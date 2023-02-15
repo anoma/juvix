@@ -24,7 +24,7 @@ tests:
     stdin: ":quit"
     exit-status: 0
 
-  - name: geb-check-type-unit
+  - name: geb-infer-type-unit
     command:
       - juvix
       - --no-colors
@@ -36,9 +36,7 @@ tests:
       contains: "so1"
     exit-status: 0
 
-
-
-  - name: geb-check-type-object
+  - name: geb-infer-type-object
     command:
       - juvix
       - --no-colors      
@@ -50,7 +48,7 @@ tests:
       contains: "No object inferred for a Geb object"
     exit-status: 0
 
-  - name: geb-check-type-integer
+  - name: geb-infer-type-integer
     command:
       - juvix
       - --no-colors        
@@ -62,6 +60,17 @@ tests:
       contains: "int"
     exit-status: 0    
 
+  # - name: geb-check-int
+  #   command:
+  #     - juvix
+  #     - --no-colors      
+  #     - dev
+  #     - geb
+  #     - repl
+  #   stdin: ":check (typed (add 1 2) so1)"
+  #   stderr: 
+  #     contains: "so1 is not a valid object for (add 1 2)"
+  #   exit-status: 1
 
   - name: geb-eval-and-operations
     command:

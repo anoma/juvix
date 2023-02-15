@@ -58,139 +58,11 @@ runCommand _opts = do
               _entryPointGenericOptions = project gopts,
               _entryPointStdin = Nothing
             }
-
-      loadEntryPoint :: EntryPoint -> Repl ()
-      loadEntryPoint ep = do
-        State.modify
-          ( set
-              replStateContext
-              ( Just
-                  ( ReplContext
-                      { _replContextEntryPoint = ep
-                      }
-                  )
-              )
-          )
-        let epPath :: Path Abs File = ep ^. entryPointModulePaths . _head1
-        liftIO (putStrLn . pack $ "OK loaded " <> toFilePath epPath)
-        content <- liftIO (readFile (toFilePath epPath))
-        let evalRes =
-              Geb.runEval $
-                Geb.RunEvalArgs
-                  { _runEvalArgsContent = content,
-                    _runEvalArgsInputFile = epPath,
-                    _runEvalArgsEvaluatorOptions = Geb.defaultEvaluatorOptions
-                  }
-        printEvalResult evalRes
-
-      reloadFile :: String -> Repl ()
-      reloadFile _ = do
-        mentryPoint <- State.gets (fmap (^. replContextEntryPoint) . (^. replStateContext))
-        maybe noFileLoadedMsg loadEntryPoint mentryPoint
-
-      pSomeFile :: String -> SomeBase File
-      pSomeFile = someFile . unpack . strip . pack
-
-      loadFile :: SomeBase File -> Repl ()
-      loadFile f = do
-        entryPoint <- getReplEntryPoint f
-        loadEntryPoint entryPoint
-
-      printRoot :: String -> Repl ()
-      printRoot _ = do
-        r <- State.gets (^. replStateInvokeDir)
-        liftIO $ putStrLn (pack (toFilePath r))
-
-      displayVersion :: String -> Repl ()
-      displayVersion _ = liftIO (putStrLn versionTag)
-
-      inferObject :: String -> Repl ()
-      inferObject gebMorphism = Repline.dontCrash $ do
-        case Geb.runParser replPath (pack gebMorphism) of
-          Left err -> printError (JuvixError err)
-          Right (Geb.ExpressionMorphism morphism) -> do
-            let inferRes = Geb.inferObject' morphism
-            case inferRes of
-              Right obj -> renderOut (Geb.ppOut Geb.defaultEvaluatorOptions obj)
-              Left err -> printError err
-          Right _ -> liftIO . putStrLn $ "No object inferred for a Geb object"
-
-      command :: String -> Repl ()
-      command input =
-        Repline.dontCrash $
-          do
-            let evalRes =
-                  Geb.runEval $
-                    Geb.RunEvalArgs
-                      { _runEvalArgsContent = pack input,
-                        _runEvalArgsInputFile = replPath,
-                        _runEvalArgsEvaluatorOptions = Geb.defaultEvaluatorOptions
-                      }
-            printEvalResult evalRes
-
-      normaliseMorphism :: String -> Repl ()
-      normaliseMorphism input =
-        Repline.dontCrash $ do
-          let evalRes =
-                Geb.runEval $
-                  Geb.RunEvalArgs
-                    { _runEvalArgsContent = pack input,
-                      _runEvalArgsInputFile = replPath,
-                      _runEvalArgsEvaluatorOptions =
-                        Geb.defaultEvaluatorOptions
-                          { Geb._evaluatorOptionsNormalise = True
-                          }
-                    }
-          printEvalResult evalRes
-
-      options :: [(String, String -> Repl ())]
-      options =
-        [ ("help", Repline.dontCrash . helpText),
-          -- `multiline` is included here for auto-completion purposes only.
-          -- `repline`'s `multilineCommand` logic overrides this no-op.
-          (multilineCmd, Repline.dontCrash . \_ -> return ()),
-          ("quit", quit),
-          ("load", Repline.dontCrash . loadFile . pSomeFile),
-          ("reload", Repline.dontCrash . reloadFile),
-          ("root", printRoot),
-          ("type", inferObject),
-          ("normalise", normaliseMorphism),
-          ("version", displayVersion)
-        ]
-
-      optsCompleter :: Repline.WordCompleter ReplS
-      optsCompleter n = do
-        let names = (":" <>) . fst <$> options
-        return (filter (isPrefixOf n) names)
-
-      prefix :: Maybe Char
-      prefix = Just ':'
-
-      multilineCommand :: Maybe String
-      multilineCommand = Just multilineCmd
-
-      tabComplete :: Repline.CompleterStyle ReplS
-      tabComplete = Repline.Prefix (Repline.wordCompleter optsCompleter) defaultMatcher
-
-      replAction :: ReplS ()
-      replAction =
-        Repline.evalReplOpts
-          Repline.ReplOpts
-            { prefix,
-              multilineCommand,
-              initialiser,
-              finaliser,
-              tabComplete,
-              command,
-              options,
-              banner
-            }
-
   invokeDir <- askInvokeDir
   globalOptions <- askGlobalOptions
   embed
     ( State.evalStateT
-        replAction
+        (replAction getReplEntryPoint)
         ( ReplState
             { _replStateContext = Nothing,
               _replStateGlobalOptions = globalOptions,
@@ -198,6 +70,142 @@ runCommand _opts = do
             }
         )
     )
+
+loadEntryPoint :: EntryPoint -> Repl ()
+loadEntryPoint ep = do
+  State.modify
+    ( set
+        replStateContext
+        (Just (ReplContext {_replContextEntryPoint = ep}))
+    )
+  let epPath :: Path Abs File = ep ^. entryPointModulePaths . _head1
+  liftIO (putStrLn . pack $ "OK loaded " <> toFilePath epPath)
+  content <- liftIO (readFile (toFilePath epPath))
+  let evalRes =
+        Geb.runEval $
+          Geb.RunEvalArgs
+            { _runEvalArgsContent = content,
+              _runEvalArgsInputFile = epPath,
+              _runEvalArgsEvaluatorOptions = Geb.defaultEvaluatorOptions
+            }
+  printEvalResult evalRes
+
+reloadFile :: String -> Repl ()
+reloadFile _ = do
+  mentryPoint <- State.gets (fmap (^. replContextEntryPoint) . (^. replStateContext))
+  maybe noFileLoadedMsg loadEntryPoint mentryPoint
+
+pSomeFile :: String -> SomeBase File
+pSomeFile = someFile . unpack . strip . pack
+
+type ReplEntryPoint = SomeBase File -> Repl EntryPoint
+
+loadFile :: ReplEntryPoint -> SomeBase File -> Repl ()
+loadFile getReplEntryPoint f = do
+  entryPoint <- getReplEntryPoint f
+  loadEntryPoint entryPoint
+
+inferObject :: String -> Repl ()
+inferObject gebMorphism = Repline.dontCrash $ do
+  case Geb.runParser replPath (pack gebMorphism) of
+    Left err -> printError (JuvixError err)
+    Right (Geb.ExpressionMorphism morphism) -> do
+      case Geb.inferObject' morphism of
+        Right obj -> renderOut (Geb.ppOut Geb.defaultEvaluatorOptions obj)
+        Left err -> printError err
+    Right _ -> liftIO . putStrLn $ "No object inferred for a Geb object"
+
+checkTypedMorphism :: String -> Repl ()
+checkTypedMorphism gebMorphism = Repline.dontCrash $ do
+  case Geb.runParser' replPath (pack gebMorphism) of
+    Left err -> printError (JuvixError err)
+    Right tyMorphism@(Geb.TypedMorphism {}) -> do
+      case Geb.check tyMorphism of
+        Right obj -> renderOut (Geb.ppOut Geb.defaultEvaluatorOptions obj)
+        Left err -> printError err
+
+runReplCommand :: String -> Repl ()
+runReplCommand input =
+  Repline.dontCrash $
+    do
+      let evalRes =
+            Geb.runEval $
+              Geb.RunEvalArgs
+                { _runEvalArgsContent = pack input,
+                  _runEvalArgsInputFile = replPath,
+                  _runEvalArgsEvaluatorOptions = Geb.defaultEvaluatorOptions
+                }
+      printEvalResult evalRes
+
+normaliseMorphism :: String -> Repl ()
+normaliseMorphism input =
+  Repline.dontCrash $ do
+    let evalRes =
+          Geb.runEval $
+            Geb.RunEvalArgs
+              { _runEvalArgsContent = pack input,
+                _runEvalArgsInputFile = replPath,
+                _runEvalArgsEvaluatorOptions =
+                  Geb.defaultEvaluatorOptions
+                    { Geb._evaluatorOptionsNormalise = True
+                    }
+              }
+    printEvalResult evalRes
+
+options :: ReplEntryPoint -> [(String, String -> Repl ())]
+options replEntryPoint =
+  [ ("help", Repline.dontCrash . helpText),
+    -- `multiline` is included here for auto-completion purposes only.
+    -- `repline`'s `multilineCommand` logic overrides this no-op.
+    (multilineCmd, Repline.dontCrash . \_ -> return ()),
+    ("quit", quit),
+    ("load", Repline.dontCrash . loadFile replEntryPoint . pSomeFile),
+    ("reload", Repline.dontCrash . reloadFile),
+    ("root", printRoot),
+    ("type", inferObject),
+    ("check", checkTypedMorphism),
+    ("normalise", normaliseMorphism),
+    ("version", displayVersion)
+  ]
+
+optsCompleter :: ReplEntryPoint -> Repline.WordCompleter ReplS
+optsCompleter replEntryPoint n = do
+  let names = (":" <>) . fst <$> options replEntryPoint
+  return (filter (isPrefixOf n) names)
+
+prefix :: Maybe Char
+prefix = Just ':'
+
+multilineCommand :: Maybe String
+multilineCommand = Just multilineCmd
+
+tabComplete :: ReplEntryPoint -> Repline.CompleterStyle ReplS
+tabComplete replEntryPoint =
+  Repline.Prefix
+    (Repline.wordCompleter (optsCompleter replEntryPoint))
+    defaultMatcher
+
+replAction :: ReplEntryPoint -> ReplS ()
+replAction replEntryPoint =
+  Repline.evalReplOpts
+    Repline.ReplOpts
+      { prefix,
+        multilineCommand,
+        initialiser = welcomeMsg,
+        finaliser = endSession,
+        command = runReplCommand,
+        options = options replEntryPoint,
+        tabComplete = tabComplete replEntryPoint,
+        banner
+      }
+
+defaultMatcher :: [(String, CompletionFunc ReplS)]
+defaultMatcher = [(":load", Repline.fileCompleter)]
+
+banner :: Repline.MultiLine -> Repl String
+banner = \case
+  Repline.MultiLine -> return "... "
+  Repline.SingleLine -> replPromptText
 
 noFileLoadedMsg :: Repl ()
 noFileLoadedMsg =
@@ -225,14 +233,6 @@ restartText = "REPL restarted"
 replPromptText :: Repl String
 replPromptText = replString . ReplMessageDoc $ P.annotate ReplPrompt "geb> "
 
-defaultMatcher :: [(String, CompletionFunc ReplS)]
-defaultMatcher = [(":load", Repline.fileCompleter)]
-
-banner :: Repline.MultiLine -> Repl String
-banner = \case
-  Repline.MultiLine -> return "... "
-  Repline.SingleLine -> replPromptText
-
 helpText :: String -> Repl ()
 helpText _ =
   renderOut
@@ -246,6 +246,7 @@ helpText _ =
         ":reload                 Reload the currently loaded file",
         ":type EXPRESSION        Infer the type of a Geb morphism",
         ":normalise EXPRESSION   Return the normal form of a Geb morphism",
+        ":check EXPRESSION       Check the type of a Geb morphism",
         ":version                Display the Juvix version",
         ":multiline              Enter multiline mode",
         ":root                   Print the root directory of the REPL",
@@ -259,11 +260,22 @@ multilineCmd = "multiline"
 quit :: String -> Repl ()
 quit _ = liftIO (throwIO Interrupt)
 
-initialiser :: Repl ()
-initialiser = welcomeMsg
+endSession :: Repl Repline.ExitDecision
+endSession = return Repline.Exit
 
-finaliser :: Repl Repline.ExitDecision
-finaliser = return Repline.Exit
+printRoot :: String -> Repl ()
+printRoot _ = do
+  r <- State.gets (^. replStateInvokeDir)
+  renderOut
+    . ReplMessageDoc
+    . normal
+    $ pack (toFilePath r)
+
+displayVersion :: String -> Repl ()
+displayVersion _ =
+  renderOut
+    . ReplMessageDoc
+    $ normal versionTag
 
 replMakeAbsolute :: SomeBase b -> Repl (Path Abs b)
 replMakeAbsolute = \case
