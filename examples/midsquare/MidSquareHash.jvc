@@ -4,6 +4,7 @@
 -- The implementation is for hashing natural numbers with maximum 16 bits into 6
 -- bits. In order to facilitate the translation to the current version of the
 -- GEB backend, no recursion is used (it is manually unrolled).
+--
 
 -- `powN` is 2 ^ N
 def pow0 : int := 1;

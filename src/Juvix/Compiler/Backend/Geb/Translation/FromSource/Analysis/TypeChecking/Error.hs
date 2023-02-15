@@ -90,7 +90,7 @@ instance ToGenericError CheckingError where
 
 -- TODO: use the real file
 mockFile :: Path Abs File
-mockFile = $(mkAbsFile "/mockfile")
+mockFile = $(mkAbsFile "/geb-checking-error")
 
 defaultLoc :: Interval
 defaultLoc = singletonInterval (mkInitialLoc mockFile)

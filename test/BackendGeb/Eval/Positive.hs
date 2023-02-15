@@ -37,23 +37,33 @@ allTests =
 
 tests :: [PosTest]
 tests =
-  []
+  [ PosTest
+      "Lambdas do not reduce"
+      $(mkRelDir ".")
+      $(mkRelFile "left-unit.geb")
+      $(mkRelFile "Eval/out/left-unit.out"),
+    PosTest
+      "Test001.lisp. Reduce application of lambda"
+      $(mkRelDir ".")
+      $(mkRelFile "test001.lisp")
+      $(mkRelFile "Eval/out/test001.out"),
+    PosTest
+      "Test002.lisp"
+      $(mkRelDir ".")
+      $(mkRelFile "test002.lisp")
+      $(mkRelFile "Eval/out/test002.out"),
+    PosTest
+      "Test003.lisp"
+      $(mkRelDir ".")
+      $(mkRelFile "test003.lisp")
+      $(mkRelFile "Eval/out/test003.out"),
+    PosTest
+      "Test005.lisp"
+      $(mkRelDir ".")
+      $(mkRelFile "test005.lisp")
+      $(mkRelFile "Eval/out/test005.out")
+  ]
 
--- PosTest
---   "Arithmetic operators"
---   $(mkRelDir ".")
---   $(mkRelFile "test001.jvc")
---   $(mkRelFile "out/test001.out"),
--- PosTest
---   "Arithmetic operators inside lambdas"
---   $(mkRelDir ".")
---   $(mkRelFile "test002.jvc")
---   $(mkRelFile "out/test002.out"),
--- PosTest
---   "Empty program with comments"
---   $(mkRelDir ".")
---   $(mkRelFile "test003.jvc")
---   $(mkRelFile "out/test003.out"),
 -- PosTest
 --   "IO builtins"
 --   $(mkRelDir ".")

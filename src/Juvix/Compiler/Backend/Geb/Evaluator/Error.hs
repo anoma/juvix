@@ -1,6 +1,5 @@
 module Juvix.Compiler.Backend.Geb.Evaluator.Error where
 
-import Control.Exception qualified as Exception
 import GHC.Show qualified as S
 import Juvix.Compiler.Backend.Geb.Evaluator.Data.Values
 import Juvix.Compiler.Backend.Geb.Language
@@ -15,7 +14,23 @@ data EvalError = EvalError
 
 makeLenses ''EvalError
 
-instance Exception.Exception EvalError
+-- TODO: Make this a proper error with a location
+instance ToGenericError EvalError where
+  genericError e =
+    return
+      GenericError
+        { _genericErrorLoc = defaultLoc,
+          _genericErrorMessage = AnsiText (pack $ S.show e),
+          _genericErrorIntervals = []
+        }
+
+mockFile :: Path Abs File
+mockFile = $(mkAbsFile "/geb-eval-error")
+
+defaultLoc :: Interval
+defaultLoc = singletonInterval (mkInitialLoc mockFile)
+
+-- instance Exception.Exception EvalError
 
 instance Show EvalError where
   show :: EvalError -> String
@@ -24,16 +39,22 @@ instance Show EvalError where
       <> fromText _evalErrorMsg
       <> case _evalErrorGebValue of
         Nothing -> ""
-        Just val -> "Value: " <> fromText (ppTrace val)
+        Just val -> "Value: " <> fromText (ppTrace val) <> "\n"
       <> case _evalErrorGebExpression of
         Nothing -> ""
         Just expr ->
           "Morphism:\n"
             <> fromText (Geb.ppTrace expr)
+            <> "\n"
 
-evalError :: Text -> Maybe GebValue -> Maybe Morphism -> a
+evalError ::
+  Member (Error JuvixError) r =>
+  Text ->
+  Maybe GebValue ->
+  Maybe Morphism ->
+  Sem r a
 evalError msg val m =
-  Exception.throw
+  throw . JuvixError $
     ( EvalError
         { _evalErrorMsg = msg,
           _evalErrorGebValue = val,

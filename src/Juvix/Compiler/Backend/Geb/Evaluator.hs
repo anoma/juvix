@@ -54,12 +54,9 @@ nf ::
 nf m = do
   val :: GebValue <- eval m
   obj :: Object <- runReader defaultInferenceEnv (infer m)
-  fromGebValue
-    ( if needObjectInfo val
-        then Just obj
-        else Nothing
-    )
-    val
+  if
+      | needObjectInfo val -> fromGebValue (Just obj) val
+      | otherwise -> fromGebValue Nothing val
 
 eval ::
   Members '[Reader Env, Error JuvixError] r =>
@@ -182,39 +179,47 @@ applyBinop ::
 applyBinop binop = do
   left <- eval $ binop ^. binopLeft
   right <- eval $ binop ^. binopRight
-  return $
-    let lfPair m1 m2 =
-          ( GebValueMorphismPair
-              ( ValueMorphismPair
-                  { _valueMorphismPairLeft = m1,
-                    _valueMorphismPairRight = m2
-                  }
-              )
-          )
-     in case (left, right) of
-          (GebValueMorphismInteger l, GebValueMorphismInteger r) ->
-            case binop ^. binopOpcode of
-              OpAdd -> GebValueMorphismInteger $ l + r
-              OpSub -> GebValueMorphismInteger $ l - r
-              OpMul -> GebValueMorphismInteger $ l * r
-              OpDiv -> GebValueMorphismInteger $ l `div` r
-              OpMod -> GebValueMorphismInteger $ l `mod` r
-              OpLt -> if l < r then valueTrue else valueFalse
-              OpEq -> if l == r then valueTrue else valueFalse
-          (m1, m2) -> case binop ^. binopOpcode of
-            OpEq ->
-              if
-                  | sameKind m1 m2 -> if m1 == m2 then valueTrue else valueFalse
-                  | otherwise ->
-                      evalError
-                        "Equality can only be applied to values of the same kind."
-                        (Just (lfPair m1 m2))
-                        (Just (MorphismBinop binop))
-            _ ->
-              evalError
-                "Canot apply operation"
-                (Just (lfPair m1 m2))
-                (Just (MorphismBinop binop))
+  let lfPair m1 m2 =
+        ( GebValueMorphismPair
+            ( ValueMorphismPair
+                { _valueMorphismPairLeft = m1,
+                  _valueMorphismPairRight = m2
+                }
+            )
+        )
+  case (left, right) of
+    (GebValueMorphismInteger l, GebValueMorphismInteger r) ->
+      case binop ^. binopOpcode of
+        OpAdd -> return $ GebValueMorphismInteger $ l + r
+        OpSub -> return $ GebValueMorphismInteger $ l - r
+        OpMul -> return $ GebValueMorphismInteger $ l * r
+        OpDiv -> return $ GebValueMorphismInteger $ l `div` r
+        OpMod -> return $ GebValueMorphismInteger $ l `mod` r
+        OpLt ->
+          if
+              | l < r -> return valueTrue
+              | otherwise -> return valueFalse
+        OpEq ->
+          if
+              | l < r -> return valueTrue
+              | otherwise -> return valueFalse
+    (m1, m2) -> case binop ^. binopOpcode of
+      OpEq ->
+        if
+            | sameKind m1 m2 ->
+                if
+                    | m1 == m2 -> return valueTrue
+                    | otherwise -> return valueFalse
+            | otherwise ->
+                evalError
+                  "Equality can only be applied to values of the same kind."
+                  (Just (lfPair m1 m2))
+                  (Just (MorphismBinop binop))
+      _ ->
+        evalError
+          "Canot apply operation"
+          (Just (lfPair m1 m2))
+          (Just (MorphismBinop binop))
 
 sameKind :: GebValue -> GebValue -> Bool
 sameKind l r = case (l, r) of

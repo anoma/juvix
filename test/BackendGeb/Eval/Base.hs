@@ -56,11 +56,6 @@ gebEvalErrorAssertion mainFile step = do
     Right (Geb.ExpressionObject _) -> assertFailure "no error"
     Right (Geb.ExpressionMorphism gebMorphism) -> do
       step "Evaluate"
-      let env :: Geb.Env =
-            Geb.Env
-              { _envEvaluatorOptions = Geb.defaultEvaluatorOptions,
-                _envContext = Context.empty
-              }
-      case Geb.eval' env gebMorphism of
+      case Geb.eval' Geb.defaultEvalEnv gebMorphism of
         Left _ -> assertBool "" True
         Right _ -> assertFailure "no error"
