@@ -67,7 +67,7 @@ setupIntToNat sym tab =
 
 fromInternal :: Internal.InternalTypedResult -> Sem k CoreResult
 fromInternal i = do
-  (res, _) <- runInfoTableBuilder tab0 (runReader (i ^. InternalTyped.resultIdenTypes) f)
+  (res, _) <- runInfoTableBuilder tab0 (runReader (i ^. InternalTyped.resultFunctions) (runReader (i ^. InternalTyped.resultIdenTypes) f))
   return $
     CoreResult
       { _coreResultTable = setupIntToNat intToNatSym res,
@@ -80,12 +80,12 @@ fromInternal i = do
     intToNatSym :: Symbol
     intToNatSym = 0
 
-    f :: (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable] r) => Sem r ()
+    f :: (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable] r) => Sem r ()
     f = do
       let resultModules = toList (i ^. InternalTyped.resultModules)
       runReader (Internal.buildTable resultModules) (mapM_ coreModule resultModules)
       where
-        coreModule :: (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable] r) => Internal.Module -> Sem r ()
+        coreModule :: (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable] r) => Internal.Module -> Sem r ()
         coreModule m = do
           registerInductiveDefs m
           registerFunctionDefs m
@@ -129,14 +129,14 @@ registerInductiveDefsBody body = mapM_ go (body ^. Internal.moduleStatements)
 
 registerFunctionDefs ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable] r) =>
+  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable] r) =>
   Internal.Module ->
   Sem r ()
 registerFunctionDefs m = registerFunctionDefsBody (m ^. Internal.moduleBody)
 
 registerFunctionDefsBody ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable] r) =>
+  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable] r) =>
   Internal.ModuleBody ->
   Sem r ()
 registerFunctionDefsBody body = mapM_ go (body ^. Internal.moduleStatements)
@@ -231,7 +231,7 @@ goConstructor sym ctor = do
 
 goMutualBlock ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable] r) =>
+  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable] r) =>
   Internal.MutualBlock ->
   Sem r ()
 goMutualBlock m = do
@@ -244,13 +244,22 @@ goMutualBlock m = do
       sym <- freshSymbol
       return (x, sym)
 
+goType ::
+  forall r.
+  (Members '[InfoTableBuilder, Reader Internal.InfoTable, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader IndexTable] r) =>
+  Internal.Expression ->
+  Sem r Type
+goType ty = do
+  normTy <- evalState InternalTyped.iniState (InternalTyped.strongNormalize' ty)
+  goExpression normTy
+
 goFunctionDefIden ::
   forall r.
-  (Members '[InfoTableBuilder, Reader Internal.InfoTable, Reader InternalTyped.TypesTable] r) =>
+  (Members '[InfoTableBuilder, Reader Internal.InfoTable, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable] r) =>
   (Internal.FunctionDef, Symbol) ->
   Sem r Type
 goFunctionDefIden (f, sym) = do
-  funTy <- runReader initIndexTable (goExpression (f ^. Internal.funDefType))
+  funTy <- runReader initIndexTable (goType (f ^. Internal.funDefType))
   let info =
         IdentifierInfo
           { _identifierName = f ^. Internal.funDefName . nameText,
