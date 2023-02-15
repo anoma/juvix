@@ -8,9 +8,9 @@ where
 import Control.DeepSeq
 import Juvix.Compiler.Backend.Geb.Data.Context as Context
 import Juvix.Compiler.Backend.Geb.Evaluator.Data
+import Juvix.Compiler.Backend.Geb.Evaluator.Error
 import Juvix.Compiler.Backend.Geb.Evaluator.Options
 import Juvix.Compiler.Backend.Geb.Language
-import Juvix.Compiler.Backend.Geb.Pretty qualified as Geb
 import Juvix.Compiler.Backend.Geb.Translation.FromGebValue
 import Juvix.Compiler.Backend.Geb.Translation.FromSource as Geb
 import Juvix.Compiler.Backend.Geb.Translation.FromSource.Analysis.Inference as Geb
@@ -48,8 +48,9 @@ eval ::
   Members '[Reader Env, Error JuvixError] r =>
   Morphism ->
   Sem r GebValue
-eval = \case
-  MorphismAbsurd _ -> error "Absurd can not be evaluated."
+eval morph = case morph of
+  MorphismAbsurd _ ->
+    evalError "Absurd can not be evaluated." Nothing (Just morph)
   MorphismVar var -> do
     ctx <- asks (^. envContext)
     return $ Context.lookup (var ^. varIndex) ctx
@@ -69,13 +70,21 @@ eval = \case
     case res of
       GebValueMorphismPair pair ->
         return $ pair ^. valueMorphismPairLeft
-      _ -> error "First can only be applied to pairs."
+      _ ->
+        evalError
+          "First can only be applied to pairs."
+          Nothing
+          (Just morph)
   MorphismSecond s -> do
     res <- eval $ s ^. secondValue
     case res of
       GebValueMorphismPair pair ->
         return $ pair ^. valueMorphismPairRight
-      _ -> error "Second can only be applied to pairs."
+      _ ->
+        evalError
+          "Second can only be applied to pairs."
+          (Just res)
+          (Just morph)
   MorphismBinop op -> applyBinop op
   MorphismApplication app ->
     apply (app ^. applicationLeft) (app ^. applicationRight)
@@ -112,7 +121,11 @@ eval = \case
                   }
         fun <- eval fun'
         apply' fun rightArg
-      _ -> error "Case can only be applied to sum types."
+      _ ->
+        evalError
+          "Case can only be applied to terms of the coproduct object."
+          (Just vCaseOn)
+          (Just morph)
 
 apply ::
   Members '[Reader Env, Error JuvixError] r =>
@@ -131,7 +144,7 @@ apply fun' arg' = do
     GebValueClosure cls ->
       local (over envContext (Context.cons arg)) $
         eval (cls ^. valueClosureLambda . lambdaBody)
-    _ -> error "Can only apply functions."
+    _ -> evalError "Can only apply functions." (Just fun) (Just fun')
 
 apply' ::
   Members '[Reader Env, Error JuvixError] r =>
@@ -143,7 +156,7 @@ apply' fun arg =
     GebValueClosure cls ->
       local (over envContext (Context.cons arg)) $
         eval (cls ^. valueClosureLambda . lambdaBody)
-    _ -> error "Can only apply functions."
+    _ -> evalError "Can only apply functions." (Just fun) Nothing
 
 applyBinop ::
   Members '[Reader Env, Error JuvixError] r =>
@@ -153,25 +166,38 @@ applyBinop binop = do
   left <- eval $ binop ^. binopLeft
   right <- eval $ binop ^. binopRight
   return $
-    case (left, right) of
-      (GebValueMorphismInteger l, GebValueMorphismInteger r) ->
-        case binop ^. binopOpcode of
-          OpAdd -> GebValueMorphismInteger $ l + r
-          OpSub -> GebValueMorphismInteger $ l - r
-          OpMul -> GebValueMorphismInteger $ l * r
-          OpDiv -> GebValueMorphismInteger $ l `div` r
-          OpMod -> GebValueMorphismInteger $ l `mod` r
-          OpLt -> if l < r then valueTrue else valueFalse
-          OpEq -> if l == r then valueTrue else valueFalse
-      (m1, m2) -> case binop ^. binopOpcode of
-        OpEq ->
-          if
-              | sameKind m1 m2 -> if m1 == m2 then valueTrue else valueFalse
-              | otherwise -> error "Equality can only be applied to values of the same kind."
-        _ ->
-          error $
-            "Canot apply operation:\n"
-              <> (Geb.ppPrint (MorphismBinop binop))
+    let lfPair m1 m2 =
+          ( GebValueMorphismPair
+              ( ValueMorphismPair
+                  { _valueMorphismPairLeft = m1,
+                    _valueMorphismPairRight = m2
+                  }
+              )
+          )
+     in case (left, right) of
+          (GebValueMorphismInteger l, GebValueMorphismInteger r) ->
+            case binop ^. binopOpcode of
+              OpAdd -> GebValueMorphismInteger $ l + r
+              OpSub -> GebValueMorphismInteger $ l - r
+              OpMul -> GebValueMorphismInteger $ l * r
+              OpDiv -> GebValueMorphismInteger $ l `div` r
+              OpMod -> GebValueMorphismInteger $ l `mod` r
+              OpLt -> if l < r then valueTrue else valueFalse
+              OpEq -> if l == r then valueTrue else valueFalse
+          (m1, m2) -> case binop ^. binopOpcode of
+            OpEq ->
+              if
+                  | sameKind m1 m2 -> if m1 == m2 then valueTrue else valueFalse
+                  | otherwise ->
+                      evalError
+                        "Equality can only be applied to values of the same kind."
+                        (Just (lfPair m1 m2))
+                        (Just (MorphismBinop binop))
+            _ ->
+              evalError
+                "Canot apply operation"
+                (Just (lfPair m1 m2))
+                (Just (MorphismBinop binop))
 
 sameKind :: GebValue -> GebValue -> Bool
 sameKind l r = case (l, r) of
@@ -197,13 +223,14 @@ nf ::
   Morphism ->
   Sem r Morphism
 nf m = do
-  -- First, we check the type (object) contained in the Morphism
-  -- corresponds to the inferred type.
-  ty <- runReader defaultInferenceEnv $ inferObject m
-  -- Then, we evaluate the Morphism.
-  val <- eval m
-  -- Finally, we convert the result back to a Morphism.
-  fromGebValue ty val
+  v :: GebValue <- eval m
+  o :: Object <- runReader defaultInferenceEnv (inferObject m)
+  fromGebValue
+    ( if needObjectInfo v
+        then Just o
+        else Nothing
+    )
+    v
 
 nf' :: Env -> Morphism -> Either JuvixError Morphism
 nf' env m = run . runError $ runReader env (nf m)

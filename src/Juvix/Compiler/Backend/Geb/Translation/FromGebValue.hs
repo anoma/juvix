@@ -12,9 +12,9 @@ import Juvix.Compiler.Backend.Geb.Pretty qualified as Geb
 import Juvix.Compiler.Backend.Geb.Pretty.Values
 
 data FromGebValueError = FromGebValueError
-  { _fromGebValueErrorMsg :: !Text,
-    _fromGebValueErrorGebValue :: !(Maybe GebValue),
-    _fromGebValueErrorGebExpression :: !(Maybe Object)
+  { _fromGebValueErrorMsg :: Text,
+    _fromGebValueErrorGebValue :: Maybe GebValue,
+    _fromGebValueErrorGebExpression :: Maybe Object
   }
 
 makeLenses ''FromGebValueError
@@ -23,57 +23,71 @@ instance Exception.Exception FromGebValueError
 
 instance Show FromGebValueError where
   show :: FromGebValueError -> String
-  show (FromGebValueError {..}) =
+  show FromGebValueError {..} =
     "fromGebValue error: "
       <> fromText _fromGebValueErrorMsg
       <> case _fromGebValueErrorGebValue of
-        Nothing -> "(no value)"
+        Nothing -> ""
         Just val -> ": " <> fromText (ppTrace val)
       <> case _fromGebValueErrorGebExpression of
-        Nothing -> "(no geb object)"
+        Nothing -> ""
         Just expr ->
           "GebObject associated:\n"
             <> fromText (Geb.ppTrace expr)
 
-fromGebValueError :: Text -> GebValue -> Object -> a
+fromGebValueError :: Text -> Maybe GebValue -> Maybe Object -> a
 fromGebValueError msg val gebExpr =
   Exception.throw
-    ( FromGebValueError
-        { _fromGebValueErrorMsg = msg,
-          _fromGebValueErrorGebValue = Just val,
-          _fromGebValueErrorGebExpression = Just gebExpr
-        }
-    )
+    FromGebValueError
+      { _fromGebValueErrorMsg = msg,
+        _fromGebValueErrorGebValue = val,
+        _fromGebValueErrorGebExpression = gebExpr
+      }
 
--- TODO: use fromGebValueError
+-- We cannot quote GebValues to Morphisms without knowing the type
+-- in some cases. For example, we cannot quote a GebValueMorphismLeft.
+-- So we need to provide the Geb object associated to the Geb value.
 
--- | Quoting a GebValue to a Morphism.
--- Morphisms carry the type of the value they represent, in
--- contrast to GebValues, which do not. To quote a GebValue,
--- we need to know the type of the value.
+needObjectInfo :: GebValue -> Bool
+needObjectInfo = \case
+  GebValueMorphismUnit -> False
+  GebValueMorphismInteger {} -> False
+  GebValueClosure {} -> False
+  GebValueMorphismLeft {} -> True
+  GebValueMorphismRight {} -> True
+  GebValueMorphismPair {} -> True
+
+-- | Quote GebValues to Morphisms.
 fromGebValue ::
   Members '[Reader Env, Error JuvixError] r =>
-  Object ->
+  Maybe Object ->
   GebValue ->
   Sem r Morphism
 fromGebValue ty = \case
-  GebValueMorphismInteger i -> case ty of
-    ObjectInteger -> return $ MorphismInteger i
-    _ -> errorFromGebValue "type mismatch. Expected Integer"
-  GebValueMorphismUnit -> case ty of
-    ObjectTerminal -> return MorphismUnit
-    _ -> errorFromGebValue "type mismatch. Expected Unit"
-  GebValueMorphismLeft m -> case ty of
-    ObjectCoproduct _ -> MorphismLeft <$> fromGebValue ty m
-    _ -> errorFromGebValue "type mismatch (left). Expected a coproduct"
-  GebValueMorphismRight m -> case ty of
-    ObjectCoproduct _ -> MorphismRight <$> fromGebValue ty m
-    _ -> errorFromGebValue "type mismatch (right). Expected a coproduct"
-  GebValueMorphismPair m -> case ty of
-    ObjectProduct prod -> do
+  GebValueMorphismInteger i -> return $ MorphismInteger i
+  GebValueMorphismUnit -> return MorphismUnit
+  GebValueClosure cls -> return $ MorphismLambda $ cls ^. valueClosureLambda
+  val@(GebValueMorphismLeft m) -> case ty of
+    Just (ObjectCoproduct _) -> MorphismLeft <$> fromGebValue ty m
+    Just _ ->
+      fromGebValueError
+        "type mismatch (left). Expected a coproduct"
+        (Just val)
+        ty
+    Nothing -> fromGebValueError "need object info" (Just val) ty
+  val@(GebValueMorphismRight m) -> case ty of
+    Just (ObjectCoproduct _) -> MorphismRight <$> fromGebValue ty m
+    Just _ ->
+      fromGebValueError
+        "type mismatch (right). Expected a coproduct"
+        (Just val)
+        ty
+    Nothing -> fromGebValueError "need object info" (Just val) ty
+  val@(GebValueMorphismPair m) -> case ty of
+    Just (ObjectProduct prod) -> do
       let (a, b) = (prod ^. productLeft, prod ^. productRight)
-      pLeft <- fromGebValue a (m ^. valueMorphismPairLeft)
-      pRight <- fromGebValue b (m ^. valueMorphismPairRight)
+      pLeft <- fromGebValue (Just a) (m ^. valueMorphismPairLeft)
+      pRight <- fromGebValue (Just b) (m ^. valueMorphismPairRight)
       return $
         MorphismPair
           Pair
@@ -82,8 +96,9 @@ fromGebValue ty = \case
               _pairLeftType = a,
               _pairRightType = b
             }
-    _ -> errorFromGebValue "type mismatch (pair). Expected a product"
-  GebValueClosure cls -> return $ MorphismLambda $ cls ^. valueClosureLambda
-
-errorFromGebValue :: Text -> a
-errorFromGebValue = error . ("fromGebValue: " <>)
+    Just _ ->
+      fromGebValueError
+        "type mismatch (pair). Expected a product"
+        (Just val)
+        ty
+    Nothing -> fromGebValueError "need object info" (Just val) ty

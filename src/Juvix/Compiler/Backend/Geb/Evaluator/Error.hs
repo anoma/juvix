@@ -10,7 +10,7 @@ import Juvix.Compiler.Backend.Geb.Pretty.Values
 data EvalError = EvalError
   { _evalErrorMsg :: !Text,
     _evalErrorGebValue :: !(Maybe GebValue),
-    _evalErrorGebExpression :: !(Maybe Expression)
+    _evalErrorGebExpression :: !(Maybe Morphism)
   }
 
 makeLenses ''EvalError
@@ -23,20 +23,20 @@ instance Show EvalError where
     "evaluation error: "
       <> fromText _evalErrorMsg
       <> case _evalErrorGebValue of
-        Nothing -> "(no value)"
-        Just val -> ": " <> fromText (ppTrace val)
+        Nothing -> ""
+        Just val -> "Value: " <> fromText (ppTrace val)
       <> case _evalErrorGebExpression of
-        Nothing -> "(no geb expression)"
+        Nothing -> ""
         Just expr ->
-          "GebObject associated:\n"
+          "Morphism:\n"
             <> fromText (Geb.ppTrace expr)
 
-evalError :: Text -> Maybe GebValue -> Maybe Expression -> a
-evalError msg val gebExpr =
+evalError :: Text -> Maybe GebValue -> Maybe Morphism -> a
+evalError msg val m =
   Exception.throw
     ( EvalError
         { _evalErrorMsg = msg,
           _evalErrorGebValue = val,
-          _evalErrorGebExpression = gebExpr
+          _evalErrorGebExpression = m
         }
     )
