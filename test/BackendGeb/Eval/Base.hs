@@ -42,7 +42,7 @@ gebEvalAssertion mainFile expectedFile step = do
               actualOutput <- TIO.readFile (toFilePath outputFile)
               expected <- TIO.readFile (toFilePath expectedFile)
               step "Compare expected and actual program output"
-              assertEqDiff
+              assertEqDiffText
                 ("Check: EVAL output = " <> toFilePath expectedFile)
                 actualOutput
                 expected

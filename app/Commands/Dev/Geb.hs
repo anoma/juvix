@@ -6,6 +6,7 @@ where
 
 import Commands.Base
 import Commands.Dev.Geb.Eval as Eval
+import Commands.Dev.Geb.Infer as Check
 import Commands.Dev.Geb.Infer as Infer
 import Commands.Dev.Geb.Options
 import Commands.Dev.Geb.Read as Read
@@ -17,3 +18,4 @@ runCommand = \case
   GebCommandEval opts -> Eval.runCommand opts
   GebCommandRead opts -> Read.runCommand opts
   GebCommandInfer opts -> Infer.runCommand opts
+  GebCommandCheck opts -> Check.runCommand opts

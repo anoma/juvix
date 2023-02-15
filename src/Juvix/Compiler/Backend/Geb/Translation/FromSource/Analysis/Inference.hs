@@ -26,7 +26,17 @@ defaultInferenceEnv =
       _inferenceEnvTypeInfo = Nothing
     }
 
-check = undefined -- TODO
+check ::
+  TypedMorphism ->
+  Either JuvixError Object
+check TypedMorphism {..} =
+  run . runError $
+    runReader
+      ( defaultInferenceEnv
+          { _inferenceEnvTypeInfo = Just _typedMorphismObject
+          }
+      )
+      (inferObject _typedMorphism)
 
 inferObject' :: Morphism -> Either JuvixError Object
 inferObject' m =

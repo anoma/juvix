@@ -16,6 +16,7 @@ data GebCommand
   | GebCommandEval GebEvalOptions
   | GebCommandRead GebReadOptions
   | GebCommandInfer GebInferOptions
+  | GebCommandCheck GebInferOptions -- Same as infer for now
   deriving stock (Data)
 
 parseGebCommand :: Parser GebCommand
@@ -25,7 +26,8 @@ parseGebCommand =
       [ commandRepl,
         commandEval,
         commandRead,
-        commandInfer
+        commandInfer,
+        commandCheck
       ]
   where
     commandRepl :: Mod CommandFields GebCommand
@@ -39,6 +41,9 @@ parseGebCommand =
 
     commandInfer :: Mod CommandFields GebCommand
     commandInfer = command "infer" inferInfo
+
+    commandCheck :: Mod CommandFields GebCommand
+    commandCheck = command "check" checkInfo
 
     replInfo :: ParserInfo GebCommand
     replInfo =
@@ -63,3 +68,9 @@ parseGebCommand =
       info
         (GebCommandInfer <$> parseGebInferOptions)
         (progDesc "Infer the GebObject for a Geb morphism found in the given file. ")
+
+    checkInfo :: ParserInfo GebCommand
+    checkInfo =
+      info
+        (GebCommandInfer <$> parseGebInferOptions)
+        (progDesc "Check the GebObject provided matches th given Geb morphism. ")

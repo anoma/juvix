@@ -15,8 +15,8 @@ runCommand opts = do
   f :: Path Abs File <- someBaseToAbs' b
   content :: Text <- embed (readFile (toFilePath f))
   case Geb.runParser' f content of
-    Right (Geb.TypedMorphism {}) ->
-      case Geb.inferObject' gebTerm of
+    Right tyMorph@(Geb.TypedMorphism {}) ->
+      case Geb.check tyMorph of
         Left err -> exitJuvixError (JuvixError err)
         Right obj -> renderStdOut (Geb.ppOut opts obj)
     Left err -> exitJuvixError (JuvixError err)
