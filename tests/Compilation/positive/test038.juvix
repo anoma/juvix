@@ -1,0 +1,9 @@
+-- Simple case expression
+module test038;
+
+open import Stdlib.Prelude;
+
+main : IO;
+main := printNatLn (case 1, 2 | suc _, zero := 0 | suc _, suc x := x | _ := 19);
+
+end;

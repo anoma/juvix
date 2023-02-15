@@ -1,3 +1,4 @@
+-- Applications with lets and cases in function position
 module test037;
   open import Stdlib.Prelude;
 

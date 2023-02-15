@@ -20,6 +20,7 @@ import Juvix.Compiler.Core.Extra.Info
 import Juvix.Compiler.Core.Extra.Recursors
 import Juvix.Compiler.Core.Extra.Recursors.Fold.Named
 import Juvix.Compiler.Core.Extra.Recursors.Map.Named
+import Juvix.Compiler.Core.Info.TypeInfo
 import Juvix.Compiler.Core.Language
 
 isClosed :: Node -> Bool
@@ -207,3 +208,9 @@ patternBinders f p = case p of
 
 patternBindersNum :: Pattern -> Int
 patternBindersNum = length . (^.. patternBinders)
+
+patternType :: Pattern -> Node
+patternType = \case
+  PatWildcard w -> getInfoType (w ^. patternWildcardInfo)
+  PatBinder b -> b ^. patternBinder . binderType
+  PatConstr c -> getInfoType (c ^. patternConstrInfo)

@@ -36,6 +36,10 @@ g leaf := leaf;
 g (node (node _ _) r) := r;
 g (node l r) := node r l;
 
+h : Nat -> Nat;
+h (suc (suc (suc (suc n)))) := n;
+h _ := 0;
+
 printListNatLn : List Nat → IO;
 printListNatLn nil := printStringLn "nil";
 printListNatLn (x :: xs) := printNat x >> printString " :: " >> printListNatLn xs;
@@ -48,6 +52,8 @@ main :=
   printNatLn (f (gen 16)) >>
   printNatLn (f (gen 17)) >>
   printNatLn (f (gen 18)) >>
-  printNatLn (f (gen 20));
+  printNatLn (f (gen 20)) >>
+  printNatLn (h 5) >>
+  printNatLn (h 3);
 
 end;

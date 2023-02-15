@@ -25,7 +25,7 @@ uniqueName txt sym = txt <> "_" <> show sym
 -- common "builtin" constructors, e.g., unit, nat, so that the code generator
 -- can treat them specially.
 data Tag = BuiltinTag BuiltinDataTag | UserTag Word
-  deriving stock (Eq, Ord, Generic)
+  deriving stock (Eq, Generic, Ord, Show)
 
 instance Hashable Tag
 

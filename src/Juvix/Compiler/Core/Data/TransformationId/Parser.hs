@@ -44,6 +44,7 @@ pcompletions = do
       LambdaLetRecLifting -> strLifting
       LetRecLifting -> strLetRecLifting
       TopEtaExpand -> strTopEtaExpand
+      MatchToCase -> strMatchToCase
       Identity -> strIdentity
       RemoveTypeArgs -> strRemoveTypeArgs
       MoveApps -> strMoveApps
@@ -73,6 +74,7 @@ transformation =
     <|> symbol strConvertBuiltinTypes $> ConvertBuiltinTypes
     <|> symbol strUnrollRecursion $> UnrollRecursion
     <|> symbol strComputeTypeInfo $> ComputeTypeInfo
+    <|> symbol strMatchToCase $> MatchToCase
 
 allStrings :: [Text]
 allStrings =
@@ -84,7 +86,8 @@ allStrings =
     strNatToInt,
     strConvertBuiltinTypes,
     strUnrollRecursion,
-    strComputeTypeInfo
+    strComputeTypeInfo,
+    strMatchToCase
   ]
 
 strLifting :: Text
@@ -95,6 +98,9 @@ strLetRecLifting = "letrec-lifting"
 
 strTopEtaExpand :: Text
 strTopEtaExpand = "top-eta-expand"
+
+strMatchToCase :: Text
+strMatchToCase = "match-to-case"
 
 strIdentity :: Text
 strIdentity = "identity"

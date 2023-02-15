@@ -15,6 +15,7 @@ import Juvix.Compiler.Core.Transformation.ConvertBuiltinTypes
 import Juvix.Compiler.Core.Transformation.Eta
 import Juvix.Compiler.Core.Transformation.Identity
 import Juvix.Compiler.Core.Transformation.LambdaLetRecLifting
+import Juvix.Compiler.Core.Transformation.MatchToCase
 import Juvix.Compiler.Core.Transformation.MoveApps
 import Juvix.Compiler.Core.Transformation.NatToInt
 import Juvix.Compiler.Core.Transformation.RemoveTypeArgs
@@ -36,3 +37,4 @@ applyTransformations ts tbl = foldl' (flip appTrans) tbl ts
       ConvertBuiltinTypes -> convertBuiltinTypes
       ComputeTypeInfo -> computeTypeInfo
       UnrollRecursion -> unrollRecursion
+      MatchToCase -> matchToCase

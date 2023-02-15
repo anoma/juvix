@@ -297,7 +297,7 @@ mkFunBody f
     nPatterns = length (f ^. Internal.funDefClauses . _head1 . Internal.clausePatterns)
 
     vs :: [Index]
-    vs = take nPatterns [0 ..]
+    vs = reverse (take nPatterns [0 ..])
 
 goCase ::
   forall r.
@@ -326,7 +326,7 @@ goLambda ::
   Sem r Node
 goLambda l = do
   ms <- underBinders nPatterns (mapM goLambdaClause (l ^. Internal.lambdaClauses))
-  let values = take nPatterns (mkVar' <$> [0 ..])
+  let values = reverse (take nPatterns (mkVar' <$> [0 ..]))
       match = mkMatch' (fromList values) (toList ms)
   return $ foldr (\_ n -> mkLambda' n) match values
   where
@@ -570,7 +570,7 @@ goPatternArgs body ps = do
   varsNum <- asks (^. indexTableVarsNum)
   pats <- patterns
   let bs :: [Name]
-      bs = concatMap getPatternArgVars (reverse ps)
+      bs = concatMap getPatternArgVars ps
       (vars', varsNum') =
         foldl'
           ( \(vs, k) name ->
@@ -586,7 +586,7 @@ goPatternArgs body ps = do
   MatchBranch Info.empty (fromList pats) <$> body'
   where
     patterns :: Sem r [Pattern]
-    patterns = reverse <$> mapM fromPatternArg ps
+    patterns = mapM fromPatternArg ps
 
 goFunctionClause ::
   forall r.

@@ -16,12 +16,18 @@ terminating
 f : Tree → Nat;
 f leaf := 1;
 f (node l r) :=
-  let l : Tree; l := g l in
-  let r : Tree; r := g r in
-  let terminating a : Nat; a := λ {leaf := 1 | (node l r) := f l + f r} l in
-  let terminating b : Nat;
-       b := λ {(node l r) := f l + f r
-                | _ := 2} r in
+  let
+    l : Tree := g l;
+    r : Tree := g r;
+    terminating a : Nat :=
+      case l
+      | leaf := 1
+      | node l r := f l + f r;
+    terminating b : Nat :=
+      case r
+      | node l r := f l + f r
+      | _ := 2;
+  in
   a * b;
 
 isNode : Tree → Bool;

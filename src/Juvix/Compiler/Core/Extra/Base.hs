@@ -58,11 +58,17 @@ mkLambda' = mkLambda Info.empty emptyBinder
 mkLambdaTy :: Node -> Node -> Node
 mkLambdaTy ty = mkLambda Info.empty (Binder "?" Nothing ty)
 
+mkLambdasTy :: [Type] -> Node -> Node
+mkLambdasTy tys n = foldl' (flip mkLambdaTy) n (reverse tys)
+
 mkLetItem' :: Node -> LetItem
 mkLetItem' = LetItem emptyBinder
 
 mkLet :: Info -> Binder -> Node -> Node -> Node
 mkLet i bi v b = NLet (Let i (LetItem bi v) b)
+
+mkLetTy :: Info -> Type -> Node -> Node -> Node
+mkLetTy i ty = mkLet i (Binder "?" Nothing ty)
 
 mkLet' :: Node -> Node -> Node
 mkLet' = mkLet Info.empty emptyBinder

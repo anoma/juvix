@@ -13,4 +13,5 @@ data TransformationId
   | Identity
   | UnrollRecursion
   | ComputeTypeInfo
+  | MatchToCase
   deriving stock (Data)

@@ -39,7 +39,7 @@ allTests =
     ( map
         (mkTest . toTestDescr)
         ( filterOutTests
-            [ "Merge sort"
+            [ "Nested binders with variable capture"
             ]
             tests
         )
@@ -238,5 +238,10 @@ tests =
       "Applications with lets and cases in function position"
       $(mkRelDir ".")
       $(mkRelFile "test037.juvix")
-      $(mkRelFile "out/test037.out")
+      $(mkRelFile "out/test037.out"),
+    posTest
+      "Simple case expression"
+      $(mkRelDir ".")
+      $(mkRelFile "test038.juvix")
+      $(mkRelFile "out/test038.out")
   ]
