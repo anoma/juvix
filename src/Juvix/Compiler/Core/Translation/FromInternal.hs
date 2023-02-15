@@ -339,9 +339,10 @@ goLambda ::
   Sem r Node
 goLambda l = do
   ms <- underBinders nPatterns (mapM goLambdaClause (l ^. Internal.lambdaClauses))
+  ty <- goExpression (fromJust (l ^. Internal.lambdaType))
   let values = reverse (take nPatterns (mkVar' <$> [0 ..]))
       match = mkMatch' (fromList values) (toList ms)
-      argtys = replicate nPatterns mkDynamic' -- TODO: use actual argument types when available in Internal
+      argtys = take nPatterns $ typeArgs ty
   return $ foldr mkLambda' match argtys
   where
     -- Assumption: all clauses have the same number of patterns
