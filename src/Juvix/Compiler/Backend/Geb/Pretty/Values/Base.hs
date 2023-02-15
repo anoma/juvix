@@ -18,6 +18,9 @@ doc opts x =
 class PrettyCode c where
   ppCode :: Member (Reader Options) r => c -> Sem r (Doc Ann)
 
+ppCode' :: (PrettyCode c) => Options -> c -> Doc Ann
+ppCode' opts = run . runReader opts . ppCode
+
 instance PrettyCode ValueMorphismPair where
   ppCode ValueMorphismPair {..} = do
     left <- ppArg _valueMorphismPairLeft

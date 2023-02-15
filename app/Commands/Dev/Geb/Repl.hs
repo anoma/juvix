@@ -110,17 +110,17 @@ inferObject gebMorphism = Repline.dontCrash $ do
   case Geb.runParser replPath (pack gebMorphism) of
     Left err -> printError (JuvixError err)
     Right (Geb.ExpressionMorphism morphism) -> do
-      case Geb.inferObject' morphism of
+      case Geb.infer' morphism of
         Right obj -> renderOut (Geb.ppOut Geb.defaultEvaluatorOptions obj)
         Left err -> printError err
-    Right _ -> renderOutNormal "No object inferred for a Geb object"
+    Right _ -> printError (error "Inference only works on Geb morphisms.")
 
 checkTypedMorphism :: String -> Repl ()
 checkTypedMorphism gebMorphism = Repline.dontCrash $ do
   case Geb.runParser' replPath (pack gebMorphism) of
     Left err -> printError (JuvixError err)
     Right tyMorphism@(Geb.TypedMorphism {}) -> do
-      case Geb.check tyMorphism of
+      case Geb.check' tyMorphism of
         Right obj -> renderOut (Geb.ppOut Geb.defaultEvaluatorOptions obj)
         Left err -> printError err
 
@@ -158,13 +158,13 @@ options replEntryPoint =
     -- `multiline` is included here for auto-completion purposes only.
     -- `repline`'s `multilineCommand` logic overrides this no-op.
     (multilineCmd, Repline.dontCrash . \_ -> return ()),
-    ("quit", quit),
+    ("check", checkTypedMorphism),
     ("load", Repline.dontCrash . loadFile replEntryPoint . pSomeFile),
+    ("normalise", normaliseMorphism),
+    ("quit", quit),
     ("reload", Repline.dontCrash . reloadFile),
     ("root", printRoot),
     ("type", inferObject),
-    ("check", checkTypedMorphism),
-    ("normalise", normaliseMorphism),
     ("version", displayVersion)
   ]
 
@@ -245,9 +245,9 @@ helpText _ =
         ":help                   Print this help",
         ":load FILE              Load a file into the REPL",
         ":reload                 Reload the currently loaded file",
+        ":check EXPRESSION       Check the type of a Geb morphism",
         ":type EXPRESSION        Infer the type of a Geb morphism",
         ":normalise EXPRESSION   Return the normal form of a Geb morphism",
-        ":check EXPRESSION       Check the type of a Geb morphism",
         ":version                Display the Juvix version",
         ":multiline              Enter multiline mode",
         ":root                   Print the root directory of the REPL",
@@ -297,7 +297,6 @@ renderOut t = render' t >> liftIO (putStrLn "")
 renderOutNormal :: Text -> Repl ()
 renderOutNormal = renderOut . ReplMessageDoc . normal
 
--- TODO: use the color scheme assigned for ReplError
 printError :: JuvixError -> Repl ()
 printError e = do
   opts <- State.gets (^. replStateGlobalOptions)

@@ -13,7 +13,7 @@ import Juvix.Compiler.Backend.Geb.Evaluator.Options
 import Juvix.Compiler.Backend.Geb.Language
 import Juvix.Compiler.Backend.Geb.Translation.FromGebValue
 import Juvix.Compiler.Backend.Geb.Translation.FromSource as Geb
-import Juvix.Compiler.Backend.Geb.Translation.FromSource.Analysis.Inference as Geb
+import Juvix.Compiler.Backend.Geb.Translation.FromSource.Analysis.TypeChecking as Geb
 
 data RunEvalArgs = RunEvalArgs
   { _runEvalArgsInputFile :: Path Abs File,
@@ -53,7 +53,7 @@ nf ::
   Sem r Morphism
 nf m = do
   val :: GebValue <- eval m
-  obj :: Object <- runReader defaultInferenceEnv (inferObject m)
+  obj :: Object <- runReader defaultInferenceEnv (infer m)
   fromGebValue
     ( if needObjectInfo val
         then Just obj

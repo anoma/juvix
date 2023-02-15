@@ -1,76 +1,70 @@
-module Juvix.Compiler.Backend.Geb.Translation.FromSource.Analysis.Inference where
+module Juvix.Compiler.Backend.Geb.Translation.FromSource.Analysis.TypeChecking
+  ( module Juvix.Compiler.Backend.Geb.Translation.FromSource.Analysis.TypeChecking,
+    module Juvix.Compiler.Backend.Geb.Translation.FromSource.Analysis.TypeChecking.Data.Types,
+    module Juvix.Compiler.Backend.Geb.Translation.FromSource.Analysis.TypeChecking.Error,
+  )
+where
 
 import Juvix.Compiler.Backend.Geb.Data.Context as Context
 import Juvix.Compiler.Backend.Geb.Extra
 import Juvix.Compiler.Backend.Geb.Language
 import Juvix.Compiler.Backend.Geb.Pretty
+import Juvix.Compiler.Backend.Geb.Translation.FromSource.Analysis.TypeChecking.Data.Types
+import Juvix.Compiler.Backend.Geb.Translation.FromSource.Analysis.TypeChecking.Error
 
--- Context.empty Nothing
+check' :: TypedMorphism -> Either JuvixError Object
+check' = run . runError . check
 
-data InferenceEnv = InferenceEnv
-  { -- | The context of the term being inferred.
-    _inferenceEnvContext :: Context Object,
-    -- | A Geb object to help the inference process.
-    -- This is needed because some morphisms lack of type information.
-    -- For example, the case of the left injection of a coproduct.
-    _inferenceEnvTypeInfo :: Maybe Object
-  }
-  deriving stock (Show, Generic)
-
-makeLenses ''InferenceEnv
-
-defaultInferenceEnv :: InferenceEnv
-defaultInferenceEnv =
-  InferenceEnv
-    { _inferenceEnvContext = Context.empty,
-      _inferenceEnvTypeInfo = Nothing
-    }
-
-check ::
-  TypedMorphism ->
-  Either JuvixError Object
-check TypedMorphism {..} =
-  run . runError $
+check :: Members '[Error JuvixError] r => TypedMorphism -> Sem r Object
+check TypedMorphism {..} = do
+  infObj <-
     runReader
-      ( defaultInferenceEnv
-          { _inferenceEnvTypeInfo = Just _typedMorphismObject
-          }
-      )
-      (inferObject _typedMorphism)
+      (defaultInferenceEnv {_inferenceEnvTypeInfo = Just _typedMorphismObject})
+      (infer _typedMorphism)
+  if
+      | infObj == _typedMorphismObject -> return infObj
+      | otherwise ->
+          throw
+            . JuvixError
+            $ CheckingErrorTypeMismatch
+              TypeMismatch
+                { _typeMismatchMorphism = _typedMorphism,
+                  _typeMismatchExpected = _typedMorphismObject,
+                  _typeMismatchActual = infObj
+                }
 
-inferObject' :: Morphism -> Either JuvixError Object
-inferObject' m =
-  run . runError $ runReader defaultInferenceEnv (inferObject m)
+infer' :: Morphism -> Either JuvixError Object
+infer' = run . runError . runReader defaultInferenceEnv . infer
 
-inferObject ::
+infer ::
   Members '[Reader InferenceEnv, Error JuvixError] r =>
   Morphism ->
   Sem r Object
-inferObject = \case
+infer = \case
   MorphismUnit -> return ObjectTerminal
   MorphismInteger {} -> return ObjectInteger
-  MorphismAbsurd x -> inferObject x
+  MorphismAbsurd x -> infer x
   MorphismPair pair -> do
     let lType = pair ^. pairLeftType
         rType = pair ^. pairRightType
-    infLeftType <-
+    infObjLeft <-
       local
         (over inferenceEnvTypeInfo (const (Just lType)))
-        (inferObject (pair ^. pairLeft))
+        (infer (pair ^. pairLeft))
     unless
-      (infLeftType == lType)
+      (infObjLeft == lType)
       (errorInferObject "Type mismatch: left type on a pair")
     infRightType <-
       local
         (over inferenceEnvTypeInfo (const (Just rType)))
-        (inferObject (pair ^. pairRight))
+        (infer (pair ^. pairRight))
     unless
       (infRightType == rType)
       (errorInferObject "Type mismatch: right type on a pair")
     return $
       ObjectProduct
         Product
-          { _productLeft = infLeftType,
+          { _productLeft = infObjLeft,
             _productRight = infRightType
           }
   MorphismCase c -> do
@@ -81,14 +75,14 @@ inferObject = \case
     ty <-
       local
         (over inferenceEnvTypeInfo (const (Just leftType)))
-        (inferObject (p ^. firstValue))
+        (infer (p ^. firstValue))
     unless (ty == leftType) (errorInferObject "Type mismatch")
     return ty
   MorphismSecond p -> do
     let rightType = p ^. secondRightType
     ty <-
       local (over inferenceEnvTypeInfo (const (Just rightType))) $
-        inferObject (p ^. secondValue)
+        infer (p ^. secondValue)
     unless (ty == rightType) (errorInferObject "Type mismatch")
     return ty
   MorphismLambda l -> do
@@ -103,7 +97,7 @@ inferObject = \case
                 }
             )
         )
-        (inferObject (l ^. lambdaBody))
+        (infer (l ^. lambdaBody))
     unless
       (bTy == bodyTy)
       (errorInferObject "Type mismatch: body of the lambda")
@@ -120,13 +114,13 @@ inferObject = \case
     lTy <-
       local
         (over inferenceEnvTypeInfo (const (Just homTy)))
-        ( inferObject
+        ( infer
             (app ^. applicationLeft)
         )
     rTy <-
       local
         (over inferenceEnvTypeInfo (const (Just rightTy)))
-        (inferObject (app ^. applicationRight))
+        (infer (app ^. applicationRight))
     case lTy of
       ObjectHom h -> do
         unless
@@ -139,11 +133,11 @@ inferObject = \case
     aTy <-
       local
         (over inferenceEnvTypeInfo (const (Just outTy)))
-        (inferObject (op ^. binopLeft))
+        (infer (op ^. binopLeft))
     bTy <-
       local
         (over inferenceEnvTypeInfo (const (Just outTy)))
-        (inferObject (op ^. binopRight))
+        (infer (op ^. binopRight))
     unless
       (aTy == bTy)
       (errorInferObject "Arguments of a binary operation should have the same type")
@@ -175,7 +169,7 @@ inferObject = \case
         aTy <-
           local
             (over inferenceEnvTypeInfo (const (Just leftTy)))
-            (inferObject a)
+            (infer a)
         unless
           (aTy == leftTy)
           (errorInferObject "Type mismatch: left morphism")
@@ -194,7 +188,7 @@ inferObject = \case
         bTy <-
           local
             (over inferenceEnvTypeInfo (const (Just rightTy)))
-            (inferObject b)
+            (infer b)
         unless
           (bTy == rightTy)
           (errorInferObject "Type mismatch: right morphism")
@@ -203,7 +197,7 @@ inferObject = \case
       Nothing -> errorInferObject $ lackOfInformation <> " on a right morphism"
 
 errorInferObject :: Text -> a
-errorInferObject = error . ("inferObject: " <>)
+errorInferObject = error . ("infer: " <>)
 
 lackOfInformation :: Text
 lackOfInformation = "Not enough information to infer the type"

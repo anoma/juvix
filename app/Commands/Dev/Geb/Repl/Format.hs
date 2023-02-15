@@ -11,7 +11,6 @@ import Prettyprinter.Render.Terminal
 data ReplStyle
   = ReplPrompt
   | ReplName
-  | ReplType
   | ReplError
   | ReplIntro
   | ReplNormal
@@ -30,7 +29,6 @@ stylize :: ReplStyle -> AnsiStyle
 stylize = \case
   ReplPrompt -> color Blue
   ReplName -> color Green
-  ReplType -> color Yellow
   ReplError -> color Red
   ReplNormal -> color Blue
   ReplIntro -> bold
