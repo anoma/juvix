@@ -76,6 +76,7 @@ transformation =
     <|> symbol strUnrollRecursion $> UnrollRecursion
     <|> symbol strComputeTypeInfo $> ComputeTypeInfo
     <|> symbol strMatchToCase $> MatchToCase
+    <|> symbol strEtaExpandApps $> EtaExpandApps
 
 allStrings :: [Text]
 allStrings =
@@ -88,7 +89,8 @@ allStrings =
     strConvertBuiltinTypes,
     strUnrollRecursion,
     strComputeTypeInfo,
-    strMatchToCase
+    strMatchToCase,
+    strEtaExpandApps
   ]
 
 strLifting :: Text
