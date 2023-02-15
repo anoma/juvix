@@ -1,7 +1,7 @@
 module Core.Eval.Base where
 
-import Data.HashMap.Strict qualified as HashMap
 import Base
+import Data.HashMap.Strict qualified as HashMap
 import Data.Text.IO qualified as TIO
 import Juvix.Compiler.Core.Data.InfoTable
 import Juvix.Compiler.Core.Error
