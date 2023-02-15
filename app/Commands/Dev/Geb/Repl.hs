@@ -37,10 +37,12 @@ replPath :: Path Abs File
 replPath = $(mkAbsFile "/repl.geb")
 
 runCommand :: (Members '[Embed IO, App] r) => GebReplOptions -> Sem r ()
-runCommand _opts = do
+runCommand replOpts = do
   root <- askPkgDir
   buildDir <- askBuildDir
   package <- askPackage
+  invokeDir <- askInvokeDir
+  globalOptions <- askGlobalOptions
   let getReplEntryPoint :: SomeBase File -> Repl EntryPoint
       getReplEntryPoint inputFile = do
         gopts <- State.gets (^. replStateGlobalOptions)
@@ -58,11 +60,9 @@ runCommand _opts = do
               _entryPointGenericOptions = project gopts,
               _entryPointStdin = Nothing
             }
-  invokeDir <- askInvokeDir
-  globalOptions <- askGlobalOptions
   embed
     ( State.evalStateT
-        (replAction getReplEntryPoint)
+        (replAction replOpts getReplEntryPoint)
         ( ReplState
             { _replStateContext = Nothing,
               _replStateGlobalOptions = globalOptions,
@@ -113,7 +113,7 @@ inferObject gebMorphism = Repline.dontCrash $ do
       case Geb.inferObject' morphism of
         Right obj -> renderOut (Geb.ppOut Geb.defaultEvaluatorOptions obj)
         Left err -> printError err
-    Right _ -> liftIO . putStrLn $ "No object inferred for a Geb object"
+    Right _ -> renderOutNormal "No object inferred for a Geb object"
 
 checkTypedMorphism :: String -> Repl ()
 checkTypedMorphism gebMorphism = Repline.dontCrash $ do
@@ -185,13 +185,13 @@ tabComplete replEntryPoint =
     (Repline.wordCompleter (optsCompleter replEntryPoint))
     defaultMatcher
 
-replAction :: ReplEntryPoint -> ReplS ()
-replAction replEntryPoint =
+replAction :: GebReplOptions -> ReplEntryPoint -> ReplS ()
+replAction replOpts replEntryPoint =
   Repline.evalReplOpts
     Repline.ReplOpts
       { prefix,
         multilineCommand,
-        initialiser = welcomeMsg,
+        initialiser = initSession replOpts,
         finaliser = endSession,
         command = runReplCommand,
         options = options replEntryPoint,
@@ -216,28 +216,29 @@ noFileLoadedMsg =
       "No file loaded. Load a file using the `:load FILE` command."
       <> P.line
 
-welcomeMsg :: Repl ()
+initSession :: GebReplOptions -> Repl ()
+initSession replOpts
+  | replOpts ^. gebReplOptionsSilent = return ()
+  | otherwise = renderOut welcomeMsg
+
+welcomeMsg :: ReplMessageDoc
 welcomeMsg =
-  renderOut
-    . ReplMessageDoc
-    $ P.annotate ReplIntro "Welcome to the Juvix Geb REPL!"
+  ReplMessageDoc $
+    P.annotate ReplIntro "Welcome to the Juvix Geb REPL!"
       <> P.line
       <> normal ("Juvix v" <> versionTag <> ": https://juvix.org.")
       <> P.line
       <> normal ("Type :help for help.")
       <> P.line
 
-restartText :: Text
-restartText = "REPL restarted"
-
 replPromptText :: Repl String
-replPromptText = replString . ReplMessageDoc $ P.annotate ReplPrompt "geb> "
+replPromptText = do
+  r <- replText . ReplMessageDoc $ P.annotate ReplPrompt "geb> "
+  return (unpack r)
 
 helpText :: String -> Repl ()
 helpText _ =
-  renderOut
-    . ReplMessageDoc
-    . normal
+  renderOutNormal
     . pack
     $ unlines
       [ "EXPRESSION              Evaluate a Geb morphism",
@@ -266,16 +267,10 @@ endSession = return Repline.Exit
 printRoot :: String -> Repl ()
 printRoot _ = do
   r <- State.gets (^. replStateInvokeDir)
-  renderOut
-    . ReplMessageDoc
-    . normal
-    $ pack (toFilePath r)
+  renderOutNormal $ pack (toFilePath r)
 
 displayVersion :: String -> Repl ()
-displayVersion _ =
-  renderOut
-    . ReplMessageDoc
-    $ normal versionTag
+displayVersion _ = renderOutNormal versionTag
 
 replMakeAbsolute :: SomeBase b -> Repl (Path Abs b)
 replMakeAbsolute = \case
@@ -284,11 +279,11 @@ replMakeAbsolute = \case
     invokeDir <- State.gets (^. replStateInvokeDir)
     return (invokeDir <//> r)
 
-replString :: (P.HasAnsiBackend a, P.HasTextBackend a) => a -> Repl String
-replString t = do
+replText :: (P.HasAnsiBackend a, P.HasTextBackend a) => a -> Repl Text
+replText t = do
   opts <- State.gets (^. replStateGlobalOptions)
   hasAnsi <- liftIO (Ansi.hSupportsANSIColor stdout)
-  return . unpack $ P.toAnsiText (not (opts ^. globalNoColors) && hasAnsi) t
+  return $ P.toAnsiText (not (opts ^. globalNoColors) && hasAnsi) t
 
 render' :: (P.HasAnsiBackend a, P.HasTextBackend a) => a -> Repl ()
 render' t = do
@@ -299,15 +294,25 @@ render' t = do
 renderOut :: (P.HasAnsiBackend a, P.HasTextBackend a) => a -> Repl ()
 renderOut t = render' t >> liftIO (putStrLn "")
 
+renderOutNormal :: Text -> Repl ()
+renderOutNormal = renderOut . ReplMessageDoc . normal
+
+-- TODO: use the color scheme assigned for ReplError
 printError :: JuvixError -> Repl ()
 printError e = do
   opts <- State.gets (^. replStateGlobalOptions)
   hasAnsi <- liftIO (Ansi.hSupportsANSIColor stderr)
-  liftIO
-    . hPutStrLn stderr
-    . run
-    . runReader (project' @GenericOptions opts)
-    $ Error.render (not (opts ^. globalNoColors) && hasAnsi) False e
+  let useAnsi = (not (opts ^. globalNoColors) && hasAnsi)
+  errorText <-
+    replText . ReplMessageDoc
+      $ P.annotate
+        ReplError
+      $ pretty
+        ( run
+            . runReader (project' @GenericOptions opts)
+            $ Error.render useAnsi False e
+        )
+  liftIO $ hPutStrLn stderr errorText
 
 printEvalResult :: Either JuvixError Geb.RunEvalResult -> Repl ()
 printEvalResult = \case

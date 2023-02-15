@@ -1,4 +1,8 @@
-module Commands.Dev.Geb.Repl.Format where
+module Commands.Dev.Geb.Repl.Format
+  ( module Commands.Dev.Geb.Repl.Format,
+    pretty,
+  )
+where
 
 import Juvix.Prelude
 import Juvix.Prelude.Pretty
