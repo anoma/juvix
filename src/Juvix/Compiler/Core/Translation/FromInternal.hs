@@ -762,9 +762,10 @@ goApplication a = do
             (arg1 : arg2 : xs) ->
               return $
                 mkApps'
-                  (mkConstr'
-                    (BuiltinTag TagBind)
-                    [arg1, mkLambda' (mkTypeConstr' ioSym []) (shift 1 arg2)])
+                  ( mkConstr'
+                      (BuiltinTag TagBind)
+                      [arg1, mkLambda' (mkTypeConstr' ioSym []) (shift 1 arg2)]
+                  )
                   xs
             _ -> error "internal to core: >> must be called with 2 arguments"
         Just Internal.BuiltinIOReadline -> app

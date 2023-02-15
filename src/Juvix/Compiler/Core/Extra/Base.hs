@@ -273,7 +273,7 @@ unfoldLambdas' :: Node -> (Int, Node)
 unfoldLambdas' = first length . unfoldLambdas
 
 lambdaTypes :: Node -> [Type]
-lambdaTypes = map (\LambdaLhs{..} -> _lambdaLhsBinder ^. binderType) . fst . unfoldLambdas
+lambdaTypes = map (\LambdaLhs {..} -> _lambdaLhsBinder ^. binderType) . fst . unfoldLambdas
 
 isType :: Node -> Bool
 isType = \case

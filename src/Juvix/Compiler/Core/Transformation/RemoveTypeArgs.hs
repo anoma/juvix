@@ -7,8 +7,8 @@ where
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Core.Data.BinderList qualified as BL
 import Juvix.Compiler.Core.Extra
-import Juvix.Compiler.Core.Transformation.Base
 import Juvix.Compiler.Core.Pretty
+import Juvix.Compiler.Core.Transformation.Base
 
 convertNode :: InfoTable -> Node -> Node
 convertNode tab = convert mempty
