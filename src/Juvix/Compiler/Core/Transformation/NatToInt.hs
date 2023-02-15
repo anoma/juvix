@@ -25,14 +25,16 @@ convertNode tab = convert [] 0
         Recur' (levels, convertIdentApp node (\g -> g _identInfo l r) _identSymbol)
       NApp (App _ (NIdt (Ident {..})) l) ->
         Recur'
-          (levels,
+          ( levels,
             convertIdentApp
               node
-              (\g ->
-                mkLet' mkTypeInteger' l $
-                  mkLambda' mkTypeInteger' $
-                  g _identInfo (mkVar' 1) (mkVar' 0))
-              _identSymbol)
+              ( \g ->
+                  mkLet' mkTypeInteger' l $
+                    mkLambda' mkTypeInteger' $
+                      g _identInfo (mkVar' 1) (mkVar' 0)
+              )
+              _identSymbol
+          )
       NIdt (Ident {..})
         | Just _identSymbol == tab ^. infoIntToNat ->
             End' (mkLambda' mkTypeInteger' (mkVar' 0))
