@@ -167,9 +167,12 @@ developBeta = umap go
       NApp (App _ (NLam (Lambda {..})) arg) -> subst arg _lambdaBody
       _ -> n
 
-etaExpand :: Int -> Node -> Node
-etaExpand 0 n = n
-etaExpand k n = mkLambdasN k (mkApps' (shift k n) (map mkVar' (reverse [0 .. k - 1])))
+etaExpand :: [Type] -> Node -> Node
+etaExpand [] n = n
+etaExpand argtys n =
+  mkLambdas' argtys (mkApps' (shift k n) (map mkVar' (reverse [0 .. k - 1])))
+  where
+    k = length argtys
 
 convertClosures :: Node -> Node
 convertClosures = umap go
@@ -205,3 +208,19 @@ patternType = \case
   PatWildcard w -> getInfoType (w ^. patternWildcardInfo)
   PatBinder b -> b ^. patternBinder . binderType
   PatConstr c -> getInfoType (c ^. patternConstrInfo)
+
+builtinOpArgTypes :: BuiltinOp -> [Type]
+builtinOpArgTypes = \case
+  OpIntAdd -> [mkTypeInteger', mkTypeInteger']
+  OpIntSub -> [mkTypeInteger', mkTypeInteger']
+  OpIntMul -> [mkTypeInteger', mkTypeInteger']
+  OpIntDiv -> [mkTypeInteger', mkTypeInteger']
+  OpIntMod -> [mkTypeInteger', mkTypeInteger']
+  OpIntLt -> [mkTypeInteger', mkTypeInteger']
+  OpIntLe -> [mkTypeInteger', mkTypeInteger']
+  OpEq -> [mkDynamic', mkDynamic']
+  OpShow -> [mkDynamic']
+  OpStrConcat -> [mkTypeString', mkTypeString']
+  OpStrToInt -> [mkTypeString']
+  OpTrace -> [mkDynamic', mkDynamic']
+  OpFail -> [mkTypeString']
