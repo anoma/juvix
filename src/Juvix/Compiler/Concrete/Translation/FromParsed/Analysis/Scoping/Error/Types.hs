@@ -279,7 +279,6 @@ instance ToGenericError MultipleExportConflict where
 
 data NotInScope = NotInScope
   { _notInScopeSymbol :: Symbol,
-    _notInScopeLocal :: LocalVars,
     _notInScopeScope :: Scope
   }
   deriving stock (Show)
@@ -318,8 +317,7 @@ instance ToGenericError NotInScope where
                 ]
           candidates :: HashSet Text
           candidates =
-            HashSet.fromList (map (^. symbolText) (HashMap.keys (_notInScopeLocal ^. localVars)))
-              <> HashSet.fromList (map (^. symbolText) (HashMap.keys (_notInScopeScope ^. scopeSymbols)))
+              HashSet.fromList (map (^. symbolText) (HashMap.keys (_notInScopeScope ^. scopeSymbols)))
 
 instance HasLoc NotInScope where
   getLoc = getLoc . (^. notInScopeSymbol)

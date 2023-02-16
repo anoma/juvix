@@ -75,7 +75,7 @@ scopeCheckExpression tab scope as = mapError (JuvixError @ScoperError) $ do
       ( runReader iniScopeParameters $
           evalState iniScoperState $
             evalState scope $
-              localScope $
+              withLocalScope $
                 checkParseExpressionAtoms as
       )
   where
@@ -87,7 +87,7 @@ scopeCheckExpression tab scope as = mapError (JuvixError @ScoperError) $ do
         }
 
 checkParseExpressionAtoms' ::
-  (Members '[Error ScoperError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, NameIdGen] r) =>
+  (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
   ExpressionAtoms 'Parsed ->
   Sem r Expression
 checkParseExpressionAtoms' = checkExpressionAtoms >=> parseExpressionAtoms
@@ -168,6 +168,12 @@ bindSymbolOf k e s = do
   bindReservedSymbol s' (e (set S.nameConcrete () s'))
   registerName (S.unqualifiedSymbol s')
   return s'
+
+bindVariableSymbol ::
+  (Members '[Error ScoperError, NameIdGen, State Scope, InfoTableBuilder] r) =>
+  Symbol ->
+  Sem r S.Symbol
+bindVariableSymbol = bindSymbolOf S.KNameLocal EntryVariable
 
 bindFunctionSymbol ::
   (Members '[Error ScoperError, NameIdGen, State Scope, InfoTableBuilder] r) =>
@@ -347,6 +353,9 @@ entryToScopedIden name e = do
       ScopedConstructor (set (constructorRefName . S.nameConcrete) name ref)
     EntryFunction ref ->
       ScopedFunction (set (functionRefName . S.nameConcrete) name ref)
+    EntryVariable v -> case name of
+      NameQualified {} -> impossible
+      NameUnqualified uname -> ScopedVar (set S.nameConcrete uname v)
     EntryModule {} -> impossible
 
 -- | We gather all symbols which have been defined or marked to be public in the given scope.
@@ -404,7 +413,7 @@ checkOperatorSyntaxDef s@OperatorSyntaxDef {..} = do
         (\s' -> throw (ErrDuplicateFixity (DuplicateFixity s' s)))
 
 checkTypeSignature ::
-  (Members '[Error ScoperError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, NameIdGen] r) =>
+  (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
   TypeSignature 'Parsed ->
   Sem r (TypeSignature 'Scoped)
 checkTypeSignature TypeSignature {..} = do
@@ -415,7 +424,7 @@ checkTypeSignature TypeSignature {..} = do
   registerFunction' TypeSignature {_sigName = sigName', _sigType = sigType', _sigDoc = sigDoc', _sigBody = sigBody', ..}
 
 checkConstructorDef ::
-  (Members '[Error ScoperError, Reader LocalVars, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
+  (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
   InductiveConstructorDef 'Parsed ->
   Sem r (InductiveConstructorDef 'Scoped)
 checkConstructorDef InductiveConstructorDef {..} = do
@@ -432,7 +441,7 @@ checkConstructorDef InductiveConstructorDef {..} = do
 
 withParams ::
   forall r a.
-  (Members '[Reader LocalVars, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
+  (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
   [InductiveParameters 'Parsed] ->
   ([InductiveParameters 'Scoped] -> Sem r a) ->
   Sem r a
@@ -465,12 +474,12 @@ withParams xs a = go [] [] xs
                       )
                 | otherwise -> do
                     nm' <- freshVariable nm
-                    withBindLocalVariable (LocalVariable nm') $
+                    withBindLocalVariable nm' $
                       go' (nm' : names') (nm : usedNames) names
 
 checkInductiveDef ::
   forall r.
-  (Members '[Error ScoperError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, NameIdGen] r) =>
+  (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
   InductiveDef 'Parsed ->
   Sem r (InductiveDef 'Scoped)
 checkInductiveDef ty@InductiveDef {..} = do
@@ -494,12 +503,14 @@ checkInductiveDef ty@InductiveDef {..} = do
 createExportsTable :: ExportInfo -> HashSet NameId
 createExportsTable ei = foldr (HashSet.insert . getNameId) HashSet.empty (HashMap.elems (ei ^. exportSymbols))
   where
+    getNameId :: SymbolEntry -> NameId
     getNameId = \case
       EntryAxiom r -> getNameRefId (r ^. axiomRefName)
       EntryInductive r -> getNameRefId (r ^. inductiveRefName)
       EntryFunction r -> getNameRefId (r ^. functionRefName)
       EntryConstructor r -> getNameRefId (r ^. constructorRefName)
       EntryModule r -> getModuleRefNameId r
+      EntryVariable v -> v ^. S.nameId
 
 checkTopModules ::
   forall r.
@@ -555,7 +566,7 @@ checkTopModule m@(Module _moduleKw path doc body) = do
     checkedModule = do
       (s, (m', p)) <- runState iniScope $ do
         path' <- freshTopModulePath
-        localScope $ do
+        withLocalScope $ do
           (_moduleExportInfo, body') <- checkModuleBody body
           doc' <- mapM checkJudoc doc
           let _moduleRefModule =
@@ -581,7 +592,7 @@ withLocalScope ma = do
 
 checkModuleBody ::
   forall r.
-  (Members '[Error ScoperError, State Scope, Reader ScopeParameters, State ScoperState, Reader LocalVars, InfoTableBuilder, NameIdGen] r) =>
+  (Members '[Error ScoperError, State Scope, Reader ScopeParameters, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
   [Statement 'Parsed] ->
   Sem r (ExportInfo, [Statement 'Scoped])
 checkModuleBody body = do
@@ -592,7 +603,7 @@ checkModuleBody body = do
 
 checkLocalModule ::
   forall r.
-  (Members '[Error ScoperError, State Scope, Reader ScopeParameters, State ScoperState, Reader LocalVars, InfoTableBuilder, NameIdGen] r) =>
+  (Members '[Error ScoperError, State Scope, Reader ScopeParameters, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
   Module 'Parsed 'ModuleLocal ->
   Sem r (Module 'Scoped 'ModuleLocal)
 checkLocalModule Module {..} = do
@@ -678,7 +689,7 @@ getExportInfo modId = do
     _ :&: ent -> ent ^. moduleExportInfo
 
 checkOpenImportModule ::
-  (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, NameIdGen] r) =>
+  (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
   OpenModule 'Parsed ->
   Sem r (OpenModule 'Scoped)
 checkOpenImportModule op
@@ -693,7 +704,7 @@ checkOpenImportModule op
 
 checkOpenModuleNoImport ::
   forall r.
-  (Members '[Error ScoperError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, NameIdGen] r) =>
+  (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
   OpenModule 'Parsed ->
   Sem r (OpenModule 'Scoped)
 checkOpenModuleNoImport OpenModule {..}
@@ -749,7 +760,7 @@ checkOpenModuleNoImport OpenModule {..}
 
 checkOpenModule ::
   forall r.
-  (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, NameIdGen] r) =>
+  (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
   OpenModule 'Parsed ->
   Sem r (OpenModule 'Scoped)
 checkOpenModule op
@@ -758,7 +769,7 @@ checkOpenModule op
 
 checkFunctionClause ::
   forall r.
-  (Members '[Error ScoperError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, NameIdGen] r) =>
+  (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
   FunctionClause 'Parsed ->
   Sem r (FunctionClause 'Scoped)
 checkFunctionClause clause@FunctionClause {..} = do
@@ -787,21 +798,18 @@ checkFunctionClause clause@FunctionClause {..} = do
         err :: Sem r a
         err = throw (ErrLacksTypeSig (LacksTypeSig clause))
 
-localScope :: forall r a. Sem (Reader LocalVars : r) a -> Sem r a
-localScope = runReader (LocalVars mempty)
-
 checkAxiomDef ::
   (Members '[InfoTableBuilder, Error ScoperError, State Scope, State ScoperState, NameIdGen] r) =>
   AxiomDef 'Parsed ->
   Sem r (AxiomDef 'Scoped)
 checkAxiomDef AxiomDef {..} = do
-  axiomType' <- localScope (checkParseExpressionAtoms _axiomType)
+  axiomType' <- withLocalScope (checkParseExpressionAtoms _axiomType)
   axiomName' <- bindAxiomSymbol _axiomName
-  axiomDoc' <- localScope (mapM checkJudoc _axiomDoc)
+  axiomDoc' <- withLocalScope (mapM checkJudoc _axiomDoc)
   registerAxiom' AxiomDef {_axiomName = axiomName', _axiomType = axiomType', _axiomDoc = axiomDoc', ..}
 
 checkCompile ::
-  (Members '[InfoTableBuilder, Error ScoperError, State Scope, Reader LocalVars, State ScoperState] r) =>
+  (Members '[InfoTableBuilder, Error ScoperError, State Scope, State ScoperState] r) =>
   Compile 'Parsed ->
   Sem r (Compile 'Scoped)
 checkCompile c@Compile {..} = do
@@ -853,18 +861,25 @@ checkBackendItems sym (b : bs) bset =
           | otherwise -> checkBackendItems sym bs (HashSet.insert cBackend bset)
 
 checkCompileName ::
-  (Members '[Error ScoperError, State Scope, Reader LocalVars, State ScoperState, InfoTableBuilder] r) =>
+  (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder] r) =>
   Compile 'Parsed ->
   Sem r S.Symbol
 checkCompileName Compile {..} = do
   let sym :: Symbol = _compileName
       name :: Name = NameUnqualified sym
   scope <- get
-  locals <- ask
   entries <- lookupQualifiedSymbol ([], sym)
   case filter S.canBeCompiled entries of
     [] -> case entries of
-      [] -> throw (ErrSymNotInScope (NotInScope sym locals scope))
+      [] ->
+        throw
+          ( ErrSymNotInScope
+              ( NotInScope
+                  { _notInScopeSymbol = sym,
+                    _notInScopeScope = scope
+                  }
+              )
+          )
       (e : _) ->
         throw
           ( ErrWrongKindExpressionCompileBlock
@@ -894,57 +909,33 @@ checkEval ::
   (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
   Eval 'Parsed ->
   Sem r (Eval 'Scoped)
-checkEval (Eval s) = Eval <$> localScope (checkParseExpressionAtoms s)
+checkEval (Eval s) = Eval <$> withLocalScope (checkParseExpressionAtoms s)
 
 checkPrint ::
   (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
   Print 'Parsed ->
   Sem r (Print 'Scoped)
-checkPrint (Print s) = Print <$> localScope (checkParseExpressionAtoms s)
+checkPrint (Print s) = Print <$> withLocalScope (checkParseExpressionAtoms s)
 
 checkFunction ::
   forall r.
-  (Members '[Error ScoperError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, NameIdGen] r) =>
+  (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
   Function 'Parsed ->
   Sem r (Function 'Scoped)
-checkFunction Function {..} = do
-  funParameters' <- checkParams
-  let scoped = foldr go id (funParameters' ^. paramNames)
-  funReturn' <- scoped (checkParseExpressionAtoms _funReturn)
-  return
-    Function
-      { _funParameters = funParameters',
-        _funReturn = funReturn',
-        _funKw
-      }
-  where
-    go :: Maybe (SymbolType 'Scoped) -> (Sem r a -> Sem r a) -> (Sem r a -> Sem r a)
-    go param acc = case param of
-      Nothing -> acc
-      Just s -> withBindLocalVariable (LocalVariable s) . acc
-    checkParams :: Sem r (FunctionParameters 'Scoped)
-    checkParams = do
-      paramType' <- checkParseExpressionAtoms _paramType
-      paramNames' <- checkParamNames
-      return
-        FunctionParameters
-          { _paramNames = paramNames',
-            _paramImplicit = _paramImplicit,
-            _paramType = paramType'
-          }
-      where
-        FunctionParameters {..} = _funParameters
-        checkParamNames :: Sem r (NonEmpty (Maybe S.Symbol))
-        checkParamNames =
-          forM
-            _paramNames
-            ( \case
-                Nothing -> return Nothing
-                Just s -> Just <$> freshVariable s
-            )
+checkFunction f = do
+  _paramType <- checkParseExpressionAtoms (f ^. funParameters . paramType)
+  withLocalScope $ do
+    _paramNames <- forM (f ^. funParameters . paramNames) $ \case
+      Nothing -> return Nothing
+      Just p -> Just <$> bindVariableSymbol p
+    _funReturn <- checkParseExpressionAtoms (f ^. funReturn)
+    let _paramImplicit =  f ^. funParameters . paramImplicit
+        _funParameters = FunctionParameters {..}
+        _funKw = f ^. funKw
+    return Function {..}
 
 checkLetClause ::
-  (Members '[Error ScoperError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, NameIdGen] r) =>
+  (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
   LetClause 'Parsed ->
   Sem r (LetClause 'Scoped)
 checkLetClause lc = case lc of
@@ -953,7 +944,7 @@ checkLetClause lc = case lc of
 
 checkLetBlock ::
   forall r.
-  Members '[Error ScoperError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, NameIdGen] r =>
+  Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r =>
   LetBlock 'Parsed ->
   Sem r (LetBlock 'Scoped)
 checkLetBlock LetBlock {..} =
@@ -973,7 +964,7 @@ checkLetBlock LetBlock {..} =
 
 checkCaseBranch ::
   forall r.
-  Members '[Error ScoperError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, NameIdGen] r =>
+  Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r =>
   CaseBranch 'Parsed ->
   Sem r (CaseBranch 'Scoped)
 checkCaseBranch CaseBranch {..} = do
@@ -994,7 +985,7 @@ checkCaseBranch CaseBranch {..} = do
         (throw (ErrCaseBranchImplicitPattern (CaseBranchImplicitPattern p)))
 
 checkCase ::
-  Members '[Error ScoperError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, NameIdGen] r =>
+  Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r =>
   Case 'Parsed ->
   Sem r (Case 'Scoped)
 checkCase Case {..} = do
@@ -1009,13 +1000,13 @@ checkCase Case {..} = do
       }
 
 checkLambda ::
-  (Members '[Error ScoperError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, NameIdGen] r) =>
+  (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
   Lambda 'Parsed ->
   Sem r (Lambda 'Scoped)
 checkLambda Lambda {..} = Lambda _lambdaKw <$> mapM checkLambdaClause _lambdaClauses
 
 checkLambdaClause ::
-  (Members '[Error ScoperError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, NameIdGen] r) =>
+  (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
   LambdaClause 'Parsed ->
   Sem r (LambdaClause 'Scoped)
 checkLambdaClause LambdaClause {..} = do
@@ -1033,7 +1024,7 @@ scopedVar ::
   LocalVariable ->
   Symbol ->
   Sem r S.Symbol
-scopedVar (LocalVariable s) n = do
+scopedVar s n = do
   let scoped = set S.nameConcrete n s
   registerName (S.unqualifiedSymbol scoped)
   return scoped
@@ -1049,7 +1040,7 @@ scopedFunction (FunctionRef' fref) n = do
   return (FunctionRef' scoped)
 
 checkUnqualified ::
-  (Members '[Error ScoperError, State Scope, Reader LocalVars, State ScoperState, InfoTableBuilder] r) =>
+  (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder] r) =>
   Symbol ->
   Sem r ScopedIden
 checkUnqualified s = do
@@ -1115,7 +1106,7 @@ checkPatternBinding (PatternBinding n p) = do
     else return $ set patternArgName (Just n') p'
 
 withBindCurrentGroup ::
-  (Members '[State Scope, Reader LocalVars] r) =>
+  (Members '[State Scope] r) =>
   Sem r a ->
   Sem r a
 withBindCurrentGroup ma = do
@@ -1123,18 +1114,15 @@ withBindCurrentGroup ma = do
   modify (set scopeBindGroup mempty) -- empties the group
   local (over localVars (HashMap.union grp)) ma
 
-addLocalVars :: [LocalVariable] -> LocalVars -> LocalVars
-addLocalVars lv = over localVars (flip (foldr insertVar) lv)
-  where
-    insertVar :: LocalVariable -> HashMap Symbol LocalVariable -> HashMap Symbol LocalVariable
-    insertVar v = HashMap.insert (v ^. variableName . S.nameConcrete) v
+-- addLocalVars :: [LocalVariable] -> LocalVars -> LocalVars
+-- addLocalVars lv = over localVars (flip (foldr insertVar) lv)
+--   where
+--     insertVar :: LocalVariable -> HashMap Symbol LocalVariable -> HashMap Symbol LocalVariable
+--     insertVar v = HashMap.insert (v ^. variableName . S.nameConcrete) v
 
-withBindLocalVariable ::
-  (Members '[Reader LocalVars] r) =>
-  LocalVariable ->
-  Sem r a ->
-  Sem r a
-withBindLocalVariable var = local (addLocalVars [var])
+-- bindLocalVariable ::
+--   (Members '[State Scope] r) => LocalVariable -> Sem r ()
+-- bindLocalVariable var = local (addLocalVars [var])
 
 -- | Binds a local variable in a bind group, i.e. a group of pattern.
 groupBindLocalVariable ::
@@ -1162,7 +1150,7 @@ groupBindLocalVariable s = do
     addToGroup :: Sem r S.Symbol
     addToGroup = do
       n <- freshVariable s
-      modify (over scopeBindGroup (HashMap.insert s (LocalVariable n)))
+      modify (over scopeBindGroup (HashMap.insert s n))
       return n
 
 checkPatternAtoms ::
@@ -1190,7 +1178,7 @@ checkPatternAtom = \case
   PatternAtomAt p -> PatternAtomAt <$> checkPatternBinding p
 
 checkName ::
-  (Members '[Error ScoperError, State Scope, Reader LocalVars, State ScoperState, InfoTableBuilder] r) =>
+  (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder] r) =>
   Name ->
   Sem r ScopedIden
 checkName n = case n of
@@ -1198,7 +1186,7 @@ checkName n = case n of
   NameUnqualified s -> checkUnqualified s
 
 checkExpressionAtom ::
-  (Members '[Error ScoperError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, NameIdGen] r) =>
+  (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
   ExpressionAtom 'Parsed ->
   Sem r (ExpressionAtom 'Scoped)
 checkExpressionAtom e = case e of
@@ -1227,7 +1215,7 @@ checkHole h = do
       }
 
 checkParens ::
-  (Members '[Error ScoperError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, NameIdGen] r) =>
+  (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
   ExpressionAtoms 'Parsed ->
   Sem r Expression
 checkParens e@(ExpressionAtoms as _) = case as of
@@ -1240,20 +1228,20 @@ checkParens e@(ExpressionAtoms as _) = case as of
 
 checkExpressionAtoms ::
   forall r.
-  (Members '[Error ScoperError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, NameIdGen] r) =>
+  (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
   ExpressionAtoms 'Parsed ->
   Sem r (ExpressionAtoms 'Scoped)
 checkExpressionAtoms (ExpressionAtoms l i) = do
   (`ExpressionAtoms` i) <$> mapM checkExpressionAtom l
 
 checkJudoc ::
-  (Members '[Error ScoperError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, NameIdGen] r) =>
+  (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
   Judoc 'Parsed ->
   Sem r (Judoc 'Scoped)
 checkJudoc (Judoc atoms) = Judoc <$> mapM checkJudocBlock atoms
 
 checkJudocBlock ::
-  (Members '[Error ScoperError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, NameIdGen] r) =>
+  (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
   JudocBlock 'Parsed ->
   Sem r (JudocBlock 'Scoped)
 checkJudocBlock = \case
@@ -1261,13 +1249,13 @@ checkJudocBlock = \case
   JudocExample e -> JudocExample <$> traverseOf exampleExpression checkParseExpressionAtoms e
 
 checkJudocLine ::
-  (Members '[Error ScoperError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, NameIdGen] r) =>
+  (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
   JudocParagraphLine 'Parsed ->
   Sem r (JudocParagraphLine 'Scoped)
 checkJudocLine (JudocParagraphLine atoms) = JudocParagraphLine <$> mapM (mapM checkJudocAtom) atoms
 
 checkJudocAtom ::
-  (Members '[Error ScoperError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, NameIdGen] r) =>
+  (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
   JudocAtom 'Parsed ->
   Sem r (JudocAtom 'Scoped)
 checkJudocAtom = \case
@@ -1276,7 +1264,7 @@ checkJudocAtom = \case
 
 checkParseExpressionAtoms ::
   forall r.
-  (Members '[Error ScoperError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, NameIdGen] r) =>
+  (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
   ExpressionAtoms 'Parsed ->
   Sem r Expression
 checkParseExpressionAtoms = checkExpressionAtoms >=> parseExpressionAtoms
@@ -1288,7 +1276,7 @@ checkParsePatternAtom ::
 checkParsePatternAtom = checkPatternAtom >=> parsePatternAtom
 
 checkStatement ::
-  (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, NameIdGen] r) =>
+  (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
   Statement 'Parsed ->
   Sem r (Statement 'Scoped)
 checkStatement s = case s of

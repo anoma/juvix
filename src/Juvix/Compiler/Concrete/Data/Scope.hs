@@ -9,15 +9,12 @@ import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Language
 import Juvix.Prelude
 
-newtype LocalVariable = LocalVariable
-  { _variableName :: S.Symbol
-  }
-  deriving newtype (Show, Eq, Hashable)
+type LocalVariable = S.Symbol
 
-newtype LocalVars = LocalVars
-  { _localVars :: HashMap Symbol LocalVariable
-  }
-  deriving stock (Show)
+-- newtype LocalVars = LocalVars
+--   { _localVars :: HashMap Symbol LocalVariable
+--   }
+--   deriving stock (Show)
 
 newtype SymbolInfo = SymbolInfo
   { -- | This map must have at least one entry. If there are more than one
@@ -27,7 +24,7 @@ newtype SymbolInfo = SymbolInfo
   }
   deriving newtype (Show, Semigroup, Monoid)
 
-mkModuleRef' :: (SingI t) => ModuleRef'' 'S.NotConcrete t -> ModuleRef' 'S.NotConcrete
+mkModuleRef' :: SingI t => ModuleRef'' 'S.NotConcrete t -> ModuleRef' 'S.NotConcrete
 mkModuleRef' m = ModuleRef' (sing :&: m)
 
 data Scope = Scope
@@ -40,15 +37,12 @@ data Scope = Scope
     -- symbol with a different location but we may want the location of the
     -- original symbol
     _scopeLocalSymbols :: HashMap Symbol S.Symbol,
-    _scopeBindGroup :: HashMap Symbol LocalVariable,
     _scopeCompilationRules :: HashMap Symbol CompileInfo
   }
   deriving stock (Show)
 
 makeLenses ''ExportInfo
-makeLenses ''LocalVariable
 makeLenses ''SymbolInfo
-makeLenses ''LocalVars
 makeLenses ''Scope
 
 newtype ModulesCache = ModulesCache
@@ -81,6 +75,5 @@ emptyScope absPath =
       _scopeSymbols = mempty,
       _scopeTopModules = mempty,
       _scopeLocalSymbols = mempty,
-      _scopeBindGroup = mempty,
       _scopeCompilationRules = mempty
     }
