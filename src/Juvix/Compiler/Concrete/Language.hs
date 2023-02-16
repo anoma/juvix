@@ -1296,44 +1296,76 @@ instance
 
 --------------------------------------------------------------------------------
 
-instance IsApe Application Expression where
+data ApeHelper
+  = HelperExpression Expression
+  | HelperFunction (Function 'Scoped)
+  | HelperFunctionParams (FunctionParameters 'Scoped)
+  | HelperFunctionArrow KeywordRef
+
+instance IsApe Application ApeHelper where
   toApe (Application l r) =
     ApeApp
       Ape.App
-        { _appLeft = toApe l,
-          _appRight = toApe r
+        { _appLeft = toApe (HelperExpression l),
+          _appRight = toApe (HelperExpression r)
         }
 
-instance IsApe InfixApplication Expression where
+instance IsApe InfixApplication ApeHelper where
   toApe i@(InfixApplication l op r) =
     ApeInfix
       Infix
         { _infixFixity = getFixity i,
-          _infixLeft = toApe l,
-          _infixRight = toApe r,
+          _infixLeft = toApe (HelperExpression l),
+          _infixRight = toApe (HelperExpression r),
           _infixIsComma = isDelimiterStr (prettyText (identifierName op ^. S.nameConcrete)),
-          _infixOp = ExpressionIdentifier op
+          _infixOp = HelperExpression (ExpressionIdentifier op)
         }
 
-instance IsApe PostfixApplication Expression where
+instance IsApe PostfixApplication ApeHelper where
   toApe p@(PostfixApplication l op) =
     ApePostfix
       Postfix
         { _postfixFixity = getFixity p,
-          _postfixLeft = toApe l,
-          _postfixOp = ExpressionIdentifier op
+          _postfixLeft = toApe (HelperExpression l),
+          _postfixOp = HelperExpression (ExpressionIdentifier op)
         }
 
-instance IsApe Expression Expression where
+instance IsApe (Function 'Scoped) ApeHelper where
+  toApe (Function ps kw ret) =
+    ApeInfix
+      Infix
+        { _infixFixity = funFixity,
+          _infixLeft = toApe (HelperFunctionParams ps),
+          _infixRight = toApe (HelperExpression ret),
+          _infixIsComma = False,
+          _infixOp = HelperFunctionArrow kw
+        }
+
+instance IsApe ApeHelper ApeHelper where
   toApe = \case
-    ExpressionApplication a -> toApe a
-    ExpressionInfixApplication a -> toApe a
-    ExpressionPostfixApplication a -> toApe a
-    e ->
+    HelperExpression (ExpressionApplication a) -> toApe a
+    HelperExpression (ExpressionInfixApplication a) -> toApe a
+    HelperExpression (ExpressionPostfixApplication a) -> toApe a
+    HelperFunction f -> toApe f
+    a@(HelperFunctionArrow {}) ->
+      ApeLeaf
+        ( Leaf
+            { _leafAtomicity = Atom,
+              _leafExpr = a
+            }
+        )
+    h@(HelperFunctionParams (FunctionParameters _ _ e)) ->
       ApeLeaf
         ( Leaf
             { _leafAtomicity = atomicity e,
-              _leafExpr = e
+              _leafExpr = h
+            }
+        )
+    h@(HelperExpression e) ->
+      ApeLeaf
+        ( Leaf
+            { _leafAtomicity = atomicity e,
+              _leafExpr = h
             }
         )
 

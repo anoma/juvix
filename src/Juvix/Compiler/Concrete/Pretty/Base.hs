@@ -435,16 +435,20 @@ instance (SingI s) => PrettyCode (TypeSignature s) where
     return $ doc' ?<> builtin' <?+> sigTerminating' <> hang' (sigName' <+> kwColon <+> sigType' <+?> body')
 
 instance (SingI s) => PrettyCode (Function s) where
-  ppCode :: forall r. (Members '[Reader Options] r) => Function s -> Sem r (Doc Ann)
-  ppCode Function {..} = do
-    funParameter' <- ppCode _funParameters
-    funReturn' <- ppRightExpression' funFixity _funReturn
-    funKw' <- ppCode _funKw
-    return $ funParameter' <+> funKw' <+> funReturn'
+  ppCode a = case sing :: SStage s of
+    SParsed -> ppCode' a
+    SScoped -> apeHelper a (ppCode' a)
     where
-      ppRightExpression' = case sing :: SStage s of
-        SParsed -> ppRightExpression
-        SScoped -> ppRightExpression
+      ppCode' :: forall r. (Members '[Reader Options] r) => Function s -> Sem r (Doc Ann)
+      ppCode' Function {..} = do
+        funParameter' <- ppCode _funParameters
+        funReturn' <- ppRightExpression' funFixity _funReturn
+        funKw' <- ppCode _funKw
+        return $ funParameter' <+> funKw' <+> funReturn'
+        where
+          ppRightExpression' = case sing :: SStage s of
+            SParsed -> ppRightExpression
+            SScoped -> ppRightExpression
 
 instance (SingI s) => PrettyCode (FunctionParameters s) where
   ppCode FunctionParameters {..} = do
@@ -628,13 +632,20 @@ instance PrettyCode Application where
       args' <- mapM ppCodeAtom args
       return $ PP.group (f' <+> nest' (vsep args'))
 
-apeHelper :: (IsApe a Expression, Members '[Reader Options] r) => a -> Sem r (Doc CodeAnn) -> Sem r (Doc CodeAnn)
+instance PrettyCode ApeHelper where
+  ppCode = \case
+    HelperExpression e -> ppCode e
+    HelperFunctionParams a -> ppCode a
+    HelperFunction f -> ppCode f
+    HelperFunctionArrow r -> return (pretty r)
+
+apeHelper :: (IsApe a ApeHelper, Members '[Reader Options] r) => a -> Sem r (Doc CodeAnn) -> Sem r (Doc CodeAnn)
 apeHelper a alt = do
   opts <- ask @Options
   if
       | not (opts ^. optNoApe) ->
           return $
-            let params :: ApeParams Expression
+            let params :: ApeParams ApeHelper
                 params = ApeParams (run . runReader opts . ppCode)
              in runApe params a
       | otherwise -> alt

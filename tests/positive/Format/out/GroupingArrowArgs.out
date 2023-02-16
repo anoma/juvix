@@ -1,0 +1,10 @@
+module GroupingArrowArgs;
+  open import Stdlib.Prelude;
+
+  -- grouping of type arguments
+  type AnExampleType (A : Type) :=
+    | anExampleType : {A : Type} -> AnExampleType;
+
+  funOnAnExampleType : {A : Type} -> List A -> List A -> List A -> List A -> List A -> List A -> List A -> Nat;
+  funOnAnExampleType := const (const (const 0));
+end;
