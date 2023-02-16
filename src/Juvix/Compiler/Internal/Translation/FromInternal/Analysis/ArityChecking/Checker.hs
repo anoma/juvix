@@ -356,6 +356,7 @@ checkCase ari l = do
   _caseBranches <- mapM checkCaseBranch (l ^. caseBranches)
   _caseExpression <- checkExpression ArityUnit (l ^. caseExpression)
   let _caseParens = l ^. caseParens
+      _caseExpressionType :: Maybe Expression = Nothing
   return Case {..}
   where
     checkCaseBranch :: CaseBranch -> Sem r CaseBranch

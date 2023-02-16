@@ -555,6 +555,7 @@ inferExpression' hint e = case e of
         Just hi -> return hi
       typedCaseExpression <- inferExpression' Nothing (c ^. caseExpression)
       let _caseExpression = typedCaseExpression ^. typedExpression
+          _caseExpressionType = Just (typedCaseExpression ^. typedType)
           goBranch :: CaseBranch -> Sem r CaseBranch
           goBranch b =
             traverseOf
