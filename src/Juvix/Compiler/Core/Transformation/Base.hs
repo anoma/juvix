@@ -64,4 +64,3 @@ mapAllNodes f tab =
 
     convertAxiom :: AxiomInfo -> AxiomInfo
     convertAxiom = over axiomType f
-
