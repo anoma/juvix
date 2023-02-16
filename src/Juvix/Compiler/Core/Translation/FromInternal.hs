@@ -304,22 +304,53 @@ mkFunBody ::
   Type -> -- converted type of the function
   Internal.FunctionDef ->
   Sem r Node
-mkFunBody ty f
-  | nPatterns == 0 = goExpression (f ^. Internal.funDefClauses . _head1 . Internal.clauseBody)
+mkFunBody ty f =
+  mkBody ty (fmap (\c -> (c ^. Internal.clausePatterns, c ^. Internal.clauseBody)) (f ^. Internal.funDefClauses))
+
+mkBody ::
+  forall r.
+  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable] r) =>
+  Type -> -- type of the function
+  NonEmpty ([Internal.PatternArg], Internal.Expression) ->
+  Sem r Node
+mkBody ty clauses
+  | nPatterns == 0 = goExpression (snd (head clauses))
   | otherwise = do
-      let values :: [Node]
-          values = mkVar Info.empty <$> vs
-      ms <- underBinders nPatterns (mapM (goFunctionClause ty) (f ^. Internal.funDefClauses))
-      let match = mkMatch' (fromList values) (toList ms)
+      let values = mkVar Info.empty <$> vs
           argtys = take nPatterns (typeArgs ty)
-      return $ foldr mkLambda' match argtys
+          values' = map fst $ filter (isInductive . snd) (zipExact values argtys)
+      case values' of
+        [] -> do
+          vars <- asks (^. indexTableVars)
+          varsNum <- asks (^. indexTableVarsNum)
+          let (pats, body) = head clauses
+              (vars', varsNum') =
+                foldl'
+                  (\(vrs, k) pat -> (addPatternVariableNames pat k vrs, k + 1))
+                  (vars, varsNum)
+                  pats
+          body' <-
+            local
+              (set indexTableVars vars' . set indexTableVarsNum varsNum')
+              (goExpression body)
+          return $ foldr mkLambda' body' argtys
+        _ : _ -> do
+          ms <- underBinders nPatterns (mapM (uncurry goClause) clauses)
+          let match = mkMatch' (fromList values') (toList ms)
+          return $ foldr mkLambda' match argtys
   where
     -- Assumption: All clauses have the same number of patterns
     nPatterns :: Int
-    nPatterns = length (f ^. Internal.funDefClauses . _head1 . Internal.clausePatterns)
+    nPatterns = length (fst (head clauses))
 
     vs :: [Index]
     vs = reverse (take nPatterns [0 ..])
+
+    goClause :: [Internal.PatternArg] -> Internal.Expression -> Sem r MatchBranch
+    goClause pats body = goPatternArgs body pats ptys
+      where
+        ptys :: [Type]
+        ptys = take (length pats) (typeArgs ty)
 
 goCase ::
   forall r.
@@ -328,8 +359,26 @@ goCase ::
   Sem r Node
 goCase c = do
   expr <- goExpression (c ^. Internal.caseExpression)
-  branches <- toList <$> mapM (goCaseBranch mkDynamic') (c ^. Internal.caseBranches) -- TODO: remove mkDynamic'
-  return (mkMatch' (pure expr) branches)
+  ty <- goType (fromJust $ c ^. Internal.caseExpressionType)
+  case ty of
+    NTyp {} -> do
+      branches <- toList <$> mapM (goCaseBranch ty) (c ^. Internal.caseBranches)
+      return (mkMatch' (pure expr) branches)
+    _ ->
+      case c ^. Internal.caseBranches of
+        Internal.CaseBranch {..} :| _ ->
+          case _caseBranchPattern ^. Internal.patternArgPattern of
+            Internal.PatternVariable {} -> do
+              vars <- asks (^. indexTableVars)
+              varsNum <- asks (^. indexTableVarsNum)
+              let vars' = addPatternVariableNames _caseBranchPattern varsNum vars
+              body <-
+                local
+                  (set indexTableVars vars')
+                  (underBinders 1 (goExpression _caseBranchExpression))
+              return $ mkLet' ty expr body
+            _ ->
+              impossible
 
 goCaseBranch ::
   forall r.
@@ -346,29 +395,7 @@ goLambda ::
   Sem r Node
 goLambda l = do
   ty <- goType (fromJust (l ^. Internal.lambdaType))
-  ms <- underBinders nPatterns (mapM (goLambdaClause ty) (l ^. Internal.lambdaClauses))
-  let values = reverse (take nPatterns (mkVar' <$> [0 ..]))
-      match = mkMatch' (fromList values) (toList ms)
-      argtys = take nPatterns $ typeArgs ty
-  return $ foldr mkLambda' match argtys
-  where
-    -- Assumption: all clauses have the same number of patterns
-    nPatterns :: Int
-    nPatterns = length (l ^. Internal.lambdaClauses . _head1 . Internal.lambdaPatterns)
-
-goLambdaClause ::
-  forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable] r) =>
-  Type -> -- type of the lambda
-  Internal.LambdaClause ->
-  Sem r MatchBranch
-goLambdaClause ty clause = goPatternArgs (clause ^. Internal.lambdaBody) ps ptys
-  where
-    ps :: [Internal.PatternArg]
-    ps = toList (clause ^. Internal.lambdaPatterns)
-
-    ptys :: [Type]
-    ptys = take (length ps) (typeArgs ty)
+  mkBody ty (fmap (\c -> (toList (c ^. Internal.lambdaPatterns), c ^. Internal.lambdaBody)) (l ^. Internal.lambdaClauses))
 
 goLet ::
   forall r.
@@ -637,9 +664,11 @@ goPatternArgs body ps0 ptys0 = do
           (go (lvl + 1) (pat : pats) ps' ptys')
       (p : ps', _ : ptys') ->
         case p ^. Internal.patternArgPattern of
-          Internal.PatternVariable vn ->
+          Internal.PatternVariable {} -> do
+            vars <- asks (^. indexTableVars)
+            let vars' = addPatternVariableNames p lvl vars
             local
-              (over indexTableVars (HashMap.insert (vn ^. nameId) lvl))
+              (set indexTableVars vars')
               (go (lvl + 1) pats ps' ptys')
           _ ->
             impossible
@@ -649,19 +678,13 @@ goPatternArgs body ps0 ptys0 = do
       _ ->
         impossible
 
-goFunctionClause ::
-  forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable] r) =>
-  Type -> -- type of the function
-  Internal.FunctionClause ->
-  Sem r MatchBranch
-goFunctionClause ty clause = goPatternArgs (clause ^. Internal.clauseBody) internalPatternArgs ptys
-  where
-    internalPatternArgs :: [Internal.PatternArg]
-    internalPatternArgs = clause ^. Internal.clausePatterns
-
-    ptys :: [Type]
-    ptys = take (length internalPatternArgs) (typeArgs ty)
+addPatternVariableNames ::
+  Internal.PatternArg ->
+  Level ->
+  HashMap NameId Level ->
+  HashMap NameId Level
+addPatternVariableNames p lvl vars =
+  foldl' (\vs name -> HashMap.insert (name ^. nameId) lvl vs) vars (getPatternArgVars p)
 
 goExpression ::
   forall r.
