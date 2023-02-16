@@ -28,9 +28,9 @@ def f := \t match t with {
   node l r :=
     match g l, g r with {
       leaf, leaf := 0 - 6;
-      node l r, leaf := (f l + f r) * 2;
-      node l1 r1, node l2 r2 := (f l1 + f r1) * (f l2 + f r2);
-      _, node l r := (f l + f r) * (0 - 3)
+      node l r, leaf := ((f l + f r) * 2) % 30000;
+      node l1 r1, node l2 r2 := ((f l1 + f r1) * (f l2 + f r2)) % 30000;
+      _, node l r := ((f l + f r) * (0 - 3)) % 30000;
     }
 };
 

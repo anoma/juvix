@@ -1,4 +1,4 @@
--- power
+-- fast exponentiation
 
 def power' := \a \b \acc
   if b = 0 then
