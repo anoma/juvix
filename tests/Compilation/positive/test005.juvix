@@ -13,6 +13,6 @@ I : {A : Type} → A → A;
 I := S K (K {_} {Bool});
 
 main : IO;
-main := printNatLn $ I 1 + I I 1 + I (I 1) + I I I 1 + I (I I) I (I I I) 1 + I I I (I I I (I I)) I (I I) I I I 1;
+main := printNatLn (I 1 + I I 1 + I (I 1) + I I I 1 + I (I I) I (I I I) 1 + I I I (I I I (I I)) I (I I) I I I 1);
 
 end;

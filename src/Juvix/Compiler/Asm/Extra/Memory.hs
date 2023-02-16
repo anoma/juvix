@@ -146,7 +146,7 @@ checkValueStack' loc tab tys mem = do
   mapM_
     ( \(ty, idx) -> do
         let ty' = fromJust $ topValueStack idx mem
-        unless (isSubtype ty' ty) $
+        unless (isSubtype' ty' ty) $
           throw $
             AsmError loc $
               "type mismatch on value stack cell "
