@@ -35,3 +35,33 @@ mapT' f tab =
 
 walkT :: (Applicative f) => (Symbol -> Node -> f ()) -> InfoTable -> f ()
 walkT f tab = for_ (HashMap.toList (tab ^. identContext)) (uncurry f)
+
+mapAllNodes :: (Node -> Node) -> InfoTable -> InfoTable
+mapAllNodes f tab =
+  mapAxioms convertAxiom $
+    mapInductives convertInductive $
+      mapConstructors convertConstructor $
+        mapIdents convertIdent $
+          mapT (const f) tab
+  where
+    convertIdent :: IdentifierInfo -> IdentifierInfo
+    convertIdent ii =
+      ii
+        { _identifierType = f (ii ^. identifierType),
+          _identifierArgsInfo = map (over argumentType f) (ii ^. identifierArgsInfo)
+        }
+
+    convertConstructor :: ConstructorInfo -> ConstructorInfo
+    convertConstructor = over constructorType f
+
+    convertInductive :: InductiveInfo -> InductiveInfo
+    convertInductive ii =
+      ii
+        { _inductiveKind = f (ii ^. inductiveKind),
+          _inductiveParams = map (over paramKind f) (ii ^. inductiveParams),
+          _inductiveConstructors = map convertConstructor (ii ^. inductiveConstructors)
+        }
+
+    convertAxiom :: AxiomInfo -> AxiomInfo
+    convertAxiom = over axiomType f
+

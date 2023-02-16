@@ -80,4 +80,4 @@ etaExpandApps tab =
         Nothing -> []
 
 etaExpansionApps :: InfoTable -> InfoTable
-etaExpansionApps tab = mapT (const (etaExpandApps tab)) tab
+etaExpansionApps tab = mapAllNodes (etaExpandApps tab) tab
