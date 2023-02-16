@@ -26,3 +26,6 @@ localAddName n s = do
         ( over indexTableVars (HashMap.insert (n ^. nameId) idx)
             . over indexTableVarsNum (+ 1)
         )
+
+underBinders :: Members '[Reader IndexTable] r => Int -> Sem r a -> Sem r a
+underBinders nBinders = local (over indexTableVarsNum (+ nBinders))
