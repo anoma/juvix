@@ -60,12 +60,25 @@ makeLenses ''ScopeParameters
 
 data ScoperState = ScoperState
   { _scoperModulesCache :: ModulesCache,
-    _scoperFixities :: HashMap Symbol OperatorSyntaxDef,
     _scoperModules :: HashMap S.ModuleNameId (ModuleRef' 'S.NotConcrete),
     _scoperScope :: HashMap TopModulePath Scope
   }
 
 makeLenses ''ScoperState
+
+data SymbolFixity = SymbolFixity
+  { _symbolFixityUsed :: Bool,
+    _symbolFixityDef :: OperatorSyntaxDef
+  }
+
+makeLenses ''SymbolFixity
+
+newtype ScoperFixities = ScoperFixites
+  { _scoperFixities :: HashMap Symbol SymbolFixity
+  }
+  deriving newtype (Semigroup, Monoid)
+
+makeLenses ''ScoperFixities
 
 emptyScope :: S.AbsModulePath -> Scope
 emptyScope absPath =

@@ -30,7 +30,6 @@ iniScoperState =
   ScoperState
     { _scoperModulesCache = ModulesCache mempty,
       _scoperModules = mempty,
-      _scoperFixities = mempty,
       _scoperScope = mempty
     }
 
@@ -93,12 +92,12 @@ checkParseExpressionAtoms' ::
   Sem r Expression
 checkParseExpressionAtoms' = checkExpressionAtoms >=> parseExpressionAtoms
 
-freshVariable :: Members '[NameIdGen, State Scope, State ScoperState] r => Symbol -> Sem r S.Symbol
+freshVariable :: Members '[NameIdGen, State ScoperFixities, State Scope, State ScoperState] r => Symbol -> Sem r S.Symbol
 freshVariable = freshSymbol S.KNameLocal
 
 freshSymbol ::
   forall r.
-  (Members '[State Scope, State ScoperState, NameIdGen] r) =>
+  (Members '[State Scope, State ScoperState, NameIdGen, State ScoperFixities] r) =>
   S.NameKind ->
   Symbol ->
   Sem r S.Symbol
@@ -114,13 +113,15 @@ freshSymbol _nameKind _nameConcrete = do
   where
     fixity :: Sem r (Maybe Fixity)
     fixity
-      | S.canHaveFixity _nameKind =
-          fmap (^. opFixity) . HashMap.lookup _nameConcrete <$> gets (^. scoperFixities)
+      | S.canHaveFixity _nameKind = do
+          mf <- gets (^? scoperFixities . at _nameConcrete . _Just . symbolFixityDef . opFixity)
+          when (isJust mf) (modify (set (scoperFixities . at _nameConcrete . _Just . symbolFixityUsed) True))
+          return mf
       | otherwise = return Nothing
 
 reserveSymbolOf ::
   forall r.
-  (Members '[Error ScoperError, NameIdGen, State Scope, State ScoperState] r) =>
+  (Members '[Error ScoperError, NameIdGen, State ScoperFixities, State Scope, State ScoperState] r) =>
   S.NameKind ->
   Symbol ->
   Sem r S.Symbol
@@ -155,7 +156,7 @@ bindReservedSymbol s' entry = do
       Just SymbolInfo {..} -> SymbolInfo (HashMap.insert path entry _symbolInfo)
 
 bindSymbolOf ::
-  (Members '[Error ScoperError, NameIdGen, State Scope, InfoTableBuilder, State ScoperState] r) =>
+  (Members '[Error ScoperError, NameIdGen, State ScoperFixities, State Scope, InfoTableBuilder, State ScoperState] r) =>
   S.NameKind ->
   (S.Name' () -> SymbolEntry) ->
   Symbol ->
@@ -165,38 +166,42 @@ bindSymbolOf k mkEntry s = do
   bindReservedSymbol s' (mkEntry (S.unConcrete s'))
   return s'
 
+ignoreFixities :: Sem (State ScoperFixities ': r) a -> Sem r a
+ignoreFixities = evalState mempty
+
+-- variables are assumed to never be infix operators
 bindVariableSymbol ::
   Members '[Error ScoperError, NameIdGen, State Scope, InfoTableBuilder, State ScoperState] r =>
   Symbol ->
   Sem r S.Symbol
-bindVariableSymbol = bindSymbolOf S.KNameLocal EntryVariable
+bindVariableSymbol = ignoreFixities . bindSymbolOf S.KNameLocal EntryVariable
 
 bindFunctionSymbol ::
-  Members '[Error ScoperError, NameIdGen, State Scope, InfoTableBuilder, State ScoperState] r =>
+  Members '[Error ScoperError, NameIdGen, State ScoperFixities, State Scope, InfoTableBuilder, State ScoperState] r =>
   Symbol ->
   Sem r S.Symbol
 bindFunctionSymbol = bindSymbolOf S.KNameFunction (EntryFunction . FunctionRef')
 
 bindInductiveSymbol ::
-  Members '[Error ScoperError, NameIdGen, State Scope, InfoTableBuilder, State ScoperState] r =>
+  Members '[Error ScoperError, NameIdGen, State ScoperFixities, State Scope, InfoTableBuilder, State ScoperState] r =>
   Symbol ->
   Sem r S.Symbol
 bindInductiveSymbol = bindSymbolOf S.KNameInductive (EntryInductive . InductiveRef')
 
 bindAxiomSymbol ::
-  Members '[Error ScoperError, NameIdGen, State Scope, InfoTableBuilder, State ScoperState] r =>
+  Members '[Error ScoperError, NameIdGen, State ScoperFixities, State Scope, InfoTableBuilder, State ScoperState] r =>
   Symbol ->
   Sem r S.Symbol
 bindAxiomSymbol = bindSymbolOf S.KNameAxiom (EntryAxiom . AxiomRef')
 
 bindConstructorSymbol ::
-  Members '[Error ScoperError, NameIdGen, State Scope, InfoTableBuilder, State ScoperState] r =>
+  Members '[Error ScoperError, NameIdGen, State ScoperFixities, State Scope, InfoTableBuilder, State ScoperState] r =>
   Symbol ->
   Sem r S.Symbol
 bindConstructorSymbol = bindSymbolOf S.KNameConstructor (EntryConstructor . ConstructorRef')
 
 bindLocalModuleSymbol ::
-  Members '[Error ScoperError, NameIdGen, State Scope, InfoTableBuilder, State ScoperState] r =>
+  Members '[Error ScoperError, NameIdGen, State ScoperFixities, State Scope, InfoTableBuilder, State ScoperState] r =>
   ExportInfo ->
   Module 'Scoped 'ModuleLocal ->
   Symbol ->
@@ -395,21 +400,26 @@ readScopeModule import_ = do
 
 checkOperatorSyntaxDef ::
   forall r.
-  Members '[Error ScoperError, State Scope, State ScoperState] r =>
+  Members '[Error ScoperError, State Scope, State ScoperState, State ScoperFixities] r =>
   OperatorSyntaxDef ->
   Sem r ()
 checkOperatorSyntaxDef s@OperatorSyntaxDef {..} = do
   checkNotDefined
-  modify (over scoperFixities (HashMap.insert _opSymbol s))
+  let sf =
+        SymbolFixity
+          { _symbolFixityUsed = False,
+            _symbolFixityDef = s
+          }
+  modify (over scoperFixities (HashMap.insert _opSymbol sf))
   where
     checkNotDefined :: Sem r ()
     checkNotDefined =
       whenJustM
         (HashMap.lookup _opSymbol <$> gets (^. scoperFixities))
-        (\s' -> throw (ErrDuplicateFixity (DuplicateFixity s' s)))
+        $ \s' -> throw (ErrDuplicateFixity (DuplicateFixity (s' ^. symbolFixityDef) s))
 
 checkTypeSignature ::
-  (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
+  (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, State ScoperFixities] r) =>
   TypeSignature 'Parsed ->
   Sem r (TypeSignature 'Scoped)
 checkTypeSignature TypeSignature {..} = do
@@ -431,7 +441,7 @@ checkInductiveParameters params = do
 
 checkInductiveDef ::
   forall r.
-  (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
+  (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, State ScoperFixities] r) =>
   InductiveDef 'Parsed ->
   Sem r (InductiveDef 'Scoped)
 checkInductiveDef InductiveDef {..} = do
@@ -568,14 +578,20 @@ withLocalScope ma = do
   put before
   return x
 
+fixitiesBlock :: Members '[Error ScoperError] r => Sem (State ScoperFixities ': r) a -> Sem r a
+fixitiesBlock m =
+  evalState (mempty :: ScoperFixities) $ do
+    a <- m
+    checkOrphanFixities
+    return a
+
 checkModuleBody ::
   forall r.
-  (Members '[Error ScoperError, State Scope, Reader ScopeParameters, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
+  Members '[Error ScoperError, State Scope, Reader ScopeParameters, State ScoperState, InfoTableBuilder, NameIdGen] r =>
   [Statement 'Parsed] ->
   Sem r (ExportInfo, [Statement 'Scoped])
 checkModuleBody body = do
-  body' <- mapM checkStatement body
-  checkOrphanFixities
+  body' <- fixitiesBlock (mapM checkStatement body)
   exported <- get >>= exportScope
   return (exported, body')
 
@@ -591,7 +607,7 @@ checkLocalModule Module {..} = do
       (e, b) <- checkModuleBody _moduleBody
       doc' <- mapM checkJudoc _moduleDoc
       return (e, b, doc')
-  _modulePath' <- reserveSymbolOf S.KNameLocalModule _modulePath
+  _modulePath' <- ignoreFixities (reserveSymbolOf S.KNameLocalModule _modulePath)
   let moduleId = _modulePath' ^. S.nameId
       _moduleRefName = S.unConcrete _modulePath'
       _moduleRefModule =
@@ -613,20 +629,17 @@ checkLocalModule Module {..} = do
       absPath <- (S.<.> _modulePath) <$> gets (^. scopePath)
       modify (set scopePath absPath)
       modify (over scopeSymbols (fmap inheritSymbol))
-      modify (set scoperFixities mempty) -- do not inherit fixity declarations
       where
         inheritSymbol :: SymbolInfo -> SymbolInfo
         inheritSymbol (SymbolInfo s) = SymbolInfo (fmap inheritEntry s)
         inheritEntry :: SymbolEntry -> SymbolEntry
         inheritEntry = entryOverName (over S.nameWhyInScope S.BecauseInherited . set S.nameVisibilityAnn VisPrivate)
 
-checkOrphanFixities :: forall r. Members '[Error ScoperError, State Scope, State ScoperState] r => Sem r ()
+checkOrphanFixities :: forall r. Members '[Error ScoperError, State ScoperFixities] r => Sem r ()
 checkOrphanFixities = do
-  path <- gets (^. scopePath)
   declared <- gets (^. scoperFixities)
-  used <- gets (HashMap.keys . fmap (filter (== path) . HashMap.keys . (^. symbolInfo)) . (^. scopeSymbols))
-  let unused = toList (foldr HashMap.delete declared used)
-  case listToMaybe unused of
+  let unused = fmap (^. symbolFixityDef) . find (^. symbolFixityUsed . to not) . toList $ declared
+  case unused of
     Nothing -> return ()
     Just x -> throw (ErrUnusedOperatorDef (UnusedOperatorDef x))
 
@@ -776,7 +789,7 @@ checkFunctionClause clause@FunctionClause {..} = do
         err = throw (ErrLacksTypeSig (LacksTypeSig clause))
 
 checkAxiomDef ::
-  (Members '[InfoTableBuilder, Error ScoperError, State Scope, State ScoperState, NameIdGen] r) =>
+  (Members '[InfoTableBuilder, Error ScoperError, State Scope, State ScoperState, NameIdGen, State ScoperFixities] r) =>
   AxiomDef 'Parsed ->
   Sem r (AxiomDef 'Scoped)
 checkAxiomDef AxiomDef {..} = do
@@ -911,11 +924,12 @@ checkFunction f = do
         _funKw = f ^. funKw
     return Function {..}
 
+-- for now functions defined in let clauses cannot be infix operators
 checkLetClause ::
   (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
   LetClause 'Parsed ->
   Sem r (LetClause 'Scoped)
-checkLetClause lc = case lc of
+checkLetClause lc = ignoreFixities $ case lc of
   LetTypeSig t -> LetTypeSig <$> checkTypeSignature t
   LetFunClause c -> LetFunClause <$> checkFunctionClause c
 
@@ -1199,7 +1213,7 @@ checkParsePatternAtom ::
 checkParsePatternAtom = checkPatternAtom >=> parsePatternAtom
 
 checkStatement ::
-  (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
+  (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, State ScoperFixities] r) =>
   Statement 'Parsed ->
   Sem r (Statement 'Scoped)
 checkStatement s = case s of

@@ -317,7 +317,7 @@ instance ToGenericError NotInScope where
                 ]
           candidates :: HashSet Text
           candidates =
-              HashSet.fromList (map (^. symbolText) (HashMap.keys (_notInScopeScope ^. scopeSymbols)))
+            HashSet.fromList (map (^. symbolText) (HashMap.keys (_notInScopeScope ^. scopeSymbols)))
 
 instance HasLoc NotInScope where
   getLoc = getLoc . (^. notInScopeSymbol)
