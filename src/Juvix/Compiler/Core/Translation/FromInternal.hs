@@ -270,7 +270,7 @@ goFunctionDefIden (f, sym) = do
             _identifierSymbol = sym,
             _identifierType = funTy,
             -- _identiferArgsNum needs to match the number of lambdas in the
-            -- body. This needs to be filled in later.
+            -- body. This needs to be filled in later (in goFunctionDef).
             _identifierArgsNum = 0,
             _identifierArgsInfo = [],
             _identifierIsExported = False,
@@ -301,7 +301,7 @@ goFunctionDef ((f, sym), ty) = do
 mkFunBody ::
   forall r.
   (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable] r) =>
-  Type ->
+  Type -> -- converted type of the function
   Internal.FunctionDef ->
   Sem r Node
 mkFunBody ty f
@@ -309,10 +309,7 @@ mkFunBody ty f
   | otherwise = do
       let values :: [Node]
           values = mkVar Info.empty <$> vs
-      ms <-
-        local
-          (over indexTableVarsNum (+ nPatterns))
-          (mapM goFunctionClause (f ^. Internal.funDefClauses))
+      ms <- underBinders nPatterns (mapM (goFunctionClause ty) (f ^. Internal.funDefClauses))
       let match = mkMatch' (fromList values) (toList ms)
           argtys = take nPatterns (typeArgs ty)
       return $ foldr mkLambda' match argtys
@@ -331,18 +328,16 @@ goCase ::
   Sem r Node
 goCase c = do
   expr <- goExpression (c ^. Internal.caseExpression)
-  branches <- toList <$> mapM goCaseBranch (c ^. Internal.caseBranches)
+  branches <- toList <$> mapM (goCaseBranch mkDynamic') (c ^. Internal.caseBranches) -- TODO: remove mkDynamic'
   return (mkMatch' (pure expr) branches)
 
 goCaseBranch ::
   forall r.
   (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable] r) =>
+  Type ->
   Internal.CaseBranch ->
   Sem r MatchBranch
-goCaseBranch b = goPatternArgs (b ^. Internal.caseBranchExpression) [b ^. Internal.caseBranchPattern]
-
-underBinders :: Members '[Reader IndexTable] r => Int -> Sem r a -> Sem r a
-underBinders nBinders = local (over indexTableVarsNum (+ nBinders))
+goCaseBranch ty b = goPatternArgs (b ^. Internal.caseBranchExpression) [b ^. Internal.caseBranchPattern] [ty]
 
 goLambda ::
   forall r.
@@ -350,8 +345,8 @@ goLambda ::
   Internal.Lambda ->
   Sem r Node
 goLambda l = do
-  ms <- underBinders nPatterns (mapM goLambdaClause (l ^. Internal.lambdaClauses))
   ty <- goType (fromJust (l ^. Internal.lambdaType))
+  ms <- underBinders nPatterns (mapM (goLambdaClause ty) (l ^. Internal.lambdaClauses))
   let values = reverse (take nPatterns (mkVar' <$> [0 ..]))
       match = mkMatch' (fromList values) (toList ms)
       argtys = take nPatterns $ typeArgs ty
@@ -364,12 +359,16 @@ goLambda l = do
 goLambdaClause ::
   forall r.
   (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable] r) =>
+  Type -> -- type of the lambda
   Internal.LambdaClause ->
   Sem r MatchBranch
-goLambdaClause clause = goPatternArgs (clause ^. Internal.lambdaBody) ps
+goLambdaClause ty clause = goPatternArgs (clause ^. Internal.lambdaBody) ps ptys
   where
     ps :: [Internal.PatternArg]
     ps = toList (clause ^. Internal.lambdaPatterns)
+
+    ptys :: [Type]
+    ptys = take (length ps) (typeArgs ty)
 
 goLet ::
   forall r.
@@ -611,12 +610,16 @@ goPatternArgs ::
   (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable] r) =>
   Internal.Expression ->
   [Internal.PatternArg] ->
+  [Type] -> -- types of the patterns
   Sem r MatchBranch
-goPatternArgs body ps = go [] ps
+goPatternArgs body ps0 ptys0 = do
+  k <- asks (^. indexTableVarsNum)
+  go k [] ps0 ptys0
   where
-    go :: [Pattern] -> [Internal.PatternArg] -> Sem r MatchBranch
-    go pats = \case
-      p : ps' -> do
+    -- `lvl` is the level of the lambda-bound variable corresponding to the current pattern
+    go :: Level -> [Pattern] -> [Internal.PatternArg] -> [Type] -> Sem r MatchBranch
+    go lvl pats ps ptys = case (ps, ptys) of
+      (p : ps', NTyp {} : ptys') -> do
         pat <- fromPatternArg p
         vars <- asks (^. indexTableVars)
         varsNum <- asks (^. indexTableVarsNum)
@@ -631,20 +634,34 @@ goPatternArgs body ps = go [] ps
                 bs
         local
           (set indexTableVars vars' . set indexTableVarsNum varsNum')
-          (go (pat : pats) ps')
-      [] -> do
+          (go (lvl + 1) (pat : pats) ps' ptys')
+      (p : ps', _ : ptys') ->
+        case p ^. Internal.patternArgPattern of
+          Internal.PatternVariable vn ->
+            local
+              (over indexTableVars (HashMap.insert (vn ^. nameId) lvl))
+              (go (lvl + 1) pats ps' ptys')
+          _ ->
+            impossible
+      ([], []) -> do
         body' <- goExpression body
         return $ MatchBranch Info.empty (fromList (reverse pats)) body'
+      _ ->
+        impossible
 
 goFunctionClause ::
   forall r.
   (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable] r) =>
+  Type -> -- type of the function
   Internal.FunctionClause ->
   Sem r MatchBranch
-goFunctionClause clause = goPatternArgs (clause ^. Internal.clauseBody) internalPatternArgs
+goFunctionClause ty clause = goPatternArgs (clause ^. Internal.clauseBody) internalPatternArgs ptys
   where
     internalPatternArgs :: [Internal.PatternArg]
     internalPatternArgs = clause ^. Internal.clausePatterns
+
+    ptys :: [Type]
+    ptys = take (length internalPatternArgs) (typeArgs ty)
 
 goExpression ::
   forall r.
