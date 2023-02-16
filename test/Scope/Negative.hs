@@ -78,14 +78,14 @@ scoperErrorTests =
       $(mkRelDir "BindGroupConflict")
       $(mkRelFile "Clause.juvix")
       $ \case
-        ErrBindGroup {} -> Nothing
+        ErrMultipleDeclarations {} -> Nothing
         _ -> wrongError,
     NegTest
       "Binding group conflict (lambda clause)"
       $(mkRelDir "BindGroupConflict")
       $(mkRelFile "Lambda.juvix")
       $ \case
-        ErrBindGroup {} -> Nothing
+        ErrMultipleDeclarations {} -> Nothing
         _ -> wrongError,
     NegTest
       "Infix error (expression)"
@@ -253,7 +253,7 @@ scoperErrorTests =
       $(mkRelDir ".")
       $(mkRelFile "DuplicateInductiveParameterName.juvix")
       $ \case
-        ErrDuplicateInductiveParameterName {} -> Nothing
+        ErrMultipleDeclarations {} -> Nothing
         _ -> wrongError,
     NegTest
       "A function has a duplicate clause"

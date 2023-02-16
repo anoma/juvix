@@ -192,34 +192,6 @@ instance ToGenericError QualSymNotInScope where
           i = getLoc _qualSymNotInScope
           msg = "Qualified symbol not in scope:" <+> ppCode opts' _qualSymNotInScope
 
-data BindGroupConflict = BindGroupConflict
-  { _bindGroupFirst :: Symbol,
-    _bindGroupSecond :: Symbol
-  }
-  deriving stock (Show)
-
-instance ToGenericError BindGroupConflict where
-  genericError BindGroupConflict {..} = ask >>= generr
-    where
-      generr opts =
-        return
-          GenericError
-            { _genericErrorLoc = i2,
-              _genericErrorMessage = prettyError msg,
-              _genericErrorIntervals = [i1, i2]
-            }
-        where
-          opts' = fromGenericOptions opts
-          i1 = getLoc _bindGroupFirst
-          i2 = getLoc _bindGroupSecond
-
-          msg =
-            "The variable"
-              <+> ppCode opts' _bindGroupFirst
-              <+> "appears twice in the same binding group:"
-                <> line
-                <> indent' (align (vsep (map pretty [i1, i2])))
-
 data DuplicateFixity = DuplicateFixity
   { _dupFixityFirst :: OperatorSyntaxDef,
     _dupFixitySecond :: OperatorSyntaxDef
@@ -562,34 +534,6 @@ ambiguousMessage opts' n es =
       <> "It could be any of:"
       <> line
       <> indent' (vsep (map (ppCode opts') es))
-
-newtype DuplicateInductiveParameterName = DuplicateInductiveParameterName
-  { _duplicateInductiveParameterName :: Symbol
-  }
-  deriving stock (Show)
-
-makeLenses ''DuplicateInductiveParameterName
-
-instance ToGenericError DuplicateInductiveParameterName where
-  genericError e = ask >>= generr
-    where
-      generr opts =
-        return
-          GenericError
-            { _genericErrorLoc = i,
-              _genericErrorMessage = prettyError msg,
-              _genericErrorIntervals = [i]
-            }
-        where
-          opts' = fromGenericOptions opts
-          param = e ^. duplicateInductiveParameterName
-          i = getLoc param
-          msg =
-            "Invalid name"
-              <+> ppCode opts' param
-                <> "."
-                <> line
-                <> "Inductive parameter names can not be repeated."
 
 newtype DoubleBracesPattern = DoubleBracesPattern
   { _doubleBracesPatternArg :: PatternArg

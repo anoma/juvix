@@ -11,11 +11,6 @@ import Juvix.Prelude
 
 type LocalVariable = S.Symbol
 
--- newtype LocalVars = LocalVars
---   { _localVars :: HashMap Symbol LocalVariable
---   }
---   deriving stock (Show)
-
 newtype SymbolInfo = SymbolInfo
   { -- | This map must have at least one entry. If there are more than one
     -- entry, it means that the same symbol has been brought into scope from two

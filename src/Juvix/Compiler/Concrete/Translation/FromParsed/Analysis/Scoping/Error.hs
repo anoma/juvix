@@ -22,7 +22,6 @@ data ScoperError
   | ErrSymNotInScope NotInScope
   | ErrQualSymNotInScope QualSymNotInScope
   | ErrModuleNotInScope ModuleNotInScope
-  | ErrBindGroup BindGroupConflict
   | ErrDuplicateFixity DuplicateFixity
   | ErrMultipleExport MultipleExportConflict
   | ErrAmbiguousSym AmbiguousSym
@@ -32,7 +31,6 @@ data ScoperError
   | ErrMultipleCompileBlockSameName MultipleCompileBlockSameName
   | ErrMultipleCompileRuleSameBackend MultipleCompileRuleSameBackend
   | ErrWrongKindExpressionCompileBlock WrongKindExpressionCompileBlock
-  | ErrDuplicateInductiveParameterName DuplicateInductiveParameterName
   | ErrDoubleBracesPattern DoubleBracesPattern
   | ErrDoubleBinderPattern DoubleBinderPattern
   | ErrAliasBinderPattern AliasBinderPattern
@@ -54,7 +52,6 @@ instance ToGenericError ScoperError where
     ErrSymNotInScope e -> genericError e
     ErrQualSymNotInScope e -> genericError e
     ErrModuleNotInScope e -> genericError e
-    ErrBindGroup e -> genericError e
     ErrDuplicateFixity e -> genericError e
     ErrMultipleExport e -> genericError e
     ErrAmbiguousSym e -> genericError e
@@ -65,7 +62,6 @@ instance ToGenericError ScoperError where
     ErrMultipleCompileBlockSameName e -> genericError e
     ErrMultipleCompileRuleSameBackend e -> genericError e
     ErrWrongKindExpressionCompileBlock e -> genericError e
-    ErrDuplicateInductiveParameterName e -> genericError e
     ErrDoubleBracesPattern e -> genericError e
     ErrDoubleBinderPattern e -> genericError e
     ErrAliasBinderPattern e -> genericError e
