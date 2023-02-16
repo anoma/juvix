@@ -67,6 +67,9 @@ fromGebValue ty = \case
   GebValueMorphismInteger i -> return $ MorphismInteger i
   GebValueMorphismUnit -> return MorphismUnit
   GebValueClosure cls -> case ty of
+    -- FIXME: body <- apply' fun (var' not in the env)
+    -- expr <- fromGebvalue  bodyCal with env extended with var'
+    -- return lambda body.
     Just (ObjectHom funObj) ->
       return $
         MorphismLambda

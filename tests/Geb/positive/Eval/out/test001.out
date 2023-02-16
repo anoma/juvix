@@ -1,8 +1,7 @@
-(lamb
-  lamb
-    so1
-    (coprod
-      so1
-      so1)
-    (right
+(cls
+  (env
+    unit
+    (left
       unit))
+  (right
+    unit))
