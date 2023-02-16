@@ -47,18 +47,6 @@ etaExpandTypeConstrs getArgtys = umap go
           argtys = getArgtys _typeConstrSymbol
       _ -> n
 
-squashApps :: Node -> Node
-squashApps = dmap go
-  where
-    go :: Node -> Node
-    go n =
-      let (l, args) = unfoldApps' n
-       in case l of
-            NCtr (Constr i tag args') -> mkConstr i tag (args' ++ args)
-            NBlt (BuiltinApp i op args') -> mkBuiltinApp i op (args' ++ args)
-            NTyp (TypeConstr i sym args') -> mkTypeConstr i sym (args' ++ args)
-            _ -> n
-
 etaExpandApps :: InfoTable -> Node -> Node
 etaExpandApps tab =
   squashApps

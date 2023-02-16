@@ -254,7 +254,7 @@ goType ::
   Sem r Type
 goType ty = do
   normTy <- evalState InternalTyped.iniState (InternalTyped.strongNormalize' ty)
-  goExpression normTy
+  squashApps <$> goExpression normTy
 
 goFunctionDefIden ::
   forall r.
