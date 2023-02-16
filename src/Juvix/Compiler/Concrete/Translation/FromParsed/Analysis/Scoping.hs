@@ -533,7 +533,7 @@ checkTopModule ::
   (Members '[Error ScoperError, Reader ScopeParameters, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
   Module 'Parsed 'ModuleTop ->
   Sem r (ModuleRef'' 'S.NotConcrete 'ModuleTop)
-checkTopModule m@(Module _moduleKw path params doc body) = do
+checkTopModule m@(Module _moduleKw path doc body) = do
   r <- checkedModule
   modify (over (scoperModulesCache . cachedModules) (HashMap.insert path r))
   registerModule (r ^. moduleRefModule)
@@ -563,20 +563,18 @@ checkTopModule m@(Module _moduleKw path params doc body) = do
     checkedModule = do
       (s, (m', p)) <- runState iniScope $ do
         path' <- freshTopModulePath
-        localScope $
-          withParams params $ \params' -> do
-            (_moduleExportInfo, body') <- checkModuleBody body
-            doc' <- mapM checkJudoc doc
-            let _moduleRefModule =
-                  Module
-                    { _modulePath = path',
-                      _moduleParameters = params',
-                      _moduleBody = body',
-                      _moduleDoc = doc',
-                      _moduleKw
-                    }
-                _moduleRefName = set S.nameConcrete () path'
-            return (ModuleRef'' {..}, path')
+        localScope $ do
+          (_moduleExportInfo, body') <- checkModuleBody body
+          doc' <- mapM checkJudoc doc
+          let _moduleRefModule =
+                Module
+                  { _modulePath = path',
+                    _moduleBody = body',
+                    _moduleDoc = doc',
+                    _moduleKw
+                  }
+              _moduleRefName = set S.nameConcrete () path'
+          return (ModuleRef'' {..}, path')
       modify (set (scoperScope . at (p ^. S.nameConcrete)) (Just s))
       return m'
 
@@ -604,20 +602,18 @@ checkLocalModule ::
   Module 'Parsed 'ModuleLocal ->
   Sem r (Module 'Scoped 'ModuleLocal)
 checkLocalModule Module {..} = do
-  (_moduleExportInfo, moduleBody', moduleParameters', moduleDoc') <-
-    withScope $
-      withParams _moduleParameters $ \p' -> do
-        inheritScope
-        (e, b) <- checkModuleBody _moduleBody
-        doc' <- mapM checkJudoc _moduleDoc
-        return (e, b, p', doc')
+  (_moduleExportInfo, moduleBody', moduleDoc') <-
+    withScope $ do
+      inheritScope
+      (e, b) <- checkModuleBody _moduleBody
+      doc' <- mapM checkJudoc _moduleDoc
+      return (e, b, doc')
   _modulePath' <- reserveSymbolOf S.KNameLocalModule _modulePath
   let moduleId = _modulePath' ^. S.nameId
       _moduleRefName = set S.nameConcrete () _modulePath'
       _moduleRefModule =
         Module
           { _modulePath = _modulePath',
-            _moduleParameters = moduleParameters',
             _moduleBody = moduleBody',
             _moduleDoc = moduleDoc',
             _moduleKw
@@ -710,13 +706,11 @@ checkOpenModuleNoImport OpenModule {..}
   | isJust _openModuleImportKw = error "unsupported: open import statement"
   | otherwise = do
       openModuleName'@(ModuleRef' (_ :&: moduleRef'')) <- lookupModuleSymbol _openModuleName
-      openParameters' <- mapM checkParseExpressionAtoms _openParameters
       mergeScope (alterScope (moduleRef'' ^. moduleExportInfo))
       registerName (moduleRef'' ^. moduleRefName)
       return
         OpenModule
           { _openModuleName = openModuleName',
-            _openParameters = openParameters',
             ..
           }
   where

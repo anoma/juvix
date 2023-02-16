@@ -398,7 +398,6 @@ type LocalModuleName s = SymbolType s
 data Module (s :: Stage) (t :: ModuleIsTop) = Module
   { _moduleKw :: KeywordRef,
     _modulePath :: ModulePathType s t,
-    _moduleParameters :: [InductiveParameters s],
     _moduleDoc :: Maybe (Judoc s),
     _moduleBody :: [Statement s]
   }
@@ -511,7 +510,6 @@ data OpenModule (s :: Stage) = OpenModule
   { _openModuleKw :: KeywordRef,
     _openModuleName :: ModuleRefType s,
     _openModuleImportKw :: Maybe KeywordRef,
-    _openParameters :: [ExpressionType s],
     _openUsingHiding :: Maybe UsingHiding,
     _openPublic :: PublicAnn
   }

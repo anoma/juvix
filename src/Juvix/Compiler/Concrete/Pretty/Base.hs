@@ -208,19 +208,17 @@ instance (SingI s, SingI t) => PrettyCode (Module s t) where
   ppCode Module {..} = do
     moduleBody' <- indent' <$> ppCode _moduleBody
     modulePath' <- ppModulePathType _modulePath
-    moduleParameters' <- ppInductiveParameters _moduleParameters
     moduleDoc' <- mapM ppCode _moduleDoc
     return $
       moduleDoc'
         ?<> kwModule
         <+> modulePath'
-        <+?> moduleParameters'
-        <> kwSemicolon
-        <> line
-        <> moduleBody'
-        <> line
-        <> kwEnd
-        <>? lastSemicolon
+          <> kwSemicolon
+          <> line
+          <> moduleBody'
+          <> line
+          <> kwEnd
+          <>? lastSemicolon
     where
       lastSemicolon = case sing :: SModuleIsTop t of
         SModuleLocal -> Nothing
@@ -368,18 +366,10 @@ instance (SingI s) => PrettyCode (OpenModule s) where
       SParsed -> ppCode _openModuleName
       SScoped -> ppCode _openModuleName
     openUsingHiding' <- mapM ppUsingHiding _openUsingHiding
-    openParameters' <- ppOpenParams
     importkw' <- mapM ppCode _openModuleImportKw
     let openPublic' = ppPublic
-    return $ kwOpen <+?> importkw' <+> openModuleName' <+?> openParameters' <+?> openUsingHiding' <+?> openPublic'
+    return $ kwOpen <+?> importkw' <+> openModuleName' <+?> openUsingHiding' <+?> openPublic'
     where
-      ppAtom' = case sing :: SStage s of
-        SParsed -> ppCodeAtom
-        SScoped -> ppCodeAtom
-      ppOpenParams :: Sem r (Maybe (Doc Ann))
-      ppOpenParams = case _openParameters of
-        [] -> return Nothing
-        _ -> Just . hsep <$> mapM ppAtom' _openParameters
       ppUsingHiding :: UsingHiding -> Sem r (Doc Ann)
       ppUsingHiding uh = do
         bracedList <-

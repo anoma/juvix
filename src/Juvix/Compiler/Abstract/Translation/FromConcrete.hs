@@ -69,17 +69,15 @@ goModule m = case sing :: SModuleIsTop t of
   SModuleLocal -> goModule' m
   where
     goModule' :: Module 'Scoped t -> Sem r Abstract.Module
-    goModule' Module {..}
-      | null _moduleParameters = do
-          body' <- goModuleBody _moduleBody
-          examples' <- goExamples _moduleDoc
-          return
-            Abstract.Module
-              { _moduleName = name',
-                _moduleBody = body',
-                _moduleExamples = examples'
-              }
-      | otherwise = unsupported "Module parameters"
+    goModule' Module {..} = do
+      body' <- goModuleBody _moduleBody
+      examples' <- goExamples _moduleDoc
+      return
+        Abstract.Module
+          { _moduleName = name',
+            _moduleBody = body',
+            _moduleExamples = examples'
+          }
       where
         name' :: Abstract.Name
         name' = case sing :: SModuleIsTop t of
