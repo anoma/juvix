@@ -6,7 +6,6 @@ module Juvix.Compiler.Internal.Language
     module Juvix.Compiler.Concrete.Data.Literal,
     module Juvix.Data.Universe,
     module Juvix.Data.Hole,
-    module Juvix.Data.Wildcard,
     module Juvix.Compiler.Concrete.Data.Builtins,
   )
 where
@@ -17,7 +16,6 @@ import Juvix.Compiler.Concrete.Data.Literal
 import Juvix.Data.Hole
 import Juvix.Data.IsImplicit
 import Juvix.Data.Universe hiding (smallUniverse)
-import Juvix.Data.Wildcard
 import Juvix.Data.WithLoc
 import Juvix.Prelude
 
