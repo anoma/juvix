@@ -187,7 +187,8 @@ recurse' sig = go True
           let argsNum = case _callType of
                 CallClosure -> length (typeArgs ty)
                 CallFun sym -> getFunInfo (sig ^. recursorInfoTable) sym ^. functionArgsNum
-          checkFunType ty
+          when (argsNum /= 0) $
+            checkFunType ty
           when (ty /= TyDynamic && argsNum /= _callArgsNum) $
             throw $
               AsmError loc "invalid call: the number of supplied arguments doesn't match the number of expected arguments"
