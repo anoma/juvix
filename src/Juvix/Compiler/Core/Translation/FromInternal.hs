@@ -99,21 +99,24 @@ fromInternalExpression res exp = do
       ( runInfoTableBuilder
           (res ^. coreResultTable)
           ( runReader
-              (res ^. coreResultInternalTypedResult . InternalTyped.resultIdenTypes)
-              (runReader initIndexTable (goExpression exp))
+              (res ^. coreResultInternalTypedResult . InternalTyped.resultFunctions)
+              ( runReader
+                  (res ^. coreResultInternalTypedResult . InternalTyped.resultIdenTypes)
+                  (runReader initIndexTable (goExpression exp))
+              )
           )
       )
 
 registerInductiveDefs ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable] r) =>
+  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable] r) =>
   Internal.Module ->
   Sem r ()
 registerInductiveDefs m = registerInductiveDefsBody (m ^. Internal.moduleBody)
 
 registerInductiveDefsBody ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable] r) =>
+  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable] r) =>
   Internal.ModuleBody ->
   Sem r ()
 registerInductiveDefsBody body = mapM_ go (body ^. Internal.moduleStatements)
@@ -129,14 +132,14 @@ registerInductiveDefsBody body = mapM_ go (body ^. Internal.moduleStatements)
 
 registerFunctionDefs ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable] r) =>
+  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable] r) =>
   Internal.Module ->
   Sem r ()
 registerFunctionDefs m = registerFunctionDefsBody (m ^. Internal.moduleBody)
 
 registerFunctionDefsBody ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable] r) =>
+  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable] r) =>
   Internal.ModuleBody ->
   Sem r ()
 registerFunctionDefsBody body = mapM_ go (body ^. Internal.moduleStatements)
@@ -150,7 +153,7 @@ registerFunctionDefsBody body = mapM_ go (body ^. Internal.moduleStatements)
 
 goInductiveDef ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable] r) =>
+  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable] r) =>
   Internal.InductiveDef ->
   Sem r ()
 goInductiveDef i = do
@@ -175,7 +178,7 @@ goInductiveDef i = do
 
 goConstructor ::
   forall r.
-  (Members '[InfoTableBuilder, Reader Internal.InfoTable, Reader InternalTyped.TypesTable] r) =>
+  (Members '[InfoTableBuilder, Reader Internal.InfoTable, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable] r) =>
   Symbol ->
   Internal.InductiveConstructorDef ->
   Sem r ConstructorInfo
@@ -221,7 +224,7 @@ goConstructor sym ctor = do
       runReader
         initIndexTable
         ( Internal.constructorType ctorName
-            >>= goExpression
+            >>= goType
         )
 
     argsNum :: Sem r Int
@@ -279,7 +282,7 @@ goFunctionDefIden (f, sym) = do
 
 goFunctionDef ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable] r) =>
+  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable] r) =>
   ((Internal.FunctionDef, Symbol), Type) ->
   Sem r ()
 goFunctionDef ((f, sym), ty) = do
@@ -297,7 +300,7 @@ goFunctionDef ((f, sym), ty) = do
 
 mkFunBody ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable, Reader IndexTable] r) =>
+  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable] r) =>
   Type ->
   Internal.FunctionDef ->
   Sem r Node
@@ -323,7 +326,7 @@ mkFunBody ty f
 
 goCase ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable, Reader IndexTable] r) =>
+  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable] r) =>
   Internal.Case ->
   Sem r Node
 goCase c = do
@@ -333,7 +336,7 @@ goCase c = do
 
 goCaseBranch ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable, Reader IndexTable] r) =>
+  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable] r) =>
   Internal.CaseBranch ->
   Sem r MatchBranch
 goCaseBranch b = goPatternArgs (b ^. Internal.caseBranchExpression) [b ^. Internal.caseBranchPattern]
@@ -343,12 +346,12 @@ underBinders nBinders = local (over indexTableVarsNum (+ nBinders))
 
 goLambda ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable, Reader IndexTable] r) =>
+  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable] r) =>
   Internal.Lambda ->
   Sem r Node
 goLambda l = do
   ms <- underBinders nPatterns (mapM goLambdaClause (l ^. Internal.lambdaClauses))
-  ty <- goExpression (fromJust (l ^. Internal.lambdaType))
+  ty <- goType (fromJust (l ^. Internal.lambdaType))
   let values = reverse (take nPatterns (mkVar' <$> [0 ..]))
       match = mkMatch' (fromList values) (toList ms)
       argtys = take nPatterns $ typeArgs ty
@@ -360,7 +363,7 @@ goLambda l = do
 
 goLambdaClause ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable, Reader IndexTable] r) =>
+  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable] r) =>
   Internal.LambdaClause ->
   Sem r MatchBranch
 goLambdaClause clause = goPatternArgs (clause ^. Internal.lambdaBody) ps
@@ -370,7 +373,7 @@ goLambdaClause clause = goPatternArgs (clause ^. Internal.lambdaBody) ps
 
 goLet ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable, Reader IndexTable] r) =>
+  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable] r) =>
   Internal.Let ->
   Sem r Node
 goLet l = do
@@ -397,17 +400,17 @@ goLet l = do
 
 goLetClause ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable, Reader IndexTable] r) =>
+  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable] r) =>
   Internal.LetClause ->
   Sem r (Type, Node)
 goLetClause (Internal.LetFunDef f) = do
-  funTy <- goExpression (f ^. Internal.funDefType)
+  funTy <- goType (f ^. Internal.funDefType)
   funBody <- mkFunBody funTy f
   return (funTy, funBody)
 
 goAxiomInductive ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable] r) =>
+  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable] r) =>
   Internal.AxiomDef ->
   Sem r ()
 goAxiomInductive a = whenJust (a ^. Internal.axiomBuiltin) builtinInductive
@@ -449,7 +452,7 @@ goAxiomInductive a = whenJust (a ^. Internal.axiomBuiltin) builtinInductive
 
 goAxiomDef ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable] r) =>
+  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable] r) =>
   Internal.AxiomDef ->
   Sem r ()
 goAxiomDef a = do
@@ -521,14 +524,14 @@ goAxiomDef a = do
         Just (mkLambda' mkSmallUniv (mkLambda' (mkVar' 0) (mkBuiltinApp' OpFail [mkVar' 0])))
 
     axiomType' :: Sem r Type
-    axiomType' = runReader initIndexTable (goExpression (a ^. Internal.axiomType))
+    axiomType' = runReader initIndexTable (goType (a ^. Internal.axiomType))
 
     writeLambda :: Type -> Node
     writeLambda ty = mkLambda' ty (mkConstr' (BuiltinTag TagWrite) [mkVar' 0])
 
 fromPatternArg ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable, Reader IndexTable] r) =>
+  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable] r) =>
   Internal.PatternArg ->
   Sem r Pattern
 fromPatternArg pa = case pa ^. Internal.patternArgName of
@@ -556,7 +559,7 @@ fromPatternArg pa = case pa ^. Internal.patternArgName of
       )
 
     getPatternType :: Name -> Sem r Type
-    getPatternType n = asks (fromJust . HashMap.lookup n) >>= goExpression
+    getPatternType n = asks (fromJust . HashMap.lookup n) >>= goType
 
     fromPattern :: Internal.Pattern -> Sem r Pattern
     fromPattern = \case
@@ -605,7 +608,7 @@ getPatternArgVars pa = case pa ^. Internal.patternArgName of
 
 goPatternArgs ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable, Reader IndexTable] r) =>
+  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable] r) =>
   Internal.Expression ->
   [Internal.PatternArg] ->
   Sem r MatchBranch
@@ -635,7 +638,7 @@ goPatternArgs body ps = go [] ps
 
 goFunctionClause ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable, Reader IndexTable] r) =>
+  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable] r) =>
   Internal.FunctionClause ->
   Sem r MatchBranch
 goFunctionClause clause = goPatternArgs (clause ^. Internal.clauseBody) internalPatternArgs
@@ -645,7 +648,7 @@ goFunctionClause clause = goPatternArgs (clause ^. Internal.clauseBody) internal
 
 goExpression ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable, Reader IndexTable] r) =>
+  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable] r) =>
   Internal.Expression ->
   Sem r Node
 goExpression = \case
@@ -720,7 +723,7 @@ goExpression = \case
 
 goFunction ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable, Reader IndexTable] r) =>
+  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable] r) =>
   ([Internal.FunctionParameter], Internal.Expression) ->
   Sem r Node
 goFunction (params, returnTypeExpr) = go params
@@ -728,7 +731,7 @@ goFunction (params, returnTypeExpr) = go params
     go :: [Internal.FunctionParameter] -> Sem r Node
     go = \case
       param : params' -> do
-        paramTy <- goExpression (param ^. Internal.paramType)
+        paramTy <- goType (param ^. Internal.paramType)
         let paramBinder =
               Binder
                 { _binderName = maybe "?" (^. nameText) $ param ^. Internal.paramName,
@@ -739,20 +742,20 @@ goFunction (params, returnTypeExpr) = go params
           Nothing -> mkPi mempty paramBinder <$> local (over indexTableVarsNum (+ 1)) (go params')
           Just vn -> mkPi mempty paramBinder <$> localAddName vn (go params')
       [] ->
-        goExpression returnTypeExpr
+        goType returnTypeExpr
 
 goSimpleLambda ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable, Reader IndexTable] r) =>
+  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable] r) =>
   Internal.SimpleLambda ->
   Sem r Node
 goSimpleLambda l = do
-  ty <- goExpression (l ^. Internal.slambdaVarType)
+  ty <- goType (l ^. Internal.slambdaVarType)
   localAddName (l ^. Internal.slambdaVar) (mkLambda' ty <$> goExpression (l ^. Internal.slambdaBody))
 
 goApplication ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable, Reader IndexTable] r) =>
+  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable] r) =>
   Internal.Application ->
   Sem r Node
 goApplication a = do
