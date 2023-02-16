@@ -8,7 +8,6 @@ where
 import Juvix.Compiler.Backend.Geb.Data.Context as Context
 import Juvix.Compiler.Backend.Geb.Extra
 import Juvix.Compiler.Backend.Geb.Language
-import Juvix.Compiler.Backend.Geb.Pretty
 import Juvix.Compiler.Backend.Geb.Translation.FromSource.Analysis.TypeChecking.Data.Types
 import Juvix.Compiler.Backend.Geb.Translation.FromSource.Analysis.TypeChecking.Error
 
