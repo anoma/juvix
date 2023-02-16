@@ -1,7 +1,7 @@
 module Juvix.Compiler.Backend.Geb.Pretty.Values.Base where
 
 import Juvix.Compiler.Backend.Geb.Evaluator.Data.Values
-import Juvix.Compiler.Backend.Geb.Pretty.Base qualified as Geb
+import Juvix.Compiler.Backend.Geb.Pretty qualified as Geb
 import Juvix.Compiler.Backend.Geb.Pretty.Keywords
 import Juvix.Compiler.Backend.Geb.Pretty.Options
 import Juvix.Data.CodeAnn
@@ -27,29 +27,6 @@ instance PrettyCode ValueMorphismPair where
     right <- ppArg _valueMorphismPairRight
     return $ kwPair <> line <> indent' (vsep [left, right])
 
-instance PrettyCode ValueClosure where
-  ppCode cls = do
-    lamb <- Geb.ppArg (cls ^. valueClosureLambdaBody)
-    env <- mapM ppArg (toList (cls ^. valueClosureEnv))
-    -- TODO: this could probably be done more nicely
-    return $
-      kwClosure
-        <> line
-        <> indent'
-          ( vsep
-              [ parens
-                  ( kwClosureEnv
-                      <> line
-                      <> indent'
-                        ( if null env
-                            then kwNil
-                            else (vsep env)
-                        )
-                  ),
-                lamb
-              ]
-          )
-
 instance PrettyCode GebValue where
   ppCode = \case
     GebValueMorphismUnit -> return kwUnit
@@ -61,7 +38,7 @@ instance PrettyCode GebValue where
       v <- ppArg val
       return $ kwRight <> line <> indent' v
     GebValueMorphismPair x -> ppCode x
-    GebValueClosure x -> ppCode x
+    GebValueClosure x -> Geb.ppCode (x ^. valueClosureLambdaBody)
 
 --------------------------------------------------------------------------------
 -- helper functions

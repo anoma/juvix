@@ -43,7 +43,10 @@ objNoEvalMsg = "Geb objects cannot be evaluated, only morphisms."
 
 eval' :: Env -> Morphism -> Either JuvixError GebValue
 eval' env m =
-  run . runError $ runReader env $ mapError (JuvixError @EvalError) $ eval m
+  run . runError $
+    runReader env $
+      mapError (JuvixError @EvalError) $
+        eval m
 
 nf' :: Env -> Morphism -> Either JuvixError Morphism
 nf' env m = run . runError $ runReader env (nf m)

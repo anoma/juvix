@@ -1,7 +1,7 @@
 (case-on
     so1     ;left
     so1     ;right
-    (coprod      ; codmain
+    (coprod      ; codomain
     so1
     so1)
 

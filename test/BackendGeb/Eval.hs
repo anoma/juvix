@@ -7,5 +7,5 @@ import Base
 allTests :: TestTree
 allTests =
   testGroup
-    "JuvixGeb eval"
+    "JuvixGeb eval tests"
     [EvalP.allTests, EvalN.allTests]

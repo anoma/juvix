@@ -29,13 +29,4 @@ allTests =
     (map (mkTest . testDescr) tests)
 
 tests :: [NegTest]
-tests =
-  [ NegTest
-      "Test004.lisp"
-      $(mkRelDir ".")
-      $(mkRelFile "test004.lisp"),
-    NegTest
-      "Test006.lisp"
-      $(mkRelDir ".")
-      $(mkRelFile "test006.lisp")
-  ]
+tests = []

@@ -55,15 +55,6 @@ kwPair = keyword Str.gebPair
 kwLamb :: Doc Ann
 kwLamb = keyword Str.gebLamb
 
-kwClosure :: Doc Ann
-kwClosure = keyword Str.gebValueClosure
-
-kwClosureEnv :: Doc Ann
-kwClosureEnv = keyword Str.gebValueClosureEnv
-
-kwNil :: Doc Ann
-kwNil = keyword Str.lispNil
-
 kwApp :: Doc Ann
 kwApp = keyword Str.gebApp
 

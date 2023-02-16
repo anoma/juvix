@@ -1,5 +1,2 @@
-(cls
-  (env
-    nil)
-  (left
-    unit))
+(left
+  unit)

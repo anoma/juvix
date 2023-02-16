@@ -1,5 +1,2 @@
-(cls
-  (env
-    unit)
-  (left
-    unit))
+(left
+  unit)
