@@ -29,7 +29,6 @@ mkModuleRef' m = ModuleRef' (sing :&: m)
 
 data Scope = Scope
   { _scopePath :: S.AbsModulePath,
-    _scopeFixities :: HashMap Symbol OperatorSyntaxDef,
     _scopeSymbols :: HashMap Symbol SymbolInfo,
     _scopeTopModules :: HashMap TopModulePath (ModuleRef'' 'S.NotConcrete 'ModuleTop),
     -- | Symbols that have been defined in the current scope level. Every symbol
@@ -61,6 +60,7 @@ makeLenses ''ScopeParameters
 
 data ScoperState = ScoperState
   { _scoperModulesCache :: ModulesCache,
+    _scoperFixities :: HashMap Symbol OperatorSyntaxDef,
     _scoperModules :: HashMap S.ModuleNameId (ModuleRef' 'S.NotConcrete),
     _scoperScope :: HashMap TopModulePath Scope
   }
@@ -71,7 +71,6 @@ emptyScope :: S.AbsModulePath -> Scope
 emptyScope absPath =
   Scope
     { _scopePath = absPath,
-      _scopeFixities = mempty,
       _scopeSymbols = mempty,
       _scopeTopModules = mempty,
       _scopeLocalSymbols = mempty,

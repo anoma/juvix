@@ -30,6 +30,7 @@ iniScoperState =
   ScoperState
     { _scoperModulesCache = ModulesCache mempty,
       _scoperModules = mempty,
+      _scoperFixities = mempty,
       _scoperScope = mempty
     }
 
@@ -92,12 +93,12 @@ checkParseExpressionAtoms' ::
   Sem r Expression
 checkParseExpressionAtoms' = checkExpressionAtoms >=> parseExpressionAtoms
 
-freshVariable :: (Members '[NameIdGen, State Scope] r) => Symbol -> Sem r S.Symbol
+freshVariable :: Members '[NameIdGen, State Scope, State ScoperState] r => Symbol -> Sem r S.Symbol
 freshVariable = freshSymbol S.KNameLocal
 
 freshSymbol ::
   forall r.
-  (Members '[State Scope, NameIdGen] r) =>
+  (Members '[State Scope, State ScoperState, NameIdGen] r) =>
   S.NameKind ->
   Symbol ->
   Sem r S.Symbol
@@ -114,12 +115,12 @@ freshSymbol _nameKind _nameConcrete = do
     fixity :: Sem r (Maybe Fixity)
     fixity
       | S.canHaveFixity _nameKind =
-          fmap (^. opFixity) . HashMap.lookup _nameConcrete <$> gets (^. scopeFixities)
+          fmap (^. opFixity) . HashMap.lookup _nameConcrete <$> gets (^. scoperFixities)
       | otherwise = return Nothing
 
 reserveSymbolOf ::
   forall r.
-  (Members '[Error ScoperError, NameIdGen, State Scope] r) =>
+  (Members '[Error ScoperError, NameIdGen, State Scope, State ScoperState] r) =>
   S.NameKind ->
   Symbol ->
   Sem r S.Symbol
@@ -130,25 +131,21 @@ reserveSymbolOf k s = do
     checkNotBound :: Sem r ()
     checkNotBound = do
       exists <- HashMap.lookup s <$> gets (^. scopeLocalSymbols)
-      whenJust exists $
-        \d ->
-          throw
-            ( ErrMultipleDeclarations
-                MultipleDeclarations
-                  { _multipleDeclSecond = s,
-                    _multipleDeclFirst = getLoc d
-                  }
-            )
+      whenJust exists $ \d ->
+        throw
+          ( ErrMultipleDeclarations
+              MultipleDeclarations
+                { _multipleDeclSecond = s,
+                  _multipleDeclFirst = getLoc d
+                }
+          )
 
-bindReservedSymbol ::
-  (Members '[State Scope] r) =>
-  S.Symbol ->
-  SymbolEntry ->
-  Sem r ()
+bindReservedSymbol :: Members '[State Scope, InfoTableBuilder] r => S.Symbol -> SymbolEntry -> Sem r ()
 bindReservedSymbol s' entry = do
   path <- gets (^. scopePath)
   modify (over scopeSymbols (HashMap.alter (Just . addS path) s))
   modify (set (scopeLocalSymbols . at s) (Just s'))
+  registerName (S.unqualifiedSymbol s')
   where
     s :: Symbol
     s = s' ^. S.nameConcrete
@@ -158,49 +155,48 @@ bindReservedSymbol s' entry = do
       Just SymbolInfo {..} -> SymbolInfo (HashMap.insert path entry _symbolInfo)
 
 bindSymbolOf ::
-  (Members '[Error ScoperError, NameIdGen, State Scope, InfoTableBuilder] r) =>
+  (Members '[Error ScoperError, NameIdGen, State Scope, InfoTableBuilder, State ScoperState] r) =>
   S.NameKind ->
   (S.Name' () -> SymbolEntry) ->
   Symbol ->
   Sem r S.Symbol
-bindSymbolOf k e s = do
+bindSymbolOf k mkEntry s = do
   s' <- reserveSymbolOf k s
-  bindReservedSymbol s' (e (set S.nameConcrete () s'))
-  registerName (S.unqualifiedSymbol s')
+  bindReservedSymbol s' (mkEntry (S.unConcrete s'))
   return s'
 
 bindVariableSymbol ::
-  (Members '[Error ScoperError, NameIdGen, State Scope, InfoTableBuilder] r) =>
+  Members '[Error ScoperError, NameIdGen, State Scope, InfoTableBuilder, State ScoperState] r =>
   Symbol ->
   Sem r S.Symbol
 bindVariableSymbol = bindSymbolOf S.KNameLocal EntryVariable
 
 bindFunctionSymbol ::
-  (Members '[Error ScoperError, NameIdGen, State Scope, InfoTableBuilder] r) =>
+  Members '[Error ScoperError, NameIdGen, State Scope, InfoTableBuilder, State ScoperState] r =>
   Symbol ->
   Sem r S.Symbol
 bindFunctionSymbol = bindSymbolOf S.KNameFunction (EntryFunction . FunctionRef')
 
 bindInductiveSymbol ::
-  (Members '[Error ScoperError, NameIdGen, State Scope, InfoTableBuilder] r) =>
+  Members '[Error ScoperError, NameIdGen, State Scope, InfoTableBuilder, State ScoperState] r =>
   Symbol ->
   Sem r S.Symbol
 bindInductiveSymbol = bindSymbolOf S.KNameInductive (EntryInductive . InductiveRef')
 
 bindAxiomSymbol ::
-  (Members '[Error ScoperError, NameIdGen, State Scope, InfoTableBuilder] r) =>
+  Members '[Error ScoperError, NameIdGen, State Scope, InfoTableBuilder, State ScoperState] r =>
   Symbol ->
   Sem r S.Symbol
 bindAxiomSymbol = bindSymbolOf S.KNameAxiom (EntryAxiom . AxiomRef')
 
 bindConstructorSymbol ::
-  (Members '[Error ScoperError, NameIdGen, State Scope, InfoTableBuilder] r) =>
+  Members '[Error ScoperError, NameIdGen, State Scope, InfoTableBuilder, State ScoperState] r =>
   Symbol ->
   Sem r S.Symbol
 bindConstructorSymbol = bindSymbolOf S.KNameConstructor (EntryConstructor . ConstructorRef')
 
 bindLocalModuleSymbol ::
-  (Members '[Error ScoperError, NameIdGen, State Scope, InfoTableBuilder] r) =>
+  Members '[Error ScoperError, NameIdGen, State Scope, InfoTableBuilder, State ScoperState] r =>
   ExportInfo ->
   Module 'Scoped 'ModuleLocal ->
   Symbol ->
@@ -399,17 +395,17 @@ readScopeModule import_ = do
 
 checkOperatorSyntaxDef ::
   forall r.
-  (Members '[Error ScoperError, State Scope] r) =>
+  Members '[Error ScoperError, State Scope, State ScoperState] r =>
   OperatorSyntaxDef ->
   Sem r ()
 checkOperatorSyntaxDef s@OperatorSyntaxDef {..} = do
   checkNotDefined
-  modify (over scopeFixities (HashMap.insert _opSymbol s))
+  modify (over scoperFixities (HashMap.insert _opSymbol s))
   where
     checkNotDefined :: Sem r ()
     checkNotDefined =
       whenJustM
-        (HashMap.lookup _opSymbol <$> gets (^. scopeFixities))
+        (HashMap.lookup _opSymbol <$> gets (^. scoperFixities))
         (\s' -> throw (ErrDuplicateFixity (DuplicateFixity s' s)))
 
 checkTypeSignature ::
@@ -423,82 +419,64 @@ checkTypeSignature TypeSignature {..} = do
   sigBody' <- mapM checkParseExpressionAtoms _sigBody
   registerFunction' TypeSignature {_sigName = sigName', _sigType = sigType', _sigDoc = sigDoc', _sigBody = sigBody', ..}
 
-checkConstructorDef ::
+checkInductiveParameters ::
+  forall r.
   (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
-  InductiveConstructorDef 'Parsed ->
-  Sem r (InductiveConstructorDef 'Scoped)
-checkConstructorDef InductiveConstructorDef {..} = do
-  constructorType' <- checkParseExpressionAtoms _constructorType
-  constructorName' <- bindConstructorSymbol _constructorName
-  doc' <- mapM checkJudoc _constructorDoc
-  registerConstructor'
-    InductiveConstructorDef
-      { _constructorName = constructorName',
-        _constructorType = constructorType',
-        _constructorDoc = doc',
-        _constructorPipe
-      }
-
-withParams ::
-  forall r a.
-  (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
-  [InductiveParameters 'Parsed] ->
-  ([InductiveParameters 'Scoped] -> Sem r a) ->
-  Sem r a
-withParams xs a = go [] [] xs
-  where
-    go :: [InductiveParameters 'Scoped] -> [Symbol] -> [InductiveParameters 'Parsed] -> Sem r a
-    go inductiveParameters' usedNames params =
-      case params of
-        -- All params have been checked
-        [] -> a inductiveParameters'
-        -- More params to check
-        (InductiveParameters {..} : ps) ->
-          go' [] usedNames (toList _inductiveParametersNames)
-          where
-            go' :: [SymbolType 'Scoped] -> [Symbol] -> [SymbolType 'Parsed] -> Sem r a
-            go' names' usedNames' = \case
-              [] -> do
-                inductiveParametersType' <- checkParseExpressionAtoms _inductiveParametersType
-                let param' =
-                      InductiveParameters
-                        { _inductiveParametersType = inductiveParametersType',
-                          _inductiveParametersNames = NonEmpty.fromList (reverse names')
-                        }
-                go (inductiveParameters' ++ [param']) usedNames' ps
-              nm : names
-                | nm `elem` usedNames' ->
-                    throw
-                      ( ErrDuplicateInductiveParameterName
-                          (DuplicateInductiveParameterName nm)
-                      )
-                | otherwise -> do
-                    nm' <- freshVariable nm
-                    withBindLocalVariable nm' $
-                      go' (nm' : names') (nm : usedNames) names
+  InductiveParameters 'Parsed ->
+  Sem r (InductiveParameters 'Scoped)
+checkInductiveParameters params = do
+  _inductiveParametersType <- checkParseExpressionAtoms (params ^. inductiveParametersType)
+  _inductiveParametersNames <- mapM bindVariableSymbol (params ^. inductiveParametersNames)
+  return InductiveParameters {..}
 
 checkInductiveDef ::
   forall r.
   (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
   InductiveDef 'Parsed ->
   Sem r (InductiveDef 'Scoped)
-checkInductiveDef ty@InductiveDef {..} = do
-  withParams _inductiveParameters $ \inductiveParameters' -> do
+checkInductiveDef InductiveDef {..} = do
+  inductiveName' <- bindInductiveSymbol _inductiveName
+  (inductiveParameters', inductiveType', inductiveDoc', inductiveConstructors') <- withLocalScope $ do
+    inductiveParameters' <- mapM checkInductiveParameters _inductiveParameters
     inductiveType' <- mapM checkParseExpressionAtoms _inductiveType
     inductiveDoc' <- mapM checkJudoc _inductiveDoc
-    inductiveName' <- bindInductiveSymbol _inductiveName
     inductiveConstructors' <- mapM checkConstructorDef _inductiveConstructors
-    registerInductive'
-      InductiveDef
-        { _inductiveName = inductiveName',
-          _inductiveDoc = inductiveDoc',
-          _inductiveBuiltin = _inductiveBuiltin,
-          _inductiveParameters = inductiveParameters',
-          _inductiveType = inductiveType',
-          _inductiveConstructors = inductiveConstructors',
-          _inductivePositive = ty ^. inductivePositive,
-          _inductiveKw
-        }
+    return (inductiveParameters', inductiveType', inductiveDoc', inductiveConstructors')
+  forM_ inductiveConstructors' bindConstructor
+  registerInductive'
+    InductiveDef
+      { _inductiveName = inductiveName',
+        _inductiveDoc = inductiveDoc',
+        _inductiveParameters = inductiveParameters',
+        _inductiveType = inductiveType',
+        _inductiveConstructors = inductiveConstructors',
+        _inductiveBuiltin,
+        _inductivePositive,
+        _inductiveKw
+      }
+  where
+    bindConstructor :: InductiveConstructorDef 'Scoped -> Sem r ()
+    bindConstructor d =
+      bindReservedSymbol
+        (d ^. constructorName)
+        ( EntryConstructor
+            ( ConstructorRef'
+                (S.unConcrete (d ^. constructorName))
+            )
+        )
+    -- note that the constructor name is not bound here
+    checkConstructorDef :: InductiveConstructorDef 'Parsed -> Sem r (InductiveConstructorDef 'Scoped)
+    checkConstructorDef InductiveConstructorDef {..} = do
+      constructorType' <- checkParseExpressionAtoms _constructorType
+      constructorName' <- reserveSymbolOf S.KNameConstructor _constructorName
+      doc' <- mapM checkJudoc _constructorDoc
+      registerConstructor'
+        InductiveConstructorDef
+          { _constructorName = constructorName',
+            _constructorType = constructorType',
+            _constructorDoc = doc',
+            _constructorPipe
+          }
 
 createExportsTable :: ExportInfo -> HashSet NameId
 createExportsTable ei = foldr (HashSet.insert . getNameId) HashSet.empty (HashMap.elems (ei ^. exportSymbols))
@@ -576,7 +554,7 @@ checkTopModule m@(Module _moduleKw path doc body) = do
                     _moduleDoc = doc',
                     _moduleKw
                   }
-              _moduleRefName = set S.nameConcrete () path'
+              _moduleRefName = S.unConcrete path'
           return (ModuleRef'' {..}, path')
       modify (set (scoperScope . at (p ^. S.nameConcrete)) (Just s))
       return m'
@@ -615,7 +593,7 @@ checkLocalModule Module {..} = do
       return (e, b, doc')
   _modulePath' <- reserveSymbolOf S.KNameLocalModule _modulePath
   let moduleId = _modulePath' ^. S.nameId
-      _moduleRefName = set S.nameConcrete () _modulePath'
+      _moduleRefName = S.unConcrete _modulePath'
       _moduleRefModule =
         Module
           { _modulePath = _modulePath',
@@ -635,22 +613,22 @@ checkLocalModule Module {..} = do
       absPath <- (S.<.> _modulePath) <$> gets (^. scopePath)
       modify (set scopePath absPath)
       modify (over scopeSymbols (fmap inheritSymbol))
-      modify (set scopeFixities mempty) -- do not inherit fixity declarations
+      modify (set scoperFixities mempty) -- do not inherit fixity declarations
       where
         inheritSymbol :: SymbolInfo -> SymbolInfo
         inheritSymbol (SymbolInfo s) = SymbolInfo (fmap inheritEntry s)
         inheritEntry :: SymbolEntry -> SymbolEntry
         inheritEntry = entryOverName (over S.nameWhyInScope S.BecauseInherited . set S.nameVisibilityAnn VisPrivate)
 
-checkOrphanFixities :: forall r. (Members '[Error ScoperError, State Scope] r) => Sem r ()
+checkOrphanFixities :: forall r. Members '[Error ScoperError, State Scope, State ScoperState] r => Sem r ()
 checkOrphanFixities = do
   path <- gets (^. scopePath)
-  declared <- gets (^. scopeFixities)
+  declared <- gets (^. scoperFixities)
   used <- gets (HashMap.keys . fmap (filter (== path) . HashMap.keys . (^. symbolInfo)) . (^. scopeSymbols))
-  let unused = toList $ foldr HashMap.delete declared used
-  case unused of
-    [] -> return ()
-    (x : _) -> throw (ErrUnusedOperatorDef (UnusedOperatorDef x))
+  let unused = toList (foldr HashMap.delete declared used)
+  case listToMaybe unused of
+    Nothing -> return ()
+    Just x -> throw (ErrUnusedOperatorDef (UnusedOperatorDef x))
 
 symbolInfoSingle :: SymbolEntry -> SymbolInfo
 symbolInfoSingle p = SymbolInfo $ HashMap.singleton (entryName p ^. S.nameDefinedIn) p
@@ -708,7 +686,7 @@ checkOpenModuleNoImport ::
   OpenModule 'Parsed ->
   Sem r (OpenModule 'Scoped)
 checkOpenModuleNoImport OpenModule {..}
-  | isJust _openModuleImportKw = error "unsupported: open import statement"
+  | isJust _openModuleImportKw = impossible
   | otherwise = do
       openModuleName'@(ModuleRef' (_ :&: moduleRef'')) <- lookupModuleSymbol _openModuleName
       mergeScope (alterScope (moduleRef'' ^. moduleExportInfo))
@@ -775,11 +753,10 @@ checkFunctionClause ::
 checkFunctionClause clause@FunctionClause {..} = do
   clauseOwnerFunction' <- checkTypeSigInScope
   registerName (S.unqualifiedSymbol clauseOwnerFunction')
-  (clausePatterns', clauseBody') <- do
+  (clausePatterns', clauseBody') <- withLocalScope $ do
     clp <- mapM checkParsePatternAtom _clausePatterns
-    withBindCurrentGroup $ do
-      clb <- checkParseExpressionAtoms _clauseBody
-      return (clp, clb)
+    clb <- checkParseExpressionAtoms _clauseBody
+    return (clp, clb)
   registerFunctionClause'
     FunctionClause
       { _clauseOwnerFunction = clauseOwnerFunction',
@@ -929,7 +906,7 @@ checkFunction f = do
       Nothing -> return Nothing
       Just p -> Just <$> bindVariableSymbol p
     _funReturn <- checkParseExpressionAtoms (f ^. funReturn)
-    let _paramImplicit =  f ^. funParameters . paramImplicit
+    let _paramImplicit = f ^. funParameters . paramImplicit
         _funParameters = FunctionParameters {..}
         _funKw = f ^. funKw
     return Function {..}
@@ -967,10 +944,10 @@ checkCaseBranch ::
   Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r =>
   CaseBranch 'Parsed ->
   Sem r (CaseBranch 'Scoped)
-checkCaseBranch CaseBranch {..} = do
+checkCaseBranch CaseBranch {..} = withLocalScope $ do
   pattern' <- checkParsePatternAtoms _caseBranchPattern
   checkNotImplicit pattern'
-  expression' <- withBindCurrentGroup (checkParseExpressionAtoms _caseBranchExpression)
+  expression' <- (checkParseExpressionAtoms _caseBranchExpression)
   return $
     CaseBranch
       { _caseBranchPattern = pattern',
@@ -1009,9 +986,9 @@ checkLambdaClause ::
   (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
   LambdaClause 'Parsed ->
   Sem r (LambdaClause 'Scoped)
-checkLambdaClause LambdaClause {..} = do
+checkLambdaClause LambdaClause {..} = withLocalScope $ do
   lambdaParameters' <- mapM checkParsePatternAtom _lambdaParameters
-  lambdaBody' <- withBindCurrentGroup (checkParseExpressionAtoms _lambdaBody)
+  lambdaBody' <- checkParseExpressionAtoms _lambdaBody
   return
     LambdaClause
       { _lambdaParameters = lambdaParameters',
@@ -1044,24 +1021,18 @@ checkUnqualified ::
   Symbol ->
   Sem r ScopedIden
 checkUnqualified s = do
-  -- Local vars have scope priority
-  l <- HashMap.lookup s <$> asks (^. localVars)
-  case l of
-    Just v -> ScopedVar <$> scopedVar v s
-    Nothing -> do
-      scope <- get
-      locals <- ask
-      -- Lookup at the global scope
-      let err = throw (ErrSymNotInScope (NotInScope s locals scope))
-      entries <-
-        filter S.isExprKind
-          <$> lookupQualifiedSymbol ([], s)
-      case entries of
-        [] -> err
-        [x] -> entryToScopedIden n x
-        es -> throw (ErrAmbiguousSym (AmbiguousSym n es))
-      where
-        n = NameUnqualified s
+  scope <- get
+  -- Lookup at the global scope
+  let err = throw (ErrSymNotInScope (NotInScope s scope))
+  entries <-
+    filter S.isExprKind
+      <$> lookupQualifiedSymbol ([], s)
+  case entries of
+    [] -> err
+    [x] -> entryToScopedIden n x
+    es -> throw (ErrAmbiguousSym (AmbiguousSym n es))
+  where
+    n = NameUnqualified s
 
 checkPatternName ::
   forall r.
@@ -1074,7 +1045,7 @@ checkPatternName n = do
     Just constr -> do
       registerName (constr ^. constructorRefName)
       return (PatternScopedConstructor constr) -- the symbol is a constructor
-    Nothing -> PatternScopedVar <$> groupBindLocalVariable sym -- the symbol is a variable
+    Nothing -> PatternScopedVar <$> bindVariableSymbol sym -- the symbol is a variable
   where
     (path, sym) = case n of
       NameQualified (QualifiedName (SymbolPath p) s) -> (toList p, s)
@@ -1099,59 +1070,11 @@ checkPatternBinding ::
   PatternBinding ->
   Sem r PatternArg
 checkPatternBinding (PatternBinding n p) = do
-  n' <- groupBindLocalVariable n
+  n' <- bindVariableSymbol n
   p' <- checkParsePatternAtom p
-  if isJust (p' ^. patternArgName)
-    then throw (ErrDoubleBinderPattern (DoubleBinderPattern n' p'))
-    else return $ set patternArgName (Just n') p'
-
-withBindCurrentGroup ::
-  (Members '[State Scope] r) =>
-  Sem r a ->
-  Sem r a
-withBindCurrentGroup ma = do
-  grp <- gets (^. scopeBindGroup)
-  modify (set scopeBindGroup mempty) -- empties the group
-  local (over localVars (HashMap.union grp)) ma
-
--- addLocalVars :: [LocalVariable] -> LocalVars -> LocalVars
--- addLocalVars lv = over localVars (flip (foldr insertVar) lv)
---   where
---     insertVar :: LocalVariable -> HashMap Symbol LocalVariable -> HashMap Symbol LocalVariable
---     insertVar v = HashMap.insert (v ^. variableName . S.nameConcrete) v
-
--- bindLocalVariable ::
---   (Members '[State Scope] r) => LocalVariable -> Sem r ()
--- bindLocalVariable var = local (addLocalVars [var])
-
--- | Binds a local variable in a bind group, i.e. a group of pattern.
-groupBindLocalVariable ::
-  forall r.
-  (Members '[Error ScoperError, State Scope, NameIdGen] r) =>
-  Symbol ->
-  Sem r S.Symbol
-groupBindLocalVariable s = do
-  checkNotInGroup
-  addToGroup
-  where
-    checkNotInGroup :: Sem r ()
-    checkNotInGroup =
-      whenJustM
-        (HashMap.lookup s <$> gets (^. scopeBindGroup))
-        ( \x ->
-            throw
-              ( ErrBindGroup
-                  BindGroupConflict
-                    { _bindGroupFirst = x ^. variableName . S.nameConcrete,
-                      _bindGroupSecond = s
-                    }
-              )
-        )
-    addToGroup :: Sem r S.Symbol
-    addToGroup = do
-      n <- freshVariable s
-      modify (over scopeBindGroup (HashMap.insert s n))
-      return n
+  if
+      | isJust (p' ^. patternArgName) -> throw (ErrDoubleBinderPattern (DoubleBinderPattern n' p'))
+      | otherwise -> return $ set patternArgName (Just n') p'
 
 checkPatternAtoms ::
   (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
@@ -1295,9 +1218,9 @@ checkStatement s = case s of
 -- Infix Expression
 -------------------------------------------------------------------------------
 
-makeExpressionTable2 ::
+makeExpressionTable ::
   ExpressionAtoms 'Scoped -> [[P.Operator Parse Expression]]
-makeExpressionTable2 (ExpressionAtoms atoms _) = [appOpExplicit] : operators ++ [[functionOp]]
+makeExpressionTable (ExpressionAtoms atoms _) = [appOpExplicit] : operators ++ [[functionOp]]
   where
     operators = mkSymbolTable idens
     idens :: [ScopedIden]
@@ -1394,7 +1317,7 @@ parseExpressionAtoms a@(ExpressionAtoms sections _) = do
     parser :: Parse Expression
     parser = runM (mkExpressionParser tbl) <* P.eof
     res = P.parse parser filePath (toList sections)
-    tbl = makeExpressionTable2 a
+    tbl = makeExpressionTable a
     filePath :: FilePath
     filePath = ""
 
