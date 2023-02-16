@@ -21,6 +21,28 @@ class PrettyCode c where
 ppCode' :: (PrettyCode c) => Options -> c -> Doc Ann
 ppCode' opts = run . runReader opts . ppCode
 
+instance PrettyCode ValueClosure where
+  ppCode cls = do
+    lamb <- Geb.ppArg (cls ^. valueClosureLambdaBody)
+    env <- mapM ppArg (toList (cls ^. valueClosureEnv))
+    return $
+      kwClosure
+        <> line
+        <> indent'
+          ( vsep
+              [ parens
+                  ( kwClosureEnv
+                      <> line
+                      <> indent'
+                        ( if null env
+                            then kwNil
+                            else (vsep env)
+                        )
+                  ),
+                lamb
+              ]
+          )
+
 instance PrettyCode ValueMorphismPair where
   ppCode ValueMorphismPair {..} = do
     left <- ppArg _valueMorphismPairLeft
@@ -38,7 +60,7 @@ instance PrettyCode GebValue where
       v <- ppArg val
       return $ kwRight <> line <> indent' v
     GebValueMorphismPair x -> ppCode x
-    GebValueClosure x -> Geb.ppCode (x ^. valueClosureLambdaBody)
+    GebValueClosure x -> ppCode x
 
 --------------------------------------------------------------------------------
 -- helper functions

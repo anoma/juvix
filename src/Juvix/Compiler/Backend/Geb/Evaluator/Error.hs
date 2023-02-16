@@ -1,5 +1,6 @@
 module Juvix.Compiler.Backend.Geb.Evaluator.Error where
 
+import GHC.Exception qualified as Exception
 import GHC.Show qualified as S
 import Juvix.Compiler.Backend.Geb.Evaluator.Data.Values
 import Juvix.Compiler.Backend.Geb.Language
@@ -12,7 +13,14 @@ data EvalError = EvalError
     _evalErrorGebExpression :: !(Maybe Morphism)
   }
 
+data FromGebValueError = FromGebValueError
+  { _fromGebValueErrorMsg :: Text,
+    _fromGebValueErrorGebValue :: Maybe GebValue,
+    _fromGebValueErrorGebExpression :: Maybe Object
+  }
+
 makeLenses ''EvalError
+makeLenses ''FromGebValueError
 
 -- TODO: Make this a proper error with a location
 instance ToGenericError EvalError where
@@ -61,3 +69,19 @@ evalError msg val m =
           _evalErrorGebExpression = m
         }
     )
+
+instance Exception.Exception FromGebValueError
+
+instance Show FromGebValueError where
+  show :: FromGebValueError -> String
+  show FromGebValueError {..} =
+    "fromGebValue error: "
+      <> fromText _fromGebValueErrorMsg
+      <> case _fromGebValueErrorGebValue of
+        Nothing -> ""
+        Just val -> ": " <> fromText (ppTrace val)
+      <> case _fromGebValueErrorGebExpression of
+        Nothing -> ""
+        Just expr ->
+          "GebObject associated:\n"
+            <> fromText (Geb.ppTrace expr)

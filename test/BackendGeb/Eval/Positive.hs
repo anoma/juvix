@@ -48,27 +48,27 @@ tests =
       $(mkRelFile "case-on.geb")
       $(mkRelFile "Eval/out/case-on.out"),
     PosTest
-      "Test001.lisp. Reduce application of lambda"
+      "test001.lisp. Reduce application of lambda"
       $(mkRelDir ".")
       $(mkRelFile "test001.lisp")
       $(mkRelFile "Eval/out/test001.out"),
     PosTest
-      "Test002.lisp"
+      "test002.lisp"
       $(mkRelDir ".")
       $(mkRelFile "test002.lisp")
       $(mkRelFile "Eval/out/test002.out"),
     PosTest
-      "Test003.lisp"
+      "test003.lisp"
       $(mkRelDir ".")
       $(mkRelFile "test003.lisp")
       $(mkRelFile "Eval/out/test003.out"),
     PosTest
-      "Test005.lisp"
+      "test005.lisp"
       $(mkRelDir ".")
       $(mkRelFile "test005.lisp")
       $(mkRelFile "Eval/out/test005.out"),
     PosTest
-      "Test006.lisp"
+      "test006.lisp"
       $(mkRelDir ".")
       $(mkRelFile "test006.lisp")
       $(mkRelFile "Eval/out/test006.out")

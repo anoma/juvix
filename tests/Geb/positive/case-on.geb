@@ -5,7 +5,7 @@
     so1
     so1)
 
-    (right unit) ; left + right
+    (right 1) ; left + right
     (lamb     ; left -> codomain
         so1
         (coprod
