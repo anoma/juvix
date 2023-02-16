@@ -252,7 +252,6 @@ instance PrettyPrint (OpenModule 'Scoped) where
   ppCode OpenModule {..} = do
     let name' = ppCode _openModuleName
         usingHiding' = ppCode <$> _openUsingHiding
-        openParameters' = hsep . fmap ppAtom <$> nonEmpty _openParameters
         importkw' = ppCode <$> _openModuleImportKw
         public' = case _openPublic of
           Public -> Just (noLoc P.kwPublic)
@@ -260,7 +259,6 @@ instance PrettyPrint (OpenModule 'Scoped) where
     ppCode _openModuleKw
       <+?> importkw'
       <+> name'
-      <+?> openParameters'
       <+?> usingHiding'
       <+?> public'
 
