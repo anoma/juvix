@@ -30,7 +30,7 @@ instance PrettyCode ValueMorphismPair where
 instance PrettyCode ValueClosure where
   ppCode cls = do
     lamb <- Geb.ppArg (cls ^. valueClosureLambdaBody)
-    env <- mapM ppCode (toList (cls ^. valueClosureEnv))
+    env <- mapM ppArg (toList (cls ^. valueClosureEnv))
     -- TODO: this could probably be done more nicely
     return $
       kwClosure
@@ -39,12 +39,12 @@ instance PrettyCode ValueClosure where
           ( vsep
               [ parens
                   ( kwClosureEnv
-                      <+> ( if null env
-                              then kwNil
-                              else
-                                parens
-                                  (vsep env)
-                          )
+                      <> line
+                      <> indent'
+                        ( if null env
+                            then kwNil
+                            else (vsep env)
+                        )
                   ),
                 lamb
               ]

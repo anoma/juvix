@@ -5,4 +5,3 @@ type optbool {
 };
 
 (\(x : bool) \(o : optbool) { case o of { Just b := if x then true else b; Nothing := false } }) false (Just true)
--- DEBUG: CoreToGeb

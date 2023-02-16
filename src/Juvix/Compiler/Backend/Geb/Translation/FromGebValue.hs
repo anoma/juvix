@@ -81,7 +81,7 @@ fromGebValue ty = \case
         "Got Helper wrong object. Expected function object (lambda)"
         Nothing
         ty
-    Nothing -> fromGebValueError "need object info" Nothing ty
+    Nothing -> fromGebValueError "(closure) Need object info" Nothing ty
   val@(GebValueMorphismLeft m) -> case ty of
     Just (ObjectCoproduct _) -> MorphismLeft <$> fromGebValue ty m
     Just _ ->

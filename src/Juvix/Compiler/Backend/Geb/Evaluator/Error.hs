@@ -30,16 +30,16 @@ mockFile = $(mkAbsFile "/geb-eval-error")
 defaultLoc :: Interval
 defaultLoc = singletonInterval (mkInitialLoc mockFile)
 
--- instance Exception.Exception EvalError
-
 instance Show EvalError where
   show :: EvalError -> String
   show (EvalError {..}) =
     "evaluation error: "
       <> fromText _evalErrorMsg
+      <> "\n"
       <> case _evalErrorGebValue of
         Nothing -> ""
-        Just val -> "Value: " <> fromText (ppTrace val) <> "\n"
+        Just val -> "Value:\n" <> fromText (ppTrace val)
+      <> "\n"
       <> case _evalErrorGebExpression of
         Nothing -> ""
         Just expr ->

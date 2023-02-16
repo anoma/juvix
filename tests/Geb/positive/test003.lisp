@@ -6,48 +6,8 @@
 (in-package :test003)
 
 (defparameter *entry*
-  (typed (app
-    (coprod
-      so1
-      (coprod
-        (coprod
-          so1
-          so1)
-        (coprod
-          (prod
-            (coprod
-              so1
-              so1)
-            (!->
-              (coprod
-                so1
-                so1)
-              (coprod
-                so1
-                so1)))
-          (prod
-            (coprod
-              so1
-              so1)
-            (prod
-              (!->
-                (coprod
-                  so1
-                  so1)
-                (!->
-                  (coprod
-                    so1
-                    so1)
-                  (coprod
-                    so1
-                    so1)))
-              (coprod
-                so1
-                so1))))))
-    (coprod
-      so1
-      so1)
-    (lamb
+  (typed
+    (app
       (coprod
         so1
         (coprod
@@ -88,54 +48,49 @@
       (coprod
         so1
         so1)
-      (case-on
-        so1
+      (lamb
         (coprod
+          so1
           (coprod
-            so1
-            so1)
-          (coprod
-            (prod
-              (coprod
-                so1
-                so1)
-              (!->
+            (coprod
+              so1
+              so1)
+            (coprod
+              (prod
                 (coprod
                   so1
                   so1)
-                (coprod
-                  so1
-                  so1)))
-            (prod
-              (coprod
-                so1
-                so1)
-              (prod
                 (!->
                   (coprod
                     so1
                     so1)
+                  (coprod
+                    so1
+                    so1)))
+              (prod
+                (coprod
+                  so1
+                  so1)
+                (prod
                   (!->
                     (coprod
                       so1
                       so1)
-                    (coprod
-                      so1
-                      so1)))
-                (coprod
-                  so1
-                  so1)))))
+                    (!->
+                      (coprod
+                        so1
+                        so1)
+                      (coprod
+                        so1
+                        so1)))
+                  (coprod
+                    so1
+                    so1))))))
         (coprod
           so1
           so1)
-        (index 0)
-        (lamb
+        (case-on
           so1
-          (coprod
-            so1
-            so1)
-          (right unit))
-        (lamb
           (coprod
             (coprod
               so1
@@ -174,69 +129,57 @@
           (coprod
             so1
             so1)
-          (case-on
+          (index 0)
+          (lamb
+            so1
             (coprod
               so1
               so1)
+            (right
+              unit))
+          (lamb
             (coprod
-              (prod
-                (coprod
-                  so1
-                  so1)
-                (!->
+              (coprod
+                so1
+                so1)
+              (coprod
+                (prod
                   (coprod
                     so1
                     so1)
-                  (coprod
-                    so1
-                    so1)))
-              (prod
-                (coprod
-                  so1
-                  so1)
-                (prod
                   (!->
                     (coprod
                       so1
                       so1)
+                    (coprod
+                      so1
+                      so1)))
+                (prod
+                  (coprod
+                    so1
+                    so1)
+                  (prod
                     (!->
                       (coprod
                         so1
                         so1)
-                      (coprod
-                        so1
-                        so1)))
-                  (coprod
-                    so1
-                    so1))))
+                      (!->
+                        (coprod
+                          so1
+                          so1)
+                        (coprod
+                          so1
+                          so1)))
+                    (coprod
+                      so1
+                      so1)))))
             (coprod
               so1
               so1)
-            (index 1)
-            (lamb
+            (case-on
               (coprod
                 so1
                 so1)
-              (coprod
-                so1
-                so1)
-              (app
-                (coprod
-                  so1
-                  so1)
-                (coprod
-                  so1
-                  so1)
-                (lamb
-                  (coprod
-                    so1
-                    so1)
-                  (coprod
-                    so1
-                    so1)
-                  (index 0))
-                (index 2)))
-            (lamb
               (coprod
                 (prod
                   (coprod
@@ -271,42 +214,32 @@
               (coprod
                 so1
                 so1)
-              (case-on
-                (prod
+              (index 1)
+              (lamb
+                (coprod
+                  so1
+                  so1)
+                (coprod
+                  so1
+                  so1)
+                (app
                   (coprod
                     so1
                     so1)
-                  (!->
+                  (coprod
+                    so1
+                    so1)
+                  (lamb
                     (coprod
                       so1
                       so1)
                     (coprod
                       so1
-                      so1)))
-                (prod
-                  (coprod
-                    so1
-                    so1)
-                  (prod
-                    (!->
-                      (coprod
-                        so1
-                        so1)
-                      (!->
-                        (coprod
-                          so1
-                          so1)
-                        (coprod
-                          so1
-                          so1)))
-                    (coprod
-                      so1
-                      so1)))
+                      so1)
+                    (index 0))
+                  (index 2)))
+              (lamb
                 (coprod
-                  so1
-                  so1)
-                (index 2)
-                (lamb
                   (prod
                     (coprod
                       so1
@@ -318,29 +251,12 @@
                       (coprod
                         so1
                         so1)))
-                  (coprod
-                    so1
-                    so1)
-                  (app
-                    (!->
-                      (coprod
-                        so1
-                        so1)
-                      (coprod
-                        so1
-                        so1))
-                    (!->
-                      (coprod
-                        so1
-                        so1)
-                      (coprod
-                        so1
-                        so1))
-                    (app
-                      (coprod
-                        so1
-                        so1)
-                      (prod
+                  (prod
+                    (coprod
+                      so1
+                      so1)
+                    (prod
+                      (!->
                         (coprod
                           so1
                           so1)
@@ -351,66 +267,24 @@
                           (coprod
                             so1
                             so1)))
-                      (lamb
-                        (coprod
-                          so1
-                          so1)
-                        (!->
-                          (!->
-                            (coprod
-                              so1
-                              so1)
-                            (coprod
-                              so1
-                              so1))
-                          (coprod
-                            so1
-                            so1))
-                        (lamb
-                          (!->
-                            (coprod
-                              so1
-                              so1)
-                            (coprod
-                              so1
-                              so1))
-                          (coprod
-                            so1
-                            so1)
-                          (app
-                            (coprod
-                              so1
-                              so1)
-                            (coprod
-                              so1
-                              so1)
-                            (index 0)
-                            (index 1))))
-                      (fst
-                        (coprod
-                          so1
-                          so1)
-                        (!->
-                          (coprod
-                            so1
-                            so1)
-                          (coprod
-                            so1
-                            so1))
-                        (index 3)))
-                    (snd
+                      (coprod
+                        so1
+                        so1))))
+                (coprod
+                  so1
+                  so1)
+                (case-on
+                  (prod
+                    (coprod
+                      so1
+                      so1)
+                    (!->
                       (coprod
                         so1
                         so1)
-                      (!->
-                        (coprod
-                          so1
-                          so1)
-                        (coprod
-                          so1
-                          so1))
-                      (index 3))))
-                (lamb
+                      (coprod
+                        so1
+                        so1)))
                   (prod
                     (coprod
                       so1
@@ -433,15 +307,100 @@
                   (coprod
                     so1
                     so1)
-                  (app
-                    (coprod
-                      so1
-                      so1)
+                  (index 2)
+                  (lamb
+                    (prod
+                      (coprod
+                        so1
+                        so1)
+                      (!->
+                        (coprod
+                          so1
+                          so1)
+                        (coprod
+                          so1
+                          so1)))
                     (coprod
                       so1
                       so1)
                     (app
                       (!->
+                        (coprod
+                          so1
+                          so1)
+                        (coprod
+                          so1
+                          so1))
+                      (!->
+                        (coprod
+                          so1
+                          so1)
+                        (coprod
+                          so1
+                          so1))
+                      (app
+                        (coprod
+                          so1
+                          so1)
+                        (prod
+                          (coprod
+                            so1
+                            so1)
+                          (!->
+                            (coprod
+                              so1
+                              so1)
+                            (coprod
+                              so1
+                              so1)))
+                        (lamb
+                          (coprod
+                            so1
+                            so1)
+                          (!->
+                            (!->
+                              (coprod
+                                so1
+                                so1)
+                              (coprod
+                                so1
+                                so1))
+                            (coprod
+                              so1
+                              so1))
+                          (lamb
+                            (!->
+                              (coprod
+                                so1
+                                so1)
+                              (coprod
+                                so1
+                                so1))
+                            (coprod
+                              so1
+                              so1)
+                            (app
+                              (coprod
+                                so1
+                                so1)
+                              (coprod
+                                so1
+                                so1)
+                              (index 0)
+                              (index 1))))
+                        (fst
+                          (coprod
+                            so1
+                            so1)
+                          (!->
+                            (coprod
+                              so1
+                              so1)
+                            (coprod
+                              so1
+                              so1))
+                          (index 3)))
+                      (snd
                         (coprod
                           so1
                           so1)
@@ -451,7 +410,13 @@
                             so1)
                           (coprod
                             so1
-                            so1)))
+                            so1))
+                        (index 3))))
+                  (lamb
+                    (prod
+                      (coprod
+                        so1
+                        so1)
                       (prod
                         (!->
                           (coprod
@@ -466,46 +431,34 @@
                               so1)))
                         (coprod
                           so1
-                          so1))
+                          so1)))
+                    (coprod
+                      so1
+                      so1)
+                    (app
+                      (coprod
+                        so1
+                        so1)
+                      (coprod
+                        so1
+                        so1)
                       (app
-                        (coprod
-                          so1
-                          so1)
-                        (prod
-                          (coprod
-                            so1
-                            so1)
-                          (prod
-                            (!->
-                              (coprod
-                                so1
-                                so1)
-                              (!->
-                                (coprod
-                                  so1
-                                  so1)
-                                (coprod
-                                  so1
-                                  so1)))
-                            (coprod
-                              so1
-                              so1)))
-                        (lamb
+                        (!->
                           (coprod
                             so1
                             so1)
                           (!->
-                            (!->
-                              (coprod
-                                so1
-                                so1)
-                              (!->
-                                (coprod
-                                  so1
-                                  so1)
-                                (coprod
-                                  so1
-                                  so1)))
+                            (coprod
+                              so1
+                              so1)
+                            (coprod
+                              so1
+                              so1)))
+                        (prod
+                          (!->
+                            (coprod
+                              so1
+                              so1)
                             (!->
                               (coprod
                                 so1
@@ -513,11 +466,48 @@
                               (coprod
                                 so1
                                 so1)))
-                          (lamb
-                            (!->
+                          (coprod
+                            so1
+                            so1))
+                        (app
+                          (coprod
+                            so1
+                            so1)
+                          (prod
+                            (coprod
+                              so1
+                              so1)
+                            (prod
+                              (!->
+                                (coprod
+                                  so1
+                                  so1)
+                                (!->
+                                  (coprod
+                                    so1
+                                    so1)
+                                  (coprod
+                                    so1
+                                    so1)))
                               (coprod
                                 so1
-                                so1)
+                                so1)))
+                          (lamb
+                            (coprod
+                              so1
+                              so1)
+                            (!->
+                              (!->
+                                (coprod
+                                  so1
+                                  so1)
+                                (!->
+                                  (coprod
+                                    so1
+                                    so1)
+                                  (coprod
+                                    so1
+                                    so1)))
                               (!->
                                 (coprod
                                   so1
@@ -525,21 +515,26 @@
                                 (coprod
                                   so1
                                   so1)))
-                            (!->
-                              (coprod
-                                so1
-                                so1)
-                              (coprod
-                                so1
-                                so1))
                             (lamb
-                              (coprod
-                                so1
-                                so1)
-                              (coprod
-                                so1
-                                so1)
-                              (app
+                              (!->
+                                (coprod
+                                  so1
+                                  so1)
+                                (!->
+                                  (coprod
+                                    so1
+                                    so1)
+                                  (coprod
+                                    so1
+                                    so1)))
+                              (!->
+                                (coprod
+                                  so1
+                                  so1)
+                                (coprod
+                                  so1
+                                  so1))
+                              (lamb
                                 (coprod
                                   so1
                                   so1)
@@ -550,37 +545,79 @@
                                   (coprod
                                     so1
                                     so1)
-                                  (!->
+                                  (coprod
+                                    so1
+                                    so1)
+                                  (app
                                     (coprod
                                       so1
                                       so1)
-                                    (coprod
-                                      so1
-                                      so1))
-                                  (index 1)
-                                  (index 2))
-                                (index 0)))))
-                        (fst
-                          (coprod
-                            so1
-                            so1)
-                          (prod
-                            (!->
-                              (coprod
-                                so1
-                                so1)
+                                    (!->
+                                      (coprod
+                                        so1
+                                        so1)
+                                      (coprod
+                                        so1
+                                        so1))
+                                    (index 1)
+                                    (index 2))
+                                  (index 0)))))
+                          (fst
+                            (coprod
+                              so1
+                              so1)
+                            (prod
                               (!->
                                 (coprod
                                   so1
                                   so1)
-                                (coprod
-                                  so1
-                                  so1)))
+                                (!->
+                                  (coprod
+                                    so1
+                                    so1)
+                                  (coprod
+                                    so1
+                                    so1)))
+                              (coprod
+                                so1
+                                so1))
+                            (index 3)))
+                        (fst
+                          (!->
                             (coprod
                               so1
-                              so1))
-                          (index 3)))
-                      (fst
+                              so1)
+                            (!->
+                              (coprod
+                                so1
+                                so1)
+                              (coprod
+                                so1
+                                so1)))
+                          (coprod
+                            so1
+                            so1)
+                          (snd
+                            (coprod
+                              so1
+                              so1)
+                            (prod
+                              (!->
+                                (coprod
+                                  so1
+                                  so1)
+                                (!->
+                                  (coprod
+                                    so1
+                                    so1)
+                                  (coprod
+                                    so1
+                                    so1)))
+                              (coprod
+                                so1
+                                so1))
+                            (index 3))))
+                      (snd
                         (!->
                           (coprod
                             so1
@@ -614,114 +651,86 @@
                             (coprod
                               so1
                               so1))
-                          (index 3))))
-                    (snd
-                      (!->
-                        (coprod
-                          so1
-                          so1)
-                        (!->
-                          (coprod
-                            so1
-                            so1)
-                          (coprod
-                            so1
-                            so1)))
-                      (coprod
-                        so1
-                        so1)
-                      (snd
-                        (coprod
-                          so1
-                          so1)
-                        (prod
-                          (!->
-                            (coprod
-                              so1
-                              so1)
-                            (!->
-                              (coprod
-                                so1
-                                so1)
-                              (coprod
-                                so1
-                                so1)))
-                          (coprod
-                            so1
-                            so1))
-                        (index 3)))))))))))
-    (right (right (right (pair
-      (coprod
-        so1
-        so1)
-      (prod
-        (!->
-          (coprod
-            so1
-            so1)
-          (!->
-            (coprod
-              so1
-              so1)
-            (coprod
-              so1
-              so1)))
-        (coprod
-          so1
-          so1))
-      (left unit)
-      (pair
-        (!->
-          (coprod
-            so1
-            so1)
-          (!->
-            (coprod
-              so1
-              so1)
-            (coprod
-              so1
-              so1)))
-        (coprod
-          so1
-          so1)
-        (lamb
-          (coprod
-            so1
-            so1)
-          (!->
-            (coprod
-              so1
-              so1)
-            (coprod
-              so1
-              so1))
-          (lamb
-            (coprod
-              so1
-              so1)
-            (coprod
-              so1
-              so1)
-            (case-on
-              so1
-              so1
+                          (index 3)))))))))))
+      (right
+        (right
+          (right
+            (pair
               (coprod
                 so1
                 so1)
-              (index 0)
-              (lamb
-                so1
+              (prod
+                (!->
+                  (coprod
+                    so1
+                    so1)
+                  (!->
+                    (coprod
+                      so1
+                      so1)
+                    (coprod
+                      so1
+                      so1)))
+                (coprod
+                  so1
+                  so1))
+              (left
+                unit)
+              (pair
+                (!->
+                  (coprod
+                    so1
+                    so1)
+                  (!->
+                    (coprod
+                      so1
+                      so1)
+                    (coprod
+                      so1
+                      so1)))
                 (coprod
                   so1
                   so1)
-                (right unit))
-              (lamb
-                so1
-                (coprod
-                  so1
-                  so1)
-                (index 2)))))
-        (right unit))))))) (coprod
-    so1
-    so1)))
+                (lamb
+                  (coprod
+                    so1
+                    so1)
+                  (!->
+                    (coprod
+                      so1
+                      so1)
+                    (coprod
+                      so1
+                      so1))
+                  (lamb
+                    (coprod
+                      so1
+                      so1)
+                    (coprod
+                      so1
+                      so1)
+                    (case-on
+                      so1
+                      so1
+                      (coprod
+                        so1
+                        so1)
+                      (index 0)
+                      (lamb
+                        so1
+                        (coprod
+                          so1
+                          so1)
+                        (right
+                          unit))
+                      (lamb
+                        so1
+                        (coprod
+                          so1
+                          so1)
+                        (index 2)))))
+                (right
+                  unit)))))))
+    (coprod
+      so1
+      so1)))

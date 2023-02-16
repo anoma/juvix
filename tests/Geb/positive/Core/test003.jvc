@@ -12,4 +12,3 @@ type enum {
   opt2 b f := f b;
   opt3 b1 f b2 := f b1 b2;
 }) (opt3 true (\(x : bool) \(y : bool) if y then false else x) false)
--- DEBUG: CoreToGeb

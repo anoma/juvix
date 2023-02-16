@@ -6,4 +6,10 @@
 (in-package :test005)
 
 (defparameter *entry*
-  (typed (add 5 (mul 2 3)) int))
+  (typed
+    (add
+      5
+      (mul
+        2
+        3))
+    int))
