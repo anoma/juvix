@@ -241,10 +241,12 @@ compilePattern numPatterns = \case
               { _binderName = "_",
                 _binderLocation = getInfoLocation info,
                 _binderType = getInfoType info
+                -- TODO: `getInfoType` always returns Dynamic at this stage
               }
         PatConstr c' -> do
           let info = c' ^. patternConstrInfo
           mkUniqueBinder "arg" (getInfoLocation info) (getInfoType info)
+          -- TODO: `getInfoType` always returns Dynamic at this stage
 
       mkCaseFromBinders :: [Binder] -> Sem r (Node -> Node)
       mkCaseFromBinders binders = do
