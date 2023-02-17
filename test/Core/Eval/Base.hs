@@ -13,6 +13,7 @@ import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Core.Pretty
 import Juvix.Compiler.Core.Transformation
 import Juvix.Compiler.Core.Translation.FromSource
+import GHC.Base (seq)
 
 coreEvalAssertion' ::
   InfoTable ->
@@ -21,6 +22,7 @@ coreEvalAssertion' ::
   (String -> IO ()) ->
   Assertion
 coreEvalAssertion' tab mainFile expectedFile step =
+  length (fromText (ppPrint tab) :: String) `seq`
   case (tab ^. infoMain) >>= ((tab ^. identContext) HashMap.!?) of
     Just node -> do
       withTempDir'
