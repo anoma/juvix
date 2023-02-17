@@ -3,9 +3,9 @@ module Commands.Eval where
 import Commands.Base
 import Commands.Eval.Options
 import Evaluator qualified as Eval
-import Juvix.Compiler.Core.Language qualified as Core
-import Juvix.Compiler.Core.Data.InfoTable qualified as Core
 import Juvix.Compiler.Core qualified as Core
+import Juvix.Compiler.Core.Data.InfoTable qualified as Core
+import Juvix.Compiler.Core.Language qualified as Core
 import Juvix.Compiler.Core.Pipeline qualified as Core
 
 runCommand :: (Members '[Embed IO, App] r) => EvalOptions -> Sem r ()
