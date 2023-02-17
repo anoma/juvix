@@ -121,7 +121,7 @@ compileMatchBranch (Indexed branchNum br) = do
     patternsNum = length patterns
 
     wrapBody :: [CompiledBinder] -> Node
-    wrapBody binders = foldr (uncurry (mkLet mempty)) shiftedBody vars
+    wrapBody binders = foldr (uncurry (mkLet mempty . set binderType mkDynamic')) shiftedBody vars
       where
         vars :: [(Binder, Node)]
         vars = second mkVar' . swap . toTuple <$> extractOriginalBinders binders
@@ -195,7 +195,7 @@ compilePattern numPatterns = \case
   PatBinder b -> do
     subPats <- resetCurrentNode (incBindersAbove (compilePattern numPatterns (b ^. patternBinderPattern)))
     currentNode <- asks (^. compileStateNodeCurrent)
-    let newBinder = b ^. patternBinder
+    let newBinder = set binderType mkDynamic' $ b ^. patternBinder -- TODO: this is a hack to avoid problems with de Bruijn
     let compiledBinder =
           CompiledPattern
             { _compiledPatBinders = [OriginalBinder newBinder],
