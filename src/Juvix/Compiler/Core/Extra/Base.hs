@@ -139,6 +139,9 @@ mkUniv i l = NUniv (Univ i l)
 mkUniv' :: Int -> Type
 mkUniv' = mkUniv Info.empty
 
+mkSmallUniv :: Type
+mkSmallUniv = mkUniv' (fromIntegral smallLevel)
+
 mkTypeConstr :: Info -> Symbol -> [Type] -> Type
 mkTypeConstr i sym args = NTyp (TypeConstr i sym args)
 
