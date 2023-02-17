@@ -993,6 +993,13 @@ instance Eq (ModuleRef'' 'S.Concrete t) where
 instance HasAtomicity (PatternAtom 'Parsed) where
   atomicity = const Atom
 
+instance SingI s => HasAtomicity (FunctionParameters s) where
+  atomicity p
+    | not (null (p ^. paramNames)) || p ^. paramImplicit == Implicit = Atom
+    | otherwise = case sing :: SStage s of
+        SParsed -> atomicity (p ^. paramType)
+        SScoped -> atomicity (p ^. paramType)
+
 deriving stock instance
   ( Show Symbol,
     Show (PatternAtom 'Parsed)
@@ -1296,78 +1303,74 @@ instance
 
 --------------------------------------------------------------------------------
 
-data ApeHelper
+data ApeLeaf
   = HelperExpression Expression
-  | HelperFunction (Function 'Scoped)
   | HelperFunctionParams (FunctionParameters 'Scoped)
   | HelperFunctionArrow KeywordRef
 
-instance IsApe Application ApeHelper where
+instance IsApe Application ApeLeaf where
   toApe (Application l r) =
     ApeApp
       Ape.App
-        { _appLeft = toApe (HelperExpression l),
-          _appRight = toApe (HelperExpression r)
+        { _appLeft = toApe l,
+          _appRight = toApe r
         }
 
-instance IsApe InfixApplication ApeHelper where
+instance IsApe InfixApplication ApeLeaf where
   toApe i@(InfixApplication l op r) =
     ApeInfix
       Infix
         { _infixFixity = getFixity i,
-          _infixLeft = toApe (HelperExpression l),
-          _infixRight = toApe (HelperExpression r),
+          _infixLeft = toApe l,
+          _infixRight = toApe r,
           _infixIsComma = isDelimiterStr (prettyText (identifierName op ^. S.nameConcrete)),
           _infixOp = HelperExpression (ExpressionIdentifier op)
         }
 
-instance IsApe PostfixApplication ApeHelper where
+instance IsApe PostfixApplication ApeLeaf where
   toApe p@(PostfixApplication l op) =
     ApePostfix
       Postfix
         { _postfixFixity = getFixity p,
-          _postfixLeft = toApe (HelperExpression l),
+          _postfixLeft = toApe l,
           _postfixOp = HelperExpression (ExpressionIdentifier op)
         }
 
-instance IsApe (Function 'Scoped) ApeHelper where
+instance IsApe (Function 'Scoped) ApeLeaf where
   toApe (Function ps kw ret) =
     ApeInfix
       Infix
         { _infixFixity = funFixity,
-          _infixLeft = toApe (HelperFunctionParams ps),
-          _infixRight = toApe (HelperExpression ret),
+          _infixLeft = toApe ps,
+          _infixRight = toApe ret,
           _infixIsComma = False,
           _infixOp = HelperFunctionArrow kw
         }
 
-instance IsApe ApeHelper ApeHelper where
+instance IsApe Expression ApeLeaf where
   toApe = \case
-    HelperExpression (ExpressionApplication a) -> toApe a
-    HelperExpression (ExpressionInfixApplication a) -> toApe a
-    HelperExpression (ExpressionPostfixApplication a) -> toApe a
-    HelperFunction f -> toApe f
-    a@(HelperFunctionArrow {}) ->
-      ApeLeaf
-        ( Leaf
-            { _leafAtomicity = Atom,
-              _leafExpr = a
-            }
-        )
-    h@(HelperFunctionParams (FunctionParameters _ _ e)) ->
+    ExpressionApplication a -> toApe a
+    ExpressionInfixApplication a -> toApe a
+    ExpressionPostfixApplication a -> toApe a
+    ExpressionFunction a -> toApe a
+    e ->
       ApeLeaf
         ( Leaf
             { _leafAtomicity = atomicity e,
-              _leafExpr = h
+              _leafExpr = HelperExpression e
             }
         )
-    h@(HelperExpression e) ->
-      ApeLeaf
-        ( Leaf
-            { _leafAtomicity = atomicity e,
-              _leafExpr = h
-            }
-        )
+
+instance IsApe (FunctionParameters 'Scoped) ApeLeaf where
+  toApe f
+    | atomicity f == Atom =
+        ApeLeaf
+          ( Leaf
+              { _leafAtomicity = Atom,
+                _leafExpr = HelperFunctionParams f
+              }
+          )
+    | otherwise = toApe (f ^. paramType)
 
 instance HasAtomicity PatternArg where
   atomicity p

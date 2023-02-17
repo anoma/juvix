@@ -195,10 +195,10 @@ instance PrettyPrint (TypeSignature 'Scoped) where
       <?+> termin'
         ?<> ( name'
                 <+> noLoc P.kwColon
-                <+> nest
-                  ( type'
-                      <+?> body'
-                  )
+                  <> oneLineOrNext
+                    ( type'
+                        <+?> body'
+                    )
             )
 
 instance PrettyPrint Pattern where

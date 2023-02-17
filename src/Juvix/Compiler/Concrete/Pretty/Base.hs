@@ -432,7 +432,7 @@ instance (SingI s) => PrettyCode (TypeSignature s) where
     builtin' <- traverse ppCode _sigBuiltin
     doc' <- mapM ppCode _sigDoc
     body' :: Maybe (Doc Ann) <- fmap (kwAssign <+>) <$> mapM ppExpression _sigBody
-    return $ doc' ?<> builtin' <?+> sigTerminating' <> hang' (sigName' <+> kwColon <+> sigType' <+?> body')
+    return $ doc' ?<> builtin' <?+> sigTerminating' <> hang' (sigName' <+> kwColon <> oneLineOrNext (sigType' <+?> body'))
 
 instance (SingI s) => PrettyCode (Function s) where
   ppCode a = case sing :: SStage s of
@@ -632,20 +632,19 @@ instance PrettyCode Application where
       args' <- mapM ppCodeAtom args
       return $ PP.group (f' <+> nest' (vsep args'))
 
-instance PrettyCode ApeHelper where
+instance PrettyCode ApeLeaf where
   ppCode = \case
     HelperExpression e -> ppCode e
     HelperFunctionParams a -> ppCode a
-    HelperFunction f -> ppCode f
     HelperFunctionArrow r -> return (pretty r)
 
-apeHelper :: (IsApe a ApeHelper, Members '[Reader Options] r) => a -> Sem r (Doc CodeAnn) -> Sem r (Doc CodeAnn)
+apeHelper :: (IsApe a ApeLeaf, Members '[Reader Options] r) => a -> Sem r (Doc CodeAnn) -> Sem r (Doc CodeAnn)
 apeHelper a alt = do
   opts <- ask @Options
   if
       | not (opts ^. optNoApe) ->
           return $
-            let params :: ApeParams ApeHelper
+            let params :: ApeParams ApeLeaf
                 params = ApeParams (run . runReader opts . ppCode)
              in runApe params a
       | otherwise -> alt
