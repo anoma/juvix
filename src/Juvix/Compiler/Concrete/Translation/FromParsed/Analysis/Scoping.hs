@@ -1318,7 +1318,7 @@ makeExpressionTable (ExpressionAtoms atoms _) = [appOpExplicit] : operators ++ [
           where
             param =
               FunctionParameters
-                { _paramNames = NonEmpty.singleton Nothing,
+                { _paramNames = [],
                   _paramImplicit = Explicit,
                   _paramType = a
                 }

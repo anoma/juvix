@@ -507,7 +507,7 @@ functionParams :: forall r. (Members '[InfoTableBuilder, JudocStash, NameIdGen] 
 functionParams = do
   (_paramNames, _paramImplicit) <- P.try $ do
     impl <- implicitOpen
-    n <- some1 pName
+    n <- some pName
     kw kwColon
     return (n, impl)
   _paramType <- parseExpressionAtoms
