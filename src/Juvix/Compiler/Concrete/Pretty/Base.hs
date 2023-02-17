@@ -634,9 +634,9 @@ instance PrettyCode Application where
 
 instance PrettyCode ApeLeaf where
   ppCode = \case
-    HelperExpression e -> ppCode e
-    HelperFunctionParams a -> ppCode a
-    HelperFunctionArrow r -> return (pretty r)
+    ApeLeafExpression e -> ppCode e
+    ApeLeafFunctionParams a -> ppCode a
+    ApeLeafFunctionKw r -> return (pretty r)
 
 apeHelper :: (IsApe a ApeLeaf, Members '[Reader Options] r) => a -> Sem r (Doc CodeAnn) -> Sem r (Doc CodeAnn)
 apeHelper a alt = do

@@ -1304,9 +1304,9 @@ instance
 --------------------------------------------------------------------------------
 
 data ApeLeaf
-  = HelperExpression Expression
-  | HelperFunctionParams (FunctionParameters 'Scoped)
-  | HelperFunctionArrow KeywordRef
+  = ApeLeafExpression Expression
+  | ApeLeafFunctionParams (FunctionParameters 'Scoped)
+  | ApeLeafFunctionKw KeywordRef
 
 instance IsApe Application ApeLeaf where
   toApe (Application l r) =
@@ -1324,7 +1324,7 @@ instance IsApe InfixApplication ApeLeaf where
           _infixLeft = toApe l,
           _infixRight = toApe r,
           _infixIsComma = isDelimiterStr (prettyText (identifierName op ^. S.nameConcrete)),
-          _infixOp = HelperExpression (ExpressionIdentifier op)
+          _infixOp = ApeLeafExpression (ExpressionIdentifier op)
         }
 
 instance IsApe PostfixApplication ApeLeaf where
@@ -1333,7 +1333,7 @@ instance IsApe PostfixApplication ApeLeaf where
       Postfix
         { _postfixFixity = getFixity p,
           _postfixLeft = toApe l,
-          _postfixOp = HelperExpression (ExpressionIdentifier op)
+          _postfixOp = ApeLeafExpression (ExpressionIdentifier op)
         }
 
 instance IsApe (Function 'Scoped) ApeLeaf where
@@ -1344,7 +1344,7 @@ instance IsApe (Function 'Scoped) ApeLeaf where
           _infixLeft = toApe ps,
           _infixRight = toApe ret,
           _infixIsComma = False,
-          _infixOp = HelperFunctionArrow kw
+          _infixOp = ApeLeafFunctionKw kw
         }
 
 instance IsApe Expression ApeLeaf where
@@ -1357,7 +1357,7 @@ instance IsApe Expression ApeLeaf where
       ApeLeaf
         ( Leaf
             { _leafAtomicity = atomicity e,
-              _leafExpr = HelperExpression e
+              _leafExpr = ApeLeafExpression e
             }
         )
 
@@ -1367,7 +1367,7 @@ instance IsApe (FunctionParameters 'Scoped) ApeLeaf where
         ApeLeaf
           ( Leaf
               { _leafAtomicity = Atom,
-                _leafExpr = HelperFunctionParams f
+                _leafExpr = ApeLeafFunctionParams f
               }
           )
     | otherwise = toApe (f ^. paramType)
