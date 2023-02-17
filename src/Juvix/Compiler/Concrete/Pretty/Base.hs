@@ -431,7 +431,7 @@ instance (SingI s) => PrettyCode (TypeSignature s) where
     sigType' <- ppExpression _sigType
     builtin' <- traverse ppCode _sigBuiltin
     doc' <- mapM ppCode _sigDoc
-    body' :: Maybe (Doc Ann) <- fmap (kwAssign <+>) <$> mapM ppExpression _sigBody
+    body' :: Maybe (Doc Ann) <- fmap ((kwAssign <>) . oneLineOrNext) <$> mapM ppExpression _sigBody
     return $ doc' ?<> builtin' <?+> sigTerminating' <> hang' (sigName' <+> kwColon <> oneLineOrNext (sigType' <+?> body'))
 
 instance (SingI s) => PrettyCode (Function s) where

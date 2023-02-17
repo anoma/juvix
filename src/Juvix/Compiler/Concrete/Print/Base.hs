@@ -189,7 +189,7 @@ instance PrettyPrint (TypeSignature 'Scoped) where
         name' = region (P.annDef _sigName) (ppCode _sigName)
         body' = case _sigBody of
           Nothing -> Nothing
-          Just body -> Just (noLoc P.kwAssign <+> ppCode body)
+          Just body -> Just (noLoc P.kwAssign <> oneLineOrNext (ppCode body))
     doc'
       ?<> builtin'
       <?+> termin'
