@@ -228,5 +228,9 @@ tests =
     PosTest
       "Short syntax for multiple parameters"
       $(mkRelDir ".")
-      $(mkRelFile "MultiParams.juvix")
+      $(mkRelFile "MultiParams.juvix"),
+    PosTest
+      "Shadow imported symbol"
+      $(mkRelDir "ImportShadow")
+      $(mkRelFile "Main.juvix")
   ]

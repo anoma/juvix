@@ -1,0 +1,19 @@
+module Main;
+  open import Nat;
+
+  type Unit :=
+    | unit : Unit;
+
+  f : Nat;
+  f :=
+    case unit
+      | is-zero := zero;
+
+  f2 : Nat;
+  f2 :=
+    case suc zero
+      | suc is-zero := zero;
+
+  f3 : Nat → Nat;
+  f3 (suc is-zero) := is-zero;
+end;
