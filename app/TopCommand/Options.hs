@@ -1,8 +1,9 @@
 module TopCommand.Options where
 
 import Commands.Compile.Options
-import Commands.Dev.Options
+import Commands.Dev.Options qualified as Dev
 import Commands.Doctor.Options
+import Commands.Eval.Options
 import Commands.Html.Options
 import Commands.Repl.Options
 import Commands.Typecheck.Options
@@ -16,8 +17,9 @@ data TopCommand
   | DisplayHelp
   | Typecheck TypecheckOptions
   | Compile CompileOptions
+  | Eval EvalOptions
   | Html HtmlOptions
-  | Dev DevCommand
+  | Dev Dev.DevCommand
   | Doctor DoctorOptions
   | Init
   | JuvixRepl ReplOptions
@@ -101,6 +103,13 @@ commandCompile =
       (Compile <$> parseCompileOptions)
       (progDesc "Compile a Juvix file")
 
+commandEval :: Mod CommandFields TopCommand
+commandEval =
+  command "eval" $
+    info
+      (Eval <$> parseEvalOptions)
+      (progDesc "Evaluate a Juvix file")
+
 commandHtml :: Mod CommandFields TopCommand
 commandHtml =
   command "html" $
@@ -112,7 +121,7 @@ commandDev :: Mod CommandFields TopCommand
 commandDev =
   command "dev" $
     info
-      (Dev <$> parseDevCommand)
+      (Dev <$> Dev.parseDevCommand)
       (progDesc "Commands for the developers")
 
 parseCompilerCommand :: Parser TopCommand
@@ -123,6 +132,7 @@ parseCompilerCommand =
           metavar "COMPILER_CMD",
           commandCheck,
           commandCompile,
+          commandEval,
           commandHtml
         ]
     )

@@ -591,7 +591,7 @@ fromPatternArg pa = case pa ^. Internal.patternArgName of
       Internal.PatternConstructorApp c -> do
         (indParams, _) <- InternalTyped.lookupConstructorArgTypes n
         patternArgs <- mapM fromPatternArg params
-        let indArgs = replicate (length indParams) wildcard
+        let indArgs = replicate (length indParams) wildcard -- TODO: wrong - need to preserve type
             args = indArgs ++ patternArgs
         m <- getIdent identIndex
         case m of
