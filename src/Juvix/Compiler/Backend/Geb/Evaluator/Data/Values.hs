@@ -15,13 +15,6 @@ data GebValue
 
 instance NFData GebValue
 
-newtype ValueMorphismLambda = ValueMorphismLambda
-  { _valueMorphismLambdaFunction :: GebValue
-  }
-  deriving stock (Show, Generic)
-
-instance NFData ValueMorphismLambda
-
 data ValueMorphismPair = ValueMorphismPair
   { _valueMorphismPairLeft :: GebValue,
     _valueMorphismPairRight :: GebValue
@@ -65,7 +58,6 @@ instance HasAtomicity GebValue where
     GebValueMorphismUnit -> Atom
     GebValueClosure {} -> Aggregate appFixity
 
-makeLenses ''ValueMorphismLambda
 makeLenses ''ValueMorphismPair
 makeLenses ''ValueMorphismCase
 makeLenses ''ValueMorphismBinop

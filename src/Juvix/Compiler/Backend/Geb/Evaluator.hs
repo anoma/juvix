@@ -67,6 +67,9 @@ eval ::
   Morphism ->
   Sem r GebValue
 eval morph = case morph of
+  MorphismVar var -> do
+    ctx <- asks (^. envContext)
+    return $ Context.lookup (var ^. varIndex) ctx
   MorphismAbsurd _ ->
     throw
       EvalError
@@ -74,11 +77,9 @@ eval morph = case morph of
           _evalErrorGebValue = Nothing,
           _evalErrorGebExpression = Just morph
         }
-  MorphismVar var -> do
-    ctx <- asks (^. envContext)
-    return $ Context.lookup (var ^. varIndex) ctx
   MorphismUnit -> return GebValueMorphismUnit
   MorphismInteger i -> return $ GebValueMorphismInteger i
+  MorphismBinop op -> applyBinop op
   MorphismPair pair -> do
     left <- eval $ pair ^. pairLeft
     right <- eval $ pair ^. pairRight
@@ -112,7 +113,6 @@ eval morph = case morph of
               _evalErrorGebValue = Just res,
               _evalErrorGebExpression = Just morph
             }
-  MorphismBinop op -> applyBinop op
   MorphismApplication app ->
     apply (app ^. applicationLeft) (app ^. applicationRight)
   MorphismLambda lambda -> do
