@@ -158,14 +158,25 @@ goInductiveDef ::
   Sem r ()
 goInductiveDef i = do
   sym <- freshSymbol
-  let info =
+  let params =
+        map
+          ( \p ->
+              ParameterInfo
+                { _paramName = p ^. Internal.inductiveParamName . nameText,
+                  _paramLocation = Just $ p ^. Internal.inductiveParamName . nameLoc,
+                  _paramIsImplicit = False, -- TODO: not currently easily available in Internal
+                  _paramKind = mkSmallUniv
+                }
+          )
+          (i ^. Internal.inductiveParameters)
+      info =
         InductiveInfo
           { _inductiveName = i ^. Internal.inductiveName . nameText,
             _inductiveLocation = Just $ i ^. Internal.inductiveName . nameLoc,
             _inductiveSymbol = sym,
             _inductiveKind = mkSmallUniv,
             _inductiveConstructors = [],
-            _inductiveParams = [],
+            _inductiveParams = params,
             _inductivePositive = i ^. Internal.inductivePositive,
             _inductiveBuiltin = fmap BuiltinTypeInductive (i ^. Internal.inductiveBuiltin)
           }
