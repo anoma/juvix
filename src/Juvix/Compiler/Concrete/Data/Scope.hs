@@ -22,6 +22,12 @@ newtype SymbolInfo = SymbolInfo
 mkModuleRef' :: SingI t => ModuleRef'' 'S.NotConcrete t -> ModuleRef' 'S.NotConcrete
 mkModuleRef' m = ModuleRef' (sing :&: m)
 
+data BindingStrategy
+  = -- | Local binding allows shadowing
+    BindingLocal
+  | -- | Top binding does not allow shadowing. It may result in an ambiguous error
+    BindingTop
+
 data Scope = Scope
   { _scopePath :: S.AbsModulePath,
     _scopeSymbols :: HashMap Symbol SymbolInfo,

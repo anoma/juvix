@@ -141,22 +141,25 @@ reserveSymbolOf k s = do
                 }
           )
 
-bindReservedSymbol :: Members '[State Scope, InfoTableBuilder] r => S.Symbol -> SymbolEntry -> Sem r ()
+bindReservedSymbol :: Members '[State Scope, InfoTableBuilder, Reader BindingStrategy] r => S.Symbol -> SymbolEntry -> Sem r ()
 bindReservedSymbol s' entry = do
   path <- gets (^. scopePath)
-  modify (over scopeSymbols (HashMap.alter (Just . addS path) s))
+  strat <- ask
+  modify (over scopeSymbols (HashMap.alter (Just . addS strat path) s))
   modify (set (scopeLocalSymbols . at s) (Just s'))
   registerName (S.unqualifiedSymbol s')
   where
     s :: Symbol
     s = s' ^. S.nameConcrete
-    addS :: S.AbsModulePath -> Maybe SymbolInfo -> SymbolInfo
-    addS path m = case m of
+    addS :: BindingStrategy -> S.AbsModulePath -> Maybe SymbolInfo -> SymbolInfo
+    addS strat path m = case m of
       Nothing -> symbolInfoSingle entry
-      Just SymbolInfo {..} -> SymbolInfo (HashMap.insert path entry _symbolInfo)
+      Just SymbolInfo {..} -> case strat of
+        BindingLocal -> symbolInfoSingle entry
+        BindingTop -> SymbolInfo (HashMap.insert path entry _symbolInfo)
 
 bindSymbolOf ::
-  (Members '[Error ScoperError, NameIdGen, State ScoperFixities, State Scope, InfoTableBuilder, State ScoperState] r) =>
+  (Members '[Error ScoperError, NameIdGen, State ScoperFixities, State Scope, InfoTableBuilder, State ScoperState, Reader BindingStrategy] r) =>
   S.NameKind ->
   (S.Name' () -> SymbolEntry) ->
   Symbol ->
@@ -174,34 +177,34 @@ bindVariableSymbol ::
   Members '[Error ScoperError, NameIdGen, State Scope, InfoTableBuilder, State ScoperState] r =>
   Symbol ->
   Sem r S.Symbol
-bindVariableSymbol = ignoreFixities . bindSymbolOf S.KNameLocal EntryVariable
+bindVariableSymbol = localBindings . ignoreFixities . bindSymbolOf S.KNameLocal EntryVariable
 
 bindFunctionSymbol ::
-  Members '[Error ScoperError, NameIdGen, State ScoperFixities, State Scope, InfoTableBuilder, State ScoperState] r =>
+  Members '[Error ScoperError, NameIdGen, State ScoperFixities, State Scope, InfoTableBuilder, State ScoperState, Reader BindingStrategy] r =>
   Symbol ->
   Sem r S.Symbol
 bindFunctionSymbol = bindSymbolOf S.KNameFunction (EntryFunction . FunctionRef')
 
 bindInductiveSymbol ::
-  Members '[Error ScoperError, NameIdGen, State ScoperFixities, State Scope, InfoTableBuilder, State ScoperState] r =>
+  Members '[Error ScoperError, NameIdGen, State ScoperFixities, State Scope, InfoTableBuilder, State ScoperState, Reader BindingStrategy] r =>
   Symbol ->
   Sem r S.Symbol
 bindInductiveSymbol = bindSymbolOf S.KNameInductive (EntryInductive . InductiveRef')
 
 bindAxiomSymbol ::
-  Members '[Error ScoperError, NameIdGen, State ScoperFixities, State Scope, InfoTableBuilder, State ScoperState] r =>
+  Members '[Error ScoperError, NameIdGen, State ScoperFixities, State Scope, InfoTableBuilder, State ScoperState, Reader BindingStrategy] r =>
   Symbol ->
   Sem r S.Symbol
 bindAxiomSymbol = bindSymbolOf S.KNameAxiom (EntryAxiom . AxiomRef')
 
 bindConstructorSymbol ::
-  Members '[Error ScoperError, NameIdGen, State ScoperFixities, State Scope, InfoTableBuilder, State ScoperState] r =>
+  Members '[Error ScoperError, NameIdGen, State ScoperFixities, State Scope, InfoTableBuilder, State ScoperState, Reader BindingStrategy] r =>
   Symbol ->
   Sem r S.Symbol
 bindConstructorSymbol = bindSymbolOf S.KNameConstructor (EntryConstructor . ConstructorRef')
 
 bindLocalModuleSymbol ::
-  Members '[Error ScoperError, NameIdGen, State ScoperFixities, State Scope, InfoTableBuilder, State ScoperState] r =>
+  Members '[Error ScoperError, NameIdGen, State ScoperFixities, State Scope, InfoTableBuilder, State ScoperState, Reader BindingStrategy] r =>
   ExportInfo ->
   Module 'Scoped 'ModuleLocal ->
   Symbol ->
@@ -419,7 +422,7 @@ checkOperatorSyntaxDef s@OperatorSyntaxDef {..} = do
         $ \s' -> throw (ErrDuplicateFixity (DuplicateFixity (s' ^. symbolFixityDef) s))
 
 checkTypeSignature ::
-  (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, State ScoperFixities] r) =>
+  (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, State ScoperFixities, Reader BindingStrategy] r) =>
   TypeSignature 'Parsed ->
   Sem r (TypeSignature 'Scoped)
 checkTypeSignature TypeSignature {..} = do
@@ -445,7 +448,7 @@ checkInductiveDef ::
   InductiveDef 'Parsed ->
   Sem r (InductiveDef 'Scoped)
 checkInductiveDef InductiveDef {..} = do
-  inductiveName' <- bindInductiveSymbol _inductiveName
+  inductiveName' <- topBindings (bindInductiveSymbol _inductiveName)
   (inductiveParameters', inductiveType', inductiveDoc', inductiveConstructors') <- withLocalScope $ do
     inductiveParameters' <- mapM checkInductiveParameters _inductiveParameters
     inductiveType' <- mapM checkParseExpressionAtoms _inductiveType
@@ -467,13 +470,14 @@ checkInductiveDef InductiveDef {..} = do
   where
     bindConstructor :: InductiveConstructorDef 'Scoped -> Sem r ()
     bindConstructor d =
-      bindReservedSymbol
-        (d ^. constructorName)
-        ( EntryConstructor
-            ( ConstructorRef'
-                (S.unConcrete (d ^. constructorName))
-            )
-        )
+      topBindings $
+        bindReservedSymbol
+          (d ^. constructorName)
+          ( EntryConstructor
+              ( ConstructorRef'
+                  (S.unConcrete (d ^. constructorName))
+              )
+          )
     -- note that the constructor name is not bound here
     checkConstructorDef :: InductiveConstructorDef 'Parsed -> Sem r (InductiveConstructorDef 'Scoped)
     checkConstructorDef InductiveConstructorDef {..} = do
@@ -506,9 +510,8 @@ checkTopModules ::
   NonEmpty (Module 'Parsed 'ModuleTop) ->
   Sem r (NonEmpty (Module 'Scoped 'ModuleTop), HashSet NameId)
 checkTopModules modules = do
-  r <- checkTopModule (head modules)
-  mods <- (r ^. moduleRefModule :|) <$> mapM checkTopModule_ (NonEmpty.tail modules)
-  return (mods, createExportsTable (r ^. moduleExportInfo))
+  checked <- mapM checkTopModule modules
+  return ((^. moduleRefModule) <$> checked, createExportsTable (head checked ^. moduleExportInfo))
 
 checkTopModule_ ::
   forall r.
@@ -516,6 +519,13 @@ checkTopModule_ ::
   Module 'Parsed 'ModuleTop ->
   Sem r (Module 'Scoped 'ModuleTop)
 checkTopModule_ = fmap (^. moduleRefModule) . checkTopModule
+
+topBindings :: Sem (Reader BindingStrategy ': r) a -> Sem r a
+topBindings = runReader BindingTop
+
+localBindings :: Sem (Reader BindingStrategy ': r) a -> Sem r a
+-- localBindings = local (const BindingLocal)
+localBindings = runReader BindingLocal
 
 checkTopModule ::
   forall r.
@@ -555,7 +565,7 @@ checkTopModule m@(Module _moduleKw path doc body) = do
       (s, (m', p)) <- runState iniScope $ do
         path' <- freshTopModulePath
         withLocalScope $ do
-          (_moduleExportInfo, body') <- checkModuleBody body
+          (_moduleExportInfo, body') <- topBindings (checkModuleBody body)
           doc' <- mapM checkJudoc doc
           let _moduleRefModule =
                 Module
@@ -587,7 +597,7 @@ fixitiesBlock m =
 
 checkModuleBody ::
   forall r.
-  Members '[Error ScoperError, State Scope, Reader ScopeParameters, State ScoperState, InfoTableBuilder, NameIdGen] r =>
+  Members '[Error ScoperError, State Scope, Reader ScopeParameters, State ScoperState, InfoTableBuilder, NameIdGen, Reader BindingStrategy] r =>
   [Statement 'Parsed] ->
   Sem r (ExportInfo, [Statement 'Scoped])
 checkModuleBody body = do
@@ -597,7 +607,7 @@ checkModuleBody body = do
 
 checkLocalModule ::
   forall r.
-  (Members '[Error ScoperError, State Scope, Reader ScopeParameters, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
+  (Members '[Error ScoperError, State Scope, Reader ScopeParameters, State ScoperState, InfoTableBuilder, NameIdGen, Reader BindingStrategy] r) =>
   Module 'Parsed 'ModuleLocal ->
   Sem r (Module 'Scoped 'ModuleLocal)
 checkLocalModule Module {..} = do
@@ -760,7 +770,7 @@ checkOpenModule op
 
 checkFunctionClause ::
   forall r.
-  (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
+  (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, Reader BindingStrategy] r) =>
   FunctionClause 'Parsed ->
   Sem r (FunctionClause 'Scoped)
 checkFunctionClause clause@FunctionClause {..} = do
@@ -789,7 +799,7 @@ checkFunctionClause clause@FunctionClause {..} = do
         err = throw (ErrLacksTypeSig (LacksTypeSig clause))
 
 checkAxiomDef ::
-  (Members '[InfoTableBuilder, Error ScoperError, State Scope, State ScoperState, NameIdGen, State ScoperFixities] r) =>
+  (Members '[InfoTableBuilder, Error ScoperError, State Scope, State ScoperState, NameIdGen, State ScoperFixities, Reader BindingStrategy] r) =>
   AxiomDef 'Parsed ->
   Sem r (AxiomDef 'Scoped)
 checkAxiomDef AxiomDef {..} = do
@@ -896,13 +906,13 @@ entryToSymbol :: SymbolEntry -> Symbol -> S.Symbol
 entryToSymbol sentry csym = set S.nameConcrete csym (symbolEntryToSName sentry)
 
 checkEval ::
-  (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
+  (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, Reader BindingStrategy] r) =>
   Eval 'Parsed ->
   Sem r (Eval 'Scoped)
 checkEval (Eval s) = Eval <$> withLocalScope (checkParseExpressionAtoms s)
 
 checkPrint ::
-  (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
+  (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, Reader BindingStrategy] r) =>
   Print 'Parsed ->
   Sem r (Print 'Scoped)
 checkPrint (Print s) = Print <$> withLocalScope (checkParseExpressionAtoms s)
@@ -929,7 +939,7 @@ checkLetClause ::
   (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
   LetClause 'Parsed ->
   Sem r (LetClause 'Scoped)
-checkLetClause lc = ignoreFixities $ case lc of
+checkLetClause lc = localBindings . ignoreFixities $ case lc of
   LetTypeSig t -> LetTypeSig <$> checkTypeSignature t
   LetFunClause c -> LetFunClause <$> checkFunctionClause c
 
@@ -1080,7 +1090,7 @@ checkPatternName n = do
       _ -> Nothing
 
 checkPatternBinding ::
-  (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
+  Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r =>
   PatternBinding ->
   Sem r PatternArg
 checkPatternBinding (PatternBinding n p) = do
@@ -1152,7 +1162,7 @@ checkHole h = do
       }
 
 checkParens ::
-  (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
+  Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r =>
   ExpressionAtoms 'Parsed ->
   Sem r Expression
 checkParens e@(ExpressionAtoms as _) = case as of
@@ -1168,8 +1178,7 @@ checkExpressionAtoms ::
   (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
   ExpressionAtoms 'Parsed ->
   Sem r (ExpressionAtoms 'Scoped)
-checkExpressionAtoms (ExpressionAtoms l i) = do
-  (`ExpressionAtoms` i) <$> mapM checkExpressionAtom l
+checkExpressionAtoms (ExpressionAtoms l i) = (`ExpressionAtoms` i) <$> mapM checkExpressionAtom l
 
 checkJudoc ::
   (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
@@ -1216,7 +1225,7 @@ checkStatement ::
   (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, State ScoperFixities] r) =>
   Statement 'Parsed ->
   Sem r (Statement 'Scoped)
-checkStatement s = case s of
+checkStatement s = topBindings $ case s of
   StatementOperator opDef -> StatementOperator opDef <$ checkOperatorSyntaxDef opDef
   StatementTypeSignature tySig -> StatementTypeSignature <$> checkTypeSignature tySig
   StatementImport imp -> StatementImport <$> checkImport imp
