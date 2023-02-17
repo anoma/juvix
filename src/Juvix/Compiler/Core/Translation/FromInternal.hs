@@ -21,9 +21,6 @@ import Juvix.Extra.Strings qualified as Str
 mkIdentIndex :: Name -> Text
 mkIdentIndex = show . (^. Internal.nameId . Internal.unNameId)
 
-mkSmallUniv :: Type
-mkSmallUniv = mkUniv' (fromIntegral smallLevel)
-
 setupIntToNat :: Symbol -> InfoTable -> InfoTable
 setupIntToNat sym tab =
   tab

@@ -56,13 +56,15 @@ convertNode tab = convert mempty
           nParams = maybe 0 (length . (^. inductiveParams)) (tab ^. infoInductives . at _caseInductive)
           convertBranch :: CaseBranch -> CaseBranch
           convertBranch br@CaseBranch {..} =
-            let binders' =
+            let paramBinders = map (set binderType mkSmallUniv) (take nParams _caseBranchBinders)
+                argBinders = drop nParams _caseBranchBinders
+                binders' =
                   filterBinders
-                    (BL.prepend (reverse (take nParams _caseBranchBinders)) vars)
-                    (drop nParams _caseBranchBinders)
+                    (BL.prependRev paramBinders vars)
+                    argBinders
                 body' =
                   convert
-                    (BL.prependRev _caseBranchBinders vars)
+                    (BL.prependRev argBinders (BL.prependRev paramBinders vars))
                     _caseBranchBody
              in br
                   { _caseBranchBinders = binders',
