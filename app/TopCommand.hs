@@ -4,6 +4,7 @@ import Commands.Base
 import Commands.Compile qualified as Compile
 import Commands.Dev qualified as Dev
 import Commands.Doctor qualified as Doctor
+import Commands.Eval qualified as Eval
 import Commands.Html qualified as Html
 import Commands.Init qualified as Init
 import Commands.Repl qualified as Repl
@@ -29,5 +30,6 @@ runTopCommand = \case
   Dev opts -> Dev.runCommand opts
   Typecheck opts -> Typecheck.runCommand opts
   Compile opts -> Compile.runCommand opts
+  Eval opts -> Eval.runCommand opts
   Html opts -> Html.runCommand opts
   JuvixRepl opts -> Repl.runCommand opts
