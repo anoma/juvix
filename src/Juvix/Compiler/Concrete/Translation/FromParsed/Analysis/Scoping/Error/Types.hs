@@ -533,7 +533,7 @@ ambiguousMessage opts' n es =
       <> line
       <> "It could be any of:"
       <> line
-      <> indent' (vsep (map (ppCode opts') es))
+      <> itemize (map (ppMessage opts') es)
 
 newtype DoubleBracesPattern = DoubleBracesPattern
   { _doubleBracesPatternArg :: PatternArg

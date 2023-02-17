@@ -15,10 +15,10 @@ g : Tree → Tree;
 terminating
 f : Tree → Nat;
 f leaf := 1;
-f (node l r) :=
+f (node l' r') :=
   let
-    l : Tree := g l;
-    r : Tree := g r;
+    l : Tree := g l';
+    r : Tree := g r';
     terminating a : Nat :=
       case l
       | leaf := 1

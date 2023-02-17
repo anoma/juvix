@@ -781,20 +781,20 @@ ppExpression = case sing :: SStage s of
 instance PrettyCode SymbolEntry where
   ppCode ent =
     return
-      ( kindTag
-          <+> pretty (entryName ent ^. S.nameVerbatim)
+      ( kindWord
+          <+> code (kindAnn (pretty (entryName ent ^. S.nameVerbatim)))
           <+> "defined at"
           <+> pretty (getLoc ent)
       )
     where
       pretty' :: Text -> Doc a
       pretty' = pretty
-      kindTag = case ent of
-        EntryAxiom _ -> annotateKind S.KNameAxiom (pretty' Str.axiom)
-        EntryInductive _ -> annotateKind S.KNameInductive (pretty' Str.inductive)
-        EntryFunction _ -> annotateKind S.KNameFunction (pretty' Str.function)
-        EntryConstructor _ -> annotateKind S.KNameConstructor (pretty' Str.constructor)
-        EntryVariable _ -> annotateKind S.KNameLocal (pretty' Str.variable)
+      (kindAnn :: Doc Ann -> Doc Ann, kindWord :: Doc Ann) = case ent of
+        EntryAxiom {} -> (annotateKind S.KNameAxiom, pretty' Str.axiom)
+        EntryInductive {} -> (annotateKind S.KNameInductive, pretty' Str.inductive)
+        EntryFunction {} -> (annotateKind S.KNameFunction, pretty' Str.function)
+        EntryConstructor {} -> (annotateKind S.KNameConstructor, pretty' Str.constructor)
+        EntryVariable {} -> (annotateKind S.KNameLocal, pretty' Str.variable)
         EntryModule (ModuleRef' (isTop :&: _))
-          | SModuleTop <- isTop -> annotateKind S.KNameTopModule (pretty' Str.topModule)
-          | SModuleLocal <- isTop -> annotateKind S.KNameLocalModule (pretty' Str.localModule)
+          | SModuleTop <- isTop -> (annotateKind S.KNameTopModule, pretty' Str.topModule)
+          | SModuleLocal <- isTop -> (annotateKind S.KNameLocalModule, pretty' Str.localModule)

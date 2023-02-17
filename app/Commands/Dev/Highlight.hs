@@ -10,12 +10,13 @@ import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
 runCommand :: Members '[Embed IO, App] r => HighlightOptions -> Sem r ()
 runCommand HighlightOptions {..} = do
   res <- runPipelineEither _highlightInputFile upToScoping
+  inputFile <- someBaseToAbs' (_highlightInputFile ^. pathPath)
   case res of
     Left err -> do
+      let filterByFile = filter ((== inputFile) . (^. intervalFile))
       genOpts <- askGenericOptions
-      sayRaw (Highlight.goErrors _highlightBackend (run $ runReader genOpts $ errorIntervals err))
+      sayRaw (Highlight.goErrors _highlightBackend (filterByFile . run . runReader genOpts $ errorIntervals err))
     Right r -> do
-      inputFile <- someBaseToAbs' (_highlightInputFile ^. pathPath)
       let tbl = r ^. _2 . Scoper.resultParserResult . Parser.resultTable
           items = tbl ^. Parser.infoParsedItems
           names = r ^. _2 . (Scoper.resultScoperTable . Scoper.infoNames)

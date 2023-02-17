@@ -13,8 +13,14 @@ import Text.EditDistance
 ppCode :: (Scoped.PrettyCode c) => Scoped.Options -> c -> Doc Ann
 ppCode opts = runPP opts . Scoped.ppCode
 
+ppMessage :: (Scoped.PrettyCode c) => Scoped.Options -> c -> Doc Ann
+ppMessage opts = runPP' opts . Scoped.ppCode
+
+runPP' :: Scoped.Options -> Sem '[Reader Scoped.Options] (Doc Scoped.Ann) -> Doc Ann
+runPP' opts = run . runReader opts
+
 runPP :: Scoped.Options -> Sem '[Reader Scoped.Options] (Doc Scoped.Ann) -> Doc Ann
-runPP opts = code . run . runReader opts
+runPP opts = code . runPP' opts
 
 prettyError :: Doc Ann -> AnsiText
 prettyError = AnsiText . PPOutput

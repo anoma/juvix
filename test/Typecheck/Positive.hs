@@ -201,7 +201,11 @@ tests =
     posTest
       "Case expressions"
       $(mkRelDir "Internal")
-      $(mkRelFile "Case.juvix")
+      $(mkRelFile "Case.juvix"),
+    posTest
+      "Let shadowing"
+      $(mkRelDir ".")
+      $(mkRelFile "LetShadow.juvix")
   ]
     <> [ compilationTest t | t <- Compilation.tests, t ^. Compilation.name /= "Self-application"
        ]

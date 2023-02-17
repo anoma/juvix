@@ -3,9 +3,12 @@ module LetShadow;
     | zero : Nat
     | suc : Nat → Nat;
 
+  type Unit :=
+    | unit : Unit;
+
   t : Nat;
   t :=
-    case zero
+    case unit
       | x :=
         let
           x : Nat := suc zero;
