@@ -1,7 +1,7 @@
 -- eta-expansion
 module test036;
 
-open import Stdlib.Prelude public;
+open import Stdlib.Prelude;
 
 expand : {A : Type} → A → Nat → A;
 expand f x := f;
