@@ -335,7 +335,8 @@ mkBody ty clauses
               (goExpression body)
           return $ foldr mkLambda' body' argtys
         _ : _ -> do
-          ms <- underBinders nPatterns (mapM (uncurry goClause) clauses)
+          varsNum <- asks (^. indexTableVarsNum)
+          ms <- underBinders nPatterns (mapM (uncurry (goClause varsNum)) clauses)
           let match = mkMatch' (fromList values') (toList ms)
           return $ foldr mkLambda' match argtys
   where
@@ -346,8 +347,8 @@ mkBody ty clauses
     vs :: [Index]
     vs = reverse (take nPatterns [0 ..])
 
-    goClause :: [Internal.PatternArg] -> Internal.Expression -> Sem r MatchBranch
-    goClause pats body = goPatternArgs body pats ptys
+    goClause :: Level -> [Internal.PatternArg] -> Internal.Expression -> Sem r MatchBranch
+    goClause lvl pats body = goPatternArgs lvl body pats ptys
       where
         ptys :: [Type]
         ptys = take (length pats) (typeArgs ty)
@@ -379,14 +380,9 @@ goCase c = do
               return $ mkLet' ty expr body
             _ ->
               impossible
-
-goCaseBranch ::
-  forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable] r) =>
-  Type ->
-  Internal.CaseBranch ->
-  Sem r MatchBranch
-goCaseBranch ty b = goPatternArgs (b ^. Internal.caseBranchExpression) [b ^. Internal.caseBranchPattern] [ty]
+  where
+    goCaseBranch :: Type -> Internal.CaseBranch -> Sem r MatchBranch
+    goCaseBranch ty b = goPatternArgs 0 (b ^. Internal.caseBranchExpression) [b ^. Internal.caseBranchPattern] [ty]
 
 goLambda ::
   forall r.
@@ -635,13 +631,12 @@ getPatternArgVars pa = case pa ^. Internal.patternArgName of
 goPatternArgs ::
   forall r.
   (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable] r) =>
+  Level -> -- the level of the first binder for the matched value
   Internal.Expression ->
   [Internal.PatternArg] ->
   [Type] -> -- types of the patterns
   Sem r MatchBranch
-goPatternArgs body ps0 ptys0 = do
-  k <- asks (^. indexTableVarsNum)
-  go k [] ps0 ptys0
+goPatternArgs lvl0 body ps0 ptys0 = go lvl0 [] ps0 ptys0
   where
     -- `lvl` is the level of the lambda-bound variable corresponding to the current pattern
     go :: Level -> [Pattern] -> [Internal.PatternArg] -> [Type] -> Sem r MatchBranch
