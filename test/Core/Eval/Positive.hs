@@ -274,5 +274,10 @@ tests =
       "String builtins"
       $(mkRelDir ".")
       $(mkRelFile "test048.jvc")
-      $(mkRelFile "out/test048.out")
+      $(mkRelFile "out/test048.out"),
+    PosTest
+      "Lifting and polymorphism"
+      $(mkRelDir ".")
+      $(mkRelFile "test049.jvc")
+      $(mkRelFile "out/test049.out")
   ]
