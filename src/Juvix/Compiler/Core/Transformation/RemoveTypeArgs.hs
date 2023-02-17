@@ -52,9 +52,14 @@ convertNode tab = convert mempty
       NCase (Case {..}) ->
         End (mkCase _caseInfo _caseInductive (convert vars _caseValue) (map convertBranch _caseBranches) (fmap (convert vars) _caseDefault))
         where
+          nParams :: Int
+          nParams = maybe 0 (length . (^. inductiveParams)) (tab ^. infoInductives . at _caseInductive)
           convertBranch :: CaseBranch -> CaseBranch
           convertBranch br@CaseBranch {..} =
-            let binders' = filterBinders vars _caseBranchBinders
+            let binders' =
+                  filterBinders
+                    (BL.prepend (reverse (take nParams _caseBranchBinders)) vars)
+                    (drop nParams _caseBranchBinders)
                 body' =
                   convert
                     (BL.prependRev _caseBranchBinders vars)
