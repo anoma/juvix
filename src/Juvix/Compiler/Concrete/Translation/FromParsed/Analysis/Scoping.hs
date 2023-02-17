@@ -954,7 +954,7 @@ checkFunction Function {..} = do
           }
       where
         FunctionParameters {..} = _funParameters
-        checkParamNames :: Sem r (NonEmpty (Maybe S.Symbol))
+        checkParamNames :: Sem r [Maybe S.Symbol]
         checkParamNames =
           forM
             _paramNames
@@ -1389,7 +1389,7 @@ makeExpressionTable2 (ExpressionAtoms atoms _) = [appOpExplicit] : operators ++ 
           where
             param =
               FunctionParameters
-                { _paramNames = NonEmpty.singleton Nothing,
+                { _paramNames = [],
                   _paramImplicit = Explicit,
                   _paramType = a
                 }
