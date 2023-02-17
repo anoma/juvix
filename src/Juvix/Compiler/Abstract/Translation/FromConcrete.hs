@@ -466,7 +466,7 @@ goFunctionParameters (FunctionParameters {..}) = do
               Abstract._paramName = goSymbol <$> param
             }
       )
-      _paramNames
+      (fromMaybe (pure Nothing) (nonEmpty _paramNames))
 
 goPatternApplication ::
   (Members '[Error ScoperError, InfoTableBuilder] r) =>

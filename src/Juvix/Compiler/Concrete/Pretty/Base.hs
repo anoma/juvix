@@ -449,7 +449,7 @@ instance (SingI s) => PrettyCode (Function s) where
 instance (SingI s) => PrettyCode (FunctionParameters s) where
   ppCode FunctionParameters {..} = do
     case _paramNames of
-      Nothing :| [] -> ppLeftExpression' funFixity _paramType
+      [] -> ppLeftExpression' funFixity _paramType
       _ -> do
         paramNames' <-
           forM

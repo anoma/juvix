@@ -16,7 +16,6 @@ module Juvix.Compiler.Concrete.Language
 where
 
 import Data.Kind qualified as GHC
-import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Compiler.Concrete.Data.Builtins
 import Juvix.Compiler.Concrete.Data.Literal
 import Juvix.Compiler.Concrete.Data.ModuleIsTop
@@ -598,7 +597,7 @@ instance HasAtomicity (Lambda s) where
 --------------------------------------------------------------------------------
 
 data FunctionParameters (s :: Stage) = FunctionParameters
-  { _paramNames :: NonEmpty (Maybe (SymbolType s)),
+  { _paramNames :: [Maybe (SymbolType s)],
     _paramImplicit :: IsImplicit,
     _paramType :: ExpressionType s
   }
@@ -1069,7 +1068,7 @@ instance HasLoc (Lambda 'Scoped) where
   getLoc l = getLoc (l ^. lambdaKw) <> getLocSpan (l ^. lambdaClauses)
 
 instance HasLoc (FunctionParameters 'Scoped) where
-  getLoc p = (getLoc <$> NonEmpty.head (p ^. paramNames)) ?<> getLoc (p ^. paramType)
+  getLoc p = (getLoc <$> join (listToMaybe (p ^. paramNames))) ?<> getLoc (p ^. paramType)
 
 instance HasLoc (Function 'Scoped) where
   getLoc f = getLoc (f ^. funParameters) <> getLoc (f ^. funReturn)
