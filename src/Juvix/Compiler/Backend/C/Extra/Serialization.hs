@@ -1,5 +1,6 @@
 module Juvix.Compiler.Backend.C.Extra.Serialization where
 
+import Codec.Binary.UTF8.String qualified as UTF8
 import Juvix.Compiler.Backend.C.Language
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude hiding (Binary, Unary)
@@ -157,7 +158,7 @@ mkCExpr = \case
   ExpressionLiteral l -> case l of
     LiteralInt i -> CConst (CIntConst (cInteger i) C.undefNode)
     LiteralChar c -> CConst (CCharConst (cChar c) C.undefNode)
-    LiteralString s -> CConst (CStrConst (cString (unpack s)) C.undefNode)
+    LiteralString s -> CConst (CStrConst (cString (UTF8.encodeString (unpack s))) C.undefNode)
   ExpressionVar n -> CVar (mkIdent n) C.undefNode
   ExpressionBinary Binary {..} ->
     CBinary (mkBinaryOp _binaryOp) (mkCExpr _binaryLeft) (mkCExpr _binaryRight) C.undefNode
