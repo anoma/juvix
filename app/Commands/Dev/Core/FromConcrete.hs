@@ -15,7 +15,8 @@ runCommand localOpts = do
   let tab' :: InfoTable = Core.applyTransformations (project localOpts ^. coreFromConcreteTransformations) tab
 
       inInputModule :: IdentifierInfo -> Bool
-      inInputModule = (== Just path) . (^? identifierLocation . _Just . intervalFile)
+      inInputModule _ | not (localOpts ^. coreFromConcreteFilter) = True
+      inInputModule x = (== Just path) . (^? identifierLocation . _Just . intervalFile) $ x
 
       mainIdens :: [IdentifierInfo] =
         sortOn
