@@ -8,6 +8,7 @@ import Juvix.Compiler.Core.Pretty.Options qualified as Core
 data CoreFromConcreteOptions = CoreFromConcreteOptions
   { _coreFromConcreteTransformations :: [TransformationId],
     _coreFromConcreteShowDeBruijn :: Bool,
+    _coreFromConcreteFilter :: Bool,
     _coreFromConcreteNoIO :: Bool,
     _coreFromConcreteEval :: Bool,
     _coreFromConcreteInputFile :: AppPath File,
@@ -37,6 +38,11 @@ parseCoreFromConcreteOptions = do
     switch
       ( long "show-de-bruijn"
           <> help "Show variable de Bruijn indices"
+      )
+  _coreFromConcreteFilter <-
+    switch
+      ( long "filter"
+          <> help "Filter out the functions not from the input module"
       )
   _coreFromConcreteEval <-
     switch
