@@ -112,8 +112,7 @@
         (right
           unit))
       (left
-        (left
-          unit)))
+        4))
     (coprod
       so1
       so1)))

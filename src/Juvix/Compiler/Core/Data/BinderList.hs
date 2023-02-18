@@ -3,13 +3,14 @@ module Juvix.Compiler.Core.Data.BinderList where
 import Control.DeepSeq
 import Juvix.Compiler.Core.Language hiding (cons, drop, lookup, uncons)
 import Juvix.Prelude qualified as Prelude
+import GHC.Show qualified as S
 
 -- | if we have \x\y. b, the binderlist in b is [y, x]
 data BinderList a = BinderList
   { _blLength :: Int,
     _blMap :: [a]
   }
-  deriving stock (Show, Eq, Generic)
+  deriving stock (Eq, Generic)
 
 instance NFData a => NFData (BinderList a)
 
@@ -52,6 +53,9 @@ instance Foldable BinderList where
   toList :: BinderList a -> [a]
   toList = (^. blMap)
 
+instance Show a => Show (BinderList a) where
+  show = S.show . toList
+  
 -- | same as `lookupsSortedRev` but the result is in the same order as the input list.
 lookupsSorted :: BinderList a -> [Var' i] -> [(Var' i, a)]
 lookupsSorted bl = reverse . lookupsSortedRev bl

@@ -6,7 +6,7 @@ where
 
 import Control.DeepSeq
 import Juvix.Prelude hiding (First, Product)
-
+import GHC.Show qualified as S
 {-
   The following datatypes correspond to GEB types for terms
   (https://github.com/anoma/geb/blob/main/src/specs/lambda.lisp) and types
@@ -25,7 +25,7 @@ data Case = Case
     _caseLeft :: Morphism,
     _caseRight :: Morphism
   }
-  deriving stock (Show, Eq, Generic)
+  deriving stock (Eq, Generic)
 
 instance NFData Case
 
@@ -35,7 +35,7 @@ data Pair = Pair
     _pairLeft :: Morphism,
     _pairRight :: Morphism
   }
-  deriving stock (Show, Eq, Generic)
+  deriving stock (Eq, Generic)
 
 instance NFData Pair
 
@@ -44,7 +44,7 @@ data First = First
     _firstRightType :: Object,
     _firstValue :: Morphism
   }
-  deriving stock (Show, Eq, Generic)
+  deriving stock (Eq, Generic)
 
 instance NFData First
 
@@ -53,7 +53,7 @@ data Second = Second
     _secondRightType :: Object,
     _secondValue :: Morphism
   }
-  deriving stock (Show, Eq, Generic)
+  deriving stock (Eq, Generic)
 
 instance NFData Second
 
@@ -62,7 +62,7 @@ data Lambda = Lambda
     _lambdaBodyType :: Object,
     _lambdaBody :: Morphism
   }
-  deriving stock (Show, Eq, Generic)
+  deriving stock (Eq, Generic)
 
 instance NFData Lambda
 
@@ -72,11 +72,15 @@ data Application = Application
     _applicationLeft :: Morphism,
     _applicationRight :: Morphism
   }
-  deriving stock (Show, Eq, Generic)
+  deriving stock (Eq, Generic)
 
 instance NFData Application
 
-newtype Var = Var {_varIndex :: Int} deriving stock (Show, Eq, Generic)
+newtype Var = Var {_varIndex :: Int} 
+  deriving stock (Eq, Generic)
+
+instance Show Var where
+  show (Var i) = "var" <> show i
 
 instance NFData Var
 
@@ -117,7 +121,51 @@ data Morphism
   | MorphismVar Var
   | MorphismInteger Integer
   | MorphismBinop Binop
-  deriving stock (Show, Eq, Generic)
+  deriving stock (Eq, Generic)
+
+instance Show Morphism where
+  show = \case
+    MorphismAbsurd m -> "absurd " <> show m
+    MorphismUnit -> "unit"
+    MorphismLeft m -> "left " <> show m
+    MorphismRight m -> "right " <> show m
+    MorphismCase c -> show c
+    MorphismPair p -> show p
+    MorphismFirst f -> show f
+    MorphismSecond s -> show s
+    MorphismLambda l -> show l
+    MorphismApplication a -> show a
+    MorphismVar v -> show v
+    MorphismInteger i -> show i
+    MorphismBinop b -> show b
+
+instance Show Case where
+  show (Case _ _ _ caseOn left right) =
+    "Case[ on:= " <> show caseOn <> "\n" <>
+       "  left:= " <> show left <> "\n"
+    <> "  right:=" <> show right <> "]"
+
+instance Show Pair where
+  show (Pair _ _ left right) =
+    "Pair[\n" <>
+    "  left:= " <> show left <> ",\n" <>
+    "  right:= " <> show right <> "]"
+
+instance Show First where
+  show (First _ _ value) =
+    "fst " <> show value
+
+instance Show Second where
+  show (Second _ _ value) =
+    "snd " <> show value
+
+instance Show Lambda where
+  show (Lambda _ _ body) =
+    "λ. " <> show body
+
+instance Show Application where
+  show (Application _ _ left right) =
+    "App[ left:=" <> show left <> "\n     right:=" <> show right <> "]"
 
 instance NFData Morphism
 

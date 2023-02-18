@@ -14,6 +14,9 @@ import Juvix.Compiler.Backend.Geb.Evaluator.Options
 import Juvix.Compiler.Backend.Geb.Language
 import Juvix.Compiler.Backend.Geb.Translation.FromSource as Geb
 import Juvix.Compiler.Backend.Geb.Translation.FromSource.Analysis.TypeChecking as Geb
+import Juvix.Compiler.Backend.Geb.Pretty qualified as P
+import Juvix.Compiler.Backend.Geb.Pretty.Values qualified as V
+
 
 data RunEvalArgs = RunEvalArgs
   { _runEvalArgsInputFile :: Path Abs File,
@@ -66,10 +69,18 @@ eval ::
   Members '[Reader Env, Error EvalError] r =>
   Morphism ->
   Sem r GebValue
-eval morph = case morph of
+eval morph = do
+ env <- asks (^. envContext)
+ trace (
+  "eval" <> "\n" <>
+  "  arg:=" <> show morph <> "\n" <>
+  "  env:=" <> show env <> "\n"
+   ) $
+  case morph of
   MorphismVar var -> do
     ctx <- asks (^. envContext)
-    return $ Context.lookup (var ^. varIndex) ctx
+    let val = Context.lookup (var ^. varIndex) ctx
+    trace ("varLookup := " <> show val) $ return val
   MorphismAbsurd _ ->
     throw
       EvalError
@@ -128,7 +139,8 @@ eval morph = case morph of
   MorphismCase c -> do
     vCaseOn <- eval $ c ^. caseOn
     case vCaseOn of
-      GebValueMorphismLeft leftArg -> apply' (c ^. caseLeft) leftArg
+      GebValueMorphismLeft leftArg -> do
+        apply' (c ^. caseLeft) leftArg
       GebValueMorphismRight rightArg -> apply' (c ^. caseRight) rightArg
       _ ->
         throw
@@ -144,6 +156,13 @@ apply ::
   Morphism ->
   Sem r GebValue
 apply fun' arg' = do
+ env <- asks (^. envContext)
+ trace (
+   "apply\n" <>
+   " fun:= " <> show fun' <>  "\n" <>
+   " arg:= " <> show arg' <> "\n" <>
+   " env:=" <> show env <> "\n"
+   ) $ do
   evalStrategy <- asks (^. envEvaluatorOptions . evaluatorOptionsEvalStrategy)
   let maybeForce :: GebValue -> GebValue
       maybeForce = case evalStrategy of
@@ -153,6 +172,7 @@ apply fun' arg' = do
   fun <- eval fun'
   case fun of
     GebValueClosure cls ->
+      trace (show cls) $
       do
         let clsEnv = cls ^. valueClosureEnv
             bodyEnv = Context.cons arg clsEnv
@@ -172,10 +192,18 @@ apply' ::
   GebValue ->
   Sem r GebValue
 apply' fun' arg = do
+ env <- asks (^. envContext)
+ trace (
+   "apply'\n" <>
+   " fun:= " <> show fun' <>  "\n" <>
+   " arg:= " <> show arg <> "\n" <>
+   " env:=" <> show env <> "\n"
+   ) $ do
   fun <- eval fun'
   case fun of
-    GebValueClosure cls -> do
-      let clsEnv = cls ^. valueClosureEnv
+    GebValueClosure cls -> 
+      trace (show cls) $ do
+      let clsEnv = cls ^. valueClosureEnv 
           bodyEnv = Context.cons arg clsEnv
       local (over envContext (const bodyEnv)) $
         eval (cls ^. valueClosureLambdaBody)
