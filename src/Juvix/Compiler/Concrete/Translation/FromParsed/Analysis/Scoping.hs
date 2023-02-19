@@ -564,7 +564,7 @@ checkTopModule m@(Module _moduleKw path doc body) = do
     checkedModule = do
       (s, (m', p)) <- runState iniScope $ do
         path' <- freshTopModulePath
-        withLocalScope $ do
+        withTopScope $ do
           (_moduleExportInfo, body') <- topBindings (checkModuleBody body)
           doc' <- mapM checkJudoc doc
           let _moduleRefModule =
@@ -578,6 +578,13 @@ checkTopModule m@(Module _moduleKw path doc body) = do
           return (ModuleRef'' {..}, path')
       modify (set (scoperScope . at (p ^. S.nameConcrete)) (Just s))
       return m'
+
+withTopScope :: Members '[State Scope] r => Sem r a -> Sem r a
+withTopScope ma = do
+  before <- get @Scope
+  let scope' = set scopeLocalSymbols mempty before
+  put scope'
+  ma
 
 withLocalScope :: Members '[State Scope] r => Sem r a -> Sem r a
 withLocalScope ma = do
