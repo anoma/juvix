@@ -57,8 +57,9 @@ fromCore :: Core.InfoTable -> (Morphism, Object)
 fromCore tab = case tab ^. Core.infoMain of
   Just sym ->
     let node = fromJust $ HashMap.lookup sym (tab ^. Core.identContext)
-        idents = HashMap.delete sym (tab ^. Core.infoIdentifiers)
-        morph = run (runReader emptyEnv (goIdents node (HashMap.elems idents)))
+        syms = reverse $ filter (/= sym) $ Core.createIdentDependencyInfo tab ^. Core.depInfoTopSort
+        idents = map (\s -> fromJust $ HashMap.lookup s (tab ^. Core.infoIdentifiers)) syms
+        morph = run (runReader emptyEnv (goIdents node idents))
         obj = convertType (Info.getNodeType node)
      in (morph, obj)
   Nothing ->
