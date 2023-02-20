@@ -95,6 +95,8 @@ module Format;
       -> Nat;
   exampleFunction1 _ _ _ _ _ _ _ := 1;
 
+  -- 200 in the body is idented with respect to the start of the chain
+  -- (at {A : Type})
   exampleFunction2 :
     {A : Type}
       -> List A
@@ -105,7 +107,7 @@ module Format;
       -> List A
       -> List A
       -> Nat :=
-      100
+      200
         + 100
         + 100
         + 100
