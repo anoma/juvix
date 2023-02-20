@@ -5,7 +5,6 @@ import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Core.Data.InfoTable
 import Juvix.Compiler.Core.Extra.Utils
 import Juvix.Compiler.Core.Language
-import Juvix.Data.DependencyInfo
 
 type IdentDependencyInfo = DependencyInfo Symbol
 
