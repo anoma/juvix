@@ -14,7 +14,8 @@ data DependencyInfo n = DependencyInfo
   { _depInfoGraph :: Graph,
     _depInfoNodeFromVertex :: Vertex -> (n, HashSet n),
     _depInfoVertexFromName :: n -> Maybe Vertex,
-    _depInfoReachable :: HashSet n
+    _depInfoReachable :: HashSet n,
+    _depInfoTopSort :: [n]
   }
 
 makeLenses ''DependencyInfo
@@ -25,7 +26,8 @@ createDependencyInfo edges startNames =
     { _depInfoGraph = graph,
       _depInfoNodeFromVertex = \v -> let (_, x, y) = nodeFromVertex v in (x, HashSet.fromList y),
       _depInfoVertexFromName = vertexFromName,
-      _depInfoReachable = reachableNames
+      _depInfoReachable = reachableNames,
+      _depInfoTopSort = topSortedNames
     }
   where
     graph :: Graph
@@ -41,6 +43,8 @@ createDependencyInfo edges startNames =
           concatMap (Graph.reachable graph) startVertices
     startVertices :: [Vertex]
     startVertices = mapMaybe vertexFromName (HashSet.toList startNames)
+    topSortedNames :: [n]
+    topSortedNames = map (\v -> case nodeFromVertex v of (_, n, _) -> n) (Graph.topSort graph)
 
 nameFromVertex :: DependencyInfo n -> Vertex -> n
 nameFromVertex depInfo v = fst $ (depInfo ^. depInfoNodeFromVertex) v
