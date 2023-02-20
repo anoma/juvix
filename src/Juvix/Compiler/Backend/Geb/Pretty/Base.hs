@@ -167,19 +167,25 @@ instance PrettyCode Hom where
     return $ kwHom <> line <> indent' (vsep [dom, cod])
 
 instance PrettyCode Object where
-  ppCode _ = return kwInteger
-  -- \case
-  --   ObjectInitial -> return kwInitial
-  --   ObjectTerminal -> return kwTerminal
-  --   ObjectProduct x -> ppCode x
-  --   ObjectCoproduct x -> ppCode x
-  --   ObjectHom x -> ppCode x
-  --   ObjectInteger -> return kwInteger
+  ppCode =
+    \case
+      ObjectInitial -> return kwInitial
+      ObjectTerminal -> return kwTerminal
+      ObjectProduct x -> ppCode x
+      ObjectCoproduct x -> ppCode x
+      ObjectHom x -> ppCode x
+      ObjectInteger -> return kwInteger
 
 instance PrettyCode Expression where
   ppCode = \case
     ExpressionMorphism x -> ppCode x
     ExpressionObject x -> ppCode x
+
+instance PrettyCode TypedMorphism where
+  ppCode TypedMorphism {..} = do
+    m <- ppArg _typedMorphism
+    o <- ppArg _typedMorphismObject
+    return $ kwTyped <> line <> indent' (vsep [m , o])
 
 --------------------------------------------------------------------------------
 -- helper functions

@@ -264,6 +264,8 @@ instance HasAtomicity Expression where
     ExpressionMorphism m -> atomicity m
     ExpressionObject o -> atomicity o
 
+instance HasAtomicity TypedMorphism where
+
 makeLenses ''Case
 makeLenses ''Pair
 makeLenses ''First

@@ -13,14 +13,14 @@ data EvalError = EvalError
     _evalErrorGebExpression :: !(Maybe Morphism)
   }
 
-data FromGebValueError = FromGebValueError
-  { _fromGebValueErrorMsg :: Text,
-    _fromGebValueErrorGebValue :: Maybe GebValue,
-    _fromGebValueErrorGebExpression :: Maybe Object
+data QuoteError = QuoteError
+  { _quoteErrorMsg :: Text,
+    _quoteErrorGebValue :: Maybe GebValue,
+    _quoteErrorGebExpression :: Maybe Object
   }
 
 makeLenses ''EvalError
-makeLenses ''FromGebValueError
+makeLenses ''QuoteError
 
 -- TODO: Make this a proper error with a location
 instance ToGenericError EvalError where
@@ -70,17 +70,17 @@ evalError msg val m =
         }
     )
 
-instance Exception.Exception FromGebValueError
+instance Exception.Exception QuoteError
 
-instance Show FromGebValueError where
-  show :: FromGebValueError -> String
-  show FromGebValueError {..} =
-    "fromGebValue error: "
-      <> fromText _fromGebValueErrorMsg
-      <> case _fromGebValueErrorGebValue of
+instance Show QuoteError where
+  show :: QuoteError -> String
+  show QuoteError {..} =
+    "Quote error: "
+      <> fromText _quoteErrorMsg
+      <> case _quoteErrorGebValue of
         Nothing -> ""
         Just val -> ": " <> fromText (ppTrace val)
-      <> case _fromGebValueErrorGebExpression of
+      <> case _quoteErrorGebExpression of
         Nothing -> ""
         Just expr ->
           "GebObject associated:\n"

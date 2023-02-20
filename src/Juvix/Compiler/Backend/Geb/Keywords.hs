@@ -112,3 +112,6 @@ kwGebObjectCoproduct = asciiKw Str.gebCoprod
 
 kwGebObjectHom :: Keyword
 kwGebObjectHom = asciiKw Str.gebHom
+
+kwTyped :: Keyword
+kwTyped = asciiKw Str.gebTyped

@@ -629,6 +629,9 @@ gebHom = "!->"
 gebInteger :: IsString s => s
 gebInteger = "int"
 
+gebTyped :: IsString s => s
+gebTyped = "typed"
+
 juvixFunctionT :: IsString s => s
 juvixFunctionT = "juvix_function_t"
 

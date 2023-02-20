@@ -12,11 +12,10 @@ import Juvix.Compiler.Backend.Geb.Evaluator.Data
 import Juvix.Compiler.Backend.Geb.Evaluator.Error
 import Juvix.Compiler.Backend.Geb.Evaluator.Options
 import Juvix.Compiler.Backend.Geb.Language
-import Juvix.Compiler.Backend.Geb.Translation.FromSource as Geb
-import Juvix.Compiler.Backend.Geb.Translation.FromSource.Analysis.TypeChecking as Geb
 import Juvix.Compiler.Backend.Geb.Pretty qualified as P
 import Juvix.Compiler.Backend.Geb.Pretty.Values qualified as V
-
+import Juvix.Compiler.Backend.Geb.Translation.FromSource as Geb
+import Juvix.Compiler.Backend.Geb.Translation.FromSource.Analysis.TypeChecking as Geb
 
 data RunEvalArgs = RunEvalArgs
   { _runEvalArgsInputFile :: Path Abs File,
@@ -60,166 +59,164 @@ nf ::
   Sem r Morphism
 nf m = do
   val :: GebValue <- mapError (JuvixError @EvalError) $ eval m
-  obj :: Object <- runReader defaultInferenceEnv (infer m)
+  obj :: Object <- runReader defaultInferenceEnv $
+    mapError (JuvixError @CheckingError) (inferObject m)
   if
-      | needObjectInfo val -> fromGebValue (Just obj) val
-      | otherwise -> fromGebValue Nothing val
+      | requiresObjectInfo val -> quote (Just obj) val
+      | otherwise -> quote Nothing val
 
-eval ::
-  Members '[Reader Env, Error EvalError] r =>
-  Morphism ->
-  Sem r GebValue
+
+type EvalEffects r = Members '[Reader Env, Error EvalError] r
+
+eval :: EvalEffects r => Morphism -> Sem r GebValue
 eval morph = do
- env <- asks (^. envContext)
- trace (
-  "eval" <> "\n" <>
-  "  arg:=" <> show morph <> "\n" <>
-  "  env:=" <> show env <> "\n"
-   ) $
-  case morph of
-  MorphismVar var -> do
-    ctx <- asks (^. envContext)
-    let val = Context.lookup (var ^. varIndex) ctx
-    trace ("varLookup := " <> show val) $ return val
-  MorphismAbsurd _ ->
-    throw
-      EvalError
-        { _evalErrorMsg = "Absurd can not be evaluated.",
-          _evalErrorGebValue = Nothing,
-          _evalErrorGebExpression = Just morph
-        }
-  MorphismUnit -> return GebValueMorphismUnit
-  MorphismInteger i -> return $ GebValueMorphismInteger i
-  MorphismBinop op -> applyBinop op
-  MorphismPair pair -> do
-    left <- eval $ pair ^. pairLeft
-    right <- eval $ pair ^. pairRight
-    return $
-      GebValueMorphismPair $
-        ValueMorphismPair
-          { _valueMorphismPairLeft = left,
-            _valueMorphismPairRight = right
-          }
-  MorphismFirst f -> do
-    res <- eval $ f ^. firstValue
-    case res of
-      GebValueMorphismPair pair ->
-        return $ pair ^. valueMorphismPairLeft
-      _ ->
-        throw
-          EvalError
-            { _evalErrorMsg = "First can only be applied to pairs.",
-              _evalErrorGebValue = Nothing,
-              _evalErrorGebExpression = Just morph
-            }
-  MorphismSecond s -> do
-    res <- eval $ s ^. secondValue
-    case res of
-      GebValueMorphismPair pair ->
-        return $ pair ^. valueMorphismPairRight
-      _ ->
-        throw
-          EvalError
-            { _evalErrorMsg = "Second can only be applied to pairs.",
-              _evalErrorGebValue = Just res,
-              _evalErrorGebExpression = Just morph
-            }
-  MorphismApplication app ->
-    apply (app ^. applicationLeft) (app ^. applicationRight)
-  MorphismLambda lambda -> do
-    ctx <- asks (^. envContext)
-    return $
-      GebValueClosure $
-        ValueClosure
-          { _valueClosureLambdaBody = lambda ^. lambdaBody,
-            _valueClosureEnv = ctx
-          }
-  MorphismLeft m -> GebValueMorphismLeft <$> eval m
-  MorphismRight m -> GebValueMorphismRight <$> eval m
-  MorphismCase c -> do
-    vCaseOn <- eval $ c ^. caseOn
-    case vCaseOn of
-      GebValueMorphismLeft leftArg -> do
-        apply' (c ^. caseLeft) leftArg
-      GebValueMorphismRight rightArg -> apply' (c ^. caseRight) rightArg
-      _ ->
-        throw
-          EvalError
-            { _evalErrorMsg = "Case can only be applied to terms of the coproduct object.",
-              _evalErrorGebValue = Just vCaseOn,
-              _evalErrorGebExpression = Just morph
-            }
+  env <- asks (^. envContext)
+  trace
+    ( "eval"
+        <> "\n"
+        <> "  arg:="
+        <> show morph
+        <> "\n"
+        <> "  env:="
+        <> show env
+        <> "\n"
+    )
+    $ case morph of
+      MorphismAbsurd x -> evalAbsurd x
+      MorphismApplication app -> evalApp app
+      MorphismBinop op -> evalBinop op
+      MorphismCase c -> evalCase c
+      MorphismFirst f -> evalFirst f
+      MorphismInteger i -> return $ GebValueMorphismInteger i
+      MorphismLambda l -> evalLambda l
+      MorphismLeft m -> GebValueMorphismLeft <$> eval m
+      MorphismPair p -> evalPair p
+      MorphismRight m -> GebValueMorphismRight <$> eval m
+      MorphismSecond s -> evalSecond s
+      MorphismUnit -> return GebValueMorphismUnit
+      MorphismVar x -> evalVar x
 
-apply ::
-  Members '[Reader Env, Error EvalError] r =>
-  Morphism ->
-  Morphism ->
-  Sem r GebValue
-apply fun' arg' = do
- env <- asks (^. envContext)
- trace (
-   "apply\n" <>
-   " fun:= " <> show fun' <>  "\n" <>
-   " arg:= " <> show arg' <> "\n" <>
-   " env:=" <> show env <> "\n"
-   ) $ do
+evalVar :: EvalEffects r => Var -> Sem r GebValue
+evalVar var = do
+  ctx <- asks (^. envContext)
+  let val = Context.lookup (var ^. varIndex) ctx
+  trace ("varLookup := " <> show val) $ return val
+
+evalAbsurd :: EvalEffects r => Morphism -> Sem r GebValue
+evalAbsurd morph =
+  throw
+    EvalError
+      { _evalErrorMsg = "Absurd can not be evaluated.",
+        _evalErrorGebValue = Nothing,
+        _evalErrorGebExpression = Just morph
+      }
+
+evalPair :: EvalEffects r => Pair -> Sem r GebValue
+evalPair pair = do
+  left <- eval $ pair ^. pairLeft
+  right <- eval $ pair ^. pairRight
+  return $
+    GebValueMorphismPair $
+      ValueMorphismPair
+        { _valueMorphismPairLeft = left,
+          _valueMorphismPairRight = right
+        }
+
+evalFirst :: EvalEffects r => First -> Sem r GebValue
+evalFirst f = do
+  res <- eval $ f ^. firstValue
+  case res of
+    GebValueMorphismPair pair -> return $ pair ^. valueMorphismPairLeft
+    _ ->
+      throw
+        EvalError
+          { _evalErrorMsg = "First can only be applied to pairs.",
+            _evalErrorGebValue = Nothing,
+            _evalErrorGebExpression = Just (MorphismFirst f)
+          }
+
+evalSecond :: EvalEffects r => Second -> Sem r GebValue
+evalSecond s = do
+  res <- eval $ s ^. secondValue
+  case res of
+    GebValueMorphismPair pair -> return $ pair ^. valueMorphismPairRight
+    _ ->
+      throw
+        EvalError
+          { _evalErrorMsg = "Second can only be applied to pairs.",
+            _evalErrorGebValue = Just res,
+            _evalErrorGebExpression = Just (MorphismSecond s)
+          }
+
+evalApp :: EvalEffects r => Application -> Sem r GebValue
+evalApp app = do
   evalStrategy <- asks (^. envEvaluatorOptions . evaluatorOptionsEvalStrategy)
   let maybeForce :: GebValue -> GebValue
       maybeForce = case evalStrategy of
         CallByName -> id
         CallByValue -> force
-  arg <- maybeForce <$> eval arg'
-  fun <- eval fun'
-  case fun of
-    GebValueClosure cls ->
-      trace (show cls) $
-      do
-        let clsEnv = cls ^. valueClosureEnv
-            bodyEnv = Context.cons arg clsEnv
-        local (over envContext (const bodyEnv)) $
-          eval (cls ^. valueClosureLambdaBody)
-    _ ->
-      throw
-        EvalError
-          { _evalErrorMsg = "Can only apply functions.",
-            _evalErrorGebValue = Just fun,
-            _evalErrorGebExpression = Just fun'
-          }
+  arg <- maybeForce <$> eval (app ^. applicationRight)
+  apply (app ^. applicationLeft) arg
 
-apply' ::
-  Members '[Reader Env, Error EvalError] r =>
+apply ::
+  EvalEffects r =>
   Morphism ->
   GebValue ->
   Sem r GebValue
-apply' fun' arg = do
- env <- asks (^. envContext)
- trace (
-   "apply'\n" <>
-   " fun:= " <> show fun' <>  "\n" <>
-   " arg:= " <> show arg <> "\n" <>
-   " env:=" <> show env <> "\n"
-   ) $ do
-  fun <- eval fun'
-  case fun of
-    GebValueClosure cls -> 
-      trace (show cls) $ do
-      let clsEnv = cls ^. valueClosureEnv 
-          bodyEnv = Context.cons arg clsEnv
-      local (over envContext (const bodyEnv)) $
-        eval (cls ^. valueClosureLambdaBody)
+apply fun' arg = do
+  env <- asks (^. envContext)
+  trace
+    ( "apply\n"
+        <> (" fun:= " <> show fun' <> "\n")
+        <> (" arg:= " <> show arg <> "\n")
+        <> (" env:=" <> show env <> "\n")
+    )
+    $ do
+      fun <- eval fun'
+      case fun of
+        GebValueClosure cls ->
+          trace (show cls) $ do
+            let clsEnv = cls ^. valueClosureEnv
+                bodyEnv = Context.cons arg clsEnv
+            local (over envContext (const bodyEnv)) $
+              eval (cls ^. valueClosureLambdaBody)
+        _ ->
+          throw $
+            EvalError
+              { _evalErrorMsg = "Can only apply functions.",
+                _evalErrorGebValue = (Just fun),
+                _evalErrorGebExpression = Nothing
+              }
+
+evalLambda :: EvalEffects r => Lambda -> Sem r GebValue
+evalLambda lambda = do
+  ctx <- asks (^. envContext)
+  return $
+    GebValueClosure $
+      ValueClosure
+        { _valueClosureLambdaBody = lambda ^. lambdaBody,
+          _valueClosureEnv = ctx
+        }
+
+evalCase :: EvalEffects r => Case -> Sem r GebValue
+evalCase c = do
+  vCaseOn <- eval $ c ^. caseOn
+  case vCaseOn of
+    GebValueMorphismLeft leftArg -> apply (c ^. caseLeft) leftArg
+    GebValueMorphismRight rightArg -> apply (c ^. caseRight) rightArg
     _ ->
-      throw $
+      throw
         EvalError
-          { _evalErrorMsg = "Can only apply functions.",
-            _evalErrorGebValue = (Just fun),
-            _evalErrorGebExpression = Nothing
+          { _evalErrorMsg = "Case can only be applied to terms of the coproduct object.",
+            _evalErrorGebValue = Just vCaseOn,
+            _evalErrorGebExpression = Just (MorphismCase c)
           }
 
-applyBinop ::
+evalBinop ::
   Members '[Reader Env, Error EvalError] r =>
   Binop ->
   Sem r GebValue
-applyBinop binop = do
+evalBinop binop = do
   left <- eval $ binop ^. binopLeft
   right <- eval $ binop ^. binopRight
   let lfPair m1 m2 =
@@ -284,39 +281,30 @@ valueTrue = GebValueMorphismLeft GebValueMorphismUnit
 valueFalse :: GebValue
 valueFalse = GebValueMorphismRight GebValueMorphismUnit
 
--- TODO: DONT REVIEW BELOW YET
-fromGebValueError :: Text -> Maybe GebValue -> Maybe Object -> a
-fromGebValueError msg val gebExpr =
-  Exception.throw
-    FromGebValueError
-      { _fromGebValueErrorMsg = msg,
-        _fromGebValueErrorGebValue = val,
-        _fromGebValueErrorGebExpression = gebExpr
-      }
-
--- We cannot quote GebValues to Morphisms without knowing the type
--- in some cases. For example, we cannot quote a GebValueMorphismLeft.
--- So we need to provide the Geb object associated to the Geb value.
-
-needObjectInfo :: GebValue -> Bool
-needObjectInfo = \case
+requiresObjectInfo :: GebValue -> Bool
+requiresObjectInfo = \case
   GebValueMorphismUnit -> False
   GebValueMorphismInteger {} -> False
-  GebValueClosure {} -> False
+  GebValueClosure {} -> True
   GebValueMorphismLeft {} -> True
   GebValueMorphismRight {} -> True
   GebValueMorphismPair {} -> True
 
--- | Quote GebValues to Morphisms.
-fromGebValue ::
-  Members '[Reader Env, Error JuvixError] r =>
-  Maybe Object ->
-  GebValue ->
-  Sem r Morphism
-fromGebValue ty = \case
+-- | Quasi-quoter
+-- The reconstruct of the corresponding morphism from a GebValue
+-- requires type information provided by a helper Geb object.
+quote :: Maybe Object -> GebValue -> Sem r Morphism
+quote ty = \case
+  GebValueClosure cls -> quoteClosure ty cls
   GebValueMorphismInteger i -> return $ MorphismInteger i
+  GebValueMorphismLeft m -> quoteValueMorphismLeft ty m
+  GebValueMorphismPair m -> quoteValueMorphismPair ty m
+  GebValueMorphismRight m -> quoteMorphismRight ty m
   GebValueMorphismUnit -> return MorphismUnit
-  GebValueClosure cls -> case ty of
+
+quoteClosure :: Maybe Object -> ValueClosure -> Sem r Morphism
+quoteClosure ty cls = do
+  case ty of
     Just (ObjectHom funObj) ->
       return $
         MorphismLambda
@@ -327,32 +315,23 @@ fromGebValue ty = \case
                 cls ^. valueClosureLambdaBody
             }
     Just _ ->
-      fromGebValueError
-        "Got Helper wrong object. Expected function object (lambda)"
+      quoteError
+        "Got wrong object. Expected function object for a lambda"
         Nothing
         ty
-    Nothing -> fromGebValueError "(closure) Need object info" Nothing ty
-  val@(GebValueMorphismLeft m) -> case ty of
-    Just (ObjectCoproduct _) -> MorphismLeft <$> fromGebValue ty m
-    Just _ ->
-      fromGebValueError
-        "type mismatch (left). Expected a coproduct"
-        (Just val)
+    Nothing ->
+      quoteError
+        "(closure) Need object info"
+        (Just (GebValueClosure cls))
         ty
-    Nothing -> fromGebValueError "need object info" (Just val) ty
-  val@(GebValueMorphismRight m) -> case ty of
-    Just (ObjectCoproduct _) -> MorphismRight <$> fromGebValue ty m
-    Just _ ->
-      fromGebValueError
-        "type mismatch (right). Expected a coproduct"
-        (Just val)
-        ty
-    Nothing -> fromGebValueError "need object info" (Just val) ty
-  val@(GebValueMorphismPair m) -> case ty of
+
+quoteValueMorphismPair :: Maybe Object -> ValueMorphismPair -> Sem r Morphism
+quoteValueMorphismPair ty vpair = do
+  case ty of
     Just (ObjectProduct prod) -> do
       let (a, b) = (prod ^. productLeft, prod ^. productRight)
-      pLeft <- fromGebValue (Just a) (m ^. valueMorphismPairLeft)
-      pRight <- fromGebValue (Just b) (m ^. valueMorphismPairRight)
+      pLeft <- quote (Just a) (vpair ^. valueMorphismPairLeft)
+      pRight <- quote (Just b) (vpair ^. valueMorphismPairRight)
       return $
         MorphismPair
           Pair
@@ -362,8 +341,41 @@ fromGebValue ty = \case
               _pairRightType = b
             }
     Just _ ->
-      fromGebValueError
+      quoteError
         "type mismatch (pair). Expected a product"
-        (Just val)
+        (Just (GebValueMorphismPair vpair))
         ty
-    Nothing -> fromGebValueError "need object info" (Just val) ty
+    Nothing ->
+      quoteError
+        "need object info"
+        (Just (GebValueMorphismPair vpair))
+        ty
+
+quoteValueMorphismLeft :: Maybe Object -> GebValue -> Sem r Morphism
+quoteValueMorphismLeft ty m = case ty of
+  Just (ObjectCoproduct _) -> MorphismLeft <$> quote ty m
+  Just _ ->
+    quoteError
+      "type mismatch (left). Expected a coproduct"
+      (Just (GebValueMorphismLeft m))
+      ty
+  Nothing -> quoteError "need object info" (Just (GebValueMorphismLeft m)) ty
+
+quoteMorphismRight :: Maybe Object -> GebValue -> Sem r Morphism
+quoteMorphismRight ty r = case ty of
+  Just (ObjectCoproduct _) -> MorphismRight <$> quote ty r
+  Just _ ->
+    quoteError
+      "type mismatch (right). Expected a coproduct"
+      (Just (GebValueMorphismRight r))
+      ty
+  Nothing -> quoteError "need object info" (Just (GebValueMorphismRight r)) ty
+
+quoteError :: Text -> Maybe GebValue -> Maybe Object -> a
+quoteError msg val gebExpr =
+  Exception.throw
+    QuoteError
+      { _quoteErrorMsg = msg,
+        _quoteErrorGebValue = val,
+        _quoteErrorGebExpression = gebExpr
+      }

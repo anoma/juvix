@@ -108,3 +108,6 @@ kwHom = keyword Str.gebHom
 
 kwInteger :: Doc Ann
 kwInteger = keyword Str.gebInteger
+
+kwTyped :: Doc Ann
+kwTyped = keyword Str.gebTyped
