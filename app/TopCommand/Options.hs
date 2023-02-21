@@ -4,6 +4,7 @@ import Commands.Compile.Options
 import Commands.Dev.Options
 import Commands.Doctor.Options
 import Commands.Html.Options
+import Commands.Org.Options
 import Commands.Repl.Options
 import Commands.Typecheck.Options
 import CommonOptions hiding (Doc)
@@ -21,6 +22,7 @@ data TopCommand
   | Doctor DoctorOptions
   | Init
   | JuvixRepl ReplOptions
+  | Org OrgOptions
   deriving stock (Data)
 
 topCommandInputFile :: TopCommand -> Maybe (SomeBase File)
@@ -58,7 +60,8 @@ parseUtility =
           commandDoctor,
           commandInit,
           commandDev,
-          commandRepl
+          commandRepl,
+          commandOrg
         ]
     )
   where
@@ -77,6 +80,14 @@ parseUtility =
         ( info
             (Doctor <$> parseDoctorOptions)
             (progDesc "Perform checks on your Juvix development environment")
+        )
+    commandOrg :: Mod CommandFields TopCommand
+    commandOrg =
+      command
+        "org"
+        ( info
+            (Org <$> parseOrg)
+            (progDesc "Process an org file")
         )
     commandRepl :: Mod CommandFields TopCommand
     commandRepl =

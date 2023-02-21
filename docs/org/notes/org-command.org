@@ -1,0 +1,49 @@
+#+title: Readme
+
+* =juvix org=
+The =juvix org= command is used to include juvix fragments as rich html.
+
+** Inline code
+To include an inline juvix module, the syntax is as follows:
+#+begin_src juvix
+module Example;
+
+end;
+#+end_src
+
+By default the root is searched in the usual way starting from the directory of
+the org file. You can also provide an explicit package root with the
+=:package-root= flag thus: The given flag can be absolute or relative to the
+location of the org file.
+#+begin_src juvix :package-root some/other/root
+module Example;
+
+end;
+#+end_src
+
+First it will try to parse the full module. If that fails, then it will try to
+parse a list of statements. These statements will be wrapped in a dummy module
+during the processing phase.
+# #+begin_src juvix
+f : Nat;
+f := Nat;
+#+end_src
+
+If you want the source block to belong to a specific module that can be
+referenced in subsequent blocks, then you can use the =:module= otption thus:
+#+begin_src juvix :module Path.ModuleName
+f : Nat;
+f := 1;
+#+end_src
+
+#+begin_src juvix :module Path.ModuleName
+f' : Nat;
+f' := 2;
+#+end_src
+
+Sometimes, it is useful to include code in a module that you don't want to
+render. In that case you can use the =:hide= flag:
+#+begin_src juvix :module F :hide
+import ..
+import ..
+#+end_src

@@ -38,7 +38,7 @@ data JudocArgs = JudocArgs
     _judocArgsAssetsPrefix :: Text,
     _judocArgsUrlPrefix :: Text,
     _judocArgsCtx :: InternalTypedResult,
-    _judocArgsTheme :: Theme,
+    _judocArgsTheme :: HtmlTheme,
     _judocArgsNonRecursive :: Bool,
     _judocArgsNoFooter :: Bool
   }

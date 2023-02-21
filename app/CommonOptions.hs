@@ -1,14 +1,14 @@
 -- | Contains common options reused in several commands.
 module CommonOptions
   ( module CommonOptions,
-    module Juvix.Prelude,
+    module Juvix,
     module Options.Applicative,
   )
 where
 
 import Control.Exception qualified as GHC
 import Juvix.Compiler.Core.Data.TransformationId.Parser
-import Juvix.Prelude
+import Juvix.Prelude as Juvix
 import Options.Applicative
 import System.Process
 import Prelude (show)
@@ -230,3 +230,33 @@ optTransformationIds =
   where
     parseTransf :: String -> Either String [TransformationId]
     parseTransf = mapLeft unpack . parseTransformations . pack
+
+optTheme :: Parser HtmlTheme
+optTheme =
+  option
+    (eitherReader parseTheme)
+    ( long "theme"
+        <> metavar "THEME"
+        <> value Ayu
+        <> showDefault
+        <> help "Theme for syntax highlighting. Options: ayu (light) and nord (dark)"
+        <> completeWith (map Juvix.show allThemes)
+    )
+
+optAssetsPrefix :: Parser Text
+optAssetsPrefix =
+  strOption
+    ( value ""
+        <> long "prefix-assets"
+        <> showDefault
+        <> help "Prefix used for assets's source path"
+    )
+
+optUrlPrefix :: Parser Text
+optUrlPrefix =
+  strOption
+    ( value ""
+        <> long "prefix-url"
+        <> showDefault
+        <> help "Prefix used for inner Juvix hyperlinks"
+    )

@@ -1,6 +1,7 @@
 module Juvix.Data
   ( module Juvix.Data.Backends,
     module Juvix.Data.Effect,
+    module Juvix.Data.HtmlTheme,
     module Juvix.Data.Error,
     module Juvix.Data.Fixity,
     module Juvix.Data.ForeignBlock,
@@ -27,6 +28,7 @@ import Juvix.Data.Error
 import Juvix.Data.Fixity
 import Juvix.Data.ForeignBlock
 import Juvix.Data.Hole
+import Juvix.Data.HtmlTheme
 import Juvix.Data.Irrelevant
 import Juvix.Data.IsImplicit
 import Juvix.Data.Loc

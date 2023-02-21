@@ -1,12 +1,11 @@
 module Commands.Html.Options where
 
 import CommonOptions
-import Juvix.Compiler.Backend.Html.Data.Options hiding (HtmlOptions)
 
 data HtmlOptions = HtmlOptions
   { _htmlNonRecursive :: Bool,
     _htmlOnlySource :: Bool,
-    _htmlTheme :: Theme,
+    _htmlTheme :: HtmlTheme,
     _htmlOutputDir :: AppPath Dir,
     _htmlInputFile :: AppPath File,
     _htmlNoFooter :: Bool,
@@ -30,16 +29,7 @@ parseHtml = do
       ( long "only-source"
           <> help "Generate only Html for the source code with syntax highlighting"
       )
-  _htmlTheme <-
-    option
-      (eitherReader parseTheme)
-      ( long "theme"
-          <> metavar "THEME"
-          <> value Ayu
-          <> showDefault
-          <> help "Theme for syntax highlighting. Options: ayu (light) and nord (dark)"
-          <> completeWith (map show allThemes)
-      )
+  _htmlTheme <- optTheme
   _htmlOutputDir <-
     parseGenericOutputDir
       ( value (Rel $(mkRelDir "html"))
@@ -52,20 +42,8 @@ parseHtml = do
       ( long "no-footer"
           <> help "Remove HTML Juvix footer"
       )
-  _htmlAssetsPrefix <-
-    strOption
-      ( value ""
-          <> long "prefix-assets"
-          <> showDefault
-          <> help "Prefix used for assets's source path"
-      )
-  _htmlUrlPrefix <-
-    strOption
-      ( value ""
-          <> long "prefix-url"
-          <> showDefault
-          <> help "Prefix used for inner Juvix hyperlinks"
-      )
+  _htmlAssetsPrefix <- optAssetsPrefix
+  _htmlUrlPrefix <- optUrlPrefix
   _htmlOpen <-
     switch
       ( long "open"
@@ -73,12 +51,3 @@ parseHtml = do
       )
   _htmlInputFile <- parseInputJuvixFile
   pure HtmlOptions {..}
-  where
-    allThemes :: [Theme]
-    allThemes = allElements
-
-    parseTheme :: String -> Either String Theme
-    parseTheme s = case map toLower s of
-      "nord" -> Right Nord
-      "ayu" -> Right Ayu
-      _ -> Left $ "unrecognised theme: " <> s

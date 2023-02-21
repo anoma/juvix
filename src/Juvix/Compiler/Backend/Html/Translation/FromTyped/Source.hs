@@ -39,7 +39,7 @@ data GenSourceHtmlArgs = GenSourceHtmlArgs
     _genSourceHtmlArgsNonRecursive :: Bool,
     _genSourceHtmlArgsNoFooter :: Bool,
     _genSourceHtmlArgsComments :: Comments,
-    _genSourceHtmlArgsTheme :: Theme
+    _genSourceHtmlArgsTheme :: HtmlTheme
   }
 
 makeLenses ''GenSourceHtmlArgs

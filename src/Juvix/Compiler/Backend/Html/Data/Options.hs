@@ -1,5 +1,10 @@
-module Juvix.Compiler.Backend.Html.Data.Options where
+module Juvix.Compiler.Backend.Html.Data.Options
+  ( module Juvix.Compiler.Backend.Html.Data.Options,
+    module Juvix.Data.HtmlTheme,
+  )
+where
 
+import Juvix.Data.HtmlTheme
 import Juvix.Prelude
 
 data HtmlOptions = HtmlOptions
@@ -8,14 +13,9 @@ data HtmlOptions = HtmlOptions
     _htmlOptionsUrlPrefix :: Text,
     _htmlOptionsOutputDir :: Path Abs Dir,
     _htmlOptionsParamBase :: Text,
-    _htmlOptionsTheme :: Theme,
+    _htmlOptionsTheme :: HtmlTheme,
     _htmlOptionsNoFooter :: Bool
   }
-
-data Theme
-  = Nord
-  | Ayu
-  deriving stock (Show, Enum, Bounded, Data)
 
 data HtmlKind
   = HtmlDoc
