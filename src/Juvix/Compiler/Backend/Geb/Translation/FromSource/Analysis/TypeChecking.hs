@@ -24,13 +24,24 @@ check morph obj' = do
       (inferObject morph)
   unless
     (obj == obj')
-    ( throw $ CheckingErrorTypeMismatch
+    ( throw $
+        CheckingErrorTypeMismatch
           TypeMismatch
             { _typeMismatchMorphism = morph,
               _typeMismatchExpected = obj,
               _typeMismatchActual = obj
             }
     )
+
+checkSameType :: InferEffects r => [Morphism] -> Sem r ()
+checkSameType = \case
+  [] -> return ()
+  (x : xs) -> do
+    obj <- inferObject x
+    checkListSameType xs obj
+
+checkListSameType :: InferEffects r => [Morphism] -> Object -> Sem r ()
+checkListSameType morphs obj = mapM_ (`check` obj) morphs
 
 inferObject' :: Morphism -> Either CheckingError Object
 inferObject' = run . runError . runReader defaultInferenceEnv . inferObject
@@ -55,8 +66,6 @@ inferObject = \case
   MorphismVar v -> inferObjectVar v
   MorphismLeft a -> inferObjectLeft a
   MorphismRight b -> inferObjectRight b
-  -- FIXME: Once https://github.com/anoma/geb/issues/53 is fixed, we have
-  -- to update Left,Right cases to use their type information.
 
 inferObjectApplication :: InferEffects r => Application -> Sem r Object
 inferObjectApplication app = do
@@ -66,9 +75,8 @@ inferObjectApplication app = do
         ObjectHom $
           Hom {_homDomain = lType, _homCodomain = rType}
   check (app ^. applicationLeft) homTy
-  check (app ^. applicationRight) lType 
+  check (app ^. applicationRight) lType
   return rType
-
 
 inferObjectLambda :: InferEffects r => Lambda -> Sem r Object
 inferObjectLambda l = do
@@ -91,7 +99,6 @@ inferObjectLambda l = do
           _homCodomain = bType
         }
 
-
 inferObjectPair :: InferEffects r => Pair -> Sem r Object
 inferObjectPair pair = do
   let lType = pair ^. pairLeftType
@@ -109,73 +116,93 @@ inferObjectCase :: InferEffects r => Case -> Sem r Object
 inferObjectCase c = do
   let aType = c ^. caseLeftType
       bType = c ^. caseRightType
-      vType = Coproduct {
-        _coproductLeft = aType,
-        _coproductRight = bType
-      }
-  undefined
+      vType =
+        ObjectCoproduct $
+          Coproduct
+            { _coproductLeft = aType,
+              _coproductRight = bType
+            }
+      cType = c ^. caseCodomainType
+      leftType =
+        ObjectHom $
+          Hom
+            { _homDomain = aType,
+              _homCodomain = cType
+            }
+      rightType =
+        ObjectHom $
+          Hom
+            { _homDomain = bType,
+              _homCodomain = cType
+            }
+  check (c ^. caseOn) vType
+  check (c ^. caseLeft) leftType
+  check (c ^. caseRight) rightType
+  return cType
 
 inferObjectFirst :: InferEffects r => First -> Sem r Object
 inferObjectFirst p = do
   let leftType = p ^. firstLeftType
-  ty <-
-    local
-      (over inferenceEnvTypeInfo (const (Just leftType)))
-      (inferObject (p ^. firstValue))
-  unless (ty == leftType) (errorInferObject "Type mismatch")
-  return ty
+      rightType = p ^. firstRightType
+      pairType =
+        ObjectProduct $
+          Product
+            { _productLeft = leftType,
+              _productRight = rightType
+            }
+  check (p ^. firstValue) pairType
+  return leftType
 
 inferObjectSecond :: InferEffects r => Second -> Sem r Object
 inferObjectSecond p = do
-  let rightType = p ^. secondRightType
-  ty <-
-    local (over inferenceEnvTypeInfo (const (Just rightType))) $
-      inferObject (p ^. secondValue)
-  unless (ty == rightType) (errorInferObject "Type mismatch")
-  return ty
-
-inferObjectBinop :: InferEffects r => Binop -> Sem r Object
-inferObjectBinop op = do
-  let outTy = objectBinop op
-  aTy <-
-    local
-      (over inferenceEnvTypeInfo (const (Just outTy)))
-      (inferObject (op ^. binopLeft))
-  bTy <-
-    local
-      (over inferenceEnvTypeInfo (const (Just outTy)))
-      (inferObject (op ^. binopRight))
-  unless
-    (aTy == bTy)
-    (errorInferObject "Arguments of a binary operation should have the same type")
-  return outTy
+  let leftType = p ^. secondLeftType
+      rightType = p ^. secondRightType
+      pairType =
+        ObjectProduct $
+          Product
+            { _productLeft = leftType,
+              _productRight = rightType
+            }
+  check (p ^. secondValue) pairType
+  return rightType
 
 inferObjectVar :: InferEffects r => Var -> Sem r Object
 inferObjectVar v = do
   ctx <- asks (^. inferenceEnvContext)
-  let varTy = Context.lookup (v ^. varIndex) ctx
-  tyInfo' <- asks (^. inferenceEnvTypeInfo)
-  case tyInfo' of
-    Nothing ->
-      throw
-        $ CheckingErrorLackOfInformation
-          LackOfInformation
-            { _lackOfInformationMorphism = Just (MorphismVar v),
-              _lacOfInformationHelperObject = Nothing,
-              _lackOfInformationMessage = "Expected type information for variable"
-            }
-    Just tyInfo -> do
-      unless
-        (varTy == tyInfo)
-        ( throw $ CheckingErrorTypeMismatch
-              TypeMismatch
-                { _typeMismatchExpected = tyInfo,
-                  _typeMismatchActual = varTy,
-                  _typeMismatchMorphism = MorphismVar v
-                }
-        )
-      return varTy
+  return $ Context.lookup (v ^. varIndex) ctx
 
+inferObjectBinop :: InferEffects r => Binop -> Sem r Object
+inferObjectBinop opApp = do
+  let outTy = objectBinop opApp
+      leftArg = opApp ^. binopLeft
+      rightArg = opApp ^. binopRight
+      args = [leftArg, rightArg]
+
+  case opApp ^. binopOpcode of
+    OpAdd -> do
+      checkListSameType args ObjectInteger
+      return outTy
+    OpSub -> do
+      checkListSameType args ObjectInteger
+      return outTy
+    OpMul -> do
+      checkListSameType args ObjectInteger
+      return outTy
+    OpDiv -> do
+      checkListSameType args ObjectInteger
+      return outTy
+    OpMod -> do
+      checkListSameType args ObjectInteger
+      return outTy
+    OpEq -> do
+      checkSameType args
+      return outTy
+    OpLt -> do
+      checkSameType args
+      return outTy
+
+-- FIXME: Once https://github.com/anoma/geb/issues/53 is fixed,
+-- Update: inferObjectLeft and inferObjectRight to use the same code
 inferObjectLeft :: InferEffects r => Morphism -> Sem r Object
 inferObjectLeft a =
   do
@@ -189,8 +216,8 @@ inferObjectLeft a =
             (inferObject a)
         unless
           (aTy == leftTy)
-          ( throw
-              $ CheckingErrorTypeMismatch
+          ( throw $
+              CheckingErrorTypeMismatch
                 TypeMismatch
                   { _typeMismatchExpected = aTy,
                     _typeMismatchActual = leftTy,
@@ -199,8 +226,8 @@ inferObjectLeft a =
           )
         return cTy
       Just ty ->
-        throw
-          $ CheckingErrorWrongObject
+        throw $
+          CheckingErrorWrongObject
             WrongObject
               { _wrongObjectExpected = Nothing,
                 _wrongObjectActual = Just ty,
@@ -208,8 +235,8 @@ inferObjectLeft a =
                 _wrongObjectMessage = "Expected a coproduct object for a left morphism."
               }
       Nothing ->
-        throw
-          $ CheckingErrorLackOfInformation
+        throw $
+          CheckingErrorLackOfInformation
             LackOfInformation
               { _lackOfInformationMorphism = Just (MorphismLeft a),
                 _lacOfInformationHelperObject = tyInfo,
@@ -228,7 +255,8 @@ inferObjectRight bMorph = do
           (inferObject bMorph)
       unless
         (bTy == rightTy)
-        ( throw $ CheckingErrorTypeMismatch
+        ( throw $
+            CheckingErrorTypeMismatch
               TypeMismatch
                 { _typeMismatchExpected = bTy,
                   _typeMismatchActual = rightTy,
@@ -237,8 +265,8 @@ inferObjectRight bMorph = do
         )
       return cTy
     Just ty ->
-      throw
-        $ CheckingErrorWrongObject
+      throw $
+        CheckingErrorWrongObject
           WrongObject
             { _wrongObjectExpected = Nothing,
               _wrongObjectActual = Just ty,
@@ -246,16 +274,10 @@ inferObjectRight bMorph = do
               _wrongObjectMessage = "Expected a coproduct object for a right morphism."
             }
     Nothing ->
-      throw
-        $ CheckingErrorLackOfInformation
+      throw $
+        CheckingErrorLackOfInformation
           LackOfInformation
             { _lackOfInformationMorphism = Just (MorphismRight bMorph),
               _lacOfInformationHelperObject = tyInfo,
               _lackOfInformationMessage = "on a right morphism"
             }
-
-errorInferObject :: Text -> a
-errorInferObject = error . ("infer: " <>)
-
-lackOfInformation :: Text
-lackOfInformation = "Not enough information to inferObject the type"

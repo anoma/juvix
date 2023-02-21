@@ -5,8 +5,9 @@ module Juvix.Compiler.Backend.Geb.Language
 where
 
 import Control.DeepSeq
-import Juvix.Prelude hiding (First, Product)
 import GHC.Show qualified as S
+import Juvix.Prelude hiding (First, Product)
+
 {-
   The following datatypes correspond to GEB types for terms
   (https://github.com/anoma/geb/blob/main/src/specs/lambda.lisp) and types
@@ -76,7 +77,7 @@ data Application = Application
 
 instance NFData Application
 
-newtype Var = Var {_varIndex :: Int} 
+newtype Var = Var {_varIndex :: Int}
   deriving stock (Eq, Generic)
 
 instance Show Var where
@@ -141,15 +142,25 @@ instance Show Morphism where
 
 instance Show Case where
   show (Case _ _ _ caseOn left right) =
-    "Case[ on:= " <> show caseOn <> "\n" <>
-       "  left:= " <> show left <> "\n"
-    <> "  right:=" <> show right <> "]"
+    "Case[ on:= "
+      <> show caseOn
+      <> "\n"
+      <> "  left:= "
+      <> show left
+      <> "\n"
+      <> "  right:="
+      <> show right
+      <> "]"
 
 instance Show Pair where
   show (Pair _ _ left right) =
-    "Pair[\n" <>
-    "  left:= " <> show left <> ",\n" <>
-    "  right:= " <> show right <> "]"
+    "Pair[\n"
+      <> "  left:= "
+      <> show left
+      <> ",\n"
+      <> "  right:= "
+      <> show right
+      <> "]"
 
 instance Show First where
   show (First _ _ value) =
@@ -265,6 +276,7 @@ instance HasAtomicity Expression where
     ExpressionObject o -> atomicity o
 
 instance HasAtomicity TypedMorphism where
+  atomicity _ = Aggregate appFixity
 
 makeLenses ''Case
 makeLenses ''Pair

@@ -1,3 +1,5 @@
+;; THE following example does not typecheck on purpose
+;; It's meant to be used only for the evaluator.
 ;; ↓ app2 fun arg, where
 ;;     fun := cls (λ . (index 1)) with env := GlobalEnv
 ;;     arg := cls 0 with env := GlobalEnv

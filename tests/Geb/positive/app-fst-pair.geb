@@ -4,7 +4,7 @@
     (lamb
         int
         int
-        (snd 
+        (fst 
             int 
             int 
             (index 0)))

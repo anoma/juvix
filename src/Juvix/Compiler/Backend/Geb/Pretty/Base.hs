@@ -185,7 +185,7 @@ instance PrettyCode TypedMorphism where
   ppCode TypedMorphism {..} = do
     m <- ppArg _typedMorphism
     o <- ppArg _typedMorphismObject
-    return $ kwTyped <> line <> indent' (vsep [m , o])
+    return $ kwTyped <> line <> indent' (vsep [m, o])
 
 --------------------------------------------------------------------------------
 -- helper functions

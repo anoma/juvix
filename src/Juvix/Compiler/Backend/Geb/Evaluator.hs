@@ -57,48 +57,48 @@ nf ::
   Sem r Morphism
 nf m = do
   val :: GebValue <- mapError (JuvixError @EvalError) $ eval m
-  obj :: Object <- runReader defaultInferenceEnv $
-    mapError (JuvixError @CheckingError) (inferObject m)
+  obj :: Object <-
+    runReader defaultInferenceEnv $
+      mapError (JuvixError @CheckingError) (inferObject m)
   if
       | requiresObjectInfo val -> quote (Just obj) val
       | otherwise -> quote Nothing val
-
 
 type EvalEffects r = Members '[Reader Env, Error EvalError] r
 
 eval :: EvalEffects r => Morphism -> Sem r GebValue
 eval morph = do
-  env <- asks (^. envContext)
-  trace
-    ( "eval"
-        <> "\n"
-        <> "  arg:="
-        <> show morph
-        <> "\n"
-        <> "  env:="
-        <> show env
-        <> "\n"
-    ) $
-    case morph of
-      MorphismAbsurd x -> evalAbsurd x
-      MorphismApplication app -> evalApp app
-      MorphismBinop op -> evalBinop op
-      MorphismCase c -> evalCase c
-      MorphismFirst f -> evalFirst f
-      MorphismInteger i -> return $ GebValueMorphismInteger i
-      MorphismLambda l -> evalLambda l
-      MorphismLeft m -> GebValueMorphismLeft <$> eval m
-      MorphismPair p -> evalPair p
-      MorphismRight m -> GebValueMorphismRight <$> eval m
-      MorphismSecond s -> evalSecond s
-      MorphismUnit -> return GebValueMorphismUnit
-      MorphismVar x -> evalVar x
+  -- env <- asks (^. envContext)
+  -- trace
+  --   ( "eval"
+  --       <> "\n"
+  --       <> "  arg:="
+  --       <> show morph
+  --       <> "\n"
+  --       <> "  env:="
+  --       <> show env
+  --       <> "\n"
+  --   ) $
+   case morph of
+    MorphismAbsurd x -> evalAbsurd x
+    MorphismApplication app -> evalApp app
+    MorphismBinop op -> evalBinop op
+    MorphismCase c -> evalCase c
+    MorphismFirst f -> evalFirst f
+    MorphismInteger i -> return $ GebValueMorphismInteger i
+    MorphismLambda l -> evalLambda l
+    MorphismLeft m -> GebValueMorphismLeft <$> eval m
+    MorphismPair p -> evalPair p
+    MorphismRight m -> GebValueMorphismRight <$> eval m
+    MorphismSecond s -> evalSecond s
+    MorphismUnit -> return GebValueMorphismUnit
+    MorphismVar x -> evalVar x
 
 evalVar :: EvalEffects r => Var -> Sem r GebValue
 evalVar var = do
   ctx <- asks (^. envContext)
   let val = Context.lookup (var ^. varIndex) ctx
-  -- trace ("varLookup := " <> show val) $ 
+  -- trace ("varLookup := " <> show val) $
   return val
 
 evalAbsurd :: EvalEffects r => Morphism -> Sem r GebValue
@@ -163,29 +163,29 @@ apply ::
   GebValue ->
   Sem r GebValue
 apply fun' arg = do
-  env <- asks (^. envContext)
-  trace
-    ( "apply\n"
-        <> (" fun:= " <> show fun' <> "\n")
-        <> (" arg:= " <> show arg <> "\n")
-        <> (" env:=" <> show env <> "\n")
-    )  $ do
-      fun <- eval fun'
-      case fun of
-        GebValueClosure cls ->
-          trace ("cls:= " <> show cls <> "\n") $ 
-          do
-            let clsEnv = cls ^. valueClosureEnv
-                bodyEnv = Context.cons arg clsEnv
-            local (over envContext (const bodyEnv)) $
-              eval (cls ^. valueClosureLambdaBody)
-        _ ->
-          throw $
-            EvalError
-              { _evalErrorMsg = "Can only apply functions.",
-                _evalErrorGebValue = (Just fun),
-                _evalErrorGebExpression = Nothing
-              }
+  -- env <- asks (^. envContext)
+  -- trace
+  --   ( "apply\n"
+  --       <> (" fun:= " <> show fun' <> "\n")
+  --       <> (" arg:= " <> show arg <> "\n")
+  --       <> (" env:=" <> show env <> "\n")
+  --   )  $ do
+    fun <- eval fun'
+    case fun of
+      GebValueClosure cls ->
+        -- trace ("cls:= " <> show cls <> "\n") $
+        do
+          let clsEnv = cls ^. valueClosureEnv
+              bodyEnv = Context.cons arg clsEnv
+          local (over envContext (const bodyEnv)) $
+            eval (cls ^. valueClosureLambdaBody)
+      _ ->
+        throw $
+          EvalError
+            { _evalErrorMsg = "Can only apply functions.",
+              _evalErrorGebValue = (Just fun),
+              _evalErrorGebExpression = Nothing
+            }
 
 evalLambda :: EvalEffects r => Lambda -> Sem r GebValue
 evalLambda lambda = do
@@ -259,7 +259,7 @@ evalBinop binop = do
       _ ->
         throw
           EvalError
-            { _evalErrorMsg = "Canot apply operation",
+            { _evalErrorMsg = "Cannot apply operation",
               _evalErrorGebValue = Just (lfPair m1 m2),
               _evalErrorGebExpression = Just (MorphismBinop binop)
             }
@@ -289,9 +289,6 @@ requiresObjectInfo = \case
   GebValueMorphismRight {} -> True
   GebValueMorphismPair {} -> True
 
--- | Quasi-quoter
--- The reconstruct of the corresponding morphism from a GebValue
--- requires type information provided by a helper Geb object.
 quote :: Maybe Object -> GebValue -> Sem r Morphism
 quote ty = \case
   GebValueClosure cls -> quoteClosure ty cls

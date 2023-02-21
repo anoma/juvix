@@ -8,8 +8,14 @@
             int 
             int
             (index 0)
-            (right 1)
-            (left 2)
+            (lamb
+              int
+              int 
+              (right 1))
+            (lamb
+              int
+              int 
+              (left 2))
             )
     )
   (left

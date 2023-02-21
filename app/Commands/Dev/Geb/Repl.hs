@@ -9,13 +9,13 @@ import Control.Exception (throwIO)
 import Control.Monad.State.Strict qualified as State
 import Juvix.Compiler.Backend.Geb qualified as Geb
 import Juvix.Compiler.Backend.Geb.Pretty.Values qualified as GebValue
+import Juvix.Compiler.Backend.Geb.Translation.FromSource.Analysis.TypeChecking.Error
 import Juvix.Data.Error.GenericError qualified as Error
 import Juvix.Extra.Version
 import Juvix.Prelude.Pretty qualified as P
 import System.Console.ANSI qualified as Ansi
 import System.Console.Haskeline
 import System.Console.Repline qualified as Repline
-import Juvix.Compiler.Backend.Geb.Translation.FromSource.Analysis.TypeChecking.Error
 
 type ReplS = State.StateT ReplState IO
 
@@ -120,7 +120,7 @@ checkTypedMorphism :: String -> Repl ()
 checkTypedMorphism gebMorphism = Repline.dontCrash $ do
   case Geb.runParser' replPath (pack gebMorphism) of
     Left err -> printError (JuvixError err)
-    Right tyMorphism@(Geb.TypedMorphism {}) -> do 
+    Right tyMorphism@(Geb.TypedMorphism {}) -> do
       case run . runError @CheckingError $ Geb.check' tyMorphism of
         Right obj -> renderOut (Geb.ppOut Geb.defaultEvaluatorOptions obj)
         Left err -> undefined -- printError (JuvixError err)
