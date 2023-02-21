@@ -5,7 +5,9 @@ module Logic.Extra;
 
   --- Concatenates a list of strings
 
-  --- ;concat (("a" :: nil) :: "b" :: nil); evaluates to ;"a" :: "b" :: nil;
+  --- ;concat (("a" :: nil) :: "b" :: nil); evaluates to ;"a"
+    :: "b"
+    :: nil;
   concat : List String → String;
   concat := foldl (++str) "";
 
@@ -21,3 +23,4 @@ module Logic.Extra;
   unlines : List String → String;
   unlines := intercalate "\n";
 end;
+

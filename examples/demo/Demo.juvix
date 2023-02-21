@@ -32,29 +32,29 @@ module Demo;
 
   preorder : {A : Type} → Tree A → List A;
   preorder (leaf x) := x :: nil;
-  preorder (node x l r) := x
-    :: nil
-    ++ preorder l
-    ++ preorder r;
+  preorder (node x l r) :=
+    x :: nil ++ preorder l ++ preorder r;
 
   terminating
   sort : {A : Type} → (A → A → Ordering) → List A → List A;
   sort _ nil := nil;
   sort _ xs@(_ :: nil) := xs;
-  sort cmp xs := uncurry
-    (merge cmp)
-    (both (sort cmp) (splitAt (div (length xs) 2) xs));
+  sort cmp xs :=
+    uncurry
+      (merge cmp)
+      (both (sort cmp) (splitAt (div (length xs) 2) xs));
 
   printNatListLn : List Nat → IO;
   printNatListLn nil := printStringLn "nil";
-  printNatListLn (x :: xs) := printNat x
-    >> printString " :: "
-    >> printNatListLn xs;
+  printNatListLn (x :: xs) :=
+    printNat x >> printString " :: " >> printNatListLn xs;
 
   main : IO;
-  main := printStringLn "Hello!"
-    >> printNatListLn (preorder (mirror tree))
-    >> printNatListLn (sort compare (preorder (mirror tree)))
-    >> printNatLn (log2 3)
-    >> printNatLn (log2 130);
+  main :=
+    printStringLn "Hello!"
+      >> printNatListLn (preorder (mirror tree))
+      >> printNatListLn (sort compare (preorder (mirror tree)))
+      >> printNatLn (log2 3)
+      >> printNatLn (log2 130);
 end;
+

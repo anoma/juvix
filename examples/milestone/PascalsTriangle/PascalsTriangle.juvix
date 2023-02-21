@@ -9,7 +9,7 @@ module PascalsTriangle;
   open import Stdlib.Prelude;
 
   zipWith : {A : Type} → {B : Type} → {C : Type} → (A → B → C) → List
-    A → List B → List C;
+      A → List B → List C;
   zipWith f nil _ := nil;
   zipWith f _ nil := nil;
   zipWith f (x :: xs) (y :: ys) := f x y :: zipWith f xs ys;
@@ -26,8 +26,8 @@ module PascalsTriangle;
   --- Concatenates a list of strings
 
   --- ;concat (("a" :: nil) :: "b" :: nil); evaluates to ;"a"
-  :: "b"
-  :: nil;
+    :: "b"
+    :: nil;
   concat : List String → String;
   concat := foldl (++str) "";
 
@@ -39,16 +39,16 @@ module PascalsTriangle;
   unlines := intercalate "\n";
 
   showList : List Nat → String;
-  showList xs := "["
-    ++str intercalate "," (map natToString xs)
-    ++str "]";
+  showList xs :=
+    "[" ++str intercalate "," (map natToString xs) ++str "]";
 
   --- Compute the next row of Pascal's triangle
   pascalNextRow : List Nat → List Nat;
-  pascalNextRow row := zipWith
-    (+)
-    (singleton zero ++ row)
-    (row ++ singleton zero);
+  pascalNextRow row :=
+    zipWith
+      (+)
+      (singleton zero ++ row)
+      (row ++ singleton zero);
 
   --- Produce Pascal's triangle to a given depth
   pascal : Nat → List (List Nat);
@@ -57,3 +57,4 @@ module PascalsTriangle;
   main : IO;
   main := printStringLn (unlines (map showList (pascal 10)));
 end;
+

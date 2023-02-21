@@ -14,11 +14,12 @@ module CLI.TicTacToe;
 
   --- A ;String; that prompts the user for their input
   prompt : GameState → String;
-  prompt x := "\n"
-    ++str showGameState x
-    ++str "\nPlayer "
-    ++str showSymbol (player x)
-    ++str ": ";
+  prompt x :=
+    "\n"
+      ++str showGameState x
+      ++str "\nPlayer "
+      ++str showSymbol (player x)
+      ++str ": ";
 
   nextMove : GameState → String → GameState;
   nextMove s := flip playMove s ∘ validMove ∘ stringToNat;
@@ -26,20 +27,25 @@ module CLI.TicTacToe;
   --- Main loop
   terminating
   run : GameState → IO;
-  run (state b p (terminate msg)) := printStringLn
-    ("\n"
-    ++str showGameState (state b p noError)
-    ++str "\n"
-    ++str msg);
-  run (state b p (continue msg)) := printString (msg ++str prompt (state b p noError)) >>
-    readLn (run ∘ nextMove (state b p noError));
-  run x := printString (prompt x) >> readLn (run ∘ nextMove x);
+  run (state b p (terminate msg)) :=
+    printStringLn
+      ("\n"
+        ++str showGameState (state b p noError)
+        ++str "\n"
+        ++str msg);
+  run (state b p (continue msg)) :=
+    printString (msg ++str prompt (state b p noError))
+      >> readLn (run ∘ nextMove (state b p noError));
+  run x :=
+    printString (prompt x) >> readLn (run ∘ nextMove x);
 
   --- The welcome message
   welcome : String;
-  welcome := "MiniTicTacToe\n-------------\n\nType a number then ENTER to make a move";
+  welcome :=
+    "MiniTicTacToe\n-------------\n\nType a number then ENTER to make a move";
 
   --- The entry point of the program
   main : IO;
   main := printStringLn welcome >> run beginState;
 end;
+

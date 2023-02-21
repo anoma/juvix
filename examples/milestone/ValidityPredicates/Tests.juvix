@@ -29,7 +29,9 @@ module Tests;
   show-result false := "FAIL";
 
   main : IO;
-  main := printString "VP Status: "
-    >> printStringLn
-      (show-result (vp token keys-changed verifiers));
+  main :=
+    printString "VP Status: "
+      >> printStringLn
+        (show-result (vp token keys-changed verifiers));
 end;
+

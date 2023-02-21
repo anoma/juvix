@@ -2,7 +2,7 @@ module Collatz;
   open import Stdlib.Prelude;
 
   mapMaybe : {A : Type} → {B : Type} → (A → B) → Maybe
-    A → Maybe B;
+      A → Maybe B;
   mapMaybe _ nothing := nothing;
   mapMaybe f (just x) := just (f x);
 
@@ -23,9 +23,8 @@ module Collatz;
 
   -- IO
   --- -----------------------------------------------------------------------------
-
   output : Nat → Nat × IO;
-  output n := n , printNatLn n;
+  output n := n, printNatLn n;
 
   terminating
   run : (Nat → Nat) → Nat → IO;
@@ -33,8 +32,12 @@ module Collatz;
   run f n := run f (fst (output (f n)));
 
   welcome : String;
-  welcome := "Collatz calculator\n------------------\n\nType a number then ENTER";
+  welcome :=
+    "Collatz calculator\n------------------\n\nType a number then ENTER";
 
   main : IO;
-  main := printStringLn welcome >> readLn (run collatz ∘ stringToNat);
+  main :=
+    printStringLn welcome
+      >> readLn (run collatz ∘ stringToNat);
 end;
+

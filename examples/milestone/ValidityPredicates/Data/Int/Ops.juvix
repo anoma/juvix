@@ -54,3 +54,4 @@ module Data.Int.Ops;
     c ↦ "plus";
   };
 end;
+
