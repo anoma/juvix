@@ -50,4 +50,3 @@ module SimpleFungibleToken;
         (Int_0, true)
         keys-changed);
 end;
-

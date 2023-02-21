@@ -2,4 +2,3 @@ module TicTacToe;
   import CLI.TicTacToe;
   import Web.TicTacToe;
 end;
-

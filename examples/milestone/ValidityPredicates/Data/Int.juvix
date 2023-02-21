@@ -17,4 +17,3 @@ module Data.Int;
     c ↦ "1";
   };
 end;
-

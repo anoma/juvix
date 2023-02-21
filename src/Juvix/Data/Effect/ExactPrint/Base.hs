@@ -80,6 +80,7 @@ line' = append' P.line
 end' :: forall r. Members '[State Builder] r => Sem r ()
 end' = do
   cs <- gets (^. builderComments)
+  unless (null cs) line'
   mapM_ printComment cs
   modify' (set builderComments [])
 

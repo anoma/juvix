@@ -30,4 +30,3 @@ module Logic.Square;
       (empty n);
   replace _ _ s := s;
 end;
-

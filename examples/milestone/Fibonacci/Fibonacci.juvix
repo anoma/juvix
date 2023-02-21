@@ -11,4 +11,3 @@ module Fibonacci;
   main : IO;
   main := printNatLn (fibonacci 25);
 end;
-
