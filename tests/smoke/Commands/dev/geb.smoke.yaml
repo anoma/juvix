@@ -133,44 +133,21 @@ tests:
       - geb
       - read
     args:
-      - Geb/positive/Core/test001.geb
-    stdout: |-
+      - Geb/positive/app-lambda.geb
+    stdout: |
       (app
-        (coprod
-          so1
-          so1)
-        (coprod
-          so1
-          so1)
+        int
+        int
         (lamb
-          (coprod
-            so1
-            so1)
-          (coprod
-            so1
-            so1)
-          (case-on
-            so1
-            so1
-            (coprod
-              so1
-              so1)
-            (index 0)
-            (lamb
-              so1
-              (coprod
-                so1
-                so1)
-              (right
-                unit))
-            (lamb
-              so1
-              (coprod
-                so1
-                so1)
-              (left
-                unit))))
-        (left
-          unit))
+          int
+          int
+          (lamb
+            int
+            int
+            (index 1)))
+        (lamb
+          int
+          int
+          (index 0)))
 
     exit-status: 0

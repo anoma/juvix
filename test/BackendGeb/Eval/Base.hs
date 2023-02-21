@@ -24,7 +24,7 @@ gebEvalAssertion mainFile expectedFile step = do
       let env :: Geb.Env =
             Geb.Env
               { _envEvaluatorOptions = Geb.defaultEvaluatorOptions,
-                _envContext = Context.empty
+                _envContext = mempty
               }
       withTempDir' $
         \dirPath -> do

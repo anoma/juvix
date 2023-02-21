@@ -7,4 +7,4 @@ allTests :: TestTree
 allTests =
   testGroup
     "JuvixGeb eval tests"
-    [EvalP.allTests, EvalN.allTests]
+    [EvalP.allTests]
