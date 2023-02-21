@@ -23,4 +23,3 @@ module Logic.Extra;
   unlines : List String → String;
   unlines := intercalate "\n";
 end;
-

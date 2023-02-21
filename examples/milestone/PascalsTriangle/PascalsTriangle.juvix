@@ -57,4 +57,3 @@ module PascalsTriangle;
   main : IO;
   main := printStringLn (unlines (map showList (pascal 10)));
 end;
-

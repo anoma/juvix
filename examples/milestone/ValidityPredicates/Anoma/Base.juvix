@@ -80,4 +80,3 @@ module Anoma.Base;
   unwrap-default : Maybe Int → Int;
   unwrap-default := maybe Int_0 id;
 end;
-
