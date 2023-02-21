@@ -3,7 +3,6 @@ module BackendGeb.Eval.Base where
 import Base
 import Data.Text.IO qualified as TIO
 import Juvix.Compiler.Backend.Geb qualified as Geb
-import Juvix.Compiler.Backend.Geb.Data.Context as Context
 import Juvix.Compiler.Backend.Geb.Pretty.Values qualified as PrettyGeb
 import Juvix.Prelude.Pretty
 
