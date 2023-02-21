@@ -18,6 +18,6 @@ makeLenses ''InferenceEnv
 defaultInferenceEnv :: InferenceEnv
 defaultInferenceEnv =
   InferenceEnv
-    { _inferenceEnvContext = Context.empty,
+    { _inferenceEnvContext = mempty,
       _inferenceEnvTypeInfo = Nothing
     }

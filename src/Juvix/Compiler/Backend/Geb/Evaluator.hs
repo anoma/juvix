@@ -5,7 +5,6 @@ module Juvix.Compiler.Backend.Geb.Evaluator
   )
 where
 
-import Control.DeepSeq
 import Control.Exception qualified as Exception
 import Juvix.Compiler.Backend.Geb.Analysis.TypeChecking as Geb
 import Juvix.Compiler.Backend.Geb.Data.Context as Context
@@ -30,10 +29,10 @@ runEval RunEvalArgs {..} =
       let env :: Env =
             Env
               { _envEvaluatorOptions = _runEvalArgsEvaluatorOptions,
-                _envContext = Context.empty
+                _envContext = mempty
               }
-      if _runEvalArgsEvaluatorOptions ^. evaluatorOptionsNormalise
-        then RunEvalResultMorphism <$> nf' env m
+      if _runEvalArgsEvaluatorOptions ^. evaluatorOptionsOutputMorphism
+        then RunEvalResultMorphism <$> evalAndOutputMorphism' env m
         else RunEvalResultGebValue <$> eval' env m
     Right _ -> Left (error @JuvixError objNoEvalMsg)
     Left err -> Left (JuvixError err)
@@ -48,14 +47,14 @@ eval' env m =
       runReader env $
         eval m
 
-nf' :: Env -> Morphism -> Either JuvixError Morphism
-nf' env m = run . runError $ runReader env (nf m)
+evalAndOutputMorphism' :: Env -> Morphism -> Either JuvixError Morphism
+evalAndOutputMorphism' env m = run . runError $ runReader env (evalAndOutputMorphism m)
 
-nf ::
+evalAndOutputMorphism ::
   Members '[Reader Env, Error JuvixError] r =>
   Morphism ->
   Sem r Morphism
-nf m = do
+evalAndOutputMorphism m = do
   val :: GebValue <- mapError (JuvixError @EvalError) $ eval m
   obj :: Object <-
     runReader defaultInferenceEnv $
@@ -67,18 +66,7 @@ nf m = do
 type EvalEffects r = Members '[Reader Env, Error EvalError] r
 
 eval :: EvalEffects r => Morphism -> Sem r GebValue
-eval morph = do
-  -- env <- asks (^. envContext)
-  -- trace
-  --   ( "eval"
-  --       <> "\n"
-  --       <> "  arg:="
-  --       <> show morph
-  --       <> "\n"
-  --       <> "  env:="
-  --       <> show env
-  --       <> "\n"
-  --   ) $
+eval morph =
   case morph of
     MorphismAbsurd x -> evalAbsurd x
     MorphismApplication app -> evalApp app
@@ -149,12 +137,7 @@ evalSecond s = do
 
 evalApp :: EvalEffects r => Application -> Sem r GebValue
 evalApp app = do
-  evalStrategy <- asks (^. envEvaluatorOptions . evaluatorOptionsEvalStrategy)
-  let maybeForce :: GebValue -> GebValue
-      maybeForce = case evalStrategy of
-        CallByName -> id
-        CallByValue -> force
-  arg <- maybeForce <$> eval (app ^. applicationRight)
+  arg <- eval (app ^. applicationRight)
   apply (app ^. applicationLeft) arg
 
 apply ::
@@ -163,17 +146,9 @@ apply ::
   GebValue ->
   Sem r GebValue
 apply fun' arg = do
-  -- env <- asks (^. envContext)
-  -- trace
-  --   ( "apply\n"
-  --       <> (" fun:= " <> show fun' <> "\n")
-  --       <> (" arg:= " <> show arg <> "\n")
-  --       <> (" env:=" <> show env <> "\n")
-  --   )  $ do
   fun <- eval fun'
   case fun of
     GebValueClosure cls ->
-      -- trace ("cls:= " <> show cls <> "\n") $
       do
         let clsEnv = cls ^. valueClosureEnv
             bodyEnv = Context.cons arg clsEnv

@@ -1,6 +1,5 @@
 module Juvix.Compiler.Core.Data.BinderList where
 
-import Control.DeepSeq
 import GHC.Show qualified as S
 import Juvix.Compiler.Core.Language hiding (cons, drop, lookup, uncons)
 import Juvix.Prelude qualified as Prelude
@@ -12,15 +11,10 @@ data BinderList a = BinderList
   }
   deriving stock (Eq, Generic)
 
-instance NFData a => NFData (BinderList a)
-
 makeLenses ''BinderList
 
 fromList :: [a] -> BinderList a
 fromList l = BinderList (length l) l
-
-empty :: BinderList a
-empty = fromList []
 
 drop :: Int -> BinderList a -> BinderList a
 drop k (BinderList n l) = BinderList (n - k) (dropExact k l)

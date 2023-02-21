@@ -16,5 +16,5 @@ defaultEvalEnv :: Env
 defaultEvalEnv =
   Env
     { _envEvaluatorOptions = defaultEvaluatorOptions,
-      _envContext = Context.empty
+      _envContext = mempty
     }

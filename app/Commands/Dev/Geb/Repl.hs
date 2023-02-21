@@ -134,8 +134,8 @@ runReplCommand input =
                 }
       printEvalResult evalRes
 
-normaliseMorphism :: String -> Repl ()
-normaliseMorphism input =
+evalAndOutputMorphism :: String -> Repl ()
+evalAndOutputMorphism input =
   Repline.dontCrash $ do
     let evalRes =
           Geb.runEval $
@@ -144,7 +144,7 @@ normaliseMorphism input =
                 _runEvalArgsInputFile = replPath,
                 _runEvalArgsEvaluatorOptions =
                   Geb.defaultEvaluatorOptions
-                    { Geb._evaluatorOptionsNormalise = True
+                    { Geb._evaluatorOptionsOutputMorphism = True
                     }
               }
     printEvalResult evalRes
@@ -157,7 +157,7 @@ options replEntryPoint =
     (multilineCmd, Repline.dontCrash . \_ -> return ()),
     ("check", checkTypedMorphism),
     ("load", Repline.dontCrash . loadFile replEntryPoint . pSomeFile),
-    ("normalise", normaliseMorphism),
+    ("morphism", evalAndOutputMorphism),
     ("quit", quit),
     ("reload", Repline.dontCrash . reloadFile),
     ("root", printRoot),
@@ -243,7 +243,7 @@ helpText _ =
       :reload                 Reload the currently loaded file
       :check EXPRESSION       Check the type of a Geb morphism
       :type EXPRESSION        Infer the type of a Geb morphism
-      :normalise EXPRESSION   Return the normal form of a Geb morphism
+      :morphism EXPRESSION    Read back after evaluate a Geb morphism
       :version                Display the Juvix version
       :multiline              Enter multiline mode
       :root                   Print the root directory of the REPL

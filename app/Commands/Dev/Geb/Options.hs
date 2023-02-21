@@ -16,7 +16,7 @@ data GebCommand
   | GebCommandEval GebEvalOptions
   | GebCommandRead GebReadOptions
   | GebCommandInfer GebInferOptions
-  | GebCommandCheck GebInferOptions -- Same as infer for now
+  | GebCommandCheck GebInferOptions
   deriving stock (Data)
 
 parseGebCommand :: Parser GebCommand
@@ -67,10 +67,10 @@ parseGebCommand =
     inferInfo =
       info
         (GebCommandInfer <$> parseGebInferOptions)
-        (progDesc "Infer the GebObject for a Geb morphism found in the given file. ")
+        (progDesc "Infer the Geb object for a Geb morphism found in the given file. ")
 
     checkInfo :: ParserInfo GebCommand
     checkInfo =
       info
         (GebCommandInfer <$> parseGebInferOptions)
-        (progDesc "Check the GebObject provided matches th given Geb morphism. ")
+        (progDesc "Check the given Geb object matches the given Geb morphism")

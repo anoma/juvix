@@ -2,7 +2,6 @@ module Commands.Dev.Geb.Eval where
 
 import Commands.Base
 import Commands.Dev.Geb.Eval.Options
-import Juvix.Compiler.Backend.Geb.Data.Context as EvalContext
 import Juvix.Compiler.Backend.Geb.Evaluator qualified as Geb
 import Juvix.Compiler.Backend.Geb.Language qualified as Geb
 import Juvix.Compiler.Backend.Geb.Pretty qualified as Geb
@@ -40,11 +39,11 @@ evalAndPrint opts = \case
     let env :: Geb.Env =
           Geb.Env
             { _envEvaluatorOptions = opts',
-              _envContext = EvalContext.empty
+              _envContext = mempty
             }
     if
-        | opts' ^. Geb.evaluatorOptionsNormalise ->
-            case Geb.nf' env morphism of
+        | opts' ^. Geb.evaluatorOptionsOutputMorphism ->
+            case Geb.evalAndOutputMorphism' env morphism of
               Left err -> exitJuvixError err
               Right m -> renderStdOut (Geb.ppOut opts' m)
         | otherwise ->

@@ -1,7 +1,5 @@
 module Juvix.Compiler.Backend.Geb.Evaluator.Data.Values where
 
-import Control.DeepSeq
-import GHC.Show
 import Juvix.Compiler.Backend.Geb.Data.Context as Context
 import Juvix.Compiler.Backend.Geb.Language hiding (show)
 
@@ -12,43 +10,33 @@ data GebValue
   | GebValueMorphismRight GebValue
   | GebValueMorphismPair ValueMorphismPair
   | GebValueClosure ValueClosure
-  deriving stock (Eq, Generic)
-
-instance NFData GebValue
+  deriving stock (Show, Eq, Generic)
 
 data ValueMorphismPair = ValueMorphismPair
   { _valueMorphismPairLeft :: GebValue,
     _valueMorphismPairRight :: GebValue
   }
-  deriving stock (Eq, Generic)
-
-instance NFData ValueMorphismPair
+  deriving stock (Show, Eq, Generic)
 
 data ValueMorphismCase = ValueMorphismCase
   { _valueMorphismCaseOn :: GebValue,
     _valueMorphismCaseLeft :: GebValue,
     _valueMorphismCaseRight :: GebValue
   }
-  deriving stock (Eq, Generic)
-
-instance NFData ValueMorphismCase
+  deriving stock (Show, Eq, Generic)
 
 data ValueMorphismBinop = ValueMorphismBinop
   { _valueMorphismBinopOpcode :: Opcode,
     _valueMorphismBinopLeft :: GebValue,
     _valueMorphismBinopRight :: GebValue
   }
-  deriving stock (Eq, Generic)
-
-instance NFData ValueMorphismBinop
+  deriving stock (Show, Eq, Generic)
 
 data ValueClosure = ValueClosure
   { _valueClosureEnv :: Context GebValue,
     _valueClosureLambdaBody :: Morphism
   }
-  deriving stock (Eq, Generic)
-
-instance NFData ValueClosure
+  deriving stock (Show, Eq, Generic)
 
 instance HasAtomicity GebValue where
   atomicity = \case
@@ -58,44 +46,6 @@ instance HasAtomicity GebValue where
     GebValueMorphismRight {} -> Aggregate appFixity
     GebValueMorphismUnit -> Atom
     GebValueClosure {} -> Aggregate appFixity
-
-instance Show GebValue where
-  show = \case
-    GebValueMorphismUnit -> "Unit"
-    GebValueMorphismInteger i -> show i
-    GebValueMorphismLeft l -> "Left[" <> show l <> "]"
-    GebValueMorphismRight r -> "Right[" <> show r <> "]"
-    GebValueMorphismPair p -> show p
-    GebValueClosure c -> show c
-
-instance Show ValueMorphismPair where
-  show (ValueMorphismPair l r) =
-    "Pair[" <> show l <> ", " <> show r <> "]"
-
-instance Show ValueMorphismCase where
-  show (ValueMorphismCase caseOn' l r) =
-    "Case[ on:= "
-      <> show caseOn'
-      <> "\n"
-      <> " left:= "
-      <> show l
-      <> "\n"
-      <> "  right:= "
-      <> show r
-      <> " ]"
-
-instance Show ValueMorphismBinop where
-  show (ValueMorphismBinop op l r) =
-    show op <> "[ " <> show l <> " " <> show r <> " ]"
-
-instance Show ValueClosure where
-  show (ValueClosure env body) =
-    "Closure[ env := "
-      <> show env
-      <> "\n"
-      <> ", body := "
-      <> show body
-      <> " ]"
 
 makeLenses ''ValueMorphismPair
 makeLenses ''ValueMorphismCase

@@ -4,8 +4,6 @@ module Juvix.Compiler.Backend.Geb.Language
   )
 where
 
-import Control.DeepSeq
-import GHC.Show qualified as S
 import Juvix.Prelude hiding (First, Product)
 
 {-
@@ -26,9 +24,7 @@ data Case = Case
     _caseLeft :: Morphism,
     _caseRight :: Morphism
   }
-  deriving stock (Eq, Generic)
-
-instance NFData Case
+  deriving stock (Show, Eq, Generic)
 
 data Pair = Pair
   { _pairLeftType :: Object,
@@ -36,36 +32,28 @@ data Pair = Pair
     _pairLeft :: Morphism,
     _pairRight :: Morphism
   }
-  deriving stock (Eq, Generic)
-
-instance NFData Pair
+  deriving stock (Show, Eq, Generic)
 
 data First = First
   { _firstLeftType :: Object,
     _firstRightType :: Object,
     _firstValue :: Morphism
   }
-  deriving stock (Eq, Generic)
-
-instance NFData First
+  deriving stock (Show, Eq, Generic)
 
 data Second = Second
   { _secondLeftType :: Object,
     _secondRightType :: Object,
     _secondValue :: Morphism
   }
-  deriving stock (Eq, Generic)
-
-instance NFData Second
+  deriving stock (Show, Eq, Generic)
 
 data Lambda = Lambda
   { _lambdaVarType :: Object,
     _lambdaBodyType :: Object,
     _lambdaBody :: Morphism
   }
-  deriving stock (Eq, Generic)
-
-instance NFData Lambda
+  deriving stock (Show, Eq, Generic)
 
 data Application = Application
   { _applicationDomainType :: Object,
@@ -73,17 +61,10 @@ data Application = Application
     _applicationLeft :: Morphism,
     _applicationRight :: Morphism
   }
-  deriving stock (Eq, Generic)
-
-instance NFData Application
+  deriving stock (Show, Eq, Generic)
 
 newtype Var = Var {_varIndex :: Int}
-  deriving stock (Eq, Generic)
-
-instance Show Var where
-  show (Var i) = "var" <> show i
-
-instance NFData Var
+  deriving stock (Show, Eq, Generic)
 
 data Opcode
   = OpAdd
@@ -95,16 +76,12 @@ data Opcode
   | OpLt
   deriving stock (Show, Eq, Generic)
 
-instance NFData Opcode
-
 data Binop = Binop
   { _binopOpcode :: Opcode,
     _binopLeft :: Morphism,
     _binopRight :: Morphism
   }
   deriving stock (Show, Eq, Generic)
-
-instance NFData Binop
 
 -- | Corresponds to the GEB type for terms (morphisms of the category): `stlc`
 -- (https://github.com/anoma/geb/blob/main/src/specs/lambda.lisp).
@@ -122,9 +99,7 @@ data Morphism
   | MorphismVar Var
   | MorphismInteger Integer
   | MorphismBinop Binop
-  deriving stock (Eq, Generic)
-
-instance NFData Morphism
+  deriving stock (Show, Eq, Generic)
 
 data Product = Product
   { _productLeft :: Object,
@@ -132,15 +107,11 @@ data Product = Product
   }
   deriving stock (Show, Eq, Generic)
 
-instance NFData Product
-
 data Coproduct = Coproduct
   { _coproductLeft :: Object,
     _coproductRight :: Object
   }
   deriving stock (Show, Eq, Generic)
-
-instance NFData Coproduct
 
 -- | Function type
 data Hom = Hom
@@ -148,8 +119,6 @@ data Hom = Hom
     _homCodomain :: Object
   }
   deriving stock (Show, Eq, Generic)
-
-instance NFData Hom
 
 -- | Corresponds to the GEB type for types (objects of the category): `substobj`
 -- (https://github.com/anoma/geb/blob/main/src/specs/geb.lisp).
@@ -165,22 +134,16 @@ data Object
   | ObjectInteger
   deriving stock (Show, Eq, Generic)
 
-instance NFData Object
-
 data Expression
   = ExpressionMorphism Morphism
   | ExpressionObject Object
   deriving stock (Show, Eq, Generic)
-
-instance NFData Expression
 
 data TypedMorphism = TypedMorphism
   { _typedMorphism :: Morphism,
     _typedMorphismObject :: Object
   }
   deriving stock (Show, Eq, Generic)
-
-instance NFData TypedMorphism
 
 instance HasAtomicity Opcode where
   atomicity OpAdd = Atom
@@ -223,66 +186,6 @@ instance HasAtomicity Expression where
 
 instance HasAtomicity TypedMorphism where
   atomicity _ = Aggregate appFixity
-
-instance Show Morphism where
-  show = \case
-    MorphismAbsurd m -> "absurd " <> show m
-    MorphismUnit -> "unit"
-    MorphismLeft m -> "left " <> show m
-    MorphismRight m -> "right " <> show m
-    MorphismCase c -> show c
-    MorphismPair p -> show p
-    MorphismFirst f -> show f
-    MorphismSecond s -> show s
-    MorphismLambda l -> show l
-    MorphismApplication a -> show a
-    MorphismVar v -> show v
-    MorphismInteger i -> show i
-    MorphismBinop b -> show b
-
-instance Show Case where
-  show (Case _ _ _ caseOn left right) =
-    "Case[ on:= "
-      <> show caseOn
-      <> "\n"
-      <> "  left:= "
-      <> show left
-      <> "\n"
-      <> "  right:="
-      <> show right
-      <> "]"
-
-instance Show Pair where
-  show (Pair _ _ left right) =
-    "Pair[\n"
-      <> "  left:= "
-      <> show left
-      <> ",\n"
-      <> "  right:= "
-      <> show right
-      <> "]"
-
-instance Show First where
-  show (First _ _ value) =
-    "fst " <> show value
-
-instance Show Second where
-  show (Second _ _ value) =
-    "snd " <> show value
-
-instance Show Lambda where
-  show (Lambda _ _ body) =
-    "λ. " <> show body
-
-instance Show Application where
-  show (Application _ _ left right) =
-    "App[\n"
-      <> "left:="
-      <> show left
-      <> "\n"
-      <> "right:="
-      <> show right
-      <> "]"
 
 makeLenses ''Case
 makeLenses ''Pair
