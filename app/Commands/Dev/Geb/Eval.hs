@@ -23,7 +23,9 @@ runCommand opts = do
   content :: Text <- embed (readFile (toFilePath f))
   case Geb.runParser f content of
     Left err -> exitJuvixError (JuvixError err)
-    Right gebTerm -> evalAndPrint opts gebTerm
+    Right gebTerm -> do
+      evalAndPrint opts gebTerm
+      embed (putStrLn "")
 
 evalAndPrint ::
   forall r a.

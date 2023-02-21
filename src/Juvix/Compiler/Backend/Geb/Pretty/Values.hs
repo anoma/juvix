@@ -1,14 +1,14 @@
 module Juvix.Compiler.Backend.Geb.Pretty.Values
   ( module Juvix.Compiler.Backend.Geb.Pretty.Values,
-    module Juvix.Compiler.Backend.Geb.Pretty.Values.Base,
+    -- module Juvix.Compiler.Backend.Geb.Pretty.Values.Base,
     module Juvix.Compiler.Backend.Geb.Pretty.Options,
     module Juvix.Data.PPOutput,
   )
 where
 
 import Juvix.Compiler.Backend.Geb.Language
+import Juvix.Compiler.Backend.Geb.Pretty.Base
 import Juvix.Compiler.Backend.Geb.Pretty.Options
-import Juvix.Compiler.Backend.Geb.Pretty.Values.Base
 import Juvix.Data.PPOutput
 import Prettyprinter.Render.Terminal qualified as Ansi
 

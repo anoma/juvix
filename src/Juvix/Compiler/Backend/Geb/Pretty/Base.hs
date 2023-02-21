@@ -5,6 +5,8 @@ module Juvix.Compiler.Backend.Geb.Pretty.Base
   )
 where
 
+import Juvix.Compiler.Backend.Geb.Evaluator.Data.RunEvalResult
+import Juvix.Compiler.Backend.Geb.Evaluator.Data.Values
 import Juvix.Compiler.Backend.Geb.Language
 import Juvix.Compiler.Backend.Geb.Pretty.Keywords
 import Juvix.Compiler.Backend.Geb.Pretty.Options
@@ -186,6 +188,52 @@ instance PrettyCode TypedMorphism where
     m <- ppArg _typedMorphism
     o <- ppArg _typedMorphismObject
     return $ kwTyped <> line <> indent' (vsep [m, o])
+
+instance PrettyCode ValueClosure where
+  ppCode cls = do
+    lamb <- ppArg (cls ^. valueClosureLambdaBody)
+    env <- mapM ppArg (toList (cls ^. valueClosureEnv))
+    return $
+      kwClosure
+        <> line
+        <> indent'
+          ( vsep
+              [ parens
+                  ( kwClosureEnv
+                      <> line
+                      <> indent'
+                        ( if null env
+                            then kwNil
+                            else (vsep env)
+                        )
+                  ),
+                lamb
+              ]
+          )
+
+instance PrettyCode ValueMorphismPair where
+  ppCode ValueMorphismPair {..} = do
+    left <- ppArg _valueMorphismPairLeft
+    right <- ppArg _valueMorphismPairRight
+    return $ kwPair <> line <> indent' (vsep [left, right])
+
+instance PrettyCode GebValue where
+  ppCode = \case
+    GebValueMorphismUnit -> return kwUnit
+    GebValueMorphismInteger n -> return $ annotate AnnLiteralInteger (pretty n)
+    GebValueMorphismLeft val -> do
+      v <- ppArg val
+      return $ kwLeft <> line <> indent' v
+    GebValueMorphismRight val -> do
+      v <- ppArg val
+      return $ kwRight <> line <> indent' v
+    GebValueMorphismPair x -> ppCode x
+    GebValueClosure x -> ppCode x
+
+instance PrettyCode RunEvalResult where
+  ppCode = \case
+    RunEvalResultMorphism m -> ppCode m
+    RunEvalResultGebValue v -> ppCode v
 
 --------------------------------------------------------------------------------
 -- helper functions

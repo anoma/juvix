@@ -55,7 +55,7 @@ inferObject ::
 inferObject = \case
   MorphismUnit -> return ObjectTerminal
   MorphismInteger {} -> return ObjectInteger
-  MorphismAbsurd x -> inferObject x
+  MorphismAbsurd x -> inferObjectAbsurd x
   MorphismApplication app -> inferObjectApplication app
   MorphismPair pair -> inferObjectPair pair
   MorphismCase c -> inferObjectCase c
@@ -66,6 +66,18 @@ inferObject = \case
   MorphismVar v -> inferObjectVar v
   MorphismLeft a -> inferObjectLeft a
   MorphismRight b -> inferObjectRight b
+
+-- FIXME: Depends on fixing anoma/geb#53
+inferObjectAbsurd :: InferEffects r => Morphism -> Sem r Object
+inferObjectAbsurd x =
+  throw
+    ( CheckingErrorLackOfInformation
+        LackOfInformation
+          { _lackOfInformationMorphism = Just x,
+            _lacOfInformationHelperObject = Nothing,
+            _lackOfInformationMessage = "Absurd"
+          }
+    )
 
 inferObjectApplication :: InferEffects r => Application -> Sem r Object
 inferObjectApplication app = do
@@ -194,10 +206,10 @@ inferObjectBinop opApp = do
     OpMod -> do
       checkListSameType args ObjectInteger
       return outTy
-    OpEq -> do
-      checkSameType args
-      return outTy
     OpLt -> do
+      checkListSameType args ObjectInteger
+      return outTy
+    OpEq -> do
       checkSameType args
       return outTy
 

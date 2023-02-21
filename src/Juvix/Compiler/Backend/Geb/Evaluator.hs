@@ -274,27 +274,11 @@ quote ty = \case
   GebValueMorphismUnit -> return MorphismUnit
 
 quoteClosure :: Maybe Object -> ValueClosure -> Sem r Morphism
-quoteClosure ty cls = do
-  case ty of
-    Just (ObjectHom funObj) ->
-      return $
-        MorphismLambda
-          Lambda
-            { _lambdaVarType = funObj ^. homDomain,
-              _lambdaBodyType = funObj ^. homCodomain,
-              _lambdaBody =
-                cls ^. valueClosureLambdaBody
-            }
-    Just _ ->
-      quoteError
-        "Got wrong object. Expected function object for a lambda"
-        Nothing
-        ty
-    Nothing ->
-      quoteError
-        "(closure) Need object info"
-        (Just (GebValueClosure cls))
-        ty
+quoteClosure ty cls =
+  quoteError
+    "Not implemented yet"
+    (Just (GebValueClosure cls))
+    ty
 
 quoteValueMorphismPair :: Maybe Object -> ValueMorphismPair -> Sem r Morphism
 quoteValueMorphismPair ty vpair = do
