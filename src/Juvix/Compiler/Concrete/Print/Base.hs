@@ -22,7 +22,7 @@ class PrettyPrint a where
   ppCode :: Members '[ExactPrint, Reader Options] r => a -> Sem r ()
 
 instance PrettyPrint Keyword where
-  ppCode = noLoc . pretty
+  ppCode = noLoc . annotate AnnKeyword . pretty
 
 instance PrettyPrint KeywordRef where
   ppCode = ppMorpheme
