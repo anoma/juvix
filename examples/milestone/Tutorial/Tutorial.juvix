@@ -12,3 +12,4 @@ module Tutorial;
   main : IO;
   main := printStringLn "Hello world!";
 end;
+

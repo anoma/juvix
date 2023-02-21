@@ -57,3 +57,4 @@ module Demo;
       >> printNatLn (log2 3)
       >> printNatLn (log2 130);
 end;
+

@@ -40,3 +40,4 @@ module Collatz;
     printStringLn welcome
       >> readLn (run collatz ∘ stringToNat);
 end;
+

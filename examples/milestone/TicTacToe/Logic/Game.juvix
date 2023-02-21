@@ -48,3 +48,4 @@ module Logic.Game;
   validMove : Nat → Maybe Nat;
   validMove n := if (n <= 9 && n >= 1) (just n) nothing;
 end;
+

@@ -48,3 +48,4 @@ module Logic.GameState;
   draw (state (board squares) _ _) :=
     null (possibleMoves (flatten squares));
 end;
+

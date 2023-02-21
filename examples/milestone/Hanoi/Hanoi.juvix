@@ -72,3 +72,4 @@ module Hanoi;
     printStringLn
       (unlines (map showMove (hanoi 5 left middle right)));
 end;
+

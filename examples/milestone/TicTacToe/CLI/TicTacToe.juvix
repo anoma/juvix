@@ -48,3 +48,4 @@ module CLI.TicTacToe;
   main : IO;
   main := printStringLn welcome >> run beginState;
 end;
+

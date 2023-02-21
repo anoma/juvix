@@ -36,3 +36,4 @@ module Logic.Board;
   showBoard (board squares) :=
     unlines (surround "+---+---+---+" (map showRow squares));
 end;
+

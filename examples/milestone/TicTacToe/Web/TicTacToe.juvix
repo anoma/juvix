@@ -173,3 +173,4 @@ module Web.TicTacToe;
     renderAndReturn
       (playMove (validMove (selectedSquare x y)) s);
 end;
+

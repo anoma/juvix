@@ -76,7 +76,7 @@ instance SingI t => PrettyPrint (Module 'Scoped t) where
       lastSemicolon :: Sem r ()
       lastSemicolon = case sing :: SModuleIsTop t of
         SModuleLocal -> return ()
-        SModuleTop -> semicolon <> end
+        SModuleTop -> semicolon <> line <> end
 
 instance PrettyPrint [Statement 'Scoped] where
   ppCode :: forall r. Members '[ExactPrint, Reader Options] r => [Statement 'Scoped] -> Sem r ()

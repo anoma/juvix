@@ -25,3 +25,4 @@ module Logic.Symbol;
   showSymbol O := "O";
   showSymbol X := "X";
 end;
+
