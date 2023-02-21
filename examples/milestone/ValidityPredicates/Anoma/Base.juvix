@@ -39,10 +39,8 @@ module Anoma.Base;
   from-int i := if (i < Int_0) nothing (just i);
 
   from-string : String → Maybe String;
-  from-string s := if
-    (s Stdlib.Data.String.Ord.== "")
-    nothing
-    (just s);
+  from-string s :=
+    if (s Stdlib.Data.String.Ord.== "") nothing (just s);
 
   --- -----------------------------------------------------------------------------
 
@@ -76,8 +74,8 @@ module Anoma.Base;
   read-post s := from-int (readPost s);
 
   is-balance-key : String → String → Maybe String;
-  is-balance-key token key := from-string
-    (isBalanceKey token key);
+  is-balance-key token key :=
+    from-string (isBalanceKey token key);
 
   unwrap-default : Maybe Int → Int;
   unwrap-default := maybe Int_0 id;

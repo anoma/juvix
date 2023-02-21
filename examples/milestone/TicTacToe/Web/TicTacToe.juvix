@@ -20,7 +20,7 @@ module Web.TicTacToe;
   axiom hostFillText : Nat → Nat → String → Nat → String → Nat → IO;
 
   -- IO extensions
-    IOUnit : IO;
+  IOUnit : IO;
   IOUnit := printString "";
 
   ioseq : IO → IO → IO;
@@ -33,9 +33,9 @@ module Web.TicTacToe;
   mapIO f xs := sequenceIO (map f xs);
 
   -- List extensions
-    zip : {A : Type} → {B : Type} → List A → List B → List
-    (A × B);
-  zip (a :: as) (b :: bs) := (a , b) :: zip as bs;
+  zip : {A : Type} → {B : Type} → List A → List B → List
+      (A × B);
+  zip (a :: as) (b :: bs) := (a, b) :: zip as bs;
   zip _ _ := nil;
 
   rangeAux : Nat → Nat → List Nat;
@@ -49,7 +49,7 @@ module Web.TicTacToe;
   enumerate l := zip (range (length l)) l;
 
   -- Formatting constants
-    squareWidth : Nat;
+  squareWidth : Nat;
   squareWidth := 100;
 
   textSize : Nat;
@@ -85,43 +85,40 @@ module Web.TicTacToe;
   alignNum center := 2;
 
   renderText : String → Nat → Nat → Align → IO;
-  renderText t row col a := hostFillText
-    (squareWidth * row + xTextOffset)
-    (squareWidth * col + yTextOffset)
-    t
-    textSize
-    textColor
-    (alignNum a);
+  renderText t row col a :=
+    hostFillText
+      (squareWidth * row + xTextOffset)
+      (squareWidth * col + yTextOffset)
+      t
+      textSize
+      textColor
+      (alignNum a);
 
   renderSymbol : Symbol → Nat → Nat → IO;
-  renderSymbol s row col := renderText
-    (showSymbol s)
-    row
-    col
-    center;
+  renderSymbol s row col :=
+    renderText (showSymbol s) row col center;
 
   renderNumber : Nat → Nat → Nat → IO;
-  renderNumber n row col := renderText
-    (natToString n)
-    row
-    col
-    center;
+  renderNumber n row col :=
+    renderText (natToString n) row col center;
 
   renderSquare : Nat → Nat → Square → IO;
-  renderSquare row col (occupied s) := hostFillRect
-      (squareWidth * row)
-      (squareWidth * col)
-      squareWidth
-      squareWidth
-      backgroundColor
-    >> renderSymbol s row col;
-  renderSquare row col (empty n) := hostFillRect
-      (squareWidth * row)
-      (squareWidth * col)
-      squareWidth
-      squareWidth
-      lightBackgroundColor
-    >> renderNumber n row col;
+  renderSquare row col (occupied s) :=
+    hostFillRect
+        (squareWidth * row)
+        (squareWidth * col)
+        squareWidth
+        squareWidth
+        backgroundColor
+      >> renderSymbol s row col;
+  renderSquare row col (empty n) :=
+    hostFillRect
+        (squareWidth * row)
+        (squareWidth * col)
+        squareWidth
+        squareWidth
+        lightBackgroundColor
+      >> renderNumber n row col;
 
   renderRowAux : Nat → Nat × Square → IO;
   renderRowAux col (row , s) := renderSquare row col s;
@@ -130,9 +127,8 @@ module Web.TicTacToe;
   renderRow (n , xs) := mapIO (renderRowAux n) (enumerate xs);
 
   renderBoard : Board → IO;
-  renderBoard (board squares) := mapIO
-    renderRow
-    (enumerate squares);
+  renderBoard (board squares) :=
+    mapIO renderRow (enumerate squares);
 
   renderFooterText : String → IO;
   renderFooterText msg := renderText msg 0 3 left;
@@ -146,32 +142,34 @@ module Web.TicTacToe;
   renderError (terminate msg) := renderText msg 0 3 left;
 
   renderGameState : GameState → IO;
-  renderGameState (state b _ (terminate msg)) := renderBoard b
-    >> renderFooterText msg;
-  renderGameState (state b p (continue msg)) := renderBoard b
-    >> renderFooterText (nextPlayerText p)
-    >> renderText (msg) 0 4 left;
-  renderGameState (state b p _) := renderBoard b
-    >> renderFooterText (nextPlayerText p);
+  renderGameState (state b _ (terminate msg)) :=
+    renderBoard b >> renderFooterText msg;
+  renderGameState (state b p (continue msg)) :=
+    renderBoard b
+      >> renderFooterText (nextPlayerText p)
+      >> renderText (msg) 0 4 left;
+  renderGameState (state b p _) :=
+    renderBoard b >> renderFooterText (nextPlayerText p);
 
   renderAndReturn : GameState → GameState;
   renderAndReturn s := const s (renderGameState s);
 
   selectedSquare : Nat → Nat → Nat;
-  selectedSquare row col := 3 * div col squareWidth
-    + div row squareWidth
-    + 1;
+  selectedSquare row col :=
+    3 * div col squareWidth + div row squareWidth + 1;
 
   -- API
-    initGame : GameState;
-  initGame := const
-    beginState
-    (renderGameState beginState
-    >> renderText "Click on a square to make a move" 0 4 left);
+  initGame : GameState;
+  initGame :=
+    const
+      beginState
+      (renderGameState beginState
+        >> renderText "Click on a square to make a move" 0 4 left);
 
   move : GameState → Nat → Nat → GameState;
-  move (state b p (terminate e)) x y := renderAndReturn
-    (state b p (terminate e));
-  move s x y := renderAndReturn
-    (playMove (validMove (selectedSquare x y)) s);
+  move (state b p (terminate e)) x y :=
+    renderAndReturn (state b p (terminate e));
+  move s x y :=
+    renderAndReturn
+      (playMove (validMove (selectedSquare x y)) s);
 end;

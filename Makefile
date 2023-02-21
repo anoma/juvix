@@ -162,7 +162,6 @@ juvix-format: $(TOFORMAT)
 $(TOFORMAT): %:
 	@echo "Formatting $@"
 	@juvix dev scope $@ --with-comments > $@.tmp
-	@echo "" >> $@.tmp
 	@mv $@.tmp $@
 	@echo "Typechecking formatted $@"
 	@juvix typecheck $@ --only-errors
