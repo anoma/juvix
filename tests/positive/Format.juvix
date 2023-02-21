@@ -81,4 +81,41 @@ module Format;
   -- function with single wildcard parameter
   g : (_ : Type) -> Nat;
   g _ := 1;
+
+  -- grouping of type arguments
+  exampleFunction1 :
+    {A : Type}
+      -> List A
+      -> List A
+      -> List A
+      -> List A
+      -> List A
+      -> List A
+      -> List A
+      -> Nat;
+  exampleFunction1 _ _ _ _ _ _ _ := 1;
+
+  -- 200 in the body is idented with respect to the start of the chain
+  -- (at {A : Type})
+  exampleFunction2 :
+    {A : Type}
+      -> List A
+      -> List A
+      -> List A
+      -> List A
+      -> List A
+      -> List A
+      -> List A
+      -> Nat :=
+      200
+        + 100
+        + 100
+        + 100
+        + 100
+        + 100
+        + 100
+        + 100
+        + 100
+        + 100
+        + 100;
 end;

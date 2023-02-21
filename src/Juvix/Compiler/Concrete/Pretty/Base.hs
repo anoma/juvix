@@ -431,20 +431,24 @@ instance (SingI s) => PrettyCode (TypeSignature s) where
     sigType' <- ppExpression _sigType
     builtin' <- traverse ppCode _sigBuiltin
     doc' <- mapM ppCode _sigDoc
-    body' :: Maybe (Doc Ann) <- fmap (kwAssign <+>) <$> mapM ppExpression _sigBody
-    return $ doc' ?<> builtin' <?+> sigTerminating' <> hang' (sigName' <+> kwColon <+> sigType' <+?> body')
+    body' :: Maybe (Doc Ann) <- fmap ((kwAssign <>) . oneLineOrNext) <$> mapM ppExpression _sigBody
+    return $ doc' ?<> builtin' <?+> sigTerminating' <> hang' (sigName' <+> kwColon <> oneLineOrNext (sigType' <+?> body'))
 
 instance (SingI s) => PrettyCode (Function s) where
-  ppCode :: forall r. (Members '[Reader Options] r) => Function s -> Sem r (Doc Ann)
-  ppCode Function {..} = do
-    funParameter' <- ppCode _funParameters
-    funReturn' <- ppRightExpression' funFixity _funReturn
-    funKw' <- ppCode _funKw
-    return $ funParameter' <+> funKw' <+> funReturn'
+  ppCode a = case sing :: SStage s of
+    SParsed -> ppCode' a
+    SScoped -> apeHelper a (ppCode' a)
     where
-      ppRightExpression' = case sing :: SStage s of
-        SParsed -> ppRightExpression
-        SScoped -> ppRightExpression
+      ppCode' :: forall r. (Members '[Reader Options] r) => Function s -> Sem r (Doc Ann)
+      ppCode' Function {..} = do
+        funParameter' <- ppCode _funParameters
+        funReturn' <- ppRightExpression' funFixity _funReturn
+        funKw' <- ppCode _funKw
+        return $ funParameter' <+> funKw' <+> funReturn'
+        where
+          ppRightExpression' = case sing :: SStage s of
+            SParsed -> ppRightExpression
+            SScoped -> ppRightExpression
 
 instance (SingI s) => PrettyCode (FunctionParameters s) where
   ppCode FunctionParameters {..} = do
@@ -628,13 +632,19 @@ instance PrettyCode Application where
       args' <- mapM ppCodeAtom args
       return $ PP.group (f' <+> nest' (vsep args'))
 
-apeHelper :: (IsApe a Expression, Members '[Reader Options] r) => a -> Sem r (Doc CodeAnn) -> Sem r (Doc CodeAnn)
+instance PrettyCode ApeLeaf where
+  ppCode = \case
+    ApeLeafExpression e -> ppCode e
+    ApeLeafFunctionParams a -> ppCode a
+    ApeLeafFunctionKw r -> return (pretty r)
+
+apeHelper :: (IsApe a ApeLeaf, Members '[Reader Options] r) => a -> Sem r (Doc CodeAnn) -> Sem r (Doc CodeAnn)
 apeHelper a alt = do
   opts <- ask @Options
   if
       | not (opts ^. optNoApe) ->
           return $
-            let params :: ApeParams Expression
+            let params :: ApeParams ApeLeaf
                 params = ApeParams (run . runReader opts . ppCode)
              in runApe params a
       | otherwise -> alt
