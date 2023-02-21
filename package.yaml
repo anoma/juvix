@@ -126,6 +126,8 @@ executables:
     main: Main.hs
     source-dirs: app
     dependencies:
+    - commonmark == 0.2.*
+    - commonmark-extensions == 0.2.*
     - juvix
     - haskeline == 0.8.*
     - http-conduit == 2.3.*

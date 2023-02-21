@@ -16,7 +16,7 @@ makeLenses ''OrgOptions
 
 parseOrg :: Parser OrgOptions
 parseOrg = do
-  _orgInputFile <- parseInputJuvixFile
+  _orgInputFile <- parseGenericInputFile
   _orgTheme <- optTheme
   _orgOutputDir <-
     parseGenericOutputDir

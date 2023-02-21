@@ -24,7 +24,7 @@ end;
 First it will try to parse the full module. If that fails, then it will try to
 parse a list of statements. These statements will be wrapped in a dummy module
 during the processing phase.
-# #+begin_src juvix
+#+begin_src juvix
 f : Nat;
 f := Nat;
 #+end_src
