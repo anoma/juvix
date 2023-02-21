@@ -79,7 +79,7 @@ eval morph = do
   --       <> show env
   --       <> "\n"
   --   ) $
-   case morph of
+  case morph of
     MorphismAbsurd x -> evalAbsurd x
     MorphismApplication app -> evalApp app
     MorphismBinop op -> evalBinop op
@@ -170,22 +170,22 @@ apply fun' arg = do
   --       <> (" arg:= " <> show arg <> "\n")
   --       <> (" env:=" <> show env <> "\n")
   --   )  $ do
-    fun <- eval fun'
-    case fun of
-      GebValueClosure cls ->
-        -- trace ("cls:= " <> show cls <> "\n") $
-        do
-          let clsEnv = cls ^. valueClosureEnv
-              bodyEnv = Context.cons arg clsEnv
-          local (over envContext (const bodyEnv)) $
-            eval (cls ^. valueClosureLambdaBody)
-      _ ->
-        throw $
-          EvalError
-            { _evalErrorMsg = "Can only apply functions.",
-              _evalErrorGebValue = (Just fun),
-              _evalErrorGebExpression = Nothing
-            }
+  fun <- eval fun'
+  case fun of
+    GebValueClosure cls ->
+      -- trace ("cls:= " <> show cls <> "\n") $
+      do
+        let clsEnv = cls ^. valueClosureEnv
+            bodyEnv = Context.cons arg clsEnv
+        local (over envContext (const bodyEnv)) $
+          eval (cls ^. valueClosureLambdaBody)
+    _ ->
+      throw $
+        EvalError
+          { _evalErrorMsg = "Can only apply functions.",
+            _evalErrorGebValue = (Just fun),
+            _evalErrorGebExpression = Nothing
+          }
 
 evalLambda :: EvalEffects r => Lambda -> Sem r GebValue
 evalLambda lambda = do

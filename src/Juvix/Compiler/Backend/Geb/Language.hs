@@ -124,60 +124,6 @@ data Morphism
   | MorphismBinop Binop
   deriving stock (Eq, Generic)
 
-instance Show Morphism where
-  show = \case
-    MorphismAbsurd m -> "absurd " <> show m
-    MorphismUnit -> "unit"
-    MorphismLeft m -> "left " <> show m
-    MorphismRight m -> "right " <> show m
-    MorphismCase c -> show c
-    MorphismPair p -> show p
-    MorphismFirst f -> show f
-    MorphismSecond s -> show s
-    MorphismLambda l -> show l
-    MorphismApplication a -> show a
-    MorphismVar v -> show v
-    MorphismInteger i -> show i
-    MorphismBinop b -> show b
-
-instance Show Case where
-  show (Case _ _ _ caseOn left right) =
-    "Case[ on:= "
-      <> show caseOn
-      <> "\n"
-      <> "  left:= "
-      <> show left
-      <> "\n"
-      <> "  right:="
-      <> show right
-      <> "]"
-
-instance Show Pair where
-  show (Pair _ _ left right) =
-    "Pair[\n"
-      <> "  left:= "
-      <> show left
-      <> ",\n"
-      <> "  right:= "
-      <> show right
-      <> "]"
-
-instance Show First where
-  show (First _ _ value) =
-    "fst " <> show value
-
-instance Show Second where
-  show (Second _ _ value) =
-    "snd " <> show value
-
-instance Show Lambda where
-  show (Lambda _ _ body) =
-    "λ. " <> show body
-
-instance Show Application where
-  show (Application _ _ left right) =
-    "App[ left:=" <> show left <> "\n     right:=" <> show right <> "]"
-
 instance NFData Morphism
 
 data Product = Product
@@ -277,6 +223,66 @@ instance HasAtomicity Expression where
 
 instance HasAtomicity TypedMorphism where
   atomicity _ = Aggregate appFixity
+
+instance Show Morphism where
+  show = \case
+    MorphismAbsurd m -> "absurd " <> show m
+    MorphismUnit -> "unit"
+    MorphismLeft m -> "left " <> show m
+    MorphismRight m -> "right " <> show m
+    MorphismCase c -> show c
+    MorphismPair p -> show p
+    MorphismFirst f -> show f
+    MorphismSecond s -> show s
+    MorphismLambda l -> show l
+    MorphismApplication a -> show a
+    MorphismVar v -> show v
+    MorphismInteger i -> show i
+    MorphismBinop b -> show b
+
+instance Show Case where
+  show (Case _ _ _ caseOn left right) =
+    "Case[ on:= "
+      <> show caseOn
+      <> "\n"
+      <> "  left:= "
+      <> show left
+      <> "\n"
+      <> "  right:="
+      <> show right
+      <> "]"
+
+instance Show Pair where
+  show (Pair _ _ left right) =
+    "Pair[\n"
+      <> "  left:= "
+      <> show left
+      <> ",\n"
+      <> "  right:= "
+      <> show right
+      <> "]"
+
+instance Show First where
+  show (First _ _ value) =
+    "fst " <> show value
+
+instance Show Second where
+  show (Second _ _ value) =
+    "snd " <> show value
+
+instance Show Lambda where
+  show (Lambda _ _ body) =
+    "λ. " <> show body
+
+instance Show Application where
+  show (Application _ _ left right) =
+    "App[\n"
+      <> "left:="
+      <> show left
+      <> "\n"
+      <> "right:="
+      <> show right
+      <> "]"
 
 makeLenses ''Case
 makeLenses ''Pair

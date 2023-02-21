@@ -37,8 +37,7 @@ allTests =
 
 tests :: [PosTest]
 tests =
-  [ 
-    PosTest
+  [ PosTest
       "App case on"
       $(mkRelDir ".")
       $(mkRelFile "app-case-on.geb")
