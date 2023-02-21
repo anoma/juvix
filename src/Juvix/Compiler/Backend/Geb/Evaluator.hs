@@ -7,13 +7,13 @@ where
 
 import Control.DeepSeq
 import Control.Exception qualified as Exception
+import Juvix.Compiler.Backend.Geb.Analysis.TypeChecking as Geb
 import Juvix.Compiler.Backend.Geb.Data.Context as Context
 import Juvix.Compiler.Backend.Geb.Evaluator.Data
 import Juvix.Compiler.Backend.Geb.Evaluator.Error
 import Juvix.Compiler.Backend.Geb.Evaluator.Options
 import Juvix.Compiler.Backend.Geb.Language
 import Juvix.Compiler.Backend.Geb.Translation.FromSource as Geb
-import Juvix.Compiler.Backend.Geb.Translation.FromSource.Analysis.TypeChecking as Geb
 
 data RunEvalArgs = RunEvalArgs
   { _runEvalArgsInputFile :: Path Abs File,

@@ -1,4 +1,4 @@
-module Juvix.Compiler.Backend.Geb.Translation.FromSource.Analysis.TypeChecking.Error where
+module Juvix.Compiler.Backend.Geb.Analysis.TypeChecking.Error where
 
 import Juvix.Compiler.Backend.Geb.Language
 import Juvix.Compiler.Backend.Geb.Pretty
@@ -134,7 +134,6 @@ instance ToGenericError CheckingError where
     CheckingErrorLackOfInformation e -> genericError e
     CheckingErrorWrongObject e -> genericError e
 
--- TODO: use the real file
 mockFile :: Path Abs File
 mockFile = $(mkAbsFile "/geb-checking-error")
 

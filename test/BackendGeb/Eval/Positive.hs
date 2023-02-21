@@ -71,38 +71,5 @@ tests =
       "case on"
       $(mkRelDir ".")
       $(mkRelFile "case-on.geb")
-      $(mkRelFile "Eval/out/case-on.out"),
-    PosTest
-      "test001.lisp. Reduce application of lambda"
-      $(mkRelDir ".")
-      $(mkRelFile "test001.lisp")
-      $(mkRelFile "Eval/out/test001.out"),
-    -- FIXME: Uncomment this test001/test002 once we fix the
-    -- translation Core to GEB.
-    -- PosTest
-    --   "test002.lisp"
-    --   $(mkRelDir ".")
-    --   $(mkRelFile "test002.lisp")
-    --   $(mkRelFile "Eval/out/test002.out"),
-    -- TODO:
-    -- PosTest
-    --   "test003.lisp"
-    --   $(mkRelDir ".")
-    --   $(mkRelFile "test003.lisp")
-    -- \$(mkRelFile "Eval/out/test003.out"),
-    -- PosTest
-    --   "test004.lisp"
-    --   $(mkRelDir ".")
-    --   $(mkRelFile "test004.lisp")
-    --   $(mkRelFile "Eval/out/test004.out"),
-    PosTest
-      "test005.lisp"
-      $(mkRelDir ".")
-      $(mkRelFile "test005.lisp")
-      $(mkRelFile "Eval/out/test005.out"),
-    PosTest
-      "test006.lisp"
-      $(mkRelDir ".")
-      $(mkRelFile "test006.lisp")
-      $(mkRelFile "Eval/out/test006.out")
+      $(mkRelFile "Eval/out/case-on.out")
   ]

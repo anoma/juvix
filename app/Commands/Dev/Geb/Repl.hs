@@ -7,9 +7,10 @@ import Commands.Dev.Geb.Repl.Format
 import Commands.Dev.Geb.Repl.Options
 import Control.Exception (throwIO)
 import Control.Monad.State.Strict qualified as State
+import Data.String.Interpolate (i, __i)
 import Juvix.Compiler.Backend.Geb qualified as Geb
+import Juvix.Compiler.Backend.Geb.Analysis.TypeChecking.Error
 import Juvix.Compiler.Backend.Geb.Pretty.Values qualified as GebValue
-import Juvix.Compiler.Backend.Geb.Translation.FromSource.Analysis.TypeChecking.Error
 import Juvix.Data.Error.GenericError qualified as Error
 import Juvix.Extra.Version
 import Juvix.Prelude.Pretty qualified as P
@@ -21,18 +22,13 @@ type ReplS = State.StateT ReplState IO
 
 type Repl a = Repline.HaskelineT ReplS a
 
-newtype ReplContext = ReplContext
-  { _replContextEntryPoint :: EntryPoint
-  }
-
 data ReplState = ReplState
-  { _replStateContext :: Maybe ReplContext,
+  { _replContextEntryPoint :: Maybe EntryPoint,
     _replStateInvokeDir :: Path Abs Dir,
     _replStateGlobalOptions :: GlobalOptions
   }
 
 makeLenses ''ReplState
-makeLenses ''ReplContext
 
 replPath :: Path Abs File
 replPath = $(mkAbsFile "/repl.geb")
@@ -65,7 +61,7 @@ runCommand replOpts = do
     ( State.evalStateT
         (replAction replOpts getReplEntryPoint)
         ( ReplState
-            { _replStateContext = Nothing,
+            { _replContextEntryPoint = Nothing,
               _replStateGlobalOptions = globalOptions,
               _replStateInvokeDir = invokeDir
             }
@@ -76,8 +72,8 @@ loadEntryPoint :: EntryPoint -> Repl ()
 loadEntryPoint ep = do
   State.modify
     ( set
-        replStateContext
-        (Just (ReplContext {_replContextEntryPoint = ep}))
+        replContextEntryPoint
+        (Just ep)
     )
   let epPath :: Path Abs File = ep ^. entryPointModulePaths . _head1
   liftIO (putStrLn . pack $ "OK loaded " <> toFilePath epPath)
@@ -93,7 +89,7 @@ loadEntryPoint ep = do
 
 reloadFile :: String -> Repl ()
 reloadFile _ = do
-  mentryPoint <- State.gets (fmap (^. replContextEntryPoint) . (^. replStateContext))
+  mentryPoint <- State.gets ((^. replContextEntryPoint))
   maybe noFileLoadedMsg loadEntryPoint mentryPoint
 
 pSomeFile :: String -> SomeBase File
@@ -123,7 +119,7 @@ checkTypedMorphism gebMorphism = Repline.dontCrash $ do
     Right tyMorphism@(Geb.TypedMorphism {}) -> do
       case run . runError @CheckingError $ Geb.check' tyMorphism of
         Right obj -> renderOut (Geb.ppOut Geb.defaultEvaluatorOptions obj)
-        Left err -> undefined -- printError (JuvixError err)
+        Left err -> printError (JuvixError err)
 
 runReplCommand :: String -> Repl ()
 runReplCommand input =
@@ -227,9 +223,9 @@ welcomeMsg =
   ReplMessageDoc $
     P.annotate ReplIntro "Welcome to the Juvix Geb REPL!"
       <> P.line
-      <> normal ("Juvix v" <> versionTag <> ": https://juvix.org.")
+      <> normal [i|Juvix v#{versionTag}: https://juvix.org.|]
       <> P.line
-      <> normal ("Type :help for help.")
+      <> normal "Type :help for help."
       <> P.line
 
 replPromptText :: Repl String
@@ -240,21 +236,20 @@ replPromptText = do
 helpText :: String -> Repl ()
 helpText _ =
   renderOutNormal
-    . pack
-    $ unlines
-      [ "EXPRESSION              Evaluate a Geb morphism",
-        ":help                   Print this help",
-        ":load FILE              Load a file into the REPL",
-        ":reload                 Reload the currently loaded file",
-        ":check EXPRESSION       Check the type of a Geb morphism",
-        ":type EXPRESSION        Infer the type of a Geb morphism",
-        ":normalise EXPRESSION   Return the normal form of a Geb morphism",
-        ":version                Display the Juvix version",
-        ":multiline              Enter multiline mode",
-        ":root                   Print the root directory of the REPL",
-        ":version                Display the Juvix version",
-        ":quit                   Exit the REPL"
-      ]
+    [__i|
+      EXPRESSION              Evaluate a Geb morphism
+      :help                   Print this help
+      :load FILE              Load a file into the REPL
+      :reload                 Reload the currently loaded file
+      :check EXPRESSION       Check the type of a Geb morphism
+      :type EXPRESSION        Infer the type of a Geb morphism
+      :normalise EXPRESSION   Return the normal form of a Geb morphism
+      :version                Display the Juvix version
+      :multiline              Enter multiline mode
+      :root                   Print the root directory of the REPL
+      :version                Display the Juvix version
+      :quit                   Exit the REPL
+  |]
 
 multilineCmd :: String
 multilineCmd = "multiline"

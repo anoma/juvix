@@ -1,4 +1,4 @@
-module Juvix.Compiler.Backend.Geb.Translation.FromSource.Analysis.TypeChecking.Data.Types where
+module Juvix.Compiler.Backend.Geb.Analysis.TypeChecking.Data.Types where
 
 import Juvix.Compiler.Backend.Geb.Data.Context as Context
 import Juvix.Compiler.Backend.Geb.Language

@@ -1,15 +1,15 @@
-module Juvix.Compiler.Backend.Geb.Translation.FromSource.Analysis.TypeChecking
-  ( module Juvix.Compiler.Backend.Geb.Translation.FromSource.Analysis.TypeChecking,
-    module Juvix.Compiler.Backend.Geb.Translation.FromSource.Analysis.TypeChecking.Data.Types,
-    module Juvix.Compiler.Backend.Geb.Translation.FromSource.Analysis.TypeChecking.Error,
+module Juvix.Compiler.Backend.Geb.Analysis.TypeChecking
+  ( module Juvix.Compiler.Backend.Geb.Analysis.TypeChecking,
+    module Juvix.Compiler.Backend.Geb.Analysis.TypeChecking.Data.Types,
+    module Juvix.Compiler.Backend.Geb.Analysis.TypeChecking.Error,
   )
 where
 
+import Juvix.Compiler.Backend.Geb.Analysis.TypeChecking.Data.Types
+import Juvix.Compiler.Backend.Geb.Analysis.TypeChecking.Error
 import Juvix.Compiler.Backend.Geb.Data.Context as Context
 import Juvix.Compiler.Backend.Geb.Extra
 import Juvix.Compiler.Backend.Geb.Language
-import Juvix.Compiler.Backend.Geb.Translation.FromSource.Analysis.TypeChecking.Data.Types
-import Juvix.Compiler.Backend.Geb.Translation.FromSource.Analysis.TypeChecking.Error
 
 check' :: Member (Error CheckingError) r => TypedMorphism -> Sem r TypedMorphism
 check' tyMorph = do

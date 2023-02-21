@@ -3,7 +3,7 @@ module Commands.Dev.Geb.Check where
 import Commands.Base
 import Commands.Dev.Geb.Infer.Options
 import Juvix.Compiler.Backend.Geb qualified as Geb
-import Juvix.Compiler.Backend.Geb.Translation.FromSource.Analysis.TypeChecking.Error
+import Juvix.Compiler.Backend.Geb.Analysis.TypeChecking.Error
 
 runCommand ::
   forall r.

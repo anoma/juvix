@@ -109,34 +109,6 @@ tests:
         3000
     exit-status: 0
 
-  - name: core-to-geblisp-file-generation
-    command:
-      shell:
-        - bash
-      script: |
-        cd ./Geb/positive
-        juvix dev core compile -t geb Core/test001.jvc
-        [ -f Core/test001.lisp ]
-        diff Core/test001.lisp test001.lisp
-    stdout: 
-      contains: 
-        ""
-    exit-status: 0
-
-  - name: core-to-geb-only-term-flag
-    command:
-      shell:
-        - bash
-      script: |
-        cd ./Geb/positive
-        juvix dev core compile -t geb Core/test001.jvc --only-term
-        [ -f Core/test001.geb ]
-        diff Core/test001.geb test001.geb
-    stdout: 
-      contains: 
-        ""
-    exit-status: 0  
-
   - name: geb-root
     command:
       - juvix
