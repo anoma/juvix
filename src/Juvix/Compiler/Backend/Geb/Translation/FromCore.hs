@@ -120,7 +120,7 @@ fromCore tab = case tab ^. Core.infoMain of
         nodeType = convertType (Info.getNodeType node)
 
     convertNode :: Core.Node -> Trans Morphism
-    convertNode = \case
+    convertNode node = case node of
       Core.NVar x -> convertVar x
       Core.NIdt x -> convertIdent x
       Core.NCst x -> convertConstant x
@@ -289,7 +289,7 @@ fromCore tab = case tab ^. Core.infoMain of
 
     convertLet :: Core.Let -> Trans Morphism
     convertLet Core.Let {..} = do
-      _lambdaBody <- convertNode _letBody
+      _lambdaBody <- underBinder (convertNode _letBody)
       let domty = convertType (_letItem ^. Core.letItemBinder . Core.binderType)
           codty = convertType (Info.getNodeType _letBody)
       arg <- convertNode (_letItem ^. Core.letItemValue)
@@ -325,7 +325,8 @@ fromCore tab = case tab ^. Core.infoMain of
           | null branches -> MorphismAbsurd <$> convertNode _caseValue
           | missingCtrsNum > 1 -> do
               arg <- convertNode defaultNode
-              body <- shifting (go indty _caseValue branches)
+              val <- shifting (convertNode _caseValue)
+              body <- shifting (go indty val branches)
               let ty = convertType (Info.getNodeType defaultNode)
               return $
                 MorphismApplication
@@ -341,7 +342,9 @@ fromCore tab = case tab ^. Core.infoMain of
                             },
                       _applicationRight = arg
                     }
-          | otherwise -> go indty _caseValue branches
+          | otherwise -> do
+              val <- convertNode _caseValue
+              go indty val branches
       where
         indty = convertInductive _caseInductive
         ii = fromJust $ HashMap.lookup _caseInductive (tab ^. Core.infoInductives)
@@ -358,7 +361,7 @@ fromCore tab = case tab ^. Core.infoMain of
         -- `_caseDefault` is the body of those branches which were not present in
         -- `_caseBranches`.
         branches = sortOn (^. Core.caseBranchTag) (_caseBranches ++ ctrBrs)
-        codty = convertType (Info.getNodeType (List.head branches ^. Core.caseBranchBody))
+        codomainType = convertType (Info.getNodeType (List.head branches ^. Core.caseBranchBody))
 
         mkCtrBranch :: Core.ConstructorInfo -> Core.CaseBranch
         mkCtrBranch ci =
@@ -377,34 +380,33 @@ fromCore tab = case tab ^. Core.infoMain of
                   | missingCtrsNum > 1 -> Core.mkVar'
                   | otherwise -> (`Core.shift` defaultNode)
 
-        go :: Object -> Core.Node -> [Core.CaseBranch] -> Trans Morphism
+        go :: Object -> Morphism -> [Core.CaseBranch] -> Trans Morphism
         go ty val = \case
-          [br] ->
+          [br] -> do
             -- there is only one constructor, so `ty` is a product of its argument types
             mkBranch ty val br
           br : brs -> do
-            _caseOn <- convertNode val
-            bodyLeft <- shifting (mkBranch lty val br)
-            bodyRight <- shifting (go rty (Core.mkVar' 0) brs)
+            bodyLeft <- shifting (mkBranch lty (MorphismVar (Var 0)) br)
+            bodyRight <- shifting (go rty (MorphismVar (Var 0)) brs)
             return $
               MorphismCase
                 Case
                   { _caseLeftType = lty,
                     _caseRightType = rty,
-                    _caseCodomainType = codty,
-                    _caseOn,
+                    _caseCodomainType = codomainType,
+                    _caseOn = val,
                     _caseLeft =
                       MorphismLambda
                         Lambda
                           { _lambdaVarType = lty,
-                            _lambdaBodyType = codty,
+                            _lambdaBodyType = codomainType,
                             _lambdaBody = bodyLeft
                           },
                     _caseRight =
                       MorphismLambda
                         Lambda
                           { _lambdaVarType = rty,
-                            _lambdaBodyType = codty,
+                            _lambdaBodyType = codomainType,
                             _lambdaBody = bodyRight
                           }
                   }
@@ -414,17 +416,33 @@ fromCore tab = case tab ^. Core.infoMain of
                 _ -> impossible
           [] -> impossible
 
-        mkBranch :: Object -> Core.Node -> Core.CaseBranch -> Trans Morphism
+        mkBranch :: Object -> Morphism -> Core.CaseBranch -> Trans Morphism
         mkBranch valty val Core.CaseBranch {..} = do
           branch <- underBinders _caseBranchBindersNum (convertNode _caseBranchBody)
           if
               | _caseBranchBindersNum == 0 -> return branch
-              | otherwise -> do
-                  val' <- convertNode val
-                  return $ mkApps (mkLambs branch argtys) val' valty argtys
+              | _caseBranchBindersNum == 1 ->
+                  return $
+                    MorphismApplication
+                      Application
+                        { _applicationDomainType = valty,
+                          _applicationCodomainType = codomainType,
+                          _applicationLeft =
+                            MorphismLambda
+                              Lambda
+                                { _lambdaVarType = valty,
+                                  _lambdaBodyType = codomainType,
+                                  _lambdaBody = branch
+                                },
+                          _applicationRight = val
+                        }
+              | otherwise ->
+                  return $ mkApps (mkLambs branch argtys) val valty argtys
           where
             argtys = destructProduct valty
 
+            -- `mkApps` creates applications of `acc` to extracted components of
+            -- `v` which is a product (right-nested)
             mkApps :: Morphism -> Morphism -> Object -> [Object] -> Morphism
             mkApps acc v vty = \case
               ty : tys ->
@@ -441,7 +459,7 @@ fromCore tab = case tab ^. Core.infoMain of
                     MorphismApplication
                       Application
                         { _applicationDomainType = ty,
-                          _applicationCodomainType = vty,
+                          _applicationCodomainType = mkHoms tys codomainType,
                           _applicationLeft = acc,
                           _applicationRight =
                             if
@@ -475,7 +493,7 @@ fromCore tab = case tab ^. Core.infoMain of
                         ObjectHom (Hom ty accty)
                       )
                   )
-                  (br, codty)
+                  (br, codomainType)
 
     convertType :: Core.Type -> Object
     convertType = \case
