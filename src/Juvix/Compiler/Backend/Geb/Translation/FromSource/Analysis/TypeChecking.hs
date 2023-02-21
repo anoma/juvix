@@ -11,16 +11,12 @@ import Juvix.Compiler.Backend.Geb.Language
 import Juvix.Compiler.Backend.Geb.Translation.FromSource.Analysis.TypeChecking.Data.Types
 import Juvix.Compiler.Backend.Geb.Translation.FromSource.Analysis.TypeChecking.Error
 
-check' :: TypedMorphism -> Either JuvixError TypedMorphism
+check' :: Member (Error CheckingError) r => TypedMorphism -> Sem r TypedMorphism
 check' tyMorph = do
-  -- let checkOut = run . runError (check (tyMorph ^. typedMorphism) (tyMorph ^. typedMorphismObject))
-  case (run . runError $ check (tyMorph ^. typedMorphism) (tyMorph ^. typedMorphismObject)) of
-    Left err -> return (JuvixError err)
-    Right _ -> tyMorph
+  runReader defaultInferenceEnv $ check (tyMorph ^. typedMorphism) (tyMorph ^. typedMorphismObject)
+  return tyMorph
 
-  -- return undefined
-
-check :: Members '[Error CheckingError] r => Morphism -> Object -> Sem r ()
+check :: Members '[Reader InferenceEnv, Error CheckingError] r => Morphism -> Object -> Sem r ()
 check morph obj' = do
   obj <-
     runReader
@@ -64,70 +60,60 @@ inferObject = \case
 
 inferObjectApplication :: InferEffects r => Application -> Sem r Object
 inferObjectApplication app = do
-  let domainTy = app ^. applicationDomainType
-      codomainTy = app ^. applicationCodomainType
+  let lType = app ^. applicationDomainType
+      rType = app ^. applicationCodomainType
       homTy =
         ObjectHom $
-          Hom {_homDomain = domainTy, _homCodomain = codomainTy}
-  funTy <-
-    local
-      (over inferenceEnvTypeInfo (const (Just homTy)))
-      (inferObject (app ^. applicationLeft))
-  argTy <-
-    local
-      (over inferenceEnvTypeInfo (const (Just domainTy)))
-      (inferObject (app ^. applicationRight))
-  case funTy of
-    ObjectHom h -> do
-      unless
-        (h ^. homDomain == argTy)
-        ( throw $ CheckingErrorWrongObject
-              WrongObject
-                { _wrongObjectExpected = Just $ h ^. homDomain,
-                  _wrongObjectActual = Just argTy,
-                  _wrongObjectMorphism = app ^. applicationRight,
-                  _wrongObjectMessage = "Type mismatch: domain of the function and the argument."
-                }
+          Hom {_homDomain = lType, _homCodomain = rType}
+  check (app ^. applicationLeft) homTy
+  check (app ^. applicationRight) lType 
+  return rType
+
+
+inferObjectLambda :: InferEffects r => Lambda -> Sem r Object
+inferObjectLambda l = do
+  let aType = l ^. lambdaVarType
+      bType = l ^. lambdaBodyType
+  ctx <- asks (^. inferenceEnvContext)
+  local
+    ( const
+        ( InferenceEnv
+            { _inferenceEnvContext = Context.cons aType ctx,
+              _inferenceEnvTypeInfo = Just aType
+            }
         )
-      return $ h ^. homCodomain
-    obj ->
-      ( throw
-          $ CheckingErrorWrongObject
-            WrongObject
-              { _wrongObjectMessage = "Left side of the application should be a function",
-                _wrongObjectExpected = Nothing,
-                _wrongObjectActual = Just obj,
-                _wrongObjectMorphism = app ^. applicationLeft
-              }
-      )
+    )
+    (check (l ^. lambdaBody) bType)
+  return $
+    ObjectHom $
+      Hom
+        { _homDomain = aType,
+          _homCodomain = bType
+        }
+
 
 inferObjectPair :: InferEffects r => Pair -> Sem r Object
 inferObjectPair pair = do
   let lType = pair ^. pairLeftType
       rType = pair ^. pairRightType
-  infObjLeft <-
-    local
-      (over inferenceEnvTypeInfo (const (Just lType)))
-      (inferObject (pair ^. pairLeft))
-  unless
-    (infObjLeft == lType)
-    (errorInferObject "Type mismatch: left type on a pair")
-  infRightType <-
-    local
-      (over inferenceEnvTypeInfo (const (Just rType)))
-      (inferObject (pair ^. pairRight))
-  unless
-    (infRightType == rType)
-    (errorInferObject "Type mismatch: right type on a pair")
+  check (pair ^. pairLeft) lType
+  check (pair ^. pairRight) rType
   return $
     ObjectProduct
       Product
-        { _productLeft = infObjLeft,
-          _productRight = infRightType
+        { _productLeft = lType,
+          _productRight = rType
         }
 
 inferObjectCase :: InferEffects r => Case -> Sem r Object
-inferObjectCase c = return $ c ^. caseCodomainType
+inferObjectCase c = do
+  let aType = c ^. caseLeftType
+      bType = c ^. caseRightType
+      vType = Coproduct {
+        _coproductLeft = aType,
+        _coproductRight = bType
+      }
+  undefined
 
 inferObjectFirst :: InferEffects r => First -> Sem r Object
 inferObjectFirst p = do
@@ -147,30 +133,6 @@ inferObjectSecond p = do
       inferObject (p ^. secondValue)
   unless (ty == rightType) (errorInferObject "Type mismatch")
   return ty
-
-inferObjectLambda :: InferEffects r => Lambda -> Sem r Object
-inferObjectLambda l = do
-  let bodyTy = l ^. lambdaBodyType
-  ctx <- asks (^. inferenceEnvContext)
-  bTy <-
-    local
-      ( const
-          ( InferenceEnv
-              { _inferenceEnvContext = Context.cons (l ^. lambdaVarType) ctx,
-                _inferenceEnvTypeInfo = Just bodyTy
-              }
-          )
-      )
-      (inferObject (l ^. lambdaBody))
-  unless
-    (bTy == bodyTy)
-    (errorInferObject "Type mismatch: body of the lambda")
-  return $
-    ObjectHom $
-      Hom
-        { _homDomain = l ^. lambdaVarType,
-          _homCodomain = l ^. lambdaBodyType
-        }
 
 inferObjectBinop :: InferEffects r => Binop -> Sem r Object
 inferObjectBinop op = do

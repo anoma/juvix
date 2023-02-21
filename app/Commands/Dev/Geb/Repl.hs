@@ -15,6 +15,7 @@ import Juvix.Prelude.Pretty qualified as P
 import System.Console.ANSI qualified as Ansi
 import System.Console.Haskeline
 import System.Console.Repline qualified as Repline
+import Juvix.Compiler.Backend.Geb.Translation.FromSource.Analysis.TypeChecking.Error
 
 type ReplS = State.StateT ReplState IO
 
@@ -119,10 +120,10 @@ checkTypedMorphism :: String -> Repl ()
 checkTypedMorphism gebMorphism = Repline.dontCrash $ do
   case Geb.runParser' replPath (pack gebMorphism) of
     Left err -> printError (JuvixError err)
-    Right tyMorphism@(Geb.TypedMorphism {}) -> do
-      case Geb.check' tyMorphism of
+    Right tyMorphism@(Geb.TypedMorphism {}) -> do 
+      case run . runError @CheckingError $ Geb.check' tyMorphism of
         Right obj -> renderOut (Geb.ppOut Geb.defaultEvaluatorOptions obj)
-        Left err -> printError err
+        Left err -> undefined -- printError (JuvixError err)
 
 runReplCommand :: String -> Repl ()
 runReplCommand input =

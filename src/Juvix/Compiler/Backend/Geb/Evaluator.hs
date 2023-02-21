@@ -12,8 +12,6 @@ import Juvix.Compiler.Backend.Geb.Evaluator.Data
 import Juvix.Compiler.Backend.Geb.Evaluator.Error
 import Juvix.Compiler.Backend.Geb.Evaluator.Options
 import Juvix.Compiler.Backend.Geb.Language
-import Juvix.Compiler.Backend.Geb.Pretty qualified as P
-import Juvix.Compiler.Backend.Geb.Pretty.Values qualified as V
 import Juvix.Compiler.Backend.Geb.Translation.FromSource as Geb
 import Juvix.Compiler.Backend.Geb.Translation.FromSource.Analysis.TypeChecking as Geb
 
@@ -80,8 +78,8 @@ eval morph = do
         <> "  env:="
         <> show env
         <> "\n"
-    )
-    $ case morph of
+    ) $
+    case morph of
       MorphismAbsurd x -> evalAbsurd x
       MorphismApplication app -> evalApp app
       MorphismBinop op -> evalBinop op
@@ -100,7 +98,8 @@ evalVar :: EvalEffects r => Var -> Sem r GebValue
 evalVar var = do
   ctx <- asks (^. envContext)
   let val = Context.lookup (var ^. varIndex) ctx
-  trace ("varLookup := " <> show val) $ return val
+  -- trace ("varLookup := " <> show val) $ 
+  return val
 
 evalAbsurd :: EvalEffects r => Morphism -> Sem r GebValue
 evalAbsurd morph =
@@ -170,12 +169,12 @@ apply fun' arg = do
         <> (" fun:= " <> show fun' <> "\n")
         <> (" arg:= " <> show arg <> "\n")
         <> (" env:=" <> show env <> "\n")
-    )
-    $ do
+    )  $ do
       fun <- eval fun'
       case fun of
         GebValueClosure cls ->
-          trace (show cls) $ do
+          trace ("cls:= " <> show cls <> "\n") $ 
+          do
             let clsEnv = cls ^. valueClosureEnv
                 bodyEnv = Context.cons arg clsEnv
             local (over envContext (const bodyEnv)) $
