@@ -200,11 +200,6 @@ isDynamic = \case
   NDyn {} -> True
   _ -> False
 
-isTypeConstr :: Type -> Bool
-isTypeConstr ty = case typeTarget ty of
-  NUniv {} -> True
-  _ -> False
-
 isInductive :: Type -> Bool
 isInductive NTyp {} = True
 isInductive _ = False
