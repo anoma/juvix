@@ -1,0 +1,7 @@
+(cls
+  (env
+    nil)
+  (lamb
+    so1
+    so1
+    (index 1)))

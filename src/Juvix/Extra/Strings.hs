@@ -575,6 +575,15 @@ gebSnd = "snd"
 gebLamb :: IsString s => s
 gebLamb = "lamb"
 
+gebValueClosure :: IsString s => s
+gebValueClosure = "cls"
+
+gebValueClosureEnv :: IsString s => s
+gebValueClosureEnv = "env"
+
+lispNil :: IsString s => s
+lispNil = "nil"
+
 gebApp :: IsString s => s
 gebApp = "app"
 
@@ -615,10 +624,13 @@ gebCoprod :: IsString s => s
 gebCoprod = "coprod"
 
 gebHom :: IsString s => s
-gebHom = "hom"
+gebHom = "!->"
 
 gebInteger :: IsString s => s
 gebInteger = "int"
+
+gebTyped :: IsString s => s
+gebTyped = "typed"
 
 juvixFunctionT :: IsString s => s
 juvixFunctionT = "juvix_function_t"

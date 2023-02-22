@@ -12,7 +12,7 @@ defaultOptions :: Options
 defaultOptions = Options
 
 traceOptions :: Options
-traceOptions = Options
+traceOptions = defaultOptions
 
 fromGenericOptions :: GenericOptions -> Options
 fromGenericOptions _ = defaultOptions

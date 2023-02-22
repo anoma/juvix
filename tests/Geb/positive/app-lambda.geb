@@ -1,0 +1,25 @@
+;; ↓ app fun arg where
+;;     fun := cls (λ . (index 1)) with env := []
+;;     arg := cls (index 0) with env := []
+;; → (eval (λ . (index 1)) with env := (arg : [])
+;; → cls (arg : []) (index 1).
+
+;; λ.(λ.0)
+(app 
+    int
+    int
+    ;; fun: ↓ cls [] (lamb (index 1))
+    ;; λλ.1
+   (lamb
+     int
+     int
+     (lamb
+       int
+       int
+       (index 1)))
+   ;; ↓ arg: cls [] (index 0)   
+   ;; λ.0
+      (lamb
+        int
+        int
+        (index 0)))

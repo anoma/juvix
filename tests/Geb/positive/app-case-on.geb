@@ -1,0 +1,22 @@
+(app 
+    (coprod int int)
+    (coprod so1 int)
+    (lamb
+        int int
+        (case-on 
+            int
+            int 
+            int
+            (index 0)
+            (lamb
+              int
+              int 
+              (right 1))
+            (lamb
+              int
+              int 
+              (left 2))
+            )
+    )
+  (left
+    3))

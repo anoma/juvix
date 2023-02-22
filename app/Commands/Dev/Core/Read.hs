@@ -8,7 +8,15 @@ import Juvix.Compiler.Core.Scoper qualified as Scoper
 import Juvix.Compiler.Core.Transformation qualified as Core
 import Juvix.Compiler.Core.Translation.FromSource qualified as Core
 
-runCommand :: forall r a. (Members '[Embed IO, App] r, CanonicalProjection a Eval.EvalOptions, CanonicalProjection a Core.Options, CanonicalProjection a CoreReadOptions) => a -> Sem r ()
+runCommand ::
+  forall r a.
+  ( Members '[Embed IO, App] r,
+    CanonicalProjection a Eval.EvalOptions,
+    CanonicalProjection a Core.Options,
+    CanonicalProjection a CoreReadOptions
+  ) =>
+  a ->
+  Sem r ()
 runCommand opts = do
   inputFile :: Path Abs File <- someBaseToAbs' sinputFile
   s' <- embed . readFile . toFilePath $ inputFile

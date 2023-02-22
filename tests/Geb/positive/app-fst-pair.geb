@@ -1,0 +1,15 @@
+(app
+    int 
+    int
+    (lamb
+        int
+        int
+        (fst 
+            int 
+            int 
+            (index 0)))
+    (pair
+        int
+        int
+        10
+        20))

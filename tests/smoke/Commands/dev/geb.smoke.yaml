@@ -1,0 +1,153 @@
+working-directory: ./../../../../tests
+
+tests:
+  - name: geb-open
+    command:
+      - juvix
+      - --no-colors
+      - dev 
+      - geb
+      - repl
+    stdout:
+      contains: "Welcome to the Juvix Geb REPL!"
+    exit-status: 0
+    
+  - name: geb-quit
+    command:
+      - juvix
+      - --no-colors
+      - dev 
+      - geb
+      - repl
+    stdout: 
+      contains: "geb>"
+    stdin: ":quit"
+    exit-status: 0
+
+  - name: geb-infer-type-unit
+    command:
+      - juvix
+      - --no-colors
+      - dev
+      - geb
+      - repl
+    stdin: ":type unit"
+    stdout:
+      contains: "so1"
+    exit-status: 0
+
+  - name: geb-infer-type-object
+    command:
+      - juvix
+      - --no-colors      
+      - dev
+      - geb
+      - repl
+    stdin: ":type so1"
+    stdout: 
+      contains: "Inference only works on Geb morphisms"
+    exit-status: 0
+
+  - name: geb-infer-type-integer
+    command:
+      - juvix
+      - --no-colors        
+      - dev
+      - geb
+      - repl
+    stdin: ":t (mul 2 3)"
+    stdout: 
+      contains: "int"
+    exit-status: 0    
+
+  # - name: geb-check-int
+  #   command:
+  #     - juvix
+  #     - --no-colors      
+  #     - dev
+  #     - geb
+  #     - repl
+  #   stdin: ":check (typed (add 1 2) so1)"
+  #   stderr: 
+  #     contains: "so1 is not a valid object for (add 1 2)"
+  #   exit-status: 1
+
+  - name: geb-eval-and-operations
+    command:
+      - juvix
+      - --no-format
+      - dev
+      - geb
+      - repl
+    stdin: "(add 2 (mul 3 4))"
+    stdout: 
+      contains: |
+        14
+    exit-status: 0    
+
+  - name: geb-eval-with-spaces
+    command:
+      - juvix
+      - dev
+      - geb
+      - repl
+    stdin: "  unit"
+    stdout: 
+      contains:
+        "unit"
+    exit-status:    
+
+  - name: geb-load-and-eval-gebext
+    command:
+      shell:
+        - bash
+      script: |
+        cd ./Geb/positive/ && juvix dev geb repl
+    stdin: ":load    basic-app.geb"
+    stdout: 
+      contains: |
+        3000
+    exit-status: 0
+
+  - name: geb-root
+    command:
+      - juvix
+      - --no-colors
+      - dev
+      - geb
+      - repl
+    stdin: ":root"
+    stdout: 
+      matches: |
+        Welcome .*
+        Juvix .*
+        Type .*
+        
+        geb> .*/tests/
+    exit-status: 0
+
+  - name: geb-read-file
+    command:
+      - juvix
+      - dev
+      - geb
+      - read
+    args:
+      - Geb/positive/app-lambda.geb
+    stdout: |
+      (app
+        int
+        int
+        (lamb
+          int
+          int
+          (lamb
+            int
+            int
+            (index 1)))
+        (lamb
+          int
+          int
+          (index 0)))
+
+    exit-status: 0

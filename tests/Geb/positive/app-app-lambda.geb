@@ -1,0 +1,39 @@
+;; THE following example does not typecheck on purpose
+;; It's meant to be used only for the evaluator.
+;; ↓ app2 fun arg, where
+;;     fun := cls (λ . (index 1)) with env := GlobalEnv
+;;     arg := cls 0 with env := GlobalEnv
+;; → (eval (λ . (index 1)) with env := arg : GlobalEnv
+;; → cls (arg : GlobalEnv) (index 1).
+
+;; ↓ app1 (cls (arg : GlobalEnv) (index 1)) unit
+;;   → eval (index 1) with (env = unit : arg : GlobalEnv)
+;;   → env !! 1 → arg ≡ "cls 0 with env = GlobalEnv"
+;;                    ≡ λ . 0
+;; Nicely, 
+;;   (((λ x λ y . x) ⬝ (λ z . z)) unit
+;;    ( (λ y . (λ z . z)) unit.
+;;    (λ z . z) ≡ λ . 0
+
+;; ((λ λ . 1) (λ.0)) ⬝ unit
+;; ((  λ . (λ.0))) ⬝ unit
+;; ((      (λ.0))) 
+
+(app int int  ;; app1
+  (app      ;; app2
+      int
+      int
+      ;; ↓ cls [] (lamb (index 1))
+    (lamb
+      int
+      int
+      (lamb
+        int
+        int
+        (index 1)))
+    ;; ↓ cls [] (index 0)   
+        (lamb
+          int
+          int
+          (index 0)))
+  unit)

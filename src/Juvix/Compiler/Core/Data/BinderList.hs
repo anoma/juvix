@@ -1,5 +1,6 @@
 module Juvix.Compiler.Core.Data.BinderList where
 
+import GHC.Show qualified as S
 import Juvix.Compiler.Core.Language hiding (cons, drop, lookup, uncons)
 import Juvix.Prelude qualified as Prelude
 
@@ -8,6 +9,7 @@ data BinderList a = BinderList
   { _blLength :: Int,
     _blMap :: [a]
   }
+  deriving stock (Eq, Generic)
 
 makeLenses ''BinderList
 
@@ -44,6 +46,9 @@ instance Foldable BinderList where
 
   toList :: BinderList a -> [a]
   toList = (^. blMap)
+
+instance Show a => Show (BinderList a) where
+  show = S.show . toList
 
 -- | same as `lookupsSortedRev` but the result is in the same order as the input list.
 lookupsSorted :: BinderList a -> [Var' i] -> [(Var' i, a)]

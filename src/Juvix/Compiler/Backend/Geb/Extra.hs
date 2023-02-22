@@ -41,3 +41,29 @@ mkOr arg1 arg2 =
                 _lambdaBody = arg2
               }
       }
+
+objectLeftCase :: Case -> Object
+objectLeftCase Case {..} =
+  ObjectHom
+    Hom
+      { _homDomain = _caseLeftType,
+        _homCodomain = _caseCodomainType
+      }
+
+objectRightCase :: Case -> Object
+objectRightCase Case {..} =
+  ObjectHom
+    Hom
+      { _homDomain = _caseRightType,
+        _homCodomain = _caseCodomainType
+      }
+
+objectBinop :: Binop -> Object
+objectBinop op = case op ^. binopOpcode of
+  OpAdd -> ObjectInteger
+  OpSub -> ObjectInteger
+  OpMul -> ObjectInteger
+  OpDiv -> ObjectInteger
+  OpMod -> ObjectInteger
+  OpEq -> objectBool
+  OpLt -> objectBool
