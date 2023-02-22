@@ -347,6 +347,7 @@ goCase c = do
   _caseBranches <- mapM goCaseBranch (c ^. Abstract.caseBranches)
   let _caseParens = c ^. Abstract.caseParens
       _caseExpressionType :: Maybe Expression = Nothing
+      _caseExpressionWholeType :: Maybe Expression = Nothing
   return Case {..}
 
 goCaseBranch :: Members '[NameIdGen] r => Abstract.CaseBranch -> Sem r CaseBranch

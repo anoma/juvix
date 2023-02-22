@@ -157,6 +157,8 @@ data Case = Case
   { _caseExpression :: Expression,
     -- | The typechecker fills this field
     _caseExpressionType :: Maybe Expression,
+    -- | The typechecker fills this field
+    _caseExpressionWholeType :: Maybe Expression,
     _caseBranches :: NonEmpty CaseBranch,
     _caseParens :: Bool
   }
