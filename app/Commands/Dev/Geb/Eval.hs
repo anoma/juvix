@@ -5,7 +5,6 @@ import Commands.Dev.Geb.Eval.Options
 import Juvix.Compiler.Backend.Geb.Evaluator qualified as Geb
 import Juvix.Compiler.Backend.Geb.Language qualified as Geb
 import Juvix.Compiler.Backend.Geb.Pretty qualified as Geb
-import Juvix.Compiler.Backend.Geb.Pretty.Values qualified as GebValue
 import Juvix.Compiler.Backend.Geb.Translation.FromSource qualified as Geb
 
 runCommand ::
@@ -51,5 +50,5 @@ evalAndPrint opts = \case
         | otherwise ->
             case Geb.eval' env morphism of
               Left err -> exitJuvixError err
-              Right m -> renderStdOut (GebValue.ppOut opts' m)
+              Right m -> renderStdOut (Geb.ppOut opts' m)
   Geb.ExpressionObject _ -> error Geb.objNoEvalMsg

@@ -4,8 +4,7 @@ import GHC.Exception qualified as Exception
 import GHC.Show qualified as S
 import Juvix.Compiler.Backend.Geb.Evaluator.Data.Values
 import Juvix.Compiler.Backend.Geb.Language
-import Juvix.Compiler.Backend.Geb.Pretty qualified as Geb
-import Juvix.Compiler.Backend.Geb.Pretty.Values
+import Juvix.Compiler.Backend.Geb.Pretty
 
 data EvalError = EvalError
   { _evalErrorMsg :: !Text,
@@ -52,7 +51,7 @@ instance Show EvalError where
         Nothing -> ""
         Just expr ->
           "Morphism:\n"
-            <> fromText (Geb.ppTrace expr)
+            <> fromText (ppTrace expr)
             <> "\n"
 
 evalError ::
@@ -84,4 +83,4 @@ instance Show QuoteError where
         Nothing -> ""
         Just expr ->
           "GebObject associated:\n"
-            <> fromText (Geb.ppTrace expr)
+            <> fromText (ppTrace expr)

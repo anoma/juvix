@@ -10,7 +10,6 @@ import Control.Monad.State.Strict qualified as State
 import Data.String.Interpolate (i, __i)
 import Juvix.Compiler.Backend.Geb qualified as Geb
 import Juvix.Compiler.Backend.Geb.Analysis.TypeChecking.Error
-import Juvix.Compiler.Backend.Geb.Pretty.Values qualified as GebValue
 import Juvix.Data.Error.GenericError qualified as Error
 import Juvix.Extra.Version
 import Juvix.Prelude.Pretty qualified as P
@@ -313,6 +312,6 @@ printEvalResult :: Either JuvixError Geb.RunEvalResult -> Repl ()
 printEvalResult = \case
   Left err -> printError err
   Right (Geb.RunEvalResultGebValue v) ->
-    renderOut (GebValue.ppOut Geb.defaultEvaluatorOptions v)
+    renderOut (Geb.ppOut Geb.defaultEvaluatorOptions v)
   Right (Geb.RunEvalResultMorphism morphism) ->
     renderOut (Geb.ppOut Geb.defaultEvaluatorOptions morphism)

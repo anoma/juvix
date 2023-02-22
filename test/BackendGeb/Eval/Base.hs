@@ -3,7 +3,6 @@ module BackendGeb.Eval.Base where
 import Base
 import Data.Text.IO qualified as TIO
 import Juvix.Compiler.Backend.Geb qualified as Geb
-import Juvix.Compiler.Backend.Geb.Pretty.Values qualified as PrettyGeb
 import Juvix.Prelude.Pretty
 
 gebEvalAssertion ::
@@ -36,7 +35,7 @@ gebEvalAssertion mainFile expectedFile step = do
               hClose hout
               assertFailure (show (pretty (fromJuvixError @GenericError err)))
             Right value -> do
-              hPutStrLn hout (PrettyGeb.ppPrint value)
+              hPutStrLn hout (Geb.ppPrint value)
               hClose hout
               actualOutput <- TIO.readFile (toFilePath outputFile)
               expected <- TIO.readFile (toFilePath expectedFile)
