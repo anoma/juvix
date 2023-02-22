@@ -7,7 +7,7 @@ def csuc : (Π A : Type, (A → A) → A → A) → Π A : Type, (A → A) → A
   λ(n : Π A : Type, (A → A) → A → A) λ(A : Type) λ(f : A → A) λ(x : A) f (n A f x);
 
 def num : nat → Π A : Type, (A → A) → A → A :=
-  λ(n : nat) match n with {
+  λ(n : nat) match n : nat with : { Π A : Type, (A → A) → A → A } {
     zero := czero;
     suc n := csuc (num n);
   };
@@ -15,4 +15,10 @@ def num : nat → Π A : Type, (A → A) → A → A :=
 def toNat : (Π A : Type, (A → A) → A → A) → nat :=
   λ(n : Π A : Type, (A → A) → A → A) n nat suc zero;
 
-toNat (num (suc (suc (suc zero))))
+def toInt : nat → int :=
+  λ(n : nat) case n of {
+    zero := 0;
+    suc n := toInt n + 1;
+  };
+
+toInt (toNat (num (suc (suc (suc zero)))))

@@ -17,10 +17,8 @@ matchToCaseNode n = case n of
   NMatch m -> do
     let branches = m ^. matchBranches
         values = toList (m ^. matchValues)
-        matchType = getInfoType (m ^. matchInfo)
-        -- TODO: `getInfoType` always returns Dynamic at this stage, because the
-        -- Internal-to-Core translation doesn't store types in the Infos
-        valueTypes = (getInfoType . getInfo <$> values)
+        matchType = m ^. matchReturnType
+        valueTypes = toList (m ^. matchValueTypes)
         branchType = mkPis' valueTypes matchType
 
     -- Index from 1 because we prepend the fail branch.

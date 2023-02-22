@@ -815,20 +815,35 @@ exprMatch ::
   ParsecS r Node
 exprMatch varsNum vars = do
   kw kwMatch
-  values <- P.sepBy (bracedExpr varsNum vars) (kw kwComma)
+  vals <- P.sepBy (exprMatchValue varsNum vars) (kw kwComma)
   kw kwWith
-  braces (exprMatch' values varsNum vars)
-    <|> exprMatch' values varsNum vars
+  mty <- optional (kw kwColon >> bracedExpr varsNum vars)
+  let rty = fromMaybe mkDynamic' mty
+  braces (exprMatch' vals rty varsNum vars)
+    <|> exprMatch' vals rty varsNum vars
+
+exprMatchValue ::
+  (Member InfoTableBuilder r) =>
+  Index ->
+  HashMap Text Level ->
+  ParsecS r (Node, Type)
+exprMatchValue varsNum vars = do
+  val <- bracedExpr varsNum vars
+  mty <- optional (kw kwColon >> bracedExpr varsNum vars)
+  return (val, fromMaybe mkDynamic' mty)
 
 exprMatch' ::
   (Member InfoTableBuilder r) =>
-  [Node] ->
+  [(Node, Type)] ->
+  Type ->
   Index ->
   HashMap Text Level ->
   ParsecS r Node
-exprMatch' values varsNum vars = do
+exprMatch' vals rty varsNum vars = do
+  let values = map fst vals
+      types = map snd vals
   bs <- P.sepEndBy (matchBranch (length values) varsNum vars) (kw kwSemicolon)
-  return $ mkMatch' (fromList values) bs
+  return $ mkMatch' (fromList types) rty (fromList values) bs
 
 matchBranch ::
   (Member InfoTableBuilder r) =>
@@ -865,7 +880,7 @@ branchPattern =
 wildcardPattern :: ParsecS r Pattern
 wildcardPattern = do
   kw kwWildcard
-  return $ PatWildcard (PatternWildcard Info.empty)
+  return $ PatWildcard (PatternWildcard Info.empty mkDynamic')
 
 binderOrConstrPattern ::
   (Member InfoTableBuilder r) =>
@@ -886,7 +901,7 @@ binderOrConstrPattern parseArgs = do
       return $ PatConstr (PatternConstr info tag ps)
     _ -> do
       mp <- optional binderPattern
-      let pat = fromMaybe (PatWildcard (PatternWildcard Info.empty)) mp
+      let pat = fromMaybe (PatWildcard (PatternWildcard Info.empty mkDynamic')) mp
           binder = Binder txt (Just i) mkDynamic'
       return $ PatBinder (PatternBinder binder pat)
 
