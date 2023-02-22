@@ -279,5 +279,10 @@ tests =
       "Lifting and polymorphism"
       $(mkRelDir ".")
       $(mkRelFile "test049.jvc")
-      $(mkRelFile "out/test049.out")
+      $(mkRelFile "out/test049.out"),
+    PosTest
+      "Church numerals with pattern matching"
+      $(mkRelDir ".")
+      $(mkRelFile "test050.jvc")
+      $(mkRelFile "out/test050.out")
   ]
