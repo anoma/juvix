@@ -16,7 +16,7 @@ gebEvalAssertion mainFile expectedFile step = do
   case Geb.runParser mainFile input of
     Left err -> assertFailure (show (pretty err))
     Right (Geb.ExpressionObject _) -> do
-      step "No evalution for objects"
+      step "No evaluation for objects"
       assertFailure (unpack Geb.objNoEvalMsg)
     Right (Geb.ExpressionMorphism gebMorphism) -> do
       let env :: Geb.Env =
