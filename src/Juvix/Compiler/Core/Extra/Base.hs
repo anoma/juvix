@@ -5,6 +5,7 @@ module Juvix.Compiler.Core.Extra.Base
 where
 
 import Data.Functor.Identity
+import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Compiler.Core.Data.BinderList (BinderList)
 import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Language
@@ -79,10 +80,10 @@ mkCase i sym v bs def = NCase (Case i sym v bs def)
 mkCase' :: Symbol -> Node -> [CaseBranch] -> Maybe Node -> Node
 mkCase' = mkCase Info.empty
 
-mkMatch :: Info -> NonEmpty Node -> [MatchBranch] -> Node
-mkMatch i vs bs = NMatch (Match i vs bs)
+mkMatch :: Info -> NonEmpty Type -> Type -> NonEmpty Node -> [MatchBranch] -> Node
+mkMatch i vtys rty vs bs = NMatch (Match i vtys rty vs bs)
 
-mkMatch' :: NonEmpty Node -> [MatchBranch] -> Node
+mkMatch' :: NonEmpty Type -> Type -> NonEmpty Node -> [MatchBranch] -> Node
 mkMatch' = mkMatch Info.empty
 
 mkMatchBranch :: Info -> NonEmpty Pattern -> Node -> MatchBranch
@@ -565,14 +566,16 @@ destruct = \case
                 _nodeReassemble = twoManyChildrenI $ \i' is' v' def' allNodes' ->
                   mkCase i' sym (v' ^. childNode) (mkBranches is' allNodes') (Just (def' ^. childNode))
               }
-  NMatch (Match i vs branches) ->
+  NMatch (Match i vtys rty vs branches) ->
     let allNodes :: [NodeChild]
         allNodes =
-          concat
-            [ b
-                : map (noBinders . (^. binderType)) bis
-              | (bis, b) <- branchChildren
-            ]
+          noBinders rty
+            : map noBinders (toList vtys)
+            ++ concat
+              [ b
+                  : map (noBinders . (^. binderType)) bis
+                | (bis, b) <- branchChildren
+              ]
           where
             branchChildren :: [([Binder], NodeChild)]
             branchChildren =
@@ -623,15 +626,25 @@ destruct = \case
                         }
                   numVals = length vs
                   values' :: NonEmpty NodeChild
-                  branchesChilds' :: [NodeChild]
-                  (values', branchesChilds') = first nonEmpty' (splitAtExact numVals (toList chs'))
+                  valueTypes' :: NonEmpty NodeChild
+                  returnType' :: NodeChild
+                  branchesChildren' :: [NodeChild]
+                  (values', chs'') = first nonEmpty' (splitAtExact numVals (toList chs'))
+                  (valueTypes', chs''') = first nonEmpty' (splitAtExact numVals chs'')
+                  returnType' = head (NonEmpty.fromList chs''')
+                  branchesChildren' = tail chs'''
                   branches' :: [MatchBranch]
                   branches' =
                     run $
                       runInputList is' $
-                        runInputList branchesChilds' $
+                        runInputList branchesChildren' $
                           mapM mkBranch branches
-               in mkMatch i' (fmap (^. childNode) values') branches'
+               in mkMatch
+                    i'
+                    (fmap (^. childNode) valueTypes')
+                    (returnType' ^. childNode)
+                    (fmap (^. childNode) values')
+                    branches'
           }
   NPi (Pi i bi b) ->
     NodeDetails

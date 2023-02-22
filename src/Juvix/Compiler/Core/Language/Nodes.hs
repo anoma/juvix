@@ -142,6 +142,8 @@ data If' i a = If
 -- | Complex pattern match. `Match` is lazy: only the selected branch is evaluated.
 data Match' i a = Match
   { _matchInfo :: i,
+    _matchValueTypes :: !(NonEmpty a),
+    _matchReturnType :: !a,
     _matchValues :: !(NonEmpty a),
     _matchBranches :: ![MatchBranch' i a]
   }
@@ -159,12 +161,13 @@ data MatchBranch' i a = MatchBranch
   }
 
 data Pattern' i a
-  = PatWildcard (PatternWildcard' i)
+  = PatWildcard (PatternWildcard' i a)
   | PatBinder (PatternBinder' i a)
   | PatConstr (PatternConstr' i a)
 
-newtype PatternWildcard' i = PatternWildcard
-  { _patternWildcardInfo :: i
+data PatternWildcard' i a = PatternWildcard
+  { _patternWildcardInfo :: i,
+    _patternWildcardType :: a
   }
 
 data PatternBinder' i a = PatternBinder
@@ -265,7 +268,7 @@ instance HasAtomicity (If' i a) where
 instance HasAtomicity (Match' i a) where
   atomicity _ = Aggregate lambdaFixity
 
-instance HasAtomicity (PatternWildcard' i) where
+instance HasAtomicity (PatternWildcard' i a) where
   atomicity _ = Atom
 
 instance HasAtomicity (PatternBinder' i a) where
@@ -361,9 +364,9 @@ instance (Eq a) => Eq (CaseBranch' i a ty) where
       ..&&.. eqOn (^. caseBranchBody)
 
 instance (Eq a) => Eq (Match' i a) where
-  (Match _ vs1 bs1) == (Match _ vs2 bs2) = vs1 == vs2 && bs1 == bs2
+  (Match _ _ _ vs1 bs1) == (Match _ _ _ vs2 bs2) = vs1 == vs2 && bs1 == bs2
 
-instance Eq (PatternWildcard' i) where
+instance Eq (PatternWildcard' i a) where
   _ == _ = True
 
 instance Eq (Univ' i) where
