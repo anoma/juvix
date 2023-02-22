@@ -121,6 +121,9 @@ fromQualifiedName (C.QualifiedName _ s) = s
 topModulePathName :: TopModulePath -> Symbol
 topModulePathName = over nameConcrete (^. C.modulePathName)
 
+unConcrete :: Name' a -> Name' ()
+unConcrete = set nameConcrete ()
+
 symbolText :: Symbol -> Text
 symbolText s = s ^. nameConcrete . C.symbolText
 

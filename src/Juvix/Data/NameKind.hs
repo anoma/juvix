@@ -86,3 +86,8 @@ nameKindAnsi k = case k of
   KNameFunction -> colorDull Yellow
   KNameLocal -> mempty
   KNameTopModule -> color Cyan
+
+isFunctionKind :: (HasNameKind a) => a -> Bool
+isFunctionKind k = case getNameKind k of
+  KNameFunction -> True
+  _ -> False

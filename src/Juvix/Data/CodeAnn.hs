@@ -267,4 +267,4 @@ bracesIndent :: Doc Ann -> Doc Ann
 bracesIndent = braces . blockIndent
 
 blockIndent :: Doc Ann -> Doc Ann
-blockIndent d = line <> indent' d <> line
+blockIndent d = hardline <> indent' d <> line

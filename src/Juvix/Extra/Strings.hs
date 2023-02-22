@@ -38,6 +38,9 @@ inductive = "type"
 function :: (IsString s) => s
 function = "function"
 
+variable :: IsString s => s
+variable = "variable"
+
 constructor :: (IsString s) => s
 constructor = "constructor"
 

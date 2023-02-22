@@ -497,6 +497,7 @@ data SymbolEntry
   | EntryFunction (FunctionRef' 'S.NotConcrete)
   | EntryConstructor (ConstructorRef' 'S.NotConcrete)
   | EntryModule (ModuleRef' 'S.NotConcrete)
+  | EntryVariable (S.Name' ())
   deriving stock (Show)
 
 -- | Symbols that a module exports
@@ -1393,6 +1394,7 @@ entryPrism f = \case
   EntryFunction fun -> (fun ^. functionRefName, EntryFunction (over functionRefName f fun))
   EntryConstructor c -> (c ^. constructorRefName, EntryConstructor (over constructorRefName f c))
   EntryModule m -> (getModuleRefNameType m, EntryModule (overModuleRef'' (over moduleRefName f) m))
+  EntryVariable m -> (m, EntryVariable (f m))
 
 entryOverName :: (S.Name' () -> S.Name' ()) -> SymbolEntry -> SymbolEntry
 entryOverName f = snd . entryPrism f
@@ -1406,6 +1408,7 @@ entryIsExpression = \case
   EntryInductive {} -> True
   EntryFunction {} -> True
   EntryConstructor {} -> True
+  EntryVariable {} -> True
   EntryModule {} -> False
 
 judocExamples :: Judoc s -> [Example s]
@@ -1429,6 +1432,7 @@ symbolEntryToSName = \case
   EntryFunction f -> f ^. functionRefName
   EntryConstructor c -> c ^. constructorRefName
   EntryModule m -> getModuleRefNameType m
+  EntryVariable m -> m
 
 instance HasNameKind SymbolEntry where
   getNameKind = getNameKind . entryName

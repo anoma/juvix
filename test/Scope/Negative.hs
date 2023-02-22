@@ -78,14 +78,14 @@ scoperErrorTests =
       $(mkRelDir "BindGroupConflict")
       $(mkRelFile "Clause.juvix")
       $ \case
-        ErrBindGroup {} -> Nothing
+        ErrMultipleDeclarations {} -> Nothing
         _ -> wrongError,
     NegTest
       "Binding group conflict (lambda clause)"
       $(mkRelDir "BindGroupConflict")
       $(mkRelFile "Lambda.juvix")
       $ \case
-        ErrBindGroup {} -> Nothing
+        ErrMultipleDeclarations {} -> Nothing
         _ -> wrongError,
     NegTest
       "Infix error (expression)"
@@ -253,7 +253,7 @@ scoperErrorTests =
       $(mkRelDir ".")
       $(mkRelFile "DuplicateInductiveParameterName.juvix")
       $ \case
-        ErrDuplicateInductiveParameterName {} -> Nothing
+        ErrMultipleDeclarations {} -> Nothing
         _ -> wrongError,
     NegTest
       "A function has a duplicate clause"
@@ -261,5 +261,19 @@ scoperErrorTests =
       $(mkRelFile "DuplicateClause.juvix")
       $ \case
         ErrDuplicateFunctionClause {} -> Nothing
+        _ -> wrongError,
+    NegTest
+      "A function lacks a type signature"
+      $(mkRelDir ".")
+      $(mkRelFile "LacksTypeSig.juvix")
+      $ \case
+        ErrLacksTypeSig {} -> Nothing
+        _ -> wrongError,
+    NegTest
+      "A function inside a let lacks a type signature that is at the top level"
+      $(mkRelDir ".")
+      $(mkRelFile "LacksTypeSig2.juvix")
+      $ \case
+        ErrLacksTypeSig {} -> Nothing
         _ -> wrongError
   ]

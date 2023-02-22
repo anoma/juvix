@@ -11,16 +11,14 @@ import Data.List.NonEmpty.Extra qualified as NonEmpty
 import Juvix.Compiler.Concrete.Data.Scope
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Language
-import Juvix.Compiler.Concrete.Language qualified as L
 import Juvix.Compiler.Concrete.Pretty.Options (Options, fromGenericOptions)
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error.Pretty
 import Juvix.Data.CodeAnn
 import Juvix.Prelude
 
 data MultipleDeclarations = MultipleDeclarations
-  { _multipleDeclEntry :: SymbolEntry,
-    _multipleDeclSymbol :: Text,
-    _multipleDeclSecond :: Interval
+  { _multipleDeclFirst :: Interval,
+    _multipleDeclSecond :: Symbol
   }
   deriving stock (Show)
 
@@ -28,20 +26,22 @@ instance ToGenericError MultipleDeclarations where
   genericError MultipleDeclarations {..} =
     return
       GenericError
-        { _genericErrorLoc = i1,
+        { _genericErrorLoc = i2,
           _genericErrorMessage = prettyError msg,
-          _genericErrorIntervals = [i1, _multipleDeclSecond]
+          _genericErrorIntervals = [i1, i2]
         }
     where
       i1 :: Interval
-      i1 = entryName _multipleDeclEntry ^. S.nameDefined
+      i1 = _multipleDeclFirst
+      i2 :: Interval
+      i2 = getLoc _multipleDeclSecond
       msg =
         "Multiple declarations of"
-          <+> ppSymbolT _multipleDeclSymbol
+          <+> pretty _multipleDeclSecond
             <> line
             <> "Declared at:"
-          <+> align (vsep lst)
-      lst = map pretty [L.symbolEntryToSName _multipleDeclEntry ^. S.nameDefined, _multipleDeclSecond]
+            <> line
+            <> itemize (map pretty [i1, i2])
 
 -- | megaparsec error while resolving infixities.
 newtype InfixError = InfixError
@@ -192,34 +192,6 @@ instance ToGenericError QualSymNotInScope where
           i = getLoc _qualSymNotInScope
           msg = "Qualified symbol not in scope:" <+> ppCode opts' _qualSymNotInScope
 
-data BindGroupConflict = BindGroupConflict
-  { _bindGroupFirst :: Symbol,
-    _bindGroupSecond :: Symbol
-  }
-  deriving stock (Show)
-
-instance ToGenericError BindGroupConflict where
-  genericError BindGroupConflict {..} = ask >>= generr
-    where
-      generr opts =
-        return
-          GenericError
-            { _genericErrorLoc = i2,
-              _genericErrorMessage = prettyError msg,
-              _genericErrorIntervals = [i1, i2]
-            }
-        where
-          opts' = fromGenericOptions opts
-          i1 = getLoc _bindGroupFirst
-          i2 = getLoc _bindGroupSecond
-
-          msg =
-            "The variable"
-              <+> ppCode opts' _bindGroupFirst
-              <+> "appears twice in the same binding group:"
-                <> line
-                <> indent' (align (vsep (map pretty [i1, i2])))
-
 data DuplicateFixity = DuplicateFixity
   { _dupFixityFirst :: OperatorSyntaxDef,
     _dupFixitySecond :: OperatorSyntaxDef
@@ -279,7 +251,6 @@ instance ToGenericError MultipleExportConflict where
 
 data NotInScope = NotInScope
   { _notInScopeSymbol :: Symbol,
-    _notInScopeLocal :: LocalVars,
     _notInScopeScope :: Scope
   }
   deriving stock (Show)
@@ -318,8 +289,7 @@ instance ToGenericError NotInScope where
                 ]
           candidates :: HashSet Text
           candidates =
-            HashSet.fromList (map (^. symbolText) (HashMap.keys (_notInScopeLocal ^. localVars)))
-              <> HashSet.fromList (map (^. symbolText) (HashMap.keys (_notInScopeScope ^. scopeSymbols)))
+            HashSet.fromList (map (^. symbolText) (HashMap.keys (_notInScopeScope ^. scopeSymbols)))
 
 instance HasLoc NotInScope where
   getLoc = getLoc . (^. notInScopeSymbol)
@@ -563,35 +533,7 @@ ambiguousMessage opts' n es =
       <> line
       <> "It could be any of:"
       <> line
-      <> indent' (vsep (map (ppCode opts') es))
-
-newtype DuplicateInductiveParameterName = DuplicateInductiveParameterName
-  { _duplicateInductiveParameterName :: Symbol
-  }
-  deriving stock (Show)
-
-makeLenses ''DuplicateInductiveParameterName
-
-instance ToGenericError DuplicateInductiveParameterName where
-  genericError e = ask >>= generr
-    where
-      generr opts =
-        return
-          GenericError
-            { _genericErrorLoc = i,
-              _genericErrorMessage = prettyError msg,
-              _genericErrorIntervals = [i]
-            }
-        where
-          opts' = fromGenericOptions opts
-          param = e ^. duplicateInductiveParameterName
-          i = getLoc param
-          msg =
-            "Invalid name"
-              <+> ppCode opts' param
-                <> "."
-                <> line
-                <> "Inductive parameter names can not be repeated."
+      <> itemize (map (ppMessage opts') es)
 
 newtype DoubleBracesPattern = DoubleBracesPattern
   { _doubleBracesPatternArg :: PatternArg
