@@ -12,6 +12,7 @@ import Juvix.Data.Effect.Files.IO
 import Juvix.Data.Effect.Files.Pure (runFilesPure)
 import Juvix.Prelude.Base
 import Juvix.Prelude.Path
+import Juvix.Extra.Paths.Base
 
 -- | for now we only check for string equality
 equalPaths :: Path Abs File -> Path Abs File -> Sem r Bool
@@ -47,11 +48,12 @@ walkDirRel handler topdir = do
       walktree curdir = do
         let fullDir :: Path Abs Dir = topdir <//> curdir
         (subdirs, files) <- listDirRel fullDir
+        let hasJuvixYaml = juvixYamlFile `elem` files
         action <- raise (handler fullDir subdirs files)
         case action of
           RecurseNever -> return ()
           RecurseFilter fi ->
-            let ds = map (curdir <//>) (filter fi subdirs)
+            let ds = map (curdir <//>) (filter (fi hasJuvixYaml) subdirs)
              in mapM_ walkAvoidLoop ds
       checkLoop :: Path Abs Dir -> Sem (State (HashSet Uid) ': r) Bool
       checkLoop dir = do

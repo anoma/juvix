@@ -16,7 +16,7 @@ data RecursorArgs = RecursorArgs
 
 data Recurse r
   = RecurseNever
-  | RecurseFilter (Path r Dir -> Bool)
+  | RecurseFilter (Bool -> Path r Dir -> Bool)
 
 makeLenses ''RecursorArgs
 
