@@ -3,6 +3,7 @@ module Core.Eval.Base where
 import Base
 import Data.HashMap.Strict qualified as HashMap
 import Data.Text.IO qualified as TIO
+import GHC.Base (seq)
 import Juvix.Compiler.Core.Data.InfoTable
 import Juvix.Compiler.Core.Error
 import Juvix.Compiler.Core.Evaluator
@@ -13,7 +14,6 @@ import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Core.Pretty
 import Juvix.Compiler.Core.Transformation
 import Juvix.Compiler.Core.Translation.FromSource
-import GHC.Base (seq)
 
 coreEvalAssertion' ::
   InfoTable ->
@@ -23,29 +23,29 @@ coreEvalAssertion' ::
   Assertion
 coreEvalAssertion' tab mainFile expectedFile step =
   length (fromText (ppPrint tab) :: String) `seq`
-  case (tab ^. infoMain) >>= ((tab ^. identContext) HashMap.!?) of
-    Just node -> do
-      withTempDir'
-        ( \dirPath -> do
-            let outputFile = dirPath <//> $(mkRelFile "out.out")
-            hout <- openFile (toFilePath outputFile) WriteMode
-            step "Evaluate"
-            r' <- doEval mainFile hout tab node
-            case r' of
-              Left err -> do
-                hClose hout
-                assertFailure (show (pretty err))
-              Right value -> do
-                unless
-                  (Info.member kNoDisplayInfo (getInfo value))
-                  (hPutStrLn hout (ppPrint value))
-                hClose hout
-                actualOutput <- TIO.readFile (toFilePath outputFile)
-                step "Compare expected and actual program output"
-                expected <- TIO.readFile (toFilePath expectedFile)
-                assertEqDiffText ("Check: EVAL output = " <> toFilePath expectedFile) actualOutput expected
-        )
-    Nothing -> assertFailure ("No main function registered in: " <> toFilePath mainFile)
+    case (tab ^. infoMain) >>= ((tab ^. identContext) HashMap.!?) of
+      Just node -> do
+        withTempDir'
+          ( \dirPath -> do
+              let outputFile = dirPath <//> $(mkRelFile "out.out")
+              hout <- openFile (toFilePath outputFile) WriteMode
+              step "Evaluate"
+              r' <- doEval mainFile hout tab node
+              case r' of
+                Left err -> do
+                  hClose hout
+                  assertFailure (show (pretty err))
+                Right value -> do
+                  unless
+                    (Info.member kNoDisplayInfo (getInfo value))
+                    (hPutStrLn hout (ppPrint value))
+                  hClose hout
+                  actualOutput <- TIO.readFile (toFilePath outputFile)
+                  step "Compare expected and actual program output"
+                  expected <- TIO.readFile (toFilePath expectedFile)
+                  assertEqDiffText ("Check: EVAL output = " <> toFilePath expectedFile) actualOutput expected
+          )
+      Nothing -> assertFailure ("No main function registered in: " <> toFilePath mainFile)
 
 coreEvalAssertion ::
   Path Abs File ->
