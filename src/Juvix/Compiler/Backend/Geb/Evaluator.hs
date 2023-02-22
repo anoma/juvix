@@ -86,7 +86,6 @@ evalVar :: EvalEffects r => Var -> Sem r GebValue
 evalVar var = do
   ctx <- asks (^. envContext)
   let val = Context.lookup (var ^. varIndex) ctx
-  -- trace ("varLookup := " <> show val) $
   return val
 
 evalAbsurd :: EvalEffects r => Morphism -> Sem r GebValue
