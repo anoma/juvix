@@ -19,12 +19,8 @@ module Logic.Board;
   full (a :: b :: c :: nil) := ==Square a b && ==Square b c;
 
   diagonals : List (List Square) → List (List Square);
-  diagonals ((a1 :: _ :: b1 :: nil) :: (_ :: c :: _ :: nil) :: (b2 :: _ :: a2 :: nil) :: nil) := (a1
-      :: c
-      :: a2
-      :: nil)
-    :: (b1 :: c :: b2 :: nil)
-    :: nil;
+  diagonals ((a1 :: _ :: b1 :: nil) :: (_ :: c :: _ :: nil) :: (b2 :: _ :: a2 :: nil) :: nil) :=
+    (a1 :: c :: a2 :: nil) :: (b1 :: c :: b2 :: nil) :: nil;
 
   columns : List (List Square) → List (List Square);
   columns := transpose;
@@ -37,6 +33,6 @@ module Logic.Board;
   showRow xs := concat (surround "|" (map showSquare xs));
 
   showBoard : Board → String;
-  showBoard (board squares) := unlines
-    (surround "+---+---+---+" (map showRow squares));
+  showBoard (board squares) :=
+    unlines (surround "+---+---+---+" (map showRow squares));
 end;

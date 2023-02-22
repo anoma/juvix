@@ -23,9 +23,10 @@ module Logic.Square;
   showSquare (occupied s) := " " ++str showSymbol s ++str " ";
 
   replace : Symbol → Nat → Square → Square;
-  replace player k (empty n) := if
-    (n Stdlib.Data.Nat.Ord.== k)
-    (occupied player)
-    (empty n);
+  replace player k (empty n) :=
+    if
+      (n Stdlib.Data.Nat.Ord.== k)
+      (occupied player)
+      (empty n);
   replace _ _ s := s;
 end;

@@ -22,7 +22,7 @@ class PrettyPrint a where
   ppCode :: Members '[ExactPrint, Reader Options] r => a -> Sem r ()
 
 instance PrettyPrint Keyword where
-  ppCode = noLoc . pretty
+  ppCode = noLoc . annotate AnnKeyword . pretty
 
 instance PrettyPrint KeywordRef where
   ppCode = ppMorpheme
@@ -76,7 +76,7 @@ instance SingI t => PrettyPrint (Module 'Scoped t) where
       lastSemicolon :: Sem r ()
       lastSemicolon = case sing :: SModuleIsTop t of
         SModuleLocal -> return ()
-        SModuleTop -> semicolon >> line <> end
+        SModuleTop -> semicolon <> line <> end
 
 instance PrettyPrint [Statement 'Scoped] where
   ppCode :: forall r. Members '[ExactPrint, Reader Options] r => [Statement 'Scoped] -> Sem r ()
@@ -189,16 +189,16 @@ instance PrettyPrint (TypeSignature 'Scoped) where
         name' = region (P.annDef _sigName) (ppCode _sigName)
         body' = case _sigBody of
           Nothing -> Nothing
-          Just body -> Just (noLoc P.kwAssign <+> ppCode body)
+          Just body -> Just (noLoc P.kwAssign <> oneLineOrNext (ppCode body))
     doc'
       ?<> builtin'
       <?+> termin'
         ?<> ( name'
                 <+> noLoc P.kwColon
-                <+> nest
-                  ( type'
-                      <+?> body'
-                  )
+                  <> oneLineOrNext
+                    ( type'
+                        <+?> body'
+                    )
             )
 
 instance PrettyPrint Pattern where

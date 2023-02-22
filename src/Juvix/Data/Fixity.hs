@@ -43,6 +43,7 @@ makeLenses ''Fixity
 data Atomicity
   = Atom
   | Aggregate Fixity
+  deriving stock (Eq)
 
 class HasAtomicity a where
   atomicity :: a -> Atomicity
