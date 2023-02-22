@@ -10,6 +10,11 @@ import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Pretty
 import Juvix.Compiler.Core.Transformation.Base
 
+isTypeConstr :: Type -> Bool
+isTypeConstr ty = case typeTarget ty of
+  NUniv {} -> True
+  _ -> False
+
 convertNode :: InfoTable -> Node -> Node
 convertNode tab = convert mempty
   where
