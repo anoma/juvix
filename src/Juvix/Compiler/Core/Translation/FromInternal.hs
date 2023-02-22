@@ -2,6 +2,7 @@ module Juvix.Compiler.Core.Translation.FromInternal where
 
 import Data.HashMap.Strict qualified as HashMap
 import Data.List.NonEmpty (fromList)
+import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Compiler.Abstract.Data.Name
 import Juvix.Compiler.Concrete.Data.Literal (LiteralLoc)
 import Juvix.Compiler.Core.Data
@@ -350,10 +351,16 @@ mkBody ty clauses
   where
     -- Assumption: All clauses have the same number of patterns
     nPatterns :: Int
-    nPatterns = length (fst (head clauses))
+    nPatterns = checkPatternsNum (length (fst (head clauses))) (NonEmpty.tail $ fmap fst clauses)
 
     vs :: [Index]
     vs = reverse (take nPatterns [0 ..])
+
+    checkPatternsNum :: Int -> [[a]] -> Int
+    checkPatternsNum len = \case
+      [] -> len
+      ps : pats | length ps == len -> checkPatternsNum len pats
+      _ -> error "internal-to-core: all clauses must have the same number of patterns"
 
     goClause :: Level -> [Internal.PatternArg] -> Internal.Expression -> Sem r MatchBranch
     goClause lvl pats body = goPatternArgs lvl body pats ptys

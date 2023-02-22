@@ -4,7 +4,9 @@ module test030;
 open import Stdlib.Prelude;
 
 iterate : {A : Type} → (A → A) → Nat → A → A;
-iterate f zero x := x;
+-- clauses with differing number of patterns not yet supported
+-- iterate f zero x := x;
+iterate f zero := id;
 iterate f (suc n) := f ∘ (iterate f n);
 
 plus : Nat → Nat → Nat;
