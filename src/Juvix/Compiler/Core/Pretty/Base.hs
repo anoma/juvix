@@ -11,7 +11,8 @@ import Juvix.Compiler.Abstract.Data.Name
 import Juvix.Compiler.Core.Data.BinderList as BL
 import Juvix.Compiler.Core.Data.InfoTable
 import Juvix.Compiler.Core.Data.Stripped.InfoTable qualified as Stripped
-import Juvix.Compiler.Core.Extra
+import Juvix.Compiler.Core.Extra.Base
+import Juvix.Compiler.Core.Extra.SubstEnv
 import Juvix.Compiler.Core.Info.NameInfo
 import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Core.Language.Stripped qualified as Stripped

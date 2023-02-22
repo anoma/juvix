@@ -6,6 +6,7 @@ module Juvix.Compiler.Core.Extra.Utils
     module Juvix.Compiler.Core.Extra.Equality,
     module Juvix.Compiler.Core.Extra.Recursors.Fold.Named,
     module Juvix.Compiler.Core.Extra.Recursors.Map.Named,
+    module Juvix.Compiler.Core.Extra.SubstEnv,
   )
 where
 
@@ -20,6 +21,7 @@ import Juvix.Compiler.Core.Extra.Info
 import Juvix.Compiler.Core.Extra.Recursors
 import Juvix.Compiler.Core.Extra.Recursors.Fold.Named
 import Juvix.Compiler.Core.Extra.Recursors.Map.Named
+import Juvix.Compiler.Core.Extra.SubstEnv
 import Juvix.Compiler.Core.Info.TypeInfo
 import Juvix.Compiler.Core.Language
 
@@ -168,17 +170,6 @@ developBeta = umap go
 etaExpand :: Int -> Node -> Node
 etaExpand 0 n = n
 etaExpand k n = mkLambdas' k (mkApps' (shift k n) (map mkVar' (reverse [0 .. k - 1])))
-
--- | substitution of all free variables for values in an environment
-substEnv :: Env -> Node -> Node
-substEnv env
-  | null env = id
-  | otherwise = umapN go
-  where
-    go k n = case n of
-      NVar (Var _ idx)
-        | idx >= k -> env !! (idx - k)
-      _ -> n
 
 convertClosures :: Node -> Node
 convertClosures = umap go
