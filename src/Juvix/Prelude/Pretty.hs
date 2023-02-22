@@ -81,6 +81,9 @@ toAnsiText useColors
   | useColors = Ansi.renderStrict . toAnsiStream
   | otherwise = Text.renderStrict . toTextStream
 
+toPlainText :: HasTextBackend a => a -> Text
+toPlainText = Text.renderStrict . toTextStream
+
 prettyText :: (Pretty a) => a -> Text
 prettyText = Text.renderStrict . layoutPretty defaultLayoutOptions . pretty
 

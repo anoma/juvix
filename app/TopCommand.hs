@@ -1,6 +1,6 @@
 module TopCommand where
 
-import Commands.Base
+import Commands.Base hiding (Format)
 import Commands.Compile qualified as Compile
 import Commands.Dev qualified as Dev
 import Commands.Doctor qualified as Doctor
@@ -8,6 +8,7 @@ import Commands.Eval qualified as Eval
 import Commands.Html qualified as Html
 import Commands.Init qualified as Init
 import Commands.Repl qualified as Repl
+import Commands.Format qualified as Format
 import Commands.Typecheck qualified as Typecheck
 import Juvix.Extra.Version
 import System.Environment (getProgName)
@@ -34,3 +35,4 @@ runTopCommand = \case
   Eval opts -> Eval.runCommand opts
   Html opts -> Html.runCommand opts
   JuvixRepl opts -> Repl.runCommand opts
+  JuvixFormat opts -> Format.runCommand opts

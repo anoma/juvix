@@ -7,6 +7,7 @@ import Commands.Eval.Options
 import Commands.Html.Options
 import Commands.Repl.Options
 import Commands.Typecheck.Options
+import Commands.Format.Options
 import CommonOptions hiding (Doc)
 import Data.Generics.Uniplate.Data
 import GlobalOptions
@@ -24,6 +25,7 @@ data TopCommand
   | Doctor DoctorOptions
   | Init
   | JuvixRepl ReplOptions
+  | JuvixFormat FormatOptions
   deriving stock (Data)
 
 topCommandInputFile :: TopCommand -> Maybe (SomeBase File)
@@ -69,7 +71,8 @@ parseUtility =
           commandDoctor,
           commandInit,
           commandDev,
-          commandRepl
+          commandRepl,
+          commandFormat
         ]
     )
   where
@@ -97,6 +100,13 @@ parseUtility =
             (JuvixRepl <$> parseRepl)
             (progDesc "Run the Juvix REPL")
         )
+
+    commandFormat :: Mod CommandFields TopCommand
+    commandFormat =
+      command "format" $
+        info
+          (JuvixFormat <$> parseFormat)
+          (progDesc "Format a Juvix file or project")
 
 commandCheck :: Mod CommandFields TopCommand
 commandCheck =
