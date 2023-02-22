@@ -77,8 +77,8 @@ Juvix standard library's website]]. For further details, please refer to
 
 ** Community
 
-Join us on our [[https://discord.gg/waYhQ2Qr][Discord server]]
+Join us on our [[https://discord.gg/PfaaFVErHt][Discord server]]!
 
-This project is part of a bigger effort called [[https://anoma.net/][Anoma]].
-Anoma is a suite of protocols and mechanisms for self-contained, self-sovereign coordination.
+Juvix is part of a bigger effort called [[https://anoma.net/][Anoma]].
+Anoma is an intent-centric, privacy-preserving protocol for decentralized counterparty discovery, solving, and multi-chain atomic settlement.
 Join the [[https://anoma.net/community][Anoma project]].
