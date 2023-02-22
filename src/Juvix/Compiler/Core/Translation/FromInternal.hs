@@ -328,6 +328,8 @@ mkBody ty clauses
       let values = mkVar Info.empty <$> vs
           argtys = take nPatterns (typeArgs ty)
           values' = map fst $ filter (isInductive . snd) (zipExact values argtys)
+          argtys' = filter isInductive argtys
+          returnType = mkPis' (drop nPatterns (typeArgs ty)) (typeTarget ty)
       case values' of
         [] -> do
           vars <- asks (^. indexTableVars)
@@ -346,7 +348,7 @@ mkBody ty clauses
         _ : _ -> do
           varsNum <- asks (^. indexTableVarsNum)
           ms <- underBinders nPatterns (mapM (uncurry (goClause varsNum)) clauses)
-          let match = mkMatch' (fromList values') (toList ms)
+          let match = mkMatch' (fromList argtys') returnType (fromList values') (toList ms)
           return $ foldr mkLambda' match argtys
   where
     -- Assumption: All clauses have the same number of patterns
@@ -379,7 +381,7 @@ goCase c = do
   case ty of
     NTyp {} -> do
       branches <- toList <$> mapM (goCaseBranch ty) (c ^. Internal.caseBranches)
-      return (mkMatch' (pure expr) branches)
+      return (mkMatch' (NonEmpty.singleton ty) mkDynamic' (pure expr) branches) -- TODO: remove mkDynamic' as soon as we have the type information in Internal
     _ ->
       case c ^. Internal.caseBranches of
         Internal.CaseBranch {..} :| _ ->
@@ -606,7 +608,7 @@ fromPatternArg pa = case pa ^. Internal.patternArgName of
       Internal.PatternConstructorApp c -> do
         (indParams, _) <- InternalTyped.lookupConstructorArgTypes n
         patternArgs <- mapM fromPatternArg params
-        let indArgs = replicate (length indParams) wildcard -- TODO: wrong - need to preserve type
+        let indArgs = replicate (length indParams) wildcard
             args = indArgs ++ patternArgs
         m <- getIdent identIndex
         case m of
@@ -627,7 +629,7 @@ fromPatternArg pa = case pa ^. Internal.patternArgName of
           txt = c ^. Internal.constrAppConstructor . Internal.nameText
       where
         wildcard :: Pattern
-        wildcard = PatWildcard (PatternWildcard Info.empty)
+        wildcard = PatWildcard (PatternWildcard Info.empty mkSmallUniv)
 
 getPatternArgVars :: Internal.PatternArg -> [Name]
 getPatternArgVars pa = case pa ^. Internal.patternArgName of
