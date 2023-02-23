@@ -58,6 +58,16 @@ objectRightCase Case {..} =
         _homCodomain = _caseCodomainType
       }
 
+mkHoms :: [Object] -> Object -> Object
+mkHoms argtys codty = case argtys of
+  [] -> codty
+  ty : tys ->
+    ObjectHom $
+      Hom
+        { _homDomain = ty,
+          _homCodomain = (mkHoms tys codty)
+        }
+
 objectBinop :: Binop -> Object
 objectBinop op = case op ^. binopOpcode of
   OpAdd -> ObjectInteger

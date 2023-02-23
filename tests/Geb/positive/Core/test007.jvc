@@ -1,0 +1,12 @@
+-- single-constructor inductive types
+
+type Box2 {
+    box2 : int -> int -> Box2;
+};
+
+type Box {
+    box : Box2 -> Box;
+};
+
+(\(b : Box) case b of { box u := case u of { box2 x y := x + y } }) (box (box2 3 5))
+-- result: 8

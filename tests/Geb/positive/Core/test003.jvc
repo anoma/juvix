@@ -1,14 +1,13 @@
+-- inductive types
 
 type enum {
   opt0 : enum;
   opt1 : bool -> enum;
-  opt2 : bool -> (bool -> bool) -> enum;
-  opt3 : bool -> (bool -> bool -> bool) -> bool -> enum;
+  opt2 : bool -> bool -> enum;
 };
 
 (\(e : enum) case e of {
   opt0 := false;
   opt1 b := b;
-  opt2 b f := f b;
-  opt3 b1 f b2 := f b1 b2;
-}) (opt3 true (\(x : bool) \(y : bool) if y then false else x) false)
+  opt2 b c := if b then b else c;
+}) (opt2 false true)
