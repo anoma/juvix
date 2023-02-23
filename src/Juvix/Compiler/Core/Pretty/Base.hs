@@ -146,6 +146,22 @@ instance (PrettyCode a) => PrettyCode (Binder' a) where
     ty' <- ppCode ty
     return (parens (pretty name' <+> kwColon <+> ty'))
 
+ppWithType :: Member (Reader Options) r => Doc Ann -> Type -> Sem r (Doc Ann)
+ppWithType d = \case
+  NDyn {} ->
+    return d
+  ty -> do
+    ty' <- ppCode ty
+    return $ parens (d <+> kwColon <+> ty')
+
+ppTypeAnnot :: Member (Reader Options) r => Type -> Sem r (Doc Ann)
+ppTypeAnnot = \case
+  NDyn {} ->
+    return mempty
+  ty -> do
+    ty' <- ppCode ty
+    return $ mempty <+> kwColon <+> parens ty'
+
 ppCodeLet' :: (PrettyCode a, Member (Reader Options) r) => Text -> Maybe (Doc Ann) -> Let' i a ty -> Sem r (Doc Ann)
 ppCodeLet' name mty lt = do
   n' <- ppName KNameConstructor name
@@ -200,10 +216,11 @@ instance PrettyCode PatternBinder where
   ppCode PatternBinder {..} = do
     n <- ppName KNameLocal (_patternBinder ^. binderName)
     case _patternBinderPattern of
-      PatWildcard {} -> return n
+      PatWildcard {} -> do
+        ppWithType n (_patternBinder ^. binderType)
       _ -> do
         pat <- ppRightExpression appFixity _patternBinderPattern
-        return $ n <> kwAt <> pat
+        ppWithType (n <> kwAt <> pat) (_patternBinder ^. binderType)
 
 instance PrettyCode PatternConstr where
   ppCode PatternConstr {..} = do
@@ -290,9 +307,11 @@ instance PrettyCode Node where
           branchBodies = map (^. matchBranchBody) _matchBranches
       pats <- mapM ppPatterns branchPatterns
       vs <- mapM ppCode _matchValues
+      vs' <- zipWithM ppWithType (toList vs) (toList _matchValueTypes)
       bs <- sequence $ zipWithExact (\ps br -> ppCode br >>= \br' -> return $ ps <+> kwMapsto <+> br') pats branchBodies
       let bss = bracesIndent $ align $ concatWith (\a b -> a <> kwSemicolon <> line <> b) bs
-      return $ kwMatch <+> hsep (punctuate comma (toList vs)) <+> kwWith <+> bss
+      rty <- ppTypeAnnot _matchReturnType
+      return $ kwMatch <+> hsep (punctuate comma vs') <+> kwWith <> rty <+> bss
     NPi Pi {..} ->
       let piType = _piBinder ^. binderType
        in case _piBinder ^. binderName of
