@@ -92,22 +92,36 @@ cosmos f = ufoldA reassemble f
 -- if fv = x1, x2, .., xn
 -- the result is of the form λx1 λx2 .. λ xn b
 captureFreeVars :: [(Index, Binder)] -> Node -> Node
-captureFreeVars fv
-  | n == 0 = id
-  | otherwise = mkLambdasB infos . mapFreeVars
+captureFreeVars freevars = goBinders freevars . mapFreeVars
   where
-    (indices, infos) = unzip fv
-    n = length fv
-    s :: HashMap Index Index
-    s = HashMap.fromList (zip (reverse indices) [0 ..])
     mapFreeVars :: Node -> Node
     mapFreeVars = dmapN go
       where
+        s :: HashMap Index Index
+        s = HashMap.fromList (zip (reverse (map fst freevars)) [0 ..])
         go :: Index -> Node -> Node
         go k = \case
           NVar (Var i u)
             | Just v <- s ^. at (u - k) -> NVar (Var i (v + k))
           m -> m
+
+    goBinders :: [(Index, Binder)] -> Node -> Node
+    goBinders fv = case unsnoc fv of
+      Nothing -> id
+      Just (fvs , (idx, bin)) -> goBinders fvs . mkLambdaB (mapBinder idx bin)
+      where
+        indices = map fst fv
+        mapBinder :: Index -> Binder -> Binder
+        mapBinder binderIndex = over binderType (dmapN go)
+          where
+            go :: Index -> Node -> Node
+            go k = \case
+              NVar u
+                | u ^. varIndex >= k ->
+                    let uCtx = u ^. varIndex + binderIndex + 1
+                        u' = fromJust (elemIndex uCtx indices)
+                     in NVar (set varIndex u' u)
+              m -> m
 
 -- captures all free variables of a node. It also returns the list of captured
 -- variables in left-to-right order: if snd is of the form λxλy... then fst is
@@ -120,11 +134,11 @@ captureFreeVarsCtx bl n =
 freeVarsCtx' :: BinderList Binder -> Node -> [Var]
 freeVarsCtx' bl = map fst . freeVarsCtx bl
 
--- | the output list does not contain repeated elements and is sorted by *decreasing* variable index.
+-- | The output list does not contain repeated elements and is sorted by *decreasing* variable index.
 -- The indices are relative to the given binder list
 freeVarsCtx :: BinderList Binder -> Node -> [(Var, Binder)]
-freeVarsCtx ctx n =
-  BL.lookupsSortedRev ctx . run . fmap fst . runOutputList $ go (freeVarsSorted n)
+freeVarsCtx ctx =
+  BL.lookupsSortedRev ctx . run . fmap fst . runOutputList . go . freeVarsSorted
   where
     go ::
       -- set of free variables relative to the original ctx

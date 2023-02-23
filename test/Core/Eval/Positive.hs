@@ -10,6 +10,8 @@ data PosTest = PosTest
     _expectedFile :: Path Rel File
   }
 
+makeLenses ''PosTest
+
 root :: Path Abs Dir
 root = relToProject $(mkRelDir "tests/Core/positive")
 
