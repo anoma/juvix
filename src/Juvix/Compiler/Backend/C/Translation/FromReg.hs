@@ -4,7 +4,6 @@ import Data.HashMap.Strict qualified as HashMap
 import Data.List qualified as List
 import Juvix.Compiler.Backend
 import Juvix.Compiler.Backend.C.Data.CBuilder
-import Juvix.Compiler.Backend.C.Data.Types
 import Juvix.Compiler.Backend.C.Extra.Serialization
 import Juvix.Compiler.Backend.C.Language as C
 import Juvix.Compiler.Backend.C.Translation.FromReg.Base
@@ -12,6 +11,10 @@ import Juvix.Compiler.Reg.Data.InfoTable qualified as Reg
 import Juvix.Compiler.Reg.Extra qualified as Reg
 import Juvix.Compiler.Reg.Language qualified as Reg
 import Juvix.Prelude
+
+newtype MiniCResult = MiniCResult
+  { _resultCCode :: Text
+  }
 
 fromReg :: Limits -> Reg.InfoTable -> MiniCResult
 fromReg lims tab =
