@@ -314,6 +314,32 @@ getPatternInfos = reverse . go []
       PatBinder PatternBinder {..} -> go acc _patternBinderPattern
       PatWildcard PatternWildcard {..} -> _patternWildcardInfo : acc
 
+mapPatternBinders :: (Int -> Binder -> Binder) -> Pattern -> Pattern
+mapPatternBinders f = snd . go 0
+  where
+    go :: Int -> Pattern -> (Int, Pattern)
+    go k = \case
+      PatConstr p ->
+        let (k', rargs') =
+              foldl'
+                ( \(m, acc) pat ->
+                    let (m', pat') = go m pat
+                     in (m', pat' : acc)
+                )
+                (k, [])
+                (p ^. patternConstrArgs)
+         in (k', PatConstr p {_patternConstrArgs = reverse rargs'})
+      PatBinder p ->
+        let (k', pat') = go (k + 1) (p ^. patternBinderPattern)
+         in ( k',
+              PatBinder
+                p
+                  { _patternBinder = f k (p ^. patternBinder),
+                    _patternBinderPattern = pat'
+                  }
+            )
+      PatWildcard p -> (k, PatWildcard p)
+
 {------------------------------------------------------------------------}
 {- generic Node destruction -}
 
@@ -571,6 +597,7 @@ destruct = \case
         allNodes =
           noBinders rty
             : map noBinders (toList vtys)
+            ++ map noBinders (toList vs)
             ++ concat
               [ b
                   : map (noBinders . (^. binderType)) bis
@@ -611,7 +638,7 @@ destruct = \case
      in NodeDetails
           { _nodeInfo = i,
             _nodeSubinfos = branchInfos,
-            _nodeChildren = map noBinders (toList vs) ++ allNodes,
+            _nodeChildren = allNodes,
             _nodeReassemble = someChildrenI $ \i' is' chs' ->
               let mkBranch :: MatchBranch -> Sem '[Input (Maybe NodeChild), Input (Maybe Info)] MatchBranch
                   mkBranch br = do
@@ -629,10 +656,9 @@ destruct = \case
                   valueTypes' :: NonEmpty NodeChild
                   returnType' :: NodeChild
                   branchesChildren' :: [NodeChild]
-                  (values', chs'') = first nonEmpty' (splitAtExact numVals (toList chs'))
-                  (valueTypes', chs''') = first nonEmpty' (splitAtExact numVals chs'')
-                  returnType' = head (NonEmpty.fromList chs''')
-                  branchesChildren' = tail chs'''
+                  returnType' = head chs'
+                  (valueTypes', chs'') = first nonEmpty' (splitAtExact numVals (NonEmpty.tail chs'))
+                  (values', branchesChildren') = first nonEmpty' (splitAtExact numVals chs'')
                   branches' :: [MatchBranch]
                   branches' =
                     run $

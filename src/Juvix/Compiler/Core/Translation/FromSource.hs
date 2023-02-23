@@ -241,6 +241,15 @@ bracedExpr ::
   ParsecS r Node
 bracedExpr varsNum vars = braces (expr varsNum vars) <|> expr varsNum vars
 
+typeAnnot ::
+  (Member InfoTableBuilder r) =>
+  Index ->
+  HashMap Text Level ->
+  ParsecS r Node
+typeAnnot varsNum vars = do
+  kw kwColon
+  expr varsNum vars
+
 typeExpr ::
   (Member InfoTableBuilder r) =>
   Index ->
@@ -817,7 +826,7 @@ exprMatch varsNum vars = do
   kw kwMatch
   vals <- P.sepBy (exprMatchValue varsNum vars) (kw kwComma)
   kw kwWith
-  mty <- optional (kw kwColon >> bracedExpr varsNum vars)
+  mty <- optional (typeAnnot varsNum vars)
   let rty = fromMaybe mkDynamic' mty
   braces (exprMatch' vals rty varsNum vars)
     <|> exprMatch' vals rty varsNum vars
@@ -827,9 +836,16 @@ exprMatchValue ::
   Index ->
   HashMap Text Level ->
   ParsecS r (Node, Type)
-exprMatchValue varsNum vars = do
-  val <- bracedExpr varsNum vars
-  mty <- optional (kw kwColon >> bracedExpr varsNum vars)
+exprMatchValue varsNum vars = parens (exprMatchValue' varsNum vars) <|> exprMatchValue' varsNum vars
+
+exprMatchValue' ::
+  (Member InfoTableBuilder r) =>
+  Index ->
+  HashMap Text Level ->
+  ParsecS r (Node, Type)
+exprMatchValue' varsNum vars = do
+  val <- expr varsNum vars
+  mty <- optional (kw kwColon >> expr varsNum vars)
   return (val, fromMaybe mkDynamic' mty)
 
 exprMatch' ::
@@ -853,7 +869,7 @@ matchBranch ::
   ParsecS r MatchBranch
 matchBranch patsNum varsNum vars = do
   off <- P.getOffset
-  pats <- P.sepBy branchPattern (kw kwComma)
+  pats <- P.sepBy (branchPattern varsNum vars) (kw kwComma)
   kw kwAssign
   unless (length pats == patsNum) $
     parseFailure off "wrong number of patterns"
@@ -866,16 +882,30 @@ matchBranch patsNum varsNum vars = do
           )
           (vars, varsNum)
           (map (^. binderName) pis)
+      pats' :: [Pattern]
+      pats' =
+        reverse $
+          snd $
+            foldl'
+              ( \(k, acc) pat ->
+                  ( k + length (getPatternBinders pat),
+                    mapPatternBinders (over binderType . shift . (+ k)) pat : acc
+                  )
+              )
+              (0, [])
+              pats
   br <- bracedExpr varsNum' vars'
-  return $ MatchBranch Info.empty (fromList pats) br
+  return $ MatchBranch Info.empty (fromList pats') br
 
 branchPattern ::
   (Member InfoTableBuilder r) =>
+  Index ->
+  HashMap Text Level ->
   ParsecS r Pattern
-branchPattern =
-  wildcardPattern
-    <|> binderOrConstrPattern True
-    <|> parens branchPattern
+branchPattern varsNum vars =
+  parens (branchPattern varsNum vars)
+    <|> wildcardPattern
+    <|> binderOrConstrPattern True varsNum vars
 
 wildcardPattern :: ParsecS r Pattern
 wildcardPattern = do
@@ -885,14 +915,16 @@ wildcardPattern = do
 binderOrConstrPattern ::
   (Member InfoTableBuilder r) =>
   Bool ->
+  Index ->
+  HashMap Text Level ->
   ParsecS r Pattern
-binderOrConstrPattern parseArgs = do
+binderOrConstrPattern parseArgs varsNum vars = do
   off <- P.getOffset
   (txt, i) <- identifierL
   r <- lift (getIdent txt)
   case r of
     Just (IdentConstr tag) -> do
-      ps <- if parseArgs then P.many branchPattern else return []
+      ps <- if parseArgs then P.many (branchPattern varsNum vars) else return []
       ci <- lift $ getConstructorInfo tag
       when
         (ci ^. constructorArgsNum /= length ps)
@@ -900,19 +932,23 @@ binderOrConstrPattern parseArgs = do
       let info = setInfoName (ci ^. constructorName) Info.empty
       return $ PatConstr (PatternConstr info tag ps)
     _ -> do
-      mp <- optional binderPattern
-      let pat = fromMaybe (PatWildcard (PatternWildcard Info.empty mkDynamic')) mp
-          binder = Binder txt (Just i) mkDynamic'
+      mp <- optional (binderPattern varsNum vars)
+      mty <- optional (kw kwColon >> expr varsNum vars)
+      let ty = fromMaybe mkDynamic' mty
+          pat = fromMaybe (PatWildcard (PatternWildcard Info.empty ty)) mp
+          binder = Binder txt (Just i) ty
       return $ PatBinder (PatternBinder binder pat)
 
 binderPattern ::
   (Member InfoTableBuilder r) =>
+  Index ->
+  HashMap Text Level ->
   ParsecS r Pattern
-binderPattern = do
+binderPattern varsNum vars = do
   symbolAt
-  wildcardPattern
-    <|> binderOrConstrPattern False
-    <|> parens branchPattern
+  parens (branchPattern varsNum vars)
+    <|> wildcardPattern
+    <|> binderOrConstrPattern False varsNum vars
 
 exprNamed ::
   (Member InfoTableBuilder r) =>
