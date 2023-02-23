@@ -14,7 +14,7 @@ where
 import Juvix.Compiler.Abstract.Data.Name
 import Juvix.Compiler.Concrete.Data.Builtins
 import Juvix.Compiler.Concrete.Data.Literal
-import Juvix.Compiler.Concrete.Language (BackendItem, ForeignBlock (..), symbolLoc)
+import Juvix.Compiler.Concrete.Language (symbolLoc)
 import Juvix.Data.Hole
 import Juvix.Data.IsImplicit
 import Juvix.Data.Universe
@@ -43,7 +43,6 @@ data Statement
   = StatementInductive InductiveDef
   | StatementFunction FunctionDef
   | StatementImport TopModule
-  | StatementForeign ForeignBlock
   | StatementLocalModule LocalModule
   | StatementAxiom AxiomDef
   deriving stock (Eq, Show)

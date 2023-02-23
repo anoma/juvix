@@ -1,8 +1,0 @@
-module Input;
-
-open import Stdlib.Prelude;
-
-fun : Nat → Nat;
-fun _ := 3;
-
-end;

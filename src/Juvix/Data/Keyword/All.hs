@@ -34,9 +34,6 @@ kwColonOne = asciiKw Str.colonOne
 kwColonZero :: Keyword
 kwColonZero = asciiKw Str.colonZero
 
-kwCompile :: Keyword
-kwCompile = asciiKw Str.compile
-
 kwEnd :: Keyword
 kwEnd = asciiKw Str.end
 
@@ -45,9 +42,6 @@ kwHiding = asciiKw Str.hiding
 
 kwImport :: Keyword
 kwImport = asciiKw Str.import_
-
-kwForeign :: Keyword
-kwForeign = asciiKw Str.foreign_
 
 kwIn :: Keyword
 kwIn = asciiKw Str.in_

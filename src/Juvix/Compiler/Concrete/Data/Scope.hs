@@ -36,8 +36,7 @@ data Scope = Scope
     -- should map to itself. This is needed because we may query it with a
     -- symbol with a different location but we may want the location of the
     -- original symbol
-    _scopeLocalSymbols :: HashMap Symbol S.Symbol,
-    _scopeCompilationRules :: HashMap Symbol CompileInfo
+    _scopeLocalSymbols :: HashMap Symbol S.Symbol
   }
   deriving stock (Show)
 
@@ -87,6 +86,5 @@ emptyScope absPath =
     { _scopePath = absPath,
       _scopeSymbols = mempty,
       _scopeTopModules = mempty,
-      _scopeLocalSymbols = mempty,
-      _scopeCompilationRules = mempty
+      _scopeLocalSymbols = mempty
     }

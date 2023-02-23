@@ -174,10 +174,6 @@ tests =
       $(mkRelDir ".")
       $(mkRelFile "Axiom.juvix"),
     PosTest
-      "Foreign block parsing"
-      $(mkRelDir ".")
-      $(mkRelFile "Foreign.juvix"),
-    PosTest
       "Multiple modules non-ambiguous symbol - same file"
       $(mkRelDir "QualifiedSymbol")
       $(mkRelFile "M.juvix"),

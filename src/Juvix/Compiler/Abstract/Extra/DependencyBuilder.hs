@@ -88,7 +88,6 @@ goStatement modName = \case
     checkStartNode (ax ^. axiomName)
     addEdge (ax ^. axiomName) modName
     goExpression (ax ^. axiomName) (ax ^. axiomType)
-  StatementForeign {} -> return ()
   StatementFunction f -> goTopFunctionDef modName f
   StatementImport m -> guardNotVisited (m ^. moduleName) (goModule m)
   StatementLocalModule m -> goLocalModule modName m

@@ -1,8 +1,0 @@
-plusOne one: 2
-plusOneThenTwo: 3
-plusOneThenX three: 4
-plusOneTwo: 3
-plusX three three: 6
-plusXIgnore one three three: 6
-plusXIgnore2 one one three three: 6
-plusXIgnore22 one one three two: 5

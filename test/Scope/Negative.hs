@@ -172,32 +172,11 @@ scoperErrorTests =
         ErrAmbiguousSym {} -> Nothing
         _ -> wrongError,
     NegTest
-      "Wrong location of a compile block"
-      $(mkRelDir "CompileBlocks")
-      $(mkRelFile "WrongLocationCompileBlock.juvix")
-      $ \case
-        ErrWrongLocationCompileBlock {} -> Nothing
-        _ -> wrongError,
-    NegTest
       "Implicit argument on the left of an application"
       $(mkRelDir ".")
       $(mkRelFile "AppLeftImplicit.juvix")
       $ \case
         ErrAppLeftImplicit {} -> Nothing
-        _ -> wrongError,
-    NegTest
-      "Multiple compile blocks for the same name"
-      $(mkRelDir "CompileBlocks")
-      $(mkRelFile "MultipleCompileBlockSameName.juvix")
-      $ \case
-        ErrMultipleCompileBlockSameName {} -> Nothing
-        _ -> wrongError,
-    NegTest
-      "Multiple rules for a backend inside a compile block"
-      $(mkRelDir "CompileBlocks")
-      $(mkRelFile "MultipleCompileRuleSameBackend.juvix")
-      $ \case
-        ErrMultipleCompileRuleSameBackend {} -> Nothing
         _ -> wrongError,
     NegTest
       "issue 230"
@@ -240,13 +219,6 @@ scoperErrorTests =
       $(mkRelFile "ConstructorExpectedLeftApplication.juvix")
       $ \case
         ErrConstructorExpectedLeftApplication {} -> Nothing
-        _ -> wrongError,
-    NegTest
-      "Compile block for a unsupported kind of expression"
-      $(mkRelDir "CompileBlocks")
-      $(mkRelFile "WrongKindExpressionCompileBlock.juvix")
-      $ \case
-        ErrWrongKindExpressionCompileBlock {} -> Nothing
         _ -> wrongError,
     NegTest
       "A type parameter name occurs twice when declaring an inductive type"

@@ -13,7 +13,6 @@ data InfoTableBuilder m a where
   RegisterFunction :: TypeSignature 'Scoped -> InfoTableBuilder m ()
   RegisterFunctionClause :: FunctionClause 'Scoped -> InfoTableBuilder m ()
   RegisterName :: (HasLoc c) => S.Name' c -> InfoTableBuilder m ()
-  RegisterCompile :: Compile 'Scoped -> InfoTableBuilder m ()
   RegisterModule :: Module 'Scoped 'ModuleTop -> InfoTableBuilder m ()
 
 makeSem ''InfoTableBuilder
@@ -42,12 +41,6 @@ registerAxiom' ::
   Sem r (AxiomDef 'Scoped)
 registerAxiom' a = registerAxiom a $> a
 
-registerCompile' ::
-  (Member InfoTableBuilder r) =>
-  Compile 'Scoped ->
-  Sem r (Compile 'Scoped)
-registerCompile' c = registerCompile c $> c
-
 registerFunctionClause' ::
   (Member InfoTableBuilder r) =>
   FunctionClause 'Scoped ->
@@ -60,14 +53,6 @@ toState = reinterpret $ \case
     let ref = AxiomRef' (S.unqualifiedSymbol (d ^. axiomName))
         info = AxiomInfo {_axiomInfoType = d ^. axiomType}
      in modify (over infoAxioms (HashMap.insert ref info))
-  RegisterCompile c ->
-    let symb = c ^. compileName
-        info =
-          CompileInfo
-            { _compileInfoBackendItems = c ^. compileBackendItems,
-              _compileInfoDefined = getLoc symb
-            }
-     in modify (over infoCompilationRules (HashMap.insert symb info))
   RegisterConstructor c ->
     let ref = ConstructorRef' (S.unqualifiedSymbol (c ^. constructorName))
         info = ConstructorInfo {_constructorInfoType = c ^. constructorType}

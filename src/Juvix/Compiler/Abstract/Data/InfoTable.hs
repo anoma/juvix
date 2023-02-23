@@ -1,7 +1,6 @@
 module Juvix.Compiler.Abstract.Data.InfoTable where
 
 import Juvix.Compiler.Abstract.Language
-import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Prelude
 
 newtype FunctionInfo = FunctionInfo
@@ -26,8 +25,7 @@ data InfoTable = InfoTable
   { _infoConstructors :: HashMap ConstructorRef ConstructorInfo,
     _infoAxioms :: HashMap AxiomRef AxiomInfo,
     _infoInductives :: HashMap InductiveRef InductiveInfo,
-    _infoFunctions :: HashMap FunctionRef FunctionInfo,
-    _infoCompilationRules :: HashMap S.Symbol [BackendItem]
+    _infoFunctions :: HashMap FunctionRef FunctionInfo
   }
 
 emptyInfoTable :: InfoTable
@@ -36,8 +34,7 @@ emptyInfoTable =
     { _infoConstructors = mempty,
       _infoAxioms = mempty,
       _infoInductives = mempty,
-      _infoFunctions = mempty,
-      _infoCompilationRules = mempty
+      _infoFunctions = mempty
     }
 
 makeLenses ''InfoTable

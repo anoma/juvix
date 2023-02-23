@@ -148,7 +148,6 @@ goStatement ::
   Sem r (Maybe Statement)
 goStatement = \case
   Abstract.StatementAxiom d -> Just . StatementAxiom <$> goAxiomDef d
-  Abstract.StatementForeign f -> return (Just (StatementForeign f))
   Abstract.StatementFunction {} -> return Nothing
   Abstract.StatementImport i -> fmap StatementInclude <$> goImport i
   Abstract.StatementLocalModule {} -> unsupported "local modules"

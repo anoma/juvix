@@ -74,12 +74,6 @@ kwArrow = keyword Str.toUnicode
 kwMapsto :: Doc Ann
 kwMapsto = keyword Str.mapstoUnicode
 
-kwForeign :: Doc Ann
-kwForeign = keyword Str.foreign_
-
-kwCompile :: Doc Ann
-kwCompile = keyword Str.compile
-
 kwC :: Doc Ann
 kwC = keyword Str.cBackend
 

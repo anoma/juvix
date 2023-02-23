@@ -39,7 +39,6 @@ newtype ModuleBody = ModuleBody
 data Statement
   = StatementInductive InductiveDef
   | StatementFunction MutualBlock
-  | StatementForeign ForeignBlock
   | StatementAxiom AxiomDef
   | StatementInclude Include
   deriving stock (Data)

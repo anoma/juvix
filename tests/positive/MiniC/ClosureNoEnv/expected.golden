@@ -1,4 +1,0 @@
-plus 1 2: 3
-suc one: 2
-plus-nat 1 2: 3
-nest-apply apply-nat suc one: 2

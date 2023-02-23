@@ -815,100 +815,6 @@ checkAxiomDef AxiomDef {..} = do
   axiomDoc' <- withLocalScope (mapM checkJudoc _axiomDoc)
   registerAxiom' AxiomDef {_axiomName = axiomName', _axiomType = axiomType', _axiomDoc = axiomDoc', ..}
 
-checkCompile ::
-  (Members '[InfoTableBuilder, Error ScoperError, State Scope, State ScoperState] r) =>
-  Compile 'Parsed ->
-  Sem r (Compile 'Scoped)
-checkCompile c@Compile {..} = do
-  scopedSym :: S.Symbol <- checkCompileName c
-  let sym :: Symbol = c ^. compileName
-  rules <- gets (^. scopeCompilationRules)
-  if
-      | Just info <- HashMap.lookup sym rules ->
-          throw
-            ( ErrMultipleCompileBlockSameName
-                ( MultipleCompileBlockSameName
-                    { _multipleCompileBlockFirstDefined = info ^. compileInfoDefined,
-                      _multipleCompileBlockSym = sym
-                    }
-                )
-            )
-      | otherwise -> do
-          void (checkBackendItems sym _compileBackendItems mempty)
-          registerName (S.unqualifiedSymbol scopedSym)
-          modify
-            ( over
-                scopeCompilationRules
-                ( HashMap.insert
-                    _compileName
-                    ( CompileInfo
-                        { _compileInfoBackendItems = _compileBackendItems,
-                          _compileInfoDefined = getLoc scopedSym
-                        }
-                    )
-                )
-            )
-          registerCompile' $ Compile {_compileName = scopedSym, ..}
-
-checkBackendItems ::
-  (Members '[Error ScoperError] r) =>
-  Symbol ->
-  [BackendItem] ->
-  HashSet Backend ->
-  Sem r (HashSet Backend)
-checkBackendItems _ [] bset = return bset
-checkBackendItems sym (b : bs) bset =
-  let cBackend = b ^. backendItemBackend . withLocParam
-   in if
-          | HashSet.member cBackend bset ->
-              throw
-                ( ErrMultipleCompileRuleSameBackend
-                    (MultipleCompileRuleSameBackend b sym)
-                )
-          | otherwise -> checkBackendItems sym bs (HashSet.insert cBackend bset)
-
-checkCompileName ::
-  (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder] r) =>
-  Compile 'Parsed ->
-  Sem r S.Symbol
-checkCompileName Compile {..} = do
-  let sym :: Symbol = _compileName
-      name :: Name = NameUnqualified sym
-  scope <- get
-  entries <- lookupQualifiedSymbol ([], sym)
-  case filter S.canBeCompiled entries of
-    [] -> case entries of
-      [] ->
-        throw
-          ( ErrSymNotInScope
-              ( NotInScope
-                  { _notInScopeSymbol = sym,
-                    _notInScopeScope = scope
-                  }
-              )
-          )
-      (e : _) ->
-        throw
-          ( ErrWrongKindExpressionCompileBlock
-              ( WrongKindExpressionCompileBlock
-                  { _wrongKindExpressionCompileBlockSym = sym,
-                    _wrongKindExpressionCompileBlockEntry = e
-                  }
-              )
-          )
-    [x] -> do
-      actualPath <- gets (^. scopePath)
-      let scoped = entryToSymbol x sym
-          expectedPath = scoped ^. S.nameDefinedIn
-      if
-          | actualPath == expectedPath -> return scoped
-          | otherwise ->
-              throw
-                ( ErrWrongLocationCompileBlock
-                    (WrongLocationCompileBlock expectedPath name)
-                )
-    xs -> throw (ErrAmbiguousSym (AmbiguousSym name xs))
-
 entryToSymbol :: SymbolEntry -> Symbol -> S.Symbol
 entryToSymbol sentry csym = set S.nameConcrete csym (symbolEntryToSName sentry)
 
@@ -1241,8 +1147,6 @@ checkStatement s = topBindings $ case s of
   StatementOpenModule open -> StatementOpenModule <$> checkOpenModule open
   StatementFunctionClause clause -> StatementFunctionClause <$> checkFunctionClause clause
   StatementAxiom ax -> StatementAxiom <$> checkAxiomDef ax
-  StatementForeign d -> return (StatementForeign d)
-  StatementCompile c -> StatementCompile <$> checkCompile c
 
 -------------------------------------------------------------------------------
 -- Infix Expression

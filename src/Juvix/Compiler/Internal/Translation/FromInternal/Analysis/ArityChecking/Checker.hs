@@ -49,7 +49,6 @@ checkStatement ::
 checkStatement s = case s of
   StatementFunction b -> StatementFunction <$> checkMutualBlock b
   StatementInclude i -> StatementInclude <$> checkInclude i
-  StatementForeign {} -> return s
   StatementInductive d -> StatementInductive <$> checkInductive d
   StatementAxiom a -> StatementAxiom <$> checkAxiom a
 

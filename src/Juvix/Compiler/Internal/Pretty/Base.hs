@@ -113,12 +113,6 @@ instance PrettyCode Lambda where
 instance PrettyCode a => PrettyCode (WithLoc a) where
   ppCode = ppCode . (^. withLocParam)
 
-instance PrettyCode BackendItem where
-  ppCode BackendItem {..} = do
-    backend <- ppCode _backendItemBackend
-    return $
-      backend <+> kwMapsto <+> pretty _backendItemCode
-
 instance PrettyCode FunctionParameter where
   ppCode FunctionParameter {..} = do
     case _paramName of
@@ -200,23 +194,6 @@ instance PrettyCode FunctionClause where
     clauseBody' <- ppCode (c ^. clauseBody)
     return $ nest 2 (funName <+?> clausePatterns' <+> kwAssign <+> clauseBody')
 
-instance PrettyCode Backend where
-  ppCode = \case
-    BackendGhc -> return kwGhc
-    BackendC -> return kwC
-
-instance PrettyCode ForeignBlock where
-  ppCode ForeignBlock {..} = do
-    _foreignBackend' <- ppCode _foreignBackend
-    return $
-      kwForeign
-        <+> _foreignBackend'
-        <+> lbrace
-          <> line
-          <> pretty _foreignCode
-          <> line
-          <> rbrace
-
 instance PrettyCode Include where
   ppCode i = do
     name' <- ppCode (i ^. includeModule . moduleName)
@@ -234,7 +211,6 @@ instance PrettyCode MutualBlock where
 
 instance PrettyCode Statement where
   ppCode = \case
-    StatementForeign f -> ppCode f
     StatementFunction f -> ppCode f
     StatementInductive f -> ppCode f
     StatementAxiom f -> ppCode f

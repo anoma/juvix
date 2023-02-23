@@ -1,6 +1,0 @@
-even 1: false
-even 4: true
-even 9: false
-odd 1: true
-odd 4: false
-odd 9: true

@@ -257,12 +257,6 @@ mapstoUnicode = "↦"
 mapstoAscii :: (IsString s) => s
 mapstoAscii = "->"
 
-foreign_ :: (IsString s) => s
-foreign_ = "foreign"
-
-compile :: (IsString s) => s
-compile = "compile"
-
 comma :: (IsString s) => s
 comma = ","
 
