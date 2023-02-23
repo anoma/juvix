@@ -604,11 +604,11 @@ fromPatternArg pa = case pa ^. Internal.patternArgName of
     fromPattern = \case
       Internal.PatternVariable n -> do
         ty <- getPatternType n
-        return $ PatBinder (PatternBinder (Binder (n ^. nameText) (Just (n ^. nameLoc)) ty) wildcard)
+        return $ PatBinder (PatternBinder (Binder (n ^. nameText) (Just (n ^. nameLoc)) ty) (wildcard ty))
       Internal.PatternConstructorApp c -> do
         (indParams, _) <- InternalTyped.lookupConstructorArgTypes n
         patternArgs <- mapM fromPatternArg params
-        let indArgs = replicate (length indParams) wildcard
+        let indArgs = replicate (length indParams) (wildcard mkSmallUniv)
             args = indArgs ++ patternArgs
         m <- getIdent identIndex
         case m of
@@ -628,8 +628,8 @@ fromPatternArg pa = case pa ^. Internal.patternArgName of
           txt :: Text
           txt = c ^. Internal.constrAppConstructor . Internal.nameText
       where
-        wildcard :: Pattern
-        wildcard = PatWildcard (PatternWildcard Info.empty mkSmallUniv)
+        wildcard :: Type -> Pattern
+        wildcard ty = PatWildcard (PatternWildcard Info.empty ty)
 
 getPatternArgVars :: Internal.PatternArg -> [Name]
 getPatternArgVars pa = case pa ^. Internal.patternArgName of
