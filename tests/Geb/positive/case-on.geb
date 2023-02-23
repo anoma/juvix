@@ -5,13 +5,14 @@
     so1
     so1)
 
-    (right 1) ; left + right
+    (right so1 1) ; left + right
     (lamb     ; left -> codomain
         so1
         (coprod
             so1
             so1)
         (right
+            so1
             unit))
     (lamb     ; right -> codomain
         so1
@@ -19,4 +20,5 @@
             so1
             so1)
         (left
+            so1
             unit)))

@@ -11,12 +11,13 @@
             (lamb
               int
               int 
-              (right 1))
+              (right int 1))
             (lamb
               int
               int 
-              (left 2))
+              (left int 2))
             )
     )
   (left
+    int
     3))

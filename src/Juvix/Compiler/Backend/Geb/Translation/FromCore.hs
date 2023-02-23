@@ -129,8 +129,8 @@ fromCore tab = case tab ^. Core.infoMain of
       Core.NCtr x -> convertConstr x
       Core.NLam x -> convertLambda x
       Core.NLet x -> convertLet x
-      Core.NRec {} -> unsupported -- LetRecs should be lifted out beforehand
       Core.NCase x -> convertCase x
+      Core.NRec {} -> unsupported -- LetRecs should be lifted out beforehand
       Core.NMatch {} -> unsupported -- Pattern matching should be compiled beforehand
       Core.NPi {} -> unsupported
       Core.NUniv {} -> unsupported
@@ -147,14 +147,16 @@ fromCore tab = case tab ^. Core.infoMain of
     convertVar Core.Var {..} = do
       varsNum <- asks (^. envLevel)
       shiftLevels <- asks (^. envShiftLevels)
-      return $ MorphismVar (Var (_varIndex + insertedBinders varsNum shiftLevels _varIndex))
+      let newIdx = _varIndex + insertedBinders varsNum shiftLevels _varIndex
+      return $ MorphismVar Var {_varIndex = newIdx}
 
     convertIdent :: Core.Ident -> Trans Morphism
     convertIdent Core.Ident {..} = do
       varsNum <- asks (^. envLevel)
       shiftLevels <- asks (^. envShiftLevels)
       identMap <- asks (^. envIdentMap)
-      return $ MorphismVar (Var (varsNum + length shiftLevels - fromJust (HashMap.lookup _identSymbol identMap) - 1))
+      let newIdx = varsNum + length shiftLevels - fromJust (HashMap.lookup _identSymbol identMap) - 1
+      return $ MorphismVar Var {_varIndex = newIdx}
 
     convertConstant :: Core.Constant -> Trans Morphism
     convertConstant Core.Constant {..} = case _constantValue of
@@ -176,56 +178,71 @@ fromCore tab = case tab ^. Core.infoMain of
 
     convertBuiltinApp :: Core.BuiltinApp -> Trans Morphism
     convertBuiltinApp Core.BuiltinApp {..} = case _builtinAppOp of
-      Core.OpIntAdd ->
-        convertBinop OpAdd _builtinAppArgs
-      Core.OpIntSub ->
-        convertBinop OpSub _builtinAppArgs
-      Core.OpIntMul ->
-        convertBinop OpMul _builtinAppArgs
-      Core.OpIntDiv ->
-        convertBinop OpDiv _builtinAppArgs
-      Core.OpIntMod ->
-        convertBinop OpMod _builtinAppArgs
-      Core.OpIntLt ->
-        convertBinop OpLt _builtinAppArgs
-      Core.OpIntLe ->
-        case _builtinAppArgs of
-          [arg1, arg2] -> do
-            arg1' <- convertNode arg1
-            arg2' <- convertNode arg2
-            let le =
-                  MorphismLambda
-                    Lambda
-                      { _lambdaVarType = ObjectInteger,
-                        _lambdaBodyType = ObjectHom (Hom ObjectInteger objectBool),
-                        _lambdaBody =
-                          MorphismLambda
-                            Lambda
-                              { _lambdaVarType = ObjectInteger,
-                                _lambdaBodyType = objectBool,
-                                _lambdaBody =
-                                  mkOr
-                                    (MorphismBinop $ Binop OpLt (MorphismVar (Var 1)) (MorphismVar (Var 0)))
-                                    (MorphismBinop $ Binop OpEq (MorphismVar (Var 1)) (MorphismVar (Var 0)))
-                              }
-                      }
-             in return $
-                  MorphismApplication
-                    Application
-                      { _applicationDomainType = ObjectInteger,
-                        _applicationCodomainType = ObjectHom (Hom ObjectInteger objectBool),
-                        _applicationLeft =
-                          MorphismApplication
-                            Application
-                              { _applicationDomainType = ObjectInteger,
-                                _applicationCodomainType = objectBool,
-                                _applicationLeft = le,
-                                _applicationRight = arg2'
-                              },
-                        _applicationRight = arg1'
-                      }
-          _ ->
-            error "wrong builtin application argument number"
+      Core.OpIntAdd -> convertBinop OpAdd _builtinAppArgs
+      Core.OpIntSub -> convertBinop OpSub _builtinAppArgs
+      Core.OpIntMul -> convertBinop OpMul _builtinAppArgs
+      Core.OpIntDiv -> convertBinop OpDiv _builtinAppArgs
+      Core.OpIntMod -> convertBinop OpMod _builtinAppArgs
+      Core.OpIntLt -> convertBinop OpLt _builtinAppArgs
+      Core.OpIntLe -> case _builtinAppArgs of
+        [arg1, arg2] -> do
+          arg1' <- convertNode arg1
+          arg2' <- convertNode arg2
+          let le =
+                MorphismLambda
+                  Lambda
+                    { _lambdaVarType = ObjectInteger,
+                      _lambdaBodyType =
+                        ObjectHom
+                          Hom
+                            { _homDomain = ObjectInteger,
+                              _homCodomain = objectBool
+                            },
+                      _lambdaBody =
+                        MorphismLambda
+                          Lambda
+                            { _lambdaVarType = ObjectInteger,
+                              _lambdaBodyType = objectBool,
+                              _lambdaBody =
+                                mkOr
+                                  ( MorphismBinop
+                                      Binop
+                                        { _binopOpcode = OpLt,
+                                          _binopLeft = MorphismVar Var {_varIndex = 1},
+                                          _binopRight = MorphismVar Var {_varIndex = 0}
+                                        }
+                                  )
+                                  ( MorphismBinop
+                                      Binop
+                                        { _binopOpcode = OpEq,
+                                          _binopLeft = MorphismVar Var {_varIndex = 1},
+                                          _binopRight = MorphismVar Var {_varIndex = 0}
+                                        }
+                                  )
+                            }
+                    }
+           in return $
+                MorphismApplication
+                  Application
+                    { _applicationDomainType = ObjectInteger,
+                      _applicationCodomainType =
+                        ObjectHom
+                          Hom
+                            { _homDomain = ObjectInteger,
+                              _homCodomain = objectBool
+                            },
+                      _applicationLeft =
+                        MorphismApplication
+                          Application
+                            { _applicationDomainType = ObjectInteger,
+                              _applicationCodomainType = objectBool,
+                              _applicationLeft = le,
+                              _applicationRight = arg2'
+                            },
+                      _applicationRight = arg1'
+                    }
+        _ ->
+          error "wrong builtin application argument number"
       Core.OpEq ->
         case _builtinAppArgs of
           arg : _
@@ -237,28 +254,61 @@ fromCore tab = case tab ^. Core.infoMain of
         unsupported
 
     convertBinop :: Opcode -> [Core.Node] -> Trans Morphism
-    convertBinop op args =
-      case args of
-        [arg1, arg2] -> do
-          arg1' <- convertNode arg1
-          arg2' <- convertNode arg2
-          return $ MorphismBinop (Binop op arg1' arg2')
-        _ ->
-          error "wrong builtin application argument number"
+    convertBinop op = \case
+      [arg1, arg2] -> do
+        arg1' <- convertNode arg1
+        arg2' <- convertNode arg2
+        return $
+          MorphismBinop
+            Binop
+              { _binopOpcode = op,
+                _binopLeft = arg1',
+                _binopRight = arg2'
+              }
+      _ ->
+        error "wrong builtin application argument number"
 
     convertConstr :: Core.Constr -> Trans Morphism
     convertConstr Core.Constr {..} = do
       prod <- mkProd
-      return (foldr ($) prod (replicate tagNum MorphismRight))
+      return $ foldr ($) prod (replicate tagNum restPartConstructor)
       where
         ci = fromJust $ HashMap.lookup _constrTag (tab ^. Core.infoConstructors)
         sym = ci ^. Core.constructorInductive
         ctrs = fromJust (HashMap.lookup sym (tab ^. Core.infoInductives)) ^. Core.inductiveConstructors
-        tagNum = fromJust $ elemIndex _constrTag (sort (map (^. Core.constructorTag) ctrs))
+        tagNum =
+          fromJust $
+            elemIndex
+              _constrTag
+              (sort (map (^. Core.constructorTag) ctrs))
+
+        cType = convertType $ ci ^. Core.constructorType
+        (leftType, rightType) = case cType of
+          (ObjectCoproduct (Coproduct {..})) -> (_coproductLeft, _coproductRight)
+          _ -> error $ "wrong constructor type:" <> show cType
+
         mkProd :: Trans Morphism
         mkProd =
-          (if tagNum == length ctrs - 1 then id else MorphismLeft)
+          ( if tagNum == length ctrs - 1
+              then id
+              else
+                ( \c ->
+                    MorphismLeft
+                      LeftInj
+                        { _leftInjRightType = leftType,
+                          _leftInjValue = c
+                        }
+                )
+          )
             <$> (convertProduct _constrArgs)
+
+        restPartConstructor :: Morphism -> Morphism
+        restPartConstructor c =
+          MorphismRight
+            RightInj
+              { _rightInjLeftType = rightType,
+                _rightInjValue = c
+              }
 
     convertProduct :: [Core.Node] -> Trans Morphism
     convertProduct args = do
@@ -285,7 +335,12 @@ fromCore tab = case tab ^. Core.infoMain of
                     _pairLeft = x,
                     _pairRight = y
                   }
-            zty = ObjectProduct (Product xty yty)
+            zty =
+              ObjectProduct
+                Product
+                  { _productLeft = xty,
+                    _productRight = yty
+                  }
 
     convertLet :: Core.Let -> Trans Morphism
     convertLet Core.Let {..} = do
@@ -490,27 +545,24 @@ fromCore tab = case tab ^. Core.infoMain of
                               _lambdaBodyType = accty,
                               _lambdaBody = acc
                             },
-                        ObjectHom (Hom ty accty)
+                        ObjectHom
+                          Hom
+                            { _homDomain = ty,
+                              _homCodomain = accty
+                            }
                       )
                   )
                   (br, codomainType)
 
     convertType :: Core.Type -> Object
     convertType = \case
-      Core.NPi x ->
-        convertPi x
-      Core.NUniv {} ->
-        unsupported -- no polymorphism yet
-      Core.NTyp x ->
-        convertTypeConstr x
-      Core.NPrim x ->
-        convertTypePrim x
-      Core.NDyn {} ->
-        error "incomplete type information (dynamic type encountered)"
-      Core.NLam Core.Lambda {..} ->
-        convertType _lambdaBody
-      _ ->
-        unsupported
+      Core.NPi x -> convertPi x
+      Core.NUniv {} -> unsupported -- no polymorphism yet
+      Core.NTyp x -> convertTypeConstr x
+      Core.NPrim x -> convertTypePrim x
+      Core.NDyn {} -> error "incomplete type information (dynamic type encountered)"
+      Core.NLam Core.Lambda {..} -> convertType _lambdaBody
+      _ -> unsupported
 
     convertPi :: Core.Pi -> Object
     convertPi Core.Pi {..} =
@@ -526,32 +578,44 @@ fromCore tab = case tab ^. Core.infoMain of
     convertTypePrim :: Core.TypePrim -> Object
     convertTypePrim Core.TypePrim {..} =
       case _typePrimPrimitive of
-        Core.PrimInteger _ -> ObjectInteger
-        Core.PrimBool _ -> objectBool
+        Core.PrimInteger {} -> ObjectInteger
+        Core.PrimBool {} -> objectBool
         Core.PrimString -> unsupported
 
     convertInductive :: Symbol -> Object
-    convertInductive sym =
+    convertInductive sym = do
+      let ctrs =
+            sortOn (^. Core.constructorTag) $
+              fromJust
+                (HashMap.lookup sym (tab ^. Core.infoInductives))
+                ^. Core.inductiveConstructors
       case reverse ctrs of
-        ci : ctrs' ->
+        ci : ctrs' -> do
           foldr
-            (\x acc -> ObjectCoproduct (Coproduct (convertConstructorType (x ^. Core.constructorType)) acc))
+            ( \x acc ->
+                ObjectCoproduct
+                  Coproduct
+                    { _coproductLeft =
+                        convertConstructorType $ x ^. Core.constructorType,
+                      _coproductRight = acc
+                    }
+            )
             (convertConstructorType (ci ^. Core.constructorType))
             (reverse ctrs')
-        [] ->
-          ObjectInitial
-      where
-        ctrs =
-          sortOn (^. Core.constructorTag) $
-            fromJust (HashMap.lookup sym (tab ^. Core.infoInductives)) ^. Core.inductiveConstructors
+        [] -> ObjectInitial
 
     convertConstructorType :: Core.Node -> Object
     convertConstructorType ty =
       case reverse (Core.typeArgs ty) of
         hty : tys ->
           foldr
-            (\x acc -> ObjectProduct (Product (convertType x) acc))
+            ( \x acc ->
+                ObjectProduct
+                  Product
+                    { _productLeft = convertType x,
+                      _productRight = acc
+                    }
+            )
             (convertType hty)
             (reverse tys)
-        [] ->
-          ObjectTerminal
+        [] -> ObjectTerminal

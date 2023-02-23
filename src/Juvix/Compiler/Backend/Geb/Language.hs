@@ -26,6 +26,18 @@ data Case = Case
   }
   deriving stock (Show, Eq, Generic)
 
+data LeftInj = LeftInj
+  { _leftInjRightType :: Object,
+    _leftInjValue :: Morphism
+  }
+  deriving stock (Show, Eq, Generic)
+
+data RightInj = RightInj
+  { _rightInjLeftType :: Object,
+    _rightInjValue :: Morphism
+  }
+  deriving stock (Show, Eq, Generic)
+
 data Pair = Pair
   { _pairLeftType :: Object,
     _pairRightType :: Object,
@@ -88,8 +100,8 @@ data Binop = Binop
 data Morphism
   = MorphismAbsurd Morphism
   | MorphismUnit
-  | MorphismLeft Morphism
-  | MorphismRight Morphism
+  | MorphismLeft LeftInj
+  | MorphismRight RightInj
   | MorphismCase Case
   | MorphismPair Pair
   | MorphismFirst First
@@ -192,6 +204,8 @@ makeLenses ''Pair
 makeLenses ''First
 makeLenses ''Second
 makeLenses ''Lambda
+makeLenses ''LeftInj
+makeLenses ''RightInj
 makeLenses ''Var
 makeLenses ''Binop
 makeLenses ''Application

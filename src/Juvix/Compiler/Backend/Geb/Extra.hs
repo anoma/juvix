@@ -13,10 +13,20 @@ objectBool :: Object
 objectBool = ObjectCoproduct (Coproduct ObjectTerminal ObjectTerminal)
 
 morphismTrue :: Morphism
-morphismTrue = MorphismLeft MorphismUnit
+morphismTrue =
+  MorphismLeft
+    LeftInj
+      { _leftInjRightType = ObjectTerminal,
+        _leftInjValue = MorphismUnit
+      }
 
 morphismFalse :: Morphism
-morphismFalse = MorphismRight MorphismUnit
+morphismFalse =
+  MorphismRight
+    RightInj
+      { _rightInjLeftType = ObjectTerminal,
+        _rightInjValue = MorphismUnit
+      }
 
 mkOr :: Morphism -> Morphism -> Morphism
 mkOr arg1 arg2 =

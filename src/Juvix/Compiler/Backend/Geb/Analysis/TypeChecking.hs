@@ -215,81 +215,24 @@ inferObjectBinop opApp = do
 
 -- FIXME: Once https://github.com/anoma/geb/issues/53 is fixed,
 -- Update: inferObjectLeft and inferObjectRight to use the same code
-inferObjectLeft :: InferEffects r => Morphism -> Sem r Object
-inferObjectLeft a =
-  do
-    tyInfo <- asks (^. inferenceEnvTypeInfo)
-    case tyInfo of
-      Just cTy@(ObjectCoproduct coprod) -> do
-        let leftTy = coprod ^. coproductLeft
-        aTy <-
-          local
-            (over inferenceEnvTypeInfo (const (Just leftTy)))
-            (inferObject a)
-        unless
-          (aTy == leftTy)
-          ( throw $
-              CheckingErrorTypeMismatch
-                TypeMismatch
-                  { _typeMismatchExpected = aTy,
-                    _typeMismatchActual = leftTy,
-                    _typeMismatchMorphism = MorphismLeft a
-                  }
-          )
-        return cTy
-      Just ty ->
-        throw $
-          CheckingErrorWrongObject
-            WrongObject
-              { _wrongObjectExpected = Nothing,
-                _wrongObjectActual = Just ty,
-                _wrongObjectMorphism = MorphismLeft a,
-                _wrongObjectMessage = "Expected a coproduct object for a left morphism."
-              }
-      Nothing ->
-        throw $
-          CheckingErrorLackOfInformation
-            LackOfInformation
-              { _lackOfInformationMorphism = Just (MorphismLeft a),
-                _lacOfInformationHelperObject = tyInfo,
-                _lackOfInformationMessage = "on a left morphism"
-              }
+inferObjectLeft :: InferEffects r => LeftInj -> Sem r Object
+inferObjectLeft LeftInj {..} = do
+  let aMorph = _leftInjValue
+  aType <- inferObject aMorph
+  return $
+    ObjectCoproduct $
+      Coproduct
+        { _coproductLeft = aType,
+          _coproductRight = _leftInjRightType
+        }
 
-inferObjectRight :: InferEffects r => Morphism -> Sem r Object
-inferObjectRight bMorph = do
-  tyInfo <- asks (^. inferenceEnvTypeInfo)
-  case tyInfo of
-    Just cTy@(ObjectCoproduct coprod) -> do
-      let rightTy = coprod ^. coproductRight
-      bTy <-
-        local
-          (over inferenceEnvTypeInfo (const (Just rightTy)))
-          (inferObject bMorph)
-      unless
-        (bTy == rightTy)
-        ( throw $
-            CheckingErrorTypeMismatch
-              TypeMismatch
-                { _typeMismatchExpected = bTy,
-                  _typeMismatchActual = rightTy,
-                  _typeMismatchMorphism = MorphismRight bMorph
-                }
-        )
-      return cTy
-    Just ty ->
-      throw $
-        CheckingErrorWrongObject
-          WrongObject
-            { _wrongObjectExpected = Nothing,
-              _wrongObjectActual = Just ty,
-              _wrongObjectMorphism = MorphismRight bMorph,
-              _wrongObjectMessage = "Expected a coproduct object for a right morphism."
-            }
-    Nothing ->
-      throw $
-        CheckingErrorLackOfInformation
-          LackOfInformation
-            { _lackOfInformationMorphism = Just (MorphismRight bMorph),
-              _lacOfInformationHelperObject = tyInfo,
-              _lackOfInformationMessage = "on a right morphism"
-            }
+inferObjectRight :: InferEffects r => RightInj -> Sem r Object
+inferObjectRight RightInj {..} = do
+  let bMorph = _rightInjValue
+  bType <- inferObject bMorph
+  return $
+    ObjectCoproduct $
+      Coproduct
+        { _coproductLeft = _rightInjLeftType,
+          _coproductRight = bType
+        }

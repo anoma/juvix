@@ -75,9 +75,9 @@ eval morph =
     MorphismFirst f -> evalFirst f
     MorphismInteger i -> return $ GebValueMorphismInteger i
     MorphismLambda l -> evalLambda l
-    MorphismLeft m -> GebValueMorphismLeft <$> eval m
+    MorphismLeft m -> evalLeftInj m
     MorphismPair p -> evalPair p
-    MorphismRight m -> GebValueMorphismRight <$> eval m
+    MorphismRight m -> evalRightInj m
     MorphismSecond s -> evalSecond s
     MorphismUnit -> return GebValueMorphismUnit
     MorphismVar x -> evalVar x
@@ -133,6 +133,16 @@ evalSecond s = do
             _evalErrorGebValue = Just res,
             _evalErrorGebExpression = Just (MorphismSecond s)
           }
+
+evalLeftInj :: EvalEffects r => LeftInj -> Sem r GebValue
+evalLeftInj s = do
+  res <- eval $ s ^. leftInjValue
+  return $ GebValueMorphismLeft res
+
+evalRightInj :: EvalEffects r => RightInj -> Sem r GebValue
+evalRightInj s = do
+  res <- eval $ s ^. rightInjValue
+  return $ GebValueMorphismRight res
 
 evalApp :: EvalEffects r => Application -> Sem r GebValue
 evalApp app = do
@@ -259,8 +269,8 @@ requiresObjectInfo = \case
   GebValueMorphismUnit -> False
   GebValueMorphismInteger {} -> False
   GebValueClosure {} -> True
-  GebValueMorphismLeft {} -> True
-  GebValueMorphismRight {} -> True
+  GebValueMorphismLeft {} -> False
+  GebValueMorphismRight {} -> False
   GebValueMorphismPair {} -> True
 
 quote :: Maybe Object -> GebValue -> Sem r Morphism
@@ -307,7 +317,14 @@ quoteValueMorphismPair ty vpair = do
 
 quoteValueMorphismLeft :: Maybe Object -> GebValue -> Sem r Morphism
 quoteValueMorphismLeft ty m = case ty of
-  Just (ObjectCoproduct _) -> MorphismLeft <$> quote ty m
+  Just (ObjectCoproduct Coproduct {..}) -> do
+    leftMorphism <- quote ty m
+    return $
+      MorphismLeft
+        LeftInj
+          { _leftInjValue = leftMorphism,
+            _leftInjRightType = _coproductRight
+          }
   Just _ ->
     quoteError
       "type mismatch (left). Expected a coproduct"
@@ -317,7 +334,14 @@ quoteValueMorphismLeft ty m = case ty of
 
 quoteMorphismRight :: Maybe Object -> GebValue -> Sem r Morphism
 quoteMorphismRight ty r = case ty of
-  Just (ObjectCoproduct _) -> MorphismRight <$> quote ty r
+  Just (ObjectCoproduct Coproduct {..}) -> do
+    rightMorphism <- quote ty r
+    return $
+      MorphismRight
+        RightInj
+          { _rightInjValue = rightMorphism,
+            _rightInjLeftType = _coproductLeft
+          }
   Just _ ->
     quoteError
       "type mismatch (right). Expected a coproduct"

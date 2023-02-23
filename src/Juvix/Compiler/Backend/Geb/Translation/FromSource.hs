@@ -143,8 +143,8 @@ morphism =
       <|> Geb.MorphismInteger <$> morphismInteger
       <|> parens
         ( Geb.MorphismAbsurd <$> morphismAbsurd
-            <|> Geb.MorphismLeft <$> morphismLeft
-            <|> Geb.MorphismRight <$> morphismRight
+            <|> Geb.MorphismLeft <$> morphismLeftInj
+            <|> Geb.MorphismRight <$> morphismRightInj
             <|> Geb.MorphismCase <$> morphismCase
             <|> Geb.MorphismPair <$> morphismPair
             <|> Geb.MorphismFirst <$> morphismFirst
@@ -209,17 +209,29 @@ morphismAbsurd =
     kw kwGebMorphismAbsurd
     morphism
 
-morphismLeft :: ParsecS r Geb.Morphism
-morphismLeft = do
+morphismLeftInj :: ParsecS r Geb.LeftInj
+morphismLeftInj = do
   P.label "<geb MorphismLeft>" $ do
     kw kwGebMorphismLeft
-    morphism
+    rType <- object
+    lValue <- morphism
+    return $
+      Geb.LeftInj
+        { _leftInjRightType = rType,
+          _leftInjValue = lValue
+        }
 
-morphismRight :: ParsecS r Geb.Morphism
-morphismRight = do
+morphismRightInj :: ParsecS r Geb.RightInj
+morphismRightInj = do
   P.label "<geb MorphismRight>" $ do
     kw kwGebMorphismRight
-    morphism
+    lType <- object
+    rValue <- morphism
+    return $
+      Geb.RightInj
+        { _rightInjLeftType = lType,
+          _rightInjValue = rValue
+        }
 
 morphismCase :: ParsecS r Geb.Case
 morphismCase = do

@@ -90,6 +90,18 @@ instance PrettyCode Second where
     val <- ppArg _secondValue
     return $ kwSnd <> line <> indent' (vsep [lty, rty, val])
 
+instance PrettyCode LeftInj where
+  ppCode LeftInj {..} = do
+    rty <- ppArg _leftInjRightType
+    val <- ppArg _leftInjValue
+    return $ kwLeft <> line <> indent' (vsep [rty, val])
+
+instance PrettyCode RightInj where
+  ppCode RightInj {..} = do
+    lty <- ppArg _rightInjLeftType
+    val <- ppArg _rightInjValue
+    return $ kwRight <> line <> indent' (vsep [lty, val])
+
 instance PrettyCode Lambda where
   ppCode Lambda {..} = do
     vty <- ppArg _lambdaVarType
@@ -104,9 +116,6 @@ instance PrettyCode Application where
     left <- ppArg _applicationLeft
     right <- ppArg _applicationRight
     return $ kwApp <> line <> indent' (vsep [dom, cod, left, right])
-
-instance PrettyCode Var where
-  ppCode Var {..} = return $ annotate AnnLiteralInteger (pretty _varIndex)
 
 instance PrettyCode Opcode where
   ppCode = \case
@@ -125,28 +134,27 @@ instance PrettyCode Binop where
     right <- ppArg _binopRight
     return $ op <> line <> indent' (vsep [left, right])
 
+instance PrettyCode Var where
+  ppCode Var {..} = do
+    return $
+      kwVar
+        <+> annotate AnnLiteralInteger (pretty _varIndex)
+
 instance PrettyCode Morphism where
   ppCode = \case
     MorphismAbsurd val -> do
       v <- ppArg val
       return $ kwAbsurd <+> v
-    MorphismUnit ->
-      return kwUnit
-    MorphismLeft val -> do
-      v <- ppArg val
-      return $ kwLeft <> line <> indent' v
-    MorphismRight val -> do
-      v <- ppArg val
-      return $ kwRight <> line <> indent' v
+    MorphismUnit -> return kwUnit
+    MorphismLeft val -> ppCode val
+    MorphismRight val -> ppCode val
     MorphismCase x -> ppCode x
     MorphismPair x -> ppCode x
     MorphismFirst x -> ppCode x
     MorphismSecond x -> ppCode x
     MorphismLambda x -> ppCode x
     MorphismApplication x -> ppCode x
-    MorphismVar idx -> do
-      i <- ppCode idx
-      return $ kwVar <+> i
+    MorphismVar idx -> ppCode idx
     MorphismInteger n -> return $ annotate AnnLiteralInteger (pretty n)
     MorphismBinop x -> ppCode x
 
