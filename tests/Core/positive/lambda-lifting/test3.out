@@ -1,6 +1,0 @@
--- IdentContext
-def const := λx λy x$1
-def id := λx x$0
-def t3 := λr λs const !5 (id (!6 r$1))
-def 5 := λx x$0
-def 6 := λr λx r$1
