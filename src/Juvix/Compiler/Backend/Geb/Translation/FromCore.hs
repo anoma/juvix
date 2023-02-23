@@ -120,7 +120,7 @@ fromCore tab = case tab ^. Core.infoMain of
         nodeType = convertType (Info.getNodeType node)
 
     convertNode :: Core.Node -> Trans Morphism
-    convertNode node = case node of
+    convertNode = \case
       Core.NVar x -> convertVar x
       Core.NIdt x -> convertIdent x
       Core.NCst x -> convertConstant x
@@ -417,7 +417,7 @@ fromCore tab = case tab ^. Core.infoMain of
           [] -> impossible
 
         mkBranch :: Object -> Morphism -> Core.CaseBranch -> Trans Morphism
-        mkBranch valty val Core.CaseBranch {..} = do
+        mkBranch valType val Core.CaseBranch {..} = do
           branch <- underBinders _caseBranchBindersNum (convertNode _caseBranchBody)
           if
               | _caseBranchBindersNum == 0 -> return branch
@@ -425,21 +425,21 @@ fromCore tab = case tab ^. Core.infoMain of
                   return $
                     MorphismApplication
                       Application
-                        { _applicationDomainType = valty,
+                        { _applicationDomainType = valType,
                           _applicationCodomainType = codomainType,
                           _applicationLeft =
                             MorphismLambda
                               Lambda
-                                { _lambdaVarType = valty,
+                                { _lambdaVarType = valType,
                                   _lambdaBodyType = codomainType,
                                   _lambdaBody = branch
                                 },
                           _applicationRight = val
                         }
               | otherwise ->
-                  return $ mkApps (mkLambs branch argtys) val valty argtys
+                  return $ mkApps (mkLambs branch argtys) val valType argtys
           where
-            argtys = destructProduct valty
+            argtys = destructProduct valType
 
             -- `mkApps` creates applications of `acc` to extracted components of
             -- `v` which is a product (right-nested)
