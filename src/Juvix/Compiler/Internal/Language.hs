@@ -155,8 +155,10 @@ instance Hashable CaseBranch
 
 data Case = Case
   { _caseExpression :: Expression,
-    -- | The typechecker fills this field
+    -- | The type of the cased expression. The typechecker fills this field
     _caseExpressionType :: Maybe Expression,
+    -- | The type of the whole case expression. The typechecker fills this field
+    _caseExpressionWholeType :: Maybe Expression,
     _caseBranches :: NonEmpty CaseBranch,
     _caseParens :: Bool
   }

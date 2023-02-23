@@ -251,6 +251,7 @@ instance HasExpressions Case where
     _caseBranches :: NonEmpty CaseBranch <- traverse (leafExpressions f) (l ^. caseBranches)
     _caseExpression <- leafExpressions f (l ^. caseExpression)
     _caseExpressionType <- traverse (leafExpressions f) (l ^. caseExpressionType)
+    _caseExpressionWholeType <- traverse (leafExpressions f) (l ^. caseExpressionWholeType)
     pure Case {..}
     where
       _caseParens = l ^. caseParens
