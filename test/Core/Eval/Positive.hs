@@ -284,5 +284,10 @@ tests =
       "Church numerals with pattern matching"
       $(mkRelDir ".")
       $(mkRelFile "test050.jvc")
-      $(mkRelFile "out/test050.out")
+      $(mkRelFile "out/test050.out"),
+    PosTest
+      "Type annotations for patterns"
+      $(mkRelDir ".")
+      $(mkRelFile "test051.jvc")
+      $(mkRelFile "out/test051.out")
   ]
