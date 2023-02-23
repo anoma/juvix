@@ -381,7 +381,8 @@ goCase c = do
   case ty of
     NTyp {} -> do
       branches <- toList <$> mapM (goCaseBranch ty) (c ^. Internal.caseBranches)
-      return (mkMatch' (NonEmpty.singleton ty) mkDynamic' (pure expr) branches) -- TODO: remove mkDynamic' as soon as we have the type information in Internal
+      rty <- goType (fromJust $ c ^. Internal.caseExpressionWholeType)
+      return (mkMatch' (NonEmpty.singleton ty) rty (pure expr) branches)
     _ ->
       case c ^. Internal.caseBranches of
         Internal.CaseBranch {..} :| _ ->
