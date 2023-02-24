@@ -324,8 +324,7 @@ instance PrettyCode Node where
               ty <- ppCode piType
               b <- ppCode _piBody
               return $ kwPi <+> n <+> kwColon <+> ty <> comma <+> b
-    NUniv Univ {..} ->
-      return $ kwType <+> pretty _univLevel
+    NUniv u -> ppCode u
     NPrim TypePrim {..} -> ppCode _typePrimPrimitive
     NTyp TypeConstr {..} -> do
       args' <- mapM (ppRightExpression appFixity) _typeConstrArgs
@@ -334,6 +333,11 @@ instance PrettyCode Node where
     NDyn {} -> return kwDynamic
     Closure env l@Lambda {} ->
       ppCode (substEnv env (NLam l))
+
+instance PrettyCode (Univ' i) where
+  ppCode Univ {..} = return $ if
+    | _univLevel == 0 -> kwType
+    | otherwise -> kwType <+> pretty _univLevel
 
 instance PrettyCode Stripped.TypeApp where
   ppCode Stripped.TypeApp {..} = do
