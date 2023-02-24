@@ -25,7 +25,7 @@ lambdaLiftNode aboveBl top =
     typeFromArgs :: [ArgumentInfo] -> Type
     typeFromArgs = \case
       [] -> mkDynamic' -- change this when we have type info about the body
-      (a : as) -> mkPi' (a ^. argumentType) (typeFromArgs as)
+      (a : as) -> mkPi mempty (binderFromArgumentInfo a) (typeFromArgs as)
 
     goTop :: BinderList Binder -> Node -> [LambdaLhs] -> Sem r Node
     goTop bl body = \case

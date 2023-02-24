@@ -10,6 +10,8 @@ data PosTest = PosTest
     _expectedFile :: Path Rel File
   }
 
+makeLenses ''PosTest
+
 root :: Path Abs Dir
 root = relToProject $(mkRelDir "tests/Core/positive")
 
@@ -289,5 +291,10 @@ tests =
       "Type annotations for patterns"
       $(mkRelDir ".")
       $(mkRelFile "test051.jvc")
-      $(mkRelFile "out/test051.out")
+      $(mkRelFile "out/test051.out"),
+    PosTest
+      "foldl with match"
+      $(mkRelDir ".")
+      $(mkRelFile "test052.jvc")
+      $(mkRelFile "out/test052.out")
   ]

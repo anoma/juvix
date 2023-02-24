@@ -9,6 +9,7 @@ import Juvix.Compiler.Core.Info.LocationInfo
 import Juvix.Compiler.Core.Info.NameInfo
 import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Core.Language.Stripped qualified as Stripped
+import Juvix.Compiler.Core.Pretty (ppTrace)
 
 fromCore :: InfoTable -> Stripped.InfoTable
 fromCore tab =
@@ -220,4 +221,4 @@ translateType node = case node of
     Stripped.TyPrim _typePrimPrimitive
   NDyn Dynamic {} ->
     Stripped.TyDynamic
-  _ -> error "Core to Core.Stripped: unsupported type"
+  _ -> error $ "Core to Core.Stripped: unsupported type: " <> ppTrace node
