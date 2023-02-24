@@ -770,7 +770,7 @@ goExpression = \case
   Internal.ExpressionSimpleLambda l -> goSimpleLambda l
   Internal.ExpressionLambda l -> goLambda l
   Internal.ExpressionCase l -> goCase l
-  e@(Internal.ExpressionFunction {}) -> goFunction (Internal.unfoldFunType e)
+  e@Internal.ExpressionFunction {} -> goFunction (Internal.unfoldFunType e)
   Internal.ExpressionHole h -> error ("internal to core: goExpression hole: " <> show (Loc.getLoc h))
   Internal.ExpressionUniverse {} -> return mkSmallUniv
 
