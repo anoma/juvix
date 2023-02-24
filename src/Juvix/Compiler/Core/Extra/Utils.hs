@@ -106,7 +106,7 @@ captureFreeVars freevars = goBinders freevars . mapFreeVars
           m -> m
 
     goBinders :: [(Index, Binder)] -> Node -> Node
-    goBinders fv = trace (show indices) $ case unsnoc fv of
+    goBinders fv = case unsnoc fv of
       Nothing -> id
       Just (fvs, (idx, bin)) -> goBinders fvs . mkLambdaB (mapBinder idx bin)
       where
