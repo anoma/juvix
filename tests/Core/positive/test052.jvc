@@ -1,4 +1,5 @@
 -- foldl with match
+
 type List {
     nil : Π A : Type, List A;
     cons : Π A : Type, A → List A → List A;
@@ -8,7 +9,7 @@ def foldl : Π A : Type, Π B : Type, (B → A → B) → B → List A → B :=
     λ(A : Type) λ(B : Type) λ(f : B → A → B) λ(b : B) λ(l : List A)
     match (l : List A) with : B {
         nil _ := b;
-        cons _ h hs := foldl A B f (f b h) hs
+        cons _ (h : A) (hs : List A) := foldl A B f (f b h) hs
     };
 
 foldl int int (+) 0 (cons int 1 (cons int 2 (cons int 3 (nil int))))
