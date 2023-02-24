@@ -108,7 +108,7 @@ captureFreeVars freevars = goBinders freevars . mapFreeVars
     goBinders :: [(Index, Binder)] -> Node -> Node
     goBinders fv = case unsnoc fv of
       Nothing -> id
-      Just (fvs , (idx, bin)) -> goBinders fvs . mkLambdaB (mapBinder idx bin)
+      Just (fvs, (idx, bin)) -> goBinders fvs . mkLambdaB (mapBinder idx bin)
       where
         indices = map fst fv
         mapBinder :: Index -> Binder -> Binder
@@ -210,6 +210,14 @@ squashApps = dmap go
             NBlt (BuiltinApp i op args') -> mkBuiltinApp i op (args' ++ args)
             NTyp (TypeConstr i sym args') -> mkTypeConstr i sym (args' ++ args)
             _ -> n
+
+binderFromArgumentInfo :: ArgumentInfo -> Binder
+binderFromArgumentInfo a =
+  Binder
+    { _binderName = a ^. argumentName,
+      _binderLocation = a ^. argumentLocation,
+      _binderType = a ^. argumentType
+    }
 
 argumentInfoFromBinder :: Binder -> ArgumentInfo
 argumentInfoFromBinder i =
