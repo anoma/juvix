@@ -296,5 +296,10 @@ tests =
       "foldl with match"
       $(mkRelDir ".")
       $(mkRelFile "test052.jvc")
-      $(mkRelFile "out/test052.out")
+      $(mkRelFile "out/test052.out"),
+    PosTest
+      "Match with higher-order polymorphic functions"
+      $(mkRelDir ".")
+      $(mkRelFile "test053.jvc")
+      $(mkRelFile "out/test053.out")
   ]
