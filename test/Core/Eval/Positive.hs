@@ -298,7 +298,7 @@ tests =
       $(mkRelFile "test052.jvc")
       $(mkRelFile "out/test052.out"),
     PosTest
-      "Free variables capture with polymorphic binders"
+      "Match with higher-order polymorphic functions"
       $(mkRelDir ".")
       $(mkRelFile "test053.jvc")
       $(mkRelFile "out/test053.out")

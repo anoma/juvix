@@ -1,4 +1,4 @@
--- Match box with higher order polymorphic function
+-- Match with higher-order polymorphic functions
 type Box {
     mkBox : Π A : Type, A → Box A;
 };
