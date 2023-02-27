@@ -5,14 +5,15 @@
 ;; → cls (arg : []) (index 1).
 
 ;; λ.(λ.0)
+(typed
 (app 
-    int
-    int
+   (!-> int (!-> int int))
+   (!-> int int)
     ;; fun: ↓ cls [] (lamb (index 1))
     ;; λλ.1
    (lamb
      int
-     int
+    (!-> int int)
      (lamb
        int
        int
@@ -22,4 +23,6 @@
       (lamb
         int
         int
-        (index 0)))
+        (index 0))
+)
+(!-> int int))

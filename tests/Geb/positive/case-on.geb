@@ -1,26 +1,30 @@
-(case-on
-    so1     ;left
-    so1     ;right
-    (coprod      ; codomain
+(typed
+  (case-on
     so1
-    so1)
-
-    (right so1 int 1) ; left + right
-    (lamb     ; left -> codomain
+    so1
+    (coprod
+      so1
+      int)
+    (right
+      so1
+      int
+      1)
+    (lamb
+      so1
+      (coprod
         so1
-        (coprod
-            so1
-            so1)
-        (right
-            so1
-            so1
-            unit))
-    (lamb     ; right -> codomain
+        so1)
+      (right
         so1
-        (coprod
-            so1
-            so1)
-        (left
-            so1
-            so1
-            unit)))
+        so1
+        unit))
+    (lamb
+      so1
+      (coprod
+        so1
+        so1)
+      (left
+        so1
+        so1
+        unit)))
+  so0)

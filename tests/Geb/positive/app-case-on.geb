@@ -1,23 +1,47 @@
-(app 
-    (coprod int int)
-    (coprod so1 int)
+(typed
+  (app
+    (coprod
+      int
+      int)
+    (coprod
+      int
+      int)
     (lamb
-        int int
-        (case-on 
+      (coprod
+        int
+        int)
+      (coprod
+        int
+        int)
+      (case-on
+        int
+        int
+        (coprod
+          int
+          int)
+        (index 0)
+        (lamb
+          int
+          (coprod
             int
-            int 
+            int)
+          (right
             int
-            (index 0)
-            (lamb
-              int
-              int 
-              (right int 1))
-            (lamb
-              int
-              int 
-              (left int 2))
-            )
-    )
-  (left
+            int
+            1))
+        (lamb
+          int
+          (coprod
+            int
+            int)
+          (left
+            int
+            int
+            2))))
+    (left
+      int
+      int
+      3))
+  (coprod
     int
-    3))
+    int))
