@@ -31,7 +31,7 @@ matchToCaseNode n = case n of
     return (foldr (mkLet' branchType) appNode branchNodes)
   _ -> return n
 
--- | increase all free variable indices by a given value.
+-- | Increase all free variable indices by a given value.
 -- In this function we consider indices to be embedded at a specified level
 shiftEmbedded :: Level -> Index -> Node -> Node
 shiftEmbedded _ 0 = id

@@ -118,12 +118,13 @@ captureFreeVars freevars = goBinders freevars . mapFreeVars
             go k = \case
               NVar u
                 | u ^. varIndex >= k ->
-                    let uCtx = u ^. varIndex + binderIndex + 1
-                        u' = length indices - 2 - fromJust (elemIndex uCtx indices)
+                    let uCtx = u ^. varIndex - k + binderIndex + 1
+                        err = error ("impossible: could not find " <> show uCtx <> " in " <> show indices)
+                        u' = length indices - 2 - fromMaybe err (elemIndex uCtx indices) + k
                      in NVar (set varIndex u' u)
               m -> m
 
--- captures all free variables of a node. It also returns the list of captured
+-- | Captures all free variables of a node. It also returns the list of captured
 -- variables in left-to-right order: if snd is of the form λxλy... then fst is
 -- [x, y]
 captureFreeVarsCtx :: BinderList Binder -> Node -> ([(Var, Binder)], Node)
