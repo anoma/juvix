@@ -15,9 +15,10 @@ runCommand opts = do
       b = opts ^. gebInferOptionsInputFile . pathPath
   f :: Path Abs File <- someBaseToAbs' b
   content :: Text <- embed (readFile (toFilePath f))
-  case Geb.runParser' f content of
-    Right tyMorph@(Geb.TypedMorphism {}) -> do
+  case Geb.runParser f content of
+    Right (Geb.ExpressionTypedMorphism tyMorph) -> do
       case run . runError @CheckingError $ (Geb.check' tyMorph) of
         Left err -> exitJuvixError (JuvixError err)
         Right _ -> renderStdOut ("Well done! It typechecks" :: Text)
+    Right _ -> exitJuvixError (error @JuvixError "Not a typed morphism")
     Left err -> exitJuvixError (JuvixError err)

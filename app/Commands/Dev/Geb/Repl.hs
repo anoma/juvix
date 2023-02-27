@@ -109,16 +109,19 @@ inferObject gebMorphism = Repline.dontCrash $ do
       case Geb.inferObject' morphism of
         Right obj -> renderOut (Geb.ppOut Geb.defaultEvaluatorOptions obj)
         Left err -> printError (JuvixError err)
+    Right (Geb.ExpressionTypedMorphism _) ->
+      checkTypedMorphism gebMorphism
     Right _ -> printError (error "Inference only works on Geb morphisms.")
 
 checkTypedMorphism :: String -> Repl ()
 checkTypedMorphism gebMorphism = Repline.dontCrash $ do
-  case Geb.runParser' replPath (pack gebMorphism) of
+  case Geb.runParser replPath (pack gebMorphism) of
     Left err -> printError (JuvixError err)
-    Right tyMorphism@(Geb.TypedMorphism {}) -> do
+    Right (Geb.ExpressionTypedMorphism tyMorphism) -> do
       case run . runError @CheckingError $ Geb.check' tyMorphism of
         Right obj -> renderOut (Geb.ppOut Geb.defaultEvaluatorOptions obj)
         Left err -> printError (JuvixError err)
+    Right _ -> printError (error "Checking only works on typed Geb morphisms.")
 
 runReplCommand :: String -> Repl ()
 runReplCommand input =

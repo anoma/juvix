@@ -57,7 +57,7 @@ evalAndOutputMorphism ::
 evalAndOutputMorphism m = do
   val :: GebValue <- mapError (JuvixError @EvalError) $ eval m
   obj :: Object <-
-    runReader defaultInferenceEnv $
+    runReader (mempty @CheckingEnv) $
       mapError (JuvixError @CheckingError) (inferObject m)
   if
       | requiresObjectInfo val -> quote (Just obj) val
@@ -88,13 +88,13 @@ evalVar var = do
   let val = Context.lookup (var ^. varIndex) ctx
   return val
 
-evalAbsurd :: EvalEffects r => Morphism -> Sem r GebValue
+evalAbsurd :: EvalEffects r => Absurd -> Sem r GebValue
 evalAbsurd morph =
   throw
     EvalError
       { _evalErrorMsg = "Absurd can not be evaluated.",
         _evalErrorGebValue = Nothing,
-        _evalErrorGebExpression = Just morph
+        _evalErrorGebExpression = Just $ MorphismAbsurd morph
       }
 
 evalPair :: EvalEffects r => Pair -> Sem r GebValue
@@ -323,6 +323,7 @@ quoteValueMorphismLeft ty m = case ty of
       MorphismLeft
         LeftInj
           { _leftInjValue = leftMorphism,
+            _leftInjLeftType = _coproductLeft,
             _leftInjRightType = _coproductRight
           }
   Just _ ->
@@ -340,7 +341,8 @@ quoteMorphismRight ty r = case ty of
       MorphismRight
         RightInj
           { _rightInjValue = rightMorphism,
-            _rightInjLeftType = _coproductLeft
+            _rightInjLeftType = _coproductLeft,
+            _rightInjRightType = _coproductRight
           }
   Just _ ->
     quoteError

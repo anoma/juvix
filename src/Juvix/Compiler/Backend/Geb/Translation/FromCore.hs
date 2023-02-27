@@ -59,8 +59,8 @@ fromCore tab = case tab ^. Core.infoMain of
     let node = fromJust $ HashMap.lookup sym (tab ^. Core.identContext)
         syms = reverse $ filter (/= sym) $ Core.createIdentDependencyInfo tab ^. Core.depInfoTopSort
         idents = map (\s -> fromJust $ HashMap.lookup s (tab ^. Core.infoIdentifiers)) syms
-        morph = run (runReader emptyEnv (goIdents node idents))
-        obj = convertType (Info.getNodeType node)
+        morph = run . runReader emptyEnv $ goIdents node idents
+        obj = convertType $ Info.getNodeType node
      in (morph, obj)
   Nothing ->
     error "no main function"
@@ -270,45 +270,68 @@ fromCore tab = case tab ^. Core.infoMain of
 
     convertConstr :: Core.Constr -> Trans Morphism
     convertConstr Core.Constr {..} = do
-      prod <- mkProd
-      return $ foldr ($) prod (replicate tagNum restPartConstructor)
+      args <- convertProduct _constrArgs
+      return $ (constructors !! tagNum) args
       where
         ci = fromJust $ HashMap.lookup _constrTag (tab ^. Core.infoConstructors)
         sym = ci ^. Core.constructorInductive
-        ctrs = fromJust (HashMap.lookup sym (tab ^. Core.infoInductives)) ^. Core.inductiveConstructors
+        ctrs =
+          fromJust
+            (HashMap.lookup sym (tab ^. Core.infoInductives))
+            ^. Core.inductiveConstructors
         tagNum =
-          fromJust $
-            elemIndex
+          fromJust
+            $ elemIndex
               _constrTag
-              (sort (map (^. Core.constructorTag) ctrs))
+              . sort
+            $ map (^. Core.constructorTag) ctrs
 
-        cType = convertType $ ci ^. Core.constructorType
-        (leftType, rightType) = case cType of
-          (ObjectCoproduct (Coproduct {..})) -> (_coproductLeft, _coproductRight)
-          _ -> error $ "wrong constructor type:" <> show cType
+        constructors = mkConstructors $ convertInductive sym
 
-        mkProd :: Trans Morphism
-        mkProd =
-          ( if tagNum == length ctrs - 1
-              then id
-              else
-                ( \c ->
+        mkConstructors :: Object -> [Morphism -> Morphism]
+        mkConstructors = \case
+          ObjectCoproduct a -> do
+            let lType = a ^. coproductLeft
+                rType = a ^. coproductRight
+            case rType of
+              ObjectCoproduct _ ->
+                ( \x ->
                     MorphismLeft
                       LeftInj
-                        { _leftInjRightType = leftType,
-                          _leftInjValue = c
+                        { _leftInjLeftType = lType,
+                          _leftInjRightType = rType,
+                          _leftInjValue = x
                         }
                 )
-          )
-            <$> (convertProduct _constrArgs)
+                  : map
+                    ( \f x ->
+                        MorphismRight
+                          RightInj
+                            { _rightInjLeftType = lType,
+                              _rightInjRightType = rType,
+                              _rightInjValue = f x
+                            }
+                    )
+                    (mkConstructors rType)
+                where
 
-        restPartConstructor :: Morphism -> Morphism
-        restPartConstructor c =
-          MorphismRight
-            RightInj
-              { _rightInjLeftType = rightType,
-                _rightInjValue = c
-              }
+              _ ->
+                [ \x ->
+                    MorphismLeft
+                      LeftInj
+                        { _leftInjLeftType = lType,
+                          _leftInjRightType = rType,
+                          _leftInjValue = x
+                        },
+                  \x ->
+                    MorphismRight
+                      RightInj
+                        { _rightInjLeftType = lType,
+                          _rightInjRightType = rType,
+                          _rightInjValue = x
+                        }
+                ]
+          _ -> [id]
 
     convertProduct :: [Core.Node] -> Trans Morphism
     convertProduct args = do
@@ -377,7 +400,15 @@ fromCore tab = case tab ^. Core.infoMain of
     convertCase :: Core.Case -> Trans Morphism
     convertCase Core.Case {..} = do
       if
-          | null branches -> MorphismAbsurd <$> convertNode _caseValue
+          | null branches -> do
+              x <- convertNode _caseValue
+              ty <- undefined
+              return $
+                MorphismAbsurd
+                  Absurd
+                    { _absurdType = ty,
+                      _absurdValue = x
+                    }
           | missingCtrsNum > 1 -> do
               arg <- convertNode defaultNode
               val <- shifting (convertNode _caseValue)

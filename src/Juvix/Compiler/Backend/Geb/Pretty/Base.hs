@@ -43,7 +43,7 @@ docLisp opts packageName entryName morph obj =
             <> line
             <> indent'
               ( parens
-                  ( "typed"
+                  ( kwTyped
                       <> line
                       <> indent'
                         (vsep [doc opts morph, doc opts obj])
@@ -92,15 +92,23 @@ instance PrettyCode Second where
 
 instance PrettyCode LeftInj where
   ppCode LeftInj {..} = do
+    lty <- ppArg _leftInjLeftType
     rty <- ppArg _leftInjRightType
     val <- ppArg _leftInjValue
-    return $ kwLeft <> line <> indent' (vsep [rty, val])
+    return $ kwLeft <> line <> indent' (vsep [lty, rty, val])
 
 instance PrettyCode RightInj where
   ppCode RightInj {..} = do
     lty <- ppArg _rightInjLeftType
+    rty <- ppArg _rightInjRightType
     val <- ppArg _rightInjValue
-    return $ kwRight <> line <> indent' (vsep [lty, val])
+    return $ kwRight <> line <> indent' (vsep [lty, rty, val])
+
+instance PrettyCode Absurd where
+  ppCode Absurd {..} = do
+    ty <- ppArg _absurdType
+    val <- ppArg _absurdValue
+    return $ kwAbsurd <> line <> indent' (vsep [ty, val])
 
 instance PrettyCode Lambda where
   ppCode Lambda {..} = do
@@ -142,9 +150,7 @@ instance PrettyCode Var where
 
 instance PrettyCode Morphism where
   ppCode = \case
-    MorphismAbsurd val -> do
-      v <- ppArg val
-      return $ kwAbsurd <+> v
+    MorphismAbsurd val -> ppCode val
     MorphismUnit -> return kwUnit
     MorphismLeft val -> ppCode val
     MorphismRight val -> ppCode val
@@ -190,6 +196,7 @@ instance PrettyCode Expression where
   ppCode = \case
     ExpressionMorphism x -> ppCode x
     ExpressionObject x -> ppCode x
+    ExpressionTypedMorphism x -> ppCode x
 
 instance PrettyCode TypedMorphism where
   ppCode TypedMorphism {..} = do

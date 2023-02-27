@@ -52,15 +52,14 @@ instance ToGenericError TypeMismatch where
           expected = e ^. typeMismatchExpected
           actual = e ^. typeMismatchActual
           msg =
-            "The"
-              <+> ppCode' opts' morph
+            ppCode' opts' morph
               <+> "has object:"
                 <> line
-                <> indent' (ppCode' opts' actual)
+                <> ppCode' opts' actual
                 <> line
                 <> "but is expected to have as object:"
                 <> line
-                <> indent' (ppCode' opts' expected)
+                <> ppCode' opts' expected
 
 instance ToGenericError LackOfInformation where
   genericError e = ask >>= generr

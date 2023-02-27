@@ -19,7 +19,10 @@
 ;; ((  λ . (λ.0))) ⬝ unit
 ;; ((      (λ.0))) 
 
-(app int int  ;; app1
+
+(app 
+  int 
+  int  ;; app1
   (app      ;; app2
       int
       int
@@ -28,7 +31,7 @@
       int
       int
       (lamb
-        int
+        (!-> int int)
         int
         (index 1)))
     ;; ↓ cls [] (index 0)   

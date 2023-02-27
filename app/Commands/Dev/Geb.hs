@@ -5,9 +5,9 @@ module Commands.Dev.Geb
 where
 
 import Commands.Base
+import Commands.Dev.Geb.Check as Infer
 import Commands.Dev.Geb.Eval as Eval
 import Commands.Dev.Geb.Infer as Check
-import Commands.Dev.Geb.Infer as Infer
 import Commands.Dev.Geb.Options
 import Commands.Dev.Geb.Read as Read
 import Commands.Dev.Geb.Repl as Repl

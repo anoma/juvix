@@ -26,14 +26,22 @@ data Case = Case
   }
   deriving stock (Show, Eq, Generic)
 
+data Absurd = Absurd
+  { _absurdType :: Object,
+    _absurdValue :: Morphism
+  }
+  deriving stock (Show, Eq, Generic)
+
 data LeftInj = LeftInj
-  { _leftInjRightType :: Object,
+  { _leftInjLeftType :: Object,
+    _leftInjRightType :: Object,
     _leftInjValue :: Morphism
   }
   deriving stock (Show, Eq, Generic)
 
 data RightInj = RightInj
   { _rightInjLeftType :: Object,
+    _rightInjRightType :: Object,
     _rightInjValue :: Morphism
   }
   deriving stock (Show, Eq, Generic)
@@ -98,7 +106,7 @@ data Binop = Binop
 -- | Corresponds to the GEB type for terms (morphisms of the category): `stlc`
 -- (https://github.com/anoma/geb/blob/main/src/specs/lambda.lisp).
 data Morphism
-  = MorphismAbsurd Morphism
+  = MorphismAbsurd Absurd
   | MorphismUnit
   | MorphismLeft LeftInj
   | MorphismRight RightInj
@@ -149,6 +157,7 @@ data Object
 data Expression
   = ExpressionMorphism Morphism
   | ExpressionObject Object
+  | ExpressionTypedMorphism TypedMorphism
   deriving stock (Show, Eq, Generic)
 
 data TypedMorphism = TypedMorphism
@@ -195,23 +204,25 @@ instance HasAtomicity Expression where
   atomicity = \case
     ExpressionMorphism m -> atomicity m
     ExpressionObject o -> atomicity o
+    ExpressionTypedMorphism tm -> atomicity tm
 
 instance HasAtomicity TypedMorphism where
   atomicity _ = Aggregate appFixity
 
+makeLenses ''Absurd
+makeLenses ''Application
+makeLenses ''Binop
 makeLenses ''Case
-makeLenses ''Pair
+makeLenses ''Coproduct
 makeLenses ''First
-makeLenses ''Second
+makeLenses ''Hom
 makeLenses ''Lambda
 makeLenses ''LeftInj
-makeLenses ''RightInj
-makeLenses ''Var
-makeLenses ''Binop
-makeLenses ''Application
 makeLenses ''Morphism
-makeLenses ''Product
-makeLenses ''Coproduct
-makeLenses ''Hom
 makeLenses ''Object
+makeLenses ''Pair
+makeLenses ''Product
+makeLenses ''RightInj
+makeLenses ''Second
 makeLenses ''TypedMorphism
+makeLenses ''Var

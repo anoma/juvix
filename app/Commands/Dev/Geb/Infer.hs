@@ -19,6 +19,14 @@ runCommand opts = do
       case Geb.inferObject' gebTerm of
         Left err -> exitJuvixError (JuvixError err)
         Right obj -> renderStdOut (Geb.ppOut opts obj)
+    Right (Geb.ExpressionTypedMorphism tyMorph) -> do
+      case run . runError @Geb.CheckingError $ Geb.check' tyMorph of
+        Left err -> exitJuvixError (JuvixError err)
+        Right _ ->
+          renderStdOut $
+            Geb.ppOut
+              opts
+              (tyMorph ^. Geb.typedMorphismObject)
     Right (Geb.ExpressionObject _) ->
       exitJuvixError (error @JuvixError "No inference for objects")
     Left err -> exitJuvixError (JuvixError err)

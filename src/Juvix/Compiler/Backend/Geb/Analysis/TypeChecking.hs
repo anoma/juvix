@@ -1,27 +1,25 @@
 module Juvix.Compiler.Backend.Geb.Analysis.TypeChecking
   ( module Juvix.Compiler.Backend.Geb.Analysis.TypeChecking,
-    module Juvix.Compiler.Backend.Geb.Analysis.TypeChecking.Data.Types,
     module Juvix.Compiler.Backend.Geb.Analysis.TypeChecking.Error,
   )
 where
 
-import Juvix.Compiler.Backend.Geb.Analysis.TypeChecking.Data.Types
 import Juvix.Compiler.Backend.Geb.Analysis.TypeChecking.Error
 import Juvix.Compiler.Backend.Geb.Data.Context as Context
 import Juvix.Compiler.Backend.Geb.Extra
 import Juvix.Compiler.Backend.Geb.Language
 
+type CheckingEnv = Context Object
+
 check' :: Member (Error CheckingError) r => TypedMorphism -> Sem r TypedMorphism
 check' tyMorph = do
-  runReader defaultInferenceEnv $ check (tyMorph ^. typedMorphism) (tyMorph ^. typedMorphismObject)
+  runReader (mempty @CheckingEnv) $ check (tyMorph ^. typedMorphism) (tyMorph ^. typedMorphismObject)
   return tyMorph
 
-check :: Members '[Reader InferenceEnv, Error CheckingError] r => Morphism -> Object -> Sem r ()
+check :: Members '[Reader CheckingEnv, Error CheckingError] r => Morphism -> Object -> Sem r ()
 check morph obj' = do
-  obj <-
-    runReader
-      (defaultInferenceEnv {_inferenceEnvTypeInfo = Just obj'})
-      (inferObject morph)
+  ctx <- ask @CheckingEnv
+  obj <- runReader ctx (inferObject morph)
   unless
     (obj == obj')
     ( throw $
@@ -29,7 +27,7 @@ check morph obj' = do
           TypeMismatch
             { _typeMismatchMorphism = morph,
               _typeMismatchExpected = obj,
-              _typeMismatchActual = obj
+              _typeMismatchActual = obj'
             }
     )
 
@@ -44,14 +42,11 @@ checkListSameType :: InferEffects r => [Morphism] -> Object -> Sem r ()
 checkListSameType morphs obj = mapM_ (`check` obj) morphs
 
 inferObject' :: Morphism -> Either CheckingError Object
-inferObject' = run . runError . runReader defaultInferenceEnv . inferObject
+inferObject' = run . runError . runReader mempty . inferObject @'[Reader CheckingEnv, Error CheckingError]
 
-type InferEffects r = Members '[Reader InferenceEnv, Error CheckingError] r
+type InferEffects r = Members '[Reader CheckingEnv, Error CheckingError] r
 
-inferObject ::
-  Members '[Reader InferenceEnv, Error CheckingError] r =>
-  Morphism ->
-  Sem r Object
+inferObject :: InferEffects r => Morphism -> Sem r Object
 inferObject = \case
   MorphismUnit -> return ObjectTerminal
   MorphismInteger {} -> return ObjectInteger
@@ -67,17 +62,10 @@ inferObject = \case
   MorphismLeft a -> inferObjectLeft a
   MorphismRight b -> inferObjectRight b
 
--- FIXME: Depends on fixing anoma/geb#53
-inferObjectAbsurd :: InferEffects r => Morphism -> Sem r Object
-inferObjectAbsurd x =
-  throw
-    ( CheckingErrorLackOfInformation
-        LackOfInformation
-          { _lackOfInformationMorphism = Just x,
-            _lacOfInformationHelperObject = Nothing,
-            _lackOfInformationMessage = "Absurd"
-          }
-    )
+inferObjectAbsurd :: InferEffects r => Absurd -> Sem r Object
+inferObjectAbsurd x = do
+  check (x ^. absurdValue) (x ^. absurdType)
+  return ObjectInitial
 
 inferObjectApplication :: InferEffects r => Application -> Sem r Object
 inferObjectApplication app = do
@@ -94,15 +82,9 @@ inferObjectLambda :: InferEffects r => Lambda -> Sem r Object
 inferObjectLambda l = do
   let aType = l ^. lambdaVarType
       bType = l ^. lambdaBodyType
-  ctx <- asks (^. inferenceEnvContext)
+  ctx <- ask @CheckingEnv
   local
-    ( const
-        ( InferenceEnv
-            { _inferenceEnvContext = Context.cons aType ctx,
-              _inferenceEnvTypeInfo = Just aType
-            }
-        )
-    )
+    (const (Context.cons aType ctx))
     (check (l ^. lambdaBody) bType)
   return $
     ObjectHom $
@@ -180,7 +162,7 @@ inferObjectSecond p = do
 
 inferObjectVar :: InferEffects r => Var -> Sem r Object
 inferObjectVar v = do
-  ctx <- asks (^. inferenceEnvContext)
+  ctx <- ask @CheckingEnv
   return $ Context.lookup (v ^. varIndex) ctx
 
 inferObjectBinop :: InferEffects r => Binop -> Sem r Object
@@ -213,26 +195,22 @@ inferObjectBinop opApp = do
       checkSameType args
       return outTy
 
--- FIXME: Once https://github.com/anoma/geb/issues/53 is fixed,
--- Update: inferObjectLeft and inferObjectRight to use the same code
 inferObjectLeft :: InferEffects r => LeftInj -> Sem r Object
 inferObjectLeft LeftInj {..} = do
-  let aMorph = _leftInjValue
-  aType <- inferObject aMorph
+  check _leftInjValue _leftInjLeftType
   return $
     ObjectCoproduct $
       Coproduct
-        { _coproductLeft = aType,
+        { _coproductLeft = _leftInjLeftType,
           _coproductRight = _leftInjRightType
         }
 
 inferObjectRight :: InferEffects r => RightInj -> Sem r Object
 inferObjectRight RightInj {..} = do
-  let bMorph = _rightInjValue
-  bType <- inferObject bMorph
+  check _rightInjValue _rightInjRightType
   return $
     ObjectCoproduct $
       Coproduct
         { _coproductLeft = _rightInjLeftType,
-          _coproductRight = bType
+          _coproductRight = _rightInjRightType
         }
