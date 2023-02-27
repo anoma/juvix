@@ -1,0 +1,12 @@
+-- Match box with higher order polymorphic function
+type Box {
+    mkBox : Π A : Type, A → Box A;
+};
+
+def tt : Π A : Type, (int → A) → Box A → int :=
+    λ(A : Type) λ(f : int → A) λ(l : Box A)
+    match (l : Box A) with : int {
+        mkBox _ _ := f 33
+    };
+
+tt int ((+) 2) (mkBox int 1)
