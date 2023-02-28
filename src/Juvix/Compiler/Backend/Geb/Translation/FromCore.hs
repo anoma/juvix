@@ -382,11 +382,10 @@ fromCore tab = case tab ^. Core.infoMain of
       if
           | null branches -> do
               x <- convertNode _caseValue
-              let ty = convertInductive _caseInductive
               return $
                 MorphismAbsurd
                   Absurd
-                    { _absurdType = ty,
+                    { _absurdType = codomainType,
                       _absurdValue = x
                     }
           | missingCtrsNum > 1 -> do
@@ -417,7 +416,11 @@ fromCore tab = case tab ^. Core.infoMain of
         missingCtrs =
           filter
             ( \x ->
-                isNothing (find (\y -> x ^. Core.constructorTag == y ^. Core.caseBranchTag) _caseBranches)
+                isNothing
+                  ( find
+                      (\y -> x ^. Core.constructorTag == y ^. Core.caseBranchTag)
+                      _caseBranches
+                  )
             )
             (ii ^. Core.inductiveConstructors)
         missingCtrsNum = length missingCtrs
