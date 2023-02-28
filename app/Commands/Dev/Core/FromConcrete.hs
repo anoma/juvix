@@ -34,7 +34,9 @@ runCommand localOpts = do
         find (^. identifierName . to (== s)) mainIdens
 
       goPrint :: Sem r ()
-      goPrint = forM_ nodes printNode
+      goPrint = case localOpts ^. coreFromConcreteSymbolName of
+        Just {} -> printNode (fromMaybe err (getDef selInfo))
+        Nothing -> renderStdOut (Core.ppOut localOpts tab')
         where
           printNode :: (Text, Core.Node) -> Sem r ()
           printNode (name, node) = do
@@ -42,9 +44,6 @@ runCommand localOpts = do
             renderStdOut (Core.ppOut localOpts node)
             newline
             newline
-          nodes :: [(Text, Core.Node)]
-            | isJust (localOpts ^. coreFromConcreteSymbolName) = [fromMaybe err (getDef selInfo)]
-            | otherwise = mapMaybe (getDef . Just) mainIdens
 
       goEval :: Sem r ()
       goEval = evalAndPrint localOpts tab' evalNode
