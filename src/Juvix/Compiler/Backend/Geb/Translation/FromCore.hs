@@ -285,53 +285,31 @@ fromCore tab = case tab ^. Core.infoMain of
               _constrTag
               . sort
             $ map (^. Core.constructorTag) ctrs
-
         constructors = mkConstructors $ convertInductive sym
 
-        mkConstructors :: Object -> [Morphism -> Morphism]
-        mkConstructors = \case
-          ObjectCoproduct a -> do
-            let lType = a ^. coproductLeft
-                rType = a ^. coproductRight
-            case rType of
-              ObjectCoproduct _ ->
-                ( \x ->
-                    MorphismLeft
-                      LeftInj
-                        { _leftInjLeftType = lType,
-                          _leftInjRightType = rType,
-                          _leftInjValue = x
-                        }
-                )
-                  : map
-                    ( \f x ->
-                        MorphismRight
-                          RightInj
-                            { _rightInjLeftType = lType,
-                              _rightInjRightType = rType,
-                              _rightInjValue = f x
-                            }
-                    )
-                    (mkConstructors rType)
-                where
-
-              _ ->
-                [ \x ->
-                    MorphismLeft
-                      LeftInj
-                        { _leftInjLeftType = lType,
-                          _leftInjRightType = rType,
-                          _leftInjValue = x
-                        },
-                  \x ->
-                    MorphismRight
-                      RightInj
-                        { _rightInjLeftType = lType,
-                          _rightInjRightType = rType,
-                          _rightInjValue = x
-                        }
-                ]
-          _ -> [id]
+    mkConstructors :: Object -> [Morphism -> Morphism]
+    mkConstructors = \case
+      ObjectCoproduct a -> do
+        let lType = a ^. coproductLeft
+            rType = a ^. coproductRight
+            lInj :: Morphism -> Morphism
+            lInj x =
+              MorphismLeft
+                LeftInj
+                  { _leftInjLeftType = lType,
+                    _leftInjRightType = rType,
+                    _leftInjValue = x
+                  }
+            rInj :: Morphism -> Morphism
+            rInj x =
+              MorphismRight
+                RightInj
+                  { _rightInjLeftType = lType,
+                    _rightInjRightType = rType,
+                    _rightInjValue = x
+                  }
+        lInj : map (rInj .) (mkConstructors rType)
+      _ -> [id]
 
     convertProduct :: [Core.Node] -> Trans Morphism
     convertProduct args = do
@@ -402,7 +380,7 @@ fromCore tab = case tab ^. Core.infoMain of
       if
           | null branches -> do
               x <- convertNode _caseValue
-              ty <- undefined
+              let ty = convertInductive _caseInductive
               return $
                 MorphismAbsurd
                   Absurd

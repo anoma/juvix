@@ -16,7 +16,8 @@ morphismTrue :: Morphism
 morphismTrue =
   MorphismLeft
     LeftInj
-      { _leftInjRightType = ObjectTerminal,
+      { _leftInjLeftType = ObjectTerminal,
+        _leftInjRightType = ObjectTerminal,
         _leftInjValue = MorphismUnit
       }
 
@@ -25,6 +26,7 @@ morphismFalse =
   MorphismRight
     RightInj
       { _rightInjLeftType = ObjectTerminal,
+        _rightInjRightType = ObjectTerminal,
         _rightInjValue = MorphismUnit
       }
 
