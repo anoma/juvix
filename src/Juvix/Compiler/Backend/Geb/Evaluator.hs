@@ -23,19 +23,25 @@ data RunEvalArgs = RunEvalArgs
 makeLenses ''RunEvalArgs
 
 runEval :: RunEvalArgs -> Either JuvixError RunEvalResult
-runEval RunEvalArgs {..} =
+runEval RunEvalArgs {..} = do
   case Geb.runParser _runEvalArgsInputFile _runEvalArgsContent of
-    Right (ExpressionMorphism m) -> do
+    Left err -> Left (JuvixError err)
+    Right m' -> do
       let env :: Env =
             Env
               { _envEvaluatorOptions = _runEvalArgsEvaluatorOptions,
                 _envContext = mempty
               }
-      if _runEvalArgsEvaluatorOptions ^. evaluatorOptionsOutputMorphism
-        then RunEvalResultMorphism <$> evalAndOutputMorphism' env m
-        else RunEvalResultGebValue <$> eval' env m
-    Right _ -> Left (error @JuvixError objNoEvalMsg)
-    Left err -> Left (JuvixError err)
+      let outputFormat morph
+            | _runEvalArgsEvaluatorOptions ^. evaluatorOptionsOutputMorphism =
+                RunEvalResultMorphism <$> evalAndOutputMorphism' env morph
+            | otherwise = RunEvalResultGebValue <$> eval' env morph
+
+      case m' of
+        ExpressionObject _ -> Left (error @JuvixError objNoEvalMsg)
+        ExpressionTypedMorphism tyMorph ->
+          outputFormat (tyMorph ^. typedMorphism)
+        ExpressionMorphism m -> outputFormat m
 
 objNoEvalMsg :: Text
 objNoEvalMsg = "Geb objects cannot be evaluated, only morphisms."

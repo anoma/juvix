@@ -1,14 +1,14 @@
 (typed
   (case-on
     so1
-    so1
+    int
     (coprod
       so1
-      int)
+      so1)
     (right
       so1
       int
-      1)
+      10)
     (lamb
       so1
       (coprod
@@ -19,7 +19,7 @@
         so1
         unit))
     (lamb
-      so1
+      int
       (coprod
         so1
         so1)
@@ -27,4 +27,6 @@
         so1
         so1
         unit)))
-  so0)
+  (coprod
+    so1
+    so1))

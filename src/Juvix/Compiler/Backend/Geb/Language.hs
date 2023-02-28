@@ -83,7 +83,9 @@ data Application = Application
   }
   deriving stock (Show, Eq, Generic)
 
-newtype Var = Var {_varIndex :: Int}
+newtype Var = Var
+  { _varIndex :: Int
+  }
   deriving stock (Show, Eq, Generic)
 
 data Opcode
@@ -208,6 +210,8 @@ instance HasAtomicity Expression where
 
 instance HasAtomicity TypedMorphism where
   atomicity _ = Aggregate appFixity
+
+-- TODO: hasLoc
 
 makeLenses ''Absurd
 makeLenses ''Application

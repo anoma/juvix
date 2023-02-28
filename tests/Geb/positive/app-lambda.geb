@@ -7,22 +7,22 @@
 ;; λ.(λ.0)
 (typed
 (app 
-   (!-> int (!-> int int))
-   (!-> int int)
+   (!-> so1 so1)
+   (!-> int (!-> so1 so1))
     ;; fun: ↓ cls [] (lamb (index 1))
     ;; λλ.1
    (lamb
-     int
-    (!-> int int)
+     (!-> so1 so1)
+     (!-> int (!-> so1 so1))
      (lamb
        int
-       int
+       (!-> so1 so1)
        (index 1)))
    ;; ↓ arg: cls [] (index 0)   
    ;; λ.0
       (lamb
-        int
-        int
-        (index 0))
-)
-(!-> int int))
+        so1
+        so1
+        (index 0)))
+
+(!-> int (!-> so1 so1)))
