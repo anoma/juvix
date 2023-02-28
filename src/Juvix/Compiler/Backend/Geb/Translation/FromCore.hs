@@ -271,6 +271,8 @@ fromCore tab = case tab ^. Core.infoMain of
     convertConstr :: Core.Constr -> Trans Morphism
     convertConstr Core.Constr {..} = do
       args <- convertProduct _constrArgs
+      unless (tagNum < length constructors) $
+        error "constructor tag out of range"
       return $ (constructors !! tagNum) args
       where
         ci = fromJust $ HashMap.lookup _constrTag (tab ^. Core.infoConstructors)
