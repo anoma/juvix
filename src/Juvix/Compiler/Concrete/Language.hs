@@ -1359,7 +1359,7 @@ instance IsApe PatternInfixApp ApeLeaf where
         { _infixFixity = getFixity i,
           _infixLeft = toApe l,
           _infixRight = toApe r,
-          _infixIsComma = isDelimiterStr (prettyText (op ^. constructorRefName . S.nameConcrete)),
+          _infixIsDelimiter = isDelimiterStr (prettyText (op ^. constructorRefName . S.nameConcrete)),
           _infixOp = ApeLeafPattern (PatternConstructor op)
         }
 
@@ -1378,7 +1378,7 @@ instance IsApe InfixApplication ApeLeaf where
         { _infixFixity = getFixity i,
           _infixLeft = toApe l,
           _infixRight = toApe r,
-          _infixIsComma = isDelimiterStr (prettyText (identifierName op ^. S.nameConcrete)),
+          _infixIsDelimiter = isDelimiterStr (prettyText (identifierName op ^. S.nameConcrete)),
           _infixOp = ApeLeafExpression (ExpressionIdentifier op)
         }
 
@@ -1398,7 +1398,7 @@ instance IsApe (Function 'Scoped) ApeLeaf where
         { _infixFixity = funFixity,
           _infixLeft = toApe ps,
           _infixRight = toApe ret,
-          _infixIsComma = False,
+          _infixIsDelimiter = False,
           _infixOp = ApeLeafFunctionKw kw
         }
 

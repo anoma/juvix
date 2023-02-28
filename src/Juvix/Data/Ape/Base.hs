@@ -114,7 +114,7 @@ toCape = \case
               }
 
     unfoldInfix :: Infix a -> Chain a
-    unfoldInfix (Infix fx l op isComma r)
+    unfoldInfix (Infix fx l op isDelimiter r)
       | isLeftAssoc fx = leftAssoc
       | isRightAssoc fx = rightAssoc
       | otherwise = noAssoc
@@ -124,7 +124,7 @@ toCape = \case
           Chain
             { _chainFixity = fx,
               _chainHead = toCape l,
-              _chainLinks = pure (Link op isComma (toCape r))
+              _chainLinks = pure (Link op isDelimiter (toCape r))
             }
 
         rightAssoc :: Chain a
@@ -132,22 +132,22 @@ toCape = \case
           Chain
             { _chainFixity = fx,
               _chainHead = toCape l,
-              _chainLinks = go op isComma r
+              _chainLinks = go op isDelimiter r
             }
           where
             go :: a -> Bool -> Ape a -> NonEmpty (Link a)
             go prevOp prevIsDelimiter = \case
-              ApeInfix (Infix fx' l' op' isComma' r')
-                | fx == fx' -> pure (Link prevOp prevIsDelimiter (toCape l')) <> go op' isComma' r'
+              ApeInfix (Infix fx' l' op' isDelimiter' r')
+                | fx == fx' -> pure (Link prevOp prevIsDelimiter (toCape l')) <> go op' isDelimiter' r'
               e -> pure (Link prevOp prevIsDelimiter (toCape e))
 
         leftAssoc :: Chain a
-        leftAssoc = go (pure (Link op isComma (toCape r))) l
+        leftAssoc = go (pure (Link op isDelimiter (toCape r))) l
           where
             go :: NonEmpty (Link a) -> Ape a -> Chain a
             go ac = \case
-              ApeInfix (Infix fx' l' op' isComma' r')
-                | fx == fx' -> go (pure (Link op' isComma' (toCape r')) <> ac) l'
+              ApeInfix (Infix fx' l' op' isDelimiter' r')
+                | fx == fx' -> go (pure (Link op' isDelimiter' (toCape r')) <> ac) l'
               e ->
                 Chain
                   { _chainFixity = fx,
