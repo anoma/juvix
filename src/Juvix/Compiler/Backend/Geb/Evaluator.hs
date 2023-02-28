@@ -23,19 +23,25 @@ data RunEvalArgs = RunEvalArgs
 makeLenses ''RunEvalArgs
 
 runEval :: RunEvalArgs -> Either JuvixError RunEvalResult
-runEval RunEvalArgs {..} =
+runEval RunEvalArgs {..} = do
   case Geb.runParser _runEvalArgsInputFile _runEvalArgsContent of
-    Right (ExpressionMorphism m) -> do
+    Left err -> Left (JuvixError err)
+    Right m' -> do
       let env :: Env =
             Env
               { _envEvaluatorOptions = _runEvalArgsEvaluatorOptions,
                 _envContext = mempty
               }
-      if _runEvalArgsEvaluatorOptions ^. evaluatorOptionsOutputMorphism
-        then RunEvalResultMorphism <$> evalAndOutputMorphism' env m
-        else RunEvalResultGebValue <$> eval' env m
-    Right _ -> Left (error @JuvixError objNoEvalMsg)
-    Left err -> Left (JuvixError err)
+      let outputFormat morph
+            | _runEvalArgsEvaluatorOptions ^. evaluatorOptionsOutputMorphism =
+                RunEvalResultMorphism <$> evalAndOutputMorphism' env morph
+            | otherwise = RunEvalResultGebValue <$> eval' env morph
+
+      case m' of
+        ExpressionObject _ -> Left (error @JuvixError objNoEvalMsg)
+        ExpressionTypedMorphism tyMorph ->
+          outputFormat (tyMorph ^. typedMorphism)
+        ExpressionMorphism m -> outputFormat m
 
 objNoEvalMsg :: Text
 objNoEvalMsg = "Geb objects cannot be evaluated, only morphisms."
@@ -57,7 +63,7 @@ evalAndOutputMorphism ::
 evalAndOutputMorphism m = do
   val :: GebValue <- mapError (JuvixError @EvalError) $ eval m
   obj :: Object <-
-    runReader defaultInferenceEnv $
+    runReader (mempty @CheckingEnv) $
       mapError (JuvixError @CheckingError) (inferObject m)
   if
       | requiresObjectInfo val -> quote (Just obj) val
@@ -75,9 +81,9 @@ eval morph =
     MorphismFirst f -> evalFirst f
     MorphismInteger i -> return $ GebValueMorphismInteger i
     MorphismLambda l -> evalLambda l
-    MorphismLeft m -> GebValueMorphismLeft <$> eval m
+    MorphismLeft m -> evalLeftInj m
     MorphismPair p -> evalPair p
-    MorphismRight m -> GebValueMorphismRight <$> eval m
+    MorphismRight m -> evalRightInj m
     MorphismSecond s -> evalSecond s
     MorphismUnit -> return GebValueMorphismUnit
     MorphismVar x -> evalVar x
@@ -88,13 +94,13 @@ evalVar var = do
   let val = Context.lookup (var ^. varIndex) ctx
   return val
 
-evalAbsurd :: EvalEffects r => Morphism -> Sem r GebValue
+evalAbsurd :: EvalEffects r => Absurd -> Sem r GebValue
 evalAbsurd morph =
   throw
     EvalError
       { _evalErrorMsg = "Absurd can not be evaluated.",
         _evalErrorGebValue = Nothing,
-        _evalErrorGebExpression = Just morph
+        _evalErrorGebExpression = Just $ MorphismAbsurd morph
       }
 
 evalPair :: EvalEffects r => Pair -> Sem r GebValue
@@ -133,6 +139,16 @@ evalSecond s = do
             _evalErrorGebValue = Just res,
             _evalErrorGebExpression = Just (MorphismSecond s)
           }
+
+evalLeftInj :: EvalEffects r => LeftInj -> Sem r GebValue
+evalLeftInj s = do
+  res <- eval $ s ^. leftInjValue
+  return $ GebValueMorphismLeft res
+
+evalRightInj :: EvalEffects r => RightInj -> Sem r GebValue
+evalRightInj s = do
+  res <- eval $ s ^. rightInjValue
+  return $ GebValueMorphismRight res
 
 evalApp :: EvalEffects r => Application -> Sem r GebValue
 evalApp app = do
@@ -259,8 +275,8 @@ requiresObjectInfo = \case
   GebValueMorphismUnit -> False
   GebValueMorphismInteger {} -> False
   GebValueClosure {} -> True
-  GebValueMorphismLeft {} -> True
-  GebValueMorphismRight {} -> True
+  GebValueMorphismLeft {} -> False
+  GebValueMorphismRight {} -> False
   GebValueMorphismPair {} -> True
 
 quote :: Maybe Object -> GebValue -> Sem r Morphism
@@ -307,7 +323,15 @@ quoteValueMorphismPair ty vpair = do
 
 quoteValueMorphismLeft :: Maybe Object -> GebValue -> Sem r Morphism
 quoteValueMorphismLeft ty m = case ty of
-  Just (ObjectCoproduct _) -> MorphismLeft <$> quote ty m
+  Just (ObjectCoproduct Coproduct {..}) -> do
+    leftMorphism <- quote ty m
+    return $
+      MorphismLeft
+        LeftInj
+          { _leftInjValue = leftMorphism,
+            _leftInjLeftType = _coproductLeft,
+            _leftInjRightType = _coproductRight
+          }
   Just _ ->
     quoteError
       "type mismatch (left). Expected a coproduct"
@@ -317,7 +341,15 @@ quoteValueMorphismLeft ty m = case ty of
 
 quoteMorphismRight :: Maybe Object -> GebValue -> Sem r Morphism
 quoteMorphismRight ty r = case ty of
-  Just (ObjectCoproduct _) -> MorphismRight <$> quote ty r
+  Just (ObjectCoproduct Coproduct {..}) -> do
+    rightMorphism <- quote ty r
+    return $
+      MorphismRight
+        RightInj
+          { _rightInjValue = rightMorphism,
+            _rightInjLeftType = _coproductLeft,
+            _rightInjRightType = _coproductRight
+          }
   Just _ ->
     quoteError
       "type mismatch (right). Expected a coproduct"

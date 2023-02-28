@@ -135,19 +135,38 @@ tests:
     args:
       - Geb/positive/app-lambda.geb
     stdout: |
-      (app
-        int
-        int
-        (lamb
-          int
-          int
+      (typed
+        (app
+          (!->
+            so1
+            so1)
+          (!->
+            int
+            (!->
+              so1
+              so1))
           (lamb
-            int
-            int
-            (index 1)))
-        (lamb
+            (!->
+              so1
+              so1)
+            (!->
+              int
+              (!->
+                so1
+                so1))
+            (lamb
+              int
+              (!->
+                so1
+                so1)
+              (index 1)))
+          (lamb
+            so1
+            so1
+            (index 0)))
+        (!->
           int
-          int
-          (index 0)))
-
+          (!->
+            so1
+            so1)))
     exit-status: 0

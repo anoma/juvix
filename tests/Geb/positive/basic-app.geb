@@ -1,8 +1,12 @@
-(app 
- int
- int
- (lamb
+(typed
+  (app
     int
     int
-    (index 0))
- (add 1000 2000))
+    (lamb
+      int
+      int
+      (index 0))
+    (add
+      1000
+      2000))
+  int)

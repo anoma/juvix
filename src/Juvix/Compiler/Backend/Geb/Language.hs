@@ -26,6 +26,26 @@ data Case = Case
   }
   deriving stock (Show, Eq, Generic)
 
+data Absurd = Absurd
+  { _absurdType :: Object,
+    _absurdValue :: Morphism
+  }
+  deriving stock (Show, Eq, Generic)
+
+data LeftInj = LeftInj
+  { _leftInjLeftType :: Object,
+    _leftInjRightType :: Object,
+    _leftInjValue :: Morphism
+  }
+  deriving stock (Show, Eq, Generic)
+
+data RightInj = RightInj
+  { _rightInjLeftType :: Object,
+    _rightInjRightType :: Object,
+    _rightInjValue :: Morphism
+  }
+  deriving stock (Show, Eq, Generic)
+
 data Pair = Pair
   { _pairLeftType :: Object,
     _pairRightType :: Object,
@@ -63,7 +83,9 @@ data Application = Application
   }
   deriving stock (Show, Eq, Generic)
 
-newtype Var = Var {_varIndex :: Int}
+newtype Var = Var
+  { _varIndex :: Int
+  }
   deriving stock (Show, Eq, Generic)
 
 data Opcode
@@ -86,10 +108,10 @@ data Binop = Binop
 -- | Corresponds to the GEB type for terms (morphisms of the category): `stlc`
 -- (https://github.com/anoma/geb/blob/main/src/specs/lambda.lisp).
 data Morphism
-  = MorphismAbsurd Morphism
+  = MorphismAbsurd Absurd
   | MorphismUnit
-  | MorphismLeft Morphism
-  | MorphismRight Morphism
+  | MorphismLeft LeftInj
+  | MorphismRight RightInj
   | MorphismCase Case
   | MorphismPair Pair
   | MorphismFirst First
@@ -137,6 +159,7 @@ data Object
 data Expression
   = ExpressionMorphism Morphism
   | ExpressionObject Object
+  | ExpressionTypedMorphism TypedMorphism
   deriving stock (Show, Eq, Generic)
 
 data TypedMorphism = TypedMorphism
@@ -183,21 +206,27 @@ instance HasAtomicity Expression where
   atomicity = \case
     ExpressionMorphism m -> atomicity m
     ExpressionObject o -> atomicity o
+    ExpressionTypedMorphism tm -> atomicity tm
 
 instance HasAtomicity TypedMorphism where
   atomicity _ = Aggregate appFixity
 
-makeLenses ''Case
-makeLenses ''Pair
-makeLenses ''First
-makeLenses ''Second
-makeLenses ''Lambda
-makeLenses ''Var
-makeLenses ''Binop
+-- TODO: hasLoc
+
+makeLenses ''Absurd
 makeLenses ''Application
-makeLenses ''Morphism
-makeLenses ''Product
+makeLenses ''Binop
+makeLenses ''Case
 makeLenses ''Coproduct
+makeLenses ''First
 makeLenses ''Hom
+makeLenses ''Lambda
+makeLenses ''LeftInj
+makeLenses ''Morphism
 makeLenses ''Object
+makeLenses ''Pair
+makeLenses ''Product
+makeLenses ''RightInj
+makeLenses ''Second
 makeLenses ''TypedMorphism
+makeLenses ''Var

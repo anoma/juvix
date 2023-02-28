@@ -43,7 +43,7 @@ docLisp opts packageName entryName morph obj =
             <> line
             <> indent'
               ( parens
-                  ( "typed"
+                  ( kwTyped
                       <> line
                       <> indent'
                         (vsep [doc opts morph, doc opts obj])
@@ -90,6 +90,26 @@ instance PrettyCode Second where
     val <- ppArg _secondValue
     return $ kwSnd <> line <> indent' (vsep [lty, rty, val])
 
+instance PrettyCode LeftInj where
+  ppCode LeftInj {..} = do
+    lty <- ppArg _leftInjLeftType
+    rty <- ppArg _leftInjRightType
+    val <- ppArg _leftInjValue
+    return $ kwLeft <> line <> indent' (vsep [lty, rty, val])
+
+instance PrettyCode RightInj where
+  ppCode RightInj {..} = do
+    lty <- ppArg _rightInjLeftType
+    rty <- ppArg _rightInjRightType
+    val <- ppArg _rightInjValue
+    return $ kwRight <> line <> indent' (vsep [lty, rty, val])
+
+instance PrettyCode Absurd where
+  ppCode Absurd {..} = do
+    ty <- ppArg _absurdType
+    val <- ppArg _absurdValue
+    return $ kwAbsurd <> line <> indent' (vsep [ty, val])
+
 instance PrettyCode Lambda where
   ppCode Lambda {..} = do
     vty <- ppArg _lambdaVarType
@@ -104,9 +124,6 @@ instance PrettyCode Application where
     left <- ppArg _applicationLeft
     right <- ppArg _applicationRight
     return $ kwApp <> line <> indent' (vsep [dom, cod, left, right])
-
-instance PrettyCode Var where
-  ppCode Var {..} = return $ annotate AnnLiteralInteger (pretty _varIndex)
 
 instance PrettyCode Opcode where
   ppCode = \case
@@ -125,28 +142,25 @@ instance PrettyCode Binop where
     right <- ppArg _binopRight
     return $ op <> line <> indent' (vsep [left, right])
 
+instance PrettyCode Var where
+  ppCode Var {..} = do
+    return $
+      kwVar
+        <+> annotate AnnLiteralInteger (pretty _varIndex)
+
 instance PrettyCode Morphism where
   ppCode = \case
-    MorphismAbsurd val -> do
-      v <- ppArg val
-      return $ kwAbsurd <+> v
-    MorphismUnit ->
-      return kwUnit
-    MorphismLeft val -> do
-      v <- ppArg val
-      return $ kwLeft <> line <> indent' v
-    MorphismRight val -> do
-      v <- ppArg val
-      return $ kwRight <> line <> indent' v
+    MorphismAbsurd val -> ppCode val
+    MorphismUnit -> return kwUnit
+    MorphismLeft val -> ppCode val
+    MorphismRight val -> ppCode val
     MorphismCase x -> ppCode x
     MorphismPair x -> ppCode x
     MorphismFirst x -> ppCode x
     MorphismSecond x -> ppCode x
     MorphismLambda x -> ppCode x
     MorphismApplication x -> ppCode x
-    MorphismVar idx -> do
-      i <- ppCode idx
-      return $ kwVar <+> i
+    MorphismVar idx -> ppCode idx
     MorphismInteger n -> return $ annotate AnnLiteralInteger (pretty n)
     MorphismBinop x -> ppCode x
 
@@ -182,6 +196,7 @@ instance PrettyCode Expression where
   ppCode = \case
     ExpressionMorphism x -> ppCode x
     ExpressionObject x -> ppCode x
+    ExpressionTypedMorphism x -> ppCode x
 
 instance PrettyCode TypedMorphism where
   ppCode TypedMorphism {..} = do

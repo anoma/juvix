@@ -1,6 +1,15 @@
-(lamb
-  so1
-  (coprod
+(typed
+  (lamb
     so1
-    so1)
-  (left unit))
+    (coprod
+      so1
+      so1)
+    (left
+      so1
+      so1
+      unit))
+  (!->
+    so1
+    (coprod
+      so1
+      so1)))

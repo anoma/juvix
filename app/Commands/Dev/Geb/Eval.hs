@@ -52,3 +52,7 @@ evalAndPrint opts = \case
               Left err -> exitJuvixError err
               Right m -> renderStdOut (Geb.ppOut opts' m)
   Geb.ExpressionObject _ -> error Geb.objNoEvalMsg
+  Geb.ExpressionTypedMorphism tyMorph ->
+    evalAndPrint
+      opts
+      (Geb.ExpressionMorphism (tyMorph ^. Geb.typedMorphism))

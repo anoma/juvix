@@ -5,7 +5,6 @@ module Juvix.Compiler.Backend.Geb.Translation.FromSource
 where
 
 import Juvix.Compiler.Backend.Geb.Keywords
-import Juvix.Compiler.Backend.Geb.Language (typedMorphism)
 import Juvix.Compiler.Backend.Geb.Language qualified as Geb
 import Juvix.Compiler.Backend.Geb.Translation.FromSource.Lexer
 import Juvix.Parser.Error
@@ -34,33 +33,16 @@ runParser ::
   Path Abs File ->
   Text ->
   Either MegaparsecError Geb.Expression
-runParser fileName input =
-  do
-    let parser :: ParsecS r Geb.Expression
-        parser
-          | isJuvixGebFile fileName = parseGeb
-          | isLispFile fileName = parseGebLisp
-          | otherwise = error "unknown file extension"
-    case run $
-      P.runParserT parser (fromAbsFile fileName) input of
-      Left err -> Left (MegaparsecError err)
-      Right gebTerm -> Right gebTerm
-
-runParser' ::
-  Path Abs File ->
-  Text ->
-  Either MegaparsecError Geb.TypedMorphism
-runParser' fileName input =
-  do
-    let parser :: ParsecS r Geb.TypedMorphism
-        parser
-          | isJuvixGebFile fileName = parseTypedMorphism
-          | isLispFile fileName = parseGebLisp'
-          | otherwise = error "unknown file extension"
-    case run $
-      P.runParserT parser (fromAbsFile fileName) input of
-      Left err -> Left (MegaparsecError err)
-      Right gebTerm -> Right gebTerm
+runParser fileName input = do
+  let parser :: ParsecS r Geb.Expression
+      parser
+        | isJuvixGebFile fileName = parseGeb
+        | isLispFile fileName = parseGebLisp
+        | otherwise = error "unknown file extension"
+  case run $
+    P.runParserT parser (fromAbsFile fileName) input of
+    Left err -> Left (MegaparsecError err)
+    Right gebTerm -> Right gebTerm
 
 parseLispSymbol :: ParsecS r Text
 parseLispSymbol =
@@ -109,32 +91,25 @@ parseDefParameter =
 
 parseGebLisp :: ParsecS r Geb.Expression
 parseGebLisp = do
-  tyMorph <- parseGebLisp'
-  return $
-    Geb.ExpressionMorphism $
-      tyMorph
-        ^. typedMorphism
-
-parseGebLisp' :: ParsecS r Geb.TypedMorphism
-parseGebLisp' = do
   space
   P.label "<defpackage>" parseLispExpr
   P.label "<in-package>" parseLispExpr
   entry <- parseDefParameter
   P.eof
   return $
-    entry
-      ^. lispDefParameterMorphism
-
-parseGebExpression :: ParsecS r Geb.Expression
-parseGebExpression =
-  P.try (Geb.ExpressionObject <$> object)
-    <|> Geb.ExpressionMorphism <$> morphism
+    Geb.ExpressionTypedMorphism $
+      entry
+        ^. lispDefParameterMorphism
 
 parseGeb :: ParsecS r Geb.Expression
 parseGeb =
-  P.label "<geb program>" $
-    space *> parseGebExpression <* P.eof
+  P.label "<geb program>" $ do
+    space
+    ( P.try (Geb.ExpressionObject <$> object)
+        <|> P.try (Geb.ExpressionMorphism <$> morphism)
+        <|> Geb.ExpressionTypedMorphism <$> parseTypedMorphism
+      )
+      <* P.eof
 
 morphism :: ParsecS r Geb.Morphism
 morphism =
@@ -143,8 +118,8 @@ morphism =
       <|> Geb.MorphismInteger <$> morphismInteger
       <|> parens
         ( Geb.MorphismAbsurd <$> morphismAbsurd
-            <|> Geb.MorphismLeft <$> morphismLeft
-            <|> Geb.MorphismRight <$> morphismRight
+            <|> Geb.MorphismLeft <$> morphismLeftInj
+            <|> Geb.MorphismRight <$> morphismRightInj
             <|> Geb.MorphismCase <$> morphismCase
             <|> Geb.MorphismPair <$> morphismPair
             <|> Geb.MorphismFirst <$> morphismFirst
@@ -203,23 +178,45 @@ morphismUnit = do
     kw kwGebMorphismUnit
     return Geb.MorphismUnit
 
-morphismAbsurd :: ParsecS r Geb.Morphism
+morphismAbsurd :: ParsecS r Geb.Absurd
 morphismAbsurd =
   P.label "<geb MorphismAbsurd>" $ do
     kw kwGebMorphismAbsurd
-    morphism
+    obj <- object
+    morph <- morphism
+    return $
+      Geb.Absurd
+        { _absurdType = obj,
+          _absurdValue = morph
+        }
 
-morphismLeft :: ParsecS r Geb.Morphism
-morphismLeft = do
+morphismLeftInj :: ParsecS r Geb.LeftInj
+morphismLeftInj = do
   P.label "<geb MorphismLeft>" $ do
     kw kwGebMorphismLeft
-    morphism
+    lType <- object
+    rType <- object
+    lValue <- morphism
+    return $
+      Geb.LeftInj
+        { _leftInjLeftType = lType,
+          _leftInjRightType = rType,
+          _leftInjValue = lValue
+        }
 
-morphismRight :: ParsecS r Geb.Morphism
-morphismRight = do
+morphismRightInj :: ParsecS r Geb.RightInj
+morphismRightInj = do
   P.label "<geb MorphismRight>" $ do
     kw kwGebMorphismRight
-    morphism
+    lType <- object
+    rType <- object
+    rValue <- morphism
+    return $
+      Geb.RightInj
+        { _rightInjLeftType = lType,
+          _rightInjRightType = rType,
+          _rightInjValue = rValue
+        }
 
 morphismCase :: ParsecS r Geb.Case
 morphismCase = do

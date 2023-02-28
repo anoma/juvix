@@ -1,0 +1,6 @@
+*.lisp
+*.geb
+*.pir
+*.pp
+*.plonk
+*.proof
