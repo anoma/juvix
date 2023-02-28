@@ -187,9 +187,6 @@ runCommand opts = do
               compileString :: Repl (Either JuvixError Core.Node)
               compileString = liftIO $ compileExpressionIO' ctx (strip (pack s))
 
-              bindEither :: (Monad m) => m (Either e a) -> (a -> m (Either e b)) -> m (Either e b)
-              bindEither x f = join <$> (x >>= mapM f)
-
       core :: String -> Repl ()
       core input = Repline.dontCrash $ do
         ctx <- State.gets (^. replStateContext)

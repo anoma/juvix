@@ -10,6 +10,30 @@ import Juvix.Compiler.Core.Data.InfoTable
 import Juvix.Compiler.Core.Data.InfoTableBuilder
 import Juvix.Compiler.Core.Language
 
+mapIdentsM :: Monad m => (IdentifierInfo -> m IdentifierInfo) -> InfoTable -> m InfoTable
+mapIdentsM = overM infoIdentifiers . mapM
+
+mapInductivesM :: Monad m => (InductiveInfo -> m InductiveInfo) -> InfoTable -> m InfoTable
+mapInductivesM = overM infoInductives . mapM
+
+mapConstructorsM :: Monad m => (ConstructorInfo -> m ConstructorInfo) -> InfoTable -> m InfoTable
+mapConstructorsM = overM infoConstructors . mapM
+
+mapAxiomsM :: Monad m => (AxiomInfo -> m AxiomInfo) -> InfoTable -> m InfoTable
+mapAxiomsM = overM infoAxioms . mapM
+
+mapNodesM :: Monad m => (Node -> m Node) -> InfoTable -> m InfoTable
+mapNodesM = overM identContext . mapM
+
+mapAllNodesM :: Monad m => (Node -> m Node) -> InfoTable -> m InfoTable
+mapAllNodesM f tab =
+  mapNodesM f tab >>=
+  mapAxiomsM (overM axiomType f) >>=
+  mapConstructorsM (overM constructorType f) >>=
+  mapInductivesM (overM inductiveKind f) >>=
+  mapInductivesM (overM inductiveConstructors (mapM (overM constructorType f))) >>=
+  mapIdentsM (overM identifierType f)
+
 mapIdents :: (IdentifierInfo -> IdentifierInfo) -> InfoTable -> InfoTable
 mapIdents = over infoIdentifiers . fmap
 

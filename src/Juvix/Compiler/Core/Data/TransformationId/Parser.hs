@@ -80,6 +80,7 @@ transformationText = \case
   ComputeTypeInfo -> strComputeTypeInfo
   UnrollRecursion -> strUnrollRecursion
   DisambiguateNames -> strDisambiguateNames
+  CheckGeb -> strCheckGeb
 
 parsePipeline :: MonadParsec e Text m => m PipelineId
 parsePipeline = choice [symbol (pipelineText t) $> t | t <- allElements]
@@ -137,3 +138,6 @@ strUnrollRecursion = "unroll-recursion"
 
 strDisambiguateNames :: Text
 strDisambiguateNames = "disambiguate-names"
+
+strCheckGeb :: Text
+strCheckGeb = "check-geb"

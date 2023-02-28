@@ -1,4 +1,4 @@
-module Juvix.Compiler.Core.Extra.IdentDependencyInfo where
+module Juvix.Compiler.Core.Data.IdentDependencyInfo where
 
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet

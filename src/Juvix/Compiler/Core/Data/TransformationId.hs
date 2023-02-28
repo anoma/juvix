@@ -16,6 +16,7 @@ data TransformationId
   | MatchToCase
   | EtaExpandApps
   | DisambiguateNames
+  | CheckGeb
   deriving stock (Data, Bounded, Enum)
 
 data PipelineId

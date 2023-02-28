@@ -13,13 +13,12 @@ runCommand :: forall r. Members '[Embed IO, App] r => CoreFromConcreteOptions ->
 runCommand localOpts = do
   tab <- (^. coreResultTable) <$> runPipeline (localOpts ^. coreFromConcreteInputFile) upToCore
   path :: Path Abs File <- someBaseToAbs' (localOpts ^. coreFromConcreteInputFile . pathPath)
-  let tab0 :: InfoTable = Core.applyTransformations (project localOpts ^. coreFromConcreteTransformations) tab
-      tab' :: InfoTable = if localOpts ^. coreFromConcreteNoDisambiguate then tab0 else disambiguateNames tab0
-
+  r <- runError @JuvixError $ Core.applyTransformations (project localOpts ^. coreFromConcreteTransformations) tab
+  tab0 :: InfoTable <- getRight r
+  let tab' :: InfoTable = if localOpts ^. coreFromConcreteNoDisambiguate then tab0 else disambiguateNames tab0
       inInputModule :: IdentifierInfo -> Bool
-      inInputModule x
-        | localOpts ^. coreFromConcreteFilter = (== Just path) . (^? identifierLocation . _Just . intervalFile) $ x
-        | otherwise = True
+      inInputModule _ | not (localOpts ^. coreFromConcreteFilter) = True
+      inInputModule x = (== Just path) . (^? identifierLocation . _Just . intervalFile) $ x
 
       mainIdens :: [IdentifierInfo] =
         sortOn

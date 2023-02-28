@@ -14,7 +14,8 @@ runCommand opts = do
   inputFile :: Path Abs File <- someBaseToAbs' sinputFile
   s' <- embed (readFile $ toFilePath inputFile)
   tab <- getRight (mapLeft JuvixError (Core.runParserMain inputFile Core.emptyInfoTable s'))
-  let tab' = Asm.fromCore $ Stripped.fromCore (Core.toStripped tab)
+  r <- runError @JuvixError $ Core.toStripped tab
+  tab' <- Asm.fromCore . Stripped.fromCore <$> getRight r
   if
       | project opts ^. coreAsmPrint ->
           renderStdOut (Asm.ppOutDefault tab' tab')
