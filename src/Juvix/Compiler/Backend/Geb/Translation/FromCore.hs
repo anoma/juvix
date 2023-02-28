@@ -382,10 +382,11 @@ fromCore tab = case tab ^. Core.infoMain of
       if
           | null branches -> do
               x <- convertNode _caseValue
+              let ty = convertType (Info.getInfoType _caseInfo)
               return $
                 MorphismAbsurd
                   Absurd
-                    { _absurdType = codomainType,
+                    { _absurdType = ty,
                       _absurdValue = x
                     }
           | missingCtrsNum > 1 -> do
