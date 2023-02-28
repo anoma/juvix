@@ -240,6 +240,7 @@ optTransformationIds =
     (eitherReader parseTransf)
     ( long "transforms"
         <> short 't'
+        <> value []
         <> metavar "[Transform]"
         <> completer (mkCompleter (return . completionsString))
         <> help "hint: use autocomplete"
