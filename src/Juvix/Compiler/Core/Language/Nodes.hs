@@ -178,7 +178,8 @@ data PatternBinder' i a = PatternBinder
 data PatternConstr' i a = PatternConstr
   { _patternConstrInfo :: i,
     _patternConstrTag :: !Tag,
-    _patternConstrArgs :: ![Pattern' i a]
+    _patternConstrArgs :: ![Pattern' i a],
+    _patternConstrType :: a
   }
 
 -- | Useful for unfolding Pi
@@ -414,7 +415,7 @@ instance (Eq a) => Eq (MatchBranch' i a) where
   (MatchBranch _ pats1 b1) == (MatchBranch _ pats2 b2) = pats1 == pats2 && b1 == b2
 
 instance (Eq a) => Eq (PatternConstr' i a) where
-  (PatternConstr _ tag1 ps1) == (PatternConstr _ tag2 ps2) = tag1 == tag2 && ps1 == ps2
+  (PatternConstr _ tag1 ps1 _) == (PatternConstr _ tag2 ps2 _) = tag1 == tag2 && ps1 == ps2
 
 instance Hashable (Ident' i) where
   hashWithSalt s = hashWithSalt s . (^. identSymbol)

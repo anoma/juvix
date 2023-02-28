@@ -930,7 +930,7 @@ binderOrConstrPattern parseArgs varsNum vars = do
         (ci ^. constructorArgsNum /= length ps)
         (parseFailure off "wrong number of constructor arguments")
       let info = setInfoName (ci ^. constructorName) Info.empty
-      return $ PatConstr (PatternConstr info tag ps)
+      return $ PatConstr (PatternConstr info tag ps mkDynamic')
     _ -> do
       mp <- optional (binderPattern varsNum vars)
       mty <- optional (kw kwColon >> expr varsNum vars)
