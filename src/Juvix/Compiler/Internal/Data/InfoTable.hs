@@ -104,14 +104,17 @@ buildTable1' m = do
     compute = do
       infoInc <- buildTable' (map (^. includeModule) includes)
       return (InfoTable {..} <> infoInc)
+
     includes :: [Include]
     includes = [i | StatementInclude i <- ss]
+
     _infoInductives :: HashMap Name InductiveInfo
     _infoInductives =
       HashMap.fromList
         [ (d ^. inductiveName, InductiveInfo d)
           | StatementInductive d <- ss
         ]
+
     _infoConstructors :: HashMap Name ConstructorInfo
     _infoConstructors =
       HashMap.fromList
@@ -124,6 +127,7 @@ buildTable1' m = do
             (builtin, c) <- zipExact builtins (d ^. inductiveConstructors),
             let args = c ^. inductiveConstructorParameters
         ]
+
     _infoFunctions :: HashMap Name FunctionInfo
     _infoFunctions =
       HashMap.fromList $
@@ -140,6 +144,7 @@ buildTable1' m = do
         isInclude = \case
           StatementInclude {} -> True
           _ -> False
+
     _infoAxioms :: HashMap Name AxiomInfo
     _infoAxioms =
       HashMap.fromList
@@ -148,7 +153,23 @@ buildTable1' m = do
         ]
 
     ss :: [Statement]
-    ss = m ^. (moduleBody . moduleStatements)
+    ss = moduleStatementsRec m
+
+-- | Returns all statements in a module, including those in local modules
+moduleStatementsRec :: Module -> [Statement]
+moduleStatementsRec m =
+  m
+    ^. moduleBody
+    . moduleStatements
+    ++ concatMap moduleStatementsRec localModules
+  where
+    localModules :: [Module]
+    localModules = mapMaybe getLocalModule (m ^. moduleBody . moduleStatements)
+      where
+        getLocalModule :: Statement -> Maybe Module
+        getLocalModule = \case
+          StatementModule l -> return l
+          _ -> Nothing
 
 lookupConstructor :: (Member (Reader InfoTable) r) => Name -> Sem r ConstructorInfo
 lookupConstructor f = HashMap.lookupDefault impossible f <$> asks (^. infoConstructors)
