@@ -63,13 +63,15 @@ convertNode tab = convert mempty
           convertBranch br@CaseBranch {..} =
             let paramBinders = map (set binderType mkSmallUniv) (take nParams _caseBranchBinders)
                 argBinders = drop nParams _caseBranchBinders
+                tyargs = drop nParams (typeArgs (fromJust (tab ^. infoConstructors . at _caseBranchTag) ^. constructorType))
+                argBinders' = zipWith (\b ty -> if isDynamic (b ^. binderType) && isTypeConstr ty then set binderType ty b else b) argBinders (tyargs ++ repeat mkDynamic')
                 binders' =
                   filterBinders
                     (BL.prependRev paramBinders vars)
-                    argBinders
+                    argBinders'
                 body' =
                   convert
-                    (BL.prependRev argBinders (BL.prependRev paramBinders vars))
+                    (BL.prependRev argBinders' (BL.prependRev paramBinders vars))
                     _caseBranchBody
              in br
                   { _caseBranchBinders = binders',
