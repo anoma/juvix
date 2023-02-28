@@ -10,14 +10,6 @@ import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Pretty
 import Juvix.Compiler.Core.Transformation.Base
 
-isTypeConstr :: InfoTable -> Type -> Bool
-isTypeConstr tab ty = case typeTarget ty of
-  NUniv {} ->
-    True
-  NIdt Ident {..} ->
-    isTypeConstr tab (fromJust $ HashMap.lookup _identSymbol (tab ^. identContext))
-  _ -> False
-
 convertNode :: InfoTable -> Node -> Node
 convertNode tab = convert mempty
   where

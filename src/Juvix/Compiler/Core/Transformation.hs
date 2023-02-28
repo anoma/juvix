@@ -26,7 +26,7 @@ import Juvix.Compiler.Core.Transformation.TopEtaExpand
 import Juvix.Compiler.Core.Transformation.UnrollRecursion
 
 applyTransformations :: forall r. Member (Error JuvixError) r => [TransformationId] -> InfoTable -> Sem r InfoTable
-applyTransformations ts tbl = foldr (\tid acc -> acc >>= appTrans tid) (return tbl) ts
+applyTransformations ts tbl = foldl' (\acc tid -> acc >>= appTrans tid) (return tbl) ts
   where
     appTrans :: TransformationId -> InfoTable -> Sem r InfoTable
     appTrans = \case

@@ -7,6 +7,7 @@ import Juvix.Compiler.Builtins (iniState)
 import Juvix.Compiler.Core.Pipeline qualified as Core
 import Juvix.Compiler.Core.Translation.FromInternal.Data qualified as Core
 import Juvix.Compiler.Pipeline
+import Juvix.Data.PPOutput
 
 compileAssertion ::
   Bool ->
@@ -19,7 +20,7 @@ compileAssertion onlyEval mainFile expectedFile step = do
   cwd <- getCurrentDir
   let entryPoint = defaultEntryPoint cwd mainFile
   tab <- (^. Core.coreResultTable) . snd <$> runIO' iniState entryPoint upToCore
-  case run $ runError $ Core.toEval tab' of
+  case run $ runError $ Core.toEval tab of
     Left err -> assertFailure (show (pretty (fromJuvixError @GenericError err)))
     Right tab' -> do
       coreEvalAssertion' tab' mainFile expectedFile step

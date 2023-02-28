@@ -22,7 +22,7 @@ checkGeb tab = checkNoRecursion >> mapAllNodesM checkTypes tab
             | isDynamic (_lambdaBinder ^. binderType) ->
                 throw (dynamicTypeError node (_lambdaBinder ^. binderLocation))
           NPi (Pi {..})
-            | isTypeConstr (_piBinder ^. binderType) ->
+            | isTypeConstr tab (_piBinder ^. binderType) ->
                 throw
                   CoreError
                     { _coreErrorMsg = "polymorphism not supported for the GEB target",
