@@ -76,7 +76,7 @@ runInfoTableBuilder tab =
         return (UserTag (s ^. infoNextTag))
       RegisterIdent idt ii -> do
         let sym = ii ^. identifierSymbol
-        let identKind = IdentFun (ii ^. identifierSymbol)
+            identKind = IdentFun (ii ^. identifierSymbol)
         whenJust
           (ii ^. identifierBuiltin)
           (\b -> modify' (over infoBuiltins (HashMap.insert (BuiltinsFunction b) identKind)))
@@ -84,7 +84,7 @@ runInfoTableBuilder tab =
         modify' (over identMap (HashMap.insert idt identKind))
       RegisterConstructor idt ci -> do
         let tag = ci ^. constructorTag
-        let identKind = IdentConstr tag
+            identKind = IdentConstr tag
         whenJust
           (ci ^. constructorBuiltin)
           (\b -> modify' (over infoBuiltins (HashMap.insert (BuiltinsConstructor b) identKind)))
@@ -92,7 +92,7 @@ runInfoTableBuilder tab =
         modify' (over identMap (HashMap.insert idt identKind))
       RegisterInductive idt ii -> do
         let sym = ii ^. inductiveSymbol
-        let identKind = IdentInd sym
+            identKind = IdentInd sym
         whenJust
           (ii ^. inductiveBuiltin)
           (\b -> modify' (over infoBuiltins (HashMap.insert (builtinTypeToPrim b) identKind)))
