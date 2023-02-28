@@ -34,13 +34,13 @@ expressionContext _contextCoreResult = ExpressionContext {..}
     _contextInternalResult =
       _contextInternalTypedResult
         ^. InternalTyped.resultInternalArityResult
-        . InternalArity.resultInternalResult
+          . InternalArity.resultInternalResult
 
     _contextScoperResult :: Scoper.ScoperResult
     _contextScoperResult =
       _contextInternalResult
         ^. Internal.resultAbstract
-        . Abstract.resultScoper
+          . Abstract.resultScoper
 
     _contextScoperTable :: Scoper.InfoTable
     _contextScoperTable =
