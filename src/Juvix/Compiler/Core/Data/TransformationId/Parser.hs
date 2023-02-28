@@ -14,7 +14,7 @@ parseHelper p t = case runParser p "<input>" t of
   Right r -> return r
 
 parseTransformations :: Text -> Either Text [TransformationId]
-parseTransformations = parseHelper transformations
+parseTransformations = fmap fromTransformationLikes . parseHelper transformations
 
 completionsString :: String -> [String]
 completionsString = map unpack . completions . pack
@@ -22,37 +22,23 @@ completionsString = map unpack . completions . pack
 completions :: Text -> [Text]
 completions = fromRight [] . parseHelper pcompletions
 
-transformations :: (MonadParsec e Text m) => m [TransformationId]
+transformations :: (MonadParsec e Text m) => m [TransformationLikeId]
 transformations = do
   L.hspace
-  sepEndBy transformation comma <* eof
+  sepEndBy transformationLike comma <* eof
 
 -- | returns a possible list of completions
 pcompletions :: (MonadParsec e Text m) => m [Text]
 pcompletions = do
   L.hspace
-  l <- sepEndBy transformation comma
+  l <- sepEndBy transformationLike comma
   rest <- Text.strip <$> takeRest
   return [ppTransL (notNull l) l <> str | str <- allStrings, Text.isPrefixOf rest str]
   where
-    ppTransL :: Bool -> [TransformationId] -> Text
+    ppTransL :: Bool -> [TransformationLikeId] -> Text
     ppTransL c =
       let f :: Text -> Text = if c then (<> ",") else id
-       in f . Text.intercalate "," . map ppTrans
-    ppTrans :: TransformationId -> Text
-    ppTrans = \case
-      LambdaLetRecLifting -> strLifting
-      LetRecLifting -> strLetRecLifting
-      TopEtaExpand -> strTopEtaExpand
-      MatchToCase -> strMatchToCase
-      EtaExpandApps -> strEtaExpandApps
-      Identity -> strIdentity
-      RemoveTypeArgs -> strRemoveTypeArgs
-      MoveApps -> strMoveApps
-      NatToInt -> strNatToInt
-      ConvertBuiltinTypes -> strConvertBuiltinTypes
-      ComputeTypeInfo -> strComputeTypeInfo
-      UnrollRecursion -> strUnrollRecursion
+       in f . Text.intercalate "," . map transformationLikeText
 
 lexeme :: (MonadParsec e Text m) => m a -> m a
 lexeme = L.lexeme L.hspace
@@ -63,35 +49,54 @@ comma = symbol ","
 symbol :: (MonadParsec e Text m) => Text -> m ()
 symbol = void . lexeme . chunk
 
-transformation :: (MonadParsec e Text m) => m TransformationId
-transformation =
-  symbol strLifting $> LambdaLetRecLifting
-    <|> symbol strLetRecLifting $> LetRecLifting
-    <|> symbol strIdentity $> Identity
-    <|> symbol strTopEtaExpand $> TopEtaExpand
-    <|> symbol strRemoveTypeArgs $> RemoveTypeArgs
-    <|> symbol strMoveApps $> MoveApps
-    <|> symbol strNatToInt $> NatToInt
-    <|> symbol strConvertBuiltinTypes $> ConvertBuiltinTypes
-    <|> symbol strUnrollRecursion $> UnrollRecursion
-    <|> symbol strComputeTypeInfo $> ComputeTypeInfo
-    <|> symbol strMatchToCase $> MatchToCase
-    <|> symbol strEtaExpandApps $> EtaExpandApps
+transformationLike :: MonadParsec e Text m => m TransformationLikeId
+transformationLike =
+  TransformationId <$> transformation
+    <|> PipelineId <$> parsePipeline
+
+pipelineText :: PipelineId -> Text
+pipelineText = \case
+  PipelineEval -> strEvalPipeline
+  PipelineGeb -> strGebPipeline
+  PipelineStripped -> strStrippedPipeline
+
+transformationLikeText :: TransformationLikeId -> Text
+transformationLikeText = \case
+  TransformationId t -> transformationText t
+  PipelineId p -> pipelineText p
+
+transformationText :: TransformationId -> Text
+transformationText = \case
+  LambdaLetRecLifting -> strLifting
+  LetRecLifting -> strLetRecLifting
+  TopEtaExpand -> strTopEtaExpand
+  MatchToCase -> strMatchToCase
+  EtaExpandApps -> strEtaExpandApps
+  Identity -> strIdentity
+  RemoveTypeArgs -> strRemoveTypeArgs
+  MoveApps -> strMoveApps
+  NatToInt -> strNatToInt
+  ConvertBuiltinTypes -> strConvertBuiltinTypes
+  ComputeTypeInfo -> strComputeTypeInfo
+  UnrollRecursion -> strUnrollRecursion
+
+parsePipeline :: MonadParsec e Text m => m PipelineId
+parsePipeline = choice [symbol (pipelineText t) $> t | t <- allElements]
+
+transformation :: MonadParsec e Text m => m TransformationId
+transformation = choice [symbol (transformationText t) $> t | t <- allElements]
 
 allStrings :: [Text]
-allStrings =
-  [ strLifting,
-    strTopEtaExpand,
-    strIdentity,
-    strRemoveTypeArgs,
-    strMoveApps,
-    strNatToInt,
-    strConvertBuiltinTypes,
-    strUnrollRecursion,
-    strComputeTypeInfo,
-    strMatchToCase,
-    strEtaExpandApps
-  ]
+allStrings = map transformationLikeText allTransformationLikeIds
+
+strEvalPipeline :: Text
+strEvalPipeline = "pipeline-eval"
+
+strGebPipeline :: Text
+strGebPipeline = "pipeline-geb"
+
+strStrippedPipeline :: Text
+strStrippedPipeline = "pipeline-stripped"
 
 strLifting :: Text
 strLifting = "lifting"

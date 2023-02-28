@@ -8,7 +8,6 @@ where
 
 import Control.Exception qualified as GHC
 import Juvix.Compiler.Core.Data.TransformationId.Parser
-import Juvix.Compiler.Core.Pipeline qualified as Core
 import Juvix.Prelude
 import Options.Applicative
 import System.Process
@@ -241,7 +240,6 @@ optTransformationIds =
     (eitherReader parseTransf)
     ( long "transforms"
         <> short 't'
-        <> value Core.toEvalTransformations
         <> metavar "[Transform]"
         <> completer (mkCompleter (return . completionsString))
         <> help "hint: use autocomplete"
