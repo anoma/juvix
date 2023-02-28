@@ -19,6 +19,9 @@ compileAssertion onlyEval mainFile expectedFile step = do
   cwd <- getCurrentDir
   let entryPoint = defaultEntryPoint cwd mainFile
   tab <- (^. Core.coreResultTable) . snd <$> runIO' iniState entryPoint upToCore
-  coreEvalAssertion' (Core.toEval tab) mainFile expectedFile step
-  unless onlyEval $
-    coreCompileAssertion' tab mainFile expectedFile step
+  case run $ runError $ Core.toEval tab' of
+    Left err -> assertFailure (show (pretty (fromJuvixError @GenericError err)))
+    Right tab' -> do
+      coreEvalAssertion' tab' mainFile expectedFile step
+      unless onlyEval $
+        coreCompileAssertion' tab' mainFile expectedFile step

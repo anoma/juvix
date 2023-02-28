@@ -43,9 +43,12 @@ coreCompileAssertion' ::
   Assertion
 coreCompileAssertion' tab mainFile expectedFile step = do
   step "Translate to JuvixAsm"
-  let tab' = Asm.fromCore $ Stripped.fromCore $ toStripped tab
-  length (fromText (Asm.ppPrint tab' tab') :: String) `seq`
-    Asm.asmCompileAssertion' tab' mainFile expectedFile step
+  case run $ runError $ toStripped tab of
+    Left err -> assertFailure (show (pretty (fromJuvixError @GenericError err)))
+    Right tab0 -> do
+      let tab' = Asm.fromCore $ Stripped.fromCore $ tab0
+      length (fromText (Asm.ppPrint tab' tab') :: String) `seq`
+        Asm.asmCompileAssertion' tab' mainFile expectedFile step
 
 coreCompileAssertion ::
   Path Abs File ->
