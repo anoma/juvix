@@ -14,6 +14,7 @@ data TransformationId
   | UnrollRecursion
   | ComputeTypeInfo
   | MatchToCase
+  | NaiveMatchToCase
   | EtaExpandApps
   | DisambiguateNames
   | CheckGeb
@@ -43,15 +44,15 @@ fromTransformationLike = \case
 fromTransformationLikes :: [TransformationLikeId] -> [TransformationId]
 fromTransformationLikes = concatMap fromTransformationLike
 
+toEvalTransformations :: [TransformationId]
+toEvalTransformations = [EtaExpandApps, NaiveMatchToCase, NatToInt, ConvertBuiltinTypes]
+
 toStrippedTransformations :: [TransformationId]
 toStrippedTransformations =
   toEvalTransformations ++ [LambdaLetRecLifting, TopEtaExpand, MoveApps, RemoveTypeArgs]
 
 toGebTransformations :: [TransformationId]
 toGebTransformations = toEvalTransformations ++ [LetRecLifting, CheckGeb, UnrollRecursion, ComputeTypeInfo]
-
-toEvalTransformations :: [TransformationId]
-toEvalTransformations = [EtaExpandApps, MatchToCase, NatToInt, ConvertBuiltinTypes]
 
 pipeline :: PipelineId -> [TransformationId]
 pipeline = \case

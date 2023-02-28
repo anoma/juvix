@@ -20,6 +20,7 @@ import Juvix.Compiler.Core.Transformation.Identity
 import Juvix.Compiler.Core.Transformation.LambdaLetRecLifting
 import Juvix.Compiler.Core.Transformation.MatchToCase
 import Juvix.Compiler.Core.Transformation.MoveApps
+import Juvix.Compiler.Core.Transformation.NaiveMatchToCase qualified as Naive
 import Juvix.Compiler.Core.Transformation.NatToInt
 import Juvix.Compiler.Core.Transformation.RemoveTypeArgs
 import Juvix.Compiler.Core.Transformation.TopEtaExpand
@@ -41,6 +42,7 @@ applyTransformations ts tbl = foldl' (\acc tid -> acc >>= appTrans tid) (return 
       ComputeTypeInfo -> return . computeTypeInfo
       UnrollRecursion -> return . unrollRecursion
       MatchToCase -> return . matchToCase
+      NaiveMatchToCase -> return . Naive.matchToCase
       EtaExpandApps -> return . etaExpansionApps
       DisambiguateNames -> return . disambiguateNames
       CheckGeb -> mapError (JuvixError @CoreError) . checkGeb
