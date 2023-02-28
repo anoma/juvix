@@ -7,24 +7,14 @@ where
 import Juvix.Compiler.Core.Data.InfoTable
 import Juvix.Compiler.Core.Transformation
 
-toEvalTransformations :: [TransformationId]
-toEvalTransformations = [EtaExpandApps, MatchToCase, NatToInt, ConvertBuiltinTypes]
-
 -- | Perform transformations on Core necessary for efficient evaluation
 toEval :: InfoTable -> InfoTable
 toEval = applyTransformations toEvalTransformations
-
-toStrippedTransformations :: [TransformationId]
-toStrippedTransformations =
-  toEvalTransformations ++ [LambdaLetRecLifting, TopEtaExpand, MoveApps, RemoveTypeArgs]
 
 -- | Perform transformations on Core necessary before the translation to
 -- Core.Stripped
 toStripped :: InfoTable -> InfoTable
 toStripped = applyTransformations toStrippedTransformations
-
-toGebTransformations :: [TransformationId]
-toGebTransformations = toEvalTransformations ++ [UnrollRecursion, ComputeTypeInfo]
 
 -- | Perform transformations on Core necessary before the translation to GEB
 toGeb :: InfoTable -> InfoTable
