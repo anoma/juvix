@@ -21,7 +21,7 @@ data Cape a
 
 data Link a = Link
   { _linkOp :: a,
-    _linkIsComma :: Bool,
+    _linkIsDelimiter :: Bool,
     _linkArg :: Cape a
   }
 
@@ -61,7 +61,7 @@ data Infix a = Infix
     -- | When isComma is set to True, the operator will be printed without left
     -- space if the chain fits in the same line, otherwise it will behave as a
     -- regular infix operator.
-    _infixIsComma :: Bool,
+    _infixIsDelimiter :: Bool,
     _infixRight :: Ape a
   }
 
@@ -136,10 +136,10 @@ toCape = \case
             }
           where
             go :: a -> Bool -> Ape a -> NonEmpty (Link a)
-            go prevOp prevIsComma = \case
+            go prevOp prevIsDelimiter = \case
               ApeInfix (Infix fx' l' op' isComma' r')
-                | fx == fx' -> pure (Link prevOp prevIsComma (toCape l')) <> go op' isComma' r'
-              e -> pure (Link prevOp prevIsComma (toCape e))
+                | fx == fx' -> pure (Link prevOp prevIsDelimiter (toCape l')) <> go op' isComma' r'
+              e -> pure (Link prevOp prevIsDelimiter (toCape e))
 
         leftAssoc :: Chain a
         leftAssoc = go (pure (Link op isComma (toCape r))) l
