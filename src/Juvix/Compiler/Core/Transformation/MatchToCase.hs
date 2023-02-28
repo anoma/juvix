@@ -119,15 +119,20 @@ compileMatchBranch (Indexed branchNum br) = do
     patternsNum = length patterns
 
     wrapBody :: [CompiledBinder] -> Node
-    wrapBody binders = foldr (uncurry (mkLet mempty . set binderType mkDynamic')) shiftedBody vars -- TODO: mkDynamic' here is a hack and it's not completely correct; the de Bruijn indices in the binder type should be shifted appropriately
+    wrapBody binders = mkShiftedLets shiftIndex vars shiftedBody
       where
         vars :: [(Binder, Node)]
         vars = second mkVar' . swap . toTuple <$> extractOriginalBinders binders
 
+        auxiliaryBindersNum :: Int
+        auxiliaryBindersNum = length (filter isAuxiliaryBinder binders)
+
+        shiftIndex :: Int
+        shiftIndex = auxiliaryBindersNum + patternsNum + branchNum
+
         shiftedBody :: Node
         shiftedBody =
           let patternBindersNum' = length (concatMap getPatternBinders patterns)
-              auxiliaryBindersNum = length (filter isAuxiliaryBinder binders)
            in shiftEmbedded
                 patternBindersNum'
                 (auxiliaryBindersNum + patternBindersNum' + patternsNum + branchNum)
@@ -139,6 +144,12 @@ compileMatchBranch (Indexed branchNum br) = do
         { _compileStateBindersAbove = 0,
           _compileStateCompiledPattern = mempty
         }
+
+mkShiftedLets :: Index -> [(Binder, Node)] -> Node -> Node
+mkShiftedLets outerShift vars body = foldr f body (indexFrom 0 vars)
+  where
+    f :: Indexed (Binder, Node) -> Node -> Node
+    f (Indexed idx (b, v)) n = mkLet mempty (over binderType (shift (outerShift + idx)) b) v n
 
 -- | Extract original binders (i.e binders which are referenced in the match
 -- branch body) from a list of `CompiledBinder`s indexed by the total number
