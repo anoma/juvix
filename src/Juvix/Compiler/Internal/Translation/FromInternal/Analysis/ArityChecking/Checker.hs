@@ -51,6 +51,7 @@ checkStatement s = case s of
   StatementInclude i -> StatementInclude <$> checkInclude i
   StatementInductive d -> StatementInductive <$> checkInductive d
   StatementAxiom a -> StatementAxiom <$> checkAxiom a
+  StatementModule m -> StatementModule <$> checkModule m
 
 checkInductive :: forall r. (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r) => InductiveDef -> Sem r InductiveDef
 checkInductive d = do

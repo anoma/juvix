@@ -223,6 +223,7 @@ instance PrettyCode Statement where
     StatementInductive f -> ppCode f
     StatementAxiom f -> ppCode f
     StatementInclude i -> ppCode i
+    StatementModule i -> ppCode i
 
 instance PrettyCode ModuleBody where
   ppCode m = do

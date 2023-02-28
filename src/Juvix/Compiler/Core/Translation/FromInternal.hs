@@ -119,7 +119,8 @@ goModule m = mapM_ go (m ^. Internal.moduleBody . Internal.moduleStatements)
       Internal.StatementInductive d -> goInductiveDef d
       Internal.StatementAxiom a -> goAxiomInductive a >> goAxiomDef a
       Internal.StatementFunction f -> goMutualBlock f
-      Internal.StatementInclude i -> goModule (i ^. Internal.includeModule)
+      Internal.StatementInclude i -> mapM_ go (i ^. Internal.includeModule . Internal.moduleBody . Internal.moduleStatements)
+      Internal.StatementModule l -> goModule l
 
 goInductiveDef ::
   forall r.
