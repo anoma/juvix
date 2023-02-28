@@ -3,7 +3,6 @@ module Core.Transformation.Pipeline (allTests) where
 import Base
 import Core.Eval.Positive qualified as Eval
 import Core.Transformation.Base
-import Juvix.Compiler.Core.Pipeline
 import Juvix.Compiler.Core.Transformation
 
 allTests :: TestTree
