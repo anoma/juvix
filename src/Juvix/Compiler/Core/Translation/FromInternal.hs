@@ -612,8 +612,18 @@ fromPatternArg pa = case pa ^. Internal.patternArgName of
         let indArgs = replicate (length indParams) (wildcard mkSmallUniv)
             args = indArgs ++ patternArgs
         m <- getIdent identIndex
+        ctorTy <- InternalTyped.constructorReturnType n >>= goType
         case m of
-          Just (IdentConstr tag) -> return $ PatConstr (PatternConstr (setInfoLocation (n ^. nameLoc) (setInfoName (n ^. nameText) Info.empty)) tag args)
+          Just (IdentConstr tag) ->
+            return $
+              PatConstr
+                ( PatternConstr
+                    { _patternConstrInfo = setInfoLocation (n ^. nameLoc) (setInfoName (n ^. nameText) Info.empty),
+                      _patternConstrTag = tag,
+                      _patternConstrArgs = args,
+                      _patternConstrType = ctorTy
+                    }
+                )
           Just _ -> error ("internal to core: not a constructor " <> txt)
           Nothing -> error ("internal to core: undeclared identifier: " <> txt)
         where
