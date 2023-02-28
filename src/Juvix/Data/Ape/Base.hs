@@ -58,7 +58,7 @@ data Infix a = Infix
   { _infixFixity :: Fixity,
     _infixLeft :: Ape a,
     _infixOp :: a,
-    -- | When isComma is set to True, the operator will be printed without left
+    -- | When isDelimiter is set to True, the operator will be printed without left
     -- space if the chain fits in the same line, otherwise it will behave as a
     -- regular infix operator.
     _infixIsDelimiter :: Bool,
