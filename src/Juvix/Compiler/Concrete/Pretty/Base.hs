@@ -73,9 +73,9 @@ groupStatements = reverse . map reverse . uncurry cons . foldl' aux ([], [])
         SScoped ->
           i
             ^. importModule
-              . moduleRefModule
-              . modulePath
-              . S.nameId
+            . moduleRefModule
+            . modulePath
+            . S.nameId
             == getModuleRefNameId (o ^. openModuleName)
       (StatementImport _, _) -> False
       (StatementOpenModule {}, StatementOpenModule {}) -> True

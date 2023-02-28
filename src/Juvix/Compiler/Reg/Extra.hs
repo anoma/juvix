@@ -37,13 +37,13 @@ computeMaxStackHeight lims = maximum . map go
             length _instrCallClosuresArgs
               + 1
               + lims
-                ^. limitsDispatchStackSize
+              ^. limitsDispatchStackSize
       CallClosures InstrCallClosures {..} ->
         length _instrCallClosuresLiveVars
           + length _instrCallClosuresArgs
           + 1
           + lims
-            ^. limitsDispatchStackSize
+          ^. limitsDispatchStackSize
       Return {} -> 0
       Branch InstrBranch {..} ->
         max

@@ -156,10 +156,10 @@ genJudocHtml JudocArgs {..} =
     cs =
       _judocArgsCtx
         ^. resultInternalArityResult
-          . InternalArity.resultInternalResult
-          . Internal.resultAbstract
-          . Abstract.resultScoper
-          . Scoped.comments
+        . InternalArity.resultInternalResult
+        . Internal.resultAbstract
+        . Abstract.resultScoper
+        . Scoped.comments
 
     entry :: EntryPoint
     entry = _judocArgsCtx ^. InternalTyped.internalTypedResultEntryPoint
@@ -171,10 +171,10 @@ genJudocHtml JudocArgs {..} =
     mainMod =
       _judocArgsCtx
         ^. InternalTyped.resultInternalArityResult
-          . InternalArity.resultInternalResult
-          . Internal.resultAbstract
-          . Abstract.resultScoper
-          . Scoped.mainModule
+        . InternalArity.resultInternalResult
+        . Internal.resultAbstract
+        . Abstract.resultScoper
+        . Scoped.mainModule
 
     htmlOpts :: HtmlOptions
     htmlOpts =

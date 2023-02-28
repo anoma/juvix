@@ -27,12 +27,12 @@ mapNodesM = overM identContext . mapM
 
 mapAllNodesM :: Monad m => (Node -> m Node) -> InfoTable -> m InfoTable
 mapAllNodesM f tab =
-  mapNodesM f tab >>=
-  mapAxiomsM (overM axiomType f) >>=
-  mapConstructorsM (overM constructorType f) >>=
-  mapInductivesM (overM inductiveKind f) >>=
-  mapInductivesM (overM inductiveConstructors (mapM (overM constructorType f))) >>=
-  mapIdentsM (overM identifierType f)
+  mapNodesM f tab
+    >>= mapAxiomsM (overM axiomType f)
+    >>= mapConstructorsM (overM constructorType f)
+    >>= mapInductivesM (overM inductiveKind f)
+    >>= mapInductivesM (overM inductiveConstructors (mapM (overM constructorType f)))
+    >>= mapIdentsM (overM identifierType f)
 
 mapIdents :: (IdentifierInfo -> IdentifierInfo) -> InfoTable -> InfoTable
 mapIdents = over infoIdentifiers . fmap
