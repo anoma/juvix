@@ -160,7 +160,7 @@ moduleStatementsRec :: Module -> [Statement]
 moduleStatementsRec m =
   m
     ^. moduleBody
-    . moduleStatements
+      . moduleStatements
     ++ concatMap moduleStatementsRec localModules
   where
     localModules :: [Module]
