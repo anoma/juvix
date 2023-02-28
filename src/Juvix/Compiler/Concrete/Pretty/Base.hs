@@ -561,7 +561,7 @@ instance PrettyCode PatternArg where
     return $ (n' <&> (<> kwAt)) ?<> delimIf i (isJust n && not (isAtomic p)) p'
 
 instance PrettyCode PatternApp where
-  ppCode (PatternApp l r) = do
+  ppCode p@(PatternApp l r) = apeHelper p $ do
     l' <- ppLeftExpression appFixity l
     r' <- ppRightExpression appFixity r
     return $ l' <+> r'
@@ -637,6 +637,8 @@ instance PrettyCode ApeLeaf where
     ApeLeafExpression e -> ppCode e
     ApeLeafFunctionParams a -> ppCode a
     ApeLeafFunctionKw r -> return (pretty r)
+    ApeLeafPattern r -> ppCode r
+    ApeLeafPatternArg r -> ppCode r
 
 apeHelper :: (IsApe a ApeLeaf, Members '[Reader Options] r) => a -> Sem r (Doc CodeAnn) -> Sem r (Doc CodeAnn)
 apeHelper a alt = do
@@ -708,14 +710,14 @@ instance PrettyCode Pattern where
     PatternPostfixApplication i -> ppPatternPostfixApp i
     where
       ppPatternInfixApp :: PatternInfixApp -> Sem r (Doc Ann)
-      ppPatternInfixApp p@PatternInfixApp {..} = do
+      ppPatternInfixApp p@PatternInfixApp {..} = apeHelper p $ do
         patInfixConstructor' <- ppCode _patInfixConstructor
         patInfixLeft' <- ppLeftExpression (getFixity p) _patInfixLeft
         patInfixRight' <- ppRightExpression (getFixity p) _patInfixRight
         return $ patInfixLeft' <+> patInfixConstructor' <+> patInfixRight'
 
       ppPatternPostfixApp :: PatternPostfixApp -> Sem r (Doc Ann)
-      ppPatternPostfixApp p@PatternPostfixApp {..} = do
+      ppPatternPostfixApp p@PatternPostfixApp {..} = apeHelper p $ do
         patPostfixConstructor' <- ppCode _patPostfixConstructor
         patPostfixParameter' <- ppLeftExpression (getFixity p) _patPostfixParameter
         return $ patPostfixParameter' <+> patPostfixConstructor'

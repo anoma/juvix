@@ -118,4 +118,14 @@ module Format;
         + 100
         + 100
         + 100;
+
+  module Patterns;
+    infixr 4 ,;
+    type Pair :=
+      | , : String → String → String;
+
+    -- Commas in patterns
+    f : _;
+    f (a, b, c, d) := a;
+  end;
 end;
