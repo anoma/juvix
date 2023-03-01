@@ -4,7 +4,6 @@ import Juvix.Compiler.Core.Data.InfoTableBuilder
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Info.LocationInfo
 import Juvix.Compiler.Core.Info.NameInfo (setInfoName)
-import Juvix.Compiler.Core.Info.TypeInfo
 import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Core.Transformation.Base
 import Juvix.Compiler.Core.Transformation.MatchToCase.Data
@@ -110,7 +109,7 @@ shiftEmbedded wrappingLevel m = umapN go
 -- branch.
 compileMatchBranch :: forall r. Members '[InfoTableBuilder] r => Indexed MatchBranch -> Sem r Node
 compileMatchBranch (Indexed branchNum br) = do
-  compiledBranch <- runReader initState' (combineCompiledPatterns (map (compilePattern patternsNum) patterns))
+  compiledBranch <- runReader initState (combineCompiledPatterns (map (compilePattern patternsNum) patterns))
   return (mkLambdas' (patternType <$> patterns) ((compiledBranch ^. compiledPatMkNode) (wrapBody (compiledBranch ^. compiledPatBinders))))
   where
     patterns :: [Pattern]
@@ -137,13 +136,6 @@ compileMatchBranch (Indexed branchNum br) = do
                 patternBindersNum'
                 (auxiliaryBindersNum + patternBindersNum' + patternsNum + branchNum)
                 (br ^. matchBranchBody)
-
-    initState' :: CompileState
-    initState' =
-      CompileState
-        { _compileStateBindersAbove = 0,
-          _compileStateCompiledPattern = mempty
-        }
 
 -- | Increase the indices of free variables in the binderTyped by a given value
 shiftBinder :: Index -> Binder -> Binder
@@ -212,7 +204,7 @@ compilePattern numPatterns = \case
   PatBinder b -> do
     subPats <- resetCurrentNode (incBindersAbove (compilePattern numPatterns (b ^. patternBinderPattern)))
     currentNode <- asks (^. compileStateNodeCurrent)
-    let newBinder = set binderType mkDynamic' $ b ^. patternBinder -- TODO: this is a hack to avoid problems with de Bruijn, but it's not entirely correct
+    let newBinder = b ^. patternBinder
     let compiledBinder =
           CompiledPattern
             { _compiledPatBinders = [OriginalBinder newBinder],
@@ -247,13 +239,11 @@ compilePattern numPatterns = \case
             Binder
               { _binderName = "_",
                 _binderLocation = getInfoLocation info,
-                _binderType = getInfoType info
-                -- TODO: `getInfoType` always returns Dynamic at this stage
+                _binderType = w ^. patternWildcardType
               }
         PatConstr c' -> do
           let info = c' ^. patternConstrInfo
-          -- TODO: `getInfoType` always returns Dynamic at this stage
-          mkUniqueBinder "arg" (getInfoLocation info) (getInfoType info)
+          mkUniqueBinder "arg" (getInfoLocation info) (c' ^. patternConstrType)
 
       mkCaseFromBinders :: [Binder] -> Sem r (Node -> Node)
       mkCaseFromBinders binders = do
