@@ -12,7 +12,7 @@ repository that you're pushing to. In this case the repository is `
 ghcr.io/paulcadman`.
 
 ``` shell
-docker build -t ghcr.io/paulcadman/ghc-alpine:9.2.5 -f Dockerfile-ghc-alpine-9.2.5 .
+docker build -t ghcr.io/paulcadman/ghc-alpine:9.2.6 -f Dockerfile-ghc-alpine-9.2.6 .
 ```
 
 ## Authenticating with the GitHub Docker repository
@@ -35,12 +35,12 @@ NB: You do not substitue your username for `USERNAME` in the command above.
 ## Testing the image
 
 ``` shell
-docker run -it --rm ghcr.io/paulcadman/ghc-alpine:9.2.5
+docker run -it --rm ghcr.io/paulcadman/ghc-alpine:9.2.6
 ```
 
 ## Pushing the image
 
 ``` shell
-docker push ghcr.io/paulcadman/ghc-alpine:9.2.5
+docker push ghcr.io/paulcadman/ghc-alpine:9.2.6
 
 ```
