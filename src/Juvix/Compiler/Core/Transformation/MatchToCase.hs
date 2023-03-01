@@ -228,18 +228,8 @@ compilePattern numPatterns = \case
 
       compileArgs :: [Pattern] -> Sem r CompiledPattern
       compileArgs args = do
-        bindersAbove <- asks (^. compileStateBindersAbove)
         let ctorArgsPatterns = compilePattern numPatterns <$> args
-            state = mkState bindersAbove
-        runReader state (combineCompiledPatterns ctorArgsPatterns)
-        where
-          mkState :: Int -> CompileState
-          mkState bindersAbove =
-            ( CompileState
-                { _compileStateBindersAbove = bindersAbove + length args,
-                  _compileStateCompiledPattern = mempty
-                }
-            )
+        addBindersAbove (length args) (resetCompiledPattern (combineCompiledPatterns ctorArgsPatterns))
 
       mkCompiledBinder :: Pattern -> Sem r CompiledBinder
       mkCompiledBinder p = AuxiliaryBinder <$> mkBinder'' p
