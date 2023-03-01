@@ -145,6 +145,10 @@ compileMatchBranch (Indexed branchNum br) = do
           _compileStateCompiledPattern = mempty
         }
 
+-- | Increase the indices of free variables in the binderTyped by a given value
+shiftBinder :: Index -> Binder -> Binder
+shiftBinder idx = over binderType (shift idx)
+
 -- | Make a sequence of nested lets from a list of binders / value pairs. The
 -- indices of free variables in binder types are shifted by the sum of
 -- `baseShift` and the number of lets that have already been added in the
@@ -153,7 +157,7 @@ mkShiftedLets :: Index -> [(Binder, Node)] -> Node -> Node
 mkShiftedLets baseShift vars body = foldr f body (indexFrom 0 vars)
   where
     f :: Indexed (Binder, Node) -> Node -> Node
-    f (Indexed idx (b, v)) n = mkLet mempty (over binderType (shift (baseShift + idx)) b) v n
+    f (Indexed idx (b, v)) = mkLet mempty (shiftBinder (baseShift + idx) b) v
 
 -- | Extract original binders (i.e binders which are referenced in the match
 -- branch body) from a list of `CompiledBinder`s indexed by the total number
