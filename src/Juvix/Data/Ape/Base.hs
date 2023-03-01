@@ -21,7 +21,7 @@ data Cape a
 
 data Link a = Link
   { _linkOp :: a,
-    _linkIsComma :: Bool,
+    _linkIsDelimiter :: Bool,
     _linkArg :: Cape a
   }
 
@@ -58,10 +58,10 @@ data Infix a = Infix
   { _infixFixity :: Fixity,
     _infixLeft :: Ape a,
     _infixOp :: a,
-    -- | When isComma is set to True, the operator will be printed without left
+    -- | When isDelimiter is set to True, the operator will be printed without left
     -- space if the chain fits in the same line, otherwise it will behave as a
     -- regular infix operator.
-    _infixIsComma :: Bool,
+    _infixIsDelimiter :: Bool,
     _infixRight :: Ape a
   }
 
@@ -114,7 +114,7 @@ toCape = \case
               }
 
     unfoldInfix :: Infix a -> Chain a
-    unfoldInfix (Infix fx l op isComma r)
+    unfoldInfix (Infix fx l op isDelimiter r)
       | isLeftAssoc fx = leftAssoc
       | isRightAssoc fx = rightAssoc
       | otherwise = noAssoc
@@ -124,7 +124,7 @@ toCape = \case
           Chain
             { _chainFixity = fx,
               _chainHead = toCape l,
-              _chainLinks = pure (Link op isComma (toCape r))
+              _chainLinks = pure (Link op isDelimiter (toCape r))
             }
 
         rightAssoc :: Chain a
@@ -132,22 +132,22 @@ toCape = \case
           Chain
             { _chainFixity = fx,
               _chainHead = toCape l,
-              _chainLinks = go op isComma r
+              _chainLinks = go op isDelimiter r
             }
           where
             go :: a -> Bool -> Ape a -> NonEmpty (Link a)
-            go prevOp prevIsComma = \case
-              ApeInfix (Infix fx' l' op' isComma' r')
-                | fx == fx' -> pure (Link prevOp prevIsComma (toCape l')) <> go op' isComma' r'
-              e -> pure (Link prevOp prevIsComma (toCape e))
+            go prevOp prevIsDelimiter = \case
+              ApeInfix (Infix fx' l' op' isDelimiter' r')
+                | fx == fx' -> pure (Link prevOp prevIsDelimiter (toCape l')) <> go op' isDelimiter' r'
+              e -> pure (Link prevOp prevIsDelimiter (toCape e))
 
         leftAssoc :: Chain a
-        leftAssoc = go (pure (Link op isComma (toCape r))) l
+        leftAssoc = go (pure (Link op isDelimiter (toCape r))) l
           where
             go :: NonEmpty (Link a) -> Ape a -> Chain a
             go ac = \case
-              ApeInfix (Infix fx' l' op' isComma' r')
-                | fx == fx' -> go (pure (Link op' isComma' (toCape r')) <> ac) l'
+              ApeInfix (Infix fx' l' op' isDelimiter' r')
+                | fx == fx' -> go (pure (Link op' isDelimiter' (toCape r')) <> ac) l'
               e ->
                 Chain
                   { _chainFixity = fx,

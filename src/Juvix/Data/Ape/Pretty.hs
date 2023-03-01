@@ -61,7 +61,7 @@ ppChain (Chain opFix f links) = do
       l : ls -> do
         let sepHelper a b = a <> sp <> b
             sp
-              | l ^. linkIsComma = line'
+              | l ^. linkIsDelimiter = line'
               | otherwise = line
         pp <- asks (^. apePP)
         let op' = pp (l ^. linkOp)

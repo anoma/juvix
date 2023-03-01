@@ -1308,6 +1308,60 @@ data ApeLeaf
   = ApeLeafExpression Expression
   | ApeLeafFunctionParams (FunctionParameters 'Scoped)
   | ApeLeafFunctionKw KeywordRef
+  | ApeLeafPattern Pattern
+  | ApeLeafPatternArg PatternArg
+
+instance IsApe PatternApp ApeLeaf where
+  toApe (PatternApp l r) =
+    ApeApp
+      Ape.App
+        { _appLeft = toApe l,
+          _appRight = toApe r
+        }
+
+instance IsApe Pattern ApeLeaf where
+  toApe = \case
+    PatternApplication a -> toApe a
+    PatternInfixApplication a -> toApe a
+    PatternPostfixApplication a -> toApe a
+    e ->
+      ApeLeaf
+        ( Leaf
+            { _leafAtomicity = atomicity e,
+              _leafExpr = ApeLeafPattern e
+            }
+        )
+
+instance IsApe PatternArg ApeLeaf where
+  toApe pa
+    | Atom == atomicity pa =
+        ApeLeaf
+          ( Leaf
+              { _leafAtomicity = Atom,
+                _leafExpr = ApeLeafPatternArg pa
+              }
+          )
+    | otherwise = toApe (pa ^. patternArgPattern)
+
+instance IsApe PatternPostfixApp ApeLeaf where
+  toApe p@(PatternPostfixApp l op) =
+    ApePostfix
+      Postfix
+        { _postfixFixity = getFixity p,
+          _postfixLeft = toApe l,
+          _postfixOp = ApeLeafPattern (PatternConstructor op)
+        }
+
+instance IsApe PatternInfixApp ApeLeaf where
+  toApe i@(PatternInfixApp l op r) =
+    ApeInfix
+      Infix
+        { _infixFixity = getFixity i,
+          _infixLeft = toApe l,
+          _infixRight = toApe r,
+          _infixIsDelimiter = isDelimiterStr (prettyText (op ^. constructorRefName . S.nameConcrete)),
+          _infixOp = ApeLeafPattern (PatternConstructor op)
+        }
 
 instance IsApe Application ApeLeaf where
   toApe (Application l r) =
@@ -1324,7 +1378,7 @@ instance IsApe InfixApplication ApeLeaf where
         { _infixFixity = getFixity i,
           _infixLeft = toApe l,
           _infixRight = toApe r,
-          _infixIsComma = isDelimiterStr (prettyText (identifierName op ^. S.nameConcrete)),
+          _infixIsDelimiter = isDelimiterStr (prettyText (identifierName op ^. S.nameConcrete)),
           _infixOp = ApeLeafExpression (ExpressionIdentifier op)
         }
 
@@ -1344,7 +1398,7 @@ instance IsApe (Function 'Scoped) ApeLeaf where
         { _infixFixity = funFixity,
           _infixLeft = toApe ps,
           _infixRight = toApe ret,
-          _infixIsComma = False,
+          _infixIsDelimiter = False,
           _infixOp = ApeLeafFunctionKw kw
         }
 
