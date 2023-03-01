@@ -40,25 +40,12 @@ data CompiledPattern = CompiledPattern
 
 data CompileState = CompileState
   { _compileStateBindersAbove :: Int,
+    _compileStateTotalAuxBinders :: Int,
     _compileStateCompiledPattern :: CompiledPattern
   }
 
 newtype CompileStateNode = CompileStateNode
   {_compileStateNodeCurrent :: Node}
-
-initState :: CompileState
-initState =
-  CompileState
-    { _compileStateBindersAbove = 0,
-      _compileStateCompiledPattern =
-        CompiledPattern
-          { _compiledPatBinders = [],
-            _compiledPatMkNode = id
-          }
-    }
-
-stateWithBindersAbove :: Int -> CompileState
-stateWithBindersAbove n = initState {_compileStateBindersAbove = n}
 
 makeLenses ''CompiledPattern
 makeLenses ''CompileState
@@ -89,3 +76,14 @@ instance Monoid CompiledPattern where
       { _compiledPatBinders = [],
         _compiledPatMkNode = id
       }
+
+initState :: CompileState
+initState =
+  CompileState
+    { _compileStateBindersAbove = 0,
+      _compileStateTotalAuxBinders = 0,
+      _compileStateCompiledPattern = mempty
+    }
+
+stateWithBindersAbove :: Int -> CompileState
+stateWithBindersAbove n = initState {_compileStateBindersAbove = n}
