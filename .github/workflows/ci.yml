@@ -98,7 +98,7 @@ jobs:
       - uses: haskell/actions/setup@v2
         name: Setup Haskell
         with:
-          ghc-version: 9.2.5
+          ghc-version: 9.2.6
           enable-stack: true
           stack-version: latest
 
@@ -232,7 +232,7 @@ jobs:
       - uses: haskell/actions/setup@v2
         name: Setup Haskell
         with:
-          ghc-version: 9.2.5
+          ghc-version: 9.2.6
           enable-stack: true
           stack-version: latest
 
@@ -299,7 +299,7 @@ jobs:
       - uses: haskell/actions/setup@v2
         name: Setup Haskell
         with:
-          ghc-version: 9.2.5
+          ghc-version: 9.2.6
           enable-stack: true
           stack-version: latest
       - name: Set homebrew LLVM CC and LIBTOOL vars (macOS)
