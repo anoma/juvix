@@ -70,7 +70,7 @@ ppName kind name = return $ annotate (AnnKind kind) (pretty name)
 
 ppCodeVar' :: (Member (Reader Options) r) => Text -> Var' i -> Sem r (Doc Ann)
 ppCodeVar' name v = do
-  let name' = annotate (AnnKind KNameLocal) (pretty name)
+  name' <- ppName KNameLocal name
   showDeBruijn <- asks (^. optShowDeBruijnIndices)
   if showDeBruijn || name == ""
     then return $ name' <> kwDeBruijnVar <> pretty (v ^. varIndex)
@@ -406,9 +406,28 @@ instance PrettyCode InfoTable where
   ppCode :: forall r. (Member (Reader Options) r) => InfoTable -> Sem r (Doc Ann)
   ppCode tbl = do
     tys <- ppInductives (toList (tbl ^. infoInductives))
+    sigs <- ppSigs (toList (tbl ^. infoIdentifiers))
     ctx' <- ppContext (tbl ^. identContext)
-    return ("-- Types" <> line <> tys <> line <> "-- Identifiers" <> line <> ctx' <> line)
+    return ("-- Types" <> line <> tys <> line <> "-- Identifiers" <> line <> sigs <> ctx' <> line)
     where
+      ppSig :: Symbol -> Sem r (Doc Ann)
+      ppSig s = do
+        showIds <- asks (^. optShowNameIds)
+        let mname :: Text
+            mname = tbl ^. infoIdentifiers . at s . _Just . identifierName
+            mname' = if showIds then (\nm -> nm <> "!" <> prettyText s) mname else mname
+        sym' <- ppName KNameLocal mname'
+        let ii = fromJust $ HashMap.lookup s (tbl ^. infoIdentifiers)
+            ty = ii ^. identifierType
+        ty' <- ppCode ty
+        let tydoc = if isDynamic ty then mempty else space <> colon <+> ty'
+        return (kwDef <+> sym' <> tydoc)
+
+      ppSigs :: [IdentifierInfo] -> Sem r (Doc Ann)
+      ppSigs idents = do
+        pp <- mapM (\ii -> ppSig (ii ^. identifierSymbol)) idents
+        return $ foldr (\p acc -> p <> kwSemicolon <> line <> acc) "" pp
+
       ppContext :: IdentContext -> Sem r (Doc Ann)
       ppContext ctx = do
         defs <- mapM (uncurry ppDef) (HashMap.toList ctx)
@@ -416,26 +435,21 @@ instance PrettyCode InfoTable where
         where
           ppDef :: Symbol -> Node -> Sem r (Doc Ann)
           ppDef s n = do
-            let mname :: Text
-                mname = tbl ^. infoIdentifiers . at s . _Just . identifierName
-                mname' = (\nm -> nm <> "!" <> prettyText s) mname
-            sym' <- ppName KNameLocal mname'
+            sig <- ppSig s
             body' <- ppCode n
-            let ii = fromJust $ HashMap.lookup s (tbl ^. infoIdentifiers)
-                ty = ii ^. identifierType
-            ty' <- ppCode ty
-            let tydoc = if isDynamic ty then mempty else space <> colon <+> ty'
-            return (kwDef <+> sym' <> tydoc <+> kwAssign <+> nest 2 body')
+            return (sig <+> kwAssign <+> nest 2 body' <> kwSemicolon)
+
       ppInductives :: [InductiveInfo] -> Sem r (Doc Ann)
       ppInductives inds = do
         inds' <- mapM ppInductive inds
         return (vsep inds')
         where
           ppInductive :: InductiveInfo -> Sem r (Doc Ann)
+          ppInductive ii | isJust (ii ^. inductiveBuiltin) = return ""
           ppInductive ii = do
             name <- ppName KNameInductive (ii ^. inductiveName)
             ctrs <- mapM (fmap (<> semi) . ppCode) (ii ^. inductiveConstructors)
-            return (kwInductive <+> name <+> braces (line <> indent' (vsep ctrs) <> line))
+            return (kwInductive <+> name <+> braces (line <> indent' (vsep ctrs) <> line) <> kwSemicolon)
 
 instance PrettyCode Stripped.ArgumentInfo where
   ppCode :: (Member (Reader Options) r) => Stripped.ArgumentInfo -> Sem r (Doc Ann)
