@@ -154,6 +154,18 @@ ppWithType d = \case
     ty' <- ppCode ty
     return $ parens (d <+> kwColon <+> ty')
 
+ppNameTyped :: NameKind -> Text -> Maybe (Doc Ann) -> Sem r (Doc Ann)
+ppNameTyped kn name mty = do
+  n <- ppName kn name
+  case mty of
+    Nothing -> return n
+    Just ty -> return $ parens (n <+> kwColon <+> ty)
+
+ppType :: Member (Reader Options) r => Type -> Sem r (Maybe (Doc Ann))
+ppType = \case
+  NDyn {} -> return Nothing
+  ty -> Just <$> ppCode ty
+
 ppTypeAnnot :: Member (Reader Options) r => Type -> Sem r (Doc Ann)
 ppTypeAnnot = \case
   NDyn {} ->
@@ -174,8 +186,8 @@ ppCodeLet' name mty lt = do
           mempty
   return $ kwLet <+> n' <> tty <+> kwAssign <+> v' <+> kwIn <+> b'
 
-ppCodeCase' :: (PrettyCode a, Member (Reader Options) r) => [[Text]] -> [Text] -> Case' i bi a ty -> Sem r (Doc Ann)
-ppCodeCase' branchBinderNames branchTagNames Case {..} =
+ppCodeCase' :: (PrettyCode a, Member (Reader Options) r) => [[Text]] -> [[Maybe (Doc Ann)]] -> [Text] -> Case' i bi a ty -> Sem r (Doc Ann)
+ppCodeCase' branchBinderNames branchBinderTypes branchTagNames Case {..} =
   case _caseBranches of
     [CaseBranch _ (BuiltinTag TagTrue) _ _ br1, CaseBranch _ (BuiltinTag TagTrue) _ _ br2] -> do
       br1' <- ppCode br1
@@ -189,7 +201,7 @@ ppCodeCase' branchBinderNames branchTagNames Case {..} =
       return $ kwIf <+> v <+> kwThen <+> br1' <+> kwElse <+> br2'
     _ -> do
       let branchBodies = map (^. caseBranchBody) _caseBranches
-      bns <- mapM (mapM (ppName KNameLocal)) branchBinderNames
+      bns <- zipWithM (zipWithM (ppNameTyped KNameLocal)) branchBinderNames branchBinderTypes
       cns <- mapM (ppName KNameConstructor) branchTagNames
       v <- ppCode _caseValue
       bs' <- sequence $ zipWith3Exact (\cn bn br -> ppCode br >>= \br' -> return $ foldl' (<+>) cn bn <+> kwAssign <+> br') cns bns branchBodies
@@ -277,7 +289,9 @@ instance PrettyCode LetRec where
          in kwLetRec <> nss <> line <> bss <> line <> kwIn <> line <> b'
     where
       getName :: Binder -> Sem r (Doc Ann)
-      getName i = ppName KNameLocal (i ^. binderName)
+      getName i = do
+        n <- ppName KNameLocal (i ^. binderName)
+        ppWithType n (i ^. binderType)
 
 instance PrettyCode Node where
   ppCode :: forall r. (Member (Reader Options) r) => Node -> Sem r (Doc Ann)
@@ -306,10 +320,11 @@ instance PrettyCode Node where
       return (lam <+> b)
     NLet x -> ppCode x
     NRec l -> ppCode l
-    NCase x@Case {..} ->
+    NCase x@Case {..} -> do
       let branchBinderNames = map (\CaseBranch {..} -> map (^. binderName) _caseBranchBinders) _caseBranches
           branchTagNames = map (\CaseBranch {..} -> getInfoName _caseBranchInfo) _caseBranches
-       in ppCodeCase' branchBinderNames branchTagNames x
+      branchBinderTypes <- mapM (\CaseBranch {..} -> mapM (ppType . (^. binderType)) _caseBranchBinders) _caseBranches
+      ppCodeCase' branchBinderNames branchBinderTypes branchTagNames x
     NMatch Match {..} -> do
       let branchPatterns = map (^. matchBranchPatterns) _matchBranches
           branchBodies = map (^. matchBranchBody) _matchBranches
@@ -371,6 +386,11 @@ instance PrettyCode Stripped.Type where
     Stripped.TyApp x -> ppCode x
     Stripped.TyFun x -> ppCode x
 
+ppTypeStripped :: Member (Reader Options) r => Stripped.Type -> Sem r (Maybe (Doc Ann))
+ppTypeStripped = \case
+  Stripped.TyDynamic -> return Nothing
+  ty -> Just <$> ppCode ty
+
 instance PrettyCode Stripped.Node where
   ppCode = \case
     Stripped.NVar x ->
@@ -389,10 +409,11 @@ instance PrettyCode Stripped.Node where
       let name = x ^. (letItem . letItemBinder . binderName)
           ty = x ^. (letItem . letItemBinder . binderType)
        in ppCode ty >>= \tty -> ppCodeLet' name (Just tty) x
-    Stripped.NCase x@Stripped.Case {..} ->
+    Stripped.NCase x@Stripped.Case {..} -> do
       let branchBinderNames = map (map (^. binderName) . (^. caseBranchBinders)) _caseBranches
           branchTagNames = map (^. (caseBranchInfo . Stripped.caseBranchInfoConstrName)) _caseBranches
-       in ppCodeCase' branchBinderNames branchTagNames x
+      branchBinderTypes <- mapM (\CaseBranch {..} -> mapM (ppTypeStripped . (^. binderType)) _caseBranchBinders) _caseBranches
+      ppCodeCase' branchBinderNames branchBinderTypes branchTagNames x
     Stripped.NIf x -> ppCode x
 
 instance PrettyCode ConstructorInfo where
