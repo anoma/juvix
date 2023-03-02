@@ -9,6 +9,7 @@ import Juvix.Compiler.Core.Pretty.Options qualified as Core
 data CoreReadOptions = CoreReadOptions
   { _coreReadTransformations :: [TransformationId],
     _coreReadShowDeBruijn :: Bool,
+    _coreReadShowIdentIds :: Bool,
     _coreReadEval :: Bool,
     _coreReadNoPrint :: Bool,
     _coreReadInputFile :: AppPath File
@@ -20,7 +21,8 @@ makeLenses ''CoreReadOptions
 instance CanonicalProjection CoreReadOptions Core.Options where
   project c =
     Core.defaultOptions
-      { Core._optShowDeBruijnIndices = c ^. coreReadShowDeBruijn
+      { Core._optShowDeBruijnIndices = c ^. coreReadShowDeBruijn,
+        Core._optShowIdentIds = c ^. coreReadShowIdentIds
       }
 
 instance CanonicalProjection CoreReadOptions Eval.CoreEvalOptions where
@@ -28,7 +30,8 @@ instance CanonicalProjection CoreReadOptions Eval.CoreEvalOptions where
     Eval.CoreEvalOptions
       { _coreEvalNoIO = False,
         _coreEvalInputFile = c ^. coreReadInputFile,
-        _coreEvalShowDeBruijn = c ^. coreReadShowDeBruijn
+        _coreEvalShowDeBruijn = c ^. coreReadShowDeBruijn,
+        _coreEvalShowIdentIds = c ^. coreReadShowIdentIds
       }
 
 instance CanonicalProjection CoreReadOptions Evaluator.EvalOptions where
@@ -41,6 +44,7 @@ instance CanonicalProjection CoreReadOptions Evaluator.EvalOptions where
 parseCoreReadOptions :: Parser CoreReadOptions
 parseCoreReadOptions = do
   _coreReadShowDeBruijn <- optDeBruijn
+  _coreReadShowIdentIds <- optIdentIds
   _coreReadNoPrint <-
     switch
       ( long "no-print"

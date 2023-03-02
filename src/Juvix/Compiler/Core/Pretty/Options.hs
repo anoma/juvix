@@ -3,8 +3,7 @@ module Juvix.Compiler.Core.Pretty.Options where
 import Juvix.Prelude
 
 data Options = Options
-  { _optIndent :: Int,
-    _optShowNameIds :: Bool,
+  { _optShowIdentIds :: Bool,
     _optShowDeBruijnIndices :: Bool
   }
 
@@ -13,21 +12,19 @@ makeLenses ''Options
 defaultOptions :: Options
 defaultOptions =
   Options
-    { _optIndent = 2,
-      _optShowNameIds = False,
+    { _optShowIdentIds = False,
       _optShowDeBruijnIndices = False
     }
 
 traceOptions :: Options
 traceOptions =
   Options
-    { _optIndent = 2,
-      _optShowNameIds = False,
+    { _optShowIdentIds = False,
       _optShowDeBruijnIndices = True
     }
 
 fromGenericOptions :: GenericOptions -> Options
-fromGenericOptions GenericOptions {..} = set optShowNameIds _showNameIds defaultOptions
+fromGenericOptions _ = defaultOptions
 
 instance CanonicalProjection GenericOptions Options where
-  project = fromGenericOptions
+  project _ = defaultOptions
