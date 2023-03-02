@@ -113,8 +113,11 @@ statementDef = do
         sym
         (parseFailure off ("duplicate definition of: " ++ fromText txt))
       tab <- lift getInfoTable
+      mty <- optional typeAnnotation
       let fi = fromMaybe impossible $ HashMap.lookup sym (tab ^. infoIdentifiers)
-          ty = fi ^. identifierType
+          ty = fromMaybe (fi ^. identifierType) mty
+      unless (isDynamic (fi ^. identifierType) || ty == fi ^. identifierType) $
+        parseFailure off ("type signature doesn't match earlier definition")
       parseDefinition sym ty
       return sym
     Just IdentInd {} ->
@@ -579,6 +582,28 @@ parseLocalName = parseWildcardName <|> parseIdentName
     parseIdentName :: ParsecS r (Text, Location)
     parseIdentName = identifierL
 
+parseLocalBinder ::
+  forall r.
+  (Member InfoTableBuilder r) =>
+  Index ->
+  HashMap Text Level ->
+  ParsecS r ((Text, Location), Type)
+parseLocalBinder varsNum vars = parseBinder <|> parseName
+  where
+    parseBinder :: ParsecS r ((Text, Location), Type)
+    parseBinder = do
+      lparen
+      n <- parseLocalName
+      kw kwColon
+      ty <- expr varsNum vars
+      rparen
+      return (n, ty)
+
+    parseName :: ParsecS r ((Text, Location), Type)
+    parseName = do
+      n <- parseLocalName
+      return (n, mkDynamic')
+
 exprPi ::
   (Member InfoTableBuilder r) =>
   Index ->
@@ -780,8 +805,8 @@ caseMatchingBranch varsNum vars = do
     Just IdentInd {} ->
       parseFailure off ("not a constructor: " ++ fromText txt)
     Just (IdentConstr tag) -> do
-      ns :: [(Text, Location)] <- P.many parseLocalName
-      let bindersNum = length ns
+      bs :: [((Text, Location), Type)] <- P.many (parseLocalBinder varsNum vars)
+      let bindersNum = length bs
       ci <- lift $ getConstructorInfo tag
       when
         (ci ^. constructorArgsNum /= bindersNum)
@@ -790,14 +815,20 @@ caseMatchingBranch varsNum vars = do
       let vars' =
             fst $
               foldl'
-                ( \(vs, k) (name, _) ->
+                ( \(vs, k) ((name, _), _) ->
                     (HashMap.insert name k vs, k + 1)
                 )
                 (vars, varsNum)
-                ns
+                bs
       br <- bracedExpr (varsNum + bindersNum) vars'
       let info = setInfoName (ci ^. constructorName) mempty
-          binders = zipWith (\(name, loc) -> Binder name (Just loc)) ns (typeArgs (ci ^. constructorType) ++ repeat mkDynamic')
+          binders =
+            zipWith
+              ( \((name, loc), ty) ty' ->
+                  Binder name (Just loc) (if isDynamic ty then ty' else ty)
+              )
+              bs
+              (typeArgs (ci ^. constructorType) ++ repeat mkDynamic')
       return $ CaseBranch info tag binders bindersNum br
     Nothing ->
       parseFailure off ("undeclared identifier: " ++ fromText txt)
