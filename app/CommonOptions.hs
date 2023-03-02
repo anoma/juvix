@@ -234,6 +234,13 @@ optDeBruijn =
         <> help "Show variable de Bruijn indices"
     )
 
+optIdentIds :: Parser Bool
+optIdentIds =
+  switch
+    ( long "show-ident-ids"
+        <> help "Show identifier IDs"
+    )
+
 optTransformationIds :: Parser [TransformationId]
 optTransformationIds =
   option

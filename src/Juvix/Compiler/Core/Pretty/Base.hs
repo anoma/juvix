@@ -68,6 +68,12 @@ instance PrettyCode Primitive where
 ppName :: NameKind -> Text -> Sem r (Doc Ann)
 ppName kind name = return $ annotate (AnnKind kind) (pretty name)
 
+ppIdentName :: Member (Reader Options) r => Text -> Symbol -> Sem r (Doc Ann)
+ppIdentName name sym = do
+  showIds <- asks (^. optShowIdentIds)
+  let name' = if showIds then name <> "!" <> prettyText sym else name
+  ppName KNameFunction name'
+
 ppCodeVar' :: (Member (Reader Options) r) => Text -> Var' i -> Sem r (Doc Ann)
 ppCodeVar' name v = do
   name' <- ppName KNameLocal name
@@ -299,9 +305,9 @@ instance PrettyCode Node where
     NVar x ->
       let name = getInfoName (x ^. varInfo)
        in ppCodeVar' name x
-    NIdt x ->
+    NIdt x -> do
       let name = getInfoName (x ^. identInfo)
-       in ppName KNameLocal name
+       in ppIdentName name (x ^. identSymbol)
     NCst x -> ppCode x
     NApp x -> ppCode x
     NBlt x -> ppCode x
@@ -398,7 +404,7 @@ instance PrettyCode Stripped.Node where
        in ppCodeVar' name x
     Stripped.NIdt x ->
       let name = x ^. (identInfo . Stripped.identInfoName)
-       in ppName KNameLocal name
+       in ppIdentName name (x ^. identSymbol)
     Stripped.NCst x -> ppCode x
     Stripped.NApp x -> ppCode x
     Stripped.NBlt x -> ppCode x
@@ -433,11 +439,11 @@ instance PrettyCode InfoTable where
     where
       ppSig :: Symbol -> Sem r (Doc Ann)
       ppSig s = do
-        showIds <- asks (^. optShowNameIds)
+        showIds <- asks (^. optShowIdentIds)
         let mname :: Text
             mname = tbl ^. infoIdentifiers . at s . _Just . identifierName
             mname' = if showIds then (\nm -> nm <> "!" <> prettyText s) mname else mname
-        sym' <- ppName KNameLocal mname'
+        sym' <- ppName KNameFunction mname'
         let ii = fromJust $ HashMap.lookup s (tbl ^. infoIdentifiers)
             ty = ii ^. identifierType
         ty' <- ppCode ty
