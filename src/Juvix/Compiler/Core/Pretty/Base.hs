@@ -408,7 +408,7 @@ instance PrettyCode InfoTable where
     tys <- ppInductives (toList (tbl ^. infoInductives))
     sigs <- ppSigs (toList (tbl ^. infoIdentifiers))
     ctx' <- ppContext (tbl ^. identContext)
-    return ("-- Types" <> line <> tys <> line <> "-- Identifiers" <> line <> sigs <> ctx' <> line)
+    return (tys <> line <> line <> sigs <> line <> ctx' <> line)
     where
       ppSig :: Symbol -> Sem r (Doc Ann)
       ppSig s = do
@@ -441,11 +441,10 @@ instance PrettyCode InfoTable where
 
       ppInductives :: [InductiveInfo] -> Sem r (Doc Ann)
       ppInductives inds = do
-        inds' <- mapM ppInductive inds
+        inds' <- mapM ppInductive (filter (isNothing . (^. inductiveBuiltin)) inds)
         return (vsep inds')
         where
           ppInductive :: InductiveInfo -> Sem r (Doc Ann)
-          ppInductive ii | isJust (ii ^. inductiveBuiltin) = return ""
           ppInductive ii = do
             name <- ppName KNameInductive (ii ^. inductiveName)
             ctrs <- mapM (fmap (<> semi) . ppCode) (ii ^. inductiveConstructors)
