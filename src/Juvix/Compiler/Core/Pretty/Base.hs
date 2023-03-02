@@ -435,7 +435,8 @@ instance PrettyCode InfoTable where
     tys <- ppInductives (toList (tbl ^. infoInductives))
     sigs <- ppSigs (toList (tbl ^. infoIdentifiers))
     ctx' <- ppContext (tbl ^. identContext)
-    return (tys <> line <> line <> sigs <> line <> ctx' <> line)
+    main <- maybe (return "") (\s -> (<> line) . (line <>) <$> ppName KNameFunction (fromJust (HashMap.lookup s (tbl ^. infoIdentifiers)) ^. identifierName)) (tbl ^. infoMain)
+    return (tys <> line <> line <> sigs <> line <> ctx' <> line <> main)
     where
       ppSig :: Symbol -> Sem r (Doc Ann)
       ppSig s = do
