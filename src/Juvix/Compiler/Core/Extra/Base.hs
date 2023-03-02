@@ -346,6 +346,11 @@ mapPatternBinders f = snd . go 0
             )
       PatWildcard p -> (k, PatWildcard p)
 
+isPatConstr :: Pattern -> Bool
+isPatConstr = \case
+  PatConstr {} -> True
+  _ -> False
+
 {------------------------------------------------------------------------}
 {- generic Node destruction -}
 
