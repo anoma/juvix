@@ -328,8 +328,10 @@ mkBody ty clauses
       let values = mkVar Info.empty <$> vs
           argtys = take nPatterns (typeArgs ty)
           values' = map fst $ filter (isInductive . snd) (zipExact values argtys)
-          argtys' = filter isInductive argtys
-          returnType = mkPis' (drop nPatterns (typeArgs ty)) (typeTarget ty)
+          -- match types are shifted by 1 because it lies at one level below the
+          -- lambdas for the pattern arguments
+          matchArgTys = shift 1 <$> filter isInductive argtys
+          matchReturnType' = shift 1 $ mkPis' (drop nPatterns (typeArgs ty)) (typeTarget ty)
       case values' of
         [] -> do
           vars <- asks (^. indexTableVars)
@@ -348,7 +350,7 @@ mkBody ty clauses
         _ : _ -> do
           varsNum <- asks (^. indexTableVarsNum)
           ms <- underBinders nPatterns (mapM (uncurry (goClause varsNum)) clauses)
-          let match = mkMatch' (fromList argtys') returnType (fromList values') (toList ms)
+          let match = mkMatch' (fromList matchArgTys) matchReturnType' (fromList values') (toList ms)
           return $ foldr mkLambda' match argtys
   where
     -- Assumption: All clauses have the same number of patterns
