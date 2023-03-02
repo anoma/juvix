@@ -27,7 +27,9 @@ matchToCaseNode n = case n of
 
     -- The appNode calls the first branch with the values of the match
     let appNode = mkApps' (mkVar' 0) (shift (length branchNodes) <$> values)
-    return (foldr (mkLet' branchType) appNode branchNodes)
+    let branchBinder = typeToBinder branchType
+    let branchBinders = zip (repeat branchBinder) branchNodes
+    return (mkShiftedLets 0 branchBinders appNode)
   _ -> return n
 
 -- | Increase all free variable indices by a given value.
@@ -150,6 +152,15 @@ mkShiftedLets baseShift vars body = foldr f body (indexFrom 0 vars)
   where
     f :: Indexed (Binder, Node) -> Node -> Node
     f (Indexed idx (b, v)) = mkLet mempty (shiftBinder (baseShift + idx) b) v
+
+-- | Wrap a type node in an unnamed binder.
+typeToBinder :: Type -> Binder
+typeToBinder ty =
+  Binder
+    { _binderName = "?",
+      _binderLocation = Nothing,
+      _binderType = ty
+    }
 
 -- | Extract original binders (i.e binders which are referenced in the match
 -- branch body) from a list of `CompiledBinder`s indexed by the total number
