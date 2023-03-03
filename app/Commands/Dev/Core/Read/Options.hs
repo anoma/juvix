@@ -10,6 +10,7 @@ data CoreReadOptions = CoreReadOptions
   { _coreReadTransformations :: [TransformationId],
     _coreReadShowDeBruijn :: Bool,
     _coreReadShowIdentIds :: Bool,
+    _coreReadNoDisambiguate :: Bool,
     _coreReadEval :: Bool,
     _coreReadNoPrint :: Bool,
     _coreReadInputFile :: AppPath File
@@ -31,13 +32,15 @@ instance CanonicalProjection CoreReadOptions Eval.CoreEvalOptions where
       { _coreEvalNoIO = False,
         _coreEvalInputFile = c ^. coreReadInputFile,
         _coreEvalShowDeBruijn = c ^. coreReadShowDeBruijn,
-        _coreEvalShowIdentIds = c ^. coreReadShowIdentIds
+        _coreEvalShowIdentIds = c ^. coreReadShowIdentIds,
+        _coreEvalNoDisambiguate = c ^. coreReadNoDisambiguate
       }
 
 instance CanonicalProjection CoreReadOptions Evaluator.EvalOptions where
   project x =
     Evaluator.EvalOptions
       { _evalNoIO = False,
+        _evalNoDisambiguate = x ^. coreReadNoDisambiguate,
         _evalInputFile = x ^. coreReadInputFile
       }
 
@@ -45,6 +48,7 @@ parseCoreReadOptions :: Parser CoreReadOptions
 parseCoreReadOptions = do
   _coreReadShowDeBruijn <- optDeBruijn
   _coreReadShowIdentIds <- optIdentIds
+  _coreReadNoDisambiguate <- optNoDisambiguate
   _coreReadNoPrint <-
     switch
       ( long "no-print"

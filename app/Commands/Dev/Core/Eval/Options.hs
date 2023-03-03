@@ -8,7 +8,8 @@ data CoreEvalOptions = CoreEvalOptions
   { _coreEvalNoIO :: Bool,
     _coreEvalInputFile :: AppPath File,
     _coreEvalShowDeBruijn :: Bool,
-    _coreEvalShowIdentIds :: Bool
+    _coreEvalShowIdentIds :: Bool,
+    _coreEvalNoDisambiguate :: Bool
   }
   deriving stock (Data)
 
@@ -25,7 +26,8 @@ instance CanonicalProjection CoreEvalOptions Eval.EvalOptions where
   project c =
     Eval.EvalOptions
       { _evalInputFile = c ^. coreEvalInputFile,
-        _evalNoIO = c ^. coreEvalNoIO
+        _evalNoIO = c ^. coreEvalNoIO,
+        _evalNoDisambiguate = c ^. coreEvalNoDisambiguate
       }
 
 parseCoreEvalOptions :: Parser CoreEvalOptions
@@ -37,5 +39,6 @@ parseCoreEvalOptions = do
       )
   _coreEvalShowDeBruijn <- optDeBruijn
   _coreEvalShowIdentIds <- optIdentIds
+  _coreEvalNoDisambiguate <- optNoDisambiguate
   _coreEvalInputFile <- parseInputJuvixCoreFile
   pure CoreEvalOptions {..}

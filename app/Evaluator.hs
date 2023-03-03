@@ -10,10 +10,12 @@ import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Info.NoDisplayInfo qualified as Info
 import Juvix.Compiler.Core.Language qualified as Core
 import Juvix.Compiler.Core.Pretty qualified as Core
+import Juvix.Compiler.Core.Transformation.DisambiguateBinderNames qualified as Core
 
 data EvalOptions = EvalOptions
   { _evalInputFile :: AppPath File,
-    _evalNoIO :: Bool
+    _evalNoIO :: Bool,
+    _evalNoDisambiguate :: Bool
   }
 
 makeLenses ''EvalOptions
@@ -54,8 +56,10 @@ evalAndPrint opts tab node = do
       | Info.member Info.kNoDisplayInfo (Core.getInfo node') ->
           return ()
     Right node' -> do
-      renderStdOut (Core.ppOut opts node')
+      renderStdOut (Core.ppOut opts node'')
       embed (putStrLn "")
+      where
+        node'' = if project opts ^. evalNoDisambiguate then node' else Core.disambiguateNodeBinderNames tab node'
   where
     defaultLoc :: Sem r Interval
     defaultLoc = singletonInterval . mkInitialLoc <$> someBaseToAbs' f
