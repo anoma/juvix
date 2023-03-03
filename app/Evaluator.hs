@@ -10,7 +10,7 @@ import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Info.NoDisplayInfo qualified as Info
 import Juvix.Compiler.Core.Language qualified as Core
 import Juvix.Compiler.Core.Pretty qualified as Core
-import Juvix.Compiler.Core.Transformation.DisambiguateBinderNames qualified as Core
+import Juvix.Compiler.Core.Transformation.DisambiguateNames qualified as Core
 
 data EvalOptions = EvalOptions
   { _evalInputFile :: AppPath File,
@@ -59,7 +59,7 @@ evalAndPrint opts tab node = do
       renderStdOut (Core.ppOut opts node'')
       embed (putStrLn "")
       where
-        node'' = if project opts ^. evalNoDisambiguate then node' else Core.disambiguateNodeBinderNames tab node'
+        node'' = if project opts ^. evalNoDisambiguate then node' else Core.disambiguateNodeNames tab node'
   where
     defaultLoc :: Sem r Interval
     defaultLoc = singletonInterval . mkInitialLoc <$> someBaseToAbs' f

@@ -15,7 +15,7 @@ data TransformationId
   | ComputeTypeInfo
   | MatchToCase
   | EtaExpandApps
-  | DisambiguateBinderNames
+  | DisambiguateNames
   deriving stock (Data, Bounded, Enum)
 
 data PipelineId
