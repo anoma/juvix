@@ -111,7 +111,7 @@ shiftEmbedded wrappingLevel m = umapN go
 -- branch.
 compileMatchBranch :: forall r. Members '[InfoTableBuilder] r => Indexed MatchBranch -> Sem r Node
 compileMatchBranch (Indexed branchNum br) = do
-  compiledBranch <- runReader initState (combineCompiledPatterns (map (compilePattern patternsNum) patterns))
+  compiledBranch <- runReader initState (combineCompiledPatterns (map (compilePattern branchNum patternsNum) patterns))
   return (mkLambdas' (patternType <$> patterns) ((compiledBranch ^. compiledPatMkNode) (wrapBody (compiledBranch ^. compiledPatBinders))))
   where
     patterns :: [Pattern]
@@ -120,21 +120,19 @@ compileMatchBranch (Indexed branchNum br) = do
     patternsNum = length patterns
 
     wrapBody :: [CompiledBinder] -> Node
-    wrapBody binders = mkShiftedLets shiftIndex vars shiftedBody
+    wrapBody binders = foldr (uncurry (mkLet mempty)) shiftedBody vars
       where
         vars :: [(Binder, Node)]
-        vars = second mkVar' . swap . toTuple <$> extractOriginalBinders binders
+        vars = (bimap (shiftBinder patternBindersNum') mkVar' . swap . toTuple) <$> extractOriginalBinders binders
 
         auxiliaryBindersNum :: Int
         auxiliaryBindersNum = length (filter isAuxiliaryBinder binders)
 
-        shiftIndex :: Int
-        shiftIndex = length binders + patternsNum + branchNum
+        patternBindersNum' :: Int
+        patternBindersNum' = length (concatMap getPatternBinders patterns)
 
         shiftedBody :: Node
-        shiftedBody =
-          let patternBindersNum' = length (concatMap getPatternBinders patterns)
-           in shiftEmbedded
+        shiftedBody = shiftEmbedded
                 patternBindersNum'
                 (auxiliaryBindersNum + patternBindersNum' + patternsNum + branchNum)
                 (br ^. matchBranchBody)
@@ -215,15 +213,15 @@ combineCompiledPatterns ps = go indexedPatterns
 -- (wildcard, binder or constructor) introduces an auxiliary binder.
 -- The arguments are then compiled recursively using a new CompileState context.
 -- The default case points to the next branch pattern.
-compilePattern :: forall r. Members [Reader CompileState, Reader CompileStateNode, InfoTableBuilder] r => Int -> Pattern -> Sem r CompiledPattern
-compilePattern numPatterns = \case
+compilePattern :: forall r. Members [Reader CompileState, Reader CompileStateNode, InfoTableBuilder] r => Int -> Int -> Pattern -> Sem r CompiledPattern
+compilePattern branchNum numPatterns = \case
   PatWildcard {} -> return (CompiledPattern [] id)
   PatBinder b -> do
-    subPats <- resetCurrentNode (incBindersAbove (compilePattern numPatterns (b ^. patternBinderPattern)))
+    subPats <- resetCurrentNode (incBindersAbove (compilePattern branchNum numPatterns (b ^. patternBinderPattern)))
     currentNode <- asks (^. compileStateNodeCurrent)
     bindersAbove <- asks (^. compileStateBindersAbove)
 
-    let newBinder = shiftBinder (bindersAbove + numPatterns) (b ^. patternBinder)
+    let newBinder = shiftBinder (bindersAbove + numPatterns + branchNum) (b ^. patternBinder)
     let compiledBinder =
           CompiledPattern
             { _compiledPatBinders = [OriginalBinder newBinder],
@@ -243,7 +241,7 @@ compilePattern numPatterns = \case
 
       compileArgs :: [Pattern] -> Sem r CompiledPattern
       compileArgs args = do
-        let ctorArgsPatterns = compilePattern numPatterns <$> args
+        let ctorArgsPatterns = compilePattern branchNum numPatterns <$> args
         addBindersAbove (length args) (resetCompiledPattern (combineCompiledPatterns ctorArgsPatterns))
 
       mkCompiledBinder :: Pattern -> Sem r CompiledBinder
