@@ -5,6 +5,7 @@ module Juvix.Compiler.Core.Data.InfoTable
 where
 
 import Data.HashMap.Strict qualified as HashMap
+import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Concrete.Data.Builtins
 import Juvix.Compiler.Core.Language
 
@@ -140,3 +141,13 @@ lookupBuiltinFunction tab b = (HashMap.!) (tab ^. infoIdentifiers) . funSym <$> 
 
 identName :: InfoTable -> Symbol -> Text
 identName tab sym = fromJust (HashMap.lookup sym (tab ^. infoIdentifiers)) ^. identifierName
+
+identNames :: InfoTable -> HashSet Text
+identNames tab =
+  HashSet.fromList $
+    map (^. identifierName) (HashMap.elems (tab ^. infoIdentifiers))
+      ++ map (^. constructorName) (HashMap.elems (tab ^. infoConstructors))
+      ++ map (^. inductiveName) (HashMap.elems (tab ^. infoInductives))
+
+freshIdentName :: InfoTable -> Text -> Text
+freshIdentName tab = freshName (identNames tab)

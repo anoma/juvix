@@ -215,6 +215,10 @@ prime name = case Text.splitOn "'" name of
   [name', num] -> name' <> "'" <> maybe (num <> "'") (show . (+ 1)) (Text.readMaybe (unpack num) :: Maybe Word)
   _ -> name <> "'"
 
+freshName :: HashSet Text -> Text -> Text
+freshName names name | HashSet.member name names = freshName names (prime name)
+freshName _ name = name
+
 --------------------------------------------------------------------------------
 -- Foldable
 --------------------------------------------------------------------------------

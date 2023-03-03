@@ -1,6 +1,6 @@
 module Juvix.Compiler.Core.Transformation.DisambiguateNames where
 
-import Data.HashMap.Strict qualified as HashMap
+import Data.HashSet qualified as HashSet
 import Data.List qualified as List
 import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Compiler.Core.Data.BinderList qualified as BL
@@ -72,10 +72,13 @@ disambiguateNodeNames tab = dmapL go
           | name == "_" ->
               name
           | elem name (map (^. binderName) (toList bl))
-              || HashMap.member name (tab ^. identMap) ->
+              || HashSet.member name names ->
               disambiguate bl (prime name)
           | otherwise ->
               name
+
+    names :: HashSet Text
+    names = identNames tab
 
 disambiguateNames :: InfoTable -> InfoTable
 disambiguateNames tab =
