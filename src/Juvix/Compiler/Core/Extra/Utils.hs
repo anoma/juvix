@@ -6,7 +6,7 @@ module Juvix.Compiler.Core.Extra.Utils
     module Juvix.Compiler.Core.Extra.Equality,
     module Juvix.Compiler.Core.Extra.Recursors.Fold.Named,
     module Juvix.Compiler.Core.Extra.Recursors.Map.Named,
-    module Juvix.Compiler.Core.Extra.SubstEnv,
+    module Juvix.Compiler.Core.Extra.Utils.Base,
   )
 where
 
@@ -21,7 +21,7 @@ import Juvix.Compiler.Core.Extra.Info
 import Juvix.Compiler.Core.Extra.Recursors
 import Juvix.Compiler.Core.Extra.Recursors.Fold.Named
 import Juvix.Compiler.Core.Extra.Recursors.Map.Named
-import Juvix.Compiler.Core.Extra.SubstEnv
+import Juvix.Compiler.Core.Extra.Utils.Base
 import Juvix.Compiler.Core.Language
 
 isClosed :: Node -> Bool
@@ -50,13 +50,6 @@ nodeIdents f = ufoldA reassemble go
     go = \case
       NIdt i -> NIdt <$> f i
       n -> pure n
-
-countFreeVarOccurrences :: Index -> Node -> Int
-countFreeVarOccurrences idx = gatherN go 0
-  where
-    go k acc = \case
-      NVar (Var _ idx') | idx' == idx + k -> acc + 1
-      _ -> acc
 
 shiftVar :: Index -> Var -> Var
 shiftVar m = over varIndex (+ m)
