@@ -490,7 +490,7 @@ goAxiomInductive a = whenJust (a ^. Internal.axiomBuiltin) builtinInductive
       Internal.BuiltinIOSequence -> return ()
       Internal.BuiltinIOReadline -> return ()
       Internal.BuiltinString -> registerInductiveAxiom (Just BuiltinString) []
-      Internal.BuiltinIO -> registerInductiveAxiom Nothing builtinIOConstrs
+      Internal.BuiltinIO -> registerInductiveAxiom (Just BuiltinIO) builtinIOConstrs
       Internal.BuiltinTrace -> return ()
       Internal.BuiltinFail -> return ()
       Internal.BuiltinStringConcat -> return ()
@@ -501,11 +501,12 @@ goAxiomInductive a = whenJust (a ^. Internal.axiomBuiltin) builtinInductive
     registerInductiveAxiom :: Maybe BuiltinAxiom -> [(Tag, Text, Type -> Type, Maybe BuiltinConstructor)] -> Sem r ()
     registerInductiveAxiom ax ctrs = do
       sym <- freshSymbol
-      let ty = mkTypeConstr' sym []
+      let name = a ^. Internal.axiomName . nameText
+          ty = mkTypeConstr (setInfoName name mempty) sym []
           ctrs' = builtinConstrs sym ty ctrs
           info =
             InductiveInfo
-              { _inductiveName = a ^. Internal.axiomName . nameText,
+              { _inductiveName = name,
                 _inductiveLocation = Just $ a ^. Internal.axiomName . nameLoc,
                 _inductiveSymbol = sym,
                 _inductiveKind = mkSmallUniv,
