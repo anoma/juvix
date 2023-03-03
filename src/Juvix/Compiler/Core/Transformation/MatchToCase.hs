@@ -153,6 +153,12 @@ mkShiftedLets baseShift vars body = foldr f body (indexFrom 0 vars)
     f :: Indexed (Binder, Node) -> Node -> Node
     f (Indexed idx (b, v)) = mkLet mempty (shiftBinder (baseShift + idx) b) v
 
+mkShiftedLambdas :: Index -> [Type] -> Node -> Node
+mkShiftedLambdas baseShift tys body = foldr f body (indexFrom 0 tys)
+  where
+    f :: Indexed Type -> Node -> Node
+    f (Indexed idx ty) = mkLambda' (shift (baseShift + idx) ty)
+
 -- | Wrap a type node in an unnamed binder.
 typeToBinder :: Type -> Binder
 typeToBinder ty =
@@ -289,7 +295,7 @@ compilePattern numPatterns = \case
               )
 
 failNode :: [Type] -> Node
-failNode tys = mkLambdas' tys (mkBuiltinApp' OpFail [mkConstant' (ConstString "Non-exhaustive patterns")])
+failNode tys = mkShiftedLambdas 1 tys (mkBuiltinApp' OpFail [mkConstant' (ConstString "Non-exhaustive patterns")])
 
 mkUniqueBinder' :: Member InfoTableBuilder r => Text -> Node -> Sem r Binder
 mkUniqueBinder' name ty = mkUniqueBinder name Nothing ty
