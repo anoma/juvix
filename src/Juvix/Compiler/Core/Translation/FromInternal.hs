@@ -328,10 +328,10 @@ mkBody ty clauses
       let values = mkVar Info.empty <$> vs
           argtys = take nPatterns (typeArgs ty)
           values' = map fst $ filter (isInductive . snd) (zipExact values argtys)
-          -- match types are shifted by 1 because it lies at one level below the
-          -- lambdas for the pattern arguments
-          matchArgTys = shift 1 <$> filter isInductive argtys
-          matchReturnType' = shift 1 $ mkPis' (drop nPatterns (typeArgs ty)) (typeTarget ty)
+          matchArgtys = shiftMatchTypeArg <$> indexFrom 0 argtys
+          matchTypeTarget = typeTarget ty
+          matchIndArgTys = filter isInductive matchArgtys
+          matchReturnType' = mkPis' (drop nPatterns (typeArgs ty)) matchTypeTarget
       case values' of
         [] -> do
           vars <- asks (^. indexTableVars)
@@ -350,7 +350,7 @@ mkBody ty clauses
         _ : _ -> do
           varsNum <- asks (^. indexTableVarsNum)
           ms <- underBinders nPatterns (mapM (uncurry (goClause varsNum)) clauses)
-          let match = mkMatch' (fromList matchArgTys) matchReturnType' (fromList values') (toList ms)
+          let match = mkMatch' (fromList matchIndArgTys) matchReturnType' (fromList values') (toList ms)
           return $ foldr mkLambda' match argtys
   where
     -- Assumption: All clauses have the same number of patterns
@@ -359,6 +359,9 @@ mkBody ty clauses
 
     vs :: [Index]
     vs = reverse (take nPatterns [0 ..])
+
+    shiftMatchTypeArg :: Indexed Type -> Type
+    shiftMatchTypeArg (Indexed idx ty') = shift (nPatterns - idx) ty'
 
     checkPatternsNum :: Int -> [[a]] -> Int
     checkPatternsNum len = \case
@@ -671,6 +674,7 @@ goPatternArgs lvl0 body ps0 ptys0 = go lvl0 [] ps0 ptys0
     -- `lvl` is the level of the lambda-bound variable corresponding to the current pattern
     go :: Level -> [Pattern] -> [Internal.PatternArg] -> [Type] -> Sem r MatchBranch
     go lvl pats ps ptys = case (ps, ptys) of
+      -- The pattern has an inductive type, so can be matched on
       (p : ps', NTyp {} : ptys') -> do
         pat <- fromPatternArg p
         vars <- asks (^. indexTableVars)
@@ -688,6 +692,7 @@ goPatternArgs lvl0 body ps0 ptys0 = go lvl0 [] ps0 ptys0
           (set indexTableVars vars' . set indexTableVarsNum varsNum')
           (go (lvl + 1) (pat : pats) ps' ptys')
       (p : ps', _ : ptys') ->
+        -- The pattern does not have an inductive type, so is excluded from the match
         case p ^. Internal.patternArgPattern of
           Internal.PatternVariable {} -> do
             vars <- asks (^. indexTableVars)
