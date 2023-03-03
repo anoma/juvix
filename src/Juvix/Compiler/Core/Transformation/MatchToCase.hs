@@ -221,7 +221,9 @@ compilePattern numPatterns = \case
   PatBinder b -> do
     subPats <- resetCurrentNode (incBindersAbove (compilePattern numPatterns (b ^. patternBinderPattern)))
     currentNode <- asks (^. compileStateNodeCurrent)
-    let newBinder = b ^. patternBinder
+    bindersAbove <- asks (^. compileStateBindersAbove)
+
+    let newBinder = shiftBinder (bindersAbove + numPatterns) (b ^. patternBinder)
     let compiledBinder =
           CompiledPattern
             { _compiledPatBinders = [OriginalBinder newBinder],
