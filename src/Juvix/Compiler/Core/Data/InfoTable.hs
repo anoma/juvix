@@ -137,3 +137,6 @@ lookupBuiltinFunction tab b = (HashMap.!) (tab ^. infoIdentifiers) . funSym <$> 
     funSym = \case
       IdentFun s -> s
       _ -> error "core infotable: expected function identifier"
+
+identName :: InfoTable -> Symbol -> Text
+identName tab sym = fromJust (HashMap.lookup sym (tab ^. infoIdentifiers)) ^. identifierName

@@ -1,4 +1,4 @@
-module Juvix.Compiler.Core.Transformation.DisambiguateBinderNames where
+module Juvix.Compiler.Core.Transformation.DisambiguateNames where
 
 import Data.HashMap.Strict qualified as HashMap
 import Data.List qualified as List
@@ -8,13 +8,15 @@ import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Info.NameInfo (setInfoName)
 import Juvix.Compiler.Core.Transformation.Base
 
-disambiguateNodeBinderNames :: InfoTable -> Node -> Node
-disambiguateNodeBinderNames tab = dmapL go
+disambiguateNodeNames :: InfoTable -> Node -> Node
+disambiguateNodeNames tab = dmapL go
   where
     go :: BinderList Binder -> Node -> Node
     go bl node = case node of
       NVar Var {..} ->
         mkVar (setInfoName (BL.lookup _varIndex bl ^. binderName) _varInfo) _varIndex
+      NIdt Ident {..} ->
+        mkIdent (setInfoName (identName tab _identSymbol) _identInfo) _identSymbol
       NLam lam ->
         NLam (over lambdaBinder (over binderName (disambiguate bl)) lam)
       NLet lt ->
@@ -75,6 +77,6 @@ disambiguateNodeBinderNames tab = dmapL go
           | otherwise ->
               name
 
-disambiguateBinderNames :: InfoTable -> InfoTable
-disambiguateBinderNames tab =
-  mapAllNodes (disambiguateNodeBinderNames tab) tab
+disambiguateNames :: InfoTable -> InfoTable
+disambiguateNames tab =
+  mapAllNodes (disambiguateNodeNames tab) tab

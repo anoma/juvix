@@ -79,7 +79,7 @@ transformationText = \case
   ConvertBuiltinTypes -> strConvertBuiltinTypes
   ComputeTypeInfo -> strComputeTypeInfo
   UnrollRecursion -> strUnrollRecursion
-  DisambiguateBinderNames -> strDisambiguateBinderNames
+  DisambiguateNames -> strDisambiguateNames
 
 parsePipeline :: MonadParsec e Text m => m PipelineId
 parsePipeline = choice [symbol (pipelineText t) $> t | t <- allElements]
@@ -135,5 +135,5 @@ strComputeTypeInfo = "compute-type-info"
 strUnrollRecursion :: Text
 strUnrollRecursion = "unroll-recursion"
 
-strDisambiguateBinderNames :: Text
-strDisambiguateBinderNames = "disambiguate-binder-names"
+strDisambiguateNames :: Text
+strDisambiguateNames = "disambiguate-names"
