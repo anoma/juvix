@@ -256,11 +256,11 @@ compilePattern numPatterns = \case
             Binder
               { _binderName = "_",
                 _binderLocation = getInfoLocation info,
-                _binderType = w ^. patternWildcardType
+                _binderType = mkDynamic'
               }
         PatConstr c' -> do
           let info = c' ^. patternConstrInfo
-          mkUniqueBinder "arg" (getInfoLocation info) (c' ^. patternConstrType)
+          mkUniqueBinder "arg" (getInfoLocation info) mkDynamic'
 
       mkCaseFromBinders :: [Binder] -> Sem r (Node -> Node)
       mkCaseFromBinders binders = do
