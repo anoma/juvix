@@ -360,6 +360,31 @@ mkBody ty clauses
     vs :: [Index]
     vs = reverse (take nPatterns [0 ..])
 
+    -- | The types of arguments in the match must be shifted due to the
+    -- difference in level between when the type argument in bound (in a
+    -- surrounding lambda) and when it is used in the match constructor.
+    --
+    -- For example:
+    --
+    --    f : {A : Type} -> A -> List A -> A -> A -> List A;
+    --    f _ _ _ := \ { _ := nil };
+    --
+    -- f has the following type, with indices:
+    --
+    --    A -> A$0 -> List A$1 -> A$2 -> A$3 -> A$4 -> List A$5
+    --
+    -- Is translated to the following match (omiting the translation of the body):
+    --
+    --    λ(? : Type)
+    --      λ(? : A$0)
+    --        λ(? : List A$1)
+    --          λ(? : A$2)
+    --            λ(? : A$3)
+    --              match (?$2 : List A$4) with : (A$4 → List A$5)
+    --
+    -- The return type (A$3 -> List A$4) already has the correct indices
+    -- relative to the match node. However the type of the match argument has
+    -- been shifted by the number of pattern binders below it.
     shiftMatchTypeArg :: Indexed Type -> Type
     shiftMatchTypeArg (Indexed idx ty') = shift (nPatterns - idx) ty'
 
