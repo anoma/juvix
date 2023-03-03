@@ -12,7 +12,7 @@ import Juvix.Compiler.Core.Data.BinderList as BL
 import Juvix.Compiler.Core.Data.InfoTable
 import Juvix.Compiler.Core.Data.Stripped.InfoTable qualified as Stripped
 import Juvix.Compiler.Core.Extra.Base
-import Juvix.Compiler.Core.Extra.SubstEnv
+import Juvix.Compiler.Core.Extra.Utils.Base
 import Juvix.Compiler.Core.Info.NameInfo
 import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Core.Language.Stripped qualified as Stripped
@@ -355,16 +355,16 @@ instance PrettyCode Node where
 instance PrettyCode Pi where
   ppCode Pi {..} =
     let piType = _piBinder ^. binderType
-     in case _piBinder ^. binderName of
-          "?" -> do
-            ty <- ppLeftExpression funFixity piType
-            b <- ppRightExpression funFixity _piBody
-            return $ ty <+> kwArrow <+> b
-          name -> do
-            n <- ppName KNameLocal name
-            ty <- ppCode piType
-            b <- ppCode _piBody
-            return $ kwPi <+> n <+> kwColon <+> ty <> comma <+> b
+     in if
+            | varOccurs 0 _piBody -> do
+                n <- ppName KNameLocal (_piBinder ^. binderName)
+                ty <- ppCode piType
+                b <- ppCode _piBody
+                return $ kwPi <+> n <+> kwColon <+> ty <> comma <+> b
+            | otherwise -> do
+                ty <- ppLeftExpression funFixity piType
+                b <- ppRightExpression funFixity _piBody
+                return $ ty <+> kwArrow <+> b
 
 instance PrettyCode (Univ' i) where
   ppCode Univ {..} =

@@ -514,6 +514,7 @@ builtinAppExpr varsNum vars = do
       <|> (kw kwMinus $> OpIntSub)
       <|> (kw kwDiv $> OpIntDiv)
       <|> (kw kwMul $> OpIntMul)
+      <|> (kw kwMod $> OpIntMod)
       <|> (kw kwShow $> OpShow)
       <|> (kw kwStrConcat $> OpStrConcat)
       <|> (kw kwStrToInt $> OpStrToInt)

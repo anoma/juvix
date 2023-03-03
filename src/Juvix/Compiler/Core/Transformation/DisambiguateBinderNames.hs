@@ -40,7 +40,7 @@ disambiguateNodeBinderNames tab = dmapL go
       NMatch m ->
         NMatch (over matchBranches (map (over matchBranchPatterns (NonEmpty.fromList . snd . disambiguatePatterns bl . toList))) m)
       NPi pi
-        | pi ^. piBinder . binderName /= "?" ->
+        | varOccurs 0 (pi ^. piBody) ->
             NPi (over piBinder (over binderName (disambiguate bl)) pi)
       _ -> node
 
