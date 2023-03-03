@@ -337,7 +337,7 @@ instance PrettyCode Node where
       pats <- mapM ppPatterns branchPatterns
       vs <- mapM ppCode _matchValues
       vs' <- zipWithM ppWithType (toList vs) (toList _matchValueTypes)
-      bs <- sequence $ zipWithExact (\ps br -> ppCode br >>= \br' -> return $ ps <+> kwMapsto <+> br') pats branchBodies
+      bs <- sequence $ zipWithExact (\ps br -> ppCode br >>= \br' -> return $ ps <+> kwAssign <+> br') pats branchBodies
       let bss = bracesIndent $ align $ concatWith (\a b -> a <> kwSemicolon <> line <> b) bs
       rty <- ppTypeAnnot _matchReturnType
       return $ kwMatch <+> hsep (punctuate comma vs') <+> kwWith <> rty <+> bss
