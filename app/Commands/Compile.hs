@@ -7,6 +7,7 @@ import Commands.Extra.Compile qualified as Compile
 import Data.Text.IO qualified as TIO
 import Juvix.Compiler.Core qualified as Core
 import Juvix.Compiler.Core.Pretty qualified as Core
+import Juvix.Compiler.Core.Transformation.DisambiguateNames qualified as Core
 
 runCommand :: (Members '[Embed IO, App] r) => CompileOptions -> Sem r ()
 runCommand opts@CompileOptions {..} = do
@@ -28,4 +29,4 @@ runCommand opts@CompileOptions {..} = do
 writeCoreFile :: (Members '[Embed IO, App] r) => Compile.PipelineArg -> Sem r ()
 writeCoreFile Compile.PipelineArg {..} = do
   coreFile <- Compile.outputFile _pipelineArgOptions _pipelineArgFile
-  embed $ TIO.writeFile (toFilePath coreFile) (show $ Core.ppOut Core.defaultOptions {Core._optShowDeBruijnIndices = True} _pipelineArgInfoTable)
+  embed $ TIO.writeFile (toFilePath coreFile) (show $ Core.ppOutDefault (Core.disambiguateNames _pipelineArgInfoTable))
