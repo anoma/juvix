@@ -9,6 +9,7 @@ data CoreFromConcreteOptions = CoreFromConcreteOptions
   { _coreFromConcreteTransformations :: [TransformationId],
     _coreFromConcreteShowDeBruijn :: Bool,
     _coreFromConcreteShowIdentIds :: Bool,
+    _coreFromConcreteNoDisambiguate :: Bool,
     _coreFromConcreteFilter :: Bool,
     _coreFromConcreteNoIO :: Bool,
     _coreFromConcreteEval :: Bool,
@@ -30,7 +31,8 @@ instance CanonicalProjection CoreFromConcreteOptions Eval.EvalOptions where
   project c =
     Eval.EvalOptions
       { _evalInputFile = c ^. coreFromConcreteInputFile,
-        _evalNoIO = c ^. coreFromConcreteNoIO
+        _evalNoIO = c ^. coreFromConcreteNoIO,
+        _evalNoDisambiguate = c ^. coreFromConcreteNoDisambiguate
       }
 
 parseCoreFromConcreteOptions :: Parser CoreFromConcreteOptions
@@ -38,6 +40,7 @@ parseCoreFromConcreteOptions = do
   _coreFromConcreteTransformations <- optTransformationIds
   _coreFromConcreteShowDeBruijn <- optDeBruijn
   _coreFromConcreteShowIdentIds <- optIdentIds
+  _coreFromConcreteNoDisambiguate <- optNoDisambiguate
   _coreFromConcreteFilter <-
     switch
       ( long "filter"

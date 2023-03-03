@@ -6,6 +6,7 @@ import Evaluator qualified as Eval
 import Juvix.Compiler.Core.Pretty qualified as Core
 import Juvix.Compiler.Core.Scoper qualified as Scoper
 import Juvix.Compiler.Core.Transformation qualified as Core
+import Juvix.Compiler.Core.Transformation.DisambiguateBinderNames qualified as Core
 import Juvix.Compiler.Core.Translation.FromSource qualified as Core
 
 runCommand ::
@@ -21,7 +22,8 @@ runCommand opts = do
   inputFile :: Path Abs File <- someBaseToAbs' sinputFile
   s' <- embed . readFile . toFilePath $ inputFile
   tab <- getRight (mapLeft JuvixError (Core.runParserMain inputFile Core.emptyInfoTable s'))
-  let tab' = Core.applyTransformations (project opts ^. coreReadTransformations) tab
+  let tab0 = Core.applyTransformations (project opts ^. coreReadTransformations) tab
+      tab' = if project opts ^. coreReadNoDisambiguate then tab0 else Core.disambiguateBinderNames tab0
   embed (Scoper.scopeTrace tab')
   unless (project opts ^. coreReadNoPrint) $ do
     renderStdOut (Core.ppOut opts tab')

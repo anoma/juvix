@@ -12,7 +12,6 @@ type IdentContext = HashMap Symbol Node
 
 data InfoTable = InfoTable
   { _identContext :: IdentContext,
-    -- `_identMap` is needed only for REPL
     _identMap :: HashMap Text IdentKind,
     _infoMain :: Maybe Symbol,
     _infoIdentifiers :: HashMap Symbol IdentifierInfo,
