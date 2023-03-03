@@ -33,7 +33,7 @@ setupIntToNat sym tab =
     ii =
       IdentifierInfo
         { _identifierSymbol = sym,
-          _identifierName = "intToNat",
+          _identifierName = freshIdentName tab "intToNat",
           _identifierLocation = Nothing,
           _identifierArgsNum = 1,
           _identifierArgsInfo =

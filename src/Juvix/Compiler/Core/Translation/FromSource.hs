@@ -50,7 +50,7 @@ setupMainFunction tab node =
     sym = tab ^. infoNextSymbol
     info =
       IdentifierInfo
-        { _identifierName = "main",
+        { _identifierName = freshIdentName tab "main",
           _identifierLocation = Nothing,
           _identifierSymbol = sym,
           _identifierArgsNum = 0,
