@@ -129,7 +129,7 @@ compileMatchBranch (Indexed branchNum br) = do
         auxiliaryBindersNum = length (filter isAuxiliaryBinder binders)
 
         shiftIndex :: Int
-        shiftIndex = auxiliaryBindersNum + patternsNum + branchNum
+        shiftIndex = length binders + patternsNum + branchNum
 
         shiftedBody :: Node
         shiftedBody =
