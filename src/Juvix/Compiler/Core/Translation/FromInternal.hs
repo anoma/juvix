@@ -297,6 +297,10 @@ goFunctionDefIden (f, sym) = do
       Just BuiltinNatMul -> Str.natMul
       Just BuiltinNatDiv -> Str.natDiv
       Just BuiltinNatMod -> Str.natMod
+      Just BuiltinNatUDiv -> Str.natUDiv
+      Just BuiltinNatLe -> Str.natLe
+      Just BuiltinNatLt -> Str.natLt
+      Just BuiltinNatEq -> Str.natEq
       _ -> name
 
 goFunctionDef ::

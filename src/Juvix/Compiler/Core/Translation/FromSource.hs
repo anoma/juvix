@@ -107,6 +107,14 @@ statementBuiltin = do
           lift $ registerIdent (ii ^. identifierName) ii {_identifierBuiltin = Just BuiltinNatDiv}
       | ii ^. identifierName == Str.natMod ->
           lift $ registerIdent (ii ^. identifierName) ii {_identifierBuiltin = Just BuiltinNatMod}
+      | ii ^. identifierName == Str.natUDiv ->
+          lift $ registerIdent (ii ^. identifierName) ii {_identifierBuiltin = Just BuiltinNatUDiv}
+      | ii ^. identifierName == Str.natLe ->
+          lift $ registerIdent (ii ^. identifierName) ii {_identifierBuiltin = Just BuiltinNatLe}
+      | ii ^. identifierName == Str.natLt ->
+          lift $ registerIdent (ii ^. identifierName) ii {_identifierBuiltin = Just BuiltinNatLt}
+      | ii ^. identifierName == Str.natEq ->
+          lift $ registerIdent (ii ^. identifierName) ii {_identifierBuiltin = Just BuiltinNatEq}
       | otherwise -> parseFailure off "unrecorgnized builtin definition"
 
 statementDef ::
