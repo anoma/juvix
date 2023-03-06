@@ -39,6 +39,8 @@ disambiguateNodeNames tab = dmapL go
         NCase (over caseBranches (map (over caseBranchBinders (disambiguateBinders bl))) c)
       NMatch m ->
         NMatch (over matchBranches (map (over matchBranchPatterns (NonEmpty.fromList . snd . disambiguatePatterns bl . toList))) m)
+      NTyp TypeConstr {..} ->
+        mkTypeConstr (setInfoName (typeName tab _typeConstrSymbol) _typeConstrInfo) _typeConstrSymbol _typeConstrArgs
       NPi pi
         | varOccurs 0 (pi ^. piBody) ->
             NPi (over piBinder (over binderName (disambiguate bl)) pi)
