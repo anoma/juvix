@@ -809,6 +809,20 @@ caseDefaultBranch varsNum vars = do
   kw kwAssign
   bracedExpr varsNum vars
 
+parseCaseBranchBinders ::
+  (Member InfoTableBuilder r) =>
+  Index ->
+  HashMap Text Level ->
+  ParsecS r [((Text, Location), Type)]
+parseCaseBranchBinders varsNum vars = do
+  mb <- optional (parseLocalBinder varsNum vars)
+  case mb of
+    Just b@((name, _), _) ->
+      (b :)
+        <$> parseCaseBranchBinders (varsNum + 1) (HashMap.insert name varsNum vars)
+    Nothing ->
+      return []
+
 caseMatchingBranch ::
   (Member InfoTableBuilder r) =>
   Index ->
@@ -824,7 +838,7 @@ caseMatchingBranch varsNum vars = do
     Just IdentInd {} ->
       parseFailure off ("not a constructor: " ++ fromText txt)
     Just (IdentConstr tag) -> do
-      bs :: [((Text, Location), Type)] <- P.many (parseLocalBinder varsNum vars)
+      bs :: [((Text, Location), Type)] <- parseCaseBranchBinders varsNum vars
       let bindersNum = length bs
       ci <- lift $ getConstructorInfo tag
       when
