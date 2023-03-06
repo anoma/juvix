@@ -301,5 +301,10 @@ tests =
       "Match with higher-order polymorphic functions"
       $(mkRelDir ".")
       $(mkRelFile "test053.jvc")
-      $(mkRelFile "out/test053.out")
+      $(mkRelFile "out/test053.out"),
+    PosTest
+      "Typed match"
+      $(mkRelDir ".")
+      $(mkRelFile "test054.jvc")
+      $(mkRelFile "out/test054.out")
   ]
