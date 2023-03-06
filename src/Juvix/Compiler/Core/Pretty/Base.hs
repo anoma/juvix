@@ -292,7 +292,7 @@ instance PrettyCode LetRec where
                   concatWith (\a b -> a <> kwSemicolon <> line <> b) $
                     zipWithExact (\b val -> b <+> kwAssign <+> val) (toList bs) (toList vs)
             nss = enclose kwSquareL kwSquareR (concatWith (<+>) names)
-         in kwLetRec <> nss <> line <> bss <> line <> kwIn <> line <> b'
+         in kwLetRec <> nss <> line <> bss <> kwSemicolon <> line <> kwIn <> line <> b'
     where
       getName :: Binder -> Sem r (Doc Ann)
       getName i = do
