@@ -369,7 +369,7 @@ data NodeDetails = NodeDetails
     -- | 'nodeReassemble' reassembles the node from the info, the subinfos and
     -- the children (which should be in the same fixed order as in the
     -- 'nodeSubinfos' and 'nodeChildren' components).
-    _nodeReassemble :: Info -> [Info] -> [NodeChild] -> Node
+    _nodeReassemble :: Info -> [Info] -> [Node] -> Node
   }
 
 makeLenses ''NodeDetails
@@ -401,44 +401,44 @@ manyBinders bis n =
       _childBindersNum = length bis
     }
 
-type Reassemble = Info -> [Info] -> [NodeChild] -> Node
+type Reassemble = Info -> [Info] -> [Node] -> Node
 
 {-# INLINE noChildren #-}
 noChildren :: (Info -> Node) -> Reassemble
 noChildren f i _ _ = f i
 
 {-# INLINE oneChild #-}
-oneChild :: (Info -> NodeChild -> Node) -> Reassemble
+oneChild :: (Info -> Node -> Node) -> Reassemble
 oneChild f i _ ch = case ch of
   [c] -> f i c
   _ -> impossible
 
 {-# INLINE twoChildren #-}
-twoChildren :: (Info -> NodeChild -> NodeChild -> Node) -> Reassemble
+twoChildren :: (Info -> Node -> Node -> Node) -> Reassemble
 twoChildren f i _ ch = case ch of
   [l, r] -> f i l r
   _ -> impossible
 
 {-# INLINE threeChildren #-}
-threeChildren :: (Info -> NodeChild -> NodeChild -> NodeChild -> Node) -> Reassemble
+threeChildren :: (Info -> Node -> Node -> Node -> Node) -> Reassemble
 threeChildren f i _ ch = case ch of
   [a, b, c] -> f i a b c
   _ -> impossible
 
 {-# INLINE manyChildren #-}
-manyChildren :: (Info -> [NodeChild] -> Node) -> Reassemble
+manyChildren :: (Info -> [Node] -> Node) -> Reassemble
 manyChildren f i _ = f i
 
 {-# INLINE someChildren #-}
-someChildren :: (Info -> NonEmpty NodeChild -> Node) -> Reassemble
+someChildren :: (Info -> NonEmpty Node -> Node) -> Reassemble
 someChildren f i _ = f i . nonEmpty'
 
 {-# INLINE someChildrenI #-}
-someChildrenI :: (Info -> [Info] -> NonEmpty NodeChild -> Node) -> Reassemble
+someChildrenI :: (Info -> [Info] -> NonEmpty Node -> Node) -> Reassemble
 someChildrenI f i is = f i is . nonEmpty'
 
 {-# INLINE twoManyChildrenI #-}
-twoManyChildrenI :: (Info -> [Info] -> NodeChild -> NodeChild -> [NodeChild] -> Node) -> Reassemble
+twoManyChildrenI :: (Info -> [Info] -> Node -> Node -> [Node] -> Node) -> Reassemble
 twoManyChildrenI f i is = \case
   (x : y : xs) -> f i is x y xs
   _ -> impossible
@@ -477,21 +477,21 @@ destruct = \case
       { _nodeInfo = i,
         _nodeSubinfos = [],
         _nodeChildren = map noBinders [l, r],
-        _nodeReassemble = twoChildren $ \i' l' r' -> mkApp i' (l' ^. childNode) (r' ^. childNode)
+        _nodeReassemble = twoChildren $ \i' l' r' -> mkApp i' l' r'
       }
   NBlt (BuiltinApp i op args) ->
     NodeDetails
       { _nodeInfo = i,
         _nodeSubinfos = [],
         _nodeChildren = map noBinders args,
-        _nodeReassemble = manyChildren $ \i' args' -> mkBuiltinApp i' op (map (^. childNode) args')
+        _nodeReassemble = manyChildren $ \i' args' -> mkBuiltinApp i' op args'
       }
   NCtr (Constr i tag args) ->
     NodeDetails
       { _nodeInfo = i,
         _nodeSubinfos = [],
         _nodeChildren = map noBinders args,
-        _nodeReassemble = manyChildren $ \i' -> mkConstr i' tag . map (^. childNode)
+        _nodeReassemble = manyChildren $ \i' -> mkConstr i' tag
       }
   NLam (Lambda i bi b) ->
     NodeDetails
@@ -500,8 +500,8 @@ destruct = \case
         _nodeChildren = [noBinders (bi ^. binderType), oneBinder bi b],
         _nodeReassemble = twoChildren $ \i' ty' b' ->
           let binder' :: Binder
-              binder' = set binderType (ty' ^. childNode) bi
-           in mkLambda i' binder' (b' ^. childNode)
+              binder' = set binderType ty' bi
+           in mkLambda i' binder' b'
       }
   NLet (Let i (LetItem bi v) b) ->
     NodeDetails
@@ -510,8 +510,8 @@ destruct = \case
         _nodeChildren = [noBinders (bi ^. binderType), noBinders v, oneBinder bi b],
         _nodeReassemble = threeChildren $ \i' ty' v' b' ->
           let binder' :: Binder
-              binder' = set binderType (ty' ^. childNode) bi
-           in mkLet i' binder' (v' ^. childNode) (b' ^. childNode)
+              binder' = set binderType ty' bi
+           in mkLet i' binder' v' b'
       }
   NRec (LetRec i vs b) ->
     NodeDetails
@@ -528,11 +528,11 @@ destruct = \case
           let numItems :: Int
               numItems = length vs
               tys' :: [Type]
-              values' :: [NodeChild]
-              (values', tys') = second (map (^. childNode)) (splitAtExact numItems valuesTys')
+              values' :: [Node]
+              (values', tys') = splitAtExact numItems valuesTys'
               items' =
                 nonEmpty'
-                  [ LetItem (Binder name loc ty') (v' ^. childNode)
+                  [ LetItem (Binder name loc ty') v'
                     | (v', ty', name, loc) <-
                         zip4Exact
                           values'
@@ -540,7 +540,7 @@ destruct = \case
                           (map (^. letItemBinder . binderName) (toList vs))
                           (map (^. letItemBinder . binderLocation) (toList vs))
                   ]
-           in mkLetRec i' items' (b' ^. childNode)
+           in mkLetRec i' items' b'
       }
   NCase (Case i sym v brs mdef) ->
     let branchChildren :: [([Binder], NodeChild)]
@@ -553,21 +553,21 @@ destruct = \case
         allNodes :: [NodeChild]
         allNodes =
           concat
-            [ b : map (noBinders . (^. binderType)) bi
-              | (bi, b) <- branchChildren
+            [ br : reverse (foldl' (\r b -> manyBinders (take (length r) bi) (b ^. binderType) : r) [] bi)
+              | (bi, br) <- branchChildren
             ]
-        mkBranch :: Info -> CaseBranch -> Sem '[Input (Maybe NodeChild)] CaseBranch
+        mkBranch :: Info -> CaseBranch -> Sem '[Input (Maybe Node)] CaseBranch
         mkBranch nfo' br = do
           b' <- input'
           let nBinders = br ^. caseBranchBindersNum
-          tys' <- map (^. childNode) <$> replicateM nBinders input'
+          tys' <- replicateM nBinders input'
           return
             br
               { _caseBranchInfo = nfo',
-                _caseBranchBinders = zipWithExact (set binderType) tys' (b' ^. childBinders),
-                _caseBranchBody = b' ^. childNode
+                _caseBranchBinders = zipWithExact (set binderType) tys' (br ^. caseBranchBinders),
+                _caseBranchBody = b'
               }
-        mkBranches :: [Info] -> [NodeChild] -> [CaseBranch]
+        mkBranches :: [Info] -> [Node] -> [CaseBranch]
         mkBranches is' allNodes' =
           run $
             runInputList allNodes' $
@@ -582,7 +582,7 @@ destruct = \case
                 _nodeSubinfos = map (^. caseBranchInfo) brs,
                 _nodeChildren = noBinders v : allNodes,
                 _nodeReassemble = someChildrenI $ \i' is' (v' :| allNodes') ->
-                  mkCase i' sym (v' ^. childNode) (mkBranches is' allNodes') Nothing
+                  mkCase i' sym v' (mkBranches is' allNodes') Nothing
               }
           Just def ->
             NodeDetails
@@ -590,7 +590,7 @@ destruct = \case
                 _nodeSubinfos = map (^. caseBranchInfo) brs,
                 _nodeChildren = noBinders v : noBinders def : allNodes,
                 _nodeReassemble = twoManyChildrenI $ \i' is' v' def' allNodes' ->
-                  mkCase i' sym (v' ^. childNode) (mkBranches is' allNodes') (Just (def' ^. childNode))
+                  mkCase i' sym v' (mkBranches is' allNodes') (Just def')
               }
   NMatch (Match i vtys rty vs branches) ->
     let allNodes :: [NodeChild]
@@ -599,9 +599,9 @@ destruct = \case
             : map noBinders (toList vtys)
             ++ map noBinders (toList vs)
             ++ concat
-              [ b
-                  : map (noBinders . (^. binderType)) bis
-                | (bis, b) <- branchChildren
+              [ br
+                  : reverse (foldl' (\r b -> manyBinders (take (length r) bis) (b ^. binderType) : r) [] bis)
+                | (bis, br) <- branchChildren
               ]
           where
             branchChildren :: [([Binder], NodeChild)]
@@ -618,7 +618,8 @@ destruct = \case
                 : concatMap getPatternInfos (br ^. matchBranchPatterns)
               | br <- branches
             ]
-        setPatternsInfos :: forall r. (Members '[Input (Maybe Info), Input (Maybe NodeChild)] r) => NonEmpty Pattern -> Sem r (NonEmpty Pattern)
+        -- sets the infos and the binder types in the patterns
+        setPatternsInfos :: forall r. (Members '[Input (Maybe Info), Input (Maybe Node)] r) => NonEmpty Pattern -> Sem r (NonEmpty Pattern)
         setPatternsInfos = mapM goPattern
           where
             goPattern :: Pattern -> Sem r Pattern
@@ -627,7 +628,7 @@ destruct = \case
                 i' <- input'
                 return (PatWildcard (set patternWildcardInfo i' x))
               PatBinder x -> do
-                ty <- (^. childNode) <$> input'
+                ty <- input'
                 let _patternBinder = set binderType ty (x ^. patternBinder)
                 _patternBinderPattern <- goPattern (x ^. patternBinderPattern)
                 return (PatBinder PatternBinder {..})
@@ -640,7 +641,7 @@ destruct = \case
             _nodeSubinfos = branchInfos,
             _nodeChildren = allNodes,
             _nodeReassemble = someChildrenI $ \i' is' chs' ->
-              let mkBranch :: MatchBranch -> Sem '[Input (Maybe NodeChild), Input (Maybe Info)] MatchBranch
+              let mkBranch :: MatchBranch -> Sem '[Input (Maybe Node), Input (Maybe Info)] MatchBranch
                   mkBranch br = do
                     bi' <- input'
                     b' <- input'
@@ -649,13 +650,13 @@ destruct = \case
                       br
                         { _matchBranchInfo = bi',
                           _matchBranchPatterns = pats',
-                          _matchBranchBody = b' ^. childNode
+                          _matchBranchBody = b'
                         }
                   numVals = length vs
-                  values' :: NonEmpty NodeChild
-                  valueTypes' :: NonEmpty NodeChild
-                  returnType' :: NodeChild
-                  branchesChildren' :: [NodeChild]
+                  values' :: NonEmpty Node
+                  valueTypes' :: NonEmpty Node
+                  returnType' :: Node
+                  branchesChildren' :: [Node]
                   returnType' = head chs'
                   (valueTypes', chs'') = first nonEmpty' (splitAtExact numVals (NonEmpty.tail chs'))
                   (values', branchesChildren') = first nonEmpty' (splitAtExact numVals chs'')
@@ -667,9 +668,9 @@ destruct = \case
                           mapM mkBranch branches
                in mkMatch
                     i'
-                    (fmap (^. childNode) valueTypes')
-                    (returnType' ^. childNode)
-                    (fmap (^. childNode) values')
+                    valueTypes'
+                    returnType'
+                    values'
                     branches'
           }
   NPi (Pi i bi b) ->
@@ -679,8 +680,8 @@ destruct = \case
         _nodeChildren = [noBinders (bi ^. binderType), oneBinder bi b],
         _nodeReassemble = twoChildren $ \i' bi' b' ->
           let binder' :: Binder
-              binder' = set binderType (bi' ^. childNode) bi
-           in mkPi i' binder' (b' ^. childNode)
+              binder' = set binderType bi' bi
+           in mkPi i' binder' b'
       }
   NUniv (Univ i l) ->
     NodeDetails
@@ -694,7 +695,7 @@ destruct = \case
       { _nodeInfo = i,
         _nodeSubinfos = [],
         _nodeChildren = map noBinders args,
-        _nodeReassemble = manyChildren $ \i' -> mkTypeConstr i' sym . map (^. childNode)
+        _nodeReassemble = manyChildren $ \i' -> mkTypeConstr i' sym
       }
   NPrim (TypePrim i prim) ->
     NodeDetails
@@ -716,14 +717,11 @@ destruct = \case
         _nodeSubinfos = [],
         _nodeChildren = oneBinder bi b : map noBinders env,
         _nodeReassemble = someChildren $ \i' (b' :| env') ->
-          Closure (map (^. childNode) env') (Lambda i' bi (b' ^. childNode))
+          Closure env' (Lambda i' bi b')
       }
 
 reassembleDetails :: NodeDetails -> [Node] -> Node
-reassembleDetails d ns = (d ^. nodeReassemble) (d ^. nodeInfo) (d ^. nodeSubinfos) children'
-  where
-    children' :: [NodeChild]
-    children' = zipWithExact (set childNode) ns (d ^. nodeChildren)
+reassembleDetails d ns = (d ^. nodeReassemble) (d ^. nodeInfo) (d ^. nodeSubinfos) ns
 
 reassemble :: Node -> [Node] -> Node
 reassemble = reassembleDetails . destruct
@@ -747,7 +745,7 @@ modifyInfoM f n =
    in do
         i' <- f (ni ^. nodeInfo)
         is' <- mapM f (ni ^. nodeSubinfos)
-        return ((ni ^. nodeReassemble) i' is' (ni ^. nodeChildren))
+        return ((ni ^. nodeReassemble) i' is' (map (^. childNode) (ni ^. nodeChildren)))
 
 modifyInfo :: (Info -> Info) -> Node -> Node
 modifyInfo f n = runIdentity $ modifyInfoM (pure . f) n
