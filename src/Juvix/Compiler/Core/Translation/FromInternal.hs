@@ -149,7 +149,6 @@ goInductiveDef ::
   Sem r ()
 goInductiveDef i = do
   sym <- freshSymbol
-  ctorInfos <- mapM (goConstructor sym) (i ^. Internal.inductiveConstructors)
   _inductiveName <- topName (i ^. Internal.inductiveName)
   let params =
         map
@@ -176,6 +175,8 @@ goInductiveDef i = do
       idx = mkIdentIndex (i ^. Internal.inductiveName)
   -- The inductive needs to be registered before translating the constructors,
   -- because their types refer to the inductive
+  registerInductive idx info
+  ctorInfos <- mapM (goConstructor sym) (i ^. Internal.inductiveConstructors)
   registerInductive idx info {_inductiveConstructors = ctorInfos}
 
 goConstructor ::
