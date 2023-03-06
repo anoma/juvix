@@ -61,9 +61,9 @@ instance PrettyCode Tag where
 
 instance PrettyCode Primitive where
   ppCode = \case
-    PrimInteger _ -> return $ annotate (AnnKind KNameInductive) (pretty ("int" :: String))
-    PrimBool _ -> return $ annotate (AnnKind KNameInductive) (pretty ("bool" :: String))
-    PrimString -> return $ annotate (AnnKind KNameInductive) (pretty ("string" :: String))
+    PrimInteger _ -> return $ annotate (AnnKind KNameInductive) (pretty ("Int" :: String))
+    PrimBool _ -> return $ annotate (AnnKind KNameInductive) (pretty ("Bool" :: String))
+    PrimString -> return $ annotate (AnnKind KNameInductive) (pretty ("String" :: String))
 
 ppName :: NameKind -> Text -> Sem r (Doc Ann)
 ppName kind name = return $ annotate (AnnKind kind) (pretty name)
@@ -449,7 +449,8 @@ instance PrettyCode InfoTable where
             ty = ii ^. identifierType
         ty' <- ppCode ty
         let tydoc = if isDynamic ty then mempty else space <> colon <+> ty'
-        return (kwDef <+> sym' <> tydoc)
+            blt = if isJust (ii ^. identifierBuiltin) then (Str.builtin <+> mempty) else mempty
+        return (blt <> kwDef <+> sym' <> tydoc)
 
       ppSigs :: [IdentifierInfo] -> Sem r (Doc Ann)
       ppSigs idents = do

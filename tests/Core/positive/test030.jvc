@@ -6,16 +6,16 @@ type Unit {
 
 type list {
   nil : list;
-  cons : any -> list -> list;
+  cons : Any -> list -> list;
 };
 
 type Stream {
-  scons : any -> (Unit -> Stream) -> Stream;
+  scons : Any -> (Unit -> Stream) -> Stream;
 };
 
 def force : (Unit -> Stream) -> Stream := \f f unit;
 
-def filter : (any -> bool) -> (Unit -> Stream) -> Unit -> Stream := \p \s \_
+def filter : (Any -> Bool) -> (Unit -> Stream) -> Unit -> Stream := \p \s \_
   case force s of {
     scons h t :=
       if p h then
@@ -24,7 +24,7 @@ def filter : (any -> bool) -> (Unit -> Stream) -> Unit -> Stream := \p \s \_
         force (filter p t)
   };
 
-def take : int -> (Unit -> Stream) -> list := \n \s
+def take : Int -> (Unit -> Stream) -> list := \n \s
   if n = 0 then
     nil
   else
@@ -32,14 +32,14 @@ def take : int -> (Unit -> Stream) -> list := \n \s
       scons h t := cons h (take (n - 1) t)
     };
 
-def nth : int -> (Unit -> Stream) -> any := \n \s
+def nth : Int -> (Unit -> Stream) -> Any := \n \s
   case force s of {
     scons h t := if n = 0 then h else nth (n - 1) t
   };
 
-def numbers : int -> Unit -> Stream := \n \_ scons n (numbers (n + 1));
+def numbers : Int -> Unit -> Stream := \n \_ scons n (numbers (n + 1));
 
-def indivisible : int -> int -> bool := \n \x if x % n = 0 then false else true;
+def indivisible : Int -> Int -> Bool := \n \x if x % n = 0 then false else true;
 def eratostenes : (Unit -> Stream) -> Unit -> Stream := \s \_
   case force s of {
     scons n t :=

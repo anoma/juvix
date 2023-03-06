@@ -21,6 +21,6 @@ def g := λ(A : Type) λ(xs : list A) λ(B : Type) λ(ys : list B) case xs of {
   nil _ := 0;
 };
 
-def main := g int (cons int 2 (nil int)) int (cons int 3 (nil int)) * f int 1 int (hd int (tl int (id (list int) (cons int 1 (cons int 2 (nil int))))));
+def main := g Int (cons Int 2 (nil Int)) Int (cons Int 3 (nil Int)) * f Int 1 Int (hd Int (tl Int (id (list Int) (cons Int 1 (cons Int 2 (nil Int))))));
 
 main
