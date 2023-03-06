@@ -4,8 +4,10 @@ import Commands.Base
 import Commands.Compile.Options
 import Commands.Dev.Core.Compile.Base qualified as Compile
 import Commands.Extra.Compile qualified as Compile
+import Commands.Extra.Compile.Options qualified as Core
 import Data.Text.IO qualified as TIO
 import Juvix.Compiler.Core qualified as Core
+import Juvix.Compiler.Core.Pipeline qualified as Core
 import Juvix.Compiler.Core.Pretty qualified as Core
 import Juvix.Compiler.Core.Transformation.DisambiguateNames qualified as Core
 
@@ -29,4 +31,5 @@ runCommand opts@CompileOptions {..} = do
 writeCoreFile :: (Members '[Embed IO, App] r) => Compile.PipelineArg -> Sem r ()
 writeCoreFile Compile.PipelineArg {..} = do
   coreFile <- Compile.outputFile _pipelineArgOptions _pipelineArgFile
-  embed $ TIO.writeFile (toFilePath coreFile) (show $ Core.ppOutDefault (Core.disambiguateNames _pipelineArgInfoTable))
+  let tab = if _pipelineArgOptions ^. Core.compileRaw then _pipelineArgInfoTable else Core.toEval _pipelineArgInfoTable
+  embed $ TIO.writeFile (toFilePath coreFile) (show $ Core.ppOutDefault (Core.disambiguateNames tab))

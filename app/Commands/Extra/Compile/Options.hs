@@ -25,6 +25,7 @@ data CompileOptions = CompileOptions
     _compilePreprocess :: Bool,
     _compileAssembly :: Bool,
     _compileTerm :: Bool,
+    _compileRaw :: Bool,
     _compileOutputFile :: Maybe (AppPath File),
     _compileTarget :: CompileTarget,
     _compileInputFile :: AppPath File
@@ -64,6 +65,12 @@ parseCompileOptions parseInputFile = do
       ( short 'G'
           <> long "only-term"
           <> help "Produce term output only (for targets: geb)"
+      )
+  _compileRaw <-
+    switch
+      ( short 'R'
+          <> long "raw"
+          <> help "Skip the default transformations (for targets: core)"
       )
   _compileTarget <- optCompileTarget
   _compileOutputFile <- optional parseGenericOutputFile
