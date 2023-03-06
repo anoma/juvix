@@ -165,7 +165,7 @@ type_ :: (IsString s) => s
 type_ = "Type"
 
 any :: (IsString s) => s
-any = "any"
+any = "Any"
 
 questionMark :: (IsString s) => s
 questionMark = "?"

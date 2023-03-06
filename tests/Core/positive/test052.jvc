@@ -12,4 +12,4 @@ def foldl : Π A : Type, Π B : Type, (B → A → B) → B → List A → B :=
         cons _ (h : A) (hs : List A) := foldl A B f (f b h) hs
     };
 
-foldl int int (+) 0 (cons int 1 (cons int 2 (cons int 3 (nil int))))
+foldl Int Int (+) 0 (cons Int 1 (cons Int 2 (cons Int 3 (nil Int))))

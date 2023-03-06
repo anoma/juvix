@@ -2,7 +2,7 @@
 
 type list {
   nil : list;
-  cons : any -> list -> list;
+  cons : Any -> list -> list;
 };
 
 def hd := \l case l of { cons x _ := x };

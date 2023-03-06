@@ -1,7 +1,7 @@
 -- eta-expansion of builtins and constructors
 
 type stream {
-  cons : any -> any -> stream;
+  cons : Any -> Any -> stream;
 };
 
 def f := \g g 2;

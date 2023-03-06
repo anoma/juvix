@@ -18,6 +18,7 @@ import Juvix.Compiler.Core.Info.NameInfo as NameInfo
 import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Core.Transformation.Eta
 import Juvix.Compiler.Core.Translation.FromSource.Lexer
+import Juvix.Extra.Strings qualified as Str
 import Juvix.Parser.Error
 import Text.Megaparsec qualified as P
 
@@ -95,9 +96,18 @@ statementBuiltin = do
   kw kwBuiltin
   sym <- statementDef
   ii <- lift $ getIdentifierInfo sym
-  case ii ^. identifierName of
-    "plus" -> lift $ registerIdent (ii ^. identifierName) ii {_identifierBuiltin = Just BuiltinNatPlus}
-    _ -> parseFailure off "unrecorgnized builtin definition"
+  if
+      | ii ^. identifierName == Str.natPlus ->
+          lift $ registerIdent (ii ^. identifierName) ii {_identifierBuiltin = Just BuiltinNatPlus}
+      | ii ^. identifierName == Str.natSub ->
+          lift $ registerIdent (ii ^. identifierName) ii {_identifierBuiltin = Just BuiltinNatSub}
+      | ii ^. identifierName == Str.natMul ->
+          lift $ registerIdent (ii ^. identifierName) ii {_identifierBuiltin = Just BuiltinNatMul}
+      | ii ^. identifierName == Str.natDiv ->
+          lift $ registerIdent (ii ^. identifierName) ii {_identifierBuiltin = Just BuiltinNatDiv}
+      | ii ^. identifierName == Str.natMod ->
+          lift $ registerIdent (ii ^. identifierName) ii {_identifierBuiltin = Just BuiltinNatMod}
+      | otherwise -> parseFailure off "unrecorgnized builtin definition"
 
 statementDef ::
   (Member InfoTableBuilder r) =>
@@ -1008,8 +1018,8 @@ exprNamed varsNum vars = do
   off <- P.getOffset
   (txt, i) <- identifierL
   case txt of
-    "int" -> return mkTypeInteger'
-    "string" -> return mkTypeString'
+    "Int" -> return mkTypeInteger'
+    "String" -> return mkTypeString'
     _ ->
       case HashMap.lookup txt vars of
         Just k -> do

@@ -3,6 +3,7 @@ module Juvix.Compiler.Core.Data.InfoTableBuilder where
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Core.Data.InfoTable
 import Juvix.Compiler.Core.Extra.Base
+import Juvix.Compiler.Core.Info.NameInfo
 import Juvix.Compiler.Core.Language
 
 data InfoTableBuilder m a where
@@ -149,7 +150,7 @@ declareInductiveBuiltins ::
   Sem r ()
 declareInductiveBuiltins indName blt ctrs = do
   sym <- freshSymbol
-  let ty = mkTypeConstr' sym []
+  let ty = mkTypeConstr (setInfoName indName mempty) sym []
       constrs = builtinConstrs sym ty ctrs
   registerInductive
     indName
@@ -184,7 +185,7 @@ declareIOBuiltins =
 declareBoolBuiltins :: (Member InfoTableBuilder r) => Sem r ()
 declareBoolBuiltins =
   declareInductiveBuiltins
-    "bool"
+    "Bool"
     (Just (BuiltinTypeInductive BuiltinBool))
     [ (BuiltinTag TagTrue, "true", const mkTypeBool', Just BuiltinBoolTrue),
       (BuiltinTag TagFalse, "false", const mkTypeBool', Just BuiltinBoolFalse)
@@ -195,7 +196,7 @@ declareNatBuiltins = do
   tagZero <- freshTag
   tagSuc <- freshTag
   declareInductiveBuiltins
-    "nat"
+    "Nat"
     (Just (BuiltinTypeInductive BuiltinNat))
     [ (tagZero, "zero", id, Just BuiltinNatZero),
       (tagSuc, "suc", \x -> mkPi' x x, Just BuiltinNatSuc)

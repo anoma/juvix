@@ -10,7 +10,7 @@ def const := \x \y x;
 
 type list {
   nil : list;
-  cons : any -> list -> list;
+  cons : Any -> list -> list;
 };
 
 trace (const 0 (trace "!" 1)) (
