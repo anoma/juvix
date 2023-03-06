@@ -28,7 +28,7 @@ matchToCaseNode n = case n of
     -- The appNode calls the first branch with the values of the match
     let appNode = mkApps' (mkVar' 0) (shift (length branchNodes) <$> values)
     let branchBinder = typeToBinder branchType
-    let branchBinders = zip (repeat branchBinder) branchNodes
+    let branchBinders = map (branchBinder,) branchNodes
     return (mkShiftedLets 0 branchBinders appNode)
   _ -> return n
 
