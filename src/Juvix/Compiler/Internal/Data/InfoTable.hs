@@ -155,21 +155,6 @@ buildTable1' m = do
     ss :: [Statement]
     ss = flattenModule m
 
--- moduleStatementsRec :: Module -> [Statement]
--- moduleStatementsRec m =
---   m
---     ^. moduleBody
---       . moduleStatements
---     ++ concatMap moduleStatementsRec localModules
---   where
---     localModules :: [Module]
---     localModules = mapMaybe getLocalModule (m ^. moduleBody . moduleStatements)
---       where
---         getLocalModule :: Statement -> Maybe Module
---         getLocalModule = \case
---           StatementModule l -> return l
---           _ -> Nothing
-
 -- | Returns all statements in a module, including those in local modules
 flattenModule :: Module -> [Statement]
 flattenModule m = concatMap go (m ^. moduleBody . moduleStatements)
