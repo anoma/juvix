@@ -142,6 +142,9 @@ lookupBuiltinFunction tab b = (HashMap.!) (tab ^. infoIdentifiers) . funSym <$> 
 identName :: InfoTable -> Symbol -> Text
 identName tab sym = fromJust (HashMap.lookup sym (tab ^. infoIdentifiers)) ^. identifierName
 
+typeName :: InfoTable -> Symbol -> Text
+typeName tab sym = fromJust (HashMap.lookup sym (tab ^. infoInductives)) ^. inductiveName
+
 identNames :: InfoTable -> HashSet Text
 identNames tab =
   HashSet.fromList $
