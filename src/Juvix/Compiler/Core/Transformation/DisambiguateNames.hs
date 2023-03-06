@@ -71,6 +71,8 @@ disambiguateNodeNames tab = dmapL go
     disambiguate :: BinderList Binder -> Text -> Text
     disambiguate bl name =
       if
+          | name == "?" || name == "" ->
+              disambiguate bl "_X"
           | name == "_" ->
               name
           | elem name (map (^. binderName) (toList bl))
