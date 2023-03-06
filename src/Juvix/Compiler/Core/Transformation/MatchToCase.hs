@@ -295,7 +295,7 @@ compilePattern branchNum numPatterns = \case
               )
 
 failNode :: [Type] -> Node
-failNode tys = mkShiftedLambdas 1 tys (mkBuiltinApp' OpFail [mkConstant' (ConstString "Non-exhaustive patterns")])
+failNode tys = mkShiftedLambdas 0 tys (mkBuiltinApp' OpFail [mkConstant' (ConstString "Non-exhaustive patterns")])
 
 mkUniqueBinder' :: Member InfoTableBuilder r => Text -> Node -> Sem r Binder
 mkUniqueBinder' name ty = mkUniqueBinder name Nothing ty
