@@ -27,21 +27,8 @@ type Tree {
   node : Π A : Type, Tree A -> Tree A -> Tree A;
 };
 
-def gen : Int → Tree Int := \(n : Int)
-    if n <= 0 then leaf Int 1 else node Int (gen (n - 2)) (gen (n - 1));
-
-def g : Π A : Type, Tree A → Tree A;
-
-def f : Tree Int → Int := \(t : Tree Int) match t : Tree Int with : Int {
-  leaf _ (x : Int) := x;
-  node _ (l : Tree Int) r :=
-    match (g Int l : Tree Int), (g Int r : Tree Int) with : Int {
-      leaf _ _, leaf _ _ := 0 - 6;
-      node (A : Type) (l : Tree A) (r : Tree Int), leaf _ _ := ((f l + f r) * 2) % 20000;
-      node (A : Type) (l1 : Tree A) (r1 : Tree A), node (B : Type) (l2 : Tree A) (r2 : Tree B) := ((f l1 + f r1) * (f l2 + f r2)) % 20000;
-      _, node _ l r := ((f l + f r) * (0 - 3)) % 20000;
-    }
-};
+def gen : int → Tree int := \(n : int)
+    if n <= 0 then leaf int 1 else node int (gen (n - 2)) (gen (n - 1));
 
 def g : Π A : Type, Tree A → Tree A := \(A : Type) \(t : Tree A) {
   match t : Tree A with : Tree A {
@@ -49,6 +36,17 @@ def g : Π A : Type, Tree A → Tree A := \(A : Type) \(t : Tree A) {
     node _ (node _ _ _) r := r;
     node (A' : Type) (l : Tree A) (r : Tree A') := node A' r l;
   }
+};
+
+def f : Tree int → int := \(t : Tree int) match t : Tree int with : int {
+  leaf _ (x : int) := x;
+  node _ (l : Tree int) r :=
+    match (g int l : Tree int), (g int r : Tree int) with : int {
+      leaf _ _, leaf _ _ := 0 - 6;
+      node (A : Type) (l : Tree A) (r : Tree int), leaf _ _ := ((f l + f r) * 2) % 20000;
+      node (A : Type) (l1 : Tree A) (r1 : Tree A), node (B : Type) (l2 : Tree A) (r2 : Tree B) := ((f l1 + f r1) * (f l2 + f r2)) % 20000;
+      _, node _ l r := ((f l + f r) * (0 - 3)) % 20000;
+    }
 };
 
 def writeLn := \x write x >> write "\n";
