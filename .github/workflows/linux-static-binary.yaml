@@ -12,7 +12,7 @@ jobs:
   build:
     name: Build static binary
     runs-on: ubuntu-latest
-    container: ghcr.io/paulcadman/ghc-alpine:9.2.5
+    container: ghcr.io/paulcadman/ghc-alpine:9.2.6
     steps:
       - name: checkout code
         uses: actions/checkout@v3
