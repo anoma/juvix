@@ -130,8 +130,41 @@ convertNode tab = convert [] 0
             Just BuiltinNatEq -> f (\info x y -> mkBuiltinApp info OpEq [x, y])
             _ -> node
 
+filterNatBuiltins :: InfoTable -> InfoTable
+filterNatBuiltins tab =
+  let tab' =
+        over
+          infoIdentifiers
+          (HashMap.filter (isNatBuiltin . (^. identifierBuiltin)))
+          tab
+   in over
+        identMap
+        ( HashMap.filter
+            ( \case
+                IdentFun s -> HashMap.member s (tab' ^. infoIdentifiers)
+                _ -> True
+            )
+        )
+        $ over
+          identContext
+          (HashMap.filterWithKey (\s _ -> HashMap.member s (tab' ^. infoIdentifiers)))
+          tab'
+  where
+    isNatBuiltin :: Maybe BuiltinFunction -> Bool
+    isNatBuiltin = \case
+      Just BuiltinNatPlus -> False
+      Just BuiltinNatSub -> False
+      Just BuiltinNatMul -> False
+      Just BuiltinNatUDiv -> False
+      Just BuiltinNatDiv -> False
+      Just BuiltinNatMod -> False
+      Just BuiltinNatLe -> False
+      Just BuiltinNatLt -> False
+      Just BuiltinNatEq -> False
+      _ -> True
+
 natToInt :: InfoTable -> InfoTable
-natToInt tab = mapT (const (convertNode tab')) tab'
+natToInt tab = filterNatBuiltins $ mapAllNodes (convertNode tab') tab'
   where
     tab' =
       case tab ^. infoIntToNat of
