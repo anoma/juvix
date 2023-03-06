@@ -138,3 +138,16 @@ lookupBuiltinFunction tab b = (HashMap.!) (tab ^. infoIdentifiers) . funSym <$> 
     funSym = \case
       IdentFun s -> s
       _ -> error "core infotable: expected function identifier"
+
+-- | Useful for printing
+filterByFile :: Path Abs File -> InfoTable -> InfoTable
+filterByFile f t =
+  t
+    { _infoIdentifiers = HashMap.filter (^. identifierLocation . to matchesLocation) (t ^. infoIdentifiers),
+      _infoAxioms = HashMap.filter (^. axiomLocation . to matchesLocation) (t ^. infoAxioms),
+      _infoConstructors = HashMap.filter (^. constructorLocation . to matchesLocation) (t ^. infoConstructors),
+      _infoInductives = HashMap.filter (^. inductiveLocation . to matchesLocation) (t ^. infoInductives)
+    }
+  where
+    matchesLocation :: Maybe Location -> Bool
+    matchesLocation l = l ^? _Just . intervalFile == Just f

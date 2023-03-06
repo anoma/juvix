@@ -404,20 +404,27 @@ instance PrettyCode InfoTable where
       ppContext :: IdentContext -> Sem r (Doc Ann)
       ppContext ctx = do
         defs <- mapM (uncurry ppDef) (HashMap.toList ctx)
-        return (vsep defs)
+        return (vsep (catMaybes defs))
         where
-          ppDef :: Symbol -> Node -> Sem r (Doc Ann)
+          ppDef :: Symbol -> Node -> Sem r (Maybe (Doc Ann))
           ppDef s n = do
             let mname :: Text
                 mname = tbl ^. infoIdentifiers . at s . _Just . identifierName
                 mname' = (\nm -> nm <> "!" <> prettyText s) mname
             sym' <- ppName KNameLocal mname'
             body' <- ppCode n
-            let ii = fromJust $ HashMap.lookup s (tbl ^. infoIdentifiers)
-                ty = ii ^. identifierType
-            ty' <- ppCode ty
-            let tydoc = if isDynamic ty then mempty else space <> colon <+> ty'
-            return (kwDef <+> sym' <> tydoc <+> kwAssign <+> nest 2 body')
+            let -- the identifier may be missing if we have filtered out some
+                -- identifiers for printing purposes
+                ii = HashMap.lookup s (tbl ^. infoIdentifiers)
+                mty = ii ^? _Just . identifierType
+            case mty of
+              Nothing -> return Nothing
+              Just ty -> do
+                ty' <- ppCode ty
+                let tydoc
+                      | isDynamic ty = mempty
+                      | otherwise = space <> colon <+> ty'
+                return (Just (kwDef <+> sym' <> tydoc <+> kwAssign <+> nest' body'))
       ppInductives :: [InductiveInfo] -> Sem r (Doc Ann)
       ppInductives inds = do
         inds' <- mapM ppInductive inds
