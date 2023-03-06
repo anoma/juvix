@@ -15,8 +15,9 @@ runCommand localOpts = do
   let tab' :: InfoTable = Core.applyTransformations (project localOpts ^. coreFromConcreteTransformations) tab
 
       inInputModule :: IdentifierInfo -> Bool
-      inInputModule _ | not (localOpts ^. coreFromConcreteFilter) = True
-      inInputModule x = (== Just path) . (^? identifierLocation . _Just . intervalFile) $ x
+      inInputModule x
+        | localOpts ^. coreFromConcreteFilter = (== Just path) . (^? identifierLocation . _Just . intervalFile) $ x
+        | otherwise = True
 
       mainIdens :: [IdentifierInfo] =
         sortOn
@@ -36,8 +37,12 @@ runCommand localOpts = do
       goPrint :: Sem r ()
       goPrint = case localOpts ^. coreFromConcreteSymbolName of
         Just {} -> printNode (fromMaybe err (getDef selInfo))
-        Nothing -> renderStdOut (Core.ppOut localOpts tab')
+        Nothing -> renderStdOut (Core.ppOut localOpts printTab)
         where
+          printTab :: InfoTable
+          printTab
+            | localOpts ^. coreFromConcreteFilter = filterByFile path tab'
+            | otherwise = tab'
           printNode :: (Text, Core.Node) -> Sem r ()
           printNode (name, node) = do
             renderStdOut (name <> " = ")

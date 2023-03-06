@@ -436,35 +436,46 @@ instance PrettyCode InfoTable where
     main <- maybe (return "") (\s -> (<> line) . (line <>) <$> ppName KNameFunction (fromJust (HashMap.lookup s (tbl ^. infoIdentifiers)) ^. identifierName)) (tbl ^. infoMain)
     return (tys <> line <> line <> sigs <> line <> ctx' <> line <> main)
     where
-      ppSig :: Symbol -> Sem r (Doc Ann)
+      ppSig :: Symbol -> Sem r (Maybe (Doc Ann))
       ppSig s = do
         showIds <- asks (^. optShowIdentIds)
         let mname :: Text
             mname = tbl ^. infoIdentifiers . at s . _Just . identifierName
             mname' = if showIds then (\nm -> nm <> "!" <> prettyText s) mname else mname
         sym' <- ppName KNameFunction mname'
-        let ii = fromJust $ HashMap.lookup s (tbl ^. infoIdentifiers)
-            ty = ii ^. identifierType
-        ty' <- ppCode ty
-        let tydoc = if isDynamic ty then mempty else space <> colon <+> ty'
-            blt = if isJust (ii ^. identifierBuiltin) then (Str.builtin <+> mempty) else mempty
-        return (blt <> kwDef <+> sym' <> tydoc)
+        let -- the identifier may be missing if we have filtered out some
+            -- identifiers for printing purposes
+            mii = HashMap.lookup s (tbl ^. infoIdentifiers)
+        case mii of
+          Nothing -> return Nothing
+          Just ii -> do
+            let ty = ii ^. identifierType
+            ty' <- ppCode ty
+            let tydoc
+                  | isDynamic ty = mempty
+                  | otherwise = space <> colon <+> ty'
+                blt = if isJust (ii ^. identifierBuiltin) then (Str.builtin <+> mempty) else mempty
+            return (Just (blt <> kwDef <+> sym' <> tydoc))
 
       ppSigs :: [IdentifierInfo] -> Sem r (Doc Ann)
       ppSigs idents = do
         pp <- mapM (\ii -> ppSig (ii ^. identifierSymbol)) idents
-        return $ foldr (\p acc -> p <> kwSemicolon <> line <> acc) "" pp
+        return $ foldr (\p acc -> p <> kwSemicolon <> line <> acc) "" (catMaybes pp)
 
       ppContext :: IdentContext -> Sem r (Doc Ann)
       ppContext ctx = do
         defs <- mapM (uncurry ppDef) (HashMap.toList ctx)
-        return (vsep defs)
+        return (vsep (catMaybes defs))
         where
-          ppDef :: Symbol -> Node -> Sem r (Doc Ann)
+          ppDef :: Symbol -> Node -> Sem r (Maybe (Doc Ann))
           ppDef s n = do
-            sig <- ppSig s
-            body' <- ppCode n
-            return (sig <+> kwAssign <+> nest 2 body' <> kwSemicolon)
+            msig <- ppSig s
+            case msig of
+              Just sig -> do
+                body' <- ppCode n
+                return (Just (sig <+> kwAssign <+> nest' body' <> kwSemicolon))
+              Nothing ->
+                return Nothing
 
       ppInductives :: [InductiveInfo] -> Sem r (Doc Ann)
       ppInductives inds = do
