@@ -111,7 +111,7 @@ shiftEmbedded wrappingLevel m = umapN go
 -- branch.
 compileMatchBranch :: forall r. Members '[InfoTableBuilder] r => Indexed MatchBranch -> Sem r Node
 compileMatchBranch (Indexed branchNum br) = do
-  compiledBranch <- runReader initState (combineCompiledPatterns (map (compilePattern branchNum patternsNum) patterns))
+  compiledBranch <- runReader initState (combineCompiledPatterns (map (compilePattern 0 branchNum patternsNum) patterns))
   return (mkLambdas' (patternType <$> patterns) ((compiledBranch ^. compiledPatMkNode) (wrapBody (compiledBranch ^. compiledPatBinders))))
   where
     patterns :: [Pattern]
@@ -213,15 +213,14 @@ combineCompiledPatterns ps = go indexedPatterns
 -- (wildcard, binder or constructor) introduces an auxiliary binder.
 -- The arguments are then compiled recursively using a new CompileState context.
 -- The default case points to the next branch pattern.
-compilePattern :: forall r. Members [Reader CompileState, Reader CompileStateNode, InfoTableBuilder] r => Int -> Int -> Pattern -> Sem r CompiledPattern
-compilePattern branchNum numPatterns = \case
+compilePattern :: forall r. Members [Reader CompileState, Reader CompileStateNode, InfoTableBuilder] r => Int -> Int -> Int -> Pattern -> Sem r CompiledPattern
+compilePattern baseShift branchNum numPatterns = \case
   PatWildcard {} -> return (CompiledPattern [] id)
   PatBinder b -> do
-    subPats <- resetCurrentNode (incBindersAbove (compilePattern branchNum numPatterns (b ^. patternBinderPattern)))
+    subPats <- resetCurrentNode (incBindersAbove (compilePattern baseShift branchNum numPatterns (b ^. patternBinderPattern)))
     currentNode <- asks (^. compileStateNodeCurrent)
-    bindersAbove <- asks (^. compileStateBindersAbove)
 
-    let newBinder = shiftBinder (bindersAbove + numPatterns + branchNum) (b ^. patternBinder)
+    let newBinder = shiftBinder (baseShift + branchNum + numPatterns) (b ^. patternBinder)
     let compiledBinder =
           CompiledPattern
             { _compiledPatBinders = [OriginalBinder newBinder],
@@ -241,7 +240,7 @@ compilePattern branchNum numPatterns = \case
 
       compileArgs :: [Pattern] -> Sem r CompiledPattern
       compileArgs args = do
-        let ctorArgsPatterns = compilePattern branchNum numPatterns <$> args
+        let ctorArgsPatterns = compilePattern (length args) branchNum numPatterns <$> args
         addBindersAbove (length args) (resetCompiledPattern (combineCompiledPatterns ctorArgsPatterns))
 
       mkCompiledBinder :: Pattern -> Sem r CompiledBinder
