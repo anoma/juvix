@@ -9,7 +9,7 @@ import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Transformation.Base
 
 substDrop :: [Node] -> [Node] -> [Node]
-substDrop args argtys = zipWith (\ty n -> substs (map (shift n) args) ty) (drop k argtys) [k ..]
+substDrop args argtys = zipWith (\ty n -> substs (map (shift n) (reverse args)) ty) (drop k argtys) [0 ..]
   where
     k = length args
 

@@ -360,7 +360,7 @@ mkBody ty clauses
     vs :: [Index]
     vs = reverse (take nPatterns [0 ..])
 
-    -- | The types of arguments in the match must be shifted due to the
+    -- The types of arguments in the match must be shifted due to the
     -- difference in level between when the type argument in bound (in a
     -- surrounding lambda) and when it is used in the match constructor.
     --

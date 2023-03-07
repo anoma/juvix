@@ -1,0 +1,10 @@
+-- eta-expansion of polymorphic constructors
+
+type Box {
+    box : Π T : Type, Π A : T, A → A → Box A;
+};
+
+def f : Box int → int := \(x : Box int) case x of { box _ _ a b := b - a };
+def g : (int → int → Box int) → Box int := \(f : int → int → Box int) f 2 3;
+
+f (g (box Type int))
