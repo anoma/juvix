@@ -159,10 +159,10 @@ buildTable1' m = do
 flattenModule :: Module -> [Statement]
 flattenModule m = concatMap go (m ^. moduleBody . moduleStatements)
   where
-  go :: Statement -> [Statement]
-  go = \case
-    StatementModule l -> flattenModule l
-    s -> [s]
+    go :: Statement -> [Statement]
+    go = \case
+      StatementModule l -> flattenModule l
+      s -> [s]
 
 lookupConstructor :: (Member (Reader InfoTable) r) => Name -> Sem r ConstructorInfo
 lookupConstructor f = HashMap.lookupDefault impossible f <$> asks (^. infoConstructors)

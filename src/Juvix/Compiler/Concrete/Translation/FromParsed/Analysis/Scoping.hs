@@ -978,24 +978,24 @@ checkUnqualified s = do
 resolveShadowing :: [SymbolEntry] -> [SymbolEntry]
 resolveShadowing es = go [(e, entryName e ^. S.nameWhyInScope) | e <- es]
   where
-  go :: [(SymbolEntry, S.WhyInScope)] -> [SymbolEntry]
-  go itms
-    | any (((== S.BecauseImportedOpened) .||. (== S.BecauseDefined)) . snd) itms =
-        [ e | (e, w) <- itms, not (isInherited w)
-        ]
-    | all (isInherited . snd) itms = go [ (e, peelInherited  w) | (e, w) <- itms]
-    | otherwise = map fst itms
-    where
-      peelInherited :: S.WhyInScope -> S.WhyInScope
-      peelInherited = \case
-        S.BecauseInherited w -> w
-        _ -> impossible
+    go :: [(SymbolEntry, S.WhyInScope)] -> [SymbolEntry]
+    go itms
+      | any (((== S.BecauseImportedOpened) .||. (== S.BecauseDefined)) . snd) itms =
+          [ e | (e, w) <- itms, not (isInherited w)
+          ]
+      | all (isInherited . snd) itms = go [(e, peelInherited w) | (e, w) <- itms]
+      | otherwise = map fst itms
+      where
+        peelInherited :: S.WhyInScope -> S.WhyInScope
+        peelInherited = \case
+          S.BecauseInherited w -> w
+          _ -> impossible
 
-      isInherited :: S.WhyInScope -> Bool
-      isInherited = \case
-        S.BecauseInherited {} -> True
-        S.BecauseDefined {} -> False
-        S.BecauseImportedOpened {} -> False
+        isInherited :: S.WhyInScope -> Bool
+        isInherited = \case
+          S.BecauseInherited {} -> True
+          S.BecauseDefined {} -> False
+          S.BecauseImportedOpened {} -> False
 
 checkPatternName ::
   forall r.
