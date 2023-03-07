@@ -931,7 +931,7 @@ binderOrConstrPattern parseArgs varsNum vars = do
         (ci ^. constructorArgsNum /= length ps)
         (parseFailure off "wrong number of constructor arguments")
       let info = setInfoName (ci ^. constructorName) Info.empty
-      return (PatConstr (PatternConstr info tag ps), (varsNum', vars'))
+      return (PatConstr (PatternConstr info tag ps mkDynamic'), (varsNum', vars'))
     _ -> do
       let vars1 = HashMap.insert txt varsNum vars
       mp <- optional (binderPattern (varsNum + 1) vars1)

@@ -4,7 +4,6 @@ import Juvix.Compiler.Core.Data.InfoTableBuilder
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Info.LocationInfo
 import Juvix.Compiler.Core.Info.NameInfo (setInfoName)
-import Juvix.Compiler.Core.Info.TypeInfo
 import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Core.Transformation.Base
 import Juvix.Compiler.Core.Transformation.MatchToCase.Data
@@ -28,7 +27,9 @@ matchToCaseNode n = case n of
 
     -- The appNode calls the first branch with the values of the match
     let appNode = mkApps' (mkVar' 0) (shift (length branchNodes) <$> values)
-    return (foldr (mkLet' branchType) appNode branchNodes)
+    let branchBinder = typeToBinder branchType
+    let branchBinders = map (branchBinder,) branchNodes
+    return (mkShiftedLets 0 branchBinders appNode)
   _ -> return n
 
 -- | Increase all free variable indices by a given value.
@@ -110,7 +111,7 @@ shiftEmbedded wrappingLevel m = umapN go
 -- branch.
 compileMatchBranch :: forall r. Members '[InfoTableBuilder] r => Indexed MatchBranch -> Sem r Node
 compileMatchBranch (Indexed branchNum br) = do
-  compiledBranch <- runReader initState' (combineCompiledPatterns (map (compilePattern patternsNum) patterns))
+  compiledBranch <- runReader initState (combineCompiledPatterns (map (compilePattern 0 branchNum patternsNum) patterns))
   return (mkLambdas' (patternType <$> patterns) ((compiledBranch ^. compiledPatMkNode) (wrapBody (compiledBranch ^. compiledPatBinders))))
   where
     patterns :: [Pattern]
@@ -119,26 +120,51 @@ compileMatchBranch (Indexed branchNum br) = do
     patternsNum = length patterns
 
     wrapBody :: [CompiledBinder] -> Node
-    wrapBody binders = foldr (uncurry (mkLet mempty . set binderType mkDynamic')) shiftedBody vars -- TODO: mkDynamic' here is a hack and it's not completely correct; the de Bruijn indices in the binder type should be shifted appropriately
+    wrapBody binders = foldr (uncurry (mkLet mempty)) shiftedBody vars
       where
         vars :: [(Binder, Node)]
-        vars = second mkVar' . swap . toTuple <$> extractOriginalBinders binders
+        vars = (bimap (shiftBinder patternBindersNum') mkVar' . swap . toTuple) <$> extractOriginalBinders binders
+
+        auxiliaryBindersNum :: Int
+        auxiliaryBindersNum = length (filter isAuxiliaryBinder binders)
+
+        patternBindersNum' :: Int
+        patternBindersNum' = length (concatMap getPatternBinders patterns)
 
         shiftedBody :: Node
-        shiftedBody =
-          let patternBindersNum' = length (concatMap getPatternBinders patterns)
-              auxiliaryBindersNum = length (filter isAuxiliaryBinder binders)
-           in shiftEmbedded
+        shiftedBody = shiftEmbedded
                 patternBindersNum'
                 (auxiliaryBindersNum + patternBindersNum' + patternsNum + branchNum)
                 (br ^. matchBranchBody)
 
-    initState' :: CompileState
-    initState' =
-      CompileState
-        { _compileStateBindersAbove = 0,
-          _compileStateCompiledPattern = mempty
-        }
+-- | Increase the indices of free variables in the binderTyped by a given value
+shiftBinder :: Index -> Binder -> Binder
+shiftBinder idx = over binderType (shift idx)
+
+-- | Make a sequence of nested lets from a list of binders / value pairs. The
+-- indices of free variables in binder types are shifted by the sum of
+-- `baseShift` and the number of lets that have already been added in the
+-- sequence.
+mkShiftedLets :: Index -> [(Binder, Node)] -> Node -> Node
+mkShiftedLets baseShift vars body = foldr f body (indexFrom 0 vars)
+  where
+    f :: Indexed (Binder, Node) -> Node -> Node
+    f (Indexed idx (b, v)) = mkLet mempty (shiftBinder (baseShift + idx) b) v
+
+mkShiftedLambdas :: Index -> [Type] -> Node -> Node
+mkShiftedLambdas baseShift tys body = foldr f body (indexFrom 0 tys)
+  where
+    f :: Indexed Type -> Node -> Node
+    f (Indexed idx ty) = mkLambda' (shift (baseShift + idx) ty)
+
+-- | Wrap a type node in an unnamed binder.
+typeToBinder :: Type -> Binder
+typeToBinder ty =
+  Binder
+    { _binderName = "?",
+      _binderLocation = Nothing,
+      _binderType = ty
+    }
 
 -- | Extract original binders (i.e binders which are referenced in the match
 -- branch body) from a list of `CompiledBinder`s indexed by the total number
@@ -187,13 +213,14 @@ combineCompiledPatterns ps = go indexedPatterns
 -- (wildcard, binder or constructor) introduces an auxiliary binder.
 -- The arguments are then compiled recursively using a new CompileState context.
 -- The default case points to the next branch pattern.
-compilePattern :: forall r. Members [Reader CompileState, Reader CompileStateNode, InfoTableBuilder] r => Int -> Pattern -> Sem r CompiledPattern
-compilePattern numPatterns = \case
+compilePattern :: forall r. Members [Reader CompileState, Reader CompileStateNode, InfoTableBuilder] r => Int -> Int -> Int -> Pattern -> Sem r CompiledPattern
+compilePattern baseShift branchNum numPatterns = \case
   PatWildcard {} -> return (CompiledPattern [] id)
   PatBinder b -> do
-    subPats <- resetCurrentNode (incBindersAbove (compilePattern numPatterns (b ^. patternBinderPattern)))
+    subPats <- resetCurrentNode (incBindersAbove (compilePattern baseShift branchNum numPatterns (b ^. patternBinderPattern)))
     currentNode <- asks (^. compileStateNodeCurrent)
-    let newBinder = set binderType mkDynamic' $ b ^. patternBinder -- TODO: this is a hack to avoid problems with de Bruijn, but it's not entirely correct
+
+    let newBinder = shiftBinder (baseShift + branchNum + numPatterns) (b ^. patternBinder)
     let compiledBinder =
           CompiledPattern
             { _compiledPatBinders = [OriginalBinder newBinder],
@@ -213,18 +240,8 @@ compilePattern numPatterns = \case
 
       compileArgs :: [Pattern] -> Sem r CompiledPattern
       compileArgs args = do
-        bindersAbove <- asks (^. compileStateBindersAbove)
-        let ctorArgsPatterns = compilePattern numPatterns <$> args
-            state = mkState bindersAbove
-        runReader state (combineCompiledPatterns ctorArgsPatterns)
-        where
-          mkState :: Int -> CompileState
-          mkState bindersAbove =
-            ( CompileState
-                { _compileStateBindersAbove = bindersAbove + length args,
-                  _compileStateCompiledPattern = mempty
-                }
-            )
+        let ctorArgsPatterns = compilePattern (length args) branchNum numPatterns <$> args
+        addBindersAbove (length args) (resetCompiledPattern (combineCompiledPatterns ctorArgsPatterns))
 
       mkCompiledBinder :: Pattern -> Sem r CompiledBinder
       mkCompiledBinder p = AuxiliaryBinder <$> mkBinder'' p
@@ -238,13 +255,11 @@ compilePattern numPatterns = \case
             Binder
               { _binderName = "_",
                 _binderLocation = getInfoLocation info,
-                _binderType = getInfoType info
-                -- TODO: `getInfoType` always returns Dynamic at this stage
+                _binderType = mkDynamic'
               }
         PatConstr c' -> do
           let info = c' ^. patternConstrInfo
-          -- TODO: `getInfoType` always returns Dynamic at this stage
-          mkUniqueBinder "arg" (getInfoLocation info) (getInfoType info)
+          mkUniqueBinder "arg" (getInfoLocation info) mkDynamic'
 
       mkCaseFromBinders :: [Binder] -> Sem r (Node -> Node)
       mkCaseFromBinders binders = do
@@ -279,7 +294,7 @@ compilePattern numPatterns = \case
               )
 
 failNode :: [Type] -> Node
-failNode tys = mkLambdas' tys (mkBuiltinApp' OpFail [mkConstant' (ConstString "Non-exhaustive patterns")])
+failNode tys = mkShiftedLambdas 0 tys (mkBuiltinApp' OpFail [mkConstant' (ConstString "Non-exhaustive patterns")])
 
 mkUniqueBinder' :: Member InfoTableBuilder r => Text -> Node -> Sem r Binder
 mkUniqueBinder' name ty = mkUniqueBinder name Nothing ty
