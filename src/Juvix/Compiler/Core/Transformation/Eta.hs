@@ -9,7 +9,8 @@ import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Transformation.Base
 
 substDrop :: [Node] -> [Node] -> [Node]
-substDrop args argtys = zipWith (\ty n -> substs (map (shift n) (reverse args)) ty) (drop k argtys) [0 ..]
+substDrop args argtys =
+  reverse $ snd $ foldl' (\(args', acc) ty -> (mkVar' 0 : map (shift 1) args', substs args' ty : acc)) (reverse args, []) (drop k argtys)
   where
     k = length args
 
