@@ -306,5 +306,10 @@ tests =
       "Typed match"
       $(mkRelDir ".")
       $(mkRelFile "test054.jvc")
-      $(mkRelFile "out/test054.out")
+      $(mkRelFile "out/test054.out"),
+    PosTest
+      "Eta-expansion of polymorphic constructors"
+      $(mkRelDir ".")
+      $(mkRelFile "test055.jvc")
+      $(mkRelFile "out/test055.out")
   ]
