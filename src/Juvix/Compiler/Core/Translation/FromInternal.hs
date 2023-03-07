@@ -631,6 +631,14 @@ fromPatternArg pa = case pa ^. Internal.patternArgName of
     getPatternType :: Name -> Sem r Type
     getPatternType n = asks (fromJust . HashMap.lookup n) >>= goType
 
+    -- The types of the pattern must be shifted by the index of the argument
+    -- within the params
+    indexedPatternArgs :: [Internal.PatternArg] -> Sem r [Pattern]
+    indexedPatternArgs ps = mapM go (indexFrom 0 ps)
+      where
+        go :: Indexed (Internal.PatternArg) -> Sem r Pattern
+        go (Indexed i p) = local (over indexTableVarsNum (+ i)) (fromPatternArg p)
+
     fromPattern :: Internal.Pattern -> Sem r Pattern
     fromPattern = \case
       Internal.PatternVariable n -> do
@@ -638,7 +646,7 @@ fromPatternArg pa = case pa ^. Internal.patternArgName of
         return $ PatBinder (PatternBinder (Binder (n ^. nameText) (Just (n ^. nameLoc)) ty) (wildcard ty))
       Internal.PatternConstructorApp c -> do
         (indParams, _) <- InternalTyped.lookupConstructorArgTypes n
-        patternArgs <- mapM fromPatternArg params
+        patternArgs <- indexedPatternArgs params
         let indArgs = replicate (length indParams) (wildcard mkSmallUniv)
             args = indArgs ++ patternArgs
         m <- getIdent identIndex
