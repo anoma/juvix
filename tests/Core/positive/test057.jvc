@@ -1,0 +1,10 @@
+-- type synonyms
+
+def T : Type := Type;
+def I : Type := int;
+
+def id : Π A : T, A → A := \(A : T) \(x : A) x;
+
+def id' : I → I := \(x : I) id I x;
+
+id int 4 + id' 1
