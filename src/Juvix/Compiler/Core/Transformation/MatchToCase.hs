@@ -11,6 +11,12 @@ import Juvix.Compiler.Core.Transformation.MatchToCase.Data
 matchToCase :: InfoTable -> InfoTable
 matchToCase = run . mapT' (const (umapM matchToCaseNode))
 
+mkShiftedPis' :: [Type] -> Type -> Type
+mkShiftedPis' lhs rhs = foldl' go (shift (length lhs) rhs) (reverse (indexFrom 0 lhs))
+  where
+    go :: Type -> Indexed Type -> Type
+    go t (Indexed i a) = mkPi' (shift i a) t
+
 matchToCaseNode :: forall r. Member InfoTableBuilder r => Node -> Sem r Node
 matchToCaseNode n = case n of
   NMatch m -> do
@@ -18,7 +24,7 @@ matchToCaseNode n = case n of
         values = toList (m ^. matchValues)
         matchType = m ^. matchReturnType
         valueTypes = toList (m ^. matchValueTypes)
-        branchType = mkPis' valueTypes matchType
+        branchType = mkShiftedPis' valueTypes matchType
 
     -- Index from 1 because we prepend the fail branch.
     branchNodes <-
