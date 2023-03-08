@@ -523,7 +523,7 @@ destruct = \case
               (binders, values) = unzip [(it ^. letItemBinder, it ^. letItemValue) | it <- toList vs]
               binderTypes :: [Type]
               binderTypes = map (^. binderType) binders
-           in map (manyBinders binders) (b : values) ++ map noBinders binderTypes,
+           in map (manyBinders binders) (b : values) ++ map (manyBinders binders) binderTypes,
         _nodeReassemble = someChildren $ \i' (b' :| valuesTys') ->
           let numItems :: Int
               numItems = length vs

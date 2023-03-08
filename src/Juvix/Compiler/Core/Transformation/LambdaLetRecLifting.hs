@@ -80,6 +80,7 @@ lambdaLiftNode aboveBl top =
               defs = toList (letr ^.. letRecValues . each . letItemValue)
               ndefs :: Int
               ndefs = length defs
+          -- TODO: `lambdaLiftBinder bl` is incorrect here; it should be: bl'
           letRecBinders' :: [Binder] <- mapM (lambdaLiftBinder bl) (letr ^.. letRecValues . each . letItemBinder)
           let bl' :: BinderList Binder
               -- the reverse is necessary because the last item in letRecBinders has index 0
@@ -151,8 +152,7 @@ lambdaLiftNode aboveBl top =
                         | otherwise -> impossible
                       (y : ys) -> mkLet mempty bnd' (shift k x) (goShift (k + 1) (y :| ys))
                       where
-                        bnd' = over binderType (shift k . subsCalls . shift (-ndefs)) bnd
-          -- TODO: the types should also be lambda-lifted
+                        bnd' = over binderType (shift k . subsCalls) bnd
           let res :: Node
               res = shiftHelper body' (nonEmpty' (zipExact letItems letRecBinders'))
           return (Recur res)
