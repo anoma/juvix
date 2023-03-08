@@ -1,7 +1,21 @@
 -- letrec with type annotations
 
+type Box {
+    box : Π A : Type, A → Box A;
+};
+
+def unbox : Π A : Type, Box A → A := \(A : Type) \(b : Box A)
+    case b of {
+        box _ x := x
+    };
+
+def g : Π A : Type, A → A := \(A : Type) \(x : A)
+    letrec[b] b : Box A := box A x;
+    in
+    unbox A b;
+
 letrec[A f]
     A : Type := int;
     f : A → int := \(x : A) x;
 in
-f 4
+g int (f 4)
