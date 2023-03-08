@@ -311,5 +311,10 @@ tests =
       "Eta-expansion of polymorphic constructors"
       $(mkRelDir ".")
       $(mkRelFile "test055.jvc")
-      $(mkRelFile "out/test055.out")
+      $(mkRelFile "out/test055.out"),
+    PosTest
+      "LetRec with type annotations"
+      $(mkRelDir ".")
+      $(mkRelFile "test056.jvc")
+      $(mkRelFile "out/test056.out")
   ]

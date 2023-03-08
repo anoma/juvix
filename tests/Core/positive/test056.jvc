@@ -1,0 +1,7 @@
+-- letrec with type annotations
+
+letrec[A f]
+    A : Type := int;
+    f : A → int := \(x : A) x;
+in
+f 4
