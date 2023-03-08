@@ -10,9 +10,12 @@ import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Pretty
 import Juvix.Compiler.Core.Transformation.Base
 
-isTypeConstr :: Type -> Bool
-isTypeConstr ty = case typeTarget ty of
-  NUniv {} -> True
+isTypeConstr :: InfoTable -> Type -> Bool
+isTypeConstr tab ty = case typeTarget ty of
+  NUniv {} ->
+    True
+  NIdt Ident {..} ->
+    isTypeConstr tab (fromJust $ HashMap.lookup _identSymbol (tab ^. identContext))
   _ -> False
 
 convertNode :: InfoTable -> Node -> Node
@@ -29,11 +32,18 @@ convertNode tab = convert mempty
       NVar v@(Var {..}) ->
         let ty = BL.lookup _varIndex vars ^. binderType
          in if
-                | isTypeConstr ty -> End (mkDynamic _varInfo)
+                | isTypeConstr tab ty -> End (mkDynamic _varInfo)
                 | otherwise -> End (NVar (shiftVar (-k) v))
         where
-          k = length (filter (isTypeConstr . (^. binderType)) (take _varIndex (toList vars)))
-      NApp (App {}) ->
+          k = length (filter (isTypeConstr tab . (^. binderType)) (take _varIndex (toList vars)))
+      NIdt Ident {..} ->
+        let fi = fromJust $ HashMap.lookup _identSymbol (tab ^. infoIdentifiers)
+         in if
+                | isTypeConstr tab (fi ^. identifierType) ->
+                    Recur (fromJust $ HashMap.lookup _identSymbol (tab ^. identContext))
+                | otherwise ->
+                    Recur node
+      NApp App {..} ->
         let (h, args) = unfoldApps node
             ty =
               case h of
@@ -45,6 +55,8 @@ convertNode tab = convert mempty
                 _ -> unsupported node
             args' = filterArgs ty args
          in if
+                | isTypeConstr tab ty ->
+                    End (mkDynamic _appInfo)
                 | null args' ->
                     End (convert vars h)
                 | otherwise ->
@@ -64,7 +76,7 @@ convertNode tab = convert mempty
             let paramBinders = map (set binderType mkSmallUniv) (take nParams _caseBranchBinders)
                 argBinders = drop nParams _caseBranchBinders
                 tyargs = drop nParams (typeArgs (fromJust (tab ^. infoConstructors . at _caseBranchTag) ^. constructorType))
-                argBinders' = zipWith (\b ty -> if isDynamic (b ^. binderType) && isTypeConstr ty then set binderType ty b else b) argBinders (tyargs ++ repeat mkDynamic')
+                argBinders' = zipWith (\b ty -> if isDynamic (b ^. binderType) && isTypeConstr tab ty then set binderType ty b else b) argBinders (tyargs ++ repeat mkDynamic')
                 binders' =
                   filterBinders
                     (BL.prependRev paramBinders vars)
@@ -81,25 +93,25 @@ convertNode tab = convert mempty
           filterBinders :: BinderList Binder -> [Binder] -> [Binder]
           filterBinders _ [] = []
           filterBinders vars' (b : bs)
-            | isTypeConstr (b ^. binderType) =
+            | isTypeConstr tab (b ^. binderType) =
                 filterBinders (BL.cons b vars') bs
           filterBinders vars' (b : bs) =
             over binderType (convert vars') b : filterBinders (BL.cons b vars') bs
       NLam (Lambda {..})
-        | isTypeConstr (_lambdaBinder ^. binderType) ->
+        | isTypeConstr tab (_lambdaBinder ^. binderType) ->
             End (convert (BL.cons _lambdaBinder vars) _lambdaBody)
       NLet (Let {..})
-        | isTypeConstr (_letItem ^. letItemBinder . binderType) ->
+        | isTypeConstr tab (_letItem ^. letItemBinder . binderType) ->
             End (convert (BL.cons (_letItem ^. letItemBinder) vars) _letBody)
       NPi (Pi {..})
-        | isTypeConstr (_piBinder ^. binderType) && not (isTypeConstr _piBody) ->
+        | isTypeConstr tab (_piBinder ^. binderType) && not (isTypeConstr tab _piBody) ->
             End (convert (BL.cons _piBinder vars) _piBody)
       _ -> Recur node
       where
         filterArgs :: Type -> [a] -> [a]
         filterArgs ty args =
           map fst $
-            filter (not . isTypeConstr . snd) (zip args (typeArgs ty ++ repeat mkDynamic'))
+            filter (not . isTypeConstr tab . snd) (zip args (typeArgs ty ++ repeat mkDynamic'))
 
 convertIdent :: InfoTable -> IdentifierInfo -> IdentifierInfo
 convertIdent tab ii =
@@ -109,7 +121,7 @@ convertIdent tab ii =
         map (uncurry (set argumentType)) $
           zipExact tyargs' $
             map fst $
-              filter (not . isTypeConstr . snd) (zipExact (ii ^. identifierArgsInfo) tyargs),
+              filter (not . isTypeConstr tab . snd) (zipExact (ii ^. identifierArgsInfo) tyargs),
       _identifierArgsNum = length (typeArgs ty')
     }
   where
@@ -130,7 +142,7 @@ convertInductive :: InfoTable -> InductiveInfo -> InductiveInfo
 convertInductive tab ii =
   ii
     { _inductiveKind = ty',
-      _inductiveParams = map (over paramKind (convertNode tab) . fst) $ filter (not . isTypeConstr . snd) (zipExact (ii ^. inductiveParams) tyargs),
+      _inductiveParams = map (over paramKind (convertNode tab) . fst) $ filter (not . isTypeConstr tab . snd) (zipExact (ii ^. inductiveParams) tyargs),
       _inductiveConstructors = map (convertConstructor tab) (ii ^. inductiveConstructors)
     }
   where

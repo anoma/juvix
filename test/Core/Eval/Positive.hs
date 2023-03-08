@@ -316,5 +316,10 @@ tests =
       "LetRec with type annotations"
       $(mkRelDir ".")
       $(mkRelFile "test056.jvc")
-      $(mkRelFile "out/test056.out")
+      $(mkRelFile "out/test056.out"),
+    PosTest
+      "Type synonyms"
+      $(mkRelDir ".")
+      $(mkRelFile "test057.jvc")
+      $(mkRelFile "out/test057.out")
   ]
