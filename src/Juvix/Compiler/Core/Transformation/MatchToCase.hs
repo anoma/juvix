@@ -259,7 +259,7 @@ compilePattern baseShift branchNum numPatterns = \case
           let info = w ^. patternWildcardInfo
           return
             Binder
-              { _binderName = "_",
+              { _binderName = "?",
                 _binderLocation = getInfoLocation info,
                 _binderType = mkDynamic'
               }
