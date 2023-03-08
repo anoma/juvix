@@ -202,7 +202,9 @@ instance Hashable Application where
 -- | Fully applied constructor in a pattern.
 data ConstructorApp = ConstructorApp
   { _constrAppConstructor :: Name,
-    _constrAppParameters :: [PatternArg]
+    _constrAppParameters :: [PatternArg],
+    -- | The type checker fills this field
+    _constrAppType :: Maybe Expression
   }
   deriving stock (Eq, Generic, Data)
 
@@ -320,8 +322,8 @@ instance HasAtomicity Function where
   atomicity = const (Aggregate funFixity)
 
 instance HasAtomicity ConstructorApp where
-  atomicity (ConstructorApp _ args)
-    | null args = Atom
+  atomicity ConstructorApp {..}
+    | null _constrAppParameters = Atom
     | otherwise = Aggregate appFixity
 
 instance HasAtomicity PatternArg where
@@ -409,7 +411,7 @@ instance HasLoc PatternArg where
   getLoc a = fmap getLoc (a ^. patternArgName) ?<> getLoc (a ^. patternArgPattern)
 
 instance HasLoc ConstructorApp where
-  getLoc (ConstructorApp c ps) =
-    case last <$> nonEmpty ps of
-      Just p -> getLoc c <> getLoc p
-      Nothing -> getLoc c
+  getLoc ConstructorApp {..} =
+    case last <$> nonEmpty _constrAppParameters of
+      Just p -> getLoc _constrAppConstructor <> getLoc p
+      Nothing -> getLoc _constrAppConstructor

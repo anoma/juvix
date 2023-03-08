@@ -222,7 +222,10 @@ class HasExpressions a where
   leafExpressions :: Traversal' a Expression
 
 instance HasExpressions LambdaClause where
-  leafExpressions f (LambdaClause ps b) = LambdaClause ps <$> leafExpressions f b
+  leafExpressions f l = do
+    _lambdaPatterns <- traverse (leafExpressions f) (l ^. lambdaPatterns)
+    _lambdaBody <- leafExpressions f (l ^. lambdaBody)
+    pure LambdaClause {..}
 
 instance HasExpressions Lambda where
   leafExpressions f l = do
@@ -243,8 +246,22 @@ instance HasExpressions Expression where
     ExpressionUniverse {} -> f e
     ExpressionHole {} -> f e
 
+instance HasExpressions ConstructorApp where
+  leafExpressions f = traverseOf (constrAppType . _Just) (leafExpressions f)
+
+instance HasExpressions PatternArg where
+  leafExpressions f = traverseOf patternArgPattern (leafExpressions f)
+
+instance HasExpressions Pattern where
+  leafExpressions f p = case p of
+    PatternVariable {} -> pure p
+    PatternConstructorApp a -> PatternConstructorApp <$> leafExpressions f a
+
 instance HasExpressions CaseBranch where
-  leafExpressions f = traverseOf caseBranchExpression (leafExpressions f)
+  leafExpressions f b = do
+    _caseBranchPattern <- leafExpressions f (b ^. caseBranchPattern)
+    _caseBranchExpression <- leafExpressions f (b ^. caseBranchExpression)
+    pure CaseBranch {..}
 
 instance HasExpressions Case where
   leafExpressions f l = do
@@ -315,9 +332,10 @@ subsHoles s = over leafExpressions helper
       _ -> e
 
 instance HasExpressions FunctionClause where
-  leafExpressions f (FunctionClause n ps b) = do
-    b' <- leafExpressions f b
-    pure (FunctionClause n ps b')
+  leafExpressions f c = do
+    _clauseBody <- leafExpressions f (c ^. clauseBody)
+    _clausePatterns <- traverse (leafExpressions f) (c ^. clausePatterns)
+    pure FunctionClause {_clauseName = c ^. clauseName, ..}
 
 instance HasExpressions Example where
   leafExpressions f = traverseOf exampleExpression (leafExpressions f)

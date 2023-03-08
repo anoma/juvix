@@ -138,10 +138,11 @@ compileMatchBranch (Indexed branchNum br) = do
         patternBindersNum' = length (concatMap getPatternBinders patterns)
 
         shiftedBody :: Node
-        shiftedBody = shiftEmbedded
-                patternBindersNum'
-                (auxiliaryBindersNum + patternBindersNum' + patternsNum + branchNum)
-                (br ^. matchBranchBody)
+        shiftedBody =
+          shiftEmbedded
+            patternBindersNum'
+            (auxiliaryBindersNum + patternBindersNum' + patternsNum + branchNum)
+            (br ^. matchBranchBody)
 
 -- | Increase the indices of free variables in the binderTyped by a given value
 shiftBinder :: Index -> Binder -> Binder

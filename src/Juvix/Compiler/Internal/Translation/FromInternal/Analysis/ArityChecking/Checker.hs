@@ -322,16 +322,17 @@ checkPattern ari = traverseOf (patternArgName . each) nameAri >=> traverseOf pat
                   }
             )
 
--- | TODO: insert holes for constructor implicit arguments
 checkConstructorApp ::
   forall r.
   (Members '[Reader InfoTable, Error ArityCheckerError, State LocalVars] r) =>
   ConstructorApp ->
   Sem r ConstructorApp
-checkConstructorApp ca@(ConstructorApp c ps) = do
+checkConstructorApp ca = do
+  let c = ca ^. constrAppConstructor
   args <- (^. constructorInfoArgs) <$> lookupConstructor c
   let arities = map typeArity args
       n = length arities
+      ps = ca ^. constrAppParameters
       lps = length ps
   when
     (n /= lps)
@@ -344,7 +345,7 @@ checkConstructorApp ca@(ConstructorApp c ps) = do
         )
     )
   ps' <- zipWithM checkPattern arities ps
-  return (ConstructorApp c ps')
+  return (ConstructorApp c ps' Nothing)
 
 checkCase ::
   forall r.
