@@ -419,9 +419,9 @@ checkPattern = go
               expectedNum = length psTys
               w = map unnamedParameter psTys'
           when (expectedNum /= length ps) (throw (appErr app expectedNum))
-          zipWithM_ go w ps
+          pis <- zipWithM go w ps
           let appTy = foldExplicitApplication (ExpressionIden inductivename) (map snd ctx)
-          return app {_constrAppType = Just appTy}
+          return app {_constrAppType = Just appTy, _constrAppParameters = pis}
         appErr :: ConstructorApp -> Int -> TypeCheckerError
         appErr app expected =
           ErrArity
