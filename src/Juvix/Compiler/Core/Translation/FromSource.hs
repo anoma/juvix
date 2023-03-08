@@ -667,12 +667,14 @@ letrecDefs names varsNum vars = forM names letrecItem
     letrecItem n = do
       off <- P.getOffset
       (txt, i) <- identifierL
+      mty <- optional (kw kwColon >> expr varsNum vars)
       when (n /= txt) $
         parseFailure off "identifier name doesn't match letrec signature"
       kw kwAssign
       v <- bracedExpr varsNum vars
       kw kwSemicolon
-      return $ LetItem (Binder txt (Just i) mkDynamic') v
+      let ty = fromMaybe mkDynamic' mty
+      return $ LetItem (Binder txt (Just i) ty) v
 
 letrecDef ::
   (Member InfoTableBuilder r) =>
