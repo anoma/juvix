@@ -650,7 +650,7 @@ fromPatternArg pa = case pa ^. Internal.patternArgName of
         let indArgs = replicate (length indParams) (wildcard mkSmallUniv)
             args = indArgs ++ patternArgs
         m <- getIdent identIndex
-        ctorTy <- InternalTyped.constructorReturnType n >>= goType
+        ctorTy <- goType (fromJust (c ^. Internal.constrAppType))
         case m of
           Just (IdentConstr tag) ->
             return $
