@@ -623,25 +623,17 @@ fromPatternArg pa = case pa ^. Internal.patternArgName of
       idt :: IndexTable <- get
       runReader idt (goType ty)
 
-    indexedPatternArgs :: [Internal.PatternArg] -> Sem r [Pattern]
-    indexedPatternArgs ps = mapM go (zipExact accumPatternVarsNum ps)
-      where
-        go :: (Int, Internal.PatternArg) -> Sem r Pattern
-        go (i, p) = local (over indexTableVarsNum (+ i)) (fromPatternArg p)
-
-        patternVarsNumList :: [Int]
-        patternVarsNumList = map (length . getPatternArgVars) ps
-
-        accumPatternVarsNum :: [Int]
-        accumPatternVarsNum = init (scanl (+) 0 patternVarsNumList)
-
     fromPattern :: Internal.Pattern -> Sem r Pattern
     fromPattern = \case
       Internal.PatternVariable n -> do
         ty <- getPatternType n
+        varsNum <- (^. indexTableVarsNum) <$> get
+        -- `indexTableVarsNum` was already increased by `fromPatternArg` before
+        -- calling `fromPattern`
+        modify (over indexTableVars (HashMap.insert (n ^. nameId) (varsNum - 1)))
         return $ PatWildcard (PatternWildcard mempty (Binder (n ^. nameText) (Just (n ^. nameLoc)) ty))
       Internal.PatternConstructorApp c -> do
-        (indParams, _) <- InternalTyped.lookupConstructorArgTypes (c ^. Internal.constrAppConstructor)
+        (indParams, _) <- InternalTyped.lookupConstructorArgTypes ctrName
         let nParams = length indParams
         modify (over indexTableVarsNum (+ nParams))
         patternArgs <- mapM fromPatternArg params
@@ -654,8 +646,8 @@ fromPatternArg pa = case pa ^. Internal.patternArgName of
             return $
               PatConstr
                 ( PatternConstr
-                    { _patternConstrInfo = mempty,
-                      _patternConstrBinder = Binder "_" Nothing corTy,
+                    { _patternConstrInfo = setInfoName (ctrName ^. nameText) mempty,
+                      _patternConstrBinder = Binder "_" Nothing ctorTy,
                       _patternConstrTag = tag,
                       _patternConstrArgs = args
                     }
@@ -663,6 +655,9 @@ fromPatternArg pa = case pa ^. Internal.patternArgName of
           Just _ -> error ("internal to core: not a constructor " <> txt)
           Nothing -> error ("internal to core: undeclared identifier: " <> txt)
         where
+          ctrName :: Name
+          ctrName = c ^. Internal.constrAppConstructor
+
           params :: [Internal.PatternArg]
           params = (c ^. Internal.constrAppParameters)
 
