@@ -9,10 +9,14 @@ def unbox : Π A : Type, Box A → A := \(A : Type) \(b : Box A)
         box _ x := x
     };
 
+def id : Π A : Type, A → A := \(A : Type) \(x : A) x;
+
 def g : Π A : Type, A → A := \(A : Type) \(x : A)
-    letrec[b] b : Box A := box A x;
+    letrec[b h]
+        b : Box A := box A x;
+        h : Π A : Type, A → A := id;
     in
-    unbox A b;
+    h A (unbox A b);
 
 letrec[A f]
     A : Type := int;
