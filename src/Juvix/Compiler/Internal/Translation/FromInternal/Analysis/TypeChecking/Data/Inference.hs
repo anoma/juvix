@@ -384,7 +384,7 @@ matchPatterns (PatternArg impl1 name1 pat1) (PatternArg impl2 name2 pat2) =
       (PatternVariable {}, _) -> err
       (_, PatternVariable {}) -> err
     goConstructor :: ConstructorApp -> ConstructorApp -> Sem r Bool
-    goConstructor (ConstructorApp c1 args1) (ConstructorApp c2 args2)
+    goConstructor (ConstructorApp c1 args1 _) (ConstructorApp c2 args2 _)
       | c1 /= c2 = err
       | otherwise = case zipExactMay args1 args2 of
           Nothing -> err

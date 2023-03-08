@@ -259,7 +259,8 @@ goConstructorApp c = do
   return
     ConstructorApp
       { _constrAppConstructor = c ^. Abstract.constrAppConstructor . Abstract.constructorRefName,
-        _constrAppParameters = _constrAppParameters'
+        _constrAppParameters = _constrAppParameters',
+        _constrAppType = Nothing
       }
 
 isSmallType :: Abstract.Expression -> Bool
