@@ -254,17 +254,25 @@ instance PrettyCode Let where
 instance PrettyCode LetRec where
   ppCode :: forall r. (Member (Reader Options) r) => LetRec -> Sem r (Doc Ann)
   ppCode LetRec {..} = do
+    let tys = fmap (^. letItemBinder . binderType) _letRecValues
     names <- mapM (getName . (^. letItemBinder)) _letRecValues
+    types <- mapM ppCode tys
     vs <- mapM (ppCode . (^. letItemValue)) _letRecValues
     b' <- ppCode _letRecBody
-    return $ case names of
-      hns :| [] -> kwLetRec <+> hns <+> kwAssign <+> head vs <+> kwIn <+> b'
+    let bs =
+          zipWith3Exact
+            (\n ty ty' -> if isDynamic ty' then n else n <+> colon <+> ty)
+            (toList names)
+            (toList types)
+            (toList tys)
+    return $ case bs of
+      [hbs] -> kwLetRec <+> hbs <+> kwAssign <+> head vs <+> kwIn <+> b'
       _ ->
         let bss =
               indent' $
                 align $
                   concatWith (\a b -> a <> kwSemicolon <> line <> b) $
-                    zipWithExact (\name val -> name <+> kwAssign <+> val) (toList names) (toList vs)
+                    zipWithExact (\b val -> b <+> kwAssign <+> val) (toList bs) (toList vs)
             nss = enclose kwSquareL kwSquareR (concatWith (<+>) names)
          in kwLetRec <> nss <> line <> bss <> line <> kwIn <> line <> b'
     where
