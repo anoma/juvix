@@ -382,7 +382,7 @@ mkBody ty clauses
     --            λ(? : A$3)
     --              match (?$2 : List A$4) with : (A$4 → List A$5)
     --
-    -- The return type (A$3 -> List A$4) already has the correct indices
+    -- The return type (A$4 -> List A$5) already has the correct indices
     -- relative to the match node. However the type of the match argument has
     -- been shifted by the number of pattern binders below it.
     shiftMatchTypeArg :: Indexed Type -> Type
