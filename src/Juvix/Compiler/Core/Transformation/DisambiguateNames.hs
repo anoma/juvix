@@ -1,7 +1,6 @@
 module Juvix.Compiler.Core.Transformation.DisambiguateNames where
 
 import Data.HashSet qualified as HashSet
-import Data.List qualified as List
 import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Compiler.Core.Data.BinderList qualified as BL
 import Juvix.Compiler.Core.Extra
@@ -57,16 +56,15 @@ disambiguateNodeNames tab = dmapL go
     disambiguatePatterns bl = \case
       [] -> (bl, [])
       pat : pats' -> case pat of
-        PatWildcard {} -> second (pat :) (disambiguatePatterns bl pats')
-        PatBinder pb -> second (PatBinder pb' :) (disambiguatePatterns bl' pats')
+        PatWildcard w -> second (PatWildcard w' :) (disambiguatePatterns (BL.cons b' bl) pats')
           where
-            b' = over binderName (disambiguate bl) (pb ^. patternBinder)
-            (bl', p') = disambiguatePatterns (BL.cons b' bl) [pb ^. patternBinderPattern]
-            pb' = set patternBinderPattern (List.head p') (set patternBinder b' pb)
+            b' = over binderName (disambiguate bl) (w ^. patternWildcardBinder)
+            w' = set patternWildcardBinder b' w
         PatConstr c -> second (pat' :) (disambiguatePatterns bl' pats')
           where
-            (bl', args') = disambiguatePatterns bl (c ^. patternConstrArgs)
-            pat' = PatConstr $ set patternConstrArgs args' c
+            b' = over binderName (disambiguate bl) (c ^. patternConstrBinder)
+            (bl', args') = disambiguatePatterns (BL.cons b' bl) (c ^. patternConstrArgs)
+            pat' = PatConstr $ set patternConstrBinder b' $ set patternConstrArgs args' c
 
     disambiguate :: BinderList Binder -> Text -> Text
     disambiguate bl name =

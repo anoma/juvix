@@ -2,7 +2,6 @@ module Juvix.Compiler.Core.Transformation.NaiveMatchToCase where
 
 import Juvix.Compiler.Core.Data.InfoTableBuilder
 import Juvix.Compiler.Core.Extra
-import Juvix.Compiler.Core.Info.LocationInfo
 import Juvix.Compiler.Core.Info.NameInfo (setInfoName)
 import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Core.Transformation.Base
@@ -222,9 +221,7 @@ combineCompiledPatterns ps = go indexedPatterns
 
 -- | Compile a single pattern
 --
--- A Wildcard introduces no new binders and do not modify the body.
---
--- A Binder introduces a binder and may also name a subpattern (i.e an as-pattern)
+-- A Wildcard introduces one binder and does not modify the body.
 --
 -- A Constructor is translated into a case statement. Each of its arguments
 -- (wildcard, binder or constructor) introduces an auxiliary binder.
@@ -232,23 +229,29 @@ combineCompiledPatterns ps = go indexedPatterns
 -- The default case points to the next branch pattern.
 compilePattern :: forall r. Members [Reader CompileState, Reader CompileStateNode, InfoTableBuilder] r => Int -> Int -> Int -> Pattern -> Sem r CompiledPattern
 compilePattern baseShift branchNum numPatterns = \case
-  PatWildcard {} -> return (CompiledPattern [] id)
-  PatBinder b -> do
-    subPats <- resetCurrentNode (incBindersAbove (compilePattern baseShift branchNum numPatterns (b ^. patternBinderPattern)))
+  PatWildcard w -> do
     auxPatternsNum <- length . filter isAuxiliaryBinder <$> asks (^. compileStateCompiledPattern . compiledPatBinders)
     currentNode <- asks (^. compileStateNodeCurrent)
-    let newBinder = shiftBinder (baseShift + branchNum + numPatterns + auxPatternsNum) (b ^. patternBinder)
+    let newBinder = shiftBinder (baseShift + branchNum + numPatterns + auxPatternsNum) (w ^. patternWildcardBinder)
     let compiledBinder =
           CompiledPattern
             { _compiledPatBinders = [OriginalBinder newBinder],
               _compiledPatMkNode = mkLet mempty newBinder currentNode
             }
-    return (compiledBinder <> subPats)
+    return compiledBinder
   PatConstr c -> do
     let args = (c ^. patternConstrArgs)
-    compiledArgs <- compileArgs args
-    compiledCase <- compileCase args
-    return (compiledCase <> compiledArgs)
+    compiledArgs <- resetCurrentNode (incBindersAbove (compileArgs args))
+    compiledCase <- resetCurrentNode (incBindersAbove (compileCase args))
+    auxPatternsNum <- length . filter isAuxiliaryBinder <$> asks (^. compileStateCompiledPattern . compiledPatBinders)
+    currentNode <- asks (^. compileStateNodeCurrent)
+    let newBinder = shiftBinder (baseShift + branchNum + numPatterns + auxPatternsNum) (c ^. patternConstrBinder)
+        compiledBinder =
+          CompiledPattern
+            { _compiledPatBinders = [OriginalBinder newBinder],
+              _compiledPatMkNode = mkLet mempty newBinder currentNode
+            }
+    return (compiledBinder <> compiledCase <> compiledArgs)
     where
       compileCase :: [Pattern] -> Sem r CompiledPattern
       compileCase args = do
@@ -265,18 +268,8 @@ compilePattern baseShift branchNum numPatterns = \case
 
       mkBinder'' :: Pattern -> Sem r Binder
       mkBinder'' = \case
-        PatBinder b -> return (b ^. patternBinder)
-        PatWildcard w -> do
-          let info = w ^. patternWildcardInfo
-          return
-            Binder
-              { _binderName = "?",
-                _binderLocation = getInfoLocation info,
-                _binderType = mkDynamic'
-              }
-        PatConstr c' -> do
-          let info = c' ^. patternConstrInfo
-          mkUniqueBinder "arg" (getInfoLocation info) mkDynamic'
+        PatWildcard w -> return $ w ^. patternWildcardBinder
+        PatConstr c' -> return $ c' ^. patternConstrBinder
 
       mkCaseFromBinders :: [Binder] -> Sem r (Node -> Node)
       mkCaseFromBinders binders = do

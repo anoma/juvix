@@ -68,7 +68,7 @@ matchToCase tab = mapAllNodes (convert [] 0) tab
     -- `compile err levels bl vls matrix`:
     --  - `err` creates a textual representation of an unmatched pattern
     --    sequence, given as arguments the representations of patterns for the
-    --    holes (corresponding to the matched values `vls`)
+    --    holes (corresponding to the matched values `vs`)
     --  - `levels` is the list of de Bruijn levels (w.r.t. the input node) at
     --    which binders are inserted in the output node
     --  - `bl` is the current de Bruijn level
@@ -133,10 +133,10 @@ matchToCase tab = mapAllNodes (convert [] 0) tab
       snd $
         foldr
           ( \(pat, vi) (n, node) -> case pat of
-              PatBinder PatternBinder {..} ->
+              PatWildcard PatternWildcard {..} ->
                 ( n - 1,
                   mkLet'
-                    (convert levels (bl + n) (_patternBinder ^. binderType))
+                    (convert levels (bl + n) (_patternWildcardBinder ^. binderType))
                     (mkVar' (vi + n))
                     node
                 )
@@ -184,4 +184,4 @@ matchToCase tab = mapAllNodes (convert [] 0) tab
             (parens (foldl' (<+>) (doc defaultOptions tag) (take argsNum args)) : drop argsNum args)
 
     compileDefault :: ([Doc Ann] -> Doc Ann) -> [Level] -> Level -> [Index] -> [Pattern] -> PatternMatrix -> Node
-    compileDefault = undefined
+    compileDefault = impossible

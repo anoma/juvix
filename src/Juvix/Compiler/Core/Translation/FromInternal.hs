@@ -586,35 +586,42 @@ goAxiomDef a = do
 
 fromPatternArg ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable] r) =>
+  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable, State IndexTable] r) =>
   Internal.PatternArg ->
   Sem r Pattern
 fromPatternArg pa = case pa ^. Internal.patternArgName of
   Just pan -> do
     ty <- getPatternType pan
+    varsNum <- (^. indexTableVarsNum) <$> get
+    modify
+      ( over indexTableVarsNum (+ 1)
+          . over indexTableVars (HashMap.insert (pan ^. nameId) varsNum)
+      )
     wrapAsPattern pan ty <$> subPat
-  Nothing -> subPat
+  Nothing -> do
+    modify (over indexTableVarsNum (+ 1))
+    subPat
   where
     subPat :: Sem r Pattern
     subPat = fromPattern (pa ^. Internal.patternArgPattern)
 
     wrapAsPattern :: Name -> Type -> Pattern -> Pattern
-    wrapAsPattern pan ty pat =
-      ( PatBinder
-          ( PatternBinder
-              { _patternBinder =
-                  Binder
-                    { _binderName = pan ^. nameText,
-                      _binderLocation = Just (pan ^. nameLoc),
-                      _binderType = ty
-                    },
-                _patternBinderPattern = pat
-              }
-          )
-      )
+    wrapAsPattern pan ty = \case
+      PatWildcard p -> PatWildcard $ set patternWildcardBinder binder p
+      PatConstr p -> PatConstr $ set patternConstrBinder binder p
+      where
+        binder =
+          Binder
+            { _binderName = pan ^. nameText,
+              _binderLocation = Just (pan ^. nameLoc),
+              _binderType = ty
+            }
 
     getPatternType :: Name -> Sem r Type
-    getPatternType n = asks (fromJust . HashMap.lookup n) >>= goType
+    getPatternType n = do
+      ty <- asks (fromJust . HashMap.lookup n)
+      idt :: IndexTable <- get
+      runReader idt (goType ty)
 
     indexedPatternArgs :: [Internal.PatternArg] -> Sem r [Pattern]
     indexedPatternArgs ps = mapM go (zipExact accumPatternVarsNum ps)
@@ -632,11 +639,13 @@ fromPatternArg pa = case pa ^. Internal.patternArgName of
     fromPattern = \case
       Internal.PatternVariable n -> do
         ty <- getPatternType n
-        return $ PatBinder (PatternBinder (Binder (n ^. nameText) (Just (n ^. nameLoc)) ty) (wildcard ty))
+        return $ PatWildcard (PatternWildcard mempty (Binder (n ^. nameText) (Just (n ^. nameLoc)) ty))
       Internal.PatternConstructorApp c -> do
-        (indParams, _) <- InternalTyped.lookupConstructorArgTypes n
-        patternArgs <- indexedPatternArgs params
-        let indArgs = replicate (length indParams) (wildcard mkSmallUniv)
+        (indParams, _) <- InternalTyped.lookupConstructorArgTypes (c ^. Internal.constrAppConstructor)
+        let nParams = length indParams
+        modify (over indexTableVarsNum (+ nParams))
+        patternArgs <- mapM fromPatternArg params
+        let indArgs = replicate nParams (wildcard mkSmallUniv)
             args = indArgs ++ patternArgs
         m <- getIdent identIndex
         ctorTy <- goType (fromJust (c ^. Internal.constrAppType))
@@ -645,18 +654,15 @@ fromPatternArg pa = case pa ^. Internal.patternArgName of
             return $
               PatConstr
                 ( PatternConstr
-                    { _patternConstrInfo = setInfoLocation (n ^. nameLoc) (setInfoName (n ^. nameText) Info.empty),
+                    { _patternConstrInfo = mempty,
+                      _patternConstrBinder = Binder "_" Nothing corTy,
                       _patternConstrTag = tag,
-                      _patternConstrArgs = args,
-                      _patternConstrType = ctorTy
+                      _patternConstrArgs = args
                     }
                 )
           Just _ -> error ("internal to core: not a constructor " <> txt)
           Nothing -> error ("internal to core: undeclared identifier: " <> txt)
         where
-          n :: Name
-          n = c ^. Internal.constrAppConstructor
-
           params :: [Internal.PatternArg]
           params = (c ^. Internal.constrAppParameters)
 
@@ -665,23 +671,9 @@ fromPatternArg pa = case pa ^. Internal.patternArgName of
 
           txt :: Text
           txt = c ^. Internal.constrAppConstructor . Internal.nameText
-      where
-        wildcard :: Type -> Pattern
-        wildcard ty = PatWildcard (PatternWildcard Info.empty ty)
 
-getPatternArgVars :: Internal.PatternArg -> [Name]
-getPatternArgVars pa = case pa ^. Internal.patternArgName of
-  Nothing -> subVars
-  Just pan -> pan : subVars
-  where
-    getPatternVars :: Internal.Pattern -> [Name]
-    getPatternVars = \case
-      Internal.PatternVariable n -> [n]
-      Internal.PatternConstructorApp c ->
-        concatMap getPatternArgVars (c ^. Internal.constrAppParameters)
-
-    subVars :: [Name]
-    subVars = getPatternVars (pa ^. Internal.patternArgPattern)
+          wildcard :: Type -> Pattern
+          wildcard ty = PatWildcard (PatternWildcard Info.empty (Binder "_" Nothing ty))
 
 goPatternArgs ::
   forall r.
@@ -698,20 +690,10 @@ goPatternArgs lvl0 body ps0 ptys0 = go lvl0 [] ps0 ptys0
     go lvl pats ps ptys = case (ps, ptys) of
       -- The pattern has an inductive type, so can be matched on
       (p : ps', NTyp {} : ptys') -> do
-        pat <- fromPatternArg p
-        vars <- asks (^. indexTableVars)
-        varsNum <- asks (^. indexTableVarsNum)
-        let bs :: [Name]
-            bs = getPatternArgVars p
-            (vars', varsNum') =
-              foldl'
-                ( \(vs, k) name ->
-                    (HashMap.insert (name ^. nameId) k vs, k + 1)
-                )
-                (vars, varsNum)
-                bs
+        itb :: IndexTable <- ask
+        (itb', pat) <- runState itb (fromPatternArg p)
         local
-          (set indexTableVars vars' . set indexTableVarsNum varsNum')
+          (const itb')
           (go (lvl + 1) (pat : pats) ps' ptys')
       (p : ps', _ : ptys') ->
         -- The pattern does not have an inductive type, so is excluded from the match
@@ -736,7 +718,19 @@ addPatternVariableNames ::
   HashMap NameId Level ->
   HashMap NameId Level
 addPatternVariableNames p lvl vars =
-  foldl' (\vs name -> HashMap.insert (name ^. nameId) lvl vs) vars (getPatternArgVars p)
+  foldl'
+    (\vs -> maybe vs (\name -> HashMap.insert (name ^. nameId) lvl vs))
+    vars
+    (getPatternArgVars p)
+  where
+    getPatternArgVars :: Internal.PatternArg -> [Maybe Name]
+    getPatternArgVars pa =
+      pa ^. Internal.patternArgName : getPatternVars (pa ^. Internal.patternArgPattern)
+
+    getPatternVars :: Internal.Pattern -> [Maybe Name]
+    getPatternVars = \case
+      Internal.PatternVariable n -> [Just n]
+      Internal.PatternConstructorApp {} -> impossible
 
 goExpression ::
   forall r.
