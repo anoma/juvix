@@ -35,7 +35,7 @@ matchToCaseNode n = case n of
     let appNode = mkApps' (mkVar' 0) (shift (length branchNodes) <$> values)
     let branchBinder = typeToBinder branchType
     let branchBinders = map (branchBinder,) branchNodes
-    return (mkShiftedLets 0 branchBinders appNode)
+    return (mkShiftedBinderLets 0 branchBinders appNode)
   _ -> return n
 
 -- | Increase all free variable indices by a given value.
@@ -152,8 +152,8 @@ shiftBinder idx = over binderType (shift idx)
 -- indices of free variables in binder types are shifted by the sum of
 -- `baseShift` and the number of lets that have already been added in the
 -- sequence.
-mkShiftedLets :: Index -> [(Binder, Node)] -> Node -> Node
-mkShiftedLets baseShift vars body = foldr f body (indexFrom 0 vars)
+mkShiftedBinderLets :: Index -> [(Binder, Node)] -> Node -> Node
+mkShiftedBinderLets baseShift vars body = foldr f body (indexFrom 0 vars)
   where
     f :: Indexed (Binder, Node) -> Node -> Node
     f (Indexed idx (b, v)) = mkLet mempty (shiftBinder (baseShift + idx) b) v
