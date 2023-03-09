@@ -115,9 +115,9 @@ unifyTypes' loc tab ty1 ty2 =
           | tgt1 == TyDynamic && tgt2 == TyDynamic ->
               unifyTypes (curryType ty1) (curryType ty2)
           | tgt1 == TyDynamic ->
-              unifyTypes (uncurryType ty1) ty2
+              unifyTypes (curryType ty1) (curryType ty2)
           | tgt2 == TyDynamic ->
-              unifyTypes ty1 (uncurryType ty2)
+              unifyTypes (curryType ty1) (curryType ty2)
           | otherwise ->
               unifyTypes ty1 ty2
   where
@@ -175,9 +175,9 @@ isSubtype' ty1 ty2 =
       | tgt1 == TyDynamic && tgt2 == TyDynamic ->
           isSubtype (curryType ty1) (curryType ty2)
       | tgt1 == TyDynamic ->
-          isSubtype (uncurryType ty1) ty2
+          isSubtype (curryType ty1) (curryType ty2)
       | tgt2 == TyDynamic ->
-          isSubtype ty1 (uncurryType ty2)
+          isSubtype (curryType ty1) (curryType ty2)
       | otherwise ->
           isSubtype ty1 ty2
   where
