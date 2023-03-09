@@ -4,7 +4,7 @@ type Box {
     box : Π T : Type, Π A : T, A → A → Box A;
 };
 
-def f : Box int → int := \(x : Box int) case x of { box _ _ a b := b - a };
-def g : (int → int → Box int) → Box int := \(f : int → int → Box int) f 2 3;
+def f : Box Int → Int := \(x : Box Int) case x of { box _ _ a b := b - a };
+def g : (Int → Int → Box Int) → Box Int := \(f : Int → Int → Box Int) f 2 3;
 
-f (g (box Type int))
+f (g (box Type Int))

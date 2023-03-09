@@ -19,7 +19,7 @@ def g : Π A : Type, A → A := \(A : Type) \(x : A)
     h A (unbox A b);
 
 letrec[A f]
-    A : Type := int;
-    f : A → int := \(x : A) x;
+    A : Type := Int;
+    f : A → Int := \(x : A) x;
 in
-g int (f 4)
+g Int (f 4)

@@ -295,9 +295,7 @@ instance PrettyCode LetRec where
          in kwLetRec <> nss <> line <> bss <> kwSemicolon <> line <> kwIn <> line <> b'
     where
       getName :: Binder -> Sem r (Doc Ann)
-      getName i = do
-        n <- ppName KNameLocal (i ^. binderName)
-        ppWithType n (i ^. binderType)
+      getName i = ppName KNameLocal (i ^. binderName)
 
 instance PrettyCode Node where
   ppCode :: forall r. (Member (Reader Options) r) => Node -> Sem r (Doc Ann)
