@@ -321,5 +321,10 @@ tests =
       "Type synonyms"
       $(mkRelDir ".")
       $(mkRelFile "test057.jvc")
-      $(mkRelFile "out/test057.out")
+      $(mkRelFile "out/test057.out"),
+    PosTest
+      "Lifting and partial application"
+      $(mkRelDir ".")
+      $(mkRelFile "test058.jvc")
+      $(mkRelFile "out/test058.out")
   ]
