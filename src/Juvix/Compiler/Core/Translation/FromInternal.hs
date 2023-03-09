@@ -592,30 +592,12 @@ fromPatternArg ::
 fromPatternArg pa = case pa ^. Internal.patternArgName of
   Just pan -> do
     ty <- getPatternType pan
-    varsNum <- (^. indexTableVarsNum) <$> get
-    modify
-      ( over indexTableVarsNum (+ 1)
-          . over indexTableVars (HashMap.insert (pan ^. nameId) varsNum)
-      )
-    wrapAsPattern pan ty <$> subPat
-  Nothing -> do
-    modify (over indexTableVarsNum (+ 1))
-    subPat
+    subPat $ Just (pan, ty)
+  Nothing ->
+    subPat Nothing
   where
-    subPat :: Sem r Pattern
-    subPat = fromPattern (pa ^. Internal.patternArgPattern)
-
-    wrapAsPattern :: Name -> Type -> Pattern -> Pattern
-    wrapAsPattern pan ty = \case
-      PatWildcard p -> PatWildcard $ set patternWildcardBinder binder p
-      PatConstr p -> PatConstr $ set patternConstrBinder binder p
-      where
-        binder =
-          Binder
-            { _binderName = pan ^. nameText,
-              _binderLocation = Just (pan ^. nameLoc),
-              _binderType = ty
-            }
+    subPat :: Maybe (Name, Type) -> Sem r Pattern
+    subPat asPat = fromPattern asPat (pa ^. Internal.patternArgPattern)
 
     getPatternType :: Name -> Sem r Type
     getPatternType n = do
@@ -623,19 +605,28 @@ fromPatternArg pa = case pa ^. Internal.patternArgName of
       idt :: IndexTable <- get
       runReader idt (goType ty)
 
-    fromPattern :: Internal.Pattern -> Sem r Pattern
-    fromPattern = \case
+    fromPattern :: Maybe (Name, Type) -> Internal.Pattern -> Sem r Pattern
+    fromPattern asPat = \case
       Internal.PatternVariable n -> do
         ty <- getPatternType n
         varsNum <- (^. indexTableVarsNum) <$> get
-        -- `indexTableVarsNum` was already increased by `fromPatternArg` before
-        -- calling `fromPattern`
-        modify (over indexTableVars (HashMap.insert (n ^. nameId) (varsNum - 1)))
+        modify
+          ( over indexTableVarsNum (+ 1)
+              . over indexTableVars (HashMap.insert (n ^. nameId) varsNum)
+          )
+        case asPat of
+          Just (pan, _) -> modify (over indexTableVars (HashMap.insert (pan ^. nameId) varsNum))
+          _ -> return ()
         return $ PatWildcard (PatternWildcard mempty (Binder (n ^. nameText) (Just (n ^. nameLoc)) ty))
       Internal.PatternConstructorApp c -> do
+        varsNum <- (^. indexTableVarsNum) <$> get
+        case asPat of
+          Just (pan, _) -> modify (over indexTableVars (HashMap.insert (pan ^. nameId) varsNum))
+          _ -> return ()
         (indParams, _) <- InternalTyped.lookupConstructorArgTypes ctrName
         let nParams = length indParams
-        modify (over indexTableVarsNum (+ nParams))
+        -- + 1 for the as-pattern
+        modify (over indexTableVarsNum (+ (nParams + 1)))
         patternArgs <- mapM fromPatternArg params
         let indArgs = replicate nParams (wildcard mkSmallUniv)
             args = indArgs ++ patternArgs
@@ -647,7 +638,7 @@ fromPatternArg pa = case pa ^. Internal.patternArgName of
               PatConstr
                 ( PatternConstr
                     { _patternConstrInfo = setInfoName (ctrName ^. nameText) mempty,
-                      _patternConstrBinder = Binder "_" Nothing ctorTy,
+                      _patternConstrBinder = binder ctorTy,
                       _patternConstrTag = tag,
                       _patternConstrArgs = args
                     }
@@ -663,6 +654,11 @@ fromPatternArg pa = case pa ^. Internal.patternArgName of
 
           identIndex :: Text
           identIndex = mkIdentIndex (c ^. Internal.constrAppConstructor)
+
+          binder :: Type -> Binder
+          binder ctorTy = case asPat of
+            Just (pan, ty) -> Binder (pan ^. nameText) (Just (pan ^. nameLoc)) ty
+            _ -> Binder "_" Nothing ctorTy
 
           txt :: Text
           txt = c ^. Internal.constrAppConstructor . Internal.nameText
