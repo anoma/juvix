@@ -32,7 +32,7 @@ createBuiltinConstr ::
   BuiltinDataTag ->
   Text ->
   Type ->
-  Interval ->
+  Location ->
   ConstructorInfo
 createBuiltinConstr sym btag name ty i =
   let n = builtinConstrArgsNum btag
