@@ -3,6 +3,7 @@ module Asm.Compile.Base where
 import Base
 import Data.Text.IO qualified as TIO
 import Juvix.Compiler.Asm.Data.InfoTable
+import Juvix.Compiler.Asm.Error
 import Juvix.Compiler.Asm.Options
 import Juvix.Compiler.Asm.Translation.FromSource
 import Juvix.Compiler.Backend qualified as Backend
@@ -14,7 +15,9 @@ asmCompileAssertion' :: InfoTable -> Path Abs File -> Path Abs File -> (String -
 asmCompileAssertion' tab mainFile expectedFile step = do
   step "Generate C code"
   case run $ runError @JuvixError $ Pipeline.asmToMiniC asmOpts tab of
-    Left {} -> assertFailure "code generation failed"
+    Left e -> do
+      let err :: AsmError = fromJust (fromJuvixError e)
+      assertFailure ("code generation failed:" <> "\n" <> unpack (err ^. asmErrorMsg))
     Right C.MiniCResult {..} ->
       withTempDir'
         ( \dirPath -> do
