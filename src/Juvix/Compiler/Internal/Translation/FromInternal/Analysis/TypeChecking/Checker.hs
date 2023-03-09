@@ -271,10 +271,11 @@ checkFunctionClause ::
   FunctionClause ->
   Sem r FunctionClause
 checkFunctionClause clauseType FunctionClause {..} = do
-  body' <- checkClause clauseType _clausePatterns _clauseBody
+  (patterns', body') <- checkClause clauseType _clausePatterns _clauseBody
   return
     FunctionClause
       { _clauseBody = body',
+        _clausePatterns = patterns',
         ..
       }
 
@@ -288,19 +289,21 @@ checkClause ::
   [PatternArg] ->
   -- | Body
   Expression ->
-  Sem r Expression -- Checked body
+  Sem r ([PatternArg], Expression) -- (Checked patterns, Checked body)
 checkClause clauseType clausePats body = do
   locals0 <- ask
-  (localsPats, bodyTy) <- helper clausePats clauseType
+  (localsPats, (checkedPatterns, bodyType)) <- helper clausePats clauseType
   let locals' = locals0 <> localsPats
-      bodyTy' = substitutionE (localsToSubsE locals') bodyTy
-  local (const locals') (checkExpression bodyTy' body)
+      bodyTy' = substitutionE (localsToSubsE locals') bodyType
+  checkedBody <- local (const locals') (checkExpression bodyTy' body)
+  return (checkedPatterns, checkedBody)
   where
-    helper :: [PatternArg] -> Expression -> Sem r (LocalVars, Expression)
+    helper :: [PatternArg] -> Expression -> Sem r (LocalVars, ([PatternArg], Expression))
     helper pats ty = runState emptyLocalVars (go pats ty)
-    go :: [PatternArg] -> Expression -> Sem (State LocalVars ': r) Expression
+
+    go :: [PatternArg] -> Expression -> Sem (State LocalVars ': r) ([PatternArg], Expression)
     go pats bodyTy = case pats of
-      [] -> return bodyTy
+      [] -> return ([], bodyTy)
       (p : ps) -> do
         bodyTy' <- weakNormalize bodyTy
         case bodyTy' of
@@ -310,8 +313,8 @@ checkClause clauseType clausePats body = do
           _ -> case unfoldFunType bodyTy' of
             ([], _) -> error "too many patterns"
             (par : pars, ret) -> do
-              checkPattern par p
-              go ps (foldFunType pars ret)
+              par' <- checkPattern par p
+              first (par' :) <$> go ps (foldFunType pars ret)
 
 -- | Refines a hole into a function type. I.e. '_@1' is matched with '_@fresh → _@fresh'
 holeRefineToFunction :: (Members '[Inference, NameIdGen] r) => Hole -> Sem r Function
@@ -349,10 +352,10 @@ checkPattern ::
   (Members '[Reader InfoTable, Error TypeCheckerError, State LocalVars, Inference, NameIdGen, Reader FunctionsTable] r) =>
   FunctionParameter ->
   PatternArg ->
-  Sem r ()
+  Sem r PatternArg
 checkPattern = go
   where
-    go :: FunctionParameter -> PatternArg -> Sem r ()
+    go :: FunctionParameter -> PatternArg -> Sem r PatternArg
     go argTy patArg = do
       matchIsImplicit (argTy ^. paramImplicit) patArg
       tyVarMap <- fmap (ExpressionIden . IdenVar) . (^. localTyMap) <$> get
@@ -360,8 +363,8 @@ checkPattern = go
           pat = patArg ^. patternArgPattern
           name = patArg ^. patternArgName
       whenJust name (\n -> addVar n ty argTy)
-      case pat of
-        PatternVariable v -> addVar v ty argTy
+      pat' <- case pat of
+        PatternVariable v -> addVar v ty argTy $> pat
         PatternConstructorApp a -> do
           s <- checkSaturatedInductive ty
           info <- lookupConstructor (a ^. constrAppConstructor)
@@ -390,7 +393,7 @@ checkPattern = go
                 (matchTypes patternTy (ExpressionHole hole))
                 err
               let tyArgs = zipExact indParams paramHoles
-              goConstr a tyArgs
+              PatternConstructorApp <$> goConstr indName a tyArgs
             Right (ind, tyArgs) -> do
               when
                 (ind /= constrIndName)
@@ -403,21 +406,24 @@ checkPattern = go
                           }
                     )
                 )
-              goConstr a tyArgs
+              PatternConstructorApp <$> goConstr (IdenInductive ind) a tyArgs
+      return (set patternArgPattern pat' patArg)
       where
         addVar :: VarName -> Expression -> FunctionParameter -> Sem r ()
         addVar v ty argType = do
           modify (addType v ty)
           registerIden v ty
           whenJust (argType ^. paramName) (\v' -> modify (addTypeMapping v' v))
-        goConstr :: ConstructorApp -> [(InductiveParameter, Expression)] -> Sem r ()
-        goConstr app@(ConstructorApp c ps) ctx = do
+        goConstr :: Iden -> ConstructorApp -> [(InductiveParameter, Expression)] -> Sem r ConstructorApp
+        goConstr inductivename app@(ConstructorApp c ps _) ctx = do
           (_, psTys) <- constructorArgTypes <$> lookupConstructor c
           let psTys' = map (substituteIndParams ctx) psTys
               expectedNum = length psTys
-          let w = map unnamedParameter psTys'
+              w = map unnamedParameter psTys'
           when (expectedNum /= length ps) (throw (appErr app expectedNum))
-          zipWithM_ go w ps
+          pis <- zipWithM go w ps
+          let appTy = foldExplicitApplication (ExpressionIden inductivename) (map snd ctx)
+          return app {_constrAppType = Just appTy, _constrAppParameters = pis}
         appErr :: ConstructorApp -> Int -> TypeCheckerError
         appErr app expected =
           ErrArity
@@ -558,11 +564,12 @@ inferExpression' hint e = case e of
           _caseExpressionType = Just (typedCaseExpression ^. typedType)
           _caseExpressionWholeType = Just ty
           goBranch :: CaseBranch -> Sem r CaseBranch
-          goBranch b =
-            traverseOf
-              caseBranchExpression
-              (checkClause funty (pure (b ^. caseBranchPattern)))
-              b
+          goBranch b = do
+            (onePat, _caseBranchExpression) <- checkClause funty [b ^. caseBranchPattern] (b ^. caseBranchExpression)
+            let _caseBranchPattern = case onePat of
+                  [x] -> x
+                  _ -> impossible
+            return CaseBranch {..}
             where
               funty :: Expression
               funty = ExpressionFunction (mkFunction (typedCaseExpression ^. typedType) ty)
@@ -590,8 +597,8 @@ inferExpression' hint e = case e of
       where
         goClause :: Expression -> LambdaClause -> Sem r LambdaClause
         goClause ty (LambdaClause pats body) = do
-          body' <- checkClause ty (toList pats) body
-          return (LambdaClause pats body')
+          (pats', body') <- checkClause ty (toList pats) body
+          return (LambdaClause (nonEmpty' pats') body')
 
     goUniverse :: SmallUniverse -> Sem r TypedExpression
     goUniverse u =
