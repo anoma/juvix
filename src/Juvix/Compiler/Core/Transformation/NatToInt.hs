@@ -135,7 +135,7 @@ filterNatBuiltins tab =
   let tab' =
         over
           infoIdentifiers
-          (HashMap.filter (isNatBuiltin . (^. identifierBuiltin)))
+          (HashMap.filter (isNotNatBuiltin . (^. identifierBuiltin)))
           tab
    in over
         identMap
@@ -150,18 +150,10 @@ filterNatBuiltins tab =
           (HashMap.filterWithKey (\s _ -> HashMap.member s (tab' ^. infoIdentifiers)))
           tab'
   where
-    isNatBuiltin :: Maybe BuiltinFunction -> Bool
-    isNatBuiltin = \case
-      Just BuiltinNatPlus -> False
-      Just BuiltinNatSub -> False
-      Just BuiltinNatMul -> False
-      Just BuiltinNatUDiv -> False
-      Just BuiltinNatDiv -> False
-      Just BuiltinNatMod -> False
-      Just BuiltinNatLe -> False
-      Just BuiltinNatLt -> False
-      Just BuiltinNatEq -> False
-      _ -> True
+    isNotNatBuiltin :: Maybe BuiltinFunction -> Bool
+    isNotNatBuiltin = \case
+      Just b -> not (isNatBuiltin b)
+      Nothing -> True
 
 natToInt :: InfoTable -> InfoTable
 natToInt tab = filterNatBuiltins $ mapAllNodes (convertNode tab') tab'

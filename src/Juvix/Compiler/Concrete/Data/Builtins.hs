@@ -143,3 +143,19 @@ builtinTypeToPrim :: BuiltinType -> BuiltinPrim
 builtinTypeToPrim = \case
   BuiltinTypeInductive b -> BuiltinsInductive b
   BuiltinTypeAxiom b -> BuiltinsAxiom b
+
+isNatBuiltin :: BuiltinFunction -> Bool
+isNatBuiltin = \case
+  BuiltinNatPlus -> True
+  BuiltinNatSub -> True
+  BuiltinNatMul -> True
+  BuiltinNatUDiv -> True
+  BuiltinNatDiv -> True
+  BuiltinNatMod -> True
+  BuiltinNatLe -> True
+  BuiltinNatLt -> True
+  BuiltinNatEq -> True
+  _ -> False
+
+isIgnoredBuiltin :: BuiltinFunction -> Bool
+isIgnoredBuiltin = not . isNatBuiltin

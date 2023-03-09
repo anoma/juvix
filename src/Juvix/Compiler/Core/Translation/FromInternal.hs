@@ -16,6 +16,7 @@ import Juvix.Compiler.Internal.Extra qualified as Internal
 import Juvix.Compiler.Internal.Translation.Extra qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking qualified as InternalTyped
 import Juvix.Data.Loc qualified as Loc
+import Juvix.Data.PPOutput
 import Juvix.Extra.Strings qualified as Str
 
 -- Translation of a Name into the identifier index used in the Core InfoTable
@@ -286,22 +287,22 @@ goFunctionDefIden (f, sym) = do
             _identifierIsExported = False,
             _identifierBuiltin = f ^. Internal.funDefBuiltin
           }
-  registerIdent (mkIdentIndex (f ^. Internal.funDefName)) info
-  when (f ^. Internal.funDefName . Internal.nameText == Str.main) (registerMain sym)
-  return funTy
+  case f ^. Internal.funDefBuiltin of
+    Just b
+      | isIgnoredBuiltin b ->
+          return funTy
+    _ -> do
+      registerIdent (mkIdentIndex (f ^. Internal.funDefName)) info
+      when (f ^. Internal.funDefName . Internal.nameText == Str.main) (registerMain sym)
+      return funTy
   where
     normalizeBuiltinName :: Maybe BuiltinFunction -> Text -> Text
     normalizeBuiltinName blt name = case blt of
-      Just BuiltinNatPlus -> Str.natPlus
-      Just BuiltinNatSub -> Str.natSub
-      Just BuiltinNatMul -> Str.natMul
-      Just BuiltinNatDiv -> Str.natDiv
-      Just BuiltinNatMod -> Str.natMod
-      Just BuiltinNatUDiv -> Str.natUDiv
-      Just BuiltinNatLe -> Str.natLe
-      Just BuiltinNatLt -> Str.natLt
-      Just BuiltinNatEq -> Str.natEq
-      _ -> name
+      Just b | isNatBuiltin b -> show (pretty b)
+      _ -> case name of
+        ">" -> Str.natGt
+        ">=" -> Str.natGe
+        _ -> name
 
 goFunctionDef ::
   forall r.
@@ -310,7 +311,7 @@ goFunctionDef ::
   Sem r ()
 goFunctionDef ((f, sym), ty) = do
   mbody <- case f ^. Internal.funDefBuiltin of
-    Just Internal.BuiltinBoolIf -> return Nothing
+    Just b | isIgnoredBuiltin b -> return Nothing
     Just _ -> Just <$> runReader initIndexTable (mkFunBody ty f)
     Nothing -> Just <$> runReader initIndexTable (mkFunBody ty f)
   forM_ mbody (registerIdentNode sym)
