@@ -933,11 +933,12 @@ binderOrConstrPattern parseArgs varsNum vars = do
         (ci ^. constructorArgsNum /= length ps)
         (parseFailure off "wrong number of constructor arguments")
       let info = setInfoName (ci ^. constructorName) Info.empty
-      return (PatConstr (PatternConstr info tag ps mkDynamic'), (varsNum', vars'))
+      mty <- optional (kw kwColon >> expr (varsNum) vars)
+      return (PatConstr (PatternConstr info tag ps (fromMaybe mkDynamic' mty)), (varsNum', vars'))
     _ -> do
       let vars1 = HashMap.insert txt varsNum vars
       mp <- optional (binderPattern (varsNum + 1) vars1)
-      mty <- optional (kw kwColon >> expr (varsNum) vars1)
+      mty <- optional (kw kwColon >> expr (varsNum) vars)
       let ty = fromMaybe mkDynamic' mty
           (pat, (varsNum', vars')) = fromMaybe (PatWildcard (PatternWildcard Info.empty ty), (varsNum + 1, vars1)) mp
           binder = Binder txt (Just i) ty
