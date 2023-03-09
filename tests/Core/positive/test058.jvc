@@ -1,8 +1,8 @@
 -- lifting and partial application
 
-def f : (int -> int -> int) -> int := \(h : int -> int -> int) h 1 2;
-def g : int -> int := \(x : int) x;
+def f : (Int -> Int -> Int) -> Int := \(h : Int -> Int -> Int) h 1 2;
+def g : Int -> Int := \(x : Int) x;
 
-let h : int -> int -> int := \(x : int) g
+let h : Int -> Int -> Int := \(x : Int) g
 in
 f h + h 2 3
