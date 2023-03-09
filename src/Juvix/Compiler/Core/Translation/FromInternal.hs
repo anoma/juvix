@@ -619,7 +619,9 @@ fromPatternArg pa = case pa ^. Internal.patternArgName of
           _ -> return ()
         return $ PatWildcard (PatternWildcard mempty (Binder (n ^. nameText) (Just (n ^. nameLoc)) ty))
       Internal.PatternConstructorApp c -> do
-        varsNum <- (^. indexTableVarsNum) <$> get
+        idt :: IndexTable <- get
+        ctorTy <- runReader idt $ goType (fromJust (c ^. Internal.constrAppType))
+        let varsNum = idt ^. indexTableVarsNum
         case asPat of
           Just (pan, _) -> modify (over indexTableVars (HashMap.insert (pan ^. nameId) varsNum))
           _ -> return ()
@@ -631,7 +633,6 @@ fromPatternArg pa = case pa ^. Internal.patternArgName of
         let indArgs = replicate nParams (wildcard mkSmallUniv)
             args = indArgs ++ patternArgs
         m <- getIdent identIndex
-        ctorTy <- goType (fromJust (c ^. Internal.constrAppType))
         case m of
           Just (IdentConstr tag) ->
             return $
