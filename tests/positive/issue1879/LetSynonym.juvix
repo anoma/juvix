@@ -1,0 +1,13 @@
+module LetSynonym;
+  type T :=
+    | t : T;
+
+  main : T;
+  main :=
+    let
+      A : Type;
+      A := T;
+      x : A;
+      x := t;
+    in x;
+end;

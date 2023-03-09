@@ -10,5 +10,5 @@ newtype FunctionsTable = FunctionsTable
 
 makeLenses ''FunctionsTable
 
-askFunctionDef :: (Member (Reader FunctionsTable) r) => FunctionName -> Sem r (Maybe Expression)
-askFunctionDef f = asks (^. functionsTable . at f)
+askFunctionDef :: (Member (State FunctionsTable) r) => FunctionName -> Sem r (Maybe Expression)
+askFunctionDef f = gets (^. functionsTable . at f)
