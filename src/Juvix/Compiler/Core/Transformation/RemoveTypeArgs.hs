@@ -52,8 +52,7 @@ convertNode tab = convert mempty
                 NIdt (Ident {..}) ->
                   let fi = fromJust $ HashMap.lookup _identSymbol (tab ^. infoIdentifiers)
                    in fi ^. identifierType
-                NTyp {} -> h
-                _ -> unsupported h
+                _ -> unsupported node
             args' = filterArgs ty args
          in if
                 | isTypeConstr tab ty ->
