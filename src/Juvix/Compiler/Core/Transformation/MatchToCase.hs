@@ -235,8 +235,9 @@ compilePattern baseShift branchNum numPatterns = \case
   PatWildcard {} -> return (CompiledPattern [] id)
   PatBinder b -> do
     subPats <- resetCurrentNode (incBindersAbove (compilePattern baseShift branchNum numPatterns (b ^. patternBinderPattern)))
+    auxPatternsNum <- length . filter isAuxiliaryBinder <$> asks (^. compileStateCompiledPattern . compiledPatBinders)
     currentNode <- asks (^. compileStateNodeCurrent)
-    let newBinder = shiftBinder (baseShift + branchNum + numPatterns) (b ^. patternBinder)
+    let newBinder = shiftBinder (baseShift + branchNum + numPatterns + auxPatternsNum) (b ^. patternBinder)
     let compiledBinder =
           CompiledPattern
             { _compiledPatBinders = [OriginalBinder newBinder],
