@@ -82,16 +82,16 @@ lambdaLiftNode aboveBl top =
               ndefs = length defs
               binders :: [Binder]
               binders = letr ^.. letRecValues . each . letItemBinder
-          letRecBinders' :: [Binder] <- mapM (lambdaLiftBinder (BL.prependRev binders bl)) binders
+          letRecBinders' :: [Binder] <- mapM (lambdaLiftBinder bl) binders
+          topSyms :: [Symbol] <- forM defs (const freshSymbol)
           let bl' :: BinderList Binder
               bl' = BL.prependRev letRecBinders' bl
-          topSyms :: [Symbol] <- forM defs (const freshSymbol)
 
-          let topNames :: [Text]
+              topNames :: [Text]
               topNames = zipWithExact uniqueName (map (^. binderName) letRecBinders') topSyms
               topSymsWithName = zipExact topSyms topNames
 
-          let recItemsFreeVars :: [(Var, Binder)]
+              recItemsFreeVars :: [(Var, Binder)]
               recItemsFreeVars = mapMaybe helper (concatMap (freeVarsCtx' bl') defs)
                 where
                   helper :: Var -> Maybe (Var, Binder)

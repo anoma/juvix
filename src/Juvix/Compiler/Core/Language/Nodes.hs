@@ -104,6 +104,8 @@ data LetItem' a ty = LetItem
 -- body and in the values `length _letRecValues` implicit binders are introduced
 -- which hold the functions/values being defined.
 -- the last item in _letRecValues will have have index $0 in the body.
+-- The values are *not* in scope of the binders. I.e.
+-- the binders of the values cannot refer to the values
 data LetRec' i a ty = LetRec
   { _letRecInfo :: i,
     _letRecValues :: !(NonEmpty (LetItem' a ty)),
