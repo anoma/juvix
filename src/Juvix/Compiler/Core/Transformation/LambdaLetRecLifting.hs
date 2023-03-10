@@ -83,7 +83,6 @@ lambdaLiftNode aboveBl top =
           -- TODO: `lambdaLiftBinder bl` is incorrect here; it should be: bl'
           letRecBinders' :: [Binder] <- mapM (lambdaLiftBinder bl) (letr ^.. letRecValues . each . letItemBinder)
           let bl' :: BinderList Binder
-              -- the reverse is necessary because the last item in letRecBinders has index 0
               bl' = BL.prependRev letRecBinders' bl
           topSyms :: [Symbol] <- forM defs (const freshSymbol)
 
