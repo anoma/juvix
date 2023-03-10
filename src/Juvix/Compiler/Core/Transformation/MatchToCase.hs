@@ -118,12 +118,22 @@ shiftEmbedded wrappingLevel m = umapN go
 compileMatchBranch :: forall r. Members '[InfoTableBuilder] r => Indexed MatchBranch -> Sem r Node
 compileMatchBranch (Indexed branchNum br) = do
   compiledBranch <- runReader initState (combineCompiledPatterns (map (compilePattern 0 branchNum patternsNum) patterns))
-  return (mkShiftedLambdas branchNum (patternType <$> patterns) ((compiledBranch ^. compiledPatMkNode) (wrapBody (compiledBranch ^. compiledPatBinders))))
+  return (mkShiftedLambdas branchNum shiftedPatternTypes ((compiledBranch ^. compiledPatMkNode) (wrapBody (compiledBranch ^. compiledPatBinders))))
   where
     patterns :: [Pattern]
     patterns = toList (br ^. matchBranchPatterns)
 
+    patternsNum :: Int
     patternsNum = length patterns
+
+    patternBindersNumList :: [Int]
+    patternBindersNumList = map (length . getPatternBinders) patterns
+
+    accumPatternBindersNum :: [Int]
+    accumPatternBindersNum = init (scanl (+) 0 patternBindersNumList)
+
+    shiftedPatternTypes :: [Type]
+    shiftedPatternTypes = [shift (-n) b | (n, b) <- zipExact accumPatternBindersNum (map patternType patterns)]
 
     wrapBody :: [CompiledBinder] -> Node
     wrapBody binders = foldr (uncurry (mkLet mempty)) shiftedBody vars
@@ -135,7 +145,7 @@ compileMatchBranch (Indexed branchNum br) = do
         auxiliaryBindersNum = length (filter isAuxiliaryBinder binders)
 
         patternBindersNum' :: Int
-        patternBindersNum' = length (concatMap getPatternBinders patterns)
+        patternBindersNum' = sum patternBindersNumList
 
         shiftedBody :: Node
         shiftedBody =
@@ -226,7 +236,6 @@ compilePattern baseShift branchNum numPatterns = \case
   PatBinder b -> do
     subPats <- resetCurrentNode (incBindersAbove (compilePattern baseShift branchNum numPatterns (b ^. patternBinderPattern)))
     currentNode <- asks (^. compileStateNodeCurrent)
-
     let newBinder = shiftBinder (baseShift + branchNum + numPatterns) (b ^. patternBinder)
     let compiledBinder =
           CompiledPattern
