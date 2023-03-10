@@ -77,11 +77,12 @@ lambdaLiftNode aboveBl top =
         goLetRec :: LetRec -> Sem r Recur
         goLetRec letr = do
           let defs :: [Node]
-              defs = toList (letr ^.. letRecValues . each . letItemValue)
+              defs = letr ^.. letRecValues . each . letItemValue
               ndefs :: Int
               ndefs = length defs
-          -- TODO: `lambdaLiftBinder bl` is incorrect here; it should be: bl'
-          letRecBinders' :: [Binder] <- mapM (lambdaLiftBinder bl) (letr ^.. letRecValues . each . letItemBinder)
+              binders :: [Binder]
+              binders = letr ^.. letRecValues . each . letItemBinder
+          letRecBinders' :: [Binder] <- mapM (lambdaLiftBinder (BL.prependRev binders bl)) binders
           let bl' :: BinderList Binder
               bl' = BL.prependRev letRecBinders' bl
           topSyms :: [Symbol] <- forM defs (const freshSymbol)
