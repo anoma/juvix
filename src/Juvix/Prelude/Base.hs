@@ -384,9 +384,6 @@ nubHashable = HashSet.toList . HashSet.fromList
 allElements :: (Bounded a, Enum a) => [a]
 allElements = [minBound .. maxBound]
 
-readerState :: forall a r x. (Member (State a) r) => Sem (Reader a ': r) x -> Sem r x
-readerState m = get >>= (`runReader` m)
-
 infixr 3 .&&.
 
 (.&&.) :: (a -> Bool) -> (a -> Bool) -> a -> Bool

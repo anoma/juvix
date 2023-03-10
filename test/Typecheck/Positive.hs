@@ -205,7 +205,11 @@ tests =
     posTest
       "Let shadowing"
       $(mkRelDir ".")
-      $(mkRelFile "LetShadow.juvix")
+      $(mkRelFile "LetShadow.juvix"),
+    posTest
+      "Type synonym inside let"
+      $(mkRelDir "issue1879")
+      $(mkRelFile "LetSynonym.juvix")
   ]
     <> [ compilationTest t | t <- Compilation.tests, t ^. Compilation.name /= "Self-application"
        ]

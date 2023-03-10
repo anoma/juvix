@@ -55,7 +55,7 @@ typeCheckExpressionType ::
 typeCheckExpressionType InternalTypedResult {..} exp =
   mapError (JuvixError @TypeCheckerError)
     $ do
-      runReader _resultFunctions
+      evalState _resultFunctions
       . evalState _resultIdenTypes
       . runReader table
       . ignoreOutput @Example

@@ -336,10 +336,21 @@ ppCodeAtom c = do
   p' <- ppCode c
   return $ if isAtomic c then p' else parens p'
 
+instance PrettyCode a => PrettyCode (Maybe a) where
+  ppCode = \case
+    Nothing -> return "Nothing"
+    Just p -> ("Nothing" <+>) <$> ppCode p
+
+instance (PrettyCode a, PrettyCode b) => PrettyCode (a, b) where
+  ppCode (x, y) = do
+    x' <- ppCode x
+    y' <- ppCode y
+    return $ encloseSep "(" ")" ", " [x', y']
+
 instance (PrettyCode a) => PrettyCode [a] where
   ppCode x = do
     cs <- mapM ppCode (toList x)
-    return $ encloseSep "(" ")" ", " cs
+    return $ encloseSep "[" "]" ", " cs
 
 instance (PrettyCode a) => PrettyCode (NonEmpty a) where
   ppCode x = ppCode (toList x)
