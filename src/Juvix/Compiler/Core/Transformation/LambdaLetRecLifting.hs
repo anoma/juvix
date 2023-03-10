@@ -113,7 +113,7 @@ lambdaLiftNode aboveBl top =
           -- lambda lifting. This is a tradeoff. We have slower compilation but
           -- slightly faster execution time, since it minimizes the number of
           -- free variables that need to be passed around.
-          liftedDefs <- mapM (lambdaLiftNode bl . subsCalls) defs
+          liftedDefs <- mapM (lambdaLiftNode bl' . subsCalls) defs
           body' <- lambdaLiftNode bl' (letr ^. letRecBody)
           let declareTopSyms :: Sem r ()
               declareTopSyms =
