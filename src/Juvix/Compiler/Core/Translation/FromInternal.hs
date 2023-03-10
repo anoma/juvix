@@ -441,6 +441,7 @@ goLambda l = do
   ty <- goType (fromJust (l ^. Internal.lambdaType))
   mkBody ty (fmap (\c -> (toList (c ^. Internal.lambdaPatterns), c ^. Internal.lambdaBody)) (l ^. Internal.lambdaClauses))
 
+
 goLet ::
   forall r.
   (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable] r) =>
@@ -450,7 +451,7 @@ goLet l = do
   vars <- asks (^. indexTableVars)
   varsNum <- asks (^. indexTableVarsNum)
   let bs :: [Name]
-      bs = map (\(Internal.LetFunDef (Internal.FunctionDef {..})) -> _funDefName) (toList $ l ^. Internal.letClauses)
+      bs = map (\(Internal.LetFunDef Internal.FunctionDef {..}) -> _funDefName) (toList $ l ^. Internal.letClauses)
       (vars', varsNum') =
         foldl'
           ( \(vs, k) name ->
@@ -458,25 +459,28 @@ goLet l = do
           )
           (vars, varsNum)
           bs
-  (defs, value) <-
-    local
-      (set indexTableVars vars' . set indexTableVarsNum varsNum')
-      ( do
-          a <- mapM goLetClause (l ^. Internal.letClauses)
-          b <- goExpression (l ^. Internal.letExpression)
-          return (a, b)
-      )
+  (defs, value) <- do
+          values <- mapM (\(Internal.LetFunDef f) -> do
+              funTy <- goType (f ^. Internal.funDefType)
+
+              funBody <- local (set indexTableVars vars' . set indexTableVarsNum varsNum') (mkFunBody funTy f)
+              return (funTy, funBody))
+                    (l ^. Internal.letClauses)
+
+          lbody <- local
+                (set indexTableVars vars' . set indexTableVarsNum varsNum') (goExpression (l ^. Internal.letExpression))
+          return (values, lbody)
   return $ mkLetRec' defs value
 
-goLetClause ::
-  forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable] r) =>
-  Internal.LetClause ->
-  Sem r (Type, Node)
-goLetClause (Internal.LetFunDef f) = do
-  funTy <- goType (f ^. Internal.funDefType)
-  funBody <- mkFunBody funTy f
-  return (funTy, funBody)
+-- goLetRecClause ::
+--   forall r.
+--   (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable] r) =>
+--   Internal.LetClause ->
+--   Sem r (Type, Node)
+-- goLetRecClause (Internal.LetFunDef f) = do
+--   funTy <-
+--   funBody <-
+--   return (funTy, funBody)
 
 goAxiomInductive ::
   forall r.

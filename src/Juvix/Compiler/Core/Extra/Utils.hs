@@ -145,14 +145,15 @@ freeVarsCtx ctx =
       Set Var ->
       Sem '[Output Var] ()
     go fv = case Set.minView fv of
-      Nothing -> return ()
-      Just (v, vs) -> do
-        output v
-        let idx = v ^. varIndex
-            bi = BL.lookup idx ctx
-            freevarsbi' :: Set Var
-            freevarsbi' = Set.mapMonotonic (over varIndex (+ (idx + 1))) (freeVarsSorted (bi ^. binderType))
-        go (freevarsbi' <> vs)
+        Nothing -> return ()
+        Just (v, vs) -> do
+          output v
+          let idx = v ^. varIndex
+              bi :: Binder = BL.lookup idx ctx
+              fbi = freeVarsSorted (bi ^. binderType)
+              freevarsbi' :: Set Var
+              freevarsbi' = Set.mapMonotonic (over varIndex (+ (idx + 1))) fbi
+          go (freevarsbi' <> vs)
 
 -- | subst for multiple bindings
 substs :: [Node] -> Node -> Node
