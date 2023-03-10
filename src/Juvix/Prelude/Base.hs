@@ -70,6 +70,7 @@ module Juvix.Prelude.Base
     pack,
     unpack,
     strip,
+    assert,
     HashMap,
     ByteString,
     HashSet,
@@ -140,6 +141,7 @@ import Data.Tuple.Extra
 import Data.Typeable hiding (TyCon)
 import Data.Void
 import Data.Word
+import GHC.Base (assert)
 import GHC.Enum
 import GHC.Err qualified as Err
 import GHC.Generics (Generic)

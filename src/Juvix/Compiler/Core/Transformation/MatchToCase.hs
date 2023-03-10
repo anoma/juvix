@@ -9,8 +9,6 @@ import Juvix.Compiler.Core.Transformation.Base
 
 data PatternRow = PatternRow
   { _patternRowPatterns :: [Pattern],
-    -- | The number of binders in `_patternRowPatterns`
-    _patternRowBindersNum :: Int,
     _patternRowBody :: Node
   }
 
@@ -22,32 +20,29 @@ type PatternMatrix = [PatternRow]
 -- `Case` nodes. The algorithm is based on the paper: Luc Maranget, "Compiling
 -- Pattern Matching to Good Decision Trees", ML'08.
 matchToCase :: InfoTable -> InfoTable
-matchToCase tab = mapAllNodes (convert [] 0) tab
+matchToCase tab = mapAllNodes (convert mempty 0) tab
   where
-    -- See the comments above `compile` for the explanation of `levels` and
-    -- `bl`.
-    convert :: [Level] -> Level -> Node -> Node
-    convert levels bl node = dmapCNR' (bl, go) levels node
+    convert :: HashMap Level Level -> Level -> Node -> Node
+    convert levelMap bl node = dmapCNR' (bl, go) levelMap node
 
-    go :: [Level] -> Level -> Node -> Recur' [Level]
-    go levels bl = \case
+    go :: HashMap Level Level -> Level -> Node -> Recur' (HashMap Level Level)
+    go levelMap bl = \case
       NVar (Var {..}) ->
-        End' (mkVar _varInfo (adjustIndex levels bl _varIndex))
+        End' (mkVar _varInfo (adjustIndex levelMap bl _varIndex))
       NMatch (Match {..}) ->
         End' $
           snd $
             foldr
-              ( \(val, valty) (k, node) ->
-                  let levels' = replicate k bl ++ levels
-                   in ( k - 1,
-                        mkLet'
-                          (convert levels' bl valty)
-                          (convert levels' bl val)
-                          node
-                      )
+              ( \(val, valty) (blo, node) ->
+                  ( blo - 1,
+                    mkLet'
+                      (shift (blo - bl) (convert levelMap bl valty))
+                      (shift (blo - bl) (convert levelMap bl val))
+                      node
+                  )
               )
-              ( n - 1,
-                compile err (replicate n bl ++ levels) bl [0 .. n - 1] matrix
+              ( bl + n - 1,
+                compile err levelMap bl (bl + n) [bl .. bl + n - 1] matrix
               )
               (zipExact (toList _matchValues) (toList _matchValueTypes))
         where
@@ -55,13 +50,12 @@ matchToCase tab = mapAllNodes (convert [] 0) tab
           err = hsep . take n
           matrix = map matchBranchToPatternRow _matchBranches
       node ->
-        Recur' (levels, node)
+        Recur' (levelMap, node)
 
     matchBranchToPatternRow :: MatchBranch -> PatternRow
     matchBranchToPatternRow MatchBranch {..} =
       PatternRow
         { _patternRowPatterns = toList _matchBranchPatterns,
-          _patternRowBindersNum = length (concatMap getPatternBinders _matchBranchPatterns),
           _patternRowBody = _matchBranchBody
         }
 
@@ -69,28 +63,40 @@ matchToCase tab = mapAllNodes (convert [] 0) tab
     --  - `err` creates a textual representation of an unmatched pattern
     --    sequence, given as arguments the representations of patterns for the
     --    holes (corresponding to the matched values `vs`)
-    --  - `levels` is the list of de Bruijn levels (w.r.t. the input node) at
-    --    which binders are inserted in the output node
-    --  - `bl` is the current de Bruijn level
-    --  - `vs` are the de Bruijn indices of the values matched on, w.r.t. the
+    --  - `levelMap` maps input de Bruijn levels to output de Bruijn levels
+    --  - `bli` is the current de Bruijn level in the input node
+    --  - `blo` is the current de Bruijn level in the output node
+    --  - `vs` are the de Bruijn levels of the values matched on, w.r.t. the
     --    output node
     --  - `matrix` is the pattern matching matrix
-    compile :: ([Doc Ann] -> Doc Ann) -> [Level] -> Level -> [Index] -> PatternMatrix -> Node
-    compile err levels bl vs matrix = case matrix of
+    --
+    -- Hence, `blo - bli` is the number of extra binders inserted in the output
+    -- node, in comparison to the current position in the input node.
+    compile :: ([Doc Ann] -> Doc Ann) -> HashMap Level Level -> Level -> Level -> [Level] -> PatternMatrix -> Node
+    compile err levelMap bli blo vs matrix = case matrix of
       [] ->
+        -- The matrix has no rows -- matching fails (Section 4, case 1).
         error $ show $ ppOutput $ err (repeat "_")
       r@PatternRow {..} : _
-        | not (any isPatConstr _patternRowPatterns) ->
-            -- The first row matches all values
-            compileMatchingRow levels bl vs r
+        | all isPatWildcard _patternRowPatterns ->
+            -- The first row matches all values (Section 4, case 2)
+            compileMatchingRow levelMap bli blo vs r
       _ ->
+        -- Section 4, case 3
+        -- Select the first column
         let (col, matrix') = decompose matrix
-            val = mkVar' (List.head vs)
             tags = toList (getPatTags col)
+            vl = List.head vs
+            vs' = List.tail vs
+            val = mkVar' (getBinderIndex blo vl)
+            levelMap' = HashMap.insert bli vl levelMap
+            bli' = bli + 1
          in if
                 | null tags ->
-                    compileDefault err levels bl vs col matrix'
+                    -- There are no constructors
+                    compileDefault err levelMap' bli' blo vs' col matrix'
                 | otherwise ->
+                    -- Section 4, case 3(a)
                     let ind = fromJust (HashMap.lookup (List.head tags) (tab ^. infoConstructors)) ^. constructorInductive
                         ctrsNum = length (fromJust (HashMap.lookup ind (tab ^. infoInductives)) ^. inductiveConstructors)
                      in NCase
@@ -98,18 +104,30 @@ matchToCase tab = mapAllNodes (convert [] 0) tab
                             { _caseInfo = mempty,
                               _caseInductive = ind,
                               _caseValue = val,
-                              _caseBranches = map (compileBranch err levels bl vs col matrix') tags,
+                              _caseBranches = map (compileBranch err levelMap' bli' blo vs' col matrix') tags,
                               _caseDefault =
                                 if
                                     | length tags == ctrsNum ->
                                         Nothing
                                     | otherwise ->
-                                        Just $ compileDefault err levels bl vs col matrix'
+                                        Just $ compileDefault err levelMap' bli' blo vs' col matrix'
                             }
 
-    adjustIndex :: [Level] -> Level -> Index -> Index
-    adjustIndex levels bl idx =
-      idx + length (filter (\x -> x >= bl - idx) levels)
+    adjustIndex :: HashMap Level Level -> Level -> Index -> Index
+    adjustIndex levelMap bl idx =
+      case HashMap.lookup (getBinderLevel bl idx) levelMap of
+        Nothing -> idx
+        Just lvl -> getBinderIndex bl lvl
+
+    updateLevelMap :: HashMap Level Level -> Level -> [Level] -> HashMap Level Level
+    updateLevelMap levelMap bli vs =
+      snd $
+        foldl'
+          ( \(bl, mp) vl ->
+              (bl + 1, HashMap.insert bl vl mp)
+          )
+          (bli, levelMap)
+          vs
 
     -- The `_patternRowBindersNum` field of the resulting matrix is not
     -- adjusted.
@@ -128,34 +146,25 @@ matchToCase tab = mapAllNodes (convert [] 0) tab
       _ : pats ->
         getPatTags pats
 
-    compileMatchingRow :: [Level] -> Level -> [Index] -> PatternRow -> Node
-    compileMatchingRow levels bl vs PatternRow {..} =
-      snd $
-        foldr
-          ( \(pat, vi) (n, node) -> case pat of
-              PatWildcard PatternWildcard {..} ->
-                ( n - 1,
-                  mkLet'
-                    (convert levels (bl + n) (_patternWildcardBinder ^. binderType))
-                    (mkVar' (vi + n))
-                    node
-                )
-              _ ->
-                (n, node)
-          )
-          (_patternRowBindersNum - 1, body)
-          (reverse (zipExact _patternRowPatterns vs))
+    compileMatchingRow :: HashMap Level Level -> Level -> Level -> [Level] -> PatternRow -> Node
+    compileMatchingRow levelMap bli blo vs PatternRow {..} =
+      assert (length _patternRowPatterns == length vs) $
+        assert (bli == blo - length vs) $
+          convert levelMap' blo _patternRowBody
       where
-        body = convert levels (bl + _patternRowBindersNum) _patternRowBody
+        levelMap' = updateLevelMap levelMap bli vs
 
-    compileBranch :: ([Doc Ann] -> Doc Ann) -> [Level] -> Level -> [Index] -> [Pattern] -> PatternMatrix -> Tag -> CaseBranch
-    compileBranch err levels bl vs col matrix tag =
+    -- `compileBranch` computes S(c, M) where `c = Constr tag` and `M =
+    -- col:matrix`, as described in Section 2, Figure 1 in the paper. Then it
+    -- continues compilation with the new matrix.
+    compileBranch :: ([Doc Ann] -> Doc Ann) -> HashMap Level Level -> Level -> Level -> [Level] -> [Pattern] -> PatternMatrix -> Tag -> CaseBranch
+    compileBranch err levelMap bli blo vs col matrix tag =
       CaseBranch
         { _caseBranchInfo = mempty,
           _caseBranchTag = tag,
           _caseBranchBinders = map mkBinder' argtys,
           _caseBranchBindersNum = argsNum,
-          _caseBranchBody = compile err' levels' bl vs' matrix'
+          _caseBranchBody = compile err' levelMap' bli blo' (vs' ++ vs) matrix'
         }
       where
         argtys = typeArgs $ fromJust (HashMap.lookup tag (tab ^. infoConstructors)) ^. constructorType
@@ -177,11 +186,28 @@ matchToCase tab = mapAllNodes (convert [] 0) tab
               )
               col
               matrix
-        levels' = replicate argsNum bl ++ levels
-        vs' = [0 .. argsNum - 1] ++ map (argsNum +) (List.tail vs)
+        vs' = [blo .. blo + argsNum - 1]
+        levelMap' = updateLevelMap levelMap bli vs'
+        blo' = blo + argsNum
         err' args =
           err
             (parens (foldl' (<+>) (doc defaultOptions tag) (take argsNum args)) : drop argsNum args)
 
-    compileDefault :: ([Doc Ann] -> Doc Ann) -> [Level] -> Level -> [Index] -> [Pattern] -> PatternMatrix -> Node
-    compileDefault = impossible
+    -- `compileDefault` computes D(M) where `M = col:matrix`, as described in
+    -- Section 2, Figure 1 in the paper. Then it continues compilation with the
+    -- new matrix.
+    compileDefault :: ([Doc Ann] -> Doc Ann) -> HashMap Level Level -> Level -> Level -> [Level] -> [Pattern] -> PatternMatrix -> Node
+    compileDefault err levelMap bli blo vs col matrix =
+      compile err' levelMap bli blo vs matrix'
+      where
+        matrix' =
+          catMaybes $
+            zipWithExact
+              ( \pat row ->
+                  case pat of
+                    PatWildcard {} -> Just row
+                    _ -> Nothing
+              )
+              col
+              matrix
+        err' args = err ("_" : args)
