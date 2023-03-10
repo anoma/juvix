@@ -76,7 +76,7 @@ matchToCase tab = mapAllNodes (convert mempty 0) tab
     compile err levelMap bli blo vs matrix = case matrix of
       [] ->
         -- The matrix has no rows -- matching fails (Section 4, case 1).
-        error $ show $ ppOutput $ err (repeat "_")
+        error $ "Pattern matching not exhaustive. Example pattern sequence not matched: " <> show (ppOutput $ err (repeat "_"))
       r@PatternRow {..} : _
         | all isPatWildcard _patternRowPatterns ->
             -- The first row matches all values (Section 4, case 2)
