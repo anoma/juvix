@@ -6,13 +6,15 @@ import Evaluator
 import Juvix.Compiler.Core.Data.InfoTable
 import Juvix.Compiler.Core.Pretty qualified as Core
 import Juvix.Compiler.Core.Transformation qualified as Core
+import Juvix.Compiler.Core.Transformation.DisambiguateNames (disambiguateNames)
 import Juvix.Compiler.Core.Translation
 
 runCommand :: forall r. Members '[Embed IO, App] r => CoreFromConcreteOptions -> Sem r ()
 runCommand localOpts = do
   tab <- (^. coreResultTable) <$> runPipeline (localOpts ^. coreFromConcreteInputFile) upToCore
   path :: Path Abs File <- someBaseToAbs' (localOpts ^. coreFromConcreteInputFile . pathPath)
-  let tab' :: InfoTable = Core.applyTransformations (project localOpts ^. coreFromConcreteTransformations) tab
+  let tab0 :: InfoTable = Core.applyTransformations (project localOpts ^. coreFromConcreteTransformations) tab
+      tab' :: InfoTable = if localOpts ^. coreFromConcreteNoDisambiguate then tab0 else disambiguateNames tab0
 
       inInputModule :: IdentifierInfo -> Bool
       inInputModule x
