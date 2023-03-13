@@ -7,32 +7,36 @@ import Juvix.Compiler.Core.Extra.Recursors.Parameters
 
 {-
 
-The mapping recursors come in two major variants: dmap and umap. They map each
-subterm of a given term. The invocation `dmap f t` goes through the node `t`
-top-down, applying the function `f` to `t` first, and then recursively
-descending into the children of `f t`. The invocation `umap f t` goes through
-the term `t` bottom-up, first recursively descending into the children of `t`
-and mapping them with `umap f`, then reassembling `t` with the mapped children
-into `t'`, and finally applying `f` to `t'`.
+The mapping recursors come in three major variants: dmap, umap and rmap. They
+map each subterm of a given term.
 
-The suffixes of `dmap` and `umap` indicate the exact form of the mapping
+1. `dmap f t` goes through the node `t` top-down, applying the function `f` to
+`t` first, and then recursively descending into the children of `f t`.
+
+2. `umap f t` goes through the term `t` bottom-up, first recursively descending
+into the children of `t` and mapping them with `umap f`, then reassembling `t`
+with the mapped children into `t'`, and finally applying `f` to `t'`.
+
+3. `rmap f t`: see Recursors.RMap.Named.
+
+The suffixes of `dmap`, `umap` and `rmap` indicate the exact form of the mapping
 function `f`, what arguments are provided to it and how its return value is
 interpreted.
 
-\* M: Monadic version. The return value of the mapping function `f` is wrapped in
+- M: Monadic version. The return value of the mapping function `f` is wrapped in
   a monad.
-\* L: The function `f` receives as an argument the list of binders upwards in the
+- L: The function `f` receives as an argument the list of binders upwards in the
   term. The n-th element of the binder list corresponds to the free variable of
   the current subterm with de Bruijn index n.
-\* N: The function `f` receives as an argument the number of binders upwards in
+- N: The function `f` receives as an argument the number of binders upwards in
   the term, i.e., the current de Bruijn level.
-\* ': When combined with L or N, makes it possible to supply the initial binder
+- ': When combined with L or N, makes it possible to supply the initial binder
   list or de Bruijn level. This is useful when mapping a subterm with free
   variables.
-\* R: The function `f` returns an element of the `Recur` (or `Recur'`) datatype,
+- R: The function `f` returns an element of the `Recur` (or `Recur'`) datatype,
   indicating whether `dmap` should descend into the children or stop the
   traversal.
-\* C: Enables collecting an arbitrary value while going downward in the term tree
+- C: Enables collecting an arbitrary value while going downward in the term tree
   with `dmap`. The initial value is provided to `dmap`. The function `f`
   receives as an argument the current collected value and returns the value for
   the children, in addition to the new node.
