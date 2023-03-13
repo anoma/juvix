@@ -184,16 +184,6 @@ substDrop args argtys =
   where
     k = length args
 
--- | reduce all beta redexes present in a term and the ones created immediately
--- downwards (i.e., a "beta-development")
-developBeta :: Node -> Node
-developBeta = umap go
-  where
-    go :: Node -> Node
-    go n = case n of
-      NApp (App _ (NLam (Lambda {..})) arg) -> subst arg _lambdaBody
-      _ -> n
-
 etaExpand :: [Type] -> Node -> Node
 etaExpand [] n = n
 etaExpand argtys n =
