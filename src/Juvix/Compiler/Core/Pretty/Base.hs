@@ -444,11 +444,19 @@ instance PrettyCode Stripped.ArgumentInfo where
     ty <- ppCode _argumentType
     return $ name <+> colon <+> ty
 
+instance PrettyCode Stripped.ConstructorInfo where
+  ppCode :: (Member (Reader Options) r) => Stripped.ConstructorInfo -> Sem r (Doc Ann)
+  ppCode ci = do
+    name <- ppName KNameConstructor (ci ^. Stripped.constructorName)
+    ty <- ppCode (ci ^. Stripped.constructorType)
+    return $ name <+> colon <+> ty
+
 instance PrettyCode Stripped.InfoTable where
   ppCode :: forall r. (Member (Reader Options) r) => Stripped.InfoTable -> Sem r (Doc Ann)
   ppCode tbl = do
+    inds' <- ppInductives (HashMap.elems (tbl ^. Stripped.infoInductives))
     ctx' <- ppFunctions (tbl ^. Stripped.infoFunctions)
-    return ("-- Functions" <> line <> ctx' <> line)
+    return ("-- Types" <> line <> inds' <> line <> "-- Functions" <> line <> ctx' <> line)
     where
       ppFunctions :: HashMap Symbol Stripped.FunctionInfo -> Sem r (Doc Ann)
       ppFunctions ctx = do
@@ -461,6 +469,17 @@ instance PrettyCode Stripped.InfoTable where
             args <- mapM ppCode (fi ^. Stripped.functionArgsInfo)
             body' <- ppCode (fi ^. Stripped.functionBody)
             return (kwDef <+> sym' <> encloseSep lparen rparen ", " args <+> kwAssign <+> body')
+
+      ppInductives :: [Stripped.InductiveInfo] -> Sem r (Doc Ann)
+      ppInductives inds = do
+        inds' <- mapM ppInductive inds
+        return (vsep inds')
+        where
+          ppInductive :: Stripped.InductiveInfo -> Sem r (Doc Ann)
+          ppInductive ii = do
+            name <- ppName KNameInductive (ii ^. Stripped.inductiveName)
+            ctrs <- mapM (fmap (<> semi) . ppCode) (ii ^. Stripped.inductiveConstructors)
+            return (kwInductive <+> name <+> braces (line <> indent' (vsep ctrs) <> line))
 
 instance (PrettyCode a) => PrettyCode (NonEmpty a) where
   ppCode x = ppCode (toList x)

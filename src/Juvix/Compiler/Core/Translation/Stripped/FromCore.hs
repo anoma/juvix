@@ -22,9 +22,12 @@ fromCore tab =
     tab' =
       tab
         { _infoIdentifiers = HashMap.filter (\ii -> isNothing (ii ^. identifierBuiltin)) (tab ^. infoIdentifiers),
-          _infoInductives = HashMap.filter (\ii -> isNothing (ii ^. inductiveBuiltin)) (tab ^. infoInductives),
+          _infoInductives = HashMap.filter (\ii -> isNothing (ii ^. inductiveBuiltin) || isIO (ii ^. inductiveBuiltin)) (tab ^. infoInductives),
           _infoConstructors = HashMap.filter (\ci -> isNothing (ci ^. constructorBuiltin)) (tab ^. infoConstructors)
         }
+    isIO :: Maybe BuiltinType -> Bool
+    isIO (Just (BuiltinTypeAxiom BuiltinIO)) = True
+    isIO _ = False
 
 translateFunctionInfo :: InfoTable -> IdentifierInfo -> Stripped.FunctionInfo
 translateFunctionInfo tab IdentifierInfo {..} =
