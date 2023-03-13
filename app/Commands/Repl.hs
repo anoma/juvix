@@ -175,7 +175,7 @@ runCommand opts = do
             where
               eval :: Core.Node -> Repl (Either JuvixError Core.Node)
               eval n =
-                let (tab', n') = runTransformations (opts ^. replTransformations) infoTable n
+                let (tab', n') = runTransformations (Core.toEvalTransformations ++ opts ^. replTransformations) infoTable n
                  in liftIO $
                       mapLeft
                         (JuvixError @Core.CoreError)
