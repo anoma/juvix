@@ -476,16 +476,6 @@ goLet l = do
     return (values, lbody)
   return $ mkLetRec' defs value
 
--- goLetRecClause ::
---   forall r.
---   (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable] r) =>
---   Internal.LetClause ->
---   Sem r (Type, Node)
--- goLetRecClause (Internal.LetFunDef f) = do
---   funTy <-
---   funBody <-
---   return (funTy, funBody)
-
 goAxiomInductive ::
   forall r.
   (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable] r) =>
