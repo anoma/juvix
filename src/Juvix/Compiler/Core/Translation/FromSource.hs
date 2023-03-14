@@ -668,13 +668,14 @@ exprLetrecOne ::
 exprLetrecOne varsNum vars = do
   kw kwLetRec
   (name, loc) <- parseLocalName
+  mty <- optional (kw kwColon >> expr varsNum vars)
   kw kwAssign
   let vars' = HashMap.insert name varsNum vars
   value <- bracedExpr (varsNum + 1) vars'
   kw kwIn
   body <- bracedExpr (varsNum + 1) vars'
   let item :: LetItem
-      item = LetItem (Binder name (Just loc) mkDynamic') value
+      item = LetItem (Binder name (Just loc) (fromMaybe mkDynamic' mty)) value
   return $ mkLetRec mempty (pure item) body
 
 exprLetrecMany ::
@@ -688,7 +689,7 @@ exprLetrecMany varsNum vars = do
   when (null defNames) $
     parseFailure off "expected at least one identifier name in letrec signature"
   let (vars', varsNum') = foldl' (\(vs, k) txt -> (HashMap.insert txt k vs, k + 1)) (vars, varsNum) defNames
-  defs <- letrecDefs defNames varsNum' vars'
+  defs <- letrecDefs defNames varsNum vars varsNum' vars'
   kw kwIn
   body <- bracedExpr varsNum' vars'
   return $ mkLetRec mempty defs body
@@ -702,14 +703,16 @@ letrecDefs ::
   NonEmpty Text ->
   Index ->
   HashMap Text Level ->
+  Index ->
+  HashMap Text Level ->
   ParsecS r (NonEmpty LetItem)
-letrecDefs names varsNum vars = forM names letrecItem
+letrecDefs names varsNum0 vars0 varsNum vars = forM names letrecItem
   where
     letrecItem :: Text -> ParsecS r LetItem
     letrecItem n = do
       off <- P.getOffset
       (txt, i) <- identifierL
-      mty <- optional (typeAnnot varsNum vars)
+      mty <- optional (typeAnnot varsNum0 vars0)
       when (n /= txt) $
         parseFailure off "identifier name doesn't match letrec signature"
       kw kwAssign
