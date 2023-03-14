@@ -22,8 +22,6 @@ extra-source-files:
 - juvix-stdlib/**/*.juvix
 - runtime/include/**/*.h
 - runtime/**/*.a
-- c-runtime/**/*.h
-- c-runtime/walloc/walloc.c
 
 dependencies:
 - aeson == 2.0.*
