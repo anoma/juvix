@@ -587,8 +587,7 @@ exprPi ::
 exprPi varsNum vars = do
   kw kwPi
   (name, loc) <- parseLocalName
-  kw kwColon
-  ty <- expr varsNum vars
+  ty <- typeAnnot varsNum vars
   kw kwComma
   let vars' = HashMap.insert name varsNum vars
       bi = Binder name (Just loc) ty
@@ -612,8 +611,7 @@ exprLambda varsNum vars = do
       parens
         ( do
             n <- parseLocalName
-            kw kwColon
-            ty <- expr varsNum vars
+            ty <- typeAnnot varsNum vars
             return (n, Just ty)
         )
         <|> (\n -> (n, Nothing)) <$> parseLocalName
@@ -667,7 +665,7 @@ letrecDefs names varsNum vars = forM names letrecItem
     letrecItem n = do
       off <- P.getOffset
       (txt, i) <- identifierL
-      mty <- optional (kw kwColon >> expr varsNum vars)
+      mty <- optional (typeAnnot varsNum vars)
       when (n /= txt) $
         parseFailure off "identifier name doesn't match letrec signature"
       kw kwAssign
@@ -695,7 +693,7 @@ exprLet ::
 exprLet varsNum vars = do
   kw kwLet
   (name, loc) <- parseLocalName
-  mty <- optional (kw kwColon >> expr varsNum vars)
+  mty <- optional (typeAnnot varsNum vars)
   kw kwAssign
   value <- bracedExpr varsNum vars
   kw kwIn
@@ -847,7 +845,7 @@ exprMatchValue' ::
   ParsecS r (Node, Type)
 exprMatchValue' varsNum vars = do
   val <- expr varsNum vars
-  mty <- optional (kw kwColon >> expr varsNum vars)
+  mty <- optional (typeAnnot varsNum vars)
   return (val, fromMaybe mkDynamic' mty)
 
 exprMatch' ::
@@ -933,12 +931,12 @@ binderOrConstrPattern parseArgs varsNum vars = do
         (ci ^. constructorArgsNum /= length ps)
         (parseFailure off "wrong number of constructor arguments")
       let info = setInfoName (ci ^. constructorName) Info.empty
-      mty <- optional (kw kwColon >> expr (varsNum) vars)
+      mty <- optional (typeAnnot varsNum vars)
       return (PatConstr (PatternConstr info tag ps (fromMaybe mkDynamic' mty)), (varsNum', vars'))
     _ -> do
       let vars1 = HashMap.insert txt varsNum vars
       mp <- optional (binderPattern (varsNum + 1) vars1)
-      mty <- optional (kw kwColon >> expr (varsNum) vars)
+      mty <- optional (typeAnnot varsNum vars)
       let ty = fromMaybe mkDynamic' mty
           (pat, (varsNum', vars')) = fromMaybe (PatWildcard (PatternWildcard Info.empty ty), (varsNum + 1, vars1)) mp
           binder = Binder txt (Just i) ty
