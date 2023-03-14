@@ -14,7 +14,6 @@ import Juvix.Data.Keyword.All
     kwCase,
     kwColon,
     kwComma,
-    kwConstr,
     kwDef,
     kwDiv,
     kwElse,

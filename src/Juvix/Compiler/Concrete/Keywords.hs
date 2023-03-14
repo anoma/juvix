@@ -10,17 +10,12 @@ import Juvix.Data.Keyword.All
   ( -- reserved
 
     -- extra
-    cBackend,
-    ghc,
     kwAssign,
     kwAt,
     kwAxiom,
     kwBuiltin,
     kwCase,
     kwColon,
-    kwColonOmega,
-    kwColonOne,
-    kwColonZero,
     kwEnd,
     kwHiding,
     kwHole,
@@ -59,9 +54,6 @@ allKeywords =
     kwAxiom,
     kwCase,
     kwColon,
-    kwColonOmega,
-    kwColonOne,
-    kwColonZero,
     kwEnd,
     kwHiding,
     kwHole,
