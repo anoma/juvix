@@ -10,4 +10,4 @@ import CommonOptions
 type AsmCompileOptions = CompileOptions
 
 parseAsmCompileOptions :: Parser AsmCompileOptions
-parseAsmCompileOptions = parseCompileOptions
+parseAsmCompileOptions = parseCompileOptions parseInputJuvixAsmFile

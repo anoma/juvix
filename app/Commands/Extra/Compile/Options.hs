@@ -33,8 +33,8 @@ data CompileOptions = CompileOptions
 
 makeLenses ''CompileOptions
 
-parseCompileOptions :: Parser CompileOptions
-parseCompileOptions = do
+parseCompileOptions :: Parser (AppPath File) -> Parser CompileOptions
+parseCompileOptions parseInputFile = do
   _compileDebug <-
     switch
       ( short 'g'
@@ -67,7 +67,7 @@ parseCompileOptions = do
       )
   _compileTarget <- optCompileTarget
   _compileOutputFile <- optional parseGenericOutputFile
-  _compileInputFile <- parseGenericInputFile
+  _compileInputFile <- parseInputFile
   pure CompileOptions {..}
 
 optCompileTarget :: Parser CompileTarget

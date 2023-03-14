@@ -92,5 +92,5 @@ parseCoreCommand =
     compileInfo :: ParserInfo CoreCommand
     compileInfo =
       info
-        (CoreCompile <$> parseCompileOptions)
+        (CoreCompile <$> parseCompileOptions parseInputJuvixCoreFile)
         (progDesc "Compile a JuvixCore file to native code, WebAssembly or GEB")

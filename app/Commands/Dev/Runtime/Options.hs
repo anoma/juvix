@@ -20,5 +20,5 @@ parseRuntimeCommand =
     compileInfo :: ParserInfo RuntimeCommand
     compileInfo =
       info
-        (Compile <$> parseCompileOptions)
+        (Compile <$> parseCompileOptions parseInputCFile)
         (progDesc "Compile a C file with Juvix runtime included")
