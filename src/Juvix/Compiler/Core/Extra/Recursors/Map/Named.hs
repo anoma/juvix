@@ -145,8 +145,11 @@ dmapCNRM' f ini = nodeMapG' STopDown (pairCollector (identityCollector ini) (bin
 dmapCLM :: (Monad m) => (c -> BinderList Binder -> Node -> m (c, Node)) -> c -> Node -> m Node
 dmapCLM f = dmapCLM' (mempty, f)
 
+dmapCNM' :: (Monad m) => (Level, c -> Level -> Node -> m (c, Node)) -> c -> Node -> m Node
+dmapCNM' f ini = nodeMapG' STopDown (pairCollector (identityCollector ini) (binderNumCollector' (fst f))) (\(c, bi) -> fromPair bi . snd f c bi)
+
 dmapCNM :: (Monad m) => (c -> Level -> Node -> m (c, Node)) -> c -> Node -> m Node
-dmapCNM f ini = nodeMapG' STopDown (pairCollector (identityCollector ini) binderNumCollector) (\(c, bi) -> fromPair bi . f c bi)
+dmapCNM f = dmapCNM' (0, f)
 
 dmapCM :: (Monad m) => (c -> Node -> m (c, Node)) -> c -> Node -> m Node
 dmapCM f ini = nodeMapG' STopDown (identityCollector ini) (\c -> fmap Recur' . f c)
@@ -156,6 +159,9 @@ dmapCL' f ini = runIdentity . dmapCLM' (embedIden f) ini
 
 dmapCLR' :: (BinderList Binder, c -> BinderList Binder -> Node -> Recur' c) -> c -> Node -> Node
 dmapCLR' f ini = runIdentity . dmapCLRM' (embedIden f) ini
+
+dmapCN' :: (Level, c -> Level -> Node -> (c, Node)) -> c -> Node -> Node
+dmapCN' f ini = runIdentity . dmapCNM' (embedIden f) ini
 
 dmapCNR' :: (Level, c -> Level -> Node -> Recur' c) -> c -> Node -> Node
 dmapCNR' f ini = runIdentity . dmapCNRM' (embedIden f) ini

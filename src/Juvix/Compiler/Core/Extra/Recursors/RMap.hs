@@ -1,5 +1,6 @@
 module Juvix.Compiler.Core.Extra.Recursors.RMap where
 
+import Data.Functor.Identity
 import Juvix.Compiler.Core.Data.BinderList qualified as BL
 import Juvix.Compiler.Core.Extra.Base
 import Juvix.Compiler.Core.Extra.Recursors.Base
@@ -26,7 +27,7 @@ rmapG ::
   forall c m.
   (Monad m) =>
   Collector (Int, [Binder]) c ->
-  (([BinderChange] -> c -> Node -> m Node) -> c -> Node -> m Node) ->
+  ((c -> [BinderChange] -> Node -> m Node) -> c -> Node -> m Node) ->
   Node ->
   m Node
 rmapG coll f = go mempty 0 (coll ^. cEmpty)
@@ -37,8 +38,8 @@ rmapG coll f = go mempty 0 (coll ^. cEmpty)
     go :: BinderList (Level, Maybe Node) -> Int -> c -> Node -> m Node
     go binders bl c n = f recur c n
       where
-        recur :: [BinderChange] -> c -> Node -> m Node
-        recur changes c' n' =
+        recur :: c -> [BinderChange] -> Node -> m Node
+        recur c' changes n' =
           let ni = destruct n'
            in adjustVar . reassembleDetails ni <$> mapM goChild (ni ^. nodeChildren)
           where
@@ -71,3 +72,21 @@ rmapG coll f = go mempty 0 (coll ^. cEmpty)
             where
               (lvl, mnode) = BL.lookup (v ^. varIndex) binders
           node -> node
+
+rmapEmbedIden :: ((([BinderChange] -> Node -> Node) -> Node -> Node)) -> (([BinderChange] -> Node -> Identity Node) -> Node -> Identity Node)
+rmapEmbedIden f recur = return . f (\bcs -> runIdentity . recur bcs)
+
+rmapEmbedIden' :: ((([BinderChange] -> Node -> Node) -> c -> Node -> Node)) -> (([BinderChange] -> Node -> Identity Node) -> c -> Node -> Identity Node)
+rmapEmbedIden' f recur bl = return . f (\bcs -> runIdentity . recur bcs) bl
+
+rmapEmbedIden'' :: (((c -> [BinderChange] -> Node -> Node) -> c -> Node -> Node)) -> ((c -> [BinderChange] -> Node -> Identity Node) -> c -> Node -> Identity Node)
+rmapEmbedIden'' f recur bl = return . f (\c bcs -> runIdentity . recur c bcs) bl
+
+rmapCEmbedIden :: (((c -> [BinderChange] -> Node -> Node) -> c -> Node -> Node)) -> ((c -> [BinderChange] -> Node -> Identity Node) -> c -> Node -> Identity Node)
+rmapCEmbedIden = rmapEmbedIden''
+
+rmapCEmbedIden' :: (((c -> [BinderChange] -> Node -> Node) -> c -> b -> Node -> Node)) -> ((c -> [BinderChange] -> Node -> Identity Node) -> c -> b -> Node -> Identity Node)
+rmapCEmbedIden' f recur c b = return . f (\c' bcs -> runIdentity . recur c' bcs) c b
+
+rmapCEmbedIden'' :: (((c -> b -> [BinderChange] -> Node -> Node) -> c -> b -> Node -> Node)) -> ((c -> b -> [BinderChange] -> Node -> Identity Node) -> c -> b -> Node -> Identity Node)
+rmapCEmbedIden'' f recur c b = return . f (\c' b' bcs -> runIdentity . recur c' b' bcs) c b

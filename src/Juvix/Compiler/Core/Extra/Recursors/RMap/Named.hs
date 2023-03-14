@@ -1,5 +1,9 @@
 module Juvix.Compiler.Core.Extra.Recursors.RMap.Named where
 
+import Data.Functor.Identity
+import Juvix.Compiler.Core.Extra.Recursors.Base
+import Juvix.Compiler.Core.Extra.Recursors.RMap
+
 {-
 `rmap f t` goes through the node top-down, but in contrast to `dmap` the
 recursion must be performed explicitly with a function provided to `f`, and it
@@ -37,7 +41,7 @@ The invocation
 ```
 rmapN go (\x \y x$1 + y$0)
 where
-  go :: ([BinderChange] -> Level -> Node -> Node) -> Node -> Node
+  go :: ([BinderChange] -> Node -> Node) -> Level -> Node -> Node
   go recur k node = case node of
     NLam Lambda {..} ->
       mkLet
@@ -86,3 +90,63 @@ produces
 For the meaning of the suffixes to `rmap` see the comments in
 Core.Extra.Recursors.Map.Named
 -}
+
+rmapLM :: (Monad m) => (([BinderChange] -> Node -> m Node) -> BinderList Binder -> Node -> m Node) -> Node -> m Node
+rmapLM f = rmapLM' (\recur bl -> f (recur bl) bl)
+
+rmapNM :: (Monad m) => (([BinderChange] -> Node -> m Node) -> Level -> Node -> m Node) -> Node -> m Node
+rmapNM f = rmapNM' (\recur bl -> f (recur bl) bl)
+
+rmapM :: (Monad m) => (([BinderChange] -> Node -> m Node) -> Node -> m Node) -> Node -> m Node
+rmapM f = rmapG unitCollector (\recur _ -> f (recur ()))
+
+rmapLM' :: (Monad m) => ((BinderList Binder -> [BinderChange] -> Node -> m Node) -> BinderList Binder -> Node -> m Node) -> Node -> m Node
+rmapLM' f = rmapG binderInfoCollector f
+
+rmapNM' :: (Monad m) => ((Level -> [BinderChange] -> Node -> m Node) -> Level -> Node -> m Node) -> Node -> m Node
+rmapNM' f = rmapG binderNumCollector f
+
+rmapL :: (([BinderChange] -> Node -> Node) -> BinderList Binder -> Node -> Node) -> Node -> Node
+rmapL f = runIdentity . rmapLM (rmapEmbedIden' f)
+
+rmapN :: (([BinderChange] -> Node -> Node) -> Level -> Node -> Node) -> Node -> Node
+rmapN f = runIdentity . rmapNM (rmapEmbedIden' f)
+
+rmap :: (([BinderChange] -> Node -> Node) -> Node -> Node) -> Node -> Node
+rmap f = runIdentity . rmapM (rmapEmbedIden f)
+
+rmapL' :: ((BinderList Binder -> [BinderChange] -> Node -> Node) -> BinderList Binder -> Node -> Node) -> Node -> Node
+rmapL' f = runIdentity . rmapLM' (rmapEmbedIden'' f)
+
+rmapN' :: ((Level -> [BinderChange] -> Node -> Node) -> Level -> Node -> Node) -> Node -> Node
+rmapN' f = runIdentity . rmapNM' (rmapEmbedIden'' f)
+
+rmapCLM' :: (Monad m) => ((c -> BinderList Binder -> [BinderChange] -> Node -> m Node) -> c -> BinderList Binder -> Node -> m Node) -> c -> Node -> m Node
+rmapCLM' f ini = rmapG (pairCollector (identityCollector ini) binderInfoCollector) (uncurry . f . curry)
+
+rmapCLM :: (Monad m) => ((c -> [BinderChange] -> Node -> m Node) -> c -> BinderList Binder -> Node -> m Node) -> c -> Node -> m Node
+rmapCLM f = rmapCLM' (\recur c bl -> f (`recur` bl) c bl)
+
+rmapCNM' :: (Monad m) => ((c -> Level -> [BinderChange] -> Node -> m Node) -> c -> Level -> Node -> m Node) -> c -> Node -> m Node
+rmapCNM' f ini = rmapG (pairCollector (identityCollector ini) binderNumCollector) (uncurry . f . curry)
+
+rmapCNM :: (Monad m) => ((c -> [BinderChange] -> Node -> m Node) -> c -> Level -> Node -> m Node) -> c -> Node -> m Node
+rmapCNM f = rmapCNM' (\recur c bl -> f (`recur` bl) c bl)
+
+rmapCM :: (Monad m) => ((c -> [BinderChange] -> Node -> m Node) -> c -> Node -> m Node) -> c -> Node -> m Node
+rmapCM f ini = rmapG (identityCollector ini) f
+
+rmapCL' :: ((c -> BinderList Binder -> [BinderChange] -> Node -> Node) -> c -> BinderList Binder -> Node -> Node) -> c -> Node -> Node
+rmapCL' f ini = runIdentity . rmapCLM' (rmapCEmbedIden'' f) ini
+
+rmapCL :: ((c -> [BinderChange] -> Node -> Node) -> c -> BinderList Binder -> Node -> Node) -> c -> Node -> Node
+rmapCL f ini = runIdentity . rmapCLM (rmapCEmbedIden' f) ini
+
+rmapCN' :: ((c -> Level -> [BinderChange] -> Node -> Node) -> c -> Level -> Node -> Node) -> c -> Node -> Node
+rmapCN' f ini = runIdentity . rmapCNM' (rmapCEmbedIden'' f) ini
+
+rmapCN :: ((c -> [BinderChange] -> Node -> Node) -> c -> Level -> Node -> Node) -> c -> Node -> Node
+rmapCN f ini = runIdentity . rmapCNM (rmapCEmbedIden' f) ini
+
+rmapC :: ((c -> [BinderChange] -> Node -> Node) -> c -> Node -> Node) -> c -> Node -> Node
+rmapC f ini = runIdentity . rmapCM (rmapCEmbedIden f) ini
