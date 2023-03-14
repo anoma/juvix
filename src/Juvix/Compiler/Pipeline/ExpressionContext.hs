@@ -9,6 +9,7 @@ import Juvix.Compiler.Concrete.Language qualified as C
 import Juvix.Compiler.Concrete.Translation.FromParsed qualified as Scoper
 import Juvix.Compiler.Core qualified as Core
 import Juvix.Compiler.Core.Data.InfoTableBuilder
+import Juvix.Compiler.Core.Extra.Base (mkDynamic')
 import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Core.Transformation
 import Juvix.Compiler.Internal qualified as Internal
@@ -61,6 +62,21 @@ runTransformations :: [TransformationId] -> InfoTable -> Node -> (InfoTable, Nod
 runTransformations ts tab n = snd $ run $ runInfoTableBuilder tab $ do
   sym <- freshSymbol
   registerIdentNode sym n
+  -- `n` will get filtered out by the transformations unless it has a
+  -- corresponding entry in `infoIdentifiers`
+  let name = freshIdentName tab "_repl"
+      ii =
+        IdentifierInfo
+          { _identifierName = name,
+            _identifierSymbol = sym,
+            _identifierLocation = Nothing,
+            _identifierArgsNum = 0,
+            _identifierArgsInfo = [],
+            _identifierType = mkDynamic',
+            _identifierIsExported = False,
+            _identifierBuiltin = Nothing
+          }
+  registerIdent name ii
   tab' <- applyTransformations ts <$> getInfoTable
   let node' = lookupDefault impossible sym (tab' ^. identContext)
   return (tab', node')
