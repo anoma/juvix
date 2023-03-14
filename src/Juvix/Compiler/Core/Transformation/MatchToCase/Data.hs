@@ -40,7 +40,6 @@ data CompiledPattern = CompiledPattern
 
 data CompileState = CompileState
   { _compileStateBindersAbove :: Int,
-    _compileStateTotalAuxBinders :: Int,
     _compileStateCompiledPattern :: CompiledPattern
   }
 
@@ -81,7 +80,6 @@ initState :: CompileState
 initState =
   CompileState
     { _compileStateBindersAbove = 0,
-      _compileStateTotalAuxBinders = 0,
       _compileStateCompiledPattern = mempty
     }
 
