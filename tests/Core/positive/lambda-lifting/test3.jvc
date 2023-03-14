@@ -1,3 +1,0 @@
-def const := \x \y x;
-def id := \x x;
-def t3 := \r \s const (\x x) (id (\x r));

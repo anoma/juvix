@@ -108,12 +108,6 @@ typecheck =
     >=> Internal.arityChecking
     >=> Internal.typeChecking
 
-compile ::
-  (Members PipelineEff r) =>
-  EntryPoint ->
-  Sem r C.MiniCResult
-compile = typecheck >=> C.fromInternal
-
 upToParsing ::
   (Members '[Reader EntryPoint, Files, Error JuvixError, NameIdGen, PathResolver] r) =>
   Sem r Parser.ParserResult

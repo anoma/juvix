@@ -1,8 +1,5 @@
 module Axiom;
 
 axiom Action : Type;
-compile Action {
- ghc ↦ "IO ()";
-};
 
 end;

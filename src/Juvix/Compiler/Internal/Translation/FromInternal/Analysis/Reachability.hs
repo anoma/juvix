@@ -31,7 +31,6 @@ goStatement :: (Member (Reader NameDependencyInfo) r) => Statement -> Sem r (May
 goStatement s = case s of
   StatementInductive i -> returnIfReachable (i ^. inductiveName) s
   StatementFunction (MutualBlock (f :| _)) -> returnIfReachable (f ^. funDefName) s -- note that any function is reachable iff all are reachable
-  StatementForeign {} -> return (Just s)
   StatementAxiom ax -> returnIfReachable (ax ^. axiomName) s
   StatementInclude i -> do
     m <- goModule (i ^. includeModule)

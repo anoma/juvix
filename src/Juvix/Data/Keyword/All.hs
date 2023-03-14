@@ -25,18 +25,6 @@ kwAxiom = asciiKw Str.axiom
 kwColon :: Keyword
 kwColon = asciiKw Str.colon
 
-kwColonOmega :: Keyword
-kwColonOmega = unicodeKw Str.colonOmegaAscii Str.colonOmegaUnicode
-
-kwColonOne :: Keyword
-kwColonOne = asciiKw Str.colonOne
-
-kwColonZero :: Keyword
-kwColonZero = asciiKw Str.colonZero
-
-kwCompile :: Keyword
-kwCompile = asciiKw Str.compile
-
 kwEnd :: Keyword
 kwEnd = asciiKw Str.end
 
@@ -45,9 +33,6 @@ kwHiding = asciiKw Str.hiding
 
 kwImport :: Keyword
 kwImport = asciiKw Str.import_
-
-kwForeign :: Keyword
-kwForeign = asciiKw Str.foreign_
 
 kwIn :: Keyword
 kwIn = asciiKw Str.in_
@@ -118,17 +103,8 @@ kwHole = asciiKw Str.underscore
 kwWildcard :: Keyword
 kwWildcard = asciiKw Str.underscore
 
-ghc :: Keyword
-ghc = asciiKw Str.ghc
-
-cBackend :: Keyword
-cBackend = asciiKw Str.cBackend
-
 kwLetRec :: Keyword
 kwLetRec = asciiKw Str.letrec_
-
-kwConstr :: Keyword
-kwConstr = asciiKw Str.constr
 
 kwCase :: Keyword
 kwCase = asciiKw Str.case_
@@ -221,10 +197,10 @@ kwFalse :: Keyword
 kwFalse = asciiKw Str.false_
 
 kwArg :: Keyword
-kwArg = asciiKw Str.arg_
+kwArg = asciiKw Str.arg
 
 kwTmp :: Keyword
-kwTmp = asciiKw Str.tmp_
+kwTmp = asciiKw Str.tmp
 
 kwUnit :: Keyword
 kwUnit = asciiKw Str.unit

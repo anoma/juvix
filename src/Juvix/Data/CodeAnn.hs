@@ -74,18 +74,6 @@ kwArrow = keyword Str.toUnicode
 kwMapsto :: Doc Ann
 kwMapsto = keyword Str.mapstoUnicode
 
-kwForeign :: Doc Ann
-kwForeign = keyword Str.foreign_
-
-kwCompile :: Doc Ann
-kwCompile = keyword Str.compile
-
-kwC :: Doc Ann
-kwC = keyword Str.cBackend
-
-kwGhc :: Doc Ann
-kwGhc = keyword Str.ghc
-
 kwColon :: Doc Ann
 kwColon = keyword Str.colon
 
@@ -128,14 +116,8 @@ kwEnd = keyword Str.end
 kwBuiltin :: Doc Ann
 kwBuiltin = keyword Str.builtin
 
-kwNat :: Doc Ann
-kwNat = keyword Str.nat
-
 kwInductive :: Doc Ann
 kwInductive = keyword Str.inductive
-
-kwArrowR :: Doc Ann
-kwArrowR = keyword Str.toUnicode
 
 kwLet :: Doc Ann
 kwLet = keyword Str.let_
@@ -157,15 +139,6 @@ kwInfixl = keyword Str.infixl_
 
 kwInfix :: Doc Ann
 kwInfix = keyword Str.infix_
-
-kwColonZero :: Doc Ann
-kwColonZero = keyword Str.colonZero
-
-kwColonOne :: Doc Ann
-kwColonOne = keyword Str.colonOne
-
-kwColonOmega :: Doc Ann
-kwColonOmega = keyword Str.colonOmegaUnicode
 
 kwOpen :: Doc Ann
 kwOpen = keyword Str.open

@@ -147,11 +147,9 @@ goStatement (Indexed idx s) =
     StatementOperator {} -> return Nothing
     StatementOpenModule o -> goOpenModule o
     StatementInductive i -> Just . Abstract.StatementInductive <$> goInductive i
-    StatementForeign f -> return (Just (Abstract.StatementForeign f))
     StatementModule f -> Just . Abstract.StatementLocalModule <$> goLocalModule f
     StatementTypeSignature {} -> return Nothing
     StatementFunctionClause {} -> return Nothing
-    StatementCompile {} -> return Nothing
 
 goOpenModule ::
   forall r.

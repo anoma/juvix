@@ -2,7 +2,6 @@ module Juvix.Compiler.Backend.C.Extra.Serialization where
 
 import Codec.Binary.UTF8.String qualified as UTF8
 import Juvix.Compiler.Backend.C.Language
-import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude hiding (Binary, Unary)
 import Language.C qualified as C
 import Language.C.Data.Ident qualified as C
@@ -28,18 +27,9 @@ prettyCpp = \case
     prettyDefine :: Text -> HP.Doc -> HP.Doc
     prettyDefine n body = "#define" HP.<+> prettyText n HP.<+> body
 
-prettyAttribute :: Attribute -> HP.Doc
-prettyAttribute = \case
-  ExportName n -> attr "export_name" n
-  ImportName n -> attr "import_name" n
-  where
-    attr :: Text -> Text -> HP.Doc
-    attr n v = "__attribute__" HP.<> HP.parens (HP.parens (prettyText n HP.<> HP.parens (HP.doubleQuotes (prettyText v))))
-
 prettyCCode :: CCode -> HP.Doc
 prettyCCode = \case
   ExternalDecl decl -> P.pretty (CDeclExt (mkCDecl decl))
-  ExternalAttribute a -> prettyAttribute a
   ExternalFuncSig funSig -> P.pretty (CDeclExt (mkCFunSig funSig))
   ExternalFunc fun -> P.pretty (CFDefExt (mkCFunDef fun))
   ExternalMacro m -> prettyCpp m
@@ -51,33 +41,8 @@ serialize = show . codeUnitDoc
     codeUnitDoc :: CCodeUnit -> HP.Doc
     codeUnitDoc c = HP.vcat (map prettyCCode (c ^. ccodeCode))
 
-goTypeDecl' :: CDeclType -> Declaration
-goTypeDecl' CDeclType {..} =
-  Declaration
-    { _declType = _typeDeclType,
-      _declIsPtr = _typeIsPtr,
-      _declName = Nothing,
-      _declInitializer = Nothing
-    }
-
 mkCDecl :: Declaration -> CDecl
 mkCDecl Declaration {..} = case _declType of
-  DeclFunPtr FunPtr {..} ->
-    CDecl
-      (mkDeclSpecifier _funPtrReturnType)
-      [(Just declr, Nothing, Nothing)]
-      C.undefNode
-    where
-      declr :: CDeclr
-      declr = CDeclr (mkIdent <$> _declName) derivedDeclr Nothing [] C.undefNode
-      derivedDeclr :: [CDerivedDeclr]
-      derivedDeclr = CPtrDeclr [] C.undefNode : (funDerDeclr <> ptrDeclr)
-      ptrDeclr :: [CDerivedDeclr]
-      ptrDeclr = [CPtrDeclr [] C.undefNode | _funPtrIsPtr]
-      funDerDeclr :: [CDerivedDeclr]
-      funDerDeclr = [CFunDeclr (Right (funArgs, False)) [] C.undefNode]
-      funArgs :: [CDecl]
-      funArgs = mkCDecl . goTypeDecl' <$> _funPtrArgs
   DeclArray Array {..} ->
     CDecl
       (CStorageSpec (CStatic C.undefNode) : mkDeclSpecifier _arrayType)
@@ -99,7 +64,7 @@ mkCDecl Declaration {..} = case _declType of
       declrName :: CDeclr
       declrName = CDeclr (mkIdent <$> _declName) ptrDeclr Nothing [] C.undefNode
       ptrDeclr :: [CDerivedDeclarator C.NodeInfo]
-      ptrDeclr = [CPtrDeclr [] C.undefNode | _declIsPtr]
+      ptrDeclr = []
       initializer :: Maybe CInit
       initializer = mkCInit <$> _declInitializer
 
@@ -124,7 +89,7 @@ mkFunCommon FunctionSig {..} = (declSpec, declr)
     derivedDeclr :: [CDerivedDeclr]
     derivedDeclr = funDerDeclr <> ptrDeclr
     ptrDeclr :: [CDerivedDeclr]
-    ptrDeclr = [CPtrDeclr [] C.undefNode | _funcIsPtr]
+    ptrDeclr = []
     funDerDeclr :: [CDerivedDeclr]
     funDerDeclr = [CFunDeclr (Right (funArgs, False)) [] C.undefNode]
     funArgs :: [CDecl]
@@ -153,7 +118,6 @@ mkBlockItem = \case
 mkCExpr :: Expression -> CExpr
 mkCExpr = \case
   ExpressionAssign Assign {..} -> CAssign CAssignOp (mkCExpr _assignLeft) (mkCExpr _assignRight) C.undefNode
-  ExpressionCast Cast {..} -> CCast (mkCDecl _castDecl) (mkCExpr _castExpression) C.undefNode
   ExpressionCall Call {..} -> CCall (mkCExpr _callCallee) (mkCExpr <$> _callArgs) C.undefNode
   ExpressionLiteral l -> case l of
     LiteralInt i -> CConst (CIntConst (cInteger i) C.undefNode)
@@ -164,8 +128,6 @@ mkCExpr = \case
     CBinary (mkBinaryOp _binaryOp) (mkCExpr _binaryLeft) (mkCExpr _binaryRight) C.undefNode
   ExpressionUnary Unary {..} ->
     CUnary (mkUnaryOp _unaryOp) (mkCExpr _unarySubject) C.undefNode
-  ExpressionMember MemberAccess {..} ->
-    CMember (mkCExpr _memberSubject) (mkIdent _memberField) (_memberOp == Pointer) C.undefNode
   ExpressionStatement stmt ->
     CStatExpr (mkCStat stmt) C.undefNode
 
@@ -224,12 +186,8 @@ mkUnaryOp = \case
 mkDeclSpecifier :: DeclType -> [CDeclSpec]
 mkDeclSpecifier = \case
   DeclTypeDefType typeDefName -> mkTypeDefTypeSpec typeDefName
-  DeclTypeDef typ -> CStorageSpec (CTypedef C.undefNode) : mkDeclSpecifier typ
   DeclStructUnion StructUnion {..} -> mkStructUnionTypeSpec _structUnionTag _structUnionName _structMembers
   DeclEnum Enum {..} -> mkEnumSpec _enumName _enumMembers
-  DeclJuvixClosure -> mkTypeDefTypeSpec Str.juvixFunctionT
-  BoolType -> [CTypeSpec (CBoolType C.undefNode)]
-  DeclFunPtr {} -> []
   DeclArray {} -> []
 
 mkEnumSpec :: Maybe Text -> Maybe [Text] -> [CDeclSpec]

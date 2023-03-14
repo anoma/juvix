@@ -6,7 +6,6 @@ module Juvix.Compiler.Concrete.Pretty.Base
 where
 
 import Data.List.NonEmpty.Extra qualified as NonEmpty
-import Data.Text qualified as T
 import Juvix.Compiler.Concrete.Data.ScopedName (AbsModulePath, IsConcrete (..))
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Extra (unfoldApplication)
@@ -66,8 +65,6 @@ groupStatements = reverse . map reverse . uncurry cons . foldl' aux ([], [])
     -- blank line
     g :: Statement s -> Statement s -> Bool
     g a b = case (a, b) of
-      (StatementForeign _, _) -> False
-      (StatementCompile _, _) -> False
       (StatementOperator _, StatementOperator _) -> True
       (StatementOperator o, s) -> definesSymbol (o ^. opSymbol) s
       (StatementImport _, StatementImport _) -> True
@@ -132,40 +129,6 @@ instance (SingI s) => PrettyCode (Statement s) where
     StatementOpenModule o -> ppCode o
     StatementFunctionClause c -> ppCode c
     StatementAxiom a -> ppCode a
-    StatementForeign p -> ppCode p
-    StatementCompile c -> ppCode c
-
-instance PrettyCode Backend where
-  ppCode = \case
-    BackendGhc -> return kwGhc
-    BackendC -> return kwC
-
-instance (SingI s) => PrettyCode (Compile s) where
-  ppCode Compile {..} = do
-    compileName' <- ppSymbol _compileName
-    compileBackendItems' <- bracesIndent <$> ppBlock _compileBackendItems
-    return $ kwCompile <+> compileName' <+> compileBackendItems'
-
-instance PrettyCode ForeignBlock where
-  ppCode ForeignBlock {..} = do
-    _foreignBackend' <- ppCode _foreignBackend
-    return $
-      kwForeign
-        <+> _foreignBackend'
-        <+> lbrace
-          <> line
-          <> pretty (escape _foreignCode)
-          <> line
-          <> rbrace
-    where
-      escape :: Text -> Text
-      escape = T.replace "}" "\\}"
-
-instance PrettyCode BackendItem where
-  ppCode BackendItem {..} = do
-    backend <- ppCode _backendItemBackend
-    return $
-      backend <+> kwMapsto <+> ppStringLit _backendItemCode
 
 ppTopModulePath ::
   forall s r.

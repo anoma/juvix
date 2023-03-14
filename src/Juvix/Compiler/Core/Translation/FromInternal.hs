@@ -123,7 +123,6 @@ registerInductiveDefsBody body = mapM_ go (body ^. Internal.moduleStatements)
     go = \case
       Internal.StatementInductive d -> goInductiveDef d
       Internal.StatementAxiom {} -> return ()
-      Internal.StatementForeign {} -> return ()
       Internal.StatementFunction {} -> return ()
       Internal.StatementInclude i ->
         mapM_ go (i ^. Internal.includeModule . Internal.moduleBody . Internal.moduleStatements)

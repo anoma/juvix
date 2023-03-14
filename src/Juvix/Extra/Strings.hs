@@ -44,9 +44,6 @@ variable = "variable"
 constructor :: (IsString s) => s
 constructor = "constructor"
 
-constr :: (IsString s) => s
-constr = "constr"
-
 topModule :: (IsString s) => s
 topModule = "top module"
 
@@ -67,9 +64,6 @@ open = "open"
 
 postfix :: (IsString s) => s
 postfix = "postfix"
-
-print :: (IsString s) => s
-print = "print"
 
 let_ :: (IsString s) => s
 let_ = "let"
@@ -109,9 +103,6 @@ stringToNat = "string-to-nat"
 
 bool_ :: (IsString s) => s
 bool_ = "bool"
-
-boolean_ :: (IsString s) => s
-boolean_ = "boolean"
 
 boolPrint :: (IsString s) => s
 boolPrint = "bool-print"
@@ -257,12 +248,6 @@ mapstoUnicode = "↦"
 mapstoAscii :: (IsString s) => s
 mapstoAscii = "->"
 
-foreign_ :: (IsString s) => s
-foreign_ = "foreign"
-
-compile :: (IsString s) => s
-compile = "compile"
-
 comma :: (IsString s) => s
 comma = ","
 
@@ -281,27 +266,6 @@ dot = "."
 colon :: (IsString s) => s
 colon = ":"
 
-colonSpace :: (IsString s) => s
-colonSpace = ": "
-
-colonOmegaUnicode :: (IsString s) => s
-colonOmegaUnicode = ":ω"
-
-colonOmegaAscii :: (IsString s) => s
-colonOmegaAscii = ":any"
-
-colonOne :: (IsString s) => s
-colonOne = ":1"
-
-colonZero :: (IsString s) => s
-colonZero = ":0"
-
-ghc :: (IsString s) => s
-ghc = "ghc"
-
-cBackend :: (IsString s) => s
-cBackend = "c"
-
 terminating :: (IsString s) => s
 terminating = "terminating"
 
@@ -311,35 +275,8 @@ positive = "positive"
 waveArrow :: (IsString s) => s
 waveArrow = "↝"
 
-stdlib :: (IsString s) => s
-stdlib = "stdlib.h"
-
-stdbool :: (IsString s) => s
-stdbool = "stdbool.h"
-
-stdio :: (IsString s) => s
-stdio = "stdio.h"
-
 main :: (IsString s) => s
 main = "main"
-
-fprintf :: (IsString s) => s
-fprintf = "fprintf"
-
-stderr_ :: (IsString s) => s
-stderr_ = "stderr"
-
-exit :: (IsString s) => s
-exit = "exit"
-
-exitFailure_ :: (IsString s) => s
-exitFailure_ = "EXIT_FAILURE"
-
-malloc :: (IsString s) => s
-malloc = "malloc"
-
-sizeof :: (IsString s) => s
-sizeof = "sizeof"
 
 true_ :: (IsString s) => s
 true_ = "true"
@@ -349,27 +286,6 @@ false_ = "false"
 
 default_ :: (IsString s) => s
 default_ = "default"
-
-arg_ :: (IsString s) => s
-arg_ = "arg"
-
-tmp_ :: (IsString s) => s
-tmp_ = "tmp"
-
-tag :: (IsString s) => s
-tag = "tag"
-
-main_ :: (IsString s) => s
-main_ = "main"
-
-minicRuntime :: (IsString s) => s
-minicRuntime = "c-runtime.h"
-
-putStrLn_ :: (IsString s) => s
-putStrLn_ = "putStrLn"
-
-debug_ :: (IsString s) => s
-debug_ = "debug"
 
 plus :: (IsString s) => s
 plus = "+"
@@ -404,32 +320,14 @@ piUnicode = "Π"
 piAscii :: (IsString s) => s
 piAscii = "Pi"
 
-pi_ :: (IsString s) => s
-pi_ = "pi"
-
 def :: (IsString s) => s
 def = "def"
-
-zero :: (IsString s) => s
-zero = "0"
-
-succ :: (IsString s) => s
-succ = "S"
 
 unit :: (IsString s) => s
 unit = "unit"
 
 void :: (IsString s) => s
 void = "void"
-
-nil :: (IsString s) => s
-nil = "nil"
-
-cons :: (IsString s) => s
-cons = "cons"
-
-pair :: (IsString s) => s
-pair = "pair"
 
 case_ :: (IsString s) => s
 case_ = "case"
@@ -448,9 +346,6 @@ with_ = "with"
 
 fun_ :: (IsString s) => s
 fun_ = "function"
-
-fwd_ :: (IsString s) => s
-fwd_ = "forward"
 
 integer :: (IsString s) => s
 integer = "integer"
@@ -631,9 +526,6 @@ gebInteger = "int"
 
 gebTyped :: IsString s => s
 gebTyped = "typed"
-
-juvixFunctionT :: IsString s => s
-juvixFunctionT = "juvix_function_t"
 
 juvixDotOrg :: (IsString s) => s
 juvixDotOrg = "https://juvix.org"

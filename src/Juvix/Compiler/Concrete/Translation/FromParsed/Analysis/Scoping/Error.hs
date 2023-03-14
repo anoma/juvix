@@ -27,10 +27,6 @@ data ScoperError
   | ErrAmbiguousSym AmbiguousSym
   | ErrAmbiguousModuleSym AmbiguousModuleSym
   | ErrUnusedOperatorDef UnusedOperatorDef
-  | ErrWrongLocationCompileBlock WrongLocationCompileBlock
-  | ErrMultipleCompileBlockSameName MultipleCompileBlockSameName
-  | ErrMultipleCompileRuleSameBackend MultipleCompileRuleSameBackend
-  | ErrWrongKindExpressionCompileBlock WrongKindExpressionCompileBlock
   | ErrDoubleBracesPattern DoubleBracesPattern
   | ErrDoubleBinderPattern DoubleBinderPattern
   | ErrAliasBinderPattern AliasBinderPattern
@@ -58,10 +54,6 @@ instance ToGenericError ScoperError where
     ErrAmbiguousModuleSym e -> genericError e
     ErrUnusedOperatorDef e -> genericError e
     ErrLacksFunctionClause e -> genericError e
-    ErrWrongLocationCompileBlock e -> genericError e
-    ErrMultipleCompileBlockSameName e -> genericError e
-    ErrMultipleCompileRuleSameBackend e -> genericError e
-    ErrWrongKindExpressionCompileBlock e -> genericError e
     ErrDoubleBracesPattern e -> genericError e
     ErrDoubleBinderPattern e -> genericError e
     ErrAliasBinderPattern e -> genericError e

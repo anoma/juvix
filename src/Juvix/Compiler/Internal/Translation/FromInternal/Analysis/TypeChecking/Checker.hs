@@ -58,7 +58,6 @@ checkStatement ::
   Sem r Statement
 checkStatement s = case s of
   StatementFunction funs -> StatementFunction <$> runReader emptyLocalVars (checkMutualBlock funs)
-  StatementForeign {} -> return s
   StatementInductive ind -> StatementInductive <$> checkInductiveDef ind
   StatementInclude i -> StatementInclude <$> checkInclude i
   StatementAxiom ax -> do

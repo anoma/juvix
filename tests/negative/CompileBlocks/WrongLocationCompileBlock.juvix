@@ -1,9 +1,0 @@
-module WrongLocationCompileBlock;
-import Sample.Definitions;
-open Sample.Definitions;
-
-compile A {
- ghc -> "Bool";
-};
-
-end;

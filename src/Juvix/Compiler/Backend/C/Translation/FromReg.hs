@@ -33,7 +33,6 @@ fromReg lims tab =
                   { _arrayType = DeclTypeDefType "constr_info_t",
                     _arraySize = fromIntegral (info ^. Reg.extraInfoConstrsNum)
                   },
-            _declIsPtr = False,
             _declName = Just "juvix_constr_info_array",
             _declInitializer =
               Just $
@@ -54,7 +53,6 @@ fromReg lims tab =
                   { _arrayType = DeclTypeDefType "function_info_t",
                     _arraySize = fromIntegral (info ^. Reg.extraInfoFunctionsNum)
                   },
-            _declIsPtr = False,
             _declName = Just "juvix_function_info_array",
             _declInitializer =
               Just $
@@ -76,7 +74,6 @@ fromReg lims tab =
     mainSig =
       FunctionSig
         { _funcReturnType = DeclTypeDefType "int",
-          _funcIsPtr = False,
           _funcQualifier = None,
           _funcName = "main",
           _funcArgs = []

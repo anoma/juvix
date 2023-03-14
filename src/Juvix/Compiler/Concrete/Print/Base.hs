@@ -6,7 +6,6 @@ module Juvix.Compiler.Concrete.Print.Base
 where
 
 import Data.List.NonEmpty.Extra qualified as NonEmpty
-import Data.Text qualified as Text
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Pretty.Base qualified as P
@@ -336,42 +335,6 @@ instance PrettyPrint (InductiveDef 'Scoped) where
       ppConstructorBlock :: NonEmpty (InductiveConstructorDef 'Scoped) -> Sem r ()
       ppConstructorBlock cs = vsep (ppCode <$> cs)
 
-instance PrettyPrint (WithLoc Backend) where
-  ppCode = ppMorpheme
-
-instance PrettyPrint ForeignBlock where
-  ppCode ForeignBlock {..} = do
-    let _foreignBackend' = ppCode _foreignBackend
-    ppCode _foreignKw
-      <+> _foreignBackend'
-      <+> lbrace
-        <> line
-        <> noLoc (pretty (escape _foreignCode))
-        <> line
-        <> rbrace
-    where
-      escape :: Text -> Text
-      escape = Text.replace "}" "\\}"
-
-instance PrettyPrint BackendItem where
-  ppCode BackendItem {..} = do
-    let backend' = ppCode _backendItemBackend
-    backend'
-      <+> noLoc P.kwMapsto
-      <+> noLoc (ppStringLit _backendItemCode)
-
-instance PrettyPrint (Compile 'Scoped) where
-  ppCode :: forall r. Members '[ExactPrint, Reader Options] r => Compile 'Scoped -> Sem r ()
-  ppCode Compile {..} = do
-    let name' = ppCode _compileName
-        items' = ppBlock _compileBackendItems
-    ppCode _compileKw
-      <+> name'
-      <+> items'
-    where
-      ppBlock :: PrettyPrint c => [c] -> Sem r ()
-      ppBlock = bracesIndent . vsep . map ((<> semicolon) . ppCode)
-
 instance PrettyPrint (Statement 'Scoped) where
   ppCode = \case
     StatementOperator o -> ppCode o
@@ -382,5 +345,3 @@ instance PrettyPrint (Statement 'Scoped) where
     StatementOpenModule o -> ppCode o
     StatementFunctionClause c -> ppCode c
     StatementAxiom a -> ppCode a
-    StatementForeign f -> ppCode f
-    StatementCompile c -> ppCode c

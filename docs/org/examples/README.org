@@ -8,13 +8,6 @@ The following links are clickable versions of their corresponding Juvix programs
 - [[https://docs.juvix.org/examples/html/PascalsTriangle/PascalsTriangle.html][PascalsTriangle.juvix]]
 - [[https://docs.juvix.org/examples/html/Collatz/Collatz.html][Collatz.juvix]]
 - [[https://docs.juvix.org/examples/html/TicTacToe/CLI/CLI.TicTacToe.html][TicTacToe.juvix]]
-- [[https://docs.juvix.org/examples/html/ValidityPredicates/SimpleFungibleToken.html][SimpleFungibleToken.juvix]]
 
 The [[https://anoma.github.io/juvix-stdlib/][Juvix standard library]] contains
 common functions that can be used in Juvix programs.
-
-** Example Juvix Web apps
-
-The following links navigate to example Juvix programs running as Web apps:
-
-- [[https://docs.juvix.org/examples/webapp/TicTacToe/Web/][WebTicTacToe]]

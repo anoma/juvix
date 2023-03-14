@@ -115,8 +115,6 @@ data Statement (s :: Stage)
   | StatementOpenModule (OpenModule s)
   | StatementFunctionClause (FunctionClause s)
   | StatementAxiom (AxiomDef s)
-  | StatementForeign ForeignBlock
-  | StatementCompile (Compile s)
 
 deriving stock instance
   ( Show (ImportType s),
@@ -807,25 +805,6 @@ deriving stock instance (Show (ExpressionType s), Show (PatternParensType s)) =>
 deriving stock instance (Ord (ExpressionType s), Ord (PatternParensType s)) => Ord (Case s)
 
 --------------------------------------------------------------------------------
--- Compile statements
---------------------------------------------------------------------------------
-
-data Compile s = Compile
-  { _compileKw :: KeywordRef,
-    _compileName :: SymbolType s,
-    _compileBackendItems :: [BackendItem]
-  }
-
-deriving stock instance
-  (Show (SymbolType s)) => Show (Compile s)
-
-deriving stock instance
-  (Ord (SymbolType s)) => Ord (Compile s)
-
-deriving stock instance
-  (Eq (SymbolType s)) => Eq (Compile s)
-
---------------------------------------------------------------------------------
 -- Debugging statements
 --------------------------------------------------------------------------------
 
@@ -954,7 +933,6 @@ makeLenses ''OpenModule
 makeLenses ''PatternApp
 makeLenses ''PatternInfixApp
 makeLenses ''PatternPostfixApp
-makeLenses ''Compile
 makeLenses ''Case
 makeLenses ''CaseBranch
 makeLenses ''PatternBinding

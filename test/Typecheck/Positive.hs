@@ -111,14 +111,6 @@ tests =
       $(mkRelDir "Internal")
       $(mkRelFile "LiteralInt.juvix"),
     posTest
-      "PolySimpleFungibleToken"
-      $(mkRelDir "FullExamples")
-      $(mkRelFile "SimpleFungibleTokenImplicit.juvix"),
-    posTest
-      "GHC backend MonoSimpleFungibleToken"
-      $(mkRelDir "FullExamples")
-      $(mkRelFile "MonoSimpleFungibleToken.juvix"),
-    posTest
       "Axiom"
       $(mkRelDir ".")
       $(mkRelFile "Axiom.juvix"),

@@ -1,3 +1,0 @@
--- IdentContext
-def t1 := λg λf f$0 (!3 g$1)
-def 3 := λg λx λy λz g$3 x$2

@@ -158,10 +158,8 @@ statement = P.label "<top level statement>" $ do
     <|> (StatementOpenModule <$> openModule)
     <|> (StatementImport <$> import_)
     <|> (StatementInductive <$> inductiveDef Nothing)
-    <|> (StatementForeign <$> foreignBlock)
     <|> (StatementModule <$> moduleDef)
     <|> (StatementAxiom <$> axiomDef Nothing)
-    <|> (StatementCompile <$> compileBlock)
     <|> builtinStatement
     <|> ( either StatementTypeSignature StatementFunctionClause
             <$> auxTypeSigFunClause
@@ -263,42 +261,6 @@ builtinStatement = do
   (builtinInductive >>= fmap StatementInductive . builtinInductiveDef)
     <|> (builtinFunction >>= fmap StatementTypeSignature . builtinTypeSig)
     <|> (builtinAxiom >>= fmap StatementAxiom . builtinAxiomDef)
-
---------------------------------------------------------------------------------
--- Compile
---------------------------------------------------------------------------------
-
-compileBlock :: forall r. (Members '[InfoTableBuilder, JudocStash, NameIdGen] r) => ParsecS r (Compile 'Parsed)
-compileBlock = do
-  _compileKw <- kw kwCompile
-  _compileName <- symbol
-  _compileBackendItems <- backends
-  return Compile {..}
-  where
-    backends = toList <$> braces (P.sepEndBy1 backendItem (kw kwSemicolon))
-    backendItem :: ParsecS r BackendItem
-    backendItem = do
-      _backendItemBackend <- backend
-      kw kwMapsTo
-      _backendItemCode <- fst <$> string
-      return BackendItem {..}
-
---------------------------------------------------------------------------------
--- Foreign
---------------------------------------------------------------------------------
-
-backend :: Members '[InfoTableBuilder, JudocStash, NameIdGen] r => ParsecS r (WithLoc Backend)
-backend =
-  withLoc $
-    kw ghc $> BackendGhc
-      <|> kw cBackend $> BackendC
-
-foreignBlock :: (Members '[InfoTableBuilder, JudocStash, NameIdGen] r) => ParsecS r ForeignBlock
-foreignBlock = do
-  _foreignKw <- kw kwForeign
-  _foreignBackend <- backend
-  _foreignCode <- bracedString
-  return ForeignBlock {..}
 
 --------------------------------------------------------------------------------
 -- Operator syntax declaration
