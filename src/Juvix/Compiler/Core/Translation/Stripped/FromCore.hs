@@ -14,10 +14,20 @@ fromCore :: InfoTable -> Stripped.InfoTable
 fromCore tab =
   Stripped.InfoTable
     { _infoMain = tab ^. infoMain,
-      _infoFunctions = fmap (translateFunctionInfo tab) (tab ^. infoIdentifiers),
-      _infoInductives = fmap translateInductiveInfo (tab ^. infoInductives),
-      _infoConstructors = fmap translateConstructorInfo (tab ^. infoConstructors)
+      _infoFunctions = fmap (translateFunctionInfo tab) (tab' ^. infoIdentifiers),
+      _infoInductives = fmap translateInductiveInfo (tab' ^. infoInductives),
+      _infoConstructors = fmap translateConstructorInfo (tab' ^. infoConstructors)
     }
+  where
+    tab' =
+      tab
+        { _infoIdentifiers = HashMap.filter (\ii -> isNothing (ii ^. identifierBuiltin)) (tab ^. infoIdentifiers),
+          _infoInductives = HashMap.filter (\ii -> isNothing (ii ^. inductiveBuiltin) || isIO (ii ^. inductiveBuiltin)) (tab ^. infoInductives),
+          _infoConstructors = HashMap.filter (\ci -> isNothing (ci ^. constructorBuiltin)) (tab ^. infoConstructors)
+        }
+    isIO :: Maybe BuiltinType -> Bool
+    isIO (Just (BuiltinTypeAxiom BuiltinIO)) = True
+    isIO _ = False
 
 translateFunctionInfo :: InfoTable -> IdentifierInfo -> Stripped.FunctionInfo
 translateFunctionInfo tab IdentifierInfo {..} =
@@ -117,12 +127,26 @@ translateNode node = case node of
       )
       (translateNode (_letItem ^. letItemValue))
       (translateNode _letBody)
-  NCase Case {..} ->
-    Stripped.mkCase
-      _caseInductive
-      (translateNode _caseValue)
-      (map translateCaseBranch _caseBranches)
-      (fmap translateNode _caseDefault)
+  NCase Case {..} -> case _caseBranches of
+    [br@CaseBranch {..}]
+      | _caseBranchTag == BuiltinTag TagTrue ->
+          translateIf _caseValue (br ^. caseBranchBody) (fromMaybe branchFailure _caseDefault)
+    [br@CaseBranch {..}]
+      | _caseBranchTag == BuiltinTag TagFalse ->
+          translateIf _caseValue (fromMaybe branchFailure _caseDefault) (br ^. caseBranchBody)
+    [br1, br2]
+      | br1 ^. caseBranchTag == BuiltinTag TagTrue
+          && br2 ^. caseBranchTag == BuiltinTag TagFalse ->
+          translateIf _caseValue (br1 ^. caseBranchBody) (br2 ^. caseBranchBody)
+      | br1 ^. caseBranchTag == BuiltinTag TagFalse
+          && br2 ^. caseBranchTag == BuiltinTag TagTrue ->
+          translateIf _caseValue (br2 ^. caseBranchBody) (br1 ^. caseBranchBody)
+    _ ->
+      Stripped.mkCase
+        _caseInductive
+        (translateNode _caseValue)
+        (map translateCaseBranch _caseBranches)
+        (fmap translateNode _caseDefault)
   _
     | isType node ->
         Stripped.mkConstr (Stripped.ConstrInfo "()" Nothing Stripped.TyDynamic) (BuiltinTag TagTrue) []
@@ -132,7 +156,16 @@ translateNode node = case node of
     unsupported :: a
     unsupported = error "Core to Core.Stripped: unsupported node"
 
+    translateIf :: Node -> Node -> Node -> Stripped.Node
+    translateIf val br1 br2 = Stripped.mkIf (translateNode val) (translateNode br1) (translateNode br2)
+
+    branchFailure :: Node
+    branchFailure = mkBuiltinApp' OpFail [mkConstant' (ConstString "illegal `if` branch")]
+
     translateCaseBranch :: CaseBranch -> Stripped.CaseBranch
+    translateCaseBranch CaseBranch {..}
+      | _caseBranchTag == BuiltinTag TagTrue || _caseBranchTag == BuiltinTag TagFalse =
+          error "Core to Core.Stripped: invalid case on booleans"
     translateCaseBranch CaseBranch {..} =
       Stripped.CaseBranch
         { _caseBranchInfo =
@@ -190,4 +223,11 @@ translateType node = case node of
     Stripped.TyPrim _typePrimPrimitive
   NDyn Dynamic {} ->
     Stripped.TyDynamic
-  _ -> error "Core to Core.Stripped: unsupported type"
+  _ ->
+    Stripped.TyDynamic
+
+-- TODO: We need to return TyDynamic here to handle type synonyms. This should
+-- be handled by RemoveTypeArgs, but currently it cannot be because
+-- lambda-letrec-lifting doesn't preserve the type information about the body.
+
+-- _ -> error $ "Core to Core.Stripped: unsupported type: " <> ppTrace node

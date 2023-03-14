@@ -57,11 +57,10 @@ mainModuleScope e = fromJust (moduleScope e (mainModuleTopPath e))
 mainModuleTopPath :: ExpressionContext -> C.TopModulePath
 mainModuleTopPath = (^. contextScoperResult . Scoper.mainModule . C.modulePath . S.nameConcrete)
 
-transformNode :: InfoTable -> [TransformationId] -> Node -> Node
-transformNode tab ts n = snd (run (runInfoTableBuilder tab transformNode'))
-  where
-    transformNode' :: Member InfoTableBuilder r => Sem r Node
-    transformNode' = do
-      sym <- freshSymbol
-      registerIdentNode sym n
-      lookupDefault impossible sym . (^. identContext) . applyTransformations ts <$> getInfoTable
+runTransformations :: [TransformationId] -> InfoTable -> Node -> (InfoTable, Node)
+runTransformations ts tab n = snd $ run $ runInfoTableBuilder tab $ do
+  sym <- freshSymbol
+  registerIdentNode sym n
+  tab' <- applyTransformations ts <$> getInfoTable
+  let node' = lookupDefault impossible sym (tab' ^. identContext)
+  return (tab', node')

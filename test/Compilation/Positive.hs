@@ -7,6 +7,7 @@ data PosTest = PosTest
   { _name :: String,
     _dir :: Path Abs Dir,
     _file :: Path Abs File,
+    _onlyEval :: Bool,
     _expectedFile :: Path Abs File
   }
 
@@ -26,31 +27,28 @@ toTestDescr PosTest {..} =
    in TestDescr
         { _testName = _name,
           _testRoot = tRoot,
-          _testAssertion = Steps $ compileAssertion file' expected'
+          _testAssertion = Steps $ compileAssertion _onlyEval file' expected'
         }
-
-filterOutTests :: [String] -> [PosTest] -> [PosTest]
-filterOutTests out = filter (\PosTest {..} -> _name `notElem` out)
 
 allTests :: TestTree
 allTests =
   testGroup
     "Juvix compilation pipeline positive tests"
-    ( map
-        (mkTest . toTestDescr)
-        ( filterOutTests
-            [ "Nested binders with variable capture"
-            ]
-            tests
-        )
-    )
+    (map (mkTest . toTestDescr) tests)
 
-posTest :: String -> Path Rel Dir -> Path Rel File -> Path Rel File -> PosTest
-posTest _name rdir rfile routfile =
+posTest' :: Bool -> String -> Path Rel Dir -> Path Rel File -> Path Rel File -> PosTest
+posTest' _onlyEval _name rdir rfile routfile =
   let _dir = root <//> rdir
       _file = _dir <//> rfile
       _expectedFile = root <//> routfile
    in PosTest {..}
+
+posTest :: String -> Path Rel Dir -> Path Rel File -> Path Rel File -> PosTest
+posTest = posTest' False
+
+-- tests which use large integers are only evaluated but not compiled
+posTestEval :: String -> Path Rel Dir -> Path Rel File -> Path Rel File -> PosTest
+posTestEval = posTest' True
 
 tests :: [PosTest]
 tests =
@@ -104,7 +102,7 @@ tests =
       $(mkRelDir ".")
       $(mkRelFile "test010.juvix")
       $(mkRelFile "out/test010.out"),
-    posTest
+    posTestEval
       "Tail recursion: Fibonacci numbers in linear time"
       $(mkRelDir ".")
       $(mkRelFile "test011.juvix")

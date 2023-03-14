@@ -1,6 +1,6 @@
 -- Value stack type mismatch
 
-function id(*) {
+function id(integer) : integer {
   push arg[0];
   ret;
 }

@@ -64,6 +64,8 @@ type Let = Let' () Node Type
 
 type Case = Case' () CaseBranchInfo Node Type
 
+type If = If' () Node
+
 type CaseBranch = CaseBranch' CaseBranchInfo Node Type
 
 {---------------------------------------------------------------------------------}
@@ -77,6 +79,7 @@ data Node
   | NCtr Constr
   | NLet Let
   | NCase Case
+  | NIf If
   deriving stock (Eq)
 
 instance HasAtomicity Node where
@@ -89,6 +92,7 @@ instance HasAtomicity Node where
     NCtr x -> atomicity x
     NLet x -> atomicity x
     NCase x -> atomicity x
+    NIf x -> atomicity x
 
 makeLenses ''VarInfo
 makeLenses ''IdentInfo

@@ -28,9 +28,9 @@ f leaf := 1;
 f (node l r) :=
   case g l, g r
     | (leaf, leaf) := 3
-    | (node l r, leaf) := (f l + f r) * 2
-    | (node l1 r1, node l2 r2) := (f l1 + f r1) * (f l2 + f r2)
-    | (_, node l r) := f l + f r;
+    | (node l r, leaf) := mod ((f l + f r) * 2) 20000
+    | (node l1 r1, node l2 r2) := mod ((f l1 + f r1) * (f l2 + f r2)) 20000
+    | (_, node l r) := mod (f l + f r) 20000;
 
 g leaf := leaf;
 g (node (node _ _) r) := r;

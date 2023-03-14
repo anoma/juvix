@@ -5,6 +5,8 @@ import Base
 import Core.Eval.Base
 import Core.Eval.Positive qualified as Eval
 import Data.Text.IO qualified as TIO
+import GHC.Base (seq)
+import Juvix.Compiler.Asm.Pretty qualified as Asm
 import Juvix.Compiler.Asm.Translation.FromCore qualified as Asm
 import Juvix.Compiler.Core.Pipeline
 import Juvix.Compiler.Core.Translation.FromSource
@@ -42,7 +44,8 @@ coreCompileAssertion' ::
 coreCompileAssertion' tab mainFile expectedFile step = do
   step "Translate to JuvixAsm"
   let tab' = Asm.fromCore $ Stripped.fromCore $ toStripped tab
-  Asm.asmCompileAssertion' tab' mainFile expectedFile step
+  length (fromText (Asm.ppPrint tab' tab') :: String) `seq`
+    Asm.asmCompileAssertion' tab' mainFile expectedFile step
 
 coreCompileAssertion ::
   Path Abs File ->

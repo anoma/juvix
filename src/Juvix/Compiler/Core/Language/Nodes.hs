@@ -104,6 +104,8 @@ data LetItem' a ty = LetItem
 -- body and in the values `length _letRecValues` implicit binders are introduced
 -- which hold the functions/values being defined.
 -- the last item in _letRecValues will have have index $0 in the body.
+-- The values are *not* in scope of the binders. I.e.
+-- the binders of the values cannot refer to the values
 data LetRec' i a ty = LetRec
   { _letRecInfo :: i,
     _letRecValues :: !(NonEmpty (LetItem' a ty)),
@@ -131,9 +133,19 @@ data CaseBranch' i a ty = CaseBranch
     _caseBranchBody :: !a
   }
 
+-- | A special form of `Case` for the booleans. Used only in Core.Stripped.
+data If' i a = If
+  { _ifInfo :: i,
+    _ifValue :: !a,
+    _ifTrue :: !a,
+    _ifFalse :: !a
+  }
+
 -- | Complex pattern match. `Match` is lazy: only the selected branch is evaluated.
 data Match' i a = Match
   { _matchInfo :: i,
+    _matchValueTypes :: !(NonEmpty a),
+    _matchReturnType :: !a,
     _matchValues :: !(NonEmpty a),
     _matchBranches :: ![MatchBranch' i a]
   }
@@ -151,12 +163,13 @@ data MatchBranch' i a = MatchBranch
   }
 
 data Pattern' i a
-  = PatWildcard (PatternWildcard' i)
+  = PatWildcard (PatternWildcard' i a)
   | PatBinder (PatternBinder' i a)
   | PatConstr (PatternConstr' i a)
 
-newtype PatternWildcard' i = PatternWildcard
-  { _patternWildcardInfo :: i
+data PatternWildcard' i a = PatternWildcard
+  { _patternWildcardInfo :: i,
+    _patternWildcardType :: a
   }
 
 data PatternBinder' i a = PatternBinder
@@ -167,7 +180,8 @@ data PatternBinder' i a = PatternBinder
 data PatternConstr' i a = PatternConstr
   { _patternConstrInfo :: i,
     _patternConstrTag :: !Tag,
-    _patternConstrArgs :: ![Pattern' i a]
+    _patternConstrArgs :: ![Pattern' i a],
+    _patternConstrType :: a
   }
 
 -- | Useful for unfolding Pi
@@ -251,10 +265,13 @@ instance HasAtomicity (LetRec' i a ty) where
 instance HasAtomicity (Case' i bi a ty) where
   atomicity _ = Aggregate lambdaFixity
 
+instance HasAtomicity (If' i a) where
+  atomicity _ = Aggregate lambdaFixity
+
 instance HasAtomicity (Match' i a) where
   atomicity _ = Aggregate lambdaFixity
 
-instance HasAtomicity (PatternWildcard' i) where
+instance HasAtomicity (PatternWildcard' i a) where
   atomicity _ = Atom
 
 instance HasAtomicity (PatternBinder' i a) where
@@ -341,15 +358,18 @@ instance (Eq a) => Eq (Constr' i a) where
 instance (Eq a) => Eq (Case' i bi a ty) where
   (Case _ sym1 v1 bs1 def1) == (Case _ sym2 v2 bs2 def2) = sym1 == sym2 && v1 == v2 && bs1 == bs2 && def1 == def2
 
+instance (Eq a) => Eq (If' i a) where
+  (If _ v1 b1 c1) == (If _ v2 b2 c2) = v1 == v2 && b1 == b2 && c1 == c2
+
 instance (Eq a) => Eq (CaseBranch' i a ty) where
   (==) =
     eqOn (^. caseBranchTag)
       ..&&.. eqOn (^. caseBranchBody)
 
 instance (Eq a) => Eq (Match' i a) where
-  (Match _ vs1 bs1) == (Match _ vs2 bs2) = vs1 == vs2 && bs1 == bs2
+  (Match _ _ _ vs1 bs1) == (Match _ _ _ vs2 bs2) = vs1 == vs2 && bs1 == bs2
 
-instance Eq (PatternWildcard' i) where
+instance Eq (PatternWildcard' i a) where
   _ == _ = True
 
 instance Eq (Univ' i) where
@@ -397,7 +417,7 @@ instance (Eq a) => Eq (MatchBranch' i a) where
   (MatchBranch _ pats1 b1) == (MatchBranch _ pats2 b2) = pats1 == pats2 && b1 == b2
 
 instance (Eq a) => Eq (PatternConstr' i a) where
-  (PatternConstr _ tag1 ps1) == (PatternConstr _ tag2 ps2) = tag1 == tag2 && ps1 == ps2
+  (PatternConstr _ tag1 ps1 _) == (PatternConstr _ tag2 ps2 _) = tag1 == tag2 && ps1 == ps2
 
 instance Hashable (Ident' i) where
   hashWithSalt s = hashWithSalt s . (^. identSymbol)

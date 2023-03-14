@@ -146,6 +146,22 @@ instance (PrettyCode a) => PrettyCode (Binder' a) where
     ty' <- ppCode ty
     return (parens (pretty name' <+> kwColon <+> ty'))
 
+ppWithType :: Member (Reader Options) r => Doc Ann -> Type -> Sem r (Doc Ann)
+ppWithType d = \case
+  NDyn {} ->
+    return d
+  ty -> do
+    ty' <- ppCode ty
+    return $ parens (d <+> kwColon <+> ty')
+
+ppTypeAnnot :: Member (Reader Options) r => Type -> Sem r (Doc Ann)
+ppTypeAnnot = \case
+  NDyn {} ->
+    return mempty
+  ty -> do
+    ty' <- ppCode ty
+    return $ mempty <+> kwColon <+> parens ty'
+
 ppCodeLet' :: (PrettyCode a, Member (Reader Options) r) => Text -> Maybe (Doc Ann) -> Let' i a ty -> Sem r (Doc Ann)
 ppCodeLet' name mty lt = do
   n' <- ppName KNameConstructor name
@@ -186,6 +202,13 @@ ppCodeCase' branchBinderNames branchTagNames Case {..} =
       let bss = bracesIndent $ align $ concatWith (\a b -> a <> kwSemicolon <> line <> b) bs''
       return $ kwCase <+> v <+> kwOf <+> bss
 
+instance PrettyCode a => PrettyCode (If' i a) where
+  ppCode If {..} = do
+    v <- ppCode _ifValue
+    l <- ppCode _ifTrue
+    r <- ppCode _ifFalse
+    return $ kwIf <+> v <+> kwThen <+> l <+> kwElse <+> r
+
 instance PrettyCode PatternWildcard where
   ppCode _ = return kwWildcard
 
@@ -193,10 +216,11 @@ instance PrettyCode PatternBinder where
   ppCode PatternBinder {..} = do
     n <- ppName KNameLocal (_patternBinder ^. binderName)
     case _patternBinderPattern of
-      PatWildcard {} -> return n
+      PatWildcard {} -> do
+        ppWithType n (_patternBinder ^. binderType)
       _ -> do
         pat <- ppRightExpression appFixity _patternBinderPattern
-        return $ n <> kwAt <> pat
+        ppWithType (n <> kwAt <> pat) (_patternBinder ^. binderType)
 
 instance PrettyCode PatternConstr where
   ppCode PatternConstr {..} = do
@@ -230,17 +254,25 @@ instance PrettyCode Let where
 instance PrettyCode LetRec where
   ppCode :: forall r. (Member (Reader Options) r) => LetRec -> Sem r (Doc Ann)
   ppCode LetRec {..} = do
+    let tys = fmap (^. letItemBinder . binderType) _letRecValues
     names <- mapM (getName . (^. letItemBinder)) _letRecValues
+    types <- mapM ppCode tys
     vs <- mapM (ppCode . (^. letItemValue)) _letRecValues
     b' <- ppCode _letRecBody
-    return $ case names of
-      hns :| [] -> kwLetRec <+> hns <+> kwAssign <+> head vs <+> kwIn <+> b'
+    let bs =
+          zipWith3Exact
+            (\n ty ty' -> if isDynamic ty' then n else n <+> colon <+> ty)
+            (toList names)
+            (toList types)
+            (toList tys)
+    return $ case bs of
+      [hbs] -> kwLetRec <+> hbs <+> kwAssign <+> head vs <+> kwIn <+> b'
       _ ->
         let bss =
               indent' $
                 align $
                   concatWith (\a b -> a <> kwSemicolon <> line <> b) $
-                    zipWithExact (\name val -> name <+> kwAssign <+> val) (toList names) (toList vs)
+                    zipWithExact (\b val -> b <+> kwAssign <+> val) (toList bs) (toList vs)
             nss = enclose kwSquareL kwSquareR (concatWith (<+>) names)
          in kwLetRec <> nss <> line <> bss <> line <> kwIn <> line <> b'
     where
@@ -283,23 +315,13 @@ instance PrettyCode Node where
           branchBodies = map (^. matchBranchBody) _matchBranches
       pats <- mapM ppPatterns branchPatterns
       vs <- mapM ppCode _matchValues
+      vs' <- zipWithM ppWithType (toList vs) (toList _matchValueTypes)
       bs <- sequence $ zipWithExact (\ps br -> ppCode br >>= \br' -> return $ ps <+> kwMapsto <+> br') pats branchBodies
       let bss = bracesIndent $ align $ concatWith (\a b -> a <> kwSemicolon <> line <> b) bs
-      return $ kwMatch <+> hsep (punctuate comma (toList vs)) <+> kwWith <+> bss
-    NPi Pi {..} ->
-      let piType = _piBinder ^. binderType
-       in case _piBinder ^. binderName of
-            "?" -> do
-              ty <- ppLeftExpression funFixity piType
-              b <- ppRightExpression funFixity _piBody
-              return $ ty <+> kwArrow <+> b
-            name -> do
-              n <- ppName KNameLocal name
-              ty <- ppCode piType
-              b <- ppCode _piBody
-              return $ kwPi <+> n <+> kwColon <+> ty <> comma <+> b
-    NUniv Univ {..} ->
-      return $ kwType <+> pretty _univLevel
+      rty <- ppTypeAnnot _matchReturnType
+      return $ kwMatch <+> hsep (punctuate comma vs') <+> kwWith <> rty <+> bss
+    NPi p -> ppCode p
+    NUniv u -> ppCode u
     NPrim TypePrim {..} -> ppCode _typePrimPrimitive
     NTyp TypeConstr {..} -> do
       args' <- mapM (ppRightExpression appFixity) _typeConstrArgs
@@ -308,6 +330,27 @@ instance PrettyCode Node where
     NDyn {} -> return kwDynamic
     Closure env l@Lambda {} ->
       ppCode (substEnv env (NLam l))
+
+instance PrettyCode Pi where
+  ppCode Pi {..} =
+    let piType = _piBinder ^. binderType
+     in case _piBinder ^. binderName of
+          "?" -> do
+            ty <- ppLeftExpression funFixity piType
+            b <- ppRightExpression funFixity _piBody
+            return $ ty <+> kwArrow <+> b
+          name -> do
+            n <- ppName KNameLocal name
+            ty <- ppCode piType
+            b <- ppCode _piBody
+            return $ kwPi <+> n <+> kwColon <+> ty <> comma <+> b
+
+instance PrettyCode (Univ' i) where
+  ppCode Univ {..} =
+    return $
+      if
+          | _univLevel == 0 -> kwType
+          | otherwise -> kwType <+> pretty _univLevel
 
 instance PrettyCode Stripped.TypeApp where
   ppCode Stripped.TypeApp {..} = do
@@ -350,6 +393,7 @@ instance PrettyCode Stripped.Node where
       let branchBinderNames = map (map (^. binderName) . (^. caseBranchBinders)) _caseBranches
           branchTagNames = map (^. (caseBranchInfo . Stripped.caseBranchInfoConstrName)) _caseBranches
        in ppCodeCase' branchBinderNames branchTagNames x
+    Stripped.NIf x -> ppCode x
 
 instance PrettyCode ConstructorInfo where
   ppCode :: (Member (Reader Options) r) => ConstructorInfo -> Sem r (Doc Ann)
@@ -400,11 +444,19 @@ instance PrettyCode Stripped.ArgumentInfo where
     ty <- ppCode _argumentType
     return $ name <+> colon <+> ty
 
+instance PrettyCode Stripped.ConstructorInfo where
+  ppCode :: (Member (Reader Options) r) => Stripped.ConstructorInfo -> Sem r (Doc Ann)
+  ppCode ci = do
+    name <- ppName KNameConstructor (ci ^. Stripped.constructorName)
+    ty <- ppCode (ci ^. Stripped.constructorType)
+    return $ name <+> colon <+> ty
+
 instance PrettyCode Stripped.InfoTable where
   ppCode :: forall r. (Member (Reader Options) r) => Stripped.InfoTable -> Sem r (Doc Ann)
   ppCode tbl = do
+    inds' <- ppInductives (HashMap.elems (tbl ^. Stripped.infoInductives))
     ctx' <- ppFunctions (tbl ^. Stripped.infoFunctions)
-    return ("-- Functions" <> line <> ctx' <> line)
+    return ("-- Types" <> line <> inds' <> line <> "-- Functions" <> line <> ctx' <> line)
     where
       ppFunctions :: HashMap Symbol Stripped.FunctionInfo -> Sem r (Doc Ann)
       ppFunctions ctx = do
@@ -417,6 +469,17 @@ instance PrettyCode Stripped.InfoTable where
             args <- mapM ppCode (fi ^. Stripped.functionArgsInfo)
             body' <- ppCode (fi ^. Stripped.functionBody)
             return (kwDef <+> sym' <> encloseSep lparen rparen ", " args <+> kwAssign <+> body')
+
+      ppInductives :: [Stripped.InductiveInfo] -> Sem r (Doc Ann)
+      ppInductives inds = do
+        inds' <- mapM ppInductive inds
+        return (vsep inds')
+        where
+          ppInductive :: Stripped.InductiveInfo -> Sem r (Doc Ann)
+          ppInductive ii = do
+            name <- ppName KNameInductive (ii ^. Stripped.inductiveName)
+            ctrs <- mapM (fmap (<> semi) . ppCode) (ii ^. Stripped.inductiveConstructors)
+            return (kwInductive <+> name <+> braces (line <> indent' (vsep ctrs) <> line))
 
 instance (PrettyCode a) => PrettyCode (NonEmpty a) where
   ppCode x = ppCode (toList x)

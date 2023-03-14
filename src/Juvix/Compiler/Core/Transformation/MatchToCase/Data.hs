@@ -46,26 +46,18 @@ data CompileState = CompileState
 newtype CompileStateNode = CompileStateNode
   {_compileStateNodeCurrent :: Node}
 
-initState :: CompileState
-initState =
-  CompileState
-    { _compileStateBindersAbove = 0,
-      _compileStateCompiledPattern =
-        CompiledPattern
-          { _compiledPatBinders = [],
-            _compiledPatMkNode = id
-          }
-    }
-
-stateWithBindersAbove :: Int -> CompileState
-stateWithBindersAbove n = initState {_compileStateBindersAbove = n}
-
 makeLenses ''CompiledPattern
 makeLenses ''CompileState
 makeLenses ''CompileStateNode
 
+addBindersAbove :: Member (Reader CompileState) r => Int -> Sem r CompiledPattern -> Sem r CompiledPattern
+addBindersAbove bindersNum = local (over compileStateBindersAbove (+ bindersNum))
+
 incBindersAbove :: Member (Reader CompileState) r => Sem r CompiledPattern -> Sem r CompiledPattern
-incBindersAbove = local (over compileStateBindersAbove (+ 1))
+incBindersAbove = addBindersAbove 1
+
+resetCompiledPattern :: Member (Reader CompileState) r => Sem r CompiledPattern -> Sem r CompiledPattern
+resetCompiledPattern = local (set compileStateCompiledPattern mempty)
 
 resetCurrentNode :: Member (Reader CompileStateNode) r => Sem r CompiledPattern -> Sem r CompiledPattern
 resetCurrentNode = local (set compileStateNodeCurrent (mkVar' 0))
@@ -83,3 +75,13 @@ instance Monoid CompiledPattern where
       { _compiledPatBinders = [],
         _compiledPatMkNode = id
       }
+
+initState :: CompileState
+initState =
+  CompileState
+    { _compileStateBindersAbove = 0,
+      _compileStateCompiledPattern = mempty
+    }
+
+stateWithBindersAbove :: Int -> CompileState
+stateWithBindersAbove n = initState {_compileStateBindersAbove = n}

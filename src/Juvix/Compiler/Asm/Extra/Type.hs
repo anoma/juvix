@@ -112,12 +112,8 @@ unifyTypes' loc tab ty1 ty2 =
       -- The `if` is to ensure correct behaviour with dynamic type targets. E.g.
       -- `(A, B) -> *` should unify with `A -> B -> C -> D`.
       if
-          | tgt1 == TyDynamic && tgt2 == TyDynamic ->
+          | tgt1 == TyDynamic || tgt2 == TyDynamic ->
               unifyTypes (curryType ty1) (curryType ty2)
-          | tgt1 == TyDynamic ->
-              unifyTypes (uncurryType ty1) ty2
-          | tgt2 == TyDynamic ->
-              unifyTypes ty1 (uncurryType ty2)
           | otherwise ->
               unifyTypes ty1 ty2
   where
@@ -166,3 +162,17 @@ isSubtype ty1 ty2 = case (ty1, ty2) of
   (TyFun {}, _) -> False
   (_, TyFun {}) -> False
   (_, TyConstr {}) -> False
+
+isSubtype' :: Type -> Type -> Bool
+isSubtype' ty1 ty2
+  -- The guard is to ensure correct behaviour with dynamic type targets. E.g.
+  -- `A -> B -> C -> D` should be a subtype of `(A, B) -> *`.
+  | tgt1 == TyDynamic || tgt2 == TyDynamic =
+      isSubtype
+        (curryType ty1)
+        (curryType ty2)
+  where
+    tgt1 = typeTarget (uncurryType ty1)
+    tgt2 = typeTarget (uncurryType ty2)
+isSubtype' ty1 ty2 =
+  isSubtype ty1 ty2

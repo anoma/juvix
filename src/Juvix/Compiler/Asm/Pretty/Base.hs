@@ -7,6 +7,7 @@ where
 import Data.Foldable
 import Data.HashMap.Strict qualified as HashMap
 import Data.List.NonEmpty qualified as NonEmpty
+import Data.Text qualified as Text
 import Juvix.Compiler.Abstract.Data.Name
 import Juvix.Compiler.Asm.Data.InfoTable
 import Juvix.Compiler.Asm.Extra.Base
@@ -36,20 +37,29 @@ wrapCore f c = do
   opts <- ask
   return $ run $ runReader (toCoreOptions opts) $ f c
 
+quoteAsmName :: Text -> Text
+quoteAsmName txt =
+  foldr
+    (uncurry Text.replace)
+    txt
+    [ ("$", "__dollar__"),
+      (":", "__colon__")
+    ]
+
 ppConstrName :: (Member (Reader Options) r) => Tag -> Sem r (Doc Ann)
 ppConstrName tag = do
   opts <- ask
   let tab = opts ^. optInfoTable
   maybe
     (wrapCore Core.ppCode tag)
-    (\ci -> return $ annotate (AnnKind KNameConstructor) (pretty (ci ^. constructorName)))
+    (\ci -> return $ annotate (AnnKind KNameConstructor) (pretty (quoteAsmName (ci ^. constructorName))))
     (HashMap.lookup tag (tab ^. infoConstrs))
 
 ppIndName :: (Member (Reader Options) r) => Symbol -> Sem r (Doc Ann)
 ppIndName sym = do
   opts <- ask
   let ci = fromMaybe impossible $ HashMap.lookup sym (opts ^. optInfoTable . infoInductives)
-  return $ annotate (AnnKind KNameInductive) (pretty (ci ^. inductiveName))
+  return $ annotate (AnnKind KNameInductive) (pretty (quoteAsmName (ci ^. inductiveName)))
 
 ppFunName :: (Member (Reader Options) r) => Symbol -> Sem r (Doc Ann)
 ppFunName sym = do
@@ -60,7 +70,7 @@ ppFunName sym = do
         annotate (AnnKind KNameFunction) $
           pretty ("unnamed_function_" ++ show sym :: String)
     )
-    (\fi -> return $ annotate (AnnKind KNameFunction) (pretty (fi ^. functionName)))
+    (\fi -> return $ annotate (AnnKind KNameFunction) (pretty (quoteAsmName (fi ^. functionName))))
     (HashMap.lookup sym (tab ^. infoFunctions))
 
 instance PrettyCode BuiltinDataTag where
@@ -344,7 +354,7 @@ ppFunSig FunctionInfo {..} = do
   targetty <- ppCode (typeTarget _functionType)
   return $
     keyword Str.function
-      <+> annotate (AnnKind KNameFunction) (pretty _functionName)
+      <+> annotate (AnnKind KNameFunction) (pretty (quoteAsmName _functionName))
         <> encloseSep lparen rparen ", " argtys
       <+> colon
       <+> targetty
@@ -353,19 +363,29 @@ ppFunSig FunctionInfo {..} = do
 instance PrettyCode ConstructorInfo where
   ppCode ConstructorInfo {..} = do
     ty <- ppCode _constructorType
-    return $ annotate (AnnKind KNameConstructor) (pretty _constructorName) <+> colon <+> ty
+    return $ annotate (AnnKind KNameConstructor) (pretty (quoteAsmName _constructorName)) <+> colon <+> ty
 
 instance PrettyCode InductiveInfo where
   ppCode InductiveInfo {..} = do
     ctrs <- mapM ppCode _inductiveConstructors
-    return $ kwInductive <+> annotate (AnnKind KNameInductive) (pretty _inductiveName) <+> braces' (vcat (map (<> semi) ctrs))
+    return $ kwInductive <+> annotate (AnnKind KNameInductive) (pretty (quoteAsmName _inductiveName)) <+> braces' (vcat (map (<> semi) ctrs))
 
 instance PrettyCode InfoTable where
   ppCode InfoTable {..} = do
-    inds <- mapM ppCode (HashMap.elems _infoInductives)
+    inds <- mapM ppCode (HashMap.elems (filterOutBuiltins _infoInductives))
     funsigs <- mapM ppFunSig (HashMap.elems _infoFunctions)
     funs <- mapM ppCode (HashMap.elems _infoFunctions)
     return $ vcat (map (<> line) inds) <> line <> vcat funsigs <> line <> line <> vcat (map (<> line) funs)
+    where
+      filterOutBuiltins :: HashMap Symbol InductiveInfo -> HashMap Symbol InductiveInfo
+      filterOutBuiltins =
+        HashMap.filter
+          ( \ii -> case ii ^. inductiveConstructors of
+              ci : _ -> case ci ^. constructorTag of
+                BuiltinTag _ -> False
+                UserTag _ -> True
+              [] -> True
+          )
 
 {--------------------------------------------------------------------------------}
 {- helper functions -}

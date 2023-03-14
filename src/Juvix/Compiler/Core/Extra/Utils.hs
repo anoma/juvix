@@ -22,7 +22,6 @@ import Juvix.Compiler.Core.Extra.Recursors
 import Juvix.Compiler.Core.Extra.Recursors.Fold.Named
 import Juvix.Compiler.Core.Extra.Recursors.Map.Named
 import Juvix.Compiler.Core.Extra.SubstEnv
-import Juvix.Compiler.Core.Info.TypeInfo
 import Juvix.Compiler.Core.Language
 
 isClosed :: Node -> Bool
@@ -92,24 +91,39 @@ cosmos f = ufoldA reassemble f
 -- if fv = x1, x2, .., xn
 -- the result is of the form λx1 λx2 .. λ xn b
 captureFreeVars :: [(Index, Binder)] -> Node -> Node
-captureFreeVars fv
-  | n == 0 = id
-  | otherwise = mkLambdasB infos . mapFreeVars
+captureFreeVars freevars = goBinders freevars . mapFreeVars
   where
-    (indices, infos) = unzip fv
-    n = length fv
-    s :: HashMap Index Index
-    s = HashMap.fromList (zip (reverse indices) [0 ..])
     mapFreeVars :: Node -> Node
     mapFreeVars = dmapN go
       where
+        s :: HashMap Index Index
+        s = HashMap.fromList (zip (reverse (map fst freevars)) [0 ..])
         go :: Index -> Node -> Node
         go k = \case
           NVar (Var i u)
             | Just v <- s ^. at (u - k) -> NVar (Var i (v + k))
           m -> m
 
--- captures all free variables of a node. It also returns the list of captured
+    goBinders :: [(Index, Binder)] -> Node -> Node
+    goBinders fv = case unsnoc fv of
+      Nothing -> id
+      Just (fvs, (idx, bin)) -> goBinders fvs . mkLambdaB (mapBinder idx bin)
+      where
+        indices = map fst fv
+        mapBinder :: Index -> Binder -> Binder
+        mapBinder binderIndex = over binderType (dmapN go)
+          where
+            go :: Index -> Node -> Node
+            go k = \case
+              NVar u
+                | u ^. varIndex >= k ->
+                    let uCtx = u ^. varIndex - k + binderIndex + 1
+                        err = error ("impossible: could not find " <> show uCtx <> " in " <> show indices)
+                        u' = length indices - 2 - fromMaybe err (elemIndex uCtx indices) + k
+                     in NVar (set varIndex u' u)
+              m -> m
+
+-- | Captures all free variables of a node. It also returns the list of captured
 -- variables in left-to-right order: if snd is of the form λxλy... then fst is
 -- [x, y]
 captureFreeVarsCtx :: BinderList Binder -> Node -> ([(Var, Binder)], Node)
@@ -120,11 +134,11 @@ captureFreeVarsCtx bl n =
 freeVarsCtx' :: BinderList Binder -> Node -> [Var]
 freeVarsCtx' bl = map fst . freeVarsCtx bl
 
--- | the output list does not contain repeated elements and is sorted by *decreasing* variable index.
+-- | The output list does not contain repeated elements and is sorted by *decreasing* variable index.
 -- The indices are relative to the given binder list
 freeVarsCtx :: BinderList Binder -> Node -> [(Var, Binder)]
-freeVarsCtx ctx n =
-  BL.lookupsSortedRev ctx . run . fmap fst . runOutputList $ go (freeVarsSorted n)
+freeVarsCtx ctx =
+  BL.lookupsSortedRev ctx . run . fmap fst . runOutputList . go . freeVarsSorted
   where
     go ::
       -- set of free variables relative to the original ctx
@@ -135,9 +149,10 @@ freeVarsCtx ctx n =
       Just (v, vs) -> do
         output v
         let idx = v ^. varIndex
-            bi = BL.lookup idx ctx
+            bi :: Binder = BL.lookup idx ctx
+            fbi = freeVarsSorted (bi ^. binderType)
             freevarsbi' :: Set Var
-            freevarsbi' = Set.mapMonotonic (over varIndex (+ (idx + 1))) (freeVarsSorted (bi ^. binderType))
+            freevarsbi' = Set.mapMonotonic (over varIndex (+ (idx + 1))) fbi
         go (freevarsbi' <> vs)
 
 -- | subst for multiple bindings
@@ -157,6 +172,18 @@ substs t = umapN go
 subst :: Node -> Node -> Node
 subst t = substs [t]
 
+-- | `substDrop args argtys` drops `length args` from `argtys` and substitutes
+-- the corresponding variables with `args`. For example:
+-- ```
+-- substDrop [Nat, Var 3] [Type, Type, Var 1, Var 1] =
+--   [Nat, Var 4]
+-- ``
+substDrop :: [Node] -> [Node] -> [Node]
+substDrop args argtys =
+  reverse $ snd $ foldl' (\(args', acc) ty -> (mkVar' 0 : map (shift 1) args', substs args' ty : acc)) (reverse args, []) (drop k argtys)
+  where
+    k = length args
+
 -- | reduce all beta redexes present in a term and the ones created immediately
 -- downwards (i.e., a "beta-development")
 developBeta :: Node -> Node
@@ -167,9 +194,12 @@ developBeta = umap go
       NApp (App _ (NLam (Lambda {..})) arg) -> subst arg _lambdaBody
       _ -> n
 
-etaExpand :: Int -> Node -> Node
-etaExpand 0 n = n
-etaExpand k n = mkLambdas' k (mkApps' (shift k n) (map mkVar' (reverse [0 .. k - 1])))
+etaExpand :: [Type] -> Node -> Node
+etaExpand [] n = n
+etaExpand argtys n =
+  mkLambdas' argtys (mkApps' (shift k n) (map mkVar' (reverse [0 .. k - 1])))
+  where
+    k = length argtys
 
 convertClosures :: Node -> Node
 convertClosures = umap go
@@ -181,6 +211,26 @@ convertClosures = umap go
 
 convertRuntimeNodes :: Node -> Node
 convertRuntimeNodes = convertClosures
+
+squashApps :: Node -> Node
+squashApps = dmap go
+  where
+    go :: Node -> Node
+    go n =
+      let (l, args) = unfoldApps' n
+       in case l of
+            NCtr (Constr i tag args') -> mkConstr i tag (args' ++ args)
+            NBlt (BuiltinApp i op args') -> mkBuiltinApp i op (args' ++ args)
+            NTyp (TypeConstr i sym args') -> mkTypeConstr i sym (args' ++ args)
+            _ -> n
+
+binderFromArgumentInfo :: ArgumentInfo -> Binder
+binderFromArgumentInfo a =
+  Binder
+    { _binderName = a ^. argumentName,
+      _binderLocation = a ^. argumentLocation,
+      _binderType = a ^. argumentType
+    }
 
 argumentInfoFromBinder :: Binder -> ArgumentInfo
 argumentInfoFromBinder i =
@@ -202,6 +252,22 @@ patternBindersNum = length . (^.. patternBinders)
 
 patternType :: Pattern -> Node
 patternType = \case
-  PatWildcard w -> getInfoType (w ^. patternWildcardInfo)
+  PatWildcard w -> w ^. patternWildcardType
   PatBinder b -> b ^. patternBinder . binderType
-  PatConstr c -> getInfoType (c ^. patternConstrInfo)
+  PatConstr c -> c ^. patternConstrType
+
+builtinOpArgTypes :: BuiltinOp -> [Type]
+builtinOpArgTypes = \case
+  OpIntAdd -> [mkTypeInteger', mkTypeInteger']
+  OpIntSub -> [mkTypeInteger', mkTypeInteger']
+  OpIntMul -> [mkTypeInteger', mkTypeInteger']
+  OpIntDiv -> [mkTypeInteger', mkTypeInteger']
+  OpIntMod -> [mkTypeInteger', mkTypeInteger']
+  OpIntLt -> [mkTypeInteger', mkTypeInteger']
+  OpIntLe -> [mkTypeInteger', mkTypeInteger']
+  OpEq -> [mkDynamic', mkDynamic']
+  OpShow -> [mkDynamic']
+  OpStrConcat -> [mkTypeString', mkTypeString']
+  OpStrToInt -> [mkTypeString']
+  OpTrace -> [mkDynamic', mkDynamic']
+  OpFail -> [mkTypeString']

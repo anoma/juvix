@@ -2,7 +2,6 @@ module Main (main) where
 
 import Arity qualified
 import Asm qualified
-import BackendC qualified
 import BackendGeb qualified
 import Base
 import Compilation qualified
@@ -20,8 +19,7 @@ slowTests :: TestTree
 slowTests =
   testGroup
     "Juvix slow tests"
-    [ BackendC.allTests,
-      BackendGeb.allTests,
+    [ BackendGeb.allTests,
       Runtime.allTests,
       Asm.allTests,
       Core.allTests,

@@ -16,7 +16,7 @@ data CoreCommand
   | FromConcrete CoreFromConcreteOptions
   | Strip CoreStripOptions
   | CoreAsm CoreAsmOptions
-  | CoreCompile CoreCompileOptions
+  | CoreCompile CompileOptions
   deriving stock (Data)
 
 parseCoreCommand :: Parser CoreCommand
@@ -92,5 +92,5 @@ parseCoreCommand =
     compileInfo :: ParserInfo CoreCommand
     compileInfo =
       info
-        (CoreCompile <$> parseCoreCompileOptions)
-        (progDesc "Compile a JuvixCore file to native code or WebAssembly")
+        (CoreCompile <$> parseCompileOptions parseInputJuvixCoreFile)
+        (progDesc "Compile a JuvixCore file to native code, WebAssembly or GEB")

@@ -125,7 +125,7 @@ tests:
     stdin: "let x : Nat; x := 2 + 1 in x"
     stdout:
       contains:
-        "suc (suc (suc zero))"
+        "3"
     exit-status: 0
 
   - name: load-builtin-bool
@@ -137,7 +137,7 @@ tests:
     stdin: ":load BuiltinBool.juvix"
     stdout:
       contains:
-        BuiltinBool>
+        "BuiltinBool>"
     exit-status: 0
 
   - name: load-builtin-bool-with-spaces
@@ -197,7 +197,7 @@ tests:
     stdin: "1 + 2"
     stdout:
       contains: |
-        suc (suc (suc zero))
+        3
     exit-status: 0
 
   - name: repl-trace
@@ -209,9 +209,9 @@ tests:
     stdin: trace 2 (printNatLn 3)
     stdout:
       contains: |
-        suc (suc (suc zero))
+        3
     stderr: |
-        suc (suc zero)
+        2
     exit-status: 0
 
   - name: repl-trace-file
@@ -223,12 +223,12 @@ tests:
     stdin: f 4 0
     stdout:
       contains: |
-       zero
+       0
     stderr: |
-       suc (suc (suc (suc zero)))
-       suc (suc (suc zero))
-       suc (suc zero)
-       suc zero
+       4
+       3
+       2
+       1
     exit-status: 0
 
   - name: repl-fail
@@ -244,15 +244,4 @@ tests:
     stderr:
       contains: |
         evaluation error: failure: Enough
-    exit-status: 0
-
-  - name: repl-nat-to-int-transform
-    command:
-      - juvix
-      - repl
-      - -t nat-to-int
-    stdin: "1 + 2"
-    stdout:
-      contains: |
-        3
     exit-status: 0

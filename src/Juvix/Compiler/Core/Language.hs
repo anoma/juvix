@@ -43,7 +43,7 @@ type Match = Match' Info Node
 
 type MatchBranch = MatchBranch' Info Node
 
-type PatternWildcard = PatternWildcard' Info
+type PatternWildcard = PatternWildcard' Info Node
 
 type PatternBinder = PatternBinder' Info Node
 

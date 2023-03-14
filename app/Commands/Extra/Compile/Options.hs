@@ -7,6 +7,8 @@ data CompileTarget
   = TargetWasm32Wasi
   | TargetNative64
   | TargetGeb
+  | TargetCore
+  | TargetAsm
   deriving stock (Data, Bounded, Enum)
 
 instance Show CompileTarget where
@@ -14,6 +16,8 @@ instance Show CompileTarget where
     TargetWasm32Wasi -> "wasm32-wasi"
     TargetNative64 -> "native"
     TargetGeb -> "geb"
+    TargetCore -> "core"
+    TargetAsm -> "asm"
 
 data CompileOptions = CompileOptions
   { _compileDebug :: Bool,
@@ -29,8 +33,8 @@ data CompileOptions = CompileOptions
 
 makeLenses ''CompileOptions
 
-parseCompileOptions :: Parser CompileOptions
-parseCompileOptions = do
+parseCompileOptions :: Parser (AppPath File) -> Parser CompileOptions
+parseCompileOptions parseInputFile = do
   _compileDebug <-
     switch
       ( short 'g'
@@ -63,7 +67,7 @@ parseCompileOptions = do
       )
   _compileTarget <- optCompileTarget
   _compileOutputFile <- optional parseGenericOutputFile
-  _compileInputFile <- parseGenericInputFile
+  _compileInputFile <- parseInputFile
   pure CompileOptions {..}
 
 optCompileTarget :: Parser CompileTarget

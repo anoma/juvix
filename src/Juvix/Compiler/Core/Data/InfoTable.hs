@@ -72,7 +72,7 @@ data InductiveInfo = InductiveInfo
     _inductiveConstructors :: [ConstructorInfo],
     _inductiveParams :: [ParameterInfo],
     _inductivePositive :: Bool,
-    _inductiveBuiltin :: Maybe BuiltinInductive
+    _inductiveBuiltin :: Maybe BuiltinType
   }
 
 data ConstructorInfo = ConstructorInfo

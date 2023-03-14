@@ -10,6 +10,8 @@ data PosTest = PosTest
     _expectedFile :: Path Rel File
   }
 
+makeLenses ''PosTest
+
 root :: Path Abs Dir
 root = relToProject $(mkRelDir "tests/Core/positive")
 
@@ -274,5 +276,55 @@ tests =
       "String builtins"
       $(mkRelDir ".")
       $(mkRelFile "test048.jvc")
-      $(mkRelFile "out/test048.out")
+      $(mkRelFile "out/test048.out"),
+    PosTest
+      "Lifting and polymorphism"
+      $(mkRelDir ".")
+      $(mkRelFile "test049.jvc")
+      $(mkRelFile "out/test049.out"),
+    PosTest
+      "Church numerals with pattern matching"
+      $(mkRelDir ".")
+      $(mkRelFile "test050.jvc")
+      $(mkRelFile "out/test050.out"),
+    PosTest
+      "Type annotations for patterns"
+      $(mkRelDir ".")
+      $(mkRelFile "test051.jvc")
+      $(mkRelFile "out/test051.out"),
+    PosTest
+      "foldl with match"
+      $(mkRelDir ".")
+      $(mkRelFile "test052.jvc")
+      $(mkRelFile "out/test052.out"),
+    PosTest
+      "Match with higher-order polymorphic functions"
+      $(mkRelDir ".")
+      $(mkRelFile "test053.jvc")
+      $(mkRelFile "out/test053.out"),
+    PosTest
+      "Typed match"
+      $(mkRelDir ".")
+      $(mkRelFile "test054.jvc")
+      $(mkRelFile "out/test054.out"),
+    PosTest
+      "Eta-expansion of polymorphic constructors"
+      $(mkRelDir ".")
+      $(mkRelFile "test055.jvc")
+      $(mkRelFile "out/test055.out"),
+    PosTest
+      "LetRec with type annotations"
+      $(mkRelDir ".")
+      $(mkRelFile "test056.jvc")
+      $(mkRelFile "out/test056.out"),
+    PosTest
+      "Type synonyms"
+      $(mkRelDir ".")
+      $(mkRelFile "test057.jvc")
+      $(mkRelFile "out/test057.out"),
+    PosTest
+      "Lifting and partial application"
+      $(mkRelDir ".")
+      $(mkRelFile "test058.jvc")
+      $(mkRelFile "out/test058.out")
   ]

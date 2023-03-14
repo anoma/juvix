@@ -25,7 +25,7 @@ lambdaLiftNode aboveBl top =
     typeFromArgs :: [ArgumentInfo] -> Type
     typeFromArgs = \case
       [] -> mkDynamic' -- change this when we have type info about the body
-      (a : as) -> mkPi' (a ^. argumentType) (typeFromArgs as)
+      (a : as) -> mkPi mempty (binderFromArgumentInfo a) (typeFromArgs as)
 
     goTop :: BinderList Binder -> Node -> [LambdaLhs] -> Sem r Node
     goTop bl body = \case
@@ -77,20 +77,21 @@ lambdaLiftNode aboveBl top =
         goLetRec :: LetRec -> Sem r Recur
         goLetRec letr = do
           let defs :: [Node]
-              defs = toList (letr ^.. letRecValues . each . letItemValue)
+              defs = letr ^.. letRecValues . each . letItemValue
               ndefs :: Int
               ndefs = length defs
-          letRecBinders' :: [Binder] <- mapM (lambdaLiftBinder bl) (letr ^.. letRecValues . each . letItemBinder)
-          let bl' :: BinderList Binder
-              -- the reverse is necessary because the last item in letRecBinders has index 0
-              bl' = BL.prependRev letRecBinders' bl
+              binders :: [Binder]
+              binders = letr ^.. letRecValues . each . letItemBinder
+          letRecBinders' :: [Binder] <- mapM (lambdaLiftBinder bl) binders
           topSyms :: [Symbol] <- forM defs (const freshSymbol)
+          let bl' :: BinderList Binder
+              bl' = BL.prependRev letRecBinders' bl
 
-          let topNames :: [Text]
+              topNames :: [Text]
               topNames = zipWithExact uniqueName (map (^. binderName) letRecBinders') topSyms
               topSymsWithName = zipExact topSyms topNames
 
-          let recItemsFreeVars :: [(Var, Binder)]
+              recItemsFreeVars :: [(Var, Binder)]
               recItemsFreeVars = mapMaybe helper (concatMap (freeVarsCtx' bl') defs)
                 where
                   helper :: Var -> Maybe (Var, Binder)
@@ -151,8 +152,7 @@ lambdaLiftNode aboveBl top =
                         | otherwise -> impossible
                       (y : ys) -> mkLet mempty bnd' (shift k x) (goShift (k + 1) (y :| ys))
                       where
-                        bnd' = over binderType (shift k . subsCalls . shift (-ndefs)) bnd
-          -- TODO: the types should also be lambda-lifted
+                        bnd' = over binderType (shift k . subsCalls) bnd
           let res :: Node
               res = shiftHelper body' (nonEmpty' (zipExact letItems letRecBinders'))
           return (Recur res)

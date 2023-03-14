@@ -39,6 +39,16 @@ getBoolSymbol = do
   ci <- getConstructorInfo (BuiltinTag TagTrue)
   return $ ci ^. constructorInductive
 
+getIOSymbol :: (Member InfoTableBuilder r) => Sem r Symbol
+getIOSymbol = do
+  ci <- getConstructorInfo (BuiltinTag TagWrite)
+  return $ ci ^. constructorInductive
+
+getNatSymbol :: (Member InfoTableBuilder r) => Sem r Symbol
+getNatSymbol = do
+  tab <- getInfoTable
+  return $ fromJust (lookupBuiltinInductive tab BuiltinNat) ^. inductiveSymbol
+
 checkSymbolDefined :: (Member InfoTableBuilder r) => Symbol -> Sem r Bool
 checkSymbolDefined sym = do
   tab <- getInfoTable
@@ -83,7 +93,7 @@ runInfoTableBuilder tab =
         let identKind = IdentInd sym
         whenJust
           (ii ^. inductiveBuiltin)
-          (\b -> modify' (over infoBuiltins (HashMap.insert (BuiltinsInductive b) identKind)))
+          (\b -> modify' (over infoBuiltins (HashMap.insert (builtinTypeToPrim b) identKind)))
         modify' (over infoInductives (HashMap.insert sym ii))
         modify' (over identMap (HashMap.insert idt identKind))
       RegisterIdentNode sym node ->
@@ -111,29 +121,36 @@ createBuiltinConstr ::
   Text ->
   Type ->
   Maybe BuiltinConstructor ->
-  Sem r ConstructorInfo
-createBuiltinConstr sym tag nameTxt ty cblt = do
-  return $
-    ConstructorInfo
-      { _constructorName = nameTxt,
-        _constructorLocation = Nothing,
-        _constructorTag = tag,
-        _constructorType = ty,
-        _constructorArgsNum = length (typeArgs ty),
-        _constructorInductive = sym,
-        _constructorBuiltin = cblt
-      }
+  ConstructorInfo
+createBuiltinConstr sym tag nameTxt ty cblt =
+  ConstructorInfo
+    { _constructorName = nameTxt,
+      _constructorLocation = Nothing,
+      _constructorTag = tag,
+      _constructorType = ty,
+      _constructorArgsNum = length (typeArgs ty),
+      _constructorInductive = sym,
+      _constructorBuiltin = cblt
+    }
+
+builtinConstrs ::
+  Symbol ->
+  Type ->
+  [(Tag, Text, Type -> Type, Maybe BuiltinConstructor)] ->
+  [ConstructorInfo]
+builtinConstrs sym ty ctrs =
+  map (\(tag, name, fty, cblt) -> createBuiltinConstr sym tag name (fty ty) cblt) ctrs
 
 declareInductiveBuiltins ::
   (Member InfoTableBuilder r) =>
   Text ->
-  Maybe BuiltinInductive ->
+  Maybe BuiltinType ->
   [(Tag, Text, Type -> Type, Maybe BuiltinConstructor)] ->
   Sem r ()
 declareInductiveBuiltins indName blt ctrs = do
   sym <- freshSymbol
   let ty = mkTypeConstr' sym []
-  constrs <- mapM (\(tag, name, fty, cblt) -> createBuiltinConstr sym tag name (fty ty) cblt) ctrs
+      constrs = builtinConstrs sym ty ctrs
   registerInductive
     indName
     ( InductiveInfo
@@ -149,22 +166,26 @@ declareInductiveBuiltins indName blt ctrs = do
     )
   mapM_ (\ci -> registerConstructor (ci ^. constructorName) ci) constrs
 
+builtinIOConstrs :: [(Tag, Text, Type -> Type, Maybe BuiltinConstructor)]
+builtinIOConstrs =
+  [ (BuiltinTag TagReturn, "return", mkPi' mkDynamic', Nothing),
+    (BuiltinTag TagBind, "bind", \ty -> mkPi' ty (mkPi' (mkPi' mkDynamic' ty) ty), Nothing),
+    (BuiltinTag TagWrite, "write", mkPi' mkDynamic', Nothing),
+    (BuiltinTag TagReadLn, "readLn", id, Nothing)
+  ]
+
 declareIOBuiltins :: (Member InfoTableBuilder r) => Sem r ()
 declareIOBuiltins =
   declareInductiveBuiltins
     "IO"
-    Nothing
-    [ (BuiltinTag TagReturn, "return", mkPi' mkDynamic', Nothing),
-      (BuiltinTag TagBind, "bind", \ty -> mkPi' ty (mkPi' (mkPi' mkDynamic' ty) ty), Nothing),
-      (BuiltinTag TagWrite, "write", mkPi' mkDynamic', Nothing),
-      (BuiltinTag TagReadLn, "readLn", id, Nothing)
-    ]
+    (Just (BuiltinTypeAxiom BuiltinIO))
+    builtinIOConstrs
 
 declareBoolBuiltins :: (Member InfoTableBuilder r) => Sem r ()
 declareBoolBuiltins =
   declareInductiveBuiltins
     "bool"
-    (Just BuiltinBool)
+    (Just (BuiltinTypeInductive BuiltinBool))
     [ (BuiltinTag TagTrue, "true", const mkTypeBool', Just BuiltinBoolTrue),
       (BuiltinTag TagFalse, "false", const mkTypeBool', Just BuiltinBoolFalse)
     ]
@@ -175,7 +196,7 @@ declareNatBuiltins = do
   tagSuc <- freshTag
   declareInductiveBuiltins
     "nat"
-    (Just BuiltinNat)
+    (Just (BuiltinTypeInductive BuiltinNat))
     [ (tagZero, "zero", id, Just BuiltinNatZero),
       (tagSuc, "suc", \x -> mkPi' x x, Just BuiltinNatSuc)
     ]

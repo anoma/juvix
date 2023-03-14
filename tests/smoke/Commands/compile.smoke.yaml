@@ -11,17 +11,6 @@ tests:
         JUVIX_FILE
     exit-status: 0
 
-  - name: minic-compilation
-    command:
-      shell:
-        - bash
-      script: |
-        juvix compile positive/MiniC/HelloWorld/Input.juvix -o hello.wasm
-        [ -f hello.wasm ]
-        
-    stdout: ""
-    exit-status: 0
-  
   - name: hello-world
     command:
       shell:
@@ -29,7 +18,7 @@ tests:
       script: |
         cd ./../examples/milestone/HelloWorld
         juvix compile HelloWorld.juvix
-        [ -f HelloWorld ] 
+        [ -f HelloWorld ]
         ./HelloWorld
     exit-status: 0
     stdout: |

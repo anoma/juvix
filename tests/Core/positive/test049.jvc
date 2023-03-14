@@ -1,0 +1,15 @@
+-- lifting and polymorphism
+
+type Boxed {
+    Box : Π A : Type, A → Boxed A
+};
+
+def g : Π A : Type, A → Boxed A → A → A := λ(A : Type) λ(a : A) λ(_ : Boxed A) λ(a' : A) a;
+
+def f : Π A : Type, int → int → Boxed A → int → A → A :=
+    λ(A : Type) λ(n : int) λ(m : int) λ(b : Boxed A) λ(k : int) λ(a' : A)
+        case b of {
+            Box _ a := (λ(_ : int) g A a b a') (n + m + k);
+        };
+
+f int 0 1 (Box int 1) 2 3

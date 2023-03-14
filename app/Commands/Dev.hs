@@ -11,7 +11,6 @@ import Commands.Dev.DisplayRoot qualified as DisplayRoot
 import Commands.Dev.Geb qualified as Geb
 import Commands.Dev.Highlight qualified as Highlight
 import Commands.Dev.Internal qualified as Internal
-import Commands.Dev.MiniC qualified as MiniC
 import Commands.Dev.Options
 import Commands.Dev.Parse qualified as Parse
 import Commands.Dev.Runtime qualified as Runtime
@@ -24,7 +23,6 @@ runCommand = \case
   Parse opts -> Parse.runCommand opts
   Scope opts -> Scope.runCommand opts
   Internal opts -> Internal.runCommand opts
-  MiniC opts -> MiniC.runCommand opts
   Termination opts -> Termination.runCommand opts
   Core opts -> Core.runCommand opts
   Geb opts -> Geb.runCommand opts

@@ -156,17 +156,41 @@ upToCore ::
 upToCore =
   upToInternalReachability >>= Core.fromInternal
 
+upToAsm ::
+  (Members '[Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, PathResolver] r) =>
+  Sem r Asm.InfoTable
+upToAsm =
+  upToCore >>= \Core.CoreResult {..} -> return (coreToAsm _coreResultTable)
+
 upToMiniC ::
   (Members '[Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, PathResolver] r) =>
+  Asm.Options ->
   Sem r C.MiniCResult
-upToMiniC = upToInternalReachability >>= C.fromInternal
+upToMiniC opts =
+  upToAsm >>= asmToMiniC opts
+
+upToGeb ::
+  (Members '[Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, PathResolver] r) =>
+  Geb.ResultSpec ->
+  Sem r Geb.Result
+upToGeb spec =
+  upToCore >>= \Core.CoreResult {..} -> coreToGeb spec _coreResultTable
+
+upToEval ::
+  (Members '[Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, PathResolver] r) =>
+  Sem r Core.CoreResult
+upToEval =
+  upToCore >>= \r -> return r {Core._coreResultTable = Core.toEval (r ^. Core.coreResultTable)}
 
 --------------------------------------------------------------------------------
 -- Internal workflows
 --------------------------------------------------------------------------------
 
+coreToAsm :: Core.InfoTable -> Asm.InfoTable
+coreToAsm = Asm.fromCore . Stripped.fromCore . Core.toStripped
+
 coreToMiniC :: (Member (Error JuvixError) r) => Asm.Options -> Core.InfoTable -> Sem r C.MiniCResult
-coreToMiniC opts = asmToMiniC opts . Asm.fromCore . Stripped.fromCore . Core.toStripped
+coreToMiniC opts = asmToMiniC opts . coreToAsm
 
 asmToMiniC :: (Member (Error JuvixError) r) => Asm.Options -> Asm.InfoTable -> Sem r C.MiniCResult
 asmToMiniC opts = Asm.toReg opts >=> regToMiniC (opts ^. Asm.optLimits) . Reg.fromAsm

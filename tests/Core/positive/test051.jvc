@@ -1,0 +1,13 @@
+-- Type annotations for patterns
+
+type Box {
+    box : Π A : Type, A → Box A;
+};
+
+def f : Box (Π A : Type, A → A) → int := \(x : Box (Π A : Type, A → A))
+    match x : Box (Π A : Type, A → A) with : int {
+        box _ (g : Π A : Type, A → A) : Box (Π A : Type, A → A)  := g int 1;
+    };
+
+f (box (Π A : Type, A → A) \(A : Type) \(x : A) x)
+-- result: 1

@@ -264,7 +264,7 @@ SMOKE := $(shell command -v smoke 2> /dev/null)
 
 .PHONY : smoke-only
 smoke-only:
-	@$(if $(SMOKE),, $(error "Smoke not found, please install it from https://github.com/SamirTalwar/smoke"))
+	@$(if $(SMOKE),, $(error "Smoke not found, please install it from https://github.com/jonaprieto/smoke"))
 	@smoke $(shell find tests -name '*.smoke.yaml')
 
 .PHONY : smoke

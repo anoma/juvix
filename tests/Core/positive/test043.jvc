@@ -2,9 +2,10 @@
 
 def fun := λ(A : Type) λ(x : A) let f := λ(h : A → A) h (h x) in f (λ(y : A) x);
 
-def fun' := λ(T : Type → Type) λ(A : Type) λ(B : T A) λ(x : B)
+def fun' : Π T : Type → Type, Π X : Type, Π A : Type, any :=
+  λ(T : Type → Type) λ(_ : Type) λ(A : Type) λ(B : T A) λ(x : B)
   let f := λ(g : B → B) g (g x) in
   let h := λ(b : B) λ(a : A) a * b - b in
   f (λ(y : B) h y x);
 
-fun int 2 + fun' (λ(A : Type) A) int int 3
+fun int 2 + fun' (λ(A : Type) A) bool int int 3
