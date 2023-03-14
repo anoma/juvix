@@ -15,28 +15,30 @@ runCommand opts = do
   s <- embed (readFile (toFilePath file))
   case Asm.runParser (toFilePath file) s of
     Left err -> exitJuvixError (JuvixError err)
-    Right tab -> case run $ runError $ asmToMiniC asmOpts tab of
-      Left err -> exitJuvixError err
-      Right C.MiniCResult {..} -> do
-        buildDir <- askBuildDir
-        ensureDir buildDir
-        cFile <- inputCFile file
-        embed $ TIO.writeFile (toFilePath cFile) _resultCCode
-        Compile.runCommand opts {_compileInputFile = AppPath (Abs cFile) False}
+    Right tab -> do
+      tgt <- asmTarget (opts ^. compileTarget)
+      case run $ runError $ asmToMiniC (asmOpts tgt) tab of
+        Left err -> exitJuvixError err
+        Right C.MiniCResult {..} -> do
+          buildDir <- askBuildDir
+          ensureDir buildDir
+          cFile <- inputCFile file
+          embed $ TIO.writeFile (toFilePath cFile) _resultCCode
+          Compile.runCommand opts {_compileInputFile = AppPath (Abs cFile) False}
   where
     getFile :: Sem r (Path Abs File)
     getFile = someBaseToAbs' (opts ^. compileInputFile . pathPath)
 
-    asmOpts :: Asm.Options
-    asmOpts = Asm.makeOptions (asmTarget (opts ^. compileTarget)) (opts ^. compileDebug)
+    asmOpts :: Backend.Target -> Asm.Options
+    asmOpts tgt = Asm.makeOptions tgt (opts ^. compileDebug)
 
-    asmTarget :: CompileTarget -> Backend.Target
+    asmTarget :: CompileTarget -> Sem r Backend.Target
     asmTarget = \case
-      TargetWasm32Wasi -> Backend.TargetCWasm32Wasi
-      TargetNative64 -> Backend.TargetCNative64
-      TargetGeb -> error "GEB target not supported for JuvixAsm"
-      TargetCore -> error "JuvixCore target not supported for JuvixAsm"
-      TargetAsm -> error "JuvixAsm target not supported for JuvixAsm"
+      TargetWasm32Wasi -> return Backend.TargetCWasm32Wasi
+      TargetNative64 -> return Backend.TargetCNative64
+      TargetGeb -> exitMsg (ExitFailure 1) "error: GEB target not supported for JuvixAsm"
+      TargetCore -> exitMsg (ExitFailure 1) "error: JuvixCore target not supported for JuvixAsm"
+      TargetAsm -> exitMsg (ExitFailure 1) "error: JuvixAsm target not supported for JuvixAsm"
 
 inputCFile :: (Members '[App] r) => Path Abs File -> Sem r (Path Abs File)
 inputCFile inputFileCompile = do

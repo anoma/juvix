@@ -172,6 +172,18 @@ substs t = umapN go
 subst :: Node -> Node -> Node
 subst t = substs [t]
 
+-- | `substDrop args argtys` drops `length args` from `argtys` and substitutes
+-- the corresponding variables with `args`. For example:
+-- ```
+-- substDrop [Nat, Var 3] [Type, Type, Var 1, Var 1] =
+--   [Nat, Var 4]
+-- ``
+substDrop :: [Node] -> [Node] -> [Node]
+substDrop args argtys =
+  reverse $ snd $ foldl' (\(args', acc) ty -> (mkVar' 0 : map (shift 1) args', substs args' ty : acc)) (reverse args, []) (drop k argtys)
+  where
+    k = length args
+
 -- | reduce all beta redexes present in a term and the ones created immediately
 -- downwards (i.e., a "beta-development")
 developBeta :: Node -> Node

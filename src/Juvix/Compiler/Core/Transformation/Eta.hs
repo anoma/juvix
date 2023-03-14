@@ -8,12 +8,6 @@ import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Transformation.Base
 
-substDrop :: [Node] -> [Node] -> [Node]
-substDrop args argtys =
-  reverse $ snd $ foldl' (\(args', acc) ty -> (mkVar' 0 : map (shift 1) args', substs args' ty : acc)) (reverse args, []) (drop k argtys)
-  where
-    k = length args
-
 etaExpandBuiltins :: Node -> Node
 etaExpandBuiltins = umap go
   where
