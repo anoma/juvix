@@ -385,7 +385,7 @@ checkPattern = go
                   indName = IdenInductive (info ^. constructorInfoInductive)
                   loc = getLoc a
               paramHoles <- map ExpressionHole <$> replicateM numIndParams (freshHole loc)
-              let patternTy = foldApplication (ExpressionIden indName) (zip (repeat Explicit) paramHoles)
+              let patternTy = foldApplication (ExpressionIden indName) (map (Explicit,) paramHoles)
               whenJustM
                 (matchTypes patternTy (ExpressionHole hole))
                 err
@@ -524,10 +524,10 @@ inferExpression' hint e = case e of
                   }
           }
 
-    -- what about mutually recursive lets?
     goLetClause :: LetClause -> Sem r LetClause
     goLetClause = \case
       LetFunDef f -> LetFunDef <$> checkFunctionDef f
+      LetMutualBlock f -> LetMutualBlock <$> checkMutualBlock f
 
     goHole :: Hole -> Sem r TypedExpression
     goHole h = do

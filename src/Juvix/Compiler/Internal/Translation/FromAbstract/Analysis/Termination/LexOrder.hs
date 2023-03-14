@@ -9,7 +9,7 @@ import Juvix.Compiler.Abstract.Extra
 import Juvix.Compiler.Internal.Translation.FromAbstract.Analysis.Termination.Data
 import Juvix.Prelude
 
-fromEdgeList :: [Edge] -> Graph
+fromEdgeList :: [Edge] -> EdgeMap
 fromEdgeList l = HashMap.fromList [((e ^. edgeFrom, e ^. edgeTo), e) | e <- l]
 
 composeEdge :: Edge -> Edge -> Maybe Edge
@@ -22,7 +22,7 @@ composeEdge a b = do
         _edgeMatrices = multiplyMany (a ^. edgeMatrices) (b ^. edgeMatrices)
       }
 
-edgesCompose :: Graph -> Graph -> Graph
+edgesCompose :: EdgeMap -> EdgeMap -> EdgeMap
 edgesCompose g h =
   fromEdgeList
     (catMaybes [composeEdge u v | u <- toList g, v <- toList h])
@@ -37,10 +37,10 @@ edgeUnion a b
         (HashSet.union (a ^. edgeMatrices) (b ^. edgeMatrices))
   | otherwise = impossible
 
-edgesUnion :: Graph -> Graph -> Graph
+edgesUnion :: EdgeMap -> EdgeMap -> EdgeMap
 edgesUnion = HashMap.unionWith edgeUnion
 
-edgesCount :: Graph -> Int
+edgesCount :: EdgeMap -> Int
 edgesCount es = sum [HashSet.size (e ^. edgeMatrices) | e <- toList es]
 
 multiply :: CallMatrix -> CallMatrix -> CallMatrix
@@ -77,10 +77,10 @@ unsafeFilterGraph funNames (CompleteCallGraph g) =
 completeCallGraph :: CallMap -> CompleteCallGraph
 completeCallGraph CallMap {..} = CompleteCallGraph (go startingEdges)
   where
-    startingEdges :: Graph
+    startingEdges :: EdgeMap
     startingEdges = foldr insertCall mempty allCalls
       where
-        insertCall :: Call -> Graph -> Graph
+        insertCall :: Call -> EdgeMap -> EdgeMap
         insertCall Call {..} = HashMap.alter (Just . aux) (_callFrom, _callTo)
           where
             aux :: Maybe Edge -> Edge
@@ -96,14 +96,14 @@ completeCallGraph CallMap {..} = CompleteCallGraph (go startingEdges)
           funCall <- funCalls
       ]
 
-    go :: Graph -> Graph
+    go :: EdgeMap -> EdgeMap
     go g
       | edgesCount g == edgesCount g' = g
       | otherwise = go g'
       where
         g' = step g
 
-    step :: Graph -> Graph
+    step :: EdgeMap -> EdgeMap
     step s = edgesUnion (edgesCompose s startingEdges) s
 
 reflexiveEdges :: CompleteCallGraph -> [ReflexiveEdge]

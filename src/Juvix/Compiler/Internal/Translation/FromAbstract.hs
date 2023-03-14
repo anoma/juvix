@@ -8,16 +8,15 @@ module Juvix.Compiler.Internal.Translation.FromAbstract
   )
 where
 
-import Data.Graph
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
-import Juvix.Compiler.Abstract.Data.NameDependencyInfo qualified as Abstract
+import Juvix.Compiler.Abstract.Data.NameDependencyInfo
 import Juvix.Compiler.Abstract.Extra.DependencyBuilder
 import Juvix.Compiler.Abstract.Extra.DependencyBuilder qualified as Abstract
 import Juvix.Compiler.Abstract.Language qualified as Abstract
 import Juvix.Compiler.Abstract.Translation.FromConcrete.Data.Context qualified as Abstract
 import Juvix.Compiler.Internal.Extra
-import Juvix.Compiler.Internal.Translation.FromAbstract.Analysis.Termination hiding (Graph)
+import Juvix.Compiler.Internal.Translation.FromAbstract.Analysis.Termination
 import Juvix.Compiler.Internal.Translation.FromAbstract.Data.Context
 import Juvix.Compiler.Pipeline.EntryPoint qualified as E
 import Juvix.Prelude
@@ -69,10 +68,14 @@ fromAbstract abstractResults = do
       abstractResults
         ^. Abstract.abstractResultEntryPoint
           . E.entryPointNoTermination
+    depInfo :: NameDependencyInfo
     depInfo = buildDependencyInfo (abstractResults ^. Abstract.resultModules) (abstractResults ^. Abstract.resultExports)
 
-fromAbstractExpression :: (Members '[NameIdGen] r) => Abstract.Expression -> Sem r Expression
-fromAbstractExpression = goExpression
+fromAbstractExpression :: Members '[NameIdGen] r => Abstract.Expression -> Sem r Expression
+fromAbstractExpression e = runReader depInfo (goExpression e)
+  where
+    depInfo :: NameDependencyInfo
+    depInfo = buildDependencyInfoExpr e
 
 goModule ::
   (Members '[Reader ExportsTable, State TranslationState, NameIdGen] r) =>
@@ -80,42 +83,45 @@ goModule ::
   Sem r Module
 goModule m = do
   expTbl <- ask
-  let mutualBlocks :: [NonEmpty Abstract.FunctionDef]
-      mutualBlocks = buildMutualBlocks expTbl
-  _moduleBody' <- goModuleBody mutualBlocks (m ^. Abstract.moduleBody)
-  examples' <- mapM goExample (m ^. Abstract.moduleExamples)
-  return
-    Module
-      { _moduleName = m ^. Abstract.moduleName,
-        _moduleExamples = examples',
-        _moduleBody = _moduleBody'
-      }
+  let depInfo :: NameDependencyInfo
+      depInfo = Abstract.buildDependencyInfo (pure m) expTbl
+  runReader depInfo $ do
+    mutualBlocks :: [SCC Abstract.FunctionDef] <- buildMutualBlocks moduleFunctionDefs
+    _moduleBody' <- goModuleBody (map flattenSCC mutualBlocks) (m ^. Abstract.moduleBody)
+    examples' <- mapM goExample (m ^. Abstract.moduleExamples)
+    return
+      Module
+        { _moduleName = m ^. Abstract.moduleName,
+          _moduleExamples = examples',
+          _moduleBody = _moduleBody'
+        }
+  where
+    moduleFunctionDefs :: [Abstract.FunctionDef]
+    moduleFunctionDefs = [d | Abstract.StatementFunction d <- m ^. Abstract.moduleBody . Abstract.moduleStatements]
+
+buildMutualBlocks :: Members '[Reader NameDependencyInfo] r => [Abstract.FunctionDef] -> Sem r [SCC Abstract.FunctionDef]
+buildMutualBlocks defs = do
+  depInfo <- ask
+  let scomponents :: [SCC Abstract.Name] = buildSCCs depInfo
+  return (mapMaybe helper scomponents)
   where
     funsByName :: HashMap Abstract.FunctionName Abstract.FunctionDef
-    funsByName =
-      HashMap.fromList
-        [ (d ^. Abstract.funDefName, d)
-          | Abstract.StatementFunction d <- m ^. Abstract.moduleBody . Abstract.moduleStatements
-        ]
+    funsByName = HashMap.fromList [(d ^. Abstract.funDefName, d) | d <- defs]
     getFun :: Abstract.FunctionName -> Maybe Abstract.FunctionDef
     getFun n = funsByName ^. at n
-    buildMutualBlocks :: Abstract.ExportsTable -> [NonEmpty Abstract.FunctionDef]
-    buildMutualBlocks expTbl = mapMaybe (nonEmpty . mapMaybe getFun . toList . fromNonEmptyTree) scomponents
+    helper :: SCC Abstract.Name -> Maybe (SCC Abstract.FunctionDef)
+    helper = nonEmptySCC . fmap getFun
       where
-        fromNonEmptyTree :: Tree a -> NonEmpty a
-        fromNonEmptyTree = fromJust . nonEmpty . toList
-        depInfo :: Abstract.NameDependencyInfo
-        depInfo = Abstract.buildDependencyInfo (pure m) expTbl
-        graph :: Graph
-        graph = Abstract.buildDependencyInfo (pure m) expTbl ^. Abstract.depInfoGraph
-        scomponents :: [Tree Abstract.Name]
-        scomponents = fmap (Abstract.nameFromVertex depInfo) <$> scc graph
+        nonEmptySCC :: SCC (Maybe a) -> Maybe (SCC a)
+        nonEmptySCC = \case
+          AcyclicSCC a -> AcyclicSCC <$> a
+          CyclicSCC p -> CyclicSCC . toList <$> nonEmpty (catMaybes p)
 
 unsupported :: Text -> a
 unsupported thing = error ("Abstract to Internal: Not yet supported: " <> thing)
 
 goModuleBody ::
-  (Members '[Reader ExportsTable, State TranslationState, NameIdGen] r) =>
+  (Members '[Reader ExportsTable, Reader NameDependencyInfo, State TranslationState, NameIdGen] r) =>
   [NonEmpty Abstract.FunctionDef] ->
   Abstract.ModuleBody ->
   Sem r ModuleBody
@@ -143,7 +149,7 @@ goImport m = do
             )
 
 goStatement ::
-  (Members '[Reader ExportsTable, State TranslationState, NameIdGen] r) =>
+  (Members '[Reader ExportsTable, State TranslationState, NameIdGen, Reader NameDependencyInfo] r) =>
   Abstract.Statement ->
   Sem r (Maybe Statement)
 goStatement = \case
@@ -198,7 +204,7 @@ goFunction (Abstract.Function l r) = do
   r' <- goType r
   return (Function l' r')
 
-goFunctionDef :: (Members '[NameIdGen] r) => Abstract.FunctionDef -> Sem r FunctionDef
+goFunctionDef :: Members '[NameIdGen, Reader NameDependencyInfo] r => Abstract.FunctionDef -> Sem r FunctionDef
 goFunctionDef f = do
   _funDefClauses' <- mapM (goFunctionClause _funDefName') (f ^. Abstract.funDefClauses)
   _funDefType' <- goType (f ^. Abstract.funDefTypeSig)
@@ -215,7 +221,7 @@ goFunctionDef f = do
     _funDefName' :: Name
     _funDefName' = f ^. Abstract.funDefName
 
-goExample :: (Members '[NameIdGen] r) => Abstract.Example -> Sem r Example
+goExample :: Members '[NameIdGen, Reader NameDependencyInfo] r => Abstract.Example -> Sem r Example
 goExample e = do
   e' <- goExpression (e ^. Abstract.exampleExpression)
   return
@@ -224,7 +230,7 @@ goExample e = do
         _exampleId = e ^. Abstract.exampleId
       }
 
-goFunctionClause :: (Members '[NameIdGen] r) => Name -> Abstract.FunctionClause -> Sem r FunctionClause
+goFunctionClause :: Members '[NameIdGen, Reader NameDependencyInfo] r => Name -> Abstract.FunctionClause -> Sem r FunctionClause
 goFunctionClause n c = do
   _clauseBody' <- goExpression (c ^. Abstract.clauseBody)
   _clausePatterns' <- mapM goPatternArg (c ^. Abstract.clausePatterns)
@@ -287,7 +293,7 @@ goType e = case e of
   Abstract.ExpressionLet {} -> unsupported "let in types"
   Abstract.ExpressionCase {} -> unsupported "case in types"
 
-goLambda :: forall r. (Members '[NameIdGen] r) => Abstract.Lambda -> Sem r Lambda
+goLambda :: forall r. Members '[NameIdGen, Reader NameDependencyInfo] r => Abstract.Lambda -> Sem r Lambda
 goLambda (Abstract.Lambda cl') = do
   _lambdaClauses <- mapM goClause cl'
   let _lambdaType :: Maybe Expression = Nothing
@@ -304,7 +310,7 @@ goLambda (Abstract.Lambda cl') = do
           Explicit -> p
           Implicit -> unsupported "implicit patterns in lambda"
 
-goApplication :: (Members '[NameIdGen] r) => Abstract.Application -> Sem r Application
+goApplication :: Members '[NameIdGen, Reader NameDependencyInfo] r => Abstract.Application -> Sem r Application
 goApplication (Abstract.Application f x i) = do
   f' <- goExpression f
   x' <- goExpression x
@@ -318,7 +324,7 @@ goIden i = case i of
   Abstract.IdenAxiom a -> IdenAxiom (a ^. Abstract.axiomRefName)
   Abstract.IdenInductive a -> IdenInductive (a ^. Abstract.inductiveRefName)
 
-goExpressionFunction :: forall r. (Members '[NameIdGen] r) => Abstract.Function -> Sem r Function
+goExpressionFunction :: forall r. Members '[NameIdGen, Reader NameDependencyInfo] r => Abstract.Function -> Sem r Function
 goExpressionFunction f = do
   l' <- goParam (f ^. Abstract.funParameter)
   r' <- goExpression (f ^. Abstract.funReturn)
@@ -329,7 +335,7 @@ goExpressionFunction f = do
       ty' <- goExpression (p ^. Abstract.paramType)
       return (FunctionParameter (p ^. Abstract.paramName) (p ^. Abstract.paramImplicit) ty')
 
-goExpression :: (Members '[NameIdGen] r) => Abstract.Expression -> Sem r Expression
+goExpression :: Members '[NameIdGen, Reader NameDependencyInfo] r => Abstract.Expression -> Sem r Expression
 goExpression e = case e of
   Abstract.ExpressionIden i -> return (ExpressionIden (goIden i))
   Abstract.ExpressionUniverse u -> return (ExpressionUniverse (goUniverse u))
@@ -341,7 +347,7 @@ goExpression e = case e of
   Abstract.ExpressionLet l -> ExpressionLet <$> goLet l
   Abstract.ExpressionCase c -> ExpressionCase <$> goCase c
 
-goCase :: Members '[NameIdGen] r => Abstract.Case -> Sem r Case
+goCase :: Members '[NameIdGen, Reader NameDependencyInfo] r => Abstract.Case -> Sem r Case
 goCase c = do
   _caseExpression <- goExpression (c ^. Abstract.caseExpression)
   _caseBranches <- mapM goCaseBranch (c ^. Abstract.caseBranches)
@@ -350,21 +356,25 @@ goCase c = do
       _caseExpressionWholeType :: Maybe Expression = Nothing
   return Case {..}
 
-goCaseBranch :: Members '[NameIdGen] r => Abstract.CaseBranch -> Sem r CaseBranch
+goCaseBranch :: Members '[NameIdGen, Reader NameDependencyInfo] r => Abstract.CaseBranch -> Sem r CaseBranch
 goCaseBranch b = do
   _caseBranchPattern <- goPatternArg (b ^. Abstract.caseBranchPattern)
   _caseBranchExpression <- goExpression (b ^. Abstract.caseBranchExpression)
   return CaseBranch {..}
 
-goLetClause :: (Members '[NameIdGen] r) => Abstract.LetClause -> Sem r LetClause
-goLetClause = \case
-  Abstract.LetFunDef f -> LetFunDef <$> goFunctionDef f
-
-goLet :: (Members '[NameIdGen] r) => Abstract.Let -> Sem r Let
+goLet :: forall r. (Members '[NameIdGen, Reader NameDependencyInfo] r) => Abstract.Let -> Sem r Let
 goLet l = do
   _letExpression <- goExpression (l ^. Abstract.letExpression)
-  _letClauses <- mapM goLetClause (l ^. Abstract.letClauses)
+  mutualBlocks <- buildMutualBlocks funDefs
+  _letClauses <- nonEmpty' <$> mapM goLetBlock mutualBlocks
   return Let {..}
+  where
+    funDefs :: [Abstract.FunctionDef]
+    funDefs = [f | Abstract.LetFunDef f <- toList (l ^. Abstract.letClauses)]
+    goLetBlock :: SCC Abstract.FunctionDef -> Sem r LetClause
+    goLetBlock = \case
+      AcyclicSCC f -> LetFunDef <$> goFunctionDef f
+      CyclicSCC m -> LetMutualBlock . MutualBlock <$> mapM goFunctionDef (nonEmpty' m)
 
 goInductiveParameter :: Abstract.FunctionParameter -> Sem r InductiveParameter
 goInductiveParameter f =
@@ -378,7 +388,7 @@ goInductiveParameter f =
     (Just {}, _) -> unsupported "only type variables of small types are allowed"
     (Nothing, _) -> unsupported "unnamed inductive parameters"
 
-goInductiveDef :: forall r. (Members '[NameIdGen] r) => Abstract.InductiveDef -> Sem r InductiveDef
+goInductiveDef :: forall r. Members '[NameIdGen, Reader NameDependencyInfo] r => Abstract.InductiveDef -> Sem r InductiveDef
 goInductiveDef i
   | not (isSmallType (i ^. Abstract.inductiveType)) = unsupported "inductive indices"
   | otherwise = do

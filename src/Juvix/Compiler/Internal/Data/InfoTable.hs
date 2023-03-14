@@ -117,9 +117,14 @@ buildTable1' m = do
         ]
           <> [ (f ^. funDefName, FunctionInfo f)
                | s <- filter (not . isInclude) ss,
-                 LetFunDef f <- universeBi s
+                 Let {..} <- universeBi s,
+                 f <- concatMap (toList . flattenClause) _letClauses
              ]
       where
+        flattenClause :: LetClause -> NonEmpty FunctionDef
+        flattenClause = \case
+          LetFunDef f -> pure f
+          LetMutualBlock (MutualBlock fs) -> fs
         isInclude :: Statement -> Bool
         isInclude = \case
           StatementInclude {} -> True

@@ -11,7 +11,7 @@ import Juvix.Compiler.Internal.Translation.FromAbstract.Analysis.Termination.Dat
 import Juvix.Prelude
 import Prettyprinter qualified as PP
 
-type Graph = HashMap (FunctionName, FunctionName) Edge
+type EdgeMap = HashMap (FunctionName, FunctionName) Edge
 
 data Edge = Edge
   { _edgeFrom :: FunctionName,
@@ -19,7 +19,7 @@ data Edge = Edge
     _edgeMatrices :: HashSet CallMatrix
   }
 
-newtype CompleteCallGraph = CompleteCallGraph Graph
+newtype CompleteCallGraph = CompleteCallGraph EdgeMap
 
 data ReflexiveEdge = ReflexiveEdge
   { _reflexiveEdgeFun :: FunctionName,

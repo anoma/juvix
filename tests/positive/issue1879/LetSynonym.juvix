@@ -1,4 +1,6 @@
 module LetSynonym;
+  open import Stdlib.Prelude;
+
   type T :=
     | t : T;
 
@@ -9,5 +11,11 @@ module LetSynonym;
       A := T;
       x : A;
       x := t;
+      odd : _;
+      even : _;
+      odd zero := false;
+      odd (suc n) := even n;
+      even zero := true;
+      even (suc n) := odd n;
     in x;
 end;

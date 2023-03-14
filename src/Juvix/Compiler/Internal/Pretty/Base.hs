@@ -93,6 +93,7 @@ instance PrettyCode Let where
 instance PrettyCode LetClause where
   ppCode = \case
     LetFunDef f -> ppCode f
+    LetMutualBlock b -> ppCode b
 
 ppPipeBlock :: (PrettyCode a, Members '[Reader Options] r, Traversable t) => t a -> Sem r (Doc Ann)
 ppPipeBlock items = vsep <$> mapM (fmap (kwPipe <+>) . ppCode) items

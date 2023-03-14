@@ -7,6 +7,7 @@
 module Juvix.Prelude.Base
   ( module Juvix.Prelude.Base,
     module Control.Applicative,
+    module Data.Graph,
     module Data.Map.Strict,
     module Data.Set,
     module Data.IntMap.Strict,
@@ -95,6 +96,7 @@ import Data.Eq
 import Data.Foldable hiding (minimum, minimumBy)
 import Data.Function
 import Data.Functor
+import Data.Graph (Graph, SCC (..), Vertex, stronglyConnComp)
 import Data.HashMap.Strict (HashMap)
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet (HashSet)
@@ -441,3 +443,9 @@ ensureFile f =
   unlessM
     (Path.doesFileExist f)
     (throwM (mkIOError doesNotExistErrorType "" Nothing (Just (toFilePath f))))
+
+-- Ideally `CyclicSCC`'s argument' would have type `NonEmpty a` instead of `[a]`
+flattenSCC :: SCC a -> NonEmpty a
+flattenSCC = \case
+  AcyclicSCC a -> pure a
+  CyclicSCC as -> nonEmpty' as

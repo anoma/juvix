@@ -73,9 +73,14 @@ instance HasExpressions Case where
     where
       _caseParens = l ^. caseParens
 
+instance HasExpressions MutualBlock where
+  leafExpressions f (MutualBlock defs) =
+    MutualBlock <$> traverse (leafExpressions f) defs
+
 instance HasExpressions LetClause where
   leafExpressions f = \case
     LetFunDef d -> LetFunDef <$> leafExpressions f d
+    LetMutualBlock b -> LetMutualBlock <$> leafExpressions f b
 
 instance HasExpressions Let where
   leafExpressions f l = do

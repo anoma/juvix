@@ -377,6 +377,7 @@ checkLet ari l = do
     checkLetClause :: LetClause -> Sem r LetClause
     checkLetClause = \case
       LetFunDef f -> LetFunDef <$> checkFunctionDef f
+      LetMutualBlock f -> LetMutualBlock <$> checkMutualBlock f
 
 checkLambda ::
   forall r.
