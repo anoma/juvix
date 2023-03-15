@@ -5,7 +5,6 @@ module Juvix.Compiler.Internal.Pretty.Base
   )
 where
 
-import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Internal.Extra
 import Juvix.Compiler.Internal.Pretty.Options
 import Juvix.Data.CodeAnn
@@ -234,48 +233,6 @@ instance PrettyCode Module where
           <> body'
           <> line
 
-instance PrettyCode TypeCallIden where
-  ppCode = \case
-    InductiveIden n -> ppCode n
-    FunctionIden n -> ppCode n
-
-instance PrettyCode Caller where
-  ppCode = \case
-    CallerInductive n -> ppCode n
-    CallerAxiom n -> ppCode n
-    CallerFunction n -> ppCode n
-
-instance PrettyCode ConcreteTypeCall where
-  ppCode = ppCode . fmap (^. unconcreteType)
-
-instance PrettyCode TypeCall where
-  ppCode (TypeCall' f args) = do
-    f' <- ppCode f
-    args' <- mapM ppCodeAtom args
-    return $ f' <+> hsep args'
-
-instance PrettyCode TypeCallsMap where
-  ppCode m = do
-    let title = keyword "Type Calls Map:"
-        elems :: [(Caller, TypeCall)]
-        elems =
-          [(caller, t) | (caller, l) <- HashMap.toList (m ^. typeCallsMap), t <- toList l]
-    elems' <- mapM ppCodeElem (sortOn fst elems)
-    return $ title <> line <> vsep elems' <> line
-    where
-      ppCodeElem :: (Member (Reader Options) r) => (Caller, TypeCall) -> Sem r (Doc Ann)
-      ppCodeElem (caller, t) = do
-        caller' <- ppCode caller
-        t' <- ppCode t
-        return $ caller' <+> kwMapsto <+> t'
-
-instance PrettyCode TypeCalls where
-  ppCode m = do
-    let title = keyword "Propagated Type Calls:"
-        elems = sortOn (^. typeCallIden) (concatMap HashMap.keys (toList (m ^. typeCallSet)))
-    elems' <- mapM ppCode elems
-    return $ title <> line <> vsep elems' <> line
-
 ppPostExpression ::
   (PrettyCode a, HasAtomicity a, Member (Reader Options) r) =>
   Fixity ->
@@ -330,6 +287,3 @@ instance (PrettyCode a) => PrettyCode [a] where
 
 instance (PrettyCode a) => PrettyCode (NonEmpty a) where
   ppCode x = ppCode (toList x)
-
-instance PrettyCode ConcreteType where
-  ppCode ConcreteType {..} = ppCode _unconcreteType
