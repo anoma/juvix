@@ -33,14 +33,6 @@ freeVarsSorted n = Set.fromList (n ^.. freeVars)
 freeVarsSet :: Node -> HashSet Var
 freeVarsSet n = HashSet.fromList (n ^.. freeVars)
 
-freeVars :: SimpleFold Node Var
-freeVars f = ufoldNA reassemble go
-  where
-    go k = \case
-      NVar var@(Var _ idx)
-        | idx >= k -> NVar <$> f (shiftVar (-k) var)
-      n -> pure n
-
 getIdents :: Node -> HashSet Ident
 getIdents n = HashSet.fromList (n ^.. nodeIdents)
 
@@ -50,9 +42,6 @@ nodeIdents f = ufoldA reassemble go
     go = \case
       NIdt i -> NIdt <$> f i
       n -> pure n
-
-shiftVar :: Index -> Var -> Var
-shiftVar m = over varIndex (+ m)
 
 -- | increase all free variable indices by a given value
 shift :: Index -> Node -> Node
