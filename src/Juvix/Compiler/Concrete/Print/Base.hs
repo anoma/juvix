@@ -69,6 +69,7 @@ instance SingI t => PrettyPrint (Module 'Scoped t) where
         <> line
         <> topSpace
         <> moduleBody'
+        <> line
         <>? ending
     where
       topSpace :: Sem r ()
@@ -84,7 +85,7 @@ instance SingI t => PrettyPrint (Module 'Scoped t) where
       ending :: Maybe (Sem r ())
       ending = case sing :: SModuleIsTop t of
         SModuleLocal -> Just (ppCode _moduleKwEnd)
-        SModuleTop -> Nothing
+        SModuleTop -> Just end
 
 instance PrettyPrint [Statement 'Scoped] where
   ppCode :: forall r. Members '[ExactPrint, Reader Options] r => [Statement 'Scoped] -> Sem r ()
