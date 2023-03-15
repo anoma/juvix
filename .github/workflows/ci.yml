@@ -26,7 +26,6 @@ env:
 jobs:
 
   ormolu:
-    if: ${{ false }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -37,7 +36,6 @@ jobs:
             --ghc-opt -XMultiParamTypeClasses --ghc-opt -XStandaloneDeriving
             --ghc-opt -XTemplateHaskell --ghc-opt -XUnicodeSyntax
   clang-format:
-    if: ${{ false }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -46,7 +44,6 @@ jobs:
           clang-format-version: '15'
           check-path: runtime/src
   pre-commit:
-    if: ${{ false }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -73,7 +70,6 @@ jobs:
           extra_args: mixed-line-ending --all-files
 
   build-and-test-linux:
-    if: ${{ false }}
     runs-on: ubuntu-20.04
     steps:
       - name: Checkout our repository
@@ -192,10 +188,10 @@ jobs:
           key: '${{ steps.stack-work-cache.outputs.cache-primary-key }}'
 
   docs-linux:
-    # needs: build-and-test-linux
-    # if: >-
-    #   github.ref == 'refs/heads/main' || github.event_name ==
-    #   'workflow_dispatch'
+    needs: build-and-test-linux
+    if: >-
+      github.ref == 'refs/heads/main' || github.event_name ==
+      'workflow_dispatch'
     runs-on: ubuntu-20.04
     steps:
       - name: Checkout our repository
@@ -269,7 +265,6 @@ jobs:
           make demo-example
 
       - name: Deploy HTML to github pages
-        if: ${{ false }}
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: '${{ secrets.GITHUB_TOKEN }}'
@@ -278,7 +273,6 @@ jobs:
           cname: docs.juvix.org
 
   build-and-test-macos:
-    if: ${{ false }}
     runs-on: macos-12
     steps:
       - name: Checkout our repository
