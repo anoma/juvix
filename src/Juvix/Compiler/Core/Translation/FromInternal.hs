@@ -16,6 +16,7 @@ import Juvix.Compiler.Internal.Extra qualified as Internal
 import Juvix.Compiler.Internal.Translation.Extra qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking qualified as InternalTyped
 import Juvix.Data.Loc qualified as Loc
+import Juvix.Data.PPOutput
 import Juvix.Extra.Strings qualified as Str
 
 -- Translation of a Name into the identifier index used in the Core InfoTable
@@ -33,7 +34,7 @@ setupIntToNat sym tab =
     ii =
       IdentifierInfo
         { _identifierSymbol = sym,
-          _identifierName = "intToNat",
+          _identifierName = freshIdentName tab "intToNat",
           _identifierLocation = Nothing,
           _identifierArgsNum = 1,
           _identifierArgsInfo =
@@ -44,7 +45,7 @@ setupIntToNat sym tab =
                   _argumentIsImplicit = Explicit
                 }
             ],
-          _identifierType = mkPi' mkTypeInteger' mkTypeInteger',
+          _identifierType = mkPi' mkTypeInteger' targetType,
           _identifierIsExported = False,
           _identifierBuiltin = Nothing
         }
@@ -59,9 +60,11 @@ setupIntToNat sym tab =
               (mkConstr (setInfoName "suc" mempty) tagSuc [mkApp' (mkIdent' sym) (mkBuiltinApp' OpIntSub [mkVar' 0, mkConstant' (ConstInteger 1)])])
         _ ->
           mkLambda' mkTypeInteger' $ mkVar' 0
+    targetType = maybe mkTypeInteger' (\s -> mkTypeConstr (setInfoName "Nat" mempty) s []) natSymM
     tagZeroM = (^. constructorTag) <$> lookupBuiltinConstructor tab BuiltinNatZero
     tagSucM = (^. constructorTag) <$> lookupBuiltinConstructor tab BuiltinNatSuc
     boolSymM = (^. inductiveSymbol) <$> lookupBuiltinInductive tab BuiltinBool
+    natSymM = (^. inductiveSymbol) <$> lookupBuiltinInductive tab BuiltinNat
 
 fromInternal :: Internal.InternalTypedResult -> Sem k CoreResult
 fromInternal i = do
@@ -273,7 +276,7 @@ goFunctionDefIden (f, sym) = do
   funTy <- runReader initIndexTable (goType (f ^. Internal.funDefType))
   let info =
         IdentifierInfo
-          { _identifierName = f ^. Internal.funDefName . nameText,
+          { _identifierName = normalizeBuiltinName (f ^. Internal.funDefBuiltin) (f ^. Internal.funDefName . nameText),
             _identifierLocation = Just $ f ^. Internal.funDefName . nameLoc,
             _identifierSymbol = sym,
             _identifierType = funTy,
@@ -284,9 +287,22 @@ goFunctionDefIden (f, sym) = do
             _identifierIsExported = False,
             _identifierBuiltin = f ^. Internal.funDefBuiltin
           }
-  registerIdent (mkIdentIndex (f ^. Internal.funDefName)) info
-  when (f ^. Internal.funDefName . Internal.nameText == Str.main) (registerMain sym)
-  return funTy
+  case f ^. Internal.funDefBuiltin of
+    Just b
+      | isIgnoredBuiltin b ->
+          return funTy
+    _ -> do
+      registerIdent (mkIdentIndex (f ^. Internal.funDefName)) info
+      when (f ^. Internal.funDefName . Internal.nameText == Str.main) (registerMain sym)
+      return funTy
+  where
+    normalizeBuiltinName :: Maybe BuiltinFunction -> Text -> Text
+    normalizeBuiltinName blt name = case blt of
+      Just b | isNatBuiltin b -> show (pretty b)
+      _ -> case name of
+        ">" -> Str.natGt
+        ">=" -> Str.natGe
+        _ -> name
 
 goFunctionDef ::
   forall r.
@@ -295,7 +311,7 @@ goFunctionDef ::
   Sem r ()
 goFunctionDef ((f, sym), ty) = do
   mbody <- case f ^. Internal.funDefBuiltin of
-    Just Internal.BuiltinBoolIf -> return Nothing
+    Just b | isIgnoredBuiltin b -> return Nothing
     Just _ -> Just <$> runReader initIndexTable (mkFunBody ty f)
     Nothing -> Just <$> runReader initIndexTable (mkFunBody ty f)
   forM_ mbody (registerIdentNode sym)
@@ -490,7 +506,7 @@ goAxiomInductive a = whenJust (a ^. Internal.axiomBuiltin) builtinInductive
       Internal.BuiltinIOSequence -> return ()
       Internal.BuiltinIOReadline -> return ()
       Internal.BuiltinString -> registerInductiveAxiom (Just BuiltinString) []
-      Internal.BuiltinIO -> registerInductiveAxiom Nothing builtinIOConstrs
+      Internal.BuiltinIO -> registerInductiveAxiom (Just BuiltinIO) builtinIOConstrs
       Internal.BuiltinTrace -> return ()
       Internal.BuiltinFail -> return ()
       Internal.BuiltinStringConcat -> return ()
@@ -501,11 +517,12 @@ goAxiomInductive a = whenJust (a ^. Internal.axiomBuiltin) builtinInductive
     registerInductiveAxiom :: Maybe BuiltinAxiom -> [(Tag, Text, Type -> Type, Maybe BuiltinConstructor)] -> Sem r ()
     registerInductiveAxiom ax ctrs = do
       sym <- freshSymbol
-      let ty = mkTypeConstr' sym []
+      let name = a ^. Internal.axiomName . nameText
+          ty = mkTypeConstr (setInfoName name mempty) sym []
           ctrs' = builtinConstrs sym ty ctrs
           info =
             InductiveInfo
-              { _inductiveName = a ^. Internal.axiomName . nameText,
+              { _inductiveName = name,
                 _inductiveLocation = Just $ a ^. Internal.axiomName . nameLoc,
                 _inductiveSymbol = sym,
                 _inductiveKind = mkSmallUniv,
@@ -525,7 +542,9 @@ goAxiomDef ::
 goAxiomDef a = do
   boolSym <- getBoolSymbol
   natSym <- getNatSymbol
-  case a ^. Internal.axiomBuiltin >>= builtinBody boolSym natSym of
+  tab <- getInfoTable
+  let natName = fromJust (HashMap.lookup natSym (tab ^. infoInductives)) ^. inductiveName
+  case a ^. Internal.axiomBuiltin >>= builtinBody boolSym natSym natName of
     Just body -> do
       sym <- freshSymbol
       ty <- axiomType'
@@ -546,9 +565,9 @@ goAxiomDef a = do
       setIdentArgsInfo sym (map (argumentInfoFromBinder . (^. lambdaLhsBinder)) is)
     Nothing -> return ()
   where
-    builtinBody :: Symbol -> Symbol -> Internal.BuiltinAxiom -> Maybe Node
-    builtinBody boolSym natSym = \case
-      Internal.BuiltinNatPrint -> Just $ writeLambda (mkTypeConstr' natSym [])
+    builtinBody :: Symbol -> Symbol -> Text -> Internal.BuiltinAxiom -> Maybe Node
+    builtinBody boolSym natSym natName = \case
+      Internal.BuiltinNatPrint -> Just $ writeLambda (mkTypeConstr (setInfoName natName mempty) natSym [])
       Internal.BuiltinStringPrint -> Just $ writeLambda mkTypeString'
       Internal.BuiltinBoolPrint -> Just $ writeLambda mkTypeBool'
       Internal.BuiltinIOSequence -> Nothing
@@ -583,7 +602,7 @@ goAxiomDef a = do
               )
           )
       Internal.BuiltinNatToString ->
-        Just (mkLambda' (mkTypeConstr' natSym []) (mkBuiltinApp' OpShow [mkVar' 0]))
+        Just (mkLambda' (mkTypeConstr (setInfoName natName mempty) natSym []) (mkBuiltinApp' OpShow [mkVar' 0]))
       Internal.BuiltinString -> Nothing
       Internal.BuiltinIO -> Nothing
       Internal.BuiltinTrace -> Nothing
@@ -886,7 +905,7 @@ goApplication a = do
                 mkApps'
                   ( mkConstr'
                       (BuiltinTag TagBind)
-                      [arg1, mkLambda' (mkTypeConstr' ioSym []) (shift 1 arg2)]
+                      [arg1, mkLambda' (mkTypeConstr (setInfoName Str.io mempty) ioSym []) (shift 1 arg2)]
                   )
                   xs
             _ -> error "internal to core: >> must be called with 2 arguments"

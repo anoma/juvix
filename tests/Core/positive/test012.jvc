@@ -7,7 +7,7 @@ type tree : Type {
   leaf : tree;
 };
 
-def gen : int -> tree := \n
+def gen : Int -> tree := \n
   if n = 0 then
     leaf
   else if n % 3 = 0 then

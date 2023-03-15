@@ -24,7 +24,8 @@ instance CanonicalProjection EvalOptions Eval.EvalOptions where
   project c =
     Eval.EvalOptions
       { _evalInputFile = c ^. evalInputFile,
-        _evalNoIO = c ^. evalNoIO
+        _evalNoIO = c ^. evalNoIO,
+        _evalNoDisambiguate = False
       }
 
 parseEvalOptions :: Parser EvalOptions

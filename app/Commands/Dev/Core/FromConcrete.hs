@@ -6,17 +6,20 @@ import Evaluator
 import Juvix.Compiler.Core.Data.InfoTable
 import Juvix.Compiler.Core.Pretty qualified as Core
 import Juvix.Compiler.Core.Transformation qualified as Core
+import Juvix.Compiler.Core.Transformation.DisambiguateNames (disambiguateNames)
 import Juvix.Compiler.Core.Translation
 
 runCommand :: forall r. Members '[Embed IO, App] r => CoreFromConcreteOptions -> Sem r ()
 runCommand localOpts = do
   tab <- (^. coreResultTable) <$> runPipeline (localOpts ^. coreFromConcreteInputFile) upToCore
   path :: Path Abs File <- someBaseToAbs' (localOpts ^. coreFromConcreteInputFile . pathPath)
-  let tab' :: InfoTable = Core.applyTransformations (project localOpts ^. coreFromConcreteTransformations) tab
+  let tab0 :: InfoTable = Core.applyTransformations (project localOpts ^. coreFromConcreteTransformations) tab
+      tab' :: InfoTable = if localOpts ^. coreFromConcreteNoDisambiguate then tab0 else disambiguateNames tab0
 
       inInputModule :: IdentifierInfo -> Bool
-      inInputModule _ | not (localOpts ^. coreFromConcreteFilter) = True
-      inInputModule x = (== Just path) . (^? identifierLocation . _Just . intervalFile) $ x
+      inInputModule x
+        | localOpts ^. coreFromConcreteFilter = (== Just path) . (^? identifierLocation . _Just . intervalFile) $ x
+        | otherwise = True
 
       mainIdens :: [IdentifierInfo] =
         sortOn
@@ -34,17 +37,20 @@ runCommand localOpts = do
         find (^. identifierName . to (== s)) mainIdens
 
       goPrint :: Sem r ()
-      goPrint = forM_ nodes printNode
+      goPrint = case localOpts ^. coreFromConcreteSymbolName of
+        Just {} -> printNode (fromMaybe err (getDef selInfo))
+        Nothing -> renderStdOut (Core.ppOut localOpts printTab)
         where
+          printTab :: InfoTable
+          printTab
+            | localOpts ^. coreFromConcreteFilter = filterByFile path tab'
+            | otherwise = tab'
           printNode :: (Text, Core.Node) -> Sem r ()
           printNode (name, node) = do
             renderStdOut (name <> " = ")
             renderStdOut (Core.ppOut localOpts node)
             newline
             newline
-          nodes :: [(Text, Core.Node)]
-            | isJust (localOpts ^. coreFromConcreteSymbolName) = [fromMaybe err (getDef selInfo)]
-            | otherwise = mapMaybe (getDef . Just) mainIdens
 
       goEval :: Sem r ()
       goEval = evalAndPrint localOpts tab' evalNode

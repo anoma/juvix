@@ -7,7 +7,9 @@ import Juvix.Compiler.Core.Pretty.Options qualified as Core
 data CoreEvalOptions = CoreEvalOptions
   { _coreEvalNoIO :: Bool,
     _coreEvalInputFile :: AppPath File,
-    _coreEvalShowDeBruijn :: Bool
+    _coreEvalShowDeBruijn :: Bool,
+    _coreEvalShowIdentIds :: Bool,
+    _coreEvalNoDisambiguate :: Bool
   }
   deriving stock (Data)
 
@@ -16,14 +18,16 @@ makeLenses ''CoreEvalOptions
 instance CanonicalProjection CoreEvalOptions Core.Options where
   project c =
     Core.defaultOptions
-      { Core._optShowDeBruijnIndices = c ^. coreEvalShowDeBruijn
+      { Core._optShowDeBruijnIndices = c ^. coreEvalShowDeBruijn,
+        Core._optShowIdentIds = c ^. coreEvalShowIdentIds
       }
 
 instance CanonicalProjection CoreEvalOptions Eval.EvalOptions where
   project c =
     Eval.EvalOptions
       { _evalInputFile = c ^. coreEvalInputFile,
-        _evalNoIO = c ^. coreEvalNoIO
+        _evalNoIO = c ^. coreEvalNoIO,
+        _evalNoDisambiguate = c ^. coreEvalNoDisambiguate
       }
 
 parseCoreEvalOptions :: Parser CoreEvalOptions
@@ -34,5 +38,7 @@ parseCoreEvalOptions = do
           <> help "Don't interpret the IO effects"
       )
   _coreEvalShowDeBruijn <- optDeBruijn
+  _coreEvalShowIdentIds <- optIdentIds
+  _coreEvalNoDisambiguate <- optNoDisambiguate
   _coreEvalInputFile <- parseInputJuvixCoreFile
   pure CoreEvalOptions {..}

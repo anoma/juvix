@@ -1,17 +1,17 @@
 -- eta-expansion
 
-def compose : (int -> int) -> (int -> int) -> int -> int := \f \g \x f (g x);
+def compose : (Int -> Int) -> (Int -> Int) -> Int -> Int := \f \g \x f (g x);
 
-def expand : any -> int -> any := \f \x f;
+def expand : Any -> Int -> Any := \f \x f;
 
-def f : int -> int := (+) 1;
+def f : Int -> Int := (+) 1;
 
-def g : int -> int -> int := \z compose f (\x x - z);
+def g : Int -> Int -> Int := \z compose f (\x x - z);
 
-def h : int -> int := compose f (g 3);
+def h : Int -> Int := compose f (g 3);
 
-def j : int -> int -> int := g;
+def j : Int -> Int -> Int := g;
 
-def k : int -> int -> any -> int := expand j;
+def k : Int -> Int -> Any -> Int := expand j;
 
 h 13 + j 2 3 + k 9 4 7

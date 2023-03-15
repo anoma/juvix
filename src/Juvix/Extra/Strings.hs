@@ -149,6 +149,12 @@ natLt = "nat-lt"
 natEq :: (IsString s) => s
 natEq = "nat-eq"
 
+natGt :: (IsString s) => s
+natGt = "nat-gt"
+
+natGe :: (IsString s) => s
+natGe = "nat-ge"
+
 boolIf :: (IsString s) => s
 boolIf = "bool-if"
 
@@ -165,7 +171,7 @@ type_ :: (IsString s) => s
 type_ = "Type"
 
 any :: (IsString s) => s
-any = "any"
+any = "Any"
 
 questionMark :: (IsString s) => s
 questionMark = "?"

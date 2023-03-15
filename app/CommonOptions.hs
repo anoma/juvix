@@ -234,6 +234,20 @@ optDeBruijn =
         <> help "Show variable de Bruijn indices"
     )
 
+optIdentIds :: Parser Bool
+optIdentIds =
+  switch
+    ( long "show-ident-ids"
+        <> help "Show identifier IDs"
+    )
+
+optNoDisambiguate :: Parser Bool
+optNoDisambiguate =
+  switch
+    ( long "no-disambiguate"
+        <> help "Don't disambiguate the names of bound variables"
+    )
+
 optTransformationIds :: Parser [TransformationId]
 optTransformationIds =
   option

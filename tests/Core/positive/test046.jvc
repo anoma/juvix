@@ -2,7 +2,7 @@
 
 type list {
   nil : list;
-  cons : any -> list -> list;
+  cons : Any -> list -> list;
 };
 
 def f := \l (case l of { cons x _ := x; nil := \x x } ) (let y := \x x in (let z := \x x in case l of { cons _ _ := \x x } z) y) 7;

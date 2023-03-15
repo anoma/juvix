@@ -8,6 +8,8 @@ import Juvix.Compiler.Core.Pretty.Options qualified as Core
 data CoreFromConcreteOptions = CoreFromConcreteOptions
   { _coreFromConcreteTransformations :: [TransformationId],
     _coreFromConcreteShowDeBruijn :: Bool,
+    _coreFromConcreteShowIdentIds :: Bool,
+    _coreFromConcreteNoDisambiguate :: Bool,
     _coreFromConcreteFilter :: Bool,
     _coreFromConcreteNoIO :: Bool,
     _coreFromConcreteEval :: Bool,
@@ -21,24 +23,24 @@ makeLenses ''CoreFromConcreteOptions
 instance CanonicalProjection CoreFromConcreteOptions Core.Options where
   project c =
     Core.defaultOptions
-      { Core._optShowDeBruijnIndices = c ^. coreFromConcreteShowDeBruijn
+      { Core._optShowDeBruijnIndices = c ^. coreFromConcreteShowDeBruijn,
+        Core._optShowIdentIds = c ^. coreFromConcreteShowIdentIds
       }
 
 instance CanonicalProjection CoreFromConcreteOptions Eval.EvalOptions where
   project c =
     Eval.EvalOptions
       { _evalInputFile = c ^. coreFromConcreteInputFile,
-        _evalNoIO = c ^. coreFromConcreteNoIO
+        _evalNoIO = c ^. coreFromConcreteNoIO,
+        _evalNoDisambiguate = c ^. coreFromConcreteNoDisambiguate
       }
 
 parseCoreFromConcreteOptions :: Parser CoreFromConcreteOptions
 parseCoreFromConcreteOptions = do
   _coreFromConcreteTransformations <- optTransformationIds
-  _coreFromConcreteShowDeBruijn <-
-    switch
-      ( long "show-de-bruijn"
-          <> help "Show variable de Bruijn indices"
-      )
+  _coreFromConcreteShowDeBruijn <- optDeBruijn
+  _coreFromConcreteShowIdentIds <- optIdentIds
+  _coreFromConcreteNoDisambiguate <- optNoDisambiguate
   _coreFromConcreteFilter <-
     switch
       ( long "filter"

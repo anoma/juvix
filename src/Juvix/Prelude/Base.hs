@@ -130,6 +130,7 @@ import Data.Singletons.TH (genSingletons, promoteOrdInstances, singOrdInstances)
 import Data.Stream (Stream)
 import Data.String
 import Data.Text (Text, pack, strip, unpack)
+import Data.Text qualified as Text
 import Data.Text.Encoding
 import Data.Text.IO
 import Data.Traversable
@@ -177,6 +178,7 @@ import System.IO hiding
     writeFile,
   )
 import System.IO.Error
+import Text.Read qualified as Text
 import Text.Show (Show)
 import Text.Show qualified as Show
 import Prelude (Double)
@@ -200,6 +202,22 @@ show = fromString . Show.show
 toUpperFirst :: String -> String
 toUpperFirst [] = []
 toUpperFirst (x : xs) = Char.toUpper x : xs
+
+--------------------------------------------------------------------------------
+-- Text
+--------------------------------------------------------------------------------
+
+prime :: Text -> Text
+prime "" = "_X"
+prime "?" = "_X"
+prime name = case Text.splitOn "'" name of
+  [name', ""] -> name' <> "'0"
+  [name', num] -> name' <> "'" <> maybe (num <> "'") (show . (+ 1)) (Text.readMaybe (unpack num) :: Maybe Word)
+  _ -> name <> "'"
+
+freshName :: HashSet Text -> Text -> Text
+freshName names name | HashSet.member name names = freshName names (prime name)
+freshName _ name = name
 
 --------------------------------------------------------------------------------
 -- Foldable

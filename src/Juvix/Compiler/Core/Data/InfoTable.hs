@@ -5,6 +5,7 @@ module Juvix.Compiler.Core.Data.InfoTable
 where
 
 import Data.HashMap.Strict qualified as HashMap
+import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Concrete.Data.Builtins
 import Juvix.Compiler.Core.Language
 
@@ -12,7 +13,6 @@ type IdentContext = HashMap Symbol Node
 
 data InfoTable = InfoTable
   { _identContext :: IdentContext,
-    -- `_identMap` is needed only for REPL
     _identMap :: HashMap Text IdentKind,
     _infoMain :: Maybe Symbol,
     _infoIdentifiers :: HashMap Symbol IdentifierInfo,
@@ -138,3 +138,31 @@ lookupBuiltinFunction tab b = (HashMap.!) (tab ^. infoIdentifiers) . funSym <$> 
     funSym = \case
       IdentFun s -> s
       _ -> error "core infotable: expected function identifier"
+
+identName :: InfoTable -> Symbol -> Text
+identName tab sym = fromJust (HashMap.lookup sym (tab ^. infoIdentifiers)) ^. identifierName
+
+typeName :: InfoTable -> Symbol -> Text
+typeName tab sym = fromJust (HashMap.lookup sym (tab ^. infoInductives)) ^. inductiveName
+
+identNames :: InfoTable -> HashSet Text
+identNames tab =
+  HashSet.fromList $
+    map (^. identifierName) (HashMap.elems (tab ^. infoIdentifiers))
+      ++ map (^. constructorName) (HashMap.elems (tab ^. infoConstructors))
+      ++ map (^. inductiveName) (HashMap.elems (tab ^. infoInductives))
+
+freshIdentName :: InfoTable -> Text -> Text
+freshIdentName tab = freshName (identNames tab)
+
+filterByFile :: Path Abs File -> InfoTable -> InfoTable
+filterByFile f t =
+  t
+    { _infoIdentifiers = HashMap.filter (^. identifierLocation . to matchesLocation) (t ^. infoIdentifiers),
+      _infoAxioms = HashMap.filter (^. axiomLocation . to matchesLocation) (t ^. infoAxioms),
+      _infoConstructors = HashMap.filter (^. constructorLocation . to matchesLocation) (t ^. infoConstructors),
+      _infoInductives = HashMap.filter (^. inductiveLocation . to matchesLocation) (t ^. infoInductives)
+    }
+  where
+    matchesLocation :: Maybe Location -> Bool
+    matchesLocation l = l ^? _Just . intervalFile == Just f

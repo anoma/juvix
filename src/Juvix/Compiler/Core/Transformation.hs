@@ -12,6 +12,7 @@ import Juvix.Compiler.Core.Data.TransformationId
 import Juvix.Compiler.Core.Transformation.Base
 import Juvix.Compiler.Core.Transformation.ComputeTypeInfo
 import Juvix.Compiler.Core.Transformation.ConvertBuiltinTypes
+import Juvix.Compiler.Core.Transformation.DisambiguateNames
 import Juvix.Compiler.Core.Transformation.Eta
 import Juvix.Compiler.Core.Transformation.Identity
 import Juvix.Compiler.Core.Transformation.LambdaLetRecLifting
@@ -39,3 +40,4 @@ applyTransformations ts tbl = foldl' (flip appTrans) tbl ts
       UnrollRecursion -> unrollRecursion
       MatchToCase -> matchToCase
       EtaExpandApps -> etaExpansionApps
+      DisambiguateNames -> disambiguateNames

@@ -1,7 +1,7 @@
 -- Church numerals
 
 type Pair {
-  pair : any -> any -> Pair;
+  pair : Any -> Any -> Pair;
 };
 
 def fst := \p case p of { pair x _ := x };

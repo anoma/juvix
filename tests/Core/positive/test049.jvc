@@ -6,10 +6,10 @@ type Boxed {
 
 def g : Π A : Type, A → Boxed A → A → A := λ(A : Type) λ(a : A) λ(_ : Boxed A) λ(a' : A) a;
 
-def f : Π A : Type, int → int → Boxed A → int → A → A :=
-    λ(A : Type) λ(n : int) λ(m : int) λ(b : Boxed A) λ(k : int) λ(a' : A)
+def f : Π A : Type, Int → Int → Boxed A → Int → A → A :=
+    λ(A : Type) λ(n : Int) λ(m : Int) λ(b : Boxed A) λ(k : Int) λ(a' : A)
         case b of {
-            Box _ a := (λ(_ : int) g A a b a') (n + m + k);
+            Box _ a := (λ(_ : Int) g A a b a') (n + m + k);
         };
 
-f int 0 1 (Box int 1) 2 3
+f Int 0 1 (Box Int 1) 2 3
