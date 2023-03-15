@@ -256,13 +256,12 @@ jobs:
           cd main
           make markdown-docs
 
-      - name: Generate HTML and Web App files from milestone examples
+      - name: Generate HTML files from examples
         run: |
           cd main
           echo "$GITHUB_WORKSPACE/.local/bin" >> $GITHUB_PATH
           make install
           make html-examples
-          make webapp-examples
           make demo-example
 
       - name: Deploy HTML to github pages
