@@ -23,6 +23,27 @@ data BinderChange
     -- indices of `n` are with respect to the result
     BCRemove BinderRemove
 
+bindersFromBinderChange :: [BinderChange] -> [Binder]
+bindersFromBinderChange =
+  reverse
+    . foldl'
+      ( \bs chg -> case chg of
+          BCAdd _ -> bs
+          BCKeep b -> b : bs
+          BCRemove (BinderRemove b _) -> b : bs
+      )
+      []
+
+bindersNumFromBinderChange :: [BinderChange] -> Int
+bindersNumFromBinderChange =
+  foldl'
+    ( \n chg -> case chg of
+        BCAdd {} -> n
+        BCKeep {} -> n + 1
+        BCRemove {} -> n + 1
+    )
+    0
+
 rmapG ::
   forall c m.
   (Monad m) =>
@@ -58,7 +79,7 @@ rmapG coll f = go mempty 0 (coll ^. cEmpty)
                   binders' = BL.prependRev cbs (BL.prepend rbs' binders)
                in go
                     binders'
-                    bl'
+                    (bl' + ch ^. childBindersNum)
                     ((coll ^. cCollect) (length rbs + ch ^. childBindersNum, reverse rbs ++ ch ^. childBinders) c')
                     (ch ^. childNode)
 

@@ -68,6 +68,9 @@ mkLet i bi v b = NLet (Let i (LetItem bi v) b)
 mkLet' :: Type -> Node -> Node -> Node
 mkLet' ty = mkLet Info.empty (mkBinder' ty)
 
+mkLets' :: [(Type, Node)] -> Node -> Node
+mkLets' tvs n = foldl' (\n' (ty, v) -> mkLet' ty v n') n (reverse tvs)
+
 mkLetRec :: Info -> NonEmpty LetItem -> Node -> Node
 mkLetRec i vs b = NRec (LetRec i vs b)
 

@@ -47,13 +47,13 @@ where
       mkLet
         _lambdaInfo
         (over binderType (cont []) _lambdaBinder)
-        (mkConstant' (ConstInteger k))
+        (mkConstant' (ConstInteger (fromIntegral k)))
         (cont [BCAdd 1, BCRemove (BinderRemove _lambdaBinder (mkVar' 0))] _lambdaBody)
     _ ->
       recur [] node
     where
-      cont :: [BinderChange] -> Node -> Node
-      cont bcs = go (recur . (bcs ++)) k
+      cont :: Level -> [BinderChange] -> Node -> Node
+      cont bcs = go (recur . (bcs ++)) (k + bindersNumFromBindersChange bcs)
 ```
 produces
 ```
@@ -69,7 +69,7 @@ where
     NLam lam1@(Lambda _ _ (NLam lam2)) ->
       mkLambda
         (lam1 ^. lambdaInfo)
-        (over lambdaBinder (over binderType (cont [])) lam1)
+        (over binderType (cont []) (lam1 ^. lambdaBinder))
         (cont
           [
             BCKeep (lam1 ^. lambdaBinder),
