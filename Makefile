@@ -17,8 +17,6 @@ EXAMPLES= Collatz/Collatz.juvix \
 	TicTacToe/CLI/TicTacToe.juvix \
 	Tutorial/Tutorial.juvix \
 
-EXAMPLE_WEBAPP_OUTPUT=_docs/examples/webapp
-WEBAPP_EXAMPLES=TicTacToe/Web/TicTacToe.juvix
 DEMO_EXAMPLE=examples/demo/Demo.juvix
 
 MAKEAUXFLAGS?=-s
@@ -76,15 +74,6 @@ demo-example:
 	$(eval OUTPUTDIR=$(EXAMPLEHTMLOUTPUT)/Demo)
 	@mkdir -p ${OUTPUTDIR}
 	@juvix html $(DEMO_EXAMPLE) --output-dir=$(CURDIR)/${OUTPUTDIR}
-
-.PHONY: webapp-examples
-webapp-examples: $(WEBAPP_EXAMPLES)
-
-$(WEBAPP_EXAMPLES):
-	$(eval OUTPUTDIR=$(EXAMPLE_WEBAPP_OUTPUT)/$(dir $@))
-	@mkdir -p ${OUTPUTDIR}
-	@juvix compile -t wasm -r standalone $(EXAMPLEMILESTONE)/$@
-	@cp $(dir $(EXAMPLEMILESTONE)/$@)* ${OUTPUTDIR}
 
 # -- MDBook
 

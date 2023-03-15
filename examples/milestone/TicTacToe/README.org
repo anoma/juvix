@@ -3,7 +3,7 @@
 ** TicTacToe
 
 This directory contains Juvix code for a Tic-Tac-Toe game that can be run as a
-terminal application or a Web application.
+terminal application.
 
 The common logic code is in =Logic/=, the code specific to the terminal
 application is in =CLI/= and the code specific to the Web application is in
