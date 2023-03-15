@@ -6,6 +6,7 @@ module Juvix.Compiler.Core.Extra.Utils
     module Juvix.Compiler.Core.Extra.Equality,
     module Juvix.Compiler.Core.Extra.Recursors.Fold.Named,
     module Juvix.Compiler.Core.Extra.Recursors.Map.Named,
+    module Juvix.Compiler.Core.Extra.Recursors.RMap.Named,
     module Juvix.Compiler.Core.Extra.Recursors.Utils,
     module Juvix.Compiler.Core.Extra.Utils.Base,
   )
@@ -22,6 +23,7 @@ import Juvix.Compiler.Core.Extra.Info
 import Juvix.Compiler.Core.Extra.Recursors
 import Juvix.Compiler.Core.Extra.Recursors.Fold.Named
 import Juvix.Compiler.Core.Extra.Recursors.Map.Named
+import Juvix.Compiler.Core.Extra.Recursors.RMap.Named
 import Juvix.Compiler.Core.Extra.Recursors.Utils
 import Juvix.Compiler.Core.Extra.Utils.Base
 import Juvix.Compiler.Core.Language
