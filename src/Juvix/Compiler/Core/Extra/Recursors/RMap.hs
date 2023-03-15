@@ -60,39 +60,37 @@ rmapG coll f = go mempty 0 (coll ^. cEmpty)
     go binders bl c n = f recur c n
       where
         recur :: c -> [BinderChange] -> Node -> m Node
-        recur c' changes n' =
-          let ni = destruct n'
-           in adjustVar . reassembleDetails ni <$> mapM goChild (ni ^. nodeChildren)
-          where
-            goChild :: NodeChild -> m Node
-            goChild ch =
-              let (bl', rbs, rbs') =
-                    foldl'
-                      ( \(l, bs, acc) chg -> case chg of
-                          BCAdd k -> (l + k, bs, acc)
-                          BCKeep b -> (l + 1, b : bs, (l, Nothing) : acc)
-                          BCRemove (BinderRemove b node) -> (l, b : bs, (l, Just node) : acc)
-                      )
-                      (bl, [], [])
-                      changes
-                  cbs = map (\l -> (l, Nothing)) [bl' .. bl' + ch ^. childBindersNum - 1]
-                  binders' = BL.prependRev cbs (BL.prepend rbs' binders)
-               in go
-                    binders'
-                    (bl' + ch ^. childBindersNum)
-                    ((coll ^. cCollect) (length rbs + ch ^. childBindersNum, reverse rbs ++ ch ^. childBinders) c')
-                    (ch ^. childNode)
-
-        adjustVar :: Node -> Node
-        adjustVar = \case
+        recur c' changes = \case
           NVar v ->
-            maybe
-              (NVar v {_varIndex = getBinderIndex bl lvl})
-              (shift (bl - lvl))
-              mnode
+            return $
+              maybe
+                (NVar v {_varIndex = getBinderIndex bl lvl})
+                (shift (bl - lvl))
+                mnode
             where
               (lvl, mnode) = BL.lookup (v ^. varIndex) binders
-          node -> node
+          n' ->
+            let ni = destruct n'
+             in reassembleDetails ni <$> mapM goChild (ni ^. nodeChildren)
+            where
+              goChild :: NodeChild -> m Node
+              goChild ch =
+                let (bl', rbs, rbs') =
+                      foldl'
+                        ( \(l, bs, acc) chg -> case chg of
+                            BCAdd k -> (l + k, bs, acc)
+                            BCKeep b -> (l + 1, b : bs, (l, Nothing) : acc)
+                            BCRemove (BinderRemove b node) -> (l, b : bs, (l, Just node) : acc)
+                        )
+                        (bl, [], [])
+                        changes
+                    cbs = map (\l -> (l, Nothing)) [bl' .. bl' + ch ^. childBindersNum - 1]
+                    binders' = BL.prependRev cbs (BL.prepend rbs' binders)
+                 in go
+                      binders'
+                      (bl' + ch ^. childBindersNum)
+                      ((coll ^. cCollect) (length rbs + ch ^. childBindersNum, reverse rbs ++ ch ^. childBinders) c')
+                      (ch ^. childNode)
 
 rmapEmbedIden :: ((([BinderChange] -> Node -> Node) -> Node -> Node)) -> (([BinderChange] -> Node -> Identity Node) -> Node -> Identity Node)
 rmapEmbedIden f recur = return . f (\bcs -> runIdentity . recur bcs)
