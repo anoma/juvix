@@ -5,8 +5,389 @@
 <img align="right" width="300" height="300" alt="Juvix Mascot" src="../assets/images/tara-smiling.svg" />
 </a>
 #+end_html
+** [[https://github.com/anoma/juvix/tree/v0.3.0][v0.3.0]]  (2023-03-15)
+[[https://github.com/anoma/juvix/compare/v0.2.9...v0.3.0][Full Changelog]]
 
-** [[https://github.com/anoma/juvix/tree/v0.2.9][v0.2.9]] (2022-01-18)
+*Implemented enhancements:*
+
+- Avoid line breaks in applications within a type signature
+  [[https://github.com/anoma/juvix/issues/1850][#1850]]
+  ([[https://github.com/paulcadman][paulcadman]])
+- Respect user's spacing decisions in the formatter
+  [[https://github.com/anoma/juvix/issues/1837][#1837]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Formatter should not transform ASCII symbols to unicode by default
+  [[https://github.com/anoma/juvix/issues/1827][#1827]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Enable match-to-case, nat-to-int and convert-builtins by default in
+  REPL [[https://github.com/anoma/juvix/issues/1825][#1825]]
+  ([[https://github.com/lukaszcz][lukaszcz]])
+- The Juvix formatter works poorly with multi-line ifs
+  [[https://github.com/anoma/juvix/issues/1793][#1793]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Add a lazy IO sequencing function (#1772)
+  [[https://github.com/anoma/juvix/issues/1773][#1773]]
+  ([[https://github.com/lukaszcz][lukaszcz]])
+- Support LetRec in the GEB backend
+  [[https://github.com/anoma/juvix/issues/1756][#1756]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Support integers in the GEB backend
+  [[https://github.com/anoma/juvix/issues/1753][#1753]]
+  ([[https://github.com/lukaszcz][lukaszcz]])
+- GEB evaluator [[https://github.com/anoma/juvix/issues/1751][#1751]]
+  ([[https://github.com/jonaprieto][jonaprieto]])
+- Add debugging builtin functions
+  [[https://github.com/anoma/juvix/issues/1731][#1731]]
+  ([[https://github.com/jonaprieto][jonaprieto]])
+- Non-judoc comments are removed when generating HTML output
+  [[https://github.com/anoma/juvix/issues/1723][#1723]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Special syntax for =case=
+  [[https://github.com/anoma/juvix/issues/1716][#1716]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Make || and && lazy
+  [[https://github.com/anoma/juvix/issues/1701][#1701]]
+  ([[https://github.com/lukaszcz][lukaszcz]])
+- It should be possible to specify multiple implicit type arguments at
+  once [[https://github.com/anoma/juvix/issues/1692][#1692]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Naive compilation of complex pattern matches with match-expressions to
+  decision trees with case-expressions
+  [[https://github.com/anoma/juvix/issues/1531][#1531]]
+  ([[https://github.com/paulcadman][paulcadman]])
+- New compilation pipeline
+  [[https://github.com/anoma/juvix/pull/1832][#1832]]
+  ([[https://github.com/lukaszcz][lukaszcz]])
+- Add internal core-eval option to evaluate named function identifier
+  [[https://github.com/anoma/juvix/pull/1819][#1819]]
+  ([[https://github.com/paulcadman][paulcadman]])
+- Short syntax for sequences of function and datatype parameters
+  [[https://github.com/anoma/juvix/pull/1809][#1809]]
+  ([[https://github.com/lukaszcz][lukaszcz]])
+- Add Geb Backend Evaluator with some extra subcommands
+  [[https://github.com/anoma/juvix/pull/1808][#1808]]
+  ([[https://github.com/jonaprieto][jonaprieto]])
+- Add REPL option to apply Core transformations
+  [[https://github.com/anoma/juvix/pull/1796][#1796]]
+  ([[https://github.com/paulcadman][paulcadman]])
+- String builtins [[https://github.com/anoma/juvix/pull/1784][#1784]]
+  ([[https://github.com/lukaszcz][lukaszcz]])
+- Use restore/save github action to speed up the CI testing
+  [[https://github.com/anoma/juvix/pull/1783][#1783]]
+  ([[https://github.com/jonaprieto][jonaprieto]])
+- Fix minor issue with ==% for type equality
+  [[https://github.com/anoma/juvix/pull/1780][#1780]]
+  ([[https://github.com/jonaprieto][jonaprieto]])
+- Add debugging builtin functions =trace= and =fail=
+  [[https://github.com/anoma/juvix/pull/1771][#1771]]
+  ([[https://github.com/jonaprieto][jonaprieto]])
+- Keep regular comments in html output
+  [[https://github.com/anoma/juvix/pull/1766][#1766]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Lazy boolean operators
+  [[https://github.com/anoma/juvix/pull/1743][#1743]]
+  ([[https://github.com/lukaszcz][lukaszcz]])
+- Refactor =html= command with extra options
+  [[https://github.com/anoma/juvix/pull/1725][#1725]]
+  ([[https://github.com/jonaprieto][jonaprieto]])
+- Add initial setup for codespaces
+  [[https://github.com/anoma/juvix/pull/1713][#1713]]
+  ([[https://github.com/jonaprieto][jonaprieto]])
+- Typecheck let expressions
+  [[https://github.com/anoma/juvix/pull/1712][#1712]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Use Smoke instead of shelltestrunner
+  [[https://github.com/anoma/juvix/pull/1710][#1710]]
+  ([[https://github.com/jonaprieto][jonaprieto]])
+- Replace --output-dir flag by --internal-build-dir
+  [[https://github.com/anoma/juvix/pull/1707][#1707]]
+  ([[https://github.com/jonaprieto][jonaprieto]])
+- Compiler output [[https://github.com/anoma/juvix/pull/1705][#1705]]
+  ([[https://github.com/jonaprieto][jonaprieto]])
+- Allow optional pipe before the first constructor for inductive type
+  declarations [[https://github.com/anoma/juvix/pull/1699][#1699]]
+  ([[https://github.com/jonaprieto][jonaprieto]])
+- Nat builtins [[https://github.com/anoma/juvix/pull/1686][#1686]]
+  ([[https://github.com/lukaszcz][lukaszcz]])
+
+
+*Merged pull requests:*
+
+- Remove dead code in =Internal=
+  [[https://github.com/anoma/juvix/pull/1891][#1891]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Remove missing Juvix examples and webapp example from docs build
+  [[https://github.com/anoma/juvix/pull/1890][#1890]]
+  ([[https://github.com/paulcadman][paulcadman]])
+- Fix type synonym in let
+  [[https://github.com/anoma/juvix/pull/1880][#1880]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Update stack resolver to lts-20.12
+  [[https://github.com/anoma/juvix/pull/1873][#1873]]
+  ([[https://github.com/paulcadman][paulcadman]])
+- Use Ape to format patterns
+  [[https://github.com/anoma/juvix/pull/1870][#1870]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Fix Core-To-Geb translation
+  [[https://github.com/anoma/juvix/pull/1863][#1863]]
+  ([[https://github.com/jonaprieto][jonaprieto]])
+- Remove the old C backend
+  [[https://github.com/anoma/juvix/pull/1862][#1862]]
+  ([[https://github.com/lukaszcz][lukaszcz]])
+- Move =substEnv= to its own module
+  [[https://github.com/anoma/juvix/pull/1861][#1861]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Add =_caseTypeWholeExpression= to Internal
+  [[https://github.com/anoma/juvix/pull/1860][#1860]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- remove old minihaskell files
+  [[https://github.com/anoma/juvix/pull/1859][#1859]]
+  ([[https://github.com/jonaprieto][jonaprieto]])
+- Fix bugs in the Case translation in Core-to-Geb
+  [[https://github.com/anoma/juvix/pull/1858][#1858]]
+  ([[https://github.com/lukaszcz][lukaszcz]])
+- Format examples [[https://github.com/anoma/juvix/pull/1856][#1856]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Sort the identifiers topologically in the Core-to-GEB translation
+  [[https://github.com/anoma/juvix/pull/1854][#1854]]
+  ([[https://github.com/lukaszcz][lukaszcz]])
+- Add type info to the mid-square hashing function
+  [[https://github.com/anoma/juvix/pull/1853][#1853]]
+  ([[https://github.com/lukaszcz][lukaszcz]])
+- Use APE mechanism to format Function expressions
+  [[https://github.com/anoma/juvix/pull/1852][#1852]]
+  ([[https://github.com/paulcadman][paulcadman]])
+- Preserve single wildcards pretty printing function parameters
+  [[https://github.com/anoma/juvix/pull/1851][#1851]]
+  ([[https://github.com/paulcadman][paulcadman]])
+- Add type annotation to case expression
+  [[https://github.com/anoma/juvix/pull/1849][#1849]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Remove module parameters
+  [[https://github.com/anoma/juvix/pull/1848][#1848]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Allow shadowing local variables with let function definitions
+  [[https://github.com/anoma/juvix/pull/1847][#1847]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Add lambda type info
+  [[https://github.com/anoma/juvix/pull/1845][#1845]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Improve comma formatting
+  [[https://github.com/anoma/juvix/pull/1842][#1842]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Improve formatter [[https://github.com/anoma/juvix/pull/1840][#1840]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Respect lambda Ascii/Unicode
+  [[https://github.com/anoma/juvix/pull/1838][#1838]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Fix =juvix init= [[https://github.com/anoma/juvix/pull/1835][#1835]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- The formatter respects the ascii function arrow
+  [[https://github.com/anoma/juvix/pull/1834][#1834]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Add =dev core from-concrete= command
+  [[https://github.com/anoma/juvix/pull/1833][#1833]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Give proper errors for incorrect application of lazy builtins
+  [[https://github.com/anoma/juvix/pull/1830][#1830]]
+  ([[https://github.com/lukaszcz][lukaszcz]])
+- Documentation: update language reference
+  [[https://github.com/anoma/juvix/pull/1829][#1829]]
+  ([[https://github.com/lukaszcz][lukaszcz]])
+- Add compilation of complex pattern matching to case
+  [[https://github.com/anoma/juvix/pull/1824][#1824]]
+  ([[https://github.com/paulcadman][paulcadman]])
+- Apply CI ghcup workaround to docs build
+  [[https://github.com/anoma/juvix/pull/1823][#1823]]
+  ([[https://github.com/paulcadman][paulcadman]])
+- Update the Juvix tutorial for 0.3
+  [[https://github.com/anoma/juvix/pull/1822][#1822]]
+  ([[https://github.com/lukaszcz][lukaszcz]])
+- Workaround ghcup issue on CI runner
+  [[https://github.com/anoma/juvix/pull/1821][#1821]]
+  ([[https://github.com/paulcadman][paulcadman]])
+- Respect the =juvix dev highlight --format= flag when outputting errors
+  [[https://github.com/anoma/juvix/pull/1820][#1820]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Comments about the usage of the JuvixCore recursors
+  [[https://github.com/anoma/juvix/pull/1818][#1818]]
+  ([[https://github.com/lukaszcz][lukaszcz]])
+- Emacs mode and VSCode extension tutorials
+  [[https://github.com/anoma/juvix/pull/1815][#1815]]
+  ([[https://github.com/lukaszcz][lukaszcz]])
+- Documentation: how to compile Juvix programs
+  [[https://github.com/anoma/juvix/pull/1813][#1813]]
+  ([[https://github.com/lukaszcz][lukaszcz]])
+- Make '>>' lazy [[https://github.com/anoma/juvix/pull/1812][#1812]]
+  ([[https://github.com/lukaszcz][lukaszcz]])
+- Output proper GEB Lisp programs
+  [[https://github.com/anoma/juvix/pull/1810][#1810]]
+  ([[https://github.com/lukaszcz][lukaszcz]])
+- Remove the usage annotation syntax
+  [[https://github.com/anoma/juvix/pull/1805][#1805]]
+  ([[https://github.com/lukaszcz][lukaszcz]])
+- Mid-square hashing implemented in JuvixCore
+  [[https://github.com/anoma/juvix/pull/1804][#1804]]
+  ([[https://github.com/lukaszcz][lukaszcz]])
+- Autocompletion for =dev core compilation --target=
+  [[https://github.com/anoma/juvix/pull/1803][#1803]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Special syntax for case
+  [[https://github.com/anoma/juvix/pull/1800][#1800]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Adapt benchmarks to the new pipeline
+  [[https://github.com/anoma/juvix/pull/1795][#1795]]
+  ([[https://github.com/lukaszcz][lukaszcz]])
+- Support letrec lifting without lambda lifting
+  [[https://github.com/anoma/juvix/pull/1794][#1794]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Use the reader effect
+  [[https://github.com/anoma/juvix/pull/1791][#1791]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Remove braces from let expressions
+  [[https://github.com/anoma/juvix/pull/1790][#1790]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Translate as-pattern binders to Core PatternBinders
+  [[https://github.com/anoma/juvix/pull/1789][#1789]]
+  ([[https://github.com/paulcadman][paulcadman]])
+- Fix termination with as-patterns
+  [[https://github.com/anoma/juvix/pull/1787][#1787]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Allow type signatures to have a body
+  [[https://github.com/anoma/juvix/pull/1785][#1785]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Track builtins in the Core InfoTable
+  [[https://github.com/anoma/juvix/pull/1782][#1782]]
+  ([[https://github.com/paulcadman][paulcadman]])
+- Pipes for lambda clauses
+  [[https://github.com/anoma/juvix/pull/1781][#1781]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Support integers in the GEB backend
+  [[https://github.com/anoma/juvix/pull/1778][#1778]]
+  ([[https://github.com/lukaszcz][lukaszcz]])
+- Add builtin nat and bool types as start nodes in reachability analysis
+  [[https://github.com/anoma/juvix/pull/1775][#1775]]
+  ([[https://github.com/paulcadman][paulcadman]])
+- Update pre-commit [[https://github.com/anoma/juvix/pull/1772][#1772]]
+  ([[https://github.com/jonaprieto][jonaprieto]])
+- Parse JuvixCore with absolute paths
+  [[https://github.com/anoma/juvix/pull/1770][#1770]]
+  ([[https://github.com/paulcadman][paulcadman]])
+- Use absolute path in Core Evaluator to generate source file location
+  [[https://github.com/anoma/juvix/pull/1769][#1769]]
+  ([[https://github.com/paulcadman][paulcadman]])
+- Install wasmer binary from Github releases
+  [[https://github.com/anoma/juvix/pull/1765][#1765]]
+  ([[https://github.com/jonaprieto][jonaprieto]])
+- Run the new Juvix formatter for all the Juvix examples
+  [[https://github.com/anoma/juvix/pull/1764][#1764]]
+  ([[https://github.com/jonaprieto][jonaprieto]])
+- Fix let expressions in the repl
+  [[https://github.com/anoma/juvix/pull/1763][#1763]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Improve arity inference for repl expressions
+  [[https://github.com/anoma/juvix/pull/1762][#1762]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Fix broken links and other improvements
+  [[https://github.com/anoma/juvix/pull/1761][#1761]]
+  ([[https://github.com/jonaprieto][jonaprieto]])
+- Translate Nat builtins to the correct Core Ops
+  [[https://github.com/anoma/juvix/pull/1760][#1760]]
+  ([[https://github.com/paulcadman][paulcadman]])
+- Remove hlint from the CI and pre-commit config
+  [[https://github.com/anoma/juvix/pull/1759][#1759]]
+  ([[https://github.com/jonaprieto][jonaprieto]])
+- Fix demo example build
+  [[https://github.com/anoma/juvix/pull/1757][#1757]]
+  ([[https://github.com/paulcadman][paulcadman]])
+- Basic Geb integration
+  [[https://github.com/anoma/juvix/pull/1748][#1748]]
+  ([[https://github.com/lukaszcz][lukaszcz]])
+- Fix macOS CI build [[https://github.com/anoma/juvix/pull/1747][#1747]]
+  ([[https://github.com/paulcadman][paulcadman]])
+- Adapt Juvix programs to the new pipeline
+  [[https://github.com/anoma/juvix/pull/1746][#1746]]
+  ([[https://github.com/lukaszcz][lukaszcz]])
+- Fix link in README for the new docs
+  [[https://github.com/anoma/juvix/pull/1745][#1745]]
+  ([[https://github.com/lukaszcz][lukaszcz]])
+- Move juvix-mode to a separate repository
+  [[https://github.com/anoma/juvix/pull/1744][#1744]]
+  ([[https://github.com/jonaprieto][jonaprieto]])
+- Print comments when pretty printing concrete syntax
+  [[https://github.com/anoma/juvix/pull/1737][#1737]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Demo [[https://github.com/anoma/juvix/pull/1736][#1736]]
+  ([[https://github.com/lukaszcz][lukaszcz]])
+- Update CI to install Smoke, Github actions, and Makefile fixes
+  [[https://github.com/anoma/juvix/pull/1735][#1735]]
+  ([[https://github.com/jonaprieto][jonaprieto]])
+- Update stack.yaml [[https://github.com/anoma/juvix/pull/1734][#1734]]
+  ([[https://github.com/jonaprieto][jonaprieto]])
+- Fix Nat builtins [[https://github.com/anoma/juvix/pull/1733][#1733]]
+  ([[https://github.com/lukaszcz][lukaszcz]])
+- Script to count LOC
+  [[https://github.com/anoma/juvix/pull/1732][#1732]]
+  ([[https://github.com/lukaszcz][lukaszcz]])
+- Give a proper type to literal Strings
+  [[https://github.com/anoma/juvix/pull/1730][#1730]]
+  ([[https://github.com/paulcadman][paulcadman]])
+- Do not filter implicit args in internal to core translation
+  [[https://github.com/anoma/juvix/pull/1728][#1728]]
+  ([[https://github.com/paulcadman][paulcadman]])
+- Fix de Brujin indexing of lambda arguments
+  [[https://github.com/anoma/juvix/pull/1727][#1727]]
+  ([[https://github.com/paulcadman][paulcadman]])
+- Fix inference loop [[https://github.com/anoma/juvix/pull/1726][#1726]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Remove wildcard patterns from Internal
+  [[https://github.com/anoma/juvix/pull/1724][#1724]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Restructure the documentation and add a tutorial
+  [[https://github.com/anoma/juvix/pull/1718][#1718]]
+  ([[https://github.com/lukaszcz][lukaszcz]])
+- Improve error message for confusing ':=' with '='
+  [[https://github.com/anoma/juvix/pull/1715][#1715]]
+  ([[https://github.com/lukaszcz][lukaszcz]])
+- Fix #1704 [[https://github.com/anoma/juvix/pull/1711][#1711]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Fix #1693 [[https://github.com/anoma/juvix/pull/1708][#1708]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Tests for the new compilation pipeline
+  [[https://github.com/anoma/juvix/pull/1703][#1703]]
+  ([[https://github.com/lukaszcz][lukaszcz]])
+- Add printString and printBool support to legacy C backend
+  [[https://github.com/anoma/juvix/pull/1698][#1698]]
+  ([[https://github.com/paulcadman][paulcadman]])
+- Add --show-de-bruijn option to =juvix repl=
+  [[https://github.com/anoma/juvix/pull/1694][#1694]]
+  ([[https://github.com/lukaszcz][lukaszcz]])
+- Allow 'terminating' keyword with builtins
+  [[https://github.com/anoma/juvix/pull/1688][#1688]]
+  ([[https://github.com/lukaszcz][lukaszcz]])
+- Remove unicode cons symbol
+  [[https://github.com/anoma/juvix/pull/1687][#1687]]
+  ([[https://github.com/lukaszcz][lukaszcz]])
+- Change syntax for ind. data types and forbid the empty data type
+  [[https://github.com/anoma/juvix/pull/1684][#1684]]
+  ([[https://github.com/jonaprieto][jonaprieto]])
+- Convert Nat literals to Core integers
+  [[https://github.com/anoma/juvix/pull/1681][#1681]]
+  ([[https://github.com/lukaszcz][lukaszcz]])
+- Less verbose output from running =make check=
+  [[https://github.com/anoma/juvix/pull/1675][#1675]]
+  ([[https://github.com/jonaprieto][jonaprieto]])
+- Remove where syntax
+  [[https://github.com/anoma/juvix/pull/1674][#1674]]
+  ([[https://github.com/jonaprieto][jonaprieto]])
+- Benchmarks [[https://github.com/anoma/juvix/pull/1673][#1673]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- JuvixCore to JuvixAsm translation
+  [[https://github.com/anoma/juvix/pull/1665][#1665]]
+  ([[https://github.com/lukaszcz][lukaszcz]])
+
+
+** [[https://github.com/anoma/juvix/tree/v0.2.9][v0.2.9]] (2023-01-18)
 [[https://github.com/anoma/juvix/compare/v0.2.8...v0.2.9][Full
 Changelog]]
 
