@@ -16,7 +16,6 @@ EXAMPLES= Collatz/Collatz.juvix \
 	PascalsTriangle/PascalsTriangle.juvix \
 	TicTacToe/CLI/TicTacToe.juvix \
 	Tutorial/Tutorial.juvix \
-	ValidityPredicates/SimpleFungibleToken.juvix
 
 EXAMPLE_WEBAPP_OUTPUT=_docs/examples/webapp
 WEBAPP_EXAMPLES=TicTacToe/Web/TicTacToe.juvix
