@@ -1,131 +1,131 @@
 module Format;
-  open import Stdlib.Prelude hiding {,};
-  open import Stdlib.Data.Nat.Ord;
 
-  terminating
-  go : Nat → Nat → Nat;
-  go n s :=
-    if
-      (s < n)
-      (go (sub n 1) s)
-      (go n (sub s n) + go (sub n 1) s);
+open import Stdlib.Prelude hiding {,};
+open import Stdlib.Data.Nat.Ord;
 
-  module M;
-    infixr 4 ,;
-    axiom , : String → String → String;
-  end;
+terminating
+go : Nat → Nat → Nat;
+go n s :=
+  if
+    (s < n)
+    (go (sub n 1) s)
+    (go n (sub s n) + go (sub n 1) s);
 
-  -- qualified commas
-  t4 : String;
-  t4 := "a" M., "b" M., "c" M., "d";
+module M;
+  infixr 4 ,;
+  axiom , : String → String → String;
+end;
 
-  open M;
+-- qualified commas
+t4 : String;
+t4 := "a" M., "b" M., "c" M., "d";
 
-  -- mix qualified and unqualified commas
-  t5 : String;
-  t5 := "a" M., "b" M., "c", "d";
+open M;
 
-  -- comma chain fits in a line
-  t2 : String;
-  t2 := "a", "b", "c", "d";
+-- mix qualified and unqualified commas
+t5 : String;
+t5 := "a" M., "b" M., "c", "d";
 
-  -- comma chain does not fit in a line
-  t3 : String;
-  t3 :=
-    "a"
-      , "b"
-      , "c"
-      , "d"
-      , "e"
-      , "f"
-      , "g"
-      , "h"
-      , "i"
-      , "j"
-      , "k"
-      , "1234";
+-- comma chain fits in a line
+t2 : String;
+t2 := "a", "b", "c", "d";
 
-  infixl 7 +l7;
-  axiom +l7 : String → String → String;
+-- comma chain does not fit in a line
+t3 : String;
+t3 :=
+  "a"
+    , "b"
+    , "c"
+    , "d"
+    , "e"
+    , "f"
+    , "g"
+    , "h"
+    , "i"
+    , "j"
+    , "k"
+    , "1234";
 
-  infixr 3 +r3;
-  axiom +r3 : String → String → String;
+infixl 7 +l7;
+axiom +l7 : String → String → String;
 
-  infixl 1 +l1;
-  axiom +l1 : String → String → String;
+infixr 3 +r3;
+axiom +r3 : String → String → String;
 
-  infixl 6 +l6;
-  axiom +l6 : String → String → String;
+infixl 1 +l1;
+axiom +l1 : String → String → String;
 
-  infixr 6 +r6;
-  axiom +r6 : String → String → String;
+infixl 6 +l6;
+axiom +l6 : String → String → String;
 
-  -- nesting of chains
-  t : String;
-  t :=
-    "Hellooooooooo"
-      +l1 "Hellooooooooo"
-      +l1 "Hellooooooooo"
-          +l6 "Hellooooooooo"
-          +l6 ("Hellooooooooo"
-            +r6 "Hellooooooooo"
-            +r6 "Hellooooooooo")
-          +l6 "Hellooooooooo"
-          +l6 "Hellooooooooo"
-            +l7 "Hellooooooooo"
-            +l7 "Hellooooooooo"
-            +l7 "Hellooooooooo"
-        , "hi"
-        , "hi";
+infixr 6 +r6;
+axiom +r6 : String → String → String;
 
-  -- function with single wildcard parameter
-  g : (_ : Type) -> Nat;
-  g _ := 1;
+-- nesting of chains
+t : String;
+t :=
+  "Hellooooooooo"
+    +l1 "Hellooooooooo"
+    +l1 "Hellooooooooo"
+        +l6 "Hellooooooooo"
+        +l6 ("Hellooooooooo"
+          +r6 "Hellooooooooo"
+          +r6 "Hellooooooooo")
+        +l6 "Hellooooooooo"
+        +l6 "Hellooooooooo"
+          +l7 "Hellooooooooo"
+          +l7 "Hellooooooooo"
+          +l7 "Hellooooooooo"
+      , "hi"
+      , "hi";
 
-  -- grouping of type arguments
-  exampleFunction1 :
-    {A : Type}
-      -> List A
-      -> List A
-      -> List A
-      -> List A
-      -> List A
-      -> List A
-      -> List A
-      -> Nat;
-  exampleFunction1 _ _ _ _ _ _ _ := 1;
+-- function with single wildcard parameter
+g : (_ : Type) -> Nat;
+g _ := 1;
 
-  -- 200 in the body is idented with respect to the start of the chain
-  -- (at {A : Type})
-  exampleFunction2 :
-    {A : Type}
-      -> List A
-      -> List A
-      -> List A
-      -> List A
-      -> List A
-      -> List A
-      -> List A
-      -> Nat :=
-      200
-        + 100
-        + 100
-        + 100
-        + 100
-        + 100
-        + 100
-        + 100
-        + 100
-        + 100
-        + 100;
+-- grouping of type arguments
+exampleFunction1 :
+  {A : Type}
+    -> List A
+    -> List A
+    -> List A
+    -> List A
+    -> List A
+    -> List A
+    -> List A
+    -> Nat;
+exampleFunction1 _ _ _ _ _ _ _ := 1;
 
-  module Patterns;
-    infixr 4 ,;
-    type Pair :=
-      | , : String → String → String;
+-- 200 in the body is idented with respect to the start of the chain
+-- (at {A : Type})
+exampleFunction2 :
+  {A : Type}
+    -> List A
+    -> List A
+    -> List A
+    -> List A
+    -> List A
+    -> List A
+    -> List A
+    -> Nat :=
+    200
+      + 100
+      + 100
+      + 100
+      + 100
+      + 100
+      + 100
+      + 100
+      + 100
+      + 100
+      + 100;
 
-    -- Commas in patterns
-    f : _;
-    f (a, b, c, d) := a;
-  end;
+module Patterns;
+  infixr 4 ,;
+  type Pair :=
+    | , : String → String → String;
+
+  -- Commas in patterns
+  f : _;
+  f (a, b, c, d) := a;
 end;
