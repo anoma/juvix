@@ -1,11 +1,11 @@
 name:            juvix
-version:         0.2.9
+version:         0.3.0
 license:         GPL-3.0-only
 license-file:    LICENSE
 copyright:       (c) 2022- Heliax AG.
 maintainer:      The PLT Team at Heliax AG <hello@heliax.dev>
 author:          [ Jonathan Prieto-Cubides , Jan Mas Rovira , Paul Cadman , Lukasz Czajka , Github's contributors ]
-tested-with:     ghc == 9.2.5
+tested-with:     ghc == 9.2.6
 homepage:        https://juvix.org
 bug-reports:     https://github.com/anoma/juvix/issues
 description:     The Juvix compiler
