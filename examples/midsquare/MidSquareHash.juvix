@@ -10,7 +10,7 @@ module MidSquareHash;
 open import Stdlib.Prelude;
 open import Stdlib.Data.Nat.Ord;
 
--- `powN` is 2 ^ N
+--- `powN` is 2 ^ N
 pow0 : Nat := 1;
 pow1 : Nat := 2 * pow0;
 pow2 : Nat := 2 * pow1;
@@ -29,8 +29,8 @@ pow14 : Nat := 2 * pow13;
 pow15 : Nat := 2 * pow14;
 pow16 : Nat := 2 * pow15;
 
--- `hashN` hashes a number with max N bits (i.e. smaller than 2^N) Into 6 bits
--- (i.e. smaller than 64) using the mid-square algorithm.
+--- `hashN` hashes a number with max N bits (i.e. smaller than 2^N) Into 6 bits
+--- (i.e. smaller than 64) using the mid-square algorithm.
 hash0 : Nat -> Nat;
 hash0 x := 0;
 
