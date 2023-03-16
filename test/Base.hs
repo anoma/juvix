@@ -12,7 +12,7 @@ import Control.Monad.Extra as Monad
 import Data.Algorithm.Diff
 import Data.Algorithm.DiffOutput
 import Juvix.Extra.Paths
-import Juvix.Prelude
+import Juvix.Prelude hiding (assert)
 import Juvix.Prelude.Env
 import Test.Tasty
 import Test.Tasty.HUnit
