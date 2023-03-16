@@ -1,0 +1,15 @@
+module MutualLet;
+
+open import Stdlib.Data.Nat;
+open import Stdlib.Data.Bool;
+
+main : _;
+main :=
+  let
+    odd : _;
+    even : _;
+    odd zero := false;
+    odd (suc n) := not (even n);
+    even zero := true;
+    even (suc n) := not (odd n);
+  in even 5;
