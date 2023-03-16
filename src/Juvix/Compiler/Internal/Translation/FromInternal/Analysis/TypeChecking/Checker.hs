@@ -529,8 +529,8 @@ inferExpression' hint e = case e of
       LetFunDef f -> LetFunDef <$> checkFunctionDef f
       LetMutualBlock b -> LetMutualBlock <$> goMutualLet b
       where
-      goMutualLet :: MutualBlock -> Sem r MutualBlock
-      goMutualLet (MutualBlock fs) = MutualBlock <$> mapM checkFunctionDef fs
+        goMutualLet :: MutualBlock -> Sem r MutualBlock
+        goMutualLet (MutualBlock fs) = MutualBlock <$> mapM checkFunctionDef fs
 
     goHole :: Hole -> Sem r TypedExpression
     goHole h = do
