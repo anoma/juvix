@@ -118,6 +118,16 @@ tests:
           Nat
     exit-status: 0
 
+  - name: eval-mutually-recursive-let-expression
+    command:
+      - juvix
+      - repl
+    stdin: "let even : Nat → Bool; odd : _; odd zero := false; odd (suc n) := not (even n); even zero := true; even (suc n) := not (odd n) in even 10"
+    stdout:
+      contains:
+        "true"
+    exit-status: 0
+
   - name: eval-let-expression
     command:
       - juvix
