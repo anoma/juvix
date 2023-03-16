@@ -23,24 +23,30 @@ data BinderChange
     -- indices of `n` are with respect to the result
     BCRemove BinderRemove
 
+-- | Returns the binders in the original node skipped before a call to `recur`,
+-- as specified by the BinderChange list.
 bindersFromBinderChange :: [BinderChange] -> [Binder]
-bindersFromBinderChange =
-  reverse
-    . foldl'
-      ( \bs chg -> case chg of
-          BCAdd _ -> bs
-          BCKeep b -> b : bs
-          BCRemove (BinderRemove b _) -> b : bs
-      )
-      []
+bindersFromBinderChange = concatMap helper
+  where
+    helper = \case
+      BCAdd {} -> []
+      BCKeep b -> [b]
+      BCRemove (BinderRemove b _) -> [b]
 
+-- | Returns the number of skipped binders in the original node as specified by
+-- the BinderChange list.
 bindersNumFromBinderChange :: [BinderChange] -> Int
-bindersNumFromBinderChange =
+bindersNumFromBinderChange = length . bindersFromBinderChange
+
+-- | Returns the number of skipped binders in the result node as specified by
+-- the BinderChange list.
+resultBindersNumFromBinderChange :: [BinderChange] -> Int
+resultBindersNumFromBinderChange =
   foldl'
-    ( \n chg -> case chg of
-        BCAdd {} -> n
-        BCKeep {} -> n + 1
-        BCRemove {} -> n + 1
+    ( \acc -> \case
+        BCAdd k -> acc + k
+        BCKeep {} -> acc + 1
+        BCRemove {} -> acc
     )
     0
 
