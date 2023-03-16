@@ -168,8 +168,9 @@ ppInductiveParameters ps
   | otherwise = Just <$> ppCode ps
 
 instance (SingI s, SingI t) => PrettyCode (Module s t) where
+  ppCode :: (Members '[Reader Options] r) => Module s t -> Sem r (Doc Ann)
   ppCode Module {..} = do
-    moduleBody' <- indent' <$> ppCode _moduleBody
+    moduleBody' <- localIndent <$> ppCode _moduleBody
     modulePath' <- ppModulePathType _modulePath
     moduleDoc' <- mapM ppCode _moduleDoc
     return $
@@ -178,14 +179,24 @@ instance (SingI s, SingI t) => PrettyCode (Module s t) where
         <+> modulePath'
           <> kwSemicolon
           <> line
+          <> topSpace
           <> moduleBody'
-          <> line
-          <> kwEnd
-          <>? lastSemicolon
+          <>? ending
     where
-      lastSemicolon = case sing :: SModuleIsTop t of
-        SModuleLocal -> Nothing
-        SModuleTop -> Just (kwSemicolon <> line)
+      topSpace :: Doc Ann
+      topSpace = case sing :: SModuleIsTop t of
+        SModuleLocal -> mempty
+        SModuleTop -> line
+
+      localIndent :: Doc Ann -> Doc Ann
+      localIndent = case sing :: SModuleIsTop t of
+        SModuleLocal -> indent'
+        SModuleTop -> id
+
+      ending :: Maybe (Doc Ann)
+      ending = case sing :: SModuleIsTop t of
+        SModuleLocal -> Just (line <> kwEnd)
+        SModuleTop -> Nothing
 
 instance PrettyCode Precedence where
   ppCode p = return $ case p of

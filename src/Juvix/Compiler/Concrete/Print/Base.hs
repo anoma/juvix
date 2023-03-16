@@ -59,7 +59,7 @@ ppModulePathType x = case sing :: SStage s of
 instance SingI t => PrettyPrint (Module 'Scoped t) where
   ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => Module 'Scoped t -> Sem r ()
   ppCode Module {..} = do
-    let moduleBody' = indent (ppCode _moduleBody)
+    let moduleBody' = localIndent (ppCode _moduleBody)
         modulePath' = ppModulePathType _modulePath
         moduleDoc' :: Sem r () = maybe (return ()) ppCode _moduleDoc
     moduleDoc'
@@ -67,15 +67,25 @@ instance SingI t => PrettyPrint (Module 'Scoped t) where
       <+> modulePath'
         <> ppCode kwSemicolon
         <> line
+        <> topSpace
         <> moduleBody'
         <> line
-        <> ppCode kwEnd
-        <> lastSemicolon
+        <> ending
     where
-      lastSemicolon :: Sem r ()
-      lastSemicolon = case sing :: SModuleIsTop t of
-        SModuleLocal -> return ()
-        SModuleTop -> semicolon <> line <> end
+      topSpace :: Sem r ()
+      topSpace = case sing :: SModuleIsTop t of
+        SModuleLocal -> mempty
+        SModuleTop -> line
+
+      localIndent :: Sem r () -> Sem r ()
+      localIndent = case sing :: SModuleIsTop t of
+        SModuleLocal -> indent
+        SModuleTop -> id
+
+      ending :: Sem r ()
+      ending = case sing :: SModuleIsTop t of
+        SModuleLocal -> ppCode _moduleKwEnd
+        SModuleTop -> end
 
 instance PrettyPrint [Statement 'Scoped] where
   ppCode :: forall r. Members '[ExactPrint, Reader Options] r => [Statement 'Scoped] -> Sem r ()

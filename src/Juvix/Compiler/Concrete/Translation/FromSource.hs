@@ -614,7 +614,7 @@ pmodulePath = case sing :: SModuleIsTop t of
   SModuleTop -> topModulePath
   SModuleLocal -> symbol
 
-moduleDef :: (SingI t, Members '[Error ParserError, Files, PathResolver, InfoTableBuilder, JudocStash, NameIdGen] r) => ParsecS r (Module 'Parsed t)
+moduleDef :: forall t r. (SingI t, Members '[Error ParserError, Files, PathResolver, InfoTableBuilder, JudocStash, NameIdGen] r) => ParsecS r (Module 'Parsed t)
 moduleDef = P.label "<module definition>" $ do
   _moduleKw <- kw kwModule
   _moduleDoc <- getJudoc
@@ -622,8 +622,13 @@ moduleDef = P.label "<module definition>" $ do
   _moduleParameters <- many inductiveParams
   kw kwSemicolon
   _moduleBody <- P.sepEndBy statement (kw kwSemicolon)
-  kw kwEnd
+  _moduleKwEnd <- endModule
   return Module {..}
+  where
+    endModule :: ParsecS r (ModuleEndType t)
+    endModule = case sing :: SModuleIsTop t of
+      SModuleLocal -> kw kwEnd
+      SModuleTop -> void (optional (kw kwEnd >> kw kwSemicolon))
 
 -- | An ExpressionAtom which is a valid expression on its own.
 atomicExpression :: (Members '[InfoTableBuilder, JudocStash, NameIdGen] r) => ParsecS r (ExpressionAtoms 'Parsed)

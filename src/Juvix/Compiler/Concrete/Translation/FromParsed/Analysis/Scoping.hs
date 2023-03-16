@@ -532,9 +532,9 @@ checkTopModule ::
   (Members '[Error ScoperError, Reader ScopeParameters, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
   Module 'Parsed 'ModuleTop ->
   Sem r (ModuleRef'' 'S.NotConcrete 'ModuleTop)
-checkTopModule m@(Module _moduleKw path doc body) = do
+checkTopModule m@Module {..} = do
   r <- checkedModule
-  modify (over (scoperModulesCache . cachedModules) (HashMap.insert path r))
+  modify (over (scoperModulesCache . cachedModules) (HashMap.insert _modulePath r))
   registerModule (r ^. moduleRefModule)
   return r
   where
@@ -544,16 +544,16 @@ checkTopModule m@(Module _moduleKw path doc body) = do
       Sem s S.TopModulePath
     freshTopModulePath = do
       _nameId <- freshNameId
-      let _nameDefinedIn = S.topModulePathToAbsPath path
-          _nameConcrete = path
-          _nameDefined = getLoc (path ^. modulePathName)
+      let _nameDefinedIn = S.topModulePathToAbsPath _modulePath
+          _nameConcrete = _modulePath
+          _nameDefined = getLoc (_modulePath ^. modulePathName)
           _nameKind = S.KNameTopModule
           _nameFixity :: Maybe Fixity
           _nameFixity = Nothing
           -- This visibility annotation is not relevant
           _nameVisibilityAnn = VisPublic
           _nameWhyInScope = S.BecauseDefined
-          _nameVerbatim = N.topModulePathToDottedPath path
+          _nameVerbatim = N.topModulePathToDottedPath _modulePath
           moduleName = S.Name' {..}
       return moduleName
 
@@ -565,14 +565,15 @@ checkTopModule m@(Module _moduleKw path doc body) = do
       (s, (m', p)) <- runState iniScope $ do
         path' <- freshTopModulePath
         withTopScope $ do
-          (_moduleExportInfo, body') <- topBindings (checkModuleBody body)
-          doc' <- mapM checkJudoc doc
+          (_moduleExportInfo, body') <- topBindings (checkModuleBody _moduleBody)
+          doc' <- mapM checkJudoc _moduleDoc
           let _moduleRefModule =
                 Module
                   { _modulePath = path',
                     _moduleBody = body',
                     _moduleDoc = doc',
-                    _moduleKw
+                    _moduleKw,
+                    _moduleKwEnd
                   }
               _moduleRefName = S.unConcrete path'
           return (ModuleRef'' {..}, path')
@@ -632,7 +633,8 @@ checkLocalModule Module {..} = do
           { _modulePath = _modulePath',
             _moduleBody = moduleBody',
             _moduleDoc = moduleDoc',
-            _moduleKw
+            _moduleKw,
+            _moduleKwEnd
           }
       entry :: ModuleRef' 'S.NotConcrete
       entry = mkModuleRef' @'ModuleLocal ModuleRef'' {..}

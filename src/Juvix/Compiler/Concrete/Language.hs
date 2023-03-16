@@ -102,6 +102,11 @@ type family ModulePathType s t = res | res -> t s where
   ModulePathType 'Parsed 'ModuleLocal = Symbol
   ModulePathType 'Scoped 'ModuleLocal = S.Symbol
 
+type ModuleEndType :: ModuleIsTop -> GHC.Type
+type family ModuleEndType t = res | res -> t where
+  ModuleEndType 'ModuleTop = ()
+  ModuleEndType 'ModuleLocal = KeywordRef
+
 --------------------------------------------------------------------------------
 -- Top level statement
 --------------------------------------------------------------------------------
@@ -396,7 +401,8 @@ data Module (s :: Stage) (t :: ModuleIsTop) = Module
   { _moduleKw :: KeywordRef,
     _modulePath :: ModulePathType s t,
     _moduleDoc :: Maybe (Judoc s),
-    _moduleBody :: [Statement s]
+    _moduleBody :: [Statement s],
+    _moduleKwEnd :: ModuleEndType t
   }
 
 deriving stock instance
@@ -407,6 +413,7 @@ deriving stock instance
     Show (IdentifierType s),
     Show (ModuleRefType s),
     Show (SymbolType s),
+    Show (ModuleEndType t),
     Show (ExpressionType s)
   ) =>
   Show (Module s t)
@@ -419,6 +426,7 @@ deriving stock instance
     Eq (IdentifierType s),
     Eq (ModuleRefType s),
     Eq (SymbolType s),
+    Eq (ModuleEndType t),
     Eq (ExpressionType s)
   ) =>
   Eq (Module s t)
@@ -431,6 +439,7 @@ deriving stock instance
     Ord (IdentifierType s),
     Ord (ModuleRefType s),
     Ord (SymbolType s),
+    Ord (ModuleEndType t),
     Ord (ExpressionType s)
   ) =>
   Ord (Module s t)
