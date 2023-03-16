@@ -1,10 +1,10 @@
--- This file implements the mid-square hashing function in Juvix. See:
--- https://research.cs.vt.edu/AVresearch/hashing/midsquare.php
---
--- The implementation is for hashing natural numbers with maximum 16 bits Into 6
--- bits. In order to facilitate the translation to the current version of the
--- GEB backend, no recursion is used (it is manually unrolled).
---
+--- This file implements the mid-square hashing function in Juvix. See:
+--- https://research.cs.vt.edu/AVresearch/hashing/midsquare.php
+---
+--- The implementation is for hashing natural numbers with maximum 16 bits into 6
+--- bits. In order to facilitate the translation to the current version of the
+--- GEB backend, no recursion is used (it is manually unrolled).
+---
 module MidSquareHash;
 
 open import Stdlib.Prelude;
@@ -29,7 +29,7 @@ pow14 : Nat := 2 * pow13;
 pow15 : Nat := 2 * pow14;
 pow16 : Nat := 2 * pow15;
 
---- `hashN` hashes a number with max N bits (i.e. smaller than 2^N) Into 6 bits
+--- `hashN` hashes a number with max N bits (i.e. smaller than 2^N) into 6 bits
 --- (i.e. smaller than 64) using the mid-square algorithm.
 hash0 : Nat -> Nat;
 hash0 x := 0;
