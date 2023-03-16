@@ -3,7 +3,7 @@ module Juvix.Data.DependencyInfo where
 import Data.Graph qualified as Graph
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
-import GHC.Arr (Array, (!))
+import GHC.Arr (Array, indices, (!))
 import Juvix.Prelude.Base
 
 -- DependencyInfo is polymorphic to anticipate future use with other identifier
@@ -59,7 +59,7 @@ buildSCCs = Graph.stronglyConnComp . (^. depInfoEdgeList)
 
 isCyclic :: DependencyInfo n -> Bool
 isCyclic DependencyInfo {..} =
-  run $ evalState (mempty :: HashSet Int) $ go _depInfoGraph mempty 0
+  run $ evalState (mempty :: HashSet Int) $ or <$> mapM (go _depInfoGraph mempty) (indices _depInfoGraph)
   where
     go :: Member (State (HashSet Int)) r => Array Int [Int] -> HashSet Int -> Int -> Sem r Bool
     go graph vars v

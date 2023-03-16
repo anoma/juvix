@@ -185,72 +185,8 @@ fromCore tab = case tab ^. Core.infoMain of
       Core.OpIntDiv -> convertBinop OpDiv _builtinAppArgs
       Core.OpIntMod -> convertBinop OpMod _builtinAppArgs
       Core.OpIntLt -> convertBinop OpLt _builtinAppArgs
-      Core.OpIntLe -> case _builtinAppArgs of
-        [arg1, arg2] -> do
-          arg1' <- convertNode arg1
-          arg2' <- convertNode arg2
-          let le =
-                MorphismLambda
-                  Lambda
-                    { _lambdaVarType = ObjectInteger,
-                      _lambdaBodyType =
-                        ObjectHom
-                          Hom
-                            { _homDomain = ObjectInteger,
-                              _homCodomain = objectBool
-                            },
-                      _lambdaBody =
-                        MorphismLambda
-                          Lambda
-                            { _lambdaVarType = ObjectInteger,
-                              _lambdaBodyType = objectBool,
-                              _lambdaBody =
-                                mkOr
-                                  ( MorphismBinop
-                                      Binop
-                                        { _binopOpcode = OpLt,
-                                          _binopLeft = MorphismVar Var {_varIndex = 1},
-                                          _binopRight = MorphismVar Var {_varIndex = 0}
-                                        }
-                                  )
-                                  ( MorphismBinop
-                                      Binop
-                                        { _binopOpcode = OpEq,
-                                          _binopLeft = MorphismVar Var {_varIndex = 1},
-                                          _binopRight = MorphismVar Var {_varIndex = 0}
-                                        }
-                                  )
-                            }
-                    }
-           in return $
-                MorphismApplication
-                  Application
-                    { _applicationDomainType = ObjectInteger,
-                      _applicationCodomainType =
-                        ObjectHom
-                          Hom
-                            { _homDomain = ObjectInteger,
-                              _homCodomain = objectBool
-                            },
-                      _applicationLeft =
-                        MorphismApplication
-                          Application
-                            { _applicationDomainType = ObjectInteger,
-                              _applicationCodomainType = objectBool,
-                              _applicationLeft = le,
-                              _applicationRight = arg2'
-                            },
-                      _applicationRight = arg1'
-                    }
-        _ ->
-          error "wrong builtin application argument number"
-      Core.OpEq ->
-        case _builtinAppArgs of
-          arg : _
-            | Info.getNodeType arg == Core.mkTypeInteger' ->
-                convertBinop OpEq _builtinAppArgs
-          _ ->
-            error "unsupported equality argument types"
+      Core.OpIntLe -> convertOpIntLe _builtinAppArgs
+      Core.OpEq -> convertOpEq _builtinAppArgs
       _ ->
         unsupported
 
@@ -268,6 +204,75 @@ fromCore tab = case tab ^. Core.infoMain of
               }
       _ ->
         error "wrong builtin application argument number"
+
+    convertOpIntLe :: [Core.Node] -> Trans Morphism
+    convertOpIntLe = \case
+      [arg1, arg2] -> do
+        arg1' <- convertNode arg1
+        arg2' <- convertNode arg2
+        let le =
+              MorphismLambda
+                Lambda
+                  { _lambdaVarType = ObjectInteger,
+                    _lambdaBodyType =
+                      ObjectHom
+                        Hom
+                          { _homDomain = ObjectInteger,
+                            _homCodomain = objectBool
+                          },
+                    _lambdaBody =
+                      MorphismLambda
+                        Lambda
+                          { _lambdaVarType = ObjectInteger,
+                            _lambdaBodyType = objectBool,
+                            _lambdaBody =
+                              mkOr
+                                ( MorphismBinop
+                                    Binop
+                                      { _binopOpcode = OpLt,
+                                        _binopLeft = MorphismVar Var {_varIndex = 1},
+                                        _binopRight = MorphismVar Var {_varIndex = 0}
+                                      }
+                                )
+                                ( MorphismBinop
+                                    Binop
+                                      { _binopOpcode = OpEq,
+                                        _binopLeft = MorphismVar Var {_varIndex = 1},
+                                        _binopRight = MorphismVar Var {_varIndex = 0}
+                                      }
+                                )
+                          }
+                  }
+         in return $
+              MorphismApplication
+                Application
+                  { _applicationDomainType = ObjectInteger,
+                    _applicationCodomainType =
+                      ObjectHom
+                        Hom
+                          { _homDomain = ObjectInteger,
+                            _homCodomain = objectBool
+                          },
+                    _applicationLeft =
+                      MorphismApplication
+                        Application
+                          { _applicationDomainType = ObjectInteger,
+                            _applicationCodomainType = objectBool,
+                            _applicationLeft = le,
+                            _applicationRight = arg2'
+                          },
+                    _applicationRight = arg1'
+                  }
+      _ ->
+        error "wrong builtin application argument number"
+
+    convertOpEq :: [Core.Node] -> Trans Morphism
+    convertOpEq args = case args of
+      arg : _
+        | Info.getNodeType arg == Core.mkTypeInteger' ->
+            convertBinop OpEq args
+      _ ->
+        error "unsupported equality argument types"
 
     convertConstr :: Core.Constr -> Trans Morphism
     convertConstr Core.Constr {..} = do
