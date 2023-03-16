@@ -27,7 +27,7 @@ checkGeb tab = checkNoRecursion >> mapAllNodesM checkTypes tab
                   CoreError
                     { _coreErrorMsg = "polymorphism not supported for the GEB target",
                       _coreErrorNode = Just node,
-                      _coreErrorLoc = fromMaybe defaultLoc (getInfoLocation _piInfo)
+                      _coreErrorLoc = fromMaybe defaultLoc (_piBinder ^. binderLocation)
                     }
           _ -> return node
 
