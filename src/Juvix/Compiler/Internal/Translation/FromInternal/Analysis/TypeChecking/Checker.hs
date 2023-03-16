@@ -57,7 +57,7 @@ checkStatement ::
   Statement ->
   Sem r Statement
 checkStatement s = case s of
-  StatementFunction funs -> StatementFunction <$> runReader emptyLocalVars (checkMutualBlock funs)
+  StatementFunction funs -> StatementFunction <$> runReader emptyLocalVars (checkTopMutualBlock funs)
   StatementInductive ind -> StatementInductive <$> checkInductiveDef ind
   StatementInclude i -> StatementInclude <$> checkInclude i
   StatementAxiom ax -> do
@@ -125,11 +125,11 @@ checkInductiveDef InductiveDef {..} = runInferenceDef $ do
 withEmptyVars :: Sem (Reader LocalVars : r) a -> Sem r a
 withEmptyVars = runReader emptyLocalVars
 
-checkMutualBlock ::
+checkTopMutualBlock ::
   (Members '[Reader LocalVars, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example, Builtins] r) =>
   MutualBlock ->
   Sem r MutualBlock
-checkMutualBlock (MutualBlock ds) = MutualBlock <$> runInferenceDefs (mapM checkFunctionDef ds)
+checkTopMutualBlock (MutualBlock ds) = MutualBlock <$> runInferenceDefs (mapM checkFunctionDef ds)
 
 checkFunctionDef ::
   (Members '[Reader LocalVars, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example, Builtins, Inference] r) =>
@@ -527,7 +527,10 @@ inferExpression' hint e = case e of
     goLetClause :: LetClause -> Sem r LetClause
     goLetClause = \case
       LetFunDef f -> LetFunDef <$> checkFunctionDef f
-      LetMutualBlock f -> LetMutualBlock <$> checkMutualBlock f
+      LetMutualBlock b -> LetMutualBlock <$> goMutualLet b
+      where
+      goMutualLet :: MutualBlock -> Sem r MutualBlock
+      goMutualLet (MutualBlock fs) = MutualBlock <$> mapM checkFunctionDef fs
 
     goHole :: Hole -> Sem r TypedExpression
     goHole h = do
