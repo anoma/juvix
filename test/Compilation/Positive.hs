@@ -247,5 +247,4 @@ tests =
       $(mkRelDir ".")
       $(mkRelFile "test039.juvix")
       $(mkRelFile "out/test039.out")
-
   ]
