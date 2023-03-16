@@ -5,6 +5,7 @@ module Juvix.Compiler.Core.Extra.Utils.Base where
 
 import Juvix.Compiler.Core.Extra.Base
 import Juvix.Compiler.Core.Extra.Recursors
+import Juvix.Compiler.Core.Extra.Recursors.Utils
 import Juvix.Compiler.Core.Language
 
 -- | substitution of all free variables for values in an environment
@@ -25,9 +26,6 @@ freeVars f = ufoldNA reassemble go
       NVar var@Var {..}
         | _varIndex >= k -> NVar <$> f (shiftVar (-k) var)
       n -> pure n
-
-shiftVar :: Index -> Var -> Var
-shiftVar m = over varIndex (+ m)
 
 freeVarOccurrences :: Index -> SimpleFold Node Var
 freeVarOccurrences idx = freeVars . filtered ((== idx) . (^. varIndex))

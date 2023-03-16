@@ -331,6 +331,9 @@ makeLenses ''TypeConstr'
 makeLenses ''Dynamic'
 makeLenses ''LetItem'
 
+instance Eq ty => Eq (Binder' ty) where
+  (==) = eqOn (^. binderType)
+
 instance Eq (Var' i) where
   (Var _ idx1) == (Var _ idx2) = idx1 == idx2
 
@@ -386,20 +389,18 @@ instance Eq (Dynamic' i) where
 
 deriving stock instance (Eq a) => Eq (Pattern' i a)
 
-instance (Eq a) => Eq (LetItem' a ty) where
-  (==) = eqOn (^. letItemValue)
+instance (Eq a, Eq ty) => Eq (LetItem' a ty) where
+  (==) = eqOn (^. letItemValue) ..&&.. eqOn (^. letItemBinder)
 
--- | ignores the binder
-instance (Eq a) => Eq (Lambda' i a ty) where
-  (==) = eqOn (^. lambdaBody)
+instance (Eq a, Eq ty) => Eq (Lambda' i a ty) where
+  (Lambda _ bd1 body1) == (Lambda _ bd2 body2) = bd1 == bd2 && body1 == body2
 
--- | ignores the binder
-instance (Eq a) => Eq (Let' i a ty) where
+instance (Eq a, Eq ty) => Eq (Let' i a ty) where
   (==) =
     eqOn (^. letItem)
       ..&&.. eqOn (^. letBody)
 
-instance (Eq a) => Eq (LetRec' i a ty) where
+instance (Eq a, Eq ty) => Eq (LetRec' i a ty) where
   (==) =
     eqOn (^. letRecBody)
       ..&&.. eqOn (^. letRecValues)

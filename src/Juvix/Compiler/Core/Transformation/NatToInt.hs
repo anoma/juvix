@@ -8,56 +8,46 @@ import Juvix.Compiler.Core.Info.NameInfo
 import Juvix.Compiler.Core.Transformation.Base
 
 convertNode :: InfoTable -> Node -> Node
-convertNode tab = convert [] 0
+convertNode tab = rmap go
   where
-    -- `levels` is the list of de Bruijn levels at which binders are inserted
-    convert :: [Level] -> Level -> Node -> Node
-    convert levels bl node = dmapCNR' (bl, go) levels node
-
-    go :: [Level] -> Level -> Node -> Recur' [Level]
-    go levels bl node = case node of
-      NVar (Var {..}) ->
-        End' (mkVar _varInfo (_varIndex + length (filter (\x -> x >= bl - _varIndex) levels)))
+    go :: ([BinderChange] -> Node -> Node) -> Node -> Node
+    go recur node = case node of
       NApp (App _ (NIdt (Ident {..})) l)
         | Just _identSymbol == tab ^. infoIntToNat ->
-            End' (convert levels bl l)
+            go recur l
       NApp (App _ (NApp (App _ (NIdt (Ident {..})) l)) r) ->
-        Recur' (levels, convertIdentApp node (\g -> g _identInfo l r) _identSymbol)
+        recur [] $ convertIdentApp node (\g -> g _identInfo l r) _identSymbol
       NApp (App _ (NIdt (Ident {..})) l) ->
-        Recur'
-          ( levels,
-            convertIdentApp
-              node
-              ( \g ->
-                  mkLet' mkTypeInteger' l $
-                    mkLambda' mkTypeInteger' $
-                      g _identInfo (mkVar' 1) (mkVar' 0)
-              )
-              _identSymbol
-          )
+        recur [] $
+          convertIdentApp
+            node
+            ( \g ->
+                mkLet' mkTypeInteger' l $
+                  mkLambda' mkTypeInteger' $
+                    g _identInfo (mkVar' 1) (mkVar' 0)
+            )
+            _identSymbol
       NIdt (Ident {..})
         | Just _identSymbol == tab ^. infoIntToNat ->
-            End' (mkLambda' mkTypeInteger' (mkVar' 0))
+            mkLambda' mkTypeInteger' (mkVar' 0)
       NIdt (Ident {..}) ->
-        Recur'
-          ( levels,
-            convertIdentApp
-              node
-              ( \g ->
+        recur [] $
+          convertIdentApp
+            node
+            ( \g ->
+                mkLambda' mkTypeInteger' $
                   mkLambda' mkTypeInteger' $
-                    mkLambda' mkTypeInteger' $
-                      g _identInfo (mkVar' 1) (mkVar' 0)
-              )
-              _identSymbol
-          )
+                    g _identInfo (mkVar' 1) (mkVar' 0)
+            )
+            _identSymbol
       NCtr (Constr {..}) ->
         let ci = fromJust $ HashMap.lookup _constrTag (tab ^. infoConstructors)
          in case ci ^. constructorBuiltin of
               Just BuiltinNatZero ->
-                Recur' (levels, mkConstant _constrInfo (ConstInteger 0))
+                mkConstant _constrInfo (ConstInteger 0)
               Just BuiltinNatSuc ->
-                Recur' (levels, mkBuiltinApp _constrInfo OpIntAdd (_constrArgs ++ [mkConstant' (ConstInteger 1)]))
-              _ -> Recur' (levels, node)
+                recur [] $ mkBuiltinApp _constrInfo OpIntAdd (_constrArgs ++ [mkConstant' (ConstInteger 1)])
+              _ -> recur [] node
       NCase (Case {..}) ->
         let ii = fromJust $ HashMap.lookup _caseInductive (tab ^. infoInductives)
          in case ii ^. inductiveBuiltin of
@@ -72,32 +62,33 @@ convertNode tab = convert [] 0
                             makeIf br2 (br1 ^. caseBranchBody)
                         | otherwise ->
                             impossible
-                  [] -> Recur' (levels, fromJust _caseDefault)
+                  [] -> recur [] $ fromJust _caseDefault
                   _ -> impossible
-              _ -> Recur' (levels, node)
+              _ -> recur [] node
         where
-          makeIf :: CaseBranch -> Node -> Recur' [Level]
+          makeIf :: CaseBranch -> Node -> Node
           makeIf CaseBranch {..} br =
             let ci = fromJust $ HashMap.lookup (BuiltinTag TagTrue) (tab ^. infoConstructors)
                 sym = ci ^. constructorInductive
              in case _caseBranchBindersNum of
                   0 ->
-                    Recur' (levels, mkIf _caseInfo sym (mkBuiltinApp' OpEq [_caseValue, mkConstant' (ConstInteger 0)]) _caseBranchBody br)
+                    recur [] $ mkIf _caseInfo sym (mkBuiltinApp' OpEq [_caseValue, mkConstant' (ConstInteger 0)]) _caseBranchBody br
                   1 ->
-                    End' $
-                      mkLet mempty (emptyBinder {_binderName = name}) (mkBuiltinApp' OpIntSub [convert levels bl _caseValue, mkConstant' (ConstInteger 1)]) $
-                        mkIf
-                          _caseInfo
-                          sym
-                          (mkBuiltinApp' OpIntLe [mkConstant' (ConstInteger 0), mkVar (Info.singleton (NameInfo name)) 0])
-                          (convert levels (bl + 1) _caseBranchBody)
-                          (convert (bl : levels) bl br)
+                    mkLet mempty binder' (mkBuiltinApp' OpIntSub [go recur _caseValue, mkConstant' (ConstInteger 1)]) $
+                      mkIf
+                        _caseInfo
+                        sym
+                        (mkBuiltinApp' OpIntLe [mkConstant' (ConstInteger 0), mkVar (Info.singleton (NameInfo name)) 0])
+                        (go (recur . (BCKeep binder :)) _caseBranchBody)
+                        (go (recur . (BCAdd 1 :)) br)
                     where
-                      name = List.head _caseBranchBinders ^. binderName
+                      binder = List.head _caseBranchBinders
+                      name = binder ^. binderName
+                      binder' = over binderType (go recur) binder
                   _ -> impossible
           maybeBranch :: Maybe Node -> Node
           maybeBranch = fromMaybe (mkBuiltinApp' OpFail [mkConstant' (ConstString "no matching branch")])
-      _ -> Recur' (levels, node)
+      _ -> recur [] node
 
     convertIdentApp :: Node -> ((Info -> Node -> Node -> Node) -> Node) -> Symbol -> Node
     convertIdentApp node f sym =
