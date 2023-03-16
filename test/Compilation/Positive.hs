@@ -241,5 +241,11 @@ tests =
       "Simple case expression"
       $(mkRelDir ".")
       $(mkRelFile "test038.juvix")
-      $(mkRelFile "out/test038.out")
+      $(mkRelFile "out/test038.out"),
+    posTest
+      "Mutually recursive let expression"
+      $(mkRelDir ".")
+      $(mkRelFile "test039.juvix")
+      $(mkRelFile "out/test039.out")
+
   ]
