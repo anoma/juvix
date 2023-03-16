@@ -15,11 +15,12 @@ node.
 The first argument to `recur` specifies the changes in binders on top of the
 call to `recur`:
 - `BCAdd n` indicates that `n` new binders are added,
-- `BCKeep n` indicates that `n` original binders are preserved,
-- `BCRemove node` indicates that a binder is removed and all bound variables
-  referring to it replaced with `node`. The de Bruijn indices in `node` are
-  relative to the result at the point of `recur` invocation, i.e., adjusted by
-  the shifts caused by the binder changes before it in the binder change list.
+- `BCKeep b` indicates that an original binder `b` is preserved,
+- `BCRemove (BinderRemove b node)` indicates that a binder `b` is removed and
+  all bound variables referring to it replaced with `node`. The de Bruijn
+  indices in `node` are relative to the result at the point of `recur`
+  invocation, i.e., adjusted by the shifts caused by the binder changes before
+  it in the binder change list.
 
 The function `recur` automatically adjusts the de Bruijn indices in the result
 node, by shifting them according to the binder shift at their binding point. For
