@@ -210,3 +210,6 @@ kwVoid = asciiKw Str.void
 
 kwDollar :: Keyword
 kwDollar = asciiKw Str.dollar
+
+kwMutual :: Keyword
+kwMutual = asciiKw Str.mutual

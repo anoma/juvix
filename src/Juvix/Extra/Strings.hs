@@ -311,6 +311,9 @@ mod = "%"
 dollar :: (IsString s) => s
 dollar = "$"
 
+mutual :: (IsString s) => s
+mutual = "mutual"
+
 if_ :: (IsString s) => s
 if_ = "if"
 

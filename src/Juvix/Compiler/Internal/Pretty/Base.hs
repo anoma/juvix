@@ -91,9 +91,17 @@ instance PrettyCode Let where
     return $ kwLet <+> letClauses' <+> kwIn <+> letExpression'
 
 instance PrettyCode LetClause where
+  ppCode :: forall r. Member (Reader Options) r => LetClause -> Sem r (Doc Ann)
   ppCode = \case
     LetFunDef f -> ppCode f
-    LetMutualBlock b -> ppCode b
+    LetMutualBlock b -> ppMutual b
+    where
+      ppMutual :: MutualBlock -> Sem r (Doc Ann)
+      ppMutual m@(MutualBlock b)
+        | [_] <- toList b = ppCode b
+        | otherwise = do
+            b' <- ppCode m
+            return (kwMutual <+> braces (line <> indent' b' <> line))
 
 ppPipeBlock :: (PrettyCode a, Members '[Reader Options] r, Traversable t) => t a -> Sem r (Doc Ann)
 ppPipeBlock items = vsep <$> mapM (fmap (kwPipe <+>) . ppCode) items
