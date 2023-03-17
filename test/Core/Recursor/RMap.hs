@@ -28,6 +28,9 @@ tests =
       addLambdas
       [ ( mkLambdas' [mkTypeInteger', mkTypeInteger'] (mkBuiltinApp' OpIntAdd [mkVar' 1, mkVar' 0]),
           mkLambdas' [mkDynamic', mkTypeInteger', mkDynamic', mkTypeInteger'] (mkBuiltinApp' OpIntAdd [mkVar' 2, mkVar' 0])
+        ),
+        ( mkLambdas' [mkTypeInteger', mkTypeInteger'] (mkVar' 1),
+          mkLambdas' [mkDynamic', mkTypeInteger', mkDynamic', mkTypeInteger'] (mkVar' 2)
         )
       ],
     UnitTest
@@ -38,6 +41,9 @@ tests =
         ),
         ( mkLambda' mkTypeInteger' $ mkLet' mkTypeInteger' (mkVar' 0) $ mkLambda' mkTypeInteger' $ mkBuiltinApp' OpIntAdd [mkVar' 2, mkVar' 0],
           mkLets' [(mkTypeInteger', mkConstant' (ConstInteger 0)), (mkTypeInteger', mkVar' 0), (mkTypeInteger', mkConstant' (ConstInteger 2))] (mkBuiltinApp' OpIntAdd [mkVar' 2, mkVar' 0])
+        ),
+        ( mkLambda' mkTypeInteger' $ mkVar' 0,
+          mkLet' mkTypeInteger' (mkConstant' (ConstInteger 0)) (mkVar' 0)
         )
       ],
     UnitTest
@@ -45,6 +51,15 @@ tests =
       removeLambdas
       [ ( mkLambdas' [mkTypeInteger', mkTypeInteger', mkTypeInteger', mkTypeInteger'] (mkBuiltinApp' OpIntAdd [mkBuiltinApp' OpIntAdd [mkVar' 3, mkVar' 1], mkVar' 2]),
           mkLambdas' [mkTypeInteger', mkTypeInteger'] (mkBuiltinApp' OpIntAdd [mkBuiltinApp' OpIntAdd [mkVar' 1, mkVar' 0], mkVar' 1])
+        ),
+        ( mkLambdas' [mkTypeInteger', mkTypeInteger'] (mkVar' 0),
+          mkLambda' mkTypeInteger' (mkVar' 0)
+        ),
+        ( mkLambdas' [mkTypeInteger', mkTypeInteger', mkTypeInteger', mkTypeInteger'] (mkVar' 2),
+          mkLambdas' [mkTypeInteger', mkTypeInteger'] (mkVar' 1)
+        ),
+        ( mkLambdas' [mkTypeInteger', mkTypeInteger', mkTypeInteger'] (mkVar' 1),
+          mkLambdas' [mkTypeInteger', mkTypeInteger'] (mkVar' 1)
         )
       ]
   ]
