@@ -86,28 +86,34 @@ goMatchToCase tab recur = \case
             vs' = List.tail vs
             val = mkVal bindersNum vl
             (col, matrix') = decompose val matrix
-            tags = toList (getPatTags col)
+            tagsSet = getPatTags col
+            tags = toList tagsSet
+            ind = fromJust (HashMap.lookup (List.head tags) (tab ^. infoConstructors)) ^. constructorInductive
+            ctrsNum = length (fromJust (HashMap.lookup ind (tab ^. infoInductives)) ^. inductiveConstructors)
          in if
                 | null tags ->
                     -- There are no constructor patterns
-                    compileDefault err bindersNum vs' col matrix'
+                    compileDefault (missingTag ind tagsSet) err bindersNum vs' col matrix'
                 | otherwise ->
                     -- Section 4, case 3(a)
-                    let ind = fromJust (HashMap.lookup (List.head tags) (tab ^. infoConstructors)) ^. constructorInductive
-                        ctrsNum = length (fromJust (HashMap.lookup ind (tab ^. infoInductives)) ^. inductiveConstructors)
-                     in NCase
-                          Case
-                            { _caseInfo = mempty,
-                              _caseInductive = ind,
-                              _caseValue = val,
-                              _caseBranches = map (compileBranch err bindersNum vs' col matrix') tags,
-                              _caseDefault =
-                                if
-                                    | length tags == ctrsNum ->
-                                        Nothing
-                                    | otherwise ->
-                                        Just $ compileDefault err bindersNum vs' col matrix'
-                            }
+                    NCase
+                      Case
+                        { _caseInfo = mempty,
+                          _caseInductive = ind,
+                          _caseValue = val,
+                          _caseBranches = map (compileBranch err bindersNum vs' col matrix') tags,
+                          _caseDefault =
+                            if
+                                | length tags == ctrsNum ->
+                                    Nothing
+                                | otherwise ->
+                                    Just $ compileDefault (missingTag ind tagsSet) err bindersNum vs' col matrix'
+                        }
+
+    missingTag :: Symbol -> HashSet Tag -> Tag
+    missingTag ind tags = fromJust $ find (not . flip HashSet.member tags) (map (^. constructorTag) (ii ^. inductiveConstructors))
+      where
+        ii = fromJust $ HashMap.lookup ind (tab ^. infoInductives)
 
     mkVal :: Level -> Level -> Node
     mkVal bindersNum vl = mkVar' (getBinderIndex bindersNum vl)
@@ -207,8 +213,8 @@ goMatchToCase tab recur = \case
     -- `compileDefault` computes D(M) where `M = col:matrix`, as described in
     -- Section 2, Figure 1 in the paper. Then it continues compilation with the
     -- new matrix.
-    compileDefault :: ([Doc Ann] -> Doc Ann) -> Level -> [Level] -> [Pattern] -> PatternMatrix -> Node
-    compileDefault err bindersNum vs col matrix =
+    compileDefault :: Tag -> ([Doc Ann] -> Doc Ann) -> Level -> [Level] -> [Pattern] -> PatternMatrix -> Node
+    compileDefault tag err bindersNum vs col matrix =
       compile err' bindersNum vs matrix'
       where
         matrix' =
@@ -221,4 +227,6 @@ goMatchToCase tab recur = \case
               )
               col
               matrix
-        err' args = err ("_" : args)
+        err' args = err (pretty (ci ^. constructorName) <+> hsep (replicate argsNum "_") : args)
+        ci = fromJust $ HashMap.lookup tag (tab ^. infoConstructors)
+        argsNum = ci ^. constructorArgsNum
