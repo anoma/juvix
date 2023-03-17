@@ -299,6 +299,11 @@ isType = \case
 {------------------------------------------------------------------------}
 {- functions on Pattern -}
 
+getPatternBinder :: Pattern -> Binder
+getPatternBinder = \case
+  PatConstr PatternConstr {..} -> _patternConstrBinder
+  PatWildcard PatternWildcard {..} -> _patternWildcardBinder
+
 getPatternBinders :: Pattern -> [Binder]
 getPatternBinders = reverse . go []
   where
