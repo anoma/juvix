@@ -46,7 +46,9 @@ data Statement
 newtype MutualBlock = MutualBlock
   { _mutualFunctions :: NonEmpty FunctionDef
   }
-  deriving stock (Data)
+  deriving stock (Eq, Generic, Data)
+
+instance Hashable MutualBlock
 
 data AxiomDef = AxiomDef
   { _axiomName :: AxiomName,
@@ -98,8 +100,10 @@ data TypedExpression = TypedExpression
     _typedExpression :: Expression
   }
 
-newtype LetClause
-  = LetFunDef FunctionDef
+data LetClause
+  = -- | Non-recursive let definition
+    LetFunDef FunctionDef
+  | LetMutualBlock MutualBlock
   deriving stock (Eq, Generic, Data)
 
 instance Hashable LetClause
@@ -367,9 +371,13 @@ instance HasLoc FunctionClause where
 instance HasLoc FunctionDef where
   getLoc f = getLoc (f ^. funDefName) <> getLocSpan (f ^. funDefClauses)
 
+instance HasLoc MutualBlock where
+  getLoc (MutualBlock defs) = getLocSpan defs
+
 instance HasLoc LetClause where
   getLoc = \case
     LetFunDef f -> getLoc f
+    LetMutualBlock f -> getLoc f
 
 instance HasLoc Let where
   getLoc l = getLocSpan (l ^. letClauses) <> getLoc (l ^. letExpression)

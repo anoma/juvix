@@ -73,8 +73,24 @@ extendWithReplExpression e =
   over
     infoFunctions
     ( HashMap.union
-        (HashMap.fromList [(f ^. funDefName, FunctionInfo f) | LetFunDef f <- universeBi e])
+        ( HashMap.fromList
+            [ (f ^. funDefName, FunctionInfo f)
+              | f <- letFunctionDefs e
+            ]
+        )
     )
+
+letFunctionDefs :: Data from => from -> [FunctionDef]
+letFunctionDefs e =
+  concat
+    [ concatMap (toList . flattenClause) _letClauses
+      | Let {..} <- universeBi e
+    ]
+  where
+    flattenClause :: LetClause -> NonEmpty FunctionDef
+    flattenClause = \case
+      LetFunDef f -> pure f
+      LetMutualBlock (MutualBlock fs) -> fs
 
 -- | moduleName ↦ infoTable
 type Cache = HashMap Name InfoTable
@@ -117,7 +133,7 @@ buildTable1' m = do
         ]
           <> [ (f ^. funDefName, FunctionInfo f)
                | s <- filter (not . isInclude) ss,
-                 LetFunDef f <- universeBi s
+                 f <- letFunctionDefs s
              ]
       where
         isInclude :: Statement -> Bool

@@ -201,7 +201,11 @@ tests =
     posTest
       "Type synonym inside let"
       $(mkRelDir "issue1879")
-      $(mkRelFile "LetSynonym.juvix")
+      $(mkRelFile "LetSynonym.juvix"),
+    posTest
+      "Mutual inference inside let"
+      $(mkRelDir ".")
+      $(mkRelFile "MutualLet.juvix")
   ]
     <> [ compilationTest t | t <- Compilation.tests, t ^. Compilation.name /= "Self-application"
        ]

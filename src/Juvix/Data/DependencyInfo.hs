@@ -1,6 +1,5 @@
 module Juvix.Data.DependencyInfo where
 
-import Data.Graph (Graph, Vertex)
 import Data.Graph qualified as Graph
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
@@ -13,6 +12,7 @@ import Juvix.Prelude.Base
 data DependencyInfo n = DependencyInfo
   { _depInfoGraph :: Graph,
     _depInfoNodeFromVertex :: Vertex -> (n, HashSet n),
+    _depInfoEdgeList :: [(n, n, [n])],
     _depInfoVertexFromName :: n -> Maybe Vertex,
     _depInfoReachable :: HashSet n,
     _depInfoTopSort :: [n]
@@ -25,6 +25,7 @@ createDependencyInfo edges startNames =
   DependencyInfo
     { _depInfoGraph = graph,
       _depInfoNodeFromVertex = \v -> let (_, x, y) = nodeFromVertex v in (x, HashSet.fromList y),
+      _depInfoEdgeList = edgeList,
       _depInfoVertexFromName = vertexFromName,
       _depInfoReachable = reachableNames,
       _depInfoTopSort = topSortedNames
@@ -33,9 +34,9 @@ createDependencyInfo edges startNames =
     graph :: Graph
     nodeFromVertex :: Vertex -> (n, n, [n])
     vertexFromName :: n -> Maybe Vertex
-    (graph, nodeFromVertex, vertexFromName) =
-      Graph.graphFromEdges $
-        map (\(x, y) -> (x, x, HashSet.toList y)) (HashMap.toList edges)
+    (graph, nodeFromVertex, vertexFromName) = Graph.graphFromEdges edgeList
+    edgeList :: [(n, n, [n])]
+    edgeList = map (\(x, y) -> (x, x, HashSet.toList y)) (HashMap.toList edges)
     reachableNames :: HashSet n
     reachableNames =
       HashSet.fromList $
@@ -51,3 +52,6 @@ nameFromVertex depInfo v = fst $ (depInfo ^. depInfoNodeFromVertex) v
 
 isReachable :: (Hashable n) => DependencyInfo n -> n -> Bool
 isReachable depInfo n = HashSet.member n (depInfo ^. depInfoReachable)
+
+buildSCCs :: Ord n => DependencyInfo n -> [SCC n]
+buildSCCs = Graph.stronglyConnComp . (^. depInfoEdgeList)

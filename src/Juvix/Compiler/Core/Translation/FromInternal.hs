@@ -311,8 +311,9 @@ goFunctionDef ::
   Sem r ()
 goFunctionDef ((f, sym), ty) = do
   mbody <- case f ^. Internal.funDefBuiltin of
-    Just b | isIgnoredBuiltin b -> return Nothing
-    Just _ -> Just <$> runReader initIndexTable (mkFunBody ty f)
+    Just b
+      | isIgnoredBuiltin b -> return Nothing
+      | otherwise -> Just <$> runReader initIndexTable (mkFunBody ty f)
     Nothing -> Just <$> runReader initIndexTable (mkFunBody ty f)
   forM_ mbody (registerIdentNode sym)
   forM_ mbody setIdentArgsInfo'
@@ -461,35 +462,33 @@ goLet ::
   (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable] r) =>
   Internal.Let ->
   Sem r Node
-goLet l = do
-  vars <- asks (^. indexTableVars)
-  varsNum <- asks (^. indexTableVarsNum)
-  let bs :: [Name]
-      bs = map (\(Internal.LetFunDef Internal.FunctionDef {..}) -> _funDefName) (toList $ l ^. Internal.letClauses)
-      (vars', varsNum') =
-        foldl'
-          ( \(vs, k) name ->
-              (HashMap.insert (name ^. nameId) k vs, k + 1)
-          )
-          (vars, varsNum)
-          bs
-  (defs, value) <- do
-    values <-
-      mapM
-        ( \(Internal.LetFunDef f) -> do
-            funTy <- goType (f ^. Internal.funDefType)
-
-            funBody <- local (set indexTableVars vars' . set indexTableVarsNum varsNum') (mkFunBody funTy f)
-            return (funTy, funBody)
-        )
-        (l ^. Internal.letClauses)
-
-    lbody <-
-      local
-        (set indexTableVars vars' . set indexTableVarsNum varsNum')
-        (goExpression (l ^. Internal.letExpression))
-    return (values, lbody)
-  return $ mkLetRec' defs value
+goLet l = goClauses (toList (l ^. Internal.letClauses))
+  where
+    goClauses :: [Internal.LetClause] -> Sem r Node
+    goClauses = \case
+      [] -> goExpression (l ^. Internal.letExpression)
+      c : cs -> case c of
+        Internal.LetFunDef f -> goNonRecFun f
+        Internal.LetMutualBlock m -> goMutual m
+        where
+          goNonRecFun :: Internal.FunctionDef -> Sem r Node
+          goNonRecFun f =
+            do
+              funTy <- goType (f ^. Internal.funDefType)
+              funBody <- mkFunBody funTy f
+              rest <- localAddName (f ^. Internal.funDefName) (goClauses cs)
+              return $ mkLet' funTy funBody rest
+          goMutual :: Internal.MutualBlock -> Sem r Node
+          goMutual (Internal.MutualBlock funs) = do
+            let lfuns = toList funs
+                names = map (^. Internal.funDefName) lfuns
+                tys = map (^. Internal.funDefType) lfuns
+            tys' <- mapM goType tys
+            localAddNames names $ do
+              vals' <- sequence [mkFunBody ty f | (ty, f) <- zipExact tys' lfuns]
+              let items = nonEmpty' (zip tys' vals')
+              rest <- goClauses cs
+              return (mkLetRec' items rest)
 
 goAxiomInductive ::
   forall r.
