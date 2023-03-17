@@ -25,7 +25,7 @@ checkGeb tab =
           NLam Lambda {..}
             | isDynamic (_lambdaBinder ^. binderType) ->
                 throw (dynamicTypeError node (_lambdaBinder ^. binderLocation))
-          NPi (Pi {..})
+          NPi Pi {..}
             | isTypeConstr tab (_piBinder ^. binderType) ->
                 throw
                   CoreError
@@ -68,17 +68,16 @@ checkGeb tab =
           _ -> return node
 
     checkNoRecursion :: Sem r ()
-    checkNoRecursion =
-      if
-          | isCyclic (createIdentDependencyInfo tab) ->
-              throw
-                CoreError
-                  { _coreErrorMsg = "recursion not supported for the GEB target",
-                    _coreErrorNode = Nothing,
-                    _coreErrorLoc = defaultLoc
-                  }
-          | otherwise ->
-              return ()
+    checkNoRecursion
+      | isCyclic (createIdentDependencyInfo tab) =
+          throw
+            CoreError
+              { _coreErrorMsg = "recursion not supported for the GEB target",
+                _coreErrorNode = Nothing,
+                _coreErrorLoc = defaultLoc
+              }
+      | otherwise =
+          return ()
 
     dynamicTypeError :: Node -> Maybe Location -> CoreError
     dynamicTypeError node loc =
