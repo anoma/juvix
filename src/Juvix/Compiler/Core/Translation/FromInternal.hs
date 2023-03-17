@@ -646,13 +646,17 @@ fromPatternArg pa = case pa ^. Internal.patternArgName of
     getPatternType :: Name -> Sem r Type
     getPatternType n = asks (fromJust . HashMap.lookup n) >>= goType
 
-    -- The types of the pattern must be shifted by the index of the argument
-    -- within the params
     indexedPatternArgs :: [Internal.PatternArg] -> Sem r [Pattern]
-    indexedPatternArgs ps = mapM go (indexFrom 0 ps)
+    indexedPatternArgs ps = mapM go (zipExact accumPatternVarsNum ps)
       where
-        go :: Indexed (Internal.PatternArg) -> Sem r Pattern
-        go (Indexed i p) = local (over indexTableVarsNum (+ i)) (fromPatternArg p)
+        go :: (Int, Internal.PatternArg) -> Sem r Pattern
+        go (i, p) = local (over indexTableVarsNum (+ i)) (fromPatternArg p)
+
+        patternVarsNumList :: [Int]
+        patternVarsNumList = map (length . getPatternArgVars) ps
+
+        accumPatternVarsNum :: [Int]
+        accumPatternVarsNum = init (scanl (+) 0 patternVarsNumList)
 
     fromPattern :: Internal.Pattern -> Sem r Pattern
     fromPattern = \case
