@@ -231,7 +231,7 @@ goMatchToCase tab recur = \case
               )
               col
               matrix
-        err' args = err (parensIf (argsNum > 0) (pretty (ci ^. constructorName) <+> hsep (replicate argsNum "_")) : args)
+        err' args = err (parensIf (argsNum > 0) (foldl' (<+>) (pretty (ci ^. constructorName)) (replicate argsNum "_")) : args)
         ci = fromJust $ HashMap.lookup tag (tab ^. infoConstructors)
         paramsNum = getTypeParamsNum tab (ci ^. constructorType)
         argsNum = ci ^. constructorArgsNum - paramsNum
