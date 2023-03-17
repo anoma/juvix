@@ -74,7 +74,10 @@ goMatchToCase tab recur = \case
     compile err bindersNum vs matrix = case matrix of
       [] ->
         -- The matrix has no rows -- matching fails (Section 4, case 1).
-        error $ "Pattern matching not exhaustive. Example pattern sequence not matched: " <> show (ppOutput $ err (repeat "_"))
+        mkBuiltinApp' OpFail [mkConstant' (ConstString ("Pattern sequence not matched: " <> pat))]
+        where
+          -- error $ "Pattern matching not exhaustive. Example pattern sequence not matched: " <> show (ppOutput $ err (repeat "_"))
+          pat = show (ppOutput $ err (repeat "_"))
       r@PatternRow {..} : _
         | all isPatWildcard _patternRowPatterns ->
             -- The first row matches all values (Section 4, case 2)
