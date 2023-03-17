@@ -246,5 +246,10 @@ tests =
       "Mutually recursive let expression"
       $(mkRelDir ".")
       $(mkRelFile "test039.juvix")
-      $(mkRelFile "out/test039.out")
+      $(mkRelFile "out/test039.out"),
+    posTest
+      "Pattern matching nullary constructor"
+      $(mkRelDir ".")
+      $(mkRelFile "test040.juvix")
+      $(mkRelFile "out/test040.out")
   ]
