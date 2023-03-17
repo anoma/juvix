@@ -90,11 +90,11 @@ convertNode tab = rmap go
           maybeBranch = fromMaybe (mkBuiltinApp' OpFail [mkConstant' (ConstString "no matching branch")])
       NTyp TypeConstr {..} ->
         case ii ^. inductiveBuiltin of
-          Just (BuiltinTypeInductive BuiltinNat) -> End' mkTypeInteger'
-          _ -> Recur' (levels, node)
+          Just (BuiltinTypeInductive BuiltinNat) -> mkTypeInteger'
+          _ -> recur [] node
         where
           ii = fromJust $ tab ^. infoInductives . at _typeConstrSymbol
-      _ -> Recur' (levels, node)
+      _ -> recur [] node
 
     convertIdentApp :: Node -> ((Info -> Node -> Node -> Node) -> Node) -> Symbol -> Node
     convertIdentApp node f sym =
