@@ -208,7 +208,8 @@ goMatchToCase tab recur = \case
               matrix
         err' args =
           err
-            (parensIf (argsNum > 0) (foldl' (<+>) (pretty (ci ^. constructorName)) (take argsNum args)) : drop argsNum args)
+            (parensIf (argsNum > paramsNum) (foldl' (<+>) (pretty (ci ^. constructorName)) (drop paramsNum (take argsNum args))) : drop argsNum args)
+        paramsNum = getTypeParamsNum tab (ci ^. constructorType)
 
     -- `compileDefault` computes D(M) where `M = col:matrix`, as described in
     -- Section 2, Figure 1 in the paper. Then it continues compilation with the
@@ -229,4 +230,5 @@ goMatchToCase tab recur = \case
               matrix
         err' args = err (parensIf (argsNum > 0) (pretty (ci ^. constructorName) <+> hsep (replicate argsNum "_")) : args)
         ci = fromJust $ HashMap.lookup tag (tab ^. infoConstructors)
-        argsNum = ci ^. constructorArgsNum
+        paramsNum = getTypeParamsNum tab (ci ^. constructorType)
+        argsNum = ci ^. constructorArgsNum - paramsNum

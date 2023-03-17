@@ -39,6 +39,12 @@ isTypeConstr tab ty = case typeTarget ty of
     isTypeConstr tab (fromJust $ HashMap.lookup _identSymbol (tab ^. identContext))
   _ -> False
 
+getTypeParams :: InfoTable -> Type -> [Type]
+getTypeParams tab ty = filter (isTypeConstr tab) (typeArgs ty)
+
+getTypeParamsNum :: InfoTable -> Type -> Int
+getTypeParamsNum tab ty = length $ getTypeParams tab ty
+
 freeVarsSorted :: Node -> Set Var
 freeVarsSorted n = Set.fromList (n ^.. freeVars)
 
