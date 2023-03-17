@@ -54,14 +54,15 @@ typeCheckExpressionType ::
   Sem r TypedExpression
 typeCheckExpressionType InternalTypedResult {..} exp =
   mapError (JuvixError @TypeCheckerError)
-    $ do
-      evalState _resultFunctions
+    $ evalState _resultFunctions
       . evalState _resultIdenTypes
       . runReader table
       . ignoreOutput @Example
       . withEmptyVars
       . runInferenceDef
-    $ inferExpression' Nothing exp
+    $ do
+      t <- inferExpression' Nothing exp
+      traverseOf typedType strongNormalize t
   where
     table :: InfoTable
     table = buildTableRepl exp _resultModules
@@ -71,14 +72,14 @@ typeCheckExpression ::
   InternalTypedResult ->
   Expression ->
   Sem r Expression
-typeCheckExpression res exp = fmap (^. typedExpression) (typeCheckExpressionType res exp)
+typeCheckExpression res exp = (^. typedExpression) <$> typeCheckExpressionType res exp
 
 inferExpressionType ::
   (Members '[Error JuvixError, NameIdGen, Builtins] r) =>
   InternalTypedResult ->
   Expression ->
   Sem r Expression
-inferExpressionType res exp = fmap (^. typedType) (typeCheckExpressionType res exp)
+inferExpressionType res exp = (^. typedType) <$> typeCheckExpressionType res exp
 
 typeChecking ::
   (Members '[Error JuvixError, NameIdGen, Builtins] r) =>
