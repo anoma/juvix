@@ -54,7 +54,10 @@ instance PrettyCode Application where
     return $ l' <+> r'
 
 instance PrettyCode TypedExpression where
-  ppCode e = ppCode (e ^. typedExpression)
+  ppCode e = do
+    e' <- ppCode (e ^. typedExpression)
+    ty' <- ppCode (e ^. typedType)
+    return (e' <+> kwColon <+> ty')
 
 instance PrettyCode SmallUniverse where
   ppCode _ = return kwType
