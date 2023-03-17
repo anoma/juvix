@@ -17,9 +17,7 @@ import Juvix.Compiler.Concrete qualified as Concrete
 import Juvix.Compiler.Concrete.Translation.FromParsed qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
-import Juvix.Compiler.Core.Language qualified as Core
-import Juvix.Compiler.Core.Pipeline qualified as Core
-import Juvix.Compiler.Core.Translation qualified as Core
+import Juvix.Compiler.Core qualified as Core
 import Juvix.Compiler.Core.Translation.Stripped.FromCore qualified as Stripped
 import Juvix.Compiler.Internal qualified as Internal
 import Juvix.Compiler.Pipeline.Artifacts
