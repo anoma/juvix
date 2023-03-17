@@ -113,11 +113,6 @@ goMatchToCase tab recur = \case
                                     Just $ compileDefault (missingTag ind tagsSet) err bindersNum vs' col matrix'
                         }
 
-    missingTag :: Symbol -> HashSet Tag -> Tag
-    missingTag ind tags = fromJust $ find (not . flip HashSet.member tags) (map (^. constructorTag) (ii ^. inductiveConstructors))
-      where
-        ii = fromJust $ HashMap.lookup ind (tab ^. infoInductives)
-
     mkVal :: Level -> Level -> Node
     mkVal bindersNum vl = mkVar' (getBinderIndex bindersNum vl)
 
@@ -151,6 +146,11 @@ goMatchToCase tab recur = \case
       _ : pats ->
         getPatTags pats
 
+    missingTag :: Symbol -> HashSet Tag -> Tag
+    missingTag ind tags = fromJust $ find (not . flip HashSet.member tags) (map (^. constructorTag) (ii ^. inductiveConstructors))
+      where
+        ii = fromJust $ HashMap.lookup ind (tab ^. infoInductives)
+
     compileMatchingRow :: Level -> [Level] -> PatternRow -> Node
     compileMatchingRow bindersNum vs PatternRow {..} =
       goMatchToCase tab (recur . (bcs ++)) _patternRowBody
@@ -172,7 +172,7 @@ goMatchToCase tab recur = \case
       CaseBranch
         { _caseBranchInfo = setInfoName (ci ^. constructorName) mempty,
           _caseBranchTag = tag,
-          _caseBranchBinders = map mkBinder' argtys,
+          _caseBranchBinders = zipWithExact (set binderType) argtys binders,
           _caseBranchBindersNum = argsNum,
           _caseBranchBody = compile err' bindersNum' (vs' ++ vs) matrix'
         }
@@ -180,6 +180,18 @@ goMatchToCase tab recur = \case
         ci = fromJust $ HashMap.lookup tag (tab ^. infoConstructors)
         argtys = typeArgs $ fromJust (HashMap.lookup tag (tab ^. infoConstructors)) ^. constructorType
         argsNum = length argtys
+        binders =
+          List.head $
+            map (map getPatternBinder) $
+              mapMaybe
+                ( \case
+                    PatConstr PatternConstr {..}
+                      | _patternConstrTag == tag ->
+                          Just _patternConstrArgs
+                    _ ->
+                      Nothing
+                )
+                col
         bindersNum' = bindersNum + argsNum
         vs' = [bindersNum .. bindersNum + argsNum - 1]
         matrix' =
