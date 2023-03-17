@@ -1,6 +1,4 @@
 module LetSynonym;
-  open import Stdlib.Prelude;
-
   type T :=
     | t : T;
 
