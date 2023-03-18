@@ -251,5 +251,10 @@ tests =
       "Pattern matching nullary constructor"
       $(mkRelDir ".")
       $(mkRelFile "test040.juvix")
-      $(mkRelFile "out/test040.out")
+      $(mkRelFile "out/test040.out"),
+    posTest
+      "Use a builtin inductive in an inductive constructor"
+      $(mkRelDir ".")
+      $(mkRelFile "test041.juvix")
+      $(mkRelFile "out/test041.out")
   ]
