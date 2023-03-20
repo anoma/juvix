@@ -45,7 +45,7 @@ fromTransformationLikes :: [TransformationLikeId] -> [TransformationId]
 fromTransformationLikes = concatMap fromTransformationLike
 
 toEvalTransformations :: [TransformationId]
-toEvalTransformations = [EtaExpandApps, NaiveMatchToCase, NatToInt, ConvertBuiltinTypes]
+toEvalTransformations = [EtaExpandApps, MatchToCase, NatToInt, ConvertBuiltinTypes]
 
 toStrippedTransformations :: [TransformationId]
 toStrippedTransformations =

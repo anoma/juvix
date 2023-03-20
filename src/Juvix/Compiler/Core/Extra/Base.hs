@@ -312,6 +312,11 @@ getPatternBinders = reverse . go []
       PatConstr PatternConstr {..} -> foldl' go (_patternConstrBinder : acc) _patternConstrArgs
       PatWildcard PatternWildcard {..} -> _patternWildcardBinder : acc
 
+getPatternExtraBinders :: Pattern -> [Binder]
+getPatternExtraBinders = \case
+  PatConstr PatternConstr {..} -> concatMap getPatternBinders _patternConstrArgs
+  PatWildcard {} -> []
+
 getPatternInfos :: Pattern -> [Info]
 getPatternInfos = reverse . go []
   where

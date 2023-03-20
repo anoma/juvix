@@ -164,68 +164,6 @@ goMatchToCase tab recur = \case
               _patternRowBinderChangesRev
               (drop _patternRowIgnoredPatternsNum (zipExact _patternRowPatterns vs))
 
-    -- `compileBranch` computes S(c, M) where `c = Constr tag` and `M =
-    -- col:matrix`, as described in Section 2, Figure 1 in the paper. Then it
-    -- continues compilation with the new matrix.
-    compileBranch :: ([Doc Ann] -> Doc Ann) -> Level -> [Level] -> [Pattern] -> PatternMatrix -> Tag -> CaseBranch
-    compileBranch err bindersNum vs col matrix tag =
-      CaseBranch
-        { _caseBranchInfo = setInfoName (ci ^. constructorName) mempty,
-          _caseBranchTag = tag,
-          _caseBranchBinders = zipWithExact (set binderType) argtys binders,
-          _caseBranchBindersNum = argsNum,
-          _caseBranchBody = compile err' bindersNum' (vs' ++ vs) matrix'
-        }
-      where
-        ci = fromJust $ HashMap.lookup tag (tab ^. infoConstructors)
-        argtys = typeArgs $ fromJust (HashMap.lookup tag (tab ^. infoConstructors)) ^. constructorType
-        argsNum = length argtys
-        binders =
-          List.head $
-            map (map getPatternBinder) $
-              mapMaybe
-                ( \case
-                    PatConstr PatternConstr {..}
-                      | _patternConstrTag == tag ->
-                          Just _patternConstrArgs
-                    _ ->
-                      Nothing
-                )
-                col
-        bindersNum' = bindersNum + argsNum
-        vs' = [bindersNum .. bindersNum + argsNum - 1]
-        matrix' =
-          catMaybes $
-            zipWithExact
-              ( \pat row ->
-                  case pat of
-                    PatConstr PatternConstr {..}
-                      | _patternConstrTag == tag ->
-                          Just $
-                            row
-                              { _patternRowPatterns =
-                                  _patternConstrArgs ++ row ^. patternRowPatterns,
-                                _patternRowBinderChangesRev = BCAdd argsNum : row ^. patternRowBinderChangesRev
-                              }
-                    PatWildcard {} ->
-                      Just $
-                        row
-                          { _patternRowPatterns =
-                              map (PatWildcard . PatternWildcard mempty . Binder "_" Nothing) argtys
-                                ++ row ^. patternRowPatterns,
-                            _patternRowBinderChangesRev = BCAdd argsNum : row ^. patternRowBinderChangesRev,
-                            _patternRowIgnoredPatternsNum = argsNum + row ^. patternRowIgnoredPatternsNum
-                          }
-                    _ ->
-                      Nothing
-              )
-              col
-              matrix
-        err' args =
-          err
-            (parensIf (argsNum > paramsNum) (foldl' (<+>) (pretty (ci ^. constructorName)) (drop paramsNum (take argsNum args))) : drop argsNum args)
-        paramsNum = getTypeParamsNum tab (ci ^. constructorType)
-
     -- `compileDefault` computes D(M) where `M = col:matrix`, as described in
     -- Section 2, Figure 1 in the paper. Then it continues compilation with the
     -- new matrix.
@@ -247,3 +185,97 @@ goMatchToCase tab recur = \case
         ci = fromJust $ HashMap.lookup tag (tab ^. infoConstructors)
         paramsNum = getTypeParamsNum tab (ci ^. constructorType)
         argsNum = ci ^. constructorArgsNum - paramsNum
+
+    -- `compileBranch` computes S(c, M) where `c = Constr tag` and `M =
+    -- col:matrix`, as described in Section 2, Figure 1 in the paper. Then it
+    -- continues compilation with the new matrix.
+    compileBranch :: ([Doc Ann] -> Doc Ann) -> Level -> [Level] -> [Pattern] -> PatternMatrix -> Tag -> CaseBranch
+    compileBranch err bindersNum vs col matrix tag =
+      CaseBranch
+        { _caseBranchInfo = setInfoName (ci ^. constructorName) mempty,
+          _caseBranchTag = tag,
+          _caseBranchBinders = binders',
+          _caseBranchBindersNum = argsNum,
+          _caseBranchBody = compile err' bindersNum' (vs' ++ vs) matrix'
+        }
+      where
+        matrix' = getBranchMatrix col matrix tag
+        binders' = getBranchBinders col matrix tag
+        ci = fromJust $ HashMap.lookup tag (tab ^. infoConstructors)
+        paramsNum = getTypeParamsNum tab (ci ^. constructorType)
+        argsNum = length (typeArgs (ci ^. constructorType))
+        bindersNum' = bindersNum + argsNum
+        vs' = [bindersNum .. bindersNum + argsNum - 1]
+        err' args =
+          err
+            (parensIf (argsNum > paramsNum) (foldl' (<+>) (pretty (ci ^. constructorName)) (drop paramsNum (take argsNum args))) : drop argsNum args)
+
+    getBranchBinders :: [Pattern] -> PatternMatrix -> Tag -> [Binder]
+    getBranchBinders col matrix tag =
+      reverse $
+        snd $
+          foldl'
+            ( \(rbcs, acc) pat ->
+                let bcs = map (\b -> BCRemove (BinderRemove b (error "pattern compiler: dependently typed pattern"))) (getPatternExtraBinders pat)
+                    bc = BCRemove (BinderRemove (getPatternBinder pat) (mkVar' 0))
+                    binder = over binderType (goMatchToCase tab (recur . revAppend rbcs)) (getPatternBinder pat)
+                 in (revAppend bcs (bc : BCAdd 1 : rbcs), binder : acc)
+            )
+            (matrix !! argPatsIndex ^. patternRowBinderChangesRev, [])
+            argPats
+      where
+        argPats =
+          List.head $
+            mapMaybe
+              ( \case
+                  PatConstr PatternConstr {..}
+                    | _patternConstrTag == tag ->
+                        Just _patternConstrArgs
+                  _ ->
+                    Nothing
+              )
+              col
+        argPatsIndex =
+          fromJust $
+            findIndex
+              ( \case
+                  PatConstr PatternConstr {..}
+                    | _patternConstrTag == tag ->
+                        True
+                  _ ->
+                    False
+              )
+              col
+
+    getBranchMatrix :: [Pattern] -> PatternMatrix -> Tag -> PatternMatrix
+    getBranchMatrix col matrix tag =
+      catMaybes $
+        zipWithExact
+          ( \pat row ->
+              case pat of
+                PatConstr PatternConstr {..}
+                  | _patternConstrTag == tag ->
+                      Just $
+                        row
+                          { _patternRowPatterns =
+                              _patternConstrArgs ++ row ^. patternRowPatterns,
+                            _patternRowBinderChangesRev = BCAdd argsNum : row ^. patternRowBinderChangesRev
+                          }
+                PatWildcard {} ->
+                  Just $
+                    row
+                      { _patternRowPatterns =
+                          map (PatWildcard . PatternWildcard mempty . Binder "_" Nothing) argtys
+                            ++ row ^. patternRowPatterns,
+                        _patternRowBinderChangesRev = BCAdd argsNum : row ^. patternRowBinderChangesRev,
+                        _patternRowIgnoredPatternsNum = argsNum + row ^. patternRowIgnoredPatternsNum
+                      }
+                _ ->
+                  Nothing
+          )
+          col
+          matrix
+      where
+        ci = fromJust $ HashMap.lookup tag (tab ^. infoConstructors)
+        argtys = typeArgs (ci ^. constructorType)
+        argsNum = length argtys
