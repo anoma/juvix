@@ -31,3 +31,7 @@ mkProjFile r = do
   let p = relToProject r
   ensureFile p
   lift p
+
+-- | imaginary file path for error messages in the repl.
+replPath :: Path Abs File
+replPath = $(mkAbsFile "/<repl>")

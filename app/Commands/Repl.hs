@@ -3,7 +3,6 @@
 module Commands.Repl where
 
 import Commands.Base hiding (command)
-import Commands.Extra.Paths
 import Commands.Repl.Options
 import Control.Exception (throwIO)
 import Control.Monad.State.Strict qualified as State
