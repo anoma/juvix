@@ -119,7 +119,7 @@ recurse' sig = go True
             Dump ->
               return mem
             Failure ->
-              return mem
+              return $ pushValueStack TyDynamic (popValueStack 1 mem)
             Prealloc {} ->
               return mem
             AllocConstr tag -> do

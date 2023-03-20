@@ -136,7 +136,7 @@ genCode infoTable fi =
     goBuiltinApp :: Bool -> Int -> BinderList Value -> Core.BuiltinApp -> Code'
     goBuiltinApp isTail tempSize refs (Core.BuiltinApp {..}) =
       snocReturn isTail $
-        DL.snoc
+        DL.append
           (DL.concat (map (go False tempSize refs) (reverse _builtinAppArgs)))
           (genOp _builtinAppOp)
 
@@ -236,21 +236,21 @@ genCode infoTable fi =
               }
         )
 
-    genOp :: Core.BuiltinOp -> Command
+    genOp :: Core.BuiltinOp -> Code'
     genOp = \case
-      Core.OpIntAdd -> mkBinop IntAdd
-      Core.OpIntSub -> mkBinop IntSub
-      Core.OpIntMul -> mkBinop IntMul
-      Core.OpIntDiv -> mkBinop IntDiv
-      Core.OpIntMod -> mkBinop IntMod
-      Core.OpIntLt -> mkBinop IntLt
-      Core.OpIntLe -> mkBinop IntLe
-      Core.OpEq -> mkBinop ValEq
-      Core.OpShow -> mkInstr ValShow
-      Core.OpStrConcat -> mkBinop StrConcat
-      Core.OpStrToInt -> mkInstr StrToInt
-      Core.OpTrace -> mkInstr Trace
-      Core.OpFail -> mkInstr Failure
+      Core.OpIntAdd -> DL.singleton $ mkBinop IntAdd
+      Core.OpIntSub -> DL.singleton $ mkBinop IntSub
+      Core.OpIntMul -> DL.singleton $ mkBinop IntMul
+      Core.OpIntDiv -> DL.singleton $ mkBinop IntDiv
+      Core.OpIntMod -> DL.singleton $ mkBinop IntMod
+      Core.OpIntLt -> DL.singleton $ mkBinop IntLt
+      Core.OpIntLe -> DL.singleton $ mkBinop IntLe
+      Core.OpEq -> DL.singleton $ mkBinop ValEq
+      Core.OpShow -> DL.singleton $ mkInstr ValShow
+      Core.OpStrConcat -> DL.singleton $ mkBinop StrConcat
+      Core.OpStrToInt -> DL.singleton $ mkInstr StrToInt
+      Core.OpTrace -> DL.fromList [mkInstr Trace, mkInstr Pop]
+      Core.OpFail -> DL.singleton $ mkInstr Failure
 
     getArgsNum :: Symbol -> Int
     getArgsNum sym =

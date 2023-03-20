@@ -256,5 +256,15 @@ tests =
       "Use a builtin inductive in an inductive constructor"
       $(mkRelDir ".")
       $(mkRelFile "test041.juvix")
-      $(mkRelFile "out/test041.out")
+      $(mkRelFile "out/test041.out"),
+    posTest
+      "Builtin string-to-nat"
+      $(mkRelDir ".")
+      $(mkRelFile "test042.juvix")
+      $(mkRelFile "out/test042.out"),
+    posTest
+      "Builtin trace"
+      $(mkRelDir ".")
+      $(mkRelFile "test043.juvix")
+      $(mkRelFile "out/test043.out")
   ]
