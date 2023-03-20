@@ -8,14 +8,14 @@ import Juvix.Compiler.Core.Data.InfoTable
 import Juvix.Compiler.Core.Transformation
 
 -- | Perform transformations on Core necessary for efficient evaluation
-toEval :: InfoTable -> InfoTable
+toEval :: Member (Error JuvixError) r => InfoTable -> Sem r InfoTable
 toEval = applyTransformations toEvalTransformations
 
 -- | Perform transformations on Core necessary before the translation to
 -- Core.Stripped
-toStripped :: InfoTable -> InfoTable
+toStripped :: Member (Error JuvixError) r => InfoTable -> Sem r InfoTable
 toStripped = applyTransformations toStrippedTransformations
 
 -- | Perform transformations on Core necessary before the translation to GEB
-toGeb :: InfoTable -> InfoTable
+toGeb :: Member (Error JuvixError) r => InfoTable -> Sem r InfoTable
 toGeb = applyTransformations toGebTransformations

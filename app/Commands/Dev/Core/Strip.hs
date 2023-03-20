@@ -11,8 +11,9 @@ runCommand :: forall r a. (Members '[Embed IO, App] r, CanonicalProjection a Cor
 runCommand opts = do
   inputFile :: Path Abs File <- someBaseToAbs' sinputFile
   s' <- embed (readFile $ toFilePath inputFile)
-  tab <- getRight (mapLeft JuvixError (Core.runParserMain inputFile Core.emptyInfoTable s'))
-  let tab' = Stripped.fromCore (Core.toStripped tab)
+  (tab, _) <- getRight (mapLeft JuvixError (Core.runParser inputFile Core.emptyInfoTable s'))
+  r <- runError @JuvixError (Core.toStripped tab)
+  tab' <- getRight $ mapLeft JuvixError $ mapRight Stripped.fromCore r
   unless (project opts ^. coreStripNoPrint) $ do
     renderStdOut (Core.ppOut opts tab')
   where

@@ -31,6 +31,14 @@ import Juvix.Compiler.Core.Language
 isClosed :: Node -> Bool
 isClosed = not . has freeVars
 
+isTypeConstr :: InfoTable -> Type -> Bool
+isTypeConstr tab ty = case typeTarget ty of
+  NUniv {} ->
+    True
+  NIdt Ident {..} ->
+    isTypeConstr tab (fromJust $ HashMap.lookup _identSymbol (tab ^. identContext))
+  _ -> False
+
 freeVarsSorted :: Node -> Set Var
 freeVarsSorted n = Set.fromList (n ^.. freeVars)
 

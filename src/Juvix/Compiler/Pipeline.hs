@@ -154,7 +154,7 @@ upToAsm ::
   (Members '[Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, PathResolver] r) =>
   Sem r Asm.InfoTable
 upToAsm =
-  upToCore >>= \Core.CoreResult {..} -> return (coreToAsm _coreResultTable)
+  upToCore >>= \Core.CoreResult {..} -> coreToAsm _coreResultTable
 
 upToMiniC ::
   (Members '[Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, PathResolver] r) =>
@@ -174,26 +174,26 @@ upToEval ::
   (Members '[Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, PathResolver] r) =>
   Sem r Core.CoreResult
 upToEval =
-  upToCore >>= \r -> return r {Core._coreResultTable = Core.toEval (r ^. Core.coreResultTable)}
+  upToCore >>= \r -> Core.toEval (r ^. Core.coreResultTable) >>= \tab -> return r {Core._coreResultTable = tab}
 
 --------------------------------------------------------------------------------
 -- Internal workflows
 --------------------------------------------------------------------------------
 
-coreToAsm :: Core.InfoTable -> Asm.InfoTable
-coreToAsm = Asm.fromCore . Stripped.fromCore . Core.toStripped
+coreToAsm :: Member (Error JuvixError) r => Core.InfoTable -> Sem r Asm.InfoTable
+coreToAsm = Core.toStripped >=> return . Asm.fromCore . Stripped.fromCore
 
 coreToMiniC :: (Member (Error JuvixError) r) => Asm.Options -> Core.InfoTable -> Sem r C.MiniCResult
-coreToMiniC opts = asmToMiniC opts . coreToAsm
+coreToMiniC opts = coreToAsm >=> asmToMiniC opts
 
-asmToMiniC :: (Member (Error JuvixError) r) => Asm.Options -> Asm.InfoTable -> Sem r C.MiniCResult
+asmToMiniC :: Member (Error JuvixError) r => Asm.Options -> Asm.InfoTable -> Sem r C.MiniCResult
 asmToMiniC opts = Asm.toReg opts >=> regToMiniC (opts ^. Asm.optLimits) . Reg.fromAsm
 
 regToMiniC :: Backend.Limits -> Reg.InfoTable -> Sem r C.MiniCResult
 regToMiniC lims = return . C.fromReg lims
 
-coreToGeb :: Geb.ResultSpec -> Core.InfoTable -> Sem r Geb.Result
-coreToGeb spec = return . uncurry (Geb.toResult spec) . Geb.fromCore . Core.toGeb
+coreToGeb :: Member (Error JuvixError) r => Geb.ResultSpec -> Core.InfoTable -> Sem r Geb.Result
+coreToGeb spec = Core.toGeb >=> return . uncurry (Geb.toResult spec) . Geb.fromCore
 
 --------------------------------------------------------------------------------
 -- Run pipeline

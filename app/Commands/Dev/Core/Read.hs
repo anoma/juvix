@@ -22,8 +22,9 @@ runCommand opts = do
   inputFile :: Path Abs File <- someBaseToAbs' sinputFile
   s' <- embed . readFile . toFilePath $ inputFile
   tab <- getRight (mapLeft JuvixError (Core.runParserMain inputFile Core.emptyInfoTable s'))
-  let tab0 = Core.applyTransformations (project opts ^. coreReadTransformations) tab
-      tab' = if project opts ^. coreReadNoDisambiguate then tab0 else Core.disambiguateNames tab0
+  r <- runError @JuvixError $ Core.applyTransformations (project opts ^. coreReadTransformations) tab
+  tab0 <- getRight $ mapLeft JuvixError r
+  let tab' = if project opts ^. coreReadNoDisambiguate then tab0 else Core.disambiguateNames tab0
   embed (Scoper.scopeTrace tab')
   unless (project opts ^. coreReadNoPrint) $ do
     renderStdOut (Core.ppOut opts tab')

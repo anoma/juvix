@@ -16,6 +16,7 @@ data TransformationId
   | MatchToCase
   | EtaExpandApps
   | DisambiguateNames
+  | CheckGeb
   deriving stock (Data, Bounded, Enum)
 
 data PipelineId
@@ -47,7 +48,7 @@ toStrippedTransformations =
   toEvalTransformations ++ [LambdaLetRecLifting, TopEtaExpand, MoveApps, RemoveTypeArgs]
 
 toGebTransformations :: [TransformationId]
-toGebTransformations = toEvalTransformations ++ [UnrollRecursion, ComputeTypeInfo]
+toGebTransformations = toEvalTransformations ++ [LetRecLifting, CheckGeb, UnrollRecursion, ComputeTypeInfo]
 
 toEvalTransformations :: [TransformationId]
 toEvalTransformations = [EtaExpandApps, MatchToCase, NatToInt, ConvertBuiltinTypes]

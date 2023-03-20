@@ -30,5 +30,8 @@ runCommand opts@CompileOptions {..} = do
 writeCoreFile :: (Members '[Embed IO, App] r) => Compile.PipelineArg -> Sem r ()
 writeCoreFile Compile.PipelineArg {..} = do
   coreFile <- Compile.outputFile _pipelineArgOptions _pipelineArgFile
-  let tab = Core.toEval _pipelineArgInfoTable
-  embed $ TIO.writeFile (toFilePath coreFile) (show $ Core.ppOutDefault (Core.disambiguateNames tab))
+  r <- runError @JuvixError $ Core.toEval _pipelineArgInfoTable
+  case r of
+    Left e -> exitJuvixError e
+    Right tab ->
+      embed $ TIO.writeFile (toFilePath coreFile) (show $ Core.ppOutDefault (Core.disambiguateNames tab))

@@ -58,25 +58,28 @@ mainModuleScope e = fromJust (moduleScope e (mainModuleTopPath e))
 mainModuleTopPath :: ExpressionContext -> C.TopModulePath
 mainModuleTopPath = (^. contextScoperResult . Scoper.mainModule . C.modulePath . S.nameConcrete)
 
-runTransformations :: [TransformationId] -> InfoTable -> Node -> (InfoTable, Node)
-runTransformations ts tab n = snd $ run $ runInfoTableBuilder tab $ do
-  sym <- freshSymbol
-  registerIdentNode sym n
-  -- `n` will get filtered out by the transformations unless it has a
-  -- corresponding entry in `infoIdentifiers`
-  let name = freshIdentName tab "_repl"
-      ii =
-        IdentifierInfo
-          { _identifierName = name,
-            _identifierSymbol = sym,
-            _identifierLocation = Nothing,
-            _identifierArgsNum = 0,
-            _identifierArgsInfo = [],
-            _identifierType = mkDynamic',
-            _identifierIsExported = False,
-            _identifierBuiltin = Nothing
-          }
-  registerIdent name ii
-  tab' <- applyTransformations ts <$> getInfoTable
-  let node' = lookupDefault impossible sym (tab' ^. identContext)
-  return (tab', node')
+runTransformations :: Member (Error JuvixError) r => [TransformationId] -> InfoTable -> Node -> Sem r (InfoTable, Node)
+runTransformations ts tab n = snd <$> runInfoTableBuilder tab e
+  where
+    e = do
+      sym <- freshSymbol
+      registerIdentNode sym n
+      -- `n` will get filtered out by the transformations unless it has a
+      -- corresponding entry in `infoIdentifiers`
+      let name = freshIdentName tab "_repl"
+          ii =
+            IdentifierInfo
+              { _identifierName = name,
+                _identifierSymbol = sym,
+                _identifierLocation = Nothing,
+                _identifierArgsNum = 0,
+                _identifierArgsInfo = [],
+                _identifierType = mkDynamic',
+                _identifierIsExported = False,
+                _identifierBuiltin = Nothing
+              }
+      registerIdent name ii
+      tab0 <- getInfoTable
+      tab' <- applyTransformations ts tab0
+      let node' = lookupDefault impossible sym (tab' ^. identContext)
+      return (tab', node')

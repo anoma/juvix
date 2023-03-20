@@ -175,8 +175,10 @@ runCommand opts = do
             where
               eval :: Core.Node -> Repl (Either JuvixError Core.Node)
               eval n =
-                let (tab', n') = runTransformations (Core.toEvalTransformations ++ opts ^. replTransformations) infoTable n
-                 in liftIO $
+                case run $ runError @JuvixError $ runTransformations (Core.toEvalTransformations ++ opts ^. replTransformations) infoTable n of
+                  Left err -> return $ Left err
+                  Right (tab', n') ->
+                    liftIO $
                       mapLeft
                         (JuvixError @Core.CoreError)
                         <$> doEvalIO False defaultLoc tab' n'

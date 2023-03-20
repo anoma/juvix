@@ -73,6 +73,7 @@ runGebPipeline PipelineArg {..} = do
 runAsmPipeline :: (Members '[Embed IO, App] r) => PipelineArg -> Sem r ()
 runAsmPipeline PipelineArg {..} = do
   asmFile <- Compile.outputFile _pipelineArgOptions _pipelineArgFile
-  let tab' = coreToAsm _pipelineArgInfoTable
-      code = Pretty.ppPrint tab' tab'
+  r <- runError @JuvixError (coreToAsm _pipelineArgInfoTable)
+  tab' <- getRight r
+  let code = Pretty.ppPrint tab' tab'
   embed $ TIO.writeFile (toFilePath asmFile) code
