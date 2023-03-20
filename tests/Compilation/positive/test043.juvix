@@ -1,0 +1,16 @@
+-- builtin trace
+module test043;
+
+builtin nat type Nat :=
+  | zero : Nat
+  | suc : Nat → Nat;
+
+builtin string axiom String : Type;
+
+builtin trace axiom trace : {A : Type} → {B : Type} → A → B → B;
+
+f : Nat;
+f := trace "a" 1;
+
+main : Nat;
+main := f;

@@ -251,5 +251,15 @@ tests =
       "Pattern matching nullary constructor"
       $(mkRelDir ".")
       $(mkRelFile "test040.juvix")
-      $(mkRelFile "out/test040.out")
+      $(mkRelFile "out/test040.out"),
+    posTest
+      "Builtin string-to-nat"
+      $(mkRelDir ".")
+      $(mkRelFile "test042.juvix")
+      $(mkRelFile "out/test042.out"),
+    posTest
+      "Builtin trace"
+      $(mkRelDir ".")
+      $(mkRelFile "test043.juvix")
+      $(mkRelFile "out/test043.out")
   ]

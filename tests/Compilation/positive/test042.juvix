@@ -1,0 +1,17 @@
+-- builtin string-to-nat
+module test042;
+
+builtin bool type Bool :=
+  | true : Bool
+  | false : Bool;
+
+builtin string axiom String : Type;
+
+builtin nat type Nat :=
+  | zero : Nat
+  | suc : Nat → Nat;
+
+builtin string-to-nat axiom stringToNat : String -> Nat;
+
+main : Nat;
+main := stringToNat "1";
