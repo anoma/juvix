@@ -31,6 +31,7 @@ jobs:
       - uses: actions/checkout@v3
       - uses: mrkkrp/ormolu-action@v10
         with:
+          version: 0.5.2.0
           extra-args: >-
             --ghc-opt -XDerivingStrategies --ghc-opt -XImportQualifiedPost
             --ghc-opt -XMultiParamTypeClasses --ghc-opt -XStandaloneDeriving
@@ -44,7 +45,7 @@ jobs:
         with:
           clang-format-version: '15'
           check-path: runtime/src
-          
+
   pre-commit:
     runs-on: ubuntu-latest
     steps:
@@ -166,7 +167,7 @@ jobs:
         with:
           path: main/.stack-work
           key: '${{ steps.stack-work-cache.outputs.cache-primary-key }}'
-      
+
       - name: Save cache .stack
         uses: actions/cache/save@v3
         if: always()
@@ -281,7 +282,7 @@ jobs:
           ghc-version: 9.2.6
           enable-stack: true
           stack-version: latest
-          
+
       - name: Set homebrew LLVM CC and LIBTOOL vars (macOS)
         run: |
           echo "CC=$(brew --prefix llvm)/bin/clang" >> $GITHUB_ENV
