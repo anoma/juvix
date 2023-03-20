@@ -63,10 +63,12 @@ coreEvalAssertion mainFile expectedFile trans testTrans step = do
       step "Compare expected and actual program output"
       expected <- TIO.readFile (toFilePath expectedFile)
       assertEqDiffText ("Check: EVAL output = " <> toFilePath expectedFile) "" expected
-    Right (tabIni, Just node) -> do
-      let tab = applyTransformations trans (setupMainFunction tabIni node)
-      testTrans tab
-      coreEvalAssertion' tab mainFile expectedFile step
+    Right (tabIni, Just node) ->
+      case run $ runError $ applyTransformations trans (setupMainFunction tabIni node) of
+        Left err -> assertFailure (show (pretty (fromJuvixError @GenericError err)))
+        Right tab -> do
+          testTrans tab
+          coreEvalAssertion' tab mainFile expectedFile step
 
 coreEvalErrorAssertion :: Path Abs File -> (String -> IO ()) -> Assertion
 coreEvalErrorAssertion mainFile step = do

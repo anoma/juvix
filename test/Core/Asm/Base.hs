@@ -49,5 +49,8 @@ coreAsmAssertion mainFile expectedFile step = do
       assertEqDiffText ("Check: EVAL output = " <> toFilePath expectedFile) "" expected
     Right (tabIni, Just node) -> do
       step "Translate"
-      let tab = Asm.fromCore $ Stripped.fromCore $ toStripped $ setupMainFunction tabIni node
-      Asm.asmRunAssertion' tab expectedFile step
+      case run $ runError $ toStripped $ setupMainFunction tabIni node of
+        Left err -> assertFailure (show (pretty (fromJuvixError @GenericError err)))
+        Right tab' -> do
+          let tab = Asm.fromCore $ Stripped.fromCore $ tab'
+          Asm.asmRunAssertion' tab expectedFile step

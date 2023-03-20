@@ -11,8 +11,9 @@ import Juvix.Compiler.Core.Pipeline qualified as Core
 runCommand :: (Members '[Embed IO, App] r) => EvalOptions -> Sem r ()
 runCommand opts@EvalOptions {..} = do
   Core.CoreResult {..} <- runPipeline _evalInputFile upToCore
-  let tab = Core.toEval _coreResultTable
-      evalNode =
+  r <- runError @JuvixError $ Core.toEval _coreResultTable
+  tab <- getRight r
+  let evalNode =
         if
             | isJust (_evalSymbolName) -> getNode' tab (selInfo tab)
             | otherwise -> getNode' tab (mainInfo tab)

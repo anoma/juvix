@@ -253,6 +253,11 @@ tests =
       $(mkRelFile "test040.juvix")
       $(mkRelFile "out/test040.out"),
     posTest
+      "Use a builtin inductive in an inductive constructor"
+      $(mkRelDir ".")
+      $(mkRelFile "test041.juvix")
+      $(mkRelFile "out/test041.out"),
+    posTest
       "Builtin string-to-nat"
       $(mkRelDir ".")
       $(mkRelFile "test042.juvix")

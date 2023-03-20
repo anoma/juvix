@@ -68,7 +68,6 @@ fromAbstract abstractResults = do
       abstractResults
         ^. Abstract.abstractResultEntryPoint
           . E.entryPointNoTermination
-    depInfo :: NameDependencyInfo
     depInfo = buildDependencyInfo (abstractResults ^. Abstract.resultModules) (abstractResults ^. Abstract.resultExports)
 
 fromAbstractExpression :: Members '[NameIdGen] r => Abstract.Expression -> Sem r Expression

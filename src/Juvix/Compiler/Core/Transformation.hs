@@ -9,7 +9,9 @@ module Juvix.Compiler.Core.Transformation
 where
 
 import Juvix.Compiler.Core.Data.TransformationId
+import Juvix.Compiler.Core.Error
 import Juvix.Compiler.Core.Transformation.Base
+import Juvix.Compiler.Core.Transformation.CheckGeb
 import Juvix.Compiler.Core.Transformation.ComputeTypeInfo
 import Juvix.Compiler.Core.Transformation.ConvertBuiltinTypes
 import Juvix.Compiler.Core.Transformation.DisambiguateNames
@@ -23,21 +25,22 @@ import Juvix.Compiler.Core.Transformation.RemoveTypeArgs
 import Juvix.Compiler.Core.Transformation.TopEtaExpand
 import Juvix.Compiler.Core.Transformation.UnrollRecursion
 
-applyTransformations :: [TransformationId] -> InfoTable -> InfoTable
-applyTransformations ts tbl = foldl' (flip appTrans) tbl ts
+applyTransformations :: forall r. Member (Error JuvixError) r => [TransformationId] -> InfoTable -> Sem r InfoTable
+applyTransformations ts tbl = foldl' (\acc tid -> acc >>= appTrans tid) (return tbl) ts
   where
-    appTrans :: TransformationId -> InfoTable -> InfoTable
+    appTrans :: TransformationId -> InfoTable -> Sem r InfoTable
     appTrans = \case
-      LambdaLetRecLifting -> lambdaLetRecLifting
-      LetRecLifting -> letRecLifting
-      Identity -> identity
-      TopEtaExpand -> topEtaExpand
-      RemoveTypeArgs -> removeTypeArgs
-      MoveApps -> moveApps
-      NatToInt -> natToInt
-      ConvertBuiltinTypes -> convertBuiltinTypes
-      ComputeTypeInfo -> computeTypeInfo
-      UnrollRecursion -> unrollRecursion
-      MatchToCase -> matchToCase
-      EtaExpandApps -> etaExpansionApps
-      DisambiguateNames -> disambiguateNames
+      LambdaLetRecLifting -> return . lambdaLetRecLifting
+      LetRecLifting -> return . letRecLifting
+      Identity -> return . identity
+      TopEtaExpand -> return . topEtaExpand
+      RemoveTypeArgs -> return . removeTypeArgs
+      MoveApps -> return . moveApps
+      NatToInt -> return . natToInt
+      ConvertBuiltinTypes -> return . convertBuiltinTypes
+      ComputeTypeInfo -> return . computeTypeInfo
+      UnrollRecursion -> return . unrollRecursion
+      MatchToCase -> return . matchToCase
+      EtaExpandApps -> return . etaExpansionApps
+      DisambiguateNames -> return . disambiguateNames
+      CheckGeb -> mapError (JuvixError @CoreError) . checkGeb

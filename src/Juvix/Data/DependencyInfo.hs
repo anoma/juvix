@@ -55,3 +55,6 @@ isReachable depInfo n = HashSet.member n (depInfo ^. depInfoReachable)
 
 buildSCCs :: Ord n => DependencyInfo n -> [SCC n]
 buildSCCs = Graph.stronglyConnComp . (^. depInfoEdgeList)
+
+isCyclic :: Ord n => DependencyInfo n -> Bool
+isCyclic = any (\case CyclicSCC _ -> True; _ -> False) . buildSCCs
