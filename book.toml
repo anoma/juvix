@@ -3,15 +3,49 @@ title = "The Juvix Book"
 authors =  [ "Jonathan Prieto-Cubides" , "Jan Mas Rovira" , "Paul Cadman" , "Lukasz Czajka" ]
 language = "en"
 multilingual = false
-src = "docs/md/"
+src = "docs"
 
 [build]
-build-dir = "_docs"
 create-missing = true
 
-[output.html]
-mathjax-support = true
+[preprocessor.index]
 
-[preprocessor.toc]
-command = "mdbook-toc"
-renderer = ["html"]
+[preprocessor.links]
+
+[preprocessor.pagetoc]
+
+[preprocessor.katex]
+renderers = ["html"]
+static-css = false
+include-src = false
+block-delimiter = {left = "$$", right = "$$"}
+inline-delimiter = {left = "$", right = "$"}
+macros = "theme/latex-macros.txt"
+
+[output.katex]
+
+[output.html]
+default-theme = "light"
+preferred-dark-theme = "Ayu"
+copy-fonts = true
+additional-css = ["theme/pagetoc.css"]
+additional-js = ["theme/pagetoc.js","assets/images/tara-magicien.png", "assets/images/tara-seating.svg", "assets/images/tara-smiling.png", "assets/images/tara-smiling.svg", "assets/images/tara-teaching.png", "assets/images/tara-teaching.svg", "assets/js/highlight.js", "assets/js/tex-chtml.js" ]
+no-section-label = false
+git-repository-url = "https://github.com/anoma/juvix"
+git-repository-icon = "fa-github"
+
+[output.html.fold]
+enable = true    # whether or not to enable section folding
+level = 0         # the depth to start folding
+
+[output.html.search]
+enable = true            # enables the search feature
+limit-results = 15       # maximum number of search results
+teaser-word-count = 30   # number of words used for a search result teaser
+use-boolean-and = true   # multiple search terms must all match
+boost-title = 2          # ranking boost factor for matches in headers
+boost-hierarchy = 1      # ranking boost factor for matches in page names
+boost-paragraph = 1      # ranking boost factor for matches in text
+expand = true            # partial words will match longer terms
+heading-split-level = 2  # link results to heading levels
+copy-js = true           # include Javascript code for search

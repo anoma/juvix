@@ -13,7 +13,7 @@ category:        Compilers/Interpreters
 github:          anoma/juvix
 
 extra-source-files:
-- README.org
+- README.md
 - assets/css/*.css
 - assets/js/*.js
 - assets/images/*.svg

@@ -65,7 +65,8 @@ agda2hs/
 docs/*.html
 *.cabal
 /src/Juvix/Utils/OldParser.hs
-CHANGELOG.md
+docs/changelog.ord
+docs/README.md
 UPDATES-FOR-CHANGELOG.org
 .juvix-build
 
@@ -74,16 +75,13 @@ UPDATES-FOR-CHANGELOG.org
 *.s
 *.wasm
 *.exe
-docs/md/
-_docs
-docs/**/*.md
+book/*
 **/html/*
 
 *.cmi
 *.cmx
 *.cmo
 .history
-docs/org/README.org
 # Binary files (produced by `make check`)
 examples/milestone/HelloWorld/HelloWorld
 hie.yaml

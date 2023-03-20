@@ -1,2 +1,0 @@
-
-The [[https://anoma.github.io/juvix-stdlib/][Juvix standard library]] contains common functions that can be used in Juvix programs.
