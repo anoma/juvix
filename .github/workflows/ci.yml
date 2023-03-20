@@ -110,7 +110,7 @@ jobs:
           echo "WASI_SYSROOT_PATH=$GITHUB_WORKSPACE/wasi-sysroot" >> $GITHUB_ENV
 
       - name: Install the latest Wasmer version
-        uses: jaxxstorm/action-install-gh-release@1.10.0
+        uses: jaxxstorm/action-install-gh-release@v1.10.0
         with:
           repo: wasmerio/wasmer
           tag: latest
@@ -312,7 +312,7 @@ jobs:
           echo "WASI_SYSROOT_PATH=$GITHUB_WORKSPACE/wasi-sysroot" >> $GITHUB_ENV
 
       - name: Install the latest Wasmer version
-        uses: jaxxstorm/action-install-gh-release@1.10.0
+        uses: jaxxstorm/action-install-gh-release@v1.10.0
         with:
           repo: wasmerio/wasmer
           tag: latest
@@ -344,7 +344,7 @@ jobs:
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Install Smoke
-        uses: jaxxstorm/action-install-gh-release@1.10.0
+        uses: jaxxstorm/action-install-gh-release@v1.10.0
         with:
           repo: jonaprieto/smoke
           tag: latest
