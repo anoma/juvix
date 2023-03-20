@@ -30,6 +30,15 @@ convertNode = dmap go
                           _caseBranches,
                       _caseDefault = fmap (`mkApps` args) _caseDefault
                     }
+              NBlt BuiltinApp {..}
+                | _builtinAppOp == OpFail ->
+                    tgt
+              NBlt blt@BuiltinApp {..}
+                | _builtinAppOp == OpTrace ->
+                    case _builtinAppArgs ++ map snd args of
+                      [arg1] -> NBlt blt {_builtinAppArgs = [arg1]}
+                      arg1 : arg2 : args' -> NBlt blt {_builtinAppArgs = [arg1, mkApps' arg2 args']}
+                      _ -> impossible
               _ -> node
       _ -> node
 
