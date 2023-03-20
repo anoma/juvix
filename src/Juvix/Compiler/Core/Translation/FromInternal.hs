@@ -84,12 +84,7 @@ fromInternal i = do
     f :: (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable] r) => Sem r ()
     f = do
       let resultModules = toList (i ^. InternalTyped.resultModules)
-      runReader (Internal.buildTable resultModules) (mapM_ coreModule resultModules)
-      where
-        coreModule :: (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable] r) => Internal.Module -> Sem r ()
-        coreModule m = do
-          registerInductiveDefs m
-          registerFunctionDefs m
+      runReader (Internal.buildTable resultModules) (mapM_ goModule resultModules)
 
 fromInternalExpression :: CoreResult -> Internal.Expression -> Sem r Node
 fromInternalExpression res exp = do
@@ -108,48 +103,19 @@ fromInternalExpression res exp = do
           )
       )
 
-registerInductiveDefs ::
+goModule ::
   forall r.
   (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable] r) =>
   Internal.Module ->
   Sem r ()
-registerInductiveDefs m = registerInductiveDefsBody (m ^. Internal.moduleBody)
-
-registerInductiveDefsBody ::
-  forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable] r) =>
-  Internal.ModuleBody ->
-  Sem r ()
-registerInductiveDefsBody body = mapM_ go (body ^. Internal.moduleStatements)
+goModule m = mapM_ go (m ^. Internal.moduleBody . Internal.moduleStatements)
   where
     go :: Internal.Statement -> Sem r ()
     go = \case
       Internal.StatementInductive d -> goInductiveDef d
-      Internal.StatementAxiom {} -> return ()
-      Internal.StatementFunction {} -> return ()
-      Internal.StatementInclude i ->
-        mapM_ go (i ^. Internal.includeModule . Internal.moduleBody . Internal.moduleStatements)
-
-registerFunctionDefs ::
-  forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable] r) =>
-  Internal.Module ->
-  Sem r ()
-registerFunctionDefs m = registerFunctionDefsBody (m ^. Internal.moduleBody)
-
-registerFunctionDefsBody ::
-  forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable] r) =>
-  Internal.ModuleBody ->
-  Sem r ()
-registerFunctionDefsBody body = mapM_ go (body ^. Internal.moduleStatements)
-  where
-    go :: Internal.Statement -> Sem r ()
-    go = \case
-      Internal.StatementFunction f -> goMutualBlock f
       Internal.StatementAxiom a -> goAxiomInductive a >> goAxiomDef a
-      Internal.StatementInclude i -> mapM_ go (i ^. Internal.includeModule . Internal.moduleBody . Internal.moduleStatements)
-      _ -> return ()
+      Internal.StatementFunction f -> goMutualBlock f
+      Internal.StatementInclude i -> goModule (i ^. Internal.includeModule)
 
 goInductiveDef ::
   forall r.

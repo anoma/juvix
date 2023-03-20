@@ -1,0 +1,13 @@
+-- Use a builtin inductive in an inductive constructor
+module test041;
+
+open import Stdlib.Prelude;
+
+type BoxedString :=
+  | boxed : String -> BoxedString;
+
+printBoxedString : BoxedString -> IO;
+printBoxedString (boxed s) := printStringLn s;
+
+main : IO;
+main := printBoxedString (boxed "abc");
