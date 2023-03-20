@@ -17,7 +17,8 @@ DEMO_EXAMPLE=examples/demo/Demo.juvix
 MAKEAUXFLAGS?=-s
 MAKE=make ${MAKEAUXFLAGS}
 METAFILES:=README.md \
-		   changelog.md
+		   CHANGELOG.md \
+		   CONTRIBUTING.md
 
 ifeq ($(UNAME), Darwin)
 	THREADS := $(shell sysctl -n hw.logicalcpu)

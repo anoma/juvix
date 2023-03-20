@@ -65,9 +65,9 @@ agda2hs/
 docs/*.html
 *.cabal
 /src/Juvix/Utils/OldParser.hs
-docs/changelog.md
+docs/CHANGELOG.md
+docs/CONTRIBUTING
 docs/README.md
-UPDATES-FOR-CHANGELOG.org
 .juvix-build
 
 # C Code generation

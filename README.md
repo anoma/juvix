@@ -24,7 +24,10 @@ alt="pages-build-deployment" /></a>
 <img align="right" width="270" alt="Juvix Mascot" src="assets/images/tara-seating.svg" />
 </a>
 
-Juvix is an open-source, constantly evolving functional programming language designed for writing privacy-preserving decentralized applications. It enables developers to write smart contracts and decentralized applications (dApps) on blockchain platforms in a secure and efficient way.
+Juvix is an open-source, constantly evolving functional programming language
+designed for writing privacy-preserving decentralized applications. It enables
+developers to write smart contracts and decentralized applications on blockchain
+platforms in a secure and efficient way.
 
 ## Getting Started
 
@@ -64,7 +67,7 @@ If you're interested in Juvix, you may also want to explore the following relate
 | Project | Description |
 | --- | --- |
 | [GEB](https://github.com/anoma/geb) | Intermediate language for writing compilers and one of the Juvix backends. |
-| [VampIR](https://github.com/anoma/vamp-ir) | Proof-system-agnostic language for writing arithmetic circuit and one of the GEB's backend.|
+| [VampIR](https://github.com/anoma/vamp-ir) | Proof-system-agnostic language for writing arithmetic circuit and one of the GEB backends.|
 
 ## Resources
 
@@ -73,22 +76,22 @@ Here is a summary of resources to help you learn more about Juvix:
 <!-- prettier-ignore -->
 | Resource | Description |
 | --- | --- |
-| [Official website](https://juvix.org) | The official website of Juvix, where you can find documentation, tutorials, and community resources. |
+| [Official website](https://juvix.org) | The official website of Juvix, where you can find documentation, changelog, tutorials, and community resources. |
 | [GitHub repository](https://github.com/anoma/juvix) | The official GitHub repository of Juvix, where you can find the source code and contribute to the project. |
 | [Discord community](https://discord.gg/PfaaFVErHt) | The Juvix community on Discord is a space where you can connect with the developers behind Juvix and other members of the community who are passionate about privacy-preserving decentralized applications. It's a place where you can ask for help with using Juvix, discuss the latest features and updates, and get involved in the project. |
 | [Twitter](https://twitter.com/juvixlang) | The official Twitter account of Juvix, where you can stay up-to-date with the latest news and announcements. |
 | [Standard library](https://github.com/anoma/juvix-stdlib) | The Juvix standard library is a collection of pre-written functions and modules that come bundled with the Juvix programming language. It provides developers with a set of common and useful tools that they can use to build their Juvix programs without having to write everything from scratch. |
 | [VSCode extension](https://github.com/anoma/vscode-juvix) | Support for the Juvix programming language with features such as syntax highlighting, error checking and many more directly in the VSCode editor.
 | [Emacs Juvix mode](https://github.com/anoma/juvix-mode) | A major mode for Emacs that provides support for writing Juvix programs. |
-| [Juvix Standard Lib Codespace](https://github.com/codespaces-templates/juvix-stdlib) | A web-based development environment for the Juvix standard library on GitHub. It provides a pre-configured workspace with the Juvix standard library installed and ready to use, so you can start using the library in your projects. Some examples of Juvix programs are also loaded in this environment. |
-| [Juvix Github Codespace](https://github.com/codespaces-templates/juvix) | This codespace provides a pre-configured workspace with Juvix and the Haskell toolchain installed. Everything is ready to use, so you can start developing/inspecting the Juvix compiler right away. |
+| [Juvix Standard Lib Codespace](https://github.com/codespaces/new?hide_repo_select=true&ref=main&repo=102404734&machine=standardLinux32gb&location=WestEurope) | A web-based development environment for the Juvix standard library on GitHub. It provides a pre-configured workspace with the Juvix standard library installed and ready to use, so you can start using the library in your projects. Some examples of Juvix programs are also loaded in this environment. |
+| [Juvix Github Codespace](https://github.com/codespaces/new?hide_repo_select=true&ref=main&repo=102404734&machine=standardLinux32gb&location=WestEurope) | This codespace provides a pre-configured workspace with Juvix and the Haskell toolchain installed. Everything is ready to use, so you can start developing/inspecting the Juvix compiler right away. |
 | [Homebrew Juvix formula](https://github.com/anoma/homebrew-juvix) | A formula for Homebrew, a package manager for macOS and Linux, that allows you to easily install Juvix on your system. |
 | [Juvix Nightly builds](https://github.com/anoma/nightly-juvix-builds) | Users can download and use these nightly builds to experiment with the latest changes to the Juvix Compiler. Nightly builds may contain new features, bug fixes, and other improvements to Juvix that are still in development and have not yet been released in an official version.|
 
 ## Contributing
 
-If you're interested in contributing to Juvix, please see the contributing guidelines for more information. We welcome contributions of all kinds, from bug reports and feature requests to code contributions and documentation improvements.
+If you're interested in contributing to Juvix, please see the [contributing guidelines](CONTRIBUTING.md) for more information. We welcome contributions of all kinds, from bug reports and feature requests to code contributions and documentation improvements.
 
 ## License
 
-Juvix is open-source software released under the GNU General Public License v3.0.
+Juvix is open-source software released under the GNU General Public License v3.0. See the [LICENSE](LICENSE) file for more information.
