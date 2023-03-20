@@ -216,14 +216,26 @@ jobs:
           path: main/.stack-work
           key: ${{ runner.os }}-stack-work-
 
-      - uses: r-lib/actions/setup-pandoc@v2
+
+      - name: Install mdbook-pagetoc
+        uses: baptiste0928/cargo-install@v1
         with:
-          pandoc-version: 2.19.2
+          crate: mdbook-pagetoc
+
+      - name: Install mdbook-katex
+        uses: baptiste0928/cargo-install@v1
+        with:
+          crate: mdbook-katex
+
+      - name: Install mdbook-linkcheck
+        uses: baptiste0928/cargo-install@v1
+        with:
+          crate: mdbook-linkcheck
 
       - name: MDBook setup
         uses: peaceiris/actions-mdbook@v1
         with:
-          mdbook-version: 0.4.22
+          mdbook-version: "latest"
 
       - name: Workaround runner image issue
         # https://github.com/actions/runner-images/issues/7061
@@ -254,7 +266,7 @@ jobs:
       - name: Generate Markdown files for each Org file
         run: |
           cd main
-          make markdown-docs
+          make docs
 
       - name: Generate HTML files from examples
         run: |
@@ -268,7 +280,7 @@ jobs:
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: '${{ secrets.GITHUB_TOKEN }}'
-          publish_dir: main/_docs
+          publish_dir: main/book/html
           enable_jekyll: false
           cname: docs.juvix.org
 
