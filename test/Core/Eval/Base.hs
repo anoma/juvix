@@ -101,6 +101,6 @@ doEval ::
   Node ->
   IO (Either CoreError Node)
 doEval f hout tab node =
-  catchEvalErrorIO defaultLoc (hEvalIO stdin hout (tab ^. identContext) [] node)
+  catchEvalErrorIO defaultLoc (hEvalIO hout stdin hout (tab ^. identContext) [] node)
   where
     defaultLoc = singletonInterval (mkInitialLoc f)

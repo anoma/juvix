@@ -8,8 +8,8 @@ module Juvix.Compiler.Core.Evaluator where
 
 import Control.Exception qualified as Exception
 import Data.HashMap.Strict qualified as HashMap
-import Debug.Trace qualified as Debug
 import GHC.Conc qualified as GHC
+import GHC.IO (unsafePerformIO)
 import GHC.Show qualified as S
 import Juvix.Compiler.Core.Data.InfoTable
 import Juvix.Compiler.Core.Error (CoreError (..))
@@ -48,8 +48,8 @@ instance Exception.Exception EvalError
 -- | `eval ctx env n` evalues a node `n` whose all free variables point into
 -- `env`. All nodes in `ctx` must be closed. All nodes in `env` must be values.
 -- Invariant for values v: eval ctx env v = v
-eval :: IdentContext -> Env -> Node -> Node
-eval !ctx !env0 = convertRuntimeNodes . eval' env0
+eval :: Handle -> IdentContext -> Env -> Node -> Node
+eval herr ctx env0 = convertRuntimeNodes . eval' env0
   where
     evalError :: Text -> Node -> a
     evalError msg node = Exception.throw (EvalError msg (Just node))
@@ -149,8 +149,8 @@ eval !ctx !env0 = convertRuntimeNodes . eval' env0
                 evalError "string to integer: not an integer" n
           _ ->
             evalError "string conversion: argument not a string" n
-      OpFail -> unary $ \msg -> Exception.throw (EvalError (fromString ("failure: " ++ printNode (eval' env msg))) Nothing)
-      OpTrace -> binary $ \msg x -> Debug.trace (printNode (eval' env msg)) (eval' env x)
+      OpFail -> unary $ \msg -> Exception.throw (EvalError ("failure: " <> printNode (eval' env msg)) Nothing)
+      OpTrace -> binary $ \msg x -> unsafePerformIO (hPutStrLn herr (printNode (eval' env msg)) >> return (eval' env x))
       where
         err :: Text -> a
         err msg = evalError msg n
@@ -206,10 +206,10 @@ eval !ctx !env0 = convertRuntimeNodes . eval' env0
       v -> evalError "not an integer" v
     {-# INLINE integerFromNode #-}
 
-    printNode :: Node -> String
+    printNode :: Node -> Text
     printNode = \case
-      NCst (Constant _ (ConstString s)) -> fromText s
-      v -> fromText $ ppPrint v
+      NCst (Constant _ (ConstString s)) -> s
+      v -> ppPrint v
 
     lookupContext :: Node -> Symbol -> Node
     lookupContext n sym =
@@ -219,15 +219,15 @@ eval !ctx !env0 = convertRuntimeNodes . eval' env0
     {-# INLINE lookupContext #-}
 
 -- Evaluate `node` and interpret the builtin IO actions.
-hEvalIO :: Handle -> Handle -> IdentContext -> Env -> Node -> IO Node
-hEvalIO hin hout ctx env node =
-  let node' = eval ctx env node
+hEvalIO :: Handle -> Handle -> Handle -> IdentContext -> Env -> Node -> IO Node
+hEvalIO herr hin hout ctx env node =
+  let node' = eval herr ctx env node
    in case node' of
         NCtr (Constr _ (BuiltinTag TagReturn) [x]) ->
           return x
         NCtr (Constr _ (BuiltinTag TagBind) [x, f]) -> do
-          x' <- hEvalIO hin hout ctx env x
-          hEvalIO hin hout ctx env (mkApp Info.empty f x')
+          x' <- hEvalIO herr hin hout ctx env x
+          hEvalIO herr hin hout ctx env (mkApp Info.empty f x')
         NCtr (Constr _ (BuiltinTag TagWrite) [NCst (Constant _ (ConstString s))]) -> do
           hPutStr hout s
           return unitNode
@@ -243,7 +243,7 @@ hEvalIO hin hout ctx env node =
     unitNode = mkConstr (Info.singleton (NoDisplayInfo ())) (BuiltinTag TagTrue) []
 
 evalIO :: IdentContext -> Env -> Node -> IO Node
-evalIO = hEvalIO stdin stdout
+evalIO = hEvalIO stderr stdin stdout
 
 -- | Catch EvalError and convert it to CoreError. Needs a default location in case
 -- no location is available in EvalError.

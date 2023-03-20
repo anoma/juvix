@@ -29,7 +29,7 @@ doEval ::
   Core.Node ->
   Sem r (Either Core.CoreError Core.Node)
 doEval noIO loc tab node
-  | noIO = embed $ Core.catchEvalError loc (Core.eval (tab ^. Core.identContext) [] node)
+  | noIO = embed $ Core.catchEvalError loc (Core.eval stderr (tab ^. Core.identContext) [] node)
   | otherwise = embed $ Core.catchEvalErrorIO loc (Core.evalIO (tab ^. Core.identContext) [] node)
 
 doEvalIO ::
