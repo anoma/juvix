@@ -49,3 +49,12 @@ boost-paragraph = 1      # ranking boost factor for matches in text
 expand = true            # partial words will match longer terms
 heading-split-level = 2  # link results to heading levels
 copy-js = true           # include Javascript code for search
+
+[output.linkcheck]
+follow-web-links = false
+traverse-parent-directories = false
+exclude = [ ]
+user-agent = "mdbook-linkcheck-0.4.0"
+cache-timeout = 43200
+[output.linkcheck.http-headers]
+'crates\.io' = ["Accept: text/html"]
