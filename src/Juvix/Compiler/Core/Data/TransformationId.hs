@@ -17,7 +17,7 @@ data TransformationId
   | EtaExpandApps
   | DisambiguateNames
   | CheckGeb
-  deriving stock (Data, Bounded, Enum)
+  deriving stock (Data, Bounded, Enum, Show)
 
 data PipelineId
   = PipelineEval

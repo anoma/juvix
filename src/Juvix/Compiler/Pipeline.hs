@@ -21,6 +21,7 @@ import Juvix.Compiler.Core qualified as Core
 import Juvix.Compiler.Core.Translation.Stripped.FromCore qualified as Stripped
 import Juvix.Compiler.Internal qualified as Internal
 import Juvix.Compiler.Pipeline.Artifacts
+import Juvix.Compiler.Pipeline.Artifacts (runBuiltinsArtifacts, runNameIdGenArtifacts)
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Compiler.Pipeline.ExpressionContext
 import Juvix.Compiler.Pipeline.Setup
@@ -31,63 +32,70 @@ import Juvix.Prelude
 type PipelineEff = '[PathResolver, Reader EntryPoint, Files, NameIdGen, Builtins, Error JuvixError, Embed IO]
 
 arityCheckExpression ::
-  Members '[Error JuvixError, NameIdGen, Builtins] r =>
+  Members '[Error JuvixError, State Artifacts] r =>
   Path Abs File ->
   ExpressionContext ->
   Text ->
   Sem r Internal.Expression
 arityCheckExpression fp ctx txt =
-  Parser.expressionFromTextSource fp txt
-    >>= Scoper.scopeCheckExpression (ctx ^. contextScoperTable) (mainModuleScope ctx)
-    >>= Abstract.fromConcreteExpression
-    >>= Internal.fromAbstractExpression
-    >>= Internal.arityCheckExpression (ctx ^. contextInternalResult)
+  ( runNameIdGenArtifacts
+      . runBuiltinsArtifacts
+  )
+    $ Parser.expressionFromTextSource fp txt
+      >>= Scoper.scopeCheckExpression (ctx ^. contextScoperTable) (mainModuleScope ctx)
+      >>= Abstract.fromConcreteExpression
+      >>= Internal.fromAbstractExpression
+      >>= Internal.arityCheckExpression (ctx ^. contextInternalResult)
 
 inferExpression ::
-  Members '[Error JuvixError, NameIdGen, Builtins] r =>
+  Members '[Error JuvixError, State Artifacts] r =>
   Path Abs File ->
   ExpressionContext ->
   Text ->
   Sem r Internal.Expression
 inferExpression fp ctx txt =
-  arityCheckExpression fp ctx txt
-    >>= Internal.inferExpressionType (ctx ^. contextInternalTypedResult)
+  ( runNameIdGenArtifacts
+      . runBuiltinsArtifacts
+  )
+    $ arityCheckExpression fp ctx txt
+      >>= Internal.inferExpressionType (ctx ^. contextInternalTypedResult)
 
 compileExpression ::
-  Members '[Error JuvixError, NameIdGen, Builtins] r =>
+  Members '[Error JuvixError, State Artifacts] r =>
   Path Abs File ->
   ExpressionContext ->
   Text ->
   Sem r Core.Node
 compileExpression fp ctx txt =
-  arityCheckExpression fp ctx txt
-    >>= Internal.typeCheckExpression (ctx ^. contextInternalTypedResult)
-    >>= Core.fromInternalExpression (ctx ^. contextCoreResult)
+  ( runNameIdGenArtifacts
+      . runBuiltinsArtifacts
+  )
+    $ arityCheckExpression fp ctx txt
+      >>= Internal.typeCheckExpression (ctx ^. contextInternalTypedResult)
+      >>= (\typed -> trace ("TYPED " <> Internal.ppTrace typed) $ Core.fromInternalExpression (ctx ^. contextCoreResult) typed)
 
 compileExpressionIO ::
+  Members '[Error JuvixError, State Artifacts, Embed IO] r =>
   Path Abs File ->
   ExpressionContext ->
-  BuiltinsState ->
   Text ->
-  IO (Either JuvixError Core.Node)
-compileExpressionIO fp ctx builtinsState txt =
-  runM
-    . runError
-    . runNameIdGen
-    . (fmap snd . runBuiltins builtinsState)
+  Sem r (Either JuvixError Core.Node)
+compileExpressionIO fp ctx txt =
+  runError
+    . runNameIdGenArtifacts
+    . runBuiltinsArtifacts
     $ compileExpression fp ctx txt
 
 inferExpressionIO ::
+  Members '[State Artifacts, Embed IO] r =>
   Path Abs File ->
   ExpressionContext ->
-  BuiltinsState ->
   Text ->
-  IO (Either JuvixError Internal.Expression)
-inferExpressionIO fp ctx builtinsState txt =
-  runM
-    . runError
-    . runNameIdGen
-    . (fmap snd . runBuiltins builtinsState)
+  Sem r (Either JuvixError Internal.Expression)
+inferExpressionIO fp ctx txt =
+  runError
+    . runNameIdGenArtifacts
+    . runBuiltinsArtifacts
     $ inferExpression fp ctx txt
 
 --------------------------------------------------------------------------------
@@ -99,8 +107,7 @@ typecheck ::
   EntryPoint ->
   Sem r Internal.InternalTypedResult
 typecheck =
-  do
-    Concrete.fromSource
+  Concrete.fromSource
     >=> Abstract.fromConcrete
     >=> Internal.fromAbstract
     >=> Internal.arityChecking
@@ -197,33 +204,25 @@ coreToGeb spec = Core.toGeb >=> return . uncurry (Geb.toResult spec) . Geb.fromC
 -- Run pipeline
 --------------------------------------------------------------------------------
 
-runIOEither :: forall a. BuiltinsState -> EntryPoint -> Sem PipelineEff a -> IO (Either JuvixError (Artifacts, a))
-runIOEither builtinsState entry =
+-- | It returns `ResolverState` so that we can retrieve the `juvix.yaml` files,
+-- which we require for `Sope` tests.
+runIOEither :: forall a. EntryPoint -> Sem PipelineEff a -> IO (Either JuvixError (ResolverState, a))
+runIOEither entry =
   runM
     . runError
-    . fmap makeArtifacts
-    . runBuiltins builtinsState
-    . runNameIdGen
+    . evalTopBuiltins
+    . evalTopNameIdGen
     . runFilesIO
     . runReader entry
     . runPathResolverPipe
-  where
-    makeArtifacts :: (BuiltinsState, (ResolverState, any)) -> (Artifacts, any)
-    makeArtifacts (builtins, (resolver, a)) =
-      ( Artifacts
-          { _artifactBuiltins = builtins,
-            _artifactResolver = resolver
-          },
-        a
-      )
 
-runIO :: BuiltinsState -> GenericOptions -> EntryPoint -> Sem PipelineEff a -> IO (Artifacts, a)
-runIO builtinsState opts entry = runIOEither builtinsState entry >=> mayThrow
+runIO :: GenericOptions -> EntryPoint -> Sem PipelineEff a -> IO (ResolverState, a)
+runIO opts entry = runIOEither entry >=> mayThrow
   where
     mayThrow :: Either JuvixError r -> IO r
     mayThrow = \case
-      Left err -> runM $ runReader opts $ printErrorAnsiSafe err >> embed exitFailure
+      Left err -> runM . runReader opts $ printErrorAnsiSafe err >> embed exitFailure
       Right r -> return r
 
-runIO' :: BuiltinsState -> EntryPoint -> Sem PipelineEff a -> IO (Artifacts, a)
-runIO' builtinsState = runIO builtinsState defaultGenericOptions
+runIO' :: EntryPoint -> Sem PipelineEff a -> IO (ResolverState, a)
+runIO' = runIO defaultGenericOptions

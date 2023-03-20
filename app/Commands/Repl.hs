@@ -33,7 +33,7 @@ type ReplS = State.StateT ReplState IO
 type Repl a = HaskelineT ReplS a
 
 data ReplContext = ReplContext
-  { _replContextBuiltins :: BuiltinsState,
+  { _replContextArtifacts :: Artifacts,
     _replContextExpContext :: ExpressionContext,
     _replContextEntryPoint :: EntryPoint
   }

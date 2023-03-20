@@ -15,6 +15,7 @@ import Juvix.Compiler.Internal.Translation.FromAbstract.Data.Context
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking qualified as ArityChecking
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Reachability
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking
+import Juvix.Compiler.Pipeline.Artifacts
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Data.Effect.NameIdGen
 import Juvix.Prelude hiding (fromEither)
@@ -48,34 +49,42 @@ arityCheckExpression InternalResult {..} exp =
     table = buildTableRepl exp _resultModules
 
 typeCheckExpressionType ::
-  (Members '[Error JuvixError, NameIdGen, Builtins] r) =>
+  forall r.
+  (Members '[Error JuvixError, State Artifacts] r) =>
   InternalTypedResult ->
   Expression ->
   Sem r TypedExpression
-typeCheckExpressionType InternalTypedResult {..} exp =
-  mapError (JuvixError @TypeCheckerError)
-    $ evalState _resultFunctions
-      . evalState _resultIdenTypes
-      . runReader table
-      . ignoreOutput @Example
-      . withEmptyVars
-      . runInferenceDef
-    $ do
-      t <- inferExpression' Nothing exp
-      traverseOf typedType strongNormalize t
+typeCheckExpressionType InternalTypedResult {..} exp = do
+  x <-
+    mapError (JuvixError @TypeCheckerError)
+      $ runState @TypesTable _resultIdenTypes
+        . runState _resultFunctions
+        . runBuiltinsArtifacts
+        . runNameIdGenArtifacts
+        . runReader table
+        . ignoreOutput @Example
+        . withEmptyVars
+        . runInferenceDef
+      $ inferExpression' Nothing exp >>= traverseOf typedType strongNormalize
+  helper x
   where
+    helper :: (TypesTable, (FunctionsTable, TypedExpression)) -> Sem r TypedExpression
+    helper (typesTbl, (funsTbl, typedExpr)) = do
+      modify' (over artifactTypes (<> typesTbl))
+      modify' (over artifactFunctions (<> funsTbl))
+      return typedExpr
     table :: InfoTable
     table = buildTableRepl exp _resultModules
 
 typeCheckExpression ::
-  (Members '[Error JuvixError, NameIdGen, Builtins] r) =>
+  (Members '[Error JuvixError, NameIdGen, Builtins, State Artifacts] r) =>
   InternalTypedResult ->
   Expression ->
   Sem r Expression
 typeCheckExpression res exp = (^. typedExpression) <$> typeCheckExpressionType res exp
 
 inferExpressionType ::
-  (Members '[Error JuvixError, NameIdGen, Builtins] r) =>
+  (Members '[Error JuvixError, NameIdGen, Builtins, State Artifacts] r) =>
   InternalTypedResult ->
   Expression ->
   Sem r Expression

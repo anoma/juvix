@@ -614,7 +614,7 @@ fromPatternArg pa = case pa ^. Internal.patternArgName of
       )
 
     getPatternType :: Name -> Sem r Type
-    getPatternType n = asks (fromJust . HashMap.lookup n) >>= goType
+    getPatternType n = asks @InternalTyped.TypesTable (fromJust . HashMap.lookup n) >>= goType
 
     indexedPatternArgs :: [Internal.PatternArg] -> Sem r [Pattern]
     indexedPatternArgs ps = mapM go (zipExact accumPatternVarsNum ps)

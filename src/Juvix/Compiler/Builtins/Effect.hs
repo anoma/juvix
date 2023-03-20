@@ -61,6 +61,12 @@ re = reinterpret $ \case
                 _alreadyDefinedLoc = getLoc n
               }
 
+evalTopBuiltins :: (Member (Error JuvixError) r) => Sem (Builtins ': r) a -> Sem r a
+evalTopBuiltins = fmap snd . runTopBuiltins
+
+runTopBuiltins :: (Member (Error JuvixError) r) => Sem (Builtins ': r) a -> Sem r (BuiltinsState, a)
+runTopBuiltins = runBuiltins iniState
+
 runBuiltins :: (Member (Error JuvixError) r) => BuiltinsState -> Sem (Builtins ': r) a -> Sem r (BuiltinsState, a)
 runBuiltins s = runState s . re
 
