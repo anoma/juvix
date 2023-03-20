@@ -22,19 +22,20 @@ concurrency:
   cancel-in-progress: true
 env:
   STACKFLAGS: '--pedantic --stack-root ${{ github.workspace }}/.stack'
+  SKIP: ormolu
 
 jobs:
-
   ormolu:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: mrkkrp/ormolu-action@v9
+      - uses: mrkkrp/ormolu-action@v10
         with:
           extra-args: >-
             --ghc-opt -XDerivingStrategies --ghc-opt -XImportQualifiedPost
             --ghc-opt -XMultiParamTypeClasses --ghc-opt -XStandaloneDeriving
             --ghc-opt -XTemplateHaskell --ghc-opt -XUnicodeSyntax
+
   clang-format:
     runs-on: ubuntu-latest
     steps:
@@ -43,31 +44,15 @@ jobs:
         with:
           clang-format-version: '15'
           check-path: runtime/src
+          
   pre-commit:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
         with:
-          python-version: '3.9'
+          python-version: '3.11'
       - uses: pre-commit/action@v3.0.0
-        with:
-          extra_args: trailing-whitespace --all-files
-      - uses: pre-commit/action@v3.0.0
-        with:
-          extra_args: end-of-file-fixer --all-files
-      - uses: pre-commit/action@v3.0.0
-        with:
-          extra_args: check-yaml --all-files
-      - uses: pre-commit/action@v3.0.0
-        with:
-          extra_args: check-added-large-files --all-files
-      - uses: pre-commit/action@v3.0.0
-        with:
-          extra_args: check-case-conflict --all-files
-      - uses: pre-commit/action@v3.0.0
-        with:
-          extra_args: mixed-line-ending --all-files
 
   build-and-test-linux:
     runs-on: ubuntu-20.04
@@ -77,19 +62,13 @@ jobs:
         with:
           path: main
           submodules: true
-      - uses: actions/cache/restore@v3
-        id: stack-cache
-        name: Restore .stack cache
-        with:
-          path: ${{ github.workspace }}/.stack
-          key: ${{ runner.os }}-stack-
 
-      - uses: actions/cache/restore@v3
-        id: stack-work-cache
-        name: Restore main/.stack-work cache
-        with:
-          path: main/.stack-work
-          key: ${{ runner.os }}-stack-work-
+      - uses: actions/checkout@v3
+      - uses: freckle/stack-action@v4
+
+      - name: Workaround runner image issue
+        # https://github.com/actions/runner-images/issues/7061
+        run: sudo chown -R $USER /usr/local/.ghcup
 
       - name: Workaround runner image issue
         # https://github.com/actions/runner-images/issues/7061
@@ -124,12 +103,13 @@ jobs:
           -OL
 
           tar xfv wasi-sysroot-15.0.tar.gz
+
       - name: Set WASI_SYSROOT_PATH
         run: |
           echo "WASI_SYSROOT_PATH=$GITHUB_WORKSPACE/wasi-sysroot" >> $GITHUB_ENV
 
       - name: Install the latest Wasmer version
-        uses: jonaprieto/action-install-gh-release@2
+        uses: jaxxstorm/action-install-gh-release@1.10.0
         with:
           repo: wasmerio/wasmer
           tag: latest
@@ -186,6 +166,19 @@ jobs:
         with:
           path: main/.stack-work
           key: '${{ steps.stack-work-cache.outputs.cache-primary-key }}'
+      
+      - name: Save cache .stack
+        uses: actions/cache/save@v3
+        if: always()
+        with:
+          path: ${{ github.workspace }}/.stack
+          key: '${{ steps.stack-cache.outputs.cache-primary-key }}'
+
+      - name: Save cache main/.stack-work if the job was successful
+        uses: actions/cache/save@v3
+        with:
+          path: main/.stack-work
+          key: '${{ steps.stack-work-cache.outputs.cache-primary-key }}'
 
   docs-linux:
     needs: build-and-test-linux
@@ -200,30 +193,29 @@ jobs:
           path: main
           submodules: recursive
 
-      - uses: actions/cache/restore@v3
-        name: Restore .stack cache
-        id: stack-cache
+      - name: Install mdbook-pagetoc
+        uses: baptiste0928/cargo-install@v1
         with:
-          fail-on-cache-miss: true
-          path: ${{ github.workspace }}/.stack
-          key: ${{ runner.os }}-stack-
+          crate: mdbook-pagetoc
 
-      - uses: actions/cache/restore@v3
-        name: Restore main/.stack-work cache
-        id: stack-work-cache
+      - name: Install mdbook-katex
+        uses: baptiste0928/cargo-install@v1
         with:
-          fail-on-cache-miss: true
-          path: main/.stack-work
-          key: ${{ runner.os }}-stack-work-
+          crate: mdbook-katex
 
-      - uses: r-lib/actions/setup-pandoc@v2
+      - name: Install mdbook-linkcheck
+        uses: baptiste0928/cargo-install@v1
         with:
-          pandoc-version: 2.19.2
+          crate: mdbook-linkcheck
 
       - name: MDBook setup
         uses: peaceiris/actions-mdbook@v1
         with:
-          mdbook-version: 0.4.22
+          mdbook-version: "latest"
+
+      - name: Workaround runner image issue
+        # https://github.com/actions/runner-images/issues/7061
+        run: sudo chown -R $USER /usr/local/.ghcup
 
       - name: Workaround runner image issue
         # https://github.com/actions/runner-images/issues/7061
@@ -254,7 +246,7 @@ jobs:
       - name: Generate Markdown files for each Org file
         run: |
           cd main
-          make markdown-docs
+          make docs
 
       - name: Generate HTML files from examples
         run: |
@@ -268,7 +260,7 @@ jobs:
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: '${{ secrets.GITHUB_TOKEN }}'
-          publish_dir: main/_docs
+          publish_dir: main/book/html
           enable_jekyll: false
           cname: docs.juvix.org
 
@@ -281,19 +273,7 @@ jobs:
           path: main
           submodules: true
 
-      - uses: actions/cache/restore@v3
-        id: stack-cache
-        name: Restore .stack cache
-        with:
-          path: ${{ github.workspace }}/.stack
-          key: ${{ runner.os }}-stack-
-
-      - uses: actions/cache/restore@v3
-        name: Restore main/.stack-work cache
-        id: stack-work-cache
-        with:
-          path: main/.stack-work
-          key: ${{ runner.os }}-stack-work-
+      - uses: freckle/stack-action@v4
 
       - uses: haskell/actions/setup@v2
         name: Setup Haskell
@@ -301,14 +281,17 @@ jobs:
           ghc-version: 9.2.6
           enable-stack: true
           stack-version: latest
+          
       - name: Set homebrew LLVM CC and LIBTOOL vars (macOS)
         run: |
           echo "CC=$(brew --prefix llvm)/bin/clang" >> $GITHUB_ENV
           echo "LIBTOOL=$(brew --prefix llvm)/bin/llvm-ar" >> $GITHUB_ENV
+
       - name: Install ICU4C
         run: |
           brew install icu4c
           brew link icu4c --force
+
       - name: Build Project (macOS)
         run: |
           cd main
@@ -322,11 +305,13 @@ jobs:
           -OL
 
           tar xfv wasi-sysroot-15.0.tar.gz
+
       - name: Set WASI_SYSROOT_PATH
         run: |
           echo "WASI_SYSROOT_PATH=$GITHUB_WORKSPACE/wasi-sysroot" >> $GITHUB_ENV
+
       - name: Install the latest Wasmer version
-        uses: jonaprieto/action-install-gh-release@2
+        uses: jaxxstorm/action-install-gh-release@1.10.0
         with:
           repo: wasmerio/wasmer
           tag: latest
@@ -337,39 +322,28 @@ jobs:
         run: |
           echo "CC=$(brew --prefix llvm)/bin/clang" >> $GITHUB_ENV
           echo "LIBTOOL=$(brew --prefix llvm)/bin/llvm-ar" >> $GITHUB_ENV
+
       - name: stack setup (macOS)
         run: |
           cd main
           stack setup
+
       - name: Add homebrew clang to the PATH (macOS)
         run: |
           echo "$(brew --prefix llvm)/bin" >> $GITHUB_PATH
+
       - name: Test suite (macOS)
         if: ${{ success() }}
         run: |
           cd main
           make CC=$CC LIBTOOL=$LIBTOOL test
 
-      - name: Save stack cache
-        uses: actions/cache/save@v3
-        if: always()
-        with:
-          path: ${{ github.workspace }}/.stack
-          key: '${{ steps.stack-cache.outputs.cache-primary-key }}'
-
-      - name: Save stack-work cache
-        uses: actions/cache/save@v3
-        if: always()
-        with:
-          path: main/.stack-work
-          key: '${{ steps.stack-work-cache.outputs.cache-primary-key }}'
-
       - name: Add ~/.local/bin to PATH
         run: |
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Install Smoke
-        uses: jonaprieto/action-install-gh-release@2
+        uses: jaxxstorm/action-install-gh-release@1.10.0
         with:
           repo: jonaprieto/smoke
           tag: latest
