@@ -21,7 +21,6 @@ concurrency:
   group: '${{ github.workflow }}-${{ github.head_ref || github.run_id }}'
   cancel-in-progress: true
 env:
-  STACKFLAGS: '--pedantic --stack-root ${{ github.workspace }}/.stack'
   SKIP: ormolu
 
 jobs:
@@ -63,9 +62,6 @@ jobs:
         with:
           path: main
           submodules: true
-
-      - uses: actions/checkout@v3
-      - uses: freckle/stack-action@v4
 
       - name: Workaround runner image issue
         # https://github.com/actions/runner-images/issues/7061
@@ -120,6 +116,10 @@ jobs:
       - name: Install libicu for testing
         run: sudo apt install -y libicu66
 
+      - uses: freckle/stack-action@v4
+        with:
+          test: false
+
       - name: Build Project
         run: |
           cd main
@@ -154,32 +154,6 @@ jobs:
         run: |
           cd main
           make smoke
-
-      - name: Save cache .stack
-        uses: actions/cache/save@v3
-        if: always()
-        with:
-          path: ${{ github.workspace }}/.stack
-          key: '${{ steps.stack-cache.outputs.cache-primary-key }}'
-
-      - name: Save cache main/.stack-work if the job was successful
-        uses: actions/cache/save@v3
-        with:
-          path: main/.stack-work
-          key: '${{ steps.stack-work-cache.outputs.cache-primary-key }}'
-
-      - name: Save cache .stack
-        uses: actions/cache/save@v3
-        if: always()
-        with:
-          path: ${{ github.workspace }}/.stack
-          key: '${{ steps.stack-cache.outputs.cache-primary-key }}'
-
-      - name: Save cache main/.stack-work if the job was successful
-        uses: actions/cache/save@v3
-        with:
-          path: main/.stack-work
-          key: '${{ steps.stack-work-cache.outputs.cache-primary-key }}'
 
   docs-linux:
     needs: build-and-test-linux
@@ -244,10 +218,14 @@ jobs:
           version: '13.0'
           cached: '${{ steps.cache-llvm.outputs.cache-hit }}'
 
-      - name: Generate Markdown files for each Org file
+      - name: Build the mdbook
         run: |
           cd main
           make docs
+
+      - uses: freckle/stack-action@v4
+        with:
+          test: false
 
       - name: Generate HTML files from examples
         run: |
@@ -257,6 +235,7 @@ jobs:
           make html-examples
           make demo-example
 
+      # TODO: use new action 'pages deploy'
       - name: Deploy HTML to github pages
         uses: peaceiris/actions-gh-pages@v3
         with:
@@ -274,7 +253,6 @@ jobs:
           path: main
           submodules: true
 
-      - uses: freckle/stack-action@v4
 
       - uses: haskell/actions/setup@v2
         name: Setup Haskell
@@ -292,6 +270,10 @@ jobs:
         run: |
           brew install icu4c
           brew link icu4c --force
+
+      - uses: freckle/stack-action@v4
+        with:
+          test: false
 
       - name: Build Project (macOS)
         run: |
@@ -323,11 +305,6 @@ jobs:
         run: |
           echo "CC=$(brew --prefix llvm)/bin/clang" >> $GITHUB_ENV
           echo "LIBTOOL=$(brew --prefix llvm)/bin/llvm-ar" >> $GITHUB_ENV
-
-      - name: stack setup (macOS)
-        run: |
-          cd main
-          stack setup
 
       - name: Add homebrew clang to the PATH (macOS)
         run: |
