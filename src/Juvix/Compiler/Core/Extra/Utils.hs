@@ -55,6 +55,14 @@ nodeIdents f = ufoldA reassemble go
       NIdt i -> NIdt <$> f i
       n -> pure n
 
+getInductives :: Node -> HashSet Symbol
+getInductives = ufold (foldr mappend) go
+  where
+    go :: Node -> HashSet Symbol
+    go = \case
+      NTyp TypeConstr {..} -> HashSet.singleton _typeConstrSymbol
+      _ -> mempty
+
 -- | Prism for NRec
 _NRec :: SimpleFold Node LetRec
 _NRec f = \case
