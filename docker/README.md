@@ -11,7 +11,7 @@ The tag of the image should be prefixed by the location of the GitHub docker
 repository that you're pushing to. In this case the repository is `
 ghcr.io/paulcadman`.
 
-``` shell
+```shell
 docker build -t ghcr.io/paulcadman/ghc-alpine:9.2.6 -f Dockerfile-ghc-alpine-9.2.6 .
 ```
 
@@ -26,7 +26,7 @@ https://docs.github.com/en/packages/working-with-a-github-packages-registry/work
 
 Set the token to the variable `CR_PAT` and then authenticate:
 
-``` shell
+```shell
 echo $CR_PAT | docker login ghcr.io -u USERNAME --password-stdin
 ```
 
@@ -34,13 +34,13 @@ NB: You do not substitue your username for `USERNAME` in the command above.
 
 ## Testing the image
 
-``` shell
+```shell
 docker run -it --rm ghcr.io/paulcadman/ghc-alpine:9.2.6
 ```
 
 ## Pushing the image
 
-``` shell
+```shell
 docker push ghcr.io/paulcadman/ghc-alpine:9.2.6
 
 ```

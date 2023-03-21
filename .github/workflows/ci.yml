@@ -1,5 +1,5 @@
 name: The Juvix compiler CI
-'on':
+"on":
   workflow_dispatch:
     inputs:
       ref:
@@ -18,12 +18,13 @@ name: The Juvix compiler CI
       - synchronize
       - ready_for_review
 concurrency:
-  group: '${{ github.workflow }}-${{ github.head_ref || github.run_id }}'
+  group: "${{ github.workflow }}-${{ github.head_ref || github.run_id }}"
   cancel-in-progress: true
 env:
   SKIP: ormolu
 
 jobs:
+<<<<<<< HEAD
 
   pre-commit:
     runs-on: ubuntu-latest
@@ -44,11 +45,26 @@ jobs:
           check-path: runtime/src
 
   ormolu:
+=======
+  pre-commit:
+>>>>>>> 9606ba98 (w.i.p)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
       - uses: mrkkrp/ormolu-action@v11
         with:
+<<<<<<< HEAD
+=======
+          python-version: "3.11"
+      - uses: pre-commit/action@v3.0.0
+
+  ormolu:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: mrkkrp/ormolu-action@v11
+        with:
+>>>>>>> 9606ba98 (w.i.p)
           version: 0.5.2.0
           extra-args: >-
             --ghc-opt -XDerivingStrategies --ghc-opt -XImportQualifiedPost
@@ -71,13 +87,13 @@ jobs:
           path: |
             C:/Program Files/LLVM
             ./llvm
-          key: '${{ runner.os }}-llvm-13'
+          key: "${{ runner.os }}-llvm-13"
 
       - name: Install LLVM and Clang
         uses: KyleMayes/install-llvm-action@v1
         with:
-          version: '13.0'
-          cached: '${{ steps.cache-llvm.outputs.cache-hit }}'
+          version: "13.0"
+          cached: "${{ steps.cache-llvm.outputs.cache-hit }}"
 
       - name: Download and extract wasi-sysroot
         run: >
@@ -191,13 +207,13 @@ jobs:
           path: |
             C:/Program Files/LLVM
             ./llvm
-          key: '${{ runner.os }}-llvm-13'
+          key: "${{ runner.os }}-llvm-13"
 
       - name: Install LLVM and Clang
         uses: KyleMayes/install-llvm-action@v1
         with:
-          version: '13.0'
-          cached: '${{ steps.cache-llvm.outputs.cache-hit }}'
+          version: "13.0"
+          cached: "${{ steps.cache-llvm.outputs.cache-hit }}"
 
       - name: Build the mdbook
         run: |
@@ -227,7 +243,11 @@ jobs:
       - name: Deploy HTML to github pages
         uses: peaceiris/actions-gh-pages@v3
         with:
+<<<<<<< HEAD
           github_token: '${{ secrets.GITHUB_TOKEN }}'
+=======
+          github_token: "${{ secrets.GITHUB_TOKEN }}"
+>>>>>>> 9606ba98 (w.i.p)
           publish_dir: main/book/html
           enable_jekyll: false
           cname: docs.juvix.org
@@ -250,7 +270,10 @@ jobs:
         run: |
           brew install icu4c
           brew link icu4c --force
+<<<<<<< HEAD
 
+=======
+>>>>>>> 9606ba98 (w.i.p)
 
       - name: Download and extract wasi-sysroot
         run: >
