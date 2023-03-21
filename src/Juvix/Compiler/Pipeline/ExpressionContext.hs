@@ -23,7 +23,7 @@ runTransformations ts n = runCoreInfoTableBuilderArtifacts $ do
   -- corresponding entry in `infoIdentifiers`
   tab <- getInfoTable
   let name = freshIdentName tab "_repl"
-      ii =
+      idenInfo =
         IdentifierInfo
           { _identifierName = name,
             _identifierSymbol = sym,
@@ -34,7 +34,7 @@ runTransformations ts n = runCoreInfoTableBuilderArtifacts $ do
             _identifierIsExported = False,
             _identifierBuiltin = Nothing
           }
-  registerIdent name ii
+  registerIdent name idenInfo
   tab' <- getInfoTable >>= applyTransformations ts
   modify' (set artifactCoreTable tab')
   let node' = HashMap.lookupDefault impossible sym (tab' ^. identContext)

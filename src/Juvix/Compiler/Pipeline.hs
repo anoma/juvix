@@ -260,8 +260,8 @@ pipelineIOEither entry m = do
     runM
       . runError
       . runState initialArtifacts
-      . evalTopBuiltins
-      . evalTopNameIdGen
+      . runBuiltinsArtifacts
+      . runNameIdGenArtifacts
       . runFilesIO
       . runReader entry
       . runPathResolverArtifacts

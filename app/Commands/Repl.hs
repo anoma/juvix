@@ -174,7 +174,11 @@ runCommand opts = do
               artif = ctx ^. replContextArtifacts
               eval :: Core.Node -> Repl (Either JuvixError Core.Node)
               eval n =
-                case run . runError @JuvixError . runState artif $ runTransformations (Core.toEvalTransformations ++ opts ^. replTransformations) n of
+                let
+                  transforms :: [Core.TransformationId]
+                  transforms = Core.toEvalTransformations ++ opts ^. replTransformations
+                in
+                  case run . runError @JuvixError . runState artif $ runTransformations transforms n of
                   Left err -> return $ Left err
                   Right (artif', n') ->
                     liftIO $
