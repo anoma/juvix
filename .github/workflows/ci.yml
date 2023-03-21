@@ -24,6 +24,25 @@ env:
   SKIP: ormolu
 
 jobs:
+
+  pre-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - uses: pre-commit/action@v3.0.0
+
+  clang-format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: jidicula/clang-format-action@v4.10.1
+        with:
+          clang-format-version: '15'
+          check-path: runtime/src
+
   ormolu:
     runs-on: ubuntu-latest
     steps:
@@ -35,24 +54,6 @@ jobs:
             --ghc-opt -XDerivingStrategies --ghc-opt -XImportQualifiedPost
             --ghc-opt -XMultiParamTypeClasses --ghc-opt -XStandaloneDeriving
             --ghc-opt -XTemplateHaskell --ghc-opt -XUnicodeSyntax
-
-  clang-format:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: jidicula/clang-format-action@v4.10.1
-        with:
-          clang-format-version: '15'
-          check-path: runtime/src
-
-  pre-commit:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-      - uses: pre-commit/action@v3.0.0
 
   build-and-test-linux:
     runs-on: ubuntu-20.04
@@ -100,6 +101,11 @@ jobs:
 
       - name: Install libicu for testing
         run: sudo apt install -y libicu66
+
+      - name: Make runtime
+        run: |
+          cd main
+          make runtime
 
       - name: Stack setup
         uses: freckle/stack-action@v4
