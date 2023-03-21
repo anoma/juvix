@@ -17,7 +17,7 @@ runCommand opts = do
   let r =
         run $
           runReader (project gopts) $
-            runError @JuvixError (Core.toStripped' tab :: Sem '[Error JuvixError, Reader Core.Options] Core.InfoTable)
+            runError @JuvixError (Core.toStripped' tab :: Sem '[Error JuvixError, Reader Core.CoreOptions] Core.InfoTable)
   tab' <- getRight $ mapLeft JuvixError $ mapRight Stripped.fromCore r
   unless (project opts ^. coreStripNoPrint) $ do
     renderStdOut (Pretty.ppOut opts tab')

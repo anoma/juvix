@@ -17,7 +17,7 @@ runCommand opts@EvalOptions {..} = do
         run $
           runReader (project gopts) $
             runError @JuvixError $
-              (Core.toEval' _coreResultTable :: Sem '[Error JuvixError, Reader Core.Options] Core.InfoTable)
+              (Core.toEval' _coreResultTable :: Sem '[Error JuvixError, Reader Core.CoreOptions] Core.InfoTable)
   tab <- getRight r
   let evalNode =
         if

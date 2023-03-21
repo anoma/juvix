@@ -4,7 +4,7 @@ import Base
 import Core.Compile.Base
 import Core.Eval.Base
 import Juvix.Compiler.Builtins (iniState)
-import Juvix.Compiler.Core.Options qualified as Options
+import Juvix.Compiler.Core.Options qualified as Core
 import Juvix.Compiler.Core.Pipeline qualified as Core
 import Juvix.Compiler.Core.Translation.FromInternal.Data qualified as Core
 import Juvix.Compiler.Pipeline
@@ -27,7 +27,7 @@ compileAssertion mode mainFile expectedFile step = do
   cwd <- getCurrentDir
   let entryPoint = defaultEntryPoint cwd mainFile
   tab <- (^. Core.coreResultTable) . snd <$> runIO' iniState entryPoint upToCore
-  case run $ runReader Options.defaultOptions $ runError $ Core.toEval' tab of
+  case run $ runReader Core.defaultCoreOptions $ runError $ Core.toEval' tab of
     Left err -> assertFailure (show (pretty (fromJuvixError @GenericError err)))
     Right tab' -> do
       let evalAssertion = coreEvalAssertion' tab' mainFile expectedFile step

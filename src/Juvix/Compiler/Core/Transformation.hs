@@ -27,7 +27,7 @@ import Juvix.Compiler.Core.Transformation.RemoveTypeArgs
 import Juvix.Compiler.Core.Transformation.TopEtaExpand
 import Juvix.Compiler.Core.Transformation.UnrollRecursion
 
-applyTransformations :: forall r. Members '[Error JuvixError, Reader Options] r => [TransformationId] -> InfoTable -> Sem r InfoTable
+applyTransformations :: forall r. Members '[Error JuvixError, Reader CoreOptions] r => [TransformationId] -> InfoTable -> Sem r InfoTable
 applyTransformations ts tbl = foldl' (\acc tid -> acc >>= appTrans tid) (return tbl) ts
   where
     appTrans :: TransformationId -> InfoTable -> Sem r InfoTable

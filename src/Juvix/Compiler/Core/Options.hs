@@ -3,20 +3,20 @@ module Juvix.Compiler.Core.Options where
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Prelude
 
-newtype Options = Options
+newtype CoreOptions = CoreOptions
   { _optCheckCoverage :: Bool
   }
 
-makeLenses ''Options
+makeLenses ''CoreOptions
 
-defaultOptions :: Options
-defaultOptions =
-  Options
+defaultCoreOptions :: CoreOptions
+defaultCoreOptions =
+  CoreOptions
     { _optCheckCoverage = False
     }
 
-fromEntryPoint :: EntryPoint -> Options
+fromEntryPoint :: EntryPoint -> CoreOptions
 fromEntryPoint EntryPoint {..} =
-  Options
+  CoreOptions
     { _optCheckCoverage = not _entryPointNoCoverage
     }

@@ -45,9 +45,9 @@ instance CanonicalProjection GlobalOptions E.GenericOptions where
         E._genericNoApe = _globalNoApe
       }
 
-instance CanonicalProjection GlobalOptions Core.Options where
+instance CanonicalProjection GlobalOptions Core.CoreOptions where
   project GlobalOptions {..} =
-    Core.Options
+    Core.CoreOptions
       { Core._optCheckCoverage = not _globalNoCoverage
       }
 
