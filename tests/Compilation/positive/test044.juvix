@@ -1,0 +1,10 @@
+-- Builtin readline
+module test044;
+
+builtin string axiom String : Type;
+builtin IO axiom IO : Type;
+builtin IO-readline axiom readLn : (String → IO) → IO;
+builtin string-print axiom printString : String → IO;
+
+main : IO;
+main := readLn printString;

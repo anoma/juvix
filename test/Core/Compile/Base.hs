@@ -32,30 +32,32 @@ toTestDescr Test {..} =
    in TestDescr
         { _testName = _name,
           _testRoot = tRoot,
-          _testAssertion = Steps $ coreCompileAssertion file' expected'
+          _testAssertion = Steps $ coreCompileAssertion file' expected' ""
         }
 
 coreCompileAssertion' ::
   InfoTable ->
   Path Abs File ->
   Path Abs File ->
+  Text ->
   (String -> IO ()) ->
   Assertion
-coreCompileAssertion' tab mainFile expectedFile step = do
+coreCompileAssertion' tab mainFile expectedFile stdinText step = do
   step "Translate to JuvixAsm"
   case run $ runError $ toStripped tab of
     Left err -> assertFailure (show (pretty (fromJuvixError @GenericError err)))
     Right tab0 -> do
       let tab' = Asm.fromCore $ Stripped.fromCore $ tab0
       length (fromText (Asm.ppPrint tab' tab') :: String) `seq`
-        Asm.asmCompileAssertion' tab' mainFile expectedFile step
+        Asm.asmCompileAssertion' tab' mainFile expectedFile stdinText step
 
 coreCompileAssertion ::
   Path Abs File ->
   Path Abs File ->
+  Text ->
   (String -> IO ()) ->
   Assertion
-coreCompileAssertion mainFile expectedFile step = do
+coreCompileAssertion mainFile expectedFile stdinText step = do
   step "Parse"
   r <- parseFile mainFile
   case r of
@@ -65,4 +67,4 @@ coreCompileAssertion mainFile expectedFile step = do
       expected <- TIO.readFile (toFilePath expectedFile)
       assertEqDiffText ("Check: EVAL output = " <> toFilePath expectedFile) "" expected
     Right (tabIni, Just node) ->
-      coreCompileAssertion' (setupMainFunction tabIni node) mainFile expectedFile step
+      coreCompileAssertion' (setupMainFunction tabIni node) mainFile expectedFile stdinText step

@@ -7,7 +7,7 @@ data PosTest = PosTest
   { _name :: String,
     _dir :: Path Abs Dir,
     _file :: Path Abs File,
-    _onlyEval :: Bool,
+    _assertionMode :: CompileAssertionMode,
     _expectedFile :: Path Abs File
   }
 
@@ -27,7 +27,7 @@ toTestDescr PosTest {..} =
    in TestDescr
         { _testName = _name,
           _testRoot = tRoot,
-          _testAssertion = Steps $ compileAssertion _onlyEval file' expected'
+          _testAssertion = Steps $ compileAssertion _assertionMode file' expected'
         }
 
 allTests :: TestTree
@@ -36,19 +36,26 @@ allTests =
     "Juvix compilation pipeline positive tests"
     (map (mkTest . toTestDescr) tests)
 
-posTest' :: Bool -> String -> Path Rel Dir -> Path Rel File -> Path Rel File -> PosTest
-posTest' _onlyEval _name rdir rfile routfile =
+posTest' :: CompileAssertionMode -> String -> Path Rel Dir -> Path Rel File -> Path Rel File -> PosTest
+posTest' _assertionMode _name rdir rfile routfile =
   let _dir = root <//> rdir
       _file = _dir <//> rfile
       _expectedFile = root <//> routfile
    in PosTest {..}
 
+posTestStdin :: String -> Path Rel Dir -> Path Rel File -> Path Rel File -> Text -> PosTest
+posTestStdin _name rdir rfile routfile _stdinText =
+  let t = posTest _name rdir rfile routfile
+   in t
+        { _assertionMode = CompileOnly _stdinText
+        }
+
 posTest :: String -> Path Rel Dir -> Path Rel File -> Path Rel File -> PosTest
-posTest = posTest' False
+posTest = posTest' EvalAndCompile
 
 -- tests which use large integers are only evaluated but not compiled
 posTestEval :: String -> Path Rel Dir -> Path Rel File -> Path Rel File -> PosTest
-posTestEval = posTest' True
+posTestEval = posTest' EvalOnly
 
 tests :: [PosTest]
 tests =
@@ -266,5 +273,11 @@ tests =
       "Builtin trace"
       $(mkRelDir ".")
       $(mkRelFile "test043.juvix")
-      $(mkRelFile "out/test043.out")
+      $(mkRelFile "out/test043.out"),
+    posTestStdin
+      "Builtin readline"
+      $(mkRelDir ".")
+      $(mkRelFile "test044.juvix")
+      $(mkRelFile "out/test044.out")
+      "a\n"
   ]
