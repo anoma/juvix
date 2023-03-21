@@ -37,69 +37,56 @@ arityChecking res@InternalResult {..} =
     table = buildTable _resultModules
 
 arityCheckExpression ::
-  (Members '[Error JuvixError, NameIdGen] r) =>
-  InternalResult ->
+  (Members '[Error JuvixError, State Artifacts] r) =>
   Expression ->
   Sem r Expression
-arityCheckExpression InternalResult {..} exp =
-  mapError (JuvixError @ArityChecking.ArityCheckerError) $
-    runReader table (ArityChecking.inferReplExpression exp)
-  where
-    table :: InfoTable
-    table = buildTableRepl exp _resultModules
+arityCheckExpression exp = do
+  table <- extendedTableReplArtifacts exp
+  mapError (JuvixError @ArityChecking.ArityCheckerError)
+    $ runReader table
+      . runNameIdGenArtifacts
+    $ ArityChecking.inferReplExpression exp
 
 typeCheckExpressionType ::
   forall r.
   (Members '[Error JuvixError, State Artifacts] r) =>
-  InternalTypedResult ->
   Expression ->
   Sem r TypedExpression
-typeCheckExpressionType InternalTypedResult {..} exp = do
-  x <-
-    mapError (JuvixError @TypeCheckerError)
-      $ runState @TypesTable _resultIdenTypes
-        . runState _resultFunctions
-        . runBuiltinsArtifacts
-        . runNameIdGenArtifacts
-        . runReader table
-        . ignoreOutput @Example
-        . withEmptyVars
-        . runInferenceDef
-      $ inferExpression' Nothing exp >>= traverseOf typedType strongNormalize
-  helper x
-  where
-    helper :: (TypesTable, (FunctionsTable, TypedExpression)) -> Sem r TypedExpression
-    helper (typesTbl, (funsTbl, typedExpr)) = do
-      modify' (over artifactTypes (<> typesTbl))
-      modify' (over artifactFunctions (<> funsTbl))
-      return typedExpr
-    table :: InfoTable
-    table = buildTableRepl exp _resultModules
+typeCheckExpressionType exp = do
+  table <- extendedTableReplArtifacts exp
+  mapError (JuvixError @TypeCheckerError)
+    $ runTypesTableArtifacts
+      . runFunctionsTableArtifacts
+      . runBuiltinsArtifacts
+      . runNameIdGenArtifacts
+      . runReader table
+      . ignoreOutput @Example
+      . withEmptyVars
+      . runInferenceDef
+    $ inferExpression' Nothing exp >>= traverseOf typedType strongNormalize
 
 typeCheckExpression ::
-  (Members '[Error JuvixError, NameIdGen, Builtins, State Artifacts] r) =>
-  InternalTypedResult ->
+  (Members '[Error JuvixError, State Artifacts] r) =>
   Expression ->
   Sem r Expression
-typeCheckExpression res exp = (^. typedExpression) <$> typeCheckExpressionType res exp
+typeCheckExpression exp = (^. typedExpression) <$> typeCheckExpressionType exp
 
 inferExpressionType ::
-  (Members '[Error JuvixError, NameIdGen, Builtins, State Artifacts] r) =>
-  InternalTypedResult ->
+  (Members '[Error JuvixError, State Artifacts] r) =>
   Expression ->
   Sem r Expression
-inferExpressionType res exp = (^. typedType) <$> typeCheckExpressionType res exp
+inferExpressionType exp = (^. typedType) <$> typeCheckExpressionType exp
 
 typeChecking ::
-  (Members '[Error JuvixError, NameIdGen, Builtins] r) =>
+  Members '[Error JuvixError, Builtins, NameIdGen] r =>
   ArityChecking.InternalArityResult ->
   Sem r InternalTypedResult
 typeChecking res@ArityChecking.InternalArityResult {..} =
   mapError (JuvixError @TypeCheckerError) $ do
     (normalized, (idens, (funs, r))) <-
       runOutputList
-        . runState (mempty :: TypesTable)
         . runReader entryPoint
+        . runState (mempty :: TypesTable)
         . runState (mempty :: FunctionsTable)
         . runReader table
         $ mapM checkModule _resultModules
@@ -109,7 +96,8 @@ typeChecking res@ArityChecking.InternalArityResult {..} =
           _resultModules = r,
           _resultNormalized = HashMap.fromList [(e ^. exampleId, e ^. exampleExpression) | e <- normalized],
           _resultIdenTypes = idens,
-          _resultFunctions = funs
+          _resultFunctions = funs,
+          _resultInfoTable = buildTable r
         }
   where
     table :: InfoTable

@@ -8,7 +8,8 @@ import Control.Exception (throwIO)
 import Control.Monad.State.Strict qualified as State
 import Data.String.Interpolate (i, __i)
 import Evaluator
-import Juvix.Compiler.Builtins.Effect
+import Juvix.Compiler.Concrete.Data.Scope (scopePath)
+import Juvix.Compiler.Concrete.Data.ScopedName (absTopModulePath)
 import Juvix.Compiler.Core.Error qualified as Core
 import Juvix.Compiler.Core.Extra qualified as Core
 import Juvix.Compiler.Core.Info qualified as Info
@@ -16,7 +17,6 @@ import Juvix.Compiler.Core.Info.NoDisplayInfo qualified as Info
 import Juvix.Compiler.Core.Language qualified as Core
 import Juvix.Compiler.Core.Pretty qualified as Core
 import Juvix.Compiler.Core.Transformation qualified as Core
-import Juvix.Compiler.Core.Translation.FromInternal.Data qualified as Core
 import Juvix.Compiler.Internal.Language qualified as Internal
 import Juvix.Compiler.Internal.Pretty qualified as Internal
 import Juvix.Data.Error.GenericError qualified as Error
@@ -34,7 +34,6 @@ type Repl a = HaskelineT ReplS a
 
 data ReplContext = ReplContext
   { _replContextArtifacts :: Artifacts,
-    _replContextExpContext :: ExpressionContext,
     _replContextEntryPoint :: EntryPoint
   }
 
@@ -48,7 +47,7 @@ data ReplState = ReplState
 makeLenses ''ReplState
 makeLenses ''ReplContext
 
-helpTxt :: (MonadIO m) => m ()
+helpTxt :: MonadIO m => m ()
 helpTxt =
   liftIO
     ( putStrLn
@@ -107,14 +106,13 @@ runCommand opts = do
 
       loadEntryPoint :: EntryPoint -> Repl ()
       loadEntryPoint ep = do
-        (artif, res) <- liftIO (runIO' iniState ep upToCore)
+        artif <- liftIO (pipelineIO' ep upToCore)
         State.modify
           ( set
               replStateContext
               ( Just
                   ( ReplContext
-                      { _replContextBuiltins = artif ^. artifactBuiltins,
-                        _replContextExpContext = expressionContext res,
+                      { _replContextArtifacts = artif,
                         _replContextEntryPoint = ep
                       }
                   )
@@ -172,18 +170,17 @@ runCommand opts = do
           compileThenEval :: ReplContext -> String -> Repl (Either JuvixError Core.Node)
           compileThenEval ctx s = bindEither compileString eval
             where
+              artif :: Artifacts
+              artif = ctx ^. replContextArtifacts
               eval :: Core.Node -> Repl (Either JuvixError Core.Node)
               eval n =
-                case run $ runError @JuvixError $ runTransformations (Core.toEvalTransformations ++ opts ^. replTransformations) infoTable n of
+                case run . runError @JuvixError . runState artif $ runTransformations (Core.toEvalTransformations ++ opts ^. replTransformations) n of
                   Left err -> return $ Left err
-                  Right (tab', n') ->
+                  Right (artif', n') ->
                     liftIO $
                       mapLeft
                         (JuvixError @Core.CoreError)
-                        <$> doEvalIO False defaultLoc tab' n'
-
-              infoTable :: Core.InfoTable
-              infoTable = ctx ^. replContextExpContext . contextCoreResult . Core.coreResultTable
+                        <$> doEvalIO False defaultLoc (artif' ^. artifactCoreTable) n'
 
               compileString :: Repl (Either JuvixError Core.Node)
               compileString = liftIO $ compileExpressionIO' ctx (strip (pack s))
@@ -242,9 +239,19 @@ runCommand opts = do
       banner = \case
         MultiLine -> return "... "
         SingleLine -> do
-          mctx <- State.gets (fmap (^. replContextExpContext) . (^. replStateContext))
-          case mctx of
-            Just ctx -> return [i|#{unpack (P.prettyText (mainModuleTopPath ctx))}> |]
+          mmodulePath <-
+            State.gets
+              ( ^?
+                  replStateContext
+                    . _Just
+                    . replContextArtifacts
+                    . artifactMainModuleScope
+                    . _Just
+                    . scopePath
+                    . absTopModulePath
+              )
+          case mmodulePath of
+            Just path -> return [i|#{unpack (P.prettyText path)}> |]
             Nothing -> return "juvix> "
 
       prefix :: Maybe Char
@@ -324,10 +331,16 @@ replMakeAbsolute = \case
     return (invokeDir <//> r)
 
 inferExpressionIO' :: ReplContext -> Text -> IO (Either JuvixError Internal.Expression)
-inferExpressionIO' ctx = inferExpressionIO replPath (ctx ^. replContextExpContext) (ctx ^. replContextBuiltins)
+inferExpressionIO' ctx txt =
+  runM
+    . evalState (ctx ^. replContextArtifacts)
+    $ inferExpressionIO replPath txt
 
 compileExpressionIO' :: ReplContext -> Text -> IO (Either JuvixError Core.Node)
-compileExpressionIO' ctx = compileExpressionIO replPath (ctx ^. replContextExpContext) (ctx ^. replContextBuiltins)
+compileExpressionIO' ctx txt =
+  runM
+    . evalState (ctx ^. replContextArtifacts)
+    $ compileExpressionIO replPath txt
 
 render' :: (P.HasAnsiBackend a, P.HasTextBackend a) => a -> Repl ()
 render' t = do

@@ -1,4 +1,8 @@
-module Juvix.Compiler.Core.Data.InfoTableBuilder where
+module Juvix.Compiler.Core.Data.InfoTableBuilder
+  ( module Juvix.Compiler.Core.Data.InfoTable,
+    module Juvix.Compiler.Core.Data.InfoTableBuilder,
+  )
+where
 
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Core.Data.InfoTable

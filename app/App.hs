@@ -3,7 +3,8 @@ module App where
 import CommonOptions
 import Data.ByteString qualified as ByteString
 import GlobalOptions
-import Juvix.Compiler.Builtins.Effect
+import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver
+import Juvix.Compiler.Core qualified as Core
 import Juvix.Compiler.Pipeline
 import Juvix.Data.Error qualified as Error
 import Juvix.Prelude.Pretty hiding (Doc)
@@ -19,7 +20,8 @@ data App m a where
   AskPackage :: App m Package
   AskGlobalOptions :: App m GlobalOptions
   RenderStdOut :: (HasAnsiBackend a, HasTextBackend a) => a -> App m ()
-  RunPipelineEither :: AppPath File -> Sem PipelineEff a -> App m (Either JuvixError (Artifacts, a))
+  RunPipelineEither :: AppPath File -> Sem PipelineEff a -> App m (Either JuvixError (ResolverState, a))
+  RunCorePipelineEither :: AppPath File -> Sem TopPipelineEff Core.CoreResult -> App m (Either JuvixError Artifacts)
   Say :: Text -> App m ()
   SayRaw :: ByteString -> App m ()
 
@@ -51,9 +53,12 @@ runAppIO args@RunAppIOArgs {..} =
     AskInvokeDir -> return _runAppIOArgsInvokeDir
     AskPkgDir -> return _runAppIOArgsPkgDir
     AskBuildDir -> return _runAppIOArgsBuildDir
+    RunCorePipelineEither input p -> do
+      entry <- embed (getEntryPoint' args input)
+      embed (pipelineIOEither entry p)
     RunPipelineEither input p -> do
       entry <- embed (getEntryPoint' args input)
-      embed (runIOEither iniState entry p)
+      embed (runIOEither entry p)
     Say t
       | g ^. globalOnlyErrors -> return ()
       | otherwise -> embed (putStrLn t)

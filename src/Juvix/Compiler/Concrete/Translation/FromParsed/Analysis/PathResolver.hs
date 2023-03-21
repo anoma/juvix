@@ -8,10 +8,12 @@ module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver
     withPathFile,
     expectedModulePath,
     runPathResolverPipe,
+    runPathResolverPipe',
     evalPathResolverPipe,
     ResolverState,
     resolverFiles,
     resolverPackages,
+    iniResolverState,
   )
 where
 
@@ -178,6 +180,11 @@ runPathResolver' st root x = do
 
 runPathResolver :: (Members '[Files, Error Text] r) => Path Abs Dir -> Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
 runPathResolver = runPathResolver' iniResolverState
+
+runPathResolverPipe' :: (Members '[Files, Reader EntryPoint] r) => ResolverState -> Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
+runPathResolverPipe' iniState a = do
+  r <- asks (^. entryPointResolverRoot)
+  runError (runPathResolver' iniState r (raiseUnder a)) >>= either error return
 
 runPathResolverPipe :: (Members '[Files, Reader EntryPoint] r) => Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
 runPathResolverPipe a = do
