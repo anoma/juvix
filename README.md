@@ -43,6 +43,7 @@ Some language features in Juvix include:
 - Parametric polymorphism
 - User defined inductive data types
 - Higher-order functions
+- Referential transparency
 
 The Juvix module system allows developers to break down their programs into
 smaller, reusable modules that can be compiled separately and combined to create
