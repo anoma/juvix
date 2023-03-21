@@ -300,16 +300,17 @@ mkFunBody ::
   Internal.FunctionDef ->
   Sem r Node
 mkFunBody ty f =
-  mkBody ty (f ^. Internal.funDefTotal) (fmap (\c -> (c ^. Internal.clausePatterns, c ^. Internal.clauseBody)) (f ^. Internal.funDefClauses))
+  mkBody ty (f ^. Internal.funDefTotal) (Just $ f ^. Internal.funDefName . nameLoc) (fmap (\c -> (c ^. Internal.clausePatterns, c ^. Internal.clauseBody)) (f ^. Internal.funDefClauses))
 
 mkBody ::
   forall r.
   (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable] r) =>
   Type -> -- type of the function
   Bool -> -- is marked as total
+  Maybe Location ->
   NonEmpty ([Internal.PatternArg], Internal.Expression) ->
   Sem r Node
-mkBody ty bTotal clauses
+mkBody ty bTotal loc clauses
   | nPatterns == 0 = goExpression (snd (head clauses))
   | otherwise = do
       let values = mkVar Info.empty <$> vs
@@ -337,7 +338,8 @@ mkBody ty bTotal clauses
         _ : _ -> do
           varsNum <- asks (^. indexTableVarsNum)
           ms <- underBinders nPatterns (mapM (uncurry (goClause varsNum)) clauses)
-          let match = mkMatch' bTotal (fromList matchIndArgTys) matchReturnType' (fromList values') (toList ms)
+          let i = maybe mempty (`setInfoLocation` mempty) loc
+              match = mkMatch i bTotal (fromList matchIndArgTys) matchReturnType' (fromList values') (toList ms)
           return $ foldr mkLambda' match argtys
   where
     -- Assumption: All clauses have the same number of patterns
@@ -426,7 +428,7 @@ goLambda ::
   Sem r Node
 goLambda l = do
   ty <- goType (fromJust (l ^. Internal.lambdaType))
-  mkBody ty False (fmap (\c -> (toList (c ^. Internal.lambdaPatterns), c ^. Internal.lambdaBody)) (l ^. Internal.lambdaClauses))
+  mkBody ty False Nothing (fmap (\c -> (toList (c ^. Internal.lambdaPatterns), c ^. Internal.lambdaBody)) (l ^. Internal.lambdaClauses))
 
 goLet ::
   forall r.
