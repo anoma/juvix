@@ -30,7 +30,7 @@ ready to use with Juvix and the Haskell toolchain installed.
 
 ## The Juvix programming language
 
-Juvix provides a high degree of assurance. The Juvix compiler runs several
+Juvix is designed with a focus on safety. The Juvix compiler runs several
 static analyses which guarantee the absence of runtime errors. Analyses
 performed include termination and type checking. As a result, functional
 programs, especially validity predicates, can be written with greater confidence
