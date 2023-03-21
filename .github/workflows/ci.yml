@@ -266,6 +266,11 @@ jobs:
           binaries-location: bin
           cache: true
 
+      - name: Set homebrew LLVM CC and LIBTOOL vars (macOS)
+        run: |
+          echo "CC=$(brew --prefix llvm)/bin/clang" >> $GITHUB_ENV
+          echo "LIBTOOL=$(brew --prefix llvm)/bin/llvm-ar" >> $GITHUB_ENV
+
       - name: Make runtime
         run: |
           cd main
@@ -276,11 +281,6 @@ jobs:
         with:
           working-directory: main
           test: false
-
-      - name: Set homebrew LLVM CC and LIBTOOL vars (macOS)
-        run: |
-          echo "CC=$(brew --prefix llvm)/bin/clang" >> $GITHUB_ENV
-          echo "LIBTOOL=$(brew --prefix llvm)/bin/llvm-ar" >> $GITHUB_ENV
 
       - name: Add homebrew clang to the PATH (macOS)
         run: |
