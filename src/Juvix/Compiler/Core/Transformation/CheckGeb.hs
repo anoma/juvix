@@ -2,6 +2,7 @@ module Juvix.Compiler.Core.Transformation.CheckGeb where
 
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Core.Data.IdentDependencyInfo
+import Juvix.Compiler.Core.Data.TypeDependencyInfo
 import Juvix.Compiler.Core.Error
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Info.LocationInfo (getInfoLocation)
@@ -10,6 +11,7 @@ import Juvix.Compiler.Core.Transformation.Base
 checkGeb :: forall r. Member (Error CoreError) r => InfoTable -> Sem r InfoTable
 checkGeb tab =
   checkNoRecursion
+    >> checkNoRecursiveTypes
     >> mapAllNodesM checkNoIO tab
     >> mapAllNodesM checkBuiltins tab
     >> mapAllNodesM checkTypes tab
@@ -73,6 +75,18 @@ checkGeb tab =
           throw
             CoreError
               { _coreErrorMsg = "recursion not supported for the GEB target",
+                _coreErrorNode = Nothing,
+                _coreErrorLoc = defaultLoc
+              }
+      | otherwise =
+          return ()
+
+    checkNoRecursiveTypes :: Sem r ()
+    checkNoRecursiveTypes
+      | isCyclic (createTypeDependencyInfo tab) =
+          throw
+            CoreError
+              { _coreErrorMsg = "recursive types not supported for the GEB target",
                 _coreErrorNode = Nothing,
                 _coreErrorLoc = defaultLoc
               }
