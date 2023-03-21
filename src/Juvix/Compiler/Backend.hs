@@ -1,9 +1,10 @@
 module Juvix.Compiler.Backend where
 
+import GHC.Base (maxInt)
 import Juvix.Prelude
 
-data Target = TargetCWasm32Wasi | TargetCNative64
-  deriving stock (Data)
+data Target = TargetCWasm32Wasi | TargetCNative64 | TargetGeb | TargetCore | TargetAsm
+  deriving stock (Data, Eq, Show)
 
 data Limits = Limits
   { _limitsMaxConstrs :: Int,
@@ -18,6 +19,7 @@ data Limits = Limits
     _limitsDispatchStackSize :: Int,
     _limitsBuiltinUIDsNum :: Int
   }
+  deriving stock (Eq, Show)
 
 makeLenses ''Limits
 
@@ -53,3 +55,24 @@ getLimits tgt debug = case tgt of
         _limitsDispatchStackSize = 4,
         _limitsBuiltinUIDsNum = 8
       }
+  TargetGeb ->
+    defaultLimits
+  TargetCore ->
+    defaultLimits
+  TargetAsm ->
+    defaultLimits
+
+defaultLimits :: Limits
+defaultLimits =
+  Limits
+    { _limitsMaxConstrs = maxInt,
+      _limitsMaxConstrArgs = maxInt,
+      _limitsMaxFunctionArgs = maxInt,
+      _limitsMaxLocalVars = maxInt,
+      _limitsMaxClosureSize = maxInt,
+      _limitsClosureHeadSize = maxInt,
+      _limitsMaxStackDelta = maxInt,
+      _limitsMaxFunctionAlloc = maxInt,
+      _limitsDispatchStackSize = maxInt,
+      _limitsBuiltinUIDsNum = maxInt
+    }

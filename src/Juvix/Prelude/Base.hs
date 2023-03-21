@@ -197,6 +197,13 @@ traverseM ::
 traverseM f = fmap join . traverse f
 
 --------------------------------------------------------------------------------
+
+mapReader :: Member (Reader e1) r => (e1 -> e2) -> Sem (Reader e2 ': r) a -> Sem r a
+mapReader f s = do
+  e <- ask
+  runReader (f e) s
+
+--------------------------------------------------------------------------------
 -- String related util functions.
 --------------------------------------------------------------------------------
 

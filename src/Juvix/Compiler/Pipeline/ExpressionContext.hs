@@ -11,10 +11,12 @@ import Juvix.Compiler.Core qualified as Core
 import Juvix.Compiler.Core.Data.InfoTableBuilder
 import Juvix.Compiler.Core.Extra.Base (mkDynamic')
 import Juvix.Compiler.Core.Language
+import Juvix.Compiler.Core.Options (fromEntryPoint)
 import Juvix.Compiler.Core.Transformation
 import Juvix.Compiler.Internal qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Data.Context qualified as InternalArity
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context qualified as InternalTyped
+import Juvix.Compiler.Pipeline.EntryPoint
 
 data ExpressionContext = ExpressionContext
   { _contextInternalTypedResult :: InternalTyped.InternalTypedResult,
@@ -58,7 +60,7 @@ mainModuleScope e = fromJust (moduleScope e (mainModuleTopPath e))
 mainModuleTopPath :: ExpressionContext -> C.TopModulePath
 mainModuleTopPath = (^. contextScoperResult . Scoper.mainModule . C.modulePath . S.nameConcrete)
 
-runTransformations :: Member (Error JuvixError) r => [TransformationId] -> InfoTable -> Node -> Sem r (InfoTable, Node)
+runTransformations :: Members '[Error JuvixError, Reader EntryPoint] r => [TransformationId] -> InfoTable -> Node -> Sem r (InfoTable, Node)
 runTransformations ts tab n = snd <$> runInfoTableBuilder tab e
   where
     e = do
@@ -80,6 +82,6 @@ runTransformations ts tab n = snd <$> runInfoTableBuilder tab e
               }
       registerIdent name ii
       tab0 <- getInfoTable
-      tab' <- applyTransformations ts tab0
+      tab' <- mapReader fromEntryPoint $ applyTransformations ts tab0
       let node' = lookupDefault impossible sym (tab' ^. identContext)
       return (tab', node')

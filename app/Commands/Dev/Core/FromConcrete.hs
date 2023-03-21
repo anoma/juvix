@@ -4,16 +4,18 @@ import Commands.Base
 import Commands.Dev.Core.FromConcrete.Options
 import Evaluator
 import Juvix.Compiler.Core.Data.InfoTable
-import Juvix.Compiler.Core.Pretty qualified as Core
+import Juvix.Compiler.Core.Options qualified as Core
+import Juvix.Compiler.Core.Pretty qualified as Pretty
 import Juvix.Compiler.Core.Transformation qualified as Core
 import Juvix.Compiler.Core.Transformation.DisambiguateNames (disambiguateNames)
 import Juvix.Compiler.Core.Translation
 
 runCommand :: forall r. Members '[Embed IO, App] r => CoreFromConcreteOptions -> Sem r ()
 runCommand localOpts = do
+  gopts <- askGlobalOptions
   tab <- (^. coreResultTable) <$> runPipeline (localOpts ^. coreFromConcreteInputFile) upToCore
   path :: Path Abs File <- someBaseToAbs' (localOpts ^. coreFromConcreteInputFile . pathPath)
-  r <- runError @JuvixError $ Core.applyTransformations (project localOpts ^. coreFromConcreteTransformations) tab
+  let r = run $ runReader (project @GlobalOptions @Core.Options gopts) $ runError @JuvixError $ Core.applyTransformations (project localOpts ^. coreFromConcreteTransformations) tab
   tab0 :: InfoTable <- getRight r
   let tab' :: InfoTable = if localOpts ^. coreFromConcreteNoDisambiguate then tab0 else disambiguateNames tab0
       inInputModule :: IdentifierInfo -> Bool
@@ -38,7 +40,7 @@ runCommand localOpts = do
       goPrint :: Sem r ()
       goPrint = case localOpts ^. coreFromConcreteSymbolName of
         Just {} -> printNode (fromMaybe err (getDef selInfo))
-        Nothing -> renderStdOut (Core.ppOut localOpts printTab)
+        Nothing -> renderStdOut (Pretty.ppOut localOpts printTab)
         where
           printTab :: InfoTable
           printTab
@@ -47,7 +49,7 @@ runCommand localOpts = do
           printNode :: (Text, Core.Node) -> Sem r ()
           printNode (name, node) = do
             renderStdOut (name <> " = ")
-            renderStdOut (Core.ppOut localOpts node)
+            renderStdOut (Pretty.ppOut localOpts node)
             newline
             newline
 

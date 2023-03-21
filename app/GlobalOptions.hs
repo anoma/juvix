@@ -5,6 +5,7 @@ where
 
 import CommonOptions
 import Juvix.Compiler.Abstract.Pretty.Options qualified as Abstract
+import Juvix.Compiler.Core.Options qualified as Core
 import Juvix.Compiler.Internal.Pretty.Options qualified as Internal
 import Juvix.Data.Error.GenericError qualified as E
 import Juvix.Extra.Paths
@@ -18,6 +19,7 @@ data GlobalOptions = GlobalOptions
     _globalStdin :: Bool,
     _globalNoTermination :: Bool,
     _globalNoPositivity :: Bool,
+    _globalNoCoverage :: Bool,
     _globalNoStdlib :: Bool
   }
   deriving stock (Eq, Show)
@@ -43,6 +45,12 @@ instance CanonicalProjection GlobalOptions E.GenericOptions where
         E._genericNoApe = _globalNoApe
       }
 
+instance CanonicalProjection GlobalOptions Core.Options where
+  project GlobalOptions {..} =
+    Core.Options
+      { Core._optCheckCoverage = not _globalNoCoverage
+      }
+
 defaultGlobalOptions :: GlobalOptions
 defaultGlobalOptions =
   GlobalOptions
@@ -54,6 +62,7 @@ defaultGlobalOptions =
       _globalBuildDir = Nothing,
       _globalStdin = False,
       _globalNoPositivity = False,
+      _globalNoCoverage = False,
       _globalNoStdlib = False
     }
 
@@ -102,6 +111,11 @@ parseGlobalFlags = do
     switch
       ( long "no-positivity"
           <> help "Disable positivity checking for inductive types"
+      )
+  _globalNoCoverage <-
+    switch
+      ( long "no-coverage"
+          <> help "Disable coverage checking for patterns"
       )
   _globalNoStdlib <-
     switch

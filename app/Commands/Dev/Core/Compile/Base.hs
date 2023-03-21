@@ -4,7 +4,6 @@ import Commands.Base
 import Commands.Dev.Core.Compile.Options
 import Commands.Extra.Compile qualified as Compile
 import Data.Text.IO qualified as TIO
-import Juvix.Compiler.Asm.Options qualified as Asm
 import Juvix.Compiler.Asm.Pretty qualified as Pretty
 import Juvix.Compiler.Backend qualified as Backend
 import Juvix.Compiler.Backend.C qualified as C
@@ -18,13 +17,31 @@ data PipelineArg = PipelineArg
     _pipelineArgInfoTable :: Core.InfoTable
   }
 
+getEntry :: Members '[Embed IO, App] r => PipelineArg -> Sem r EntryPoint
+getEntry PipelineArg {..} = do
+  ep <- getEntryPoint (AppPath (Abs _pipelineArgFile) True)
+  return $
+    ep
+      { _entryPointTarget = getTarget (_pipelineArgOptions ^. compileTarget),
+        _entryPointDebug = _pipelineArgOptions ^. compileDebug
+      }
+  where
+    getTarget :: CompileTarget -> Backend.Target
+    getTarget = \case
+      TargetWasm32Wasi -> Backend.TargetCWasm32Wasi
+      TargetNative64 -> Backend.TargetCNative64
+      TargetGeb -> Backend.TargetGeb
+      TargetCore -> Backend.TargetCore
+      TargetAsm -> Backend.TargetAsm
+
 runCPipeline ::
   forall r.
   (Members '[Embed IO, App] r) =>
   PipelineArg ->
   Sem r ()
-runCPipeline PipelineArg {..} = do
-  C.MiniCResult {..} <- getRight (run (runError (coreToMiniC asmOpts _pipelineArgInfoTable :: Sem '[Error JuvixError] C.MiniCResult)))
+runCPipeline pa@PipelineArg {..} = do
+  entryPoint <- getEntry pa
+  C.MiniCResult {..} <- getRight (run (runReader entryPoint (runError (coreToMiniC _pipelineArgInfoTable :: Sem '[Error JuvixError, Reader EntryPoint] C.MiniCResult))))
   cFile <- inputCFile _pipelineArgFile
   embed $ TIO.writeFile (toFilePath cFile) _resultCCode
   outfile <- Compile.outputFile _pipelineArgOptions _pipelineArgFile
@@ -34,17 +51,6 @@ runCPipeline PipelineArg {..} = do
         _compileOutputFile = Just (AppPath (Abs outfile) False)
       }
   where
-    asmOpts :: Asm.Options
-    asmOpts = Asm.makeOptions (asmTarget (_pipelineArgOptions ^. compileTarget)) (_pipelineArgOptions ^. compileDebug)
-
-    asmTarget :: CompileTarget -> Backend.Target
-    asmTarget = \case
-      TargetWasm32Wasi -> Backend.TargetCWasm32Wasi
-      TargetNative64 -> Backend.TargetCNative64
-      TargetGeb -> impossible
-      TargetCore -> impossible
-      TargetAsm -> impossible
-
     inputCFile :: Path Abs File -> Sem r (Path Abs File)
     inputCFile inputFileCompile = do
       buildDir <- askBuildDir
@@ -56,7 +62,8 @@ runGebPipeline ::
   (Members '[Embed IO, App] r) =>
   PipelineArg ->
   Sem r ()
-runGebPipeline PipelineArg {..} = do
+runGebPipeline pa@PipelineArg {..} = do
+  entryPoint <- getEntry pa
   gebFile <- Compile.outputFile _pipelineArgOptions _pipelineArgFile
   let spec =
         if
@@ -67,13 +74,14 @@ runGebPipeline PipelineArg {..} = do
                     { _lispPackageName = fromString $ takeBaseName $ toFilePath gebFile,
                       _lispPackageEntry = "*entry*"
                     }
-  Geb.Result {..} <- getRight (run (runError (coreToGeb spec _pipelineArgInfoTable :: Sem '[Error JuvixError] Geb.Result)))
+  Geb.Result {..} <- getRight (run (runReader entryPoint (runError (coreToGeb spec _pipelineArgInfoTable :: Sem '[Error JuvixError, Reader EntryPoint] Geb.Result))))
   embed $ TIO.writeFile (toFilePath gebFile) _resultCode
 
 runAsmPipeline :: (Members '[Embed IO, App] r) => PipelineArg -> Sem r ()
-runAsmPipeline PipelineArg {..} = do
+runAsmPipeline pa@PipelineArg {..} = do
+  entryPoint <- getEntry pa
   asmFile <- Compile.outputFile _pipelineArgOptions _pipelineArgFile
-  r <- runError @JuvixError (coreToAsm _pipelineArgInfoTable)
+  r <- runReader entryPoint $ runError @JuvixError (coreToAsm _pipelineArgInfoTable)
   tab' <- getRight r
   let code = Pretty.ppPrint tab' tab'
   embed $ TIO.writeFile (toFilePath asmFile) code

@@ -4,6 +4,7 @@ module Juvix.Compiler.Pipeline.EntryPoint
   )
 where
 
+import Juvix.Compiler.Backend
 import Juvix.Compiler.Pipeline.Package
 import Juvix.Extra.Paths
 import Juvix.Prelude
@@ -17,9 +18,12 @@ data EntryPoint = EntryPoint
     _entryPointBuildDir :: Path Abs Dir,
     _entryPointNoTermination :: Bool,
     _entryPointNoPositivity :: Bool,
+    _entryPointNoCoverage :: Bool,
     _entryPointNoStdlib :: Bool,
     _entryPointPackage :: Package,
     _entryPointStdin :: Maybe Text,
+    _entryPointTarget :: Target,
+    _entryPointDebug :: Bool,
     _entryPointGenericOptions :: GenericOptions,
     _entryPointModulePaths :: NonEmpty (Path Abs File)
   }
@@ -35,10 +39,13 @@ defaultEntryPoint root mainFile =
       _entryPointBuildDir = buildDir,
       _entryPointNoTermination = False,
       _entryPointNoPositivity = False,
+      _entryPointNoCoverage = False,
       _entryPointNoStdlib = False,
       _entryPointStdin = Nothing,
       _entryPointPackage = defaultPackage root buildDir,
       _entryPointGenericOptions = defaultGenericOptions,
+      _entryPointTarget = TargetCNative64,
+      _entryPointDebug = False,
       _entryPointModulePaths = pure mainFile
     }
   where
