@@ -47,7 +47,7 @@ repos:
         entry: make -s check-ormolu
         language: system
         pass_filenames: false
-      - id: juvix-examples
+      - id: format-juvix-examples
         name: typecheck and format Juvix examples
         entry: make -s juvix-format
         language: system
