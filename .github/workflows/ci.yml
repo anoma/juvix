@@ -1,5 +1,5 @@
 name: The Juvix compiler CI
-'on':
+"on":
   workflow_dispatch:
     inputs:
       ref:
@@ -18,20 +18,19 @@ name: The Juvix compiler CI
       - synchronize
       - ready_for_review
 concurrency:
-  group: '${{ github.workflow }}-${{ github.head_ref || github.run_id }}'
+  group: "${{ github.workflow }}-${{ github.head_ref || github.run_id }}"
   cancel-in-progress: true
 env:
   SKIP: ormolu
 
 jobs:
-
   pre-commit:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
+          python-version: "3.11"
       - uses: pre-commit/action@v3.0.0
 
   clang-format:
@@ -40,7 +39,7 @@ jobs:
       - uses: actions/checkout@v3
       - uses: jidicula/clang-format-action@v4.10.1
         with:
-          clang-format-version: '15'
+          clang-format-version: "15"
           check-path: runtime/src
 
   ormolu:
@@ -71,13 +70,13 @@ jobs:
           path: |
             C:/Program Files/LLVM
             ./llvm
-          key: '${{ runner.os }}-llvm-13'
+          key: "${{ runner.os }}-llvm-13"
 
       - name: Install LLVM and Clang
         uses: KyleMayes/install-llvm-action@v1
         with:
-          version: '13.0'
-          cached: '${{ steps.cache-llvm.outputs.cache-hit }}'
+          version: "13.0"
+          cached: "${{ steps.cache-llvm.outputs.cache-hit }}"
 
       - name: Download and extract wasi-sysroot
         run: >
@@ -191,13 +190,13 @@ jobs:
           path: |
             C:/Program Files/LLVM
             ./llvm
-          key: '${{ runner.os }}-llvm-13'
+          key: "${{ runner.os }}-llvm-13"
 
       - name: Install LLVM and Clang
         uses: KyleMayes/install-llvm-action@v1
         with:
-          version: '13.0'
-          cached: '${{ steps.cache-llvm.outputs.cache-hit }}'
+          version: "13.0"
+          cached: "${{ steps.cache-llvm.outputs.cache-hit }}"
 
       - name: Build the mdbook
         run: |
@@ -227,7 +226,7 @@ jobs:
       - name: Deploy HTML to github pages
         uses: peaceiris/actions-gh-pages@v3
         with:
-          github_token: '${{ secrets.GITHUB_TOKEN }}'
+          github_token: "${{ secrets.GITHUB_TOKEN }}"
           publish_dir: main/book/html
           enable_jekyll: false
           cname: docs.juvix.org
