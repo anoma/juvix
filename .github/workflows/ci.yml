@@ -102,11 +102,6 @@ jobs:
       - name: Install libicu for testing
         run: sudo apt install -y libicu66
 
-      - name: Make runtime
-        run: |
-          cd main
-          make runtime
-
       - name: Stack setup
         uses: freckle/stack-action@v4
         with:
