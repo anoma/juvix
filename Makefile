@@ -18,7 +18,8 @@ MAKEAUXFLAGS?=-s
 MAKE=make ${MAKEAUXFLAGS}
 METAFILES:=README.md \
 		   CHANGELOG.md \
-		   CONTRIBUTING.md
+		   CONTRIBUTING.md \
+		   LICENSE.md
 
 ifeq ($(UNAME), Darwin)
 	THREADS := $(shell sysctl -n hw.logicalcpu)

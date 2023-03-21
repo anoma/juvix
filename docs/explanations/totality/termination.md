@@ -2,7 +2,7 @@
 
 To not bring inconsistencies by function declarations, Juvix requires
 that every function passes its termination checker. However, since this
-is a strong requirement, often tricky to fulfill, we give the user the
+is a strong requirement, often tricky to fulfil, we give the user the
 possibility to skip this check in two different ways:
 
 - Using the `terminating` keyword to annotate function type signatures
@@ -25,5 +25,5 @@ juvix typecheck --no-termination MyProgram.juvix
 
 In any case, be aware that our termination checker is limited as it only
 accepts a subset of recursion functions. The termination checker
-algorithm is a slightly modification of the algorithm for checking
+algorithm is a slight modification of the algorithm for checking
 termination in the Foetus's language.

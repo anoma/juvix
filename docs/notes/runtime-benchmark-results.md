@@ -1,11 +1,9 @@
-Benchmarks of the new Juvix runtime `==================================`
+# Benchmarks of the new Juvix runtime
 
 Benchmarked version: commit 148ececb4d4259eacbb980f5992073a3ac611d82
 from 31.10.2022
 
-Summary
-
----
+## Summary
 
 We benchmark several programs manually compiled into the primitives of
 the new Juvix runtime. The code corresponds closely to the code that
@@ -53,9 +51,7 @@ dominates the running time. However, this is partly because the
 compilation of closures in current Juvix is incorrect allowing it to be
 more efficient.
 
-Benchmark programs
-
----
+## Benchmark programs
 
 # fibonacci: compute the Nth Fibonacci number modulo 2<sup>28</sup> (N = 100’000’000)
 
@@ -129,9 +125,7 @@ structures.
 The benchmark programs can be found in \`tests/benchmark\` in the Juvix
 source directory.
 
-Methodology
-
----
+## Methodology
 
 For each program the total running time (elapsed real time) and memory
 use (maximum resident set size) were measured on an M1 iMac with no
@@ -139,9 +133,7 @@ significant background activity. Averages of several runs were taken.
 The variance was negligible, unless indicated otherwise by providing a
 range.
 
-Results
-
----
+## Results
 
 # fibonacci: compute the Nth Fibonacci number modulo 2<sup>28</sup> (N = 100’000’000)
 

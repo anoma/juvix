@@ -1,7 +1,7 @@
 # Summary
 
 - [The Juvix project](./README.md)
-- [Changelog](./changelog.md)
+- [Changelog](./CHANGELOG.md)
 - [Quick start](./quick-start.md)
 
 # Tutorials
@@ -49,3 +49,5 @@
 # About
 
 - [Community](./about/community.md)
+- [Contributing](./CONTRIBUTING.md)
+- [License](./LICENSE.md)

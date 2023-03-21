@@ -25,7 +25,7 @@ We could also refer to positive parameters as such parameters occurring
 in no negative positions. For example, the type `B` in the `c0`
 constructor above is on the left of the arrow `B->X`. Then, `B` is at a
 negative position. Negative parameters need to be considered when
-checking strictly positive data types as they may allow to define
+checking strictly positive data types as they may allow defining
 non-strictly positive data types.
 
 In the example below, the type `T0` is strictly positive. However, the
@@ -44,7 +44,7 @@ type T1 := c1 : T0 T1 -> T1;
 
 To bypass the positivity check, a data type declaration can be annotated
 with the keyword `positive`. Another way is to use the CLI global flag
-`--no-positivity` when typechecking a `Juvix` File.
+`--no-positivity` when type checking a `Juvix` File.
 
 ```juvix
 $ cat tests/negative/MicroJuvix/NoStrictlyPositiveDataTypes/E5.mjuvix
@@ -57,10 +57,10 @@ end;
 
 ## Examples of non-strictly data types
 
-- `Bad` is not strictly positive beceause of the negative parameter
+- `Bad` is not strictly positive because of the negative parameter
   `A` of `Tree`.
 
-  ```minijuvix
+  ```juvix
   type Tree (A : Type) :=
       leaf : Tree A
     | node : (A -> Tree A) -> Tree A;
@@ -71,7 +71,7 @@ end;
 
 - `A` is a negative parameter.
 
-  ```minijuvix
+  ```juvix
   type B (A : Type) :=
     b : (A -> B (B A -> A)) -> B A;
   ```

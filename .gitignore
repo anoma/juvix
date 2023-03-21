@@ -66,7 +66,8 @@ docs/*.html
 *.cabal
 /src/Juvix/Utils/OldParser.hs
 docs/CHANGELOG.md
-docs/CONTRIBUTING
+docs/CONTRIBUTING.md
+docs/LICENSE.md
 docs/README.md
 .juvix-build
 

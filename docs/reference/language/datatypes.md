@@ -2,11 +2,11 @@
 
 A data type declaration consists of:
 
-- the `type` keyword,
+- The `type` keyword,
 - a unique name for the type,
-- the `:=` symbol,
-- a non-empty list of constructor declarations – functions for
-  building the elements of the data type.
+- the `:=` symbol, and
+- a non-empty list of constructor declarations (functions for
+  building the elements of the data type).
 
 The simplest data type is the `Unit` type with one constructor called
 `unit`.

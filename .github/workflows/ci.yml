@@ -1,5 +1,5 @@
 name: The Juvix compiler CI
-'on':
+"on":
   workflow_dispatch:
     inputs:
       ref:
@@ -18,13 +18,12 @@ name: The Juvix compiler CI
       - synchronize
       - ready_for_review
 concurrency:
-  group: '${{ github.workflow }}-${{ github.head_ref || github.run_id }}'
+  group: "${{ github.workflow }}-${{ github.head_ref || github.run_id }}"
   cancel-in-progress: true
 env:
-  STACKFLAGS: '--pedantic --stack-root ${{ github.workspace }}/.stack'
+  STACKFLAGS: "--pedantic --stack-root ${{ github.workspace }}/.stack"
 
 jobs:
-
   ormolu:
     runs-on: ubuntu-latest
     steps:
@@ -41,7 +40,7 @@ jobs:
       - uses: actions/checkout@v3
       - uses: jidicula/clang-format-action@v4.10.1
         with:
-          clang-format-version: '15'
+          clang-format-version: "15"
           check-path: runtime/src
   pre-commit:
     runs-on: ubuntu-latest
@@ -49,7 +48,7 @@ jobs:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
         with:
-          python-version: '3.9'
+          python-version: "3.9"
       - uses: pre-commit/action@v3.0.0
         with:
           extra_args: trailing-whitespace --all-files
@@ -109,13 +108,13 @@ jobs:
           path: |
             C:/Program Files/LLVM
             ./llvm
-          key: '${{ runner.os }}-llvm-13'
+          key: "${{ runner.os }}-llvm-13"
 
       - name: Install LLVM and Clang
         uses: KyleMayes/install-llvm-action@v1
         with:
-          version: '13.0'
-          cached: '${{ steps.cache-llvm.outputs.cache-hit }}'
+          version: "13.0"
+          cached: "${{ steps.cache-llvm.outputs.cache-hit }}"
 
       - name: Download and extract wasi-sysroot
         run: >
@@ -179,13 +178,13 @@ jobs:
         if: always()
         with:
           path: ${{ github.workspace }}/.stack
-          key: '${{ steps.stack-cache.outputs.cache-primary-key }}'
+          key: "${{ steps.stack-cache.outputs.cache-primary-key }}"
 
       - name: Save cache main/.stack-work if the job was successful
         uses: actions/cache/save@v3
         with:
           path: main/.stack-work
-          key: '${{ steps.stack-work-cache.outputs.cache-primary-key }}'
+          key: "${{ steps.stack-work-cache.outputs.cache-primary-key }}"
 
   docs-linux:
     needs: build-and-test-linux
@@ -215,7 +214,6 @@ jobs:
           fail-on-cache-miss: true
           path: main/.stack-work
           key: ${{ runner.os }}-stack-work-
-
 
       - name: Install mdbook-pagetoc
         uses: baptiste0928/cargo-install@v1
@@ -255,13 +253,13 @@ jobs:
           path: |
             C:/Program Files/LLVM
             ./llvm
-          key: '${{ runner.os }}-llvm-13'
+          key: "${{ runner.os }}-llvm-13"
 
       - name: Install LLVM and Clang
         uses: KyleMayes/install-llvm-action@v1
         with:
-          version: '13.0'
-          cached: '${{ steps.cache-llvm.outputs.cache-hit }}'
+          version: "13.0"
+          cached: "${{ steps.cache-llvm.outputs.cache-hit }}"
 
       - name: Generate Markdown files for each Org file
         run: |
@@ -279,7 +277,7 @@ jobs:
       - name: Deploy HTML to github pages
         uses: peaceiris/actions-gh-pages@v3
         with:
-          github_token: '${{ secrets.GITHUB_TOKEN }}'
+          github_token: "${{ secrets.GITHUB_TOKEN }}"
           publish_dir: main/book/html
           enable_jekyll: false
           cname: docs.juvix.org
@@ -367,14 +365,14 @@ jobs:
         if: always()
         with:
           path: ${{ github.workspace }}/.stack
-          key: '${{ steps.stack-cache.outputs.cache-primary-key }}'
+          key: "${{ steps.stack-cache.outputs.cache-primary-key }}"
 
       - name: Save stack-work cache
         uses: actions/cache/save@v3
         if: always()
         with:
           path: main/.stack-work
-          key: '${{ steps.stack-work-cache.outputs.cache-primary-key }}'
+          key: "${{ steps.stack-work-cache.outputs.cache-primary-key }}"
 
       - name: Add ~/.local/bin to PATH
         run: |
