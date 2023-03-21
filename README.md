@@ -33,7 +33,8 @@ platforms in a secure and efficient way.
 
 To get started with Juvix, head over to the [documentation website](https://docs.juvix.org) to learn more about the language and its features. You can also find installation instructions and tutorials to help you get started with writing Juvix programs.
 You can download the [latest release](https://github.com/Juvix-lang/juvix/releases) from the Juvix GitHub repository or use the web-based development environment, [Juvix Github
-Codespace](https://github.com/codespaces/new?hide_repo_select=true&ref=main&repo=102404734&machine=standardLinux32gb&location=WestEurope), which provides a pre-configured workspace with Juvix and the Haskell toolchain installed and ready to use.
+Codespace](https://github.com/codespaces/new?hide_repo_select=true&ref=main&repo=102404734&machine=standardLinux32gb&location=WestEurope), which provides a pre-configured workspace ready to use
+with Juvix and the Haskell toolchain installed.
 
 ## The Juvix programming language
 
