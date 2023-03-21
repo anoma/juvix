@@ -41,8 +41,12 @@ all: install
 clean: clean-runtime
 	@stack clean --full
 	@rm -rf .hie
-	@rm -rf _docs
+	@rm -rf book
 	@rm -rf docs/md
+
+.PHONY: clean-hard
+clean-hard: clean
+	@git clean -fdx
 
 .PHONY: clean-runtime
 clean-runtime: clean-juvix-build
@@ -233,7 +237,7 @@ fast-install: runtime submodules
 # -- Testing
 
 .PHONY : test
-test: build
+test: build runtime submodules
 	@stack test ${STACKFLAGS} ${STACKTESTFLAGS}
 
 .PHONY : fast-test
