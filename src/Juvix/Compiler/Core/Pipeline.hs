@@ -22,7 +22,7 @@ toStripped' :: Members '[Error JuvixError, Reader Options] r => InfoTable -> Sem
 toStripped' = applyTransformations toStrippedTransformations
 
 toStripped :: Members '[Error JuvixError, Reader EntryPoint] r => InfoTable -> Sem r InfoTable
-toStripped = mapReader fromEntryPoint . applyTransformations toEvalTransformations
+toStripped = mapReader fromEntryPoint . applyTransformations toStrippedTransformations
 
 -- | Perform transformations on Core necessary before the translation to GEB
 toGeb' :: Members '[Error JuvixError, Reader Options] r => InfoTable -> Sem r InfoTable
