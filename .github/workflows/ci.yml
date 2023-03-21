@@ -251,16 +251,6 @@ jobs:
           brew install icu4c
           brew link icu4c --force
 
-      - name: Make runtime
-        run: |
-          cd main
-          make runtime
-
-      - name: Stack setup
-        uses: freckle/stack-action@v4
-        with:
-          working-directory: main
-          test: false
 
       - name: Download and extract wasi-sysroot
         run: >
@@ -290,6 +280,17 @@ jobs:
       - name: Add homebrew clang to the PATH (macOS)
         run: |
           echo "$(brew --prefix llvm)/bin" >> $GITHUB_PATH
+
+      - name: Make runtime
+        run: |
+          cd main
+          make CC=$CC LIBTOOL=$LIBTOOL runtime
+
+      - name: Stack setup
+        uses: freckle/stack-action@v4
+        with:
+          working-directory: main
+          test: false
 
       - name: Test suite (macOS)
         if: ${{ success() }}
