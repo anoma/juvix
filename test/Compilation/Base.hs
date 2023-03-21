@@ -36,3 +36,16 @@ compileAssertion mode mainFile expectedFile step = do
         EvalOnly -> evalAssertion
         CompileOnly stdinText -> compileAssertion' stdinText
         EvalAndCompile -> evalAssertion >> compileAssertion' ""
+
+compileErrorAssertion ::
+  Path Abs File ->
+  (String -> IO ()) ->
+  Assertion
+compileErrorAssertion mainFile step = do
+  step "Translate to JuvixCore"
+  cwd <- getCurrentDir
+  let entryPoint = defaultEntryPoint cwd mainFile
+  tab <- (^. Core.coreResultTable) . snd <$> runIO' iniState entryPoint upToCore
+  case run $ runReader Core.defaultCoreOptions $ runError @JuvixError $ Core.toEval' tab of
+    Left _ -> assertBool "" True
+    Right _ -> assertFailure "no error"
