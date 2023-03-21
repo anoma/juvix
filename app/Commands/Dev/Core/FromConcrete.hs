@@ -5,7 +5,7 @@ import Commands.Dev.Core.FromConcrete.Options
 import Evaluator
 import Juvix.Compiler.Core.Data.InfoTable
 import Juvix.Compiler.Core.Options qualified as Core
-import Juvix.Compiler.Core.Pretty qualified as Pretty
+import Juvix.Compiler.Core.Pretty qualified as Core
 import Juvix.Compiler.Core.Transformation qualified as Core
 import Juvix.Compiler.Core.Transformation.DisambiguateNames (disambiguateNames)
 import Juvix.Compiler.Core.Translation
@@ -40,7 +40,7 @@ runCommand localOpts = do
       goPrint :: Sem r ()
       goPrint = case localOpts ^. coreFromConcreteSymbolName of
         Just {} -> printNode (fromMaybe err (getDef selInfo))
-        Nothing -> renderStdOut (Pretty.ppOut localOpts printTab)
+        Nothing -> renderStdOut (Core.ppOut localOpts printTab)
         where
           printTab :: InfoTable
           printTab
@@ -49,7 +49,7 @@ runCommand localOpts = do
           printNode :: (Text, Core.Node) -> Sem r ()
           printNode (name, node) = do
             renderStdOut (name <> " = ")
-            renderStdOut (Pretty.ppOut localOpts node)
+            renderStdOut (Core.ppOut localOpts node)
             newline
             newline
 
