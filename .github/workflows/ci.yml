@@ -240,11 +240,6 @@ jobs:
           path: main
           submodules: true
 
-      - name: Set homebrew LLVM CC and LIBTOOL vars (macOS)
-        run: |
-          echo "CC=$(brew --prefix llvm)/bin/clang" >> $GITHUB_ENV
-          echo "LIBTOOL=$(brew --prefix llvm)/bin/llvm-ar" >> $GITHUB_ENV
-
       - name: Install ICU4C
         run: |
           brew install icu4c
@@ -275,10 +270,6 @@ jobs:
           echo "CC=$(brew --prefix llvm)/bin/clang" >> $GITHUB_ENV
           echo "LIBTOOL=$(brew --prefix llvm)/bin/llvm-ar" >> $GITHUB_ENV
 
-      - name: Add homebrew clang to the PATH (macOS)
-        run: |
-          echo "$(brew --prefix llvm)/bin" >> $GITHUB_PATH
-
       - name: Make runtime
         run: |
           cd main
@@ -289,6 +280,10 @@ jobs:
         with:
           working-directory: main
           test: false
+
+      - name: Add homebrew clang to the PATH (macOS)
+        run: |
+          echo "$(brew --prefix llvm)/bin" >> $GITHUB_PATH
 
       - name: Test suite (macOS)
         if: ${{ success() }}
