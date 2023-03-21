@@ -28,9 +28,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: mrkkrp/ormolu-action@v9
+      - uses: mrkkrp/ormolu-action@v11
         with:
-          # version: 0.5.2.0
+          version: 0.5.2.0
           extra-args: >-
             --ghc-opt -XDerivingStrategies --ghc-opt -XImportQualifiedPost
             --ghc-opt -XMultiParamTypeClasses --ghc-opt -XStandaloneDeriving
@@ -62,21 +62,6 @@ jobs:
         with:
           path: main
           submodules: true
-
-      - name: Workaround runner image issue
-        # https://github.com/actions/runner-images/issues/7061
-        run: sudo chown -R $USER /usr/local/.ghcup
-
-      - name: Workaround runner image issue
-        # https://github.com/actions/runner-images/issues/7061
-        run: sudo chown -R $USER /usr/local/.ghcup
-
-      - uses: haskell/actions/setup@v2
-        name: Setup Haskell
-        with:
-          ghc-version: 9.2.6
-          enable-stack: true
-          stack-version: latest
 
       - name: Cache LLVM and Clang
         id: cache-llvm
@@ -116,15 +101,11 @@ jobs:
       - name: Install libicu for testing
         run: sudo apt install -y libicu66
 
-      - uses: freckle/stack-action@v4
+      - name: Stack setup
+        uses: freckle/stack-action@v4
         with:
+          working-directory: main
           test: false
-
-      - name: Build Project
-        run: |
-          cd main
-          stack path --stack-root
-          make build
 
       - name: Test suite
         id: test
@@ -142,11 +123,20 @@ jobs:
           repository: jonaprieto/smoke
           path: smoke
 
+      - uses: freckle/stack-cache-action@v2
+        with:
+          working-directory: smoke
+
       - name: Install Smoke
         run: |
           cd smoke
           stack install --stack-root ${{ github.workspace }}/.stack
         shell: bash
+
+      - name: Install Juvix binary
+        run: |
+          cd main
+          make install
 
       - name: Smoke testing
         id: smoke-linux
@@ -188,21 +178,6 @@ jobs:
         with:
           mdbook-version: "latest"
 
-      - name: Workaround runner image issue
-        # https://github.com/actions/runner-images/issues/7061
-        run: sudo chown -R $USER /usr/local/.ghcup
-
-      - name: Workaround runner image issue
-        # https://github.com/actions/runner-images/issues/7061
-        run: sudo chown -R $USER /usr/local/.ghcup
-
-      - uses: haskell/actions/setup@v2
-        name: Setup Haskell
-        with:
-          ghc-version: 9.2.6
-          enable-stack: true
-          stack-version: latest
-
       - name: Cache LLVM and Clang
         id: cache-llvm
         uses: actions/cache@v3
@@ -223,8 +198,10 @@ jobs:
           cd main
           make docs
 
-      - uses: freckle/stack-action@v4
+      - name: Stack setup
+        uses: freckle/stack-action@v4
         with:
+          working-directory: main
           test: false
 
       - name: Generate HTML files from examples
@@ -253,14 +230,6 @@ jobs:
           path: main
           submodules: true
 
-
-      - uses: haskell/actions/setup@v2
-        name: Setup Haskell
-        with:
-          ghc-version: 9.2.6
-          enable-stack: true
-          stack-version: latest
-
       - name: Set homebrew LLVM CC and LIBTOOL vars (macOS)
         run: |
           echo "CC=$(brew --prefix llvm)/bin/clang" >> $GITHUB_ENV
@@ -271,15 +240,11 @@ jobs:
           brew install icu4c
           brew link icu4c --force
 
-      - uses: freckle/stack-action@v4
+      - name: Stack setup
+        uses: freckle/stack-action@v4
         with:
+          working-directory: main
           test: false
-
-      - name: Build Project (macOS)
-        run: |
-          cd main
-          stack path --stack-root
-          make CC=$CC LIBTOOL=$LIBTOOL build
 
       - name: Download and extract wasi-sysroot
         run: >
@@ -315,6 +280,7 @@ jobs:
         run: |
           cd main
           make CC=$CC LIBTOOL=$LIBTOOL test
+          make CC=$CC LIBTOOL=$LIBTOOL install
 
       - name: Add ~/.local/bin to PATH
         run: |
