@@ -5,7 +5,7 @@ of any kind. We appreciate any help/feedback we can get.
 
 ## Getting Started
 
-Make sure you have followed the [installation instructions](https://docs.juvix.org/howto/installing.html) and have a working Juvix installation. You can also use the web-based development environment ready to the Juvix development, [Juvix Github Codespace](
+Make sure you have followed the [installation instructions](https://docs.juvix.org/howto/installing.html) and have a working Juvix installation. You can also use the web-based development environment ready to the Juvix development, [Juvix Github Codespace](https://github.com/codespaces/new?hide_repo_select=true&ref=main&repo=102404734&machine=standardLinux32gb&location=WestEurope)
 
 1. Fork the repository.
 2. Clone your forked repository to your local machine.
