@@ -28,7 +28,7 @@ Juvix GitHub repository or use the web-based development environment, [Juvix
 Github Codespace][repo-codespace], which provides a pre-configured workspace
 ready to use with Juvix and the Haskell toolchain installed.
 
-## The Juvix programming language
+## Language features
 
 Juvix is designed with a focus on safety. The Juvix compiler runs several
 static analyses which guarantee the absence of runtime errors. Analyses
