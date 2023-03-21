@@ -84,6 +84,11 @@ static word_t io_readln() {
         error_exit_msg("read error");
     }
     io_buffer[MAX_CSTRING_LENGTH - 1] = 0;
+    // remove trailing newline
+    size_t len = strlen(io_buffer);
+    if (len > 0) {
+        io_buffer[len - 1] = 0;
+    }
     return alloc_cstring(io_buffer);
 #elif defined(API_WASI)
     io_flush();
