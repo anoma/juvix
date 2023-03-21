@@ -164,6 +164,9 @@ kwSemicolon = delimiter Str.semicolon
 kwTerminating :: Doc Ann
 kwTerminating = keyword Str.terminating
 
+kwTotal :: Doc Ann
+kwTotal = keyword Str.total
+
 kwBraceL :: Doc Ann
 kwBraceL = delimiter "{"
 

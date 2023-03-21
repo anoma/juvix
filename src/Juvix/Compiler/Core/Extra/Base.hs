@@ -83,10 +83,10 @@ mkCase i sym v bs def = NCase (Case i sym v bs def)
 mkCase' :: Symbol -> Node -> [CaseBranch] -> Maybe Node -> Node
 mkCase' = mkCase Info.empty
 
-mkMatch :: Info -> NonEmpty Type -> Type -> NonEmpty Node -> [MatchBranch] -> Node
-mkMatch i vtys rty vs bs = NMatch (Match i vtys rty vs bs)
+mkMatch :: Info -> Bool -> NonEmpty Type -> Type -> NonEmpty Node -> [MatchBranch] -> Node
+mkMatch i tot vtys rty vs bs = NMatch (Match i tot vtys rty vs bs)
 
-mkMatch' :: NonEmpty Type -> Type -> NonEmpty Node -> [MatchBranch] -> Node
+mkMatch' :: Bool -> NonEmpty Type -> Type -> NonEmpty Node -> [MatchBranch] -> Node
 mkMatch' = mkMatch Info.empty
 
 mkMatchBranch :: Info -> NonEmpty Pattern -> Node -> MatchBranch
@@ -587,7 +587,7 @@ destruct = \case
                 _nodeReassemble = twoManyChildrenI $ \i' is' v' def' allNodes' ->
                   mkCase i' sym v' (mkBranches is' allNodes') (Just def')
               }
-  NMatch (Match i vtys rty vs branches) ->
+  NMatch (Match i tot vtys rty vs branches) ->
     let allNodes :: [NodeChild]
         allNodes =
           noBinders rty
@@ -661,6 +661,7 @@ destruct = \case
                           mapM mkBranch branches
                in mkMatch
                     i'
+                    tot
                     valueTypes'
                     returnType'
                     values'

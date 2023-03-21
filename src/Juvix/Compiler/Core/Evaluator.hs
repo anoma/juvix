@@ -75,7 +75,7 @@ eval herr ctx env0 = convertRuntimeNodes . eval' env0
         case eval' env v of
           NCtr (Constr _ tag args) -> branch n env args tag def bs
           v' -> evalError "matching on non-data" (substEnv env (mkCase i sym v' bs def))
-      NMatch (Match _ _ _ vs bs) ->
+      NMatch (Match _ _ _ _ vs bs) ->
         let !vs' = map' (eval' env) (toList vs)
          in match n env vs' bs
       NPi {} -> substEnv env n

@@ -181,6 +181,7 @@ goFunctionDefHelper ::
 goFunctionDefHelper sig@TypeSignature {..} clauses = do
   let _funDefName = goSymbol _sigName
       _funDefTerminating = isJust _sigTerminating
+      _funDefTotal = isJust _sigTotal
       _funDefBuiltin = (^. withLocParam) <$> _sigBuiltin
   _funDefTypeSig <- goExpression _sigType
   _funDefExamples <- goExamples _sigDoc

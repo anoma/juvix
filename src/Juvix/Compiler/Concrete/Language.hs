@@ -193,7 +193,8 @@ data TypeSignature (s :: Stage) = TypeSignature
     _sigDoc :: Maybe (Judoc s),
     _sigBuiltin :: Maybe (WithLoc BuiltinFunction),
     _sigBody :: Maybe (ExpressionType s),
-    _sigTerminating :: Maybe KeywordRef
+    _sigTerminating :: Maybe KeywordRef,
+    _sigTotal :: Maybe KeywordRef
   }
 
 deriving stock instance (Show (ExpressionType s), Show (SymbolType s)) => Show (TypeSignature s)

@@ -275,6 +275,9 @@ colon = ":"
 terminating :: (IsString s) => s
 terminating = "terminating"
 
+total :: (IsString s) => s
+total = "total"
+
 positive :: (IsString s) => s
 positive = "positive"
 

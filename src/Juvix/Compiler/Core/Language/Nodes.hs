@@ -144,6 +144,7 @@ data If' i a = If
 -- | Complex pattern match. `Match` is lazy: only the selected branch is evaluated.
 data Match' i a = Match
   { _matchInfo :: i,
+    _matchTotal :: !Bool,
     _matchValueTypes :: !(NonEmpty a),
     _matchReturnType :: !a,
     _matchValues :: !(NonEmpty a),
@@ -361,7 +362,7 @@ instance (Eq a) => Eq (CaseBranch' i a ty) where
       ..&&.. eqOn (^. caseBranchBody)
 
 instance (Eq a) => Eq (Match' i a) where
-  (Match _ _ _ vs1 bs1) == (Match _ _ _ vs2 bs2) = vs1 == vs2 && bs1 == bs2
+  (Match _ _ _ _ vs1 bs1) == (Match _ _ _ _ vs2 bs2) = vs1 == vs2 && bs1 == bs2
 
 instance Eq (PatternWildcard' i a) where
   _ == _ = True

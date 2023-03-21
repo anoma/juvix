@@ -88,6 +88,9 @@ kwType = asciiKw Str.type_
 kwTerminating :: Keyword
 kwTerminating = asciiKw Str.terminating
 
+kwTotal :: Keyword
+kwTotal = asciiKw Str.total
+
 kwPositive :: Keyword
 kwPositive = asciiKw Str.positive
 

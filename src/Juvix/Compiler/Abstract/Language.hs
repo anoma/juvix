@@ -59,7 +59,8 @@ data FunctionDef = FunctionDef
     _funDefExamples :: [Example],
     _funDefClauses :: NonEmpty FunctionClause,
     _funDefBuiltin :: Maybe BuiltinFunction,
-    _funDefTerminating :: Bool
+    _funDefTerminating :: Bool,
+    _funDefTotal :: Bool
   }
   deriving stock (Eq, Show)
 

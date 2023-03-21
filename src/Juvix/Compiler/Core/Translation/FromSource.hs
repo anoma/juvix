@@ -926,7 +926,7 @@ exprMatch' vals rty varsNum vars = do
   let values = map fst vals
       types = map snd vals
   bs <- P.sepEndBy (matchBranch (length values) varsNum vars) (kw kwSemicolon)
-  return $ mkMatch' (fromList types) rty (fromList values) bs
+  return $ mkMatch' True (fromList types) rty (fromList values) bs
 
 matchBranch ::
   (Member InfoTableBuilder r) =>

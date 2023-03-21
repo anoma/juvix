@@ -50,7 +50,8 @@ goMatchToCase recur node = case node of
         go :: Int -> [(Node, Type)] -> Sem r Node
         go n = \case
           [] ->
-            compile err n [0 .. n - 1] matrix
+            local (over optCheckCoverage (&& (not _matchTotal))) $
+              compile err n [0 .. n - 1] matrix
             where
               err = hsep . take n
               matrix = map matchBranchToPatternRow _matchBranches
