@@ -26,7 +26,7 @@ void io_flush() {
         io_index = 0;
 #else
         io_buffer[io_index] = 0;
-        print_msg(io_buffer);
+        print_msg_nonl(io_buffer);
         io_index = 0;
 #endif
     }
