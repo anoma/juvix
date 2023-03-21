@@ -111,21 +111,21 @@ goMatchToCase recur node = case node of
             (col, matrix') = decompose val matrix
             tagsSet = getPatTags col
             tags = toList tagsSet
-            ind = fromJust (HashMap.lookup (List.head tags) (tab ^. infoConstructors)) ^. constructorInductive
-            ctrsNum = length (fromJust (HashMap.lookup ind (tab ^. infoInductives)) ^. inductiveConstructors)
          in if
                 | null tags ->
                     -- There are no constructor patterns
-                    compileDefault (missingTag tab ind tagsSet) err bindersNum vs' col matrix'
+                    compileDefault Nothing err bindersNum vs' col matrix'
                 | otherwise -> do
                     -- Section 4, case 3(a)
+                    let ind = fromJust (HashMap.lookup (List.head tags) (tab ^. infoConstructors)) ^. constructorInductive
+                        ctrsNum = length (fromJust (HashMap.lookup ind (tab ^. infoInductives)) ^. inductiveConstructors)
                     branches <- mapM (compileBranch err bindersNum vs' col matrix') tags
                     defaultBranch <-
                       if
                           | length tags == ctrsNum ->
                               return Nothing
                           | otherwise ->
-                              Just <$> compileDefault (missingTag tab ind tagsSet) err bindersNum vs' col matrix'
+                              Just <$> compileDefault (Just $ missingTag tab ind tagsSet) err bindersNum vs' col matrix'
                     return $
                       NCase
                         Case
@@ -190,14 +190,10 @@ goMatchToCase recur node = case node of
     -- `compileDefault` computes D(M) where `M = col:matrix`, as described in
     -- Section 2, Figure 1 in the paper. Then it continues compilation with the
     -- new matrix.
-    compileDefault :: Tag -> ([Doc Ann] -> Doc Ann) -> Level -> [Level] -> [Pattern] -> PatternMatrix -> Sem r Node
-    compileDefault tag err bindersNum vs col matrix = do
+    compileDefault :: Maybe Tag -> ([Doc Ann] -> Doc Ann) -> Level -> [Level] -> [Pattern] -> PatternMatrix -> Sem r Node
+    compileDefault mtag err bindersNum vs col matrix = do
       tab <- ask
-      let ci = fromJust $ HashMap.lookup tag (tab ^. infoConstructors)
-          paramsNum = getTypeParamsNum tab (ci ^. constructorType)
-          argsNum = ci ^. constructorArgsNum - paramsNum
-          err' args = err (parensIf (argsNum > 0) (foldl' (<+>) (pretty (ci ^. constructorName)) (replicate argsNum "_")) : args)
-      compile err' bindersNum vs matrix'
+      compile (err' tab) bindersNum vs matrix'
       where
         matrix' =
           catMaybes $
@@ -209,6 +205,16 @@ goMatchToCase recur node = case node of
               )
               col
               matrix
+        err' tab args =
+          case mtag of
+            Just tag ->
+              err (parensIf (argsNum > 0) (foldl' (<+>) (pretty (ci ^. constructorName)) (replicate argsNum "_")) : args)
+              where
+                ci = fromJust $ HashMap.lookup tag (tab ^. infoConstructors)
+                paramsNum = getTypeParamsNum tab (ci ^. constructorType)
+                argsNum = ci ^. constructorArgsNum - paramsNum
+            Nothing ->
+              err ("_" : args)
 
     -- `compileBranch` computes S(c, M) where `c = Constr tag` and `M =
     -- col:matrix`, as described in Section 2, Figure 1 in the paper. Then it
