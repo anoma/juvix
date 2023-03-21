@@ -5,17 +5,17 @@ of any kind. We appreciate any help/feedback we can get.
 
 ## Getting Started
 
-Make sure you have followed the [installation instructions](https://docs.juvix.org/howto/installing.html) and have a working Juvix installation. You can also use the web-based development environment ready to the Juvix development, [Juvix Github Codespace](https://github.com/codespaces/new?hide_repo_select=true&ref=main&repo=102404734&machine=standardLinux32gb&location=WestEurope)
+Make sure you have followed the [installation instructions][installation] and have a working Juvix installation. You can also use the web-based development environment ready to the Juvix development, [Juvix Github Codespace][juvix-codespace]
 
 1. Fork the repository.
 2. Clone your forked repository to your local machine.
-3. Install [Stack](https://docs.haskellstack.org/en/stable/README/) if you
+3. Install [Stack][stack] if you
    haven't already.
 4. Build the project by running `stack build`. To build the project with
    optimizations, run `stack build --fast`. To install the binaries to your
    local `~/.local/bin`, run `stack install`.
 5. Run the tests by running `stack test`.
-6. Make sure to install the [pre-commit](https://pre-commit.com/) binary, so you
+6. Make sure to install the [pre-commit][pre-commit] binary, so you
    can run the pre-commit hooks by running `make precommit` in the root
    directory of the project. All the Pull Requests will be checked by the
    pre-commit hooks.
@@ -34,7 +34,7 @@ We value readability and maintainability over saving lines of code. The best
 source of truth for the Juvix code style is the existing codebase. We strongly
 encourage you to look at the existing code and follow the same style. Open an
 issue if you have any questions, or better yet, join our
-[Discord](https://discord.gg/8JYQXZJ) and ask there!
+[Discord][discord] and ask there!
 
 Some basic guidelines when writing code:
 
@@ -56,3 +56,9 @@ CLI, please also update the smoke tests in the `tests/smoke` directory.
 All pull requests will be reviewed by at least one member of the development team. Feedback may be provided on the code itself, as well as on the tests and documentation.
 
 Thank you for contributing to Juvix!
+
+[installation]: https://docs.juvix.org/howto/installing.html
+[juvix-codespace]: https://github.com/codespaces/new?hide_repo_select=true&ref=main&repo=102404734&machine=standardLinux32gb&location=WestEurope
+[stack]: https://docs.haskellstack.org/en/stable/README/
+[pre-commit]: https://pre-commit.com/
+[discord]: https://discord.gg/PfaaFVErHt
