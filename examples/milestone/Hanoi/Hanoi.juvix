@@ -14,61 +14,61 @@
 
 --- The function ;hanoi; computes the sequence of moves to solve puzzle.
 module Hanoi;
-  open import Stdlib.Prelude;
 
-  --- Concatenates a list of strings
+open import Stdlib.Prelude;
 
-  --- ;concat (("a" :: nil) :: "b" :: nil); evaluates to ;"a"
-    :: "b"
-    :: nil;
-  concat : List String → String;
-  concat := foldl (++str) "";
+--- Concatenates a list of strings
 
-  intercalate : String → List String → String;
-  intercalate sep xs := concat (intersperse sep xs);
+--- ;concat (("a" :: nil) :: "b" :: nil); evaluates to ;"a"
+  :: "b"
+  :: nil;
+concat : List String → String;
+concat := foldl (++str) "";
 
-  --- Joins a list of strings with the newline character
-  unlines : List String → String;
-  unlines := intercalate "\n";
+intercalate : String → List String → String;
+intercalate sep xs := concat (intersperse sep xs);
 
-  --- Produce a singleton List
-  singleton : {A : Type} → A → List A;
-  singleton a := a :: nil;
+--- Joins a list of strings with the newline character
+unlines : List String → String;
+unlines := intercalate "\n";
 
-  --- Produce a ;String; representation of a ;List Nat;
-  showList : List Nat → String;
-  showList xs :=
-    "[" ++str intercalate "," (map natToString xs) ++str "]";
+--- Produce a singleton List
+singleton : {A : Type} → A → List A;
+singleton a := a :: nil;
 
-  --- A Peg represents a peg in the towers of Hanoi game
-  type Peg :=
-    | left : Peg
-    | middle : Peg
-    | right : Peg;
+--- Produce a ;String; representation of a ;List Nat;
+showList : List Nat → String;
+showList xs :=
+  "[" ++str intercalate "," (map natToString xs) ++str "]";
 
-  showPeg : Peg → String;
-  showPeg left := "left";
-  showPeg middle := "middle";
-  showPeg right := "right";
+--- A Peg represents a peg in the towers of Hanoi game
+type Peg :=
+  | left : Peg
+  | middle : Peg
+  | right : Peg;
 
-  --- A Move represents a move between pegs
-  type Move :=
-    | move : Peg → Peg → Move;
+showPeg : Peg → String;
+showPeg left := "left";
+showPeg middle := "middle";
+showPeg right := "right";
 
-  showMove : Move → String;
-  showMove (move from to) :=
-    showPeg from ++str " -> " ++str showPeg to;
+--- A Move represents a move between pegs
+type Move :=
+  | move : Peg → Peg → Move;
 
-  --- Produce a list of ;Move;s that solves the towers of Hanoi game
-  hanoi : Nat → Peg → Peg → Peg → List Move;
-  hanoi zero _ _ _ := nil;
-  hanoi (suc n) p1 p2 p3 :=
-    hanoi n p1 p3 p2
-      ++ singleton (move p1 p2)
-      ++ hanoi n p3 p2 p1;
+showMove : Move → String;
+showMove (move from to) :=
+  showPeg from ++str " -> " ++str showPeg to;
 
-  main : IO;
-  main :=
-    printStringLn
-      (unlines (map showMove (hanoi 5 left middle right)));
-end;
+--- Produce a list of ;Move;s that solves the towers of Hanoi game
+hanoi : Nat → Peg → Peg → Peg → List Move;
+hanoi zero _ _ _ := nil;
+hanoi (suc n) p1 p2 p3 :=
+  hanoi n p1 p3 p2
+    ++ singleton (move p1 p2)
+    ++ hanoi n p3 p2 p1;
+
+main : IO;
+main :=
+  printStringLn
+    (unlines (map showMove (hanoi 5 left middle right)));

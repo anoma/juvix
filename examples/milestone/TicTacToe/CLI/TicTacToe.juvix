@@ -8,43 +8,43 @@
 
 --- The module Logic.Game contains the game logic.
 module CLI.TicTacToe;
-  open import Stdlib.Data.Nat.Ord;
-  open import Stdlib.Prelude;
-  open import Logic.Game;
 
-  --- A ;String; that prompts the user for their input
-  prompt : GameState → String;
-  prompt x :=
-    "\n"
-      ++str showGameState x
-      ++str "\nPlayer "
-      ++str showSymbol (player x)
-      ++str ": ";
+open import Stdlib.Data.Nat.Ord;
+open import Stdlib.Prelude;
+open import Logic.Game;
 
-  nextMove : GameState → String → GameState;
-  nextMove s := flip playMove s ∘ validMove ∘ stringToNat;
+--- A ;String; that prompts the user for their input
+prompt : GameState → String;
+prompt x :=
+  "\n"
+    ++str showGameState x
+    ++str "\nPlayer "
+    ++str showSymbol (player x)
+    ++str ": ";
 
-  --- Main loop
-  terminating
-  run : GameState → IO;
-  run (state b p (terminate msg)) :=
-    printStringLn
-      ("\n"
-        ++str showGameState (state b p noError)
-        ++str "\n"
-        ++str msg);
-  run (state b p (continue msg)) :=
-    printString (msg ++str prompt (state b p noError))
-      >> readLn (run ∘ nextMove (state b p noError));
-  run x :=
-    printString (prompt x) >> readLn (run ∘ nextMove x);
+nextMove : GameState → String → GameState;
+nextMove s := flip playMove s ∘ validMove ∘ stringToNat;
 
-  --- The welcome message
-  welcome : String;
-  welcome :=
-    "MiniTicTacToe\n-------------\n\nType a number then ENTER to make a move";
+--- Main loop
+terminating
+run : GameState → IO;
+run (state b p (terminate msg)) :=
+  printStringLn
+    ("\n"
+      ++str showGameState (state b p noError)
+      ++str "\n"
+      ++str msg);
+run (state b p (continue msg)) :=
+  printString (msg ++str prompt (state b p noError))
+    >> readLn (run ∘ nextMove (state b p noError));
+run x :=
+  printString (prompt x) >> readLn (run ∘ nextMove x);
 
-  --- The entry point of the program
-  main : IO;
-  main := printStringLn welcome >> run beginState;
-end;
+--- The welcome message
+welcome : String;
+welcome :=
+  "MiniTicTacToe\n-------------\n\nType a number then ENTER to make a move";
+
+--- The entry point of the program
+main : IO;
+main := printStringLn welcome >> run beginState;

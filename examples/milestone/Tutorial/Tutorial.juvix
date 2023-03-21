@@ -4,11 +4,11 @@
 
 --- first.
 module Tutorial;
-  -- import the standard library prelude and bring it into scope
-  open import Stdlib.Prelude;
-  -- bring comparison operators on Nat into scope
-  open import Stdlib.Data.Nat.Ord;
 
-  main : IO;
-  main := printStringLn "Hello world!";
-end;
+-- import the standard library prelude and bring it into scope
+open import Stdlib.Prelude;
+-- bring comparison operators on Nat into scope
+open import Stdlib.Data.Nat.Ord;
+
+main : IO;
+main := printStringLn "Hello world!";

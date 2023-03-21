@@ -1,13 +1,13 @@
 module Fibonacci;
-  open import Stdlib.Prelude;
 
-  fib : Nat → Nat → Nat → Nat;
-  fib zero x1 _ := x1;
-  fib (suc n) x1 x2 := fib n x2 (x1 + x2);
+open import Stdlib.Prelude;
 
-  fibonacci : Nat → Nat;
-  fibonacci n := fib n 0 1;
+fib : Nat → Nat → Nat → Nat;
+fib zero x1 _ := x1;
+fib (suc n) x1 x2 := fib n x2 (x1 + x2);
 
-  main : IO;
-  main := printNatLn (fibonacci 25);
-end;
+fibonacci : Nat → Nat;
+fibonacci n := fib n 0 1;
+
+main : IO;
+main := printNatLn (fibonacci 25);

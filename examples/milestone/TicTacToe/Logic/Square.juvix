@@ -1,32 +1,32 @@
 module Logic.Square;
-  open import Stdlib.Prelude;
-  open import Logic.Symbol;
-  open import Stdlib.Data.Nat.Ord;
-  open import Logic.Extra;
 
-  --- A square is each of the holes in a board
-  type Square :=
-    | --- An empty square has a ;Nat; that uniquely identifies it
-      empty : Nat → Square
-    | --- An occupied square has a ;Symbol; in it
-      occupied : Symbol → Square;
+open import Stdlib.Prelude;
+open import Logic.Symbol;
+open import Stdlib.Data.Nat.Ord;
+open import Logic.Extra;
 
-  --- Equality for ;Square;s
-  ==Square : Square → Square → Bool;
-  ==Square (empty m) (empty n) := m == n;
-  ==Square (occupied s) (occupied t) := ==Symbol s t;
-  ==Square _ _ := false;
+--- A square is each of the holes in a board
+type Square :=
+  | --- An empty square has a ;Nat; that uniquely identifies it
+    empty : Nat → Square
+  | --- An occupied square has a ;Symbol; in it
+    occupied : Symbol → Square;
 
-  --- Textual representation of a ;Square;
-  showSquare : Square → String;
-  showSquare (empty n) := " " ++str natToString n ++str " ";
-  showSquare (occupied s) := " " ++str showSymbol s ++str " ";
+--- Equality for ;Square;s
+==Square : Square → Square → Bool;
+==Square (empty m) (empty n) := m == n;
+==Square (occupied s) (occupied t) := ==Symbol s t;
+==Square _ _ := false;
 
-  replace : Symbol → Nat → Square → Square;
-  replace player k (empty n) :=
-    if
-      (n Stdlib.Data.Nat.Ord.== k)
-      (occupied player)
-      (empty n);
-  replace _ _ s := s;
-end;
+--- Textual representation of a ;Square;
+showSquare : Square → String;
+showSquare (empty n) := " " ++str natToString n ++str " ";
+showSquare (occupied s) := " " ++str showSymbol s ++str " ";
+
+replace : Symbol → Nat → Square → Square;
+replace player k (empty n) :=
+  if
+    (n Stdlib.Data.Nat.Ord.== k)
+    (occupied player)
+    (empty n);
+replace _ _ s := s;

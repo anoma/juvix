@@ -21,40 +21,15 @@ concurrency:
   group: "${{ github.workflow }}-${{ github.head_ref || github.run_id }}"
   cancel-in-progress: true
 env:
-  SKIP: ormolu
+  SKIP: ormolu format-juvix-examples
 
 jobs:
-<<<<<<< HEAD
-
   pre-commit:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
-      - uses: pre-commit/action@v3.0.0
-
-  clang-format:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: jidicula/clang-format-action@v4.10.1
-        with:
-          clang-format-version: '15'
-          check-path: runtime/src
-
-  ormolu:
-=======
-  pre-commit:
->>>>>>> 9606ba98 (w.i.p)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: mrkkrp/ormolu-action@v11
-        with:
-<<<<<<< HEAD
-=======
           python-version: "3.11"
       - uses: pre-commit/action@v3.0.0
 
@@ -64,7 +39,6 @@ jobs:
       - uses: actions/checkout@v3
       - uses: mrkkrp/ormolu-action@v11
         with:
->>>>>>> 9606ba98 (w.i.p)
           version: 0.5.2.0
           extra-args: >-
             --ghc-opt -XDerivingStrategies --ghc-opt -XImportQualifiedPost
@@ -135,6 +109,12 @@ jobs:
         run: |
           cd main
           make test
+
+      - name: Typecheck and format Juvix examples
+        if: ${{ success() }}
+        run: |
+          cd main
+          make -s juvix-format
 
       - name: Add ~/.local/bin to PATH
         run: |
@@ -243,11 +223,7 @@ jobs:
       - name: Deploy HTML to github pages
         uses: peaceiris/actions-gh-pages@v3
         with:
-<<<<<<< HEAD
-          github_token: '${{ secrets.GITHUB_TOKEN }}'
-=======
           github_token: "${{ secrets.GITHUB_TOKEN }}"
->>>>>>> 9606ba98 (w.i.p)
           publish_dir: main/book/html
           enable_jekyll: false
           cname: docs.juvix.org
@@ -270,10 +246,6 @@ jobs:
         run: |
           brew install icu4c
           brew link icu4c --force
-<<<<<<< HEAD
-
-=======
->>>>>>> 9606ba98 (w.i.p)
 
       - name: Download and extract wasi-sysroot
         run: >
@@ -321,6 +293,12 @@ jobs:
           cd main
           make CC=$CC LIBTOOL=$LIBTOOL test
           make CC=$CC LIBTOOL=$LIBTOOL install
+
+      - name: Typecheck and format Juvix examples
+        if: ${{ success() }}
+        run: |
+          cd main
+          make -s juvix-format
 
       - name: Add ~/.local/bin to PATH
         run: |
