@@ -84,5 +84,5 @@ unrollRecursion tab =
             go :: Int -> Node -> Node
             go limit = \case
               NIdt idt@Ident {..} ->
-                NIdt idt {_identSymbol = fromJust $ HashMap.lookup (_identSymbol, limit - 1) freshSyms}
+                NIdt idt {_identSymbol = fromMaybe _identSymbol $ HashMap.lookup (_identSymbol, limit - 1) freshSyms}
               node -> node
