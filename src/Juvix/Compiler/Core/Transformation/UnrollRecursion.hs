@@ -43,7 +43,7 @@ unrollRecursion tab =
       modify (\mp -> foldr (mapSymbol freshSyms) mp syms)
       where
         unrollLimit :: Int
-        unrollLimit = 100
+        unrollLimit = 140
 
         mapSymbol :: HashMap (Symbol, Int) Symbol -> Symbol -> HashMap Symbol Symbol -> HashMap Symbol Symbol
         mapSymbol freshSyms sym = HashMap.insert sym (fromJust $ HashMap.lookup (sym, unrollLimit) freshSyms)

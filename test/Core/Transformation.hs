@@ -5,6 +5,7 @@ import Core.Transformation.Identity qualified as Identity
 import Core.Transformation.Lifting qualified as Lifting
 import Core.Transformation.Pipeline qualified as Pipeline
 import Core.Transformation.TopEtaExpand qualified as TopEtaExpand
+import Core.Transformation.Unrolling qualified as Unrolling
 
 allTests :: TestTree
 allTests =
@@ -13,5 +14,6 @@ allTests =
     [ Identity.allTests,
       TopEtaExpand.allTests,
       Lifting.allTests,
-      Pipeline.allTests
+      Pipeline.allTests,
+      Unrolling.allTests
     ]
