@@ -35,6 +35,7 @@ bool io_interpret(word_t x, word_t *ret, word_t *arg);
             CALL_CLOSURE(juvix_io_ret, juvix_io_interpret_label_1);      \
             STACK_LEAVE;                                                 \
         } else {                                                         \
+            RESTORE_MEMORY_POINTERS;                                     \
             juvix_result = juvix_io_ret;                                 \
             RETURN_NS;                                                   \
         }                                                                \

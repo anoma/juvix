@@ -42,14 +42,14 @@ repos:
 
   - repo: local
     hooks:
-      - id: ormolu
-        name: check Haskell formatting with ormolu
-        entry: make -s check-ormolu
-        language: system
-        pass_filenames: false
       - id: format-juvix-examples
         name: typecheck and format Juvix examples
         entry: make -s juvix-format
         language: system
         verbose: false
+        pass_filenames: false
+      - id: ormolu
+        name: format Haskell code with ormolu
+        entry: make -s ormolu
+        language: system
         pass_filenames: false

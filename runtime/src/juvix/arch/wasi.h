@@ -7,6 +7,7 @@
 
 _Noreturn void exit(int code);
 
+void puts_nonl(const char *str);
 void puts(const char *str);
 
 typedef struct Ciovec {

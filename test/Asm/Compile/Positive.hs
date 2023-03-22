@@ -12,7 +12,7 @@ testDescr Run.PosTest {..} =
    in TestDescr
         { _testName = _name,
           _testRoot = tRoot,
-          _testAssertion = Steps $ asmCompileAssertion file' expected'
+          _testAssertion = Steps $ asmCompileAssertion file' expected' ""
         }
 
 allTests :: TestTree

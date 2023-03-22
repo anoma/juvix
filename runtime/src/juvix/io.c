@@ -26,7 +26,7 @@ void io_flush() {
         io_index = 0;
 #else
         io_buffer[io_index] = 0;
-        print_msg(io_buffer);
+        print_msg_nonl(io_buffer);
         io_index = 0;
 #endif
     }
@@ -84,6 +84,11 @@ static word_t io_readln() {
         error_exit_msg("read error");
     }
     io_buffer[MAX_CSTRING_LENGTH - 1] = 0;
+    // remove trailing newline
+    size_t len = strlen(io_buffer);
+    if (len > 0) {
+        io_buffer[len - 1] = 0;
+    }
     return alloc_cstring(io_buffer);
 #elif defined(API_WASI)
     io_flush();

@@ -2,11 +2,6 @@ PWD=$(CURDIR)
 PREFIX="$(PWD)/.stack-work/prefix"
 UNAME := $(shell uname)
 
-IMAGES = $(shell find assets/images -type f)
-
-ORGFILES = $(shell find docs/org -type f -name '*.org')
-MDFILES:=$(patsubst docs/org/%,docs/md/%,$(ORGFILES:.org=.md))
-
 EXAMPLEMILESTONE=examples/milestone
 EXAMPLEHTMLOUTPUT=_docs/examples/html
 EXAMPLES= Collatz/Collatz.juvix \
@@ -21,9 +16,10 @@ DEMO_EXAMPLE=examples/demo/Demo.juvix
 
 MAKEAUXFLAGS?=-s
 MAKE=make ${MAKEAUXFLAGS}
-
-ORGTOMDPRG ?=pandoc
-ORGOPTS=--from org --to markdown_strict -s -o $@
+METAFILES:=README.md \
+		   CHANGELOG.md \
+		   CONTRIBUTING.md \
+		   LICENSE.md
 
 ifeq ($(UNAME), Darwin)
 	THREADS := $(shell sysctl -n hw.logicalcpu)
@@ -33,16 +29,10 @@ else
 	THREADS := $(shell echo %NUMBER_OF_PROCESSORS%)
 endif
 
-images:
-	echo $(IMAGES)
-
-all: install
-
 clean: clean-runtime
 	@stack clean --full
 	@rm -rf .hie
 	@rm -rf book
-	@rm -rf docs/md
 
 .PHONY: clean-hard
 clean-hard: clean
@@ -81,39 +71,20 @@ demo-example:
 
 # -- MDBook
 
-docs/md/README.md : README.org
-	@mkdir -p docs/md
-	@${ORGTOMDPRG} README.org ${ORGOPTS}
-
-docs/md/changelog.md : changelog.org
-	@mkdir -p docs/md
-	@${ORGTOMDPRG} changelog.org ${ORGOPTS}
-
-docs/md/%.md : docs/org/%.org
-	@echo "Processing ...  $@"
-	@mkdir -p $(dir $@)
-	${ORGTOMDPRG} $? ${ORGOPTS}
-
-.PHONY: markdown-files
-markdown-files: docs/md/README.md docs/md/changelog.md $(MDFILES)
-
-.PHONY: markdown-docs
-markdown-docs: cargo-dependencies markdown-files
-	@echo "copying assets ..."
-	@mkdir -p docs/md/assets/images
-	@cp -v $(IMAGES) docs/md/assets/images/
+.PHONY: docs
+docs:
+	@cp $(METAFILES) docs/
 	@mdbook build
 
 .PHONY: serve-docs
-serve-docs: markdown-files
+serve-docs: docs
 	@mdbook serve --open
-
 
 cargo-dependencies:
 	@cargo install mdbook \
-		mdbook-katex \
-		mdbook-linkcheck \
-		mdbook-toc
+				   mdbook-katex \
+				   mdbook-linkcheck \
+				   mdbook-pagetoc
 
 # -- Codebase Documentation
 
@@ -130,8 +101,8 @@ ORMOLUFILES = $(shell git ls-files '*.hs' '*.hs-boot' | grep -v '^contrib/')
 ORMOLUFLAGS?=--no-cabal
 ORMOLUMODE?=inplace
 
-.PHONY: format
-format: clang-format
+.PHONY: ormolu
+ormolu:
 	@${ORMOLU} ${ORMOLUFLAGS} \
 		--ghc-opt -XStandaloneDeriving \
 		--ghc-opt -XUnicodeSyntax \
@@ -142,6 +113,11 @@ format: clang-format
 			--mode ${ORMOLUMODE} \
 		$(ORMOLUFILES)
 
+.PHONY: format
+format:
+	@${MAKE} clang-format
+	@${MAKE} ormolu
+
 .PHONY: clang-format
 clang-format:
 	@cd runtime && ${MAKE} format
@@ -149,8 +125,6 @@ clang-format:
 TOFORMATJUVIXFILES = ./examples
 TOFORMAT = $(shell find ${TOFORMATJUVIXFILES} -name "*.juvix" -print)
 
-.PHONY: $(TOFORMAT)
-juvix-format: $(TOFORMAT)
 $(TOFORMAT): %:
 	@echo "Formatting $@"
 	@juvix dev scope $@ --with-comments > $@.tmp
@@ -158,10 +132,14 @@ $(TOFORMAT): %:
 	@echo "Typechecking formatted $@"
 	@juvix typecheck $@ --only-errors
 
+.PHONY: $(TOFORMAT)
+juvix-format:
+	@${MAKE} $(TOFORMAT)
+
 .PHONY: check-ormolu
 check-ormolu: export ORMOLUMODE = check
 check-ormolu:
-	@${MAKE} format
+	@${MAKE} ormolu
 
 HLINT?=stack exec -- hlint
 HLINTFLAGS?=
