@@ -238,22 +238,21 @@ runIO opts entry = runIOEither entry >=> mayThrow
 runIO' :: EntryPoint -> Sem PipelineEff a -> IO (ResolverState, a)
 runIO' = runIO defaultGenericOptions
 
-pipelineIO' :: EntryPoint -> Sem TopPipelineEff Core.CoreResult -> IO Artifacts
-pipelineIO' = pipelineIO defaultGenericOptions
+corePipelineIO' :: EntryPoint -> IO Artifacts
+corePipelineIO' = corePipelineIO defaultGenericOptions
 
-pipelineIO :: GenericOptions -> EntryPoint -> Sem TopPipelineEff Core.CoreResult -> IO Artifacts
-pipelineIO opts entry = pipelineIOEither entry >=> mayThrow
+corePipelineIO :: GenericOptions -> EntryPoint -> IO Artifacts
+corePipelineIO opts entry = corePipelineIOEither entry >>= mayThrow
   where
     mayThrow :: Either JuvixError r -> IO r
     mayThrow = \case
       Left err -> runM . runReader opts $ printErrorAnsiSafe err >> embed exitFailure
       Right r -> return r
 
-pipelineIOEither ::
+corePipelineIOEither ::
   EntryPoint ->
-  Sem TopPipelineEff Core.CoreResult ->
   IO (Either JuvixError Artifacts)
-pipelineIOEither entry m = do
+corePipelineIOEither entry = do
   eith <-
     runM
       . runError
@@ -263,7 +262,7 @@ pipelineIOEither entry m = do
       . runFilesIO
       . runReader entry
       . runPathResolverArtifacts
-      $ m
+      $ upToCore
   return $ case eith of
     Left err -> Left err
     Right (art, coreRes) ->

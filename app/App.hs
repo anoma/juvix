@@ -21,7 +21,7 @@ data App m a where
   AskGlobalOptions :: App m GlobalOptions
   RenderStdOut :: (HasAnsiBackend a, HasTextBackend a) => a -> App m ()
   RunPipelineEither :: AppPath File -> Sem PipelineEff a -> App m (Either JuvixError (ResolverState, a))
-  RunCorePipelineEither :: AppPath File -> Sem TopPipelineEff Core.CoreResult -> App m (Either JuvixError Artifacts)
+  RunCorePipelineEither :: AppPath File -> App m (Either JuvixError Artifacts)
   Say :: Text -> App m ()
   SayRaw :: ByteString -> App m ()
 
@@ -53,9 +53,9 @@ runAppIO args@RunAppIOArgs {..} =
     AskInvokeDir -> return _runAppIOArgsInvokeDir
     AskPkgDir -> return _runAppIOArgsPkgDir
     AskBuildDir -> return _runAppIOArgsBuildDir
-    RunCorePipelineEither input p -> do
+    RunCorePipelineEither input -> do
       entry <- embed (getEntryPoint' args input)
-      embed (pipelineIOEither entry p)
+      embed (corePipelineIOEither entry)
     RunPipelineEither input p -> do
       entry <- embed (getEntryPoint' args input)
       embed (runIOEither entry p)

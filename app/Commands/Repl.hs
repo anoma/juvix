@@ -108,7 +108,7 @@ runCommand opts = do
 
       loadEntryPoint :: EntryPoint -> Repl ()
       loadEntryPoint ep = do
-        artif <- liftIO (pipelineIO' ep upToCore)
+        artif <- liftIO (corePipelineIO' ep)
         State.modify
           ( set
               replStateContext
