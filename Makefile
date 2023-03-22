@@ -38,10 +38,6 @@ clean: clean-runtime
 clean-hard: clean
 	@git clean -fdx
 
-.PHONY: clean-hard
-clean-hard: clean
-	@git clean -fdx
-
 .PHONY: clean-runtime
 clean-runtime: clean-juvix-build
 	@cd runtime && ${MAKE} clean
