@@ -174,17 +174,15 @@ runCommand opts = do
               artif = ctx ^. replContextArtifacts
               eval :: Core.Node -> Repl (Either JuvixError Core.Node)
               eval n =
-                let
-                  transforms :: [Core.TransformationId]
-                  transforms = maybe Core.toEvalTransformations toList (opts ^. replTransformations)
-                in
-                  case run . runError @JuvixError . runState artif $ runTransformations transforms n of
-                  Left err -> return $ Left err
-                  Right (artif', n') ->
-                    liftIO $
-                      mapLeft
-                        (JuvixError @Core.CoreError)
-                        <$> doEvalIO False defaultLoc (artif' ^. artifactCoreTable) n'
+                let transforms :: [Core.TransformationId]
+                    transforms = maybe Core.toEvalTransformations toList (opts ^. replTransformations)
+                 in case run . runError @JuvixError . runState artif $ runTransformations transforms n of
+                      Left err -> return $ Left err
+                      Right (artif', n') ->
+                        liftIO $
+                          mapLeft
+                            (JuvixError @Core.CoreError)
+                            <$> doEvalIO False defaultLoc (artif' ^. artifactCoreTable) n'
 
               compileString :: Repl (Either JuvixError Core.Node)
               compileString = liftIO $ compileExpressionIO' ctx (strip (pack s))
