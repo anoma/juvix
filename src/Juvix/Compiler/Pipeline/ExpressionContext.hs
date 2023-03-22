@@ -36,6 +36,6 @@ runTransformations ts n = runCoreInfoTableBuilderArtifacts $ do
           }
   registerIdent name idenInfo
   tab' <- getInfoTable >>= applyTransformations ts
-  modify' (set artifactCoreTable tab')
+  setInfoTable tab'
   let node' = HashMap.lookupDefault impossible sym (tab' ^. identContext)
   return node'
