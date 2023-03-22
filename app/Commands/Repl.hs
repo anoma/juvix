@@ -176,7 +176,7 @@ runCommand opts = do
               eval n =
                 let
                   transforms :: [Core.TransformationId]
-                  transforms = Core.toEvalTransformations ++ opts ^. replTransformations
+                  transforms = maybe Core.toEvalTransformations toList (opts ^. replTransformations)
                 in
                   case run . runError @JuvixError . runState artif $ runTransformations transforms n of
                   Left err -> return $ Left err
