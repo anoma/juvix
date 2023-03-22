@@ -1,4 +1,8 @@
 -- | Stuff that is generated when the pipeline is run
+--
+-- Arguments to the *Artifacts functions in this module should not modify the
+-- Artifacts State since any changes will be overwritten by the
+-- `runStateLikeArtifacts` wrapper.
 module Juvix.Compiler.Pipeline.Artifacts where
 
 import Juvix.Compiler.Builtins
