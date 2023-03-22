@@ -12,7 +12,6 @@ import Juvix.Compiler.Backend qualified as Backend
 import Juvix.Compiler.Backend.C qualified as C
 import Juvix.Compiler.Backend.Geb qualified as Geb
 import Juvix.Compiler.Builtins
-import Juvix.Compiler.Concrete qualified as Concrete
 import Juvix.Compiler.Concrete.Data.Scope
 import Juvix.Compiler.Concrete.Translation.FromParsed qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver
@@ -112,17 +111,6 @@ inferExpressionIO fp txt =
 --------------------------------------------------------------------------------
 -- Workflows
 --------------------------------------------------------------------------------
-
-typecheckOld ::
-  (Members PipelineEff r) =>
-  EntryPoint ->
-  Sem r Internal.InternalTypedResult
-typecheckOld =
-  Concrete.fromSource
-    >=> Abstract.fromConcrete
-    >=> Internal.fromAbstract
-    >=> Internal.arityChecking
-    >=> Internal.typeChecking
 
 upToParsing ::
   (Members '[Reader EntryPoint, Files, Error JuvixError, NameIdGen, PathResolver] r) =>
