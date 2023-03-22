@@ -19,9 +19,17 @@ extern int errno;
 /**********************************************/
 /* Basic primitive functions and macros */
 
-static void print_msg(const char *msg) {
+static inline void print_msg(const char *msg) {
 #if defined(API_LIBC) || defined(API_WASI)
     puts(msg);
+#endif
+}
+
+static inline void print_msg_nonl(const char *msg) {
+#if defined(API_LIBC)
+    fputs(msg, stdout);
+#elif defined(API_WASI)
+    puts_nonl(msg);
 #endif
 }
 

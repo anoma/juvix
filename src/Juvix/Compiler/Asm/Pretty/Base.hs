@@ -46,6 +46,14 @@ quoteAsmName txt =
       (":", "__colon__")
     ]
 
+quoteAsmFunName :: Text -> Text
+quoteAsmFunName txt =
+  foldr
+    (uncurry Text.replace)
+    txt
+    [ ("readLn", "__readLn__")
+    ]
+
 ppConstrName :: (Member (Reader Options) r) => Tag -> Sem r (Doc Ann)
 ppConstrName tag = do
   opts <- ask
@@ -70,7 +78,7 @@ ppFunName sym = do
         annotate (AnnKind KNameFunction) $
           pretty ("unnamed_function_" ++ show sym :: String)
     )
-    (\fi -> return $ annotate (AnnKind KNameFunction) (pretty (quoteAsmName (fi ^. functionName))))
+    (\fi -> return $ annotate (AnnKind KNameFunction) (pretty (quoteAsmFunName $ quoteAsmName (fi ^. functionName))))
     (HashMap.lookup sym (tab ^. infoFunctions))
 
 instance PrettyCode BuiltinDataTag where
@@ -342,7 +350,7 @@ instance PrettyCode FunctionInfo where
     c <- ppCodeCode _functionCode
     return $
       keyword Str.function
-        <+> annotate (AnnKind KNameFunction) (pretty _functionName)
+        <+> annotate (AnnKind KNameFunction) (pretty (quoteAsmFunName $ quoteAsmName _functionName))
           <> encloseSep lparen rparen ", " argtys
         <+> colon
         <+> targetty
@@ -354,7 +362,7 @@ ppFunSig FunctionInfo {..} = do
   targetty <- ppCode (typeTarget _functionType)
   return $
     keyword Str.function
-      <+> annotate (AnnKind KNameFunction) (pretty (quoteAsmName _functionName))
+      <+> annotate (AnnKind KNameFunction) (pretty (quoteAsmFunName $ quoteAsmName _functionName))
         <> encloseSep lparen rparen ", " argtys
       <+> colon
       <+> targetty

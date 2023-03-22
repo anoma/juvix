@@ -1,7 +1,7 @@
 name: juvix
 version: 0.3.0
 license: GPL-3.0-only
-license-file: LICENSE
+license-file: LICENSE.md
 copyright: (c) 2022- Heliax AG.
 maintainer: The PLT Team at Heliax AG <hello@heliax.dev>
 author:
@@ -20,7 +20,7 @@ category: Compilers/Interpreters
 github: anoma/juvix
 
 extra-source-files:
-  - README.org
+  - README.md
   - assets/css/*.css
   - assets/js/*.js
   - assets/images/*.svg
