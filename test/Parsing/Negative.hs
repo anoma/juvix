@@ -1,7 +1,6 @@
 module Parsing.Negative where
 
 import Base
-import Juvix.Compiler.Builtins (iniState)
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Error
 import Juvix.Compiler.Pipeline
 import Juvix.Parser.Error
@@ -26,7 +25,7 @@ testDescr NegTest {..} =
           _testRoot = tRoot,
           _testAssertion = Single $ do
             let entryPoint = defaultEntryPoint tRoot _file
-            res <- runIOEither iniState entryPoint upToParsing
+            res <- runIOEither entryPoint upToParsing
             case mapLeft fromJuvixError res of
               Left (Just parErr) -> whenJust (_checkErr parErr) assertFailure
               Left Nothing -> assertFailure "An error ocurred but it was not in the parser."

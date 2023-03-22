@@ -1,7 +1,6 @@
 module Scope.Negative (allTests) where
 
 import Base
-import Juvix.Compiler.Builtins (iniState)
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
 import Juvix.Compiler.Pipeline
 
@@ -26,7 +25,7 @@ testDescr NegTest {..} =
           _testRoot = tRoot,
           _testAssertion = Single $ do
             let entryPoint = defaultEntryPoint tRoot file'
-            res <- runIOEither iniState entryPoint upToAbstract
+            res <- runIOEither entryPoint upToAbstract
             case mapLeft fromJuvixError res of
               Left (Just err) -> whenJust (_checkErr err) assertFailure
               Left Nothing -> assertFailure "An error ocurred but it was not in the scoper."

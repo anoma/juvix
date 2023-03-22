@@ -1,7 +1,6 @@
 module Typecheck.Negative where
 
 import Base
-import Juvix.Compiler.Builtins (iniState)
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error
 import Juvix.Compiler.Pipeline
 
@@ -23,7 +22,7 @@ testDescr NegTest {..} =
           _testRoot = tRoot,
           _testAssertion = Single $ do
             let entryPoint = defaultEntryPoint tRoot file'
-            result <- runIOEither iniState entryPoint upToInternalTyped
+            result <- runIOEither entryPoint upToInternalTyped
             case mapLeft fromJuvixError result of
               Left (Just tyError) -> whenJust (_checkErr tyError) assertFailure
               Left Nothing -> assertFailure "An error ocurred but it was not in the type checker."

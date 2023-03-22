@@ -2,7 +2,6 @@ module Scope.Positive where
 
 import Base
 import Data.HashMap.Strict qualified as HashMap
-import Juvix.Compiler.Builtins (iniState)
 import Juvix.Compiler.Concrete qualified as Concrete
 import Juvix.Compiler.Concrete.Extra
 import Juvix.Compiler.Concrete.Pretty qualified as M
@@ -59,7 +58,7 @@ testDescr PosTest {..} = helper renderCodeOld "" : [helper renderCodeNew " (with
                     runHelper files =
                       runM
                         . runErrorIO' @JuvixError
-                        . runNameIdGen
+                        . evalTopNameIdGen
                         . runFilesPure files tRoot
                         . runReader entryPoint
                         . runPathResolverPipe
@@ -67,12 +66,11 @@ testDescr PosTest {..} = helper renderCodeOld "" : [helper renderCodeNew " (with
                     evalHelper files = fmap snd . runHelper files
 
                 step "Parsing"
-                p :: Parser.ParserResult <- snd <$> runIO' iniState entryPoint upToParsing
+                p :: Parser.ParserResult <- snd <$> runIO' entryPoint upToParsing
 
                 step "Scoping"
-                (artif :: Artifacts, s :: Scoper.ScoperResult) <-
+                (resolverState :: ResolverState, s :: Scoper.ScoperResult) <-
                   runIO'
-                    iniState
                     entryPoint
                     ( do
                         void entrySetup
@@ -82,7 +80,7 @@ testDescr PosTest {..} = helper renderCodeOld "" : [helper renderCodeNew " (with
                 let yamlFiles :: [(Path Abs File, Text)]
                     yamlFiles =
                       [ (pkgi ^. packageRoot <//> juvixYamlFile, encodeToText (rawPackage (pkgi ^. packagePackage)))
-                        | pkgi <- toList (artif ^. artifactResolver . resolverPackages)
+                        | pkgi <- toList (resolverState ^. resolverPackages)
                       ]
                     fsScoped :: HashMap (Path Abs File) Text
                     fsScoped =

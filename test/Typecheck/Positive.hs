@@ -2,7 +2,6 @@ module Typecheck.Positive where
 
 import Base
 import Compilation.Positive qualified as Compilation
-import Juvix.Compiler.Builtins (iniState)
 import Juvix.Compiler.Pipeline
 import Typecheck.Negative qualified as N
 
@@ -28,7 +27,7 @@ testDescr PosTest {..} =
       _testRoot = _dir,
       _testAssertion = Single $ do
         let entryPoint = defaultEntryPoint _dir _file
-        (void . runIO' iniState entryPoint) upToInternalTyped
+        (void . runIO' entryPoint) upToInternalTyped
     }
 
 --------------------------------------------------------------------------------
@@ -51,7 +50,7 @@ testNoPositivityFlag N.NegTest {..} =
                     { _entryPointNoPositivity = True
                     }
 
-            (void . runIO' iniState entryPoint) upToInternal
+            (void . runIO' entryPoint) upToInternal
         }
 
 negPositivityTests :: [N.NegTest]
