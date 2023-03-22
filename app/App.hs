@@ -4,7 +4,6 @@ import CommonOptions
 import Data.ByteString qualified as ByteString
 import GlobalOptions
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver
-import Juvix.Compiler.Core qualified as Core
 import Juvix.Compiler.Pipeline
 import Juvix.Data.Error qualified as Error
 import Juvix.Prelude.Pretty hiding (Doc)
