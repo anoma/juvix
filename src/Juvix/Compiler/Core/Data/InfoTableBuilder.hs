@@ -21,6 +21,7 @@ data InfoTableBuilder m a where
   OverIdentArgsInfo :: Symbol -> ([ArgumentInfo] -> [ArgumentInfo]) -> InfoTableBuilder m ()
   GetIdent :: Text -> InfoTableBuilder m (Maybe IdentKind)
   GetInfoTable :: InfoTableBuilder m InfoTable
+  SetInfoTable :: InfoTable -> InfoTableBuilder m ()
 
 makeSem ''InfoTableBuilder
 
@@ -115,6 +116,7 @@ runInfoTableBuilder tab =
         return $ HashMap.lookup txt (s ^. identMap)
       GetInfoTable ->
         get
+      SetInfoTable t -> put t
 
 --------------------------------------------
 -- Builtin declarations
