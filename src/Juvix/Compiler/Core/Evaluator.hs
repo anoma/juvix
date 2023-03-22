@@ -55,36 +55,35 @@ eval herr ctx env0 = convertRuntimeNodes . eval' env0
     evalError msg node = Exception.throw (EvalError msg (Just node))
 
     eval' :: Env -> Node -> Node
-    eval' !env !n =
-      case n of
-        NVar (Var _ idx) -> env !! idx
-        NIdt (Ident _ sym) -> eval' [] (lookupContext n sym)
-        NCst {} -> n
-        NApp (App i l r) ->
-          case eval' env l of
-            Closure env' (Lambda _ _ b) -> let !v = eval' env r in eval' (v : env') b
-            v -> evalError "invalid application" (mkApp i v (substEnv env r))
-        NBlt (BuiltinApp _ op args) -> applyBuiltin n env op args
-        NCtr (Constr i tag args) -> mkConstr i tag (map' (eval' env) args)
-        NLam l@Lambda {} -> Closure env l
-        NLet (Let _ (LetItem _ v) b) -> let !v' = eval' env v in eval' (v' : env) b
-        NRec (LetRec _ vs b) ->
-          let !vs' = map (eval' env' . (^. letItemValue)) (toList vs)
-              !env' = revAppend vs' env
-           in foldr GHC.pseq (eval' env' b) vs'
-        NCase (Case i sym v bs def) ->
-          case eval' env v of
-            NCtr (Constr _ tag args) -> branch n env args tag def bs
-            v' -> evalError "matching on non-data" (substEnv env (mkCase i sym v' bs def))
-        NMatch (Match _ _ _ vs bs) ->
-          let !vs' = map' (eval' env) (toList vs)
-           in match n env vs' bs
-        NPi {} -> substEnv env n
-        NUniv {} -> n
-        NTyp (TypeConstr i sym args) -> mkTypeConstr i sym (map' (eval' env) args)
-        NPrim {} -> n
-        NDyn {} -> n
-        Closure {} -> n
+    eval' !env !n = case n of
+      NVar (Var _ idx) -> env !! idx
+      NIdt (Ident _ sym) -> eval' [] (lookupContext n sym)
+      NCst {} -> n
+      NApp (App i l r) ->
+        case eval' env l of
+          Closure env' (Lambda _ _ b) -> let !v = eval' env r in eval' (v : env') b
+          v -> evalError "invalid application" (mkApp i v (substEnv env r))
+      NBlt (BuiltinApp _ op args) -> applyBuiltin n env op args
+      NCtr (Constr i tag args) -> mkConstr i tag (map' (eval' env) args)
+      NLam l@Lambda {} -> Closure env l
+      NLet (Let _ (LetItem _ v) b) -> let !v' = eval' env v in eval' (v' : env) b
+      NRec (LetRec _ vs b) ->
+        let !vs' = map (eval' env' . (^. letItemValue)) (toList vs)
+            !env' = revAppend vs' env
+         in foldr GHC.pseq (eval' env' b) vs'
+      NCase (Case i sym v bs def) ->
+        case eval' env v of
+          NCtr (Constr _ tag args) -> branch n env args tag def bs
+          v' -> evalError "matching on non-data" (substEnv env (mkCase i sym v' bs def))
+      NMatch (Match _ _ _ vs bs) ->
+        let !vs' = map' (eval' env) (toList vs)
+         in match n env vs' bs
+      NPi {} -> substEnv env n
+      NUniv {} -> n
+      NTyp (TypeConstr i sym args) -> mkTypeConstr i sym (map' (eval' env) args)
+      NPrim {} -> n
+      NDyn {} -> n
+      Closure {} -> n
 
     branch :: Node -> Env -> [Node] -> Tag -> Maybe Node -> [CaseBranch] -> Node
     branch n !env !args !tag !def = \case
