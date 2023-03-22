@@ -6,10 +6,12 @@ import Commands.Base hiding (command)
 import Commands.Repl.Options
 import Control.Exception (throwIO)
 import Control.Monad.State.Strict qualified as State
+import Data.HashMap.Strict qualified as HashMap
 import Data.String.Interpolate (i, __i)
 import Evaluator
 import Juvix.Compiler.Concrete.Data.Scope (scopePath)
 import Juvix.Compiler.Concrete.Data.ScopedName (absTopModulePath)
+import Juvix.Compiler.Core.Data.InfoTableBuilder qualified as Core
 import Juvix.Compiler.Core.Error qualified as Core
 import Juvix.Compiler.Core.Extra qualified as Core
 import Juvix.Compiler.Core.Info qualified as Info
@@ -358,3 +360,32 @@ printError e = do
   opts <- State.gets (^. replStateGlobalOptions)
   hasAnsi <- liftIO (Ansi.hSupportsANSIColor stderr)
   liftIO $ hPutStrLn stderr $ run (runReader (project' @GenericOptions opts) (Error.render (not (opts ^. globalNoColors) && hasAnsi) False e))
+
+runTransformations ::
+  Members '[State Artifacts, Error JuvixError] r =>
+  [Core.TransformationId] ->
+  Core.Node ->
+  Sem r Core.Node
+runTransformations ts n = runCoreInfoTableBuilderArtifacts $ do
+  sym <- Core.freshSymbol
+  Core.registerIdentNode sym n
+  -- `n` will get filtered out by the transformations unless it has a
+  -- corresponding entry in `infoIdentifiers`
+  tab <- Core.getInfoTable
+  let name = Core.freshIdentName tab "_repl"
+      idenInfo =
+        Core.IdentifierInfo
+          { _identifierName = name,
+            _identifierSymbol = sym,
+            _identifierLocation = Nothing,
+            _identifierArgsNum = 0,
+            _identifierArgsInfo = [],
+            _identifierType = Core.mkDynamic',
+            _identifierIsExported = False,
+            _identifierBuiltin = Nothing
+          }
+  Core.registerIdent name idenInfo
+  tab' <- Core.getInfoTable >>= Core.applyTransformations ts
+  Core.setInfoTable tab'
+  let node' = HashMap.lookupDefault impossible sym (tab' ^. Core.identContext)
+  return node'
