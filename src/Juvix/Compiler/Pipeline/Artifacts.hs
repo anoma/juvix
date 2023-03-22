@@ -79,6 +79,9 @@ runReaderArtifacts l m = do
   s <- gets (^. l)
   runReader s m
 
+forbidStateArtifacts :: Members '[State Artifacts] r => Sem r a -> Sem r a
+forbidStateArtifacts = intercept @(State Artifacts) (\ _ -> error "internal error: invalid usage of State Artifacts")
+
 runStateLikeArtifacts ::
   Members '[State Artifacts] r =>
   (field -> Sem (stateEff ': r) a -> Sem r (field, a)) ->
@@ -87,6 +90,6 @@ runStateLikeArtifacts ::
   Sem r a
 runStateLikeArtifacts runEff l m = do
   s <- gets (^. l)
-  (s', a) <- runEff s m
+  (s', a) <- forbidStateArtifacts (runEff s m)
   modify' (set l s')
   return a
