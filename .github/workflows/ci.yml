@@ -285,15 +285,15 @@ jobs:
           make CC=$CC LIBTOOL=$LIBTOOL install
           make CC=$CC LIBTOOL=$LIBTOOL test
 
+      - name: Add ~/.local/bin to PATH
+        run: |
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
       - name: Typecheck and format Juvix examples
         if: ${{ success() }}
         run: |
           cd main
           make -s juvix-format
-
-      - name: Add ~/.local/bin to PATH
-        run: |
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Install Smoke
         uses: jaxxstorm/action-install-gh-release@v1.10.0
