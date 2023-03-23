@@ -98,6 +98,7 @@ jobs:
           make runtime
 
       - name: Stack setup
+        id: stack
         uses: freckle/stack-action@v4
         with:
           working-directory: main
@@ -133,7 +134,8 @@ jobs:
       - name: Install Smoke
         run: |
           cd smoke
-          stack install --stack-root ${{ github.workspace }}/.stack
+          stack install --stack-root ${{ steps.stack.outputs.stack-root }}
+
         shell: bash
 
       - name: Smoke testing
@@ -144,8 +146,8 @@ jobs:
           make smoke
 
   docs-linux:
-    runs-on: ubuntu-20.04
     needs: build-and-test-linux
+    runs-on: ubuntu-20.04
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -207,6 +209,7 @@ jobs:
           make runtime
 
       - name: Stack setup
+        id: stack
         uses: freckle/stack-action@v4
         with:
           working-directory: main
@@ -222,18 +225,20 @@ jobs:
 
       - name: Setup Pages
         uses: actions/configure-pages@v3
+        if: >-
+          github.ref == 'refs/heads/main' || github.event_name ==
+          'workflow_dispatch'
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v1
+        if: ${{ success() }}
         with:
           path: main/book/html
 
       - name: Deploy to GitHub Pages
         uses: actions/deploy-pages@v1
         id: deployment
-        if: >-
-          github.ref == 'refs/heads/main' || github.event_name ==
-          'workflow_dispatch'
+        if: ${{ success() }}
 
   build-and-test-macos:
     runs-on: macos-12
@@ -280,6 +285,7 @@ jobs:
           make CC=$CC LIBTOOL=$LIBTOOL runtime
 
       - name: Stack setup
+        id: stack
         uses: freckle/stack-action@v4
         with:
           working-directory: main
