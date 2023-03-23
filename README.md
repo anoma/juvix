@@ -38,7 +38,6 @@
 </tr>
 </table>
 
-
 Juvix is an open-source, constantly evolving functional programming language
 designed for writing privacy-preserving decentralized applications. Using Juvix, developers can write high-level programs which can be compiled to WASM directly, or through [VampIR][vampir] to circuits for private execution with [Taiga][taiga] on [Anoma][anoma] or Ethereum.
 
