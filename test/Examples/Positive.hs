@@ -49,6 +49,12 @@ tests =
       $(mkRelFile "Fibonacci/expected.golden")
       "25\n",
     posTest
+      "Collatz calculator"
+      $(mkRelDir "milestone/Collatz")
+      $(mkRelFile "Collatz.juvix")
+      $(mkRelFile "Collatz/expected.golden")
+      "123\n",
+    posTest
       "Towers of Hanoi"
       $(mkRelDir "milestone/Hanoi")
       $(mkRelFile "Hanoi.juvix")
