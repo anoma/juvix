@@ -14,6 +14,7 @@ import Options.Applicative.Help.Pretty
 
 data TopCommand
   = DisplayVersion
+  | DisplayNumericVersion
   | DisplayHelp
   | Typecheck TypecheckOptions
   | Compile CompileOptions
@@ -39,7 +40,15 @@ parseDisplayVersion =
     DisplayVersion
     ( long "version"
         <> short 'v'
-        <> help "Show the version"
+        <> help "Show version information"
+    )
+
+parseDisplayNumericVersion :: Parser TopCommand
+parseDisplayNumericVersion =
+  flag'
+    DisplayNumericVersion
+    ( long "numeric-version"
+        <> help "Show only the version number"
     )
 
 parseDisplayHelp :: Parser TopCommand
@@ -140,6 +149,7 @@ parseCompilerCommand =
 parseTopCommand :: Parser TopCommand
 parseTopCommand =
   parseDisplayVersion
+    <|> parseDisplayNumericVersion
     <|> parseDisplayHelp
     <|> parseCompilerCommand
     <|> parseUtility

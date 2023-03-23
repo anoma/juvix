@@ -63,3 +63,6 @@ runDisplayVersion :: IO ()
 runDisplayVersion = do
   v <- layoutPretty defaultLayoutOptions <$> infoVersionRepo
   renderIO stdout v
+
+runDisplayNumericVersion :: IO ()
+runDisplayNumericVersion = putStrLn versionDoc

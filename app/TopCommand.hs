@@ -24,6 +24,7 @@ showHelpText = do
 runTopCommand :: forall r. (Members '[Embed IO, App] r) => TopCommand -> Sem r ()
 runTopCommand = \case
   DisplayVersion -> embed runDisplayVersion
+  DisplayNumericVersion -> embed runDisplayNumericVersion
   DisplayHelp -> embed showHelpText
   Doctor opts -> runLogIO (Doctor.runCommand opts)
   Init -> runLogIO Init.init
