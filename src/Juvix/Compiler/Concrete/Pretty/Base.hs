@@ -401,13 +401,12 @@ instance (SingI s) => PrettyCode (JudocAtom s) where
 instance (SingI s) => PrettyCode (TypeSignature s) where
   ppCode TypeSignature {..} = do
     let sigTerminating' = if isJust _sigTerminating then kwTerminating <> line else mempty
-    let sigTotal' = if isJust _sigTotal then kwTotal <> line else mempty
     sigName' <- annDef _sigName <$> ppSymbol _sigName
     sigType' <- ppExpression _sigType
     builtin' <- traverse ppCode _sigBuiltin
     doc' <- mapM ppCode _sigDoc
     body' :: Maybe (Doc Ann) <- fmap ((kwAssign <>) . oneLineOrNext) <$> mapM ppExpression _sigBody
-    return $ doc' ?<> builtin' <?+> sigTerminating' <> sigTotal' <> hang' (sigName' <+> kwColon <> oneLineOrNext (sigType' <+?> body'))
+    return $ doc' ?<> builtin' <?+> sigTerminating' <> hang' (sigName' <+> kwColon <> oneLineOrNext (sigType' <+?> body'))
 
 instance (SingI s) => PrettyCode (Function s) where
   ppCode a = case sing :: SStage s of

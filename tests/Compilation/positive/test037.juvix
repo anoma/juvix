@@ -12,10 +12,10 @@ module test037;
        in (let
           z : (Nat → Nat) → Nat → Nat;
           z := id;
-         in (case l | _ :: _ := id | nil := id) z)
+         in (case l   | _ :: _ := id) z)
       y)
     7;
 
   main : IO;
-  main := printNatLn (f (λ { | x y := x y + 2 } :: nil));
+  main := printNatLn (f (λ {   | x y := x y + 2 } :: nil));
 end;

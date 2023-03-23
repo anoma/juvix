@@ -192,7 +192,6 @@ instance PrettyPrint (TypeSignature 'Scoped) where
   ppCode :: forall r. Members '[ExactPrint, Reader Options] r => TypeSignature 'Scoped -> Sem r ()
   ppCode TypeSignature {..} = do
     let termin' :: Maybe (Sem r ()) = (<> line) . ppCode <$> _sigTerminating
-        total' :: Maybe (Sem r ()) = (<> line) . ppCode <$> _sigTotal
         doc' :: Maybe (Sem r ()) = ppCode <$> _sigDoc
         builtin' :: Maybe (Sem r ()) = ppCode <$> _sigBuiltin
         type' = ppCode _sigType
@@ -203,7 +202,6 @@ instance PrettyPrint (TypeSignature 'Scoped) where
     doc'
       ?<> builtin'
       <?+> termin'
-        ?<> total'
         ?<> ( name'
                 <+> noLoc P.kwColon
                   <> oneLineOrNext

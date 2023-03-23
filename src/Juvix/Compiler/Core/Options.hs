@@ -12,7 +12,7 @@ makeLenses ''CoreOptions
 defaultCoreOptions :: CoreOptions
 defaultCoreOptions =
   CoreOptions
-    { _optCheckCoverage = True
+    { _optCheckCoverage = False
     }
 
 fromEntryPoint :: EntryPoint -> CoreOptions

@@ -252,9 +252,8 @@ builtinTypeSig ::
   ParsecS r (TypeSignature 'Parsed)
 builtinTypeSig b = do
   terminating <- optional (kw kwTerminating)
-  total <- optional (kw kwTotal)
   fun <- symbol
-  typeSignature terminating total fun (Just b)
+  typeSignature terminating fun (Just b)
 
 builtinStatement :: (Members '[InfoTableBuilder, JudocStash, NameIdGen] r) => ParsecS r (Statement 'Parsed)
 builtinStatement = do
@@ -420,11 +419,10 @@ getJudoc = P.lift $ do
 typeSignature ::
   Members '[InfoTableBuilder, JudocStash, NameIdGen] r =>
   Maybe KeywordRef ->
-  Maybe KeywordRef ->
   Symbol ->
   Maybe (WithLoc BuiltinFunction) ->
   ParsecS r (TypeSignature 'Parsed)
-typeSignature _sigTerminating _sigTotal _sigName _sigBuiltin = do
+typeSignature _sigTerminating _sigName _sigBuiltin = do
   kw kwColon
   _sigType <- parseExpressionAtoms
   _sigDoc <- getJudoc
@@ -437,9 +435,8 @@ auxTypeSigFunClause ::
   ParsecS r (Either (TypeSignature 'Parsed) (FunctionClause 'Parsed))
 auxTypeSigFunClause = do
   terminating <- optional (kw kwTerminating)
-  total <- optional (kw kwTotal)
   sym <- symbol
-  (Left <$> typeSignature terminating total sym Nothing)
+  (Left <$> typeSignature terminating sym Nothing)
     <|> (Right <$> functionClause sym)
 
 axiomDef ::

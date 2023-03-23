@@ -157,8 +157,7 @@ instance HasExpressions FunctionDef where
           _funDefType = ty',
           _funDefExamples = examples',
           _funDefName,
-          _funDefBuiltin,
-          _funDefTotal
+          _funDefBuiltin
         }
 
 instance HasExpressions InductiveParameter where

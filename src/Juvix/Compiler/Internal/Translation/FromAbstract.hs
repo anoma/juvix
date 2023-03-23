@@ -214,8 +214,7 @@ goFunctionDef f = do
         _funDefType = _funDefType',
         _funDefClauses = _funDefClauses',
         _funDefExamples = _funDefExamples',
-        _funDefBuiltin = f ^. Abstract.funDefBuiltin,
-        _funDefTotal = f ^. Abstract.funDefTotal
+        _funDefBuiltin = f ^. Abstract.funDefBuiltin
       }
   where
     _funDefName' :: Name
