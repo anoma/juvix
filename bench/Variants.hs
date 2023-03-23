@@ -165,7 +165,7 @@ juvixWasm =
       _variantColor = getVariantColor JuvixWasm,
       _variantRun = runWasm,
       _variantBuild = \args ->
-        command_ [] "juvix" (juvixCommon ++ ["--target=wasm"] ++ commonOptions args ext)
+        command_ [] "juvix" (juvixCommon ++ ["--target=wasm32-wasi"] ++ commonOptions args ext)
     }
   where
     ext :: [String]
