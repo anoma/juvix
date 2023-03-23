@@ -1,0 +1,14 @@
+-- implicit builtin bool
+module test045;
+  builtin nat type Nat :=
+    | zero : Nat
+    | suc : Nat → Nat;
+
+  infixl 6 +;
+  + : Nat → Nat → Nat;
+  + zero b := b;
+  + (suc a) b := suc (a + b);
+
+  main : Nat;
+  main := 1 + 3;
+end;

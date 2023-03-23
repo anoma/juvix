@@ -279,5 +279,10 @@ tests =
       $(mkRelDir ".")
       $(mkRelFile "test044.juvix")
       $(mkRelFile "out/test044.out")
-      "a\n"
+      "a\n",
+    posTest
+      "Implicit builtin bool"
+      $(mkRelDir ".")
+      $(mkRelFile "test045.juvix")
+      $(mkRelFile "out/test045.out")
   ]
