@@ -13,17 +13,14 @@ createTypeDependencyInfo tab = createDependencyInfo graph startVertices
   where
     graph :: HashMap Symbol (HashSet Symbol)
     graph =
-      fmap
-        ( \InductiveInfo {..} ->
-            foldr
-              (mappend . getInductives)
-              mempty
-              ( concatMap
-                  (\ci -> typeArgs (ci ^. constructorType))
-                  _inductiveConstructors
-              )
-        )
-        (HashMap.filter (isNothing . (^. inductiveBuiltin)) (tab ^. infoInductives))
+      HashSet.fromList . (^.. inductiveSymbols)
+        <$> HashMap.filter (isNothing . (^. inductiveBuiltin)) (tab ^. infoInductives)
+
+    constructorTypes :: SimpleFold ConstructorInfo Type
+    constructorTypes = constructorType . to typeArgs . each
+
+    inductiveSymbols :: SimpleFold InductiveInfo Symbol
+    inductiveSymbols = inductiveConstructors . each . constructorTypes . nodeInductives
 
     startVertices :: HashSet Symbol
     startVertices = HashSet.fromList syms

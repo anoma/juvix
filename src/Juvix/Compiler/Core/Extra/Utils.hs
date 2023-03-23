@@ -55,13 +55,12 @@ nodeIdents f = ufoldA reassemble go
       NIdt i -> NIdt <$> f i
       n -> pure n
 
-getInductives :: Node -> HashSet Symbol
-getInductives = ufold (foldr mappend) go
+nodeInductives :: Traversal' Node Symbol
+nodeInductives f = ufoldA reassemble go
   where
-    go :: Node -> HashSet Symbol
     go = \case
-      NTyp TypeConstr {..} -> HashSet.singleton _typeConstrSymbol
-      _ -> mempty
+      NTyp ty -> NTyp <$> traverseOf typeConstrSymbol f ty
+      n -> pure n
 
 -- | Prism for NRec
 _NRec :: SimpleFold Node LetRec
