@@ -1,8 +1,20 @@
+--- This module tests the Juvix formater
+--- This is the second line of the first paragraph
+---
+--- The second paragraph starts.
+--- Second line of the second paragraph
+---
+--- An example follows:
+---
+--- >>> Type;
+---
+--- Third paragraph
 module Format;
 
 open import Stdlib.Prelude hiding {,};
 open import Stdlib.Data.Nat.Ord;
 
+--- a function we call ;go;
 terminating
 go : Nat → Nat → Nat;
 go n s :=
@@ -123,7 +135,8 @@ exampleFunction2 :
 module Patterns;
   infixr 4 ,;
   type Pair :=
-    | , : String → String → String;
+    | --- The , is used to build ;Pair;s
+      , : String → String → String;
 
   -- Commas in patterns
   f : _;
