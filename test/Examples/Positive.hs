@@ -38,21 +38,20 @@ posTest _name rdir rfile routfile _stdin =
   let _dir = srcRoot <//> rdir
       _file = _dir <//> rfile
       _expectedFile = expectedRoot <//> routfile
-  in
-  PosTest {..}
+   in PosTest {..}
 
 tests :: [PosTest]
-tests = [
-  posTest
-    "Fibonacci"
-    $(mkRelDir "milestone/Fibonacci")
-    $(mkRelFile "Fibonacci.juvix")
-    $(mkRelFile "Fibonacci/expected.golden")
-    "25\n",
-  posTest
-    "Towers of Hanoi"
-    $(mkRelDir "milestone/Hanoi")
-    $(mkRelFile "Hanoi.juvix")
-    $(mkRelFile "Hanoi/expected.golden")
-    ""
-        ]
+tests =
+  [ posTest
+      "Fibonacci"
+      $(mkRelDir "milestone/Fibonacci")
+      $(mkRelFile "Fibonacci.juvix")
+      $(mkRelFile "Fibonacci/expected.golden")
+      "25\n",
+    posTest
+      "Towers of Hanoi"
+      $(mkRelDir "milestone/Hanoi")
+      $(mkRelFile "Hanoi.juvix")
+      $(mkRelFile "Hanoi/expected.golden")
+      ""
+  ]
