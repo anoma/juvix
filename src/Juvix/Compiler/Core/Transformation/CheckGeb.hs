@@ -70,28 +70,24 @@ checkGeb tab =
           _ -> return node
 
     checkNoRecursion :: Sem r ()
-    checkNoRecursion
-      | isCyclic (createIdentDependencyInfo tab) =
+    checkNoRecursion =
+      when (isCyclic (createIdentDependencyInfo tab)) $
           throw
             CoreError
               { _coreErrorMsg = "recursion not supported for the GEB target",
                 _coreErrorNode = Nothing,
                 _coreErrorLoc = defaultLoc
               }
-      | otherwise =
-          return ()
 
     checkNoRecursiveTypes :: Sem r ()
-    checkNoRecursiveTypes
-      | isCyclic (createTypeDependencyInfo tab) =
+    checkNoRecursiveTypes =
+      when (isCyclic (createTypeDependencyInfo tab)) $
           throw
             CoreError
               { _coreErrorMsg = "recursive types not supported for the GEB target",
                 _coreErrorNode = Nothing,
                 _coreErrorLoc = defaultLoc
               }
-      | otherwise =
-          return ()
 
     dynamicTypeError :: Node -> Maybe Location -> CoreError
     dynamicTypeError node loc =
