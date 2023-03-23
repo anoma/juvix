@@ -4,7 +4,7 @@ import Commands.Base
 import Commands.Dev.Core.Compile.Options
 import Commands.Extra.Compile qualified as Compile
 import Data.Text.IO qualified as TIO
-import Juvix.Compiler.Asm.Pretty qualified as Core
+import Juvix.Compiler.Asm.Pretty qualified as Asm
 import Juvix.Compiler.Backend qualified as Backend
 import Juvix.Compiler.Backend.C qualified as C
 import Juvix.Compiler.Backend.Geb qualified as Geb
@@ -83,5 +83,5 @@ runAsmPipeline pa@PipelineArg {..} = do
   asmFile <- Compile.outputFile _pipelineArgOptions _pipelineArgFile
   r <- runReader entryPoint $ runError @JuvixError (coreToAsm _pipelineArgInfoTable)
   tab' <- getRight r
-  let code = Core.ppPrint tab' tab'
+  let code = Asm.ppPrint tab' tab'
   embed $ TIO.writeFile (toFilePath asmFile) code

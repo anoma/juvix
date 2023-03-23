@@ -86,7 +86,7 @@ goMatchToCase recur node = case node of
             | fCoverage ->
                 throw
                   CoreError
-                    { _coreErrorMsg = "Pattern matching not exhaustive. Example pattern sequence not matched: " <> show (ppOutput $ err (repeat "_")),
+                    { _coreErrorMsg = "Pattern matching not exhaustive. Example pattern sequence not matched: " <> pat,
                       _coreErrorNode = Nothing,
                       _coreErrorLoc = fromMaybe defaultLoc (getNodeLocation node)
                     }
@@ -94,7 +94,7 @@ goMatchToCase recur node = case node of
                 return $
                   mkBuiltinApp' OpFail [mkConstant' (ConstString ("Pattern sequence not matched: " <> pat))]
         where
-          pat = show (ppOutput $ err (repeat "_"))
+          pat = show (ppOutput $ err (replicate (length vs) "_"))
           mockFile = $(mkAbsFile "/match-to-case")
           defaultLoc = singletonInterval (mkInitialLoc mockFile)
       r@PatternRow {..} : _
@@ -195,20 +195,11 @@ goMatchToCase recur node = case node of
       tab <- ask
       compile (err' tab) bindersNum vs matrix'
       where
-        matrix' =
-          catMaybes $
-            zipWithExact
-              ( \pat row ->
-                  case pat of
-                    PatWildcard {} -> Just row
-                    _ -> Nothing
-              )
-              col
-              matrix
+        matrix' = [row | (pat, row) <- zipExact col matrix, PatWildcard {} <- [pat]]
         err' tab args =
           case mtag of
             Just tag ->
-              err (parensIf (argsNum > 0) (foldl' (<+>) (pretty (ci ^. constructorName)) (replicate argsNum "_")) : args)
+              err (parensIf (argsNum > 0) (hsep (pretty (ci ^. constructorName) : replicate argsNum "_")) : args)
               where
                 ci = fromJust $ HashMap.lookup tag (tab ^. infoConstructors)
                 paramsNum = getTypeParamsNum tab (ci ^. constructorType)
@@ -229,7 +220,7 @@ goMatchToCase recur node = case node of
           vs' = [bindersNum .. bindersNum + argsNum - 1]
           err' args =
             err
-              (parensIf (argsNum > paramsNum) (foldl' (<+>) (pretty (ci ^. constructorName)) (drop paramsNum (take argsNum args))) : drop argsNum args)
+              (parensIf (argsNum > paramsNum) (hsep (pretty (ci ^. constructorName) : drop paramsNum (take argsNum args))) : drop argsNum args)
       binders' <- getBranchBinders col matrix tag
       matrix' <- getBranchMatrix col matrix tag
       body <- compile err' bindersNum' (vs' ++ vs) matrix'
@@ -253,31 +244,17 @@ goMatchToCase recur node = case node of
               binder <- overM binderType (goMatchToCase (recur . revAppend rbcs)) (getPatternBinder pat)
               return (revAppend bcs (bc : BCAdd 1 : rbcs), binder : acc)
           )
-          (return (matrix !! argPatsIndex ^. patternRowBinderChangesRev, []))
-          argPats
+          (return (matrix !! (argPatsIx ^. indexedIx) ^. patternRowBinderChangesRev, []))
+          (argPatsIx ^. indexedThing)
       where
-        argPats =
-          List.head $
-            mapMaybe
-              ( \case
-                  PatConstr PatternConstr {..}
-                    | _patternConstrTag == tag ->
-                        Just _patternConstrArgs
-                  _ ->
-                    Nothing
-              )
-              col
-        argPatsIndex =
-          fromJust $
-            findIndex
-              ( \case
-                  PatConstr PatternConstr {..}
-                    | _patternConstrTag == tag ->
-                        True
-                  _ ->
-                    False
-              )
-              col
+        argPatsIx :: Indexed [Pattern]
+        argPatsIx = fromJust (firstJust (mapM getArgs) (indexFrom 0 col))
+          where
+            getArgs :: Pattern -> Maybe [Pattern]
+            getArgs = \case
+              PatConstr PatternConstr {..}
+                | _patternConstrTag == tag -> Just _patternConstrArgs
+              _ -> Nothing
 
     getBranchMatrix :: [Pattern] -> PatternMatrix -> Tag -> Sem r PatternMatrix
     getBranchMatrix col matrix tag = do
@@ -285,30 +262,25 @@ goMatchToCase recur node = case node of
       let ci = fromJust $ HashMap.lookup tag (tab ^. infoConstructors)
           argtys = typeArgs (ci ^. constructorType)
           argsNum = length argtys
-      return $
-        catMaybes $
-          zipWithExact
-            ( \pat row ->
-                case pat of
-                  PatConstr PatternConstr {..}
-                    | _patternConstrTag == tag ->
-                        Just $
-                          row
-                            { _patternRowPatterns =
-                                _patternConstrArgs ++ row ^. patternRowPatterns,
-                              _patternRowBinderChangesRev = BCAdd argsNum : row ^. patternRowBinderChangesRev
-                            }
-                  PatWildcard {} ->
-                    Just $
-                      row
-                        { _patternRowPatterns =
-                            map (PatWildcard . PatternWildcard mempty . Binder "_" Nothing) argtys
-                              ++ row ^. patternRowPatterns,
-                          _patternRowBinderChangesRev = BCAdd argsNum : row ^. patternRowBinderChangesRev,
-                          _patternRowIgnoredPatternsNum = argsNum + row ^. patternRowIgnoredPatternsNum
-                        }
-                  _ ->
-                    Nothing
-            )
-            col
-            matrix
+          helper :: PatternRow -> Pattern -> Maybe PatternRow
+          helper row = \case
+            PatConstr PatternConstr {..}
+              | _patternConstrTag == tag ->
+                  Just $
+                    row
+                      { _patternRowPatterns =
+                          _patternConstrArgs ++ row ^. patternRowPatterns,
+                        _patternRowBinderChangesRev = BCAdd argsNum : row ^. patternRowBinderChangesRev
+                      }
+            PatWildcard {} ->
+              Just $
+                row
+                  { _patternRowPatterns =
+                      map (PatWildcard . PatternWildcard mempty . Binder "_" Nothing) argtys
+                        ++ row ^. patternRowPatterns,
+                    _patternRowBinderChangesRev = BCAdd argsNum : row ^. patternRowBinderChangesRev,
+                    _patternRowIgnoredPatternsNum = argsNum + row ^. patternRowIgnoredPatternsNum
+                  }
+            _ ->
+              Nothing
+      return (catMaybes [helper row pat | (pat, row) <- zipExact col matrix])

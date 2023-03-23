@@ -3,7 +3,12 @@ module Juvix.Compiler.Backend where
 import GHC.Base (maxInt)
 import Juvix.Prelude
 
-data Target = TargetCWasm32Wasi | TargetCNative64 | TargetGeb | TargetCore | TargetAsm
+data Target
+  = TargetCWasm32Wasi
+  | TargetCNative64
+  | TargetGeb
+  | TargetCore
+  | TargetAsm
   deriving stock (Data, Eq, Show)
 
 data Limits = Limits
