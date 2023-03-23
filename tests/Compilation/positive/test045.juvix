@@ -1,4 +1,6 @@
 -- implicit builtin bool
+-- Builtin nat requires builtin bool when translated to integers, because 
+-- matching is translated to comparison operators and cases on booleans.
 module test045;
   builtin nat type Nat :=
     | zero : Nat
