@@ -17,6 +17,7 @@ data TransformationId
   | EtaExpandApps
   | DisambiguateNames
   | CheckGeb
+  | LetFolding
   deriving stock (Data, Bounded, Enum)
 
 data PipelineId
@@ -51,7 +52,7 @@ toGebTransformations :: [TransformationId]
 toGebTransformations = toEvalTransformations ++ [LetRecLifting, CheckGeb, UnrollRecursion, ComputeTypeInfo]
 
 toEvalTransformations :: [TransformationId]
-toEvalTransformations = [EtaExpandApps, MatchToCase, NatToInt, ConvertBuiltinTypes]
+toEvalTransformations = [EtaExpandApps, MatchToCase, NatToInt, ConvertBuiltinTypes, LetFolding]
 
 pipeline :: PipelineId -> [TransformationId]
 pipeline = \case

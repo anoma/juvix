@@ -81,6 +81,7 @@ transformationText = \case
   UnrollRecursion -> strUnrollRecursion
   DisambiguateNames -> strDisambiguateNames
   CheckGeb -> strCheckGeb
+  LetFolding -> strLetFolding
 
 parsePipeline :: MonadParsec e Text m => m PipelineId
 parsePipeline = choice [symbol (pipelineText t) $> t | t <- allElements]
@@ -141,3 +142,6 @@ strDisambiguateNames = "disambiguate-names"
 
 strCheckGeb :: Text
 strCheckGeb = "check-geb"
+
+strLetFolding :: Text
+strLetFolding = "let-folding"

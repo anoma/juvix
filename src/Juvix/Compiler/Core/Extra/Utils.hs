@@ -39,6 +39,13 @@ isTypeConstr tab ty = case typeTarget ty of
     isTypeConstr tab (fromJust $ HashMap.lookup _identSymbol (tab ^. identContext))
   _ -> False
 
+isImmediate :: Node -> Bool
+isImmediate = \case
+  NVar {} -> True
+  NIdt {} -> True
+  NCst {} -> True
+  _ -> False
+
 freeVarsSorted :: Node -> Set Var
 freeVarsSorted n = Set.fromList (n ^.. freeVars)
 
