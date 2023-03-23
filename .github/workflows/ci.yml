@@ -98,6 +98,7 @@ jobs:
           make runtime
 
       - name: Stack setup
+        id: stack
         uses: freckle/stack-action@v4
         with:
           working-directory: main
@@ -131,10 +132,10 @@ jobs:
           working-directory: smoke
 
       - name: Install Smoke
+        shell: bash
         run: |
           cd smoke
-          stack install --stack-root ${{ github.workspace }}/.stack
-        shell: bash
+          stack install --stack-root ${{ steps.stack.outputs.stack-root }}
 
       - name: Smoke testing
         id: smoke-linux
@@ -145,10 +146,15 @@ jobs:
 
   docs-linux:
     needs: build-and-test-linux
-    if: >-
-      github.ref == 'refs/heads/main' || github.event_name ==
-      'workflow_dispatch'
     runs-on: ubuntu-20.04
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    # Grant GITHUB_TOKEN the permissions required to make a Pages deployment
+    permissions:
+      pages: write # to deploy to Pages
+      id-token: write # to verify the deployment originates from an appropriate source
+
     steps:
       - name: Checkout our repository
         uses: actions/checkout@v3
@@ -202,6 +208,7 @@ jobs:
           make runtime
 
       - name: Stack setup
+        id: stack
         uses: freckle/stack-action@v4
         with:
           working-directory: main
@@ -215,14 +222,26 @@ jobs:
           make html-examples
           make demo-example
 
-      # TODO: use new action 'pages deploy'
-      - name: Deploy HTML to github pages
-        uses: peaceiris/actions-gh-pages@v3
+      - name: Setup Pages
+        uses: actions/configure-pages@v3
+        if: >-
+          github.ref == 'refs/heads/main' || github.event_name ==
+          'workflow_dispatch'
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v1
+        if: >-
+          github.ref == 'refs/heads/main' || github.event_name ==
+          'workflow_dispatch'
         with:
-          github_token: "${{ secrets.GITHUB_TOKEN }}"
-          publish_dir: main/book/html
-          enable_jekyll: false
-          cname: docs.juvix.org
+          path: main/book/html
+
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v1
+        id: deployment
+        if: >-
+          github.ref == 'refs/heads/main' || github.event_name ==
+          'workflow_dispatch'
 
   build-and-test-macos:
     runs-on: macos-12
@@ -269,6 +288,7 @@ jobs:
           make CC=$CC LIBTOOL=$LIBTOOL runtime
 
       - name: Stack setup
+        id: stack
         uses: freckle/stack-action@v4
         with:
           working-directory: main
