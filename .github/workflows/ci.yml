@@ -21,7 +21,7 @@ concurrency:
   group: "${{ github.workflow }}-${{ github.head_ref || github.run_id }}"
   cancel-in-progress: true
 env:
-  SKIP: ormolu
+  SKIP: ormolu,format-juvix-examples
 
 jobs:
   pre-commit:
@@ -32,15 +32,6 @@ jobs:
         with:
           python-version: "3.11"
       - uses: pre-commit/action@v3.0.0
-
-  clang-format:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: jidicula/clang-format-action@v4.10.1
-        with:
-          clang-format-version: "15"
-          check-path: runtime/src
 
   ormolu:
     runs-on: ubuntu-latest
@@ -112,12 +103,19 @@ jobs:
           working-directory: main
           test: false
 
-      - name: Test suite
+      - name: Install and test Juvix
         id: test
         if: ${{ success() }}
         run: |
           cd main
+          make install
           make test
+
+      - name: Typecheck and format Juvix examples
+        if: ${{ success() }}
+        run: |
+          cd main
+          make -s juvix-format
 
       - name: Add ~/.local/bin to PATH
         run: |
@@ -137,11 +135,6 @@ jobs:
           cd smoke
           stack install --stack-root ${{ github.workspace }}/.stack
         shell: bash
-
-      - name: Install Juvix binary
-        run: |
-          cd main
-          make install
 
       - name: Smoke testing
         id: smoke-linux
@@ -285,16 +278,22 @@ jobs:
         run: |
           echo "$(brew --prefix llvm)/bin" >> $GITHUB_PATH
 
-      - name: Test suite (macOS)
+      - name: Install and test Juvix
         if: ${{ success() }}
         run: |
           cd main
-          make CC=$CC LIBTOOL=$LIBTOOL test
           make CC=$CC LIBTOOL=$LIBTOOL install
+          make CC=$CC LIBTOOL=$LIBTOOL test
 
       - name: Add ~/.local/bin to PATH
         run: |
           echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Typecheck and format Juvix examples
+        if: ${{ success() }}
+        run: |
+          cd main
+          make -s juvix-format
 
       - name: Install Smoke
         uses: jaxxstorm/action-install-gh-release@v1.10.0

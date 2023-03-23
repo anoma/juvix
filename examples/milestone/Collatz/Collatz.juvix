@@ -1,42 +1,42 @@
 module Collatz;
-  open import Stdlib.Prelude;
 
-  mapMaybe : {A : Type} → {B : Type} → (A → B) → Maybe
-      A → Maybe B;
-  mapMaybe _ nothing := nothing;
-  mapMaybe f (just x) := just (f x);
+open import Stdlib.Prelude;
 
-  div2 : Nat → Maybe Nat;
-  div2 zero := just zero;
-  div2 (suc (suc n)) := mapMaybe suc (div2 n);
-  div2 _ := nothing;
+mapMaybe :
+  {A : Type} → {B : Type} → (A → B) → Maybe A → Maybe B;
+mapMaybe _ nothing := nothing;
+mapMaybe f (just x) := just (f x);
 
-  collatzNext : Nat → Nat;
-  collatzNext n := fromMaybe (suc (3 * n)) (div2 n);
+div2 : Nat → Maybe Nat;
+div2 zero := just zero;
+div2 (suc (suc n)) := mapMaybe suc (div2 n);
+div2 _ := nothing;
 
-  collatz : Nat → Nat;
-  collatz zero := zero;
-  collatz (suc zero) := suc zero;
-  collatz (suc (suc n)) := collatzNext (suc (suc n));
+collatzNext : Nat → Nat;
+collatzNext n := fromMaybe (suc (3 * n)) (div2 n);
 
-  --- -----------------------------------------------------------------------------
+collatz : Nat → Nat;
+collatz zero := zero;
+collatz (suc zero) := suc zero;
+collatz (suc (suc n)) := collatzNext (suc (suc n));
 
-  -- IO
-  --- -----------------------------------------------------------------------------
-  output : Nat → Nat × IO;
-  output n := n, printNatLn n;
+--- -----------------------------------------------------------------------------
 
-  terminating
-  run : (Nat → Nat) → Nat → IO;
-  run _ (suc zero) := printStringLn "Finished!";
-  run f n := run f (fst (output (f n)));
+-- IO
+--- -----------------------------------------------------------------------------
+output : Nat → Nat × IO;
+output n := n, printNatLn n;
 
-  welcome : String;
-  welcome :=
-    "Collatz calculator\n------------------\n\nType a number then ENTER";
+terminating
+run : (Nat → Nat) → Nat → IO;
+run _ (suc zero) := printStringLn "Finished!";
+run f n := run f (fst (output (f n)));
 
-  main : IO;
-  main :=
-    printStringLn welcome
-      >> readLn (run collatz ∘ stringToNat);
-end;
+welcome : String;
+welcome :=
+  "Collatz calculator\n------------------\n\nType a number then ENTER";
+
+main : IO;
+main :=
+  printStringLn welcome
+    >> readLn (run collatz ∘ stringToNat);

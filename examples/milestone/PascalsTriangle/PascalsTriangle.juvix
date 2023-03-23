@@ -6,54 +6,60 @@
 
 --- The function ;pascal; produces the triangle to a given depth.
 module PascalsTriangle;
-  open import Stdlib.Prelude;
 
-  zipWith : {A : Type} → {B : Type} → {C : Type} → (A → B → C) → List
-      A → List B → List C;
-  zipWith f nil _ := nil;
-  zipWith f _ nil := nil;
-  zipWith f (x :: xs) (y :: ys) := f x y :: zipWith f xs ys;
+open import Stdlib.Prelude;
 
-  --- Return a list of repeated applications of a given function
-  iterate : {A : Type} → Nat → (A → A) → A → List A;
-  iterate zero _ _ := nil;
-  iterate (suc n) f a := a :: iterate n f (f a);
+zipWith :
+  {A : Type}
+    → {B : Type}
+    → {C : Type}
+    → (A → B → C)
+    → List A
+    → List B
+    → List C;
+zipWith f nil _ := nil;
+zipWith f _ nil := nil;
+zipWith f (x :: xs) (y :: ys) := f x y :: zipWith f xs ys;
 
-  --- Produce a singleton List
-  singleton : {A : Type} → A → List A;
-  singleton a := a :: nil;
+--- Return a list of repeated applications of a given function
+iterate : {A : Type} → Nat → (A → A) → A → List A;
+iterate zero _ _ := nil;
+iterate (suc n) f a := a :: iterate n f (f a);
 
-  --- Concatenates a list of strings
+--- Produce a singleton List
+singleton : {A : Type} → A → List A;
+singleton a := a :: nil;
 
-  --- ;concat (("a" :: nil) :: "b" :: nil); evaluates to ;"a"
-    :: "b"
-    :: nil;
-  concat : List String → String;
-  concat := foldl (++str) "";
+--- Concatenates a list of strings
 
-  intercalate : String → List String → String;
-  intercalate sep xs := concat (intersperse sep xs);
+--- ;concat (("a" :: nil) :: "b" :: nil); evaluates to ;"a"
+  :: "b"
+  :: nil;
+concat : List String → String;
+concat := foldl (++str) "";
 
-  --- Joins a list of strings with the newline character
-  unlines : List String → String;
-  unlines := intercalate "\n";
+intercalate : String → List String → String;
+intercalate sep xs := concat (intersperse sep xs);
 
-  showList : List Nat → String;
-  showList xs :=
-    "[" ++str intercalate "," (map natToString xs) ++str "]";
+--- Joins a list of strings with the newline character
+unlines : List String → String;
+unlines := intercalate "\n";
 
-  --- Compute the next row of Pascal's triangle
-  pascalNextRow : List Nat → List Nat;
-  pascalNextRow row :=
-    zipWith
-      (+)
-      (singleton zero ++ row)
-      (row ++ singleton zero);
+showList : List Nat → String;
+showList xs :=
+  "[" ++str intercalate "," (map natToString xs) ++str "]";
 
-  --- Produce Pascal's triangle to a given depth
-  pascal : Nat → List (List Nat);
-  pascal rows := iterate rows pascalNextRow (singleton 1);
+--- Compute the next row of Pascal's triangle
+pascalNextRow : List Nat → List Nat;
+pascalNextRow row :=
+  zipWith
+    (+)
+    (singleton zero ++ row)
+    (row ++ singleton zero);
 
-  main : IO;
-  main := printStringLn (unlines (map showList (pascal 10)));
-end;
+--- Produce Pascal's triangle to a given depth
+pascal : Nat → List (List Nat);
+pascal rows := iterate rows pascalNextRow (singleton 1);
+
+main : IO;
+main := printStringLn (unlines (map showList (pascal 10)));

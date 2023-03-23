@@ -1,3 +1,4 @@
 module TicTacToe;
-  import CLI.TicTacToe;
-end;
+
+import CLI.TicTacToe;
+import CLI.TicTacToe;
