@@ -132,11 +132,10 @@ jobs:
           working-directory: smoke
 
       - name: Install Smoke
+        shell: bash
         run: |
           cd smoke
           stack install --stack-root ${{ steps.stack.outputs.stack-root }}
-
-        shell: bash
 
       - name: Smoke testing
         id: smoke-linux
@@ -231,14 +230,18 @@ jobs:
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v1
-        if: ${{ success() }}
+        if: >-
+          github.ref == 'refs/heads/main' || github.event_name ==
+          'workflow_dispatch'
         with:
           path: main/book/html
 
       - name: Deploy to GitHub Pages
         uses: actions/deploy-pages@v1
         id: deployment
-        if: ${{ success() }}
+        if: >-
+          github.ref == 'refs/heads/main' || github.event_name ==
+          'workflow_dispatch'
 
   build-and-test-macos:
     runs-on: macos-12
