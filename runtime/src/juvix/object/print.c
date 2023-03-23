@@ -207,6 +207,7 @@ size_t print_to_buf(char *buf, size_t n, word_t x) {
     return k;
 }
 
+// The returned pointer should be freed with `free_strbuf`
 char *print(word_t x) {
     // TODO: replace this with malloc when we have it for all APIs
     char *buf = palloc(1);

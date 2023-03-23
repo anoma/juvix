@@ -38,6 +38,14 @@ computeCodePrealloc tab code = prealloc <$> foldS sig code (0, [])
       TailCall {} -> return (0, cmd : prealloc acc)
       CallClosures {} -> return (0, cmd : prealloc acc)
       TailCallClosures {} -> return (0, cmd : prealloc acc)
+      Binop StrConcat -> do
+        opts <- ask
+        let size = opts ^. optLimits . limitsMaxStringSize
+        return (k + size, cmd : c)
+      ValShow -> do
+        opts <- ask
+        let size = opts ^. optLimits . limitsMaxStringSize
+        return (k + size, cmd : c)
       _ -> return (k, cmd : c)
       where
         cmd = Instr instr
@@ -107,6 +115,14 @@ checkCodePrealloc tab code = do
       ExtendClosure {} -> do
         opts <- ask
         let size = opts ^. optLimits . limitsMaxClosureSize
+        return $ \k -> cont (k - size)
+      Binop StrConcat -> do
+        opts <- ask
+        let size = opts ^. optLimits . limitsMaxStringSize
+        return $ \k -> cont (k - size)
+      ValShow -> do
+        opts <- ask
+        let size = opts ^. optLimits . limitsMaxStringSize
         return $ \k -> cont (k - size)
       _ -> return id
 

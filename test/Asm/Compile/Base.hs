@@ -26,6 +26,10 @@ asmCompileAssertion' tab mainFile expectedFile stdinText step = do
             Runtime.clangAssertion cFile expectedFile stdinText step
         )
   where
+    -- TODO: In the future, the target supplied here might need to correspond to
+    -- the actual target, and C code will then need to be re-generated for each
+    -- target separately. Now this works only because those limits that
+    -- Prealloc.hs uses are the same for the Native64 and Wasm32 targets.
     asmOpts :: Options
     asmOpts = makeOptions Backend.TargetCNative64 True
 
