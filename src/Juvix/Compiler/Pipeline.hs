@@ -204,7 +204,7 @@ coreToGeb spec = Core.toGeb >=> return . uncurry (Geb.toResult spec) . Geb.fromC
 --------------------------------------------------------------------------------
 
 -- | It returns `ResolverState` so that we can retrieve the `juvix.yaml` files,
--- which we require for `Sope` tests.
+-- which we require for `Scope` tests.
 runIOEither :: forall a. EntryPoint -> Sem PipelineEff a -> IO (Either JuvixError (ResolverState, a))
 runIOEither entry =
   runM
