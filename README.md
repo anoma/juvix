@@ -2,18 +2,42 @@
 
 <a href="https://github.com/anoma/juvix"><img align="right" width="300" alt="Tara the Juvix mascot" src="assets/images/tara-seating.svg" /></a>
 
-<!-- prettier-ignore -->
-| CI Status |
-| --------- |
-|<a href="https://github.com/anoma/juvix/actions/workflows/ci.yml"><img alt="CI status" src="https://github.com/anoma/juvix/actions/workflows/ci.yml/badge.svg" /> </a> |
-|<a href="https://github.com/anoma/juvix/actions/workflows/pages/pages-build-deployment"><img src="https://github.com/anoma/juvix/actions/workflows/pages/pages-build-deployment/badge.svg" alt="pages-build-deployment" /></a>|
+<table>
+<tr>
+<th> CI Status </th>
+</tr>
+<tr>
+<td>
 
-<!-- prettier-ignore -->
-| Codebase |
-| -------- |
-|<a href="https://github.com/anoma/juvix/tags"><img src="https://img.shields.io/github/v/release/anoma/juvix?include_prereleases"/></a>|
-|<a href="https://github.com/anoma/juvix/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0--only-blue.svg"/></a> |
-|<a href="https://github.com/codespaces/new?hide_repo_select=true&ref=main&repo=102404734&machine=standardLinux32gb&location=WestEurope"><img height="20pt" alt="Open the Juvix Standard Lib in Github Codespace" src="https://github.com/codespaces/badge.svg"/> </a>|
+[![The Juvix compiler CI](https://github.com/anoma/juvix/actions/workflows/ci.yml/badge.svg)](https://github.com/anoma/juvix/actions/workflows/ci.yml)
+
+</td>
+</tr>
+<tr>
+<td>
+
+[![Nightly build, release and benchmark](https://github.com/anoma/juvix-nightly-builds/actions/workflows/release-nightly.yaml/badge.svg)](https://github.com/anoma/juvix-nightly-builds/actions/workflows/release-nightly.yaml)
+
+</td>
+</tr>
+<tr>
+<th> Codebase  </th>
+</tr>
+<tr>
+<td><a href="https://github.com/anoma/juvix/tags"><img src="https://img.shields.io/github/v/release/anoma/juvix?include_prereleases"/></a>
+</td>
+</tr>
+<tr>
+<td>
+<a href="https://github.com/anoma/juvix/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0--only-blue.svg"/></a>
+</td>
+</tr>
+<tr>
+<td> <a href="https://github.com/codespaces/new?hide_repo_select=true&ref=main&repo=102404734&machine=standardLinux32gb&location=WestEurope"><img height="20pt" alt="Open the Juvix Standard Lib in Github Codespace" src="https://github.com/codespaces/badge.svg"/> </a>
+</td>
+</tr>
+</table>
+
 
 Juvix is an open-source, constantly evolving functional programming language
 designed for writing privacy-preserving decentralized applications. Using Juvix, developers can write high-level programs which can be compiled to WASM directly, or through [VampIR][vampir] to circuits for private execution with [Taiga][taiga] on [Anoma][anoma] or Ethereum.
@@ -132,7 +156,7 @@ Juvix is open-source software released under the GNU General Public License v3.0
 [juvix-formula]: https://github.com/anoma/homebrew-juvix
 [juvix-mode]: https://github.com/anoma/juvix-mode
 [latest-release]: https://github.com/anoma/juvix/releases/latest
-[nightly-builds]: https://github.com/anoma/nightly-juvix-builds
+[nightly-builds]: https://github.com/anoma/juvix-nightly-builds
 [repo-codespace]: https://github.com/codespaces/new?hide_repo_select=true&ref=main&repo=102404734&machine=standardLinux32gb&location=WestEurope
 [repo]: https://github.com/anoma/juvix
 [stdlib-codespace]: https://github.com/codespaces/new?hide_repo_select=true&ref=main&repo=102404734&machine=standardLinux32gb&location=WestEurope
