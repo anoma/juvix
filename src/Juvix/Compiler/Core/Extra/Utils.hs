@@ -55,6 +55,13 @@ nodeIdents f = ufoldA reassemble go
       NIdt i -> NIdt <$> f i
       n -> pure n
 
+nodeInductives :: Traversal' Node Symbol
+nodeInductives f = ufoldA reassemble go
+  where
+    go = \case
+      NTyp ty -> NTyp <$> traverseOf typeConstrSymbol f ty
+      n -> pure n
+
 -- | Prism for NRec
 _NRec :: SimpleFold Node LetRec
 _NRec f = \case
