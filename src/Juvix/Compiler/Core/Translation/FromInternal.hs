@@ -23,49 +23,6 @@ import Juvix.Extra.Strings qualified as Str
 mkIdentIndex :: Name -> Text
 mkIdentIndex = show . (^. Internal.nameId . Internal.unNameId)
 
-setupIntToNat :: Symbol -> InfoTable -> InfoTable
-setupIntToNat sym tab =
-  tab
-    { _infoIdentifiers = HashMap.insert sym ii (tab ^. infoIdentifiers),
-      _identContext = HashMap.insert sym node (tab ^. identContext),
-      _infoIntToNat = Just sym
-    }
-  where
-    ii =
-      IdentifierInfo
-        { _identifierSymbol = sym,
-          _identifierName = freshIdentName tab "intToNat",
-          _identifierLocation = Nothing,
-          _identifierArgsNum = 1,
-          _identifierArgsInfo =
-            [ ArgumentInfo
-                { _argumentName = "x",
-                  _argumentLocation = Nothing,
-                  _argumentType = mkTypePrim' (PrimInteger $ PrimIntegerInfo Nothing Nothing),
-                  _argumentIsImplicit = Explicit
-                }
-            ],
-          _identifierType = mkPi' mkTypeInteger' targetType,
-          _identifierIsExported = False,
-          _identifierBuiltin = Nothing
-        }
-    node =
-      case (tagZeroM, tagSucM, boolSymM) of
-        (Just tagZero, Just tagSuc, Just boolSym) ->
-          mkLambda' mkTypeInteger' $
-            mkIf'
-              boolSym
-              (mkBuiltinApp' OpEq [mkVar' 0, mkConstant' (ConstInteger 0)])
-              (mkConstr (setInfoName "zero" mempty) tagZero [])
-              (mkConstr (setInfoName "suc" mempty) tagSuc [mkApp' (mkIdent' sym) (mkBuiltinApp' OpIntSub [mkVar' 0, mkConstant' (ConstInteger 1)])])
-        _ ->
-          mkLambda' mkTypeInteger' $ mkVar' 0
-    targetType = maybe mkTypeInteger' (\s -> mkTypeConstr (setInfoName "Nat" mempty) s []) natSymM
-    tagZeroM = (^. constructorTag) <$> lookupBuiltinConstructor tab BuiltinNatZero
-    tagSucM = (^. constructorTag) <$> lookupBuiltinConstructor tab BuiltinNatSuc
-    boolSymM = (^. inductiveSymbol) <$> lookupBuiltinInductive tab BuiltinBool
-    natSymM = (^. inductiveSymbol) <$> lookupBuiltinInductive tab BuiltinNat
-
 fromInternal :: Internal.InternalTypedResult -> Sem k CoreResult
 fromInternal i = do
   (res, _) <- runInfoTableBuilder tab0 (evalState (i ^. InternalTyped.resultFunctions) (runReader (i ^. InternalTyped.resultIdenTypes) f))
@@ -85,6 +42,53 @@ fromInternal i = do
     f = do
       let resultModules = toList (i ^. InternalTyped.resultModules)
       runReader (Internal.buildTable resultModules) (mapM_ goModule resultModules)
+      tab <- getInfoTable
+      when
+        (isNothing (lookupBuiltinInductive tab BuiltinBool))
+        declareBoolBuiltins
+
+    setupIntToNat :: Symbol -> InfoTable -> InfoTable
+    setupIntToNat sym tab =
+      tab
+        { _infoIdentifiers = HashMap.insert sym ii (tab ^. infoIdentifiers),
+          _identContext = HashMap.insert sym node (tab ^. identContext),
+          _infoIntToNat = Just sym
+        }
+      where
+        ii =
+          IdentifierInfo
+            { _identifierSymbol = sym,
+              _identifierName = freshIdentName tab "intToNat",
+              _identifierLocation = Nothing,
+              _identifierArgsNum = 1,
+              _identifierArgsInfo =
+                [ ArgumentInfo
+                    { _argumentName = "x",
+                      _argumentLocation = Nothing,
+                      _argumentType = mkTypePrim' (PrimInteger $ PrimIntegerInfo Nothing Nothing),
+                      _argumentIsImplicit = Explicit
+                    }
+                ],
+              _identifierType = mkPi' mkTypeInteger' targetType,
+              _identifierIsExported = False,
+              _identifierBuiltin = Nothing
+            }
+        node =
+          case (tagZeroM, tagSucM, boolSymM) of
+            (Just tagZero, Just tagSuc, Just boolSym) ->
+              mkLambda' mkTypeInteger' $
+                mkIf'
+                  boolSym
+                  (mkBuiltinApp' OpEq [mkVar' 0, mkConstant' (ConstInteger 0)])
+                  (mkConstr (setInfoName "zero" mempty) tagZero [])
+                  (mkConstr (setInfoName "suc" mempty) tagSuc [mkApp' (mkIdent' sym) (mkBuiltinApp' OpIntSub [mkVar' 0, mkConstant' (ConstInteger 1)])])
+            _ ->
+              mkLambda' mkTypeInteger' $ mkVar' 0
+        targetType = maybe mkTypeInteger' (\s -> mkTypeConstr (setInfoName "Nat" mempty) s []) natSymM
+        tagZeroM = (^. constructorTag) <$> lookupBuiltinConstructor tab BuiltinNatZero
+        tagSucM = (^. constructorTag) <$> lookupBuiltinConstructor tab BuiltinNatSuc
+        boolSymM = (^. inductiveSymbol) <$> lookupBuiltinInductive tab BuiltinBool
+        natSymM = (^. inductiveSymbol) <$> lookupBuiltinInductive tab BuiltinNat
 
 fromInternalExpression :: CoreResult -> Internal.Expression -> Sem r Node
 fromInternalExpression res exp = do
