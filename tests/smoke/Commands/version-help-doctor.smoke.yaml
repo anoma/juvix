@@ -9,6 +9,16 @@ tests:
         regex: |-
           ^Juvix version 0.3.0-([a-f0-9]{7}).*
 
+  - name: cli-numeric-version
+    command:
+      - juvix
+      - --numeric-version
+    exit-status: 0
+    stdout:
+      matches:
+        regex: |-
+          ^(\d+)((\.{1}\d+)*)(\.{0})$
+
   - name: cli-flag-help  
     command:
       - juvix
