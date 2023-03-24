@@ -4,10 +4,10 @@ import Commands.Compile.Options
 import Commands.Dev.Options qualified as Dev
 import Commands.Doctor.Options
 import Commands.Eval.Options
+import Commands.Format.Options
 import Commands.Html.Options
 import Commands.Repl.Options
 import Commands.Typecheck.Options
-import Commands.Format.Options
 import CommonOptions hiding (Doc)
 import Data.Generics.Uniplate.Data
 import GlobalOptions

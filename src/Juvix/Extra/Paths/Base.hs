@@ -1,8 +1,8 @@
 module Juvix.Extra.Paths.Base where
 
 import Data.FileEmbed qualified as FE
-import Juvix.Prelude.Path
 import Juvix.Prelude.Base
+import Juvix.Prelude.Path
 import Language.Haskell.TH.Syntax
 
 assetsDirQ :: Q Exp

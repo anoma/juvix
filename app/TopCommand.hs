@@ -5,10 +5,10 @@ import Commands.Compile qualified as Compile
 import Commands.Dev qualified as Dev
 import Commands.Doctor qualified as Doctor
 import Commands.Eval qualified as Eval
+import Commands.Format qualified as Format
 import Commands.Html qualified as Html
 import Commands.Init qualified as Init
 import Commands.Repl qualified as Repl
-import Commands.Format qualified as Format
 import Commands.Typecheck qualified as Typecheck
 import Juvix.Extra.Version
 import System.Environment (getProgName)
