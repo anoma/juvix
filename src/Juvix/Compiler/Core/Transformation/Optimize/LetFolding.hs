@@ -1,3 +1,15 @@
+-- An optimizing transformation that folds lets whose values are immediate,
+-- i.e., they don't require evaluation or memory allocation (variables or
+-- constants).
+--
+-- For example, transforms
+-- ```
+-- let x := y in let z := x + x in x + z
+-- ```
+-- to
+-- ```
+-- let z := y + y in y + z
+-- ```
 module Juvix.Compiler.Core.Transformation.Optimize.LetFolding where
 
 import Juvix.Compiler.Core.Extra

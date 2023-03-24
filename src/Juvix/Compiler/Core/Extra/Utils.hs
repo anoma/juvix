@@ -39,6 +39,8 @@ isTypeConstr tab ty = case typeTarget ty of
     isTypeConstr tab (fromJust $ HashMap.lookup _identSymbol (tab ^. identContext))
   _ -> False
 
+-- True for nodes whose evaluation immediately returns a constant value, i.e.,
+-- no reduction or memory allocation in the runtime is required.
 isImmediate :: Node -> Bool
 isImmediate = \case
   NVar {} -> True
