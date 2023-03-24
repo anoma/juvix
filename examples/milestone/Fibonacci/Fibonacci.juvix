@@ -10,4 +10,4 @@ fibonacci : Nat → Nat;
 fibonacci n := fib n 0 1;
 
 main : IO;
-main := printNatLn (fibonacci 25);
+main := readLn (printNatLn ∘ fibonacci ∘ stringToNat);

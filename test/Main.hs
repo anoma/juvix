@@ -6,6 +6,7 @@ import BackendGeb qualified
 import Base
 import Compilation qualified
 import Core qualified
+import Examples qualified
 import Format qualified
 import Internal qualified
 import Parsing qualified
@@ -24,7 +25,8 @@ slowTests =
       Asm.allTests,
       Core.allTests,
       Internal.allTests,
-      Compilation.allTests
+      Compilation.allTests,
+      Examples.allTests
     ]
 
 fastTests :: TestTree

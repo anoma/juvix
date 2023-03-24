@@ -1,42 +1,34 @@
 module Collatz;
 
 open import Stdlib.Prelude;
-
-mapMaybe :
-  {A : Type} → {B : Type} → (A → B) → Maybe A → Maybe B;
-mapMaybe _ nothing := nothing;
-mapMaybe f (just x) := just (f x);
-
-div2 : Nat → Maybe Nat;
-div2 zero := just zero;
-div2 (suc (suc n)) := mapMaybe suc (div2 n);
-div2 _ := nothing;
+open import Stdlib.Data.Nat.Ord;
 
 collatzNext : Nat → Nat;
-collatzNext n := fromMaybe (suc (3 * n)) (div2 n);
+collatzNext n := if (mod n 2 == 0) (div n 2) (3 * n + 1);
 
 collatz : Nat → Nat;
 collatz zero := zero;
 collatz (suc zero) := suc zero;
-collatz (suc (suc n)) := collatzNext (suc (suc n));
-
---- -----------------------------------------------------------------------------
-
--- IO
---- -----------------------------------------------------------------------------
-output : Nat → Nat × IO;
-output n := n, printNatLn n;
+collatz n := collatzNext n;
 
 terminating
 run : (Nat → Nat) → Nat → IO;
-run _ (suc zero) := printStringLn "Finished!";
-run f n := run f (fst (output (f n)));
+run _ (suc zero) :=
+  printNatLn 1 >> printStringLn "Finished!";
+run f n := printNatLn n >> run f (f n);
 
 welcome : String;
 welcome :=
   "Collatz calculator\n------------------\n\nType a number then ENTER";
 
+resultHeading : String;
+resultHeading := "Collatz sequence:";
+
 main : IO;
 main :=
   printStringLn welcome
-    >> readLn (run collatz ∘ stringToNat);
+    >> readLn
+      λ {
+        | s := printStringLn resultHeading
+          >> run collatz (stringToNat s)
+      };

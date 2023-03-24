@@ -45,7 +45,7 @@ getTypeParams tab ty = filter (isTypeConstr tab) (typeArgs ty)
 getTypeParamsNum :: InfoTable -> Type -> Int
 getTypeParamsNum tab ty = length $ getTypeParams tab ty
 
--- True for nodes whose evaluation immediately returns a constant value, i.e.,
+-- True for nodes whose evaluation immediately returns a value, i.e.,
 -- no reduction or memory allocation in the runtime is required.
 isImmediate :: Node -> Bool
 isImmediate = \case

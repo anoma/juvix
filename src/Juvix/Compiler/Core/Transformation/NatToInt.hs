@@ -134,18 +134,7 @@ filterNatBuiltins tab =
           infoIdentifiers
           (HashMap.filter (isNotNatBuiltin . (^. identifierBuiltin)))
           tab
-   in over
-        identMap
-        ( HashMap.filter
-            ( \case
-                IdentFun s -> HashMap.member s (tab' ^. infoIdentifiers)
-                _ -> True
-            )
-        )
-        $ over
-          identContext
-          (HashMap.filterWithKey (\s _ -> HashMap.member s (tab' ^. infoIdentifiers)))
-          tab'
+   in pruneInfoTable tab'
   where
     isNotNatBuiltin :: Maybe BuiltinFunction -> Bool
     isNotNatBuiltin = \case
