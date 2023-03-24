@@ -118,6 +118,9 @@ runInfoTableBuilder tab =
       GetInfoTable ->
         get
 
+execInfoTableBuilder :: InfoTable -> Sem (InfoTableBuilder ': r) a -> Sem r InfoTable
+execInfoTableBuilder tab = fmap fst . runInfoTableBuilder tab
+
 --------------------------------------------
 -- Builtin declarations
 --------------------------------------------

@@ -42,8 +42,7 @@ liftTest _testEval =
       }
 
 checkNoRecursion :: InfoTable -> Assertion
-checkNoRecursion tab
-  | isCyclic (createIdentDependencyInfo tab) =
-      assertFailure "recursion detected"
-  | otherwise =
-      return ()
+checkNoRecursion tab =
+  when
+    (isCyclic (createIdentDependencyInfo tab))
+    (assertFailure "recursion detected")

@@ -362,10 +362,12 @@ data Indexed a = Indexed
   { _indexedIx :: Int,
     _indexedThing :: a
   }
-  deriving stock (Show, Eq, Ord, Foldable, Traversable)
+  deriving stock (Generic, Show, Eq, Ord, Foldable, Traversable)
 
 instance Functor Indexed where
   fmap f (Indexed i a) = Indexed i (f a)
+
+instance Hashable a => Hashable (Indexed a)
 
 indexFrom :: Int -> [a] -> [Indexed a]
 indexFrom i = zipWith Indexed [i ..]

@@ -167,7 +167,7 @@ filterByFile f t =
     matchesLocation :: Maybe Location -> Bool
     matchesLocation l = l ^? _Just . intervalFile == Just f
 
--- Prunes the orphaned entries of identMap and indentContext, i.e., ones that
+-- | Prunes the orphaned entries of identMap and indentContext, i.e., ones that
 -- have no corresponding entries in infoIdentifiers or infoInductives
 pruneInfoTable :: InfoTable -> InfoTable
 pruneInfoTable tab =
