@@ -31,8 +31,9 @@ import Juvix.Compiler.Pipeline.Setup
 import Juvix.Compiler.Reg.Data.InfoTable qualified as Reg
 import Juvix.Compiler.Reg.Translation.FromAsm qualified as Reg
 import Juvix.Prelude
+import System.IO.Error
 
-type PipelineEff = '[PathResolver, Reader EntryPoint, Files, NameIdGen, Builtins, Error JuvixError, Embed IO]
+type PipelineEff = '[PathResolver, Reader EntryPoint, Files, Error IOError, NameIdGen, Builtins, Error JuvixError, Embed IO]
 
 arityCheckExpression ::
   Members '[Error JuvixError, NameIdGen, Builtins] r =>
@@ -216,6 +217,7 @@ runIOEither builtinsState entry =
     . fmap makeArtifacts
     . runBuiltins builtinsState
     . runNameIdGen
+    . runIOErrorToIO
     . runFilesIO
     . runReader entry
     . runPathResolverPipe

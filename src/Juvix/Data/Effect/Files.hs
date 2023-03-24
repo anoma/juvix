@@ -10,9 +10,9 @@ import Data.HashSet qualified as HashSet
 import Juvix.Data.Effect.Files.Base
 import Juvix.Data.Effect.Files.IO
 import Juvix.Data.Effect.Files.Pure (runFilesPure)
+import Juvix.Extra.Paths.Base
 import Juvix.Prelude.Base
 import Juvix.Prelude.Path
-import Juvix.Extra.Paths.Base
 
 -- | for now we only check for string equality
 equalPaths :: Path Abs File -> Path Abs File -> Sem r Bool

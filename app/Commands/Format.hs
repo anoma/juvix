@@ -14,7 +14,7 @@ import Juvix.Prelude.Pretty (toPlainText)
 runCommand :: forall r. Members '[Embed IO, App] r => FormatOptions -> Sem r ()
 runCommand opts = case opts ^. formatInputFile of
   Nothing -> error "not implemented"
-  Just p -> unlessM (runFilesIO (isFileFormatted p)) (err p)
+  Just p -> unlessM (runIOErrorToIO $ runFilesIO (isFileFormatted p)) (err p)
   where
     err :: AppPath File -> Sem r ()
     err p = exitMsg (ExitFailure 1) [i|File #{p} is not formatted|]
