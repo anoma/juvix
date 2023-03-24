@@ -154,7 +154,7 @@ goMatchToCase recur node = case node of
               _patternRowBinderChangesRev =
                 if
                     | nIgnored > 0 -> rbcs
-                    | otherwise -> BCRemove (BinderRemove binder val) : rbcs
+                    | otherwise -> mkBCRemove binder val : rbcs
             }
           where
             nIgnored = row ^. patternRowIgnoredPatternsNum
@@ -182,7 +182,7 @@ goMatchToCase recur node = case node of
           reverse $
             foldl'
               ( \acc (pat, vl) ->
-                  BCRemove (BinderRemove (getPatternBinder pat) (mkVal bindersNum vl)) : acc
+                  mkBCRemove (getPatternBinder pat) (mkVal bindersNum vl) : acc
               )
               _patternRowBinderChangesRev
               (drop _patternRowIgnoredPatternsNum (zipExact _patternRowPatterns vs))
@@ -239,8 +239,8 @@ goMatchToCase recur node = case node of
         <$> foldl'
           ( \a pat -> do
               (rbcs, acc) <- a
-              let bcs = map (\b -> BCRemove (BinderRemove b (error "pattern compiler: dependently typed pattern"))) (getPatternExtraBinders pat)
-                  bc = BCRemove (BinderRemove (getPatternBinder pat) (mkVar' 0))
+              let bcs = map (\b -> mkBCRemove b (error "pattern compiler: dependently typed pattern")) (getPatternExtraBinders pat)
+                  bc = mkBCRemove (getPatternBinder pat) (mkVar' 0)
               binder <- overM binderType (goMatchToCase (recur . revAppend rbcs)) (getPatternBinder pat)
               return (revAppend bcs (bc : BCAdd 1 : rbcs), binder : acc)
           )
