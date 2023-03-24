@@ -46,6 +46,7 @@ isImmediate = \case
   NVar {} -> True
   NIdt {} -> True
   NCst {} -> True
+  NLam {} -> True
   _ -> False
 
 freeVarsSorted :: Node -> Set Var
