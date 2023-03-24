@@ -1,4 +1,3 @@
-
 module Format;
 
 open import Stdlib.Prelude hiding {,};
