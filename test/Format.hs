@@ -4,7 +4,6 @@ import Base
 import Juvix.Compiler.Builtins (iniState)
 import Juvix.Compiler.Concrete qualified as Concrete
 import Juvix.Compiler.Concrete.Print qualified as P
-import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
 import Juvix.Compiler.Pipeline
@@ -24,16 +23,6 @@ root = relToProject $(mkRelDir "tests/positive")
 
 renderCode :: (HasLoc a, P.PrettyPrint a) => P.Comments -> a -> Text
 renderCode c = prettyText . P.ppOutDefault c
-
-type Pipe =
-  '[ PathResolver,
-     Reader EntryPoint,
-     Files,
-     NameIdGen,
-     Error JuvixError,
-     Reader GenericOptions,
-     Embed IO
-   ]
 
 posTest :: String -> Path Rel Dir -> Path Rel File -> PosTest
 posTest _name rdir rfile =
