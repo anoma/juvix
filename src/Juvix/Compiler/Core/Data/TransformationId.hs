@@ -18,6 +18,7 @@ data TransformationId
   | EtaExpandApps
   | DisambiguateNames
   | CheckGeb
+  | LetFolding
   deriving stock (Data, Bounded, Enum)
 
 data PipelineId
@@ -45,7 +46,7 @@ fromTransformationLikes :: [TransformationLikeId] -> [TransformationId]
 fromTransformationLikes = concatMap fromTransformationLike
 
 toEvalTransformations :: [TransformationId]
-toEvalTransformations = [EtaExpandApps, MatchToCase, NatToInt, ConvertBuiltinTypes]
+toEvalTransformations = [EtaExpandApps, MatchToCase, NatToInt, ConvertBuiltinTypes, LetFolding]
 
 toStrippedTransformations :: [TransformationId]
 toStrippedTransformations =

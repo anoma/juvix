@@ -23,6 +23,9 @@ data BinderChange
     -- indices of `n` are with respect to the result
     BCRemove BinderRemove
 
+mkBCRemove :: Binder -> Node -> BinderChange
+mkBCRemove b n = BCRemove (BinderRemove b n)
+
 -- | Returns the binders in the original node skipped before a call to `recur`,
 -- as specified by the BinderChange list.
 bindersFromBinderChange :: [BinderChange] -> [Binder]
