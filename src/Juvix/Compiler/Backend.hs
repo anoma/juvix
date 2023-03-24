@@ -76,6 +76,7 @@ defaultLimits =
       _limitsMaxLocalVars = maxInt,
       _limitsMaxClosureSize = maxInt,
       _limitsClosureHeadSize = maxInt,
+      _limitsMaxStringSize = maxInt,
       _limitsMaxStackDelta = maxInt,
       _limitsMaxFunctionAlloc = maxInt,
       _limitsDispatchStackSize = maxInt,
