@@ -1,10 +1,11 @@
 --- This file implements the mid-square hashing function in Juvix. See:
+
 --- https://research.cs.vt.edu/AVresearch/hashing/midsquare.php
----
 --- The implementation is for hashing natural numbers with maximum 16 bits into 6
+
 --- bits. In order to facilitate the translation to the current version of the
+
 --- GEB backend, no recursion is used (it is manually unrolled).
----
 module MidSquareHashUnrolled;
 
 open import Stdlib.Prelude;
@@ -12,24 +13,41 @@ open import Stdlib.Data.Nat.Ord;
 
 --- `powN` is 2 ^ N
 pow0 : Nat := 1;
+
 pow1 : Nat := 2 * pow0;
+
 pow2 : Nat := 2 * pow1;
+
 pow3 : Nat := 2 * pow2;
+
 pow4 : Nat := 2 * pow3;
+
 pow5 : Nat := 2 * pow4;
+
 pow6 : Nat := 2 * pow5;
+
 pow7 : Nat := 2 * pow6;
+
 pow8 : Nat := 2 * pow7;
+
 pow9 : Nat := 2 * pow8;
+
 pow10 : Nat := 2 * pow9;
+
 pow11 : Nat := 2 * pow10;
+
 pow12 : Nat := 2 * pow11;
+
 pow13 : Nat := 2 * pow12;
+
 pow14 : Nat := 2 * pow13;
+
 pow15 : Nat := 2 * pow14;
+
 pow16 : Nat := 2 * pow15;
 
 --- `hashN` hashes a number with max N bits (i.e. smaller than 2^N) into 6 bits
+
 --- (i.e. smaller than 64) using the mid-square algorithm.
 hash0 : Nat -> Nat;
 hash0 x := 0;
@@ -44,48 +62,59 @@ hash3 : Nat -> Nat;
 hash3 x := x * x;
 
 hash4 : Nat -> Nat;
-hash4 x := if (x < pow3) (hash3 x) (mod (div (x * x) pow1) pow6);
+hash4 x :=
+  if (x < pow3) (hash3 x) (mod (div (x * x) pow1) pow6);
 
 hash5 : Nat -> Nat;
-hash5 x := if (x < pow4) (hash4 x) (mod (div (x * x) pow2) pow6);
+hash5 x :=
+  if (x < pow4) (hash4 x) (mod (div (x * x) pow2) pow6);
 
 hash6 : Nat -> Nat;
-hash6 x := if (x < pow5) (hash5 x) (mod (div (x * x) pow3) pow6);
+hash6 x :=
+  if (x < pow5) (hash5 x) (mod (div (x * x) pow3) pow6);
 
 hash7 : Nat -> Nat;
-hash7 x := if (x < pow6) (hash6 x) (mod (div (x * x) pow4) pow6);
+hash7 x :=
+  if (x < pow6) (hash6 x) (mod (div (x * x) pow4) pow6);
 
 hash8 : Nat -> Nat;
-hash8 x := if (x < pow7) (hash7 x) (mod (div (x * x) pow5) pow6);
+hash8 x :=
+  if (x < pow7) (hash7 x) (mod (div (x * x) pow5) pow6);
 
 hash9 : Nat -> Nat;
-hash9 x := if (x < pow8) (hash8 x) (mod (div (x * x) pow6) pow6);
+hash9 x :=
+  if (x < pow8) (hash8 x) (mod (div (x * x) pow6) pow6);
 
 hash10 : Nat -> Nat;
-hash10 x := if (x < pow9) (hash9 x) (mod (div (x * x) pow7) pow6);
+hash10 x :=
+  if (x < pow9) (hash9 x) (mod (div (x * x) pow7) pow6);
 
 hash11 : Nat -> Nat;
-hash11 x := if (x < pow10) (hash10 x) (mod (div (x * x) pow8) pow6);
+hash11 x :=
+  if (x < pow10) (hash10 x) (mod (div (x * x) pow8) pow6);
 
 hash12 : Nat -> Nat;
-hash12 x := if (x < pow11) (hash11 x) (mod (div (x * x) pow9) pow6);
+hash12 x :=
+  if (x < pow11) (hash11 x) (mod (div (x * x) pow9) pow6);
 
 hash13 : Nat -> Nat;
-hash13 x := if (x < pow12) (hash12 x) (mod (div (x * x) pow10) pow6);
+hash13 x :=
+  if (x < pow12) (hash12 x) (mod (div (x * x) pow10) pow6);
 
 hash14 : Nat -> Nat;
-hash14 x := if (x < pow13) (hash13 x) (mod (div (x * x) pow11) pow6);
+hash14 x :=
+  if (x < pow13) (hash13 x) (mod (div (x * x) pow11) pow6);
 
 hash15 : Nat -> Nat;
-hash15 x := if (x < pow14) (hash14 x) (mod (div (x * x) pow12) pow6);
+hash15 x :=
+  if (x < pow14) (hash14 x) (mod (div (x * x) pow12) pow6);
 
 hash16 : Nat -> Nat;
-hash16 x := if (x < pow15) (hash15 x) (mod (div (x * x) pow13) pow6);
+hash16 x :=
+  if (x < pow15) (hash15 x) (mod (div (x * x) pow13) pow6);
 
 hash : Nat -> Nat := hash16;
 
 main : Nat;
 main := hash 1367;
 -- result: 3
-
-end;

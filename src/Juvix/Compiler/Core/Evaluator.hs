@@ -45,6 +45,13 @@ instance Show EvalError where
 
 instance Exception.Exception EvalError
 
+evalInfoTable :: Handle -> InfoTable -> Node
+evalInfoTable herr info = eval herr idenCtxt [] mainNode
+  where
+    idenCtxt = info ^. identContext
+    mainSym = fromJust (info ^. infoMain)
+    mainNode = fromJust (HashMap.lookup mainSym idenCtxt)
+
 -- | `eval ctx env n` evalues a node `n` whose all free variables point into
 -- `env`. All nodes in `ctx` must be closed. All nodes in `env` must be values.
 -- Invariant for values v: eval ctx env v = v

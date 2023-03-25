@@ -1,7 +1,7 @@
 -- single-constructor inductive types
 
 type Box2 {
-    box2 : int -> int -> Box2;
+    box2 : Int -> Int -> Box2;
 };
 
 type Box {
