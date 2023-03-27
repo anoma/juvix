@@ -1,6 +1,7 @@
 --- This file implements the mid-square hashing function in Juvix. See:
 
 --- https://research.cs.vt.edu/AVresearch/hashing/midsquare.php
+
 --- The implementation is for hashing natural numbers with maximum 16 bits into 6
 
 --- bits. In order to facilitate the translation to the current version of the

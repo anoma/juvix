@@ -118,13 +118,11 @@ eval herr ctx env0 = convertRuntimeNodes . eval' env0
             evalError "the number of patterns doesn't match the number of arguments" (substEnv env n)
 
           patmatch :: [Node] -> Node -> Pattern -> Maybe [Node]
-          patmatch acc _ PatWildcard {} =
-            Just acc
-          patmatch acc v (PatBinder PatternBinder {..}) =
-            patmatch (v : acc) v _patternBinderPattern
-          patmatch acc (NCtr (Constr _ tag args)) (PatConstr PatternConstr {..})
+          patmatch acc v PatWildcard {} =
+            Just (v : acc)
+          patmatch acc v@(NCtr (Constr _ tag args)) (PatConstr PatternConstr {..})
             | tag == _patternConstrTag =
-                matchPatterns acc args _patternConstrArgs
+                matchPatterns (v : acc) args _patternConstrArgs
           patmatch _ _ _ = Nothing
       [] ->
         evalError "no matching pattern" (substEnv env n)

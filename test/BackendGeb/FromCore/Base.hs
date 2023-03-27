@@ -4,27 +4,8 @@ import Base
 import Data.Text.IO qualified as TIO
 import Juvix.Compiler.Backend.Geb qualified as Geb
 import Juvix.Compiler.Core qualified as Core
+import Juvix.Compiler.Pipeline
 import Juvix.Prelude.Pretty
-
-{-
-  Test summary:
-  1. Parse the Juvix Core file.
-  2. Prepare the Juvix Core node for translation to Geb.
-  3. Translate the Juvix Core node to Geb so that it can be executed in the Geb
-     environment.
-  4. Perform typechecking on the translated Geb node to ensure that the types
-     from the core node make sense in the Geb context and avoid any runtime
-     errors.
-  5. Evaluate the Juvix Core node to see if it produces the expected output.
-  6. Translate the result of the evaluated Juvix Core node to Geb for comparison
-     with the expected output.
-  7. Compare the result of the evaluation of the Geb terms produced in step 3
-     with the result of the evaluation of the Geb terms produced in step 6 to
-     ensure consistency.
-  8. If step 7 succeeds, then compare the output of the evaluation of the core
-     node with the expected output to ensure that the program is functioning as
-     intended.
--}
 
 coreToGebtranslationAssertion ::
   Path Abs File ->
@@ -34,11 +15,14 @@ coreToGebtranslationAssertion ::
 coreToGebtranslationAssertion mainFile expectedFile step = do
   step "Parse Juvix Core file"
   input <- readFile . toFilePath $ mainFile
+  cwd <- getCurrentDir
+  let entryPoint = defaultEntryPoint cwd mainFile
   case Core.runParserMain mainFile Core.emptyInfoTable input of
     Left err -> assertFailure . show . pretty $ err
     Right coreInfoTable -> do
       step "Prepare the Juvix Core node for translation to Geb"
-      case run . runError @Geb.JuvixError $ Core.toGeb coreInfoTable of
+      case run . runReader entryPoint . runError @Geb.JuvixError $
+        Core.toGeb coreInfoTable of
         Left err ->
           assertFailure . show . pretty $
             fromJuvixError @GenericError err

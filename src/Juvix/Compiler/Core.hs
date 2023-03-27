@@ -6,6 +6,7 @@ module Juvix.Compiler.Core
     module Juvix.Compiler.Core.Data,
     module Juvix.Compiler.Core.Extra,
     module Juvix.Compiler.Core.Error,
+    module Juvix.Compiler.Core.Options,
   )
 where
 
@@ -14,5 +15,6 @@ import Juvix.Compiler.Core.Error
 import Juvix.Compiler.Core.Evaluator
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Language
+import Juvix.Compiler.Core.Options
 import Juvix.Compiler.Core.Pipeline
 import Juvix.Compiler.Core.Translation

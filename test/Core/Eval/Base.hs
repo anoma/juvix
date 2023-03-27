@@ -11,6 +11,7 @@ import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Info.NoDisplayInfo
 import Juvix.Compiler.Core.Language
+import Juvix.Compiler.Core.Options
 import Juvix.Compiler.Core.Pretty
 import Juvix.Compiler.Core.Transformation
 import Juvix.Compiler.Core.Translation.FromSource
@@ -64,7 +65,7 @@ coreEvalAssertion mainFile expectedFile trans testTrans step = do
       expected <- TIO.readFile (toFilePath expectedFile)
       assertEqDiffText ("Check: EVAL output = " <> toFilePath expectedFile) "" expected
     Right (tabIni, Just node) ->
-      case run $ runError $ applyTransformations trans (setupMainFunction tabIni node) of
+      case run $ runReader defaultCoreOptions $ runError $ applyTransformations trans (setupMainFunction tabIni node) of
         Left err -> assertFailure (show (pretty (fromJuvixError @GenericError err)))
         Right tab -> do
           testTrans tab

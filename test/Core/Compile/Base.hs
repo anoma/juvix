@@ -8,6 +8,7 @@ import Data.Text.IO qualified as TIO
 import GHC.Base (seq)
 import Juvix.Compiler.Asm.Pretty qualified as Asm
 import Juvix.Compiler.Asm.Translation.FromCore qualified as Asm
+import Juvix.Compiler.Core.Options
 import Juvix.Compiler.Core.Pipeline
 import Juvix.Compiler.Core.Translation.FromSource
 import Juvix.Compiler.Core.Translation.Stripped.FromCore qualified as Stripped
@@ -44,7 +45,7 @@ coreCompileAssertion' ::
   Assertion
 coreCompileAssertion' tab mainFile expectedFile stdinText step = do
   step "Translate to JuvixAsm"
-  case run $ runError $ toStripped tab of
+  case run $ runReader defaultCoreOptions $ runError $ toStripped' tab of
     Left err -> assertFailure (show (pretty (fromJuvixError @GenericError err)))
     Right tab0 -> do
       let tab' = Asm.fromCore $ Stripped.fromCore $ tab0

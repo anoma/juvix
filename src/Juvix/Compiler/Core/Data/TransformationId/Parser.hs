@@ -71,6 +71,7 @@ transformationText = \case
   LetRecLifting -> strLetRecLifting
   TopEtaExpand -> strTopEtaExpand
   MatchToCase -> strMatchToCase
+  NaiveMatchToCase -> strNaiveMatchToCase
   EtaExpandApps -> strEtaExpandApps
   Identity -> strIdentity
   RemoveTypeArgs -> strRemoveTypeArgs
@@ -112,6 +113,9 @@ strTopEtaExpand = "top-eta-expand"
 
 strMatchToCase :: Text
 strMatchToCase = "match-to-case"
+
+strNaiveMatchToCase :: Text
+strNaiveMatchToCase = "naive-match-to-case"
 
 strEtaExpandApps :: Text
 strEtaExpandApps = "eta-expand-apps"

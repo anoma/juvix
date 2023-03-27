@@ -969,45 +969,67 @@ branchPattern ::
   ParsecS r (Pattern, (Index, HashMap Text Level))
 branchPattern varsNum vars =
   parens (branchPattern varsNum vars)
-    <|> wildcardPattern varsNum vars
-    <|> binderOrConstrPattern True varsNum vars
+    <|> branchPatternWildcard varsNum vars
+    <|> branchPattern' varsNum vars
 
-wildcardPattern ::
-  Index ->
-  HashMap Text Level ->
-  ParsecS r (Pattern, (Index, HashMap Text Level))
-wildcardPattern varsNum vars = do
-  kw kwWildcard
-  return (PatWildcard (PatternWildcard Info.empty mkDynamic'), (varsNum, vars))
-
-binderOrConstrPattern ::
+branchPatternWildcard ::
   (Member InfoTableBuilder r) =>
-  Bool ->
   Index ->
   HashMap Text Level ->
   ParsecS r (Pattern, (Index, HashMap Text Level))
-binderOrConstrPattern parseArgs varsNum vars = do
+branchPatternWildcard varsNum vars = do
+  kw kwWildcard
+  mty <- optional (kw kwColon >> expr varsNum vars)
+  let binder = Binder "_" Nothing (fromMaybe mkDynamic' mty)
+  return (PatWildcard (PatternWildcard mempty binder), (varsNum + 1, vars))
+
+branchPattern' ::
+  (Member InfoTableBuilder r) =>
+  Index ->
+  HashMap Text Level ->
+  ParsecS r (Pattern, (Index, HashMap Text Level))
+branchPattern' varsNum vars = do
   off <- P.getOffset
   (txt, i) <- identifierL
   r <- lift (getIdent txt)
   case r of
     Just (IdentConstr tag) -> do
-      (ps, (varsNum', vars')) <- if parseArgs then constrArgPatterns varsNum vars else return ([], (varsNum, vars))
+      (ps, (varsNum', vars')) <- constrArgPatterns (varsNum + 1) vars
+      mty <- optional (typeAnnot varsNum vars)
       ci <- lift $ getConstructorInfo tag
       when
         (ci ^. constructorArgsNum /= length ps)
         (parseFailure off "wrong number of constructor arguments")
       let info = setInfoName (ci ^. constructorName) Info.empty
-      mty <- optional (typeAnnot varsNum vars)
-      return (PatConstr (PatternConstr info tag ps (fromMaybe mkDynamic' mty)), (varsNum', vars'))
+          ty = fromMaybe mkDynamic' mty
+          binder = Binder "_" (Just i) ty
+      return (PatConstr (PatternConstr info binder tag ps), (varsNum', vars'))
     _ -> do
       let vars1 = HashMap.insert txt varsNum vars
-      mp <- optional (binderPattern (varsNum + 1) vars1)
+      mp <- optional (symbolAt >> parens (branchPattern (varsNum + 1) vars1))
       mty <- optional (typeAnnot varsNum vars)
       let ty = fromMaybe mkDynamic' mty
-          (pat, (varsNum', vars')) = fromMaybe (PatWildcard (PatternWildcard Info.empty ty), (varsNum + 1, vars1)) mp
-          binder = Binder txt (Just i) ty
-      return (PatBinder (PatternBinder binder pat), (varsNum', vars'))
+      case mp of
+        Just (pat, r') ->
+          case pat of
+            PatWildcard p ->
+              return (PatWildcard $ over patternWildcardBinder adjustBinder p, r')
+            PatConstr p ->
+              return (PatConstr $ over patternConstrBinder adjustBinder p, r')
+          where
+            adjustBinder :: Binder -> Binder
+            adjustBinder b =
+              set
+                binderName
+                txt
+                ( set
+                    binderLocation
+                    (Just i)
+                    (over binderType (if isDynamic ty then id else const ty) b)
+                )
+        Nothing -> do
+          let binder = Binder txt (Just i) ty
+          return (PatWildcard (PatternWildcard mempty binder), (varsNum + 1, vars1))
 
 constrArgPatterns ::
   (Member InfoTableBuilder r) =>
@@ -1022,17 +1044,6 @@ constrArgPatterns varsNum vars = do
       return (pat : pats, (varsNum'', vars''))
     Nothing ->
       return ([], (varsNum, vars))
-
-binderPattern ::
-  (Member InfoTableBuilder r) =>
-  Index ->
-  HashMap Text Level ->
-  ParsecS r (Pattern, (Index, HashMap Text Level))
-binderPattern varsNum vars = do
-  symbolAt
-  parens (branchPattern varsNum vars)
-    <|> wildcardPattern varsNum vars
-    <|> binderOrConstrPattern False varsNum vars
 
 exprNamed ::
   (Member InfoTableBuilder r) =>
