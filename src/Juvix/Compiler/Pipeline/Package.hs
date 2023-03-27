@@ -24,7 +24,6 @@ import Juvix.Compiler.Pipeline.Package.Dependency
 import Juvix.Extra.Paths
 import Juvix.Prelude
 import Lens.Micro.Platform qualified as Lens
-import System.IO.Error
 
 type NameType :: IsProcessed -> GHC.Type
 type family NameType s = res | res -> s where
@@ -152,9 +151,9 @@ readPackage adir buildDir = do
 
 readPackageIO :: Path Abs Dir -> Path Abs Dir -> IO Package
 readPackageIO dir buildDir = do
-  let x :: Sem '[Error Text, Files, Error IOError, Embed IO] Package
+  let x :: Sem '[Error Text, Files, Embed IO] Package
       x = readPackage dir buildDir
-  m <- runM $ runIOErrorToIO $ runFilesIO (runError x)
+  m <- runM $ runFilesIO (runError x)
   case m of
     Left err -> putStrLn err >> exitFailure
     Right r -> return r

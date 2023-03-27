@@ -2,9 +2,12 @@ module Juvix.Data.Effect.Files.Pure where
 
 import Data.HashMap.Strict qualified as HashMap
 import Data.Tree
+import Data.Unique
 import Juvix.Data.Effect.Files.Base
 import Juvix.Prelude.Base
 import Juvix.Prelude.Path
+import Polysemy.ConstraintAbsorber.MonadCatch
+import Polysemy.Fresh
 import Prelude qualified
 
 data FS = FS
@@ -84,6 +87,20 @@ re cwd = reinterpret $ \case
   where
     cwd' :: FilePath
     cwd' = toFilePath cwd
+
+runTempFilePure ::
+  Members '[Files, Fresh Unique, Error SomeException] r =>
+  Sem (TempFile ': r) a ->
+  Sem r a
+runTempFilePure = interpret $ \case
+  TempFilePath -> do
+    tmpDir <- absorbMonadThrow (parseAbsDir "/tmp")
+    uid <- show . hashUnique <$> fresh
+    tmpFile <- absorbMonadThrow (parseRelFile uid)
+    let p = tmpDir <//> tmpFile
+    writeFile' p ""
+    return p
+  RemoveTempFile p -> removeFile' p
 
 missingErr :: (Members '[State FS] r) => FilePath -> Sem r a
 missingErr f = do

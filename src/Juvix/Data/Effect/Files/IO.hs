@@ -4,24 +4,26 @@ module Juvix.Data.Effect.Files.IO
   )
 where
 
+import Control.Monad.Catch qualified as MC
 import Data.ByteString qualified as ByteString
 import Juvix.Data.Effect.Files.Base
 import Juvix.Prelude.Base
 import Juvix.Prelude.Path
 import Path.IO qualified as Path
 import System.IO.Error
+import System.IO.Temp
 import System.Posix.Types qualified as P
 import System.PosixCompat.Files qualified as P
 
 runFilesIO ::
   forall r a.
-  (Members '[Error IOError, Embed IO] r) =>
+  (Members '[Embed IO] r) =>
   Sem (Files ': r) a ->
   Sem r a
 runFilesIO = interpret helper
   where
     helper :: forall rInitial x. Files (Sem rInitial) x -> Sem r x
-    helper = fromException @IOError . helper'
+    helper = embed . helper'
 
     helper' :: forall rInitial x. Files (Sem rInitial) x -> IO x
     helper' = \case
@@ -44,14 +46,14 @@ runFilesIO = interpret helper
       RenameFile' p1 p2 -> Path.renameFile p1 p2
       CopyFile' p1 p2 -> Path.copyFile p1 p2
 
-runIOErrorToIO ::
+runTempFileIO ::
   forall r a.
-  Member (Embed IO) r =>
-  Sem (Error IOError ': r) a ->
+  Members '[Embed IO] r =>
+  Sem (TempFile ': r) a ->
   Sem r a
-runIOErrorToIO a = do
-  err <- runError a
-  case err of
-    Left e -> do
-      embed @IO (throwM e)
-    Right x -> return x
+runTempFileIO = interpret $ \case
+  TempFilePath -> embed (emptySystemTempFile "tmp" >>= parseAbsFile)
+  RemoveTempFile p -> embed (ignoringIOErrors (Path.removeFile p))
+    where
+      ignoringIOErrors :: IO () -> IO ()
+      ignoringIOErrors ioe = MC.catch ioe (\(_ :: IOError) -> return ())
