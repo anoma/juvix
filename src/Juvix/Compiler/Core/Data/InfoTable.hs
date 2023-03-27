@@ -41,6 +41,13 @@ emptyInfoTable =
       _infoBuiltins = mempty
     }
 
+emptyInfoTable' :: Node -> InfoTable
+emptyInfoTable' mainNode =
+  emptyInfoTable
+    { _identContext = HashMap.singleton 0 mainNode,
+      _infoMain = Just 0
+    }
+
 data IdentKind
   = IdentFun Symbol
   | IdentInd Symbol

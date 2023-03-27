@@ -3,9 +3,8 @@
 --- https://research.cs.vt.edu/AVresearch/hashing/midsquare.php
 
 --- The implementation is for hashing natural numbers with maximum 16 bits into 6
---- bits.
----
 
+--- bits.
 module MidSquareHash;
 
 open import Stdlib.Prelude;
@@ -17,12 +16,14 @@ pow zero := 1;
 pow (suc n) := 2 * pow n;
 
 --- `hash' N` hashes a number with max N bits (i.e. smaller than 2^N) into 6 bits
+
 --- (i.e. smaller than 64) using the mid-square algorithm.
 hash' : Nat -> Nat -> Nat;
 hash' (suc n@(suc (suc m))) x :=
-  if (x < pow n)
-     (hash' n x)
-     (mod (div (x * x) (pow m)) (pow 6));
+  if
+    (x < pow n)
+    (hash' n x)
+    (mod (div (x * x) (pow m)) (pow 6));
 hash' _ x := x * x;
 
 hash : Nat -> Nat := hash' 16;

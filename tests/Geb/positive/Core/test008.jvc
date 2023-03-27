@@ -2,9 +2,9 @@
 
 type enum {
   opt0 : enum;
-  opt1 : bool -> enum;
-  opt2 : bool -> (bool -> bool) -> enum;
-  opt3 : bool -> (bool -> bool -> bool) -> bool -> enum;
+  opt1 : Bool -> enum;
+  opt2 : Bool -> (Bool -> Bool) -> enum;
+  opt3 : Bool -> (Bool -> Bool -> Bool) -> Bool -> enum;
 };
 
 (\(e : enum) case e of {
@@ -12,4 +12,4 @@ type enum {
   opt1 b := b;
   opt2 b f := f b;
   opt3 b1 f b2 := f b1 b2;
-}) (opt3 true (\(x : bool) \(y : bool) if y then false else x) false)
+}) (opt3 true (\(x : Bool) \(y : Bool) if y then false else x) false)
