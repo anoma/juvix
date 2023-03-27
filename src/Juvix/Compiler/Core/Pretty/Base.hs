@@ -425,7 +425,7 @@ instance PrettyCode InfoTable where
   ppCode :: forall r. (Member (Reader Options) r) => InfoTable -> Sem r (Doc Ann)
   ppCode tbl = do
     tys <- ppInductives (toList (tbl ^. infoInductives))
-    sigs <- ppSigs (toList (tbl ^. infoIdentifiers))
+    sigs <- ppSigs (sortOn (^. identifierSymbol) $ toList (tbl ^. infoIdentifiers))
     ctx' <- ppContext (tbl ^. identContext)
     main <- maybe (return "") (\s -> (<> line) . (line <>) <$> ppName KNameFunction (fromJust (HashMap.lookup s (tbl ^. infoIdentifiers)) ^. identifierName)) (tbl ^. infoMain)
     return (tys <> line <> line <> sigs <> line <> ctx' <> line <> main)
@@ -458,7 +458,7 @@ instance PrettyCode InfoTable where
 
       ppContext :: IdentContext -> Sem r (Doc Ann)
       ppContext ctx = do
-        defs <- mapM (uncurry ppDef) (HashMap.toList ctx)
+        defs <- mapM (uncurry ppDef) (sortOn fst (HashMap.toList ctx))
         return (vsep (catMaybes defs))
         where
           ppDef :: Symbol -> Node -> Sem r (Maybe (Doc Ann))
