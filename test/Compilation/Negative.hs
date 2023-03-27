@@ -33,5 +33,13 @@ tests =
   [ NegTest
       "Pattern matching coverage"
       $(mkRelDir ".")
-      $(mkRelFile "test001.juvix")
+      $(mkRelFile "test001.juvix"),
+    NegTest
+      "Pattern matching coverage in cases"
+      $(mkRelDir ".")
+      $(mkRelFile "test002.juvix"),
+    NegTest
+      "Pattern matching coverage in lambdas"
+      $(mkRelDir ".")
+      $(mkRelFile "test003.juvix")
   ]

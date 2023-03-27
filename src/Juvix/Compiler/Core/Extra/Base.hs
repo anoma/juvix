@@ -202,6 +202,9 @@ typeArgs = fst . unfoldPi'
 typeTarget :: Type -> Type
 typeTarget = snd . unfoldPi
 
+typeArgsBinders :: Type -> [Binder]
+typeArgsBinders = map (^. piLhsBinder) . fst . unfoldPi
+
 isDynamic :: Type -> Bool
 isDynamic = \case
   NDyn {} -> True
