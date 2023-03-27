@@ -33,7 +33,7 @@ def gen : Int → Tree Int := \(n : Int)
 def g : Π A : Type, Tree A → Tree A := \(A : Type) \(t : Tree A) {
   match t : Tree A with : Tree A {
     leaf (A : Type) (x : A) := t;
-    node _ (node _ _ _) r := r;
+    node (A : Type) (node (B : Type) (l1 : Tree B) (l2 : Tree A)) (r : Tree A) := r;
     node (A' : Type) (l : Tree A) (r : Tree A') := node A' r l;
   }
 };

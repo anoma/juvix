@@ -9,6 +9,7 @@ import Control.Exception (throwIO)
 import Control.Monad.State.Strict qualified as State
 import Data.String.Interpolate (i, __i)
 import Evaluator
+import Juvix.Compiler.Backend qualified as Backend
 import Juvix.Compiler.Builtins.Effect
 import Juvix.Compiler.Core.Error qualified as Core
 import Juvix.Compiler.Core.Extra qualified as Core
@@ -90,11 +91,14 @@ runCommand opts = do
               _entryPointResolverRoot = root,
               _entryPointNoTermination = gopts ^. globalNoTermination,
               _entryPointNoPositivity = gopts ^. globalNoPositivity,
+              _entryPointNoCoverage = gopts ^. globalNoCoverage,
               _entryPointNoStdlib = gopts ^. globalNoStdlib,
               _entryPointPackage = package,
               _entryPointModulePaths = pure absInputFile,
               _entryPointGenericOptions = project gopts,
-              _entryPointStdin = Nothing
+              _entryPointStdin = Nothing,
+              _entryPointTarget = Backend.TargetCore,
+              _entryPointDebug = False
             }
 
       printHelpTxt :: String -> Repl ()
@@ -174,8 +178,9 @@ runCommand opts = do
           compileThenEval ctx s = bindEither compileString eval
             where
               eval :: Core.Node -> Repl (Either JuvixError Core.Node)
-              eval n =
-                case run $ runError @JuvixError $ runTransformations (Core.toEvalTransformations ++ opts ^. replTransformations) infoTable n of
+              eval n = do
+                ep <- getReplEntryPoint (Abs replPath)
+                case run $ runReader ep $ runError @JuvixError $ runTransformations (Core.toEvalTransformations ++ opts ^. replTransformations) infoTable n of
                   Left err -> return $ Left err
                   Right (tab', n') ->
                     liftIO $
@@ -310,11 +315,14 @@ defaultPreludeEntryPoint = do
         _entryPointBuildDir = buildDir,
         _entryPointNoTermination = opts ^. globalNoTermination,
         _entryPointNoPositivity = opts ^. globalNoPositivity,
+        _entryPointNoCoverage = opts ^. globalNoCoverage,
         _entryPointNoStdlib = opts ^. globalNoStdlib,
         _entryPointPackage = defaultPackage root buildDir,
         _entryPointModulePaths = pure (defStdlibDir <//> preludePath),
         _entryPointGenericOptions = project opts,
-        _entryPointStdin = Nothing
+        _entryPointStdin = Nothing,
+        _entryPointTarget = Backend.TargetCore,
+        _entryPointDebug = False
       }
 
 replMakeAbsolute :: SomeBase b -> Repl (Path Abs b)

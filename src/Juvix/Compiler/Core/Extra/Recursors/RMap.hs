@@ -65,7 +65,7 @@ rmapG coll f = go mempty 0 (coll ^. cEmpty)
     -- `binders` maps input de Bruijn indices to result de Bruijn levels
     -- (adjusted by the binder shift at their occurrence) plus the replacement
     -- node; `bl` is the current binder level in the result node
-    go :: BinderList (Level, Maybe Node) -> Int -> c -> Node -> m Node
+    go :: BinderList (Level, Maybe Node) -> Level -> c -> Node -> m Node
     go binders bl c n = f recur c n
       where
         recur :: c -> [BinderChange] -> Node -> m Node

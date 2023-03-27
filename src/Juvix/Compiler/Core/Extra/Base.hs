@@ -299,17 +299,23 @@ isType = \case
 {------------------------------------------------------------------------}
 {- functions on Pattern -}
 
-getPatternParts :: Pattern -> [Either Binder Node]
-getPatternParts = reverse . go []
-  where
-    go :: [Either Binder Node] -> Pattern -> [Either Binder Node]
-    go acc = \case
-      PatConstr PatternConstr {..} -> Right _patternConstrType : foldl' go acc _patternConstrArgs
-      PatBinder p -> go (Left (p ^. patternBinder) : acc) (p ^. patternBinderPattern)
-      PatWildcard {} -> acc
+getPatternBinder :: Pattern -> Binder
+getPatternBinder = \case
+  PatConstr PatternConstr {..} -> _patternConstrBinder
+  PatWildcard PatternWildcard {..} -> _patternWildcardBinder
 
 getPatternBinders :: Pattern -> [Binder]
-getPatternBinders = lefts . getPatternParts
+getPatternBinders = reverse . go []
+  where
+    go :: [Binder] -> Pattern -> [Binder]
+    go acc = \case
+      PatConstr PatternConstr {..} -> foldl' go (_patternConstrBinder : acc) _patternConstrArgs
+      PatWildcard PatternWildcard {..} -> _patternWildcardBinder : acc
+
+getPatternExtraBinders :: Pattern -> [Binder]
+getPatternExtraBinders = \case
+  PatConstr PatternConstr {..} -> concatMap getPatternBinders _patternConstrArgs
+  PatWildcard {} -> []
 
 getPatternInfos :: Pattern -> [Info]
 getPatternInfos = reverse . go []
@@ -317,34 +323,17 @@ getPatternInfos = reverse . go []
     go :: [Info] -> Pattern -> [Info]
     go acc = \case
       PatConstr PatternConstr {..} -> foldl' go (_patternConstrInfo : acc) _patternConstrArgs
-      PatBinder PatternBinder {..} -> go acc _patternBinderPattern
       PatWildcard PatternWildcard {..} -> _patternWildcardInfo : acc
 
-mapPatternBinders :: (Int -> Binder -> Binder) -> Pattern -> Pattern
-mapPatternBinders f = snd . go 0
-  where
-    go :: Int -> Pattern -> (Int, Pattern)
-    go k = \case
-      PatConstr p ->
-        let (k', rargs') =
-              foldl'
-                ( \(m, acc) pat ->
-                    let (m', pat') = go m pat
-                     in (m', pat' : acc)
-                )
-                (k, [])
-                (p ^. patternConstrArgs)
-         in (k', PatConstr p {_patternConstrArgs = reverse rargs'})
-      PatBinder p ->
-        let (k', pat') = go (k + 1) (p ^. patternBinderPattern)
-         in ( k',
-              PatBinder
-                p
-                  { _patternBinder = f k (p ^. patternBinder),
-                    _patternBinderPattern = pat'
-                  }
-            )
-      PatWildcard p -> (k, PatWildcard p)
+isPatWildcard :: Pattern -> Bool
+isPatWildcard = \case
+  PatWildcard {} -> True
+  PatConstr {} -> False
+
+isPatConstr :: Pattern -> Bool
+isPatConstr = \case
+  PatConstr {} -> True
+  PatWildcard {} -> False
 
 {------------------------------------------------------------------------}
 {- generic Node destruction -}
@@ -606,21 +595,16 @@ destruct = \case
             ++ map noBinders (toList vs)
             ++ concat
               [ br
-                  : reverse (foldl' (\acc b -> manyBinders (take (length acc) (lefts bis)) (getNode b) : acc) [] bis)
+                  : reverse (foldl' (\acc b -> manyBinders (take (length acc) bis) (b ^. binderType) : acc) [] bis)
                 | (bis, br) <- branchChildren
               ]
           where
-            branchChildren :: [([Either Binder Node], NodeChild)]
+            branchChildren :: [([Binder], NodeChild)]
             branchChildren =
-              [ (parts, manyBinders (lefts parts) (br ^. matchBranchBody))
+              [ (binders, manyBinders binders (br ^. matchBranchBody))
                 | br <- branches,
-                  let parts = concatMap getPatternParts (toList (br ^. matchBranchPatterns))
+                  let binders = concatMap getPatternBinders (toList (br ^. matchBranchPatterns))
               ]
-
-            getNode :: Either Binder Node -> Node
-            getNode = \case
-              Left b -> b ^. binderType
-              Right n -> n
 
         branchInfos :: [Info]
         branchInfos =
@@ -638,17 +622,13 @@ destruct = \case
             goPattern = \case
               PatWildcard x -> do
                 i' <- input'
-                return (PatWildcard (set patternWildcardInfo i' x))
-              PatBinder x -> do
                 ty <- input'
-                let _patternBinder = set binderType ty (x ^. patternBinder)
-                _patternBinderPattern <- goPattern (x ^. patternBinderPattern)
-                return (PatBinder PatternBinder {..})
+                return (PatWildcard (over patternWildcardBinder (set binderType ty) (set patternWildcardInfo i' x)))
               PatConstr x -> do
                 i' <- input'
-                args' <- mapM goPattern (x ^. patternConstrArgs)
                 ty <- input'
-                return (PatConstr (set patternConstrType ty (set patternConstrInfo i' (set patternConstrArgs args' x))))
+                args' <- mapM goPattern (x ^. patternConstrArgs)
+                return (PatConstr (over patternConstrBinder (set binderType ty) (set patternConstrInfo i' (set patternConstrArgs args' x))))
      in NodeDetails
           { _nodeInfo = i,
             _nodeSubinfos = branchInfos,
