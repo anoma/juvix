@@ -5,7 +5,6 @@ open import Stdlib.Data.Nat.Ord;
 open import Stdlib.Prelude;
 
 --- Concatenates a list of strings
-
 --- ;concat (("a" :: nil) :: "b" :: nil); evaluates to ;"a"
   :: "b"
   :: nil;
