@@ -19,35 +19,28 @@ data FormatTarget
   | TargetDir
 
 runCommand :: forall r. Members '[Embed IO, App, Resource, Files] r => FormatOptions -> Sem r ()
-runCommand opts = runOutputSem (renderFormattedOutput opts) $ runScopeFileApp $ do
-  res <- case opts ^. formatInput of
-    Left appFile -> do
-      p <- someBaseToAbs' (appFile ^. pathPath)
-      format p
-    Right rootPath -> do
-      p <- someBaseToAbs' (rootPath ^. pathPath)
-      formatProject p
-  when (res == FormatResultFail) (exitMsg (ExitFailure 1) "")
+runCommand opts = do
+  f <- filePathToAbs (opts ^. formatInput)
+  let target = case f of
+        Left {} -> TargetFile
+        Right {} -> TargetDir
+  runOutputSem (renderFormattedOutput target opts) $ runScopeFileApp $ do
+    res <- case f of
+      Left p -> format p
+      Right p -> formatProject p
+    when (res == FormatResultFail) (embed (exitWith (ExitFailure 1)))
 
-renderModeFromOptions :: FormatOptions -> FormattedFileInfo -> FormatRenderMode
-renderModeFromOptions opts formattedInfo
+renderModeFromOptions :: FormatTarget -> FormatOptions -> FormattedFileInfo -> FormatRenderMode
+renderModeFromOptions target opts formattedInfo
   | opts ^. formatInPlace = EditInPlace formattedInfo
   | opts ^. formatCheck = NoEdit Silent
   | otherwise = case target of
       TargetFile -> NoEdit (ReformattedFile (formattedInfo ^. formattedFileInfoContentsAnsi))
       TargetDir -> NoEdit (InputPath (formattedInfo ^. formattedFileInfoPath))
-  where
-    target :: FormatTarget
-    target = targetFromOptions opts
 
-targetFromOptions :: FormatOptions -> FormatTarget
-targetFromOptions opts = case (opts ^. formatInput) of
-  Left {} -> TargetFile
-  Right {} -> TargetDir
-
-renderFormattedOutput :: forall r. Members '[Embed IO, App, Resource, Files] r => FormatOptions -> FormattedFileInfo -> Sem r ()
-renderFormattedOutput opts fInfo = do
-  let renderMode = renderModeFromOptions opts fInfo
+renderFormattedOutput :: forall r. Members '[Embed IO, App, Resource, Files] r => FormatTarget -> FormatOptions -> FormattedFileInfo -> Sem r ()
+renderFormattedOutput target opts fInfo = do
+  let renderMode = renderModeFromOptions target opts fInfo
   outputResult renderMode
   where
     outputResult :: FormatRenderMode -> Sem r ()

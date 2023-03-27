@@ -12,12 +12,12 @@ type RootDir = Path Abs Dir
 type BuildDir = Path Abs Dir
 
 findRootAndChangeDir ::
-  Maybe (SomeBase Dir) ->
+  IO (Maybe (SomeBase Dir)) ->
   GlobalOptions ->
   Path Abs Dir ->
   IO (RootDir, Package, BuildDir)
 findRootAndChangeDir minputFile gopts invokeDir = do
-  whenJust minputFile $ \case
+  whenJustM minputFile $ \case
     Abs d -> setCurrentDir d
     Rel d -> setCurrentDir d
   r <- IO.try go

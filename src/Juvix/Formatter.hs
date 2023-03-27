@@ -60,8 +60,8 @@ format p = do
                   _formattedFileInfoContentsAnsi = formattedContents
                 }
             )
-          return FormatResultOK
-      | otherwise -> return FormatResultFail
+          return FormatResultFail
+      | otherwise -> return FormatResultOK
 
 -- | Format a Juvix project.
 --

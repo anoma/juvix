@@ -8,6 +8,7 @@ import Juvix.Compiler.Pipeline
 import Juvix.Data.Error qualified as Error
 import Juvix.Prelude.Pretty hiding (Doc)
 import System.Console.ANSI qualified as Ansi
+import System.Directory qualified as D
 import System.Process qualified as P
 
 data RunCommandResult = RunCommandResult
@@ -116,6 +117,15 @@ someBaseToAbs' :: (Members '[App] r) => SomeBase a -> Sem r (Path Abs a)
 someBaseToAbs' f = do
   r <- askInvokeDir
   return (someBaseToAbs r f)
+
+filePathToAbs :: Members '[Embed IO, App] r => FilePath -> Sem r (Either (Path Abs File) (Path Abs Dir))
+filePathToAbs fp = do
+  invokeDir <- askInvokeDir
+  absPath <- embed (D.canonicalizePath (toFilePath invokeDir </> fp))
+  isDirectory <- embed (D.doesDirectoryExist absPath)
+  if
+      | isDirectory -> Right <$> embed @IO (parseAbsDir absPath)
+      | otherwise -> Left <$> embed @IO (parseAbsFile absPath)
 
 askGenericOptions :: (Members '[App] r) => Sem r GenericOptions
 askGenericOptions = project <$> askGlobalOptions

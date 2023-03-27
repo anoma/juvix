@@ -12,6 +12,8 @@ import CommonOptions hiding (Doc)
 import Data.Generics.Uniplate.Data
 import GlobalOptions
 import Options.Applicative.Help.Pretty
+import System.Directory qualified as D
+import Safe
 
 data TopCommand
   = DisplayVersion
@@ -28,18 +30,26 @@ data TopCommand
   | JuvixFormat FormatOptions
   deriving stock (Data)
 
-topCommandInputFile :: TopCommand -> Maybe (SomeBase Dir)
-topCommandInputFile t = (firstJust getInputFile (universeBi t)) <|> (firstJust getInputDir (universeBi t))
+topCommandInputFile :: TopCommand -> IO (Maybe (SomeBase Dir))
+topCommandInputFile t = do
+    d <- getFilePath (universeBi t)
+    return $ (firstJust getInputFile (universeBi t)) <|> d
   where
     getInputFile :: AppPath File -> Maybe (SomeBase Dir)
     getInputFile p
       | p ^. pathIsInput = Just (mapSomeBase parent (p ^. pathPath))
       | otherwise = Nothing
 
-    getInputDir :: AppPath Dir -> Maybe (SomeBase Dir)
-    getInputDir p
-      | p ^. pathIsInput = Just (p ^. pathPath)
-      | otherwise = Nothing
+    getFilePath :: [FilePath] -> IO (Maybe (SomeBase Dir))
+    getFilePath fs = mapM go (headMay fs)
+      where
+      go :: FilePath -> IO (SomeBase Dir)
+      go fp = do
+        nfp <- D.canonicalizePath fp
+        isDirectory <- D.doesDirectoryExist nfp
+        if
+          | isDirectory -> parseSomeDir nfp
+          | otherwise -> mapSomeBase parent <$> (parseSomeFile nfp)
 
 parseDisplayVersion :: Parser TopCommand
 parseDisplayVersion =
