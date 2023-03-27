@@ -1,4 +1,4 @@
-module Juvix.Compiler.Core.Transformation.ComputeTypeInfo (computeTypeInfo) where
+module Juvix.Compiler.Core.Transformation.ComputeTypeInfo where
 
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Core.Data.BinderList qualified as BL
@@ -6,15 +6,16 @@ import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Info.TypeInfo qualified as Info
 import Juvix.Compiler.Core.Transformation.Base
 
+computeNodeType :: InfoTable -> Node -> Type
+computeNodeType tab = Info.getNodeType . computeNodeTypeInfo tab
+
 -- | Computes the TypeInfo for each subnode.
 --
 -- Assumptions:
--- 1. All binders and identifiers are decorated with full type information.
--- 2. No polymorphism.
--- 3. No dynamic type.
--- 4. All cases have at least one branch.
--- 5. No `Match` nodes.
--- 6. All inductives and function types are in universe 0.
+-- 1. All binders and identifiers are decorated with correct full type information.
+-- 2. All cases have at least one branch.
+-- 3. No `Match` nodes.
+-- 4. All inductives and function types are in universe 0.
 computeNodeTypeInfo :: InfoTable -> Node -> Node
 computeNodeTypeInfo tab = umapL go
   where
@@ -22,24 +23,21 @@ computeNodeTypeInfo tab = umapL go
     go bl node = Info.setNodeType (nodeType bl node) node
 
     nodeType :: BinderList Binder -> Node -> Type
-    nodeType bl = \case
+    nodeType bl node = case node of
       NVar Var {..} ->
-        BL.lookup _varIndex bl ^. binderType
+        shift (_varIndex + 1) (BL.lookup _varIndex bl ^. binderType)
       NIdt Ident {..} ->
         fromJust (HashMap.lookup _identSymbol (tab ^. infoIdentifiers)) ^. identifierType
       NCst Constant {..} ->
         case _constantValue of
           ConstInteger {} -> mkTypeInteger'
           ConstString {} -> mkTypeString'
-      NApp App {..} ->
-        let lty = Info.getNodeType _appLeft
-            rty = Info.getNodeType _appRight
-         in case lty of
-              NPi Pi {..}
-                | rty == _piBinder ^. binderType ->
-                    _piBody
-              _ ->
-                error "incorrect type information (application)"
+      NApp {} ->
+        let (fn, args) = unfoldApps' node
+            fty = Info.getNodeType fn
+            (tyargs, target) = unfoldPi fty
+            target' = rePis (drop (length args) tyargs) target
+         in substs (reverse args) target'
       NBlt BuiltinApp {..} ->
         case _builtinAppOp of
           OpIntAdd -> mkTypeInteger'
@@ -66,7 +64,7 @@ computeNodeTypeInfo tab = umapL go
               _ ->
                 mkTypeConstr' (ci ^. constructorInductive) (take (length (ii ^. inductiveParams)) _constrArgs)
       NLam Lambda {..} ->
-        mkPi' (_lambdaBinder ^. binderType) (Info.getNodeType _lambdaBody)
+        mkPi mempty _lambdaBinder (Info.getNodeType _lambdaBody)
       NLet Let {..} ->
         Info.getNodeType _letBody
       NRec LetRec {..} ->

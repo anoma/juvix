@@ -265,3 +265,14 @@ tests:
       contains: |
         evaluation error: failure: Enough
     exit-status: 0
+
+  - name: core-repl-type
+    command:
+      - juvix
+      - dev
+      - core
+      - repl
+    stdin: ":t (\\(A : Type) \\(x : A) \\(y : A) \\(B : Type) \\(z : B) \\(_ : A) x) Int 1 2 String"
+    stdout:
+      contains: |
+        String → Int → Int
