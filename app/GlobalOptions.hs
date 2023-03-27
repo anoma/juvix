@@ -8,7 +8,6 @@ import Juvix.Compiler.Abstract.Pretty.Options qualified as Abstract
 import Juvix.Compiler.Core.Options qualified as Core
 import Juvix.Compiler.Internal.Pretty.Options qualified as Internal
 import Juvix.Compiler.Pipeline (EntryPoint (..), defaultEntryPoint)
-import Juvix.Compiler.Pipeline.EntryPoint (defaultUnrollLimit)
 import Juvix.Data.Error.GenericError qualified as E
 import Juvix.Extra.Paths
 
