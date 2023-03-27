@@ -63,3 +63,14 @@ walkDirRel handler topdir = do
             | HashSet.member ufid visited -> return True
             | otherwise -> modify' (HashSet.insert ufid) $> False
   evalState mempty (walkAvoidLoop $(mkRelDir "."))
+
+-- | Restore the original contents of a file if an error occurs in an action.
+restoreFileOnError :: forall r a. Members '[Resource, Files, TempFile] r => Path Abs File -> Sem r a -> Sem r a
+restoreFileOnError p action = do
+  t <- tempFilePath
+  finally (restoreOnErrorAction t) (removeTempFile t)
+  where
+    restoreOnErrorAction :: Path Abs File -> Sem r a
+    restoreOnErrorAction tmpFile = do
+      copyFile' p tmpFile
+      onException action (renameFile' tmpFile p)
