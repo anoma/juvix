@@ -1,24 +1,20 @@
 --- Towers of Hanoi is a puzzle with three rods and n disks of decresing size.
-
 --- The disks are stacked ontop of each other through the first rod.
-
 --- The aim of the game is to move the stack of disks to another rod while
-
 --- following these rules:
-
+---
 --- 1. Only one disk can be moved at a time
-
+---
 --- 2. You may only move a disk from the top of one of the stacks to the top of another stack
-
+---
 --- 3. No disk may be moved on top of a smaller disk
-
+---
 --- The function ;hanoi; computes the sequence of moves to solve puzzle.
 module Hanoi;
 
 open import Stdlib.Prelude;
 
 --- Concatenates a list of strings
-
 --- ;concat (("a" :: nil) :: "b" :: nil); evaluates to ;"a"
   :: "b"
   :: nil;
