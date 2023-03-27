@@ -11,6 +11,7 @@ import Juvix.Compiler.Core.Data.TransformationId.Parser
 import Juvix.Prelude
 import Options.Applicative
 import System.Process
+import Text.Read (readMaybe)
 import Prelude (show)
 
 -- | Paths that are input are used to detect the root of the project.
@@ -129,6 +130,12 @@ someDirOpt = eitherReader aux
   where
     aux :: String -> Either String (SomeBase Dir)
     aux s = maybe (Left $ s <> " is not a directory path") Right (parseSomeDir s)
+
+naturalNumberOpt :: ReadM Word
+naturalNumberOpt = eitherReader aux
+  where
+    aux :: String -> Either String Word
+    aux s = maybe (Left $ s <> " is not a nonnegative number") Right (readMaybe s :: Maybe Word)
 
 extCompleter :: String -> Completer
 extCompleter ext = mkCompleter $ \word -> do

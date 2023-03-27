@@ -3,8 +3,9 @@ module Juvix.Compiler.Core.Options where
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Prelude
 
-newtype CoreOptions = CoreOptions
-  { _optCheckCoverage :: Bool
+data CoreOptions = CoreOptions
+  { _optCheckCoverage :: Bool,
+    _optUnrollLimit :: Int
   }
 
 makeLenses ''CoreOptions
@@ -12,11 +13,13 @@ makeLenses ''CoreOptions
 defaultCoreOptions :: CoreOptions
 defaultCoreOptions =
   CoreOptions
-    { _optCheckCoverage = True
+    { _optCheckCoverage = True,
+      _optUnrollLimit = 140
     }
 
 fromEntryPoint :: EntryPoint -> CoreOptions
 fromEntryPoint EntryPoint {..} =
   CoreOptions
-    { _optCheckCoverage = not _entryPointNoCoverage
+    { _optCheckCoverage = not _entryPointNoCoverage,
+      _optUnrollLimit = _entryPointUnrollLimit
     }

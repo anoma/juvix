@@ -3,7 +3,6 @@ module App where
 import CommonOptions
 import Data.ByteString qualified as ByteString
 import GlobalOptions
-import Juvix.Compiler.Backend qualified as Backend
 import Juvix.Compiler.Builtins.Effect
 import Juvix.Compiler.Pipeline
 import Juvix.Data.Error qualified as Error
@@ -79,21 +78,11 @@ getEntryPoint' RunAppIOArgs {..} inputFile = do
     if
         | opts ^. globalStdin -> Just <$> getContents
         | otherwise -> return Nothing
-  return
-    EntryPoint
-      { _entryPointRoot = root,
-        _entryPointResolverRoot = root,
-        _entryPointBuildDir = _runAppIOArgsBuildDir,
-        _entryPointNoTermination = opts ^. globalNoTermination,
-        _entryPointNoPositivity = opts ^. globalNoPositivity,
-        _entryPointNoCoverage = opts ^. globalNoCoverage,
-        _entryPointNoStdlib = opts ^. globalNoStdlib,
+  return $
+    (entryPointFromGlobalOptions root (someBaseToAbs _runAppIOArgsInvokeDir (inputFile ^. pathPath)) opts)
+      { _entryPointBuildDir = _runAppIOArgsBuildDir,
         _entryPointPackage = _runAppIOArgsPkg,
-        _entryPointModulePaths = pure (someBaseToAbs _runAppIOArgsInvokeDir (inputFile ^. pathPath)),
-        _entryPointGenericOptions = project opts,
-        _entryPointStdin = estdin,
-        _entryPointDebug = False,
-        _entryPointTarget = Backend.TargetCore
+        _entryPointStdin = estdin
       }
 
 someBaseToAbs' :: (Members '[App] r) => SomeBase a -> Sem r (Path Abs a)

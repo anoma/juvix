@@ -24,6 +24,7 @@ data EntryPoint = EntryPoint
     _entryPointStdin :: Maybe Text,
     _entryPointTarget :: Target,
     _entryPointDebug :: Bool,
+    _entryPointUnrollLimit :: Int,
     _entryPointGenericOptions :: GenericOptions,
     _entryPointModulePaths :: NonEmpty (Path Abs File)
   }
@@ -44,8 +45,9 @@ defaultEntryPoint root mainFile =
       _entryPointStdin = Nothing,
       _entryPointPackage = defaultPackage root buildDir,
       _entryPointGenericOptions = defaultGenericOptions,
-      _entryPointTarget = TargetCNative64,
+      _entryPointTarget = TargetCore,
       _entryPointDebug = False,
+      _entryPointUnrollLimit = 140,
       _entryPointModulePaths = pure mainFile
     }
   where
