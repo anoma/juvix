@@ -40,6 +40,9 @@ runFilesIO = interpret helper
             P.CIno fid = P.fileID status
         return (Uid (dev, fid))
       GetDirAbsPath f -> canonicalizePath f
+      RemoveFile' f -> Path.removeFile f
+      RenameFile' p1 p2 -> Path.renameFile p1 p2
+      CopyFile' p1 p2 -> Path.copyFile p1 p2
 
 runIOErrorToIO ::
   forall r a.

@@ -78,6 +78,9 @@ re cwd = reinterpret $ \case
   ListDirRel p -> do
     n <- lookupDir' p
     return (HashMap.keys (n ^. dirDirs), HashMap.keys (n ^. dirFiles))
+  RemoveFile' p -> removeFileHelper p
+  RenameFile' p1 p2 -> renameFileHelper p1 p2
+  CopyFile' p1 p2 -> copyFileHelper p1 p2
   where
     cwd' :: FilePath
     cwd' = toFilePath cwd
@@ -139,6 +142,30 @@ writeFileHelper p contents = do
         where
           helper :: Maybe FSNode -> FSNode
           helper = maybe (error "directory does not exist") (go ds)
+
+removeFileHelper :: (Members '[State FS] r) => Path Abs File -> Sem r ()
+removeFileHelper p = do
+  checkRoot r
+  modify (over fsNode (go dirs))
+  where
+    (r, dirs, f) = destructAbsFile p
+    go :: [Path Rel Dir] -> FSNode -> FSNode
+    go = \case
+      [] -> set (dirFiles . at f) Nothing
+      (d : ds) -> over dirDirs (HashMap.alter (Just . helper) d)
+        where
+          helper :: Maybe FSNode -> FSNode
+          helper = maybe (error "directory does not exist") (go ds)
+
+renameFileHelper :: (Members '[State FS] r) => Path Abs File -> Path Abs File -> Sem r ()
+renameFileHelper fromPath toPath = do
+  copyFileHelper fromPath toPath
+  removeFileHelper fromPath
+
+copyFileHelper :: (Members '[State FS] r) => Path Abs File -> Path Abs File -> Sem r ()
+copyFileHelper fromPath toPath = do
+  fromContents <- lookupFile' fromPath
+  writeFileHelper toPath fromContents
 
 lookupDir :: (Members '[State FS] r) => Path Abs Dir -> Sem r (Maybe FSNode)
 lookupDir p = do

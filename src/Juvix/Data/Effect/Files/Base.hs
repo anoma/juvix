@@ -32,5 +32,8 @@ data Files m a where
   RemoveDirectoryRecursive' :: Path Abs Dir -> Files m ()
   WriteFile' :: Path Abs File -> Text -> Files m ()
   WriteFileBS :: Path Abs File -> ByteString -> Files m ()
+  RemoveFile' :: Path Abs File -> Files m ()
+  RenameFile' :: Path Abs File -> Path Abs File -> Files m ()
+  CopyFile' :: Path Abs File -> Path Abs File -> Files m ()
 
 makeSem ''Files
