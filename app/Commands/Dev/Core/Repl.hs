@@ -10,6 +10,8 @@ import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Info.NoDisplayInfo qualified as Info
 import Juvix.Compiler.Core.Language qualified as Core
 import Juvix.Compiler.Core.Pretty qualified as Core
+import Juvix.Compiler.Core.Transformation.ComputeTypeInfo qualified as Core
+import Juvix.Compiler.Core.Transformation.DisambiguateNames qualified as Core
 import Juvix.Compiler.Core.Translation.FromSource qualified as Core
 
 runCommand :: forall r. (Members '[Embed IO, App] r) => CoreReplOptions -> Sem r ()
@@ -52,6 +54,15 @@ runRepl opts tab = do
             replEval True tab' node
           Right (tab', Nothing) ->
             runRepl opts tab'
+      ':' : 't' : ' ' : s' ->
+        case parseText tab (fromString s') of
+          Left err -> do
+            printJuvixError (JuvixError err)
+            runRepl opts tab
+          Right (tab', Just node) ->
+            replType tab' node
+          Right (tab', Nothing) ->
+            runRepl opts tab'
       ':' : 'l' : ' ' : f -> do
         s' <- embed (readFile f)
         sf <- someBaseToAbs' (someFile f)
@@ -84,11 +95,18 @@ runRepl opts tab = do
         Right node'
           | Info.member Info.kNoDisplayInfo (Core.getInfo node') -> runRepl opts tab'
           | otherwise -> do
-              renderStdOut (Core.ppOut opts node')
+              renderStdOut (Core.ppOut opts (Core.disambiguateNodeNames tab' node'))
               embed (putStrLn "")
               runRepl opts tab'
       where
         defaultLoc = singletonInterval (mkInitialLoc replPath)
+
+    replType :: Core.InfoTable -> Core.Node -> Sem r ()
+    replType tab' node = do
+      let ty = Core.disambiguateNodeNames tab' (Core.computeNodeType tab' node)
+      renderStdOut (Core.ppOut opts ty)
+      embed (putStrLn "")
+      runRepl opts tab'
 
 showReplWelcome :: (Members '[Embed IO, App] r) => Sem r ()
 showReplWelcome = embed $ do
@@ -107,6 +125,7 @@ showReplHelp = do
   putStrLn "Available commands:"
   putStrLn ":p expr               Pretty print \"expr\"."
   putStrLn ":e expr               Evaluate \"expr\" without interpreting IO actions."
+  putStrLn ":t expr               Infer and print the type of \"expr\"."
   putStrLn ":l file               Load and evaluate \"file\". Resets REPL state."
   putStrLn ":r                    Reset REPL state."
   putStrLn ":q                    Quit."

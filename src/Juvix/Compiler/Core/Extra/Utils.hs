@@ -161,7 +161,8 @@ freeVarsCtx ctx =
             freevarsbi' = Set.mapMonotonic (over varIndex (+ (idx + 1))) fbi
         go (freevarsbi' <> vs)
 
--- | subst for multiple bindings
+-- | subst for multiple bindings; the first element in the list of substitutions
+-- corresponds to de Bruijn index 0
 substs :: [Node] -> Node -> Node
 substs t = umapN go
   where

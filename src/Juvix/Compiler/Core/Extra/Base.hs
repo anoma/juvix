@@ -193,8 +193,11 @@ unfoldPi ty = case ty of
      in (PiLhs i bi : args, target)
   _ -> ([], ty)
 
+unfoldPi' :: Type -> ([Type], Type)
+unfoldPi' = first (map (^. piLhsBinder . binderType)) . unfoldPi
+
 typeArgs :: Type -> [Type]
-typeArgs = map (^. piLhsBinder . binderType) . fst . unfoldPi
+typeArgs = fst . unfoldPi'
 
 typeTarget :: Type -> Type
 typeTarget = snd . unfoldPi
