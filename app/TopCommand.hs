@@ -22,7 +22,7 @@ showHelpText = do
       (msg, _) = renderFailure helpText progn
   putStrLn (pack msg)
 
-runTopCommand :: forall r. (Members '[Embed IO, App] r) => TopCommand -> Sem r ()
+runTopCommand :: forall r. (Members '[Embed IO, App, Resource] r) => TopCommand -> Sem r ()
 runTopCommand = \case
   DisplayVersion -> embed runDisplayVersion
   DisplayNumericVersion -> embed runDisplayNumericVersion
@@ -35,4 +35,4 @@ runTopCommand = \case
   Eval opts -> Eval.runCommand opts
   Html opts -> Html.runCommand opts
   JuvixRepl opts -> Repl.runCommand opts
-  JuvixFormat opts -> Format.runCommand opts
+  JuvixFormat opts -> runFilesIO (Format.runCommand opts)

@@ -1,49 +1,68 @@
-{-# LANGUAGE QuasiQuotes #-}
-
 module Commands.Format where
 
 import Commands.Base
 import Commands.Format.Options
-import Data.String.Interpolate (i)
-import Data.Text qualified as T
-import Juvix.Compiler.Concrete.Language
-import Juvix.Compiler.Concrete.Print (ppOutDefault)
-import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
-import Juvix.Prelude.Pretty (toPlainText)
+import Juvix.Formatter
+import Juvix.Prelude.Pretty
 
-runCommand :: forall r. Members '[Embed IO, App] r => FormatOptions -> Sem r ()
-runCommand opts = case opts ^. formatInputFile of
-  Nothing -> error "not implemented"
-  Just p -> unlessM (runIOErrorToIO $ runFilesIO (isFileFormatted p)) (err p)
+data FormatNoEditRenderMode
+  = ReformattedFile (NonEmpty AnsiText)
+  | InputPath (Path Abs File)
+  | Silent
+
+data FormatRenderMode
+  = EditInPlace FormattedFileInfo
+  | NoEdit FormatNoEditRenderMode
+
+data FormatTarget
+  = TargetFile
+  | TargetDir
+
+runCommand :: forall r. Members '[Embed IO, App, Resource, Files] r => FormatOptions -> Sem r ()
+runCommand opts = runOutputSem (renderFormattedOutput opts) $ runScopeFileApp $ do
+  res <- case opts ^. formatInput of
+    Left appFile -> do
+      p <- someBaseToAbs' (appFile ^. pathPath)
+      format p
+    Right rootPath -> do
+      p <- someBaseToAbs' (rootPath ^. pathPath)
+      formatProject p
+  when (res == FormatResultFail) (exitMsg (ExitFailure 1) "")
+
+renderModeFromOptions :: FormatOptions -> FormattedFileInfo -> FormatRenderMode
+renderModeFromOptions opts formattedInfo
+  | opts ^. formatInPlace = EditInPlace formattedInfo
+  | opts ^. formatCheck = NoEdit Silent
+  | otherwise = case target of
+      TargetFile -> NoEdit (ReformattedFile (formattedInfo ^. formattedFileInfoContentsAnsi))
+      TargetDir -> NoEdit (InputPath (formattedInfo ^. formattedFileInfoPath))
   where
-    err :: AppPath File -> Sem r ()
-    err p = exitMsg (ExitFailure 1) [i|File #{p} is not formatted|]
+    target :: FormatTarget
+    target = targetFromOptions opts
 
-formatAbsFile :: Member App r => Path Abs File -> Sem r Text
-formatAbsFile p = formatAppFile appFile
+targetFromOptions :: FormatOptions -> FormatTarget
+targetFromOptions opts = case (opts ^. formatInput) of
+  Left {} -> TargetFile
+  Right {} -> TargetDir
+
+renderFormattedOutput :: forall r. Members '[Embed IO, App, Resource, Files] r => FormatOptions -> FormattedFileInfo -> Sem r ()
+renderFormattedOutput opts fInfo = do
+  let renderMode = renderModeFromOptions opts fInfo
+  outputResult renderMode
   where
-    appFile :: AppPath File
-    appFile =
-      AppPath
-        { _pathPath = Abs p,
-          _pathIsInput = True
-        }
+    outputResult :: FormatRenderMode -> Sem r ()
+    outputResult = \case
+      EditInPlace i@(FormattedFileInfo {..}) ->
+        runTempFileIO $
+          restoreFileOnError _formattedFileInfoPath $
+            writeFile' _formattedFileInfoPath (i ^. formattedFileInfoContentsText)
+      NoEdit m -> case m of
+        ReformattedFile ts -> forM_ ts renderStdOut
+        InputPath p -> say (pack (toFilePath p))
+        Silent -> return ()
 
-isFileFormatted :: Members '[Files, App] r => AppPath File -> Sem r Bool
-isFileFormatted appFile = do
-  p <- someBaseToAbs' (appFile ^. pathPath)
-  actual <- readFile' p
-  expected <- formatAppFile appFile
-  return (actual == expected)
-
-formatAppFile :: Member App r => AppPath File -> Sem r Text
-formatAppFile appFile = do
-  res <- runPipeline appFile upToScoping
-  let cs = res ^. Scoper.comments
-      formattedModules = run (runReader cs (mapM formatTopModule (res ^. Scoper.resultModules)))
-  return (T.concat (toList formattedModules))
-  where
-    formatTopModule :: Member (Reader Comments) r => Module 'Scoped 'ModuleTop -> Sem r Text
-    formatTopModule m = do
-      cs <- ask
-      return (toPlainText (ppOutDefault cs m))
+runScopeFileApp :: Member App r => Sem (ScopeEff ': r) a -> Sem r a
+runScopeFileApp = interpret $ \case
+  ScopeFile p -> do
+    let appFile = AppPath (Abs p) False
+    runPipeline appFile upToScoping

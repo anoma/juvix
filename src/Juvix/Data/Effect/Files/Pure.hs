@@ -213,3 +213,9 @@ lookupFile' p =
   fromMaybeM err (lookupFile p)
   where
     err = missingErr (toFilePath p)
+
+parseAbsDirError :: forall r. Members '[Error SomeException] r => FilePath -> Sem r (Path Abs Dir)
+parseAbsDirError fp = absorbMonadThrow (parseAbsDir fp)
+
+parseRelFileError :: forall r. Members '[Error SomeException] r => FilePath -> Sem r (Path Rel File)
+parseRelFileError fp = absorbMonadThrow (parseRelFile fp)
