@@ -28,11 +28,16 @@ data TopCommand
   | JuvixFormat FormatOptions
   deriving stock (Data)
 
-topCommandInputFile :: TopCommand -> Maybe (SomeBase File)
-topCommandInputFile = firstJust getInputFile . universeBi
+topCommandInputFile :: TopCommand -> Maybe (SomeBase Dir)
+topCommandInputFile t = (firstJust getInputFile (universeBi t)) <|> (firstJust getInputDir (universeBi t))
   where
-    getInputFile :: AppPath File -> Maybe (SomeBase File)
+    getInputFile :: AppPath File -> Maybe (SomeBase Dir)
     getInputFile p
+      | p ^. pathIsInput = Just (mapSomeBase parent (p ^. pathPath))
+      | otherwise = Nothing
+
+    getInputDir :: AppPath Dir -> Maybe (SomeBase Dir)
+    getInputDir p
       | p ^. pathIsInput = Just (p ^. pathPath)
       | otherwise = Nothing
 
