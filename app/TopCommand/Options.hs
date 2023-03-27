@@ -12,8 +12,8 @@ import CommonOptions hiding (Doc)
 import Data.Generics.Uniplate.Data
 import GlobalOptions
 import Options.Applicative.Help.Pretty
-import System.Directory qualified as D
 import Safe
+import System.Directory qualified as D
 
 data TopCommand
   = DisplayVersion
@@ -32,8 +32,8 @@ data TopCommand
 
 topCommandInputFile :: TopCommand -> IO (Maybe (SomeBase Dir))
 topCommandInputFile t = do
-    d <- getFilePath (universeBi t)
-    return $ (firstJust getInputFile (universeBi t)) <|> d
+  d <- getFilePath (universeBi t)
+  return $ (firstJust getInputFile (universeBi t)) <|> d
   where
     getInputFile :: AppPath File -> Maybe (SomeBase Dir)
     getInputFile p
@@ -43,13 +43,13 @@ topCommandInputFile t = do
     getFilePath :: [FilePath] -> IO (Maybe (SomeBase Dir))
     getFilePath fs = mapM go (headMay fs)
       where
-      go :: FilePath -> IO (SomeBase Dir)
-      go fp = do
-        nfp <- D.canonicalizePath fp
-        isDirectory <- D.doesDirectoryExist nfp
-        if
-          | isDirectory -> parseSomeDir nfp
-          | otherwise -> mapSomeBase parent <$> (parseSomeFile nfp)
+        go :: FilePath -> IO (SomeBase Dir)
+        go fp = do
+          nfp <- D.canonicalizePath fp
+          isDirectory <- D.doesDirectoryExist nfp
+          if
+              | isDirectory -> parseSomeDir nfp
+              | otherwise -> mapSomeBase parent <$> (parseSomeFile nfp)
 
 parseDisplayVersion :: Parser TopCommand
 parseDisplayVersion =
