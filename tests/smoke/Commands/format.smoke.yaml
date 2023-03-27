@@ -1,0 +1,35 @@
+working-directory: ./../../../tests
+
+tests:
+  - name: shows-file-argument-for-autocompletion
+    command:
+      - juvix
+      - format
+      - --help
+    stdout:
+      contains:
+        JUVIX_FILE
+    exit-status: 0
+
+  - name: format-formatted-file
+    command:
+      - juvix
+      - format
+      - positive/Format.juvix
+    exit-status: 0
+    stdout: ""
+
+  - name: format-unformatted-file
+    command:
+      shell:
+        - bash
+      script: |
+        temp=$(mktemp -d)
+        trap 'rm -rf -- "$temp"' EXIT
+        cd $temp
+        touch juvix.yaml
+        echo "module Foo ;" >> Foo.juvix
+        juvix format Foo.juvix
+    stdout:
+      contains: module Foo;
+    exit-status: 1
