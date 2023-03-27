@@ -47,11 +47,14 @@ defaultEntryPoint root mainFile =
       _entryPointGenericOptions = defaultGenericOptions,
       _entryPointTarget = TargetCore,
       _entryPointDebug = False,
-      _entryPointUnrollLimit = 140,
+      _entryPointUnrollLimit = defaultUnrollLimit,
       _entryPointModulePaths = pure mainFile
     }
   where
     buildDir = rootBuildDir root
+
+defaultUnrollLimit :: Int
+defaultUnrollLimit = 140
 
 mainModulePath :: Lens' EntryPoint (Path Abs File)
 mainModulePath = entryPointModulePaths . _head1

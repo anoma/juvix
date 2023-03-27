@@ -8,6 +8,7 @@ import Juvix.Compiler.Abstract.Pretty.Options qualified as Abstract
 import Juvix.Compiler.Core.Options qualified as Core
 import Juvix.Compiler.Internal.Pretty.Options qualified as Internal
 import Juvix.Compiler.Pipeline (EntryPoint (..), defaultEntryPoint)
+import Juvix.Compiler.Pipeline.EntryPoint (defaultUnrollLimit)
 import Juvix.Data.Error.GenericError qualified as E
 import Juvix.Extra.Paths
 
@@ -22,7 +23,7 @@ data GlobalOptions = GlobalOptions
     _globalNoPositivity :: Bool,
     _globalNoCoverage :: Bool,
     _globalNoStdlib :: Bool,
-    _globalUnrollLimit :: Word
+    _globalUnrollLimit :: Int
   }
   deriving stock (Eq, Show)
 
@@ -51,7 +52,7 @@ instance CanonicalProjection GlobalOptions Core.CoreOptions where
   project GlobalOptions {..} =
     Core.CoreOptions
       { Core._optCheckCoverage = not _globalNoCoverage,
-        Core._optUnrollLimit = fromIntegral _globalUnrollLimit
+        Core._optUnrollLimit = _globalUnrollLimit
       }
 
 defaultGlobalOptions :: GlobalOptions
@@ -67,7 +68,7 @@ defaultGlobalOptions =
       _globalNoPositivity = False,
       _globalNoCoverage = False,
       _globalNoStdlib = False,
-      _globalUnrollLimit = 140
+      _globalUnrollLimit = defaultUnrollLimit
     }
 
 -- | Get a parser for global flags which can be hidden or not depending on
@@ -128,8 +129,11 @@ parseGlobalFlags = do
       )
   _globalUnrollLimit <-
     option
-      naturalNumberOpt
-      (long "unroll" <> value 140 <> help "Recursion unrolling limit (default: 140)")
+      (fromIntegral <$> naturalNumberOpt)
+      ( long "unroll"
+          <> value defaultUnrollLimit
+          <> help ("Recursion unrolling limit (default: " <> show defaultUnrollLimit <> ")")
+      )
   return GlobalOptions {..}
 
 parseBuildDir :: Mod OptionFields (SomeBase Dir) -> Parser (AppPath Dir)
@@ -152,6 +156,6 @@ entryPointFromGlobalOptions root mainFile opts =
       _entryPointNoPositivity = opts ^. globalNoPositivity,
       _entryPointNoCoverage = opts ^. globalNoCoverage,
       _entryPointNoStdlib = opts ^. globalNoStdlib,
-      _entryPointUnrollLimit = fromIntegral $ opts ^. globalUnrollLimit,
+      _entryPointUnrollLimit = opts ^. globalUnrollLimit,
       _entryPointGenericOptions = project opts
     }
