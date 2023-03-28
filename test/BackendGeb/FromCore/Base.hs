@@ -8,12 +8,12 @@ import Juvix.Compiler.Core qualified as Core
 import Juvix.Compiler.Pipeline
 import Juvix.Prelude.Pretty
 
-coreToGebtranslationAssertion ::
+coreToGebTranslationAssertion ::
   Path Abs File ->
   Path Abs File ->
   (String -> IO ()) ->
   Assertion
-coreToGebtranslationAssertion mainFile expectedFile step = do
+coreToGebTranslationAssertion mainFile expectedFile step = do
   step "Parse Juvix Core file"
   input <- readFile . toFilePath $ mainFile
   cwd <- getCurrentDir

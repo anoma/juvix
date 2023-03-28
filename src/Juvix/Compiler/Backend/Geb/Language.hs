@@ -32,27 +32,33 @@ data Absurd = Absurd
   }
   deriving stock (Show, Eq, Generic)
 
-data LeftInj = LeftInj
+data LeftInj' a = LeftInj
   { _leftInjLeftType :: Object,
     _leftInjRightType :: Object,
-    _leftInjValue :: Morphism
+    _leftInjValue :: a
   }
   deriving stock (Show, Eq, Generic)
 
-data RightInj = RightInj
+type LeftInj = LeftInj' Morphism
+
+data RightInj' a = RightInj
   { _rightInjLeftType :: Object,
     _rightInjRightType :: Object,
-    _rightInjValue :: Morphism
+    _rightInjValue :: a
   }
   deriving stock (Show, Eq, Generic)
 
-data Pair = Pair
+type RightInj = RightInj' Morphism
+
+data Pair' a = Pair
   { _pairLeftType :: Object,
     _pairRightType :: Object,
-    _pairLeft :: Morphism,
-    _pairRight :: Morphism
+    _pairLeft :: a,
+    _pairRight :: a
   }
   deriving stock (Show, Eq, Generic)
+
+type Pair = Pair' Morphism
 
 data First = First
   { _firstLeftType :: Object,
@@ -221,12 +227,12 @@ makeLenses ''Coproduct
 makeLenses ''First
 makeLenses ''Hom
 makeLenses ''Lambda
-makeLenses ''LeftInj
+makeLenses ''LeftInj'
 makeLenses ''Morphism
 makeLenses ''Object
-makeLenses ''Pair
+makeLenses ''Pair'
 makeLenses ''Product
-makeLenses ''RightInj
+makeLenses ''RightInj'
 makeLenses ''Second
 makeLenses ''TypedMorphism
 makeLenses ''Var

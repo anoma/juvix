@@ -109,16 +109,18 @@ evalPair pair = do
   right <- eval $ pair ^. pairRight
   return $
     GebValueMorphismPair $
-      ValueMorphismPair
-        { _valueMorphismPairLeft = left,
-          _valueMorphismPairRight = right
+      Pair
+        { _pairLeft = left,
+          _pairRight = right,
+          _pairLeftType = pair ^. pairLeftType,
+          _pairRightType = pair ^. pairRightType
         }
 
 evalFirst :: EvalEffects r => First -> Sem r GebValue
 evalFirst f = do
   res <- eval $ f ^. firstValue
   case res of
-    GebValueMorphismPair pair -> return $ pair ^. valueMorphismPairLeft
+    GebValueMorphismPair pair -> return $ pair ^. pairLeft
     _ ->
       throw
         EvalError
@@ -131,7 +133,7 @@ evalSecond :: EvalEffects r => Second -> Sem r GebValue
 evalSecond s = do
   res <- eval $ s ^. secondValue
   case res of
-    GebValueMorphismPair pair -> return $ pair ^. valueMorphismPairRight
+    GebValueMorphismPair pair -> return $ pair ^. pairRight
     _ ->
       throw
         EvalError
@@ -143,12 +145,24 @@ evalSecond s = do
 evalLeftInj :: EvalEffects r => LeftInj -> Sem r GebValue
 evalLeftInj s = do
   res <- eval $ s ^. leftInjValue
-  return $ GebValueMorphismLeft res
+  return $
+    GebValueMorphismLeft $
+      LeftInj
+        { _leftInjValue = res,
+          _leftInjLeftType = s ^. leftInjLeftType,
+          _leftInjRightType = s ^. leftInjRightType
+        }
 
 evalRightInj :: EvalEffects r => RightInj -> Sem r GebValue
 evalRightInj s = do
   res <- eval $ s ^. rightInjValue
-  return $ GebValueMorphismRight res
+  return $
+    GebValueMorphismRight $
+      RightInj
+        { _rightInjValue = res,
+          _rightInjLeftType = s ^. rightInjLeftType,
+          _rightInjRightType = s ^. rightInjRightType
+        }
 
 evalApp :: EvalEffects r => Application -> Sem r GebValue
 evalApp app = do
@@ -191,8 +205,8 @@ evalCase :: EvalEffects r => Case -> Sem r GebValue
 evalCase c = do
   vCaseOn <- eval $ c ^. caseOn
   case vCaseOn of
-    GebValueMorphismLeft leftArg -> apply (c ^. caseLeft) leftArg
-    GebValueMorphismRight rightArg -> apply (c ^. caseRight) rightArg
+    GebValueMorphismLeft leftArg -> apply (c ^. caseLeft) (leftArg ^. leftInjValue)
+    GebValueMorphismRight rightArg -> apply (c ^. caseRight) (rightArg ^. rightInjValue)
     _ ->
       throw
         EvalError
@@ -210,9 +224,11 @@ evalBinop binop = do
   right <- eval $ binop ^. binopRight
   let lfPair m1 m2 =
         ( GebValueMorphismPair
-            ( ValueMorphismPair
-                { _valueMorphismPairLeft = m1,
-                  _valueMorphismPairRight = m2
+            ( Pair
+                { _pairLeft = m1,
+                  _pairRight = m2,
+                  _pairLeftType = ObjectInteger,
+                  _pairRightType = ObjectInteger
                 }
             )
         )
@@ -265,10 +281,22 @@ sameKind l r = case (l, r) of
   _ -> False
 
 valueTrue :: GebValue
-valueTrue = GebValueMorphismLeft GebValueMorphismUnit
+valueTrue =
+  GebValueMorphismLeft $
+    LeftInj
+      { _leftInjValue = GebValueMorphismUnit,
+        _leftInjLeftType = ObjectTerminal,
+        _leftInjRightType = ObjectTerminal
+      }
 
 valueFalse :: GebValue
-valueFalse = GebValueMorphismRight GebValueMorphismUnit
+valueFalse =
+  GebValueMorphismRight $
+    RightInj
+      { _rightInjValue = GebValueMorphismUnit,
+        _rightInjLeftType = ObjectTerminal,
+        _rightInjRightType = ObjectTerminal
+      }
 
 requiresObjectInfo :: GebValue -> Bool
 requiresObjectInfo = \case
@@ -295,13 +323,13 @@ quoteClosure ty cls =
     (Just (GebValueClosure cls))
     ty
 
-quoteValueMorphismPair :: Maybe Object -> ValueMorphismPair -> Sem r Morphism
+quoteValueMorphismPair :: Maybe Object -> Pair' GebValue -> Sem r Morphism
 quoteValueMorphismPair ty vpair = do
   case ty of
     Just (ObjectProduct prod) -> do
       let (a, b) = (prod ^. productLeft, prod ^. productRight)
-      pLeft <- quote (Just a) (vpair ^. valueMorphismPairLeft)
-      pRight <- quote (Just b) (vpair ^. valueMorphismPairRight)
+      pLeft <- quote (Just a) (vpair ^. pairLeft)
+      pRight <- quote (Just b) (vpair ^. pairRight)
       return $
         MorphismPair
           Pair
@@ -321,10 +349,10 @@ quoteValueMorphismPair ty vpair = do
         (Just (GebValueMorphismPair vpair))
         ty
 
-quoteValueMorphismLeft :: Maybe Object -> GebValue -> Sem r Morphism
+quoteValueMorphismLeft :: Maybe Object -> LeftInj' GebValue -> Sem r Morphism
 quoteValueMorphismLeft ty m = case ty of
   Just (ObjectCoproduct Coproduct {..}) -> do
-    leftMorphism <- quote ty m
+    leftMorphism <- quote ty (m ^. leftInjValue)
     return $
       MorphismLeft
         LeftInj
@@ -339,10 +367,10 @@ quoteValueMorphismLeft ty m = case ty of
       ty
   Nothing -> quoteError "need object info" (Just (GebValueMorphismLeft m)) ty
 
-quoteMorphismRight :: Maybe Object -> GebValue -> Sem r Morphism
+quoteMorphismRight :: Maybe Object -> RightInj' GebValue -> Sem r Morphism
 quoteMorphismRight ty r = case ty of
   Just (ObjectCoproduct Coproduct {..}) -> do
-    rightMorphism <- quote ty r
+    rightMorphism <- quote ty (r ^. rightInjValue)
     return $
       MorphismRight
         RightInj
