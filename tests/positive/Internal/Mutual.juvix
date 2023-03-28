@@ -1,11 +1,11 @@
 module Mutual;
 
 type Bool :=
-     true : Bool
+  | true : Bool
   | false : Bool;
 
 type Nat :=
-  zero : Nat
+  | zero : Nat
   | suc : Nat → Nat;
 
 not : _;
@@ -13,6 +13,7 @@ not false := true;
 not true := false;
 
 odd : _;
+
 even : _;
 
 odd zero := false;
@@ -20,5 +21,3 @@ odd (suc n) := even n;
 
 even zero := true;
 even (suc n) := odd n;
-
-end;

@@ -1,10 +1,13 @@
 module ShadowPublicOpen;
-  module M;
-    module N;
-      axiom A : Type;
-    end;
-    open N public;
+
+module M;
+  module N;
+    axiom A : Type;
   end;
-  open M;
-  axiom A : Type;
+
+  open N public;
 end;
+
+open M;
+
+axiom A : Type;

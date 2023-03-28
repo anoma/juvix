@@ -1,19 +1,19 @@
 module PolymorphismHoles;
 
 type Pair (A : Type) (B : Type) :=
- mkPair : A → B → Pair A B;
+  | mkPair : A → B → Pair A B;
 
 type Nat :=
- zero : Nat |
- suc : Nat → Nat;
+  | zero : Nat
+  | suc : Nat → Nat;
 
 type List (A : Type) :=
- nil : List A |
- cons : A → List A → List A;
+  | nil : List A
+  | cons : A → List A → List A;
 
 type Bool :=
- false : Bool |
- true : Bool;
+  | false : Bool
+  | true : Bool;
 
 id : (A : Type) → A → A;
 id _ a := a;
@@ -35,12 +35,17 @@ p := mkPair true false;
 swap : (A : Type) → (B : Type) → Pair A B → Pair B A;
 swap A B (mkPair a b) := mkPair b a;
 
-curry : (A : Type) → (B : Type) → (C : Type)
-  → (Pair A B → C) → A → B → C;
-curry A B C f a b := f (mkPair a b) ;
+curry :
+  (A : Type)
+    → (B : Type)
+    → (C : Type)
+    → (Pair A B → C)
+    → A
+    → B
+    → C;
+curry A B C f a b := f (mkPair a b);
 
-ap : (A : Type) → (B : Type)
-  → (A → B) → A → B;
+ap : (A : Type) → (B : Type) → (A → B) → A → B;
 ap A B f a := f a;
 
 headDef : (A : Type) → A → List A → A;
@@ -53,25 +58,35 @@ ite _ false _ ff := ff;
 
 filter : (A : Type) → (A → Bool) → List A → List A;
 filter _ f nil := nil;
-filter _ f (cons x xs) := ite _ (f x) (cons x (filter _ f xs)) (filter _ f xs);
+filter _ f (cons x xs) :=
+  ite _ (f x) (cons x (filter _ f xs)) (filter _ f xs);
 
-map : (A : Type) → (B : Type) →
-  (A → B) → List _ → List _;
+map : (A : Type) → (B : Type) → (A → B) → List _ → List _;
 map _ _ f nil := nil;
 map _ _ f (cons x xs) := cons (f x) (map _ _ f xs);
 
-zip : (A : Type) → (B : Type)
-    → List A → List B → List (Pair A B);
+zip :
+  (A : Type)
+    → (B : Type)
+    → List A
+    → List B
+    → List (Pair A B);
 zip A _ nil _ := nil;
 zip _ _ _ nil := nil;
 zip _ _ (cons a as) (cons b bs) := nil;
 
-zipWith : (A : Type) → (B : Type) → (C : Type)
-  → (A → B → C)
-  → List A → List B → List C;
+zipWith :
+  (A : Type)
+    → (B : Type)
+    → (C : Type)
+    → (A → B → C)
+    → List A
+    → List B
+    → List C;
 zipWith _ _ C f nil _ := nil;
 zipWith _ _ C f _ nil := nil;
-zipWith _ _ _ f (cons a as) (cons b bs) := cons (f a b) (zipWith _ _ _ f as bs);
+zipWith _ _ _ f (cons a as) (cons b bs) :=
+  cons (f a b) (zipWith _ _ _ f as bs);
 
 rankn : ((A : Type) → A → A) → Bool → Nat → Pair Bool Nat;
 rankn f b n := mkPair (f _ b) (f _ n);
@@ -87,7 +102,8 @@ pairEval : (A : Type) → (B : Type) → Pair (A → B) A → B;
 pairEval _ _ (mkPair f x) := f x;
 
 main : Nat;
-main := headDef _ (pairEval _ _ (mkPair (add zero) zero))
-   (zipWith _ _ _ add l1 l1);
-
-end;
+main :=
+  headDef
+    _
+    (pairEval _ _ (mkPair (add zero) zero))
+    (zipWith _ _ _ add l1 l1);

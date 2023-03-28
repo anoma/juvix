@@ -1,20 +1,19 @@
 module M;
 
-  module O;
-    axiom A : Type;
-  end;
-
-  open O;
-
-  module N;
-    module O;
-      type T :=
-        A : T;
-    end;
-  end;
-
-  open N.O;
-
-  fun : T → T;
-  fun A := T;
+module O;
+  axiom A : Type;
 end;
+
+open O;
+
+module N;
+  module O;
+    type T :=
+      | A : T;
+  end;
+end;
+
+open N.O;
+
+fun : T → T;
+fun A := T;
