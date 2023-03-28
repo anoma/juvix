@@ -300,13 +300,13 @@ mkFunBody ::
   Internal.FunctionDef ->
   Sem r Node
 mkFunBody ty f =
-  mkBody ty (Just $ f ^. Internal.funDefName . nameLoc) (fmap (\c -> (c ^. Internal.clausePatterns, c ^. Internal.clauseBody)) (f ^. Internal.funDefClauses))
+  mkBody ty (f ^. Internal.funDefName . nameLoc) (fmap (\c -> (c ^. Internal.clausePatterns, c ^. Internal.clauseBody)) (f ^. Internal.funDefClauses))
 
 mkBody ::
   forall r.
   (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable] r) =>
   Type -> -- type of the function
-  Maybe Location ->
+  Location ->
   NonEmpty ([Internal.PatternArg], Internal.Expression) ->
   Sem r Node
 mkBody ty loc clauses
@@ -314,11 +314,12 @@ mkBody ty loc clauses
   | otherwise = do
       let values = mkVar Info.empty <$> vs
           argtys = take nPatterns (typeArgs ty)
+          argbinders = take nPatterns (typeArgsBinders ty)
           values' = map fst $ filter (isInductive . snd) (zipExact values argtys)
           matchArgtys = shiftMatchTypeArg <$> indexFrom 0 argtys
           matchTypeTarget = typeTarget ty
           matchIndArgTys = filter isInductive matchArgtys
-          matchReturnType' = mkPis' (drop nPatterns (typeArgs ty)) matchTypeTarget
+          matchReturnType' = mkPis (drop nPatterns (typeArgsBinders ty)) matchTypeTarget
       case values' of
         [] -> do
           vars <- asks (^. indexTableVars)
@@ -333,13 +334,13 @@ mkBody ty loc clauses
             local
               (set indexTableVars vars' . set indexTableVarsNum varsNum')
               (goExpression body)
-          return $ foldr mkLambda' body' argtys
+          return $ foldr (mkLambda mempty) body' argbinders
         _ : _ -> do
           varsNum <- asks (^. indexTableVarsNum)
           ms <- underBinders nPatterns (mapM (uncurry (goClause varsNum)) clauses)
-          let i = maybe mempty (`setInfoLocation` mempty) loc
+          let i = setInfoLocation loc mempty
               match = mkMatch i (fromList matchIndArgTys) matchReturnType' (fromList values') (toList ms)
-          return $ foldr mkLambda' match argtys
+          return $ foldr (mkLambda mempty) match argbinders
   where
     -- Assumption: All clauses have the same number of patterns
     nPatterns :: Int
@@ -361,7 +362,7 @@ mkBody ty loc clauses
     --
     --    A -> A$0 -> List A$1 -> A$2 -> A$3 -> A$4 -> List A$5
     --
-    -- Is translated to the following match (omiting the translation of the body):
+    -- Is translated to the following match (omitting the translation of the body):
     --
     --    λ(? : Type)
     --      λ(? : A$0)
@@ -394,18 +395,20 @@ goCase ::
   Internal.Case ->
   Sem r Node
 goCase c = do
+  let loc = getLoc c
+      i = setInfoLocation loc mempty
   expr <- goExpression (c ^. Internal.caseExpression)
   ty <- goType (fromJust $ c ^. Internal.caseExpressionType)
   case ty of
     NTyp {} -> do
       branches <- toList <$> mapM (goCaseBranch ty) (c ^. Internal.caseBranches)
       rty <- goType (fromJust $ c ^. Internal.caseExpressionWholeType)
-      return (mkMatch' (NonEmpty.singleton ty) rty (pure expr) branches)
+      return (mkMatch i (NonEmpty.singleton ty) rty (pure expr) branches)
     _ ->
       case c ^. Internal.caseBranches of
         Internal.CaseBranch {..} :| _ ->
           case _caseBranchPattern ^. Internal.patternArgPattern of
-            Internal.PatternVariable {} -> do
+            Internal.PatternVariable name -> do
               vars <- asks (^. indexTableVars)
               varsNum <- asks (^. indexTableVarsNum)
               let vars' = addPatternVariableNames _caseBranchPattern varsNum vars
@@ -413,7 +416,7 @@ goCase c = do
                 local
                   (set indexTableVars vars')
                   (underBinders 1 (goExpression _caseBranchExpression))
-              return $ mkLet' ty expr body
+              return $ mkLet i (Binder (name ^. nameText) (Just $ name ^. nameLoc) ty) expr body
             _ ->
               impossible
   where
@@ -427,7 +430,7 @@ goLambda ::
   Sem r Node
 goLambda l = do
   ty <- goType (fromJust (l ^. Internal.lambdaType))
-  mkBody ty Nothing (fmap (\c -> (toList (c ^. Internal.lambdaPatterns), c ^. Internal.lambdaBody)) (l ^. Internal.lambdaClauses))
+  mkBody ty (getLoc l) (fmap (\c -> (toList (c ^. Internal.lambdaPatterns), c ^. Internal.lambdaBody)) (l ^. Internal.lambdaClauses))
 
 goLet ::
   forall r.
@@ -449,7 +452,9 @@ goLet l = goClauses (toList (l ^. Internal.letClauses))
               funTy <- goType (f ^. Internal.funDefType)
               funBody <- mkFunBody funTy f
               rest <- localAddName (f ^. Internal.funDefName) (goClauses cs)
-              return $ mkLet' funTy funBody rest
+              let name = f ^. Internal.funDefName . nameText
+                  loc = f ^. Internal.funDefName . nameLoc
+              return $ mkLet mempty (Binder name (Just loc) funTy) funBody rest
           goMutual :: Internal.MutualBlock -> Sem r Node
           goMutual (Internal.MutualBlock funs) = do
             let lfuns = toList funs
@@ -458,9 +463,9 @@ goLet l = goClauses (toList (l ^. Internal.letClauses))
             tys' <- mapM goType tys
             localAddNames names $ do
               vals' <- sequence [mkFunBody ty f | (ty, f) <- zipExact tys' lfuns]
-              let items = nonEmpty' (zip tys' vals')
+              let items = nonEmpty' (zipWith3Exact (\ty n v -> LetItem (Binder (n ^. nameText) (Just $ n ^. nameLoc) ty) v) tys' names vals')
               rest <- goClauses cs
-              return (mkLetRec' items rest)
+              return (mkLetRec mempty items rest)
 
 goAxiomInductive ::
   forall r.
@@ -831,7 +836,9 @@ goSimpleLambda ::
   Sem r Node
 goSimpleLambda l = do
   ty <- goType (l ^. Internal.slambdaVarType)
-  localAddName (l ^. Internal.slambdaVar) (mkLambda' ty <$> goExpression (l ^. Internal.slambdaBody))
+  let loc = l ^. Internal.slambdaVar . nameLoc
+      name = l ^. Internal.slambdaVar . nameText
+  localAddName (l ^. Internal.slambdaVar) (mkLambda mempty (Binder name (Just loc) ty) <$> goExpression (l ^. Internal.slambdaBody))
 
 goApplication ::
   forall r.

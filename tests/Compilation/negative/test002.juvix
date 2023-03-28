@@ -1,0 +1,12 @@
+-- pattern matching coverage in cases
+module test002;
+
+open import Stdlib.Prelude;
+
+f : List Nat -> Nat;
+f x := case x
+  | nil := 0
+  | x :: y :: _ := x + y;
+
+main : Nat;
+main := f (1 :: 2 :: nil);

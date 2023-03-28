@@ -1,0 +1,7 @@
+-- pattern matching coverage in lambdas
+module test003;
+
+open import Stdlib.Prelude;
+
+main : Nat;
+main := λ{ zero := 1 | (suc (suc _)) := 2 } 1;
