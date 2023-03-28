@@ -10,6 +10,7 @@ import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Info.NameInfo
 import Juvix.Compiler.Core.Pretty
 import Juvix.Compiler.Core.Transformation.Base
+import Juvix.Compiler.Core.Transformation.ComputeTypeInfo (computeNodeType)
 
 lambdaLiftBinder :: Members '[Reader OnlyLetRec, InfoTableBuilder] r => BinderList Binder -> Binder -> Sem r Binder
 lambdaLiftBinder bl = traverseOf binderType (lambdaLiftNode bl)
@@ -22,10 +23,8 @@ lambdaLiftNode aboveBl top =
       (topArgs, body) = unfoldLambdas top
    in goTop aboveBl body topArgs
   where
-    typeFromArgs :: [ArgumentInfo] -> Type
-    typeFromArgs = \case
-      [] -> mkDynamic' -- change this when we have type info about the body
-      (a : as) -> mkPi mempty (binderFromArgumentInfo a) (typeFromArgs as)
+    nodeType :: Node -> Sem r Type
+    nodeType n = flip computeNodeType n <$> getInfoTable
 
     goTop :: BinderList Binder -> Node -> [LambdaLhs] -> Sem r Node
     goTop bl body = \case
@@ -58,13 +57,14 @@ lambdaLiftNode aboveBl top =
                   argsInfo = map (argumentInfoFromBinder . (^. lambdaLhsBinder)) (fst (unfoldLambdas fBody'))
               f <- freshSymbol
               let name = uniqueName "lambda" f
+              ty <- nodeType fBody'
               registerIdent
                 name
                 IdentifierInfo
                   { _identifierSymbol = f,
                     _identifierName = name,
                     _identifierLocation = Nothing,
-                    _identifierType = typeFromArgs argsInfo,
+                    _identifierType = ty,
                     _identifierArgsNum = length argsInfo,
                     _identifierArgsInfo = argsInfo,
                     _identifierIsExported = False,
@@ -78,10 +78,13 @@ lambdaLiftNode aboveBl top =
         goLetRec letr = do
           let defs :: [Node]
               defs = letr ^.. letRecValues . each . letItemValue
+              defsTypes :: [Type]
+              defsTypes = letr ^.. letRecValues . each . letItemBinder . binderType
               ndefs :: Int
               ndefs = length defs
               binders :: [Binder]
               binders = letr ^.. letRecValues . each . letItemBinder
+
           letRecBinders' :: [Binder] <- mapM (lambdaLiftBinder bl) binders
           topSyms :: [Symbol] <- forM defs (const freshSymbol)
           let bl' :: BinderList Binder
@@ -98,7 +101,7 @@ lambdaLiftNode aboveBl top =
                   helper :: Var -> Maybe (Var, Binder)
                   helper v
                     | v ^. varIndex < ndefs = Nothing
-                    | otherwise = Just (set varIndex idx' v, BL.lookup idx' bl)
+                    | otherwise = Just (shiftVar (- ndefs) v, BL.lookup idx' bl)
                     where
                       idx' = v ^. varIndex - ndefs
 
@@ -120,7 +123,8 @@ lambdaLiftNode aboveBl top =
               declareTopSyms =
                 sequence_
                   [ do
-                      let topBody = captureFreeVars (map (first (^. varIndex)) recItemsFreeVars) b
+                      let (topBody, topTy) = captureFreeVarsType (map (first (^. varIndex)) recItemsFreeVars)
+                              (b, bty)
                           argsInfo :: [ArgumentInfo]
                           argsInfo =
                             map (argumentInfoFromBinder . (^. lambdaLhsBinder)) (fst (unfoldLambdas topBody))
@@ -131,13 +135,16 @@ lambdaLiftNode aboveBl top =
                           { _identifierSymbol = sym,
                             _identifierName = name,
                             _identifierLocation = itemBinder ^. binderLocation,
-                            _identifierType = typeFromArgs argsInfo,
+                            _identifierType = topTy,
                             _identifierArgsNum = length argsInfo,
                             _identifierArgsInfo = argsInfo,
                             _identifierIsExported = False,
                             _identifierBuiltin = Nothing
                           }
-                    | ((sym, name), (itemBinder, b)) <- zipExact topSymsWithName (zipExact letRecBinders' liftedDefs)
+                    | ((sym, name), (itemBinder, (b, bty))) <-
+                      zipExact topSymsWithName
+                      (zipExact letRecBinders'
+                       (zipExact liftedDefs defsTypes))
                   ]
           declareTopSyms
 

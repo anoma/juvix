@@ -96,11 +96,13 @@ _NLam f = \case
 cosmos :: SimpleFold Node Node
 cosmos f = ufoldA reassemble f
 
--- | The list should not contain repeated indices.
--- if fv = x1, x2, .., xn
--- the result is of the form λx1 λx2 .. λ xn b
-captureFreeVars :: [(Index, Binder)] -> Node -> Node
-captureFreeVars freevars = goBinders freevars . mapFreeVars
+-- | The free vars are given in the context of the node.
+captureFreeVarsType :: [(Index, Binder)] -> (Node, Type) -> (Node, Type)
+captureFreeVarsType freevars (n, ty) =
+  let bodyTy = mapFreeVars ty
+      body' = mapFreeVars n
+  in (mkLambdasB captureBinders' body'
+     , mkPis captureBinders' bodyTy)
   where
     mapFreeVars :: Node -> Node
     mapFreeVars = dmapN go
@@ -112,25 +114,33 @@ captureFreeVars freevars = goBinders freevars . mapFreeVars
           NVar (Var i u)
             | Just v <- s ^. at (u - k) -> NVar (Var i (v + k))
           m -> m
+    captureBinders' :: [Binder]
+    captureBinders' = goBinders freevars []
+     where
+      goBinders :: [(Index, Binder)] -> [Binder] -> [Binder]
+      goBinders fv acc = case unsnoc fv of
+        Nothing -> acc
+        Just (fvs, (idx, bin)) -> goBinders fvs (mapBinder idx bin : acc)
+        where
+          indices = map fst fv
+          mapBinder :: Index -> Binder -> Binder
+          mapBinder binderIndex = over binderType (dmapN go)
+            where
+              go :: Index -> Node -> Node
+              go k = \case
+                NVar u
+                  | u ^. varIndex >= k ->
+                      let uCtx = u ^. varIndex - k + binderIndex + 1
+                          err = error ("impossible: could not find " <> show uCtx <> " in " <> show indices)
+                          u' = length indices - 2 - fromMaybe err (elemIndex uCtx indices) + k
+                      in NVar (set varIndex u' u)
+                m -> m
 
-    goBinders :: [(Index, Binder)] -> Node -> Node
-    goBinders fv = case unsnoc fv of
-      Nothing -> id
-      Just (fvs, (idx, bin)) -> goBinders fvs . mkLambdaB (mapBinder idx bin)
-      where
-        indices = map fst fv
-        mapBinder :: Index -> Binder -> Binder
-        mapBinder binderIndex = over binderType (dmapN go)
-          where
-            go :: Index -> Node -> Node
-            go k = \case
-              NVar u
-                | u ^. varIndex >= k ->
-                    let uCtx = u ^. varIndex - k + binderIndex + 1
-                        err = error ("impossible: could not find " <> show uCtx <> " in " <> show indices)
-                        u' = length indices - 2 - fromMaybe err (elemIndex uCtx indices) + k
-                     in NVar (set varIndex u' u)
-              m -> m
+-- | The list should not contain repeated indices.
+-- if fv = x1, x2, .., xn
+-- the result is of the form λx1 λx2 .. λ xn b
+captureFreeVars :: [(Index, Binder)] -> Node -> Node
+captureFreeVars freevars n = fst (captureFreeVarsType freevars (n, mkDynamic'))
 
 -- | Captures all free variables of a node. It also returns the list of captured
 -- variables in left-to-right order: if snd is of the form λxλy... then fst is
@@ -140,11 +150,17 @@ captureFreeVarsCtx bl n =
   let assocs = freeVarsCtx bl n
    in (assocs, captureFreeVars (map (first (^. varIndex)) assocs) n)
 
+captureFreeVarsCtxType :: BinderList Binder -> (Node, Type) -> ([(Var, Binder)], (Node, Type))
+captureFreeVarsCtxType bl (n, ty) =
+  let assocs = freeVarsCtx bl n
+      assocsi = map (first (^. varIndex)) assocs
+   in (assocs, captureFreeVarsType assocsi (n, ty))
+
 freeVarsCtxMany' :: BinderList Binder -> [Node] -> [Var]
 freeVarsCtxMany' bl = map fst . freeVarsCtxMany bl
 
 freeVarsCtx :: BinderList Binder -> Node -> [(Var, Binder)]
-freeVarsCtx ctx = freeVarsCtxMany ctx . pure
+freeVarsCtx ctx =freeVarsCtxMany ctx . pure
 
 -- | The output list does not contain repeated elements and is sorted by
 -- *decreasing* variable index. The indices are relative to the given binder

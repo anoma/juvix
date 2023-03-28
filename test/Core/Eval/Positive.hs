@@ -233,7 +233,7 @@ tests =
       $(mkRelFile "test039.jvc")
       $(mkRelFile "out/test039.out"),
     PosTest
-      "LetRec"
+      "LetRec - fib, fact"
       $(mkRelDir ".")
       $(mkRelFile "test040.jvc")
       $(mkRelFile "out/test040.out"),
