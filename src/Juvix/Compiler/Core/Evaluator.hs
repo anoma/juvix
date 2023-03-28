@@ -267,7 +267,7 @@ catchEvalErrorIO loc ma =
 toCoreError :: Location -> EvalError -> CoreError
 toCoreError loc (EvalError {..}) =
   CoreError
-    { _coreErrorMsg = "evaluation error: " <> _evalErrorMsg,
+    { _coreErrorMsg = ppOutput $ "evaluation error: " <> pretty _evalErrorMsg,
       _coreErrorNode = _evalErrorNode,
       _coreErrorLoc = fromMaybe loc (lookupLocation =<< _evalErrorNode)
     }

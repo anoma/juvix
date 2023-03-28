@@ -7,6 +7,7 @@ import Juvix.Compiler.Core.Error
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Info.LocationInfo (getInfoLocation)
 import Juvix.Compiler.Core.Transformation.Base
+import Juvix.Data.PPOutput
 
 checkGeb :: forall r. Member (Error CoreError) r => InfoTable -> Sem r InfoTable
 checkGeb tab =
@@ -31,7 +32,7 @@ checkGeb tab =
             | isTypeConstr tab (_piBinder ^. binderType) ->
                 throw
                   CoreError
-                    { _coreErrorMsg = "polymorphism not supported for the GEB target",
+                    { _coreErrorMsg = ppOutput "polymorphism not supported for the GEB target",
                       _coreErrorNode = Just node,
                       _coreErrorLoc = fromMaybe defaultLoc (_piBinder ^. binderLocation)
                     }
@@ -74,7 +75,7 @@ checkGeb tab =
       when (isCyclic (createIdentDependencyInfo tab)) $
         throw
           CoreError
-            { _coreErrorMsg = "recursion not supported for the GEB target",
+            { _coreErrorMsg = ppOutput "recursion not supported for the GEB target",
               _coreErrorNode = Nothing,
               _coreErrorLoc = defaultLoc
             }
@@ -84,7 +85,7 @@ checkGeb tab =
       when (isCyclic (createTypeDependencyInfo tab)) $
         throw
           CoreError
-            { _coreErrorMsg = "recursive types not supported for the GEB target",
+            { _coreErrorMsg = ppOutput "recursive types not supported for the GEB target",
               _coreErrorNode = Nothing,
               _coreErrorLoc = defaultLoc
             }
@@ -92,7 +93,7 @@ checkGeb tab =
     dynamicTypeError :: Node -> Maybe Location -> CoreError
     dynamicTypeError node loc =
       CoreError
-        { _coreErrorMsg = "compilation for the GEB target requires full type information",
+        { _coreErrorMsg = ppOutput "compilation for the GEB target requires full type information",
           _coreErrorNode = Just node,
           _coreErrorLoc = fromMaybe defaultLoc loc
         }
@@ -100,7 +101,7 @@ checkGeb tab =
     unsupportedError :: Text -> Node -> Maybe Location -> CoreError
     unsupportedError what node loc =
       CoreError
-        { _coreErrorMsg = what <> " not supported for the GEB target",
+        { _coreErrorMsg = ppOutput $ pretty what <> " not supported for the GEB target",
           _coreErrorNode = Just node,
           _coreErrorLoc = fromMaybe defaultLoc loc
         }

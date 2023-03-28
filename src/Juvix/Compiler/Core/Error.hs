@@ -4,7 +4,7 @@ import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Core.Pretty
 
 data CoreError = CoreError
-  { _coreErrorMsg :: Text,
+  { _coreErrorMsg :: AnsiText,
     _coreErrorNode :: Maybe Node,
     _coreErrorLoc :: Location
   }
@@ -18,15 +18,15 @@ instance ToGenericError CoreError where
         return
           GenericError
             { _genericErrorLoc = i,
-              _genericErrorMessage = ppOutput msg,
+              _genericErrorMessage = msg,
               _genericErrorIntervals = [i]
             }
         where
           i = getLoc e
           opts' = fromGenericOptions opts
           msg = case e ^. coreErrorNode of
-            Just node -> pretty (e ^. coreErrorMsg) <> colon <> space <> pretty (ppTrace' opts' node)
-            Nothing -> pretty (e ^. coreErrorMsg)
+            Just node -> ppOutput (pretty (e ^. coreErrorMsg) <> colon <> space <> doc opts' node)
+            Nothing -> e ^. coreErrorMsg
 
 instance Pretty CoreError where
   pretty (CoreError {..}) = case _coreErrorNode of

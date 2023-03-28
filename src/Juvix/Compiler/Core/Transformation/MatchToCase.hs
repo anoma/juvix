@@ -10,6 +10,7 @@ import Juvix.Compiler.Core.Info.NameInfo (setInfoName)
 import Juvix.Compiler.Core.Options
 import Juvix.Compiler.Core.Pretty hiding (Options)
 import Juvix.Compiler.Core.Transformation.Base
+import Juvix.Data.NameKind
 
 data PatternRow = PatternRow
   { _patternRowPatterns :: [Pattern],
@@ -86,15 +87,15 @@ goMatchToCase recur node = case node of
             | fCoverage ->
                 throw
                   CoreError
-                    { _coreErrorMsg = "Pattern matching not exhaustive. Example pattern sequence not matched: " <> pat,
+                    { _coreErrorMsg = ppOutput ("Pattern matching not exhaustive. Example pattern sequence not matched: " <> pat),
                       _coreErrorNode = Nothing,
                       _coreErrorLoc = fromMaybe defaultLoc (getNodeLocation node)
                     }
             | otherwise ->
                 return $
-                  mkBuiltinApp' OpFail [mkConstant' (ConstString ("Pattern sequence not matched: " <> pat))]
+                  mkBuiltinApp' OpFail [mkConstant' (ConstString ("Pattern sequence not matched: " <> show pat))]
         where
-          pat = show (ppOutput $ err (replicate (length vs) "_"))
+          pat = err (replicate (length vs) "_")
           mockFile = $(mkAbsFile "/match-to-case")
           defaultLoc = singletonInterval (mkInitialLoc mockFile)
       r@PatternRow {..} : _
@@ -199,7 +200,7 @@ goMatchToCase recur node = case node of
         err' tab args =
           case mtag of
             Just tag ->
-              err (parensIf (argsNum > 0) (hsep (pretty (ci ^. constructorName) : replicate argsNum "_")) : args)
+              err (parensIf (argsNum > 0) (hsep (annotate (AnnKind KNameConstructor) (pretty (ci ^. constructorName)) : replicate argsNum "_")) : args)
               where
                 ci = fromJust $ HashMap.lookup tag (tab ^. infoConstructors)
                 paramsNum = getTypeParamsNum tab (ci ^. constructorType)
@@ -220,7 +221,7 @@ goMatchToCase recur node = case node of
           vs' = [bindersNum .. bindersNum + argsNum - 1]
           err' args =
             err
-              (parensIf (argsNum > paramsNum) (hsep (pretty (ci ^. constructorName) : drop paramsNum (take argsNum args))) : drop argsNum args)
+              (parensIf (argsNum > paramsNum) (hsep (annotate (AnnKind KNameConstructor) (pretty (ci ^. constructorName)) : drop paramsNum (take argsNum args))) : drop argsNum args)
       binders' <- getBranchBinders col matrix tag
       matrix' <- getBranchMatrix col matrix tag
       body <- compile err' bindersNum' (vs' ++ vs) matrix'
