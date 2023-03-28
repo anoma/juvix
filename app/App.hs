@@ -9,14 +9,6 @@ import Juvix.Data.Error qualified as Error
 import Juvix.Prelude.Pretty hiding (Doc)
 import System.Console.ANSI qualified as Ansi
 import System.Directory qualified as D
-import System.Process qualified as P
-
-data RunCommandResult = RunCommandResult
-  { _runCmdResStdout :: Text,
-    _runCmdResStderr :: Text
-  }
-
-makeLenses ''RunCommandResult
 
 data App m a where
   ExitMsg :: ExitCode -> Text -> App m a
@@ -31,8 +23,6 @@ data App m a where
   RunPipelineEither :: AppPath File -> Sem PipelineEff a -> App m (Either JuvixError (Artifacts, a))
   Say :: Text -> App m ()
   SayRaw :: ByteString -> App m ()
-  CheckCommand :: Text -> App m (Maybe (Path Abs File))
-  RunExternalCommand :: Text -> [Text] -> App m RunCommandResult
 
 makeSem ''App
 
@@ -75,23 +65,6 @@ runAppIO args@RunAppIOArgs {..} =
       embed exitFailure
     ExitMsg exitCode t -> embed (putStrLn t >> hFlush stdout >> exitWith exitCode)
     SayRaw b -> embed (ByteString.putStr b)
-    CheckCommand progName -> do
-      let progNamePath :: Path Rel File = relFile (unpack progName)
-      findExecutable progNamePath
-    RunExternalCommand progName progArgs -> do
-      (code, resStdout, resStderr) <-
-        embed
-          ( P.readProcessWithExitCode
-              (unpack progName)
-              (unpack <$> progArgs)
-              ""
-          )
-      unless (code == ExitSuccess) (embed exitFailure)
-      return $
-        RunCommandResult
-          { _runCmdResStdout = pack resStdout,
-            _runCmdResStderr = pack resStderr
-          }
   where
     g :: GlobalOptions
     g = _runAppIOArgsGlobalOptions
