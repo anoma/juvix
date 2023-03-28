@@ -121,8 +121,19 @@ parseUtility =
       command "format" $
         info
           (JuvixFormat <$> parseFormat)
-          (progDesc "Format a Juvix file or project")
+          ( progDescDoc
+              ( Just
+                  ( vsep
+                      [ "Format a Juvix file or project directory",
+                        "",
+                        "When the command is run with an unformatted file it prints the reformatted source to standard output.",
+                        "When the command is run with a project directory it prints a list of unformatted files in the project."
+                      ]
+                  )
+              )
+          )
 
+-- \n\nWhen the command is run with a file it prints the reformatted source to standard output.\nWhen the command is run with a project directory it prints a list of unformatted files in the project.")
 commandCheck :: Mod CommandFields TopCommand
 commandCheck =
   command "typecheck" $

@@ -15,7 +15,7 @@ parseInputJuvixFileOrDir :: Parser FilePath
 parseInputJuvixFileOrDir =
   strArgument
     ( metavar "JUVIX_FILE_OR_DIR"
-        <> help "Path to a .juvix file or to a directory containing Juvix files"
+        <> help "Path to a .juvix file or to a directory containing Juvix files."
         <> completer juvixCompleter
         <> action "directory"
     )
