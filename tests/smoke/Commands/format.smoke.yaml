@@ -114,3 +114,17 @@ tests:
         juvix format --check $temp
     stdout: ""
     exit-status: 0
+
+  - name: format-file-with-scope-error
+    command:
+      shell:
+        - bash
+      script: |
+        temp=$(mktemp -d)
+        trap 'rm -rf -- "$temp"' EXIT
+        cd $temp
+        echo "module Bar;" > Foo.juvix
+        juvix format Foo.juvix
+    stderr:
+      contains: "error"
+    exit-status: 1
