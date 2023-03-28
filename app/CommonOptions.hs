@@ -137,12 +137,6 @@ naturalNumberOpt = eitherReader aux
     aux :: String -> Either String Word
     aux s = maybe (Left $ s <> " is not a nonnegative number") Right (readMaybe s :: Maybe Word)
 
-someFileOrDirOpt :: ReadM (Either (SomeBase File) (SomeBase Dir))
-someFileOrDirOpt = eitherReader aux
-  where
-    aux :: String -> Either String (Either (SomeBase File) (SomeBase Dir))
-    aux s = maybe (Left $ s <> " is not a file or directory path") Right ((Left <$> (parseSomeFile s)) <|> (Right <$> (parseSomeDir s)))
-
 extCompleter :: String -> Completer
 extCompleter ext = mkCompleter $ \word -> do
   let cmd = unwords ["compgen", "-o", "plusdirs", "-f", "-X", "!*." <> ext, "--", requote word]
