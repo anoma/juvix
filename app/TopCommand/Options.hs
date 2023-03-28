@@ -133,7 +133,6 @@ parseUtility =
               )
           )
 
--- \n\nWhen the command is run with a file it prints the reformatted source to standard output.\nWhen the command is run with a project directory it prints a list of unformatted files in the project.")
 commandCheck :: Mod CommandFields TopCommand
 commandCheck =
   command "typecheck" $
