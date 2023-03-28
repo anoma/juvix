@@ -92,14 +92,15 @@ lambdaLiftNode aboveBl top =
               topSymsWithName = zipExact topSyms topNames
 
               recItemsFreeVars :: [(Var, Binder)]
-              recItemsFreeVars = mapMaybe helper (concatMap (freeVarsCtx' bl') defs)
+              recItemsFreeVars = mapMaybe helper (freeVarsCtxMany' bl' defs)
                 where
+                  -- discards free variables that refer to the letrec items
                   helper :: Var -> Maybe (Var, Binder)
                   helper v
                     | v ^. varIndex < ndefs = Nothing
                     | otherwise = Just (set varIndex idx' v, BL.lookup idx' bl)
                     where
-                      idx' = (v ^. varIndex) - ndefs
+                      idx' = v ^. varIndex - ndefs
 
               letItems :: [Node]
               letItems =

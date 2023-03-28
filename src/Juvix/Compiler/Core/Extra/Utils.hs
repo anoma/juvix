@@ -54,8 +54,11 @@ isImmediate = \case
   NCst {} -> True
   _ -> False
 
+freeVarsSortedMany :: [Node] -> Set Var
+freeVarsSortedMany n = Set.fromList (n ^.. each . freeVars)
+
 freeVarsSorted :: Node -> Set Var
-freeVarsSorted n = Set.fromList (n ^.. freeVars)
+freeVarsSorted = freeVarsSortedMany . pure
 
 freeVarsSet :: Node -> HashSet Var
 freeVarsSet n = HashSet.fromList (n ^.. freeVars)
@@ -137,14 +140,18 @@ captureFreeVarsCtx bl n =
   let assocs = freeVarsCtx bl n
    in (assocs, captureFreeVars (map (first (^. varIndex)) assocs) n)
 
-freeVarsCtx' :: BinderList Binder -> Node -> [Var]
-freeVarsCtx' bl = map fst . freeVarsCtx bl
+freeVarsCtxMany' :: BinderList Binder -> [Node] -> [Var]
+freeVarsCtxMany' bl = map fst . freeVarsCtxMany bl
 
--- | The output list does not contain repeated elements and is sorted by *decreasing* variable index.
--- The indices are relative to the given binder list
 freeVarsCtx :: BinderList Binder -> Node -> [(Var, Binder)]
-freeVarsCtx ctx =
-  BL.lookupsSortedRev ctx . run . fmap fst . runOutputList . go . freeVarsSorted
+freeVarsCtx ctx = freeVarsCtxMany ctx . pure
+
+-- | The output list does not contain repeated elements and is sorted by
+-- *decreasing* variable index. The indices are relative to the given binder
+-- list
+freeVarsCtxMany :: BinderList Binder -> [Node] -> [(Var, Binder)]
+freeVarsCtxMany ctx =
+  BL.lookupsSortedRev ctx . run . fmap fst . runOutputList . go . freeVarsSortedMany
   where
     go ::
       -- set of free variables relative to the original ctx
