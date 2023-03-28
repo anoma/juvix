@@ -124,7 +124,7 @@ parseUtility =
           ( progDescDoc
               ( Just
                   ( vsep
-                      [ "Format a Juvix file or project directory",
+                      [ "Format a Juvix file or Juvix project",
                         "",
                         "When the command is run with an unformatted file it prints the reformatted source to standard output.",
                         "When the command is run with a project directory it prints a list of unformatted files in the project."
