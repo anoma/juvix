@@ -14,7 +14,7 @@ defaultCoreOptions :: CoreOptions
 defaultCoreOptions =
   CoreOptions
     { _optCheckCoverage = True,
-      _optUnrollLimit = 140
+      _optUnrollLimit = defaultUnrollLimit
     }
 
 fromEntryPoint :: EntryPoint -> CoreOptions
