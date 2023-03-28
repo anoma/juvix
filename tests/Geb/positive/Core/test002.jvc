@@ -1,3 +1,4 @@
+-- pattern matching
 
 type optbool {
   Just : Bool -> optbool;

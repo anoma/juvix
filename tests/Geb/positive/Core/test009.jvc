@@ -1,0 +1,3 @@
+-- comparisons
+
+(\(x : Int) if 0 <= x then 1 else 2) 3
