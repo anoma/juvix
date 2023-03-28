@@ -9,7 +9,6 @@ import Control.Exception (throwIO)
 import Control.Monad.State.Strict qualified as State
 import Data.String.Interpolate (i, __i)
 import Evaluator
-import Juvix.Compiler.Backend qualified as Backend
 import Juvix.Compiler.Builtins.Effect
 import Juvix.Compiler.Core.Error qualified as Core
 import Juvix.Compiler.Core.Extra qualified as Core
@@ -85,20 +84,9 @@ runCommand opts = do
         gopts <- State.gets (^. replStateGlobalOptions)
         absInputFile :: Path Abs File <- replMakeAbsolute inputFile
         return $
-          EntryPoint
-            { _entryPointRoot = root,
-              _entryPointBuildDir = buildDir,
-              _entryPointResolverRoot = root,
-              _entryPointNoTermination = gopts ^. globalNoTermination,
-              _entryPointNoPositivity = gopts ^. globalNoPositivity,
-              _entryPointNoCoverage = gopts ^. globalNoCoverage,
-              _entryPointNoStdlib = gopts ^. globalNoStdlib,
-              _entryPointPackage = package,
-              _entryPointModulePaths = pure absInputFile,
-              _entryPointGenericOptions = project gopts,
-              _entryPointStdin = Nothing,
-              _entryPointTarget = Backend.TargetCore,
-              _entryPointDebug = False
+          (entryPointFromGlobalOptions root absInputFile gopts)
+            { _entryPointBuildDir = buildDir,
+              _entryPointPackage = package
             }
 
       printHelpTxt :: String -> Repl ()
@@ -306,23 +294,10 @@ defaultPreludeEntryPoint :: Repl EntryPoint
 defaultPreludeEntryPoint = do
   opts <- State.gets (^. replStateGlobalOptions)
   root <- State.gets (^. replStatePkgDir)
-  let buildDir = rootBuildDir root
-      defStdlibDir = defaultStdlibPath buildDir
+  let defStdlibDir = defaultStdlibPath (rootBuildDir root)
   return $
-    EntryPoint
-      { _entryPointRoot = root,
-        _entryPointResolverRoot = defStdlibDir,
-        _entryPointBuildDir = buildDir,
-        _entryPointNoTermination = opts ^. globalNoTermination,
-        _entryPointNoPositivity = opts ^. globalNoPositivity,
-        _entryPointNoCoverage = opts ^. globalNoCoverage,
-        _entryPointNoStdlib = opts ^. globalNoStdlib,
-        _entryPointPackage = defaultPackage root buildDir,
-        _entryPointModulePaths = pure (defStdlibDir <//> preludePath),
-        _entryPointGenericOptions = project opts,
-        _entryPointStdin = Nothing,
-        _entryPointTarget = Backend.TargetCore,
-        _entryPointDebug = False
+    (entryPointFromGlobalOptions root (defStdlibDir <//> preludePath) opts)
+      { _entryPointResolverRoot = defStdlibDir
       }
 
 replMakeAbsolute :: SomeBase b -> Repl (Path Abs b)

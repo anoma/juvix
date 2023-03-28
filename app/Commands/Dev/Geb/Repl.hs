@@ -43,20 +43,10 @@ runCommand replOpts = do
         gopts <- State.gets (^. replStateGlobalOptions)
         absInputFile :: Path Abs File <- replMakeAbsolute inputFile
         return $
-          EntryPoint
-            { _entryPointRoot = root,
-              _entryPointBuildDir = buildDir,
-              _entryPointResolverRoot = root,
-              _entryPointNoTermination = gopts ^. globalNoTermination,
-              _entryPointNoPositivity = gopts ^. globalNoPositivity,
-              _entryPointNoCoverage = gopts ^. globalNoCoverage,
-              _entryPointNoStdlib = gopts ^. globalNoStdlib,
+          (entryPointFromGlobalOptions root absInputFile gopts)
+            { _entryPointBuildDir = buildDir,
               _entryPointPackage = package,
-              _entryPointModulePaths = pure absInputFile,
-              _entryPointGenericOptions = project gopts,
-              _entryPointStdin = Nothing,
-              _entryPointTarget = Backend.TargetGeb,
-              _entryPointDebug = False
+              _entryPointTarget = Backend.TargetGeb
             }
   embed
     ( State.evalStateT

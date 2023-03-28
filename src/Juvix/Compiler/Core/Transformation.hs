@@ -42,7 +42,7 @@ applyTransformations ts tbl = foldl' (\acc tid -> acc >>= appTrans tid) (return 
       NatToInt -> return . natToInt
       ConvertBuiltinTypes -> return . convertBuiltinTypes
       ComputeTypeInfo -> return . computeTypeInfo
-      UnrollRecursion -> return . unrollRecursion
+      UnrollRecursion -> unrollRecursion
       MatchToCase -> mapError (JuvixError @CoreError) . matchToCase
       NaiveMatchToCase -> return . Naive.matchToCase
       EtaExpandApps -> return . etaExpansionApps
