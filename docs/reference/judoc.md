@@ -8,7 +8,7 @@ blocks* to the following entities:
 4. A type signature of a function.
 5. An axiom definition.
 
-In order to attach documentation to any of these entities, write *blocks* of
+In order to attach documentation to any of these entities, write _blocks_ of
 documentation before them:
 
 1. For modules:
@@ -32,16 +32,16 @@ documentation before them:
    id : {A : Type} -> A -> A;
    ```
    
-   Next we define the syntax of Judoc *blocks*.
+   Next we define the syntax of Judoc _blocks_.
 
 ## Block
 
-A *block* can be one of these:
-1. A *paragraph*.
-2. An *example*.
+A _block_ can be one of these:
+1. A _paragraph_.
+2. An _example_.
 
-*Blocks* are separated by a line with only `---`.
-For instance, this is a sequence of two *blocks*:
+_Blocks_ are separated by a line with only `---`.
+For instance, this is a sequence of two _blocks_:
 ```
 --- First block
 ---
@@ -56,9 +56,9 @@ Note that the following is a single block since it lacks the `---` separator:
 ```
 
 ### Paragraph
-A *paragraph* is a non-empty sequence of *lines*.
+A _paragraph_ is a non-empty sequence of _lines_.
 
-For instance, the following is a paragraph with two *lines*:
+For instance, the following is a paragraph with two _lines_:
 ```
 --- First line
 --- Second line
@@ -72,20 +72,20 @@ First line Second line
 ```
 
 ##### line
-A *line* starts with `---` and is followed by a non-empty sequence of
-*atoms*.
+A _line_ starts with `---` and is followed by a non-empty sequence of
+_atoms_.
 
-For instance, the following is a valid *line*:
+For instance, the following is a valid _line_:
 ```
 --- A ;Pair Int Bool; contains an ;Int; and a ;Bool;
 ```
 
 ##### Atom
-An *atom* is either:
+An _atom_ is either:
 1. A string of text (including spaces but not line breaks).
 2. An inline Juvix expression surrounded by `;`.
 
-For instance, the following are valid *atoms*:
+For instance, the following are valid _atoms_:
 1. `I am some text.`
 2. `;Pair Int Bool;`
 
