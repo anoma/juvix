@@ -114,7 +114,7 @@ convertIdent tab ii =
           zipExact tyargs' $
             map fst $
               filter (not . isTypeConstr tab . snd) (zipExact (ii ^. identifierArgsInfo) tyargs),
-      _identifierArgsNum = length (typeArgs ty')
+      _identifierArgsNum = length tyargs'
     }
   where
     tyargs = typeArgs (ii ^. identifierType)
