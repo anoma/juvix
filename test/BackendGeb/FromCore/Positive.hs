@@ -88,8 +88,13 @@ tests =
       $(mkRelFile "Core/test010.jvc")
       $(mkRelFile "Eval/out/test010.geb"),
     PosTest
-      "Test010: functions returning functions with variable capture"
+      "Test011: functions returning functions with variable capture"
       $(mkRelDir ".")
       $(mkRelFile "Core/test011.jvc")
-      $(mkRelFile "Eval/out/test011.geb")
+      $(mkRelFile "Eval/out/test011.geb"),
+    PosTest
+      "Test012: partial application"
+      $(mkRelDir ".")
+      $(mkRelFile "Core/test012.jvc")
+      $(mkRelFile "Eval/out/test012.geb")
   ]
