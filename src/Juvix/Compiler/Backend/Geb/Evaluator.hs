@@ -61,7 +61,7 @@ evalAndOutputMorphism ::
   Sem r Morphism
 evalAndOutputMorphism m = do
   val :: GebValue <- mapError (JuvixError @EvalError) $ eval m
-  quote val
+  return $ quote val
 
 type EvalEffects r = Members '[Reader Env, Error EvalError] r
 
@@ -292,52 +292,48 @@ valueFalse =
         _rightInjRightType = ObjectTerminal
       }
 
-quote :: GebValue -> Sem r Morphism
+quote :: GebValue -> Morphism
 quote = \case
   GebValueClosure cls -> quoteClosure cls
-  GebValueMorphismInteger i -> return $ MorphismInteger i
+  GebValueMorphismInteger i -> MorphismInteger i
   GebValueMorphismLeft m -> quoteValueMorphismLeft m
   GebValueMorphismPair m -> quoteValueMorphismPair m
   GebValueMorphismRight m -> quoteValueMorphismRight m
-  GebValueMorphismUnit -> return MorphismUnit
+  GebValueMorphismUnit -> MorphismUnit
 
-quoteClosure :: ValueClosure -> Sem r Morphism
-quoteClosure cls = do
-  env <- mapM quote (toList (cls ^. valueClosureEnv))
-  return $
-    substs env (MorphismLambda (cls ^. valueClosureLambda))
+quoteClosure :: ValueClosure -> Morphism
+quoteClosure cls =
+  let env = map quote (toList (cls ^. valueClosureEnv))
+   in substs env (MorphismLambda (cls ^. valueClosureLambda))
 
-quoteValueMorphismPair :: ValuePair -> Sem r Morphism
-quoteValueMorphismPair vpair = do
-  pLeft <- quote (vpair ^. pairLeft)
-  pRight <- quote (vpair ^. pairRight)
-  return $
-    MorphismPair
-      Pair
-        { _pairLeft = pLeft,
-          _pairRight = pRight,
-          _pairLeftType = vpair ^. pairLeftType,
-          _pairRightType = vpair ^. pairRightType
-        }
+quoteValueMorphismPair :: ValuePair -> Morphism
+quoteValueMorphismPair vpair =
+  let pLeft = quote (vpair ^. pairLeft)
+      pRight = quote (vpair ^. pairRight)
+   in MorphismPair
+        Pair
+          { _pairLeft = pLeft,
+            _pairRight = pRight,
+            _pairLeftType = vpair ^. pairLeftType,
+            _pairRightType = vpair ^. pairRightType
+          }
 
-quoteValueMorphismLeft :: ValueLeftInj -> Sem r Morphism
-quoteValueMorphismLeft m = do
-  leftMorphism <- quote (m ^. leftInjValue)
-  return $
-    MorphismLeft
-      LeftInj
-        { _leftInjValue = leftMorphism,
-          _leftInjLeftType = m ^. leftInjLeftType,
-          _leftInjRightType = m ^. leftInjRightType
-        }
+quoteValueMorphismLeft :: ValueLeftInj -> Morphism
+quoteValueMorphismLeft m =
+  let leftMorphism = quote (m ^. leftInjValue)
+   in MorphismLeft
+        LeftInj
+          { _leftInjValue = leftMorphism,
+            _leftInjLeftType = m ^. leftInjLeftType,
+            _leftInjRightType = m ^. leftInjRightType
+          }
 
-quoteValueMorphismRight :: ValueRightInj -> Sem r Morphism
-quoteValueMorphismRight m = do
-  rightMorphism <- quote (m ^. rightInjValue)
-  return $
-    MorphismRight
-      RightInj
-        { _rightInjValue = rightMorphism,
-          _rightInjLeftType = m ^. rightInjLeftType,
-          _rightInjRightType = m ^. rightInjRightType
-        }
+quoteValueMorphismRight :: ValueRightInj -> Morphism
+quoteValueMorphismRight m =
+  let rightMorphism = quote (m ^. rightInjValue)
+   in MorphismRight
+        RightInj
+          { _rightInjValue = rightMorphism,
+            _rightInjLeftType = m ^. rightInjLeftType,
+            _rightInjRightType = m ^. rightInjRightType
+          }
