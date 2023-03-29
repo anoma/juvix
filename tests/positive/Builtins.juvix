@@ -1,9 +1,13 @@
 module Builtins;
-  open import Stdlib.Prelude;
 
-  f : String -> IO;
-  f s := printStringLn (natToString (stringToNat "290" + 3) ++str natToString 7 ++str s);
+open import Stdlib.Prelude;
 
-  main : IO;
-  main := readLn f;
-end;
+f : String -> IO;
+f s :=
+  printStringLn
+    (natToString (stringToNat "290" + 3)
+      ++str natToString 7
+      ++str s);
+
+main : IO;
+main := readLn f;

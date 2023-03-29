@@ -57,6 +57,7 @@ module Juvix.Prelude.Base
     module Polysemy.Fixpoint,
     module Polysemy.Output,
     module Polysemy.Reader,
+    module Polysemy.Resource,
     module Polysemy.State,
     module Language.Haskell.TH.Syntax,
     module Prettyprinter,
@@ -158,6 +159,7 @@ import Polysemy.Error hiding (fromEither)
 import Polysemy.Fixpoint
 import Polysemy.Output
 import Polysemy.Reader
+import Polysemy.Resource
 import Polysemy.State
 import Prettyprinter (Doc, (<+>))
 import Safe.Exact

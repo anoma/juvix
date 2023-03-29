@@ -1,10 +1,9 @@
 module Data.Bool;
-  type Bool :=
-    true : Bool |
-    false : Bool;
 
-  not : Bool → Bool;
-  not true := false;
-  not false := true;
+type Bool :=
+  | true : Bool
+  | false : Bool;
 
-end;
+not : Bool → Bool;
+not true := false;
+not false := true;

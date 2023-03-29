@@ -5,18 +5,20 @@ open Data.Bool;
 
 -- infixr 5 ::; waiting for implicit arguments
 type List (A : Type) :=
-  nil : List A
+  | nil : List A
   | :: : A → List A → List A;
 
 match : {A : Type} → {B : Type} → A → (A → B) → B;
 match x f := f x;
 
-foldr : (a : Type) → (b : Type) → (a → b → b) → b → List a → b;
+foldr :
+  (a : Type) → (b : Type) → (a → b → b) → b → List a → b;
 foldr _ _ _ z nil := z;
 foldr a b f z (:: h hs) := f h (foldr a b f z hs);
 
-foldl : (a : Type) → (b : Type) → (b → a → b) → b → List a → b;
-foldl a b f z nil := z ;
+foldl :
+  (a : Type) → (b : Type) → (b → a → b) → b → List a → b;
+foldl a b f z nil := z;
 foldl a b f z (:: h hs) := foldl a b f (f z h) hs;
 
 map : (a : Type) → (b : Type) → (a → b) → List a → List b;
@@ -25,10 +27,13 @@ map a b f (:: h hs) := :: (f h) (map a b f hs);
 
 filter : (a : Type) → (a → Bool) → List a → List a;
 filter a f nil := nil;
-filter a f (:: h hs) := match (f h) λ {
-  | true := :: h (filter a f hs)
-  | false := filter a f hs
-};
+filter a f (:: h hs) :=
+  match
+    (f h)
+    λ {
+      | true := :: h (filter a f hs)
+      | false := filter a f hs
+    };
 
 import Data.Nat;
 open Data.Nat;
@@ -40,10 +45,10 @@ length a (:: _ l) := suc (length a l);
 reverse : (a : Type) → List a → List a;
 reverse a l :=
   let
-  rev : List a → List a → List a;
-  rev nil a := a;
-  rev (:: x xs) a := rev xs (:: x a)
-   in rev l nil;
+    rev : List a → List a → List a;
+    rev nil a := a;
+    rev (:: x xs) a := rev xs (:: x a);
+  in rev l nil;
 
 replicate : (a : Type) → ℕ → a → List a;
 replicate a zero _ := nil;
@@ -60,18 +65,30 @@ import Data.Product;
 open Data.Product;
 
 splitAt : (a : Type) → ℕ → List a → List a × List a;
-splitAt a _ nil := , nil nil ;
+splitAt a _ nil := , nil nil;
 splitAt a zero xs := , nil xs;
 splitAt a (suc zero) (:: x xs) := , (:: x nil) xs;
-splitAt a (suc (suc m)) (:: x xs) := match (splitAt a m xs) λ {
-    (, xs' xs'') := , (:: x xs') xs''
-  };
+splitAt a (suc (suc m)) (:: x xs) :=
+  match
+    (splitAt a m xs)
+    λ {
+      | (, xs' xs'') := , (:: x xs') xs''
+    };
 
-terminating merge : (a : Type) → (a → a → Ordering) → List a → List a → List a;
-merge a cmp (:: x xs) (:: y ys) := match (cmp x y) λ {
-    | LT := :: x (merge a cmp xs (:: y ys))
-    | _ := :: y (merge a cmp (:: x xs) ys)
-  };
+terminating
+merge :
+  (a : Type)
+    → (a → a → Ordering)
+    → List a
+    → List a
+    → List a;
+merge a cmp (:: x xs) (:: y ys) :=
+  match
+    (cmp x y)
+    λ {
+      | LT := :: x (merge a cmp xs (:: y ys))
+      | _ := :: y (merge a cmp (:: x xs) ys)
+    };
 merge _ _ nil ys := ys;
 merge _ _ xs nil := xs;
 
@@ -80,20 +97,24 @@ merge _ _ xs nil := xs;
 ++ a nil ys := ys;
 ++ a (:: x xs) ys := :: x (++ a xs ys);
 
-terminating quickSort : (a : Type) → (a → a → Ordering) → List a → List a;
+terminating
+quickSort :
+  (a : Type) → (a → a → Ordering) → List a → List a;
 quickSort a _ nil := nil;
 quickSort a _ (:: x nil) := :: x nil;
 quickSort a cmp (:: x ys) :=
   let
     ltx : a → Bool;
-    ltx y := match (cmp y x) λ{
-      | LT := true
-      | _  := false
-    };
+    ltx y :=
+      match
+        (cmp y x)
+        λ {
+          | LT := true
+          | _ := false
+        };
     gex : a → Bool;
-    gex y := not (ltx y)
-   in
-     ++ a (quickSort a cmp (filter a ltx ys))
+    gex y := not (ltx y);
+  in ++
+    a
+    (quickSort a cmp (filter a ltx ys))
     (++ a (:: x nil) (quickSort a cmp (filter a gex ys)));
-
-end;

@@ -1,16 +1,16 @@
 module LetShadow;
-  type Nat :=
-    | zero : Nat
-    | suc : Nat → Nat;
 
-  type Unit :=
-    | unit : Unit;
+type Nat :=
+  | zero : Nat
+  | suc : Nat → Nat;
 
-  t : Nat;
-  t :=
-    case unit
-      | x :=
-        let
-          x : Nat := suc zero;
-        in x;
-end;
+type Unit :=
+  | unit : Unit;
+
+t : Nat;
+t :=
+  case unit
+    | x :=
+      let
+        x : Nat := suc zero;
+      in x;

@@ -1,15 +1,15 @@
 module Nat;
-  type Bool :=
-    | true : Bool
-    | false : Bool;
 
-  type Nat :=
-    | zero : Nat
-    | suc : Nat → Nat;
+type Bool :=
+  | true : Bool
+  | false : Bool;
 
-  is-zero : Nat → Bool;
-  is-zero n :=
-    case n
-      | zero := true
-      | suc _ := false;
-end;
+type Nat :=
+  | zero : Nat
+  | suc : Nat → Nat;
+
+is-zero : Nat → Bool;
+is-zero n :=
+  case n
+    | zero := true
+    | suc _ := false;

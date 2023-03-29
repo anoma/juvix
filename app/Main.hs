@@ -12,4 +12,4 @@ main = do
   _runAppIOArgsInvokeDir <- getCurrentDir
   (_runAppIOArgsGlobalOptions, cli) <- customExecParser parserPreferences descr
   (_runAppIOArgsPkgDir, _runAppIOArgsPkg, _runAppIOArgsBuildDir) <- findRootAndChangeDir (topCommandInputFile cli) _runAppIOArgsGlobalOptions _runAppIOArgsInvokeDir
-  runM (runAppIO (RunAppIOArgs {..}) (runTopCommand cli))
+  runFinal (resourceToIOFinal (embedToFinal @IO (runAppIO (RunAppIOArgs {..}) (runTopCommand cli))))

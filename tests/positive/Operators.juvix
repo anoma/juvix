@@ -1,15 +1,13 @@
 module Operators;
 
-  infixl 5 + ;
-  axiom + : Type → Type → Type;
+infixl 5 +;
+axiom + : Type → Type → Type;
 
-  plus : Type → Type → Type;
-  plus := (+);
+plus : Type → Type → Type;
+plus := (+);
 
-  plus2 : Type → Type → Type → Type;
-  plus2 a b c := a + b + c;
+plus2 : Type → Type → Type → Type;
+plus2 a b c := a + b + c;
 
-  plus3 : Type → Type → Type → Type → Type;
-  plus3 a b c d := (+) (a + b) ((+) c d);
-
-end;
+plus3 : Type → Type → Type → Type → Type;
+plus3 a b c d := (+) (a + b) ((+) c d);

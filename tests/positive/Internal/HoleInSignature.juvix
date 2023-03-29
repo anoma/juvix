@@ -1,15 +1,14 @@
 module HoleInSignature;
+
 type Pair (A : Type) (B : Type) :=
-  mkPair : A → B → Pair A B;
+  | mkPair : A → B → Pair A B;
 
 type Bool :=
-  true : Bool |
-  false : Bool;
+  | true : Bool
+  | false : Bool;
 
 p : Pair _ _;
 p := mkPair true false;
 
 p2 : (A : Type) → (B : Type) → _ → B → Pair A _;
 p2 _ _ a b := mkPair a b;
-
-end;

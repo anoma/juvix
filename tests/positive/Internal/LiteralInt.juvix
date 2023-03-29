@@ -1,11 +1,15 @@
 module LiteralInt;
-  open import Stdlib.Prelude;
-  type A := a : A;
-  type B := b : B;
 
-  f : Nat;
-  f := 1;
+open import Stdlib.Prelude;
 
-  main : IO;
-  main := printNatLn 2;
-end;
+type A :=
+  | a : A;
+
+type B :=
+  | b : B;
+
+f : Nat;
+f := 1;
+
+main : IO;
+main := printNatLn 2;

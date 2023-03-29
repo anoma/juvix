@@ -2,9 +2,12 @@ module Juvix.Data.Effect.Files.Pure where
 
 import Data.HashMap.Strict qualified as HashMap
 import Data.Tree
+import Data.Unique
 import Juvix.Data.Effect.Files.Base
 import Juvix.Prelude.Base
 import Juvix.Prelude.Path
+import Polysemy.ConstraintAbsorber.MonadCatch
+import Polysemy.Fresh
 import Prelude qualified
 
 data FS = FS
@@ -78,9 +81,26 @@ re cwd = reinterpret $ \case
   ListDirRel p -> do
     n <- lookupDir' p
     return (HashMap.keys (n ^. dirDirs), HashMap.keys (n ^. dirFiles))
+  RemoveFile' p -> removeFileHelper p
+  RenameFile' p1 p2 -> renameFileHelper p1 p2
+  CopyFile' p1 p2 -> copyFileHelper p1 p2
   where
     cwd' :: FilePath
     cwd' = toFilePath cwd
+
+runTempFilePure ::
+  Members '[Files, Fresh Unique, Error SomeException] r =>
+  Sem (TempFile ': r) a ->
+  Sem r a
+runTempFilePure = interpret $ \case
+  TempFilePath -> do
+    tmpDir <- absorbMonadThrow (parseAbsDir "/tmp")
+    uid <- show . hashUnique <$> fresh
+    tmpFile <- absorbMonadThrow (parseRelFile uid)
+    let p = tmpDir <//> tmpFile
+    writeFile' p ""
+    return p
+  RemoveTempFile p -> removeFile' p
 
 missingErr :: (Members '[State FS] r) => FilePath -> Sem r a
 missingErr f = do
@@ -139,6 +159,30 @@ writeFileHelper p contents = do
         where
           helper :: Maybe FSNode -> FSNode
           helper = maybe (error "directory does not exist") (go ds)
+
+removeFileHelper :: (Members '[State FS] r) => Path Abs File -> Sem r ()
+removeFileHelper p = do
+  checkRoot r
+  modify (over fsNode (go dirs))
+  where
+    (r, dirs, f) = destructAbsFile p
+    go :: [Path Rel Dir] -> FSNode -> FSNode
+    go = \case
+      [] -> set (dirFiles . at f) Nothing
+      (d : ds) -> over dirDirs (HashMap.alter (Just . helper) d)
+        where
+          helper :: Maybe FSNode -> FSNode
+          helper = maybe (error "directory does not exist") (go ds)
+
+renameFileHelper :: (Members '[State FS] r) => Path Abs File -> Path Abs File -> Sem r ()
+renameFileHelper fromPath toPath = do
+  copyFileHelper fromPath toPath
+  removeFileHelper fromPath
+
+copyFileHelper :: (Members '[State FS] r) => Path Abs File -> Path Abs File -> Sem r ()
+copyFileHelper fromPath toPath = do
+  fromContents <- lookupFile' fromPath
+  writeFileHelper toPath fromContents
 
 lookupDir :: (Members '[State FS] r) => Path Abs Dir -> Sem r (Maybe FSNode)
 lookupDir p = do

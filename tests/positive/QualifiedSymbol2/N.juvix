@@ -1,10 +1,9 @@
 module N;
-  import M;
 
-  module M;
-    axiom A : Type;
-  end;
+import M;
 
-  axiom B : M.A;
-
+module M;
+  axiom A : Type;
 end;
+
+axiom B : M.A;

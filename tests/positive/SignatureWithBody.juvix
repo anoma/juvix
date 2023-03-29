@@ -1,15 +1,21 @@
 module SignatureWithBody;
-  open import Stdlib.Prelude;
 
-  isNull : {A : Type} → List A → Bool := λ {
+open import Stdlib.Prelude;
+
+isNull :
+  {A : Type} → List A → Bool :=
+    λ {
       | nil := true
       | _ := false
     };
 
-  isNull' : {A : Type} → List A → Bool := let
-      aux : {A : Type} → List A → Bool := λ {
-          | nil := true
-          | _ := false
-        };
-     in aux;
-end;
+isNull' :
+  {A : Type} → List A → Bool :=
+    let
+      aux :
+          {A : Type} → List A → Bool :=
+            λ {
+              | nil := true
+              | _ := false
+            };
+    in aux;

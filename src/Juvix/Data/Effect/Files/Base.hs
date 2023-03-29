@@ -16,9 +16,15 @@ data RecursorArgs = RecursorArgs
 
 data Recurse r
   = RecurseNever
-  | RecurseFilter (Path r Dir -> Bool)
+  | RecurseFilter (Bool -> Path r Dir -> Bool)
 
 makeLenses ''RecursorArgs
+
+data TempFile m a where
+  TempFilePath :: TempFile m (Path Abs File)
+  RemoveTempFile :: Path Abs File -> TempFile m ()
+
+makeSem ''TempFile
 
 data Files m a where
   EnsureDir' :: Path Abs Dir -> Files m ()
@@ -32,5 +38,8 @@ data Files m a where
   RemoveDirectoryRecursive' :: Path Abs Dir -> Files m ()
   WriteFile' :: Path Abs File -> Text -> Files m ()
   WriteFileBS :: Path Abs File -> ByteString -> Files m ()
+  RemoveFile' :: Path Abs File -> Files m ()
+  RenameFile' :: Path Abs File -> Path Abs File -> Files m ()
+  CopyFile' :: Path Abs File -> Path Abs File -> Files m ()
 
 makeSem ''Files

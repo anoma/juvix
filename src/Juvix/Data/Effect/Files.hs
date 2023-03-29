@@ -10,6 +10,7 @@ import Data.HashSet qualified as HashSet
 import Juvix.Data.Effect.Files.Base
 import Juvix.Data.Effect.Files.IO
 import Juvix.Data.Effect.Files.Pure (runFilesPure)
+import Juvix.Extra.Paths.Base
 import Juvix.Prelude.Base
 import Juvix.Prelude.Path
 
@@ -47,11 +48,12 @@ walkDirRel handler topdir = do
       walktree curdir = do
         let fullDir :: Path Abs Dir = topdir <//> curdir
         (subdirs, files) <- listDirRel fullDir
+        let hasJuvixYaml = juvixYamlFile `elem` files
         action <- raise (handler fullDir subdirs files)
         case action of
           RecurseNever -> return ()
           RecurseFilter fi ->
-            let ds = map (curdir <//>) (filter fi subdirs)
+            let ds = map (curdir <//>) (filter (fi hasJuvixYaml) subdirs)
              in mapM_ walkAvoidLoop ds
       checkLoop :: Path Abs Dir -> Sem (State (HashSet Uid) ': r) Bool
       checkLoop dir = do
@@ -61,3 +63,14 @@ walkDirRel handler topdir = do
             | HashSet.member ufid visited -> return True
             | otherwise -> modify' (HashSet.insert ufid) $> False
   evalState mempty (walkAvoidLoop $(mkRelDir "."))
+
+-- | Restore the original contents of a file if an error occurs in an action.
+restoreFileOnError :: forall r a. Members '[Resource, Files, TempFile] r => Path Abs File -> Sem r a -> Sem r a
+restoreFileOnError p action = do
+  t <- tempFilePath
+  finally (restoreOnErrorAction t) (removeTempFile t)
+  where
+    restoreOnErrorAction :: Path Abs File -> Sem r a
+    restoreOnErrorAction tmpFile = do
+      copyFile' p tmpFile
+      onException action (renameFile' tmpFile p)
