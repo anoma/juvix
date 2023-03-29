@@ -3,5 +3,13 @@
     (cls
       (env
         nil)
-      (index 0)))
-  (index 1))
+      (lamb
+        so1
+        so1
+        (index 0))))
+  (lamb
+    int
+    (!->
+      so1
+      so1)
+    (index 1)))

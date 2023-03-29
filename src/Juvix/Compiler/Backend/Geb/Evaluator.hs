@@ -5,12 +5,11 @@ module Juvix.Compiler.Backend.Geb.Evaluator
   )
 where
 
-import Control.Exception qualified as Exception
-import Juvix.Compiler.Backend.Geb.Analysis.TypeChecking as Geb
 import Juvix.Compiler.Backend.Geb.Data.Context as Context
 import Juvix.Compiler.Backend.Geb.Evaluator.Data
 import Juvix.Compiler.Backend.Geb.Evaluator.Error
 import Juvix.Compiler.Backend.Geb.Evaluator.Options
+import Juvix.Compiler.Backend.Geb.Extra
 import Juvix.Compiler.Backend.Geb.Language
 import Juvix.Compiler.Backend.Geb.Translation.FromSource as Geb
 
@@ -62,12 +61,7 @@ evalAndOutputMorphism ::
   Sem r Morphism
 evalAndOutputMorphism m = do
   val :: GebValue <- mapError (JuvixError @EvalError) $ eval m
-  obj :: Object <-
-    runReader (mempty @CheckingEnv) $
-      mapError (JuvixError @CheckingError) (inferObject m)
-  if
-      | requiresObjectInfo val -> quote (Just obj) val
-      | otherwise -> quote Nothing val
+  return $ quote val
 
 type EvalEffects r = Members '[Reader Env, Error EvalError] r
 
@@ -109,16 +103,18 @@ evalPair pair = do
   right <- eval $ pair ^. pairRight
   return $
     GebValueMorphismPair $
-      ValueMorphismPair
-        { _valueMorphismPairLeft = left,
-          _valueMorphismPairRight = right
+      Pair
+        { _pairLeft = left,
+          _pairRight = right,
+          _pairLeftType = pair ^. pairLeftType,
+          _pairRightType = pair ^. pairRightType
         }
 
 evalFirst :: EvalEffects r => First -> Sem r GebValue
 evalFirst f = do
   res <- eval $ f ^. firstValue
   case res of
-    GebValueMorphismPair pair -> return $ pair ^. valueMorphismPairLeft
+    GebValueMorphismPair pair -> return $ pair ^. pairLeft
     _ ->
       throw
         EvalError
@@ -131,7 +127,7 @@ evalSecond :: EvalEffects r => Second -> Sem r GebValue
 evalSecond s = do
   res <- eval $ s ^. secondValue
   case res of
-    GebValueMorphismPair pair -> return $ pair ^. valueMorphismPairRight
+    GebValueMorphismPair pair -> return $ pair ^. pairRight
     _ ->
       throw
         EvalError
@@ -143,12 +139,24 @@ evalSecond s = do
 evalLeftInj :: EvalEffects r => LeftInj -> Sem r GebValue
 evalLeftInj s = do
   res <- eval $ s ^. leftInjValue
-  return $ GebValueMorphismLeft res
+  return $
+    GebValueMorphismLeft $
+      LeftInj
+        { _leftInjValue = res,
+          _leftInjLeftType = s ^. leftInjLeftType,
+          _leftInjRightType = s ^. leftInjRightType
+        }
 
 evalRightInj :: EvalEffects r => RightInj -> Sem r GebValue
 evalRightInj s = do
   res <- eval $ s ^. rightInjValue
-  return $ GebValueMorphismRight res
+  return $
+    GebValueMorphismRight $
+      RightInj
+        { _rightInjValue = res,
+          _rightInjLeftType = s ^. rightInjLeftType,
+          _rightInjRightType = s ^. rightInjRightType
+        }
 
 evalApp :: EvalEffects r => Application -> Sem r GebValue
 evalApp app = do
@@ -167,8 +175,8 @@ apply fun' arg = do
       do
         let clsEnv = cls ^. valueClosureEnv
             bodyEnv = Context.cons arg clsEnv
-        local (over envContext (const bodyEnv)) $
-          eval (cls ^. valueClosureLambdaBody)
+        local (set envContext bodyEnv) $
+          eval (cls ^. valueClosureLambda . lambdaBody)
     _ ->
       throw $
         EvalError
@@ -183,7 +191,7 @@ evalLambda lambda = do
   return $
     GebValueClosure $
       ValueClosure
-        { _valueClosureLambdaBody = lambda ^. lambdaBody,
+        { _valueClosureLambda = lambda,
           _valueClosureEnv = ctx
         }
 
@@ -191,8 +199,8 @@ evalCase :: EvalEffects r => Case -> Sem r GebValue
 evalCase c = do
   vCaseOn <- eval $ c ^. caseOn
   case vCaseOn of
-    GebValueMorphismLeft leftArg -> apply (c ^. caseLeft) leftArg
-    GebValueMorphismRight rightArg -> apply (c ^. caseRight) rightArg
+    GebValueMorphismLeft leftArg -> apply (c ^. caseLeft) (leftArg ^. leftInjValue)
+    GebValueMorphismRight rightArg -> apply (c ^. caseRight) (rightArg ^. rightInjValue)
     _ ->
       throw
         EvalError
@@ -210,9 +218,11 @@ evalBinop binop = do
   right <- eval $ binop ^. binopRight
   let lfPair m1 m2 =
         ( GebValueMorphismPair
-            ( ValueMorphismPair
-                { _valueMorphismPairLeft = m1,
-                  _valueMorphismPairRight = m2
+            ( Pair
+                { _pairLeft = m1,
+                  _pairRight = m2,
+                  _pairLeftType = ObjectInteger,
+                  _pairRightType = ObjectInteger
                 }
             )
         )
@@ -265,103 +275,65 @@ sameKind l r = case (l, r) of
   _ -> False
 
 valueTrue :: GebValue
-valueTrue = GebValueMorphismLeft GebValueMorphismUnit
+valueTrue =
+  GebValueMorphismLeft $
+    LeftInj
+      { _leftInjValue = GebValueMorphismUnit,
+        _leftInjLeftType = ObjectTerminal,
+        _leftInjRightType = ObjectTerminal
+      }
 
 valueFalse :: GebValue
-valueFalse = GebValueMorphismRight GebValueMorphismUnit
+valueFalse =
+  GebValueMorphismRight $
+    RightInj
+      { _rightInjValue = GebValueMorphismUnit,
+        _rightInjLeftType = ObjectTerminal,
+        _rightInjRightType = ObjectTerminal
+      }
 
-requiresObjectInfo :: GebValue -> Bool
-requiresObjectInfo = \case
-  GebValueMorphismUnit -> False
-  GebValueMorphismInteger {} -> False
-  GebValueClosure {} -> True
-  GebValueMorphismLeft {} -> False
-  GebValueMorphismRight {} -> False
-  GebValueMorphismPair {} -> True
+quote :: GebValue -> Morphism
+quote = \case
+  GebValueClosure cls -> quoteClosure cls
+  GebValueMorphismInteger i -> MorphismInteger i
+  GebValueMorphismLeft m -> quoteValueMorphismLeft m
+  GebValueMorphismPair m -> quoteValueMorphismPair m
+  GebValueMorphismRight m -> quoteValueMorphismRight m
+  GebValueMorphismUnit -> MorphismUnit
 
-quote :: Maybe Object -> GebValue -> Sem r Morphism
-quote ty = \case
-  GebValueClosure cls -> quoteClosure ty cls
-  GebValueMorphismInteger i -> return $ MorphismInteger i
-  GebValueMorphismLeft m -> quoteValueMorphismLeft ty m
-  GebValueMorphismPair m -> quoteValueMorphismPair ty m
-  GebValueMorphismRight m -> quoteMorphismRight ty m
-  GebValueMorphismUnit -> return MorphismUnit
+quoteClosure :: ValueClosure -> Morphism
+quoteClosure cls =
+  let env = map quote (toList (cls ^. valueClosureEnv))
+   in substs env (MorphismLambda (cls ^. valueClosureLambda))
 
-quoteClosure :: Maybe Object -> ValueClosure -> Sem r Morphism
-quoteClosure ty cls =
-  quoteError
-    "Not implemented yet"
-    (Just (GebValueClosure cls))
-    ty
+quoteValueMorphismPair :: ValuePair -> Morphism
+quoteValueMorphismPair vpair =
+  let pLeft = quote (vpair ^. pairLeft)
+      pRight = quote (vpair ^. pairRight)
+   in MorphismPair
+        Pair
+          { _pairLeft = pLeft,
+            _pairRight = pRight,
+            _pairLeftType = vpair ^. pairLeftType,
+            _pairRightType = vpair ^. pairRightType
+          }
 
-quoteValueMorphismPair :: Maybe Object -> ValueMorphismPair -> Sem r Morphism
-quoteValueMorphismPair ty vpair = do
-  case ty of
-    Just (ObjectProduct prod) -> do
-      let (a, b) = (prod ^. productLeft, prod ^. productRight)
-      pLeft <- quote (Just a) (vpair ^. valueMorphismPairLeft)
-      pRight <- quote (Just b) (vpair ^. valueMorphismPairRight)
-      return $
-        MorphismPair
-          Pair
-            { _pairLeft = pLeft,
-              _pairRight = pRight,
-              _pairLeftType = a,
-              _pairRightType = b
-            }
-    Just _ ->
-      quoteError
-        "type mismatch (pair). Expected a product"
-        (Just (GebValueMorphismPair vpair))
-        ty
-    Nothing ->
-      quoteError
-        "need object info"
-        (Just (GebValueMorphismPair vpair))
-        ty
-
-quoteValueMorphismLeft :: Maybe Object -> GebValue -> Sem r Morphism
-quoteValueMorphismLeft ty m = case ty of
-  Just (ObjectCoproduct Coproduct {..}) -> do
-    leftMorphism <- quote ty m
-    return $
-      MorphismLeft
+quoteValueMorphismLeft :: ValueLeftInj -> Morphism
+quoteValueMorphismLeft m =
+  let leftMorphism = quote (m ^. leftInjValue)
+   in MorphismLeft
         LeftInj
           { _leftInjValue = leftMorphism,
-            _leftInjLeftType = _coproductLeft,
-            _leftInjRightType = _coproductRight
+            _leftInjLeftType = m ^. leftInjLeftType,
+            _leftInjRightType = m ^. leftInjRightType
           }
-  Just _ ->
-    quoteError
-      "type mismatch (left). Expected a coproduct"
-      (Just (GebValueMorphismLeft m))
-      ty
-  Nothing -> quoteError "need object info" (Just (GebValueMorphismLeft m)) ty
 
-quoteMorphismRight :: Maybe Object -> GebValue -> Sem r Morphism
-quoteMorphismRight ty r = case ty of
-  Just (ObjectCoproduct Coproduct {..}) -> do
-    rightMorphism <- quote ty r
-    return $
-      MorphismRight
+quoteValueMorphismRight :: ValueRightInj -> Morphism
+quoteValueMorphismRight m =
+  let rightMorphism = quote (m ^. rightInjValue)
+   in MorphismRight
         RightInj
           { _rightInjValue = rightMorphism,
-            _rightInjLeftType = _coproductLeft,
-            _rightInjRightType = _coproductRight
+            _rightInjLeftType = m ^. rightInjLeftType,
+            _rightInjRightType = m ^. rightInjRightType
           }
-  Just _ ->
-    quoteError
-      "type mismatch (right). Expected a coproduct"
-      (Just (GebValueMorphismRight r))
-      ty
-  Nothing -> quoteError "need object info" (Just (GebValueMorphismRight r)) ty
-
-quoteError :: Text -> Maybe GebValue -> Maybe Object -> a
-quoteError msg val gebExpr =
-  Exception.throw
-    QuoteError
-      { _quoteErrorMsg = msg,
-        _quoteErrorGebValue = val,
-        _quoteErrorGebExpression = gebExpr
-      }

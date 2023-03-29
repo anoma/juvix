@@ -71,5 +71,10 @@ tests =
       "case on"
       $(mkRelDir ".")
       $(mkRelFile "case-on.geb")
-      $(mkRelFile "Eval/out/case-on.out")
+      $(mkRelFile "Eval/out/case-on.out"),
+    PosTest
+      "left unit"
+      $(mkRelDir ".")
+      $(mkRelFile "left-unit.geb")
+      $(mkRelFile "Eval/out/left-unit.out")
   ]

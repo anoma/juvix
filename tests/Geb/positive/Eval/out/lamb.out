@@ -3,5 +3,10 @@
     nil)
   (lamb
     so1
-    so1
-    (index 1)))
+    (!->
+      so1
+      so1)
+    (lamb
+      so1
+      so1
+      (index 1))))

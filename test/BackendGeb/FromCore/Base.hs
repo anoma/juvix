@@ -8,12 +8,12 @@ import Juvix.Compiler.Core qualified as Core
 import Juvix.Compiler.Pipeline
 import Juvix.Prelude.Pretty
 
-coreToGebtranslationAssertion ::
+coreToGebTranslationAssertion ::
   Path Abs File ->
   Path Abs File ->
   (String -> IO ()) ->
   Assertion
-coreToGebtranslationAssertion mainFile expectedFile step = do
+coreToGebTranslationAssertion mainFile expectedFile step = do
   step "Parse Juvix Core file"
   input <- readFile . toFilePath $ mainFile
   cwd <- getCurrentDir
@@ -74,17 +74,12 @@ coreToGebTranslationAssertion' coreInfoTable entryPoint expectedFile step = do
                         expectedInput <- TIO.readFile fpath
                         step "Compare expected and actual program output"
                         let compareEvalOutput morph =
-                              case Geb.eval' Geb.defaultEvalEnv morph of
-                                Left err ->
-                                  assertFailure . show . pretty $
-                                    fromJuvixError @GenericError (JuvixError err)
-                                Right resEvalExpected -> do
-                                  if
-                                      | resEvalTranslatedMorph /= resEvalExpected ->
-                                          assertFailure $
-                                            "The result of evaluating the translated Geb"
-                                              <> "node is not equal to the expected output"
-                                      | otherwise -> assertBool "" True
+                              if
+                                  | Geb.quote resEvalTranslatedMorph /= morph ->
+                                      assertFailure $
+                                        "The result of evaluating the translated Geb"
+                                          <> "node is not equal to the expected output"
+                                  | otherwise -> assertBool "" True
                         case Geb.runParser expectedFile expectedInput of
                           Left parseErr -> assertFailure . show . pretty $ parseErr
                           Right (Geb.ExpressionMorphism m) -> compareEvalOutput m

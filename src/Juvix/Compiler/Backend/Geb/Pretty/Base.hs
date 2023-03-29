@@ -68,7 +68,7 @@ instance PrettyCode Case where
     return $
       kwCaseOn <> line <> indent 2 (vsep [lty, rty, cod, val, left, right])
 
-instance PrettyCode Pair where
+instance (HasAtomicity a, PrettyCode a) => PrettyCode (Pair' a) where
   ppCode Pair {..} = do
     lty <- ppArg _pairLeftType
     rty <- ppArg _pairRightType
@@ -90,14 +90,14 @@ instance PrettyCode Second where
     val <- ppArg _secondValue
     return $ kwSnd <> line <> indent' (vsep [lty, rty, val])
 
-instance PrettyCode LeftInj where
+instance (HasAtomicity a, PrettyCode a) => PrettyCode (LeftInj' a) where
   ppCode LeftInj {..} = do
     lty <- ppArg _leftInjLeftType
     rty <- ppArg _leftInjRightType
     val <- ppArg _leftInjValue
     return $ kwLeft <> line <> indent' (vsep [lty, rty, val])
 
-instance PrettyCode RightInj where
+instance (HasAtomicity a, PrettyCode a) => PrettyCode (RightInj' a) where
   ppCode RightInj {..} = do
     lty <- ppArg _rightInjLeftType
     rty <- ppArg _rightInjRightType
@@ -206,7 +206,7 @@ instance PrettyCode TypedMorphism where
 
 instance PrettyCode ValueClosure where
   ppCode cls = do
-    lamb <- ppArg (cls ^. valueClosureLambdaBody)
+    lamb <- ppArg (MorphismLambda (cls ^. valueClosureLambda))
     env <- mapM ppArg (toList (cls ^. valueClosureEnv))
     return $
       kwClosure
@@ -226,22 +226,12 @@ instance PrettyCode ValueClosure where
               ]
           )
 
-instance PrettyCode ValueMorphismPair where
-  ppCode ValueMorphismPair {..} = do
-    left <- ppArg _valueMorphismPairLeft
-    right <- ppArg _valueMorphismPairRight
-    return $ kwPair <> line <> indent' (vsep [left, right])
-
 instance PrettyCode GebValue where
   ppCode = \case
     GebValueMorphismUnit -> return kwUnit
     GebValueMorphismInteger n -> return $ annotate AnnLiteralInteger (pretty n)
-    GebValueMorphismLeft val -> do
-      v <- ppArg val
-      return $ kwLeft <> line <> indent' v
-    GebValueMorphismRight val -> do
-      v <- ppArg val
-      return $ kwRight <> line <> indent' v
+    GebValueMorphismLeft x -> ppCode x
+    GebValueMorphismRight x -> ppCode x
     GebValueMorphismPair x -> ppCode x
     GebValueClosure x -> ppCode x
 

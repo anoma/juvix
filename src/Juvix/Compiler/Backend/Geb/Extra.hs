@@ -90,3 +90,40 @@ objectBinop op = case op ^. binopOpcode of
   OpMod -> ObjectInteger
   OpEq -> objectBool
   OpLt -> objectBool
+
+mapVars :: (Int -> Var -> Morphism) -> Morphism -> Morphism
+mapVars f m = go 0 m
+  where
+    go :: Int -> Morphism -> Morphism
+    go k = \case
+      MorphismAbsurd x -> MorphismAbsurd (over absurdValue (go k) x)
+      MorphismUnit -> MorphismUnit
+      MorphismLeft x -> MorphismLeft (over leftInjValue (go k) x)
+      MorphismRight x -> MorphismRight (over rightInjValue (go k) x)
+      MorphismCase x -> MorphismCase (over caseOn (go k) (over caseLeft (go k) (over caseRight (go k) x)))
+      MorphismPair x -> MorphismPair (over pairLeft (go k) (over pairRight (go k) x))
+      MorphismFirst x -> MorphismFirst (over firstValue (go k) x)
+      MorphismSecond x -> MorphismSecond (over secondValue (go k) x)
+      MorphismLambda x -> MorphismLambda (over lambdaBody (go (k + 1)) x)
+      MorphismApplication x -> MorphismApplication (over applicationLeft (go k) (over applicationRight (go k) x))
+      MorphismVar x -> f k x
+      MorphismInteger i -> MorphismInteger i
+      MorphismBinop x -> MorphismBinop (over binopLeft (go k) (over binopRight (go k) x))
+
+shift :: Int -> Morphism -> Morphism
+shift 0 m = m
+shift n m = mapVars go m
+  where
+    go :: Int -> Var -> Morphism
+    go k v@Var {..} | _varIndex >= k = MorphismVar v {_varIndex = _varIndex + n}
+    go _ v = MorphismVar v
+
+substs :: [Morphism] -> Morphism -> Morphism
+substs env = mapVars go
+  where
+    n :: Int
+    n = length env
+
+    go :: Int -> Var -> Morphism
+    go k Var {..} | _varIndex >= k && _varIndex < k + n = shift k (env !! (_varIndex - k))
+    go _ v = MorphismVar v
