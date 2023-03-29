@@ -19,6 +19,6 @@ runCommand opts = do
     Right (Geb.ExpressionTypedMorphism tyMorph) -> do
       case run . runError @CheckingError $ (Geb.check' tyMorph) of
         Left err -> exitJuvixError (JuvixError err)
-        Right _ -> renderStdOut ("Well done! It typechecks" :: Text)
+        Right _ -> renderStdOut ("Well done! It typechecks\n" :: Text)
     Right _ -> exitJuvixError (error @JuvixError "Not a typed morphism")
     Left err -> exitJuvixError (JuvixError err)

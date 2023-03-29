@@ -81,5 +81,15 @@ tests =
       "Test009: comparisons"
       $(mkRelDir ".")
       $(mkRelFile "Core/test009.jvc")
-      $(mkRelFile "Eval/out/test009.geb")
+      $(mkRelFile "Eval/out/test009.geb"),
+    PosTest
+      "Test010: let"
+      $(mkRelDir ".")
+      $(mkRelFile "Core/test010.jvc")
+      $(mkRelFile "Eval/out/test010.geb"),
+    PosTest
+      "Test010: functions returning functions with variable capture"
+      $(mkRelDir ".")
+      $(mkRelFile "Core/test011.jvc")
+      $(mkRelFile "Eval/out/test011.geb")
   ]

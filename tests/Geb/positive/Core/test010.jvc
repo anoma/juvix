@@ -1,0 +1,8 @@
+-- let
+
+let x : Nat := 1 in
+let x : Nat := x + let x : Nat := 2 in x in
+let x : Nat := x * x in
+let y : Nat := x + 2 in
+let z : Nat := x + y in
+x + y + z

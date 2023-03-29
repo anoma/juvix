@@ -230,7 +230,7 @@ evalBinop binop = do
               | otherwise -> return valueFalse
         OpEq ->
           if
-              | l < r -> return valueTrue
+              | l == r -> return valueTrue
               | otherwise -> return valueFalse
     (m1, m2) -> case binop ^. binopOpcode of
       OpEq ->
