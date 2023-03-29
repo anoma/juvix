@@ -101,7 +101,7 @@ lambdaLiftNode aboveBl top =
                   helper :: Var -> Maybe (Var, Binder)
                   helper v
                     | v ^. varIndex < ndefs = Nothing
-                    | otherwise = Just (shiftVar (- ndefs) v, BL.lookup idx' bl)
+                    | otherwise = Just (shiftVar (-ndefs) v, BL.lookup idx' bl)
                     where
                       idx' = v ^. varIndex - ndefs
 
@@ -123,7 +123,9 @@ lambdaLiftNode aboveBl top =
               declareTopSyms =
                 sequence_
                   [ do
-                      let (topBody, topTy) = captureFreeVarsType (map (first (^. varIndex)) recItemsFreeVars)
+                      let (topBody, topTy) =
+                            captureFreeVarsType
+                              (map (first (^. varIndex)) recItemsFreeVars)
                               (b, bty)
                           argsInfo :: [ArgumentInfo]
                           argsInfo =
@@ -142,9 +144,12 @@ lambdaLiftNode aboveBl top =
                             _identifierBuiltin = Nothing
                           }
                     | ((sym, name), (itemBinder, (b, bty))) <-
-                      zipExact topSymsWithName
-                      (zipExact letRecBinders'
-                       (zipExact liftedDefs defsTypes))
+                        zipExact
+                          topSymsWithName
+                          ( zipExact
+                              letRecBinders'
+                              (zipExact liftedDefs defsTypes)
+                          )
                   ]
           declareTopSyms
 
