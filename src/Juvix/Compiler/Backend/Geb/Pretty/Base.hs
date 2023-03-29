@@ -142,6 +142,11 @@ instance PrettyCode Binop where
     right <- ppArg _binopRight
     return $ op <> line <> indent' (vsep [left, right])
 
+instance PrettyCode Failure where
+  ppCode Failure {..} = do
+    ty <- ppCode _failureType
+    return $ kwFail <+> ppStringLit _failureMessage <+> ty
+
 instance PrettyCode Var where
   ppCode Var {..} = do
     return $
@@ -163,6 +168,7 @@ instance PrettyCode Morphism where
     MorphismVar idx -> ppCode idx
     MorphismInteger n -> return $ annotate AnnLiteralInteger (pretty n)
     MorphismBinop x -> ppCode x
+    MorphismFail x -> ppCode x
 
 instance PrettyCode Product where
   ppCode Product {..} = do

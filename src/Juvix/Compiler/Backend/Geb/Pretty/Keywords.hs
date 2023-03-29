@@ -28,7 +28,8 @@ keywords =
     kwSub,
     kwMul,
     kwDiv,
-    kwMod
+    kwMod,
+    kwFail
   ]
 
 kwAbsurd :: Doc Ann
@@ -111,3 +112,6 @@ kwInteger = keyword Str.gebInteger
 
 kwTyped :: Doc Ann
 kwTyped = keyword Str.gebTyped
+
+kwFail :: Doc Ann
+kwFail = keyword Str.gebFail
