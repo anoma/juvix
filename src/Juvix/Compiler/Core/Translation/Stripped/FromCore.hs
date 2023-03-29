@@ -1,14 +1,13 @@
 module Juvix.Compiler.Core.Translation.Stripped.FromCore (fromCore) where
 
 import Data.HashMap.Strict qualified as HashMap
-import Juvix.Compiler.Core.Data.InfoTable
+import Juvix.Compiler.Core
 import Juvix.Compiler.Core.Data.Stripped.InfoTable qualified as Stripped
-import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Extra.Stripped.Base qualified as Stripped
 import Juvix.Compiler.Core.Info.LocationInfo
 import Juvix.Compiler.Core.Info.NameInfo
-import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Core.Language.Stripped qualified as Stripped
+import Juvix.Compiler.Core.Pretty
 
 fromCore :: InfoTable -> Stripped.InfoTable
 fromCore tab =
@@ -87,7 +86,15 @@ translateFunction :: Int -> Node -> Stripped.Node
 translateFunction argsNum node =
   let (k, body) = unfoldLambdas' node
    in if
-          | k /= argsNum -> error "wrong number of arguments"
+          | k /= argsNum ->
+              error
+                ( "wrong number of arguments. argsNum = "
+                    <> show argsNum
+                    <> ", unfoldLambdas = "
+                    <> show k
+                    <> "\nNode = "
+                    <> ppTrace node
+                )
           | otherwise -> translateNode body
 
 translateNode :: Node -> Stripped.Node
