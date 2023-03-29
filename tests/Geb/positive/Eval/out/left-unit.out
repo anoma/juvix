@@ -1,7 +1,12 @@
 (cls
   (env
     nil)
-  (left
+  (lamb
     so1
-    so1
-    unit))
+    (coprod
+      so1
+      so1)
+    (left
+      so1
+      so1
+      unit)))

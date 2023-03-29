@@ -206,7 +206,7 @@ instance PrettyCode TypedMorphism where
 
 instance PrettyCode ValueClosure where
   ppCode cls = do
-    lamb <- ppArg (cls ^. valueClosureLambdaBody)
+    lamb <- ppArg (MorphismLambda (cls ^. valueClosureLambda))
     env <- mapM ppArg (toList (cls ^. valueClosureEnv))
     return $
       kwClosure
