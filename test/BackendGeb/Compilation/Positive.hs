@@ -73,5 +73,25 @@ tests =
       "Test008: higher-order inductive types"
       $(mkRelDir ".")
       $(mkRelFile "test008.juvix")
-      $(mkRelFile "out/test008.geb")
+      $(mkRelFile "out/test008.geb"),
+    PosTest
+      "Test009: let"
+      $(mkRelDir ".")
+      $(mkRelFile "test009.juvix")
+      $(mkRelFile "out/test009.geb"),
+    PosTest
+      "Test010: functions returning functions with variable capture"
+      $(mkRelDir ".")
+      $(mkRelFile "test010.juvix")
+      $(mkRelFile "out/test010.geb"),
+    PosTest
+      "Test011: applications with lets and cases in function position"
+      $(mkRelDir ".")
+      $(mkRelFile "test011.juvix")
+      $(mkRelFile "out/test011.geb"),
+    PosTest
+      "Test012: mid-square hashing (unrolled)"
+      $(mkRelDir ".")
+      $(mkRelFile "test012.juvix")
+      $(mkRelFile "out/test012.geb")
   ]

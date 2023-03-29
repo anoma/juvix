@@ -96,5 +96,10 @@ tests =
       "Test012: partial application"
       $(mkRelDir ".")
       $(mkRelFile "Core/test012.jvc")
-      $(mkRelFile "Eval/out/test012.geb")
+      $(mkRelFile "Eval/out/test012.geb"),
+    PosTest
+      "Test013: mid-square hashing (unrolled)"
+      $(mkRelDir ".")
+      $(mkRelFile "Core/test013.jvc")
+      $(mkRelFile "Eval/out/test013.geb")
   ]
