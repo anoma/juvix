@@ -43,7 +43,7 @@ fromInternal i = do
     intToNatSym :: Symbol
     intToNatSym = 0
 
-    f :: (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable] r) => Sem r ()
+    f :: Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, State InternalTyped.FunctionsTable] r => Sem r ()
     f = do
       let resultModules = toList (i ^. InternalTyped.resultModules)
       runReader (Internal.buildTable resultModules) (mapM_ goTopModule resultModules)
@@ -114,14 +114,14 @@ fromInternalExpression res exp = do
 
 goTopModule ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable] r) =>
+  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable] r) =>
   Internal.Module ->
   Sem r ()
 goTopModule = runReader @LocalModules mempty . goModule
 
 goModule ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader LocalModules] r) =>
+  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader LocalModules] r) =>
   Internal.Module ->
   Sem r ()
 goModule m = mapM_ go (m ^. Internal.moduleBody . Internal.moduleStatements)
@@ -144,7 +144,7 @@ topName n = do
 
 goInductiveDef ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader LocalModules] r) =>
+  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader LocalModules] r) =>
   Internal.InductiveDef ->
   Sem r ()
 goInductiveDef i = do
@@ -181,7 +181,7 @@ goInductiveDef i = do
 
 goConstructor ::
   forall r.
-  (Members '[InfoTableBuilder, Reader Internal.InfoTable, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader LocalModules] r) =>
+  (Members '[InfoTableBuilder, Reader Internal.InfoTable, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader LocalModules] r) =>
   Symbol ->
   Internal.InductiveConstructorDef ->
   Sem r ConstructorInfo
@@ -237,7 +237,7 @@ goConstructor sym ctor = do
 
 goMutualBlock ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader LocalModules] r) =>
+  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader LocalModules] r) =>
   Internal.MutualBlock ->
   Sem r ()
 goMutualBlock m = do
@@ -261,7 +261,7 @@ goType ty = do
 
 goFunctionDefIden ::
   forall r.
-  (Members '[InfoTableBuilder, Reader Internal.InfoTable, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader LocalModules] r) =>
+  (Members '[InfoTableBuilder, Reader Internal.InfoTable, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader LocalModules] r) =>
   (Internal.FunctionDef, Symbol) ->
   Sem r Type
 goFunctionDefIden (f, sym) = do
@@ -492,7 +492,7 @@ goLet l = goClauses (toList (l ^. Internal.letClauses))
 
 goAxiomInductive ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader LocalModules] r) =>
+  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader LocalModules] r) =>
   Internal.AxiomDef ->
   Sem r ()
 goAxiomInductive a = whenJust (a ^. Internal.axiomBuiltin) builtinInductive
@@ -536,7 +536,7 @@ goAxiomInductive a = whenJust (a ^. Internal.axiomBuiltin) builtinInductive
 
 goAxiomDef ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader LocalModules] r) =>
+  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader LocalModules] r) =>
   Internal.AxiomDef ->
   Sem r ()
 goAxiomDef a = do
