@@ -23,7 +23,7 @@ testDescr PosTest {..} =
           _testRoot = tRoot,
           _testAssertion =
             Steps $
-              coreToGebtranslationAssertion file' expected'
+              coreToGebTranslationAssertion file' expected'
         }
 
 filterOutTests :: [String] -> [PosTest] -> [PosTest]
