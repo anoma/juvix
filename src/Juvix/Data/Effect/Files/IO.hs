@@ -4,35 +4,56 @@ module Juvix.Data.Effect.Files.IO
   )
 where
 
+import Control.Monad.Catch qualified as MC
 import Data.ByteString qualified as ByteString
 import Juvix.Data.Effect.Files.Base
 import Juvix.Prelude.Base
 import Juvix.Prelude.Path
 import Path.IO qualified as Path
+import System.IO.Error
+import System.IO.Temp
 import System.Posix.Types qualified as P
 import System.PosixCompat.Files qualified as P
 
 runFilesIO ::
   forall r a.
-  (Member (Embed IO) r) =>
+  (Members '[Embed IO] r) =>
   Sem (Files ': r) a ->
   Sem r a
 runFilesIO = interpret helper
   where
     helper :: forall rInitial x. Files (Sem rInitial) x -> Sem r x
-    helper = \case
-      ReadFile' f -> embed (readFile (toFilePath f))
-      WriteFileBS p bs -> embed (ByteString.writeFile (toFilePath p) bs)
-      WriteFile' f txt -> embed (writeFile (toFilePath f) txt)
+    helper = embed . helper'
+
+    helper' :: forall rInitial x. Files (Sem rInitial) x -> IO x
+    helper' = \case
+      ReadFile' f -> readFile (toFilePath f)
+      WriteFileBS p bs -> ByteString.writeFile (toFilePath p) bs
+      WriteFile' f txt -> writeFile (toFilePath f) txt
       EnsureDir' p -> Path.ensureDir p
       DirectoryExists' p -> Path.doesDirExist p
-      ReadFileBS' f -> embed (ByteString.readFile (toFilePath f))
+      ReadFileBS' f -> ByteString.readFile (toFilePath f)
       FileExists' f -> Path.doesFileExist f
       RemoveDirectoryRecursive' d -> removeDirRecur d
-      ListDirRel p -> embed @IO (Path.listDirRel p)
+      ListDirRel p -> Path.listDirRel p
       PathUid f -> do
-        status <- embed (P.getFileStatus (toFilePath f))
+        status <- P.getFileStatus (toFilePath f)
         let P.CDev dev = P.deviceID status
             P.CIno fid = P.fileID status
         return (Uid (dev, fid))
       GetDirAbsPath f -> canonicalizePath f
+      RemoveFile' f -> Path.removeFile f
+      RenameFile' p1 p2 -> Path.renameFile p1 p2
+      CopyFile' p1 p2 -> Path.copyFile p1 p2
+
+runTempFileIO ::
+  forall r a.
+  Members '[Embed IO] r =>
+  Sem (TempFile ': r) a ->
+  Sem r a
+runTempFileIO = interpret $ \case
+  TempFilePath -> embed (emptySystemTempFile "tmp" >>= parseAbsFile)
+  RemoveTempFile p -> embed (ignoringIOErrors (Path.removeFile p))
+    where
+      ignoringIOErrors :: IO () -> IO ()
+      ignoringIOErrors ioe = MC.catch ioe (\(_ :: IOError) -> return ())

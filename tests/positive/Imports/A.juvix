@@ -1,14 +1,17 @@
 module A;
-  module M;
+
+module M;
   module N;
-   infix 3 t;
-   type T :=
-    t : T;
-  end ;
+    infix 3 t;
+    type T :=
+      | t : T;
+  end;
+
   infixr 2 +;
   axiom + : Type → Type → Type;
-  end;
-  import M;
-  f : M.N.T;
-  f (_ M.N.t _) := Type M.+ Type M.+ M.MType;
 end;
+
+import M;
+
+f : M.N.T;
+f (_ M.N.t _) := Type M.+ Type M.+ M.MType;

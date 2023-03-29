@@ -4,6 +4,7 @@ import Commands.Compile.Options
 import Commands.Dev.Options qualified as Dev
 import Commands.Doctor.Options
 import Commands.Eval.Options
+import Commands.Format.Options
 import Commands.Html.Options
 import Commands.Repl.Options
 import Commands.Typecheck.Options
@@ -11,6 +12,8 @@ import CommonOptions hiding (Doc)
 import Data.Generics.Uniplate.Data
 import GlobalOptions
 import Options.Applicative.Help.Pretty
+import Safe
+import System.Directory qualified as D
 
 data TopCommand
   = DisplayVersion
@@ -24,15 +27,29 @@ data TopCommand
   | Doctor DoctorOptions
   | Init
   | JuvixRepl ReplOptions
+  | JuvixFormat FormatOptions
   deriving stock (Data)
 
-topCommandInputFile :: TopCommand -> Maybe (SomeBase File)
-topCommandInputFile = firstJust getInputFile . universeBi
+topCommandInputFile :: TopCommand -> IO (Maybe (SomeBase Dir))
+topCommandInputFile t = do
+  d <- getFilePath (universeBi t)
+  return $ (firstJust getInputFile (universeBi t)) <|> d
   where
-    getInputFile :: AppPath File -> Maybe (SomeBase File)
+    getInputFile :: AppPath File -> Maybe (SomeBase Dir)
     getInputFile p
-      | p ^. pathIsInput = Just (p ^. pathPath)
+      | p ^. pathIsInput = Just (mapSomeBase parent (p ^. pathPath))
       | otherwise = Nothing
+
+    getFilePath :: [FilePath] -> IO (Maybe (SomeBase Dir))
+    getFilePath fs = mapM go (headMay fs)
+      where
+        go :: FilePath -> IO (SomeBase Dir)
+        go fp = do
+          nfp <- D.canonicalizePath fp
+          isDirectory <- D.doesDirectoryExist nfp
+          if
+              | isDirectory -> parseSomeDir nfp
+              | otherwise -> mapSomeBase parent <$> (parseSomeFile nfp)
 
 parseDisplayVersion :: Parser TopCommand
 parseDisplayVersion =
@@ -69,7 +86,8 @@ parseUtility =
           commandDoctor,
           commandInit,
           commandDev,
-          commandRepl
+          commandRepl,
+          commandFormat
         ]
     )
   where
@@ -97,6 +115,23 @@ parseUtility =
             (JuvixRepl <$> parseRepl)
             (progDesc "Run the Juvix REPL")
         )
+
+    commandFormat :: Mod CommandFields TopCommand
+    commandFormat =
+      command "format" $
+        info
+          (JuvixFormat <$> parseFormat)
+          ( progDescDoc
+              ( Just
+                  ( vsep
+                      [ "Format a Juvix file or Juvix project",
+                        "",
+                        "When the command is run with an unformatted file it prints the reformatted source to standard output.",
+                        "When the command is run with a project directory it prints a list of unformatted files in the project."
+                      ]
+                  )
+              )
+          )
 
 commandCheck :: Mod CommandFields TopCommand
 commandCheck =

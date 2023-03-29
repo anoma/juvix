@@ -1,0 +1,130 @@
+working-directory: ./../../../tests
+
+tests:
+  - name: shows-file-argument-for-autocompletion
+    command:
+      - juvix
+      - format
+      - --help
+    stdout:
+      contains:
+        JUVIX_FILE
+    exit-status: 0
+
+  - name: format-formatted-file
+    command:
+      - juvix
+      - format
+      - positive/Format.juvix
+    exit-status: 0
+    stdout: ""
+
+  - name: format-unformatted-file
+    command:
+      shell:
+        - bash
+      script: |
+        temp=$(mktemp -d)
+        trap 'rm -rf -- "$temp"' EXIT
+        cd $temp
+        touch juvix.yaml
+        echo "module Foo ;" >> Foo.juvix
+        juvix format Foo.juvix
+    stdout:
+      contains: module Foo;
+    exit-status: 1
+
+  - name: format-unformatted-file-check-no-stdout
+    command:
+      shell:
+        - bash
+      script: |
+        temp=$(mktemp -d)
+        trap 'rm -rf -- "$temp"' EXIT
+        cd $temp
+        touch juvix.yaml
+        echo "module Foo ;" >> Foo.juvix
+        juvix format --check Foo.juvix
+    stdout: ""
+    exit-status: 1
+
+  - name: format-formatted-file-check-no-stdout
+    command:
+      - juvix
+      - format
+      - --check
+      - positive/Format.juvix
+    exit-status: 0
+    stdout: ""
+
+  - name: format-dir-with-all-formatted
+    command:
+      shell:
+        - bash
+      script: |
+        temp=$(mktemp -d)
+        trap 'rm -rf -- "$temp"' EXIT
+        touch $temp/juvix.yaml
+        cp positive/Format.juvix $temp
+        juvix format $temp
+    stdout: ""
+    exit-status: 0
+
+  - name: format-dir-containing-unformatted
+    command:
+      shell:
+        - bash
+      script: |
+        temp=$(mktemp -d)
+        trap 'rm -rf -- "$temp"' EXIT
+        touch $temp/juvix.yaml
+        cp positive/Format.juvix $temp
+        cd $temp
+        echo "module Foo ;" >> Foo.juvix
+        juvix format $temp
+    stdout:
+      contains:
+        "Foo.juvix"
+    exit-status: 1
+
+  - name: format-dir-containing-unformatted-check-no-stdout
+    command:
+      shell:
+        - bash
+      script: |
+        temp=$(mktemp -d)
+        trap 'rm -rf -- "$temp"' EXIT
+        touch $temp/juvix.yaml
+        cp positive/Format.juvix $temp
+        cd $temp
+        echo "module Foo ;" >> Foo.juvix
+        juvix format --check $temp
+    stdout: ""
+    exit-status: 1
+
+  - name: format-dir-with-all-formatted-check-no-stdout
+    command:
+      shell:
+        - bash
+      script: |
+        temp=$(mktemp -d)
+        trap 'rm -rf -- "$temp"' EXIT
+        touch $temp/juvix.yaml
+        cp positive/Format.juvix $temp
+        juvix format --check $temp
+    stdout: ""
+    exit-status: 0
+
+  - name: format-file-with-scope-error
+    command:
+      shell:
+        - bash
+      script: |
+        temp=$(mktemp -d)
+        trap 'rm -rf -- "$temp"' EXIT
+        cd $temp
+        echo "module Bar;" > Foo.juvix
+        juvix format Foo.juvix
+    stderr:
+      contains: "error"
+    exit-status: 1

@@ -8,6 +8,7 @@ import Compilation qualified
 import Core qualified
 import Examples qualified
 import Format qualified
+import Formatter qualified
 import Internal qualified
 import Parsing qualified
 import Reachability qualified
@@ -39,7 +40,8 @@ fastTests =
       Arity.allTests,
       Typecheck.allTests,
       Reachability.allTests,
-      Format.allTests
+      Format.allTests,
+      Formatter.allTests
     ]
 
 main :: IO ()

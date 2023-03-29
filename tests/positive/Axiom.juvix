@@ -1,5 +1,3 @@
 module Axiom;
 
 axiom Action : Type;
-
-end;

@@ -20,5 +20,3 @@ czero {_} f x := x;
 
 csuc : Num → Num;
 csuc n {_} f := f ∘ n {_} f;
-
-end;

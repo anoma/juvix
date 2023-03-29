@@ -1,10 +1,10 @@
 module Box;
 
- type Box (A : Type) :=
-   box : A → Box A;
+type Box (A : Type) :=
+  | box : A → Box A;
 
- type T :=
-   t : T;
+type T :=
+  | t : T;
 
 b : Box _;
 b := box t;
@@ -13,6 +13,4 @@ id : {A : Type} → A → A;
 id x := x;
 
 tt : _;
-tt := id t
-
-end;
+tt := id t;

@@ -1,5 +1,4 @@
 module Inductive;
 
-  type T := t : T;
-  
-end ;
+type T :=
+  | t : T;

@@ -237,8 +237,8 @@ fromCore tab = case tab ^. Core.infoMain of
                                 ( MorphismBinop
                                     Binop
                                       { _binopOpcode = OpEq,
-                                        _binopLeft = MorphismVar Var {_varIndex = 1},
-                                        _binopRight = MorphismVar Var {_varIndex = 0}
+                                        _binopLeft = MorphismVar Var {_varIndex = 2},
+                                        _binopRight = MorphismVar Var {_varIndex = 1}
                                       }
                                 )
                           }
@@ -247,29 +247,30 @@ fromCore tab = case tab ^. Core.infoMain of
               MorphismApplication
                 Application
                   { _applicationDomainType = ObjectInteger,
-                    _applicationCodomainType =
-                      ObjectHom
-                        Hom
-                          { _homDomain = ObjectInteger,
-                            _homCodomain = objectBool
-                          },
+                    _applicationCodomainType = objectBool,
                     _applicationLeft =
                       MorphismApplication
                         Application
                           { _applicationDomainType = ObjectInteger,
-                            _applicationCodomainType = objectBool,
+                            _applicationCodomainType =
+                              ObjectHom
+                                Hom
+                                  { _homDomain = ObjectInteger,
+                                    _homCodomain = objectBool
+                                  },
                             _applicationLeft = le,
-                            _applicationRight = arg2'
+                            _applicationRight = arg1'
                           },
-                    _applicationRight = arg1'
+                    _applicationRight = arg2'
                   }
       _ ->
         error "wrong builtin application argument number"
 
     convertOpEq :: [Core.Node] -> Trans Morphism
     convertOpEq args = case args of
-      arg : _
-        | Info.getNodeType arg == Core.mkTypeInteger' ->
+      arg1 : arg2 : _
+        | Info.getNodeType arg1 == Core.mkTypeInteger'
+            && Info.getNodeType arg2 == Core.mkTypeInteger' ->
             convertBinop OpEq args
       _ ->
         error "unsupported equality argument types"
@@ -360,8 +361,8 @@ fromCore tab = case tab ^. Core.infoMain of
       return $
         MorphismApplication
           Application
-            { _applicationCodomainType = domty,
-              _applicationDomainType = codty,
+            { _applicationDomainType = domty,
+              _applicationCodomainType = codty,
               _applicationLeft =
                 MorphismLambda
                   Lambda

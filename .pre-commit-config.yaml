@@ -43,11 +43,19 @@ repos:
   - repo: local
     hooks:
       - id: format-juvix-examples
-        name: typecheck and format Juvix examples
-        entry: make -s juvix-format
+        name: format Juvix examples
+        entry: make -s format-juvix-examples
         language: system
         verbose: false
         pass_filenames: false
+
+      - id: typecheck-juvix-examples
+        name: typecheck Juvix examples
+        entry: make -s typecheck-juvix-examples
+        language: system
+        verbose: false
+        pass_filenames: false
+
       - id: ormolu
         name: format Haskell code with ormolu
         entry: make -s ormolu

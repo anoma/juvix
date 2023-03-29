@@ -1,14 +1,15 @@
 module M;
 
-  module N;
-    module O;
-      axiom A : Type;
-    end;
-  end;
-  open N;
-
+module N;
   module O;
+    axiom A : Type;
   end;
-
-  axiom B : O.A;
 end;
+
+open N;
+
+module O;
+  
+end;
+
+axiom B : O.A;

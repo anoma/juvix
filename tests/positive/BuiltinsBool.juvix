@@ -1,13 +1,9 @@
 module BuiltinsBool;
 
-builtin bool
-type Bool :=
-     true : Bool
+builtin bool type Bool :=
+  | true : Bool
   | false : Bool;
 
-builtin bool-if
-if : {A : Type} → Bool → A → A → A;
+builtin bool-if if : {A : Type} → Bool → A → A → A;
 if true t _ := t;
 if false _ e := e;
-
-end;

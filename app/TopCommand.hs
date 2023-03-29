@@ -1,10 +1,11 @@
 module TopCommand where
 
-import Commands.Base
+import Commands.Base hiding (Format)
 import Commands.Compile qualified as Compile
 import Commands.Dev qualified as Dev
 import Commands.Doctor qualified as Doctor
 import Commands.Eval qualified as Eval
+import Commands.Format qualified as Format
 import Commands.Html qualified as Html
 import Commands.Init qualified as Init
 import Commands.Repl qualified as Repl
@@ -21,7 +22,7 @@ showHelpText = do
       (msg, _) = renderFailure helpText progn
   putStrLn (pack msg)
 
-runTopCommand :: forall r. (Members '[Embed IO, App] r) => TopCommand -> Sem r ()
+runTopCommand :: forall r. (Members '[Embed IO, App, Resource] r) => TopCommand -> Sem r ()
 runTopCommand = \case
   DisplayVersion -> embed runDisplayVersion
   DisplayNumericVersion -> embed runDisplayNumericVersion
@@ -34,3 +35,4 @@ runTopCommand = \case
   Eval opts -> Eval.runCommand opts
   Html opts -> Html.runCommand opts
   JuvixRepl opts -> Repl.runCommand opts
+  JuvixFormat opts -> runFilesIO (Format.runCommand opts)

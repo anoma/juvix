@@ -30,6 +30,7 @@ morphismFalse =
         _rightInjValue = MorphismUnit
       }
 
+-- | NOTE: `arg2` needs to be shifted by 1!
 mkOr :: Morphism -> Morphism -> Morphism
 mkOr arg1 arg2 =
   MorphismCase

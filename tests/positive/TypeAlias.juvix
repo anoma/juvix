@@ -1,10 +1,10 @@
 module TypeAlias;
 
 type T :=
- t : T;
+  | t : T;
 
 type T2 :=
- t2 : T2;
+  | t2 : T2;
 
 alias : Type;
 alias := T;
@@ -22,16 +22,15 @@ infixr 9 ⊙;
 x2 : (id ⊙ id) alias;
 x2 := t;
 
-flip : (Type → Type → Type) → id Type → Type → (id ⊙ id) Type;
+flip :
+  (Type → Type → Type) → id Type → Type → (id ⊙ id) Type;
 flip f a b := f b a;
 
 type Pair (A : Type) (B : Type) :=
- mkPair : id T → id (id A) → B → Pair A B;
+  | mkPair : id T → id (id A) → B → Pair A B;
 
 p : {A : Type} → A → Pair A A;
 p a := mkPair t a a;
 
 x' : flip Pair (id _) T2;
 x' := mkPair x t2 t;
-
-end;
