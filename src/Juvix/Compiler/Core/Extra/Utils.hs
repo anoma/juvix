@@ -39,8 +39,26 @@ isTypeConstr tab ty = case typeTarget ty of
     isTypeConstr tab (fromJust $ HashMap.lookup _identSymbol (tab ^. identContext))
   _ -> False
 
+getTypeParams :: InfoTable -> Type -> [Type]
+getTypeParams tab ty = filter (isTypeConstr tab) (typeArgs ty)
+
+getTypeParamsNum :: InfoTable -> Type -> Int
+getTypeParamsNum tab ty = length $ getTypeParams tab ty
+
+-- True for nodes whose evaluation immediately returns a value, i.e.,
+-- no reduction or memory allocation in the runtime is required.
+isImmediate :: Node -> Bool
+isImmediate = \case
+  NVar {} -> True
+  NIdt {} -> True
+  NCst {} -> True
+  _ -> False
+
+freeVarsSortedMany :: [Node] -> Set Var
+freeVarsSortedMany n = Set.fromList (n ^.. each . freeVars)
+
 freeVarsSorted :: Node -> Set Var
-freeVarsSorted n = Set.fromList (n ^.. freeVars)
+freeVarsSorted = freeVarsSortedMany . pure
 
 freeVarsSet :: Node -> HashSet Var
 freeVarsSet n = HashSet.fromList (n ^.. freeVars)
@@ -122,14 +140,18 @@ captureFreeVarsCtx bl n =
   let assocs = freeVarsCtx bl n
    in (assocs, captureFreeVars (map (first (^. varIndex)) assocs) n)
 
-freeVarsCtx' :: BinderList Binder -> Node -> [Var]
-freeVarsCtx' bl = map fst . freeVarsCtx bl
+freeVarsCtxMany' :: BinderList Binder -> [Node] -> [Var]
+freeVarsCtxMany' bl = map fst . freeVarsCtxMany bl
 
--- | The output list does not contain repeated elements and is sorted by *decreasing* variable index.
--- The indices are relative to the given binder list
 freeVarsCtx :: BinderList Binder -> Node -> [(Var, Binder)]
-freeVarsCtx ctx =
-  BL.lookupsSortedRev ctx . run . fmap fst . runOutputList . go . freeVarsSorted
+freeVarsCtx ctx = freeVarsCtxMany ctx . pure
+
+-- | The output list does not contain repeated elements and is sorted by
+-- *decreasing* variable index. The indices are relative to the given binder
+-- list
+freeVarsCtxMany :: BinderList Binder -> [Node] -> [(Var, Binder)]
+freeVarsCtxMany ctx =
+  BL.lookupsSortedRev ctx . run . fmap fst . runOutputList . go . freeVarsSortedMany
   where
     go ::
       -- set of free variables relative to the original ctx
@@ -146,7 +168,8 @@ freeVarsCtx ctx =
             freevarsbi' = Set.mapMonotonic (over varIndex (+ (idx + 1))) fbi
         go (freevarsbi' <> vs)
 
--- | subst for multiple bindings
+-- | subst for multiple bindings; the first element in the list of substitutions
+-- corresponds to de Bruijn index 0
 substs :: [Node] -> Node -> Node
 substs t = umapN go
   where
@@ -222,20 +245,10 @@ argumentInfoFromBinder i =
       _argumentIsImplicit = Explicit
     }
 
-patternBinders :: SimpleFold Pattern PatternBinder
-patternBinders f p = case p of
-  PatWildcard {} -> pure p
-  PatConstr c -> traverseOf patternConstrArgs (traverse (patternBinders f)) c $> p
-  PatBinder b -> f b $> p
-
-patternBindersNum :: Pattern -> Int
-patternBindersNum = length . (^.. patternBinders)
-
 patternType :: Pattern -> Node
 patternType = \case
-  PatWildcard w -> w ^. patternWildcardType
-  PatBinder b -> b ^. patternBinder . binderType
-  PatConstr c -> c ^. patternConstrType
+  PatWildcard w -> w ^. patternWildcardBinder . binderType
+  PatConstr c -> c ^. patternConstrBinder . binderType
 
 builtinOpArgTypes :: BuiltinOp -> [Type]
 builtinOpArgTypes = \case

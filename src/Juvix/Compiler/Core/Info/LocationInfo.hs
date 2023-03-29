@@ -1,7 +1,8 @@
 module Juvix.Compiler.Core.Info.LocationInfo where
 
+import Juvix.Compiler.Core.Extra.Base
 import Juvix.Compiler.Core.Info qualified as Info
-import Juvix.Compiler.Core.Language.Base
+import Juvix.Compiler.Core.Language
 
 newtype LocationInfo = LocationInfo {_infoLocation :: Location}
 
@@ -20,3 +21,6 @@ getInfoLocation i =
 
 setInfoLocation :: Location -> Info -> Info
 setInfoLocation = Info.insert . LocationInfo
+
+getNodeLocation :: Node -> Maybe Location
+getNodeLocation = getInfoLocation . getInfo

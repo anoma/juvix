@@ -368,7 +368,7 @@ ppJudocExampleStart = pretty (Str.judocExample :: Text)
 instance (SingI s) => PrettyCode (Example s) where
   ppCode e = do
     e' <- ppExpression (e ^. exampleExpression)
-    return (ppJudocStart <+> ppJudocExampleStart <+> e' <> kwSemicolon <> line)
+    return (ppJudocStart <+> ppJudocExampleStart <+> e' <> kwSemicolon)
 
 instance (SingI s) => PrettyCode (JudocBlock s) where
   ppCode = \case
@@ -379,7 +379,7 @@ instance (SingI s) => PrettyCode (JudocParagraphLine s) where
   ppCode (JudocParagraphLine atoms) = do
     atoms' <- mconcatMap ppCode atoms
     let prefix = pretty (Str.judocStart :: Text) :: Doc Ann
-    return (prefix <+> atoms' <> line)
+    return (prefix <+> atoms')
 
 instance (SingI s) => PrettyCode (Judoc s) where
   ppCode :: forall r. (Members '[Reader Options] r) => Judoc s -> Sem r (Doc Ann)

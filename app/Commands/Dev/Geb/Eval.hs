@@ -35,6 +35,7 @@ evalAndPrint ::
   Geb.Expression ->
   Sem r ()
 evalAndPrint opts = \case
+  Geb.ExpressionObject _ -> error Geb.objNoEvalMsg
   Geb.ExpressionMorphism morphism -> do
     let opts' :: Geb.EvaluatorOptions = project opts
     let env :: Geb.Env =
@@ -51,7 +52,6 @@ evalAndPrint opts = \case
             case Geb.eval' env morphism of
               Left err -> exitJuvixError err
               Right m -> renderStdOut (Geb.ppOut opts' m)
-  Geb.ExpressionObject _ -> error Geb.objNoEvalMsg
   Geb.ExpressionTypedMorphism tyMorph ->
     evalAndPrint
       opts

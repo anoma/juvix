@@ -228,28 +228,22 @@ instance PrettyCode a => PrettyCode (If' i a) where
     return $ kwIf <+> v <+> kwThen <+> l <+> kwElse <+> r
 
 instance PrettyCode PatternWildcard where
-  ppCode _ = return kwWildcard
-
-instance PrettyCode PatternBinder where
-  ppCode PatternBinder {..} = do
-    n <- ppName KNameLocal (_patternBinder ^. binderName)
-    case _patternBinderPattern of
-      PatWildcard {} -> do
-        ppWithType n (_patternBinder ^. binderType)
-      _ -> do
-        pat <- ppRightExpression appFixity _patternBinderPattern
-        ppWithType (n <> kwAt <> pat) (_patternBinder ^. binderType)
+  ppCode PatternWildcard {..} = do
+    n <- ppName KNameLocal (_patternWildcardBinder ^. binderName)
+    ppWithType n (_patternWildcardBinder ^. binderType)
 
 instance PrettyCode PatternConstr where
   ppCode PatternConstr {..} = do
     n <- ppName KNameConstructor (getInfoName _patternConstrInfo)
     args <- mapM (ppRightExpression appFixity) _patternConstrArgs
-    return $ foldl' (<+>) n args
+    bn <- ppName KNameLocal (_patternConstrBinder ^. binderName)
+    let pat = foldl' (<+>) n args
+        pat' = if _patternConstrBinder ^. binderName == "?" || _patternConstrBinder ^. binderName == "" then pat else bn <> kwAt <> parens pat
+    ppWithType pat' (_patternConstrBinder ^. binderType)
 
 instance PrettyCode Pattern where
   ppCode = \case
     PatWildcard x -> ppCode x
-    PatBinder x -> ppCode x
     PatConstr x -> ppCode x
 
 ppPatterns :: (Member (Reader Options) r) => NonEmpty Pattern -> Sem r (Doc Ann)
@@ -431,7 +425,7 @@ instance PrettyCode InfoTable where
   ppCode :: forall r. (Member (Reader Options) r) => InfoTable -> Sem r (Doc Ann)
   ppCode tbl = do
     tys <- ppInductives (toList (tbl ^. infoInductives))
-    sigs <- ppSigs (toList (tbl ^. infoIdentifiers))
+    sigs <- ppSigs (sortOn (^. identifierSymbol) $ toList (tbl ^. infoIdentifiers))
     ctx' <- ppContext (tbl ^. identContext)
     main <- maybe (return "") (\s -> (<> line) . (line <>) <$> ppName KNameFunction (fromJust (HashMap.lookup s (tbl ^. infoIdentifiers)) ^. identifierName)) (tbl ^. infoMain)
     return (tys <> line <> line <> sigs <> line <> ctx' <> line <> main)
@@ -464,7 +458,7 @@ instance PrettyCode InfoTable where
 
       ppContext :: IdentContext -> Sem r (Doc Ann)
       ppContext ctx = do
-        defs <- mapM (uncurry ppDef) (HashMap.toList ctx)
+        defs <- mapM (uncurry ppDef) (sortOn fst (HashMap.toList ctx))
         return (vsep (catMaybes defs))
         where
           ppDef :: Symbol -> Node -> Sem r (Maybe (Doc Ann))

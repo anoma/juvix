@@ -70,6 +70,7 @@ module Juvix.Prelude.Base
     pack,
     unpack,
     strip,
+    assert,
     HashMap,
     ByteString,
     HashSet,
@@ -140,6 +141,7 @@ import Data.Tuple.Extra
 import Data.Typeable hiding (TyCon)
 import Data.Void
 import Data.Word
+import GHC.Base (assert)
 import GHC.Enum
 import GHC.Err qualified as Err
 import GHC.Generics (Generic)
@@ -193,6 +195,13 @@ traverseM ::
   m a1 ->
   f (m a2)
 traverseM f = fmap join . traverse f
+
+--------------------------------------------------------------------------------
+
+mapReader :: Member (Reader e1) r => (e1 -> e2) -> Sem (Reader e2 ': r) a -> Sem r a
+mapReader f s = do
+  e <- ask
+  runReader (f e) s
 
 --------------------------------------------------------------------------------
 -- String related util functions.
@@ -362,10 +371,12 @@ data Indexed a = Indexed
   { _indexedIx :: Int,
     _indexedThing :: a
   }
-  deriving stock (Show, Eq, Ord, Foldable, Traversable)
+  deriving stock (Generic, Show, Eq, Ord, Foldable, Traversable)
 
 instance Functor Indexed where
   fmap f (Indexed i a) = Indexed i (f a)
+
+instance Hashable a => Hashable (Indexed a)
 
 indexFrom :: Int -> [a] -> [Indexed a]
 indexFrom i = zipWith Indexed [i ..]

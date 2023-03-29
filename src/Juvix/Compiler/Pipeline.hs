@@ -6,6 +6,8 @@ module Juvix.Compiler.Pipeline
 where
 
 import Juvix.Compiler.Abstract.Translation qualified as Abstract
+import Juvix.Compiler.Asm.Error qualified as Asm
+import Juvix.Compiler.Asm.Options qualified as Asm
 import Juvix.Compiler.Asm.Pipeline qualified as Asm
 import Juvix.Compiler.Asm.Translation.FromCore qualified as Asm
 import Juvix.Compiler.Backend qualified as Backend
@@ -162,10 +164,8 @@ upToAsm =
 
 upToMiniC ::
   (Members '[Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, PathResolver] r) =>
-  Asm.Options ->
   Sem r C.MiniCResult
-upToMiniC opts =
-  upToAsm >>= asmToMiniC opts
+upToMiniC = upToAsm >>= asmToMiniC
 
 upToGeb ::
   (Members '[Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, PathResolver] r) =>
@@ -184,20 +184,30 @@ upToEval =
 -- Internal workflows
 --------------------------------------------------------------------------------
 
-coreToAsm :: Member (Error JuvixError) r => Core.InfoTable -> Sem r Asm.InfoTable
+coreToAsm :: Members '[Error JuvixError, Reader EntryPoint] r => Core.InfoTable -> Sem r Asm.InfoTable
 coreToAsm = Core.toStripped >=> return . Asm.fromCore . Stripped.fromCore
 
-coreToMiniC :: (Member (Error JuvixError) r) => Asm.Options -> Core.InfoTable -> Sem r C.MiniCResult
-coreToMiniC opts = coreToAsm >=> asmToMiniC opts
+coreToMiniC :: Members '[Error JuvixError, Reader EntryPoint] r => Core.InfoTable -> Sem r C.MiniCResult
+coreToMiniC = coreToAsm >=> asmToMiniC
 
-asmToMiniC :: Member (Error JuvixError) r => Asm.Options -> Asm.InfoTable -> Sem r C.MiniCResult
-asmToMiniC opts = Asm.toReg opts >=> regToMiniC (opts ^. Asm.optLimits) . Reg.fromAsm
+asmToMiniC :: Members '[Error JuvixError, Reader EntryPoint] r => Asm.InfoTable -> Sem r C.MiniCResult
+asmToMiniC = Asm.toReg >=> regToMiniC . Reg.fromAsm
 
-regToMiniC :: Backend.Limits -> Reg.InfoTable -> Sem r C.MiniCResult
-regToMiniC lims = return . C.fromReg lims
+regToMiniC :: Member (Reader EntryPoint) r => Reg.InfoTable -> Sem r C.MiniCResult
+regToMiniC tab = do
+  e <- ask
+  return $ C.fromReg (Backend.getLimits (e ^. entryPointTarget) (e ^. entryPointDebug)) tab
 
-coreToGeb :: Member (Error JuvixError) r => Geb.ResultSpec -> Core.InfoTable -> Sem r Geb.Result
+coreToGeb :: Members '[Error JuvixError, Reader EntryPoint] r => Geb.ResultSpec -> Core.InfoTable -> Sem r Geb.Result
 coreToGeb spec = Core.toGeb >=> return . uncurry (Geb.toResult spec) . Geb.fromCore
+
+asmToMiniC' :: Members '[Error JuvixError, Reader Asm.Options] r => Asm.InfoTable -> Sem r C.MiniCResult
+asmToMiniC' = mapError (JuvixError @Asm.AsmError) . Asm.toReg' >=> regToMiniC' . Reg.fromAsm
+
+regToMiniC' :: Member (Reader Asm.Options) r => Reg.InfoTable -> Sem r C.MiniCResult
+regToMiniC' tab = do
+  e <- ask
+  return $ C.fromReg (e ^. Asm.optLimits) tab
 
 --------------------------------------------------------------------------------
 -- Run pipeline

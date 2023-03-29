@@ -1,338 +1,287 @@
 module Juvix.Compiler.Core.Transformation.MatchToCase where
 
-import Juvix.Compiler.Core.Data.InfoTableBuilder
+import Data.HashMap.Strict qualified as HashMap
+import Data.HashSet qualified as HashSet
+import Data.List qualified as List
+import Juvix.Compiler.Core.Error
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Info.LocationInfo
 import Juvix.Compiler.Core.Info.NameInfo (setInfoName)
-import Juvix.Compiler.Core.Language
+import Juvix.Compiler.Core.Options
+import Juvix.Compiler.Core.Pretty hiding (Options)
 import Juvix.Compiler.Core.Transformation.Base
-import Juvix.Compiler.Core.Transformation.MatchToCase.Data
+import Juvix.Data.NameKind
 
-matchToCase :: InfoTable -> InfoTable
-matchToCase = run . mapT' (const (umapM matchToCaseNode))
+data PatternRow = PatternRow
+  { _patternRowPatterns :: [Pattern],
+    _patternRowBody :: Node,
+    -- | The number of initial wildcard binders in `_patternRowPatterns` which
+    -- don't originate from the input
+    _patternRowIgnoredPatternsNum :: Int,
+    -- | Previous binder changes, reversed
+    _patternRowBinderChangesRev :: [BinderChange]
+  }
 
-mkShiftedPis' :: [Type] -> Type -> Type
-mkShiftedPis' lhs rhs = foldl' go (shift (length lhs) rhs) (reverse (indexFrom 0 lhs))
+makeLenses ''PatternRow
+
+type PatternMatrix = [PatternRow]
+
+-- | Compiles pattern matches (`Match` nodes) to decision trees built up from
+-- `Case` nodes. The algorithm is based on the paper: Luc Maranget, "Compiling
+-- Pattern Matching to Good Decision Trees", ML'08.
+matchToCase :: Members '[Error CoreError, Reader CoreOptions] r => InfoTable -> Sem r InfoTable
+matchToCase tab = runReader tab $ mapAllNodesM (rmapM goMatchToCase) tab
+
+goMatchToCase ::
+  forall r.
+  Members '[Error CoreError, Reader CoreOptions, Reader InfoTable] r =>
+  ([BinderChange] -> Node -> Sem r Node) ->
+  Node ->
+  Sem r Node
+goMatchToCase recur node = case node of
+  NMatch m ->
+    compileMatch m
+  _ ->
+    recur [] node
   where
-    go :: Type -> Indexed Type -> Type
-    go t (Indexed i a) = mkPi' (shift i a) t
-
-matchToCaseNode :: forall r. Member InfoTableBuilder r => Node -> Sem r Node
-matchToCaseNode n = case n of
-  NMatch m -> do
-    let branches = m ^. matchBranches
-        values = toList (m ^. matchValues)
-        matchType = m ^. matchReturnType
-        valueTypes = toList (m ^. matchValueTypes)
-        branchType = mkShiftedPis' valueTypes matchType
-
-    -- Index from 1 because we prepend the fail branch.
-    branchNodes <-
-      (failNode valueTypes :)
-        <$> mapM compileMatchBranch (indexFrom 1 (reverse branches))
-
-    -- The appNode calls the first branch with the values of the match
-    let appNode = mkApps' (mkVar' 0) (shift (length branchNodes) <$> values)
-    let branchBinder = typeToBinder branchType
-    let branchBinders = map (branchBinder,) branchNodes
-    return (mkShiftedBinderLets 0 branchBinders appNode)
-  _ -> return n
-
--- | Increase all free variable indices by a given value.
--- In this function we consider indices to be embedded at a specified level
-shiftEmbedded :: Level -> Index -> Node -> Node
-shiftEmbedded _ 0 = id
-shiftEmbedded wrappingLevel m = umapN go
-  where
-    go k = \case
-      NVar v
-        | v ^. varIndex >= (k + wrappingLevel) -> NVar (shiftVar m v)
-      n -> n
-
--- | Returns a modified MatchBranch body where:
---
---        1. The body is wrapped in let bindings so that bound variables in the
---        body point to the correct variables.
---
---        2. Free variables in the body are shifted by the sum of:
---
---            * The number of let bindings added in step 1, equal to the total
---              number of pattern binders in the matchbranch.
---
---            * The auxillary bindings added in the translation (i.e bindings
---              not present in the original match bindings, added for nested
---              cases and case bindings).
---
---            * The number of previously bound matchbranches including the fail branch.
---
---            * The total number of match patterns (because each match pattern
---              is translated to a lambda argument surrounding the compiled
---              branch).
---
--- For example:
---
---  @
---      f : Nat -> List Nat -> Nat;
---      f x xs := case xs
---         | (y :: z :: ys) := x + y + z;
---  @
---
--- Translates to the following nested matches:
---
--- @
---       λ? λ? match ?$1, ?$0 with {
---          x, xs ↦ match xs$0 with {
---            :: _ y (:: _ z ys) ↦ + (+ x$4 y$2) z$1
---          }
--- @
---
--- The body of the match branch is @ + (+ x$3 y$2) z$1 @, the @x@ variable is
--- free in the inner match, so it needs to be shifted so it continues to point
--- to the @x@ bound in the outer match after additional binders have been added.
---
--- The inner match compiles to:
---
--- @
---    λ?
---         let ? := λ? fail "Non-exhaustive patterns" in
---         let ? := λ? case ?$0 of {
---           :: _ y arg_11 := let y := ?$1 in case ?$1 of {
---             :: _ z ys := let z := ?$1 in
---                          let ys := ?$1 in
---                              let y := ?$5 in
---                              let z := ?$2 in
---                              let ys := ?$2 in + (+ x$15 y$2) z$1;
---             _ := ?$5 ?$4
---           };
---           _ := ?$1 ?$0
--- @
---
--- The body is wrapped in let bindings for `y`, `z` and `ys` in the
--- correct order so that the indices of `y` and `z` in the body point to the
--- correct variables above.
---
--- The index for the free variable @x@ in the body has increased from 4 to 15.
--- This is because we have added 3 binders around the body, 6 auxillary binders,
--- 1 binder for the lambda surrounding the case and 1 binder for the fail
--- branch.
-compileMatchBranch :: forall r. Members '[InfoTableBuilder] r => Indexed MatchBranch -> Sem r Node
-compileMatchBranch (Indexed branchNum br) = do
-  compiledBranch <- runReader initState (combineCompiledPatterns (map (compilePattern 0 branchNum patternsNum) patterns))
-  return (mkShiftedLambdas branchNum shiftedPatternTypes ((compiledBranch ^. compiledPatMkNode) (wrapBody (compiledBranch ^. compiledPatBinders))))
-  where
-    patterns :: [Pattern]
-    patterns = toList (br ^. matchBranchPatterns)
-
-    patternsNum :: Int
-    patternsNum = length patterns
-
-    patternBindersNumList :: [Int]
-    patternBindersNumList = map (length . getPatternBinders) patterns
-
-    accumPatternBindersNum :: [Int]
-    accumPatternBindersNum = init (scanl (+) 0 patternBindersNumList)
-
-    shiftedPatternTypes :: [Type]
-    shiftedPatternTypes = [shift (-n) b | (n, b) <- zipExact accumPatternBindersNum (map patternType patterns)]
-
-    wrapBody :: [CompiledBinder] -> Node
-    wrapBody binders = foldr (uncurry (mkLet mempty)) shiftedBody vars
+    compileMatch :: Match -> Sem r Node
+    compileMatch Match {..} =
+      go 0 (zipExact (toList _matchValues) (toList _matchValueTypes))
       where
-        vars :: [(Binder, Node)]
-        vars = (bimap (shiftBinder patternBindersNum') mkVar' . swap . toTuple) <$> extractOriginalBinders binders
+        go :: Int -> [(Node, Type)] -> Sem r Node
+        go n = \case
+          [] ->
+            compile err n [0 .. n - 1] matrix
+            where
+              err = hsep . take n
+              matrix = map matchBranchToPatternRow _matchBranches
 
-        auxiliaryBindersNum :: Int
-        auxiliaryBindersNum = length (filter isAuxiliaryBinder binders)
+              matchBranchToPatternRow :: MatchBranch -> PatternRow
+              matchBranchToPatternRow MatchBranch {..} =
+                PatternRow
+                  { _patternRowPatterns = toList _matchBranchPatterns,
+                    _patternRowBody = _matchBranchBody,
+                    _patternRowIgnoredPatternsNum = 0,
+                    _patternRowBinderChangesRev = [BCAdd n]
+                  }
+          (val, valty) : vs' -> do
+            ty' <- goMatchToCase (recur . (BCAdd n :)) valty
+            val' <- goMatchToCase (recur . (BCAdd n :)) val
+            mkLet' ty' val' <$> go (n + 1) vs'
 
-        patternBindersNum' :: Int
-        patternBindersNum' = sum patternBindersNumList
-
-        shiftedBody :: Node
-        shiftedBody =
-          shiftEmbedded
-            patternBindersNum'
-            (auxiliaryBindersNum + patternBindersNum' + patternsNum + branchNum)
-            (br ^. matchBranchBody)
-
--- | Increase the indices of free variables in the binderTyped by a given value
-shiftBinder :: Index -> Binder -> Binder
-shiftBinder idx = over binderType (shift idx)
-
--- | Make a sequence of nested lets from a list of binders / value pairs. The
--- indices of free variables in binder types are shifted by the sum of
--- `baseShift` and the number of lets that have already been added in the
--- sequence.
-mkShiftedBinderLets :: Index -> [(Binder, Node)] -> Node -> Node
-mkShiftedBinderLets baseShift vars body = foldr f body (indexFrom 0 vars)
-  where
-    f :: Indexed (Binder, Node) -> Node -> Node
-    f (Indexed idx (b, v)) = mkLet mempty (shiftBinder (baseShift + idx) b) v
-
-mkShiftedLambdas :: Index -> [Type] -> Node -> Node
-mkShiftedLambdas baseShift tys body = foldr f body (indexFrom 0 tys)
-  where
-    f :: Indexed Type -> Node -> Node
-    f (Indexed idx ty) = mkLambda' (shift (baseShift + idx) ty)
-
--- | Wrap a type node in an unnamed binder.
-typeToBinder :: Type -> Binder
-typeToBinder ty =
-  Binder
-    { _binderName = "?",
-      _binderLocation = Nothing,
-      _binderType = ty
-    }
-
--- | Extract original binders (i.e binders which are referenced in the match
--- branch body) from a list of `CompiledBinder`s indexed by the total number
--- (i.e including the auxiliary binders) of binders below it.
--- The `CompiledBinders` should be passed to this function in the order that they
--- were introduced.
-extractOriginalBinders :: [CompiledBinder] -> [Indexed Binder]
-extractOriginalBinders vs = updateBinders $ fmap getBinder <$> reverse (filterIndexed isOriginalBinder (indexFrom 0 (reverse vs)))
-  where
-    updateBinders :: [Indexed a] -> [Indexed a]
-    updateBinders = zipWith (over indexedIx . (+)) [0 ..]
-
--- | Combine the results of compiling the patterns of a match branch or patterns of constructor arguments.
---
--- If the arguments are a_1, .... a_n then the first pattern refers to its argument by index (n - 1), the second argument
--- refers to its argument by index (n - 2) and so on. This is the purpose of the indexedPatterns and setting the CompileStateNode.
---
--- The patterns are then evaluated and combined from left to right in the list .
-combineCompiledPatterns :: forall r. Member (Reader CompileState) r => [Sem ((Reader CompileStateNode) ': r) CompiledPattern] -> Sem r CompiledPattern
-combineCompiledPatterns ps = go indexedPatterns
-  where
-    indexedPatterns :: [Indexed (Sem ((Reader CompileStateNode) ': r) CompiledPattern)]
-    indexedPatterns = reverse (indexFrom 0 (reverse ps))
-
-    go :: [Indexed (Sem ((Reader CompileStateNode) ': r) CompiledPattern)] -> Sem r CompiledPattern
-    go [] = asks (^. compileStateCompiledPattern)
-    go (Indexed depth cp : xs) = do
-      numBinders <- length <$> asks (^. compileStateCompiledPattern . compiledPatBinders)
-      nextPattern <- runReader (CompileStateNode (mkVar' (numBinders + depth))) cp
-      updateState nextPattern (go xs)
-      where
-        updateState :: CompiledPattern -> Sem r CompiledPattern -> Sem r CompiledPattern
-        updateState p =
-          local
-            ( over compileStateBindersAbove (+ length (p ^. compiledPatBinders))
-                . (over compileStateCompiledPattern (<> p))
-            )
-
--- | Compile a single pattern
---
--- A Wildcard introduces no new binders and do not modify the body.
---
--- A Binder introduces a binder and may also name a subpattern (i.e an as-pattern)
---
--- A Constructor is translated into a case statement. Each of its arguments
--- (wildcard, binder or constructor) introduces an auxiliary binder.
--- The arguments are then compiled recursively using a new CompileState context.
--- The default case points to the next branch pattern.
-compilePattern :: forall r. Members [Reader CompileState, Reader CompileStateNode, InfoTableBuilder] r => Int -> Int -> Int -> Pattern -> Sem r CompiledPattern
-compilePattern baseShift branchNum numPatterns = \case
-  PatWildcard {} -> return (CompiledPattern [] id)
-  PatBinder b -> do
-    subPats <- resetCurrentNode (incBindersAbove (compilePattern baseShift branchNum numPatterns (b ^. patternBinderPattern)))
-    auxPatternsNum <- length . filter isAuxiliaryBinder <$> asks (^. compileStateCompiledPattern . compiledPatBinders)
-    currentNode <- asks (^. compileStateNodeCurrent)
-    let newBinder = shiftBinder (baseShift + branchNum + numPatterns + auxPatternsNum) (b ^. patternBinder)
-    let compiledBinder =
-          CompiledPattern
-            { _compiledPatBinders = [OriginalBinder newBinder],
-              _compiledPatMkNode = mkLet mempty newBinder currentNode
-            }
-    return (compiledBinder <> subPats)
-  PatConstr c -> do
-    let args = (c ^. patternConstrArgs)
-    compiledArgs <- compileArgs args
-    compiledCase <- compileCase args
-    return (compiledCase <> compiledArgs)
-    where
-      compileCase :: [Pattern] -> Sem r CompiledPattern
-      compileCase args = do
-        binders <- mapM mkBinder'' args
-        CompiledPattern <$> mapM mkCompiledBinder args <*> mkCaseFromBinders binders
-
-      compileArgs :: [Pattern] -> Sem r CompiledPattern
-      compileArgs args = do
-        let ctorArgsPatterns = compilePattern (length args) branchNum numPatterns <$> args
-        addBindersAbove (length args) (resetCompiledPattern (combineCompiledPatterns ctorArgsPatterns))
-
-      mkCompiledBinder :: Pattern -> Sem r CompiledBinder
-      mkCompiledBinder p = AuxiliaryBinder <$> mkBinder'' p
-
-      mkBinder'' :: Pattern -> Sem r Binder
-      mkBinder'' = \case
-        PatBinder b -> return (b ^. patternBinder)
-        PatWildcard w -> do
-          let info = w ^. patternWildcardInfo
-          return
-            Binder
-              { _binderName = "?",
-                _binderLocation = getInfoLocation info,
-                _binderType = mkDynamic'
-              }
-        PatConstr c' -> do
-          let info = c' ^. patternConstrInfo
-          mkUniqueBinder "arg" (getInfoLocation info) mkDynamic'
-
-      mkCaseFromBinders :: [Binder] -> Sem r (Node -> Node)
-      mkCaseFromBinders binders = do
-        indSym <- (^. constructorInductive) <$> ctorInfo
-        currentNode <- asks (^. compileStateNodeCurrent)
-        defaultNode'' <- defaultNode' numPatterns
-        let mkCaseFromBranch :: CaseBranch -> Node
-            mkCaseFromBranch b =
-              mkCase
-                mempty
-                indSym
-                currentNode
-                [b]
-                (Just defaultNode'')
-        (mkCaseFromBranch .) <$> mkBranch
-        where
-          ctorInfo :: Sem r ConstructorInfo
-          ctorInfo = getConstructorInfo (c ^. patternConstrTag)
-
-          mkBranch :: Sem r (Node -> CaseBranch)
-          mkBranch = do
-            ctorName <- (^. constructorName) <$> ctorInfo
-            return
-              ( \next ->
-                  CaseBranch
-                    { _caseBranchInfo = setInfoName ctorName mempty,
-                      _caseBranchTag = c ^. patternConstrTag,
-                      _caseBranchBinders = binders,
-                      _caseBranchBindersNum = length binders,
-                      _caseBranchBody = next
+    -- `compile err bindersNum vs matrix`:
+    --  - `err` creates a textual representation of an unmatched pattern
+    --    sequence, given as arguments the representations of patterns for the
+    --    holes (corresponding to the matched values `vs`)
+    --  - `bindersNum` is the number of binders added so far
+    --  - `vs` are the de Bruijn levels of the values matched on w.r.t. the
+    --    first added binder; a value matched on is always a variable referring
+    --    to one of the binders added so far
+    --  - `matrix` is the pattern matching matrix
+    compile :: ([Doc Ann] -> Doc Ann) -> Level -> [Level] -> PatternMatrix -> Sem r Node
+    compile err bindersNum vs matrix = case matrix of
+      [] -> do
+        -- The matrix has no rows -- matching fails (Section 4, case 1).
+        fCoverage <- asks (^. optCheckCoverage)
+        if
+            | fCoverage ->
+                throw
+                  CoreError
+                    { _coreErrorMsg = ppOutput ("Pattern matching not exhaustive. Example pattern sequence not matched: " <> pat),
+                      _coreErrorNode = Nothing,
+                      _coreErrorLoc = fromMaybe defaultLoc (getNodeLocation node)
                     }
+            | otherwise ->
+                return $
+                  mkBuiltinApp' OpFail [mkConstant' (ConstString ("Pattern sequence not matched: " <> show pat))]
+        where
+          pat = err (replicate (length vs) "_")
+          mockFile = $(mkAbsFile "/match-to-case")
+          defaultLoc = singletonInterval (mkInitialLoc mockFile)
+      r@PatternRow {..} : _
+        | all isPatWildcard _patternRowPatterns ->
+            -- The first row matches all values (Section 4, case 2)
+            compileMatchingRow bindersNum vs r
+      _ -> do
+        -- Section 4, case 3
+        -- Select the first column
+        tab <- ask
+        let vl = List.head vs
+            vs' = List.tail vs
+            val = mkVal bindersNum vl
+            (col, matrix') = decompose val matrix
+            tagsSet = getPatTags col
+            tags = toList tagsSet
+         in if
+                | null tags ->
+                    -- There are no constructor patterns
+                    compileDefault Nothing err bindersNum vs' col matrix'
+                | otherwise -> do
+                    -- Section 4, case 3(a)
+                    let ind = fromJust (HashMap.lookup (List.head tags) (tab ^. infoConstructors)) ^. constructorInductive
+                        ctrsNum = length (fromJust (HashMap.lookup ind (tab ^. infoInductives)) ^. inductiveConstructors)
+                    branches <- mapM (compileBranch err bindersNum vs' col matrix') tags
+                    defaultBranch <-
+                      if
+                          | length tags == ctrsNum ->
+                              return Nothing
+                          | otherwise ->
+                              Just <$> compileDefault (Just $ missingTag tab ind tagsSet) err bindersNum vs' col matrix'
+                    return $
+                      NCase
+                        Case
+                          { _caseInfo = mempty,
+                            _caseInductive = ind,
+                            _caseValue = val,
+                            _caseBranches = branches,
+                            _caseDefault = defaultBranch
+                          }
+
+    mkVal :: Level -> Level -> Node
+    mkVal bindersNum vl = mkVar' (getBinderIndex bindersNum vl)
+
+    decompose :: Node -> PatternMatrix -> ([Pattern], PatternMatrix)
+    decompose val matrix = (col, matrix')
+      where
+        col = map (List.head . (^. patternRowPatterns)) matrix
+        matrix' = map updateRow matrix
+        binder = getPatternBinder (List.head col)
+
+        updateRow :: PatternRow -> PatternRow
+        updateRow row =
+          row
+            { _patternRowPatterns = List.tail (row ^. patternRowPatterns),
+              _patternRowIgnoredPatternsNum = max 0 (nIgnored - 1),
+              _patternRowBinderChangesRev =
+                if
+                    | nIgnored > 0 -> rbcs
+                    | otherwise -> mkBCRemove binder val : rbcs
+            }
+          where
+            nIgnored = row ^. patternRowIgnoredPatternsNum
+            rbcs = row ^. patternRowBinderChangesRev
+
+    getPatTags :: [Pattern] -> HashSet Tag
+    getPatTags = \case
+      [] ->
+        mempty
+      PatConstr PatternConstr {..} : pats ->
+        HashSet.insert _patternConstrTag (getPatTags pats)
+      _ : pats ->
+        getPatTags pats
+
+    missingTag :: InfoTable -> Symbol -> HashSet Tag -> Tag
+    missingTag tab ind tags = fromJust $ find (not . flip HashSet.member tags) (map (^. constructorTag) (ii ^. inductiveConstructors))
+      where
+        ii = fromJust $ HashMap.lookup ind (tab ^. infoInductives)
+
+    compileMatchingRow :: Level -> [Level] -> PatternRow -> Sem r Node
+    compileMatchingRow bindersNum vs PatternRow {..} =
+      goMatchToCase (recur . (bcs ++)) _patternRowBody
+      where
+        bcs =
+          reverse $
+            foldl'
+              ( \acc (pat, vl) ->
+                  mkBCRemove (getPatternBinder pat) (mkVal bindersNum vl) : acc
               )
+              _patternRowBinderChangesRev
+              (drop _patternRowIgnoredPatternsNum (zipExact _patternRowPatterns vs))
 
-failNode :: [Type] -> Node
-failNode tys = mkShiftedLambdas 0 tys (mkBuiltinApp' OpFail [mkConstant' (ConstString "Non-exhaustive patterns")])
+    -- `compileDefault` computes D(M) where `M = col:matrix`, as described in
+    -- Section 2, Figure 1 in the paper. Then it continues compilation with the
+    -- new matrix.
+    compileDefault :: Maybe Tag -> ([Doc Ann] -> Doc Ann) -> Level -> [Level] -> [Pattern] -> PatternMatrix -> Sem r Node
+    compileDefault mtag err bindersNum vs col matrix = do
+      tab <- ask
+      compile (err' tab) bindersNum vs matrix'
+      where
+        matrix' = [row | (pat, row) <- zipExact col matrix, PatWildcard {} <- [pat]]
+        err' tab args =
+          case mtag of
+            Just tag ->
+              err (parensIf (argsNum > 0) (hsep (annotate (AnnKind KNameConstructor) (pretty (ci ^. constructorName)) : replicate argsNum "_")) : args)
+              where
+                ci = fromJust $ HashMap.lookup tag (tab ^. infoConstructors)
+                paramsNum = getTypeParamsNum tab (ci ^. constructorType)
+                argsNum = ci ^. constructorArgsNum - paramsNum
+            Nothing ->
+              err ("_" : args)
 
-mkUniqueBinder' :: Member InfoTableBuilder r => Text -> Node -> Sem r Binder
-mkUniqueBinder' name ty = mkUniqueBinder name Nothing ty
+    -- `compileBranch` computes S(c, M) where `c = Constr tag` and `M =
+    -- col:matrix`, as described in Section 2, Figure 1 in the paper. Then it
+    -- continues compilation with the new matrix.
+    compileBranch :: ([Doc Ann] -> Doc Ann) -> Level -> [Level] -> [Pattern] -> PatternMatrix -> Tag -> Sem r CaseBranch
+    compileBranch err bindersNum vs col matrix tag = do
+      tab <- ask
+      let ci = fromJust $ HashMap.lookup tag (tab ^. infoConstructors)
+          paramsNum = getTypeParamsNum tab (ci ^. constructorType)
+          argsNum = length (typeArgs (ci ^. constructorType))
+          bindersNum' = bindersNum + argsNum
+          vs' = [bindersNum .. bindersNum + argsNum - 1]
+          err' args =
+            err
+              (parensIf (argsNum > paramsNum) (hsep (annotate (AnnKind KNameConstructor) (pretty (ci ^. constructorName)) : drop paramsNum (take argsNum args))) : drop argsNum args)
+      binders' <- getBranchBinders col matrix tag
+      matrix' <- getBranchMatrix col matrix tag
+      body <- compile err' bindersNum' (vs' ++ vs) matrix'
+      return $
+        CaseBranch
+          { _caseBranchInfo = setInfoName (ci ^. constructorName) mempty,
+            _caseBranchTag = tag,
+            _caseBranchBinders = binders',
+            _caseBranchBindersNum = argsNum,
+            _caseBranchBody = body
+          }
 
-mkUniqueBinder :: Member InfoTableBuilder r => Text -> Maybe Location -> Node -> Sem r Binder
-mkUniqueBinder name loc ty = do
-  sym <- freshSymbol
-  return
-    Binder
-      { _binderName = uniqueName name sym,
-        _binderLocation = loc,
-        _binderType = ty
-      }
+    getBranchBinders :: [Pattern] -> PatternMatrix -> Tag -> Sem r [Binder]
+    getBranchBinders col matrix tag =
+      reverse . snd
+        <$> foldl'
+          ( \a pat -> do
+              (rbcs, acc) <- a
+              let bcs = map (\b -> mkBCRemove b (error "pattern compiler: dependently typed pattern")) (getPatternExtraBinders pat)
+                  bc = mkBCRemove (getPatternBinder pat) (mkVar' 0)
+              binder <- overM binderType (goMatchToCase (recur . revAppend rbcs)) (getPatternBinder pat)
+              return (revAppend bcs (bc : BCAdd 1 : rbcs), binder : acc)
+          )
+          (return (matrix !! (argPatsIx ^. indexedIx) ^. patternRowBinderChangesRev, []))
+          (argPatsIx ^. indexedThing)
+      where
+        argPatsIx :: Indexed [Pattern]
+        argPatsIx = fromJust (firstJust (mapM getArgs) (indexFrom 0 col))
+          where
+            getArgs :: Pattern -> Maybe [Pattern]
+            getArgs = \case
+              PatConstr PatternConstr {..}
+                | _patternConstrTag == tag -> Just _patternConstrArgs
+              _ -> Nothing
 
--- | The default node in a case expression.
--- It points to the next branch above.
-defaultNode' :: Member (Reader CompileState) r => Int -> Sem r Node
-defaultNode' numMatchValues = do
-  numBindersAbove <- asks (^. compileStateBindersAbove)
-  return
-    ( mkApps'
-        (mkVar' (numBindersAbove + numMatchValues))
-        (mkVar' <$> (reverse (take numMatchValues [numBindersAbove ..])))
-    )
+    getBranchMatrix :: [Pattern] -> PatternMatrix -> Tag -> Sem r PatternMatrix
+    getBranchMatrix col matrix tag = do
+      tab <- ask
+      let ci = fromJust $ HashMap.lookup tag (tab ^. infoConstructors)
+          argtys = typeArgs (ci ^. constructorType)
+          argsNum = length argtys
+          helper :: PatternRow -> Pattern -> Maybe PatternRow
+          helper row = \case
+            PatConstr PatternConstr {..}
+              | _patternConstrTag == tag ->
+                  Just $
+                    row
+                      { _patternRowPatterns =
+                          _patternConstrArgs ++ row ^. patternRowPatterns,
+                        _patternRowBinderChangesRev = BCAdd argsNum : row ^. patternRowBinderChangesRev
+                      }
+            PatWildcard {} ->
+              Just $
+                row
+                  { _patternRowPatterns =
+                      map (PatWildcard . PatternWildcard mempty . Binder "_" Nothing) argtys
+                        ++ row ^. patternRowPatterns,
+                    _patternRowBinderChangesRev = BCAdd argsNum : row ^. patternRowBinderChangesRev,
+                    _patternRowIgnoredPatternsNum = argsNum + row ^. patternRowIgnoredPatternsNum
+                  }
+            _ ->
+              Nothing
+      return (catMaybes [helper row pat | (pat, row) <- zipExact col matrix])

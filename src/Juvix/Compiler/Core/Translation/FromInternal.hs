@@ -283,24 +283,26 @@ mkFunBody ::
   Internal.FunctionDef ->
   Sem r Node
 mkFunBody ty f =
-  mkBody ty (fmap (\c -> (c ^. Internal.clausePatterns, c ^. Internal.clauseBody)) (f ^. Internal.funDefClauses))
+  mkBody ty (f ^. Internal.funDefName . nameLoc) (fmap (\c -> (c ^. Internal.clausePatterns, c ^. Internal.clauseBody)) (f ^. Internal.funDefClauses))
 
 mkBody ::
   forall r.
   (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable] r) =>
   Type -> -- type of the function
+  Location ->
   NonEmpty ([Internal.PatternArg], Internal.Expression) ->
   Sem r Node
-mkBody ty clauses
+mkBody ty loc clauses
   | nPatterns == 0 = goExpression (snd (head clauses))
   | otherwise = do
       let values = mkVar Info.empty <$> vs
           argtys = take nPatterns (typeArgs ty)
+          argbinders = take nPatterns (typeArgsBinders ty)
           values' = map fst $ filter (isInductive . snd) (zipExact values argtys)
           matchArgtys = shiftMatchTypeArg <$> indexFrom 0 argtys
           matchTypeTarget = typeTarget ty
           matchIndArgTys = filter isInductive matchArgtys
-          matchReturnType' = mkPis' (drop nPatterns (typeArgs ty)) matchTypeTarget
+          matchReturnType' = mkPis (drop nPatterns (typeArgsBinders ty)) matchTypeTarget
       case values' of
         [] -> do
           vars <- asks (^. indexTableVars)
@@ -315,12 +317,13 @@ mkBody ty clauses
             local
               (set indexTableVars vars' . set indexTableVarsNum varsNum')
               (goExpression body)
-          return $ foldr mkLambda' body' argtys
+          return $ foldr (mkLambda mempty) body' argbinders
         _ : _ -> do
           varsNum <- asks (^. indexTableVarsNum)
           ms <- underBinders nPatterns (mapM (uncurry (goClause varsNum)) clauses)
-          let match = mkMatch' (fromList matchIndArgTys) matchReturnType' (fromList values') (toList ms)
-          return $ foldr mkLambda' match argtys
+          let i = setInfoLocation loc mempty
+              match = mkMatch i (fromList matchIndArgTys) matchReturnType' (fromList values') (toList ms)
+          return $ foldr (mkLambda mempty) match argbinders
   where
     -- Assumption: All clauses have the same number of patterns
     nPatterns :: Int
@@ -342,7 +345,7 @@ mkBody ty clauses
     --
     --    A -> A$0 -> List A$1 -> A$2 -> A$3 -> A$4 -> List A$5
     --
-    -- Is translated to the following match (omiting the translation of the body):
+    -- Is translated to the following match (omitting the translation of the body):
     --
     --    λ(? : Type)
     --      λ(? : A$0)
@@ -375,18 +378,20 @@ goCase ::
   Internal.Case ->
   Sem r Node
 goCase c = do
+  let loc = getLoc c
+      i = setInfoLocation loc mempty
   expr <- goExpression (c ^. Internal.caseExpression)
   ty <- goType (fromJust $ c ^. Internal.caseExpressionType)
   case ty of
     NTyp {} -> do
       branches <- toList <$> mapM (goCaseBranch ty) (c ^. Internal.caseBranches)
       rty <- goType (fromJust $ c ^. Internal.caseExpressionWholeType)
-      return (mkMatch' (NonEmpty.singleton ty) rty (pure expr) branches)
+      return (mkMatch i (NonEmpty.singleton ty) rty (pure expr) branches)
     _ ->
       case c ^. Internal.caseBranches of
         Internal.CaseBranch {..} :| _ ->
           case _caseBranchPattern ^. Internal.patternArgPattern of
-            Internal.PatternVariable {} -> do
+            Internal.PatternVariable name -> do
               vars <- asks (^. indexTableVars)
               varsNum <- asks (^. indexTableVarsNum)
               let vars' = addPatternVariableNames _caseBranchPattern varsNum vars
@@ -394,7 +399,7 @@ goCase c = do
                 local
                   (set indexTableVars vars')
                   (underBinders 1 (goExpression _caseBranchExpression))
-              return $ mkLet' ty expr body
+              return $ mkLet i (Binder (name ^. nameText) (Just $ name ^. nameLoc) ty) expr body
             _ ->
               impossible
   where
@@ -408,7 +413,7 @@ goLambda ::
   Sem r Node
 goLambda l = do
   ty <- goType (fromJust (l ^. Internal.lambdaType))
-  mkBody ty (fmap (\c -> (toList (c ^. Internal.lambdaPatterns), c ^. Internal.lambdaBody)) (l ^. Internal.lambdaClauses))
+  mkBody ty (getLoc l) (fmap (\c -> (toList (c ^. Internal.lambdaPatterns), c ^. Internal.lambdaBody)) (l ^. Internal.lambdaClauses))
 
 goLet ::
   forall r.
@@ -430,7 +435,9 @@ goLet l = goClauses (toList (l ^. Internal.letClauses))
               funTy <- goType (f ^. Internal.funDefType)
               funBody <- mkFunBody funTy f
               rest <- localAddName (f ^. Internal.funDefName) (goClauses cs)
-              return $ mkLet' funTy funBody rest
+              let name = f ^. Internal.funDefName . nameText
+                  loc = f ^. Internal.funDefName . nameLoc
+              return $ mkLet mempty (Binder name (Just loc) funTy) funBody rest
           goMutual :: Internal.MutualBlock -> Sem r Node
           goMutual (Internal.MutualBlock funs) = do
             let lfuns = toList funs
@@ -439,9 +446,9 @@ goLet l = goClauses (toList (l ^. Internal.letClauses))
             tys' <- mapM goType tys
             localAddNames names $ do
               vals' <- sequence [mkFunBody ty f | (ty, f) <- zipExact tys' lfuns]
-              let items = nonEmpty' (zip tys' vals')
+              let items = nonEmpty' (zipWith3Exact (\ty n v -> LetItem (Binder (n ^. nameText) (Just $ n ^. nameLoc) ty) v) tys' names vals')
               rest <- goClauses cs
-              return (mkLetRec' items rest)
+              return (mkLetRec mempty items rest)
 
 goAxiomInductive ::
   forall r.
@@ -569,76 +576,69 @@ goAxiomDef a = do
 
 fromPatternArg ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable] r) =>
+  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable, State IndexTable] r) =>
   Internal.PatternArg ->
   Sem r Pattern
 fromPatternArg pa = case pa ^. Internal.patternArgName of
   Just pan -> do
     ty <- getPatternType pan
-    wrapAsPattern pan ty <$> subPat
-  Nothing -> subPat
+    subPat $ Just (pan, ty)
+  Nothing ->
+    subPat Nothing
   where
-    subPat :: Sem r Pattern
-    subPat = fromPattern (pa ^. Internal.patternArgPattern)
-
-    wrapAsPattern :: Name -> Type -> Pattern -> Pattern
-    wrapAsPattern pan ty pat =
-      ( PatBinder
-          ( PatternBinder
-              { _patternBinder =
-                  Binder
-                    { _binderName = pan ^. nameText,
-                      _binderLocation = Just (pan ^. nameLoc),
-                      _binderType = ty
-                    },
-                _patternBinderPattern = pat
-              }
-          )
-      )
+    subPat :: Maybe (Name, Type) -> Sem r Pattern
+    subPat asPat = fromPattern asPat (pa ^. Internal.patternArgPattern)
 
     getPatternType :: Name -> Sem r Type
-    getPatternType n = asks @InternalTyped.TypesTable (fromJust . HashMap.lookup n) >>= goType
+    getPatternType n = do
+      ty <- asks (fromJust . HashMap.lookup n)
+      idt :: IndexTable <- get
+      runReader idt (goType ty)
 
-    indexedPatternArgs :: [Internal.PatternArg] -> Sem r [Pattern]
-    indexedPatternArgs ps = mapM go (zipExact accumPatternVarsNum ps)
-      where
-        go :: (Int, Internal.PatternArg) -> Sem r Pattern
-        go (i, p) = local (over indexTableVarsNum (+ i)) (fromPatternArg p)
-
-        patternVarsNumList :: [Int]
-        patternVarsNumList = map (length . getPatternArgVars) ps
-
-        accumPatternVarsNum :: [Int]
-        accumPatternVarsNum = init (scanl (+) 0 patternVarsNumList)
-
-    fromPattern :: Internal.Pattern -> Sem r Pattern
-    fromPattern = \case
+    fromPattern :: Maybe (Name, Type) -> Internal.Pattern -> Sem r Pattern
+    fromPattern asPat = \case
       Internal.PatternVariable n -> do
         ty <- getPatternType n
-        return $ PatBinder (PatternBinder (Binder (n ^. nameText) (Just (n ^. nameLoc)) ty) (wildcard ty))
+        varsNum <- (^. indexTableVarsNum) <$> get
+        modify
+          ( over indexTableVarsNum (+ 1)
+              . over indexTableVars (HashMap.insert (n ^. nameId) varsNum)
+          )
+        case asPat of
+          Just (pan, _) -> modify (over indexTableVars (HashMap.insert (pan ^. nameId) varsNum))
+          _ -> return ()
+        return $ PatWildcard (PatternWildcard mempty (Binder (n ^. nameText) (Just (n ^. nameLoc)) ty))
       Internal.PatternConstructorApp c -> do
-        (indParams, _) <- InternalTyped.lookupConstructorArgTypes n
-        patternArgs <- indexedPatternArgs params
-        let indArgs = replicate (length indParams) (wildcard mkSmallUniv)
+        idt :: IndexTable <- get
+        ctorTy <- runReader idt $ goType (fromJust (c ^. Internal.constrAppType))
+        let varsNum = idt ^. indexTableVarsNum
+        case asPat of
+          Just (pan, _) -> modify (over indexTableVars (HashMap.insert (pan ^. nameId) varsNum))
+          _ -> return ()
+        (indParams, _) <- InternalTyped.lookupConstructorArgTypes ctrName
+        let nParams = length indParams
+        -- + 1 for the as-pattern
+        modify (over indexTableVarsNum (+ (nParams + 1)))
+        patternArgs <- mapM fromPatternArg params
+        let indArgs = replicate nParams (wildcard mkSmallUniv)
             args = indArgs ++ patternArgs
         m <- getIdent identIndex
-        ctorTy <- goType (fromJust (c ^. Internal.constrAppType))
         case m of
           Just (IdentConstr tag) ->
             return $
               PatConstr
                 ( PatternConstr
-                    { _patternConstrInfo = setInfoLocation (n ^. nameLoc) (setInfoName (n ^. nameText) Info.empty),
+                    { _patternConstrInfo = setInfoName (ctrName ^. nameText) mempty,
+                      _patternConstrBinder = binder ctorTy,
                       _patternConstrTag = tag,
-                      _patternConstrArgs = args,
-                      _patternConstrType = ctorTy
+                      _patternConstrArgs = args
                     }
                 )
           Just _ -> error ("internal to core: not a constructor " <> txt)
           Nothing -> error ("internal to core: undeclared identifier: " <> txt)
         where
-          n :: Name
-          n = c ^. Internal.constrAppConstructor
+          ctrName :: Name
+          ctrName = c ^. Internal.constrAppConstructor
 
           params :: [Internal.PatternArg]
           params = (c ^. Internal.constrAppParameters)
@@ -646,25 +646,16 @@ fromPatternArg pa = case pa ^. Internal.patternArgName of
           identIndex :: Text
           identIndex = mkIdentIndex (c ^. Internal.constrAppConstructor)
 
+          binder :: Type -> Binder
+          binder ctorTy = case asPat of
+            Just (pan, ty) -> Binder (pan ^. nameText) (Just (pan ^. nameLoc)) ty
+            _ -> Binder "_" Nothing ctorTy
+
           txt :: Text
           txt = c ^. Internal.constrAppConstructor . Internal.nameText
-      where
-        wildcard :: Type -> Pattern
-        wildcard ty = PatWildcard (PatternWildcard Info.empty ty)
 
-getPatternArgVars :: Internal.PatternArg -> [Name]
-getPatternArgVars pa = case pa ^. Internal.patternArgName of
-  Nothing -> subVars
-  Just pan -> pan : subVars
-  where
-    getPatternVars :: Internal.Pattern -> [Name]
-    getPatternVars = \case
-      Internal.PatternVariable n -> [n]
-      Internal.PatternConstructorApp c ->
-        concatMap getPatternArgVars (c ^. Internal.constrAppParameters)
-
-    subVars :: [Name]
-    subVars = getPatternVars (pa ^. Internal.patternArgPattern)
+          wildcard :: Type -> Pattern
+          wildcard ty = PatWildcard (PatternWildcard Info.empty (Binder "_" Nothing ty))
 
 goPatternArgs ::
   forall r.
@@ -681,20 +672,10 @@ goPatternArgs lvl0 body ps0 ptys0 = go lvl0 [] ps0 ptys0
     go lvl pats ps ptys = case (ps, ptys) of
       -- The pattern has an inductive type, so can be matched on
       (p : ps', NTyp {} : ptys') -> do
-        pat <- fromPatternArg p
-        vars <- asks (^. indexTableVars)
-        varsNum <- asks (^. indexTableVarsNum)
-        let bs :: [Name]
-            bs = getPatternArgVars p
-            (vars', varsNum') =
-              foldl'
-                ( \(vs, k) name ->
-                    (HashMap.insert (name ^. nameId) k vs, k + 1)
-                )
-                (vars, varsNum)
-                bs
+        itb :: IndexTable <- ask
+        (itb', pat) <- runState itb (fromPatternArg p)
         local
-          (set indexTableVars vars' . set indexTableVarsNum varsNum')
+          (const itb')
           (go (lvl + 1) (pat : pats) ps' ptys')
       (p : ps', _ : ptys') ->
         -- The pattern does not have an inductive type, so is excluded from the match
@@ -719,7 +700,19 @@ addPatternVariableNames ::
   HashMap NameId Level ->
   HashMap NameId Level
 addPatternVariableNames p lvl vars =
-  foldl' (\vs name -> HashMap.insert (name ^. nameId) lvl vs) vars (getPatternArgVars p)
+  foldl'
+    (\vs -> maybe vs (\name -> HashMap.insert (name ^. nameId) lvl vs))
+    vars
+    (getPatternArgVars p)
+  where
+    getPatternArgVars :: Internal.PatternArg -> [Maybe Name]
+    getPatternArgVars pa =
+      pa ^. Internal.patternArgName : getPatternVars (pa ^. Internal.patternArgPattern)
+
+    getPatternVars :: Internal.Pattern -> [Maybe Name]
+    getPatternVars = \case
+      Internal.PatternVariable n -> [Just n]
+      Internal.PatternConstructorApp {} -> impossible
 
 goExpression ::
   forall r.
@@ -826,7 +819,9 @@ goSimpleLambda ::
   Sem r Node
 goSimpleLambda l = do
   ty <- goType (l ^. Internal.slambdaVarType)
-  localAddName (l ^. Internal.slambdaVar) (mkLambda' ty <$> goExpression (l ^. Internal.slambdaBody))
+  let loc = l ^. Internal.slambdaVar . nameLoc
+      name = l ^. Internal.slambdaVar . nameText
+  localAddName (l ^. Internal.slambdaVar) (mkLambda mempty (Binder name (Just loc) ty) <$> goExpression (l ^. Internal.slambdaBody))
 
 goApplication ::
   forall r.

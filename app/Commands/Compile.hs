@@ -6,6 +6,7 @@ import Commands.Dev.Core.Compile.Base qualified as Compile
 import Commands.Extra.Compile qualified as Compile
 import Data.Text.IO qualified as TIO
 import Juvix.Compiler.Core qualified as Core
+import Juvix.Compiler.Core.Pretty qualified as Core
 import Juvix.Compiler.Core.Transformation.DisambiguateNames qualified as Core
 
 runCommand :: (Members '[Embed IO, App] r) => CompileOptions -> Sem r ()
@@ -26,9 +27,10 @@ runCommand opts@CompileOptions {..} = do
     TargetAsm -> Compile.runAsmPipeline arg
 
 writeCoreFile :: (Members '[Embed IO, App] r) => Compile.PipelineArg -> Sem r ()
-writeCoreFile Compile.PipelineArg {..} = do
+writeCoreFile pa@Compile.PipelineArg {..} = do
+  entryPoint <- Compile.getEntry pa
   coreFile <- Compile.outputFile _pipelineArgOptions _pipelineArgFile
-  r <- runError @JuvixError $ Core.toEval _pipelineArgInfoTable
+  r <- runReader entryPoint $ runError @JuvixError $ Core.toEval _pipelineArgInfoTable
   case r of
     Left e -> exitJuvixError e
     Right tab ->

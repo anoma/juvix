@@ -6,6 +6,7 @@ import Core.Eval.Base
 import Core.Eval.Positive qualified as Eval
 import Data.Text.IO qualified as TIO
 import Juvix.Compiler.Asm.Translation.FromCore qualified as Asm
+import Juvix.Compiler.Core.Options
 import Juvix.Compiler.Core.Pipeline
 import Juvix.Compiler.Core.Translation.FromSource
 import Juvix.Compiler.Core.Translation.Stripped.FromCore qualified as Stripped
@@ -49,7 +50,7 @@ coreAsmAssertion mainFile expectedFile step = do
       assertEqDiffText ("Check: EVAL output = " <> toFilePath expectedFile) "" expected
     Right (tabIni, Just node) -> do
       step "Translate"
-      case run $ runError $ toStripped $ setupMainFunction tabIni node of
+      case run $ runReader defaultCoreOptions $ runError $ toStripped' $ setupMainFunction tabIni node of
         Left err -> assertFailure (show (pretty (fromJuvixError @GenericError err)))
         Right tab' -> do
           let tab = Asm.fromCore $ Stripped.fromCore $ tab'

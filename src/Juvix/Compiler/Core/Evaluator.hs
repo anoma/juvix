@@ -45,6 +45,13 @@ instance Show EvalError where
 
 instance Exception.Exception EvalError
 
+evalInfoTable :: Handle -> InfoTable -> Node
+evalInfoTable herr info = eval herr idenCtxt [] mainNode
+  where
+    idenCtxt = info ^. identContext
+    mainSym = fromJust (info ^. infoMain)
+    mainNode = fromJust (HashMap.lookup mainSym idenCtxt)
+
 -- | `eval ctx env n` evalues a node `n` whose all free variables point into
 -- `env`. All nodes in `ctx` must be closed. All nodes in `env` must be values.
 -- Invariant for values v: eval ctx env v = v
@@ -111,13 +118,11 @@ eval herr ctx env0 = convertRuntimeNodes . eval' env0
             evalError "the number of patterns doesn't match the number of arguments" (substEnv env n)
 
           patmatch :: [Node] -> Node -> Pattern -> Maybe [Node]
-          patmatch acc _ PatWildcard {} =
-            Just acc
-          patmatch acc v (PatBinder PatternBinder {..}) =
-            patmatch (v : acc) v _patternBinderPattern
-          patmatch acc (NCtr (Constr _ tag args)) (PatConstr PatternConstr {..})
+          patmatch acc v PatWildcard {} =
+            Just (v : acc)
+          patmatch acc v@(NCtr (Constr _ tag args)) (PatConstr PatternConstr {..})
             | tag == _patternConstrTag =
-                matchPatterns acc args _patternConstrArgs
+                matchPatterns (v : acc) args _patternConstrArgs
           patmatch _ _ _ = Nothing
       [] ->
         evalError "no matching pattern" (substEnv env n)
@@ -262,7 +267,7 @@ catchEvalErrorIO loc ma =
 toCoreError :: Location -> EvalError -> CoreError
 toCoreError loc (EvalError {..}) =
   CoreError
-    { _coreErrorMsg = "evaluation error: " <> _evalErrorMsg,
+    { _coreErrorMsg = ppOutput $ "evaluation error: " <> pretty _evalErrorMsg,
       _coreErrorNode = _evalErrorNode,
       _coreErrorLoc = fromMaybe loc (lookupLocation =<< _evalErrorNode)
     }

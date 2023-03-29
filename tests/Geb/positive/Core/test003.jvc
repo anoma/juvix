@@ -2,8 +2,8 @@
 
 type enum {
   opt0 : enum;
-  opt1 : bool -> enum;
-  opt2 : bool -> bool -> enum;
+  opt1 : Bool -> enum;
+  opt2 : Bool -> Bool -> enum;
 };
 
 (\(e : enum) case e of {

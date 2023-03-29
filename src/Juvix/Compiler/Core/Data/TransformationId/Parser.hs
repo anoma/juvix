@@ -71,6 +71,7 @@ transformationText = \case
   LetRecLifting -> strLetRecLifting
   TopEtaExpand -> strTopEtaExpand
   MatchToCase -> strMatchToCase
+  NaiveMatchToCase -> strNaiveMatchToCase
   EtaExpandApps -> strEtaExpandApps
   Identity -> strIdentity
   RemoveTypeArgs -> strRemoveTypeArgs
@@ -81,6 +82,7 @@ transformationText = \case
   UnrollRecursion -> strUnrollRecursion
   DisambiguateNames -> strDisambiguateNames
   CheckGeb -> strCheckGeb
+  LetFolding -> strLetFolding
 
 parsePipeline :: MonadParsec e Text m => m PipelineId
 parsePipeline = choice [symbol (pipelineText t) $> t | t <- allElements]
@@ -112,6 +114,9 @@ strTopEtaExpand = "top-eta-expand"
 strMatchToCase :: Text
 strMatchToCase = "match-to-case"
 
+strNaiveMatchToCase :: Text
+strNaiveMatchToCase = "naive-match-to-case"
+
 strEtaExpandApps :: Text
 strEtaExpandApps = "eta-expand-apps"
 
@@ -141,3 +146,6 @@ strDisambiguateNames = "disambiguate-names"
 
 strCheckGeb :: Text
 strCheckGeb = "check-geb"
+
+strLetFolding :: Text
+strLetFolding = "let-folding"

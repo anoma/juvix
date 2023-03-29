@@ -7,8 +7,13 @@ import Juvix.Compiler.Core qualified as Core
 
 runCommand :: (Members '[Embed IO, App] r) => EvalOptions -> Sem r ()
 runCommand opts@EvalOptions {..} = do
+  gopts <- askGlobalOptions
   Core.CoreResult {..} <- runPipeline _evalInputFile upToCore
-  r <- runError @JuvixError $ Core.toEval _coreResultTable
+  let r =
+        run $
+          runReader (project gopts) $
+            runError @JuvixError $
+              (Core.toEval' _coreResultTable :: Sem '[Error JuvixError, Reader Core.CoreOptions] Core.InfoTable)
   tab <- getRight r
   let evalNode =
         if

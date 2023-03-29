@@ -5,7 +5,9 @@ where
 
 import CommonOptions
 import Juvix.Compiler.Abstract.Pretty.Options qualified as Abstract
+import Juvix.Compiler.Core.Options qualified as Core
 import Juvix.Compiler.Internal.Pretty.Options qualified as Internal
+import Juvix.Compiler.Pipeline (EntryPoint (..), defaultEntryPoint, defaultUnrollLimit)
 import Juvix.Data.Error.GenericError qualified as E
 import Juvix.Extra.Paths
 
@@ -18,7 +20,9 @@ data GlobalOptions = GlobalOptions
     _globalStdin :: Bool,
     _globalNoTermination :: Bool,
     _globalNoPositivity :: Bool,
-    _globalNoStdlib :: Bool
+    _globalNoCoverage :: Bool,
+    _globalNoStdlib :: Bool,
+    _globalUnrollLimit :: Int
   }
   deriving stock (Eq, Show)
 
@@ -43,6 +47,13 @@ instance CanonicalProjection GlobalOptions E.GenericOptions where
         E._genericNoApe = _globalNoApe
       }
 
+instance CanonicalProjection GlobalOptions Core.CoreOptions where
+  project GlobalOptions {..} =
+    Core.CoreOptions
+      { Core._optCheckCoverage = not _globalNoCoverage,
+        Core._optUnrollLimit = _globalUnrollLimit
+      }
+
 defaultGlobalOptions :: GlobalOptions
 defaultGlobalOptions =
   GlobalOptions
@@ -54,7 +65,9 @@ defaultGlobalOptions =
       _globalBuildDir = Nothing,
       _globalStdin = False,
       _globalNoPositivity = False,
-      _globalNoStdlib = False
+      _globalNoCoverage = False,
+      _globalNoStdlib = False,
+      _globalUnrollLimit = defaultUnrollLimit
     }
 
 -- | Get a parser for global flags which can be hidden or not depending on
@@ -103,10 +116,22 @@ parseGlobalFlags = do
       ( long "no-positivity"
           <> help "Disable positivity checking for inductive types"
       )
+  _globalNoCoverage <-
+    switch
+      ( long "no-coverage"
+          <> help "Disable coverage checking for patterns"
+      )
   _globalNoStdlib <-
     switch
       ( long "no-stdlib"
           <> help "Do not use the standard library"
+      )
+  _globalUnrollLimit <-
+    option
+      (fromIntegral <$> naturalNumberOpt)
+      ( long "unroll"
+          <> value defaultUnrollLimit
+          <> help ("Recursion unrolling limit (default: " <> show defaultUnrollLimit <> ")")
       )
   return GlobalOptions {..}
 
@@ -122,3 +147,14 @@ parseBuildDir m = do
           <> m
       )
   pure AppPath {_pathIsInput = False, ..}
+
+entryPointFromGlobalOptions :: Path Abs Dir -> Path Abs File -> GlobalOptions -> EntryPoint
+entryPointFromGlobalOptions root mainFile opts =
+  (defaultEntryPoint root mainFile)
+    { _entryPointNoTermination = opts ^. globalNoTermination,
+      _entryPointNoPositivity = opts ^. globalNoPositivity,
+      _entryPointNoCoverage = opts ^. globalNoCoverage,
+      _entryPointNoStdlib = opts ^. globalNoStdlib,
+      _entryPointUnrollLimit = opts ^. globalUnrollLimit,
+      _entryPointGenericOptions = project opts
+    }

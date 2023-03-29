@@ -13,8 +13,7 @@ import Juvix.Compiler.Concrete.Pretty.Options
 import Juvix.Data.CodeAnn (Ann, CodeAnn (..), ppStringLit)
 import Juvix.Data.Effect.ExactPrint
 import Juvix.Data.Keyword.All
-import Juvix.Prelude.Base hiding ((<+>), (<+?>), (<?+>), (?<>))
-import Juvix.Prelude.Path
+import Juvix.Prelude hiding ((<+>), (<+?>), (<?+>), (?<>))
 import Juvix.Prelude.Pretty (annotate, pretty)
 
 class PrettyPrint a where
@@ -144,13 +143,16 @@ instance PrettyPrint (Example 'Scoped) where
       <+> noLoc P.ppJudocExampleStart
       <+> ppCode (e ^. exampleExpression)
         <> noLoc P.kwSemicolon
-        <> line
 
 instance PrettyPrint (JudocParagraphLine 'Scoped) where
   ppCode = ppMorpheme
 
 instance PrettyPrint (Judoc 'Scoped) where
-  ppCode (Judoc blocks) = mconcatMapM ppCode blocks
+  ppCode :: forall r. Members '[ExactPrint, Reader Options] r => Judoc 'Scoped -> Sem r ()
+  ppCode (Judoc blocks) = sequenceWith paragraphSep (map ppCode blocks) >> line
+    where
+      paragraphSep :: Sem r ()
+      paragraphSep = line >> noLoc P.ppJudocStart >> line
 
 instance PrettyPrint (JudocBlock 'Scoped) where
   ppCode = \case

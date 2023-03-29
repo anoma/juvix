@@ -5,9 +5,11 @@ module Commands.Dev.Geb.Repl where
 import Commands.Base hiding (command)
 import Commands.Dev.Geb.Repl.Format
 import Commands.Dev.Geb.Repl.Options
+import Commands.Extra.Paths
 import Control.Exception (throwIO)
 import Control.Monad.State.Strict qualified as State
 import Data.String.Interpolate (i, __i)
+import Juvix.Compiler.Backend qualified as Backend
 import Juvix.Compiler.Backend.Geb qualified as Geb
 import Juvix.Compiler.Backend.Geb.Analysis.TypeChecking.Error
 import Juvix.Data.Error.GenericError qualified as Error
@@ -29,9 +31,6 @@ data ReplState = ReplState
 
 makeLenses ''ReplState
 
-replPath :: Path Abs File
-replPath = $(mkAbsFile "/repl.geb")
-
 runCommand :: (Members '[Embed IO, App] r) => GebReplOptions -> Sem r ()
 runCommand replOpts = do
   root <- askPkgDir
@@ -44,17 +43,10 @@ runCommand replOpts = do
         gopts <- State.gets (^. replStateGlobalOptions)
         absInputFile :: Path Abs File <- replMakeAbsolute inputFile
         return $
-          EntryPoint
-            { _entryPointRoot = root,
-              _entryPointBuildDir = buildDir,
-              _entryPointResolverRoot = root,
-              _entryPointNoTermination = gopts ^. globalNoTermination,
-              _entryPointNoPositivity = gopts ^. globalNoPositivity,
-              _entryPointNoStdlib = gopts ^. globalNoStdlib,
+          (entryPointFromGlobalOptions root absInputFile gopts)
+            { _entryPointBuildDir = buildDir,
               _entryPointPackage = package,
-              _entryPointModulePaths = pure absInputFile,
-              _entryPointGenericOptions = project gopts,
-              _entryPointStdin = Nothing
+              _entryPointTarget = Backend.TargetGeb
             }
   embed
     ( State.evalStateT
@@ -103,7 +95,7 @@ loadFile getReplEntryPoint f = do
 
 inferObject :: String -> Repl ()
 inferObject gebMorphism = Repline.dontCrash $ do
-  case Geb.runParser replPath (pack gebMorphism) of
+  case Geb.runParser gebReplPath (pack gebMorphism) of
     Left err -> printError (JuvixError err)
     Right (Geb.ExpressionMorphism morphism) -> do
       case Geb.inferObject' morphism of
@@ -115,7 +107,7 @@ inferObject gebMorphism = Repline.dontCrash $ do
 
 checkTypedMorphism :: String -> Repl ()
 checkTypedMorphism gebMorphism = Repline.dontCrash $ do
-  case Geb.runParser replPath (pack gebMorphism) of
+  case Geb.runParser gebReplPath (pack gebMorphism) of
     Left err -> printError (JuvixError err)
     Right (Geb.ExpressionTypedMorphism tyMorphism) -> do
       case run . runError @CheckingError $ Geb.check' tyMorphism of
@@ -131,7 +123,7 @@ runReplCommand input =
             Geb.runEval $
               Geb.RunEvalArgs
                 { _runEvalArgsContent = pack input,
-                  _runEvalArgsInputFile = replPath,
+                  _runEvalArgsInputFile = gebReplPath,
                   _runEvalArgsEvaluatorOptions = Geb.defaultEvaluatorOptions
                 }
       printEvalResult evalRes
@@ -143,7 +135,7 @@ evalAndOutputMorphism input =
           Geb.runEval $
             Geb.RunEvalArgs
               { _runEvalArgsContent = pack input,
-                _runEvalArgsInputFile = replPath,
+                _runEvalArgsInputFile = gebReplPath,
                 _runEvalArgsEvaluatorOptions =
                   Geb.defaultEvaluatorOptions
                     { Geb._evaluatorOptionsOutputMorphism = True

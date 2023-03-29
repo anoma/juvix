@@ -1,6 +1,6 @@
 -- definitions
 
-def not : bool -> bool := \(x : bool) if x then false else true;
-def and : bool -> bool -> bool := \(x : bool) \(y : bool) if x then y else false;
+def not : Bool -> Bool := \(x : Bool) if x then false else true;
+def and : Bool -> Bool -> Bool := \(x : Bool) \(y : Bool) if x then y else false;
 
 and (not false) (not (not true))

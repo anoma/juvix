@@ -1,7 +1,5 @@
 --- This is an advanced tutorial for the Juvix programming language. You should read
-
 --- the "Quick start" and the "Learn Juvix in minutes" pages in the documentation
-
 --- first.
 module Tutorial;
 

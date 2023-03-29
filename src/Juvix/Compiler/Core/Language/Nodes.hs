@@ -150,12 +150,14 @@ data Match' i a = Match
     _matchBranches :: ![MatchBranch' i a]
   }
 
--- | The patterns introduce binders from left to right, e.g., matching on the
--- patterns '(C (D x) y) (E _ z)' with body 'f x y z' may be represented by a
--- 'MatchBranch' with '_matchBranchPatterns' equal to '[PatConstr Ctag
--- [PatConstr Dtag [PatBinder], PatBinder], PatConstr Etag [PatWildcard,
--- PatBinder]]' and '_matchBranchBody' equal to 'App (App (App (Ident f) (Var
--- 2)) (Var 1)) (Var 0)'. So the de Bruijn indices increase from right to left.
+-- | The patterns introduce binders from left to right, with the binder for a
+-- constructor before the binders for the subpatterns, e.g., matching on the
+-- patterns '(C (D x) y) u@(E _ z)' with body 'f x y z u' may be represented by
+-- a 'MatchBranch' with '_matchBranchPatterns' equal to '[PatConstr Ctag
+-- [PatConstr Dtag [PatWildcard], PatWildcard], PatConstr Etag [PatWildcard,
+-- PatWildcard]]' and '_matchBranchBody' equal to 'App (App (App (Ident f) (Var
+-- 4)) (Var 3)) (Var 0) (Var 2)'. So the de Bruijn indices increase from right
+-- to left.
 data MatchBranch' i a = MatchBranch
   { _matchBranchInfo :: i,
     _matchBranchPatterns :: !(NonEmpty (Pattern' i a)),
@@ -164,24 +166,18 @@ data MatchBranch' i a = MatchBranch
 
 data Pattern' i a
   = PatWildcard (PatternWildcard' i a)
-  | PatBinder (PatternBinder' i a)
   | PatConstr (PatternConstr' i a)
 
 data PatternWildcard' i a = PatternWildcard
   { _patternWildcardInfo :: i,
-    _patternWildcardType :: a
-  }
-
-data PatternBinder' i a = PatternBinder
-  { _patternBinder :: Binder' a,
-    _patternBinderPattern :: Pattern' i a
+    _patternWildcardBinder :: Binder' a
   }
 
 data PatternConstr' i a = PatternConstr
   { _patternConstrInfo :: i,
+    _patternConstrBinder :: Binder' a,
     _patternConstrTag :: !Tag,
-    _patternConstrArgs :: ![Pattern' i a],
-    _patternConstrType :: a
+    _patternConstrArgs :: ![Pattern' i a]
   }
 
 -- | Useful for unfolding Pi
@@ -274,9 +270,6 @@ instance HasAtomicity (Match' i a) where
 instance HasAtomicity (PatternWildcard' i a) where
   atomicity _ = Atom
 
-instance HasAtomicity (PatternBinder' i a) where
-  atomicity _ = Atom
-
 instance HasAtomicity (PatternConstr' i a) where
   atomicity PatternConstr {..}
     | null _patternConstrArgs = Atom
@@ -285,7 +278,6 @@ instance HasAtomicity (PatternConstr' i a) where
 instance HasAtomicity (Pattern' i a) where
   atomicity = \case
     PatWildcard x -> atomicity x
-    PatBinder x -> atomicity x
     PatConstr x -> atomicity x
 
 instance HasAtomicity (Pi' i a) where
@@ -322,7 +314,6 @@ makeLenses ''CaseBranch'
 makeLenses ''Match'
 makeLenses ''MatchBranch'
 makeLenses ''PatternWildcard'
-makeLenses ''PatternBinder'
 makeLenses ''PatternConstr'
 makeLenses ''Pi'
 makeLenses ''Lambda'
@@ -410,15 +401,11 @@ instance (Eq a) => Eq (Pi' i a) where
     eqOn (^. piBinder . binderType)
       ..&&.. eqOn (^. piBody)
 
--- | ignores the binder
-instance (Eq a) => Eq (PatternBinder' i a) where
-  (==) = eqOn (^. patternBinderPattern)
-
 instance (Eq a) => Eq (MatchBranch' i a) where
   (MatchBranch _ pats1 b1) == (MatchBranch _ pats2 b2) = pats1 == pats2 && b1 == b2
 
 instance (Eq a) => Eq (PatternConstr' i a) where
-  (PatternConstr _ tag1 ps1 _) == (PatternConstr _ tag2 ps2 _) = tag1 == tag2 && ps1 == ps2
+  (PatternConstr _ _ tag1 ps1) == (PatternConstr _ _ tag2 ps2) = tag1 == tag2 && ps1 == ps2
 
 instance Hashable (Ident' i) where
   hashWithSalt s = hashWithSalt s . (^. identSymbol)

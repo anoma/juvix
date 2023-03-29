@@ -1,4 +1,4 @@
-module Juvix.Compiler.Core.Transformation.MatchToCase.Data where
+module Juvix.Compiler.Core.Transformation.NaiveMatchToCase.Data where
 
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Language

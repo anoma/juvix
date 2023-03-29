@@ -1,18 +1,18 @@
 -- arithmetic
 
-def f : int -> int -> int := \(x : int) \(y : int) x + y;
+def f : Int -> Int -> Int := \(x : Int) \(y : Int) x + y;
 
-def g : int -> int -> int := \(x : int) \(y : int) (x + 1) - (y * 7);
+def g : Int -> Int -> Int := \(x : Int) \(y : Int) (x + 1) - (y * 7);
 
-def h : (int -> int -> int) -> int -> int -> int := \(f : int -> int -> int) \(y : int) \(z : int) f y y * z;
+def h : (Int -> Int -> Int) -> Int -> Int -> Int := \(f : Int -> Int -> Int) \(y : Int) \(z : Int) f y y * z;
 
-def x : int := 5;
-def y : int := 17;
-def func : int -> int := \(x : int) x + 4;
-def z : int := 0;
+def x : Int := 5;
+def y : Int := 17;
+def func : Int -> Int := \(x : Int) x + 4;
+def z : Int := 0;
 
-def vx : int := 30;
-def vy : int := 7;
+def vx : Int := 30;
+def vy : Int := 7;
 
 func (y / x) + -- 17 div 5 + 4 = 7
 (z * x + y) + -- 17

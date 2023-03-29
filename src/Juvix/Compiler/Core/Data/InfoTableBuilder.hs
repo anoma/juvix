@@ -18,6 +18,7 @@ data InfoTableBuilder m a where
   RegisterInductive :: Text -> InductiveInfo -> InfoTableBuilder m ()
   RegisterIdentNode :: Symbol -> Node -> InfoTableBuilder m ()
   RegisterMain :: Symbol -> InfoTableBuilder m ()
+  RemoveSymbol :: Symbol -> InfoTableBuilder m ()
   OverIdentArgsInfo :: Symbol -> ([ArgumentInfo] -> [ArgumentInfo]) -> InfoTableBuilder m ()
   GetIdent :: Text -> InfoTableBuilder m (Maybe IdentKind)
   GetInfoTable :: InfoTableBuilder m InfoTable
@@ -106,6 +107,11 @@ runInfoTableBuilder tab =
         modify' (over identContext (HashMap.insert sym node))
       RegisterMain sym -> do
         modify' (set infoMain (Just sym))
+      RemoveSymbol sym -> do
+        modify' (over infoMain (maybe Nothing (\sym' -> if sym' == sym then Nothing else Just sym')))
+        modify' (over infoIdentifiers (HashMap.delete sym))
+        modify' (over identContext (HashMap.delete sym))
+        modify' (over infoInductives (HashMap.delete sym))
       OverIdentArgsInfo sym f -> do
         argsInfo <- f <$> gets (^. infoIdentifiers . at sym . _Just . identifierArgsInfo)
         modify' (set (infoIdentifiers . at sym . _Just . identifierArgsInfo) argsInfo)
@@ -117,6 +123,9 @@ runInfoTableBuilder tab =
       GetInfoTable ->
         get
       SetInfoTable t -> put t
+
+execInfoTableBuilder :: InfoTable -> Sem (InfoTableBuilder ': r) a -> Sem r InfoTable
+execInfoTableBuilder tab = fmap fst . runInfoTableBuilder tab
 
 --------------------------------------------
 -- Builtin declarations

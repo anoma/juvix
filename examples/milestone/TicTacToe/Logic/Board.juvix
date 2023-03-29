@@ -1,6 +1,7 @@
 module Logic.Board;
 
 open import Stdlib.Prelude;
+open import Stdlib.Debug.Fail;
 open import Logic.Square public;
 open import Logic.Symbol public;
 open import Logic.Extra;
@@ -18,6 +19,7 @@ possibleMoves (_ :: xs) := possibleMoves xs;
 --- ;true; if all the ;Square;s in the list are equal
 full : List Square → Bool;
 full (a :: b :: c :: nil) := ==Square a b && ==Square b c;
+full _ := fail "full";
 
 diagonals : List (List Square) → List (List Square);
 diagonals ((a1 :: _ :: b1 :: nil)
@@ -25,6 +27,7 @@ diagonals ((a1 :: _ :: b1 :: nil)
   :: (b2 :: _ :: a2 :: nil)
   :: nil) :=
   (a1 :: c :: a2 :: nil) :: (b1 :: c :: b2 :: nil) :: nil;
+diagonals _ := fail "diagonals";
 
 columns : List (List Square) → List (List Square);
 columns := transpose;

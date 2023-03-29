@@ -23,6 +23,9 @@ data BinderChange
     -- indices of `n` are with respect to the result
     BCRemove BinderRemove
 
+mkBCRemove :: Binder -> Node -> BinderChange
+mkBCRemove b n = BCRemove (BinderRemove b n)
+
 -- | Returns the binders in the original node skipped before a call to `recur`,
 -- as specified by the BinderChange list.
 bindersFromBinderChange :: [BinderChange] -> [Binder]
@@ -62,7 +65,7 @@ rmapG coll f = go mempty 0 (coll ^. cEmpty)
     -- `binders` maps input de Bruijn indices to result de Bruijn levels
     -- (adjusted by the binder shift at their occurrence) plus the replacement
     -- node; `bl` is the current binder level in the result node
-    go :: BinderList (Level, Maybe Node) -> Int -> c -> Node -> m Node
+    go :: BinderList (Level, Maybe Node) -> Level -> c -> Node -> m Node
     go binders bl c n = f recur c n
       where
         recur :: c -> [BinderChange] -> Node -> m Node

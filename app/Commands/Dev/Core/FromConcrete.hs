@@ -4,6 +4,7 @@ import Commands.Base
 import Commands.Dev.Core.FromConcrete.Options
 import Evaluator
 import Juvix.Compiler.Core.Data.InfoTable
+import Juvix.Compiler.Core.Options qualified as Core
 import Juvix.Compiler.Core.Pretty qualified as Core
 import Juvix.Compiler.Core.Transformation qualified as Core
 import Juvix.Compiler.Core.Transformation.DisambiguateNames (disambiguateNames)
@@ -11,9 +12,10 @@ import Juvix.Compiler.Core.Translation
 
 runCommand :: forall r. Members '[Embed IO, App] r => CoreFromConcreteOptions -> Sem r ()
 runCommand localOpts = do
+  gopts <- askGlobalOptions
   tab <- (^. coreResultTable) <$> runPipeline (localOpts ^. coreFromConcreteInputFile) upToCore
   path :: Path Abs File <- someBaseToAbs' (localOpts ^. coreFromConcreteInputFile . pathPath)
-  r <- runError @JuvixError $ Core.applyTransformations (project localOpts ^. coreFromConcreteTransformations) tab
+  let r = run $ runReader (project @GlobalOptions @Core.CoreOptions gopts) $ runError @JuvixError $ Core.applyTransformations (project localOpts ^. coreFromConcreteTransformations) tab
   tab0 :: InfoTable <- getRight r
   let tab' :: InfoTable = if localOpts ^. coreFromConcreteNoDisambiguate then tab0 else disambiguateNames tab0
       inInputModule :: IdentifierInfo -> Bool

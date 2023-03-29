@@ -11,12 +11,9 @@ import Data.String.Interpolate (i, __i)
 import Evaluator
 import Juvix.Compiler.Concrete.Data.Scope (scopePath)
 import Juvix.Compiler.Concrete.Data.ScopedName (absTopModulePath)
-import Juvix.Compiler.Core.Data.InfoTableBuilder qualified as Core
-import Juvix.Compiler.Core.Error qualified as Core
-import Juvix.Compiler.Core.Extra qualified as Core
+import Juvix.Compiler.Core qualified as Core
 import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Info.NoDisplayInfo qualified as Info
-import Juvix.Compiler.Core.Language qualified as Core
 import Juvix.Compiler.Core.Pretty qualified as Core
 import Juvix.Compiler.Core.Transformation qualified as Core
 import Juvix.Compiler.Internal.Language qualified as Internal
@@ -84,17 +81,9 @@ runCommand opts = do
         gopts <- State.gets (^. replStateGlobalOptions)
         absInputFile :: Path Abs File <- replMakeAbsolute inputFile
         return $
-          EntryPoint
-            { _entryPointRoot = root,
-              _entryPointBuildDir = buildDir,
-              _entryPointResolverRoot = root,
-              _entryPointNoTermination = gopts ^. globalNoTermination,
-              _entryPointNoPositivity = gopts ^. globalNoPositivity,
-              _entryPointNoStdlib = gopts ^. globalNoStdlib,
-              _entryPointPackage = package,
-              _entryPointModulePaths = pure absInputFile,
-              _entryPointGenericOptions = project gopts,
-              _entryPointStdin = Nothing
+          (entryPointFromGlobalOptions root absInputFile gopts)
+            { _entryPointBuildDir = buildDir,
+              _entryPointPackage = package
             }
 
       printHelpTxt :: String -> Repl ()
@@ -174,17 +163,18 @@ runCommand opts = do
             where
               artif :: Artifacts
               artif = ctx ^. replContextArtifacts
+              transforms :: [Core.TransformationId]
+              transforms = maybe Core.toEvalTransformations toList (opts ^. replTransformations)
               eval :: Core.Node -> Repl (Either JuvixError Core.Node)
-              eval n =
-                let transforms :: [Core.TransformationId]
-                    transforms = maybe Core.toEvalTransformations toList (opts ^. replTransformations)
-                 in case run . runError @JuvixError . runState artif $ runTransformations transforms n of
-                      Left err -> return $ Left err
-                      Right (artif', n') ->
-                        liftIO $
-                          mapLeft
-                            (JuvixError @Core.CoreError)
-                            <$> doEvalIO False defaultLoc (artif' ^. artifactCoreTable) n'
+              eval n = do
+                ep <- getReplEntryPoint (Abs replPath)
+                case run $ runReader ep $ runError @JuvixError $ runState artif $ runTransformations transforms n of
+                  Left err -> return $ Left err
+                  Right (artif', n') ->
+                    liftIO $
+                      mapLeft
+                        (JuvixError @Core.CoreError)
+                        <$> doEvalIO False defaultLoc (artif' ^. artifactCoreTable) n'
 
               compileString :: Repl (Either JuvixError Core.Node)
               compileString = liftIO $ compileExpressionIO' ctx (strip (pack s))
@@ -311,20 +301,10 @@ defaultPreludeEntryPoint :: Repl EntryPoint
 defaultPreludeEntryPoint = do
   opts <- State.gets (^. replStateGlobalOptions)
   root <- State.gets (^. replStatePkgDir)
-  let buildDir = rootBuildDir root
-      defStdlibDir = defaultStdlibPath buildDir
+  let defStdlibDir = defaultStdlibPath (rootBuildDir root)
   return $
-    EntryPoint
-      { _entryPointRoot = root,
-        _entryPointResolverRoot = defStdlibDir,
-        _entryPointBuildDir = buildDir,
-        _entryPointNoTermination = opts ^. globalNoTermination,
-        _entryPointNoPositivity = opts ^. globalNoPositivity,
-        _entryPointNoStdlib = opts ^. globalNoStdlib,
-        _entryPointPackage = defaultPackage root buildDir,
-        _entryPointModulePaths = pure (defStdlibDir <//> preludePath),
-        _entryPointGenericOptions = project opts,
-        _entryPointStdin = Nothing
+    (entryPointFromGlobalOptions root (defStdlibDir <//> preludePath) opts)
+      { _entryPointResolverRoot = defStdlibDir
       }
 
 replMakeAbsolute :: SomeBase b -> Repl (Path Abs b)
@@ -362,7 +342,7 @@ printError e = do
   liftIO $ hPutStrLn stderr $ run (runReader (project' @GenericOptions opts) (Error.render (not (opts ^. globalNoColors) && hasAnsi) False e))
 
 runTransformations ::
-  Members '[State Artifacts, Error JuvixError] r =>
+  Members '[State Artifacts, Error JuvixError, Reader EntryPoint] r =>
   [Core.TransformationId] ->
   Core.Node ->
   Sem r Core.Node
@@ -385,7 +365,8 @@ runTransformations ts n = runCoreInfoTableBuilderArtifacts $ do
             _identifierBuiltin = Nothing
           }
   Core.registerIdent name idenInfo
-  tab' <- Core.getInfoTable >>= Core.applyTransformations ts
+  tab0 <- Core.getInfoTable
+  tab' <- mapReader Core.fromEntryPoint $ Core.applyTransformations ts tab0
   Core.setInfoTable tab'
   let node' = HashMap.lookupDefault impossible sym (tab' ^. Core.identContext)
   return node'

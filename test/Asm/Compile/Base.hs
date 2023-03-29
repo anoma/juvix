@@ -14,7 +14,7 @@ import Runtime.Base qualified as Runtime
 asmCompileAssertion' :: InfoTable -> Path Abs File -> Path Abs File -> Text -> (String -> IO ()) -> Assertion
 asmCompileAssertion' tab mainFile expectedFile stdinText step = do
   step "Generate C code"
-  case run $ runError @JuvixError $ Pipeline.asmToMiniC asmOpts tab of
+  case run $ runReader asmOpts $ runError @JuvixError $ Pipeline.asmToMiniC' tab of
     Left e -> do
       let err :: AsmError = fromJust (fromJuvixError e)
       assertFailure ("code generation failed:" <> "\n" <> unpack (err ^. asmErrorMsg))

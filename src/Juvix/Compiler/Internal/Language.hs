@@ -383,10 +383,10 @@ instance HasLoc Let where
   getLoc l = getLocSpan (l ^. letClauses) <> getLoc (l ^. letExpression)
 
 instance HasLoc CaseBranch where
-  getLoc c = getLoc (c ^. caseBranchExpression)
+  getLoc c = getLoc (c ^. caseBranchPattern) <> getLoc (c ^. caseBranchExpression)
 
 instance HasLoc Case where
-  getLoc c = getLoc (c ^. caseBranches . to last)
+  getLoc c = getLocSpan (c ^. caseBranches)
 
 instance HasLoc Expression where
   getLoc = \case
