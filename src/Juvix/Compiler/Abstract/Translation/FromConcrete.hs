@@ -268,6 +268,7 @@ registerBuiltinInductive ::
 registerBuiltinInductive d = \case
   BuiltinNat -> registerNatDef d
   BuiltinBool -> registerBoolDef d
+  BuiltinInt -> registerIntDef d
 
 registerBuiltinFunction ::
   (Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen] r) =>

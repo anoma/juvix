@@ -39,10 +39,12 @@ builtinConstructors :: BuiltinInductive -> [BuiltinConstructor]
 builtinConstructors = \case
   BuiltinNat -> [BuiltinNatZero, BuiltinNatSuc]
   BuiltinBool -> [BuiltinBoolTrue, BuiltinBoolFalse]
+  BuiltinInt -> [BuiltinIntOfNat, BuiltinIntNegSuc]
 
 data BuiltinInductive
   = BuiltinNat
   | BuiltinBool
+  | BuiltinInt
   deriving stock (Show, Eq, Ord, Enum, Bounded, Generic, Data)
 
 instance Hashable BuiltinInductive
@@ -51,12 +53,15 @@ instance Pretty BuiltinInductive where
   pretty = \case
     BuiltinNat -> Str.nat
     BuiltinBool -> Str.bool_
+    BuiltinInt -> Str.int_
 
 data BuiltinConstructor
   = BuiltinNatZero
   | BuiltinNatSuc
   | BuiltinBoolTrue
   | BuiltinBoolFalse
+  | BuiltinIntOfNat
+  | BuiltinIntNegSuc
   deriving stock (Show, Eq, Ord, Generic, Data)
 
 instance Hashable BuiltinConstructor

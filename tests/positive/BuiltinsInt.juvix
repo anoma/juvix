@@ -1,0 +1,35 @@
+module BuiltinsInt;
+
+open import Stdlib.Data.Nat;
+
+builtin int type Int :=
+  | --- ofNat n represents the integer n
+    ofNat : Nat -> Int
+  | --- negSuc n represents the integer -(n + 1)
+    negSuc : Nat -> Int;
+
+subNatInt : Nat -> Nat -> Int;
+subNatInt m n :=
+  case sub n m
+    | zero := ofNat (sub m n)
+    | suc k := negSuc k;
+
+negNat : Nat -> Int;
+negNat zero := ofNat zero;
+negNat (suc n) := negSuc n;
+
+neg : Int -> Int;
+neg (ofNat n) := negNat n;
+neg (negSuc n) := ofNat (suc n);
+
+addInt : Int -> Int -> Int;
+addInt (ofNat m) (ofNat n) := ofNat (m + n);
+addInt (ofNat m) (negSuc n) := subNatInt m (suc n);
+addInt (negSuc m) (ofNat n) := subNatInt n (suc m);
+addInt (negSuc m) (negSuc n) := negSuc (suc (m + n));
+
+mulInt : Int -> Int -> Int;
+mulInt (ofNat m) (ofNat n) := ofNat (m * n);
+mulInt (ofNat m) (negSuc n) := negNat (m * suc n);
+mulInt (negSuc m) (ofNat n) := negNat (suc m * n);
+mulInt (negSuc m) (negSuc n) := ofNat (suc m * suc n);

@@ -213,6 +213,8 @@ goConstructor sym ctor = do
       Just Internal.BuiltinBoolFalse -> return (BuiltinTag TagFalse)
       Just Internal.BuiltinNatZero -> freshTag
       Just Internal.BuiltinNatSuc -> freshTag
+      Just Internal.BuiltinIntOfNat -> freshTag
+      Just Internal.BuiltinIntNegSuc -> freshTag
       Nothing -> freshTag
 
     ctorType :: Sem r Type

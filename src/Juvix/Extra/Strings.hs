@@ -104,6 +104,9 @@ stringToNat = "string-to-nat"
 bool_ :: (IsString s) => s
 bool_ = "bool"
 
+int_ :: (IsString s) => s
+int_ = "int"
+
 boolPrint :: (IsString s) => s
 boolPrint = "bool-print"
 
