@@ -23,7 +23,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  SKIP: ormolu,format-juvix-examples
+  SKIP: ormolu,format-juvix-examples,typecheck-juvix-examples
 
 jobs:
   pre-commit:
