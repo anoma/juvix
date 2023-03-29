@@ -122,19 +122,27 @@ format:
 clang-format:
 	@cd runtime && ${MAKE} format
 
-TOFORMATJUVIXFILES = ./examples
-TOFORMAT = $(shell find ${TOFORMATJUVIXFILES} -name "*.juvix" -print)
+JUVIXEXAMPLEFILES=$(shell find ./examples -name "*.juvix" -print)
+JUVIXFORMATFLAGS?=--in-place
+JUVIXTYPECHECKFLAGS?=--only-errors
 
-$(TOFORMAT): %:
-	@echo "Formatting $@"
-	@juvix dev scope $@ --with-comments > $@.tmp
-	@mv $@.tmp $@
-	@echo "Typechecking formatted $@"
-	@juvix typecheck $@ --only-errors
+.PHONY: format-juvix-examples
+format-juvix-examples:
+	@for file in $(JUVIXEXAMPLEFILES); do \
+		juvix format $(JUVIXFORMATFLAGS) "$$file"; \
+	done
 
-.PHONY: $(TOFORMAT)
-juvix-format:
-	@${MAKE} $(TOFORMAT)
+.PHONY: check-format-juvix-examples
+check-format-juvix-examples:
+	@export JUVIXFORMATFLAGS=--check
+	@${MAKE} format-juvix-examples
+
+.PHONY: typecheck-juvix-examples
+typecheck-juvix-examples:
+	@for file in $(JUVIXEXAMPLEFILES); do \
+		echo "Checking $$file"; \
+		juvix typecheck "$$file" $(JUVIXTYPECHECKFLAGS); \
+	done
 
 .PHONY: check-ormolu
 check-ormolu: export ORMOLUMODE = check
@@ -175,7 +183,7 @@ check-only:
 	@${MAKE} install
 	@${MAKE} test
 	@${MAKE} smoke
-	@${MAKE} juvix-format
+	@${MAKE} check-juviformat
 	@${MAKE} format
 	@${MAKE} pre-commit
 

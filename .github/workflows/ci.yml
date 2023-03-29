@@ -17,9 +17,11 @@ name: The Juvix compiler CI
       - reopened
       - synchronize
       - ready_for_review
+
 concurrency:
   group: "${{ github.workflow }}-${{ github.head_ref || github.run_id }}"
   cancel-in-progress: true
+
 env:
   SKIP: ormolu,format-juvix-examples
 
@@ -116,7 +118,8 @@ jobs:
         if: ${{ success() }}
         run: |
           cd main
-          make -s juvix-format
+          make -s check-format-juvix-examples
+          make -s typecheck-juvix-examples
 
       - name: Add ~/.local/bin to PATH
         run: |
@@ -313,7 +316,8 @@ jobs:
         if: ${{ success() }}
         run: |
           cd main
-          make -s juvix-format
+          make -s check-format-juvix-examples
+          make -s typecheck-juvix-examples
 
       - name: Install Smoke
         uses: jaxxstorm/action-install-gh-release@v1.10.0
