@@ -4,11 +4,11 @@ blocks* to the following entities:
 
 1. A module.
 2. A type definition.
-4. A constructor definition.
-3. A type signature of a function.
-4. An axiom definition.
+3. A constructor definition.
+4. A type signature of a function.
+5. An axiom definition.
 
-In order to attach documentation to either of these items, write *blocks* of
+In order to attach documentation to any of these entities, write *blocks* of
 documentation before them:
 
 1. For modules:
@@ -51,7 +51,6 @@ For instance, this is a sequence of two *blocks*:
 Note that the following is a single block since it lacks the `---` separator:
 ```
 --- First block
-
 
 --- Still first block
 ```
