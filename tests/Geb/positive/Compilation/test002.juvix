@@ -1,0 +1,10 @@
+module test002;
+
+open import Stdlib.Prelude;
+
+type optbool :=
+|  Just : Bool -> optbool
+|  Nothing : optbool;
+
+main : Bool;
+main := λ{ x (Just b) := if x true b | _ Nothing := false } false (Just true);

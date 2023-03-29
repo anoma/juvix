@@ -1,0 +1,9 @@
+-- functions returning functions with variable capture
+
+def f : Nat -> Nat -> Nat := \(x : Nat)
+  if x = 6 then \(x : Nat) 0
+  else if x = 5 then \(x : Nat) 1
+  else if x = 10 then \(y : Nat) (\(x : Nat) x) 2
+  else \(x : Nat) x;
+
+f 5 6 + f 6 5 + f 10 5 + f 11 5

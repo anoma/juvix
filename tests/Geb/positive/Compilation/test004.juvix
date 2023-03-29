@@ -1,0 +1,7 @@
+-- definitions
+module test004;
+
+open import Stdlib.Prelude;
+
+main : Bool;
+main := and (not false) (not (not true));

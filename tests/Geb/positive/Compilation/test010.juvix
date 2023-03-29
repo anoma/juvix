@@ -1,0 +1,21 @@
+-- functions returning functions with variable capture
+module test010;
+
+open import Stdlib.Prelude;
+open import Stdlib.Data.Nat.Ord;
+
+f : Nat → Nat → Nat;
+f x := if (x == 6)
+          λ{_ := 0}
+          (if (x == 5)
+              λ{_ := 1}
+              (if (x == 10)
+                  λ{_ := λ{x := x} 2}
+                  λ{x := x}));
+
+main : Nat;
+main :=
+    f 5 6 +
+    f 6 5 +
+    f 10 5 +
+    f 11 5;

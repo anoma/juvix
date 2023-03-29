@@ -28,6 +28,12 @@ checkGeb tab =
           NLam Lambda {..}
             | isDynamic (_lambdaBinder ^. binderType) ->
                 throw (dynamicTypeError node (_lambdaBinder ^. binderLocation))
+          NLet Let {..}
+            | isDynamic (_letItem ^. letItemBinder . binderType) ->
+                throw (dynamicTypeError node (_letItem ^. letItemBinder . binderLocation))
+          NRec LetRec {..}
+            | any (isDynamic . (^. letItemBinder . binderType)) _letRecValues ->
+                throw (dynamicTypeError node (head _letRecValues ^. letItemBinder . binderLocation))
           NPi Pi {..}
             | isTypeConstr tab (_piBinder ^. binderType) ->
                 throw
