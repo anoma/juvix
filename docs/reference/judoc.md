@@ -60,11 +60,16 @@ A *paragraph* is a non-empty sequence of *lines*.
 
 For instance, the following is a paragraph with two *lines*:
 ```
---- A ;Pair Int Bool; contains an ;Int; and a ;Bool;
+--- First line
+--- Second line
 ```
 
 Note that a rendered paragraph will have have no line breaks. If you want to
-have line breaks, you will need to split the paragraph.
+have line breaks, you will need to split the paragraph. Hence, the paragraph
+above will be rendered as
+```
+First line Second line
+```
 
 ##### line
 A *line* starts with `---` and is followed by a non-empty sequence of
