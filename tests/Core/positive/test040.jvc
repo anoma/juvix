@@ -1,13 +1,13 @@
 -- letrec
 
-def sum := letrec sum := \x if x = 0 then 0 else x + sum (x - 1) in sum;
+def sum := letrec sum : Int -> Int := \x if x = 0 then 0 else x + sum (x - 1) in sum;
 
 def fact := \x
-  letrec fact' := \x \acc if x = 0 then acc else fact' (x - 1) (acc * x)
+  letrec fact' : Int -> Int -> Int := \x \acc if x = 0 then acc else fact' (x - 1) (acc * x)
   in fact' x 1;
 
 def fib :=
-  letrec fib' := \n \x \y if n = 0 then x else fib' (n - 1) y (x + y)
+  letrec fib' : Int -> Int -> Int -> Int := \n \x \y if n = 0 then x else fib' (n - 1) y (x + y)
   in \n fib' n 0 1;
 
 def writeLn := \x write x >> write "\n";
@@ -16,19 +16,19 @@ def mutrec :=
   let two := 2 in
   let one := 1 in
   letrec[f g h]
-    f := \x {
+    f : Int  -> Int := \x {
       if x < one then
         one
       else
         g (x - one) + two * x
     };
-    g := \x {
+    g : Int -> Int := \x {
       if x < one then
         one
       else
         x + h (x - one)
     };
-    h := \x letrec z := {
+    h : Int -> Int := \x letrec z : Int := {
       if x < one then
         one
       else
