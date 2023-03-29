@@ -1,6 +1,6 @@
 # Judoc syntax reference
-Judoc is used to document parts of your code. You can attach *Judoc
-blocks* to the following entities:
+Judoc is used to document parts of your code. You can attach _Judoc
+blocks_ to the following entities:
 
 1. A module.
 2. A type definition.
