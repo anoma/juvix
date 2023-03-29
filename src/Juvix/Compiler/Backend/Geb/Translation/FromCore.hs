@@ -187,6 +187,7 @@ fromCore tab = case tab ^. Core.infoMain of
       Core.OpIntLt -> convertBinop OpLt _builtinAppArgs
       Core.OpIntLe -> convertOpIntLe _builtinAppArgs
       Core.OpEq -> convertOpEq _builtinAppArgs
+      Core.OpFail -> convertOpFail (Info.getInfoType _builtinAppInfo) _builtinAppArgs
       _ ->
         unsupported
 
@@ -274,6 +275,13 @@ fromCore tab = case tab ^. Core.infoMain of
             convertBinop OpEq args
       _ ->
         error "unsupported equality argument types"
+
+    convertOpFail :: Core.Type -> [Core.Node] -> Trans Morphism
+    convertOpFail ty args = case args of
+      [Core.NCst (Core.Constant _ (Core.ConstString msg))] -> do
+        return $ MorphismFail (Failure msg (convertType ty))
+      _ ->
+        error "unsupported fail arguments"
 
     convertConstr :: Core.Constr -> Trans Morphism
     convertConstr Core.Constr {..} = do

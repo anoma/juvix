@@ -6,6 +6,7 @@ import Juvix.Compiler.Core.Data.TypeDependencyInfo
 import Juvix.Compiler.Core.Error
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Info.LocationInfo (getInfoLocation)
+import Juvix.Compiler.Core.Info.TypeInfo qualified as Info
 import Juvix.Compiler.Core.Transformation.Base
 import Juvix.Data.PPOutput
 
@@ -58,7 +59,12 @@ checkGeb tab =
               OpStrConcat -> throw $ unsupportedError "strings" node (getInfoLocation _builtinAppInfo)
               OpStrToInt -> throw $ unsupportedError "strings" node (getInfoLocation _builtinAppInfo)
               OpTrace -> throw $ unsupportedError "tracing" node (getInfoLocation _builtinAppInfo)
-              OpFail -> throw $ unsupportedError "failing" node (getInfoLocation _builtinAppInfo)
+              OpFail -> do
+                let ty = Info.getInfoType _builtinAppInfo
+                when (isDynamic ty) $
+                  throw $
+                    unsupportedError "failing without type info" node (getInfoLocation _builtinAppInfo)
+                return node
               _ -> return node
           _ -> return node
 

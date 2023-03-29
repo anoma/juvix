@@ -128,6 +128,7 @@ morphism =
             <|> Geb.MorphismApplication <$> morphismApplication
             <|> Geb.MorphismVar <$> morphismVar
             <|> Geb.MorphismBinop <$> morphismBinop
+            <|> Geb.MorphismFail <$> morphismFail
         )
 
 parseNatural :: ParsecS r Integer
@@ -159,6 +160,13 @@ morphismBinop = do
           _binopLeft = m1,
           _binopRight = m2
         }
+
+morphismFail :: ParsecS r Geb.Failure
+morphismFail = do
+  P.label "<geb MorphismFail>" $ do
+    kw kwFail
+    msg <- fst <$> string
+    Geb.Failure msg <$> object
 
 object :: ParsecS r Geb.Object
 object =

@@ -111,6 +111,12 @@ data Binop = Binop
   }
   deriving stock (Show, Eq, Generic)
 
+data Failure = Failure
+  { _failureMessage :: Text,
+    _failureType :: Object
+  }
+  deriving stock (Show, Eq, Generic)
+
 -- | Corresponds to the GEB type for terms (morphisms of the category): `stlc`
 -- (https://github.com/anoma/geb/blob/main/src/specs/lambda.lisp).
 data Morphism
@@ -127,6 +133,7 @@ data Morphism
   | MorphismVar Var
   | MorphismInteger Integer
   | MorphismBinop Binop
+  | MorphismFail Failure
   deriving stock (Show, Eq, Generic)
 
 data Product = Product
@@ -198,6 +205,7 @@ instance HasAtomicity Morphism where
     MorphismVar {} -> Aggregate appFixity
     MorphismInteger {} -> Atom
     MorphismBinop {} -> Aggregate appFixity
+    MorphismFail {} -> Aggregate appFixity
 
 instance HasAtomicity Object where
   atomicity = \case
@@ -225,6 +233,7 @@ makeLenses ''Binop
 makeLenses ''Case
 makeLenses ''Coproduct
 makeLenses ''First
+makeLenses ''Failure
 makeLenses ''Hom
 makeLenses ''Lambda
 makeLenses ''LeftInj'
