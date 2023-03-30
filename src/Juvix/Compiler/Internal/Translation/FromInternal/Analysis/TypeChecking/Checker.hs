@@ -475,23 +475,6 @@ freshHole l = do
   uid <- freshNameId
   return (Hole uid l)
 
-literalType :: (Members '[NameIdGen, Builtins] r) => LiteralLoc -> Sem r TypedExpression
-literalType lit@(WithLoc i l) = case l of
-  LitInteger {} -> do
-    nat <- getBuiltinName i BuiltinNat
-    return
-      TypedExpression
-        { _typedExpression = ExpressionLiteral lit,
-          _typedType = ExpressionIden (IdenInductive nat)
-        }
-  LitString {} -> do
-    str <- getBuiltinName i BuiltinString
-    return
-      TypedExpression
-        { _typedExpression = ExpressionLiteral lit,
-          _typedType = ExpressionIden (IdenAxiom str)
-        }
-
 inferExpression' ::
   forall r.
   (Members '[Reader InfoTable, State FunctionsTable, State TypesTable, Reader LocalVars, Error TypeCheckerError, NameIdGen, Inference, Output Example, Builtins] r) =>
@@ -620,7 +603,29 @@ inferExpression' hint e = case e of
       return (TypedExpression uni (ExpressionFunction (Function l' r')))
 
     goLiteral :: LiteralLoc -> Sem r TypedExpression
-    goLiteral = literalType
+    goLiteral lit@(WithLoc i l) = case l of
+      LitInteger v -> do
+        int <- mkBuiltinInductive BuiltinInt
+        nat <- mkBuiltinInductive BuiltinNat
+        let ty =
+              if
+                  | v < 0 -> int
+                  | otherwise -> fromMaybe nat hint
+        return
+          TypedExpression
+            { _typedExpression = ExpressionLiteral lit,
+              _typedType = ty
+            }
+        where
+          mkBuiltinInductive :: BuiltinInductive -> Sem r Expression
+          mkBuiltinInductive = fmap (ExpressionIden . IdenInductive) . getBuiltinName i
+      LitString {} -> do
+        str <- getBuiltinName i BuiltinString
+        return
+          TypedExpression
+            { _typedExpression = ExpressionLiteral lit,
+              _typedType = ExpressionIden (IdenAxiom str)
+            }
 
     goIden :: Iden -> Sem r TypedExpression
     goIden i = case i of

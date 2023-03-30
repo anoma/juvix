@@ -1,4 +1,4 @@
-module BuiltinsInt;
+module BuiltinInt;
 
 open import Stdlib.Data.Nat;
 
