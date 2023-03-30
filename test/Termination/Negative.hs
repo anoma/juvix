@@ -1,7 +1,6 @@
 module Termination.Negative (module Termination.Negative) where
 
 import Base
-import Juvix.Compiler.Builtins.Effect
 import Juvix.Compiler.Internal.Translation.FromAbstract.Analysis.Termination
 import Juvix.Compiler.Pipeline
 
@@ -23,7 +22,7 @@ testDescr NegTest {..} =
           _testRoot = tRoot,
           _testAssertion = Single $ do
             let entryPoint = (defaultEntryPoint tRoot file') {_entryPointNoStdlib = True}
-            result <- runIOEither iniState entryPoint upToInternal
+            result <- runIOEither entryPoint upToInternal
             case mapLeft fromJuvixError result of
               Left (Just lexError) -> whenJust (_checkErr lexError) assertFailure
               Left Nothing -> assertFailure "The termination checker did not find an error."

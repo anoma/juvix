@@ -7,7 +7,7 @@ where
 import Juvix.Compiler.Concrete.Data
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude
-import Juvix.Prelude.Pretty hiding (braces, parens)
+import Juvix.Prelude.Pretty hiding (braces, group, list, parens)
 import Prettyprinter.Render.Terminal (Color (..), bold, colorDull)
 
 type Ann = CodeAnn

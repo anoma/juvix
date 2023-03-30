@@ -29,7 +29,7 @@ makeLenses ''EvalError
 
 instance Show EvalError where
   show :: EvalError -> String
-  show (EvalError {..}) =
+  show EvalError {..} =
     "evaluation error: "
       ++ fromText _evalErrorMsg
       ++ case _evalErrorNode of

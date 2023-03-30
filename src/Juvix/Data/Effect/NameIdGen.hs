@@ -28,5 +28,11 @@ toState = reinterpret $ \case
     put rest
     return fresh
 
-runNameIdGen :: Sem (NameIdGen ': r) a -> Sem r a
-runNameIdGen = evalState allNameIds . toState
+runNameIdGen :: Stream NameId -> Sem (NameIdGen ': r) a -> Sem r (Stream NameId, a)
+runNameIdGen s = runState s . toState
+
+runTopNameIdGen :: Sem (NameIdGen ': r) a -> Sem r (Stream NameId, a)
+runTopNameIdGen = runNameIdGen allNameIds
+
+evalTopNameIdGen :: Sem (NameIdGen ': r) a -> Sem r a
+evalTopNameIdGen = fmap snd . runTopNameIdGen

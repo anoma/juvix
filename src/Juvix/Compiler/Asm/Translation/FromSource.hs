@@ -22,7 +22,7 @@ runParser :: FilePath -> Text -> Either MegaparsecError InfoTable
 runParser fileName input =
   case run $
     runInfoTableBuilder $
-      runNameIdGen $
+      evalTopNameIdGen $
         P.runParserT parseToplevel fileName input of
     (_, Left err) -> Left (MegaparsecError err)
     (tbl, Right ()) -> Right tbl

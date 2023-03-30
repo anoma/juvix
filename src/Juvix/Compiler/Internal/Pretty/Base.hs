@@ -54,7 +54,10 @@ instance PrettyCode Application where
     return $ l' <+> r'
 
 instance PrettyCode TypedExpression where
-  ppCode e = ppCode (e ^. typedExpression)
+  ppCode e = do
+    e' <- ppCode (e ^. typedExpression)
+    ty' <- ppCode (e ^. typedType)
+    return (e' <+> kwColon <+> ty')
 
 instance PrettyCode SmallUniverse where
   ppCode _ = return kwType
@@ -176,7 +179,10 @@ instance PrettyCode ConstructorApp where
   ppCode c = do
     constr' <- ppCode (c ^. constrAppConstructor)
     params' <- mapM ppCodeAtom (c ^. constrAppParameters)
-    return $ hsep $ constr' : params'
+    mty' <- mapM ppCode (c ^. constrAppType)
+    case mty' of
+      Nothing -> return $ hsep (constr' : params')
+      Just ty' -> return $ parens (hsep (constr' : params') <+> kwColon <+> ty')
 
 instance PrettyCode Pattern where
   ppCode p = case p of

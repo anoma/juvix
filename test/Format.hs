@@ -1,7 +1,6 @@
 module Format where
 
 import Base
-import Juvix.Compiler.Builtins (iniState)
 import Juvix.Compiler.Concrete qualified as Concrete
 import Juvix.Compiler.Concrete.Print qualified as P
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
@@ -40,13 +39,12 @@ testDescr PosTest {..} =
         let entryPoint = entryPointFromPackage _dir _file pkg
         original :: Text <- readFile (toFilePath (entryPoint ^. entryPointModulePaths . _head1))
         step "Parsing"
-        p :: Parser.ParserResult <- snd <$> runIO' iniState entryPoint upToParsing
+        p :: Parser.ParserResult <- snd <$> runIO' entryPoint upToParsing
 
         step "Scoping"
         s :: Scoper.ScoperResult <-
           snd
             <$> runIO'
-              iniState
               entryPoint
               ( do
                   void entrySetup

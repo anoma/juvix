@@ -28,8 +28,8 @@ data BuiltinsState = BuiltinsState
 
 makeLenses ''BuiltinsState
 
-iniState :: BuiltinsState
-iniState = BuiltinsState mempty mempty
+iniBuiltins :: BuiltinsState
+iniBuiltins = BuiltinsState mempty mempty
 
 re :: forall r a. (Member (Error JuvixError) r) => Sem (Builtins ': r) a -> Sem (State BuiltinsState ': r) a
 re = reinterpret $ \case
@@ -60,6 +60,12 @@ re = reinterpret $ \case
               { _alreadyDefinedBuiltin = b,
                 _alreadyDefinedLoc = getLoc n
               }
+
+evalTopBuiltins :: (Member (Error JuvixError) r) => Sem (Builtins ': r) a -> Sem r a
+evalTopBuiltins = fmap snd . runTopBuiltins
+
+runTopBuiltins :: (Member (Error JuvixError) r) => Sem (Builtins ': r) a -> Sem r (BuiltinsState, a)
+runTopBuiltins = runBuiltins iniBuiltins
 
 runBuiltins :: (Member (Error JuvixError) r) => BuiltinsState -> Sem (Builtins ': r) a -> Sem r (BuiltinsState, a)
 runBuiltins s = runState s . re
