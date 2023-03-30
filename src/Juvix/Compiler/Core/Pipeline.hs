@@ -13,6 +13,9 @@ import Juvix.Compiler.Pipeline.EntryPoint (EntryPoint)
 toEval' :: Members '[Error JuvixError, Reader CoreOptions] r => InfoTable -> Sem r InfoTable
 toEval' = applyTransformations toEvalTransformations
 
+toTypechecked :: Members '[Error JuvixError, Reader EntryPoint] r => InfoTable -> Sem r InfoTable
+toTypechecked = mapReader fromEntryPoint . applyTransformations toTypecheckTransformations
+
 toEval :: Members '[Error JuvixError, Reader EntryPoint] r => InfoTable -> Sem r InfoTable
 toEval = mapReader fromEntryPoint . applyTransformations toEvalTransformations
 

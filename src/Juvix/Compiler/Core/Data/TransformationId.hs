@@ -45,6 +45,9 @@ fromTransformationLike = \case
 fromTransformationLikes :: [TransformationLikeId] -> [TransformationId]
 fromTransformationLikes = concatMap fromTransformationLike
 
+toTypecheckTransformations :: [TransformationId]
+toTypecheckTransformations = [MatchToCase]
+
 toEvalTransformations :: [TransformationId]
 toEvalTransformations = [EtaExpandApps, MatchToCase, NatToInt, ConvertBuiltinTypes, LetFolding]
 
