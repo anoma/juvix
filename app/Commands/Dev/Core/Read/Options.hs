@@ -10,6 +10,7 @@ data CoreReadOptions = CoreReadOptions
   { _coreReadTransformations :: [TransformationId],
     _coreReadShowDeBruijn :: Bool,
     _coreReadShowIdentIds :: Bool,
+    _coreReadShowArgsNum :: Bool,
     _coreReadNoDisambiguate :: Bool,
     _coreReadEval :: Bool,
     _coreReadNoPrint :: Bool,
@@ -23,7 +24,8 @@ instance CanonicalProjection CoreReadOptions Core.Options where
   project c =
     Core.defaultOptions
       { Core._optShowDeBruijnIndices = c ^. coreReadShowDeBruijn,
-        Core._optShowIdentIds = c ^. coreReadShowIdentIds
+        Core._optShowIdentIds = c ^. coreReadShowIdentIds,
+        Core._optShowArgsNum = c ^. coreReadShowArgsNum
       }
 
 instance CanonicalProjection CoreReadOptions Eval.CoreEvalOptions where
@@ -33,6 +35,7 @@ instance CanonicalProjection CoreReadOptions Eval.CoreEvalOptions where
         _coreEvalInputFile = c ^. coreReadInputFile,
         _coreEvalShowDeBruijn = c ^. coreReadShowDeBruijn,
         _coreEvalShowIdentIds = c ^. coreReadShowIdentIds,
+        _coreEvalShowArgsNum = c ^. coreReadShowArgsNum,
         _coreEvalNoDisambiguate = c ^. coreReadNoDisambiguate
       }
 
@@ -48,6 +51,7 @@ parseCoreReadOptions :: Parser CoreReadOptions
 parseCoreReadOptions = do
   _coreReadShowDeBruijn <- optDeBruijn
   _coreReadShowIdentIds <- optIdentIds
+  _coreReadShowArgsNum <- optArgsNum
   _coreReadNoDisambiguate <- optNoDisambiguate
   _coreReadNoPrint <-
     switch
