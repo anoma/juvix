@@ -1,0 +1,11 @@
+-- tail recursion through higher-order functions
+
+def sumb : (Int -> Int -> Int) -> Int -> Int -> Int :=
+    \(f : Int -> Int -> Int) \(x : Int) \(acc : Int)
+        if x = 0 then acc else f (x - 1) acc;
+def sum' : Int -> Int -> Int :=
+    \(x : Int) \(acc : Int) sumb sum' x (x + acc);
+def sum : Int -> Int :=
+    \(x : Int) sum' x 0;
+
+sum 100

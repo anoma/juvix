@@ -1,0 +1,5 @@
+-- McCarthy's 91 function
+
+def f91 : Int -> Int := \(n : Int) if n > 100 then n - 10 else f91 (f91 (n + 11));
+
+f91 101 + f91 95 + f91 16 + f91 5
