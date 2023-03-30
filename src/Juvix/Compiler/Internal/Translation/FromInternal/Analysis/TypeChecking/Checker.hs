@@ -605,12 +605,11 @@ inferExpression' hint e = case e of
     goLiteral :: LiteralLoc -> Sem r TypedExpression
     goLiteral lit@(WithLoc i l) = case l of
       LitInteger v -> do
-        int <- mkBuiltinInductive BuiltinInt
         nat <- mkBuiltinInductive BuiltinNat
-        let ty =
-              if
-                  | v < 0 -> int
-                  | otherwise -> fromMaybe nat hint
+        ty <-
+          if
+              | v < 0 -> mkBuiltinInductive BuiltinInt
+              | otherwise -> return (fromMaybe nat hint)
         return
           TypedExpression
             { _typedExpression = ExpressionLiteral lit,
