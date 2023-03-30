@@ -1,0 +1,13 @@
+-- fast exponentiation
+
+def power' : Int -> Int -> Int -> Int := \(a : Int) \(b : Int) \(acc : Int)
+  if b = 0 then
+    acc
+  else if b % 2 = 0 then
+    power' (a * a) (b / 2) acc
+  else
+    power' (a * a) (b / 2) (acc * a);
+
+def power : Int -> Int -> Int := \(a : Int) \(b : Int) power' a b 1;
+
+power 2 3 + power 3 7 + power 5 11
