@@ -60,6 +60,7 @@ inferObject = \case
   MorphismVar v -> inferObjectVar v
   MorphismLeft a -> inferObjectLeft a
   MorphismRight b -> inferObjectRight b
+  MorphismFail x -> return $ x ^. failureType
 
 inferObjectAbsurd :: InferEffects r => Absurd -> Sem r Object
 inferObjectAbsurd x = do

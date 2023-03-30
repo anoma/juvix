@@ -93,5 +93,70 @@ tests =
       "Test012: mid-square hashing (unrolled)"
       $(mkRelDir ".")
       $(mkRelFile "test012.juvix")
-      $(mkRelFile "out/test012.geb")
+      $(mkRelFile "out/test012.geb"),
+    PosTest
+      "Test013: recursion"
+      $(mkRelDir ".")
+      $(mkRelFile "test013.juvix")
+      $(mkRelFile "out/test013.geb"),
+    PosTest
+      "Test014: tail recursion"
+      $(mkRelDir ".")
+      $(mkRelFile "test014.juvix")
+      $(mkRelFile "out/test014.geb"),
+    PosTest
+      "Test015: tail recursion: Fibonacci numbers in linear time"
+      $(mkRelDir ".")
+      $(mkRelFile "test015.juvix")
+      $(mkRelFile "out/test015.geb"),
+    PosTest
+      "Test016: local functions with free variables"
+      $(mkRelDir ".")
+      $(mkRelFile "test016.juvix")
+      $(mkRelFile "out/test016.geb"),
+    PosTest
+      "Test017: recursion through higher-order functions"
+      $(mkRelDir ".")
+      $(mkRelFile "test017.juvix")
+      $(mkRelFile "out/test017.geb"),
+    PosTest
+      "Test018: tail recursion through higher-order functions"
+      $(mkRelDir ".")
+      $(mkRelFile "test018.juvix")
+      $(mkRelFile "out/test018.geb"),
+    PosTest
+      "Test019: higher-order functions and recursion"
+      $(mkRelDir ".")
+      $(mkRelFile "test019.juvix")
+      $(mkRelFile "out/test019.geb"),
+    PosTest
+      "Test020: McCarthy's 91 function"
+      $(mkRelDir ".")
+      $(mkRelFile "test020.juvix")
+      $(mkRelFile "out/test020.geb"),
+    PosTest
+      "Test021: fast exponentiation"
+      $(mkRelDir ".")
+      $(mkRelFile "test021.juvix")
+      $(mkRelFile "out/test021.geb"),
+    PosTest
+      "Test022: mutual recursion"
+      $(mkRelDir ".")
+      $(mkRelFile "test022.juvix")
+      $(mkRelFile "out/test022.geb"),
+    PosTest
+      "Test023: Euclid's algorithm"
+      $(mkRelDir ".")
+      $(mkRelFile "test023.juvix")
+      $(mkRelFile "out/test023.geb"),
+    PosTest
+      "Test024: Ackermann function"
+      $(mkRelDir ".")
+      $(mkRelFile "test024.juvix")
+      $(mkRelFile "out/test024.geb"),
+    PosTest
+      "Test025: mid-square hashing"
+      $(mkRelDir ".")
+      $(mkRelFile "test025.juvix")
+      $(mkRelFile "out/test025.geb")
   ]

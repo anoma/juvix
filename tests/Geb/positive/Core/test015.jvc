@@ -1,0 +1,6 @@
+-- tail recursion
+
+def sum' : Int -> Int -> Int := \(x : Int) \(acc : Int) if x = 0 then acc else sum' (x - 1) (x + acc);
+def sum : Int -> Int := \(x : Int) sum' x 0;
+
+sum 100

@@ -1,0 +1,16 @@
+-- mid-square hashing
+
+def pow : Int -> Int := \(x : Int) if x = 0 then 1 else 2 * pow (x - 1);
+
+def hash' : Int -> Int -> Int := \(n : Int) \(x : Int)
+    if n <= 3 then
+        x * x
+    else if x < pow (n - 1) then
+        hash' (n - 1) x
+    else
+        ((x * x) / pow (n - 3)) % pow 6;
+
+def hash : Int -> Int := hash' 16;
+
+hash 1367
+-- result: 3

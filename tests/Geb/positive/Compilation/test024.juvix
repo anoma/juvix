@@ -1,0 +1,12 @@
+-- Ackermann function
+module test024;
+
+open import Stdlib.Prelude;
+
+ack : Nat → Nat → Nat;
+ack zero n := n + 1;
+ack (suc m) zero := ack m 1;
+ack (suc m) (suc n) := ack m (ack (suc m) n);
+
+main : Nat;
+main := ack 0 7 + ack 1 7 + ack 1 13 + ack 2 7 + ack 2 13 + ack 3 4;
