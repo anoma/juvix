@@ -714,10 +714,12 @@ destruct = \case
     NodeDetails
       { _nodeInfo = i,
         _nodeSubinfos = [],
-        _nodeChildren = oneBinder bi b : map noBinders env,
+        _nodeChildren = manyBinders binders b : map noBinders env,
         _nodeReassemble = someChildren $ \i' (b' :| env') ->
           Closure env' (Lambda i' bi b')
       }
+    where
+      binders = replicate (length env) (mkBinder' mkDynamic') ++ [bi]
 
 reassembleDetails :: NodeDetails -> [Node] -> Node
 reassembleDetails d ns = (d ^. nodeReassemble) (d ^. nodeInfo) (d ^. nodeSubinfos) ns
