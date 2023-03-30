@@ -4,6 +4,7 @@ import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Core.Data.IdentDependencyInfo
 import Juvix.Compiler.Core.Data.InfoTableBuilder
 import Juvix.Compiler.Core.Extra
+import Juvix.Compiler.Core.Info.TypeInfo (setNodeType)
 import Juvix.Compiler.Core.Options
 import Juvix.Compiler.Core.Transformation.Base
 
@@ -69,9 +70,12 @@ unrollRecursion tab = do
                   name' = ii ^. identifierName <> "__" <> show limit
                   ii' = ii {_identifierSymbol = sym', _identifierName = name'}
               registerIdent name' ii'
-              let node
+              let failNode =
+                    setNodeType (ii ^. identifierType) $
+                      mkBuiltinApp' OpFail [mkConstant' (ConstString "recursion limit reached")]
+                  node
                     | limit == 0 =
-                        etaExpand (typeArgs (ii ^. identifierType)) (mkBuiltinApp' OpFail [mkConstant' (ConstString "recursion limit reached")])
+                        etaExpand (typeArgs (ii ^. identifierType)) failNode
                     | otherwise =
                         umap (go limit) (fromJust $ HashMap.lookup sym (tab ^. identContext))
               registerIdentNode sym' node

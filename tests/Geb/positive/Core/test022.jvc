@@ -1,0 +1,28 @@
+-- mutual recursion
+
+def g : Int -> Int;
+
+def f : Int -> Int := \(x : Int) {
+  if x < 1 then
+    1
+  else
+    2 * x + g (x - 1)
+};
+
+def h : Int -> Int;
+
+def g : Int -> Int := \(x : Int) {
+  if x < 1 then
+    1
+  else
+    x + h (x - 1)
+};
+
+def h : Int -> Int := \(x : Int) {
+  if x < 1 then
+    1
+  else
+    x * f (x - 1)
+};
+
+f 5 + f 10

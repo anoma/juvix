@@ -174,6 +174,12 @@ upToGeb ::
 upToGeb spec =
   upToCore >>= \Core.CoreResult {..} -> coreToGeb spec _coreResultTable
 
+upToCoreTypecheck ::
+  (Members '[Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, PathResolver] r) =>
+  Sem r Core.CoreResult
+upToCoreTypecheck =
+  upToCore >>= \r -> Core.toTypechecked (r ^. Core.coreResultTable) >>= \tab -> return r {Core._coreResultTable = tab}
+
 upToEval ::
   (Members '[Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, PathResolver] r) =>
   Sem r Core.CoreResult

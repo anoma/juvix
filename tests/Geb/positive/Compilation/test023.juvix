@@ -1,0 +1,21 @@
+-- Euclid's algorithm
+module test023;
+
+open import Stdlib.Prelude;
+open import Stdlib.Data.Nat.Ord;
+
+terminating
+gcd : Nat → Nat → Nat;
+gcd a b := if (a > b)
+              (gcd b a)
+              (if (a == 0)
+                  b
+                  (gcd (mod b a) a));
+
+main : Nat;
+main :=
+  gcd (3 * 7 * 2) (7 * 2 * 11) +
+  gcd (3 * 7 * 2 * 11 * 5) (7 * 2 * 5) +
+  gcd 3 7 +
+  gcd 7 3 +
+  gcd (11 * 7 * 3) (2 * 5 * 13);

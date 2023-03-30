@@ -54,7 +54,7 @@ computeNodeTypeInfo tab = umapL go
           OpTrace -> case _builtinAppArgs of
             [_, arg2] -> Info.getNodeType arg2
             _ -> error "incorrect trace builtin application"
-          OpFail -> mkDynamic'
+          OpFail -> Info.getNodeType node
       NCtr Constr {..} ->
         let ci = fromJust $ HashMap.lookup _constrTag (tab ^. infoConstructors)
             ii = fromJust $ HashMap.lookup (ci ^. constructorInductive) (tab ^. infoInductives)

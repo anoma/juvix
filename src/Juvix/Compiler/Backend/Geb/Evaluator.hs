@@ -81,6 +81,7 @@ eval morph =
     MorphismSecond s -> evalSecond s
     MorphismUnit -> return GebValueMorphismUnit
     MorphismVar x -> evalVar x
+    MorphismFail x -> evalFail x
 
 evalVar :: EvalEffects r => Var -> Sem r GebValue
 evalVar var = do
@@ -210,7 +211,7 @@ evalCase c = do
           }
 
 evalBinop ::
-  Members '[Reader Env, Error EvalError] r =>
+  EvalEffects r =>
   Binop ->
   Sem r GebValue
 evalBinop binop = do
@@ -263,6 +264,15 @@ evalBinop binop = do
               _evalErrorGebValue = Just (lfPair m1 m2),
               _evalErrorGebExpression = Just (MorphismBinop binop)
             }
+
+evalFail :: EvalEffects r => Failure -> Sem r GebValue
+evalFail Failure {..} =
+  throw
+    EvalError
+      { _evalErrorMsg = "failure: " <> _failureMessage,
+        _evalErrorGebValue = Nothing,
+        _evalErrorGebExpression = Nothing
+      }
 
 sameKind :: GebValue -> GebValue -> Bool
 sameKind l r = case (l, r) of

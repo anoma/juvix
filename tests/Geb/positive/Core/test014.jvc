@@ -1,0 +1,5 @@
+-- recursion
+
+def sum : Int -> Int := \(x : Int) if x = 0 then 0 else x + sum (x - 1);
+
+sum 100

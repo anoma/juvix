@@ -509,6 +509,9 @@ gebDiv = "div"
 gebMod :: IsString s => s
 gebMod = "mod"
 
+gebFail :: IsString s => s
+gebFail = "fail"
+
 gebEq :: IsString s => s
 gebEq = "eq"
 
