@@ -14,7 +14,7 @@ ignoredTests =
     "Fast exponentiation",
     "Nested 'case', 'let' and 'if' with variable capture",
     "Mutual recursion",
-    "LetRec",
+    "LetRec - fib, fact",
     "Big numbers"
   ]
 
