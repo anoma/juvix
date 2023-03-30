@@ -161,5 +161,10 @@ tests =
       "Test025: mid-square hashing"
       $(mkRelDir ".")
       $(mkRelFile "Core/test025.jvc")
-      $(mkRelFile "Eval/out/test025.geb")
+      $(mkRelFile "Eval/out/test025.geb"),
+    PosTest
+      "Test026: letrec"
+      $(mkRelDir ".")
+      $(mkRelFile "Core/test026.jvc")
+      $(mkRelFile "Eval/out/test026.geb")
   ]

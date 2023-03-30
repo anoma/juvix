@@ -158,5 +158,10 @@ tests =
       "Test025: mid-square hashing"
       $(mkRelDir ".")
       $(mkRelFile "test025.juvix")
-      $(mkRelFile "out/test025.geb")
+      $(mkRelFile "out/test025.geb"),
+    PosTest
+      "Test026: recursive let"
+      $(mkRelDir ".")
+      $(mkRelFile "test026.juvix")
+      $(mkRelFile "out/test026.geb")
   ]
