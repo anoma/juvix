@@ -326,5 +326,10 @@ tests =
       "Lifting and partial application"
       $(mkRelDir ".")
       $(mkRelFile "test058.jvc")
-      $(mkRelFile "out/test058.out")
+      $(mkRelFile "out/test058.out"),
+    PosTest
+      "Polymorphic type arguments"
+      $(mkRelDir ".")
+      $(mkRelFile "test059.jvc")
+      $(mkRelFile "out/test059.out")
   ]
