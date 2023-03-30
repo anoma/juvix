@@ -144,7 +144,7 @@ instance PrettyCode Binop where
 
 instance PrettyCode Failure where
   ppCode Failure {..} = do
-    ty <- ppCode _failureType
+    ty <- ppArg _failureType
     return $ kwFail <+> ppStringLit _failureMessage <+> ty
 
 instance PrettyCode Var where
