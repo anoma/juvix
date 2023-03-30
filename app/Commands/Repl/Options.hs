@@ -8,7 +8,7 @@ data ReplOptions = ReplOptions
   { _replInputFile :: Maybe (AppPath File),
     _replShowDeBruijn :: Bool,
     _replNoPrelude :: Bool,
-    _replTransformations :: [TransformationId]
+    _replTransformations :: Maybe (NonEmpty TransformationId)
   }
   deriving stock (Data)
 
@@ -22,7 +22,7 @@ instance CanonicalProjection ReplOptions Core.Options where
 
 parseRepl :: Parser ReplOptions
 parseRepl = do
-  _replTransformations <- optTransformationIds
+  _replTransformations <- nonEmpty <$> optTransformationIds
   _replInputFile <- optional parseInputJuvixFile
   _replShowDeBruijn <-
     switch

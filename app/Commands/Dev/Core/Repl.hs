@@ -2,7 +2,6 @@ module Commands.Dev.Core.Repl where
 
 import Commands.Base
 import Commands.Dev.Core.Repl.Options
-import Commands.Extra.Paths
 import Evaluator
 import Juvix.Compiler.Core.Data.InfoTable qualified as Core
 import Juvix.Compiler.Core.Extra.Base qualified as Core
@@ -13,6 +12,7 @@ import Juvix.Compiler.Core.Pretty qualified as Core
 import Juvix.Compiler.Core.Transformation.ComputeTypeInfo qualified as Core
 import Juvix.Compiler.Core.Transformation.DisambiguateNames qualified as Core
 import Juvix.Compiler.Core.Translation.FromSource qualified as Core
+import Juvix.Extra.Paths
 
 runCommand :: forall r. (Members '[Embed IO, App] r) => CoreReplOptions -> Sem r ()
 runCommand opts = do

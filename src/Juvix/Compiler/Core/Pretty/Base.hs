@@ -443,13 +443,15 @@ instance PrettyCode InfoTable where
         case mii of
           Nothing -> return Nothing
           Just ii -> do
-            let ty = ii ^. identifierType
+            showArgsNum <- asks (^. optShowArgsNum)
+            let argsNum = if showArgsNum then brackets (pretty (ii ^. identifierArgsNum)) else mempty
+                ty = ii ^. identifierType
             ty' <- ppCode ty
             let tydoc
                   | isDynamic ty = mempty
                   | otherwise = space <> colon <+> ty'
-                blt = if isJust (ii ^. identifierBuiltin) then Str.builtin <+> mempty else mempty
-            return (Just (blt <> kwDef <+> sym' <> tydoc))
+                blt = if isJust (ii ^. identifierBuiltin) then (Str.builtin <+> mempty) else mempty
+            return (Just (blt <> kwDef <+> sym' <> argsNum <> tydoc))
 
       ppSigs :: [IdentifierInfo] -> Sem r (Doc Ann)
       ppSigs idents = do

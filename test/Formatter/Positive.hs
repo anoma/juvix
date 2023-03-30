@@ -1,7 +1,6 @@
 module Formatter.Positive where
 
 import Base
-import Juvix.Compiler.Builtins
 import Juvix.Compiler.Pipeline
 import Juvix.Formatter
 import Scope.Positive qualified
@@ -11,7 +10,7 @@ runScopeEffIO :: Member (Embed IO) r => Path Abs Dir -> Sem (ScopeEff ': r) a ->
 runScopeEffIO testRoot' = interpret $ \case
   ScopeFile p -> do
     let entry = defaultEntryPoint testRoot' p
-    embed (snd <$> runIO' iniState entry upToScoping)
+    embed (snd <$> runIO' entry upToScoping)
 
 makeFormatTest' :: Scope.PosTest -> TestDescr
 makeFormatTest' Scope.PosTest {..} =

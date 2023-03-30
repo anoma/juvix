@@ -90,23 +90,6 @@ fromInternal i = do
         boolSymM = (^. inductiveSymbol) <$> lookupBuiltinInductive tab BuiltinBool
         natSymM = (^. inductiveSymbol) <$> lookupBuiltinInductive tab BuiltinNat
 
-fromInternalExpression :: CoreResult -> Internal.Expression -> Sem r Node
-fromInternalExpression res exp = do
-  let modules = res ^. coreResultInternalTypedResult . InternalTyped.resultModules
-  snd
-    <$> runReader
-      (Internal.buildTable modules)
-      ( runInfoTableBuilder
-          (res ^. coreResultTable)
-          ( evalState
-              (res ^. coreResultInternalTypedResult . InternalTyped.resultFunctions)
-              ( runReader
-                  (res ^. coreResultInternalTypedResult . InternalTyped.resultIdenTypes)
-                  (runReader initIndexTable (goExpression exp))
-              )
-          )
-      )
-
 goModule ::
   forall r.
   (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable] r) =>

@@ -5,7 +5,6 @@ module Commands.Dev.Geb.Repl where
 import Commands.Base hiding (command)
 import Commands.Dev.Geb.Repl.Format
 import Commands.Dev.Geb.Repl.Options
-import Commands.Extra.Paths
 import Control.Exception (throwIO)
 import Control.Monad.State.Strict qualified as State
 import Data.String.Interpolate (i, __i)
@@ -13,6 +12,7 @@ import Juvix.Compiler.Backend qualified as Backend
 import Juvix.Compiler.Backend.Geb qualified as Geb
 import Juvix.Compiler.Backend.Geb.Analysis.TypeChecking.Error
 import Juvix.Data.Error.GenericError qualified as Error
+import Juvix.Extra.Paths
 import Juvix.Extra.Version
 import Juvix.Prelude.Pretty qualified as P
 import System.Console.ANSI qualified as Ansi
