@@ -19,7 +19,7 @@ data TransformationId
   | DisambiguateNames
   | CheckGeb
   | LetFolding
-  deriving stock (Data, Bounded, Enum)
+  deriving stock (Data, Bounded, Enum, Show)
 
 data PipelineId
   = PipelineEval

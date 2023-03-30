@@ -1,5 +1,6 @@
 module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context
   ( module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context,
+    module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.FunctionsTable,
     module Juvix.Compiler.Internal.Data.InfoTable,
   )
 where
@@ -21,7 +22,8 @@ data InternalTypedResult = InternalTypedResult
     _resultModules :: NonEmpty Module,
     _resultNormalized :: NormalizedTable,
     _resultIdenTypes :: TypesTable,
-    _resultFunctions :: FunctionsTable
+    _resultFunctions :: FunctionsTable,
+    _resultInfoTable :: InfoTable
   }
 
 makeLenses ''InternalTypedResult

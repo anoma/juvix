@@ -2,7 +2,6 @@ module Reachability.Positive where
 
 import Base
 import Data.HashSet qualified as HashSet
-import Juvix.Compiler.Builtins (iniState)
 import Juvix.Compiler.Internal.Language qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context qualified as Internal
 import Juvix.Compiler.Pipeline
@@ -36,7 +35,7 @@ testDescr PosTest {..} =
                     }
 
             step "Pipeline up to reachability"
-            p :: Internal.InternalTypedResult <- snd <$> runIO' iniState entryPoint upToInternalReachability
+            p :: Internal.InternalTypedResult <- snd <$> runIO' entryPoint upToInternalReachability
 
             step "Check reachability results"
             let names = concatMap getNames (p ^. Internal.resultModules)

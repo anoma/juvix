@@ -1,4 +1,8 @@
-module Juvix.Compiler.Core.Data.InfoTableBuilder where
+module Juvix.Compiler.Core.Data.InfoTableBuilder
+  ( module Juvix.Compiler.Core.Data.InfoTable,
+    module Juvix.Compiler.Core.Data.InfoTableBuilder,
+  )
+where
 
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Core.Data.InfoTable
@@ -18,6 +22,7 @@ data InfoTableBuilder m a where
   OverIdentArgsInfo :: Symbol -> ([ArgumentInfo] -> [ArgumentInfo]) -> InfoTableBuilder m ()
   GetIdent :: Text -> InfoTableBuilder m (Maybe IdentKind)
   GetInfoTable :: InfoTableBuilder m InfoTable
+  SetInfoTable :: InfoTable -> InfoTableBuilder m ()
 
 makeSem ''InfoTableBuilder
 
@@ -117,6 +122,7 @@ runInfoTableBuilder tab =
         return $ HashMap.lookup txt (s ^. identMap)
       GetInfoTable ->
         get
+      SetInfoTable t -> put t
 
 execInfoTableBuilder :: InfoTable -> Sem (InfoTableBuilder ': r) a -> Sem r InfoTable
 execInfoTableBuilder tab = fmap fst . runInfoTableBuilder tab

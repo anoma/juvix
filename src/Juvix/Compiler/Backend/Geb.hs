@@ -10,5 +10,5 @@ where
 import Juvix.Compiler.Backend.Geb.Analysis.TypeChecking
 import Juvix.Compiler.Backend.Geb.Evaluator
 import Juvix.Compiler.Backend.Geb.Language
-import Juvix.Compiler.Backend.Geb.Pretty hiding (group, list)
+import Juvix.Compiler.Backend.Geb.Pretty
 import Juvix.Compiler.Backend.Geb.Translation
