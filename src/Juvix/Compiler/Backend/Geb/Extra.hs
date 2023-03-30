@@ -109,6 +109,7 @@ mapVars f m = go 0 m
       MorphismVar x -> f k x
       MorphismInteger i -> MorphismInteger i
       MorphismBinop x -> MorphismBinop (over binopLeft (go k) (over binopRight (go k) x))
+      MorphismFail x -> MorphismFail x
 
 shift :: Int -> Morphism -> Morphism
 shift 0 m = m
