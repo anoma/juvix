@@ -1,3 +1,4 @@
+-- pattern matching
 module test002;
 
 open import Stdlib.Prelude;

@@ -1,0 +1,19 @@
+-- mutual recursion
+module test022;
+
+open import Stdlib.Prelude;
+open import Stdlib.Data.Nat.Ord;
+
+terminating
+f : Nat → Nat;
+terminating
+g : Nat → Nat;
+terminating
+h : Nat → Nat;
+
+f x := if (x < 1) 1 (2 * x + g (sub x 1));
+g x := if (x < 1) 1 (x + h (sub x 1));
+h x := if (x < 1) 1 (x * f (sub x 1));
+
+main : Nat;
+main := f 5 + f 10 + f 20;
