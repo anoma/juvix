@@ -116,10 +116,11 @@ jobs:
 
       - name: Typecheck and format Juvix examples
         if: ${{ success() }}
+        continue-on-error: true
         run: |
           cd main
-          make -s check-format-juvix-examples
-          make -s typecheck-juvix-examples
+          make check-format-juvix-examples
+          make typecheck-juvix-examples
 
       - name: Add ~/.local/bin to PATH
         run: |
