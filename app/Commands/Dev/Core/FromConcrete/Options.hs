@@ -9,6 +9,7 @@ data CoreFromConcreteOptions = CoreFromConcreteOptions
   { _coreFromConcreteTransformations :: [TransformationId],
     _coreFromConcreteShowDeBruijn :: Bool,
     _coreFromConcreteShowIdentIds :: Bool,
+    _coreFromConcreteShowArgsNum :: Bool,
     _coreFromConcreteNoDisambiguate :: Bool,
     _coreFromConcreteFilter :: Bool,
     _coreFromConcreteNoIO :: Bool,
@@ -24,7 +25,8 @@ instance CanonicalProjection CoreFromConcreteOptions Core.Options where
   project c =
     Core.defaultOptions
       { Core._optShowDeBruijnIndices = c ^. coreFromConcreteShowDeBruijn,
-        Core._optShowIdentIds = c ^. coreFromConcreteShowIdentIds
+        Core._optShowIdentIds = c ^. coreFromConcreteShowIdentIds,
+        Core._optShowArgsNum = c ^. coreFromConcreteShowArgsNum
       }
 
 instance CanonicalProjection CoreFromConcreteOptions Eval.EvalOptions where
@@ -40,6 +42,7 @@ parseCoreFromConcreteOptions = do
   _coreFromConcreteTransformations <- optTransformationIds
   _coreFromConcreteShowDeBruijn <- optDeBruijn
   _coreFromConcreteShowIdentIds <- optIdentIds
+  _coreFromConcreteShowArgsNum <- optArgsNum
   _coreFromConcreteNoDisambiguate <- optNoDisambiguate
   _coreFromConcreteFilter <-
     switch

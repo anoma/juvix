@@ -248,6 +248,13 @@ optIdentIds =
         <> help "Show identifier IDs"
     )
 
+optArgsNum :: Parser Bool
+optArgsNum =
+  switch
+    ( long "show-args-num"
+        <> help "Show identifier arguments number"
+    )
+
 optNoDisambiguate :: Parser Bool
 optNoDisambiguate =
   switch
