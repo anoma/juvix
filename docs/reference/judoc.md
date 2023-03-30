@@ -22,7 +22,7 @@ documentation before them:
    --- Unary representation of natural numbers
    type Nat : Type :=
      | --- Nullary constructor representing number 0
-       zero : Nat;
+       zero : Nat
      | --- Unary constructor representing the successor of a natural number
        suc : Nat -> Nat;
    ```
