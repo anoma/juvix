@@ -19,9 +19,11 @@ import Commands.Dev.Geb.Options
 import Commands.Dev.Highlight.Options
 import Commands.Dev.Internal.Options
 import Commands.Dev.Parse.Options
+import Commands.Dev.Repl.Options
 import Commands.Dev.Runtime.Options
 import Commands.Dev.Scope.Options
 import Commands.Dev.Termination.Options
+import Commands.Repl.Options
 import CommonOptions
 
 data DevCommand
@@ -35,6 +37,7 @@ data DevCommand
   | Parse ParseOptions
   | Scope ScopeOptions
   | Termination TerminationCommand
+  | JuvixDevRepl ReplOptions
   deriving stock (Data)
 
 parseDevCommand :: Parser DevCommand
@@ -50,7 +53,8 @@ parseDevCommand =
           commandParse,
           commandScope,
           commandShowRoot,
-          commandTermination
+          commandTermination,
+          commandJuvixDevRepl
         ]
     )
 
@@ -123,3 +127,12 @@ commandTermination =
     info
       (Termination <$> parseTerminationCommand)
       (progDesc "Subcommands related to termination checking")
+
+commandJuvixDevRepl :: Mod CommandFields DevCommand
+commandJuvixDevRepl =
+  command
+    "repl"
+    ( info
+        (JuvixDevRepl <$> parseDevRepl)
+        (progDesc "Run the Juvix dev REPL")
+    )
