@@ -1,0 +1,12 @@
+-- McCarthy's 91 function
+module test020;
+
+open import Stdlib.Prelude;
+open import Stdlib.Data.Nat.Ord;
+
+terminating
+f91 : Nat → Nat;
+f91 n := if (n > 100) (sub n 10) (f91 (f91 (n + 11)));
+
+main : Nat;
+main := f91 101 + f91 95 + f91 16 + f91 5;
