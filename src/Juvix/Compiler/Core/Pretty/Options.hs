@@ -23,7 +23,7 @@ traceOptions =
   Options
     { _optShowIdentIds = False,
       _optShowDeBruijnIndices = True,
-      _optShowArgsNum = False
+      _optShowArgsNum = True
     }
 
 fromGenericOptions :: GenericOptions -> Options
