@@ -1,0 +1,5 @@
+-- polymorphic type arguments
+
+def id : Π A : Type, A → A := \(A : Type) \(x : A) x;
+
+id (Π A : Type, A → A) id Int 7

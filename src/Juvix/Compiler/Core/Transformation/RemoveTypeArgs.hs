@@ -45,7 +45,7 @@ convertNode tab = convert mempty
                   let fi = fromJust $ HashMap.lookup _identSymbol (tab ^. infoIdentifiers)
                    in fi ^. identifierType
                 _ -> unsupported node
-            args' = filterArgs ty args
+            args' = filterArgs snd ty args
          in if
                 | isTypeConstr tab ty ->
                     End (mkDynamic _appInfo)
@@ -56,7 +56,7 @@ convertNode tab = convert mempty
       NCtr (Constr {..}) ->
         let ci = fromJust $ HashMap.lookup _constrTag (tab ^. infoConstructors)
             ty = ci ^. constructorType
-            args' = filterArgs ty _constrArgs
+            args' = filterArgs id ty _constrArgs
          in End (mkConstr _constrInfo _constrTag (map (convert vars) args'))
       NCase (Case {..}) ->
         End (mkCase _caseInfo _caseInductive (convert vars _caseValue) (map convertBranch _caseBranches) (fmap (convert vars) _caseDefault))
@@ -100,10 +100,18 @@ convertNode tab = convert mempty
             End (convert (BL.cons _piBinder vars) _piBody)
       _ -> Recur node
       where
-        filterArgs :: Type -> [a] -> [a]
-        filterArgs ty args =
-          map fst $
-            filter (not . isTypeConstr tab . snd) (zip args (typeArgs ty ++ repeat mkDynamic'))
+        filterArgs :: (a -> Node) -> Type -> [a] -> [a]
+        filterArgs getNode ty args = case (ty, args) of
+          (NPi Pi {..}, arg : args') ->
+            let ty' = subst (getNode arg) _piBody
+                args'' = filterArgs getNode ty' args'
+             in if
+                    | isTypeConstr tab (_piBinder ^. binderType) ->
+                        args''
+                    | otherwise ->
+                        arg : args''
+          _ ->
+            args
 
 convertIdent :: InfoTable -> IdentifierInfo -> IdentifierInfo
 convertIdent tab ii =
