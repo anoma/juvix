@@ -284,5 +284,10 @@ tests =
       "Implicit builtin bool"
       $(mkRelDir ".")
       $(mkRelFile "test045.juvix")
-      $(mkRelFile "out/test045.out")
+      $(mkRelFile "out/test045.out"),
+    posTest
+      "Local modules"
+      $(mkRelDir ".")
+      $(mkRelFile "test046.juvix")
+      $(mkRelFile "out/test046.out")
   ]
