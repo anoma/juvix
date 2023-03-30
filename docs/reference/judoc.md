@@ -95,3 +95,9 @@ An example is of the following form
 --- >>> someExpression ;
 ```
 The `someExpression` can span multiple lines and it must be ended with a `;`.
+For instance:
+```
+--- >>> 1
+        + 2
+        + 3;
+```
