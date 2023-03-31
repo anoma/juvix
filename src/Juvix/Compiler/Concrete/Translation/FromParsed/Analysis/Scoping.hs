@@ -974,6 +974,10 @@ checkUnqualified s = do
   where
     n = NameUnqualified s
 
+-- | Remove the symbol entries associated with a single symbol according to the
+-- shadowing rules for modules. For example, a symbol defined in the outer
+-- module with the same name as a symbol defined in the inner module will be
+-- removed.
 resolveShadowing :: [SymbolEntry] -> [SymbolEntry]
 resolveShadowing es = go [(e, entryName e ^. S.nameWhyInScope) | e <- es]
   where
