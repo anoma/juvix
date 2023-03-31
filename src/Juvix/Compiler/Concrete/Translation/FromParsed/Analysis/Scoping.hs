@@ -253,7 +253,7 @@ getTopModulePath Module {..} =
 -- | Do not call directly. Looks for a symbol in (possibly) nested local modules
 lookupSymbolAux ::
   forall r.
-  (Members '[State Scope, Error ScoperError] r) =>
+  Members '[State Scope] r =>
   [Symbol] ->
   Symbol ->
   Sem r [SymbolEntry]
@@ -269,7 +269,7 @@ lookupSymbolAux modules final = do
           return $ case r of
             Nothing -> []
             Just SymbolInfo {..} -> toList _symbolInfo
-        (p : ps) ->
+        p : ps ->
           mapMaybe (lookInExport final ps . getModuleExportInfo)
             . concat
             . maybeToList
@@ -300,7 +300,7 @@ lookInExport sym remaining e = case remaining of
 -- modules due to nesting.
 lookupQualifiedSymbol ::
   forall r.
-  (Members '[State Scope, Error ScoperError, State ScoperState] r) =>
+  Members '[State Scope, State ScoperState] r =>
   ([Symbol], Symbol) ->
   Sem r [SymbolEntry]
 lookupQualifiedSymbol (path, sym) = do
@@ -651,6 +651,7 @@ checkLocalModule Module {..} = do
       where
         inheritSymbol :: SymbolInfo -> SymbolInfo
         inheritSymbol (SymbolInfo s) = SymbolInfo (fmap inheritEntry s)
+
         inheritEntry :: SymbolEntry -> SymbolEntry
         inheritEntry = entryOverName (over S.nameWhyInScope S.BecauseInherited . set S.nameVisibilityAnn VisPrivate)
 
@@ -966,12 +967,36 @@ checkUnqualified s = do
   entries <-
     filter S.isExprKind
       <$> lookupQualifiedSymbol ([], s)
-  case entries of
+  case resolveShadowing entries of
     [] -> err
     [x] -> entryToScopedIden n x
     es -> throw (ErrAmbiguousSym (AmbiguousSym n es))
   where
     n = NameUnqualified s
+
+-- | Remove the symbol entries associated with a single symbol according to the
+-- shadowing rules for modules. For example, a symbol defined in the outer
+-- module with the same name as a symbol defined in the inner module will be
+-- removed.
+resolveShadowing :: [SymbolEntry] -> [SymbolEntry]
+resolveShadowing es = go [(e, entryName e ^. S.nameWhyInScope) | e <- es]
+  where
+    go :: [(SymbolEntry, S.WhyInScope)] -> [SymbolEntry]
+    go itms
+      | any (((== S.BecauseImportedOpened) .||. (== S.BecauseDefined)) . snd) itms =
+          [e | (e, w) <- itms, not (isInherited w)]
+      | (notNull .&&. all (isInherited . snd)) itms = go [(e, peelInherited w) | (e, w) <- itms]
+      | otherwise = map fst itms
+      where
+        peelInherited :: S.WhyInScope -> S.WhyInScope
+        peelInherited = \case
+          S.BecauseInherited w -> w
+          _ -> impossible
+
+        isInherited :: S.WhyInScope -> Bool
+        isInherited = \case
+          S.BecauseInherited {} -> True
+          _ -> False
 
 checkPatternName ::
   forall r.

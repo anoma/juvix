@@ -16,7 +16,8 @@ data Name = Name
   { _nameText :: Text,
     _nameId :: NameId,
     _nameKind :: NameKind,
-    _namePretty :: Text, -- How to print this name in error messages
+    -- |  How to print this name in error messages
+    _namePretty :: Text,
     _nameLoc :: Interval
   }
   deriving stock (Show, Data)

@@ -14,7 +14,7 @@ type LocalVariable = S.Symbol
 newtype SymbolInfo = SymbolInfo
   { -- | This map must have at least one entry. If there are more than one
     -- entry, it means that the same symbol has been brought into scope from two
-    -- different places.
+    -- different places
     _symbolInfo :: HashMap S.AbsModulePath SymbolEntry
   }
   deriving newtype (Show, Semigroup, Monoid)
