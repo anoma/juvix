@@ -1,5 +1,5 @@
 -- local modules
-module test046;
+module test047;
 
 open import Stdlib.Prelude;
 
