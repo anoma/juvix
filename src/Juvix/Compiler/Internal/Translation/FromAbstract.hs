@@ -155,7 +155,7 @@ goStatement = \case
   Abstract.StatementAxiom d -> Just . StatementAxiom <$> goAxiomDef d
   Abstract.StatementFunction {} -> return Nothing
   Abstract.StatementImport i -> fmap StatementInclude <$> goImport i
-  Abstract.StatementLocalModule {} -> unsupported "local modules"
+  Abstract.StatementLocalModule m -> Just . StatementModule <$> goModule m
   Abstract.StatementInductive i -> Just . StatementInductive <$> goInductiveDef i
 
 goTypeIden :: Abstract.Iden -> Iden

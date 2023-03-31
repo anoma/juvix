@@ -61,7 +61,7 @@ data WhyInScope
     BecauseImportedOpened
   | -- | Defined in this module.
     BecauseDefined
-  deriving stock (Show)
+  deriving stock (Eq, Show)
 
 type Name = Name' C.Name
 

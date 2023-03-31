@@ -53,6 +53,7 @@ getNames m = concatMap getDeclName (m ^. (Internal.moduleBody . Internal.moduleS
       Internal.StatementFunction (Internal.MutualBlock f) -> map (^. Internal.funDefName . Internal.nameText) (toList f)
       Internal.StatementAxiom ax -> [ax ^. (Internal.axiomName . Internal.nameText)]
       Internal.StatementInclude i -> getNames (i ^. Internal.includeModule)
+      Internal.StatementModule l -> getNames l
 
 allTests :: TestTree
 allTests =

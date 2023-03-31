@@ -289,5 +289,10 @@ tests =
       "Test046: Polymorphic type arguments"
       $(mkRelDir ".")
       $(mkRelFile "test046.juvix")
-      $(mkRelFile "out/test046.out")
+      $(mkRelFile "out/test046.out"),
+    posTest
+      "Test047: Local Modules"
+      $(mkRelDir ".")
+      $(mkRelFile "test047.juvix")
+      $(mkRelFile "out/test047.out")
   ]

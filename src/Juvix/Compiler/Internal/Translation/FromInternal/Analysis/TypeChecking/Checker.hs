@@ -60,6 +60,7 @@ checkStatement s = case s of
   StatementFunction funs -> StatementFunction <$> runReader emptyLocalVars (checkTopMutualBlock funs)
   StatementInductive ind -> StatementInductive <$> checkInductiveDef ind
   StatementInclude i -> StatementInclude <$> checkInclude i
+  StatementModule m -> StatementModule <$> checkModule m
   StatementAxiom ax -> do
     modify (HashMap.insert (ax ^. axiomName) (ax ^. axiomType))
     return s

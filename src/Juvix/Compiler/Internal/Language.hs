@@ -41,6 +41,7 @@ data Statement
   | StatementFunction MutualBlock
   | StatementAxiom AxiomDef
   | StatementInclude Include
+  | StatementModule Module
   deriving stock (Data)
 
 newtype MutualBlock = MutualBlock
