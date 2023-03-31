@@ -54,10 +54,10 @@ toEvalTransformations = [EtaExpandApps, MatchToCase, NatToInt, ConvertBuiltinTyp
 
 toStrippedTransformations :: [TransformationId]
 toStrippedTransformations =
-  toEvalTransformations ++ [LambdaLetRecLifting, TopEtaExpand, MoveApps, RemoveTypeArgs]
+  toEvalTransformations ++ [LambdaLetRecLifting, LetFolding, TopEtaExpand, MoveApps, RemoveTypeArgs]
 
 toGebTransformations :: [TransformationId]
-toGebTransformations = toEvalTransformations ++ [LetRecLifting, CheckGeb, UnrollRecursion, FoldTypeSynonyms, ComputeTypeInfo]
+toGebTransformations = toEvalTransformations ++ [CheckGeb, LetRecLifting, LetFolding, UnrollRecursion, FoldTypeSynonyms, ComputeTypeInfo]
 
 pipeline :: PipelineId -> [TransformationId]
 pipeline = \case

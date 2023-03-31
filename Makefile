@@ -135,7 +135,7 @@ format-juvix-examples:
 .PHONY: check-format-juvix-examples
 check-format-juvix-examples:
 	@export JUVIXFORMATFLAGS=--check
-	@${MAKE} format-juvix-examples
+	@make format-juvix-examples
 
 .PHONY: typecheck-juvix-examples
 typecheck-juvix-examples:
