@@ -83,6 +83,7 @@ transformationText = \case
   DisambiguateNames -> strDisambiguateNames
   CheckGeb -> strCheckGeb
   LetFolding -> strLetFolding
+  FoldTypeSynonyms -> strFoldTypeSynonyms
 
 parsePipeline :: MonadParsec e Text m => m PipelineId
 parsePipeline = choice [symbol (pipelineText t) $> t | t <- allElements]
@@ -149,3 +150,6 @@ strCheckGeb = "check-geb"
 
 strLetFolding :: Text
 strLetFolding = "let-folding"
+
+strFoldTypeSynonyms :: Text
+strFoldTypeSynonyms = "fold-type-synonyms"

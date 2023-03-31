@@ -17,6 +17,7 @@ import Juvix.Compiler.Core.Transformation.ComputeTypeInfo
 import Juvix.Compiler.Core.Transformation.ConvertBuiltinTypes
 import Juvix.Compiler.Core.Transformation.DisambiguateNames
 import Juvix.Compiler.Core.Transformation.Eta
+import Juvix.Compiler.Core.Transformation.FoldTypeSynonyms
 import Juvix.Compiler.Core.Transformation.Identity
 import Juvix.Compiler.Core.Transformation.LambdaLetRecLifting
 import Juvix.Compiler.Core.Transformation.MatchToCase
@@ -49,3 +50,4 @@ applyTransformations ts tbl = foldM (flip appTrans) tbl ts
       DisambiguateNames -> return . disambiguateNames
       CheckGeb -> mapError (JuvixError @CoreError) . checkGeb
       LetFolding -> return . letFolding
+      FoldTypeSynonyms -> return . foldTypeSynonyms

@@ -152,12 +152,6 @@ convertInductive tab ii =
 convertAxiom :: InfoTable -> AxiomInfo -> AxiomInfo
 convertAxiom tab = over axiomType (convertNode tab)
 
-filterOutTypeSynonyms :: InfoTable -> InfoTable
-filterOutTypeSynonyms tab = pruneInfoTable tab'
-  where
-    tab' = tab {_infoIdentifiers = idents'}
-    idents' = HashMap.filter (\ii -> not (isTypeConstr tab (ii ^. identifierType))) (tab ^. infoIdentifiers)
-
 removeTypeArgs :: InfoTable -> InfoTable
 removeTypeArgs tab =
   filterOutTypeSynonyms $
