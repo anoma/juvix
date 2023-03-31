@@ -16,6 +16,7 @@ import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Info.NoDisplayInfo qualified as Info
 import Juvix.Compiler.Core.Pretty qualified as Core
 import Juvix.Compiler.Core.Transformation qualified as Core
+import Juvix.Compiler.Core.Transformation.DisambiguateNames (disambiguateNames)
 import Juvix.Compiler.Internal.Language qualified as Internal
 import Juvix.Compiler.Internal.Pretty qualified as Internal
 import Juvix.Data.Error.GenericError qualified as Error
@@ -163,18 +164,21 @@ runCommand opts = do
             where
               artif :: Artifacts
               artif = ctx ^. replContextArtifacts
-              transforms :: [Core.TransformationId]
-              transforms = maybe Core.toEvalTransformations toList (opts ^. replTransformations)
               eval :: Core.Node -> Repl (Either JuvixError Core.Node)
               eval n = do
                 ep <- getReplEntryPoint (Abs replPath)
-                case run $ runReader ep $ runError @JuvixError $ runState artif $ runTransformations transforms n of
+                case run $ runReader ep $ runError @JuvixError $ runState artif $ runTransformations (opts ^. replTransformations) n of
                   Left err -> return $ Left err
                   Right (artif', n') ->
                     liftIO $
                       mapLeft
                         (JuvixError @Core.CoreError)
-                        <$> doEvalIO False defaultLoc (artif' ^. artifactCoreTable) n'
+                        <$> doEvalIO False defaultLoc tab' n'
+                    where
+                      tab' :: Core.InfoTable
+                      tab'
+                        | opts ^. replNoDisambiguate = artif' ^. artifactCoreTable
+                        | otherwise = disambiguateNames (artif' ^. artifactCoreTable)
 
               compileString :: Repl (Either JuvixError Core.Node)
               compileString = liftIO $ compileExpressionIO' ctx (strip (pack s))
