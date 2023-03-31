@@ -166,5 +166,10 @@ tests =
       "Test026: letrec"
       $(mkRelDir ".")
       $(mkRelFile "Core/test026.jvc")
-      $(mkRelFile "Eval/out/test026.geb")
+      $(mkRelFile "Eval/out/test026.geb"),
+    PosTest
+      "Test027: type synonyms"
+      $(mkRelDir ".")
+      $(mkRelFile "Core/test027.jvc")
+      $(mkRelFile "Eval/out/test027.geb")
   ]

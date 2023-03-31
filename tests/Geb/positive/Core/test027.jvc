@@ -1,0 +1,7 @@
+-- type synonyms
+
+def T : Type := Int;
+
+def f : T -> T := \(x : T) x + 7;
+
+f 2

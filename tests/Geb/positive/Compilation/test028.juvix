@@ -1,0 +1,21 @@
+-- Mutually recursive let expressions
+module test028;
+
+open import Stdlib.Prelude;
+
+main : Bool;
+main :=
+  let
+    Ty : Type;
+    Ty := Nat;
+    odd : _;
+    even : _;
+    unused : _;
+    odd zero := false;
+    odd (suc n) := not (even n);
+    unused := 123;
+    even zero := true;
+    even (suc n) := not (odd n);
+    plusOne : Ty → Ty;
+    plusOne n := n + 1;
+  in odd (plusOne 13) || even (plusOne 12);

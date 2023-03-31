@@ -1,0 +1,11 @@
+-- pattern matching on natural numbers
+module test029;
+
+open import Stdlib.Prelude;
+
+h : Nat -> Nat;
+h (suc (suc (suc (suc n)))) := n;
+h _ := 0;
+
+main : Nat;
+main := h 5 + h 3;
