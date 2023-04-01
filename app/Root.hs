@@ -38,7 +38,7 @@ findRootAndChangeDir minputFile gopts invokeDir = do
       case l of
         Nothing -> do
           let buildDir = getBuildDir gopts invokeDir cwd
-          return (cwd, defaultPackage cwd buildDir, buildDir)
+          return (cwd, defaultPackage, buildDir)
         Just yamlPath -> do
           bs <- ByteString.readFile (toFilePath yamlPath)
           let isEmpty = ByteString.null bs
@@ -46,8 +46,8 @@ findRootAndChangeDir minputFile gopts invokeDir = do
               buildDir = getBuildDir gopts invokeDir root
           pkg <-
             if
-                | isEmpty -> return (defaultPackage root buildDir)
-                | otherwise -> readPackageIO root buildDir
+                | isEmpty -> return defaultPackage
+                | otherwise -> readPackageIO root
           return (root, pkg, buildDir)
 
 getBuildDir :: GlobalOptions -> Path Abs Dir -> Path Abs Dir -> Path Abs Dir

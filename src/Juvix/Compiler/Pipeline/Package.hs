@@ -140,16 +140,16 @@ readPackage ::
   (Members '[Files, Error Text] r) =>
   Path Abs Dir ->
   Sem r Package
-readPackage adir = do
+readPackage root = do
   bs <- readFileBS' yamlPath
   either (throw . pack . prettyPrintParseException) processPackage (decodeEither' bs)
   where
-    yamlPath = adir <//> juvixYamlFile
+    yamlPath = root <//> juvixYamlFile
 
 readPackageIO :: Path Abs Dir -> IO Package
-readPackageIO dir = do
+readPackageIO root = do
   let x :: Sem '[Error Text, Files, Embed IO] Package
-      x = readPackage dir
+      x = readPackage root
   m <- runM $ runFilesIO (runError x)
   case m of
     Left err -> putStrLn err >> exitFailure

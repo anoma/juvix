@@ -44,7 +44,7 @@ getPackage = do
   tproj <- getProjName
   say "Write the version of your project [leave empty for 0.0.0]"
   root <- getCurrentDir
-  let pkg = defaultPackage root (rootBuildDir root)
+  let pkg = defaultPackage
   tversion :: SemVer <- getVersion
   return
     pkg

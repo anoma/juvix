@@ -63,19 +63,20 @@ iniResolverState =
 
 mkPackageInfo ::
   forall r.
-  (Members '[Files, Error Text] r) =>
+  (Members '[Files, Error Text, Reader ResolverEnv] r) =>
   Maybe EntryPoint ->
   Path Abs Dir ->
   Sem r PackageInfo
 mkPackageInfo mpackageEntry _packageRoot = do
   let buildDir = maybe (rootBuildDir _packageRoot) (^. entryPointBuildDir) mpackageEntry
-  _packagePackage <- maybe (readPackage _packageRoot buildDir) (return . (^. entryPointPackage)) mpackageEntry
+  _packagePackage <- maybe (readPackage _packageRoot) (return . (^. entryPointPackage)) mpackageEntry
   let deps :: [Dependency] = _packagePackage ^. packageDependencies
+  depsPaths <- mapM getDependencyPath deps
   ensureStdlib buildDir deps
   files :: [Path Rel File] <- map (fromJust . stripProperPrefix _packageRoot) <$> walkDirRelAccum juvixAccum _packageRoot []
   let _packageRelativeFiles = HashSet.fromList files
       _packageAvailableRoots =
-        HashSet.fromList (_packageRoot : map (^. dependencyPath) deps)
+        HashSet.fromList (_packageRoot : depsPaths)
   return PackageInfo {..}
   where
     juvixAccum :: Path Abs Dir -> [Path Rel Dir] -> [Path Rel File] -> [Path Abs File] -> Sem r ([Path Abs File], Recurse Rel)
@@ -84,19 +85,26 @@ mkPackageInfo mpackageEntry _packageRoot = do
         newJuvixFiles :: [Path Abs File]
         newJuvixFiles = [cd <//> f | f <- files, isJuvixFile f]
 
-dependencyCached :: (Members '[State ResolverState] r) => Dependency -> Sem r Bool
-dependencyCached d = HashMap.member (d ^. dependencyPath) <$> gets (^. resolverPackages)
+dependencyCached :: (Members '[State ResolverState, Reader ResolverEnv] r) => Dependency -> Sem r Bool
+dependencyCached d = do
+  p <- getDependencyPath d
+  HashMap.member p <$> gets (^. resolverPackages)
 
 withPathFile :: (Members '[PathResolver] r) => TopModulePath -> (Either PathResolverError (Path Abs File) -> Sem r a) -> Sem r a
 withPathFile m f = withPath m (f . mapRight (uncurry (<//>)))
 
+getDependencyPath :: Members '[Reader ResolverEnv] r => Dependency -> Sem r (Path Abs Dir)
+getDependencyPath (Dependency p) = do
+  r <- asks (^. envRoot)
+  return (someBaseToAbs r p)
+
 addDependency' ::
-  (Members '[State ResolverState, Files, Error Text] r) =>
+  (Members '[State ResolverState, Reader ResolverEnv, Files, Error Text] r) =>
   Maybe EntryPoint ->
   Dependency ->
   Sem r ()
 addDependency' me d = do
-  let p :: Path Abs Dir = d ^. dependencyPath
+  p <- getDependencyPath d
   unlessM (dependencyCached d) $ do
     pkgInfo <- mkPackageInfo me p
     -- traceM ("adding dependency " <> pack (toFilePath p))

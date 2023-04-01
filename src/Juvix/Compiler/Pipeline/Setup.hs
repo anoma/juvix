@@ -17,13 +17,13 @@ entrySetup = do
 registerDependencies :: (Members '[Reader EntryPoint, PathResolver] r) => Sem r ()
 registerDependencies = do
   e <- ask
-  addDependency (Just e) (Dependency (e ^. entryPointRoot))
+  addDependency (Just e) (Dependency (Abs (e ^. entryPointRoot)))
 
 stdlibDep ::
   forall r.
   (Members '[Reader EntryPoint, Files, PathResolver] r) =>
   Sem r Dependency
-stdlibDep = Dependency <$> getRoot
+stdlibDep = Dependency . Abs <$> getRoot
   where
     getRoot :: Sem r (Path Abs Dir)
     getRoot = do
