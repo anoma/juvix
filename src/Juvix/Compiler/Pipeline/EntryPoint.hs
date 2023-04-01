@@ -9,6 +9,10 @@ import Juvix.Compiler.Pipeline.Package
 import Juvix.Extra.Paths
 import Juvix.Prelude
 
+data PackageMode =
+  ModeSingleFile
+  | ModePackage Package
+
 -- | The head of _entryModulePaths is assumed to be the Main module
 data EntryPoint = EntryPoint
   { _entryPointRoot :: Path Abs Dir,
@@ -37,7 +41,7 @@ defaultEntryPoint root mainFile =
   EntryPoint
     { _entryPointRoot = root,
       _entryPointResolverRoot = root,
-      _entryPointBuildDir = buildDir,
+      _entryPointBuildDir = defaultBuildDir,
       _entryPointNoTermination = False,
       _entryPointNoPositivity = False,
       _entryPointNoCoverage = False,
@@ -51,7 +55,7 @@ defaultEntryPoint root mainFile =
       _entryPointModulePaths = pure mainFile
     }
   where
-    buildDir = rootBuildDir root
+    defaultBuildDir = rootBuildDir root
 
 defaultUnrollLimit :: Int
 defaultUnrollLimit = 140

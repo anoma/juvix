@@ -117,7 +117,7 @@ inferExpressionIO fp txt =
 upToParsing ::
   (Members '[Reader EntryPoint, Files, Error JuvixError, NameIdGen, PathResolver] r) =>
   Sem r Parser.ParserResult
-upToParsing = entrySetup >>= Parser.fromSource
+upToParsing = entrySetup >> ask >>= Parser.fromSource
 
 upToScoping ::
   (Members '[Reader EntryPoint, Files, NameIdGen, Error JuvixError, PathResolver] r) =>

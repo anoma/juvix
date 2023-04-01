@@ -23,7 +23,7 @@ findRootAndChangeDir minputFile gopts invokeDir = do
   r <- IO.try go
   case r of
     Left (err :: IO.SomeException) -> do
-      putStrLn "Something went wrong when figuring out the root of the project."
+      putStrLn "Something went wrong when looking for the root of the project."
       putStrLn (pack (IO.displayException err))
       exitFailure
     Right root -> return root
@@ -38,6 +38,8 @@ findRootAndChangeDir minputFile gopts invokeDir = do
       case l of
         Nothing -> do
           let buildDir = getBuildDir gopts invokeDir cwd
+          -- TODOOOOOOOOOOOOOOOOOOOO
+          -- FIXME defaultPackage!!
           return (cwd, defaultPackage, buildDir)
         Just yamlPath -> do
           bs <- ByteString.readFile (toFilePath yamlPath)

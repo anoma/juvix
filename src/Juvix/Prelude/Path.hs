@@ -22,6 +22,14 @@ infixr 5 <//>
 (<//>) :: Path b Dir -> Path Rel t -> Path b t
 (<//>) = (Path.</>)
 
+infixr 5 <///>
+
+-- | Appens a relative path to some directory
+(<///>) :: SomeBase Dir -> Path Rel t -> SomeBase t
+(<///>) s r = case s of
+  Abs a -> Abs (a <//> r)
+  Rel a -> Rel (a <//> r)
+
 someFile :: FilePath -> SomeBase File
 someFile r = fromMaybe (error ("not a file path: " <> pack r)) (parseSomeFile r)
 

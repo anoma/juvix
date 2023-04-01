@@ -32,9 +32,11 @@ ensureStdlib buildDir deps =
     stdLibBuildDir = juvixStdlibDir buildDir
 
     isStdLib :: Dependency -> Maybe (Path Abs Dir)
-    isStdLib (Dependency dep)
-      | someBaseToAbs buildDir dep == stdLibBuildDir = Just stdLibBuildDir
-      | otherwise = Nothing
+    isStdLib (Dependency dep) =
+      let res
+            | someBaseToAbs buildDir dep == stdLibBuildDir = Just stdLibBuildDir
+            | otherwise = Nothing
+      in trace (show dep <> " " <> show res) $ res
 
 writeStdlib :: forall r. (Members '[Reader StdlibRoot, Files] r) => Sem r ()
 writeStdlib = do

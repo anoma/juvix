@@ -3,13 +3,12 @@ module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver
     module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Error,
     module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.PackageInfo,
     PathResolver,
-    addDependency,
+    registerDependencies,
     withPath,
     withPathFile,
     expectedModulePath,
     runPathResolverPipe,
     runPathResolverPipe',
-    evalPathResolverPipe,
     ResolverState,
     resolverFiles,
     resolverPackages,
@@ -29,8 +28,7 @@ import Juvix.Extra.Stdlib (ensureStdlib)
 import Juvix.Prelude
 
 data PathResolver m a where
-  -- | Currently, we pass (Just entrypoint) only for the current package and Nothing for all dependencies
-  AddDependency :: Maybe EntryPoint -> Dependency -> PathResolver m ()
+  RegisterDependencies :: PathResolver m ()
   ExpectedModulePath :: TopModulePath -> PathResolver m (Path Abs File)
   WithPath ::
     TopModulePath ->
@@ -60,6 +58,13 @@ iniResolverState =
     { _resolverPackages = mempty,
       _resolverFiles = mempty
     }
+
+-- mkDependencyPackageInfo ::
+--   forall r.
+--   (Members '[Files, Error Text, Reader ResolverEnv] r) =>
+--   Path Abs Dir ->
+--   Sem r PackageInfo
+-- mkDependencyPackageInfo = mkPackageInfo Nothing
 
 mkPackageInfo ::
   forall r.
@@ -98,22 +103,32 @@ getDependencyPath (Dependency p) = do
   r <- asks (^. envRoot)
   return (someBaseToAbs r p)
 
+registerDependencies' ::
+  (Members '[Reader EntryPoint, State ResolverState, Reader ResolverEnv, Files, Error Text] r) =>
+  Sem r ()
+registerDependencies' = do
+  e <- ask @EntryPoint
+  addDependency' (Dependency (Abs (e ^. entryPointRoot)))
+
 addDependency' ::
+  (Members '[State ResolverState, Reader ResolverEnv, Files, Error Text] r) =>
+  Dependency ->
+  Sem r ()
+addDependency' = addDependencyHelper Nothing
+
+addDependencyHelper ::
   (Members '[State ResolverState, Reader ResolverEnv, Files, Error Text] r) =>
   Maybe EntryPoint ->
   Dependency ->
   Sem r ()
-addDependency' me d = do
+addDependencyHelper me d = do
   p <- getDependencyPath d
   unlessM (dependencyCached d) $ do
     pkgInfo <- mkPackageInfo me p
-    -- traceM ("adding dependency " <> pack (toFilePath p))
-    -- traceM ("has " <> prettyText (pkgInfo ^. packageRelativeFiles . to HashSet.size) <> " files")
     modify' (set (resolverPackages . at p) (Just pkgInfo))
     forM_ (pkgInfo ^. packageRelativeFiles) $ \f -> do
-      -- traceM ("adding file " <> pack (toFilePath f))
       modify' (over resolverFiles (HashMap.insertWith (<>) f (pure pkgInfo)))
-    forM_ (pkgInfo ^. packagePackage . packageDependencies) (addDependency' Nothing)
+    forM_ (pkgInfo ^. packagePackage . packageDependencies) addDependency'
 
 currentPackage :: (Members '[State ResolverState, Reader ResolverEnv] r) => Sem r PackageInfo
 currentPackage = do
@@ -156,7 +171,7 @@ expectedPath' m = do
 
 re ::
   forall r a.
-  (Members '[Files, Error Text] r) =>
+  (Members '[Reader EntryPoint, Files, Error Text] r) =>
   Sem (PathResolver ': r) a ->
   Sem (Reader ResolverEnv ': State ResolverState ': r) a
 re = reinterpret2H helper
@@ -166,7 +181,7 @@ re = reinterpret2H helper
       PathResolver (Sem rInitial) x ->
       Tactical PathResolver (Sem rInitial) (Reader ResolverEnv ': (State ResolverState ': r)) x
     helper = \case
-      AddDependency me m -> addDependency' me m >>= pureT
+      RegisterDependencies -> registerDependencies' >>= pureT
       ExpectedModulePath m -> expectedPath' m >>= pureT
       WithPath m a -> do
         x :: Either PathResolverError (Path Abs Dir, Path Rel File) <- resolvePath' m
@@ -179,14 +194,14 @@ re = reinterpret2H helper
               Right (r, _) -> r
         raise (evalPathResolver' st' root' (a' x'))
 
-evalPathResolver' :: (Members '[Files, Error Text] r) => ResolverState -> Path Abs Dir -> Sem (PathResolver ': r) a -> Sem r a
+evalPathResolver' :: (Members '[Reader EntryPoint, Files, Error Text] r) => ResolverState -> Path Abs Dir -> Sem (PathResolver ': r) a -> Sem r a
 evalPathResolver' st root = fmap snd . runPathResolver' st root
 
-runPathResolver' :: (Members '[Files, Error Text] r) => ResolverState -> Path Abs Dir -> Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
+runPathResolver' :: (Members '[Reader EntryPoint, Files, Error Text] r) => ResolverState -> Path Abs Dir -> Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
 runPathResolver' st root x = do
   runState st (runReader (ResolverEnv root) (re x))
 
-runPathResolver :: (Members '[Files, Error Text] r) => Path Abs Dir -> Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
+runPathResolver :: (Members '[Reader EntryPoint, Files, Error Text] r) => Path Abs Dir -> Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
 runPathResolver = runPathResolver' iniResolverState
 
 runPathResolverPipe' :: (Members '[Files, Reader EntryPoint] r) => ResolverState -> Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
@@ -199,5 +214,5 @@ runPathResolverPipe a = do
   r <- asks (^. entryPointResolverRoot)
   runError (runPathResolver r (raiseUnder a)) >>= either error return
 
-evalPathResolverPipe :: (Members '[Files, Reader EntryPoint] r) => Sem (PathResolver ': r) a -> Sem r a
-evalPathResolverPipe = fmap snd . runPathResolverPipe
+-- evalPathResolverPipe :: (Members '[Files, Reader EntryPoint] r) => Sem (PathResolver ': r) a -> Sem r a
+-- evalPathResolverPipe = fmap snd . runPathResolverPipe
