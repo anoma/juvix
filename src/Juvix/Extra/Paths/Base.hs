@@ -32,6 +32,9 @@ juvixYamlFile = $(mkRelFile "juvix.yaml")
 relBuildDir :: Path Rel Dir
 relBuildDir = $(mkRelDir ".juvix-build")
 
+relStdlibDir :: Path Rel Dir
+relStdlibDir = $(mkRelDir "stdlib")
+
 rootBuildDir :: Path Abs Dir -> Path Abs Dir
 rootBuildDir root = root <//> relBuildDir
 
@@ -39,7 +42,7 @@ juvixIncludeDir :: Path Abs Dir -> Path Abs Dir
 juvixIncludeDir buildDir = buildDir <//> $(mkRelDir "include")
 
 juvixStdlibDir :: Path Abs Dir -> Path Abs Dir
-juvixStdlibDir buildDir = buildDir <//> $(mkRelDir "stdlib")
+juvixStdlibDir buildDir = buildDir <//> relStdlibDir
 
 preludePath :: Path Rel File
 preludePath = $(mkRelFile "Stdlib/Prelude.juvix")

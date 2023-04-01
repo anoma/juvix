@@ -1,47 +1,24 @@
 module Juvix.Compiler.Pipeline.Package.Dependency
-  ( RawDependency,
-    Dependency,
-    Dependency' (..),
-    processDependency,
+  ( Dependency (..),
     dependencyPath,
-    rawDependency,
   )
 where
 
--- import Lens.Micro.Platform qualified as Lens
 import Data.Aeson.BetterErrors
-import Data.Kind qualified as GHC
 import Data.Yaml
 import Juvix.Prelude
+import Juvix.Prelude.Pretty
 
-type PathType :: IsProcessed -> GHC.Type
-type family PathType s = res | res -> s where
-  PathType 'Raw = SomeBase Dir
-  PathType 'Processed = Path Abs Dir
-
--- | dependencies paths are canonicalized just after reading the package
-newtype Dependency' (s :: IsProcessed) = Dependency
-  { _dependencyPath :: PathType s
+newtype Dependency = Dependency
+  { _dependencyPath :: SomeBase Dir
   }
-  deriving stock (Generic)
+  deriving stock (Generic, Eq, Show)
 
-type RawDependency = Dependency' 'Raw
-
-type Dependency = Dependency' 'Processed
-
-deriving stock instance Eq RawDependency
-
-deriving stock instance Eq Dependency
-
-deriving stock instance Show RawDependency
-
-deriving stock instance Show Dependency
-
-instance ToJSON RawDependency where
+instance ToJSON Dependency where
   toJSON (Dependency p) = toJSON (fromSomeDir p)
   toEncoding (Dependency p) = toEncoding (fromSomeDir p)
 
-instance FromJSON RawDependency where
+instance FromJSON Dependency where
   parseJSON = toAesonParser id (Dependency <$> p)
     where
       p :: Parse Text (SomeBase Dir)
@@ -50,12 +27,7 @@ instance FromJSON RawDependency where
         let dir = parseSomeDir str
         maybe (throwCustomError ("failed to parse directory: " <> pack str)) pure dir
 
-rawDependency :: Dependency -> RawDependency
-rawDependency (Dependency p) = Dependency (Abs p)
+makeLenses ''Dependency
 
-processDependency :: Path Abs Dir -> RawDependency -> Dependency
-processDependency r (Dependency p) = case p of
-  Rel a -> Dependency (r <//> a)
-  Abs a -> Dependency a
-
-makeLenses ''Dependency'
+instance Pretty Dependency where
+  pretty (Dependency i) = pretty (fromSomeDir i)

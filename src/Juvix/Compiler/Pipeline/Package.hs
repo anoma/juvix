@@ -37,7 +37,7 @@ type family VersionType s = res | res -> s where
 
 type DependenciesType :: IsProcessed -> GHC.Type
 type family DependenciesType s = res | res -> s where
-  DependenciesType 'Raw = Maybe [RawDependency]
+  DependenciesType 'Raw = Maybe [Dependency]
   DependenciesType 'Processed = [Dependency]
 
 data Package' (s :: IsProcessed) = Package
@@ -93,8 +93,8 @@ rawDefaultPackage =
     }
 
 -- | Has the implicit stdlib dependency
-defaultPackage :: Path Abs Dir -> Path Abs Dir -> Package
-defaultPackage root buildDir = fromRight impossible . run . runError @Text . processPackage root buildDir $ rawDefaultPackage
+defaultPackage :: Package
+defaultPackage = fromRight impossible . run . runError @Text . processPackage $ rawDefaultPackage
 
 -- | Has no dependencies
 emptyPackage :: Package
@@ -110,16 +110,14 @@ rawPackage pkg =
   Package
     { _packageName = Just (pkg ^. packageName),
       _packageVersion = Just (prettyV (pkg ^. packageVersion)),
-      _packageDependencies = Just (map rawDependency (pkg ^. packageDependencies))
+      _packageDependencies = Just (pkg ^. packageDependencies)
     }
 
-processPackage :: forall r. (Members '[Error Text] r) => Path Abs Dir -> Path Abs Dir -> Package' 'Raw -> Sem r Package
-processPackage dir buildDir pkg = do
+processPackage :: forall r. (Members '[Error Text] r) => Package' 'Raw -> Sem r Package
+processPackage pkg = do
   let _packageName = fromMaybe defaultPackageName (pkg ^. packageName)
-      stdlib = Dependency (Abs (juvixStdlibDir buildDir))
-      _packageDependencies =
-        let rawDeps :: [RawDependency] = fromMaybe [stdlib] (pkg ^. packageDependencies)
-         in map (processDependency dir) rawDeps
+      stdlib = Dependency (Rel (relBuildDir <//> relStdlibDir))
+      _packageDependencies = fromMaybe [stdlib] (pkg ^. packageDependencies)
   _packageVersion <- getVersion
   return Package {..}
   where
@@ -141,18 +139,17 @@ readPackage ::
   forall r.
   (Members '[Files, Error Text] r) =>
   Path Abs Dir ->
-  Path Abs Dir ->
   Sem r Package
-readPackage adir buildDir = do
+readPackage adir = do
   bs <- readFileBS' yamlPath
-  either (throw . pack . prettyPrintParseException) (processPackage adir buildDir) (decodeEither' bs)
+  either (throw . pack . prettyPrintParseException) processPackage (decodeEither' bs)
   where
     yamlPath = adir <//> juvixYamlFile
 
-readPackageIO :: Path Abs Dir -> Path Abs Dir -> IO Package
-readPackageIO dir buildDir = do
+readPackageIO :: Path Abs Dir -> IO Package
+readPackageIO dir = do
   let x :: Sem '[Error Text, Files, Embed IO] Package
-      x = readPackage dir buildDir
+      x = readPackage dir
   m <- runM $ runFilesIO (runError x)
   case m of
     Left err -> putStrLn err >> exitFailure
