@@ -31,7 +31,7 @@ juvix [Global options] ((-v|--version) | (-h|--help) | COMPILER_CMD | UTILITY_CM
 ## Utility Commands
 
 - `doctor` Perform checks on your Juvix development environment
-- `init` Interactively initialize a juvix project in the current
+- `init` Interactively initialize a Juvix project in the current
   directory
 
 ## Dev Commands
