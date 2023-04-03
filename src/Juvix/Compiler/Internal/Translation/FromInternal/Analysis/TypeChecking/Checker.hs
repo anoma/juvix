@@ -605,11 +605,10 @@ inferExpression' hint e = case e of
     goLiteral :: LiteralLoc -> Sem r TypedExpression
     goLiteral lit@(WithLoc i l) = case l of
       LitInteger v -> do
-        nat <- mkBuiltinInductive BuiltinNat
-        ty <-
-          if
-              | v < 0 -> mkBuiltinInductive BuiltinInt
-              | otherwise -> return (fromMaybe nat hint)
+        ty <- case hint of
+          Nothing -> inferLitTypeFromValue
+          Just ExpressionHole {} -> inferLitTypeFromValue
+          Just exp -> return exp
         return
           TypedExpression
             { _typedExpression = ExpressionLiteral lit,
@@ -618,6 +617,11 @@ inferExpression' hint e = case e of
         where
           mkBuiltinInductive :: BuiltinInductive -> Sem r Expression
           mkBuiltinInductive = fmap (ExpressionIden . IdenInductive) . getBuiltinName i
+
+          inferLitTypeFromValue :: Sem r Expression
+          inferLitTypeFromValue
+            | v < 0 = mkBuiltinInductive BuiltinInt
+            | otherwise = mkBuiltinInductive BuiltinNat
       LitString {} -> do
         str <- getBuiltinName i BuiltinString
         return
