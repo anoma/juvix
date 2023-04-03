@@ -16,6 +16,7 @@ convertNode tab = umap go
         case ii ^. inductiveBuiltin of
           Just (BuiltinTypeInductive BuiltinBool) -> mkTypeBool'
           Just (BuiltinTypeInductive BuiltinNat) -> mkTypeInteger'
+          Just (BuiltinTypeInductive BuiltinInt) -> mkTypeInteger'
           Just (BuiltinTypeAxiom BuiltinString) -> mkTypeString'
           _ -> node
         where
