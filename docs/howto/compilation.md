@@ -8,13 +8,11 @@ module `Hello`:
 -- Hello world example. This is a comment.
 module Hello;
 
--- Import the standard library prelude, including the function 'printStringLn'
+-- Import the standard library prelude, including the 'String' type
 open import Stdlib.Prelude;
 
-main : IO;
-main := printStringLn "Hello world!";
-
-end;
+main : String;
+main := "Hello world!";
 ```
 
 A file compiled to an executable must define the zero-argument function
@@ -36,6 +34,15 @@ are specified with the `-t` option:
     runtime.
 3.  `geb`. Produces a [GEB](https://anoma.github.io/geb/) input file.
 
+# Compilation options
+
+To see all compilation options type `juvix compile --help`. The most
+commonly used options are:
+
+* `-t target`: specify the target,
+* `-g`: generate debug information and runtime assertions,
+* `-o file`: specify the output file.
+
 # Juvix projects
 
 A <u>Juvix project</u> is a collection of Juvix modules inside one main
@@ -44,6 +51,9 @@ each module must coincide with the path of the file it is defined in,
 relative to the project's root directory. For example, if the file is
 `root/Data/List.juvix` then the module must be called `Data.List`,
 assuming `root` is the project's directory.
+
+To interactively initialize a Juvix project in the current directory,
+use `juvix init`.
 
 To check that Juvix is correctly detecting your project's root, you can
 run the command `juvix dev root File.juvix`.
