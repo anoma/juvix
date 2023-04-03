@@ -164,21 +164,26 @@ runCommand opts = do
             where
               artif :: Artifacts
               artif = ctx ^. replContextArtifacts
+
+              shouldDisambiguate :: Bool
+              shouldDisambiguate = not (opts ^. replNoDisambiguate)
+
               eval :: Core.Node -> Repl (Either JuvixError Core.Node)
               eval n = do
                 ep <- getReplEntryPoint (Abs replPath)
-                case run $ runReader ep $ runError @JuvixError $ runState artif $ runTransformations (opts ^. replTransformations) n of
+                case run
+                  . runReader ep
+                  . runError @JuvixError
+                  . runState artif
+                  . runTransformations shouldDisambiguate (opts ^. replTransformations)
+                  $ n of
                   Left err -> return $ Left err
-                  Right (artif', n') ->
-                    liftIO $
-                      mapLeft
-                        (JuvixError @Core.CoreError)
-                        <$> doEvalIO False defaultLoc tab' n'
-                    where
-                      tab' :: Core.InfoTable
-                      tab'
-                        | opts ^. replNoDisambiguate = artif' ^. artifactCoreTable
-                        | otherwise = disambiguateNames (artif' ^. artifactCoreTable)
+                  Right (artif', n') -> liftIO (doEvalIO' artif' n')
+
+              doEvalIO' :: Artifacts -> Core.Node -> IO (Either JuvixError Core.Node)
+              doEvalIO' artif' n =
+                mapLeft (JuvixError @Core.CoreError)
+                  <$> doEvalIO False defaultLoc (artif' ^. artifactCoreTable) n
 
               compileString :: Repl (Either JuvixError Core.Node)
               compileString = liftIO $ compileExpressionIO' ctx (strip (pack s))
@@ -346,31 +351,48 @@ printError e = do
   liftIO $ hPutStrLn stderr $ run (runReader (project' @GenericOptions opts) (Error.render (not (opts ^. globalNoColors) && hasAnsi) False e))
 
 runTransformations ::
+  forall r.
   Members '[State Artifacts, Error JuvixError, Reader EntryPoint] r =>
+  Bool ->
   [Core.TransformationId] ->
   Core.Node ->
   Sem r Core.Node
-runTransformations ts n = runCoreInfoTableBuilderArtifacts $ do
-  sym <- Core.freshSymbol
-  Core.registerIdentNode sym n
-  -- `n` will get filtered out by the transformations unless it has a
-  -- corresponding entry in `infoIdentifiers`
-  tab <- Core.getInfoTable
-  let name = Core.freshIdentName tab "_repl"
-      idenInfo =
-        Core.IdentifierInfo
-          { _identifierName = name,
-            _identifierSymbol = sym,
-            _identifierLocation = Nothing,
-            _identifierArgsNum = 0,
-            _identifierArgsInfo = [],
-            _identifierType = Core.mkDynamic',
-            _identifierIsExported = False,
-            _identifierBuiltin = Nothing
-          }
-  Core.registerIdent name idenInfo
-  tab0 <- Core.getInfoTable
-  tab' <- mapReader Core.fromEntryPoint $ Core.applyTransformations ts tab0
-  Core.setInfoTable tab'
-  let node' = HashMap.lookupDefault impossible sym (tab' ^. Core.identContext)
-  return node'
+runTransformations shouldDisambiguate ts n = runCoreInfoTableBuilderArtifacts $ do
+  sym <- addNode n
+  applyTransforms shouldDisambiguate ts
+  getNode sym
+  where
+    addNode :: Core.Node -> Sem (Core.InfoTableBuilder ': r) Core.Symbol
+    addNode node = do
+      sym <- Core.freshSymbol
+      Core.registerIdentNode sym node
+      -- `n` will get filtered out by the transformations unless it has a
+      -- corresponding entry in `infoIdentifiers`
+      tab <- Core.getInfoTable
+      let name = Core.freshIdentName tab "_repl"
+          idenInfo =
+            Core.IdentifierInfo
+              { _identifierName = name,
+                _identifierSymbol = sym,
+                _identifierLocation = Nothing,
+                _identifierArgsNum = 0,
+                _identifierArgsInfo = [],
+                _identifierType = Core.mkDynamic',
+                _identifierIsExported = False,
+                _identifierBuiltin = Nothing
+              }
+      Core.registerIdent name idenInfo
+      return sym
+
+    applyTransforms :: Bool -> [Core.TransformationId] -> Sem (Core.InfoTableBuilder ': r) ()
+    applyTransforms shouldDisambiguate' ts' = do
+      tab <- Core.getInfoTable
+      tab' <- mapReader Core.fromEntryPoint $ Core.applyTransformations ts' tab
+      let tab'' =
+            if
+                | shouldDisambiguate' -> disambiguateNames tab'
+                | otherwise -> tab'
+      Core.setInfoTable tab''
+
+    getNode :: Core.Symbol -> Sem (Core.InfoTableBuilder ': r) Core.Node
+    getNode sym = HashMap.lookupDefault impossible sym . (^. Core.identContext) <$> Core.getInfoTable
