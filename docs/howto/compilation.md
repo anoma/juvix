@@ -39,9 +39,9 @@ are specified with the `-t` option:
 To see all compilation options type `juvix compile --help`. The most
 commonly used options are:
 
-* `-t target`: specify the target,
-* `-g`: generate debug information and runtime assertions,
-* `-o file`: specify the output file.
+- `-t target`: specify the target,
+- `-g`: generate debug information and runtime assertions,
+- `-o file`: specify the output file.
 
 # Juvix projects
 
