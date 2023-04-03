@@ -288,7 +288,7 @@ ppCodeAtom c = do
 instance PrettyCode a => PrettyCode (Maybe a) where
   ppCode = \case
     Nothing -> return "Nothing"
-    Just p -> ("Nothing" <+>) <$> ppCode p
+    Just p -> ("Just" <+>) <$> ppCode p
 
 instance (PrettyCode a, PrettyCode b) => PrettyCode (a, b) where
   ppCode (x, y) = do
