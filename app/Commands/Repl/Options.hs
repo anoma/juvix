@@ -25,7 +25,7 @@ parseRepl :: Parser ReplOptions
 parseRepl = do
   let _replTransformations = toEvalTransformations
       _replShowDeBruijn = False
-      _replNoDisambiguate = True
+      _replNoDisambiguate = False
   _replInputFile <- optional parseInputJuvixFile
   _replNoPrelude <-
     switch
