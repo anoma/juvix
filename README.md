@@ -84,7 +84,7 @@ If you're interested in Juvix, you may also want to explore the following relate
 | Project | Description |
 | ------- | ----------- |
 | [GEB][geb] | Intermediate language for writing compilers and one of the Juvix backends. |
-| [VampIR][vampir] | Proof-system-agnostic language for writing arithmetic circuit and one of the GEB backends.|
+| [VampIR][vampir] | Proof-system-agnostic language for writing arithmetic circuits and one of the GEB backends.|
 | [Taiga][taiga] | A framework for generalized shielded state transitions. |
 
 ## Resources

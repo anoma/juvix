@@ -4,6 +4,165 @@
 <img align="right" width="300" height="300" alt="Juvix Mascot" src="../assets/images/tara-smiling.svg" />
 </a>
 
+## [v0.3.1](https://github.com/anoma/juvix/tree/v0.3.1) (2023-03-31)
+
+[Full Changelog](https://github.com/anoma/juvix/compare/v0.3.0...v0.3.1)
+
+**Implemented enhancements:**
+
+- Option `--show-args-num` [\#1946](https://github.com/anoma/juvix/pull/1946)
+  ([lukaszcz](https://github.com/lukaszcz))
+- Preserve the target type in letrec lifting
+  [\#1945](https://github.com/anoma/juvix/pull/1945)
+  ([janmasrovira](https://github.com/janmasrovira))
+- Add syntax highlighting to Core error messages
+  [\#1938](https://github.com/anoma/juvix/pull/1938)
+  ([lukaszcz](https://github.com/lukaszcz))
+- Add the `--unroll` option
+  [\#1935](https://github.com/anoma/juvix/pull/1935)
+  ([lukaszcz](https://github.com/lukaszcz))
+- Preserve name and location information in Internal-to-Core
+  [\#1933](https://github.com/anoma/juvix/pull/1933)
+  ([lukaszcz](https://github.com/lukaszcz))
+- Polymorphic type inference in Core
+  [\#1931](https://github.com/anoma/juvix/pull/1931)
+  ([lukaszcz](https://github.com/lukaszcz))
+- Update README.md with Juvix nightly builds badge
+  [\#1923](https://github.com/anoma/juvix/pull/1923)
+  ([jonaprieto](https://github.com/jonaprieto))
+- Create clean-up-cache.yaml
+  [\#1915](https://github.com/anoma/juvix/pull/1915)
+  ([jonaprieto](https://github.com/jonaprieto))
+- Update GitHub pages deployment using deploy-pages action
+  [\#1910](https://github.com/anoma/juvix/pull/1910)
+  ([jonaprieto](https://github.com/jonaprieto))
+- Check for recursive inductive types in the GEB pipeline
+  [\#1909](https://github.com/anoma/juvix/pull/1909)
+  ([lukaszcz](https://github.com/lukaszcz))
+- CI pre-commit maintenance
+  [\#1905](https://github.com/anoma/juvix/pull/1905)
+  ([jonaprieto](https://github.com/jonaprieto))
+- Add new README and md files
+  [\#1904](https://github.com/anoma/juvix/pull/1904)
+  ([jonaprieto](https://github.com/jonaprieto))
+- Print JuvixCore correctly
+  [\#1875](https://github.com/anoma/juvix/pull/1875)
+  ([lukaszcz](https://github.com/lukaszcz))
+- Pattern matching compilation
+  [\#1874](https://github.com/anoma/juvix/pull/1874)
+  ([lukaszcz](https://github.com/lukaszcz))
+- CI Haskell maintenance
+  [\#1797](https://github.com/anoma/juvix/pull/1797)
+  ([jonaprieto](https://github.com/jonaprieto))
+
+**Merged pull requests:**
+
+- Let-folding after lifting
+  [\#1955](https://github.com/anoma/juvix/pull/1955)
+  ([lukaszcz](https://github.com/lukaszcz))
+- Fix removal of polymorphic type arguments
+  [\#1954](https://github.com/anoma/juvix/pull/1954)
+  ([lukaszcz](https://github.com/lukaszcz))
+- Fix a bug in closure traversal
+  [\#1953](https://github.com/anoma/juvix/pull/1953)
+  ([lukaszcz](https://github.com/lukaszcz))
+- Update typecheck command to check for coverage
+  [\#1952](https://github.com/anoma/juvix/pull/1952)
+  ([janmasrovira](https://github.com/janmasrovira))
+- CI: Ignore errors linux typecheck / format examples step
+  [\#1950](https://github.com/anoma/juvix/pull/1950)
+  ([paulcadman](https://github.com/paulcadman))
+- Filter out type synonyms in RemoveTypeArgs
+  [\#1949](https://github.com/anoma/juvix/pull/1949)
+  ([lukaszcz](https://github.com/lukaszcz))
+- Add fail nodes to Geb
+  [\#1947](https://github.com/anoma/juvix/pull/1947)
+  ([lukaszcz](https://github.com/lukaszcz))
+- End-to-end Geb compilation tests
+  [\#1942](https://github.com/anoma/juvix/pull/1942)
+  ([lukaszcz](https://github.com/lukaszcz))
+- Add juvix dev repl command
+  [\#1941](https://github.com/anoma/juvix/pull/1941)
+  ([paulcadman](https://github.com/paulcadman))
+- Refactor Geb values
+  [\#1940](https://github.com/anoma/juvix/pull/1940)
+  ([lukaszcz](https://github.com/lukaszcz))
+- Avoid capturing the same free variable multiple times in letrec lifting
+  [\#1939](https://github.com/anoma/juvix/pull/1939)
+  ([janmasrovira](https://github.com/janmasrovira))
+- Add Judoc syntax reference
+  [\#1934](https://github.com/anoma/juvix/pull/1934)
+  ([janmasrovira](https://github.com/janmasrovira))
+- Fix spacing of judoc in the formatter
+  [\#1932](https://github.com/anoma/juvix/pull/1932)
+  ([janmasrovira](https://github.com/janmasrovira))
+- bench: Fix juvix compile flag for wasm
+  [\#1925](https://github.com/anoma/juvix/pull/1925)
+  ([paulcadman](https://github.com/paulcadman))
+- Fix memory count for string operations
+  [\#1924](https://github.com/anoma/juvix/pull/1924)
+  ([lukaszcz](https://github.com/lukaszcz))
+- Let folding
+  [\#1921](https://github.com/anoma/juvix/pull/1921)
+  ([lukaszcz](https://github.com/lukaszcz))
+- Add a test suite for milestone examples
+  [\#1920](https://github.com/anoma/juvix/pull/1920)
+  ([paulcadman](https://github.com/paulcadman))
+- Add --numeric-version flag
+  [\#1918](https://github.com/anoma/juvix/pull/1918)
+  ([jonaprieto](https://github.com/jonaprieto))
+- Fix bug with unregistered builtin bool
+  [\#1917](https://github.com/anoma/juvix/pull/1917)
+  ([lukaszcz](https://github.com/lukaszcz))
+- Recursion unrolling for functions
+  [\#1912](https://github.com/anoma/juvix/pull/1912)
+  ([lukaszcz](https://github.com/lukaszcz))
+- Fix REPL state to include enough information to rerun the pipeline
+  [\#1911](https://github.com/anoma/juvix/pull/1911)
+  ([janmasrovira](https://github.com/janmasrovira))
+- CI Haskell fix for macOS build
+  [\#1908](https://github.com/anoma/juvix/pull/1908)
+  ([jonaprieto](https://github.com/jonaprieto))
+- Fix bug in IO runtime
+  [\#1906](https://github.com/anoma/juvix/pull/1906)
+  ([lukaszcz](https://github.com/lukaszcz))
+- Fix JuvixAsm validation
+  [\#1903](https://github.com/anoma/juvix/pull/1903)
+  ([lukaszcz](https://github.com/lukaszcz))
+- Fix registration of builtin inductive axioms
+  [\#1901](https://github.com/anoma/juvix/pull/1901)
+  ([paulcadman](https://github.com/paulcadman))
+- internal-to-core: Fix index shifting of pattern arguments
+  [\#1900](https://github.com/anoma/juvix/pull/1900)
+  ([paulcadman](https://github.com/paulcadman))
+- Fix de Bruijn indices in rmap
+  [\#1898](https://github.com/anoma/juvix/pull/1898)
+  ([lukaszcz](https://github.com/lukaszcz))
+- Normalize types in repl
+  [\#1897](https://github.com/anoma/juvix/pull/1897)
+  ([janmasrovira](https://github.com/janmasrovira))
+- Add MidSquareHash.juvix and fix types in MidSquareHash.jvc
+  [\#1896](https://github.com/anoma/juvix/pull/1896)
+  ([lukaszcz](https://github.com/lukaszcz))
+- Automatically detect and split mutually recursive blocks in let expressions
+  [\#1894](https://github.com/anoma/juvix/pull/1894)
+  ([janmasrovira](https://github.com/janmasrovira))
+- The `rmap` recursor
+  [\#1893](https://github.com/anoma/juvix/pull/1893)
+  ([lukaszcz](https://github.com/lukaszcz))
+- Add `juvix format` command
+  [\#1886](https://github.com/anoma/juvix/pull/1886)
+  ([paulcadman](https://github.com/paulcadman))
+- Make keyword `end` optional for top modules
+  [\#1883](https://github.com/anoma/juvix/pull/1883)
+  ([janmasrovira](https://github.com/janmasrovira))
+- Add errors to the Core pipeline and check GEB prerequisites
+  [\#1871](https://github.com/anoma/juvix/pull/1871)
+  ([lukaszcz](https://github.com/lukaszcz))
+- Test core to geb translation
+  [\#1865](https://github.com/anoma/juvix/pull/1865)
+  ([jonaprieto](https://github.com/jonaprieto))
+
 ## [v0.3.0](https://github.com/anoma/juvix/tree/v0.3.0) (2023-03-15)
 
 [Full Changelog](https://github.com/anoma/juvix/compare/v0.2.9...v0.3.0)
