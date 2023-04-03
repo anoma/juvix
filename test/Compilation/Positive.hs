@@ -299,5 +299,10 @@ tests =
       "Test048: String quoting"
       $(mkRelDir ".")
       $(mkRelFile "test048.juvix")
-      $(mkRelFile "out/test048.out")
+      $(mkRelFile "out/test048.out"),
+    posTest
+      "Test049: Builtin Int"
+      $(mkRelDir ".")
+      $(mkRelFile "test049.juvix")
+      $(mkRelFile "out/test049.out")
   ]
