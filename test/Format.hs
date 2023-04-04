@@ -5,7 +5,6 @@ import Juvix.Compiler.Concrete qualified as Concrete
 import Juvix.Compiler.Concrete.Print qualified as P
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
-import Juvix.Compiler.Pipeline
 import Juvix.Compiler.Pipeline.Setup
 import Juvix.Prelude.Pretty
 
@@ -35,8 +34,7 @@ testDescr PosTest {..} =
     { _testName = _name,
       _testRoot = _dir,
       _testAssertion = Steps $ \step -> do
-        pkg <- readPackageIO _dir (rootBuildDir _dir)
-        let entryPoint = entryPointFromPackage _dir _file pkg
+        entryPoint <- defaultEntryPointCwdIO _file
         original :: Text <- readFile (toFilePath (entryPoint ^. entryPointModulePaths . _head1))
         step "Parsing"
         p :: Parser.ParserResult <- snd <$> runIO' entryPoint upToParsing

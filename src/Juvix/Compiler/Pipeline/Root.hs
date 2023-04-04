@@ -10,18 +10,19 @@ data Roots = Roots
   { _rootsRootDir :: Path Abs Dir,
     _rootsPackage :: Package,
     _rootsPackageGlobal :: Bool,
-    _rootsBuildDir :: Path Abs Dir
+    _rootsBuildDir :: Path Abs Dir,
+    _rootsInvokeDir :: Path Abs Dir
   }
 
 makeLenses ''Roots
 
 findRootAndChangeDir ::
-  IO (Maybe (SomeBase Dir)) ->
+  Maybe (SomeBase Dir) ->
   Maybe (SomeBase Dir) ->
   Path Abs Dir ->
   IO Roots
-findRootAndChangeDir minputFile mbuildDir invokeDir = do
-  whenJustM minputFile $ \case
+findRootAndChangeDir minputFileDir mbuildDir _rootsInvokeDir = do
+  whenJust minputFileDir $ \case
     Abs d -> setCurrentDir d
     Rel d -> setCurrentDir d
   r <- IO.try go
@@ -39,7 +40,7 @@ findRootAndChangeDir minputFile mbuildDir invokeDir = do
     go = do
       cwd <- getCurrentDir
       l <- findFile (possiblePaths cwd) Paths.juvixYamlFile
-      let _rootsBuildDir = getBuildDir mbuildDir invokeDir cwd
+      let _rootsBuildDir = getBuildDir mbuildDir _rootsInvokeDir cwd
       case l of
         Nothing -> do
           _rootsPackage <- readGlobalPackageIO

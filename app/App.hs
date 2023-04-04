@@ -14,6 +14,7 @@ data App m a where
   ExitMsg :: ExitCode -> Text -> App m a
   ExitJuvixError :: JuvixError -> App m a
   PrintJuvixError :: JuvixError -> App m ()
+  AskRoots :: App m Roots
   AskInvokeDir :: App m (Path Abs Dir)
   AskPkgDir :: App m (Path Abs Dir)
   AskBuildDir :: App m (Path Abs Dir)
@@ -30,11 +31,7 @@ makeSem ''App
 
 data RunAppIOArgs = RunAppIOArgs
   { _runAppIOArgsGlobalOptions :: GlobalOptions,
-    _runAppIOArgsInvokeDir :: Path Abs Dir,
-    _runAppIOArgsBuildDir :: Path Abs Dir,
-    _runAppIOArgsPkgDir :: Path Abs Dir,
-    _runAppIOArgsPkg :: Package,
-    _runAppIOArgsPkgGlobal :: Bool
+    _runAppIOArgsRoots :: Roots
   }
 
 runAppIO ::
@@ -45,17 +42,18 @@ runAppIO ::
   Sem r a
 runAppIO args@RunAppIOArgs {..} =
   interpret $ \case
-    AskPackageGlobal -> return _runAppIOArgsPkgGlobal
+    AskPackageGlobal -> return (_runAppIOArgsRoots ^. rootsPackageGlobal)
     RenderStdOut t
       | _runAppIOArgsGlobalOptions ^. globalOnlyErrors -> return ()
       | otherwise -> embed $ do
           sup <- Ansi.hSupportsANSIColor stdout
           renderIO (not (_runAppIOArgsGlobalOptions ^. globalNoColors) && sup) t
     AskGlobalOptions -> return _runAppIOArgsGlobalOptions
-    AskPackage -> return _runAppIOArgsPkg
-    AskInvokeDir -> return _runAppIOArgsInvokeDir
-    AskPkgDir -> return _runAppIOArgsPkgDir
-    AskBuildDir -> return _runAppIOArgsBuildDir
+    AskPackage -> return (_runAppIOArgsRoots ^. rootsPackage)
+    AskRoots -> return _runAppIOArgsRoots
+    AskInvokeDir -> return (_runAppIOArgsRoots ^. rootsInvokeDir)
+    AskPkgDir -> return (_runAppIOArgsRoots ^. rootsRootDir)
+    AskBuildDir -> return (_runAppIOArgsRoots ^. rootsBuildDir)
     RunCorePipelineEither input -> do
       entry <- embed (getEntryPoint' args input)
       embed (corePipelineIOEither entry)
@@ -81,15 +79,19 @@ runAppIO args@RunAppIOArgs {..} =
 getEntryPoint' :: RunAppIOArgs -> AppPath File -> IO EntryPoint
 getEntryPoint' RunAppIOArgs {..} inputFile = do
   let opts = _runAppIOArgsGlobalOptions
-      root = _runAppIOArgsPkgDir
+      root = _runAppIOArgsRoots ^. rootsRootDir
+      pkg = _runAppIOArgsRoots ^. rootsPackage
+      isGlobal = _runAppIOArgsRoots ^. rootsPackageGlobal
+      invokeDir = _runAppIOArgsRoots ^. rootsInvokeDir
+      buildDir = _runAppIOArgsRoots ^. rootsBuildDir
   estdin <-
     if
         | opts ^. globalStdin -> Just <$> getContents
         | otherwise -> return Nothing
   return $
-    (entryPointFromGlobalOptions (_runAppIOArgsPkg, _runAppIOArgsPkgGlobal) root (someBaseToAbs _runAppIOArgsInvokeDir (inputFile ^. pathPath)) opts)
-      { _entryPointBuildDir = Abs _runAppIOArgsBuildDir,
-        _entryPointPackage = _runAppIOArgsPkg,
+    (entryPointFromGlobalOptions (pkg, isGlobal) root (someBaseToAbs invokeDir (inputFile ^. pathPath)) opts)
+      { _entryPointBuildDir = Abs buildDir,
+        _entryPointPackage = pkg,
         _entryPointStdin = estdin
       }
 
@@ -113,11 +115,7 @@ askGenericOptions = project <$> askGlobalOptions
 getEntryPoint :: (Members '[Embed IO, App] r) => AppPath File -> Sem r EntryPoint
 getEntryPoint inputFile = do
   _runAppIOArgsGlobalOptions <- askGlobalOptions
-  _runAppIOArgsPkgDir <- askPkgDir
-  _runAppIOArgsPkg <- askPackage
-  _runAppIOArgsPkgGlobal <- askPackageGlobal
-  _runAppIOArgsBuildDir <- askBuildDir
-  _runAppIOArgsInvokeDir <- askInvokeDir
+  _runAppIOArgsRoots <- askRoots
   embed (getEntryPoint' (RunAppIOArgs {..}) inputFile)
 
 runPipeline :: (Member App r) => AppPath File -> Sem PipelineEff a -> Sem r a

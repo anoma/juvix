@@ -2,6 +2,7 @@ module Juvix.Compiler.Pipeline
   ( module Juvix.Compiler.Pipeline,
     module Juvix.Compiler.Pipeline.EntryPoint,
     module Juvix.Compiler.Pipeline.Artifacts,
+    module Juvix.Compiler.Pipeline.Root,
   )
 where
 
@@ -27,6 +28,7 @@ import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.D
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context qualified as Typed
 import Juvix.Compiler.Pipeline.Artifacts
 import Juvix.Compiler.Pipeline.EntryPoint
+import Juvix.Compiler.Pipeline.Root
 import Juvix.Compiler.Pipeline.Setup
 import Juvix.Compiler.Reg.Data.InfoTable qualified as Reg
 import Juvix.Compiler.Reg.Translation.FromAsm qualified as Reg

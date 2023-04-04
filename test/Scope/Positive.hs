@@ -9,7 +9,6 @@ import Juvix.Compiler.Concrete.Print qualified as P
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
-import Juvix.Compiler.Pipeline
 import Juvix.Compiler.Pipeline.Setup
 import Juvix.Prelude.Aeson
 import Juvix.Prelude.Pretty
@@ -52,9 +51,8 @@ testDescr PosTest {..} = helper renderCodeOld "" : [helper renderCodeNew " (with
             { _testName = _name <> tag,
               _testRoot = tRoot,
               _testAssertion = Steps $ \step -> do
-                pkg <- readPackageIO tRoot (rootBuildDir tRoot)
-                let entryPoint = entryPointFromPackage tRoot file' pkg
-                    runHelper :: HashMap (Path Abs File) Text -> Sem Pipe a -> IO (ResolverState, a)
+                entryPoint <- defaultEntryPointCwdIO file'
+                let runHelper :: HashMap (Path Abs File) Text -> Sem Pipe a -> IO (ResolverState, a)
                     runHelper files =
                       runM
                         . runErrorIO' @JuvixError

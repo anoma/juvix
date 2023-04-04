@@ -4,7 +4,6 @@ import Base
 import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Internal.Language qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context qualified as Internal
-import Juvix.Compiler.Pipeline
 
 data PosTest = PosTest
   { _name :: String,
@@ -28,11 +27,9 @@ testDescr PosTest {..} =
           _testRoot = tRoot,
           _testAssertion = Steps $ \step -> do
             let noStdlib = _stdlibMode == StdlibExclude
-                entryPoint =
-                  (defaultEntryPoint tRoot file')
-                    { _entryPointRoot = tRoot,
-                      _entryPointNoStdlib = noStdlib
-                    }
+            entryPoint <-
+              set entryPointNoStdlib noStdlib
+                <$> defaultEntryPointCwdIO file'
 
             step "Pipeline up to reachability"
             p :: Internal.InternalTypedResult <- snd <$> runIO' entryPoint upToInternalReachability

@@ -21,7 +21,7 @@ testDescr NegTest {..} =
         { _testName = _name,
           _testRoot = tRoot,
           _testAssertion = Single $ do
-            let entryPoint = (defaultEntryPoint tRoot file') {_entryPointNoStdlib = True}
+            entryPoint <- set entryPointNoStdlib True <$> defaultEntryPointCwdIO file'
             result <- runIOEither entryPoint upToInternal
             case mapLeft fromJuvixError result of
               Left (Just lexError) -> whenJust (_checkErr lexError) assertFailure

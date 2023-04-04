@@ -10,17 +10,9 @@ import TopCommand.Options
 main :: IO ()
 main = do
   let parserPreferences = prefs showHelpOnEmpty
-  _runAppIOArgsInvokeDir <- getCurrentDir
+  invokeDir <- getCurrentDir
   (_runAppIOArgsGlobalOptions, cli) <- customExecParser parserPreferences descr
   let mbuildDir = _runAppIOArgsGlobalOptions ^? globalBuildDir . _Just . pathPath
-  roots <- findRootAndChangeDir (topCommandInputFile cli) mbuildDir _runAppIOArgsInvokeDir
-  let runAppArgs =
-        RunAppIOArgs
-          { _runAppIOArgsPkgGlobal = roots ^. rootsPackageGlobal,
-            _runAppIOArgsPkgDir = roots ^. rootsRootDir,
-            _runAppIOArgsPkg = roots ^. rootsPackage,
-            _runAppIOArgsBuildDir = roots ^. rootsBuildDir,
-            _runAppIOArgsInvokeDir,
-            _runAppIOArgsGlobalOptions
-          }
-  runFinal (resourceToIOFinal (embedToFinal @IO (runAppIO runAppArgs (runTopCommand cli))))
+  mainFileDir <- topCommandInputFile cli
+  _runAppIOArgsRoots <- findRootAndChangeDir mainFileDir mbuildDir invokeDir
+  runFinal (resourceToIOFinal (embedToFinal @IO (runAppIO RunAppIOArgs {..} (runTopCommand cli))))

@@ -6,6 +6,7 @@ where
 
 import Juvix.Compiler.Backend
 import Juvix.Compiler.Pipeline.Package
+import Juvix.Compiler.Pipeline.Root
 import Juvix.Extra.Paths
 import Juvix.Prelude
 
@@ -32,6 +33,15 @@ data EntryPoint = EntryPoint
   deriving stock (Eq, Show)
 
 makeLenses ''EntryPoint
+
+defaultEntryPointCwdIO :: Path Abs File -> IO EntryPoint
+defaultEntryPointCwdIO mainFile = do
+  cwd <- getCurrentDir
+  roots <- findRootAndChangeDir (Just (Abs (parent mainFile))) Nothing cwd
+  let pkg = roots ^. rootsPackage
+      isGlobal = roots ^. rootsPackageGlobal
+      root = roots ^. rootsRootDir
+  return (defaultEntryPoint (pkg, isGlobal) root mainFile)
 
 defaultEntryPoint :: (Package, Bool) -> Path Abs Dir -> Path Abs File -> EntryPoint
 defaultEntryPoint (pkg, global) root mainFile =
