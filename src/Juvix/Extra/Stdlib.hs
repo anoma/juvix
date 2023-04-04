@@ -34,22 +34,9 @@ ensureStdlib rootDir buildDir deps =
     isStdLib :: Dependency -> Maybe (Path Abs Dir)
     isStdLib (Dependency dep) =
       let mstdlib :: Maybe (Path Rel Dir) = stripProperPrefix buildDir (someBaseToAbs rootDir dep)
-          res
-            | mstdlib == Just relStdlibDir = Just stdLibBuildDir
-            | otherwise = Nothing
-       in trace
-            ( "Dep "
-                <> show dep
-                <> "\nRes "
-                <> show res
-                <> "\nBuilddir "
-                <> show buildDir
-                <> "\nRoot "
-                <> show rootDir
-                <> "\nmstdlib "
-                <> show mstdlib
-            )
-            res
+       in if
+              | mstdlib == Just relStdlibDir -> Just stdLibBuildDir
+              | otherwise -> Nothing
 
 writeStdlib :: forall r. (Members '[Reader StdlibRoot, Files] r) => Sem r ()
 writeStdlib = do

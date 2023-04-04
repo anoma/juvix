@@ -5,10 +5,12 @@ module Base
     module Base,
     module Juvix.Extra.Paths,
     module Juvix.Prelude.Env,
+    module Juvix.Compiler.Pipeline,
   )
 where
 
 import Control.Monad.Extra as Monad
+import Juvix.Compiler.Pipeline
 import Data.Algorithm.Diff
 import Data.Algorithm.DiffOutput
 import Juvix.Extra.Paths

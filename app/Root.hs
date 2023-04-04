@@ -1,9 +1,8 @@
 module Root where
 
-import CommonOptions
+import Juvix.Prelude
 import Control.Exception qualified as IO
 import Data.ByteString qualified as ByteString
-import GlobalOptions
 import Juvix.Compiler.Pipeline.Package
 import Juvix.Extra.Paths qualified as Paths
 
@@ -15,10 +14,10 @@ type IsGlobal = Bool
 
 findRootAndChangeDir ::
   IO (Maybe (SomeBase Dir)) ->
-  GlobalOptions ->
+  Maybe (SomeBase Dir) ->
   Path Abs Dir ->
   IO (RootDir, (Package, IsGlobal), BuildDir)
-findRootAndChangeDir minputFile gopts invokeDir = do
+findRootAndChangeDir minputFile mbuildDir invokeDir = do
   whenJustM minputFile $ \case
     Abs d -> setCurrentDir d
     Rel d -> setCurrentDir d
@@ -37,7 +36,7 @@ findRootAndChangeDir minputFile gopts invokeDir = do
     go = do
       cwd <- getCurrentDir
       l <- findFile (possiblePaths cwd) Paths.juvixYamlFile
-      let buildDir = getBuildDir gopts invokeDir cwd
+      let buildDir = getBuildDir mbuildDir invokeDir cwd
       case l of
         Nothing -> do
           globPkg <- readGlobalPackageIO
@@ -53,9 +52,9 @@ findRootAndChangeDir minputFile gopts invokeDir = do
                 | otherwise -> readPackageIO root (Abs buildDir)
           return (root, (pkg, False), buildDir)
 
-getBuildDir :: GlobalOptions -> Path Abs Dir -> Path Abs Dir -> Path Abs Dir
-getBuildDir g invokeDir pkgDir = case g ^. globalBuildDir of
+getBuildDir :: Maybe (SomeBase Dir) -> Path Abs Dir -> Path Abs Dir -> Path Abs Dir
+getBuildDir mbuildDir invokeDir pkgDir = case mbuildDir of
   Nothing -> Paths.rootBuildDir pkgDir
-  Just (AppPath p _) -> case p of
+  Just p -> case p of
     Rel r -> invokeDir <//> r
     Abs a -> a
