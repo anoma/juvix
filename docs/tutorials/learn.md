@@ -30,7 +30,7 @@ The response should be similar to:
 ```jrepl
 Juvix REPL version 0.3: https://juvix.org. Run :help for help
 OK loaded: ./.juvix-build/stdlib/Stdlib/Prelude.juvix
-Stdlib.Prelude> 1 + 3
+Stdlib.Prelude>
 ```
 
 Currently, the REPL supports evaluating expressions but it does not yet
@@ -515,7 +515,7 @@ polymorphic definition of lists from the standard library:
 infixr 5 ::;
 type List (A : Type) :=
 | nil : List A
-| :: : {A : Type} -> A -> List A -> List A;
+| :: : A -> List A -> List A;
 ```
 
 The constructor `::` is declared as a right-associative infix operator
@@ -569,7 +569,7 @@ This is not acceptable if you care about performance. In an imperative
 language, one would use a simple loop going over the list without any
 memory allocation. In pseudocode:
 
-```
+```pascal
 var sum : Nat := 0;
 while (lst /= nnil) {
   sum := sum + head lst;
