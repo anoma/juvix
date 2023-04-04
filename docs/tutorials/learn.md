@@ -613,7 +613,7 @@ imperative pseudocode for computing the nth Fibonacci number in linear
 time. The variables `cur` and `next` hold the last two computed
 Fibonacci numbers.
 
-```
+```pascal
 var cur : Nat := 0;
 var next : Nat := 1;
 while (n /= 0) {
