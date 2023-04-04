@@ -29,7 +29,7 @@ import Juvix.Prelude
 
 data PathResolver m a where
   RegisterDependencies :: PathResolver m ()
-  ExpectedModulePath :: TopModulePath -> PathResolver m (Path Abs File)
+  ExpectedModulePath :: Path Abs File -> TopModulePath -> PathResolver m (Maybe (Path Abs File))
   WithPath ::
     TopModulePath ->
     (Either PathResolverError (Path Abs Dir, Path Rel File) -> m x) ->
@@ -37,8 +37,10 @@ data PathResolver m a where
 
 makeSem ''PathResolver
 
-newtype ResolverEnv = ResolverEnv
-  { _envRoot :: Path Abs Dir
+data ResolverEnv = ResolverEnv
+  { _envRoot :: Path Abs Dir,
+    -- | The path of the input file *if* we are using the global project
+    _envSingleFile :: Maybe (Path Abs File)
   }
 
 data ResolverState = ResolverState
@@ -59,13 +61,6 @@ iniResolverState =
       _resolverFiles = mempty
     }
 
--- mkDependencyPackageInfo ::
---   forall r.
---   (Members '[Files, Error Text, Reader ResolverEnv] r) =>
---   Path Abs Dir ->
---   Sem r PackageInfo
--- mkDependencyPackageInfo = mkPackageInfo Nothing
-
 mkPackageInfo ::
   forall r.
   (Members '[Files, Error Text, Reader ResolverEnv] r) =>
@@ -81,8 +76,9 @@ mkPackageInfo mpackageEntry _packageRoot = do
   _packagePackage <- maybe (readPackage _packageRoot buildDirDep) (return . (^. entryPointPackage)) mpackageEntry
   let deps :: [Dependency] = _packagePackage ^. packageDependencies
   depsPaths <- mapM getDependencyPath deps
-  ensureStdlib buildDir deps
-  files :: [Path Rel File] <- map (fromJust . stripProperPrefix _packageRoot) <$> walkDirRelAccum juvixAccum _packageRoot []
+  ensureStdlib _packageRoot buildDir deps
+  files :: [Path Rel File] <-
+    map (fromJust . stripProperPrefix _packageRoot) <$> walkDirRelAccum juvixAccum _packageRoot []
   let _packageRelativeFiles = HashSet.fromList files
       _packageAvailableRoots =
         HashSet.fromList (_packageRoot : depsPaths)
@@ -112,7 +108,13 @@ registerDependencies' ::
   Sem r ()
 registerDependencies' = do
   e <- ask @EntryPoint
-  addDependency' (Dependency (Abs (e ^. entryPointRoot)))
+  isGlobal <- asks (^. entryPointPackageGlobal)
+  if
+      | isGlobal -> do
+          glob <- globalRoot
+          let globDep = Dependency (Abs glob)
+          local (set envRoot glob) (addDependency' globDep)
+      | otherwise -> addDependency' (Dependency (Abs (e ^. entryPointRoot)))
 
 addDependency' ::
   (Members '[State ResolverState, Reader ResolverEnv, Files, Error Text] r) =>
@@ -168,10 +170,13 @@ resolvePath' mp = do
               }
         )
 
-expectedPath' :: (Members '[Reader ResolverEnv] r) => TopModulePath -> Sem r (Path Abs File)
-expectedPath' m = do
+expectedPath' :: Members '[Reader ResolverEnv] r => Path Abs File -> TopModulePath -> Sem r (Maybe (Path Abs File))
+expectedPath' actualPath m = do
   root <- asks (^. envRoot)
-  return (root <//> topModulePathToRelativePath' m)
+  msingle <- asks (^. envSingleFile)
+  if
+      | msingle == Just actualPath -> return Nothing
+      | otherwise -> return (Just (root <//> topModulePathToRelativePath' m))
 
 re ::
   forall r a.
@@ -186,7 +191,7 @@ re = reinterpret2H helper
       Tactical PathResolver (Sem rInitial) (Reader ResolverEnv ': (State ResolverState ': r)) x
     helper = \case
       RegisterDependencies -> registerDependencies' >>= pureT
-      ExpectedModulePath m -> expectedPath' m >>= pureT
+      ExpectedModulePath a m -> expectedPath' a m >>= pureT
       WithPath m a -> do
         x :: Either PathResolverError (Path Abs Dir, Path Rel File) <- resolvePath' m
         oldroot <- asks (^. envRoot)
@@ -201,12 +206,23 @@ re = reinterpret2H helper
 evalPathResolver' :: (Members '[Reader EntryPoint, Files, Error Text] r) => ResolverState -> Path Abs Dir -> Sem (PathResolver ': r) a -> Sem r a
 evalPathResolver' st root = fmap snd . runPathResolver' st root
 
-runPathResolver' :: (Members '[Reader EntryPoint, Files, Error Text] r) => ResolverState -> Path Abs Dir -> Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
-runPathResolver' st root x = do
-  runState st (runReader (ResolverEnv root) (re x))
-
 runPathResolver :: (Members '[Reader EntryPoint, Files, Error Text] r) => Path Abs Dir -> Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
 runPathResolver = runPathResolver' iniResolverState
+
+runPathResolver' :: (Members '[Reader EntryPoint, Files, Error Text] r) => ResolverState -> Path Abs Dir -> Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
+runPathResolver' st root x = do
+  e <- ask
+  let _envSingleFile :: Maybe (Path Abs File)
+      _envSingleFile
+        | e ^. entryPointPackageGlobal = Just (e ^. entryPointModulePaths . _head1)
+        | otherwise = Nothing
+      env :: ResolverEnv
+      env =
+        ResolverEnv
+          { _envRoot = root,
+            _envSingleFile
+          }
+  runState st (runReader env (re x))
 
 runPathResolverPipe' :: (Members '[Files, Reader EntryPoint] r) => ResolverState -> Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
 runPathResolverPipe' iniState a = do
@@ -217,6 +233,3 @@ runPathResolverPipe :: (Members '[Files, Reader EntryPoint] r) => Sem (PathResol
 runPathResolverPipe a = do
   r <- asks (^. entryPointResolverRoot)
   runError (runPathResolver r (raiseUnder a)) >>= either error return
-
--- evalPathResolverPipe :: (Members '[Files, Reader EntryPoint] r) => Sem (PathResolver ': r) a -> Sem r a
--- evalPathResolverPipe = fmap snd . runPathResolverPipe

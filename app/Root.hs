@@ -41,7 +41,8 @@ findRootAndChangeDir minputFile gopts invokeDir = do
       case l of
         Nothing -> do
           globPkg <- readGlobalPackageIO
-          return (cwd, (globPkg, True), buildDir)
+          root <- runM (runFilesIO globalRoot)
+          return (root, (globPkg, True), buildDir)
         Just yamlPath -> do
           bs <- ByteString.readFile (toFilePath yamlPath)
           let isEmpty = ByteString.null bs

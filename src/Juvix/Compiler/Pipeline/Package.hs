@@ -70,7 +70,8 @@ rawPackageOptions :: Options
 rawPackageOptions =
   defaultOptions
     { fieldLabelModifier = over Lens._head toLower . dropPrefix "_package",
-      rejectUnknownFields = True
+      rejectUnknownFields = True,
+      omitNothingFields = True
     }
 
 instance ToJSON RawPackage where
@@ -140,7 +141,7 @@ globalPackage =
     { _packageDependencies = [defaultStdlibDep],
       _packageName = "global-juvix-package",
       _packageVersion = defaultVersion,
-      _packageBuildDir = Just (Rel relBuildDir)
+      _packageBuildDir = Nothing
     }
 
 -- | given some directory d it tries to read the file d/juvix.yaml and parse its contents
@@ -181,4 +182,5 @@ readGlobalPackage = do
 writeGlobalPackage :: Members '[Files] r => Sem r ()
 writeGlobalPackage = do
   yamlPath <- globalYaml
+  ensureDir' (parent yamlPath)
   writeFileBS yamlPath (encode (rawPackage globalPackage))
