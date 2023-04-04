@@ -34,7 +34,7 @@ checkExec tab =
         loc = fromMaybe defaultLoc (ii ^. identifierLocation)
 
         mockFile :: Path Abs File
-        mockFile = $(mkAbsFile "/core-to-geb")
+        mockFile = $(mkAbsFile "/core-to-exec")
 
         defaultLoc :: Interval
         defaultLoc = singletonInterval (mkInitialLoc mockFile)
