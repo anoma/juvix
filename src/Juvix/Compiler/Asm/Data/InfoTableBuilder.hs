@@ -2,7 +2,6 @@ module Juvix.Compiler.Asm.Data.InfoTableBuilder where
 
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Asm.Data.InfoTable
-import Juvix.Compiler.Asm.Extra.Base
 import Juvix.Compiler.Asm.Language
 
 data IdentKind
@@ -76,4 +75,4 @@ runInfoTableBuilder =
         return $ HashMap.lookup txt (s ^. stateIdents)
       GetFunctionInfo sym -> do
         s <- get
-        return (getFunInfo (s ^. stateInfoTable) sym)
+        return (lookupFunInfo (s ^. stateInfoTable) sym)

@@ -4,7 +4,6 @@ import Base
 import Data.Text.IO qualified as TIO
 import Juvix.Compiler.Asm.Data.InfoTable
 import Juvix.Compiler.Asm.Error
-import Juvix.Compiler.Asm.Extra
 import Juvix.Compiler.Asm.Interpreter
 import Juvix.Compiler.Asm.Pretty
 import Juvix.Compiler.Asm.Transformation.Validate
@@ -24,7 +23,7 @@ asmRunAssertion' tab expectedFile step = do
                 let outputFile = dirPath <//> $(mkRelFile "out.out")
                 hout <- openFile (toFilePath outputFile) WriteMode
                 step "Interpret"
-                r' <- doRun hout tab (getFunInfo tab sym)
+                r' <- doRun hout tab (lookupFunInfo tab sym)
                 case r' of
                   Left err -> do
                     hClose hout
@@ -72,7 +71,7 @@ asmRunErrorAssertion mainFile step = do
                     let outputFile = dirPath <//> $(mkRelFile "out.out")
                     hout <- openFile (toFilePath outputFile) WriteMode
                     step "Interpret"
-                    r' <- doRun hout tab (getFunInfo tab sym)
+                    r' <- doRun hout tab (lookupFunInfo tab sym)
                     hClose hout
                     case r' of
                       Left _ -> assertBool "" True

@@ -27,19 +27,13 @@ data InfoTableBuilder m a where
 makeSem ''InfoTableBuilder
 
 getConstructorInfo :: (Member InfoTableBuilder r) => Tag -> Sem r ConstructorInfo
-getConstructorInfo tag = do
-  tab <- getInfoTable
-  return $ fromJust (HashMap.lookup tag (tab ^. infoConstructors))
+getConstructorInfo tag = flip lookupConstructorInfo tag <$> getInfoTable
 
 getInductiveInfo :: (Member InfoTableBuilder r) => Symbol -> Sem r InductiveInfo
-getInductiveInfo sym = do
-  tab <- getInfoTable
-  return $ fromJust (HashMap.lookup sym (tab ^. infoInductives))
+getInductiveInfo sym = flip lookupInductiveInfo sym <$> getInfoTable
 
 getIdentifierInfo :: (Member InfoTableBuilder r) => Symbol -> Sem r IdentifierInfo
-getIdentifierInfo sym = do
-  tab <- getInfoTable
-  return $ fromJust (HashMap.lookup sym (tab ^. infoIdentifiers))
+getIdentifierInfo sym = flip lookupIdentifierInfo sym <$> getInfoTable
 
 getBoolSymbol :: (Member InfoTableBuilder r) => Sem r Symbol
 getBoolSymbol = do

@@ -105,14 +105,29 @@ makeLenses ''ConstructorInfo
 makeLenses ''ParameterInfo
 makeLenses ''AxiomInfo
 
+lookupInductiveInfo' :: InfoTable -> Symbol -> Maybe InductiveInfo
+lookupInductiveInfo' tab sym = HashMap.lookup sym (tab ^. infoInductives)
+
+lookupConstructorInfo' :: InfoTable -> Tag -> Maybe ConstructorInfo
+lookupConstructorInfo' tab tag = HashMap.lookup tag (tab ^. infoConstructors)
+
+lookupIdentifierInfo' :: InfoTable -> Symbol -> Maybe IdentifierInfo
+lookupIdentifierInfo' tab sym = HashMap.lookup sym (tab ^. infoIdentifiers)
+
+lookupIdentifierNode' :: InfoTable -> Symbol -> Maybe Node
+lookupIdentifierNode' tab sym = HashMap.lookup sym (tab ^. identContext)
+
 lookupInductiveInfo :: InfoTable -> Symbol -> InductiveInfo
-lookupInductiveInfo tab sym = fromJust $ HashMap.lookup sym (tab ^. infoInductives)
+lookupInductiveInfo tab sym = fromJust $ lookupInductiveInfo' tab sym
 
 lookupConstructorInfo :: InfoTable -> Tag -> ConstructorInfo
-lookupConstructorInfo tab tag = fromJust $ HashMap.lookup tag (tab ^. infoConstructors)
+lookupConstructorInfo tab tag = fromJust $ lookupConstructorInfo' tab tag
 
 lookupIdentifierInfo :: InfoTable -> Symbol -> IdentifierInfo
-lookupIdentifierInfo tab sym = fromJust $ HashMap.lookup sym (tab ^. infoIdentifiers)
+lookupIdentifierInfo tab sym = fromJust $ lookupIdentifierInfo' tab sym
+
+lookupIdentifierNode :: InfoTable -> Symbol -> Node
+lookupIdentifierNode tab sym = fromJust $ lookupIdentifierNode' tab sym
 
 lookupBuiltinInductive :: InfoTable -> BuiltinInductive -> Maybe InductiveInfo
 lookupBuiltinInductive tab b = (HashMap.!) (tab ^. infoInductives) . indSym <$> idenKind
@@ -148,10 +163,10 @@ lookupBuiltinFunction tab b = (HashMap.!) (tab ^. infoIdentifiers) . funSym <$> 
       _ -> error "core infotable: expected function identifier"
 
 identName :: InfoTable -> Symbol -> Text
-identName tab sym = fromJust (HashMap.lookup sym (tab ^. infoIdentifiers)) ^. identifierName
+identName tab sym = lookupIdentifierInfo tab sym ^. identifierName
 
 typeName :: InfoTable -> Symbol -> Text
-typeName tab sym = fromJust (HashMap.lookup sym (tab ^. infoInductives)) ^. inductiveName
+typeName tab sym = lookupInductiveInfo tab sym ^. inductiveName
 
 identNames :: InfoTable -> HashSet Text
 identNames tab =

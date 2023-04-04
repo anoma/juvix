@@ -427,7 +427,7 @@ instance PrettyCode InfoTable where
     tys <- ppInductives (toList (tbl ^. infoInductives))
     sigs <- ppSigs (sortOn (^. identifierSymbol) $ toList (tbl ^. infoIdentifiers))
     ctx' <- ppContext (tbl ^. identContext)
-    main <- maybe (return "") (\s -> (<> line) . (line <>) <$> ppName KNameFunction (fromJust (HashMap.lookup s (tbl ^. infoIdentifiers)) ^. identifierName)) (tbl ^. infoMain)
+    main <- maybe (return "") (\s -> (<> line) . (line <>) <$> ppName KNameFunction (identName tbl s)) (tbl ^. infoMain)
     return (tys <> line <> line <> sigs <> line <> ctx' <> line <> main)
     where
       ppSig :: Symbol -> Sem r (Maybe (Doc Ann))
@@ -439,7 +439,7 @@ instance PrettyCode InfoTable where
         sym' <- ppName KNameFunction mname'
         let -- the identifier may be missing if we have filtered out some
             -- identifiers for printing purposes
-            mii = HashMap.lookup s (tbl ^. infoIdentifiers)
+            mii = lookupIdentifierInfo' tbl s
         case mii of
           Nothing -> return Nothing
           Just ii -> do

@@ -69,5 +69,11 @@ emptyInfoTable =
       _infoMainFunction = Nothing
     }
 
-lookupConstructorInfo :: InfoTable -> Tag -> ConstructorInfo
-lookupConstructorInfo tab tag = fromJust $ HashMap.lookup tag (tab ^. infoConstrs)
+lookupFunInfo :: InfoTable -> Symbol -> FunctionInfo
+lookupFunInfo infoTable sym = fromMaybe (error "invalid function symbol") (HashMap.lookup sym (infoTable ^. infoFunctions))
+
+lookupConstrInfo :: InfoTable -> Tag -> ConstructorInfo
+lookupConstrInfo infoTable tag = fromMaybe (error "invalid constructor tag") (HashMap.lookup tag (infoTable ^. infoConstrs))
+
+lookupInductiveInfo :: InfoTable -> Symbol -> InductiveInfo
+lookupInductiveInfo infoTable sym = fromMaybe (error "invalid inductive symbol") (HashMap.lookup sym (infoTable ^. infoInductives))

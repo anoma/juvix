@@ -57,9 +57,9 @@ withSymbol sym a = do
 fromCore :: Core.InfoTable -> (Morphism, Object)
 fromCore tab = case tab ^. Core.infoMain of
   Just sym ->
-    let node = fromJust $ HashMap.lookup sym (tab ^. Core.identContext)
+    let node = Core.lookupIdentifierNode tab sym
         syms = reverse $ filter (/= sym) $ Core.createIdentDependencyInfo tab ^. Core.depInfoTopSort
-        idents = map (\s -> fromJust $ HashMap.lookup s (tab ^. Core.infoIdentifiers)) syms
+        idents = map (Core.lookupIdentifierInfo tab) syms
         morph = run . runReader emptyEnv $ goIdents node idents
         obj = convertType $ Info.getNodeType node
      in (morph, obj)
@@ -106,7 +106,7 @@ fromCore tab = case tab ^. Core.infoMain of
               }
         where
           sym = ii ^. Core.identifierSymbol
-          fundef = fromJust $ HashMap.lookup sym (tab ^. Core.identContext)
+          fundef = Core.lookupIdentifierNode tab sym
           argty = convertType (Info.getNodeType fundef)
           mkLambda = do
             body <- withSymbol sym (goIdents node idents)
@@ -290,12 +290,9 @@ fromCore tab = case tab ^. Core.infoMain of
         error "constructor tag out of range"
       return $ (constructors !! tagNum) args
       where
-        ci = fromJust $ HashMap.lookup _constrTag (tab ^. Core.infoConstructors)
+        ci = Core.lookupConstructorInfo tab _constrTag
         sym = ci ^. Core.constructorInductive
-        ctrs =
-          fromJust
-            (HashMap.lookup sym (tab ^. Core.infoInductives))
-            ^. Core.inductiveConstructors
+        ctrs = Core.lookupInductiveInfo tab sym ^. Core.inductiveConstructors
         tagNum =
           fromJust
             $ elemIndex
@@ -428,7 +425,7 @@ fromCore tab = case tab ^. Core.infoMain of
               go indty val branches
       where
         indty = convertInductive _caseInductive
-        ii = fromJust $ HashMap.lookup _caseInductive (tab ^. Core.infoInductives)
+        ii = Core.lookupInductiveInfo tab _caseInductive
         missingCtrs =
           filter
             ( \x ->
@@ -617,9 +614,7 @@ fromCore tab = case tab ^. Core.infoMain of
       let ctrs =
             map (Core.lookupConstructorInfo tab) $
               sort $
-                fromJust
-                  (HashMap.lookup sym (tab ^. Core.infoInductives))
-                  ^. Core.inductiveConstructors
+                Core.lookupInductiveInfo tab sym ^. Core.inductiveConstructors
       case reverse ctrs of
         ci : ctrs' -> do
           foldr

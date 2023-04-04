@@ -5,7 +5,6 @@ import Juvix.Compiler.Asm.Data.InfoTable
 import Juvix.Compiler.Asm.Data.Stack (Stack)
 import Juvix.Compiler.Asm.Data.Stack qualified as Stack
 import Juvix.Compiler.Asm.Error
-import Juvix.Compiler.Asm.Extra.Base
 import Juvix.Compiler.Asm.Extra.Type
 import Juvix.Compiler.Asm.Language
 import Juvix.Compiler.Asm.Pretty
@@ -91,7 +90,7 @@ getMemValueType :: InfoTable -> MemValue -> Memory -> Maybe Type
 getMemValueType tab val mem = case val of
   DRef dr -> getDirectRefType dr mem
   ConstrRef fld ->
-    let ci = getConstrInfo tab (fld ^. fieldTag)
+    let ci = lookupConstrInfo tab (fld ^. fieldTag)
         tyargs = typeArgs (ci ^. constructorType)
      in atMay tyargs (fld ^. fieldOffset)
 

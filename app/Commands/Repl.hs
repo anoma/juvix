@@ -6,7 +6,6 @@ import Commands.Base hiding (command)
 import Commands.Repl.Options
 import Control.Exception (throwIO)
 import Control.Monad.State.Strict qualified as State
-import Data.HashMap.Strict qualified as HashMap
 import Data.String.Interpolate (i, __i)
 import Evaluator
 import Juvix.Compiler.Concrete.Data.Scope (scopePath)
@@ -394,4 +393,4 @@ runTransformations shouldDisambiguate ts n = runCoreInfoTableBuilderArtifacts $ 
       Core.setInfoTable tab''
 
     getNode :: Core.Symbol -> Sem (Core.InfoTableBuilder ': r) Core.Node
-    getNode sym = HashMap.lookupDefault impossible sym . (^. Core.identContext) <$> Core.getInfoTable
+    getNode sym = fromMaybe impossible . flip Core.lookupIdentifierNode' sym <$> Core.getInfoTable

@@ -36,7 +36,7 @@ isTypeConstr tab ty = case typeTarget ty of
   NUniv {} ->
     True
   NIdt Ident {..} ->
-    isTypeConstr tab (fromJust $ HashMap.lookup _identSymbol (tab ^. identContext))
+    isTypeConstr tab (lookupIdentifierNode tab _identSymbol)
   _ -> False
 
 getTypeParams :: InfoTable -> Type -> [Type]

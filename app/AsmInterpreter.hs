@@ -17,7 +17,7 @@ runAsm bValidate tab =
         Nothing ->
           case tab ^. Asm.infoMainFunction of
             Just sym -> do
-              r <- doRun tab (Asm.getFunInfo tab sym)
+              r <- doRun tab (Asm.lookupFunInfo tab sym)
               case r of
                 Left err ->
                   exitJuvixError (JuvixError err)
