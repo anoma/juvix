@@ -18,6 +18,7 @@ data App m a where
   AskPkgDir :: App m (Path Abs Dir)
   AskBuildDir :: App m (Path Abs Dir)
   AskPackage :: App m Package
+  AskPackageGlobal :: App m Bool
   AskGlobalOptions :: App m GlobalOptions
   RenderStdOut :: (HasAnsiBackend a, HasTextBackend a) => a -> App m ()
   RunPipelineEither :: AppPath File -> Sem PipelineEff a -> App m (Either JuvixError (ResolverState, a))
@@ -32,7 +33,8 @@ data RunAppIOArgs = RunAppIOArgs
     _runAppIOArgsInvokeDir :: Path Abs Dir,
     _runAppIOArgsBuildDir :: Path Abs Dir,
     _runAppIOArgsPkgDir :: Path Abs Dir,
-    _runAppIOArgsPkg :: Package
+    _runAppIOArgsPkg :: Package,
+    _runAppIOArgsPkgGlobal :: Bool
   }
 
 runAppIO ::
@@ -43,6 +45,7 @@ runAppIO ::
   Sem r a
 runAppIO args@RunAppIOArgs {..} =
   interpret $ \case
+    AskPackageGlobal -> return _runAppIOArgsPkgGlobal
     RenderStdOut t
       | _runAppIOArgsGlobalOptions ^. globalOnlyErrors -> return ()
       | otherwise -> embed $ do
@@ -84,8 +87,8 @@ getEntryPoint' RunAppIOArgs {..} inputFile = do
         | opts ^. globalStdin -> Just <$> getContents
         | otherwise -> return Nothing
   return $
-    (entryPointFromGlobalOptions root (someBaseToAbs _runAppIOArgsInvokeDir (inputFile ^. pathPath)) opts)
-      { _entryPointBuildDir = _runAppIOArgsBuildDir,
+    (entryPointFromGlobalOptions (_runAppIOArgsPkg, _runAppIOArgsPkgGlobal) root (someBaseToAbs _runAppIOArgsInvokeDir (inputFile ^. pathPath)) opts)
+      { _entryPointBuildDir = Abs _runAppIOArgsBuildDir,
         _entryPointPackage = _runAppIOArgsPkg,
         _entryPointStdin = estdin
       }
@@ -112,6 +115,7 @@ getEntryPoint inputFile = do
   _runAppIOArgsGlobalOptions <- askGlobalOptions
   _runAppIOArgsPkgDir <- askPkgDir
   _runAppIOArgsPkg <- askPackage
+  _runAppIOArgsPkgGlobal <- askPackageGlobal
   _runAppIOArgsBuildDir <- askBuildDir
   _runAppIOArgsInvokeDir <- askInvokeDir
   embed (getEntryPoint' (RunAppIOArgs {..}) inputFile)

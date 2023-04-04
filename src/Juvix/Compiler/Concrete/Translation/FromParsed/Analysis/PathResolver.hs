@@ -73,8 +73,12 @@ mkPackageInfo ::
   Path Abs Dir ->
   Sem r PackageInfo
 mkPackageInfo mpackageEntry _packageRoot = do
-  let buildDir = maybe (rootBuildDir _packageRoot) (^. entryPointBuildDir) mpackageEntry
-  _packagePackage <- maybe (readPackage _packageRoot) (return . (^. entryPointPackage)) mpackageEntry
+  let buildDir = maybe (rootBuildDir _packageRoot) (someBaseToAbs _packageRoot . (^. entryPointBuildDir)) mpackageEntry
+      buildDirDep :: Maybe (SomeBase Dir)
+        | isJust mpackageEntry = Just (Abs buildDir)
+        | otherwise = Nothing
+
+  _packagePackage <- maybe (readPackage _packageRoot buildDirDep) (return . (^. entryPointPackage)) mpackageEntry
   let deps :: [Dependency] = _packagePackage ^. packageDependencies
   depsPaths <- mapM getDependencyPath deps
   ensureStdlib buildDir deps

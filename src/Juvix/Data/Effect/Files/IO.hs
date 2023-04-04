@@ -7,9 +7,11 @@ where
 import Control.Monad.Catch qualified as MC
 import Data.ByteString qualified as ByteString
 import Juvix.Data.Effect.Files.Base
+import Juvix.Extra.Version
 import Juvix.Prelude.Base
 import Juvix.Prelude.Path
 import Path.IO qualified as Path
+import System.Environment.XDG.BaseDir
 import System.IO.Error
 import System.IO.Temp
 import System.Posix.Types qualified as P
@@ -45,6 +47,10 @@ runFilesIO = interpret helper
       RemoveFile' f -> Path.removeFile f
       RenameFile' p1 p2 -> Path.renameFile p1 p2
       CopyFile' p1 p2 -> Path.copyFile p1 p2
+      JuvixConfigDir -> juvixConfigDirIO
+
+juvixConfigDirIO :: IO (Path Abs Dir)
+juvixConfigDirIO = (<//> versionDir) . absDir <$> getUserConfigDir "juvix"
 
 runTempFileIO ::
   forall r a.

@@ -36,7 +36,7 @@ ensureStdlib buildDir deps =
       let res
             | someBaseToAbs buildDir dep == stdLibBuildDir = Just stdLibBuildDir
             | otherwise = Nothing
-      in trace (show dep <> " " <> show res) $ res
+       in trace (show dep <> " " <> show res) $ res
 
 writeStdlib :: forall r. (Members '[Reader StdlibRoot, Files] r) => Sem r ()
 writeStdlib = do

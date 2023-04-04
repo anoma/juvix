@@ -3,6 +3,7 @@ module Juvix.Compiler.Pipeline.Package
     RawPackage,
     Package,
     Package' (..),
+    defaultStdlibDep,
     packageName,
     packageBuildDir,
     packageVersion,
@@ -10,7 +11,10 @@ module Juvix.Compiler.Pipeline.Package
     rawPackage,
     readPackage,
     readPackageIO,
+    readGlobalPackageIO,
     globalPackage,
+    emptyPackage,
+    readGlobalPackage,
   )
 where
 
@@ -24,7 +28,6 @@ import Juvix.Compiler.Pipeline.Package.Dependency
 import Juvix.Extra.Paths
 import Juvix.Prelude
 import Lens.Micro.Platform qualified as Lens
-import System.Environment.XDG.BaseDir
 
 type NameType :: IsProcessed -> GHC.Type
 type family NameType s = res | res -> s where
@@ -87,19 +90,15 @@ instance FromJSON RawPackage where
       err :: a
       err = error "Failed to parse juvix.yaml"
 
--- -- | Has the implicit stdlib dependency
--- rawDefaultPackage :: Package' 'Raw
--- rawDefaultPackage =
---   Package
---     { _packageName = Nothing,
---       _packageVersion = Nothing,
---       _packageDependencies = Nothing,
---       _packageBuildDir = Nothing
---     }
-
--- -- | Has the implicit stdlib dependency
--- defaultPackage :: SomeBase Dir -> Package
--- defaultPackage buildDir = fromRight impossible . run . runError @Text . processPackage buildDir $ rawDefaultPackage
+-- | This is used when juvix.yaml exists but it is empty
+emptyPackage :: Package
+emptyPackage =
+  Package
+    { _packageName = defaultPackageName,
+      _packageVersion = defaultVersion,
+      _packageDependencies = [defaultStdlibDep],
+      _packageBuildDir = Nothing
+    }
 
 rawPackage :: Package -> RawPackage
 rawPackage pkg =
@@ -110,10 +109,10 @@ rawPackage pkg =
       _packageBuildDir = pkg ^. packageBuildDir
     }
 
-processPackage :: forall r. (Members '[Error Text] r) => SomeBase Dir -> RawPackage -> Sem r Package
+processPackage :: forall r. (Members '[Error Text] r) => Maybe (SomeBase Dir) -> RawPackage -> Sem r Package
 processPackage buildDir pkg = do
   let _packageName = fromMaybe defaultPackageName (pkg ^. packageName)
-      stdlib = Dependency (buildDir <///> relStdlibDir)
+      stdlib = Dependency (fromMaybe (Rel relBuildDir) buildDir <///> relStdlibDir)
       _packageDependencies = fromMaybe [stdlib] (pkg ^. packageDependencies)
       _packageBuildDir = pkg ^. packageBuildDir
   _packageVersion <- getVersion
@@ -149,7 +148,7 @@ readPackage ::
   forall r.
   (Members '[Files, Error Text] r) =>
   Path Abs Dir ->
-  SomeBase Dir ->
+  Maybe (SomeBase Dir) ->
   Sem r Package
 readPackage root buildDir = do
   bs <- readFileBS' yamlPath
@@ -160,11 +159,26 @@ readPackage root buildDir = do
 readPackageIO :: Path Abs Dir -> SomeBase Dir -> IO Package
 readPackageIO root buildDir = do
   let x :: Sem '[Error Text, Files, Embed IO] Package
-      x = readPackage root buildDir
+      x = readPackage root (Just buildDir)
   m <- runM $ runFilesIO (runError x)
   case m of
     Left err -> putStrLn err >> exitFailure
     Right r -> return r
 
-readGlobalPackage :: IO Package
-readGlobalPackage = undefined
+readGlobalPackageIO :: IO Package
+readGlobalPackageIO = do
+  m <- runM . runFilesIO . runError $ readGlobalPackage
+  case m of
+    Left err -> putStrLn err >> exitFailure
+    Right r -> return r
+
+readGlobalPackage :: Members '[Error Text, Files] r => Sem r Package
+readGlobalPackage = do
+  yamlPath <- globalYaml
+  unlessM (fileExists' yamlPath) writeGlobalPackage
+  readPackage (parent yamlPath) Nothing
+
+writeGlobalPackage :: Members '[Files] r => Sem r ()
+writeGlobalPackage = do
+  yamlPath <- globalYaml
+  writeFileBS yamlPath (encode (rawPackage globalPackage))

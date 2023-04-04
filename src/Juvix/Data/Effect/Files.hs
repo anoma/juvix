@@ -74,3 +74,6 @@ restoreFileOnError p action = do
     restoreOnErrorAction tmpFile = do
       copyFile' p tmpFile
       onException action (renameFile' tmpFile p)
+
+globalYaml :: Members '[Files] r => Sem r (Path Abs File)
+globalYaml = (<//> ($(mkRelDir "global-project") <//> juvixYamlFile)) <$> juvixConfigDir

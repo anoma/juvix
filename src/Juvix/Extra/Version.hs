@@ -3,10 +3,14 @@ module Juvix.Extra.Version where
 import Data.Version (showVersion)
 import Development.GitRev (gitBranch, gitCommitDate, gitHash)
 import Juvix.Prelude.Base hiding (Doc)
+import Juvix.Prelude.Path
 import Paths_juvix qualified
 import Prettyprinter as PP
 import Prettyprinter.Render.Text (renderIO)
 import System.Environment (getProgName)
+
+versionDir :: Path Rel Dir
+versionDir = relDir (unpack versionDoc)
 
 versionDoc :: Text
 versionDoc = pack (showVersion Paths_juvix.version)

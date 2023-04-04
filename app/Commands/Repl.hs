@@ -39,6 +39,8 @@ data ReplContext = ReplContext
 
 data ReplState = ReplState
   { _replStatePkgDir :: Path Abs Dir,
+    _replStatePkg :: Package,
+    _replStatePkgGlobal :: Bool,
     _replStateInvokeDir :: Path Abs Dir,
     _replStateContext :: Maybe ReplContext,
     _replStateGlobalOptions :: GlobalOptions
@@ -56,7 +58,6 @@ helpTxt =
   :help                     Print help text and describe options
   :load       FILE          Load a file into the REPL
   :reload                   Reload the currently loaded file
-  :prelude                  Load the Prelude from the standard library
   :type       EXPRESSION    Infer the type of an expression
   :core       EXPRESSION    Translate the expression to JuvixCore
   :multiline                Start a multi-line input. Submit with <Ctrl-D>
@@ -72,19 +73,19 @@ noFileLoadedMsg = liftIO (putStrLn "No file loaded. Load a file using the `:load
 welcomeMsg :: (MonadIO m) => m ()
 welcomeMsg = liftIO (putStrLn [i|Juvix REPL version #{versionTag}: https://juvix.org. Run :help for help|])
 
-runCommand :: (Members '[Embed IO, App] r) => ReplOptions -> Sem r ()
+runCommand :: Members '[Embed IO, App] r => ReplOptions -> Sem r ()
 runCommand opts = do
   root <- askPkgDir
   buildDir <- askBuildDir
   package <- askPackage
+  global <- askPackageGlobal
   let getReplEntryPoint :: SomeBase File -> Repl EntryPoint
       getReplEntryPoint inputFile = do
         gopts <- State.gets (^. replStateGlobalOptions)
         absInputFile :: Path Abs File <- replMakeAbsolute inputFile
         return $
-          (entryPointFromGlobalOptions root absInputFile gopts)
-            { _entryPointBuildDir = buildDir,
-              _entryPointPackage = package
+          (entryPointFromGlobalOptions (package, global) root absInputFile gopts)
+            { _entryPointBuildDir = Abs buildDir
             }
 
       printHelpTxt :: String -> Repl ()
@@ -133,7 +134,7 @@ runCommand opts = do
       loadPrelude = loadDefaultPrelude
 
       loadDefaultPrelude :: Repl ()
-      loadDefaultPrelude = defaultPreludeEntryPoint >>= loadEntryPoint
+      loadDefaultPrelude = whenJustM defaultPreludeEntryPoint loadEntryPoint
 
       printRoot :: String -> Repl ()
       printRoot _ = do
@@ -228,7 +229,6 @@ runCommand opts = do
           ("quit", quit),
           ("load", Repline.dontCrash . loadFile . pSomeFile),
           ("reload", Repline.dontCrash . reloadFile),
-          ("prelude", Repline.dontCrash . const loadPrelude),
           ("root", printRoot),
           ("type", inferType),
           ("version", displayVersion),
@@ -299,27 +299,34 @@ runCommand opts = do
   pkgDir <- askPkgDir
   invokeDir <- askInvokeDir
   globalOptions <- askGlobalOptions
+  pkgGlobal <- askPackageGlobal
+  pkg <- askPackage
   embed
     ( State.evalStateT
         replAction
         ( ReplState
             { _replStatePkgDir = pkgDir,
+              _replStatePkgGlobal = pkgGlobal,
               _replStateInvokeDir = invokeDir,
               _replStateContext = Nothing,
+              _replStatePkg = pkg,
               _replStateGlobalOptions = globalOptions
             }
         )
     )
 
-defaultPreludeEntryPoint :: Repl EntryPoint
+defaultPreludeEntryPoint :: Repl (Maybe EntryPoint)
 defaultPreludeEntryPoint = do
   opts <- State.gets (^. replStateGlobalOptions)
   root <- State.gets (^. replStatePkgDir)
+  pkg <- State.gets (^. replStatePkg)
+  pkgGlobal <- State.gets (^. replStatePkgGlobal)
   let defStdlibDir = defaultStdlibPath (rootBuildDir root)
   return $
-    (entryPointFromGlobalOptions root (defStdlibDir <//> preludePath) opts)
-      { _entryPointResolverRoot = defStdlibDir
-      }
+    Just
+      (entryPointFromGlobalOptions (pkg, pkgGlobal) root (defStdlibDir <//> preludePath) opts)
+        { _entryPointResolverRoot = defStdlibDir
+        }
 
 replMakeAbsolute :: SomeBase b -> Repl (Path Abs b)
 replMakeAbsolute = \case

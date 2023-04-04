@@ -9,22 +9,19 @@ import Juvix.Compiler.Pipeline.Package
 import Juvix.Extra.Paths
 import Juvix.Prelude
 
-data PackageMode =
-  ModeSingleFile
-  | ModePackage Package
-
 -- | The head of _entryModulePaths is assumed to be the Main module
 data EntryPoint = EntryPoint
   { _entryPointRoot :: Path Abs Dir,
     -- | initial root for the path resolver. Usually it should be equal to
     -- _entryPointRoot. It only differs for `juvix repl`.
     _entryPointResolverRoot :: Path Abs Dir,
-    _entryPointBuildDir :: Path Abs Dir,
+    _entryPointBuildDir :: SomeBase Dir,
     _entryPointNoTermination :: Bool,
     _entryPointNoPositivity :: Bool,
     _entryPointNoCoverage :: Bool,
     _entryPointNoStdlib :: Bool,
     _entryPointPackage :: Package,
+    _entryPointGlobalPackage :: Bool,
     _entryPointStdin :: Maybe Text,
     _entryPointTarget :: Target,
     _entryPointDebug :: Bool,
@@ -36,35 +33,28 @@ data EntryPoint = EntryPoint
 
 makeLenses ''EntryPoint
 
-defaultEntryPoint :: Path Abs Dir -> Path Abs File -> EntryPoint
-defaultEntryPoint root mainFile =
+defaultEntryPoint :: (Package, Bool) -> Path Abs Dir -> Path Abs File -> EntryPoint
+defaultEntryPoint (pkg, global) root mainFile =
   EntryPoint
     { _entryPointRoot = root,
       _entryPointResolverRoot = root,
-      _entryPointBuildDir = defaultBuildDir,
+      _entryPointBuildDir = Rel relBuildDir,
       _entryPointNoTermination = False,
       _entryPointNoPositivity = False,
       _entryPointNoCoverage = False,
       _entryPointNoStdlib = False,
       _entryPointStdin = Nothing,
-      _entryPointPackage = defaultPackage,
+      _entryPointPackage = pkg,
+      _entryPointGlobalPackage = global,
       _entryPointGenericOptions = defaultGenericOptions,
       _entryPointTarget = TargetCore,
       _entryPointDebug = False,
       _entryPointUnrollLimit = defaultUnrollLimit,
       _entryPointModulePaths = pure mainFile
     }
-  where
-    defaultBuildDir = rootBuildDir root
 
 defaultUnrollLimit :: Int
 defaultUnrollLimit = 140
 
 mainModulePath :: Lens' EntryPoint (Path Abs File)
 mainModulePath = entryPointModulePaths . _head1
-
-entryPointFromPackage :: Path Abs Dir -> Path Abs File -> Package -> EntryPoint
-entryPointFromPackage root mainFile pkg =
-  (defaultEntryPoint root mainFile)
-    { _entryPointPackage = pkg
-    }
