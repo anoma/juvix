@@ -10,12 +10,13 @@ allTests = testGroup "JuvixCore compilation tests" (map liftTest (Eval.filterOut
 -- Arbitrary precision integers not yet supported
 ignoredTests :: [String]
 ignoredTests =
-  [ "Tail recursion: Fibonacci numbers in linear time",
-    "Fast exponentiation",
-    "Nested 'case', 'let' and 'if' with variable capture",
-    "Mutual recursion",
-    "LetRec - fib, fact",
-    "Big numbers"
+  [ "Test011: Tail recursion: Fibonacci numbers in linear time",
+    "Test022: Fast exponentiation",
+    "Test025: Mutual recursion",
+    "Test026: Nested 'case', 'let' and 'if' with variable capture",
+    "Test034: Evaluation order",
+    "Test036: Big numbers",
+    "Test040: LetRec - fib, fact"
   ]
 
 liftTest :: Eval.PosTest -> TestTree
