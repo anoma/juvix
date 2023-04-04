@@ -570,12 +570,15 @@ language, one would use a simple loop going over the list without any
 memory allocation. In pseudocode:
 
 ```pascal
-var sum : Nat := 0;
-while (lst /= nnil) {
+sum : Nat := 0;
+
+while (lst /= nil) do
+begin
   sum := sum + head lst;
   lst := tail lst;
-};
-return sum;
+end;
+
+result := sum;
 ```
 
 Fortunately, it is possible to rewrite this function to use _tail
@@ -614,15 +617,18 @@ time. The variables `cur` and `next` hold the last two computed
 Fibonacci numbers.
 
 ```pascal
-var cur : Nat := 0;
-var next : Nat := 1;
-while (n /= 0) {
-  var tmp := next;
+cur : Nat := 0;
+next : Nat := 1;
+
+while (n /= 0) do
+begin
+  tmp := next;
   next := cur + next;
   cur := tmp;
   n := n - 1;
-};
-return cur;
+end;
+
+result := cur;
 ```
 
 An equivalent functional program is:
