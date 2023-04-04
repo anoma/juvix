@@ -46,7 +46,7 @@ fromAsm tab =
         { _inductiveName = ii ^. Asm.inductiveName,
           _inductiveLocation = ii ^. Asm.inductiveLocation,
           _inductiveSymbol = ii ^. Asm.inductiveSymbol,
-          _inductiveConstructors = map convertConstr (ii ^. Asm.inductiveConstructors),
+          _inductiveConstructors = ii ^. Asm.inductiveConstructors,
           _inductiveRepresentation = ii ^. Asm.inductiveRepresentation
         }
 

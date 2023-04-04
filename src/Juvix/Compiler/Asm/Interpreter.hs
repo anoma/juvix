@@ -128,7 +128,7 @@ runCodeR infoTable funInfo = goCode (funInfo ^. functionCode) >> popLastValueSta
       Prealloc {} ->
         goCode cont
       AllocConstr tag -> do
-        let ci = getConstrInfo infoTable tag
+        let ci = lookupConstrInfo infoTable tag
         args <- replicateM (ci ^. constructorArgsNum) popValueStack
         pushValueStack (ValConstr (Constr tag args))
         goCode cont
@@ -240,7 +240,7 @@ runCodeR infoTable funInfo = goCode (funInfo ^. functionCode) >> popLastValueSta
     getCallDetails :: (Member Runtime r) => Maybe Location -> InstrCall -> Sem r (Code, Frame)
     getCallDetails loc InstrCall {..} = case _callType of
       CallFun sym -> do
-        let fi = getFunInfo infoTable sym
+        let fi = lookupFunInfo infoTable sym
         when
           (_callArgsNum /= fi ^. functionArgsNum)
           (runtimeError "invalid direct call: supplied arguments number not equal to expected arguments number")
@@ -250,7 +250,7 @@ runCodeR infoTable funInfo = goCode (funInfo ^. functionCode) >> popLastValueSta
         v <- popValueStack
         case v of
           ValClosure cl -> do
-            let fi = getFunInfo infoTable (cl ^. closureSymbol)
+            let fi = lookupFunInfo infoTable (cl ^. closureSymbol)
                 n = length (cl ^. closureArgs)
             when
               (n >= fi ^. functionArgsNum)
@@ -283,7 +283,7 @@ runCodeR infoTable funInfo = goCode (funInfo ^. functionCode) >> popLastValueSta
       v <- popValueStack
       case v of
         ValClosure cl -> do
-          let fi = getFunInfo infoTable (cl ^. closureSymbol)
+          let fi = lookupFunInfo infoTable (cl ^. closureSymbol)
           let n = fi ^. functionArgsNum - length (cl ^. closureArgs)
           when
             (n < 0)

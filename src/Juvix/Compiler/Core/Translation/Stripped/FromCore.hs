@@ -30,26 +30,27 @@ fromCore tab =
 
 translateFunctionInfo :: InfoTable -> IdentifierInfo -> Stripped.FunctionInfo
 translateFunctionInfo tab IdentifierInfo {..} =
-  Stripped.FunctionInfo
-    { _functionName = _identifierName,
-      _functionLocation = _identifierLocation,
-      _functionSymbol = _identifierSymbol,
-      _functionBody =
-        translateFunction
-          _identifierArgsNum
-          (fromJust $ HashMap.lookup _identifierSymbol (tab ^. identContext)),
-      _functionType = translateType _identifierType,
-      _functionArgsNum = _identifierArgsNum,
-      _functionArgsInfo = map translateArgInfo _identifierArgsInfo,
-      _functionIsExported = _identifierIsExported
-    }
+  assert (length (typeArgsBinders _identifierType) == _identifierArgsNum) $
+    Stripped.FunctionInfo
+      { _functionName = _identifierName,
+        _functionLocation = _identifierLocation,
+        _functionSymbol = _identifierSymbol,
+        _functionBody =
+          translateFunction
+            _identifierArgsNum
+            (fromJust $ HashMap.lookup _identifierSymbol (tab ^. identContext)),
+        _functionType = translateType _identifierType,
+        _functionArgsNum = _identifierArgsNum,
+        _functionArgsInfo = map translateArgInfo (typeArgsBinders _identifierType),
+        _functionIsExported = _identifierIsExported
+      }
 
-translateArgInfo :: ArgumentInfo -> Stripped.ArgumentInfo
-translateArgInfo ArgumentInfo {..} =
+translateArgInfo :: Binder -> Stripped.ArgumentInfo
+translateArgInfo Binder {..} =
   Stripped.ArgumentInfo
-    { _argumentName = _argumentName,
-      _argumentLocation = _argumentLocation,
-      _argumentType = translateType _argumentType
+    { _argumentName = _binderName,
+      _argumentLocation = _binderLocation,
+      _argumentType = translateType _binderType
     }
 
 translateInductiveInfo :: InductiveInfo -> Stripped.InductiveInfo
@@ -59,7 +60,7 @@ translateInductiveInfo InductiveInfo {..} =
       _inductiveLocation = _inductiveLocation,
       _inductiveSymbol = _inductiveSymbol,
       _inductiveKind = translateType _inductiveKind,
-      _inductiveConstructors = map translateConstructorInfo _inductiveConstructors,
+      _inductiveConstructors = _inductiveConstructors,
       _inductiveParams = map translateParamInfo _inductiveParams
     }
 

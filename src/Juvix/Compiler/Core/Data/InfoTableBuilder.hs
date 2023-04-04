@@ -19,7 +19,7 @@ data InfoTableBuilder m a where
   RegisterIdentNode :: Symbol -> Node -> InfoTableBuilder m ()
   RegisterMain :: Symbol -> InfoTableBuilder m ()
   RemoveSymbol :: Symbol -> InfoTableBuilder m ()
-  OverIdentArgsInfo :: Symbol -> ([ArgumentInfo] -> [ArgumentInfo]) -> InfoTableBuilder m ()
+  OverIdentArgs :: Symbol -> ([Binder] -> [Binder]) -> InfoTableBuilder m ()
   GetIdent :: Text -> InfoTableBuilder m (Maybe IdentKind)
   GetInfoTable :: InfoTableBuilder m InfoTable
   SetInfoTable :: InfoTable -> InfoTableBuilder m ()
@@ -27,19 +27,13 @@ data InfoTableBuilder m a where
 makeSem ''InfoTableBuilder
 
 getConstructorInfo :: (Member InfoTableBuilder r) => Tag -> Sem r ConstructorInfo
-getConstructorInfo tag = do
-  tab <- getInfoTable
-  return $ fromJust (HashMap.lookup tag (tab ^. infoConstructors))
+getConstructorInfo tag = flip lookupConstructorInfo tag <$> getInfoTable
 
 getInductiveInfo :: (Member InfoTableBuilder r) => Symbol -> Sem r InductiveInfo
-getInductiveInfo sym = do
-  tab <- getInfoTable
-  return $ fromJust (HashMap.lookup sym (tab ^. infoInductives))
+getInductiveInfo sym = flip lookupInductiveInfo sym <$> getInfoTable
 
 getIdentifierInfo :: (Member InfoTableBuilder r) => Symbol -> Sem r IdentifierInfo
-getIdentifierInfo sym = do
-  tab <- getInfoTable
-  return $ fromJust (HashMap.lookup sym (tab ^. infoIdentifiers))
+getIdentifierInfo sym = flip lookupIdentifierInfo sym <$> getInfoTable
 
 getBoolSymbol :: (Member InfoTableBuilder r) => Sem r Symbol
 getBoolSymbol = do
@@ -61,8 +55,8 @@ checkSymbolDefined sym = do
   tab <- getInfoTable
   return $ HashMap.member sym (tab ^. identContext)
 
-setIdentArgsInfo :: (Member InfoTableBuilder r) => Symbol -> [ArgumentInfo] -> Sem r ()
-setIdentArgsInfo sym = overIdentArgsInfo sym . const
+setIdentArgs :: (Member InfoTableBuilder r) => Symbol -> [Binder] -> Sem r ()
+setIdentArgs sym = overIdentArgs sym . const
 
 runInfoTableBuilder :: forall r a. InfoTable -> Sem (InfoTableBuilder ': r) a -> Sem r (InfoTable, a)
 runInfoTableBuilder tab =
@@ -112,11 +106,10 @@ runInfoTableBuilder tab =
         modify' (over infoIdentifiers (HashMap.delete sym))
         modify' (over identContext (HashMap.delete sym))
         modify' (over infoInductives (HashMap.delete sym))
-      OverIdentArgsInfo sym f -> do
-        argsInfo <- f <$> gets (^. infoIdentifiers . at sym . _Just . identifierArgsInfo)
-        modify' (set (infoIdentifiers . at sym . _Just . identifierArgsInfo) argsInfo)
-        modify' (set (infoIdentifiers . at sym . _Just . identifierArgsNum) (length argsInfo))
-        modify' (over infoIdentifiers (HashMap.adjust (over identifierType (expandType (map (^. argumentType) argsInfo))) sym))
+      OverIdentArgs sym f -> do
+        args <- f <$> gets (^. identContext . at sym . _Just . to (map (^. piLhsBinder) . fst . unfoldPi))
+        modify' (set (infoIdentifiers . at sym . _Just . identifierArgsNum) (length args))
+        modify' (over infoIdentifiers (HashMap.adjust (over identifierType (expandType args)) sym))
       GetIdent txt -> do
         s <- get
         return $ HashMap.lookup txt (s ^. identMap)
@@ -174,7 +167,7 @@ declareInductiveBuiltins indName blt ctrs = do
           _inductiveLocation = Nothing,
           _inductiveSymbol = sym,
           _inductiveKind = mkDynamic',
-          _inductiveConstructors = constrs,
+          _inductiveConstructors = map (^. constructorTag) constrs,
           _inductivePositive = True,
           _inductiveParams = [],
           _inductiveBuiltin = blt

@@ -123,7 +123,7 @@ recurse' sig = go True
             Prealloc {} ->
               return mem
             AllocConstr tag -> do
-              let ci = getConstrInfo (sig ^. recursorInfoTable) tag
+              let ci = lookupConstrInfo (sig ^. recursorInfoTable) tag
                   n = ci ^. constructorArgsNum
                   tyargs = typeArgs (ci ^. constructorType)
               checkValueStack' loc (sig ^. recursorInfoTable) tyargs mem
@@ -136,7 +136,7 @@ recurse' sig = go True
                 pushValueStack (mkTypeConstr (ci ^. constructorInductive) tag tys) $
                   popValueStack n mem
             AllocClosure InstrAllocClosure {..} -> do
-              let fi = getFunInfo (sig ^. recursorInfoTable) _allocClosureFunSymbol
+              let fi = lookupFunInfo (sig ^. recursorInfoTable) _allocClosureFunSymbol
                   (tyargs, tgt) = unfoldType (fi ^. functionType)
               checkValueStack' loc (sig ^. recursorInfoTable) (take _allocClosureArgsNum tyargs) mem
               return $
@@ -183,10 +183,10 @@ recurse' sig = go True
               AsmError loc "invalid call: not enough values on the stack"
           let ty = case _callType of
                 CallClosure -> topValueStack' 0 mem
-                CallFun sym -> getFunInfo (sig ^. recursorInfoTable) sym ^. functionType
+                CallFun sym -> lookupFunInfo (sig ^. recursorInfoTable) sym ^. functionType
           let argsNum = case _callType of
                 CallClosure -> length (typeArgs ty)
-                CallFun sym -> getFunInfo (sig ^. recursorInfoTable) sym ^. functionArgsNum
+                CallFun sym -> lookupFunInfo (sig ^. recursorInfoTable) sym ^. functionArgsNum
           when (argsNum /= 0) $
             checkFunType ty
           when (ty /= TyDynamic && argsNum /= _callArgsNum) $
@@ -375,7 +375,7 @@ recurseS' sig = go
             Prealloc {} ->
               return si
             AllocConstr tag -> do
-              let ci = getConstrInfo (sig ^. recursorInfoTable) tag
+              let ci = lookupConstrInfo (sig ^. recursorInfoTable) tag
                   n = ci ^. constructorArgsNum
               return $
                 stackInfoPopValueStack (n - 1) si

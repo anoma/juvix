@@ -10,7 +10,6 @@ import Data.List.NonEmpty qualified as NonEmpty
 import Data.Text qualified as Text
 import Juvix.Compiler.Abstract.Data.Name
 import Juvix.Compiler.Asm.Data.InfoTable
-import Juvix.Compiler.Asm.Extra.Base
 import Juvix.Compiler.Asm.Interpreter.Base
 import Juvix.Compiler.Asm.Interpreter.RuntimeState
 import Juvix.Compiler.Asm.Pretty.Options
@@ -162,7 +161,7 @@ instance PrettyCode TypeInductive where
   ppCode :: (Member (Reader Options) r) => TypeInductive -> Sem r (Doc Ann)
   ppCode TypeInductive {..} = do
     opts <- ask
-    let ii = getInductiveInfo (opts ^. optInfoTable) _typeInductiveSymbol
+    let ii = lookupInductiveInfo (opts ^. optInfoTable) _typeInductiveSymbol
     return $ annotate (AnnKind KNameInductive) (pretty (ii ^. inductiveName))
 
 instance PrettyCode TypeConstr where
@@ -170,9 +169,9 @@ instance PrettyCode TypeConstr where
   ppCode TypeConstr {..} = do
     opts <- ask
     let tab = opts ^. optInfoTable
-    let ii = getInductiveInfo tab _typeConstrInductive
+    let ii = lookupInductiveInfo tab _typeConstrInductive
     let iname = annotate (AnnKind KNameInductive) (pretty (ii ^. inductiveName))
-    let ci = getConstrInfo tab _typeConstrTag
+    let ci = lookupConstrInfo tab _typeConstrTag
     let cname = annotate (AnnKind KNameConstructor) (pretty (ci ^. constructorName))
     args <- mapM ppCode _typeConstrFields
     return $ iname <> kwColon <> cname <> encloseSep "(" ")" ", " args
@@ -373,14 +372,14 @@ instance PrettyCode ConstructorInfo where
     ty <- ppCode _constructorType
     return $ annotate (AnnKind KNameConstructor) (pretty (quoteAsmName _constructorName)) <+> colon <+> ty
 
-instance PrettyCode InductiveInfo where
-  ppCode InductiveInfo {..} = do
-    ctrs <- mapM ppCode _inductiveConstructors
-    return $ kwInductive <+> annotate (AnnKind KNameInductive) (pretty (quoteAsmName _inductiveName)) <+> braces' (vcat (map (<> semi) ctrs))
+ppInductive :: Member (Reader Options) r => InfoTable -> InductiveInfo -> Sem r (Doc Ann)
+ppInductive tab InductiveInfo {..} = do
+  ctrs <- mapM (ppCode . lookupConstrInfo tab) _inductiveConstructors
+  return $ kwInductive <+> annotate (AnnKind KNameInductive) (pretty (quoteAsmName _inductiveName)) <+> braces' (vcat (map (<> semi) ctrs))
 
 instance PrettyCode InfoTable where
-  ppCode InfoTable {..} = do
-    inds <- mapM ppCode (HashMap.elems (filterOutBuiltins _infoInductives))
+  ppCode tab@InfoTable {..} = do
+    inds <- mapM (ppInductive tab) (HashMap.elems (filterOutBuiltins _infoInductives))
     funsigs <- mapM ppFunSig (HashMap.elems _infoFunctions)
     funs <- mapM ppCode (HashMap.elems _infoFunctions)
     return $ vcat (map (<> line) inds) <> line <> vcat funsigs <> line <> line <> vcat (map (<> line) funs)
@@ -389,9 +388,8 @@ instance PrettyCode InfoTable where
       filterOutBuiltins =
         HashMap.filter
           ( \ii -> case ii ^. inductiveConstructors of
-              ci : _ -> case ci ^. constructorTag of
-                BuiltinTag _ -> False
-                UserTag _ -> True
+              BuiltinTag _ : _ -> False
+              UserTag _ : _ -> True
               [] -> True
           )
 

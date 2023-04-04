@@ -4,7 +4,6 @@ module Juvix.Compiler.Core.Transformation.Eta
   )
 where
 
-import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Transformation.Base
 
@@ -52,13 +51,13 @@ etaExpandApps tab =
   where
     constrArgtys :: Tag -> [Type]
     constrArgtys tag =
-      case HashMap.lookup tag (tab ^. infoConstructors) of
+      case lookupConstructorInfo' tab tag of
         Just ci -> typeArgs (ci ^. constructorType)
         Nothing -> []
 
     typeConstrArgtys :: Symbol -> [Type]
     typeConstrArgtys sym =
-      case HashMap.lookup sym (tab ^. infoInductives) of
+      case lookupInductiveInfo' tab sym of
         Just ci -> map (^. paramKind) (ci ^. inductiveParams)
         Nothing -> []
 

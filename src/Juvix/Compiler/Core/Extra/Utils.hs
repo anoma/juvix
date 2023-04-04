@@ -36,7 +36,7 @@ isTypeConstr tab ty = case typeTarget ty of
   NUniv {} ->
     True
   NIdt Ident {..} ->
-    isTypeConstr tab (fromJust $ HashMap.lookup _identSymbol (tab ^. identContext))
+    isTypeConstr tab (lookupIdentifierNode tab _identSymbol)
   _ -> False
 
 getTypeParams :: InfoTable -> Type -> [Type]
@@ -250,23 +250,6 @@ squashApps = dmap go
             NBlt (BuiltinApp i op args') -> mkBuiltinApp i op (args' ++ args)
             NTyp (TypeConstr i sym args') -> mkTypeConstr i sym (args' ++ args)
             _ -> n
-
-binderFromArgumentInfo :: ArgumentInfo -> Binder
-binderFromArgumentInfo a =
-  Binder
-    { _binderName = a ^. argumentName,
-      _binderLocation = a ^. argumentLocation,
-      _binderType = a ^. argumentType
-    }
-
-argumentInfoFromBinder :: Binder -> ArgumentInfo
-argumentInfoFromBinder i =
-  ArgumentInfo
-    { _argumentName = i ^. binderName,
-      _argumentLocation = i ^. binderLocation,
-      _argumentType = i ^. binderType,
-      _argumentIsImplicit = Explicit
-    }
 
 patternType :: Pattern -> Node
 patternType = \case

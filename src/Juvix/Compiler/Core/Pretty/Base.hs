@@ -427,7 +427,7 @@ instance PrettyCode InfoTable where
     tys <- ppInductives (toList (tbl ^. infoInductives))
     sigs <- ppSigs (sortOn (^. identifierSymbol) $ toList (tbl ^. infoIdentifiers))
     ctx' <- ppContext (tbl ^. identContext)
-    main <- maybe (return "") (\s -> (<> line) . (line <>) <$> ppName KNameFunction (fromJust (HashMap.lookup s (tbl ^. infoIdentifiers)) ^. identifierName)) (tbl ^. infoMain)
+    main <- maybe (return "") (\s -> (<> line) . (line <>) <$> ppName KNameFunction (identName tbl s)) (tbl ^. infoMain)
     return (tys <> line <> line <> sigs <> line <> ctx' <> line <> main)
     where
       ppSig :: Symbol -> Sem r (Maybe (Doc Ann))
@@ -439,7 +439,7 @@ instance PrettyCode InfoTable where
         sym' <- ppName KNameFunction mname'
         let -- the identifier may be missing if we have filtered out some
             -- identifiers for printing purposes
-            mii = HashMap.lookup s (tbl ^. infoIdentifiers)
+            mii = lookupIdentifierInfo' tbl s
         case mii of
           Nothing -> return Nothing
           Just ii -> do
@@ -481,7 +481,7 @@ instance PrettyCode InfoTable where
           ppInductive :: InductiveInfo -> Sem r (Doc Ann)
           ppInductive ii = do
             name <- ppName KNameInductive (ii ^. inductiveName)
-            ctrs <- mapM (fmap (<> semi) . ppCode) (ii ^. inductiveConstructors)
+            ctrs <- mapM (fmap (<> semi) . ppCode . lookupConstructorInfo tbl) (ii ^. inductiveConstructors)
             return (kwInductive <+> name <+> braces (line <> indent' (vsep ctrs) <> line) <> kwSemicolon)
 
 instance PrettyCode Stripped.ArgumentInfo where
@@ -525,7 +525,7 @@ instance PrettyCode Stripped.InfoTable where
           ppInductive :: Stripped.InductiveInfo -> Sem r (Doc Ann)
           ppInductive ii = do
             name <- ppName KNameInductive (ii ^. Stripped.inductiveName)
-            ctrs <- mapM (fmap (<> semi) . ppCode) (ii ^. Stripped.inductiveConstructors)
+            ctrs <- mapM (fmap (<> semi) . ppCode . Stripped.lookupConstructorInfo tbl) (ii ^. Stripped.inductiveConstructors)
             return (kwInductive <+> name <+> braces (line <> indent' (vsep ctrs) <> line))
 
 instance (PrettyCode a) => PrettyCode (NonEmpty a) where
