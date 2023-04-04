@@ -1,22 +1,25 @@
-module Root where
+module Juvix.Compiler.Pipeline.Root where
 
-import Juvix.Prelude
 import Control.Exception qualified as IO
 import Data.ByteString qualified as ByteString
 import Juvix.Compiler.Pipeline.Package
 import Juvix.Extra.Paths qualified as Paths
+import Juvix.Prelude
 
-type RootDir = Path Abs Dir
+data Roots = Roots
+  { _rootsRootDir :: Path Abs Dir,
+    _rootsPackage :: Package,
+    _rootsPackageGlobal :: Bool,
+    _rootsBuildDir :: Path Abs Dir
+  }
 
-type BuildDir = Path Abs Dir
-
-type IsGlobal = Bool
+makeLenses ''Roots
 
 findRootAndChangeDir ::
   IO (Maybe (SomeBase Dir)) ->
   Maybe (SomeBase Dir) ->
   Path Abs Dir ->
-  IO (RootDir, (Package, IsGlobal), BuildDir)
+  IO Roots
 findRootAndChangeDir minputFile mbuildDir invokeDir = do
   whenJustM minputFile $ \case
     Abs d -> setCurrentDir d
@@ -27,30 +30,32 @@ findRootAndChangeDir minputFile mbuildDir invokeDir = do
       putStrLn "Something went wrong when looking for the root of the project"
       putStrLn (pack (IO.displayException err))
       exitFailure
-    Right root -> return root
+    Right roots -> return roots
   where
     possiblePaths :: Path Abs Dir -> [Path Abs Dir]
     possiblePaths p = p : toList (parents p)
 
-    go :: IO (RootDir, (Package, IsGlobal), BuildDir)
+    go :: IO Roots
     go = do
       cwd <- getCurrentDir
       l <- findFile (possiblePaths cwd) Paths.juvixYamlFile
-      let buildDir = getBuildDir mbuildDir invokeDir cwd
+      let _rootsBuildDir = getBuildDir mbuildDir invokeDir cwd
       case l of
         Nothing -> do
-          globPkg <- readGlobalPackageIO
-          root <- runM (runFilesIO globalRoot)
-          return (root, (globPkg, True), buildDir)
+          _rootsPackage <- readGlobalPackageIO
+          _rootsRootDir <- runM (runFilesIO globalRoot)
+          let _rootsPackageGlobal = True
+          return Roots {..}
         Just yamlPath -> do
           bs <- ByteString.readFile (toFilePath yamlPath)
           let isEmpty = ByteString.null bs
-              root = parent yamlPath
-          pkg <-
+              _rootsRootDir = parent yamlPath
+              _rootsPackageGlobal = False
+          _rootsPackage <-
             if
                 | isEmpty -> return emptyPackage
-                | otherwise -> readPackageIO root (Abs buildDir)
-          return (root, (pkg, False), buildDir)
+                | otherwise -> readPackageIO _rootsRootDir (Abs _rootsBuildDir)
+          return Roots {..}
 
 getBuildDir :: Maybe (SomeBase Dir) -> Path Abs Dir -> Path Abs Dir -> Path Abs Dir
 getBuildDir mbuildDir invokeDir pkgDir = case mbuildDir of
