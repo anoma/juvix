@@ -32,7 +32,7 @@ data InductiveInfo = InductiveInfo
   { _inductiveName :: Text,
     _inductiveLocation :: Maybe Location,
     _inductiveSymbol :: Symbol,
-    _inductiveConstructors :: [ConstructorInfo],
+    _inductiveConstructors :: [Tag],
     _inductiveRepresentation :: IndRep
   }
 

@@ -24,7 +24,7 @@ computeCodePrealloc tab code = prealloc <$> foldS sig code (0, [])
       AllocConstr tag ->
         return (k + size, cmd : c)
         where
-          ci = getConstrInfo tab tag
+          ci = lookupConstrInfo tab tag
           size = getConstrSize (ci ^. constructorRepresentation) (ci ^. constructorArgsNum)
       AllocClosure InstrAllocClosure {..} -> do
         opts <- ask
@@ -106,7 +106,7 @@ checkCodePrealloc tab code = do
       AllocConstr tag ->
         return $ \k -> cont (k - size)
         where
-          ci = getConstrInfo tab tag
+          ci = lookupConstrInfo tab tag
           size = getConstrSize (ci ^. constructorRepresentation) (ci ^. constructorArgsNum)
       AllocClosure InstrAllocClosure {..} -> do
         opts <- ask

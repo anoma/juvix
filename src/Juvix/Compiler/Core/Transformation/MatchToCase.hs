@@ -1,6 +1,5 @@
 module Juvix.Compiler.Core.Transformation.MatchToCase where
 
-import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
 import Data.List qualified as List
 import Juvix.Compiler.Core.Error
@@ -118,8 +117,8 @@ goMatchToCase recur node = case node of
                     compileDefault Nothing err bindersNum vs' col matrix'
                 | otherwise -> do
                     -- Section 4, case 3(a)
-                    let ind = fromJust (HashMap.lookup (List.head tags) (tab ^. infoConstructors)) ^. constructorInductive
-                        ctrsNum = length (fromJust (HashMap.lookup ind (tab ^. infoInductives)) ^. inductiveConstructors)
+                    let ind = lookupConstructorInfo tab (List.head tags) ^. constructorInductive
+                        ctrsNum = length (lookupInductiveInfo tab ind ^. inductiveConstructors)
                     branches <- mapM (compileBranch err bindersNum vs' col matrix') tags
                     defaultBranch <-
                       if
@@ -171,9 +170,9 @@ goMatchToCase recur node = case node of
         getPatTags pats
 
     missingTag :: InfoTable -> Symbol -> HashSet Tag -> Tag
-    missingTag tab ind tags = fromJust $ find (not . flip HashSet.member tags) (map (^. constructorTag) (ii ^. inductiveConstructors))
+    missingTag tab ind tags = fromJust $ find (not . flip HashSet.member tags) (ii ^. inductiveConstructors)
       where
-        ii = fromJust $ HashMap.lookup ind (tab ^. infoInductives)
+        ii = lookupInductiveInfo tab ind
 
     compileMatchingRow :: Level -> [Level] -> PatternRow -> Sem r Node
     compileMatchingRow bindersNum vs PatternRow {..} =
@@ -202,7 +201,7 @@ goMatchToCase recur node = case node of
             Just tag ->
               err (parensIf (argsNum > 0) (hsep (annotate (AnnKind KNameConstructor) (pretty (ci ^. constructorName)) : replicate argsNum "_")) : args)
               where
-                ci = fromJust $ HashMap.lookup tag (tab ^. infoConstructors)
+                ci = lookupConstructorInfo tab tag
                 paramsNum = getTypeParamsNum tab (ci ^. constructorType)
                 argsNum = ci ^. constructorArgsNum - paramsNum
             Nothing ->
@@ -214,7 +213,7 @@ goMatchToCase recur node = case node of
     compileBranch :: ([Doc Ann] -> Doc Ann) -> Level -> [Level] -> [Pattern] -> PatternMatrix -> Tag -> Sem r CaseBranch
     compileBranch err bindersNum vs col matrix tag = do
       tab <- ask
-      let ci = fromJust $ HashMap.lookup tag (tab ^. infoConstructors)
+      let ci = lookupConstructorInfo tab tag
           paramsNum = getTypeParamsNum tab (ci ^. constructorType)
           argsNum = length (typeArgs (ci ^. constructorType))
           bindersNum' = bindersNum + argsNum
@@ -260,7 +259,7 @@ goMatchToCase recur node = case node of
     getBranchMatrix :: [Pattern] -> PatternMatrix -> Tag -> Sem r PatternMatrix
     getBranchMatrix col matrix tag = do
       tab <- ask
-      let ci = fromJust $ HashMap.lookup tag (tab ^. infoConstructors)
+      let ci = lookupConstructorInfo tab tag
           argtys = typeArgs (ci ^. constructorType)
           argsNum = length argtys
           helper :: PatternRow -> Pattern -> Maybe PatternRow

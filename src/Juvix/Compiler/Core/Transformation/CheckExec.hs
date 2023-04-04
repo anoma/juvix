@@ -1,6 +1,5 @@
 module Juvix.Compiler.Core.Transformation.CheckExec where
 
-import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Core.Error
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Transformation.Base
@@ -30,7 +29,7 @@ checkExec tab =
         _ ->
           return tab
       where
-        ii = fromJust $ HashMap.lookup sym (tab ^. infoIdentifiers)
+        ii = lookupIdentifierInfo tab sym
         loc = fromMaybe defaultLoc (ii ^. identifierLocation)
 
         mockFile :: Path Abs File

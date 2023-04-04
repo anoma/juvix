@@ -1,6 +1,5 @@
 module Juvix.Compiler.Core.Transformation.CheckGeb where
 
-import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Core.Data.TypeDependencyInfo
 import Juvix.Compiler.Core.Error
 import Juvix.Compiler.Core.Extra
@@ -22,7 +21,7 @@ checkGeb tab =
         go :: Node -> Sem r Node
         go node = case node of
           NIdt Ident {..}
-            | isDynamic (fromJust (HashMap.lookup _identSymbol (tab ^. infoIdentifiers)) ^. identifierType) ->
+            | isDynamic (lookupIdentifierInfo tab _identSymbol ^. identifierType) ->
                 throw (dynamicTypeError node (getInfoLocation _identInfo))
           NLam Lambda {..}
             | isDynamic (_lambdaBinder ^. binderType) ->

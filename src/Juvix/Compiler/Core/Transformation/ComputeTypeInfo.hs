@@ -1,6 +1,5 @@
 module Juvix.Compiler.Core.Transformation.ComputeTypeInfo where
 
-import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Core.Data.BinderList qualified as BL
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Info.TypeInfo qualified as Info
@@ -27,7 +26,7 @@ computeNodeTypeInfo tab = umapL go
       NVar Var {..} ->
         shift (_varIndex + 1) (BL.lookup _varIndex bl ^. binderType)
       NIdt Ident {..} ->
-        fromJust (HashMap.lookup _identSymbol (tab ^. infoIdentifiers)) ^. identifierType
+        lookupIdentifierInfo tab _identSymbol ^. identifierType
       NCst Constant {..} ->
         case _constantValue of
           ConstInteger {} -> mkTypeInteger'
@@ -56,8 +55,8 @@ computeNodeTypeInfo tab = umapL go
             _ -> error "incorrect trace builtin application"
           OpFail -> Info.getNodeType node
       NCtr Constr {..} ->
-        let ci = fromJust $ HashMap.lookup _constrTag (tab ^. infoConstructors)
-            ii = fromJust $ HashMap.lookup (ci ^. constructorInductive) (tab ^. infoInductives)
+        let ci = lookupConstructorInfo tab _constrTag
+            ii = lookupInductiveInfo tab (ci ^. constructorInductive)
          in case ii ^. inductiveBuiltin of
               Just (BuiltinTypeInductive BuiltinBool) ->
                 mkTypeBool'

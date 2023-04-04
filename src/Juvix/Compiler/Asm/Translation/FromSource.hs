@@ -65,7 +65,7 @@ declareBuiltins = do
             _inductiveSymbol = sym,
             _inductiveLocation = Just i,
             _inductiveKind = TyDynamic,
-            _inductiveConstructors = constrs,
+            _inductiveConstructors = map (^. constructorTag) constrs,
             _inductiveRepresentation = IndRepStandard
           }
       )
@@ -155,7 +155,7 @@ statementInductive = do
           }
   lift $ registerInductive ii
   ctrs <- braces $ P.sepEndBy (constrDecl sym) (kw kwSemicolon)
-  lift $ registerInductive ii {_inductiveConstructors = ctrs}
+  lift $ registerInductive ii {_inductiveConstructors = map (^. constructorTag) ctrs}
 
 functionArguments ::
   (Member InfoTableBuilder r) =>
