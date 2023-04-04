@@ -74,6 +74,7 @@ demo-example:
 .PHONY: docs
 docs:
 	@cp $(METAFILES) docs/
+	@cp -r assets/ docs/
 	@mdbook build
 
 .PHONY: serve-docs
