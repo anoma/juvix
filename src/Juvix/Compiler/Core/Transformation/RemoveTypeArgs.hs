@@ -4,7 +4,6 @@ module Juvix.Compiler.Core.Transformation.RemoveTypeArgs
   )
 where
 
-import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Core.Data.BinderList qualified as BL
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Pretty
