@@ -614,7 +614,7 @@ goAxiomDef a = do
       registerIdent (mkIdentIndex name) info
       registerIdentNode sym body
       let (is, _) = unfoldLambdas body
-      setIdentArgsInfo sym (map (argumentInfoFromBinder . (^. lambdaLhsBinder)) is)
+      setIdentArgs sym (map (^. lambdaLhsBinder) is)
 
 fromPatternArg ::
   forall r.
