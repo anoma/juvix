@@ -10,14 +10,14 @@ suites =
     defaultSuite
     [ "mergesort",
       "fibonacci",
-      "maybe"
+      "combinations",
+      "maybe",
+      "ackermann",
+      "cps",
+      "prime"
     ]
     <> [ Suite suiteName (allVariantsExcept [C] [CoreEval])
-         | suiteName <- ["fold", "mapfold"]
-       ]
-    <> [Suite "mapfun" (allVariantsExcept [C] [CoreEval, JuvixExe, JuvixWasm])]
-    <> [ Suite suiteName (allVariantsExcept [] [CoreEval, JuvixExe, JuvixWasm])
-         | suiteName <- ["ackermann", "combinations", "cps", "prime"]
+         | suiteName <- ["fold", "mapfold", "mapfun"]
        ]
 
 defaultSuite :: String -> Suite
