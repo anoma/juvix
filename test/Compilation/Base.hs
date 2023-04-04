@@ -43,6 +43,6 @@ compileErrorAssertion mainFile step = do
   cwd <- getCurrentDir
   let entryPoint = defaultEntryPoint cwd mainFile
   tab <- (^. Core.coreResultTable) . snd <$> runIO' entryPoint upToCore
-  case run $ runReader Core.defaultCoreOptions $ runError @JuvixError $ Core.toEval' tab of
+  case run $ runReader Core.defaultCoreOptions $ runError @JuvixError $ Core.toStripped' tab of
     Left _ -> assertBool "" True
     Right _ -> assertFailure "no error"
