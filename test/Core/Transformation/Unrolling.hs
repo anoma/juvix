@@ -14,16 +14,16 @@ allTests =
         liftTest
         ( -- filter out tests which require recursion deeper than 140
           Eval.filterOutTests
-            [ "Recursion",
-              "Tail recursion",
-              "Tail recursion: Fibonacci numbers in linear time",
-              "Tail recursion through higher-order functions",
-              "Recursive functions: McCarthy's 91 function, subtraction by increments",
-              "Lists",
-              "Streams without memoization",
-              "Ackermann function (higher-order definition)",
-              "Merge sort",
-              "Big numbers"
+            [ "Test008: Recursion",
+              "Test009: Tail recursion",
+              "Test011: Tail recursion: Fibonacci numbers in linear time",
+              "Test017: Tail recursion through higher-order functions",
+              "Test020: McCarthy's 91 function, subtraction by increments",
+              "Test023: Lists",
+              "Test030: Streams without memoization",
+              "Test032: Ackermann function (higher-order definition)",
+              "Test035: Merge sort",
+              "Test036: Big numbers"
             ]
             Eval.tests
         )
