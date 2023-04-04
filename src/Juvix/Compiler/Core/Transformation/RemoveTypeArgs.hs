@@ -117,15 +117,9 @@ convertIdent :: InfoTable -> IdentifierInfo -> IdentifierInfo
 convertIdent tab ii =
   ii
     { _identifierType = ty',
-      _identifierArgsInfo =
-        map (uncurry (set argumentType)) $
-          zipExact tyargs' $
-            map fst $
-              filter (not . isTypeConstr tab . snd) (zipExact (ii ^. identifierArgsInfo) tyargs),
       _identifierArgsNum = length tyargs'
     }
   where
-    tyargs = typeArgs (ii ^. identifierType)
     ty' = convertNode tab (ii ^. identifierType)
     tyargs' = typeArgs ty'
 
@@ -142,8 +136,7 @@ convertInductive :: InfoTable -> InductiveInfo -> InductiveInfo
 convertInductive tab ii =
   ii
     { _inductiveKind = ty',
-      _inductiveParams = map (over paramKind (convertNode tab) . fst) $ filter (not . isTypeConstr tab . snd) (zipExact (ii ^. inductiveParams) tyargs),
-      _inductiveConstructors = map (convertConstructor tab) (ii ^. inductiveConstructors)
+      _inductiveParams = map (over paramKind (convertNode tab) . fst) $ filter (not . isTypeConstr tab . snd) (zipExact (ii ^. inductiveParams) tyargs)
     }
   where
     tyargs = typeArgs (ii ^. inductiveKind)

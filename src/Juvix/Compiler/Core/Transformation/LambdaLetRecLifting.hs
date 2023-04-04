@@ -53,8 +53,8 @@ lambdaLiftNode aboveBl top =
               let (freevarsAssocs, fBody') = captureFreeVarsCtx bl l'
                   allfreevars :: [Var]
                   allfreevars = map fst freevarsAssocs
-                  argsInfo :: [ArgumentInfo]
-                  argsInfo = map (argumentInfoFromBinder . (^. lambdaLhsBinder)) (fst (unfoldLambdas fBody'))
+                  argsNum :: Int
+                  argsNum = length (fst (unfoldLambdas fBody'))
               f <- freshSymbol
               let name = uniqueName "lambda" f
               ty <- nodeType fBody'
@@ -65,8 +65,7 @@ lambdaLiftNode aboveBl top =
                     _identifierName = name,
                     _identifierLocation = Nothing,
                     _identifierType = ty,
-                    _identifierArgsNum = length argsInfo,
-                    _identifierArgsInfo = argsInfo,
+                    _identifierArgsNum = argsNum,
                     _identifierIsExported = False,
                     _identifierBuiltin = Nothing
                   }
@@ -127,9 +126,8 @@ lambdaLiftNode aboveBl top =
                             captureFreeVarsType
                               (map (first (^. varIndex)) recItemsFreeVars)
                               (b, bty)
-                          argsInfo :: [ArgumentInfo]
-                          argsInfo =
-                            map (argumentInfoFromBinder . (^. lambdaLhsBinder)) (fst (unfoldLambdas topBody))
+                          argsNum :: Int
+                          argsNum = length (fst (unfoldLambdas topBody))
                       registerIdentNode sym topBody
                       registerIdent
                         name
@@ -138,8 +136,7 @@ lambdaLiftNode aboveBl top =
                             _identifierName = name,
                             _identifierLocation = itemBinder ^. binderLocation,
                             _identifierType = topTy,
-                            _identifierArgsNum = length argsInfo,
-                            _identifierArgsInfo = argsInfo,
+                            _identifierArgsNum = argsNum,
                             _identifierIsExported = False,
                             _identifierBuiltin = Nothing
                           }

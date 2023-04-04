@@ -31,7 +31,6 @@ mapAllNodesM f tab =
     >>= mapAxiomsM (overM axiomType f)
     >>= mapConstructorsM (overM constructorType f)
     >>= mapInductivesM (overM inductiveKind f)
-    >>= mapInductivesM (overM inductiveConstructors (mapM (overM constructorType f)))
     >>= mapIdentsM (overM identifierType f)
 
 mapIdents :: (IdentifierInfo -> IdentifierInfo) -> InfoTable -> InfoTable
@@ -71,8 +70,7 @@ mapAllNodes f tab =
     convertIdent :: IdentifierInfo -> IdentifierInfo
     convertIdent ii =
       ii
-        { _identifierType = f (ii ^. identifierType),
-          _identifierArgsInfo = map (over argumentType f) (ii ^. identifierArgsInfo)
+        { _identifierType = f (ii ^. identifierType)
         }
 
     convertConstructor :: ConstructorInfo -> ConstructorInfo
@@ -82,8 +80,7 @@ mapAllNodes f tab =
     convertInductive ii =
       ii
         { _inductiveKind = f (ii ^. inductiveKind),
-          _inductiveParams = map (over paramKind f) (ii ^. inductiveParams),
-          _inductiveConstructors = map convertConstructor (ii ^. inductiveConstructors)
+          _inductiveParams = map (over paramKind f) (ii ^. inductiveParams)
         }
 
     convertAxiom :: AxiomInfo -> AxiomInfo

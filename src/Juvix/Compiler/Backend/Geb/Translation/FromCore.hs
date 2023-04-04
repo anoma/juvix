@@ -301,7 +301,7 @@ fromCore tab = case tab ^. Core.infoMain of
             $ elemIndex
               _constrTag
               . sort
-            $ map (^. Core.constructorTag) ctrs
+            $ ctrs
         constructors = mkConstructors $ convertInductive sym
 
     mkConstructors :: Object -> [Morphism -> Morphism]
@@ -438,7 +438,7 @@ fromCore tab = case tab ^. Core.infoMain of
                       _caseBranches
                   )
             )
-            (ii ^. Core.inductiveConstructors)
+            (map (Core.lookupConstructorInfo tab) (ii ^. Core.inductiveConstructors))
         missingCtrsNum = length missingCtrs
         ctrBrs = map mkCtrBranch missingCtrs
         defaultNode = fromMaybe (error "not all cases covered") _caseDefault
@@ -615,10 +615,11 @@ fromCore tab = case tab ^. Core.infoMain of
     convertInductive :: Symbol -> Object
     convertInductive sym = do
       let ctrs =
-            sortOn (^. Core.constructorTag) $
-              fromJust
-                (HashMap.lookup sym (tab ^. Core.infoInductives))
-                ^. Core.inductiveConstructors
+            map (Core.lookupConstructorInfo tab) $
+              sort $
+                fromJust
+                  (HashMap.lookup sym (tab ^. Core.infoInductives))
+                  ^. Core.inductiveConstructors
       case reverse ctrs of
         ci : ctrs' -> do
           foldr

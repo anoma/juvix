@@ -66,15 +66,7 @@ fromInternal i = do
               _identifierName = freshIdentName tab "intToNat",
               _identifierLocation = Nothing,
               _identifierArgsNum = 1,
-              _identifierArgsInfo =
-                [ ArgumentInfo
-                    { _argumentName = "x",
-                      _argumentLocation = Nothing,
-                      _argumentType = mkTypePrim' (PrimInteger $ PrimIntegerInfo Nothing Nothing),
-                      _argumentIsImplicit = Explicit
-                    }
-                ],
-              _identifierType = mkPi' mkTypeInteger' targetType,
+              _identifierType = mkPi mempty (Binder "x" Nothing mkTypeInteger') targetType,
               _identifierIsExported = False,
               _identifierBuiltin = Nothing
             }
@@ -177,7 +169,7 @@ goInductiveDef i = do
   -- because their types refer to the inductive
   registerInductive idx info
   ctorInfos <- mapM (goConstructor sym) (i ^. Internal.inductiveConstructors)
-  registerInductive idx info {_inductiveConstructors = ctorInfos}
+  registerInductive idx info {_inductiveConstructors = map (^. constructorTag) ctorInfos}
 
 goConstructor ::
   forall r.
@@ -276,7 +268,6 @@ goFunctionDefIden (f, sym) = do
             -- _identiferArgsNum needs to match the number of lambdas in the
             -- body. This needs to be filled in later (in goFunctionDef).
             _identifierArgsNum = 0,
-            _identifierArgsInfo = [],
             _identifierIsExported = False,
             _identifierBuiltin = f ^. Internal.funDefBuiltin
           }
@@ -314,7 +305,7 @@ goFunctionDef ((f, sym), ty) = do
     setIdentArgsInfo' :: Node -> Sem r ()
     setIdentArgsInfo' node = do
       let (is, _) = unfoldLambdas node
-      setIdentArgsInfo sym (map (argumentInfoFromBinder . (^. lambdaLhsBinder)) is)
+      setIdentArgs sym (map (^. lambdaLhsBinder) is)
 
 mkFunBody ::
   forall r.
@@ -525,7 +516,7 @@ goAxiomInductive a = whenJust (a ^. Internal.axiomBuiltin) builtinInductive
               { _inductiveLocation = Just $ a ^. Internal.axiomName . nameLoc,
                 _inductiveSymbol = sym,
                 _inductiveKind = mkSmallUniv,
-                _inductiveConstructors = ctrs',
+                _inductiveConstructors = map (^. constructorTag) ctrs',
                 _inductiveParams = [],
                 _inductivePositive = False,
                 _inductiveBuiltin = BuiltinTypeAxiom <$> ax,
@@ -555,7 +546,6 @@ goAxiomDef a = do
                 _identifierSymbol = sym,
                 _identifierType = ty,
                 _identifierArgsNum = 0,
-                _identifierArgsInfo = [],
                 _identifierIsExported = False,
                 _identifierBuiltin = Nothing,
                 _identifierName
@@ -563,7 +553,7 @@ goAxiomDef a = do
       registerIdent (mkIdentIndex (a ^. Internal.axiomName)) info
       registerIdentNode sym body
       let (is, _) = unfoldLambdas body
-      setIdentArgsInfo sym (map (argumentInfoFromBinder . (^. lambdaLhsBinder)) is)
+      setIdentArgs sym (map (^. lambdaLhsBinder) is)
     Nothing -> return ()
   where
     builtinBody :: Symbol -> Symbol -> Text -> Internal.BuiltinAxiom -> Maybe Node

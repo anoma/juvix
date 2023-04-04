@@ -21,18 +21,9 @@ topEtaExpand info = run (mapT' go info)
           (_ : as) -> case node of
             NLam l -> NLam <$> traverseOf lambdaBody (skipLambdas as) l
             _ -> do
-              let newArgsInfo :: [ArgumentInfo]
-                  newArgsInfo = map toArgumentInfo args
-              overIdentArgsInfo sym (++ newArgsInfo)
+              let binders = map (^. piLhsBinder) args
+              overIdentArgs sym (++ binders)
               return (expand node args)
-        toArgumentInfo :: PiLhs -> ArgumentInfo
-        toArgumentInfo pi =
-          ArgumentInfo
-            { _argumentName = pi ^. piLhsBinder . binderName,
-              _argumentLocation = pi ^. piLhsBinder . binderLocation,
-              _argumentType = pi ^. piLhsBinder . binderType,
-              _argumentIsImplicit = Explicit
-            }
         expand :: Node -> [PiLhs] -> Node
         expand n lhs = reLambdas (map lambdaFromPi lhs) body'
           where

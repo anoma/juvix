@@ -316,7 +316,7 @@ translateInductiveInfo ii =
       _inductiveLocation = ii ^. Core.inductiveLocation,
       _inductiveSymbol = ii ^. Core.inductiveSymbol,
       _inductiveKind = convertType 0 (ii ^. Core.inductiveKind),
-      _inductiveConstructors = map translateConstructorInfo (ii ^. Core.inductiveConstructors),
+      _inductiveConstructors = ii ^. Core.inductiveConstructors,
       _inductiveRepresentation = IndRepStandard
     }
 

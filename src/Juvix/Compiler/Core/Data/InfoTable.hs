@@ -58,17 +58,10 @@ data IdentifierInfo = IdentifierInfo
     _identifierLocation :: Maybe Location,
     _identifierSymbol :: Symbol,
     _identifierType :: Type,
+    -- | The number of lambdas in the identifier body
     _identifierArgsNum :: Int,
-    _identifierArgsInfo :: [ArgumentInfo],
     _identifierIsExported :: Bool,
     _identifierBuiltin :: Maybe BuiltinFunction
-  }
-
-data ArgumentInfo = ArgumentInfo
-  { _argumentName :: Text,
-    _argumentLocation :: Maybe Location,
-    _argumentType :: Type,
-    _argumentIsImplicit :: IsImplicit
   }
 
 data InductiveInfo = InductiveInfo
@@ -76,7 +69,7 @@ data InductiveInfo = InductiveInfo
     _inductiveLocation :: Maybe Location,
     _inductiveSymbol :: Symbol,
     _inductiveKind :: Type,
-    _inductiveConstructors :: [ConstructorInfo],
+    _inductiveConstructors :: [Tag],
     _inductiveParams :: [ParameterInfo],
     _inductivePositive :: Bool,
     _inductiveBuiltin :: Maybe BuiltinType
@@ -107,11 +100,19 @@ data AxiomInfo = AxiomInfo
 
 makeLenses ''InfoTable
 makeLenses ''IdentifierInfo
-makeLenses ''ArgumentInfo
 makeLenses ''InductiveInfo
 makeLenses ''ConstructorInfo
 makeLenses ''ParameterInfo
 makeLenses ''AxiomInfo
+
+lookupInductiveInfo :: InfoTable -> Symbol -> InductiveInfo
+lookupInductiveInfo tab sym = fromJust $ HashMap.lookup sym (tab ^. infoInductives)
+
+lookupConstructorInfo :: InfoTable -> Tag -> ConstructorInfo
+lookupConstructorInfo tab tag = fromJust $ HashMap.lookup tag (tab ^. infoConstructors)
+
+lookupIdentifierInfo :: InfoTable -> Symbol -> IdentifierInfo
+lookupIdentifierInfo tab sym = fromJust $ HashMap.lookup sym (tab ^. infoIdentifiers)
 
 lookupBuiltinInductive :: InfoTable -> BuiltinInductive -> Maybe InductiveInfo
 lookupBuiltinInductive tab b = (HashMap.!) (tab ^. infoInductives) . indSym <$> idenKind

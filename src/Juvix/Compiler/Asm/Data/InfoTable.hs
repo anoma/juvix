@@ -5,6 +5,7 @@ module Juvix.Compiler.Asm.Data.InfoTable
   )
 where
 
+import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Asm.Language
 import Juvix.Compiler.Asm.Language.Rep
 import Juvix.Compiler.Asm.Language.Type
@@ -50,7 +51,7 @@ data InductiveInfo = InductiveInfo
     _inductiveLocation :: Maybe Location,
     _inductiveSymbol :: Symbol,
     _inductiveKind :: Type,
-    _inductiveConstructors :: [ConstructorInfo],
+    _inductiveConstructors :: [Tag],
     _inductiveRepresentation :: IndRep
   }
 
@@ -67,3 +68,6 @@ emptyInfoTable =
       _infoInductives = mempty,
       _infoMainFunction = Nothing
     }
+
+lookupConstructorInfo :: InfoTable -> Tag -> ConstructorInfo
+lookupConstructorInfo tab tag = fromJust $ HashMap.lookup tag (tab ^. infoConstrs)

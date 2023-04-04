@@ -376,7 +376,6 @@ runTransformations shouldDisambiguate ts n = runCoreInfoTableBuilderArtifacts $ 
                 _identifierSymbol = sym,
                 _identifierLocation = Nothing,
                 _identifierArgsNum = 0,
-                _identifierArgsInfo = [],
                 _identifierType = Core.mkDynamic',
                 _identifierIsExported = False,
                 _identifierBuiltin = Nothing

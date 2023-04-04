@@ -217,14 +217,14 @@ isInductive _ = False
 -- | `expandType argtys ty` expands the dynamic target of `ty` to match the
 -- number of arguments with types specified by `argstys`. For example,
 -- `expandType [int, string] (int -> any) = int -> string -> any`.
-expandType :: [Type] -> Type -> Type
+expandType :: [Binder] -> Type -> Type
 expandType argtys ty =
   let (tyargs, target) = unfoldPi ty
    in if
           | length tyargs >= length argtys ->
               ty
           | isDynamic target ->
-              rePis tyargs (mkPis' (drop (length tyargs) argtys) target)
+              rePis tyargs (mkPis (drop (length tyargs) argtys) target)
           | otherwise ->
               impossible
 

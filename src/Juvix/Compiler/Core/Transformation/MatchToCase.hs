@@ -171,7 +171,7 @@ goMatchToCase recur node = case node of
         getPatTags pats
 
     missingTag :: InfoTable -> Symbol -> HashSet Tag -> Tag
-    missingTag tab ind tags = fromJust $ find (not . flip HashSet.member tags) (map (^. constructorTag) (ii ^. inductiveConstructors))
+    missingTag tab ind tags = fromJust $ find (not . flip HashSet.member tags) (ii ^. inductiveConstructors)
       where
         ii = fromJust $ HashMap.lookup ind (tab ^. infoInductives)
 
