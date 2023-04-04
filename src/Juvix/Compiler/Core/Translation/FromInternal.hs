@@ -534,39 +534,19 @@ goAxiomDef ::
   Internal.AxiomDef ->
   Sem r ()
 goAxiomDef a = do
-  boolSym <- getBoolSymbol
-  natSym <- getNatSymbol
-  tab <- getInfoTable
-  let natName = fromJust (HashMap.lookup natSym (tab ^. infoInductives)) ^. inductiveName
-  case a ^. Internal.axiomBuiltin >>= builtinBody boolSym natSym natName of
-    Just body -> do
-      sym <- freshSymbol
-      ty <- axiomType'
-      _identifierName <- topName (a ^. Internal.axiomName)
-      let info =
-            IdentifierInfo
-              { _identifierLocation = Just $ a ^. Internal.axiomName . nameLoc,
-                _identifierSymbol = sym,
-                _identifierType = ty,
-                _identifierArgsNum = 0,
-                _identifierIsExported = False,
-                _identifierBuiltin = Nothing,
-                _identifierName
-              }
-      registerIdent (mkIdentIndex (a ^. Internal.axiomName)) info
-      registerIdentNode sym body
-      let (is, _) = unfoldLambdas body
-      setIdentArgs sym (map (^. lambdaLhsBinder) is)
-    Nothing -> return ()
+  mapM_ builtinBody (a ^. Internal.axiomBuiltin)
   where
-    builtinBody :: Symbol -> Symbol -> Text -> Internal.BuiltinAxiom -> Maybe Node
-    builtinBody boolSym natSym natName = \case
-      Internal.BuiltinNatPrint -> Just $ writeLambda (mkTypeConstr (setInfoName natName mempty) natSym [])
-      Internal.BuiltinStringPrint -> Just $ writeLambda mkTypeString'
-      Internal.BuiltinBoolPrint -> Just $ writeLambda mkTypeBool'
-      Internal.BuiltinIOSequence -> Nothing
+    builtinBody :: Internal.BuiltinAxiom -> Sem r ()
+    builtinBody = \case
+      Internal.BuiltinNatPrint -> do
+        natName <- getNatName
+        natSym <- getNatSymbol
+        registerAxiomDef $ writeLambda (mkTypeConstr (setInfoName natName mempty) natSym [])
+      Internal.BuiltinStringPrint -> registerAxiomDef $ writeLambda mkTypeString'
+      Internal.BuiltinBoolPrint -> registerAxiomDef $ writeLambda mkTypeBool'
+      Internal.BuiltinIOSequence -> return ()
       Internal.BuiltinIOReadline ->
-        Just
+        registerAxiomDef
           ( mkLambda'
               mkTypeString'
               ( mkConstr'
@@ -577,11 +557,12 @@ goAxiomDef a = do
               )
           )
       Internal.BuiltinStringConcat ->
-        Just (mkLambda' mkTypeString' (mkLambda' mkTypeString' (mkBuiltinApp' OpStrConcat [mkVar' 1, mkVar' 0])))
+        registerAxiomDef (mkLambda' mkTypeString' (mkLambda' mkTypeString' (mkBuiltinApp' OpStrConcat [mkVar' 1, mkVar' 0])))
       Internal.BuiltinStringEq ->
-        Just (mkLambda' mkTypeString' (mkLambda' mkTypeString' (mkBuiltinApp' OpEq [mkVar' 1, mkVar' 0])))
+        registerAxiomDef (mkLambda' mkTypeString' (mkLambda' mkTypeString' (mkBuiltinApp' OpEq [mkVar' 1, mkVar' 0])))
       Internal.BuiltinStringToNat -> do
-        Just
+        boolSym <- getBoolSymbol
+        registerAxiomDef
           ( mkLambda'
               mkTypeString'
               ( mkLet'
@@ -595,19 +576,45 @@ goAxiomDef a = do
                   )
               )
           )
-      Internal.BuiltinNatToString ->
-        Just (mkLambda' (mkTypeConstr (setInfoName natName mempty) natSym []) (mkBuiltinApp' OpShow [mkVar' 0]))
-      Internal.BuiltinString -> Nothing
-      Internal.BuiltinIO -> Nothing
-      Internal.BuiltinTrace -> Nothing
+      Internal.BuiltinNatToString -> do
+        natName <- getNatName
+        natSym <- getNatSymbol
+        registerAxiomDef (mkLambda' (mkTypeConstr (setInfoName natName mempty) natSym []) (mkBuiltinApp' OpShow [mkVar' 0]))
+      Internal.BuiltinString -> return ()
+      Internal.BuiltinIO -> return ()
+      Internal.BuiltinTrace -> return ()
       Internal.BuiltinFail ->
-        Just (mkLambda' mkSmallUniv (mkLambda' (mkVar' 0) (mkBuiltinApp' OpFail [mkVar' 0])))
+        registerAxiomDef (mkLambda' mkSmallUniv (mkLambda' (mkVar' 0) (mkBuiltinApp' OpFail [mkVar' 0])))
 
     axiomType' :: Sem r Type
     axiomType' = runReader initIndexTable (goType (a ^. Internal.axiomType))
 
     writeLambda :: Type -> Node
     writeLambda ty = mkLambda' ty (mkConstr' (BuiltinTag TagWrite) [mkVar' 0])
+
+    getNatName :: Sem r Text
+    getNatName = (^. inductiveName) <$> getBuiltinInductiveInfo BuiltinNat
+
+    registerAxiomDef :: Node -> Sem r ()
+    registerAxiomDef body = do
+      let name = a ^. Internal.axiomName
+      sym <- freshSymbol
+      ty <- axiomType'
+      _identifierName <- topName name
+      let info =
+            IdentifierInfo
+              { _identifierLocation = Just $ name ^. nameLoc,
+                _identifierSymbol = sym,
+                _identifierType = ty,
+                _identifierArgsNum = 0,
+                _identifierIsExported = False,
+                _identifierBuiltin = Nothing,
+                _identifierName
+              }
+      registerIdent (mkIdentIndex name) info
+      registerIdentNode sym body
+      let (is, _) = unfoldLambdas body
+      setIdentArgsInfo sym (map (argumentInfoFromBinder . (^. lambdaLhsBinder)) is)
 
 fromPatternArg ::
   forall r.

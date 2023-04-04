@@ -32,6 +32,11 @@ getConstructorInfo tag = flip lookupConstructorInfo tag <$> getInfoTable
 getInductiveInfo :: (Member InfoTableBuilder r) => Symbol -> Sem r InductiveInfo
 getInductiveInfo sym = flip lookupInductiveInfo sym <$> getInfoTable
 
+getBuiltinInductiveInfo :: Member InfoTableBuilder r => BuiltinInductive -> Sem r InductiveInfo
+getBuiltinInductiveInfo b = do
+  tab <- getInfoTable
+  return $ fromJust (lookupBuiltinInductive tab b)
+
 getIdentifierInfo :: (Member InfoTableBuilder r) => Symbol -> Sem r IdentifierInfo
 getIdentifierInfo sym = flip lookupIdentifierInfo sym <$> getInfoTable
 
@@ -46,9 +51,7 @@ getIOSymbol = do
   return $ ci ^. constructorInductive
 
 getNatSymbol :: (Member InfoTableBuilder r) => Sem r Symbol
-getNatSymbol = do
-  tab <- getInfoTable
-  return $ fromJust (lookupBuiltinInductive tab BuiltinNat) ^. inductiveSymbol
+getNatSymbol = (^. inductiveSymbol) <$> getBuiltinInductiveInfo BuiltinNat
 
 checkSymbolDefined :: (Member InfoTableBuilder r) => Symbol -> Sem r Bool
 checkSymbolDefined sym = do
