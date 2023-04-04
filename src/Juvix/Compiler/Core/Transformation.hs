@@ -12,6 +12,7 @@ import Juvix.Compiler.Core.Data.TransformationId
 import Juvix.Compiler.Core.Error
 import Juvix.Compiler.Core.Options
 import Juvix.Compiler.Core.Transformation.Base
+import Juvix.Compiler.Core.Transformation.CheckExec
 import Juvix.Compiler.Core.Transformation.CheckGeb
 import Juvix.Compiler.Core.Transformation.ComputeTypeInfo
 import Juvix.Compiler.Core.Transformation.ConvertBuiltinTypes
@@ -49,5 +50,6 @@ applyTransformations ts tbl = foldM (flip appTrans) tbl ts
       EtaExpandApps -> return . etaExpansionApps
       DisambiguateNames -> return . disambiguateNames
       CheckGeb -> mapError (JuvixError @CoreError) . checkGeb
+      CheckExec -> mapError (JuvixError @CoreError) . checkExec
       LetFolding -> return . letFolding
       FoldTypeSynonyms -> return . foldTypeSynonyms

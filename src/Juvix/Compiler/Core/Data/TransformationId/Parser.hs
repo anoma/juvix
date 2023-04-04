@@ -82,6 +82,7 @@ transformationText = \case
   UnrollRecursion -> strUnrollRecursion
   DisambiguateNames -> strDisambiguateNames
   CheckGeb -> strCheckGeb
+  CheckExec -> strCheckExec
   LetFolding -> strLetFolding
   FoldTypeSynonyms -> strFoldTypeSynonyms
 
@@ -147,6 +148,9 @@ strDisambiguateNames = "disambiguate-names"
 
 strCheckGeb :: Text
 strCheckGeb = "check-geb"
+
+strCheckExec :: Text
+strCheckExec = "check-exec"
 
 strLetFolding :: Text
 strLetFolding = "let-folding"

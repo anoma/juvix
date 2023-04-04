@@ -294,5 +294,10 @@ tests =
       "Test047: Local Modules"
       $(mkRelDir ".")
       $(mkRelFile "test047.juvix")
-      $(mkRelFile "out/test047.out")
+      $(mkRelFile "out/test047.out"),
+    posTest
+      "Test048: String quoting"
+      $(mkRelDir ".")
+      $(mkRelFile "test048.juvix")
+      $(mkRelFile "out/test048.out")
   ]
