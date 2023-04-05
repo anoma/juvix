@@ -194,6 +194,10 @@ check-only:
 check: clean
 	@${MAKE} check-only
 
+.PHONY : bench
+bench: runtime submodules
+	@stack bench
+
 # -- Build requirements
 
 .PHONY: submodules
@@ -254,11 +258,6 @@ smoke: install submodules
 
 # -- Release
 
-.PHONY : changelog-updates
-changelog-updates :
+.PHONY : changelog
+changelog :
 	@github_changelog_generator
-	@pandoc CHANGELOG.md --from markdown --to org -o UPDATES-FOR-CHANGELOG.org
-
-.PHONY : bench
-bench: runtime submodules
-	@stack bench
