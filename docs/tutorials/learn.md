@@ -27,7 +27,7 @@ juvix repl
 
 The response should be similar to:
 
-```juvix
+```jrepl
 Juvix REPL version 0.3: https://juvix.org. Run :help for help
 OK loaded: ./.juvix-build/stdlib/Stdlib/Prelude.juvix
 Stdlib.Prelude>
@@ -41,7 +41,7 @@ commands type `:help`.
 
 You can try evaluating simple arithmetic expressions in the REPL:
 
-```juvix
+```jrepl
 Stdlib.Prelude> 3 + 4
 7
 Stdlib.Prelude> 1 + 3 * 7
@@ -62,7 +62,7 @@ natural number from a smaller one yields `0`.
 
 You can also try boolean expressions
 
-```juvix
+```jrepl
 Stdlib.Prelude> true
 true
 Stdlib.Prelude> not true
@@ -77,7 +77,7 @@ Stdlib.Prelude> if true 1 0
 
 and strings, pairs and lists:
 
-```juvix
+```jrepl
 Stdlib.Prelude> "Hello world!"
 "Hello world!"
 Stdlib.Prelude> (1, 2)
@@ -91,7 +91,7 @@ In fact, you can use all functions and types from the
 module of the [standard library](https://anoma.github.io/juvix-stdlib),
 which is preloaded by default.
 
-```juvix
+```jrepl
 Stdlib.Prelude> length (1 :: 2 :: nil)
 3
 Stdlib.Prelude> null (1 :: 2 :: nil)
@@ -136,7 +136,7 @@ evaluating `main`.
 
 To see the type of an expression, use the `:type` REPL command:
 
-```juvix
+```jrepl
 Stdlib.Prelude> :type 1
 Nat
 Stdlib.Prelude> :type true
@@ -300,7 +300,7 @@ It is not necessary to define a separate function to perform pattern
 matching. One can use the `case` syntax to pattern match an expression
 directly.
 
-```juvix
+```jrepl
 Stdlib.Prelude> case (1, 2) | (suc _, zero) := 0 | (suc _, suc x) := x | _ := 19
 1
 ```
@@ -365,7 +365,7 @@ even :=
     odd' zero := false;
     odd' (suc n) := even' n;
   in
-  even'
+  even';
 ```
 
 The functions `even'` and `odd'` are not visible outside `even`.
@@ -569,13 +569,16 @@ This is not acceptable if you care about performance. In an imperative
 language, one would use a simple loop going over the list without any
 memory allocation. In pseudocode:
 
-```juvix
-var sum : Nat := 0;
-while (lst /= nnil) {
+```pascal
+sum : Nat := 0;
+
+while (lst /= nil) do
+begin
   sum := sum + head lst;
   lst := tail lst;
-};
-return sum;
+end;
+
+result := sum;
 ```
 
 Fortunately, it is possible to rewrite this function to use _tail
@@ -613,16 +616,19 @@ imperative pseudocode for computing the nth Fibonacci number in linear
 time. The variables `cur` and `next` hold the last two computed
 Fibonacci numbers.
 
-```juvix
-var cur : Nat := 0;
-var next : Nat := 1;
-while (n /= 0) {
-  var tmp := next;
+```pascal
+cur : Nat := 0;
+next : Nat := 1;
+
+while (n /= 0) do
+begin
+  tmp := next;
   next := cur + next;
   cur := tmp;
   n := n - 1;
-};
-return cur;
+end;
+
+result := cur;
 ```
 
 An equivalent functional program is:
@@ -776,7 +782,7 @@ and the [Juvix program examples](../reference/examples.md).
     Analogously to the `map` function for lists, define a function
 
     ```juvix
-    tmap : (Nat -> Nat) -> Tree -> Tree
+    tmap : (Nat -> Nat) -> Tree -> Tree;
     ```
 
     which applies a function to all natural numbers stored in a tree.

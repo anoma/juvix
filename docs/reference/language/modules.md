@@ -60,6 +60,7 @@ module B;
     open A;
     x : Nat;
     x := zero;
+end;
 ```
 
 However, opening modules may create name collisions if you already have
