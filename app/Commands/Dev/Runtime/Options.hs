@@ -21,7 +21,6 @@ parseRuntimeOptions =
     runtimeSupportedTargets
     parseInputJuvixFile
 
-
 parseRuntimeCommand :: Parser RuntimeCommand
 parseRuntimeCommand =
   hsubparser $

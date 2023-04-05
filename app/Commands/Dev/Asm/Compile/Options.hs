@@ -17,7 +17,6 @@ asmSupportedTargets =
       TargetNative64
     ]
 
-
 parseAsmCompileOptions :: Parser AsmCompileOptions
 parseAsmCompileOptions =
   parseCompileOptions
