@@ -14,3 +14,8 @@ instance Pretty IsImplicit where
   pretty = \case
     Implicit -> "implicit"
     Explicit -> "explicit"
+
+isImplicit :: IsImplicit -> Bool
+isImplicit = \case
+  Implicit -> True
+  Explicit -> False

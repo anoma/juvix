@@ -161,7 +161,7 @@ instance HasExpressions FunctionDef where
         }
 
 instance HasExpressions InductiveParameter where
-  leafExpressions _ param@(InductiveParameter _) = do
+  leafExpressions _ param@(InductiveParameter {}) = do
     pure param
 
 instance HasExpressions InductiveDef where
@@ -288,7 +288,7 @@ unfoldTypeAbsType t = case t of
   _ -> ([], t)
 
 foldExplicitApplication :: Expression -> [Expression] -> Expression
-foldExplicitApplication f = foldApplication f . zip (repeat Explicit)
+foldExplicitApplication f = foldApplication f . map (Explicit,)
 
 foldApplication :: Expression -> [(IsImplicit, Expression)] -> Expression
 foldApplication f = \case

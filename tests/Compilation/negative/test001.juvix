@@ -10,5 +10,3 @@ f _ nil := 0;
 
 main : Nat;
 main := f (1 :: nil) (2 :: nil);
-
-end;

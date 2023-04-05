@@ -382,7 +382,8 @@ goInductiveParameter f =
       | isSmallUni u ->
           return
             InductiveParameter
-              { _inductiveParamName = var
+              { _inductiveParamName = var,
+                _inductiveParamImplicit = f ^. Abstract.paramImplicit
               }
     (Just {}, _) -> unsupported "only type variables of small types are allowed"
     (Nothing, _) -> unsupported "unnamed inductive parameters"

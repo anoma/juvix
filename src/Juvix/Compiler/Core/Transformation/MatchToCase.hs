@@ -199,11 +199,18 @@ goMatchToCase recur node = case node of
         err' tab args =
           case mtag of
             Just tag ->
-              err (parensIf (argsNum > 0) (hsep (annotate (AnnKind KNameConstructor) (pretty (ci ^. constructorName)) : replicate argsNum "_")) : args)
+              err
+                ( parensIf
+                    (argsNum > 0)
+                    (hsep (ctrName : replicate argsNum "_"))
+                    : args
+                )
               where
                 ci = lookupConstructorInfo tab tag
-                paramsNum = getTypeParamsNum tab (ci ^. constructorType)
+                ii = lookupInductiveInfo tab (ci ^. constructorInductive)
+                paramsNum = length (ii ^. inductiveParams)
                 argsNum = ci ^. constructorArgsNum - paramsNum
+                ctrName = annotate (AnnKind KNameConstructor) (pretty (ci ^. constructorName))
             Nothing ->
               err ("_" : args)
 
@@ -214,13 +221,19 @@ goMatchToCase recur node = case node of
     compileBranch err bindersNum vs col matrix tag = do
       tab <- ask
       let ci = lookupConstructorInfo tab tag
-          paramsNum = getTypeParamsNum tab (ci ^. constructorType)
+          ii = lookupInductiveInfo tab (ci ^. constructorInductive)
+          paramsNum = length (ii ^. inductiveParams)
           argsNum = length (typeArgs (ci ^. constructorType))
           bindersNum' = bindersNum + argsNum
           vs' = [bindersNum .. bindersNum + argsNum - 1]
+          ctrName = annotate (AnnKind KNameConstructor) (pretty (ci ^. constructorName))
           err' args =
             err
-              (parensIf (argsNum > paramsNum) (hsep (annotate (AnnKind KNameConstructor) (pretty (ci ^. constructorName)) : drop paramsNum (take argsNum args))) : drop argsNum args)
+              ( parensIf
+                  (argsNum > paramsNum)
+                  (hsep (ctrName : drop paramsNum (take argsNum args)))
+                  : drop argsNum args
+              )
       binders' <- getBranchBinders col matrix tag
       matrix' <- getBranchMatrix col matrix tag
       body <- compile err' bindersNum' (vs' ++ vs) matrix'

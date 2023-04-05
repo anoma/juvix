@@ -51,7 +51,7 @@ data ParameterInfo = ParameterInfo
   { _paramName :: Text,
     _paramLocation :: Maybe Location,
     _paramKind :: Type,
-    _paramIsImplicit :: Bool
+    _paramIsImplicit :: IsImplicit
   }
 
 makeLenses ''InfoTable
