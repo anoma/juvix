@@ -45,6 +45,12 @@ getTypeParams tab ty = filter (isTypeConstr tab) (typeArgs ty)
 getTypeParamsNum :: InfoTable -> Type -> Int
 getTypeParamsNum tab ty = length $ getTypeParams tab ty
 
+filterOutTypeSynonyms :: InfoTable -> InfoTable
+filterOutTypeSynonyms tab = pruneInfoTable tab'
+  where
+    tab' = tab {_infoIdentifiers = idents'}
+    idents' = HashMap.filter (\ii -> not (isTypeConstr tab (ii ^. identifierType))) (tab ^. infoIdentifiers)
+
 -- True for nodes whose evaluation immediately returns a value, i.e.,
 -- no reduction or memory allocation in the runtime is required.
 isImmediate :: Node -> Bool

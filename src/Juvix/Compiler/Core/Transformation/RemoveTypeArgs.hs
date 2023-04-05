@@ -4,7 +4,6 @@ module Juvix.Compiler.Core.Transformation.RemoveTypeArgs
   )
 where
 
-import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Core.Data.BinderList qualified as BL
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Pretty
@@ -144,12 +143,6 @@ convertInductive tab ii =
 
 convertAxiom :: InfoTable -> AxiomInfo -> AxiomInfo
 convertAxiom tab = over axiomType (convertNode tab)
-
-filterOutTypeSynonyms :: InfoTable -> InfoTable
-filterOutTypeSynonyms tab = pruneInfoTable tab'
-  where
-    tab' = tab {_infoIdentifiers = idents'}
-    idents' = HashMap.filter (\ii -> not (isTypeConstr tab (ii ^. identifierType))) (tab ^. infoIdentifiers)
 
 removeTypeArgs :: InfoTable -> InfoTable
 removeTypeArgs tab =

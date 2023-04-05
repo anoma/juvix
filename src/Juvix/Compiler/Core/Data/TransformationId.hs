@@ -20,6 +20,7 @@ data TransformationId
   | CheckGeb
   | CheckExec
   | LetFolding
+  | FoldTypeSynonyms
   deriving stock (Data, Bounded, Enum, Show)
 
 data PipelineId
@@ -57,7 +58,7 @@ toStrippedTransformations =
   toEvalTransformations ++ [CheckExec, LambdaLetRecLifting, LetFolding, TopEtaExpand, MoveApps, RemoveTypeArgs]
 
 toGebTransformations :: [TransformationId]
-toGebTransformations = toEvalTransformations ++ [CheckGeb, LetRecLifting, LetFolding, UnrollRecursion, ComputeTypeInfo]
+toGebTransformations = toEvalTransformations ++ [CheckGeb, LetRecLifting, LetFolding, UnrollRecursion, FoldTypeSynonyms, ComputeTypeInfo]
 
 pipeline :: PipelineId -> [TransformationId]
 pipeline = \case
