@@ -19,9 +19,9 @@ module Juvix.Compiler.Pipeline.Package
 where
 
 import Data.Aeson (genericToEncoding, genericToJSON)
-import Data.ByteString qualified as ByteString
 import Data.Aeson.BetterErrors
 import Data.Aeson.TH
+import Data.ByteString qualified as ByteString
 import Data.Kind qualified as GHC
 import Data.Versions
 import Data.Yaml
@@ -155,8 +155,8 @@ readPackage ::
 readPackage root buildDir = do
   bs <- readFileBS' yamlPath
   if
-    | ByteString.null bs -> return emptyPackage
-    | otherwise -> either (throw . pack . prettyPrintParseException) (processPackage buildDir) (decodeEither' bs)
+      | ByteString.null bs -> return emptyPackage
+      | otherwise -> either (throw . pack . prettyPrintParseException) (processPackage buildDir) (decodeEither' bs)
   where
     yamlPath = root <//> juvixYamlFile
 
