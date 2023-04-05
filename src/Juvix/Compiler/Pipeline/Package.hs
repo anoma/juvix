@@ -19,6 +19,7 @@ module Juvix.Compiler.Pipeline.Package
 where
 
 import Data.Aeson (genericToEncoding, genericToJSON)
+import Data.ByteString qualified as ByteString
 import Data.Aeson.BetterErrors
 import Data.Aeson.TH
 import Data.Kind qualified as GHC
@@ -144,7 +145,7 @@ globalPackage =
       _packageBuildDir = Nothing
     }
 
--- | given some directory d it tries to read the file d/juvix.yaml and parse its contents
+-- | Given some directory d it tries to read the file d/juvix.yaml and parse its contents
 readPackage ::
   forall r.
   (Members '[Files, Error Text] r) =>
@@ -153,7 +154,9 @@ readPackage ::
   Sem r Package
 readPackage root buildDir = do
   bs <- readFileBS' yamlPath
-  either (throw . pack . prettyPrintParseException) (processPackage buildDir) (decodeEither' bs)
+  if
+    | ByteString.null bs -> return emptyPackage
+    | otherwise -> either (throw . pack . prettyPrintParseException) (processPackage buildDir) (decodeEither' bs)
   where
     yamlPath = root <//> juvixYamlFile
 

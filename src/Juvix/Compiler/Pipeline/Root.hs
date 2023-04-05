@@ -1,7 +1,6 @@
 module Juvix.Compiler.Pipeline.Root where
 
 import Control.Exception qualified as IO
-import Data.ByteString qualified as ByteString
 import Juvix.Compiler.Pipeline.Package
 import Juvix.Extra.Paths qualified as Paths
 import Juvix.Prelude
@@ -48,14 +47,9 @@ findRootAndChangeDir minputFileDir mbuildDir _rootsInvokeDir = do
           let _rootsPackageGlobal = True
           return Roots {..}
         Just yamlPath -> do
-          bs <- ByteString.readFile (toFilePath yamlPath)
-          let isEmpty = ByteString.null bs
-              _rootsRootDir = parent yamlPath
+          let _rootsRootDir = parent yamlPath
               _rootsPackageGlobal = False
-          _rootsPackage <-
-            if
-                | isEmpty -> return emptyPackage
-                | otherwise -> readPackageIO _rootsRootDir (Abs _rootsBuildDir)
+          _rootsPackage <- readPackageIO _rootsRootDir (Abs _rootsBuildDir)
           return Roots {..}
 
 getBuildDir :: Maybe (SomeBase Dir) -> Path Abs Dir -> Path Abs Dir -> Path Abs Dir
