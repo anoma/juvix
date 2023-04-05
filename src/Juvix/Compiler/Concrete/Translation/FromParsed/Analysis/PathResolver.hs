@@ -61,6 +61,9 @@ iniResolverState =
       _resolverFiles = mempty
     }
 
+withEnvRoot :: Members '[Reader ResolverEnv] r => Path Abs Dir -> Sem r a -> Sem r a
+withEnvRoot root' = local (set envRoot root')
+
 mkPackageInfo ::
   forall r.
   (Members '[Files, Error Text, Reader ResolverEnv] r) =>
@@ -68,7 +71,7 @@ mkPackageInfo ::
   Path Abs Dir ->
   Sem r PackageInfo
 mkPackageInfo mpackageEntry _packageRoot = do
-  let buildDir = maybe (rootBuildDir _packageRoot) (someBaseToAbs _packageRoot . (^. entryPointBuildDir)) mpackageEntry
+  let buildDir :: Path Abs Dir = maybe (rootBuildDir _packageRoot) (someBaseToAbs _packageRoot . (^. entryPointBuildDir)) mpackageEntry
       buildDirDep :: Maybe (SomeBase Dir)
         | isJust mpackageEntry = Just (Abs buildDir)
         | otherwise = Nothing
@@ -77,6 +80,7 @@ mkPackageInfo mpackageEntry _packageRoot = do
   let deps :: [Dependency] = _packagePackage ^. packageDependencies
   depsPaths <- mapM getDependencyPath deps
   ensureStdlib _packageRoot buildDir deps
+  -- FIXME do not scan files when not in a project
   files :: [Path Rel File] <-
     map (fromJust . stripProperPrefix _packageRoot) <$> walkDirRelAccum juvixAccum _packageRoot []
   let _packageRelativeFiles = HashSet.fromList files
@@ -113,7 +117,7 @@ registerDependencies' = do
       | isGlobal -> do
           glob <- globalRoot
           let globDep = Dependency (Abs glob)
-          local (set envRoot glob) (addDependency' globDep)
+          addDependency' globDep
       | otherwise -> addDependency' (Dependency (Abs (e ^. entryPointRoot)))
 
 addDependency' ::
@@ -129,7 +133,7 @@ addDependencyHelper ::
   Sem r ()
 addDependencyHelper me d = do
   p <- getDependencyPath d
-  unlessM (dependencyCached d) $ do
+  unlessM (dependencyCached d) $ withEnvRoot p $ do
     pkgInfo <- mkPackageInfo me p
     modify' (set (resolverPackages . at p) (Just pkgInfo))
     forM_ (pkgInfo ^. packageRelativeFiles) $ \f -> do
