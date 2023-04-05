@@ -80,7 +80,6 @@ mkPackageInfo mpackageEntry _packageRoot = do
   let deps :: [Dependency] = _packagePackage ^. packageDependencies
   depsPaths <- mapM getDependencyPath deps
   ensureStdlib _packageRoot buildDir deps
-  -- FIXME do not scan files when not in a project
   files :: [Path Rel File] <-
     map (fromJust . stripProperPrefix _packageRoot) <$> walkDirRelAccum juvixAccum _packageRoot []
   let _packageRelativeFiles = HashSet.fromList files
