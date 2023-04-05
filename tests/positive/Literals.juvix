@@ -1,8 +1,11 @@
 module Literals;
 
-axiom Int : Type;
-axiom String : Type;
-axiom + : Int → Int → Int;
+axiom
+Int : Type;
+axiom
+String : Type;
+axiom
++ : Int → Int → Int;
 
 a : Int;
 a := 12313;

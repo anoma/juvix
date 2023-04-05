@@ -2,7 +2,8 @@ module M;
 
 module N;
   module O;
-    axiom A : Type;
+    axiom
+    A : Type;
   end;
 end;
 
@@ -12,4 +13,5 @@ module O;
   
 end;
 
-axiom B : O.A;
+axiom
+B : O.A;

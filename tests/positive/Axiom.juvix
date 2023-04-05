@@ -1,3 +1,4 @@
 module Axiom;
 
-axiom Action : Type;
+axiom
+Action : Type;

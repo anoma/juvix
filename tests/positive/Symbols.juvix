@@ -29,7 +29,8 @@ infixl 7 ·;
 主功能 : Nat;
 主功能 := （0）;
 
-axiom = : Type;
+axiom
+= : Type;
 
 K : Nat → Nat → Nat;
 K =a@zero (=) := =a · =;

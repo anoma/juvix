@@ -1,7 +1,8 @@
 module Operators;
 
 infixl 5 +;
-axiom + : Type → Type → Type;
+axiom
++ : Type → Type → Type;
 
 plus : Type → Type → Type;
 plus := (+);
