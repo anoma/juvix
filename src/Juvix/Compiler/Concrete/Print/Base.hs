@@ -206,12 +206,12 @@ instance PrettyPrint (TypeSignature 'Scoped) where
       ?<> builtin'
       ?<> termin'
       ?<> ( name'
-                <+> noLoc P.kwColon
-                  <> oneLineOrNext
-                    ( type'
-                        <+?> body'
-                    )
-            )
+              <+> noLoc P.kwColon
+                <> oneLineOrNext
+                  ( type'
+                      <+?> body'
+                  )
+          )
 
 instance PrettyPrint Pattern where
   ppCode = ppMorpheme
