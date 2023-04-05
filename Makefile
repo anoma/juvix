@@ -21,6 +21,13 @@ METAFILES:=README.md \
 		   CONTRIBUTING.md \
 		   LICENSE.md
 
+STACKFLAGS?=--jobs $(THREADS)
+STACKTESTFLAGS?=--ta --hide-successes --ta --ansi-tricks=false
+SMOKEFLAGS?=--color --diff=git
+STACK?=stack
+
+JUVIXBIN?=juvix
+
 ifeq ($(UNAME), Darwin)
 	THREADS := $(shell sysctl -n hw.logicalcpu)
 else ifeq ($(UNAME), Linux)
@@ -30,7 +37,7 @@ else
 endif
 
 clean: clean-runtime
-	@stack clean --full
+	@${STACK} clean --full
 	@rm -rf .hie
 	@rm -rf book
 
@@ -47,7 +54,7 @@ clean-juvix-build:
 	@find . -type d -name '.juvix-build' | xargs rm -rf
 
 repl:
-	@stack ghci Juvix:lib
+	@${STACK} ghci Juvix:lib ${STACKFLAGS}
 
 # ------------------------------------------------------------------------------
 # -- The Juvix Book
@@ -61,13 +68,13 @@ html-examples: $(EXAMPLES)
 $(EXAMPLES):
 	$(eval OUTPUTDIR=$(EXAMPLEHTMLOUTPUT)/$(dir $@))
 	@mkdir -p ${OUTPUTDIR}
-	@juvix html $(EXAMPLEMILESTONE)/$@ --output-dir=$(CURDIR)/${OUTPUTDIR}
+	@${JUVIXBIN} html $(EXAMPLEMILESTONE)/$@ --output-dir=$(CURDIR)/${OUTPUTDIR}
 
 .PHONY: demo-example
 demo-example:
 	$(eval OUTPUTDIR=$(EXAMPLEHTMLOUTPUT)/Demo)
 	@mkdir -p ${OUTPUTDIR}
-	@juvix html $(DEMO_EXAMPLE) --output-dir=$(CURDIR)/${OUTPUTDIR}
+	@${JUVIXBIN} html $(DEMO_EXAMPLE) --output-dir=$(CURDIR)/${OUTPUTDIR}
 
 # -- MDBook
 
@@ -97,7 +104,7 @@ haddock :
 # -- Codebase Health
 # ------------------------------------------------------------------------------
 
-ORMOLU?=stack exec -- ormolu
+ORMOLU?=${STACK} exec -- ormolu
 ORMOLUFILES = $(shell git ls-files '*.hs' '*.hs-boot' | grep -v '^contrib/')
 ORMOLUFLAGS?=--no-cabal
 ORMOLUMODE?=inplace
@@ -130,19 +137,19 @@ JUVIXTYPECHECKFLAGS?=--only-errors
 .PHONY: format-juvix-examples
 format-juvix-examples:
 	@for file in $(JUVIXEXAMPLEFILES); do \
-		juvix format $(JUVIXFORMATFLAGS) "$$file"; \
+		${JUVIXBIN} format $(JUVIXFORMATFLAGS) "$$file"; \
 	done
 
 .PHONY: check-format-juvix-examples
 check-format-juvix-examples:
 	@export JUVIXFORMATFLAGS=--check
-	@make format-juvix-examples
+	@${MAKE} format-juvix-examples
 
 .PHONY: typecheck-juvix-examples
 typecheck-juvix-examples:
 	@for file in $(JUVIXEXAMPLEFILES); do \
 		echo "Checking $$file"; \
-		juvix typecheck "$$file" $(JUVIXTYPECHECKFLAGS); \
+		${JUVIXBIN} typecheck "$$file" $(JUVIXTYPECHECKFLAGS); \
 	done
 
 .PHONY: check-ormolu
@@ -174,25 +181,25 @@ pre-commit :
 # -- Build-Install-Test-Release
 # ------------------------------------------------------------------------------
 
-STACKFLAGS?=--jobs $(THREADS)
-STACKTESTFLAGS?=--ta --hide-successes --ta --ansi-tricks=false
-SMOKEFLAGS?=--color --diff=git
-
 .PHONY: check-only
 check-only:
-	@${MAKE} build
-	@${MAKE} install
-	@${MAKE} test
-	@${MAKE} smoke
-	@${MAKE} check-format-juvix-examples
-	@${MAKE} typecheck-juvix-examples
-	@${MAKE} check-ormolu
-	@export SKIP=ormolu,format-juvix-examples,typecheck-juvix-examples
-	@${MAKE} pre-commit
+	@${MAKE} build \
+		&& ${MAKE} install \
+		&& ${MAKE} test \
+		&& ${MAKE} smoke \
+		&& ${MAKE} check-format-juvix-examples \
+		&& ${MAKE} typecheck-juvix-examples \
+		&& ${MAKE} check-ormolu \
+		&& export SKIP=ormolu,format-juvix-examples,typecheck-juvix-examples \
+		&& ${MAKE} pre-commit
 
 .PHONY: check
 check: clean
 	@${MAKE} check-only
+
+.PHONY : bench
+bench: runtime submodules
+	@${STACK} bench ${STACKFLAGS}
 
 # -- Build requirements
 
@@ -203,11 +210,11 @@ submodules:
 
 .PHONY: build
 build: submodules runtime
-	stack build ${STACKFLAGS}
+	@${STACK} build ${STACKFLAGS}
 
 .PHONY: fast-build
 fast-build: submodules runtime
-	stack build --fast ${STACKFLAGS}
+	@${STACK} build --fast ${STACKFLAGS}
 
 .PHONY: runtime
 runtime:
@@ -217,29 +224,29 @@ runtime:
 
 .PHONY : install
 install: runtime submodules
-	@stack install ${STACKFLAGS}
+	@${STACK} install ${STACKFLAGS}
 
 .PHONY : fast-install
 fast-install: runtime submodules
-	@stack install --fast ${STACKFLAGS}
+	@${STACK} install --fast ${STACKFLAGS}
 
 # -- Testing
 
 .PHONY : test
 test: build runtime submodules
-	@stack test ${STACKFLAGS} ${STACKTESTFLAGS}
+	@${STACK} test ${STACKFLAGS} ${STACKTESTFLAGS}
 
 .PHONY : fast-test
 fast-test: fast-build
-	@stack test --fast ${STACKFLAGS} ${STACKTESTFLAGS}
+	@${STACK} test --fast ${STACKFLAGS} ${STACKTESTFLAGS}
 
 .PHONY : test-skip-slow
 test-skip-slow:
-	@stack test ${STACKFLAGS} ${STACKTESTFLAGS} --ta '-p "! /slow tests/"'
+	@${STACK} test ${STACKFLAGS} ${STACKTESTFLAGS} --ta '-p "! /slow tests/"'
 
 .PHONY : fast-test-skip-slow
 fast-test-skip-slow:
-	@stack test --fast ${STACKFLAGS} ${STACKTESTFLAGS} --ta '-p "! /slow tests/"'
+	@${STACK} test --fast ${STACKFLAGS} ${STACKTESTFLAGS} --ta '-p "! /slow tests/"'
 
 SMOKE := $(shell command -v smoke 2> /dev/null)
 
@@ -254,11 +261,6 @@ smoke: install submodules
 
 # -- Release
 
-.PHONY : changelog-updates
-changelog-updates :
+.PHONY : changelog
+changelog :
 	@github_changelog_generator
-	@pandoc CHANGELOG.md --from markdown --to org -o UPDATES-FOR-CHANGELOG.org
-
-.PHONY : bench
-bench: runtime submodules
-	@stack bench
