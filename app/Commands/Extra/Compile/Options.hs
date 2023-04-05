@@ -33,8 +33,16 @@ data CompileOptions = CompileOptions
 
 makeLenses ''CompileOptions
 
-parseCompileOptions :: Parser (AppPath File) -> Parser CompileOptions
-parseCompileOptions parseInputFile = do
+type SupportedTargets = NonEmpty CompileTarget
+
+allTargets :: [CompileTarget]
+allTargets = allElements
+
+parseCompileOptions ::
+  SupportedTargets ->
+  Parser (AppPath File) ->
+  Parser CompileOptions
+parseCompileOptions supportedTargets parseInputFile = do
   _compileDebug <-
     switch
       ( short 'g'
@@ -65,13 +73,13 @@ parseCompileOptions parseInputFile = do
           <> long "only-term"
           <> help "Produce term output only (for targets: geb)"
       )
-  _compileTarget <- optCompileTarget
+  _compileTarget <- optCompileTarget supportedTargets
   _compileOutputFile <- optional parseGenericOutputFile
   _compileInputFile <- parseInputFile
   pure CompileOptions {..}
 
-optCompileTarget :: Parser CompileTarget
-optCompileTarget =
+optCompileTarget :: SupportedTargets -> Parser CompileTarget
+optCompileTarget supportedTargets =
   option
     (eitherReader parseTarget)
     ( long "target"
@@ -79,13 +87,15 @@ optCompileTarget =
         <> metavar "TARGET"
         <> value TargetNative64
         <> showDefault
-        <> help ("select a target: " <> show allTargets)
-        <> completeWith (map show allTargets)
+        <> help ("select a target: " <> show supportedTargets)
+        <> completeWith (map show (toList supportedTargets))
     )
   where
-    allTargets :: [CompileTarget]
-    allTargets = allElements
     parseTarget :: String -> Either String CompileTarget
-    parseTarget txt = maybe err return (lookup (map toLower txt) [(Prelude.show t, t) | t <- allElements])
+    parseTarget txt =
+      maybe err return $
+        lookup
+          (map toLower txt)
+          [(Prelude.show t, t) | t <- toList supportedTargets]
       where
         err = Left $ "unrecognised target: " <> txt
