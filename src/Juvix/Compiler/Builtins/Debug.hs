@@ -10,11 +10,10 @@ registerTrace f = do
   let ftype = f ^. axiomType
       u = ExpressionUniverse (Universe {_universeLevel = Nothing, _universeLoc = error "Universe with no location"})
   a <- freshVar "a"
-  b <- freshVar "b"
-  let freeVars = HashSet.fromList [a, b]
+  let freeVars = HashSet.fromList [a]
   unless
-    ((ftype ==% (u <>--> u <>--> a --> b --> b)) freeVars)
-    (error "trace must be of type {A : Type} -> {B : Type} -> A -> B -> B")
+    ((ftype ==% (u <>--> a --> a)) freeVars)
+    (error "trace must be of type {A : Type} -> A -> A")
   registerBuiltin BuiltinTrace (f ^. axiomName)
 
 registerFail :: (Members '[Builtins, NameIdGen] r) => AxiomDef -> Sem r ()

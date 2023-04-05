@@ -271,5 +271,6 @@ builtinOpArgTypes = \case
   OpShow -> [mkDynamic']
   OpStrConcat -> [mkTypeString', mkTypeString']
   OpStrToInt -> [mkTypeString']
-  OpTrace -> [mkDynamic', mkDynamic']
+  OpSeq -> [mkDynamic', mkDynamic']
+  OpTrace -> [mkDynamic']
   OpFail -> [mkTypeString']

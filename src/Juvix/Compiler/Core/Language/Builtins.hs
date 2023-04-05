@@ -16,6 +16,7 @@ data BuiltinOp
   | OpShow
   | OpStrConcat
   | OpStrToInt
+  | OpSeq
   | OpTrace
   | OpFail
   deriving stock (Eq)
@@ -45,7 +46,8 @@ builtinOpArgsNum = \case
   OpShow -> 1
   OpStrConcat -> 2
   OpStrToInt -> 1
-  OpTrace -> 2
+  OpSeq -> 2
+  OpTrace -> 1
   OpFail -> 1
 
 builtinConstrArgsNum :: BuiltinDataTag -> Int
