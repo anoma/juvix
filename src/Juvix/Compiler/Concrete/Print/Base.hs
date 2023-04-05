@@ -326,8 +326,12 @@ ppInductiveSignature InductiveDef {..} = do
       ty' = case _inductiveType of
         Nothing -> Nothing
         Just e -> Just (noLoc P.kwColon <+> ppCode e)
+      positive'
+        | _inductivePositive = (<> line) <$> Just (noLoc P.kwPositive)
+        | otherwise = Nothing
   builtin'
-    <?+> ppCode _inductiveKw
+    ?<> positive'
+    ?<> ppCode _inductiveKw
     <+> name'
     <+?> params'
     <+?> ty'
