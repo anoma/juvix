@@ -12,6 +12,7 @@ data Roots = Roots
     _rootsBuildDir :: Path Abs Dir,
     _rootsInvokeDir :: Path Abs Dir
   }
+  deriving stock (Show)
 
 makeLenses ''Roots
 
@@ -39,16 +40,17 @@ findRootAndChangeDir minputFileDir mbuildDir _rootsInvokeDir = do
     go = do
       cwd <- getCurrentDir
       l <- findFile (possiblePaths cwd) Paths.juvixYamlFile
-      let _rootsBuildDir = getBuildDir mbuildDir _rootsInvokeDir cwd
       case l of
         Nothing -> do
           _rootsPackage <- readGlobalPackageIO
           _rootsRootDir <- runM (runFilesIO globalRoot)
           let _rootsPackageGlobal = True
+              _rootsBuildDir = getBuildDir mbuildDir _rootsInvokeDir _rootsRootDir
           return Roots {..}
         Just yamlPath -> do
           let _rootsRootDir = parent yamlPath
               _rootsPackageGlobal = False
+              _rootsBuildDir = getBuildDir mbuildDir _rootsInvokeDir _rootsRootDir
           _rootsPackage <- readPackageIO _rootsRootDir (Abs _rootsBuildDir)
           return Roots {..}
 

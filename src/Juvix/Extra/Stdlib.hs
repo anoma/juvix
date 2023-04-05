@@ -25,8 +25,11 @@ stdlibFiles = mapMaybe helper $(stdlibDir)
 
 ensureStdlib :: Members '[Files] r => Path Abs Dir -> Path Abs Dir -> [Dependency] -> Sem r ()
 ensureStdlib rootDir buildDir deps =
-  whenJust (firstJust (isStdLib rootDir buildDir) deps) $ \stdlibRoot ->
+  whenJust (packageStdlib rootDir buildDir deps) $ \stdlibRoot ->
     runReader stdlibRoot updateStdlib
+
+packageStdlib :: Path Abs Dir -> Path Abs Dir -> [Dependency] -> Maybe (Path Abs Dir)
+packageStdlib rootDir buildDir = firstJust (isStdLib rootDir buildDir)
 
 isStdLib :: Path Abs Dir -> Path Abs Dir -> Dependency -> Maybe (Path Abs Dir)
 isStdLib rootDir buildDir (Dependency dep) =

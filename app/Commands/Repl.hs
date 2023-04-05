@@ -315,7 +315,7 @@ defaultPreludeEntryPoint = do
       root = roots ^. rootsRootDir
       pkg = roots ^. rootsPackage
       pkgGlobal = roots ^. rootsPackageGlobal
-      mstdlibPath = firstJust (isStdLib root buildDir) (pkg ^. packageDependencies)
+      mstdlibPath = packageStdlib root buildDir (pkg ^. packageDependencies)
   return $ case mstdlibPath of
     Just stdlibPath ->
       Just

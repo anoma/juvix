@@ -9,7 +9,6 @@ import Juvix.Compiler.Core.Options qualified as Core
 import Juvix.Compiler.Internal.Pretty.Options qualified as Internal
 import Juvix.Compiler.Pipeline
 import Juvix.Data.Error.GenericError qualified as E
-import Juvix.Extra.Paths
 
 data GlobalOptions = GlobalOptions
   { _globalNoColors :: Bool,
@@ -140,10 +139,8 @@ parseBuildDir m = do
   _pathPath <-
     option
       someDirOpt
-      ( value (Rel relBuildDir)
-          <> metavar "BUILD_DIR"
+      (metavar "BUILD_DIR"
           <> action "directory"
-          <> showDefault
           <> m
       )
   pure AppPath {_pathIsInput = False, ..}

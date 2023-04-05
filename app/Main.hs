@@ -15,4 +15,8 @@ main = do
   let mbuildDir = _runAppIOArgsGlobalOptions ^? globalBuildDir . _Just . pathPath
   mainFileDir <- topCommandInputFile cli
   _runAppIOArgsRoots <- findRootAndChangeDir mainFileDir mbuildDir invokeDir
-  runFinal (resourceToIOFinal (embedToFinal @IO (runAppIO RunAppIOArgs {..} (runTopCommand cli))))
+  runFinal
+    . resourceToIOFinal
+    . embedToFinal @IO
+    . runAppIO RunAppIOArgs {..}
+    $ runTopCommand cli
