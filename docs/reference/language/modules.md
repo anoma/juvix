@@ -33,8 +33,11 @@ qualified.
 ```juvix
 -- A.juvix
 module A;
-   axiom Nat : Type;
-   axiom zero : Nat;
+   axiom
+   Nat : Type;
+
+   axiom
+   zero : Nat;
 end;
 
 -- B.juvix
@@ -50,8 +53,11 @@ all its names by their unqualified name.
 ```juvix
 -- A.juvix
 module A;
-   axiom Nat : Type;
-   axiom zero : Nat;
+   axiom
+   Nat : Type;
+
+   axiom
+   zero : Nat;
 end;
 
 -- B.juvix
@@ -71,15 +77,21 @@ ambiguous. For example, in module `B` below, the name `a` is ambiguous.
 ```juvix
 -- A.juvix
 module A;
-axiom A : Type;
-axiom a : A;
+axiom
+A : Type;
+
+axiom
+a : A;
 end;
 
 -- B.juvix
 module B;
+
 import A;
 open A;
-axiom a : A;
+
+axiom
+a : A;
 
 x := a;
 end;
@@ -93,7 +105,10 @@ module B;
 import A;
 open A hiding {a};
 
-axiom a : A;
+axiom
+a : A;
+
+
 x := a;
 
 end;
@@ -121,7 +136,10 @@ The `hiding` keyword can be used within an `open-import` statement.
 -- B.juvix
 module A;
 open import A hiding {a};
-axiom a : A;
+
+axiom
+a : A;
+
 x := a;
 end;
 ```
@@ -139,8 +157,12 @@ module `B`.
 ```juvix
 -- A.juvix
 module A;
-axiom A : Type;
-axiom a : A;
+axiom
+A : Type;
+
+axiom
+a : A;
+
 end;
 
 -- B.juvix

@@ -13,7 +13,8 @@ go n s :=
 
 module M;
   infixr 4 ,;
-  axiom , : String → String → String;
+  axiom
+  , : String → String → String;
 end;
 
 -- qualified commas
@@ -47,19 +48,24 @@ t3 :=
     , "1234";
 
 infixl 7 +l7;
-axiom +l7 : String → String → String;
+axiom
++l7 : String → String → String;
 
 infixr 3 +r3;
-axiom +r3 : String → String → String;
+axiom
++r3 : String → String → String;
 
 infixl 1 +l1;
-axiom +l1 : String → String → String;
+axiom
++l1 : String → String → String;
 
 infixl 6 +l6;
-axiom +l6 : String → String → String;
+axiom
++l6 : String → String → String;
 
 infixr 6 +r6;
-axiom +r6 : String → String → String;
+axiom
++r6 : String → String → String;
 
 -- nesting of chains
 t : String;
@@ -119,6 +125,10 @@ exampleFunction2 :
       + 100
       + 100
       + 100;
+
+positive
+type T0 (A : Type) :=
+  | c0 : (A -> T0 A) -> T0 A;
 
 module Patterns;
   infixr 4 ,;

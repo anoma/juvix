@@ -6,10 +6,13 @@ a type, and there exists a term _x_ that inhabits _A_. Then the program
 would look like the following.
 
 ```juvix
-    module Example;
-     axiom A : Type;
-     axiom x : A;
-    end;
+module Example;
+axiom
+A : Type;
+
+axiom
+x : A;
+end;
 ```
 
 Terms introduced by the `axiom` keyword lack any computational content.
