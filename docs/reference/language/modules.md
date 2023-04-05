@@ -15,7 +15,7 @@ end;
 A <u>Juvix project</u> is a collection of Juvix modules inside one main
 project folder containing a metadata file named `juvix.yaml`. Each Juvix
 file has to define a <u>module</u> of the same name. The name of the
-module must coincide with the path of the its file relative to its
+module must coincide with the path of its file relative to its
 project's root directory. For example, if the file is
 `root/Data/List.juvix` then the module must be called `Data.List`,
 assuming `root` is the project's folder.
@@ -130,7 +130,7 @@ We simplify it by the expression:
 open import Prelude;
 ```
 
-The `hiding` keyword can be used within an `open-import` statement.
+The `hiding` keyword can be used within a `open-import` statement.
 
 ```juvix
 -- B.juvix

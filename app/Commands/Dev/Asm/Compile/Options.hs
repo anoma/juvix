@@ -13,11 +13,10 @@ type AsmCompileOptions = CompileOptions
 asmSupportedTargets :: NonEmpty CompileTarget
 asmSupportedTargets =
   NonEmpty.fromList
-    ( [ TargetWasm32Wasi,
-        TargetNative64,
-        TargetAsm
-      ]
-    )
+    [ TargetWasm32Wasi,
+      TargetNative64
+    ]
+
 
 parseAsmCompileOptions :: Parser AsmCompileOptions
 parseAsmCompileOptions =

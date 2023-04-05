@@ -11,8 +11,8 @@ import Data.List.NonEmpty qualified as NonEmpty
 supportedTargets :: NonEmpty CompileTarget
 supportedTargets = NonEmpty.fromList allTargets
 
-parseUserCompileOptions :: Parser CompileOptions
-parseUserCompileOptions =
+parseMainCompileOptions :: Parser CompileOptions
+parseMainCompileOptions =
   parseCompileOptions
     supportedTargets
-    parseInputJuvixAsmFile
+    parseInputJuvixFile

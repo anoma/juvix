@@ -87,15 +87,18 @@ optCompileTarget supportedTargets =
         <> metavar "TARGET"
         <> value TargetNative64
         <> showDefault
-        <> help ("select a target: " <> show supportedTargets)
-        <> completeWith (map show (toList supportedTargets))
+        <> help ("select a target: " <> show listTargets)
+        <> completeWith (map show listTargets)
     )
   where
+    listTargets :: [CompileTarget]
+    listTargets = toList supportedTargets
+
     parseTarget :: String -> Either String CompileTarget
     parseTarget txt =
       maybe err return $
         lookup
           (map toLower txt)
-          [(Prelude.show t, t) | t <- toList supportedTargets]
+          [(Prelude.show t, t) | t <- listTargets]
       where
         err = Left $ "unrecognised target: " <> txt
