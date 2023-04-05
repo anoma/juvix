@@ -180,15 +180,15 @@ SMOKEFLAGS?=--color --diff=git
 
 .PHONY: check-only
 check-only:
-	@${MAKE} build
-	@${MAKE} install
-	@${MAKE} test
-	@${MAKE} smoke
-	@${MAKE} check-format-juvix-examples
-	@${MAKE} typecheck-juvix-examples
-	@${MAKE} check-ormolu
-	@export SKIP=ormolu,format-juvix-examples,typecheck-juvix-examples
-	@${MAKE} pre-commit
+	@${MAKE} build \
+		&& ${MAKE} install \
+		&& ${MAKE} test \
+		&& ${MAKE} smoke \
+		&& ${MAKE} check-format-juvix-examples \
+		&& ${MAKE} typecheck-juvix-examples \
+		&& ${MAKE} check-ormolu \
+		&& export SKIP=ormolu,format-juvix-examples,typecheck-juvix-examples \
+		&& ${MAKE} pre-commit
 
 .PHONY: check
 check: clean
