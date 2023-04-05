@@ -53,7 +53,7 @@ findRootAndChangeDir minputFileDir mbuildDir _rootsInvokeDir = do
           return Roots {..}
 
 getBuildDir :: Maybe (SomeBase Dir) -> Path Abs Dir -> Path Abs Dir -> Path Abs Dir
-getBuildDir mbuildDir invokeDir pkgDir = case mbuildDir of
+getBuildDir mbuildDirOpt invokeDir pkgDir = case mbuildDirOpt of
   Nothing -> Paths.rootBuildDir pkgDir
   Just p -> case p of
     Rel r -> invokeDir <//> r

@@ -21,6 +21,7 @@ import Juvix.Compiler.Internal.Language qualified as Internal
 import Juvix.Compiler.Internal.Pretty qualified as Internal
 import Juvix.Data.Error.GenericError qualified as Error
 import Juvix.Extra.Paths
+import Juvix.Extra.Stdlib
 import Juvix.Extra.Version
 import Juvix.Prelude.Pretty qualified as P
 import System.Console.ANSI qualified as Ansi
@@ -38,10 +39,7 @@ data ReplContext = ReplContext
   }
 
 data ReplState = ReplState
-  { _replStatePkgDir :: Path Abs Dir,
-    _replStatePkg :: Package,
-    _replStatePkgGlobal :: Bool,
-    _replStateInvokeDir :: Path Abs Dir,
+  { _replStateRoots :: Roots,
     _replStateContext :: Maybe ReplContext,
     _replStateGlobalOptions :: GlobalOptions
   }
@@ -138,7 +136,7 @@ runCommand opts = do
 
       printRoot :: String -> Repl ()
       printRoot _ = do
-        r <- State.gets (^. replStatePkgDir)
+        r <- State.gets (^. replStateRoots . rootsRootDir)
         liftIO $ putStrLn (pack (toFilePath r))
 
       displayVersion :: String -> Repl ()
@@ -295,44 +293,42 @@ runCommand opts = do
               options,
               banner
             }
-
-  pkgDir <- askPkgDir
-  invokeDir <- askInvokeDir
+  roots <- askRoots
   globalOptions <- askGlobalOptions
-  pkgGlobal <- askPackageGlobal
-  pkg <- askPackage
   embed
     ( State.evalStateT
         replAction
         ( ReplState
-            { _replStatePkgDir = pkgDir,
-              _replStatePkgGlobal = pkgGlobal,
-              _replStateInvokeDir = invokeDir,
+            { _replStateRoots = roots,
               _replStateContext = Nothing,
-              _replStatePkg = pkg,
               _replStateGlobalOptions = globalOptions
             }
         )
     )
 
+-- | If the package contains the stdlib as a dependency, loads the Prelude
 defaultPreludeEntryPoint :: Repl (Maybe EntryPoint)
 defaultPreludeEntryPoint = do
   opts <- State.gets (^. replStateGlobalOptions)
-  root <- State.gets (^. replStatePkgDir)
-  pkg <- State.gets (^. replStatePkg)
-  pkgGlobal <- State.gets (^. replStatePkgGlobal)
-  let defStdlibDir = defaultStdlibPath (rootBuildDir root)
-  return $
-    Just
-      (entryPointFromGlobalOptions (pkg, pkgGlobal) root (defStdlibDir <//> preludePath) opts)
-        { _entryPointResolverRoot = defStdlibDir
-        }
+  roots <- State.gets (^. replStateRoots)
+  let buildDir = roots ^. rootsBuildDir
+      root = roots ^. rootsRootDir
+      pkg = roots ^. rootsPackage
+      pkgGlobal = roots ^. rootsPackageGlobal
+      mstdlibPath = firstJust (isStdLib root buildDir) (pkg ^. packageDependencies)
+  return $ case mstdlibPath of
+    Just stdlibPath ->
+      Just
+        (entryPointFromGlobalOptions (pkg, pkgGlobal) root (stdlibPath <//> preludePath) opts)
+          { _entryPointResolverRoot = stdlibPath
+          }
+    Nothing -> Nothing
 
 replMakeAbsolute :: SomeBase b -> Repl (Path Abs b)
 replMakeAbsolute = \case
   Abs p -> return p
   Rel r -> do
-    invokeDir <- State.gets (^. replStateInvokeDir)
+    invokeDir <- State.gets (^. replStateRoots . rootsInvokeDir)
     return (invokeDir <//> r)
 
 inferExpressionIO' :: ReplContext -> Text -> IO (Either JuvixError Internal.Expression)
