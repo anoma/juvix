@@ -1,0 +1,111 @@
+name:                standard-library
+version:             0.1.0.0
+github:              "mariari/Misc-ML-Scripts"
+license:             GPL-3
+author:              "Mariari <mariari@protonmail.ch>"
+maintainer:          "Mariari <mariari@protonmail.ch>"
+copyright:           "2022 Mariari"
+
+# Metadata used when publishing your package
+# synopsis:            Short description of your package
+# category:            Web
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description:         Please see the README on GitHub at <https://github.com/githubuser/StandardLibrary#readme>
+
+dependencies:
+- aeson
+- base >= 4.11 && < 5
+- bytestring
+- capability
+- containers
+- directory
+# - elliptic-curve >= 0.3.0
+- filepath
+# - galois-field >= 1.0.2
+- generic-lens
+- lens
+- lens-aeson
+- megaparsec
+- mtl
+- pretty-simple
+- pretty-compact
+- protolude
+- scientific
+- text
+- time
+- unordered-containers
+- word8
+- wreq
+# Testing
+- tasty
+- tasty-silver
+
+default-extensions:
+  - BlockArguments
+  - ConstraintKinds
+  - DataKinds
+  - DefaultSignatures
+  - DeriveGeneric
+  - FlexibleContexts
+  - FlexibleInstances
+  - LambdaCase
+  - NoImplicitPrelude
+  - OverloadedStrings
+  - RankNTypes
+  - TupleSections
+  - TypeApplications
+  - TypeFamilies
+  - TypeSynonymInstances
+  - KindSignatures
+  - DefaultSignatures
+  - DeriveDataTypeable
+  - FunctionalDependencies
+
+ghc-options:
+  - -ferror-spans
+  - -Wall
+  - -fno-warn-orphans
+  - -fno-warn-name-shadowing
+  - -fno-warn-missing-pattern-synonym-signatures
+  - -j
+  - -static
+  - -fwrite-ide-info
+
+# TODO: Specify which packages are exported
+
+when:
+  condition: flag(incomplete-error)
+  ghc-options:
+    - -Werror=incomplete-patterns
+    - -Werror=missing-fields
+    - -Werror=missing-methods
+
+flags:
+  incomplete-error:
+    description: >
+      Incomplete patterns, missing record fields, and missing class methods are
+      an error
+    manual: true
+    default: false
+
+library:
+  source-dirs: src
+
+tests:
+  standard-library-test:
+    main:                Main.hs
+    source-dirs:         test
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - standard-library
+    - tasty
+    - tasty-hunit
+    - tasty-silver
+    - tasty-quickcheck
+    - pretty-simple

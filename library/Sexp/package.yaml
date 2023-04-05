@@ -1,0 +1,92 @@
+name:                sexp
+version:             0.1.0.0
+github:              "mariari/Misc-ML-Scripts"
+license:             GPL-3
+author:              "Mariari <mariari@protonmail.ch>"
+maintainer:          "Mariari <mariari@protonmail.ch>"
+copyright:           "2022 Mariari"
+
+extra-source-files:
+- README.org
+
+# Metadata used when publishing your package
+# synopsis:            Short description of your package
+# category:            Web
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description:         Please see the README on GitHub at <https://github.com/githubuser/Sexp#readme>
+
+dependencies:
+- aeson
+- base >= 4.7 && < 5
+- standard-library
+- containers
+- lens
+- text
+- megaparsec
+- hashable
+- word8
+- generic-deriving
+- unordered-containers
+- recursion-schemes
+- data-fix
+- prettyprinter
+
+default-extensions:
+  - NoImplicitPrelude
+  - OverloadedStrings
+  - NoMonomorphismRestriction
+  - RankNTypes
+  - LambdaCase
+  - UnicodeSyntax
+  - GADTs
+  - DerivingVia
+  - MultiParamTypeClasses
+  - MultiWayIf
+  - DataKinds
+  - TypeApplications
+  - ConstraintKinds
+  - PatternSynonyms
+  - FlexibleContexts
+  - FlexibleInstances
+  - QuasiQuotes
+  - TemplateHaskell
+  - TypeFamilies
+  - NamedFieldPuns
+  - DisambiguateRecordFields
+  - TupleSections
+  - DeriveGeneric
+  - DeriveDataTypeable
+  - GeneralizedNewtypeDeriving
+  - StandaloneDeriving
+  - BlockArguments
+  - FunctionalDependencies
+  - ScopedTypeVariables
+
+ghc-options:
+  - -ferror-spans
+  - -Wall
+  - -fno-warn-orphans
+  - -fno-warn-name-shadowing
+  - -fno-warn-missing-pattern-synonym-signatures
+  - -j
+  - -static
+  - -fwrite-ide-info
+
+library:
+  source-dirs: src
+
+tests:
+  sexp-test:
+    main:                Main.hs
+    source-dirs:         test
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - sexp
+    - tasty
+    - tasty-hunit

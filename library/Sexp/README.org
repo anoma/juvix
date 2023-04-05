@@ -1,0 +1,35 @@
+* Sexp
+The S-Expression library for data manipulation. It is sadly tied to a
+notion of =Namesymbols= that may not be useful for one's project
+
+However, the library provides tools for automatically deriving a
+s-expression serialization for one's Data types, along with default
+instances to serialize from and to S-expressions
+
+** Example Usage for predefined type
+#+begin_src haskell
+  λ> (Sexp.serialize (Sexp.number <$> [1..5] :: [Sexp.T]))
+  (1 2 3 4 5)
+
+  λ> deserialize (Sexp.serialize (Sexp.number <$> [1..5] :: [Sexp.T])) :: Maybe [Int]
+  Just [1,2,3,4,5]
+#+end_src
+** Deriving For One's Datatype
+#+begin_src haskell
+  data Test a
+    = Test
+    | Test2 a
+    | TestRec a (Test a)
+    | TestRec' (Test a)
+    | Test3 {fstt :: a, sndd :: Integer}
+    deriving (Show, Generic)
+
+  -- let's turn this to deriving via
+  instance Sexp.DefaultOptions (Test a)
+
+  instance (Sexp.Serialize a) => Sexp.Serialize (Test a)
+
+  λ> Sexp.serialize (TestRec 3 (Test2 3))
+
+  (":test-rec" 3 (":test2" 3))
+#+end_src

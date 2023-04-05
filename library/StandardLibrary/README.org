@@ -1,0 +1,123 @@
+* Standard Library
+This package is responsible for defining the standard library for the
+rest of the code-base. Due to this, this library relies on no other
+part of the code-base, but everything relies on it.
+
+Standard library is broken up into a few parts.
+
+1. [[file:src/Mari/Library.hs][The default prelude]]
+   - This is included by default when one imports
+     =Mari.Library=. Names here are unqualified as they are
+     considered part the code base's standard library
+2. Extra modules
+   - These are the rest of the modules, they all export important
+     helper functionality, but are best to be in a qualified package
+     rather than be implicit in our prelude.
+
+** Useful Extras
+- [[file:src/Mari/Library/Trace.hs][Trace]]
+  + Adds tracing to Haskell, properly maintains a call stack that can
+    be filtered by the user when one wishes to use it
+  + See [[file:test/Trace.hs][The Trace Tests]] to see how it is used
+    #+begin_src haskell
+      λ> example2
+      (factorial 5 1)
+      ·· (Prelude.multiply 5 1) ↦ 5
+      ·· (factorial 4 5)
+      ···· (Prelude.multiply 4 5) ↦ 20
+      ···· (factorial 3 20)
+      ······ (Prelude.multiply 3 20) ↦ 60
+      ······ (factorial 2 60)
+      ········ (Prelude.multiply 2 60) ↦ 120
+      ········ (factorial 1 120)
+      ·········· (Prelude.multiply 1 120) ↦ 120
+      ·········· (factorial 0 120) ↦ 120
+      ········ (factorial 1 120) ↦ 120
+      ······ (factorial 2 60) ↦ 120
+      ···· (factorial 3 20) ↦ 120
+      ·· (factorial 4 5) ↦ 120
+      (factorial 5 1) ↦ 120
+    #+end_src
+- [[file:src/Mari/Library/Parser/][Parser]]
+  + This provides generic utilities for the Frontend parser and the
+    S-expression parser.
+** Useful Idioms in the standard library
+- Capability is our replacement for MTL
+  + [[https://www.tweag.io/blog/2018-10-04-capability/][Tweag explains how their library works here.]]
+  + Here is a quick example of setting up an environment stolen from [[file:./../Translate/src/Mari/FreeVars.hs][FreeVars in Translate]]
+    #+begin_src haskell
+
+      -- Define the data type we wish to work on
+      data Env
+        = Env
+            { closure :: Closure.T,
+              free :: Set.HashSet NameSymbol.T
+            }
+        deriving (Generic, Show)
+
+      -- define a type alias to work under
+      type EnvAlias =
+        (State Env)
+
+      -- Create our effect
+      newtype EnvM a = Ctx {_run :: EnvAlias a}
+        deriving (Functor, Applicative, Monad)
+        -- Create the various effects we must satisfy
+        -- This one is a reader!
+        deriving
+          ( HasReader "closure" Closure.T,
+            HasSource "closure" Closure.T
+          )
+          via ReaderField "closure" EnvAlias
+        -- This one is a state effect
+        deriving
+          ( HasState "free" (Set.HashSet NameSymbol.T),
+            HasSource "free" (Set.HashSet NameSymbol.T),
+            HasSink "free" (Set.HashSet NameSymbol.T)
+          )
+          via StateField "free" EnvAlias
+
+      -- Make a runner for our effect
+      runM :: EnvM a -> (a, Env)
+      runM (Ctx c) =
+        runState c (Env Closure.empty (Set.fromList Env.namedForms))
+
+
+      -- An example function that we can run on it
+      freeVarPass ::
+        ( HasReader "closure" Closure.T f,
+          HasState "free" (Set.HashSet NameSymbol.T) f
+        ) =>
+        Sexp.T ->
+        f Sexp.T
+      freeVarPass form =
+        Env.onExpression form (== ":atom") freeVarRes
+
+      -- Example usage note we get back more frees than what are here, as we
+      -- just include the primitives as requires, so the code is a bit misleading
+      λ> (runM . freeVarPass) x
+      ((":lambda" ("x") ("+" "x" "y"))
+        ,Env {closure = T (fromList [])
+             , free = fromList
+                  [":open-in" :| [],
+                   ":lambda" :| [],
+                   "type" :| [],
+                   ":declaim" :| [],
+                   ":tuple" :| [],
+                   ":primitive" :| [],
+                   ":lambda-case" :| [],
+                   "case" :| [],
+                   ":record-no-pun" :| [],
+                   ":progn" :| [],
+                   "declare" :| [],
+                   ":list" :| [],
+                   -- Y is recorded which is correct
+                   "y" :| [],
+                   ":let-match" :| [],
+                   ":let-type" :| [],
+                   ":infix" :| [],
+                   ":paren" :| [],
+                   ":block" :| [],
+                   "+" :| []]})
+    #+end_src
+
