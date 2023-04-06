@@ -10,7 +10,7 @@ import Prettyprinter.Render.Text (renderIO)
 import System.Environment (getProgName)
 
 versionDir :: Path Rel Dir
-versionDir = relDir (unpack versionTag)
+versionDir = relDir (unpack versionDoc)
 
 versionDoc :: Text
 versionDoc = pack (showVersion Paths_juvix.version)
