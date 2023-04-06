@@ -16,6 +16,7 @@ import Juvix.Compiler.Core.Extra.Utils.Base
 import Juvix.Compiler.Core.Info.NameInfo
 import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Core.Language.Stripped qualified as Stripped
+import Juvix.Compiler.Core.Language.Value
 import Juvix.Compiler.Core.Pretty.Options
 import Juvix.Data.CodeAnn
 import Juvix.Extra.Strings qualified as Str
@@ -82,12 +83,15 @@ ppCodeVar' name v = do
     then return $ name' <> kwDeBruijnVar <> pretty (v ^. varIndex)
     else return name'
 
-instance PrettyCode (Constant' i) where
+instance PrettyCode ConstantValue where
   ppCode = \case
-    Constant _ (ConstInteger int) ->
+    ConstInteger int ->
       return $ annotate AnnLiteralInteger (pretty int)
-    Constant _ (ConstString txt) ->
+    ConstString txt ->
       return $ annotate AnnLiteralString (pretty (show txt :: String))
+
+instance PrettyCode (Constant' i) where
+  ppCode Constant {..} = ppCode _constantValue
 
 instance (PrettyCode a, HasAtomicity a) => PrettyCode (App' i a) where
   ppCode App {..} = do
@@ -537,8 +541,50 @@ instance (PrettyCode a) => PrettyCode [a] where
     cs <- mapM ppCode x
     return $ encloseSep "(" ")" ", " cs
 
-{--------------------------------------------------------------------------------}
-{- helper functions -}
+--------------------------------------------------------------------------------
+-- printing values
+--------------------------------------------------------------------------------
+
+instance PrettyCode ConstrApp where
+  ppCode ConstrApp {..} = do
+    n <- ppName KNameConstructor _constrAppName
+    case _constrAppFixity of
+      Nothing -> do
+        args <- mapM (ppRightExpression appFixity) _constrAppArgs
+        return $ hsep (n : args)
+      Just fixity
+        | isBinary fixity ->
+            case _constrAppArgs of
+              [] -> return n
+              [arg] -> do
+                arg' <- ppRightExpression appFixity arg
+                return $ parens n <+> arg'
+              [arg1, arg2] -> do
+                arg1' <- ppLeftExpression fixity arg1
+                arg2' <- ppRightExpression fixity arg2
+                return $ arg1' <+> n <+> arg2'
+              _ ->
+                impossible
+        | isUnary fixity ->
+            case _constrAppArgs of
+              [] -> return n
+              [arg] -> do
+                arg' <- ppPostExpression fixity arg
+                return $ arg' <+> n
+              _ ->
+                impossible
+      _ -> impossible
+
+instance PrettyCode Value where
+  ppCode = \case
+    ValueConstrApp x -> ppCode x
+    ValueConstant c -> ppCode c
+    ValueWildcard -> return "_"
+    ValueFun -> return "<fun>"
+
+--------------------------------------------------------------------------------
+-- helper functions
+--------------------------------------------------------------------------------
 
 ppPostExpression ::
   (PrettyCode a, HasAtomicity a, Member (Reader Options) r) =>

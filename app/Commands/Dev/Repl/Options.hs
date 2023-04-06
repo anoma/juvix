@@ -6,6 +6,7 @@ import Juvix.Compiler.Core.Data.TransformationId (toEvalTransformations)
 
 parseDevRepl :: Parser ReplOptions
 parseDevRepl = do
+  let _replPrintValues = False
   _replInputFile <- optional parseInputJuvixFile
   _replTransformations <- do
     ts <- optTransformationIds
