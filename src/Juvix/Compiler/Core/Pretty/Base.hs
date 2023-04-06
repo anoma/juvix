@@ -582,6 +582,15 @@ instance PrettyCode Value where
     ValueWildcard -> return "_"
     ValueFun -> return "<fun>"
 
+ppValueSequence :: Member (Reader Options) r => [Value] -> Sem r (Doc Ann)
+ppValueSequence vs = hsep <$> mapM (ppRightExpression appFixity) vs
+
+docValueSequence :: [Value] -> Doc Ann
+docValueSequence =
+  run
+    . runReader defaultOptions
+    . ppValueSequence
+
 --------------------------------------------------------------------------------
 -- helper functions
 --------------------------------------------------------------------------------
