@@ -135,3 +135,31 @@ registerIntNegNat f = do
   where
     builtinName :: (IsBuiltin a) => a -> Sem r Name
     builtinName = getBuiltinName (getLoc f)
+
+registerIntNeg :: forall r. Members '[Builtins, NameIdGen] r => FunctionDef -> Sem r ()
+registerIntNeg f = do
+  int <- builtinName BuiltinInt
+  ofNat <- toExpression <$> builtinName BuiltinIntOfNat
+  negSuc <- toExpression <$> builtinName BuiltinIntNegSuc
+  negNat <- toExpression <$> builtinName BuiltinIntNegNat
+  suc <- toExpression <$> builtinName BuiltinNatSuc
+  varn <- freshVar "n"
+  let neg = f ^. funDefName
+      n = toExpression varn
+      exClauses :: [(Expression, Expression)]
+      exClauses =
+        [ (neg @@ (ofNat @@ n), negNat @@ n),
+          (neg @@ (negSuc @@ n), ofNat @@ (suc @@ n))
+        ]
+  registerFun
+    FunInfo
+      { _funInfoDef = f,
+        _funInfoBuiltin = BuiltinIntNeg,
+        _funInfoSignature = int --> int,
+        _funInfoClauses = exClauses,
+        _funInfoFreeVars = [varn],
+        _funInfoFreeTypeVars = []
+      }
+  where
+    builtinName :: (IsBuiltin a) => a -> Sem r Name
+    builtinName = getBuiltinName (getLoc f)

@@ -25,4 +25,6 @@ main := printStringLn (intToString 1)
    >> printBoolLn (-1 == 1)
    >> printStringLn (intToString (-1 + 1))
    >> printStringLn (intToString (negNat (suc zero)))
-   >> printStringLn (intToString (let g : Nat -> Int := negNat in g (suc zero)));
+   >> printStringLn (intToString (let g : Nat -> Int := negNat in g (suc zero)))
+   >> printStringLn (intToString (neg -1))
+   >> printStringLn (intToString (let g : Int -> Int := neg in g -1));

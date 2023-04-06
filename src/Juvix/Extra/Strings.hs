@@ -182,6 +182,9 @@ intSubNat = "int-sub-nat"
 intNegNat :: (IsString s) => s
 intNegNat = "int-neg-nat"
 
+intNeg :: (IsString s) => s
+intNeg = "int-neg"
+
 builtin :: IsString s => s
 builtin = "builtin"
 

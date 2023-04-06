@@ -122,8 +122,10 @@ convertNode tab = rmap go
     convertSingleArgIdentApp :: Node -> Node -> Info -> Symbol -> Node
     convertSingleArgIdentApp node l info sym =
       let ii = fromJust $ HashMap.lookup sym (tab ^. infoIdentifiers)
+          negNode = negNatBody info l
        in case ii ^. identifierBuiltin of
-            Just BuiltinIntNegNat -> negNatBody info l
+            Just BuiltinIntNegNat -> negNode
+            Just BuiltinIntNeg -> negNode
             _ ->
               convertIdentApp
                 node
@@ -137,8 +139,10 @@ convertNode tab = rmap go
     convertSingleArgIdent :: Node -> Info -> Symbol -> Node
     convertSingleArgIdent node info sym =
       let ii = fromJust $ HashMap.lookup sym (tab ^. infoIdentifiers)
+          negNode = mkLambda' mkTypeInteger' $ negNatBody info (mkVar' 0)
        in case ii ^. identifierBuiltin of
-            Just BuiltinIntNegNat -> mkLambda' mkTypeInteger' $ negNatBody info (mkVar' 0)
+            Just BuiltinIntNegNat -> negNode
+            Just BuiltinIntNeg -> negNode
             _ ->
               convertIdentApp
                 node
