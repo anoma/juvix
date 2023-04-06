@@ -53,6 +53,9 @@ getIOSymbol = do
 getNatSymbol :: (Member InfoTableBuilder r) => Sem r Symbol
 getNatSymbol = (^. inductiveSymbol) <$> getBuiltinInductiveInfo BuiltinNat
 
+getIntSymbol :: (Member InfoTableBuilder r) => Sem r Symbol
+getIntSymbol = (^. inductiveSymbol) <$> getBuiltinInductiveInfo BuiltinInt
+
 checkSymbolDefined :: (Member InfoTableBuilder r) => Symbol -> Sem r Bool
 checkSymbolDefined sym = do
   tab <- getInfoTable

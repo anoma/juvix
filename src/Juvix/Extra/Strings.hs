@@ -167,6 +167,12 @@ boolOr = "bool-or"
 boolAnd :: IsString s => s
 boolAnd = "bool-and"
 
+intToString :: (IsString s) => s
+intToString = "int-to-string"
+
+intEq :: (IsString s) => s
+intEq = "int-eq"
+
 builtin :: IsString s => s
 builtin = "builtin"
 

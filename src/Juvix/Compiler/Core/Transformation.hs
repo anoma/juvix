@@ -20,6 +20,7 @@ import Juvix.Compiler.Core.Transformation.DisambiguateNames
 import Juvix.Compiler.Core.Transformation.Eta
 import Juvix.Compiler.Core.Transformation.FoldTypeSynonyms
 import Juvix.Compiler.Core.Transformation.Identity
+import Juvix.Compiler.Core.Transformation.IntToInt
 import Juvix.Compiler.Core.Transformation.LambdaLetRecLifting
 import Juvix.Compiler.Core.Transformation.MatchToCase
 import Juvix.Compiler.Core.Transformation.MoveApps
@@ -42,6 +43,7 @@ applyTransformations ts tbl = foldM (flip appTrans) tbl ts
       RemoveTypeArgs -> return . removeTypeArgs
       MoveApps -> return . moveApps
       NatToInt -> return . natToInt
+      IntToInt -> return . intToInt
       ConvertBuiltinTypes -> return . convertBuiltinTypes
       ComputeTypeInfo -> return . computeTypeInfo
       UnrollRecursion -> unrollRecursion

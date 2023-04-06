@@ -3,12 +3,17 @@ module BuiltinInt;
 open import Stdlib.Data.Nat;
 open import Stdlib.Data.Nat.Ord;
 open import Stdlib.Data.Bool;
+open import Stdlib.System.IO public;
+open import Stdlib.Data.String;
 
 builtin int type Int :=
   | --- ofNat n represents the integer n
     ofNat : Nat -> Int
   | --- negSuc n represents the integer -(n + 1)
     negSuc : Nat -> Int;
+
+builtin int-to-string axiom intToString : Int -> String;
+
 
 subNatInt : Nat -> Nat -> Int;
 subNatInt m n :=
@@ -43,7 +48,7 @@ toNat : Int -> Nat;
 toNat (ofNat n) := n;
 toNat (negSuc _) := zero;
 
-eqInt : Int -> Int -> Bool;
+builtin int-eq eqInt : Int -> Int -> Bool;
 eqInt (ofNat m) (ofNat n) := m == n;
 eqInt (negSuc m) (negSuc n) := m == n;
 eqInt _ _ := false;

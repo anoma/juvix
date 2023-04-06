@@ -79,6 +79,7 @@ data BuiltinFunction
   | BuiltinBoolIf
   | BuiltinBoolOr
   | BuiltinBoolAnd
+  | BuiltinIntEq
   deriving stock (Show, Eq, Ord, Enum, Bounded, Generic, Data)
 
 instance Hashable BuiltinFunction
@@ -97,6 +98,7 @@ instance Pretty BuiltinFunction where
     BuiltinBoolIf -> Str.boolIf
     BuiltinBoolOr -> Str.boolOr
     BuiltinBoolAnd -> Str.boolAnd
+    BuiltinIntEq -> Str.intEq
 
 data BuiltinAxiom
   = BuiltinNatPrint
@@ -112,6 +114,7 @@ data BuiltinAxiom
   | BuiltinIOReadline
   | BuiltinTrace
   | BuiltinFail
+  | BuiltinIntToString
   deriving stock (Show, Eq, Ord, Enum, Bounded, Generic, Data)
 
 instance Hashable BuiltinAxiom
@@ -131,6 +134,7 @@ instance Pretty BuiltinAxiom where
     BuiltinIOReadline -> Str.ioReadline
     BuiltinTrace -> Str.trace_
     BuiltinFail -> Str.fail_
+    BuiltinIntToString -> Str.intToString
 
 data BuiltinType
   = BuiltinTypeInductive BuiltinInductive
@@ -162,5 +166,10 @@ isNatBuiltin = \case
   BuiltinNatEq -> True
   _ -> False
 
+isIntBuiltin :: BuiltinFunction -> Bool
+isIntBuiltin = \case
+  BuiltinIntEq -> True
+  _ -> False
+
 isIgnoredBuiltin :: BuiltinFunction -> Bool
-isIgnoredBuiltin = not . isNatBuiltin
+isIgnoredBuiltin f = not (isNatBuiltin f) && not (isIntBuiltin f)

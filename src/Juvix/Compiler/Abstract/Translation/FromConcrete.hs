@@ -288,6 +288,7 @@ registerBuiltinFunction d = \case
   BuiltinBoolIf -> registerIf d
   BuiltinBoolOr -> registerOr d
   BuiltinBoolAnd -> registerAnd d
+  BuiltinIntEq -> registerIntEq d
 
 registerBuiltinAxiom ::
   (Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen] r) =>
@@ -308,6 +309,7 @@ registerBuiltinAxiom d = \case
   BuiltinBoolPrint -> registerBoolPrint d
   BuiltinTrace -> registerTrace d
   BuiltinFail -> registerFail d
+  BuiltinIntToString -> registerIntToString d
 
 goInductive ::
   (Members '[InfoTableBuilder, Builtins, Error ScoperError] r) =>
