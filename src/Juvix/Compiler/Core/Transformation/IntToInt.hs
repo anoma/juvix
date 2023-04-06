@@ -131,6 +131,8 @@ convertNode tab = rmap go
       let ii = fromJust $ HashMap.lookup sym (tab ^. infoIdentifiers)
        in case ii ^. identifierBuiltin of
             Just BuiltinIntEq -> f (\info x y -> mkBuiltinApp info OpEq [x, y])
+            Just BuiltinIntPlus -> f (\info x y -> mkBuiltinApp info OpIntAdd [x, y])
+            Just BuiltinIntSubNat -> f (\info x y -> mkBuiltinApp info OpIntSub [x, y])
             _ -> node
 
 filterIntBuiltins :: InfoTable -> InfoTable

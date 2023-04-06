@@ -65,3 +65,44 @@ registerIntEq f = do
   where
     builtinName :: (IsBuiltin a) => a -> Sem r Name
     builtinName = getBuiltinName (getLoc f)
+
+registerIntSubNat :: forall r. Members '[Builtins, NameIdGen] r => FunctionDef -> Sem r ()
+registerIntSubNat f = do
+  let loc = getLoc f
+  int <- getBuiltinName loc BuiltinInt
+  nat <- getBuiltinName loc BuiltinNat
+  unless (f ^. funDefTypeSig === (nat --> nat --> int)) (error "int-sub-nat has the wrong type signature")
+  registerBuiltin BuiltinIntSubNat (f ^. funDefName)
+
+registerIntPlus :: forall r. Members '[Builtins, NameIdGen] r => FunctionDef -> Sem r ()
+registerIntPlus f = do
+  let loc = getLoc f
+  int <- getBuiltinName loc BuiltinInt
+  ofNat <- toExpression <$> getBuiltinName loc BuiltinIntOfNat
+  negSuc <- toExpression <$> getBuiltinName loc BuiltinIntNegSuc
+  suc <- toExpression <$> getBuiltinName loc BuiltinNatSuc
+  natPlus <- toExpression <$> getBuiltinName loc BuiltinNatPlus
+  intSubNat <- toExpression <$> getBuiltinName loc BuiltinIntSubNat
+  let plus = f ^. funDefName
+  varn <- freshVar "m"
+  varm <- freshVar "n"
+  let m = toExpression varm
+      n = toExpression varn
+      (.+.) :: (IsExpression a, IsExpression b) => a -> b -> Expression
+      x .+. y = plus @@ x @@ y
+      exClauses :: [(Expression, Expression)]
+      exClauses =
+        [ ((ofNat @@ m) .+. (ofNat @@ n), ofNat @@ (natPlus @@ m @@ n)),
+          ((ofNat @@ m) .+. (negSuc @@ n), intSubNat @@ m @@ (suc @@ n)),
+          ((negSuc @@ m) .+. (ofNat @@ n), intSubNat @@ n @@ (suc @@ m)),
+          ((negSuc @@ m) .+. (negSuc @@ n), negSuc @@ (suc @@ (natPlus @@ m @@ n)))
+        ]
+  registerFun
+    FunInfo
+      { _funInfoDef = f,
+        _funInfoBuiltin = BuiltinIntPlus,
+        _funInfoSignature = int --> int --> int,
+        _funInfoClauses = exClauses,
+        _funInfoFreeVars = [varm, varn],
+        _funInfoFreeTypeVars = []
+      }

@@ -1,7 +1,8 @@
 module test049;
 
-open import Stdlib.Prelude;
+open import Stdlib.Prelude hiding {+};
 open import Stdlib.Data.Int.Ord;
+open import Stdlib.Data.Int using {+};
 
 f : Int -> Nat;
 f (negSuc n) := n;
@@ -15,10 +16,11 @@ main := printStringLn (intToString 1)
    >> printStringLn (intToString (ofNat (suc zero)))
    >> printStringLn (intToString (negSuc zero))
    >> printStringLn (natToString (f 1))
-   >> printStringLn (natToString (f (-1)))
-   >> printStringLn (natToString (f (ofNat (suc zero))))
-   >> printStringLn (natToString (f (negSuc (suc zero))))
+   >> printNatLn (f (-1))
+   >> printNatLn (f (ofNat (suc zero)))
+   >> printNatLn (f (negSuc (suc zero)))
    >> printBoolLn (-1 == -2)
    >> printBoolLn (-1 == -1)
    >> printBoolLn (1 == 1)
-   >> printBoolLn (-1 == 1);
+   >> printBoolLn (-1 == 1)
+   >> printStringLn (intToString (-1 + 1));

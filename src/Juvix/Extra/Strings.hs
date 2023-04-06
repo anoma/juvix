@@ -173,6 +173,12 @@ intToString = "int-to-string"
 intEq :: (IsString s) => s
 intEq = "int-eq"
 
+intPlus :: (IsString s) => s
+intPlus = "int-plus"
+
+intSubNat :: (IsString s) => s
+intSubNat = "int-sub-nat"
+
 builtin :: IsString s => s
 builtin = "builtin"
 
