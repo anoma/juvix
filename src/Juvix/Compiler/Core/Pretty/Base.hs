@@ -8,7 +8,7 @@ where
 import Data.HashMap.Strict qualified as HashMap
 import Data.Map.Strict qualified as Map
 import Juvix.Compiler.Abstract.Data.Name
-import Juvix.Compiler.Core.Data.BinderList as BL
+import Juvix.Compiler.Core.Data.BinderList qualified as BL
 import Juvix.Compiler.Core.Data.InfoTable
 import Juvix.Compiler.Core.Data.Stripped.InfoTable qualified as Stripped
 import Juvix.Compiler.Core.Extra.Base
@@ -114,11 +114,11 @@ instance (PrettyCode a, HasAtomicity a) => PrettyCode (BuiltinApp' i a) where
 
 ppCodeConstr' :: (PrettyCode a, HasAtomicity a, Member (Reader Options) r) => Text -> Constr' i a -> Sem r (Doc Ann)
 ppCodeConstr' name c = do
-  args' <- mapM (ppRightExpression appFixity) (c ^. constrArgs)
   n' <- case c ^. constrTag of
     BuiltinTag tag -> ppCode tag
     _ -> ppName KNameConstructor name
-  return $ foldl' (<+>) n' args'
+  args' <- mapM (ppRightExpression appFixity) (c ^. constrArgs)
+  return $ hsep (n' : args')
 
 instance (Pretty k, PrettyCode a) => PrettyCode (Map k a) where
   ppCode m = do
@@ -235,11 +235,12 @@ instance PrettyCode PatternWildcard where
 instance PrettyCode PatternConstr where
   ppCode PatternConstr {..} = do
     n <- ppName KNameConstructor (getInfoName _patternConstrInfo)
-    args <- mapM (ppRightExpression appFixity) _patternConstrArgs
     bn <- ppName KNameLocal (_patternConstrBinder ^. binderName)
-    let pat = foldl' (<+>) n args
-        pat' = if _patternConstrBinder ^. binderName == "?" || _patternConstrBinder ^. binderName == "" then pat else bn <> kwAt <> parens pat
-    ppWithType pat' (_patternConstrBinder ^. binderType)
+    let mkpat :: Doc Ann -> Doc Ann
+        mkpat pat = if _patternConstrBinder ^. binderName == "?" || _patternConstrBinder ^. binderName == "" then pat else bn <> kwAt <> parens pat
+    args <- mapM (ppRightExpression appFixity) _patternConstrArgs
+    let pat = mkpat (hsep (n : args))
+    ppWithType pat (_patternConstrBinder ^. binderType)
 
 instance PrettyCode Pattern where
   ppCode = \case

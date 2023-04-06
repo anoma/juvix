@@ -287,10 +287,10 @@ checkLhs loc guessedBody ariSignature pats = do
         pref :: Int
         pref = aI - targetI
         preceedingImplicits :: Arity -> Int
-        preceedingImplicits = length . takeWhile isImplicit . unfoldArity
+        preceedingImplicits = length . takeWhile isParamImplicit . unfoldArity
           where
-            isImplicit :: ArityParameter -> Bool
-            isImplicit = \case
+            isParamImplicit :: ArityParameter -> Bool
+            isParamImplicit = \case
               ParamExplicit {} -> False
               ParamImplicit -> True
         aI :: Int

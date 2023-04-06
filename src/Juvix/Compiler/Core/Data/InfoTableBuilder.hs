@@ -139,6 +139,7 @@ createBuiltinConstr sym tag nameTxt ty cblt =
       _constructorType = ty,
       _constructorArgsNum = length (typeArgs ty),
       _constructorInductive = sym,
+      _constructorFixity = Nothing,
       _constructorBuiltin = cblt
     }
 
