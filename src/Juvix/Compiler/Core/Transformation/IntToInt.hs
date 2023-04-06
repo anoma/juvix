@@ -19,28 +19,12 @@ convertNode tab = rmap go
       NApp (App _ (NApp (App _ (NIdt (Ident {..})) l)) r) ->
         recur [] $ convertIdentApp node (\g -> g _identInfo l r) _identSymbol
       NApp (App _ (NIdt (Ident {..})) l) ->
-        recur [] $
-          convertIdentApp
-            node
-            ( \g ->
-                mkLet' mkTypeInteger' l $
-                  mkLambda' mkTypeInteger' $
-                    g _identInfo (mkVar' 1) (mkVar' 0)
-            )
-            _identSymbol
+        recur [] $ convertSingleArgIdentApp node l _identInfo _identSymbol
       NIdt (Ident {..})
         | Just _identSymbol == tab ^. infoIntToInt ->
             mkLambda' mkTypeInteger' (mkVar' 0)
       NIdt (Ident {..}) ->
-        recur [] $
-          convertIdentApp
-            node
-            ( \g ->
-                mkLambda' mkTypeInteger' $
-                  mkLambda' mkTypeInteger' $
-                    g _identInfo (mkVar' 1) (mkVar' 0)
-            )
-            _identSymbol
+        recur [] $ convertSingleArgIdent node _identInfo _identSymbol
       NCtr (Constr {..}) ->
         let ci = fromJust $ HashMap.lookup _constrTag (tab ^. infoConstructors)
          in case ci ^. constructorBuiltin of
@@ -134,6 +118,39 @@ convertNode tab = rmap go
             Just BuiltinIntPlus -> f (\info x y -> mkBuiltinApp info OpIntAdd [x, y])
             Just BuiltinIntSubNat -> f (\info x y -> mkBuiltinApp info OpIntSub [x, y])
             _ -> node
+
+    convertSingleArgIdentApp :: Node -> Node -> Info -> Symbol -> Node
+    convertSingleArgIdentApp node l info sym =
+      let ii = fromJust $ HashMap.lookup sym (tab ^. infoIdentifiers)
+       in case ii ^. identifierBuiltin of
+            Just BuiltinIntNegNat -> negNatBody info l
+            _ ->
+              convertIdentApp
+                node
+                ( \g ->
+                    mkLet' mkTypeInteger' l $
+                      mkLambda' mkTypeInteger' $
+                        g info (mkVar' 1) (mkVar' 0)
+                )
+                sym
+
+    convertSingleArgIdent :: Node -> Info -> Symbol -> Node
+    convertSingleArgIdent node info sym =
+      let ii = fromJust $ HashMap.lookup sym (tab ^. infoIdentifiers)
+       in case ii ^. identifierBuiltin of
+            Just BuiltinIntNegNat -> mkLambda' mkTypeInteger' $ negNatBody info (mkVar' 0)
+            _ ->
+              convertIdentApp
+                node
+                ( \g ->
+                    mkLambda' mkTypeInteger' $
+                      mkLambda' mkTypeInteger' $
+                        g info (mkVar' 1) (mkVar' 0)
+                )
+                sym
+
+    negNatBody :: Info -> Node -> Node
+    negNatBody info n = mkBuiltinApp info OpIntSub [mkConstant' (ConstInteger 0), n]
 
 filterIntBuiltins :: InfoTable -> InfoTable
 filterIntBuiltins tab =

@@ -106,3 +106,32 @@ registerIntPlus f = do
         _funInfoFreeVars = [varm, varn],
         _funInfoFreeTypeVars = []
       }
+
+registerIntNegNat :: forall r. Members '[Builtins, NameIdGen] r => FunctionDef -> Sem r ()
+registerIntNegNat f = do
+  int <- builtinName BuiltinInt
+  nat <- builtinName BuiltinNat
+  ofNat <- toExpression <$> builtinName BuiltinIntOfNat
+  negSuc <- toExpression <$> builtinName BuiltinIntNegSuc
+  zero <- toExpression <$> builtinName BuiltinNatZero
+  suc <- toExpression <$> builtinName BuiltinNatSuc
+  varn <- freshVar "n"
+  let negNat = f ^. funDefName
+      n = toExpression varn
+      exClauses :: [(Expression, Expression)]
+      exClauses =
+        [ (negNat @@ zero, ofNat @@ zero),
+          (negNat @@ (suc @@ n), negSuc @@ n)
+        ]
+  registerFun
+    FunInfo
+      { _funInfoDef = f,
+        _funInfoBuiltin = BuiltinIntNegNat,
+        _funInfoSignature = nat --> int,
+        _funInfoClauses = exClauses,
+        _funInfoFreeVars = [varn],
+        _funInfoFreeTypeVars = []
+      }
+  where
+    builtinName :: (IsBuiltin a) => a -> Sem r Name
+    builtinName = getBuiltinName (getLoc f)

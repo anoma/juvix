@@ -179,6 +179,9 @@ intPlus = "int-plus"
 intSubNat :: (IsString s) => s
 intSubNat = "int-sub-nat"
 
+intNegNat :: (IsString s) => s
+intNegNat = "int-neg-nat"
+
 builtin :: IsString s => s
 builtin = "builtin"
 
