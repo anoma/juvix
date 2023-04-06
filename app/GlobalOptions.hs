@@ -139,7 +139,7 @@ parseBuildDir m = do
   _pathPath <-
     option
       someDirOpt
-      (metavar "BUILD_DIR"
+      ( metavar "BUILD_DIR"
           <> action "directory"
           <> m
       )
