@@ -417,7 +417,7 @@ goCase c = do
     NTyp {} -> do
       branches <- toList <$> mapM (goCaseBranch ty) (c ^. Internal.caseBranches)
       rty <- goType (fromJust $ c ^. Internal.caseExpressionWholeType)
-      return (mkMatch' (pure ty) rty (pure expr) branches)
+      return (mkMatch i (pure ty) rty (pure expr) branches)
     _ ->
       case c ^. Internal.caseBranches of
         Internal.CaseBranch {..} :| _ ->
