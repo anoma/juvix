@@ -765,7 +765,7 @@ goExpression = \case
   Internal.ExpressionLet l -> goLet l
   Internal.ExpressionLiteral l -> do
     tab <- getInfoTable
-    return (goLiteral (fromJust $ tab ^. infoIntToNat) l)
+    return (goLiteral (fromJust $ tab ^. infoIntToNat) (fromJust $ tab ^. infoIntToInt) l)
   Internal.ExpressionIden i -> case i of
     Internal.IdenVar n -> do
       k <- HashMap.lookupDefault impossible id_ <$> asks (^. indexTableVars)
@@ -939,10 +939,11 @@ goApplication a = do
         _ -> app
     _ -> app
 
-goLiteral :: Symbol -> LiteralLoc -> Node
-goLiteral intToNat l = case l ^. withLocParam of
+goLiteral :: Symbol -> Symbol -> Internal.LiteralLoc -> Node
+goLiteral intToNat intToInt l = case l ^. withLocParam of
   Internal.LitString s -> mkLitConst (ConstString s)
-  Internal.LitInteger i -> mkApp' (mkIdent' intToNat) (mkLitConst (ConstInteger i))
+  Internal.LitInteger i -> mkApp' (mkIdent' intToInt) (mkLitConst (ConstInteger i))
+  Internal.LitNatural i -> mkApp' (mkIdent' intToNat) (mkLitConst (ConstInteger i))
   where
     mkLitConst :: ConstantValue -> Node
     mkLitConst = mkConstant (Info.singleton (LocationInfo (l ^. withLocInt)))

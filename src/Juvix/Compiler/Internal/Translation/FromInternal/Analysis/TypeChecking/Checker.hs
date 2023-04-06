@@ -604,24 +604,8 @@ inferExpression' hint e = case e of
 
     goLiteral :: LiteralLoc -> Sem r TypedExpression
     goLiteral lit@(WithLoc i l) = case l of
-      LitInteger v -> do
-        ty <- case hint of
-          Nothing -> inferLitTypeFromValue
-          Just ExpressionHole {} -> inferLitTypeFromValue
-          Just exp -> return exp
-        return
-          TypedExpression
-            { _typedExpression = ExpressionLiteral lit,
-              _typedType = ty
-            }
-        where
-          mkBuiltinInductive :: BuiltinInductive -> Sem r Expression
-          mkBuiltinInductive = fmap (ExpressionIden . IdenInductive) . getBuiltinName i
-
-          inferLitTypeFromValue :: Sem r Expression
-          inferLitTypeFromValue
-            | v < 0 = mkBuiltinInductive BuiltinInt
-            | otherwise = mkBuiltinInductive BuiltinNat
+      LitInteger v -> typedLitInteger v
+      LitNatural v -> typedLitInteger v
       LitString {} -> do
         str <- getBuiltinName i BuiltinString
         return
@@ -629,6 +613,46 @@ inferExpression' hint e = case e of
             { _typedExpression = ExpressionLiteral lit,
               _typedType = ExpressionIden (IdenAxiom str)
             }
+      where
+        typedLitInteger :: Integer -> Sem r TypedExpression
+        typedLitInteger v = do
+          ty <- case hint of
+            Nothing -> inferLitTypeFromValue
+            Just ExpressionHole {} -> inferLitTypeFromValue
+            Just exp -> return exp
+          lit' <- WithLoc i <$> valueFromType ty
+          return
+            TypedExpression
+              { _typedExpression = ExpressionLiteral lit',
+                _typedType = ty
+              }
+          where
+            mkBuiltinInductive :: BuiltinInductive -> Sem r Expression
+            mkBuiltinInductive = fmap (ExpressionIden . IdenInductive) . getBuiltinName i
+
+            getIntTy :: Sem r Expression
+            getIntTy = mkBuiltinInductive BuiltinInt
+
+            getNatTy :: Sem r Expression
+            getNatTy = mkBuiltinInductive BuiltinNat
+
+            inferLitTypeFromValue :: Sem r Expression
+            inferLitTypeFromValue
+              | v < 0 = getIntTy
+              | otherwise = getNatTy
+
+            valueFromType :: Expression -> Sem r Literal
+            valueFromType exp = do
+              natTy <- getNatTy
+              if
+                  | exp == natTy -> return $ LitNatural v
+                  | otherwise -> do
+                      -- Avoid looking up Int type when negative literals are not used.
+                      intTy <- getIntTy
+                      return $
+                        if
+                            | exp == intTy -> LitInteger v
+                            | otherwise -> l
 
     goIden :: Iden -> Sem r TypedExpression
     goIden i = case i of
