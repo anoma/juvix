@@ -1,6 +1,9 @@
 module Juvix.Compiler.Core.Extra.Value where
 
 import Juvix.Compiler.Core.Data.InfoTable
+import Juvix.Compiler.Core.Extra.Base
+import Juvix.Compiler.Core.Info qualified as Info
+import Juvix.Compiler.Core.Info.ExpansionInfo (kExpansionInfo)
 import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Core.Language.Value
 
@@ -18,5 +21,16 @@ toValue tab = \case
       ci = lookupConstructorInfo tab _constrTag
       ii = lookupInductiveInfo tab (ci ^. constructorInductive)
       paramsNum = length (ii ^. inductiveParams)
-  NLam {} -> ValueFun
+  node@NLam {} ->
+    let (lams, body) = unfoldLambdas node
+        n = length $ takeWhile (Info.member kExpansionInfo . (^. lambdaLhsInfo)) lams
+     in if
+            | n < length lams ->
+                ValueFun
+            | otherwise ->
+                case body of
+                  NCtr c ->
+                    toValue tab (NCtr (over constrArgs (dropEnd n) c))
+                  _ ->
+                    ValueFun
   _ -> impossible

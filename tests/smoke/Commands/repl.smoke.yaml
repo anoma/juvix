@@ -266,13 +266,13 @@ tests:
         evaluation error: failure: Enough
     exit-status: 0
 
-  - name: disambiguate-names
+  - name: print-values
     command:
       - juvix
       - repl
     stdin: "nil"
     stdout:
-      contains: "λ(_X : Type) nil _X"
+      contains: "nil"
     exit-status: 0
 
   - name: core-repl-type

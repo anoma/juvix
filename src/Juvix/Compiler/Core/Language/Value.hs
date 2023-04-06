@@ -9,7 +9,7 @@ data ConstrApp = ConstrApp
     _constrAppArgs :: [Value]
   }
 
--- | Specifies Core values. For user-friendly pretty printing.
+-- | Specifies Core values for user-friendly pretty printing.
 data Value
   = ValueConstrApp ConstrApp
   | ValueConstant ConstantValue
