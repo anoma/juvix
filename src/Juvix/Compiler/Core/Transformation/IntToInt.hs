@@ -57,7 +57,6 @@ convertNode tab = rmap go
                     (BuiltinIntCtorOfNat, BuiltinIntCtorNegSuc) -> makeIf br1 br2
                     (BuiltinIntCtorNegSuc, BuiltinIntCtorOfNat) -> makeIf br2 br1
                     _ -> impossible
-
                   [] -> recur [] $ fromJust _caseDefault
                   _ -> impossible
               _ -> recur [] node
@@ -69,20 +68,21 @@ convertNode tab = rmap go
                 binder = fromJust (headMay (caseBranch ^. caseBranchBinders))
                 binder' = over binderType (go recur) binder
                 mkBody n = go (recur . (BCKeep binder :)) n
-            in
-              case builtinCtor caseBranch of
+             in case builtinCtor caseBranch of
                   BuiltinIntCtorOfNat ->
-                    mkIf _caseInfo
-                         boolSym
-                         (mkBuiltinApp' OpIntLe [mkConstant' (ConstInteger 0), cv])
-                         (mkLet mempty binder' cv (mkBody (caseBranch ^. caseBranchBody)))
-                         (go recur defaultNode)
+                    mkIf
+                      _caseInfo
+                      boolSym
+                      (mkBuiltinApp' OpIntLe [mkConstant' (ConstInteger 0), cv])
+                      (mkLet mempty binder' cv (mkBody (caseBranch ^. caseBranchBody)))
+                      (go recur defaultNode)
                   BuiltinIntCtorNegSuc ->
-                    mkIf _caseInfo
-                         boolSym
-                         (mkBuiltinApp' OpIntLt [cv, mkConstant' (ConstInteger 0)])
-                         (mkLet mempty binder' (negSucConv cv) (mkBody (caseBranch ^. caseBranchBody)))
-                         (go recur defaultNode)
+                    mkIf
+                      _caseInfo
+                      boolSym
+                      (mkBuiltinApp' OpIntLt [cv, mkConstant' (ConstInteger 0)])
+                      (mkLet mempty binder' (negSucConv cv) (mkBody (caseBranch ^. caseBranchBody)))
+                      (go recur defaultNode)
 
           makeIf :: CaseBranch -> CaseBranch -> Node
           makeIf ofNatBranch negSucBranch =
@@ -92,12 +92,12 @@ convertNode tab = rmap go
                 binder br = fromJust (headMay (br ^. caseBranchBinders))
                 binder' br = over binderType (go recur) (binder br)
                 mkBody br = go (recur . (BCKeep (binder br) :)) (br ^. caseBranchBody)
-            in
-            mkIf _caseInfo
-                 boolSym
-                 (mkBuiltinApp' OpIntLe [mkConstant' (ConstInteger 0), cv])
-                 (mkLet mempty (binder' ofNatBranch) cv (mkBody ofNatBranch))
-                 (mkLet mempty (binder' negSucBranch) (negSucConv cv) (mkBody negSucBranch))
+             in mkIf
+                  _caseInfo
+                  boolSym
+                  (mkBuiltinApp' OpIntLe [mkConstant' (ConstInteger 0), cv])
+                  (mkLet mempty (binder' ofNatBranch) cv (mkBody ofNatBranch))
+                  (mkLet mempty (binder' negSucBranch) (negSucConv cv) (mkBody negSucBranch))
 
           builtinCtor :: CaseBranch -> BuiltinIntCtor
           builtinCtor CaseBranch {..} =

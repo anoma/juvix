@@ -107,10 +107,11 @@ instance PrettyCode LetClause where
             return (kwMutual <+> braces (line <> indent' b' <> line))
 
 instance PrettyCode Literal where
-  ppCode = return . \case
-    LitNatural n -> pretty n
-    LitInteger n -> pretty n
-    LitString s -> ppStringLit s
+  ppCode =
+    return . \case
+      LitNatural n -> pretty n
+      LitInteger n -> pretty n
+      LitString s -> ppStringLit s
 
 ppPipeBlock :: (PrettyCode a, Members '[Reader Options] r, Traversable t) => t a -> Sem r (Doc Ann)
 ppPipeBlock items = vsep <$> mapM (fmap (kwPipe <+>) . ppCode) items

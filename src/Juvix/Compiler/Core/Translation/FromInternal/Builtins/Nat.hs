@@ -1,10 +1,10 @@
 module Juvix.Compiler.Core.Translation.FromInternal.Builtins.Nat where
 
 import Data.HashMap.Strict qualified as HashMap
-import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Core.Data
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Info.NameInfo
+import Juvix.Compiler.Core.Language
 
 setupIntToNat :: Symbol -> InfoTable -> InfoTable
 setupIntToNat sym tab =
