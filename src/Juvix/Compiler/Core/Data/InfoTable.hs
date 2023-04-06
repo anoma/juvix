@@ -20,6 +20,7 @@ data InfoTable = InfoTable
     _infoConstructors :: HashMap Tag ConstructorInfo,
     _infoAxioms :: HashMap Text AxiomInfo,
     _infoIntToNat :: Maybe Symbol,
+    _infoIntToInt :: Maybe Symbol,
     _infoNextSymbol :: Word,
     _infoNextTag :: Word,
     _infoBuiltins :: HashMap BuiltinPrim IdentKind
@@ -36,6 +37,7 @@ emptyInfoTable =
       _infoConstructors = mempty,
       _infoAxioms = mempty,
       _infoIntToNat = Nothing,
+      _infoIntToInt = Nothing,
       _infoNextSymbol = 1,
       _infoNextTag = 0,
       _infoBuiltins = mempty

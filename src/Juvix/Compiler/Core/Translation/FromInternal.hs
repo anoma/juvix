@@ -4,13 +4,14 @@ import Data.HashMap.Strict qualified as HashMap
 import Data.List.NonEmpty qualified as NonEmpty
 import Data.Text qualified as Text
 import Juvix.Compiler.Abstract.Data.Name
-import Juvix.Compiler.Concrete.Data.Literal (LiteralLoc)
 import Juvix.Compiler.Core.Data
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Info.LocationInfo
 import Juvix.Compiler.Core.Info.NameInfo
 import Juvix.Compiler.Core.Language
+import Juvix.Compiler.Core.Translation.FromInternal.Builtins.Int
+import Juvix.Compiler.Core.Translation.FromInternal.Builtins.Nat
 import Juvix.Compiler.Core.Translation.FromInternal.Data
 import Juvix.Compiler.Internal.Extra qualified as Internal
 import Juvix.Compiler.Internal.Translation.Extra qualified as Internal
@@ -33,15 +34,18 @@ fromInternal i = do
   (res, _) <- runInfoTableBuilder tab0 (evalState (i ^. InternalTyped.resultFunctions) (runReader (i ^. InternalTyped.resultIdenTypes) f))
   return $
     CoreResult
-      { _coreResultTable = setupIntToNat intToNatSym res,
+      { _coreResultTable = setupIntToInt intToIntSym (setupIntToNat intToNatSym res),
         _coreResultInternalTypedResult = i
       }
   where
     tab0 :: InfoTable
-    tab0 = emptyInfoTable {_infoIntToNat = Just intToNatSym, _infoNextSymbol = intToNatSym + 1}
+    tab0 = emptyInfoTable {_infoIntToNat = Just intToNatSym, _infoIntToInt = Just intToIntSym, _infoNextSymbol = intToIntSym + 1}
 
     intToNatSym :: Symbol
     intToNatSym = 0
+
+    intToIntSym :: Symbol
+    intToIntSym = intToNatSym + 1
 
     f :: Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, State InternalTyped.FunctionsTable] r => Sem r ()
     f = do
@@ -51,41 +55,6 @@ fromInternal i = do
       when
         (isNothing (lookupBuiltinInductive tab BuiltinBool))
         declareBoolBuiltins
-
-    setupIntToNat :: Symbol -> InfoTable -> InfoTable
-    setupIntToNat sym tab =
-      tab
-        { _infoIdentifiers = HashMap.insert sym ii (tab ^. infoIdentifiers),
-          _identContext = HashMap.insert sym node (tab ^. identContext),
-          _infoIntToNat = Just sym
-        }
-      where
-        ii =
-          IdentifierInfo
-            { _identifierSymbol = sym,
-              _identifierName = freshIdentName tab "intToNat",
-              _identifierLocation = Nothing,
-              _identifierArgsNum = 1,
-              _identifierType = mkPi mempty (Binder "x" Nothing mkTypeInteger') targetType,
-              _identifierIsExported = False,
-              _identifierBuiltin = Nothing
-            }
-        node =
-          case (tagZeroM, tagSucM, boolSymM) of
-            (Just tagZero, Just tagSuc, Just boolSym) ->
-              mkLambda' mkTypeInteger' $
-                mkIf'
-                  boolSym
-                  (mkBuiltinApp' OpEq [mkVar' 0, mkConstant' (ConstInteger 0)])
-                  (mkConstr (setInfoName "zero" mempty) tagZero [])
-                  (mkConstr (setInfoName "suc" mempty) tagSuc [mkApp' (mkIdent' sym) (mkBuiltinApp' OpIntSub [mkVar' 0, mkConstant' (ConstInteger 1)])])
-            _ ->
-              mkLambda' mkTypeInteger' $ mkVar' 0
-        targetType = maybe mkTypeInteger' (\s -> mkTypeConstr (setInfoName "Nat" mempty) s []) natSymM
-        tagZeroM = (^. constructorTag) <$> lookupBuiltinConstructor tab BuiltinNatZero
-        tagSucM = (^. constructorTag) <$> lookupBuiltinConstructor tab BuiltinNatSuc
-        boolSymM = (^. inductiveSymbol) <$> lookupBuiltinInductive tab BuiltinBool
-        natSymM = (^. inductiveSymbol) <$> lookupBuiltinInductive tab BuiltinNat
 
 fromInternalExpression :: CoreResult -> Internal.Expression -> Sem r Node
 fromInternalExpression res exp = do
