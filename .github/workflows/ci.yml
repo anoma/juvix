@@ -283,8 +283,8 @@ jobs:
 
       - name: Set homebrew LLVM CC and LIBTOOL vars (macOS)
         run: |
-          echo "CC=$(brew --prefix llvm)/bin/clang" >> $GITHUB_ENV
-          echo "LIBTOOL=$(brew --prefix llvm)/bin/llvm-ar" >> $GITHUB_ENV
+          echo "CC=$(brew --prefix llvm@15)/bin/clang" >> $GITHUB_ENV
+          echo "LIBTOOL=$(brew --prefix llvm@15)/bin/llvm-ar" >> $GITHUB_ENV
 
       - name: Make runtime
         run: |
@@ -300,7 +300,7 @@ jobs:
 
       - name: Add homebrew clang to the PATH (macOS)
         run: |
-          echo "$(brew --prefix llvm)/bin" >> $GITHUB_PATH
+          echo "$(brew --prefix llvm@15)/bin" >> $GITHUB_PATH
 
       - name: Install and test Juvix
         if: ${{ success() }}

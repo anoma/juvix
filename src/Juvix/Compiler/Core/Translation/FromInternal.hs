@@ -418,8 +418,6 @@ goCase c = do
     NTyp {} -> do
       branches <- toList <$> mapM (goCaseBranch ty) (c ^. Internal.caseBranches)
       rty <- goType (fromJust $ c ^. Internal.caseExpressionWholeType)
-      -- Do not use mkMatch' in this file, or the error messages for pattern
-      -- matching coverage will lack location information
       return (mkMatch i (pure ty) rty (pure expr) branches)
     _ ->
       case c ^. Internal.caseBranches of
