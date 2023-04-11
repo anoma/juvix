@@ -77,7 +77,7 @@ transformationText = \case
   RemoveTypeArgs -> strRemoveTypeArgs
   MoveApps -> strMoveApps
   NatToPrimInt -> strNatToPrimInt
-  IntToInt -> strIntToInt
+  IntToPrimInt -> strIntToPrimInt
   ConvertBuiltinTypes -> strConvertBuiltinTypes
   ComputeTypeInfo -> strComputeTypeInfo
   UnrollRecursion -> strUnrollRecursion
@@ -135,8 +135,8 @@ strMoveApps = "move-apps"
 strNatToPrimInt :: Text
 strNatToPrimInt = "nat-to-primint"
 
-strIntToInt :: Text
-strIntToInt = "int-to-int"
+strIntToPrimInt :: Text
+strIntToPrimInt = "int-to-primint"
 
 strConvertBuiltinTypes :: Text
 strConvertBuiltinTypes = "convert-builtin-types"

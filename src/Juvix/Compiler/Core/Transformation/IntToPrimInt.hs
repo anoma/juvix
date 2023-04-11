@@ -1,4 +1,4 @@
-module Juvix.Compiler.Core.Transformation.IntToInt where
+module Juvix.Compiler.Core.Transformation.IntToPrimInt where
 
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Core.Extra
@@ -177,8 +177,8 @@ filterIntBuiltins tab =
       Just b -> not (isIntBuiltin b)
       Nothing -> True
 
-intToInt :: InfoTable -> InfoTable
-intToInt tab = filterIntBuiltins $ mapAllNodes (convertNode tab') tab'
+intToPrimInt :: InfoTable -> InfoTable
+intToPrimInt tab = filterIntBuiltins $ mapAllNodes (convertNode tab') tab'
   where
     tab' =
       case tab ^. infoIntToInt of
