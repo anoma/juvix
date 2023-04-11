@@ -188,6 +188,9 @@ intNeg = "int-neg"
 intMul :: (IsString s) => s
 intMul = "int-mul"
 
+intDiv :: (IsString s) => s
+intDiv = "int-div"
+
 builtin :: IsString s => s
 builtin = "builtin"
 

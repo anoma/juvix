@@ -118,6 +118,7 @@ convertNode tab = rmap go
             Just BuiltinIntPlus -> f (\info x y -> mkBuiltinApp info OpIntAdd [x, y])
             Just BuiltinIntSubNat -> f (\info x y -> mkBuiltinApp info OpIntSub [x, y])
             Just BuiltinIntMul -> f (\info x y -> mkBuiltinApp info OpIntMul [x, y])
+            Just BuiltinIntDiv -> f (\info x y -> mkBuiltinApp info OpIntDiv [x, y])
             _ -> node
 
     convertSingleArgIdentApp :: Node -> Node -> Info -> Symbol -> Node
