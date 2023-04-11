@@ -6,8 +6,8 @@ import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Info.NameInfo
 import Juvix.Compiler.Core.Language
 
-setupIntToInt :: Symbol -> InfoTable -> InfoTable
-setupIntToInt sym tab =
+setupLiteralIntToInt :: Symbol -> InfoTable -> InfoTable
+setupLiteralIntToInt sym tab =
   tab
     { _infoIdentifiers = HashMap.insert sym ii (tab ^. infoIdentifiers),
       _identContext = HashMap.insert sym node (tab ^. identContext),

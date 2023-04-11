@@ -34,7 +34,7 @@ fromInternal i = do
   (res, _) <- runInfoTableBuilder tab0 (evalState (i ^. InternalTyped.resultFunctions) (runReader (i ^. InternalTyped.resultIdenTypes) f))
   return $
     CoreResult
-      { _coreResultTable = setupIntToInt intToIntSym (setupIntToNat intToNatSym res),
+      { _coreResultTable = setupLiteralIntToInt intToIntSym (setupLiteralIntToNat intToNatSym res),
         _coreResultInternalTypedResult = i
       }
   where
