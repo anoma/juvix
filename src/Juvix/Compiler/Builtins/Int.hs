@@ -229,3 +229,36 @@ registerIntDiv f = do
   where
     builtinName :: (IsBuiltin a) => a -> Sem r Name
     builtinName = getBuiltinName (getLoc f)
+
+registerIntMod :: forall r. Members '[Builtins, NameIdGen] r => FunctionDef -> Sem r ()
+registerIntMod f = do
+  int <- builtinName BuiltinInt
+  ofNat <- toExpression <$> builtinName BuiltinIntOfNat
+  negSuc <- toExpression <$> builtinName BuiltinIntNegSuc
+  negNat <- toExpression <$> builtinName BuiltinIntNegNat
+  natMod <- toExpression <$> builtinName BuiltinNatMod
+  natSuc <- toExpression <$> builtinName BuiltinNatSuc
+  varm <- freshVar "m"
+  varn <- freshVar "n"
+  let intMod = f ^. funDefName
+      m = toExpression varm
+      n = toExpression varn
+      exClauses :: [(Expression, Expression)]
+      exClauses =
+        [ (intMod @@ (ofNat @@ m) @@ (ofNat @@ n), ofNat @@ (natMod @@ m @@ n)),
+          (intMod @@ (ofNat @@ m) @@ (negSuc @@ n), ofNat @@ (natMod @@ m @@ (natSuc @@ n))),
+          (intMod @@ (negSuc @@ m) @@ (ofNat @@ n), negNat @@ (natMod @@ (natSuc @@ m) @@ n)),
+          (intMod @@ (negSuc @@ m) @@ (negSuc @@ n), negNat @@ (natMod @@ (natSuc @@ m) @@ (natSuc @@ n)))
+        ]
+  registerFun
+    FunInfo
+      { _funInfoDef = f,
+        _funInfoBuiltin = BuiltinIntMod,
+        _funInfoSignature = int --> int --> int,
+        _funInfoClauses = exClauses,
+        _funInfoFreeVars = [varm, varn],
+        _funInfoFreeTypeVars = []
+      }
+  where
+    builtinName :: (IsBuiltin a) => a -> Sem r Name
+    builtinName = getBuiltinName (getLoc f)

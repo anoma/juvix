@@ -191,6 +191,9 @@ intMul = "int-mul"
 intDiv :: (IsString s) => s
 intDiv = "int-div"
 
+intMod :: (IsString s) => s
+intMod = "int-mod"
+
 builtin :: IsString s => s
 builtin = "builtin"
 
