@@ -130,11 +130,7 @@ format:
 clang-format:
 	@cd runtime && ${MAKE} format
 
-JUVIXFILESTOFORMAT=$(shell find ./examples \
-																./tests/positive \
-																-type d -name ".juvix-build" -prune -o \
-																-type f -name "*.juvix" \
-																-print)
+JUVIXFILESTOFORMAT=$(shell find ./examples ./tests/positive -type d -name ".juvix-build" -prune -o -type f -name "*.juvix" -print)
 JUVIXFORMATFLAGS?=--in-place
 JUVIXTYPECHECKFLAGS?=--only-errors
 
