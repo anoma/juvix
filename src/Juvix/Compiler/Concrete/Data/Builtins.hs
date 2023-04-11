@@ -88,6 +88,7 @@ data BuiltinFunction
   | BuiltinIntDiv
   | BuiltinIntMod
   | BuiltinIntSub
+  | BuiltinIntNonNeg
   deriving stock (Show, Eq, Ord, Enum, Bounded, Generic, Data)
 
 instance Hashable BuiltinFunction
@@ -115,6 +116,7 @@ instance Pretty BuiltinFunction where
     BuiltinIntDiv -> Str.intDiv
     BuiltinIntMod -> Str.intMod
     BuiltinIntSub -> Str.intSub
+    BuiltinIntNonNeg -> Str.intNonNeg
 
 data BuiltinAxiom
   = BuiltinNatPrint
@@ -193,6 +195,7 @@ isIntBuiltin = \case
   BuiltinIntDiv -> True
   BuiltinIntMod -> True
   BuiltinIntSub -> True
+  BuiltinIntNonNeg -> True
   _ -> False
 
 isIgnoredBuiltin :: BuiltinFunction -> Bool

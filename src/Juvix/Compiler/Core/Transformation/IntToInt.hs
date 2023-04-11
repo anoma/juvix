@@ -130,6 +130,7 @@ convertNode tab = rmap go
        in case ii ^. identifierBuiltin of
             Just BuiltinIntNegNat -> negNode
             Just BuiltinIntNeg -> negNode
+            Just BuiltinIntNonNeg -> mkBuiltinApp info OpIntLe [mkConstant' (ConstInteger 0), l]
             _ ->
               convertIdentApp
                 node

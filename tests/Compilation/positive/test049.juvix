@@ -30,4 +30,6 @@ main := printStringLn (intToString 1)
    >> printStringLn (intToString (let g : Int -> Int := neg in g -1))
    >> printStringLn (intToString (-2 * 2))
    >> printStringLn (intToString (div 4 -2))
-   >> printStringLn (intToString (2 - 2));
+   >> printStringLn (intToString (2 - 2))
+   >> printBoolLn (nonNeg 0)
+   >> printBoolLn (nonNeg -1);

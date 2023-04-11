@@ -297,6 +297,7 @@ registerBuiltinFunction d = \case
   BuiltinIntDiv -> registerIntDiv d
   BuiltinIntMod -> registerIntMod d
   BuiltinIntSub -> registerIntSub d
+  BuiltinIntNonNeg -> registerIntNonNeg d
 
 registerBuiltinAxiom ::
   (Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen] r) =>

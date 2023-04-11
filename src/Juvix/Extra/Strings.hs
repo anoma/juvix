@@ -197,6 +197,9 @@ intMod = "int-mod"
 intSub :: (IsString s) => s
 intSub = "int-sub"
 
+intNonNeg :: (IsString s) => s
+intNonNeg = "int-nonneg"
+
 builtin :: IsString s => s
 builtin = "builtin"
 

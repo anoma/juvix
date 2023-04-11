@@ -289,3 +289,34 @@ registerIntSub f = do
   where
     builtinName :: (IsBuiltin a) => a -> Sem r Name
     builtinName = getBuiltinName (getLoc f)
+
+registerIntNonNeg :: forall r. Members '[Builtins, NameIdGen] r => FunctionDef -> Sem r ()
+registerIntNonNeg f = do
+  int <- builtinName BuiltinInt
+  bool_ <- builtinName BuiltinBool
+  ofNat <- toExpression <$> builtinName BuiltinIntOfNat
+  negSuc <- toExpression <$> builtinName BuiltinIntNegSuc
+  true <- toExpression <$> builtinName BuiltinBoolTrue
+  false <- toExpression <$> builtinName BuiltinBoolFalse
+  varn <- freshVar "n"
+  h <- freshHole
+  let intNonNeg = f ^. funDefName
+      n = toExpression varn
+
+      exClauses :: [(Expression, Expression)]
+      exClauses =
+        [ (intNonNeg @@ (ofNat @@ n), true),
+          (intNonNeg @@ (negSuc @@ h), false)
+        ]
+  registerFun
+    FunInfo
+      { _funInfoDef = f,
+        _funInfoBuiltin = BuiltinIntNonNeg,
+        _funInfoSignature = int --> bool_,
+        _funInfoClauses = exClauses,
+        _funInfoFreeVars = [varn],
+        _funInfoFreeTypeVars = []
+      }
+  where
+    builtinName :: (IsBuiltin a) => a -> Sem r Name
+    builtinName = getBuiltinName (getLoc f)
