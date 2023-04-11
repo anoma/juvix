@@ -185,6 +185,9 @@ intNegNat = "int-neg-nat"
 intNeg :: (IsString s) => s
 intNeg = "int-neg"
 
+intMul :: (IsString s) => s
+intMul = "int-mul"
+
 builtin :: IsString s => s
 builtin = "builtin"
 
