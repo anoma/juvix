@@ -476,6 +476,7 @@ goAxiomInductive a = whenJust (a ^. Internal.axiomBuiltin) builtinInductive
       Internal.BuiltinStringToNat -> return ()
       Internal.BuiltinNatToString -> return ()
       Internal.BuiltinIntToString -> return ()
+      Internal.BuiltinIntPrint -> return ()
 
     registerInductiveAxiom :: Maybe BuiltinAxiom -> [(Tag, Text, Type -> Type, Maybe BuiltinConstructor)] -> Sem r ()
     registerInductiveAxiom ax ctrs = do
@@ -559,6 +560,10 @@ goAxiomDef a = do
         intName <- getIntName
         intSym <- getIntSymbol
         registerAxiomDef (mkLambda' (mkTypeConstr (setInfoName intName mempty) intSym []) (mkBuiltinApp' OpShow [mkVar' 0]))
+      Internal.BuiltinIntPrint -> do
+        intName <- getIntName
+        intSym <- getIntSymbol
+        registerAxiomDef $ writeLambda (mkTypeConstr (setInfoName intName mempty) intSym [])
 
     axiomType' :: Sem r Type
     axiomType' = runReader initIndexTable (goType (a ^. Internal.axiomType))
@@ -892,6 +897,7 @@ goApplication a = do
             _ -> error "internal to core: trace must be called with 2 arguments"
         Just Internal.BuiltinFail -> app
         Just Internal.BuiltinIntToString -> app
+        Just Internal.BuiltinIntPrint -> app
         Nothing -> app
     Internal.ExpressionIden (Internal.IdenFunction n) -> do
       funInfoBuiltin <- Internal.getFunctionBuiltinInfo n

@@ -133,6 +133,7 @@ data BuiltinAxiom
   | BuiltinTrace
   | BuiltinFail
   | BuiltinIntToString
+  | BuiltinIntPrint
   deriving stock (Show, Eq, Ord, Enum, Bounded, Generic, Data)
 
 instance Hashable BuiltinAxiom
@@ -153,6 +154,7 @@ instance Pretty BuiltinAxiom where
     BuiltinTrace -> Str.trace_
     BuiltinFail -> Str.fail_
     BuiltinIntToString -> Str.intToString
+    BuiltinIntPrint -> Str.intPrint
 
 data BuiltinType
   = BuiltinTypeInductive BuiltinInductive

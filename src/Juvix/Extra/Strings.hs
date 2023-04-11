@@ -200,6 +200,9 @@ intSub = "int-sub"
 intNonNeg :: (IsString s) => s
 intNonNeg = "int-nonneg"
 
+intPrint :: (IsString s) => s
+intPrint = "int-print"
+
 builtin :: IsString s => s
 builtin = "builtin"
 

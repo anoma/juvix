@@ -319,6 +319,7 @@ registerBuiltinAxiom d = \case
   BuiltinTrace -> registerTrace d
   BuiltinFail -> registerFail d
   BuiltinIntToString -> registerIntToString d
+  BuiltinIntPrint -> registerIntPrint d
 
 goInductive ::
   (Members '[InfoTableBuilder, Builtins, Error ScoperError] r) =>

@@ -320,3 +320,10 @@ registerIntNonNeg f = do
   where
     builtinName :: (IsBuiltin a) => a -> Sem r Name
     builtinName = getBuiltinName (getLoc f)
+
+registerIntPrint :: Members '[Builtins] r => AxiomDef -> Sem r ()
+registerIntPrint f = do
+  int <- getBuiltinName (getLoc f) BuiltinInt
+  io <- getBuiltinName (getLoc f) BuiltinIO
+  unless (f ^. axiomType === (int --> io)) (error "Int print has the wrong type signature")
+  registerBuiltin BuiltinIntPrint (f ^. axiomName)
