@@ -10,7 +10,7 @@ EXAMPLES= Collatz/Collatz.juvix \
 	HelloWorld/HelloWorld.juvix \
 	PascalsTriangle/PascalsTriangle.juvix \
 	TicTacToe/CLI/TicTacToe.juvix \
-	Tutorial/Tutorial.juvix \
+	Tutorial/Tutorial.juvix
 
 DEMO_EXAMPLE=examples/demo/Demo.juvix
 
@@ -130,20 +130,26 @@ format:
 clang-format:
 	@cd runtime && ${MAKE} format
 
-JUVIXEXAMPLEFILES=$(shell find ./examples -name "*.juvix" -print)
+JUVIXFILESTOFORMAT=$(shell find ./examples \
+																./tests/positive \
+																-type d -name ".juvix-build" -prune -o \
+																-type f -name "*.juvix" \
+																-print)
 JUVIXFORMATFLAGS?=--in-place
 JUVIXTYPECHECKFLAGS?=--only-errors
 
-.PHONY: format-juvix-examples
-format-juvix-examples:
-	@for file in $(JUVIXEXAMPLEFILES); do \
-		${JUVIXBIN} format $(JUVIXFORMATFLAGS) "$$file"; \
+.PHONY: format-juvix-files
+format-juvix-files:
+	@for file in $(JUVIXFILESTOFORMAT); do \
+		juvix format $(JUVIXFORMATFLAGS) "$$file"; \
 	done
 
-.PHONY: check-format-juvix-examples
-check-format-juvix-examples:
+.PHONY: check-format-juvix-files
+check-format-juvix-files:
 	@export JUVIXFORMATFLAGS=--check
-	@${MAKE} format-juvix-examples
+	@make format-juvix-files
+
+JUVIXEXAMPLEFILES=$(shell find ./examples  -name "*.juvix" -print)
 
 .PHONY: typecheck-juvix-examples
 typecheck-juvix-examples:

@@ -1,7 +1,5 @@
 module Data.Maybe;
 
-  type Maybe (a : Type) :=
-     nothing : Maybe a |
-     just : a → Maybe a;
-
-end;
+type Maybe (a : Type) :=
+  | nothing : Maybe a
+  | just : a → Maybe a;

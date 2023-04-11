@@ -7,16 +7,18 @@ import Data.Nat;
 open Data.Nat;
 
 type List (A : Type) :=
-  nil : List A |
-  cons : A → List A → List A;
+  | nil : List A
+  | cons : A → List A → List A;
 
 -- Do not remove implicit arguments. Useful for testing.
-foldr : {A : Type} → {B : Type} → (A → B → B) → B → List A → B;
+foldr :
+  {A : Type} → {B : Type} → (A → B → B) → B → List A → B;
 foldr _ z nil := z;
 foldr f z (cons h hs) := f h (foldr {_} f z hs);
 
-foldl : {A : Type} → {B : Type} → (B → A → B) → B → List A → B;
-foldl f z nil := z ;
+foldl :
+  {A : Type} → {B : Type} → (B → A → B) → B → List A → B;
+foldl f z nil := z;
 foldl {_} {_} f z (cons h hs) := foldl {_} f (f z h) hs;
 
 map : {A : Type} → {B : Type} → (A → B) → List A → List B;
@@ -25,9 +27,8 @@ map f (cons h hs) := cons (f h) (map f hs);
 
 filter : {A : Type} → (A → Bool) → List A → List A;
 filter f nil := nil;
-filter f (cons h hs) := ite (f h)
-  (cons h (filter {_} f hs))
-  (filter f hs);
+filter f (cons h hs) :=
+  ite (f h) (cons h (filter {_} f hs)) (filter f hs);
 
 length : {A : Type} → List A → ℕ;
 length nil := zero;
@@ -51,5 +52,3 @@ take _ _ := nil;
 concat : {A : Type} → List A → List A → List A;
 concat nil ys := ys;
 concat (cons x xs) ys := cons x (concat xs ys);
-
-end;

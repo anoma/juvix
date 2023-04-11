@@ -5,5 +5,3 @@ open import Stdlib.Prelude;
 
 k : Bool;
 k := true;
-
-end;
