@@ -8,7 +8,7 @@ data TransformationId
   | TopEtaExpand
   | RemoveTypeArgs
   | MoveApps
-  | NatToInt
+  | NatToPrimInt
   | IntToInt
   | ConvertBuiltinTypes
   | Identity
@@ -52,7 +52,7 @@ toTypecheckTransformations :: [TransformationId]
 toTypecheckTransformations = [MatchToCase]
 
 toEvalTransformations :: [TransformationId]
-toEvalTransformations = [EtaExpandApps, MatchToCase, NatToInt, IntToInt, ConvertBuiltinTypes, LetFolding]
+toEvalTransformations = [EtaExpandApps, MatchToCase, NatToPrimInt, IntToInt, ConvertBuiltinTypes, LetFolding]
 
 toStrippedTransformations :: [TransformationId]
 toStrippedTransformations =

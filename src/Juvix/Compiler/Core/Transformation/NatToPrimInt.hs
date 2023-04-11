@@ -1,4 +1,4 @@
-module Juvix.Compiler.Core.Transformation.NatToInt (natToInt) where
+module Juvix.Compiler.Core.Transformation.NatToPrimInt (natToPrimInt) where
 
 import Data.HashMap.Strict qualified as HashMap
 import Data.List qualified as List
@@ -141,8 +141,8 @@ filterNatBuiltins tab =
       Just b -> not (isNatBuiltin b)
       Nothing -> True
 
-natToInt :: InfoTable -> InfoTable
-natToInt tab = filterNatBuiltins $ mapAllNodes (convertNode tab') tab'
+natToPrimInt :: InfoTable -> InfoTable
+natToPrimInt tab = filterNatBuiltins $ mapAllNodes (convertNode tab') tab'
   where
     tab' =
       case tab ^. infoIntToNat of
