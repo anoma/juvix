@@ -63,7 +63,7 @@ registerIntEq f = do
         _funInfoFreeTypeVars = []
       }
   where
-    builtinName :: (IsBuiltin a) => a -> Sem r Name
+    builtinName :: IsBuiltin a => a -> Sem r Name
     builtinName = getBuiltinName (getLoc f)
 
 registerIntSubNat :: forall r. Members '[Builtins, NameIdGen] r => FunctionDef -> Sem r ()
@@ -133,7 +133,7 @@ registerIntNegNat f = do
         _funInfoFreeTypeVars = []
       }
   where
-    builtinName :: (IsBuiltin a) => a -> Sem r Name
+    builtinName :: IsBuiltin a => a -> Sem r Name
     builtinName = getBuiltinName (getLoc f)
 
 registerIntNeg :: forall r. Members '[Builtins, NameIdGen] r => FunctionDef -> Sem r ()
@@ -161,7 +161,7 @@ registerIntNeg f = do
         _funInfoFreeTypeVars = []
       }
   where
-    builtinName :: (IsBuiltin a) => a -> Sem r Name
+    builtinName :: IsBuiltin a => a -> Sem r Name
     builtinName = getBuiltinName (getLoc f)
 
 registerIntMul :: forall r. Members '[Builtins, NameIdGen] r => FunctionDef -> Sem r ()
@@ -194,7 +194,7 @@ registerIntMul f = do
         _funInfoFreeTypeVars = []
       }
   where
-    builtinName :: (IsBuiltin a) => a -> Sem r Name
+    builtinName :: IsBuiltin a => a -> Sem r Name
     builtinName = getBuiltinName (getLoc f)
 
 registerIntDiv :: forall r. Members '[Builtins, NameIdGen] r => FunctionDef -> Sem r ()
@@ -227,7 +227,7 @@ registerIntDiv f = do
         _funInfoFreeTypeVars = []
       }
   where
-    builtinName :: (IsBuiltin a) => a -> Sem r Name
+    builtinName :: IsBuiltin a => a -> Sem r Name
     builtinName = getBuiltinName (getLoc f)
 
 registerIntMod :: forall r. Members '[Builtins, NameIdGen] r => FunctionDef -> Sem r ()
@@ -260,7 +260,7 @@ registerIntMod f = do
         _funInfoFreeTypeVars = []
       }
   where
-    builtinName :: (IsBuiltin a) => a -> Sem r Name
+    builtinName :: IsBuiltin a => a -> Sem r Name
     builtinName = getBuiltinName (getLoc f)
 
 registerIntSub :: forall r. Members '[Builtins, NameIdGen] r => FunctionDef -> Sem r ()
@@ -287,7 +287,7 @@ registerIntSub f = do
         _funInfoFreeTypeVars = []
       }
   where
-    builtinName :: (IsBuiltin a) => a -> Sem r Name
+    builtinName :: IsBuiltin a => a -> Sem r Name
     builtinName = getBuiltinName (getLoc f)
 
 registerIntNonNeg :: forall r. Members '[Builtins, NameIdGen] r => FunctionDef -> Sem r ()
@@ -318,7 +318,7 @@ registerIntNonNeg f = do
         _funInfoFreeTypeVars = []
       }
   where
-    builtinName :: (IsBuiltin a) => a -> Sem r Name
+    builtinName :: IsBuiltin a => a -> Sem r Name
     builtinName = getBuiltinName (getLoc f)
 
 registerIntPrint :: Members '[Builtins] r => AxiomDef -> Sem r ()
@@ -327,3 +327,64 @@ registerIntPrint f = do
   io <- getBuiltinName (getLoc f) BuiltinIO
   unless (f ^. axiomType === (int --> io)) (error "Int print has the wrong type signature")
   registerBuiltin BuiltinIntPrint (f ^. axiomName)
+
+registerIntLe :: forall r. Members '[Builtins, NameIdGen] r => FunctionDef -> Sem r ()
+registerIntLe f = do
+  int <- builtinName BuiltinInt
+  bool_ <- builtinName BuiltinBool
+  nonNeg <- toExpression <$> builtinName BuiltinIntNonNeg
+  intSub <- toExpression <$> builtinName BuiltinIntSub
+  varm <- freshVar "m"
+  varn <- freshVar "n"
+  let intLe = f ^. funDefName
+      (.-.) :: (IsExpression a, IsExpression b) => a -> b -> Expression
+      x .-. y = intSub @@ x @@ y
+      m = toExpression varm
+      n = toExpression varn
+      exClauses :: [(Expression, Expression)]
+      exClauses =
+        [(intLe @@ m @@ n, nonNeg @@ (n .-. m))]
+  registerFun
+    FunInfo
+      { _funInfoDef = f,
+        _funInfoBuiltin = BuiltinIntLe,
+        _funInfoSignature = int --> int --> bool_,
+        _funInfoClauses = exClauses,
+        _funInfoFreeVars = [varm, varn],
+        _funInfoFreeTypeVars = []
+      }
+  where
+    builtinName :: IsBuiltin a => a -> Sem r Name
+    builtinName = getBuiltinName (getLoc f)
+
+registerIntLt :: forall r. Members '[Builtins, NameIdGen] r => FunctionDef -> Sem r ()
+registerIntLt f = do
+  int <- builtinName BuiltinInt
+  bool_ <- builtinName BuiltinBool
+  intLe <- toExpression <$> builtinName BuiltinIntLe
+  intPlus <- toExpression <$> builtinName BuiltinIntPlus
+  varm <- freshVar "m"
+  varn <- freshVar "n"
+  let intLt = f ^. funDefName
+      (.+.) :: (IsExpression a, IsExpression b) => a -> b -> Expression
+      x .+. y = intPlus @@ x @@ y
+      (.<=.) :: (IsExpression a, IsExpression b) => a -> b -> Expression
+      lit1 = ExpressionLiteral (WithLoc (getLoc f) (LitInteger 1))
+      x .<=. y = intLe @@ x @@ y
+      m = toExpression varm
+      n = toExpression varn
+      exClauses :: [(Expression, Expression)]
+      exClauses =
+        [(intLt @@ m @@ n, (m .+. lit1) .<=. n)]
+  registerFun
+    FunInfo
+      { _funInfoDef = f,
+        _funInfoBuiltin = BuiltinIntLt,
+        _funInfoSignature = int --> int --> bool_,
+        _funInfoClauses = exClauses,
+        _funInfoFreeVars = [varm, varn],
+        _funInfoFreeTypeVars = []
+      }
+  where
+    builtinName :: IsBuiltin a => a -> Sem r Name
+    builtinName = getBuiltinName (getLoc f)

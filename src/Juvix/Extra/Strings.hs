@@ -200,6 +200,12 @@ intSub = "int-sub"
 intNonNeg :: (IsString s) => s
 intNonNeg = "int-nonneg"
 
+intLe :: IsString s => s
+intLe = "int-le"
+
+intLt :: IsString s => s
+intLt = "int-lt"
+
 intPrint :: (IsString s) => s
 intPrint = "int-print"
 

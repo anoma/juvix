@@ -1,6 +1,6 @@
 module test049;
 
-open import Stdlib.Prelude hiding {+;*;div};
+open import Stdlib.Prelude hiding {+;*;div;mod};
 open import Stdlib.Data.Int.Ord;
 open import Stdlib.Data.Int;
 
@@ -32,4 +32,9 @@ main := printStringLn (intToString 1)
    >> printIntLn (div 4 -2)
    >> printIntLn (2 - 2)
    >> printBoolLn (nonNeg 0)
-   >> printBoolLn (nonNeg -1);
+   >> printBoolLn (nonNeg -1)
+   >> printIntLn (mod -5 -2)
+   >> printBoolLn (0 < 0)
+   >> printBoolLn (0 <= 0)
+   >> printBoolLn (0 < 1)
+   >> printBoolLn (1 <= 0);
