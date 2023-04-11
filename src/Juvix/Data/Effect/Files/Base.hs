@@ -43,6 +43,4 @@ data Files m a where
   CopyFile' :: Path Abs File -> Path Abs File -> Files m ()
   JuvixConfigDir :: Files m (Path Abs Dir)
 
--- CanonicalizeDir :: Files m (Path Abs Dir)
-
 makeSem ''Files

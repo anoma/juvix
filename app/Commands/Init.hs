@@ -43,8 +43,6 @@ getPackage :: forall r. Members '[Embed IO] r => Sem r Package
 getPackage = do
   tproj <- getProjName
   say "Write the version of your project [leave empty for 0.0.0]"
-  -- root <- getCurrentDir
-  -- let pkg = defaultPackage
   tversion :: SemVer <- getVersion
   return
     Package
