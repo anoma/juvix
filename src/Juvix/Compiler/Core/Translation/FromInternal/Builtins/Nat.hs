@@ -11,7 +11,7 @@ setupIntToNat sym tab =
   tab
     { _infoIdentifiers = HashMap.insert sym ii (tab ^. infoIdentifiers),
       _identContext = HashMap.insert sym node (tab ^. identContext),
-      _infoIntToNat = Just sym
+      _infoLiteralIntToNat = Just sym
     }
   where
     ii =

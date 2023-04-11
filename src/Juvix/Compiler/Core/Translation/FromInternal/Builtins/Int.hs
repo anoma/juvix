@@ -53,4 +53,4 @@ setupIntToInt sym tab =
     tagNegSucM = (^. constructorTag) <$> lookupBuiltinConstructor tab BuiltinIntNegSuc
     boolSymM = (^. inductiveSymbol) <$> lookupBuiltinInductive tab BuiltinBool
     natIntM = (^. inductiveSymbol) <$> lookupBuiltinInductive tab BuiltinInt
-    intToNatSymM = tab ^. infoIntToNat
+    intToNatSymM = tab ^. infoLiteralIntToNat

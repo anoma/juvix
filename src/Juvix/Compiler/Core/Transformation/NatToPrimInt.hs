@@ -13,7 +13,7 @@ convertNode tab = rmap go
     go :: ([BinderChange] -> Node -> Node) -> Node -> Node
     go recur node = case node of
       NApp (App _ (NIdt (Ident {..})) l)
-        | Just _identSymbol == tab ^. infoIntToNat ->
+        | Just _identSymbol == tab ^. infoLiteralIntToNat ->
             go recur l
       NApp (App _ (NApp (App _ (NIdt (Ident {..})) l)) r) ->
         recur [] $ convertIdentApp node (\g -> g _identInfo l r) _identSymbol
@@ -28,7 +28,7 @@ convertNode tab = rmap go
             )
             _identSymbol
       NIdt (Ident {..})
-        | Just _identSymbol == tab ^. infoIntToNat ->
+        | Just _identSymbol == tab ^. infoLiteralIntToNat ->
             mkLambda' mkTypeInteger' (mkVar' 0)
       NIdt (Ident {..}) ->
         recur [] $
@@ -145,7 +145,7 @@ natToPrimInt :: InfoTable -> InfoTable
 natToPrimInt tab = filterNatBuiltins $ mapAllNodes (convertNode tab') tab'
   where
     tab' =
-      case tab ^. infoIntToNat of
+      case tab ^. infoLiteralIntToNat of
         Just sym ->
           tab {_identContext = HashMap.insert sym (mkLambda' mkTypeInteger' (mkVar' 0)) (tab ^. identContext)}
         Nothing ->
