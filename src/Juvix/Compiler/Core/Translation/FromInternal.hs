@@ -31,30 +31,25 @@ mkIdentIndex = show . (^. Internal.nameId . Internal.unNameId)
 
 fromInternal :: Internal.InternalTypedResult -> Sem k CoreResult
 fromInternal i = do
-  (res, _) <- runInfoTableBuilder tab0 (evalState (i ^. InternalTyped.resultFunctions) (runReader (i ^. InternalTyped.resultIdenTypes) f))
+  (res, _) <- runInfoTableBuilder emptyInfoTable (evalState (i ^. InternalTyped.resultFunctions) (runReader (i ^. InternalTyped.resultIdenTypes) f))
   return $
     CoreResult
-      { _coreResultTable = setupLiteralIntToInt intToIntSym (setupLiteralIntToNat intToNatSym res),
+      { _coreResultTable = res,
         _coreResultInternalTypedResult = i
       }
   where
-    tab0 :: InfoTable
-    tab0 = emptyInfoTable {_infoLiteralIntToNat = Just intToNatSym, _infoLiteralIntToInt = Just intToIntSym, _infoNextSymbol = intToIntSym + 1}
-
-    intToNatSym :: Symbol
-    intToNatSym = 0
-
-    intToIntSym :: Symbol
-    intToIntSym = intToNatSym + 1
-
     f :: Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, State InternalTyped.FunctionsTable] r => Sem r ()
     f = do
+      reserveLiteralIntToNatSymbol
+      reserveLiteralIntToIntSymbol
       let resultModules = toList (i ^. InternalTyped.resultModules)
       runReader (Internal.buildTable resultModules) (mapM_ goTopModule resultModules)
       tab <- getInfoTable
       when
         (isNothing (lookupBuiltinInductive tab BuiltinBool))
         declareBoolBuiltins
+      setupLiteralIntToNat literalIntToNatNode
+      setupLiteralIntToInt literalIntToIntNode
 
 fromInternalExpression :: CoreResult -> Internal.Expression -> Sem r Node
 fromInternalExpression res exp = do
