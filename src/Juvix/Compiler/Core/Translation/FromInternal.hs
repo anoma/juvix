@@ -39,7 +39,7 @@ fromInternal i = do
       }
   where
     tab0 :: InfoTable
-    tab0 = emptyInfoTable {_infoLiteralIntToNat = Just intToNatSym, _infoIntToInt = Just intToIntSym, _infoNextSymbol = intToIntSym + 1}
+    tab0 = emptyInfoTable {_infoLiteralIntToNat = Just intToNatSym, _infoLiteralIntToInt = Just intToIntSym, _infoNextSymbol = intToIntSym + 1}
 
     intToNatSym :: Symbol
     intToNatSym = 0
@@ -747,7 +747,7 @@ goExpression = \case
   Internal.ExpressionLet l -> goLet l
   Internal.ExpressionLiteral l -> do
     tab <- getInfoTable
-    return (goLiteral (fromJust $ tab ^. infoLiteralIntToNat) (fromJust $ tab ^. infoIntToInt) l)
+    return (goLiteral (fromJust $ tab ^. infoLiteralIntToNat) (fromJust $ tab ^. infoLiteralIntToInt) l)
   Internal.ExpressionIden i -> case i of
     Internal.IdenVar n -> do
       k <- HashMap.lookupDefault impossible id_ <$> asks (^. indexTableVars)
