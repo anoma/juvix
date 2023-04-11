@@ -357,7 +357,7 @@ even : Nat -> Bool;
 even :=
   let
     even' : Nat -> Bool;
-    odd': Nat -> Bool;
+    odd' : Nat -> Bool;
 
     even' zero := true;
     even' (suc n) := odd' n;
@@ -725,7 +725,7 @@ type Maybe (A : Type) :=
 For example, one could define the tail function as:
 
 ```juvix
-tail' : {A : Type} -> List A -> Maybe A
+tail' : {A : Type} -> List A -> Maybe (List A)
 tail' (_ :: xs) := just xs;
 tail' nil := nothing;
 ```
