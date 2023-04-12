@@ -304,5 +304,10 @@ tests =
       "Test049: Builtin Int"
       $(mkRelDir ".")
       $(mkRelFile "test049.juvix")
-      $(mkRelFile "out/test049.out")
+      $(mkRelFile "out/test049.out"),
+    posTest
+      "Test050: Pattern matching with integers"
+      $(mkRelDir ".")
+      $(mkRelFile "test050.juvix")
+      $(mkRelFile "out/test050.out")
   ]

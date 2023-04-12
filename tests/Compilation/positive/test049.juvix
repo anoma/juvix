@@ -41,4 +41,3 @@ main := printStringLn (intToString 1)
    >> printBoolLn (1 <= 0)
    >> printIntLn (mod 5 -3)
    >> printIntLn (div 5 -3);
-
