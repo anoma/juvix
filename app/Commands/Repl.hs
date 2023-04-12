@@ -315,7 +315,7 @@ defaultPreludeEntryPoint = do
       root = roots ^. rootsRootDir
       pkg = roots ^. rootsPackage
       pkgGlobal = roots ^. rootsPackageGlobal
-      mstdlibPath = packageStdlib root buildDir (pkg ^. packageDependencies)
+  mstdlibPath <- liftIO (runM (runFilesIO (packageStdlib root buildDir (pkg ^. packageDependencies))))
   return $ case mstdlibPath of
     Just stdlibPath ->
       Just

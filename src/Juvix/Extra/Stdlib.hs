@@ -25,18 +25,20 @@ stdlibFiles = mapMaybe helper $(stdlibDir)
 
 ensureStdlib :: Members '[Files] r => Path Abs Dir -> Path Abs Dir -> [Dependency] -> Sem r ()
 ensureStdlib rootDir buildDir deps =
-  whenJust (packageStdlib rootDir buildDir deps) $ \stdlibRoot ->
+  whenJustM (packageStdlib rootDir buildDir deps) $ \stdlibRoot ->
     runReader stdlibRoot updateStdlib
 
-packageStdlib :: Path Abs Dir -> Path Abs Dir -> [Dependency] -> Maybe (Path Abs Dir)
-packageStdlib rootDir buildDir = firstJust (isStdLib rootDir buildDir)
+packageStdlib :: Members '[Files] r => Path Abs Dir -> Path Abs Dir -> [Dependency] -> Sem r (Maybe (Path Abs Dir))
+packageStdlib rootDir buildDir = firstJustM (isStdLib rootDir buildDir)
 
-isStdLib :: Path Abs Dir -> Path Abs Dir -> Dependency -> Maybe (Path Abs Dir)
-isStdLib rootDir buildDir (Dependency dep) =
-  let mstdlib :: Maybe (Path Rel Dir) = stripProperPrefix buildDir (someBaseToAbs rootDir dep)
-   in if
-          | mstdlib == Just relStdlibDir -> Just stdLibBuildDir
-          | otherwise -> Nothing
+isStdLib :: Members '[Files] r => Path Abs Dir -> Path Abs Dir -> Dependency -> Sem r (Maybe (Path Abs Dir))
+isStdLib rootDir buildDir (Dependency dep) = do
+  adir <- canonicalDir rootDir dep
+  let mstdlib :: Maybe (Path Rel Dir) = stripProperPrefix buildDir adir
+  return $
+    if
+        | mstdlib == Just relStdlibDir -> Just stdLibBuildDir
+        | otherwise -> Nothing
   where
     stdLibBuildDir :: Path Abs Dir
     stdLibBuildDir = juvixStdlibDir buildDir
