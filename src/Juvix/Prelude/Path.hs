@@ -26,10 +26,7 @@ infixr 5 <///>
 
 -- | Appens a relative path to some directory
 (<///>) :: SomeBase Dir -> Path Rel t -> SomeBase t
-(<///>) s r = case s of
-  Abs a -> Abs (a <//> r)
-  Rel a -> Rel (a <//> r)
-
+(<///>) s r = mapSomeBase (<//> r) s
 someFile :: FilePath -> SomeBase File
 someFile r = fromMaybe (error ("not a file path: " <> pack r)) (parseSomeFile r)
 
