@@ -2,5 +2,3 @@ module Input;
 
 import A;
 import Nat;
-
-end;

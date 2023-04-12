@@ -2,8 +2,7 @@ module ShadowPublicOpen;
 
 module M;
   module N;
-    axiom
-    A : Type;
+    axiom A : Type;
   end;
 
   open N public;
@@ -11,5 +10,4 @@ end;
 
 open M;
 
-axiom
-A : Type;
+axiom A : Type;

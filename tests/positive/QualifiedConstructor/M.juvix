@@ -1,8 +1,7 @@
 module M;
 
 module O;
-  axiom
-  A : Type;
+  axiom A : Type;
 end;
 
 open O;

@@ -1,6 +1,7 @@
 module LiteralString;
 
-builtin string axiom String : Type;
+builtin string
+axiom String : Type;
 
 type A :=
   | a : A;

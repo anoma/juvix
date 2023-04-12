@@ -1,6 +1,6 @@
 module Data.Ord;
-    type Ordering :=
-      LT : Ordering |
-      EQ : Ordering |
-      GT : Ordering;
-end;
+
+type Ordering :=
+  | LT : Ordering
+  | EQ : Ordering
+  | GT : Ordering;
