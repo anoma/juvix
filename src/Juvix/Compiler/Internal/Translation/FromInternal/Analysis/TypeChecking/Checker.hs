@@ -617,14 +617,10 @@ inferExpression' hint e = case e of
         typedLitInteger :: Integer -> Sem r TypedExpression
         typedLitInteger v = do
           inferredTy <- inferLitTypeFromValue
-          natTy <- getNatTy
-          let ty = case hint of
-                Nothing -> inferredTy
-                Just ExpressionHole {} -> inferredTy
-                Just hintTy ->
-                  if
-                      | inferredTy == natTy -> hintTy
-                      | otherwise -> inferredTy
+          ty <- case hint of
+            Nothing -> return inferredTy
+            Just ExpressionHole {} -> return inferredTy
+            Just hintTy -> checkHint inferredTy hintTy
           lit' <- WithLoc i <$> valueFromType ty
           return
             TypedExpression
@@ -658,6 +654,22 @@ inferExpression' hint e = case e of
                         if
                             | exp == intTy -> LitInteger v
                             | otherwise -> l
+
+            checkHint :: Expression -> Expression -> Sem r Expression
+            checkHint inferredTy hintTy = do
+              natTy <- getNatTy
+              if
+                  -- Avoid looking up Int type when only Nat type is used.
+                  | inferredTy == natTy, hintTy == natTy -> return natTy
+                  | inferredTy == natTy -> checkHintWithInt
+                  | otherwise -> return inferredTy
+              where
+                checkHintWithInt :: Sem r Expression
+                checkHintWithInt = do
+                  intTy <- getIntTy
+                  if
+                      | hintTy == intTy -> return intTy
+                      | otherwise -> return inferredTy
 
     goIden :: Iden -> Sem r TypedExpression
     goIden i = case i of
