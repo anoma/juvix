@@ -26,7 +26,7 @@ convertNode tab = rmap go
       NIdt (Ident {..}) ->
         recur [] $ convertSingleArgIdent node _identInfo _identSymbol
       NCtr (Constr {..}) ->
-        let ci = fromJust $ HashMap.lookup _constrTag (tab ^. infoConstructors)
+        let ci = lookupConstructorInfo tab _constrTag
          in case ci ^. constructorBuiltin of
               Just BuiltinIntOfNat -> recur [] (fromJust (headMay _constrArgs))
               Just BuiltinIntNegSuc -> recur [] (negSucConv (fromJust (headMay _constrArgs)))
@@ -85,7 +85,7 @@ convertNode tab = rmap go
 
           builtinCtor :: CaseBranch -> BuiltinIntCtor
           builtinCtor CaseBranch {..} =
-            let ci = fromJust $ HashMap.lookup _caseBranchTag (tab ^. infoConstructors)
+            let ci = lookupConstructorInfo tab _caseBranchTag
              in case ci ^. constructorBuiltin of
                   Just BuiltinIntOfNat -> BuiltinIntCtorOfNat
                   Just BuiltinIntNegSuc -> BuiltinIntCtorNegSuc
@@ -112,7 +112,7 @@ convertNode tab = rmap go
 
     convertIdentApp :: Node -> ((Info -> Node -> Node -> Node) -> Node) -> Symbol -> Node
     convertIdentApp node f sym =
-      let ii = fromJust $ HashMap.lookup sym (tab ^. infoIdentifiers)
+      let ii = lookupIdentifierInfo tab sym
        in case ii ^. identifierBuiltin of
             Just BuiltinIntEq -> f (\info x y -> mkBuiltinApp info OpEq [x, y])
             Just BuiltinIntPlus -> f (\info x y -> mkBuiltinApp info OpIntAdd [x, y])
@@ -127,7 +127,7 @@ convertNode tab = rmap go
 
     convertSingleArgIdentApp :: Node -> Node -> Info -> Symbol -> Node
     convertSingleArgIdentApp node l info sym =
-      let ii = fromJust $ HashMap.lookup sym (tab ^. infoIdentifiers)
+      let ii = lookupIdentifierInfo tab sym
           negNode = negNatBody info l
        in case ii ^. identifierBuiltin of
             Just BuiltinIntNegNat -> negNode
@@ -145,7 +145,7 @@ convertNode tab = rmap go
 
     convertSingleArgIdent :: Node -> Info -> Symbol -> Node
     convertSingleArgIdent node info sym =
-      let ii = fromJust $ HashMap.lookup sym (tab ^. infoIdentifiers)
+      let ii = lookupIdentifierInfo tab sym
           negNode = mkLambda' mkTypeInteger' $ negNatBody info (mkVar' 0)
        in case ii ^. identifierBuiltin of
             Just BuiltinIntNegNat -> negNode
