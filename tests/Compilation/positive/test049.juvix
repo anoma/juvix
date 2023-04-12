@@ -1,3 +1,4 @@
+-- Builtin Int
 module test049;
 
 open import Stdlib.Prelude hiding {+;*;div;mod};
@@ -37,4 +38,7 @@ main := printStringLn (intToString 1)
    >> printBoolLn (0 < 0)
    >> printBoolLn (0 <= 0)
    >> printBoolLn (0 < 1)
-   >> printBoolLn (1 <= 0);
+   >> printBoolLn (1 <= 0)
+   >> printIntLn (mod 5 -3)
+   >> printIntLn (div 5 -3);
+
