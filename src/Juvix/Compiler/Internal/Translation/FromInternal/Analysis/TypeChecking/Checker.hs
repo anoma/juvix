@@ -616,10 +616,15 @@ inferExpression' hint e = case e of
       where
         typedLitInteger :: Integer -> Sem r TypedExpression
         typedLitInteger v = do
-          ty <- case hint of
-            Nothing -> inferLitTypeFromValue
-            Just ExpressionHole {} -> inferLitTypeFromValue
-            Just exp -> return exp
+          inferredTy <- inferLitTypeFromValue
+          natTy <- getNatTy
+          let ty = case hint of
+                Nothing -> inferredTy
+                Just ExpressionHole {} -> inferredTy
+                Just hintTy ->
+                  if
+                      | inferredTy == natTy -> hintTy
+                      | otherwise -> inferredTy
           lit' <- WithLoc i <$> valueFromType ty
           return
             TypedExpression

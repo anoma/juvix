@@ -125,6 +125,13 @@ tests =
       $(mkRelFile "SelfApplication.juvix")
       $ \case
         ErrUnsolvedMeta {} -> Nothing
+        _ -> wrongError,
+    NegTest
+      "Negative integer literal cannot be used as a Nat"
+      $(mkRelDir "Internal")
+      $(mkRelFile "LiteralInteger.juvix")
+      $ \case
+        ErrWrongType {} -> Nothing
         _ -> wrongError
   ]
 
