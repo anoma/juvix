@@ -18,7 +18,8 @@ data Name = Name
     _nameKind :: NameKind,
     -- |  How to print this name in error messages
     _namePretty :: Text,
-    _nameLoc :: Interval
+    _nameLoc :: Interval,
+    _nameFixity :: Maybe Fixity
   }
   deriving stock (Show, Data)
 
@@ -31,6 +32,8 @@ varFromWildcard w = do
       _nameKind = KNameLocal
       _namePretty = _nameText
       _nameLoc = getLoc w
+      _nameFixity :: Maybe Fixity
+      _nameFixity = Nothing
   return Name {..}
 
 instance HasAtomicity Name where

@@ -105,7 +105,8 @@ data Node
 -- - Closure
 --
 -- Whether something is a value matters only for the evaluation semantics. It
--- doesn't matter much outside the evaluator.
+-- doesn't matter much outside the evaluator. See also:
+-- Juvix.Compiler.Core.Language.Value.
 
 -- All nodes in an environment must be values.
 type Env = [Node]

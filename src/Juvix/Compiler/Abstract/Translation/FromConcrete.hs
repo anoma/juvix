@@ -98,7 +98,8 @@ goSymbol s =
       _nameId = s ^. S.nameId,
       _nameKind = getNameKind s,
       _namePretty = S.symbolText s,
-      _nameLoc = s ^. S.nameConcrete . symbolLoc
+      _nameLoc = s ^. S.nameConcrete . symbolLoc,
+      _nameFixity = s ^. S.nameFixity
     }
 
 goModuleBody ::

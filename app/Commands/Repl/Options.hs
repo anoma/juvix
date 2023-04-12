@@ -9,7 +9,8 @@ data ReplOptions = ReplOptions
     _replShowDeBruijn :: Bool,
     _replNoPrelude :: Bool,
     _replTransformations :: [TransformationId],
-    _replNoDisambiguate :: Bool
+    _replNoDisambiguate :: Bool,
+    _replPrintValues :: Bool
   }
   deriving stock (Data)
 
@@ -26,6 +27,7 @@ parseRepl = do
   let _replTransformations = toEvalTransformations
       _replShowDeBruijn = False
       _replNoDisambiguate = False
+      _replPrintValues = True
   _replInputFile <- optional parseInputJuvixFile
   _replNoPrelude <-
     switch

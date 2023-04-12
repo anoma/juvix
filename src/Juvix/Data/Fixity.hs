@@ -6,7 +6,7 @@ data Precedence
   = PrecMinusOmega
   | PrecNat Natural
   | PrecOmega
-  deriving stock (Show, Eq)
+  deriving stock (Show, Eq, Data)
 
 instance Ord Precedence where
   compare a b = case (a, b) of
@@ -19,24 +19,24 @@ instance Ord Precedence where
     (PrecOmega, _) -> GT
 
 data UnaryAssoc = AssocPostfix
-  deriving stock (Show, Eq, Ord)
+  deriving stock (Show, Eq, Ord, Data)
 
 data BinaryAssoc
   = AssocNone
   | AssocLeft
   | AssocRight
-  deriving stock (Show, Eq, Ord)
+  deriving stock (Show, Eq, Ord, Data)
 
 data OperatorArity
   = Unary UnaryAssoc
   | Binary BinaryAssoc
-  deriving stock (Show, Eq, Ord)
+  deriving stock (Show, Eq, Ord, Data)
 
 data Fixity = Fixity
   { _fixityPrecedence :: Precedence,
     _fixityArity :: OperatorArity
   }
-  deriving stock (Show, Eq, Ord)
+  deriving stock (Show, Eq, Ord, Data)
 
 makeLenses ''Fixity
 
@@ -65,6 +65,14 @@ isPostfixAssoc :: Fixity -> Bool
 isPostfixAssoc opInf = case opInf ^. fixityArity of
   Unary AssocPostfix -> True
   _ -> False
+
+isBinary :: Fixity -> Bool
+isBinary f = case f ^. fixityArity of
+  Binary {} -> True
+  Unary {} -> False
+
+isUnary :: Fixity -> Bool
+isUnary = not . isBinary
 
 appFixity :: Fixity
 appFixity = Fixity PrecOmega (Binary AssocLeft)

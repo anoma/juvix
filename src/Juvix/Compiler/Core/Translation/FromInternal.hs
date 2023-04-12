@@ -191,6 +191,7 @@ goConstructor sym ctor = do
             _constructorArgsNum = argsNum',
             _constructorInductive = sym,
             _constructorBuiltin = mblt,
+            _constructorFixity = ctorName ^. nameFixity,
             _constructorName
           }
 

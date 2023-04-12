@@ -82,6 +82,7 @@ data ConstructorInfo = ConstructorInfo
     _constructorType :: Type,
     _constructorArgsNum :: Int,
     _constructorInductive :: Symbol,
+    _constructorFixity :: Maybe Fixity,
     _constructorBuiltin :: Maybe BuiltinConstructor
   }
 

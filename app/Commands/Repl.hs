@@ -11,6 +11,7 @@ import Evaluator
 import Juvix.Compiler.Concrete.Data.Scope (scopePath)
 import Juvix.Compiler.Concrete.Data.ScopedName (absTopModulePath)
 import Juvix.Compiler.Core qualified as Core
+import Juvix.Compiler.Core.Extra.Value
 import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Info.NoDisplayInfo qualified as Info
 import Juvix.Compiler.Core.Pretty qualified as Core
@@ -147,12 +148,17 @@ runCommand opts = do
         ctx <- State.gets (^. replStateContext)
         case ctx of
           Just ctx' -> do
+            let tab = ctx' ^. replContextArtifacts . artifactCoreTable
             evalRes <- compileThenEval ctx' input
             case evalRes of
               Left err -> printError err
               Right n
                 | Info.member Info.kNoDisplayInfo (Core.getInfo n) -> return ()
-              Right n -> renderOut (Core.ppOut opts n)
+              Right n
+                | opts ^. replPrintValues ->
+                    renderOut (Core.ppOut opts (toValue tab n))
+                | otherwise ->
+                    renderOut (Core.ppOut opts n)
           Nothing -> noFileLoadedMsg
         where
           defaultLoc :: Interval
