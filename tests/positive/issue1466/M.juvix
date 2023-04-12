@@ -1,8 +1,8 @@
 module M;
 
 type ℕ :=
-  z : ℕ |
-  s : ℕ → ℕ;
+  | z : ℕ
+  | s : ℕ → ℕ;
 
 nat : Type;
 nat := ℕ;
@@ -14,5 +14,3 @@ infixl 1 +;
 + : nat2 → nat → nat;
 + z b := b;
 + (s a) b := s (a + b);
-
-end;

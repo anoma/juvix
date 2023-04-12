@@ -1,14 +1,14 @@
 module M;
 
 type Bool :=
-     true : Bool
+  | true : Bool
   | false : Bool;
 
 type T :=
-t : T;
+  | t : T;
 
 type Nat :=
-  zero : Nat
+  | zero : Nat
   | suc : Nat → Nat;
 
 f : _;
@@ -16,9 +16,7 @@ f false false := true;
 f true _ := false;
 
 type Pair (A : Type) (B : Type) :=
-  mkPair : A → B → Pair A B;
+  | mkPair : A → B → Pair A B;
 
 g : _;
 g (mkPair (mkPair zero false) true) := mkPair false zero;
-
-end;

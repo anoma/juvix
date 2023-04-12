@@ -1,11 +1,11 @@
 module StdlibImport;
-  open import Stdlib.Prelude;
 
-  import A;
+open import Stdlib.Prelude;
 
-  two : Nat;
-  two := 1 + 1;
+import A;
 
-  foo : A.Foo;
-  foo := A.bar;
-end;
+two : Nat;
+two := 1 + 1;
+
+foo : A.Foo;
+foo := A.bar;

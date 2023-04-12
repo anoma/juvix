@@ -3,9 +3,7 @@ module N;
 import M;
 
 module M;
-  axiom
-  A : Type;
+  axiom A : Type;
 end;
 
-axiom
-B : M.A;
+axiom B : M.A;

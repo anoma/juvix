@@ -1,6 +1,6 @@
 # Juvix VSCode extension tutorial
 
-To install the Juvix VSCode extension, click on the "Extensions" button
+To install the [Juvix VSCode extension][vscode-marketplace], click on the "Extensions" button
 in the left panel and search for the "Juvix" extension by Heliax.
 
 Once you've installed the Juvix extension, you can open a Juvix file.
@@ -36,3 +36,5 @@ The functions of the buttons are as follows.
   the executable run is displayed in a separate window.
 - Html preview. Generates HTML documentation for the current file and
   displays it in a separate window.
+
+[vscode-marketplace]: https://marketplace.visualstudio.com/items?itemName=heliax.juvix-mode

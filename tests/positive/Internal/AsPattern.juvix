@@ -11,12 +11,14 @@ infixr 9 ∘;
     → C;
 ∘ {_} {B} {_} f g x := f (g x);
 
-builtin nat type Nat :=
+builtin nat
+type Nat :=
   | zero : Nat
   | suc : Nat → Nat;
 
 infixl 6 +;
-builtin nat-plus + : Nat → Nat → Nat;
+builtin nat-plus
++ : Nat → Nat → Nat;
 + zero b := b;
 + (suc a) b := suc (a + b);
 

@@ -1,11 +1,13 @@
 module builtinFail;
-  open import Stdlib.Data.String;
-  open import Stdlib.System.IO;
 
-  builtin fail axiom fail : {A : Type} → String → A;
+open import Stdlib.Data.String;
+open import Stdlib.System.IO;
 
-  main : IO;
-  main := printStringLn "Get"
+builtin fail
+axiom fail : {A : Type} → String → A;
+
+main : IO;
+main :=
+  printStringLn "Get"
     >> fail "Enough"
     >> printStringLn "Sleep";
-end;
