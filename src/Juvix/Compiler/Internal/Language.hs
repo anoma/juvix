@@ -230,9 +230,8 @@ data Pattern
 
 instance Hashable Pattern
 
-data InductiveParameter = InductiveParameter
-  { _inductiveParamName :: VarName,
-    _inductiveParamImplicit :: IsImplicit
+newtype InductiveParameter = InductiveParameter
+  { _inductiveParamName :: VarName
   }
   deriving stock (Eq, Data)
 
@@ -343,7 +342,7 @@ instance HasAtomicity Pattern where
     PatternVariable {} -> Atom
 
 instance HasLoc InductiveParameter where
-  getLoc (InductiveParameter n _) = getLoc n
+  getLoc (InductiveParameter n) = getLoc n
 
 instance HasLoc FunctionParameter where
   getLoc f = v (getLoc (f ^. paramType))

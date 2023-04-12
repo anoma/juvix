@@ -210,8 +210,7 @@ goMatchToCase recur node = case node of
               err (ctr : args)
               where
                 ci = lookupConstructorInfo tab tag
-                ii = lookupInductiveInfo tab (ci ^. constructorInductive)
-                paramsNum = length (ii ^. inductiveParams)
+                paramsNum = getTypeParamsNum tab (ci ^. constructorType)
                 argsNum = ci ^. constructorArgsNum - paramsNum
                 ctr =
                   ValueConstrApp
@@ -230,8 +229,7 @@ goMatchToCase recur node = case node of
     compileBranch err bindersNum vs col matrix tag = do
       tab <- ask
       let ci = lookupConstructorInfo tab tag
-          ii = lookupInductiveInfo tab (ci ^. constructorInductive)
-          paramsNum = length (ii ^. inductiveParams)
+          paramsNum = getTypeParamsNum tab (ci ^. constructorType)
           argsNum = length (typeArgs (ci ^. constructorType))
           bindersNum' = bindersNum + argsNum
           vs' = [bindersNum .. bindersNum + argsNum - 1]

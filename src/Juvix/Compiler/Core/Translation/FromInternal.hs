@@ -148,7 +148,7 @@ goInductiveDef i = do
               ParameterInfo
                 { _paramName = p ^. Internal.inductiveParamName . nameText,
                   _paramLocation = Just $ p ^. Internal.inductiveParamName . nameLoc,
-                  _paramIsImplicit = p ^. Internal.inductiveParamImplicit,
+                  _paramIsImplicit = False, -- TODO: not currently easily available in Internal
                   _paramKind = mkSmallUniv
                 }
           )

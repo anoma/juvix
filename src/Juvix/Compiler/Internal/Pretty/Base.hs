@@ -157,7 +157,7 @@ ppBlock ::
 ppBlock items = vsep . toList <$> mapM ppCode items
 
 instance PrettyCode InductiveParameter where
-  ppCode (InductiveParameter v _) = do
+  ppCode (InductiveParameter v) = do
     v' <- ppCode v
     return $ parens (v' <+> kwColon <+> kwType)
 

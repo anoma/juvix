@@ -90,7 +90,7 @@ data ParameterInfo = ParameterInfo
   { _paramName :: Text,
     _paramLocation :: Maybe Location,
     _paramKind :: Type,
-    _paramIsImplicit :: IsImplicit
+    _paramIsImplicit :: Bool
   }
 
 data AxiomInfo = AxiomInfo
