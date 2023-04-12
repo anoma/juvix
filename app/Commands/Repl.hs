@@ -154,12 +154,11 @@ runCommand opts = do
               Left err -> printError err
               Right n
                 | Info.member Info.kNoDisplayInfo (Core.getInfo n) -> return ()
-              Right n ->
-                if
-                    | opts ^. replPrintValues ->
-                        renderOut (Core.ppOut opts (toValue tab n))
-                    | otherwise ->
-                        renderOut (Core.ppOut opts n)
+              Right n
+                | opts ^. replPrintValues ->
+                    renderOut (Core.ppOut opts (toValue tab n))
+                | otherwise ->
+                    renderOut (Core.ppOut opts n)
           Nothing -> noFileLoadedMsg
         where
           defaultLoc :: Interval

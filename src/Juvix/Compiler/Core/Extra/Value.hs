@@ -10,27 +10,33 @@ import Juvix.Compiler.Core.Language.Value
 toValue :: InfoTable -> Node -> Value
 toValue tab = \case
   NCst Constant {..} -> ValueConstant _constantValue
-  NCtr Constr {..} ->
-    ValueConstrApp
-      ConstrApp
-        { _constrAppName = ci ^. constructorName,
-          _constrAppFixity = ci ^. constructorFixity,
-          _constrAppArgs = map (toValue tab) (drop paramsNum _constrArgs)
-        }
-    where
-      ci = lookupConstructorInfo tab _constrTag
-      ii = lookupInductiveInfo tab (ci ^. constructorInductive)
-      paramsNum = length (ii ^. inductiveParams)
-  node@NLam {} ->
-    let (lams, body) = unfoldLambdas node
-        n = length $ takeWhile (Info.member kExpansionInfo . (^. lambdaLhsInfo)) lams
-     in if
-            | n < length lams ->
-                ValueFun
-            | otherwise ->
-                case body of
-                  NCtr c ->
-                    toValue tab (NCtr (over constrArgs (dropEnd n) c))
-                  _ ->
-                    ValueFun
+  NCtr c -> goConstr c
+  NLam lam -> goLambda lam
   _ -> impossible
+  where
+    goConstr :: Constr -> Value
+    goConstr Constr {..} =
+      ValueConstrApp
+        ConstrApp
+          { _constrAppName = ci ^. constructorName,
+            _constrAppFixity = ci ^. constructorFixity,
+            _constrAppArgs = map (toValue tab) (drop paramsNum _constrArgs)
+          }
+      where
+        ci = lookupConstructorInfo tab _constrTag
+        ii = lookupInductiveInfo tab (ci ^. constructorInductive)
+        paramsNum = length (ii ^. inductiveParams)
+
+    goLambda :: Lambda -> Value
+    goLambda lam =
+      let (lams, body) = unfoldLambdas (NLam lam)
+          n = length $ takeWhile (Info.member kExpansionInfo . (^. lambdaLhsInfo)) lams
+       in if
+              | n < length lams ->
+                  ValueFun
+              | otherwise ->
+                  case body of
+                    NCtr c ->
+                      toValue tab (NCtr (over constrArgs (dropEnd n) c))
+                    _ ->
+                      ValueFun

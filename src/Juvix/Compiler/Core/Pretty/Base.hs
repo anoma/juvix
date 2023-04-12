@@ -545,6 +545,28 @@ instance (PrettyCode a) => PrettyCode [a] where
 -- printing values
 --------------------------------------------------------------------------------
 
+goBinary :: Member (Reader Options) r => Fixity -> Doc Ann -> [Value] -> Sem r (Doc Ann)
+goBinary fixity name = \case
+  [] -> return name
+  [arg] -> do
+    arg' <- ppRightExpression appFixity arg
+    return $ parens name <+> arg'
+  [arg1, arg2] -> do
+    arg1' <- ppLeftExpression fixity arg1
+    arg2' <- ppRightExpression fixity arg2
+    return $ arg1' <+> name <+> arg2'
+  _ ->
+    impossible
+
+goUnary :: Member (Reader Options) r => Fixity -> Doc Ann -> [Value] -> Sem r (Doc Ann)
+goUnary fixity name = \case
+  [] -> return name
+  [arg] -> do
+    arg' <- ppPostExpression fixity arg
+    return $ arg' <+> name
+  _ ->
+    impossible
+
 instance PrettyCode ConstrApp where
   ppCode ConstrApp {..} = do
     n <- ppName KNameConstructor _constrAppName
@@ -554,25 +576,9 @@ instance PrettyCode ConstrApp where
         return $ hsep (n : args)
       Just fixity
         | isBinary fixity ->
-            case _constrAppArgs of
-              [] -> return n
-              [arg] -> do
-                arg' <- ppRightExpression appFixity arg
-                return $ parens n <+> arg'
-              [arg1, arg2] -> do
-                arg1' <- ppLeftExpression fixity arg1
-                arg2' <- ppRightExpression fixity arg2
-                return $ arg1' <+> n <+> arg2'
-              _ ->
-                impossible
+            goBinary fixity n _constrAppArgs
         | isUnary fixity ->
-            case _constrAppArgs of
-              [] -> return n
-              [arg] -> do
-                arg' <- ppPostExpression fixity arg
-                return $ arg' <+> n
-              _ ->
-                impossible
+            goUnary fixity n _constrAppArgs
       _ -> impossible
 
 instance PrettyCode Value where
