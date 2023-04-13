@@ -8,7 +8,6 @@ import Juvix.Compiler.Pipeline
 import Juvix.Data.Error qualified as Error
 import Juvix.Prelude.Pretty hiding (Doc)
 import System.Console.ANSI qualified as Ansi
-import System.Directory qualified as D
 
 data App m a where
   ExitMsg :: ExitCode -> Text -> App m a
@@ -21,6 +20,8 @@ data App m a where
   AskPackage :: App m Package
   AskPackageGlobal :: App m Bool
   AskGlobalOptions :: App m GlobalOptions
+  FromAppPathFile :: AppPath File -> App m (Path Abs File)
+  FromAppPathDir :: AppPath Dir -> App m (Path Abs Dir)
   RenderStdOut :: (HasAnsiBackend a, HasTextBackend a) => a -> App m ()
   RunPipelineEither :: AppPath File -> Sem PipelineEff a -> App m (Either JuvixError (ResolverState, a))
   RunCorePipelineEither :: AppPath File -> App m (Either JuvixError Artifacts)
@@ -43,6 +44,8 @@ runAppIO ::
 runAppIO args@RunAppIOArgs {..} =
   interpret $ \case
     AskPackageGlobal -> return (_runAppIOArgsRoots ^. rootsPackageGlobal)
+    FromAppPathFile p -> embed (prepathToAbsFile invDir (p ^. pathPath))
+    FromAppPathDir p -> embed (prepathToAbsDir invDir (p ^. pathPath))
     RenderStdOut t
       | _runAppIOArgsGlobalOptions ^. globalOnlyErrors -> return ()
       | otherwise -> embed $ do
@@ -51,7 +54,7 @@ runAppIO args@RunAppIOArgs {..} =
     AskGlobalOptions -> return _runAppIOArgsGlobalOptions
     AskPackage -> return (_runAppIOArgsRoots ^. rootsPackage)
     AskRoots -> return _runAppIOArgsRoots
-    AskInvokeDir -> return (_runAppIOArgsRoots ^. rootsInvokeDir)
+    AskInvokeDir -> return invDir
     AskPkgDir -> return (_runAppIOArgsRoots ^. rootsRootDir)
     AskBuildDir -> return (_runAppIOArgsRoots ^. rootsBuildDir)
     RunCorePipelineEither input -> do
@@ -71,6 +74,7 @@ runAppIO args@RunAppIOArgs {..} =
     ExitMsg exitCode t -> embed (putStrLn t >> hFlush stdout >> exitWith exitCode)
     SayRaw b -> embed (ByteString.putStr b)
   where
+    invDir = _runAppIOArgsRoots ^. rootsInvokeDir
     g :: GlobalOptions
     g = _runAppIOArgsGlobalOptions
     printErr e =
@@ -79,35 +83,22 @@ runAppIO args@RunAppIOArgs {..} =
 getEntryPoint' :: RunAppIOArgs -> AppPath File -> IO EntryPoint
 getEntryPoint' RunAppIOArgs {..} inputFile = do
   let opts = _runAppIOArgsGlobalOptions
-      root = _runAppIOArgsRoots ^. rootsRootDir
-      pkg = _runAppIOArgsRoots ^. rootsPackage
-      isGlobal = _runAppIOArgsRoots ^. rootsPackageGlobal
-      invokeDir = _runAppIOArgsRoots ^. rootsInvokeDir
-      buildDir = _runAppIOArgsRoots ^. rootsBuildDir
+      roots = _runAppIOArgsRoots
   estdin <-
     if
         | opts ^. globalStdin -> Just <$> getContents
         | otherwise -> return Nothing
-  return $
-    (entryPointFromGlobalOptions (pkg, isGlobal) root (someBaseToAbs invokeDir (inputFile ^. pathPath)) opts)
-      { _entryPointBuildDir = Abs buildDir,
-        _entryPointPackage = pkg,
-        _entryPointStdin = estdin
-      }
+  set entryPointStdin estdin <$> entryPointFromGlobalOptionsPre roots (inputFile ^. pathPath) opts
 
 someBaseToAbs' :: (Members '[App] r) => SomeBase a -> Sem r (Path Abs a)
 someBaseToAbs' f = do
   r <- askInvokeDir
   return (someBaseToAbs r f)
 
-filePathToAbs :: Members '[Embed IO, App] r => FilePath -> Sem r (Either (Path Abs File) (Path Abs Dir))
+filePathToAbs :: Members '[Embed IO, App] r => Prepath FileOrDir -> Sem r (Either (Path Abs File) (Path Abs Dir))
 filePathToAbs fp = do
   invokeDir <- askInvokeDir
-  absPath <- embed (D.canonicalizePath (toFilePath invokeDir </> fp))
-  isDirectory <- embed (D.doesDirectoryExist absPath)
-  if
-      | isDirectory -> Right <$> embed @IO (parseAbsDir absPath)
-      | otherwise -> Left <$> embed @IO (parseAbsFile absPath)
+  embed (fromPreFileOrDir invokeDir fp)
 
 askGenericOptions :: (Members '[App] r) => Sem r GenericOptions
 askGenericOptions = project <$> askGlobalOptions

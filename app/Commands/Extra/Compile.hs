@@ -10,7 +10,7 @@ import System.Process qualified as P
 
 runCommand :: forall r. (Members '[Embed IO, App] r) => CompileOptions -> Sem r ()
 runCommand opts = do
-  inputFile <- someBaseToAbs' (opts ^. compileInputFile . pathPath)
+  inputFile <- fromAppPathFile (opts ^. compileInputFile)
   result <- runCompile inputFile opts
   case result of
     Left err -> printFailureExit err
@@ -75,7 +75,7 @@ prepareRuntime buildDir o = do
 
 outputFile :: Member App r => CompileOptions -> Path Abs File -> Sem r (Path Abs File)
 outputFile opts inputFile =
-  maybe (return defaultOutputFile) someBaseToAbs' (opts ^? compileOutputFile . _Just . pathPath)
+  maybe (return defaultOutputFile) fromAppPathFile (opts ^? compileOutputFile . _Just)
   where
     defaultOutputFile :: Path Abs File
     defaultOutputFile = case opts ^. compileTarget of

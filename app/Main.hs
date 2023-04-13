@@ -12,7 +12,7 @@ main = do
   let parserPreferences = prefs showHelpOnEmpty
   invokeDir <- getCurrentDir
   (_runAppIOArgsGlobalOptions, cli) <- customExecParser parserPreferences descr
-  let mbuildDir = _runAppIOArgsGlobalOptions ^? globalBuildDir . _Just . pathPath
+  mbuildDir <- mapM (prepathToAbsDir invokeDir) (_runAppIOArgsGlobalOptions ^? globalBuildDir . _Just . pathPath)
   mainFileDir <- topCommandInputFile cli
   _runAppIOArgsRoots <- findRootAndChangeDir mainFileDir mbuildDir invokeDir
   runFinal

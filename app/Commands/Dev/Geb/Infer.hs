@@ -10,9 +10,9 @@ runCommand ::
   GebInferOptions ->
   Sem r ()
 runCommand opts = do
-  let b :: SomeBase File
-      b = opts ^. gebInferOptionsInputFile . pathPath
-  f :: Path Abs File <- someBaseToAbs' b
+  let b :: AppPath File
+      b = opts ^. gebInferOptionsInputFile
+  f :: Path Abs File <- fromAppPathFile b
   content :: Text <- embed (readFile (toFilePath f))
   case Geb.runParser f content of
     Right (Geb.ExpressionMorphism gebTerm) ->

@@ -42,7 +42,7 @@ parseHtml = do
       )
   _htmlOutputDir <-
     parseGenericOutputDir
-      ( value (Rel $(mkRelDir "html"))
+      ( value "html"
           <> showDefault
           <> help "Html output directory"
           <> action "directory"

@@ -13,7 +13,7 @@ import Juvix.Compiler.Core.Translation.Stripped.FromCore qualified as Stripped
 runCommand :: forall r a. (Members '[Embed IO, App] r, CanonicalProjection a CoreAsmOptions) => a -> Sem r ()
 runCommand opts = do
   gopts <- askGlobalOptions
-  inputFile :: Path Abs File <- someBaseToAbs' sinputFile
+  inputFile :: Path Abs File <- fromAppPathFile sinputFile
   s' <- embed (readFile $ toFilePath inputFile)
   tab <- getRight (mapLeft JuvixError (Core.runParserMain inputFile Core.emptyInfoTable s'))
   r <- runReader (project @GlobalOptions @Core.CoreOptions gopts) $ runError @JuvixError $ Core.toStripped' tab
@@ -23,5 +23,5 @@ runCommand opts = do
           renderStdOut (Asm.ppOutDefault tab' tab')
       | otherwise -> runAsm True tab'
   where
-    sinputFile :: SomeBase File
-    sinputFile = project opts ^. coreAsmInputFile . pathPath
+    sinputFile :: AppPath File
+    sinputFile = project opts ^. coreAsmInputFile

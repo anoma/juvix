@@ -13,6 +13,8 @@ import Path qualified
 import Path.IO hiding (listDirRel, walkDirRel)
 import Path.Internal
 
+data FileOrDir
+
 absDir :: FilePath -> Path Abs Dir
 absDir r = fromMaybe (error ("not an absolute file path: " <> pack r)) (parseAbsDir r)
 

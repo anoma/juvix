@@ -11,7 +11,7 @@ import Juvix.Compiler.Core.Translation.Stripped.FromCore qualified as Stripped
 runCommand :: forall r a. (Members '[Embed IO, App] r, CanonicalProjection a Core.Options, CanonicalProjection a CoreStripOptions) => a -> Sem r ()
 runCommand opts = do
   gopts <- askGlobalOptions
-  inputFile :: Path Abs File <- someBaseToAbs' sinputFile
+  inputFile :: Path Abs File <- fromAppPathFile sinputFile
   s' <- embed (readFile $ toFilePath inputFile)
   (tab, _) <- getRight (mapLeft JuvixError (Core.runParser inputFile Core.emptyInfoTable s'))
   let r =
@@ -22,5 +22,5 @@ runCommand opts = do
   unless (project opts ^. coreStripNoPrint) $ do
     renderStdOut (Core.ppOut opts tab')
   where
-    sinputFile :: SomeBase File
-    sinputFile = project opts ^. coreStripInputFile . pathPath
+    sinputFile :: AppPath File
+    sinputFile = project opts ^. coreStripInputFile

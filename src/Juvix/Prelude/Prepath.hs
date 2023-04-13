@@ -3,7 +3,10 @@ module Juvix.Prelude.Prepath
     prepath,
     mkPrepath,
     prepathToAbsDir,
+    fromPreFileOrDir,
     prepathToAbsFile,
+    prepathToFilePath,
+    preFileFromAbs,
   )
 where
 
@@ -16,7 +19,7 @@ import System.Directory qualified as System
 
 -- | A file/directory path that may contain environmental variables
 newtype Prepath d = Prepath {_prepath :: String}
-  deriving stock (Show, Eq, Generic)
+  deriving stock (Show, Eq, Data, Generic)
 
 makeLenses ''Prepath
 
@@ -46,3 +49,14 @@ prepathToFilePath :: Path Abs Dir -> Prepath d -> IO FilePath
 prepathToFilePath root pre =
   withCurrentDir root $
     shellExpandCwd (pre ^. prepath) >>= System.canonicalizePath
+
+fromPreFileOrDir :: Path Abs Dir -> Prepath FileOrDir -> IO (Either (Path Abs File) (Path Abs Dir))
+fromPreFileOrDir cwd fp = do
+  absPath <- prepathToFilePath cwd fp
+  isDirectory <- System.doesDirectoryExist absPath
+  if
+      | isDirectory -> Right <$> parseAbsDir absPath
+      | otherwise -> Left <$> parseAbsFile absPath
+
+preFileFromAbs :: Path Abs File -> Prepath File
+preFileFromAbs = mkPrepath . toFilePath

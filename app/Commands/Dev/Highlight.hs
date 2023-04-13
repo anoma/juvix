@@ -10,7 +10,7 @@ import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
 runCommand :: Members '[Embed IO, App] r => HighlightOptions -> Sem r ()
 runCommand HighlightOptions {..} = do
   res <- runPipelineEither _highlightInputFile upToScoping
-  inputFile <- someBaseToAbs' (_highlightInputFile ^. pathPath)
+  inputFile <- fromAppPathFile _highlightInputFile
   case res of
     Left err -> do
       let filterByFile = filter ((== inputFile) . (^. intervalFile))

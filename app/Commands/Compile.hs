@@ -11,7 +11,7 @@ import Juvix.Compiler.Core.Transformation.DisambiguateNames qualified as Core
 
 runCommand :: (Members '[Embed IO, App] r) => CompileOptions -> Sem r ()
 runCommand opts@CompileOptions {..} = do
-  inputFile <- someBaseToAbs' (_compileInputFile ^. pathPath)
+  inputFile <- fromAppPathFile _compileInputFile
   Core.CoreResult {..} <- runPipeline _compileInputFile upToCore
   let arg =
         Compile.PipelineArg
