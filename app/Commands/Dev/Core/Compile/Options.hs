@@ -11,7 +11,12 @@ import Data.List.NonEmpty qualified as NonEmpty
 type CoreCompileOptions = CompileOptions
 
 coreSupportedTargets :: NonEmpty CompileTarget
-coreSupportedTargets = NonEmpty.fromList allTargets
+coreSupportedTargets = NonEmpty.fromList
+  [ TargetWasm32Wasi
+  , TargetNative64
+  , TargetGeb
+  , TargetAsm
+  ]
 
 parseCoreCompileOptions :: Parser CoreCompileOptions
 parseCoreCompileOptions =
