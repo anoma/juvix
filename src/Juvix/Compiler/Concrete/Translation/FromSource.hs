@@ -297,8 +297,8 @@ import_ = do
   _importQualified <- optional qualified
   return Import {..}
   where
-  qualified :: ParsecS r Symbol
-  qualified = void (kw kwAs) >> symbol
+    qualified :: ParsecS r Symbol
+    qualified = void (kw kwAs) >> symbol
 
 withPath' ::
   forall r a.

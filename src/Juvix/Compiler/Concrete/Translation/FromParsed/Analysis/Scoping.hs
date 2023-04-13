@@ -233,14 +233,14 @@ checkImport import_@(Import kw path qual) = do
       qual' = do
         asName <- qual
         return (set S.nameConcrete asName sname')
-  addModuleToScope qual' moduleRef
+  addModuleToScope moduleRef
   registerName importName
   let moduleRef' = mkModuleRef' moduleRef
   modify (over scoperModules (HashMap.insert moduleId moduleRef'))
   return (Import kw cmoduleRef qual')
   where
-    addModuleToScope :: Maybe S.Symbol -> ModuleRef'' 'S.NotConcrete 'ModuleTop -> Sem r ()
-    addModuleToScope altName moduleRef = do
+    addModuleToScope :: ModuleRef'' 'S.NotConcrete 'ModuleTop -> Sem r ()
+    addModuleToScope moduleRef = do
       let mpath :: TopModulePath = maybe path moduleSymbolToTopModulePath qual
       modify (over scopeTopModules (HashMap.insert mpath moduleRef))
     checkCycle :: Sem r ()
@@ -538,7 +538,8 @@ localBindings = runReader BindingLocal
 freshTopModulePath ::
   forall s.
   (Members '[State ScoperState, NameIdGen] s) =>
-  TopModulePath -> Sem s S.TopModulePath
+  TopModulePath ->
+  Sem s S.TopModulePath
 freshTopModulePath _modulePath = do
   _nameId <- freshNameId
   let _nameDefinedIn = S.topModulePathToAbsPath _modulePath
