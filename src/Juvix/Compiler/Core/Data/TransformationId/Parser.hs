@@ -76,13 +76,16 @@ transformationText = \case
   Identity -> strIdentity
   RemoveTypeArgs -> strRemoveTypeArgs
   MoveApps -> strMoveApps
-  NatToInt -> strNatToInt
+  NatToPrimInt -> strNatToPrimInt
+  IntToPrimInt -> strIntToPrimInt
   ConvertBuiltinTypes -> strConvertBuiltinTypes
   ComputeTypeInfo -> strComputeTypeInfo
   UnrollRecursion -> strUnrollRecursion
   DisambiguateNames -> strDisambiguateNames
   CheckGeb -> strCheckGeb
+  CheckExec -> strCheckExec
   LetFolding -> strLetFolding
+  FoldTypeSynonyms -> strFoldTypeSynonyms
 
 parsePipeline :: MonadParsec e Text m => m PipelineId
 parsePipeline = choice [symbol (pipelineText t) $> t | t <- allElements]
@@ -129,8 +132,11 @@ strRemoveTypeArgs = "remove-type-args"
 strMoveApps :: Text
 strMoveApps = "move-apps"
 
-strNatToInt :: Text
-strNatToInt = "nat-to-int"
+strNatToPrimInt :: Text
+strNatToPrimInt = "nat-to-primint"
+
+strIntToPrimInt :: Text
+strIntToPrimInt = "int-to-primint"
 
 strConvertBuiltinTypes :: Text
 strConvertBuiltinTypes = "convert-builtin-types"
@@ -147,5 +153,11 @@ strDisambiguateNames = "disambiguate-names"
 strCheckGeb :: Text
 strCheckGeb = "check-geb"
 
+strCheckExec :: Text
+strCheckExec = "check-exec"
+
 strLetFolding :: Text
 strLetFolding = "let-folding"
+
+strFoldTypeSynonyms :: Text
+strFoldTypeSynonyms = "fold-type-synonyms"

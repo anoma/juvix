@@ -1,5 +1,6 @@
 module Juvix.Compiler.Core.Data.Stripped.InfoTable where
 
+import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Core.Language.Stripped
 
 data InfoTable = InfoTable
@@ -34,7 +35,7 @@ data InductiveInfo = InductiveInfo
     _inductiveLocation :: Maybe Location,
     _inductiveSymbol :: Symbol,
     _inductiveKind :: Type,
-    _inductiveConstructors :: [ConstructorInfo],
+    _inductiveConstructors :: [Tag],
     _inductiveParams :: [ParameterInfo]
   }
 
@@ -59,3 +60,6 @@ makeLenses ''ArgumentInfo
 makeLenses ''InductiveInfo
 makeLenses ''ConstructorInfo
 makeLenses ''ParameterInfo
+
+lookupConstructorInfo :: InfoTable -> Tag -> ConstructorInfo
+lookupConstructorInfo tab tag = fromJust $ HashMap.lookup tag (tab ^. infoConstructors)

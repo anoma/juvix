@@ -82,7 +82,7 @@ groupStatements = reverse . map reverse . uncurry cons . foldl' aux ([], [])
       (StatementOpenModule {}, _) -> False
       (StatementInductive {}, _) -> False
       (StatementModule {}, _) -> False
-      (StatementAxiom {}, StatementAxiom {}) -> True
+      (StatementAxiom {}, StatementAxiom {}) -> False
       (StatementAxiom {}, _) -> False
       (StatementTypeSignature sig, StatementFunctionClause fun) ->
         case sing :: SStage s of

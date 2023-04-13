@@ -1,6 +1,7 @@
 module Ape;
 
-builtin string axiom String : Type;
+builtin string
+axiom String : Type;
 
 infixl 7 *;
 axiom * : String → String → String;
@@ -16,6 +17,7 @@ axiom + : String → String → String;
 
 infixr 6 ++;
 axiom ++ : String → String → String;
+
 axiom f : String → String;
 
 x : String;

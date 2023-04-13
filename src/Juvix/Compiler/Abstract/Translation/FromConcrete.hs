@@ -98,7 +98,8 @@ goSymbol s =
       _nameId = s ^. S.nameId,
       _nameKind = getNameKind s,
       _namePretty = S.symbolText s,
-      _nameLoc = s ^. S.nameConcrete . symbolLoc
+      _nameLoc = s ^. S.nameConcrete . symbolLoc,
+      _nameFixity = s ^. S.nameFixity
     }
 
 goModuleBody ::
@@ -267,6 +268,7 @@ registerBuiltinInductive ::
 registerBuiltinInductive d = \case
   BuiltinNat -> registerNatDef d
   BuiltinBool -> registerBoolDef d
+  BuiltinInt -> registerIntDef d
 
 registerBuiltinFunction ::
   (Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen] r) =>
@@ -286,6 +288,18 @@ registerBuiltinFunction d = \case
   BuiltinBoolIf -> registerIf d
   BuiltinBoolOr -> registerOr d
   BuiltinBoolAnd -> registerAnd d
+  BuiltinIntEq -> registerIntEq d
+  BuiltinIntSubNat -> registerIntSubNat d
+  BuiltinIntPlus -> registerIntPlus d
+  BuiltinIntNegNat -> registerIntNegNat d
+  BuiltinIntNeg -> registerIntNeg d
+  BuiltinIntMul -> registerIntMul d
+  BuiltinIntDiv -> registerIntDiv d
+  BuiltinIntMod -> registerIntMod d
+  BuiltinIntSub -> registerIntSub d
+  BuiltinIntNonNeg -> registerIntNonNeg d
+  BuiltinIntLe -> registerIntLe d
+  BuiltinIntLt -> registerIntLt d
 
 registerBuiltinAxiom ::
   (Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen] r) =>
@@ -306,6 +320,8 @@ registerBuiltinAxiom d = \case
   BuiltinBoolPrint -> registerBoolPrint d
   BuiltinTrace -> registerTrace d
   BuiltinFail -> registerFail d
+  BuiltinIntToString -> registerIntToString d
+  BuiltinIntPrint -> registerIntPrint d
 
 goInductive ::
   (Members '[InfoTableBuilder, Builtins, Error ScoperError] r) =>

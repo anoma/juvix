@@ -271,12 +271,12 @@ clauseLhsAsExpression cl =
   foldApplication (toExpression (cl ^. clauseName)) (map toApplicationArg (cl ^. clausePatterns))
 
 expressionArrow :: (IsExpression a, IsExpression b) => IsImplicit -> a -> b -> Expression
-expressionArrow isImplicit a b =
+expressionArrow isImpl a b =
   ExpressionFunction
     ( Function
         ( FunctionParameter
             { _paramName = Nothing,
-              _paramImplicit = isImplicit,
+              _paramImplicit = isImpl,
               _paramType = toExpression a
             }
         )
@@ -326,6 +326,7 @@ freshVar n = do
         _nameText = n,
         _nameKind = KNameLocal,
         _namePretty = n,
+        _nameFixity = Nothing,
         _nameLoc = error "freshVar with no location"
       }
 

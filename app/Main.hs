@@ -2,14 +2,21 @@ module Main (main) where
 
 import App
 import CommonOptions
-import Root
+import GlobalOptions
+import Juvix.Compiler.Pipeline.Root
 import TopCommand
 import TopCommand.Options
 
 main :: IO ()
 main = do
   let parserPreferences = prefs showHelpOnEmpty
-  _runAppIOArgsInvokeDir <- getCurrentDir
+  invokeDir <- getCurrentDir
   (_runAppIOArgsGlobalOptions, cli) <- customExecParser parserPreferences descr
-  (_runAppIOArgsPkgDir, _runAppIOArgsPkg, _runAppIOArgsBuildDir) <- findRootAndChangeDir (topCommandInputFile cli) _runAppIOArgsGlobalOptions _runAppIOArgsInvokeDir
-  runFinal (resourceToIOFinal (embedToFinal @IO (runAppIO (RunAppIOArgs {..}) (runTopCommand cli))))
+  let mbuildDir = _runAppIOArgsGlobalOptions ^? globalBuildDir . _Just . pathPath
+  mainFileDir <- topCommandInputFile cli
+  _runAppIOArgsRoots <- findRootAndChangeDir mainFileDir mbuildDir invokeDir
+  runFinal
+    . resourceToIOFinal
+    . embedToFinal @IO
+    . runAppIO RunAppIOArgs {..}
+    $ runTopCommand cli

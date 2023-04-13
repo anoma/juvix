@@ -109,17 +109,18 @@ topModuleDef = do
   where
     checkPath :: Members '[PathResolver, Error ParserError] s => TopModulePath -> Sem s ()
     checkPath path = do
-      expectedPath <- expectedModulePath path
-      let actualPath = getLoc path ^. intervalFile
-      unlessM (equalPaths expectedPath actualPath) $
-        throw
-          ( ErrWrongTopModuleName
-              WrongTopModuleName
-                { _wrongTopModuleNameActualName = path,
-                  _wrongTopModuleNameExpectedPath = expectedPath,
-                  _wrongTopModuleNameActualPath = actualPath
-                }
-          )
+      let actualPath :: Path Abs File = getLoc path ^. intervalFile
+      mexpectedPath <- expectedModulePath actualPath path
+      whenJust mexpectedPath $ \expectedPath ->
+        unlessM (equalPaths expectedPath actualPath) $
+          throw
+            ( ErrWrongTopModuleName
+                WrongTopModuleName
+                  { _wrongTopModuleNameActualName = path,
+                    _wrongTopModuleNameExpectedPath = expectedPath,
+                    _wrongTopModuleNameActualPath = actualPath
+                  }
+            )
 
 --------------------------------------------------------------------------------
 -- Symbols and names

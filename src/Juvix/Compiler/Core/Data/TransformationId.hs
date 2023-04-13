@@ -8,7 +8,8 @@ data TransformationId
   | TopEtaExpand
   | RemoveTypeArgs
   | MoveApps
-  | NatToInt
+  | NatToPrimInt
+  | IntToPrimInt
   | ConvertBuiltinTypes
   | Identity
   | UnrollRecursion
@@ -18,7 +19,9 @@ data TransformationId
   | EtaExpandApps
   | DisambiguateNames
   | CheckGeb
+  | CheckExec
   | LetFolding
+  | FoldTypeSynonyms
   deriving stock (Data, Bounded, Enum, Show)
 
 data PipelineId
@@ -49,14 +52,14 @@ toTypecheckTransformations :: [TransformationId]
 toTypecheckTransformations = [MatchToCase]
 
 toEvalTransformations :: [TransformationId]
-toEvalTransformations = [EtaExpandApps, MatchToCase, NatToInt, ConvertBuiltinTypes, LetFolding]
+toEvalTransformations = [EtaExpandApps, MatchToCase, NatToPrimInt, IntToPrimInt, ConvertBuiltinTypes, LetFolding]
 
 toStrippedTransformations :: [TransformationId]
 toStrippedTransformations =
-  toEvalTransformations ++ [LambdaLetRecLifting, LetFolding, TopEtaExpand, MoveApps, RemoveTypeArgs]
+  toEvalTransformations ++ [CheckExec, LambdaLetRecLifting, LetFolding, TopEtaExpand, MoveApps, RemoveTypeArgs]
 
 toGebTransformations :: [TransformationId]
-toGebTransformations = toEvalTransformations ++ [CheckGeb, LetRecLifting, LetFolding, UnrollRecursion, ComputeTypeInfo]
+toGebTransformations = toEvalTransformations ++ [CheckGeb, LetRecLifting, LetFolding, UnrollRecursion, FoldTypeSynonyms, ComputeTypeInfo]
 
 pipeline :: PipelineId -> [TransformationId]
 pipeline = \case

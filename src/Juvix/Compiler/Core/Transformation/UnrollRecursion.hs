@@ -62,7 +62,7 @@ unrollRecursion tab = do
           forM_ [0 .. unrollLimit] goUnroll
           removeSymbol sym
           where
-            ii = fromJust $ HashMap.lookup sym (tab ^. infoIdentifiers)
+            ii = lookupIdentifierInfo tab sym
 
             goUnroll :: Int -> Sem r ()
             goUnroll limit = do
@@ -77,7 +77,7 @@ unrollRecursion tab = do
                     | limit == 0 =
                         etaExpand (typeArgs (ii ^. identifierType)) failNode
                     | otherwise =
-                        umap (go limit) (fromJust $ HashMap.lookup sym (tab ^. identContext))
+                        umap (go limit) (lookupIdentifierNode tab sym)
               registerIdentNode sym' node
 
             go :: Int -> Node -> Node

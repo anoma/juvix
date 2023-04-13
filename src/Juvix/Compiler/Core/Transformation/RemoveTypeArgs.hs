@@ -4,7 +4,6 @@ module Juvix.Compiler.Core.Transformation.RemoveTypeArgs
   )
 where
 
-import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Core.Data.BinderList qualified as BL
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Pretty
@@ -29,10 +28,10 @@ convertNode tab = convert mempty
         where
           k = length (filter (isTypeConstr tab . (^. binderType)) (take _varIndex (toList vars)))
       NIdt Ident {..} ->
-        let fi = fromJust $ HashMap.lookup _identSymbol (tab ^. infoIdentifiers)
+        let fi = lookupIdentifierInfo tab _identSymbol
          in if
                 | isTypeConstr tab (fi ^. identifierType) ->
-                    Recur (fromJust $ HashMap.lookup _identSymbol (tab ^. identContext))
+                    Recur (lookupIdentifierNode tab _identSymbol)
                 | otherwise ->
                     Recur node
       NApp App {..} ->
@@ -42,7 +41,7 @@ convertNode tab = convert mempty
                 NVar (Var {..}) ->
                   BL.lookup _varIndex vars ^. binderType
                 NIdt (Ident {..}) ->
-                  let fi = fromJust $ HashMap.lookup _identSymbol (tab ^. infoIdentifiers)
+                  let fi = lookupIdentifierInfo tab _identSymbol
                    in fi ^. identifierType
                 _ -> unsupported node
             args' = filterArgs snd ty args
@@ -54,7 +53,7 @@ convertNode tab = convert mempty
                 | otherwise ->
                     End (mkApps (convert vars h) (map (second (convert vars)) args'))
       NCtr (Constr {..}) ->
-        let ci = fromJust $ HashMap.lookup _constrTag (tab ^. infoConstructors)
+        let ci = lookupConstructorInfo tab _constrTag
             ty = ci ^. constructorType
             args' = filterArgs id ty _constrArgs
          in End (mkConstr _constrInfo _constrTag (map (convert vars) args'))
@@ -117,15 +116,9 @@ convertIdent :: InfoTable -> IdentifierInfo -> IdentifierInfo
 convertIdent tab ii =
   ii
     { _identifierType = ty',
-      _identifierArgsInfo =
-        map (uncurry (set argumentType)) $
-          zipExact tyargs' $
-            map fst $
-              filter (not . isTypeConstr tab . snd) (zipExact (ii ^. identifierArgsInfo) tyargs),
       _identifierArgsNum = length tyargs'
     }
   where
-    tyargs = typeArgs (ii ^. identifierType)
     ty' = convertNode tab (ii ^. identifierType)
     tyargs' = typeArgs ty'
 
@@ -142,8 +135,7 @@ convertInductive :: InfoTable -> InductiveInfo -> InductiveInfo
 convertInductive tab ii =
   ii
     { _inductiveKind = ty',
-      _inductiveParams = map (over paramKind (convertNode tab) . fst) $ filter (not . isTypeConstr tab . snd) (zipExact (ii ^. inductiveParams) tyargs),
-      _inductiveConstructors = map (convertConstructor tab) (ii ^. inductiveConstructors)
+      _inductiveParams = map (over paramKind (convertNode tab) . fst) $ filter (not . isTypeConstr tab . snd) (zipExact (ii ^. inductiveParams) tyargs)
     }
   where
     tyargs = typeArgs (ii ^. inductiveKind)
@@ -151,12 +143,6 @@ convertInductive tab ii =
 
 convertAxiom :: InfoTable -> AxiomInfo -> AxiomInfo
 convertAxiom tab = over axiomType (convertNode tab)
-
-filterOutTypeSynonyms :: InfoTable -> InfoTable
-filterOutTypeSynonyms tab = pruneInfoTable tab'
-  where
-    tab' = tab {_infoIdentifiers = idents'}
-    idents' = HashMap.filter (\ii -> not (isTypeConstr tab (ii ^. identifierType))) (tab ^. infoIdentifiers)
 
 removeTypeArgs :: InfoTable -> InfoTable
 removeTypeArgs tab =

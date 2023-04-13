@@ -4,7 +4,6 @@ module Juvix.Compiler.Core.Transformation.Eta
   )
 where
 
-import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Transformation.Base
 
@@ -15,7 +14,9 @@ etaExpandBuiltins = umap go
     go n = case n of
       NBlt BuiltinApp {..}
         | builtinOpArgsNum _builtinAppOp > length _builtinAppArgs ->
-            etaExpand (substDrop _builtinAppArgs (builtinOpArgTypes _builtinAppOp)) n
+            mkApps'
+              (etaExpand (builtinOpArgTypes _builtinAppOp) (mkBuiltinApp _builtinAppInfo _builtinAppOp []))
+              _builtinAppArgs
       _ -> n
 
 etaExpandConstrs :: (Tag -> [Type]) -> Node -> Node
@@ -25,7 +26,9 @@ etaExpandConstrs getArgtys = umap go
     go n = case n of
       NCtr Constr {..}
         | length argtys > length _constrArgs ->
-            etaExpand (substDrop _constrArgs argtys) n
+            mkApps'
+              (etaExpand argtys (mkConstr _constrInfo _constrTag []))
+              _constrArgs
         where
           argtys = getArgtys _constrTag
       _ -> n
@@ -37,7 +40,9 @@ etaExpandTypeConstrs getArgtys = umap go
     go n = case n of
       NTyp TypeConstr {..}
         | length argtys > length _typeConstrArgs ->
-            etaExpand (substDrop _typeConstrArgs argtys) n
+            mkApps'
+              (etaExpand argtys (mkTypeConstr _typeConstrInfo _typeConstrSymbol []))
+              _typeConstrArgs
         where
           argtys = getArgtys _typeConstrSymbol
       _ -> n
@@ -52,13 +57,13 @@ etaExpandApps tab =
   where
     constrArgtys :: Tag -> [Type]
     constrArgtys tag =
-      case HashMap.lookup tag (tab ^. infoConstructors) of
+      case lookupConstructorInfo' tab tag of
         Just ci -> typeArgs (ci ^. constructorType)
         Nothing -> []
 
     typeConstrArgtys :: Symbol -> [Type]
     typeConstrArgtys sym =
-      case HashMap.lookup sym (tab ^. infoInductives) of
+      case lookupInductiveInfo' tab sym of
         Just ci -> map (^. paramKind) (ci ^. inductiveParams)
         Nothing -> []
 

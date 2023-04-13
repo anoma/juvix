@@ -8,7 +8,7 @@ where
 import Data.HashMap.Strict qualified as HashMap
 import Data.Map.Strict qualified as Map
 import Juvix.Compiler.Abstract.Data.Name
-import Juvix.Compiler.Core.Data.BinderList as BL
+import Juvix.Compiler.Core.Data.BinderList qualified as BL
 import Juvix.Compiler.Core.Data.InfoTable
 import Juvix.Compiler.Core.Data.Stripped.InfoTable qualified as Stripped
 import Juvix.Compiler.Core.Extra.Base
@@ -16,6 +16,7 @@ import Juvix.Compiler.Core.Extra.Utils.Base
 import Juvix.Compiler.Core.Info.NameInfo
 import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Core.Language.Stripped qualified as Stripped
+import Juvix.Compiler.Core.Language.Value
 import Juvix.Compiler.Core.Pretty.Options
 import Juvix.Data.CodeAnn
 import Juvix.Extra.Strings qualified as Str
@@ -82,12 +83,15 @@ ppCodeVar' name v = do
     then return $ name' <> kwDeBruijnVar <> pretty (v ^. varIndex)
     else return name'
 
-instance PrettyCode (Constant' i) where
+instance PrettyCode ConstantValue where
   ppCode = \case
-    Constant _ (ConstInteger int) ->
+    ConstInteger int ->
       return $ annotate AnnLiteralInteger (pretty int)
-    Constant _ (ConstString txt) ->
+    ConstString txt ->
       return $ annotate AnnLiteralString (pretty (show txt :: String))
+
+instance PrettyCode (Constant' i) where
+  ppCode Constant {..} = ppCode _constantValue
 
 instance (PrettyCode a, HasAtomicity a) => PrettyCode (App' i a) where
   ppCode App {..} = do
@@ -114,11 +118,11 @@ instance (PrettyCode a, HasAtomicity a) => PrettyCode (BuiltinApp' i a) where
 
 ppCodeConstr' :: (PrettyCode a, HasAtomicity a, Member (Reader Options) r) => Text -> Constr' i a -> Sem r (Doc Ann)
 ppCodeConstr' name c = do
-  args' <- mapM (ppRightExpression appFixity) (c ^. constrArgs)
   n' <- case c ^. constrTag of
     BuiltinTag tag -> ppCode tag
     _ -> ppName KNameConstructor name
-  return $ foldl' (<+>) n' args'
+  args' <- mapM (ppRightExpression appFixity) (c ^. constrArgs)
+  return $ hsep (n' : args')
 
 instance (Pretty k, PrettyCode a) => PrettyCode (Map k a) where
   ppCode m = do
@@ -235,11 +239,12 @@ instance PrettyCode PatternWildcard where
 instance PrettyCode PatternConstr where
   ppCode PatternConstr {..} = do
     n <- ppName KNameConstructor (getInfoName _patternConstrInfo)
-    args <- mapM (ppRightExpression appFixity) _patternConstrArgs
     bn <- ppName KNameLocal (_patternConstrBinder ^. binderName)
-    let pat = foldl' (<+>) n args
-        pat' = if _patternConstrBinder ^. binderName == "?" || _patternConstrBinder ^. binderName == "" then pat else bn <> kwAt <> parens pat
-    ppWithType pat' (_patternConstrBinder ^. binderType)
+    let mkpat :: Doc Ann -> Doc Ann
+        mkpat pat = if _patternConstrBinder ^. binderName == "?" || _patternConstrBinder ^. binderName == "" then pat else bn <> kwAt <> parens pat
+    args <- mapM (ppRightExpression appFixity) _patternConstrArgs
+    let pat = mkpat (hsep (n : args))
+    ppWithType pat (_patternConstrBinder ^. binderType)
 
 instance PrettyCode Pattern where
   ppCode = \case
@@ -427,7 +432,7 @@ instance PrettyCode InfoTable where
     tys <- ppInductives (toList (tbl ^. infoInductives))
     sigs <- ppSigs (sortOn (^. identifierSymbol) $ toList (tbl ^. infoIdentifiers))
     ctx' <- ppContext (tbl ^. identContext)
-    main <- maybe (return "") (\s -> (<> line) . (line <>) <$> ppName KNameFunction (fromJust (HashMap.lookup s (tbl ^. infoIdentifiers)) ^. identifierName)) (tbl ^. infoMain)
+    main <- maybe (return "") (\s -> (<> line) . (line <>) <$> ppName KNameFunction (identName tbl s)) (tbl ^. infoMain)
     return (tys <> line <> line <> sigs <> line <> ctx' <> line <> main)
     where
       ppSig :: Symbol -> Sem r (Maybe (Doc Ann))
@@ -439,7 +444,7 @@ instance PrettyCode InfoTable where
         sym' <- ppName KNameFunction mname'
         let -- the identifier may be missing if we have filtered out some
             -- identifiers for printing purposes
-            mii = HashMap.lookup s (tbl ^. infoIdentifiers)
+            mii = lookupIdentifierInfo' tbl s
         case mii of
           Nothing -> return Nothing
           Just ii -> do
@@ -481,7 +486,7 @@ instance PrettyCode InfoTable where
           ppInductive :: InductiveInfo -> Sem r (Doc Ann)
           ppInductive ii = do
             name <- ppName KNameInductive (ii ^. inductiveName)
-            ctrs <- mapM (fmap (<> semi) . ppCode) (ii ^. inductiveConstructors)
+            ctrs <- mapM (fmap (<> semi) . ppCode . lookupConstructorInfo tbl) (ii ^. inductiveConstructors)
             return (kwInductive <+> name <+> braces (line <> indent' (vsep ctrs) <> line) <> kwSemicolon)
 
 instance PrettyCode Stripped.ArgumentInfo where
@@ -525,7 +530,7 @@ instance PrettyCode Stripped.InfoTable where
           ppInductive :: Stripped.InductiveInfo -> Sem r (Doc Ann)
           ppInductive ii = do
             name <- ppName KNameInductive (ii ^. Stripped.inductiveName)
-            ctrs <- mapM (fmap (<> semi) . ppCode) (ii ^. Stripped.inductiveConstructors)
+            ctrs <- mapM (fmap (<> semi) . ppCode . Stripped.lookupConstructorInfo tbl) (ii ^. Stripped.inductiveConstructors)
             return (kwInductive <+> name <+> braces (line <> indent' (vsep ctrs) <> line))
 
 instance (PrettyCode a) => PrettyCode (NonEmpty a) where
@@ -536,8 +541,65 @@ instance (PrettyCode a) => PrettyCode [a] where
     cs <- mapM ppCode x
     return $ encloseSep "(" ")" ", " cs
 
-{--------------------------------------------------------------------------------}
-{- helper functions -}
+--------------------------------------------------------------------------------
+-- printing values
+--------------------------------------------------------------------------------
+
+goBinary :: Member (Reader Options) r => Fixity -> Doc Ann -> [Value] -> Sem r (Doc Ann)
+goBinary fixity name = \case
+  [] -> return name
+  [arg] -> do
+    arg' <- ppRightExpression appFixity arg
+    return $ parens name <+> arg'
+  [arg1, arg2] -> do
+    arg1' <- ppLeftExpression fixity arg1
+    arg2' <- ppRightExpression fixity arg2
+    return $ arg1' <+> name <+> arg2'
+  _ ->
+    impossible
+
+goUnary :: Member (Reader Options) r => Fixity -> Doc Ann -> [Value] -> Sem r (Doc Ann)
+goUnary fixity name = \case
+  [] -> return name
+  [arg] -> do
+    arg' <- ppPostExpression fixity arg
+    return $ arg' <+> name
+  _ ->
+    impossible
+
+instance PrettyCode ConstrApp where
+  ppCode ConstrApp {..} = do
+    n <- ppName KNameConstructor _constrAppName
+    case _constrAppFixity of
+      Nothing -> do
+        args <- mapM (ppRightExpression appFixity) _constrAppArgs
+        return $ hsep (n : args)
+      Just fixity
+        | isBinary fixity ->
+            goBinary fixity n _constrAppArgs
+        | isUnary fixity ->
+            goUnary fixity n _constrAppArgs
+      _ -> impossible
+
+instance PrettyCode Value where
+  ppCode = \case
+    ValueConstrApp x -> ppCode x
+    ValueConstant c -> ppCode c
+    ValueWildcard -> return "_"
+    ValueFun -> return "<fun>"
+
+ppValueSequence :: Member (Reader Options) r => [Value] -> Sem r (Doc Ann)
+ppValueSequence vs = hsep <$> mapM (ppRightExpression appFixity) vs
+
+docValueSequence :: [Value] -> Doc Ann
+docValueSequence =
+  run
+    . runReader defaultOptions
+    . ppValueSequence
+
+--------------------------------------------------------------------------------
+-- helper functions
+--------------------------------------------------------------------------------
 
 ppPostExpression ::
   (PrettyCode a, HasAtomicity a, Member (Reader Options) r) =>

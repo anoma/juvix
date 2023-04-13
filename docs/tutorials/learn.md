@@ -1,13 +1,9 @@
 # Juvix tutorial
 
-NOTE: This is a tutorial for Juvix version 0.3. Earlier versions do not
-support all the syntax described here.
-
 - [Juvix REPL](./learn.md#juvix-repl)
 - [Basic expressions](./learn.md#basic-expressions)
 - [Files, modules and
   compilation](./learn.md#files-modules-and-compilation)
-- [Output](./learn.md#output)
 - [Data types and functions](./learn.md#data-types-and-functions)
 - [Pattern matching](./learn.md#pattern-matching)
 - [Comparisons and
@@ -31,7 +27,7 @@ juvix repl
 
 The response should be similar to:
 
-```juvix
+```jrepl
 Juvix REPL version 0.3: https://juvix.org. Run :help for help
 OK loaded: ./.juvix-build/stdlib/Stdlib/Prelude.juvix
 Stdlib.Prelude>
@@ -45,7 +41,7 @@ commands type `:help`.
 
 You can try evaluating simple arithmetic expressions in the REPL:
 
-```juvix
+```jrepl
 Stdlib.Prelude> 3 + 4
 7
 Stdlib.Prelude> 1 + 3 * 7
@@ -66,7 +62,7 @@ natural number from a smaller one yields `0`.
 
 You can also try boolean expressions
 
-```juvix
+```jrepl
 Stdlib.Prelude> true
 true
 Stdlib.Prelude> not true
@@ -81,7 +77,7 @@ Stdlib.Prelude> if true 1 0
 
 and strings, pairs and lists:
 
-```juvix
+```jrepl
 Stdlib.Prelude> "Hello world!"
 "Hello world!"
 Stdlib.Prelude> (1, 2)
@@ -95,7 +91,7 @@ In fact, you can use all functions and types from the
 module of the [standard library](https://anoma.github.io/juvix-stdlib),
 which is preloaded by default.
 
-```juvix
+```jrepl
 Stdlib.Prelude> length (1 :: 2 :: nil)
 3
 Stdlib.Prelude> null (1 :: 2 :: nil)
@@ -123,42 +119,24 @@ module `Hello`:
 -- Hello world example. This is a comment.
 module Hello;
 
--- Import the standard library prelude, including the function 'printStringLn'
+-- Import the standard library prelude, including the 'String' type
 open import Stdlib.Prelude;
 
-main : IO;
-main := printStringLn "Hello world!";
-
-end;
+main : String;
+main := "Hello world!";
 ```
 
-A file compiled to an executable must define the zero-argument function
-`main` of type `IO` which is evaluated when running the program.
-
-## Output
-
-In addition to `printStringLn`, the standard library includes the
-functions `printString`, `printNat`, `printNatLn`, `printBool`,
-`printBoolLn`. The `IO` computations can be sequenced with `>>`, e.g.,
-
-```juvix
-printNat 3 >> printString " + " >> printNatLn 4
-```
-
-has type `IO` and when executed prints `3 + 4` followed by a newline.
-
-The type `IO` is the type of IO actions, i.e., of data structures
-representing IO computations. The functions `printString`, `printNat`,
-etc., do not immediately print their arguments, but rather create a data
-structure representing an appropriate IO action. The IO actions created
-by the `main` function are executed only after the program has been
-evaluated.
+A file compiled to an executable must define the zero-argument
+function `main` which is evaluated when running the program. The
+definition of `main` can have any non-function type, e.g., `String`,
+`Bool` or `Nat`. The generated executable prints the result of
+evaluating `main`.
 
 ## Data types and functions
 
 To see the type of an expression, use the `:type` REPL command:
 
-```juvix
+```jrepl
 Stdlib.Prelude> :type 1
 Nat
 Stdlib.Prelude> :type true
@@ -322,7 +300,7 @@ It is not necessary to define a separate function to perform pattern
 matching. One can use the `case` syntax to pattern match an expression
 directly.
 
-```juvix
+```jrepl
 Stdlib.Prelude> case (1, 2) | (suc _, zero) := 0 | (suc _, suc x) := x | _ := 19
 1
 ```
@@ -375,22 +353,22 @@ One can also use multi-clause definitions in `let`-expressions, with the
 same syntax as definitions inside a module. For example:
 
 ```juvix
-even' : Nat -> Bool;
-even' :=
+even : Nat -> Bool;
+even :=
   let
-    even : Nat -> Bool;
-    odd : Nat -> Bool;
+    even' : Nat -> Bool;
+    odd' : Nat -> Bool;
 
-    even zero := true;
-    even (suc n) := odd n;
+    even' zero := true;
+    even' (suc n) := odd' n;
 
-    odd zero := false;
-    odd (suc n) := even n;
+    odd' zero := false;
+    odd' (suc n) := even' n;
   in
-  even
+  even';
 ```
 
-The functions `even` and `odd` are not visible outside `even'`.
+The functions `even'` and `odd'` are not visible outside `even`.
 
 ## Recursion
 
@@ -519,7 +497,7 @@ divides every element of `lst` by `2`, rounding down the result. The
 expression
 
 ```juvix
-\{ x := div x 1 }
+\{ x := div x 2 }
 ```
 
 is an unnamed function, or a _lambda_, which divides its argument by
@@ -530,7 +508,7 @@ is an unnamed function, or a _lambda_, which divides its argument by
 The type `NList` we have been working with above requires the list
 elements to be natural numbers. It is possible to define lists
 _polymorphically_, parameterising them by the element type. This is
-analogous to generics in languages like Java, C++ or Rust. Here is the
+similar to generics in languages like Java, C++ or Rust. Here is the
 polymorphic definition of lists from the standard library:
 
 ```juvix
@@ -591,13 +569,16 @@ This is not acceptable if you care about performance. In an imperative
 language, one would use a simple loop going over the list without any
 memory allocation. In pseudocode:
 
-```juvix
-var sum : Nat := 0;
-while (lst /= nnil) {
+```pascal
+sum : Nat := 0;
+
+while (lst /= nil) do
+begin
   sum := sum + head lst;
   lst := tail lst;
-};
-return sum;
+end;
+
+result := sum;
 ```
 
 Fortunately, it is possible to rewrite this function to use _tail
@@ -635,16 +616,19 @@ imperative pseudocode for computing the nth Fibonacci number in linear
 time. The variables `cur` and `next` hold the last two computed
 Fibonacci numbers.
 
-```juvix
-var cur : Nat := 0;
-var next : Nat := 1;
-while (n /= 0) {
-  var tmp := next;
+```pascal
+cur : Nat := 0;
+next : Nat := 1;
+
+while (n /= 0) do
+begin
+  tmp := next;
   next := cur + next;
   cur := tmp;
   n := n - 1;
-};
-return cur;
+end;
+
+result := cur;
 ```
 
 An equivalent functional program is:
@@ -684,7 +668,7 @@ Totality consists of:
 - [strict positivity](../explanations/totality/positive.md).
 
 The termination check ensures that all functions are structurally
-recursive, i.e., all recursive call are on structurally smaller value –
+recursive, i.e., all recursive call are on structurally smaller values –
 subpatterns of the matched pattern. For example, the termination checker
 rejects the definition
 
@@ -722,15 +706,44 @@ even zero := true;
 even (suc (suc n)) := even n;
 ```
 
-NOTE: Coverage checking will be implemented only in Juvix version 0.4.
-Earlier versions of Juvix accept non-exhaustive patterns.
+Since coverage checking forces the user to specify the function for all input values, it may be unclear how to implement functions which are typically partial. For example, the `tail` function on lists is often left undefined for the empty list. One solution is to return a default value. In the Juvix standard library, `tail` is implemented as follows, returning the empty list when the argument is empty.
+
+```juvix
+tail : {A : Type} -> List A -> List A;
+tail (_ :: xs) := xs;
+tail nil := nil;
+```
+
+Another solution is to wrap the result in the `Maybe` type from the standard library, which allows to represent optional values. An element of `Maybe A` is either `nothing` or `just x` with `x : A`.
+
+```juvix
+type Maybe (A : Type) :=
+  | nothing : Maybe A
+  | just : A -> Maybe A;
+```
+
+For example, one could define the tail function as:
+
+```juvix
+tail' : {A : Type} -> List A -> Maybe (List A)
+tail' (_ :: xs) := just xs;
+tail' nil := nothing;
+```
+
+Then the user needs to explicitly check if the result of the function contains a value or not:
+
+```juvix
+case tail' lst
+| just x := ...
+| nothing := ...
+```
 
 ## Exercises
 
 You have now learnt the very basics of Juvix. To consolidate your
-understanding of Juvix and functional programming, try doing some of the
-following exercises. To learn how to write more complex Juvix programs,
-see the [advanced
+understanding of Juvix and functional programming, try doing some of
+the following exercises. To learn how to write more complex Juvix
+programs, see the [advanced
 tutorial](https://docs.juvix.org/examples/html/Tutorial/Tutorial.html)
 and the [Juvix program examples](../reference/examples.md).
 
@@ -769,7 +782,7 @@ and the [Juvix program examples](../reference/examples.md).
     Analogously to the `map` function for lists, define a function
 
     ```juvix
-    tmap : (Nat -> Nat) -> Tree -> Tree
+    tmap : (Nat -> Nat) -> Tree -> Tree;
     ```
 
     which applies a function to all natural numbers stored in a tree.

@@ -19,7 +19,8 @@ data InfoTable = InfoTable
     _infoInductives :: HashMap Symbol InductiveInfo,
     _infoConstructors :: HashMap Tag ConstructorInfo,
     _infoAxioms :: HashMap Text AxiomInfo,
-    _infoIntToNat :: Maybe Symbol,
+    _infoLiteralIntToNat :: Maybe Symbol,
+    _infoLiteralIntToInt :: Maybe Symbol,
     _infoNextSymbol :: Word,
     _infoNextTag :: Word,
     _infoBuiltins :: HashMap BuiltinPrim IdentKind
@@ -35,7 +36,8 @@ emptyInfoTable =
       _infoInductives = mempty,
       _infoConstructors = mempty,
       _infoAxioms = mempty,
-      _infoIntToNat = Nothing,
+      _infoLiteralIntToNat = Nothing,
+      _infoLiteralIntToInt = Nothing,
       _infoNextSymbol = 1,
       _infoNextTag = 0,
       _infoBuiltins = mempty
@@ -58,17 +60,10 @@ data IdentifierInfo = IdentifierInfo
     _identifierLocation :: Maybe Location,
     _identifierSymbol :: Symbol,
     _identifierType :: Type,
+    -- | The number of lambdas in the identifier body
     _identifierArgsNum :: Int,
-    _identifierArgsInfo :: [ArgumentInfo],
     _identifierIsExported :: Bool,
     _identifierBuiltin :: Maybe BuiltinFunction
-  }
-
-data ArgumentInfo = ArgumentInfo
-  { _argumentName :: Text,
-    _argumentLocation :: Maybe Location,
-    _argumentType :: Type,
-    _argumentIsImplicit :: IsImplicit
   }
 
 data InductiveInfo = InductiveInfo
@@ -76,7 +71,7 @@ data InductiveInfo = InductiveInfo
     _inductiveLocation :: Maybe Location,
     _inductiveSymbol :: Symbol,
     _inductiveKind :: Type,
-    _inductiveConstructors :: [ConstructorInfo],
+    _inductiveConstructors :: [Tag],
     _inductiveParams :: [ParameterInfo],
     _inductivePositive :: Bool,
     _inductiveBuiltin :: Maybe BuiltinType
@@ -89,6 +84,7 @@ data ConstructorInfo = ConstructorInfo
     _constructorType :: Type,
     _constructorArgsNum :: Int,
     _constructorInductive :: Symbol,
+    _constructorFixity :: Maybe Fixity,
     _constructorBuiltin :: Maybe BuiltinConstructor
   }
 
@@ -107,11 +103,34 @@ data AxiomInfo = AxiomInfo
 
 makeLenses ''InfoTable
 makeLenses ''IdentifierInfo
-makeLenses ''ArgumentInfo
 makeLenses ''InductiveInfo
 makeLenses ''ConstructorInfo
 makeLenses ''ParameterInfo
 makeLenses ''AxiomInfo
+
+lookupInductiveInfo' :: InfoTable -> Symbol -> Maybe InductiveInfo
+lookupInductiveInfo' tab sym = HashMap.lookup sym (tab ^. infoInductives)
+
+lookupConstructorInfo' :: InfoTable -> Tag -> Maybe ConstructorInfo
+lookupConstructorInfo' tab tag = HashMap.lookup tag (tab ^. infoConstructors)
+
+lookupIdentifierInfo' :: InfoTable -> Symbol -> Maybe IdentifierInfo
+lookupIdentifierInfo' tab sym = HashMap.lookup sym (tab ^. infoIdentifiers)
+
+lookupIdentifierNode' :: InfoTable -> Symbol -> Maybe Node
+lookupIdentifierNode' tab sym = HashMap.lookup sym (tab ^. identContext)
+
+lookupInductiveInfo :: InfoTable -> Symbol -> InductiveInfo
+lookupInductiveInfo tab sym = fromJust $ lookupInductiveInfo' tab sym
+
+lookupConstructorInfo :: InfoTable -> Tag -> ConstructorInfo
+lookupConstructorInfo tab tag = fromJust $ lookupConstructorInfo' tab tag
+
+lookupIdentifierInfo :: InfoTable -> Symbol -> IdentifierInfo
+lookupIdentifierInfo tab sym = fromJust $ lookupIdentifierInfo' tab sym
+
+lookupIdentifierNode :: InfoTable -> Symbol -> Node
+lookupIdentifierNode tab sym = fromJust $ lookupIdentifierNode' tab sym
 
 lookupBuiltinInductive :: InfoTable -> BuiltinInductive -> Maybe InductiveInfo
 lookupBuiltinInductive tab b = (HashMap.!) (tab ^. infoInductives) . indSym <$> idenKind
@@ -147,10 +166,10 @@ lookupBuiltinFunction tab b = (HashMap.!) (tab ^. infoIdentifiers) . funSym <$> 
       _ -> error "core infotable: expected function identifier"
 
 identName :: InfoTable -> Symbol -> Text
-identName tab sym = fromJust (HashMap.lookup sym (tab ^. infoIdentifiers)) ^. identifierName
+identName tab sym = lookupIdentifierInfo tab sym ^. identifierName
 
 typeName :: InfoTable -> Symbol -> Text
-typeName tab sym = fromJust (HashMap.lookup sym (tab ^. infoInductives)) ^. inductiveName
+typeName tab sym = lookupInductiveInfo tab sym ^. inductiveName
 
 identNames :: InfoTable -> HashSet Text
 identNames tab =

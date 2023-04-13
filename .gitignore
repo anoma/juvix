@@ -88,3 +88,4 @@ examples/milestone/HelloWorld/HelloWorld
 hie.yaml
 /.shake/
 /.benchmark-results/
+docs/assets/**

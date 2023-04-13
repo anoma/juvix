@@ -55,7 +55,6 @@ setupMainFunction tab node =
           _identifierLocation = Nothing,
           _identifierSymbol = sym,
           _identifierArgsNum = 0,
-          _identifierArgsInfo = [],
           _identifierType = mkDynamic',
           _identifierBuiltin = Nothing,
           _identifierIsExported = True
@@ -153,7 +152,6 @@ statementDef = do
                 _identifierSymbol = sym,
                 _identifierType = ty,
                 _identifierArgsNum = 0,
-                _identifierArgsInfo = [],
                 _identifierIsExported = False,
                 _identifierBuiltin = Nothing
               }
@@ -177,7 +175,7 @@ parseDefinition sym ty = do
         && not (isDynamic (typeTarget ty))
     )
     $ parseFailure off "type mismatch: too many lambdas"
-  lift $ setIdentArgsInfo sym (map (argumentInfoFromBinder . (^. lambdaLhsBinder)) is)
+  lift $ setIdentArgs sym (map (^. lambdaLhsBinder) is)
 
 statementInductive ::
   (Member InfoTableBuilder r) =>
@@ -204,7 +202,7 @@ statementInductive = do
           }
   lift $ registerInductive txt ii
   ctrs <- braces $ P.sepEndBy (constrDecl sym) (kw kwSemicolon)
-  lift $ registerInductive txt ii {_inductiveConstructors = ctrs}
+  lift $ registerInductive txt ii {_inductiveConstructors = map (^. constructorTag) ctrs}
 
 constrDecl ::
   (Member InfoTableBuilder r) =>
@@ -226,6 +224,7 @@ constrDecl symInd = do
             _constructorArgsNum = length (typeArgs ty),
             _constructorType = ty,
             _constructorInductive = symInd,
+            _constructorFixity = Nothing,
             _constructorBuiltin = Nothing
           }
   lift $ registerConstructor txt ci

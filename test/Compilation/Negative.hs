@@ -41,5 +41,9 @@ tests =
     NegTest
       "Pattern matching coverage in lambdas"
       $(mkRelDir ".")
-      $(mkRelFile "test003.juvix")
+      $(mkRelFile "test003.juvix"),
+    NegTest
+      "The definition of main has a function type"
+      $(mkRelDir ".")
+      $(mkRelFile "test004.juvix")
   ]

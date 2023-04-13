@@ -1,15 +1,14 @@
 module Formatter.Positive where
 
 import Base
-import Juvix.Compiler.Pipeline
 import Juvix.Formatter
 import Scope.Positive qualified
 import Scope.Positive qualified as Scope
 
-runScopeEffIO :: Member (Embed IO) r => Path Abs Dir -> Sem (ScopeEff ': r) a -> Sem r a
-runScopeEffIO testRoot' = interpret $ \case
+runScopeEffIO :: Member (Embed IO) r => Sem (ScopeEff ': r) a -> Sem r a
+runScopeEffIO = interpret $ \case
   ScopeFile p -> do
-    let entry = defaultEntryPoint testRoot' p
+    entry <- embed (defaultEntryPointCwdIO p)
     embed (snd <$> runIO' entry upToScoping)
 
 makeFormatTest' :: Scope.PosTest -> TestDescr
@@ -20,7 +19,7 @@ makeFormatTest' Scope.PosTest {..} =
         { _testName = _name,
           _testRoot = tRoot,
           _testAssertion = Single $ do
-            d <- runM $ runError $ runOutputList @FormattedFileInfo $ runScopeEffIO tRoot $ runFilesIO $ format file'
+            d <- runM $ runError $ runOutputList @FormattedFileInfo $ runScopeEffIO $ runFilesIO $ format file'
             case d of
               Right (_, FormatResultOK) -> return ()
               Right (_, FormatResultFail) -> assertFailure ("File: " <> show file' <> " is not formatted")

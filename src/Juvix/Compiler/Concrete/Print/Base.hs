@@ -175,14 +175,14 @@ instance PrettyPrint (AxiomDef 'Scoped) where
   ppCode :: forall r. Members '[ExactPrint, Reader Options] r => AxiomDef 'Scoped -> Sem r ()
   ppCode AxiomDef {..} = do
     axiomName' <- P.annDef _axiomName <$> P.ppSymbol _axiomName
-    let builtin' :: Maybe (Sem r ()) = (\x -> P.ppCode x >>= morpheme (getLoc x)) <$> _axiomBuiltin
+    let builtin' :: Maybe (Sem r ()) = (<> line) . (\x -> P.ppCode x >>= morpheme (getLoc x)) <$> _axiomBuiltin
         _axiomDoc' :: Maybe (Sem r ()) = ppCode <$> _axiomDoc
     _axiomDoc'
       ?<> builtin'
-      <?+> ppCode _axiomKw
-        <+> morpheme (getLoc _axiomName) axiomName'
-        <+> noLoc P.kwColon
-        <+> ppCode _axiomType
+      ?<> ppCode _axiomKw
+      <+> morpheme (getLoc _axiomName) axiomName'
+      <+> noLoc P.kwColon
+      <+> ppCode _axiomType
 
 instance PrettyPrint (WithLoc BuiltinInductive) where
   ppCode b = P.ppCode (b ^. withLocParam) >>= morpheme (getLoc b)
@@ -195,7 +195,7 @@ instance PrettyPrint (TypeSignature 'Scoped) where
   ppCode TypeSignature {..} = do
     let termin' :: Maybe (Sem r ()) = (<> line) . ppCode <$> _sigTerminating
         doc' :: Maybe (Sem r ()) = ppCode <$> _sigDoc
-        builtin' :: Maybe (Sem r ()) = ppCode <$> _sigBuiltin
+        builtin' :: Maybe (Sem r ()) = (<> line) . ppCode <$> _sigBuiltin
         type' = ppCode _sigType
         name' = region (P.annDef _sigName) (ppCode _sigName)
         body' = case _sigBody of
@@ -203,14 +203,14 @@ instance PrettyPrint (TypeSignature 'Scoped) where
           Just body -> Just (noLoc P.kwAssign <> oneLineOrNext (ppCode body))
     doc'
       ?<> builtin'
-      <?+> termin'
-        ?<> ( name'
-                <+> noLoc P.kwColon
-                  <> oneLineOrNext
-                    ( type'
-                        <+?> body'
-                    )
-            )
+      ?<> termin'
+      ?<> ( name'
+              <+> noLoc P.kwColon
+                <> oneLineOrNext
+                  ( type'
+                      <+?> body'
+                  )
+          )
 
 instance PrettyPrint Pattern where
   ppCode = ppMorpheme
@@ -320,14 +320,18 @@ instance PrettyPrint (InductiveConstructorDef 'Scoped) where
 
 ppInductiveSignature :: forall r. Members '[ExactPrint, Reader Options] r => InductiveDef 'Scoped -> Sem r ()
 ppInductiveSignature InductiveDef {..} = do
-  let builtin' = ppCode <$> _inductiveBuiltin
+  let builtin' = (<> line) . ppCode <$> _inductiveBuiltin
       name' = region (P.annDef _inductiveName) (ppCode _inductiveName)
       params' = ppCode <$> nonEmpty _inductiveParameters
       ty' = case _inductiveType of
         Nothing -> Nothing
         Just e -> Just (noLoc P.kwColon <+> ppCode e)
+      positive'
+        | _inductivePositive = (<> line) <$> Just (noLoc P.kwPositive)
+        | otherwise = Nothing
   builtin'
-    <?+> ppCode _inductiveKw
+    ?<> positive'
+    ?<> ppCode _inductiveKw
     <+> name'
     <+?> params'
     <+?> ty'

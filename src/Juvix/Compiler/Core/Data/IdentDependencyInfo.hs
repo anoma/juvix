@@ -16,7 +16,7 @@ createIdentDependencyInfo tab = createDependencyInfo graph startVertices
       fmap
         ( \IdentifierInfo {..} ->
             HashSet.map (\Ident {..} -> _identSymbol) $
-              getIdents (fromJust $ HashMap.lookup _identifierSymbol (tab ^. identContext))
+              getIdents (lookupIdentifierNode tab _identifierSymbol)
         )
         (tab ^. infoIdentifiers)
 

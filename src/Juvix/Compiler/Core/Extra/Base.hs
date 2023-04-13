@@ -56,6 +56,9 @@ mkLambda i bi b = NLam (Lambda i bi b)
 mkLambda' :: Type -> Node -> Node
 mkLambda' ty = mkLambda Info.empty (mkBinder' ty)
 
+mkLambdas :: [Info] -> [Binder] -> Node -> Node
+mkLambdas is bs n = foldl' (flip (uncurry mkLambda)) n (reverse (zipExact is bs))
+
 mkLambdas' :: [Type] -> Node -> Node
 mkLambdas' tys n = foldl' (flip mkLambda') n (reverse tys)
 
@@ -217,14 +220,14 @@ isInductive _ = False
 -- | `expandType argtys ty` expands the dynamic target of `ty` to match the
 -- number of arguments with types specified by `argstys`. For example,
 -- `expandType [int, string] (int -> any) = int -> string -> any`.
-expandType :: [Type] -> Type -> Type
+expandType :: [Binder] -> Type -> Type
 expandType argtys ty =
   let (tyargs, target) = unfoldPi ty
    in if
           | length tyargs >= length argtys ->
               ty
           | isDynamic target ->
-              rePis tyargs (mkPis' (drop (length tyargs) argtys) target)
+              rePis tyargs (mkPis (drop (length tyargs) argtys) target)
           | otherwise ->
               impossible
 

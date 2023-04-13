@@ -42,9 +42,9 @@ repos:
 
   - repo: local
     hooks:
-      - id: format-juvix-examples
+      - id: format-juvix-files
         name: format Juvix examples
-        entry: make -s format-juvix-examples
+        entry: make -s format-juvix-files
         language: system
         verbose: false
         pass_filenames: false

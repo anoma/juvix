@@ -1,7 +1,9 @@
 module Literals;
 
 axiom Int : Type;
+
 axiom String : Type;
+
 axiom + : Int → Int → Int;
 
 a : Int;

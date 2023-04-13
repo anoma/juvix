@@ -1,16 +1,15 @@
 module Data.Nat;
-  type ℕ  :=
-    zero : ℕ |
-    suc : ℕ → ℕ;
 
-  infixl 6 +;
-  + : ℕ → ℕ → ℕ;
-  + zero b := b;
-  + (suc a) b := suc (a + b);
+type ℕ :=
+  | zero : ℕ
+  | suc : ℕ → ℕ;
 
-  infixl 7 *;
-  * : ℕ → ℕ → ℕ;
-  * zero b := zero;
-  * (suc a) b := b + a * b;
+infixl 6 +;
++ : ℕ → ℕ → ℕ;
++ zero b := b;
++ (suc a) b := suc (a + b);
 
-end;
+infixl 7 *;
+* : ℕ → ℕ → ℕ;
+* zero b := zero;
+* (suc a) b := b + a * b;

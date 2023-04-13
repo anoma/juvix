@@ -1,0 +1,9 @@
+module LiteralIntegerString;
+
+open import Stdlib.Prelude;
+
+f : String -> Nat;
+f _ := 0;
+
+g : Nat;
+g := f 2;

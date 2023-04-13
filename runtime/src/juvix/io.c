@@ -32,6 +32,18 @@ void io_flush() {
     }
 }
 
+static void io_print(word_t x) {
+    if (io_buffer == NULL) {
+        io_init();
+    }
+    io_index += print_to_buf(io_buffer + io_index, PAGE_SIZE - io_index, x);
+    if (io_index >= PAGE_SIZE) {
+        io_buffer[PAGE_SIZE - 1] = 0;
+        print_msg(io_buffer);
+        error_exit_msg("error: IO buffer overflow");
+    }
+}
+
 static void io_write(word_t x) {
     if (io_buffer == NULL) {
         io_init();
@@ -53,12 +65,7 @@ static void io_write(word_t x) {
             }
         }
     } else {
-        io_index += print_to_buf(io_buffer + io_index, PAGE_SIZE - io_index, x);
-        if (io_index >= PAGE_SIZE) {
-            io_buffer[PAGE_SIZE - 1] = 0;
-            print_msg(io_buffer);
-            error_exit_msg("error: IO buffer overflow");
-        }
+        io_print(x);
     }
 }
 
@@ -112,13 +119,17 @@ void io_trace(word_t x) {
     if (x == OBJ_VOID) {
         print_msg("void");
     } else {
-        io_print_toplevel(x);
+        io_write(x);
+        ASSERT(io_index < PAGE_SIZE);
+        io_buffer[io_index] = 0;
+        print_msg(io_buffer);
+        io_index = 0;
     }
 }
 
 void io_print_toplevel(word_t x) {
     if (x != OBJ_VOID) {
-        io_write(x);
+        io_print(x);
         ASSERT(io_index < PAGE_SIZE);
         io_buffer[io_index] = 0;
         print_msg(io_buffer);

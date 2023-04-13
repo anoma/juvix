@@ -22,7 +22,7 @@ tests:
       - from-concrete
       - --eval
       - --transforms
-      - nat-to-int
+      - nat-to-primint
     args:
       - positive/Internal/LiteralInt.juvix
     stdout: |

@@ -38,297 +38,297 @@ allTests =
 tests :: [PosTest]
 tests =
   [ PosTest
-      "Arithmetic operators"
+      "Test001: Arithmetic operators"
       $(mkRelDir ".")
       $(mkRelFile "test001.jvc")
       $(mkRelFile "out/test001.out"),
     PosTest
-      "Arithmetic operators inside lambdas"
+      "Test002: Arithmetic operators inside lambdas"
       $(mkRelDir ".")
       $(mkRelFile "test002.jvc")
       $(mkRelFile "out/test002.out"),
     PosTest
-      "Empty program with comments"
+      "Test003: Empty program with comments"
       $(mkRelDir ".")
       $(mkRelFile "test003.jvc")
       $(mkRelFile "out/test003.out"),
     PosTest
-      "IO builtins"
+      "Test004: IO builtins"
       $(mkRelDir ".")
       $(mkRelFile "test004.jvc")
       $(mkRelFile "out/test004.out"),
     PosTest
-      "Higher-order functions"
+      "Test005: Higher-order functions"
       $(mkRelDir ".")
       $(mkRelFile "test005.jvc")
       $(mkRelFile "out/test005.out"),
     PosTest
-      "If-then-else"
+      "Test006: If-then-else"
       $(mkRelDir ".")
       $(mkRelFile "test006.jvc")
       $(mkRelFile "out/test006.out"),
     PosTest
-      "Case"
+      "Test007: Case"
       $(mkRelDir ".")
       $(mkRelFile "test007.jvc")
       $(mkRelFile "out/test007.out"),
     PosTest
-      "Recursion"
+      "Test008: Recursion"
       $(mkRelDir ".")
       $(mkRelFile "test008.jvc")
       $(mkRelFile "out/test008.out"),
     PosTest
-      "Tail recursion"
+      "Test009: Tail recursion"
       $(mkRelDir ".")
       $(mkRelFile "test009.jvc")
       $(mkRelFile "out/test009.out"),
     PosTest
-      "Let"
+      "Test010: Let"
       $(mkRelDir ".")
       $(mkRelFile "test010.jvc")
       $(mkRelFile "out/test010.out"),
     PosTest
-      "Tail recursion: Fibonacci numbers in linear time"
+      "Test011: Tail recursion: Fibonacci numbers in linear time"
       $(mkRelDir ".")
       $(mkRelFile "test011.jvc")
       $(mkRelFile "out/test011.out"),
     PosTest
-      "Trees"
+      "Test012: Trees"
       $(mkRelDir ".")
       $(mkRelFile "test012.jvc")
       $(mkRelFile "out/test012.out"),
     PosTest
-      "Functions returning functions with variable capture"
+      "Test013: Functions returning functions with variable capture"
       $(mkRelDir ".")
       $(mkRelFile "test013.jvc")
       $(mkRelFile "out/test013.out"),
     PosTest
-      "Arithmetic"
+      "Test014: Arithmetic"
       $(mkRelDir ".")
       $(mkRelFile "test014.jvc")
       $(mkRelFile "out/test014.out"),
     PosTest
-      "Local functions with free variables"
+      "Test015: Local functions with free variables"
       $(mkRelDir ".")
       $(mkRelFile "test015.jvc")
       $(mkRelFile "out/test015.out"),
     PosTest
-      "Recursion through higher-order functions"
+      "Test016: Recursion through higher-order functions"
       $(mkRelDir ".")
       $(mkRelFile "test016.jvc")
       $(mkRelFile "out/test016.out"),
     PosTest
-      "Tail recursion through higher-order functions"
+      "Test017: Tail recursion through higher-order functions"
       $(mkRelDir ".")
       $(mkRelFile "test017.jvc")
       $(mkRelFile "out/test017.out"),
     PosTest
-      "Higher-order functions and recursion"
+      "Test018: Higher-order functions and recursion"
       $(mkRelDir ".")
       $(mkRelFile "test018.jvc")
       $(mkRelFile "out/test018.out"),
     PosTest
-      "Self-application"
+      "Test019: Self-application"
       $(mkRelDir ".")
       $(mkRelFile "test019.jvc")
       $(mkRelFile "out/test019.out"),
     PosTest
-      "Recursive functions: McCarthy's 91 function, subtraction by increments"
+      "Test020: McCarthy's 91 function, subtraction by increments"
       $(mkRelDir ".")
       $(mkRelFile "test020.jvc")
       $(mkRelFile "out/test020.out"),
     PosTest
-      "Higher-order recursive functions"
+      "Test021: Higher-order recursive functions"
       $(mkRelDir ".")
       $(mkRelFile "test021.jvc")
       $(mkRelFile "out/test021.out"),
     PosTest
-      "Fast exponentiation"
+      "Test022: Fast exponentiation"
       $(mkRelDir ".")
       $(mkRelFile "test022.jvc")
       $(mkRelFile "out/test022.out"),
     PosTest
-      "Lists"
+      "Test023: Lists"
       $(mkRelDir ".")
       $(mkRelFile "test023.jvc")
       $(mkRelFile "out/test023.out"),
     PosTest
-      "Structural equality"
+      "Test024: Structural equality"
       $(mkRelDir ".")
       $(mkRelFile "test024.jvc")
       $(mkRelFile "out/test024.out"),
     PosTest
-      "Mutual recursion"
+      "Test025: Mutual recursion"
       $(mkRelDir ".")
       $(mkRelFile "test025.jvc")
       $(mkRelFile "out/test025.out"),
     PosTest
-      "Nested 'case', 'let' and 'if' with variable capture"
+      "Test026: Nested 'case', 'let' and 'if' with variable capture"
       $(mkRelDir ".")
       $(mkRelFile "test026.jvc")
       $(mkRelFile "out/test026.out"),
     PosTest
-      "Euclid's algorithm"
+      "Test027: Euclid's algorithm"
       $(mkRelDir ".")
       $(mkRelFile "test027.jvc")
       $(mkRelFile "out/test027.out"),
     PosTest
-      "Functional queues"
+      "Test028: Functional queues"
       $(mkRelDir ".")
       $(mkRelFile "test028.jvc")
       $(mkRelFile "out/test028.out"),
     PosTest
-      "Church numerals"
+      "Test029: Church numerals"
       $(mkRelDir ".")
       $(mkRelFile "test029.jvc")
       $(mkRelFile "out/test029.out"),
     PosTest
-      "Streams without memoization"
+      "Test030: Streams without memoization"
       $(mkRelDir ".")
       $(mkRelFile "test030.jvc")
       $(mkRelFile "out/test030.out"),
     PosTest
-      "Ackermann function"
+      "Test031: Ackermann function"
       $(mkRelDir ".")
       $(mkRelFile "test031.jvc")
       $(mkRelFile "out/test031.out"),
     PosTest
-      "Ackermann function (higher-order definition)"
+      "Test032: Ackermann function (higher-order definition)"
       $(mkRelDir ".")
       $(mkRelFile "test032.jvc")
       $(mkRelFile "out/test032.out"),
     PosTest
-      "Nested lists"
+      "Test033: Nested lists"
       $(mkRelDir ".")
       $(mkRelFile "test033.jvc")
       $(mkRelFile "out/test033.out"),
-    {-    PosTest
-          "Evaluation order"
-          $(mkRelDir ".")
-          $(mkRelFile "test034.jvc")
-          $(mkRelFile "out/test034.out"), -}
     PosTest
-      "Merge sort"
+      "Test034: Evaluation order"
+      $(mkRelDir ".")
+      $(mkRelFile "test034.jvc")
+      $(mkRelFile "out/test034.out"),
+    PosTest
+      "Test035: Merge sort"
       $(mkRelDir ".")
       $(mkRelFile "test035.jvc")
       $(mkRelFile "out/test035.out"),
     PosTest
-      "Big numbers"
+      "Test036: Big numbers"
       $(mkRelDir ".")
       $(mkRelFile "test036.jvc")
       $(mkRelFile "out/test036.out"),
     PosTest
-      "Global variables"
+      "Test037: Global variables"
       $(mkRelDir ".")
       $(mkRelFile "test037.jvc")
       $(mkRelFile "out/test037.out"),
     PosTest
-      "Global variables and forward declarations"
+      "Test038: Global variables and forward declarations"
       $(mkRelDir ".")
       $(mkRelFile "test038.jvc")
       $(mkRelFile "out/test038.out"),
     PosTest
-      "Eta-expansion of builtins and constructors"
+      "Test039: Eta-expansion of builtins and constructors"
       $(mkRelDir ".")
       $(mkRelFile "test039.jvc")
       $(mkRelFile "out/test039.out"),
     PosTest
-      "LetRec - fib, fact"
+      "Test040: LetRec - fib, fact"
       $(mkRelDir ".")
       $(mkRelFile "test040.jvc")
       $(mkRelFile "out/test040.out"),
     PosTest
-      "Match with complex patterns"
+      "Test041: Match with complex patterns"
       $(mkRelDir ".")
       $(mkRelFile "test041.jvc")
       $(mkRelFile "out/test041.out"),
     PosTest
-      "Type annotations"
+      "Test042: Type annotations"
       $(mkRelDir ".")
       $(mkRelFile "test042.jvc")
       $(mkRelFile "out/test042.out"),
     PosTest
-      "Dependent lambda-abstractions"
+      "Test043: Dependent lambda-abstractions"
       $(mkRelDir ".")
       $(mkRelFile "test043.jvc")
       $(mkRelFile "out/test043.out"),
     PosTest
-      "Eta-expansion"
+      "Test044: Eta-expansion"
       $(mkRelDir ".")
       $(mkRelFile "test044.jvc")
       $(mkRelFile "out/test044.out"),
     PosTest
-      "Type application and abstraction"
+      "Test045: Type application and abstraction"
       $(mkRelDir ".")
       $(mkRelFile "test045.jvc")
       $(mkRelFile "out/test045.out"),
     PosTest
-      "Applications with lets and cases in function position"
+      "Test046: Applications with lets and cases in function position"
       $(mkRelDir ".")
       $(mkRelFile "test046.jvc")
       $(mkRelFile "out/test046.out"),
     PosTest
-      "Builtin natural numbers"
+      "Test047: Builtin natural numbers"
       $(mkRelDir ".")
       $(mkRelFile "test047.jvc")
       $(mkRelFile "out/test047.out"),
     PosTest
-      "String builtins"
+      "Test048: String builtins"
       $(mkRelDir ".")
       $(mkRelFile "test048.jvc")
       $(mkRelFile "out/test048.out"),
     PosTest
-      "Lifting and polymorphism"
+      "Test049: Lifting and polymorphism"
       $(mkRelDir ".")
       $(mkRelFile "test049.jvc")
       $(mkRelFile "out/test049.out"),
     PosTest
-      "Church numerals with pattern matching"
+      "Test050: Church numerals with pattern matching"
       $(mkRelDir ".")
       $(mkRelFile "test050.jvc")
       $(mkRelFile "out/test050.out"),
     PosTest
-      "Type annotations for patterns"
+      "Test051: Type annotations for patterns"
       $(mkRelDir ".")
       $(mkRelFile "test051.jvc")
       $(mkRelFile "out/test051.out"),
     PosTest
-      "foldl with match"
+      "Test052: foldl with match"
       $(mkRelDir ".")
       $(mkRelFile "test052.jvc")
       $(mkRelFile "out/test052.out"),
     PosTest
-      "Match with higher-order polymorphic functions"
+      "Test053: Match with higher-order polymorphic functions"
       $(mkRelDir ".")
       $(mkRelFile "test053.jvc")
       $(mkRelFile "out/test053.out"),
     PosTest
-      "Typed match"
+      "Test054: Typed match"
       $(mkRelDir ".")
       $(mkRelFile "test054.jvc")
       $(mkRelFile "out/test054.out"),
     PosTest
-      "Eta-expansion of polymorphic constructors"
+      "Test055: Eta-expansion of polymorphic constructors"
       $(mkRelDir ".")
       $(mkRelFile "test055.jvc")
       $(mkRelFile "out/test055.out"),
     PosTest
-      "LetRec with type annotations"
+      "Test056: LetRec with type annotations"
       $(mkRelDir ".")
       $(mkRelFile "test056.jvc")
       $(mkRelFile "out/test056.out"),
     PosTest
-      "Type synonyms"
+      "Test057: Type synonyms"
       $(mkRelDir ".")
       $(mkRelFile "test057.jvc")
       $(mkRelFile "out/test057.out"),
     PosTest
-      "Lifting and partial application"
+      "Test058: Lifting and partial application"
       $(mkRelDir ".")
       $(mkRelFile "test058.jvc")
       $(mkRelFile "out/test058.out"),
     PosTest
-      "Polymorphic type arguments"
+      "Test059: Polymorphic type arguments"
       $(mkRelDir ".")
       $(mkRelFile "test059.jvc")
       $(mkRelFile "out/test059.out")

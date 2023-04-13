@@ -35,102 +35,102 @@ allTests =
 tests :: [PosTest]
 tests =
   [ PosTest
-      "HelloWorld"
+      "Test001: HelloWorld"
       $(mkRelDir ".")
       $(mkRelFile "test001.c")
       $(mkRelFile "out/test001.out"),
     PosTest
-      "Page allocation"
+      "Test002: Page allocation"
       $(mkRelDir ".")
       $(mkRelFile "test002.c")
       $(mkRelFile "out/test002.out"),
     PosTest
-      "Printing of integers"
+      "Test003: Printing of integers"
       $(mkRelDir ".")
       $(mkRelFile "test003.c")
       $(mkRelFile "out/test003.out"),
     PosTest
-      "Allocator for unstructured objects"
+      "Test004: Allocator for unstructured objects"
       $(mkRelDir ".")
       $(mkRelFile "test004.c")
       $(mkRelFile "out/test004.out"),
     PosTest
-      "Allocator for unstructured objects (macro API)"
+      "Test005: Allocator for unstructured objects (macro API)"
       $(mkRelDir ".")
       $(mkRelFile "test005.c")
       $(mkRelFile "out/test005.out"),
     PosTest
-      "Stack"
+      "Test006: Stack"
       $(mkRelDir ".")
       $(mkRelFile "test006.c")
       $(mkRelFile "out/test006.out"),
     PosTest
-      "Prologue and epilogue"
+      "Test007: Prologue and epilogue"
       $(mkRelDir ".")
       $(mkRelFile "test007.c")
       $(mkRelFile "out/test007.out"),
     PosTest
-      "Basic arithmetic"
+      "Test008: Basic arithmetic"
       $(mkRelDir ".")
       $(mkRelFile "test008.c")
       $(mkRelFile "out/test008.out"),
     PosTest
-      "Direct call"
+      "Test009: Direct call"
       $(mkRelDir ".")
       $(mkRelFile "test009.c")
       $(mkRelFile "out/test009.out"),
     PosTest
-      "Indirect call"
+      "Test010: Indirect call"
       $(mkRelDir ".")
       $(mkRelFile "test010.c")
       $(mkRelFile "out/test010.out"),
     PosTest
-      "Tail calls"
+      "Test011: Tail calls"
       $(mkRelDir ".")
       $(mkRelFile "test011.c")
       $(mkRelFile "out/test011.out"),
     PosTest
-      "Tracing and strings"
+      "Test012: Tracing and strings"
       $(mkRelDir ".")
       $(mkRelFile "test012.c")
       $(mkRelFile "out/test012.out"),
     PosTest
-      "IO builtins"
+      "Test013: IO builtins"
       $(mkRelDir ".")
       $(mkRelFile "test013.c")
       $(mkRelFile "out/test013.out"),
     PosTest
-      "Higher-order functions"
+      "Test014: Higher-order functions"
       $(mkRelDir ".")
       $(mkRelFile "test014.c")
       $(mkRelFile "out/test014.out"),
     PosTest
-      "Branching, matching and recursion on lists"
+      "Test015: Branching, matching and recursion on lists"
       $(mkRelDir ".")
       $(mkRelFile "test015.c")
       $(mkRelFile "out/test015.out"),
     PosTest
-      "Closure extension"
+      "Test016: Closure extension"
       $(mkRelDir ".")
       $(mkRelFile "test016.c")
       $(mkRelFile "out/test016.out"),
     PosTest
-      "Recursion through higher-order functions"
+      "Test017: Recursion through higher-order functions"
       $(mkRelDir ".")
       $(mkRelFile "test017.c")
       $(mkRelFile "out/test017.out"),
     PosTest
-      "Tail recursion through higher-order functions"
+      "Test018: Tail recursion through higher-order functions"
       $(mkRelDir ".")
       $(mkRelFile "test018.c")
       $(mkRelFile "out/test018.out"),
     PosTest
-      "Dynamic closure extension"
+      "Test019: Dynamic closure extension"
       $(mkRelDir ".")
       $(mkRelFile "test019.c")
       $(mkRelFile "out/test019.out"),
     PosTest
-      "Higher-order function composition"
+      "Test020: Higher-order function composition"
       $(mkRelDir ".")
       $(mkRelFile "test020.c")
       $(mkRelFile "out/test020.out")

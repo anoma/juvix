@@ -8,7 +8,7 @@ where
 import Data.ByteString.Builder qualified as Builder
 import Data.HashMap.Strict qualified as HashMap
 import Data.Time.Clock
-import Data.Versions (prettyV)
+import Data.Versions (prettySemVer)
 import Juvix.Compiler.Abstract.Translation.FromConcrete qualified as Abstract
 import Juvix.Compiler.Backend.Html.Data
 import Juvix.Compiler.Backend.Html.Extra
@@ -230,7 +230,7 @@ template rightMenu' content' = do
       packageHeader :: Sem r Html
       packageHeader = do
         pkgName' <- toHtml <$> asks (^. entryPointPackage . packageName)
-        version' <- toHtml <$> asks (^. entryPointPackage . packageVersion . to prettyV)
+        version' <- toHtml <$> asks (^. entryPointPackage . packageVersion . to prettySemVer)
         return $
           Html.div ! Attr.id "package-header" $
             ( Html.span ! Attr.class_ "caption" $

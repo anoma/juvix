@@ -2,7 +2,6 @@ module Parsing.Negative where
 
 import Base
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Error
-import Juvix.Compiler.Pipeline
 import Juvix.Parser.Error
 
 root :: Path Abs Dir
@@ -24,7 +23,7 @@ testDescr NegTest {..} =
         { _testName = _name,
           _testRoot = tRoot,
           _testAssertion = Single $ do
-            let entryPoint = defaultEntryPoint tRoot _file
+            entryPoint <- defaultEntryPointCwdIO _file
             res <- runIOEither entryPoint upToParsing
             case mapLeft fromJuvixError res of
               Left (Just parErr) -> whenJust (_checkErr parErr) assertFailure

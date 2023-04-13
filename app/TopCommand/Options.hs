@@ -97,7 +97,7 @@ parseUtility =
         "init"
         ( info
             (pure Init)
-            (progDesc "Interactively initialize a juvix project in the current directory")
+            (progDesc "Interactively initialize a Juvix project in the current directory")
         )
     commandDoctor :: Mod CommandFields TopCommand
     commandDoctor =
@@ -144,7 +144,7 @@ commandCompile :: Mod CommandFields TopCommand
 commandCompile =
   command "compile" $
     info
-      (Compile <$> parseCompileOptions parseInputJuvixFile)
+      (Compile <$> parseMainCompileOptions)
       (progDesc "Compile a Juvix file")
 
 commandEval :: Mod CommandFields TopCommand

@@ -1,7 +1,7 @@
 module Fib;
 
 type Nat :=
-  zero : Nat
+  | zero : Nat
   | suc : Nat → Nat;
 
 infixl 6 +;
@@ -11,7 +11,5 @@ infixl 6 +;
 
 fib : Nat -> Nat;
 fib zero := zero;
-fib (suc (zero)) := suc zero;
+fib (suc zero) := suc zero;
 fib (suc (suc n)) := fib (suc n) + fib n;
-
-end;

@@ -7,9 +7,8 @@ import CommonOptions
 import Juvix.Compiler.Abstract.Pretty.Options qualified as Abstract
 import Juvix.Compiler.Core.Options qualified as Core
 import Juvix.Compiler.Internal.Pretty.Options qualified as Internal
-import Juvix.Compiler.Pipeline (EntryPoint (..), defaultEntryPoint, defaultUnrollLimit)
+import Juvix.Compiler.Pipeline
 import Juvix.Data.Error.GenericError qualified as E
-import Juvix.Extra.Paths
 
 data GlobalOptions = GlobalOptions
   { _globalNoColors :: Bool,
@@ -140,21 +139,25 @@ parseBuildDir m = do
   _pathPath <-
     option
       someDirOpt
-      ( value (Rel relBuildDir)
-          <> metavar "BUILD_DIR"
+      ( metavar "BUILD_DIR"
           <> action "directory"
-          <> showDefault
           <> m
       )
   pure AppPath {_pathIsInput = False, ..}
 
-entryPointFromGlobalOptions :: Path Abs Dir -> Path Abs File -> GlobalOptions -> EntryPoint
-entryPointFromGlobalOptions root mainFile opts =
-  (defaultEntryPoint root mainFile)
+entryPointFromGlobalOptions :: (Package, Bool) -> Path Abs Dir -> Path Abs File -> GlobalOptions -> EntryPoint
+entryPointFromGlobalOptions pkg root mainFile opts =
+  def
     { _entryPointNoTermination = opts ^. globalNoTermination,
       _entryPointNoPositivity = opts ^. globalNoPositivity,
       _entryPointNoCoverage = opts ^. globalNoCoverage,
       _entryPointNoStdlib = opts ^. globalNoStdlib,
       _entryPointUnrollLimit = opts ^. globalUnrollLimit,
-      _entryPointGenericOptions = project opts
+      _entryPointGenericOptions = project opts,
+      _entryPointBuildDir = fromMaybe (def ^. entryPointBuildDir) optBuildDir
     }
+  where
+    optBuildDir :: Maybe (SomeBase Dir)
+    optBuildDir = fmap (^. pathPath) (opts ^. globalBuildDir)
+    def :: EntryPoint
+    def = defaultEntryPoint pkg root mainFile

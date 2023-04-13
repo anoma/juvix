@@ -12,17 +12,20 @@ import Juvix.Compiler.Core.Data.TransformationId
 import Juvix.Compiler.Core.Error
 import Juvix.Compiler.Core.Options
 import Juvix.Compiler.Core.Transformation.Base
+import Juvix.Compiler.Core.Transformation.CheckExec
 import Juvix.Compiler.Core.Transformation.CheckGeb
 import Juvix.Compiler.Core.Transformation.ComputeTypeInfo
 import Juvix.Compiler.Core.Transformation.ConvertBuiltinTypes
 import Juvix.Compiler.Core.Transformation.DisambiguateNames
 import Juvix.Compiler.Core.Transformation.Eta
+import Juvix.Compiler.Core.Transformation.FoldTypeSynonyms
 import Juvix.Compiler.Core.Transformation.Identity
+import Juvix.Compiler.Core.Transformation.IntToPrimInt
 import Juvix.Compiler.Core.Transformation.LambdaLetRecLifting
 import Juvix.Compiler.Core.Transformation.MatchToCase
 import Juvix.Compiler.Core.Transformation.MoveApps
 import Juvix.Compiler.Core.Transformation.NaiveMatchToCase qualified as Naive
-import Juvix.Compiler.Core.Transformation.NatToInt
+import Juvix.Compiler.Core.Transformation.NatToPrimInt
 import Juvix.Compiler.Core.Transformation.Optimize.LetFolding
 import Juvix.Compiler.Core.Transformation.RemoveTypeArgs
 import Juvix.Compiler.Core.Transformation.TopEtaExpand
@@ -39,7 +42,8 @@ applyTransformations ts tbl = foldM (flip appTrans) tbl ts
       TopEtaExpand -> return . topEtaExpand
       RemoveTypeArgs -> return . removeTypeArgs
       MoveApps -> return . moveApps
-      NatToInt -> return . natToInt
+      NatToPrimInt -> return . natToPrimInt
+      IntToPrimInt -> return . intToPrimInt
       ConvertBuiltinTypes -> return . convertBuiltinTypes
       ComputeTypeInfo -> return . computeTypeInfo
       UnrollRecursion -> unrollRecursion
@@ -48,4 +52,6 @@ applyTransformations ts tbl = foldM (flip appTrans) tbl ts
       EtaExpandApps -> return . etaExpansionApps
       DisambiguateNames -> return . disambiguateNames
       CheckGeb -> mapError (JuvixError @CoreError) . checkGeb
+      CheckExec -> mapError (JuvixError @CoreError) . checkExec
       LetFolding -> return . letFolding
+      FoldTypeSynonyms -> return . foldTypeSynonyms

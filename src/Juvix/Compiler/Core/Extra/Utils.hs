@@ -26,6 +26,8 @@ import Juvix.Compiler.Core.Extra.Recursors.Map.Named
 import Juvix.Compiler.Core.Extra.Recursors.RMap.Named
 import Juvix.Compiler.Core.Extra.Recursors.Utils
 import Juvix.Compiler.Core.Extra.Utils.Base
+import Juvix.Compiler.Core.Info qualified as Info
+import Juvix.Compiler.Core.Info.ExpansionInfo
 import Juvix.Compiler.Core.Language
 
 isClosed :: Node -> Bool
@@ -36,7 +38,7 @@ isTypeConstr tab ty = case typeTarget ty of
   NUniv {} ->
     True
   NIdt Ident {..} ->
-    isTypeConstr tab (fromJust $ HashMap.lookup _identSymbol (tab ^. identContext))
+    isTypeConstr tab (lookupIdentifierNode tab _identSymbol)
   _ -> False
 
 getTypeParams :: InfoTable -> Type -> [Type]
@@ -44,6 +46,12 @@ getTypeParams tab ty = filter (isTypeConstr tab) (typeArgs ty)
 
 getTypeParamsNum :: InfoTable -> Type -> Int
 getTypeParamsNum tab ty = length $ getTypeParams tab ty
+
+filterOutTypeSynonyms :: InfoTable -> InfoTable
+filterOutTypeSynonyms tab = pruneInfoTable tab'
+  where
+    tab' = tab {_infoIdentifiers = idents'}
+    idents' = HashMap.filter (\ii -> not (isTypeConstr tab (ii ^. identifierType))) (tab ^. infoIdentifiers)
 
 -- True for nodes whose evaluation immediately returns a value, i.e.,
 -- no reduction or memory allocation in the runtime is required.
@@ -218,7 +226,7 @@ substDrop args argtys =
 etaExpand :: [Type] -> Node -> Node
 etaExpand [] n = n
 etaExpand argtys n =
-  mkLambdas' argtys (mkApps' (shift k n) (map mkVar' (reverse [0 .. k - 1])))
+  mkLambdas (replicate (length argtys) (Info.singleton (ExpansionInfo ()))) (map mkBinder' argtys) (mkApps' (shift k n) (map mkVar' (reverse [0 .. k - 1])))
   where
     k = length argtys
 
@@ -244,23 +252,6 @@ squashApps = dmap go
             NBlt (BuiltinApp i op args') -> mkBuiltinApp i op (args' ++ args)
             NTyp (TypeConstr i sym args') -> mkTypeConstr i sym (args' ++ args)
             _ -> n
-
-binderFromArgumentInfo :: ArgumentInfo -> Binder
-binderFromArgumentInfo a =
-  Binder
-    { _binderName = a ^. argumentName,
-      _binderLocation = a ^. argumentLocation,
-      _binderType = a ^. argumentType
-    }
-
-argumentInfoFromBinder :: Binder -> ArgumentInfo
-argumentInfoFromBinder i =
-  ArgumentInfo
-    { _argumentName = i ^. binderName,
-      _argumentLocation = i ^. binderLocation,
-      _argumentType = i ^. binderType,
-      _argumentIsImplicit = Explicit
-    }
 
 patternType :: Pattern -> Node
 patternType = \case
