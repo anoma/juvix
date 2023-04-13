@@ -3,7 +3,6 @@ module Juvix.Compiler.Internal.Language
     module Juvix.Compiler.Abstract.Data.Name,
     module Juvix.Data.WithLoc,
     module Juvix.Data.IsImplicit,
-    module Juvix.Compiler.Concrete.Data.Literal,
     module Juvix.Data.Universe,
     module Juvix.Data.Hole,
     module Juvix.Compiler.Concrete.Data.Builtins,
@@ -12,7 +11,6 @@ where
 
 import Juvix.Compiler.Abstract.Data.Name
 import Juvix.Compiler.Concrete.Data.Builtins
-import Juvix.Compiler.Concrete.Data.Literal
 import Juvix.Data.Hole
 import Juvix.Data.IsImplicit
 import Juvix.Data.Universe hiding (smallUniverse)
@@ -116,6 +114,16 @@ data Let = Let
   deriving stock (Eq, Generic, Data)
 
 instance Hashable Let
+
+type LiteralLoc = WithLoc Literal
+
+data Literal
+  = LitString Text
+  | LitInteger Integer
+  | LitNatural Integer
+  deriving stock (Show, Eq, Ord, Generic, Data)
+
+instance Hashable Literal
 
 data Expression
   = ExpressionIden Iden
@@ -305,6 +313,12 @@ instance HasAtomicity SimpleLambda where
 
 instance HasAtomicity Let where
   atomicity l = atomicity (l ^. letExpression)
+
+instance HasAtomicity Literal where
+  atomicity = \case
+    LitNatural {} -> Atom
+    LitInteger {} -> Atom
+    LitString {} -> Atom
 
 instance HasAtomicity Lambda where
   atomicity = const Atom

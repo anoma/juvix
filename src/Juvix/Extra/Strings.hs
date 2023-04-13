@@ -104,6 +104,9 @@ stringToNat = "string-to-nat"
 bool_ :: (IsString s) => s
 bool_ = "bool"
 
+int_ :: (IsString s) => s
+int_ = "int"
+
 boolPrint :: (IsString s) => s
 boolPrint = "bool-print"
 
@@ -163,6 +166,48 @@ boolOr = "bool-or"
 
 boolAnd :: IsString s => s
 boolAnd = "bool-and"
+
+intToString :: (IsString s) => s
+intToString = "int-to-string"
+
+intEq :: (IsString s) => s
+intEq = "int-eq"
+
+intPlus :: (IsString s) => s
+intPlus = "int-plus"
+
+intSubNat :: (IsString s) => s
+intSubNat = "int-sub-nat"
+
+intNegNat :: (IsString s) => s
+intNegNat = "int-neg-nat"
+
+intNeg :: (IsString s) => s
+intNeg = "int-neg"
+
+intMul :: (IsString s) => s
+intMul = "int-mul"
+
+intDiv :: (IsString s) => s
+intDiv = "int-div"
+
+intMod :: (IsString s) => s
+intMod = "int-mod"
+
+intSub :: (IsString s) => s
+intSub = "int-sub"
+
+intNonNeg :: (IsString s) => s
+intNonNeg = "int-nonneg"
+
+intLe :: IsString s => s
+intLe = "int-le"
+
+intLt :: IsString s => s
+intLt = "int-lt"
+
+intPrint :: (IsString s) => s
+intPrint = "int-print"
 
 builtin :: IsString s => s
 builtin = "builtin"

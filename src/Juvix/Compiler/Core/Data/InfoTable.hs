@@ -19,7 +19,8 @@ data InfoTable = InfoTable
     _infoInductives :: HashMap Symbol InductiveInfo,
     _infoConstructors :: HashMap Tag ConstructorInfo,
     _infoAxioms :: HashMap Text AxiomInfo,
-    _infoIntToNat :: Maybe Symbol,
+    _infoLiteralIntToNat :: Maybe Symbol,
+    _infoLiteralIntToInt :: Maybe Symbol,
     _infoNextSymbol :: Word,
     _infoNextTag :: Word,
     _infoBuiltins :: HashMap BuiltinPrim IdentKind
@@ -35,7 +36,8 @@ emptyInfoTable =
       _infoInductives = mempty,
       _infoConstructors = mempty,
       _infoAxioms = mempty,
-      _infoIntToNat = Nothing,
+      _infoLiteralIntToNat = Nothing,
+      _infoLiteralIntToInt = Nothing,
       _infoNextSymbol = 1,
       _infoNextTag = 0,
       _infoBuiltins = mempty
