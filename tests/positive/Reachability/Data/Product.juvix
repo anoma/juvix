@@ -2,6 +2,4 @@ module Data.Product;
 
 infixr 2 ×;
 type × (a : Type) (b : Type) :=
-  , : a → b → a × b;
-
-end;
+  | , : a → b → a × b;

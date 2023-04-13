@@ -26,6 +26,8 @@ import Juvix.Compiler.Core.Extra.Recursors.Map.Named
 import Juvix.Compiler.Core.Extra.Recursors.RMap.Named
 import Juvix.Compiler.Core.Extra.Recursors.Utils
 import Juvix.Compiler.Core.Extra.Utils.Base
+import Juvix.Compiler.Core.Info qualified as Info
+import Juvix.Compiler.Core.Info.ExpansionInfo
 import Juvix.Compiler.Core.Language
 
 isClosed :: Node -> Bool
@@ -224,7 +226,7 @@ substDrop args argtys =
 etaExpand :: [Type] -> Node -> Node
 etaExpand [] n = n
 etaExpand argtys n =
-  mkLambdas' argtys (mkApps' (shift k n) (map mkVar' (reverse [0 .. k - 1])))
+  mkLambdas (replicate (length argtys) (Info.singleton (ExpansionInfo ()))) (map mkBinder' argtys) (mkApps' (shift k n) (map mkVar' (reverse [0 .. k - 1])))
   where
     k = length argtys
 

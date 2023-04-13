@@ -224,6 +224,7 @@ constrDecl symInd = do
             _constructorArgsNum = length (typeArgs ty),
             _constructorType = ty,
             _constructorInductive = symInd,
+            _constructorFixity = Nothing,
             _constructorBuiltin = Nothing
           }
   lift $ registerConstructor txt ci

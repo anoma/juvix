@@ -1,9 +1,7 @@
 module O;
 
 open import M public;
-open import Stdlib.Prelude;
+open import Stdlib.Data.Bool;
 
 k : Bool;
 k := true;
-
-end;

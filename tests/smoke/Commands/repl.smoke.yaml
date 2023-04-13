@@ -46,7 +46,7 @@ tests:
       matches:
         regex: |
           Juvix REPL .*
-          OK loaded: .*/tests/.juvix-build/stdlib/Stdlib/Prelude.juvix
+          OK loaded: .*/stdlib/Stdlib/Prelude.juvix
     exit-status: 0
 
   - name: version-shows-same-juvix-version
@@ -94,7 +94,7 @@ tests:
       shell:
         - bash
       script: |
-        cd ./../juvix-stdlib && juvix repl
+        cd ./../juvix-stdlib && juvix repl Stdlib/Prelude.juvix
     stdout:
       contains: "Nat → Nat"
     stdin: ":t suc"
@@ -198,7 +198,7 @@ tests:
         true
     exit-status: 0
 
-  - name: root
+  - name: root-global
     command:
       - juvix
       - repl
@@ -207,7 +207,7 @@ tests:
       matches: |
         Juvix REPL .*
         OK loaded: .*
-        Stdlib.Prelude> .*/tests/
+        Stdlib.Prelude> .*/global-project/
     exit-status: 0
 
   - name: eval-adding-two-literal-nats
@@ -266,13 +266,13 @@ tests:
         evaluation error: failure: Enough
     exit-status: 0
 
-  - name: disambiguate-names
+  - name: print-values
     command:
       - juvix
       - repl
     stdin: "nil"
     stdout:
-      contains: "λ(_X : Type) nil _X"
+      contains: "nil"
     exit-status: 0
 
   - name: core-repl-type

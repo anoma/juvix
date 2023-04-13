@@ -5,12 +5,14 @@ module Base
     module Base,
     module Juvix.Extra.Paths,
     module Juvix.Prelude.Env,
+    module Juvix.Compiler.Pipeline,
   )
 where
 
 import Control.Monad.Extra as Monad
 import Data.Algorithm.Diff
 import Data.Algorithm.DiffOutput
+import Juvix.Compiler.Pipeline
 import Juvix.Extra.Paths
 import Juvix.Prelude hiding (assert)
 import Juvix.Prelude.Env
@@ -45,7 +47,7 @@ data CompileMode
 
 mkTest :: TestDescr -> TestTree
 mkTest TestDescr {..} = case _testAssertion of
-  Single assertion -> testCase _testName $ withCurrentDir _testRoot assertion
+  Single assertion -> testCase _testName (withCurrentDir _testRoot assertion)
   Steps steps -> testCaseSteps _testName (withCurrentDir _testRoot . steps)
 
 assertEqDiffText :: String -> Text -> Text -> Assertion

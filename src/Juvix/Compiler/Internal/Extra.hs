@@ -161,7 +161,7 @@ instance HasExpressions FunctionDef where
         }
 
 instance HasExpressions InductiveParameter where
-  leafExpressions _ param@(InductiveParameter _) = do
+  leafExpressions _ param@InductiveParameter {} = do
     pure param
 
 instance HasExpressions InductiveDef where

@@ -51,7 +51,7 @@ tests:
       matches:
         regex: |
           Juvix REPL .*
-          OK loaded: .*/tests/.juvix-build/stdlib/Stdlib/Prelude.juvix
+          OK loaded: .*/stdlib/Stdlib/Prelude.juvix
     exit-status: 0
 
   - name: version-shows-same-juvix-version
@@ -103,7 +103,7 @@ tests:
       shell:
         - bash
       script: |
-        cd ./../juvix-stdlib && juvix repl
+        cd ./../juvix-stdlib && juvix repl Stdlib/Prelude.juvix
     stdout:
       contains: "Nat → Nat"
     stdin: ":t suc"
@@ -222,7 +222,7 @@ tests:
       matches: |
         Juvix REPL .*
         OK loaded: .*
-        Stdlib.Prelude> .*/tests/
+        Stdlib.Prelude> .*/global-project/
     exit-status: 0
 
   - name: eval-adding-two-literal-nats

@@ -6,10 +6,10 @@ import Juvix.Compiler.Core.Error
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Info.LocationInfo
 import Juvix.Compiler.Core.Info.NameInfo (setInfoName)
+import Juvix.Compiler.Core.Language.Value
 import Juvix.Compiler.Core.Options
 import Juvix.Compiler.Core.Pretty hiding (Options)
 import Juvix.Compiler.Core.Transformation.Base
-import Juvix.Data.NameKind
 
 data PatternRow = PatternRow
   { _patternRowPatterns :: [Pattern],
@@ -52,7 +52,7 @@ goMatchToCase recur node = case node of
           [] ->
             compile err n [0 .. n - 1] matrix
             where
-              err = hsep . take n
+              err = take n
               matrix = map matchBranchToPatternRow _matchBranches
 
               matchBranchToPatternRow :: MatchBranch -> PatternRow
@@ -77,7 +77,7 @@ goMatchToCase recur node = case node of
     --    first added binder; a value matched on is always a variable referring
     --    to one of the binders added so far
     --  - `matrix` is the pattern matching matrix
-    compile :: ([Doc Ann] -> Doc Ann) -> Level -> [Level] -> PatternMatrix -> Sem r Node
+    compile :: ([Value] -> [Value]) -> Level -> [Level] -> PatternMatrix -> Sem r Node
     compile err bindersNum vs matrix = case matrix of
       [] -> do
         -- The matrix has no rows -- matching fails (Section 4, case 1).
@@ -86,15 +86,23 @@ goMatchToCase recur node = case node of
             | fCoverage ->
                 throw
                   CoreError
-                    { _coreErrorMsg = ppOutput ("Pattern matching not exhaustive. Example pattern sequence not matched: " <> pat),
+                    { _coreErrorMsg =
+                        ppOutput
+                          ( "Pattern matching not exhaustive. Example pattern "
+                              <> seq
+                              <> "not matched: "
+                              <> pat'
+                          ),
                       _coreErrorNode = Nothing,
                       _coreErrorLoc = fromMaybe defaultLoc (getNodeLocation node)
                     }
             | otherwise ->
                 return $
-                  mkBuiltinApp' OpFail [mkConstant' (ConstString ("Pattern sequence not matched: " <> show pat))]
+                  mkBuiltinApp' OpFail [mkConstant' (ConstString ("Pattern sequence not matched: " <> ppTrace pat))]
         where
-          pat = err (replicate (length vs) "_")
+          pat = err (replicate (length vs) ValueWildcard)
+          seq = if length pat == 1 then "" else "sequence "
+          pat' = if length pat == 1 then doc defaultOptions (List.head pat) else docValueSequence pat
           mockFile = $(mkAbsFile "/match-to-case")
           defaultLoc = singletonInterval (mkInitialLoc mockFile)
       r@PatternRow {..} : _
@@ -190,7 +198,7 @@ goMatchToCase recur node = case node of
     -- `compileDefault` computes D(M) where `M = col:matrix`, as described in
     -- Section 2, Figure 1 in the paper. Then it continues compilation with the
     -- new matrix.
-    compileDefault :: Maybe Tag -> ([Doc Ann] -> Doc Ann) -> Level -> [Level] -> [Pattern] -> PatternMatrix -> Sem r Node
+    compileDefault :: Maybe Tag -> ([Value] -> [Value]) -> Level -> [Level] -> [Pattern] -> PatternMatrix -> Sem r Node
     compileDefault mtag err bindersNum vs col matrix = do
       tab <- ask
       compile (err' tab) bindersNum vs matrix'
@@ -199,18 +207,25 @@ goMatchToCase recur node = case node of
         err' tab args =
           case mtag of
             Just tag ->
-              err (parensIf (argsNum > 0) (hsep (annotate (AnnKind KNameConstructor) (pretty (ci ^. constructorName)) : replicate argsNum "_")) : args)
+              err (ctr : args)
               where
                 ci = lookupConstructorInfo tab tag
                 paramsNum = getTypeParamsNum tab (ci ^. constructorType)
                 argsNum = ci ^. constructorArgsNum - paramsNum
+                ctr =
+                  ValueConstrApp
+                    ConstrApp
+                      { _constrAppName = ci ^. constructorName,
+                        _constrAppFixity = ci ^. constructorFixity,
+                        _constrAppArgs = replicate argsNum ValueWildcard
+                      }
             Nothing ->
-              err ("_" : args)
+              err (ValueWildcard : args)
 
     -- `compileBranch` computes S(c, M) where `c = Constr tag` and `M =
     -- col:matrix`, as described in Section 2, Figure 1 in the paper. Then it
     -- continues compilation with the new matrix.
-    compileBranch :: ([Doc Ann] -> Doc Ann) -> Level -> [Level] -> [Pattern] -> PatternMatrix -> Tag -> Sem r CaseBranch
+    compileBranch :: ([Value] -> [Value]) -> Level -> [Level] -> [Pattern] -> PatternMatrix -> Tag -> Sem r CaseBranch
     compileBranch err bindersNum vs col matrix tag = do
       tab <- ask
       let ci = lookupConstructorInfo tab tag
@@ -219,8 +234,15 @@ goMatchToCase recur node = case node of
           bindersNum' = bindersNum + argsNum
           vs' = [bindersNum .. bindersNum + argsNum - 1]
           err' args =
-            err
-              (parensIf (argsNum > paramsNum) (hsep (annotate (AnnKind KNameConstructor) (pretty (ci ^. constructorName)) : drop paramsNum (take argsNum args))) : drop argsNum args)
+            err (ctr : drop argsNum args)
+            where
+              ctr =
+                ValueConstrApp
+                  ConstrApp
+                    { _constrAppName = ci ^. constructorName,
+                      _constrAppFixity = ci ^. constructorFixity,
+                      _constrAppArgs = drop paramsNum (take argsNum args)
+                    }
       binders' <- getBranchBinders col matrix tag
       matrix' <- getBranchMatrix col matrix tag
       body <- compile err' bindersNum' (vs' ++ vs) matrix'

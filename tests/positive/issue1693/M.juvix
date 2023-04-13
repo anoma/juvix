@@ -1,22 +1,29 @@
 module M;
-  open import Stdlib.Prelude;
 
-  S : {A : Type} → {B : Type} → {C : Type} → (A → B → C) → (A → B) → A → C;
-  S x y z := x z (y z);
+open import Stdlib.Prelude;
 
-  K : {A : Type} → {B : Type} → A → B → A;
-  K x y := x;
+S :
+  {A : Type}
+    → {B : Type}
+    → {C : Type}
+    → (A → B → C)
+    → (A → B)
+    → A
+    → C;
+S x y z := x z (y z);
 
-  I : {A : Type} → A → A;
-  I := S K (K {_} {Bool});
+K : {A : Type} → {B : Type} → A → B → A;
+K x y := x;
 
-  main : IO;
-  main := printNatLn
+I : {A : Type} → A → A;
+I := S K (K {_} {Bool});
+
+main : IO;
+main :=
+  printNatLn
     $ I {Nat} 1
       + I I 1
       + I (I 1)
       + I 1
       + I (I I) I (I I I) 1
       + I I I (I I I (I I)) I (I I) I I I 1;
-
-end;

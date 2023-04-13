@@ -56,6 +56,9 @@ mkLambda i bi b = NLam (Lambda i bi b)
 mkLambda' :: Type -> Node -> Node
 mkLambda' ty = mkLambda Info.empty (mkBinder' ty)
 
+mkLambdas :: [Info] -> [Binder] -> Node -> Node
+mkLambdas is bs n = foldl' (flip (uncurry mkLambda)) n (reverse (zipExact is bs))
+
 mkLambdas' :: [Type] -> Node -> Node
 mkLambdas' tys n = foldl' (flip mkLambda') n (reverse tys)
 

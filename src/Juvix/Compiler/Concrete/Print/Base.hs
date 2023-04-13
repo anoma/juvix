@@ -188,12 +188,11 @@ instance PrettyPrint (AxiomDef 'Scoped) where
     let builtin' :: Maybe (Sem r ()) = (<> line) . (\x -> P.ppCode x >>= morpheme (getLoc x)) <$> _axiomBuiltin
         _axiomDoc' :: Maybe (Sem r ()) = ppCode <$> _axiomDoc
         _axiomPragmas' :: Maybe (Sem r ()) = ppCode <$> _axiomPragmas
-        axiom' = (<> line) . ppCode $ _axiomKw
     _axiomDoc'
       ?<> _axiomPragmas'
       ?<> builtin'
-      ?<> axiom'
-      <> morpheme (getLoc _axiomName) axiomName'
+      ?<> ppCode _axiomKw
+      <+> morpheme (getLoc _axiomName) axiomName'
       <+> noLoc P.kwColon
       <+> ppCode _axiomType
 

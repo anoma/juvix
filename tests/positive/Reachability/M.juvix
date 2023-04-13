@@ -14,5 +14,3 @@ g x y := f y;
 
 h : {A : Type} -> A -> Maybe Bool;
 h x := nothing;
-
-end;

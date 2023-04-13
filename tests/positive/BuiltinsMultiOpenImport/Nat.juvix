@@ -2,7 +2,5 @@ module Nat;
 
 builtin nat
 type Nat :=
-  zero : Nat
+  | zero : Nat
   | suc : Nat → Nat;
-
-end;

@@ -1,7 +1,7 @@
 module Undefined;
 
 axiom A : Type;
-terminating undefined : A;
-undefined := undefined;
 
-end;
+terminating
+undefined : A;
+undefined := undefined;

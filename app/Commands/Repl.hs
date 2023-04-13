@@ -11,6 +11,7 @@ import Evaluator
 import Juvix.Compiler.Concrete.Data.Scope (scopePath)
 import Juvix.Compiler.Concrete.Data.ScopedName (absTopModulePath)
 import Juvix.Compiler.Core qualified as Core
+import Juvix.Compiler.Core.Extra.Value
 import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Info.NoDisplayInfo qualified as Info
 import Juvix.Compiler.Core.Pretty qualified as Core
@@ -20,6 +21,7 @@ import Juvix.Compiler.Internal.Language qualified as Internal
 import Juvix.Compiler.Internal.Pretty qualified as Internal
 import Juvix.Data.Error.GenericError qualified as Error
 import Juvix.Extra.Paths
+import Juvix.Extra.Stdlib
 import Juvix.Extra.Version
 import Juvix.Prelude.Pretty qualified as P
 import System.Console.ANSI qualified as Ansi
@@ -37,8 +39,7 @@ data ReplContext = ReplContext
   }
 
 data ReplState = ReplState
-  { _replStatePkgDir :: Path Abs Dir,
-    _replStateInvokeDir :: Path Abs Dir,
+  { _replStateRoots :: Roots,
     _replStateContext :: Maybe ReplContext,
     _replStateGlobalOptions :: GlobalOptions
   }
@@ -55,7 +56,6 @@ helpTxt =
   :help                     Print help text and describe options
   :load       FILE          Load a file into the REPL
   :reload                   Reload the currently loaded file
-  :prelude                  Load the Prelude from the standard library
   :type       EXPRESSION    Infer the type of an expression
   :core       EXPRESSION    Translate the expression to JuvixCore
   :multiline                Start a multi-line input. Submit with <Ctrl-D>
@@ -71,19 +71,19 @@ noFileLoadedMsg = liftIO (putStrLn "No file loaded. Load a file using the `:load
 welcomeMsg :: (MonadIO m) => m ()
 welcomeMsg = liftIO (putStrLn [i|Juvix REPL version #{versionTag}: https://juvix.org. Run :help for help|])
 
-runCommand :: (Members '[Embed IO, App] r) => ReplOptions -> Sem r ()
+runCommand :: Members '[Embed IO, App] r => ReplOptions -> Sem r ()
 runCommand opts = do
   root <- askPkgDir
   buildDir <- askBuildDir
   package <- askPackage
+  global <- askPackageGlobal
   let getReplEntryPoint :: SomeBase File -> Repl EntryPoint
       getReplEntryPoint inputFile = do
         gopts <- State.gets (^. replStateGlobalOptions)
         absInputFile :: Path Abs File <- replMakeAbsolute inputFile
         return $
-          (entryPointFromGlobalOptions root absInputFile gopts)
-            { _entryPointBuildDir = buildDir,
-              _entryPointPackage = package
+          (entryPointFromGlobalOptions (package, global) root absInputFile gopts)
+            { _entryPointBuildDir = Abs buildDir
             }
 
       printHelpTxt :: String -> Repl ()
@@ -132,11 +132,11 @@ runCommand opts = do
       loadPrelude = loadDefaultPrelude
 
       loadDefaultPrelude :: Repl ()
-      loadDefaultPrelude = defaultPreludeEntryPoint >>= loadEntryPoint
+      loadDefaultPrelude = whenJustM defaultPreludeEntryPoint loadEntryPoint
 
       printRoot :: String -> Repl ()
       printRoot _ = do
-        r <- State.gets (^. replStatePkgDir)
+        r <- State.gets (^. replStateRoots . rootsRootDir)
         liftIO $ putStrLn (pack (toFilePath r))
 
       displayVersion :: String -> Repl ()
@@ -147,12 +147,17 @@ runCommand opts = do
         ctx <- State.gets (^. replStateContext)
         case ctx of
           Just ctx' -> do
+            let tab = ctx' ^. replContextArtifacts . artifactCoreTable
             evalRes <- compileThenEval ctx' input
             case evalRes of
               Left err -> printError err
               Right n
                 | Info.member Info.kNoDisplayInfo (Core.getInfo n) -> return ()
-              Right n -> renderOut (Core.ppOut opts n)
+              Right n
+                | opts ^. replPrintValues ->
+                    renderOut (Core.ppOut opts (toValue tab n))
+                | otherwise ->
+                    renderOut (Core.ppOut opts n)
           Nothing -> noFileLoadedMsg
         where
           defaultLoc :: Interval
@@ -222,7 +227,6 @@ runCommand opts = do
           ("quit", quit),
           ("load", Repline.dontCrash . loadFile . pSomeFile),
           ("reload", Repline.dontCrash . reloadFile),
-          ("prelude", Repline.dontCrash . const loadPrelude),
           ("root", printRoot),
           ("type", inferType),
           ("version", displayVersion),
@@ -289,37 +293,42 @@ runCommand opts = do
               options,
               banner
             }
-
-  pkgDir <- askPkgDir
-  invokeDir <- askInvokeDir
+  roots <- askRoots
   globalOptions <- askGlobalOptions
   embed
     ( State.evalStateT
         replAction
         ( ReplState
-            { _replStatePkgDir = pkgDir,
-              _replStateInvokeDir = invokeDir,
+            { _replStateRoots = roots,
               _replStateContext = Nothing,
               _replStateGlobalOptions = globalOptions
             }
         )
     )
 
-defaultPreludeEntryPoint :: Repl EntryPoint
+-- | If the package contains the stdlib as a dependency, loads the Prelude
+defaultPreludeEntryPoint :: Repl (Maybe EntryPoint)
 defaultPreludeEntryPoint = do
   opts <- State.gets (^. replStateGlobalOptions)
-  root <- State.gets (^. replStatePkgDir)
-  let defStdlibDir = defaultStdlibPath (rootBuildDir root)
-  return $
-    (entryPointFromGlobalOptions root (defStdlibDir <//> preludePath) opts)
-      { _entryPointResolverRoot = defStdlibDir
-      }
+  roots <- State.gets (^. replStateRoots)
+  let buildDir = roots ^. rootsBuildDir
+      root = roots ^. rootsRootDir
+      pkg = roots ^. rootsPackage
+      pkgGlobal = roots ^. rootsPackageGlobal
+      mstdlibPath = packageStdlib root buildDir (pkg ^. packageDependencies)
+  return $ case mstdlibPath of
+    Just stdlibPath ->
+      Just
+        (entryPointFromGlobalOptions (pkg, pkgGlobal) root (stdlibPath <//> preludePath) opts)
+          { _entryPointResolverRoot = stdlibPath
+          }
+    Nothing -> Nothing
 
 replMakeAbsolute :: SomeBase b -> Repl (Path Abs b)
 replMakeAbsolute = \case
   Abs p -> return p
   Rel r -> do
-    invokeDir <- State.gets (^. replStateInvokeDir)
+    invokeDir <- State.gets (^. replStateRoots . rootsInvokeDir)
     return (invokeDir <//> r)
 
 inferExpressionIO' :: ReplContext -> Text -> IO (Either JuvixError Internal.Expression)

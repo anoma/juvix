@@ -1,6 +1,7 @@
 module Judoc;
 
 axiom A : Type;
+
 axiom b : Type;
 
 type T :=

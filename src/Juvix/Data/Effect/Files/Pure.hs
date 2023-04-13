@@ -4,6 +4,7 @@ import Data.HashMap.Strict qualified as HashMap
 import Data.Tree
 import Data.Unique
 import Juvix.Data.Effect.Files.Base
+import Juvix.Extra.Version
 import Juvix.Prelude.Base
 import Juvix.Prelude.Path
 import Polysemy.ConstraintAbsorber.MonadCatch
@@ -84,9 +85,13 @@ re cwd = reinterpret $ \case
   RemoveFile' p -> removeFileHelper p
   RenameFile' p1 p2 -> renameFileHelper p1 p2
   CopyFile' p1 p2 -> copyFileHelper p1 p2
+  JuvixConfigDir -> return juvixConfigDirPure
   where
     cwd' :: FilePath
     cwd' = toFilePath cwd
+
+juvixConfigDirPure :: Path Abs Dir
+juvixConfigDirPure = $(mkAbsDir "/.config/juvix/") <//> versionDir
 
 runTempFilePure ::
   Members '[Files, Fresh Unique, Error SomeException] r =>

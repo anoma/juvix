@@ -1,6 +1,6 @@
 module Church;
 
-open import Stdlib.Prelude;
+open import Stdlib.Prelude hiding {toNat};
 
 Num : Type;
 Num := {A : Type} → (A → A) → A → A;

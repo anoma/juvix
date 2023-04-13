@@ -144,7 +144,7 @@ commandCompile :: Mod CommandFields TopCommand
 commandCompile =
   command "compile" $
     info
-      (Compile <$> parseCompileOptions parseInputJuvixFile)
+      (Compile <$> parseMainCompileOptions)
       (progDesc "Compile a Juvix file")
 
 commandEval :: Mod CommandFields TopCommand

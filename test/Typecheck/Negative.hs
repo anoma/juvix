@@ -2,7 +2,6 @@ module Typecheck.Negative where
 
 import Base
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error
-import Juvix.Compiler.Pipeline
 
 type FailMsg = String
 
@@ -21,7 +20,7 @@ testDescr NegTest {..} =
         { _testName = _name,
           _testRoot = tRoot,
           _testAssertion = Single $ do
-            let entryPoint = defaultEntryPoint tRoot file'
+            entryPoint <- defaultEntryPointCwdIO file'
             result <- runIOEither entryPoint upToInternalTyped
             case mapLeft fromJuvixError result of
               Left (Just tyError) -> whenJust (_checkErr tyError) assertFailure
@@ -125,6 +124,20 @@ tests =
       $(mkRelFile "SelfApplication.juvix")
       $ \case
         ErrUnsolvedMeta {} -> Nothing
+        _ -> wrongError,
+    NegTest
+      "Negative integer literal cannot be used as a Nat"
+      $(mkRelDir "Internal")
+      $(mkRelFile "LiteralInteger.juvix")
+      $ \case
+        ErrWrongType {} -> Nothing
+        _ -> wrongError,
+    NegTest
+      "Integer literal cannot be used as a String"
+      $(mkRelDir "Internal")
+      $(mkRelFile "LiteralIntegerString.juvix")
+      $ \case
+        ErrWrongType {} -> Nothing
         _ -> wrongError
   ]
 

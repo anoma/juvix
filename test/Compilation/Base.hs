@@ -4,7 +4,6 @@ import Base
 import Core.Compile.Base
 import Core.Eval.Base
 import Juvix.Compiler.Core qualified as Core
-import Juvix.Compiler.Pipeline
 import Juvix.Data.PPOutput
 
 data CompileAssertionMode
@@ -21,8 +20,7 @@ compileAssertion ::
   Assertion
 compileAssertion mode mainFile expectedFile step = do
   step "Translate to JuvixCore"
-  cwd <- getCurrentDir
-  let entryPoint = defaultEntryPoint cwd mainFile
+  entryPoint <- defaultEntryPointCwdIO mainFile
   tab <- (^. Core.coreResultTable) . snd <$> runIO' entryPoint upToCore
   case run $ runReader Core.defaultCoreOptions $ runError $ Core.toEval' tab of
     Left err -> assertFailure (show (pretty (fromJuvixError @GenericError err)))
@@ -40,8 +38,7 @@ compileErrorAssertion ::
   Assertion
 compileErrorAssertion mainFile step = do
   step "Translate to JuvixCore"
-  cwd <- getCurrentDir
-  let entryPoint = defaultEntryPoint cwd mainFile
+  entryPoint <- defaultEntryPointCwdIO mainFile
   tab <- (^. Core.coreResultTable) . snd <$> runIO' entryPoint upToCore
   case run $ runReader Core.defaultCoreOptions $ runError @JuvixError $ Core.toStripped' tab of
     Left _ -> assertBool "" True

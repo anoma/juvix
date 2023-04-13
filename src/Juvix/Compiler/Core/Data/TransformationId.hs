@@ -8,7 +8,8 @@ data TransformationId
   | TopEtaExpand
   | RemoveTypeArgs
   | MoveApps
-  | NatToInt
+  | NatToPrimInt
+  | IntToPrimInt
   | ConvertBuiltinTypes
   | Identity
   | UnrollRecursion
@@ -51,7 +52,7 @@ toTypecheckTransformations :: [TransformationId]
 toTypecheckTransformations = [MatchToCase]
 
 toEvalTransformations :: [TransformationId]
-toEvalTransformations = [EtaExpandApps, MatchToCase, NatToInt, ConvertBuiltinTypes, LetFolding]
+toEvalTransformations = [EtaExpandApps, MatchToCase, NatToPrimInt, IntToPrimInt, ConvertBuiltinTypes, LetFolding]
 
 toStrippedTransformations :: [TransformationId]
 toStrippedTransformations =

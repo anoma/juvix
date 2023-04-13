@@ -36,6 +36,7 @@ runCommand replOpts = do
   root <- askPkgDir
   buildDir <- askBuildDir
   package <- askPackage
+  global <- askPackageGlobal
   invokeDir <- askInvokeDir
   globalOptions <- askGlobalOptions
   let getReplEntryPoint :: SomeBase File -> Repl EntryPoint
@@ -43,8 +44,8 @@ runCommand replOpts = do
         gopts <- State.gets (^. replStateGlobalOptions)
         absInputFile :: Path Abs File <- replMakeAbsolute inputFile
         return $
-          (entryPointFromGlobalOptions root absInputFile gopts)
-            { _entryPointBuildDir = buildDir,
+          (entryPointFromGlobalOptions (package, global) root absInputFile gopts)
+            { _entryPointBuildDir = Abs buildDir,
               _entryPointPackage = package,
               _entryPointTarget = Backend.TargetGeb
             }
