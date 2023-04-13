@@ -1,6 +1,9 @@
 module Main;
 
 import Stdlib.Prelude as Prelude;
+open Prelude;
+
+axiom a : Nat;
 
 main : Prelude.Nat;
 main := 123;

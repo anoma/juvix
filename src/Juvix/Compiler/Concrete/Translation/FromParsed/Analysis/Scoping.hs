@@ -229,12 +229,16 @@ checkImport import_@(Import kw path qual) = do
       moduleId = sname ^. S.nameId
       cmoduleRef :: ModuleRef'' 'S.Concrete 'ModuleTop = set moduleRefName sname' moduleRef
       importName :: S.TopModulePath = set S.nameConcrete path sname
+      synonymName :: Maybe S.TopModulePath = do
+        synonym <- qual
+        return (set S.nameConcrete (moduleSymbolToTopModulePath synonym) sname)
       qual' :: Maybe S.Symbol
       qual' = do
         asName <- qual
         return (set S.nameConcrete asName sname')
   addModuleToScope moduleRef
   registerName importName
+  whenJust synonymName registerName
   let moduleRef' = mkModuleRef' moduleRef
   modify (over scoperModules (HashMap.insert moduleId moduleRef'))
   return (Import kw cmoduleRef qual')
