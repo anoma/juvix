@@ -25,7 +25,7 @@ space1 = void $ takeWhile1P (Just "white space (only spaces and newlines allowed
     isWhiteSpace = (`elem` [' ', '\n'])
 
 space' :: forall r. Bool -> ParsecS r [Comment]
-space' judoc = do
+space' special = do
   catMaybes
     <$> P.many
       ( hidden
@@ -38,7 +38,7 @@ space' judoc = do
     lineComment = do
       let _commentType = CommentOneLine
       when
-        judoc
+        special
         (notFollowedBy (P.chunk Str.judocStart))
       (_commentText, _commentInterval) <- interval $ do
         void (P.chunk "--")
@@ -48,6 +48,9 @@ space' judoc = do
     blockComment :: ParsecS r Comment
     blockComment = do
       let _commentType = CommentBlock
+      when
+        special
+        (notFollowedBy (P.chunk Str.pragmasStart))
       (_commentText, _commentInterval) <- interval $ do
         void (P.chunk "{-")
         pack <$> P.manyTill anySingle (P.chunk "-}")

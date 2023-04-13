@@ -460,6 +460,7 @@ checkInductiveDef InductiveDef {..} = do
     InductiveDef
       { _inductiveName = inductiveName',
         _inductiveDoc = inductiveDoc',
+        _inductivePragmas = _inductivePragmas,
         _inductiveParameters = inductiveParameters',
         _inductiveType = inductiveType',
         _inductiveConstructors = inductiveConstructors',
@@ -489,6 +490,7 @@ checkInductiveDef InductiveDef {..} = do
           { _constructorName = constructorName',
             _constructorType = constructorType',
             _constructorDoc = doc',
+            _constructorPragmas = _constructorPragmas,
             _constructorPipe
           }
 
@@ -572,6 +574,7 @@ checkTopModule m@Module {..} = do
                   { _modulePath = path',
                     _moduleBody = body',
                     _moduleDoc = doc',
+                    _modulePragmas = _modulePragmas,
                     _moduleKw,
                     _moduleKwEnd
                   }
@@ -633,6 +636,7 @@ checkLocalModule Module {..} = do
           { _modulePath = _modulePath',
             _moduleBody = moduleBody',
             _moduleDoc = moduleDoc',
+            _modulePragmas = _modulePragmas,
             _moduleKw,
             _moduleKwEnd
           }

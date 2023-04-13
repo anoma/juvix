@@ -5,14 +5,17 @@ module Juvix.Compiler.Concrete.Print.Base
   )
 where
 
+import Data.ByteString.UTF8 qualified as BS
 import Data.List.NonEmpty.Extra qualified as NonEmpty
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Pretty.Base qualified as P
 import Juvix.Compiler.Concrete.Pretty.Options
+import Juvix.Compiler.Pragmas
 import Juvix.Data.CodeAnn (Ann, CodeAnn (..), ppStringLit)
 import Juvix.Data.Effect.ExactPrint
 import Juvix.Data.Keyword.All
+import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude hiding ((<+>), (<+?>), (<?+>), (?<>))
 import Juvix.Prelude.Pretty (annotate, pretty)
 
@@ -61,7 +64,9 @@ instance SingI t => PrettyPrint (Module 'Scoped t) where
     let moduleBody' = localIndent (ppCode _moduleBody)
         modulePath' = ppModulePathType _modulePath
         moduleDoc' :: Sem r () = maybe (return ()) ppCode _moduleDoc
+        modulePragmas' :: Sem r () = maybe (return ()) ppCode _modulePragmas
     moduleDoc'
+      <> modulePragmas'
       <> ppCode _moduleKw
       <+> modulePath'
         <> ppCode kwSemicolon
@@ -137,6 +142,11 @@ instance PrettyPrint OperatorSyntaxDef where
 instance PrettyPrint Expression where
   ppCode = ppMorpheme
 
+instance PrettyPrint Pragmas where
+  ppCode Pragmas {..} =
+    noLoc (annotate (AnnComment) (pretty (Str.pragmasStart <> BS.toString _pragmasSource <> Str.pragmasEnd)))
+      <> line
+
 instance PrettyPrint (Example 'Scoped) where
   ppCode e =
     noLoc P.ppJudocStart
@@ -177,8 +187,10 @@ instance PrettyPrint (AxiomDef 'Scoped) where
     axiomName' <- P.annDef _axiomName <$> P.ppSymbol _axiomName
     let builtin' :: Maybe (Sem r ()) = (<> line) . (\x -> P.ppCode x >>= morpheme (getLoc x)) <$> _axiomBuiltin
         _axiomDoc' :: Maybe (Sem r ()) = ppCode <$> _axiomDoc
+        _axiomPragmas' :: Maybe (Sem r ()) = ppCode <$> _axiomPragmas
         axiom' = (<> line) . ppCode $ _axiomKw
     _axiomDoc'
+      ?<> _axiomPragmas'
       ?<> builtin'
       ?<> axiom'
       <> morpheme (getLoc _axiomName) axiomName'
@@ -196,6 +208,7 @@ instance PrettyPrint (TypeSignature 'Scoped) where
   ppCode TypeSignature {..} = do
     let termin' :: Maybe (Sem r ()) = (<> line) . ppCode <$> _sigTerminating
         doc' :: Maybe (Sem r ()) = ppCode <$> _sigDoc
+        pragmas' :: Maybe (Sem r ()) = ppCode <$> _sigPragmas
         builtin' :: Maybe (Sem r ()) = (<> line) . ppCode <$> _sigBuiltin
         type' = ppCode _sigType
         name' = region (P.annDef _sigName) (ppCode _sigName)
@@ -203,6 +216,7 @@ instance PrettyPrint (TypeSignature 'Scoped) where
           Nothing -> Nothing
           Just body -> Just (noLoc P.kwAssign <> oneLineOrNext (ppCode body))
     doc'
+      ?<> pragmas'
       ?<> builtin'
       ?<> termin'
       ?<> ( name'
@@ -311,7 +325,8 @@ instance PrettyPrint (InductiveConstructorDef 'Scoped) where
     let constructorName' = region (P.annDef _constructorName) (ppCode _constructorName)
         constructorType' = ppCode _constructorType
         doc' = ppCode <$> _constructorDoc
-    nest (pipeHelper <+> doc' ?<> constructorName' <+> noLoc P.kwColon <+> constructorType')
+        pragmas' = ppCode <$> _constructorPragmas
+    nest (pipeHelper <+> doc' ?<> pragmas' ?<> constructorName' <+> noLoc P.kwColon <+> constructorType')
     where
       -- we use this helper so that comments appear before the first optional pipe if the pipe was omitted
       pipeHelper :: Sem r ()
@@ -341,9 +356,11 @@ instance PrettyPrint (InductiveDef 'Scoped) where
   ppCode :: forall r. Members '[ExactPrint, Reader Options] r => InductiveDef 'Scoped -> Sem r ()
   ppCode d@InductiveDef {..} = do
     let doc' = ppCode <$> _inductiveDoc
+        pragmas' = ppCode <$> _inductivePragmas
         constrs' = ppConstructorBlock _inductiveConstructors
         sig' = ppInductiveSignature d
     doc'
+      ?<> pragmas'
       ?<> sig'
       <+> noLoc P.kwAssign
         <> line

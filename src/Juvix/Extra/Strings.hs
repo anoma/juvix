@@ -14,6 +14,12 @@ judocStart = "---"
 judocExample :: (IsString s) => s
 judocExample = ">>>"
 
+pragmasStart :: (IsString s) => s
+pragmasStart = "{-#"
+
+pragmasEnd :: (IsString s) => s
+pragmasEnd = "#-}"
+
 end :: (IsString s) => s
 end = "end"
 
