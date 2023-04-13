@@ -743,8 +743,8 @@ case tail' lst
 You have now learnt the very basics of Juvix. To consolidate your
 understanding of Juvix and functional programming, try doing some of
 the following exercises. To learn how to write more complex Juvix
-programs, see the [advanced
-tutorial](https://docs.juvix.org/examples/html/Tutorial/Tutorial.html)
+programs, see the
+[advanced tutorial](./../examples/html/Tutorial/Tutorial.html)
 and the [Juvix program examples](../reference/examples.md).
 
 1.  Define a function `prime : Nat -> Nat` which checks if a given
