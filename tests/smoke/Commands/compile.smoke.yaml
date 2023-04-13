@@ -1,4 +1,4 @@
-working-directory: ./../../../tests
+working-directory: ./../../../
 
 tests:
   - name: shows-file-argument-for-autocompletion
@@ -16,10 +16,23 @@ tests:
       shell:
         - bash
       script: |
-        cd ./../examples/milestone/HelloWorld
+        cd ./examples/milestone/HelloWorld
         juvix compile HelloWorld.juvix
-        [ -f HelloWorld ]
         ./HelloWorld
+    exit-status: 0
+    stdout: |
+      hello world!
+
+  - name: option-output-file
+    command:
+      shell:
+        - bash
+      script: |
+        temp=$(mktemp -d)
+        trap 'rm -rf -- "$temp"' EXIT
+        cd ./examples/milestone/HelloWorld
+        juvix compile -o $temp/Hello HelloWorld.juvix
+        $temp/Hello
     exit-status: 0
     stdout: |
       hello world!
@@ -30,11 +43,54 @@ tests:
         - bash
       script: |
         temp=$(mktemp -d)
-        cd ./../examples/milestone/HelloWorld
+        cd ./examples/milestone/HelloWorld
         juvix compile HelloWorld.juvix --internal-build-dir "$temp"
         find "$temp" | wc -l
         rm -rf "$temp"
     stdout:
       matches: |
         \s*([2-9]|[1-9][0-9]+)
+    exit-status: 0
+
+  - name: default-output-file-in-invoke-dir
+    command:
+      shell:
+        - bash
+      script: |
+        temp=$(mktemp -d)
+        trap 'rm -rf -- "$temp"' EXIT
+        testdir=$PWD/examples/milestone/HelloWorld
+        cd $temp
+        juvix compile $testdir/HelloWorld.juvix
+        ./HelloWorld
+    stdout: |
+      hello world!
+    exit-status: 0
+
+  - name: target-wasm
+    command:
+      shell:
+        - bash
+      script: |
+        temp=$(mktemp -d)
+        trap 'rm -rf -- "$temp"' EXIT
+        testdir=$PWD/examples/milestone/HelloWorld
+        cd $temp
+        juvix compile -t wasm32-wasi $testdir/HelloWorld.juvix
+        [ -f HelloWorld.wasm ]
+    stdout: ""
+    exit-status: 0
+
+  - name: target-geb
+    command:
+      shell:
+        - bash
+      script: |
+        temp=$(mktemp -d)
+        trap 'rm -rf -- "$temp"' EXIT
+        testdir=$PWD/tests/Geb/positive/Compilation
+        cd $temp
+        juvix compile -t geb $testdir/test001.juvix
+        [ -f test001.lisp ]
+    stdout: ""
     exit-status: 0
