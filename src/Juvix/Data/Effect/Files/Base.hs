@@ -41,5 +41,6 @@ data Files m a where
   RemoveFile' :: Path Abs File -> Files m ()
   RenameFile' :: Path Abs File -> Path Abs File -> Files m ()
   CopyFile' :: Path Abs File -> Path Abs File -> Files m ()
+  JuvixConfigDir :: Files m (Path Abs Dir)
 
 makeSem ''Files

@@ -2,7 +2,6 @@ module Typecheck.Negative where
 
 import Base
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error
-import Juvix.Compiler.Pipeline
 
 type FailMsg = String
 
@@ -21,7 +20,7 @@ testDescr NegTest {..} =
         { _testName = _name,
           _testRoot = tRoot,
           _testAssertion = Single $ do
-            let entryPoint = defaultEntryPoint tRoot file'
+            entryPoint <- defaultEntryPointCwdIO file'
             result <- runIOEither entryPoint upToInternalTyped
             case mapLeft fromJuvixError result of
               Left (Just tyError) -> whenJust (_checkErr tyError) assertFailure

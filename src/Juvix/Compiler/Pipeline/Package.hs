@@ -3,20 +3,25 @@ module Juvix.Compiler.Pipeline.Package
     RawPackage,
     Package,
     Package' (..),
-    defaultPackage,
+    defaultStdlibDep,
     packageName,
+    packageBuildDir,
     packageVersion,
     packageDependencies,
     rawPackage,
-    emptyPackage,
     readPackage,
     readPackageIO,
+    readGlobalPackageIO,
+    globalPackage,
+    emptyPackage,
+    readGlobalPackage,
   )
 where
 
 import Data.Aeson (genericToEncoding, genericToJSON)
 import Data.Aeson.BetterErrors
 import Data.Aeson.TH
+import Data.ByteString qualified as ByteString
 import Data.Kind qualified as GHC
 import Data.Versions
 import Data.Yaml
@@ -33,17 +38,18 @@ type family NameType s = res | res -> s where
 type VersionType :: IsProcessed -> GHC.Type
 type family VersionType s = res | res -> s where
   VersionType 'Raw = Maybe Text
-  VersionType 'Processed = Versioning
+  VersionType 'Processed = SemVer
 
 type DependenciesType :: IsProcessed -> GHC.Type
 type family DependenciesType s = res | res -> s where
-  DependenciesType 'Raw = Maybe [RawDependency]
+  DependenciesType 'Raw = Maybe [Dependency]
   DependenciesType 'Processed = [Dependency]
 
 data Package' (s :: IsProcessed) = Package
   { _packageName :: NameType s,
     _packageVersion :: VersionType s,
-    _packageDependencies :: DependenciesType s
+    _packageDependencies :: DependenciesType s,
+    _packageBuildDir :: Maybe (SomeBase Dir)
   }
   deriving stock (Generic)
 
@@ -65,70 +71,64 @@ rawPackageOptions :: Options
 rawPackageOptions =
   defaultOptions
     { fieldLabelModifier = over Lens._head toLower . dropPrefix "_package",
-      rejectUnknownFields = True
+      rejectUnknownFields = True,
+      omitNothingFields = True
     }
 
 instance ToJSON RawPackage where
   toJSON = genericToJSON rawPackageOptions
   toEncoding = genericToEncoding rawPackageOptions
 
--- | TODO: is it a good idea to return the empty package if it fails to parse?
 instance FromJSON RawPackage where
-  parseJSON = toAesonParser' (fromMaybe rawDefaultPackage <$> p)
+  parseJSON = toAesonParser' (fromMaybe err <$> p)
     where
       p :: Parse' (Maybe RawPackage)
       p = perhaps $ do
         _packageName <- keyMay "name" asText
         _packageVersion <- keyMay "version" asText
         _packageDependencies <- keyMay "dependencies" fromAesonParser
+        _packageBuildDir <- keyMay "build-dir" fromAesonParser
         return Package {..}
+      err :: a
+      err = error "Failed to parse juvix.yaml"
 
--- | Has the implicit stdlib dependency
-rawDefaultPackage :: Package' 'Raw
-rawDefaultPackage =
-  Package
-    { _packageName = Nothing,
-      _packageVersion = Nothing,
-      _packageDependencies = Nothing
-    }
-
--- | Has the implicit stdlib dependency
-defaultPackage :: Path Abs Dir -> Path Abs Dir -> Package
-defaultPackage root buildDir = fromRight impossible . run . runError @Text . processPackage root buildDir $ rawDefaultPackage
-
--- | Has no dependencies
+-- | This is used when juvix.yaml exists but it is empty
 emptyPackage :: Package
 emptyPackage =
   Package
     { _packageName = defaultPackageName,
-      _packageVersion = Ideal defaultVersion,
-      _packageDependencies = []
+      _packageVersion = defaultVersion,
+      _packageDependencies = [defaultStdlibDep],
+      _packageBuildDir = Nothing
     }
 
 rawPackage :: Package -> RawPackage
 rawPackage pkg =
   Package
     { _packageName = Just (pkg ^. packageName),
-      _packageVersion = Just (prettyV (pkg ^. packageVersion)),
-      _packageDependencies = Just (map rawDependency (pkg ^. packageDependencies))
+      _packageVersion = Just (prettySemVer (pkg ^. packageVersion)),
+      _packageDependencies = Just (pkg ^. packageDependencies),
+      _packageBuildDir = pkg ^. packageBuildDir
     }
 
-processPackage :: forall r. (Members '[Error Text] r) => Path Abs Dir -> Path Abs Dir -> Package' 'Raw -> Sem r Package
-processPackage dir buildDir pkg = do
+processPackage :: forall r. (Members '[Error Text] r) => Maybe (SomeBase Dir) -> RawPackage -> Sem r Package
+processPackage buildDir pkg = do
   let _packageName = fromMaybe defaultPackageName (pkg ^. packageName)
-      stdlib = Dependency (Abs (juvixStdlibDir buildDir))
-      _packageDependencies =
-        let rawDeps :: [RawDependency] = fromMaybe [stdlib] (pkg ^. packageDependencies)
-         in map (processDependency dir) rawDeps
+      stdlib = Dependency (fromMaybe (Rel relBuildDir) buildDir <///> relStdlibDir)
+      _packageDependencies = fromMaybe [stdlib] (pkg ^. packageDependencies)
+      _packageBuildDir = pkg ^. packageBuildDir
   _packageVersion <- getVersion
   return Package {..}
   where
-    getVersion :: Sem r Versioning
+    getVersion :: Sem r SemVer
     getVersion = case pkg ^. packageVersion of
-      Nothing -> return (Ideal defaultVersion)
-      Just ver -> case versioning ver of
+      Nothing -> return defaultVersion
+      Just ver -> case semver ver of
         Right v -> return v
         Left err -> throw (pack (errorBundlePretty err))
+
+defaultStdlibDep :: Dependency
+defaultStdlibDep = Dependency (Rel (relBuildDir <//> relStdlibDir))
 
 defaultPackageName :: Text
 defaultPackageName = "my-project"
@@ -136,24 +136,54 @@ defaultPackageName = "my-project"
 defaultVersion :: SemVer
 defaultVersion = SemVer 0 0 0 [] Nothing
 
--- | given some directory d it tries to read the file d/juvix.yaml and parse its contents
+globalPackage :: Package
+globalPackage =
+  Package
+    { _packageDependencies = [defaultStdlibDep],
+      _packageName = "global-juvix-package",
+      _packageVersion = defaultVersion,
+      _packageBuildDir = Nothing
+    }
+
+-- | Given some directory d it tries to read the file d/juvix.yaml and parse its contents
 readPackage ::
   forall r.
   (Members '[Files, Error Text] r) =>
   Path Abs Dir ->
-  Path Abs Dir ->
+  Maybe (SomeBase Dir) ->
   Sem r Package
-readPackage adir buildDir = do
+readPackage root buildDir = do
   bs <- readFileBS' yamlPath
-  either (throw . pack . prettyPrintParseException) (processPackage adir buildDir) (decodeEither' bs)
+  if
+      | ByteString.null bs -> return emptyPackage
+      | otherwise -> either (throw . pack . prettyPrintParseException) (processPackage buildDir) (decodeEither' bs)
   where
-    yamlPath = adir <//> juvixYamlFile
+    yamlPath = root <//> juvixYamlFile
 
-readPackageIO :: Path Abs Dir -> Path Abs Dir -> IO Package
-readPackageIO dir buildDir = do
+readPackageIO :: Path Abs Dir -> SomeBase Dir -> IO Package
+readPackageIO root buildDir = do
   let x :: Sem '[Error Text, Files, Embed IO] Package
-      x = readPackage dir buildDir
+      x = readPackage root (Just buildDir)
   m <- runM $ runFilesIO (runError x)
   case m of
     Left err -> putStrLn err >> exitFailure
     Right r -> return r
+
+readGlobalPackageIO :: IO Package
+readGlobalPackageIO = do
+  m <- runM . runFilesIO . runError $ readGlobalPackage
+  case m of
+    Left err -> putStrLn err >> exitFailure
+    Right r -> return r
+
+readGlobalPackage :: Members '[Error Text, Files] r => Sem r Package
+readGlobalPackage = do
+  yamlPath <- globalYaml
+  unlessM (fileExists' yamlPath) writeGlobalPackage
+  readPackage (parent yamlPath) Nothing
+
+writeGlobalPackage :: Members '[Files] r => Sem r ()
+writeGlobalPackage = do
+  yamlPath <- globalYaml
+  ensureDir' (parent yamlPath)
+  writeFileBS yamlPath (encode (rawPackage globalPackage))

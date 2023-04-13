@@ -58,4 +58,4 @@ instance PrettyCodeAnn MissingModule where
             <> line
             <> "or in one of the dependencies:"
             <> line
-            <> itemize (map pcode (_missingInfo ^.. packagePackage . packageDependencies . each . dependencyPath))
+            <> itemize (map pcode (_missingInfo ^.. packagePackage . packageDependencies . each))

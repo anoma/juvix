@@ -7,7 +7,6 @@ import Juvix.Compiler.Backend (Target (TargetGeb))
 import Juvix.Compiler.Backend.Geb qualified as Geb
 import Juvix.Compiler.Core qualified as Core
 import Juvix.Compiler.Core.Pretty qualified as Core
-import Juvix.Compiler.Pipeline
 import Juvix.Prelude.Pretty
 
 coreToGebTranslationAssertion ::
@@ -18,8 +17,7 @@ coreToGebTranslationAssertion ::
 coreToGebTranslationAssertion mainFile expectedFile step = do
   step "Parse Juvix Core file"
   input <- readFile . toFilePath $ mainFile
-  cwd <- getCurrentDir
-  let entryPoint = (defaultEntryPoint cwd mainFile) {_entryPointTarget = TargetGeb}
+  entryPoint <- set entryPointTarget TargetGeb <$> defaultEntryPointCwdIO mainFile
   case Core.runParserMain mainFile Core.emptyInfoTable input of
     Left err -> assertFailure . show . pretty $ err
     Right coreInfoTable -> coreToGebTranslationAssertion' coreInfoTable entryPoint expectedFile step

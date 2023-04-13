@@ -2,7 +2,6 @@ module Scope.Negative (allTests) where
 
 import Base
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
-import Juvix.Compiler.Pipeline
 
 type FailMsg = String
 
@@ -24,7 +23,7 @@ testDescr NegTest {..} =
         { _testName = _name,
           _testRoot = tRoot,
           _testAssertion = Single $ do
-            let entryPoint = defaultEntryPoint tRoot file'
+            entryPoint <- defaultEntryPointCwdIO file'
             res <- runIOEither entryPoint upToAbstract
             case mapLeft fromJuvixError res of
               Left (Just err) -> whenJust (_checkErr err) assertFailure
