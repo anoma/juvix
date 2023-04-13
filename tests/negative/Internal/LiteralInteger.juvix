@@ -1,0 +1,6 @@
+module LiteralInteger;
+
+open import Stdlib.Prelude;
+
+h : Nat;
+h := div 1 -2;

@@ -18,6 +18,8 @@ data InfoTableBuilder m a where
   RegisterInductive :: Text -> InductiveInfo -> InfoTableBuilder m ()
   RegisterIdentNode :: Symbol -> Node -> InfoTableBuilder m ()
   RegisterMain :: Symbol -> InfoTableBuilder m ()
+  RegisterLiteralIntToNat :: Symbol -> InfoTableBuilder m ()
+  RegisterLiteralIntToInt :: Symbol -> InfoTableBuilder m ()
   RemoveSymbol :: Symbol -> InfoTableBuilder m ()
   OverIdentArgs :: Symbol -> ([Binder] -> [Binder]) -> InfoTableBuilder m ()
   GetIdent :: Text -> InfoTableBuilder m (Maybe IdentKind)
@@ -31,6 +33,11 @@ getConstructorInfo tag = flip lookupConstructorInfo tag <$> getInfoTable
 
 getInductiveInfo :: (Member InfoTableBuilder r) => Symbol -> Sem r InductiveInfo
 getInductiveInfo sym = flip lookupInductiveInfo sym <$> getInfoTable
+
+getBuiltinInductiveInfo :: Member InfoTableBuilder r => BuiltinInductive -> Sem r InductiveInfo
+getBuiltinInductiveInfo b = do
+  tab <- getInfoTable
+  return $ fromJust (lookupBuiltinInductive tab b)
 
 getIdentifierInfo :: (Member InfoTableBuilder r) => Symbol -> Sem r IdentifierInfo
 getIdentifierInfo sym = flip lookupIdentifierInfo sym <$> getInfoTable
@@ -46,9 +53,10 @@ getIOSymbol = do
   return $ ci ^. constructorInductive
 
 getNatSymbol :: (Member InfoTableBuilder r) => Sem r Symbol
-getNatSymbol = do
-  tab <- getInfoTable
-  return $ fromJust (lookupBuiltinInductive tab BuiltinNat) ^. inductiveSymbol
+getNatSymbol = (^. inductiveSymbol) <$> getBuiltinInductiveInfo BuiltinNat
+
+getIntSymbol :: (Member InfoTableBuilder r) => Sem r Symbol
+getIntSymbol = (^. inductiveSymbol) <$> getBuiltinInductiveInfo BuiltinInt
 
 checkSymbolDefined :: (Member InfoTableBuilder r) => Symbol -> Sem r Bool
 checkSymbolDefined sym = do
@@ -101,6 +109,10 @@ runInfoTableBuilder tab =
         modify' (over identContext (HashMap.insert sym node))
       RegisterMain sym -> do
         modify' (set infoMain (Just sym))
+      RegisterLiteralIntToInt sym -> do
+        modify' (set infoLiteralIntToInt (Just sym))
+      RegisterLiteralIntToNat sym -> do
+        modify' (set infoLiteralIntToNat (Just sym))
       RemoveSymbol sym -> do
         modify' (over infoMain (maybe Nothing (\sym' -> if sym' == sym then Nothing else Just sym')))
         modify' (over infoIdentifiers (HashMap.delete sym))
@@ -210,3 +222,81 @@ declareNatBuiltins = do
     [ (tagZero, "zero", id, Just BuiltinNatZero),
       (tagSuc, "suc", \x -> mkPi' x x, Just BuiltinNatSuc)
     ]
+
+reserveLiteralIntToNatSymbol :: Member InfoTableBuilder r => Sem r ()
+reserveLiteralIntToNatSymbol = do
+  sym <- freshSymbol
+  registerLiteralIntToNat sym
+
+reserveLiteralIntToIntSymbol :: Member InfoTableBuilder r => Sem r ()
+reserveLiteralIntToIntSymbol = do
+  sym <- freshSymbol
+  registerLiteralIntToInt sym
+
+-- | Register a function Int -> Nat used to transform literal integers to builtin Nat
+setupLiteralIntToNat :: forall r. Member InfoTableBuilder r => (Symbol -> Sem r Node) -> Sem r ()
+setupLiteralIntToNat mkNode = do
+  tab <- getInfoTable
+  whenJust (tab ^. infoLiteralIntToNat) go
+  where
+    go :: Symbol -> Sem r ()
+    go sym = do
+      ii <- info sym
+      registerIdent (ii ^. identifierName) ii
+      n <- mkNode sym
+      registerIdentNode sym n
+      where
+        info :: Symbol -> Sem r IdentifierInfo
+        info s = do
+          tab <- getInfoTable
+          ty <- targetType
+          return $
+            IdentifierInfo
+              { _identifierSymbol = s,
+                _identifierName = freshIdentName tab "intToNat",
+                _identifierLocation = Nothing,
+                _identifierArgsNum = 1,
+                _identifierType = mkPi mempty (Binder "x" Nothing mkTypeInteger') ty,
+                _identifierIsExported = False,
+                _identifierBuiltin = Nothing
+              }
+
+        targetType :: Sem r Node
+        targetType = do
+          tab <- getInfoTable
+          let natSymM = (^. inductiveSymbol) <$> lookupBuiltinInductive tab BuiltinNat
+          return (maybe mkTypeInteger' (\s -> mkTypeConstr (setInfoName "Nat" mempty) s []) natSymM)
+
+-- | Register a function Int -> Int used to transform literal integers to builtin Int
+setupLiteralIntToInt :: forall r. Member InfoTableBuilder r => Sem r Node -> Sem r ()
+setupLiteralIntToInt node = do
+  tab <- getInfoTable
+  whenJust (tab ^. infoLiteralIntToInt) go
+  where
+    go :: Symbol -> Sem r ()
+    go sym = do
+      ii <- info sym
+      registerIdent (ii ^. identifierName) ii
+      n <- node
+      registerIdentNode sym n
+      where
+        info :: Symbol -> Sem r IdentifierInfo
+        info s = do
+          tab <- getInfoTable
+          ty <- targetType
+          return $
+            IdentifierInfo
+              { _identifierSymbol = s,
+                _identifierName = freshIdentName tab "literalIntToInt",
+                _identifierLocation = Nothing,
+                _identifierArgsNum = 1,
+                _identifierType = mkPi mempty (Binder "x" Nothing mkTypeInteger') ty,
+                _identifierIsExported = False,
+                _identifierBuiltin = Nothing
+              }
+
+        targetType :: Sem r Node
+        targetType = do
+          tab <- getInfoTable
+          let intSymM = (^. inductiveSymbol) <$> lookupBuiltinInductive tab BuiltinInt
+          return (maybe mkTypeInteger' (\s -> mkTypeConstr (setInfoName "Int" mempty) s []) intSymM)

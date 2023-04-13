@@ -1,6 +1,6 @@
 module MatchConstructor;
 
-open import Stdlib.Prelude;
+open import Stdlib.Prelude hiding {toNat};
 
 type Foo :=
   foo1 : Nat → Foo |

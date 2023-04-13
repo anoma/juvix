@@ -341,10 +341,18 @@ goExpression e = case e of
   Abstract.ExpressionFunction f -> ExpressionFunction <$> goExpressionFunction f
   Abstract.ExpressionApplication a -> ExpressionApplication <$> goApplication a
   Abstract.ExpressionLambda l -> ExpressionLambda <$> goLambda l
-  Abstract.ExpressionLiteral l -> return (ExpressionLiteral l)
+  Abstract.ExpressionLiteral l -> return (ExpressionLiteral (goLiteral l))
   Abstract.ExpressionHole h -> return (ExpressionHole h)
   Abstract.ExpressionLet l -> ExpressionLet <$> goLet l
   Abstract.ExpressionCase c -> ExpressionCase <$> goCase c
+
+goLiteral :: Abstract.LiteralLoc -> LiteralLoc
+goLiteral = fmap go
+  where
+    go :: Abstract.Literal -> Literal
+    go = \case
+      Abstract.LitString s -> LitString s
+      Abstract.LitInteger i -> LitInteger i
 
 goCase :: Members '[NameIdGen, Reader NameDependencyInfo] r => Abstract.Case -> Sem r Case
 goCase c = do

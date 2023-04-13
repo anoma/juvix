@@ -69,7 +69,7 @@ instance PrettyCode Expression where
     ExpressionApplication a -> ppCode a
     ExpressionFunction f -> ppCode f
     ExpressionUniverse u -> ppCode u
-    ExpressionLiteral l -> return (pretty l)
+    ExpressionLiteral l -> ppCode l
     ExpressionSimpleLambda l -> ppCode l
     ExpressionLambda l -> ppCode l
     ExpressionLet l -> ppCode l
@@ -105,6 +105,13 @@ instance PrettyCode LetClause where
         | otherwise = do
             b' <- ppCode m
             return (kwMutual <+> braces (line <> indent' b' <> line))
+
+instance PrettyCode Literal where
+  ppCode =
+    return . \case
+      LitNatural n -> pretty n
+      LitInteger n -> pretty n
+      LitString s -> ppStringLit s
 
 ppPipeBlock :: (PrettyCode a, Members '[Reader Options] r, Traversable t) => t a -> Sem r (Doc Ann)
 ppPipeBlock items = vsep <$> mapM (fmap (kwPipe <+>) . ppCode) items
