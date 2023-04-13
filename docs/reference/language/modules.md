@@ -130,7 +130,7 @@ We simplify it by the expression:
 open import Prelude;
 ```
 
-The `hiding` keyword can be used within a `open-import` statement.
+The `hiding` keyword can be used within an `open-import` statement.
 
 ```juvix
 -- B.juvix
