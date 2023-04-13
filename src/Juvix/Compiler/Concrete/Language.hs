@@ -160,14 +160,15 @@ deriving stock instance
 
 data Import (s :: Stage) = Import
   { _importKw :: KeywordRef,
-    _importModule :: ImportType s
+    _importModule :: ImportType s,
+    _importQualified :: Maybe (SymbolType s)
   }
 
-deriving stock instance (Show (ImportType s)) => Show (Import s)
+deriving stock instance (Show (SymbolType s), Show (ImportType s)) => Show (Import s)
 
-deriving stock instance (Eq (ImportType s)) => Eq (Import s)
+deriving stock instance (Eq (SymbolType s), Eq (ImportType s)) => Eq (Import s)
 
-deriving stock instance (Ord (ImportType s)) => Ord (Import s)
+deriving stock instance (Ord (SymbolType s), Ord (ImportType s)) => Ord (Import s)
 
 --------------------------------------------------------------------------------
 -- Operator syntax declaration

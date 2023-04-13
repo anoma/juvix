@@ -219,21 +219,30 @@ checkImport ::
   (Members '[Error ScoperError, State Scope, Reader ScopeParameters, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
   Import 'Parsed ->
   Sem r (Import 'Scoped)
-checkImport import_@(Import kw path) = do
+checkImport import_@(Import kw path qual) = do
   checkCycle
   cache <- gets (^. scoperModulesCache . cachedModules)
   moduleRef <- maybe (readScopeModule import_) return (cache ^. at path)
-  let checked = moduleRef ^. moduleRefModule
+  let checked :: Module 'Scoped 'ModuleTop = moduleRef ^. moduleRefModule
       sname :: S.TopModulePath = checked ^. modulePath
       sname' :: S.Name = set S.nameConcrete (topModulePathToName path) sname
       moduleId = sname ^. S.nameId
       cmoduleRef :: ModuleRef'' 'S.Concrete 'ModuleTop = set moduleRefName sname' moduleRef
-  modify (over scopeTopModules (HashMap.insert path moduleRef))
-  registerName (set S.nameConcrete path sname)
+      importName :: S.TopModulePath = set S.nameConcrete path sname
+      qual' :: Maybe S.Symbol
+      qual' = do
+        asName <- qual
+        return (set S.nameConcrete asName sname')
+  addModuleToScope qual' moduleRef
+  registerName importName
   let moduleRef' = mkModuleRef' moduleRef
   modify (over scoperModules (HashMap.insert moduleId moduleRef'))
-  return (Import kw cmoduleRef)
+  return (Import kw cmoduleRef qual')
   where
+    addModuleToScope :: Maybe S.Symbol -> ModuleRef'' 'S.NotConcrete 'ModuleTop -> Sem r ()
+    addModuleToScope altName moduleRef = do
+      let mpath :: TopModulePath = maybe path moduleSymbolToTopModulePath qual
+      modify (over scopeTopModules (HashMap.insert mpath moduleRef))
     checkCycle :: Sem r ()
     checkCycle = do
       topp <- asks (^. scopeTopParents)
@@ -328,7 +337,7 @@ lookupQualifiedSymbol (path, sym) = do
             nonEmptyToTopPath l = TopModulePath (NonEmpty.init l) (NonEmpty.last l)
         lookInTopModule :: TopModulePath -> [Symbol] -> Sem r (Maybe SymbolEntry)
         lookInTopModule topPath remaining =
-          ((fmap (^. moduleExportInfo) . HashMap.lookup topPath) >=> lookInExport sym remaining) <$> gets (^. scopeTopModules)
+          ((^? at topPath . _Just . moduleExportInfo) >=> lookInExport sym remaining) <$> gets (^. scopeTopModules)
 
 checkQualifiedExpr ::
   (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder] r) =>
@@ -524,8 +533,26 @@ topBindings :: Sem (Reader BindingStrategy ': r) a -> Sem r a
 topBindings = runReader BindingTop
 
 localBindings :: Sem (Reader BindingStrategy ': r) a -> Sem r a
--- localBindings = local (const BindingLocal)
 localBindings = runReader BindingLocal
+
+freshTopModulePath ::
+  forall s.
+  (Members '[State ScoperState, NameIdGen] s) =>
+  TopModulePath -> Sem s S.TopModulePath
+freshTopModulePath _modulePath = do
+  _nameId <- freshNameId
+  let _nameDefinedIn = S.topModulePathToAbsPath _modulePath
+      _nameConcrete = _modulePath
+      _nameDefined = getLoc (_modulePath ^. modulePathName)
+      _nameKind = S.KNameTopModule
+      _nameFixity :: Maybe Fixity
+      _nameFixity = Nothing
+      -- This visibility annotation is not relevant
+      _nameVisibilityAnn = VisPublic
+      _nameWhyInScope = S.BecauseDefined
+      _nameVerbatim = N.topModulePathToDottedPath _modulePath
+      moduleName = S.Name' {..}
+  return moduleName
 
 checkTopModule ::
   forall r.
@@ -538,32 +565,13 @@ checkTopModule m@Module {..} = do
   registerModule (r ^. moduleRefModule)
   return r
   where
-    freshTopModulePath ::
-      forall s.
-      (Members '[State ScoperState, NameIdGen] s) =>
-      Sem s S.TopModulePath
-    freshTopModulePath = do
-      _nameId <- freshNameId
-      let _nameDefinedIn = S.topModulePathToAbsPath _modulePath
-          _nameConcrete = _modulePath
-          _nameDefined = getLoc (_modulePath ^. modulePathName)
-          _nameKind = S.KNameTopModule
-          _nameFixity :: Maybe Fixity
-          _nameFixity = Nothing
-          -- This visibility annotation is not relevant
-          _nameVisibilityAnn = VisPublic
-          _nameWhyInScope = S.BecauseDefined
-          _nameVerbatim = N.topModulePathToDottedPath _modulePath
-          moduleName = S.Name' {..}
-      return moduleName
-
     iniScope :: Scope
     iniScope = emptyScope (getTopModulePath m)
 
     checkedModule :: Sem r (ModuleRef'' 'S.NotConcrete 'ModuleTop)
     checkedModule = do
       (s, (m', p)) <- runState iniScope $ do
-        path' <- freshTopModulePath
+        path' <- freshTopModulePath _modulePath
         withTopScope $ do
           (_moduleExportInfo, body') <- topBindings (checkModuleBody _moduleBody)
           doc' <- mapM checkJudoc _moduleDoc
@@ -706,7 +714,7 @@ checkOpenImportModule ::
 checkOpenImportModule op
   | Just k <- op ^. openModuleImportKw =
       let import_ :: Import 'Parsed
-          import_ = Import k (moduleNameToTopModulePath (op ^. openModuleName))
+          import_ = Import k (moduleNameToTopModulePath (op ^. openModuleName)) Nothing
        in do
             void (checkImport import_)
             scopedOpen <- checkOpenModule (set openModuleImportKw Nothing op)

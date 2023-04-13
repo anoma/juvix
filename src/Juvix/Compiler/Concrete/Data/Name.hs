@@ -88,6 +88,9 @@ topModulePathToDottedPath :: IsString s => TopModulePath -> s
 topModulePathToDottedPath (TopModulePath l r) =
   fromText $ mconcat $ intersperse "." $ map (^. symbolText) $ l ++ [r]
 
+moduleSymbolToTopModulePath :: Symbol -> TopModulePath
+moduleSymbolToTopModulePath = moduleNameToTopModulePath . NameUnqualified
+
 moduleNameToTopModulePath :: Name -> TopModulePath
 moduleNameToTopModulePath = \case
   NameUnqualified s -> TopModulePath [] s

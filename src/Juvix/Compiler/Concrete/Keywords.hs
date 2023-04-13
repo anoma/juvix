@@ -10,6 +10,7 @@ import Juvix.Data.Keyword.All
   ( -- reserved
 
     -- extra
+    kwAs,
     kwAssign,
     kwAt,
     kwAxiom,
@@ -49,7 +50,8 @@ allKeywordStrings = keywordsStrings allKeywords
 
 allKeywords :: [Keyword]
 allKeywords =
-  [ kwAssign,
+  [ kwAs,
+    kwAssign,
     kwAt,
     kwAxiom,
     kwCase,

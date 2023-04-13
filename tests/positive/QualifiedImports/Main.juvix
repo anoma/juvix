@@ -1,0 +1,6 @@
+module Main;
+
+import Stdlib.Prelude as Prelude;
+
+main : Prelude.Nat;
+main := 123;

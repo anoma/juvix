@@ -119,10 +119,16 @@ instance PrettyPrint (ModuleRef'' 'S.Concrete 'ModuleTop) where
   ppCode m = ppCode (m ^. moduleRefName)
 
 instance PrettyPrint (Import 'Scoped) where
-  ppCode :: Members '[ExactPrint, Reader Options] r => Import 'Scoped -> Sem r ()
+  ppCode :: forall r. Members '[ExactPrint, Reader Options] r => Import 'Scoped -> Sem r ()
   ppCode i = do
     ppCode (i ^. importKw)
       <+> ppCode (i ^. importModule)
+      <+?> ppQual
+    where
+      ppQual :: Maybe (Sem r ())
+      ppQual = case i ^. importQualified of
+        Nothing -> Nothing
+        Just as -> Just (noLoc P.kwAs <+> ppMorpheme as)
 
 instance PrettyPrint OperatorSyntaxDef where
   ppCode OperatorSyntaxDef {..} = do
