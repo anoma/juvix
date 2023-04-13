@@ -5,5 +5,3 @@ open import Base;
 open import Stdlib.Prelude;
 
 axiom x : Extra;
-
-end;
