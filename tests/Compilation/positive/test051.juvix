@@ -1,0 +1,12 @@
+-- local recursive function using IO >>
+module test051;
+
+open import Stdlib.Prelude;
+
+main : IO;
+main :=
+  let
+    f : Nat -> IO;
+    f zero := printStringLn "";
+    f (suc n) := printString "*" >> f n;
+  in f 3;

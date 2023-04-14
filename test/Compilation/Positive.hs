@@ -309,5 +309,10 @@ tests =
       "Test050: Pattern matching with integers"
       $(mkRelDir ".")
       $(mkRelFile "test050.juvix")
-      $(mkRelFile "out/test050.out")
+      $(mkRelFile "out/test050.out"),
+    posTest
+      "Test051: Local recursive function using IO >>"
+      $(mkRelDir ".")
+      $(mkRelFile "test051.juvix")
+      $(mkRelFile "out/test051.out")
   ]
