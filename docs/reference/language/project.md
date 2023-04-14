@@ -21,6 +21,7 @@ which contains the following fields:
 As intuition would tell, a juvix module belongs to a juvix project if it is
 placed in the subtree hanging from the root directory. This rule has two
 exceptions:
+
 1. Modules in a hidden (or hanging from a hidden) directory are not part of the
    project. E.g., if the root of a project is `dir`, then the module
    `dir/.d/Lib.juvix` does not belong to the project rooted in `dir`.
@@ -34,4 +35,3 @@ exceptions:
 Modules that belong to a project must follow a naming convention. That is, if
 `dir` is the root of a project, then the module in `dir/Path/To/lib.juvix` must
 be named `Path.To.lib`.
-
