@@ -209,6 +209,9 @@ intLt = "int-lt"
 intPrint :: (IsString s) => s
 intPrint = "int-print"
 
+as :: IsString s => s
+as = "as"
+
 builtin :: IsString s => s
 builtin = "builtin"
 

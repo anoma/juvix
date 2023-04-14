@@ -124,6 +124,7 @@ data Statement (s :: Stage)
 deriving stock instance
   ( Show (ImportType s),
     Show (ModulePathType s 'ModuleLocal),
+    Show (ModulePathType s 'ModuleTop),
     Show (PatternType s),
     Show (SymbolType s),
     Show (IdentifierType s),
@@ -136,6 +137,7 @@ deriving stock instance
   ( Eq (ImportType s),
     Eq (PatternType s),
     Eq (ModulePathType s 'ModuleLocal),
+    Eq (ModulePathType s 'ModuleTop),
     Eq (SymbolType s),
     Eq (IdentifierType s),
     Eq (ModuleRefType s),
@@ -147,6 +149,7 @@ deriving stock instance
   ( Ord (ImportType s),
     Ord (PatternType s),
     Ord (ModulePathType s 'ModuleLocal),
+    Ord (ModulePathType s 'ModuleTop),
     Ord (SymbolType s),
     Ord (IdentifierType s),
     Ord (ModuleRefType s),
@@ -160,14 +163,15 @@ deriving stock instance
 
 data Import (s :: Stage) = Import
   { _importKw :: KeywordRef,
-    _importModule :: ImportType s
+    _importModule :: ImportType s,
+    _importAsName :: Maybe (ModulePathType s 'ModuleTop)
   }
 
-deriving stock instance (Show (ImportType s)) => Show (Import s)
+deriving stock instance (Show (ModulePathType s 'ModuleTop), Show (ImportType s)) => Show (Import s)
 
-deriving stock instance (Eq (ImportType s)) => Eq (Import s)
+deriving stock instance (Eq (ModulePathType s 'ModuleTop), Eq (ImportType s)) => Eq (Import s)
 
-deriving stock instance (Ord (ImportType s)) => Ord (Import s)
+deriving stock instance (Ord (ModulePathType s 'ModuleTop), Ord (ImportType s)) => Ord (Import s)
 
 --------------------------------------------------------------------------------
 -- Operator syntax declaration
@@ -408,6 +412,7 @@ data Module (s :: Stage) (t :: ModuleIsTop) = Module
 deriving stock instance
   ( Show (ModulePathType s t),
     Show (ModulePathType s 'ModuleLocal),
+    Show (ModulePathType s 'ModuleTop),
     Show (ImportType s),
     Show (PatternType s),
     Show (IdentifierType s),
@@ -421,6 +426,7 @@ deriving stock instance
 deriving stock instance
   ( Eq (ModulePathType s t),
     Eq (ModulePathType s 'ModuleLocal),
+    Eq (ModulePathType s 'ModuleTop),
     Eq (ImportType s),
     Eq (PatternType s),
     Eq (IdentifierType s),
@@ -434,6 +440,7 @@ deriving stock instance
 deriving stock instance
   ( Ord (ModulePathType s t),
     Ord (ModulePathType s 'ModuleLocal),
+    Ord (ModulePathType s 'ModuleTop),
     Ord (ImportType s),
     Ord (PatternType s),
     Ord (IdentifierType s),
