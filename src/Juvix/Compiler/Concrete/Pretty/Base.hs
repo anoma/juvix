@@ -525,8 +525,15 @@ instance SingI s => PrettyCode (Import s) where
   ppCode :: forall r. Members '[Reader Options] r => Import s -> Sem r (Doc Ann)
   ppCode i = do
     modulePath' <- ppModulePath
-    return $ kwImport <+> modulePath'
+    qual' <- ppQual
+    return $ kwImport <+> modulePath' <+?> qual'
     where
+      ppQual :: Sem r (Maybe (Doc Ann))
+      ppQual = case i ^. importAsName of
+        Nothing -> return Nothing
+        Just as -> do
+          syn <- ppTopModulePath as
+          return . Just $ kwAs <+> syn
       ppModulePath = case sing :: SStage s of
         SParsed -> ppCode (i ^. importModule)
         SScoped -> ppCode (i ^. importModule)

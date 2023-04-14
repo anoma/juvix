@@ -505,7 +505,7 @@ checkExpression hintArity expr = case expr of
           blt <- getAxiomBuiltinInfo n
           case blt of
             Just BuiltinIOSequence -> goBuiltinApp n 0 2 f args
-            Just BuiltinTrace -> goBuiltinApp n 2 2 f args
+            Just BuiltinTrace -> goBuiltinApp n 1 1 f args
             _ -> appHelper f args
         ExpressionIden (IdenFunction n) -> do
           blt <- getFunctionBuiltinInfo n
@@ -513,6 +513,7 @@ checkExpression hintArity expr = case expr of
             Just BuiltinBoolIf -> goBuiltinApp n 1 3 f args
             Just BuiltinBoolOr -> goBuiltinApp n 0 2 f args
             Just BuiltinBoolAnd -> goBuiltinApp n 0 2 f args
+            Just BuiltinSeq -> goBuiltinApp n 2 2 f args
             _ -> appHelper f args
         _ -> appHelper f args
 

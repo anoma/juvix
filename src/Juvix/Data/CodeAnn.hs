@@ -152,6 +152,9 @@ kwUsing = keyword Str.using
 kwHiding :: Doc Ann
 kwHiding = keyword Str.hiding
 
+kwAs :: Doc Ann
+kwAs = keyword Str.as
+
 kwImport :: Doc Ann
 kwImport = keyword Str.import_
 

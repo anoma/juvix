@@ -218,6 +218,10 @@ tests =
       $(mkRelDir "Internal")
       $(mkRelFile "Case.juvix"),
     PosTest
+      "Qualified imports"
+      $(mkRelDir "QualifiedImports")
+      $(mkRelFile "Main.juvix"),
+    PosTest
       "Short syntax for multiple parameters"
       $(mkRelDir ".")
       $(mkRelFile "MultiParams.juvix"),

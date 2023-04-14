@@ -7,6 +7,9 @@ where
 import Juvix.Data.Keyword
 import Juvix.Extra.Strings qualified as Str
 
+kwAs :: Keyword
+kwAs = asciiKw Str.as
+
 kwBuiltin :: Keyword
 kwBuiltin = asciiKw Str.builtin
 
@@ -177,6 +180,9 @@ kwBind = asciiKw Str.bind
 
 kwSeq :: Keyword
 kwSeq = asciiKw Str.seq_
+
+kwSeqq :: Keyword
+kwSeqq = asciiKw Str.seqq_
 
 kwTrace :: Keyword
 kwTrace = asciiKw Str.trace_

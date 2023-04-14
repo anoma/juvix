@@ -316,12 +316,16 @@ operatorSyntaxDef = do
 -- Import statement
 --------------------------------------------------------------------------------
 
-import_ :: Members '[Files, PathResolver, InfoTableBuilder, PragmasStash, JudocStash, NameIdGen, Error ParserError] r => ParsecS r (Import 'Parsed)
+import_ :: forall r. Members '[Files, PathResolver, InfoTableBuilder, PragmasStash, JudocStash, NameIdGen, Error ParserError] r => ParsecS r (Import 'Parsed)
 import_ = do
   _importKw <- kw kwImport
   _importModule <- topModulePath
   P.lift (importedModule _importModule)
+  _importAsName <- optional pasName
   return Import {..}
+  where
+    pasName :: ParsecS r TopModulePath
+    pasName = void (kw kwAs) >> topModulePath
 
 withPath' ::
   forall r a.

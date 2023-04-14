@@ -279,7 +279,7 @@ typeExpr ::
   Index ->
   HashMap Text Level ->
   ParsecS r Node
-typeExpr varsNum vars = ioExpr varsNum vars >>= typeExpr' varsNum vars
+typeExpr varsNum vars = seqqExpr varsNum vars >>= typeExpr' varsNum vars
 
 typeExpr' ::
   (Member InfoTableBuilder r) =>
@@ -301,6 +301,26 @@ typeFunExpr' varsNum vars l = do
   kw kwRightArrow
   r <- typeExpr (varsNum + 1) vars
   return $ mkPi' l r
+
+seqqExpr ::
+  (Member InfoTableBuilder r) =>
+  Index ->
+  HashMap Text Level ->
+  ParsecS r Node
+seqqExpr varsNum vars = do
+  node <- ioExpr varsNum vars
+  seqqExpr' varsNum vars node <|> return node
+
+seqqExpr' ::
+  (Member InfoTableBuilder r) =>
+  Index ->
+  HashMap Text Level ->
+  Node ->
+  ParsecS r Node
+seqqExpr' varsNum vars node = do
+  kw kwSeqq
+  node' <- seqqExpr varsNum vars
+  return $ mkBuiltinApp' OpSeq [node, node']
 
 ioExpr ::
   (Member InfoTableBuilder r) =>
@@ -539,6 +559,7 @@ builtinAppExpr varsNum vars = do
       <|> (kw kwShow $> OpShow)
       <|> (kw kwStrConcat $> OpStrConcat)
       <|> (kw kwStrToInt $> OpStrToInt)
+      <|> (kw kwSeqq $> OpSeq)
       <|> (kw kwTrace $> OpTrace)
       <|> (kw kwFail $> OpFail)
   args <- P.many (atom varsNum vars)

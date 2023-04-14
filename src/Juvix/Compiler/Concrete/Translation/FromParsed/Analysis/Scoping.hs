@@ -219,21 +219,36 @@ checkImport ::
   (Members '[Error ScoperError, State Scope, Reader ScopeParameters, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
   Import 'Parsed ->
   Sem r (Import 'Scoped)
-checkImport import_@(Import kw path) = do
+checkImport import_@(Import kw path qual) = do
   checkCycle
   cache <- gets (^. scoperModulesCache . cachedModules)
   moduleRef <- maybe (readScopeModule import_) return (cache ^. at path)
-  let checked = moduleRef ^. moduleRefModule
+  let checked :: Module 'Scoped 'ModuleTop = moduleRef ^. moduleRefModule
       sname :: S.TopModulePath = checked ^. modulePath
       sname' :: S.Name = set S.nameConcrete (topModulePathToName path) sname
       moduleId = sname ^. S.nameId
       cmoduleRef :: ModuleRef'' 'S.Concrete 'ModuleTop = set moduleRefName sname' moduleRef
-  modify (over scopeTopModules (HashMap.insert path moduleRef))
-  registerName (set S.nameConcrete path sname)
+      importName :: S.TopModulePath = set S.nameConcrete path sname
+      synonymName :: Maybe S.TopModulePath = do
+        synonym <- qual
+        return (set S.nameConcrete synonym sname)
+      qual' :: Maybe S.TopModulePath
+      qual' = do
+        asName <- qual
+        return (set S.nameConcrete asName sname')
+  addModuleToScope moduleRef
+  registerName importName
+  whenJust synonymName registerName
   let moduleRef' = mkModuleRef' moduleRef
   modify (over scoperModules (HashMap.insert moduleId moduleRef'))
-  return (Import kw cmoduleRef)
+  return (Import kw cmoduleRef qual')
   where
+    addModuleToScope :: ModuleRef'' 'S.NotConcrete 'ModuleTop -> Sem r ()
+    addModuleToScope moduleRef = do
+      let mpath :: TopModulePath = fromMaybe path qual
+          uid :: S.NameId = moduleRef ^. moduleRefName . S.nameId
+          singTbl = HashMap.singleton uid moduleRef
+      modify (over (scopeTopModules . at mpath) (Just . maybe singTbl (HashMap.insert uid moduleRef)))
     checkCycle :: Sem r ()
     checkCycle = do
       topp <- asks (^. scopeTopParents)
@@ -260,7 +275,7 @@ lookupSymbolAux ::
 lookupSymbolAux modules final = do
   local' <- hereOrInLocalModule
   import' <- importedTopModule
-  return $ local' ++ maybeToList import'
+  return (local' ++ import')
   where
     hereOrInLocalModule :: Sem r [SymbolEntry] =
       case modules of
@@ -276,9 +291,10 @@ lookupSymbolAux modules final = do
             . fmap (mapMaybe getModuleRef . toList . (^. symbolInfo))
             . HashMap.lookup p
             <$> gets (^. scopeSymbols)
-    importedTopModule :: Sem r (Maybe SymbolEntry)
+    importedTopModule :: Sem r [SymbolEntry]
     importedTopModule = do
-      fmap (EntryModule . mkModuleRef') . HashMap.lookup path <$> gets (^. scopeTopModules)
+      tbl <- gets (^. scopeTopModules)
+      return (tbl ^.. at path . _Just . each . to (EntryModule . mkModuleRef'))
       where
         path = TopModulePath modules final
 
@@ -314,7 +330,7 @@ lookupQualifiedSymbol (path, sym) = do
     -- Looks for a top level modules
     there :: Sem r [SymbolEntry]
     there = do
-      concatMapM (fmap maybeToList . uncurry lookInTopModule) allTopPaths
+      concatMapM (uncurry lookInTopModule) allTopPaths
       where
         allTopPaths :: [(TopModulePath, [Symbol])]
         allTopPaths = map (first nonEmptyToTopPath) raw
@@ -326,9 +342,15 @@ lookupQualifiedSymbol (path, sym) = do
               ]
             nonEmptyToTopPath :: NonEmpty Symbol -> TopModulePath
             nonEmptyToTopPath l = TopModulePath (NonEmpty.init l) (NonEmpty.last l)
-        lookInTopModule :: TopModulePath -> [Symbol] -> Sem r (Maybe SymbolEntry)
-        lookInTopModule topPath remaining =
-          ((fmap (^. moduleExportInfo) . HashMap.lookup topPath) >=> lookInExport sym remaining) <$> gets (^. scopeTopModules)
+        lookInTopModule :: TopModulePath -> [Symbol] -> Sem r [SymbolEntry]
+        lookInTopModule topPath remaining = do
+          tbl <- gets (^. scopeTopModules)
+          return $
+            catMaybes
+              [ lookInExport sym remaining (ref ^. moduleExportInfo)
+                | Just t <- [tbl ^. at topPath],
+                  ref <- toList t
+              ]
 
 checkQualifiedExpr ::
   (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder] r) =>
@@ -526,7 +548,6 @@ topBindings :: Sem (Reader BindingStrategy ': r) a -> Sem r a
 topBindings = runReader BindingTop
 
 localBindings :: Sem (Reader BindingStrategy ': r) a -> Sem r a
--- localBindings = local (const BindingLocal)
 localBindings = runReader BindingLocal
 
 checkTopModule ::
@@ -710,7 +731,7 @@ checkOpenImportModule ::
 checkOpenImportModule op
   | Just k <- op ^. openModuleImportKw =
       let import_ :: Import 'Parsed
-          import_ = Import k (moduleNameToTopModulePath (op ^. openModuleName))
+          import_ = Import k (moduleNameToTopModulePath (op ^. openModuleName)) Nothing
        in do
             void (checkImport import_)
             scopedOpen <- checkOpenModule (set openModuleImportKw Nothing op)

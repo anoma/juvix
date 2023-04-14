@@ -50,8 +50,11 @@ computeNodeTypeInfo tab = umapL go
           OpShow -> mkTypeString'
           OpStrConcat -> mkTypeString'
           OpStrToInt -> mkTypeInteger'
-          OpTrace -> case _builtinAppArgs of
+          OpSeq -> case _builtinAppArgs of
             [_, arg2] -> Info.getNodeType arg2
+            _ -> error "incorrect seq builtin application"
+          OpTrace -> case _builtinAppArgs of
+            [arg] -> Info.getNodeType arg
             _ -> error "incorrect trace builtin application"
           OpFail -> Info.getNodeType node
       NCtr Constr {..} ->
