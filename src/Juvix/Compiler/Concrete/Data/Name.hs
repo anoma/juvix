@@ -86,7 +86,7 @@ topModulePathToName (TopModulePath ms m) = case nonEmpty ms of
 
 topModulePathToDottedPath :: IsString s => TopModulePath -> s
 topModulePathToDottedPath (TopModulePath l r) =
-  fromText $ mconcat $ intersperse "." $ map (^. symbolText) $ l ++ [r]
+  fromText . mconcat . intersperse "." . map (^. symbolText) $ l ++ [r]
 
 moduleNameToTopModulePath :: Name -> TopModulePath
 moduleNameToTopModulePath = \case

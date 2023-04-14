@@ -7,6 +7,9 @@ where
 import Juvix.Data.Keyword
 import Juvix.Extra.Strings qualified as Str
 
+kwAs :: Keyword
+kwAs = asciiKw Str.as
+
 kwBuiltin :: Keyword
 kwBuiltin = asciiKw Str.builtin
 
