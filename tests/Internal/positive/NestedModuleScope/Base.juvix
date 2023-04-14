@@ -1,0 +1,5 @@
+module Base;
+
+module NestedBase;
+  open import Base2 public;
+end;

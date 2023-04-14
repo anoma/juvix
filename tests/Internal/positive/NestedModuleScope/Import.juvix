@@ -1,0 +1,7 @@
+module Import;
+
+open import Base;
+open import Base2;
+
+main : Foo;
+main := foo;
