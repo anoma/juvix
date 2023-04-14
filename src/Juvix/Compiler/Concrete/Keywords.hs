@@ -50,8 +50,7 @@ allKeywordStrings = keywordsStrings allKeywords
 
 allKeywords :: [Keyword]
 allKeywords =
-  [ kwAs,
-    kwAssign,
+  [ kwAssign,
     kwAt,
     kwAxiom,
     kwCase,
@@ -78,4 +77,10 @@ allKeywords =
     kwUsing,
     kwWhere,
     kwWildcard
+  ]
+
+-- | Keywords that do not need to be reserved
+nonKeywords :: [Keyword]
+nonKeywords =
+  [ kwAs
   ]
