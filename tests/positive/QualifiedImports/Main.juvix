@@ -1,7 +1,8 @@
 module Main;
 
-import Stdlib.Prelude as Prelude;
+import Stdlib.Data.Nat as Prelude;
 import Stdlib.Prelude as Longer.For.No.Reason;
+
 open Prelude;
 
 axiom a : Nat;
@@ -10,3 +11,11 @@ axiom b : Longer.For.No.Reason.Nat;
 
 main : Prelude.Nat;
 main := 123;
+
+-- Merging imports
+import Stdlib.Data.Nat as X;
+import Stdlib.Data.Int as X;
+
+axiom c : X.Nat;
+
+axiom d : X.Int;
