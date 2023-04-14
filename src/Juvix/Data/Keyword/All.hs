@@ -181,6 +181,9 @@ kwBind = asciiKw Str.bind
 kwSeq :: Keyword
 kwSeq = asciiKw Str.seq_
 
+kwSeqq :: Keyword
+kwSeqq = asciiKw Str.seqq_
+
 kwTrace :: Keyword
 kwTrace = asciiKw Str.trace_
 

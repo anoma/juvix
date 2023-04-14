@@ -243,7 +243,7 @@ tests:
       - repl
     args:
       - positive/issue1731/builtinTrace.juvix
-    stdin: trace 2 (printNatLn 3)
+    stdin: trace 2 >>> printNatLn 3
     stdout:
       contains: |
         3

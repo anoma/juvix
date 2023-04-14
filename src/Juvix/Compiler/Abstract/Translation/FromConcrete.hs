@@ -300,6 +300,7 @@ registerBuiltinFunction d = \case
   BuiltinIntNonNeg -> registerIntNonNeg d
   BuiltinIntLe -> registerIntLe d
   BuiltinIntLt -> registerIntLt d
+  BuiltinSeq -> registerSeq d
 
 registerBuiltinAxiom ::
   (Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen] r) =>

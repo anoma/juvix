@@ -91,6 +91,7 @@ data BuiltinFunction
   | BuiltinIntNonNeg
   | BuiltinIntLe
   | BuiltinIntLt
+  | BuiltinSeq
   deriving stock (Show, Eq, Ord, Enum, Bounded, Generic, Data)
 
 instance Hashable BuiltinFunction
@@ -121,6 +122,7 @@ instance Pretty BuiltinFunction where
     BuiltinIntNonNeg -> Str.intNonNeg
     BuiltinIntLe -> Str.intLe
     BuiltinIntLt -> Str.intLt
+    BuiltinSeq -> Str.builtinSeq
 
 data BuiltinAxiom
   = BuiltinNatPrint
