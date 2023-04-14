@@ -79,7 +79,8 @@ allKeywords =
     kwWildcard
   ]
 
--- | Keywords that do not need to be reserved
+-- | Keywords that do not need to be reserved. Currently only for documentation
+-- purposes
 nonKeywords :: [Keyword]
 nonKeywords =
   [ kwAs
