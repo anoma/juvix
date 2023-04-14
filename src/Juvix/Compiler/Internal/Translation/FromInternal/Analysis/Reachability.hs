@@ -3,16 +3,15 @@ module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Reachability wh
 import Juvix.Compiler.Abstract.Data.NameDependencyInfo
 import Juvix.Compiler.Internal.Language
 import Juvix.Compiler.Internal.Translation.FromAbstract.Data.Context
--- import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context qualified as MicroTyped
-import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking qualified as MicroArity
-import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context qualified as MicroTyped
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking qualified as Arity
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context qualified as Typed
 import Juvix.Prelude
 
-filterUnreachable :: MicroTyped.InternalTypedResult -> MicroTyped.InternalTypedResult
-filterUnreachable r = r {MicroTyped._resultModules = modules'}
+filterUnreachable :: Typed.InternalTypedResult -> Typed.InternalTypedResult
+filterUnreachable r = r {Typed._resultModules = modules'}
   where
-    depInfo = r ^. (MicroTyped.resultInternalArityResult . MicroArity.resultInternalResult . resultDepInfo)
-    modules = r ^. MicroTyped.resultModules
+    depInfo = r ^. (Typed.resultInternalArityResult . Arity.resultInternalResult . resultDepInfo)
+    modules = r ^. Typed.resultModules
     modules' = run $ runReader depInfo (mapM goModule modules)
 
 askIsReachable :: Member (Reader NameDependencyInfo) r => Name -> Sem r Bool
