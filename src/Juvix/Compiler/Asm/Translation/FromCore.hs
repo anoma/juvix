@@ -137,20 +137,23 @@ genCode infoTable fi =
     goBuiltinApp isTail tempSize refs (Core.BuiltinApp {..}) =
       case _builtinAppOp of
         OpSeq ->
-          case _builtinAppArgs of
-            [arg1, arg2] ->
-              DL.append
-                (go False tempSize refs arg1)
-                ( DL.cons
-                    (mkInstr Pop)
-                    (go isTail tempSize refs arg2)
-                )
-            _ -> impossible
+          goSeq isTail tempSize refs _builtinAppArgs
         _ ->
           snocReturn isTail $
             DL.append
               (DL.concat (map (go False tempSize refs) (reverse _builtinAppArgs)))
               (genOp _builtinAppOp)
+
+    goSeq :: Bool -> Int -> BinderList Value -> [Core.Node] -> Code'
+    goSeq isTail tempSize refs = \case
+      [arg1, arg2] ->
+        DL.append
+          (go False tempSize refs arg1)
+          ( DL.cons
+              (mkInstr Pop)
+              (go isTail tempSize refs arg2)
+          )
+      _ -> impossible
 
     goConstr :: Bool -> Int -> BinderList Value -> Core.Constr -> Code'
     goConstr isTail tempSize refs = \case

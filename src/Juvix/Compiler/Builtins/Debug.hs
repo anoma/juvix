@@ -8,7 +8,7 @@ import Juvix.Prelude
 registerTrace :: (Members '[Builtins, NameIdGen] r) => AxiomDef -> Sem r ()
 registerTrace f = do
   let ftype = f ^. axiomType
-      u = ExpressionUniverse (Universe {_universeLevel = Nothing, _universeLoc = error "Universe with no location"})
+      u = ExpressionUniverse smallUniverseNoLoc
   a <- freshVar "a"
   let freeVars = HashSet.fromList [a]
   unless
@@ -19,7 +19,7 @@ registerTrace f = do
 registerFail :: (Members '[Builtins, NameIdGen] r) => AxiomDef -> Sem r ()
 registerFail f = do
   let ftype = f ^. axiomType
-      u = ExpressionUniverse (Universe {_universeLevel = Nothing, _universeLoc = error "Universe with no location"})
+      u = ExpressionUniverse smallUniverseNoLoc
   a <- freshVar "a"
   let freeVars = HashSet.fromList [a]
   string_ <- getBuiltinName (getLoc f) BuiltinString

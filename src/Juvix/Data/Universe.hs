@@ -41,6 +41,9 @@ smallUniverse = Universe (Just smallLevel)
 isSmallUniverse :: Universe -> Bool
 isSmallUniverse = (== smallLevel) . getUniverseLevel
 
+smallUniverseNoLoc :: Universe
+smallUniverseNoLoc = smallUniverse (error "Universe with no location")
+
 instance HasAtomicity Universe where
   atomicity u = case u ^. universeLevel of
     Nothing -> Atom
