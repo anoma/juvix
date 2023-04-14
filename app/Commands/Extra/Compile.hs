@@ -73,32 +73,35 @@ prepareRuntime buildDir o = do
       ensureDir (includeDir <//> parent filePath)
       BS.writeFile (toFilePath (includeDir <//> filePath)) contents
 
-outputFile :: Member App r => CompileOptions -> Path Abs File -> Sem r (Path Abs File)
+outputFile :: forall r. Member App r => CompileOptions -> Path Abs File -> Sem r (Path Abs File)
 outputFile opts inputFile =
-  maybe (return defaultOutputFile) someBaseToAbs' (opts ^? compileOutputFile . _Just . pathPath)
+  maybe defaultOutputFile someBaseToAbs' (opts ^? compileOutputFile . _Just . pathPath)
   where
-    defaultOutputFile :: Path Abs File
-    defaultOutputFile = case opts ^. compileTarget of
-      TargetNative64 ->
-        if
-            | opts ^. compileCOutput -> replaceExtension' ".c" inputFile
-            | opts ^. compilePreprocess -> addExtension' ".c" (addExtension' ".out" (removeExtension' inputFile))
-            | opts ^. compileAssembly -> replaceExtension' ".s" inputFile
-            | otherwise -> removeExtension' inputFile
-      TargetWasm32Wasi ->
-        if
-            | opts ^. compileCOutput -> replaceExtension' ".c" inputFile
-            | opts ^. compilePreprocess -> addExtension' ".c" (addExtension' ".out" (removeExtension' inputFile))
-            | opts ^. compileAssembly -> replaceExtension' ".wat" inputFile
-            | otherwise -> replaceExtension' ".wasm" inputFile
-      TargetGeb ->
-        if
-            | opts ^. compileTerm -> replaceExtension' ".geb" inputFile
-            | otherwise -> replaceExtension' ".lisp" inputFile
-      TargetCore ->
-        replaceExtension' ".jvc" inputFile
-      TargetAsm ->
-        replaceExtension' ".jva" inputFile
+    defaultOutputFile :: Sem r (Path Abs File)
+    defaultOutputFile = do
+      invokeDir <- askInvokeDir
+      let baseOutputFile = invokeDir <//> filename inputFile
+      return $ case opts ^. compileTarget of
+        TargetNative64 ->
+          if
+              | opts ^. compileCOutput -> replaceExtension' ".c" inputFile
+              | opts ^. compilePreprocess -> addExtension' ".c" (addExtension' ".out" (removeExtension' inputFile))
+              | opts ^. compileAssembly -> replaceExtension' ".s" inputFile
+              | otherwise -> removeExtension' baseOutputFile
+        TargetWasm32Wasi ->
+          if
+              | opts ^. compileCOutput -> replaceExtension' ".c" inputFile
+              | opts ^. compilePreprocess -> addExtension' ".c" (addExtension' ".out" (removeExtension' inputFile))
+              | opts ^. compileAssembly -> replaceExtension' ".wat" inputFile
+              | otherwise -> replaceExtension' ".wasm" baseOutputFile
+        TargetGeb ->
+          if
+              | opts ^. compileTerm -> replaceExtension' ".geb" inputFile
+              | otherwise -> replaceExtension' ".lisp" baseOutputFile
+        TargetCore ->
+          replaceExtension' ".jvc" baseOutputFile
+        TargetAsm ->
+          replaceExtension' ".jva" baseOutputFile
 
 clangNativeCompile ::
   forall r.

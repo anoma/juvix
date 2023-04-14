@@ -201,11 +201,6 @@ jobs:
           version: "13.0"
           cached: "${{ steps.cache-llvm.outputs.cache-hit }}"
 
-      - name: Build the mdbook
-        run: |
-          cd main
-          make docs
-
       - name: Make runtime
         run: |
           cd main
@@ -225,6 +220,11 @@ jobs:
           make install
           make html-examples
           make demo-example
+
+      - name: Build the mdbook
+        run: |
+          cd main
+          make docs
 
       - name: Setup Pages
         uses: actions/configure-pages@v3
