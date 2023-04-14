@@ -157,7 +157,8 @@ instance HasExpressions FunctionDef where
           _funDefType = ty',
           _funDefExamples = examples',
           _funDefName,
-          _funDefBuiltin
+          _funDefBuiltin,
+          _funDefPragmas
         }
 
 instance HasExpressions InductiveParameter where
@@ -176,7 +177,8 @@ instance HasExpressions InductiveDef where
           _inductiveExamples = examples',
           _inductiveName,
           _inductiveBuiltin,
-          _inductivePositive
+          _inductivePositive,
+          _inductivePragmas
         }
 
 instance HasExpressions InductiveConstructorDef where
@@ -190,7 +192,8 @@ instance HasExpressions InductiveConstructorDef where
         { _inductiveConstructorExamples = examples',
           _inductiveConstructorParameters = args',
           _inductiveConstructorReturnType = ret',
-          _inductiveConstructorName
+          _inductiveConstructorName,
+          _inductiveConstructorPragmas
         }
 
 fillHolesFunctionDef :: HashMap Hole Expression -> FunctionDef -> FunctionDef
@@ -288,7 +291,7 @@ unfoldTypeAbsType t = case t of
   _ -> ([], t)
 
 foldExplicitApplication :: Expression -> [Expression] -> Expression
-foldExplicitApplication f = foldApplication f . zip (repeat Explicit)
+foldExplicitApplication f = foldApplication f . map (Explicit,)
 
 foldApplication :: Expression -> [(IsImplicit, Expression)] -> Expression
 foldApplication f = \case

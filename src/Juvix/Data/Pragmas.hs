@@ -8,21 +8,27 @@ data PragmaInline
   = InlineNever
   | InlineFullyApplied
   | InlinePartiallyApplied {_pragmaInlineArgsNum :: Int}
-  deriving stock (Show, Eq, Ord)
+  deriving stock (Show, Eq, Ord, Data, Generic)
 
 newtype PragmaUnroll = PragmaUnroll
   { _pragmaUnrollDepth :: Int
   }
-  deriving stock (Show, Eq, Ord)
+  deriving stock (Show, Eq, Ord, Data, Generic)
 
 data Pragmas = Pragmas
   { _pragmasInline :: Maybe PragmaInline,
     _pragmasUnroll :: Maybe PragmaUnroll
   }
-  deriving stock (Show, Eq, Ord)
+  deriving stock (Show, Eq, Ord, Data, Generic)
 
 makeLenses ''PragmaUnroll
 makeLenses ''Pragmas
+
+instance Hashable PragmaInline
+
+instance Hashable PragmaUnroll
+
+instance Hashable Pragmas
 
 type PragmaError = Text
 
@@ -55,6 +61,10 @@ instance FromJSON Pragmas where
         _pragmaUnrollDepth <- asIntegral
         return PragmaUnroll {..}
 
+-- The Semigroup `<>` is used to propagate pragmas from an enclosing context.
+-- For example, if `p1` are the pragmas declared for a module `M`, and `p2` the
+-- pragmas declared for a function `f` inside `M`, then the actual pragmas for
+-- `f` are `p1 <> p2`.
 instance Semigroup Pragmas where
   p1 <> p2 =
     Pragmas

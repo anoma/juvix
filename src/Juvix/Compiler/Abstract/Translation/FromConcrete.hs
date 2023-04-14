@@ -7,7 +7,6 @@ where
 import Data.HashMap.Strict qualified as HashMap
 import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Compiler.Abstract.Data.InfoTableBuilder
-import Juvix.Compiler.Abstract.Language (FunctionDef (_funDefExamples))
 import Juvix.Compiler.Abstract.Language qualified as Abstract
 import Juvix.Compiler.Abstract.Translation.FromConcrete.Data.Context
 import Juvix.Compiler.Builtins
@@ -342,9 +341,11 @@ goInductive ::
 goInductive ty@InductiveDef {..} = do
   _inductiveParameters' <- concatMapM goInductiveParameters _inductiveParameters
   _inductiveType' <- mapM goExpression _inductiveType
-  _inductiveConstructors' <- mapM goConstructorDef _inductiveConstructors
-  _inductiveExamples' <- goExamples _inductiveDoc
   _inductivePragmas' <- goPragmas _inductivePragmas
+  _inductiveConstructors' <-
+    local (const _inductivePragmas') $
+      mapM goConstructorDef _inductiveConstructors
+  _inductiveExamples' <- goExamples _inductiveDoc
   let loc = getLoc _inductiveName
       indDef =
         Abstract.InductiveDef
