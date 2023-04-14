@@ -539,26 +539,6 @@ topBindings = runReader BindingTop
 localBindings :: Sem (Reader BindingStrategy ': r) a -> Sem r a
 localBindings = runReader BindingLocal
 
-freshTopModulePath ::
-  forall s.
-  (Members '[State ScoperState, NameIdGen] s) =>
-  TopModulePath ->
-  Sem s S.TopModulePath
-freshTopModulePath _modulePath = do
-  _nameId <- freshNameId
-  let _nameDefinedIn = S.topModulePathToAbsPath _modulePath
-      _nameConcrete = _modulePath
-      _nameDefined = getLoc (_modulePath ^. modulePathName)
-      _nameKind = S.KNameTopModule
-      _nameFixity :: Maybe Fixity
-      _nameFixity = Nothing
-      -- This visibility annotation is not relevant
-      _nameVisibilityAnn = VisPublic
-      _nameWhyInScope = S.BecauseDefined
-      _nameVerbatim = N.topModulePathToDottedPath _modulePath
-      moduleName = S.Name' {..}
-  return moduleName
-
 checkTopModule ::
   forall r.
   (Members '[Error ScoperError, Reader ScopeParameters, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
@@ -570,13 +550,32 @@ checkTopModule m@Module {..} = do
   registerModule (r ^. moduleRefModule)
   return r
   where
+    freshTopModulePath ::
+      forall s.
+      (Members '[State ScoperState, NameIdGen] s) =>
+      Sem s S.TopModulePath
+    freshTopModulePath = do
+      _nameId <- freshNameId
+      let _nameDefinedIn = S.topModulePathToAbsPath _modulePath
+          _nameConcrete = _modulePath
+          _nameDefined = getLoc (_modulePath ^. modulePathName)
+          _nameKind = S.KNameTopModule
+          _nameFixity :: Maybe Fixity
+          _nameFixity = Nothing
+          -- This visibility annotation is not relevant
+          _nameVisibilityAnn = VisPublic
+          _nameWhyInScope = S.BecauseDefined
+          _nameVerbatim = N.topModulePathToDottedPath _modulePath
+          moduleName = S.Name' {..}
+      return moduleName
+
     iniScope :: Scope
     iniScope = emptyScope (getTopModulePath m)
 
     checkedModule :: Sem r (ModuleRef'' 'S.NotConcrete 'ModuleTop)
     checkedModule = do
       (s, (m', p)) <- runState iniScope $ do
-        path' <- freshTopModulePath _modulePath
+        path' <- freshTopModulePath
         withTopScope $ do
           (_moduleExportInfo, body') <- topBindings (checkModuleBody _moduleBody)
           doc' <- mapM checkJudoc _moduleDoc
