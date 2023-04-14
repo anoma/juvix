@@ -62,6 +62,27 @@ expressionFromTextSource fp txt = mapError (JuvixError @ParserError) $ do
     Left e -> throw e
     Right exp' -> return exp'
 
+importFromTextSource ::
+  Members '[Error JuvixError, NameIdGen, Files, PathResolver] r =>
+  Path Abs File ->
+  Text ->
+  Sem r (Import 'Parsed)
+importFromTextSource fp txt = mapError (JuvixError @ParserError) $ runImportParser fp txt
+
+runImportParser ::
+  Members '[Files, NameIdGen, Error ParserError, PathResolver] r =>
+  Path Abs File ->
+  Text ->
+  Sem r (Import 'Parsed)
+runImportParser fileName input = do
+  m <-
+    runParserInfoTableBuilder $
+      evalState (Nothing @(Judoc 'Parsed)) $
+        P.runParserT import_ (toFilePath fileName) input
+  case m of
+    (_, Left err) -> throw (ErrMegaparsec (MegaparsecError err))
+    (_, Right r) -> return r
+
 runModuleParser :: Members '[Error ParserError, Files, PathResolver, NameIdGen, InfoTableBuilder] r => Path Abs File -> Text -> Sem r (Either ParserError (Module 'Parsed 'ModuleTop))
 runModuleParser fileName input = do
   m <-

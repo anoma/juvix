@@ -15,6 +15,7 @@ import Juvix.Compiler.Backend qualified as Backend
 import Juvix.Compiler.Backend.C qualified as C
 import Juvix.Compiler.Backend.Geb qualified as Geb
 import Juvix.Compiler.Builtins
+import Juvix.Compiler.Concrete.Data.ParsedInfoTableBuilder qualified as Concrete
 import Juvix.Compiler.Concrete.Data.Scope
 import Juvix.Compiler.Concrete.Translation.FromParsed qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver
@@ -317,7 +318,8 @@ corePipelineIOEither entry = do
     initialArtifacts :: Artifacts
     initialArtifacts =
       Artifacts
-        { _artifactMainModuleScope = Nothing,
+        { _artifactParsing = Concrete.iniState,
+          _artifactMainModuleScope = Nothing,
           _artifactInternalTypedTable = mempty,
           _artifactTypes = mempty,
           _artifactResolver = PathResolver.iniResolverState,

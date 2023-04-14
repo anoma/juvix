@@ -7,6 +7,8 @@ module Juvix.Compiler.Pipeline.Artifacts where
 
 import Juvix.Compiler.Builtins
 import Juvix.Compiler.Concrete.Data.InfoTable qualified as Scoped
+import Juvix.Compiler.Concrete.Data.ParsedInfoTableBuilder (BuilderState)
+import Juvix.Compiler.Concrete.Data.ParsedInfoTableBuilder qualified as Concrete
 import Juvix.Compiler.Concrete.Data.Scope
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver
 import Juvix.Compiler.Core.Data.InfoTableBuilder qualified as Core
@@ -19,7 +21,8 @@ import Juvix.Prelude
 -- | `Artifacts` contains enough information so that the pipeline can be
 -- restarted while preserving existing state.
 data Artifacts = Artifacts
-  { -- Scoping
+  { _artifactParsing :: BuilderState,
+    -- Scoping
     _artifactResolver :: ResolverState,
     _artifactBuiltins :: BuiltinsState,
     _artifactNameIdState :: Stream NameId,
@@ -55,6 +58,9 @@ runPathResolverArtifacts = runStateLikeArtifacts runPathResolverPipe' artifactRe
 
 runBuiltinsArtifacts :: Members '[Error JuvixError, State Artifacts] r => Sem (Builtins ': r) a -> Sem r a
 runBuiltinsArtifacts = runStateLikeArtifacts runBuiltins artifactBuiltins
+
+runParserInfoTableBuilderArtifacts :: Members '[State Artifacts] r => Sem (Concrete.InfoTableBuilder : r) a -> Sem r a
+runParserInfoTableBuilderArtifacts = runStateLikeArtifacts Concrete.runParserInfoTableBuilder' artifactParsing
 
 runNameIdGenArtifacts ::
   Members '[State Artifacts] r =>

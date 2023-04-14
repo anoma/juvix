@@ -10,6 +10,9 @@ module Juvix.Compiler.Concrete.Data.ParsedInfoTableBuilder
     visitModule,
     runParserInfoTableBuilder,
     module Juvix.Compiler.Concrete.Data.ParsedInfoTable,
+    BuilderState,
+    runParserInfoTableBuilder',
+    iniState,
   )
 where
 
@@ -99,10 +102,9 @@ build st =
 registerItem' :: Members '[State BuilderState] r => ParsedItem -> Sem r ()
 registerItem' i = modify' (over stateItems (i :))
 
-runParserInfoTableBuilder :: Sem (InfoTableBuilder ': r) a -> Sem r (InfoTable, a)
-runParserInfoTableBuilder =
-  fmap (first build)
-    . runState iniState
+runParserInfoTableBuilder' :: BuilderState -> Sem (InfoTableBuilder ': r) a -> Sem r (BuilderState, a)
+runParserInfoTableBuilder' s =
+  runState s
     . reinterpret
       ( \case
           ModuleVisited i -> HashSet.member i <$> gets (^. stateVisited)
@@ -120,3 +122,6 @@ runParserInfoTableBuilder =
                     _parsedTag = ParsedTagComment
                   }
       )
+
+runParserInfoTableBuilder :: Sem (InfoTableBuilder ': r) a -> Sem r (InfoTable, a)
+runParserInfoTableBuilder = fmap (first build) <$> runParserInfoTableBuilder' iniState
