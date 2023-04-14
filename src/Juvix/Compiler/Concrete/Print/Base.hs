@@ -126,7 +126,7 @@ instance PrettyPrint (Import 'Scoped) where
       <+?> ppQual
     where
       ppQual :: Maybe (Sem r ())
-      ppQual = case i ^. importQualified of
+      ppQual = case i ^. importAsName of
         Nothing -> Nothing
         Just as -> Just (noLoc P.kwAs <+> ppMorpheme as)
 

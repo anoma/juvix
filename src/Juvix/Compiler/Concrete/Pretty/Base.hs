@@ -516,10 +516,10 @@ instance SingI s => PrettyCode (Import s) where
     return $ kwImport <+> modulePath' <+?> qual'
     where
       ppQual :: Sem r (Maybe (Doc Ann))
-      ppQual = case i ^. importQualified of
+      ppQual = case i ^. importAsName of
         Nothing -> return Nothing
         Just as -> do
-          syn <- ppSymbol as
+          syn <- ppTopModulePath as
           return . Just $ kwAs <+> syn
       ppModulePath = case sing :: SStage s of
         SParsed -> ppCode (i ^. importModule)

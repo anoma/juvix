@@ -294,11 +294,11 @@ import_ = do
   _importKw <- kw kwImport
   _importModule <- topModulePath
   P.lift (importedModule _importModule)
-  _importQualified <- optional qualified
+  _importAsName <- optional pasName
   return Import {..}
   where
-    qualified :: ParsecS r Symbol
-    qualified = void (kw kwAs) >> symbol
+    pasName :: ParsecS r TopModulePath
+    pasName = void (kw kwAs) >> topModulePath
 
 withPath' ::
   forall r a.

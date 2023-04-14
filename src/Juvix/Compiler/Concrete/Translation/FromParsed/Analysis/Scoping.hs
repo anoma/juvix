@@ -231,8 +231,8 @@ checkImport import_@(Import kw path qual) = do
       importName :: S.TopModulePath = set S.nameConcrete path sname
       synonymName :: Maybe S.TopModulePath = do
         synonym <- qual
-        return (set S.nameConcrete (moduleSymbolToTopModulePath synonym) sname)
-      qual' :: Maybe S.Symbol
+        return (set S.nameConcrete synonym sname)
+      qual' :: Maybe S.TopModulePath
       qual' = do
         asName <- qual
         return (set S.nameConcrete asName sname')
@@ -245,7 +245,7 @@ checkImport import_@(Import kw path qual) = do
   where
     addModuleToScope :: ModuleRef'' 'S.NotConcrete 'ModuleTop -> Sem r ()
     addModuleToScope moduleRef = do
-      let mpath :: TopModulePath = maybe path moduleSymbolToTopModulePath qual
+      let mpath :: TopModulePath = fromMaybe path qual
       modify (over scopeTopModules (HashMap.insert mpath moduleRef))
     checkCycle :: Sem r ()
     checkCycle = do
