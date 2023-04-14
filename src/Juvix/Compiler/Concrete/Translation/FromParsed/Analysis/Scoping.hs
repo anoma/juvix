@@ -246,7 +246,9 @@ checkImport import_@(Import kw path qual) = do
     addModuleToScope :: ModuleRef'' 'S.NotConcrete 'ModuleTop -> Sem r ()
     addModuleToScope moduleRef = do
       let mpath :: TopModulePath = fromMaybe path qual
-      modify (over scopeTopModules (HashMap.insert mpath moduleRef))
+          uid :: S.NameId = moduleRef ^. moduleRefName . S.nameId
+          singTbl = HashMap.singleton uid moduleRef
+      modify (over (scopeTopModules . at mpath) (Just . maybe singTbl (HashMap.insert uid moduleRef)))
     checkCycle :: Sem r ()
     checkCycle = do
       topp <- asks (^. scopeTopParents)
@@ -273,7 +275,7 @@ lookupSymbolAux ::
 lookupSymbolAux modules final = do
   local' <- hereOrInLocalModule
   import' <- importedTopModule
-  return $ local' ++ maybeToList import'
+  return (local' ++ import')
   where
     hereOrInLocalModule :: Sem r [SymbolEntry] =
       case modules of
@@ -289,9 +291,10 @@ lookupSymbolAux modules final = do
             . fmap (mapMaybe getModuleRef . toList . (^. symbolInfo))
             . HashMap.lookup p
             <$> gets (^. scopeSymbols)
-    importedTopModule :: Sem r (Maybe SymbolEntry)
+    importedTopModule :: Sem r [SymbolEntry]
     importedTopModule = do
-      fmap (EntryModule . mkModuleRef') . HashMap.lookup path <$> gets (^. scopeTopModules)
+      tbl <- gets (^. scopeTopModules)
+      return (tbl ^.. at path . _Just . each . to (EntryModule . mkModuleRef'))
       where
         path = TopModulePath modules final
 
@@ -327,7 +330,7 @@ lookupQualifiedSymbol (path, sym) = do
     -- Looks for a top level modules
     there :: Sem r [SymbolEntry]
     there = do
-      concatMapM (fmap maybeToList . uncurry lookInTopModule) allTopPaths
+      concatMapM (uncurry lookInTopModule) allTopPaths
       where
         allTopPaths :: [(TopModulePath, [Symbol])]
         allTopPaths = map (first nonEmptyToTopPath) raw
@@ -339,9 +342,15 @@ lookupQualifiedSymbol (path, sym) = do
               ]
             nonEmptyToTopPath :: NonEmpty Symbol -> TopModulePath
             nonEmptyToTopPath l = TopModulePath (NonEmpty.init l) (NonEmpty.last l)
-        lookInTopModule :: TopModulePath -> [Symbol] -> Sem r (Maybe SymbolEntry)
-        lookInTopModule topPath remaining =
-          ((^? at topPath . _Just . moduleExportInfo) >=> lookInExport sym remaining) <$> gets (^. scopeTopModules)
+        lookInTopModule :: TopModulePath -> [Symbol] -> Sem r [SymbolEntry]
+        lookInTopModule topPath remaining = do
+          tbl <- gets (^. scopeTopModules)
+          return $
+            catMaybes
+              [ lookInExport sym remaining (ref ^. moduleExportInfo)
+                | Just t <- [tbl ^. at topPath],
+                  ref <- toList t
+              ]
 
 checkQualifiedExpr ::
   (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder] r) =>

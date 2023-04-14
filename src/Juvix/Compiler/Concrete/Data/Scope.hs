@@ -31,7 +31,11 @@ data BindingStrategy
 data Scope = Scope
   { _scopePath :: S.AbsModulePath,
     _scopeSymbols :: HashMap Symbol SymbolInfo,
-    _scopeTopModules :: HashMap TopModulePath (ModuleRef'' 'S.NotConcrete 'ModuleTop),
+    -- | The map from S.NameId to Modules is needed because we support merging
+    -- several imports under the same name. E.g.
+    -- import A as X;
+    -- import B as X;
+    _scopeTopModules :: HashMap TopModulePath (HashMap S.NameId (ModuleRef'' 'S.NotConcrete 'ModuleTop)),
     -- | Symbols that have been defined in the current scope level. Every symbol
     -- should map to itself. This is needed because we may query it with a
     -- symbol with a different location but we may want the location of the
