@@ -394,7 +394,9 @@ instance (SingI s) => PrettyCode (JudocParagraphLine s) where
 
 instance (SingI s) => PrettyCode (Judoc s) where
   ppCode :: forall r. (Members '[Reader Options] r) => Judoc s -> Sem r (Doc Ann)
-  ppCode (Judoc blocks) = mconcatMapM ppCode blocks
+  ppCode (Judoc blocks) = do
+    doc' <- vsep <$> mapM ppCode blocks
+    return $ doc' <> line
 
 instance (SingI s) => PrettyCode (JudocAtom s) where
   ppCode :: forall r. (Members '[Reader Options] r) => JudocAtom s -> Sem r (Doc Ann)

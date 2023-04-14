@@ -1,0 +1,30 @@
+module Pragmas;
+
+open import Stdlib.Prelude;
+
+{-#
+  unknownPragma: something
+  unroll: 100
+  inline: false
+#-}
+f : Nat → Nat;
+f x := x;
+
+{-# inline: true #-}
+g : Nat → Nat;
+g x := suc x;
+
+{-
+Multiline highlighting
+-}
+--- Judoc comment 1
+--- Judoc comment 2
+{-# unroll: 0 #-}
+terminating
+h : Nat → Nat;
+h x := x + 5;
+
+--- Judoc comment
+{-# {inline: false, unroll: 10, unknownPragma: tratatata} #-}
+main : Nat;
+main := 0;
