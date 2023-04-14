@@ -3,6 +3,7 @@ module Juvix.Compiler.Concrete.Data.ParsedInfoTableBuilder
     registerLiteral,
     registerKeyword,
     registerJudocText,
+    registerPragmas,
     registerComment,
     registerModule,
     moduleVisited,
@@ -40,6 +41,14 @@ registerKeyword r =
 
 registerJudocText :: Member InfoTableBuilder r => Interval -> Sem r ()
 registerJudocText i =
+  registerItem
+    ParsedItem
+      { _parsedLoc = i,
+        _parsedTag = ParsedTagComment
+      }
+
+registerPragmas :: Member InfoTableBuilder r => Interval -> Sem r ()
+registerPragmas i =
   registerItem
     ParsedItem
       { _parsedLoc = i,

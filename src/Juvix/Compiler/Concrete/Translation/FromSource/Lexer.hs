@@ -74,8 +74,11 @@ string = lexemeInterval string'
 judocExampleStart :: ParsecS r ()
 judocExampleStart = P.chunk Str.judocExample >> hspace
 
-judocStart :: ParsecS r ()
-judocStart = P.chunk Str.judocStart >> hspace
+judocStart :: Member InfoTableBuilder r => ParsecS r ()
+judocStart = do
+  (_, i) <- interval (P.chunk Str.judocStart)
+  hspace
+  P.lift (registerJudocText i)
 
 judocEmptyLine :: (Members '[InfoTableBuilder] r) => ParsecS r ()
 judocEmptyLine = lexeme (void (P.try (judocStart >> P.newline)))

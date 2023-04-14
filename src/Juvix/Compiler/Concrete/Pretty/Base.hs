@@ -368,7 +368,7 @@ instance (SingI s) => PrettyCode (OpenModule s) where
 instance PrettyCode Pragmas where
   ppCode Pragmas {..} =
     return $
-      annotate (AnnComment) (pretty (Str.pragmasStart <> BS.toString _pragmasSource <> Str.pragmasEnd)) <> line
+      annotate AnnComment (pretty (Str.pragmasStart <> BS.toString _pragmasSource <> Str.pragmasEnd)) <> line
 
 ppJudocStart :: Doc Ann
 ppJudocStart = pretty (Str.judocStart :: Text)
@@ -389,7 +389,7 @@ instance (SingI s) => PrettyCode (JudocBlock s) where
 instance (SingI s) => PrettyCode (JudocParagraphLine s) where
   ppCode (JudocParagraphLine atoms) = do
     atoms' <- mconcatMap ppCode atoms
-    let prefix = pretty (Str.judocStart :: Text) :: Doc Ann
+    let prefix = annotate AnnComment (pretty (Str.judocStart :: Text))
     return (prefix <+> atoms')
 
 instance (SingI s) => PrettyCode (Judoc s) where

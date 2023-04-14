@@ -178,7 +178,8 @@ statement = P.label "<top level statement>" $ do
 
 stashPragmas :: forall r. (Members '[InfoTableBuilder, PragmasStash, NameIdGen] r) => ParsecS r ()
 stashPragmas = do
-  pragmas <- parsePragmas
+  (pragmas, i) <- interval parsePragmas
+  P.lift (registerPragmas i)
   P.lift (put (Just pragmas))
   return ()
   where

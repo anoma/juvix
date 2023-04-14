@@ -144,7 +144,7 @@ instance PrettyPrint Expression where
 
 instance PrettyPrint Pragmas where
   ppCode Pragmas {..} =
-    noLoc (annotate (AnnComment) (pretty (Str.pragmasStart <> BS.toString _pragmasSource <> Str.pragmasEnd)))
+    noLoc (annotate AnnComment (pretty (Str.pragmasStart <> BS.toString _pragmasSource <> Str.pragmasEnd)))
       <> line
 
 instance PrettyPrint (Example 'Scoped) where
