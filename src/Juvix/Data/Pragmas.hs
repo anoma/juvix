@@ -1,8 +1,8 @@
-module Juvix.Compiler.Pragmas where
+module Juvix.Data.Pragmas where
 
 import Data.Aeson.BetterErrors
 import Data.Yaml
-import Juvix.Prelude hiding ((<|>))
+import Juvix.Prelude.Base hiding ((<|>))
 
 data PragmaInline
   = InlineNever
@@ -16,13 +16,7 @@ newtype PragmaUnroll = PragmaUnroll
   deriving stock (Show, Eq, Ord)
 
 data Pragmas = Pragmas
-  { -- We keep the exact source of the pragma text. This is necessary, because
-    -- pragmas are supposed to be backwards-compatible. Unrecognised pragmas
-    -- should be ignored, but they still need to be printed out when
-    -- pretty-printing. Also, we probably don't want to impose pragma formatting
-    -- choices on the user.
-    _pragmasSource :: ByteString,
-    _pragmasInline :: Maybe PragmaInline,
+  { _pragmasInline :: Maybe PragmaInline,
     _pragmasUnroll :: Maybe PragmaUnroll
   }
   deriving stock (Show, Eq, Ord)
@@ -37,8 +31,6 @@ instance FromJSON Pragmas where
     where
       parsePragmas :: Parse PragmaError Pragmas
       parsePragmas = do
-        let _pragmasSource :: ByteString
-            _pragmasSource = ""
         _pragmasInline <- keyMay "inline" parseInline
         _pragmasUnroll <- keyMay "unroll" parseUnroll
         return Pragmas {..}
@@ -62,3 +54,21 @@ instance FromJSON Pragmas where
       parseUnroll = do
         _pragmaUnrollDepth <- asIntegral
         return PragmaUnroll {..}
+
+instance Semigroup Pragmas where
+  p1 <> p2 =
+    Pragmas
+      { _pragmasInline = maybeSecond (p1 ^. pragmasInline) (p2 ^. pragmasInline),
+        _pragmasUnroll = maybeSecond (p2 ^. pragmasUnroll) (p1 ^. pragmasUnroll)
+      }
+    where
+      maybeSecond :: Maybe a -> Maybe a -> Maybe a
+      maybeSecond x Nothing = x
+      maybeSecond _ x@Just {} = x
+
+instance Monoid Pragmas where
+  mempty =
+    Pragmas
+      { _pragmasInline = Nothing,
+        _pragmasUnroll = Nothing
+      }

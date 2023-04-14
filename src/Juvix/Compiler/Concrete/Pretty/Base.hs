@@ -5,14 +5,12 @@ module Juvix.Compiler.Concrete.Pretty.Base
   )
 where
 
-import Data.ByteString.UTF8 qualified as BS
 import Data.List.NonEmpty.Extra qualified as NonEmpty
 import Juvix.Compiler.Concrete.Data.ScopedName (AbsModulePath, IsConcrete (..))
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Extra (unfoldApplication)
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Pretty.Options
-import Juvix.Compiler.Pragmas
 import Juvix.Data.Ape
 import Juvix.Data.CodeAnn
 import Juvix.Extra.Strings qualified as Str
@@ -365,10 +363,10 @@ instance (SingI s) => PrettyCode (OpenModule s) where
         Public -> Just kwPublic
         NoPublic -> Nothing
 
-instance PrettyCode Pragmas where
-  ppCode Pragmas {..} =
+instance PrettyCode ParsedPragmas where
+  ppCode pragma =
     return $
-      annotate AnnComment (pretty (Str.pragmasStart <> BS.toString _pragmasSource <> Str.pragmasEnd)) <> line
+      annotate AnnComment (pretty (Str.pragmasStart <> pragma ^. withSourceText <> Str.pragmasEnd)) <> line
 
 ppJudocStart :: Doc Ann
 ppJudocStart = pretty (Str.judocStart :: Text)

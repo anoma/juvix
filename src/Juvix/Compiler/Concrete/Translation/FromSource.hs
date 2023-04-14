@@ -19,7 +19,6 @@ import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver
 import Juvix.Compiler.Concrete.Translation.FromSource.Data.Context
 import Juvix.Compiler.Concrete.Translation.FromSource.Lexer hiding (symbol)
 import Juvix.Compiler.Pipeline.EntryPoint
-import Juvix.Compiler.Pragmas
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Parser.Error
 import Juvix.Prelude
@@ -27,7 +26,7 @@ import Juvix.Prelude.Pretty (Pretty, prettyText)
 
 type JudocStash = State (Maybe (Judoc 'Parsed))
 
-type PragmasStash = State (Maybe Pragmas)
+type PragmasStash = State (Maybe ParsedPragmas)
 
 fromSource ::
   (Members '[PathResolver, Files, Error JuvixError, NameIdGen] r) =>
@@ -71,7 +70,7 @@ expressionFromTextSource fp txt = mapError (JuvixError @ParserError) $ do
 runModuleParser :: Members '[Error ParserError, Files, PathResolver, NameIdGen, InfoTableBuilder] r => Path Abs File -> Text -> Sem r (Either ParserError (Module 'Parsed 'ModuleTop))
 runModuleParser fileName input = do
   m <-
-    evalState (Nothing @Pragmas) $
+    evalState (Nothing @ParsedPragmas) $
       evalState (Nothing @(Judoc 'Parsed)) $
         P.runParserT topModuleDef (toFilePath fileName) input
   case m of
@@ -86,7 +85,7 @@ runExpressionParser ::
 runExpressionParser fileName input = do
   m <-
     runParserInfoTableBuilder $
-      evalState (Nothing @Pragmas) $
+      evalState (Nothing @ParsedPragmas) $
         evalState (Nothing @(Judoc 'Parsed)) $
           P.runParserT parseExpressionAtoms (toFilePath fileName) input
   case m of
@@ -183,7 +182,7 @@ stashPragmas = do
   P.lift (put (Just pragmas))
   return ()
   where
-    parsePragmas :: ParsecS r Pragmas
+    parsePragmas :: ParsecS r ParsedPragmas
     parsePragmas = do
       void (P.chunk Str.pragmasStart)
       off <- P.getOffset
@@ -192,7 +191,7 @@ stashPragmas = do
       let bs = BS.fromString str
       case decodeEither' bs of
         Left err -> parseFailure off (prettyPrintParseException err)
-        Right pragmas -> return pragmas {_pragmasSource = bs}
+        Right pragmas -> return $ WithSource (fromString str) pragmas
 
 stashJudoc :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r ()
 stashJudoc = do
@@ -445,10 +444,10 @@ getJudoc = P.lift $ do
   put (Nothing @(Judoc 'Parsed))
   return j
 
-getPragmas :: (Member PragmasStash r) => ParsecS r (Maybe Pragmas)
+getPragmas :: (Member PragmasStash r) => ParsecS r (Maybe ParsedPragmas)
 getPragmas = P.lift $ do
   j <- get
-  put (Nothing @Pragmas)
+  put (Nothing @ParsedPragmas)
   return j
 
 typeSignature ::

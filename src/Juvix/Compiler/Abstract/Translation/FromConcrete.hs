@@ -29,30 +29,34 @@ unsupported msg = error $ msg <> "Scoped to Abstract: not yet supported"
 fromConcrete :: (Members '[Error JuvixError, Builtins, NameIdGen] r) => Scoper.ScoperResult -> Sem r AbstractResult
 fromConcrete _resultScoper =
   mapError (JuvixError @ScoperError) $ do
-    (_resultTable, _resultModules) <- runInfoTableBuilder (evalState (ModulesCache mempty) (mapM goTopModule ms))
+    (_resultTable, _resultModules) <-
+      runInfoTableBuilder $
+        runReader @Pragmas mempty $
+          evalState (ModulesCache mempty) $
+            mapM goTopModule ms
     let _resultExports = _resultScoper ^. Scoper.resultExports
     return AbstractResult {..}
   where
     ms = _resultScoper ^. Scoper.resultModules
 
 fromConcreteExpression :: (Members '[Error JuvixError, NameIdGen] r) => Scoper.Expression -> Sem r Abstract.Expression
-fromConcreteExpression = mapError (JuvixError @ScoperError) . ignoreInfoTableBuilder . goExpression
+fromConcreteExpression = mapError (JuvixError @ScoperError) . ignoreInfoTableBuilder . runReader @Pragmas mempty . goExpression
 
 goTopModule ::
-  (Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, State ModulesCache] r) =>
+  (Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ModulesCache] r) =>
   Module 'Scoped 'ModuleTop ->
   Sem r Abstract.TopModule
 goTopModule = goModule
 
 goLocalModule ::
-  (Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, State ModulesCache] r) =>
+  (Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ModulesCache] r) =>
   Module 'Scoped 'ModuleLocal ->
   Sem r Abstract.LocalModule
 goLocalModule = goModule
 
 goModule ::
   forall r t.
-  (Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, State ModulesCache] r, SingI t) =>
+  (Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ModulesCache] r, SingI t) =>
   Module 'Scoped t ->
   Sem r Abstract.Module
 goModule m = case sing :: SModuleIsTop t of
@@ -70,19 +74,26 @@ goModule m = case sing :: SModuleIsTop t of
   where
     goModule' :: Module 'Scoped t -> Sem r Abstract.Module
     goModule' Module {..} = do
-      body' <- goModuleBody _moduleBody
+      pragmas' <- goPragmas _modulePragmas
+      body' <- local (const pragmas') (goModuleBody _moduleBody)
       examples' <- goExamples _moduleDoc
       return
         Abstract.Module
           { _moduleName = name',
             _moduleBody = body',
-            _moduleExamples = examples'
+            _moduleExamples = examples',
+            _modulePragmas = pragmas'
           }
       where
         name' :: Abstract.Name
         name' = case sing :: SModuleIsTop t of
           SModuleTop -> goSymbol (S.topModulePathName _modulePath)
           SModuleLocal -> goSymbol _modulePath
+
+goPragmas :: Member (Reader Pragmas) r => Maybe ParsedPragmas -> Sem r Pragmas
+goPragmas p = do
+  p' <- ask
+  return $ p' <> maybe mempty (^. withSourceValue) p
 
 goName :: S.Name -> Abstract.Name
 goName name =
@@ -104,7 +115,7 @@ goSymbol s =
 
 goModuleBody ::
   forall r.
-  (Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, State ModulesCache] r) =>
+  (Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ModulesCache] r) =>
   [Statement 'Scoped] ->
   Sem r Abstract.ModuleBody
 goModuleBody ss' = do
@@ -138,7 +149,7 @@ goModuleBody ss' = do
 
 goStatement ::
   forall r.
-  (Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, State ModulesCache] r) =>
+  (Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ModulesCache] r) =>
   Indexed (Statement 'Scoped) ->
   Sem r (Maybe (Indexed Abstract.Statement))
 goStatement (Indexed idx s) =
@@ -154,7 +165,7 @@ goStatement (Indexed idx s) =
 
 goOpenModule ::
   forall r.
-  (Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, State ModulesCache] r) =>
+  (Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ModulesCache] r) =>
   OpenModule 'Scoped ->
   Sem r (Maybe Abstract.Statement)
 goOpenModule o
@@ -167,7 +178,7 @@ goOpenModule o
   | otherwise = return Nothing
 
 goLetFunctionDef ::
-  (Members '[InfoTableBuilder, Error ScoperError] r) =>
+  (Members '[InfoTableBuilder, Reader Pragmas, Error ScoperError] r) =>
   TypeSignature 'Scoped ->
   [FunctionClause 'Scoped] ->
   Sem r Abstract.FunctionDef
@@ -175,7 +186,7 @@ goLetFunctionDef = goFunctionDefHelper
 
 goFunctionDefHelper ::
   forall r.
-  (Members '[InfoTableBuilder, Error ScoperError] r) =>
+  (Members '[InfoTableBuilder, Reader Pragmas, Error ScoperError] r) =>
   TypeSignature 'Scoped ->
   [FunctionClause 'Scoped] ->
   Sem r Abstract.FunctionDef
@@ -185,6 +196,7 @@ goFunctionDefHelper sig@TypeSignature {..} clauses = do
       _funDefBuiltin = (^. withLocParam) <$> _sigBuiltin
   _funDefTypeSig <- goExpression _sigType
   _funDefExamples <- goExamples _sigDoc
+  _funDefPragmas <- goPragmas _sigPragmas
   _funDefClauses <- case (_sigBody, nonEmpty clauses) of
     (Nothing, Nothing) -> throw (ErrLacksFunctionClause (LacksFunctionClause sig))
     (Just {}, Just clauses') -> throw (ErrDuplicateFunctionClause (DuplicateFunctionClause sig (head clauses')))
@@ -204,7 +216,7 @@ goFunctionDefHelper sig@TypeSignature {..} clauses = do
 
 goTopFunctionDef ::
   forall r.
-  (Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen] r) =>
+  (Members '[InfoTableBuilder, Reader Pragmas, Error ScoperError, Builtins, NameIdGen] r) =>
   TypeSignature 'Scoped ->
   [FunctionClause 'Scoped] ->
   Sem r Abstract.FunctionDef
@@ -215,7 +227,7 @@ goTopFunctionDef sig clauses = do
 
 goExamples ::
   forall r.
-  (Members '[Error ScoperError, InfoTableBuilder] r) =>
+  (Members '[Error ScoperError, Reader Pragmas, InfoTableBuilder] r) =>
   Maybe (Judoc 'Scoped) ->
   Sem r [Abstract.Example]
 goExamples = mapM goExample . maybe [] judocExamples
@@ -230,7 +242,7 @@ goExamples = mapM goExample . maybe [] judocExamples
           }
 
 goFunctionClause ::
-  (Members '[Error ScoperError, InfoTableBuilder] r) =>
+  (Members '[Error ScoperError, Reader Pragmas, InfoTableBuilder] r) =>
   FunctionClause 'Scoped ->
   Sem r Abstract.FunctionClause
 goFunctionClause FunctionClause {..} = do
@@ -244,7 +256,7 @@ goFunctionClause FunctionClause {..} = do
       }
 
 goInductiveParameters ::
-  (Members '[Error ScoperError, InfoTableBuilder] r) =>
+  (Members '[Error ScoperError, Reader Pragmas, InfoTableBuilder] r) =>
   InductiveParameters 'Scoped ->
   Sem r [Abstract.FunctionParameter]
 goInductiveParameters InductiveParameters {..} = do
@@ -324,7 +336,7 @@ registerBuiltinAxiom d = \case
   BuiltinIntPrint -> registerIntPrint d
 
 goInductive ::
-  (Members '[InfoTableBuilder, Builtins, Error ScoperError] r) =>
+  (Members '[InfoTableBuilder, Reader Pragmas, Builtins, Error ScoperError] r) =>
   InductiveDef 'Scoped ->
   Sem r Abstract.InductiveDef
 goInductive ty@InductiveDef {..} = do
@@ -332,6 +344,7 @@ goInductive ty@InductiveDef {..} = do
   _inductiveType' <- mapM goExpression _inductiveType
   _inductiveConstructors' <- mapM goConstructorDef _inductiveConstructors
   _inductiveExamples' <- goExamples _inductiveDoc
+  _inductivePragmas' <- goPragmas _inductivePragmas
   let loc = getLoc _inductiveName
       indDef =
         Abstract.InductiveDef
@@ -341,7 +354,8 @@ goInductive ty@InductiveDef {..} = do
             _inductiveType = fromMaybe (Abstract.ExpressionUniverse (smallUniverse loc)) _inductiveType',
             _inductiveConstructors = toList _inductiveConstructors',
             _inductiveExamples = _inductiveExamples',
-            _inductivePositive = ty ^. inductivePositive
+            _inductivePositive = ty ^. inductivePositive,
+            _inductivePragmas = _inductivePragmas'
           }
   whenJust ((^. withLocParam) <$> _inductiveBuiltin) (registerBuiltinInductive indDef)
   inductiveInfo <- registerInductive indDef
@@ -349,22 +363,24 @@ goInductive ty@InductiveDef {..} = do
   return (inductiveInfo ^. inductiveInfoDef)
 
 goConstructorDef ::
-  (Members [Error ScoperError, InfoTableBuilder] r) =>
+  (Members [Error ScoperError, Reader Pragmas, InfoTableBuilder] r) =>
   InductiveConstructorDef 'Scoped ->
   Sem r Abstract.InductiveConstructorDef
 goConstructorDef InductiveConstructorDef {..} = do
   ty' <- goExpression _constructorType
   examples' <- goExamples _constructorDoc
+  pragmas' <- goPragmas _constructorPragmas
   return
     Abstract.InductiveConstructorDef
       { _constructorType = ty',
         _constructorExamples = examples',
-        _constructorName = goSymbol _constructorName
+        _constructorName = goSymbol _constructorName,
+        _constructorPragmas = pragmas'
       }
 
 goExpression ::
   forall r.
-  (Members [Error ScoperError, InfoTableBuilder] r) =>
+  (Members [Error ScoperError, Reader Pragmas, InfoTableBuilder] r) =>
   Expression ->
   Sem r Abstract.Expression
 goExpression = \case
@@ -432,7 +448,7 @@ goExpression = \case
       r' <- goExpression r
       return (Abstract.Application l'' r' Explicit)
 
-goCase :: forall r. (Members '[Error ScoperError, InfoTableBuilder] r) => Case 'Scoped -> Sem r Abstract.Case
+goCase :: forall r. (Members '[Error ScoperError, Reader Pragmas, InfoTableBuilder] r) => Case 'Scoped -> Sem r Abstract.Case
 goCase c = do
   _caseExpression <- goExpression (c ^. caseExpression)
   _caseBranches <- mapM goBranch (c ^. caseBranches)
@@ -445,7 +461,7 @@ goCase c = do
       _caseBranchExpression <- goExpression (b ^. caseBranchExpression)
       return Abstract.CaseBranch {..}
 
-goLambda :: forall r. (Members '[Error ScoperError, InfoTableBuilder] r) => Lambda 'Scoped -> Sem r Abstract.Lambda
+goLambda :: forall r. (Members '[Error ScoperError, Reader Pragmas, InfoTableBuilder] r) => Lambda 'Scoped -> Sem r Abstract.Lambda
 goLambda l = Abstract.Lambda <$> mapM goClause (l ^. lambdaClauses)
   where
     goClause :: LambdaClause 'Scoped -> Sem r Abstract.LambdaClause
@@ -457,7 +473,7 @@ goLambda l = Abstract.Lambda <$> mapM goClause (l ^. lambdaClauses)
 goUniverse :: Universe -> Universe
 goUniverse = id
 
-goFunction :: (Members '[Error ScoperError, InfoTableBuilder] r) => Function 'Scoped -> Sem r Abstract.Function
+goFunction :: (Members '[Error ScoperError, Reader Pragmas, InfoTableBuilder] r) => Function 'Scoped -> Sem r Abstract.Function
 goFunction f = do
   params <- goFunctionParameters (f ^. funParameters)
   ret <- goExpression (f ^. funReturn)
@@ -466,7 +482,7 @@ goFunction f = do
       foldr (\param acc -> Abstract.ExpressionFunction $ Abstract.Function param acc) ret (NonEmpty.tail params)
 
 goFunctionParameters ::
-  (Members '[Error ScoperError, InfoTableBuilder] r) =>
+  (Members '[Error ScoperError, Reader Pragmas, InfoTableBuilder] r) =>
   FunctionParameters 'Scoped ->
   Sem r (NonEmpty Abstract.FunctionParameter)
 goFunctionParameters (FunctionParameters {..}) = do
@@ -552,14 +568,16 @@ goPattern p = case p of
   PatternWildcard i -> return (Abstract.PatternWildcard i)
   PatternEmpty {} -> return Abstract.PatternEmpty
 
-goAxiom :: (Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen] r) => AxiomDef 'Scoped -> Sem r Abstract.AxiomDef
+goAxiom :: (Members '[InfoTableBuilder, Reader Pragmas, Error ScoperError, Builtins, NameIdGen] r) => AxiomDef 'Scoped -> Sem r Abstract.AxiomDef
 goAxiom a = do
   _axiomType' <- goExpression (a ^. axiomType)
+  _axiomPragmas' <- goPragmas (a ^. axiomPragmas)
   let axiom =
         Abstract.AxiomDef
           { _axiomType = _axiomType',
             _axiomBuiltin = (^. withLocParam) <$> a ^. axiomBuiltin,
-            _axiomName = goSymbol (a ^. axiomName)
+            _axiomName = goSymbol (a ^. axiomName),
+            _axiomPragmas = _axiomPragmas'
           }
   whenJust (a ^. axiomBuiltin) (registerBuiltinAxiom axiom . (^. withLocParam))
   registerAxiom' axiom

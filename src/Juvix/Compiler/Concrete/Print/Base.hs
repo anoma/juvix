@@ -5,13 +5,11 @@ module Juvix.Compiler.Concrete.Print.Base
   )
 where
 
-import Data.ByteString.UTF8 qualified as BS
 import Data.List.NonEmpty.Extra qualified as NonEmpty
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Pretty.Base qualified as P
 import Juvix.Compiler.Concrete.Pretty.Options
-import Juvix.Compiler.Pragmas
 import Juvix.Data.CodeAnn (Ann, CodeAnn (..), ppStringLit)
 import Juvix.Data.Effect.ExactPrint
 import Juvix.Data.Keyword.All
@@ -142,9 +140,9 @@ instance PrettyPrint OperatorSyntaxDef where
 instance PrettyPrint Expression where
   ppCode = ppMorpheme
 
-instance PrettyPrint Pragmas where
-  ppCode Pragmas {..} =
-    noLoc (annotate AnnComment (pretty (Str.pragmasStart <> BS.toString _pragmasSource <> Str.pragmasEnd)))
+instance PrettyPrint ParsedPragmas where
+  ppCode pragma =
+    noLoc (annotate AnnComment (pretty (Str.pragmasStart <> pragma ^. withSourceText <> Str.pragmasEnd)))
       <> line
 
 instance PrettyPrint (Example 'Scoped) where
