@@ -1,7 +1,8 @@
 # Juvix project
 
-A _juvix project_ is a collection of juvix modules plus some extra metadata. The
-most convenient way to create a juvix project is to run the command `juvix init`.
+A _juvix project_ is a collection of juvix modules plus some extra metadata
+gathered in a `juvix.yaml` file. The most convenient way to create a juvix
+project is to run the command `juvix init`.
 
 A project is rooted in a directory. The root is set by creating a `juvix.yaml`,
 which contains the following fields:
@@ -32,6 +33,5 @@ exceptions:
 
 ## Module naming convention
 
-Modules that belong to a project must follow a naming convention. That is, if
-`dir` is the root of a project, then the module in `dir/Path/To/lib.juvix` must
-be named `Path.To.lib`.
+Modules that belong to a project must follow a naming convention.
+See the documentation for [modules](modules.md).

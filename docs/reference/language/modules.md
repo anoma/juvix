@@ -12,7 +12,7 @@ We call local modules those who are defined inside another module.
 A module has a name and a body, which comprises a sequence of
 [statements](statement.md).
 
-In order to define a module with name `Data.List` we will use the following syntax:
+In order to define a module named `Data.List` we will use the following syntax:
 
 ```juvix
 module Data.List;
@@ -37,6 +37,12 @@ import Data.List;
 
 Now, we can access the definitions in the imported module using _qualified
 names_. E.g., `Data.List.sort`.
+
+It is possible to import modules and give them a more convinent way thus:
+
+```juvix
+import Data.List as List;
+```
 
 If we want to access the contents of a module without the need to qualify the
 names, we use an _open statement_. The syntax is as follows:
