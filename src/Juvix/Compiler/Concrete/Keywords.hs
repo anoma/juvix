@@ -10,6 +10,7 @@ import Juvix.Data.Keyword.All
   ( -- reserved
 
     -- extra
+    kwAs,
     kwAssign,
     kwAt,
     kwAxiom,
@@ -76,4 +77,11 @@ allKeywords =
     kwUsing,
     kwWhere,
     kwWildcard
+  ]
+
+-- | Keywords that do not need to be reserved. Currently only for documentation
+-- purposes
+nonKeywords :: [Keyword]
+nonKeywords =
+  [ kwAs
   ]

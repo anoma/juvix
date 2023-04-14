@@ -212,6 +212,9 @@ intPrint = "int-print"
 builtinSeq :: IsString s => s
 builtinSeq = "seq"
 
+as :: IsString s => s
+as = "as"
+
 builtin :: IsString s => s
 builtin = "builtin"
 
