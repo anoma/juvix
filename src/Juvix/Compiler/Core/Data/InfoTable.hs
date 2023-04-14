@@ -63,7 +63,8 @@ data IdentifierInfo = IdentifierInfo
     -- | The number of lambdas in the identifier body
     _identifierArgsNum :: Int,
     _identifierIsExported :: Bool,
-    _identifierBuiltin :: Maybe BuiltinFunction
+    _identifierBuiltin :: Maybe BuiltinFunction,
+    _identifierPragmas :: Pragmas
   }
 
 data InductiveInfo = InductiveInfo
@@ -74,7 +75,8 @@ data InductiveInfo = InductiveInfo
     _inductiveConstructors :: [Tag],
     _inductiveParams :: [ParameterInfo],
     _inductivePositive :: Bool,
-    _inductiveBuiltin :: Maybe BuiltinType
+    _inductiveBuiltin :: Maybe BuiltinType,
+    _inductivePragmas :: Pragmas
   }
 
 data ConstructorInfo = ConstructorInfo
@@ -85,7 +87,8 @@ data ConstructorInfo = ConstructorInfo
     _constructorArgsNum :: Int,
     _constructorInductive :: Symbol,
     _constructorFixity :: Maybe Fixity,
-    _constructorBuiltin :: Maybe BuiltinConstructor
+    _constructorBuiltin :: Maybe BuiltinConstructor,
+    _constructorPragmas :: Pragmas
   }
 
 data ParameterInfo = ParameterInfo
@@ -98,7 +101,8 @@ data ParameterInfo = ParameterInfo
 data AxiomInfo = AxiomInfo
   { _axiomName :: Text,
     _axiomLocation :: Maybe Location,
-    _axiomType :: Type
+    _axiomType :: Type,
+    _axiomPragmas :: Pragmas
   }
 
 makeLenses ''InfoTable

@@ -57,7 +57,8 @@ setupMainFunction tab node =
           _identifierArgsNum = 0,
           _identifierType = mkDynamic',
           _identifierBuiltin = Nothing,
-          _identifierIsExported = True
+          _identifierIsExported = True,
+          _identifierPragmas = mempty
         }
 
 guardSymbolNotDefined ::
@@ -153,7 +154,8 @@ statementDef = do
                 _identifierType = ty,
                 _identifierArgsNum = 0,
                 _identifierIsExported = False,
-                _identifierBuiltin = Nothing
+                _identifierBuiltin = Nothing,
+                _identifierPragmas = mempty
               }
       lift $ registerIdent txt info
       void $ optional (parseDefinition sym ty)
@@ -198,7 +200,8 @@ statementInductive = do
             _inductiveConstructors = [],
             _inductiveParams = [],
             _inductivePositive = True,
-            _inductiveBuiltin = Nothing
+            _inductiveBuiltin = Nothing,
+            _inductivePragmas = mempty
           }
   lift $ registerInductive txt ii
   ctrs <- braces $ P.sepEndBy (constrDecl sym) (kw kwSemicolon)
@@ -225,7 +228,8 @@ constrDecl symInd = do
             _constructorType = ty,
             _constructorInductive = symInd,
             _constructorFixity = Nothing,
-            _constructorBuiltin = Nothing
+            _constructorBuiltin = Nothing,
+            _constructorPragmas = mempty
           }
   lift $ registerConstructor txt ci
   return ci
