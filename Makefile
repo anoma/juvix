@@ -3,7 +3,7 @@ PREFIX="$(PWD)/.stack-work/prefix"
 UNAME := $(shell uname)
 
 EXAMPLEMILESTONE=examples/milestone
-EXAMPLEHTMLOUTPUT=_docs/examples/html
+EXAMPLEHTMLOUTPUT=docs/examples/html
 EXAMPLES= Collatz/Collatz.juvix \
 	Fibonacci/Fibonacci.juvix \
 	Hanoi/Hanoi.juvix \
@@ -79,7 +79,7 @@ demo-example:
 # -- MDBook
 
 .PHONY: docs
-docs:
+docs: html-examples
 	@cp $(METAFILES) docs/
 	@cp -r assets/ docs/
 	@mdbook build

@@ -62,6 +62,7 @@ _build.*/
 *.agdai
 .agda/
 agda2hs/
+docs/examples/html/.*
 docs/*.html
 *.cabal
 /src/Juvix/Utils/OldParser.hs
