@@ -4,7 +4,8 @@ module Juvix.Data.CodeAnn
   )
 where
 
-import Juvix.Compiler.Concrete.Data
+import Juvix.Compiler.Concrete.Data.Name
+import Juvix.Data.NameKind
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude
 import Juvix.Prelude.Pretty hiding (braces, group, list, parens)

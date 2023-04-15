@@ -50,14 +50,21 @@ data PropertyFace = PropertyFace
     _faceFace :: Face
   }
 
+data PropertyType = PropertyType
+  { _typeInterval :: Interval,
+    _typeType :: Text
+  }
+
 data Properties = Properties
   { _propertiesGoto :: [PropertyGoto],
-    _propertiesFace :: [PropertyFace]
+    _propertiesFace :: [PropertyFace],
+    _propertiesType :: [PropertyType]
   }
 
 data RawProperties = RawProperties
   { _rawPropertiesFace :: [RawFace],
-    _rawPropertiesGoto :: [RawGoto]
+    _rawPropertiesGoto :: [RawGoto],
+    _rawPropertiesType :: [RawType]
   }
 
 -- | (File, Row, Col, Length)
@@ -67,6 +74,9 @@ type RawFace = (RawInterval, Face)
 
 -- | (Interval, TargetFile, TargetLine, TargetColumn)
 type RawGoto = (RawInterval, Path Abs File, Int, Int)
+
+-- | (Interval, Type)
+type RawType = (RawInterval, Text)
 
 $( deriveToJSON
      defaultOptions
@@ -80,7 +90,8 @@ rawProperties :: Properties -> RawProperties
 rawProperties Properties {..} =
   RawProperties
     { _rawPropertiesGoto = map rawGoto _propertiesGoto,
-      _rawPropertiesFace = map rawFace _propertiesFace
+      _rawPropertiesFace = map rawFace _propertiesFace,
+      _rawPropertiesType = map rawType _propertiesType
     }
   where
     rawInterval :: Interval -> RawInterval
@@ -90,6 +101,9 @@ rawProperties Properties {..} =
         fromIntegral (i ^. intervalStart . locCol),
         intervalLength i
       )
+    rawType :: PropertyType -> RawType
+    rawType PropertyType {..} = (rawInterval _typeInterval, _typeType)
+
     rawFace :: PropertyFace -> RawFace
     rawFace PropertyFace {..} = (rawInterval _faceInterval, _faceFace)
 
@@ -104,8 +118,8 @@ rawProperties Properties {..} =
 -- | Example instruction:
 -- (add-text-properties 20 28
 --  '(face juvix-highlight-constructor-face))
-instance ToSexp PropertyFace where
-  toSexp PropertyFace {..} =
+instance ToSExp PropertyFace where
+  toSExp PropertyFace {..} =
     App [Symbol "add-text-properties", start, end, face]
     where
       i = _faceInterval
@@ -115,8 +129,8 @@ instance ToSexp PropertyFace where
       end = pos (i ^. intervalEnd)
       face = Quote (App [Symbol "face", faceSymbol (faceSymbolStr f)])
 
-instance ToSexp PropertyGoto where
-  toSexp PropertyGoto {..} =
+instance ToSExp PropertyGoto where
+  toSExp PropertyGoto {..} =
     App [Symbol "add-text-properties", start, end, goto]
     where
       i = _gotoInterval
@@ -124,13 +138,26 @@ instance ToSexp PropertyGoto where
       targetFile = _gotoFile
       goto = Quote (App [Symbol "juvix-goto", gotoPair])
       pos l = Int (succ (l ^. locOffset . unPos))
+      start :: SExp = pos (i ^. intervalStart)
+      end = pos (i ^. intervalEnd)
+      gotoPair = Pair (String (pack (toFilePath targetFile))) (Int (targetPos ^. locOffset . to (succ . fromIntegral)))
+
+-- (put-text-property 2 3 'display '(raise 0.5))
+instance ToSExp PropertyType where
+  toSExp PropertyType {..} =
+    App
+      [Symbol "put-text-property", start, end, echoHelp, String _typeType]
+    where
+      i = _typeInterval
+      pos l = Int (succ (l ^. locOffset . unPos))
+      echoHelp = Quote (Symbol "help-echo")
       start = pos (i ^. intervalStart)
       end = pos (i ^. intervalEnd)
-      gotoPair = Pair (String (toFilePath targetFile)) (Int (targetPos ^. locOffset . to (succ . fromIntegral)))
 
-instance ToSexp Properties where
-  toSexp Properties {..} =
+instance ToSExp Properties where
+  toSExp Properties {..} =
     progn
-      ( map toSexp _propertiesFace
-          <> map toSexp _propertiesGoto
+      ( map toSExp _propertiesFace
+          <> map toSExp _propertiesGoto
+          <> map toSExp _propertiesType
       )

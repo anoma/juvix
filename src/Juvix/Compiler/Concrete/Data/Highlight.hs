@@ -12,6 +12,11 @@ import Juvix.Compiler.Concrete.Data.Highlight.Input
 import Juvix.Compiler.Concrete.Data.Highlight.Properties
 import Juvix.Compiler.Concrete.Data.Highlight.SExp
 import Juvix.Compiler.Concrete.Data.ScopedName
+-- import Juvix.Compiler.Internal.Language qualified as Internal
+-- import Juvix.Compiler.Internal.Pretty qualified as Internal
+
+import Juvix.Compiler.Internal.Pretty qualified as Internal
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context qualified as Internal
 import Juvix.Prelude as Prelude hiding (show)
 import Prelude qualified
 
@@ -27,19 +32,20 @@ instance Show HighlightBackend where
 
 go :: HighlightBackend -> HighlightInput -> ByteString
 go = \case
-  Emacs -> Text.encodeUtf8 . renderSExp . toSexp . buildProperties
+  Emacs -> Text.encodeUtf8 . renderSExp . toSExp . buildProperties
   Json -> ByteString.toStrict . Aeson.encode . rawProperties . buildProperties
 
 goErrors :: HighlightBackend -> [Interval] -> ByteString
 goErrors = \case
-  Emacs -> Text.encodeUtf8 . renderSExp . toSexp . errorProperties
+  Emacs -> Text.encodeUtf8 . renderSExp . toSExp . errorProperties
   Json -> ByteString.toStrict . Aeson.encode . rawProperties . errorProperties
 
 errorProperties :: [Interval] -> Properties
 errorProperties l =
   Properties
     { _propertiesFace = map goFaceError l,
-      _propertiesGoto = []
+      _propertiesGoto = [],
+      _propertiesType = []
     }
 
 buildProperties :: HighlightInput -> Properties
@@ -48,7 +54,8 @@ buildProperties HighlightInput {..} =
     { _propertiesFace =
         map goFaceParsedItem _highlightParsed
           <> mapMaybe goFaceName _highlightNames,
-      _propertiesGoto = map goGotoProperty _highlightNames
+      _propertiesGoto = map goGotoProperty _highlightNames,
+      _propertiesType = mapMaybe (goTypeProperty _highlightTypes) _highlightNames
     }
 
 nameKindFace :: NameKind -> Maybe Face
@@ -92,3 +99,12 @@ goGotoProperty (AName n) = PropertyGoto {..}
     _gotoInterval = getLoc n
     _gotoPos = n ^. nameDefined . intervalStart
     _gotoFile = n ^. nameDefined . intervalFile
+
+goTypeProperty :: Internal.TypesTable -> AName -> Maybe PropertyType
+goTypeProperty tbl (AName n) = case tbl ^. at (n ^. nameId) of
+  Nothing -> Nothing
+  Just ty ->
+    let _typeType :: Text = Internal.ppPrint ty
+     in Just PropertyType {..}
+  where
+    _typeInterval = getLoc n
