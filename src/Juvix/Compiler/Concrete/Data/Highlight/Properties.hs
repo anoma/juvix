@@ -151,7 +151,7 @@ instance IsProperty EmacsProperty where
 
 putProperty :: IsProperty a => WithLoc a -> SExp
 putProperty (WithLoc i a) =
-  App [Symbol "put-text-property", start, end, String _gpropProperty, _gpropValue]
+  App [Symbol "put-text-property", start, end, Quote (Symbol _gpropProperty), Quote _gpropValue]
   where
     GenericProperty {..} = toProperty a
     start = Int (fileLocToPoint (i ^. intervalStart))
