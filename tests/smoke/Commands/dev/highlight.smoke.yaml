@@ -11,7 +11,7 @@ tests:
 
     stdout:
       contains: |
-          add-text-properties
+          put-text-properties
     exit-status: 0
 
   - name: highlight-vscode
