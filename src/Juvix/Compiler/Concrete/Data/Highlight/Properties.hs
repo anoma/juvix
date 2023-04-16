@@ -4,9 +4,23 @@ import Data.Aeson (ToJSON)
 import Data.Aeson qualified as Aeson
 import Data.Aeson.TH
 import Juvix.Compiler.Concrete.Data.Highlight.SExp
+import Juvix.Data.CodeAnn
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude
 import Lens.Micro.Platform qualified as Lens
+
+data GenericProperty = GenericProperty
+  { _gpropProperty :: Text,
+    _gpropValue :: SExp
+  }
+
+makeLenses ''GenericProperty
+
+class IsProperty a where
+  toProperty :: a -> GenericProperty
+
+instance IsProperty GenericProperty where
+  toProperty = id
 
 data Face
   = FaceConstructor
@@ -39,44 +53,55 @@ faceSymbol faceSymbolTxt = Symbol ("juvix-highlight-" <> faceSymbolTxt <> "-face
 instance ToJSON Face where
   toJSON = Aeson.String . faceSymbolStr
 
+data EmacsProperty
+  = EPropertyGoto PropertyGoto
+  | EPropertyFace PropertyFace
+  | EPropertyType PropertyType
+
+type LocEmacsProperty = WithLoc EmacsProperty
+
 data PropertyGoto = PropertyGoto
-  { _gotoInterval :: Interval,
-    _gotoFile :: Path Abs File,
+  { _gotoFile :: Path Abs File,
     _gotoPos :: FileLoc
   }
 
-data PropertyFace = PropertyFace
-  { _faceInterval :: Interval,
-    _faceFace :: Face
+newtype PropertyFace = PropertyFace
+  { _faceFace :: Face
   }
 
-data PropertyType = PropertyType
-  { _typeInterval :: Interval,
-    _typeType :: Text
+newtype PropertyType = PropertyType
+  { _typeType :: Text
   }
 
-data Properties = Properties
-  { _propertiesGoto :: [PropertyGoto],
-    _propertiesFace :: [PropertyFace],
-    _propertiesType :: [PropertyType]
+data LocProperties = LocProperties
+  { _propertiesGoto :: [WithLoc PropertyGoto],
+    _propertiesFace :: [WithLoc PropertyFace],
+    _propertiesType :: [WithLoc PropertyType]
   }
 
 data RawProperties = RawProperties
-  { _rawPropertiesFace :: [RawFace],
-    _rawPropertiesGoto :: [RawGoto],
-    _rawPropertiesType :: [RawType]
+  { _rawPropertiesFace :: [RawWithLoc RawFace],
+    _rawPropertiesGoto :: [RawWithLoc RawGoto],
+    _rawPropertiesType :: [RawWithLoc RawType]
   }
+
+-- fromCodeAnn :: CodeAnn -> Maybe EmacsProperty
+-- fromCodeAnn = \case
+--   AnnKind k -> undefined
+--   _ -> undefined
 
 -- | (File, Row, Col, Length)
 type RawInterval = (Path Abs File, Int, Int, Int)
 
-type RawFace = (RawInterval, Face)
+type RawWithLoc a = (RawInterval, a)
 
--- | (Interval, TargetFile, TargetLine, TargetColumn)
-type RawGoto = (RawInterval, Path Abs File, Int, Int)
+type RawFace = Face
 
--- | (Interval, Type)
-type RawType = (RawInterval, Text)
+-- | (TargetFile, TargetLine, TargetColumn)
+type RawGoto = (Path Abs File, Int, Int)
+
+-- | (Type)
+type RawType = Text
 
 $( deriveToJSON
      defaultOptions
@@ -86,12 +111,12 @@ $( deriveToJSON
      ''RawProperties
  )
 
-rawProperties :: Properties -> RawProperties
-rawProperties Properties {..} =
+rawProperties :: LocProperties -> RawProperties
+rawProperties LocProperties {..} =
   RawProperties
-    { _rawPropertiesGoto = map rawGoto _propertiesGoto,
-      _rawPropertiesFace = map rawFace _propertiesFace,
-      _rawPropertiesType = map rawType _propertiesType
+    { _rawPropertiesGoto = map (rawWithLoc rawGoto) _propertiesGoto,
+      _rawPropertiesFace = map (rawWithLoc rawFace) _propertiesFace,
+      _rawPropertiesType = map (rawWithLoc rawType) _propertiesType
     }
   where
     rawInterval :: Interval -> RawInterval
@@ -101,63 +126,64 @@ rawProperties Properties {..} =
         fromIntegral (i ^. intervalStart . locCol),
         intervalLength i
       )
+
+    rawWithLoc :: (a -> b) -> WithLoc a -> RawWithLoc b
+    rawWithLoc f x = (rawInterval (getLoc x), f (x ^. withLocParam))
+
     rawType :: PropertyType -> RawType
-    rawType PropertyType {..} = (rawInterval _typeInterval, _typeType)
+    rawType PropertyType {..} = _typeType
 
     rawFace :: PropertyFace -> RawFace
-    rawFace PropertyFace {..} = (rawInterval _faceInterval, _faceFace)
+    rawFace PropertyFace {..} = _faceFace
 
     rawGoto :: PropertyGoto -> RawGoto
     rawGoto PropertyGoto {..} =
-      ( rawInterval _gotoInterval,
-        _gotoFile,
+      ( _gotoFile,
         fromIntegral (_gotoPos ^. locLine),
         fromIntegral (_gotoPos ^. locCol)
       )
 
--- | Example instruction:
--- (add-text-properties 20 28
---  '(face juvix-highlight-constructor-face))
-instance ToSExp PropertyFace where
-  toSExp PropertyFace {..} =
-    App [Symbol "add-text-properties", start, end, face]
-    where
-      i = _faceInterval
-      f = _faceFace
-      pos l = Int (succ (l ^. locOffset . unPos))
-      start = pos (i ^. intervalStart)
-      end = pos (i ^. intervalEnd)
-      face = Quote (App [Symbol "face", faceSymbol (faceSymbolStr f)])
+instance IsProperty EmacsProperty where
+  toProperty = \case
+    EPropertyFace p -> toProperty p
+    EPropertyType p -> toProperty p
+    EPropertyGoto p -> toProperty p
 
-instance ToSExp PropertyGoto where
-  toSExp PropertyGoto {..} =
-    App [Symbol "add-text-properties", start, end, goto]
-    where
-      i = _gotoInterval
-      targetPos = _gotoPos
-      targetFile = _gotoFile
-      goto = Quote (App [Symbol "juvix-goto", gotoPair])
-      pos l = Int (succ (l ^. locOffset . unPos))
-      start :: SExp = pos (i ^. intervalStart)
-      end = pos (i ^. intervalEnd)
-      gotoPair = Pair (String (pack (toFilePath targetFile))) (Int (targetPos ^. locOffset . to (succ . fromIntegral)))
+putProperty :: IsProperty a => WithLoc a -> SExp
+putProperty (WithLoc i a) =
+  App [Symbol "put-text-property", start, end, String _gpropProperty, _gpropValue]
+  where
+    GenericProperty {..} = toProperty a
+    start = Int (fileLocToPoint (i ^. intervalStart))
+    end = Int (fileLocToPoint (i ^. intervalEnd))
 
--- (put-text-property 2 3 'display '(raise 0.5))
-instance ToSExp PropertyType where
-  toSExp PropertyType {..} =
-    App
-      [Symbol "put-text-property", start, end, echoHelp, String _typeType]
-    where
-      i = _typeInterval
-      pos l = Int (succ (l ^. locOffset . unPos))
-      echoHelp = Quote (Symbol "help-echo")
-      start = pos (i ^. intervalStart)
-      end = pos (i ^. intervalEnd)
+instance IsProperty PropertyFace where
+  toProperty PropertyFace {..} =
+    GenericProperty
+      { _gpropProperty = "face",
+        _gpropValue = faceSymbol (faceSymbolStr _faceFace)
+      }
 
-instance ToSExp Properties where
-  toSExp Properties {..} =
+instance IsProperty PropertyGoto where
+  toProperty PropertyGoto {..} =
+    GenericProperty
+      { _gpropProperty = "juvix-goto",
+        _gpropValue = gotoPair
+      }
+    where
+      gotoPair = Pair (String (pack (toFilePath _gotoFile))) (Int (_gotoPos ^. locOffset . to (succ . fromIntegral)))
+
+instance IsProperty PropertyType where
+  toProperty PropertyType {..} =
+    GenericProperty
+      { _gpropProperty = "help-echo",
+        _gpropValue = String _typeType
+      }
+
+instance ToSExp LocProperties where
+  toSExp LocProperties {..} =
     progn
-      ( map toSExp _propertiesFace
-          <> map toSExp _propertiesGoto
-          <> map toSExp _propertiesType
+      ( map putProperty _propertiesFace
+          <> map putProperty _propertiesGoto
+          <> map putProperty _propertiesType
       )

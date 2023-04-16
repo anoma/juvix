@@ -34,3 +34,6 @@ instance Pretty SExp where
     Backquote l -> pretty '`' <> pretty l
     Quote l -> pretty '\'' <> pretty l
     String s -> dquotes (pretty s)
+
+fileLocToPoint :: FileLoc -> Word64
+fileLocToPoint l = succ (l ^. locOffset . unPos)

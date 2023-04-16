@@ -40,17 +40,17 @@ goErrors = \case
   Emacs -> Text.encodeUtf8 . renderSExp . toSExp . errorProperties
   Json -> ByteString.toStrict . Aeson.encode . rawProperties . errorProperties
 
-errorProperties :: [Interval] -> Properties
+errorProperties :: [Interval] -> LocProperties
 errorProperties l =
-  Properties
+  LocProperties
     { _propertiesFace = map goFaceError l,
       _propertiesGoto = [],
       _propertiesType = []
     }
 
-buildProperties :: HighlightInput -> Properties
+buildProperties :: HighlightInput -> LocProperties
 buildProperties HighlightInput {..} =
-  Properties
+  LocProperties
     { _propertiesFace =
         map goFaceParsedItem _highlightParsed
           <> mapMaybe goFaceName _highlightNames,
@@ -68,19 +68,11 @@ nameKindFace = \case
   KNameAxiom -> Just FaceAxiom
   KNameLocal -> Nothing
 
-goFaceError :: Interval -> PropertyFace
-goFaceError i =
-  PropertyFace
-    { _faceFace = FaceError,
-      _faceInterval = i
-    }
+goFaceError :: Interval -> WithLoc PropertyFace
+goFaceError i = WithLoc i (PropertyFace FaceError)
 
-goFaceParsedItem :: ParsedItem -> PropertyFace
-goFaceParsedItem i =
-  PropertyFace
-    { _faceFace = f,
-      _faceInterval = i ^. parsedLoc
-    }
+goFaceParsedItem :: ParsedItem -> WithLoc PropertyFace
+goFaceParsedItem i = WithLoc (i ^. parsedLoc) (PropertyFace f)
   where
     f = case i ^. parsedTag of
       ParsedTagKeyword -> FaceKeyword
@@ -88,23 +80,19 @@ goFaceParsedItem i =
       ParsedTagLiteralString -> FaceString
       ParsedTagComment -> FaceComment
 
-goFaceName :: AName -> Maybe PropertyFace
+goFaceName :: AName -> Maybe (WithLoc PropertyFace)
 goFaceName n = do
   f <- nameKindFace (getNameKind n)
-  return (PropertyFace (getLoc n) f)
+  return (WithLoc (getLoc n) (PropertyFace f))
 
-goGotoProperty :: AName -> PropertyGoto
-goGotoProperty (AName n) = PropertyGoto {..}
+goGotoProperty :: AName -> WithLoc PropertyGoto
+goGotoProperty (AName n) = WithLoc (getLoc n) PropertyGoto {..}
   where
-    _gotoInterval = getLoc n
     _gotoPos = n ^. nameDefined . intervalStart
     _gotoFile = n ^. nameDefined . intervalFile
 
-goTypeProperty :: Internal.TypesTable -> AName -> Maybe PropertyType
-goTypeProperty tbl (AName n) = case tbl ^. at (n ^. nameId) of
-  Nothing -> Nothing
-  Just ty ->
-    let _typeType :: Text = Internal.ppPrint ty
-     in Just PropertyType {..}
-  where
-    _typeInterval = getLoc n
+goTypeProperty :: Internal.TypesTable -> AName -> Maybe (WithLoc PropertyType)
+goTypeProperty tbl (AName n) = do
+  ty <- tbl ^. at (n ^. nameId)
+  let _typeType :: Text = Internal.ppPrint ty
+  return (WithLoc (getLoc n) PropertyType {..})
