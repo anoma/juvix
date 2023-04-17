@@ -10,13 +10,14 @@ import Data.ByteString.Lazy qualified as ByteString
 import Data.Text.Encoding qualified as Text
 import Juvix.Compiler.Concrete.Data.Highlight.Input
 import Juvix.Compiler.Concrete.Data.Highlight.Properties
-import Juvix.Compiler.Concrete.Data.Highlight.SExp
 import Juvix.Compiler.Concrete.Data.ScopedName
 -- import Juvix.Compiler.Internal.Language qualified as Internal
 -- import Juvix.Compiler.Internal.Pretty qualified as Internal
 
 import Juvix.Compiler.Internal.Pretty qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context qualified as Internal
+import Juvix.Data.CodeAnn
+import Juvix.Data.Emacs
 import Juvix.Prelude as Prelude hiding (show)
 import Prelude qualified
 
@@ -30,8 +31,8 @@ instance Show HighlightBackend where
     Emacs -> "emacs"
     Json -> "json"
 
-go :: HighlightBackend -> HighlightInput -> ByteString
-go = \case
+highlight :: HighlightBackend -> HighlightInput -> ByteString
+highlight = \case
   Emacs -> Text.encodeUtf8 . renderSExp . toSExp . buildProperties
   Json -> ByteString.toStrict . Aeson.encode . rawProperties . buildProperties
 
@@ -96,3 +97,37 @@ goTypeProperty tbl (AName n) = do
   ty <- tbl ^. at (n ^. nameId)
   let _typeType :: Text = Internal.ppPrint ty
   return (WithLoc (getLoc n) PropertyType {..})
+
+fromCodeAnn :: CodeAnn -> Maybe EmacsProperty
+fromCodeAnn = \case
+  AnnKind k -> do
+    f <- nameKindFace k
+    return (EPropertyFace (PropertyFace f))
+  AnnKeyword -> Just (EPropertyFace (PropertyFace FaceKeyword))
+  -- TODO add more cases
+  _ -> Nothing
+
+-- RENDER TO EMACS
+--------------------------------------------------------
+
+data RenderState = RenderState
+  { _renderPoint :: Point,
+    _renderStack :: [(Point, EmacsProperty)],
+    _renderProperties :: [WithRange EmacsProperty]
+  }
+
+renderEmacs :: SimpleDocStream CodeAnn -> Text
+renderEmacs = run . evalState iniRenderState . go . alterAnnotationsS fromCodeAnn
+  where
+    iniRenderState =
+      RenderState
+        { _renderPoint = minBound,
+          _renderStack = [],
+          _renderProperties = []
+        }
+    go :: Members '[State RenderState] r => SimpleDocStream EmacsProperty -> Sem r Text
+    go = \case
+      SFail -> error "when is this supposed to happen?"
+      SEmpty -> return ""
+      SChar ch s -> undefined
+      _ -> undefined

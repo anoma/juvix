@@ -30,4 +30,4 @@ runCommand HighlightOptions {..} = do
                   _highlightParsed = items,
                   _highlightTypes = r ^. Internal.resultIdenTypes
                 }
-      sayRaw (Highlight.go _highlightBackend hinput)
+      sayRaw (Highlight.highlight _highlightBackend hinput)

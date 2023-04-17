@@ -1,4 +1,4 @@
-module Juvix.Compiler.Concrete.Data.Highlight.SExp where
+module Juvix.Data.Emacs.SExp where
 
 import Juvix.Prelude
 import Juvix.Prelude.Pretty

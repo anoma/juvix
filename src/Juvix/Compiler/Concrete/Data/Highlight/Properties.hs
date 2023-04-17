@@ -3,8 +3,7 @@ module Juvix.Compiler.Concrete.Data.Highlight.Properties where
 import Data.Aeson (ToJSON)
 import Data.Aeson qualified as Aeson
 import Data.Aeson.TH
-import Juvix.Compiler.Concrete.Data.Highlight.SExp
-import Juvix.Data.CodeAnn
+import Juvix.Data.Emacs
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude
 import Lens.Micro.Platform qualified as Lens
@@ -47,8 +46,11 @@ faceSymbolStr = \case
   FaceString -> Str.string
   FaceError -> Str.error
 
-faceSymbol :: Text -> SExp
-faceSymbol faceSymbolTxt = Symbol ("juvix-highlight-" <> faceSymbolTxt <> "-face")
+instance ToSExp Face where
+  toSExp = faceSymbol . faceSymbolStr
+    where
+      faceSymbol :: Text -> SExp
+      faceSymbol faceSymbolTxt = Symbol ("juvix-highlight-" <> faceSymbolTxt <> "-face")
 
 instance ToJSON Face where
   toJSON = Aeson.String . faceSymbolStr
@@ -84,11 +86,6 @@ data RawProperties = RawProperties
     _rawPropertiesGoto :: [RawWithLoc RawGoto],
     _rawPropertiesType :: [RawWithLoc RawType]
   }
-
--- fromCodeAnn :: CodeAnn -> Maybe EmacsProperty
--- fromCodeAnn = \case
---   AnnKind k -> undefined
---   _ -> undefined
 
 -- | (File, Row, Col, Length)
 type RawInterval = (Path Abs File, Int, Int, Int)
@@ -161,7 +158,7 @@ instance IsProperty PropertyFace where
   toProperty PropertyFace {..} =
     GenericProperty
       { _gpropProperty = "face",
-        _gpropValue = faceSymbol (faceSymbolStr _faceFace)
+        _gpropValue = toSExp _faceFace
       }
 
 instance IsProperty PropertyGoto where
