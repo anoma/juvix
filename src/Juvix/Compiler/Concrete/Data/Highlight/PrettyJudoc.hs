@@ -39,7 +39,7 @@ ppDoc n ty j = do
   n' <- ppScoped n
   j' <- join <$> mapM ppJudoc j
   return $
-    n' <+> kwColon <+> ty' <+?> fmap ((line <> line) <>) j'
+    n' <+> kwColon <+> ty' <+?> fmap ((hardline <> hardline) <>) j'
 
 ppJudoc :: forall r. Members '[Reader Options] r => Judoc 'Scoped -> Sem r (Maybe (Doc CodeAnn))
 ppJudoc (Judoc bs) = do

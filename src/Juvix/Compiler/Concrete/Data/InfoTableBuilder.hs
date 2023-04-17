@@ -47,8 +47,10 @@ toState = reinterpret $ \case
   RegisterFunction f ->
     let ref = FunctionRef' (S.unqualifiedSymbol (f ^. sigName))
         info = FunctionInfo {_functionInfoType = f ^. sigType}
+        j = f ^. sigDoc
      in do
           modify (over infoFunctions (HashMap.insert ref info))
+          registerDoc (f ^. sigName . nameId) j
   RegisterFunctionClause c ->
     let key = c ^. clauseOwnerFunction
         value = c
