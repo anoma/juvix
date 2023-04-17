@@ -16,10 +16,10 @@ data GenericProperty = GenericProperty
 makeLenses ''GenericProperty
 
 class IsProperty a where
-  toProperty :: a -> GenericProperty
+  toProperties :: a -> NonEmpty GenericProperty
 
 instance IsProperty GenericProperty where
-  toProperty = id
+  toProperties = pure
 
 data Face
   = FaceConstructor
@@ -58,7 +58,7 @@ instance ToJSON Face where
 data EmacsProperty
   = EPropertyGoto PropertyGoto
   | EPropertyFace PropertyFace
-  | EPropertyType PropertyType
+  | EPropertyDoc PropertyDoc
 
 type LocEmacsProperty = WithLoc EmacsProperty
 
@@ -71,20 +71,21 @@ newtype PropertyFace = PropertyFace
   { _faceFace :: Face
   }
 
-newtype PropertyType = PropertyType
-  { _typeType :: Text
+data PropertyDoc = PropertyDoc
+  { _docText :: Text,
+    _docSExp :: SExp
   }
 
 data LocProperties = LocProperties
   { _propertiesGoto :: [WithLoc PropertyGoto],
     _propertiesFace :: [WithLoc PropertyFace],
-    _propertiesType :: [WithLoc PropertyType]
+    _propertiesDoc :: [WithLoc PropertyDoc]
   }
 
 data RawProperties = RawProperties
   { _rawPropertiesFace :: [RawWithLoc RawFace],
     _rawPropertiesGoto :: [RawWithLoc RawGoto],
-    _rawPropertiesType :: [RawWithLoc RawType]
+    _rawPropertiesDoc :: [RawWithLoc RawType]
   }
 
 -- | (File, Row, Col, Length)
@@ -113,7 +114,7 @@ rawProperties LocProperties {..} =
   RawProperties
     { _rawPropertiesGoto = map (rawWithLoc rawGoto) _propertiesGoto,
       _rawPropertiesFace = map (rawWithLoc rawFace) _propertiesFace,
-      _rawPropertiesType = map (rawWithLoc rawType) _propertiesType
+      _rawPropertiesDoc = map (rawWithLoc rawType) _propertiesDoc
     }
   where
     rawInterval :: Interval -> RawInterval
@@ -127,8 +128,8 @@ rawProperties LocProperties {..} =
     rawWithLoc :: (a -> b) -> WithLoc a -> RawWithLoc b
     rawWithLoc f x = (rawInterval (getLoc x), f (x ^. withLocParam))
 
-    rawType :: PropertyType -> RawType
-    rawType PropertyType {..} = _typeType
+    rawType :: PropertyDoc -> RawType
+    rawType PropertyDoc {..} = _docText
 
     rawFace :: PropertyFace -> RawFace
     rawFace PropertyFace {..} = _faceFace
@@ -141,46 +142,70 @@ rawProperties LocProperties {..} =
       )
 
 instance IsProperty EmacsProperty where
-  toProperty = \case
-    EPropertyFace p -> toProperty p
-    EPropertyType p -> toProperty p
-    EPropertyGoto p -> toProperty p
+  toProperties = \case
+    EPropertyFace p -> toProperties p
+    EPropertyDoc p -> toProperties p
+    EPropertyGoto p -> toProperties p
 
-putProperty :: IsProperty a => WithLoc a -> SExp
-putProperty (WithLoc i a) =
+-- TODO use add-text-properties
+addGenericProperties :: WithRange (NonEmpty GenericProperty) -> SExp
+addGenericProperties (WithRange i props) =
+  progn (map (putGenericProperty . WithRange i) (toList props))
+
+putGenericProperty :: WithRange GenericProperty -> SExp
+putGenericProperty (WithRange i GenericProperty {..}) =
   App [Symbol "put-text-property", start, end, Quote (Symbol _gpropProperty), Quote _gpropValue]
   where
-    GenericProperty {..} = toProperty a
-    start = Int (fileLocToPoint (i ^. intervalStart))
-    end = Int (fileLocToPoint (i ^. intervalEnd))
+    start = Int (unPoint (i ^. pintervalStart))
+    end = Int (unPoint (i ^. pintervalEnd))
+
+putProperty :: IsProperty a => WithRange a -> SExp
+putProperty = addGenericProperties . fmap toProperties
+
+putPropertyLoc :: IsProperty a => WithLoc a -> SExp
+putPropertyLoc (WithLoc i a) = putProperty (WithRange i' a)
+  where
+    i' :: PointInterval
+    i' =
+      PointInterval
+        { _pintervalStart = fileLocToPoint (i ^. intervalStart),
+          _pintervalEnd = fileLocToPoint (i ^. intervalEnd)
+        }
 
 instance IsProperty PropertyFace where
-  toProperty PropertyFace {..} =
-    GenericProperty
-      { _gpropProperty = "face",
-        _gpropValue = toSExp _faceFace
-      }
+  toProperties PropertyFace {..} =
+    pure
+      GenericProperty
+        { _gpropProperty = "face",
+          _gpropValue = toSExp _faceFace
+        }
 
 instance IsProperty PropertyGoto where
-  toProperty PropertyGoto {..} =
-    GenericProperty
-      { _gpropProperty = "juvix-goto",
-        _gpropValue = gotoPair
-      }
+  toProperties PropertyGoto {..} =
+    pure
+      GenericProperty
+        { _gpropProperty = "juvix-goto",
+          _gpropValue = gotoPair
+        }
     where
       gotoPair = Pair (String (pack (toFilePath _gotoFile))) (Int (_gotoPos ^. locOffset . to (succ . fromIntegral)))
 
-instance IsProperty PropertyType where
-  toProperty PropertyType {..} =
+instance IsProperty PropertyDoc where
+  toProperties PropertyDoc {..} =
     GenericProperty
       { _gpropProperty = "help-echo",
-        _gpropValue = String _typeType
+        _gpropValue = String _docText
       }
+      :| [ GenericProperty
+             { _gpropProperty = "juvix-format",
+               _gpropValue = _docSExp
+             }
+         ]
 
 instance ToSExp LocProperties where
   toSExp LocProperties {..} =
     progn
-      ( map putProperty _propertiesFace
-          <> map putProperty _propertiesGoto
-          <> map putProperty _propertiesType
+      ( map putPropertyLoc _propertiesFace
+          <> map putPropertyLoc _propertiesGoto
+          <> map putPropertyLoc _propertiesDoc
       )

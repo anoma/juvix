@@ -10,10 +10,8 @@ import Data.ByteString.Lazy qualified as ByteString
 import Data.Text.Encoding qualified as Text
 import Juvix.Compiler.Concrete.Data.Highlight.Input
 import Juvix.Compiler.Concrete.Data.Highlight.Properties
+import Juvix.Compiler.Concrete.Data.Highlight.RenderEmacs
 import Juvix.Compiler.Concrete.Data.ScopedName
--- import Juvix.Compiler.Internal.Language qualified as Internal
--- import Juvix.Compiler.Internal.Pretty qualified as Internal
-
 import Juvix.Compiler.Internal.Pretty qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context qualified as Internal
 import Juvix.Data.CodeAnn
@@ -46,7 +44,7 @@ errorProperties l =
   LocProperties
     { _propertiesFace = map goFaceError l,
       _propertiesGoto = [],
-      _propertiesType = []
+      _propertiesDoc = []
     }
 
 buildProperties :: HighlightInput -> LocProperties
@@ -56,18 +54,8 @@ buildProperties HighlightInput {..} =
         map goFaceParsedItem _highlightParsed
           <> mapMaybe goFaceName _highlightNames,
       _propertiesGoto = map goGotoProperty _highlightNames,
-      _propertiesType = mapMaybe (goTypeProperty _highlightTypes) _highlightNames
+      _propertiesDoc = mapMaybe (goDocProperty _highlightTypes) _highlightNames
     }
-
-nameKindFace :: NameKind -> Maybe Face
-nameKindFace = \case
-  KNameConstructor -> Just FaceConstructor
-  KNameInductive -> Just FaceInductive
-  KNameFunction -> Just FaceFunction
-  KNameTopModule -> Just FaceModule
-  KNameLocalModule -> Just FaceModule
-  KNameAxiom -> Just FaceAxiom
-  KNameLocal -> Nothing
 
 goFaceError :: Interval -> WithLoc PropertyFace
 goFaceError i = WithLoc i (PropertyFace FaceError)
@@ -92,42 +80,8 @@ goGotoProperty (AName n) = WithLoc (getLoc n) PropertyGoto {..}
     _gotoPos = n ^. nameDefined . intervalStart
     _gotoFile = n ^. nameDefined . intervalFile
 
-goTypeProperty :: Internal.TypesTable -> AName -> Maybe (WithLoc PropertyType)
-goTypeProperty tbl (AName n) = do
+goDocProperty :: Internal.TypesTable -> AName -> Maybe (WithLoc PropertyDoc)
+goDocProperty tbl (AName n) = do
   ty <- tbl ^. at (n ^. nameId)
-  let _typeType :: Text = Internal.ppPrint ty
-  return (WithLoc (getLoc n) PropertyType {..})
-
-fromCodeAnn :: CodeAnn -> Maybe EmacsProperty
-fromCodeAnn = \case
-  AnnKind k -> do
-    f <- nameKindFace k
-    return (EPropertyFace (PropertyFace f))
-  AnnKeyword -> Just (EPropertyFace (PropertyFace FaceKeyword))
-  -- TODO add more cases
-  _ -> Nothing
-
--- RENDER TO EMACS
---------------------------------------------------------
-
-data RenderState = RenderState
-  { _renderPoint :: Point,
-    _renderStack :: [(Point, EmacsProperty)],
-    _renderProperties :: [WithRange EmacsProperty]
-  }
-
-renderEmacs :: SimpleDocStream CodeAnn -> Text
-renderEmacs = run . evalState iniRenderState . go . alterAnnotationsS fromCodeAnn
-  where
-    iniRenderState =
-      RenderState
-        { _renderPoint = minBound,
-          _renderStack = [],
-          _renderProperties = []
-        }
-    go :: Members '[State RenderState] r => SimpleDocStream EmacsProperty -> Sem r Text
-    go = \case
-      SFail -> error "when is this supposed to happen?"
-      SEmpty -> return ""
-      SChar ch s -> undefined
-      _ -> undefined
+  let (_docText, _docSExp) = renderEmacs (layoutPretty defaultLayoutOptions (Internal.doc Internal.defaultOptions ty))
+  return (WithLoc (getLoc n) PropertyDoc {..})

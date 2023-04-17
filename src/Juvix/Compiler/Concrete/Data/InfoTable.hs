@@ -30,6 +30,7 @@ data InfoTable = InfoTable
     _infoAxioms :: HashMap AxiomRef AxiomInfo,
     _infoInductives :: HashMap InductiveRef InductiveInfo,
     _infoFunctions :: HashMap FunctionRef FunctionInfo,
+    _infoDoc :: HashMap NameId (Judoc 'Scoped),
     _infoFunctionClauses :: HashMap S.Symbol (FunctionClause 'Scoped),
     _infoNames :: [S.AName]
   }
@@ -42,6 +43,7 @@ emptyInfoTable =
       _infoModules = mempty,
       _infoInductives = mempty,
       _infoFunctions = mempty,
+      _infoDoc = mempty,
       _infoFunctionClauses = mempty,
       _infoNames = mempty
     }

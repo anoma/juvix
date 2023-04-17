@@ -1,9 +1,12 @@
 module Juvix.Data.Emacs.Point
   ( Point,
+    unPoint,
     fromZeroBasedInt,
+    fileLocToPoint,
     fromOneBasedInt,
     pointSuccN,
     WithRange (..),
+    PointInterval (..),
     pintervalStart,
     pintervalEnd,
     withRange,
@@ -11,14 +14,21 @@ module Juvix.Data.Emacs.Point
   )
 where
 
+import Juvix.Data.Loc
 import Juvix.Prelude.Base
 import Juvix.Prelude.Pretty
 
 -- | Emacs point
 newtype Point = Point
-  { _unpoint :: Word64
+  { _unPoint :: Word64
   }
   deriving stock (Ord, Eq, Show, Data)
+
+unPoint :: Point -> Word64
+unPoint (Point n) = n
+
+fileLocToPoint :: FileLoc -> Point
+fileLocToPoint l = fromZeroBasedInt (l ^. locOffset . unPos . to fromIntegral)
 
 instance Enum Point where
   toEnum :: Int -> Point
@@ -41,7 +51,7 @@ fromOneBasedInt n
 fromZeroBasedInt :: Int -> Point
 fromZeroBasedInt n
   | n < 0 = error "must be non-negative"
-  | otherwise = fromOneBasedInt (n + 1)
+  | otherwise = fromOneBasedInt (succ n)
 
 instance Bounded Point where
   minBound = Point 1
