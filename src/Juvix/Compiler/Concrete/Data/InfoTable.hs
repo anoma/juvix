@@ -24,13 +24,15 @@ newtype InductiveInfo = InductiveInfo
   }
   deriving stock (Eq, Show)
 
+type DocTable = HashMap NameId (Judoc 'Scoped)
+
 data InfoTable = InfoTable
   { _infoConstructors :: HashMap ConstructorRef ConstructorInfo,
     _infoModules :: HashMap S.TopModulePath (Module 'Scoped 'ModuleTop),
     _infoAxioms :: HashMap AxiomRef AxiomInfo,
     _infoInductives :: HashMap InductiveRef InductiveInfo,
     _infoFunctions :: HashMap FunctionRef FunctionInfo,
-    _infoDoc :: HashMap NameId (Judoc 'Scoped),
+    _infoDoc :: DocTable,
     _infoFunctionClauses :: HashMap S.Symbol (FunctionClause 'Scoped),
     _infoNames :: [S.AName]
   }

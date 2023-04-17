@@ -39,16 +39,16 @@ toState = reinterpret $ \case
           registerDoc (c ^. constructorName . nameId) j
   RegisterInductive ity ->
     let ref = InductiveRef' (S.unqualifiedSymbol (ity ^. inductiveName))
-        info = InductiveInfo { _inductiveInfoDef = ity}
+        info = InductiveInfo {_inductiveInfoDef = ity}
         j = ity ^. inductiveDoc
      in do
           modify (over infoInductives (HashMap.insert ref info))
           registerDoc (ity ^. inductiveName . nameId) j
   RegisterFunction f ->
     let ref = FunctionRef' (S.unqualifiedSymbol (f ^. sigName))
-        info = FunctionInfo { _functionInfoType = f ^. sigType}
+        info = FunctionInfo {_functionInfoType = f ^. sigType}
      in do
-      modify (over infoFunctions (HashMap.insert ref info))
+          modify (over infoFunctions (HashMap.insert ref info))
   RegisterFunctionClause c ->
     let key = c ^. clauseOwnerFunction
         value = c

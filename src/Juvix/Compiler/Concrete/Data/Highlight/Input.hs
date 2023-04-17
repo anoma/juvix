@@ -4,15 +4,18 @@ module Juvix.Compiler.Concrete.Data.Highlight.Input
   )
 where
 
+import Juvix.Compiler.Concrete.Data.InfoTable qualified as Scoped
 import Juvix.Compiler.Concrete.Data.ParsedItem
 import Juvix.Compiler.Concrete.Data.ScopedName
+import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context qualified as Internal
 import Juvix.Prelude
 
 data HighlightInput = HighlightInput
   { _highlightParsed :: [ParsedItem],
     _highlightNames :: [AName],
-    _highlightTypes :: Internal.TypesTable
+    _highlightTypes :: Internal.TypesTable,
+    _highlightDoc :: Scoped.DocTable
   }
 
 makeLenses ''HighlightInput
@@ -22,5 +25,6 @@ filterInput absPth HighlightInput {..} =
   HighlightInput
     { _highlightNames = filterByLoc absPth _highlightNames,
       _highlightParsed = filterByLoc absPth _highlightParsed,
-      _highlightTypes = _highlightTypes
+      _highlightTypes,
+      _highlightDoc
     }

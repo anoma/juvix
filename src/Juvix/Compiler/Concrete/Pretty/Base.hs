@@ -328,6 +328,10 @@ instance (PrettyCode n) => PrettyCode (S.Name' n) where
       annSRef :: Doc Ann -> Doc Ann
       annSRef = annotate (AnnRef (_nameDefinedIn ^. S.absTopModulePath) _nameId)
 
+instance PrettyCode S.AName where
+  ppCode (S.AName n) =
+    return (annotate (AnnKind (S.getNameKind n)) (pretty (n ^. S.nameVerbatim)))
+
 instance PrettyCode ModuleRef where
   ppCode (ModuleRef' (t :&: ModuleRef'' {..})) = case t of
     SModuleTop -> ppCode _moduleRefName

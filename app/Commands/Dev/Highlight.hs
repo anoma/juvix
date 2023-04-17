@@ -28,6 +28,7 @@ runCommand HighlightOptions {..} = do
               Highlight.HighlightInput
                 { _highlightNames = names,
                   _highlightParsed = items,
+                  _highlightDoc = scoperResult ^. Scoper.resultScoperTable . Scoper.infoDoc,
                   _highlightTypes = r ^. Internal.resultIdenTypes
                 }
       sayRaw (Highlight.highlight _highlightBackend hinput)

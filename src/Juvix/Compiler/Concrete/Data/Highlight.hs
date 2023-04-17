@@ -9,10 +9,11 @@ import Data.Aeson qualified as Aeson
 import Data.ByteString.Lazy qualified as ByteString
 import Data.Text.Encoding qualified as Text
 import Juvix.Compiler.Concrete.Data.Highlight.Input
+import Juvix.Compiler.Concrete.Data.Highlight.PrettyJudoc
 import Juvix.Compiler.Concrete.Data.Highlight.Properties
 import Juvix.Compiler.Concrete.Data.Highlight.RenderEmacs
+import Juvix.Compiler.Concrete.Data.InfoTable qualified as Scoped
 import Juvix.Compiler.Concrete.Data.ScopedName
-import Juvix.Compiler.Internal.Pretty qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context qualified as Internal
 import Juvix.Data.CodeAnn
 import Juvix.Data.Emacs
@@ -54,7 +55,7 @@ buildProperties HighlightInput {..} =
         map goFaceParsedItem _highlightParsed
           <> mapMaybe goFaceName _highlightNames,
       _propertiesGoto = map goGotoProperty _highlightNames,
-      _propertiesDoc = mapMaybe (goDocProperty _highlightTypes) _highlightNames
+      _propertiesDoc = mapMaybe (goDocProperty _highlightDoc _highlightTypes) _highlightNames
     }
 
 goFaceError :: Interval -> WithLoc PropertyFace
@@ -80,8 +81,9 @@ goGotoProperty (AName n) = WithLoc (getLoc n) PropertyGoto {..}
     _gotoPos = n ^. nameDefined . intervalStart
     _gotoFile = n ^. nameDefined . intervalFile
 
-goDocProperty :: Internal.TypesTable -> AName -> Maybe (WithLoc PropertyDoc)
-goDocProperty tbl (AName n) = do
+goDocProperty :: Scoped.DocTable -> Internal.TypesTable -> AName -> Maybe (WithLoc PropertyDoc)
+goDocProperty doctbl tbl a@(AName n) = do
   ty <- tbl ^. at (n ^. nameId)
-  let (_docText, _docSExp) = renderEmacs (layoutPretty defaultLayoutOptions (Internal.doc Internal.defaultOptions ty))
+  let d = ppDocDefault a ty (doctbl ^. at (n ^. nameId))
+      (_docText, _docSExp) = renderEmacs (layoutPretty defaultLayoutOptions d)
   return (WithLoc (getLoc n) PropertyDoc {..})
