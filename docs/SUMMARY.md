@@ -30,9 +30,12 @@
 
 - [Standard library](./reference/stdlib.md)
 - [Language reference](./reference/language/README.md)
+  - [Project](./reference/language/project.md)
   - [Functions](./reference/language/functions.md)
+  - [Infix operators](./reference/language/infix.md)
   - [Data types](./reference/language/datatypes.md)
   - [Modules](./reference/language/modules.md)
+  - [Statements](./reference/language/statement.md)
   - [Local definitions](./reference/language/let.md)
   - [Control structures](./reference/language/control.md)
   - [Comments](./reference/language/comments.md)

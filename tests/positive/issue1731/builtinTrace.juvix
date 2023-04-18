@@ -8,7 +8,7 @@ axiom trace : {A : Type} → A → A;
 
 terminating
 f : Nat → Nat → Nat;
-f x y := if (x == 0) y (trace x >>> (f (sub x 1) y));
+f x y := if (x == 0) y (trace x >>> f (sub x 1) y);
 
 {-
 f 4 0 =
@@ -19,6 +19,5 @@ trace 4 >>> f 3 0
 => trace 4 >>> trace 3 >>> trace 2 >>> trace 1 0
 = 0
 -}
-
 main : IO;
 main := printNatLn $ f 4 0;
