@@ -68,7 +68,7 @@ import Data.List;
 open Data.List;
 ```
 
-When opening a module, if we want to open an explicit subset of its definition,
+When opening a module, if we want to open an explicit subset of its definitions,
 we will use the `using` keyword thus:
 
 ```juvix
