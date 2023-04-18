@@ -23,8 +23,16 @@ fromCodeAnn = \case
     f <- nameKindFace k
     return (EPropertyFace (PropertyFace f))
   AnnKeyword -> Just (EPropertyFace (PropertyFace FaceKeyword))
-  -- TODO add more cases
-  _ -> Nothing
+  AnnDelimiter -> Just (EPropertyFace (PropertyFace FaceKeyword))
+  AnnComment -> Just (EPropertyFace (PropertyFace FaceComment))
+  AnnLiteralString -> Just (EPropertyFace (PropertyFace FaceString))
+  AnnLiteralInteger -> Just (EPropertyFace (PropertyFace FaceNumber))
+  AnnCode -> Nothing
+  AnnImportant -> Nothing
+  AnnUnkindedSym -> Nothing
+  AnnDef {} -> Nothing
+  -- TODO goto property
+  AnnRef {} -> Nothing
 
 data RenderState = RenderState
   { _statePoint :: Point,
