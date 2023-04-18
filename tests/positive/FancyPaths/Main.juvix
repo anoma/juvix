@@ -1,0 +1,7 @@
+module Main;
+
+open import Dep;
+open import Other;
+
+axiom x : dep;
+axiom y : other;

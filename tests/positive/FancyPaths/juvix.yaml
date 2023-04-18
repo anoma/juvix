@@ -1,0 +1,4 @@
+dependencies:
+- "../FancyPaths/././path with spaces"
+# $JUVIX_TEST_PATH is meant to contain "other dep"
+- $JUVIX_TEST_PATH/../$JUVIX_TEST_PATH/
