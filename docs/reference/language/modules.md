@@ -51,8 +51,9 @@ names, we use an _open statement_. The syntax is as follows:
 open Data.List;
 ```
 
-Now we can simply write `sort`. It is important to remember that when we
-open a module, that module must be in scope.
+Now we can simply write `sort`. It is important to remember that when we open a
+module, that module must be in scope, I.e., it must either be imported
+or defined as a local module
 
 Since importing and opening a module is done often, there is special syntax for
 that. The following statement:
