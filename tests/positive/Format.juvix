@@ -128,6 +128,17 @@ positive
 type T0 (A : Type) :=
   | c0 : (A -> T0 A) -> T0 A;
 
+-- Lambda clause
+f : Nat -> Nat;
+f :=
+  \ {
+    | zero :=
+      let
+        foo : Nat := 1;
+      in foo
+    | _ := 1
+  };
+
 module Patterns;
   infixr 4 ,;
   type Pair :=

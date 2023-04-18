@@ -467,7 +467,7 @@ instance (SingI s) => PrettyCode (LambdaClause s) where
   ppCode LambdaClause {..} = do
     lambdaParameters' <- hsep <$> mapM ppPatternAtom _lambdaParameters
     lambdaBody' <- ppExpression _lambdaBody
-    return $ lambdaParameters' <+> kwAssign <+> lambdaBody'
+    return $ lambdaParameters' <+> kwAssign <> oneLineOrNext lambdaBody'
 
 instance (SingI s) => PrettyCode (CaseBranch s) where
   ppCode CaseBranch {..} = do
