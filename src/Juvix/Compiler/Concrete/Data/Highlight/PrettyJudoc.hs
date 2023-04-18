@@ -44,11 +44,14 @@ ppDoc n ty j = do
 ppJudoc :: forall r. Members '[Reader Options] r => Judoc 'Scoped -> Sem r (Maybe (Doc CodeAnn))
 ppJudoc (Judoc bs) = do
   void (ask @Options) -- to suppress redundant constraint warning
-  mapM (mconcatMap ppBlock) (nonEmpty bs)
+  mapM ppBlocks (nonEmpty bs)
   where
+    ppBlocks :: NonEmpty (JudocBlock 'Scoped) -> Sem r (Doc CodeAnn)
+    ppBlocks = fmap vsep2 . mapM ppBlock
+
     ppBlock :: JudocBlock 'Scoped -> Sem r (Doc CodeAnn)
     ppBlock = \case
-      JudocParagraph ls -> mconcatMapM ppLine (toList ls)
+      JudocParagraph ls -> hsep <$> mapM ppLine (toList ls)
       JudocExample {} -> return mempty
 
     ppLine :: JudocParagraphLine 'Scoped -> Sem r (Doc CodeAnn)

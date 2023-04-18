@@ -61,9 +61,9 @@ renderEmacs s =
         modify (over statePoint succ)
         go rest
       SLine len rest -> do
-        let b = (Text.replicate len " ")
+        let b = "\n" <> Text.replicate len " "
         modify (over stateText (<> b))
-        modify (over statePoint (pointSuccN (fromIntegral len)))
+        modify (over statePoint (pointSuccN (fromIntegral (succ len))))
         go rest
       SText len txt rest -> do
         modify (over stateText (<> txt))
