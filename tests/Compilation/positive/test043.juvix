@@ -7,10 +7,14 @@ builtin nat type Nat :=
 
 builtin string axiom String : Type;
 
-builtin trace axiom trace : {A : Type} → {B : Type} → A → B → B;
+builtin trace axiom trace : {A : Type} → A → A;
+
+builtin seq
+seq : {A B : Type} → A → B → B;
+seq x y := y;
 
 f : Nat;
-f := trace "a" 1;
+f := seq (trace "a") 1;
 
 main : Nat;
 main := f;

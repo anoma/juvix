@@ -754,6 +754,7 @@ goExpression = \case
         Just Internal.BuiltinBoolIf -> error "internal to core: if must be called with 3 arguments"
         Just Internal.BuiltinBoolOr -> error "internal to core: || must be called with 2 arguments"
         Just Internal.BuiltinBoolAnd -> error "internal to core: && must be called with 2 arguments"
+        Just Internal.BuiltinSeq -> error "internal to core: seq must be called with 2 arguments"
         _ -> return ()
       -- if the function was defined by a let, then in Core it is stored in a variable
       vars <- asks (^. indexTableVars)
@@ -783,7 +784,7 @@ goExpression = \case
       axiomInfoBuiltin <- Internal.getAxiomBuiltinInfo n
       case axiomInfoBuiltin of
         Just Internal.BuiltinIOSequence -> error "internal to core: >> must be called with 2 arguments"
-        Just Internal.BuiltinTrace -> error "internal to core: trace must be called with 2 arguments"
+        Just Internal.BuiltinTrace -> error "internal to core: trace must be called with 1 argument"
         _ -> return ()
       m <- getIdent identIndex
       return $ case m of
@@ -887,9 +888,9 @@ goApplication a = do
         Just Internal.BuiltinTrace -> do
           as <- exprArgs
           case as of
-            (_ : _ : arg1 : arg2 : xs) ->
-              return (mkApps' (mkBuiltinApp' OpTrace [arg1, arg2]) xs)
-            _ -> error "internal to core: trace must be called with 2 arguments"
+            (_ : arg : xs) ->
+              return (mkApps' (mkBuiltinApp' OpTrace [arg]) xs)
+            _ -> error "internal to core: trace must be called with 1 argument"
         Just Internal.BuiltinFail -> app
         Just Internal.BuiltinIntToString -> app
         Just Internal.BuiltinIntPrint -> app
@@ -915,6 +916,12 @@ goApplication a = do
           case as of
             (x : y : xs) -> return (mkApps' (mkIf' sym x y (mkConstr' (BuiltinTag TagFalse) [])) xs)
             _ -> error "internal to core: && must be called with 2 arguments"
+        Just Internal.BuiltinSeq -> do
+          as <- exprArgs
+          case as of
+            (_ : _ : arg1 : arg2 : xs) ->
+              return (mkApps' (mkBuiltinApp' OpSeq [arg1, arg2]) xs)
+            _ -> error "internal to core: seq must be called with 2 arguments"
         _ -> app
     _ -> app
 

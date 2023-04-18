@@ -135,10 +135,25 @@ genCode infoTable fi =
 
     goBuiltinApp :: Bool -> Int -> BinderList Value -> Core.BuiltinApp -> Code'
     goBuiltinApp isTail tempSize refs (Core.BuiltinApp {..}) =
-      snocReturn isTail $
+      case _builtinAppOp of
+        OpSeq ->
+          goSeq isTail tempSize refs _builtinAppArgs
+        _ ->
+          snocReturn isTail $
+            DL.append
+              (DL.concat (map (go False tempSize refs) (reverse _builtinAppArgs)))
+              (genOp _builtinAppOp)
+
+    goSeq :: Bool -> Int -> BinderList Value -> [Core.Node] -> Code'
+    goSeq isTail tempSize refs = \case
+      [arg1, arg2] ->
         DL.append
-          (DL.concat (map (go False tempSize refs) (reverse _builtinAppArgs)))
-          (genOp _builtinAppOp)
+          (go False tempSize refs arg1)
+          ( DL.cons
+              (mkInstr Pop)
+              (go isTail tempSize refs arg2)
+          )
+      _ -> impossible
 
     goConstr :: Bool -> Int -> BinderList Value -> Core.Constr -> Code'
     goConstr isTail tempSize refs = \case
@@ -249,8 +264,9 @@ genCode infoTable fi =
       Core.OpShow -> DL.singleton $ mkInstr ValShow
       Core.OpStrConcat -> DL.singleton $ mkBinop StrConcat
       Core.OpStrToInt -> DL.singleton $ mkInstr StrToInt
-      Core.OpTrace -> DL.fromList [mkInstr Trace, mkInstr Pop]
+      Core.OpTrace -> DL.singleton $ mkInstr Trace
       Core.OpFail -> DL.singleton $ mkInstr Failure
+      Core.OpSeq -> impossible
 
     getArgsNum :: Symbol -> Int
     getArgsNum sym =
