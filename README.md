@@ -9,14 +9,20 @@
 <tr>
 <td>
 
-[![The Juvix compiler CI](https://github.com/anoma/juvix/actions/workflows/ci.yml/badge.svg)](https://github.com/anoma/juvix/actions/workflows/ci.yml)
+<a
+href="https://github.com/anoma/juvix/actions/workflows/ci.yml"><img
+src="https://github.com/anoma/juvix/actions/workflows/ci.yml/badge.svg"
+alt="The Juvix compiler CI" /></a>
 
 </td>
 </tr>
 <tr>
 <td>
 
-[![Nightly build, release and benchmark](https://github.com/anoma/juvix-nightly-builds/actions/workflows/release-nightly.yaml/badge.svg)](https://github.com/anoma/juvix-nightly-builds/actions/workflows/release-nightly.yaml)
+<a
+href="https://github.com/anoma/juvix-nightly-builds/actions/workflows/release-nightly.yaml"><img
+src="https://github.com/anoma/juvix-nightly-builds/actions/workflows/release-nightly.yaml/badge.svg"
+alt="Nightly build, release and benchmark" /></a>
 
 </td>
 </tr>

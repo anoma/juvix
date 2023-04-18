@@ -4,6 +4,43 @@
 <img align="right" width="300" height="300" alt="Juvix Mascot" src="../assets/images/tara-smiling.svg" />
 </a>
 
+## [v0.3.2](https://github.com/anoma/juvix/tree/v0.3.2) (2023-04-18)
+
+[Full Changelog](https://github.com/anoma/juvix/compare/v0.3.1...v0.3.2)
+
+**Implemented enhancements:**
+
+- Qualified imports [\#2004](https://github.com/anoma/juvix/pull/2004) ([janmasrovira](https://github.com/janmasrovira))
+- Pretty print JuvixCore values consistently with Juvix syntax [\#1988](https://github.com/anoma/juvix/pull/1988) ([lukaszcz](https://github.com/lukaszcz))
+- Add: the 'seq' builtin \(\>\>\>\) [\#1982](https://github.com/anoma/juvix/pull/1982) ([lukaszcz](https://github.com/lukaszcz))
+- Fix: pprint positive kw for data types [\#1980](https://github.com/anoma/juvix/pull/1980) ([jonaprieto](https://github.com/jonaprieto))
+- Fix: format juvix files in test/positive [\#1978](https://github.com/anoma/juvix/pull/1978) ([jonaprieto](https://github.com/jonaprieto))
+- Add syntax highlighting for juvix code blocks in docs [\#1971](https://github.com/anoma/juvix/pull/1971) ([jonaprieto](https://github.com/jonaprieto))
+- Add juvix global project under xdg directory and other improvements [\#1963](https://github.com/anoma/juvix/pull/1963) ([janmasrovira](https://github.com/janmasrovira))
+- Add builtin integer type to the surface language [\#1948](https://github.com/anoma/juvix/pull/1948) ([paulcadman](https://github.com/paulcadman))
+
+**Merged pull requests:**
+
+- Preserve escaped " in String literals [\#2011](https://github.com/anoma/juvix/pull/2011) ([paulcadman](https://github.com/paulcadman))
+- Fix: broken links of Example programs [\#2003](https://github.com/anoma/juvix/pull/2003) ([jonaprieto](https://github.com/jonaprieto))
+- Write compile output file to invoke dir by default [\#1999](https://github.com/anoma/juvix/pull/1999) ([paulcadman](https://github.com/paulcadman))
+- Add minor improvements to the docs [\#1995](https://github.com/anoma/juvix/pull/1995) ([vrom911](https://github.com/vrom911))
+- ci: Specify llvm version in brew prefix command [\#1990](https://github.com/anoma/juvix/pull/1990) ([paulcadman](https://github.com/paulcadman))
+- Fix location for case expressions [\#1987](https://github.com/anoma/juvix/pull/1987) ([lukaszcz](https://github.com/lukaszcz))
+- Fix: add supported targets as option for compile commands [\#1983](https://github.com/anoma/juvix/pull/1983) ([jonaprieto](https://github.com/jonaprieto))
+- Fix: Stop 'make check' at first failure [\#1981](https://github.com/anoma/juvix/pull/1981) ([jonaprieto](https://github.com/jonaprieto))
+- Test numbering [\#1977](https://github.com/anoma/juvix/pull/1977) ([lukaszcz](https://github.com/lukaszcz))
+- Refactor Core datastructures [\#1975](https://github.com/anoma/juvix/pull/1975) ([lukaszcz](https://github.com/lukaszcz))
+- Add Juvix to all benchmarks [\#1974](https://github.com/anoma/juvix/pull/1974) ([lukaszcz](https://github.com/lukaszcz))
+- Check for the executable \(WASM/native\) pipeline prerequisites [\#1970](https://github.com/anoma/juvix/pull/1970) ([lukaszcz](https://github.com/lukaszcz))
+- Print quoted strings in the runtime [\#1969](https://github.com/anoma/juvix/pull/1969) ([lukaszcz](https://github.com/lukaszcz))
+- Update the tutorial [\#1967](https://github.com/anoma/juvix/pull/1967) ([lukaszcz](https://github.com/lukaszcz))
+- Fix PrettyCode \(Maybe a\) instance "Just" case [\#1966](https://github.com/anoma/juvix/pull/1966) ([paulcadman](https://github.com/paulcadman))
+- Documentation for projects and modules [\#1962](https://github.com/anoma/juvix/pull/1962) ([janmasrovira](https://github.com/janmasrovira))
+- repl: Run disambiguateNames on result node [\#1961](https://github.com/anoma/juvix/pull/1961) ([paulcadman](https://github.com/paulcadman))
+- Add FoldTypeSynonyms Transformation to Geb Pipeline and more Geb Tests [\#1956](https://github.com/anoma/juvix/pull/1956) ([lukaszcz](https://github.com/lukaszcz))
+- Support local modules [\#1872](https://github.com/anoma/juvix/pull/1872) ([janmasrovira](https://github.com/janmasrovira))
+
 ## [v0.3.1](https://github.com/anoma/juvix/tree/v0.3.1) (2023-03-31)
 
 [Full Changelog](https://github.com/anoma/juvix/compare/v0.3.0...v0.3.1)
