@@ -55,9 +55,9 @@ Juvix as follows:
 
 ```shell
 cd /tmp
-curl -OL https://github.com/anoma/juvix/releases/download/v0.3.1/juvix-linux_x86_64-v0.3.1.zip
-unzip juvix-linux_x86_64-v0.3.1.zip
-mv juvix-linux_x86_64-v0.3.1 ~/.local/bin/juvix
+curl -OL https://github.com/anoma/juvix/releases/download/v0.3.2/juvix-linux_x86_64-v0.3.2.zip
+unzip juvix-linux_x86_64-v0.3.2.zip
+mv juvix-linux_x86_64-v0.3.2 ~/.local/bin/juvix
 ```
 
 ### Building Juvix from source
