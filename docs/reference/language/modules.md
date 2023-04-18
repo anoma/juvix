@@ -86,7 +86,7 @@ All opened definitions are available under the current module, but
 they are not exported by default. Meaning that if another module imports the current
 module, it will only be able to access the definitions defined there but not
 those which have been opened. If we want opened definitions to be exported, we
-will use the `public` keyword thus:
+must use the `public` keyword thus:
 
 ```
 module Prelude;
