@@ -2,6 +2,7 @@ module Juvix.Prelude.Pretty
   ( module Juvix.Prelude.Pretty,
     module Prettyprinter,
     module Prettyprinter.Render.Terminal,
+    module Prettyprinter.Util,
   )
 where
 
@@ -11,6 +12,7 @@ import Prettyprinter qualified as PP
 import Prettyprinter.Render.Terminal (AnsiStyle)
 import Prettyprinter.Render.Terminal qualified as Ansi
 import Prettyprinter.Render.Text qualified as Text
+import Prettyprinter.Util (reflow)
 import Prelude
 
 -- | The page width is 150 with the desired length (not counting indent spaces)
@@ -86,6 +88,9 @@ toPlainText = Text.renderStrict . toTextStream
 
 prettyText :: (Pretty a) => a -> Text
 prettyText = Text.renderStrict . layoutPretty defaultLayoutOptions . pretty
+
+hsepSoft' :: Foldable f => f (Doc a) -> Doc a
+hsepSoft' = concatWith (\a b -> a <> softline' <> b)
 
 vsepHard :: Foldable f => f (Doc a) -> Doc a
 vsepHard = concatWith (\a b -> a <> hardline <> b)

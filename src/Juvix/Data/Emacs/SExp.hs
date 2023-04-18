@@ -19,6 +19,9 @@ data SExp
 progn :: [SExp] -> SExp
 progn l = App (Symbol "progn" : l)
 
+mkList :: [SExp] -> SExp
+mkList = Quote . App
+
 renderSExp :: SExp -> Text
 renderSExp =
   renderStrict

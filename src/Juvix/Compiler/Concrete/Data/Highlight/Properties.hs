@@ -147,17 +147,17 @@ instance IsProperty EmacsProperty where
     EPropertyDoc p -> toProperties p
     EPropertyGoto p -> toProperties p
 
--- TODO use add-text-properties
 addGenericProperties :: WithRange (NonEmpty GenericProperty) -> SExp
 addGenericProperties (WithRange i props) =
-  progn (map (putGenericProperty . WithRange i) (toList props))
-
-putGenericProperty :: WithRange GenericProperty -> SExp
-putGenericProperty (WithRange i GenericProperty {..}) =
-  App [Symbol "put-text-property", start, end, Quote (Symbol _gpropProperty), Quote _gpropValue]
+  App [Symbol "add-text-properties", start, end, propertyList]
   where
     start = Int (unPoint (i ^. pintervalStart))
     end = Int (unPoint (i ^. pintervalEnd))
+    propertyList :: SExp
+    propertyList = mkList (concat [[k, v] | (k, v) <- map mkItem (toList props)])
+      where
+        mkItem :: GenericProperty -> (SExp, SExp)
+        mkItem GenericProperty {..} = (Symbol _gpropProperty, _gpropValue)
 
 putProperty :: IsProperty a => WithRange a -> SExp
 putProperty = addGenericProperties . fmap toProperties

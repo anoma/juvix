@@ -6,6 +6,7 @@ import Juvix.Compiler.Concrete.Pretty qualified as Scoped
 import Juvix.Compiler.Internal.Language qualified as Internal
 import Juvix.Compiler.Internal.Pretty qualified as Internal
 import Juvix.Data.CodeAnn
+import Data.Text qualified as Text
 import Juvix.Prelude
 
 -- | placeholder
@@ -59,5 +60,14 @@ ppJudoc (Judoc bs) = do
 
     ppAtom :: JudocAtom 'Scoped -> Sem r (Doc CodeAnn)
     ppAtom = \case
-      JudocText t -> return (pretty t)
+      -- We reflow the text so that newlines may be inserted if the contents do not fit a line.
+      -- We must add space at both ends if the original text had space there
+      JudocText t
+        | Text.null t -> return mempty
+        | otherwise -> return (mkSpace (Text.head t) <> reflow t <> mkSpace (Text.last t))
+        where
+        mkSpace :: Char -> Doc CodeAnn
+        mkSpace = \case
+          ' ' -> pretty ' '
+          _ -> mempty
       JudocExpression e -> ppScoped e
