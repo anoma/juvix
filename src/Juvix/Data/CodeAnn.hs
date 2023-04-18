@@ -238,12 +238,7 @@ endSemicolon :: Doc Ann -> Doc Ann
 endSemicolon x = x <> kwSemicolon
 
 ppStringLit :: Text -> Doc Ann
-ppStringLit = annotate AnnLiteralString . doubleQuotes . escaped
-  where
-    showChar :: Char -> String
-    showChar c = showLitChar c ("" :: String)
-    escaped :: Text -> Doc a
-    escaped = mconcatMap (pretty . showChar) . unpack
+ppStringLit = annotate AnnLiteralString . pretty @Text . show
 
 bracesIndent :: Doc Ann -> Doc Ann
 bracesIndent = braces . blockIndent
