@@ -2,7 +2,7 @@
 
 ## Defining a module
 
-The `module` keyword stars the declaration of a module followed by its
+The `module` keyword starts the declaration of a module followed by its
 name and body. The module declaration ends with the `end` keyword.
 
 ```juvix
