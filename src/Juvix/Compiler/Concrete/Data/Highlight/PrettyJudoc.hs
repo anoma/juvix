@@ -1,12 +1,12 @@
 module Juvix.Compiler.Concrete.Data.Highlight.PrettyJudoc where
 
+import Data.Text qualified as Text
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as Scoped
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Pretty qualified as Scoped
 import Juvix.Compiler.Internal.Language qualified as Internal
 import Juvix.Compiler.Internal.Pretty qualified as Internal
 import Juvix.Data.CodeAnn
-import Data.Text qualified as Text
 import Juvix.Prelude
 
 -- | placeholder
@@ -40,7 +40,7 @@ ppDoc n ty j = do
   n' <- ppScoped n
   j' <- join <$> mapM ppJudoc j
   return $
-    n' <+> kwColon <+> ty' <+?> fmap ((hardline <> hardline) <>) j'
+    n' <+> kwColon <+> ty' <+?> fmap ((line <> line) <>) j'
 
 ppJudoc :: forall r. Members '[Reader Options] r => Judoc 'Scoped -> Sem r (Maybe (Doc CodeAnn))
 ppJudoc (Judoc bs) = do
@@ -66,8 +66,8 @@ ppJudoc (Judoc bs) = do
         | Text.null t -> return mempty
         | otherwise -> return (mkSpace (Text.head t) <> reflow t <> mkSpace (Text.last t))
         where
-        mkSpace :: Char -> Doc CodeAnn
-        mkSpace = \case
-          ' ' -> pretty ' '
-          _ -> mempty
+          mkSpace :: Char -> Doc CodeAnn
+          mkSpace = \case
+            ' ' -> pretty ' '
+            _ -> mempty
       JudocExpression e -> ppScoped e
