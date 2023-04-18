@@ -1,10 +1,10 @@
 -- evaluation order
 
-def g := \x trace x g;
+def g := \x trace x >>> g;
 
-def f := \x \y if x = 0 then 9 else trace 1 (f (x - 1) (y 0));
+def f := \x \y if x = 0 then 9 else trace 1 >>> (f (x - 1) (y 0));
 
-def h := \x trace 8 (trace x (x + x));
+def h := \x trace 8 >>> trace x >>> x + x;
 
 def const := \x \y x;
 
@@ -13,9 +13,9 @@ type list {
   cons : Any -> list -> list;
 };
 
-trace (const 0 (trace "!" 1)) (
-trace (const 0 (cons (trace "a" 1) (trace "b" (cons (trace "c" 1) (trace "d" nil))))) (
-trace ((\x \y \z x + y + z) (trace "1" 1) (trace "2" 2) (trace "3" 3)) (
-trace (f 5 g) (trace 7 (
-h (trace 2 3)
-)))))
+trace (const 0 (trace "!" >>> 1)) >>>
+trace (const 0 (trace "a" >>> cons 1 (trace "b" >>> trace "c" >>> cons 1 (trace "d" >>> nil)))) >>>
+trace ((\x \y \z trace "2" >>> x + y + (trace "3" >>> z)) (trace "1" >>> 1) 2 3) >>>
+trace (f 5 g) >>>
+trace 7 >>>
+h (trace 2 >>> 3)

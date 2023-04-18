@@ -8,6 +8,7 @@ module Juvix.Compiler.Core.Evaluator where
 
 import Control.Exception qualified as Exception
 import Data.HashMap.Strict qualified as HashMap
+import GHC.Base (seq)
 import GHC.Conc qualified as GHC
 import GHC.IO (unsafePerformIO)
 import GHC.Show qualified as S
@@ -154,8 +155,9 @@ eval herr ctx env0 = convertRuntimeNodes . eval' env0
                 evalError "string to integer: not an integer" n
           _ ->
             evalError "string conversion: argument not a string" n
+      OpSeq -> binary $ \x y -> eval' env x `seq` eval' env y
       OpFail -> unary $ \msg -> Exception.throw (EvalError ("failure: " <> printNode (eval' env msg)) Nothing)
-      OpTrace -> binary $ \msg x -> unsafePerformIO (hPutStrLn herr (printNode (eval' env msg)) >> return (eval' env x))
+      OpTrace -> unary $ \msg -> let !v = eval' env msg in unsafePerformIO (hPutStrLn herr (printNode v) >> return v)
       where
         err :: Text -> a
         err msg = evalError msg n

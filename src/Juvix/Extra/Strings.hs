@@ -209,6 +209,9 @@ intLt = "int-lt"
 intPrint :: (IsString s) => s
 intPrint = "int-print"
 
+builtinSeq :: IsString s => s
+builtinSeq = "seq"
+
 as :: IsString s => s
 as = "as"
 
@@ -259,6 +262,9 @@ bind = ">>="
 
 seq_ :: (IsString s) => s
 seq_ = ">>"
+
+seqq_ :: (IsString s) => s
+seqq_ = ">>>"
 
 trace_ :: (IsString s) => s
 trace_ = "trace"

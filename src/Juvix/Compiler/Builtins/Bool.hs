@@ -36,7 +36,7 @@ registerIf f = do
   true_ <- toExpression <$> getBuiltinName (getLoc f) BuiltinBoolTrue
   false_ <- toExpression <$> getBuiltinName (getLoc f) BuiltinBoolFalse
   let if_ = f ^. funDefName
-      u = ExpressionUniverse (Universe {_universeLevel = Nothing, _universeLoc = error "Universe with no location"})
+      u = ExpressionUniverse smallUniverseNoLoc
   vart <- freshVar "t"
   vare <- freshVar "e"
   hole <- freshHole
