@@ -76,7 +76,7 @@ open Data.List using {List; sort; reverse}
 ```
 
 If we want to open all definitions of a module minus a subset, we
-will use the `hiding` keyword thus:
+must use the `hiding` keyword thus:
 
 ```juvix
 open Data.List hiding {head; tail}
