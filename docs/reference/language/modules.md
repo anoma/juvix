@@ -69,7 +69,7 @@ open Data.List;
 ```
 
 When opening a module, if we want to open an explicit subset of its definitions,
-we will use the `using` keyword thus:
+we must use the `using` keyword thus:
 
 ```juvix
 open Data.List using {List; sort; reverse}
