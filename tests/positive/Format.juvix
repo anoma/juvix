@@ -46,6 +46,10 @@ t3 :=
     , "k"
     , "1234";
 
+-- escaping in String literals
+e1 : String;
+e1 := "\"\n";
+
 infixl 7 +l7;
 axiom +l7 : String → String → String;
 
