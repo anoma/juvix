@@ -4,7 +4,8 @@ module Juvix.Data.CodeAnn
   )
 where
 
-import Juvix.Compiler.Concrete.Data
+import Juvix.Compiler.Concrete.Data.Name
+import Juvix.Data.NameKind
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude
 import Juvix.Prelude.Pretty hiding (braces, group, list, parens)
@@ -238,12 +239,7 @@ endSemicolon :: Doc Ann -> Doc Ann
 endSemicolon x = x <> kwSemicolon
 
 ppStringLit :: Text -> Doc Ann
-ppStringLit = annotate AnnLiteralString . doubleQuotes . escaped
-  where
-    showChar :: Char -> String
-    showChar c = showLitChar c ("" :: String)
-    escaped :: Text -> Doc a
-    escaped = mconcatMap (pretty . showChar) . unpack
+ppStringLit = annotate AnnLiteralString . pretty @Text . show
 
 bracesIndent :: Doc Ann -> Doc Ann
 bracesIndent = braces . blockIndent

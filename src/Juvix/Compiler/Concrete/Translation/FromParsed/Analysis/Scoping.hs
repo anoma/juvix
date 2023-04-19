@@ -443,6 +443,10 @@ checkOperatorSyntaxDef s@OperatorSyntaxDef {..} = do
         (HashMap.lookup _opSymbol <$> gets (^. scoperFixities))
         $ \s' -> throw (ErrDuplicateFixity (DuplicateFixity (s' ^. symbolFixityDef) s))
 
+-- | Only used as syntactical convenience for registerX functions
+(@$>) :: Functor m => (a -> m ()) -> a -> m a
+(@$>) f a = f a $> a
+
 checkTypeSignature ::
   (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, State ScoperFixities, Reader BindingStrategy] r) =>
   TypeSignature 'Parsed ->
@@ -452,7 +456,7 @@ checkTypeSignature TypeSignature {..} = do
   sigName' <- bindFunctionSymbol _sigName
   sigDoc' <- mapM checkJudoc _sigDoc
   sigBody' <- mapM checkParseExpressionAtoms _sigBody
-  registerFunction' TypeSignature {_sigName = sigName', _sigType = sigType', _sigDoc = sigDoc', _sigBody = sigBody', ..}
+  registerFunction @$> TypeSignature {_sigName = sigName', _sigType = sigType', _sigDoc = sigDoc', _sigBody = sigBody', ..}
 
 checkInductiveParameters ::
   forall r.
@@ -478,8 +482,8 @@ checkInductiveDef InductiveDef {..} = do
     inductiveConstructors' <- mapM checkConstructorDef _inductiveConstructors
     return (inductiveParameters', inductiveType', inductiveDoc', inductiveConstructors')
   forM_ inductiveConstructors' bindConstructor
-  registerInductive'
-    InductiveDef
+  registerInductive
+    @$> InductiveDef
       { _inductiveName = inductiveName',
         _inductiveDoc = inductiveDoc',
         _inductivePragmas = _inductivePragmas,
@@ -507,8 +511,8 @@ checkInductiveDef InductiveDef {..} = do
       constructorType' <- checkParseExpressionAtoms _constructorType
       constructorName' <- reserveSymbolOf S.KNameConstructor _constructorName
       doc' <- mapM checkJudoc _constructorDoc
-      registerConstructor'
-        InductiveConstructorDef
+      registerConstructor
+        @$> InductiveConstructorDef
           { _constructorName = constructorName',
             _constructorType = constructorType',
             _constructorDoc = doc',
@@ -815,8 +819,8 @@ checkFunctionClause clause@FunctionClause {..} = do
     clp <- mapM checkParsePatternAtom _clausePatterns
     clb <- checkParseExpressionAtoms _clauseBody
     return (clp, clb)
-  registerFunctionClause'
-    FunctionClause
+  registerFunctionClause
+    @$> FunctionClause
       { _clauseOwnerFunction = clauseOwnerFunction',
         _clausePatterns = clausePatterns',
         _clauseBody = clauseBody'
@@ -841,7 +845,7 @@ checkAxiomDef AxiomDef {..} = do
   axiomType' <- withLocalScope (checkParseExpressionAtoms _axiomType)
   axiomName' <- bindAxiomSymbol _axiomName
   axiomDoc' <- withLocalScope (mapM checkJudoc _axiomDoc)
-  registerAxiom' AxiomDef {_axiomName = axiomName', _axiomType = axiomType', _axiomDoc = axiomDoc', ..}
+  registerAxiom @$> AxiomDef {_axiomName = axiomName', _axiomType = axiomType', _axiomDoc = axiomDoc', ..}
 
 entryToSymbol :: SymbolEntry -> Symbol -> S.Symbol
 entryToSymbol sentry csym = set S.nameConcrete csym (symbolEntryToSName sentry)

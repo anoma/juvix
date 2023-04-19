@@ -6,6 +6,7 @@ where
 
 import Juvix.Compiler.Abstract.Data.NameDependencyInfo qualified as DepInfo
 import Juvix.Compiler.Abstract.Translation.FromConcrete.Data.Context qualified as Abstract
+import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Data.Context qualified as Scoped
 import Juvix.Compiler.Internal.Data.InfoTable
 import Juvix.Compiler.Internal.Language
 import Juvix.Compiler.Pipeline.EntryPoint qualified as E
@@ -19,5 +20,8 @@ data InternalResult = InternalResult
 
 makeLenses ''InternalResult
 
-microJuvixResultEntryPoint :: Lens' InternalResult E.EntryPoint
-microJuvixResultEntryPoint = resultAbstract . Abstract.abstractResultEntryPoint
+internalJuvixResultEntryPoint :: Lens' InternalResult E.EntryPoint
+internalJuvixResultEntryPoint = resultAbstract . Abstract.abstractResultEntryPoint
+
+internalJuvixResultScoped :: Lens' InternalResult Scoped.ScoperResult
+internalJuvixResultScoped = resultAbstract . Abstract.resultScoper

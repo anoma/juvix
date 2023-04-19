@@ -46,6 +46,10 @@ t3 :=
     , "k"
     , "1234";
 
+-- escaping in String literals
+e1 : String;
+e1 := "\"\n";
+
 infixl 7 +l7;
 axiom +l7 : String → String → String;
 
@@ -123,6 +127,17 @@ exampleFunction2 :
 positive
 type T0 (A : Type) :=
   | c0 : (A -> T0 A) -> T0 A;
+
+-- Lambda clause
+f : Nat -> Nat;
+f :=
+  \ {
+    | zero :=
+      let
+        foo : Nat := 1;
+      in foo
+    | _ := 1
+  };
 
 module Patterns;
   infixr 4 ,;

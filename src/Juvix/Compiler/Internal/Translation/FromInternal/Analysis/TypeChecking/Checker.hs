@@ -20,7 +20,7 @@ import Juvix.Prelude hiding (fromEither)
 registerConstructor :: (Members '[State TypesTable, Reader InfoTable] r) => InductiveConstructorDef -> Sem r ()
 registerConstructor ctr = do
   ty <- constructorType (ctr ^. inductiveConstructorName)
-  modify (HashMap.insert (ctr ^. inductiveConstructorName) ty)
+  modify (HashMap.insert (ctr ^. inductiveConstructorName . nameId) ty)
 
 checkModule ::
   (Members '[Reader EntryPoint, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example, Builtins] r) =>
@@ -62,7 +62,7 @@ checkStatement s = case s of
   StatementInclude i -> StatementInclude <$> checkInclude i
   StatementModule m -> StatementModule <$> checkModule m
   StatementAxiom ax -> do
-    modify (HashMap.insert (ax ^. axiomName) (ax ^. axiomType))
+    modify (HashMap.insert (ax ^. axiomName . nameId) (ax ^. axiomType))
     return s
 
 checkInductiveDef ::
@@ -73,7 +73,7 @@ checkInductiveDef ::
 checkInductiveDef InductiveDef {..} = runInferenceDef $ do
   constrs' <- mapM goConstructor _inductiveConstructors
   ty <- inductiveType _inductiveName
-  modify (HashMap.insert _inductiveName ty)
+  modify (HashMap.insert (_inductiveName ^. nameId) ty)
   examples' <- mapM checkExample _inductiveExamples
   let d =
         InductiveDef

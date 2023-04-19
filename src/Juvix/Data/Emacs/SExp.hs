@@ -1,11 +1,11 @@
-module Juvix.Compiler.Concrete.Data.Highlight.SExp where
+module Juvix.Data.Emacs.SExp where
 
 import Juvix.Prelude
 import Juvix.Prelude.Pretty
 import Prettyprinter.Render.Text
 
-class ToSexp a where
-  toSexp :: a -> SExp
+class ToSExp a where
+  toSExp :: a -> SExp
 
 data SExp
   = Symbol Text
@@ -14,10 +14,13 @@ data SExp
   | Quote SExp
   | Backquote SExp
   | Int Word64
-  | String String
+  | String Text
 
 progn :: [SExp] -> SExp
 progn l = App (Symbol "progn" : l)
+
+mkList :: [SExp] -> SExp
+mkList = Quote . App
 
 renderSExp :: SExp -> Text
 renderSExp =

@@ -230,7 +230,7 @@ re = reinterpret $ \case
   WeakNormalize ty -> weakNormalize' ty
   where
     registerIden' :: (Members '[State InferenceState] r) => Name -> Expression -> Sem r ()
-    registerIden' i ty = modify (over inferenceIdens (HashMap.insert i ty))
+    registerIden' i ty = modify (over inferenceIdens (HashMap.insert (i ^. nameId) ty))
 
     -- Supports alpha equivalence.
     matchTypes' :: (Members '[State InferenceState, State FunctionsTable, Error TypeCheckerError] r) => Expression -> Expression -> Sem r (Maybe MatchError)

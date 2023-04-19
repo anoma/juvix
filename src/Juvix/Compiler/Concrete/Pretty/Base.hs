@@ -332,6 +332,10 @@ instance (PrettyCode n) => PrettyCode (S.Name' n) where
       annSRef :: Doc Ann -> Doc Ann
       annSRef = annotate (AnnRef (_nameDefinedIn ^. S.absTopModulePath) _nameId)
 
+instance PrettyCode S.AName where
+  ppCode (S.AName n) =
+    return (annotate (AnnKind (S.getNameKind n)) (pretty (n ^. S.nameVerbatim)))
+
 instance PrettyCode ModuleRef where
   ppCode (ModuleRef' (t :&: ModuleRef'' {..})) = case t of
     SModuleTop -> ppCode _moduleRefName
@@ -479,7 +483,7 @@ instance (SingI s) => PrettyCode (LambdaClause s) where
   ppCode LambdaClause {..} = do
     lambdaParameters' <- hsep <$> mapM ppPatternAtom _lambdaParameters
     lambdaBody' <- ppExpression _lambdaBody
-    return $ lambdaParameters' <+> kwAssign <+> lambdaBody'
+    return $ lambdaParameters' <+> kwAssign <> oneLineOrNext lambdaBody'
 
 instance (SingI s) => PrettyCode (CaseBranch s) where
   ppCode CaseBranch {..} = do

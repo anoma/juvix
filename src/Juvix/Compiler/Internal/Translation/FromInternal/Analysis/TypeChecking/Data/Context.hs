@@ -5,6 +5,7 @@ module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Da
   )
 where
 
+import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Data.Context qualified as Scoped
 import Juvix.Compiler.Internal.Data.InfoTable
 import Juvix.Compiler.Internal.Language
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Data.Context (InternalArityResult)
@@ -13,7 +14,7 @@ import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Da
 import Juvix.Compiler.Pipeline.EntryPoint qualified as E
 import Juvix.Prelude
 
-type TypesTable = HashMap Name Expression
+type TypesTable = HashMap NameId Expression
 
 type NormalizedTable = HashMap NameId Expression
 
@@ -33,3 +34,6 @@ mainModule = resultModules . _head1
 
 internalTypedResultEntryPoint :: Lens' InternalTypedResult E.EntryPoint
 internalTypedResultEntryPoint = resultInternalArityResult . Arity.internalArityResultEntryPoint
+
+internalTypedResultScoped :: Lens' InternalTypedResult Scoped.ScoperResult
+internalTypedResultScoped = resultInternalArityResult . Arity.internalArityResultScoped
