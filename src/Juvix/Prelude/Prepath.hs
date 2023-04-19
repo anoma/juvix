@@ -12,9 +12,6 @@ where
 
 import Data.Yaml
 import Juvix.Prelude.Base
--- import Text.Megaparsec as P
--- import Text.Megaparsec.Char qualified as P
--- import Text.Megaparsec.Char.Lexer qualified as P
 import Juvix.Prelude.Parsing as P
 import Juvix.Prelude.Path
 import Juvix.Prelude.Pretty
@@ -41,6 +38,7 @@ data PrepathPart
 --    They cannot be part of the path.
 -- 3. ~ is reserved for $(HOME). I.e. the prepath ~~ will expand to $HOME$HOME.
 -- 4. Nested environment variables are not allowed.
+-- 5. Paths cannot start with space.
 expandPrepath :: Prepath a -> IO FilePath
 expandPrepath (Prepath p) =
   let e = parseHelper prepathParts p
@@ -49,7 +47,7 @@ expandPrepath (Prepath p) =
         Right r -> expandParts r
   where
     prepathParts :: forall e m. MonadParsec e String m => m PrepathParts
-    prepathParts = some1 prepathPart
+    prepathParts = P.takeWhileP Nothing isSpace >> some1 prepathPart
       where
         prepathPart :: m PrepathPart
         prepathPart =
