@@ -9,9 +9,14 @@ import Data.Aeson qualified as Aeson
 import Data.ByteString.Lazy qualified as ByteString
 import Data.Text.Encoding qualified as Text
 import Juvix.Compiler.Concrete.Data.Highlight.Input
+import Juvix.Compiler.Concrete.Data.Highlight.PrettyJudoc
 import Juvix.Compiler.Concrete.Data.Highlight.Properties
-import Juvix.Compiler.Concrete.Data.Highlight.SExp
+import Juvix.Compiler.Concrete.Data.Highlight.RenderEmacs
+import Juvix.Compiler.Concrete.Data.InfoTable qualified as Scoped
 import Juvix.Compiler.Concrete.Data.ScopedName
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context qualified as Internal
+import Juvix.Data.CodeAnn
+import Juvix.Data.Emacs
 import Juvix.Prelude as Prelude hiding (show)
 import Prelude qualified
 
@@ -25,55 +30,39 @@ instance Show HighlightBackend where
     Emacs -> "emacs"
     Json -> "json"
 
-go :: HighlightBackend -> HighlightInput -> ByteString
-go = \case
-  Emacs -> Text.encodeUtf8 . renderSExp . toSexp . buildProperties
+highlight :: HighlightBackend -> HighlightInput -> ByteString
+highlight = \case
+  Emacs -> Text.encodeUtf8 . renderSExp . toSExp . buildProperties
   Json -> ByteString.toStrict . Aeson.encode . rawProperties . buildProperties
 
 goErrors :: HighlightBackend -> [Interval] -> ByteString
 goErrors = \case
-  Emacs -> Text.encodeUtf8 . renderSExp . toSexp . errorProperties
+  Emacs -> Text.encodeUtf8 . renderSExp . toSExp . errorProperties
   Json -> ByteString.toStrict . Aeson.encode . rawProperties . errorProperties
 
-errorProperties :: [Interval] -> Properties
+errorProperties :: [Interval] -> LocProperties
 errorProperties l =
-  Properties
+  LocProperties
     { _propertiesFace = map goFaceError l,
-      _propertiesGoto = []
+      _propertiesGoto = [],
+      _propertiesDoc = []
     }
 
-buildProperties :: HighlightInput -> Properties
+buildProperties :: HighlightInput -> LocProperties
 buildProperties HighlightInput {..} =
-  Properties
+  LocProperties
     { _propertiesFace =
         map goFaceParsedItem _highlightParsed
           <> mapMaybe goFaceName _highlightNames,
-      _propertiesGoto = map goGotoProperty _highlightNames
+      _propertiesGoto = map goGotoProperty _highlightNames,
+      _propertiesDoc = mapMaybe (goDocProperty _highlightDoc _highlightTypes) _highlightNames
     }
 
-nameKindFace :: NameKind -> Maybe Face
-nameKindFace = \case
-  KNameConstructor -> Just FaceConstructor
-  KNameInductive -> Just FaceInductive
-  KNameFunction -> Just FaceFunction
-  KNameTopModule -> Just FaceModule
-  KNameLocalModule -> Just FaceModule
-  KNameAxiom -> Just FaceAxiom
-  KNameLocal -> Nothing
+goFaceError :: Interval -> WithLoc PropertyFace
+goFaceError i = WithLoc i (PropertyFace FaceError)
 
-goFaceError :: Interval -> PropertyFace
-goFaceError i =
-  PropertyFace
-    { _faceFace = FaceError,
-      _faceInterval = i
-    }
-
-goFaceParsedItem :: ParsedItem -> PropertyFace
-goFaceParsedItem i =
-  PropertyFace
-    { _faceFace = f,
-      _faceInterval = i ^. parsedLoc
-    }
+goFaceParsedItem :: ParsedItem -> WithLoc PropertyFace
+goFaceParsedItem i = WithLoc (i ^. parsedLoc) (PropertyFace f)
   where
     f = case i ^. parsedTag of
       ParsedTagKeyword -> FaceKeyword
@@ -81,14 +70,20 @@ goFaceParsedItem i =
       ParsedTagLiteralString -> FaceString
       ParsedTagComment -> FaceComment
 
-goFaceName :: AName -> Maybe PropertyFace
+goFaceName :: AName -> Maybe (WithLoc PropertyFace)
 goFaceName n = do
   f <- nameKindFace (getNameKind n)
-  return (PropertyFace (getLoc n) f)
+  return (WithLoc (getLoc n) (PropertyFace f))
 
-goGotoProperty :: AName -> PropertyGoto
-goGotoProperty (AName n) = PropertyGoto {..}
+goGotoProperty :: AName -> WithLoc PropertyGoto
+goGotoProperty (AName n) = WithLoc (getLoc n) PropertyGoto {..}
   where
-    _gotoInterval = getLoc n
     _gotoPos = n ^. nameDefined . intervalStart
     _gotoFile = n ^. nameDefined . intervalFile
+
+goDocProperty :: Scoped.DocTable -> Internal.TypesTable -> AName -> Maybe (WithLoc PropertyDoc)
+goDocProperty doctbl tbl a@(AName n) = do
+  ty <- tbl ^. at (n ^. nameId)
+  let d = ppDocDefault a ty (doctbl ^. at (n ^. nameId))
+      (_docText, _docSExp) = renderEmacs (layoutPretty defaultLayoutOptions d)
+  return (WithLoc (getLoc n) PropertyDoc {..})

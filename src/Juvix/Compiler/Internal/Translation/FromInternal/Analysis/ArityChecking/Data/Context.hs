@@ -1,12 +1,13 @@
 module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Data.Context where
 
+import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Data.Context qualified as Scoped
 import Juvix.Compiler.Internal.Language
-import Juvix.Compiler.Internal.Translation.FromAbstract.Data.Context qualified as M
+import Juvix.Compiler.Internal.Translation.FromAbstract.Data.Context qualified as Internal
 import Juvix.Compiler.Pipeline.EntryPoint qualified as E
 import Juvix.Prelude
 
 data InternalArityResult = InternalArityResult
-  { _resultInternalResult :: M.InternalResult,
+  { _resultInternalResult :: Internal.InternalResult,
     _resultModules :: NonEmpty Module
   }
 
@@ -16,4 +17,7 @@ mainModule :: Lens' InternalArityResult Module
 mainModule = resultModules . _head1
 
 internalArityResultEntryPoint :: Lens' InternalArityResult E.EntryPoint
-internalArityResultEntryPoint = resultInternalResult . M.microJuvixResultEntryPoint
+internalArityResultEntryPoint = resultInternalResult . Internal.internalJuvixResultEntryPoint
+
+internalArityResultScoped :: Lens' InternalArityResult Scoped.ScoperResult
+internalArityResultScoped = resultInternalResult . Internal.internalJuvixResultScoped

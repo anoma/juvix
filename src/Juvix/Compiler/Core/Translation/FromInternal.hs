@@ -610,7 +610,7 @@ fromPatternArg pa = case pa ^. Internal.patternArgName of
 
     getPatternType :: Name -> Sem r Type
     getPatternType n = do
-      ty <- asks (fromJust . HashMap.lookup n)
+      ty <- asks (fromJust . HashMap.lookup (n ^. nameId))
       idt :: IndexTable <- get
       runReader idt (goType ty)
 
