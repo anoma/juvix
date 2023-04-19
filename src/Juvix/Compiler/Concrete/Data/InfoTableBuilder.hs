@@ -2,6 +2,7 @@ module Juvix.Compiler.Concrete.Data.InfoTableBuilder where
 
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Concrete.Data.Scope
+import Juvix.Compiler.Concrete.Data.ScopedName
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Language
 import Juvix.Prelude
@@ -17,66 +18,48 @@ data InfoTableBuilder m a where
 
 makeSem ''InfoTableBuilder
 
-registerFunction' ::
-  (Member InfoTableBuilder r) =>
-  TypeSignature 'Scoped ->
-  Sem r (TypeSignature 'Scoped)
-registerFunction' ts = registerFunction ts $> ts
-
-registerInductive' ::
-  (Member InfoTableBuilder r) =>
-  InductiveDef 'Scoped ->
-  Sem r (InductiveDef 'Scoped)
-registerInductive' i = registerInductive i $> i
-
-registerConstructor' ::
-  (Member InfoTableBuilder r) =>
-  InductiveConstructorDef 'Scoped ->
-  Sem r (InductiveConstructorDef 'Scoped)
-registerConstructor' c = registerConstructor c $> c
-
-registerAxiom' ::
-  (Member InfoTableBuilder r) =>
-  AxiomDef 'Scoped ->
-  Sem r (AxiomDef 'Scoped)
-registerAxiom' a = registerAxiom a $> a
-
-registerFunctionClause' ::
-  (Member InfoTableBuilder r) =>
-  FunctionClause 'Scoped ->
-  Sem r (FunctionClause 'Scoped)
-registerFunctionClause' a = registerFunctionClause a $> a
+registerDoc :: NameId -> Maybe (Judoc 'Scoped) -> Sem (State InfoTable ': r) ()
+registerDoc k md = modify (set (infoDoc . at k) md)
 
 toState :: Sem (InfoTableBuilder ': r) a -> Sem (State InfoTable ': r) a
 toState = reinterpret $ \case
   RegisterAxiom d ->
     let ref = AxiomRef' (S.unqualifiedSymbol (d ^. axiomName))
         info = AxiomInfo {_axiomInfoType = d ^. axiomType}
-     in modify (over infoAxioms (HashMap.insert ref info))
+        j = d ^. axiomDoc
+     in do
+          modify (over infoAxioms (HashMap.insert ref info))
+          registerDoc (d ^. axiomName . nameId) j
   RegisterConstructor c ->
     let ref = ConstructorRef' (S.unqualifiedSymbol (c ^. constructorName))
         info = ConstructorInfo {_constructorInfoType = c ^. constructorType}
-     in modify (over infoConstructors (HashMap.insert ref info))
+        j = c ^. constructorDoc
+     in do
+          modify (over infoConstructors (HashMap.insert ref info))
+          registerDoc (c ^. constructorName . nameId) j
   RegisterInductive ity ->
     let ref = InductiveRef' (S.unqualifiedSymbol (ity ^. inductiveName))
-        info =
-          InductiveInfo
-            { _inductiveInfoDef = ity
-            }
-     in modify (over infoInductives (HashMap.insert ref info))
+        info = InductiveInfo {_inductiveInfoDef = ity}
+        j = ity ^. inductiveDoc
+     in do
+          modify (over infoInductives (HashMap.insert ref info))
+          registerDoc (ity ^. inductiveName . nameId) j
   RegisterFunction f ->
     let ref = FunctionRef' (S.unqualifiedSymbol (f ^. sigName))
-        info =
-          FunctionInfo
-            { _functionInfoType = f ^. sigType
-            }
-     in modify (over infoFunctions (HashMap.insert ref info))
+        info = FunctionInfo {_functionInfoType = f ^. sigType}
+        j = f ^. sigDoc
+     in do
+          modify (over infoFunctions (HashMap.insert ref info))
+          registerDoc (f ^. sigName . nameId) j
   RegisterFunctionClause c ->
     let key = c ^. clauseOwnerFunction
         value = c
-     in modify (over infoFunctionClauses (HashMap.insert key value))
+     in do modify (over infoFunctionClauses (HashMap.insert key value))
   RegisterName n -> modify (over infoNames (cons (S.AName n)))
-  RegisterModule m -> modify (over infoModules (HashMap.insert (m ^. modulePath) m))
+  RegisterModule m -> do
+    let j = m ^. moduleDoc
+    modify (over infoModules (HashMap.insert (m ^. modulePath) m))
+    registerDoc (m ^. modulePath . nameId) j
 
 runInfoTableBuilder :: InfoTable -> Sem (InfoTableBuilder ': r) a -> Sem r (InfoTable, a)
 runInfoTableBuilder tab = runState tab . toState

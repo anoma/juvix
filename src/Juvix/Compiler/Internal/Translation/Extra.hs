@@ -32,7 +32,7 @@ filterCompileTimeArgsOrPatterns idenName lst = do
             zip lst (map (^. paramType) funParams)
   return $ typedArgs ++ drop (length funParams) lst
   where
-    ty = HashMap.lookupDefault impossible idenName
+    ty = HashMap.lookupDefault impossible (idenName ^. nameId)
     isUniverse :: Expression -> Bool
     isUniverse = \case
       (ExpressionUniverse {}) -> True
