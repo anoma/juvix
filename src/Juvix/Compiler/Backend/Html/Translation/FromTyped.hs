@@ -364,7 +364,7 @@ goJudoc (Judoc bs) = mconcatMapM goBlock bs
       JudocExample e -> goExample e
 
     goLine :: JudocParagraphLine 'Scoped -> Sem r Html
-    goLine (JudocParagraphLine atoms) = mconcatMapM goAtom (map (^. withLocParam) (toList atoms))
+    goLine (JudocParagraphLine atoms) = mconcatMapM goAtom (fmap (^. withLocParam) atoms)
 
     goExample :: Example 'Scoped -> Sem r Html
     goExample ex = do
@@ -425,7 +425,7 @@ goInductive def = do
 
 goConstructors :: forall r. (Members '[Reader HtmlOptions, Reader NormalizedTable] r) => NonEmpty (InductiveConstructorDef 'Scoped) -> Sem r Html
 goConstructors cc = do
-  tbl' <- table . tbody <$> mconcatMapM goConstructor (toList cc)
+  tbl' <- table . tbody <$> mconcatMapM goConstructor cc
   return $
     Html.div ! Attr.class_ "subs constructors" $
       (p ! Attr.class_ "caption" $ "Constructors")
