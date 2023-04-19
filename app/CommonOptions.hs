@@ -16,7 +16,7 @@ import Prelude (show)
 
 -- | Paths that are input are used to detect the root of the project.
 data AppPath f = AppPath
-  { _pathPath :: SomeBase f,
+  { _pathPath :: Prepath f,
     _pathIsInput :: Bool
   }
   deriving stock (Data, Eq)
@@ -30,7 +30,7 @@ parseInputJuvixFile :: Parser (AppPath File)
 parseInputJuvixFile = do
   _pathPath <-
     argument
-      someFileOpt
+      somePreFileOpt
       ( metavar "JUVIX_FILE"
           <> help "Path to a .juvix file"
           <> completer juvixCompleter
@@ -41,7 +41,7 @@ parseInputJuvixCoreFile :: Parser (AppPath File)
 parseInputJuvixCoreFile = do
   _pathPath <-
     argument
-      someFileOpt
+      somePreFileOpt
       ( metavar "JUVIX_CORE_FILE"
           <> help "Path to a .jvc file"
           <> completer juvixCoreCompleter
@@ -52,7 +52,7 @@ parseInputJuvixGebFile :: Parser (AppPath File)
 parseInputJuvixGebFile = do
   _pathPath <-
     argument
-      someFileOpt
+      somePreFileOpt
       ( metavar "JUVIX_GEB_FILE"
           <> help "Path to a .geb or custom .lisp file"
           <> completer juvixGebCompleter
@@ -64,7 +64,7 @@ parseInputJuvixAsmFile :: Parser (AppPath File)
 parseInputJuvixAsmFile = do
   _pathPath <-
     argument
-      someFileOpt
+      somePreFileOpt
       ( metavar "JUVIX_ASM_FILE"
           <> help "Path to a .jva file"
           <> completer juvixAsmCompleter
@@ -75,7 +75,7 @@ parseInputCFile :: Parser (AppPath File)
 parseInputCFile = do
   _pathPath <-
     argument
-      someFileOpt
+      somePreFileOpt
       ( metavar "C_FILE"
           <> help "Path to a .c file"
           <> completer juvixCCompleter
@@ -86,7 +86,7 @@ parseGenericInputFile :: Parser (AppPath File)
 parseGenericInputFile = do
   _pathPath <-
     argument
-      someFileOpt
+      somePreFileOpt
       ( metavar "INPUT_FILE"
           <> help "Path to input file"
           <> action "file"
@@ -97,7 +97,7 @@ parseGenericOutputFile :: Parser (AppPath File)
 parseGenericOutputFile = do
   _pathPath <-
     option
-      someFileOpt
+      somePreFileOpt
       ( long "output"
           <> short 'o'
           <> metavar "OUTPUT_FILE"
@@ -106,11 +106,11 @@ parseGenericOutputFile = do
       )
   pure AppPath {_pathIsInput = False, ..}
 
-parseGenericOutputDir :: Mod OptionFields (SomeBase Dir) -> Parser (AppPath Dir)
+parseGenericOutputDir :: Mod OptionFields (Prepath Dir) -> Parser (AppPath Dir)
 parseGenericOutputDir m = do
   _pathPath <-
     option
-      someDirOpt
+      somePreDirOpt
       ( long "output-dir"
           <> metavar "OUTPUT_DIR"
           <> help "Path to output directory"
@@ -118,6 +118,12 @@ parseGenericOutputDir m = do
           <> m
       )
   pure AppPath {_pathIsInput = False, ..}
+
+somePreDirOpt :: ReadM (Prepath Dir)
+somePreDirOpt = mkPrepath <$> str
+
+somePreFileOpt :: ReadM (Prepath File)
+somePreFileOpt = mkPrepath <$> str
 
 someFileOpt :: ReadM (SomeBase File)
 someFileOpt = eitherReader aux

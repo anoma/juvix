@@ -86,7 +86,7 @@ toAnsiText useColors
 toPlainText :: HasTextBackend a => a -> Text
 toPlainText = Text.renderStrict . toTextStream
 
-prettyText :: (Pretty a) => a -> Text
+prettyText :: Pretty a => a -> Text
 prettyText = Text.renderStrict . layoutPretty defaultLayoutOptions . pretty
 
 hsepSoft' :: Foldable f => f (Doc a) -> Doc a

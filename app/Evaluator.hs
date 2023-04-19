@@ -62,6 +62,6 @@ evalAndPrint opts tab node = do
         node'' = if project opts ^. evalNoDisambiguate then node' else Core.disambiguateNodeNames tab node'
   where
     defaultLoc :: Sem r Interval
-    defaultLoc = singletonInterval . mkInitialLoc <$> someBaseToAbs' f
-    f :: SomeBase File
-    f = project opts ^. evalInputFile . pathPath
+    defaultLoc = singletonInterval . mkInitialLoc <$> fromAppPathFile f
+    f :: AppPath File
+    f = project opts ^. evalInputFile

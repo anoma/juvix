@@ -93,7 +93,7 @@ mkPackageInfo mpackageEntry _packageRoot = do
         newJuvixFiles :: [Path Abs File]
         newJuvixFiles = [cd <//> f | f <- files, isJuvixFile f]
 
-dependencyCached :: (Members '[State ResolverState, Reader ResolverEnv] r) => Dependency -> Sem r Bool
+dependencyCached :: (Members '[State ResolverState, Reader ResolverEnv, Files] r) => Dependency -> Sem r Bool
 dependencyCached d = do
   p <- getDependencyPath d
   HashMap.member p <$> gets (^. resolverPackages)
@@ -101,10 +101,10 @@ dependencyCached d = do
 withPathFile :: (Members '[PathResolver] r) => TopModulePath -> (Either PathResolverError (Path Abs File) -> Sem r a) -> Sem r a
 withPathFile m f = withPath m (f . mapRight (uncurry (<//>)))
 
-getDependencyPath :: Members '[Reader ResolverEnv] r => Dependency -> Sem r (Path Abs Dir)
+getDependencyPath :: Members '[Reader ResolverEnv, Files] r => Dependency -> Sem r (Path Abs Dir)
 getDependencyPath (Dependency p) = do
   r <- asks (^. envRoot)
-  return (someBaseToAbs r p)
+  canonicalDir r p
 
 registerDependencies' ::
   (Members '[Reader EntryPoint, State ResolverState, Reader ResolverEnv, Files, Error Text] r) =>
@@ -115,9 +115,9 @@ registerDependencies' = do
   if
       | isGlobal -> do
           glob <- globalRoot
-          let globDep = Dependency (Abs glob)
+          let globDep = Dependency (mkPrepath (toFilePath glob))
           addDependency' globDep
-      | otherwise -> addDependency' (Dependency (Abs (e ^. entryPointRoot)))
+      | otherwise -> addDependency' (Dependency (mkPrepath (toFilePath (e ^. entryPointRoot))))
 
 addDependency' ::
   (Members '[State ResolverState, Reader ResolverEnv, Files, Error Text] r) =>

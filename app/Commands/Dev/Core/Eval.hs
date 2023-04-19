@@ -8,12 +8,12 @@ import Juvix.Compiler.Core.Translation.FromSource qualified as Core
 
 runCommand :: forall r. (Members '[Embed IO, App] r) => CoreEvalOptions -> Sem r ()
 runCommand opts = do
-  f :: Path Abs File <- someBaseToAbs' b
+  f :: Path Abs File <- fromAppPathFile b
   s <- embed (readFile (toFilePath f))
   case Core.runParser f Core.emptyInfoTable s of
     Left err -> exitJuvixError (JuvixError err)
     Right (tab, Just node) -> do evalAndPrint opts tab node
     Right (_, Nothing) -> return ()
   where
-    b :: SomeBase File
-    b = opts ^. coreEvalInputFile . pathPath
+    b :: AppPath File
+    b = opts ^. coreEvalInputFile

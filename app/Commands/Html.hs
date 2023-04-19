@@ -17,7 +17,7 @@ runGenOnlySourceHtml :: (Members '[Embed IO, App] r) => HtmlOptions -> Sem r ()
 runGenOnlySourceHtml HtmlOptions {..} = do
   res <- runPipeline _htmlInputFile upToScoping
   let m = head (res ^. Scoper.resultModules)
-  outputDir <- someBaseToAbs' (_htmlOutputDir ^. pathPath)
+  outputDir <- fromAppPathDir _htmlOutputDir
   embed $
     Html.genSourceHtml
       GenSourceHtmlArgs
@@ -39,7 +39,7 @@ runCommand HtmlOptions {..}
   | _htmlOnlySource = runGenOnlySourceHtml HtmlOptions {..}
   | otherwise = do
       ctx <- runPipeline _htmlInputFile upToInternalTyped
-      outputDir <- someBaseToAbs' (_htmlOutputDir ^. pathPath)
+      outputDir <- fromAppPathDir _htmlOutputDir
       Html.genJudocHtml
         JudocArgs
           { _judocArgsAssetsPrefix = _htmlAssetsPrefix,

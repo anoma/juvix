@@ -6,6 +6,7 @@ where
 
 import Juvix.Data.Uid
 import Juvix.Prelude.Base
+import Juvix.Prelude.Prepath
 import Path
 
 data RecursorArgs = RecursorArgs
@@ -42,5 +43,6 @@ data Files m a where
   RenameFile' :: Path Abs File -> Path Abs File -> Files m ()
   CopyFile' :: Path Abs File -> Path Abs File -> Files m ()
   JuvixConfigDir :: Files m (Path Abs Dir)
+  CanonicalDir :: Path Abs Dir -> Prepath Dir -> Files m (Path Abs Dir)
 
 makeSem ''Files

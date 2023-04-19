@@ -14,7 +14,7 @@ runCommand :: forall r. Members '[Embed IO, App] r => CoreFromConcreteOptions ->
 runCommand localOpts = do
   gopts <- askGlobalOptions
   tab <- (^. coreResultTable) <$> runPipeline (localOpts ^. coreFromConcreteInputFile) upToCore
-  path :: Path Abs File <- someBaseToAbs' (localOpts ^. coreFromConcreteInputFile . pathPath)
+  path :: Path Abs File <- fromAppPathFile (localOpts ^. coreFromConcreteInputFile)
   let r = run $ runReader (project @GlobalOptions @Core.CoreOptions gopts) $ runError @JuvixError $ Core.applyTransformations (project localOpts ^. coreFromConcreteTransformations) tab
   tab0 :: InfoTable <- getRight r
   let tab' :: InfoTable = if localOpts ^. coreFromConcreteNoDisambiguate then tab0 else disambiguateNames tab0

@@ -73,18 +73,11 @@ welcomeMsg = liftIO (putStrLn [i|Juvix REPL version #{versionTag}: https://juvix
 
 runCommand :: Members '[Embed IO, App] r => ReplOptions -> Sem r ()
 runCommand opts = do
-  root <- askPkgDir
-  buildDir <- askBuildDir
-  package <- askPackage
-  global <- askPackageGlobal
-  let getReplEntryPoint :: SomeBase File -> Repl EntryPoint
+  roots <- askRoots
+  let getReplEntryPoint :: Prepath File -> Repl EntryPoint
       getReplEntryPoint inputFile = do
         gopts <- State.gets (^. replStateGlobalOptions)
-        absInputFile :: Path Abs File <- replMakeAbsolute inputFile
-        return $
-          (entryPointFromGlobalOptions (package, global) root absInputFile gopts)
-            { _entryPointBuildDir = Abs buildDir
-            }
+        liftIO (entryPointFromGlobalOptionsPre roots inputFile gopts)
 
       printHelpTxt :: String -> Repl ()
       printHelpTxt _ = helpTxt
@@ -120,10 +113,10 @@ runCommand opts = do
             loadEntryPoint entryPoint
           Nothing -> noFileLoadedMsg
 
-      pSomeFile :: String -> SomeBase File
-      pSomeFile = someFile . unpack . strip . pack
+      pSomeFile :: String -> Prepath File
+      pSomeFile = mkPrepath
 
-      loadFile :: SomeBase File -> Repl ()
+      loadFile :: Prepath File -> Repl ()
       loadFile f = do
         entryPoint <- getReplEntryPoint f
         loadEntryPoint entryPoint
@@ -174,7 +167,7 @@ runCommand opts = do
 
               eval :: Core.Node -> Repl (Either JuvixError Core.Node)
               eval n = do
-                ep <- getReplEntryPoint (Abs replPath)
+                ep <- getReplEntryPoint (mkPrepath (toFilePath replPath))
                 case run
                   . runReader ep
                   . runError @JuvixError
@@ -293,7 +286,6 @@ runCommand opts = do
               options,
               banner
             }
-  roots <- askRoots
   globalOptions <- askGlobalOptions
   embed
     ( State.evalStateT
@@ -314,15 +306,12 @@ defaultPreludeEntryPoint = do
   let buildDir = roots ^. rootsBuildDir
       root = roots ^. rootsRootDir
       pkg = roots ^. rootsPackage
-      pkgGlobal = roots ^. rootsPackageGlobal
-      mstdlibPath = packageStdlib root buildDir (pkg ^. packageDependencies)
-  return $ case mstdlibPath of
+  mstdlibPath <- liftIO (runM (runFilesIO (packageStdlib root buildDir (pkg ^. packageDependencies))))
+  case mstdlibPath of
     Just stdlibPath ->
-      Just
-        (entryPointFromGlobalOptions (pkg, pkgGlobal) root (stdlibPath <//> preludePath) opts)
-          { _entryPointResolverRoot = stdlibPath
-          }
-    Nothing -> Nothing
+      Just . set entryPointResolverRoot stdlibPath
+        <$> liftIO (entryPointFromGlobalOptions roots (stdlibPath <//> preludePath) opts)
+    Nothing -> return Nothing
 
 replMakeAbsolute :: SomeBase b -> Repl (Path Abs b)
 replMakeAbsolute = \case

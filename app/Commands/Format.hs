@@ -57,5 +57,9 @@ renderFormattedOutput target opts fInfo = do
 runScopeFileApp :: Member App r => Sem (ScopeEff ': r) a -> Sem r a
 runScopeFileApp = interpret $ \case
   ScopeFile p -> do
-    let appFile = AppPath (Abs p) False
+    let appFile =
+          AppPath
+            { _pathPath = mkPrepath (toFilePath p),
+              _pathIsInput = False
+            }
     runPipeline appFile upToScoping

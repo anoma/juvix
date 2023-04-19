@@ -83,7 +83,8 @@ where
 
 import Control.Applicative
 import Control.Monad.Catch (MonadMask, MonadThrow, throwM)
-import Control.Monad.Extra hiding (fail)
+import Control.Monad.Extra hiding (fail, mconcatMapM)
+import Control.Monad.Extra qualified as Monad
 import Control.Monad.Fix
 import Control.Monad.IO.Class (MonadIO (..))
 import Data.Bifunctor hiding (first, second)
@@ -246,6 +247,9 @@ allSame t
 
 mconcatMap :: (Monoid c, Foldable t) => (a -> c) -> t a -> c
 mconcatMap f = List.mconcatMap f . toList
+
+mconcatMapM :: (Monad m, Monoid c, Foldable t) => (a -> m c) -> t a -> m c
+mconcatMapM f = Monad.mconcatMapM f . toList
 
 concatWith :: (Foldable t, Monoid a) => (a -> a -> a) -> t a -> a
 concatWith f ds

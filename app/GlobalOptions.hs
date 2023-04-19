@@ -134,30 +134,38 @@ parseGlobalFlags = do
       )
   return GlobalOptions {..}
 
-parseBuildDir :: Mod OptionFields (SomeBase Dir) -> Parser (AppPath Dir)
+parseBuildDir :: Mod OptionFields (Prepath Dir) -> Parser (AppPath Dir)
 parseBuildDir m = do
   _pathPath <-
     option
-      someDirOpt
+      somePreDirOpt
       ( metavar "BUILD_DIR"
           <> action "directory"
           <> m
       )
   pure AppPath {_pathIsInput = False, ..}
 
-entryPointFromGlobalOptions :: (Package, Bool) -> Path Abs Dir -> Path Abs File -> GlobalOptions -> EntryPoint
-entryPointFromGlobalOptions pkg root mainFile opts =
-  def
-    { _entryPointNoTermination = opts ^. globalNoTermination,
-      _entryPointNoPositivity = opts ^. globalNoPositivity,
-      _entryPointNoCoverage = opts ^. globalNoCoverage,
-      _entryPointNoStdlib = opts ^. globalNoStdlib,
-      _entryPointUnrollLimit = opts ^. globalUnrollLimit,
-      _entryPointGenericOptions = project opts,
-      _entryPointBuildDir = fromMaybe (def ^. entryPointBuildDir) optBuildDir
-    }
+entryPointFromGlobalOptionsPre :: Roots -> Prepath File -> GlobalOptions -> IO EntryPoint
+entryPointFromGlobalOptionsPre roots premainFile opts = do
+  mainFile <- prepathToAbsFile (roots ^. rootsInvokeDir) premainFile
+  entryPointFromGlobalOptions roots mainFile opts
+
+entryPointFromGlobalOptions :: Roots -> Path Abs File -> GlobalOptions -> IO EntryPoint
+entryPointFromGlobalOptions roots mainFile opts = do
+  mabsBuildDir :: Maybe (Path Abs Dir) <- mapM (prepathToAbsDir cwd) optBuildDir
+  let def :: EntryPoint
+      def = defaultEntryPoint roots mainFile
+  return
+    def
+      { _entryPointNoTermination = opts ^. globalNoTermination,
+        _entryPointNoPositivity = opts ^. globalNoPositivity,
+        _entryPointNoCoverage = opts ^. globalNoCoverage,
+        _entryPointNoStdlib = opts ^. globalNoStdlib,
+        _entryPointUnrollLimit = opts ^. globalUnrollLimit,
+        _entryPointGenericOptions = project opts,
+        _entryPointBuildDir = maybe (def ^. entryPointBuildDir) Abs mabsBuildDir
+      }
   where
-    optBuildDir :: Maybe (SomeBase Dir)
+    optBuildDir :: Maybe (Prepath Dir)
     optBuildDir = fmap (^. pathPath) (opts ^. globalBuildDir)
-    def :: EntryPoint
-    def = defaultEntryPoint pkg root mainFile
+    cwd = roots ^. rootsInvokeDir

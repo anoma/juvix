@@ -7,8 +7,10 @@ import Juvix.Data.Effect.Files.Base
 import Juvix.Extra.Version
 import Juvix.Prelude.Base
 import Juvix.Prelude.Path
+import Juvix.Prelude.Prepath
 import Polysemy.ConstraintAbsorber.MonadCatch
 import Polysemy.Fresh
+import System.FilePath qualified as FilePath
 import Prelude qualified
 
 data FS = FS
@@ -86,9 +88,26 @@ re cwd = reinterpret $ \case
   RenameFile' p1 p2 -> renameFileHelper p1 p2
   CopyFile' p1 p2 -> copyFileHelper p1 p2
   JuvixConfigDir -> return juvixConfigDirPure
+  CanonicalDir root d -> return (canonicalDirPure root d)
   where
     cwd' :: FilePath
     cwd' = toFilePath cwd
+
+canonicalDirPure :: Path Abs Dir -> Prepath Dir -> Path Abs Dir
+canonicalDirPure cwd0 = dotdot . (^. prepath)
+  where
+    dotdot :: FilePath -> Path Abs Dir
+    dotdot d = go cwd0 (FilePath.splitDirectories d)
+      where
+        go :: Path Abs Dir -> [FilePath] -> Path Abs Dir
+        go cwd = \case
+          ".." : ps -> go (parent cwd) ps
+          ps ->
+            case parseSomeDir (FilePath.joinPath ps) of
+              Nothing -> error ("failed to parse directory: " <> pack d)
+              Just m -> case m of
+                Rel r -> cwd <//> r
+                Abs a -> a
 
 juvixConfigDirPure :: Path Abs Dir
 juvixConfigDirPure = $(mkAbsDir "/.config/juvix/") <//> versionDir

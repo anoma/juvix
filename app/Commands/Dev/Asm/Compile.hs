@@ -11,7 +11,7 @@ import Juvix.Compiler.Backend.C qualified as C
 runCommand :: forall r. (Members '[Embed IO, App] r) => AsmCompileOptions -> Sem r ()
 runCommand opts = do
   file <- getFile
-  ep <- getEntryPoint (AppPath (Abs file) True)
+  ep <- getEntryPoint (AppPath (preFileFromAbs file) True)
   tgt <- getTarget (opts ^. compileTarget)
   let entryPoint :: EntryPoint
       entryPoint =
@@ -30,10 +30,10 @@ runCommand opts = do
           ensureDir buildDir
           cFile <- inputCFile file
           embed $ TIO.writeFile (toFilePath cFile) _resultCCode
-          Compile.runCommand opts {_compileInputFile = AppPath (Abs cFile) False}
+          Compile.runCommand opts {_compileInputFile = AppPath (preFileFromAbs cFile) False}
   where
     getFile :: Sem r (Path Abs File)
-    getFile = someBaseToAbs' (opts ^. compileInputFile . pathPath)
+    getFile = fromAppPathFile (opts ^. compileInputFile)
 
     getTarget :: CompileTarget -> Sem r Backend.Target
     getTarget = \case

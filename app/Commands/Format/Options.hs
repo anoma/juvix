@@ -3,7 +3,7 @@ module Commands.Format.Options where
 import CommonOptions
 
 data FormatOptions = FormatOptions
-  { _formatInput :: FilePath,
+  { _formatInput :: Prepath FileOrDir,
     _formatCheck :: Bool,
     _formatInPlace :: Bool
   }
@@ -11,7 +11,7 @@ data FormatOptions = FormatOptions
 
 makeLenses ''FormatOptions
 
-parseInputJuvixFileOrDir :: Parser FilePath
+parseInputJuvixFileOrDir :: Parser (Prepath FileOrDir)
 parseInputJuvixFileOrDir =
   strArgument
     ( metavar "JUVIX_FILE_OR_PROJECT"

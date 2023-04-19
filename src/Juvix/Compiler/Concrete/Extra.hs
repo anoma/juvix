@@ -1,5 +1,5 @@
 module Juvix.Compiler.Concrete.Extra
-  ( module Juvix.Compiler.Concrete.Extra.Base,
+  ( module Juvix.Prelude.Parsing,
     mkScopedModule,
     getAllModules,
     getModuleFilePath,
@@ -9,9 +9,9 @@ where
 
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
-import Juvix.Compiler.Concrete.Extra.Base
 import Juvix.Compiler.Concrete.Language
 import Juvix.Prelude hiding (some)
+import Juvix.Prelude.Parsing
 
 data ScopedModule = forall t. MkScopedModule (SModuleIsTop t) (Module 'Scoped t)
 
