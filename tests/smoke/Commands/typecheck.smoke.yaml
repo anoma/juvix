@@ -48,7 +48,7 @@ tests:
       shell:
         - bash
       script: |
-        JUVIX_TEST_PATH="other dep" juvix typecheck positive/FancyPaths/Main.juvix
+        HOME="home" JUVIX_TEST_PATH="other dep" juvix typecheck positive/FancyPaths/Main.juvix
     stdout:
       equals: "Well done! It type checks\n"
     exit-status: 0

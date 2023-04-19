@@ -52,18 +52,25 @@ expandPrepath (Prepath p) =
         prepathPart :: m PrepathPart
         prepathPart =
           PrepathVar <$> evar
+            <|> PrepathHome <$ home
             <|> PrepathString <$> str
           where
             reserved :: [Char]
-            reserved = "$()"
+            reserved = "$()~"
+
             notReserved :: Char -> Bool
             notReserved = (`notElem` reserved)
+
             evar :: m String
             evar = do
               P.chunk "$("
               v <- P.takeWhile1P (Just "<EnvVar>") notReserved
               P.chunk ")"
               return v
+
+            home :: m ()
+            home = void (P.chunk "~")
+
             str :: m String
             str = P.takeWhile1P (Just "<Path>") notReserved
 
