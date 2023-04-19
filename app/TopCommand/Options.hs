@@ -19,6 +19,7 @@ data TopCommand
   | DisplayHelp
   | Typecheck TypecheckOptions
   | Compile CompileOptions
+  | Clean
   | Eval EvalOptions
   | Html HtmlOptions
   | Dev Dev.DevCommand
@@ -87,7 +88,8 @@ parseUtility =
           commandInit,
           commandDev,
           commandRepl,
-          commandFormat
+          commandFormat,
+          commandClean
         ]
     )
   where
@@ -133,6 +135,12 @@ parseUtility =
               )
               <> progDesc "Format a Juvix file or Juvix project"
           )
+
+    commandClean :: Mod CommandFields TopCommand
+    commandClean =
+      command
+        "clean"
+        (info (pure Clean) (progDesc "Delete build artifacts"))
 
 commandCheck :: Mod CommandFields TopCommand
 commandCheck =

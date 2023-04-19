@@ -1,0 +1,61 @@
+working-directory: ./../../../
+
+tests:
+  - name: clean-with-no-build-dir
+    command:
+      shell:
+        - bash
+      script: |
+        temp=$(mktemp -d)
+        trap 'rm -rf -- "$temp"' EXIT
+        cd $temp
+        juvix clean
+    stdout: ""
+    exit-status: 0
+
+  - name: clean-with-default-build-dir
+    command:
+      shell:
+        - bash
+      script: |
+        temp=$(mktemp -d)
+        trap 'rm -rf -- "$temp"' EXIT
+        cd ./examples/milestone/HelloWorld
+        juvix compile -o $temp/Hello HelloWorld.juvix
+        juvix clean
+        [ -d $temp/.juvix-build ]
+    stdout: ""
+    exit-status: 1
+
+  - name: clean-with-internal-build-dir
+    command:
+      shell:
+        - bash
+      script: |
+        temp=$(mktemp -d)
+        trap 'rm -rf -- "$temp"' EXIT
+        temp_build_dir=$(mktemp -d)
+        trap 'rm -rf -- "$temp_build_dir"' EXIT
+        cd ./examples/milestone/HelloWorld
+        juvix compile -o $temp/Hello HelloWorld.juvix --internal-build-dir "$temp_build_dir"
+        juvix --internal-build-dir "$temp_build_dir" clean
+        [ -d $temp_build_dir ]
+    stdout: ""
+    exit-status: 1
+
+  - name: clean-with-internal-build-dir-does-not-remove-default-build-dir
+    command:
+      shell:
+        - bash
+      script: |
+        temp=$(mktemp -d)
+        trap 'rm -rf -- "$temp"' EXIT
+        temp_build_dir=$(mktemp -d)
+        trap 'rm -rf -- "$temp_build_dir"' EXIT
+        cp -r ./examples/milestone/HelloWorld/. $temp
+        cd $temp
+        juvix compile HelloWorld.juvix
+        juvix --internal-build-dir "$temp_build_dir" clean
+        [ -d $temp/.juvix-build ]
+    stdout: ""
+    exit-status: 0
