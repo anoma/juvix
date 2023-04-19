@@ -11,10 +11,10 @@ where
 import Control.Monad.Combinators.Expr
 import Control.Monad.Combinators.NonEmpty (sepBy1, sepEndBy1, some)
 import Control.Monad.Trans.Class (lift)
-import Text.Megaparsec hiding (sepBy1, sepEndBy1, some)
-import Text.Megaparsec.Char
 import Juvix.Prelude.Base
 import Juvix.Prelude.Pretty
+import Text.Megaparsec hiding (sepBy1, sepEndBy1, some)
+import Text.Megaparsec.Char
 
 parseHelper :: (TraversableStream txt, VisualStream txt) => Parsec Void txt a -> txt -> Either Text a
 parseHelper p t = case runParser p "<input>" t of
