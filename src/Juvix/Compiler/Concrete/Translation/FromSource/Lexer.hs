@@ -9,7 +9,7 @@ where
 import Data.Text qualified as Text
 import GHC.Unicode
 import Juvix.Compiler.Concrete.Data.ParsedInfoTableBuilder
-import Juvix.Compiler.Concrete.Extra hiding (Pos, space, string')
+import Juvix.Compiler.Concrete.Extra hiding (Pos, hspace, space, string')
 import Juvix.Compiler.Concrete.Extra qualified as P
 import Juvix.Compiler.Concrete.Keywords
 import Juvix.Data.Keyword
@@ -72,10 +72,10 @@ string :: (Members '[InfoTableBuilder] r) => ParsecS r (Text, Interval)
 string = lexemeInterval string'
 
 judocExampleStart :: ParsecS r ()
-judocExampleStart = P.chunk Str.judocExample >> hspace
+judocExampleStart = P.chunk Str.judocExample >> hspace_
 
 judocStart :: ParsecS r ()
-judocStart = P.chunk Str.judocStart >> hspace
+judocStart = P.chunk Str.judocStart >> hspace_
 
 judocEmptyLine :: (Members '[InfoTableBuilder] r) => ParsecS r ()
 judocEmptyLine = lexeme (void (P.try (judocStart >> P.newline)))

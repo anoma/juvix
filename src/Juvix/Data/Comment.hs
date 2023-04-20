@@ -26,6 +26,8 @@ data CommentType
 data Comment = Comment
   { _commentType :: CommentType,
     _commentText :: Text,
+    -- | Used for grouping comments during formatting
+    _commentPreceedingEmptyLine :: Bool,
     _commentInterval :: Interval
   }
   deriving stock (Show, Eq, Ord, Generic, Data)
