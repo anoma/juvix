@@ -34,3 +34,15 @@ p a := mkPair t a a;
 
 x' : flip Pair (id _) T2;
 x' := mkPair x t2 t;
+
+funAlias : Type -> Type;
+funAlias a := a -> a;
+
+f : funAlias T;
+f :=
+  \ {
+    | t := t
+  };
+
+f' : funAlias T;
+f' t := t;

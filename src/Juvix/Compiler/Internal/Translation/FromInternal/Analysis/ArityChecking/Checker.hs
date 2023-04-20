@@ -435,7 +435,7 @@ typeArity = go
     go :: Expression -> Arity
     go = \case
       ExpressionIden i -> goIden i
-      ExpressionApplication {} -> ArityUnit
+      ExpressionApplication a -> goApplication a
       ExpressionLiteral {} -> ArityUnknown
       ExpressionFunction f -> ArityFunction (goFun f)
       ExpressionHole {} -> ArityUnknown
@@ -444,6 +444,14 @@ typeArity = go
       ExpressionUniverse {} -> ArityUnit
       ExpressionSimpleLambda {} -> simplelambda
       ExpressionLet l -> goLet l
+
+    goApplication :: Application -> Arity
+    goApplication a = case lhs of
+      ExpressionIden IdenInductive {} -> ArityUnit
+      _ -> ArityUnknown
+      where
+        lhs :: Expression
+        lhs = fst (unfoldApplication a)
 
     goLet :: Let -> Arity
     goLet l = typeArity (l ^. letExpression)
