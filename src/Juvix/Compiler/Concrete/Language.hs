@@ -1054,6 +1054,33 @@ instance HasLoc ScopedIden where
     ScopedFunction a -> getLoc a
     ScopedVar a -> getLoc a
 
+instance HasLoc (InductiveDef 'Scoped) where
+  getLoc i = getLoc (i ^. inductiveKw)
+
+instance HasLoc (FunctionClause 'Scoped) where
+  getLoc c = getLoc (c ^. clauseOwnerFunction) <> getLoc (c ^. clauseBody)
+
+instance HasLoc ModuleRef where
+  getLoc (ModuleRef' (_ :&: r)) = getLoc r
+
+instance HasLoc (AxiomDef 'Scoped) where
+  getLoc m = getLoc (m ^. axiomKw) <> getLoc (m ^. axiomType)
+
+instance HasLoc (OpenModule 'Scoped) where
+  getLoc m = getLoc (m ^. openModuleKw) <> getLoc (m ^. openModuleName)
+
+instance HasLoc (Statement 'Scoped) where
+  getLoc :: Statement 'Scoped -> Interval
+  getLoc = \case
+    StatementOperator t -> getLoc t
+    StatementTypeSignature t -> getLoc t
+    StatementImport t -> getLoc t
+    StatementInductive t -> getLoc t
+    StatementModule t -> getLoc t
+    StatementOpenModule t -> getLoc t
+    StatementFunctionClause t -> getLoc t
+    StatementAxiom t -> getLoc t
+
 instance HasLoc Application where
   getLoc (Application l r) = getLoc l <> getLoc r
 

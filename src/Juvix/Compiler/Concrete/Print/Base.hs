@@ -88,10 +88,10 @@ instance SingI t => PrettyPrint (Module 'Scoped t) where
 
 instance PrettyPrint [Statement 'Scoped] where
   ppCode :: forall r. Members '[ExactPrint, Reader Options] r => [Statement 'Scoped] -> Sem r ()
-  ppCode ss = vsep2 (map ppGroup (P.groupStatements ss))
+  ppCode ss = paragraphs (ppGroup <$> P.groupStatements ss)
     where
-      ppGroup :: [Statement 'Scoped] -> Sem r ()
-      ppGroup = vsep . endSemicolon . map ppCode
+      ppGroup :: NonEmpty (Statement 'Scoped) -> (Interval, Sem r ())
+      ppGroup g = (getLocSpan g, vsep . endSemicolon . fmap ppCode $ g)
 
 instance PrettyPrint TopModulePath where
   ppCode t@TopModulePath {..} =

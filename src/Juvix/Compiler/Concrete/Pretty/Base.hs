@@ -50,17 +50,18 @@ ppSymbol = case sing :: SStage s of
   SParsed -> ppCode
   SScoped -> ppCode
 
-groupStatements :: forall s. (SingI s) => [Statement s] -> [[Statement s]]
-groupStatements = reverse . map reverse . uncurry cons . foldl' aux ([], [])
+groupStatements :: forall s. (SingI s) => [Statement s] -> [NonEmpty (Statement s)]
+groupStatements = \case
+  [] -> []
+  (s : ss) -> reverse . map NonEmpty.reverse . uncurry cons . foldl' aux (pure s, []) $ ss
   where
     aux ::
-      ([Statement s], [[Statement s]]) ->
+      (NonEmpty (Statement s), [NonEmpty (Statement s)]) ->
       Statement s ->
-      ([Statement s], [[Statement s]])
-    aux ([], acc) s = ([s], acc)
-    aux (gr@(a : _), acc) b
-      | g a b = (b : gr, acc)
-      | otherwise = ([b], gr : acc)
+      (NonEmpty (Statement s), [NonEmpty (Statement s)])
+    aux (gr@(a :| _), acc) b
+      | g a b = (NonEmpty.cons b gr, acc)
+      | otherwise = (pure b, gr : acc)
     -- Decides if statements a and b should be next to each other without a
     -- blank line
     g :: Statement s -> Statement s -> Bool

@@ -14,6 +14,7 @@ import Prettyprinter qualified as P
 data ExactPrint m a where
   NoLoc :: Doc Ann -> ExactPrint m ()
   Morpheme :: Interval -> Doc Ann -> ExactPrint m ()
+  PrintCommentsUntil :: Interval -> ExactPrint m [CommentGroup]
   Region :: (Doc Ann -> Doc Ann) -> m b -> ExactPrint m b
   End :: ExactPrint m ()
 
@@ -21,7 +22,7 @@ makeSem ''ExactPrint
 
 data Builder = Builder
   { -- | comments sorted by starting location
-    _builderComments :: [Comment],
+    _builderComments :: [CommentGroup],
     _builderDoc :: Doc Ann,
     _builderEnd :: FileLoc
   }
@@ -53,10 +54,11 @@ re = reinterpretH h
       NoLoc p -> append' p >>= pureT
       Morpheme l p -> morpheme' l p >>= pureT
       End -> end' >>= pureT
+      PrintCommentsUntil l -> printCommentsUntil' l >>= pureT
       Region f m -> do
         st0 :: Builder <- set builderDoc mempty <$> get
         m' <- runT m
-        (st' :: Builder, fx) <- raise $ evalExactPrint' st0 m'
+        (st' :: Builder, fx) <- raise (evalExactPrint' st0 m')
 
         modify (over builderDoc (<> f (st' ^. builderDoc)))
         modify (set builderComments (st' ^. builderComments))
@@ -66,9 +68,6 @@ re = reinterpretH h
 
 evalExactPrint' :: Builder -> Sem (ExactPrint ': r) a -> Sem r (Builder, a)
 evalExactPrint' b = runState b . re
-
-eprint :: forall r. Members '[State Builder] r => Interval -> Doc Ann -> Sem r ()
-eprint _loc doc = append' doc
 
 append' :: forall r. Members '[State Builder] r => Doc Ann -> Sem r ()
 append' d = modify (over builderDoc (<> d))
@@ -80,30 +79,44 @@ line' = append' P.line
 end' :: forall r. Members '[State Builder] r => Sem r ()
 end' = do
   cs <- gets (^. builderComments)
-  mapM_ printComment cs
+  mapM_ printCommentGroup cs
   modify' (set builderComments [])
+
+printCommentGroups :: Members '[State Builder] r => [CommentGroup] -> Sem r ()
+printCommentGroups = sequenceWith line' . map printCommentGroup
+
+printCommentGroup :: Members '[State Builder] r => CommentGroup -> Sem r ()
+printCommentGroup g = do
+  forM_ (g ^. commentGroup) printComment
 
 printComment :: Members '[State Builder] r => Comment -> Sem r ()
 printComment c = do
-  eprint (c ^. commentInterval) (annotate AnnComment (P.pretty c))
+  append' (annotate AnnComment (P.pretty c))
   line'
+
+printCommentsUntil' :: forall r. Members '[State Builder] r => Interval -> Sem r [CommentGroup]
+printCommentsUntil' loc = go
+  where
+    go :: Sem r [CommentGroup]
+    go = do
+      gs <- whileJustM popCommentGroup
+      printCommentGroups gs
+      return gs
+      where
+        cmp :: CommentGroup -> Bool
+        cmp c = getLoc c ^. intervalStart < loc ^. intervalStart
+
+        popCommentGroup :: Sem r (Maybe CommentGroup)
+        popCommentGroup = do
+          cs <- gets (^. builderComments)
+          case cs of
+            h : hs
+              | cmp h -> do
+                  modify' (set builderComments hs)
+                  return (Just h)
+            _ -> return Nothing
 
 morpheme' :: forall r. Members '[State Builder] r => Interval -> Doc Ann -> Sem r ()
 morpheme' loc doc = do
-  mc <- popComment
-  case mc of
-    Nothing -> eprint loc doc
-    Just c -> printComment c >> morpheme' loc doc
-  where
-    cmp :: Comment -> Bool
-    cmp c = c ^. commentInterval . intervalStart < loc ^. intervalStart
-
-    popComment :: Sem r (Maybe Comment)
-    popComment = do
-      cs <- gets (^. builderComments)
-      case cs of
-        h : hs
-          | cmp h -> do
-              modify' (set builderComments hs)
-              return (Just h)
-        _ -> return Nothing
+  void (printCommentsUntil' loc)
+  append' doc

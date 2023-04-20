@@ -38,30 +38,19 @@ hspace_ = void hspace
 spaceMsg :: String
 spaceMsg = "white space (only spaces and newlines allowed)"
 
-space' :: forall e m. MonadParsec e Text m => Bool -> m [Comment]
-space' judoc = comments
+space' :: forall e m. MonadParsec e Text m => Bool -> m [CommentGroup]
+space' judoc = hidden $ do
+  whiteSpace
+  whileJustM cgroup
   where
-    comments :: m [Comment]
-    comments = hidden (go [])
+    cgroup :: m (Maybe CommentGroup)
+    cgroup = fmap CommentGroup . nonEmpty <$> P.many comment <* whiteSpace
 
-    go :: [Comment] -> m [Comment]
-    go acc = do
-      s <- sepSpace
-      m <- optional (comment s)
-      case m of
-        Nothing -> return (reverse acc)
-        Just c -> go (c : acc)
-      where
-        -- Returns `True` if it consumes at least one empty line
-        sepSpace :: m Bool
-        sepSpace = do
-          hspace_
-          s <- isJust <$> optional (P.try (newline >> hspace_ >> newline))
-          optional whiteSpace
-          return s
+    ctrailSpace :: m ()
+    ctrailSpace = void (hspace_ >> optional (chunk "\n"))
 
-    comment :: Bool -> m Comment
-    comment _commentPreceedingEmptyLine = lineComment <|> blockComment
+    comment :: m Comment
+    comment = (lineComment <|> blockComment) <* ctrailSpace
       where
         lineComment :: m Comment
         lineComment = do

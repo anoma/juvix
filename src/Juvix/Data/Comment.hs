@@ -3,6 +3,7 @@ module Juvix.Data.Comment where
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Data.Loc
 import Juvix.Prelude.Base
+import Juvix.Prelude.Lens
 import Path
 import Prettyprinter
 
@@ -13,7 +14,7 @@ newtype Comments = Comments
 
 data FileComments = FileComments
   { -- | sorted by position
-    _fileCommentsSorted :: [Comment],
+    _fileCommentsSorted :: [CommentGroup],
     _fileCommentsFile :: Path Abs File
   }
   deriving stock (Eq, Show, Generic, Data)
@@ -26,15 +27,33 @@ data CommentType
 data Comment = Comment
   { _commentType :: CommentType,
     _commentText :: Text,
-    -- | Used for grouping comments during formatting
-    _commentPreceedingEmptyLine :: Bool,
     _commentInterval :: Interval
   }
   deriving stock (Show, Eq, Ord, Generic, Data)
 
+-- | A sequence of consecutive comments not separated by one or more empty
+-- lines.
+newtype CommentGroup = CommentGroup
+  { _commentGroup :: NonEmpty Comment
+  }
+  deriving stock (Show, Eq, Ord, Generic, Data)
+
+deriving newtype instance Semigroup CommentGroup
+
 makeLenses ''Comment
+makeLenses ''CommentGroup
 makeLenses ''FileComments
 makeLenses ''Comments
+
+instance HasLoc CommentGroup where
+  getLoc = getLocSpan . (^. commentGroup)
+
+instance HasLoc Comment where
+  getLoc = (^. commentInterval)
+
+instance Pretty CommentGroup where
+  pretty :: CommentGroup -> Doc ann
+  pretty = vsep . map pretty . toList . (^. commentGroup)
 
 instance Pretty Comment where
   pretty :: Comment -> Doc ann
@@ -45,21 +64,24 @@ instance Pretty Comment where
         CommentOneLine -> ("--" <>)
         CommentBlock -> enclose "{-" "-}"
 
-allComments :: Comments -> [Comment]
+flattenComments :: [CommentGroup] -> [Comment]
+flattenComments = mconcatMap (^. commentGroup . to toList)
+
+allComments :: Comments -> [CommentGroup]
 allComments c = concat [f ^. fileCommentsSorted | f <- toList (c ^. commentsByFile)]
 
-mkComments :: [Comment] -> Comments
+mkComments :: [CommentGroup] -> Comments
 mkComments cs = Comments {..}
   where
-    commentFile :: Comment -> Path Abs File
-    commentFile = (^. commentInterval . intervalFile)
+    commentFile :: CommentGroup -> Path Abs File
+    commentFile = (^. commentGroup . _head1 . commentInterval . intervalFile)
     _commentsByFile :: HashMap (Path Abs File) FileComments
     _commentsByFile =
       HashMap.fromList
         [ (_fileCommentsFile, FileComments {..})
-          | filecomments :: NonEmpty Comment <- groupSortOn commentFile cs,
+          | filecomments :: NonEmpty CommentGroup <- groupSortOn commentFile cs,
             let _fileCommentsFile = commentFile (head filecomments),
-            let _fileCommentsSorted = sortOn (^. commentInterval) (toList filecomments)
+            let _fileCommentsSorted = sortOn (^. commentGroup . _head1 . commentInterval) (toList filecomments)
         ]
 
 emptyComments :: Comments

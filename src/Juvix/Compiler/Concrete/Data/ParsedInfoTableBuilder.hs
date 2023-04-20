@@ -3,7 +3,7 @@ module Juvix.Compiler.Concrete.Data.ParsedInfoTableBuilder
     registerLiteral,
     registerKeyword,
     registerJudocText,
-    registerComment,
+    registerCommentGroup,
     registerModule,
     moduleVisited,
     visitModule,
@@ -22,7 +22,7 @@ import Juvix.Prelude
 
 data InfoTableBuilder m a where
   RegisterItem :: ParsedItem -> InfoTableBuilder m ()
-  RegisterComment :: Comment -> InfoTableBuilder m ()
+  RegisterCommentGroup :: CommentGroup -> InfoTableBuilder m ()
   RegisterModule :: Module 'Parsed 'ModuleTop -> InfoTableBuilder m ()
   VisitModule :: TopModulePath -> InfoTableBuilder m ()
   ModuleVisited :: TopModulePath -> InfoTableBuilder m Bool
@@ -62,7 +62,7 @@ registerLiteral l =
 
 data BuilderState = BuilderState
   { _stateItems :: [ParsedItem],
-    _stateComments :: [Comment],
+    _stateComments :: [CommentGroup],
     _stateVisited :: HashSet TopModulePath,
     _stateModules :: HashMap TopModulePath (Module 'Parsed 'ModuleTop)
   }
@@ -102,11 +102,11 @@ runParserInfoTableBuilder =
             modify' (over stateModules (HashMap.insert (m ^. modulePath) m))
           RegisterItem i ->
             modify' (over stateItems (i :))
-          RegisterComment c -> do
-            modify' (over stateComments (c :))
+          RegisterCommentGroup g -> do
+            modify' (over stateComments (g :))
             registerItem'
               ParsedItem
-                { _parsedLoc = c ^. commentInterval,
+                { _parsedLoc = getLoc g,
                   _parsedTag = ParsedTagComment
                 }
       )

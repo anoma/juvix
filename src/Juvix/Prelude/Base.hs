@@ -83,7 +83,7 @@ where
 
 import Control.Applicative
 import Control.Monad.Catch (MonadMask, MonadThrow, throwM)
-import Control.Monad.Extra hiding (fail, mconcatMapM)
+import Control.Monad.Extra hiding (fail, mconcatMapM, whileJustM)
 import Control.Monad.Extra qualified as Monad
 import Control.Monad.Fix
 import Control.Monad.IO.Class (MonadIO (..))
@@ -466,3 +466,28 @@ flattenSCC :: SCC a -> NonEmpty a
 flattenSCC = \case
   AcyclicSCC a -> pure a
   CyclicSCC as -> nonEmpty' as
+
+execOutputList :: Sem (Output o ': r) a -> Sem r [o]
+execOutputList = fmap fst . runOutputList
+
+whileJustM :: forall m a. Monad m => m (Maybe a) -> m [a]
+whileJustM m = go []
+  where
+    go :: [a] -> m [a]
+    go acc = do
+      r <- m
+      case r of
+        Nothing -> return (reverse acc)
+        Just r' -> go (r' : acc)
+
+sequenceEndWith :: (Monad m, Foldable l) => m () -> l (m ()) -> m ()
+sequenceEndWith sep l = sequenceWith sep l >> sep
+
+sequenceWith :: forall m l. (Monad m, Foldable l) => m () -> l (m ()) -> m ()
+sequenceWith sep = go . toList
+  where
+    go :: [m ()] -> m ()
+    go = \case
+      [] -> return ()
+      [x] -> x
+      (x : xs) -> x >> sep >> go xs
