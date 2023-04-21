@@ -100,6 +100,8 @@ exampleFunction1 :
     -> Nat;
 exampleFunction1 _ _ _ _ _ _ _ := 1;
 
+axiom undefined : {A : Type} -> A;
+
 -- 200 in the body is idented with respect to the start of the chain
 -- (at {A : Type})
 exampleFunction2 :
@@ -112,17 +114,20 @@ exampleFunction2 :
     -> List A
     -> List A
     -> Nat :=
-    200
-      + 100
-      + 100
-      + 100
-      + 100
-      + 100
-      + 100
-      + 100
-      + 100
-      + 100
-      + 100;
+    λ {
+      | _ _ _ _ _ _ _ :=
+        undefined
+          + undefined
+          + undefined
+          + undefined
+          + undefined
+          + undefined
+          + undefined
+          + undefined
+          + undefined
+          + undefined
+          + undefined
+    };
 
 positive
 type T0 (A : Type) :=
@@ -140,12 +145,12 @@ f :=
   };
 
 module Patterns;
+  infixr 2 ×;
   infixr 4 ,;
-  type Pair :=
-    | , : String → String → String;
+  type × (A : Type) (B : Type) :=
+    | , : A → B → A × B;
 
-  -- Commas in patterns
-  f : _;
+  f : Nat × Nat × Nat × Nat -> Nat;
   f (a, b, c, d) := a;
 end;
 -- Comment at the end of a module
