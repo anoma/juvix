@@ -68,12 +68,13 @@ instance SingI t => PrettyPrint (Module 'Scoped t) where
         <> line
         <> topSpace
         <> moduleBody'
+        <> line
         <> ending
     where
       topSpace :: Sem r ()
       topSpace = case sing :: SModuleIsTop t of
         SModuleLocal -> mempty
-        SModuleTop -> line
+        SModuleTop -> emptyLine
 
       localIndent :: Sem r () -> Sem r ()
       localIndent = case sing :: SModuleIsTop t of
@@ -89,8 +90,8 @@ instance PrettyPrint [Statement 'Scoped] where
   ppCode :: forall r. Members '[ExactPrint, Reader Options] r => [Statement 'Scoped] -> Sem r ()
   ppCode ss = paragraphs (ppGroup <$> P.groupStatements ss)
     where
-      ppGroup :: NonEmpty (Statement 'Scoped) -> (Interval, Sem r ())
-      ppGroup g = (getLocSpan g, vsep . endSemicolon . fmap ppCode $ g)
+      ppGroup :: NonEmpty (Statement 'Scoped) -> Sem r ()
+      ppGroup = vsep . endSemicolon . fmap ppCode
 
 instance PrettyPrint TopModulePath where
   ppCode t@TopModulePath {..} =

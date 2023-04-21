@@ -97,30 +97,5 @@ encloseSep l r sep f = l >> sequenceWith sep f >> r
 oneLineOrNext :: Members '[ExactPrint] r => Sem r () -> Sem r ()
 oneLineOrNext = region P.oneLineOrNext
 
--- | It guarantees that at least one empty line separates two paragraphs
-paragraphs :: forall l r. (Foldable l, Members '[ExactPrint] r) => l ((Interval, Sem r ())) -> Sem r ()
-paragraphs = go True . toList
-  where
-    go :: Bool -> [(Interval, Sem r ())] -> Sem r ()
-    go isFirst = \case
-      [] -> return ()
-      (i, p) : ps -> do
-        cs <- printCommentsUntil i
-        -- let lastc = intervalEndLine . getLoc . last . (^. commentGroup) . head <$> nonEmpty cs
-        --     nextp = intervalStartLine i
-        -- -- True when the last comment and the next paragraph are separated by
-        -- -- one or more empty lines
-        -- let lastSep = fromMaybe False $ do
-        --       lastc <- getLoc . last . (^. commentGroup) . head <$> nonEmpty cs
-        --       let nextp = intervalStartLine i
-        --       return (intervalEndLine lastc + 1 < nextp)
-        let extra = maybe False (not . hasEmptyLines) cs
-        when (not isFirst && extra) line
-        -- (noLoc (P.pretty lastc
-        --         <> "\n"
-        --         <> P.pretty nextp
-        --         <> "\n"
-        --         <> P.pretty lastSep <> P.pretty isFirst <> P.pretty extra) >> line)
-        p
-        line
-        go False ps
+paragraphs :: (Foldable l, Members '[ExactPrint] r) => l (Sem r ()) -> Sem r ()
+paragraphs = sequenceWith (line >> emptyLine)

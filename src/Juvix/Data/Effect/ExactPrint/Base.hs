@@ -15,6 +15,7 @@ data ExactPrint m a where
   NoLoc :: Doc Ann -> ExactPrint m ()
   Morpheme :: Interval -> Doc Ann -> ExactPrint m ()
   PrintCommentsUntil :: Interval -> ExactPrint m (Maybe SpaceSpan)
+  EmptyLine :: ExactPrint m ()
   Region :: (Doc Ann -> Doc Ann) -> m b -> ExactPrint m b
   End :: ExactPrint m ()
 
@@ -24,6 +25,7 @@ data Builder = Builder
   { -- | comments sorted by starting location
     _builderComments :: [SpaceSpan],
     _builderDoc :: Doc Ann,
+    _builderPendingEmptyLine :: Bool,
     _builderEnd :: FileLoc
   }
 
@@ -37,6 +39,7 @@ runExactPrint cs = fmap (first (^. builderDoc)) . runState ini . re
       Builder
         { _builderComments = fromMaybe [] (cs ^? _Just . fileCommentsSorted),
           _builderDoc = mempty,
+          _builderPendingEmptyLine = False,
           _builderEnd = FileLoc 0 0 0
         }
 
@@ -52,6 +55,7 @@ re = reinterpretH h
       Tactical ExactPrint (Sem rInitial) (State Builder ': r) x
     h = \case
       NoLoc p -> append' p >>= pureT
+      EmptyLine -> modify' (set builderPendingEmptyLine True) >>= pureT
       Morpheme l p -> morpheme' l p >>= pureT
       End -> end' >>= pureT
       PrintCommentsUntil l -> printCommentsUntil' l >>= pureT
@@ -86,7 +90,7 @@ end' = do
   modify' (set builderComments [])
 
 printSpaceSpan :: forall r. Members '[State Builder] r => SpaceSpan -> Sem r ()
-printSpaceSpan = sequenceWith (return ()) . fmap printSpaceSection . (^. spaceSpan)
+printSpaceSpan = mapM_ printSpaceSection . (^. spaceSpan)
   where
     printSpaceSection :: SpaceSection -> Sem r ()
     printSpaceSection = \case
@@ -99,26 +103,34 @@ printComment c = do
   line'
 
 printCommentsUntil' :: forall r. Members '[State Builder] r => Interval -> Sem r (Maybe SpaceSpan)
-printCommentsUntil' loc = go
+printCommentsUntil' loc = do
+  forceLine <- popPendingLine
+  g <- popSpaceSpan
+  let noSpaceLines = fromMaybe True $ do
+        g' <- (^. spaceSpan) <$> g
+        return (not (any (has _SpaceLines) g'))
+  when (forceLine && noSpaceLines) line'
+  whenJust g printSpaceSpan
+  return g
   where
-    go :: Sem r (Maybe SpaceSpan)
-    go = do
-      g <- popSpaceSpan
-      whenJust g printSpaceSpan
-      return g
-      where
-        cmp :: SpaceSpan -> Bool
-        cmp c = getLoc c ^. intervalStart < loc ^. intervalStart
+    cmp :: SpaceSpan -> Bool
+    cmp c = getLoc c ^. intervalStart < loc ^. intervalStart
 
-        popSpaceSpan :: Sem r (Maybe SpaceSpan)
-        popSpaceSpan = do
-          cs <- gets (^. builderComments)
-          case cs of
-            h : hs
-              | cmp h -> do
-                  modify' (set builderComments hs)
-                  return (Just h)
-            _ -> return Nothing
+    popPendingLine :: Sem r Bool
+    popPendingLine = do
+      b <- gets (^. builderPendingEmptyLine)
+      modify' (set builderPendingEmptyLine False)
+      return b
+
+    popSpaceSpan :: Sem r (Maybe SpaceSpan)
+    popSpaceSpan = do
+      cs <- gets (^. builderComments)
+      case cs of
+        h : hs
+          | cmp h -> do
+              modify' (set builderComments hs)
+              return (Just h)
+        _ -> return Nothing
 
 morpheme' :: forall r. Members '[State Builder] r => Interval -> Doc Ann -> Sem r ()
 morpheme' loc doc = do
