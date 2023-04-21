@@ -165,7 +165,12 @@ tests:
       - format
       - positive/Format.juvix
     stdin: "module OtherFormat; open import Stdlib.Prelude; main : Nat; main := 5; "
-    stderr:
-      contains: |-
-          The top module
+    stdout:
+      contains: |
+        module OtherFormat;
+
+        open import Stdlib.Prelude;
+
+        main : Nat;
+        main := 5;
     exit-status: 1
