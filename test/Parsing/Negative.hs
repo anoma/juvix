@@ -78,5 +78,13 @@ filesErrorTests =
       $(mkRelFile "WrongModuleName.juvix")
       $ \case
         ErrWrongTopModuleName {} -> Nothing
+        _ -> wrongError,
+    negTest
+      "Import a module that doesn't exist"
+      $(mkRelDir "NoDependencies")
+      $(mkRelFile "InvalidImport.juvix")
+      $ \case
+        ErrTopModulePath
+          TopModulePathError {_topModulePathError = ErrMissingModule {}} -> Nothing
         _ -> wrongError
   ]
