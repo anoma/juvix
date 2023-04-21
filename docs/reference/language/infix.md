@@ -1,3 +1,0 @@
-# Infix operators
-
-TODO
