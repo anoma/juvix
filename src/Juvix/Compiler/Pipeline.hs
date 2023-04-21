@@ -62,11 +62,8 @@ inferExpression ::
   Text ->
   Sem r Internal.Expression
 inferExpression fp txt =
-  ( runNameIdGenArtifacts
-      . runBuiltinsArtifacts
-  )
-    $ arityCheckExpression fp txt
-      >>= Internal.inferExpressionType
+  arityCheckExpression fp txt
+    >>= Internal.inferExpressionType
 
 compileExpression ::
   Members '[Error JuvixError, State Artifacts] r =>
@@ -74,12 +71,9 @@ compileExpression ::
   Text ->
   Sem r Core.Node
 compileExpression fp txt =
-  ( runNameIdGenArtifacts
-      . runBuiltinsArtifacts
-  )
-    $ arityCheckExpression fp txt
-      >>= Internal.typeCheckExpression
-      >>= fromInternalExpression
+  arityCheckExpression fp txt
+    >>= Internal.typeCheckExpression
+    >>= fromInternalExpression
 
 fromInternalExpression :: Members '[State Artifacts] r => Internal.Expression -> Sem r Core.Node
 fromInternalExpression exp = do
@@ -97,10 +91,7 @@ compileExpressionIO ::
   Text ->
   Sem r (Either JuvixError Core.Node)
 compileExpressionIO fp txt =
-  runError
-    . runNameIdGenArtifacts
-    . runBuiltinsArtifacts
-    $ compileExpression fp txt
+  runError (compileExpression fp txt)
 
 inferExpressionIO ::
   Members '[State Artifacts, Embed IO] r =>
@@ -108,10 +99,7 @@ inferExpressionIO ::
   Text ->
   Sem r (Either JuvixError Internal.Expression)
 inferExpressionIO fp txt =
-  runError
-    . runNameIdGenArtifacts
-    . runBuiltinsArtifacts
-    $ inferExpression fp txt
+  runError (inferExpression fp txt)
 
 --------------------------------------------------------------------------------
 -- Workflows
