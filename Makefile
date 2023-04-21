@@ -56,11 +56,7 @@ clean-juvix-build:
 repl:
 	@${STACK} ghci Juvix:lib ${STACKFLAGS}
 
-# ------------------------------------------------------------------------------
-# -- The Juvix Book
-# ------------------------------------------------------------------------------
-
-# -- EXAMPLES
+# -- EXAMPLES HTML OUTPUT
 
 .PHONY: html-examples
 html-examples: $(EXAMPLES)
@@ -75,26 +71,6 @@ demo-example:
 	$(eval OUTPUTDIR=$(EXAMPLEHTMLOUTPUT)/Demo)
 	@mkdir -p ${OUTPUTDIR}
 	@${JUVIXBIN} html $(DEMO_EXAMPLE) --output-dir=$(CURDIR)/${OUTPUTDIR}
-
-# -- MDBook
-
-.PHONY: docs
-docs: html-examples
-	@cp $(METAFILES) docs/
-	@cp -r assets/ docs/
-	@mdbook build
-
-.PHONY: serve-docs
-serve-docs: docs
-	@mdbook serve --open
-
-cargo-dependencies:
-	@cargo install mdbook \
-				   mdbook-katex \
-				   mdbook-linkcheck \
-				   mdbook-pagetoc
-
-# -- Codebase Documentation
 
 .PHONY : haddock
 haddock :
