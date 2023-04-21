@@ -30,7 +30,7 @@ judocText_ :: Members '[InfoTableBuilder] r => ParsecS r a -> ParsecS r ()
 judocText_ = void . judocText
 
 space :: forall r. Members '[InfoTableBuilder] r => ParsecS r ()
-space = space' True >>= mapM_ (P.lift . registerCommentGroup)
+space = space' True >>= mapM_ (P.lift . registerSpaceSpan)
 
 lexeme :: (Members '[InfoTableBuilder] r) => ParsecS r a -> ParsecS r a
 lexeme = L.lexeme space

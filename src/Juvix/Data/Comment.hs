@@ -3,7 +3,6 @@ module Juvix.Data.Comment where
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Data.Loc
 import Juvix.Prelude.Base
-import Juvix.Prelude.Lens
 import Path
 import Prettyprinter
 
@@ -14,7 +13,7 @@ newtype Comments = Comments
 
 data FileComments = FileComments
   { -- | sorted by position
-    _fileCommentsSorted :: [CommentGroup],
+    _fileCommentsSorted :: [SpaceSpan],
     _fileCommentsFile :: Path Abs File
   }
   deriving stock (Eq, Show, Generic, Data)
@@ -31,29 +30,53 @@ data Comment = Comment
   }
   deriving stock (Show, Eq, Ord, Generic, Data)
 
--- | A sequence of consecutive comments not separated by one or more empty
--- lines.
-newtype CommentGroup = CommentGroup
-  { _commentGroup :: NonEmpty Comment
+data SpaceSection
+  = SpaceComment Comment
+  | SpaceLines EmptyLines
+  deriving stock (Show, Eq, Ord, Generic, Data)
+
+-- | One or more empty lines
+data EmptyLines = EmptyLines
+  { _emptyLinesLoc :: Interval,
+    -- | The number of empty lines. Always positive
+    _emptyLinesNum :: Int
   }
   deriving stock (Show, Eq, Ord, Generic, Data)
 
-deriving newtype instance Semigroup CommentGroup
+newtype SpaceSpan = SpaceSpan
+  { _spaceSpan :: NonEmpty SpaceSection
+  }
+  deriving stock (Show, Eq, Ord, Generic, Data)
+
+deriving newtype instance Semigroup SpaceSpan
 
 makeLenses ''Comment
-makeLenses ''CommentGroup
+makeLenses ''SpaceSpan
 makeLenses ''FileComments
 makeLenses ''Comments
+makeLenses ''EmptyLines
 
-instance HasLoc CommentGroup where
-  getLoc = getLocSpan . (^. commentGroup)
+_SpaceLines :: Traversal' SpaceSection EmptyLines
+_SpaceLines f s = case s of
+  SpaceComment {} -> pure s
+  SpaceLines l -> SpaceLines <$> f l
+
+hasEmptyLines :: SpaceSpan -> Bool
+hasEmptyLines = any (has _SpaceLines) . (^. spaceSpan)
+
+instance HasLoc SpaceSpan where
+  getLoc = getLocSpan . (^. spaceSpan)
+
+instance HasLoc EmptyLines where
+  getLoc = (^. emptyLinesLoc)
+
+instance HasLoc SpaceSection where
+  getLoc = \case
+    SpaceComment g -> getLoc g
+    SpaceLines w -> getLoc w
 
 instance HasLoc Comment where
   getLoc = (^. commentInterval)
-
-instance Pretty CommentGroup where
-  pretty :: CommentGroup -> Doc ann
-  pretty = vsep . map pretty . toList . (^. commentGroup)
 
 instance Pretty Comment where
   pretty :: Comment -> Doc ann
@@ -64,24 +87,23 @@ instance Pretty Comment where
         CommentOneLine -> ("--" <>)
         CommentBlock -> enclose "{-" "-}"
 
-flattenComments :: [CommentGroup] -> [Comment]
-flattenComments = mconcatMap (^. commentGroup . to toList)
+allComments :: Comments -> [Comment]
+allComments c =
+  [ m | f <- toList (c ^. commentsByFile), s <- f ^. fileCommentsSorted, SpaceComment m <- toList (s ^. spaceSpan)
+  ]
 
-allComments :: Comments -> [CommentGroup]
-allComments c = concat [f ^. fileCommentsSorted | f <- toList (c ^. commentsByFile)]
-
-mkComments :: [CommentGroup] -> Comments
+mkComments :: [SpaceSpan] -> Comments
 mkComments cs = Comments {..}
   where
-    commentFile :: CommentGroup -> Path Abs File
-    commentFile = (^. commentGroup . _head1 . commentInterval . intervalFile)
+    spSpanFile :: SpaceSpan -> Path Abs File
+    spSpanFile = (^. intervalFile) . getLoc
     _commentsByFile :: HashMap (Path Abs File) FileComments
     _commentsByFile =
       HashMap.fromList
         [ (_fileCommentsFile, FileComments {..})
-          | filecomments :: NonEmpty CommentGroup <- groupSortOn commentFile cs,
-            let _fileCommentsFile = commentFile (head filecomments),
-            let _fileCommentsSorted = sortOn (^. commentGroup . _head1 . commentInterval) (toList filecomments)
+          | filecomments :: NonEmpty SpaceSpan <- groupSortOn spSpanFile cs,
+            let _fileCommentsFile = spSpanFile (head filecomments),
+            let _fileCommentsSorted = sortOn getLoc (toList filecomments)
         ]
 
 emptyComments :: Comments
@@ -97,11 +119,14 @@ emptyFileComments _fileCommentsFile =
 fileComments :: Path Abs File -> Comments -> FileComments
 fileComments f cs = HashMap.lookupDefault (emptyFileComments f) f (cs ^. commentsByFile)
 
+flattenComments :: [SpaceSpan] -> [Comment]
+flattenComments m = [c | s <- m, SpaceComment c <- toList (s ^. spaceSpan)]
+
 instance Pretty FileComments where
   pretty fc =
     pretty (fc ^. fileCommentsFile)
       <> line
-      <> vsep [pretty c | c <- toList (fc ^. fileCommentsSorted)]
+      <> vsep [pretty c | c <- flattenComments (fc ^. fileCommentsSorted)]
 
 instance Pretty Comments where
   pretty c

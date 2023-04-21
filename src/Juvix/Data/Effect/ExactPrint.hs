@@ -106,12 +106,21 @@ paragraphs = go True . toList
       [] -> return ()
       (i, p) : ps -> do
         cs <- printCommentsUntil i
-        let mlastComment = last <$> nonEmpty cs
-            extra = fromMaybe False $ do
-              lastComment <- mlastComment
-              nextPara <- fst . head <$> (nonEmpty ps)
-              return (intervalEndLine (getLoc lastComment) + 1 < intervalStartLine nextPara)
-        when (extra || (not isFirst)) line
+        -- let lastc = intervalEndLine . getLoc . last . (^. commentGroup) . head <$> nonEmpty cs
+        --     nextp = intervalStartLine i
+        -- -- True when the last comment and the next paragraph are separated by
+        -- -- one or more empty lines
+        -- let lastSep = fromMaybe False $ do
+        --       lastc <- getLoc . last . (^. commentGroup) . head <$> nonEmpty cs
+        --       let nextp = intervalStartLine i
+        --       return (intervalEndLine lastc + 1 < nextp)
+        let extra = maybe False (not . hasEmptyLines) cs
+        when (not isFirst && extra) line
+        -- (noLoc (P.pretty lastc
+        --         <> "\n"
+        --         <> P.pretty nextp
+        --         <> "\n"
+        --         <> P.pretty lastSep <> P.pretty isFirst <> P.pretty extra) >> line)
         p
         line
         go False ps

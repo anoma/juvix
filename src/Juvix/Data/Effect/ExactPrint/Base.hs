@@ -14,7 +14,7 @@ import Prettyprinter qualified as P
 data ExactPrint m a where
   NoLoc :: Doc Ann -> ExactPrint m ()
   Morpheme :: Interval -> Doc Ann -> ExactPrint m ()
-  PrintCommentsUntil :: Interval -> ExactPrint m [CommentGroup]
+  PrintCommentsUntil :: Interval -> ExactPrint m (Maybe SpaceSpan)
   Region :: (Doc Ann -> Doc Ann) -> m b -> ExactPrint m b
   End :: ExactPrint m ()
 
@@ -22,7 +22,7 @@ makeSem ''ExactPrint
 
 data Builder = Builder
   { -- | comments sorted by starting location
-    _builderComments :: [CommentGroup],
+    _builderComments :: [SpaceSpan],
     _builderDoc :: Doc Ann,
     _builderEnd :: FileLoc
   }
@@ -75,39 +75,43 @@ append' d = modify (over builderDoc (<> d))
 line' :: forall r. Members '[State Builder] r => Sem r ()
 line' = append' P.line
 
--- | it prints all remaining comments
+-- | It prints all remaining comments
 end' :: forall r. Members '[State Builder] r => Sem r ()
 end' = do
   cs <- gets (^. builderComments)
-  mapM_ printCommentGroup cs
+  case cs of
+    [] -> return ()
+    [x] -> printSpaceSpan x
+    _ -> impossible
   modify' (set builderComments [])
 
-printCommentGroups :: Members '[State Builder] r => [CommentGroup] -> Sem r ()
-printCommentGroups = sequenceWith line' . map printCommentGroup
-
-printCommentGroup :: Members '[State Builder] r => CommentGroup -> Sem r ()
-printCommentGroup g = do
-  forM_ (g ^. commentGroup) printComment
+printSpaceSpan :: forall r. Members '[State Builder] r => SpaceSpan -> Sem r ()
+printSpaceSpan = sequenceWith (return ()) . fmap printSpaceSection . (^. spaceSpan)
+  where
+    printSpaceSection :: SpaceSection -> Sem r ()
+    printSpaceSection = \case
+      SpaceComment c -> printComment c
+      SpaceLines l -> append' (pretty (l ^. emptyLinesNum)) >> line'
 
 printComment :: Members '[State Builder] r => Comment -> Sem r ()
 printComment c = do
   append' (annotate AnnComment (P.pretty c))
   line'
 
-printCommentsUntil' :: forall r. Members '[State Builder] r => Interval -> Sem r [CommentGroup]
+printCommentsUntil' :: forall r. Members '[State Builder] r => Interval -> Sem r (Maybe SpaceSpan)
 printCommentsUntil' loc = go
   where
-    go :: Sem r [CommentGroup]
+    go :: Sem r (Maybe SpaceSpan)
     go = do
-      gs <- whileJustM popCommentGroup
-      printCommentGroups gs
-      return gs
+      g <- popSpaceSpan
+      whenJust g printSpaceSpan
+      return g
       where
-        cmp :: CommentGroup -> Bool
+        cmp :: SpaceSpan -> Bool
         cmp c = getLoc c ^. intervalStart < loc ^. intervalStart
 
-        popCommentGroup :: Sem r (Maybe CommentGroup)
-        popCommentGroup = do
+        popSpaceSpan :: Sem r (Maybe SpaceSpan)
+        popSpaceSpan = do
           cs <- gets (^. builderComments)
           case cs of
             h : hs

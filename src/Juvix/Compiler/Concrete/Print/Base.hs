@@ -68,7 +68,6 @@ instance SingI t => PrettyPrint (Module 'Scoped t) where
         <> line
         <> topSpace
         <> moduleBody'
-        <> line
         <> ending
     where
       topSpace :: Sem r ()

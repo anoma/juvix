@@ -38,19 +38,39 @@ hspace_ = void hspace
 spaceMsg :: String
 spaceMsg = "white space (only spaces and newlines allowed)"
 
-space' :: forall e m. MonadParsec e Text m => Bool -> m [CommentGroup]
-space' judoc = hidden $ do
-  whiteSpace
-  whileJustM cgroup
+space' :: forall e m. MonadParsec e Text m => Bool -> m (Maybe SpaceSpan)
+space' judoc =
+  hidden $
+    fmap SpaceSpan . nonEmpty <$> spaceSections
   where
-    cgroup :: m (Maybe CommentGroup)
-    cgroup = fmap CommentGroup . nonEmpty <$> P.many comment <* whiteSpace
+    spaceSections :: m [SpaceSection]
+    spaceSections = catMaybes <$> go []
+      where
+        go :: [Maybe SpaceSection] -> m [Maybe SpaceSection]
+        go acc = do
+          s <- fmap SpaceLines <$> emptyLines
+          m <- fmap SpaceComment <$> optional comment
+          case m of
+            Nothing -> return (reverse (s : acc))
+            Just {} -> go (m : s : acc)
 
-    ctrailSpace :: m ()
-    ctrailSpace = void (hspace_ >> optional (chunk "\n"))
+    emptyLines :: m (Maybe EmptyLines)
+    emptyLines = do
+      (k, i) <- interval $ do
+        hspace_
+        pred . length <$> whileJustM (P.try (optional (newline >> hspace_)))
+      return
+        if
+            | k > 0 ->
+                Just
+                  EmptyLines
+                    { _emptyLinesLoc = i,
+                      _emptyLinesNum = k
+                    }
+            | otherwise -> mzero
 
     comment :: m Comment
-    comment = (lineComment <|> blockComment) <* ctrailSpace
+    comment = lineComment <|> blockComment
       where
         lineComment :: m Comment
         lineComment = do
@@ -69,6 +89,7 @@ space' judoc = hidden $ do
           (_commentText, _commentInterval) <- interval $ do
             void (P.chunk "{-")
             pack <$> P.manyTill anySingle (P.chunk "-}")
+          hspace_
           return Comment {..}
 
 integer' :: ParsecS r (Integer, Interval) -> ParsecS r (Integer, Interval)
