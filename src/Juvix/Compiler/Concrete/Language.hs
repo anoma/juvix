@@ -264,7 +264,7 @@ data InductiveDef (s :: Stage) = InductiveDef
     _inductiveParameters :: [InductiveParameters s],
     _inductiveType :: Maybe (ExpressionType s),
     _inductiveConstructors :: NonEmpty (InductiveConstructorDef s),
-    _inductivePositive :: Bool
+    _inductivePositive :: Maybe KeywordRef
   }
 
 deriving stock instance (Show (ExpressionType s), Show (SymbolType s)) => Show (InductiveDef s)
@@ -1055,7 +1055,7 @@ instance HasLoc ScopedIden where
     ScopedVar a -> getLoc a
 
 instance HasLoc (InductiveDef 'Scoped) where
-  getLoc i = getLoc (i ^. inductiveKw)
+  getLoc i = (getLoc <$> i ^. inductivePositive) ?<> getLoc (i ^. inductiveKw)
 
 instance HasLoc (FunctionClause 'Scoped) where
   getLoc c = getLoc (c ^. clauseOwnerFunction) <> getLoc (c ^. clauseBody)

@@ -56,10 +56,18 @@ makeLenses ''FileComments
 makeLenses ''Comments
 makeLenses ''EmptyLines
 
+_SpaceComment :: Traversal' SpaceSection Comment
+_SpaceComment f s = case s of
+  SpaceComment l -> SpaceComment <$> f l
+  SpaceLines {} -> pure s
+
 _SpaceLines :: Traversal' SpaceSection EmptyLines
 _SpaceLines f s = case s of
   SpaceComment {} -> pure s
   SpaceLines l -> SpaceLines <$> f l
+
+hasComments :: SpaceSpan -> Bool
+hasComments = any (has _SpaceComment) . (^. spaceSpan)
 
 hasEmptyLines :: SpaceSpan -> Bool
 hasEmptyLines = any (has _SpaceLines) . (^. spaceSpan)

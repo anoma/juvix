@@ -333,7 +333,7 @@ ppInductiveSignature InductiveDef {..} = do
         Nothing -> Nothing
         Just e -> Just (noLoc P.kwColon <+> ppCode e)
       positive'
-        | _inductivePositive = (<> line) <$> Just (noLoc P.kwPositive)
+        | Just k <- _inductivePositive = (<> line) <$> Just (ppCode k)
         | otherwise = Nothing
   builtin'
     ?<> positive'

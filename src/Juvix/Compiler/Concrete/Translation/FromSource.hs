@@ -516,7 +516,7 @@ lambda = do
 
 inductiveDef :: Members '[InfoTableBuilder, JudocStash, NameIdGen] r => Maybe (WithLoc BuiltinInductive) -> ParsecS r (InductiveDef 'Parsed)
 inductiveDef _inductiveBuiltin = do
-  _inductivePositive <- isJust <$> optional (kw kwPositive)
+  _inductivePositive <- optional (kw kwPositive)
   _inductiveKw <- kw kwInductive
   _inductiveDoc <- getJudoc
   _inductiveName <- symbol P.<?> "<type name>"
