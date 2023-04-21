@@ -1,1 +1,0 @@
-# Totality checking

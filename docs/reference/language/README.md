@@ -1,7 +1,0 @@
-- [Functions](./functions.md)
-- [Data types](./datatypes.md)
-- [Modules](./modules.md)
-- [Local definitions](./let.md)
-- [Control structures](./control.md)
-- [Comments](./comments.md)
-- [Axioms](./axioms.md)

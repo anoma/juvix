@@ -1,4 +1,4 @@
-name: The Juvix compiler CI
+name: Juvix Compiler CI
 "on":
   workflow_dispatch:
     inputs:
@@ -147,105 +147,6 @@ jobs:
         run: |
           cd main
           make smoke
-
-  docs-linux:
-    needs: build-and-test-linux
-    runs-on: ubuntu-20.04
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    # Grant GITHUB_TOKEN the permissions required to make a Pages deployment
-    permissions:
-      pages: write # to deploy to Pages
-      id-token: write # to verify the deployment originates from an appropriate source
-
-    steps:
-      - name: Checkout our repository
-        uses: actions/checkout@v3
-        with:
-          path: main
-          submodules: recursive
-
-      - name: Install mdbook-pagetoc
-        uses: baptiste0928/cargo-install@v1
-        with:
-          crate: mdbook-pagetoc
-
-      - name: Install mdbook-katex
-        uses: baptiste0928/cargo-install@v1
-        with:
-          crate: mdbook-katex
-
-      - name: Install mdbook-linkcheck
-        uses: baptiste0928/cargo-install@v1
-        with:
-          crate: mdbook-linkcheck
-
-      - name: MDBook setup
-        uses: peaceiris/actions-mdbook@v1
-        with:
-          mdbook-version: "latest"
-
-      - name: Cache LLVM and Clang
-        id: cache-llvm
-        uses: actions/cache@v3
-        with:
-          path: |
-            C:/Program Files/LLVM
-            ./llvm
-          key: "${{ runner.os }}-llvm-13"
-
-      - name: Install LLVM and Clang
-        uses: KyleMayes/install-llvm-action@v1
-        with:
-          version: "13.0"
-          cached: "${{ steps.cache-llvm.outputs.cache-hit }}"
-
-      - name: Make runtime
-        run: |
-          cd main
-          make runtime
-
-      - name: Stack setup
-        id: stack
-        uses: freckle/stack-action@v4
-        with:
-          working-directory: main
-          test: false
-
-      - name: Generate HTML files from examples
-        run: |
-          cd main
-          echo "$GITHUB_WORKSPACE/.local/bin" >> $GITHUB_PATH
-          make install
-          make html-examples
-          make demo-example
-
-      - name: Build the mdbook
-        run: |
-          cd main
-          make docs
-
-      - name: Setup Pages
-        uses: actions/configure-pages@v3
-        if: >-
-          github.ref == 'refs/heads/main' || github.event_name ==
-          'workflow_dispatch'
-
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v1
-        if: >-
-          github.ref == 'refs/heads/main' || github.event_name ==
-          'workflow_dispatch'
-        with:
-          path: main/book/html
-
-      - name: Deploy to GitHub Pages
-        uses: actions/deploy-pages@v1
-        id: deployment
-        if: >-
-          github.ref == 'refs/heads/main' || github.event_name ==
-          'workflow_dispatch'
 
   build-and-test-macos:
     runs-on: macos-12
