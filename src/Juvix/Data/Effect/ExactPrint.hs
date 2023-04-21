@@ -98,4 +98,4 @@ oneLineOrNext :: Members '[ExactPrint] r => Sem r () -> Sem r ()
 oneLineOrNext = region P.oneLineOrNext
 
 paragraphs :: (Foldable l, Members '[ExactPrint] r) => l (Sem r ()) -> Sem r ()
-paragraphs = sequenceWith (line >> emptyLine)
+paragraphs = sequenceWith (line >> ensureEmptyLine)

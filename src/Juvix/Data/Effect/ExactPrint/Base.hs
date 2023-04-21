@@ -15,8 +15,8 @@ data ExactPrint m a where
   NoLoc :: Doc Ann -> ExactPrint m ()
   Morpheme :: Interval -> Doc Ann -> ExactPrint m ()
   PrintCommentsUntil :: Interval -> ExactPrint m (Maybe SpaceSpan)
-  EmptyLine :: ExactPrint m ()
-  IgnoreTrailingEmpty :: ExactPrint m ()
+  EnsureEmptyLine :: ExactPrint m ()
+  -- IgnoreTrailingEmpty :: ExactPrint m ()
   Region :: (Doc Ann -> Doc Ann) -> m b -> ExactPrint m b
   End :: ExactPrint m ()
 
@@ -26,8 +26,7 @@ data Builder = Builder
   { -- | comments sorted by starting location
     _builderComments :: [SpaceSpan],
     _builderDoc :: Doc Ann,
-    _builderPendingEmptyLine :: Bool,
-    _builderIgnoreTrailingEmpty :: Bool,
+    _builderEnsureEmptyLine :: Bool,
     _builderEnd :: FileLoc
   }
 
@@ -41,8 +40,7 @@ runExactPrint cs = fmap (first (^. builderDoc)) . runState ini . re
       Builder
         { _builderComments = fromMaybe [] (cs ^? _Just . fileCommentsSorted),
           _builderDoc = mempty,
-          _builderPendingEmptyLine = False,
-          _builderIgnoreTrailingEmpty = False,
+          _builderEnsureEmptyLine = False,
           _builderEnd = FileLoc 0 0 0
         }
 
@@ -58,8 +56,8 @@ re = reinterpretH h
       Tactical ExactPrint (Sem rInitial) (State Builder ': r) x
     h = \case
       NoLoc p -> append' p >>= pureT
-      EmptyLine -> modify' (set builderPendingEmptyLine True) >>= pureT
-      IgnoreTrailingEmpty -> modify' (set builderIgnoreTrailingEmpty True) >>= pureT
+      EnsureEmptyLine -> modify' (set builderEnsureEmptyLine True) >>= pureT
+      -- IgnoreTrailingEmpty -> modify' (set builderIgnoreTrailingEmpty True) >>= pureT
       Morpheme l p -> morpheme' l p >>= pureT
       End -> end' >>= pureT
       PrintCommentsUntil l -> printCommentsUntil' l >>= pureT
@@ -67,11 +65,14 @@ re = reinterpretH h
         st0 :: Builder <- set builderDoc mempty <$> get
         m' <- runT m
         (st' :: Builder, fx) <- raise (evalExactPrint' st0 m')
-
-        modify (over builderDoc (<> f (st' ^. builderDoc)))
-        modify (set builderComments (st' ^. builderComments))
-        modify (set builderEnd (st' ^. builderEnd))
-
+        doc' <- gets (^. builderDoc)
+        put
+          Builder
+            { _builderDoc = doc' <> f (st' ^. builderDoc),
+              _builderComments = st' ^. builderComments,
+              _builderEnd = st' ^. builderEnd,
+              _builderEnsureEmptyLine = st' ^. builderEnsureEmptyLine
+            }
         return fx
 
 evalExactPrint' :: Builder -> Sem (ExactPrint ': r) a -> Sem r (Builder, a)
@@ -99,7 +100,7 @@ printSpaceSpan = mapM_ printSpaceSection . (^. spaceSpan)
     printSpaceSection :: SpaceSection -> Sem r ()
     printSpaceSection = \case
       SpaceComment c -> printComment c
-      SpaceLines l ->
+      SpaceLines {} ->
         -- append' (pretty $ getLoc l) >>
         line'
 
@@ -110,22 +111,22 @@ printComment c = do
 
 printCommentsUntil' :: forall r. Members '[State Builder] r => Interval -> Sem r (Maybe SpaceSpan)
 printCommentsUntil' loc = do
-  forceLine <- popPendingLine
+  forceLine <- popEnsureLine
   g <- popSpaceSpan
   let noSpaceLines = fromMaybe True $ do
         g' <- (^. spaceSpan) <$> g
         return (not (any (has _SpaceLines) g'))
-  -- when (forceLine && noSpaceLines) line'
+  when (forceLine && noSpaceLines) (append' "<ensure>\n")
   whenJust g printSpaceSpan
   return g
   where
     cmp :: SpaceSpan -> Bool
     cmp c = getLoc c ^. intervalStart < loc ^. intervalStart
 
-    popPendingLine :: Sem r Bool
-    popPendingLine = do
-      b <- gets (^. builderPendingEmptyLine)
-      modify' (set builderPendingEmptyLine False)
+    popEnsureLine :: Sem r Bool
+    popEnsureLine = do
+      b <- gets (^. builderEnsureEmptyLine)
+      modify' (set builderEnsureEmptyLine False)
       return b
 
     popSpaceSpan :: Sem r (Maybe SpaceSpan)

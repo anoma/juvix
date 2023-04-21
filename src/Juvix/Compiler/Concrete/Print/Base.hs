@@ -74,7 +74,7 @@ instance SingI t => PrettyPrint (Module 'Scoped t) where
       topSpace :: Sem r ()
       topSpace = case sing :: SModuleIsTop t of
         SModuleLocal -> mempty
-        SModuleTop -> emptyLine
+        SModuleTop -> ensureEmptyLine
 
       localIndent :: Sem r () -> Sem r ()
       localIndent = case sing :: SModuleIsTop t of
