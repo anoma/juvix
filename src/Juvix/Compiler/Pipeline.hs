@@ -17,6 +17,7 @@ import Juvix.Compiler.Backend.Geb qualified as Geb
 import Juvix.Compiler.Builtins
 import Juvix.Compiler.Concrete.Data.ParsedInfoTableBuilder qualified as Concrete
 import Juvix.Compiler.Concrete.Data.Scope
+import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Translation.FromParsed qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver qualified as PathResolver
@@ -41,39 +42,64 @@ type TopPipelineEff = '[PathResolver, Reader EntryPoint, Files, NameIdGen, Built
 
 arityCheckExpression ::
   Members '[Error JuvixError, State Artifacts] r =>
-  Path Abs File ->
-  Text ->
+  ExpressionAtoms 'Parsed ->
   Sem r Internal.Expression
-arityCheckExpression fp txt = do
+arityCheckExpression p = do
   mainScope <- fromJust <$> gets (^. artifactMainModuleScope)
   scopeTable <- gets (^. artifactScopeTable)
   ( runNameIdGenArtifacts
       . runBuiltinsArtifacts
     )
-    $ Parser.expressionFromTextSource fp txt
-      >>= Scoper.scopeCheckExpression scopeTable mainScope
+    $ Scoper.scopeCheckExpression scopeTable mainScope p
       >>= Abstract.fromConcreteExpression
       >>= Internal.fromAbstractExpression
       >>= Internal.arityCheckExpression
+
+parseExpression ::
+  Members '[State Artifacts, Error JuvixError] r =>
+  Path Abs File ->
+  Text ->
+  Sem r (ExpressionAtoms 'Parsed)
+parseExpression fp txt =
+  ( runNameIdGenArtifacts
+      . runBuiltinsArtifacts
+  )
+    $ Parser.expressionFromTextSource fp txt
+
+parseReplInput ::
+  Members '[PathResolver, Files, State Artifacts, Error JuvixError] r =>
+  Path Abs File ->
+  Text ->
+  Sem r Parser.ReplInput
+parseReplInput fp txt =
+  ( runNameIdGenArtifacts
+      . runBuiltinsArtifacts
+  )
+    $ Parser.replInputFromTextSource fp txt
 
 inferExpression ::
   Members '[Error JuvixError, State Artifacts] r =>
   Path Abs File ->
   Text ->
   Sem r Internal.Expression
-inferExpression fp txt =
-  arityCheckExpression fp txt
+inferExpression fp txt = do
+  p <- parseExpression fp txt
+  arityCheckExpression p
     >>= Internal.inferExpressionType
 
 compileExpression ::
   Members '[Error JuvixError, State Artifacts] r =>
-  Path Abs File ->
-  Text ->
+  ExpressionAtoms 'Parsed ->
   Sem r Core.Node
-compileExpression fp txt =
-  arityCheckExpression fp txt
+compileExpression p = do
+  arityCheckExpression p
     >>= Internal.typeCheckExpression
     >>= fromInternalExpression
+
+registerImport ::
+  Import 'Parsed ->
+  Sem r ()
+registerImport _ = return ()
 
 fromInternalExpression :: Members '[State Artifacts] r => Internal.Expression -> Sem r Core.Node
 fromInternalExpression exp = do
@@ -85,13 +111,24 @@ fromInternalExpression exp = do
     . runReader Core.initIndexTable
     $ Core.goExpression exp
 
-compileExpressionIO ::
-  Members '[State Artifacts, Embed IO] r =>
+data ReplPipelineResult
+  = ReplPipelineResultNode Core.Node
+  | ReplPipelineResultImport TopModulePath
+
+compileReplInputIO ::
+  Members '[Reader EntryPoint, State Artifacts, Embed IO] r =>
   Path Abs File ->
   Text ->
-  Sem r (Either JuvixError Core.Node)
-compileExpressionIO fp txt =
-  runError (compileExpression fp txt)
+  Sem r (Either JuvixError ReplPipelineResult)
+compileReplInputIO fp txt = do
+  runError
+    . runFilesIO
+    . runPathResolverArtifacts
+    $ do
+      p <- parseReplInput fp txt
+      case p of
+        Parser.ReplExpression e -> ReplPipelineResultNode <$> compileExpression e
+        Parser.ReplImport i -> registerImport i $> ReplPipelineResultImport (i ^. importModule)
 
 inferExpressionIO ::
   Members '[State Artifacts, Embed IO] r =>

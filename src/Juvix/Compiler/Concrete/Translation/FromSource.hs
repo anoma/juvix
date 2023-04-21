@@ -51,6 +51,10 @@ fromSource e = mapError (JuvixError @ParserError) $ do
               return txt
           | otherwise = readFile' fp
 
+data ReplInput
+  = ReplExpression (ExpressionAtoms 'Parsed)
+  | ReplImport (Import 'Parsed)
+
 expressionFromTextSource ::
   Members '[Error JuvixError, NameIdGen] r =>
   Path Abs File ->
@@ -61,6 +65,13 @@ expressionFromTextSource fp txt = mapError (JuvixError @ParserError) $ do
   case exp of
     Left e -> throw e
     Right exp' -> return exp'
+
+replInputFromTextSource ::
+  Members '[Error JuvixError, NameIdGen, Files, PathResolver] r =>
+  Path Abs File ->
+  Text ->
+  Sem r ReplInput
+replInputFromTextSource fp txt = mapError (JuvixError @ParserError) $ runReplInputParser fp txt
 
 importFromTextSource ::
   Members '[Error JuvixError, NameIdGen, Files, PathResolver] r =>
@@ -79,6 +90,20 @@ runImportParser fileName input = do
     runParserInfoTableBuilder $
       evalState (Nothing @(Judoc 'Parsed)) $
         P.runParserT import_ (toFilePath fileName) input
+  case m of
+    (_, Left err) -> throw (ErrMegaparsec (MegaparsecError err))
+    (_, Right r) -> return r
+
+runReplInputParser ::
+  Members '[Files, NameIdGen, Error ParserError, PathResolver] r =>
+  Path Abs File ->
+  Text ->
+  Sem r ReplInput
+runReplInputParser fileName input = do
+  m <-
+    runParserInfoTableBuilder $
+      evalState (Nothing @(Judoc 'Parsed)) $
+        P.runParserT replInput (toFilePath fileName) input
   case m of
     (_, Left err) -> throw (ErrMegaparsec (MegaparsecError err))
     (_, Right r) -> return r
@@ -142,6 +167,10 @@ topModuleDef = do
                     _wrongTopModuleNameActualPath = actualPath
                   }
             )
+
+replInput :: forall r. Members '[Files, PathResolver, InfoTableBuilder, JudocStash, NameIdGen, Error ParserError] r => ParsecS r ReplInput
+replInput = P.label "<repl input>" $ do
+  (ReplExpression <$> parseExpressionAtoms) <|> (ReplImport <$> import_)
 
 --------------------------------------------------------------------------------
 -- Symbols and names

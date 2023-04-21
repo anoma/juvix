@@ -183,7 +183,7 @@ runCommand opts = do
                   <$> doEvalIO False defaultLoc (artif' ^. artifactCoreTable) n
 
               compileString :: Repl (Either JuvixError Core.Node)
-              compileString = liftIO $ compileExpressionIO' ctx (strip (pack s))
+              compileString = liftIO $ compileReplInputIO' ctx (strip (pack s))
 
               bindEither :: (Monad m) => m (Either e a) -> (a -> m (Either e b)) -> m (Either e b)
               bindEither x f = join <$> (x >>= mapM f)
@@ -193,7 +193,7 @@ runCommand opts = do
         ctx <- State.gets (^. replStateContext)
         case ctx of
           Just ctx' -> do
-            compileRes <- liftIO (compileExpressionIO' ctx' (strip (pack input)))
+            compileRes <- liftIO (compileReplInputIO' ctx' (strip (pack input)))
             case compileRes of
               Left err -> printError err
               Right n -> renderOut (Core.ppOut opts n)
@@ -324,13 +324,22 @@ inferExpressionIO' :: ReplContext -> Text -> IO (Either JuvixError Internal.Expr
 inferExpressionIO' ctx txt =
   runM
     . evalState (ctx ^. replContextArtifacts)
+    . runReader (ctx ^. replContextEntryPoint)
     $ inferExpressionIO replPath txt
 
-compileExpressionIO' :: ReplContext -> Text -> IO (Either JuvixError Core.Node)
-compileExpressionIO' ctx txt =
+compileReplInputIO' :: ReplContext -> Text -> IO (Either JuvixError Core.Node)
+compileReplInputIO' ctx txt =
   runM
     . evalState (ctx ^. replContextArtifacts)
-    $ compileExpressionIO replPath txt
+    . runReader (ctx ^. replContextEntryPoint)
+    $ do
+      r <- compileReplInputIO replPath txt
+      return (extractNode <$> r)
+  where
+    extractNode :: ReplPipelineResult -> Core.Node
+    extractNode = \case
+      ReplPipelineResultNode n -> n
+      ReplPipelineResultImport {} -> error "import not supported"
 
 render' :: (P.HasAnsiBackend a, P.HasTextBackend a) => a -> Repl ()
 render' t = do
