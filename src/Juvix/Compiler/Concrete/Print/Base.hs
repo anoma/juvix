@@ -255,7 +255,7 @@ instance PrettyPrint UsingHiding where
             (noLoc P.kwBraceR)
             (noLoc P.kwSemicolon)
             (ppUnkindedSymbol <$> syms)
-    noLoc (pretty word) <+> bracedList
+    ppCode word <+> bracedList
     where
       (word, syms) = case uh of
         Using s -> (kwUsing, s)
