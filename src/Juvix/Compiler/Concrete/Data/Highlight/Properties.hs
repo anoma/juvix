@@ -32,6 +32,7 @@ data Face
   | FaceString
   | FaceNumber
   | FaceComment
+  | FaceJudoc
   | FaceError
 
 faceSymbolStr :: Face -> Text
@@ -45,6 +46,7 @@ faceSymbolStr = \case
   FaceFunction -> Str.function
   FaceNumber -> Str.number
   FaceComment -> Str.comment
+  FaceJudoc -> Str.judoc
   FaceString -> Str.string
   FaceError -> Str.error
 

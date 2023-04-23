@@ -256,6 +256,7 @@ putTag ann x = case ann of
   AnnKeyword -> return (Html.span ! Attr.class_ "ju-keyword" $ x)
   AnnUnkindedSym -> return (Html.span ! Attr.class_ "ju-var" $ x)
   AnnComment -> return (Html.span ! Attr.class_ "ju-var" $ x) -- TODO add comment class
+  AnnJudoc -> return (Html.span ! Attr.class_ "ju-var" $ x) -- TODO add judoc class
   AnnDelimiter -> return (Html.span ! Attr.class_ "ju-delimiter" $ x)
   AnnDef tmp ni -> boldDefine <*> tagDef tmp ni
   AnnRef tmp ni -> tagRef tmp ni
