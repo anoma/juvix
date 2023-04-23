@@ -75,6 +75,10 @@ string' :: ParsecS r Text
 string' = pack <$> (char '"' >> manyTill L.charLiteral (char '"'))
 
 -- | The caller is responsible of consuming space after it.
+delim' :: Text -> ParsecS r Interval
+delim' d = P.label (unpack d) . fmap snd . interval $ chunk d
+
+-- | The caller is responsible of consuming space after it.
 kw' :: Keyword -> ParsecS r KeywordRef
 kw' k@Keyword {..} = P.label (unpack _keywordAscii) (reserved <|> normal)
   where

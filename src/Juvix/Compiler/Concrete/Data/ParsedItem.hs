@@ -13,6 +13,7 @@ data ParsedItemTag
   | ParsedTagLiteralInt
   | ParsedTagLiteralString
   | ParsedTagComment
+  | ParsedTagDelimiter
   deriving stock (Eq, Show, Generic)
 
 makeLenses ''ParsedItem
