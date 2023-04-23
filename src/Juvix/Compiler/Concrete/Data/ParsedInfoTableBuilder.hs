@@ -43,7 +43,7 @@ registerJudocText i =
   registerItem
     ParsedItem
       { _parsedLoc = i,
-        _parsedTag = ParsedTagComment
+        _parsedTag = ParsedTagJudoc
       }
 
 registerLiteral :: Member InfoTableBuilder r => LiteralLoc -> Sem r LiteralLoc

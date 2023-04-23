@@ -68,14 +68,14 @@ bracedString =
       void (char '\\')
       char '}'
 
-string :: (Members '[InfoTableBuilder] r) => ParsecS r (Text, Interval)
+string :: Members '[InfoTableBuilder] r => ParsecS r (Text, Interval)
 string = lexemeInterval string'
 
 judocExampleStart :: ParsecS r ()
 judocExampleStart = P.chunk Str.judocExample >> hspace_
 
-judocStart :: ParsecS r ()
-judocStart = P.chunk Str.judocStart >> hspace_
+judocStart :: Members '[InfoTableBuilder] r => ParsecS r ()
+judocStart = judocText_ (P.chunk Str.judocStart) >> hspace_
 
 judocEmptyLine :: (Members '[InfoTableBuilder] r) => ParsecS r ()
 judocEmptyLine = lexeme (void (P.try (judocStart >> P.newline)))

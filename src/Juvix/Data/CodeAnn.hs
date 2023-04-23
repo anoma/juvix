@@ -18,6 +18,7 @@ data CodeAnn
   | AnnKeyword
   | AnnCode
   | AnnComment
+  | AnnJudoc
   | AnnImportant
   | AnnDelimiter
   | AnnLiteralString
@@ -37,6 +38,7 @@ stylize a = case a of
   AnnCode -> bold
   AnnImportant -> bold
   AnnComment -> colorDull Cyan
+  AnnJudoc -> colorDull Cyan
   AnnDelimiter -> colorDull White
   AnnLiteralString -> colorDull Red
   AnnLiteralInteger -> colorDull Cyan

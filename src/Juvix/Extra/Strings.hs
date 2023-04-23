@@ -77,6 +77,9 @@ public = "public"
 comment :: (IsString s) => s
 comment = "comment"
 
+judoc :: (IsString s) => s
+judoc = "judoc"
+
 number :: (IsString s) => s
 number = "number"
 

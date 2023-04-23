@@ -174,6 +174,7 @@ stashJudoc = do
   where
     judocBlocks :: ParsecS r (Judoc 'Parsed)
     judocBlocks = Judoc <$> some judocBlock
+
     judocBlock :: ParsecS r (JudocBlock 'Parsed)
     judocBlock = do
       p <-
@@ -188,13 +189,12 @@ stashJudoc = do
 
     judocExample :: ParsecS r (JudocBlock 'Parsed)
     judocExample = do
-      -- TODO judocText?
       P.try (judocStart >> judocExampleStart)
       _exampleId <- P.lift freshNameId
       (_exampleExpression, _exampleLoc) <- interval parseExpressionAtoms
       kw kwSemicolon
       space
-      return (JudocExample (Example {..}))
+      return (JudocExample Example {..})
 
     judocLine :: ParsecS r (JudocParagraphLine 'Parsed)
     judocLine = lexeme $ do
@@ -213,6 +213,7 @@ judocAtom =
       where
         isValidText :: Char -> Bool
         isValidText = (`notElem` ['\n', ';'])
+
     judocExpression :: ParsecS r (ExpressionAtoms 'Parsed)
     judocExpression = do
       judocText_ (P.char ';')
