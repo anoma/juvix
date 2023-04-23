@@ -70,6 +70,7 @@ goFaceParsedItem i = WithLoc (i ^. parsedLoc) (PropertyFace f)
       ParsedTagLiteralString -> FaceString
       ParsedTagComment -> FaceComment
       ParsedTagJudoc -> FaceJudoc
+      ParsedTagDelimiter -> FaceDelimiter
 
 goFaceName :: AName -> Maybe (WithLoc PropertyFace)
 goFaceName n = do

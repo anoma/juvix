@@ -23,7 +23,7 @@ fromCodeAnn = \case
     f <- nameKindFace k
     return (EPropertyFace (PropertyFace f))
   AnnKeyword -> Just (EPropertyFace (PropertyFace FaceKeyword))
-  AnnDelimiter -> Just (EPropertyFace (PropertyFace FaceKeyword))
+  AnnDelimiter -> Just (EPropertyFace (PropertyFace FaceDelimiter))
   AnnComment -> Just (EPropertyFace (PropertyFace FaceComment))
   AnnJudoc -> Just (EPropertyFace (PropertyFace FaceJudoc))
   AnnLiteralString -> Just (EPropertyFace (PropertyFace FaceString))
