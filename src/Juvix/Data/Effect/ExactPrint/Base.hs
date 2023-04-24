@@ -16,7 +16,6 @@ data ExactPrint m a where
   Morpheme :: Interval -> Doc Ann -> ExactPrint m ()
   PrintCommentsUntil :: Interval -> ExactPrint m (Maybe SpaceSpan)
   EnsureEmptyLine :: ExactPrint m ()
-  -- IgnoreTrailingEmpty :: ExactPrint m ()
   Region :: (Doc Ann -> Doc Ann) -> m b -> ExactPrint m b
   End :: ExactPrint m ()
 
@@ -57,7 +56,6 @@ re = reinterpretH h
     h = \case
       NoLoc p -> append' p >>= pureT
       EnsureEmptyLine -> modify' (set builderEnsureEmptyLine True) >>= pureT
-      -- IgnoreTrailingEmpty -> modify' (set builderIgnoreTrailingEmpty True) >>= pureT
       Morpheme l p -> morpheme' l p >>= pureT
       End -> end' >>= pureT
       PrintCommentsUntil l -> printCommentsUntil' l >>= pureT
@@ -100,9 +98,7 @@ printSpaceSpan = mapM_ printSpaceSection . (^. spaceSpan)
     printSpaceSection :: SpaceSection -> Sem r ()
     printSpaceSection = \case
       SpaceComment c -> printComment c
-      SpaceLines {} ->
-        -- append' (pretty $ getLoc l) >>
-        line'
+      SpaceLines {} -> line'
 
 printComment :: Members '[State Builder] r => Comment -> Sem r ()
 printComment c = do
@@ -116,7 +112,7 @@ printCommentsUntil' loc = do
   let noSpaceLines = fromMaybe True $ do
         g' <- (^. spaceSpan) <$> g
         return (not (any (has _SpaceLines) g'))
-  when (forceLine && noSpaceLines) (append' "<ensure>\n")
+  when (forceLine && noSpaceLines) line'
   whenJust g printSpaceSpan
   return g
   where

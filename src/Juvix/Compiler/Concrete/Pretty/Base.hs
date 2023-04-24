@@ -53,7 +53,7 @@ ppSymbol = case sing :: SStage s of
 groupStatements :: forall s. (SingI s) => [Statement s] -> [NonEmpty (Statement s)]
 groupStatements = \case
   [] -> []
-  (s : ss) -> reverse . map NonEmpty.reverse . uncurry cons . foldl' aux (pure s, []) $ ss
+  s : ss -> reverse . map NonEmpty.reverse . uncurry cons . foldl' aux (pure s, []) $ ss
   where
     aux ::
       (NonEmpty (Statement s), [NonEmpty (Statement s)]) ->
