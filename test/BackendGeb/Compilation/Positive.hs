@@ -178,5 +178,10 @@ tests =
       "Test029: pattern matching on natural numbers"
       $(mkRelDir ".")
       $(mkRelFile "test029.juvix")
-      $(mkRelFile "out/test029.geb")
+      $(mkRelFile "out/test029.geb"),
+    PosTest
+      "Test030: recursion with unroll pragma"
+      $(mkRelDir ".")
+      $(mkRelFile "test030.juvix")
+      $(mkRelFile "out/test030.geb")
   ]
