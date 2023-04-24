@@ -128,3 +128,49 @@ tests:
     stderr:
       contains: "error"
     exit-status: 1
+
+  - name: format-stdin
+    command:
+      - juvix
+      - --stdin
+      - format
+      - positive/Format.juvix
+    stdin: "module Format; open import Stdlib.Prelude; main : Nat; main := 5; "
+    stdout:
+      contains: |
+        module Format;
+
+        open import Stdlib.Prelude;
+
+        main : Nat;
+        main := 5;
+    exit-status: 1
+
+  - name: format-stdin-file-does-not-exist
+    command:
+      - juvix
+      - --stdin
+      - format
+      - positive/NonExistingFormat.juvix
+    stdin: "module Format; open import Stdlib.Prelude; main : Nat; main := 5; "
+    stderr:
+      contains: |
+        positive/NonExistingFormat.juvix: openFile: does not exist (No such file or directory)
+    exit-status: 1
+
+  - name: format-stdin-module-name-not-file-name
+    command:
+      - juvix
+      - --stdin
+      - format
+      - positive/Format.juvix
+    stdin: "module OtherFormat; open import Stdlib.Prelude; main : Nat; main := 5; "
+    stdout:
+      contains: |
+        module OtherFormat;
+
+        open import Stdlib.Prelude;
+
+        main : Nat;
+        main := 5;
+    exit-status: 1
