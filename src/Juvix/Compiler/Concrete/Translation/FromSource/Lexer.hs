@@ -68,7 +68,7 @@ bracedString =
       void (char '\\')
       char '}'
 
-string :: (Members '[InfoTableBuilder] r) => ParsecS r (Text, Interval)
+string :: Members '[InfoTableBuilder] r => ParsecS r (Text, Interval)
 string = lexemeInterval string'
 
 judocExampleStart :: ParsecS r ()

@@ -53,7 +53,7 @@ registerJudocText i =
   registerItem
     ParsedItem
       { _parsedLoc = i,
-        _parsedTag = ParsedTagComment
+        _parsedTag = ParsedTagJudoc
       }
 
 registerPragmas :: Member InfoTableBuilder r => Interval -> Sem r ()
