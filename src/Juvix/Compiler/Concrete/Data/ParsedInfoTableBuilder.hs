@@ -113,10 +113,10 @@ runParserInfoTableBuilder =
             modify' (over stateItems (i :))
           RegisterSpaceSpan g -> do
             modify' (over stateComments (g :))
-            -- TODO FIXME
-            registerItem'
-              ParsedItem
-                { _parsedLoc = getLoc g,
-                  _parsedTag = ParsedTagComment
-                }
+            forM_ (g ^.. spaceSpan . each . _SpaceComment) $ \c ->
+              registerItem'
+                ParsedItem
+                  { _parsedLoc = getLoc c,
+                    _parsedTag = ParsedTagComment
+                  }
       )
