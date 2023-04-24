@@ -565,7 +565,7 @@ checkTopModule m@Module {..} = do
   where
     freshTopModulePath ::
       forall s.
-      (Members '[State ScoperState, NameIdGen] s) =>
+      (Members '[State ScoperState, NameIdGen, InfoTableBuilder] s) =>
       Sem s S.TopModulePath
     freshTopModulePath = do
       _nameId <- freshNameId
@@ -580,6 +580,7 @@ checkTopModule m@Module {..} = do
           _nameWhyInScope = S.BecauseDefined
           _nameVerbatim = N.topModulePathToDottedPath _modulePath
           moduleName = S.Name' {..}
+      registerName moduleName
       return moduleName
 
     iniScope :: Scope
