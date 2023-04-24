@@ -108,7 +108,7 @@ printComment c = do
 printCommentsUntil' :: forall r. Members '[State Builder] r => Interval -> Sem r (Maybe SpaceSpan)
 printCommentsUntil' loc = do
   forceLine <- popEnsureLine
-  g <- popSpaceSpan
+  g <- fmap sconcat . nonEmpty <$> whileJustM popSpaceSpan
   let noSpaceLines = fromMaybe True $ do
         g' <- (^. spaceSpan) <$> g
         return (not (any (has _SpaceLines) g'))

@@ -49,7 +49,7 @@ ppModulePathType ::
   Sem r ()
 ppModulePathType x = case sing :: SStage s of
   SParsed -> case sing :: SModuleIsTop t of
-    SModuleLocal -> noLoc (pretty x)
+    SModuleLocal -> ppCode x
     SModuleTop -> ppCode x
   SScoped -> case sing :: SModuleIsTop t of
     SModuleLocal -> P.ppCode x >>= morpheme (getLoc x) . P.annSDef x

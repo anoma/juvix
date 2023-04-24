@@ -48,13 +48,25 @@ newtype SpaceSpan = SpaceSpan
   }
   deriving stock (Show, Eq, Ord, Generic, Data)
 
-deriving newtype instance Semigroup SpaceSpan
-
 makeLenses ''Comment
 makeLenses ''SpaceSpan
 makeLenses ''FileComments
 makeLenses ''Comments
 makeLenses ''EmptyLines
+
+instance Semigroup EmptyLines where
+  a <> b =
+    EmptyLines
+      { _emptyLinesLoc = a ^. emptyLinesLoc <> b ^. emptyLinesLoc,
+        _emptyLinesNum = a ^. emptyLinesNum + b ^. emptyLinesNum
+      }
+
+instance Semigroup SpaceSpan where
+  SpaceSpan a <> SpaceSpan b@(headb :| tailb)
+    | (inia, SpaceLines emptya) <- nonEmptyUnsnoc a,
+      SpaceLines emptyb <- headb =
+        SpaceSpan (nonEmpty' $ maybe [] toList inia <> (pure (SpaceLines (emptya <> emptyb))) <> tailb)
+    | otherwise = SpaceSpan (a <> b)
 
 _SpaceComment :: Traversal' SpaceSection Comment
 _SpaceComment f s = case s of
