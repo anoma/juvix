@@ -171,6 +171,8 @@ module Comments;
   -- attached to nothing 3
 
   axiom a4 : Type;
+
+  axiom a5 : Type;
 end;
 
 -- Comment at the end of a module

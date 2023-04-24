@@ -127,7 +127,7 @@ import Data.Map.Strict (Map)
 import Data.Maybe
 import Data.Monoid
 import Data.Ord
-import Data.Semigroup (Semigroup, (<>), sconcat)
+import Data.Semigroup (Semigroup, sconcat, (<>))
 import Data.Set (Set)
 import Data.Singletons hiding ((@@))
 import Data.Singletons.Sigma

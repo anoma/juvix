@@ -63,9 +63,10 @@ instance SingI t => PrettyPrint (Module 'Scoped t) where
         moduleDoc' :: Sem r () = maybe (return ()) ppCode _moduleDoc
         body'
           | null _moduleBody = ensureEmptyLine
-          | otherwise = topSpace
-            <> moduleBody'
-            <> line
+          | otherwise =
+              topSpace
+                <> moduleBody'
+                <> line
     moduleDoc'
       <> ppCode _moduleKw
       <+> modulePath'
