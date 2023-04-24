@@ -174,3 +174,19 @@ tests:
         main : Nat;
         main := 5;
     exit-status: 1
+
+  - name: format-stdin-no-file-name
+    command:
+      - juvix
+      - --stdin
+      - format
+    stdin: "module OtherFormat; open import Stdlib.Prelude; main : Nat; main := 5; "
+    stdout:
+      contains: |
+        module OtherFormat;
+
+        open import Stdlib.Prelude;
+
+        main : Nat;
+        main := 5;
+    exit-status: 1

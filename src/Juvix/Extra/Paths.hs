@@ -36,5 +36,8 @@ mkProjFile r = do
 replPath :: Path Abs File
 replPath = $(mkAbsFile "/repl")
 
+formatStdinPath :: Path Abs File
+formatStdinPath = $(mkAbsFile "/format-stdin")
+
 gebReplPath :: Path Abs File
 gebReplPath = $(mkAbsFile "/repl.geb")

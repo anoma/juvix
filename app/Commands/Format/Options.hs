@@ -3,7 +3,7 @@ module Commands.Format.Options where
 import CommonOptions
 
 data FormatOptions = FormatOptions
-  { _formatInput :: Prepath FileOrDir,
+  { _formatInput :: Maybe (Prepath FileOrDir),
     _formatCheck :: Bool,
     _formatInPlace :: Bool
   }
@@ -22,7 +22,7 @@ parseInputJuvixFileOrDir =
 
 parseFormat :: Parser FormatOptions
 parseFormat = do
-  _formatInput <- parseInputJuvixFileOrDir
+  _formatInput <- optional parseInputJuvixFileOrDir
   _formatCheck <-
     switch
       ( long "check"
