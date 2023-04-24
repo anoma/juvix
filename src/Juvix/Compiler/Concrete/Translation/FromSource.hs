@@ -96,7 +96,7 @@ top ::
   (Member InfoTableBuilder r) =>
   ParsecS r a ->
   ParsecS r a
-top p = space >> p <* (optional (kw kwSemicolon) >> P.eof)
+top p = space >> p <* (optional semicolon >> P.eof)
 
 topModuleDef ::
   (Members '[Error ParserError, Files, PathResolver, InfoTableBuilder, JudocStash, NameIdGen] r) =>
@@ -143,7 +143,7 @@ mkTopModulePath :: NonEmpty Symbol -> TopModulePath
 mkTopModulePath l = TopModulePath (NonEmpty.init l) (NonEmpty.last l)
 
 symbolList :: (Members '[InfoTableBuilder, JudocStash, NameIdGen] r) => ParsecS r (NonEmpty Symbol)
-symbolList = braces (P.sepBy1 symbol (kw kwSemicolon))
+symbolList = braces (P.sepBy1 symbol semicolon)
 
 topModulePath :: (Members '[InfoTableBuilder, JudocStash, NameIdGen] r) => ParsecS r TopModulePath
 topModulePath = mkTopModulePath <$> dottedSymbol
@@ -192,7 +192,7 @@ stashJudoc = do
       P.try (judocStart >> judocExampleStart)
       _exampleId <- P.lift freshNameId
       (_exampleExpression, _exampleLoc) <- interval parseExpressionAtoms
-      kw kwSemicolon
+      semicolon
       space
       return (JudocExample (Example {..}))
 
@@ -380,7 +380,7 @@ letClause = either LetTypeSig LetFunClause <$> auxTypeSigFunClause
 letBlock :: (Members '[InfoTableBuilder, JudocStash, NameIdGen] r) => ParsecS r (LetBlock 'Parsed)
 letBlock = do
   _letKw <- kw kwLet
-  _letClauses <- P.sepEndBy1 letClause (kw kwSemicolon)
+  _letClauses <- P.sepEndBy1 letClause semicolon
   kw kwIn
   _letExpression <- parseExpressionAtoms
   return LetBlock {..}
@@ -625,15 +625,15 @@ moduleDef = P.label "<module definition>" $ do
   _moduleDoc <- getJudoc
   _modulePath <- pmodulePath
   _moduleParameters <- many inductiveParams
-  kw kwSemicolon
-  _moduleBody <- P.sepEndBy statement (kw kwSemicolon)
+  semicolon
+  _moduleBody <- P.sepEndBy statement semicolon
   _moduleKwEnd <- endModule
   return Module {..}
   where
     endModule :: ParsecS r (ModuleEndType t)
     endModule = case sing :: SModuleIsTop t of
       SModuleLocal -> kw kwEnd
-      SModuleTop -> void (optional (kw kwEnd >> kw kwSemicolon))
+      SModuleTop -> void (optional (kw kwEnd >> semicolon))
 
 -- | An ExpressionAtom which is a valid expression on its own.
 atomicExpression :: (Members '[InfoTableBuilder, JudocStash, NameIdGen] r) => ParsecS r (ExpressionAtoms 'Parsed)
