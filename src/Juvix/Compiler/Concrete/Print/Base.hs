@@ -61,14 +61,17 @@ instance SingI t => PrettyPrint (Module 'Scoped t) where
     let moduleBody' = localIndent (ppCode _moduleBody)
         modulePath' = ppModulePathType _modulePath
         moduleDoc' :: Sem r () = maybe (return ()) ppCode _moduleDoc
+        body'
+          | null _moduleBody = ensureEmptyLine
+          | otherwise = topSpace
+            <> moduleBody'
+            <> line
     moduleDoc'
       <> ppCode _moduleKw
       <+> modulePath'
         <> ppCode kwSemicolon
         <> line
-        <> topSpace
-        <> moduleBody'
-        <> line
+        <> body'
         <> ending
     where
       topSpace :: Sem r ()
