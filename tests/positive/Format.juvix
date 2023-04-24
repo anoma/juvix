@@ -153,4 +153,24 @@ module Patterns;
   f : Nat × Nat × Nat × Nat -> Nat;
   f (a, b, c, d) := a;
 end;
+
+module Comments;
+  axiom a1 : Type;
+  -- attached to a1
+
+  -- attached to a2
+  axiom a2 : Type;
+
+  -- attached to nothing
+
+  axiom a3 : Type;
+
+  -- attached to nothing
+  -- attached to nothing 2
+
+  -- attached to nothing 3
+
+  axiom a4 : Type;
+end;
+
 -- Comment at the end of a module
