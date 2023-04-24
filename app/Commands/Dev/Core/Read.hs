@@ -21,7 +21,7 @@ runCommand ::
   Sem r ()
 runCommand opts = do
   gopts <- askGlobalOptions
-  inputFile :: Path Abs File <- someBaseToAbs' sinputFile
+  inputFile :: Path Abs File <- fromAppPathFile sinputFile
   s' <- embed . readFile . toFilePath $ inputFile
   tab <- getRight (mapLeft JuvixError (Core.runParserMain inputFile Core.emptyInfoTable s'))
   let r = run $ runReader (project @GlobalOptions @Core.CoreOptions gopts) $ runError @JuvixError $ Core.applyTransformations (project opts ^. coreReadTransformations) tab
@@ -41,5 +41,5 @@ runCommand opts = do
               embed (putStrLn "--------------------------------")
               Eval.evalAndPrint opts tab' node
           | otherwise -> return ()
-    sinputFile :: SomeBase File
-    sinputFile = project opts ^. coreReadInputFile . pathPath
+    sinputFile :: AppPath File
+    sinputFile = project opts ^. coreReadInputFile

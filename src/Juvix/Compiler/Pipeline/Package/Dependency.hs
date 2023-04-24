@@ -4,30 +4,23 @@ module Juvix.Compiler.Pipeline.Package.Dependency
   )
 where
 
-import Data.Aeson.BetterErrors
 import Data.Yaml
 import Juvix.Prelude
 import Juvix.Prelude.Pretty
 
 newtype Dependency = Dependency
-  { _dependencyPath :: SomeBase Dir
+  { _dependencyPath :: Prepath Dir
   }
   deriving stock (Generic, Eq, Show)
 
 instance ToJSON Dependency where
-  toJSON (Dependency p) = toJSON (fromSomeDir p)
-  toEncoding (Dependency p) = toEncoding (fromSomeDir p)
+  toJSON (Dependency p) = toJSON p
+  toEncoding (Dependency p) = toEncoding p
 
 instance FromJSON Dependency where
-  parseJSON = toAesonParser id (Dependency <$> p)
-    where
-      p :: Parse Text (SomeBase Dir)
-      p = do
-        str <- asString
-        let dir = parseSomeDir str
-        maybe (throwCustomError ("failed to parse directory: " <> pack str)) pure dir
+  parseJSON = fmap Dependency . parseJSON
 
 makeLenses ''Dependency
 
 instance Pretty Dependency where
-  pretty (Dependency i) = pretty (fromSomeDir i)
+  pretty (Dependency i) = pretty i

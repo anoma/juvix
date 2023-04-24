@@ -12,8 +12,6 @@ import CommonOptions hiding (Doc)
 import Data.Generics.Uniplate.Data
 import GlobalOptions
 import Options.Applicative.Help.Pretty
-import Safe
-import System.Directory qualified as D
 
 data TopCommand
   = DisplayVersion
@@ -21,6 +19,7 @@ data TopCommand
   | DisplayHelp
   | Typecheck TypecheckOptions
   | Compile CompileOptions
+  | Clean
   | Eval EvalOptions
   | Html HtmlOptions
   | Dev Dev.DevCommand
@@ -30,26 +29,28 @@ data TopCommand
   | JuvixFormat FormatOptions
   deriving stock (Data)
 
-topCommandInputFile :: TopCommand -> IO (Maybe (SomeBase Dir))
+topCommandInputFile :: TopCommand -> IO (Maybe (Path Abs Dir))
 topCommandInputFile t = do
-  d <- getFilePath (universeBi t)
-  return $ (firstJust getInputFile (universeBi t)) <|> d
+  d <- firstJustM getInputFileOrDir (universeBi t)
+  f <- firstJustM getInputFileDir (universeBi t)
+  return (f <|> d)
   where
-    getInputFile :: AppPath File -> Maybe (SomeBase Dir)
-    getInputFile p
-      | p ^. pathIsInput = Just (mapSomeBase parent (p ^. pathPath))
-      | otherwise = Nothing
+    getInputFileDir :: AppPath File -> IO (Maybe (Path Abs Dir))
+    getInputFileDir p
+      | p ^. pathIsInput = do
+          cwd <- getCurrentDir
+          Just . parent <$> prepathToAbsFile cwd (p ^. pathPath)
+      | otherwise = return Nothing
 
-    getFilePath :: [FilePath] -> IO (Maybe (SomeBase Dir))
-    getFilePath fs = mapM go (headMay fs)
-      where
-        go :: FilePath -> IO (SomeBase Dir)
-        go fp = do
-          nfp <- D.canonicalizePath fp
-          isDirectory <- D.doesDirectoryExist nfp
-          if
-              | isDirectory -> parseSomeDir nfp
-              | otherwise -> mapSomeBase parent <$> (parseSomeFile nfp)
+    getInputFileOrDir :: AppPath FileOrDir -> IO (Maybe (Path Abs Dir))
+    getInputFileOrDir p
+      | p ^. pathIsInput = do
+          cwd <- getCurrentDir
+          lr <- fromPreFileOrDir cwd (p ^. pathPath)
+          return . Just $ case lr of
+            Left file -> parent file
+            Right dir -> dir
+      | otherwise = return Nothing
 
 parseDisplayVersion :: Parser TopCommand
 parseDisplayVersion =
@@ -87,7 +88,8 @@ parseUtility =
           commandInit,
           commandDev,
           commandRepl,
-          commandFormat
+          commandFormat,
+          commandClean
         ]
     )
   where
@@ -121,17 +123,24 @@ parseUtility =
       command "format" $
         info
           (JuvixFormat <$> parseFormat)
-          ( progDescDoc
+          ( headerDoc
               ( Just
                   ( vsep
-                      [ "Format a Juvix file or Juvix project",
+                      [ "juvix format is used to format Juvix source files.",
                         "",
-                        "When the command is run with an unformatted file it prints the reformatted source to standard output.",
-                        "When the command is run with a project directory it prints a list of unformatted files in the project."
+                        "Given an unformatted file, it prints the reformatted source to standard output.",
+                        "Given a project directory it prints a list of unformatted files in the project."
                       ]
                   )
               )
+              <> progDesc "Format a Juvix file or Juvix project"
           )
+
+    commandClean :: Mod CommandFields TopCommand
+    commandClean =
+      command
+        "clean"
+        (info (pure Clean) (progDesc "Delete build artifacts"))
 
 commandCheck :: Mod CommandFields TopCommand
 commandCheck =

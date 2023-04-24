@@ -10,6 +10,7 @@ import Juvix.Data.Effect.Files.Base
 import Juvix.Extra.Version
 import Juvix.Prelude.Base
 import Juvix.Prelude.Path
+import Juvix.Prelude.Prepath
 import Path.IO qualified as Path
 import System.Environment.XDG.BaseDir
 import System.IO.Error
@@ -48,6 +49,7 @@ runFilesIO = interpret helper
       RenameFile' p1 p2 -> Path.renameFile p1 p2
       CopyFile' p1 p2 -> Path.copyFile p1 p2
       JuvixConfigDir -> juvixConfigDirIO
+      CanonicalDir root d -> prepathToAbsDir root d
 
 juvixConfigDirIO :: IO (Path Abs Dir)
 juvixConfigDirIO = (<//> versionDir) . absDir <$> getUserConfigDir "juvix"

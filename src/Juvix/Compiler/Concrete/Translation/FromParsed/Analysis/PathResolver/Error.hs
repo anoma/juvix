@@ -55,7 +55,16 @@ instance PrettyCodeAnn MissingModule where
       suggestion =
         "It should be in"
           <+> pcode (_missingInfo ^. packageRoot <//> topModulePathToRelativePath' _missingModule)
-            <> line
-            <> "or in one of the dependencies:"
-            <> line
-            <> itemize (map pcode (_missingInfo ^.. packagePackage . packageDependencies . each))
+            <> dependenciesSuggestion
+
+      dependenciesSuggestion :: Doc Ann
+      dependenciesSuggestion
+        | null deps = mempty
+        | otherwise =
+            line
+              <> "or in one of the dependencies:"
+              <> line
+              <> itemize (map pcode deps)
+        where
+          deps :: [Dependency]
+          deps = _missingInfo ^. packagePackage . packageDependencies

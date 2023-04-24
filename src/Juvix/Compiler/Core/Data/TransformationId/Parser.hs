@@ -3,36 +3,30 @@ module Juvix.Compiler.Core.Data.TransformationId.Parser (parseTransformations, T
 import Data.Text qualified as Text
 import Juvix.Compiler.Core.Data.TransformationId
 import Juvix.Prelude
-import Juvix.Prelude.Pretty hiding (comma)
-import Text.Megaparsec as P
-import Text.Megaparsec.Char qualified as L
+import Juvix.Prelude.Parsing (MonadParsec)
+import Juvix.Prelude.Parsing qualified as P
 import Text.Megaparsec.Char.Lexer qualified as L
 
-parseHelper :: Parsec Void Text a -> Text -> Either Text a
-parseHelper p t = case runParser p "<input>" t of
-  Left (err :: ParseErrorBundle Text Void) -> Left (prettyText (errorBundlePretty err))
-  Right r -> return r
-
 parseTransformations :: Text -> Either Text [TransformationId]
-parseTransformations = fmap fromTransformationLikes . parseHelper transformations
+parseTransformations = fmap fromTransformationLikes . P.parseHelper transformations
 
 completionsString :: String -> [String]
 completionsString = map unpack . completions . pack
 
 completions :: Text -> [Text]
-completions = fromRight [] . parseHelper pcompletions
+completions = fromRight [] . P.parseHelper pcompletions
 
 transformations :: (MonadParsec e Text m) => m [TransformationLikeId]
 transformations = do
-  L.hspace
-  sepEndBy transformationLike comma <* eof
+  P.hspace
+  P.sepEndBy transformationLike comma <* P.eof
 
 -- | returns a possible list of completions
 pcompletions :: (MonadParsec e Text m) => m [Text]
 pcompletions = do
-  L.hspace
-  l <- sepEndBy transformationLike comma
-  rest <- Text.strip <$> takeRest
+  P.hspace
+  l <- P.sepEndBy transformationLike comma
+  rest <- Text.strip <$> P.takeRest
   return [ppTransL (notNull l) l <> str | str <- allStrings, Text.isPrefixOf rest str]
   where
     ppTransL :: Bool -> [TransformationLikeId] -> Text
@@ -41,13 +35,13 @@ pcompletions = do
        in f . Text.intercalate "," . map transformationLikeText
 
 lexeme :: (MonadParsec e Text m) => m a -> m a
-lexeme = L.lexeme L.hspace
+lexeme = L.lexeme P.hspace
 
 comma :: (MonadParsec e Text m) => m ()
 comma = symbol ","
 
 symbol :: (MonadParsec e Text m) => Text -> m ()
-symbol = void . lexeme . chunk
+symbol = void . lexeme . P.chunk
 
 transformationLike :: MonadParsec e Text m => m TransformationLikeId
 transformationLike =
@@ -88,10 +82,10 @@ transformationText = \case
   FoldTypeSynonyms -> strFoldTypeSynonyms
 
 parsePipeline :: MonadParsec e Text m => m PipelineId
-parsePipeline = choice [symbol (pipelineText t) $> t | t <- allElements]
+parsePipeline = P.choice [symbol (pipelineText t) $> t | t <- allElements]
 
 transformation :: MonadParsec e Text m => m TransformationId
-transformation = choice [symbol (transformationText t) $> t | t <- allElements]
+transformation = P.choice [symbol (transformationText t) $> t | t <- allElements]
 
 allStrings :: [Text]
 allStrings = map transformationLikeText allTransformationLikeIds

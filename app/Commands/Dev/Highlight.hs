@@ -11,7 +11,7 @@ import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Da
 runCommand :: Members '[Embed IO, App] r => HighlightOptions -> Sem r ()
 runCommand HighlightOptions {..} = do
   res <- fmap snd <$> runPipelineEither _highlightInputFile upToInternalTyped
-  inputFile <- someBaseToAbs' (_highlightInputFile ^. pathPath)
+  inputFile <- fromAppPathFile _highlightInputFile
   case res of
     Left err -> do
       let filterByFile = filter ((== inputFile) . (^. intervalFile))

@@ -37,25 +37,22 @@ makeLenses ''EntryPoint
 defaultEntryPointCwdIO :: Path Abs File -> IO EntryPoint
 defaultEntryPointCwdIO mainFile = do
   cwd <- getCurrentDir
-  roots <- findRootAndChangeDir (Just (Abs (parent mainFile))) Nothing cwd
-  let pkg = roots ^. rootsPackage
-      isGlobal = roots ^. rootsPackageGlobal
-      root = roots ^. rootsRootDir
-  return (defaultEntryPoint (pkg, isGlobal) root mainFile)
+  roots <- findRootAndChangeDir (Just (parent mainFile)) Nothing cwd
+  return (defaultEntryPoint roots mainFile)
 
-defaultEntryPoint :: (Package, Bool) -> Path Abs Dir -> Path Abs File -> EntryPoint
-defaultEntryPoint (pkg, global) root mainFile =
+defaultEntryPoint :: Roots -> Path Abs File -> EntryPoint
+defaultEntryPoint roots mainFile =
   EntryPoint
-    { _entryPointRoot = root,
-      _entryPointResolverRoot = root,
+    { _entryPointRoot = roots ^. rootsRootDir,
+      _entryPointResolverRoot = roots ^. rootsRootDir,
       _entryPointBuildDir = Rel relBuildDir,
       _entryPointNoTermination = False,
       _entryPointNoPositivity = False,
       _entryPointNoCoverage = False,
       _entryPointNoStdlib = False,
       _entryPointStdin = Nothing,
-      _entryPointPackage = pkg,
-      _entryPointPackageGlobal = global,
+      _entryPointPackage = roots ^. rootsPackage,
+      _entryPointPackageGlobal = roots ^. rootsPackageGlobal,
       _entryPointGenericOptions = defaultGenericOptions,
       _entryPointTarget = TargetCore,
       _entryPointDebug = False,

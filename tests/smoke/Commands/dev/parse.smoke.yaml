@@ -24,3 +24,29 @@ tests:
       matches: |
         Module \{.*
     exit-status: 0
+
+  - name: missing-module-no-dependencies-suggestion-with-no-dependencies
+    command:
+      - juvix
+      - dev
+      - parse
+    args:
+      - negative/NoDependencies/InvalidImport.juvix
+    stderr:
+      matches:
+        regex: |-
+          ^((?!dependencies).)*$
+        options:
+          - dot-all
+    exit-status: 1
+
+  - name: missing-module-dependencies-suggestion-with-dependencies
+    command:
+      - juvix
+      - dev
+      - parse
+    args:
+      - negative/Dependencies/InvalidImport.juvix
+    stderr:
+      contains: dependencies
+    exit-status: 1

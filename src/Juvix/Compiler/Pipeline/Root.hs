@@ -17,14 +17,12 @@ data Roots = Roots
 makeLenses ''Roots
 
 findRootAndChangeDir ::
-  Maybe (SomeBase Dir) ->
-  Maybe (SomeBase Dir) ->
+  Maybe (Path Abs Dir) ->
+  Maybe (Path Abs Dir) ->
   Path Abs Dir ->
   IO Roots
 findRootAndChangeDir minputFileDir mbuildDir _rootsInvokeDir = do
-  whenJust minputFileDir $ \case
-    Abs d -> setCurrentDir d
-    Rel d -> setCurrentDir d
+  whenJust minputFileDir setCurrentDir
   r <- IO.try go
   case r of
     Left (err :: IO.SomeException) -> do
@@ -45,18 +43,16 @@ findRootAndChangeDir minputFileDir mbuildDir _rootsInvokeDir = do
           _rootsPackage <- readGlobalPackageIO
           _rootsRootDir <- runM (runFilesIO globalRoot)
           let _rootsPackageGlobal = True
-              _rootsBuildDir = getBuildDir mbuildDir _rootsInvokeDir _rootsRootDir
+              _rootsBuildDir = getBuildDir mbuildDir _rootsRootDir
           return Roots {..}
         Just yamlPath -> do
           let _rootsRootDir = parent yamlPath
               _rootsPackageGlobal = False
-              _rootsBuildDir = getBuildDir mbuildDir _rootsInvokeDir _rootsRootDir
+              _rootsBuildDir = getBuildDir mbuildDir _rootsRootDir
           _rootsPackage <- readPackageIO _rootsRootDir (Abs _rootsBuildDir)
           return Roots {..}
 
-getBuildDir :: Maybe (SomeBase Dir) -> Path Abs Dir -> Path Abs Dir -> Path Abs Dir
-getBuildDir mbuildDirOpt invokeDir pkgDir = case mbuildDirOpt of
+getBuildDir :: Maybe (Path Abs Dir) -> Path Abs Dir -> Path Abs Dir
+getBuildDir mbuildDirOpt pkgDir = case mbuildDirOpt of
   Nothing -> Paths.rootBuildDir pkgDir
-  Just p -> case p of
-    Rel r -> invokeDir <//> r
-    Abs a -> a
+  Just p -> p
