@@ -96,20 +96,30 @@ dot = P.char '.'
 dottedIdentifier :: (Members '[InfoTableBuilder] r) => ParsecS r (NonEmpty (Text, Interval))
 dottedIdentifier = lexeme $ P.sepBy1 bareIdentifier dot
 
+delim :: (Members '[InfoTableBuilder] r) => Text -> ParsecS r ()
+delim sym = lexeme $ delim' sym >>= P.lift . registerDelimiter
+
 lbrace :: (Members '[InfoTableBuilder] r) => ParsecS r ()
-lbrace = symbol "{"
+lbrace = delim "{"
 
 rbrace :: (Members '[InfoTableBuilder] r) => ParsecS r ()
-rbrace = symbol "}"
+rbrace = delim "}"
 
 lparen :: (Members '[InfoTableBuilder] r) => ParsecS r ()
-lparen = symbol "("
+lparen = delim "("
 
 rparen :: (Members '[InfoTableBuilder] r) => ParsecS r ()
-rparen = symbol ")"
+rparen = delim ")"
+
+-- TODO Consider using this instead of kw kwPipe
+pipe :: (Members '[InfoTableBuilder] r) => ParsecS r ()
+pipe = delim "|"
+
+semicolon :: (Members '[InfoTableBuilder] r) => ParsecS r ()
+semicolon = delim ";"
 
 parens :: (Members '[InfoTableBuilder] r) => ParsecS r a -> ParsecS r a
 parens = between lparen rparen
 
 braces :: (Members '[InfoTableBuilder] r) => ParsecS r a -> ParsecS r a
-braces = between (symbol "{") (symbol "}")
+braces = between lbrace rbrace

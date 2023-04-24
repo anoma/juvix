@@ -1,6 +1,7 @@
 module Juvix.Compiler.Concrete.Data.ParsedInfoTableBuilder
   ( InfoTableBuilder,
     registerLiteral,
+    registerDelimiter,
     registerKeyword,
     registerJudocText,
     registerPragmas,
@@ -38,6 +39,14 @@ registerKeyword r =
         { _parsedLoc = getLoc r,
           _parsedTag = ParsedTagKeyword
         }
+
+registerDelimiter :: Member InfoTableBuilder r => Interval -> Sem r ()
+registerDelimiter i =
+  registerItem
+    ParsedItem
+      { _parsedLoc = i,
+        _parsedTag = ParsedTagDelimiter
+      }
 
 registerJudocText :: Member InfoTableBuilder r => Interval -> Sem r ()
 registerJudocText i =

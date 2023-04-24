@@ -233,6 +233,9 @@ any = "Any"
 questionMark :: (IsString s) => s
 questionMark = "?"
 
+delimiter :: (IsString s) => s
+delimiter = "delimiter"
+
 keyword :: (IsString s) => s
 keyword = "keyword"
 

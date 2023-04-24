@@ -94,7 +94,7 @@ kwColonColon :: Doc Ann
 kwColonColon = keyword (Str.colon <> Str.colon)
 
 kwPipe :: Doc Ann
-kwPipe = keyword Str.pipe
+kwPipe = delimiter Str.pipe
 
 kwHole :: Doc Ann
 kwHole = keyword Str.underscore
