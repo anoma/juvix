@@ -9,7 +9,7 @@ end;
 open N;
 
 module O;
-  
+
 end;
 
 axiom B : O.A;
