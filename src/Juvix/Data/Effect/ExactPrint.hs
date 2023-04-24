@@ -76,20 +76,8 @@ bracesIndent d = braces (line <> indent d <> line)
 semicolon :: Members '[ExactPrint] r => Sem r ()
 semicolon = noLoc C.kwSemicolon
 
-sequenceEndWith :: (Monad m, Foldable l) => m () -> l (m ()) -> m ()
-sequenceEndWith sep l = sequenceWith sep l >> sep
-
 endSemicolon :: (Members '[ExactPrint] r, Functor l) => l (Sem r ()) -> l (Sem r ())
 endSemicolon = fmap (>> semicolon)
-
-sequenceWith :: forall m l. (Monad m, Foldable l) => m () -> l (m ()) -> m ()
-sequenceWith sep = go . toList
-  where
-    go :: [m ()] -> m ()
-    go = \case
-      [] -> return ()
-      [x] -> x
-      (x : xs) -> x >> sep >> go xs
 
 hsep :: (Members '[ExactPrint] r, Foldable l) => l (Sem r ()) -> Sem r ()
 hsep = sequenceWith space
@@ -108,3 +96,6 @@ encloseSep l r sep f = l >> sequenceWith sep f >> r
 
 oneLineOrNext :: Members '[ExactPrint] r => Sem r () -> Sem r ()
 oneLineOrNext = region P.oneLineOrNext
+
+paragraphs :: (Foldable l, Members '[ExactPrint] r) => l (Sem r ()) -> Sem r ()
+paragraphs = sequenceWith (line >> ensureEmptyLine)
