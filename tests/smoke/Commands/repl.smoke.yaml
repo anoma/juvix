@@ -341,3 +341,12 @@ tests:
     stdout:
       contains: "true"
     exit-status: 0
+
+  - name: open-import-from-stdlib
+    command:
+      - juvix
+      - repl
+    stdin: "open import Stdlib.Data.Int.Ord\n1 == 1"
+    stdout:
+      contains: "true"
+    exit-status: 0
