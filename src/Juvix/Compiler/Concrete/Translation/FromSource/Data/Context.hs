@@ -8,11 +8,13 @@ import Juvix.Compiler.Concrete.Data.ParsedInfoTable
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Prelude
+import Juvix.Compiler.Concrete.Data.ParsedInfoTableBuilder (BuilderState)
 
 data ParserResult = ParserResult
   { _resultEntry :: EntryPoint,
     _resultTable :: InfoTable,
-    _resultModules :: NonEmpty (Module 'Parsed 'ModuleTop)
+    _resultModules :: NonEmpty (Module 'Parsed 'ModuleTop),
+    _resultBuilderState :: BuilderState
   }
   deriving stock (Eq, Show)
 

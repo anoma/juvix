@@ -38,6 +38,9 @@ fromConcrete _resultScoper =
 fromConcreteExpression :: (Members '[Error JuvixError, NameIdGen] r) => Scoper.Expression -> Sem r Abstract.Expression
 fromConcreteExpression = mapError (JuvixError @ScoperError) . ignoreInfoTableBuilder . goExpression
 
+fromConcreteImport :: Members '[Error JuvixError, NameIdGen, Builtins, InfoTableBuilder] r => Scoper.Import 'Scoped -> Sem r Abstract.TopModule
+fromConcreteImport = mapError (JuvixError @ScoperError) . evalState (ModulesCache mempty) . goImport
+
 goTopModule ::
   (Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, State ModulesCache] r) =>
   Module 'Scoped 'ModuleTop ->
@@ -136,6 +139,14 @@ goModuleBody ss' = do
         sigs :: [Indexed (TypeSignature 'Scoped)]
         sigs = [Indexed i t | (Indexed i (StatementTypeSignature t)) <- ss]
 
+
+goImport ::
+  forall r.
+  (Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, State ModulesCache] r) =>
+  Import 'Scoped ->
+  Sem r Abstract.TopModule
+goImport t = goModule (t ^. importModule . moduleRefModule)
+
 goStatement ::
   forall r.
   (Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, State ModulesCache] r) =>
@@ -144,7 +155,7 @@ goStatement ::
 goStatement (Indexed idx s) =
   fmap (Indexed idx) <$> case s of
     StatementAxiom d -> Just . Abstract.StatementAxiom <$> goAxiom d
-    StatementImport t -> Just . Abstract.StatementImport <$> goModule (t ^. importModule . moduleRefModule)
+    StatementImport t -> Just . Abstract.StatementImport <$> goImport t
     StatementOperator {} -> return Nothing
     StatementOpenModule o -> goOpenModule o
     StatementInductive i -> Just . Abstract.StatementInductive <$> goInductive i

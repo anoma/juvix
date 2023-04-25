@@ -144,20 +144,26 @@ runCommand opts = do
             evalRes <- compileThenEval ctx' input
             case evalRes of
               Left err -> printError err
-              Right n
+              Right (Just n)
                 | Info.member Info.kNoDisplayInfo (Core.getInfo n) -> return ()
-              Right n
+              Right (Just n)
                 | opts ^. replPrintValues ->
                     renderOut (Core.ppOut opts (toValue tab n))
                 | otherwise ->
                     renderOut (Core.ppOut opts n)
+              Right Nothing -> return ()
           Nothing -> noFileLoadedMsg
         where
           defaultLoc :: Interval
           defaultLoc = singletonInterval (mkInitialLoc replPath)
 
-          compileThenEval :: ReplContext -> String -> Repl (Either JuvixError Core.Node)
-          compileThenEval ctx s = bindEither compileString eval
+          compileThenEval :: ReplContext -> String -> Repl (Either JuvixError (Maybe Core.Node))
+          compileThenEval ctx s = do
+              mn <- compileString
+              case mn of
+                Left err -> return (Left err)
+                Right Nothing -> return (Right Nothing)
+                Right (Just n) -> fmap Just <$> eval n
             where
               artif :: Artifacts
               artif = ctx ^. replContextArtifacts
@@ -182,21 +188,22 @@ runCommand opts = do
                 mapLeft (JuvixError @Core.CoreError)
                   <$> doEvalIO False defaultLoc (artif' ^. artifactCoreTable) n
 
-              compileString :: Repl (Either JuvixError Core.Node)
-              compileString = liftIO $ compileReplInputIO' ctx (strip (pack s))
-
-              bindEither :: (Monad m) => m (Either e a) -> (a -> m (Either e b)) -> m (Either e b)
-              bindEither x f = join <$> (x >>= mapM f)
+              compileString :: Repl (Either JuvixError (Maybe Core.Node))
+              compileString = do
+                (artifacts, res) <- liftIO $ compileReplInputIO' ctx (strip (pack s))
+                State.modify (over (replStateContext . _Just) (set replContextArtifacts artifacts))
+                return res
 
       core :: String -> Repl ()
       core input = Repline.dontCrash $ do
         ctx <- State.gets (^. replStateContext)
         case ctx of
           Just ctx' -> do
-            compileRes <- liftIO (compileReplInputIO' ctx' (strip (pack input)))
+            (_, compileRes) <- liftIO (compileReplInputIO' ctx' (strip (pack input)))
             case compileRes of
               Left err -> printError err
-              Right n -> renderOut (Core.ppOut opts n)
+              Right (Just n) -> renderOut (Core.ppOut opts n)
+              Right Nothing -> return ()
           Nothing -> noFileLoadedMsg
 
       inferType :: String -> Repl ()
@@ -327,19 +334,19 @@ inferExpressionIO' ctx txt =
     . runReader (ctx ^. replContextEntryPoint)
     $ inferExpressionIO replPath txt
 
-compileReplInputIO' :: ReplContext -> Text -> IO (Either JuvixError Core.Node)
+compileReplInputIO' :: ReplContext -> Text -> IO (Artifacts, (Either JuvixError (Maybe Core.Node)))
 compileReplInputIO' ctx txt =
   runM
-    . evalState (ctx ^. replContextArtifacts)
+    . runState (ctx ^. replContextArtifacts)
     . runReader (ctx ^. replContextEntryPoint)
     $ do
       r <- compileReplInputIO replPath txt
       return (extractNode <$> r)
   where
-    extractNode :: ReplPipelineResult -> Core.Node
+    extractNode :: ReplPipelineResult -> Maybe Core.Node
     extractNode = \case
-      ReplPipelineResultNode n -> n
-      ReplPipelineResultImport {} -> error "import not supported"
+      ReplPipelineResultNode n -> Just n
+      ReplPipelineResultImport {} -> Nothing
 
 render' :: (P.HasAnsiBackend a, P.HasTextBackend a) => a -> Repl ()
 render' t = do

@@ -15,13 +15,16 @@ import Juvix.Compiler.Backend qualified as Backend
 import Juvix.Compiler.Backend.C qualified as C
 import Juvix.Compiler.Backend.Geb qualified as Geb
 import Juvix.Compiler.Builtins
+import Juvix.Compiler.Concrete.Data.ParsedInfoTableBuilder qualified as C
 import Juvix.Compiler.Concrete.Data.ParsedInfoTableBuilder qualified as Concrete
 import Juvix.Compiler.Concrete.Data.Scope
+import Juvix.Compiler.Concrete.Data.Scope qualified as Scoper
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Translation.FromParsed qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver qualified as PathResolver
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Data.Context qualified as Scoped
+import Juvix.Compiler.Concrete.Translation.FromSource qualified as P
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
 import Juvix.Compiler.Core qualified as Core
 import Juvix.Compiler.Core.Translation.Stripped.FromCore qualified as Stripped
@@ -45,15 +48,43 @@ arityCheckExpression ::
   ExpressionAtoms 'Parsed ->
   Sem r Internal.Expression
 arityCheckExpression p = do
-  mainScope <- fromJust <$> gets (^. artifactMainModuleScope)
   scopeTable <- gets (^. artifactScopeTable)
   ( runNameIdGenArtifacts
       . runBuiltinsArtifacts
+      . runScoperScopeArtifacts
     )
-    $ Scoper.scopeCheckExpression scopeTable mainScope p
+    $ Scoper.scopeCheckExpression scopeTable p
       >>= Abstract.fromConcreteExpression
       >>= Internal.fromAbstractExpression
       >>= Internal.arityCheckExpression
+
+importToInternal ::
+  Members '[Reader EntryPoint, Error JuvixError, State Artifacts] r =>
+  Import 'Parsed ->
+  Sem r (Maybe Internal.Include)
+importToInternal i = do
+  parsedModules <- gets (^. artifactParsing . C.stateModules)
+  ( runNameIdGenArtifacts
+      . runBuiltinsArtifacts
+      . runAbstractInfoTableBuilderArtifacts
+      . runScoperInfoTableBuilderArtifacts
+      . runScoperScopeArtifacts
+      . runStateArtifacts artifactInternalTranslationState
+      . runReaderArtifacts artifactScopeExports
+      . runReader (Scoper.ScopeParameters mempty parsedModules)
+    )
+    $ do
+      mInclude <-
+        Scoper.scopeCheckImport i
+          >>= Abstract.fromConcreteImport
+          >>= Internal.fromAbstractImport
+      return mInclude
+
+importToInternal' ::
+  Members '[Reader EntryPoint, Error JuvixError, State Artifacts] r =>
+  Internal.Include ->
+  Sem r Internal.Include
+importToInternal' = Internal.arityCheckInclude >=> Internal.typeCheckInclude
 
 parseExpression ::
   Members '[State Artifacts, Error JuvixError] r =>
@@ -74,6 +105,7 @@ parseReplInput ::
 parseReplInput fp txt =
   ( runNameIdGenArtifacts
       . runBuiltinsArtifacts
+      . runParserInfoTableBuilderArtifacts
   )
     $ Parser.replInputFromTextSource fp txt
 
@@ -97,9 +129,22 @@ compileExpression p = do
     >>= fromInternalExpression
 
 registerImport ::
+  Members '[Error JuvixError, State Artifacts, Reader EntryPoint] r =>
   Import 'Parsed ->
   Sem r ()
-registerImport _ = return ()
+registerImport i = do
+  mInclude <- importToInternal i
+  whenJust mInclude (importToInternal' >=> fromInternalInclude)
+
+fromInternalInclude :: Members '[State Artifacts] r => Internal.Include -> Sem r ()
+fromInternalInclude i = do
+  let table = Internal.buildTable [i ^. Internal.includeModule]
+  runReader table
+    . runCoreInfoTableBuilderArtifacts
+    . runFunctionsTableArtifacts
+    . readerTypesTableArtifacts
+    . runReader Core.initIndexTable
+    $ Core.goTopModule (i ^. Internal.includeModule)
 
 fromInternalExpression :: Members '[State Artifacts] r => Internal.Expression -> Sem r Core.Node
 fromInternalExpression exp = do
@@ -120,7 +165,7 @@ compileReplInputIO ::
   Path Abs File ->
   Text ->
   Sem r (Either JuvixError ReplPipelineResult)
-compileReplInputIO fp txt = do
+compileReplInputIO fp txt =
   runError
     . runFilesIO
     . runPathResolverArtifacts
@@ -323,19 +368,28 @@ corePipelineIOEither entry = do
                 . Internal.resultAbstract
                 . Abstract.resultScoper
 
+          parserResult :: P.ParserResult
+          parserResult = scopedResult ^. Scoped.resultParserResult
+
           resultScoperTable :: Scoped.InfoTable
           resultScoperTable = scopedResult ^. Scoped.resultScoperTable
 
           mainModuleScope_ :: Scope
           mainModuleScope_ = Scoped.mainModuleSope scopedResult
+
+          abstractResult :: Abstract.AbstractResult
+          abstractResult = typedResult ^. Typed.resultInternalArityResult . Arity.resultInternalResult . Internal.resultAbstract
        in Right $
             foldl'
               (flip ($))
               art
               [ set artifactMainModuleScope (Just mainModuleScope_),
+                set artifactParsing (parserResult ^. P.resultBuilderState),
+                set artifactAbstractInfoTable (abstractResult ^. Abstract.resultTable),
                 set artifactInternalTypedTable typedTable,
                 set artifactCoreTable coreTable,
                 set artifactScopeTable resultScoperTable,
+                set artifactScopeExports (scopedResult ^. Scoped.resultExports),
                 set artifactTypes typesTable,
                 set artifactFunctions functionsTable
               ]
@@ -344,6 +398,7 @@ corePipelineIOEither entry = do
     initialArtifacts =
       Artifacts
         { _artifactParsing = Concrete.iniState,
+          _artifactAbstractInfoTable = Abstract.emptyInfoTable,
           _artifactMainModuleScope = Nothing,
           _artifactInternalTypedTable = mempty,
           _artifactTypes = mempty,
@@ -352,5 +407,7 @@ corePipelineIOEither entry = do
           _artifactFunctions = mempty,
           _artifactCoreTable = Core.emptyInfoTable,
           _artifactScopeTable = Scoped.emptyInfoTable,
-          _artifactBuiltins = iniBuiltins
+          _artifactBuiltins = iniBuiltins,
+          _artifactScopeExports = mempty,
+          _artifactInternalTranslationState = Internal.TranslationState mempty
         }

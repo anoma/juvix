@@ -1,10 +1,11 @@
 module Juvix.Compiler.Internal.Translation.FromAbstract
   ( module Juvix.Compiler.Internal.Translation.FromAbstract.Data.Context,
     module Juvix.Compiler.Internal.Translation.FromAbstract.Analysis.Termination,
-    TranslationState,
+    TranslationState(..),
     iniState,
     fromAbstract,
     fromAbstractExpression,
+    fromAbstractImport,
   )
 where
 
@@ -75,6 +76,11 @@ fromAbstractExpression e = runReader depInfo (goExpression e)
   where
     depInfo :: NameDependencyInfo
     depInfo = buildDependencyInfoExpr e
+
+fromAbstractImport :: Members '[Reader ExportsTable, State TranslationState, NameIdGen] r =>
+  Abstract.TopModule ->
+  Sem r (Maybe Include)
+fromAbstractImport = goImport
 
 goModule ::
   (Members '[Reader ExportsTable, State TranslationState, NameIdGen] r) =>
