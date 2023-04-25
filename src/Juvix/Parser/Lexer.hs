@@ -38,6 +38,7 @@ hspace_ = void hspace
 spaceMsg :: String
 spaceMsg = "white space (only spaces and newlines allowed)"
 
+-- | `special` is set when judoc comments or pragmas are supported
 space' :: forall e m. MonadParsec e Text m => Bool -> m (Maybe SpaceSpan)
 space' special =
   hidden $
