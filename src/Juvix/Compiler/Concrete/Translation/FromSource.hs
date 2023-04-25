@@ -180,7 +180,6 @@ stashPragmas = do
   pragmas <- withLoc parsePragmas
   P.lift (registerPragmas (getLoc pragmas))
   P.lift (put (Just pragmas))
-  return ()
   where
     parsePragmas :: ParsecS r (WithSource Pragmas)
     parsePragmas = do

@@ -45,10 +45,8 @@ unrollRecursion tab = do
         computeUnrollLimit :: Member (Reader CoreOptions) r => Sem r Int
         computeUnrollLimit = do
           defaultUnrollLimit <- asks (^. optUnrollLimit)
-          let lims = mapMaybe go syms
-          if
-              | null lims -> return defaultUnrollLimit
-              | otherwise -> return $ minimum lims
+          let lims = nonEmpty (mapMaybe go syms)
+          return (maybe defaultUnrollLimit minimum1 lims)
           where
             go :: Symbol -> Maybe Int
             go sym = fmap (^. pragmaUnrollDepth) (ii ^. identifierPragmas . pragmasUnroll)
