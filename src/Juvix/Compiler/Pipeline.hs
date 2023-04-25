@@ -75,12 +75,9 @@ importToInternal i = do
       . runStateArtifacts artifactAbstractModuleCache
       . runStateArtifacts artifactScoperState
     )
-    $ do
-      mInclude <-
-        Scoper.scopeCheckImport i
-          >>= Abstract.fromConcreteImport
-          >>= Internal.fromAbstractImport
-      return mInclude
+    $ Scoper.scopeCheckImport i
+      >>= Abstract.fromConcreteImport
+      >>= Internal.fromAbstractImport
 
 importToInternal' ::
   Members '[Reader EntryPoint, Error JuvixError, State Artifacts] r =>
