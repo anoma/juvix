@@ -323,3 +323,12 @@ tests:
       contains:
         The module Invalid does not exist
     exit-status: 0
+
+  - name: import-from-stdlib
+    command:
+      - juvix
+      - repl
+    stdin: "import Stdlib.Data.Int.Ord as Int\n1 Int.== 1"
+    stdout:
+      contains: "true"
+    exit-status: 0

@@ -72,6 +72,8 @@ importToInternal i = do
       . runStateArtifacts artifactInternalTranslationState
       . runReaderArtifacts artifactScopeExports
       . runReader (Scoper.ScopeParameters mempty parsedModules)
+      . runStateArtifacts artifactAbstractModuleCache
+      . runStateArtifacts artifactScoperState
     )
     $ do
       mInclude <-
@@ -391,7 +393,9 @@ corePipelineIOEither entry = do
                 set artifactScopeTable resultScoperTable,
                 set artifactScopeExports (scopedResult ^. Scoped.resultExports),
                 set artifactTypes typesTable,
-                set artifactFunctions functionsTable
+                set artifactFunctions functionsTable,
+                set artifactAbstractModuleCache (abstractResult ^. Abstract.resultModulesCache),
+                set artifactScoperState (scopedResult ^. Scoped.resultScoperState)
               ]
   where
     initialArtifacts :: Artifacts
@@ -409,5 +413,7 @@ corePipelineIOEither entry = do
           _artifactScopeTable = Scoped.emptyInfoTable,
           _artifactBuiltins = iniBuiltins,
           _artifactScopeExports = mempty,
-          _artifactInternalTranslationState = Internal.TranslationState mempty
+          _artifactInternalTranslationState = Internal.TranslationState mempty,
+          _artifactAbstractModuleCache = Abstract.ModulesCache mempty,
+          _artifactScoperState = Scoper.iniScoperState
         }

@@ -57,7 +57,8 @@ scopeCheck pr modules =
           _resultScoperTable = st,
           _resultModules = ms,
           _resultExports = exp,
-          _resultScope = scoperSt ^. scoperScope
+          _resultScope = scoperSt ^. scoperScope,
+          _resultScoperState = scoperSt
         }
 
 scopeCheckExpression ::
@@ -91,11 +92,10 @@ checkParseExpressionAtoms' = checkExpressionAtoms >=> parseExpressionAtoms
 
 scopeCheckImport ::
   forall r.
-  Members '[Error JuvixError, InfoTableBuilder, NameIdGen, State Scope, Reader ScopeParameters] r =>
+  Members '[Error JuvixError, InfoTableBuilder, NameIdGen, State Scope, Reader ScopeParameters, State ScoperState] r =>
   Import 'Parsed ->
   Sem r (Import 'Scoped)
-scopeCheckImport i = mapError (JuvixError @ScoperError) $ do
-  evalState iniScoperState $ checkImport i
+scopeCheckImport i = mapError (JuvixError @ScoperError) $ checkImport i
 
 freshVariable :: Members '[NameIdGen, State ScoperFixities, State Scope, State ScoperState] r => Symbol -> Sem r S.Symbol
 freshVariable = freshSymbol S.KNameLocal

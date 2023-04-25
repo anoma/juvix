@@ -17,7 +17,8 @@ data ScoperResult = ScoperResult
     _resultScoperTable :: InfoTable,
     _resultModules :: NonEmpty (Module 'Scoped 'ModuleTop),
     _resultExports :: HashSet NameId,
-    _resultScope :: HashMap TopModulePath Scope
+    _resultScope :: HashMap TopModulePath Scope,
+    _resultScoperState :: ScoperState
   }
 
 makeLenses ''ScoperResult

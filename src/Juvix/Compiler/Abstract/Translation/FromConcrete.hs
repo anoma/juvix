@@ -18,18 +18,13 @@ import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
 import Juvix.Data.NameKind
 import Juvix.Prelude
 
-newtype ModulesCache = ModulesCache
-  {_cachedModules :: HashMap S.NameId Abstract.TopModule}
-
-makeLenses ''ModulesCache
-
 unsupported :: Text -> a
 unsupported msg = error $ msg <> "Scoped to Abstract: not yet supported"
 
 fromConcrete :: (Members '[Error JuvixError, Builtins, NameIdGen] r) => Scoper.ScoperResult -> Sem r AbstractResult
 fromConcrete _resultScoper =
   mapError (JuvixError @ScoperError) $ do
-    (_resultTable, _resultModules) <- runInfoTableBuilder (evalState (ModulesCache mempty) (mapM goTopModule ms))
+    (_resultTable, (_resultModulesCache, _resultModules)) <- runInfoTableBuilder (runState (ModulesCache mempty) (mapM goTopModule ms))
     let _resultExports = _resultScoper ^. Scoper.resultExports
     return AbstractResult {..}
   where
@@ -38,8 +33,8 @@ fromConcrete _resultScoper =
 fromConcreteExpression :: (Members '[Error JuvixError, NameIdGen] r) => Scoper.Expression -> Sem r Abstract.Expression
 fromConcreteExpression = mapError (JuvixError @ScoperError) . ignoreInfoTableBuilder . goExpression
 
-fromConcreteImport :: Members '[Error JuvixError, NameIdGen, Builtins, InfoTableBuilder] r => Scoper.Import 'Scoped -> Sem r Abstract.TopModule
-fromConcreteImport = mapError (JuvixError @ScoperError) . evalState (ModulesCache mempty) . goImport
+fromConcreteImport :: Members '[Error JuvixError, NameIdGen, Builtins, InfoTableBuilder, State ModulesCache] r => Scoper.Import 'Scoped -> Sem r Abstract.TopModule
+fromConcreteImport = mapError (JuvixError @ScoperError) . goImport
 
 goTopModule ::
   (Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, State ModulesCache] r) =>

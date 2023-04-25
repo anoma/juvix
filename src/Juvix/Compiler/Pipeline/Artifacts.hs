@@ -6,6 +6,7 @@
 module Juvix.Compiler.Pipeline.Artifacts where
 
 import Juvix.Compiler.Abstract.Data.InfoTableBuilder qualified as Abstract
+import Juvix.Compiler.Abstract.Translation.FromConcrete qualified as Abstract
 import Juvix.Compiler.Builtins
 import Juvix.Compiler.Concrete.Data.InfoTable qualified as Scoped
 import Juvix.Compiler.Concrete.Data.InfoTableBuilder qualified as Scoped
@@ -13,6 +14,7 @@ import Juvix.Compiler.Concrete.Data.ParsedInfoTableBuilder (BuilderState)
 import Juvix.Compiler.Concrete.Data.ParsedInfoTableBuilder qualified as Concrete
 import Juvix.Compiler.Concrete.Data.Scope
 import Juvix.Compiler.Concrete.Data.Scope qualified as S
+import Juvix.Compiler.Concrete.Data.Scope qualified as Scoped
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver
 import Juvix.Compiler.Core.Data.InfoTableBuilder qualified as Core
 import Juvix.Compiler.Internal.Data.InfoTable qualified as Internal
@@ -34,11 +36,14 @@ data Artifacts = Artifacts
     _artifactScopeTable :: Scoped.InfoTable,
     _artifactScopeExports :: HashSet NameId,
     _artifactMainModuleScope :: Maybe Scope,
+    _artifactScoperState :: Scoped.ScoperState,
     -- Typechecking
     _artifactTypes :: TypesTable,
     _artifactFunctions :: FunctionsTable,
     -- | This includes the InfoTable from all type checked modules
     _artifactInternalTypedTable :: Internal.InfoTable,
+    -- Concrete -> Abstract
+    _artifactAbstractModuleCache :: Abstract.ModulesCache,
     -- Abstract -> Internal
     _artifactInternalTranslationState :: Internal.TranslationState,
     -- Core
