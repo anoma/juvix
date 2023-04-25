@@ -285,3 +285,41 @@ tests:
     stdout:
       contains: |
         String → Int → Int
+
+  - name: repl-import-no-dependencies
+    command:
+      shell:
+        - bash
+      script: |
+        cd positive/NoDependencies && juvix repl Empty.juvix
+    stdin: "import Foo\nFoo.bar"
+    stdout:
+      contains:
+        bar
+    exit-status: 0
+
+  - name: repl-import-no-dependencies-type
+    command:
+      shell:
+        - bash
+      script: |
+        cd positive/NoDependencies && juvix repl Empty.juvix
+    stdin: "import Foo\n:t Foo.bar"
+    stdout:
+      contains:
+        Bar
+    exit-status: 0
+
+  - name: repl-invalid-import
+    command:
+      shell:
+        - bash
+      script: |
+        cd positive/NoDependencies && juvix repl Empty.juvix
+    stdin: "import Invalid"
+    stdout:
+      contains: OK loaded
+    stderr:
+      contains:
+        The module Invalid does not exist
+    exit-status: 0
