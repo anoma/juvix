@@ -118,7 +118,7 @@ lambdaLiftNode aboveBl top =
           liftedDefs <- mapM (fmap subsCalls . lambdaLiftNode bl') defs
           body' <- lambdaLiftNode bl' (letr ^. letRecBody)
           let declareTopSyms :: Sem r ()
-              declareTopSyms = do
+              declareTopSyms =
                 sequence_
                   [ do
                       let (topBody, topTy) =
