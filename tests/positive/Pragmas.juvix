@@ -3,6 +3,9 @@ module Pragmas;
 
 open import Stdlib.Prelude;
 
+{-# unknownPragma: 0 #-}
+axiom a : Nat;
+
 {-#
   unknownPragma: something
   unroll: 100
