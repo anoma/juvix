@@ -70,7 +70,7 @@ instance Semigroup Pragmas where
   p1 <> p2 =
     Pragmas
       { _pragmasInline = p2 ^. pragmasInline <|> p1 ^. pragmasInline,
-        _pragmasUnroll = p2 ^. pragmasUnroll <|> p1 ^. pragmasUnroll
+        _pragmasUnroll = p1 ^. pragmasUnroll <|> p2 ^. pragmasUnroll
       }
 
 instance Monoid Pragmas where
