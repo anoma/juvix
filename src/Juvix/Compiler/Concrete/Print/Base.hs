@@ -60,8 +60,8 @@ instance SingI t => PrettyPrint (Module 'Scoped t) where
   ppCode Module {..} = do
     let moduleBody' = localIndent (ppCode _moduleBody)
         modulePath' = ppModulePathType _modulePath
-        moduleDoc' :: Sem r () = maybe (return ()) ppCode _moduleDoc
-        modulePragmas' :: Sem r () = maybe (return ()) ppCode _modulePragmas
+        moduleDoc' = whenJust _moduleDoc ppCode
+        modulePragmas' = whenJust _modulePragmas ppCode
         body'
           | null _moduleBody = ensureEmptyLine
           | otherwise =
