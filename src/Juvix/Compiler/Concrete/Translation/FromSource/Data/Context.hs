@@ -16,6 +16,6 @@ data ParserResult = ParserResult
     _resultModules :: NonEmpty (Module 'Parsed 'ModuleTop),
     _resultBuilderState :: BuilderState
   }
-  deriving stock (Eq, Show)
+  deriving stock (Show)
 
 makeLenses ''ParserResult

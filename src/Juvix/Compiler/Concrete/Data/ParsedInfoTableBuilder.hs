@@ -62,7 +62,7 @@ data BuilderState = BuilderState
     _stateVisited :: HashSet TopModulePath,
     _stateModules :: HashMap TopModulePath (Module 'Parsed 'ModuleTop)
   }
-  deriving stock (Show, Eq)
+  deriving stock (Show)
 
 makeLenses ''BuilderState
 
