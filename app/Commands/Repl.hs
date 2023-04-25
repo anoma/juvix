@@ -19,6 +19,7 @@ import Juvix.Compiler.Core.Transformation qualified as Core
 import Juvix.Compiler.Core.Transformation.DisambiguateNames (disambiguateNames)
 import Juvix.Compiler.Internal.Language qualified as Internal
 import Juvix.Compiler.Internal.Pretty qualified as Internal
+import Juvix.Compiler.Pipeline.Repl
 import Juvix.Data.Error.GenericError qualified as Error
 import Juvix.Extra.Paths
 import Juvix.Extra.Stdlib
