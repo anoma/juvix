@@ -158,6 +158,7 @@ fromInternalExpression exp = do
 data ReplPipelineResult
   = ReplPipelineResultNode Core.Node
   | ReplPipelineResultImport TopModulePath
+  | ReplPipelineResultOpenImport Name
 
 compileReplInputIO ::
   Members '[Reader EntryPoint, State Artifacts, Embed IO] r =>
@@ -173,6 +174,7 @@ compileReplInputIO fp txt =
       case p of
         Parser.ReplExpression e -> ReplPipelineResultNode <$> compileExpression e
         Parser.ReplImport i -> registerImport i $> ReplPipelineResultImport (i ^. importModule)
+        Parser.ReplOpenImport i -> return (ReplPipelineResultOpenImport (i ^. openModuleName))
 
 inferExpressionIO ::
   Members '[State Artifacts, Embed IO] r =>

@@ -54,6 +54,7 @@ fromSource e = mapError (JuvixError @ParserError) $ do
 data ReplInput
   = ReplExpression (ExpressionAtoms 'Parsed)
   | ReplImport (Import 'Parsed)
+  | ReplOpenImport (OpenModule 'Parsed)
 
 expressionFromTextSource ::
   Members '[Error JuvixError, NameIdGen] r =>
@@ -147,8 +148,11 @@ topModuleDef = do
             )
 
 replInput :: forall r. Members '[Files, PathResolver, InfoTableBuilder, JudocStash, NameIdGen, Error ParserError] r => ParsecS r ReplInput
-replInput = P.label "<repl input>" $ do
-  (ReplExpression <$> parseExpressionAtoms) <|> (ReplImport <$> import_)
+replInput =
+  P.label "<repl input>" $
+    (ReplExpression <$> parseExpressionAtoms)
+      <|> (ReplImport <$> import_)
+      <|> (ReplOpenImport <$> openModule)
 
 --------------------------------------------------------------------------------
 -- Symbols and names
