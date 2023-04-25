@@ -324,6 +324,26 @@ tests:
         The module Invalid does not exist
     exit-status: 0
 
+  - name: repl-import-type-error
+    command:
+      shell:
+        - bash
+      script: |
+        temp=$(mktemp -d)
+        trap 'rm -rf -- "$temp"' EXIT
+        cp negative/Internal/WrongType.juvix $temp
+        cd $temp
+        echo "module Empty;" > Empty.juvix
+        touch juvix.yaml
+        juvix repl Empty.juvix
+    stdin: "import WrongType"
+    stdout:
+      contains: OK loaded
+    stderr:
+      contains:
+        is expected to have type
+    exit-status: 0
+
   - name: import-from-stdlib
     command:
       - juvix
