@@ -50,7 +50,7 @@ ppModulePathType ::
   Sem r ()
 ppModulePathType x = case sing :: SStage s of
   SParsed -> case sing :: SModuleIsTop t of
-    SModuleLocal -> noLoc (pretty x)
+    SModuleLocal -> ppCode x
     SModuleTop -> ppCode x
   SScoped -> case sing :: SModuleIsTop t of
     SModuleLocal -> P.ppCode x >>= morpheme (getLoc x) . P.annSDef x
@@ -63,21 +63,25 @@ instance SingI t => PrettyPrint (Module 'Scoped t) where
         modulePath' = ppModulePathType _modulePath
         moduleDoc' :: Sem r () = maybe (return ()) ppCode _moduleDoc
         modulePragmas' :: Sem r () = maybe (return ()) ppCode _modulePragmas
+        body'
+          | null _moduleBody = ensureEmptyLine
+          | otherwise =
+              topSpace
+                <> moduleBody'
+                <> line
     moduleDoc'
       <> modulePragmas'
       <> ppCode _moduleKw
       <+> modulePath'
         <> ppCode kwSemicolon
         <> line
-        <> topSpace
-        <> moduleBody'
-        <> line
+        <> body'
         <> ending
     where
       topSpace :: Sem r ()
       topSpace = case sing :: SModuleIsTop t of
         SModuleLocal -> mempty
-        SModuleTop -> line
+        SModuleTop -> ensureEmptyLine
 
       localIndent :: Sem r () -> Sem r ()
       localIndent = case sing :: SModuleIsTop t of
@@ -91,10 +95,10 @@ instance SingI t => PrettyPrint (Module 'Scoped t) where
 
 instance PrettyPrint [Statement 'Scoped] where
   ppCode :: forall r. Members '[ExactPrint, Reader Options] r => [Statement 'Scoped] -> Sem r ()
-  ppCode ss = vsep2 (map ppGroup (P.groupStatements ss))
+  ppCode ss = paragraphs (ppGroup <$> P.groupStatements ss)
     where
-      ppGroup :: [Statement 'Scoped] -> Sem r ()
-      ppGroup = vsep . endSemicolon . map ppCode
+      ppGroup :: NonEmpty (Statement 'Scoped) -> Sem r ()
+      ppGroup = vsep . endSemicolon . fmap ppCode
 
 instance PrettyPrint TopModulePath where
   ppCode t@TopModulePath {..} =
@@ -267,7 +271,7 @@ instance PrettyPrint UsingHiding where
             (noLoc P.kwBraceR)
             (noLoc P.kwSemicolon)
             (ppUnkindedSymbol <$> syms)
-    noLoc (pretty word) <+> bracedList
+    ppCode word <+> bracedList
     where
       (word, syms) = case uh of
         Using s -> (kwUsing, s)
@@ -346,7 +350,7 @@ ppInductiveSignature InductiveDef {..} = do
         Nothing -> Nothing
         Just e -> Just (noLoc P.kwColon <+> ppCode e)
       positive'
-        | _inductivePositive = (<> line) <$> Just (noLoc P.kwPositive)
+        | Just k <- _inductivePositive = (<> line) <$> Just (ppCode k)
         | otherwise = Nothing
   builtin'
     ?<> positive'

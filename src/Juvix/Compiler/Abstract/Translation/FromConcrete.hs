@@ -356,8 +356,8 @@ goInductive ty@InductiveDef {..} = do
             _inductiveType = fromMaybe (Abstract.ExpressionUniverse (smallUniverse loc)) _inductiveType',
             _inductiveConstructors = toList _inductiveConstructors',
             _inductiveExamples = _inductiveExamples',
-            _inductivePositive = ty ^. inductivePositive,
-            _inductivePragmas = _inductivePragmas'
+            _inductivePragmas = _inductivePragmas',
+            _inductivePositive = isJust (ty ^. inductivePositive)
           }
   whenJust ((^. withLocParam) <$> _inductiveBuiltin) (registerBuiltinInductive indDef)
   inductiveInfo <- registerInductive indDef

@@ -9,8 +9,7 @@ import GHC.Unicode
 import Juvix.Data.Keyword
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude
-import Text.Megaparsec as P hiding (sepBy1, sepEndBy1, some)
-import Text.Megaparsec.Char hiding (space, space1)
+import Juvix.Prelude.Parsing as P hiding (hspace, space, space1)
 import Text.Megaparsec.Char.Lexer qualified as L
 
 type ParsecS r = ParsecT Void Text (Sem r)
@@ -18,43 +17,83 @@ type ParsecS r = ParsecT Void Text (Sem r)
 parseFailure :: Int -> String -> ParsecS r a
 parseFailure off str = P.parseError $ P.FancyError off (Set.singleton (P.ErrorFail str))
 
-space1 :: (MonadParsec e s m, Token s ~ Char) => m ()
-space1 = void $ takeWhile1P (Just "white space (only spaces and newlines allowed)") isWhiteSpace
-  where
-    isWhiteSpace :: Char -> Bool
-    isWhiteSpace = (`elem` [' ', '\n'])
+whiteSpace1 :: (MonadParsec e s m, Token s ~ Char) => m ()
+whiteSpace1 = void (takeWhile1P (Just spaceMsg) isWhiteSpace)
 
-space' :: forall r. Bool -> ParsecS r [Comment]
-space' special = do
-  catMaybes
-    <$> P.many
-      ( hidden
-          ( choice
-              [space1 $> Nothing, Just <$> (lineComment <|> blockComment)]
-          )
-      )
-  where
-    lineComment :: ParsecS r Comment
-    lineComment = do
-      let _commentType = CommentOneLine
-      when
-        special
-        (notFollowedBy (P.chunk Str.judocStart))
-      (_commentText, _commentInterval) <- interval $ do
-        void (P.chunk "--")
-        P.takeWhileP Nothing (/= '\n')
-      return Comment {..}
+whiteSpace :: (MonadParsec e s m, Token s ~ Char) => m ()
+whiteSpace = void (takeWhileP (Just spaceMsg) isWhiteSpace)
 
-    blockComment :: ParsecS r Comment
-    blockComment = do
-      let _commentType = CommentBlock
-      when
-        special
-        (notFollowedBy (P.chunk Str.pragmasStart))
-      (_commentText, _commentInterval) <- interval $ do
-        void (P.chunk "{-")
-        pack <$> P.manyTill anySingle (P.chunk "-}")
-      return Comment {..}
+isWhiteSpace :: Char -> Bool
+isWhiteSpace = (`elem` [' ', '\n'])
+
+hspace :: (MonadParsec e s m, Token s ~ Char) => m (Tokens s)
+hspace = takeWhileP (Just spaceMsg) isHWhiteSpace
+  where
+    isHWhiteSpace :: Char -> Bool
+    isHWhiteSpace = (== ' ')
+
+hspace_ :: (MonadParsec e s m, Token s ~ Char) => m ()
+hspace_ = void hspace
+
+spaceMsg :: String
+spaceMsg = "white space (only spaces and newlines allowed)"
+
+space' :: forall e m. MonadParsec e Text m => Bool -> m (Maybe SpaceSpan)
+space' special =
+  hidden $
+    fmap SpaceSpan . nonEmpty <$> spaceSections
+  where
+    spaceSections :: m [SpaceSection]
+    spaceSections = catMaybes <$> go []
+      where
+        go :: [Maybe SpaceSection] -> m [Maybe SpaceSection]
+        go acc = do
+          s <- fmap SpaceLines <$> emptyLines
+          m <- fmap SpaceComment <$> optional comment
+          case m of
+            Nothing -> return (reverse (s : acc))
+            Just {} -> go (m : s : acc)
+
+    emptyLines :: m (Maybe EmptyLines)
+    emptyLines = do
+      (k, i) <- interval $ do
+        hspace_
+        pred . length <$> whileJustM (P.try (optional (newline >> hspace_)))
+      return
+        if
+            | k > 0 ->
+                Just
+                  EmptyLines
+                    { _emptyLinesLoc = i,
+                      _emptyLinesNum = k
+                    }
+            | otherwise -> mzero
+
+    comment :: m Comment
+    comment = lineComment <|> blockComment
+      where
+        lineComment :: m Comment
+        lineComment = do
+          let _commentType = CommentOneLine
+          when
+            special
+            (notFollowedBy (P.chunk Str.judocStart))
+          (_commentText, _commentInterval) <- interval $ do
+            void (P.chunk "--")
+            P.takeWhileP Nothing (/= '\n')
+          return Comment {..}
+
+        blockComment :: m Comment
+        blockComment = do
+          let _commentType = CommentBlock
+          when
+            special
+            (notFollowedBy (P.chunk Str.pragmasStart))
+          (_commentText, _commentInterval) <- interval $ do
+            void (P.chunk "{-")
+            pack <$> P.manyTill anySingle (P.chunk "-}")
+          hspace_
+          return Comment {..}
 
 integer' :: ParsecS r (Integer, Interval) -> ParsecS r (Integer, Interval)
 integer' dec = do
@@ -140,7 +179,7 @@ isDelimiter = (`elem` delimiterSymbols)
 validFirstChar :: Char -> Bool
 validFirstChar c = not (isNumber c || isSpace c || (c `elem` reservedSymbols))
 
-curLoc :: ParsecS r Loc
+curLoc :: MonadParsec e Text m => m Loc
 curLoc = do
   sp <- getSourcePos
   offset <- getOffset
@@ -149,7 +188,7 @@ curLoc = do
 onlyInterval :: ParsecS r a -> ParsecS r Interval
 onlyInterval = fmap snd . interval
 
-interval :: ParsecS r a -> ParsecS r (a, Interval)
+interval :: MonadParsec e Text m => m a -> m (a, Interval)
 interval ma = do
   start <- curLoc
   res <- ma
