@@ -200,7 +200,7 @@ runCommand opts = do
         ctx <- State.gets (^. replStateContext)
         case ctx of
           Just ctx' -> do
-            (_, compileRes) <- liftIO (compileReplInputIO' ctx' (strip (pack input)))
+            compileRes <- snd <$> liftIO (compileReplInputIO' ctx' (strip (pack input)))
             case compileRes of
               Left err -> printError err
               Right (Just n) -> renderOut (Core.ppOut opts n)
