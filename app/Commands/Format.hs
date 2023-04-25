@@ -2,6 +2,7 @@ module Commands.Format where
 
 import Commands.Base
 import Commands.Format.Options
+import Data.Text qualified as Text
 import Juvix.Extra.Paths
 import Juvix.Formatter
 import Juvix.Prelude.Pretty
@@ -22,6 +23,8 @@ data FormatTarget
 
 runCommand :: forall r. Members '[Embed IO, App, Resource, Files] r => FormatOptions -> Sem r ()
 runCommand opts = do
+  globalOpts <- askGlobalOptions
+  let isStdin = globalOpts ^. globalStdin
   f <- sequence (filePathToAbs <$> (opts ^. formatInput))
 
   let target = case f of
@@ -32,7 +35,16 @@ runCommand opts = do
     res <- case f of
       Just (Left p) -> format p
       Just (Right p) -> formatProject p
-      Nothing -> format formatStdinPath
+      Nothing ->
+        if isStdin
+          then format formatStdinPath
+          else do
+            printFailureExit $
+              Text.unlines
+                [ "juvix format error: either 'JUVIX_FILE_OR_PROJECT' or 'stdin' option should be specified",
+                  "Use --help to learn more usage information."
+                ]
+            pure FormatResultFail
     when (res == FormatResultFail) (embed (exitWith (ExitFailure 1)))
 
 renderModeFromOptions :: FormatTarget -> FormatOptions -> FormattedFileInfo -> FormatRenderMode
