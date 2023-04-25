@@ -33,8 +33,17 @@ fromConcrete _resultScoper =
 fromConcreteExpression :: (Members '[Error JuvixError, NameIdGen] r) => Scoper.Expression -> Sem r Abstract.Expression
 fromConcreteExpression = mapError (JuvixError @ScoperError) . ignoreInfoTableBuilder . goExpression
 
-fromConcreteImport :: Members '[Error JuvixError, NameIdGen, Builtins, InfoTableBuilder, State ModulesCache] r => Scoper.Import 'Scoped -> Sem r Abstract.TopModule
+fromConcreteImport ::
+  Members '[Error JuvixError, NameIdGen, Builtins, InfoTableBuilder, State ModulesCache] r =>
+  Scoper.Import 'Scoped ->
+  Sem r Abstract.TopModule
 fromConcreteImport = mapError (JuvixError @ScoperError) . goImport
+
+fromConcreteOpenImport ::
+  Members '[Error JuvixError, NameIdGen, Builtins, InfoTableBuilder, State ModulesCache] r =>
+  Scoper.OpenModule 'Scoped ->
+  Sem r (Maybe Abstract.TopModule)
+fromConcreteOpenImport = mapError (JuvixError @ScoperError) . goOpenModule'
 
 goTopModule ::
   (Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, State ModulesCache] r) =>
@@ -157,19 +166,24 @@ goStatement (Indexed idx s) =
     StatementTypeSignature {} -> return Nothing
     StatementFunctionClause {} -> return Nothing
 
+goOpenModule' ::
+  forall r.
+  (Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, State ModulesCache] r) =>
+  OpenModule 'Scoped ->
+  Sem r (Maybe Abstract.TopModule)
+goOpenModule' o
+  | isJust (o ^. openModuleImportKw) =
+      case o ^. openModuleName of
+        ModuleRef' (SModuleTop :&: m) -> Just <$> goModule (m ^. moduleRefModule)
+        _ -> impossible
+  | otherwise = return Nothing
+
 goOpenModule ::
   forall r.
   (Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, State ModulesCache] r) =>
   OpenModule 'Scoped ->
   Sem r (Maybe Abstract.Statement)
-goOpenModule o
-  | isJust (o ^. openModuleImportKw) =
-      case o ^. openModuleName of
-        ModuleRef' (SModuleTop :&: m) ->
-          Just . Abstract.StatementImport
-            <$> goModule (m ^. moduleRefModule)
-        _ -> impossible
-  | otherwise = return Nothing
+goOpenModule o = fmap Abstract.StatementImport <$> goOpenModule' o
 
 goLetFunctionDef ::
   (Members '[InfoTableBuilder, Error ScoperError] r) =>

@@ -97,6 +97,13 @@ scopeCheckImport ::
   Sem r (Import 'Scoped)
 scopeCheckImport i = mapError (JuvixError @ScoperError) $ checkImport i
 
+scopeCheckOpenModule ::
+  forall r.
+  Members '[Error JuvixError, InfoTableBuilder, NameIdGen, State Scope, Reader ScopeParameters, State ScoperState] r =>
+  OpenModule 'Parsed ->
+  Sem r (OpenModule 'Scoped)
+scopeCheckOpenModule i = mapError (JuvixError @ScoperError) $ checkOpenModule i
+
 freshVariable :: Members '[NameIdGen, State ScoperFixities, State Scope, State ScoperState] r => Symbol -> Sem r S.Symbol
 freshVariable = freshSymbol S.KNameLocal
 

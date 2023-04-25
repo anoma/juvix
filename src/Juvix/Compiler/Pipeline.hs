@@ -58,6 +58,31 @@ arityCheckExpression p = do
       >>= Internal.fromAbstractExpression
       >>= Internal.arityCheckExpression
 
+openImportToInternal ::
+  Members '[Reader EntryPoint, Error JuvixError, State Artifacts] r =>
+  OpenModule 'Parsed ->
+  Sem r (Maybe Internal.Include)
+openImportToInternal o = do
+  parsedModules <- gets (^. artifactParsing . C.stateModules)
+  ( runNameIdGenArtifacts
+      . runBuiltinsArtifacts
+      . runAbstractInfoTableBuilderArtifacts
+      . runScoperInfoTableBuilderArtifacts
+      . runScoperScopeArtifacts
+      . runStateArtifacts artifactInternalTranslationState
+      . runReaderArtifacts artifactScopeExports
+      . runReader (Scoper.ScopeParameters mempty parsedModules)
+      . runStateArtifacts artifactAbstractModuleCache
+      . runStateArtifacts artifactScoperState
+    )
+    $ do
+      mTopModule <-
+        Scoper.scopeCheckOpenModule o
+          >>= Abstract.fromConcreteOpenImport
+      case mTopModule of
+        Nothing -> return Nothing
+        Just m -> Internal.fromAbstractImport m
+
 importToInternal ::
   Members '[Reader EntryPoint, Error JuvixError, State Artifacts] r =>
   Import 'Parsed ->
@@ -135,6 +160,14 @@ registerImport i = do
   mInclude <- importToInternal i
   whenJust mInclude (importToInternal' >=> fromInternalInclude)
 
+registerOpenImport ::
+  Members '[Error JuvixError, State Artifacts, Reader EntryPoint] r =>
+  OpenModule 'Parsed ->
+  Sem r ()
+registerOpenImport o = do
+  mInclude <- openImportToInternal o
+  whenJust mInclude (importToInternal' >=> fromInternalInclude)
+
 fromInternalInclude :: Members '[State Artifacts] r => Internal.Include -> Sem r ()
 fromInternalInclude i = do
   let table = Internal.buildTable [i ^. Internal.includeModule]
@@ -174,7 +207,7 @@ compileReplInputIO fp txt =
       case p of
         Parser.ReplExpression e -> ReplPipelineResultNode <$> compileExpression e
         Parser.ReplImport i -> registerImport i $> ReplPipelineResultImport (i ^. importModule)
-        Parser.ReplOpenImport i -> return (ReplPipelineResultOpenImport (i ^. openModuleName))
+        Parser.ReplOpenImport i -> registerOpenImport i $> ReplPipelineResultOpenImport (i ^. openModuleName)
 
 inferExpressionIO ::
   Members '[State Artifacts, Embed IO] r =>
