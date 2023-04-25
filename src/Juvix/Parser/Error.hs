@@ -107,26 +107,10 @@ data StdinOrFileError = StdinOrFileError
   deriving stock (Show)
 
 instance ToGenericError StdinOrFileError where
-  genericError StdinOrFileError = ask >>= generr
-    where
-      generr opts =
-        return
-          GenericError
-            { _genericErrorLoc = singletonInterval (mkInitialLoc formatStdinPath),
-              _genericErrorMessage = prettyError msg,
-              _genericErrorIntervals = []
-            }
-        where
-          opts' = fromGenericOptions opts
-          -- i = getLoc _wrongTopModuleNameActualName
-          msg =
-            "The top module"
-              -- <+> ppCode opts' _wrongTopModuleNameActualName
-              <+> "is defined in the file:"
-                <> line
-                -- <> pretty _wrongTopModuleNameActualPath
-                <> line
-                <> "But it should be in the file:"
-                <> line
-
--- <> pretty _wrongTopModuleNameExpectedPath
+  genericError StdinOrFileError =
+    return
+      GenericError
+        { _genericErrorLoc = singletonInterval (mkInitialLoc formatStdinPath),
+          _genericErrorMessage = prettyError "Neither JUVIX_FILE_OR_PROJECT nor --stdin option is choosen",
+          _genericErrorIntervals = []
+        }
