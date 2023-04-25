@@ -40,6 +40,12 @@ defaultEntryPointCwdIO mainFile = do
   roots <- findRootAndChangeDir (Just (parent mainFile)) Nothing cwd
   return (defaultEntryPoint roots mainFile)
 
+defaultEntryPointNoFileCwdIO :: IO EntryPoint
+defaultEntryPointNoFileCwdIO = do
+  cwd <- getCurrentDir
+  roots <- findRootAndChangeDir Nothing Nothing cwd
+  return (defaultEntryPointNoFile roots)
+
 defaultEntryPoint :: Roots -> Path Abs File -> EntryPoint
 defaultEntryPoint roots mainFile =
   (defaultEntryPointNoFile roots)

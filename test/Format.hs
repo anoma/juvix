@@ -35,25 +35,29 @@ testDescr PosTest {..} =
       _testRoot = _dir,
       _testAssertion = Steps $ \step -> do
         entryPoint <- defaultEntryPointCwdIO _file
-        original :: Text <- readFile (toFilePath (entryPoint ^. entryPointModulePaths . _head1))
-        step "Parsing"
-        p :: Parser.ParserResult <- snd <$> runIO' entryPoint upToParsing
+        let maybeFile = entryPoint ^. entryPointModulePaths . _headMaybe
+        case maybeFile of
+          Just file -> do
+            original :: Text <- readFile (toFilePath file)
+            step "Parsing"
+            p :: Parser.ParserResult <- snd <$> runIO' entryPoint upToParsing
 
-        step "Scoping"
-        s :: Scoper.ScoperResult <-
-          snd
-            <$> runIO'
-              entryPoint
-              ( do
-                  void entrySetup
-                  Concrete.fromParsed p
-              )
+            step "Scoping"
+            s :: Scoper.ScoperResult <-
+              snd
+                <$> runIO'
+                  entryPoint
+                  ( do
+                      void entrySetup
+                      Concrete.fromParsed p
+                  )
 
-        let formatted :: Text
-            formatted = renderCode (s ^. Scoper.comments) (s ^. Scoper.mainModule)
+            let formatted :: Text
+                formatted = renderCode (s ^. Scoper.comments) (s ^. Scoper.mainModule)
 
-        step "Format"
-        assertEqDiffText "check: pretty . scope . parse = id" original formatted
+            step "Format"
+            assertEqDiffText "check: pretty . scope . parse = id" original formatted
+          Nothing -> assertFailure "Not a module"
     }
 
 allTests :: TestTree

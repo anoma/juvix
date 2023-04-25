@@ -10,6 +10,9 @@ runScopeEffIO = interpret $ \case
   ScopeFile p -> do
     entry <- embed (defaultEntryPointCwdIO p)
     embed (snd <$> runIO' entry upToScoping)
+  ScopeStdin -> do
+    entry <- embed defaultEntryPointNoFileCwdIO
+    embed (snd <$> runIO' entry upToScoping)
 
 makeFormatTest' :: Scope.PosTest -> TestDescr
 makeFormatTest' Scope.PosTest {..} =
