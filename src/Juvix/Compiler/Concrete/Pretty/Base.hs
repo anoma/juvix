@@ -368,7 +368,7 @@ instance (SingI s) => PrettyCode (OpenModule s) where
         Public -> Just kwPublic
         NoPublic -> Nothing
 
-instance PrettyCode ParsedPragmas where
+instance PrettyCode (WithSource Pragmas) where
   ppCode pragma =
     return $
       annotate AnnComment (pretty (Str.pragmasStart <> pragma ^. withSourceText <> Str.pragmasEnd)) <> line

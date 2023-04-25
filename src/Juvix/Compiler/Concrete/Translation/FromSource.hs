@@ -177,12 +177,12 @@ statement = P.label "<top level statement>" $ do
 
 stashPragmas :: forall r. (Members '[InfoTableBuilder, PragmasStash, NameIdGen] r) => ParsecS r ()
 stashPragmas = do
-  (pragmas, i) <- interval parsePragmas
-  P.lift (registerPragmas i)
+  pragmas <- withLoc parsePragmas
+  P.lift (registerPragmas (getLoc pragmas))
   P.lift (put (Just pragmas))
   return ()
   where
-    parsePragmas :: ParsecS r ParsedPragmas
+    parsePragmas :: ParsecS r (WithSource Pragmas)
     parsePragmas = do
       void (P.chunk Str.pragmasStart)
       off <- P.getOffset

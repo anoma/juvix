@@ -13,7 +13,6 @@ import Juvix.Compiler.Concrete.Pretty.Options
 import Juvix.Data.CodeAnn (Ann, CodeAnn (..), ppStringLit)
 import Juvix.Data.Effect.ExactPrint
 import Juvix.Data.Keyword.All
-import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude hiding ((<+>), (<+?>), (<?+>), (?<>))
 import Juvix.Prelude.Pretty (annotate, pretty)
 
@@ -151,9 +150,7 @@ instance PrettyPrint Expression where
   ppCode = ppMorpheme
 
 instance PrettyPrint ParsedPragmas where
-  ppCode pragma =
-    noLoc (annotate AnnComment (pretty (Str.pragmasStart <> pragma ^. withSourceText <> Str.pragmasEnd)))
-      <> line
+  ppCode = ppMorpheme
 
 instance PrettyPrint (Example 'Scoped) where
   ppCode e =

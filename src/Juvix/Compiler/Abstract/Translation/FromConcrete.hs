@@ -92,7 +92,7 @@ goModule m = case sing :: SModuleIsTop t of
 goPragmas :: Member (Reader Pragmas) r => Maybe ParsedPragmas -> Sem r Pragmas
 goPragmas p = do
   p' <- ask
-  return $ p' <> maybe mempty (^. withSourceValue) p
+  return $ p' <> maybe mempty (^. withLocParam . withSourceValue) p
 
 goName :: S.Name -> Abstract.Name
 goName name =

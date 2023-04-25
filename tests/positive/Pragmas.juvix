@@ -1,3 +1,4 @@
+{-# unknownPragma: 300 #-}
 module Pragmas;
 
 open import Stdlib.Prelude;

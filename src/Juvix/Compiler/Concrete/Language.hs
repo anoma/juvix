@@ -116,7 +116,7 @@ type family ModuleEndType t = res | res -> t where
 -- should be ignored, but they still need to be printed out when
 -- pretty-printing. Also, we probably don't want to impose pragma formatting
 -- choices on the user.
-type ParsedPragmas = WithSource Pragmas
+type ParsedPragmas = WithLoc (WithSource Pragmas)
 
 --------------------------------------------------------------------------------
 -- Top level statement
@@ -1176,6 +1176,7 @@ getJudocLoc = fmap getLocSpan . nonEmpty . (^. block)
 instance SingI s => HasLoc (TypeSignature s) where
   getLoc TypeSignature {..} =
     (_sigDoc >>= getJudocLoc)
+      ?<> (getLoc <$> _sigPragmas)
       ?<> (getLoc <$> _sigBuiltin)
       ?<> (getLoc <$> _sigTerminating)
       ?<> (getLocExpressionType <$> _sigBody)
