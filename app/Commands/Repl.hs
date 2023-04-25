@@ -159,11 +159,11 @@ runCommand opts = do
 
           compileThenEval :: ReplContext -> String -> Repl (Either JuvixError (Maybe Core.Node))
           compileThenEval ctx s = do
-              mn <- compileString
-              case mn of
-                Left err -> return (Left err)
-                Right Nothing -> return (Right Nothing)
-                Right (Just n) -> fmap Just <$> eval n
+            mn <- compileString
+            case mn of
+              Left err -> return (Left err)
+              Right Nothing -> return (Right Nothing)
+              Right (Just n) -> fmap Just <$> eval n
             where
               artif :: Artifacts
               artif = ctx ^. replContextArtifacts

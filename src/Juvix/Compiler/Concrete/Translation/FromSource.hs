@@ -80,8 +80,8 @@ runReplInputParser ::
   Sem r ReplInput
 runReplInputParser fileName input = do
   m <-
-      evalState (Nothing @(Judoc 'Parsed)) $
-        P.runParserT replInput (toFilePath fileName) input
+    evalState (Nothing @(Judoc 'Parsed)) $
+      P.runParserT replInput (toFilePath fileName) input
   case m of
     Left err -> throw (ErrMegaparsec (MegaparsecError err))
     Right r -> return r

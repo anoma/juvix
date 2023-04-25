@@ -84,7 +84,8 @@ typeCheckExpression ::
   Sem r Expression
 typeCheckExpression exp = (^. typedExpression) <$> typeCheckExpressionType exp
 
-typeCheckInclude :: Members '[Reader EntryPoint, Error JuvixError, State Artifacts] r =>
+typeCheckInclude ::
+  Members '[Reader EntryPoint, Error JuvixError, State Artifacts] r =>
   Include ->
   Sem r Include
 typeCheckInclude i = do
@@ -98,7 +99,7 @@ typeCheckInclude i = do
       . ignoreOutput @Example
       . runReader table
       . withEmptyVars
-      $ checkInclude i
+    $ checkInclude i
 
 inferExpressionType ::
   (Members '[Error JuvixError, State Artifacts] r) =>
