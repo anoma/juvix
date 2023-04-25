@@ -4,6 +4,7 @@ import Data.Text qualified as T
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Print (ppOutDefault)
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
+import Juvix.Extra.Paths
 import Juvix.Prelude
 import Juvix.Prelude.Pretty
 
@@ -14,6 +15,7 @@ data FormattedFileInfo = FormattedFileInfo
 
 data ScopeEff m a where
   ScopeFile :: Path Abs File -> ScopeEff m Scoper.ScoperResult
+  ScopeStdin :: ScopeEff m Scoper.ScoperResult
 
 makeLenses ''FormattedFileInfo
 makeSem ''ScopeEff
@@ -98,6 +100,25 @@ formatProject p = do
 formatPath :: Member ScopeEff r => Path Abs File -> Sem r (NonEmpty AnsiText)
 formatPath p = do
   res <- scopeFile p
+  formatScoperResult res
+
+formatStdin ::
+  forall r.
+  Members '[ScopeEff, Files, Output FormattedFileInfo] r =>
+  Sem r FormatResult
+formatStdin = do
+  res <- scopeStdin
+  formattedContents <- formatScoperResult res
+  output
+    ( FormattedFileInfo
+        { _formattedFileInfoPath = formatStdinPath,
+          _formattedFileInfoContentsAnsi = formattedContents
+        }
+    )
+  return FormatResultFail
+
+formatScoperResult :: Scoper.ScoperResult -> Sem r (NonEmpty AnsiText)
+formatScoperResult res = do
   let cs = res ^. Scoper.comments
       formattedModules = run (runReader cs (mapM formatTopModule (res ^. Scoper.resultModules)))
   return formattedModules

@@ -4,6 +4,7 @@ import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Pretty.Options (fromGenericOptions)
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Error
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error.Pretty
+import Juvix.Extra.Paths
 import Juvix.Prelude
 import Text.Megaparsec qualified as M
 import Text.Megaparsec.Error (errorOffset)
@@ -12,6 +13,7 @@ data ParserError
   = ErrMegaparsec MegaparsecError
   | ErrTopModulePath TopModulePathError
   | ErrWrongTopModuleName WrongTopModuleName
+  | ErrStrinOrFile StdinOrFileError
   deriving stock (Show)
 
 instance ToGenericError ParserError where
@@ -19,6 +21,7 @@ instance ToGenericError ParserError where
     ErrMegaparsec e -> genericError e
     ErrTopModulePath e -> genericError e
     ErrWrongTopModuleName e -> genericError e
+    ErrStrinOrFile e -> genericError e
 
 instance Pretty MegaparsecError where
   pretty (MegaparsecError b) = pretty (M.errorBundlePretty b)
@@ -99,3 +102,31 @@ instance ToGenericError WrongTopModuleName where
                 <> "But it should be in the file:"
                 <> line
                 <> pretty _wrongTopModuleNameExpectedPath
+
+data StdinOrFileError = StdinOrFileError
+  deriving stock (Show)
+
+instance ToGenericError StdinOrFileError where
+  genericError StdinOrFileError = ask >>= generr
+    where
+      generr opts =
+        return
+          GenericError
+            { _genericErrorLoc = singletonInterval (mkInitialLoc formatStdinPath),
+              _genericErrorMessage = prettyError msg,
+              _genericErrorIntervals = []
+            }
+        where
+          opts' = fromGenericOptions opts
+          -- i = getLoc _wrongTopModuleNameActualName
+          msg =
+            "The top module"
+              -- <+> ppCode opts' _wrongTopModuleNameActualName
+              <+> "is defined in the file:"
+                <> line
+                -- <> pretty _wrongTopModuleNameActualPath
+                <> line
+                <> "But it should be in the file:"
+                <> line
+
+-- <> pretty _wrongTopModuleNameExpectedPath

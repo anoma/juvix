@@ -2,7 +2,9 @@
 
 module Commands.Dev.Geb.Repl where
 
-import Commands.Base hiding (command)
+import Commands.Base hiding
+  ( command,
+  )
 import Commands.Dev.Geb.Repl.Format
 import Commands.Dev.Geb.Repl.Options
 import Control.Exception (throwIO)
@@ -60,17 +62,21 @@ loadEntryPoint ep = do
         replContextEntryPoint
         (Just ep)
     )
-  let epPath :: Path Abs File = ep ^. entryPointModulePaths . _head1
-  liftIO (putStrLn . pack $ "OK loaded " <> toFilePath epPath)
-  content <- liftIO (readFile (toFilePath epPath))
-  let evalRes =
-        Geb.runEval $
-          Geb.RunEvalArgs
-            { _runEvalArgsContent = content,
-              _runEvalArgsInputFile = epPath,
-              _runEvalArgsEvaluatorOptions = Geb.defaultEvaluatorOptions
-            }
-  printEvalResult evalRes
+  let epPath :: Maybe (Path Abs File) = ep ^. entryPointModulePaths . _headMaybe
+  case epPath of
+    Just path -> do
+      let filepath = toFilePath path
+      liftIO (putStrLn . pack $ "OK loaded " <> filepath)
+      content <- liftIO (readFile filepath)
+      let evalRes =
+            Geb.runEval $
+              Geb.RunEvalArgs
+                { _runEvalArgsContent = content,
+                  _runEvalArgsInputFile = path,
+                  _runEvalArgsEvaluatorOptions = Geb.defaultEvaluatorOptions
+                }
+      printEvalResult evalRes
+    Nothing -> pure ()
 
 reloadFile :: String -> Repl ()
 reloadFile _ = do

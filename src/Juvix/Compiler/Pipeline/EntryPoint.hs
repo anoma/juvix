@@ -28,7 +28,7 @@ data EntryPoint = EntryPoint
     _entryPointDebug :: Bool,
     _entryPointUnrollLimit :: Int,
     _entryPointGenericOptions :: GenericOptions,
-    _entryPointModulePaths :: NonEmpty (Path Abs File)
+    _entryPointModulePaths :: [Path Abs File]
   }
   deriving stock (Eq, Show)
 
@@ -42,6 +42,12 @@ defaultEntryPointCwdIO mainFile = do
 
 defaultEntryPoint :: Roots -> Path Abs File -> EntryPoint
 defaultEntryPoint roots mainFile =
+  (defaultEntryPointNoFile roots)
+    { _entryPointModulePaths = pure mainFile
+    }
+
+defaultEntryPointNoFile :: Roots -> EntryPoint
+defaultEntryPointNoFile roots =
   EntryPoint
     { _entryPointRoot = roots ^. rootsRootDir,
       _entryPointResolverRoot = roots ^. rootsRootDir,
@@ -57,11 +63,11 @@ defaultEntryPoint roots mainFile =
       _entryPointTarget = TargetCore,
       _entryPointDebug = False,
       _entryPointUnrollLimit = defaultUnrollLimit,
-      _entryPointModulePaths = pure mainFile
+      _entryPointModulePaths = []
     }
 
 defaultUnrollLimit :: Int
 defaultUnrollLimit = 140
 
-mainModulePath :: Lens' EntryPoint (Path Abs File)
-mainModulePath = entryPointModulePaths . _head1
+mainModulePath :: Lens' EntryPoint (Maybe (Path Abs File))
+mainModulePath = entryPointModulePaths . _headMaybe

@@ -17,44 +17,55 @@ import Juvix.Compiler.Concrete.Extra qualified as P
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver
 import Juvix.Compiler.Concrete.Translation.FromSource.Data.Context
-import Juvix.Compiler.Concrete.Translation.FromSource.Lexer hiding (symbol)
+import Juvix.Compiler.Concrete.Translation.FromSource.Lexer hiding
+  ( symbol,
+  )
 import Juvix.Compiler.Pipeline.EntryPoint
+import Juvix.Extra.Paths
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Parser.Error
 import Juvix.Prelude
-import Juvix.Prelude.Pretty (Pretty, prettyText)
+import Juvix.Prelude.Pretty
+  ( Pretty,
+    prettyText,
+  )
 
 type JudocStash = State (Maybe (Judoc 'Parsed))
 
 type PragmasStash = State (Maybe ParsedPragmas)
 
 fromSource ::
-  (Members '[PathResolver, Files, Error JuvixError, NameIdGen] r) =>
+  (Members '[PathResolver, Files, Error JuvixError, NameIdGen, PragmasStash] r) =>
   EntryPoint ->
   Sem r ParserResult
 fromSource e = mapError (JuvixError @ParserError) $ do
-  (_resultTable, _resultModules) <- runParserInfoTableBuilder (runReader e (mapM goFile (e ^. entryPointModulePaths)))
+  (_resultTable, _resultModules) <- runParserInfoTableBuilder (runReader e getParsedModuleTops)
   let _resultEntry = e
   return ParserResult {..}
   where
+    getParsedModuleTops ::
+      forall r.
+      (Members '[PathResolver, Files, Error ParserError, InfoTableBuilder, NameIdGen, PragmasStash] r) =>
+      Sem r (NonEmpty (Module 'Parsed 'ModuleTop))
+    getParsedModuleTops = case (e ^. entryPointStdin, e ^. entryPointModulePaths) of
+      (Nothing, []) -> throw $ ErrStrinOrFile StdinOrFileError
+      (Just txt, _) ->
+        runModuleStdinParser txt >>= \case
+          Left err -> throw err
+          Right r -> pure (r :| [])
+      (_, x : xs) -> mapM goFile (x :| xs)
+
     goFile ::
       forall r.
       (Members '[PathResolver, Files, Error ParserError, InfoTableBuilder, NameIdGen] r) =>
       Path Abs File ->
       Sem r (Module 'Parsed 'ModuleTop)
     goFile fileName = do
-      input <- getFileContents fileName
+      input <- readFile' fileName
       mp <- runModuleParser fileName input
       case mp of
         Left er -> throw er
         Right m -> return m
-      where
-        getFileContents :: Path Abs File -> Sem r Text
-        getFileContents fp
-          | fp == e ^. mainModulePath,
-            Just txt <- e ^. entryPointStdin =
-              return txt
-          | otherwise = readFile' fp
 
 expressionFromTextSource ::
   Members '[Error JuvixError, NameIdGen] r =>
@@ -73,6 +84,18 @@ runModuleParser fileName input = do
     evalState (Nothing @ParsedPragmas) $
       evalState (Nothing @(Judoc 'Parsed)) $
         P.runParserT topModuleDef (toFilePath fileName) input
+  case m of
+    Left err -> return (Left (ErrMegaparsec (MegaparsecError err)))
+    Right r -> registerModule r $> Right r
+
+runModuleStdinParser ::
+  Members '[Error ParserError, Files, PathResolver, NameIdGen, InfoTableBuilder, PragmasStash] r =>
+  Text ->
+  Sem r (Either ParserError (Module 'Parsed 'ModuleTop))
+runModuleStdinParser input = do
+  m <-
+    evalState (Nothing @(Judoc 'Parsed)) $
+      P.runParserT topModuleDefStdin (toFilePath formatStdinPath) input
   case m of
     Left err -> return (Left (ErrMegaparsec (MegaparsecError err)))
     Right r -> registerModule r $> Right r
@@ -104,6 +127,14 @@ top ::
   ParsecS r a ->
   ParsecS r a
 top p = space >> p <* (optional semicolon >> P.eof)
+
+topModuleDefStdin ::
+  (Members '[Error ParserError, Files, PathResolver, InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
+  ParsecS r (Module 'Parsed 'ModuleTop)
+topModuleDefStdin = do
+  void (optional stashJudoc)
+  m <- top moduleDef
+  return m
 
 topModuleDef ::
   (Members '[Error ParserError, Files, PathResolver, InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) =>

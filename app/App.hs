@@ -6,7 +6,9 @@ import GlobalOptions
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver
 import Juvix.Compiler.Pipeline
 import Juvix.Data.Error qualified as Error
-import Juvix.Prelude.Pretty hiding (Doc)
+import Juvix.Prelude.Pretty hiding
+  ( Doc,
+  )
 import System.Console.ANSI qualified as Ansi
 
 data App m a where
@@ -24,6 +26,7 @@ data App m a where
   FromAppPathDir :: AppPath Dir -> App m (Path Abs Dir)
   RenderStdOut :: (HasAnsiBackend a, HasTextBackend a) => a -> App m ()
   RunPipelineEither :: AppPath File -> Sem PipelineEff a -> App m (Either JuvixError (ResolverState, a))
+  RunPipelineNoFileEither :: Sem PipelineEff a -> App m (Either JuvixError (ResolverState, a))
   RunCorePipelineEither :: AppPath File -> App m (Either JuvixError Artifacts)
   Say :: Text -> App m ()
   SayRaw :: ByteString -> App m ()
@@ -63,6 +66,9 @@ runAppIO args@RunAppIOArgs {..} =
     RunPipelineEither input p -> do
       entry <- embed (getEntryPoint' args input)
       embed (runIOEither entry p)
+    RunPipelineNoFileEither p -> do
+      entry <- embed (getEntryPointStdin' args)
+      embed (runIOEither entry p)
     Say t
       | g ^. globalOnlyErrors -> return ()
       | otherwise -> embed (putStrLn t)
@@ -90,6 +96,16 @@ getEntryPoint' RunAppIOArgs {..} inputFile = do
         | otherwise -> return Nothing
   set entryPointStdin estdin <$> entryPointFromGlobalOptionsPre roots (inputFile ^. pathPath) opts
 
+getEntryPointStdin' :: RunAppIOArgs -> IO EntryPoint
+getEntryPointStdin' RunAppIOArgs {..} = do
+  let opts = _runAppIOArgsGlobalOptions
+      roots = _runAppIOArgsRoots
+  estdin <-
+    if
+        | opts ^. globalStdin -> Just <$> getContents
+        | otherwise -> return Nothing
+  set entryPointStdin estdin <$> entryPointFromGlobalOptionsNoFilePre roots opts
+
 someBaseToAbs' :: (Members '[App] r) => SomeBase a -> Sem r (Path Abs a)
 someBaseToAbs' f = do
   r <- askInvokeDir
@@ -112,6 +128,13 @@ getEntryPoint inputFile = do
 runPipeline :: (Member App r) => AppPath File -> Sem PipelineEff a -> Sem r a
 runPipeline input p = do
   r <- runPipelineEither input p
+  case r of
+    Left err -> exitJuvixError err
+    Right res -> return (snd res)
+
+runPipelineNoFile :: (Member App r) => Sem PipelineEff a -> Sem r a
+runPipelineNoFile p = do
+  r <- runPipelineNoFileEither p
   case r of
     Left err -> exitJuvixError err
     Right res -> return (snd res)

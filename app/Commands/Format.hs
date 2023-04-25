@@ -3,7 +3,6 @@ module Commands.Format where
 import Commands.Base
 import Commands.Format.Options
 import Data.Text qualified as Text
-import Juvix.Extra.Paths
 import Juvix.Formatter
 import Juvix.Prelude.Pretty
 
@@ -37,7 +36,7 @@ runCommand opts = do
       Just (Right p) -> formatProject p
       Nothing ->
         if isStdin
-          then format formatStdinPath
+          then formatStdin
           else do
             printFailureExit $
               Text.unlines
@@ -81,3 +80,5 @@ runScopeFileApp = interpret $ \case
               _pathIsInput = False
             }
     runPipeline appFile upToScoping
+  ScopeStdin -> do
+    runPipelineNoFile upToScoping

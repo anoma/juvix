@@ -2,7 +2,9 @@
 
 module Commands.Repl where
 
-import Commands.Base hiding (command)
+import Commands.Base hiding
+  ( command,
+  )
 import Commands.Repl.Options
 import Control.Exception (throwIO)
 import Control.Monad.State.Strict qualified as State
@@ -102,8 +104,10 @@ runCommand opts = do
                   )
               )
           )
-        let epPath :: Path Abs File = ep ^. entryPointModulePaths . _head1
-        liftIO (putStrLn [i|OK loaded: #{toFilePath epPath}|])
+        let epPath :: Maybe (Path Abs File) = ep ^. entryPointModulePaths . _headMaybe
+        case epPath of
+          Just path -> liftIO (putStrLn [i|OK loaded: #{toFilePath path}|])
+          Nothing -> pure ()
 
       reloadFile :: String -> Repl ()
       reloadFile _ = do
