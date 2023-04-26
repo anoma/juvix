@@ -61,11 +61,18 @@ fromSource e = mapError (JuvixError @ParserError) $ do
       Path Abs File ->
       Sem r (Module 'Parsed 'ModuleTop)
     goFile fileName = do
-      input <- readFile' fileName
+      input <- getFileContents fileName
       mp <- runModuleParser fileName input
       case mp of
         Left er -> throw er
         Right m -> return m
+      where
+        getFileContents :: Path Abs File -> Sem r Text
+        getFileContents fp
+          | Just fp == e ^. mainModulePath,
+            Just txt <- e ^. entryPointStdin =
+              return txt
+          | otherwise = readFile' fp
 
 expressionFromTextSource ::
   Members '[Error JuvixError, NameIdGen] r =>

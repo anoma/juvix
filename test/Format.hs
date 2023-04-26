@@ -37,8 +37,8 @@ testDescr PosTest {..} =
         entryPoint <- defaultEntryPointCwdIO _file
         let maybeFile = entryPoint ^. entryPointModulePaths . _headMaybe
         case maybeFile of
-          Just file -> do
-            original :: Text <- readFile (toFilePath file)
+          Just f -> do
+            original :: Text <- readFile (toFilePath f)
             step "Parsing"
             p :: Parser.ParserResult <- snd <$> runIO' entryPoint upToParsing
 
