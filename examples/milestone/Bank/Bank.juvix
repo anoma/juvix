@@ -83,11 +83,6 @@ axiom runOnChain : {B : Type} -> IO -> B -> B;
 --- Computes the hash associated with an ;Address;.
 axiom hashAddress : Address -> Field;
 
---- Applies a function n times.
-iterate : {A : Type} -> Nat -> (A -> A) -> A -> A;
-iterate zero _ a := a;
-iterate (suc n) f a := iterate n f (f a);
-
 --- Returns the total amount of tokens after compounding interest.
 calculateInterest : Nat -> Nat -> Nat -> Nat;
 calculateInterest principal rate periods :=
