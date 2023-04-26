@@ -28,7 +28,7 @@ module Token;
     | --- Arguments are: owner, gates, amount.
       mkToken : Address -> Nat -> Nat -> Token;
 
-  --- Retrieves the amount from a ;Token;
+  --- Retrieves the owner from a ;Token;
   getOwner : Token -> Address;
   getOwner (mkToken o _ _) := o;
 
