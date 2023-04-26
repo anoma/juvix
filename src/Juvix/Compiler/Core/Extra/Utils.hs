@@ -231,11 +231,12 @@ etaExpand argtys n =
     k = length argtys
 
 convertClosures :: Node -> Node
-convertClosures = umap go
+convertClosures = dmap go
   where
     go :: Node -> Node
     go n = case n of
-      Closure env (Lambda i bi b) -> substEnv env (mkLambda i bi b)
+      Closure env n' ->
+        substEnv (map convertClosures env) n'
       _ -> n
 
 convertRuntimeNodes :: Node -> Node
