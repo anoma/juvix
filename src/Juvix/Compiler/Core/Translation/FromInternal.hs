@@ -126,6 +126,7 @@ goInductiveDef i = do
             _inductiveParams = params,
             _inductivePositive = i ^. Internal.inductivePositive,
             _inductiveBuiltin = fmap BuiltinTypeInductive (i ^. Internal.inductiveBuiltin),
+            _inductivePragmas = i ^. Internal.inductivePragmas,
             _inductiveName
           }
       idx = mkIdentIndex (i ^. Internal.inductiveName)
@@ -156,6 +157,7 @@ goConstructor sym ctor = do
             _constructorInductive = sym,
             _constructorBuiltin = mblt,
             _constructorFixity = ctorName ^. nameFixity,
+            _constructorPragmas = ctor ^. Internal.inductiveConstructorPragmas,
             _constructorName
           }
 
@@ -236,7 +238,8 @@ goFunctionDefIden (f, sym) = do
             -- body. This needs to be filled in later (in goFunctionDef).
             _identifierArgsNum = 0,
             _identifierIsExported = False,
-            _identifierBuiltin = f ^. Internal.funDefBuiltin
+            _identifierBuiltin = f ^. Internal.funDefBuiltin,
+            _identifierPragmas = f ^. Internal.funDefPragmas
           }
   case f ^. Internal.funDefBuiltin of
     Just b
@@ -489,6 +492,7 @@ goAxiomInductive a = whenJust (a ^. Internal.axiomBuiltin) builtinInductive
                 _inductiveParams = [],
                 _inductivePositive = False,
                 _inductiveBuiltin = BuiltinTypeAxiom <$> ax,
+                _inductivePragmas = a ^. Internal.axiomPragmas,
                 _inductiveName
               }
       registerInductive (mkIdentIndex (a ^. Internal.axiomName)) info
@@ -586,6 +590,7 @@ goAxiomDef a = do
                 _identifierArgsNum = 0,
                 _identifierIsExported = False,
                 _identifierBuiltin = Nothing,
+                _identifierPragmas = a ^. Internal.axiomPragmas,
                 _identifierName
               }
       registerIdent (mkIdentIndex name) info

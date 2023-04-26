@@ -174,8 +174,10 @@ instance (SingI s, SingI t) => PrettyCode (Module s t) where
     moduleBody' <- localIndent <$> ppCode _moduleBody
     modulePath' <- ppModulePathType _modulePath
     moduleDoc' <- mapM ppCode _moduleDoc
+    modulePragmas' <- mapM ppCode _modulePragmas
     return $
       moduleDoc'
+        ?<> modulePragmas'
         ?<> kwModule
         <+> modulePath'
           <> kwSemicolon
@@ -230,7 +232,8 @@ instance (SingI s) => PrettyCode (InductiveConstructorDef s) where
     constructorName' <- annDef _constructorName <$> ppSymbol _constructorName
     constructorType' <- ppExpression _constructorType
     doc' <- mapM ppCode _constructorDoc
-    return $ doc' ?<> hang' (constructorName' <+> kwColon <+> constructorType')
+    pragmas' <- mapM ppCode _constructorPragmas
+    return $ doc' ?<> pragmas' ?<> hang' (constructorName' <+> kwColon <+> constructorType')
 
 instance PrettyCode BuiltinInductive where
   ppCode i = return (kwBuiltin <+> keyword (prettyText i))
@@ -266,10 +269,11 @@ instance (SingI s) => PrettyCode (InductiveDef s) where
   ppCode :: forall r. (Members '[Reader Options] r) => InductiveDef s -> Sem r (Doc Ann)
   ppCode d@InductiveDef {..} = do
     doc' <- mapM ppCode _inductiveDoc
+    pragmas' <- mapM ppCode _inductivePragmas
     sig' <- ppInductiveSignature d
     inductiveConstructors' <- ppPipeBlock _inductiveConstructors
     return $
-      doc' ?<> sig'
+      doc' ?<> pragmas' ?<> sig'
         <+> kwAssign
           <> line
           <> (indent' . align) inductiveConstructors'
@@ -364,6 +368,11 @@ instance (SingI s) => PrettyCode (OpenModule s) where
         Public -> Just kwPublic
         NoPublic -> Nothing
 
+instance PrettyCode (WithSource Pragmas) where
+  ppCode pragma =
+    return $
+      annotate AnnComment (pretty (Str.pragmasStart <> pragma ^. withSourceText <> Str.pragmasEnd)) <> line
+
 ppJudocStart :: Doc Ann
 ppJudocStart = pretty (Str.judocStart :: Text)
 
@@ -383,12 +392,14 @@ instance (SingI s) => PrettyCode (JudocBlock s) where
 instance (SingI s) => PrettyCode (JudocParagraphLine s) where
   ppCode (JudocParagraphLine atoms) = do
     atoms' <- mconcatMap ppCode atoms
-    let prefix = pretty (Str.judocStart :: Text) :: Doc Ann
+    let prefix = annotate AnnComment (pretty (Str.judocStart :: Text))
     return (prefix <+> atoms')
 
 instance (SingI s) => PrettyCode (Judoc s) where
   ppCode :: forall r. (Members '[Reader Options] r) => Judoc s -> Sem r (Doc Ann)
-  ppCode (Judoc blocks) = mconcatMapM ppCode blocks
+  ppCode (Judoc blocks) = do
+    doc' <- vsep <$> mapM ppCode blocks
+    return $ doc' <> line
 
 instance (SingI s) => PrettyCode (JudocAtom s) where
   ppCode :: forall r. (Members '[Reader Options] r) => JudocAtom s -> Sem r (Doc Ann)
@@ -410,8 +421,9 @@ instance (SingI s) => PrettyCode (TypeSignature s) where
     sigType' <- ppExpression _sigType
     builtin' <- traverse ppCode _sigBuiltin
     doc' <- mapM ppCode _sigDoc
+    pragmas' <- mapM ppCode _sigPragmas
     body' :: Maybe (Doc Ann) <- fmap ((kwAssign <>) . oneLineOrNext) <$> mapM ppExpression _sigBody
-    return $ doc' ?<> builtin' <?+> sigTerminating' <> hang' (sigName' <+> kwColon <> oneLineOrNext (sigType' <+?> body'))
+    return $ doc' ?<> pragmas' ?<> builtin' <?+> sigTerminating' <> hang' (sigName' <+> kwColon <> oneLineOrNext (sigType' <+?> body'))
 
 instance (SingI s) => PrettyCode (Function s) where
   ppCode a = case sing :: SStage s of
@@ -509,9 +521,10 @@ instance (SingI s) => PrettyCode (AxiomDef s) where
   ppCode AxiomDef {..} = do
     axiomName' <- annDef _axiomName <$> ppSymbol _axiomName
     axiomDoc' <- mapM ppCode _axiomDoc
+    axiomPragmas' <- mapM ppCode _axiomPragmas
     axiomType' <- ppExpression _axiomType
     builtin' <- traverse ppCode _axiomBuiltin
-    return $ axiomDoc' ?<> builtin' <?+> hang' (kwAxiom <+> axiomName' <+> kwColon <+> axiomType')
+    return $ axiomDoc' ?<> axiomPragmas' ?<> builtin' <?+> hang' (kwAxiom <+> axiomName' <+> kwColon <+> axiomType')
 
 instance SingI s => PrettyCode (Import s) where
   ppCode :: forall r. Members '[Reader Options] r => Import s -> Sem r (Doc Ann)

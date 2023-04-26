@@ -38,8 +38,9 @@ hspace_ = void hspace
 spaceMsg :: String
 spaceMsg = "white space (only spaces and newlines allowed)"
 
+-- | `special` is set when judoc comments or pragmas are supported
 space' :: forall e m. MonadParsec e Text m => Bool -> m (Maybe SpaceSpan)
-space' judoc =
+space' special =
   hidden $
     fmap SpaceSpan . nonEmpty <$> spaceSections
   where
@@ -76,7 +77,7 @@ space' judoc =
         lineComment = do
           let _commentType = CommentOneLine
           when
-            judoc
+            special
             (notFollowedBy (P.chunk Str.judocStart))
           (_commentText, _commentInterval) <- interval $ do
             void (P.chunk "--")
@@ -86,6 +87,9 @@ space' judoc =
         blockComment :: m Comment
         blockComment = do
           let _commentType = CommentBlock
+          when
+            special
+            (notFollowedBy (P.chunk Str.pragmasStart))
           (_commentText, _commentInterval) <- interval $ do
             void (P.chunk "{-")
             pack <$> P.manyTill anySingle (P.chunk "-}")

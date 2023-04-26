@@ -59,6 +59,20 @@ parserErrorTests =
       $(mkRelFile "Tab.juvix")
       $ \case
         ErrMegaparsec {} -> Nothing
+        _ -> wrongError,
+    negTest
+      "Pragmas YAML error"
+      $(mkRelDir ".")
+      $(mkRelFile "PragmasYAML.juvix")
+      $ \case
+        ErrMegaparsec {} -> Nothing
+        _ -> wrongError,
+    negTest
+      "Pragmas format error"
+      $(mkRelDir ".")
+      $(mkRelFile "PragmasFormat.juvix")
+      $ \case
+        ErrMegaparsec {} -> Nothing
         _ -> wrongError
   ]
 

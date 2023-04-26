@@ -8,11 +8,13 @@ module Juvix.Data
     module Juvix.Data.NameId,
     module Juvix.Data.Comment,
     module Juvix.Data.Irrelevant,
+    module Juvix.Data.Pragmas,
     module Juvix.Data.Processed,
     module Juvix.Data.Uid,
     module Juvix.Data.Universe,
     module Juvix.Data.Wildcard,
     module Juvix.Data.WithLoc,
+    module Juvix.Data.WithSource,
     module Juvix.Data.DependencyInfo,
   )
 where
@@ -27,8 +29,10 @@ import Juvix.Data.Irrelevant
 import Juvix.Data.IsImplicit
 import Juvix.Data.Loc
 import Juvix.Data.NameId qualified
+import Juvix.Data.Pragmas
 import Juvix.Data.Processed
 import Juvix.Data.Uid
 import Juvix.Data.Universe
 import Juvix.Data.Wildcard
 import Juvix.Data.WithLoc
+import Juvix.Data.WithSource

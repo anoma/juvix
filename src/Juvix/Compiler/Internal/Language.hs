@@ -20,7 +20,8 @@ import Juvix.Prelude
 data Module = Module
   { _moduleName :: Name,
     _moduleExamples :: [Example],
-    _moduleBody :: ModuleBody
+    _moduleBody :: ModuleBody,
+    _modulePragmas :: Pragmas
   }
   deriving stock (Data)
 
@@ -52,7 +53,8 @@ instance Hashable MutualBlock
 data AxiomDef = AxiomDef
   { _axiomName :: AxiomName,
     _axiomBuiltin :: Maybe BuiltinAxiom,
-    _axiomType :: Expression
+    _axiomType :: Expression,
+    _axiomPragmas :: Pragmas
   }
   deriving stock (Data)
 
@@ -61,7 +63,8 @@ data FunctionDef = FunctionDef
     _funDefType :: Expression,
     _funDefExamples :: [Example],
     _funDefClauses :: NonEmpty FunctionClause,
-    _funDefBuiltin :: Maybe BuiltinFunction
+    _funDefBuiltin :: Maybe BuiltinFunction,
+    _funDefPragmas :: Pragmas
   }
   deriving stock (Eq, Generic, Data)
 
@@ -249,7 +252,8 @@ data InductiveDef = InductiveDef
     _inductiveExamples :: [Example],
     _inductiveParameters :: [InductiveParameter],
     _inductiveConstructors :: [InductiveConstructorDef],
-    _inductivePositive :: Bool
+    _inductivePositive :: Bool,
+    _inductivePragmas :: Pragmas
   }
   deriving stock (Data)
 
@@ -257,7 +261,8 @@ data InductiveConstructorDef = InductiveConstructorDef
   { _inductiveConstructorName :: ConstrName,
     _inductiveConstructorParameters :: [Expression],
     _inductiveConstructorExamples :: [Example],
-    _inductiveConstructorReturnType :: Expression
+    _inductiveConstructorReturnType :: Expression,
+    _inductiveConstructorPragmas :: Pragmas
   }
   deriving stock (Data)
 

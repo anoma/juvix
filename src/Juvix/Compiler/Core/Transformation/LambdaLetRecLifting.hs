@@ -67,7 +67,8 @@ lambdaLiftNode aboveBl top =
                     _identifierType = ty,
                     _identifierArgsNum = argsNum,
                     _identifierIsExported = False,
-                    _identifierBuiltin = Nothing
+                    _identifierBuiltin = Nothing,
+                    _identifierPragmas = mempty
                   }
               registerIdentNode f fBody'
               let fApp = mkApps' (mkIdent (setInfoName name mempty) f) (map NVar allfreevars)
@@ -91,6 +92,8 @@ lambdaLiftNode aboveBl top =
 
               topNames :: [Text]
               topNames = zipWithExact uniqueName (map (^. binderName) letRecBinders') topSyms
+
+              topSymsWithName :: [(Symbol, Text)]
               topSymsWithName = zipExact topSyms topNames
 
               recItemsFreeVars :: [(Var, Binder)]
@@ -112,11 +115,8 @@ lambdaLiftNode aboveBl top =
 
               subsCalls :: Node -> Node
               subsCalls = substs (reverse letItems)
-          -- NOTE that we are first substituting the calls and then performing
-          -- lambda lifting. This is a tradeoff. We have slower compilation but
-          -- slightly faster execution time, since it minimizes the number of
-          -- free variables that need to be passed around.
-          liftedDefs <- mapM (lambdaLiftNode bl . subsCalls) defs
+
+          liftedDefs <- mapM (fmap subsCalls . lambdaLiftNode bl') defs
           body' <- lambdaLiftNode bl' (letr ^. letRecBody)
           let declareTopSyms :: Sem r ()
               declareTopSyms =
@@ -138,7 +138,8 @@ lambdaLiftNode aboveBl top =
                             _identifierType = topTy,
                             _identifierArgsNum = argsNum,
                             _identifierIsExported = False,
-                            _identifierBuiltin = Nothing
+                            _identifierBuiltin = Nothing,
+                            _identifierPragmas = mempty
                           }
                     | ((sym, name), (itemBinder, (b, bty))) <-
                         zipExact

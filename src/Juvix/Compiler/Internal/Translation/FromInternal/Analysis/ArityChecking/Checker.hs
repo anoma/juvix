@@ -58,6 +58,7 @@ checkInductive d = do
   let _inductiveName = d ^. inductiveName
       _inductiveBuiltin = d ^. inductiveBuiltin
       _inductivePositive = d ^. inductivePositive
+      _inductivePragmas = d ^. inductivePragmas
   (localVars, _inductiveParameters) <- checkParameters (d ^. inductiveParameters)
   _inductiveExamples <- runReader localVars (mapM checkExample (d ^. inductiveExamples))
   _inductiveConstructors <- runReader localVars (mapM checkConstructor (d ^. inductiveConstructors))
@@ -72,6 +73,7 @@ checkInductive d = do
 checkConstructor :: (Members '[Reader LocalVars, Reader InfoTable, NameIdGen, Error ArityCheckerError] r) => InductiveConstructorDef -> Sem r InductiveConstructorDef
 checkConstructor c = do
   let _inductiveConstructorName = c ^. inductiveConstructorName
+      _inductiveConstructorPragmas = c ^. inductiveConstructorPragmas
   _inductiveConstructorParameters <- mapM checkType (c ^. inductiveConstructorParameters)
   _inductiveConstructorExamples <- mapM checkExample (c ^. inductiveConstructorExamples)
   _inductiveConstructorReturnType <- checkType (c ^. inductiveConstructorReturnType)
@@ -85,6 +87,7 @@ checkAxiom :: (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r
 checkAxiom a = do
   let _axiomName = a ^. axiomName
       _axiomBuiltin = a ^. axiomBuiltin
+      _axiomPragmas = a ^. axiomPragmas
   _axiomType <- withEmptyLocalVars (checkType (a ^. axiomType))
   return AxiomDef {..}
 

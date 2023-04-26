@@ -393,7 +393,8 @@ runTransformations shouldDisambiguate ts n = runCoreInfoTableBuilderArtifacts $ 
                 _identifierArgsNum = 0,
                 _identifierType = Core.mkDynamic',
                 _identifierIsExported = False,
-                _identifierBuiltin = Nothing
+                _identifierBuiltin = Nothing,
+                _identifierPragmas = mempty
               }
       Core.registerIdent name idenInfo
       return sym
