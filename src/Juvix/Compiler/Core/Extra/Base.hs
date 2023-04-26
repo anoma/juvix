@@ -214,8 +214,14 @@ isDynamic = \case
   _ -> False
 
 isInductive :: Type -> Bool
-isInductive NTyp {} = True
-isInductive _ = False
+isInductive = \case
+  NTyp {} -> True
+  _ -> False
+
+isTypePrim :: Type -> Bool
+isTypePrim = \case
+  NPrim {} -> True
+  _ -> False
 
 -- | `expandType argtys ty` expands the dynamic target of `ty` to match the
 -- number of arguments with types specified by `argstys`. For example,
@@ -713,16 +719,16 @@ destruct = \case
         _nodeChildren = [],
         _nodeReassemble = noChildren $ \i' -> mkDynamic i'
       }
-  Closure env (Lambda i bi b) ->
+  Closure env n ->
     NodeDetails
-      { _nodeInfo = i,
+      { _nodeInfo = mempty,
         _nodeSubinfos = [],
-        _nodeChildren = manyBinders binders b : map noBinders env,
-        _nodeReassemble = someChildren $ \i' (b' :| env') ->
-          Closure env' (Lambda i' bi b')
+        _nodeChildren = manyBinders binders n : map noBinders env,
+        _nodeReassemble = someChildren $ \_ (n' :| env') ->
+          Closure env' n'
       }
     where
-      binders = replicate (length env) (mkBinder' mkDynamic') ++ [bi]
+      binders = replicate (length env) (mkBinder' mkDynamic')
 
 reassembleDetails :: NodeDetails -> [Node] -> Node
 reassembleDetails d ns = (d ^. nodeReassemble) (d ^. nodeInfo) (d ^. nodeSubinfos) ns

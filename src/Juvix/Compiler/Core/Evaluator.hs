@@ -21,6 +21,12 @@ import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Core.Pretty
 import Text.Read qualified as T
 
+newtype EvalOptions = EvalOptions
+  { _evalOptionsNormalize :: Bool
+  }
+
+makeLenses ''EvalOptions
+
 data EvalError = EvalError
   { _evalErrorMsg :: !Text,
     _evalErrorNode :: !(Maybe Node)
@@ -57,7 +63,15 @@ evalInfoTable herr info = eval herr idenCtxt [] mainNode
 -- `env`. All nodes in `ctx` must be closed. All nodes in `env` must be values.
 -- Invariant for values v: eval ctx env v = v
 eval :: Handle -> IdentContext -> Env -> Node -> Node
-eval herr ctx env0 = convertRuntimeNodes . eval' env0
+eval herr ctx env = convertRuntimeNodes . geval opts herr ctx env
+  where
+    opts =
+      EvalOptions
+        { _evalOptionsNormalize = False
+        }
+
+geval :: EvalOptions -> Handle -> IdentContext -> Env -> Node -> Node
+geval opts herr ctx env0 = eval' env0
   where
     evalError :: Text -> Node -> a
     evalError msg node = Exception.throw (EvalError msg (Just node))
@@ -69,20 +83,30 @@ eval herr ctx env0 = convertRuntimeNodes . eval' env0
       NCst {} -> n
       NApp (App i l r) ->
         case eval' env l of
-          Closure env' (Lambda _ _ b) -> let !v = eval' env r in eval' (v : env') b
-          v -> evalError "invalid application" (mkApp i v (substEnv env r))
+          Closure env' (NLam (Lambda i' bi b)) ->
+            let !v = eval' env r in evalBody i' bi env' v b
+          lv
+            | opts ^. evalOptionsNormalize ->
+                let !v = eval' env r in mkApp i lv v
+            | otherwise ->
+                evalError "invalid application" (mkApp i lv (substEnv env r))
       NBlt (BuiltinApp _ op args) -> applyBuiltin n env op args
       NCtr (Constr i tag args) -> mkConstr i tag (map' (eval' env) args)
-      NLam l@Lambda {} -> Closure env l
-      NLet (Let _ (LetItem _ v) b) -> let !v' = eval' env v in eval' (v' : env) b
+      NLam {} -> Closure env n
+      NLet (Let i (LetItem bi v) b) -> let !v' = eval' env v in evalBody i bi env v' b
       NRec (LetRec _ vs b) ->
         let !vs' = map (eval' env' . (^. letItemValue)) (toList vs)
             !env' = revAppend vs' env
          in foldr GHC.pseq (eval' env' b) vs'
       NCase (Case i sym v bs def) ->
         case eval' env v of
-          NCtr (Constr _ tag args) -> branch n env args tag def bs
-          v' -> evalError "matching on non-data" (substEnv env (mkCase i sym v' bs def))
+          NCtr (Constr _ tag args) ->
+            branch n env args tag def bs
+          v'
+            | opts ^. evalOptionsNormalize ->
+                Closure env (mkCase i sym v' bs def)
+            | otherwise ->
+                evalError "matching on non-data" (substEnv env (mkCase i sym v' bs def))
       NMatch (Match _ _ _ vs bs) ->
         let !vs' = map' (eval' env) (toList vs)
          in match n env vs' bs
@@ -128,36 +152,32 @@ eval herr ctx env0 = convertRuntimeNodes . eval' env0
       [] ->
         evalError "no matching pattern" (substEnv env n)
 
+    evalBody :: Info -> Binder -> Env -> Node -> Node -> Node
+    evalBody i bi env v body
+      | opts ^. evalOptionsNormalize
+          && isTypePrim (bi ^. binderType)
+          && not (isImmediate v) =
+          Closure env (mkLet i bi v body)
+      | otherwise =
+          eval' (v : env) body
+    {-# INLINE evalBody #-}
+
     applyBuiltin :: Node -> Env -> BuiltinOp -> [Node] -> Node
-    applyBuiltin n env = \case
+    applyBuiltin n env opcode = case opcode of
       OpIntAdd -> binNumOp (+)
       OpIntSub -> binNumOp (-)
       OpIntMul -> binNumOp (*)
       OpIntLt -> binNumCmpOp (<)
       OpIntLe -> binNumCmpOp (<=)
-      OpEq -> binOp nodeFromBool id structEq
+      OpEq -> binOp nodeFromBool Just structEq
       OpIntDiv -> divOp quot
       OpIntMod -> divOp rem
-      OpShow -> unary $ \arg -> mkConstant' (ConstString (ppPrint (eval' env arg)))
-      OpStrConcat -> binary $ \arg1 arg2 ->
-        case (eval' env arg1, eval' env arg2) of
-          (NCst (Constant _ (ConstString s1)), NCst (Constant _ (ConstString s2))) ->
-            mkConstant' (ConstString (s1 <> s2))
-          _ ->
-            evalError "string concatenation: argument not a string" n
-      OpStrToInt -> unary $ \arg ->
-        case eval' env arg of
-          NCst (Constant _ (ConstString s)) ->
-            case T.readMaybe (fromText s) of
-              Just i ->
-                mkConstant' (ConstInteger i)
-              Nothing ->
-                evalError "string to integer: not an integer" n
-          _ ->
-            evalError "string conversion: argument not a string" n
-      OpSeq -> binary $ \x y -> eval' env x `seq` eval' env y
-      OpFail -> unary $ \msg -> Exception.throw (EvalError ("failure: " <> printNode (eval' env msg)) Nothing)
-      OpTrace -> unary $ \msg -> let !v = eval' env msg in unsafePerformIO (hPutStrLn herr (printNode v) >> return v)
+      OpShow -> showOp
+      OpStrConcat -> strConcatOp
+      OpStrToInt -> strToIntOp
+      OpSeq -> seqOp
+      OpFail -> failOp
+      OpTrace -> traceOp
       where
         err :: Text -> a
         err msg = evalError msg n
@@ -175,15 +195,24 @@ eval herr ctx env0 = convertRuntimeNodes . eval' env0
         {-# INLINE binary #-}
 
         divOp :: (Integer -> Integer -> Integer) -> [Node] -> Node
-        divOp op = binary $ \l r ->
-          let !vl = eval' env l
-           in case integerFromNode (eval' env r) of
-                0 -> evalError "division by zero" (substEnv env n)
-                k -> nodeFromInteger (op (integerFromNode vl) k)
+        divOp op = binOp nodeFromInteger integerFromNode $ \v1 v2 ->
+          if
+              | v2 == 0 -> evalError "division by zero" (substEnv env n)
+              | otherwise -> v1 `op` v2
         {-# INLINE divOp #-}
 
-        binOp :: (b -> Node) -> (Node -> a) -> (a -> a -> b) -> [Node] -> Node
-        binOp toNode toA op = binary $ \l r -> toNode (toA (eval' env l) `op` toA (eval' env r))
+        binOp :: (b -> Node) -> (Node -> Maybe a) -> (a -> a -> b) -> [Node] -> Node
+        binOp toNode toA op = binary $ \l r ->
+          let !vl = eval' env l
+              !vr = eval' env r
+           in case (toA vl, toA vr) of
+                (Just v1, Just v2) ->
+                  toNode (v1 `op` v2)
+                _
+                  | opts ^. evalOptionsNormalize ->
+                      mkBuiltinApp' opcode [vl, vr]
+                  | otherwise ->
+                      evalError "wrong operand type" n
         {-# INLINE binOp #-}
 
         binNumCmpOp :: (Integer -> Integer -> Bool) -> [Node] -> Node
@@ -193,6 +222,46 @@ eval herr ctx env0 = convertRuntimeNodes . eval' env0
         binNumOp :: (Integer -> Integer -> Integer) -> [Node] -> Node
         binNumOp = binOp nodeFromInteger integerFromNode
         {-# INLINE binNumOp #-}
+
+        showOp :: [Node] -> Node
+        showOp = unary $ \arg -> mkConstant' (ConstString (ppPrint (eval' env arg)))
+
+        strConcatOp :: [Node] -> Node
+        strConcatOp = binary $ \arg1 arg2 ->
+          case (eval' env arg1, eval' env arg2) of
+            (NCst (Constant _ (ConstString s1)), NCst (Constant _ (ConstString s2))) ->
+              mkConstant' (ConstString (s1 <> s2))
+            _ ->
+              evalError "string concatenation: argument not a string" n
+
+        strToIntOp :: [Node] -> Node
+        strToIntOp = unary $ \arg ->
+          case eval' env arg of
+            NCst (Constant _ (ConstString s)) ->
+              case T.readMaybe (fromText s) of
+                Just i ->
+                  mkConstant' (ConstInteger i)
+                Nothing ->
+                  evalError "string to integer: not an integer" n
+            _ ->
+              evalError "string conversion: argument not a string" n
+
+        seqOp :: [Node] -> Node
+        seqOp = binary $ \x y -> eval' env x `seq` eval' env y
+        {-# INLINE seqOp #-}
+
+        failOp :: [Node] -> Node
+        failOp = unary $ \msg ->
+          if
+              | opts ^. evalOptionsNormalize ->
+                  mkBuiltinApp' OpFail [eval' env msg]
+              | otherwise ->
+                  Exception.throw (EvalError ("failure: " <> printNode (eval' env msg)) Nothing)
+
+        traceOp :: [Node] -> Node
+        traceOp = unary $ \msg ->
+          let !v = eval' env msg
+           in unsafePerformIO (hPutStrLn herr (printNode v) >> return v)
     {-# INLINE applyBuiltin #-}
 
     nodeFromInteger :: Integer -> Node
@@ -207,10 +276,10 @@ eval herr ctx env0 = convertRuntimeNodes . eval' env0
           | otherwise = TagFalse
     {-# INLINE nodeFromBool #-}
 
-    integerFromNode :: Node -> Integer
+    integerFromNode :: Node -> Maybe Integer
     integerFromNode = \case
-      NCst (Constant _ (ConstInteger int)) -> int
-      v -> evalError "not an integer" v
+      NCst (Constant _ (ConstInteger int)) -> Just int
+      _ -> Nothing
     {-# INLINE integerFromNode #-}
 
     printNode :: Node -> Text
@@ -222,6 +291,7 @@ eval herr ctx env0 = convertRuntimeNodes . eval' env0
     lookupContext n sym =
       case HashMap.lookup sym ctx of
         Just n' -> n'
+        Nothing | opts ^. evalOptionsNormalize -> n
         Nothing -> evalError "symbol not defined" n
     {-# INLINE lookupContext #-}
 
