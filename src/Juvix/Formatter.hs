@@ -4,6 +4,8 @@ import Data.Text qualified as T
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Print (ppOutDefault)
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
+import Juvix.Compiler.Concrete.Translation.FromSource.Data.Context
+import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Extra.Paths
 import Juvix.Prelude
 import Juvix.Prelude.Pretty
@@ -54,16 +56,7 @@ format ::
 format p = do
   originalContents <- readFile' p
   formattedContents <- formatPath p
-  if
-      | originalContents /= (ansiPlainText formattedContents) -> do
-          output
-            ( FormattedFileInfo
-                { _formattedFileInfoPath = p,
-                  _formattedFileInfoContentsAnsi = formattedContents
-                }
-            )
-          return FormatResultFail
-      | otherwise -> return FormatResultOK
+  formatResultFromContents originalContents formattedContents p
 
 -- | Format a Juvix project.
 --
@@ -108,14 +101,27 @@ formatStdin ::
   Sem r FormatResult
 formatStdin = do
   res <- scopeStdin
+  let originalContents = fromMaybe "" (res ^. Scoper.resultParserResult ^. resultEntry ^. entryPointStdin)
   formattedContents <- formatScoperResult res
-  output
-    ( FormattedFileInfo
-        { _formattedFileInfoPath = formatStdinPath,
-          _formattedFileInfoContentsAnsi = formattedContents
-        }
-    )
-  return FormatResultFail
+  formatResultFromContents originalContents formattedContents formatStdinPath
+
+formatResultFromContents ::
+  forall r.
+  Members '[Output FormattedFileInfo] r =>
+  Text ->
+  NonEmpty AnsiText ->
+  Path Abs File ->
+  Sem r FormatResult
+formatResultFromContents originalContents formattedContents filepath
+  | originalContents /= (ansiPlainText formattedContents) = do
+      output
+        ( FormattedFileInfo
+            { _formattedFileInfoPath = filepath,
+              _formattedFileInfoContentsAnsi = formattedContents
+            }
+        )
+      return FormatResultFail
+  | otherwise = return FormatResultOK
 
 formatScoperResult :: Scoper.ScoperResult -> Sem r (NonEmpty AnsiText)
 formatScoperResult res = do
