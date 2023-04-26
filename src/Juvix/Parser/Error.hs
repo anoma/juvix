@@ -13,7 +13,7 @@ data ParserError
   = ErrMegaparsec MegaparsecError
   | ErrTopModulePath TopModulePathError
   | ErrWrongTopModuleName WrongTopModuleName
-  | ErrStrinOrFile StdinOrFileError
+  | ErrStdinOrFile StdinOrFileError
   deriving stock (Show)
 
 instance ToGenericError ParserError where
@@ -21,7 +21,7 @@ instance ToGenericError ParserError where
     ErrMegaparsec e -> genericError e
     ErrTopModulePath e -> genericError e
     ErrWrongTopModuleName e -> genericError e
-    ErrStrinOrFile e -> genericError e
+    ErrStdinOrFile e -> genericError e
 
 instance Pretty MegaparsecError where
   pretty (MegaparsecError b) = pretty (M.errorBundlePretty b)

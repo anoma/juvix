@@ -40,8 +40,8 @@ runCommand opts = do
           else do
             printFailureExit $
               Text.unlines
-                [ "juvix format error: either 'JUVIX_FILE_OR_PROJECT' or 'stdin' option should be specified",
-                  "Use --help to learn more usage information."
+                [ "juvix format error: either 'JUVIX_FILE_OR_PROJECT' or '--stdin' option must be specified",
+                  "Use the --help option to display more usage information."
                 ]
             pure FormatResultFail
     when (res == FormatResultFail) (embed (exitWith (ExitFailure 1)))

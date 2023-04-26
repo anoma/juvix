@@ -48,7 +48,7 @@ fromSource e = mapError (JuvixError @ParserError) $ do
       (Members '[PathResolver, Files, Error ParserError, InfoTableBuilder, NameIdGen, PragmasStash] r) =>
       Sem r (NonEmpty (Module 'Parsed 'ModuleTop))
     getParsedModuleTops = case (e ^. entryPointStdin, e ^. entryPointModulePaths) of
-      (Nothing, []) -> throw $ ErrStrinOrFile StdinOrFileError
+      (Nothing, []) -> throw $ ErrStdinOrFile StdinOrFileError
       (Just txt, _) ->
         runModuleStdinParser txt >>= \case
           Left err -> throw err
