@@ -35,15 +35,15 @@ runCommand opts = do
       Just (Left p) -> format p
       Just (Right p) -> formatProject p
       Nothing ->
-        if isStdin
-          then formatStdin
-          else do
-            printFailureExit $
-              Text.unlines
-                [ "juvix format error: either 'JUVIX_FILE_OR_PROJECT' or '--stdin' option must be specified",
-                  "Use the --help option to display more usage information."
-                ]
-            pure FormatResultFail
+        if
+            | isStdin -> formatStdin
+            | otherwise -> do
+                printFailureExit $
+                  Text.unlines
+                    [ "juvix format error: either 'JUVIX_FILE_OR_PROJECT' or '--stdin' option must be specified",
+                      "Use the --help option to display more usage information."
+                    ]
+                pure FormatResultFail
     when (res == FormatResultFail) (embed (exitWith (ExitFailure 1)))
 
 renderModeFromOptions :: FormatTarget -> FormatOptions -> FormattedFileInfo -> FormatRenderMode
