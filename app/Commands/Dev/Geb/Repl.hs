@@ -63,20 +63,18 @@ loadEntryPoint ep = do
         (Just ep)
     )
   let epPath :: Maybe (Path Abs File) = ep ^. entryPointModulePaths . _headMaybe
-  case epPath of
-    Just path -> do
-      let filepath = toFilePath path
-      liftIO (putStrLn . pack $ "OK loaded " <> filepath)
-      content <- liftIO (readFile filepath)
-      let evalRes =
-            Geb.runEval $
-              Geb.RunEvalArgs
-                { _runEvalArgsContent = content,
-                  _runEvalArgsInputFile = path,
-                  _runEvalArgsEvaluatorOptions = Geb.defaultEvaluatorOptions
-                }
-      printEvalResult evalRes
-    Nothing -> pure ()
+  whenJust epPath $ \path -> do
+    let filepath = toFilePath path
+    liftIO (putStrLn . pack $ "OK loaded " <> filepath)
+    content <- liftIO (readFile filepath)
+    let evalRes =
+          Geb.runEval $
+            Geb.RunEvalArgs
+              { _runEvalArgsContent = content,
+                _runEvalArgsInputFile = path,
+                _runEvalArgsEvaluatorOptions = Geb.defaultEvaluatorOptions
+              }
+    printEvalResult evalRes
 
 reloadFile :: String -> Repl ()
 reloadFile _ = do

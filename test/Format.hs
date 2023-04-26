@@ -36,28 +36,26 @@ testDescr PosTest {..} =
       _testAssertion = Steps $ \step -> do
         entryPoint <- defaultEntryPointCwdIO _file
         let maybeFile = entryPoint ^. entryPointModulePaths . _headMaybe
-        case maybeFile of
-          Just f -> do
-            original :: Text <- readFile (toFilePath f)
-            step "Parsing"
-            p :: Parser.ParserResult <- snd <$> runIO' entryPoint upToParsing
+        f <- fromMaybeM (assertFailure "Not a module") (return maybeFile)
+        original :: Text <- readFile (toFilePath f)
+        step "Parsing"
+        p :: Parser.ParserResult <- snd <$> runIO' entryPoint upToParsing
 
-            step "Scoping"
-            s :: Scoper.ScoperResult <-
-              snd
-                <$> runIO'
-                  entryPoint
-                  ( do
-                      void entrySetup
-                      Concrete.fromParsed p
-                  )
+        step "Scoping"
+        s :: Scoper.ScoperResult <-
+          snd
+            <$> runIO'
+              entryPoint
+              ( do
+                  void entrySetup
+                  Concrete.fromParsed p
+              )
 
-            let formatted :: Text
-                formatted = renderCode (s ^. Scoper.comments) (s ^. Scoper.mainModule)
+        let formatted :: Text
+            formatted = renderCode (s ^. Scoper.comments) (s ^. Scoper.mainModule)
 
-            step "Format"
-            assertEqDiffText "check: pretty . scope . parse = id" original formatted
-          Nothing -> assertFailure "Not a module"
+        step "Format"
+        assertEqDiffText "check: pretty . scope . parse = id" original formatted
     }
 
 allTests :: TestTree
