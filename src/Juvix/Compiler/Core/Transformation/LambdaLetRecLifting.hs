@@ -67,7 +67,8 @@ lambdaLiftNode aboveBl top =
                     _identifierType = ty,
                     _identifierArgsNum = argsNum,
                     _identifierIsExported = False,
-                    _identifierBuiltin = Nothing
+                    _identifierBuiltin = Nothing,
+                    _identifierPragmas = mempty
                   }
               registerIdentNode f fBody'
               let fApp = mkApps' (mkIdent (setInfoName name mempty) f) (map NVar allfreevars)
@@ -137,7 +138,8 @@ lambdaLiftNode aboveBl top =
                             _identifierType = topTy,
                             _identifierArgsNum = argsNum,
                             _identifierIsExported = False,
-                            _identifierBuiltin = Nothing
+                            _identifierBuiltin = Nothing,
+                            _identifierPragmas = mempty
                           }
                     | ((sym, name), (itemBinder, (b, bty))) <-
                         zipExact

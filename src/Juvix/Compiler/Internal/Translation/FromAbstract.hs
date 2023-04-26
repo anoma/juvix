@@ -92,7 +92,8 @@ goModule m = do
       Module
         { _moduleName = m ^. Abstract.moduleName,
           _moduleExamples = examples',
-          _moduleBody = _moduleBody'
+          _moduleBody = _moduleBody',
+          _modulePragmas = m ^. Abstract.modulePragmas
         }
   where
     moduleFunctionDefs :: [Abstract.FunctionDef]
@@ -173,7 +174,8 @@ goAxiomDef a = do
     AxiomDef
       { _axiomName = a ^. Abstract.axiomName,
         _axiomBuiltin = a ^. Abstract.axiomBuiltin,
-        _axiomType = _axiomType'
+        _axiomType = _axiomType',
+        _axiomPragmas = a ^. Abstract.axiomPragmas
       }
 
 goFunctionParameter :: Abstract.FunctionParameter -> Sem r FunctionParameter
@@ -214,7 +216,8 @@ goFunctionDef f = do
         _funDefType = _funDefType',
         _funDefClauses = _funDefClauses',
         _funDefExamples = _funDefExamples',
-        _funDefBuiltin = f ^. Abstract.funDefBuiltin
+        _funDefBuiltin = f ^. Abstract.funDefBuiltin,
+        _funDefPragmas = f ^. Abstract.funDefPragmas
       }
   where
     _funDefName' :: Name
@@ -413,7 +416,8 @@ goInductiveDef i
             _inductiveBuiltin = i ^. Abstract.inductiveBuiltin,
             _inductiveConstructors = inductiveConstructors',
             _inductiveExamples = examples',
-            _inductivePositive = i ^. Abstract.inductivePositive
+            _inductivePositive = i ^. Abstract.inductivePositive,
+            _inductivePragmas = i ^. Abstract.inductivePragmas
           }
   where
     goConstructorDef :: Abstract.InductiveConstructorDef -> Sem r InductiveConstructorDef
@@ -425,7 +429,8 @@ goInductiveDef i
           { _inductiveConstructorName = c ^. Abstract.constructorName,
             _inductiveConstructorParameters = cParams,
             _inductiveConstructorExamples = examples',
-            _inductiveConstructorReturnType = cReturnType
+            _inductiveConstructorReturnType = cReturnType,
+            _inductiveConstructorPragmas = c ^. Abstract.constructorPragmas
           }
 
 goTypeApplication :: Abstract.Application -> Sem r Application

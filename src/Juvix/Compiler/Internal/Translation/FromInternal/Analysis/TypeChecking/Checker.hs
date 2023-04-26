@@ -82,7 +82,8 @@ checkInductiveDef InductiveDef {..} = runInferenceDef $ do
             _inductiveName,
             _inductiveBuiltin,
             _inductivePositive,
-            _inductiveParameters
+            _inductiveParameters,
+            _inductivePragmas
           }
   checkPositivity d
   return d
@@ -106,7 +107,8 @@ checkInductiveDef InductiveDef {..} = runInferenceDef $ do
               { _inductiveConstructorParameters = cty',
                 _inductiveConstructorExamples = examples',
                 _inductiveConstructorReturnType,
-                _inductiveConstructorName
+                _inductiveConstructorName,
+                _inductiveConstructorPragmas
               }
       registerConstructor c'
       return c'

@@ -228,5 +228,9 @@ tests =
     PosTest
       "Shadow imported symbol"
       $(mkRelDir "ImportShadow")
-      $(mkRelFile "Main.juvix")
+      $(mkRelFile "Main.juvix"),
+    PosTest
+      "Pragmas"
+      $(mkRelDir ".")
+      $(mkRelFile "Pragmas.juvix")
   ]

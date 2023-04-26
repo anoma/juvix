@@ -108,6 +108,17 @@ type family ModuleEndType t = res | res -> t where
   ModuleEndType 'ModuleLocal = KeywordRef
 
 --------------------------------------------------------------------------------
+-- Pragmas
+--------------------------------------------------------------------------------
+
+-- We keep the exact source of the pragma text. This is necessary, because
+-- pragmas are supposed to be backwards-compatible. Unrecognised pragmas
+-- should be ignored, but they still need to be printed out when
+-- pretty-printing. Also, we probably don't want to impose pragma formatting
+-- choices on the user.
+type ParsedPragmas = WithLoc (WithSource Pragmas)
+
+--------------------------------------------------------------------------------
 -- Top level statement
 --------------------------------------------------------------------------------
 
@@ -195,6 +206,7 @@ data TypeSignature (s :: Stage) = TypeSignature
   { _sigName :: FunctionName s,
     _sigType :: ExpressionType s,
     _sigDoc :: Maybe (Judoc s),
+    _sigPragmas :: Maybe ParsedPragmas,
     _sigBuiltin :: Maybe (WithLoc BuiltinFunction),
     _sigBody :: Maybe (ExpressionType s),
     _sigTerminating :: Maybe KeywordRef
@@ -213,6 +225,7 @@ deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (Typ
 data AxiomDef (s :: Stage) = AxiomDef
   { _axiomKw :: KeywordRef,
     _axiomDoc :: Maybe (Judoc s),
+    _axiomPragmas :: Maybe ParsedPragmas,
     _axiomName :: SymbolType s,
     _axiomBuiltin :: Maybe (WithLoc BuiltinAxiom),
     _axiomType :: ExpressionType s
@@ -236,6 +249,7 @@ data InductiveConstructorDef (s :: Stage) = InductiveConstructorDef
   { _constructorPipe :: Irrelevant (Maybe KeywordRef),
     _constructorName :: InductiveConstructorName s,
     _constructorDoc :: Maybe (Judoc s),
+    _constructorPragmas :: Maybe ParsedPragmas,
     _constructorType :: ExpressionType s
   }
 
@@ -260,6 +274,7 @@ data InductiveDef (s :: Stage) = InductiveDef
   { _inductiveKw :: KeywordRef,
     _inductiveBuiltin :: Maybe (WithLoc BuiltinInductive),
     _inductiveDoc :: Maybe (Judoc s),
+    _inductivePragmas :: Maybe ParsedPragmas,
     _inductiveName :: InductiveName s,
     _inductiveParameters :: [InductiveParameters s],
     _inductiveType :: Maybe (ExpressionType s),
@@ -405,6 +420,7 @@ data Module (s :: Stage) (t :: ModuleIsTop) = Module
   { _moduleKw :: KeywordRef,
     _modulePath :: ModulePathType s t,
     _moduleDoc :: Maybe (Judoc s),
+    _modulePragmas :: Maybe ParsedPragmas,
     _moduleBody :: [Statement s],
     _moduleKwEnd :: ModuleEndType t
   }
@@ -1160,6 +1176,7 @@ getJudocLoc = fmap getLocSpan . nonEmpty . (^. block)
 instance SingI s => HasLoc (TypeSignature s) where
   getLoc TypeSignature {..} =
     (_sigDoc >>= getJudocLoc)
+      ?<> (getLoc <$> _sigPragmas)
       ?<> (getLoc <$> _sigBuiltin)
       ?<> (getLoc <$> _sigTerminating)
       ?<> (getLocExpressionType <$> _sigBody)

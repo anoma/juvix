@@ -37,11 +37,22 @@ unrollRecursion tab = do
 
     unrollSCC :: Members '[InfoTableBuilder, State (HashMap Symbol Symbol), Reader CoreOptions] r => [Symbol] -> Sem r ()
     unrollSCC syms = do
-      unrollLimit <- asks (^. optUnrollLimit)
+      unrollLimit <- computeUnrollLimit
       freshSyms <- genSyms unrollLimit syms
       forM_ syms (unroll unrollLimit freshSyms)
       modify (\mp -> foldr (mapSymbol unrollLimit freshSyms) mp syms)
       where
+        computeUnrollLimit :: Member (Reader CoreOptions) r => Sem r Int
+        computeUnrollLimit = do
+          defaultUnrollLimit <- asks (^. optUnrollLimit)
+          let lims = nonEmpty (mapMaybe go syms)
+          return (maybe defaultUnrollLimit minimum1 lims)
+          where
+            go :: Symbol -> Maybe Int
+            go sym = fmap (^. pragmaUnrollDepth) (ii ^. identifierPragmas . pragmasUnroll)
+              where
+                ii = lookupIdentifierInfo tab sym
+
         mapSymbol :: Int -> HashMap (Indexed Symbol) Symbol -> Symbol -> HashMap Symbol Symbol -> HashMap Symbol Symbol
         mapSymbol unrollLimit freshSyms sym = HashMap.insert sym (fromJust $ HashMap.lookup (Indexed unrollLimit sym) freshSyms)
 

@@ -152,7 +152,8 @@ createBuiltinConstr sym tag nameTxt ty cblt =
       _constructorArgsNum = length (typeArgs ty),
       _constructorInductive = sym,
       _constructorFixity = Nothing,
-      _constructorBuiltin = cblt
+      _constructorBuiltin = cblt,
+      _constructorPragmas = mempty
     }
 
 builtinConstrs ::
@@ -183,7 +184,8 @@ declareInductiveBuiltins indName blt ctrs = do
           _inductiveConstructors = map (^. constructorTag) constrs,
           _inductivePositive = True,
           _inductiveParams = [],
-          _inductiveBuiltin = blt
+          _inductiveBuiltin = blt,
+          _inductivePragmas = mempty
         }
     )
   mapM_ (\ci -> registerConstructor (ci ^. constructorName) ci) constrs
@@ -258,7 +260,8 @@ setupLiteralIntToNat mkNode = do
                 _identifierArgsNum = 1,
                 _identifierType = mkPi mempty (Binder "x" Nothing mkTypeInteger') ty,
                 _identifierIsExported = False,
-                _identifierBuiltin = Nothing
+                _identifierBuiltin = Nothing,
+                _identifierPragmas = mempty
               }
 
         targetType :: Sem r Node
@@ -292,7 +295,8 @@ setupLiteralIntToInt node = do
                 _identifierArgsNum = 1,
                 _identifierType = mkPi mempty (Binder "x" Nothing mkTypeInteger') ty,
                 _identifierIsExported = False,
-                _identifierBuiltin = Nothing
+                _identifierBuiltin = Nothing,
+                _identifierPragmas = mempty
               }
 
         targetType :: Sem r Node

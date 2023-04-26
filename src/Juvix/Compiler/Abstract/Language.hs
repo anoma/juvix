@@ -30,7 +30,8 @@ type TopModuleName = Name
 data Module = Module
   { _moduleName :: Name,
     _moduleExamples :: [Example],
-    _moduleBody :: ModuleBody
+    _moduleBody :: ModuleBody,
+    _modulePragmas :: Pragmas
   }
   deriving stock (Eq, Show)
 
@@ -59,7 +60,8 @@ data FunctionDef = FunctionDef
     _funDefExamples :: [Example],
     _funDefClauses :: NonEmpty FunctionClause,
     _funDefBuiltin :: Maybe BuiltinFunction,
-    _funDefTerminating :: Bool
+    _funDefTerminating :: Bool,
+    _funDefPragmas :: Pragmas
   }
   deriving stock (Eq, Show)
 
@@ -194,21 +196,24 @@ data InductiveDef = InductiveDef
     _inductiveType :: Expression,
     _inductiveExamples :: [Example],
     _inductiveConstructors :: [InductiveConstructorDef],
-    _inductivePositive :: Bool
+    _inductivePositive :: Bool,
+    _inductivePragmas :: Pragmas
   }
   deriving stock (Eq, Show)
 
 data InductiveConstructorDef = InductiveConstructorDef
   { _constructorName :: ConstrName,
     _constructorExamples :: [Example],
-    _constructorType :: Expression
+    _constructorType :: Expression,
+    _constructorPragmas :: Pragmas
   }
   deriving stock (Eq, Show)
 
 data AxiomDef = AxiomDef
   { _axiomName :: AxiomName,
     _axiomBuiltin :: Maybe BuiltinAxiom,
-    _axiomType :: Expression
+    _axiomType :: Expression,
+    _axiomPragmas :: Pragmas
   }
   deriving stock (Eq, Show)
 
