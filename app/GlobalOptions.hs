@@ -150,9 +150,6 @@ entryPointFromGlobalOptionsPre roots premainFile opts = do
   mainFile <- prepathToAbsFile (roots ^. rootsInvokeDir) premainFile
   entryPointFromGlobalOptions roots mainFile opts
 
-entryPointFromGlobalOptionsNoFilePre :: Roots -> GlobalOptions -> IO EntryPoint
-entryPointFromGlobalOptionsNoFilePre roots opts = entryPointFromGlobalOptionsNoFile roots opts
-
 entryPointFromGlobalOptions :: Roots -> Path Abs File -> GlobalOptions -> IO EntryPoint
 entryPointFromGlobalOptions roots mainFile opts = do
   mabsBuildDir :: Maybe (Path Abs Dir) <- mapM (prepathToAbsDir cwd) optBuildDir

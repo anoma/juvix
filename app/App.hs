@@ -104,7 +104,7 @@ getEntryPointStdin' RunAppIOArgs {..} = do
     if
         | opts ^. globalStdin -> Just <$> getContents
         | otherwise -> return Nothing
-  set entryPointStdin estdin <$> entryPointFromGlobalOptionsNoFilePre roots opts
+  set entryPointStdin estdin <$> entryPointFromGlobalOptionsNoFile roots opts
 
 someBaseToAbs' :: (Members '[App] r) => SomeBase a -> Sem r (Path Abs a)
 someBaseToAbs' f = do
