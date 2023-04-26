@@ -52,7 +52,7 @@ fromSource e = mapError (JuvixError @ParserError) $ do
       (Just txt, _) ->
         runModuleStdinParser txt >>= \case
           Left err -> throw err
-          Right r -> pure (r :| [])
+          Right r -> return (r :| [])
       (_, x : xs) -> mapM goFile (x :| xs)
 
     goFile ::
@@ -140,8 +140,7 @@ topModuleDefStdin ::
   ParsecS r (Module 'Parsed 'ModuleTop)
 topModuleDefStdin = do
   void (optional stashJudoc)
-  m <- top moduleDef
-  return m
+  top moduleDef
 
 topModuleDef ::
   (Members '[Error ParserError, Files, PathResolver, InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) =>

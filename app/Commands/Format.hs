@@ -24,11 +24,11 @@ runCommand :: forall r. Members '[Embed IO, App, Resource, Files] r => FormatOpt
 runCommand opts = do
   globalOpts <- askGlobalOptions
   let isStdin = globalOpts ^. globalStdin
-  f <- sequence (filePathToAbs <$> (opts ^. formatInput))
+  f <- mapM filePathToAbs (opts ^. formatInput)
 
   let target = case f of
-        Just (Left {}) -> TargetFile
-        Just (Right {}) -> TargetDir
+        Just Left {} -> TargetFile
+        Just Right {} -> TargetDir
         Nothing -> TargetStdin
   runOutputSem (renderFormattedOutput target opts) $ runScopeFileApp $ do
     res <- case f of
@@ -43,7 +43,7 @@ runCommand opts = do
                     [ "juvix format error: either 'JUVIX_FILE_OR_PROJECT' or '--stdin' option must be specified",
                       "Use the --help option to display more usage information."
                     ]
-                pure FormatResultFail
+                return FormatResultFail
     when (res == FormatResultFail) (embed (exitWith (ExitFailure 1)))
 
 renderModeFromOptions :: FormatTarget -> FormatOptions -> FormattedFileInfo -> FormatRenderMode

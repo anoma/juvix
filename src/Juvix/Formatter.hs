@@ -101,7 +101,7 @@ formatStdin ::
   Sem r FormatResult
 formatStdin = do
   res <- scopeStdin
-  let originalContents = fromMaybe "" (res ^. Scoper.resultParserResult ^. resultEntry ^. entryPointStdin)
+  let originalContents = fromMaybe "" (res ^. Scoper.resultParserResult . resultEntry . entryPointStdin)
   formattedContents <- formatScoperResult res
   formatResultFromContents originalContents formattedContents formatStdinPath
 
@@ -113,7 +113,7 @@ formatResultFromContents ::
   Path Abs File ->
   Sem r FormatResult
 formatResultFromContents originalContents formattedContents filepath
-  | originalContents /= (ansiPlainText formattedContents) = do
+  | originalContents /= ansiPlainText formattedContents = do
       output
         ( FormattedFileInfo
             { _formattedFileInfoPath = filepath,
