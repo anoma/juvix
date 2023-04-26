@@ -225,6 +225,7 @@ geval opts herr ctx env0 = eval' env0
 
         showOp :: [Node] -> Node
         showOp = unary $ \arg -> mkConstant' (ConstString (ppPrint (eval' env arg)))
+        {-# INLINE showOp #-}
 
         strConcatOp :: [Node] -> Node
         strConcatOp = binary $ \arg1 arg2 ->
@@ -233,6 +234,7 @@ geval opts herr ctx env0 = eval' env0
               mkConstant' (ConstString (s1 <> s2))
             _ ->
               evalError "string concatenation: argument not a string" n
+        {-# INLINE strConcatOp #-}
 
         strToIntOp :: [Node] -> Node
         strToIntOp = unary $ \arg ->
@@ -245,6 +247,7 @@ geval opts herr ctx env0 = eval' env0
                   evalError "string to integer: not an integer" n
             _ ->
               evalError "string conversion: argument not a string" n
+        {-# INLINE strToIntOp #-}
 
         seqOp :: [Node] -> Node
         seqOp = binary $ \x y -> eval' env x `seq` eval' env y
@@ -257,11 +260,13 @@ geval opts herr ctx env0 = eval' env0
                   mkBuiltinApp' OpFail [eval' env msg]
               | otherwise ->
                   Exception.throw (EvalError ("failure: " <> printNode (eval' env msg)) Nothing)
+        {-# INLINE failOp #-}
 
         traceOp :: [Node] -> Node
         traceOp = unary $ \msg ->
           let !v = eval' env msg
            in unsafePerformIO (hPutStrLn herr (printNode v) >> return v)
+        {-# INLINE traceOp #-}
     {-# INLINE applyBuiltin #-}
 
     nodeFromInteger :: Integer -> Node
