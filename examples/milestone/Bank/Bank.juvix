@@ -13,8 +13,7 @@ import Stdlib.Data.Nat as Nat;
 Address : Type;
 Address := Nat;
 
--- TODO replace Nat with Address
-bankAddress : Nat;
+bankAddress : Address;
 bankAddress := 1234;
 
 --- Some field type.
