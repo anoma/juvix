@@ -169,3 +169,23 @@ entryPointFromGlobalOptions roots mainFile opts = do
     optBuildDir :: Maybe (Prepath Dir)
     optBuildDir = fmap (^. pathPath) (opts ^. globalBuildDir)
     cwd = roots ^. rootsInvokeDir
+
+entryPointFromGlobalOptionsNoFile :: Roots -> GlobalOptions -> IO EntryPoint
+entryPointFromGlobalOptionsNoFile roots opts = do
+  mabsBuildDir :: Maybe (Path Abs Dir) <- mapM (prepathToAbsDir cwd) optBuildDir
+  let def :: EntryPoint
+      def = defaultEntryPointNoFile roots
+  return
+    def
+      { _entryPointNoTermination = opts ^. globalNoTermination,
+        _entryPointNoPositivity = opts ^. globalNoPositivity,
+        _entryPointNoCoverage = opts ^. globalNoCoverage,
+        _entryPointNoStdlib = opts ^. globalNoStdlib,
+        _entryPointUnrollLimit = opts ^. globalUnrollLimit,
+        _entryPointGenericOptions = project opts,
+        _entryPointBuildDir = maybe (def ^. entryPointBuildDir) Abs mabsBuildDir
+      }
+  where
+    optBuildDir :: Maybe (Prepath Dir)
+    optBuildDir = fmap (^. pathPath) (opts ^. globalBuildDir)
+    cwd = roots ^. rootsInvokeDir

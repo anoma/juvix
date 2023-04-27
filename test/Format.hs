@@ -35,7 +35,9 @@ testDescr PosTest {..} =
       _testRoot = _dir,
       _testAssertion = Steps $ \step -> do
         entryPoint <- defaultEntryPointCwdIO _file
-        original :: Text <- readFile (toFilePath (entryPoint ^. entryPointModulePaths . _head1))
+        let maybeFile = entryPoint ^? entryPointModulePaths . _head
+        f <- fromMaybeM (assertFailure "Not a module") (return maybeFile)
+        original :: Text <- readFile (toFilePath f)
         step "Parsing"
         p :: Parser.ParserResult <- snd <$> runIO' entryPoint upToParsing
 

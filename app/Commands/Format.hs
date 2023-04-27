@@ -2,6 +2,7 @@ module Commands.Format where
 
 import Commands.Base
 import Commands.Format.Options
+import Data.Text qualified as Text
 import Juvix.Formatter
 import Juvix.Prelude.Pretty
 
@@ -17,17 +18,32 @@ data FormatRenderMode
 data FormatTarget
   = TargetFile
   | TargetDir
+  | TargetStdin
 
 runCommand :: forall r. Members '[Embed IO, App, Resource, Files] r => FormatOptions -> Sem r ()
 runCommand opts = do
-  f <- filePathToAbs (opts ^. formatInput)
+  globalOpts <- askGlobalOptions
+  let isStdin = globalOpts ^. globalStdin
+  f <- mapM filePathToAbs (opts ^. formatInput)
+
   let target = case f of
-        Left {} -> TargetFile
-        Right {} -> TargetDir
+        Just Left {} -> TargetFile
+        Just Right {} -> TargetDir
+        Nothing -> TargetStdin
   runOutputSem (renderFormattedOutput target opts) $ runScopeFileApp $ do
     res <- case f of
-      Left p -> format p
-      Right p -> formatProject p
+      Just (Left p) -> format p
+      Just (Right p) -> formatProject p
+      Nothing ->
+        if
+            | isStdin -> formatStdin
+            | otherwise -> do
+                printFailureExit $
+                  Text.unlines
+                    [ "juvix format error: either 'JUVIX_FILE_OR_PROJECT' or '--stdin' option must be specified",
+                      "Use the --help option to display more usage information."
+                    ]
+                return FormatResultFail
     when (res == FormatResultFail) (embed (exitWith (ExitFailure 1)))
 
 renderModeFromOptions :: FormatTarget -> FormatOptions -> FormattedFileInfo -> FormatRenderMode
@@ -37,6 +53,7 @@ renderModeFromOptions target opts formattedInfo
   | otherwise = case target of
       TargetFile -> NoEdit (ReformattedFile (formattedInfo ^. formattedFileInfoContentsAnsi))
       TargetDir -> NoEdit (InputPath (formattedInfo ^. formattedFileInfoPath))
+      TargetStdin -> NoEdit (ReformattedFile (formattedInfo ^. formattedFileInfoContentsAnsi))
 
 renderFormattedOutput :: forall r. Members '[Embed IO, App, Resource, Files] r => FormatTarget -> FormatOptions -> FormattedFileInfo -> Sem r ()
 renderFormattedOutput target opts fInfo = do
@@ -63,3 +80,5 @@ runScopeFileApp = interpret $ \case
               _pathIsInput = False
             }
     runPipeline appFile upToScoping
+  ScopeStdin -> do
+    runPipelineNoFile upToScoping
