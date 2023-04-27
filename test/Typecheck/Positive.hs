@@ -210,6 +210,10 @@ tests =
       $(mkRelDir "issue1879")
       $(mkRelFile "LetSynonym.juvix"),
     posTest
+      "Type synonym inside local module"
+      $(mkRelDir ".")
+      $(mkRelFile "LocalSynonym.juvix"),
+    posTest
       "Mutual inference inside let"
       $(mkRelDir ".")
       $(mkRelFile "MutualLet.juvix"),

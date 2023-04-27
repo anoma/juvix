@@ -1,0 +1,11 @@
+module LocalSynonym;
+
+open import Stdlib.Prelude;
+
+bool : Type;
+bool := Bool;
+
+module L;
+  haha : bool;
+  haha := false;
+end;
