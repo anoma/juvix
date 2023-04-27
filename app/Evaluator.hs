@@ -9,6 +9,7 @@ import Juvix.Compiler.Core.Extra.Base qualified as Core
 import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Info.NoDisplayInfo qualified as Info
 import Juvix.Compiler.Core.Language qualified as Core
+import Juvix.Compiler.Core.Normalizer
 import Juvix.Compiler.Core.Pretty qualified as Core
 import Juvix.Compiler.Core.Transformation.DisambiguateNames qualified as Core
 
@@ -65,3 +66,20 @@ evalAndPrint opts tab node = do
     defaultLoc = singletonInterval . mkInitialLoc <$> fromAppPathFile f
     f :: AppPath File
     f = project opts ^. evalInputFile
+
+normalizeAndPrint ::
+  forall r a.
+  (Members '[Embed IO, App] r, CanonicalProjection a EvalOptions, CanonicalProjection a Core.Options) =>
+  a ->
+  Core.InfoTable ->
+  Core.Node ->
+  Sem r ()
+normalizeAndPrint opts tab node =
+  let node' = normalize tab node
+   in if
+          | Info.member Info.kNoDisplayInfo (Core.getInfo node') ->
+              return ()
+          | otherwise -> do
+              let node'' = if project opts ^. evalNoDisambiguate then node' else Core.disambiguateNodeNames tab node'
+              renderStdOut (Core.ppOut opts node'')
+              embed (putStrLn "")
