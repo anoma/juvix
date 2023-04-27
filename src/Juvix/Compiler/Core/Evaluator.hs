@@ -59,11 +59,11 @@ evalInfoTable herr info = eval herr idenCtxt [] mainNode
     mainSym = fromJust (info ^. infoMain)
     mainNode = fromJust (HashMap.lookup mainSym idenCtxt)
 
--- | `eval ctx env n` evalues a node `n` whose all free variables point into
+-- | `eval ctx env n` evaluates a node `n` whose all free variables point into
 -- `env`. All nodes in `ctx` must be closed. All nodes in `env` must be values.
 -- Invariant for values v: eval ctx env v = v
 eval :: Handle -> IdentContext -> Env -> Node -> Node
-eval herr ctx env = convertRuntimeNodes . geval opts herr ctx env
+eval herr ctx env = geval opts herr ctx env
   where
     opts =
       EvalOptions

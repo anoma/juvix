@@ -2,6 +2,7 @@ module Juvix.Compiler.Core.Extra.Value where
 
 import Juvix.Compiler.Core.Data.InfoTable
 import Juvix.Compiler.Core.Extra.Base
+import Juvix.Compiler.Core.Extra.Utils
 import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Info.ExpansionInfo (kExpansionInfo)
 import Juvix.Compiler.Core.Language
@@ -12,6 +13,7 @@ toValue tab = \case
   NCst Constant {..} -> ValueConstant _constantValue
   NCtr c -> goConstr c
   NLam lam -> goLambda lam
+  Closure {..} -> toValue tab (substEnv _closureEnv _closureNode)
   _ -> impossible
   where
     goConstr :: Constr -> Value

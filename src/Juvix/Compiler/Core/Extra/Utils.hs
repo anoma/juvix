@@ -233,18 +233,6 @@ etaExpand argtys n =
   where
     k = length argtys
 
-convertClosures :: Node -> Node
-convertClosures = dmap go
-  where
-    go :: Node -> Node
-    go n = case n of
-      Closure env n' ->
-        substEnv (map convertClosures env) n'
-      _ -> n
-
-convertRuntimeNodes :: Node -> Node
-convertRuntimeNodes = convertClosures
-
 squashApps :: Node -> Node
 squashApps = dmap go
   where
