@@ -35,7 +35,7 @@ type JudocStash = State (Maybe (Judoc 'Parsed))
 type PragmasStash = State (Maybe ParsedPragmas)
 
 fromSource ::
-  (Members '[PathResolver, Files, Error JuvixError, NameIdGen, PragmasStash] r) =>
+  (Members '[PathResolver, Files, Error JuvixError, NameIdGen] r) =>
   EntryPoint ->
   Sem r ParserResult
 fromSource e = mapError (JuvixError @ParserError) $ do
@@ -45,7 +45,7 @@ fromSource e = mapError (JuvixError @ParserError) $ do
   where
     getParsedModuleTops ::
       forall r.
-      (Members '[PathResolver, Files, Error ParserError, InfoTableBuilder, NameIdGen, PragmasStash] r) =>
+      (Members '[PathResolver, Files, Error ParserError, InfoTableBuilder, NameIdGen] r) =>
       Sem r (NonEmpty (Module 'Parsed 'ModuleTop))
     getParsedModuleTops = case (e ^. entryPointStdin, e ^. entryPointModulePaths) of
       (Nothing, []) -> throw $ ErrStdinOrFile StdinOrFileError
@@ -96,13 +96,14 @@ runModuleParser fileName input = do
     Right r -> registerModule r $> Right r
 
 runModuleStdinParser ::
-  Members '[Error ParserError, Files, PathResolver, NameIdGen, InfoTableBuilder, PragmasStash] r =>
+  Members '[Error ParserError, Files, PathResolver, NameIdGen, InfoTableBuilder] r =>
   Text ->
   Sem r (Either ParserError (Module 'Parsed 'ModuleTop))
 runModuleStdinParser input = do
   m <-
-    evalState (Nothing @(Judoc 'Parsed)) $
-      P.runParserT topModuleDefStdin (toFilePath formatStdinPath) input
+    evalState (Nothing @ParsedPragmas) $
+      evalState (Nothing @(Judoc 'Parsed)) $
+        P.runParserT topModuleDefStdin (toFilePath formatStdinPath) input
   case m of
     Left err -> return (Left (ErrMegaparsec (MegaparsecError err)))
     Right r -> registerModule r $> Right r

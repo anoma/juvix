@@ -117,73 +117,73 @@ inferExpressionIO fp txt =
 --------------------------------------------------------------------------------
 
 upToParsing ::
-  (Members '[Reader EntryPoint, Files, Error JuvixError, NameIdGen, PathResolver, Parser.PragmasStash] r) =>
+  (Members '[Reader EntryPoint, Files, Error JuvixError, NameIdGen, PathResolver] r) =>
   Sem r Parser.ParserResult
 upToParsing = entrySetup >> ask >>= Parser.fromSource
 
 upToScoping ::
-  (Members '[Reader EntryPoint, Files, NameIdGen, Error JuvixError, PathResolver, Parser.PragmasStash] r) =>
+  (Members '[Reader EntryPoint, Files, NameIdGen, Error JuvixError, PathResolver] r) =>
   Sem r Scoper.ScoperResult
 upToScoping = upToParsing >>= Scoper.fromParsed
 
 upToAbstract ::
-  (Members '[Reader EntryPoint, Files, NameIdGen, Builtins, Error JuvixError, PathResolver, Parser.PragmasStash] r) =>
+  (Members '[Reader EntryPoint, Files, NameIdGen, Builtins, Error JuvixError, PathResolver] r) =>
   Sem r Abstract.AbstractResult
 upToAbstract = upToScoping >>= Abstract.fromConcrete
 
 upToInternal ::
-  (Members '[Reader EntryPoint, Files, NameIdGen, Builtins, Error JuvixError, PathResolver, Parser.PragmasStash] r) =>
+  (Members '[Reader EntryPoint, Files, NameIdGen, Builtins, Error JuvixError, PathResolver] r) =>
   Sem r Internal.InternalResult
 upToInternal = upToAbstract >>= Internal.fromAbstract
 
 upToInternalArity ::
-  (Members '[Reader EntryPoint, Files, NameIdGen, Builtins, Error JuvixError, PathResolver, Parser.PragmasStash] r) =>
+  (Members '[Reader EntryPoint, Files, NameIdGen, Builtins, Error JuvixError, PathResolver] r) =>
   Sem r Internal.InternalArityResult
 upToInternalArity = upToInternal >>= Internal.arityChecking
 
 upToInternalTyped ::
-  (Members '[Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, PathResolver, Parser.PragmasStash] r) =>
+  (Members '[Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, PathResolver] r) =>
   Sem r Internal.InternalTypedResult
 upToInternalTyped = upToInternalArity >>= Internal.typeChecking
 
 upToInternalReachability ::
-  (Members '[Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, PathResolver, Parser.PragmasStash] r) =>
+  (Members '[Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, PathResolver] r) =>
   Sem r Internal.InternalTypedResult
 upToInternalReachability =
   Internal.filterUnreachable <$> upToInternalTyped
 
 upToCore ::
-  Members '[Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, PathResolver, Parser.PragmasStash] r =>
+  Members '[Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, PathResolver] r =>
   Sem r Core.CoreResult
 upToCore =
   upToInternalReachability >>= Core.fromInternal
 
 upToAsm ::
-  (Members '[Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, PathResolver, Parser.PragmasStash] r) =>
+  (Members '[Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, PathResolver] r) =>
   Sem r Asm.InfoTable
 upToAsm =
   upToCore >>= \Core.CoreResult {..} -> coreToAsm _coreResultTable
 
 upToMiniC ::
-  (Members '[Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, PathResolver, Parser.PragmasStash] r) =>
+  (Members '[Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, PathResolver] r) =>
   Sem r C.MiniCResult
 upToMiniC = upToAsm >>= asmToMiniC
 
 upToGeb ::
-  (Members '[Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, PathResolver, Parser.PragmasStash] r) =>
+  (Members '[Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, PathResolver] r) =>
   Geb.ResultSpec ->
   Sem r Geb.Result
 upToGeb spec =
   upToCore >>= \Core.CoreResult {..} -> coreToGeb spec _coreResultTable
 
 upToCoreTypecheck ::
-  (Members '[Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, PathResolver, Parser.PragmasStash] r) =>
+  (Members '[Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, PathResolver] r) =>
   Sem r Core.CoreResult
 upToCoreTypecheck =
   upToCore >>= \r -> Core.toTypechecked (r ^. Core.coreResultTable) >>= \tab -> return r {Core._coreResultTable = tab}
 
 upToEval ::
-  (Members '[Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, PathResolver, Parser.PragmasStash] r) =>
+  (Members '[Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, PathResolver] r) =>
   Sem r Core.CoreResult
 upToEval =
   upToCore >>= \r -> Core.toEval (r ^. Core.coreResultTable) >>= \tab -> return r {Core._coreResultTable = tab}
@@ -191,8 +191,6 @@ upToEval =
 --------------------------------------------------------------------------------
 -- Internal workflows
 --------------------------------------------------------------------------------
-
-instance Member Parser.PragmasStash '[]
 
 coreToAsm :: Members '[Error JuvixError, Reader EntryPoint] r => Core.InfoTable -> Sem r Asm.InfoTable
 coreToAsm = Core.toStripped >=> return . Asm.fromCore . Stripped.fromCore
