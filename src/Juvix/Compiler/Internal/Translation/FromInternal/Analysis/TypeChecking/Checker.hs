@@ -101,7 +101,7 @@ checkInductiveDef InductiveDef {..} = runInferenceDef $ do
           _localTyMap = mempty
         }
     goConstructor :: InductiveConstructorDef -> Sem (Inference ': r) InductiveConstructorDef
-    goConstructor (InductiveConstructorDef {..}) = do
+    goConstructor InductiveConstructorDef {..} = do
       expectedRetTy <- constructorReturnType _inductiveConstructorName
       cty' <- runReader paramLocals $ do
         void (checkIsType (getLoc ret) ret)
