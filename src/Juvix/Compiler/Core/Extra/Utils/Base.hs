@@ -12,14 +12,13 @@ import Juvix.Compiler.Core.Language
 substEnv :: Env -> Node -> Node
 substEnv env
   | null env = id
-  | otherwise = dmapNR go
+  | otherwise = umapN go
   where
-    go :: Int -> Node -> Recur
+    go :: Int -> Node -> Node
     go k n = case n of
       NVar (Var _ idx)
-        | idx >= k -> End $ env !! (idx - k)
-      Closure {} -> End n
-      _ -> Recur n
+        | idx >= k -> env !! (idx - k)
+      _ -> n
 
 freeVars :: SimpleFold Node Var
 freeVars f = ufoldNA reassemble go
