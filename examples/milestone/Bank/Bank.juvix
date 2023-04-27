@@ -1,4 +1,4 @@
---- This example is taken from Leo workshop:
+--- This example is taken from the Leo workshop:
 ---
 --- https://github.com/AleoHQ/workshop/tree/master/basic_bank
 module Bank;
