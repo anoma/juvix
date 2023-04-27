@@ -69,7 +69,7 @@ fromSource e = mapError (JuvixError @ParserError) $ do
       where
         getFileContents :: Path Abs File -> Sem r Text
         getFileContents fp
-          | Just fp == e ^. mainModulePath,
+          | Just fp == e ^? mainModulePath,
             Just txt <- e ^. entryPointStdin =
               return txt
           | otherwise = readFile' fp

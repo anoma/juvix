@@ -104,7 +104,7 @@ runCommand opts = do
                   )
               )
           )
-        let epPath :: Maybe (Path Abs File) = ep ^. entryPointModulePaths . _headMaybe
+        let epPath :: Maybe (Path Abs File) = ep ^? entryPointModulePaths . _head
         whenJust epPath $ \path -> liftIO (putStrLn [i|OK loaded: #{toFilePath path}|])
 
       reloadFile :: String -> Repl ()

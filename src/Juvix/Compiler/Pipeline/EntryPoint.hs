@@ -75,5 +75,5 @@ defaultEntryPointNoFile roots =
 defaultUnrollLimit :: Int
 defaultUnrollLimit = 140
 
-mainModulePath :: Lens' EntryPoint (Maybe (Path Abs File))
-mainModulePath = entryPointModulePaths . _headMaybe
+mainModulePath :: Traversal' EntryPoint (Path Abs File)
+mainModulePath = entryPointModulePaths . _head
