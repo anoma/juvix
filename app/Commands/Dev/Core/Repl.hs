@@ -8,6 +8,7 @@ import Juvix.Compiler.Core.Extra.Base qualified as Core
 import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Info.NoDisplayInfo qualified as Info
 import Juvix.Compiler.Core.Language qualified as Core
+import Juvix.Compiler.Core.Normalizer
 import Juvix.Compiler.Core.Pretty qualified as Core
 import Juvix.Compiler.Core.Transformation.ComputeTypeInfo qualified as Core
 import Juvix.Compiler.Core.Transformation.DisambiguateNames qualified as Core
@@ -52,6 +53,15 @@ runRepl opts tab = do
             runRepl opts tab
           Right (tab', Just node) ->
             replEval True tab' node
+          Right (tab', Nothing) ->
+            runRepl opts tab'
+      ':' : 'n' : ' ' : s' ->
+        case parseText tab (fromString s') of
+          Left err -> do
+            printJuvixError (JuvixError err)
+            runRepl opts tab
+          Right (tab', Just node) ->
+            replNormalize tab' node
           Right (tab', Nothing) ->
             runRepl opts tab'
       ':' : 't' : ' ' : s' ->
@@ -101,6 +111,17 @@ runRepl opts tab = do
       where
         defaultLoc = singletonInterval (mkInitialLoc replPath)
 
+    replNormalize :: Core.InfoTable -> Core.Node -> Sem r ()
+    replNormalize tab' node =
+      let node' = normalize tab' node
+       in if
+              | Info.member Info.kNoDisplayInfo (Core.getInfo node') ->
+                  runRepl opts tab'
+              | otherwise -> do
+                  renderStdOut (Core.ppOut opts (Core.disambiguateNodeNames tab' node'))
+                  embed (putStrLn "")
+                  runRepl opts tab'
+
     replType :: Core.InfoTable -> Core.Node -> Sem r ()
     replType tab' node = do
       let ty = Core.disambiguateNodeNames tab' (Core.computeNodeType tab' node)
@@ -125,6 +146,7 @@ showReplHelp = do
   putStrLn "Available commands:"
   putStrLn ":p expr               Pretty print \"expr\"."
   putStrLn ":e expr               Evaluate \"expr\" without interpreting IO actions."
+  putStrLn ":n expr               Normalize \"expr\"."
   putStrLn ":t expr               Infer and print the type of \"expr\"."
   putStrLn ":l file               Load and evaluate \"file\". Resets REPL state."
   putStrLn ":r                    Reset REPL state."
