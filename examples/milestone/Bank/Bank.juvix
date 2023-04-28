@@ -1,0 +1,138 @@
+--- This example is taken from the Leo workshop:
+---
+--- https://github.com/AleoHQ/workshop/tree/master/basic_bank
+module Bank;
+
+open import Stdlib.Prelude;
+open import Stdlib.Debug.Fail;
+
+open import Stdlib.Data.Nat.Ord;
+
+import Stdlib.Data.Nat as Nat;
+
+Address : Type;
+Address := Nat;
+
+bankAddress : Address;
+bankAddress := 1234;
+
+--- Some field type.
+axiom Field : Type;
+
+--- Equality test for ;Field;.
+axiom eqField : Field -> Field -> Bool;
+
+module Token;
+  type Token :=
+    | --- Arguments are: owner, gates, amount.
+      mkToken : Address -> Nat -> Nat -> Token;
+
+  --- Retrieves the owner from a ;Token;
+  getOwner : Token -> Address;
+  getOwner (mkToken o _ _) := o;
+
+  --- Retrieves the amount from a ;Token;
+  getAmount : Token -> Nat;
+  getAmount (mkToken _ _ a) := a;
+
+  --- Retrieves the gates from a ;Token;
+  getGates : Token -> Nat;
+  getGates (mkToken _ g _) := g;
+end;
+
+open Token;
+
+--- This module defines the type for balances and its associated operations.
+module Balances;
+  Balances : Type;
+  Balances := List (Field × Nat);
+
+  --- Increments the amount associated with a certain ;Field;.
+  increment : Field -> Nat -> Balances -> Balances;
+  increment f n nil := (f, n) :: nil;
+  increment f n ((b, bn) :: bs) :=
+    if
+      (eqField f b)
+      ((b, bn + n) :: bs)
+      ((b, bn) :: increment f n bs);
+
+  --- Decrements the amount associated with a certain ;Field;.
+  --- If the ;Field; is not found, it does nothing.
+  --- Subtraction is truncated to ;zero;.
+  decrement : Field -> Nat -> Balances -> Balances;
+  decrement _ _ nil := nil;
+  decrement f n ((b, bn) :: bs) :=
+    if
+      (eqField f b)
+      ((b, sub bn n) :: bs)
+      ((b, bn) :: decrement f n bs);
+
+  emtpyBalances : Balances;
+  emtpyBalances := nil;
+
+  --- Commit balances changes to the chain.
+  axiom commitBalances : Balances -> IO;
+end;
+
+open Balances;
+
+--- Runs an ;IO; action on the chain.
+axiom runOnChain : {B : Type} -> IO -> B -> B;
+
+--- Computes the hash associated with an ;Address;.
+axiom hashAddress : Address -> Field;
+
+--- Returns the total amount of tokens after compounding interest.
+calculateInterest : Nat -> Nat -> Nat -> Nat;
+calculateInterest principal rate periods :=
+  let
+    amount : Nat := principal;
+    incrAmount : Nat -> Nat;
+    incrAmount a := div (a * rate) 10000;
+  in iterate (min 100 periods) incrAmount amount;
+
+--- Asserts some ;Bool; condition.
+assert : {A : Type} -> Bool -> A -> A;
+assert c a := if c a (fail "assertion failed");
+
+--- Returns a new ;Token;. Arguments are:
+---
+--- `owner`: The address of the account to issue the token to
+---
+--- `amount`: The amount of  tokens to issue
+---
+--- `caller`: Who is creating the transaction. It must be the bank.
+issue : Address -> Address -> Nat -> Token;
+issue caller owner amount :=
+  assert (caller == bankAddress) (mkToken owner 0 amount);
+
+--- Deposits some amount of money into the bank.
+deposit : Balances -> Token -> Nat -> Token;
+deposit bal token amount :=
+  let
+    difference : Nat := sub (getAmount token) amount;
+    remaining :
+        Token :=
+          mkToken (getOwner token) (getGates token) difference;
+    hash : Field := hashAddress (getOwner token);
+    bal' : Balances := increment hash amount bal;
+  in runOnChain (commitBalances bal') remaining;
+
+--- Returns a new ;Token; containing the amount of money withdrawn.
+withdraw :
+  Balances
+    -> Address
+    -> Address
+    -> Nat
+    -> Nat
+    -> Nat
+    -> Token;
+withdraw bal caller recipient amount rate periods :=
+  assert
+    (caller == bankAddress)
+    (let
+      hash : Field := hashAddress recipient;
+      total : Nat := calculateInterest amount rate periods;
+      token : Token := mkToken recipient 0 total;
+      bal' : Balances := decrement hash amount bal;
+    in runOnChain (commitBalances bal') token);

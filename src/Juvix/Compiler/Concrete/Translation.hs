@@ -11,7 +11,7 @@ import Juvix.Prelude
 type JudocStash = State (Maybe (Judoc 'Parsed))
 
 fromSource ::
-  (Members '[Files, Error JuvixError, NameIdGen, Reader EntryPoint, PathResolver] r) =>
+  (Members '[Files, Error JuvixError, NameIdGen, Reader EntryPoint, PathResolver, Parser.PragmasStash] r) =>
   EntryPoint ->
   Sem r Scoper.ScoperResult
 fromSource = Parser.fromSource >=> Scoper.fromParsed

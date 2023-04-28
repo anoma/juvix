@@ -10,6 +10,7 @@ EXAMPLES= Collatz/Collatz.juvix \
 	HelloWorld/HelloWorld.juvix \
 	PascalsTriangle/PascalsTriangle.juvix \
 	TicTacToe/CLI/TicTacToe.juvix \
+	Bank/Bank.juvix \
 	Tutorial/Tutorial.juvix
 
 DEMO_EXAMPLE=examples/demo/Demo.juvix

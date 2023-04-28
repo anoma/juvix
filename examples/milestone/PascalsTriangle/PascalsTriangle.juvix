@@ -19,9 +19,9 @@ zipWith f _ nil := nil;
 zipWith f (x :: xs) (y :: ys) := f x y :: zipWith f xs ys;
 
 --- Return a list of repeated applications of a given function
-iterate : {A : Type} → Nat → (A → A) → A → List A;
-iterate zero _ _ := nil;
-iterate (suc n) f a := a :: iterate n f (f a);
+scanIterate : {A : Type} → Nat → (A → A) → A → List A;
+scanIterate zero _ _ := nil;
+scanIterate (suc n) f a := a :: scanIterate n f (f a);
 
 --- Produce a singleton List
 singleton : {A : Type} → A → List A;
@@ -55,7 +55,7 @@ pascalNextRow row :=
 
 --- Produce Pascal's triangle to a given depth
 pascal : Nat → List (List Nat);
-pascal rows := iterate rows pascalNextRow (singleton 1);
+pascal rows := scanIterate rows pascalNextRow (singleton 1);
 
 main : IO;
 main := printStringLn (unlines (map showList (pascal 10)));

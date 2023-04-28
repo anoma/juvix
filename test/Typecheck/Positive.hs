@@ -203,5 +203,5 @@ tests =
       $(mkRelDir ".")
       $(mkRelFile "MutualLet.juvix")
   ]
-    <> [ compilationTest t | t <- Compilation.tests, t ^. Compilation.name /= "Self-application"
+    <> [ compilationTest t | t <- Compilation.tests
        ]

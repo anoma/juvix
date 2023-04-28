@@ -44,9 +44,10 @@ id' :=
 id'' : (A : Type) → A → A;
 id'' :=
   λ {
-    | A := λ {
-      | a := a
-    }
+    | A :=
+      λ {
+        | a := a
+      }
   };
 
 uncurry :
@@ -78,9 +79,10 @@ add : Nat → Nat → Nat;
 add :=
   λ {
     | zero n := n
-    | (suc n) := λ {
-      | m := suc (add n m)
-    }
+    | (suc n) :=
+      λ {
+        | m := suc (add n m)
+      }
   };
 
 fst : {A : Type} → {B : Type} → A × B → A;
@@ -179,12 +181,8 @@ partition :
 partition :=
   λ {
     | _ nil := nil, nil
-    | f (x :: xs) := if
-      (f x)
-      first
-      second
-      ((::) x)
-      (partition f xs)
+    | f (x :: xs) :=
+      if (f x) first second ((::) x) (partition f xs)
   };
 
 zipWith :

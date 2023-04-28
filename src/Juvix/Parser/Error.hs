@@ -4,6 +4,7 @@ import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Pretty.Options (fromGenericOptions)
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Error
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error.Pretty
+import Juvix.Extra.Paths
 import Juvix.Prelude
 import Text.Megaparsec qualified as M
 import Text.Megaparsec.Error (errorOffset)
@@ -12,6 +13,7 @@ data ParserError
   = ErrMegaparsec MegaparsecError
   | ErrTopModulePath TopModulePathError
   | ErrWrongTopModuleName WrongTopModuleName
+  | ErrStdinOrFile StdinOrFileError
   deriving stock (Show)
 
 instance ToGenericError ParserError where
@@ -19,6 +21,7 @@ instance ToGenericError ParserError where
     ErrMegaparsec e -> genericError e
     ErrTopModulePath e -> genericError e
     ErrWrongTopModuleName e -> genericError e
+    ErrStdinOrFile e -> genericError e
 
 instance Pretty MegaparsecError where
   pretty (MegaparsecError b) = pretty (M.errorBundlePretty b)
@@ -99,3 +102,15 @@ instance ToGenericError WrongTopModuleName where
                 <> "But it should be in the file:"
                 <> line
                 <> pretty _wrongTopModuleNameExpectedPath
+
+data StdinOrFileError = StdinOrFileError
+  deriving stock (Show)
+
+instance ToGenericError StdinOrFileError where
+  genericError StdinOrFileError =
+    return
+      GenericError
+        { _genericErrorLoc = singletonInterval (mkInitialLoc formatStdinPath),
+          _genericErrorMessage = prettyError "Neither JUVIX_FILE_OR_PROJECT nor --stdin option is choosen",
+          _genericErrorIntervals = []
+        }
