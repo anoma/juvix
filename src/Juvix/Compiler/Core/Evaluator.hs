@@ -87,8 +87,7 @@ geval opts herr ctx env0 = eval' env0
             let !v = eval' env r in evalBody i' bi env' v b
           lv
             | opts ^. evalOptionsNormalize ->
-                -- TODO: handle the cases when `lv` is `if-then-else` or `let`
-                let !v = eval' env r in mkApp i lv v
+                let !v = eval' env r in goNormApp i lv v
             | otherwise ->
                 evalError "invalid application" (mkApp i lv (substEnv env r))
       NBlt (BuiltinApp _ op args) -> applyBuiltin n env op args
@@ -105,8 +104,7 @@ geval opts herr ctx env0 = eval' env0
             branch n env args tag def bs
           v'
             | opts ^. evalOptionsNormalize ->
-                -- TODO: handle the cases when `v'` is `if-then-else` or `let`
-                Closure env (mkCase i sym v' bs def)
+                goNormCase env i sym v' bs def
             | otherwise ->
                 evalError "matching on non-data" (substEnv env (mkCase i sym v' bs def))
       NMatch (Match _ _ _ vs bs) ->
@@ -309,6 +307,51 @@ geval opts herr ctx env0 = eval' env0
         Nothing | opts ^. evalOptionsNormalize -> n
         Nothing -> evalError "symbol not defined" n
     {-# INLINE lookupContext #-}
+
+    goNormApp :: Info -> Node -> Node -> Node
+    goNormApp i l r = case l of
+      Closure env (NLet lt) ->
+        Closure env (NLet (over letBody (\b -> mkApp i b r) lt))
+      Closure env (NCase Case {..}) ->
+        Closure
+          env
+          ( mkCase
+              _caseInfo
+              _caseInductive
+              _caseValue
+              (map (over caseBranchBody (\b -> mkApp i b r)) _caseBranches)
+              (fmap (\b -> mkApp i b r) _caseDefault)
+          )
+      _ ->
+        mkApp i l r
+
+    goNormCase :: Env -> Info -> Symbol -> Node -> [CaseBranch] -> Maybe Node -> Node
+    goNormCase env i sym v bs def = case v of
+      Closure env' (NLet Let {..}) ->
+        Closure
+          env'
+          ( mkLet
+              _letInfo
+              (_letItem ^. letItemBinder)
+              (_letItem ^. letItemValue)
+              (goBody _letBody)
+          )
+      Closure env' (NCase Case {..}) ->
+        Closure
+          env'
+          ( mkCase
+              _caseInfo
+              _caseInductive
+              _caseValue
+              (map (over caseBranchBody goBody) _caseBranches)
+              (fmap goBody _caseDefault)
+          )
+      _ ->
+        Closure env (mkCase i sym v bs def)
+      where
+        goBody :: Node -> Node
+        goBody b =
+          mkCase i sym b (map (substEnvInBranch env) bs) (fmap (substEnv env) def)
 
 -- Evaluate `node` and interpret the builtin IO actions.
 hEvalIO :: Handle -> Handle -> Handle -> IdentContext -> Env -> Node -> IO Node

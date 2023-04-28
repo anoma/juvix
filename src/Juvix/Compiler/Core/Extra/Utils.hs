@@ -30,6 +30,11 @@ import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Info.ExpansionInfo
 import Juvix.Compiler.Core.Language
 
+substEnvInBranch :: Env -> CaseBranch -> CaseBranch
+substEnvInBranch env br = over caseBranchBody (substEnv env') br
+  where
+    env' = map mkVar' [0 .. br ^. caseBranchBindersNum - 1] ++ env
+
 isClosed :: Node -> Bool
 isClosed = not . has freeVars
 
