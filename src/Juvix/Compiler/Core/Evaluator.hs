@@ -87,6 +87,7 @@ geval opts herr ctx env0 = eval' env0
             let !v = eval' env r in evalBody i' bi env' v b
           lv
             | opts ^. evalOptionsNormalize ->
+                -- TODO: handle the cases when `lv` is `if-then-else` or `let`
                 let !v = eval' env r in mkApp i lv v
             | otherwise ->
                 evalError "invalid application" (mkApp i lv (substEnv env r))
@@ -104,6 +105,7 @@ geval opts herr ctx env0 = eval' env0
             branch n env args tag def bs
           v'
             | opts ^. evalOptionsNormalize ->
+                -- TODO: handle the cases when `v'` is `if-then-else` or `let`
                 Closure env (mkCase i sym v' bs def)
             | otherwise ->
                 evalError "matching on non-data" (substEnv env (mkCase i sym v' bs def))
@@ -169,7 +171,7 @@ geval opts herr ctx env0 = eval' env0
       OpIntMul -> binNumOp (*)
       OpIntLt -> binNumCmpOp (<)
       OpIntLe -> binNumCmpOp (<=)
-      OpEq -> binOp nodeFromBool Just structEq
+      OpEq -> eqOp
       OpIntDiv -> divOp quot
       OpIntMod -> divOp rem
       OpShow -> showOp
@@ -222,6 +224,14 @@ geval opts herr ctx env0 = eval' env0
         binNumOp :: (Integer -> Integer -> Integer) -> [Node] -> Node
         binNumOp = binOp nodeFromInteger integerFromNode
         {-# INLINE binNumOp #-}
+
+        eqOp :: [Node] -> Node
+        eqOp
+          | opts ^. evalOptionsNormalize =
+              binOp nodeFromBool (\x -> if isDataValue x then Just x else Nothing) structEq
+          | otherwise =
+              binOp nodeFromBool Just structEq
+        {-# INLINE eqOp #-}
 
         showOp :: [Node] -> Node
         showOp = unary $ \arg -> mkConstant' (ConstString (ppPrint (eval' env arg)))
