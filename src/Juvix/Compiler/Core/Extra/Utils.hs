@@ -53,13 +53,20 @@ filterOutTypeSynonyms tab = pruneInfoTable tab'
     tab' = tab {_infoIdentifiers = idents'}
     idents' = HashMap.filter (\ii -> not (isTypeConstr tab (ii ^. identifierType))) (tab ^. infoIdentifiers)
 
--- True for nodes whose evaluation immediately returns a value, i.e.,
+-- | True for nodes whose evaluation immediately returns a value, i.e.,
 -- no reduction or memory allocation in the runtime is required.
 isImmediate :: Node -> Bool
 isImmediate = \case
   NVar {} -> True
   NIdt {} -> True
   NCst {} -> True
+  _ -> False
+
+-- | True if the argument is fully evaluated first-order data
+isDataValue :: Node -> Bool
+isDataValue = \case
+  NCst {} -> True
+  NCtr Constr {..} -> all isDataValue _constrArgs
   _ -> False
 
 freeVarsSortedMany :: [Node] -> Set Var

@@ -80,7 +80,7 @@ parseCoreCommand =
     normalizeInfo :: ParserInfo CoreCommand
     normalizeInfo =
       info
-        (Eval <$> parseCoreEvalOptions)
+        (Normalize <$> parseCoreNormalizeOptions)
         (progDesc "Normalize the main definition from a JuvixCore file and pretty print the result")
 
     readInfo :: ParserInfo CoreCommand
