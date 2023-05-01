@@ -255,6 +255,8 @@ instance PrettyCode Module where
           <> line
           <> body'
           <> line
+          <> kwEnd
+          <> line
 
 ppPostExpression ::
   (PrettyCode a, HasAtomicity a, Member (Reader Options) r) =>

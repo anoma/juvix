@@ -133,6 +133,7 @@ goModuleBody ::
   Abstract.ModuleBody ->
   Sem r ModuleBody
 goModuleBody mutualBlocks b = do
+  -- FIXME order is important
   mutualBlocks' <- mapM (fmap (StatementFunction . MutualBlock) . mapM goFunctionDef) mutualBlocks
   statements' <- mapMaybeM goStatement (b ^. Abstract.moduleStatements)
   return

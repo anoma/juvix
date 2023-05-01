@@ -5,7 +5,7 @@ import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
 import Juvix.Prelude.Base
 
--- DependencyInfo is polymorphic to anticipate future use with other identifier
+-- | DependencyInfo is polymorphic to anticipate future use with other identifier
 -- types in JuvixCore and further. The graph algorithms don't depend on the
 -- exact type of names (the polymorphic type n), so there is no reason to
 -- specialise DependencyInfo to any particular name type
@@ -48,7 +48,7 @@ createDependencyInfo edges startNames =
     topSortedNames = map (\v -> case nodeFromVertex v of (_, n, _) -> n) (Graph.topSort graph)
 
 nameFromVertex :: DependencyInfo n -> Vertex -> n
-nameFromVertex depInfo v = fst $ (depInfo ^. depInfoNodeFromVertex) v
+nameFromVertex depInfo = fst . (depInfo ^. depInfoNodeFromVertex)
 
 isReachable :: (Hashable n) => DependencyInfo n -> n -> Bool
 isReachable depInfo n = HashSet.member n (depInfo ^. depInfoReachable)
