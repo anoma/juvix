@@ -1,13 +1,12 @@
 working-directory: ./../../../tests/
 tests:
   - name: flag-help-shows-juvix-file-for-autocompletion
-    command: 
-      - juvix 
+    command:
+      - juvix
       - typecheck
       - --help
     stdout:
-      contains:
-        "Usage: juvix typecheck JUVIX_FILE"
+      contains: 'Usage: juvix typecheck JUVIX_FILE'
     exit-status: 0
 
   - name: check-simple-file
@@ -16,7 +15,7 @@ tests:
       - typecheck
     args:
       - positive/Internal/Simple.juvix
-    stdout: 
+    stdout:
       equals: "Well done! It type checks\n"
     exit-status: 0
 
@@ -27,7 +26,7 @@ tests:
       - typecheck
     args:
       - positive/Internal/Simple.juvix
-    stdout: ""
+    stdout: ''
     exit-status: 0
 
   - name: get-typechecking-error
@@ -37,8 +36,8 @@ tests:
       - typecheck
     args:
       - negative/Internal/MultiWrongType.juvix
-    stdout: ""
-    stderr: 
+    stdout: ''
+    stderr:
       matches: |-
         (.+)\/([^\/]+)\.juvix\:[0-9]*\:[0-9]*\-[0-9]*\: error
     exit-status: 1
@@ -52,3 +51,15 @@ tests:
     stdout:
       equals: "Well done! It type checks\n"
     exit-status: 0
+
+  - name: typecheck-stdin
+    command:
+      - juvix
+      - --stdin
+      - typecheck
+    args:
+      - positive/Internal/Simple.juvix
+    stdin: 'module OtherModule; open import Stdlib.Prelude; main : Nat; main := 5;'
+    stderr:
+      contains: 'positive/Internal/Simple.juvix'
+    exit-status: 1
