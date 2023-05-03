@@ -54,7 +54,11 @@ instance HasExpressions ConstructorApp where
     pure ConstructorApp {..}
 
 instance HasExpressions PatternArg where
-  leafExpressions f = traverseOf patternArgPattern (leafExpressions f)
+  leafExpressions f a = do
+    let _patternArgIsImplicit = a ^. patternArgIsImplicit
+        _patternArgName = a ^. patternArgName
+    _patternArgPattern <- leafExpressions f (a ^. patternArgPattern)
+    pure PatternArg {..}
 
 instance HasExpressions Pattern where
   leafExpressions f p = case p of
@@ -93,9 +97,10 @@ instance HasExpressions Let where
     pure Let {..}
 
 instance HasExpressions TypedExpression where
-  leafExpressions f t@TypedExpression {..} = do
-    e' <- leafExpressions f _typedExpression
-    pure (t {_typedExpression = e'})
+  leafExpressions f a = do
+    _typedExpression <- leafExpressions f (a ^. typedExpression)
+    _typedType <- leafExpressions f (a ^. typedType)
+    pure TypedExpression {..}
 
 instance HasExpressions SimpleLambda where
   leafExpressions f (SimpleLambda v ty b) = do
