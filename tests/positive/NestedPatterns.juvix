@@ -1,0 +1,15 @@
+module NestedPatterns;
+
+open import Stdlib.Prelude;
+
+type MyList (A : Type) :=
+  | myList : List A -> MyList A;
+
+toList : {A : Type} -> MyList A -> List A;
+toList (myList xs) := xs;
+
+f : MyList Nat -> Nat;
+f xs :=
+  case toList xs
+    | suc n :: nil := n
+    | _ := zero;
