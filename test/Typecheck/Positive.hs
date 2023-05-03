@@ -201,7 +201,11 @@ tests =
     posTest
       "Mutual inference inside let"
       $(mkRelDir ".")
-      $(mkRelFile "MutualLet.juvix")
+      $(mkRelFile "MutualLet.juvix"),
+    posTest
+      "Nested pattern match with type variables"
+      $(mkRelDir ".")
+      $(mkRelFile "NestedPatterns.juvix")
   ]
     <> [ compilationTest t | t <- Compilation.tests
        ]

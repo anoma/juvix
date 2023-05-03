@@ -47,7 +47,11 @@ instance HasExpressions Expression where
     ExpressionHole {} -> f e
 
 instance HasExpressions ConstructorApp where
-  leafExpressions f = traverseOf (constrAppType . _Just) (leafExpressions f)
+  leafExpressions f a = do
+    let _constrAppConstructor = a ^. constrAppConstructor
+    _constrAppType <- traverseOf _Just (leafExpressions f) (a ^. constrAppType)
+    _constrAppParameters <- traverseOf each (leafExpressions f) (a ^. constrAppParameters)
+    pure ConstructorApp {..}
 
 instance HasExpressions PatternArg where
   leafExpressions f = traverseOf patternArgPattern (leafExpressions f)
