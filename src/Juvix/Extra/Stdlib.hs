@@ -28,20 +28,20 @@ ensureStdlib rootDir buildDir deps =
   whenJustM (packageStdlib rootDir buildDir deps) $ \stdlibRoot ->
     runReader stdlibRoot updateStdlib
 
-packageStdlib :: Members '[Files] r => Path Abs Dir -> Path Abs Dir -> [Dependency] -> Sem r (Maybe (Path Abs Dir))
-packageStdlib rootDir buildDir = firstJustM (isStdLib rootDir buildDir)
-
-isStdLib :: Members '[Files] r => Path Abs Dir -> Path Abs Dir -> Dependency -> Sem r (Maybe (Path Abs Dir))
-isStdLib rootDir buildDir (Dependency dep) = do
-  adir <- canonicalDir rootDir dep
-  let mstdlib :: Maybe (Path Rel Dir) = stripProperPrefix buildDir adir
-  return $
-    if
-        | mstdlib == Just relStdlibDir -> Just stdLibBuildDir
-        | otherwise -> Nothing
+packageStdlib :: forall r. Members '[Files] r => Path Abs Dir -> Path Abs Dir -> [Dependency] -> Sem r (Maybe (Path Abs Dir))
+packageStdlib rootDir buildDir = firstJustM isStdLib
   where
-    stdLibBuildDir :: Path Abs Dir
-    stdLibBuildDir = juvixStdlibDir buildDir
+    isStdLib :: Dependency -> Sem r (Maybe (Path Abs Dir))
+    isStdLib (Dependency dep) = do
+      adir <- canonicalDir rootDir dep
+      let mstdlib :: Maybe (Path Rel Dir) = stripProperPrefix buildDir adir
+      return $
+        if
+            | mstdlib == Just relStdlibDir -> Just stdLibBuildDir
+            | otherwise -> Nothing
+      where
+        stdLibBuildDir :: Path Abs Dir
+        stdLibBuildDir = juvixStdlibDir buildDir
 
 writeStdlib :: forall r. (Members '[Reader StdlibRoot, Files] r) => Sem r ()
 writeStdlib = do
