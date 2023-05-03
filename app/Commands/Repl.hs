@@ -128,6 +128,8 @@ runCommand opts = do
       loadDefaultPrelude :: Repl ()
       loadDefaultPrelude = whenJustM defaultPreludeEntryPoint $ \e -> do
         let root = roots ^. rootsRootDir
+        -- The following is needed to ensure that the default location of the
+        -- standard library exists
         void
           . liftIO
           . runM
