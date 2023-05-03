@@ -7,6 +7,7 @@ module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver
     withPath,
     withPathFile,
     expectedModulePath,
+    runPathResolver,
     runPathResolverPipe,
     runPathResolverPipe',
     ResolverState,
