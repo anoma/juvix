@@ -53,6 +53,14 @@ testNoPositivityFlag N.NegTest {..} =
 negPositivityTests :: [N.NegTest]
 negPositivityTests = N.negPositivityTests
 
+testWellDefinedInductiveDefs :: [PosTest]
+testWellDefinedInductiveDefs =
+  [ posTest
+      "Rose tree definition is well-defined"
+      $(mkRelDir "Internal/Positivity")
+      $(mkRelFile "RoseTree.juvix")
+  ]
+
 testPositivityKeyword :: [PosTest]
 testPositivityKeyword =
   [ posTest
@@ -60,6 +68,7 @@ testPositivityKeyword =
       $(mkRelDir "Internal/Positivity")
       $(mkRelFile "E5.juvix")
   ]
+
 
 positivityTestGroup :: TestTree
 positivityTestGroup =
@@ -70,7 +79,10 @@ positivityTestGroup =
         (map (mkTest . testNoPositivityFlag) negPositivityTests),
       testGroup
         "Usages of the positive keyword"
-        (map (mkTest . testDescr) testPositivityKeyword)
+        (map (mkTest . testDescr) testPositivityKeyword),
+        testGroup
+        "Well-defined inductive definitions"
+        (map (mkTest . testDescr) testWellDefinedInductiveDefs)
     ]
 
 --------------------------------------------------------------------------------

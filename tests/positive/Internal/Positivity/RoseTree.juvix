@@ -1,0 +1,8 @@
+module RoseTree;
+
+type List (A : Type) : Type :=
+  | nil : List A
+  | cons : A -> List A -> List A;
+
+type RoseTree (A : Type) : Type :=
+  | node : A -> List (RoseTree A) -> RoseTree A;
