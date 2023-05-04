@@ -1,0 +1,10 @@
+module IdInType;
+
+type Unit :=
+  | unit : Unit;
+
+id : {a : Type} -> a -> a;
+id a := a;
+
+f : id Unit -> Unit;
+f _ := unit;
