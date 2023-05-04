@@ -6,18 +6,6 @@ module PascalsTriangle;
 
 open import Stdlib.Prelude;
 
-zipWith :
-  {A : Type}
-    → {B : Type}
-    → {C : Type}
-    → (A → B → C)
-    → List A
-    → List B
-    → List C;
-zipWith f nil _ := nil;
-zipWith f _ nil := nil;
-zipWith f (x :: xs) (y :: ys) := f x y :: zipWith f xs ys;
-
 --- Return a list of repeated applications of a given function
 scanIterate : {A : Type} → Nat → (A → A) → A → List A;
 scanIterate zero _ _ := nil;
@@ -36,10 +24,6 @@ concat := foldl (++str) "";
 
 intercalate : String → List String → String;
 intercalate sep xs := concat (intersperse sep xs);
-
---- Joins a list of strings with the newline character
-unlines : List String → String;
-unlines := intercalate "\n";
 
 showList : List Nat → String;
 showList xs :=
