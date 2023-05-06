@@ -2,7 +2,9 @@ module Scope.Positive where
 
 import Base
 import Data.HashMap.Strict qualified as HashMap
+import Juvix.Compiler.Builtins (evalTopBuiltins)
 import Juvix.Compiler.Concrete qualified as Concrete
+import Juvix.Compiler.Concrete.Data.Highlight (ignoreHighlightBuilder)
 import Juvix.Compiler.Concrete.Extra
 import Juvix.Compiler.Concrete.Pretty qualified as M
 import Juvix.Compiler.Concrete.Print qualified as P
@@ -12,8 +14,6 @@ import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
 import Juvix.Compiler.Pipeline.Setup
 import Juvix.Prelude.Aeson
 import Juvix.Prelude.Pretty
-import Juvix.Compiler.Concrete.Data.Highlight (ignoreHighlightBuilder)
-import Juvix.Compiler.Builtins (evalTopBuiltins)
 
 data PosTest = PosTest
   { _name :: String,
