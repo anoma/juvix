@@ -12,6 +12,8 @@ import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
 import Juvix.Compiler.Pipeline.Setup
 import Juvix.Prelude.Aeson
 import Juvix.Prelude.Pretty
+import Juvix.Compiler.Concrete.Data.Highlight (ignoreHighlightBuilder)
+import Juvix.Compiler.Builtins (evalTopBuiltins)
 
 data PosTest = PosTest
   { _name :: String,
@@ -30,16 +32,6 @@ renderCodeOld = prettyText . M.ppOutDefault
 renderCodeNew :: (HasLoc c, P.PrettyPrint c) => c -> Text
 renderCodeNew = prettyText . P.ppOutDefault emptyComments
 
-type Pipe =
-  '[ PathResolver,
-     Reader EntryPoint,
-     Files,
-     NameIdGen,
-     Error JuvixError,
-     Reader GenericOptions,
-     Embed IO
-   ]
-
 testDescr :: PosTest -> [TestDescr]
 testDescr PosTest {..} = helper renderCodeOld "" : [helper renderCodeNew " (with comments)"]
   where
@@ -52,15 +44,17 @@ testDescr PosTest {..} = helper renderCodeOld "" : [helper renderCodeNew " (with
               _testRoot = tRoot,
               _testAssertion = Steps $ \step -> do
                 entryPoint <- defaultEntryPointCwdIO file'
-                let runHelper :: HashMap (Path Abs File) Text -> Sem Pipe a -> IO (ResolverState, a)
+                let runHelper :: HashMap (Path Abs File) Text -> Sem PipelineEff a -> IO (ResolverState, a)
                     runHelper files =
                       runM
+                        . ignoreHighlightBuilder
                         . runErrorIO' @JuvixError
+                        . evalTopBuiltins
                         . evalTopNameIdGen
                         . runFilesPure files tRoot
                         . runReader entryPoint
                         . runPathResolverPipe
-                    evalHelper :: HashMap (Path Abs File) Text -> Sem Pipe a -> IO a
+                    evalHelper :: HashMap (Path Abs File) Text -> Sem PipelineEff a -> IO a
                     evalHelper files = fmap snd . runHelper files
 
                 step "Parsing"
