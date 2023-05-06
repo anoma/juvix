@@ -133,18 +133,17 @@ checkStrictlyPositiveOccurrences ty ctorName name recLimit ref =
         helperApp tyApp = do
           let (hdExpr, args) = unfoldApplication tyApp
           case hdExpr of
-            ExpressionIden (IdenInductive ty') ->
-              do
-                when (inside && name == ty') (strictlyPositivityError expr)
-                InductiveInfo indType' <- lookupInductive ty'
+            ExpressionIden (IdenInductive ty') -> do
+              when (inside && name == ty') (strictlyPositivityError expr)
+              InductiveInfo indType' <- lookupInductive ty'
 
-                -- We now need to know whether `name` negatively occurs at `indTy'`
-                -- or not. The way to know is by checking that the type ty'
-                -- preserves the positivity condition, i.e., its type parameters
-                -- are no negative.
+              -- We now need to know whether `name` negatively occurs at `indTy'`
+              -- or not. The way to know is by checking that the type ty'
+              -- preserves the positivity condition, i.e., its type parameters
+              -- are no negative.
 
-                let paramsTy' = indType' ^. inductiveParameters
-                helperInductiveApp indType' (zip paramsTy' (toList args))
+              let paramsTy' = indType' ^. inductiveParameters
+              helperInductiveApp indType' (zip paramsTy' (toList args))
             _ -> return ()
 
         helperInductiveApp :: InductiveDef -> [(InductiveParameter, Expression)] -> Sem r ()
