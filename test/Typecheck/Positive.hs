@@ -69,7 +69,6 @@ testPositivityKeyword =
       $(mkRelFile "E5.juvix")
   ]
 
-
 positivityTestGroup :: TestTree
 positivityTestGroup =
   testGroup
@@ -80,7 +79,7 @@ positivityTestGroup =
       testGroup
         "Usages of the positive keyword"
         (map (mkTest . testDescr) testPositivityKeyword),
-        testGroup
+      testGroup
         "Well-defined inductive definitions"
         (map (mkTest . testDescr) testWellDefinedInductiveDefs)
     ]
