@@ -74,6 +74,9 @@ instance Hashable Interval
 class HasLoc t where
   getLoc :: t -> Interval
 
+instance HasLoc Interval where
+  getLoc = id
+
 -- | The items are assumed to be in order with respect to their location.
 getLocSpan :: (HasLoc t) => NonEmpty t -> Interval
 getLocSpan l = getLoc (head l) <> getLoc (last l)

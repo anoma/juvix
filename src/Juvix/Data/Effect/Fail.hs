@@ -15,6 +15,12 @@ runFail ::
 runFail = fmap (^? _Right) . runError @() . reinterpret (\Fail -> throw ())
 {-# INLINE runFail #-}
 
+ignoreFail ::
+  Sem (Fail ': r) a ->
+  Sem r ()
+ignoreFail = void . runFail
+{-# INLINE ignoreFail #-}
+
 failMaybe :: (Member Fail r) => Maybe a -> Sem r a
 failMaybe = \case
   Nothing -> fail

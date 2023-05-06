@@ -11,6 +11,7 @@ import Control.Monad.Combinators.Expr qualified as P
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
 import Data.List.NonEmpty qualified as NonEmpty
+import Juvix.Compiler.Concrete.Data.Highlight.Input
 import Juvix.Compiler.Concrete.Data.InfoTableBuilder
 import Juvix.Compiler.Concrete.Data.Name qualified as N
 import Juvix.Compiler.Concrete.Data.Scope
@@ -34,7 +35,7 @@ iniScoperState =
     }
 
 scopeCheck ::
-  (Members '[Error ScoperError, NameIdGen, Reader EntryPoint] r) =>
+  (Members '[HighlightBuilder, Error ScoperError, NameIdGen, Reader EntryPoint] r) =>
   ParserResult ->
   NonEmpty (Module 'Parsed 'ModuleTop) ->
   Sem r ScoperResult
@@ -70,14 +71,14 @@ scopeCheckExpression ::
   Sem r Expression
 scopeCheckExpression tab scope as = mapError (JuvixError @ScoperError) $ do
   snd
-    <$> runInfoTableBuilder
-      tab
-      ( runReader iniScopeParameters $
-          evalState iniScoperState $
-            evalState scope $
-              withLocalScope $
-                checkParseExpressionAtoms as
-      )
+    <$> ( ignoreHighlightBuilder
+            . runInfoTableBuilder tab
+            . runReader iniScopeParameters
+            . evalState iniScoperState
+            . evalState scope
+            . withLocalScope
+            $ checkParseExpressionAtoms as
+        )
   where
     iniScopeParameters :: ScopeParameters
     iniScopeParameters =

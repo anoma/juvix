@@ -5,6 +5,7 @@ module Juvix.Compiler.Concrete.Translation.FromParsed
   )
 where
 
+import Juvix.Compiler.Concrete.Data.Highlight.Input
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping
@@ -15,7 +16,7 @@ import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Prelude
 
 fromParsed ::
-  (Members '[Error JuvixError, Files, NameIdGen, Reader EntryPoint, PathResolver] r) =>
+  (Members '[HighlightBuilder, Error JuvixError, Files, NameIdGen, Reader EntryPoint, PathResolver] r) =>
   Parsed.ParserResult ->
   Sem r ScoperResult
 fromParsed pr = mapError (JuvixError @ScoperError) $ do
