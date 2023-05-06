@@ -55,5 +55,5 @@ runJuvixError m = do
     r@Right {} -> return r
     l@(Left err) -> do
       let errs = run (runReader defaultGenericOptions (genericError err)) ^. genericErrorIntervals
-      modify (set highlightErrors errs)
+      modify (over highlightErrors (errs ++))
       return l

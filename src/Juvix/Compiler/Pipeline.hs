@@ -225,10 +225,13 @@ regToMiniC' tab = do
 -- | It returns `ResolverState` so that we can retrieve the `juvix.yaml` files,
 -- which we require for `Scope` tests.
 runIOEither :: forall a. EntryPoint -> Sem PipelineEff a -> IO (Either JuvixError (ResolverState, a))
-runIOEither entry = fmap snd . runIOEitherHighlight entry
+runIOEither entry = fmap snd . runIOEitherHelper entry
 
-runIOEitherHighlight :: forall a. EntryPoint -> Sem PipelineEff a -> IO (HighlightInput, (Either JuvixError (ResolverState, a)))
-runIOEitherHighlight entry =
+runPipelineHighlight :: forall a. EntryPoint -> Sem PipelineEff a -> IO HighlightInput
+runPipelineHighlight entry = fmap fst . runIOEitherHelper entry
+
+runIOEitherHelper :: forall a. EntryPoint -> Sem PipelineEff a -> IO (HighlightInput, (Either JuvixError (ResolverState, a)))
+runIOEitherHelper entry =
   runM
     . runHighlightBuilder
     . runJuvixError

@@ -10,6 +10,7 @@ where
 
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Builtins.Effect
+import Juvix.Compiler.Concrete.Data.Highlight.Input
 import Juvix.Compiler.Internal.Language
 import Juvix.Compiler.Internal.Translation.FromAbstract.Data.Context
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking qualified as ArityChecking
@@ -56,6 +57,7 @@ typeCheckExpressionType exp = do
   table <- extendedTableReplArtifacts exp
   mapError (JuvixError @TypeCheckerError)
     $ runTypesTableArtifacts
+      . ignoreHighlightBuilder
       . runFunctionsTableArtifacts
       . runBuiltinsArtifacts
       . runNameIdGenArtifacts
@@ -78,7 +80,7 @@ inferExpressionType ::
 inferExpressionType exp = (^. typedType) <$> typeCheckExpressionType exp
 
 typeChecking ::
-  Members '[Error JuvixError, Builtins, NameIdGen] r =>
+  Members '[HighlightBuilder, Error JuvixError, Builtins, NameIdGen] r =>
   ArityChecking.InternalArityResult ->
   Sem r InternalTypedResult
 typeChecking res@ArityChecking.InternalArityResult {..} =

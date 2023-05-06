@@ -40,11 +40,11 @@ scopeCheck ::
   NonEmpty (Module 'Parsed 'ModuleTop) ->
   Sem r ScoperResult
 scopeCheck pr modules =
-  fmap mkResult $
-    runInfoTableBuilder emptyInfoTable $
-      runReader iniScopeParameters $
-        runState iniScoperState $
-          checkTopModules modules
+  fmap mkResult
+    . runInfoTableBuilder emptyInfoTable
+    . runReader iniScopeParameters
+    . runState iniScoperState
+    $ checkTopModules modules
   where
     iniScopeParameters :: ScopeParameters
     iniScopeParameters =
@@ -457,7 +457,14 @@ checkTypeSignature TypeSignature {..} = do
   sigName' <- bindFunctionSymbol _sigName
   sigDoc' <- mapM checkJudoc _sigDoc
   sigBody' <- mapM checkParseExpressionAtoms _sigBody
-  registerFunction @$> TypeSignature {_sigName = sigName', _sigType = sigType', _sigDoc = sigDoc', _sigBody = sigBody', ..}
+  registerFunction
+    @$> TypeSignature
+      { _sigName = sigName',
+        _sigType = sigType',
+        _sigDoc = sigDoc',
+        _sigBody = sigBody',
+        ..
+      }
 
 checkInductiveParameters ::
   forall r.

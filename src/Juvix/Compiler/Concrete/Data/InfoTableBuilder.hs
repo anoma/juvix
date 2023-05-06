@@ -22,8 +22,6 @@ makeSem ''InfoTableBuilder
 registerDoc :: Members '[HighlightBuilder] r => NameId -> Maybe (Judoc 'Scoped) -> Sem r ()
 registerDoc k md = modify (set (highlightDoc . at k) md)
 
--- The reason we have HiglightBuilder here is to minimize the number changes in
--- the type signatures of the scoper.
 toState :: Members '[HighlightBuilder] r => Sem (InfoTableBuilder ': r) a -> Sem (State InfoTable ': r) a
 toState = reinterpret $ \case
   RegisterAxiom d ->
