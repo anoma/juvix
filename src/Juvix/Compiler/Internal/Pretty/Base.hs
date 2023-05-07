@@ -93,18 +93,18 @@ instance PrettyCode Let where
     letExpression' <- ppCode (l ^. letExpression)
     return $ kwLet <+> letClauses' <+> kwIn <+> letExpression'
 
+ppMutual :: (Member (Reader Options) r, PrettyCode a) => NonEmpty a -> Sem r (Doc Ann)
+ppMutual = \case
+  b :| [] -> ppCode b
+  l -> do
+    b' <- vsep2 <$> mapM ppCode l
+    return (kwMutual <+> braces (line <> indent' b' <> line))
+
 instance PrettyCode LetClause where
   ppCode :: forall r. Member (Reader Options) r => LetClause -> Sem r (Doc Ann)
   ppCode = \case
     LetFunDef f -> ppCode f
-    LetMutualBlock b -> ppMutual b
-    where
-      ppMutual :: MutualBlock -> Sem r (Doc Ann)
-      ppMutual m@(MutualBlock b)
-        | [_] <- toList b = ppCode b
-        | otherwise = do
-            b' <- ppCode m
-            return (kwMutual <+> braces (line <> indent' b' <> line))
+    LetMutualBlock b -> ppMutual (b ^. mutualLet)
 
 instance PrettyCode Literal where
   ppCode =
@@ -226,14 +226,22 @@ instance PrettyCode AxiomDef where
     axiomType' <- ppCode _axiomType
     return $ kwAxiom <+> axiomName' <+> kwColon <+> axiomType'
 
+instance PrettyCode MutualStatement where
+  ppCode = \case
+    StatementInductive d -> ppCode d
+    StatementFunction d -> ppCode d
+
 instance PrettyCode MutualBlock where
   ppCode (MutualBlock funs) =
     vsep2 <$> mapM ppCode funs
 
+instance PrettyCode MutualBlockLet where
+  ppCode (MutualBlockLet funs) =
+    vsep2 <$> mapM ppCode funs
+
 instance PrettyCode Statement where
   ppCode = \case
-    StatementFunction f -> ppCode f
-    StatementInductive f -> ppCode f
+    StatementMutual f -> ppCode f
     StatementAxiom f -> ppCode f
     StatementInclude i -> ppCode i
     StatementModule i -> ppCode i

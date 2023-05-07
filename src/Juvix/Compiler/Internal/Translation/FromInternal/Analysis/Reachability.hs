@@ -34,10 +34,9 @@ goModule m = do
   where
     body = m ^. moduleBody
 
-goStatement :: Member (Reader NameDependencyInfo) r => Statement -> Sem r (Maybe Statement)
+goStatement :: forall r. Member (Reader NameDependencyInfo) r => Statement -> Sem r (Maybe Statement)
 goStatement s = case s of
-  StatementInductive i -> returnIfReachable (i ^. inductiveName) s
-  StatementFunction (MutualBlock (f :| _)) -> returnIfReachable (f ^. funDefName) s -- note that any function is reachable iff all are reachable
+  StatementMutual m -> fmap StatementMutual <$> goMutual m
   StatementAxiom ax -> returnIfReachable (ax ^. axiomName) s
   StatementInclude i -> do
     m <- goModule (i ^. includeModule)
@@ -45,3 +44,9 @@ goStatement s = case s of
   StatementModule m -> do
     m' <- StatementModule <$> goModule m
     returnIfReachable (m ^. moduleName) m'
+  where
+  -- note that the first mutual statement is reachable iff all are reachable
+  goMutual :: MutualBlock -> Sem r (Maybe MutualBlock)
+  goMutual b@(MutualBlock (m :| _)) = case m of
+    StatementFunction f -> returnIfReachable (f ^. funDefName) b
+    StatementInductive f -> returnIfReachable (f ^. inductiveName) b

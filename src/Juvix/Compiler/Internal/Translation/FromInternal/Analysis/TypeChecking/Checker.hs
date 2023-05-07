@@ -63,8 +63,7 @@ checkStatement ::
   Statement ->
   Sem r Statement
 checkStatement s = case s of
-  StatementFunction funs -> StatementFunction <$> runReader emptyLocalVars (checkTopMutualBlock funs)
-  StatementInductive ind -> StatementInductive <$> checkInductiveDef ind
+  StatementMutual mut -> StatementMutual <$> runReader emptyLocalVars (checkTopMutualBlock mut)
   StatementInclude i -> StatementInclude <$> checkInclude i
   StatementModule m -> StatementModule <$> checkModule m
   StatementAxiom ax -> do
@@ -134,11 +133,20 @@ checkInductiveDef InductiveDef {..} = runInferenceDef $ do
 withEmptyVars :: Sem (Reader LocalVars : r) a -> Sem r a
 withEmptyVars = runReader emptyLocalVars
 
+-- TODO should we register functions (type synonyms) first?
 checkTopMutualBlock ::
-  (Members '[HighlightBuilder, Reader LocalVars, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example, Builtins] r) =>
+  (Members '[HighlightBuilder, State NegativeTypeParameters, Reader EntryPoint, Reader LocalVars, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example, Builtins] r) =>
   MutualBlock ->
   Sem r MutualBlock
-checkTopMutualBlock (MutualBlock ds) = MutualBlock <$> runInferenceDefs (mapM checkFunctionDef ds)
+checkTopMutualBlock (MutualBlock ds) = MutualBlock <$> runInferenceDefs (mapM checkMutualStatement ds)
+
+checkMutualStatement ::
+  (Members '[HighlightBuilder, State NegativeTypeParameters, Reader EntryPoint, Inference, Reader LocalVars, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example, Builtins] r) =>
+  MutualStatement ->
+  Sem r MutualStatement
+checkMutualStatement = \case
+  StatementFunction f -> StatementFunction <$> checkFunctionDef f
+  StatementInductive f -> StatementInductive <$> checkInductiveDef f
 
 checkFunctionDef ::
   (Members '[HighlightBuilder, Reader LocalVars, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example, Builtins, Inference] r) =>
@@ -520,8 +528,8 @@ inferExpression' hint e = case e of
       LetFunDef f -> LetFunDef <$> checkFunctionDef f
       LetMutualBlock b -> LetMutualBlock <$> goMutualLet b
       where
-        goMutualLet :: MutualBlock -> Sem r MutualBlock
-        goMutualLet (MutualBlock fs) = MutualBlock <$> mapM checkFunctionDef fs
+        goMutualLet :: MutualBlockLet -> Sem r MutualBlockLet
+        goMutualLet (MutualBlockLet fs) = MutualBlockLet <$> mapM checkFunctionDef fs
 
     goHole :: Hole -> Sem r TypedExpression
     goHole h = do

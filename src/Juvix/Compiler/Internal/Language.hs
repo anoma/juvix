@@ -36,19 +36,28 @@ newtype ModuleBody = ModuleBody
   deriving stock (Data)
 
 data Statement
-  = StatementInductive InductiveDef
-  | StatementFunction MutualBlock
+  = StatementMutual MutualBlock
   | StatementAxiom AxiomDef
   | StatementInclude Include
   | StatementModule Module
   deriving stock (Data)
 
+data MutualStatement =
+  StatementInductive InductiveDef
+  | StatementFunction FunctionDef
+  deriving stock (Generic, Data)
+
 newtype MutualBlock = MutualBlock
-  { _mutualFunctions :: NonEmpty FunctionDef
+  { _mutualStatements :: NonEmpty MutualStatement
+  }
+  deriving stock (Generic, Data)
+
+newtype MutualBlockLet = MutualBlockLet
+  { _mutualLet :: NonEmpty FunctionDef
   }
   deriving stock (Eq, Generic, Data)
 
-instance Hashable MutualBlock
+instance Hashable MutualBlockLet
 
 data AxiomDef = AxiomDef
   { _axiomName :: AxiomName,
@@ -105,7 +114,7 @@ data TypedExpression = TypedExpression
 data LetClause
   = -- | Non-recursive let definition
     LetFunDef FunctionDef
-  | LetMutualBlock MutualBlock
+  | LetMutualBlock MutualBlockLet
   deriving stock (Eq, Generic, Data)
 
 instance Hashable LetClause
@@ -287,6 +296,7 @@ makeLenses ''Case
 makeLenses ''CaseBranch
 makeLenses ''Module
 makeLenses ''Let
+makeLenses ''MutualBlockLet
 makeLenses ''MutualBlock
 makeLenses ''Example
 makeLenses ''PatternArg
@@ -391,8 +401,8 @@ instance HasLoc FunctionClause where
 instance HasLoc FunctionDef where
   getLoc f = getLoc (f ^. funDefName) <> getLocSpan (f ^. funDefClauses)
 
-instance HasLoc MutualBlock where
-  getLoc (MutualBlock defs) = getLocSpan defs
+instance HasLoc MutualBlockLet where
+  getLoc (MutualBlockLet defs) = getLocSpan defs
 
 instance HasLoc LetClause where
   getLoc = \case

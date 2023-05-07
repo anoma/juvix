@@ -87,7 +87,7 @@ letFunctionDefs e =
     flattenClause :: LetClause -> NonEmpty FunctionDef
     flattenClause = \case
       LetFunDef f -> pure f
-      LetMutualBlock (MutualBlock fs) -> fs
+      LetMutualBlock (MutualBlockLet fs) -> fs
 
 -- | moduleName ↦ infoTable
 type Cache = HashMap Name InfoTable
@@ -105,18 +105,31 @@ buildTable1' m = do
     includes :: [Include]
     includes = [i | StatementInclude i <- ss]
 
+    mutuals :: [MutualStatement]
+    mutuals =
+      [ d
+        | StatementMutual (MutualBlock b) <- ss,
+          d <- toList b
+      ]
+
+    inductives :: [InductiveDef]
+    inductives =
+      [ d
+        | StatementInductive d <- mutuals
+      ]
+
     _infoInductives :: HashMap Name InductiveInfo
     _infoInductives =
       HashMap.fromList
         [ (d ^. inductiveName, InductiveInfo d)
-          | StatementInductive d <- ss
+          | d <- inductives
         ]
 
     _infoConstructors :: HashMap Name ConstructorInfo
     _infoConstructors =
       HashMap.fromList
         [ (c ^. inductiveConstructorName, ConstructorInfo params args ind builtin)
-          | StatementInductive d <- ss,
+          | d <- inductives,
             let ind = d ^. inductiveName
                 n = length (d ^. inductiveConstructors)
                 params = d ^. inductiveParameters
@@ -129,8 +142,7 @@ buildTable1' m = do
     _infoFunctions =
       HashMap.fromList $
         [ (f ^. funDefName, FunctionInfo f)
-          | StatementFunction (MutualBlock b) <- ss,
-            f <- toList b
+          | StatementFunction f <- mutuals
         ]
           <> [ (f ^. funDefName, FunctionInfo f)
                | s <- filter (not . isInclude) ss,

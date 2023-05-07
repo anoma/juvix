@@ -47,9 +47,8 @@ checkStatement ::
   Statement ->
   Sem r Statement
 checkStatement s = case s of
-  StatementFunction b -> StatementFunction <$> checkMutualBlock b
+  StatementMutual b -> StatementMutual <$> checkMutualBlock b
   StatementInclude i -> StatementInclude <$> checkInclude i
-  StatementInductive d -> StatementInductive <$> checkInductive d
   StatementAxiom a -> StatementAxiom <$> checkAxiom a
   StatementModule m -> StatementModule <$> checkModule m
 
@@ -91,11 +90,25 @@ checkAxiom a = do
   _axiomType <- withEmptyLocalVars (checkType (a ^. axiomType))
   return AxiomDef {..}
 
+checkMutualStatement ::
+  (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r) =>
+  MutualStatement ->
+  Sem r MutualStatement
+checkMutualStatement = \case
+  StatementFunction f -> StatementFunction <$> checkFunctionDef f
+  StatementInductive f -> StatementInductive <$> checkInductive f
+
+checkMutualBlockLet ::
+   (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r) =>
+   MutualBlockLet ->
+   Sem r MutualBlockLet
+checkMutualBlockLet (MutualBlockLet funs) = MutualBlockLet <$> mapM checkFunctionDef funs
+
 checkMutualBlock ::
   (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r) =>
   MutualBlock ->
   Sem r MutualBlock
-checkMutualBlock (MutualBlock funs) = MutualBlock <$> mapM checkFunctionDef funs
+checkMutualBlock (MutualBlock funs) = MutualBlock <$> mapM checkMutualStatement funs
 
 checkFunctionDef ::
   (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r) =>
@@ -381,7 +394,7 @@ checkLet ari l = do
     checkLetClause :: LetClause -> Sem r LetClause
     checkLetClause = \case
       LetFunDef f -> LetFunDef <$> checkFunctionDef f
-      LetMutualBlock f -> LetMutualBlock <$> checkMutualBlock f
+      LetMutualBlock f -> LetMutualBlock <$> checkMutualBlockLet f
 
 checkLambda ::
   forall r.
