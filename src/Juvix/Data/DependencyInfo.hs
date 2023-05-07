@@ -4,6 +4,7 @@ import Data.Graph qualified as Graph
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
 import Juvix.Prelude.Base
+import Juvix.Prelude.Pretty
 
 -- | DependencyInfo is polymorphic to anticipate future use with other identifier
 -- types in JuvixCore and further. The graph algorithms don't depend on the
@@ -19,6 +20,9 @@ data DependencyInfo n = DependencyInfo
   }
 
 makeLenses ''DependencyInfo
+
+instance Pretty n => Pretty (DependencyInfo n) where
+  pretty n = pretty (n ^. depInfoEdgeList)
 
 createDependencyInfo :: forall n. (Hashable n, Ord n) => HashMap n (HashSet n) -> HashSet n -> DependencyInfo n
 createDependencyInfo edges startNames =
