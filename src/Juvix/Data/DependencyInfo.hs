@@ -22,7 +22,10 @@ data DependencyInfo n = DependencyInfo
 makeLenses ''DependencyInfo
 
 instance Pretty n => Pretty (DependencyInfo n) where
-  pretty n = pretty (n ^. depInfoEdgeList)
+  pretty n = pretty (map helper (n ^. depInfoEdgeList))
+    where
+      helper :: (n, n, [n]) -> (n, [n])
+      helper (a, _, c) = (a, c)
 
 createDependencyInfo :: forall n. (Hashable n, Ord n) => HashMap n (HashSet n) -> HashSet n -> DependencyInfo n
 createDependencyInfo edges startNames =

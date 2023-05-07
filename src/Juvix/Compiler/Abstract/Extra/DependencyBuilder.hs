@@ -92,31 +92,37 @@ guardNotVisited n cont =
 goModule :: (Members '[Reader ExportsTable, State DependencyGraph, State StartNodes, State VisitedModules] r) => Module -> Sem r ()
 goModule m = do
   checkStartNode (m ^. moduleName)
-  mapM_ (goStatement (m ^. moduleName)) (m ^. (moduleBody . moduleStatements))
+  mapM_ (goStatement (m ^. moduleName)) (m ^. moduleBody . moduleStatements)
 
 goLocalModule :: (Members '[Reader ExportsTable, State DependencyGraph, State StartNodes, State VisitedModules] r) => Name -> Module -> Sem r ()
-goLocalModule mn m = do
-  addEdge (m ^. moduleName) mn
+goLocalModule parentModule m = do
+  addEdge (m ^. moduleName) parentModule
   goModule m
 
--- declarations in a module depend on the module, not the other way round (a
+-- Declarations in a module depend on the module, not the other way round (a
 -- module is reachable if at least one of the declarations in it is reachable)
-goStatement :: (Members '[Reader ExportsTable, State DependencyGraph, State StartNodes, State VisitedModules] r) => Name -> Statement -> Sem r ()
-goStatement modName = \case
-  StatementAxiom ax -> do
-    checkStartNode (ax ^. axiomName)
-    addEdge (ax ^. axiomName) modName
-    goExpression (Just (ax ^. axiomName)) (ax ^. axiomType)
-  StatementFunction f -> goTopFunctionDef modName f
+goStatement :: forall r. Members '[Reader ExportsTable, State DependencyGraph, State StartNodes, State VisitedModules] r => Name -> Statement -> Sem r ()
+goStatement parentModule = \case
+  StatementAxiom ax -> goAxiom ax
+  StatementFunction f -> goTopFunctionDef parentModule f
   StatementImport m -> guardNotVisited (m ^. moduleName) (goModule m)
-  StatementLocalModule m -> goLocalModule modName m
-  StatementInductive i -> do
-    checkStartNode (i ^. inductiveName)
-    checkBuiltinInductiveStartNode i
-    addEdge (i ^. inductiveName) modName
-    mapM_ (goFunctionParameter (Just (i ^. inductiveName))) (i ^. inductiveParameters)
-    goExpression (Just (i ^. inductiveName)) (i ^. inductiveType)
-    mapM_ (goConstructorDef (i ^. inductiveName)) (i ^. inductiveConstructors)
+  StatementLocalModule m -> goLocalModule parentModule m
+  StatementInductive i -> goInductive i
+  where
+    goAxiom :: AxiomDef -> Sem r ()
+    goAxiom ax = do
+      checkStartNode (ax ^. axiomName)
+      addEdge (ax ^. axiomName) parentModule
+      goExpression (Just (ax ^. axiomName)) (ax ^. axiomType)
+
+    goInductive :: InductiveDef -> Sem r ()
+    goInductive i = do
+      checkStartNode (i ^. inductiveName)
+      checkBuiltinInductiveStartNode i
+      addEdge (i ^. inductiveName) parentModule
+      mapM_ (goFunctionParameter (Just (i ^. inductiveName))) (i ^. inductiveParameters)
+      goExpression (Just (i ^. inductiveName)) (i ^. inductiveType)
+      mapM_ (goConstructorDef (i ^. inductiveName)) (i ^. inductiveConstructors)
 
 goTopFunctionDef :: (Members '[State DependencyGraph, State StartNodes, Reader ExportsTable] r) => Name -> FunctionDef -> Sem r ()
 goTopFunctionDef modName f = do

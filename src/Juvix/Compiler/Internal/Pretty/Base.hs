@@ -174,7 +174,7 @@ instance PrettyCode InductiveDef where
     params <- hsepMaybe <$> mapM ppCode (d ^. inductiveParameters)
     inductiveConstructors' <- mapM ppCode (d ^. inductiveConstructors)
     let rhs = indent' $ align $ concatWith (\a b -> a <> line <> kwPipe <+> b) inductiveConstructors'
-    return $ kwData <+> inductiveName' <+?> params <+> kwEquals <> line <> rhs
+    return $ kwInductive <+> inductiveName' <+?> params <+> kwEquals <> line <> rhs
 
 instance PrettyCode PatternArg where
   ppCode (PatternArg i n p) = do
@@ -244,7 +244,20 @@ instance PrettyCode Statement where
     StatementMutual f -> ppCode f
     StatementAxiom f -> ppCode f
     StatementInclude i -> ppCode i
-    StatementModule i -> ppCode i
+    StatementModule i -> ppLocalModule i
+
+ppLocalModule :: Member (Reader Options) r => Module -> Sem r (Doc Ann)
+ppLocalModule m = do
+  name' <- ppCode (m ^. moduleName)
+  body' <- indent' <$> ppCode (m ^. moduleBody)
+  return $
+      kwModule
+        <+> name'
+        <> kwSemicolon
+          <> line
+          <> body'
+          <> line
+          <> kwEnd
 
 instance PrettyCode ModuleBody where
   ppCode m = do
@@ -252,18 +265,17 @@ instance PrettyCode ModuleBody where
     return $ vsep2 everything
 
 instance PrettyCode Module where
+  ppCode :: Member (Reader Options) r => Module -> Sem r (Doc Ann)
   ppCode m = do
     name' <- ppCode (m ^. moduleName)
     body' <- ppCode (m ^. moduleBody)
     return $
       kwModule
         <+> name'
-        <+> kwWhere
+        <> kwSemicolon
           <> line
           <> line
           <> body'
-          <> line
-          <> kwEnd
           <> line
 
 ppPostExpression ::
