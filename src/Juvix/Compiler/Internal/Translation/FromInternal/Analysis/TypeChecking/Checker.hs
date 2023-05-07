@@ -138,7 +138,8 @@ checkTopMutualBlock ::
   (Members '[HighlightBuilder, State NegativeTypeParameters, Reader EntryPoint, Reader LocalVars, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example, Builtins] r) =>
   MutualBlock ->
   Sem r MutualBlock
-checkTopMutualBlock (MutualBlock ds) = MutualBlock <$> runInferenceDefs (mapM checkMutualStatement ds)
+checkTopMutualBlock (MutualBlock ds) =
+  MutualBlock <$> runInferenceDefs (mapM checkMutualStatement ds)
 
 checkMutualStatement ::
   (Members '[HighlightBuilder, State NegativeTypeParameters, Reader EntryPoint, Inference, Reader LocalVars, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example, Builtins] r) =>

@@ -1,11 +1,11 @@
 module LocalSynonym;
 
-open import Stdlib.Prelude;
+type Unit := unit : Unit;
 
-bool : Type;
-bool := Bool;
+myUnit : Type;
+myUnit := Unit;
 
 module L;
-  haha : bool;
-  haha := false;
+  haha : myUnit;
+  haha := unit;
 end;

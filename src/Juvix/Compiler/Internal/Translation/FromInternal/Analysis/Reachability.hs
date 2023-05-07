@@ -45,8 +45,8 @@ goStatement s = case s of
     m' <- StatementModule <$> goModule m
     returnIfReachable (m ^. moduleName) m'
   where
-  -- note that the first mutual statement is reachable iff all are reachable
-  goMutual :: MutualBlock -> Sem r (Maybe MutualBlock)
-  goMutual b@(MutualBlock (m :| _)) = case m of
-    StatementFunction f -> returnIfReachable (f ^. funDefName) b
-    StatementInductive f -> returnIfReachable (f ^. inductiveName) b
+    -- note that the first mutual statement is reachable iff all are reachable
+    goMutual :: MutualBlock -> Sem r (Maybe MutualBlock)
+    goMutual b@(MutualBlock (m :| _)) = case m of
+      StatementFunction f -> returnIfReachable (f ^. funDefName) b
+      StatementInductive f -> returnIfReachable (f ^. inductiveName) b

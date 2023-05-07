@@ -202,20 +202,20 @@ goMutualBlock ::
   Sem r ()
 goMutualBlock (Internal.MutualBlock m) = forM_ m goMutualStatement
   where
-  goMutualStatement :: Internal.MutualStatement -> Sem r ()
-  goMutualStatement = \case
-    Internal.StatementFunction f -> goFun f
-    Internal.StatementInductive i -> goInductiveDef i
-    where
-    goFun :: Internal.FunctionDef -> Sem r ()
-    goFun f = do
-      funWithSym <- withSym f
-      ty <- goFunctionDefIden funWithSym
-      goFunctionDef (funWithSym, ty)
-    withSym :: a -> Sem r (a, Symbol)
-    withSym x = do
-      sym <- freshSymbol
-      return (x, sym)
+    goMutualStatement :: Internal.MutualStatement -> Sem r ()
+    goMutualStatement = \case
+      Internal.StatementFunction f -> goFun f
+      Internal.StatementInductive i -> goInductiveDef i
+      where
+        goFun :: Internal.FunctionDef -> Sem r ()
+        goFun f = do
+          funWithSym <- withSym f
+          ty <- goFunctionDefIden funWithSym
+          goFunctionDef (funWithSym, ty)
+        withSym :: a -> Sem r (a, Symbol)
+        withSym x = do
+          sym <- freshSymbol
+          return (x, sym)
 
 goType ::
   forall r.

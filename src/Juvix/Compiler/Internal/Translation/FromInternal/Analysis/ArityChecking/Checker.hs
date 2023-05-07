@@ -99,9 +99,9 @@ checkMutualStatement = \case
   StatementInductive f -> StatementInductive <$> checkInductive f
 
 checkMutualBlockLet ::
-   (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r) =>
-   MutualBlockLet ->
-   Sem r MutualBlockLet
+  (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r) =>
+  MutualBlockLet ->
+  Sem r MutualBlockLet
 checkMutualBlockLet (MutualBlockLet funs) = MutualBlockLet <$> mapM checkFunctionDef funs
 
 checkMutualBlock ::

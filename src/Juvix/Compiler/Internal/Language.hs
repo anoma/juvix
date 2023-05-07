@@ -42,8 +42,8 @@ data Statement
   | StatementModule Module
   deriving stock (Data)
 
-data MutualStatement =
-  StatementInductive InductiveDef
+data MutualStatement
+  = StatementInductive InductiveDef
   | StatementFunction FunctionDef
   deriving stock (Generic, Data)
 
