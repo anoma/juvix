@@ -84,9 +84,8 @@ goModule m = mapM_ go (m ^. Internal.moduleBody . Internal.moduleStatements)
   where
     go :: Internal.Statement -> Sem r ()
     go = \case
-      Internal.StatementInductive d -> goInductiveDef d
       Internal.StatementAxiom a -> goAxiomInductive a >> goAxiomDef a
-      Internal.StatementFunction f -> goMutualBlock f
+      Internal.StatementMutual f -> goMutualBlock f
       Internal.StatementInclude i -> mapM_ go (i ^. Internal.includeModule . Internal.moduleBody . Internal.moduleStatements)
       Internal.StatementModule l -> goModule l
 
@@ -201,11 +200,18 @@ goMutualBlock ::
   (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader LocalModules] r) =>
   Internal.MutualBlock ->
   Sem r ()
-goMutualBlock m = do
-  funcsWithSym <- mapM withSym (m ^. Internal.mutualFunctions)
-  tys <- mapM goFunctionDefIden funcsWithSym
-  mapM_ goFunctionDef (zipExact (toList funcsWithSym) (toList tys))
+goMutualBlock (Internal.MutualBlock m) = forM_ m goMutualStatement
   where
+  goMutualStatement :: Internal.MutualStatement -> Sem r ()
+  goMutualStatement = \case
+    Internal.StatementFunction f -> goFun f
+    Internal.StatementInductive i -> goInductiveDef i
+    where
+    goFun :: Internal.FunctionDef -> Sem r ()
+    goFun f = do
+      funWithSym <- withSym f
+      ty <- goFunctionDefIden funWithSym
+      goFunctionDef (funWithSym, ty)
     withSym :: a -> Sem r (a, Symbol)
     withSym x = do
       sym <- freshSymbol
@@ -439,8 +445,8 @@ goLet l = goClauses (toList (l ^. Internal.letClauses))
               let name = f ^. Internal.funDefName . nameText
                   loc = f ^. Internal.funDefName . nameLoc
               return $ mkLet mempty (Binder name (Just loc) funTy) funBody rest
-          goMutual :: Internal.MutualBlock -> Sem r Node
-          goMutual (Internal.MutualBlock funs) = do
+          goMutual :: Internal.MutualBlockLet -> Sem r Node
+          goMutual (Internal.MutualBlockLet funs) = do
             let lfuns = toList funs
                 names = map (^. Internal.funDefName) lfuns
                 tys = map (^. Internal.funDefType) lfuns
