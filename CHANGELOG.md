@@ -4,6 +4,40 @@
 <img align="right" width="300" height="300" alt="Juvix Mascot" src="../assets/images/tara-smiling.svg" />
 </a>
 
+## [v0.3.3](https://github.com/anoma/juvix/tree/v0.3.3) (2023-05-08)
+
+[Full Changelog](https://github.com/anoma/juvix/compare/v0.3.2...v0.3.3)
+
+**Implemented enhancements:**
+
+- Update to latest stdlib [\#2048](https://github.com/anoma/juvix/pull/2048) ([paulcadman](https://github.com/paulcadman))
+- Support module imports in Juvix REPL [\#2029](https://github.com/anoma/juvix/pull/2029) ([paulcadman](https://github.com/paulcadman))
+- Make format command's filepath optional [\#2028](https://github.com/anoma/juvix/pull/2028) ([vrom911](https://github.com/vrom911))
+- format long lambda clause body on a new line [\#2015](https://github.com/anoma/juvix/pull/2015) ([paulcadman](https://github.com/paulcadman))
+- Support more paths [\#2000](https://github.com/anoma/juvix/pull/2000) ([janmasrovira](https://github.com/janmasrovira))
+- Add: pragma support [\#1997](https://github.com/anoma/juvix/pull/1997) ([lukaszcz](https://github.com/lukaszcz))
+
+**Merged pull requests:**
+
+- Fix pipeline setup in the repl [\#2046](https://github.com/anoma/juvix/pull/2046) ([janmasrovira](https://github.com/janmasrovira))
+- Fix HasExpressions ConstructorApp [\#2044](https://github.com/anoma/juvix/pull/2044) ([paulcadman](https://github.com/paulcadman))
+- Fix fromSource behaviour when both stdin and filename [\#2043](https://github.com/anoma/juvix/pull/2043) ([vrom911](https://github.com/vrom911))
+- Return endLine info in highlighting command [\#2042](https://github.com/anoma/juvix/pull/2042) ([vrom911](https://github.com/vrom911))
+- Enable self-application test [\#2041](https://github.com/anoma/juvix/pull/2041) ([janmasrovira](https://github.com/janmasrovira))
+- Add bank example [\#2037](https://github.com/anoma/juvix/pull/2037) ([janmasrovira](https://github.com/janmasrovira))
+- Substitute calls after lambda lifting [\#2031](https://github.com/anoma/juvix/pull/2031) ([janmasrovira](https://github.com/janmasrovira))
+- Add delimiter face [\#2027](https://github.com/anoma/juvix/pull/2027) ([janmasrovira](https://github.com/janmasrovira))
+- Propertly register top module name in scoper [\#2026](https://github.com/anoma/juvix/pull/2026) ([janmasrovira](https://github.com/janmasrovira))
+- Add judoc code annotation and face [\#2025](https://github.com/anoma/juvix/pull/2025) ([janmasrovira](https://github.com/janmasrovira))
+- Fix dependencies suggestion in missing module error [\#2024](https://github.com/anoma/juvix/pull/2024) ([paulcadman](https://github.com/paulcadman))
+- Remove docs related files [\#2023](https://github.com/anoma/juvix/pull/2023) ([jonaprieto](https://github.com/jonaprieto))
+- Improve formatting of comments [\#2022](https://github.com/anoma/juvix/pull/2022) ([janmasrovira](https://github.com/janmasrovira))
+- Support positive arity typealias in arity checker [\#2021](https://github.com/anoma/juvix/pull/2021) ([paulcadman](https://github.com/paulcadman))
+- Add format stdin smoke tests [\#2019](https://github.com/anoma/juvix/pull/2019) ([vrom911](https://github.com/vrom911))
+- Add `juvix clean` to remove project build artifact directory [\#2018](https://github.com/anoma/juvix/pull/2018) ([paulcadman](https://github.com/paulcadman))
+- Sync stdlib [\#2012](https://github.com/anoma/juvix/pull/2012) ([janmasrovira](https://github.com/janmasrovira))
+- Ide improvements [\#2009](https://github.com/anoma/juvix/pull/2009) ([janmasrovira](https://github.com/janmasrovira))
+
 ## [v0.3.2](https://github.com/anoma/juvix/tree/v0.3.2) (2023-04-18)
 
 [Full Changelog](https://github.com/anoma/juvix/compare/v0.3.1...v0.3.2)
