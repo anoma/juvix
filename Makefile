@@ -107,7 +107,11 @@ format:
 clang-format:
 	@cd runtime && ${MAKE} format
 
-JUVIXFILESTOFORMAT=$(shell find ./examples ./tests/positive -type d -name ".juvix-build" -prune -o -type f -name "*.juvix" -print)
+JUVIXFILESTOFORMAT=$(shell find  \
+	./examples  \
+	./tests/positive \
+	./tests/negative \
+	-type d -name ".juvix-build" -prune -o -type f -name "*.juvix" -print)
 JUVIXFORMATFLAGS?=--in-place
 JUVIXTYPECHECKFLAGS?=--only-errors
 
@@ -166,7 +170,7 @@ check-only:
 		&& ${MAKE} install \
 		&& ${MAKE} test \
 		&& ${MAKE} smoke \
-		&& ${MAKE} check-format-juvix-examples \
+		&& ${MAKE} check-format-juvix-files \
 		&& ${MAKE} typecheck-juvix-examples \
 		&& ${MAKE} check-ormolu \
 		&& export SKIP=ormolu,format-juvix-examples,typecheck-juvix-examples \
