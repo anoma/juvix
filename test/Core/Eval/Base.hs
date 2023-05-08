@@ -1,8 +1,12 @@
 module Core.Eval.Base where
 
 import Base
+import Data.Aeson
+import Data.Aeson.BetterErrors
+import Data.ByteString.Lazy qualified as B
 import Data.HashMap.Strict qualified as HashMap
 import Data.Text.IO qualified as TIO
+import Data.Text.Read
 import GHC.Base (seq)
 import Juvix.Compiler.Core.Data.InfoTable
 import Juvix.Compiler.Core.Error
@@ -16,37 +20,75 @@ import Juvix.Compiler.Core.Pretty
 import Juvix.Compiler.Core.Transformation
 import Juvix.Compiler.Core.Translation.FromSource
 
+data EvalMode = EvalModePlain | EvalModeJSON
+
+data EvalData = EvalData
+  { _evalDataInput :: [Text],
+    _evalDataOutput :: Text
+  }
+  deriving stock (Generic)
+
+makeLenses ''EvalData
+
+instance FromJSON EvalData where
+  parseJSON = toAesonParser id parseEvalData
+    where
+      parseEvalData :: Parse PragmaError EvalData
+      parseEvalData = do
+        _evalDataInput <- key "in" (eachInArray asText)
+        _evalDataOutput <- key "out" asText
+        return EvalData {..}
+
 coreEvalAssertion' ::
+  EvalMode ->
   InfoTable ->
   Path Abs File ->
   Path Abs File ->
   (String -> IO ()) ->
   Assertion
-coreEvalAssertion' tab mainFile expectedFile step =
+coreEvalAssertion' mode tab mainFile expectedFile step =
   length (fromText (ppPrint tab) :: String) `seq`
     case (tab ^. infoMain) >>= ((tab ^. identContext) HashMap.!?) of
       Just node -> do
-        withTempDir'
-          ( \dirPath -> do
-              let outputFile = dirPath <//> $(mkRelFile "out.out")
-              hout <- openFile (toFilePath outputFile) WriteMode
-              step "Evaluate"
-              r' <- doEval mainFile hout tab node
-              case r' of
-                Left err -> do
-                  hClose hout
-                  assertFailure (show (pretty err))
-                Right value -> do
-                  unless
-                    (Info.member kNoDisplayInfo (getInfo value))
-                    (hPutStrLn hout (ppPrint value))
-                  hClose hout
-                  actualOutput <- TIO.readFile (toFilePath outputFile)
-                  step "Compare expected and actual program output"
-                  expected <- TIO.readFile (toFilePath expectedFile)
-                  assertEqDiffText ("Check: EVAL output = " <> toFilePath expectedFile) actualOutput expected
-          )
+        d <- readEvalData
+        case d of
+          Left msg -> assertFailure ("Error reading expected file: " <> msg)
+          Right EvalData {..} ->
+            withTempDir'
+              ( \dirPath -> do
+                  let outputFile = dirPath <//> $(mkRelFile "out.out")
+                  hout <- openFile (toFilePath outputFile) WriteMode
+                  step "Evaluate"
+                  let args = map (mkConstant' . ConstInteger . fst . fromRight' . decimal) _evalDataInput
+                      node' = mkApps' node args
+                  r' <- doEval mainFile hout tab node'
+                  case r' of
+                    Left err -> do
+                      hClose hout
+                      assertFailure (show (pretty err))
+                    Right value -> do
+                      unless
+                        (Info.member kNoDisplayInfo (getInfo value))
+                        (hPutStrLn hout (ppPrint value))
+                      hClose hout
+                      actualOutput <- TIO.readFile (toFilePath outputFile)
+                      step "Compare expected and actual program output"
+                      assertEqDiffText ("Check: EVAL output = " <> toFilePath expectedFile) actualOutput _evalDataOutput
+              )
       Nothing -> assertFailure ("No main function registered in: " <> toFilePath mainFile)
+  where
+    readEvalData :: IO (Either String EvalData)
+    readEvalData = case mode of
+      EvalModePlain -> do
+        expected <- TIO.readFile (toFilePath expectedFile)
+        return $
+          Right $
+            EvalData
+              { _evalDataInput = [],
+                _evalDataOutput = expected
+              }
+      EvalModeJSON ->
+        fmap (over evalDataOutput (<> "\n")) . eitherDecode <$> B.readFile (toFilePath expectedFile)
 
 coreEvalAssertion ::
   Path Abs File ->
@@ -69,7 +111,7 @@ coreEvalAssertion mainFile expectedFile trans testTrans step = do
         Left err -> assertFailure (show (pretty (fromJuvixError @GenericError err)))
         Right tab -> do
           testTrans tab
-          coreEvalAssertion' tab mainFile expectedFile step
+          coreEvalAssertion' EvalModePlain tab mainFile expectedFile step
 
 coreEvalErrorAssertion :: Path Abs File -> (String -> IO ()) -> Assertion
 coreEvalErrorAssertion mainFile step = do

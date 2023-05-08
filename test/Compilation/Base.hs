@@ -25,7 +25,7 @@ compileAssertion mode mainFile expectedFile step = do
   case run $ runReader Core.defaultCoreOptions $ runError $ Core.toEval' tab of
     Left err -> assertFailure (show (pretty (fromJuvixError @GenericError err)))
     Right tab' -> do
-      let evalAssertion = coreEvalAssertion' tab' mainFile expectedFile step
+      let evalAssertion = coreEvalAssertion' EvalModePlain tab' mainFile expectedFile step
           compileAssertion' stdinText = coreCompileAssertion' tab' mainFile expectedFile stdinText step
       case mode of
         EvalOnly -> evalAssertion
