@@ -232,8 +232,7 @@ instance PrettyCode MutualStatement where
     StatementFunction d -> ppCode d
 
 instance PrettyCode MutualBlock where
-  ppCode (MutualBlock funs) =
-    vsep2 <$> mapM ppCode funs
+  ppCode (MutualBlock funs) = ppMutual funs
 
 instance PrettyCode MutualBlockLet where
   ppCode (MutualBlockLet funs) =

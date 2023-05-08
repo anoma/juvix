@@ -17,6 +17,7 @@ import Juvix.Compiler.Abstract.Extra.DependencyBuilder qualified as Abstract
 import Juvix.Compiler.Abstract.Language qualified as Abstract
 import Juvix.Compiler.Abstract.Translation.FromConcrete.Data.Context qualified as Abstract
 import Juvix.Compiler.Internal.Extra
+import Juvix.Compiler.Internal.Pretty.Base
 import Juvix.Compiler.Internal.Translation.FromAbstract.Analysis.Termination
 import Juvix.Compiler.Internal.Translation.FromAbstract.Data.Context
 import Juvix.Compiler.Pipeline.EntryPoint qualified as E
@@ -53,6 +54,7 @@ fromAbstract abstractResults = do
     )
   let abstractModules = abstractResults ^. Abstract.resultModules
       exportsTbl = abstractResults ^. Abstract.resultExports
+  traceM (prettyText depInfo)
   _resultModules' <-
     runReader exportsTbl $
       evalState
@@ -126,18 +128,17 @@ buildMutualBlocks ::
 buildMutualBlocks ss = do
   depInfo <- ask
   let scomponents :: [SCC Abstract.Name] = buildSCCs depInfo
+  traceM (prettyText (map flattenSCC scomponents))
   return (mapMaybe helper scomponents)
   where
     statementsByName :: HashMap Abstract.Name PreStatement
-    statementsByName =
-      HashMap.fromList
-        (mapMaybe mkAssoc ss)
+    statementsByName = HashMap.fromList (map mkAssoc ss)
       where
-        mkAssoc :: PreStatement -> Maybe (Abstract.Name, PreStatement)
+        mkAssoc :: PreStatement -> (Abstract.Name, PreStatement)
         mkAssoc s = case s of
-          PreInductiveDef i -> Just (i ^. inductiveName, s)
-          PreFunctionDef i -> Just (i ^. funDefName, s)
-          PreAxiomDef i -> Just (i ^. axiomName, s)
+          PreInductiveDef i -> (i ^. inductiveName, s)
+          PreFunctionDef i -> (i ^. funDefName, s)
+          PreAxiomDef i -> (i ^. axiomName, s)
     getStmt :: Abstract.Name -> Maybe PreStatement
     getStmt n = statementsByName ^. at n
     helper :: SCC Abstract.Name -> Maybe (SCC PreStatement)

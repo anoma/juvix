@@ -26,7 +26,7 @@ testDescr PosTest {..} =
       _testRoot = _dir,
       _testAssertion = Single $ do
         entryPoint <- defaultEntryPointCwdIO _file
-        (void . runIO' entryPoint) upToInternalTyped
+        (void . runIO' entryPoint) upToCore
     }
 
 --------------------------------------------------------------------------------
@@ -209,6 +209,10 @@ tests =
       "Type synonym inside let"
       $(mkRelDir "issue1879")
       $(mkRelFile "LetSynonym.juvix"),
+    posTest
+      "Mutually recursive type synonym and inductive type"
+      $(mkRelDir ".")
+      $(mkRelFile "MutualType.juvix"),
     posTest
       "Type synonym inside local module"
       $(mkRelDir ".")

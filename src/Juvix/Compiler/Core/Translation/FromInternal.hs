@@ -19,6 +19,24 @@ import Juvix.Data.Loc qualified as Loc
 import Juvix.Data.PPOutput
 import Juvix.Extra.Strings qualified as Str
 
+data PreInductiveDef = PreInductiveDef
+  { _preInductiveInternal :: Internal.InductiveDef,
+    _preInductiveInfo :: InductiveInfo
+  }
+
+data PreFunctionDef = PreFunctionDef
+  { _preFunInternal :: Internal.FunctionDef,
+    _preFunSym :: Symbol,
+    _preFunType :: Type
+  }
+
+data PreMutual = PreMutual
+  { _preInductives :: [PreInductiveDef],
+    _preFunctions :: [PreFunctionDef]
+  }
+
+makeLenses ''PreMutual
+
 unsupported :: Text -> a
 unsupported thing = error ("Internal to Core: Not yet supported: " <> thing)
 
@@ -78,12 +96,13 @@ goModule m = mapM_ go (m ^. Internal.moduleBody . Internal.moduleStatements)
       Internal.StatementMutual f -> goMutualBlock f
       Internal.StatementInclude i -> mapM_ go (i ^. Internal.includeModule . Internal.moduleBody . Internal.moduleStatements)
 
-goInductiveDef ::
+-- | predefine an inductive definition
+preInductiveDef ::
   forall r.
   (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable] r) =>
   Internal.InductiveDef ->
-  Sem r ()
-goInductiveDef i = do
+  Sem r PreInductiveDef
+preInductiveDef i = do
   sym <- freshSymbol
   let _inductiveName = i ^. Internal.inductiveName . nameText
       params =
@@ -113,6 +132,22 @@ goInductiveDef i = do
   -- The inductive needs to be registered before translating the constructors,
   -- because their types refer to the inductive
   registerInductive idx info
+  return
+    PreInductiveDef
+      { _preInductiveInfo = info,
+        _preInductiveInternal = i
+      }
+
+goInductiveDef ::
+  forall r.
+  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable] r) =>
+  PreInductiveDef ->
+  Sem r ()
+goInductiveDef PreInductiveDef {..} = do
+  let i = _preInductiveInternal
+      info = _preInductiveInfo
+      idx = mkIdentIndex (i ^. Internal.inductiveName)
+      sym = info ^. inductiveSymbol
   ctorInfos <- mapM (goConstructor sym) (i ^. Internal.inductiveConstructors)
   registerInductive idx info {_inductiveConstructors = map (^. constructorTag) ctorInfos}
 
@@ -181,40 +216,35 @@ goMutualBlock ::
   (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable] r) =>
   Internal.MutualBlock ->
   Sem r ()
-goMutualBlock (Internal.MutualBlock m) = forM_ m goMutualStatement
+goMutualBlock (Internal.MutualBlock m) = preMutual m >>= goMutual
   where
-    goMutualStatement :: Internal.MutualStatement -> Sem r ()
-    goMutualStatement = \case
-      Internal.StatementFunction f -> goFun f
-      Internal.StatementInductive i -> goInductiveDef i
+    preMutual :: NonEmpty Internal.MutualStatement -> Sem r PreMutual
+    preMutual = execState (PreMutual [] []) . mapM_ step
       where
-        goFun :: Internal.FunctionDef -> Sem r ()
-        goFun f = do
-          funWithSym <- withSym f
-          ty <- goFunctionDefIden funWithSym
-          goFunctionDef (funWithSym, ty)
-        withSym :: a -> Sem r (a, Symbol)
-        withSym x = do
-          sym <- freshSymbol
-          return (x, sym)
+        step :: Internal.MutualStatement -> Sem (State PreMutual ': r) ()
+        step = \case
+          Internal.StatementFunction f -> do
+            p <- preFunctionDef f
+            modify' (over preFunctions (p :))
+          Internal.StatementInductive i -> do
+            p <- preInductiveDef i
+            modify' (over preInductives (p :))
 
-goType ::
-  forall r.
-  (Members '[InfoTableBuilder, Reader Internal.InfoTable, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader IndexTable] r) =>
-  Internal.Expression ->
-  Sem r Type
-goType ty = do
-  normTy <- evalState InternalTyped.iniState (InternalTyped.strongNormalize' ty)
-  squashApps <$> goExpression normTy
+    goMutual :: PreMutual -> Sem r ()
+    goMutual PreMutual {..} = do
+      forM_ _preInductives goInductiveDef
+      forM_ _preFunctions goFunctionDef
 
-goFunctionDefIden ::
+preFunctionDef ::
   forall r.
   (Members '[InfoTableBuilder, Reader Internal.InfoTable, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable] r) =>
-  (Internal.FunctionDef, Symbol) ->
-  Sem r Type
-goFunctionDefIden (f, sym) = do
+  Internal.FunctionDef ->
+  Sem r PreFunctionDef
+preFunctionDef f = do
+  sym <- freshSymbol
   funTy <- runReader initIndexTable (goType (f ^. Internal.funDefType))
   let _identifierName = f ^. Internal.funDefName . nameText
+
       info =
         IdentifierInfo
           { _identifierName = normalizeBuiltinName (f ^. Internal.funDefBuiltin) (f ^. Internal.funDefName . nameText),
@@ -230,12 +260,16 @@ goFunctionDefIden (f, sym) = do
           }
   case f ^. Internal.funDefBuiltin of
     Just b
-      | isIgnoredBuiltin b ->
-          return funTy
+      | isIgnoredBuiltin b -> return ()
     _ -> do
       registerIdent (mkIdentIndex (f ^. Internal.funDefName)) info
       when (f ^. Internal.funDefName . Internal.nameText == Str.main) (registerMain sym)
-      return funTy
+  return
+    PreFunctionDef
+      { _preFunInternal = f,
+        _preFunSym = sym,
+        _preFunType = funTy
+      }
   where
     normalizeBuiltinName :: Maybe BuiltinFunction -> Text -> Text
     normalizeBuiltinName blt name = case blt of
@@ -247,11 +281,14 @@ goFunctionDefIden (f, sym) = do
 
 goFunctionDef ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable] r) =>
-  ((Internal.FunctionDef, Symbol), Type) ->
+  (Members '[InfoTableBuilder, Reader Internal.InfoTable, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable] r) =>
+  PreFunctionDef ->
   Sem r ()
-goFunctionDef ((f, sym), ty) = do
-  mbody <- case f ^. Internal.funDefBuiltin of
+goFunctionDef PreFunctionDef {..} = do
+  let f = _preFunInternal
+      sym = _preFunSym
+      ty = _preFunType
+  mbody <- case _preFunInternal ^. Internal.funDefBuiltin of
     Just b
       | isIgnoredBuiltin b -> return Nothing
       | otherwise -> Just <$> runReader initIndexTable (mkFunBody ty f)
@@ -262,7 +299,16 @@ goFunctionDef ((f, sym), ty) = do
     setIdentArgsInfo' :: Node -> Sem r ()
     setIdentArgsInfo' node = do
       let (is, _) = unfoldLambdas node
-      setIdentArgs sym (map (^. lambdaLhsBinder) is)
+      setIdentArgs _preFunSym (map (^. lambdaLhsBinder) is)
+
+goType ::
+  forall r.
+  (Members '[InfoTableBuilder, Reader Internal.InfoTable, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader IndexTable] r) =>
+  Internal.Expression ->
+  Sem r Type
+goType ty = do
+  normTy <- evalState InternalTyped.iniState (InternalTyped.strongNormalize' ty)
+  squashApps <$> goExpression normTy
 
 mkFunBody ::
   forall r.
