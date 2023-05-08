@@ -14,18 +14,23 @@ type NegativeTypeParameters = HashSet VarName
 
 type ErrorReference = Maybe Expression
 
+type TypeOfConstructor = Expression
+
 type RecursionLimit = Int
 
+type CheckPositivityEffects r =
+  Members
+    '[ Reader E.EntryPoint,
+       Reader InfoTable,
+       Error TypeCheckerError,
+       Inference,
+       State NegativeTypeParameters
+     ]
+    r
+
 checkPositivity ::
-  ( Members
-      '[ Reader E.EntryPoint,
-         Reader InfoTable,
-         Error TypeCheckerError,
-         Inference,
-         State NegativeTypeParameters
-       ]
-      r
-  ) =>
+  forall r.
+  CheckPositivityEffects r =>
   InductiveDef ->
   Sem r ()
 checkPositivity ty = do
@@ -41,13 +46,13 @@ checkPositivity ty = do
 
 checkStrictlyPositiveOccurrences ::
   forall r.
-  (Members '[Reader InfoTable, Error TypeCheckerError, State NegativeTypeParameters, Inference] r) =>
+  CheckPositivityEffects r =>
   InductiveDef ->
   ConstrName ->
   Name ->
   RecursionLimit ->
   ErrorReference ->
-  Expression ->
+  TypeOfConstructor ->
   Sem r ()
 checkStrictlyPositiveOccurrences ty ctorName name recLimit ref =
   strongNormalize >=> helper False
@@ -62,16 +67,16 @@ checkStrictlyPositiveOccurrences ty ctorName name recLimit ref =
 
     helper :: Bool -> Expression -> Sem r ()
     helper inside expr = case expr of
-      ExpressionIden i -> helperIden i
-      ExpressionFunction (Function l r) -> helper True (l ^. paramType) >> helper inside r
       ExpressionApplication tyApp -> helperApp tyApp
-      ExpressionLiteral {} -> return ()
+      ExpressionCase l -> helperCase l
+      ExpressionFunction (Function l r) -> helper True (l ^. paramType) >> helper inside r
       ExpressionHole {} -> return ()
-      ExpressionUniverse {} -> return ()
-      ExpressionSimpleLambda l -> helperSimpleLambda l
+      ExpressionIden i -> helperIden i
       ExpressionLambda l -> helperLambda l
       ExpressionLet l -> helperLet l
-      ExpressionCase l -> helperCase l
+      ExpressionLiteral {} -> return ()
+      ExpressionSimpleLambda l -> helperSimpleLambda l
+      ExpressionUniverse {} -> return ()
       where
         helperCase :: Case -> Sem r ()
         helperCase l = do
@@ -115,7 +120,8 @@ checkStrictlyPositiveOccurrences ty ctorName name recLimit ref =
 
         helperIden :: Iden -> Sem r ()
         helperIden = \case
-          IdenInductive ty' -> when (inside && name == ty') (strictlyPositivityError expr)
+          IdenInductive ty' ->
+            when (inside && name == ty') (strictlyPositivityError expr)
           IdenVar name'
             | not inside -> return ()
             | name == name' -> strictlyPositivityError expr
@@ -129,36 +135,37 @@ checkStrictlyPositiveOccurrences ty ctorName name recLimit ref =
           case hdExpr of
             ExpressionIden (IdenInductive ty') -> do
               when (inside && name == ty') (strictlyPositivityError expr)
-              InductiveInfo indTy' <- lookupInductive ty'
+              InductiveInfo indType' <- lookupInductive ty'
 
               -- We now need to know whether `name` negatively occurs at `indTy'`
               -- or not. The way to know is by checking that the type ty'
               -- preserves the positivity condition, i.e., its type parameters
               -- are no negative.
 
-              let paramsTy' = indTy' ^. inductiveParameters
-              helperInductiveApp indTy' (zip paramsTy' (toList args))
+              let paramsTy' = indType' ^. inductiveParameters
+              helperInductiveApp indType' (zip paramsTy' (toList args))
             _ -> return ()
 
         helperInductiveApp :: InductiveDef -> [(InductiveParameter, Expression)] -> Sem r ()
-        helperInductiveApp typ = \case
-          ((InductiveParameter pName, arg) : ps) -> do
+        helperInductiveApp indType' = \case
+          ((InductiveParameter pName', tyArg) : ps) -> do
             negParms :: NegativeTypeParameters <- get
-            when (varOrInductiveInExpression name arg) $ do
-              when (HashSet.member pName negParms) (strictlyPositivityError arg)
+            when (varOrInductiveInExpression name tyArg) $ do
+              when (HashSet.member pName' negParms) (strictlyPositivityError tyArg)
               when (recLimit > 0) $
-                forM_ (typ ^. inductiveConstructors) $ \ctor' ->
+                forM_ (indType' ^. inductiveConstructors) $ \ctor' -> do
+                  let ctorName' = ctor' ^. inductiveConstructorName
+                  let errorRef = fromMaybe tyArg ref
                   mapM_
                     ( checkStrictlyPositiveOccurrences
-                        ty
-                        ctorName
-                        pName
+                        indType'
+                        ctorName'
+                        pName'
                         (recLimit - 1)
-                        (Just (fromMaybe arg ref))
+                        (Just errorRef)
                     )
                     (ctor' ^. inductiveConstructorParameters)
-                    >> modify (HashSet.insert pName)
-            helperInductiveApp ty ps
+            helperInductiveApp indType' ps
           [] -> return ()
 
     strictlyPositivityError :: Expression -> Sem r ()
