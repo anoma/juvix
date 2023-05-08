@@ -24,7 +24,9 @@ uniqueName txt sym = txt <> "_" <> show sym
 -- and separate from symbol IDs. We might need fixed special tags in Core for
 -- common "builtin" constructors, e.g., unit, nat, so that the code generator
 -- can treat them specially.
-data Tag = BuiltinTag BuiltinDataTag | UserTag Word
+data Tag
+  = BuiltinTag BuiltinDataTag
+  | UserTag Word
   deriving stock (Eq, Generic, Ord, Show)
 
 instance Hashable Tag
