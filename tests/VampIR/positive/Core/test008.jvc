@@ -1,0 +1,21 @@
+-- higher-order inductive types
+
+def intToBool : Int -> Bool := \(x : Int) if x = 0 then false else true;
+def boolToInt : Bool -> Int := \(x : Bool) if x then 1 else 0;
+
+type enum {
+  opt0 : enum;
+  opt1 : Bool -> enum;
+  opt2 : Bool -> (Bool -> Bool) -> enum;
+  opt3 : Bool -> (Bool -> Bool -> Bool) -> Bool -> enum;
+};
+
+\(x : Int) \(y : Int)
+boolToInt (
+  (\(e : enum) case e of {
+    opt0 := false;
+    opt1 b := b;
+    opt2 b f := f b;
+    opt3 b1 f b2 := f b1 b2;
+  }) (opt3 (intToBool x) (\(x : Bool) \(y : Bool) if y then false else x) (intToBool y))
+)

@@ -1,0 +1,9 @@
+-- let
+
+\(a : Int) \(b : Int)
+let x : Int := a in
+let x : Int := x + let x : Int := b in x in
+let x : Int := x * x in
+let y : Int := x + b in
+let z : Int := x + y in
+x + y + z

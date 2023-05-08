@@ -1,0 +1,3 @@
+-- basic arithmetic
+
+\(x : Int) \(y : Int) \(z : Int) x + y * z

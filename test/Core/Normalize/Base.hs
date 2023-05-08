@@ -21,8 +21,10 @@ coreNormalizeAssertion mainFile expectedFile step = do
     Left err -> assertFailure (show (pretty err))
     Right (_, Nothing) -> assertFailure "Empty program"
     Right (tabIni, Just node) -> do
+      step "Transform"
       let tab = setupMainFunction tabIni node
-      case run $ runReader defaultCoreOptions $ runError @JuvixError $ applyTransformations (toEvalTransformations ++ [LetRecLifting]) tab of
+          transforms = toEvalTransformations ++ [LetRecLifting, LetFolding, UnrollRecursion]
+      case run $ runReader defaultCoreOptions $ runError @JuvixError $ applyTransformations transforms tab of
         Left err -> assertFailure (show (pretty (fromJuvixError @GenericError err)))
         Right tab' -> do
           step "Normalize"
