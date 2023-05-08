@@ -10,8 +10,6 @@ import Juvix.Compiler.Abstract.Language qualified as Abstract
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Data.Context qualified as Concrete
 import Juvix.Compiler.Concrete.Translation.FromSource.Data.Context qualified as Concrete
--- import Juvix.Compiler.Concrete.Translation.FromParsed qualified as Concrete
--- import Juvix.Compiler.Concrete.Translation.FromSource qualified as Concrete
 import Juvix.Compiler.Pipeline.EntryPoint qualified as E
 import Juvix.Prelude
 
