@@ -1,0 +1,5 @@
+-- not function
+
+def intToBool : Int -> Bool := \(x : Int) if x = 0 then false else true;
+
+\(x : Int) if intToBool x then 0 else 1
