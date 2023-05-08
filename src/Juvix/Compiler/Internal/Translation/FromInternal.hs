@@ -5,6 +5,8 @@ module Juvix.Compiler.Internal.Translation.FromInternal
     typeCheckExpression,
     arityCheckExpression,
     inferExpressionType,
+    arityCheckInclude,
+    typeCheckInclude,
   )
 where
 
@@ -47,6 +49,17 @@ arityCheckExpression exp = do
       . runNameIdGenArtifacts
     $ ArityChecking.inferReplExpression exp
 
+arityCheckInclude ::
+  Members '[Error JuvixError, State Artifacts] r =>
+  Include ->
+  Sem r Include
+arityCheckInclude i = do
+  let table = buildTable [i ^. includeModule]
+  mapError (JuvixError @ArityChecking.ArityCheckerError)
+    $ runReader table
+      . runNameIdGenArtifacts
+    $ ArityChecking.checkInclude i
+
 typeCheckExpressionType ::
   forall r.
   (Members '[Error JuvixError, State Artifacts] r) =>
@@ -70,6 +83,23 @@ typeCheckExpression ::
   Expression ->
   Sem r Expression
 typeCheckExpression exp = (^. typedExpression) <$> typeCheckExpressionType exp
+
+typeCheckInclude ::
+  Members '[Reader EntryPoint, Error JuvixError, State Artifacts] r =>
+  Include ->
+  Sem r Include
+typeCheckInclude i = do
+  let table = buildTable [i ^. includeModule]
+  modify (set artifactInternalTypedTable table)
+  mapError (JuvixError @TypeCheckerError)
+    $ runTypesTableArtifacts
+      . runFunctionsTableArtifacts
+      . runBuiltinsArtifacts
+      . runNameIdGenArtifacts
+      . ignoreOutput @Example
+      . runReader table
+      . withEmptyVars
+    $ checkInclude i
 
 inferExpressionType ::
   (Members '[Error JuvixError, State Artifacts] r) =>

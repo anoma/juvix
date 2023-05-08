@@ -14,7 +14,6 @@ import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Compiler.Concrete.Data.InfoTableBuilder
 import Juvix.Compiler.Concrete.Data.Name qualified as N
 import Juvix.Compiler.Concrete.Data.Scope
-import Juvix.Compiler.Concrete.Data.Scope qualified as S
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Extra qualified as P
 import Juvix.Compiler.Concrete.Language
@@ -58,25 +57,24 @@ scopeCheck pr modules =
           _resultScoperTable = st,
           _resultModules = ms,
           _resultExports = exp,
-          _resultScope = scoperSt ^. scoperScope
+          _resultScope = scoperSt ^. scoperScope,
+          _resultScoperState = scoperSt
         }
 
 scopeCheckExpression ::
   forall r.
-  (Members '[Error JuvixError, NameIdGen] r) =>
+  (Members '[Error JuvixError, NameIdGen, State Scope] r) =>
   InfoTable ->
-  S.Scope ->
   ExpressionAtoms 'Parsed ->
   Sem r Expression
-scopeCheckExpression tab scope as = mapError (JuvixError @ScoperError) $ do
+scopeCheckExpression tab as = mapError (JuvixError @ScoperError) $ do
   snd
     <$> runInfoTableBuilder
       tab
       ( runReader iniScopeParameters $
           evalState iniScoperState $
-            evalState scope $
-              withLocalScope $
-                checkParseExpressionAtoms as
+            withLocalScope $
+              checkParseExpressionAtoms as
       )
   where
     iniScopeParameters :: ScopeParameters
@@ -91,6 +89,20 @@ checkParseExpressionAtoms' ::
   ExpressionAtoms 'Parsed ->
   Sem r Expression
 checkParseExpressionAtoms' = checkExpressionAtoms >=> parseExpressionAtoms
+
+scopeCheckImport ::
+  forall r.
+  Members '[Error JuvixError, InfoTableBuilder, NameIdGen, State Scope, Reader ScopeParameters, State ScoperState] r =>
+  Import 'Parsed ->
+  Sem r (Import 'Scoped)
+scopeCheckImport i = mapError (JuvixError @ScoperError) $ checkImport i
+
+scopeCheckOpenModule ::
+  forall r.
+  Members '[Error JuvixError, InfoTableBuilder, NameIdGen, State Scope, Reader ScopeParameters, State ScoperState] r =>
+  OpenModule 'Parsed ->
+  Sem r (OpenModule 'Scoped)
+scopeCheckOpenModule i = mapError (JuvixError @ScoperError) $ checkOpenModule i
 
 freshVariable :: Members '[NameIdGen, State ScoperFixities, State Scope, State ScoperState] r => Symbol -> Sem r S.Symbol
 freshVariable = freshSymbol S.KNameLocal
@@ -316,7 +328,7 @@ lookInExport sym remaining e = case remaining of
 -- modules due to nesting.
 lookupQualifiedSymbol ::
   forall r.
-  Members '[State Scope, State ScoperState] r =>
+  Members '[State Scope] r =>
   ([Symbol], Symbol) ->
   Sem r [SymbolEntry]
 lookupQualifiedSymbol (path, sym) = do

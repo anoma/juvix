@@ -64,5 +64,8 @@ toState = reinterpret $ \case
 runInfoTableBuilder :: Sem (InfoTableBuilder ': r) a -> Sem r (InfoTable, a)
 runInfoTableBuilder = runState emptyInfoTable . toState
 
+runInfoTableBuilder' :: InfoTable -> Sem (InfoTableBuilder ': r) a -> Sem r (InfoTable, a)
+runInfoTableBuilder' t = runState t . toState
+
 ignoreInfoTableBuilder :: Sem (InfoTableBuilder ': r) a -> Sem r a
 ignoreInfoTableBuilder = fmap snd . runInfoTableBuilder

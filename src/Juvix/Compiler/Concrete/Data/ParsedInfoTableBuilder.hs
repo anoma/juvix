@@ -1,18 +1,4 @@
-module Juvix.Compiler.Concrete.Data.ParsedInfoTableBuilder
-  ( InfoTableBuilder,
-    registerLiteral,
-    registerDelimiter,
-    registerKeyword,
-    registerJudocText,
-    registerPragmas,
-    registerSpaceSpan,
-    registerModule,
-    moduleVisited,
-    visitModule,
-    runParserInfoTableBuilder,
-    module Juvix.Compiler.Concrete.Data.ParsedInfoTable,
-  )
-where
+module Juvix.Compiler.Concrete.Data.ParsedInfoTableBuilder where
 
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
@@ -108,10 +94,9 @@ build st =
 registerItem' :: Members '[State BuilderState] r => ParsedItem -> Sem r ()
 registerItem' i = modify' (over stateItems (i :))
 
-runParserInfoTableBuilder :: Sem (InfoTableBuilder ': r) a -> Sem r (InfoTable, a)
-runParserInfoTableBuilder =
-  fmap (first build)
-    . runState iniState
+runParserInfoTableBuilder' :: BuilderState -> Sem (InfoTableBuilder ': r) a -> Sem r (BuilderState, a)
+runParserInfoTableBuilder' s =
+  runState s
     . reinterpret
       ( \case
           ModuleVisited i -> HashSet.member i <$> gets (^. stateVisited)
@@ -129,3 +114,8 @@ runParserInfoTableBuilder =
                     _parsedTag = ParsedTagComment
                   }
       )
+
+runParserInfoTableBuilder :: Sem (InfoTableBuilder ': r) a -> Sem r (BuilderState, InfoTable, a)
+runParserInfoTableBuilder m = do
+  (builderState, x) <- runParserInfoTableBuilder' iniState m
+  return (builderState, build builderState, x)

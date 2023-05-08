@@ -39,7 +39,7 @@ fromSource ::
   EntryPoint ->
   Sem r ParserResult
 fromSource e = mapError (JuvixError @ParserError) $ do
-  (_resultTable, _resultModules) <- runParserInfoTableBuilder (runReader e getParsedModuleTops)
+  (_resultBuilderState, _resultTable, _resultModules) <- runParserInfoTableBuilder (runReader e getParsedModuleTops)
   let _resultEntry = e
   return ParserResult {..}
   where
@@ -78,6 +78,11 @@ fromSource e = mapError (JuvixError @ParserError) $ do
               return txt
           | otherwise = readFile' fp
 
+data ReplInput
+  = ReplExpression (ExpressionAtoms 'Parsed)
+  | ReplImport (Import 'Parsed)
+  | ReplOpenImport (OpenModule 'Parsed)
+
 expressionFromTextSource ::
   Members '[Error JuvixError, NameIdGen] r =>
   Path Abs File ->
@@ -88,6 +93,27 @@ expressionFromTextSource fp txt = mapError (JuvixError @ParserError) $ do
   case exp of
     Left e -> throw e
     Right exp' -> return exp'
+
+replInputFromTextSource ::
+  Members '[Error JuvixError, NameIdGen, Files, PathResolver, InfoTableBuilder] r =>
+  Path Abs File ->
+  Text ->
+  Sem r ReplInput
+replInputFromTextSource fp txt = mapError (JuvixError @ParserError) $ runReplInputParser fp txt
+
+runReplInputParser ::
+  Members '[Files, NameIdGen, Error ParserError, PathResolver, InfoTableBuilder] r =>
+  Path Abs File ->
+  Text ->
+  Sem r ReplInput
+runReplInputParser fileName input = do
+  m <-
+    evalState (Nothing @ParsedPragmas) $
+      evalState (Nothing @(Judoc 'Parsed)) $
+        P.runParserT replInput (toFilePath fileName) input
+  case m of
+    Left err -> throw (ErrMegaparsec (MegaparsecError err))
+    Right r -> return r
 
 runModuleParser :: Members '[Error ParserError, Files, PathResolver, NameIdGen, InfoTableBuilder] r => Path Abs File -> Text -> Sem r (Either ParserError (Module 'Parsed 'ModuleTop))
 runModuleParser fileName input = do
@@ -124,8 +150,8 @@ runExpressionParser fileName input = do
         evalState (Nothing @(Judoc 'Parsed)) $
           P.runParserT parseExpressionAtoms (toFilePath fileName) input
   case m of
-    (_, Left err) -> return (Left (ErrMegaparsec (MegaparsecError err)))
-    (_, Right r) -> return (Right r)
+    (_, _, Left err) -> return (Left (ErrMegaparsec (MegaparsecError err)))
+    (_, _, Right r) -> return (Right r)
 
 -- | The first pipe is optional, and thus we need a `Maybe`. The rest of the elements are guaranted to be given a `Just`.
 pipeSep1 :: Member InfoTableBuilder r => (Irrelevant (Maybe KeywordRef) -> ParsecS r a) -> ParsecS r (NonEmpty a)
@@ -171,6 +197,13 @@ topModuleDef = do
                     _wrongTopModuleNameActualPath = actualPath
                   }
             )
+
+replInput :: forall r. Members '[Files, PathResolver, InfoTableBuilder, JudocStash, NameIdGen, Error ParserError, State (Maybe ParsedPragmas)] r => ParsecS r ReplInput
+replInput =
+  P.label "<repl input>" $
+    (ReplExpression <$> parseExpressionAtoms)
+      <|> (ReplImport <$> import_)
+      <|> (ReplOpenImport <$> openModule)
 
 --------------------------------------------------------------------------------
 -- Symbols and names

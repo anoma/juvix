@@ -17,21 +17,16 @@ import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
 import Juvix.Data.NameKind
 import Juvix.Prelude
 
-newtype ModulesCache = ModulesCache
-  {_cachedModules :: HashMap S.NameId Abstract.TopModule}
-
-makeLenses ''ModulesCache
-
 unsupported :: Text -> a
 unsupported msg = error $ msg <> "Scoped to Abstract: not yet supported"
 
 fromConcrete :: (Members '[Error JuvixError, Builtins, NameIdGen] r) => Scoper.ScoperResult -> Sem r AbstractResult
 fromConcrete _resultScoper =
   mapError (JuvixError @ScoperError) $ do
-    (_resultTable, _resultModules) <-
+    (_resultTable, (_resultModulesCache, _resultModules)) <-
       runInfoTableBuilder $
         runReader @Pragmas mempty $
-          evalState (ModulesCache mempty) $
+          runState (ModulesCache mempty) $
             mapM goTopModule ms
     let _resultExports = _resultScoper ^. Scoper.resultExports
     return AbstractResult {..}
@@ -40,6 +35,18 @@ fromConcrete _resultScoper =
 
 fromConcreteExpression :: (Members '[Error JuvixError, NameIdGen] r) => Scoper.Expression -> Sem r Abstract.Expression
 fromConcreteExpression = mapError (JuvixError @ScoperError) . ignoreInfoTableBuilder . runReader @Pragmas mempty . goExpression
+
+fromConcreteImport ::
+  Members '[Error JuvixError, NameIdGen, Builtins, InfoTableBuilder, State ModulesCache] r =>
+  Scoper.Import 'Scoped ->
+  Sem r Abstract.TopModule
+fromConcreteImport = mapError (JuvixError @ScoperError) . runReader @Pragmas mempty . goImport
+
+fromConcreteOpenImport ::
+  Members '[Error JuvixError, NameIdGen, Builtins, InfoTableBuilder, State ModulesCache] r =>
+  Scoper.OpenModule 'Scoped ->
+  Sem r (Maybe Abstract.TopModule)
+fromConcreteOpenImport = mapError (JuvixError @ScoperError) . runReader @Pragmas mempty . goOpenModule'
 
 goTopModule ::
   (Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ModulesCache] r) =>
@@ -146,6 +153,13 @@ goModuleBody ss' = do
         sigs :: [Indexed (TypeSignature 'Scoped)]
         sigs = [Indexed i t | (Indexed i (StatementTypeSignature t)) <- ss]
 
+goImport ::
+  forall r.
+  (Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, State ModulesCache, Reader Pragmas] r) =>
+  Import 'Scoped ->
+  Sem r Abstract.TopModule
+goImport t = goModule (t ^. importModule . moduleRefModule)
+
 goStatement ::
   forall r.
   (Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ModulesCache] r) =>
@@ -154,7 +168,7 @@ goStatement ::
 goStatement (Indexed idx s) =
   fmap (Indexed idx) <$> case s of
     StatementAxiom d -> Just . Abstract.StatementAxiom <$> goAxiom d
-    StatementImport t -> Just . Abstract.StatementImport <$> goModule (t ^. importModule . moduleRefModule)
+    StatementImport t -> Just . Abstract.StatementImport <$> goImport t
     StatementOperator {} -> return Nothing
     StatementOpenModule o -> goOpenModule o
     StatementInductive i -> Just . Abstract.StatementInductive <$> goInductive i
@@ -162,19 +176,24 @@ goStatement (Indexed idx s) =
     StatementTypeSignature {} -> return Nothing
     StatementFunctionClause {} -> return Nothing
 
+goOpenModule' ::
+  forall r.
+  (Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, State ModulesCache, Reader Pragmas] r) =>
+  OpenModule 'Scoped ->
+  Sem r (Maybe Abstract.TopModule)
+goOpenModule' o
+  | isJust (o ^. openModuleImportKw) =
+      case o ^. openModuleName of
+        ModuleRef' (SModuleTop :&: m) -> Just <$> goModule (m ^. moduleRefModule)
+        _ -> impossible
+  | otherwise = return Nothing
+
 goOpenModule ::
   forall r.
   (Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ModulesCache] r) =>
   OpenModule 'Scoped ->
   Sem r (Maybe Abstract.Statement)
-goOpenModule o
-  | isJust (o ^. openModuleImportKw) =
-      case o ^. openModuleName of
-        ModuleRef' (SModuleTop :&: m) ->
-          Just . Abstract.StatementImport
-            <$> goModule (m ^. moduleRefModule)
-        _ -> impossible
-  | otherwise = return Nothing
+goOpenModule o = fmap Abstract.StatementImport <$> goOpenModule' o
 
 goLetFunctionDef ::
   (Members '[InfoTableBuilder, Reader Pragmas, Error ScoperError] r) =>
