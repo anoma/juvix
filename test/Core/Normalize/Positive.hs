@@ -46,5 +46,45 @@ tests =
       "Test002: pattern matching"
       $(mkRelDir ".")
       $(mkRelFile "test002.jvc")
-      $(mkRelFile "data/test002.json")
+      $(mkRelFile "data/test002.json"),
+    PosTest
+      "Test003: inductive types"
+      $(mkRelDir ".")
+      $(mkRelFile "test003.jvc")
+      $(mkRelFile "data/test003.json"),
+    PosTest
+      "Test004: definitions"
+      $(mkRelDir ".")
+      $(mkRelFile "test004.jvc")
+      $(mkRelFile "data/test004.json"),
+    PosTest
+      "Test005: basic arithmetic"
+      $(mkRelDir ".")
+      $(mkRelFile "test005.jvc")
+      $(mkRelFile "data/test005.json"),
+    PosTest
+      "Test006: arithmetic"
+      $(mkRelDir ".")
+      $(mkRelFile "test006.jvc")
+      $(mkRelFile "data/test006.json"),
+    PosTest
+      "Test007: single-constructor inductive types"
+      $(mkRelDir ".")
+      $(mkRelFile "test007.jvc")
+      $(mkRelFile "data/test007.json"),
+    PosTest
+      "Test008: higher-order inductive types"
+      $(mkRelDir ".")
+      $(mkRelFile "test008.jvc")
+      $(mkRelFile "data/test008.json"),
+    PosTest
+      "Test009: comparisons"
+      $(mkRelDir ".")
+      $(mkRelFile "test009.jvc")
+      $(mkRelFile "data/test009.json"),
+    PosTest
+      "Test010: let"
+      $(mkRelDir ".")
+      $(mkRelFile "test010.jvc")
+      $(mkRelFile "data/test010.json")
   ]

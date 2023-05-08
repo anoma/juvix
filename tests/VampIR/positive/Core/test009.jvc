@@ -1,0 +1,4 @@
+-- comparisons
+
+\(a : Int) \(b : Int) \(c : Int)
+(\(x : Int) if 0 <= x then if 0 = c then 7 else 1 else b + 2) a
