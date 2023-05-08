@@ -244,20 +244,6 @@ instance PrettyCode Statement where
     StatementMutual f -> ppCode f
     StatementAxiom f -> ppCode f
     StatementInclude i -> ppCode i
-    StatementModule i -> ppLocalModule i
-
-ppLocalModule :: Member (Reader Options) r => Module -> Sem r (Doc Ann)
-ppLocalModule m = do
-  name' <- ppCode (m ^. moduleName)
-  body' <- indent' <$> ppCode (m ^. moduleBody)
-  return $
-      kwModule
-        <+> name'
-        <> kwSemicolon
-          <> line
-          <> body'
-          <> line
-          <> kwEnd
 
 instance PrettyCode ModuleBody where
   ppCode m = do
@@ -272,7 +258,7 @@ instance PrettyCode Module where
     return $
       kwModule
         <+> name'
-        <> kwSemicolon
+          <> kwSemicolon
           <> line
           <> line
           <> body'

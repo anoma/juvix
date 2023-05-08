@@ -39,7 +39,6 @@ data Statement
   = StatementMutual MutualBlock
   | StatementAxiom AxiomDef
   | StatementInclude Include
-  | StatementModule Module
   deriving stock (Data)
 
 data MutualStatement

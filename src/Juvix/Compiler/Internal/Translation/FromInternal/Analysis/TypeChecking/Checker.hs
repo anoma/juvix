@@ -65,7 +65,6 @@ checkStatement ::
 checkStatement s = case s of
   StatementMutual mut -> StatementMutual <$> runReader emptyLocalVars (checkTopMutualBlock mut)
   StatementInclude i -> StatementInclude <$> checkInclude i
-  StatementModule m -> StatementModule <$> checkModule m
   StatementAxiom ax -> do
     registerNameIdType (ax ^. axiomName . nameId) (ax ^. axiomType)
     return s

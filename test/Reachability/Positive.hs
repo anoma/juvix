@@ -49,7 +49,6 @@ getNames m = concatMap getDeclName (m ^. (Internal.moduleBody . Internal.moduleS
       Internal.StatementMutual (Internal.MutualBlock f) -> map getMutualName (toList f)
       Internal.StatementAxiom ax -> [ax ^. (Internal.axiomName . Internal.nameText)]
       Internal.StatementInclude i -> getNames (i ^. Internal.includeModule)
-      Internal.StatementModule l -> getNames l
     getMutualName :: Internal.MutualStatement -> Text
     getMutualName = \case
       Internal.StatementFunction f -> f ^. Internal.funDefName . Internal.nameText

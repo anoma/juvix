@@ -162,17 +162,16 @@ buildTable1' m = do
         ]
 
     ss :: [Statement]
-    ss = flattenModule m
+    ss = m ^. moduleBody . moduleStatements
 
 -- | Returns all statements in a module, including those in local modules
-flattenModule :: Module -> [Statement]
-flattenModule m = concatMap go (m ^. moduleBody . moduleStatements)
-  where
-    go :: Statement -> [Statement]
-    go = \case
-      StatementModule l -> flattenModule l
-      s -> [s]
-
+-- flattenModule :: Module -> [Statement]
+-- flattenModule m = concatMap go (m ^. moduleBody . moduleStatements)
+--   where
+--     go :: Statement -> [Statement]
+--     go = \case
+--       StatementModule l -> flattenModule l
+--       s -> [s]
 lookupConstructor :: (Member (Reader InfoTable) r) => Name -> Sem r ConstructorInfo
 lookupConstructor f = HashMap.lookupDefault impossible f <$> asks (^. infoConstructors)
 

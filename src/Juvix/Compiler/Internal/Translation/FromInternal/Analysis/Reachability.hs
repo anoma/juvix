@@ -41,9 +41,6 @@ goStatement s = case s of
   StatementInclude i -> do
     m <- goModule (i ^. includeModule)
     return (Just (StatementInclude i {_includeModule = m}))
-  StatementModule m -> do
-    m' <- StatementModule <$> goModule m
-    returnIfReachable (m ^. moduleName) m'
   where
     -- note that the first mutual statement is reachable iff all are reachable
     goMutual :: MutualBlock -> Sem r (Maybe MutualBlock)

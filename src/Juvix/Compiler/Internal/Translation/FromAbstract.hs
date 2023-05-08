@@ -22,6 +22,11 @@ import Juvix.Compiler.Internal.Translation.FromAbstract.Data.Context
 import Juvix.Compiler.Pipeline.EntryPoint qualified as E
 import Juvix.Prelude
 
+data PreStatement
+  = PreFunctionDef FunctionDef
+  | PreInductiveDef InductiveDef
+  | PreAxiomDef AxiomDef
+
 newtype TranslationState = TranslationState
   { -- | Top modules are supposed to be included at most once.
     _translationStateIncluded :: HashSet Abstract.TopModuleName
@@ -104,40 +109,38 @@ goModule m = do
 
 buildLetMutualBlocks ::
   Members '[Reader NameDependencyInfo] r =>
-  [Abstract.FunctionDef] ->
-  Sem r [SCC Abstract.FunctionDef]
-buildLetMutualBlocks = fmap (map (fmap fromStmt)) . buildMutualBlocks . map Abstract.StatementFunction
+  [FunctionDef] ->
+  Sem r [SCC FunctionDef]
+buildLetMutualBlocks = fmap (map (fmap fromStmt)) . buildMutualBlocks . map PreFunctionDef
   where
-    fromStmt :: Abstract.Statement -> Abstract.FunctionDef
+    fromStmt :: PreStatement -> FunctionDef
     fromStmt = \case
-      Abstract.StatementFunction f -> f
+      PreFunctionDef f -> f
       _ -> impossible
 
 -- | `StatementInclude`s are no included in the result
 buildMutualBlocks ::
   Members '[Reader NameDependencyInfo] r =>
-  [Abstract.Statement] ->
-  Sem r [SCC Abstract.Statement]
+  [PreStatement] ->
+  Sem r [SCC PreStatement]
 buildMutualBlocks ss = do
   depInfo <- ask
   let scomponents :: [SCC Abstract.Name] = buildSCCs depInfo
   return (mapMaybe helper scomponents)
   where
-    statementsByName :: HashMap Abstract.Name Abstract.Statement
+    statementsByName :: HashMap Abstract.Name PreStatement
     statementsByName =
       HashMap.fromList
         (mapMaybe mkAssoc ss)
       where
-        mkAssoc :: Abstract.Statement -> Maybe (Abstract.Name, Abstract.Statement)
+        mkAssoc :: PreStatement -> Maybe (Abstract.Name, PreStatement)
         mkAssoc s = case s of
-          Abstract.StatementImport {} -> Nothing
-          Abstract.StatementInductive i -> Just (i ^. Abstract.inductiveName, s)
-          Abstract.StatementFunction i -> Just (i ^. Abstract.funDefName, s)
-          Abstract.StatementAxiom i -> Just (i ^. Abstract.axiomName, s)
-          Abstract.StatementLocalModule i -> Just (i ^. Abstract.moduleName, s)
-    getStmt :: Abstract.FunctionName -> Maybe Abstract.Statement
+          PreInductiveDef i -> Just (i ^. inductiveName, s)
+          PreFunctionDef i -> Just (i ^. funDefName, s)
+          PreAxiomDef i -> Just (i ^. axiomName, s)
+    getStmt :: Abstract.Name -> Maybe PreStatement
     getStmt n = statementsByName ^. at n
-    helper :: SCC Abstract.Name -> Maybe (SCC Abstract.Statement)
+    helper :: SCC Abstract.Name -> Maybe (SCC PreStatement)
     helper = nonEmptySCC . fmap getStmt
       where
         nonEmptySCC :: SCC (Maybe a) -> Maybe (SCC a)
@@ -148,44 +151,54 @@ buildMutualBlocks ss = do
 unsupported :: Text -> a
 unsupported thing = error ("Abstract to Internal: Not yet supported: " <> thing)
 
+-- | Note that it ignores import statements
+goDefinition ::
+  forall r.
+  Members '[Reader ExportsTable, Reader NameDependencyInfo, State TranslationState, NameIdGen] r =>
+  Abstract.Statement ->
+  Sem r [PreStatement]
+goDefinition = \case
+  Abstract.StatementLocalModule m -> concatMapM goDefinition (m ^. Abstract.moduleBody . Abstract.moduleStatements)
+  Abstract.StatementInductive i -> pure . PreInductiveDef <$> goInductiveDef i
+  Abstract.StatementFunction i -> pure . PreFunctionDef <$> goFunctionDef i
+  Abstract.StatementAxiom a -> pure . PreAxiomDef <$> goAxiomDef a
+  Abstract.StatementImport {} -> return []
+
 goModuleBody ::
   forall r.
   Members '[Reader ExportsTable, Reader NameDependencyInfo, State TranslationState, NameIdGen] r =>
   Abstract.ModuleBody ->
   Sem r ModuleBody
 goModuleBody (Abstract.ModuleBody stmts) = do
-  sccs <- buildMutualBlocks stmts
+  preDefs <- concatMapM goDefinition stmts
+  sccs <- buildMutualBlocks preDefs
   let imports :: [Abstract.TopModule] = [t | Abstract.StatementImport t <- stmts]
+      statements' = map goSCC sccs
   imports' <- map StatementInclude <$> mapMaybeM goImport imports
-  statements' <- mapM goSCC sccs
   return
     ModuleBody
       { _moduleStatements = imports' <> statements'
       }
   where
-    goSCC :: SCC Abstract.Statement -> Sem r Statement
+    goSCC :: SCC PreStatement -> Statement
     goSCC = \case
       AcyclicSCC s -> goAcyclic s
       CyclicSCC c -> goCyclic (nonEmpty' c)
       where
-        goCyclic :: NonEmpty Abstract.Statement -> Sem r Statement
-        goCyclic c = do
-          r :: Maybe (NonEmpty MutualStatement) <- sequence <$> mapM goMutual c
-          return (maybe impossible (StatementMutual . MutualBlock) r)
+        goCyclic :: NonEmpty PreStatement -> Statement
+        goCyclic c = StatementMutual (MutualBlock (goMutual <$> c))
           where
-            goMutual :: Abstract.Statement -> Sem r (Maybe MutualStatement)
+            goMutual :: PreStatement -> MutualStatement
             goMutual = \case
-              Abstract.StatementInductive i -> Just . StatementInductive <$> goInductiveDef i
-              Abstract.StatementFunction i -> Just . StatementFunction <$> goFunctionDef i
-              _ -> return Nothing
+              PreInductiveDef i -> StatementInductive i
+              PreFunctionDef i -> StatementFunction i
+              _ -> impossible
 
-        goAcyclic :: Abstract.Statement -> Sem r Statement
+        goAcyclic :: PreStatement -> Statement
         goAcyclic = \case
-          Abstract.StatementInductive i -> one . StatementInductive <$> goInductiveDef i
-          Abstract.StatementFunction i -> one . StatementFunction <$> goFunctionDef i
-          Abstract.StatementAxiom i -> StatementAxiom <$> goAxiomDef i
-          Abstract.StatementLocalModule m -> StatementModule <$> goModule m
-          Abstract.StatementImport {} -> impossible
+          PreInductiveDef i -> one (StatementInductive i)
+          PreFunctionDef i -> one (StatementFunction i)
+          PreAxiomDef i -> StatementAxiom i
           where
             one :: MutualStatement -> Statement
             one = StatementMutual . MutualBlock . pure
@@ -432,16 +445,16 @@ goCaseBranch b = do
 goLet :: forall r. (Members '[NameIdGen, Reader NameDependencyInfo] r) => Abstract.Let -> Sem r Let
 goLet l = do
   _letExpression <- goExpression (l ^. Abstract.letExpression)
-  mutualBlocks <- buildLetMutualBlocks funDefs
-  _letClauses <- nonEmpty' <$> mapM goLetBlock mutualBlocks
+  mutualBlocks <- mapM goFunctionDef funDefs >>= buildLetMutualBlocks
+  let _letClauses = nonEmpty' (map goLetBlock mutualBlocks)
   return Let {..}
   where
     funDefs :: [Abstract.FunctionDef]
     funDefs = [f | Abstract.LetFunDef f <- toList (l ^. Abstract.letClauses)]
-    goLetBlock :: SCC Abstract.FunctionDef -> Sem r LetClause
+    goLetBlock :: SCC FunctionDef -> LetClause
     goLetBlock = \case
-      AcyclicSCC f -> LetFunDef <$> goFunctionDef f
-      CyclicSCC m -> LetMutualBlock . MutualBlockLet <$> mapM goFunctionDef (nonEmpty' m)
+      AcyclicSCC f -> LetFunDef f
+      CyclicSCC m -> LetMutualBlock (MutualBlockLet (nonEmpty' m))
 
 goInductiveParameter :: Abstract.FunctionParameter -> Sem r InductiveParameter
 goInductiveParameter f =

@@ -50,7 +50,6 @@ checkStatement s = case s of
   StatementMutual b -> StatementMutual <$> checkMutualBlock b
   StatementInclude i -> StatementInclude <$> checkInclude i
   StatementAxiom a -> StatementAxiom <$> checkAxiom a
-  StatementModule m -> StatementModule <$> checkModule m
 
 checkInductive :: forall r. (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r) => InductiveDef -> Sem r InductiveDef
 checkInductive d = do
