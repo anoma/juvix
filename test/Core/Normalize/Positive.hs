@@ -91,5 +91,20 @@ tests =
       "Test011: functions returning functions with variable capture"
       $(mkRelDir ".")
       $(mkRelFile "test011.jvc")
-      $(mkRelFile "data/test011.json")
+      $(mkRelFile "data/test011.json"),
+    PosTest
+      "Test012: partial application"
+      $(mkRelDir ".")
+      $(mkRelFile "test012.jvc")
+      $(mkRelFile "data/test012.json"),
+    PosTest
+      "Test013: mid-square hashing (unrolled)"
+      $(mkRelDir ".")
+      $(mkRelFile "test013.jvc")
+      $(mkRelFile "data/test013.json"),
+    PosTest
+      "Test014: recursion"
+      $(mkRelDir ".")
+      $(mkRelFile "test014.jvc")
+      $(mkRelFile "data/test014.json")
   ]

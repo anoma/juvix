@@ -26,6 +26,7 @@ data TransformationId
 
 data PipelineId
   = PipelineEval
+  | PipelineNormalize
   | PipelineGeb
   | PipelineStripped
   deriving stock (Data, Bounded, Enum)
@@ -54,6 +55,9 @@ toTypecheckTransformations = [MatchToCase]
 toEvalTransformations :: [TransformationId]
 toEvalTransformations = [EtaExpandApps, MatchToCase, NatToPrimInt, IntToPrimInt, ConvertBuiltinTypes, LetFolding]
 
+toNormalizeTransformations :: [TransformationId]
+toNormalizeTransformations = toEvalTransformations ++ [LetRecLifting, LetFolding, UnrollRecursion]
+
 toStrippedTransformations :: [TransformationId]
 toStrippedTransformations =
   toEvalTransformations ++ [CheckExec, LambdaLetRecLifting, LetFolding, TopEtaExpand, MoveApps, RemoveTypeArgs]
@@ -64,5 +68,6 @@ toGebTransformations = toEvalTransformations ++ [CheckGeb, LetRecLifting, LetFol
 pipeline :: PipelineId -> [TransformationId]
 pipeline = \case
   PipelineEval -> toEvalTransformations
+  PipelineNormalize -> toNormalizeTransformations
   PipelineGeb -> toGebTransformations
   PipelineStripped -> toStrippedTransformations
