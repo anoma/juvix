@@ -146,7 +146,7 @@ fromInternalInclude i = do
     . runFunctionsTableArtifacts
     . readerTypesTableArtifacts
     . runReader Core.initIndexTable
-    $ Core.goTopModule (i ^. Internal.includeModule)
+    $ Core.goModule (i ^. Internal.includeModule)
 
 fromInternalExpression :: Members '[State Artifacts] r => Internal.Expression -> Sem r Core.Node
 fromInternalExpression exp = do
