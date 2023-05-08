@@ -40,6 +40,11 @@ runCommand opts = do
               embed (putStrLn "|            Eval              |")
               embed (putStrLn "--------------------------------")
               Eval.evalAndPrint opts tab' node
+          | project opts ^. coreReadNormalize -> do
+              embed (putStrLn "--------------------------------")
+              embed (putStrLn "|         Normalize            |")
+              embed (putStrLn "--------------------------------")
+              Eval.normalizeAndPrint opts tab' node
           | otherwise -> return ()
     sinputFile :: AppPath File
     sinputFile = project opts ^. coreReadInputFile

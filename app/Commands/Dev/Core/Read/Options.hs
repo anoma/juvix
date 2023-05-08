@@ -13,6 +13,7 @@ data CoreReadOptions = CoreReadOptions
     _coreReadShowArgsNum :: Bool,
     _coreReadNoDisambiguate :: Bool,
     _coreReadEval :: Bool,
+    _coreReadNormalize :: Bool,
     _coreReadNoPrint :: Bool,
     _coreReadInputFile :: AppPath File
   }
@@ -62,6 +63,11 @@ parseCoreReadOptions = do
     switch
       ( long "eval"
           <> help "evaluate after the transformation"
+      )
+  _coreReadNormalize <-
+    switch
+      ( long "normalize"
+          <> help "normalize after the transformation"
       )
   _coreReadTransformations <- optTransformationIds
   _coreReadInputFile <- parseInputJuvixCoreFile
