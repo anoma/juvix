@@ -16,11 +16,14 @@ import Juvix.Compiler.Backend.C qualified as C
 import Juvix.Compiler.Backend.Geb qualified as Geb
 import Juvix.Compiler.Builtins
 import Juvix.Compiler.Concrete.Data.Highlight.Input
+import Juvix.Compiler.Concrete.Data.ParsedInfoTableBuilder.BuilderState qualified as Concrete
 import Juvix.Compiler.Concrete.Data.Scope
+import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Translation.FromParsed qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver qualified as PathResolver
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Data.Context qualified as Scoped
+import Juvix.Compiler.Concrete.Translation.FromSource qualified as P
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
 import Juvix.Compiler.Core qualified as Core
 import Juvix.Compiler.Core.Translation.Stripped.FromCore qualified as Stripped
@@ -38,80 +41,6 @@ import Juvix.Prelude
 type PipelineEff = '[PathResolver, Reader EntryPoint, Files, NameIdGen, Builtins, Error JuvixError, HighlightBuilder, Embed IO]
 
 type TopPipelineEff = '[PathResolver, Reader EntryPoint, Files, NameIdGen, Builtins, State Artifacts, Error JuvixError, HighlightBuilder, Embed IO]
-
-arityCheckExpression ::
-  Members '[Error JuvixError, State Artifacts] r =>
-  Path Abs File ->
-  Text ->
-  Sem r Internal.Expression
-arityCheckExpression fp txt = do
-  mainScope <- fromJust <$> gets (^. artifactMainModuleScope)
-  scopeTable <- gets (^. artifactScopeTable)
-  ( runNameIdGenArtifacts
-      . runBuiltinsArtifacts
-    )
-    $ Parser.expressionFromTextSource fp txt
-      >>= Scoper.scopeCheckExpression scopeTable mainScope
-      >>= Abstract.fromConcreteExpression
-      >>= Internal.fromAbstractExpression
-      >>= Internal.arityCheckExpression
-
-inferExpression ::
-  Members '[Error JuvixError, State Artifacts] r =>
-  Path Abs File ->
-  Text ->
-  Sem r Internal.Expression
-inferExpression fp txt =
-  ( runNameIdGenArtifacts
-      . runBuiltinsArtifacts
-  )
-    $ arityCheckExpression fp txt
-      >>= Internal.inferExpressionType
-
-compileExpression ::
-  Members '[Error JuvixError, State Artifacts] r =>
-  Path Abs File ->
-  Text ->
-  Sem r Core.Node
-compileExpression fp txt =
-  ( runNameIdGenArtifacts
-      . runBuiltinsArtifacts
-  )
-    $ arityCheckExpression fp txt
-      >>= Internal.typeCheckExpression
-      >>= fromInternalExpression
-
-fromInternalExpression :: Members '[State Artifacts] r => Internal.Expression -> Sem r Core.Node
-fromInternalExpression exp = do
-  typedTable <- gets (^. artifactInternalTypedTable)
-  runReader typedTable
-    . tmpCoreInfoTableBuilderArtifacts
-    . runFunctionsTableArtifacts
-    . readerTypesTableArtifacts
-    . runReader Core.initIndexTable
-    $ Core.goExpression exp
-
-compileExpressionIO ::
-  Members '[State Artifacts, Embed IO] r =>
-  Path Abs File ->
-  Text ->
-  Sem r (Either JuvixError Core.Node)
-compileExpressionIO fp txt =
-  runError
-    . runNameIdGenArtifacts
-    . runBuiltinsArtifacts
-    $ compileExpression fp txt
-
-inferExpressionIO ::
-  Members '[State Artifacts, Embed IO] r =>
-  Path Abs File ->
-  Text ->
-  Sem r (Either JuvixError Internal.Expression)
-inferExpressionIO fp txt =
-  runError
-    . runNameIdGenArtifacts
-    . runBuiltinsArtifacts
-    $ inferExpression fp txt
 
 --------------------------------------------------------------------------------
 -- Workflows
@@ -306,27 +235,40 @@ corePipelineIOEither entry = do
                 . Internal.resultAbstract
                 . Abstract.resultScoper
 
+          parserResult :: P.ParserResult
+          parserResult = scopedResult ^. Scoped.resultParserResult
+
           resultScoperTable :: Scoped.InfoTable
           resultScoperTable = scopedResult ^. Scoped.resultScoperTable
 
           mainModuleScope_ :: Scope
           mainModuleScope_ = Scoped.mainModuleSope scopedResult
+
+          abstractResult :: Abstract.AbstractResult
+          abstractResult = typedResult ^. Typed.resultInternalArityResult . Arity.resultInternalResult . Internal.resultAbstract
        in Right $
             foldl'
               (flip ($))
               art
               [ set artifactMainModuleScope (Just mainModuleScope_),
+                set artifactParsing (parserResult ^. P.resultBuilderState),
+                set artifactAbstractInfoTable (abstractResult ^. Abstract.resultTable),
                 set artifactInternalTypedTable typedTable,
                 set artifactCoreTable coreTable,
                 set artifactScopeTable resultScoperTable,
+                set artifactScopeExports (scopedResult ^. Scoped.resultExports),
                 set artifactTypes typesTable,
-                set artifactFunctions functionsTable
+                set artifactFunctions functionsTable,
+                set artifactAbstractModuleCache (abstractResult ^. Abstract.resultModulesCache),
+                set artifactScoperState (scopedResult ^. Scoped.resultScoperState)
               ]
   where
     initialArtifacts :: Artifacts
     initialArtifacts =
       Artifacts
-        { _artifactMainModuleScope = Nothing,
+        { _artifactParsing = Concrete.iniState,
+          _artifactAbstractInfoTable = Abstract.emptyInfoTable,
+          _artifactMainModuleScope = Nothing,
           _artifactInternalTypedTable = mempty,
           _artifactTypes = mempty,
           _artifactResolver = PathResolver.iniResolverState,
@@ -334,5 +276,9 @@ corePipelineIOEither entry = do
           _artifactFunctions = mempty,
           _artifactCoreTable = Core.emptyInfoTable,
           _artifactScopeTable = Scoped.emptyInfoTable,
-          _artifactBuiltins = iniBuiltins
+          _artifactBuiltins = iniBuiltins,
+          _artifactScopeExports = mempty,
+          _artifactInternalTranslationState = Internal.TranslationState mempty,
+          _artifactAbstractModuleCache = Abstract.ModulesCache mempty,
+          _artifactScoperState = Scoper.iniScoperState
         }

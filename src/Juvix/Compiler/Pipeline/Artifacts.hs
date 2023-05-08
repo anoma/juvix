@@ -5,13 +5,21 @@
 -- `runStateLikeArtifacts` wrapper.
 module Juvix.Compiler.Pipeline.Artifacts where
 
+import Juvix.Compiler.Abstract.Data.InfoTableBuilder qualified as Abstract
+import Juvix.Compiler.Abstract.Translation.FromConcrete qualified as Abstract
 import Juvix.Compiler.Builtins
 import Juvix.Compiler.Concrete.Data.InfoTable qualified as Scoped
+import Juvix.Compiler.Concrete.Data.InfoTableBuilder qualified as Scoped
+import Juvix.Compiler.Concrete.Data.ParsedInfoTableBuilder (BuilderState)
+import Juvix.Compiler.Concrete.Data.ParsedInfoTableBuilder qualified as Concrete
 import Juvix.Compiler.Concrete.Data.Scope
+import Juvix.Compiler.Concrete.Data.Scope qualified as S
+import Juvix.Compiler.Concrete.Data.Scope qualified as Scoped
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver
 import Juvix.Compiler.Core.Data.InfoTableBuilder qualified as Core
 import Juvix.Compiler.Internal.Data.InfoTable qualified as Internal
 import Juvix.Compiler.Internal.Language qualified as Internal
+import Juvix.Compiler.Internal.Translation.FromAbstract qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Prelude
@@ -19,17 +27,25 @@ import Juvix.Prelude
 -- | `Artifacts` contains enough information so that the pipeline can be
 -- restarted while preserving existing state.
 data Artifacts = Artifacts
-  { -- Scoping
+  { _artifactParsing :: BuilderState,
+    _artifactAbstractInfoTable :: Abstract.InfoTable,
+    -- Scoping
     _artifactResolver :: ResolverState,
     _artifactBuiltins :: BuiltinsState,
     _artifactNameIdState :: Stream NameId,
     _artifactScopeTable :: Scoped.InfoTable,
+    _artifactScopeExports :: HashSet NameId,
     _artifactMainModuleScope :: Maybe Scope,
+    _artifactScoperState :: Scoped.ScoperState,
     -- Typechecking
     _artifactTypes :: TypesTable,
     _artifactFunctions :: FunctionsTable,
     -- | This includes the InfoTable from all type checked modules
     _artifactInternalTypedTable :: Internal.InfoTable,
+    -- Concrete -> Abstract
+    _artifactAbstractModuleCache :: Abstract.ModulesCache,
+    -- Abstract -> Internal
+    _artifactInternalTranslationState :: Internal.TranslationState,
     -- Core
     _artifactCoreTable :: Core.InfoTable
   }
@@ -55,6 +71,22 @@ runPathResolverArtifacts = runStateLikeArtifacts runPathResolverPipe' artifactRe
 
 runBuiltinsArtifacts :: Members '[Error JuvixError, State Artifacts] r => Sem (Builtins ': r) a -> Sem r a
 runBuiltinsArtifacts = runStateLikeArtifacts runBuiltins artifactBuiltins
+
+runAbstractInfoTableBuilderArtifacts :: Members '[State Artifacts] r => Sem (Abstract.InfoTableBuilder : r) a -> Sem r a
+runAbstractInfoTableBuilderArtifacts = runStateLikeArtifacts Abstract.runInfoTableBuilder' artifactAbstractInfoTable
+
+runParserInfoTableBuilderArtifacts :: Members '[State Artifacts] r => Sem (Concrete.InfoTableBuilder : r) a -> Sem r a
+runParserInfoTableBuilderArtifacts = runStateLikeArtifacts Concrete.runParserInfoTableBuilderRepl artifactParsing
+
+runScoperInfoTableBuilderArtifacts :: Members '[State Artifacts] r => Sem (Scoped.InfoTableBuilder : r) a -> Sem r a
+runScoperInfoTableBuilderArtifacts = runStateLikeArtifacts Scoped.runInfoTableBuilderRepl artifactScopeTable
+
+runScoperScopeArtifacts :: Members '[State Artifacts] r => Sem (State S.Scope : r) a -> Sem r a
+runScoperScopeArtifacts m = do
+  s <- fromJust <$> gets (^. artifactMainModuleScope)
+  (s', a) <- runState s m
+  modify' (set artifactMainModuleScope (Just s'))
+  return a
 
 runNameIdGenArtifacts ::
   Members '[State Artifacts] r =>

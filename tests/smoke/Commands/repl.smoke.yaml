@@ -285,3 +285,88 @@ tests:
     stdout:
       contains: |
         String → Int → Int
+
+  - name: repl-import-no-dependencies
+    command:
+      shell:
+        - bash
+      script: |
+        cd positive/NoDependencies && juvix repl Empty.juvix
+    stdin: "import Foo\nFoo.bar"
+    stdout:
+      contains:
+        bar
+    exit-status: 0
+
+  - name: repl-import-no-dependencies-type
+    command:
+      shell:
+        - bash
+      script: |
+        cd positive/NoDependencies && juvix repl Empty.juvix
+    stdin: "import Foo\n:t Foo.bar"
+    stdout:
+      contains:
+        Bar
+    exit-status: 0
+
+  - name: repl-invalid-import
+    command:
+      shell:
+        - bash
+      script: |
+        cd positive/NoDependencies && juvix repl Empty.juvix
+    stdin: "import Invalid"
+    stdout:
+      contains: OK loaded
+    stderr:
+      contains:
+        The module Invalid does not exist
+    exit-status: 0
+
+  - name: repl-import-type-error
+    command:
+      shell:
+        - bash
+      script: |
+        temp=$(mktemp -d)
+        trap 'rm -rf -- "$temp"' EXIT
+        cp negative/Internal/WrongType.juvix $temp
+        cd $temp
+        echo "module Empty;" > Empty.juvix
+        touch juvix.yaml
+        juvix repl Empty.juvix
+    stdin: "import WrongType"
+    stdout:
+      contains: OK loaded
+    stderr:
+      contains:
+        is expected to have type
+    exit-status: 0
+
+  - name: import-from-stdlib
+    command:
+      - juvix
+      - repl
+    stdin: "import Stdlib.Data.Int.Ord as Int\n1 Int.== 1"
+    stdout:
+      contains: "true"
+    exit-status: 0
+
+  - name: import-then-open-from-stdlib
+    command:
+      - juvix
+      - repl
+    stdin: "import Stdlib.Data.Int.Ord as Int\nopen Int\n1 == 1"
+    stdout:
+      contains: "true"
+    exit-status: 0
+
+  - name: open-import-from-stdlib
+    command:
+      - juvix
+      - repl
+    stdin: "open import Stdlib.Data.Int.Ord\n1 == 1"
+    stdout:
+      contains: "true"
+    exit-status: 0
