@@ -92,8 +92,8 @@ data RawProperties = RawProperties
     _rawPropertiesDoc :: [RawWithLoc RawType]
   }
 
--- | (File, Row, Col, Length)
-type RawInterval = (Path Abs File, Int, Int, Int)
+-- | (File, Start Row, Start Col, Length, End Row, End Col)
+type RawInterval = (Path Abs File, Int, Int, Int, Int, Int)
 
 type RawWithLoc a = (RawInterval, a)
 
@@ -126,7 +126,9 @@ rawProperties LocProperties {..} =
       ( i ^. intervalFile,
         fromIntegral (i ^. intervalStart . locLine),
         fromIntegral (i ^. intervalStart . locCol),
-        intervalLength i
+        intervalLength i,
+        fromIntegral (i ^. intervalEnd . locLine),
+        fromIntegral (i ^. intervalEnd . locCol)
       )
 
     rawWithLoc :: (a -> b) -> WithLoc a -> RawWithLoc b

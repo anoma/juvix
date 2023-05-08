@@ -87,7 +87,7 @@ jobs:
         uses: jaxxstorm/action-install-gh-release@v1.10.0
         with:
           repo: wasmerio/wasmer
-          tag: latest
+          tag: v3.2.1
           binaries-location: bin
           cache: true
 
@@ -178,7 +178,7 @@ jobs:
         uses: jaxxstorm/action-install-gh-release@v1.10.0
         with:
           repo: wasmerio/wasmer
-          tag: latest
+          tag: v3.2.1
           binaries-location: bin
           cache: true
 

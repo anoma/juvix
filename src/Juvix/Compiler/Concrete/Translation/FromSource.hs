@@ -49,7 +49,11 @@ fromSource e = mapError (JuvixError @ParserError) $ do
       Sem r (NonEmpty (Module 'Parsed 'ModuleTop))
     getParsedModuleTops = case (e ^. entryPointStdin, e ^. entryPointModulePaths) of
       (Nothing, []) -> throw $ ErrStdinOrFile StdinOrFileError
-      (Just txt, _) ->
+      (Just txt, x : _) ->
+        runModuleParser x txt >>= \case
+          Left err -> throw err
+          Right r -> return (r :| [])
+      (Just txt, []) ->
         runModuleStdinParser txt >>= \case
           Left err -> throw err
           Right r -> return (r :| [])

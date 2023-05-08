@@ -1,8 +1,7 @@
 module QuickSort;
 
-open import Stdlib.Prelude;
+open import Stdlib.Prelude hiding {quickSort};
 open import Stdlib.Data.Nat.Ord;
-open import Stdlib.Data.Ord;
 
 qsHelper : {A : Type} → A → List A × List A → List A;
 qsHelper a (l , r) := l ++ (a :: nil) ++ r;

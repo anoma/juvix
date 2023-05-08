@@ -11,7 +11,7 @@ tests:
 
     stdout:
       contains: |
-          add-text-properties
+        add-text-properties
     exit-status: 0
 
   - name: highlight-vscode
@@ -26,5 +26,26 @@ tests:
 
     stdout:
       matches: |-
-          ^\{\"face\".*$
+        ^\{\"face\".*$
+    exit-status: 0
+
+  - name: highlight-stdin
+    command:
+      - juvix
+      - dev
+      - highlight
+      - --format
+      - json
+    args:
+      - Compilation/positive/test001.juvix
+      - --stdin
+    stdin: |
+      module OtherFormat;
+
+      open import Stdlib.Prelude;
+
+      main : Nat;
+      main := 5;
+    stdout:
+      contains: 'function'
     exit-status: 0

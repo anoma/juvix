@@ -12,6 +12,7 @@ import Data.String.Interpolate (i, __i)
 import Evaluator
 import Juvix.Compiler.Concrete.Data.Scope (scopePath)
 import Juvix.Compiler.Concrete.Data.ScopedName (absTopModulePath)
+import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver (runPathResolver)
 import Juvix.Compiler.Core qualified as Core
 import Juvix.Compiler.Core.Extra.Value
 import Juvix.Compiler.Core.Info qualified as Info
@@ -124,11 +125,20 @@ runCommand opts = do
         entryPoint <- getReplEntryPoint f
         loadEntryPoint entryPoint
 
-      loadPrelude :: Repl ()
-      loadPrelude = loadDefaultPrelude
-
       loadDefaultPrelude :: Repl ()
-      loadDefaultPrelude = whenJustM defaultPreludeEntryPoint loadEntryPoint
+      loadDefaultPrelude = whenJustM defaultPreludeEntryPoint $ \e -> do
+        let root = roots ^. rootsRootDir
+        -- The following is needed to ensure that the default location of the
+        -- standard library exists
+        void
+          . liftIO
+          . runM
+          . runFilesIO
+          . runError @Text
+          . runReader e
+          . runPathResolver root
+          $ entrySetup
+        loadEntryPoint e
 
       printRoot :: String -> Repl ()
       printRoot _ = do
@@ -275,7 +285,7 @@ runCommand opts = do
         welcomeMsg
         unless
           (opts ^. replNoPrelude || gopts ^. globalNoStdlib)
-          (maybe loadPrelude (loadFile . (^. pathPath)) (opts ^. replInputFile))
+          (maybe loadDefaultPrelude (loadFile . (^. pathPath)) (opts ^. replInputFile))
 
       finaliser :: Repl ExitDecision
       finaliser = return Exit

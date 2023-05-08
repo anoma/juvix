@@ -5,7 +5,6 @@ open import Stdlib.Prelude;
 -- for comparisons on natural numbers
 open import Stdlib.Data.Nat.Ord;
 -- for Ordering
-open import Stdlib.Data.Ord;
 
 even : Nat → Bool;
 even zero := true;
@@ -40,9 +39,9 @@ terminating
 sort : {A : Type} → (A → A → Ordering) → List A → List A;
 sort _ nil := nil;
 sort _ xs@(_ :: nil) := xs;
-sort cmp xs :=
+sort {A} cmp xs :=
   uncurry
-    (merge cmp)
+    (merge (mkOrd cmp))
     (both (sort cmp) (splitAt (div (length xs) 2) xs));
 
 printNatListLn : List Nat → IO;
