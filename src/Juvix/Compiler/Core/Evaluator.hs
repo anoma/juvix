@@ -79,7 +79,7 @@ geval opts herr ctx env0 = eval' env0
     eval' :: Env -> Node -> Node
     eval' !env !n = case n of
       NVar (Var _ idx) -> env !! idx
-      NIdt (Ident _ sym) -> eval' [] (lookupContext n sym)
+      NIdt (Ident _ sym) -> lookupContext n sym
       NCst {} -> n
       NApp (App i l r) ->
         case eval' env l of
@@ -303,11 +303,12 @@ geval opts herr ctx env0 = eval' env0
     lookupContext :: Node -> Symbol -> Node
     lookupContext n sym =
       case HashMap.lookup sym ctx of
-        Just n' -> n'
+        Just n' -> eval' [] n'
         Nothing | opts ^. evalOptionsNormalize -> n
         Nothing -> evalError "symbol not defined" n
     {-# INLINE lookupContext #-}
 
+    -- the Node arguments are assumed to be values
     goNormApp :: Info -> Node -> Node -> Node
     goNormApp i l r = case l of
       Closure env (NLet lt) ->
