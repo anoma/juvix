@@ -54,7 +54,6 @@ fromAbstract abstractResults = do
     )
   let abstractModules = abstractResults ^. Abstract.resultModules
       exportsTbl = abstractResults ^. Abstract.resultExports
-  traceM (prettyText depInfo)
   _resultModules' <-
     runReader exportsTbl $
       evalState
@@ -128,7 +127,6 @@ buildMutualBlocks ::
 buildMutualBlocks ss = do
   depInfo <- ask
   let scomponents :: [SCC Abstract.Name] = buildSCCs depInfo
-  traceM (prettyText (map flattenSCC scomponents))
   return (mapMaybe helper scomponents)
   where
     statementsByName :: HashMap Abstract.Name PreStatement
