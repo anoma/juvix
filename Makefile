@@ -1,7 +1,7 @@
 PWD=$(CURDIR)
 PREFIX="$(PWD)/.stack-work/prefix"
 UNAME := $(shell uname)
-
+DEBUG?=0
 EXAMPLEMILESTONE=examples/milestone
 EXAMPLEHTMLOUTPUT=docs/examples/html
 EXAMPLES= Collatz/Collatz.juvix \
@@ -18,9 +18,9 @@ DEMO_EXAMPLE=examples/demo/Demo.juvix
 MAKEAUXFLAGS?=-s
 MAKE=make ${MAKEAUXFLAGS}
 METAFILES:=README.md \
-		   CHANGELOG.md \
-		   CONTRIBUTING.md \
-		   LICENSE.md
+			 CHANGELOG.md \
+			 CONTRIBUTING.md \
+			 LICENSE.md
 
 STACKFLAGS?=--jobs $(THREADS)
 STACKTESTFLAGS?=--ta --hide-successes --ta --ansi-tricks=false
@@ -36,6 +36,21 @@ else ifeq ($(UNAME), Linux)
 else
 	THREADS := $(shell echo %NUMBER_OF_PROCESSORS%)
 endif
+
+HAS_COLOR := $(shell tput setaf 1 2>/dev/null)
+
+ifdef HAS_COLOR
+		green = $(shell tput setaf 2)
+		red = $(shell tput setaf 1)
+		reset = $(shell tput sgr0)
+else
+		green :=
+		red :=
+		reset :=
+endif
+
+OK:="${green}[OK]${reset}"
+ERROR:="${red}[ERROR]${reset}"
 
 clean: clean-runtime
 	@${STACK} clean --full
@@ -111,20 +126,40 @@ JUVIXFILESTOFORMAT=$(shell find  \
 	./examples  \
 	./tests/positive \
 	./tests/negative \
-	-type d -name ".juvix-build" -prune -o -type f -name "*.juvix" -print)
+	-type d \( -name ".juvix-build" -o -name "FancyPaths" \) -prune -o \
+	-type f -name "*.juvix" -print)
+	
 JUVIXFORMATFLAGS?=--in-place
 JUVIXTYPECHECKFLAGS?=--only-errors
 
 .PHONY: format-juvix-files
 format-juvix-files:
-	@for file in $(JUVIXFILESTOFORMAT); do \
-		juvix format $(JUVIXFORMATFLAGS) "$$file"; \
-	done
+	@exit_codes=(); \
+		for file in $(JUVIXFILESTOFORMAT); do \
+			dirname=$$(dirname "$$file"); \
+			filename=$$(basename "$$file"); \
+			cd $$dirname && \
+				if [ -z "$(DEBUG)" ]; then \
+					${JUVIXBIN} format $(JUVIXFORMATFLAGS) "$$filename"; \
+				else \
+					${JUVIXBIN} format $(JUVIXFORMATFLAGS) "$$filename" > /dev/null 2>&1; \
+				fi; \
+			exit_code=$$?; \
+			if [ $$exit_code -eq 0 ]; then \
+				echo "${OK} $$file"; \
+			elif [[ ! "$$file" =~ ^\./tests/ ]]; then \
+				echo "[-] $$file"; \
+			else \
+				exit_codes+=($$exit_code); \
+				echo "${ERROR} $$file"; \
+			fi; \
+			cd - > /dev/null; \
+			done;
+	@success_count=$$(echo "$${exit_codes[@]}" | grep -o "0" | wc -l)
 
 .PHONY: check-format-juvix-files
 check-format-juvix-files:
-	@export JUVIXFORMATFLAGS=--check
-	@make format-juvix-files
+	@JUVIXFORMATFLAGS=--check	${MAKE} format-juvix-files
 
 JUVIXEXAMPLEFILES=$(shell find ./examples  -name "*.juvix" -print)
 
