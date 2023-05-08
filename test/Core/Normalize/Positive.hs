@@ -86,5 +86,10 @@ tests =
       "Test010: let"
       $(mkRelDir ".")
       $(mkRelFile "test010.jvc")
-      $(mkRelFile "data/test010.json")
+      $(mkRelFile "data/test010.json"),
+    PosTest
+      "Test011: functions returning functions with variable capture"
+      $(mkRelDir ".")
+      $(mkRelFile "test011.jvc")
+      $(mkRelFile "data/test011.json")
   ]
