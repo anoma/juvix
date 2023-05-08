@@ -26,7 +26,7 @@ testDescr PosTest {..} =
       _testRoot = _dir,
       _testAssertion = Single $ do
         entryPoint <- defaultEntryPointCwdIO _file
-        (void . runIO' entryPoint) upInternalTyped
+        (void . runIO' entryPoint) upToInternalTyped
     }
 
 --------------------------------------------------------------------------------
