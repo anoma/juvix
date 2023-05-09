@@ -86,10 +86,7 @@ line' = append' P.line
 end' :: forall r. Members '[State Builder] r => Sem r ()
 end' = do
   cs <- gets (^. builderComments)
-  case cs of
-    [] -> return ()
-    [x] -> printSpaceSpan x
-    _ -> impossible
+  forM_ cs printSpaceSpan
   modify' (set builderComments [])
 
 printSpaceSpan :: forall r. Members '[State Builder] r => SpaceSpan -> Sem r ()
