@@ -40,13 +40,13 @@ endif
 HAS_COLOR := $(shell tput setaf 1 2>/dev/null)
 
 ifdef HAS_COLOR
-		green = $(shell tput setaf 2)
-		red = $(shell tput setaf 1)
-		reset = $(shell tput sgr0)
+	green = $(shell tput setaf 2)
+	red = $(shell tput setaf 1)
+	reset = $(shell tput sgr0)
 else
-		green :=
-		red :=
-		reset :=
+	green :=
+	red :=
+	reset :=
 endif
 
 OK:="${green}[OK]${reset}"
@@ -134,7 +134,7 @@ JUVIXTYPECHECKFLAGS?=--only-errors
 
 .PHONY: format-juvix-files
 format-juvix-files:
-	@exit_codes=(); \
+	@exit_codes=; \
 		for file in $(JUVIXFILESTOFORMAT); do \
 			dirname=$$(dirname "$$file"); \
 			filename=$$(basename "$$file"); \
@@ -148,7 +148,7 @@ format-juvix-files:
 			if [ $$exit_code -eq 0 ]; then \
 				echo "${OK} $$file"; \
 				exit_codes+=0; \
-			elif [[ ! "$$file" =~ ^\./tests/ ]]; then \
+			elif [[ "$$file" =~ ^\./tests/ ]]; then \
 				echo "[-] $$file"; \
 				exit_codes+=0; \
 			else \
@@ -156,8 +156,8 @@ format-juvix-files:
 				echo "${ERROR} $$file"; \
 			fi; \
 			cd - > /dev/null; \
-			done;
-	@echo "${exit_codes}" | grep -q '1' && exit 1 || exit 0
+			done; \
+		echo "$$exit_codes" | grep -q '1' && exit 1 || exit 0
 
 .PHONY: check-format-juvix-files
 check-format-juvix-files:
