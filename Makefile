@@ -37,21 +37,6 @@ else
 	THREADS := $(shell echo %NUMBER_OF_PROCESSORS%)
 endif
 
-HAS_COLOR := $(shell tput setaf 1 2>/dev/null)
-
-ifdef HAS_COLOR
-	green = $(shell tput setaf 2)
-	red = $(shell tput setaf 1)
-	reset = $(shell tput sgr0)
-else
-	green :=
-	red :=
-	reset :=
-endif
-
-OK:="${green}[OK]${reset}"
-ERROR:="${red}[ERROR]${reset}"
-
 clean: clean-runtime
 	@${STACK} clean --full
 	@rm -rf .hie
@@ -146,14 +131,14 @@ format-juvix-files:
 				fi; \
 			exit_code=$$?; \
 			if [ $$exit_code -eq 0 ]; then \
-				echo "${OK} $$file"; \
+				echo "[OK] $$file"; \
 				exit_codes+=0; \
 			elif [[ "$$file" =~ ^\./tests/ ]]; then \
 				echo "[-] $$file"; \
 				exit_codes+=0; \
 			else \
 				exit_codes+=1; \
-				echo "${ERROR} $$file"; \
+				echo "[ERROR] $$file"; \
 			fi; \
 			cd - > /dev/null; \
 			done; \
