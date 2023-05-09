@@ -168,13 +168,17 @@ instance PrettyCode InductiveParameter where
     v' <- ppCode v
     return $ parens (v' <+> kwColon <+> kwType)
 
+instance PrettyCode BuiltinInductive where
+  ppCode = return . annotate AnnKeyword . pretty
+
 instance PrettyCode InductiveDef where
   ppCode d = do
     inductiveName' <- ppCode (d ^. inductiveName)
+    builtin' <- fmap (kwBuiltin <+>) <$> mapM ppCode (d ^. inductiveBuiltin)
     params <- hsepMaybe <$> mapM ppCode (d ^. inductiveParameters)
     inductiveConstructors' <- mapM ppCode (d ^. inductiveConstructors)
     let rhs = indent' $ align $ concatWith (\a b -> a <> line <> kwPipe <+> b) inductiveConstructors'
-    return $ kwInductive <+> inductiveName' <+?> params <+> kwEquals <> line <> rhs
+    return $ builtin' <?+> kwInductive <+> inductiveName' <+?> params <+> kwEquals <> line <> rhs
 
 instance PrettyCode PatternArg where
   ppCode (PatternArg i n p) = do
@@ -196,17 +200,22 @@ instance PrettyCode Pattern where
     PatternVariable v -> ppCode v
     PatternConstructorApp a -> ppCode a
 
+instance PrettyCode BuiltinFunction where
+  ppCode = return . annotate AnnKeyword . pretty
+
 instance PrettyCode FunctionDef where
   ppCode f = do
+    builtin' <- fmap (kwBuiltin <+>) <$> mapM ppCode (f ^. funDefBuiltin)
     funDefName' <- ppCode (f ^. funDefName)
     funDefType' <- ppCode (f ^. funDefType)
     clauses' <- mapM ppCode (f ^. funDefClauses)
     return $
-      funDefName'
-        <+> kwColon
-        <+> funDefType'
-          <> line
-          <> vsep (toList clauses')
+      builtin'
+        <?+> funDefName'
+          <+> kwColon
+          <+> funDefType'
+            <> line
+            <> vsep (toList clauses')
 
 instance PrettyCode FunctionClause where
   ppCode c = do
@@ -220,11 +229,15 @@ instance PrettyCode Include where
     name' <- ppCode (i ^. includeModule . moduleName)
     return $ kwInclude <+> name'
 
+instance PrettyCode BuiltinAxiom where
+  ppCode = return . annotate AnnKeyword . pretty
+
 instance PrettyCode AxiomDef where
   ppCode AxiomDef {..} = do
     axiomName' <- ppCode _axiomName
+    builtin' <- fmap (kwBuiltin <+>) <$> mapM ppCode _axiomBuiltin
     axiomType' <- ppCode _axiomType
-    return $ kwAxiom <+> axiomName' <+> kwColon <+> axiomType'
+    return $ builtin' <?+> kwAxiom <+> axiomName' <+> kwColon <+> axiomType'
 
 instance PrettyCode MutualStatement where
   ppCode = \case
