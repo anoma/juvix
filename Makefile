@@ -147,15 +147,17 @@ format-juvix-files:
 			exit_code=$$?; \
 			if [ $$exit_code -eq 0 ]; then \
 				echo "${OK} $$file"; \
+				exit_codes+=0; \
 			elif [[ ! "$$file" =~ ^\./tests/ ]]; then \
 				echo "[-] $$file"; \
+				exit_codes+=0; \
 			else \
-				exit_codes+=($$exit_code); \
+				exit_codes+=1; \
 				echo "${ERROR} $$file"; \
 			fi; \
 			cd - > /dev/null; \
 			done;
-	@success_count=$$(echo "$${exit_codes[@]}" | grep -o "0" | wc -l)
+	@echo "${exit_codes}" | grep -q '1' && exit 1 || exit 0
 
 .PHONY: check-format-juvix-files
 check-format-juvix-files:

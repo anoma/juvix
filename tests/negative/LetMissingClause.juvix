@@ -1,6 +1,7 @@
 module LetMissingClause;
-  id : {A : Type} → A → A;
-  id {A} := let
-      id' : A → A;
-     in id';
-end;
+
+id : {A : Type} → A → A;
+id {A} :=
+  let
+    id' : A → A;
+  in id';

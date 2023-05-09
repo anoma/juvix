@@ -1,10 +1,9 @@
 module Braces;
 
 type Nat :=
-  O : Nat |
-  S : Nat -> Nat;
+  | O : Nat
+  | S : Nat -> Nat;
 
 fun : Nat -> Nat;
 fun (S {S {x}}) := x;
 
-end;

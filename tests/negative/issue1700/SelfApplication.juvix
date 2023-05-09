@@ -4,6 +4,11 @@ module SelfApplication;
 open import Stdlib.Prelude;
 
 main : IO;
-main := printNatLn (λ {x := x x} id (3 + 4));
+main :=
+  printNatLn
+    (λ {
+        | x := x x
+      }
+      id
+      (3 + 4));
 
-end;

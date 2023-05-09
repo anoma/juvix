@@ -1,9 +1,8 @@
 module E9;
 
 type B :=
-b : B;
+  | b : B;
 
 type T :=
-  c : ((B → T) -> T) -> T;
+  | c : ((B → T) -> T) -> T;
 
-end;

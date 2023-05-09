@@ -3,6 +3,5 @@ module E2;
 open import NegParam;
 
 type D :=
-d : T D -> D;
+  | d : T D -> D;
 
-end;

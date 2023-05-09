@@ -2,26 +2,25 @@ module Foo.Data.Bool;
 
 import Stdlib.Data.Bool;
 
-  type Bool :=
-    true : Bool |
-    false : Bool;
+type Bool :=
+  | true : Bool
+  | false : Bool;
 
-  not : Bool → Bool;
-  not true := false;
-  not false := true;
+not : Bool → Bool;
+not true := false;
+not false := true;
 
-  infixr 2 ||;
-  || : Bool → Bool → Bool;
-  || false a := a;
-  || true _ := true;
+infixr 2 ||;
+|| : Bool → Bool → Bool;
+|| false a := a;
+|| true _ := true;
 
-  infixr 2 &&;
-  && : Bool → Bool → Bool;
-  && false _ := false;
-  && true a := a;
+infixr 2 &&;
+&& : Bool → Bool → Bool;
+&& false _ := false;
+&& true a := a;
 
-  if : {A : Type} → Bool → A → A → A;
-  if true a _ := a;
-  if false _ b := b;
+if : {A : Type} → Bool → A → A → A;
+if true a _ := a;
+if false _ b := b;
 
-end;

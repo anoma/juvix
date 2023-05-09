@@ -8,4 +8,3 @@ f := zero;
 main : Nat;
 main := f;
 
-end;

@@ -1,8 +1,8 @@
 module D;
-  import Other;
-  import U;
 
-  u : Other.Unit;
-  u := U.t;
+import Other;
+import U;
 
-end;
+u : Other.Unit;
+u := U.t;
+

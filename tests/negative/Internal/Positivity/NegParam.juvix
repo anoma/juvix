@@ -1,4 +1,4 @@
 module NegParam;
+
 type T (A : Type) :=
-c : (A -> T A) -> T A;
-end;
+  | c : (A -> T A) -> T A;

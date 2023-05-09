@@ -1,7 +1,7 @@
 module WrongReturnType;
 
 axiom B : Type;
-type A :=
-c : B;
 
-end;
+type A :=
+  | c : B;
+

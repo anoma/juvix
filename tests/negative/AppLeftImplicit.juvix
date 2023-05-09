@@ -1,6 +1,5 @@
 module AppLeftImplicit;
 
- x : Type;
- x := {x};
+x : Type;
+x := {x};
 
-end;
