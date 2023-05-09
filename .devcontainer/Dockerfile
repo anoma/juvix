@@ -68,7 +68,7 @@ RUN sudo bash -c 'curl -s https://api.github.com/repos/anoma/juvix/releases/late
       | tr -d \" \
       | wget --output-document juvix.zip -qi - \
       && unzip juvix.zip \
-      && mv juvix-linux* /home/vscode/.local/bin/juvix'
+      && mv juvix /home/vscode/.local/bin/juvix'
 
 RUN sudo bash -c 'mkdir -p /home/vscode/.local/wasi-sysroot'
 RUN sudo bash -c 'curl -s https://api.github.com/repos/WebAssembly/wasi-sdk/releases/tags/wasi-sdk-16 \
