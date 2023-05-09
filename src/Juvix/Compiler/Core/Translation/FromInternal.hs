@@ -536,8 +536,7 @@ goAxiomDef ::
   (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable] r) =>
   Internal.AxiomDef ->
   Sem r ()
-goAxiomDef a = do
-  mapM_ builtinBody (a ^. Internal.axiomBuiltin)
+goAxiomDef a = mapM_ builtinBody (a ^. Internal.axiomBuiltin)
   where
     builtinBody :: Internal.BuiltinAxiom -> Sem r ()
     builtinBody = \case

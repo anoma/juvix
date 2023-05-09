@@ -491,3 +491,11 @@ sequenceWith sep = go . toList
       [] -> return ()
       [x] -> x
       (x : xs) -> x >> sep >> go xs
+
+-- | Removes the first element that satisfies a predicate and returns it
+popFirstJust :: (a -> Maybe b) -> [a] -> (Maybe b, [a])
+popFirstJust f = \case
+  [] -> (Nothing, [])
+  (h : hs) -> case f h of
+    Nothing -> (h :) <$> popFirstJust f hs
+    Just x -> (Just x, hs)

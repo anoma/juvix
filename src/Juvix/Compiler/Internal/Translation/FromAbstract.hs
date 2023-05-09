@@ -127,8 +127,25 @@ buildMutualBlocks ::
 buildMutualBlocks ss = do
   depInfo <- ask
   let scomponents :: [SCC Abstract.Name] = buildSCCs depInfo
-  return (mapMaybe helper scomponents)
+  return (boolHack (mapMaybe nameToPreStatement scomponents))
   where
+    -- If the builtin bool definition is found, it is moved at the front.
+    --
+    -- This is a hack needed to translate BuiltinStringToNat in
+    -- internal-to-core. BuiltinStringToNat is the only function that depends on
+    -- Bool implicitly (i.e. without mentioning it in its type). Eventually
+    -- BuiltinStringToNat needs to be removed and so this hack.
+    boolHack :: [SCC PreStatement] -> [SCC PreStatement]
+    boolHack s = case popFirstJust isBuiltinBool s of
+      (Nothing, _) -> s
+      (Just boolDef, rest) -> AcyclicSCC (PreInductiveDef boolDef) : rest
+      where
+        isBuiltinBool :: SCC PreStatement -> Maybe InductiveDef
+        isBuiltinBool = \case
+          CyclicSCC [PreInductiveDef b]
+            | Just BuiltinBool <- b ^. inductiveBuiltin -> Just b
+          _ -> Nothing
+
     statementsByName :: HashMap Abstract.Name PreStatement
     statementsByName = HashMap.fromList (map mkAssoc ss)
       where
@@ -137,10 +154,12 @@ buildMutualBlocks ss = do
           PreInductiveDef i -> (i ^. inductiveName, s)
           PreFunctionDef i -> (i ^. funDefName, s)
           PreAxiomDef i -> (i ^. axiomName, s)
+
     getStmt :: Abstract.Name -> Maybe PreStatement
     getStmt n = statementsByName ^. at n
-    helper :: SCC Abstract.Name -> Maybe (SCC PreStatement)
-    helper = nonEmptySCC . fmap getStmt
+
+    nameToPreStatement :: SCC Abstract.Name -> Maybe (SCC PreStatement)
+    nameToPreStatement = nonEmptySCC . fmap getStmt
       where
         nonEmptySCC :: SCC (Maybe a) -> Maybe (SCC a)
         nonEmptySCC = \case
