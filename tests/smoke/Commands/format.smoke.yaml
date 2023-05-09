@@ -56,6 +56,16 @@ tests:
     exit-status: 0
     stdout: ''
 
+  - name: format-formatted-file-from-upper-folder
+    command:
+      shell:
+        - bash
+      script: |
+        cd ..
+        juvix format examples/milestone/TicTacToe/CLI/TicTacToe.juvix
+    exit-status: 0
+    stdout: ''
+
   - name: format-dir-with-all-formatted
     command:
       shell:
