@@ -106,5 +106,70 @@ tests =
       "Test014: recursion"
       $(mkRelDir ".")
       $(mkRelFile "test014.jvc")
-      $(mkRelFile "data/test014.json")
+      $(mkRelFile "data/test014.json"),
+    PosTest
+      "Test015: tail recursion"
+      $(mkRelDir ".")
+      $(mkRelFile "test015.jvc")
+      $(mkRelFile "data/test015.json"),
+    PosTest
+      "Test016: tail recursion: Fibonacci numbers in linear time"
+      $(mkRelDir ".")
+      $(mkRelFile "test016.jvc")
+      $(mkRelFile "data/test016.json"),
+    PosTest
+      "Test017: recursion through higher-order functions"
+      $(mkRelDir ".")
+      $(mkRelFile "test017.jvc")
+      $(mkRelFile "data/test017.json"),
+    PosTest
+      "Test018: tail recursion through higher-order functions"
+      $(mkRelDir ".")
+      $(mkRelFile "test018.jvc")
+      $(mkRelFile "data/test018.json"),
+    PosTest
+      "Test019: higher-order functions and recursion"
+      $(mkRelDir ".")
+      $(mkRelFile "test019.jvc")
+      $(mkRelFile "data/test019.json"),
+    PosTest
+      "Test020: functional queues"
+      $(mkRelDir ".")
+      $(mkRelFile "test020.jvc")
+      $(mkRelFile "data/test020.json"),
+    PosTest
+      "Test021: polymorphism"
+      $(mkRelDir ".")
+      $(mkRelFile "test021.jvc")
+      $(mkRelFile "data/test021.json"),
+    PosTest
+      "Test022: mutual recursion"
+      $(mkRelDir ".")
+      $(mkRelFile "test022.jvc")
+      $(mkRelFile "data/test022.json"),
+    PosTest
+      "Test023: eta-expansion"
+      $(mkRelDir ".")
+      $(mkRelFile "test023.jvc")
+      $(mkRelFile "data/test023.json"),
+    PosTest
+      "Test024: eta-expansion of polymorphic constructors"
+      $(mkRelDir ".")
+      $(mkRelFile "test024.jvc")
+      $(mkRelFile "data/test024.json"),
+    PosTest
+      "Test025: mid-square hashing"
+      $(mkRelDir ".")
+      $(mkRelFile "test025.jvc")
+      $(mkRelFile "data/test025.json"),
+    PosTest
+      "Test026: letrec"
+      $(mkRelDir ".")
+      $(mkRelFile "test026.jvc")
+      $(mkRelFile "data/test026.json"),
+    PosTest
+      "Test027: type synonyms"
+      $(mkRelDir ".")
+      $(mkRelFile "test027.jvc")
+      $(mkRelFile "data/test027.json")
   ]
