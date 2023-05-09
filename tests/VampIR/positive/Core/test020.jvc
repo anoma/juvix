@@ -1,0 +1,50 @@
+-- functional queues
+
+type list {
+  nil : list;
+  cons : Int -> list -> list;
+};
+
+def hd : list -> Int := \(l : list) case l of { cons x _ := x };
+def tl : list -> list := \(l : list) case l of { cons _ x := x };
+
+def rev' : list -> list -> list := \(l : list) \(acc : list) case l of {
+  nil := acc;
+  cons h t := rev' t (cons h acc)
+};
+
+def rev : list -> list := \(l : list) rev' l nil;
+
+type Queue {
+  queue : list -> list -> Queue;
+};
+
+def fst : Queue -> list := \(q : Queue) case q of { queue x _ := x };
+def snd : Queue -> list := \(q : Queue) case q of { queue _ x := x };
+
+def front : Queue -> Int := \(q : Queue) hd (fst q);
+
+def pop_front : Queue -> Queue := \(q : Queue)
+  let q' : Queue := queue (tl (fst q)) (snd q) in
+  case fst q' of {
+    nil := queue (rev (snd q')) nil;
+    _ := q'
+  };
+
+def push_back : Queue -> Int -> Queue := \(q : Queue) \(x : Int) case fst q of {
+  nil := queue (cons x nil) (snd q);
+  _ := queue (fst q) (cons x (snd q))
+};
+
+def is_empty : Queue -> Bool := \(q : Queue) case fst q of {
+  nil := case snd q of { nil := true; _ := false };
+  _ := false
+};
+
+def empty : Queue := queue nil nil;
+
+def g : Queue -> Int -> Int := \(q : Queue) \(acc : Int) if is_empty q then acc else g (pop_front q) (front q + acc);
+def f : Int -> Queue -> Int := \(n : Int) \(q : Queue) if n = 0 then g q 0 else f (n - 1) (push_back q n);
+
+\(x : Int)
+f x empty
