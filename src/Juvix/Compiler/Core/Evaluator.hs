@@ -323,6 +323,9 @@ geval opts herr ctx env0 = eval' env0
               (map (over caseBranchBody (\b -> mkApp i b r)) _caseBranches)
               (fmap (\b -> mkApp i b r) _caseDefault)
           )
+      NBlt (BuiltinApp {..})
+        | _builtinAppOp == OpFail ->
+            l
       _ ->
         mkApp i l r
 
