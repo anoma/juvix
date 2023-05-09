@@ -1,0 +1,176 @@
+-- lambda calculus
+module test052;
+
+open import Stdlib.Prelude;
+
+LambdaTy : Type -> Type;
+
+AppTy : Type -> Type;
+
+infixl 6 :+:;
+-- we parameterize the variables type for testing purposes.
+type Expr' (v : Type) :=
+  | ! : v -> Expr' v
+  | lam : LambdaTy v -> Expr' v
+  | app : AppTy v -> Expr' v
+  | :+: : Expr' v -> Expr' v -> Expr' v
+  | num : Nat -> Expr' v;
+
+type Lambda' (v : Type) :=
+  | mkLambda : Expr' v -> Lambda' v;
+
+type App' (v : Type) :=
+  | mkApp : Expr' v -> Expr' v -> App' v;
+
+LambdaTy := Lambda';
+
+AppTy := App';
+
+Expr : Type;
+Expr := Expr' Nat;
+
+Lambda : Type;
+Lambda := Lambda' Nat;
+
+App : Type;
+App := App' Nat;
+
+type Either (a : Type) (b : Type) :=
+  | left : a -> Either a b
+  | right : b -> Either a b;
+
+toString : Expr -> String;
+toString (! v) := "[" ++str natToString v ++str "]";
+toString (lam (mkLambda b)) :=
+  "\955 {" ++str toString b ++str "}";
+toString (app (mkApp l r)) :=
+  "("
+    ++str toString l
+    ++str " # "
+    ++str toString r
+    ++str ")";
+toString (l :+: r) :=
+  "("
+    ++str toString l
+    ++str " + "
+    ++str toString r
+    ++str ")";
+toString (num n) := natToString n;
+
+infixl 1 >>=;
+>>= :
+  {e a b : Type}
+    -> Either e a
+    -> (a -> Either e b)
+    -> Either e b;
+>>= (left e) _ := left e;
+>>= (right a) f := f a;
+
+type Error :=
+  | ScopeError : Nat -> List Expr -> Error
+  | ExpectedNat : String -> Expr -> Error
+  | ExpectedLambda : Error;
+
+headMay : {a : Type} -> List a -> Maybe a;
+headMay nil := nothing;
+headMay (x :: _) := just x;
+
+index : {a : Type} -> List a -> Nat -> Maybe a;
+index l n := headMay (drop n l);
+
+evalNat : Expr -> Either Error Nat;
+evalNat topExpr :=
+  let
+    getLambda : Expr -> Either Error Lambda;
+    getLambda (lam l) := right l;
+    getLambda _ := left ExpectedLambda;
+    getNat : String -> Expr -> Either Error Nat;
+    getNat _ (num n) := right n;
+    getNat msg e := left (ExpectedNat msg e);
+    terminating
+    go : List Expr -> Expr -> Either Error Expr;
+    go ctx (! v) :=
+      maybe (left (ScopeError v ctx)) right (index ctx v);
+    go ctx (app (mkApp fun x)) :=
+      let
+        terminating
+        applyLambda : Lambda -> Either Error Expr;
+        applyLambda (mkLambda body) :=
+          go ctx x
+            >>= λ {
+              | x' := go (x' :: ctx) body
+            };
+      in go ctx fun >>= getLambda >>= applyLambda;
+    go _ e@(lam _) := right e;
+    go _ e@(num _) := right e;
+    go ctx (l :+: r) :=
+      go ctx l
+        >>= getNat ("rip" ++str toString l)
+        >>= λ {
+          | l' :=
+            go ctx r
+              >>= getNat "lol"
+              >>= λ {
+                | r' := right (num (l' + r'))
+              }
+        };
+  in go nil topExpr >>= getNat "wut";
+
+Λ : Expr -> Expr;
+Λ body := lam (mkLambda body);
+
+infixl 9 #;
+# : Expr -> Expr -> Expr;
+# f x := app (mkApp f x);
+
+--- Doubles a number
+double : Expr;
+double := Λ (! 0 :+: ! 0);
+
++1 : Expr;
++1 := Λ (! 0 :+: num 1);
+
+apps : Expr -> List Expr -> Expr;
+apps := foldl (#);
+
+compose : Expr;
+compose := Λ (Λ (Λ (! 2 # (! 1 # ! 0))));
+
+double+1 : Expr;
+double+1 := Λ (compose # +1 # double # ! 0);
+
++2 : Expr;
++2 := Λ (double # (+1 # ! 0));
+
+-- +2 : Expr;
+-- +2 := Λ (compose # +1 # +1 # ! 0);
+
+res : Either Error Nat;
+res := evalNat (double+1 # num 3);
+
+module ExprTraits;
+  Show : Show Expr;
+  Show := mkShow toString;
+end;
+
+fromShow : {a : Type} -> Show a -> a -> String;
+fromShow (mkShow s) a := s a;
+
+main : IO;
+main :=
+  case res
+    | left (ScopeError n ctx) :=
+      printStringLn
+        ("ScopeError: "
+          ++str natToString n
+          ++str ", ctx = "
+          ++str fromShow (ListTraits.Show ExprTraits.Show) ctx
+          ++str "\n")
+    | left (ExpectedNat msg e) :=
+      printStringLn
+        (msg ++str ": Expected a natural but got " ++str toString e)
+    | left ExpectedLambda := printStringLn "ExpectedLambda"
+    | right r := printNatLn r;
+
+-- ((f x) y) z
+-- App (App (App f x) y) z
