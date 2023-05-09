@@ -10,9 +10,13 @@ import Juvix.Prelude
 -- adjacency set representation
 type DependencyGraph = HashMap Name (HashSet Name)
 
-type StartNodes = HashSet Name
+newtype VisitedModules = VisitedModules
+  { _visitedModulesSet :: HashSet Name
+  }
 
-type VisitedModules = HashSet Name
+makeLenses ''VisitedModules
+
+type StartNodes = HashSet Name
 
 type ExportsTable = HashSet NameId
 
@@ -40,7 +44,7 @@ buildDependencyInfoHelper tbl m = createDependencyInfo graph startNodes
     graph :: DependencyGraph
     (startNodes, graph) =
       run $
-        evalState (HashSet.empty :: VisitedModules) $
+        evalState (VisitedModules mempty) $
           runState HashSet.empty $
             execState HashMap.empty $
               runReader tbl m
@@ -86,8 +90,8 @@ checkBuiltinInductiveStartNode i = whenJust (i ^. inductiveBuiltin) go
 guardNotVisited :: (Member (State VisitedModules) r) => Name -> Sem r () -> Sem r ()
 guardNotVisited n cont =
   unlessM
-    (HashSet.member n <$> get)
-    (modify (HashSet.insert n) >> cont)
+    (HashSet.member n . (^. visitedModulesSet) <$> get)
+    (modify (over visitedModulesSet (HashSet.insert n)) >> cont)
 
 goModule :: (Members '[Reader ExportsTable, State DependencyGraph, State StartNodes, State VisitedModules] r) => Module -> Sem r ()
 goModule m = do
