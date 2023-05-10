@@ -95,6 +95,22 @@ tests:
       contains: 'Foo.juvix'
     exit-status: 1
 
+  - name: format-ignore-subproject
+    command:
+      shell:
+        - bash
+      script: |
+        temp=$(mktemp -d)
+        trap 'rm -rf -- "$temp"' EXIT
+        touch $temp/juvix.yaml
+        cp positive/Format.juvix $temp
+        mkdir $temp/sub
+        touch $temp/sub/juvix.yaml
+        cp positive/Format.juvix $temp/sub
+        juvix format $temp
+    stdout: ''
+    exit-status: 0
+
   - name: format-dir-containing-unformatted-check-no-stdout
     command:
       shell:

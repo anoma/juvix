@@ -713,7 +713,16 @@ inferExpression' hint e = case e of
           case l'ty of
             ExpressionFunction (Function (FunctionParameter paraName ifun funL) funR) -> do
               r' <- checkExpression funL r
-              unless (iapp == ifun) (error "implicitness mismatch")
+              unless
+                (iapp == ifun)
+                ( error
+                    ( "Impossible: implicitness mismatch"
+                        <> show ifun
+                        <> show iapp
+                        <> "\n"
+                        <> ppTrace (Application l r iapp)
+                    )
+                )
               return
                 TypedExpression
                   { _typedExpression =
