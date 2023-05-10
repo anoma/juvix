@@ -103,13 +103,17 @@ checkFunctionDef ::
   Sem r FunctionDef
 checkFunctionDef FunctionDef {..} = do
   let arity = typeArity _funDefType
+  _funDefType' <- withEmptyLocalVars (checkType _funDefType)
   _funDefClauses' <- mapM (checkFunctionClause arity) _funDefClauses
   _funDefExamples' <- withEmptyLocalVars (mapM checkExample _funDefExamples)
   return
     FunctionDef
       { _funDefClauses = _funDefClauses',
         _funDefExamples = _funDefExamples',
-        ..
+        _funDefType = _funDefType',
+        _funDefName,
+        _funDefBuiltin,
+        _funDefPragmas
       }
 
 checkFunctionClause ::
@@ -133,6 +137,12 @@ checkFunctionClause ari cl = do
 
 simplelambda :: a
 simplelambda = error "simple lambda expressions are not supported by the arity checker"
+
+withLocalTypeVar :: Members '[Reader LocalVars] r => VarName -> Sem r a -> Sem r a
+withLocalTypeVar v = withLocalVar v ArityUnit
+
+withLocalVar :: Members '[Reader LocalVars] r => VarName -> Arity -> Sem r a -> Sem r a
+withLocalVar v = local . withArity v
 
 withEmptyLocalVars :: Sem (Reader LocalVars : r) a -> Sem r a
 withEmptyLocalVars = runReader emptyLocalVars
@@ -498,7 +508,7 @@ checkExpression hintArity expr = case expr of
   ExpressionIden {} -> goApp expr []
   ExpressionApplication a -> uncurry goApp $ second toList (unfoldApplication' a)
   ExpressionLiteral {} -> appHelper expr []
-  ExpressionFunction {} -> return expr
+  ExpressionFunction f -> ExpressionFunction <$> goFunction f
   ExpressionUniverse {} -> return expr
   ExpressionHole {} -> return expr
   ExpressionSimpleLambda {} -> simplelambda
@@ -506,6 +516,19 @@ checkExpression hintArity expr = case expr of
   ExpressionLet l -> ExpressionLet <$> checkLet hintArity l
   ExpressionCase l -> ExpressionCase <$> checkCase hintArity l
   where
+    goFunction :: Function -> Sem r Function
+    goFunction (Function l r) = do
+      l' <- goFunctionParameter l
+      r' <- maybe id withLocalTypeVar (l ^. paramName) (checkType r)
+      return (Function l' r')
+      where
+        goFunctionParameter :: FunctionParameter -> Sem r FunctionParameter
+        goFunctionParameter p = do
+          let _paramName = p ^. paramName
+              _paramImplicit = p ^. paramImplicit
+          _paramType <- checkType (p ^. paramType)
+          return FunctionParameter {..}
+
     goApp :: Expression -> [(IsImplicit, Expression)] -> Sem r Expression
     goApp f args = do
       case f of

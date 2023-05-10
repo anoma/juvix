@@ -214,6 +214,10 @@ tests =
       $(mkRelDir ".")
       $(mkRelFile "MutualLet.juvix"),
     posTest
+      "id application in type"
+      $(mkRelDir ".")
+      $(mkRelFile "IdInType.juvix"),
+    posTest
       "Nested pattern match with type variables"
       $(mkRelDir ".")
       $(mkRelFile "NestedPatterns.juvix")
