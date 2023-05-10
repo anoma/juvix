@@ -3,6 +3,9 @@ module test052;
 
 open import Stdlib.Prelude;
 
+fromShow : {a : Type} -> Show a -> a -> String;
+fromShow (mkShow s) a := s a;
+
 LambdaTy : Type -> Type;
 
 AppTy : Type -> Type;
@@ -35,6 +38,23 @@ Lambda := Lambda' Nat;
 App : Type;
 App := App' Nat;
 
+ValTy : Type -> Type;
+
+type Closure' (v : Type) :=
+ mkClosure : List (ValTy v) -> Expr' v -> Closure' v;
+
+type Val' (v : Type) :=
+  | vnum : Nat -> Val' v
+  | closure : Closure' v -> Val' v;
+
+ValTy := Val';
+
+Val : Type;
+Val := Val' Nat;
+
+Closure : Type;
+Closure := Closure' Nat;
+
 type Either (a : Type) (b : Type) :=
   | left : a -> Either a b
   | right : b -> Either a b;
@@ -57,6 +77,21 @@ toString (l :+: r) :=
     ++str ")";
 toString (num n) := natToString n;
 
+module ExprTraits;
+  Show : Show Expr;
+  Show := mkShow toString;
+end;
+
+module ValTraits;
+  terminating valToString : Val -> String;
+
+  terminating Show : Show Val;
+  Show := mkShow valToString;
+
+  valToString (vnum n) := natToString n;
+  valToString (closure (mkClosure ctx n)) := fromShow (ListTraits.Show Show) ctx ++str " ⊢ " ++str toString n;
+end;
+
 infixl 1 >>=;
 >>= :
   {e a b : Type}
@@ -67,8 +102,8 @@ infixl 1 >>=;
 >>= (right a) f := f a;
 
 type Error :=
-  | ScopeError : Nat -> List Expr -> Error
-  | ExpectedNat : String -> Expr -> Error
+  | ScopeError : Nat -> List Val -> Error
+  | ExpectedNat : Val -> Error
   | ExpectedLambda : Error;
 
 headMay : {a : Type} -> List a -> Maybe a;
@@ -78,43 +113,49 @@ headMay (x :: _) := just x;
 index : {a : Type} -> List a -> Nat -> Maybe a;
 index l n := headMay (drop n l);
 
-evalNat : Expr -> Either Error Nat;
-evalNat topExpr :=
+getNat : Val -> Either Error Nat;
+getNat (vnum n) := right n;
+getNat e := left (ExpectedNat e);
+
+-- TODO add closure
+eval : Expr -> Either Error Val;
+eval topExpr :=
   let
-    getLambda : Expr -> Either Error Lambda;
-    getLambda (lam l) := right l;
-    getLambda _ := left ExpectedLambda;
-    getNat : String -> Expr -> Either Error Nat;
-    getNat _ (num n) := right n;
-    getNat msg e := left (ExpectedNat msg e);
+    getClosure : Val -> Either Error Closure;
+    getClosure (closure l) := right l;
+    getClosure _ := left ExpectedLambda;
     terminating
-    go : List Expr -> Expr -> Either Error Expr;
+    go : List Val -> Expr -> Either Error Val;
     go ctx (! v) :=
       maybe (left (ScopeError v ctx)) right (index ctx v);
     go ctx (app (mkApp fun x)) :=
       let
         terminating
-        applyLambda : Lambda -> Either Error Expr;
-        applyLambda (mkLambda body) :=
+        applyClosure : Closure -> Either Error Val;
+        applyClosure (mkClosure closCtx body) :=
           go ctx x
             >>= λ {
-              | x' := go (x' :: ctx) body
+              | x' := go (x' :: closCtx) body
             };
-      in go ctx fun >>= getLambda >>= applyLambda;
-    go _ e@(lam _) := right e;
-    go _ e@(num _) := right e;
+      in go ctx fun >>= getClosure >>= applyClosure;
+    go ctx (lam (mkLambda body)) := right (closure (mkClosure ctx body));
+    go _ (num n) := right (vnum n);
     go ctx (l :+: r) :=
       go ctx l
-        >>= getNat ("rip" ++str toString l)
+        >>= getNat
         >>= λ {
           | l' :=
             go ctx r
-              >>= getNat "lol"
+              >>= getNat
               >>= λ {
-                | r' := right (num (l' + r'))
+                | r' := right (vnum (l' + r'))
               }
         };
-  in go nil topExpr >>= getNat "wut";
+  in go nil topExpr;
+
+terminating
+evalNat : Expr -> Either Error Nat;
+evalNat topExpr := eval topExpr >>= getNat;
 
 Λ : Expr -> Expr;
 Λ body := lam (mkLambda body);
@@ -139,38 +180,21 @@ compose := Λ (Λ (Λ (! 2 # (! 1 # ! 0))));
 double+1 : Expr;
 double+1 := Λ (compose # +1 # double # ! 0);
 
-+2 : Expr;
-+2 := Λ (double # (+1 # ! 0));
-
--- +2 : Expr;
--- +2 := Λ (compose # +1 # +1 # ! 0);
-
-res : Either Error Nat;
-res := evalNat (double+1 # num 3);
-
-module ExprTraits;
-  Show : Show Expr;
-  Show := mkShow toString;
-end;
-
-fromShow : {a : Type} -> Show a -> a -> String;
-fromShow (mkShow s) a := s a;
+res2 : Either Error Val;
+res2 := eval (double+1 # num 9);
 
 main : IO;
 main :=
-  case res
+  case res2
     | left (ScopeError n ctx) :=
       printStringLn
         ("ScopeError: "
           ++str natToString n
           ++str ", ctx = "
-          ++str fromShow (ListTraits.Show ExprTraits.Show) ctx
+          ++str fromShow (ListTraits.Show ValTraits.Show) ctx
           ++str "\n")
-    | left (ExpectedNat msg e) :=
+    | left (ExpectedNat e) :=
       printStringLn
-        (msg ++str ": Expected a natural but got " ++str toString e)
+        ("Expected a natural but got " ++str ValTraits.valToString e)
     | left ExpectedLambda := printStringLn "ExpectedLambda"
-    | right r := printNatLn r;
-
--- ((f x) y) z
--- App (App (App f x) y) z
+    | right r := printStringLn (ValTraits.valToString r);
