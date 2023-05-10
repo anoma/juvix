@@ -82,7 +82,8 @@ transformationText = \case
   LambdaFolding -> strLambdaFolding
   FoldTypeSynonyms -> strFoldTypeSynonyms
   OptPhaseEval -> strOptPhaseEval
-  OptPhaseLifted -> strOptPhaseLifted
+  OptPhaseExec -> strOptPhaseExec
+  OptPhaseGeb -> strOptPhaseGeb
 
 parsePipeline :: MonadParsec e Text m => m PipelineId
 parsePipeline = P.choice [symbol (pipelineText t) $> t | t <- allElements]
@@ -165,5 +166,8 @@ strFoldTypeSynonyms = "fold-type-synonyms"
 strOptPhaseEval :: Text
 strOptPhaseEval = "opt-phase-eval"
 
-strOptPhaseLifted :: Text
-strOptPhaseLifted = "opt-phase-lifted"
+strOptPhaseExec :: Text
+strOptPhaseExec = "opt-phase-exec"
+
+strOptPhaseGeb :: Text
+strOptPhaseGeb = "opt-phase-geb"

@@ -24,7 +24,8 @@ data TransformationId
   | LambdaFolding
   | FoldTypeSynonyms
   | OptPhaseEval
-  | OptPhaseLifted
+  | OptPhaseExec
+  | OptPhaseGeb
   deriving stock (Data, Bounded, Enum, Show)
 
 data PipelineId
@@ -59,10 +60,10 @@ toEvalTransformations = [EtaExpandApps, MatchToCase, NatToPrimInt, IntToPrimInt,
 
 toStrippedTransformations :: [TransformationId]
 toStrippedTransformations =
-  toEvalTransformations ++ [CheckExec, LambdaLetRecLifting, OptPhaseLifted, LambdaLetRecLifting, TopEtaExpand, MoveApps, RemoveTypeArgs]
+  toEvalTransformations ++ [CheckExec, LambdaLetRecLifting, OptPhaseExec, TopEtaExpand, MoveApps, RemoveTypeArgs]
 
 toGebTransformations :: [TransformationId]
-toGebTransformations = toEvalTransformations ++ [CheckGeb, LetRecLifting, OptPhaseLifted, UnrollRecursion, FoldTypeSynonyms, ComputeTypeInfo]
+toGebTransformations = toEvalTransformations ++ [CheckGeb, LetRecLifting, OptPhaseGeb, UnrollRecursion, FoldTypeSynonyms, ComputeTypeInfo]
 
 pipeline :: PipelineId -> [TransformationId]
 pipeline = \case

@@ -1,4 +1,4 @@
-module Juvix.Compiler.Core.Transformation.Optimize.Phase.Lifted where
+module Juvix.Compiler.Core.Transformation.Optimize.Phase.Geb where
 
 import Juvix.Compiler.Core.Options
 import Juvix.Compiler.Core.Transformation.Base

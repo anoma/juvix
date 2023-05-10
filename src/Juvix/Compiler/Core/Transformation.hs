@@ -29,7 +29,8 @@ import Juvix.Compiler.Core.Transformation.NatToPrimInt
 import Juvix.Compiler.Core.Transformation.Optimize.LambdaFolding
 import Juvix.Compiler.Core.Transformation.Optimize.LetFolding
 import Juvix.Compiler.Core.Transformation.Optimize.Phase.Eval qualified as Phase.Eval
-import Juvix.Compiler.Core.Transformation.Optimize.Phase.Lifted qualified as Phase.Lifted
+import Juvix.Compiler.Core.Transformation.Optimize.Phase.Exec qualified as Phase.Exec
+import Juvix.Compiler.Core.Transformation.Optimize.Phase.Geb qualified as Phase.Geb
 import Juvix.Compiler.Core.Transformation.RemoveTypeArgs
 import Juvix.Compiler.Core.Transformation.TopEtaExpand
 import Juvix.Compiler.Core.Transformation.UnrollRecursion
@@ -60,4 +61,5 @@ applyTransformations ts tbl = foldM (flip appTrans) tbl ts
       LambdaFolding -> return . lambdaFolding
       FoldTypeSynonyms -> return . foldTypeSynonyms
       OptPhaseEval -> Phase.Eval.optimize
-      OptPhaseLifted -> Phase.Lifted.optimize
+      OptPhaseExec -> Phase.Exec.optimize
+      OptPhaseGeb -> Phase.Geb.optimize
