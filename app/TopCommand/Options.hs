@@ -30,6 +30,9 @@ data TopCommand
   deriving stock (Data)
 
 topCommandInputFile :: TopCommand -> IO (Maybe (Path Abs Dir))
+topCommandInputFile (JuvixFormat fopts) = case fopts ^. formatInput of
+  Just f -> getInputDirFromPrepathFileOrDir f
+  Nothing -> return Nothing
 topCommandInputFile t = do
   d <- firstJustM getInputFileOrDir (universeBi t)
   f <- firstJustM getInputFileDir (universeBi t)
@@ -44,13 +47,16 @@ topCommandInputFile t = do
 
     getInputFileOrDir :: AppPath FileOrDir -> IO (Maybe (Path Abs Dir))
     getInputFileOrDir p
-      | p ^. pathIsInput = do
-          cwd <- getCurrentDir
-          lr <- fromPreFileOrDir cwd (p ^. pathPath)
-          return . Just $ case lr of
-            Left file -> parent file
-            Right dir -> dir
+      | p ^. pathIsInput = getInputDirFromPrepathFileOrDir (p ^. pathPath)
       | otherwise = return Nothing
+
+getInputDirFromPrepathFileOrDir :: Prepath FileOrDir -> IO (Maybe (Path Abs Dir))
+getInputDirFromPrepathFileOrDir p = do
+  cwd <- getCurrentDir
+  lr <- fromPreFileOrDir cwd p
+  return . Just $ case lr of
+    Left file -> parent file
+    Right dir -> dir
 
 parseDisplayVersion :: Parser TopCommand
 parseDisplayVersion =

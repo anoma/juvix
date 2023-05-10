@@ -7,8 +7,7 @@ tests:
       - format
       - --help
     stdout:
-      contains:
-        JUVIX_FILE
+      contains: JUVIX_FILE
     exit-status: 0
 
   - name: format-formatted-file
@@ -17,7 +16,7 @@ tests:
       - format
       - positive/Format.juvix
     exit-status: 0
-    stdout: ""
+    stdout: ''
 
   - name: format-unformatted-file
     command:
@@ -45,7 +44,7 @@ tests:
         touch juvix.yaml
         echo "module Foo ;" >> Foo.juvix
         juvix format --check Foo.juvix
-    stdout: ""
+    stdout: ''
     exit-status: 1
 
   - name: format-formatted-file-check-no-stdout
@@ -55,7 +54,17 @@ tests:
       - --check
       - positive/Format.juvix
     exit-status: 0
-    stdout: ""
+    stdout: ''
+
+  - name: format-formatted-file-from-upper-folder
+    command:
+      shell:
+        - bash
+      script: |
+        cd ..
+        juvix format --in-place examples/milestone/TicTacToe/CLI/TicTacToe.juvix
+    exit-status: 0
+    stdout: ''
 
   - name: format-dir-with-all-formatted
     command:
@@ -67,7 +76,7 @@ tests:
         touch $temp/juvix.yaml
         cp positive/Format.juvix $temp
         juvix format $temp
-    stdout: ""
+    stdout: ''
     exit-status: 0
 
   - name: format-dir-containing-unformatted
@@ -83,8 +92,7 @@ tests:
         echo "module Foo ;" >> Foo.juvix
         juvix format $temp
     stdout:
-      contains:
-        "Foo.juvix"
+      contains: 'Foo.juvix'
     exit-status: 1
 
   - name: format-dir-containing-unformatted-check-no-stdout
@@ -99,7 +107,7 @@ tests:
         cd $temp
         echo "module Foo ;" >> Foo.juvix
         juvix format --check $temp
-    stdout: ""
+    stdout: ''
     exit-status: 1
 
   - name: format-dir-with-all-formatted-check-no-stdout
@@ -112,7 +120,7 @@ tests:
         touch $temp/juvix.yaml
         cp positive/Format.juvix $temp
         juvix format --check $temp
-    stdout: ""
+    stdout: ''
     exit-status: 0
 
   - name: format-file-with-scope-error
@@ -126,7 +134,7 @@ tests:
         echo "modul Bar;" > Foo.juvix
         juvix format Foo.juvix
     stderr:
-      contains: "error"
+      contains: 'error'
     exit-status: 1
 
   - name: format-stdin
@@ -135,7 +143,7 @@ tests:
       - --stdin
       - format
       - positive/Format.juvix
-    stdin: "module Format; open import Stdlib.Prelude; main : Nat; main := 5; "
+    stdin: 'module Format; open import Stdlib.Prelude; main : Nat; main := 5; '
     stdout:
       contains: |
         module Format;
@@ -152,7 +160,7 @@ tests:
       - --stdin
       - format
       - positive/NonExistingFormat.juvix
-    stdin: "module Format; open import Stdlib.Prelude; main : Nat; main := 5; "
+    stdin: 'module Format; open import Stdlib.Prelude; main : Nat; main := 5; '
     stderr:
       contains: |
         positive/NonExistingFormat.juvix: openFile: does not exist (No such file or directory)
@@ -164,15 +172,9 @@ tests:
       - --stdin
       - format
       - positive/Format.juvix
-    stdin: "module OtherFormat; open import Stdlib.Prelude; main : Nat; main := 5; "
-    stdout:
-      contains: |
-        module OtherFormat;
-
-        open import Stdlib.Prelude;
-
-        main : Nat;
-        main := 5;
+    stdin: 'module OtherFormat; open import Stdlib.Prelude; main : Nat; main := 5; '
+    stderr:
+      contains: 'is defined in the file'
     exit-status: 1
 
   - name: format-stdin-no-file-name
@@ -180,7 +182,7 @@ tests:
       - juvix
       - --stdin
       - format
-    stdin: "module OtherFormat; open import Stdlib.Prelude; main : Nat; main := 5; "
+    stdin: 'module OtherFormat; open import Stdlib.Prelude; main : Nat; main := 5; '
     stdout:
       contains: |
         module OtherFormat;
@@ -195,7 +197,7 @@ tests:
     command:
       - juvix
       - format
-    stdin: "module OtherFormat; open import Stdlib.Prelude; main : Nat; main := 5module OtherFormat; open import Stdlib.Prelude; main : Nat; main := 5;; "
+    stdin: 'module OtherFormat; open import Stdlib.Prelude; main : Nat; main := 5module OtherFormat; open import Stdlib.Prelude; main : Nat; main := 5;; '
     stdout:
       contains: juvix format error
     exit-status: 1
