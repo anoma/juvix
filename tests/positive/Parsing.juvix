@@ -12,7 +12,6 @@ let' := Type;
 block comment 2
 -}
 
-
 {- Nesting
 
 {- Nesting
@@ -23,7 +22,6 @@ block comment 2
 
 -}
 -}
-
 
 TypeMine : Type;
 TypeMine := Type;
