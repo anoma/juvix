@@ -21,6 +21,7 @@ data TransformationId
   | CheckGeb
   | CheckExec
   | LetFolding
+  | LetHoisting
   | FoldTypeSynonyms
   deriving stock (Data, Bounded, Enum, Show)
 

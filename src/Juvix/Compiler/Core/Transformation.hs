@@ -54,4 +54,5 @@ applyTransformations ts tbl = foldM (flip appTrans) tbl ts
       CheckGeb -> mapError (JuvixError @CoreError) . checkGeb
       CheckExec -> mapError (JuvixError @CoreError) . checkExec
       LetFolding -> return . letFolding
+      LetHoisting -> undefined
       FoldTypeSynonyms -> return . foldTypeSynonyms

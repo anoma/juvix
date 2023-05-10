@@ -80,6 +80,7 @@ transformationText = \case
   CheckGeb -> strCheckGeb
   CheckExec -> strCheckExec
   LetFolding -> strLetFolding
+  LetHoisting -> strLetHoisting
   FoldTypeSynonyms -> strFoldTypeSynonyms
 
 parsePipeline :: MonadParsec e Text m => m PipelineId
@@ -90,6 +91,9 @@ transformation = P.choice [symbol (transformationText t) $> t | t <- allElements
 
 allStrings :: [Text]
 allStrings = map transformationLikeText allTransformationLikeIds
+
+strLetHoisting :: Text
+strLetHoisting = "let-hoisting"
 
 strEvalPipeline :: Text
 strEvalPipeline = "pipeline-eval"
