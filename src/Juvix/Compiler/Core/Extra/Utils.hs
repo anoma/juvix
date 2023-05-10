@@ -60,7 +60,10 @@ isImmediate = \case
   NVar {} -> True
   NIdt {} -> True
   NCst {} -> True
-  _ -> False
+  node@(NApp {}) ->
+    let (_, args) = unfoldApps' node
+     in all isType args
+  node -> isType node
 
 freeVarsSortedMany :: [Node] -> Set Var
 freeVarsSortedMany n = Set.fromList (n ^.. each . freeVars)
