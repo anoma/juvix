@@ -1,4 +1,4 @@
--- lambda calculus
+--- This module defines a simple lambda calculus and an evaluator.
 module test052;
 
 open import Stdlib.Prelude;
@@ -11,7 +11,7 @@ LambdaTy : Type -> Type;
 AppTy : Type -> Type;
 
 infixl 6 :+:;
--- we parameterize the variables type for testing purposes.
+--- An ;Expr'; is an expression in our language.
 type Expr' (v : Type) :=
   | ! : v -> Expr' v
   | lam : LambdaTy v -> Expr' v
@@ -19,9 +19,11 @@ type Expr' (v : Type) :=
   | :+: : Expr' v -> Expr' v -> Expr' v
   | num : Nat -> Expr' v;
 
+--- A ;Lambda'; is a lambda function.
 type Lambda' (v : Type) :=
   | mkLambda : Expr' v -> Lambda' v;
 
+--- An ;App'; is an application of two ;Expr';.
 type App' (v : Type) :=
   | mkApp : Expr' v -> Expr' v -> App' v;
 
@@ -40,9 +42,11 @@ App := App' Nat;
 
 ValTy : Type -> Type;
 
+--- A ;Closure'; is a context (;List; of ;ValTy;) and an ;Expr'; in that context.
 type Closure' (v : Type) :=
   | mkClosure : List (ValTy v) -> Expr' v -> Closure' v;
 
+--- A ;Val'; is either a ;Closure'; or a ;Nat;.
 type Val' (v : Type) :=
   | vnum : Nat -> Val' v
   | closure : Closure' v -> Val' v;
@@ -55,29 +59,31 @@ Val := Val' Nat;
 Closure : Type;
 Closure := Closure' Nat;
 
+--- Sum type.
 type Either (a : Type) (b : Type) :=
   | left : a -> Either a b
   | right : b -> Either a b;
 
-toString : Expr -> String;
-toString (! v) := "[" ++str natToString v ++str "]";
-toString (lam (mkLambda b)) :=
-  "\955 {" ++str toString b ++str "}";
-toString (app (mkApp l r)) :=
-  "("
-    ++str toString l
-    ++str " # "
-    ++str toString r
-    ++str ")";
-toString (l :+: r) :=
-  "("
-    ++str toString l
-    ++str " + "
-    ++str toString r
-    ++str ")";
-toString (num n) := natToString n;
-
 module ExprTraits;
+  toString : Expr -> String;
+  toString (! v) := "[" ++str natToString v ++str "]";
+  toString (lam (mkLambda b)) :=
+    "\955 {" ++str toString b ++str "}";
+  toString (app (mkApp l r)) :=
+    "("
+      ++str toString l
+      ++str " # "
+      ++str toString r
+      ++str ")";
+  toString (l :+: r) :=
+    "("
+      ++str toString l
+      ++str " + "
+      ++str toString r
+      ++str ")";
+  toString (num n) := natToString n;
+
+  --- ;Show; instance for ;Expr;.
   Show : Show Expr;
   Show := mkShow toString;
 end;
@@ -86,6 +92,7 @@ module ValTraits;
   terminating
   valToString : Val -> String;
 
+  --- ;Show; instance for ;Val;.
   terminating
   Show : Show Val;
   Show := mkShow valToString;
@@ -94,10 +101,11 @@ module ValTraits;
   valToString (closure (mkClosure ctx n)) :=
     fromShow (ListTraits.Show Show) ctx
       ++str " \8866 "
-      ++str toString n;
+      ++str ExprTraits.toString n;
 end;
 
 infixl 1 >>=;
+--- Monadic binding for ;Either;.
 >>= :
   {e a b : Type}
     -> Either e a
@@ -106,22 +114,31 @@ infixl 1 >>=;
 >>= (left e) _ := left e;
 >>= (right a) f := f a;
 
+--- An evaluation error.
 type Error :=
-  | ScopeError : Nat -> List Val -> Error
-  | ExpectedNat : Val -> Error
-  | ExpectedLambda : Error;
+  | --- A variable outside of the context was found.
+    ScopeError : Nat -> List Val -> Error
+  | --- A nat was expected.
+    ExpectedNat : Val -> Error
+  | --- A lambda was expected.
+    ExpectedLambda : Error;
 
+--- Returns the first item of a ;List;, if it exists.
 headMay : {a : Type} -> List a -> Maybe a;
 headMay nil := nothing;
 headMay (x :: _) := just x;
 
+--- ;List; indexing.
 index : {a : Type} -> List a -> Nat -> Maybe a;
 index l n := headMay (drop n l);
 
+--- Get a ;Nat; from a ;Val; or return an ;Error;.
 getNat : Val -> Either Error Nat;
 getNat (vnum n) := right n;
 getNat e := left (ExpectedNat e);
 
+--- Evaluates an ;Expr; and returns a ;Val;.
+--- If an error occurs during evaluation, returns ;Error;.
 eval : Expr -> Either Error Val;
 eval topExpr :=
   let
@@ -158,39 +175,44 @@ eval topExpr :=
         };
   in go nil topExpr;
 
+--- Evaluate an ;Expr; and try to extract a ;Nat;.
 terminating
 evalNat : Expr -> Either Error Nat;
 evalNat topExpr := eval topExpr >>= getNat;
 
+--- Syntactical helper for creating a ;lam;.
 Λ : Expr -> Expr;
 Λ body := lam (mkLambda body);
 
 infixl 9 #;
+--- Syntactical helper for creating an ;app;.
 # : Expr -> Expr -> Expr;
 # f x := app (mkApp f x);
 
---- Doubles a number
+--- ;Expr; that doubles a number.
 double : Expr;
 double := Λ (! 0 :+: ! 0);
 
+--- ;Expr; that adds 1 to a number.
 +1 : Expr;
 +1 := Λ (! 0 :+: num 1);
 
 apps : Expr -> List Expr -> Expr;
 apps := foldl (#);
 
+--- ;Expr; for function composition.
 compose : Expr;
 compose := Λ (Λ (Λ (! 2 # (! 1 # ! 0))));
 
 double+1 : Expr;
 double+1 := Λ (compose # +1 # double # ! 0);
 
-res2 : Either Error Val;
-res2 := eval (double+1 # num 9);
+res : Either Error Val;
+res := eval (double+1 # num 7);
 
 main : IO;
 main :=
-  case res2
+  case res
     | left (ScopeError n ctx) :=
       printStringLn
         ("ScopeError: "
