@@ -62,7 +62,7 @@ tests:
         - bash
       script: |
         cd ..
-        juvix format examples/milestone/TicTacToe/CLI/TicTacToe.juvix
+        juvix format --in-place examples/milestone/TicTacToe/CLI/TicTacToe.juvix
     exit-status: 0
     stdout: ''
 
