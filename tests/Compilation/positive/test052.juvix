@@ -41,7 +41,7 @@ App := App' Nat;
 ValTy : Type -> Type;
 
 type Closure' (v : Type) :=
- mkClosure : List (ValTy v) -> Expr' v -> Closure' v;
+  | mkClosure : List (ValTy v) -> Expr' v -> Closure' v;
 
 type Val' (v : Type) :=
   | vnum : Nat -> Val' v
@@ -83,13 +83,18 @@ module ExprTraits;
 end;
 
 module ValTraits;
-  terminating valToString : Val -> String;
+  terminating
+  valToString : Val -> String;
 
-  terminating Show : Show Val;
+  terminating
+  Show : Show Val;
   Show := mkShow valToString;
 
   valToString (vnum n) := natToString n;
-  valToString (closure (mkClosure ctx n)) := fromShow (ListTraits.Show Show) ctx ++str " ⊢ " ++str toString n;
+  valToString (closure (mkClosure ctx n)) :=
+    fromShow (ListTraits.Show Show) ctx
+      ++str " \8866 "
+      ++str toString n;
 end;
 
 infixl 1 >>=;
@@ -137,7 +142,8 @@ eval topExpr :=
               | x' := go (x' :: closCtx) body
             };
       in go ctx fun >>= getClosure >>= applyClosure;
-    go ctx (lam (mkLambda body)) := right (closure (mkClosure ctx body));
+    go ctx (lam (mkLambda body)) :=
+      right (closure (mkClosure ctx body));
     go _ (num n) := right (vnum n);
     go ctx (l :+: r) :=
       go ctx l
@@ -194,6 +200,7 @@ main :=
           ++str "\n")
     | left (ExpectedNat e) :=
       printStringLn
-        ("Expected a natural but got " ++str ValTraits.valToString e)
+        ("Expected a natural but got "
+          ++str ValTraits.valToString e)
     | left ExpectedLambda := printStringLn "ExpectedLambda"
     | right r := printStringLn (ValTraits.valToString r);
