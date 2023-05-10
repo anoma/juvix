@@ -256,7 +256,11 @@ preFunctionDef f = do
             _identifierArgsNum = 0,
             _identifierIsExported = False,
             _identifierBuiltin = f ^. Internal.funDefBuiltin,
-            _identifierPragmas = f ^. Internal.funDefPragmas
+            _identifierPragmas =
+              over
+                pragmasInline
+                (fmap (adjustPragmaInline (implicitParametersNum (f ^. Internal.funDefType))))
+                (f ^. Internal.funDefPragmas)
           }
   case f ^. Internal.funDefBuiltin of
     Just b
@@ -278,6 +282,18 @@ preFunctionDef f = do
         ">" -> Str.natGt
         ">=" -> Str.natGe
         _ -> name
+
+    implicitParametersNum :: Internal.Expression -> Int
+    implicitParametersNum = \case
+      Internal.ExpressionFunction Internal.Function {..}
+        | _functionLeft ^. Internal.paramImplicit == Implicit ->
+            implicitParametersNum _functionRight + 1
+      _ -> 0
+
+    adjustPragmaInline :: Int -> PragmaInline -> PragmaInline
+    adjustPragmaInline n = \case
+      InlinePartiallyApplied k -> InlinePartiallyApplied (k + n)
+      x -> x
 
 goFunctionDef ::
   forall r.
