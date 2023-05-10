@@ -23,7 +23,8 @@ getEntry PipelineArg {..} = do
   return $
     ep
       { _entryPointTarget = getTarget (_pipelineArgOptions ^. compileTarget),
-        _entryPointDebug = _pipelineArgOptions ^. compileDebug
+        _entryPointDebug = _pipelineArgOptions ^. compileDebug,
+        _entryPointOptimizationLevel = _pipelineArgOptions ^. compileOptimizationLevel
       }
   where
     getTarget :: CompileTarget -> Backend.Target
