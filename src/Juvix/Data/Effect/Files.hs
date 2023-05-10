@@ -48,13 +48,18 @@ walkDirRel handler topdir = do
       walktree curdir = do
         let fullDir :: Path Abs Dir = topdir <//> curdir
         (subdirs, files) <- listDirRel fullDir
-        let hasJuvixYaml = juvixYamlFile `elem` files
         action <- raise (handler fullDir subdirs files)
         case action of
           RecurseNever -> return ()
-          RecurseFilter fi ->
-            let ds = map (curdir <//>) (filter (fi hasJuvixYaml) subdirs)
-             in mapM_ walkAvoidLoop ds
+          RecurseFilter fi -> do
+            ds <- filterM filterSubdirs subdirs
+            mapM_ (walkAvoidLoop . (curdir <//>)) ds
+            where
+              filterSubdirs :: Path Rel Dir -> Sem (State (HashSet Uid) ': r) Bool
+              filterSubdirs d = do
+                hasJuvixYaml <- fileExists' (topdir <//> curdir <//> d <//> juvixYamlFile)
+                return (fi hasJuvixYaml d)
+
       checkLoop :: Path Abs Dir -> Sem (State (HashSet Uid) ': r) Bool
       checkLoop dir = do
         visited <- get

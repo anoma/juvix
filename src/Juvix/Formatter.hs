@@ -88,7 +88,7 @@ formatProject p = do
     handler cd _ files _ = do
       let juvixFiles = [cd <//> f | f <- files, isJuvixFile f]
       res <- combineResults <$> mapM format juvixFiles
-      return (res, RecurseFilter (\hasJuvixYaml d -> not (hasJuvixYaml && isHiddenDirectory d)))
+      return (res, RecurseFilter (\hasJuvixYaml d -> not hasJuvixYaml && not (isHiddenDirectory d)))
 
 formatPath :: Member ScopeEff r => Path Abs File -> Sem r (NonEmpty AnsiText)
 formatPath p = do
