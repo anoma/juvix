@@ -3,5 +3,27 @@ module Parsing;
 let' : Type;
 let' := Type;
 
+{- block comment -}
+-- line comment
+-- line comment 2
+
+{- block comment 2
+
+block comment 2
+-}
+
+
+{- Nesting
+
+{- Nesting
+
+{- Nesting
+
+-}
+
+-}
+-}
+
+
 TypeMine : Type;
 TypeMine := Type;

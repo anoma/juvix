@@ -91,10 +91,21 @@ space' special =
             special
             (notFollowedBy (P.chunk Str.pragmasStart))
           (_commentText, _commentInterval) <- interval $ do
-            void (P.chunk "{-")
-            pack <$> P.manyTill anySingle (P.chunk "-}")
+            void start
+            go 1 ""
           hspace_
           return Comment {..}
+          where
+            start :: m Text = P.chunk "{-"
+            ending :: m Text = P.chunk "-}"
+            go :: Int -> Text -> m Text
+            go n acc = do
+              (txt, startOrEnd) <- P.manyTill_ anySingle (Left <$> start <|> Right <$> ending)
+              case startOrEnd of
+                Left st -> go (n + 1) (acc <> pack txt <> st)
+                Right en
+                  | n > 1 -> go (n - 1) (acc <> pack txt <> en)
+                  | otherwise -> return (acc <> pack txt)
 
 integer' :: ParsecS r (Integer, Interval) -> ParsecS r (Integer, Interval)
 integer' dec = do
