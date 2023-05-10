@@ -10,6 +10,7 @@ import Data.ByteString.UTF8 qualified as BS
 import Data.List.NonEmpty.Extra qualified as NonEmpty
 import Data.Singletons
 import Data.Yaml
+import Juvix.Compiler.Concrete.Data.Highlight.Input (HighlightBuilder, ignoreHighlightBuilder)
 import Juvix.Compiler.Concrete.Data.ParsedInfoTable
 import Juvix.Compiler.Concrete.Data.ParsedInfoTableBuilder
 import Juvix.Compiler.Concrete.Extra (MonadParsec (takeWhile1P))
@@ -35,7 +36,7 @@ type JudocStash = State (Maybe (Judoc 'Parsed))
 type PragmasStash = State (Maybe ParsedPragmas)
 
 fromSource ::
-  (Members '[PathResolver, Files, Error JuvixError, NameIdGen] r) =>
+  (Members '[HighlightBuilder, PathResolver, Files, Error JuvixError, NameIdGen] r) =>
   EntryPoint ->
   Sem r ParserResult
 fromSource e = mapError (JuvixError @ParserError) $ do
@@ -118,9 +119,9 @@ runReplInputParser fileName input = do
 runModuleParser :: Members '[Error ParserError, Files, PathResolver, NameIdGen, InfoTableBuilder] r => Path Abs File -> Text -> Sem r (Either ParserError (Module 'Parsed 'ModuleTop))
 runModuleParser fileName input = do
   m <-
-    evalState (Nothing @ParsedPragmas) $
-      evalState (Nothing @(Judoc 'Parsed)) $
-        P.runParserT topModuleDef (toFilePath fileName) input
+    evalState (Nothing @ParsedPragmas)
+      . evalState (Nothing @(Judoc 'Parsed))
+      $ P.runParserT topModuleDef (toFilePath fileName) input
   case m of
     Left err -> return (Left (ErrMegaparsec (MegaparsecError err)))
     Right r -> registerModule r $> Right r
@@ -131,9 +132,9 @@ runModuleStdinParser ::
   Sem r (Either ParserError (Module 'Parsed 'ModuleTop))
 runModuleStdinParser input = do
   m <-
-    evalState (Nothing @ParsedPragmas) $
-      evalState (Nothing @(Judoc 'Parsed)) $
-        P.runParserT topModuleDefStdin (toFilePath formatStdinPath) input
+    evalState (Nothing @ParsedPragmas)
+      . evalState (Nothing @(Judoc 'Parsed))
+      $ P.runParserT topModuleDefStdin (toFilePath formatStdinPath) input
   case m of
     Left err -> return (Left (ErrMegaparsec (MegaparsecError err)))
     Right r -> registerModule r $> Right r
@@ -145,10 +146,11 @@ runExpressionParser ::
   Sem r (Either ParserError (ExpressionAtoms 'Parsed))
 runExpressionParser fileName input = do
   m <-
-    runParserInfoTableBuilder $
-      evalState (Nothing @ParsedPragmas) $
-        evalState (Nothing @(Judoc 'Parsed)) $
-          P.runParserT parseExpressionAtoms (toFilePath fileName) input
+    ignoreHighlightBuilder
+      . runParserInfoTableBuilder
+      . evalState (Nothing @ParsedPragmas)
+      . evalState (Nothing @(Judoc 'Parsed))
+      $ P.runParserT parseExpressionAtoms (toFilePath fileName) input
   case m of
     (_, _, Left err) -> return (Left (ErrMegaparsec (MegaparsecError err)))
     (_, _, Right r) -> return (Right r)

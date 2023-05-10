@@ -14,6 +14,7 @@ import Juvix.Compiler.Concrete.Data.Highlight.Properties
 import Juvix.Compiler.Concrete.Data.Highlight.RenderEmacs
 import Juvix.Compiler.Concrete.Data.InfoTable qualified as Scoped
 import Juvix.Compiler.Concrete.Data.ScopedName
+import Juvix.Compiler.Internal.Language qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context qualified as Internal
 import Juvix.Data.CodeAnn
 import Juvix.Data.Emacs
@@ -35,25 +36,13 @@ highlight = \case
   Emacs -> Text.encodeUtf8 . renderSExp . toSExp . buildProperties
   Json -> ByteString.toStrict . Aeson.encode . rawProperties . buildProperties
 
-goErrors :: HighlightBackend -> [Interval] -> ByteString
-goErrors = \case
-  Emacs -> Text.encodeUtf8 . renderSExp . toSExp . errorProperties
-  Json -> ByteString.toStrict . Aeson.encode . rawProperties . errorProperties
-
-errorProperties :: [Interval] -> LocProperties
-errorProperties l =
-  LocProperties
-    { _propertiesFace = map goFaceError l,
-      _propertiesGoto = [],
-      _propertiesDoc = []
-    }
-
 buildProperties :: HighlightInput -> LocProperties
 buildProperties HighlightInput {..} =
   LocProperties
     { _propertiesFace =
         map goFaceParsedItem _highlightParsed
-          <> mapMaybe goFaceName _highlightNames,
+          <> mapMaybe goFaceName _highlightNames
+          <> map goFaceError _highlightErrors,
       _propertiesGoto = map goGotoProperty _highlightNames,
       _propertiesDoc = mapMaybe (goDocProperty _highlightDoc _highlightTypes) _highlightNames
     }
@@ -85,7 +74,7 @@ goGotoProperty (AName n) = WithLoc (getLoc n) PropertyGoto {..}
 
 goDocProperty :: Scoped.DocTable -> Internal.TypesTable -> AName -> Maybe (WithLoc PropertyDoc)
 goDocProperty doctbl tbl a@(AName n) = do
-  ty <- tbl ^. at (n ^. nameId)
-  let d = ppDocDefault a ty (doctbl ^. at (n ^. nameId))
-      (_docText, _docSExp) = renderEmacs (layoutPretty defaultLayoutOptions d)
+  let ty :: Maybe Internal.Expression = tbl ^. at (n ^. nameId)
+  d <- ppDocDefault a ty (doctbl ^. at (n ^. nameId))
+  let (_docText, _docSExp) = renderEmacs (layoutPretty defaultLayoutOptions d)
   return (WithLoc (getLoc n) PropertyDoc {..})

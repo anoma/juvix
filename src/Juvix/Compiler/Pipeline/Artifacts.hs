@@ -76,10 +76,10 @@ runAbstractInfoTableBuilderArtifacts :: Members '[State Artifacts] r => Sem (Abs
 runAbstractInfoTableBuilderArtifacts = runStateLikeArtifacts Abstract.runInfoTableBuilder' artifactAbstractInfoTable
 
 runParserInfoTableBuilderArtifacts :: Members '[State Artifacts] r => Sem (Concrete.InfoTableBuilder : r) a -> Sem r a
-runParserInfoTableBuilderArtifacts = runStateLikeArtifacts Concrete.runParserInfoTableBuilder' artifactParsing
+runParserInfoTableBuilderArtifacts = runStateLikeArtifacts Concrete.runParserInfoTableBuilderRepl artifactParsing
 
 runScoperInfoTableBuilderArtifacts :: Members '[State Artifacts] r => Sem (Scoped.InfoTableBuilder : r) a -> Sem r a
-runScoperInfoTableBuilderArtifacts = runStateLikeArtifacts Scoped.runInfoTableBuilder artifactScopeTable
+runScoperInfoTableBuilderArtifacts = runStateLikeArtifacts Scoped.runInfoTableBuilderRepl artifactScopeTable
 
 runScoperScopeArtifacts :: Members '[State Artifacts] r => Sem (State S.Scope : r) a -> Sem r a
 runScoperScopeArtifacts m = do

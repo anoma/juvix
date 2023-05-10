@@ -1,7 +1,7 @@
 module Juvix.Compiler.Pipeline.Repl where
 
 import Juvix.Compiler.Abstract.Translation qualified as Abstract
-import Juvix.Compiler.Concrete.Data.ParsedInfoTableBuilder qualified as C
+import Juvix.Compiler.Concrete.Data.ParsedInfoTableBuilder.BuilderState qualified as C
 import Juvix.Compiler.Concrete.Data.Scope qualified as Scoper
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Translation.FromParsed qualified as Scoper

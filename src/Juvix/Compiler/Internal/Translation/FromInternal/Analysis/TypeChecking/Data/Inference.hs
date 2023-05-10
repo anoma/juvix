@@ -5,6 +5,7 @@ module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Da
 where
 
 import Data.HashMap.Strict qualified as HashMap
+import Juvix.Compiler.Concrete.Data.Highlight.Input
 import Juvix.Compiler.Internal.Extra
 import Juvix.Compiler.Internal.Pretty
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context
@@ -27,7 +28,7 @@ makeLenses ''MatchError
 data Inference m a where
   MatchTypes :: Expression -> Expression -> Inference m (Maybe MatchError)
   QueryMetavar :: Hole -> Inference m (Maybe Expression)
-  RegisterIden :: Name -> Expression -> Inference m ()
+  RegisterIdenType :: Name -> Expression -> Inference m ()
   StrongNormalize :: Expression -> Inference m Expression
   WeakNormalize :: Expression -> Inference m Expression
 
@@ -52,9 +53,9 @@ closeState ::
       TypesTable
     )
 closeState = \case
-  InferenceState m idens -> do
-    holeMap <- execState mempty (f m)
-    return (holeMap, idens)
+  InferenceState {..} -> do
+    holeMap <- execState mempty (f _inferenceMap)
+    return (holeMap, _inferenceIdens)
   where
     f ::
       forall r'.
@@ -225,12 +226,12 @@ re ::
 re = reinterpret $ \case
   MatchTypes a b -> matchTypes' a b
   QueryMetavar h -> queryMetavar' h
-  RegisterIden i ty -> registerIden' i ty
+  RegisterIdenType i ty -> registerIdenType' i ty
   StrongNormalize ty -> strongNormalize' ty
   WeakNormalize ty -> weakNormalize' ty
   where
-    registerIden' :: (Members '[State InferenceState] r) => Name -> Expression -> Sem r ()
-    registerIden' i ty = modify (over inferenceIdens (HashMap.insert (i ^. nameId) ty))
+    registerIdenType' :: (Members '[State InferenceState] r) => Name -> Expression -> Sem r ()
+    registerIdenType' i ty = modify (over inferenceIdens (HashMap.insert (i ^. nameId) ty))
 
     -- Supports alpha equivalence.
     matchTypes' :: (Members '[State InferenceState, State FunctionsTable, Error TypeCheckerError] r) => Expression -> Expression -> Sem r (Maybe MatchError)
@@ -396,7 +397,7 @@ matchPatterns (PatternArg impl1 name1 pat1) (PatternArg impl2 name2 pat2) =
     err = return False
 
 runInferenceDefs ::
-  (Members '[Error TypeCheckerError, State FunctionsTable, State TypesTable] r, HasExpressions funDef) =>
+  (Members '[HighlightBuilder, Error TypeCheckerError, State FunctionsTable, State TypesTable] r, HasExpressions funDef) =>
   Sem (Inference ': r) (NonEmpty funDef) ->
   Sem r (NonEmpty funDef)
 runInferenceDefs a = do
@@ -406,13 +407,15 @@ runInferenceDefs a = do
   return (subsHoles subs <$> expr)
 
 runInferenceDef ::
-  (Members '[Error TypeCheckerError, State FunctionsTable, State TypesTable] r, HasExpressions funDef) =>
+  (Members '[HighlightBuilder, Error TypeCheckerError, State FunctionsTable, State TypesTable] r, HasExpressions funDef) =>
   Sem (Inference ': r) funDef ->
   Sem r funDef
 runInferenceDef = fmap head . runInferenceDefs . fmap pure
 
-addIdens :: (Member (State TypesTable) r) => TypesTable -> Sem r ()
-addIdens idens = modify (HashMap.union idens)
+addIdens :: Members '[HighlightBuilder, State TypesTable] r => TypesTable -> Sem r ()
+addIdens idens = do
+  modify (HashMap.union idens)
+  modify (over highlightTypes (HashMap.union idens))
 
 -- | Assumes the given function has been type checked
 -- | NOTE: Registers the function *only* if the result type is Type

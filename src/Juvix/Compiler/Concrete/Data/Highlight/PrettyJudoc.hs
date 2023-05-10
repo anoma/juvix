@@ -15,7 +15,7 @@ data Options = Options
 defaultOptions :: Options
 defaultOptions = Options
 
-ppDocDefault :: Scoped.AName -> Internal.Expression -> Maybe (Judoc 'Scoped) -> Doc CodeAnn
+ppDocDefault :: Scoped.AName -> Maybe Internal.Expression -> Maybe (Judoc 'Scoped) -> Maybe (Doc CodeAnn)
 ppDocDefault n ty = run . runReader defaultOptions . ppDoc n ty
 
 ppInternal :: Members '[Reader Options] r => Internal.PrettyCode c => c -> Sem r (Doc CodeAnn)
@@ -34,13 +34,15 @@ ppScoped c = do
     mkOpts :: Options -> Scoped.Options
     mkOpts = const (Scoped.defaultOptions)
 
-ppDoc :: Members '[Reader Options] r => Scoped.AName -> Internal.Expression -> Maybe (Judoc 'Scoped) -> Sem r (Doc CodeAnn)
+ppDoc :: Members '[Reader Options] r => Scoped.AName -> Maybe Internal.Expression -> Maybe (Judoc 'Scoped) -> Sem r (Maybe (Doc CodeAnn))
 ppDoc n ty j = do
-  ty' <- ppInternal ty
   n' <- ppScoped n
+  ty' <- fmap ((n' <+> kwColon) <+>) <$> mapM ppInternal ty
   j' <- join <$> mapM ppJudoc j
   return $
-    n' <+> kwColon <+> ty' <+?> fmap ((line <> line) <>) j'
+    case (ty', j') of
+      (Just jty', Just jj') -> return (jty' <+> line <> line <> jj')
+      _ -> ty' <|> j'
 
 ppJudoc :: forall r. Members '[Reader Options] r => Judoc 'Scoped -> Sem r (Maybe (Doc CodeAnn))
 ppJudoc (Judoc bs) = do

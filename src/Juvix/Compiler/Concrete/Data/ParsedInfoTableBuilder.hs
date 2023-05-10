@@ -1,10 +1,15 @@
-module Juvix.Compiler.Concrete.Data.ParsedInfoTableBuilder where
+module Juvix.Compiler.Concrete.Data.ParsedInfoTableBuilder
+  ( module Juvix.Compiler.Concrete.Data.ParsedInfoTableBuilder,
+    BuilderState,
+  )
+where
 
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
+import Juvix.Compiler.Concrete.Data.Highlight.Input
 import Juvix.Compiler.Concrete.Data.Literal
 import Juvix.Compiler.Concrete.Data.ParsedInfoTable
-import Juvix.Compiler.Concrete.Data.ParsedItem
+import Juvix.Compiler.Concrete.Data.ParsedInfoTableBuilder.BuilderState
 import Juvix.Compiler.Concrete.Language
 import Juvix.Prelude
 
@@ -64,37 +69,20 @@ registerLiteral l =
       LitInteger {} -> ParsedTagLiteralInt
     loc = getLoc l
 
-data BuilderState = BuilderState
-  { _stateItems :: [ParsedItem],
-    _stateComments :: [SpaceSpan],
-    _stateVisited :: HashSet TopModulePath,
-    _stateModules :: HashMap TopModulePath (Module 'Parsed 'ModuleTop)
-  }
-  deriving stock (Show)
-
-makeLenses ''BuilderState
-
-iniState :: BuilderState
-iniState =
-  BuilderState
-    { _stateItems = [],
-      _stateComments = [],
-      _stateVisited = mempty,
-      _stateModules = mempty
-    }
-
 build :: BuilderState -> InfoTable
 build st =
   InfoTable
-    { _infoParsedItems = nubHashable (st ^. stateItems),
-      _infoParsedComments = mkComments (st ^. stateComments),
+    { _infoParsedComments = mkComments (st ^. stateComments),
       _infoParsedModules = st ^. stateModules
     }
 
-registerItem' :: Members '[State BuilderState] r => ParsedItem -> Sem r ()
-registerItem' i = modify' (over stateItems (i :))
+registerItem' :: Members '[HighlightBuilder] r => ParsedItem -> Sem r ()
+registerItem' i = modify' (over highlightParsed (i :))
 
-runParserInfoTableBuilder' :: BuilderState -> Sem (InfoTableBuilder ': r) a -> Sem r (BuilderState, a)
+runParserInfoTableBuilderRepl :: BuilderState -> Sem (InfoTableBuilder ': r) a -> Sem r (BuilderState, a)
+runParserInfoTableBuilderRepl st = ignoreHighlightBuilder . runParserInfoTableBuilder' st . raiseUnder
+
+runParserInfoTableBuilder' :: Members '[HighlightBuilder] r => BuilderState -> Sem (InfoTableBuilder ': r) a -> Sem r (BuilderState, a)
 runParserInfoTableBuilder' s =
   runState s
     . reinterpret
@@ -103,8 +91,7 @@ runParserInfoTableBuilder' s =
           VisitModule i -> modify' (over stateVisited (HashSet.insert i))
           RegisterModule m ->
             modify' (over stateModules (HashMap.insert (m ^. modulePath) m))
-          RegisterItem i ->
-            modify' (over stateItems (i :))
+          RegisterItem i -> registerItem' i
           RegisterSpaceSpan g -> do
             modify' (over stateComments (g :))
             forM_ (g ^.. spaceSpan . each . _SpaceComment) $ \c ->
@@ -115,7 +102,7 @@ runParserInfoTableBuilder' s =
                   }
       )
 
-runParserInfoTableBuilder :: Sem (InfoTableBuilder ': r) a -> Sem r (BuilderState, InfoTable, a)
+runParserInfoTableBuilder :: Members '[HighlightBuilder] r => Sem (InfoTableBuilder ': r) a -> Sem r (BuilderState, InfoTable, a)
 runParserInfoTableBuilder m = do
   (builderState, x) <- runParserInfoTableBuilder' iniState m
   return (builderState, build builderState, x)

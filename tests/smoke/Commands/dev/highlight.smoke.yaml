@@ -14,6 +14,19 @@ tests:
         add-text-properties
     exit-status: 0
 
+  - name: highlight-negative-emacs
+    command:
+      - juvix
+      - dev
+      - highlight
+    args:
+      - negative/InfixError.juvix
+
+    stdout:
+      contains: |
+        juvix-goto
+    exit-status: 0
+
   - name: highlight-vscode
     command:
       - juvix

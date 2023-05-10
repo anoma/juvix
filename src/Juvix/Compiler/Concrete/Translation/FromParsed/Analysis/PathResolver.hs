@@ -10,6 +10,7 @@ module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver
     runPathResolver,
     runPathResolverPipe,
     runPathResolverPipe',
+    evalPathResolverPipe,
     ResolverState,
     resolverFiles,
     resolverPackages,
@@ -237,3 +238,6 @@ runPathResolverPipe :: (Members '[Files, Reader EntryPoint] r) => Sem (PathResol
 runPathResolverPipe a = do
   r <- asks (^. entryPointResolverRoot)
   runError (runPathResolver r (raiseUnder a)) >>= either error return
+
+evalPathResolverPipe :: (Members '[Files, Reader EntryPoint] r) => Sem (PathResolver ': r) a -> Sem r a
+evalPathResolverPipe = fmap snd . runPathResolverPipe

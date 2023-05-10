@@ -11,6 +11,7 @@ import Control.Monad.Combinators.Expr qualified as P
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
 import Data.List.NonEmpty qualified as NonEmpty
+import Juvix.Compiler.Concrete.Data.Highlight.Input
 import Juvix.Compiler.Concrete.Data.InfoTableBuilder
 import Juvix.Compiler.Concrete.Data.Name qualified as N
 import Juvix.Compiler.Concrete.Data.Scope
@@ -33,16 +34,16 @@ iniScoperState =
     }
 
 scopeCheck ::
-  (Members '[Error ScoperError, NameIdGen, Reader EntryPoint] r) =>
+  (Members '[HighlightBuilder, Error ScoperError, NameIdGen, Reader EntryPoint] r) =>
   ParserResult ->
   NonEmpty (Module 'Parsed 'ModuleTop) ->
   Sem r ScoperResult
 scopeCheck pr modules =
-  fmap mkResult $
-    runInfoTableBuilder emptyInfoTable $
-      runReader iniScopeParameters $
-        runState iniScoperState $
-          checkTopModules modules
+  fmap mkResult
+    . runInfoTableBuilder emptyInfoTable
+    . runReader iniScopeParameters
+    . runState iniScoperState
+    $ checkTopModules modules
   where
     iniScopeParameters :: ScopeParameters
     iniScopeParameters =
@@ -69,13 +70,13 @@ scopeCheckExpression ::
   Sem r Expression
 scopeCheckExpression tab as = mapError (JuvixError @ScoperError) $ do
   snd
-    <$> runInfoTableBuilder
-      tab
-      ( runReader iniScopeParameters $
-          evalState iniScoperState $
-            withLocalScope $
-              checkParseExpressionAtoms as
-      )
+    <$> ( ignoreHighlightBuilder
+            . runInfoTableBuilder tab
+            . runReader iniScopeParameters
+            . evalState iniScoperState
+            . withLocalScope
+            $ checkParseExpressionAtoms as
+        )
   where
     iniScopeParameters :: ScopeParameters
     iniScopeParameters =
@@ -468,7 +469,14 @@ checkTypeSignature TypeSignature {..} = do
   sigName' <- bindFunctionSymbol _sigName
   sigDoc' <- mapM checkJudoc _sigDoc
   sigBody' <- mapM checkParseExpressionAtoms _sigBody
-  registerFunction @$> TypeSignature {_sigName = sigName', _sigType = sigType', _sigDoc = sigDoc', _sigBody = sigBody', ..}
+  registerFunction
+    @$> TypeSignature
+      { _sigName = sigName',
+        _sigType = sigType',
+        _sigDoc = sigDoc',
+        _sigBody = sigBody',
+        ..
+      }
 
 checkInductiveParameters ::
   forall r.

@@ -1,6 +1,7 @@
 module Juvix.Compiler.Concrete.Data.InfoTableBuilder where
 
 import Data.HashMap.Strict qualified as HashMap
+import Juvix.Compiler.Concrete.Data.Highlight.Input
 import Juvix.Compiler.Concrete.Data.Scope
 import Juvix.Compiler.Concrete.Data.ScopedName
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
@@ -18,10 +19,10 @@ data InfoTableBuilder m a where
 
 makeSem ''InfoTableBuilder
 
-registerDoc :: NameId -> Maybe (Judoc 'Scoped) -> Sem (State InfoTable ': r) ()
-registerDoc k md = modify (set (infoDoc . at k) md)
+registerDoc :: Members '[HighlightBuilder] r => NameId -> Maybe (Judoc 'Scoped) -> Sem r ()
+registerDoc k md = modify (set (highlightDoc . at k) md)
 
-toState :: Sem (InfoTableBuilder ': r) a -> Sem (State InfoTable ': r) a
+toState :: Members '[HighlightBuilder] r => Sem (InfoTableBuilder ': r) a -> Sem (State InfoTable ': r) a
 toState = reinterpret $ \case
   RegisterAxiom d ->
     let ref = AxiomRef' (S.unqualifiedSymbol (d ^. axiomName))
@@ -55,14 +56,17 @@ toState = reinterpret $ \case
     let key = c ^. clauseOwnerFunction
         value = c
      in do modify (over infoFunctionClauses (HashMap.insert key value))
-  RegisterName n -> modify (over infoNames (cons (S.AName n)))
+  RegisterName n -> modify (over highlightNames (cons (S.AName n)))
   RegisterModule m -> do
     let j = m ^. moduleDoc
     modify (over infoModules (HashMap.insert (m ^. modulePath) m))
     registerDoc (m ^. modulePath . nameId) j
 
-runInfoTableBuilder :: InfoTable -> Sem (InfoTableBuilder ': r) a -> Sem r (InfoTable, a)
+runInfoTableBuilderRepl :: InfoTable -> Sem (InfoTableBuilder ': r) a -> Sem r (InfoTable, a)
+runInfoTableBuilderRepl tab = ignoreHighlightBuilder . runInfoTableBuilder tab . raiseUnder
+
+runInfoTableBuilder :: Members '[HighlightBuilder] r => InfoTable -> Sem (InfoTableBuilder ': r) a -> Sem r (InfoTable, a)
 runInfoTableBuilder tab = runState tab . toState
 
-ignoreInfoTableBuilder :: Sem (InfoTableBuilder ': r) a -> Sem r a
+ignoreInfoTableBuilder :: Members '[HighlightBuilder] r => Sem (InfoTableBuilder ': r) a -> Sem r a
 ignoreInfoTableBuilder = evalState emptyInfoTable . toState
