@@ -59,7 +59,7 @@ toEvalTransformations = [EtaExpandApps, MatchToCase, NatToPrimInt, IntToPrimInt,
 
 toStrippedTransformations :: [TransformationId]
 toStrippedTransformations =
-  toEvalTransformations ++ [CheckExec, LambdaLetRecLifting, OptPhaseLifted, TopEtaExpand, MoveApps, RemoveTypeArgs]
+  toEvalTransformations ++ [CheckExec, LambdaLetRecLifting, OptPhaseLifted, LambdaLetRecLifting, TopEtaExpand, MoveApps, RemoveTypeArgs]
 
 toGebTransformations :: [TransformationId]
 toGebTransformations = toEvalTransformations ++ [CheckGeb, LetRecLifting, OptPhaseLifted, UnrollRecursion, FoldTypeSynonyms, ComputeTypeInfo]
