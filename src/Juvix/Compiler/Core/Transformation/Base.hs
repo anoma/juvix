@@ -93,3 +93,6 @@ withOptimizationLevel n f tab = do
   if
       | l >= n -> f tab
       | otherwise -> return tab
+
+withOptimizationLevel' :: Member (Reader CoreOptions) r => InfoTable -> Int -> (InfoTable -> Sem r InfoTable) -> Sem r InfoTable
+withOptimizationLevel' tab n f = withOptimizationLevel n f tab
