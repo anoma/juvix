@@ -218,7 +218,9 @@ jobs:
         if: ${{ success() }}
         run: |
           cd main
+          make -s clean-juvix-build
           make -s check-format-juvix-files
+          make -s clean-juvix-build
           make -s typecheck-juvix-examples
 
       - name: Install Smoke
