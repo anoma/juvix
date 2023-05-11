@@ -11,7 +11,7 @@ optimize' :: CoreOptions -> InfoTable -> InfoTable
 optimize' CoreOptions {..} tab =
   compose
     (4 * _optOptimizationLevel)
-    ( letFolding' (isInlineableLambda _optInliningDepth)
+    ( compose 2 (letFolding' (isInlineableLambda _optInliningDepth))
         . lambdaFolding
         . inlining' _optInliningDepth (recursiveIdents tab)
     )
