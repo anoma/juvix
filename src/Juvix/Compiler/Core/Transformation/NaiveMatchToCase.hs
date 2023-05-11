@@ -153,10 +153,6 @@ compileMatchBranch (Indexed branchNum br) = do
             (auxiliaryBindersNum + patternBindersNum' + patternsNum + branchNum)
             (br ^. matchBranchBody)
 
--- | Increase the indices of free variables in the binderTyped by a given value
-shiftBinder :: Index -> Binder -> Binder
-shiftBinder idx = over binderType (shift idx)
-
 -- | Make a sequence of nested lets from a list of binders / value pairs. The
 -- indices of free variables in binder types are shifted by the sum of
 -- `baseShift` and the number of lets that have already been added in the

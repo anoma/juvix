@@ -22,6 +22,7 @@ import Juvix.Compiler.Core.Transformation.FoldTypeSynonyms
 import Juvix.Compiler.Core.Transformation.Identity
 import Juvix.Compiler.Core.Transformation.IntToPrimInt
 import Juvix.Compiler.Core.Transformation.LambdaLetRecLifting
+import Juvix.Compiler.Core.Transformation.LetHoisting
 import Juvix.Compiler.Core.Transformation.MatchToCase
 import Juvix.Compiler.Core.Transformation.MoveApps
 import Juvix.Compiler.Core.Transformation.NaiveMatchToCase qualified as Naive
@@ -54,5 +55,5 @@ applyTransformations ts tbl = foldM (flip appTrans) tbl ts
       CheckGeb -> mapError (JuvixError @CoreError) . checkGeb
       CheckExec -> mapError (JuvixError @CoreError) . checkExec
       LetFolding -> return . letFolding
-      LetHoisting -> undefined
+      LetHoisting -> return . letHoisting
       FoldTypeSynonyms -> return . foldTypeSynonyms

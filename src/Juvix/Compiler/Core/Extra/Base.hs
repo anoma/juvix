@@ -71,6 +71,9 @@ mkLet i bi v b = NLet (Let i (LetItem bi v) b)
 mkLet' :: Type -> Node -> Node -> Node
 mkLet' ty = mkLet Info.empty (mkBinder' ty)
 
+mkLets :: [LetItem] -> Node -> Node
+mkLets tvs n = foldl' (\n' itm -> NLet (Let mempty itm n')) n (reverse tvs)
+
 mkLets' :: [(Type, Node)] -> Node -> Node
 mkLets' tvs n = foldl' (\n' (ty, v) -> mkLet' ty v n') n (reverse tvs)
 
