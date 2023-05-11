@@ -80,10 +80,12 @@ transformationText = \case
   CheckExec -> strCheckExec
   LetFolding -> strLetFolding
   LambdaFolding -> strLambdaFolding
+  Inlining -> strInlining
   FoldTypeSynonyms -> strFoldTypeSynonyms
   OptPhaseEval -> strOptPhaseEval
   OptPhaseExec -> strOptPhaseExec
   OptPhaseGeb -> strOptPhaseGeb
+  OptPhaseMain -> strOptPhaseMain
 
 parsePipeline :: MonadParsec e Text m => m PipelineId
 parsePipeline = P.choice [symbol (pipelineText t) $> t | t <- allElements]
@@ -160,6 +162,9 @@ strLetFolding = "let-folding"
 strLambdaFolding :: Text
 strLambdaFolding = "lambda-folding"
 
+strInlining :: Text
+strInlining = "inlining"
+
 strFoldTypeSynonyms :: Text
 strFoldTypeSynonyms = "fold-type-synonyms"
 
@@ -171,3 +176,6 @@ strOptPhaseExec = "opt-phase-exec"
 
 strOptPhaseGeb :: Text
 strOptPhaseGeb = "opt-phase-geb"
+
+strOptPhaseMain :: Text
+strOptPhaseMain = "opt-phase-main"

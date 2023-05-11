@@ -26,11 +26,13 @@ import Juvix.Compiler.Core.Transformation.MatchToCase
 import Juvix.Compiler.Core.Transformation.MoveApps
 import Juvix.Compiler.Core.Transformation.NaiveMatchToCase qualified as Naive
 import Juvix.Compiler.Core.Transformation.NatToPrimInt
+import Juvix.Compiler.Core.Transformation.Optimize.Inlining
 import Juvix.Compiler.Core.Transformation.Optimize.LambdaFolding
 import Juvix.Compiler.Core.Transformation.Optimize.LetFolding
 import Juvix.Compiler.Core.Transformation.Optimize.Phase.Eval qualified as Phase.Eval
 import Juvix.Compiler.Core.Transformation.Optimize.Phase.Exec qualified as Phase.Exec
 import Juvix.Compiler.Core.Transformation.Optimize.Phase.Geb qualified as Phase.Geb
+import Juvix.Compiler.Core.Transformation.Optimize.Phase.Main qualified as Phase.Main
 import Juvix.Compiler.Core.Transformation.RemoveTypeArgs
 import Juvix.Compiler.Core.Transformation.TopEtaExpand
 import Juvix.Compiler.Core.Transformation.UnrollRecursion
@@ -59,7 +61,9 @@ applyTransformations ts tbl = foldM (flip appTrans) tbl ts
       CheckExec -> mapError (JuvixError @CoreError) . checkExec
       LetFolding -> return . letFolding
       LambdaFolding -> return . lambdaFolding
+      Inlining -> inlining
       FoldTypeSynonyms -> return . foldTypeSynonyms
       OptPhaseEval -> Phase.Eval.optimize
       OptPhaseExec -> Phase.Exec.optimize
       OptPhaseGeb -> Phase.Geb.optimize
+      OptPhaseMain -> Phase.Main.optimize

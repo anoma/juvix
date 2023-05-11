@@ -22,10 +22,12 @@ data TransformationId
   | CheckExec
   | LetFolding
   | LambdaFolding
+  | Inlining
   | FoldTypeSynonyms
   | OptPhaseEval
   | OptPhaseExec
   | OptPhaseGeb
+  | OptPhaseMain
   deriving stock (Data, Bounded, Enum, Show)
 
 data PipelineId

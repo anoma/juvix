@@ -277,3 +277,7 @@ builtinOpArgTypes = \case
   OpSeq -> [mkDynamic', mkDynamic']
   OpTrace -> [mkDynamic']
   OpFail -> [mkTypeString']
+
+checkDepth :: Int -> Node -> Bool
+checkDepth 0 _ = False
+checkDepth d node = all (checkDepth (d - 1)) (childrenNodes node)

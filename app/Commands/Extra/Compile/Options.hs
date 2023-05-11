@@ -1,7 +1,7 @@
 module Commands.Extra.Compile.Options where
 
 import CommonOptions hiding (show)
-import Juvix.Compiler.Pipeline.EntryPoint (defaultOptimizationLevel)
+import Juvix.Compiler.Pipeline.EntryPoint
 import Prelude (Show (show))
 
 data CompileTarget
@@ -29,7 +29,8 @@ data CompileOptions = CompileOptions
     _compileOutputFile :: Maybe (AppPath File),
     _compileTarget :: CompileTarget,
     _compileInputFile :: AppPath File,
-    _compileOptimizationLevel :: Int
+    _compileOptimizationLevel :: Int,
+    _compileInliningDepth :: Int
   }
   deriving stock (Data)
 
@@ -86,6 +87,13 @@ parseCompileOptions supportedTargets parseInputFile = do
           <> long "optimize"
           <> value defaultOptimizationLevel
           <> help ("Optimization level (default: " <> show defaultOptimizationLevel <> ")")
+      )
+  _compileInliningDepth <-
+    option
+      (fromIntegral <$> naturalNumberOpt)
+      ( long "inline"
+          <> value defaultInliningDepth
+          <> help ("Automatic inlining depth limit, logarithmic in the function size (default: " <> show defaultInliningDepth <> ")")
       )
   _compileTarget <- optCompileTarget supportedTargets
   _compileOutputFile <- optional parseGenericOutputFile

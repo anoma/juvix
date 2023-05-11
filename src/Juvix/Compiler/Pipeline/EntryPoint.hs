@@ -28,6 +28,7 @@ data EntryPoint = EntryPoint
     _entryPointDebug :: Bool,
     _entryPointUnrollLimit :: Int,
     _entryPointOptimizationLevel :: Int,
+    _entryPointInliningDepth :: Int,
     _entryPointGenericOptions :: GenericOptions,
     _entryPointModulePaths :: [Path Abs File]
   }
@@ -71,6 +72,7 @@ defaultEntryPointNoFile roots =
       _entryPointDebug = False,
       _entryPointUnrollLimit = defaultUnrollLimit,
       _entryPointOptimizationLevel = defaultOptimizationLevel,
+      _entryPointInliningDepth = defaultInliningDepth,
       _entryPointModulePaths = []
     }
 
@@ -79,6 +81,9 @@ defaultUnrollLimit = 140
 
 defaultOptimizationLevel :: Int
 defaultOptimizationLevel = 1
+
+defaultInliningDepth :: Int
+defaultInliningDepth = 2
 
 mainModulePath :: Traversal' EntryPoint (Path Abs File)
 mainModulePath = entryPointModulePaths . _head

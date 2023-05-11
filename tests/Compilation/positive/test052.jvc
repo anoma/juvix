@@ -1,0 +1,23 @@
+
+
+def intToNat : Int → Int;
+def literalIntToInt : Int → Int;
+def myflip : (Any → Any → Any) → Any → Any → Any;
+def myconst : Any → Any → Any;
+def mycompose : (Any → Any) → (Any → Any) → Any → Any;
+def main : Int;
+def lambda_12 : Int → Int;
+def lambda_13 : Int → Int;
+def lambda_14 : Int → Int;
+
+def intToNat : Int → Int := λ(_X : Int) _X;
+def literalIntToInt : Int → Int := λ(_X : Int) _X;
+def myflip : (Any → Any → Any) → Any → Any → Any := λ(_X : Any → Any → Any) λ_X' λ_X'0 _X _X'0 _X';
+def myconst : Any → Any → Any := λ_X λ_X' _X;
+def mycompose : (Any → Any) → (Any → Any) → Any → Any := λ(_X : Any → Any) λ(_X' : Any → Any) λ_X'0 _X (_X' _X'0);
+def main : Int := + (lambda_14 3) 9;
+def lambda_12 : Int → Int := λ(_X : Int) + _X 1;
+def lambda_13 : Int → Int := λ(_X : Int) * _X 2;
+def lambda_14 : Int → Int := λ(_X : Int) let _X' : Int := * _X 2 in + _X' 1;
+
+main
