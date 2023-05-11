@@ -217,9 +217,11 @@ substs t = umapN go
         | idx > k -> mkVar i (idx - len)
       _ -> n
 
+-- | Increase the indices of free variables in the binderType by a given value
 shiftBinder :: Int -> Binder -> Binder
 shiftBinder = over binderType . shift
 
+-- | Increase the indices of free variables in the item binder and value
 shiftLetItem :: Int -> LetItem -> LetItem
 shiftLetItem n l =
   LetItem
