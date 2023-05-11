@@ -48,12 +48,13 @@ convertNode inlineDepth recSyms tab = dmap go
       _ ->
         node
 
-inlining' :: Int -> InfoTable -> InfoTable
-inlining' inliningDepth tab = mapT (const (convertNode inliningDepth recursiveIdents tab)) tab
-  where
-    recursiveIdents = nodesOnCycles (createIdentDependencyInfo tab)
+recursiveIdents :: InfoTable -> HashSet Symbol
+recursiveIdents = nodesOnCycles . createIdentDependencyInfo
+
+inlining' :: Int -> HashSet Symbol -> InfoTable -> InfoTable
+inlining' inliningDepth recSyms tab = mapT (const (convertNode inliningDepth recSyms tab)) tab
 
 inlining :: Member (Reader CoreOptions) r => InfoTable -> Sem r InfoTable
 inlining tab = do
   d <- asks (^. optInliningDepth)
-  return $ inlining' d tab
+  return $ inlining' d (recursiveIdents tab) tab

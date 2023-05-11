@@ -7,14 +7,15 @@ import Juvix.Compiler.Core.Transformation.Optimize.LambdaFolding
 import Juvix.Compiler.Core.Transformation.Optimize.LetFolding
 
 optimize' :: CoreOptions -> InfoTable -> InfoTable
-optimize' CoreOptions {..} =
+optimize' CoreOptions {..} tab =
   compose
     (4 * _optOptimizationLevel)
     ( letFolding' (isInlineableLambda _optInliningDepth)
         . lambdaFolding
-        . inlining' _optInliningDepth
+        . inlining' _optInliningDepth (recursiveIdents tab)
     )
     . letFolding
+    $ tab
 
 optimize :: Member (Reader CoreOptions) r => InfoTable -> Sem r InfoTable
 optimize tab = do
