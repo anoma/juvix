@@ -48,9 +48,6 @@ convertNode inlineDepth recSyms tab = dmap go
       _ ->
         node
 
-recursiveIdents :: InfoTable -> HashSet Symbol
-recursiveIdents = nodesOnCycles . createIdentDependencyInfo
-
 inlining' :: Int -> HashSet Symbol -> InfoTable -> InfoTable
 inlining' inliningDepth recSyms tab = mapT (const (convertNode inliningDepth recSyms tab)) tab
 

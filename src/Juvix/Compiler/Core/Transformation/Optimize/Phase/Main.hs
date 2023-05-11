@@ -1,5 +1,6 @@
 module Juvix.Compiler.Core.Transformation.Optimize.Phase.Main where
 
+import Juvix.Compiler.Core.Data.IdentDependencyInfo
 import Juvix.Compiler.Core.Options
 import Juvix.Compiler.Core.Transformation.Base
 import Juvix.Compiler.Core.Transformation.Optimize.Inlining
