@@ -94,3 +94,13 @@ tests:
         [ -f test001.lisp ]
     stdout: ""
     exit-status: 0
+
+  - name: input-file-does-not-exist
+    command:
+      - juvix
+      - compile
+      - positive/NonExistingCompileFile.juvix
+    stderr:
+      contains: |
+        positive/NonExistingCompileFile.juvix" does not exist
+    exit-status: 1

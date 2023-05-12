@@ -2,12 +2,14 @@ module Juvix.Prelude.Path
   ( module Juvix.Prelude.Path,
     module Path,
     module Path.IO,
+    module Juvix.Prelude.Path.SomePath,
   )
 where
 
 import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Prelude.Base
 import Juvix.Prelude.Path.OrphanInstances ()
+import Juvix.Prelude.Path.SomePath
 import Path hiding ((<.>), (</>))
 import Path qualified
 import Path.IO hiding (listDirRel, walkDirRel)
