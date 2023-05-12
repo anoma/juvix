@@ -4,34 +4,6 @@ import Juvix.Compiler.Backend.Geb.Language
 import Juvix.Data.CodeAnn
 import Juvix.Extra.Strings qualified as Str
 
-keywords :: [Doc Ann]
-keywords =
-  [ kwInitial,
-    kwTerminal,
-    kwProd,
-    kwCoprod,
-    kwHom,
-    kwInteger,
-    kwEq,
-    kwLt,
-    kwAbsurd,
-    kwUnit,
-    kwLeft,
-    kwRight,
-    kwFst,
-    kwSnd,
-    kwPair,
-    kwLamb,
-    kwApp,
-    kwVar,
-    kwAdd,
-    kwSub,
-    kwMul,
-    kwDiv,
-    kwMod,
-    kwFail
-  ]
-
 kwAbsurd :: Doc Ann
 kwAbsurd = keyword Str.gebAbsurd
 
