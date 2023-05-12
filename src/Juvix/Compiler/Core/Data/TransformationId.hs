@@ -59,6 +59,9 @@ toEvalTransformations = [EtaExpandApps, MatchToCase, NatToPrimInt, IntToPrimInt,
 toNormalizeTransformations :: [TransformationId]
 toNormalizeTransformations = toEvalTransformations ++ [LetRecLifting, LetFolding, UnrollRecursion]
 
+toLetHoistTransformations :: [TransformationId]
+toLetHoistTransformations = toNormalizeTransformations ++ [LetHoisting]
+
 toStrippedTransformations :: [TransformationId]
 toStrippedTransformations =
   toEvalTransformations ++ [CheckExec, LambdaLetRecLifting, LetFolding, TopEtaExpand, MoveApps, RemoveTypeArgs]
