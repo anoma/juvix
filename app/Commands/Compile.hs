@@ -23,6 +23,7 @@ runCommand opts@CompileOptions {..} = do
     TargetNative64 -> Compile.runCPipeline arg
     TargetWasm32Wasi -> Compile.runCPipeline arg
     TargetGeb -> Compile.runGebPipeline arg
+    TargetVampIR -> Compile.runVampIRPipeline arg
     TargetCore -> writeCoreFile arg
     TargetAsm -> Compile.runAsmPipeline arg
 

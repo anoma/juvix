@@ -8,6 +8,7 @@ import Juvix.Compiler.Asm.Pretty qualified as Asm
 import Juvix.Compiler.Backend qualified as Backend
 import Juvix.Compiler.Backend.C qualified as C
 import Juvix.Compiler.Backend.Geb qualified as Geb
+import Juvix.Compiler.Backend.VampIR.Translation qualified as VampIR
 import Juvix.Compiler.Core.Data.InfoTable qualified as Core
 import System.FilePath (takeBaseName)
 
@@ -31,6 +32,7 @@ getEntry PipelineArg {..} = do
       TargetWasm32Wasi -> Backend.TargetCWasm32Wasi
       TargetNative64 -> Backend.TargetCNative64
       TargetGeb -> Backend.TargetGeb
+      TargetVampIR -> Backend.TargetVampIR
       TargetCore -> Backend.TargetCore
       TargetAsm -> Backend.TargetAsm
 
@@ -76,6 +78,17 @@ runGebPipeline pa@PipelineArg {..} = do
                     }
   Geb.Result {..} <- getRight (run (runReader entryPoint (runError (coreToGeb spec _pipelineArgInfoTable :: Sem '[Error JuvixError, Reader EntryPoint] Geb.Result))))
   embed $ TIO.writeFile (toFilePath gebFile) _resultCode
+
+runVampIRPipeline ::
+  forall r.
+  (Members '[Embed IO, App] r) =>
+  PipelineArg ->
+  Sem r ()
+runVampIRPipeline pa@PipelineArg {..} = do
+  entryPoint <- getEntry pa
+  vampirFile <- Compile.outputFile _pipelineArgOptions _pipelineArgFile
+  VampIR.Result {..} <- getRight (run (runReader entryPoint (runError (coreToVampIR _pipelineArgInfoTable :: Sem '[Error JuvixError, Reader EntryPoint] VampIR.Result))))
+  embed $ TIO.writeFile (toFilePath vampirFile) _resultCode
 
 runAsmPipeline :: (Members '[Embed IO, App] r) => PipelineArg -> Sem r ()
 runAsmPipeline pa@PipelineArg {..} = do

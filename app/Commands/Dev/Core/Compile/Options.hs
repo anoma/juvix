@@ -16,6 +16,7 @@ coreSupportedTargets =
     [ TargetWasm32Wasi,
       TargetNative64,
       TargetGeb,
+      TargetVampIR,
       TargetAsm
     ]
 

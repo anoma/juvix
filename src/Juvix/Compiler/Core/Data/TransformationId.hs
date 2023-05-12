@@ -27,6 +27,7 @@ data TransformationId
 data PipelineId
   = PipelineEval
   | PipelineGeb
+  | PipelineVampIR
   | PipelineStripped
   deriving stock (Data, Bounded, Enum)
 
@@ -61,8 +62,12 @@ toStrippedTransformations =
 toGebTransformations :: [TransformationId]
 toGebTransformations = toEvalTransformations ++ [CheckGeb, LetRecLifting, LetFolding, UnrollRecursion, FoldTypeSynonyms, ComputeTypeInfo]
 
+toVampIRTransformations :: [TransformationId]
+toVampIRTransformations = toEvalTransformations
+
 pipeline :: PipelineId -> [TransformationId]
 pipeline = \case
   PipelineEval -> toEvalTransformations
   PipelineGeb -> toGebTransformations
+  PipelineVampIR -> toVampIRTransformations
   PipelineStripped -> toStrippedTransformations

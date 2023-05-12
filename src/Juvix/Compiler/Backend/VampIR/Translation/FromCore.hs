@@ -8,8 +8,11 @@ import Juvix.Compiler.Core.Info.NameInfo (getInfoName)
 import Juvix.Compiler.Core.Language as Core
 import Juvix.Compiler.Core.Transformation.DisambiguateNames (disambiguateNodeNames')
 
-fromCore :: Node -> Program
-fromCore node =
+fromCore :: InfoTable -> Program
+fromCore tab = fromCoreNode $ lookupIdentifierNode tab (fromJust (tab ^. infoMain))
+
+fromCoreNode :: Node -> Program
+fromCoreNode node =
   let (lams, body) = unfoldLambdas (disambiguateNodeNames' disambiguate emptyInfoTable node)
       (defs, expr) = convertLets body
    in Program

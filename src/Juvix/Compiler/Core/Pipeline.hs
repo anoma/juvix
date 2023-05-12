@@ -33,3 +33,10 @@ toGeb' = applyTransformations toGebTransformations
 
 toGeb :: Members '[Error JuvixError, Reader EntryPoint] r => InfoTable -> Sem r InfoTable
 toGeb = mapReader fromEntryPoint . applyTransformations toGebTransformations
+
+-- | Perform transformations on Core necessary before the translation to VampIR
+toVampIR' :: Members '[Error JuvixError, Reader CoreOptions] r => InfoTable -> Sem r InfoTable
+toVampIR' = applyTransformations toVampIRTransformations
+
+toVampIR :: Members '[Error JuvixError, Reader EntryPoint] r => InfoTable -> Sem r InfoTable
+toVampIR = mapReader fromEntryPoint . applyTransformations toVampIRTransformations
