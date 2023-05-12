@@ -22,17 +22,17 @@ kwMul = keyword Str.vampirMul
 kwDiv :: Doc Ann
 kwDiv = keyword Str.vampirDiv
 
+kwMod :: Doc Ann
+kwMod = keyword Str.vampirMod
+
 kwEqual :: Doc Ann
 kwEqual = keyword Str.vampirEqual
 
 kwLessThan :: Doc Ann
 kwLessThan = keyword Str.vampirLessThan
 
-kwAnd :: Doc Ann
-kwAnd = keyword Str.vampirAnd
-
-kwOr :: Doc Ann
-kwOr = keyword Str.vampirOr
+kwLessOrEqual :: Doc Ann
+kwLessOrEqual = keyword Str.vampirLessOrEqual
 
 kwIf :: Doc Ann
 kwIf = keyword Str.vampirIf

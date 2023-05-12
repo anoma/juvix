@@ -29,10 +29,10 @@ instance PrettyCode OpCode where
     OpSub -> return kwSub
     OpMul -> return kwMul
     OpDiv -> return kwDiv
+    OpMod -> return kwMod
     OpEq -> return kwEqual
     OpLt -> return kwLessThan
-    OpAnd -> return kwAnd
-    OpOr -> return kwOr
+    OpLe -> return kwLessOrEqual
 
 instance PrettyCode Binop where
   ppCode Binop {..} = do
@@ -70,9 +70,9 @@ instance PrettyCode Function where
     e <- ppCode _functionExpression
     return $ kwDef <+> hsep (n : args) <+> kwEq <+> bracesIndent (vsep defs <> line <> e) <> semi
 
-instance PrettyCode VampIR where
-  ppCode VampIR {..} = do
-    fns <- mapM ppCode _vampIRFunctions
+instance PrettyCode Program where
+  ppCode Program {..} = do
+    fns <- mapM ppCode _programFunctions
     return $ vsep vampIRDefs <> line <> line <> vsep fns
 
 --------------------------------------------------------------------------------
@@ -84,16 +84,19 @@ vampIRDefs =
   [ "def add x y = x + y;",
     "def sub x y = x - y;",
     "def mul x y = x * y;",
-    "def div x y = x / y;",
     "def isZero x = {def xi = fresh (1 | x); x * (1 - xi * x) = 0; 1 - xi * x};",
     "def equal x y = isZero (x - y);",
     "def decomp_rec bits a = {def a0 = fresh (a%2); isBool a0; def a1 = fresh (a\2); a = a0 + 2*a1; (a0 : bits a1)};",
     "def decomp n = iter n decomp_rec (fun x {[]});",
     "def decompInt n x = decomp n (x + 2^n);",
-    "def lessThan x y = last (decompInt 32 (x - y));",
-    "def negb x = 1 - x;",
-    "def andb x y = x * y;",
-    "def orb x y = negb (andb (negb x) (negb y));",
+    "def isNegative x = last (decompInt 32 x)",
+    "def lessThan x y = isNegative (x - y));",
+    "def lessOrEqual x y = lessThan x (y + 1);",
+    "def divRem a b = {def q = fresh (a\b); def r = fresh (a%b); isNegative r = 0; lessThan r b = 1; a = b * q + r; (q, r) };",
+    "def fst (x, y) = x;",
+    "def snd (x, y) = y;",
+    "def div x y = fst (divRem x y);",
+    "def rem x y = snd (divRem x y);",
     "def if b x y = b * x + (1 - b) * y;"
   ]
 

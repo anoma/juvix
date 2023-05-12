@@ -15,10 +15,10 @@ data OpCode
   | OpSub
   | OpMul
   | OpDiv
+  | OpMod
   | OpEq
   | OpLt
-  | OpAnd
-  | OpOr
+  | OpLe
 
 data Binop = Binop
   { _binopOp :: OpCode,
@@ -51,8 +51,8 @@ data Function = Function
     _functionExpression :: Expression
   }
 
-newtype VampIR = VampIR
-  { _vampIRFunctions :: [Function]
+newtype Program = Program
+  { _programFunctions :: [Function]
   }
 
 makeLenses ''Var
@@ -61,7 +61,7 @@ makeLenses ''IfThenElse
 makeLenses ''Expression
 makeLenses ''LocalDef
 makeLenses ''Function
-makeLenses ''VampIR
+makeLenses ''Program
 
 instance HasAtomicity Var where
   atomicity _ = Atom

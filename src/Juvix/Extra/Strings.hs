@@ -626,17 +626,17 @@ vampirMul = "mul"
 vampirDiv :: IsString s => s
 vampirDiv = "div"
 
+vampirMod :: IsString s => s
+vampirMod = "rem"
+
 vampirEqual :: IsString s => s
 vampirEqual = "equal"
 
 vampirLessThan :: IsString s => s
 vampirLessThan = "lessThan"
 
-vampirAnd :: IsString s => s
-vampirAnd = "andb"
-
-vampirOr :: IsString s => s
-vampirOr = "orb"
+vampirLessOrEqual :: IsString s => s
+vampirLessOrEqual = "lessOrEqual"
 
 vampirIf :: IsString s => s
 vampirIf = "if"

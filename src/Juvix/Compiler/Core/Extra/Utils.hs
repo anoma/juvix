@@ -274,3 +274,24 @@ builtinOpArgTypes = \case
   OpSeq -> [mkDynamic', mkDynamic']
   OpTrace -> [mkDynamic']
   OpFail -> [mkTypeString']
+
+translateCase :: (Node -> Node -> Node -> a) -> a -> Case -> a
+translateCase translateIf dflt Case {..} = case _caseBranches of
+  [br@CaseBranch {..}]
+    | _caseBranchTag == BuiltinTag TagTrue ->
+        translateIf _caseValue (br ^. caseBranchBody) (fromMaybe branchFailure _caseDefault)
+  [br@CaseBranch {..}]
+    | _caseBranchTag == BuiltinTag TagFalse ->
+        translateIf _caseValue (fromMaybe branchFailure _caseDefault) (br ^. caseBranchBody)
+  [br1, br2]
+    | br1 ^. caseBranchTag == BuiltinTag TagTrue
+        && br2 ^. caseBranchTag == BuiltinTag TagFalse ->
+        translateIf _caseValue (br1 ^. caseBranchBody) (br2 ^. caseBranchBody)
+    | br1 ^. caseBranchTag == BuiltinTag TagFalse
+        && br2 ^. caseBranchTag == BuiltinTag TagTrue ->
+        translateIf _caseValue (br2 ^. caseBranchBody) (br1 ^. caseBranchBody)
+  _ ->
+    dflt
+  where
+    branchFailure :: Node
+    branchFailure = mkBuiltinApp' OpFail [mkConstant' (ConstString "illegal `if` branch")]
