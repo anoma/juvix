@@ -2,7 +2,7 @@
 -- transformation assumes:
 -- - There are no LetRecs, Lambdas (other than the ones at the top), nor Match.
 -- - Case nodes do not have binders.
--- - Let items and body do not reference variables bound in Pi nodes.
+-- - Except for the top lambdas, only Let nodes introduce binders.
 -- - All let items have type Int.
 -- - Top lambdas do not have lets in the binders.
 module Juvix.Compiler.Core.Transformation.LetHoisting
@@ -12,6 +12,7 @@ module Juvix.Compiler.Core.Transformation.LetHoisting
 where
 
 import Data.HashMap.Strict qualified as HashMap
+import Juvix.Compiler.Core.Data.BinderList qualified as BL
 import Juvix.Compiler.Core.Data.InfoTableBuilder
 import Juvix.Compiler.Core.Extra.Recursors.Map.Named
 import Juvix.Compiler.Core.Extra.Utils
@@ -26,6 +27,12 @@ data LItem = LItem
 
 makeLenses ''LItem
 
+newtype LetInfo = LetInfo
+  { _letSymbols :: [Symbol]
+  }
+
+makeLenses ''LetInfo
+
 -- | `LItem` indexed by Symbol
 type LetsTable = HashMap Symbol (Indexed LItem)
 
@@ -37,60 +44,64 @@ letHoisting = run . mapT' (const letHoist)
 
 letHoist :: forall r. Members '[InfoTableBuilder] r => Node -> Sem r Node
 letHoist n = do
-  (l, n') <- runOutputList @LItem (removeLets n)
-  let (topLambdas, body') = unfoldLambdas n'
-      nlam = length topLambdas
-      il = indexFrom 0 l
+  let (topLambdas, body') = unfoldLambdas n
+  (l, body'') <- runReader @[Symbol] [] (runOutputList @LItem (removeLets body'))
+  let il = indexFrom 0 l
+      nlets = length il
       tbl = mkLetsTable il
       mkLetItem :: Indexed LItem -> LetItem
       mkLetItem i = shiftLetItem s (i ^. indexedThing . itemLet)
         where
-          s = - i ^. indexedThing . itemLevel + (nlam + i ^. indexedIx)
-          -- s = undefined
+          s = i ^. indexedIx - i ^. indexedThing . itemLevel
       letItems = map mkLetItem il
-      body'' =
-        substPlaceholders nlam tbl
-        (mkLets letItems body')
-  return (reLambdas topLambdas body'')
+      body''' =
+        substPlaceholders
+          nlets
+          tbl
+          (mkLets letItems body'')
+  return (reLambdas topLambdas body''')
 
 -- | Removes every Let node and replaces references to it with a unique symbol.
-removeLets :: forall r. Members '[InfoTableBuilder, Output LItem] r => Node -> Sem r Node
-removeLets = rmapNM' go
+-- NOTE It is assumed that all bound variables are bound by a let.
+removeLets :: forall r. Members '[InfoTableBuilder, Output LItem, Reader [Symbol]] r => Node -> Sem r Node
+removeLets = dmapLM go
   where
     go ::
-      (Level -> [BinderChange] -> Node -> Sem r Node) ->
-      Level ->
+      BinderList Binder ->
       Node ->
       Sem r Node
-    go recur _itemLevel = \case
+    go bl = \case
+      NVar v
+        | v ^. varIndex < length bl -> do
+            mkIdent' . (!! (v ^. varIndex)) <$> ask
       NLet l -> do
+        let _itemLevel = length bl
         _itemSymbol <- freshSymbol
         -- note that the binder does not need to be hoisted because it is
         -- assumed to have type Int
         let bi = l ^. letItem . letItemBinder
-        value' <- go recur _itemLevel (l ^. letItem . letItemValue)
+        value' <- go bl (l ^. letItem . letItemValue)
         let _itemLet = LetItem bi value'
         output LItem {..}
-        -- [BCRemove (BinderRemove bi (mkIdent' _itemSymbol))]
-        go (\lvl ls -> recur lvl (mkBCRemove bi (mkIdent' _itemSymbol) : ls)) _itemLevel (l ^. letBody)
-      other -> recur _itemLevel [] other
+        local (_itemSymbol :) (go (BL.cons bi bl) (l ^. letBody))
+      other -> return other
 
 -- | Replaces the placeholders with variables that point to the hoisted let.
 substPlaceholders :: Int -> LetsTable -> Node -> Node
-substPlaceholders nlam tbl = dmapN go
+substPlaceholders nlets tbl = dmap go
   where
-    go :: Level -> Node -> Node
-    go lvl = \case
+    go :: Node -> Node
+    go = \case
       NIdt i
-        | Just (l :: Indexed LItem) <- HashMap.lookup (i ^. identSymbol) tbl ->
-            mkVar' (lvl - (nlam + l ^. indexedIx))
+        | Just (t :: Indexed LItem) <- HashMap.lookup (i ^. identSymbol) tbl ->
+            mkVar' (nlets - t ^. indexedIx - 1)
       n -> n
 
 -- | True if it is of the form λ … λ let a₁ = b₁; … aₙ = bₙ in body;
 -- where body does not contain any let.
 isLetHoisted :: Node -> Bool
 isLetHoisted =
-    checkBody
+  checkBody
     . snd
     . unfoldLambdas
   where
@@ -106,8 +117,8 @@ isLetHoisted =
       n -> return n
     noLets :: forall r. Members '[Fail] r => Node -> Sem r ()
     noLets = walk go
-     where
-      go :: Node -> Sem r ()
-      go = \case
-        NLet {} -> fail
-        _ -> return ()
+      where
+        go :: Node -> Sem r ()
+        go = \case
+          NLet {} -> fail
+          _ -> return ()
