@@ -24,7 +24,7 @@ tests =
       $(mkRelDir ".")
       $(mkRelFile "test010.jvc")
       $(mkRelFile "data/test010.json"),
-     PosTest
+    PosTest
       "Test028: Lets"
       $(mkRelDir ".")
       $(mkRelFile "test028.jvc")
