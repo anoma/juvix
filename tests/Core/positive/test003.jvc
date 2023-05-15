@@ -4,6 +4,6 @@
 
 Multiline comment
 
-{- nested comments don't work -- }
+{- nested comments work -}
 
 -}
