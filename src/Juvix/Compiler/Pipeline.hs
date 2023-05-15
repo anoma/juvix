@@ -151,6 +151,9 @@ regToMiniC' tab = do
   e <- ask
   return $ C.fromReg (e ^. Asm.optLimits) tab
 
+coreToVampIR' :: Members '[Error JuvixError, Reader Core.CoreOptions] r => Core.InfoTable -> Sem r VampIR.Result
+coreToVampIR' = Core.toVampIR' >=> return . VampIR.toResult . VampIR.fromCore
+
 --------------------------------------------------------------------------------
 -- Run pipeline
 --------------------------------------------------------------------------------

@@ -58,7 +58,7 @@ instance PrettyCode LocalDef where
   ppCode LocalDef {..} = do
     n <- ppName KNameLocal _localDefName
     v <- ppCode _localDefValue
-    return $ kwDef <+> n <+> kwEq <+> v <+> semi <> line
+    return $ kwDef <+> n <+> kwEq <+> v <> semi <> line
 
 instance PrettyCode Function where
   ppCode Function {..} = do
@@ -73,7 +73,7 @@ ppEquation Function {..} = do
   let n = length _functionArguments
       args = if n == 1 then ["in"] else map (\k -> "in" <> show k) [1 .. n]
   fn <- ppName KNameFunction _functionName
-  return $ fn <+> vsep args <+> kwEq <+> "out" <> semi
+  return $ fn <+> hsep args <+> kwEq <+> "out" <> semi
 
 instance PrettyCode Program where
   ppCode Program {..} = do
