@@ -764,7 +764,10 @@ checkOpenImportModule op
               }
        in do
             void (checkImport import_)
-            scopedOpen <- checkOpenModule (set openModuleImportKw Nothing op)
+            let changeOpenName = case op ^. openImportAsName of
+                  Nothing -> id
+                  Just o -> set openModuleName (topModulePathToName o)
+            scopedOpen <- checkOpenModule (set openModuleImportKw Nothing (changeOpenName op))
             return (set openModuleImportKw (Just k) scopedOpen)
   | otherwise = impossible
 
