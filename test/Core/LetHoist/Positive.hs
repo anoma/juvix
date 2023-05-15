@@ -18,4 +18,15 @@ allTests =
     (map (mkTest . toTestDescr) tests)
 
 tests :: [PosTest]
-tests = Normalize.tests
+tests =
+  [ PosTest
+      "Test010: Lets"
+      $(mkRelDir ".")
+      $(mkRelFile "test010.jvc")
+      $(mkRelFile "data/test010.json"),
+     PosTest
+      "Test028: Lets"
+      $(mkRelDir ".")
+      $(mkRelFile "test028.jvc")
+      $(mkRelFile "data/test028.json")
+  ]
