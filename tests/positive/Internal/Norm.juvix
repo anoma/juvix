@@ -1,0 +1,6 @@
+module Norm;
+
+open import Stdlib.Prelude;
+
+main : Nat;
+main := λ{x := x + 2} 1;

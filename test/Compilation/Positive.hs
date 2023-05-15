@@ -316,8 +316,13 @@ tests =
       $(mkRelFile "test051.juvix")
       $(mkRelFile "out/test051.out"),
     posTest
-      "Test052: Mutually recursive types, simple lambda calculus"
+      "Test052: Simple lambda calculus"
       $(mkRelDir ".")
       $(mkRelFile "test052.juvix")
-      $(mkRelFile "out/test052.out")
+      $(mkRelFile "out/test052.out"),
+    posTest
+      "Test053: Inlining"
+      $(mkRelDir ".")
+      $(mkRelFile "test053.juvix")
+      $(mkRelFile "out/test053.out")
   ]

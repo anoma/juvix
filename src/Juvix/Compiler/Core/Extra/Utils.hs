@@ -65,7 +65,10 @@ isImmediate = \case
   NVar {} -> True
   NIdt {} -> True
   NCst {} -> True
-  _ -> False
+  node@(NApp {}) ->
+    let (_, args) = unfoldApps' node
+     in all isType args
+  node -> isType node
 
 -- | True if the argument is fully evaluated first-order data
 isDataValue :: Node -> Bool
@@ -287,3 +290,7 @@ builtinOpArgTypes = \case
   OpSeq -> [mkDynamic', mkDynamic']
   OpTrace -> [mkDynamic']
   OpFail -> [mkTypeString']
+
+checkDepth :: Int -> Node -> Bool
+checkDepth 0 _ = False
+checkDepth d node = all (checkDepth (d - 1)) (childrenNodes node)

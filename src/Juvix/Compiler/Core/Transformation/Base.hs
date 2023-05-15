@@ -9,6 +9,7 @@ import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Core.Data.InfoTable
 import Juvix.Compiler.Core.Data.InfoTableBuilder
 import Juvix.Compiler.Core.Language
+import Juvix.Compiler.Core.Options
 
 mapIdentsM :: Monad m => (IdentifierInfo -> m IdentifierInfo) -> InfoTable -> m InfoTable
 mapIdentsM = overM infoIdentifiers . mapM
@@ -85,3 +86,13 @@ mapAllNodes f tab =
 
     convertAxiom :: AxiomInfo -> AxiomInfo
     convertAxiom = over axiomType f
+
+withOptimizationLevel :: Member (Reader CoreOptions) r => Int -> (InfoTable -> Sem r InfoTable) -> InfoTable -> Sem r InfoTable
+withOptimizationLevel n f tab = do
+  l <- asks (^. optOptimizationLevel)
+  if
+      | l >= n -> f tab
+      | otherwise -> return tab
+
+withOptimizationLevel' :: Member (Reader CoreOptions) r => InfoTable -> Int -> (InfoTable -> Sem r InfoTable) -> Sem r InfoTable
+withOptimizationLevel' tab n f = withOptimizationLevel n f tab
