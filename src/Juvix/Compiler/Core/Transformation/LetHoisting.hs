@@ -28,12 +28,6 @@ data LItem = LItem
 
 makeLenses ''LItem
 
-newtype LetInfo = LetInfo
-  { _letSymbols :: [Symbol]
-  }
-
-makeLenses ''LetInfo
-
 -- | `LItem` indexed by Symbol
 type LetsTable = HashMap Symbol (Indexed LItem)
 
