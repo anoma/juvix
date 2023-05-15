@@ -4,6 +4,7 @@
 -- - Case nodes do not have binders.
 -- - All variables reference either a lambda or a let.
 -- - All let and lambda binders have type Int.
+-- - Let nodes do not appear under Pi binders.
 module Juvix.Compiler.Core.Transformation.LetHoisting
   ( module Juvix.Compiler.Core.Transformation.LetHoisting,
     module Juvix.Compiler.Core.Transformation.Base,
