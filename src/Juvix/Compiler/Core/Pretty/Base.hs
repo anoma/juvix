@@ -195,7 +195,7 @@ ppCodeLet' name mty lt = do
           mempty <+> kwColon <+> ty
         Nothing ->
           mempty
-  return $ kwLet <+> n' <> tty <+> kwAssign <+> v' <+> kwIn <+> b'
+  return $ kwLet <+> n' <> tty <+> kwAssign <> oneLineOrNext v' <+> kwIn <> line <> b'
 
 ppCodeCase' :: (PrettyCode a, Member (Reader Options) r) => [[Text]] -> [[Maybe (Doc Ann)]] -> [Text] -> Case' i bi a ty -> Sem r (Doc Ann)
 ppCodeCase' branchBinderNames branchBinderTypes branchTagNames Case {..} =
@@ -297,6 +297,18 @@ instance PrettyCode LetRec where
       getName :: Binder -> Sem r (Doc Ann)
       getName i = ppName KNameLocal (i ^. binderName)
 
+instance PrettyCode Lambda where
+  ppCode (Lambda _ bi body) = do
+    b <- ppCode body
+    lam <- do
+      n <- ppName KNameLocal (bi ^. binderName)
+      case bi ^. binderType of
+        NDyn {} -> return $ kwLambda <> n
+        ty -> do
+          tty <- ppCode ty
+          return $ kwLambda <> parens (n <+> kwColon <+> tty)
+    return (lam <> oneLineOrNext b)
+
 instance PrettyCode Node where
   ppCode :: forall r. (Member (Reader Options) r) => Node -> Sem r (Doc Ann)
   ppCode node = case node of
@@ -312,16 +324,7 @@ instance PrettyCode Node where
     NCtr x ->
       let name = getInfoName (x ^. constrInfo)
        in ppCodeConstr' name x
-    NLam (Lambda _ bi body) -> do
-      b <- ppCode body
-      lam <- do
-        n <- ppName KNameLocal (bi ^. binderName)
-        case bi ^. binderType of
-          NDyn {} -> return $ kwLambda <> n
-          ty -> do
-            tty <- ppCode ty
-            return $ kwLambda <> parens (n <+> kwColon <+> tty)
-      return (lam <+> b)
+    NLam l -> ppCode l
     NLet x -> ppCode x
     NRec l -> ppCode l
     NCase x@Case {..} -> do
@@ -475,7 +478,7 @@ instance PrettyCode InfoTable where
             case msig of
               Just sig -> do
                 body' <- ppCode n
-                return (Just (sig <+> kwAssign <+> nest' body' <> kwSemicolon))
+                return (Just (sig <+> kwAssign <> oneLineOrNext body' <> kwSemicolon))
               Nothing ->
                 return Nothing
 
