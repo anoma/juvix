@@ -51,6 +51,7 @@ transformationLike =
 pipelineText :: PipelineId -> Text
 pipelineText = \case
   PipelineEval -> strEvalPipeline
+  PipelineNormalize -> strNormalizePipeline
   PipelineGeb -> strGebPipeline
   PipelineVampIR -> strVampIRPipeline
   PipelineStripped -> strStrippedPipeline
@@ -99,6 +100,9 @@ allStrings = map transformationLikeText allTransformationLikeIds
 
 strEvalPipeline :: Text
 strEvalPipeline = "pipeline-eval"
+
+strNormalizePipeline :: Text
+strNormalizePipeline = "pipeline-normalize"
 
 strGebPipeline :: Text
 strGebPipeline = "pipeline-geb"

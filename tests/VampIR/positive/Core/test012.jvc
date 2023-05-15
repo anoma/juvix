@@ -1,0 +1,9 @@
+-- partial application
+
+def f : (Int -> Int -> Int) -> Int := \(h : Int -> Int -> Int) h 1 2;
+def g : Int -> Int := \(x : Int) x;
+
+\(x : Int) \(y : Int)
+let h : Int -> Int -> Int := \(x : Int) g
+in
+f h + h x y

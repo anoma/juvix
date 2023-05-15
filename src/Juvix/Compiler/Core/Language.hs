@@ -84,10 +84,10 @@ data Node
   | NTyp {-# UNPACK #-} !TypeConstr
   | NPrim {-# UNPACK #-} !TypePrim
   | NDyn !Dynamic -- Dynamic is already a newtype, so it's unpacked.
-  | -- Evaluation only: `Closure env body`.
+  | -- Evaluation only: `Closure env node`.
     Closure
       { _closureEnv :: !Env,
-        _closureLambda :: {-# UNPACK #-} !Lambda
+        _closureNode :: !Node
       }
   deriving stock (Eq)
 

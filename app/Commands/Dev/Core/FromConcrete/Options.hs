@@ -14,6 +14,7 @@ data CoreFromConcreteOptions = CoreFromConcreteOptions
     _coreFromConcreteFilter :: Bool,
     _coreFromConcreteNoIO :: Bool,
     _coreFromConcreteEval :: Bool,
+    _coreFromConcreteNormalize :: Bool,
     _coreFromConcreteInputFile :: AppPath File,
     _coreFromConcreteSymbolName :: Maybe Text
   }
@@ -53,6 +54,11 @@ parseCoreFromConcreteOptions = do
     switch
       ( long "eval"
           <> help "Evaluate the main function"
+      )
+  _coreFromConcreteNormalize <-
+    switch
+      ( long "normalize"
+          <> help "Normalize the main function"
       )
   _coreFromConcreteNoIO <-
     switch

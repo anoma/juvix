@@ -1,8 +1,8 @@
 -- let
 
-let x : Nat := 1 in
-let x : Nat := x + let x : Nat := 2 in x in
-let x : Nat := x * x in
-let y : Nat := x + 2 in
-let z : Nat := x + y in
+let x : Int := 1 in
+let x : Int := x + let x : Int := 2 in x in
+let x : Int := x * x in
+let y : Int := x + 2 in
+let z : Int := x + y in
 x + y + z

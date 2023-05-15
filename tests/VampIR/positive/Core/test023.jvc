@@ -1,0 +1,19 @@
+-- eta-expansion
+
+def compose : (Int -> Int) -> (Int -> Int) -> Int -> Int :=
+  \(f : Int -> Int) \(g : Int -> Int) \(x : Int) f (g x);
+
+def expand : Π A : Type, A -> Int -> A := \(A : Type) \(f : A) \(x : Int) f;
+
+def f : Int -> Int := (+) 1;
+
+def g : Int -> Int -> Int := \(z : Int) compose f (\(x : Int) x - z);
+
+def h : Int -> Int := compose f (g 3);
+
+def j : Int -> Int -> Int := g;
+
+def k : Int -> Int -> Int -> Int := expand (Int -> Int) j;
+
+\(x2 : Int) \(x3 : Int) \(x4 : Int) \(x7 : Int) \(x13 : Int)
+h x13 + j x2 x3 + k 9 x4 x7

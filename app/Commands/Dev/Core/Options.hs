@@ -4,6 +4,7 @@ import Commands.Dev.Core.Asm.Options
 import Commands.Dev.Core.Compile.Options
 import Commands.Dev.Core.Eval.Options
 import Commands.Dev.Core.FromConcrete.Options
+import Commands.Dev.Core.Normalize.Options
 import Commands.Dev.Core.Read.Options
 import Commands.Dev.Core.Repl.Options
 import Commands.Dev.Core.Strip.Options
@@ -12,6 +13,7 @@ import CommonOptions
 data CoreCommand
   = Repl CoreReplOptions
   | Eval CoreEvalOptions
+  | Normalize CoreNormalizeOptions
   | Read CoreReadOptions
   | FromConcrete CoreFromConcreteOptions
   | Strip CoreStripOptions
@@ -25,6 +27,7 @@ parseCoreCommand =
     mconcat
       [ commandRepl,
         commandEval,
+        commandNormalize,
         commandRead,
         commandStrip,
         commandFromConcrete,
@@ -37,6 +40,9 @@ parseCoreCommand =
 
     commandEval :: Mod CommandFields CoreCommand
     commandEval = command "eval" evalInfo
+
+    commandNormalize :: Mod CommandFields CoreCommand
+    commandNormalize = command "normalize" normalizeInfo
 
     commandRead :: Mod CommandFields CoreCommand
     commandRead = command "read" readInfo
@@ -70,6 +76,12 @@ parseCoreCommand =
       info
         (Eval <$> parseCoreEvalOptions)
         (progDesc "Evaluate a JuvixCore file and pretty print the result")
+
+    normalizeInfo :: ParserInfo CoreCommand
+    normalizeInfo =
+      info
+        (Normalize <$> parseCoreNormalizeOptions)
+        (progDesc "Normalize the main definition from a JuvixCore file and pretty print the result")
 
     readInfo :: ParserInfo CoreCommand
     readInfo =

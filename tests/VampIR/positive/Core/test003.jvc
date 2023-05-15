@@ -1,0 +1,16 @@
+-- inductive types
+
+def intToBool : Int -> Bool := \(x : Int) if x = 0 then false else true;
+def boolToInt : Bool -> Int := \(x : Bool) if x then 1 else 0;
+
+type enum {
+  opt0 : enum;
+  opt1 : Bool -> enum;
+  opt2 : Bool -> Bool -> enum;
+};
+
+\(x : Int) \(y : Int) (\(e : enum) boolToInt (case e of {
+  opt0 := false;
+  opt1 b := b;
+  opt2 b c := if b then b else c;
+})) (opt2 (intToBool x) (intToBool y))

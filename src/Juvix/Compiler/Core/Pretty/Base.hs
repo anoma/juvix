@@ -350,8 +350,8 @@ instance PrettyCode Node where
       n' <- ppName KNameInductive (getInfoName _typeConstrInfo)
       return $ foldl' (<+>) n' args'
     NDyn {} -> return kwDynamic
-    Closure env l@Lambda {} ->
-      ppCode (substEnv env (NLam l))
+    Closure env n ->
+      ppCode (substEnv env n)
 
 instance PrettyCode Pi where
   ppCode Pi {..} =

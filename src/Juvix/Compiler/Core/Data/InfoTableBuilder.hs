@@ -132,6 +132,9 @@ runInfoTableBuilder tab =
 execInfoTableBuilder :: InfoTable -> Sem (InfoTableBuilder ': r) a -> Sem r InfoTable
 execInfoTableBuilder tab = fmap fst . runInfoTableBuilder tab
 
+evalInfoTableBuilder :: InfoTable -> Sem (InfoTableBuilder ': r) a -> Sem r a
+evalInfoTableBuilder tab = fmap snd . runInfoTableBuilder tab
+
 --------------------------------------------
 -- Builtin declarations
 --------------------------------------------

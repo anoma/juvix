@@ -51,4 +51,4 @@ corePrintAssertion mainFile expectedFile step = do
       let r' = runParserMain mainFile emptyInfoTable (ppPrint tab)
       case r' of
         Left err -> assertFailure (show (pretty err))
-        Right tab' -> coreEvalAssertion' tab' mainFile expectedFile step
+        Right tab' -> coreEvalAssertion' EvalModePlain tab' mainFile expectedFile step
