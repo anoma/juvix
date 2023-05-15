@@ -89,10 +89,30 @@ jobs:
           repo: wasmerio/wasmer
           tag: v3.2.1
           binaries-location: bin
-          cache: true
+          cache: enable
 
       - name: Install libicu for testing
         run: sudo apt install -y libicu66
+
+      - name: Add ~/.local/bin to PATH
+        run: |
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Install VampIR for testing
+        uses: jaxxstorm/action-install-gh-release@v1.10.0
+        with:
+          repo: anoma/vamp-ir
+          platform: linux
+          tag: latest
+          chmod: 0755
+          rename-to: vamp-ir
+          extension-matching: disable
+          cache: enable
+
+      - name: Test VampIR
+        shell: bash
+        run: |
+          vamp-ir --version
 
       - name: Make runtime
         run: |
@@ -121,25 +141,7 @@ jobs:
           cd main
           make check-format-juvix-files && make typecheck-juvix-examples
 
-      - name: Add ~/.local/bin to PATH
-        run: |
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
 
-      - name: Install VampIR for testing
-        uses: jaxxstorm/action-install-gh-release@v1.10.0
-        with:
-          repo: anoma/vamp-ir
-          platform: linux
-          tag: latest
-          chmod: 0755
-          rename-to: vamp-ir
-          extension-matching: disable
-          cache: true
-
-      - name: Test VampIR
-        shell: bash
-        run: |
-          vamp-ir --version
 
       - uses: actions/checkout@v3
         with:
@@ -195,7 +197,7 @@ jobs:
           repo: wasmerio/wasmer
           tag: v3.2.1
           binaries-location: bin
-          cache: true
+          cache: enable
 
       - name: Set homebrew LLVM CC and LIBTOOL vars (macOS)
         run: |
@@ -217,6 +219,22 @@ jobs:
       - name: Add homebrew clang to the PATH (macOS)
         run: |
           echo "$(brew --prefix llvm@15)/bin" >> $GITHUB_PATH
+
+      - name: Install VampIR for testing
+        uses: jaxxstorm/action-install-gh-release@v1.10.0
+        with:
+          repo: anoma/vamp-ir
+          platform: linux
+          tag: latest
+          chmod: 0755
+          rename-to: vamp-ir
+          extension-matching: disable
+          cache: enable
+
+      - name: Test VampIR
+        shell: bash
+        run: |
+          vamp-ir --version
 
       - name: Install and test Juvix
         if: ${{ success() }}
@@ -244,6 +262,7 @@ jobs:
           extension-matching: disable
           rename-to: smoke
           chmod: 0755
+          cache: enable
 
       - name: Smoke testing (macOS)
         id: smoke-macos
