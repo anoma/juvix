@@ -1,6 +1,7 @@
 module Commands.Extra.Compile.Options where
 
 import CommonOptions hiding (show)
+import Juvix.Compiler.Pipeline.EntryPoint
 import Prelude (Show (show))
 
 data CompileTarget
@@ -10,7 +11,7 @@ data CompileTarget
   | TargetVampIR
   | TargetCore
   | TargetAsm
-  deriving stock (Data, Bounded, Enum)
+  deriving stock (Eq, Data, Bounded, Enum)
 
 instance Show CompileTarget where
   show = \case
@@ -29,7 +30,9 @@ data CompileOptions = CompileOptions
     _compileTerm :: Bool,
     _compileOutputFile :: Maybe (AppPath File),
     _compileTarget :: CompileTarget,
-    _compileInputFile :: AppPath File
+    _compileInputFile :: AppPath File,
+    _compileOptimizationLevel :: Int,
+    _compileInliningDepth :: Int
   }
   deriving stock (Data)
 
@@ -70,10 +73,29 @@ parseCompileOptions supportedTargets parseInputFile = do
           <> help "Produce assembly output only (for targets: wasm32-wasi, native)"
       )
   _compileTerm <-
-    switch
-      ( short 'G'
-          <> long "only-term"
-          <> help "Produce term output only (for targets: geb)"
+    if
+        | elem TargetGeb supportedTargets ->
+            switch
+              ( short 'G'
+                  <> long "only-term"
+                  <> help "Produce term output only (for targets: geb)"
+              )
+        | otherwise ->
+            pure False
+  _compileOptimizationLevel <-
+    option
+      (fromIntegral <$> naturalNumberOpt)
+      ( short 'O'
+          <> long "optimize"
+          <> value defaultOptimizationLevel
+          <> help ("Optimization level (default: " <> show defaultOptimizationLevel <> ")")
+      )
+  _compileInliningDepth <-
+    option
+      (fromIntegral <$> naturalNumberOpt)
+      ( long "inline"
+          <> value defaultInliningDepth
+          <> help ("Automatic inlining depth limit, logarithmic in the function size (default: " <> show defaultInliningDepth <> ")")
       )
   _compileTarget <- optCompileTarget supportedTargets
   _compileOutputFile <- optional parseGenericOutputFile

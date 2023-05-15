@@ -60,7 +60,10 @@ isImmediate = \case
   NVar {} -> True
   NIdt {} -> True
   NCst {} -> True
-  _ -> False
+  node@(NApp {}) ->
+    let (_, args) = unfoldApps' node
+     in all isType args
+  node -> isType node
 
 freeVarsSortedMany :: [Node] -> Set Var
 freeVarsSortedMany n = Set.fromList (n ^.. each . freeVars)
@@ -295,3 +298,7 @@ translateCase translateIf dflt Case {..} = case _caseBranches of
   where
     branchFailure :: Node
     branchFailure = mkBuiltinApp' OpFail [mkConstant' (ConstString "illegal `if` branch")]
+
+checkDepth :: Int -> Node -> Bool
+checkDepth 0 _ = False
+checkDepth d node = all (checkDepth (d - 1)) (childrenNodes node)

@@ -199,6 +199,14 @@ traverseM ::
   f (m a2)
 traverseM f = fmap join . traverse f
 
+composeM :: Monad m => Int -> (a -> m a) -> a -> m a
+composeM 0 _ a = return a
+composeM n f a = composeM (n - 1) f a >>= f
+
+compose :: Int -> (a -> a) -> a -> a
+compose 0 _ a = a
+compose n f a = f (compose (n - 1) f a)
+
 --------------------------------------------------------------------------------
 
 mapReader :: Member (Reader e1) r => (e1 -> e2) -> Sem (Reader e2 ': r) a -> Sem r a

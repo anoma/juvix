@@ -474,7 +474,7 @@ foldS sig code a = snd <$> foldS' sig initialStackInfo code a
 foldS' :: forall r a. (Member (Error AsmError) r) => FoldSig StackInfo r a -> StackInfo -> Code -> a -> Sem r (StackInfo, a)
 foldS' sig si code acc = do
   (si', fs) <- recurseS' sig' si code
-  a' <- compose fs acc
+  a' <- compose' fs acc
   return (si', a')
   where
     sig' :: RecursorSig StackInfo r (a -> Sem r a)
@@ -486,21 +486,21 @@ foldS' sig si code acc = do
             return
               ( \a -> do
                   let a' = (sig ^. foldAdjust) a
-                  a1 <- compose br1 a'
-                  a2 <- compose br2 a'
+                  a1 <- compose' br1 a'
+                  a2 <- compose' br2 a'
                   (sig ^. foldBranch) s cmd a1 a2 a
               ),
           _recurseCase = \s cmd brs md ->
             return
               ( \a -> do
                   let a' = (sig ^. foldAdjust) a
-                  as <- mapM (`compose` a') brs
+                  as <- mapM (`compose'` a') brs
                   ad <- case md of
-                    Just d -> Just <$> compose d a'
+                    Just d -> Just <$> compose' d a'
                     Nothing -> return Nothing
                   (sig ^. foldCase) s cmd as ad a
               )
         }
 
-    compose :: [a -> Sem r a] -> a -> Sem r a
-    compose lst x = foldr (=<<) (return x) lst
+    compose' :: [a -> Sem r a] -> a -> Sem r a
+    compose' lst x = foldr (=<<) (return x) lst
