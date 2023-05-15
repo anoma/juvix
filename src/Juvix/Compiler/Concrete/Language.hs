@@ -540,6 +540,7 @@ data OpenModule (s :: Stage) = OpenModule
   { _openModuleKw :: KeywordRef,
     _openModuleName :: ModuleRefType s,
     _openModuleImportKw :: Maybe KeywordRef,
+    _openImportAsName :: Maybe (ModulePathType s 'ModuleTop),
     _openUsingHiding :: Maybe UsingHiding,
     _openPublic :: PublicAnn
   }
@@ -548,6 +549,7 @@ deriving stock instance
   ( Eq (IdentifierType s),
     Eq (SymbolType s),
     Eq (ModuleRefType s),
+    Eq (ModulePathType s 'ModuleTop),
     Eq (PatternType s),
     Eq (ExpressionType s)
   ) =>
@@ -557,6 +559,7 @@ deriving stock instance
   ( Ord (IdentifierType s),
     Ord (SymbolType s),
     Ord (PatternType s),
+    Ord (ModulePathType s 'ModuleTop),
     Ord (ModuleRefType s),
     Ord (ExpressionType s)
   ) =>
@@ -565,6 +568,7 @@ deriving stock instance
 deriving stock instance
   ( Show (IdentifierType s),
     Show (ModuleRefType s),
+    Show (ModulePathType s 'ModuleTop),
     Show (ExpressionType s)
   ) =>
   Show (OpenModule s)

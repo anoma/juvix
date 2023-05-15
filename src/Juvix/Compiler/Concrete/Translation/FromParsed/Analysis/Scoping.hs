@@ -756,7 +756,12 @@ checkOpenImportModule ::
 checkOpenImportModule op
   | Just k <- op ^. openModuleImportKw =
       let import_ :: Import 'Parsed
-          import_ = Import k (moduleNameToTopModulePath (op ^. openModuleName)) Nothing
+          import_ =
+            Import
+              { _importKw = k,
+                _importModule = moduleNameToTopModulePath (op ^. openModuleName),
+                _importAsName = op ^. openImportAsName
+              }
        in do
             void (checkImport import_)
             scopedOpen <- checkOpenModule (set openModuleImportKw Nothing op)
@@ -773,6 +778,7 @@ checkOpenModuleNoImport OpenModule {..}
   | otherwise = do
       openModuleName'@(ModuleRef' (_ :&: moduleRef'')) <- lookupModuleSymbol _openModuleName
       mergeScope (alterScope (moduleRef'' ^. moduleExportInfo))
+      let _openImportAsName :: Maybe S.TopModulePath = Nothing
       registerName (moduleRef'' ^. moduleRefName)
       return
         OpenModule
