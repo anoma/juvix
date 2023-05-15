@@ -57,7 +57,6 @@ letHoist n = do
   return (reLambdas topLambdas body'')
 
 -- | Removes every Let node and replaces references to it with a unique symbol.
--- NOTE It is assumed that all bound variables are bound by a let.
 removeLets :: forall r. Members '[InfoTableBuilder, Output LItem, Reader [Symbol]] r => Node -> Sem r Node
 removeLets = go mempty
   where
