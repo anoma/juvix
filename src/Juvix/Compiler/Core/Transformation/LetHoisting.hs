@@ -2,9 +2,8 @@
 -- transformation assumes:
 -- - There are no LetRecs, Lambdas (other than the ones at the top), nor Match.
 -- - Case nodes do not have binders.
--- - Except for the top lambdas, only Let nodes introduce binders.
--- - All let items have type Int.
--- - Top lambdas do not have lets in the binders.
+-- - All variables reference either a lambda or a let.
+-- - All let and lambda binders have type Int.
 module Juvix.Compiler.Core.Transformation.LetHoisting
   ( module Juvix.Compiler.Core.Transformation.LetHoisting,
     module Juvix.Compiler.Core.Transformation.Base,
@@ -71,7 +70,7 @@ removeLets = go mempty
       NVar v
         | v ^. varIndex < length bl -> do
             End . mkIdent' . (!! (v ^. varIndex)) <$> ask
-        | otherwise -> return (End (NVar (shiftVar (-length bl) v)))
+        | otherwise -> return . End . NVar . shiftVar (-length bl) $ v
       NLet l -> do
         let _itemLevel = length bl
         _itemSymbol <- freshSymbol
