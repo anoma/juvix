@@ -351,7 +351,18 @@ instance (SingI s) => PrettyCode (OpenModule s) where
     openUsingHiding' <- mapM ppUsingHiding _openUsingHiding
     importkw' <- mapM ppCode _openModuleImportKw
     let openPublic' = ppPublic
-    return $ kwOpen <+?> importkw' <+> openModuleName' <+?> openUsingHiding' <+?> openPublic'
+    return $ case importkw' of
+      Nothing ->
+        kwOpen
+          <+> openModuleName'
+          <+?> openUsingHiding'
+          <+?> openPublic'
+      Just importkw ->
+        importkw
+          <+> openModuleName'
+          <+> kwOpen
+          <+?> openUsingHiding'
+          <+?> openPublic'
     where
       ppUsingHiding :: UsingHiding -> Sem r (Doc Ann)
       ppUsingHiding uh = do
