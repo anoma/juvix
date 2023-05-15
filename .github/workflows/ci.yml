@@ -133,6 +133,7 @@ jobs:
           tag: latest
           chmod: 0755
           rename-to: vamp-ir
+          extension-matching: disable
           cache: true
 
       - name: Test VampIR
