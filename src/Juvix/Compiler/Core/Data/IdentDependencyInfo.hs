@@ -1,6 +1,5 @@
 module Juvix.Compiler.Core.Data.IdentDependencyInfo where
 
-import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Core.Data.InfoTable
 import Juvix.Compiler.Core.Extra.Utils
@@ -24,7 +23,7 @@ createIdentDependencyInfo tab = createDependencyInfo graph startVertices
     startVertices = HashSet.fromList syms
 
     syms :: [Symbol]
-    syms = map (^. identifierSymbol) (HashMap.elems (tab ^. infoIdentifiers))
+    syms = maybe [] singleton (tab ^. infoMain)
 
 recursiveIdents :: InfoTable -> HashSet Symbol
 recursiveIdents = nodesOnCycles . createIdentDependencyInfo
