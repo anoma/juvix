@@ -94,10 +94,10 @@ checkStrictlyPositiveOccurrences ty ctorName name recLimit ref =
         helperLetClause :: LetClause -> Sem r ()
         helperLetClause = \case
           LetFunDef f -> helperFunctionDef f
-          LetMutualBlock b -> helperMutualBlock b
+          LetMutualBlock b -> helperMutualBlockLet b
 
-        helperMutualBlock :: MutualBlock -> Sem r ()
-        helperMutualBlock b = mapM_ helperFunctionDef (b ^. mutualFunctions)
+        helperMutualBlockLet :: MutualBlockLet -> Sem r ()
+        helperMutualBlockLet b = mapM_ helperFunctionDef (b ^. mutualLet)
 
         helperFunctionDef :: FunctionDef -> Sem r ()
         helperFunctionDef d = do

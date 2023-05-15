@@ -1,0 +1,11 @@
+module LocalSynonym;
+
+type Unit := unit : Unit;
+
+myUnit : Type;
+myUnit := Unit;
+
+module L;
+  haha : myUnit;
+  haha := unit;
+end;

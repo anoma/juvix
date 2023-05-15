@@ -210,6 +210,18 @@ tests =
       $(mkRelDir "issue1879")
       $(mkRelFile "LetSynonym.juvix"),
     posTest
+      "Mutually recursive of lambda calculus with synonyms"
+      $(mkRelDir ".")
+      $(mkRelFile "LambdaCalculus.juvix"),
+    posTest
+      "Mutually recursive type synonym and inductive type"
+      $(mkRelDir ".")
+      $(mkRelFile "MutualType.juvix"),
+    posTest
+      "Type synonym inside local module"
+      $(mkRelDir ".")
+      $(mkRelFile "LocalSynonym.juvix"),
+    posTest
       "Mutual inference inside let"
       $(mkRelDir ".")
       $(mkRelFile "MutualLet.juvix"),

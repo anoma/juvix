@@ -1,0 +1,17 @@
+module MutualType;
+
+infixr 5 ::;
+--- Inductive list.
+type List (a : Type) :=
+  | --- The empty list
+    nil : List a
+  | --- An element followed by a list
+    :: : a → List a → List a;
+
+Forest : Type -> Type;
+
+--- N-Ary tree.
+type Tree (A : Type) :=
+  | node : A -> Forest A -> Tree A;
+
+Forest A := List (Tree A);

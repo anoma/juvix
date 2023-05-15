@@ -314,5 +314,10 @@ tests =
       "Test051: Local recursive function using IO >>"
       $(mkRelDir ".")
       $(mkRelFile "test051.juvix")
-      $(mkRelFile "out/test051.out")
+      $(mkRelFile "out/test051.out"),
+    posTest
+      "Test052: Mutually recursive types, simple lambda calculus"
+      $(mkRelDir ".")
+      $(mkRelFile "test052.juvix")
+      $(mkRelFile "out/test052.out")
   ]

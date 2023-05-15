@@ -85,6 +85,10 @@ instance HasExpressions MutualBlock where
   leafExpressions f (MutualBlock defs) =
     MutualBlock <$> traverse (leafExpressions f) defs
 
+instance HasExpressions MutualBlockLet where
+  leafExpressions f (MutualBlockLet defs) =
+    MutualBlockLet <$> traverse (leafExpressions f) defs
+
 instance HasExpressions LetClause where
   leafExpressions f = \case
     LetFunDef d -> LetFunDef <$> leafExpressions f d
@@ -169,6 +173,11 @@ instance HasExpressions FunctionDef where
           _funDefBuiltin,
           _funDefPragmas
         }
+
+instance HasExpressions MutualStatement where
+  leafExpressions f = \case
+    StatementFunction d -> StatementFunction <$> leafExpressions f d
+    StatementInductive d -> StatementInductive <$> leafExpressions f d
 
 instance HasExpressions InductiveParameter where
   leafExpressions _ param@InductiveParameter {} = do
@@ -305,7 +314,7 @@ foldExplicitApplication f = foldApplication f . map (Explicit,)
 foldApplication :: Expression -> [(IsImplicit, Expression)] -> Expression
 foldApplication f = \case
   [] -> f
-  ((i, a) : as) -> foldApplication (ExpressionApplication (Application f a i)) as
+  (i, a) : as -> foldApplication (ExpressionApplication (Application f a i)) as
 
 unfoldApplication' :: Application -> (Expression, NonEmpty (IsImplicit, Expression))
 unfoldApplication' (Application l' r' i') = second (|: (i', r')) (unfoldExpressionApp l')

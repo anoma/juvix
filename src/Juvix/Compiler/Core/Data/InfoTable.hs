@@ -128,7 +128,7 @@ lookupInductiveInfo :: InfoTable -> Symbol -> InductiveInfo
 lookupInductiveInfo tab sym = fromJust $ lookupInductiveInfo' tab sym
 
 lookupConstructorInfo :: InfoTable -> Tag -> ConstructorInfo
-lookupConstructorInfo tab tag = fromJust $ lookupConstructorInfo' tab tag
+lookupConstructorInfo tab tag = fromMaybe (error ("tag: " <> show tag)) $ lookupConstructorInfo' tab tag
 
 lookupIdentifierInfo :: InfoTable -> Symbol -> IdentifierInfo
 lookupIdentifierInfo tab sym = fromJust $ lookupIdentifierInfo' tab sym

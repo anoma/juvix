@@ -1,0 +1,20 @@
+module LambdaCalculus;
+
+LambdaTy : Type -> Type;
+
+AppTy : Type -> Type;
+
+type Expr (V : Type) :=
+  | var : V -> Expr V
+  | lam : LambdaTy V -> Expr V
+  | app : AppTy V -> Expr V;
+
+type Lambda (V : Type) :=
+  | mkLambda : Expr V -> Lambda V;
+
+type App (V : Type) :=
+  | mkApp : Expr V -> Expr V -> App V;
+
+LambdaTy := Lambda;
+
+AppTy := App;
