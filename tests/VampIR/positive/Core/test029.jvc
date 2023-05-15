@@ -1,0 +1,14 @@
+-- let hoisting
+
+\(a : Int) \(b : Int)
+let x : Int :=
+   let y : Int := b + a in
+   let z : Int := b + a in
+   b + a + y + (let c : Int := if a < b then z else z + 3 in c + b)
+in
+let x2 : Int :=
+   let y2 : Int := b + a + x in
+   let z2 : Int := b + a in
+   b + a + y2 + (let c : Int := if a > b then z2 else z2 + 3 in c + a)
+in
+x + a + b + x2
