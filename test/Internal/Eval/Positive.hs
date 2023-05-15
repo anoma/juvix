@@ -188,5 +188,10 @@ tests =
       "Case expression"
       $(mkRelDir ".")
       $(mkRelFile "Case.juvix")
-      $(mkRelFile "out/Case.out")
+      $(mkRelFile "out/Case.out"),
+    PosTest
+      "Import a module containing a nested module"
+      $(mkRelDir "NestedModuleScope")
+      $(mkRelFile "Import.juvix")
+      $(mkRelFile "out/NestedModuleScope.out")
   ]
