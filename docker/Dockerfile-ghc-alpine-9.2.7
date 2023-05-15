@@ -10,11 +10,11 @@ RUN tar xf ghc-8.10.7-x86_64-alpine3.10-linux-integer-simple.tar.xz
 
 RUN cd ghc-8.10.7-x86_64-unknown-linux && ./configure --prefix /opt && make install
 
-RUN curl https://downloads.haskell.org/~ghc/9.2.6/ghc-9.2.6-src.tar.xz -OL
+RUN curl https://downloads.haskell.org/~ghc/9.2.7/ghc-9.2.7-src.tar.xz -OL
 
-RUN tar xf ghc-9.2.6-src.tar.xz
+RUN tar xf ghc-9.2.7-src.tar.xz
 
-WORKDIR /ghc-9.2.6
+WORKDIR /ghc-9.2.7
 
 RUN GHC=/opt/bin/ghc ./configure --prefix /usr/local
 
