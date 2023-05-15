@@ -141,8 +141,6 @@ jobs:
           cd main
           make check-format-juvix-files && make typecheck-juvix-examples
 
-
-
       - uses: actions/checkout@v3
         with:
           repository: jonaprieto/smoke
