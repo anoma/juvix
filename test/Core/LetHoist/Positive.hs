@@ -28,5 +28,10 @@ tests =
       "Test028: Lets"
       $(mkRelDir ".")
       $(mkRelFile "test028.jvc")
-      $(mkRelFile "data/test028.json")
+      $(mkRelFile "data/test028.json"),
+    PosTest
+      "Test029: Lets"
+      $(mkRelDir ".")
+      $(mkRelFile "test029.jvc")
+      $(mkRelFile "data/test029.json")
   ]
