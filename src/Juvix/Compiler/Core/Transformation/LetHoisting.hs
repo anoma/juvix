@@ -22,6 +22,7 @@ import Juvix.Compiler.Core.Transformation.Base
 data LItem = LItem
   { _itemLet :: LetItem,
     _itemLevel :: Level,
+    _itemName :: Text,
     _itemSymbol :: Symbol
   }
 
@@ -44,36 +45,33 @@ letHoisting = run . mapT' (const letHoist)
 
 letHoist :: forall r. Members '[InfoTableBuilder] r => Node -> Sem r Node
 letHoist n = do
-  let (topLambdas, body') = unfoldLambdas n
-  (l, body'') <- runReader @[Symbol] [] (runOutputList @LItem (removeLets body'))
+  let (topLambdas, body) = unfoldLambdas n
+  (l, body') <- runReader @[Symbol] [] (runOutputList @LItem (removeLets body))
   let il = indexFrom 0 l
-      nlets = length il
       tbl = mkLetsTable il
+      nlets = length il
       mkLetItem :: Indexed LItem -> LetItem
-      mkLetItem i = shiftLetItem s (i ^. indexedThing . itemLet)
-        where
-          s = i ^. indexedIx - i ^. indexedThing . itemLevel
+      mkLetItem i = shiftLetItem (i ^. indexedIx) (i ^. indexedThing . itemLet)
       letItems = map mkLetItem il
-      body''' =
-        substPlaceholders
-          nlets
-          tbl
-          (mkLets letItems body'')
-  return (reLambdas topLambdas body''')
+      body'' = substPlaceholders tbl (mkLets letItems (shift nlets body'))
+  return (reLambdas topLambdas body'')
 
 -- | Removes every Let node and replaces references to it with a unique symbol.
 -- NOTE It is assumed that all bound variables are bound by a let.
 removeLets :: forall r. Members '[InfoTableBuilder, Output LItem, Reader [Symbol]] r => Node -> Sem r Node
-removeLets = dmapLM go
+removeLets = go mempty
   where
-    go ::
+    go :: BinderList Binder -> Node -> Sem r Node
+    go bl = dmapLRM' (bl, f)
+    f ::
       BinderList Binder ->
       Node ->
-      Sem r Node
-    go bl = \case
+      Sem r Recur
+    f bl = \case
       NVar v
         | v ^. varIndex < length bl -> do
-            mkIdent' . (!! (v ^. varIndex)) <$> ask
+            End . mkIdent' . (!! (v ^. varIndex)) <$> ask
+        | otherwise -> return (End (NVar (shiftVar (-length bl) v)))
       NLet l -> do
         let _itemLevel = length bl
         _itemSymbol <- freshSymbol
@@ -81,21 +79,27 @@ removeLets = dmapLM go
         -- assumed to have type Int
         let bi = l ^. letItem . letItemBinder
         value' <- go bl (l ^. letItem . letItemValue)
-        let _itemLet = LetItem bi value'
-        output LItem {..}
-        local (_itemSymbol :) (go (BL.cons bi bl) (l ^. letBody))
-      other -> return other
+        output
+          LItem
+            { _itemLet = LetItem bi value',
+              _itemName = bi ^. binderName,
+              _itemSymbol,
+              _itemLevel
+            }
+        r <- local (_itemSymbol :) (go (BL.cons bi bl) (l ^. letBody))
+        return (End r)
+      other -> return (Recur other)
 
 -- | Replaces the placeholders with variables that point to the hoisted let.
-substPlaceholders :: Int -> LetsTable -> Node -> Node
-substPlaceholders nlets tbl = dmap go
+substPlaceholders :: LetsTable -> Node -> Node
+substPlaceholders tbl = dmapN go
   where
-    go :: Node -> Node
-    go = \case
+    go :: Level -> Node -> Node
+    go lvl = \case
       NIdt i
         | Just (t :: Indexed LItem) <- HashMap.lookup (i ^. identSymbol) tbl ->
-            mkVar' (nlets - t ^. indexedIx - 1)
-      n -> n
+            mkVarN (t ^. indexedThing . itemName) (lvl - t ^. indexedIx - 1)
+      m -> m
 
 -- | True if it is of the form λ … λ let a₁ = b₁; … aₙ = bₙ in body;
 -- where body does not contain any let.

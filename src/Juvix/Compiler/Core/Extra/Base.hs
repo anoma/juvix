@@ -8,6 +8,7 @@ import Data.Functor.Identity
 import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Compiler.Core.Data.BinderList (BinderList)
 import Juvix.Compiler.Core.Info qualified as Info
+import Juvix.Compiler.Core.Info.NameInfo (setInfoName)
 import Juvix.Compiler.Core.Language
 import Polysemy.Input
 
@@ -16,6 +17,9 @@ import Polysemy.Input
 
 mkVar :: Info -> Index -> Node
 mkVar i idx = NVar (Var i idx)
+
+mkVarN :: Text -> Index -> Node
+mkVarN name idx = NVar (Var (setInfoName name mempty) idx)
 
 mkVar' :: Index -> Node
 mkVar' = mkVar Info.empty
