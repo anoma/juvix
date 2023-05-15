@@ -25,3 +25,6 @@ createIdentDependencyInfo tab = createDependencyInfo graph startVertices
 
     syms :: [Symbol]
     syms = map (^. identifierSymbol) (HashMap.elems (tab ^. infoIdentifiers))
+
+recursiveIdents :: InfoTable -> HashSet Symbol
+recursiveIdents = nodesOnCycles . createIdentDependencyInfo

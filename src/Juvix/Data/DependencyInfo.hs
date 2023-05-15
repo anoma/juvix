@@ -65,3 +65,11 @@ buildSCCs = Graph.stronglyConnComp . (^. depInfoEdgeList)
 
 isCyclic :: Ord n => DependencyInfo n -> Bool
 isCyclic = any (\case CyclicSCC _ -> True; _ -> False) . buildSCCs
+
+nodesOnCycles :: forall n. (Hashable n, Ord n) => DependencyInfo n -> HashSet n
+nodesOnCycles = foldr go mempty . buildSCCs
+  where
+    go :: SCC n -> HashSet n -> HashSet n
+    go x acc = case x of
+      CyclicSCC ns -> foldr HashSet.insert acc ns
+      _ -> acc

@@ -1,4 +1,4 @@
---- This module defines a simple lambda calculus and an evaluator.
+--- Simple lambda claculus
 module test052;
 
 open import Stdlib.Prelude;
