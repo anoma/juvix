@@ -179,7 +179,7 @@ tests:
     stdin: 'module Format; open import Stdlib.Prelude; main : Nat; main := 5; '
     stderr:
       contains: |
-        positive/NonExistingFormat.juvix: openFile: does not exist (No such file or directory)
+        positive/NonExistingFormat.juvix" does not exist
     exit-status: 1
 
   - name: format-stdin-module-name-not-file-name

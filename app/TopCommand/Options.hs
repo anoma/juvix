@@ -29,34 +29,34 @@ data TopCommand
   | JuvixFormat FormatOptions
   deriving stock (Data)
 
-topCommandInputFile :: TopCommand -> IO (Maybe (Path Abs Dir))
-topCommandInputFile (JuvixFormat fopts) = case fopts ^. formatInput of
-  Just f -> getInputDirFromPrepathFileOrDir f
+topCommandInputPath :: TopCommand -> IO (Maybe (SomePath Abs))
+topCommandInputPath (JuvixFormat fopts) = case fopts ^. formatInput of
+  Just f -> getInputPathFromPrepathFileOrDir f
   Nothing -> return Nothing
-topCommandInputFile t = do
+topCommandInputPath t = do
   d <- firstJustM getInputFileOrDir (universeBi t)
-  f <- firstJustM getInputFileDir (universeBi t)
+  f <- firstJustM getInputFile (universeBi t)
   return (f <|> d)
   where
-    getInputFileDir :: AppPath File -> IO (Maybe (Path Abs Dir))
-    getInputFileDir p
+    getInputFile :: AppPath File -> IO (Maybe (SomePath Abs))
+    getInputFile p
       | p ^. pathIsInput = do
           cwd <- getCurrentDir
-          Just . parent <$> prepathToAbsFile cwd (p ^. pathPath)
+          Just . File <$> prepathToAbsFile cwd (p ^. pathPath)
       | otherwise = return Nothing
 
-    getInputFileOrDir :: AppPath FileOrDir -> IO (Maybe (Path Abs Dir))
+    getInputFileOrDir :: AppPath FileOrDir -> IO (Maybe (SomePath Abs))
     getInputFileOrDir p
-      | p ^. pathIsInput = getInputDirFromPrepathFileOrDir (p ^. pathPath)
+      | p ^. pathIsInput = getInputPathFromPrepathFileOrDir (p ^. pathPath)
       | otherwise = return Nothing
 
-getInputDirFromPrepathFileOrDir :: Prepath FileOrDir -> IO (Maybe (Path Abs Dir))
-getInputDirFromPrepathFileOrDir p = do
+getInputPathFromPrepathFileOrDir :: Prepath FileOrDir -> IO (Maybe (SomePath Abs))
+getInputPathFromPrepathFileOrDir p = do
   cwd <- getCurrentDir
   lr <- fromPreFileOrDir cwd p
   return . Just $ case lr of
-    Left file -> parent file
-    Right dir -> dir
+    Left file -> File file
+    Right dir -> Dir dir
 
 parseDisplayVersion :: Parser TopCommand
 parseDisplayVersion =
