@@ -30,6 +30,11 @@ import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Info.ExpansionInfo
 import Juvix.Compiler.Core.Language
 
+substEnvInBranch :: Env -> CaseBranch -> CaseBranch
+substEnvInBranch env br = over caseBranchBody (substEnv env') br
+  where
+    env' = map mkVar' [0 .. br ^. caseBranchBindersNum - 1] ++ env
+
 isClosed :: Node -> Bool
 isClosed = not . has freeVars
 
@@ -53,7 +58,7 @@ filterOutTypeSynonyms tab = pruneInfoTable tab'
     tab' = tab {_infoIdentifiers = idents'}
     idents' = HashMap.filter (\ii -> not (isTypeConstr tab (ii ^. identifierType))) (tab ^. infoIdentifiers)
 
--- True for nodes whose evaluation immediately returns a value, i.e.,
+-- | True for nodes whose evaluation immediately returns a value, i.e.,
 -- no reduction or memory allocation in the runtime is required.
 isImmediate :: Node -> Bool
 isImmediate = \case
@@ -64,6 +69,13 @@ isImmediate = \case
     let (_, args) = unfoldApps' node
      in all isType args
   node -> isType node
+
+-- | True if the argument is fully evaluated first-order data
+isDataValue :: Node -> Bool
+isDataValue = \case
+  NCst {} -> True
+  NCtr Constr {..} -> all isDataValue _constrArgs
+  _ -> False
 
 freeVarsSortedMany :: [Node] -> Set Var
 freeVarsSortedMany n = Set.fromList (n ^.. each . freeVars)
@@ -232,17 +244,6 @@ etaExpand argtys n =
   mkLambdas (replicate (length argtys) (Info.singleton (ExpansionInfo ()))) (map mkBinder' argtys) (mkApps' (shift k n) (map mkVar' (reverse [0 .. k - 1])))
   where
     k = length argtys
-
-convertClosures :: Node -> Node
-convertClosures = umap go
-  where
-    go :: Node -> Node
-    go n = case n of
-      Closure env (Lambda i bi b) -> substEnv env (mkLambda i bi b)
-      _ -> n
-
-convertRuntimeNodes :: Node -> Node
-convertRuntimeNodes = convertClosures
 
 squashApps :: Node -> Node
 squashApps = dmap go

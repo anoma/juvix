@@ -1,0 +1,19 @@
+-- arithmetic
+
+def f : Int -> Int -> Int := \(x : Int) \(y : Int) x + y;
+
+def g : Int -> Int -> Int := \(x : Int) \(y : Int) (x + 1) - (y * 7);
+
+def h : (Int -> Int -> Int) -> Int -> Int -> Int := \(f : Int -> Int -> Int) \(y : Int) \(z : Int) f y y * z;
+
+def vx : Int := 30;
+def vy : Int := 7;
+
+\(x : Int) \(y : Int) \(z : Int) \(u : Int)
+    let func : Int -> Int := \(x : Int) x + 4
+    in
+    func (y / x) + -- 17 div 5 + 4 = 7
+    (z * x + y) + -- 17
+    (vx + vy * (z + 1)) + -- 37
+    f (h g u 3) 4 -- -29
+    -- result: 32

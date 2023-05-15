@@ -1,0 +1,7 @@
+-- recursion through higher-order functions
+
+def g : (Int -> Int) -> Int -> Int :=
+    \(f : Int -> Int) \(x : Int) if x = 0 then 0 else f (x - 1);
+def f : Int -> Int := \(x : Int) x + g f x;
+
+f

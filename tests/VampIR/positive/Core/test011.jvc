@@ -1,0 +1,10 @@
+-- functions returning functions with variable capture
+
+def f : Int -> Int -> Int := \(x : Int)
+  if x = 6 then \(x : Int) 0
+  else if x = 5 then \(x : Int) 1
+  else if x = 10 then \(y : Int) (\(x : Int) x) 2
+  else \(x : Int) x;
+
+\(x : Int) \(y : Int) \(z : Int)
+f x y + f y x + f z x + f 11 x

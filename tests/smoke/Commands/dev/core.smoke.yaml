@@ -43,3 +43,42 @@ tests:
     stdout: |
       suc zero
     exit-status: 0
+
+  - name: core-repl-normalize
+    command:
+      - juvix
+      - dev
+      - core
+      - repl
+    stdin: ":n λ(x : Int) (λ(y : Int) y + 2) x"
+    stdout:
+      contains: |
+        λ(x : Int) + x 2
+    exit-status: 0
+
+  - name: core-from-concrete-normalize
+    command:
+      - juvix
+      - dev
+      - core
+      - from-concrete
+      - --normalize
+    args:
+      - positive/Internal/Norm.juvix
+    stdout: |
+      suc (suc (suc zero))
+    exit-status: 0
+
+  - name: core-read-normalize
+    command:
+      - juvix
+      - dev
+      - core
+      - read
+      - --normalize
+    args:
+      - Core/positive/test058.jvc
+    stdout:
+      contains: |
+        5
+    exit-status: 0

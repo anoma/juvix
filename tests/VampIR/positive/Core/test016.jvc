@@ -1,0 +1,6 @@
+-- tail recursion: Fibonacci numbers in linear time
+
+def fib' : Int -> Int -> Int -> Int := \(n : Int) \(x : Int) \(y : Int) if n = 0 then x else fib' (n - 1) y (x + y);
+def fib : Int -> Int := \(n : Int) fib' n 0 1;
+
+fib

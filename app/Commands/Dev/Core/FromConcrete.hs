@@ -60,6 +60,13 @@ runCommand localOpts = do
             | isJust (localOpts ^. coreFromConcreteSymbolName) = getNode' selInfo
             | otherwise = getNode' mainInfo
 
+      goNormalize :: Sem r ()
+      goNormalize = normalizeAndPrint localOpts tab' evalNode
+        where
+          evalNode :: Core.Node
+            | isJust (localOpts ^. coreFromConcreteSymbolName) = getNode' selInfo
+            | otherwise = getNode' mainInfo
+
       getDef :: Maybe IdentifierInfo -> Maybe (Text, Core.Node)
       getDef i = (getName' i,) <$> getNode i
 
@@ -77,4 +84,5 @@ runCommand localOpts = do
 
   if
       | localOpts ^. coreFromConcreteEval -> goEval
+      | localOpts ^. coreFromConcreteNormalize -> goNormalize
       | otherwise -> goPrint

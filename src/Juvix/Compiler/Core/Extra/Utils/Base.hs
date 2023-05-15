@@ -14,6 +14,7 @@ substEnv env
   | null env = id
   | otherwise = umapN go
   where
+    go :: Int -> Node -> Node
     go k n = case n of
       NVar (Var _ idx)
         | idx >= k -> env !! (idx - k)

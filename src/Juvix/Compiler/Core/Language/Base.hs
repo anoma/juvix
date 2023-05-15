@@ -42,8 +42,12 @@ type Index = Int
 -- | de Bruijn level (reverse de Bruijn index)
 type Level = Int
 
+-- | The first argument `bl` is the current binder level (the number of binders
+-- upward).
 getBinderLevel :: Level -> Index -> Level
 getBinderLevel bl idx = bl - idx - 1
 
+-- | The first argument `bl` is the current binder level (the number of binders
+-- upward).
 getBinderIndex :: Level -> Level -> Index
 getBinderIndex bl lvl = bl - lvl - 1
