@@ -50,33 +50,48 @@ fromCoreNode node =
 
     convertExpr :: Core.Node -> Expression
     convertExpr = \case
-      NVar Core.Var {..} -> ExpressionVar $ VampIR.Var (getInfoName _varInfo)
-      NCst Constant {..} -> case _constantValue of
-        ConstInteger i -> ExpressionConstant i
-        _ -> impossible
-      NBlt BuiltinApp {..} -> case _builtinAppArgs of
-        [l, r] ->
-          ExpressionBinop (Binop op (convertExpr l) (convertExpr r))
-          where
-            op = case _builtinAppOp of
-              OpIntAdd -> OpAdd
-              OpIntSub -> OpSub
-              OpIntMul -> OpMul
-              OpIntDiv -> OpDiv
-              OpIntMod -> OpMod
-              OpIntLt -> OpLt
-              OpIntLe -> OpLe
-              Core.OpEq -> VampIR.OpEq
-              _ -> impossible
-        _ -> case _builtinAppOp of
-          OpFail -> ExpressionFail
-          _ -> impossible
-      NCtr Constr {..} -> case _constrTag of
-        BuiltinTag TagTrue -> ExpressionConstant 1
-        BuiltinTag TagFalse -> ExpressionConstant 0
-        _ -> impossible
-      NCase c -> translateCase translateIf impossible c
-        where
-          translateIf :: Node -> Node -> Node -> Expression
-          translateIf val br1 br2 = ExpressionIfThenElse $ IfThenElse (convertExpr val) (convertExpr br1) (convertExpr br2)
+      NVar x -> goVar x
+      NCst x -> goConstant x
+      NBlt x -> goBuiltinApp x
+      NCtr x -> goConstructor x
+      NCase c -> goCase c
       _ -> impossible
+
+    goVar :: Core.Var -> Expression
+    goVar Core.Var {..} = ExpressionVar $ VampIR.Var (getInfoName _varInfo)
+
+    goConstant :: Constant -> Expression
+    goConstant Constant {..} = case _constantValue of
+      ConstInteger i -> ExpressionConstant i
+      _ -> impossible
+
+    goBuiltinApp :: BuiltinApp -> Expression
+    goBuiltinApp BuiltinApp {..} = case _builtinAppArgs of
+      [l, r] ->
+        ExpressionBinop (Binop op (convertExpr l) (convertExpr r))
+        where
+          op = case _builtinAppOp of
+            OpIntAdd -> OpAdd
+            OpIntSub -> OpSub
+            OpIntMul -> OpMul
+            OpIntDiv -> OpDiv
+            OpIntMod -> OpMod
+            OpIntLt -> OpLt
+            OpIntLe -> OpLe
+            Core.OpEq -> VampIR.OpEq
+            _ -> impossible
+      _ -> case _builtinAppOp of
+        OpFail -> ExpressionFail
+        _ -> impossible
+
+    goConstructor :: Constr -> Expression
+    goConstructor Constr {..} = case _constrTag of
+      BuiltinTag TagTrue -> ExpressionConstant 1
+      BuiltinTag TagFalse -> ExpressionConstant 0
+      _ -> impossible
+
+    goCase :: Case -> Expression
+    goCase c = translateCase translateIf impossible c
+      where
+        translateIf :: Node -> Node -> Node -> Expression
+        translateIf val br1 br2 = ExpressionIfThenElse $ IfThenElse (convertExpr val) (convertExpr br1) (convertExpr br2)
