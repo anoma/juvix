@@ -32,7 +32,7 @@ data ConstantValue
   | ConstString !Text
   deriving stock (Eq)
 
--- | Info about a single binder. Associated with Lambda and Pi.
+-- | Info about a single binder. Associated with Lambda, Pi, Let, Case or Match.
 data Binder' ty = Binder
   { _binderName :: Text,
     _binderLocation :: Maybe Location,

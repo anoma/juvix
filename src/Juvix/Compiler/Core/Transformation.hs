@@ -22,10 +22,12 @@ import Juvix.Compiler.Core.Transformation.FoldTypeSynonyms
 import Juvix.Compiler.Core.Transformation.Identity
 import Juvix.Compiler.Core.Transformation.IntToPrimInt
 import Juvix.Compiler.Core.Transformation.LambdaLetRecLifting
+import Juvix.Compiler.Core.Transformation.LetHoisting
 import Juvix.Compiler.Core.Transformation.MatchToCase
 import Juvix.Compiler.Core.Transformation.MoveApps
 import Juvix.Compiler.Core.Transformation.NaiveMatchToCase qualified as Naive
 import Juvix.Compiler.Core.Transformation.NatToPrimInt
+import Juvix.Compiler.Core.Transformation.Normalize
 import Juvix.Compiler.Core.Transformation.Optimize.Inlining
 import Juvix.Compiler.Core.Transformation.Optimize.LambdaFolding
 import Juvix.Compiler.Core.Transformation.Optimize.LetFolding
@@ -59,8 +61,10 @@ applyTransformations ts tbl = foldM (flip appTrans) tbl ts
       DisambiguateNames -> return . disambiguateNames
       CheckGeb -> mapError (JuvixError @CoreError) . checkGeb
       CheckExec -> mapError (JuvixError @CoreError) . checkExec
+      Normalize -> return . normalize
       LetFolding -> return . letFolding
       LambdaFolding -> return . lambdaFolding
+      LetHoisting -> return . letHoisting
       Inlining -> inlining
       FoldTypeSynonyms -> return . foldTypeSynonyms
       OptPhaseEval -> Phase.Eval.optimize

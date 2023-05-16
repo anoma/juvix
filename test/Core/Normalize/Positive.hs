@@ -18,21 +18,31 @@ fromTest = mkTest . toTestDescr
 root :: Path Abs Dir
 root = relToProject $(mkRelDir "tests/VampIR/positive/Core")
 
-toTestDescr :: PosTest -> TestDescr
-toTestDescr PosTest {..} =
+toTestDescr' ::
+  ( Path Abs File ->
+    Path Abs File ->
+    (String -> IO ()) ->
+    Assertion
+  ) ->
+  PosTest ->
+  TestDescr
+toTestDescr' assertion PosTest {..} =
   let tRoot = root <//> _relDir
       file' = tRoot <//> _file
       expected' = tRoot <//> _expectedFile
    in TestDescr
         { _testName = _name,
           _testRoot = tRoot,
-          _testAssertion = Steps $ coreNormalizeAssertion file' expected'
+          _testAssertion = Steps $ assertion file' expected'
         }
+
+toTestDescr :: PosTest -> TestDescr
+toTestDescr = toTestDescr' coreNormalizeAssertion
 
 allTests :: TestTree
 allTests =
   testGroup
-    "JuvixCore positive tests"
+    "JuvixCore normalize positive tests"
     (map (mkTest . toTestDescr) tests)
 
 tests :: [PosTest]
@@ -171,5 +181,15 @@ tests =
       "Test027: type synonyms"
       $(mkRelDir ".")
       $(mkRelFile "test027.jvc")
-      $(mkRelFile "data/test027.json")
+      $(mkRelFile "data/test027.json"),
+    PosTest
+      "Test028: let hoisting"
+      $(mkRelDir ".")
+      $(mkRelFile "test028.jvc")
+      $(mkRelFile "data/test028.json"),
+    PosTest
+      "Test029: let hoisting"
+      $(mkRelDir ".")
+      $(mkRelFile "test029.jvc")
+      $(mkRelFile "data/test029.json")
   ]

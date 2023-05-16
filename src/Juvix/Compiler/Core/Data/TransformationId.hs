@@ -20,8 +20,10 @@ data TransformationId
   | DisambiguateNames
   | CheckGeb
   | CheckExec
+  | Normalize
   | LetFolding
   | LambdaFolding
+  | LetHoisting
   | Inlining
   | FoldTypeSynonyms
   | OptPhaseEval
@@ -63,6 +65,9 @@ toEvalTransformations = [EtaExpandApps, MatchToCase, NatToPrimInt, IntToPrimInt,
 
 toNormalizeTransformations :: [TransformationId]
 toNormalizeTransformations = toEvalTransformations ++ [LetRecLifting, LetFolding, UnrollRecursion]
+
+toVampIRTransformations :: [TransformationId]
+toVampIRTransformations = toNormalizeTransformations ++ [Normalize, LetHoisting]
 
 toStrippedTransformations :: [TransformationId]
 toStrippedTransformations =

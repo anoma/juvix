@@ -20,7 +20,9 @@ import Juvix.Compiler.Core.Pretty
 import Juvix.Compiler.Core.Transformation
 import Juvix.Compiler.Core.Translation.FromSource
 
-data EvalMode = EvalModePlain | EvalModeJSON
+data EvalMode
+  = EvalModePlain
+  | EvalModeJSON
 
 data EvalData = EvalData
   { _evalDataInput :: [Text],
