@@ -1,6 +1,6 @@
 module SignatureWithBody;
 
-open import Stdlib.Prelude;
+import Stdlib.Prelude open;
 
 isNull :
   {A : Type} → List A → Bool :=

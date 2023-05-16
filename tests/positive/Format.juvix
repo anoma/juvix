@@ -1,7 +1,7 @@
 module Format;
 
-open import Stdlib.Prelude hiding {,};
-open import Stdlib.Data.Nat.Ord;
+import Stdlib.Prelude open hiding {,};
+import Stdlib.Data.Nat.Ord open;
 
 terminating
 go : Nat → Nat → Nat;
@@ -149,7 +149,7 @@ module Patterns;
   infixr 4 ,;
   type × (A : Type) (B : Type) :=
     | , : A → B → A × B;
-  
+
   f : Nat × Nat × Nat × Nat -> Nat;
   f (a, b, c, d) := a;
 end;
