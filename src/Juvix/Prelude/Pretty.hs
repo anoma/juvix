@@ -58,7 +58,7 @@ instance HasAnsiBackend AnsiText where
 
 instance HasTextBackend (Doc a) where
   toTextDoc = unAnnotate
-  toTextStream = unAnnotateS . layoutPretty defaultLayoutOptions
+  toTextStream = layoutPretty defaultLayoutOptions . unAnnotate
 
 instance HasAnsiBackend (Doc Ansi.AnsiStyle) where
   toAnsiDoc = id
