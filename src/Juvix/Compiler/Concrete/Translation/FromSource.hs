@@ -769,8 +769,11 @@ openModule = do
   _openParameters <- many atomicExpression
   _openUsingHiding <- optional usingOrHiding
   _openPublic <- maybe NoPublic (const Public) <$> optional (kw kwPublic)
-  let _openImportAsName = Nothing
-  return OpenModule {..}
+  return
+    OpenModule
+      { _openImportAsName = Nothing,
+        ..
+      }
 
 usingOrHiding :: (Members '[Error ParserError, InfoTableBuilder, JudocStash, NameIdGen, PragmasStash] r) => ParsecS r UsingHiding
 usingOrHiding =
