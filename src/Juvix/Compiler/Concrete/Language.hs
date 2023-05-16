@@ -888,9 +888,9 @@ data ExpressionAtoms (s :: Stage) = ExpressionAtoms
   }
 
 newtype Judoc (s :: Stage) = Judoc
-  { _block :: [JudocBlock s]
+  { _block :: NonEmpty (JudocBlock s)
   }
-  deriving newtype (Semigroup, Monoid)
+  deriving newtype (Semigroup)
 
 deriving stock instance (Show (ExpressionType s), Show (SymbolType s)) => Show (Judoc s)
 
@@ -1170,12 +1170,9 @@ getLocExpressionType = case sing :: SStage s of
   SParsed -> getLoc
   SScoped -> getLoc
 
-getJudocLoc :: Judoc s -> Maybe Interval
-getJudocLoc = fmap getLocSpan . nonEmpty . (^. block)
-
 instance SingI s => HasLoc (TypeSignature s) where
   getLoc TypeSignature {..} =
-    (_sigDoc >>= getJudocLoc)
+    (getLoc <$> _sigDoc)
       ?<> (getLoc <$> _sigPragmas)
       ?<> (getLoc <$> _sigBuiltin)
       ?<> (getLoc <$> _sigTerminating)
@@ -1184,6 +1181,9 @@ instance SingI s => HasLoc (TypeSignature s) where
 
 instance HasLoc (Example s) where
   getLoc e = e ^. exampleLoc
+
+instance HasLoc (Judoc s) where
+  getLoc (Judoc j) = getLocSpan j
 
 instance HasLoc (JudocBlock s) where
   getLoc = \case

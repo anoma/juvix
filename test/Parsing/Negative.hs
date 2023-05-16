@@ -100,5 +100,13 @@ filesErrorTests =
       $ \case
         ErrTopModulePath
           TopModulePathError {_topModulePathError = ErrMissingModule {}} -> Nothing
+        _ -> wrongError,
+    negTest
+      "Dangling Judoc comment"
+      $(mkRelDir ".")
+      $(mkRelFile "DanglingJudoc.juvix")
+      $ \case
+        ErrDanglingJudoc
+          DanglingJudoc {} -> Nothing
         _ -> wrongError
   ]

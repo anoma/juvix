@@ -241,16 +241,25 @@ statement :: (Members '[Files, Error ParserError, PathResolver, InfoTableBuilder
 statement = P.label "<top level statement>" $ do
   void (optional stashJudoc)
   void (optional stashPragmas)
-  (StatementOperator <$> operatorSyntaxDef)
-    <|> (StatementOpenModule <$> openModule)
-    <|> (StatementImport <$> import_)
-    <|> (StatementInductive <$> inductiveDef Nothing)
-    <|> (StatementModule <$> moduleDef)
-    <|> (StatementAxiom <$> axiomDef Nothing)
-    <|> builtinStatement
-    <|> ( either StatementTypeSignature StatementFunctionClause
+  ms <-
+    optional
+      ( StatementOperator <$> operatorSyntaxDef
+          <|> StatementOpenModule <$> openModule
+          <|> StatementImport <$> import_
+          <|> StatementInductive <$> inductiveDef Nothing
+          <|> StatementModule <$> moduleDef
+          <|> StatementAxiom <$> axiomDef Nothing
+          <|> builtinStatement
+          <|> either StatementTypeSignature StatementFunctionClause
             <$> auxTypeSigFunClause
-        )
+      )
+  case ms of
+    Just s -> return s
+    Nothing -> do
+      mj <- peekJudoc
+      case mj of
+        Nothing -> P.failure Nothing mempty
+        Just j -> P.lift . throw . ErrDanglingJudoc . DanglingJudoc $ j
 
 stashPragmas :: forall r. (Members '[InfoTableBuilder, PragmasStash, NameIdGen] r) => ParsecS r ()
 stashPragmas = do
@@ -276,7 +285,7 @@ stashJudoc = do
   P.lift (modify (<> Just b))
   where
     judocBlocks :: ParsecS r (Judoc 'Parsed)
-    judocBlocks = Judoc <$> some judocBlock
+    judocBlocks = Judoc <$> some1 judocBlock
 
     judocBlock :: ParsecS r (JudocBlock 'Parsed)
     judocBlock = do
@@ -518,6 +527,9 @@ universe = do
         Nothing -> Universe Nothing i
         Just (lvl, i') -> Universe (Just lvl) (i <> i')
     )
+
+peekJudoc :: (Member JudocStash r) => ParsecS r (Maybe (Judoc 'Parsed))
+peekJudoc = P.lift get
 
 getJudoc :: (Member JudocStash r) => ParsecS r (Maybe (Judoc 'Parsed))
 getJudoc = P.lift $ do

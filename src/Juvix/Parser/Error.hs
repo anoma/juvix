@@ -14,6 +14,7 @@ data ParserError
   | ErrTopModulePath TopModulePathError
   | ErrWrongTopModuleName WrongTopModuleName
   | ErrStdinOrFile StdinOrFileError
+  | ErrDanglingJudoc DanglingJudoc
   deriving stock (Show)
 
 instance ToGenericError ParserError where
@@ -22,6 +23,7 @@ instance ToGenericError ParserError where
     ErrTopModulePath e -> genericError e
     ErrWrongTopModuleName e -> genericError e
     ErrStdinOrFile e -> genericError e
+    ErrDanglingJudoc e -> genericError e
 
 instance Pretty MegaparsecError where
   pretty (MegaparsecError b) = pretty (M.errorBundlePretty b)
@@ -114,3 +116,23 @@ instance ToGenericError StdinOrFileError where
           _genericErrorMessage = prettyError "Neither JUVIX_FILE_OR_PROJECT nor --stdin option is choosen",
           _genericErrorIntervals = []
         }
+
+newtype DanglingJudoc = DanglingJudoc
+  { _danglingJudoc :: Judoc 'Parsed
+  }
+  deriving stock (Show)
+
+instance ToGenericError DanglingJudoc where
+  genericError :: Member (Reader GenericOptions) r => DanglingJudoc -> Sem r GenericError
+  genericError DanglingJudoc {..} = do
+    opts <- fromGenericOptions <$> ask
+    let msg = "Dangling judoc comment:\n" <+> ppCode opts _danglingJudoc
+    return
+      GenericError
+        { _genericErrorLoc = i,
+          _genericErrorMessage = AnsiText msg,
+          _genericErrorIntervals = [i]
+        }
+    where
+      i :: Interval
+      i = getLoc _danglingJudoc
