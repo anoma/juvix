@@ -77,9 +77,6 @@ toStrippedTransformations =
 toGebTransformations :: [TransformationId]
 toGebTransformations = toEvalTransformations ++ [CheckGeb, LetRecLifting, OptPhaseGeb, UnrollRecursion, FoldTypeSynonyms, ComputeTypeInfo]
 
-toVampIRTransformations :: [TransformationId]
-toVampIRTransformations = toEvalTransformations
-
 pipeline :: PipelineId -> [TransformationId]
 pipeline = \case
   PipelineEval -> toEvalTransformations

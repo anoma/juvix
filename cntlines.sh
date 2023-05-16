@@ -1,7 +1,7 @@
 #!/bin/bash
 
 function count() {
-    cloc $1 | grep 'SUM:' | awk -F ' ' '{print $5}'
+    cloc $1 | grep 'SUM:' | awk '{print $5}'
 }
 
 RUNTIME=$(count runtime/src)
