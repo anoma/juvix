@@ -351,6 +351,7 @@ instance (SingI s) => PrettyCode (OpenModule s) where
     openUsingHiding' <- mapM ppUsingHiding _openUsingHiding
     importkw' <- mapM ppCode _openModuleImportKw
     let openPublic' = ppPublic
+    alias' <- fmap (kwAs <+>) <$> mapM ppModulePathType _openImportAsName
     return $ case importkw' of
       Nothing ->
         kwOpen
@@ -360,6 +361,7 @@ instance (SingI s) => PrettyCode (OpenModule s) where
       Just importkw ->
         importkw
           <+> openModuleName'
+          <+?> alias'
           <+> kwOpen
           <+?> openUsingHiding'
           <+?> openPublic'

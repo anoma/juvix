@@ -292,7 +292,6 @@ instance PrettyPrint (OpenModule 'Scoped) where
       Nothing -> do
         openkw
           <+> name'
-          <+?> alias'
           <+?> usingHiding'
           <+?> public'
       Just importkw ->
