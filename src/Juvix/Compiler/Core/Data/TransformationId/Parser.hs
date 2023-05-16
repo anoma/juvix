@@ -79,6 +79,7 @@ transformationText = \case
   DisambiguateNames -> strDisambiguateNames
   CheckGeb -> strCheckGeb
   CheckExec -> strCheckExec
+  Normalize -> strNormalize
   LetFolding -> strLetFolding
   LambdaFolding -> strLambdaFolding
   LetHoisting -> strLetHoisting
@@ -163,6 +164,9 @@ strCheckGeb = "check-geb"
 
 strCheckExec :: Text
 strCheckExec = "check-exec"
+
+strNormalize :: Text
+strNormalize = "normalize"
 
 strLetFolding :: Text
 strLetFolding = "let-folding"

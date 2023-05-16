@@ -42,7 +42,7 @@ toTestDescr = toTestDescr' coreNormalizeAssertion
 allTests :: TestTree
 allTests =
   testGroup
-    "JuvixCore positive tests"
+    "JuvixCore normalize positive tests"
     (map (mkTest . toTestDescr) tests)
 
 tests :: [PosTest]
@@ -181,5 +181,15 @@ tests =
       "Test027: type synonyms"
       $(mkRelDir ".")
       $(mkRelFile "test027.jvc")
-      $(mkRelFile "data/test027.json")
+      $(mkRelFile "data/test027.json"),
+    PosTest
+      "Test028: let hoisting"
+      $(mkRelDir ".")
+      $(mkRelFile "test028.jvc")
+      $(mkRelFile "data/test028.json"),
+    PosTest
+      "Test029: let hoisting"
+      $(mkRelDir ".")
+      $(mkRelFile "test029.jvc")
+      $(mkRelFile "data/test029.json")
   ]

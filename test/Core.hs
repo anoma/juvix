@@ -4,11 +4,11 @@ import Base
 import Core.Asm qualified as Asm
 import Core.Compile qualified as Compile
 import Core.Eval qualified as Eval
-import Core.LetHoist qualified as LetHoist
 import Core.Normalize qualified as Normalize
 import Core.Print qualified as Print
 import Core.Recursor qualified as Rec
 import Core.Transformation qualified as Transformation
+import Core.VampIR qualified as VampIR
 
 allTests :: TestTree
 allTests =
@@ -21,5 +21,5 @@ allTests =
       Asm.allTests,
       Compile.allTests,
       Normalize.allTests,
-      LetHoist.allTests
+      VampIR.allTests
     ]
