@@ -5,9 +5,9 @@
 --- The module Logic.Game contains the game logic.
 module CLI.TicTacToe;
 
-open import Stdlib.Data.Nat.Ord;
-open import Stdlib.Prelude;
-open import Logic.Game;
+import Stdlib.Data.Nat.Ord open;
+import Stdlib.Prelude open;
+import Logic.Game open;
 
 --- A ;String; that prompts the user for their input
 prompt : GameState → String;
