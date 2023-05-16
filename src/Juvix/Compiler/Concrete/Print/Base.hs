@@ -171,7 +171,8 @@ instance PrettyPrint (Judoc 'Scoped) where
 
 instance PrettyPrint (JudocBlock 'Scoped) where
   ppCode = \case
-    JudocParagraph l -> vsep (ppCode <$> l)
+    JudocParagraphLines l -> vsep (ppCode <$> l)
+    JudocParagraphBlock {} -> undefined
     JudocExample e -> ppCode e
 
 instance PrettyPrint (JudocAtom 'Scoped) where

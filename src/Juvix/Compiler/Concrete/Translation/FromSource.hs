@@ -292,13 +292,26 @@ stashJudoc = do
     judocBlock = do
       p <-
         judocExample
-          <|> judocParagraph
-
+          <|> judocParagraphLines
+          <|> judocParagraphBlock
       void (many judocEmptyLine)
       return p
 
-    judocParagraph :: ParsecS r (JudocBlock 'Parsed)
-    judocParagraph = JudocParagraph <$> some1 judocLine
+    judocParagraphBlock :: ParsecS r (JudocBlock 'Parsed)
+    judocParagraphBlock = JudocParagraphBlock <$> blockPar
+      where
+        blockPar :: ParsecS r (JudocBlockParagraph 'Parsed)
+        blockPar = do
+          _judocBlockParagraphStart <- judocBlockStart
+          _judocBlockParagraphEnd <- judocBlockEnd
+          return
+            JudocBlockParagraph
+              { _judocBlockParagraphLines = [],
+                ..
+              }
+
+    judocParagraphLines :: ParsecS r (JudocBlock 'Parsed)
+    judocParagraphLines = JudocParagraphLines <$> some1 judocLine
 
     judocExample :: ParsecS r (JudocBlock 'Parsed)
     judocExample = do

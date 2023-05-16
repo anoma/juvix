@@ -18,3 +18,8 @@ id a := a;
 --- hellowww
 id2 : {A : Type} → A → A;
 id2 a := a;
+
+{--
+
+--}
+axiom M : Type

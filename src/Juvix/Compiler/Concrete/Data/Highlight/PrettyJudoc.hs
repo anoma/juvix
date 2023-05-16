@@ -54,7 +54,8 @@ ppJudoc (Judoc bs) = do
 
     ppBlock :: JudocBlock 'Scoped -> Sem r (Doc CodeAnn)
     ppBlock = \case
-      JudocParagraph ls -> hsep <$> mapM ppLine (toList ls)
+      JudocParagraphLines ls -> hsep <$> mapM ppLine (toList ls)
+      JudocParagraphBlock ls -> undefined
       JudocExample {} -> return mempty
 
     ppLine :: JudocParagraphLine 'Scoped -> Sem r (Doc CodeAnn)

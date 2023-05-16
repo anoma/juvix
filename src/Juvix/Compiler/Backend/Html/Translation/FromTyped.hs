@@ -360,7 +360,8 @@ goJudoc (Judoc bs) = mconcatMapM goBlock bs
   where
     goBlock :: JudocBlock 'Scoped -> Sem r Html
     goBlock = \case
-      JudocParagraph ls -> Html.p . concatWith (\l r -> l <> " " <> r) <$> mapM goLine (toList ls)
+      JudocParagraphLines ls -> Html.p . concatWith (\l r -> l <> " " <> r) <$> mapM goLine (toList ls)
+      JudocParagraphBlock {} -> undefined
       JudocExample e -> goExample e
 
     goLine :: JudocParagraphLine 'Scoped -> Sem r Html

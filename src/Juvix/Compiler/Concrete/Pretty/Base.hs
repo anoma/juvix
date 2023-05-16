@@ -399,7 +399,8 @@ instance (SingI s) => PrettyCode (Example s) where
 
 instance (SingI s) => PrettyCode (JudocBlock s) where
   ppCode = \case
-    JudocParagraph l -> vsep <$> mapM ppCode l
+    JudocParagraphLines l -> vsep <$> mapM ppCode l
+    JudocParagraphBlock {} -> undefined
     JudocExample e -> ppCode e
 
 instance (SingI s) => PrettyCode (JudocParagraphLine s) where

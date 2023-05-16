@@ -917,8 +917,21 @@ deriving stock instance (Eq (ExpressionType s)) => Eq (Example s)
 
 deriving stock instance (Ord (ExpressionType s)) => Ord (Example s)
 
+data JudocBlockParagraph (s :: Stage) = JudocBlockParagraph {
+  _judocBlockParagraphStart :: Interval,
+  _judocBlockParagraphLines :: [JudocParagraphLine s],
+  _judocBlockParagraphEnd :: Interval
+  }
+
+deriving stock instance (Show (ExpressionType s), Show (SymbolType s)) => Show (JudocBlockParagraph s)
+
+deriving stock instance (Eq (ExpressionType s), Eq (SymbolType s)) => Eq (JudocBlockParagraph s)
+
+deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (JudocBlockParagraph s)
+
 data JudocBlock (s :: Stage)
-  = JudocParagraph (NonEmpty (JudocParagraphLine s))
+  = JudocParagraphLines (NonEmpty (JudocParagraphLine s))
+  | JudocParagraphBlock (JudocBlockParagraph s)
   | JudocExample (Example s)
 
 deriving stock instance (Show (ExpressionType s), Show (SymbolType s)) => Show (JudocBlock s)
@@ -951,6 +964,7 @@ makeLenses ''Example
 makeLenses ''Lambda
 makeLenses ''LambdaClause
 makeLenses ''Judoc
+makeLenses ''JudocBlockParagraph
 makeLenses ''Function
 makeLenses ''InductiveDef
 makeLenses ''PostfixApplication
@@ -1192,9 +1206,13 @@ instance HasLoc (Example s) where
 instance HasLoc (Judoc s) where
   getLoc (Judoc j) = getLocSpan j
 
+instance HasLoc (JudocBlockParagraph s) where
+  getLoc p = p ^. judocBlockParagraphStart <> p ^. judocBlockParagraphEnd
+
 instance HasLoc (JudocBlock s) where
   getLoc = \case
-    JudocParagraph ls -> getLocSpan ls
+    JudocParagraphLines ls -> getLocSpan ls
+    JudocParagraphBlock p -> getLoc p
     JudocExample e -> getLoc e
 
 instance HasLoc (JudocParagraphLine s) where

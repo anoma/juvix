@@ -1202,7 +1202,8 @@ checkJudocBlock ::
   JudocBlock 'Parsed ->
   Sem r (JudocBlock 'Scoped)
 checkJudocBlock = \case
-  JudocParagraph l -> JudocParagraph <$> mapM checkJudocLine l
+  JudocParagraphLines l -> JudocParagraphLines <$> mapM checkJudocLine l
+  JudocParagraphBlock {} -> undefined
   JudocExample e -> JudocExample <$> traverseOf exampleExpression checkParseExpressionAtoms e
 
 checkJudocLine ::
