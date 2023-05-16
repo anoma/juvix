@@ -220,6 +220,18 @@ substs t = umapN go
         | idx > k -> mkVar i (idx - len)
       _ -> n
 
+-- | Increase the indices of free variables in the binderType by a given value
+shiftBinder :: Int -> Binder -> Binder
+shiftBinder = over binderType . shift
+
+-- | Increase the indices of free variables in the item binder and value
+shiftLetItem :: Int -> LetItem -> LetItem
+shiftLetItem n l =
+  LetItem
+    { _letItemBinder = shiftBinder n (l ^. letItemBinder),
+      _letItemValue = shift n (l ^. letItemValue)
+    }
+
 -- | substitute a term t for the free variable with de Bruijn index 0, avoiding
 -- variable capture; shifts all free variabes with de Bruijn index > 0 by -1 (as
 -- if the topmost binder was removed)

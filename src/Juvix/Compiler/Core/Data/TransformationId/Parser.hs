@@ -80,8 +80,10 @@ transformationText = \case
   DisambiguateNames -> strDisambiguateNames
   CheckGeb -> strCheckGeb
   CheckExec -> strCheckExec
+  Normalize -> strNormalize
   LetFolding -> strLetFolding
   LambdaFolding -> strLambdaFolding
+  LetHoisting -> strLetHoisting
   Inlining -> strInlining
   FoldTypeSynonyms -> strFoldTypeSynonyms
   OptPhaseEval -> strOptPhaseEval
@@ -97,6 +99,9 @@ transformation = P.choice [symbol (transformationText t) $> t | t <- allElements
 
 allStrings :: [Text]
 allStrings = map transformationLikeText allTransformationLikeIds
+
+strLetHoisting :: Text
+strLetHoisting = "let-hoisting"
 
 strEvalPipeline :: Text
 strEvalPipeline = "pipeline-eval"
@@ -163,6 +168,9 @@ strCheckGeb = "check-geb"
 
 strCheckExec :: Text
 strCheckExec = "check-exec"
+
+strNormalize :: Text
+strNormalize = "normalize"
 
 strLetFolding :: Text
 strLetFolding = "let-folding"

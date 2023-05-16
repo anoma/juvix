@@ -38,16 +38,16 @@ ppDoc :: Members '[Reader Options] r => Scoped.AName -> Maybe Internal.Expressio
 ppDoc n ty j = do
   n' <- ppScoped n
   ty' <- fmap ((n' <+> kwColon) <+>) <$> mapM ppInternal ty
-  j' <- join <$> mapM ppJudoc j
+  j' <- mapM ppJudoc j
   return $
     case (ty', j') of
       (Just jty', Just jj') -> return (jty' <+> line <> line <> jj')
       _ -> ty' <|> j'
 
-ppJudoc :: forall r. Members '[Reader Options] r => Judoc 'Scoped -> Sem r (Maybe (Doc CodeAnn))
+ppJudoc :: forall r. Members '[Reader Options] r => Judoc 'Scoped -> Sem r (Doc CodeAnn)
 ppJudoc (Judoc bs) = do
   void (ask @Options) -- to suppress redundant constraint warning
-  mapM ppBlocks (nonEmpty bs)
+  ppBlocks bs
   where
     ppBlocks :: NonEmpty (JudocBlock 'Scoped) -> Sem r (Doc CodeAnn)
     ppBlocks = fmap vsep2 . mapM ppBlock

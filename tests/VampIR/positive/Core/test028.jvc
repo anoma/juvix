@@ -1,0 +1,14 @@
+-- let hoisting
+
+\(a : Int) \(b : Int)
+let x : Int :=
+   let y : Int := b + a in
+   let z : Int := b + a in
+   b + a + y + z
+in
+let x2 : Int :=
+   let y2 : Int := b + a + x in
+   let z2 : Int := b + a in
+   b + a + y2 + z2
+in
+x + a + b + x2
