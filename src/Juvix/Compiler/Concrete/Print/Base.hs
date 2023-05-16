@@ -164,7 +164,7 @@ instance PrettyPrint (JudocParagraphLine 'Scoped) where
 
 instance PrettyPrint (Judoc 'Scoped) where
   ppCode :: forall r. Members '[ExactPrint, Reader Options] r => Judoc 'Scoped -> Sem r ()
-  ppCode (Judoc blocks) = sequenceWith paragraphSep (map ppCode blocks) >> line
+  ppCode (Judoc blocks) = sequenceWith paragraphSep (fmap ppCode blocks) >> line
     where
       paragraphSep :: Sem r ()
       paragraphSep = line >> noLoc P.ppJudocStart >> line
