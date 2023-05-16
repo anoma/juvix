@@ -284,6 +284,7 @@ instance PrettyPrint (OpenModule 'Scoped) where
         usingHiding' = ppCode <$> _openUsingHiding
         importkw' = ppCode <$> _openModuleImportKw
         openkw = ppCode _openModuleKw
+        alias' = (noLoc P.kwAs <+>) . ppCode <$> _openImportAsName
         public' = case _openPublic of
           Public -> Just (noLoc P.kwPublic)
           NoPublic -> Nothing
@@ -291,11 +292,13 @@ instance PrettyPrint (OpenModule 'Scoped) where
       Nothing -> do
         openkw
           <+> name'
+          <+?> alias'
           <+?> usingHiding'
           <+?> public'
       Just importkw ->
         importkw
           <+> name'
+          <+?> alias'
           <+> openkw
           <+?> usingHiding'
           <+?> public'

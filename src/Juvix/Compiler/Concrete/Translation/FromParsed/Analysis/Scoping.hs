@@ -763,12 +763,24 @@ checkOpenImportModule op
                 _importAsName = op ^. openImportAsName
               }
        in do
-            void (checkImport import_)
-            let changeOpenName = case op ^. openImportAsName of
-                  Nothing -> id
-                  Just o -> set openModuleName (topModulePathToName o)
-            scopedOpen <- checkOpenModule (set openModuleImportKw Nothing (changeOpenName op))
-            return (set openModuleImportKw (Just k) scopedOpen)
+            import' <- checkImport import_
+            let topName :: S.TopModulePath = over S.nameConcrete moduleNameToTopModulePath (import' ^. importModule . moduleRefName)
+                op' =
+                  op
+                    { _openModuleImportKw = Nothing,
+                      _openImportAsName = Nothing,
+                      _openModuleName = maybe (op ^. openModuleName) topModulePathToName (op ^. openImportAsName)
+                    }
+            scopedOpen <- checkOpenModuleNoImport op'
+            return
+              scopedOpen
+                { _openModuleImportKw = Just k,
+                  _openModuleName = project (import' ^. importModule),
+                  _openImportAsName =
+                    if
+                        | Just asTxt <- (op ^. openImportAsName) -> Just (set S.nameConcrete asTxt topName)
+                        | otherwise -> Nothing
+                }
   | otherwise = impossible
 
 checkOpenModuleNoImport ::
@@ -781,11 +793,11 @@ checkOpenModuleNoImport OpenModule {..}
   | otherwise = do
       openModuleName'@(ModuleRef' (_ :&: moduleRef'')) <- lookupModuleSymbol _openModuleName
       mergeScope (alterScope (moduleRef'' ^. moduleExportInfo))
-      let _openImportAsName :: Maybe S.TopModulePath = Nothing
       registerName (moduleRef'' ^. moduleRefName)
       return
         OpenModule
           { _openModuleName = openModuleName',
+            _openImportAsName = Nothing,
             ..
           }
   where

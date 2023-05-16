@@ -530,6 +530,9 @@ data SymbolEntry
   | EntryVariable (S.Name' ())
   deriving stock (Show)
 
+instance SingI t => CanonicalProjection (ModuleRef'' c t) (ModuleRef' c) where
+  project r = ModuleRef' (sing :&: r)
+
 -- | Symbols that a module exports
 newtype ExportInfo = ExportInfo
   { _exportSymbols :: HashMap Symbol SymbolEntry
