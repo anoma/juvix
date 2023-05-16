@@ -1,0 +1,5 @@
+module DanglingJudoc;
+
+axiom A : Type;
+
+--- hello
