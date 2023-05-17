@@ -283,14 +283,24 @@ instance PrettyPrint (OpenModule 'Scoped) where
     let name' = ppCode _openModuleName
         usingHiding' = ppCode <$> _openUsingHiding
         importkw' = ppCode <$> _openModuleImportKw
+        openkw = ppCode _openModuleKw
+        alias' = (noLoc P.kwAs <+>) . ppCode <$> _openImportAsName
         public' = case _openPublic of
           Public -> Just (noLoc P.kwPublic)
           NoPublic -> Nothing
-    ppCode _openModuleKw
-      <+?> importkw'
-      <+> name'
-      <+?> usingHiding'
-      <+?> public'
+    case importkw' of
+      Nothing -> do
+        openkw
+          <+> name'
+          <+?> usingHiding'
+          <+?> public'
+      Just importkw ->
+        importkw
+          <+> name'
+          <+?> alias'
+          <+> openkw
+          <+?> usingHiding'
+          <+?> public'
 
 instance PrettyPrint (FunctionClause 'Scoped) where
   ppCode :: forall r. Members '[ExactPrint, Reader Options] r => FunctionClause 'Scoped -> Sem r ()

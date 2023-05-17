@@ -1,6 +1,6 @@
 module Symbols;
 
-open import Stdlib.Data.Nat;
+import Stdlib.Data.Nat open;
 
 ╘⑽╛ : Nat;
 ╘⑽╛ := suc 9;
