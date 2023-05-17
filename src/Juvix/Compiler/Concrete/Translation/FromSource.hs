@@ -311,16 +311,10 @@ stashJudoc = do
     judocParagraphBlock :: ParsecS r (JudocBlockParagraph 'Parsed)
     judocParagraphBlock = do
       _judocBlockParagraphStart <- judocBlockStart
-      _judocBlockParagraphLines <- many blockLine
+      _judocBlockParagraphBlocks <- many (judocBlock True)
       _judocBlockParagraphEnd <- judocBlockEnd
       return
-        JudocBlockParagraph
-          { _judocBlockParagraphBlocks = [],
-            ..
-          }
-      where
-        blockLine :: ParsecS r (JudocParagraphLine 'Parsed)
-        blockLine = paragraphLine True
+        JudocBlockParagraph {..}
 
     judocParagraphLines :: Bool -> ParsecS r (JudocBlock 'Parsed)
     judocParagraphLines inBlock = JudocParagraphLines <$> some1 (paragraphLine inBlock)
@@ -338,25 +332,41 @@ stashJudoc = do
 
     paragraphLine :: Bool -> ParsecS r (JudocParagraphLine 'Parsed)
     paragraphLine inBlock = do
-      if
-          | inBlock -> return ()
-          | otherwise -> P.try (judocStart >> P.notFollowedBy (P.choice [judocExampleStart, void P.newline]))
-      l <- JudocParagraphLine <$> some1 (withLoc judocAtom)
+      unless inBlock $
+        P.try (judocStart >> P.notFollowedBy (P.choice [judocExampleStart, void P.newline]))
+      l <- JudocParagraphLine <$> some1 (withLoc (judocAtom inBlock))
       if
           | inBlock -> optional_ P.newline
-          | otherwise -> void P.newline
+          | otherwise -> void P.newline >> space
       return l
 
-judocAtom :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (JudocAtom 'Parsed)
-judocAtom =
+judocAtom ::
+  forall r.
+  (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
+  Bool ->
+  ParsecS r (JudocAtom 'Parsed)
+judocAtom inBlock =
   JudocText <$> judocAtomText
     <|> JudocExpression <$> judocExpression
   where
     judocAtomText :: ParsecS r Text
-    judocAtomText = judocText (takeWhile1P Nothing isValidText)
+    judocAtomText
+      -- TODO is this too inefficient
+      | inBlock =
+          pack . toList
+            <$> P.some
+              ( do
+                  P.notFollowedBy (P.choice (void judocBlockEnd : [void (P.single c) | c <- invalidChars]))
+                  P.anySingle
+              )
+      -- we prefer to use takeWhile1P when possible since it is more efficient than some
+      | otherwise = judocText (takeWhile1P Nothing isValidText)
       where
+        invalidChars :: [Char]
+        invalidChars = ['\n', ';']
+
         isValidText :: Char -> Bool
-        isValidText = (`notElem` ['\n', ';'])
+        isValidText = (`notElem` invalidChars)
 
     judocExpression :: ParsecS r (ExpressionAtoms 'Parsed)
     judocExpression = do

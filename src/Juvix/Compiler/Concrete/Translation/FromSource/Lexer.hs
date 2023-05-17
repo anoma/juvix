@@ -78,7 +78,6 @@ judocBlockEnd :: Members '[InfoTableBuilder] r => ParsecS r KeywordRef
 judocBlockEnd = kw delimJudocBlockEnd
 
 judocBlockStart :: Members '[InfoTableBuilder] r => ParsecS r KeywordRef
--- judocBlockStart = lexeme . judocText . onlyInterval . P.chunk $ Str.judocBlockStart
 judocBlockStart = kw delimJudocBlockStart
 
 judocStart :: Members '[InfoTableBuilder] r => ParsecS r ()

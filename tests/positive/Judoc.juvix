@@ -21,5 +21,14 @@ id a := a;
 id2 : {A : Type} → A → A;
 id2 a := a;
 
-{-- --}
+{-- hi --}
+id2 a := a;
+
+
+-- }
+--- testing double minus --
+--- testing triple --- minus
+--- testing closing --}.
+axiom B : {A : Type} → A → A;
+
 axiom M : Type
