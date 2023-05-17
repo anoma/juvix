@@ -172,15 +172,15 @@ topModuleDefStdin ::
   (Members '[Error ParserError, Files, PathResolver, InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
   ParsecS r (Module 'Parsed 'ModuleTop)
 topModuleDefStdin = do
-  void (optional stashJudoc)
+  optional_ stashJudoc
   top moduleDef
 
 topModuleDef ::
   (Members '[Error ParserError, Files, PathResolver, InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
   ParsecS r (Module 'Parsed 'ModuleTop)
 topModuleDef = do
-  void (optional stashJudoc)
-  void (optional stashPragmas)
+  optional_ stashJudoc
+  optional_ stashPragmas
   m <- top moduleDef
   P.lift (checkPath (m ^. modulePath))
   return m
@@ -239,8 +239,8 @@ topModulePath = mkTopModulePath <$> dottedSymbol
 
 statement :: (Members '[Files, Error ParserError, PathResolver, InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (Statement 'Parsed)
 statement = P.label "<top level statement>" $ do
-  void (optional stashJudoc)
-  void (optional stashPragmas)
+  optional_ stashJudoc
+  optional_ stashPragmas
   ms <-
     optional
       ( StatementOperator <$> operatorSyntaxDef
@@ -281,40 +281,43 @@ stashPragmas = do
 
 stashJudoc :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r ()
 stashJudoc = do
-  b <- judocBlocks
+  b <- judoc
   many judocEmptyLine
   P.lift (modify (<> Just b))
   where
-    judocBlocks :: ParsecS r (Judoc 'Parsed)
-    judocBlocks = Judoc <$> some1 judocBlock
+    judoc :: ParsecS r (Judoc 'Parsed)
+    judoc = Judoc <$> some1 judocGroup
 
-    judocBlock :: ParsecS r (JudocBlock 'Parsed)
-    judocBlock = do
+    judocGroup :: ParsecS r (JudocGroup 'Parsed)
+    judocGroup = undefined
+
+    judocBlock :: Bool -> ParsecS r (JudocBlock 'Parsed)
+    judocBlock inBlock = do
       p <-
         judocExample
           <|> judocParagraphLines
-          <|> judocParagraphBlock
       void (many judocEmptyLine)
       return p
 
-    judocParagraphBlock :: ParsecS r (JudocBlock 'Parsed)
-    judocParagraphBlock = JudocParagraphBlock <$> blockPar
+    judocParagraphBlock :: ParsecS r (JudocBlockParagraph 'Parsed)
+    judocParagraphBlock = do
+      _judocBlockParagraphStart <- judocBlockStart
+      _judocBlockParagraphLines <- many blockLine
+      _judocBlockParagraphEnd <- judocBlockEnd
+      return
+        JudocBlockParagraph
+          { _judocBlockParagraphBlocks = [],
+            ..
+          }
       where
-        blockPar :: ParsecS r (JudocBlockParagraph 'Parsed)
-        blockPar = do
-          _judocBlockParagraphStart <- judocBlockStart
-          _judocBlockParagraphEnd <- judocBlockEnd
-          return
-            JudocBlockParagraph
-              { _judocBlockParagraphLines = [],
-                ..
-              }
+        blockLine :: ParsecS r (JudocParagraphLine 'Parsed)
+        blockLine = paragraphLine <* (optional P.newline)
 
     judocParagraphLines :: ParsecS r (JudocBlock 'Parsed)
     judocParagraphLines = JudocParagraphLines <$> some1 judocLine
 
-    judocExample :: ParsecS r (JudocBlock 'Parsed)
-    judocExample = do
+    judocExample :: Bool -> ParsecS r (JudocBlock 'Parsed)
+    judocExample inBlock = do
       P.try (judocStart >> judocExampleStart)
       _exampleId <- P.lift freshNameId
       (_exampleExpression, _exampleLoc) <- interval parseExpressionAtoms
@@ -322,12 +325,18 @@ stashJudoc = do
       space
       return (JudocExample Example {..})
 
+    paragraphLine :: Bool -> ParsecS r (JudocParagraphLine 'Parsed)
+    paragraphLine inBlock = do
+      l <- JudocParagraphLine <$> some1 (withLoc judocAtom)
+      if
+        | inBlock -> optional_ P.newline
+        | otherwise -> void P.newline
+      return l
+
     judocLine :: ParsecS r (JudocParagraphLine 'Parsed)
     judocLine = lexeme $ do
       P.try (judocStart >> P.notFollowedBy (P.choice [judocExampleStart, void P.newline]))
-      ln <- JudocParagraphLine <$> some1 (withLoc judocAtom)
-      P.newline
-      return ln
+      paragraphLine <* P.newline
 
 judocAtom :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (JudocAtom 'Parsed)
 judocAtom =
@@ -774,7 +783,7 @@ moduleDef = P.label "<module definition>" $ do
     endModule :: ParsecS r (ModuleEndType t)
     endModule = case sing :: SModuleIsTop t of
       SModuleLocal -> kw kwEnd
-      SModuleTop -> void (optional (kw kwEnd >> semicolon))
+      SModuleTop -> optional_ (kw kwEnd >> semicolon)
 
 -- | An ExpressionAtom which is a valid expression on its own.
 atomicExpression :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (ExpressionAtoms 'Parsed)

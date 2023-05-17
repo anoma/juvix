@@ -1203,8 +1203,14 @@ checkJudocBlock ::
   Sem r (JudocBlock 'Scoped)
 checkJudocBlock = \case
   JudocParagraphLines l -> JudocParagraphLines <$> mapM checkJudocLine l
-  JudocParagraphBlock {} -> undefined
+  JudocParagraphBlock b -> JudocParagraphBlock <$> checkJudocBlockParagraph b
   JudocExample e -> JudocExample <$> traverseOf exampleExpression checkParseExpressionAtoms e
+
+checkJudocBlockParagraph ::
+  (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
+  JudocBlockParagraph 'Parsed ->
+  Sem r (JudocBlockParagraph 'Scoped)
+checkJudocBlockParagraph = undefined
 
 checkJudocLine ::
   (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>

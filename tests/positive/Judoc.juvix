@@ -19,7 +19,5 @@ id a := a;
 id2 : {A : Type} → A → A;
 id2 a := a;
 
-{--
-
---}
+{-- --}
 axiom M : Type

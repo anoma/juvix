@@ -28,8 +28,13 @@ registerKeyword r =
     <$ registerItem
       ParsedItem
         { _parsedLoc = getLoc r,
-          _parsedTag = ParsedTagKeyword
+          _parsedTag = ann
         }
+  where
+  ann = case r ^. keywordRefKeyword . keywordType of
+    KeywordTypeKeyword -> ParsedTagKeyword
+    KeywordTypeJudoc -> ParsedTagJudoc
+    KeywordTypeDelimiter -> ParsedTagDelimiter
 
 registerDelimiter :: Member InfoTableBuilder r => Interval -> Sem r ()
 registerDelimiter i =

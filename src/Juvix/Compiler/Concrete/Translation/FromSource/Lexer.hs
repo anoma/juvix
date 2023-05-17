@@ -74,11 +74,12 @@ string = lexemeInterval string'
 judocExampleStart :: ParsecS r ()
 judocExampleStart = P.chunk Str.judocExample >> hspace_
 
-judocBlockEnd :: Members '[InfoTableBuilder] r => ParsecS r Interval
-judocBlockEnd = lexeme . judocText . onlyInterval . P.chunk $ Str.judocBlockEnd
+judocBlockEnd :: Members '[InfoTableBuilder] r => ParsecS r KeywordRef
+judocBlockEnd = kw delimJudocBlockEnd
 
-judocBlockStart :: Members '[InfoTableBuilder] r => ParsecS r Interval
-judocBlockStart = lexeme . judocText . onlyInterval . P.chunk $ Str.judocBlockStart
+judocBlockStart :: Members '[InfoTableBuilder] r => ParsecS r KeywordRef
+-- judocBlockStart = lexeme . judocText . onlyInterval . P.chunk $ Str.judocBlockStart
+judocBlockStart = kw delimJudocBlockStart
 
 judocStart :: Members '[InfoTableBuilder] r => ParsecS r ()
 judocStart = judocText_ (P.chunk Str.judocStart) >> hspace_

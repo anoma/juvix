@@ -47,15 +47,25 @@ ppDoc n ty j = do
 ppJudoc :: forall r. Members '[Reader Options] r => Judoc 'Scoped -> Sem r (Doc CodeAnn)
 ppJudoc (Judoc bs) = do
   void (ask @Options) -- to suppress redundant constraint warning
-  ppBlocks bs
+  ppGroups bs
   where
-    ppBlocks :: NonEmpty (JudocBlock 'Scoped) -> Sem r (Doc CodeAnn)
+    ppGroups :: NonEmpty (JudocGroup 'Scoped) -> Sem r (Doc CodeAnn)
+    ppGroups = fmap vsep . mapM ppGroup
+
+    ppBlocks :: Traversable l => l (JudocBlock 'Scoped) -> Sem r (Doc CodeAnn)
     ppBlocks = fmap vsep2 . mapM ppBlock
+
+    ppParagraphBlock :: JudocBlockParagraph 'Scoped -> Sem r (Doc CodeAnn)
+    ppParagraphBlock = ppBlocks . (^. judocBlockParagraphBlocks)
+
+    ppGroup :: JudocGroup 'Scoped -> Sem r (Doc CodeAnn)
+    ppGroup = \case
+      JudocGroupLines p -> ppBlocks p
+      JudocGroupBlock p -> ppParagraphBlock p
 
     ppBlock :: JudocBlock 'Scoped -> Sem r (Doc CodeAnn)
     ppBlock = \case
       JudocParagraphLines ls -> hsep <$> mapM ppLine (toList ls)
-      JudocParagraphBlock ls -> undefined
       JudocExample {} -> return mempty
 
     ppLine :: JudocParagraphLine 'Scoped -> Sem r (Doc CodeAnn)

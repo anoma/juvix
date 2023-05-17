@@ -415,6 +415,9 @@ fromRightIO' pp = do
 fromRightIO :: (e -> Text) -> IO (Either e r) -> IO r
 fromRightIO pp = fromRightIO' (putStrLn . pp)
 
+optional_ :: Alternative m => m a -> m ()
+optional_ = void . optional
+
 --------------------------------------------------------------------------------
 -- Misc
 --------------------------------------------------------------------------------

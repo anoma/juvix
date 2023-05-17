@@ -16,6 +16,7 @@ import Juvix.Data.CodeAnn
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude
 import Juvix.Prelude.Pretty qualified as PP
+import Juvix.Compiler.Concrete.Keywords (delimJudocStart)
 
 doc :: (PrettyCode c) => Options -> c -> Doc Ann
 doc opts =
@@ -295,10 +296,15 @@ instance PrettyCode S.NameId where
   ppCode (S.NameId k) = return (pretty k)
 
 instance PrettyCode KeywordRef where
-  ppCode = return . annotate AnnKeyword . pretty
+  ppCode = ppCode . (^. keywordRefKeyword)
 
 instance PrettyCode Keyword where
-  ppCode = return . annotate AnnKeyword . pretty
+  ppCode p = return . annotate ann . pretty $ p
+    where
+    ann = case p ^. keywordType of
+      KeywordTypeDelimiter -> AnnDelimiter
+      KeywordTypeKeyword -> AnnKeyword
+      KeywordTypeJudoc -> AnnJudoc
 
 annDef :: forall s. SingI s => SymbolType s -> Doc Ann -> Doc Ann
 annDef nm = case sing :: SStage s of
@@ -386,8 +392,12 @@ instance PrettyCode (WithSource Pragmas) where
     return $
       annotate AnnComment (pretty (Str.pragmasStart <> pragma ^. withSourceText <> Str.pragmasEnd)) <> line
 
-ppJudocStart :: Doc Ann
-ppJudocStart = pretty (Str.judocStart :: Text)
+ppJudocStart :: Members '[Reader Options] r => Sem r (Maybe (Doc Ann))
+ppJudocStart = do
+  i <- asks (^. optInJudocBlock)
+  if
+    | i -> Just <$> ppCode delimJudocStart
+    | otherwise -> return Nothing
 
 ppJudocExampleStart :: Doc Ann
 ppJudocExampleStart = pretty (Str.judocExample :: Text)
@@ -395,21 +405,36 @@ ppJudocExampleStart = pretty (Str.judocExample :: Text)
 instance (SingI s) => PrettyCode (Example s) where
   ppCode e = do
     e' <- ppExpression (e ^. exampleExpression)
-    return (ppJudocStart <+> ppJudocExampleStart <+> e' <> kwSemicolon)
+    start' <- ppJudocStart
+    return (start' <?+> ppJudocExampleStart <+> e' <> kwSemicolon)
 
-instance (SingI s) => PrettyCode (JudocBlock s) where
+instance SingI s => PrettyCode (JudocBlockParagraph s) where
+  ppCode p = do
+    start' <- ppCode (p ^. judocBlockParagraphStart)
+    contents' <- inJudocBlock (vsep <$> mapM ppCode (p ^. judocBlockParagraphBlocks))
+    end' <- ppCode (p ^. judocBlockParagraphEnd)
+    return (start' <+> contents' <+> end')
+
+instance SingI s => PrettyCode (JudocBlock s) where
   ppCode = \case
-    JudocParagraphLines l -> vsep <$> mapM ppCode l
-    JudocParagraphBlock {} -> undefined
+    JudocParagraphLines l -> vsep <$> mapM ppStandaloneLine l
     JudocExample e -> ppCode e
+    where
+    ppStandaloneLine :: (Members '[Reader Options] r) => JudocParagraphLine s -> Sem r (Doc Ann)
+    ppStandaloneLine l = do
+      atoms' <- ppCode l
+      prefix <- ppJudocStart
+      return (prefix <?+> atoms')
 
 instance (SingI s) => PrettyCode (JudocParagraphLine s) where
-  ppCode (JudocParagraphLine atoms) = do
-    atoms' <- mconcatMap ppCode atoms
-    let prefix = annotate AnnComment (pretty (Str.judocStart :: Text))
-    return (prefix <+> atoms')
+  ppCode (JudocParagraphLine atoms) = mconcatMap ppCode atoms
 
-instance (SingI s) => PrettyCode (Judoc s) where
+instance SingI s => PrettyCode (JudocGroup s) where
+  ppCode = \case
+    JudocGroupLines l -> vsep <$> mapM ppCode l
+    JudocGroupBlock l -> ppCode l
+
+instance SingI s => PrettyCode (Judoc s) where
   ppCode :: forall r. (Members '[Reader Options] r) => Judoc s -> Sem r (Doc Ann)
   ppCode (Judoc blocks) = do
     doc' <- vsep <$> mapM ppCode blocks
