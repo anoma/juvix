@@ -37,9 +37,23 @@ instance FromJSON EvalData where
     where
       parseEvalData :: Parse PragmaError EvalData
       parseEvalData = do
-        _evalDataInput <- key "in" (eachInArray asText)
+        _evalDataInput <- parseInputs
         _evalDataOutput <- key "out" asText
         return EvalData {..}
+
+      parseInputs :: Parse PragmaError [Text]
+      parseInputs = do
+        mi <- keyMay "in" asText
+        case mi of
+          Nothing -> parseInputs' 1
+          Just i -> return [i]
+
+      parseInputs' :: Int -> Parse PragmaError [Text]
+      parseInputs' n = do
+        mi <- keyMay ("in" <> show n) asText
+        case mi of
+          Nothing -> return []
+          Just i -> (i :) <$> parseInputs' (n + 1)
 
 coreEvalAssertion' ::
   EvalMode ->

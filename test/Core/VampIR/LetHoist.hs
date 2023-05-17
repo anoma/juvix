@@ -22,17 +22,17 @@ tests :: [PosTest]
 tests =
   [ PosTest
       "Test010: Lets"
-      $(mkRelDir ".")
+      $(mkRelDir "Core")
       $(mkRelFile "test010.jvc")
       $(mkRelFile "data/test010.json"),
     PosTest
       "Test028: Let hoisting"
-      $(mkRelDir ".")
+      $(mkRelDir "Core")
       $(mkRelFile "test028.jvc")
       $(mkRelFile "data/test028.json"),
     PosTest
       "Test029: Let hoisting"
-      $(mkRelDir ".")
+      $(mkRelDir "Core")
       $(mkRelFile "test029.jvc")
       $(mkRelFile "data/test029.json")
   ]

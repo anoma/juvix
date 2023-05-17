@@ -100,6 +100,12 @@ upToMiniC ::
   Sem r C.MiniCResult
 upToMiniC = upToAsm >>= asmToMiniC
 
+upToVampIR ::
+  (Members '[HighlightBuilder, Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, PathResolver] r) =>
+  Sem r VampIR.Result
+upToVampIR =
+  upToCore >>= \Core.CoreResult {..} -> coreToVampIR _coreResultTable
+
 upToGeb ::
   (Members '[HighlightBuilder, Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, PathResolver] r) =>
   Geb.ResultSpec ->
