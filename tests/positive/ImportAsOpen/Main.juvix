@@ -1,0 +1,9 @@
+module Main;
+
+import Other as O open;
+
+B : Type;
+B := A;
+
+B' : Type;
+B' := O.A;

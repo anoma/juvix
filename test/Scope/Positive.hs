@@ -226,5 +226,9 @@ tests =
     PosTest
       "Pragmas"
       $(mkRelDir ".")
-      $(mkRelFile "Pragmas.juvix")
+      $(mkRelFile "Pragmas.juvix"),
+    PosTest
+      "Import as open"
+      $(mkRelDir "ImportAsOpen")
+      $(mkRelFile "Main.juvix")
   ]

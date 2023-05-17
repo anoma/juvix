@@ -1,7 +1,7 @@
 {-# unknownPragma: 300 #-}
 module Pragmas;
 
-open import Stdlib.Prelude;
+import Stdlib.Prelude open;
 
 {-# unknownPragma: 0 #-}
 axiom a : Nat;

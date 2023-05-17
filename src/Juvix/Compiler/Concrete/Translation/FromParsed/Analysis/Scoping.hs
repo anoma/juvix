@@ -756,11 +756,31 @@ checkOpenImportModule ::
 checkOpenImportModule op
   | Just k <- op ^. openModuleImportKw =
       let import_ :: Import 'Parsed
-          import_ = Import k (moduleNameToTopModulePath (op ^. openModuleName)) Nothing
+          import_ =
+            Import
+              { _importKw = k,
+                _importModule = moduleNameToTopModulePath (op ^. openModuleName),
+                _importAsName = op ^. openImportAsName
+              }
        in do
-            void (checkImport import_)
-            scopedOpen <- checkOpenModule (set openModuleImportKw Nothing op)
-            return (set openModuleImportKw (Just k) scopedOpen)
+            import' <- checkImport import_
+            let topName :: S.TopModulePath = over S.nameConcrete moduleNameToTopModulePath (import' ^. importModule . moduleRefName)
+                op' =
+                  op
+                    { _openModuleImportKw = Nothing,
+                      _openImportAsName = Nothing,
+                      _openModuleName = maybe (op ^. openModuleName) topModulePathToName (op ^. openImportAsName)
+                    }
+            scopedOpen <- checkOpenModuleNoImport op'
+            return
+              scopedOpen
+                { _openModuleImportKw = Just k,
+                  _openModuleName = project (import' ^. importModule),
+                  _openImportAsName =
+                    if
+                        | Just asTxt <- (op ^. openImportAsName) -> Just (set S.nameConcrete asTxt topName)
+                        | otherwise -> Nothing
+                }
   | otherwise = impossible
 
 checkOpenModuleNoImport ::
@@ -777,6 +797,7 @@ checkOpenModuleNoImport OpenModule {..}
       return
         OpenModule
           { _openModuleName = openModuleName',
+            _openImportAsName = Nothing,
             ..
           }
   where

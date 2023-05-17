@@ -244,6 +244,7 @@ statement = P.label "<top level statement>" $ do
   ms <-
     optional
       ( StatementOperator <$> operatorSyntaxDef
+          <|> P.try (StatementOpenModule <$> newOpenSyntax)
           <|> StatementOpenModule <$> openModule
           <|> StatementImport <$> import_
           <|> StatementInductive <$> inductiveDef Nothing
@@ -780,9 +781,28 @@ openModule = do
   _openParameters <- many atomicExpression
   _openUsingHiding <- optional usingOrHiding
   _openPublic <- maybe NoPublic (const Public) <$> optional (kw kwPublic)
-  return OpenModule {..}
-  where
-    usingOrHiding :: ParsecS r UsingHiding
-    usingOrHiding =
-      (kw kwUsing >> (Using <$> symbolList))
-        <|> (kw kwHiding >> (Hiding <$> symbolList))
+  return
+    OpenModule
+      { _openImportAsName = Nothing,
+        ..
+      }
+
+usingOrHiding :: (Members '[Error ParserError, InfoTableBuilder, JudocStash, NameIdGen, PragmasStash] r) => ParsecS r UsingHiding
+usingOrHiding =
+  (kw kwUsing >> (Using <$> symbolList))
+    <|> (kw kwHiding >> (Hiding <$> symbolList))
+
+newOpenSyntax :: forall r. (Members '[Error ParserError, PathResolver, Files, InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (OpenModule 'Parsed)
+newOpenSyntax = do
+  im <- import_
+  _openModuleKw <- kw kwOpen
+  _openParameters <- many atomicExpression
+  _openUsingHiding <- optional usingOrHiding
+  _openPublic <- maybe NoPublic (const Public) <$> optional (kw kwPublic)
+  let _openModuleName = topModulePathToName (im ^. importModule)
+      _openModuleImportKw = Just (im ^. importKw)
+      _openImportAsName = im ^. importAsName
+  return
+    OpenModule
+      { ..
+      }

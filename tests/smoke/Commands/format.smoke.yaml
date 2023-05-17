@@ -159,12 +159,12 @@ tests:
       - --stdin
       - format
       - positive/Format.juvix
-    stdin: 'module Format; open import Stdlib.Prelude; main : Nat; main := 5; '
+    stdin: 'module Format; import Stdlib.Prelude open; main : Nat; main := 5; '
     stdout:
       contains: |
         module Format;
 
-        open import Stdlib.Prelude;
+        import Stdlib.Prelude open;
 
         main : Nat;
         main := 5;
@@ -176,7 +176,7 @@ tests:
       - --stdin
       - format
       - positive/NonExistingFormat.juvix
-    stdin: 'module Format; open import Stdlib.Prelude; main : Nat; main := 5; '
+    stdin: 'module Format; import Stdlib.Prelude open; main : Nat; main := 5; '
     stderr:
       contains: |
         positive/NonExistingFormat.juvix" does not exist
@@ -188,7 +188,7 @@ tests:
       - --stdin
       - format
       - positive/Format.juvix
-    stdin: 'module OtherFormat; open import Stdlib.Prelude; main : Nat; main := 5; '
+    stdin: 'module OtherFormat; import Stdlib.Prelude open; main : Nat; main := 5; '
     stderr:
       contains: 'is defined in the file'
     exit-status: 1
@@ -198,12 +198,12 @@ tests:
       - juvix
       - --stdin
       - format
-    stdin: 'module OtherFormat; open import Stdlib.Prelude; main : Nat; main := 5; '
+    stdin: 'module OtherFormat; import Stdlib.Prelude open; main : Nat; main := 5; '
     stdout:
       contains: |
         module OtherFormat;
 
-        open import Stdlib.Prelude;
+        import Stdlib.Prelude open;
 
         main : Nat;
         main := 5;
@@ -213,7 +213,7 @@ tests:
     command:
       - juvix
       - format
-    stdin: 'module OtherFormat; open import Stdlib.Prelude; main : Nat; main := 5module OtherFormat; open import Stdlib.Prelude; main : Nat; main := 5;; '
+    stdin: 'module OtherFormat; import Stdlib.Prelude open; main : Nat; main := 5module OtherFormat; import Stdlib.Prelude open; main : Nat; main := 5;; '
     stdout:
       contains: juvix format error
     exit-status: 1
