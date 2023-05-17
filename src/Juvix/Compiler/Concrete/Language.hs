@@ -917,10 +917,10 @@ deriving stock instance (Eq (ExpressionType s)) => Eq (Example s)
 
 deriving stock instance (Ord (ExpressionType s)) => Ord (Example s)
 
-data JudocBlockParagraph (s :: Stage) = JudocBlockParagraph {
-  _judocBlockParagraphStart :: KeywordRef,
-  _judocBlockParagraphBlocks :: [JudocBlock s],
-  _judocBlockParagraphEnd :: KeywordRef
+data JudocBlockParagraph (s :: Stage) = JudocBlockParagraph
+  { _judocBlockParagraphStart :: KeywordRef,
+    _judocBlockParagraphBlocks :: [JudocBlock s],
+    _judocBlockParagraphEnd :: KeywordRef
   }
 
 deriving stock instance (Show (ExpressionType s), Show (SymbolType s)) => Show (JudocBlockParagraph s)

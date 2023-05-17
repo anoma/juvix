@@ -31,10 +31,10 @@ registerKeyword r =
           _parsedTag = ann
         }
   where
-  ann = case r ^. keywordRefKeyword . keywordType of
-    KeywordTypeKeyword -> ParsedTagKeyword
-    KeywordTypeJudoc -> ParsedTagJudoc
-    KeywordTypeDelimiter -> ParsedTagDelimiter
+    ann = case r ^. keywordRefKeyword . keywordType of
+      KeywordTypeKeyword -> ParsedTagKeyword
+      KeywordTypeJudoc -> ParsedTagJudoc
+      KeywordTypeDelimiter -> ParsedTagDelimiter
 
 registerDelimiter :: Member InfoTableBuilder r => Interval -> Sem r ()
 registerDelimiter i =

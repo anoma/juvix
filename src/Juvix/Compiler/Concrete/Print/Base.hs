@@ -156,8 +156,8 @@ ppJudocStart :: Members '[ExactPrint, Reader Options] r => Sem r (Maybe ())
 ppJudocStart = do
   inBlock <- asks (^. optInJudocBlock)
   if
-    | inBlock -> return Nothing
-    | otherwise -> ppCode delimJudocStart $> Just ()
+      | inBlock -> return Nothing
+      | otherwise -> ppCode delimJudocStart $> Just ()
 
 instance PrettyPrint (Example 'Scoped) where
   ppCode e =
@@ -188,10 +188,10 @@ instance PrettyPrint (JudocGroup 'Scoped) where
     JudocGroupLines l -> goLines l
     JudocGroupBlock l -> ppCode l
     where
-    goLines blocks = sequenceWith paragraphSep (fmap ppCode blocks) >> line
-     where
-      paragraphSep :: Sem r ()
-      paragraphSep = line >> ppJudocStart >> line
+      goLines blocks = sequenceWith paragraphSep (fmap ppCode blocks) >> line
+        where
+          paragraphSep :: Sem r ()
+          paragraphSep = line >> ppJudocStart >> line
 
 instance PrettyPrint (JudocBlock 'Scoped) where
   ppCode = \case

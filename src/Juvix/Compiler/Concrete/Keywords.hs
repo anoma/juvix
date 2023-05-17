@@ -7,10 +7,10 @@ where
 
 import Juvix.Data.Keyword
 import Juvix.Data.Keyword.All
-  (
-    -- delimiters
-    delimJudocBlockStart,
+  ( -- delimiters
+
     delimJudocBlockEnd,
+    delimJudocBlockStart,
     delimJudocStart,
     -- keywords
     kwAs,

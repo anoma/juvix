@@ -9,6 +9,7 @@ import Data.List.NonEmpty.Extra qualified as NonEmpty
 import Juvix.Compiler.Concrete.Data.ScopedName (AbsModulePath, IsConcrete (..))
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Extra (unfoldApplication)
+import Juvix.Compiler.Concrete.Keywords (delimJudocStart)
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Pretty.Options
 import Juvix.Data.Ape
@@ -16,7 +17,6 @@ import Juvix.Data.CodeAnn
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude
 import Juvix.Prelude.Pretty qualified as PP
-import Juvix.Compiler.Concrete.Keywords (delimJudocStart)
 
 doc :: (PrettyCode c) => Options -> c -> Doc Ann
 doc opts =
@@ -301,10 +301,10 @@ instance PrettyCode KeywordRef where
 instance PrettyCode Keyword where
   ppCode p = return . annotate ann . pretty $ p
     where
-    ann = case p ^. keywordType of
-      KeywordTypeDelimiter -> AnnDelimiter
-      KeywordTypeKeyword -> AnnKeyword
-      KeywordTypeJudoc -> AnnJudoc
+      ann = case p ^. keywordType of
+        KeywordTypeDelimiter -> AnnDelimiter
+        KeywordTypeKeyword -> AnnKeyword
+        KeywordTypeJudoc -> AnnJudoc
 
 annDef :: forall s. SingI s => SymbolType s -> Doc Ann -> Doc Ann
 annDef nm = case sing :: SStage s of
@@ -396,8 +396,8 @@ ppJudocStart :: Members '[Reader Options] r => Sem r (Maybe (Doc Ann))
 ppJudocStart = do
   i <- asks (^. optInJudocBlock)
   if
-    | i -> Just <$> ppCode delimJudocStart
-    | otherwise -> return Nothing
+      | i -> Just <$> ppCode delimJudocStart
+      | otherwise -> return Nothing
 
 ppJudocExampleStart :: Doc Ann
 ppJudocExampleStart = pretty (Str.judocExample :: Text)
@@ -420,11 +420,11 @@ instance SingI s => PrettyCode (JudocBlock s) where
     JudocParagraphLines l -> vsep <$> mapM ppStandaloneLine l
     JudocExample e -> ppCode e
     where
-    ppStandaloneLine :: (Members '[Reader Options] r) => JudocParagraphLine s -> Sem r (Doc Ann)
-    ppStandaloneLine l = do
-      atoms' <- ppCode l
-      prefix <- ppJudocStart
-      return (prefix <?+> atoms')
+      ppStandaloneLine :: (Members '[Reader Options] r) => JudocParagraphLine s -> Sem r (Doc Ann)
+      ppStandaloneLine l = do
+        atoms' <- ppCode l
+        prefix <- ppJudocStart
+        return (prefix <?+> atoms')
 
 instance (SingI s) => PrettyCode (JudocParagraphLine s) where
   ppCode (JudocParagraphLine atoms) = mconcatMap ppCode atoms
