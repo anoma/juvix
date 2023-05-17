@@ -4,8 +4,10 @@ axiom A : Type;
 
 axiom b : Type;
 
+--- document type
 type T :=
-  | t : T;
+  | --- document constructor
+  t : T;
 
 --- he ;id A; and ;A A id T A id; this is another ;id
   id

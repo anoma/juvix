@@ -282,21 +282,29 @@ stashPragmas = do
 stashJudoc :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r ()
 stashJudoc = do
   b <- judoc
-  many judocEmptyLine
+  many (judocEmptyLine False)
   P.lift (modify (<> Just b))
   where
     judoc :: ParsecS r (Judoc 'Parsed)
     judoc = Judoc <$> some1 judocGroup
 
     judocGroup :: ParsecS r (JudocGroup 'Parsed)
-    judocGroup = undefined
+    judocGroup =
+      JudocGroupBlock <$> judocParagraphBlock
+      <|> JudocGroupLines <$> some1 (judocBlock False)
+
+    judocEmptyLine :: Bool -> ParsecS r ()
+    judocEmptyLine inBlock = lexeme . void $
+      if
+        | inBlock -> P.newline
+        | otherwise -> P.try (judocStart >> P.newline)
 
     judocBlock :: Bool -> ParsecS r (JudocBlock 'Parsed)
     judocBlock inBlock = do
       p <-
-        judocExample
-          <|> judocParagraphLines
-      void (many judocEmptyLine)
+        judocExample inBlock
+          <|> judocParagraphLines inBlock
+      void (many (judocEmptyLine inBlock))
       return p
 
     judocParagraphBlock :: ParsecS r (JudocBlockParagraph 'Parsed)
@@ -311,14 +319,16 @@ stashJudoc = do
           }
       where
         blockLine :: ParsecS r (JudocParagraphLine 'Parsed)
-        blockLine = paragraphLine <* (optional P.newline)
+        blockLine = paragraphLine True
 
-    judocParagraphLines :: ParsecS r (JudocBlock 'Parsed)
-    judocParagraphLines = JudocParagraphLines <$> some1 judocLine
+    judocParagraphLines :: Bool -> ParsecS r (JudocBlock 'Parsed)
+    judocParagraphLines inBlock = JudocParagraphLines <$> some1 (paragraphLine inBlock)
 
     judocExample :: Bool -> ParsecS r (JudocBlock 'Parsed)
     judocExample inBlock = do
-      P.try (judocStart >> judocExampleStart)
+      if
+        | inBlock -> judocExampleStart
+        | otherwise -> P.try (judocStart >> judocExampleStart)
       _exampleId <- P.lift freshNameId
       (_exampleExpression, _exampleLoc) <- interval parseExpressionAtoms
       semicolon
@@ -327,16 +337,14 @@ stashJudoc = do
 
     paragraphLine :: Bool -> ParsecS r (JudocParagraphLine 'Parsed)
     paragraphLine inBlock = do
+      if
+        | inBlock -> return ()
+        | otherwise -> P.try (judocStart >> P.notFollowedBy (P.choice [judocExampleStart, void P.newline]))
       l <- JudocParagraphLine <$> some1 (withLoc judocAtom)
       if
         | inBlock -> optional_ P.newline
         | otherwise -> void P.newline
       return l
-
-    judocLine :: ParsecS r (JudocParagraphLine 'Parsed)
-    judocLine = lexeme $ do
-      P.try (judocStart >> P.notFollowedBy (P.choice [judocExampleStart, void P.newline]))
-      paragraphLine <* P.newline
 
 judocAtom :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (JudocAtom 'Parsed)
 judocAtom =

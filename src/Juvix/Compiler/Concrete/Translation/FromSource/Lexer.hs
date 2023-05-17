@@ -84,9 +84,6 @@ judocBlockStart = kw delimJudocBlockStart
 judocStart :: Members '[InfoTableBuilder] r => ParsecS r ()
 judocStart = judocText_ (P.chunk Str.judocStart) >> hspace_
 
-judocEmptyLine :: (Members '[InfoTableBuilder] r) => ParsecS r ()
-judocEmptyLine = lexeme (void (P.try (judocStart >> P.newline)))
-
 kw :: Member InfoTableBuilder r => Keyword -> ParsecS r KeywordRef
 kw k = lexeme $ kw' k >>= P.lift . registerKeyword
 

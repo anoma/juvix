@@ -1195,7 +1195,15 @@ checkJudoc ::
   (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
   Judoc 'Parsed ->
   Sem r (Judoc 'Scoped)
-checkJudoc (Judoc atoms) = Judoc <$> mapM checkJudocBlock atoms
+checkJudoc (Judoc groups) = Judoc <$> mapM checkJudocGroup groups
+
+checkJudocGroup ::
+  (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
+  JudocGroup 'Parsed ->
+  Sem r (JudocGroup 'Scoped)
+checkJudocGroup = \case
+  JudocGroupBlock b -> JudocGroupBlock <$> checkJudocBlockParagraph b
+  JudocGroupLines l -> JudocGroupLines <$> mapM checkJudocBlock l
 
 checkJudocBlock ::
   (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
@@ -1203,14 +1211,13 @@ checkJudocBlock ::
   Sem r (JudocBlock 'Scoped)
 checkJudocBlock = \case
   JudocParagraphLines l -> JudocParagraphLines <$> mapM checkJudocLine l
-  JudocParagraphBlock b -> JudocParagraphBlock <$> checkJudocBlockParagraph b
   JudocExample e -> JudocExample <$> traverseOf exampleExpression checkParseExpressionAtoms e
 
 checkJudocBlockParagraph ::
   (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
   JudocBlockParagraph 'Parsed ->
   Sem r (JudocBlockParagraph 'Scoped)
-checkJudocBlockParagraph = undefined
+checkJudocBlockParagraph = traverseOf judocBlockParagraphBlocks (mapM checkJudocBlock)
 
 checkJudocLine ::
   (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
