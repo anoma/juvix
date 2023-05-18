@@ -7,16 +7,16 @@ import Juvix.Compiler.Core
 import Juvix.Prelude.Pretty
 import System.Process qualified as P
 
-vampirAssertion :: Path Abs File -> Path Abs File -> (String -> IO ()) -> Assertion
-vampirAssertion mainFile dataFile step = do
+vampirAssertion :: Int -> Path Abs File -> Path Abs File -> (String -> IO ()) -> Assertion
+vampirAssertion paramsNum mainFile dataFile step = do
   step "Parse"
   s <- readFile (toFilePath mainFile)
   case runParserMain mainFile emptyInfoTable s of
     Left err -> assertFailure (show err)
-    Right tab -> vampirAssertion' tab dataFile step
+    Right tab -> vampirAssertion' paramsNum tab dataFile step
 
-vampirAssertion' :: InfoTable -> Path Abs File -> (String -> IO ()) -> Assertion
-vampirAssertion' tab dataFile step = do
+vampirAssertion' :: Int -> InfoTable -> Path Abs File -> (String -> IO ()) -> Assertion
+vampirAssertion' paramsNum tab dataFile step = do
   withTempDir'
     ( \dirPath -> do
         step "Translate to VampIR"
@@ -30,7 +30,7 @@ vampirAssertion' tab dataFile step = do
             assertCmdExists $(mkRelFile "vamp-ir")
 
             step "VampIR setup parameters"
-            P.callProcess "vamp-ir" (setupParamsArgs 10 dirPath)
+            P.callProcess "vamp-ir" (setupParamsArgs paramsNum dirPath)
             step "VampIR compile"
             P.callProcess "vamp-ir" (compileArgs vampirFile dirPath)
             step "VampIR prove"

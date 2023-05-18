@@ -18,7 +18,8 @@ allTests =
     ( map
         (mkTest . toTestDescr)
         ( tests
-            ++ ( Normalize.filterOutTests
+            ++ ( -- filtering due to stack overflow in VampIR with too many definitions
+                 Normalize.filterOutTests
                    [ "Test020: functional queues",
                      "Test026: letrec"
                    ]
@@ -30,11 +31,13 @@ allTests =
 tests :: [PosTest]
 tests =
   [ PosTest
+      5
       "Test001"
       $(mkRelDir "translation")
       $(mkRelFile "test001.jvc")
       $(mkRelFile "data/test001.json"),
     PosTest
+      5
       "Test002"
       $(mkRelDir "translation")
       $(mkRelFile "test002.jvc")
