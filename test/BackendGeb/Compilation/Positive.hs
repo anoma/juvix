@@ -125,7 +125,7 @@ tests =
       $(mkRelFile "test018.juvix")
       $(mkRelFile "out/test018.geb"),
     PosTest
-      "Test019: higher-order functions and recursion"
+      "Test019: higher-order functions"
       $(mkRelDir ".")
       $(mkRelFile "test019.juvix")
       $(mkRelFile "out/test019.geb"),

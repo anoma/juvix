@@ -1,4 +1,4 @@
--- higher-order functions and recursion
+-- higher-order functions
 
 def f : (Int -> Int) -> Int := \(g : Int -> Int) g 5;
 def h : Int -> Int -> Int := \(x : Int) \(z : Int) x + z;

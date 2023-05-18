@@ -1,0 +1,15 @@
+-- tail recursion
+module test012;
+
+open import Stdlib.Prelude;
+
+{-# unroll: 21 #-}
+sum' : Nat → Nat → Nat;
+sum' acc zero := acc;
+sum' acc (suc x) := sum' (suc x + acc) x;
+
+sum : Nat → Nat;
+sum := sum' 0;
+
+main : Nat -> Nat;
+main := sum;

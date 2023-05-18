@@ -1,5 +1,5 @@
 -- higher-order functions
-module test019;
+module test016;
 
 open import Stdlib.Prelude;
 
@@ -9,8 +9,8 @@ f g := g 5;
 h : Nat → Nat → Nat;
 h x z := x + z;
 
-u : Nat → Nat;
-u x := f (h 4) + x;
+u : Nat → Nat → Nat;
+u x y := f (h y) + x;
 
-main : Nat;
-main := u 2;
+main : Nat → Nat → Nat;
+main := u;

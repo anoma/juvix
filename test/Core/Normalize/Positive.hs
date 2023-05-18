@@ -162,7 +162,7 @@ tests =
       $(mkRelFile "data/test018.json"),
     PosTest
       5
-      "Test019: higher-order functions and recursion"
+      "Test019: higher-order functions"
       $(mkRelDir "Core")
       $(mkRelFile "test019.jvc")
       $(mkRelFile "data/test019.json"),

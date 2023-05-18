@@ -1,0 +1,7 @@
+-- polymorphism
+module test019;
+
+open import Stdlib.Prelude;
+
+main : Nat -> Nat -> Nat;
+main x y := head (tail (id (x :: y :: nil)));

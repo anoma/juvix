@@ -1,0 +1,25 @@
+-- higher-order inductive types
+module test006;
+
+open import Stdlib.Prelude;
+open import Stdlib.Data.Nat.Ord;
+
+type enum :=
+|  opt0 : enum
+|  opt1 : Bool -> enum
+|  opt2 : Bool -> (Bool -> Bool) -> enum
+|  opt3 : Bool -> (Bool -> Bool -> Bool) -> Bool -> enum;
+
+natToBool : Nat -> Bool;
+natToBool x := if (x == 0) false true;
+
+boolToNat : Bool -> Nat;
+boolToNat x := if x 1 0;
+
+main : Nat -> Nat -> Nat;
+main x y := boolToNat $
+  case (opt3 (natToBool x) (λ{ x y := if y false x }) (natToBool y))
+  | opt0 := false
+  | opt1 b := b
+  | opt2 b f := f b
+  | opt3 b1 f b2 := f b1 b2;
