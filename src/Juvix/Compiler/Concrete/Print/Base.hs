@@ -20,7 +20,12 @@ class PrettyPrint a where
   ppCode :: Members '[ExactPrint, Reader Options] r => a -> Sem r ()
 
 instance PrettyPrint Keyword where
-  ppCode = noLoc . annotate AnnKeyword . pretty
+  ppCode p = noLoc . annotate ann . pretty $ p
+    where
+      ann = case p ^. keywordType of
+        KeywordTypeDelimiter -> AnnDelimiter
+        KeywordTypeKeyword -> AnnKeyword
+        KeywordTypeJudoc -> AnnJudoc
 
 instance PrettyPrint KeywordRef where
   ppCode = ppMorpheme
@@ -171,7 +176,7 @@ instance PrettyPrint (JudocParagraphLine 'Scoped) where
 
 instance PrettyPrint (Judoc 'Scoped) where
   ppCode :: forall r. Members '[ExactPrint, Reader Options] r => Judoc 'Scoped -> Sem r ()
-  ppCode (Judoc blocks) = sequenceWith paragraphSep (fmap ppCode blocks) >> line
+  ppCode (Judoc groups) = sequenceWith paragraphSep (ppCode <$> groups) >> line
     where
       paragraphSep :: Sem r ()
       paragraphSep = line >> ppJudocStart >> line
@@ -179,8 +184,10 @@ instance PrettyPrint (Judoc 'Scoped) where
 instance PrettyPrint (JudocBlockParagraph 'Scoped) where
   ppCode p = do
     let start' = ppCode (p ^. judocBlockParagraphStart)
+        contents' = inJudocBlock (vsep2 (ppCode <$> p ^. judocBlockParagraphBlocks))
         endpar' = ppCode (p ^. judocBlockParagraphEnd)
-    start' <+> endpar'
+        -- TODO ensure exactly one space before endpar'
+    start' <+> contents' <+> endpar'
 
 instance PrettyPrint (JudocGroup 'Scoped) where
   ppCode :: forall r. Members '[ExactPrint, Reader Options] r => JudocGroup 'Scoped -> Sem r ()
@@ -188,7 +195,7 @@ instance PrettyPrint (JudocGroup 'Scoped) where
     JudocGroupLines l -> goLines l
     JudocGroupBlock l -> ppCode l
     where
-      goLines blocks = sequenceWith paragraphSep (fmap ppCode blocks) >> line
+      goLines blocks = sequenceWith paragraphSep (fmap ppCode blocks)
         where
           paragraphSep :: Sem r ()
           paragraphSep = line >> ppJudocStart >> line

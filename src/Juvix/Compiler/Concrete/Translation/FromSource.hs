@@ -30,6 +30,7 @@ import Juvix.Prelude.Pretty
   ( Pretty,
     prettyText,
   )
+import Data.Text qualified as Text
 
 type JudocStash = State (Maybe (Judoc 'Parsed))
 
@@ -334,11 +335,19 @@ stashJudoc = do
     paragraphLine inBlock = do
       unless inBlock $
         P.try (judocStart >> P.notFollowedBy (P.choice [judocExampleStart, void P.newline]))
-      l <- JudocParagraphLine <$> some1 (withLoc (judocAtom inBlock))
+      l <- JudocParagraphLine . trimLast <$> some1 (withLoc (judocAtom inBlock))
       if
           | inBlock -> optional_ P.newline
           | otherwise -> void P.newline >> space
       return l
+      where
+        trimLast :: NonEmpty (WithLoc (JudocAtom 'Parsed)) -> NonEmpty (WithLoc (JudocAtom 'Parsed))
+        trimLast = over (_last1 . withLocParam) tr
+         where
+         tr :: JudocAtom 'Parsed -> JudocAtom 'Parsed
+         tr a = case a of
+           JudocExpression {} -> a
+           JudocText txt -> JudocText (Text.stripEnd txt)
 
 judocAtom ::
   forall r.
@@ -350,17 +359,19 @@ judocAtom inBlock =
     <|> JudocExpression <$> judocExpression
   where
     judocAtomText :: ParsecS r Text
-    judocAtomText
-      -- TODO is this too inefficient
-      | inBlock =
-          pack . toList
-            <$> P.some
-              ( do
-                  P.notFollowedBy (P.choice (void judocBlockEnd : [void (P.single c) | c <- invalidChars]))
-                  P.anySingle
-              )
-      -- we prefer to use takeWhile1P when possible since it is more efficient than some
-      | otherwise = judocText (takeWhile1P Nothing isValidText)
+    judocAtomText =
+      judocText $
+        if
+            | inBlock ->
+                -- TODO is this too inefficient
+                pack . toList
+                  <$> P.some
+                    ( do
+                        P.notFollowedBy (P.choice (void judocBlockEnd : [void (P.single c) | c <- invalidChars]))
+                        P.anySingle
+                    )
+            -- we prefer to use takeWhile1P when possible since it is more efficient than some
+            | otherwise -> (takeWhile1P Nothing isValidText)
       where
         invalidChars :: [Char]
         invalidChars = ['\n', ';']

@@ -396,8 +396,8 @@ ppJudocStart :: Members '[Reader Options] r => Sem r (Maybe (Doc Ann))
 ppJudocStart = do
   i <- asks (^. optInJudocBlock)
   if
-      | i -> Just <$> ppCode delimJudocStart
-      | otherwise -> return Nothing
+      | i -> return Nothing
+      | otherwise -> Just <$> ppCode delimJudocStart
 
 ppJudocExampleStart :: Doc Ann
 ppJudocExampleStart = pretty (Str.judocExample :: Text)
@@ -417,17 +417,14 @@ instance SingI s => PrettyCode (JudocBlockParagraph s) where
 
 instance SingI s => PrettyCode (JudocBlock s) where
   ppCode = \case
-    JudocParagraphLines l -> vsep <$> mapM ppStandaloneLine l
+    JudocParagraphLines l -> vsep <$> mapM ppCode l
     JudocExample e -> ppCode e
-    where
-      ppStandaloneLine :: (Members '[Reader Options] r) => JudocParagraphLine s -> Sem r (Doc Ann)
-      ppStandaloneLine l = do
-        atoms' <- ppCode l
-        prefix <- ppJudocStart
-        return (prefix <?+> atoms')
 
 instance (SingI s) => PrettyCode (JudocParagraphLine s) where
-  ppCode (JudocParagraphLine atoms) = mconcatMap ppCode atoms
+  ppCode (JudocParagraphLine atoms) = do
+    start' <- ppJudocStart
+    atoms' <- mconcatMap ppCode atoms
+    return (start' <?+> atoms')
 
 instance SingI s => PrettyCode (JudocGroup s) where
   ppCode = \case
@@ -436,8 +433,8 @@ instance SingI s => PrettyCode (JudocGroup s) where
 
 instance SingI s => PrettyCode (Judoc s) where
   ppCode :: forall r. (Members '[Reader Options] r) => Judoc s -> Sem r (Doc Ann)
-  ppCode (Judoc blocks) = do
-    doc' <- vsep <$> mapM ppCode blocks
+  ppCode (Judoc groups) = do
+    doc' <- vsep <$> mapM ppCode groups
     return $ doc' <> line
 
 instance (SingI s) => PrettyCode (JudocAtom s) where
