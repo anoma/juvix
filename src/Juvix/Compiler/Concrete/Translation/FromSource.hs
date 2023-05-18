@@ -9,6 +9,7 @@ where
 import Data.ByteString.UTF8 qualified as BS
 import Data.List.NonEmpty.Extra qualified as NonEmpty
 import Data.Singletons
+import Data.Text qualified as Text
 import Data.Yaml
 import Juvix.Compiler.Concrete.Data.Highlight.Input (HighlightBuilder, ignoreHighlightBuilder)
 import Juvix.Compiler.Concrete.Data.ParsedInfoTable
@@ -30,7 +31,6 @@ import Juvix.Prelude.Pretty
   ( Pretty,
     prettyText,
   )
-import Data.Text qualified as Text
 
 type JudocStash = State (Maybe (Judoc 'Parsed))
 
@@ -343,11 +343,11 @@ stashJudoc = do
       where
         trimLast :: NonEmpty (WithLoc (JudocAtom 'Parsed)) -> NonEmpty (WithLoc (JudocAtom 'Parsed))
         trimLast = over (_last1 . withLocParam) tr
-         where
-         tr :: JudocAtom 'Parsed -> JudocAtom 'Parsed
-         tr a = case a of
-           JudocExpression {} -> a
-           JudocText txt -> JudocText (Text.stripEnd txt)
+          where
+            tr :: JudocAtom 'Parsed -> JudocAtom 'Parsed
+            tr a = case a of
+              JudocExpression {} -> a
+              JudocText txt -> JudocText (Text.stripEnd txt)
 
 judocAtom ::
   forall r.

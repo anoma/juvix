@@ -224,6 +224,10 @@ tests =
       $(mkRelDir "ImportShadow")
       $(mkRelFile "Main.juvix"),
     PosTest
+      "Judoc"
+      $(mkRelDir ".")
+      $(mkRelFile "Judoc.juvix"),
+    PosTest
       "Pragmas"
       $(mkRelDir ".")
       $(mkRelFile "Pragmas.juvix"),

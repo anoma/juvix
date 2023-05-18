@@ -411,7 +411,7 @@ instance (SingI s) => PrettyCode (Example s) where
 instance SingI s => PrettyCode (JudocBlockParagraph s) where
   ppCode p = do
     start' <- ppCode (p ^. judocBlockParagraphStart)
-    contents' <- inJudocBlock (vsep <$> mapM ppCode (p ^. judocBlockParagraphBlocks))
+    contents' <- inJudocBlock (vsep2 <$> mapM ppCode (p ^. judocBlockParagraphBlocks))
     end' <- ppCode (p ^. judocBlockParagraphEnd)
     return (start' <+> contents' <+> end')
 
@@ -427,15 +427,35 @@ instance (SingI s) => PrettyCode (JudocParagraphLine s) where
     return (start' <?+> atoms')
 
 instance SingI s => PrettyCode (JudocGroup s) where
+  ppCode :: forall r. Members '[Reader Options] r => JudocGroup s -> Sem r (Doc Ann)
   ppCode = \case
-    JudocGroupLines l -> vsep <$> mapM ppCode l
+    JudocGroupLines l -> goLines l
     JudocGroupBlock l -> ppCode l
+    where
+      goLines :: NonEmpty (JudocBlock s) -> Sem r (Doc Ann)
+      goLines blocks = do
+        start' <- ppCode delimJudocStart
+        let blockSep' = line <> start' <> line
+        blocks' <- mapM ppCode blocks
+        return (concatWith (\a b -> a <> blockSep' <> b) blocks')
 
 instance SingI s => PrettyCode (Judoc s) where
-  ppCode :: forall r. (Members '[Reader Options] r) => Judoc s -> Sem r (Doc Ann)
+  ppCode :: forall r. Members '[Reader Options] r => Judoc s -> Sem r (Doc Ann)
   ppCode (Judoc groups) = do
-    doc' <- vsep <$> mapM ppCode groups
-    return $ doc' <> line
+    groups' <- ppGroups groups
+    return (groups' <> line)
+    where
+      ppGroups :: NonEmpty (JudocGroup s) -> Sem r (Doc Ann)
+      ppGroups = \case
+        g :| [] -> ppCode g
+        g :| b : bs -> ppCode g <> groupSep <> ppGroups (b :| bs)
+          where
+            groupSep :: Sem r (Doc Ann)
+            groupSep = (line <>) <$> extraLine
+            extraLine :: Sem r (Doc Ann)
+            extraLine = case (g, b) of
+              (JudocGroupLines {}, JudocGroupLines {}) -> (<> line) <$> ppCode delimJudocStart
+              _ -> return mempty
 
 instance (SingI s) => PrettyCode (JudocAtom s) where
   ppCode :: forall r. (Members '[Reader Options] r) => JudocAtom s -> Sem r (Doc Ann)

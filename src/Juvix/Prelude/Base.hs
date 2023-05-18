@@ -511,5 +511,5 @@ popFirstJust f = \case
     Nothing -> (h :) <$> popFirstJust f hs
     Just x -> (Just x, hs)
 
-uncurryF :: Functor f => (a -> b -> c) -> f (a , b) -> f c
+uncurryF :: Functor f => (a -> b -> c) -> f (a, b) -> f c
 uncurryF g input = uncurry g <$> input

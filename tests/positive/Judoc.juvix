@@ -7,9 +7,9 @@ axiom b : Type;
 --- document type
 type T :=
   | --- document constructor
-  t : T;
+    t : T;
 
---- he ;id A; and ;A A id T A id; this is another ;id
+--- blah ;id A; and ;A A id T A id; this is another ;id
   id
   id; example
 --- hahahah
@@ -18,17 +18,23 @@ id : {A : Type} → A → A;
 id a := a;
 
 --- hellowww
+{-- judoc block --}
+{-- judoc block --}
+{--  --}
 id2 : {A : Type} → A → A;
 id2 a := a;
-
-{-- hi --}
 id2 a := a;
-
 
 -- }
 --- testing double minus --
 --- testing triple --- minus
 --- testing closing --}.
+---
+--- second paragraph
 axiom B : {A : Type} → A → A;
 
-axiom M : Type
+{-- Hi
+
+Bye
+end --}
+axiom M : Type;
