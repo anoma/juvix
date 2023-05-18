@@ -362,17 +362,20 @@ judocAtom inBlock =
     judocAtomText =
       judocText $
         if
-            | inBlock ->
-                -- TODO is this too inefficient
-                pack . toList
-                  <$> P.some
-                    ( do
-                        P.notFollowedBy (P.choice (void judocBlockEnd : [void (P.single c) | c <- invalidChars]))
-                        P.anySingle
-                    )
-            -- we prefer to use takeWhile1P when possible since it is more efficient than some
-            | otherwise -> (takeWhile1P Nothing isValidText)
+            | inBlock -> goBlockAtom
+            | otherwise -> takeWhile1P Nothing isValidText
       where
+        -- We prefer to use takeWhile1P when possible since it is more efficient than some
+        goBlockAtom :: ParsecS r Text
+        goBlockAtom = do
+          txt <- takeWhile1P Nothing (`notElem` stopChars)
+          dashes <- many (P.notFollowedBy judocBlockEnd >> P.single '-')
+          rest <- optional goBlockAtom
+          return (txt <> pack dashes <> fromMaybe mempty rest)
+          where
+            stopChars :: [Char]
+            stopChars = '-' : invalidChars
+
         invalidChars :: [Char]
         invalidChars = ['\n', ';']
 

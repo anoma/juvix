@@ -19,7 +19,8 @@ id a := a;
 
 --- hellowww
 {-- judoc block --}
-{-- judoc block --}
+{-- judoc
+block --}
 {--  --}
 id2 : {A : Type} → A → A;
 id2 a := a;
