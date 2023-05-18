@@ -20,6 +20,7 @@ data TransformationId
   | DisambiguateNames
   | CheckGeb
   | CheckExec
+  | CheckVampIR
   | Normalize
   | LetFolding
   | LambdaFolding
@@ -68,7 +69,7 @@ toNormalizeTransformations :: [TransformationId]
 toNormalizeTransformations = toEvalTransformations ++ [LetRecLifting, LetFolding, UnrollRecursion]
 
 toVampIRTransformations :: [TransformationId]
-toVampIRTransformations = toNormalizeTransformations ++ [Normalize, LetHoisting]
+toVampIRTransformations = toEvalTransformations ++ [CheckVampIR, LetRecLifting, LetFolding, UnrollRecursion, Normalize, LetHoisting]
 
 toStrippedTransformations :: [TransformationId]
 toStrippedTransformations =
