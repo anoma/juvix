@@ -82,7 +82,11 @@ jobs:
       - name: Set WASI_SYSROOT_PATH
         run: |
           echo "WASI_SYSROOT_PATH=$GITHUB_WORKSPACE/wasi-sysroot" >> $GITHUB_ENV
-
+          
+      - name: Add ~/.local/bin to PATH
+        run: |
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+          
       - name: Install the latest Wasmer version
         uses: jaxxstorm/action-install-gh-release@v1.10.0
         with:
@@ -90,14 +94,11 @@ jobs:
           tag: v3.2.1
           binaries-location: bin
           rename-to: wasmer
+          chmod: 0755
           cache: enable
 
       - name: Install libicu for testing
         run: sudo apt install -y libicu66
-
-      - name: Add ~/.local/bin to PATH
-        run: |
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Install VampIR for testing
         uses: jaxxstorm/action-install-gh-release@v1.10.0
@@ -196,6 +197,7 @@ jobs:
           repo: wasmerio/wasmer
           tag: v3.2.1
           binaries-location: bin
+          chmod: 0755
           rename-to: wasmer
           cache: enable
 
