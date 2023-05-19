@@ -176,6 +176,7 @@ native64Args buildDir o outfile inputFile =
     <> [ "-DARCH_NATIVE64",
          "-DAPI_LIBC",
          "-m64",
+         "-finline-functions",
          "-O" <> show optValue,
          toFilePath inputFile
        ]
