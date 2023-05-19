@@ -1,6 +1,6 @@
 module Implicit;
 
-infixr 9 ∘;
+syntax infixr 9 ∘;
 ∘ :
   {A : Type}
     → {B : Type}
@@ -15,8 +15,8 @@ type Nat :=
   | zero : Nat
   | suc : Nat → Nat;
 
-infixr 2 ×;
-infixr 4 ,;
+syntax infixr 2 ×;
+syntax infixr 4 ,;
 type × (A : Type) (B : Type) :=
   | , : A → B → A × B;
 
@@ -67,7 +67,7 @@ if : {A : Type} → Bool → A → A → A;
 if true a _ := a;
 if false _ b := b;
 
-infixr 5 ::;
+syntax infixr 5 ::;
 type List (A : Type) :=
   | nil : List A
   | :: : A → List A → List A;

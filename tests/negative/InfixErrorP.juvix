@@ -1,6 +1,6 @@
 module InfixErrorP;
 
-  infix 5 , ;
+  syntax infix 5 , ;
 
   type Pair :=
    , : Type → Type → Pair;

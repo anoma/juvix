@@ -123,7 +123,7 @@ type ParsedPragmas = WithLoc (WithSource Pragmas)
 --------------------------------------------------------------------------------
 
 data Statement (s :: Stage)
-  = StatementOperator OperatorSyntaxDef
+  = StatementSyntax SyntaxDef
   | StatementTypeSignature (TypeSignature s)
   | StatementImport (Import s)
   | StatementInductive (InductiveDef s)
@@ -185,18 +185,31 @@ deriving stock instance (Eq (ModulePathType s 'ModuleTop), Eq (ImportType s)) =>
 deriving stock instance (Ord (ModulePathType s 'ModuleTop), Ord (ImportType s)) => Ord (Import s)
 
 --------------------------------------------------------------------------------
+-- Syntax declaration
+--------------------------------------------------------------------------------
+
+newtype SyntaxDef
+  = SyntaxOperator OperatorSyntaxDef
+  deriving stock (Show, Eq, Ord)
+
+instance HasLoc SyntaxDef where
+  getLoc = \case
+    SyntaxOperator t -> getLoc t
+
+--------------------------------------------------------------------------------
 -- Operator syntax declaration
 --------------------------------------------------------------------------------
 
 data OperatorSyntaxDef = OperatorSyntaxDef
   { _opSymbol :: Symbol,
     _opFixity :: Fixity,
-    _opKw :: KeywordRef
+    _opKw :: KeywordRef,
+    _opSyntaxKw :: KeywordRef
   }
   deriving stock (Show, Eq, Ord)
 
 instance HasLoc OperatorSyntaxDef where
-  getLoc OperatorSyntaxDef {..} = getLoc _opKw <> getLoc _opSymbol
+  getLoc OperatorSyntaxDef {..} = getLoc _opSyntaxKw <> getLoc _opKw <> getLoc _opSymbol
 
 -------------------------------------------------------------------------------
 -- Type signature declaration
@@ -1118,7 +1131,7 @@ instance HasLoc (OpenModule 'Scoped) where
 instance HasLoc (Statement 'Scoped) where
   getLoc :: Statement 'Scoped -> Interval
   getLoc = \case
-    StatementOperator t -> getLoc t
+    StatementSyntax t -> getLoc t
     StatementTypeSignature t -> getLoc t
     StatementImport t -> getLoc t
     StatementInductive t -> getLoc t

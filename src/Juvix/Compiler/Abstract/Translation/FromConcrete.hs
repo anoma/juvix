@@ -169,7 +169,7 @@ goStatement (Indexed idx s) =
   fmap (Indexed idx) <$> case s of
     StatementAxiom d -> Just . Abstract.StatementAxiom <$> goAxiom d
     StatementImport t -> Just . Abstract.StatementImport <$> goImport t
-    StatementOperator {} -> return Nothing
+    StatementSyntax {} -> return Nothing
     StatementOpenModule o -> goOpenModule o
     StatementInductive i -> Just . Abstract.StatementInductive <$> goInductive i
     StatementModule f -> Just . Abstract.StatementLocalModule <$> goLocalModule f

@@ -82,6 +82,9 @@ kwRightArrow = unicodeKw Str.toAscii Str.toUnicode
 kwSemicolon :: Keyword
 kwSemicolon = asciiKw Str.semicolon
 
+kwSyntax :: Keyword
+kwSyntax = asciiKw Str.syntax
+
 kwPipe :: Keyword
 kwPipe = asciiKw Str.pipe
 

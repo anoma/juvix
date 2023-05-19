@@ -4,12 +4,12 @@ type Nat :=
   | zero : Nat
   | suc : Nat → Nat;
 
-infixr 2 ×;
-infixr 4 ,;
+syntax infixr 2 ×;
+syntax infixr 4 ,;
 type × (A : Type) (B : Type) :=
   | , : A → B → A × B;
 
-infixr 9 ∘;
+syntax infixr 9 ∘;
 ∘ :
   {A : Type}
     → {B : Type}
@@ -124,7 +124,7 @@ both {_} {B} :=
     | f (a, b) := f a, f b
   };
 
-infixr 5 ::;
+syntax infixr 5 ::;
 type List (a : Type) :=
   | nil : List a
   | :: : a → List a → List a;

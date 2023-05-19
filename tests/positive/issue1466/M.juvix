@@ -10,7 +10,7 @@ nat := ℕ;
 nat2 : Type;
 nat2 := nat;
 
-infixl 1 +;
+syntax infixl 1 +;
 + : nat2 → nat → nat;
 + z b := b;
 + (s a) b := s (a + b);

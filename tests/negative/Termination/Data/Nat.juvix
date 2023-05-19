@@ -3,12 +3,12 @@ module Data.Nat;
     zero : ℕ |
     suc : ℕ → ℕ;
 
-  infixl 6 +;
+  syntax infixl 6 +;
   + : ℕ → ℕ → ℕ;
   + zero b := b;
   + (suc a) b := suc (a + b);
 
-  infixl 7 *;
+  syntax infixl 7 *;
   * : ℕ → ℕ → ℕ;
   * zero b := zero;
   * (suc a) b := b + a * b;

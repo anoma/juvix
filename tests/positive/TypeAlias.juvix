@@ -15,7 +15,7 @@ x := t;
 id : Type → Type;
 id x := x;
 
-infixr 9 ⊙;
+syntax infixr 9 ⊙;
 ⊙ : (Type → Type) → (Type → Type) → Type → Type;
 ⊙ f g x := f (g x);
 

@@ -67,8 +67,8 @@ groupStatements = \case
     -- blank line
     g :: Statement s -> Statement s -> Bool
     g a b = case (a, b) of
-      (StatementOperator _, StatementOperator _) -> True
-      (StatementOperator o, s) -> definesSymbol (o ^. opSymbol) s
+      (StatementSyntax _, StatementSyntax _) -> True
+      (StatementSyntax (SyntaxOperator o), s) -> definesSymbol (o ^. opSymbol) s
       (StatementImport _, StatementImport _) -> True
       (StatementImport i, StatementOpenModule o) -> case sing :: SStage s of
         SParsed -> True
@@ -123,7 +123,7 @@ instance (SingI s) => PrettyCode [Statement s] where
 
 instance (SingI s) => PrettyCode (Statement s) where
   ppCode = \case
-    StatementOperator op -> ppCode op
+    StatementSyntax s -> ppCode s
     StatementTypeSignature sig -> ppCode sig
     StatementImport i -> ppCode i
     StatementInductive d -> ppCode d
@@ -221,6 +221,11 @@ instance PrettyCode OperatorArity where
       AssocRight -> kwInfixr
       AssocLeft -> kwInfixl
       AssocNone -> kwInfix
+
+instance PrettyCode SyntaxDef where
+  ppCode s =
+    (kwSyntax <+>) <$> case s of
+      SyntaxOperator op -> ppCode op
 
 instance PrettyCode OperatorSyntaxDef where
   ppCode OperatorSyntaxDef {..} = do

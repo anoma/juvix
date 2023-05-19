@@ -1,6 +1,6 @@
 module InfixError;
 
-  infix 5 + ;
+  syntax infix 5 + ;
   axiom + : Type → Type → Type;
 
   axiom T : Type + Type + ;

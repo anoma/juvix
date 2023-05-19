@@ -3,19 +3,19 @@ module Ape;
 builtin string
 axiom String : Type;
 
-infixl 7 *;
+syntax infixl 7 *;
 axiom * : String → String → String;
 
-infixr 3 -;
+syntax infixr 3 -;
 axiom - : String → String → String;
 
-infixl 1 >>;
+syntax infixl 1 >>;
 axiom >> : String → String → String;
 
-infixl 6 +;
+syntax infixl 6 +;
 axiom + : String → String → String;
 
-infixr 6 ++;
+syntax infixr 6 ++;
 axiom ++ : String → String → String;
 
 axiom f : String → String;

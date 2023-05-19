@@ -40,6 +40,7 @@ import Juvix.Data.Keyword.All
     kwPublic,
     kwRightArrow,
     kwSemicolon,
+    kwSyntax,
     kwTerminating,
     kwType,
     kwUsing,
@@ -64,18 +65,15 @@ allKeywords =
     kwImport,
     kwIn,
     kwInductive,
-    kwInfix,
-    kwInfixl,
-    kwInfixr,
     kwLambda,
     kwLet,
     kwModule,
     kwOpen,
     kwPipe,
-    kwPostfix,
     kwPublic,
     kwRightArrow,
     kwSemicolon,
+    kwSyntax,
     kwType,
     kwUsing,
     kwWhere,
@@ -86,5 +84,9 @@ allKeywords =
 -- purposes
 nonKeywords :: [Keyword]
 nonKeywords =
-  [ kwAs
+  [ kwAs,
+    kwInfix,
+    kwInfixl,
+    kwInfixr,
+    kwPostfix
   ]

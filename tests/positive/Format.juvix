@@ -12,7 +12,7 @@ go n s :=
     (go n (sub s n) + go (sub n 1) s);
 
 module M;
-  infixr 4 ,;
+  syntax infixr 4 ,;
   axiom , : String → String → String;
 end;
 
@@ -50,19 +50,19 @@ t3 :=
 e1 : String;
 e1 := "\"\n";
 
-infixl 7 +l7;
+syntax infixl 7 +l7;
 axiom +l7 : String → String → String;
 
-infixr 3 +r3;
+syntax infixr 3 +r3;
 axiom +r3 : String → String → String;
 
-infixl 1 +l1;
+syntax infixl 1 +l1;
 axiom +l1 : String → String → String;
 
-infixl 6 +l6;
+syntax infixl 6 +l6;
 axiom +l6 : String → String → String;
 
-infixr 6 +r6;
+syntax infixr 6 +r6;
 axiom +r6 : String → String → String;
 
 -- nesting of chains
@@ -147,8 +147,8 @@ f :=
   };
 
 module Patterns;
-  infixr 2 ×;
-  infixr 4 ,;
+  syntax infixr 2 ×;
+  syntax infixr 4 ,;
   type × (A : Type) (B : Type) :=
     | , : A → B → A × B;
 

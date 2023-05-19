@@ -1,6 +1,5 @@
 module Data.Product;
 
-infixr 2 ×;
--- infixr 4 ,; waiting for implicit arguments
+syntax infixr 2 ×;
 type × (a : Type) (b : Type) :=
   | , : a → b → a × b;

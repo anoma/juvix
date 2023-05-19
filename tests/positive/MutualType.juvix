@@ -1,6 +1,6 @@
 module MutualType;
 
-infixr 5 ::;
+syntax infixr 5 ::;
 --- Inductive list.
 type List (a : Type) :=
   | --- The empty list
