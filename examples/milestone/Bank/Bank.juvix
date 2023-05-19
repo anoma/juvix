@@ -3,10 +3,10 @@
 --- https://github.com/AleoHQ/workshop/tree/master/basic_bank
 module Bank;
 
-open import Stdlib.Prelude;
-open import Stdlib.Debug.Fail;
+import Stdlib.Prelude open;
+import Stdlib.Debug.Fail open;
 
-open import Stdlib.Data.Nat.Ord;
+import Stdlib.Data.Nat.Ord open;
 
 import Stdlib.Data.Nat as Nat;
 
@@ -106,6 +106,9 @@ issue : Address -> Address -> Nat -> Token;
 issue caller owner amount :=
   assert (caller == bankAddress) (mkToken owner 0 amount);
 
+{-
+-- TODO: Uncomment this block once we fix
+-- https://github.com/anoma/juvix/issues/2056
 --- Deposits some amount of money into the bank.
 deposit : Balances -> Token -> Nat -> Token;
 deposit bal token amount :=
@@ -114,7 +117,7 @@ deposit bal token amount :=
     remaining :
         Token :=
           mkToken (getOwner token) (getGates token) difference;
-    hash : Field := hashAddress (getOwner token);
+    hash : Field := hashAddress (getOwner token);  # TODO: This raise an error
     bal' : Balances := increment hash amount bal;
   in runOnChain (commitBalances bal') remaining;
 
@@ -131,8 +134,9 @@ withdraw bal caller recipient amount rate periods :=
   assert
     (caller == bankAddress)
     (let
-      hash : Field := hashAddress recipient;
+      hash : Field := hashAddress recipient;  # TODO: Idem
       total : Nat := calculateInterest amount rate periods;
       token : Token := mkToken recipient 0 total;
       bal' : Balances := decrement hash amount bal;
     in runOnChain (commitBalances bal') token);
+-}

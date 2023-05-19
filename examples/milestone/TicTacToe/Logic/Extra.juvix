@@ -1,8 +1,8 @@
 --- Some generic helper definitions.
 module Logic.Extra;
 
-open import Stdlib.Data.Nat.Ord;
-open import Stdlib.Prelude;
+import Stdlib.Data.Nat.Ord open;
+import Stdlib.Prelude open;
 
 --- Concatenates a list of strings
 --- ;concat (("a" :: nil) :: "b" :: nil); evaluates to ;"a"

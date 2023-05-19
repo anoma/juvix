@@ -34,10 +34,7 @@ snd : {A : Type} → {B : Type} → A × B → B;
 snd p@(_, b) := b;
 
 lambda : Nat → Nat → Nat;
-lambda x :=
-  λ {
-    | a@(suc _) := a + x + zero
-  };
+lambda x := λ {a@(suc _) := a + x + zero};
 
 a : {A : Type} → A × Nat → Nat;
 a p@(x, s@zero) := snd p + 1;

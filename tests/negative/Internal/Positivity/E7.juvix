@@ -1,9 +1,8 @@
 module E7;
 
 type T0 (A : Type) (B : Type) :=
-c0 : (B -> A) -> T0 A B;
+  | c0 : (B -> A) -> T0 A B;
 
 type T1 (A : Type) :=
-c1 : (A -> T0 A (T1 A)) -> T1 A;
+  | c1 : (A -> T0 A (T1 A)) -> T1 A;
 
-end;

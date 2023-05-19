@@ -1,14 +1,13 @@
 module M;
 
 type Bool :=
-     true : Bool
+  | true : Bool
   | false : Bool;
 
 type Pair (A : Type) (B : Type) :=
-  mkPair : A → B → Pair A B;
+  | mkPair : A → B → Pair A B;
 
 f : _ → _;
 f (mkPair false true) := true;
 f true := false;
 
-end;

@@ -18,37 +18,19 @@ syntax infixr 9 ∘;
     → (A → B)
     → A
     → C;
-∘ {_} {B} {_} :=
-  λ {
-    | f g x := f (g x)
-  };
+∘ {_} {B} {_} := λ {f g x := f (g x)};
 
 id : {A : Type} → A → A;
-id :=
-  λ {
-    | a := a
-  };
+id := λ {a := a};
 
 id2 : {A : Type} → {B : Type} → A → A;
-id2 :=
-  λ {
-    | a := a
-  };
+id2 := λ {a := a};
 
 id' : (A : Type) → A → A;
-id' :=
-  λ {
-    | A a := a
-  };
+id' := λ {A a := a};
 
 id'' : (A : Type) → A → A;
-id'' :=
-  λ {
-    | A :=
-      λ {
-        | a := a
-      }
-  };
+id'' := λ {A := λ {a := a}};
 
 uncurry :
   {A : Type}
@@ -57,45 +39,26 @@ uncurry :
     → (A → B → C)
     → A × B
     → C;
-uncurry :=
-  λ {
-    | f (a, b) := f a b
-  };
+uncurry := λ {f (a, b) := f a b};
 
 idB : {A : Type} → A → A;
-idB a :=
-  λ {
-      | a := a
-    }
-    a;
+idB a := λ {a := a} a;
 
 mapB : {A : Type} → (A → A) → A → A;
-mapB :=
-  λ {
-    | f a := f a
-  };
+mapB := λ {f a := f a};
 
 add : Nat → Nat → Nat;
 add :=
   λ {
     | zero n := n
-    | (suc n) :=
-      λ {
-        | m := suc (add n m)
-      }
+    | (suc n) := λ {m := suc (add n m)}
   };
 
 fst : {A : Type} → {B : Type} → A × B → A;
-fst {_} :=
-  λ {
-    | (a, _) := a
-  };
+fst {_} := λ {(a, _) := a};
 
 swap : {A : Type} → {B : Type} → A × B → B × A;
-swap {_} {_} :=
-  λ {
-    | (a, b) := b, a
-  };
+swap {_} {_} := λ {(a, b) := b, a};
 
 first :
   {A : Type}
@@ -104,10 +67,7 @@ first :
     → (A → A')
     → A × B
     → A' × B;
-first :=
-  λ {
-    | f (a, b) := f a, b
-  };
+first := λ {f (a, b) := f a, b};
 
 second :
   {A : Type}
@@ -119,10 +79,7 @@ second :
 second f (a, b) := a, f b;
 
 both : {A : Type} → {B : Type} → (A → B) → A × A → B × B;
-both {_} {B} :=
-  λ {
-    | f (a, b) := f a, f b
-  };
+both {_} {B} := λ {f (a, b) := f a, f b};
 
 syntax infixr 5 ::;
 type List (a : Type) :=
@@ -137,10 +94,7 @@ map {_} :=
   };
 
 pairEval : {A : Type} → {B : Type} → (A → B) × A → B;
-pairEval :=
-  λ {
-    | (f, x) := f x
-  };
+pairEval := λ {(f, x) := f x};
 
 foldr :
   {A : Type} → {B : Type} → (A → B → B) → B → List A → B;
@@ -205,25 +159,13 @@ t :
     → {B : Type}
     → ({X : Type} → List X)
     → List A × List B;
-t :=
-  id
-    {({X : Type} → List X) → _}
-    λ {
-      | f := f {_}, f {_}
-    };
+t := id {({X : Type} → List X) → _} λ {f := f {_}, f {_}};
 
 type Box (A : Type) :=
   | b : A → Box A;
 
 x : Box ((A : Type) → A → A);
-x :=
-  b
-    λ {
-      | A a := a
-    };
+x := b λ {A a := a};
 
 t1 : {A : Type} → Box ((A : Type) → A → A) → A → A;
-t1 {A} :=
-  λ {
-    | (b f) := f A
-  };
+t1 {A} := λ {(b f) := f A};

@@ -1,10 +1,10 @@
 module Logic.Board;
 
-open import Stdlib.Prelude;
-open import Stdlib.Debug.Fail;
-open import Logic.Square public;
-open import Logic.Symbol public;
-open import Logic.Extra;
+import Stdlib.Prelude open;
+import Stdlib.Debug.Fail open;
+import Logic.Square open public;
+import Logic.Symbol open public;
+import Logic.Extra open;
 
 --- A 3x3 grid of ;Square;s
 type Board :=

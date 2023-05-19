@@ -1,24 +1,20 @@
 module Data.Bool;
-  type Bool :=
-    true : Bool |
-    false : Bool;
 
-  not : Bool → Bool;
-  not true := false;
-  not false := true;
+type Bool :=
+  | true : Bool
+  | false : Bool;
 
-  syntax infixr 2 ||;
-  || : Bool → Bool → Bool;
-  || false a := a;
-  || true _ := true;
+syntax infixr 2 ||;
+|| : Bool → Bool → Bool;
+|| false a := a;
+|| true _ := true;
 
-  syntax infixr 2 &&;
-  && : Bool → Bool → Bool;
-  && false _ := false;
-  && true a := a;
+syntax infixr 2 &&;
+&& : Bool → Bool → Bool;
+&& false _ := false;
+&& true a := a;
 
-  ite : (a : Type) → Bool → a → a → a;
-  ite _ true a _ := a;
-  ite _ false _ b := b;
+ite : (a : Type) → Bool → a → a → a;
+ite _ true a _ := a;
+ite _ false _ b := b;
 
-end;

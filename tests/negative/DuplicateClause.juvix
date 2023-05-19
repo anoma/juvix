@@ -2,9 +2,6 @@ module DuplicateClause;
 
 axiom T : Type;
 
-id : T → T := λ {
-  t := t
-};
+id : T → T := λ {t := t};
 id t := t;
 
-end;

@@ -1,6 +1,7 @@
 module LocalSynonym;
 
-type Unit := unit : Unit;
+type Unit :=
+  | unit : Unit;
 
 myUnit : Type;
 myUnit := Unit;

@@ -1,6 +1,6 @@
 module Fibonacci;
 
-open import Stdlib.Prelude;
+import Stdlib.Prelude open;
 
 fib : Nat → Nat → Nat → Nat;
 fib zero x1 _ := x1;

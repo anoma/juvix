@@ -1,4 +1,4 @@
 module Input;
 
-open import A;
-open import Nat;
+import A open;
+import Nat open;

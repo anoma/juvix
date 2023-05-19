@@ -1,6 +1,6 @@
 module Extra;
 
-open import Base;
+import Base open;
 
 axiom Extra : Type;
 

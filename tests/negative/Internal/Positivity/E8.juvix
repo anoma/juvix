@@ -1,4 +1,4 @@
 module E8;
+
 type B (A : Type) :=
-b : (A -> B (B A -> A)) -> B A;
-end;
+  | b : (A -> B (B A -> A)) -> B A;

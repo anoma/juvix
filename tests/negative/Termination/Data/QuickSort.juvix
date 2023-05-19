@@ -7,31 +7,36 @@ import Data.Nat;
 open Data.Nat;
 
 type List (A : Type) :=
-  nil  : List A |
-  cons : A → List A → List A;
+  | nil : List A
+  | cons : A → List A → List A;
 
 filter : (A : Type) → (A → Bool) → List A → List A;
-filter A f nil         := nil A;
-filter A f (cons h hs) := ite (List A) (f h)
-  (cons A h (filter A f hs))
-  (filter A f hs);
+filter A f nil := nil A;
+filter A f (cons h hs) :=
+  ite
+    (List A)
+    (f h)
+    (cons A h (filter A f hs))
+    (filter A f hs);
 
 concat : (A : Type) → List A → List A → List A;
-concat A nil ys         := ys;
+concat A nil ys := ys;
 concat A (cons x xs) ys := cons A x (concat A xs ys);
 
 ltx : (A : Type) → (A → A → Bool) → A → A → Bool;
 ltx A lessThan x y := lessThan y x;
 
 gex : (A : Type) → (A → A → Bool) → A → A → Bool;
-gex A lessThan x y := not (ltx A lessThan x y) ;
+gex A lessThan x y := not (ltx A lessThan x y);
 
 quicksort : (A : Type) → (A → A → Bool) → List A → List A;
 quicksort A _ nil := nil A;
 quicksort A _ (cons x nil) := cons A x (nil A);
 quicksort A lessThan (cons x ys) :=
-  concat A (quicksort A lessThan (filter A (ltx A lessThan x) ys))
-           (concat A
-           (cons A x (nil A))
-           (quicksort A lessThan (filter A (gex A lessThan x)) ys));
-end;
+  concat
+    A
+    (quicksort A lessThan (filter A (ltx A lessThan x) ys))
+    (concat
+      A
+      (cons A x (nil A))
+      (quicksort A lessThan (filter A (gex A lessThan x)) ys));

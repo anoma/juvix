@@ -1,7 +1,7 @@
 module LhsTooManyPatterns;
-  type T :=
-    A : T;
 
-  f : T → T;
-  f A x := A;
-end;
+type T :=
+  | A : T;
+
+f : T → T;
+f A x := A;

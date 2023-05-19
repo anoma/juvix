@@ -1,7 +1,7 @@
+SHELL := /bin/bash
 PWD=$(CURDIR)
 PREFIX="$(PWD)/.stack-work/prefix"
 UNAME := $(shell uname)
-
 EXAMPLEMILESTONE=examples/milestone
 EXAMPLEHTMLOUTPUT=docs/examples/html
 EXAMPLES= Collatz/Collatz.juvix \
@@ -18,9 +18,9 @@ DEMO_EXAMPLE=examples/demo/Demo.juvix
 MAKEAUXFLAGS?=-s
 MAKE=make ${MAKEAUXFLAGS}
 METAFILES:=README.md \
-		   CHANGELOG.md \
-		   CONTRIBUTING.md \
-		   LICENSE.md
+			 CHANGELOG.md \
+			 CONTRIBUTING.md \
+			 LICENSE.md
 
 STACKFLAGS?=--jobs $(THREADS)
 STACKTESTFLAGS?=--ta --hide-successes --ta --ansi-tricks=false
@@ -107,28 +107,48 @@ format:
 clang-format:
 	@cd runtime && ${MAKE} format
 
-JUVIXFILESTOFORMAT=$(shell find ./examples ./tests/positive -type d -name ".juvix-build" -prune -o -type f -name "*.juvix" -print)
+JUVIXFILESTOFORMAT=$(shell find  \
+	./examples  \
+	./tests/positive \
+	./tests/negative \
+	-type d \( -name ".juvix-build" -o -name "FancyPaths" \) -prune -o \
+	-type f -name "*.juvix" -print)
+
 JUVIXFORMATFLAGS?=--in-place
 JUVIXTYPECHECKFLAGS?=--only-errors
 
 .PHONY: format-juvix-files
 format-juvix-files:
 	@for file in $(JUVIXFILESTOFORMAT); do \
-		juvix format $(JUVIXFORMATFLAGS) "$$file"; \
-	done
+		${JUVIXBIN} format $(JUVIXFORMATFLAGS) "$$file" > /dev/null 2>&1; \
+		exit_code=$$?; \
+		if [ $$exit_code -eq 0 ]; then \
+			echo "[OK] $$file"; \
+      	elif [[ $$exit_code -ne 0 && "$$file" == *"tests/"* ]]; then \
+			echo "[CONTINUE] $$file is in tests directory."; \
+      	else \
+ 			echo "[FAIL] $$file formatting failed" && exit 1; \
+      	fi; \
+      	done;
 
 .PHONY: check-format-juvix-files
 check-format-juvix-files:
-	@export JUVIXFORMATFLAGS=--check
-	@make format-juvix-files
+	@JUVIXFORMATFLAGS=--check ${MAKE} format-juvix-files
 
-JUVIXEXAMPLEFILES=$(shell find ./examples  -name "*.juvix" -print)
+JUVIXEXAMPLEFILES=$(shell find ./examples \
+	-type d \( -name ".juvix-build" \) -prune -o \
+	-name "*.juvix" -print)
 
 .PHONY: typecheck-juvix-examples
 typecheck-juvix-examples:
 	@for file in $(JUVIXEXAMPLEFILES); do \
-		echo "Checking $$file"; \
 		${JUVIXBIN} typecheck "$$file" $(JUVIXTYPECHECKFLAGS); \
+		exit_code=$$?; \
+		if [ $$exit_code -eq 0 ]; then \
+			echo "[OK] $$file typechecks"; \
+		else \
+ 			echo "[FAIL] Typecking failed for $$file" && exit 1; \
+      	fi; \
 	done
 
 .PHONY: check-ormolu
@@ -166,7 +186,7 @@ check-only:
 		&& ${MAKE} install \
 		&& ${MAKE} test \
 		&& ${MAKE} smoke \
-		&& ${MAKE} check-format-juvix-examples \
+		&& ${MAKE} check-format-juvix-files \
 		&& ${MAKE} typecheck-juvix-examples \
 		&& ${MAKE} check-ormolu \
 		&& export SKIP=ormolu,format-juvix-examples,typecheck-juvix-examples \

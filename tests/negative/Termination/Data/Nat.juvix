@@ -1,27 +1,24 @@
 module Data.Nat;
-  type ℕ  :=
-    zero : ℕ |
-    suc : ℕ → ℕ;
 
-  syntax infixl 6 +;
-  + : ℕ → ℕ → ℕ;
-  + zero b := b;
-  + (suc a) b := suc (a + b);
+syntax infixl 6 +;
++ : ℕ → ℕ → ℕ;
++ zero b := b;
++ (suc a) b := suc (a + b);
 
-  syntax infixl 7 *;
-  * : ℕ → ℕ → ℕ;
-  * zero b := zero;
-  * (suc a) b := b + a * b;
+syntax infixl 7 *;
+* : ℕ → ℕ → ℕ;
+* zero b := zero;
+* (suc a) b := b + a * b;
 
-  import Data.Bool;
-  open Data.Bool;
+import Data.Bool;
+open Data.Bool;
 
-  even : ℕ → Bool;
-  odd : ℕ → Bool;
+even : ℕ → Bool;
 
-  even zero := true;
-  even (suc n) := odd n;
+odd : ℕ → Bool;
 
-  odd zero := false;
-  odd (suc n) := even n;
-end;
+even zero := true;
+even (suc n) := odd n;
+
+odd zero := false;
+odd (suc n) := even n;

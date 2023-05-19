@@ -1,7 +1,7 @@
 module E3;
 
 axiom B : Type;
-type X  :=
-  c : B -> (X -> B) -> X;
 
-end;
+type X :=
+  | c : B -> (X -> B) -> X;
+

@@ -8,6 +8,6 @@ terminating
 g : A -> A -> A;
 
 g x y := f x x;
+
 f x y := g x (f x x);
 
-end;

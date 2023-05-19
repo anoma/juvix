@@ -3,4 +3,3 @@ module ConstructorExpectedLeftApplication;
 f : {A : Type} -> A -> A;
 f (x y) := x;
 
-end;

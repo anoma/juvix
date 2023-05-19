@@ -1,7 +1,7 @@
 module Collatz;
 
-open import Stdlib.Prelude;
-open import Stdlib.Data.Nat.Ord;
+import Stdlib.Prelude open;
+import Stdlib.Data.Nat.Ord open;
 
 collatzNext : Nat → Nat;
 collatzNext n := if (mod n 2 == 0) (div n 2) (3 * n + 1);
@@ -28,7 +28,6 @@ main : IO;
 main :=
   printStringLn welcome
     >> readLn
-      λ {
-        | s :=
-          printStringLn resultHeading >> run collatz (stringToNat s)
-      };
+      λ {s :=
+        printStringLn resultHeading
+          >> run collatz (stringToNat s)};
