@@ -116,7 +116,6 @@ jobs:
 
       - name: Typecheck and format Juvix examples
         if: ${{ success() }}
-        continue-on-error: true
         shell: bash
         run: |
           cd main
