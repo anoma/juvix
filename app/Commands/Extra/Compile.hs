@@ -176,7 +176,7 @@ native64Args buildDir o outfile inputFile =
     <> [ "-DARCH_NATIVE64",
          "-DAPI_LIBC",
          "-m64",
-         "-O3",
+         "-O" <> show (maybe defaultOptLevel (max 1) (o ^. compileOptimizationLevel)),
          toFilePath inputFile
        ]
     <> ( if
@@ -184,6 +184,11 @@ native64Args buildDir o outfile inputFile =
                  ["-ljuvix"]
              | otherwise -> []
        )
+  where
+    defaultOptLevel :: Int
+    defaultOptLevel
+      | o ^. compileDebug = debugClangOptimizationLevel
+      | otherwise = defaultClangOptimizationLevel
 
 wasiArgs :: Path Abs Dir -> CompileOptions -> Path Abs File -> Path Abs File -> Path Abs Dir -> [String]
 wasiArgs buildDir o outfile inputFile sysrootPath =
@@ -212,3 +217,9 @@ runClang args = do
   case exitCode of
     ExitSuccess -> return ()
     _ -> throw (pack err)
+
+debugClangOptimizationLevel :: Int
+debugClangOptimizationLevel = 1
+
+defaultClangOptimizationLevel :: Int
+defaultClangOptimizationLevel = 1
