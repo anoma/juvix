@@ -222,7 +222,7 @@ jobs:
         uses: jaxxstorm/action-install-gh-release@v1.10.0
         with:
           repo: anoma/vamp-ir
-          platform: linux
+          platform: darwin
           tag: latest
           chmod: 0755
           rename-to: vamp-ir
