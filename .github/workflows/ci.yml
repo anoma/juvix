@@ -117,12 +117,10 @@ jobs:
       - name: Typecheck and format Juvix examples
         if: ${{ success() }}
         continue-on-error: true
+        shell: bash
         run: |
           cd main
-          make clean-juvix-build
-          make check-format-juvix-files
-          make clean-juvix-build
-          make typecheck-juvix-examples
+          make clean-juvix-build && make check-format-juvix-files && make clean-juvix-build && make typecheck-juvix-examples
 
       - name: Add ~/.local/bin to PATH
         run: |
@@ -218,12 +216,10 @@ jobs:
 
       - name: Typecheck and format Juvix examples
         if: ${{ success() }}
+        shell: bash
         run: |
           cd main
-          make clean-juvix-build
-          make check-format-juvix-files
-          make clean-juvix-build
-          make typecheck-juvix-examples
+          make clean-juvix-build && make check-format-juvix-files && make clean-juvix-build && make typecheck-juvix-examples
 
       - name: Install Smoke
         uses: jaxxstorm/action-install-gh-release@v1.10.0
