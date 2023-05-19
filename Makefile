@@ -133,15 +133,20 @@ format-juvix-files:
 
 .PHONY: check-format-juvix-files
 check-format-juvix-files:
-	@JUVIXFORMATFLAGS=--check	${MAKE} format-juvix-files
+	@JUVIXFORMATFLAGS=--check ${MAKE} format-juvix-files
 
 JUVIXEXAMPLEFILES=$(shell find ./examples  -name "*.juvix" -print)
 
 .PHONY: typecheck-juvix-examples
 typecheck-juvix-examples:
 	@for file in $(JUVIXEXAMPLEFILES); do \
-		echo "Checking $$file"; \
 		${JUVIXBIN} typecheck "$$file" $(JUVIXTYPECHECKFLAGS); \
+		exit_code=$$?; \
+		if [ $$exit_code -eq 0 ]; then \
+			echo "[OK] $$file typechecks"; \
+		else \
+ 			echo "[FAIL] Typecking failed for $$file" && exit 1; \
+      	fi; \
 	done
 
 .PHONY: check-ormolu

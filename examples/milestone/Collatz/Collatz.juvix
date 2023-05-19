@@ -28,7 +28,6 @@ main : IO;
 main :=
   printStringLn welcome
     >> readLn
-      λ {
-        | s :=
-          printStringLn resultHeading >> run collatz (stringToNat s)
-      };
+      λ {s :=
+        printStringLn resultHeading
+          >> run collatz (stringToNat s)};
