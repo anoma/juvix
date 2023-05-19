@@ -306,7 +306,7 @@ instance PrettyPrint (UsingHiding 'Scoped) where
           encloseSep
             (noLoc P.kwBraceL)
             (noLoc P.kwBraceR)
-            (noLoc P.kwSemicolon)
+            (noLoc P.kwSemicolon <> space)
             ppItems
     kw' <+> bracedList
     where
