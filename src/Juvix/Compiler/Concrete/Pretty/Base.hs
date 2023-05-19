@@ -296,15 +296,10 @@ instance PrettyCode S.NameId where
   ppCode (S.NameId k) = return (pretty k)
 
 instance PrettyCode KeywordRef where
-  ppCode = ppCode . (^. keywordRefKeyword)
+  ppCode p = return . annotate (kwTypeAnn (p ^. keywordRefKeyword . keywordType)) . pretty $ p
 
 instance PrettyCode Keyword where
-  ppCode p = return . annotate ann . pretty $ p
-    where
-      ann = case p ^. keywordType of
-        KeywordTypeDelimiter -> AnnDelimiter
-        KeywordTypeKeyword -> AnnKeyword
-        KeywordTypeJudoc -> AnnJudoc
+  ppCode p = return . annotate (kwTypeAnn (p ^. keywordType)) . pretty $ p
 
 annDef :: forall s. SingI s => SymbolType s -> Doc Ann -> Doc Ann
 annDef nm = case sing :: SStage s of
