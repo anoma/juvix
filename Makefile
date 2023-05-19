@@ -1,3 +1,4 @@
+SHELL := /bin/bash
 PWD=$(CURDIR)
 PREFIX="$(PWD)/.stack-work/prefix"
 UNAME := $(shell uname)
