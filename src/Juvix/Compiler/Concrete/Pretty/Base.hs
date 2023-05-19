@@ -223,15 +223,14 @@ instance PrettyCode OperatorArity where
       AssocNone -> kwInfix
 
 instance PrettyCode SyntaxDef where
-  ppCode s =
-    (kwSyntax <+>) <$> case s of
-      SyntaxOperator op -> ppCode op
+  ppCode = \case
+    SyntaxOperator op -> ppCode op
 
 instance PrettyCode OperatorSyntaxDef where
   ppCode OperatorSyntaxDef {..} = do
     opSymbol' <- ppUnkindedSymbol _opSymbol
     opFixity' <- ppCode _opFixity
-    return $ opFixity' <+> opSymbol'
+    return $ kwSyntax <+> opFixity' <+> opSymbol'
 
 instance (SingI s) => PrettyCode (InductiveConstructorDef s) where
   ppCode InductiveConstructorDef {..} = do

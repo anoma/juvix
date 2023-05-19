@@ -1264,7 +1264,7 @@ checkSyntaxDef ::
   (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, State ScoperFixities] r) =>
   SyntaxDef ->
   Sem r SyntaxDef
-checkSyntaxDef s = case s of
+checkSyntaxDef = \case
   SyntaxOperator opDef -> SyntaxOperator opDef <$ checkOperatorSyntaxDef opDef
 
 -------------------------------------------------------------------------------

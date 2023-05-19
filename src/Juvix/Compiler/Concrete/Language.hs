@@ -209,7 +209,7 @@ data OperatorSyntaxDef = OperatorSyntaxDef
   deriving stock (Show, Eq, Ord)
 
 instance HasLoc OperatorSyntaxDef where
-  getLoc OperatorSyntaxDef {..} = getLoc _opSyntaxKw <> getLoc _opKw <> getLoc _opSymbol
+  getLoc OperatorSyntaxDef {..} = getLoc _opSyntaxKw <> getLoc _opSymbol
 
 -------------------------------------------------------------------------------
 -- Type signature declaration
