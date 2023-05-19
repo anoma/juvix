@@ -176,7 +176,6 @@ native64Args buildDir o outfile inputFile =
     <> [ "-DARCH_NATIVE64",
          "-DAPI_LIBC",
          "-m64",
-         "-finline-functions",
          "-O" <> show optValue,
          toFilePath inputFile
        ]
@@ -187,9 +186,7 @@ native64Args buildDir o outfile inputFile =
        )
   where
     optValue :: Int
-    optValue
-      | o ^. compileDebug = 0
-      | otherwise = max 0 (o ^. compileOptimizationLevel)
+    optValue = max 1 (o ^. compileOptimizationLevel)
 
 wasiArgs :: Path Abs Dir -> CompileOptions -> Path Abs File -> Path Abs File -> Path Abs Dir -> [String]
 wasiArgs buildDir o outfile inputFile sysrootPath =
