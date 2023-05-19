@@ -113,7 +113,7 @@ JUVIXFILESTOFORMAT=$(shell find  \
 	./tests/negative \
 	-type d \( -name ".juvix-build" -o -name "FancyPaths" \) -prune -o \
 	-type f -name "*.juvix" -print)
-	
+
 JUVIXFORMATFLAGS?=--in-place
 JUVIXTYPECHECKFLAGS?=--only-errors
 

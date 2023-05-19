@@ -4,8 +4,8 @@
 --- bits.
 module MidSquareHash;
 
-open import Stdlib.Prelude;
-open import Stdlib.Data.Nat.Ord;
+import Stdlib.Prelude open;
+import Stdlib.Data.Nat.Ord open;
 
 --- `pow N` is 2 ^ N
 pow : Nat -> Nat;

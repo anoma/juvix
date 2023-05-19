@@ -1,7 +1,7 @@
 module builtinFail;
 
-open import Stdlib.Data.String;
-open import Stdlib.System.IO;
+import Stdlib.Data.String open;
+import Stdlib.System.IO open;
 
 builtin fail
 axiom fail : {A : Type} → String → A;

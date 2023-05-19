@@ -4,9 +4,9 @@
 module Tutorial;
 
 -- import the standard library prelude and bring it into scope
-open import Stdlib.Prelude;
+import Stdlib.Prelude open;
 -- bring comparison operators on Nat into scope
-open import Stdlib.Data.Nat.Ord;
+import Stdlib.Data.Nat.Ord open;
 
 main : IO;
 main := printStringLn "Hello world!";

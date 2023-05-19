@@ -1,7 +1,7 @@
 module Input;
 
-open import Extra;
-open import Base;
-open import Stdlib.Prelude;
+import Extra open;
+import Base open;
+import Stdlib.Prelude open;
 
 axiom x : Extra;

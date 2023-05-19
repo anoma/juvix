@@ -1,9 +1,9 @@
 module Demo;
 
 -- standard library prelude
-open import Stdlib.Prelude;
+import Stdlib.Prelude open;
 -- for comparisons on natural numbers
-open import Stdlib.Data.Nat.Ord;
+import Stdlib.Data.Nat.Ord open;
 -- for Ordering
 
 even : Nat → Bool;

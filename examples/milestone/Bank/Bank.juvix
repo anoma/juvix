@@ -3,10 +3,10 @@
 --- https://github.com/AleoHQ/workshop/tree/master/basic_bank
 module Bank;
 
-open import Stdlib.Prelude;
-open import Stdlib.Debug.Fail;
+import Stdlib.Prelude open;
+import Stdlib.Debug.Fail open;
 
-open import Stdlib.Data.Nat.Ord;
+import Stdlib.Data.Nat.Ord open;
 
 import Stdlib.Data.Nat as Nat;
 
@@ -66,7 +66,7 @@ module Balances;
       (eqField f b)
       ((b, sub bn n) :: bs)
       ((b, bn) :: decrement f n bs);
-  
+
   emtpyBalances : Balances;
   emtpyBalances := nil;
 

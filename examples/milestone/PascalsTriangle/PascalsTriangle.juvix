@@ -4,7 +4,7 @@
 --- The function ;pascal; produces the triangle to a given depth.
 module PascalsTriangle;
 
-open import Stdlib.Prelude;
+import Stdlib.Prelude open;
 
 --- Return a list of repeated applications of a given function
 scanIterate : {A : Type} → Nat → (A → A) → A → List A;

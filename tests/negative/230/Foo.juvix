@@ -1,4 +1,4 @@
 module Foo;
 
-open import Foo.Data.Bool;
+import Foo.Data.Bool open;
 

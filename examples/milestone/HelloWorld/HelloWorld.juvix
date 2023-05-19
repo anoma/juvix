@@ -1,7 +1,7 @@
 -- HelloWorld.juvix
 module HelloWorld;
 
-open import Stdlib.Prelude;
+import Stdlib.Prelude open;
 
 main : IO;
 main := printStringLn "hello world!";

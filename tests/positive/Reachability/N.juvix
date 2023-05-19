@@ -1,7 +1,7 @@
 module N;
 
-open import M;
-open import Stdlib.Prelude;
+import M open;
+import Stdlib.Prelude open;
 
 test : {A : Type} -> A -> A;
 test x := x;

@@ -1,9 +1,9 @@
 module Logic.Square;
 
-open import Stdlib.Prelude;
-open import Logic.Symbol;
-open import Stdlib.Data.Nat.Ord;
-open import Logic.Extra;
+import Stdlib.Prelude open;
+import Logic.Symbol open;
+import Stdlib.Data.Nat.Ord open;
+import Logic.Extra open;
 
 --- A square is each of the holes in a board
 type Square :=

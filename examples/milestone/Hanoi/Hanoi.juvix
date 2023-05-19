@@ -12,7 +12,7 @@
 --- The function ;hanoi; computes the sequence of moves to solve puzzle.
 module Hanoi;
 
-open import Stdlib.Prelude;
+import Stdlib.Prelude open;
 
 --- Concatenates a list of strings
 --- ;concat (("a" :: nil) :: "b" :: nil); evaluates to ;"a"

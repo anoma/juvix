@@ -1,10 +1,10 @@
 module M;
 
-open import Data.Nat;
-open import Data.Maybe;
-open import Data.Product;
-open import Data.Bool;
-open import Data.Ord;
+import Data.Nat open;
+import Data.Maybe open;
+import Data.Product open;
+import Data.Bool open;
+import Data.Ord open;
 
 f : Bool -> Bool;
 f x := x;

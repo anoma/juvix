@@ -1,7 +1,7 @@
 --- This module defines the ;Symbol; type and some helper functions.
 module Logic.Symbol;
 
-open import Stdlib.Prelude;
+import Stdlib.Prelude open;
 
 --- A symbol represents a token that can be placed in a square
 type Symbol :=

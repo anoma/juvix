@@ -1,6 +1,6 @@
 module E2;
 
-open import NegParam;
+import NegParam open;
 
 type D :=
   | d : T D -> D;
