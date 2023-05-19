@@ -23,7 +23,7 @@ instance HasAnsiBackend ReplMessageDoc where
 
 instance HasTextBackend ReplMessageDoc where
   toTextDoc (ReplMessageDoc o) = unAnnotate o
-  toTextStream (ReplMessageDoc o) = unAnnotateS (layoutPretty defaultLayoutOptions o)
+  toTextStream (ReplMessageDoc o) = layoutPretty defaultLayoutOptions (unAnnotate o)
 
 stylize :: ReplStyle -> AnsiStyle
 stylize = \case
