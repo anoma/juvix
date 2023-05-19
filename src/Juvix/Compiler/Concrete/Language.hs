@@ -467,8 +467,9 @@ deriving stock instance
   ) =>
   Ord (Module s t)
 
-newtype UsingItem (s :: Stage) = UsingItem
-  { _usingSymbol :: SymbolType s
+data UsingItem (s :: Stage) = UsingItem
+  { _usingSymbol :: SymbolType s,
+    _usingAs :: Maybe (SymbolType s)
   }
 
 deriving stock instance
