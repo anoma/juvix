@@ -300,18 +300,26 @@ ppAtom c
   | otherwise = parens (ppCode c)
 
 instance PrettyPrint (UsingHiding 'Scoped) where
+  ppCode :: forall r. Members '[ExactPrint, Reader Options] r => UsingHiding 'Scoped -> Sem r ()
   ppCode uh = do
     let bracedList =
           encloseSep
             (noLoc P.kwBraceL)
             (noLoc P.kwBraceR)
             (noLoc P.kwSemicolon)
-            (ppUnkindedSymbol <$> syms)
-    ppCode word <+> bracedList
+            ppItems
+    kw' <+> bracedList
     where
-      (word, syms) = case uh of
-        Using s -> (kwUsing, fmap (^. usingSymbol) s)
-        Hiding s -> (kwHiding, s)
+      kw' :: Sem r ()
+      kw' = case uh of
+        Using {} -> ppCode kwUsing
+        Hiding {} -> ppCode kwHiding
+      ppItems :: NonEmpty (Sem r ())
+      ppItems = case uh of
+        Using s -> fmap ppUsingItem s
+        Hiding s -> fmap ppUnkindedSymbol s
+      ppUsingItem :: UsingItem 'Scoped -> Sem r ()
+      ppUsingItem ui = ppCode (ui ^. usingSymbol)
 
 instance PrettyPrint ModuleRef where
   ppCode (ModuleRef' (_ :&: ModuleRef'' {..})) = ppCode _moduleRefName

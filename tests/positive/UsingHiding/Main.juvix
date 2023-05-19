@@ -1,0 +1,10 @@
+module Main;
+
+module M;
+  axiom A : Type;
+
+  axiom B : Type;
+end;
+
+open M using {A};
+open M hiding {B};

@@ -854,7 +854,7 @@ openModule = do
 
 usingOrHiding :: (Members '[Error ParserError, InfoTableBuilder, JudocStash, NameIdGen, PragmasStash] r) => ParsecS r (UsingHiding 'Parsed)
 usingOrHiding =
-  (kw kwUsing >> (Using <$> symbolList))
+  (kw kwUsing >> (Using . fmap UsingItem <$> symbolList))
     <|> (kw kwHiding >> (Hiding <$> symbolList))
 
 newOpenSyntax :: forall r. (Members '[Error ParserError, PathResolver, Files, InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (OpenModule 'Parsed)

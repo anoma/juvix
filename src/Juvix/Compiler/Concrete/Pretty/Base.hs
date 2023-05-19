@@ -349,7 +349,7 @@ instance (SingI s) => PrettyCode (OpenModule s) where
     openModuleName' <- case sing :: SStage s of
       SParsed -> ppCode _openModuleName
       SScoped -> ppCode _openModuleName
-    openUsingHiding' <- mapM ppUsingHiding _openUsingHiding
+    openUsingHiding' <- mapM ppCode _openUsingHiding
     importkw' <- mapM ppCode _openModuleImportKw
     let openPublic' = ppPublic
     alias' <- fmap (kwAs <+>) <$> mapM ppModulePathType _openImportAsName
@@ -367,25 +367,27 @@ instance (SingI s) => PrettyCode (OpenModule s) where
           <+?> openUsingHiding'
           <+?> openPublic'
     where
-      ppUsingHiding :: UsingHiding s -> Sem r (Doc Ann)
-      ppUsingHiding uh = do
-        items' <- ppItems
-        let bracedList = encloseSep kwBraceL kwBraceR (kwSemicolon <> space) (toList items')
-        return $ kw' <+> bracedList
-        where
-          kw' = case uh of
-            Using {} -> kwUsing
-            Hiding {} -> kwHiding
-          ppItems :: Sem r (NonEmpty (Doc Ann))
-          ppItems = case uh of
-            Using s -> mapM ppUsingItem s
-            Hiding s -> mapM ppUnkindedSymbol s
-          ppUsingItem :: UsingItem s -> Sem r (Doc Ann)
-          ppUsingItem ui = ppSymbol (ui ^. usingSymbol)
       ppPublic :: Maybe (Doc Ann)
       ppPublic = case _openPublic of
         Public -> Just kwPublic
         NoPublic -> Nothing
+
+instance SingI s => PrettyCode (UsingHiding s) where
+  ppCode :: forall r. Members '[Reader Options] r => UsingHiding s -> Sem r (Doc Ann)
+  ppCode uh = do
+    items' <- ppItems
+    let bracedList = encloseSep kwBraceL kwBraceR (kwSemicolon <> space) (toList items')
+    return $ kw' <+> bracedList
+    where
+      kw' = case uh of
+        Using {} -> kwUsing
+        Hiding {} -> kwHiding
+      ppItems :: Sem r (NonEmpty (Doc Ann))
+      ppItems = case uh of
+        Using s -> mapM ppUsingItem s
+        Hiding s -> mapM ppUnkindedSymbol s
+      ppUsingItem :: UsingItem s -> Sem r (Doc Ann)
+      ppUsingItem ui = ppSymbol (ui ^. usingSymbol)
 
 instance PrettyCode (WithSource Pragmas) where
   ppCode pragma =
