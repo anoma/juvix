@@ -1,6 +1,6 @@
 module LiteralInt;
 
-open import Stdlib.Prelude;
+import Stdlib.Prelude open;
 
 type A :=
   | a : A;

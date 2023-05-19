@@ -5,8 +5,8 @@
 --- GEB backend, no recursion is used (it is manually unrolled).
 module MidSquareHashUnrolled;
 
-open import Stdlib.Prelude;
-open import Stdlib.Data.Nat.Ord;
+import Stdlib.Prelude open;
+import Stdlib.Data.Nat.Ord open;
 
 --- `powN` is 2 ^ N
 pow0 : Nat := 1;

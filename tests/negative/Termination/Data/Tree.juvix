@@ -1,14 +1,14 @@
 module Data.Tree;
+
 type Tree (A : Type) :=
-  leaf : Tree A |
-  branch  : Tree A → Tree A → Tree A;
+  | leaf : Tree A
+  | branch : Tree A → Tree A → Tree A;
 
 f : (A : Type) → Tree A → Tree A → Tree A;
-f A x leaf         := x;
+f A x leaf := x;
 f A x (branch y z) := f A (f A x y) z;
 
 g : (A : Type) → Tree A → Tree A → Tree A;
-g A x leaf         := x;
+g A x leaf := x;
 g A x (branch y z) := g A z (g A x y);
 
-end;

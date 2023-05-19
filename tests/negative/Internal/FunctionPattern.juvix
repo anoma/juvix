@@ -1,7 +1,7 @@
 module FunctionPattern;
-  type T :=
-    A : T;
 
-  f : (T → T) → T;
-  f A := A;
-end;
+type T :=
+  | A : T;
+
+f : (T → T) → T;
+f A := A;

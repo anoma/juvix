@@ -1,10 +1,10 @@
 module M;
-  import Other;
 
-  type Unit :=
-  t : Unit;
+import Other;
 
-  u : Other.Unit;
-  u := t;
+type Unit :=
+  | t : Unit;
 
-end;
+u : Other.Unit;
+u := t;
+

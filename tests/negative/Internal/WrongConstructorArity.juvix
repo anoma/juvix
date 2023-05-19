@@ -1,7 +1,7 @@
 module WrongConstructorArity;
-  type T :=
-    A : T → T;
 
-  f : T → T;
-  f (A i x) := i;
-end;
+type T :=
+  | A : T → T;
+
+f : T → T;
+f (A i x) := i;

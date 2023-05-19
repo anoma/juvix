@@ -1,14 +1,15 @@
 module LazyBuiltin;
 
-builtin bool type Bool :=
+builtin bool
+type Bool :=
   | true : Bool
   | false : Bool;
 
-builtin bool-if if : {A : Type} -> Bool -> A -> A -> A;
+builtin bool-if
+if : {A : Type} -> Bool -> A -> A -> A;
 if true x _ := x;
 if false _ x := x;
 
 f : Bool -> Bool;
 f x := if x;
 
-end;

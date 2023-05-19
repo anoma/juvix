@@ -1,10 +1,9 @@
 module E4;
 
 type Tree (A : Type) :=
-  leaf : Tree A |
-  node : (A -> Tree A) -> Tree A;
+  | leaf : Tree A
+  | node : (A -> Tree A) -> Tree A;
 
 type Bad :=
-  bad : Tree Bad -> Bad;
+  | bad : Tree Bad -> Bad;
 
-end;

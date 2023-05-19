@@ -1,10 +1,10 @@
 module WrongType;
-  type A :=
-    a : A;
 
-  type B :=
-    b : B;
+type A :=
+  | a : A;
 
-  f : A;
-  f := b;
-end;
+type B :=
+  | b : B;
+
+f : A;
+f := b;

@@ -1,4 +1,3 @@
 module LacksFunctionClause;
 
-  id : Type → Type → Type;
-end;
+id : Type → Type → Type;

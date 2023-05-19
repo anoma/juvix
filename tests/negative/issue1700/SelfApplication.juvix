@@ -1,9 +1,8 @@
 -- self-application
 module SelfApplication;
 
-open import Stdlib.Prelude;
+import Stdlib.Prelude open;
 
 main : IO;
 main := printNatLn (λ {x := x x} id (3 + 4));
 
-end;

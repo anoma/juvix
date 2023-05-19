@@ -1,8 +1,8 @@
 module Logic.GameState;
 
-open import Stdlib.Prelude;
-open import Logic.Extra;
-open import Logic.Board;
+import Stdlib.Prelude open;
+import Logic.Extra open;
+import Logic.Board open;
 
 type Error :=
   | --- no error occurred

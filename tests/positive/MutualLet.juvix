@@ -1,7 +1,7 @@
 module MutualLet;
 
-open import Stdlib.Data.Nat;
-open import Stdlib.Data.Bool;
+import Stdlib.Data.Nat open;
+import Stdlib.Data.Bool open;
 
 main : _;
 main :=

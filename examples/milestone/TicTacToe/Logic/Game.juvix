@@ -4,11 +4,11 @@
 --- diagonal row is the winner. It is a solved game, with a forced draw assuming best play from both players.
 module Logic.Game;
 
-open import Stdlib.Data.Nat.Ord;
-open import Stdlib.Prelude;
-open import Logic.Extra public;
-open import Logic.Board public;
-open import Logic.GameState public;
+import Stdlib.Data.Nat.Ord open;
+import Stdlib.Prelude open;
+import Logic.Extra open public;
+import Logic.Board open public;
+import Logic.GameState open public;
 
 --- Checks if we reached the end of the game.
 checkState : GameState → GameState;

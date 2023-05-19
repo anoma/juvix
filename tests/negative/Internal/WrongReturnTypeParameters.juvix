@@ -1,6 +1,5 @@
 module WrongReturnTypeParameters;
 
 type A (B : Type) :=
-c : A B B;
+  | c : A B B;
 
-end;

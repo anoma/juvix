@@ -1,13 +1,13 @@
 module MultiWrongType;
-  type A :=
-    a : A;
 
-  type B :=
-    b : B;
+type A :=
+  | a : A;
 
-  f : A;
-  f := b;
+type B :=
+  | b : B;
 
-  g : B;
-  g := a;
-end;
+f : A;
+f := b;
+
+g : B;
+g := a;
