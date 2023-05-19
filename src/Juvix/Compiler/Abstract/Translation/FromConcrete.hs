@@ -418,6 +418,7 @@ goExpression = \case
   ExpressionUniverse uni -> return (Abstract.ExpressionUniverse (goUniverse uni))
   ExpressionFunction func -> Abstract.ExpressionFunction <$> goFunction func
   ExpressionHole h -> return (Abstract.ExpressionHole h)
+  ExpressionIterator i -> goIterator i
   where
     goIden :: Concrete.ScopedIden -> Abstract.Expression
     goIden x = Abstract.ExpressionIden $ case x of
@@ -468,6 +469,28 @@ goExpression = \case
           l'' = Abstract.ExpressionApplication (Abstract.Application op' l' Explicit)
       r' <- goExpression r
       return (Abstract.Application l'' r' Explicit)
+
+    goIterator :: Iterator 'Scoped -> Sem r Abstract.Expression
+    goIterator Iterator {..} = do
+      inipats' <- mapM goPatternArg inipats
+      rngpats' <- mapM goPatternArg rngpats
+      expr <- goExpression _iteratorBody
+      let lam =
+            Abstract.ExpressionLambda $
+              Abstract.Lambda $
+                Abstract.LambdaClause (NonEmpty.fromList (inipats' ++ rngpats')) expr :| []
+          fn = goIden _iteratorName
+      inivals' <- mapM goExpression inivals
+      rngvals' <- mapM goExpression rngvals
+      return $ foldl' mkApp fn (lam : inivals' ++ rngvals')
+      where
+        inipats = map (^. initializerPattern) _iteratorInitializers
+        inivals = map (^. initializerExpression) _iteratorInitializers
+        rngpats = map (^. rangePattern) _iteratorRanges
+        rngvals = map (^. rangeExpression) _iteratorRanges
+
+        mkApp :: Abstract.Expression -> Abstract.Expression -> Abstract.Expression
+        mkApp a1 a2 = Abstract.ExpressionApplication $ Abstract.Application a1 a2 Explicit
 
 goCase :: forall r. (Members '[Error ScoperError, Reader Pragmas, InfoTableBuilder] r) => Case 'Scoped -> Sem r Abstract.Case
 goCase c = do
