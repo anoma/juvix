@@ -89,6 +89,7 @@ jobs:
           repo: wasmerio/wasmer
           tag: v3.2.1
           binaries-location: bin
+          rename-to: wasmer
           cache: enable
 
       - name: Install libicu for testing
@@ -195,6 +196,7 @@ jobs:
           repo: wasmerio/wasmer
           tag: v3.2.1
           binaries-location: bin
+          rename-to: wasmer
           cache: enable
 
       - name: Set homebrew LLVM CC and LIBTOOL vars (macOS)
