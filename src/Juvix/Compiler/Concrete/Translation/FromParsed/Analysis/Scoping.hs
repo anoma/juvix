@@ -798,13 +798,12 @@ checkOpenModuleNoImport OpenModule {..}
 
       let checkUsingHiding :: UsingHiding 'Parsed -> Sem r (UsingHiding 'Scoped)
           checkUsingHiding = \case
-            Hiding h -> return (Hiding h)
+            Hiding h -> Hiding <$> mapM scopeSymbol h
             Using uh -> Using <$> mapM checkUsingItem uh
             where
-              checkUsingItem :: UsingItem 'Parsed -> Sem r (UsingItem 'Scoped)
-              checkUsingItem i = do
-                let s = i ^. usingSymbol
-                    mentry :: Maybe SymbolEntry
+              scopeSymbol :: Symbol -> Sem r S.Symbol
+              scopeSymbol s = do
+                let mentry :: Maybe SymbolEntry
                     mentry = tbl ^. at s
                     err =
                       throw
@@ -818,6 +817,11 @@ checkOpenModuleNoImport OpenModule {..}
                 entry <- maybe err return mentry
                 let scopedSym = entryToSymbol entry s
                 registerName (S.unqualifiedSymbol scopedSym)
+                return scopedSym
+
+              checkUsingItem :: UsingItem 'Parsed -> Sem r (UsingItem 'Scoped)
+              checkUsingItem i = do
+                scopedSym <- scopeSymbol (i ^. usingSymbol)
                 return
                   ( UsingItem
                       { _usingSymbol = scopedSym

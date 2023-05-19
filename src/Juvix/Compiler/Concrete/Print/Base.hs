@@ -317,7 +317,7 @@ instance PrettyPrint (UsingHiding 'Scoped) where
       ppItems :: NonEmpty (Sem r ())
       ppItems = case uh of
         Using s -> fmap ppUsingItem s
-        Hiding s -> fmap ppUnkindedSymbol s
+        Hiding s -> fmap ppCode s
       ppUsingItem :: UsingItem 'Scoped -> Sem r ()
       ppUsingItem ui = ppCode (ui ^. usingSymbol)
 

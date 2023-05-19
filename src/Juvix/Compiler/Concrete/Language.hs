@@ -488,7 +488,7 @@ deriving stock instance
 
 data UsingHiding (s :: Stage)
   = Using (NonEmpty (UsingItem s))
-  | Hiding (NonEmpty Symbol)
+  | Hiding (NonEmpty (SymbolType s))
 
 deriving stock instance
   ( Show (SymbolType s)

@@ -385,7 +385,7 @@ instance SingI s => PrettyCode (UsingHiding s) where
       ppItems :: Sem r (NonEmpty (Doc Ann))
       ppItems = case uh of
         Using s -> mapM ppUsingItem s
-        Hiding s -> mapM ppUnkindedSymbol s
+        Hiding s -> mapM ppSymbol s
       ppUsingItem :: UsingItem s -> Sem r (Doc Ann)
       ppUsingItem ui = ppSymbol (ui ^. usingSymbol)
 
