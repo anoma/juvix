@@ -84,6 +84,19 @@ newtype ScoperFixities = ScoperFixites
 
 makeLenses ''ScoperFixities
 
+data SymbolIterator = SymbolIterator
+  { _symbolIteratorUsed :: Bool,
+    _symbolIteratorDef :: IteratorSyntaxDef
+  }
+
+newtype ScoperIterators = ScoperIterators
+  { _scoperIterators :: HashMap Symbol SymbolIterator
+  }
+  deriving newtype (Semigroup, Monoid)
+
+makeLenses ''ScoperIterators
+makeLenses ''SymbolIterator
+
 emptyScope :: S.AbsModulePath -> Scope
 emptyScope absPath =
   Scope

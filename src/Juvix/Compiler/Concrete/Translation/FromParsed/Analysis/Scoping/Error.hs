@@ -23,10 +23,12 @@ data ScoperError
   | ErrQualSymNotInScope QualSymNotInScope
   | ErrModuleNotInScope ModuleNotInScope
   | ErrDuplicateFixity DuplicateFixity
+  | ErrDuplicateIterator DuplicateIterator
   | ErrMultipleExport MultipleExportConflict
   | ErrAmbiguousSym AmbiguousSym
   | ErrAmbiguousModuleSym AmbiguousModuleSym
   | ErrUnusedOperatorDef UnusedOperatorDef
+  | ErrUnusedIteratorDef UnusedIteratorDef
   | ErrDoubleBracesPattern DoubleBracesPattern
   | ErrDoubleBinderPattern DoubleBinderPattern
   | ErrAliasBinderPattern AliasBinderPattern
@@ -34,6 +36,8 @@ data ScoperError
   | ErrConstructorExpectedLeftApplication ConstructorExpectedLeftApplication
   | ErrCaseBranchImplicitPattern CaseBranchImplicitPattern
   | ErrModuleDoesNotExportSymbol ModuleDoesNotExportSymbol
+  | ErrIteratorInitializer IteratorInitializer
+  | ErrIteratorRange IteratorRange
   deriving stock (Show)
 
 instance ToGenericError ScoperError where
@@ -50,10 +54,12 @@ instance ToGenericError ScoperError where
     ErrQualSymNotInScope e -> genericError e
     ErrModuleNotInScope e -> genericError e
     ErrDuplicateFixity e -> genericError e
+    ErrDuplicateIterator e -> genericError e
     ErrMultipleExport e -> genericError e
     ErrAmbiguousSym e -> genericError e
     ErrAmbiguousModuleSym e -> genericError e
     ErrUnusedOperatorDef e -> genericError e
+    ErrUnusedIteratorDef e -> genericError e
     ErrLacksFunctionClause e -> genericError e
     ErrDoubleBracesPattern e -> genericError e
     ErrDoubleBinderPattern e -> genericError e
@@ -61,3 +67,5 @@ instance ToGenericError ScoperError where
     ErrImplicitPatternLeftApplication e -> genericError e
     ErrConstructorExpectedLeftApplication e -> genericError e
     ErrModuleDoesNotExportSymbol e -> genericError e
+    ErrIteratorInitializer e -> genericError e
+    ErrIteratorRange e -> genericError e
