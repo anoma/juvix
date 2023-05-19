@@ -176,7 +176,7 @@ native64Args buildDir o outfile inputFile =
     <> [ "-DARCH_NATIVE64",
          "-DAPI_LIBC",
          "-m64",
-         "-O3",
+         "-O" <> show (max 0 (o ^. compileOptimizationLevel)),
          toFilePath inputFile
        ]
     <> ( if
