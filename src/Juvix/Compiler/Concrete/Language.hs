@@ -467,10 +467,43 @@ deriving stock instance
   ) =>
   Ord (Module s t)
 
-data UsingHiding
-  = Using (NonEmpty Symbol)
+newtype UsingItem (s :: Stage) = UsingItem
+  { _usingSymbol :: SymbolType s
+  }
+
+deriving stock instance
+  ( Show (SymbolType s)
+  ) =>
+  Show (UsingItem s)
+
+deriving stock instance
+  ( Eq (SymbolType s)
+  ) =>
+  Eq (UsingItem s)
+
+deriving stock instance
+  ( Ord (SymbolType s)
+  ) =>
+  Ord (UsingItem s)
+
+data UsingHiding (s :: Stage)
+  = Using (NonEmpty (UsingItem s))
   | Hiding (NonEmpty Symbol)
-  deriving stock (Show, Eq, Ord)
+
+deriving stock instance
+  ( Show (SymbolType s)
+  ) =>
+  Show (UsingHiding s)
+
+deriving stock instance
+  ( Eq (SymbolType s)
+  ) =>
+  Eq (UsingHiding s)
+
+deriving stock instance
+  ( Ord (SymbolType s)
+  ) =>
+  Ord (UsingHiding s)
 
 type ModuleRef = ModuleRef' 'S.Concrete
 
@@ -544,7 +577,7 @@ data OpenModule (s :: Stage) = OpenModule
     _openModuleName :: ModuleRefType s,
     _openModuleImportKw :: Maybe KeywordRef,
     _openImportAsName :: Maybe (ModulePathType s 'ModuleTop),
-    _openUsingHiding :: Maybe UsingHiding,
+    _openUsingHiding :: Maybe (UsingHiding s),
     _openPublic :: PublicAnn
   }
 
@@ -571,6 +604,7 @@ deriving stock instance
 deriving stock instance
   ( Show (IdentifierType s),
     Show (ModuleRefType s),
+    Show (SymbolType s),
     Show (ModulePathType s 'ModuleTop),
     Show (ExpressionType s)
   ) =>
@@ -969,6 +1003,7 @@ deriving stock instance (Eq (ExpressionType s), Eq (SymbolType s)) => Eq (JudocA
 deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (JudocAtom s)
 
 makeLenses ''PatternArg
+makeLenses ''UsingItem
 makeLenses ''Example
 makeLenses ''Lambda
 makeLenses ''LambdaClause

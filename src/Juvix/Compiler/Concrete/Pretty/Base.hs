@@ -367,16 +367,21 @@ instance (SingI s) => PrettyCode (OpenModule s) where
           <+?> openUsingHiding'
           <+?> openPublic'
     where
-      ppUsingHiding :: UsingHiding -> Sem r (Doc Ann)
+      ppUsingHiding :: UsingHiding s -> Sem r (Doc Ann)
       ppUsingHiding uh = do
-        bracedList <-
-          encloseSep kwBraceL kwBraceR kwSemicolon . toList
-            <$> mapM ppUnkindedSymbol syms
-        return $ kw <+> bracedList
+        items' <- ppItems
+        let bracedList = encloseSep kwBraceL kwBraceR (kwSemicolon <> space) (toList items')
+        return $ kw' <+> bracedList
         where
-          (kw, syms) = case uh of
-            Using s -> (kwUsing, s)
-            Hiding s -> (kwHiding, s)
+          kw' = case uh of
+            Using {} -> kwUsing
+            Hiding {} -> kwHiding
+          ppItems :: Sem r (NonEmpty (Doc Ann))
+          ppItems = case uh of
+            Using s -> mapM ppUsingItem s
+            Hiding s -> mapM ppUnkindedSymbol s
+          ppUsingItem :: UsingItem s -> Sem r (Doc Ann)
+          ppUsingItem ui = ppSymbol (ui ^. usingSymbol)
       ppPublic :: Maybe (Doc Ann)
       ppPublic = case _openPublic of
         Public -> Just kwPublic

@@ -299,7 +299,7 @@ ppAtom c
   | isAtomic c = ppCode c
   | otherwise = parens (ppCode c)
 
-instance PrettyPrint UsingHiding where
+instance PrettyPrint (UsingHiding 'Scoped) where
   ppCode uh = do
     let bracedList =
           encloseSep
@@ -310,7 +310,7 @@ instance PrettyPrint UsingHiding where
     ppCode word <+> bracedList
     where
       (word, syms) = case uh of
-        Using s -> (kwUsing, s)
+        Using s -> (kwUsing, fmap (^. usingSymbol) s)
         Hiding s -> (kwHiding, s)
 
 instance PrettyPrint ModuleRef where
