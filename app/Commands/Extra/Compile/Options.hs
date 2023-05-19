@@ -31,7 +31,7 @@ data CompileOptions = CompileOptions
     _compileOutputFile :: Maybe (AppPath File),
     _compileTarget :: CompileTarget,
     _compileInputFile :: AppPath File,
-    _compileOptimizationLevel :: Int,
+    _compileOptimizationLevel :: Maybe Int,
     _compileInliningDepth :: Int
   }
   deriving stock (Data)
@@ -83,12 +83,13 @@ parseCompileOptions supportedTargets parseInputFile = do
         | otherwise ->
             pure False
   _compileOptimizationLevel <-
-    option
-      (fromIntegral <$> naturalNumberOpt)
-      ( short 'O'
-          <> long "optimize"
-          <> value defaultOptimizationLevel
-          <> help ("Optimization level (default: " <> show defaultOptimizationLevel <> ")")
+    optional
+      ( option
+          (fromIntegral <$> naturalNumberOpt)
+          ( short 'O'
+              <> long "optimize"
+              <> help ("Optimization level (default: " <> show defaultOptimizationLevel <> ")")
+          )
       )
   _compileInliningDepth <-
     option

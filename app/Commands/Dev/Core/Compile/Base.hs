@@ -25,10 +25,7 @@ getEntry PipelineArg {..} = do
     ep
       { _entryPointTarget = getTarget (_pipelineArgOptions ^. compileTarget),
         _entryPointDebug = _pipelineArgOptions ^. compileDebug,
-        _entryPointOptimizationLevel =
-          if
-              | _pipelineArgOptions ^. compileDebug -> 0
-              | otherwise -> _pipelineArgOptions ^. compileOptimizationLevel,
+        _entryPointOptimizationLevel = fromMaybe defaultOptLevel (_pipelineArgOptions ^. compileOptimizationLevel),
         _entryPointInliningDepth = _pipelineArgOptions ^. compileInliningDepth
       }
   where
@@ -40,6 +37,11 @@ getEntry PipelineArg {..} = do
       TargetVampIR -> Backend.TargetVampIR
       TargetCore -> Backend.TargetCore
       TargetAsm -> Backend.TargetAsm
+
+    defaultOptLevel :: Int
+    defaultOptLevel
+      | _pipelineArgOptions ^. compileDebug = 0
+      | otherwise = defaultOptimizationLevel
 
 runCPipeline ::
   forall r.
