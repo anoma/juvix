@@ -114,26 +114,28 @@ exampleFunction2 :
     -> List A
     -> List A
     -> Nat :=
-    λ {
-      | _ _ _ _ _ _ _ :=
-        undefined
-          + undefined
-          + undefined
-          + undefined
-          + undefined
-          + undefined
-          + undefined
-          + undefined
-          + undefined
-          + undefined
-          + undefined
-    };
+    λ {_ _ _ _ _ _ _ :=
+      undefined
+        + undefined
+        + undefined
+        + undefined
+        + undefined
+        + undefined
+        + undefined
+        + undefined
+        + undefined
+        + undefined
+        + undefined};
 
 positive
 type T0 (A : Type) :=
   | c0 : (A -> T0 A) -> T0 A;
 
--- Lambda clause
+-- Single Lambda clause
+idLambda : {A : Type} -> A -> A;
+idLambda := λ {x := x};
+
+-- Lambda clauses
 f : Nat -> Nat;
 f :=
   \ {
@@ -149,7 +151,7 @@ module Patterns;
   infixr 4 ,;
   type × (A : Type) (B : Type) :=
     | , : A → B → A × B;
-  
+
   f : Nat × Nat × Nat × Nat -> Nat;
   f (a, b, c, d) := a;
 end;

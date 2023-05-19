@@ -71,9 +71,7 @@ splitAt a (suc zero) (:: x xs) := , (:: x nil) xs;
 splitAt a (suc (suc m)) (:: x xs) :=
   match
     (splitAt a m xs)
-    λ {
-      | (, xs' xs'') := , (:: x xs') xs''
-    };
+    λ {(, xs' xs'') := , (:: x xs') xs''};
 
 terminating
 merge :
