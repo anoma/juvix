@@ -30,6 +30,7 @@ runCompile inputFile o = do
     TargetWasm32Wasi -> runError (clangWasmWasiCompile inputFile o)
     TargetNative64 -> runError (clangNativeCompile inputFile o)
     TargetGeb -> return $ Right ()
+    TargetVampIR -> return $ Right ()
     TargetCore -> return $ Right ()
     TargetAsm -> return $ Right ()
 
@@ -42,6 +43,7 @@ prepareRuntime buildDir o = do
     TargetNative64 | o ^. compileDebug -> writeRuntime nativeDebugRuntime
     TargetNative64 -> writeRuntime nativeReleaseRuntime
     TargetGeb -> return ()
+    TargetVampIR -> return ()
     TargetCore -> return ()
     TargetAsm -> return ()
   where
@@ -98,6 +100,8 @@ outputFile opts inputFile =
           if
               | opts ^. compileTerm -> replaceExtension' ".geb" inputFile
               | otherwise -> replaceExtension' ".lisp" baseOutputFile
+        TargetVampIR ->
+          replaceExtension' ".pir" baseOutputFile
         TargetCore ->
           replaceExtension' ".jvc" baseOutputFile
         TargetAsm ->

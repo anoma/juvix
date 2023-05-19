@@ -7,6 +7,7 @@ data Target
   = TargetCWasm32Wasi
   | TargetCNative64
   | TargetGeb
+  | TargetVampIR
   | TargetCore
   | TargetAsm
   deriving stock (Data, Eq, Show)
@@ -61,6 +62,8 @@ getLimits tgt debug = case tgt of
         _limitsBuiltinUIDsNum = 8
       }
   TargetGeb ->
+    defaultLimits
+  TargetVampIR ->
     defaultLimits
   TargetCore ->
     defaultLimits

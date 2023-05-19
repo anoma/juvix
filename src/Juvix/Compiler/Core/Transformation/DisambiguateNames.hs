@@ -7,8 +7,8 @@ import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Info.NameInfo (setInfoName)
 import Juvix.Compiler.Core.Transformation.Base
 
-disambiguateNodeNames :: InfoTable -> Node -> Node
-disambiguateNodeNames tab = dmapL go
+disambiguateNodeNames' :: (BinderList Binder -> Text -> Text) -> InfoTable -> Node -> Node
+disambiguateNodeNames' disambiguate tab = dmapL go
   where
     go :: BinderList Binder -> Node -> Node
     go bl node = case node of
@@ -66,6 +66,9 @@ disambiguateNodeNames tab = dmapL go
             (bl', args') = disambiguatePatterns (BL.cons b' bl) (c ^. patternConstrArgs)
             pat' = PatConstr $ set patternConstrBinder b' $ set patternConstrArgs args' c
 
+disambiguateNodeNames :: InfoTable -> Node -> Node
+disambiguateNodeNames tab = disambiguateNodeNames' disambiguate tab
+  where
     disambiguate :: BinderList Binder -> Text -> Text
     disambiguate bl name =
       if

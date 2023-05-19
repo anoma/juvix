@@ -16,6 +16,7 @@ runCommand opts = do
     TargetWasm32Wasi -> runCPipeline arg
     TargetNative64 -> runCPipeline arg
     TargetGeb -> runGebPipeline arg
+    TargetVampIR -> runVampIRPipeline arg
     TargetCore -> return ()
     TargetAsm -> runAsmPipeline arg
   where

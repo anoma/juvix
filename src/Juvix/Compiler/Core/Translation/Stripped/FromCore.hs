@@ -135,26 +135,14 @@ translateNode node = case node of
       )
       (translateNode (_letItem ^. letItemValue))
       (translateNode _letBody)
-  NCase Case {..} -> case _caseBranches of
-    [br@CaseBranch {..}]
-      | _caseBranchTag == BuiltinTag TagTrue ->
-          translateIf _caseValue (br ^. caseBranchBody) (fromMaybe branchFailure _caseDefault)
-    [br@CaseBranch {..}]
-      | _caseBranchTag == BuiltinTag TagFalse ->
-          translateIf _caseValue (fromMaybe branchFailure _caseDefault) (br ^. caseBranchBody)
-    [br1, br2]
-      | br1 ^. caseBranchTag == BuiltinTag TagTrue
-          && br2 ^. caseBranchTag == BuiltinTag TagFalse ->
-          translateIf _caseValue (br1 ^. caseBranchBody) (br2 ^. caseBranchBody)
-      | br1 ^. caseBranchTag == BuiltinTag TagFalse
-          && br2 ^. caseBranchTag == BuiltinTag TagTrue ->
-          translateIf _caseValue (br2 ^. caseBranchBody) (br1 ^. caseBranchBody)
-    _ ->
-      Stripped.mkCase
-        _caseInductive
-        (translateNode _caseValue)
-        (map translateCaseBranch _caseBranches)
-        (fmap translateNode _caseDefault)
+  NCase c@Case {..} -> translateCase translateIf dflt c
+    where
+      dflt =
+        Stripped.mkCase
+          _caseInductive
+          (translateNode _caseValue)
+          (map translateCaseBranch _caseBranches)
+          (fmap translateNode _caseDefault)
   _
     | isType node ->
         Stripped.mkConstr (Stripped.ConstrInfo "()" Nothing Stripped.TyDynamic) (BuiltinTag TagTrue) []
@@ -166,9 +154,6 @@ translateNode node = case node of
 
     translateIf :: Node -> Node -> Node -> Stripped.Node
     translateIf val br1 br2 = Stripped.mkIf (translateNode val) (translateNode br1) (translateNode br2)
-
-    branchFailure :: Node
-    branchFailure = mkBuiltinApp' OpFail [mkConstant' (ConstString "illegal `if` branch")]
 
     translateCaseBranch :: CaseBranch -> Stripped.CaseBranch
     translateCaseBranch CaseBranch {..}

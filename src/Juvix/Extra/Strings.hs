@@ -613,3 +613,36 @@ gebTyped = "typed"
 
 juvixDotOrg :: (IsString s) => s
 juvixDotOrg = "https://juvix.org"
+
+vampirDef :: IsString s => s
+vampirDef = "def"
+
+vampirEq :: IsString s => s
+vampirEq = "="
+
+vampirAdd :: IsString s => s
+vampirAdd = "add"
+
+vampirSub :: IsString s => s
+vampirSub = "sub"
+
+vampirMul :: IsString s => s
+vampirMul = "mul"
+
+vampirDiv :: IsString s => s
+vampirDiv = "div"
+
+vampirMod :: IsString s => s
+vampirMod = "rem"
+
+vampirEqual :: IsString s => s
+vampirEqual = "equal"
+
+vampirLessThan :: IsString s => s
+vampirLessThan = "lessThan"
+
+vampirLessOrEqual :: IsString s => s
+vampirLessOrEqual = "lessOrEqual"
+
+vampirIf :: IsString s => s
+vampirIf = "if"

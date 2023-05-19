@@ -8,6 +8,7 @@ data CompileTarget
   = TargetWasm32Wasi
   | TargetNative64
   | TargetGeb
+  | TargetVampIR
   | TargetCore
   | TargetAsm
   deriving stock (Eq, Data, Bounded, Enum)
@@ -17,6 +18,7 @@ instance Show CompileTarget where
     TargetWasm32Wasi -> "wasm32-wasi"
     TargetNative64 -> "native"
     TargetGeb -> "geb"
+    TargetVampIR -> "vampir"
     TargetCore -> "core"
     TargetAsm -> "asm"
 

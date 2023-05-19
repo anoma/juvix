@@ -36,6 +36,7 @@ data PipelineId
   = PipelineEval
   | PipelineNormalize
   | PipelineGeb
+  | PipelineVampIR
   | PipelineStripped
   deriving stock (Data, Bounded, Enum)
 
@@ -81,4 +82,5 @@ pipeline = \case
   PipelineEval -> toEvalTransformations
   PipelineNormalize -> toNormalizeTransformations
   PipelineGeb -> toGebTransformations
+  PipelineVampIR -> toVampIRTransformations
   PipelineStripped -> toStrippedTransformations
