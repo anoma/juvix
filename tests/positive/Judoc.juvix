@@ -24,7 +24,7 @@ block --}
 {-- -- --}
 {--  --}
 {-- f
-z --}
+z ;Type; --}
 id2 : {A : Type} → A → A;
 id2 a := a;
 id2 a := a;
