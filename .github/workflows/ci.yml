@@ -103,7 +103,7 @@ jobs:
         with:
           repo: anoma/vamp-ir
           platform: linux
-          tag: latest
+          tag: v0.1.2
           chmod: 0755
           rename-to: vamp-ir
           extension-matching: disable
@@ -223,7 +223,7 @@ jobs:
         with:
           repo: anoma/vamp-ir
           platform: darwin
-          tag: latest
+          tag: v0.1.2
           chmod: 0755
           rename-to: vamp-ir
           extension-matching: disable
