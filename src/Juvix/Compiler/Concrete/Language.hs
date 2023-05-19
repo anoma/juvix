@@ -895,7 +895,7 @@ data ExpressionAtoms (s :: Stage) = ExpressionAtoms
   }
 
 newtype Judoc (s :: Stage) = Judoc
-  { _block :: NonEmpty (JudocBlock s)
+  { _judocGroups :: NonEmpty (JudocGroup s)
   }
   deriving newtype (Semigroup)
 
@@ -917,8 +917,30 @@ deriving stock instance (Eq (ExpressionType s)) => Eq (Example s)
 
 deriving stock instance (Ord (ExpressionType s)) => Ord (Example s)
 
+data JudocBlockParagraph (s :: Stage) = JudocBlockParagraph
+  { _judocBlockParagraphStart :: KeywordRef,
+    _judocBlockParagraphBlocks :: [JudocBlock s],
+    _judocBlockParagraphEnd :: KeywordRef
+  }
+
+deriving stock instance (Show (ExpressionType s), Show (SymbolType s)) => Show (JudocBlockParagraph s)
+
+deriving stock instance (Eq (ExpressionType s), Eq (SymbolType s)) => Eq (JudocBlockParagraph s)
+
+deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (JudocBlockParagraph s)
+
+data JudocGroup (s :: Stage)
+  = JudocGroupBlock (JudocBlockParagraph s)
+  | JudocGroupLines (NonEmpty (JudocBlock s))
+
+deriving stock instance (Show (ExpressionType s), Show (SymbolType s)) => Show (JudocGroup s)
+
+deriving stock instance (Eq (ExpressionType s), Eq (SymbolType s)) => Eq (JudocGroup s)
+
+deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (JudocGroup s)
+
 data JudocBlock (s :: Stage)
-  = JudocParagraph (NonEmpty (JudocParagraphLine s))
+  = JudocParagraphLines (NonEmpty (JudocParagraphLine s))
   | JudocExample (Example s)
 
 deriving stock instance (Show (ExpressionType s), Show (SymbolType s)) => Show (JudocBlock s)
@@ -951,6 +973,7 @@ makeLenses ''Example
 makeLenses ''Lambda
 makeLenses ''LambdaClause
 makeLenses ''Judoc
+makeLenses ''JudocBlockParagraph
 makeLenses ''Function
 makeLenses ''InductiveDef
 makeLenses ''PostfixApplication
@@ -1192,9 +1215,17 @@ instance HasLoc (Example s) where
 instance HasLoc (Judoc s) where
   getLoc (Judoc j) = getLocSpan j
 
+instance HasLoc (JudocBlockParagraph s) where
+  getLoc p = getLoc (p ^. judocBlockParagraphStart) <> getLoc (p ^. judocBlockParagraphEnd)
+
+instance HasLoc (JudocGroup s) where
+  getLoc = \case
+    JudocGroupBlock l -> getLoc l
+    JudocGroupLines l -> getLocSpan l
+
 instance HasLoc (JudocBlock s) where
   getLoc = \case
-    JudocParagraph ls -> getLocSpan ls
+    JudocParagraphLines ls -> getLocSpan ls
     JudocExample e -> getLoc e
 
 instance HasLoc (JudocParagraphLine s) where
@@ -1511,10 +1542,18 @@ entryIsExpression = \case
   EntryModule {} -> False
 
 judocExamples :: Judoc s -> [Example s]
-judocExamples (Judoc bs) = concatMap go bs
+judocExamples (Judoc bs) = concatMap goGroup bs
   where
-    go :: JudocBlock s -> [Example s]
-    go = \case
+    goGroup :: JudocGroup s -> [Example s]
+    goGroup = \case
+      JudocGroupBlock p -> goParagraph p
+      JudocGroupLines l -> concatMap goBlock l
+
+    goParagraph :: JudocBlockParagraph s -> [Example s]
+    goParagraph l = concatMap goBlock (l ^. judocBlockParagraphBlocks)
+
+    goBlock :: JudocBlock s -> [Example s]
+    goBlock = \case
       JudocExample e -> [e]
       _ -> mempty
 

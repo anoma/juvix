@@ -78,7 +78,11 @@ space' special =
           let _commentType = CommentOneLine
           when
             special
-            (notFollowedBy (P.chunk Str.judocStart))
+            ( notFollowedBy
+                ( P.chunk Str.judocStart
+                    <|> P.chunk Str.judocBlockEnd
+                )
+            )
           (_commentText, _commentInterval) <- interval $ do
             void (P.chunk "--")
             P.takeWhileP Nothing (/= '\n')
@@ -89,7 +93,11 @@ space' special =
           let _commentType = CommentBlock
           when
             special
-            (notFollowedBy (P.chunk Str.pragmasStart))
+            ( notFollowedBy
+                ( P.chunk Str.pragmasStart
+                    <|> P.chunk Str.judocBlockStart
+                )
+            )
           (_commentText, _commentInterval) <- interval $ do
             void start
             go 1 ""

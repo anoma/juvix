@@ -356,11 +356,19 @@ goJudocMay :: (Members '[Reader HtmlOptions, Reader NormalizedTable] r) => Maybe
 goJudocMay = maybe (return mempty) goJudoc
 
 goJudoc :: forall r. (Members '[Reader HtmlOptions, Reader NormalizedTable] r) => Judoc 'Scoped -> Sem r Html
-goJudoc (Judoc bs) = mconcatMapM goBlock bs
+goJudoc (Judoc bs) = mconcatMapM goGroup bs
   where
+    goGroup :: JudocGroup 'Scoped -> Sem r Html
+    goGroup = \case
+      JudocGroupLines l -> mconcatMapM goBlock l
+      JudocGroupBlock l -> goGroupBlock l
+
+    goGroupBlock :: JudocBlockParagraph 'Scoped -> Sem r Html
+    goGroupBlock = mconcatMap goBlock . (^. judocBlockParagraphBlocks)
+
     goBlock :: JudocBlock 'Scoped -> Sem r Html
     goBlock = \case
-      JudocParagraph ls -> Html.p . concatWith (\l r -> l <> " " <> r) <$> mapM goLine (toList ls)
+      JudocParagraphLines ls -> Html.p . concatWith (\l r -> l <> " " <> r) <$> mapM goLine (toList ls)
       JudocExample e -> goExample e
 
     goLine :: JudocParagraphLine 'Scoped -> Sem r Html

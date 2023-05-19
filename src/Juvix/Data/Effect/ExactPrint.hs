@@ -22,6 +22,15 @@ infixr 7 ?<>
 (?<>) :: Maybe (Sem r ()) -> Sem r () -> Sem r ()
 (?<>) = maybe id (<>)
 
+infixr 7 <??+>
+
+(<??+>) :: Members '[ExactPrint] r => Sem r (Maybe ()) -> Sem r () -> Sem r ()
+(<??+>) ma b = do
+  r <- ma
+  case r of
+    Nothing -> b
+    Just () -> (space <> b)
+
 infixr 7 <?+>
 
 (<?+>) :: Members '[ExactPrint] r => Maybe (Sem r ()) -> Sem r () -> Sem r ()
