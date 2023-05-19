@@ -312,6 +312,7 @@ stashJudoc = do
     judocParagraphBlock :: ParsecS r (JudocBlockParagraph 'Parsed)
     judocParagraphBlock = do
       _judocBlockParagraphStart <- judocBlockStart
+      whiteSpace
       _judocBlockParagraphBlocks <- many (judocBlock True)
       _judocBlockParagraphEnd <- judocBlockEnd
       return
@@ -335,19 +336,19 @@ stashJudoc = do
     paragraphLine inBlock = do
       unless inBlock $
         P.try (judocStart >> P.notFollowedBy (P.choice [judocExampleStart, void P.newline]))
-      l <- JudocParagraphLine . trimLast <$> some1 (withLoc (judocAtom inBlock))
+      l <- JudocParagraphLine . trimEnds <$> some1 (withLoc (judocAtom inBlock))
       if
           | inBlock -> optional_ P.newline
           | otherwise -> void P.newline >> space
       return l
       where
-        trimLast :: NonEmpty (WithLoc (JudocAtom 'Parsed)) -> NonEmpty (WithLoc (JudocAtom 'Parsed))
-        trimLast = over (_last1 . withLocParam) tr
+        trimEnds :: NonEmpty (WithLoc (JudocAtom 'Parsed)) -> NonEmpty (WithLoc (JudocAtom 'Parsed))
+        trimEnds = over (_last1 . withLocParam) (tr Text.stripEnd)
           where
-            tr :: JudocAtom 'Parsed -> JudocAtom 'Parsed
-            tr a = case a of
+            tr :: (Text -> Text) -> JudocAtom 'Parsed -> JudocAtom 'Parsed
+            tr strp a = case a of
               JudocExpression {} -> a
-              JudocText txt -> JudocText (Text.stripEnd txt)
+              JudocText txt -> JudocText (strp txt)
 
 judocAtom ::
   forall r.
@@ -365,12 +366,15 @@ judocAtom inBlock =
             | inBlock -> goBlockAtom
             | otherwise -> takeWhile1P Nothing isValidText
       where
-        -- We prefer to use takeWhile1P when possible since it is more efficient than some
+        -- We prefer to use takeWhileP when possible since it is more efficient than some
         goBlockAtom :: ParsecS r Text
         goBlockAtom = do
-          txt <- takeWhile1P Nothing (`notElem` stopChars)
+          txt <- P.takeWhileP Nothing (`notElem` stopChars)
           dashes <- many (P.notFollowedBy judocBlockEnd >> P.single '-')
-          rest <- optional goBlockAtom
+          rest <-
+            if
+                | not (Text.null txt) || notNull dashes -> optional goBlockAtom
+                | otherwise -> mzero
           return (txt <> pack dashes <> fromMaybe mempty rest)
           where
             stopChars :: [Char]

@@ -21,7 +21,10 @@ id a := a;
 {-- judoc block --}
 {-- judoc
 block --}
+{-- -- --}
 {--  --}
+{-- f
+z --}
 id2 : {A : Type} → A → A;
 id2 a := a;
 id2 a := a;
