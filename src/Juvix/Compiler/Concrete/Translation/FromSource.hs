@@ -9,6 +9,7 @@ where
 import Data.ByteString.UTF8 qualified as BS
 import Data.List.NonEmpty.Extra qualified as NonEmpty
 import Data.Singletons
+import Data.Text qualified as Text
 import Data.Yaml
 import Juvix.Compiler.Concrete.Data.Highlight.Input (HighlightBuilder, ignoreHighlightBuilder)
 import Juvix.Compiler.Concrete.Data.ParsedInfoTable
@@ -172,15 +173,15 @@ topModuleDefStdin ::
   (Members '[Error ParserError, Files, PathResolver, InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
   ParsecS r (Module 'Parsed 'ModuleTop)
 topModuleDefStdin = do
-  void (optional stashJudoc)
+  optional_ stashJudoc
   top moduleDef
 
 topModuleDef ::
   (Members '[Error ParserError, Files, PathResolver, InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
   ParsecS r (Module 'Parsed 'ModuleTop)
 topModuleDef = do
-  void (optional stashJudoc)
-  void (optional stashPragmas)
+  optional_ stashJudoc
+  optional_ stashPragmas
   m <- top moduleDef
   P.lift (checkPath (m ^. modulePath))
   return m
@@ -239,8 +240,8 @@ topModulePath = mkTopModulePath <$> dottedSymbol
 
 statement :: (Members '[Files, Error ParserError, PathResolver, InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (Statement 'Parsed)
 statement = P.label "<top level statement>" $ do
-  void (optional stashJudoc)
-  void (optional stashPragmas)
+  optional_ stashJudoc
+  optional_ stashPragmas
   ms <-
     optional
       ( StatementOperator <$> operatorSyntaxDef
@@ -281,51 +282,109 @@ stashPragmas = do
 
 stashJudoc :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r ()
 stashJudoc = do
-  b <- judocBlocks
-  many judocEmptyLine
+  b <- judoc
+  many (judocEmptyLine False)
   P.lift (modify (<> Just b))
   where
-    judocBlocks :: ParsecS r (Judoc 'Parsed)
-    judocBlocks = Judoc <$> some1 judocBlock
+    judoc :: ParsecS r (Judoc 'Parsed)
+    judoc = Judoc <$> some1 judocGroup
 
-    judocBlock :: ParsecS r (JudocBlock 'Parsed)
-    judocBlock = do
+    judocGroup :: ParsecS r (JudocGroup 'Parsed)
+    judocGroup =
+      JudocGroupBlock <$> judocParagraphBlock
+        <|> JudocGroupLines <$> some1 (judocBlock False)
+
+    judocEmptyLine :: Bool -> ParsecS r ()
+    judocEmptyLine inBlock =
+      lexeme . void $
+        if
+            | inBlock -> P.newline
+            | otherwise -> P.try (judocStart >> P.newline)
+
+    judocBlock :: Bool -> ParsecS r (JudocBlock 'Parsed)
+    judocBlock inBlock = do
       p <-
-        judocExample
-          <|> judocParagraph
-
-      void (many judocEmptyLine)
+        judocExample inBlock
+          <|> judocParagraphLines inBlock
+      void (many (judocEmptyLine inBlock))
       return p
 
-    judocParagraph :: ParsecS r (JudocBlock 'Parsed)
-    judocParagraph = JudocParagraph <$> some1 judocLine
+    judocParagraphBlock :: ParsecS r (JudocBlockParagraph 'Parsed)
+    judocParagraphBlock = do
+      _judocBlockParagraphStart <- judocBlockStart
+      whiteSpace
+      _judocBlockParagraphBlocks <- many (judocBlock True)
+      _judocBlockParagraphEnd <- judocBlockEnd
+      return
+        JudocBlockParagraph {..}
 
-    judocExample :: ParsecS r (JudocBlock 'Parsed)
-    judocExample = do
-      P.try (judocStart >> judocExampleStart)
+    judocParagraphLines :: Bool -> ParsecS r (JudocBlock 'Parsed)
+    judocParagraphLines inBlock = JudocParagraphLines <$> some1 (paragraphLine inBlock)
+
+    judocExample :: Bool -> ParsecS r (JudocBlock 'Parsed)
+    judocExample inBlock = do
+      if
+          | inBlock -> judocExampleStart
+          | otherwise -> P.try (judocStart >> judocExampleStart)
       _exampleId <- P.lift freshNameId
       (_exampleExpression, _exampleLoc) <- interval parseExpressionAtoms
       semicolon
       space
       return (JudocExample Example {..})
 
-    judocLine :: ParsecS r (JudocParagraphLine 'Parsed)
-    judocLine = lexeme $ do
-      P.try (judocStart >> P.notFollowedBy (P.choice [judocExampleStart, void P.newline]))
-      ln <- JudocParagraphLine <$> some1 (withLoc judocAtom)
-      P.newline
-      return ln
+    paragraphLine :: Bool -> ParsecS r (JudocParagraphLine 'Parsed)
+    paragraphLine inBlock = do
+      unless inBlock $
+        P.try (judocStart >> P.notFollowedBy (P.choice [judocExampleStart, void P.newline]))
+      l <- JudocParagraphLine . trimEnds <$> some1 (withLoc (judocAtom inBlock))
+      if
+          | inBlock -> optional_ P.newline
+          | otherwise -> void P.newline >> space
+      return l
+      where
+        trimEnds :: NonEmpty (WithLoc (JudocAtom 'Parsed)) -> NonEmpty (WithLoc (JudocAtom 'Parsed))
+        trimEnds = over (_last1 . withLocParam) (tr Text.stripEnd)
+          where
+            tr :: (Text -> Text) -> JudocAtom 'Parsed -> JudocAtom 'Parsed
+            tr strp a = case a of
+              JudocExpression {} -> a
+              JudocText txt -> JudocText (strp txt)
 
-judocAtom :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (JudocAtom 'Parsed)
-judocAtom =
+judocAtom ::
+  forall r.
+  (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
+  Bool ->
+  ParsecS r (JudocAtom 'Parsed)
+judocAtom inBlock =
   JudocText <$> judocAtomText
     <|> JudocExpression <$> judocExpression
   where
     judocAtomText :: ParsecS r Text
-    judocAtomText = judocText (takeWhile1P Nothing isValidText)
+    judocAtomText =
+      judocText $
+        if
+            | inBlock -> goBlockAtom
+            | otherwise -> takeWhile1P Nothing isValidText
       where
+        -- We prefer to use takeWhileP when possible since it is more efficient than some
+        goBlockAtom :: ParsecS r Text
+        goBlockAtom = do
+          txt <- P.takeWhileP Nothing (`notElem` stopChars)
+          dashes <- many (P.notFollowedBy judocBlockEnd >> P.single '-')
+          rest <-
+            if
+                | not (Text.null txt) || notNull dashes -> optional goBlockAtom
+                | otherwise -> mzero
+          return (txt <> pack dashes <> fromMaybe mempty rest)
+          where
+            stopChars :: [Char]
+            stopChars = '-' : invalidChars
+
+        invalidChars :: [Char]
+        invalidChars = ['\n', ';']
+
         isValidText :: Char -> Bool
-        isValidText = (`notElem` ['\n', ';'])
+        isValidText = (`notElem` invalidChars)
 
     judocExpression :: ParsecS r (ExpressionAtoms 'Parsed)
     judocExpression = do
@@ -761,7 +820,7 @@ moduleDef = P.label "<module definition>" $ do
     endModule :: ParsecS r (ModuleEndType t)
     endModule = case sing :: SModuleIsTop t of
       SModuleLocal -> kw kwEnd
-      SModuleTop -> void (optional (kw kwEnd >> semicolon))
+      SModuleTop -> optional_ (kw kwEnd >> semicolon)
 
 -- | An ExpressionAtom which is a valid expression on its own.
 atomicExpression :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (ExpressionAtoms 'Parsed)

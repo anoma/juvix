@@ -10,11 +10,18 @@ data IsUnicode
   | Ascii
   deriving stock (Eq, Show, Ord, Data)
 
+data KeywordType
+  = KeywordTypeKeyword
+  | KeywordTypeDelimiter
+  | KeywordTypeJudoc
+  deriving stock (Eq, Show, Ord, Data)
+
 data Keyword = Keyword
   { _keywordAscii :: Text,
     _keywordUnicode :: Maybe Text,
     -- | true if _keywordAscii has a reserved character (the unicode is assumed to not have any)
-    _keywordHasReserved :: Bool
+    _keywordHasReserved :: Bool,
+    _keywordType :: KeywordType
   }
   deriving stock (Eq, Show, Ord, Data)
 
@@ -66,7 +73,26 @@ mkKw :: Text -> Maybe Text -> Keyword
 mkKw _keywordAscii _keywordUnicode =
   Keyword
     { _keywordHasReserved = hasReservedChar _keywordAscii,
+      _keywordType = KeywordTypeKeyword,
       ..
+    }
+
+mkJudocDelim :: Text -> Keyword
+mkJudocDelim ascii =
+  Keyword
+    { _keywordType = KeywordTypeJudoc,
+      _keywordAscii = ascii,
+      _keywordUnicode = Nothing,
+      _keywordHasReserved = hasReservedChar ascii
+    }
+
+mkDelim :: Text -> Keyword
+mkDelim ascii =
+  Keyword
+    { _keywordType = KeywordTypeDelimiter,
+      _keywordAscii = ascii,
+      _keywordUnicode = Nothing,
+      _keywordHasReserved = hasReservedChar ascii
     }
 
 asciiKw :: Text -> Keyword

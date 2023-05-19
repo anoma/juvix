@@ -7,9 +7,12 @@ where
 
 import Juvix.Data.Keyword
 import Juvix.Data.Keyword.All
-  ( -- reserved
+  ( -- delimiters
 
-    -- extra
+    delimJudocBlockEnd,
+    delimJudocBlockStart,
+    delimJudocStart,
+    -- keywords
     kwAs,
     kwAssign,
     kwAt,

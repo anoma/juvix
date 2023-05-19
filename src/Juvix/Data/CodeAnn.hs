@@ -5,6 +5,7 @@ module Juvix.Data.CodeAnn
 where
 
 import Juvix.Compiler.Concrete.Data.Name
+import Juvix.Data.Keyword
 import Juvix.Data.NameKind
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude
@@ -51,6 +52,12 @@ class PrettyCodeAnn a where
 instance HasAnsiBackend (Doc CodeAnn) where
   toAnsiDoc = fmap stylize
   toAnsiStream = fmap stylize . layoutPretty defaultLayoutOptions
+
+kwTypeAnn :: KeywordType -> CodeAnn
+kwTypeAnn = \case
+  KeywordTypeDelimiter -> AnnDelimiter
+  KeywordTypeKeyword -> AnnKeyword
+  KeywordTypeJudoc -> AnnJudoc
 
 -- | for builtin stuff
 primitive :: Text -> Doc Ann

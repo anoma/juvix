@@ -415,6 +415,9 @@ fromRightIO' pp = do
 fromRightIO :: (e -> Text) -> IO (Either e r) -> IO r
 fromRightIO pp = fromRightIO' (putStrLn . pp)
 
+optional_ :: Alternative m => m a -> m ()
+optional_ = void . optional
+
 --------------------------------------------------------------------------------
 -- Misc
 --------------------------------------------------------------------------------
@@ -507,3 +510,6 @@ popFirstJust f = \case
   (h : hs) -> case f h of
     Nothing -> (h :) <$> popFirstJust f hs
     Just x -> (Just x, hs)
+
+uncurryF :: Functor f => (a -> b -> c) -> f (a, b) -> f c
+uncurryF g input = uncurry g <$> input

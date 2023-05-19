@@ -8,6 +8,12 @@ module_ = "module"
 axiom :: (IsString s) => s
 axiom = "axiom"
 
+judocBlockStart :: (IsString s) => s
+judocBlockStart = "{--"
+
+judocBlockEnd :: (IsString s) => s
+judocBlockEnd = "--}"
+
 judocStart :: (IsString s) => s
 judocStart = "---"
 

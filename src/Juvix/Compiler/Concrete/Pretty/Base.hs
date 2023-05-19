@@ -9,6 +9,7 @@ import Data.List.NonEmpty.Extra qualified as NonEmpty
 import Juvix.Compiler.Concrete.Data.ScopedName (AbsModulePath, IsConcrete (..))
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Extra (unfoldApplication)
+import Juvix.Compiler.Concrete.Keywords (delimJudocStart)
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Pretty.Options
 import Juvix.Data.Ape
@@ -295,10 +296,10 @@ instance PrettyCode S.NameId where
   ppCode (S.NameId k) = return (pretty k)
 
 instance PrettyCode KeywordRef where
-  ppCode = return . annotate AnnKeyword . pretty
+  ppCode p = return . annotate (kwTypeAnn (p ^. keywordRefKeyword . keywordType)) . pretty $ p
 
 instance PrettyCode Keyword where
-  ppCode = return . annotate AnnKeyword . pretty
+  ppCode p = return . annotate (kwTypeAnn (p ^. keywordType)) . pretty $ p
 
 annDef :: forall s. SingI s => SymbolType s -> Doc Ann -> Doc Ann
 annDef nm = case sing :: SStage s of
@@ -386,8 +387,12 @@ instance PrettyCode (WithSource Pragmas) where
     return $
       annotate AnnComment (pretty (Str.pragmasStart <> pragma ^. withSourceText <> Str.pragmasEnd)) <> line
 
-ppJudocStart :: Doc Ann
-ppJudocStart = pretty (Str.judocStart :: Text)
+ppJudocStart :: Members '[Reader Options] r => Sem r (Maybe (Doc Ann))
+ppJudocStart = do
+  i <- asks (^. optInJudocBlock)
+  if
+      | i -> return Nothing
+      | otherwise -> Just <$> ppCode delimJudocStart
 
 ppJudocExampleStart :: Doc Ann
 ppJudocExampleStart = pretty (Str.judocExample :: Text)
@@ -395,24 +400,57 @@ ppJudocExampleStart = pretty (Str.judocExample :: Text)
 instance (SingI s) => PrettyCode (Example s) where
   ppCode e = do
     e' <- ppExpression (e ^. exampleExpression)
-    return (ppJudocStart <+> ppJudocExampleStart <+> e' <> kwSemicolon)
+    start' <- ppJudocStart
+    return (start' <?+> ppJudocExampleStart <+> e' <> kwSemicolon)
 
-instance (SingI s) => PrettyCode (JudocBlock s) where
+instance SingI s => PrettyCode (JudocBlockParagraph s) where
+  ppCode p = do
+    start' <- ppCode (p ^. judocBlockParagraphStart)
+    contents' <- inJudocBlock (vsep2 <$> mapM ppCode (p ^. judocBlockParagraphBlocks))
+    end' <- ppCode (p ^. judocBlockParagraphEnd)
+    return (start' <+> contents' <+> end')
+
+instance SingI s => PrettyCode (JudocBlock s) where
   ppCode = \case
-    JudocParagraph l -> vsep <$> mapM ppCode l
+    JudocParagraphLines l -> vsep <$> mapM ppCode l
     JudocExample e -> ppCode e
 
 instance (SingI s) => PrettyCode (JudocParagraphLine s) where
   ppCode (JudocParagraphLine atoms) = do
+    start' <- ppJudocStart
     atoms' <- mconcatMap ppCode atoms
-    let prefix = annotate AnnComment (pretty (Str.judocStart :: Text))
-    return (prefix <+> atoms')
+    return (start' <?+> atoms')
 
-instance (SingI s) => PrettyCode (Judoc s) where
-  ppCode :: forall r. (Members '[Reader Options] r) => Judoc s -> Sem r (Doc Ann)
-  ppCode (Judoc blocks) = do
-    doc' <- vsep <$> mapM ppCode blocks
-    return $ doc' <> line
+instance SingI s => PrettyCode (JudocGroup s) where
+  ppCode :: forall r. Members '[Reader Options] r => JudocGroup s -> Sem r (Doc Ann)
+  ppCode = \case
+    JudocGroupLines l -> goLines l
+    JudocGroupBlock l -> ppCode l
+    where
+      goLines :: NonEmpty (JudocBlock s) -> Sem r (Doc Ann)
+      goLines blocks = do
+        start' <- ppCode delimJudocStart
+        let blockSep' = line <> start' <> line
+        blocks' <- mapM ppCode blocks
+        return (concatWith (\a b -> a <> blockSep' <> b) blocks')
+
+instance SingI s => PrettyCode (Judoc s) where
+  ppCode :: forall r. Members '[Reader Options] r => Judoc s -> Sem r (Doc Ann)
+  ppCode (Judoc groups) = do
+    groups' <- ppGroups groups
+    return (groups' <> line)
+    where
+      ppGroups :: NonEmpty (JudocGroup s) -> Sem r (Doc Ann)
+      ppGroups = \case
+        g :| [] -> ppCode g
+        g :| b : bs -> ppCode g <> groupSep <> ppGroups (b :| bs)
+          where
+            groupSep :: Sem r (Doc Ann)
+            groupSep = (line <>) <$> extraLine
+            extraLine :: Sem r (Doc Ann)
+            extraLine = case (g, b) of
+              (JudocGroupLines {}, JudocGroupLines {}) -> (<> line) <$> ppCode delimJudocStart
+              _ -> return mempty
 
 instance (SingI s) => PrettyCode (JudocAtom s) where
   ppCode :: forall r. (Members '[Reader Options] r) => JudocAtom s -> Sem r (Doc Ann)

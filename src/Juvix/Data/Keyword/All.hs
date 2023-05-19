@@ -219,3 +219,12 @@ kwDollar = asciiKw Str.dollar
 
 kwMutual :: Keyword
 kwMutual = asciiKw Str.mutual
+
+delimJudocStart :: Keyword
+delimJudocStart = mkJudocDelim Str.judocStart
+
+delimJudocBlockStart :: Keyword
+delimJudocBlockStart = mkJudocDelim Str.judocBlockStart
+
+delimJudocBlockEnd :: Keyword
+delimJudocBlockEnd = mkJudocDelim Str.judocBlockEnd

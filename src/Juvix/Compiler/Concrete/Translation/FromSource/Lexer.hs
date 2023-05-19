@@ -74,14 +74,21 @@ string = lexemeInterval string'
 judocExampleStart :: ParsecS r ()
 judocExampleStart = P.chunk Str.judocExample >> hspace_
 
+judocBlockEnd :: Members '[InfoTableBuilder] r => ParsecS r KeywordRef
+judocBlockEnd = kw delimJudocBlockEnd
+
+judocBlockStart :: Members '[InfoTableBuilder] r => ParsecS r KeywordRef
+judocBlockStart = kwBare delimJudocBlockStart
+
 judocStart :: Members '[InfoTableBuilder] r => ParsecS r ()
 judocStart = judocText_ (P.chunk Str.judocStart) >> hspace_
 
-judocEmptyLine :: (Members '[InfoTableBuilder] r) => ParsecS r ()
-judocEmptyLine = lexeme (void (P.try (judocStart >> P.newline)))
+-- | Does not consume space after it
+kwBare :: Member InfoTableBuilder r => Keyword -> ParsecS r KeywordRef
+kwBare k = kw' k >>= P.lift . registerKeyword
 
 kw :: Member InfoTableBuilder r => Keyword -> ParsecS r KeywordRef
-kw k = lexeme $ kw' k >>= P.lift . registerKeyword
+kw = lexeme . kwBare
 
 -- | Same as @identifier@ but does not consume space after it.
 bareIdentifier :: ParsecS r (Text, Interval)

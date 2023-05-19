@@ -20,7 +20,12 @@ class PrettyPrint a where
   ppCode :: Members '[ExactPrint, Reader Options] r => a -> Sem r ()
 
 instance PrettyPrint Keyword where
-  ppCode = noLoc . annotate AnnKeyword . pretty
+  ppCode p = noLoc . annotate ann . pretty $ p
+    where
+      ann = case p ^. keywordType of
+        KeywordTypeDelimiter -> AnnDelimiter
+        KeywordTypeKeyword -> AnnKeyword
+        KeywordTypeJudoc -> AnnJudoc
 
 instance PrettyPrint KeywordRef where
   ppCode = ppMorpheme
@@ -152,10 +157,17 @@ instance PrettyPrint Expression where
 instance PrettyPrint ParsedPragmas where
   ppCode = ppMorpheme
 
+ppJudocStart :: Members '[ExactPrint, Reader Options] r => Sem r (Maybe ())
+ppJudocStart = do
+  inBlock <- asks (^. optInJudocBlock)
+  if
+      | inBlock -> return Nothing
+      | otherwise -> ppCode delimJudocStart $> Just ()
+
 instance PrettyPrint (Example 'Scoped) where
   ppCode e =
-    noLoc P.ppJudocStart
-      <+> noLoc P.ppJudocExampleStart
+    ppJudocStart
+      <??+> noLoc P.ppJudocExampleStart
       <+> ppCode (e ^. exampleExpression)
         <> noLoc P.kwSemicolon
 
@@ -164,14 +176,41 @@ instance PrettyPrint (JudocParagraphLine 'Scoped) where
 
 instance PrettyPrint (Judoc 'Scoped) where
   ppCode :: forall r. Members '[ExactPrint, Reader Options] r => Judoc 'Scoped -> Sem r ()
-  ppCode (Judoc blocks) = sequenceWith paragraphSep (fmap ppCode blocks) >> line
+  ppCode (Judoc groups) = ppGroups groups <> line
     where
-      paragraphSep :: Sem r ()
-      paragraphSep = line >> noLoc P.ppJudocStart >> line
+      ppGroups :: NonEmpty (JudocGroup 'Scoped) -> Sem r ()
+      ppGroups = \case
+        g :| [] -> ppCode g
+        g :| b : bs -> ppCode g <> groupSep <> ppGroups (b :| bs)
+          where
+            groupSep :: Sem r ()
+            groupSep = line <> extraLine
+            extraLine :: Sem r ()
+            extraLine = case (g, b) of
+              (JudocGroupLines {}, JudocGroupLines {}) -> ppCode delimJudocStart <> line
+              _ -> return ()
+
+instance PrettyPrint (JudocBlockParagraph 'Scoped) where
+  ppCode p = do
+    let start' = ppCode (p ^. judocBlockParagraphStart)
+        contents' = inJudocBlock (vsep2 (ppCode <$> p ^. judocBlockParagraphBlocks))
+        endpar' = ppCode (p ^. judocBlockParagraphEnd)
+    start' <+> contents' <+> endpar'
+
+instance PrettyPrint (JudocGroup 'Scoped) where
+  ppCode :: forall r. Members '[ExactPrint, Reader Options] r => JudocGroup 'Scoped -> Sem r ()
+  ppCode = \case
+    JudocGroupLines l -> goLines l
+    JudocGroupBlock l -> ppCode l
+    where
+      goLines blocks = sequenceWith blockSep (fmap ppCode blocks)
+        where
+          blockSep :: Sem r ()
+          blockSep = line >> ppJudocStart >> line
 
 instance PrettyPrint (JudocBlock 'Scoped) where
   ppCode = \case
-    JudocParagraph l -> vsep (ppCode <$> l)
+    JudocParagraphLines l -> vsep (ppCode <$> l)
     JudocExample e -> ppCode e
 
 instance PrettyPrint (JudocAtom 'Scoped) where
