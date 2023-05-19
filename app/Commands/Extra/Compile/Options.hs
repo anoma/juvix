@@ -52,7 +52,7 @@ parseCompileOptions supportedTargets parseInputFile = do
     switch
       ( short 'g'
           <> long "debug"
-          <> help "Generate debug information and runtime assertions"
+          <> help "Generate debug information and runtime assertions. Disables optimizations"
       )
   _compileCOutput <-
     switch
