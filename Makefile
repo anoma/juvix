@@ -135,7 +135,9 @@ format-juvix-files:
 check-format-juvix-files:
 	@JUVIXFORMATFLAGS=--check ${MAKE} format-juvix-files
 
-JUVIXEXAMPLEFILES=$(shell find ./examples  -name "*.juvix" -print)
+JUVIXEXAMPLEFILES=$(shell find ./examples \
+	-type d \( -name ".juvix-build" \) -prune -o \
+	-name "*.juvix" -print)
 
 .PHONY: typecheck-juvix-examples
 typecheck-juvix-examples:
