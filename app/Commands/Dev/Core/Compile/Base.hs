@@ -25,7 +25,10 @@ getEntry PipelineArg {..} = do
     ep
       { _entryPointTarget = getTarget (_pipelineArgOptions ^. compileTarget),
         _entryPointDebug = _pipelineArgOptions ^. compileDebug,
-        _entryPointOptimizationLevel = _pipelineArgOptions ^. compileOptimizationLevel,
+        _entryPointOptimizationLevel =
+          if
+              | _pipelineArgOptions ^. compileDebug -> 0
+              | otherwise -> _pipelineArgOptions ^. compileOptimizationLevel,
         _entryPointInliningDepth = _pipelineArgOptions ^. compileInliningDepth
       }
   where

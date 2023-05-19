@@ -186,7 +186,9 @@ native64Args buildDir o outfile inputFile =
        )
   where
     optValue :: Int
-    optValue = max 1 (o ^. compileOptimizationLevel)
+    optValue
+      | o ^. compileDebug = 1
+      | otherwise = max 1 (o ^. compileOptimizationLevel)
 
 wasiArgs :: Path Abs Dir -> CompileOptions -> Path Abs File -> Path Abs File -> Path Abs Dir -> [String]
 wasiArgs buildDir o outfile inputFile sysrootPath =
