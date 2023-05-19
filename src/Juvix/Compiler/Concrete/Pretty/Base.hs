@@ -513,8 +513,10 @@ instance (SingI s) => PrettyCode (Case s) where
 
 instance (SingI s) => PrettyCode (Lambda s) where
   ppCode Lambda {..} = do
-    lambdaClauses' <- bracesIndent <$> ppPipeBlock _lambdaClauses
     lambdaKw' <- ppCode _lambdaKw
+    lambdaClauses' <- case _lambdaClauses of
+      s :| [] -> braces <$> ppCode s
+      _ -> bracesIndent <$> ppPipeBlock _lambdaClauses
     return $ lambdaKw' <+> lambdaClauses'
 
 instance (SingI s) => PrettyCode (FunctionClause s) where
