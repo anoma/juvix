@@ -184,11 +184,11 @@ native64Args buildDir o outfile inputFile =
                  ["-ljuvix"]
              | otherwise -> []
        )
-    where
-      optValue :: Int
-      optValue
-        | o ^. compileDebug = 0
-        | otherwise = max 0 (o ^. compileOptimizationLevel)
+  where
+    optValue :: Int
+    optValue
+      | o ^. compileDebug = 0
+      | otherwise = max 0 (o ^. compileOptimizationLevel)
 
 wasiArgs :: Path Abs Dir -> CompileOptions -> Path Abs File -> Path Abs File -> Path Abs Dir -> [String]
 wasiArgs buildDir o outfile inputFile sysrootPath =
