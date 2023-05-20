@@ -868,23 +868,22 @@ checkOpenModuleNoImport OpenModule {..}
           NoPublic -> VisPrivate
 
         filterScope :: ExportInfo -> ExportInfo
-        filterScope ei = case openModif of
-          Just (Using l) -> over exportSymbols (HashMap.fromList . mapMaybe inUsing . HashMap.toList) ei
+        filterScope = case openModif of
+          Just (Using l) -> over exportSymbols (HashMap.fromList . mapMaybe inUsing . HashMap.toList)
             where
               inUsing :: (Symbol, SymbolEntry) -> Maybe (Symbol, SymbolEntry)
               inUsing (sym, e) = do
                 mayAs' <- u ^. at (symbolEntryNameId e)
                 return (fromMaybe sym mayAs', e)
-
               u :: HashMap NameId (Maybe Symbol)
               u = HashMap.fromList [(i ^. usingSymbol . S.nameId, i ^? usingAs . _Just . S.nameConcrete) | i <- toList l]
-          Just (Hiding l) -> over exportSymbols (HashMap.filter (not . inHiding)) ei
+          Just (Hiding l) -> over exportSymbols (HashMap.filter (not . inHiding))
             where
               inHiding :: SymbolEntry -> Bool
               inHiding e = HashSet.member (symbolEntryNameId e) u
               u :: HashSet NameId
               u = HashSet.fromList (map (^. S.nameId) (toList l))
-          Nothing -> ei
+          Nothing -> id
 
 checkOpenModule ::
   forall r.
