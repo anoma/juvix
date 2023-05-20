@@ -1599,6 +1599,9 @@ instance HasLoc SymbolEntry where
 overModuleRef'' :: forall s s'. (forall t. ModuleRef'' s t -> ModuleRef'' s' t) -> ModuleRef' s -> ModuleRef' s'
 overModuleRef'' f = over unModuleRef' (\(t :&: m'') -> t :&: f m'')
 
+symbolEntryNameId :: SymbolEntry -> NameId
+symbolEntryNameId = (^. S.nameId) . symbolEntryToSName
+
 symbolEntryToSName :: SymbolEntry -> S.Name' ()
 symbolEntryToSName = \case
   EntryAxiom a -> a ^. axiomRefName

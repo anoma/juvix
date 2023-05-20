@@ -9,5 +9,8 @@ module M;
   axiom B : Type;
 end;
 
-open M using {A; id};
+open M using {A; id as myId};
 open M hiding {B};
+
+t : {X : Type} -> X -> X;
+t := myId;
