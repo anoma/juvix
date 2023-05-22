@@ -109,22 +109,6 @@ jobs:
         run: |
           vamp-ir --version
 
-      - name: Install VampIR for testing
-        uses: jaxxstorm/action-install-gh-release@v1.10.0
-        with:
-          repo: anoma/vamp-ir
-          platform: linux
-          tag: v0.1.2
-          chmod: 0755
-          rename-to: vamp-ir
-          extension-matching: disable
-          cache: enable
-
-      - name: Test VampIR
-        shell: bash
-        run: |
-          vamp-ir --version
-
       - name: Make runtime
         run: |
           cd main
