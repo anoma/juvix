@@ -48,7 +48,7 @@ jobs:
             --ghc-opt -XTemplateHaskell --ghc-opt -XUnicodeSyntax
 
   build-and-test-linux:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout our repository
         uses: actions/checkout@v3
