@@ -388,10 +388,15 @@ instance SingI s => PrettyCode (UsingHiding s) where
         Hiding {} -> kwHiding
       ppItems :: Sem r (NonEmpty (Doc Ann))
       ppItems = case uh of
-        Using s -> mapM ppUsingItem s
+        Using s -> mapM ppCode s
         Hiding s -> mapM ppSymbol s
-      ppUsingItem :: UsingItem s -> Sem r (Doc Ann)
-      ppUsingItem ui = ppSymbol (ui ^. usingSymbol)
+
+instance SingI s => PrettyCode (UsingItem s) where
+  ppCode ui = do
+    kwAs' <- ppCode kwAs
+    as' <- fmap (kwAs' <+>) <$> mapM ppSymbol (ui ^. usingAs)
+    sym' <- ppSymbol (ui ^. usingSymbol)
+    return (sym' <+?> as')
 
 instance PrettyCode (WithSource Pragmas) where
   ppCode pragma =
