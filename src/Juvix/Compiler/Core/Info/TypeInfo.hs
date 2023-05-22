@@ -5,7 +5,9 @@ import Juvix.Compiler.Core.Extra.Info
 import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Language
 
-newtype TypeInfo = TypeInfo {_infoType :: Type}
+newtype TypeInfo = TypeInfo
+  { _infoType :: Type
+  }
 
 instance IsInfo TypeInfo
 

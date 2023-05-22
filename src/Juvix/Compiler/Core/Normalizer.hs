@@ -64,6 +64,7 @@ normalize tab0 = run . evalInfoTableBuilder tab0 . runReader normEnv . normalize
       NTyp x -> goTypeConstr x
       NPrim {} -> return val
       NDyn {} -> return val
+      NBot {} -> return val
       Closure {..} -> goClosure _closureEnv _closureNode
 
     underBinder :: Norm a -> Norm a

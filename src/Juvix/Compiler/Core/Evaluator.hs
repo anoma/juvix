@@ -115,6 +115,7 @@ geval opts herr ctx env0 = eval' env0
       NTyp (TypeConstr i sym args) -> mkTypeConstr i sym (map' (eval' env) args)
       NPrim {} -> n
       NDyn {} -> n
+      NBot {} -> evalError "bottom" n
       Closure {} -> n
 
     branch :: Node -> Env -> [Node] -> Tag -> Maybe Node -> [CaseBranch] -> Node

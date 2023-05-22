@@ -350,6 +350,7 @@ instance PrettyCode Node where
       n' <- ppName KNameInductive (getInfoName _typeConstrInfo)
       return $ foldl' (<+>) n' args'
     NDyn {} -> return kwDynamic
+    NBot {} -> return kwBottom
     Closure env n ->
       ppCode (substEnv env n)
 
@@ -737,3 +738,9 @@ kwFail = keyword Str.fail_
 
 kwDynamic :: Doc Ann
 kwDynamic = keyword Str.any
+
+kwBottomAscii :: Doc Ann
+kwBottomAscii = keyword Str.bottomAscii
+
+kwBottom :: Doc Ann
+kwBottom = keyword Str.bottom
