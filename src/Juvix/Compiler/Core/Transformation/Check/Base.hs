@@ -4,7 +4,7 @@ import Juvix.Compiler.Core.Data.InfoTable
 import Juvix.Compiler.Core.Data.TypeDependencyInfo (createTypeDependencyInfo)
 import Juvix.Compiler.Core.Error
 import Juvix.Compiler.Core.Extra
-import Juvix.Compiler.Core.Info.LocationInfo (getInfoLocation)
+import Juvix.Compiler.Core.Info.LocationInfo (getInfoLocation, getNodeLocation)
 import Juvix.Compiler.Core.Info.TypeInfo qualified as Info
 import Juvix.Compiler.Core.Language
 import Juvix.Data.PPOutput
@@ -55,6 +55,14 @@ checkBuiltins allowUntypedFail = dmapRM go
             return $ End node
           _ -> return $ Recur node
       _ -> return $ Recur node
+
+-- | Checks that the root of the node is not `Bottom`. Currently the only way we
+-- create `Bottom` is when translating axioms that are not builtin. Hence it is
+-- enought to check the root only.
+checkNoAxiom :: forall r. Member (Error CoreError) r => Node -> Sem r Node
+checkNoAxiom n = case n of
+  NBot {} -> throw (unsupportedError "Non-builtin axioms cannot be compiled because they lack a definition" n (getNodeLocation n))
+  _ -> return n
 
 checkNoIO :: forall r. Member (Error CoreError) r => Node -> Sem r Node
 checkNoIO = dmapM go
