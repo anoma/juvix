@@ -48,7 +48,7 @@ jobs:
             --ghc-opt -XTemplateHaskell --ghc-opt -XUnicodeSyntax
 
   build-and-test-linux:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout our repository
         uses: actions/checkout@v3
@@ -90,8 +90,24 @@ jobs:
       - name: Setup Wasmer
         uses: wasmerio/setup-wasmer@v2
 
-      - name: Install libicu for testing
-        run: sudo apt install -y libicu66
+      - name: Install libs
+        run: sudo apt install -y libncurses5
+
+      - name: Install VampIR for testing
+        uses: jaxxstorm/action-install-gh-release@v1.10.0
+        with:
+          repo: anoma/vamp-ir
+          platform: linux
+          tag: v0.1.2
+          chmod: 0755
+          rename-to: vamp-ir
+          extension-matching: disable
+          cache: enable
+
+      - name: Test VampIR
+        shell: bash
+        run: |
+          vamp-ir --version
 
       - name: Install VampIR for testing
         uses: jaxxstorm/action-install-gh-release@v1.10.0
@@ -136,27 +152,23 @@ jobs:
           cd main
           make check-format-juvix-files && make typecheck-juvix-examples
 
-      - uses: actions/checkout@v3
+      - name: Install Smoke for testing
+        uses: jaxxstorm/action-install-gh-release@v1.10.0
         with:
-          repository: jonaprieto/smoke
-          path: smoke
-
-      - uses: freckle/stack-cache-action@v2
-        with:
-          working-directory: smoke
-
-      - name: Install Smoke
-        shell: bash
-        run: |
-          cd smoke
-          stack install --stack-root ${{ steps.stack.outputs.stack-root }}
+          repo: jonaprieto/smoke
+          platform: linux
+          tag: v2.3.2
+          chmod: 0755
+          rename-to: smoke
+          extension-matching: disable
+          cache: enable
 
       - name: Smoke testing
         id: smoke-linux
         if: ${{ success() }}
         run: |
           cd main
-          make smoke
+          make smoke-only
 
   build-and-test-macos:
     runs-on: macos-12
