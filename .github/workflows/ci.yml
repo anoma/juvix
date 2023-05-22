@@ -145,11 +145,22 @@ jobs:
         with:
           working-directory: smoke
 
-      - name: Install Smoke
-        shell: bash
-        run: |
-          cd smoke
-          stack install --stack-root ${{ steps.stack.outputs.stack-root }}
+      # - name: Install Smoke
+      #   shell: bash
+      #   run: |
+      #     cd smoke
+      #     stack install --stack-root ${{ steps.stack.outputs.stack-root }}
+
+      - name: Install Smoke for testing
+        uses: jaxxstorm/action-install-gh-release@v1.10.0
+        with:
+          repo: jonaprieto/smoke
+          platform: linux
+          tag: v2.3.2
+          chmod: 0755
+          rename-to: smoke
+          extension-matching: disable
+          cache: enable
 
       - name: Smoke testing
         id: smoke-linux
