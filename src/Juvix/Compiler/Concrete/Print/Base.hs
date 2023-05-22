@@ -320,10 +320,8 @@ instance PrettyPrint (UsingHiding 'Scoped) where
         Hiding {} -> ppCode kwHiding
       ppItems :: NonEmpty (Sem r ())
       ppItems = case uh of
-        Using s -> fmap ppUsingItem s
+        Using s -> fmap ppCode s
         Hiding s -> fmap ppCode s
-      ppUsingItem :: UsingItem 'Scoped -> Sem r ()
-      ppUsingItem ui = ppCode (ui ^. usingSymbol)
 
 instance PrettyPrint (UsingItem 'Scoped) where
   ppCode :: forall r. Members '[ExactPrint, Reader Options] r => UsingItem 'Scoped -> Sem r ()
