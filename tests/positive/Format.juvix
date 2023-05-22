@@ -156,6 +156,8 @@ module Patterns;
   f (a, b, c, d) := a;
 end;
 
+import Stdlib.Prelude open using {Nat as Natural};
+
 module Comments;
   axiom a1 : Type;
   -- attached to a1

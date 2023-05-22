@@ -1,8 +1,8 @@
 module Data.Nat;
 
 type ℕ :=
-  zero : ℕ
-| suc : ℕ → ℕ;
+  | zero : ℕ
+  | suc : ℕ → ℕ;
 
 syntax infixl 6 +;
 + : ℕ → ℕ → ℕ;
