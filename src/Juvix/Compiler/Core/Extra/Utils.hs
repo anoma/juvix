@@ -70,7 +70,6 @@ isType = \case
   NTyp {} -> True
   NDyn {} -> True
   NBot (Bottom i) -> isType (Info.getInfoType i)
-  -- NBot (Bottom {}) -> undefined
   NVar {} -> False
   NIdt {} -> False
   NCst {} -> False
