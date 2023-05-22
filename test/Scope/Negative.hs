@@ -245,5 +245,12 @@ scoperErrorTests =
       $(mkRelFile "LacksTypeSig2.juvix")
       $ \case
         ErrLacksTypeSig {} -> Nothing
+        _ -> wrongError,
+    NegTest
+      "Using symbol that is not exported"
+      $(mkRelDir "UsingHiding")
+      $(mkRelFile "Main.juvix")
+      $ \case
+        ErrModuleDoesNotExportSymbol {} -> Nothing
         _ -> wrongError
   ]

@@ -608,3 +608,28 @@ instance ToGenericError CaseBranchImplicitPattern where
     where
       i :: Interval
       i = getLoc _caseBranchImplicitPattern
+
+data ModuleDoesNotExportSymbol = ModuleDoesNotExportSymbol
+  { _moduleDoesNotExportSymbol :: Symbol,
+    _moduleDoesNotExportModule :: ModuleRef
+  }
+  deriving stock (Show)
+
+instance ToGenericError ModuleDoesNotExportSymbol where
+  genericError :: Member (Reader GenericOptions) r => ModuleDoesNotExportSymbol -> Sem r GenericError
+  genericError ModuleDoesNotExportSymbol {..} = do
+    opts <- fromGenericOptions <$> ask
+    let msg =
+          "The module"
+            <+> ppCode opts _moduleDoesNotExportModule
+            <+> "does not export"
+            <+> ppCode opts _moduleDoesNotExportSymbol
+    return
+      GenericError
+        { _genericErrorLoc = i,
+          _genericErrorMessage = AnsiText msg,
+          _genericErrorIntervals = [i]
+        }
+    where
+      i :: Interval
+      i = getLoc _moduleDoesNotExportSymbol
