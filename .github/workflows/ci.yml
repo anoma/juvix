@@ -50,11 +50,11 @@ jobs:
   build-and-test-linux:
     runs-on: ubuntu-22.04
     steps:
-      # - name: Checkout our repository
-      #   uses: actions/checkout@v3
-      #   with:
-      #     path: main
-      #     submodules: true
+      - name: Checkout our repository
+        uses: actions/checkout@v3
+        with:
+          path: main
+          submodules: true
 
       # - name: Cache LLVM and Clang
       #   id: cache-llvm
