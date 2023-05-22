@@ -14,6 +14,7 @@ import Juvix.Compiler.Core.Data.Stripped.InfoTable qualified as Stripped
 import Juvix.Compiler.Core.Extra.Base
 import Juvix.Compiler.Core.Extra.Utils.Base
 import Juvix.Compiler.Core.Info.NameInfo
+import Juvix.Compiler.Core.Info.TypeInfo qualified as Info
 import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Core.Language.Stripped qualified as Stripped
 import Juvix.Compiler.Core.Language.Value
@@ -309,6 +310,12 @@ instance PrettyCode Lambda where
           return $ kwLambda <> parens (n <+> kwColon <+> tty)
     return (lam <> oneLineOrNext b)
 
+instance PrettyCode Bottom where
+  ppCode :: Member (Reader Options) r => Bottom -> Sem r (Doc Ann)
+  ppCode (Bottom i) = do
+    ty' <- ppCode (Info.getInfoType i)
+    return (parens (kwBottom <+> kwColon <+> ty'))
+
 instance PrettyCode Node where
   ppCode :: forall r. (Member (Reader Options) r) => Node -> Sem r (Doc Ann)
   ppCode node = case node of
@@ -350,7 +357,7 @@ instance PrettyCode Node where
       n' <- ppName KNameInductive (getInfoName _typeConstrInfo)
       return $ foldl' (<+>) n' args'
     NDyn {} -> return kwDynamic
-    NBot {} -> return kwBottom
+    NBot b -> ppCode b
     Closure env n ->
       ppCode (substEnv env n)
 
