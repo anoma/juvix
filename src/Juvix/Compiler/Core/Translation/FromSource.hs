@@ -617,9 +617,10 @@ exprDynamic = kw kwAny $> mkDynamic'
 
 exprBottom :: Members '[InfoTableBuilder] r => ParsecS r Node
 exprBottom = do
-  kw kwBottom
-  ty <- fromMaybe mkDynamic' <$> optional (kw kwColon >> expression)
-  return (mkAxiom ty)
+  (ty, loc) <- interval $ do
+    kw kwBottom
+    fromMaybe mkDynamic' <$> optional (kw kwColon >> expression)
+  return (mkAxiom loc ty)
 
 parseLocalName :: ParsecS r (Text, Location)
 parseLocalName = parseWildcardName <|> parseIdentName

@@ -557,7 +557,7 @@ goAxiomDef ::
 goAxiomDef a = maybe goAxiomNotBuiltin builtinBody (a ^. Internal.axiomBuiltin)
   where
     goAxiomNotBuiltin :: Sem r ()
-    goAxiomNotBuiltin = axiomType' >>= registerAxiomDef . mkAxiom
+    goAxiomNotBuiltin = axiomType' >>= registerAxiomDef . mkAxiom (getLoc a)
 
     builtinBody :: Internal.BuiltinAxiom -> Sem r ()
     builtinBody = \case

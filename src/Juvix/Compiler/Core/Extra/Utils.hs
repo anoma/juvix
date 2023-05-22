@@ -28,6 +28,7 @@ import Juvix.Compiler.Core.Extra.Recursors.Utils
 import Juvix.Compiler.Core.Extra.Utils.Base
 import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Info.ExpansionInfo
+import Juvix.Compiler.Core.Info.LocationInfo qualified as Info
 import Juvix.Compiler.Core.Info.TypeInfo qualified as Info
 import Juvix.Compiler.Core.Language
 
@@ -39,8 +40,8 @@ substEnvInBranch env br = over caseBranchBody (substEnv env') br
 isClosed :: Node -> Bool
 isClosed = not . has freeVars
 
-mkAxiom :: Type -> Node
-mkAxiom ty = mkBottom (Info.setInfoType ty mempty)
+mkAxiom :: Interval -> Type -> Node
+mkAxiom loc ty = mkBottom (Info.setInfoLocation loc (Info.setInfoType ty mempty))
 
 isTypeConstr :: InfoTable -> Type -> Bool
 isTypeConstr tab ty = case typeTarget ty of

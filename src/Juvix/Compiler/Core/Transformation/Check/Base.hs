@@ -9,6 +9,7 @@ import Juvix.Compiler.Core.Info.LocationInfo (getInfoLocation, getNodeLocation)
 import Juvix.Compiler.Core.Info.TypeInfo qualified as Info
 import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Core.Transformation.Base (mapT')
+import Juvix.Data.NameKind
 import Juvix.Data.PPOutput
 
 dynamicTypeError :: Node -> Maybe Location -> CoreError
@@ -25,7 +26,7 @@ axiomError sym loc = do
   let nameTxt = identName tbl sym
   throw
     CoreError
-      { _coreErrorMsg = ppOutput ("Symbol" <+> pretty nameTxt <> " is defined as an axiom and thus it cannot be compiled"),
+      { _coreErrorMsg = ppOutput ("The symbol" <+> annotate (AnnKind KNameAxiom) (pretty nameTxt) <> " is defined as an axiom and thus it cannot be compiled"),
         _coreErrorNode = Nothing,
         _coreErrorLoc = fromMaybe defaultLoc loc
       }
