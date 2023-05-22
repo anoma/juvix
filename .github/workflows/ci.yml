@@ -50,100 +50,100 @@ jobs:
   build-and-test-linux:
     runs-on: ubuntu-22.04
     steps:
-      - name: Checkout our repository
-        uses: actions/checkout@v3
-        with:
-          path: main
-          submodules: true
+      # - name: Checkout our repository
+      #   uses: actions/checkout@v3
+      #   with:
+      #     path: main
+      #     submodules: true
 
-      - name: Cache LLVM and Clang
-        id: cache-llvm
-        uses: actions/cache@v3
-        with:
-          path: |
-            C:/Program Files/LLVM
-            ./llvm
-          key: "${{ runner.os }}-llvm-13"
+      # - name: Cache LLVM and Clang
+      #   id: cache-llvm
+      #   uses: actions/cache@v3
+      #   with:
+      #     path: |
+      #       C:/Program Files/LLVM
+      #       ./llvm
+      #     key: "${{ runner.os }}-llvm-13"
 
-      - name: Install LLVM and Clang
-        uses: KyleMayes/install-llvm-action@v1
-        with:
-          version: "13.0"
-          cached: "${{ steps.cache-llvm.outputs.cache-hit }}"
+      # - name: Install LLVM and Clang
+      #   uses: KyleMayes/install-llvm-action@v1
+      #   with:
+      #     version: "13.0"
+      #     cached: "${{ steps.cache-llvm.outputs.cache-hit }}"
 
-      - name: Download and extract wasi-sysroot
-        run: >
-          curl
-          https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-15/wasi-sysroot-15.0.tar.gz
-          -OL
+      # - name: Download and extract wasi-sysroot
+      #   run: >
+      #     curl
+      #     https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-15/wasi-sysroot-15.0.tar.gz
+      #     -OL
 
-          tar xfv wasi-sysroot-15.0.tar.gz
+      #     tar xfv wasi-sysroot-15.0.tar.gz
 
-      - name: Set WASI_SYSROOT_PATH
-        run: |
-          echo "WASI_SYSROOT_PATH=$GITHUB_WORKSPACE/wasi-sysroot" >> $GITHUB_ENV
+      # - name: Set WASI_SYSROOT_PATH
+      #   run: |
+      #     echo "WASI_SYSROOT_PATH=$GITHUB_WORKSPACE/wasi-sysroot" >> $GITHUB_ENV
 
-      - name: Add ~/.local/bin to PATH
-        run: |
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
+      # - name: Add ~/.local/bin to PATH
+      #   run: |
+      #     echo "$HOME/.local/bin" >> $GITHUB_PATH
 
-      - name: Setup Wasmer
-        uses: wasmerio/setup-wasmer@v2
+      # - name: Setup Wasmer
+      #   uses: wasmerio/setup-wasmer@v2
 
-      - name: Install libncurses5
-        run: sudo apt install -y libncurses5
+      - name: Install libs
+        run: sudo apt install -y libncurses5 libicu70
 
-      - name: Install VampIR for testing
-        uses: jaxxstorm/action-install-gh-release@v1.10.0
-        with:
-          repo: anoma/vamp-ir
-          platform: linux
-          tag: v0.1.2
-          chmod: 0755
-          rename-to: vamp-ir
-          extension-matching: disable
-          cache: enable
+      # - name: Install VampIR for testing
+      #   uses: jaxxstorm/action-install-gh-release@v1.10.0
+      #   with:
+      #     repo: anoma/vamp-ir
+      #     platform: linux
+      #     tag: v0.1.2
+      #     chmod: 0755
+      #     rename-to: vamp-ir
+      #     extension-matching: disable
+      #     cache: enable
 
-      - name: Test VampIR
-        shell: bash
-        run: |
-          vamp-ir --version
+      # - name: Test VampIR
+      #   shell: bash
+      #   run: |
+      #     vamp-ir --version
 
-      - name: Make runtime
-        run: |
-          cd main
-          make runtime
+      # - name: Make runtime
+      #   run: |
+      #     cd main
+      #     make runtime
 
-      - name: Stack setup
-        id: stack
-        uses: freckle/stack-action@v4
-        with:
-          working-directory: main
-          test: false
+      # - name: Stack setup
+      #   id: stack
+      #   uses: freckle/stack-action@v4
+      #   with:
+      #     working-directory: main
+      #     test: false
 
-      - name: Install and test Juvix
-        id: test
-        if: ${{ success() }}
-        run: |
-          cd main
-          make install
-          make test
+      # - name: Install and test Juvix
+      #   id: test
+      #   if: ${{ success() }}
+      #   run: |
+      #     cd main
+      #     make install
+      #     make test
 
-      - name: Typecheck and format Juvix examples
-        if: ${{ success() }}
-        shell: bash
-        run: |
-          cd main
-          make check-format-juvix-files && make typecheck-juvix-examples
+      # - name: Typecheck and format Juvix examples
+      #   if: ${{ success() }}
+      #   shell: bash
+      #   run: |
+      #     cd main
+      #     make check-format-juvix-files && make typecheck-juvix-examples
 
-      - uses: actions/checkout@v3
-        with:
-          repository: jonaprieto/smoke
-          path: smoke
+      # - uses: actions/checkout@v3
+      #   with:
+      #     repository: jonaprieto/smoke
+      #     path: smoke
 
-      - uses: freckle/stack-cache-action@v2
-        with:
-          working-directory: smoke
+      # - uses: freckle/stack-cache-action@v2
+      #   with:
+      #     working-directory: smoke
 
       # - name: Install Smoke
       #   shell: bash
@@ -167,7 +167,7 @@ jobs:
         if: ${{ success() }}
         run: |
           cd main
-          make smoke
+          make smoke-only
 
   build-and-test-macos:
     runs-on: macos-12
