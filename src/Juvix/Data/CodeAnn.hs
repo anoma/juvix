@@ -141,6 +141,9 @@ kwIn = keyword Str.in_
 kwPublic :: Doc Ann
 kwPublic = keyword Str.public
 
+kwSyntax :: Doc Ann
+kwSyntax = keyword Str.syntax
+
 kwPostfix :: Doc Ann
 kwPostfix = keyword Str.postfix
 

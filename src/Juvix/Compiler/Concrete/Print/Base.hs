@@ -141,6 +141,10 @@ instance PrettyPrint (Import 'Scoped) where
         Nothing -> Nothing
         Just as -> Just (noLoc P.kwAs <+> ppMorpheme as)
 
+instance PrettyPrint SyntaxDef where
+  ppCode = \case
+    SyntaxOperator op -> ppCode op
+
 instance PrettyPrint OperatorSyntaxDef where
   ppCode OperatorSyntaxDef {..} = do
     opSymbol' <- P.ppUnkindedSymbol _opSymbol
@@ -149,7 +153,7 @@ instance PrettyPrint OperatorSyntaxDef where
     where
       fi = do
         p <- P.ppCode (_opFixity ^. fixityPrecedence)
-        ppCode _opKw <+> noLoc p
+        ppCode _opSyntaxKw <+> ppCode _opKw <+> noLoc p
 
 instance PrettyPrint Expression where
   ppCode = ppMorpheme
@@ -440,7 +444,7 @@ instance PrettyPrint (InductiveDef 'Scoped) where
 
 instance PrettyPrint (Statement 'Scoped) where
   ppCode = \case
-    StatementOperator o -> ppCode o
+    StatementSyntax s -> ppCode s
     StatementTypeSignature s -> ppCode s
     StatementImport i -> ppCode i
     StatementInductive i -> ppCode i

@@ -10,12 +10,12 @@ not : Bool → Bool;
 not true := false;
 not false := true;
 
-infixr 2 ||;
+syntax infixr 2 ||;
 || : Bool → Bool → Bool;
 || false a := a;
 || true _ := true;
 
-infixr 2 &&;
+syntax infixr 2 &&;
 && : Bool → Bool → Bool;
 && false _ := false;
 && true a := a;

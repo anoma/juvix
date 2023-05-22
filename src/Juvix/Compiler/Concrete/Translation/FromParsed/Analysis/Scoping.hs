@@ -1296,7 +1296,7 @@ checkStatement ::
   Statement 'Parsed ->
   Sem r (Statement 'Scoped)
 checkStatement s = topBindings $ case s of
-  StatementOperator opDef -> StatementOperator opDef <$ checkOperatorSyntaxDef opDef
+  StatementSyntax synDef -> StatementSyntax <$> checkSyntaxDef synDef
   StatementTypeSignature tySig -> StatementTypeSignature <$> checkTypeSignature tySig
   StatementImport imp -> StatementImport <$> checkImport imp
   StatementInductive dt -> StatementInductive <$> checkInductiveDef dt
@@ -1304,6 +1304,13 @@ checkStatement s = topBindings $ case s of
   StatementOpenModule open -> StatementOpenModule <$> checkOpenModule open
   StatementFunctionClause clause -> StatementFunctionClause <$> checkFunctionClause clause
   StatementAxiom ax -> StatementAxiom <$> checkAxiomDef ax
+
+checkSyntaxDef ::
+  (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, State ScoperFixities] r) =>
+  SyntaxDef ->
+  Sem r SyntaxDef
+checkSyntaxDef = \case
+  SyntaxOperator opDef -> SyntaxOperator opDef <$ checkOperatorSyntaxDef opDef
 
 -------------------------------------------------------------------------------
 -- Infix Expression

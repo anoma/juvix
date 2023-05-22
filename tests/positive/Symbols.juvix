@@ -15,11 +15,11 @@ import Stdlib.Data.Nat open;
 （*） : Nat -> Nat -> Nat;
 （*） := (*);
 
-infixl 6 －;
+syntax infixl 6 －;
 － : Nat -> Nat -> Nat;
 － := （-）;
 
-infixl 7 ·;
+syntax infixl 7 ·;
 · : Nat -> Nat -> Nat;
 · := （*）;
 

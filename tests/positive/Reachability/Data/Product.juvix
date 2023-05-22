@@ -1,5 +1,5 @@
 module Data.Product;
 
-infixr 2 ×;
+syntax infixr 2 ×;
 type × (a : Type) (b : Type) :=
   | , : a → b → a × b;

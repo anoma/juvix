@@ -253,7 +253,7 @@ statement = P.label "<top level statement>" $ do
   optional_ stashPragmas
   ms <-
     optional
-      ( StatementOperator <$> operatorSyntaxDef
+      ( StatementSyntax <$> syntaxDef
           <|> P.try (StatementOpenModule <$> newOpenSyntax)
           <|> StatementOpenModule <$> openModule
           <|> StatementImport <$> import_
@@ -446,14 +446,23 @@ builtinStatement = do
     <|> (builtinAxiom >>= fmap StatementAxiom . builtinAxiomDef)
 
 --------------------------------------------------------------------------------
+-- Syntax declaration
+--------------------------------------------------------------------------------
+
+syntaxDef :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r SyntaxDef
+syntaxDef = do
+  s <- kw kwSyntax
+  SyntaxOperator <$> operatorSyntaxDef s
+
+--------------------------------------------------------------------------------
 -- Operator syntax declaration
 --------------------------------------------------------------------------------
 
 precedence :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r Precedence
 precedence = PrecNat <$> (fst <$> decimal)
 
-operatorSyntaxDef :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r OperatorSyntaxDef
-operatorSyntaxDef = do
+operatorSyntaxDef :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => KeywordRef -> ParsecS r OperatorSyntaxDef
+operatorSyntaxDef _opSyntaxKw = do
   (_fixityArity, _opKw) <- arity
   _fixityPrecedence <- precedence
   _opSymbol <- symbol

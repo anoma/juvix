@@ -10,7 +10,7 @@ LambdaTy : Type -> Type;
 
 AppTy : Type -> Type;
 
-infixl 6 :+:;
+syntax infixl 6 :+:;
 --- An ;Expr'; is an expression in our language.
 type Expr' (v : Type) :=
   | ! : v -> Expr' v
@@ -104,7 +104,7 @@ module ValTraits;
       ++str ExprTraits.toString n;
 end;
 
-infixl 1 >>=;
+syntax infixl 1 >>=;
 --- Monadic binding for ;Either;.
 >>= :
   {e a b : Type}
@@ -184,7 +184,7 @@ evalNat topExpr := eval topExpr >>= getNat;
 Λ : Expr -> Expr;
 Λ body := lam (mkLambda body);
 
-infixl 9 #;
+syntax infixl 9 #;
 --- Syntactical helper for creating an ;app;.
 # : Expr -> Expr -> Expr;
 # f x := app (mkApp f x);

@@ -3,7 +3,6 @@ module Data.List;
 import Data.Bool;
 open Data.Bool;
 
--- infixr 5 ::; waiting for implicit arguments
 type List (A : Type) :=
   | nil : List A
   | :: : A → List A → List A;
@@ -90,7 +89,6 @@ merge a cmp (:: x xs) (:: y ys) :=
 merge _ _ nil ys := ys;
 merge _ _ xs nil := xs;
 
--- infixr 5 ++; waiting for implicit arguments
 ++ : (a : Type) → List a → List a → List a;
 ++ a nil ys := ys;
 ++ a (:: x xs) ys := :: x (++ a xs ys);

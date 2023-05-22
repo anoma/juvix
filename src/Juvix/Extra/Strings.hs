@@ -74,6 +74,9 @@ infixr_ = "infixr"
 open :: (IsString s) => s
 open = "open"
 
+syntax :: (IsString s) => s
+syntax = "syntax"
+
 postfix :: (IsString s) => s
 postfix = "postfix"
 

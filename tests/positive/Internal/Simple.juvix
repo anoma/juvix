@@ -14,18 +14,18 @@ type Nat :=
   | zero : Nat
   | suc : Nat → Nat;
 
-infix 3 ==;
+syntax infix 3 ==;
 == : Nat → Nat → Bool;
 == zero zero := true;
 == (suc a) (suc b) := a == b;
 == _ _ := false;
 
-infixl 4 +;
+syntax infixl 4 +;
 + : Nat → Nat → Nat;
 + zero b := b;
 + (suc a) b := suc (a + b);
 
-infixr 5 ::;
+syntax infixr 5 ::;
 type List :=
   | nil : List
   | :: : Nat → List → List;

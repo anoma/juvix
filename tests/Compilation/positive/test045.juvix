@@ -1,12 +1,12 @@
 -- implicit builtin bool
--- Builtin nat requires builtin bool when translated to integers, because 
+-- Builtin nat requires builtin bool when translated to integers, because
 -- matching is translated to comparison operators and cases on booleans.
 module test045;
   builtin nat type Nat :=
     | zero : Nat
     | suc : Nat → Nat;
 
-  infixl 6 +;
+  syntax infixl 6 +;
   + : Nat → Nat → Nat;
   + zero b := b;
   + (suc a) b := suc (a + b);

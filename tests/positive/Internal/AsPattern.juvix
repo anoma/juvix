@@ -1,6 +1,6 @@
 module AsPattern;
 
-infixr 9 ∘;
+syntax infixr 9 ∘;
 ∘ :
   {A : Type}
     → {B : Type}
@@ -16,14 +16,14 @@ type Nat :=
   | zero : Nat
   | suc : Nat → Nat;
 
-infixl 6 +;
+syntax infixl 6 +;
 builtin nat-plus
 + : Nat → Nat → Nat;
 + zero b := b;
 + (suc a) b := suc (a + b);
 
-infixr 2 ×;
-infixr 4 ,;
+syntax infixr 2 ×;
+syntax infixr 4 ,;
 type × (A : Type) (B : Type) :=
   | , : A → B → A × B;
 
