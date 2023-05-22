@@ -7,7 +7,8 @@ import Juvix.Compiler.Core.Transformation.Check.Base
 import Juvix.Data.PPOutput
 
 checkExec :: forall r. Member (Error CoreError) r => InfoTable -> Sem r InfoTable
-checkExec tab =
+checkExec tab = do
+  checkNoAxioms tab
   case tab ^. infoMain of
     Nothing ->
       throw

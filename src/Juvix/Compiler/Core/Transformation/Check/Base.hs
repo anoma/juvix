@@ -1,21 +1,34 @@
 module Juvix.Compiler.Core.Transformation.Check.Base where
 
 import Juvix.Compiler.Core.Data.InfoTable
+import Juvix.Compiler.Core.Data.InfoTableBuilder
 import Juvix.Compiler.Core.Data.TypeDependencyInfo (createTypeDependencyInfo)
 import Juvix.Compiler.Core.Error
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Info.LocationInfo (getInfoLocation, getNodeLocation)
 import Juvix.Compiler.Core.Info.TypeInfo qualified as Info
 import Juvix.Compiler.Core.Language
+import Juvix.Compiler.Core.Transformation.Base (mapT')
 import Juvix.Data.PPOutput
 
 dynamicTypeError :: Node -> Maybe Location -> CoreError
 dynamicTypeError node loc =
   CoreError
-    { _coreErrorMsg = ppOutput $ "compilation for this target requires full type information",
+    { _coreErrorMsg = ppOutput "compilation for this target requires full type information",
       _coreErrorNode = Just node,
       _coreErrorLoc = fromMaybe defaultLoc loc
     }
+
+axiomError :: Members '[Error CoreError, InfoTableBuilder] r => Symbol -> Maybe Location -> Sem r a
+axiomError sym loc = do
+  tbl <- getInfoTable
+  let nameTxt = identName tbl sym
+  throw
+    CoreError
+      { _coreErrorMsg = ppOutput ("Symbol" <+> pretty nameTxt <> " is defined as an axiom and thus it cannot be compiled"),
+        _coreErrorNode = Nothing,
+        _coreErrorLoc = fromMaybe defaultLoc loc
+      }
 
 unsupportedError :: Text -> Node -> Maybe Location -> CoreError
 unsupportedError what node loc =
@@ -59,10 +72,13 @@ checkBuiltins allowUntypedFail = dmapRM go
 -- | Checks that the root of the node is not `Bottom`. Currently the only way we
 -- create `Bottom` is when translating axioms that are not builtin. Hence it is
 -- enought to check the root only.
-checkNoAxiom :: forall r. Member (Error CoreError) r => Node -> Sem r Node
-checkNoAxiom n = case n of
-  NBot {} -> throw (unsupportedError "Non-builtin axioms cannot be compiled because they lack a definition" n (getNodeLocation n))
-  _ -> return n
+checkNoAxioms :: forall r. Member (Error CoreError) r => InfoTable -> Sem r ()
+checkNoAxioms = void . mapT' checkNodeNoAxiom
+  where
+    checkNodeNoAxiom :: Symbol -> Node -> Sem (InfoTableBuilder ': r) Node
+    checkNodeNoAxiom sym n = case n of
+      NBot {} -> axiomError sym (getNodeLocation n)
+      _ -> return n
 
 checkNoIO :: forall r. Member (Error CoreError) r => Node -> Sem r Node
 checkNoIO = dmapM go

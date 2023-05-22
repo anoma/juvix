@@ -8,6 +8,7 @@ checkGeb :: forall r. Member (Error CoreError) r => InfoTable -> Sem r InfoTable
 checkGeb tab =
   checkMainExists tab
     >> checkNoRecursiveTypes tab
+    >> checkNoAxioms tab
     >> mapAllNodesM checkNoIO tab
     >> mapAllNodesM (checkBuiltins False) tab
     >> mapAllNodesM (checkTypes False tab) tab
