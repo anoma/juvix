@@ -1,0 +1,9 @@
+-- polymorphism
+module test019;
+
+open import Stdlib.Prelude;
+
+main : Nat -> Nat -> Nat;
+main x y := case tail (id (x :: y :: nil))
+  | nil := 0
+  | h :: _ := h;

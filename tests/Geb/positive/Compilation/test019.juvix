@@ -1,4 +1,4 @@
--- higher-order functions and recursion
+-- higher-order functions
 module test019;
 
 open import Stdlib.Prelude;

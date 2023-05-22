@@ -7,45 +7,44 @@ import Juvix.Compiler.Core
 import Juvix.Prelude.Pretty
 import System.Process qualified as P
 
-vampirAssertion :: Path Abs File -> Path Abs File -> (String -> IO ()) -> Assertion
-vampirAssertion mainFile dataFile step = do
+vampirAssertion :: Int -> Path Abs File -> Path Abs File -> (String -> IO ()) -> Assertion
+vampirAssertion paramsNum mainFile dataFile step = do
   step "Parse"
   s <- readFile (toFilePath mainFile)
   case runParserMain mainFile emptyInfoTable s of
     Left err -> assertFailure (show err)
-    Right tab -> do
-      withTempDir'
-        ( \dirPath -> do
-            step "Translate to VampIR"
-            let vampirFile = dirPath <//> $(mkRelFile "program.pir")
-            case run (runReader defaultCoreOptions (runError @JuvixError (coreToVampIR' tab))) of
-              Left err -> assertFailure (show (pretty (fromJuvixError @GenericError err)))
-              Right VampIR.Result {..} -> do
-                TIO.writeFile (toFilePath vampirFile) _resultCode
-                vampirAssertion' vampirFile dataFile step
-        )
+    Right tab -> vampirAssertion' paramsNum tab dataFile step
 
-vampirAssertion' :: Path Abs File -> Path Abs File -> (String -> IO ()) -> Assertion
-vampirAssertion' inputFile dataFile step = do
-  step "Check vamp-ir on path"
-  assertCmdExists $(mkRelFile "vamp-ir")
-
+vampirAssertion' :: Int -> InfoTable -> Path Abs File -> (String -> IO ()) -> Assertion
+vampirAssertion' paramsNum tab dataFile step = do
   withTempDir'
     ( \dirPath -> do
-        step "VampIR setup parameters"
-        P.callProcess "vamp-ir" (setupParamsArgs dirPath)
-        step "VampIR compile"
-        P.callProcess "vamp-ir" (compileArgs inputFile dirPath)
-        step "VampIR prove"
-        P.callProcess "vamp-ir" (proveArgs dataFile dirPath)
-        step "VampIR verify"
-        P.callProcess "vamp-ir" (verifyArgs dirPath)
+        step "Translate to VampIR"
+        let vampirFile = dirPath <//> $(mkRelFile "program.pir")
+        case run (runReader defaultCoreOptions (runError @JuvixError (coreToVampIR' tab))) of
+          Left err -> assertFailure (show (pretty (fromJuvixError @GenericError err)))
+          Right VampIR.Result {..} -> do
+            TIO.writeFile (toFilePath vampirFile) _resultCode
+
+            step "Check vamp-ir on path"
+            assertCmdExists $(mkRelFile "vamp-ir")
+
+            step "VampIR setup parameters"
+            P.callProcess "vamp-ir" (setupParamsArgs paramsNum dirPath)
+            step "VampIR compile"
+            P.callProcess "vamp-ir" (compileArgs vampirFile dirPath)
+            step "VampIR prove"
+            P.callProcess "vamp-ir" (proveArgs dataFile dirPath)
+            step "VampIR verify"
+            P.callProcess "vamp-ir" (verifyArgs dirPath)
     )
 
-setupParamsArgs :: Path Abs Dir -> [String]
-setupParamsArgs dirPath =
+setupParamsArgs :: Int -> Path Abs Dir -> [String]
+setupParamsArgs paramsNum dirPath =
   [ "plonk",
     "setup",
+    "-m",
+    show paramsNum,
     "-o",
     toFilePath (dirPath <//> $(mkRelFile "params.pp"))
   ]

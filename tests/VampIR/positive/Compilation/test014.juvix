@@ -1,0 +1,16 @@
+-- recursion through higher-order functions
+module test014;
+
+open import Stdlib.Prelude;
+
+g : (Nat → Nat) → Nat → Nat;
+g f zero := 0;
+g f (suc x) := f x;
+
+{-# unroll: 21 #-}
+terminating
+f : Nat → Nat;
+f x := x + g f x;
+
+main : Nat -> Nat;
+main := f;

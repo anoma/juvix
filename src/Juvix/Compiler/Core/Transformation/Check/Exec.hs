@@ -1,14 +1,21 @@
-module Juvix.Compiler.Core.Transformation.CheckExec where
+module Juvix.Compiler.Core.Transformation.Check.Exec where
 
 import Juvix.Compiler.Core.Error
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Transformation.Base
+import Juvix.Compiler.Core.Transformation.Check.Base
 import Juvix.Data.PPOutput
 
 checkExec :: forall r. Member (Error CoreError) r => InfoTable -> Sem r InfoTable
 checkExec tab =
   case tab ^. infoMain of
-    Nothing -> return tab
+    Nothing ->
+      throw
+        CoreError
+          { _coreErrorMsg = ppOutput "no `main` function",
+            _coreErrorNode = Nothing,
+            _coreErrorLoc = defaultLoc
+          }
     Just sym ->
       case ii ^. identifierType of
         NPi {} ->
@@ -31,9 +38,3 @@ checkExec tab =
       where
         ii = lookupIdentifierInfo tab sym
         loc = fromMaybe defaultLoc (ii ^. identifierLocation)
-
-        mockFile :: Path Abs File
-        mockFile = $(mkAbsFile "/core-to-exec")
-
-        defaultLoc :: Interval
-        defaultLoc = singletonInterval (mkInitialLoc mockFile)

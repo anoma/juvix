@@ -1,0 +1,13 @@
+-- let
+module test007;
+
+open import Stdlib.Prelude;
+
+main : Nat -> Nat -> Nat;
+main a b :=
+    let x : Nat := a in
+    let x1 : Nat := x + let x2 : Nat := 2 in x2 in
+    let x3 : Nat := x1 * x1 in
+    let y : Nat := x3 + b in -- 11
+    let z : Nat := x3 + y in -- 20
+    x + y + z;

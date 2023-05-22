@@ -1,0 +1,15 @@
+-- single-constructor inductive types
+module test005;
+
+open import Stdlib.Prelude;
+
+type Box2 :=
+    box2 : Nat -> Nat -> Box2;
+
+type Box :=
+    box : Box2 -> Box;
+
+main : Nat -> Nat -> Nat;
+main x y := case box (box2 x y)
+  | box (box2 x y) := x + y;
+-- result: 8

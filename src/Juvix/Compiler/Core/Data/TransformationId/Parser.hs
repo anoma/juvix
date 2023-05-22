@@ -80,6 +80,7 @@ transformationText = \case
   DisambiguateNames -> strDisambiguateNames
   CheckGeb -> strCheckGeb
   CheckExec -> strCheckExec
+  CheckVampIR -> strCheckVampIR
   Normalize -> strNormalize
   LetFolding -> strLetFolding
   LambdaFolding -> strLambdaFolding
@@ -168,6 +169,9 @@ strCheckGeb = "check-geb"
 
 strCheckExec :: Text
 strCheckExec = "check-exec"
+
+strCheckVampIR :: Text
+strCheckVampIR = "check-vampir"
 
 strNormalize :: Text
 strNormalize = "normalize"

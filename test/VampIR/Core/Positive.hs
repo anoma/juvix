@@ -1,47 +1,55 @@
 module VampIR.Core.Positive where
 
 import Base
+import Core.Normalize.Positive (PosTest (..))
+import Core.Normalize.Positive qualified as Normalize
 import VampIR.Core.Base
 
-data PosTest = PosTest
-  { _name :: String,
-    _relDir :: Path Rel Dir,
-    _file :: Path Rel File,
-    _dataFile :: Path Rel File
-  }
+fromTest :: PosTest -> TestTree
+fromTest = mkTest . toTestDescr
 
-makeLenses ''PosTest
-
-root :: Path Abs Dir
-root = relToProject $(mkRelDir "tests/VampIR/positive/translation")
-
-testDescr :: PosTest -> TestDescr
-testDescr PosTest {..} =
-  let tRoot = root <//> _relDir
-      file' = tRoot <//> _file
-      data' = tRoot <//> _dataFile
-   in TestDescr
-        { _testName = _name,
-          _testRoot = tRoot,
-          _testAssertion = Steps $ vampirAssertion file' data'
-        }
+toTestDescr :: PosTest -> TestDescr
+toTestDescr = Normalize.toTestDescr' vampirAssertion
 
 allTests :: TestTree
 allTests =
   testGroup
     "VampIR translation positive tests"
-    (map (mkTest . testDescr) tests)
+    ( map
+        (mkTest . toTestDescr)
+        ( tests
+            ++ ( Normalize.filterOutTests
+                   ( -- VampIR stack overflow
+                     [ "Test020: functional queues",
+                       "Test026: letrec"
+                     ]
+                       ++
+                       -- recursion takes too long
+                       [ "Test014: recursion",
+                         "Test015: tail recursion",
+                         "Test016: tail recursion: Fibonacci numbers in linear time",
+                         "Test017: recursion through higher-order functions",
+                         "Test018: tail recursion through higher-order functions",
+                         "Test022: mutual recursion"
+                       ]
+                   )
+                   Normalize.tests
+               )
+        )
+    )
 
 tests :: [PosTest]
 tests =
   [ PosTest
+      5
       "Test001"
-      $(mkRelDir ".")
+      $(mkRelDir "translation")
       $(mkRelFile "test001.jvc")
       $(mkRelFile "data/test001.json"),
     PosTest
+      5
       "Test002"
-      $(mkRelDir ".")
+      $(mkRelDir "translation")
       $(mkRelFile "test002.jvc")
       $(mkRelFile "data/test002.json")
   ]
