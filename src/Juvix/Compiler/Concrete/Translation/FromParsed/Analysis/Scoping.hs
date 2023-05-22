@@ -792,12 +792,48 @@ checkOpenModuleNoImport OpenModule {..}
   | isJust _openModuleImportKw = impossible
   | otherwise = do
       openModuleName'@(ModuleRef' (_ :&: moduleRef'')) <- lookupModuleSymbol _openModuleName
-      mergeScope (alterScope (moduleRef'' ^. moduleExportInfo))
+      let exportInfo@(ExportInfo tbl) = moduleRef'' ^. moduleExportInfo
+      mergeScope (alterScope exportInfo)
       registerName (moduleRef'' ^. moduleRefName)
+
+      let checkUsingHiding :: UsingHiding 'Parsed -> Sem r (UsingHiding 'Scoped)
+          checkUsingHiding = \case
+            Hiding h -> Hiding <$> mapM scopeSymbol h
+            Using uh -> Using <$> mapM checkUsingItem uh
+            where
+              scopeSymbol :: Symbol -> Sem r S.Symbol
+              scopeSymbol s = do
+                let mentry :: Maybe SymbolEntry
+                    mentry = tbl ^. at s
+                    err =
+                      throw
+                        ( ErrModuleDoesNotExportSymbol
+                            ( ModuleDoesNotExportSymbol
+                                { _moduleDoesNotExportSymbol = s,
+                                  _moduleDoesNotExportModule = openModuleName'
+                                }
+                            )
+                        )
+                entry <- maybe err return mentry
+                let scopedSym = entryToSymbol entry s
+                registerName (S.unqualifiedSymbol scopedSym)
+                return scopedSym
+
+              checkUsingItem :: UsingItem 'Parsed -> Sem r (UsingItem 'Scoped)
+              checkUsingItem i = do
+                scopedSym <- scopeSymbol (i ^. usingSymbol)
+                return
+                  ( UsingItem
+                      { _usingSymbol = scopedSym
+                      }
+                  )
+
+      usingHiding' <- mapM checkUsingHiding _openUsingHiding
       return
         OpenModule
           { _openModuleName = openModuleName',
             _openImportAsName = Nothing,
+            _openUsingHiding = usingHiding',
             ..
           }
   where
@@ -809,11 +845,13 @@ checkOpenModuleNoImport OpenModule {..}
         mergeSymbol (s, entry) =
           modify
             (over scopeSymbols (HashMap.insertWith (<>) s (symbolInfoSingle entry)))
+
     setsUsingHiding :: Maybe (Either (HashSet Symbol) (HashSet Symbol))
     setsUsingHiding = case _openUsingHiding of
-      Just (Using l) -> Just (Left (HashSet.fromList (toList l)))
+      Just (Using l) -> Just (Left (HashSet.fromList (map (^. usingSymbol) $ toList l)))
       Just (Hiding l) -> Just (Right (HashSet.fromList (toList l)))
       Nothing -> Nothing
+
     alterScope :: ExportInfo -> ExportInfo
     alterScope = alterEntries . filterScope
       where
@@ -825,20 +863,23 @@ checkOpenModuleNoImport OpenModule {..}
             )
         alterEntries :: ExportInfo -> ExportInfo
         alterEntries = over exportSymbols (fmap alterEntry)
+
         publicAnnToVis :: PublicAnn -> VisibilityAnn
         publicAnnToVis = \case
           Public -> VisPublic
           NoPublic -> VisPrivate
+
         filterScope :: ExportInfo -> ExportInfo
         filterScope = over exportSymbols filterTable
           where
             filterTable :: HashMap Symbol a -> HashMap Symbol a
             filterTable = HashMap.filterWithKey (const . shouldOpen)
-        shouldOpen :: Symbol -> Bool
-        shouldOpen s = case setsUsingHiding of
-          Nothing -> True
-          Just (Left using) -> HashSet.member s using
-          Just (Right hiding) -> not (HashSet.member s hiding)
+
+            shouldOpen :: Symbol -> Bool
+            shouldOpen s = case setsUsingHiding of
+              Nothing -> True
+              Just (Left using) -> HashSet.member s using
+              Just (Right hiding) -> not (HashSet.member s hiding)
 
 checkOpenModule ::
   forall r.

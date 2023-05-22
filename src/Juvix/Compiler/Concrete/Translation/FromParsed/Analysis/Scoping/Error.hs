@@ -33,6 +33,7 @@ data ScoperError
   | ErrImplicitPatternLeftApplication ImplicitPatternLeftApplication
   | ErrConstructorExpectedLeftApplication ConstructorExpectedLeftApplication
   | ErrCaseBranchImplicitPattern CaseBranchImplicitPattern
+  | ErrModuleDoesNotExportSymbol ModuleDoesNotExportSymbol
   deriving stock (Show)
 
 instance ToGenericError ScoperError where
@@ -59,3 +60,4 @@ instance ToGenericError ScoperError where
     ErrAliasBinderPattern e -> genericError e
     ErrImplicitPatternLeftApplication e -> genericError e
     ErrConstructorExpectedLeftApplication e -> genericError e
+    ErrModuleDoesNotExportSymbol e -> genericError e
