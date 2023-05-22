@@ -90,8 +90,8 @@ jobs:
       - name: Setup Wasmer
         uses: wasmerio/setup-wasmer@v2
 
-      # - name: Install libicu for testing
-      #   run: sudo apt install -y libicu66
+      - name: Install libncurses5
+        run: sudo apt install -y libncurses5
 
       - name: Install VampIR for testing
         uses: jaxxstorm/action-install-gh-release@v1.10.0
