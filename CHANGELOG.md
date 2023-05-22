@@ -4,6 +4,45 @@
 <img align="right" width="300" height="300" alt="Juvix Mascot" src="../assets/images/tara-smiling.svg" />
 </a>
 
+## [v0.3.4](https://github.com/anoma/juvix/tree/v0.3.4) (2023-05-22)
+
+[Full Changelog](https://github.com/anoma/juvix/compare/v0.3.3...v0.3.4)
+
+**Implemented enhancements:**
+
+- Allow symbol renaming inside `using {..}` [\#2109](https://github.com/anoma/juvix/pull/2109) ([janmasrovira](https://github.com/janmasrovira))
+- Scope check symbols inside `using {..}` and `hiding {..}` [\#2108](https://github.com/anoma/juvix/pull/2108) ([janmasrovira](https://github.com/janmasrovira))
+- Pass through compile optimization flag to C compiler and disable optimization for --debug [\#2106](https://github.com/anoma/juvix/pull/2106) ([paulcadman](https://github.com/paulcadman))
+- Add syntax for Judoc blocks [\#2102](https://github.com/anoma/juvix/pull/2102) ([janmasrovira](https://github.com/janmasrovira))
+- Add dangling judoc error [\#2099](https://github.com/anoma/juvix/pull/2099) ([janmasrovira](https://github.com/janmasrovira))
+- Modify `open import` syntax [\#2098](https://github.com/anoma/juvix/pull/2098) ([janmasrovira](https://github.com/janmasrovira))
+- Improve error message when input path doesn't exist [\#2092](https://github.com/anoma/juvix/pull/2092) ([paulcadman](https://github.com/paulcadman))
+- Partial incremental highlighting [\#2053](https://github.com/anoma/juvix/pull/2053) ([janmasrovira](https://github.com/janmasrovira))
+- Normalization by Evaluation [\#2038](https://github.com/anoma/juvix/pull/2038) ([lukaszcz](https://github.com/lukaszcz))
+- Inlining [\#2036](https://github.com/anoma/juvix/pull/2036) ([lukaszcz](https://github.com/lukaszcz))
+
+**Merged pull requests:**
+
+- Use PrettyCode instance instead of obsolete ppUsingItem in Print.Base [\#2115](https://github.com/anoma/juvix/pull/2115) ([janmasrovira](https://github.com/janmasrovira))
+- Add `syntax` keyword [\#2107](https://github.com/anoma/juvix/pull/2107) ([lukaszcz](https://github.com/lukaszcz))
+- Simplify formatting of lambdas with a single clause [\#2105](https://github.com/anoma/juvix/pull/2105) ([janmasrovira](https://github.com/janmasrovira))
+- Fix extra whitespace in text rendering of indented empty lines [\#2101](https://github.com/anoma/juvix/pull/2101) ([paulcadman](https://github.com/paulcadman))
+- Reachability analysis in Core [\#2097](https://github.com/anoma/juvix/pull/2097) ([lukaszcz](https://github.com/lukaszcz))
+- Slightly improve prettyprinting for Core [\#2094](https://github.com/anoma/juvix/pull/2094) ([janmasrovira](https://github.com/janmasrovira))
+- Bump to LTS Haskell 20.21 \(ghc-9.2.7\) [\#2093](https://github.com/anoma/juvix/pull/2093) ([jonaprieto](https://github.com/jonaprieto))
+- Direct translation from normalized JuvixCore to VampIR [\#2086](https://github.com/anoma/juvix/pull/2086) ([lukaszcz](https://github.com/lukaszcz))
+- ci: clean .juvix-build directory before formatting/typechecking examples [\#2079](https://github.com/anoma/juvix/pull/2079) ([paulcadman](https://github.com/paulcadman))
+- Fix format on projects that contain subprojects [\#2078](https://github.com/anoma/juvix/pull/2078) ([paulcadman](https://github.com/paulcadman))
+- Implement core transformation `let-hoisting` [\#2076](https://github.com/anoma/juvix/pull/2076) ([janmasrovira](https://github.com/janmasrovira))
+- Allow nested block comments [\#2075](https://github.com/anoma/juvix/pull/2075) ([janmasrovira](https://github.com/janmasrovira))
+- Fix topCommandInputFile for Format command [\#2063](https://github.com/anoma/juvix/pull/2063) ([vrom911](https://github.com/vrom911))
+- Fix reachability analysis with imports in unreachable nested modules [\#2062](https://github.com/anoma/juvix/pull/2062) ([lukaszcz](https://github.com/lukaszcz))
+- Fix devcontainer juvix install [\#2061](https://github.com/anoma/juvix/pull/2061) ([paulcadman](https://github.com/paulcadman))
+- Fix Makefile target bugs for formatting and type Checking Juvix files [\#2057](https://github.com/anoma/juvix/pull/2057) ([jonaprieto](https://github.com/jonaprieto))
+- Fix a bug in the positivity checker \(\#1943\) [\#2054](https://github.com/anoma/juvix/pull/2054) ([jonaprieto](https://github.com/jonaprieto))
+- Arity check types and functions \(-\>\) [\#2049](https://github.com/anoma/juvix/pull/2049) ([janmasrovira](https://github.com/janmasrovira))
+- Fix ordering of statements in Abstract -\> Internal [\#2040](https://github.com/anoma/juvix/pull/2040) ([janmasrovira](https://github.com/janmasrovira))
+
 ## [v0.3.3](https://github.com/anoma/juvix/tree/v0.3.3) (2023-05-08)
 
 [Full Changelog](https://github.com/anoma/juvix/compare/v0.3.2...v0.3.3)
