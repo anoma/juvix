@@ -793,7 +793,6 @@ checkOpenModuleNoImport OpenModule {..}
   | otherwise = do
       openModuleName'@(ModuleRef' (_ :&: moduleRef'')) <- lookupModuleSymbol _openModuleName
       let exportInfo@(ExportInfo tbl) = moduleRef'' ^. moduleExportInfo
-      mergeScope (alterScope exportInfo)
       registerName (moduleRef'' ^. moduleRefName)
 
       let checkUsingHiding :: UsingHiding 'Parsed -> Sem r (UsingHiding 'Scoped)
@@ -822,13 +821,18 @@ checkOpenModuleNoImport OpenModule {..}
               checkUsingItem :: UsingItem 'Parsed -> Sem r (UsingItem 'Scoped)
               checkUsingItem i = do
                 scopedSym <- scopeSymbol (i ^. usingSymbol)
+                let scopedAs = do
+                      c <- i ^. usingAs
+                      return (set S.nameConcrete c scopedSym)
+                mapM_ (registerName . S.unqualifiedSymbol) scopedAs
                 return
-                  ( UsingItem
-                      { _usingSymbol = scopedSym
-                      }
-                  )
+                  UsingItem
+                    { _usingSymbol = scopedSym,
+                      _usingAs = scopedAs
+                    }
 
       usingHiding' <- mapM checkUsingHiding _openUsingHiding
+      mergeScope (alterScope usingHiding' exportInfo)
       return
         OpenModule
           { _openModuleName = openModuleName',
@@ -846,14 +850,8 @@ checkOpenModuleNoImport OpenModule {..}
           modify
             (over scopeSymbols (HashMap.insertWith (<>) s (symbolInfoSingle entry)))
 
-    setsUsingHiding :: Maybe (Either (HashSet Symbol) (HashSet Symbol))
-    setsUsingHiding = case _openUsingHiding of
-      Just (Using l) -> Just (Left (HashSet.fromList (map (^. usingSymbol) $ toList l)))
-      Just (Hiding l) -> Just (Right (HashSet.fromList (toList l)))
-      Nothing -> Nothing
-
-    alterScope :: ExportInfo -> ExportInfo
-    alterScope = alterEntries . filterScope
+    alterScope :: Maybe (UsingHiding 'Scoped) -> ExportInfo -> ExportInfo
+    alterScope openModif = alterEntries . filterScope
       where
         alterEntry :: SymbolEntry -> SymbolEntry
         alterEntry =
@@ -870,16 +868,22 @@ checkOpenModuleNoImport OpenModule {..}
           NoPublic -> VisPrivate
 
         filterScope :: ExportInfo -> ExportInfo
-        filterScope = over exportSymbols filterTable
-          where
-            filterTable :: HashMap Symbol a -> HashMap Symbol a
-            filterTable = HashMap.filterWithKey (const . shouldOpen)
-
-            shouldOpen :: Symbol -> Bool
-            shouldOpen s = case setsUsingHiding of
-              Nothing -> True
-              Just (Left using) -> HashSet.member s using
-              Just (Right hiding) -> not (HashSet.member s hiding)
+        filterScope = case openModif of
+          Just (Using l) -> over exportSymbols (HashMap.fromList . mapMaybe inUsing . HashMap.toList)
+            where
+              inUsing :: (Symbol, SymbolEntry) -> Maybe (Symbol, SymbolEntry)
+              inUsing (sym, e) = do
+                mayAs' <- u ^. at (symbolEntryNameId e)
+                return (fromMaybe sym mayAs', e)
+              u :: HashMap NameId (Maybe Symbol)
+              u = HashMap.fromList [(i ^. usingSymbol . S.nameId, i ^? usingAs . _Just . S.nameConcrete) | i <- toList l]
+          Just (Hiding l) -> over exportSymbols (HashMap.filter (not . inHiding))
+            where
+              inHiding :: SymbolEntry -> Bool
+              inHiding e = HashSet.member (symbolEntryNameId e) u
+              u :: HashSet NameId
+              u = HashSet.fromList (map (^. S.nameId) (toList l))
+          Nothing -> id
 
 checkOpenModule ::
   forall r.

@@ -467,8 +467,9 @@ deriving stock instance
   ) =>
   Ord (Module s t)
 
-newtype UsingItem (s :: Stage) = UsingItem
-  { _usingSymbol :: SymbolType s
+data UsingItem (s :: Stage) = UsingItem
+  { _usingSymbol :: SymbolType s,
+    _usingAs :: Maybe (SymbolType s)
   }
 
 deriving stock instance
@@ -1597,6 +1598,9 @@ instance HasLoc SymbolEntry where
 
 overModuleRef'' :: forall s s'. (forall t. ModuleRef'' s t -> ModuleRef'' s' t) -> ModuleRef' s -> ModuleRef' s'
 overModuleRef'' f = over unModuleRef' (\(t :&: m'') -> t :&: f m'')
+
+symbolEntryNameId :: SymbolEntry -> NameId
+symbolEntryNameId = (^. S.nameId) . symbolEntryToSName
 
 symbolEntryToSName :: SymbolEntry -> S.Name' ()
 symbolEntryToSName = \case

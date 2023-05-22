@@ -321,6 +321,14 @@ instance PrettyPrint (UsingHiding 'Scoped) where
       ppUsingItem :: UsingItem 'Scoped -> Sem r ()
       ppUsingItem ui = ppCode (ui ^. usingSymbol)
 
+instance PrettyPrint (UsingItem 'Scoped) where
+  ppCode :: forall r. Members '[ExactPrint, Reader Options] r => UsingItem 'Scoped -> Sem r ()
+  ppCode ui = do
+    let kwAs' :: Sem r () = ppCode kwAs
+        as' = (kwAs' <+>) . ppCode <$> ui ^. usingAs
+        sym' = ppCode (ui ^. usingSymbol)
+    sym' <+?> as'
+
 instance PrettyPrint ModuleRef where
   ppCode (ModuleRef' (_ :&: ModuleRef'' {..})) = ppCode _moduleRefName
 

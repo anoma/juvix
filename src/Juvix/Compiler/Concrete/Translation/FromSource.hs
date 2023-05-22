@@ -229,7 +229,10 @@ mkTopModulePath :: NonEmpty Symbol -> TopModulePath
 mkTopModulePath l = TopModulePath (NonEmpty.init l) (NonEmpty.last l)
 
 usingItem :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (UsingItem 'Parsed)
-usingItem = UsingItem <$> symbol
+usingItem = do
+  _usingSymbol <- symbol
+  _usingAs <- optional (kw kwAs >> symbol)
+  return UsingItem {..}
 
 usingItems :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (NonEmpty (UsingItem 'Parsed))
 usingItems = braces (P.sepBy1 usingItem semicolon)
@@ -854,8 +857,8 @@ openModule = do
 
 usingOrHiding :: (Members '[Error ParserError, InfoTableBuilder, JudocStash, NameIdGen, PragmasStash] r) => ParsecS r (UsingHiding 'Parsed)
 usingOrHiding =
-  (kw kwUsing >> (Using . fmap UsingItem <$> symbolList))
-    <|> (kw kwHiding >> (Hiding <$> symbolList))
+  (kw kwUsing >> Using <$> usingItems)
+    <|> (kw kwHiding >> Hiding <$> symbolList)
 
 newOpenSyntax :: forall r. (Members '[Error ParserError, PathResolver, Files, InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (OpenModule 'Parsed)
 newOpenSyntax = do
