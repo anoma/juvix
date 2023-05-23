@@ -23,6 +23,22 @@ tests:
     stdout: |
       hello world!
 
+  - name: hello-world-no-arg-error
+    command:
+      shell:
+        - bash
+      script: |
+        temp=$(mktemp -d)
+        trap 'rm -rf -- "$temp"' EXIT
+        cd ./examples/milestone/
+        cp -r HelloWorld "$temp"
+        cd "$temp/HelloWorld"
+        sed -i '/^main:/d' juvix.yaml
+        juvix compile
+    exit-status: 1
+    stdout: |
+     A path to the main file must be given in the CLI or specified in the `main` field of the juvix.yaml file
+
   - name: hello-world
     command:
       shell:
