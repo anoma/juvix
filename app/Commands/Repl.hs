@@ -62,6 +62,7 @@ helpTxt =
   :load       FILE          Load a file into the REPL
   :reload                   Reload the currently loaded file
   :type       EXPRESSION    Infer the type of an expression
+  :def        IDENTIFIER    Print the definition of the identifier
   :core       EXPRESSION    Translate the expression to JuvixCore
   :multiline                Start a multi-line input. Submit with <Ctrl-D>
   :root                     Print the current project root
@@ -220,6 +221,18 @@ runCommand opts = do
               Right Nothing -> return ()
           Nothing -> noFileLoadedMsg
 
+      printDefinition :: String -> Repl ()
+      printDefinition input = Repline.dontCrash $ do
+        ctx <- State.gets (^. replStateContext)
+        gopts <- State.gets (^. replStateGlobalOptions)
+        case ctx of
+          Just ctx' -> do
+            compileRes <- liftIO (inferExpressionIO' ctx' (strip (pack input)))
+            case compileRes of
+              Left err -> printError err
+              Right n -> renderOut (Internal.ppOut (project' @GenericOptions gopts) n)
+          Nothing -> noFileLoadedMsg
+
       inferType :: String -> Repl ()
       inferType input = Repline.dontCrash $ do
         ctx <- State.gets (^. replStateContext)
@@ -242,6 +255,7 @@ runCommand opts = do
           ("load", Repline.dontCrash . loadFile . pSomeFile),
           ("reload", Repline.dontCrash . reloadFile),
           ("root", printRoot),
+          ("def", printDefinition),
           ("type", inferType),
           ("version", displayVersion),
           ("core", core)
