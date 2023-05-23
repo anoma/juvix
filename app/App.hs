@@ -86,10 +86,9 @@ runAppIO args@RunAppIOArgs {..} =
     exitMsg' :: ExitCode -> Text -> Sem r x
     exitMsg' exitCode t = embed (putStrLn t >> hFlush stdout >> exitWith exitCode)
     getMainFile' :: Maybe (AppPath File) -> Sem r (Path Abs File)
-    getMainFile' m = case m of
+    getMainFile' = \case
       Just p -> embed (prepathToAbsFile invDir (p ^. pathPath))
       Nothing -> case pkg ^. packageMain of
-        -- TODO do something special if it is the global package?
         Just p -> embed (prepathToAbsFile invDir p)
         Nothing -> missingMainErr
     missingMainErr :: Sem r x
