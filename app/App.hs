@@ -80,16 +80,26 @@ runAppIO args@RunAppIOArgs {..} =
     ExitJuvixError e -> do
       printErr e
       embed exitFailure
-    ExitMsg exitCode t -> embed (putStrLn t >> hFlush stdout >> exitWith exitCode)
+    ExitMsg exitCode t -> exitMsg' exitCode t
     SayRaw b -> embed (ByteString.putStr b)
   where
+    exitMsg' :: ExitCode -> Text -> Sem r x
+    exitMsg' exitCode t = embed (putStrLn t >> hFlush stdout >> exitWith exitCode)
     getMainFile' :: Maybe (AppPath File) -> Sem r (Path Abs File)
     getMainFile' m = case m of
       Just p -> embed (prepathToAbsFile invDir (p ^. pathPath))
       Nothing -> case pkg ^. packageMain of
         -- TODO do something special if it is the global package?
         Just p -> embed (prepathToAbsFile invDir p)
-        Nothing -> error ("A path to the main file must be given in the CLI or specified in `main` field of the " <> pack (toFilePath juvixYamlFile) <> " file")
+        Nothing -> missingMainErr
+    missingMainErr :: Sem r x
+    missingMainErr =
+      exitMsg'
+        (ExitFailure 1)
+        ( "A path to the main file must be given in the CLI or specified in the `main` field of the "
+            <> pack (toFilePath juvixYamlFile)
+            <> " file"
+        )
     invDir = _runAppIOArgsRoots ^. rootsInvokeDir
     pkg :: Package
     pkg = _runAppIOArgsRoots ^. rootsPackage
