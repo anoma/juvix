@@ -10,6 +10,7 @@ import Juvix.Prelude.Pretty hiding
   ( Doc,
   )
 import System.Console.ANSI qualified as Ansi
+import Juvix.Extra.Paths.Base
 
 data App m a where
   ExitMsg :: ExitCode -> Text -> App m a
@@ -23,6 +24,7 @@ data App m a where
   AskPackageGlobal :: App m Bool
   AskGlobalOptions :: App m GlobalOptions
   FromAppPathFile :: AppPath File -> App m (Path Abs File)
+  GetMainFile :: Maybe (AppPath File) -> App m (Path Abs File)
   FromAppPathDir :: AppPath Dir -> App m (Path Abs Dir)
   RenderStdOut :: (HasAnsiBackend a, HasTextBackend a) => a -> App m ()
   RunPipelineEither :: AppPath File -> Sem PipelineEff a -> App m (Either JuvixError (ResolverState, a))
@@ -48,6 +50,7 @@ runAppIO args@RunAppIOArgs {..} =
   interpret $ \case
     AskPackageGlobal -> return (_runAppIOArgsRoots ^. rootsPackageGlobal)
     FromAppPathFile p -> embed (prepathToAbsFile invDir (p ^. pathPath))
+    GetMainFile m -> getMainFile' m
     FromAppPathDir p -> embed (prepathToAbsDir invDir (p ^. pathPath))
     RenderStdOut t
       | _runAppIOArgsGlobalOptions ^. globalOnlyErrors -> return ()
@@ -80,7 +83,16 @@ runAppIO args@RunAppIOArgs {..} =
     ExitMsg exitCode t -> embed (putStrLn t >> hFlush stdout >> exitWith exitCode)
     SayRaw b -> embed (ByteString.putStr b)
   where
+    getMainFile' :: Maybe (AppPath File) -> Sem r (Path Abs File)
+    getMainFile' m = case m of
+      Just p -> embed (prepathToAbsFile invDir (p ^. pathPath))
+      Nothing -> case pkg ^. packageMain of
+        -- TODO do something special if it is the global package?
+        Just p -> embed (prepathToAbsFile invDir p)
+        Nothing -> error ("A path to the main file must be given in the CLI or specified in `main` field of the " <> pack (toFilePath juvixYamlFile) <> " file")
     invDir = _runAppIOArgsRoots ^. rootsInvokeDir
+    pkg :: Package
+    pkg = _runAppIOArgsRoots ^. rootsPackage
     g :: GlobalOptions
     g = _runAppIOArgsGlobalOptions
     printErr e =

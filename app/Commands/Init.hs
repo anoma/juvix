@@ -49,6 +49,7 @@ getPackage = do
       { _packageName = tproj,
         _packageVersion = tversion,
         _packageBuildDir = Nothing,
+        _packageMain = Nothing,
         _packageDependencies = [defaultStdlibDep]
       }
 

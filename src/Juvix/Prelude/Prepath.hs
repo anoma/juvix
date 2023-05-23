@@ -20,7 +20,9 @@ import System.Directory qualified as System
 import System.Environment
 
 -- | A file/directory path that may contain environmental variables
-newtype Prepath d = Prepath {_prepath :: String}
+newtype Prepath d = Prepath
+  { _prepath :: String
+  }
   deriving stock (Show, Eq, Data, Generic)
 
 makeLenses ''Prepath
