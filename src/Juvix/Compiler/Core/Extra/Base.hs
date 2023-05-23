@@ -196,7 +196,7 @@ mkBottom :: Info -> Type
 mkBottom i = NBot (Bottom i)
 
 mkBottom' :: Type
-mkBottom' = NBot (Bottom mempty)
+mkBottom' = mkBottom mempty
 
 {------------------------------------------------------------------------}
 {- functions on Type -}
