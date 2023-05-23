@@ -5,7 +5,7 @@ import Core.Asm.Base
 import Core.Eval.Positive qualified as Eval
 
 allTests :: TestTree
-allTests = testGroup "JuvixCore to JuvixAsm positive tests" (map liftTest (Eval.filterOutTests ignoredTests Eval.tests))
+allTests = testGroup "JuvixCore to JuvixAsm positive tests" (map liftTest (Eval.filterOutTests ignoredTests Eval.compilableTests))
 
 ignoredTests :: [String]
 ignoredTests = []

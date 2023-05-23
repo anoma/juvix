@@ -6,7 +6,7 @@ import Core.Transformation.Base
 import Juvix.Compiler.Core.Transformation
 
 allTests :: TestTree
-allTests = testGroup "Transformation pipeline" (map liftTest Eval.tests)
+allTests = testGroup "Transformation pipeline (to Stripped)" (map liftTest Eval.compilableTests)
 
 pipe :: [TransformationId]
 pipe = toStrippedTransformations
