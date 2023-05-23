@@ -219,7 +219,15 @@ data TypePrim' i = TypePrim
 -- | Dynamic type. A Node with a dynamic type has an unknown type. Useful
 -- for transformations that introduce partial type information, e.g., one can
 -- have types `* -> *` and `* -> * -> Nat` where `*` is the dynamic type.
-newtype Dynamic' i = Dynamic {_dynamicInfo :: i}
+newtype Dynamic' i = Dynamic
+  { _dynamicInfo :: i
+  }
+
+-- | A fail node.
+data Bottom' i a = Bottom
+  { _bottomInfo :: i,
+    _bottomType :: !a
+  }
 
 {-------------------------------------------------------------------}
 {- Typeclass instances -}
@@ -293,6 +301,9 @@ instance HasAtomicity (TypeConstr' i a) where
   atomicity _ = Aggregate lambdaFixity
 
 instance HasAtomicity (Dynamic' i) where
+  atomicity _ = Atom
+
+instance HasAtomicity (Bottom' i a) where
   atomicity _ = Atom
 
 lambdaFixity :: Fixity
@@ -377,6 +388,9 @@ instance Eq (TypePrim' i) where
 
 instance Eq (Dynamic' i) where
   (Dynamic _) == (Dynamic _) = True
+
+instance Eq (Bottom' i a) where
+  Bottom {} == Bottom {} = True
 
 deriving stock instance (Eq a) => Eq (Pattern' i a)
 

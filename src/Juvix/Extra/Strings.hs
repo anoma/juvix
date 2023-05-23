@@ -437,6 +437,12 @@ integer = "integer"
 bool :: (IsString s) => s
 bool = "bool"
 
+bottomAscii :: (IsString s) => s
+bottomAscii = "bottom"
+
+bottom :: (IsString s) => s
+bottom = "⊥"
+
 arg :: (IsString s) => s
 arg = "arg"
 

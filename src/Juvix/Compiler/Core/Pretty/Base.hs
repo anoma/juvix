@@ -309,6 +309,12 @@ instance PrettyCode Lambda where
           return $ kwLambda <> parens (n <+> kwColon <+> tty)
     return (lam <> oneLineOrNext b)
 
+instance PrettyCode Bottom where
+  ppCode :: Member (Reader Options) r => Bottom -> Sem r (Doc Ann)
+  ppCode Bottom {..} = do
+    ty' <- ppCode _bottomType
+    return (parens (kwBottom <+> kwColon <+> ty'))
+
 instance PrettyCode Node where
   ppCode :: forall r. (Member (Reader Options) r) => Node -> Sem r (Doc Ann)
   ppCode node = case node of
@@ -350,6 +356,7 @@ instance PrettyCode Node where
       n' <- ppName KNameInductive (getInfoName _typeConstrInfo)
       return $ foldl' (<+>) n' args'
     NDyn {} -> return kwDynamic
+    NBot b -> ppCode b
     Closure env n ->
       ppCode (substEnv env n)
 
@@ -737,3 +744,9 @@ kwFail = keyword Str.fail_
 
 kwDynamic :: Doc Ann
 kwDynamic = keyword Str.any
+
+kwBottomAscii :: Doc Ann
+kwBottomAscii = keyword Str.bottomAscii
+
+kwBottom :: Doc Ann
+kwBottom = keyword Str.bottom

@@ -61,6 +61,8 @@ type TypePrim = TypePrim' Info
 
 type Dynamic = Dynamic' Info
 
+type Bottom = Bottom' Info Node
+
 {---------------------------------------------------------------------------------}
 
 -- | `Node` is the type of nodes in the program tree. The nodes themselves
@@ -84,6 +86,7 @@ data Node
   | NTyp {-# UNPACK #-} !TypeConstr
   | NPrim {-# UNPACK #-} !TypePrim
   | NDyn !Dynamic -- Dynamic is already a newtype, so it's unpacked.
+  | NBot {-# UNPACK #-} !Bottom
   | -- Evaluation only: `Closure env node`.
     Closure
       { _closureEnv :: !Env,
@@ -129,6 +132,7 @@ instance HasAtomicity Node where
     NTyp x -> atomicity x
     NPrim x -> atomicity x
     NDyn x -> atomicity x
+    NBot x -> atomicity x
     Closure {} -> Aggregate lambdaFixity
 
 emptyBinder :: Binder

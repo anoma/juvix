@@ -369,6 +369,9 @@ instance HasAtomicity Pattern where
     PatternConstructorApp a -> atomicity a
     PatternVariable {} -> Atom
 
+instance HasLoc AxiomDef where
+  getLoc a = getLoc (a ^. axiomName) <> getLoc (a ^. axiomType)
+
 instance HasLoc InductiveParameter where
   getLoc (InductiveParameter n) = getLoc n
 

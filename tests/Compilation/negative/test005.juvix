@@ -1,0 +1,9 @@
+-- Axiom
+module test005;
+
+type Unit := unit : Unit;
+
+axiom Boom : Unit;
+
+x : Unit;
+x := Boom;

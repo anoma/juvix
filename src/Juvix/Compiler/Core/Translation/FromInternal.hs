@@ -78,7 +78,7 @@ fromInternalExpression res exp = do
               (res ^. coreResultInternalTypedResult . InternalTyped.resultFunctions)
               ( runReader
                   (res ^. coreResultInternalTypedResult . InternalTyped.resultIdenTypes)
-                  (runReader initIndexTable (goExpression exp))
+                  (fromTopIndex (goExpression exp))
               )
           )
       )
@@ -242,7 +242,7 @@ preFunctionDef ::
   Sem r PreFunctionDef
 preFunctionDef f = do
   sym <- freshSymbol
-  funTy <- runReader initIndexTable (goType (f ^. Internal.funDefType))
+  funTy <- fromTopIndex (goType (f ^. Internal.funDefType))
   let _identifierName = f ^. Internal.funDefName . nameText
 
       info =
@@ -307,8 +307,7 @@ goFunctionDef PreFunctionDef {..} = do
   mbody <- case _preFunInternal ^. Internal.funDefBuiltin of
     Just b
       | isIgnoredBuiltin b -> return Nothing
-      | otherwise -> Just <$> runReader initIndexTable (mkFunBody ty f)
-    Nothing -> Just <$> runReader initIndexTable (mkFunBody ty f)
+    _ -> Just <$> fromTopIndex (mkFunBody ty f)
   forM_ mbody (registerIdentNode sym)
   forM_ mbody setIdentArgsInfo'
   where
@@ -547,13 +546,19 @@ goAxiomInductive a = whenJust (a ^. Internal.axiomBuiltin) builtinInductive
       registerInductive (mkIdentIndex (a ^. Internal.axiomName)) info
       mapM_ (\ci -> registerConstructor (ci ^. constructorName) ci) ctrs'
 
+fromTopIndex :: Sem (Reader IndexTable : r) a -> Sem r a
+fromTopIndex = runReader initIndexTable
+
 goAxiomDef ::
   forall r.
   (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable] r) =>
   Internal.AxiomDef ->
   Sem r ()
-goAxiomDef a = mapM_ builtinBody (a ^. Internal.axiomBuiltin)
+goAxiomDef a = maybe goAxiomNotBuiltin builtinBody (a ^. Internal.axiomBuiltin)
   where
+    goAxiomNotBuiltin :: Sem r ()
+    goAxiomNotBuiltin = axiomType' >>= registerAxiomDef . mkAxiom (getLoc a)
+
     builtinBody :: Internal.BuiltinAxiom -> Sem r ()
     builtinBody = \case
       Internal.BuiltinNatPrint -> do
@@ -613,7 +618,7 @@ goAxiomDef a = mapM_ builtinBody (a ^. Internal.axiomBuiltin)
         registerAxiomDef $ writeLambda (mkTypeConstr (setInfoName intName mempty) intSym [])
 
     axiomType' :: Sem r Type
-    axiomType' = runReader initIndexTable (goType (a ^. Internal.axiomType))
+    axiomType' = fromTopIndex (goType (a ^. Internal.axiomType))
 
     writeLambda :: Type -> Node
     writeLambda ty = mkLambda' ty (mkConstr' (BuiltinTag TagWrite) [mkVar' 0])

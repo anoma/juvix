@@ -28,6 +28,7 @@ import Juvix.Compiler.Core.Extra.Recursors.Utils
 import Juvix.Compiler.Core.Extra.Utils.Base
 import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Info.ExpansionInfo
+import Juvix.Compiler.Core.Info.LocationInfo qualified as Info
 import Juvix.Compiler.Core.Language
 
 substEnvInBranch :: Env -> CaseBranch -> CaseBranch
@@ -37,6 +38,9 @@ substEnvInBranch env br = over caseBranchBody (substEnv env') br
 
 isClosed :: Node -> Bool
 isClosed = not . has freeVars
+
+mkAxiom :: Interval -> Type -> Node
+mkAxiom loc = mkBottom (Info.setInfoLocation loc mempty)
 
 isTypeConstr :: InfoTable -> Type -> Bool
 isTypeConstr tab ty = case typeTarget ty of
@@ -57,6 +61,27 @@ filterOutTypeSynonyms tab = pruneInfoTable tab'
   where
     tab' = tab {_infoIdentifiers = idents'}
     idents' = HashMap.filter (\ii -> not (isTypeConstr tab (ii ^. identifierType))) (tab ^. infoIdentifiers)
+
+isType :: Node -> Bool
+isType = \case
+  NPi {} -> True
+  NUniv {} -> True
+  NPrim {} -> True
+  NTyp {} -> True
+  NDyn {} -> True
+  NBot {} -> False
+  NVar {} -> False
+  NIdt {} -> False
+  NCst {} -> False
+  NApp {} -> False
+  NBlt {} -> False
+  NCtr {} -> False
+  NLam {} -> False
+  NLet {} -> False
+  NRec {} -> False
+  NCase {} -> False
+  NMatch {} -> False
+  Closure {} -> False
 
 -- | True for nodes whose evaluation immediately returns a value, i.e.,
 -- no reduction or memory allocation in the runtime is required.

@@ -89,6 +89,8 @@ computeNodeTypeInfo tab = umapL go
         mkUniv' 0
       NDyn Dynamic {} ->
         mkUniv' 0
+      NBot Bottom {..} ->
+        _bottomType
       Closure {} ->
         impossible
 

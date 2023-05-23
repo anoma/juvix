@@ -584,6 +584,7 @@ atom varsNum vars =
     <|> exprConstString
     <|> exprUniverse
     <|> exprDynamic
+    <|> exprBottom
     <|> exprPi varsNum vars
     <|> exprLambda varsNum vars
     <|> exprLetrecMany varsNum vars
@@ -613,6 +614,13 @@ exprUniverse = do
 
 exprDynamic :: ParsecS r Type
 exprDynamic = kw kwAny $> mkDynamic'
+
+exprBottom :: Members '[InfoTableBuilder] r => ParsecS r Node
+exprBottom = do
+  (ty, loc) <- interval $ do
+    kw kwBottom
+    fromMaybe mkDynamic' <$> optional (kw kwColon >> expression)
+  return (mkAxiom loc ty)
 
 parseLocalName :: ParsecS r (Text, Location)
 parseLocalName = parseWildcardName <|> parseIdentName

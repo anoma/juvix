@@ -31,19 +31,23 @@ allTests =
 tests :: [NegTest]
 tests =
   [ NegTest
-      "Pattern matching coverage"
+      "Test001: Pattern matching coverage"
       $(mkRelDir ".")
       $(mkRelFile "test001.juvix"),
     NegTest
-      "Pattern matching coverage in cases"
+      "Test002: Pattern matching coverage in cases"
       $(mkRelDir ".")
       $(mkRelFile "test002.juvix"),
     NegTest
-      "Pattern matching coverage in lambdas"
+      "Test003: Pattern matching coverage in lambdas"
       $(mkRelDir ".")
       $(mkRelFile "test003.juvix"),
     NegTest
-      "The definition of main has a function type"
+      "Test004: The definition of main has a function type"
       $(mkRelDir ".")
-      $(mkRelFile "test004.juvix")
+      $(mkRelFile "test004.juvix"),
+    NegTest
+      "Test005: Axiom"
+      $(mkRelDir ".")
+      $(mkRelFile "test005.juvix")
   ]

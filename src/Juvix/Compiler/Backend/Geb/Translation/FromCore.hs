@@ -138,6 +138,7 @@ fromCore tab = case tab ^. Core.infoMain of
       Core.NTyp {} -> unsupported
       Core.NPrim {} -> unsupported
       Core.NDyn {} -> unsupported
+      Core.NBot {} -> unsupported
       Core.Closure {} -> unsupported
 
     insertedBinders :: Level -> [Level] -> Index -> Int

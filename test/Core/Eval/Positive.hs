@@ -35,6 +35,12 @@ allTests =
     "JuvixCore positive tests"
     (map (mkTest . testDescr) tests)
 
+compilableTests :: [PosTest]
+compilableTests = filter ((`notElem` skip) . (^. name)) tests
+  where
+    skip :: [String]
+    skip = ["Test060: Bottom"]
+
 tests :: [PosTest]
 tests =
   [ PosTest
@@ -331,5 +337,10 @@ tests =
       "Test059: Polymorphic type arguments"
       $(mkRelDir ".")
       $(mkRelFile "test059.jvc")
-      $(mkRelFile "out/test059.out")
+      $(mkRelFile "out/test059.out"),
+    PosTest
+      "Test060: Bottom"
+      $(mkRelDir ".")
+      $(mkRelFile "test060.jvc")
+      $(mkRelFile "out/test060.out")
   ]

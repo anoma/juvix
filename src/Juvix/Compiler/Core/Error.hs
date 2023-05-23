@@ -29,9 +29,9 @@ instance ToGenericError CoreError where
             Nothing -> e ^. coreErrorMsg
 
 instance Pretty CoreError where
-  pretty (CoreError {..}) = case _coreErrorNode of
+  pretty CoreError {..} = case _coreErrorNode of
     Just node -> pretty _coreErrorMsg <> colon <> space <> pretty (ppTrace node)
     Nothing -> pretty _coreErrorMsg
 
 instance HasLoc CoreError where
-  getLoc (CoreError {..}) = _coreErrorLoc
+  getLoc CoreError {..} = _coreErrorLoc

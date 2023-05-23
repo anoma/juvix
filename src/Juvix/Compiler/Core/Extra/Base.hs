@@ -192,6 +192,12 @@ mkDynamic i = NDyn (Dynamic i)
 mkDynamic' :: Type
 mkDynamic' = mkDynamic Info.empty
 
+mkBottom :: Info -> Type -> Node
+mkBottom _bottomInfo _bottomType = NBot Bottom {..}
+
+mkBottom' :: Node
+mkBottom' = mkBottom mempty mkDynamic'
+
 {------------------------------------------------------------------------}
 {- functions on Type -}
 
@@ -297,26 +303,6 @@ unfoldLambdas' = first length . unfoldLambdas
 
 lambdaTypes :: Node -> [Type]
 lambdaTypes = map (\LambdaLhs {..} -> _lambdaLhsBinder ^. binderType) . fst . unfoldLambdas
-
-isType :: Node -> Bool
-isType = \case
-  NPi {} -> True
-  NUniv {} -> True
-  NPrim {} -> True
-  NTyp {} -> True
-  NDyn {} -> True
-  NVar {} -> False
-  NIdt {} -> False
-  NCst {} -> False
-  NApp {} -> False
-  NBlt {} -> False
-  NCtr {} -> False
-  NLam {} -> False
-  NLet {} -> False
-  NRec {} -> False
-  NCase {} -> False
-  NMatch {} -> False
-  Closure {} -> False
 
 {------------------------------------------------------------------------}
 {- functions on Pattern -}
@@ -725,6 +711,13 @@ destruct = \case
         _nodeSubinfos = [],
         _nodeChildren = [],
         _nodeReassemble = noChildren $ \i' -> mkDynamic i'
+      }
+  NBot (Bottom i ty) ->
+    NodeDetails
+      { _nodeInfo = i,
+        _nodeSubinfos = [],
+        _nodeChildren = [noBinders ty],
+        _nodeReassemble = oneChild mkBottom
       }
   Closure env n ->
     NodeDetails

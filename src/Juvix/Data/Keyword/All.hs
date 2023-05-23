@@ -13,6 +13,9 @@ kwAs = asciiKw Str.as
 kwBuiltin :: Keyword
 kwBuiltin = asciiKw Str.builtin
 
+kwBottom :: Keyword
+kwBottom = unicodeKw Str.bottomAscii Str.bottom
+
 kwAny :: Keyword
 kwAny = asciiKw Str.any
 

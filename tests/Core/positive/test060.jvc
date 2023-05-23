@@ -1,0 +1,12 @@
+-- Axioms, bottom
+
+type Unit : Type {
+  unit : Unit;
+};
+
+
+def a : Unit := ⊥ : Unit;
+
+def boom2 : Unit := (bottom : Unit);
+
+2 + 2

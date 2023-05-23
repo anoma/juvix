@@ -10,6 +10,7 @@ checkVampIR :: forall r. Member (Error CoreError) r => InfoTable -> Sem r InfoTa
 checkVampIR tab =
   checkMainExists tab
     >> checkMainType
+    >> checkNoAxioms tab
     >> mapAllNodesM checkNoIO tab
     >> mapAllNodesM (checkBuiltins True) tab
   where
