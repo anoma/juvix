@@ -107,11 +107,11 @@ inferExpression ::
   Members '[Error JuvixError, State Artifacts] r =>
   Path Abs File ->
   Text ->
-  Sem r Internal.Expression
+  Sem r Internal.TypedExpression
 inferExpression fp txt = do
   p <- parseExpression fp txt
   arityCheckExpression p
-    >>= Internal.inferExpressionType
+    >>= Internal.typeCheckExpressionType
 
 compileExpression ::
   Members '[Error JuvixError, State Artifacts] r =>
@@ -183,6 +183,6 @@ inferExpressionIO ::
   Members '[State Artifacts, Embed IO] r =>
   Path Abs File ->
   Text ->
-  Sem r (Either JuvixError Internal.Expression)
+  Sem r (Either JuvixError Internal.TypedExpression)
 inferExpressionIO fp txt =
   runError (inferExpression fp txt)

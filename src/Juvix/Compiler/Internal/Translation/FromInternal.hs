@@ -3,8 +3,8 @@ module Juvix.Compiler.Internal.Translation.FromInternal
     arityChecking,
     typeChecking,
     typeCheckExpression,
+    typeCheckExpressionType,
     arityCheckExpression,
-    inferExpressionType,
     arityCheckInclude,
     typeCheckInclude,
   )
@@ -103,12 +103,6 @@ typeCheckInclude i = do
       . runReader table
       . withEmptyVars
     $ checkInclude i
-
-inferExpressionType ::
-  (Members '[Error JuvixError, State Artifacts] r) =>
-  Expression ->
-  Sem r Expression
-inferExpressionType exp = (^. typedType) <$> typeCheckExpressionType exp
 
 typeChecking ::
   Members '[HighlightBuilder, Error JuvixError, Builtins, NameIdGen] r =>

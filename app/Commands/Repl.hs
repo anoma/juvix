@@ -20,6 +20,7 @@ import Juvix.Compiler.Core.Info.NoDisplayInfo qualified as Info
 import Juvix.Compiler.Core.Pretty qualified as Core
 import Juvix.Compiler.Core.Transformation qualified as Core
 import Juvix.Compiler.Core.Transformation.DisambiguateNames (disambiguateNames)
+import Juvix.Compiler.Internal.Data qualified as Internal
 import Juvix.Compiler.Internal.Language qualified as Internal
 import Juvix.Compiler.Internal.Pretty qualified as Internal
 import Juvix.Compiler.Pipeline.Repl
@@ -62,6 +63,7 @@ helpTxt =
   :load       FILE          Load a file into the REPL
   :reload                   Reload the currently loaded file
   :type       EXPRESSION    Infer the type of an expression
+  :def        IDENTIFIER    Print the definition of the identifier
   :core       EXPRESSION    Translate the expression to JuvixCore
   :multiline                Start a multi-line input. Submit with <Ctrl-D>
   :root                     Print the current project root
@@ -220,6 +222,51 @@ runCommand opts = do
               Right Nothing -> return ()
           Nothing -> noFileLoadedMsg
 
+      printDefinition :: String -> Repl ()
+      printDefinition input = Repline.dontCrash $ do
+        ctx <- State.gets (^. replStateContext)
+        gopts <- State.gets (^. replStateGlobalOptions)
+        case ctx of
+          Just ctx' -> do
+            compileRes <- liftIO (inferExpressionIO' ctx' (strip (pack input)))
+            let tbl :: Internal.InfoTable = ctx ^?! _Just . replContextArtifacts . artifactInternalTypedTable
+
+                printFunction :: Internal.FunctionName -> Repl ()
+                printFunction fun = do
+                  let def :: Internal.FunctionDef = tbl ^?! Internal.infoFunctions . at fun . _Just . Internal.functionInfoDef
+                  renderOut (Internal.ppOut (project' @GenericOptions gopts) def)
+
+                printInductive :: Internal.InductiveName -> Repl ()
+                printInductive ind = do
+                  let def :: Internal.InductiveDef = tbl ^?! Internal.infoInductives . at ind . _Just . Internal.inductiveInfoDef
+                  renderOut (Internal.ppOut (project' @GenericOptions gopts) def)
+
+                printAxiom :: Internal.AxiomName -> Repl ()
+                printAxiom ax = do
+                  let def :: Internal.AxiomDef = tbl ^?! Internal.infoAxioms . at ax . _Just . Internal.axiomInfoDef
+                  renderOut (Internal.ppOut (project' @GenericOptions gopts) def)
+
+                printConstructor :: Internal.ConstructorName -> Repl ()
+                printConstructor c = do
+                  let ind :: Internal.InductiveName = tbl ^?! Internal.infoConstructors . at c . _Just . Internal.constructorInfoInductive
+                  printInductive ind
+
+            case compileRes of
+              Left err -> printError err
+              Right expr ->
+                getIdentifier (expr ^. Internal.typedExpression) >>= \case
+                  Internal.IdenAxiom a -> printAxiom a
+                  Internal.IdenVar {} -> impossible
+                  Internal.IdenInductive ind -> printInductive ind
+                  Internal.IdenConstructor c -> printConstructor c
+                  Internal.IdenFunction fun -> printFunction fun
+          Nothing -> noFileLoadedMsg
+        where
+          getIdentifier :: Internal.Expression -> Repl Internal.Iden
+          getIdentifier = \case
+            Internal.ExpressionIden n -> return n
+            x -> error $ "Not an identifier: " <> Internal.ppTrace x
+
       inferType :: String -> Repl ()
       inferType input = Repline.dontCrash $ do
         ctx <- State.gets (^. replStateContext)
@@ -229,7 +276,7 @@ runCommand opts = do
             compileRes <- liftIO (inferExpressionIO' ctx' (strip (pack input)))
             case compileRes of
               Left err -> printError err
-              Right n -> renderOut (Internal.ppOut (project' @GenericOptions gopts) n)
+              Right n -> renderOut (Internal.ppOut (project' @GenericOptions gopts) (n ^. Internal.typedType))
           Nothing -> noFileLoadedMsg
 
       options :: [(String, String -> Repl ())]
@@ -242,6 +289,7 @@ runCommand opts = do
           ("load", Repline.dontCrash . loadFile . pSomeFile),
           ("reload", Repline.dontCrash . reloadFile),
           ("root", printRoot),
+          ("def", printDefinition),
           ("type", inferType),
           ("version", displayVersion),
           ("core", core)
@@ -341,7 +389,7 @@ replMakeAbsolute = \case
     invokeDir <- State.gets (^. replStateRoots . rootsInvokeDir)
     return (invokeDir <//> r)
 
-inferExpressionIO' :: ReplContext -> Text -> IO (Either JuvixError Internal.Expression)
+inferExpressionIO' :: ReplContext -> Text -> IO (Either JuvixError Internal.TypedExpression)
 inferExpressionIO' ctx txt =
   runM
     . evalState (ctx ^. replContextArtifacts)
