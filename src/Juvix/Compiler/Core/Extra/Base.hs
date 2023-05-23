@@ -192,11 +192,11 @@ mkDynamic i = NDyn (Dynamic i)
 mkDynamic' :: Type
 mkDynamic' = mkDynamic Info.empty
 
-mkBottom :: Info -> Type
-mkBottom i = NBot (Bottom i)
+mkBottom :: Info -> Type -> Node
+mkBottom _bottomInfo _bottomType = NBot Bottom {..}
 
-mkBottom' :: Type
-mkBottom' = mkBottom mempty
+mkBottom' :: Node
+mkBottom' = mkBottom mempty mkDynamic'
 
 {------------------------------------------------------------------------}
 {- functions on Type -}
@@ -712,12 +712,12 @@ destruct = \case
         _nodeChildren = [],
         _nodeReassemble = noChildren $ \i' -> mkDynamic i'
       }
-  NBot (Bottom i) ->
+  NBot (Bottom i ty) ->
     NodeDetails
       { _nodeInfo = i,
         _nodeSubinfos = [],
-        _nodeChildren = [],
-        _nodeReassemble = noChildren $ \i' -> mkBottom i'
+        _nodeChildren = [noBinders ty],
+        _nodeReassemble = oneChild mkBottom
       }
   Closure env n ->
     NodeDetails

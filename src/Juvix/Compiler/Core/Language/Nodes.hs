@@ -224,8 +224,9 @@ newtype Dynamic' i = Dynamic
   }
 
 -- | A fail node.
-newtype Bottom' i = Bottom
-  { _bottomInfo :: i
+data Bottom' i a = Bottom
+  { _bottomInfo :: i,
+    _bottomType :: !a
   }
 
 {-------------------------------------------------------------------}
@@ -302,7 +303,7 @@ instance HasAtomicity (TypeConstr' i a) where
 instance HasAtomicity (Dynamic' i) where
   atomicity _ = Atom
 
-instance HasAtomicity (Bottom' i) where
+instance HasAtomicity (Bottom' i a) where
   atomicity _ = Atom
 
 lambdaFixity :: Fixity
@@ -388,8 +389,8 @@ instance Eq (TypePrim' i) where
 instance Eq (Dynamic' i) where
   (Dynamic _) == (Dynamic _) = True
 
-instance Eq (Bottom' i) where
-  (Bottom _) == (Bottom _) = True
+instance Eq (Bottom' i a) where
+  Bottom {} == Bottom {} = True
 
 deriving stock instance (Eq a) => Eq (Pattern' i a)
 

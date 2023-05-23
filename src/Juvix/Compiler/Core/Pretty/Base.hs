@@ -14,7 +14,6 @@ import Juvix.Compiler.Core.Data.Stripped.InfoTable qualified as Stripped
 import Juvix.Compiler.Core.Extra.Base
 import Juvix.Compiler.Core.Extra.Utils.Base
 import Juvix.Compiler.Core.Info.NameInfo
-import Juvix.Compiler.Core.Info.TypeInfo qualified as Info
 import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Core.Language.Stripped qualified as Stripped
 import Juvix.Compiler.Core.Language.Value
@@ -312,8 +311,8 @@ instance PrettyCode Lambda where
 
 instance PrettyCode Bottom where
   ppCode :: Member (Reader Options) r => Bottom -> Sem r (Doc Ann)
-  ppCode (Bottom i) = do
-    ty' <- ppCode (Info.getInfoType i)
+  ppCode Bottom {..} = do
+    ty' <- ppCode _bottomType
     return (parens (kwBottom <+> kwColon <+> ty'))
 
 instance PrettyCode Node where

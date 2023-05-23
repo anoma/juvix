@@ -61,7 +61,7 @@ type TypePrim = TypePrim' Info
 
 type Dynamic = Dynamic' Info
 
-type Bottom = Bottom' Info
+type Bottom = Bottom' Info Node
 
 {---------------------------------------------------------------------------------}
 
@@ -86,7 +86,7 @@ data Node
   | NTyp {-# UNPACK #-} !TypeConstr
   | NPrim {-# UNPACK #-} !TypePrim
   | NDyn !Dynamic -- Dynamic is already a newtype, so it's unpacked.
-  | NBot !Bottom -- Bottom is already a newtype, so it's unpacked.
+  | NBot {-# UNPACK #-} !Bottom
   | -- Evaluation only: `Closure env node`.
     Closure
       { _closureEnv :: !Env,
