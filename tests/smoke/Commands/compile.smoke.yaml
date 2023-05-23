@@ -11,6 +11,18 @@ tests:
         JUVIX_FILE
     exit-status: 0
 
+  - name: hello-world-no-arg
+    command:
+      shell:
+        - bash
+      script: |
+        cd ./examples/milestone/HelloWorld
+        juvix compile
+        ./HelloWorld
+    exit-status: 0
+    stdout: |
+      hello world!
+
   - name: hello-world
     command:
       shell:
