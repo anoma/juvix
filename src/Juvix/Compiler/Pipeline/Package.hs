@@ -8,6 +8,7 @@ module Juvix.Compiler.Pipeline.Package
     packageBuildDir,
     packageVersion,
     packageDependencies,
+    packageMain,
     rawPackage,
     readPackage,
     readPackageIO,
@@ -49,7 +50,8 @@ data Package' (s :: IsProcessed) = Package
   { _packageName :: NameType s,
     _packageVersion :: VersionType s,
     _packageDependencies :: DependenciesType s,
-    _packageBuildDir :: Maybe (SomeBase Dir)
+    _packageBuildDir :: Maybe (SomeBase Dir),
+    _packageMain :: Maybe (Prepath File)
   }
   deriving stock (Generic)
 
@@ -88,6 +90,7 @@ instance FromJSON RawPackage where
         _packageVersion <- keyMay "version" asText
         _packageDependencies <- keyMay "dependencies" fromAesonParser
         _packageBuildDir <- keyMay "build-dir" fromAesonParser
+        _packageMain <- keyMay "main" fromAesonParser
         return Package {..}
       err :: a
       err = error "Failed to parse juvix.yaml"
@@ -99,6 +102,7 @@ emptyPackage =
     { _packageName = defaultPackageName,
       _packageVersion = defaultVersion,
       _packageDependencies = [defaultStdlibDep],
+      _packageMain = Nothing,
       _packageBuildDir = Nothing
     }
 
@@ -108,7 +112,8 @@ rawPackage pkg =
     { _packageName = Just (pkg ^. packageName),
       _packageVersion = Just (prettySemVer (pkg ^. packageVersion)),
       _packageDependencies = Just (pkg ^. packageDependencies),
-      _packageBuildDir = pkg ^. packageBuildDir
+      _packageBuildDir = pkg ^. packageBuildDir,
+      _packageMain = pkg ^. packageMain
     }
 
 processPackage :: forall r. (Members '[Error Text] r) => Maybe (SomeBase Dir) -> RawPackage -> Sem r Package
@@ -117,9 +122,13 @@ processPackage buildDir pkg = do
       base :: SomeBase Dir = fromMaybe (Rel relBuildDir) buildDir <///> relStdlibDir
       stdlib = Dependency (mkPrepath (fromSomeDir base))
       _packageDependencies = fromMaybe [stdlib] (pkg ^. packageDependencies)
-      _packageBuildDir = pkg ^. packageBuildDir
   _packageVersion <- getVersion
-  return Package {..}
+  return
+    Package
+      { _packageBuildDir = pkg ^. packageBuildDir,
+        _packageMain = pkg ^. packageMain,
+        ..
+      }
   where
     getVersion :: Sem r SemVer
     getVersion = case pkg ^. packageVersion of
@@ -143,6 +152,7 @@ globalPackage =
     { _packageDependencies = [defaultStdlibDep],
       _packageName = "global-juvix-package",
       _packageVersion = defaultVersion,
+      _packageMain = Nothing,
       _packageBuildDir = Nothing
     }
 

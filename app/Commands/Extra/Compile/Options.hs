@@ -30,7 +30,7 @@ data CompileOptions = CompileOptions
     _compileTerm :: Bool,
     _compileOutputFile :: Maybe (AppPath File),
     _compileTarget :: CompileTarget,
-    _compileInputFile :: AppPath File,
+    _compileInputFile :: Maybe (AppPath File),
     _compileOptimizationLevel :: Maybe Int,
     _compileInliningDepth :: Int
   }
@@ -100,7 +100,7 @@ parseCompileOptions supportedTargets parseInputFile = do
       )
   _compileTarget <- optCompileTarget supportedTargets
   _compileOutputFile <- optional parseGenericOutputFile
-  _compileInputFile <- parseInputFile
+  _compileInputFile <- optional parseInputFile
   pure CompileOptions {..}
 
 optCompileTarget :: SupportedTargets -> Parser CompileTarget

@@ -56,7 +56,7 @@ runCPipeline pa@PipelineArg {..} = do
   outfile <- Compile.outputFile _pipelineArgOptions _pipelineArgFile
   Compile.runCommand
     _pipelineArgOptions
-      { _compileInputFile = AppPath (preFileFromAbs cFile) False,
+      { _compileInputFile = Just (AppPath (preFileFromAbs cFile) False),
         _compileOutputFile = Just (AppPath (preFileFromAbs outfile) False)
       }
   where

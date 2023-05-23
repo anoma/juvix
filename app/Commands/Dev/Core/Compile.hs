@@ -21,4 +21,4 @@ runCommand opts = do
     TargetAsm -> runAsmPipeline arg
   where
     getFile :: Sem r (Path Abs File)
-    getFile = fromAppPathFile (opts ^. compileInputFile)
+    getFile = getMainFile (opts ^. compileInputFile)
