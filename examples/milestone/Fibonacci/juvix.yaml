@@ -1,2 +1,3 @@
 name: Fibonacci
+main: Fibonacci.juvix
 version: 0.1.0
