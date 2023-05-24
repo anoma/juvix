@@ -172,7 +172,9 @@ jobs:
         run: |
           brew install gnu-sed
           echo "export PATH=$(brew --prefix coreutils)/libexec/gnubin:\$PATH" >> $GITHUB_ENV
-          echo "$PATH"
+
+      - name: Test Sed
+        run: |
           sed --version
 
       - name: Download and extract wasi-sysroot
