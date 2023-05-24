@@ -6,6 +6,7 @@ import GlobalOptions
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver
 import Juvix.Compiler.Pipeline
 import Juvix.Data.Error qualified as Error
+import Juvix.Extra.Paths.Base
 import Juvix.Prelude.Pretty hiding
   ( Doc,
   )
@@ -23,6 +24,7 @@ data App m a where
   AskPackageGlobal :: App m Bool
   AskGlobalOptions :: App m GlobalOptions
   FromAppPathFile :: AppPath File -> App m (Path Abs File)
+  GetMainFile :: Maybe (AppPath File) -> App m (Path Abs File)
   FromAppPathDir :: AppPath Dir -> App m (Path Abs Dir)
   RenderStdOut :: (HasAnsiBackend a, HasTextBackend a) => a -> App m ()
   RunPipelineEither :: AppPath File -> Sem PipelineEff a -> App m (Either JuvixError (ResolverState, a))
@@ -48,6 +50,7 @@ runAppIO args@RunAppIOArgs {..} =
   interpret $ \case
     AskPackageGlobal -> return (_runAppIOArgsRoots ^. rootsPackageGlobal)
     FromAppPathFile p -> embed (prepathToAbsFile invDir (p ^. pathPath))
+    GetMainFile m -> getMainFile' m
     FromAppPathDir p -> embed (prepathToAbsDir invDir (p ^. pathPath))
     RenderStdOut t
       | _runAppIOArgsGlobalOptions ^. globalOnlyErrors -> return ()
@@ -77,10 +80,28 @@ runAppIO args@RunAppIOArgs {..} =
     ExitJuvixError e -> do
       printErr e
       embed exitFailure
-    ExitMsg exitCode t -> embed (putStrLn t >> hFlush stdout >> exitWith exitCode)
+    ExitMsg exitCode t -> exitMsg' exitCode t
     SayRaw b -> embed (ByteString.putStr b)
   where
+    exitMsg' :: ExitCode -> Text -> Sem r x
+    exitMsg' exitCode t = embed (putStrLn t >> hFlush stdout >> exitWith exitCode)
+    getMainFile' :: Maybe (AppPath File) -> Sem r (Path Abs File)
+    getMainFile' = \case
+      Just p -> embed (prepathToAbsFile invDir (p ^. pathPath))
+      Nothing -> case pkg ^. packageMain of
+        Just p -> embed (prepathToAbsFile invDir p)
+        Nothing -> missingMainErr
+    missingMainErr :: Sem r x
+    missingMainErr =
+      exitMsg'
+        (ExitFailure 1)
+        ( "A path to the main file must be given in the CLI or specified in the `main` field of the "
+            <> pack (toFilePath juvixYamlFile)
+            <> " file"
+        )
     invDir = _runAppIOArgsRoots ^. rootsInvokeDir
+    pkg :: Package
+    pkg = _runAppIOArgsRoots ^. rootsPackage
     g :: GlobalOptions
     g = _runAppIOArgsGlobalOptions
     printErr e =

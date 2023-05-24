@@ -10,7 +10,7 @@ import System.Process qualified as P
 
 runCommand :: forall r. (Members '[Embed IO, App] r) => CompileOptions -> Sem r ()
 runCommand opts = do
-  inputFile <- fromAppPathFile (opts ^. compileInputFile)
+  inputFile <- getMainFile (opts ^. compileInputFile)
   result <- runCompile inputFile opts
   case result of
     Left err -> printFailureExit err

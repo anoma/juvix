@@ -30,10 +30,10 @@ runCommand opts = do
           ensureDir buildDir
           cFile <- inputCFile file
           embed $ TIO.writeFile (toFilePath cFile) _resultCCode
-          Compile.runCommand opts {_compileInputFile = AppPath (preFileFromAbs cFile) False}
+          Compile.runCommand opts {_compileInputFile = Just (AppPath (preFileFromAbs cFile) False)}
   where
     getFile :: Sem r (Path Abs File)
-    getFile = fromAppPathFile (opts ^. compileInputFile)
+    getFile = getMainFile (opts ^. compileInputFile)
 
     getTarget :: CompileTarget -> Sem r Backend.Target
     getTarget = \case
