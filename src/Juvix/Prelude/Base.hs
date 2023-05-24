@@ -8,6 +8,7 @@ module Juvix.Prelude.Base
   ( module Juvix.Prelude.Base,
     module Control.Applicative,
     module Data.Graph,
+    module Text.Show.Unicode,
     module Data.Map.Strict,
     module Data.Set,
     module Data.IntMap.Strict,
@@ -188,6 +189,7 @@ import System.IO.Error
 import Text.Read qualified as Text
 import Text.Show (Show)
 import Text.Show qualified as Show
+import Text.Show.Unicode (urecover, ushow)
 import Prelude (Double)
 
 --------------------------------------------------------------------------------

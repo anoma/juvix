@@ -251,7 +251,7 @@ endSemicolon :: Doc Ann -> Doc Ann
 endSemicolon x = x <> kwSemicolon
 
 ppStringLit :: Text -> Doc Ann
-ppStringLit = annotate AnnLiteralString . pretty @Text . show
+ppStringLit = annotate AnnLiteralString . pretty . pack . urecover . show
 
 bracesIndent :: Doc Ann -> Doc Ann
 bracesIndent = braces . blockIndent

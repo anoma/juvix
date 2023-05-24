@@ -158,6 +158,11 @@ end;
 
 import Stdlib.Prelude open using {Nat as Natural};
 
+module UnicodeStrings;
+  a : String;
+  a := "λ";
+end;
+
 module Comments;
   axiom a1 : Type;
   -- attached to a1
