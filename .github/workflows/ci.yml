@@ -172,6 +172,7 @@ jobs:
         run: |
           brew install gnu-sed
           echo "$(brew --prefix)/opt/gnu-sed/libexec/gnubin" >> $GITHUB_PATH
+          sed --version
 
       - name: Download and extract wasi-sysroot
         run: >
@@ -186,7 +187,7 @@ jobs:
           echo "WASI_SYSROOT_PATH=$GITHUB_WORKSPACE/wasi-sysroot" >> $GITHUB_ENV
 
       - name: Setup Wasmer
-        uses: wasmerio/setup-wasmer@v2
+        uses: wasmerio/setup-wasmer@v3
 
       - name: Set homebrew LLVM CC and LIBTOOL vars (macOS)
         run: |
