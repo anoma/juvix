@@ -5,23 +5,23 @@ tests:
     command:
       - juvix
       - --no-colors
-      - dev 
+      - dev
       - geb
       - repl
     stdout:
-      contains: "Welcome to the Juvix Geb REPL!"
+      contains: 'Welcome to the Juvix Geb REPL!'
     exit-status: 0
-    
+
   - name: geb-quit
     command:
       - juvix
       - --no-colors
-      - dev 
+      - dev
       - geb
       - repl
-    stdout: 
-      contains: "geb>"
-    stdin: ":quit"
+    stdout:
+      contains: 'geb>'
+    stdin: ':quit'
     exit-status: 0
 
   - name: geb-infer-type-unit
@@ -31,59 +31,58 @@ tests:
       - dev
       - geb
       - repl
-    stdin: ":type unit"
+    stdin: ':type unit'
     stdout:
-      contains: "so1"
+      contains: 'so1'
     exit-status: 0
 
   - name: geb-infer-type-object
     command:
       - juvix
-      - --no-colors      
+      - --no-colors
       - dev
       - geb
       - repl
-    stdin: ":type so1"
-    stdout: 
-      contains: "Inference only works on Geb morphisms"
+    stdin: ':type so1'
+    stdout:
+      contains: 'Inference only works on Geb morphisms'
     exit-status: 0
 
   - name: geb-infer-type-integer
     command:
       - juvix
-      - --no-colors        
+      - --no-colors
       - dev
       - geb
       - repl
-    stdin: ":t (mul 2 3)"
-    stdout: 
-      contains: "int"
-    exit-status: 0    
+    stdin: ':t (mul 2 3)'
+    stdout:
+      contains: 'int'
+    exit-status: 0
 
   # - name: geb-check-int
   #   command:
   #     - juvix
-  #     - --no-colors      
+  #     - --no-colors
   #     - dev
   #     - geb
   #     - repl
   #   stdin: ":check (typed (add 1 2) so1)"
-  #   stderr: 
+  #   stderr:
   #     contains: "so1 is not a valid object for (add 1 2)"
   #   exit-status: 1
 
   - name: geb-eval-and-operations
     command:
       - juvix
-      - --no-format
       - dev
       - geb
       - repl
-    stdin: "(add 2 (mul 3 4))"
-    stdout: 
+    stdin: '(add 2 (mul 3 4))'
+    stdout:
       contains: |
         14
-    exit-status: 0    
+    exit-status: 0
 
   - name: geb-eval-with-spaces
     command:
@@ -91,11 +90,10 @@ tests:
       - dev
       - geb
       - repl
-    stdin: "  unit"
-    stdout: 
-      contains:
-        "unit"
-    exit-status:    
+    stdin: '  unit'
+    stdout:
+      contains: 'unit'
+    exit-status:
 
   - name: geb-load-and-eval-gebext
     command:
@@ -103,8 +101,8 @@ tests:
         - bash
       script: |
         cd ./Geb/positive/ && juvix dev geb repl
-    stdin: ":load    basic-app.geb"
-    stdout: 
+    stdin: ':load    basic-app.geb'
+    stdout:
       contains: |
         3000
     exit-status: 0
@@ -116,13 +114,13 @@ tests:
       - dev
       - geb
       - repl
-    stdin: ":root"
-    stdout: 
+    stdin: ':root'
+    stdout:
       matches: |
         Welcome .*
         Juvix .*
         Type .*
-        
+
         geb> .*/tests/
     exit-status: 0
 
