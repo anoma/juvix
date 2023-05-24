@@ -170,7 +170,7 @@ jobs:
 
       - name: Install Sed
         run: |
-          brew install --default-names gnu-sed
+          brew install --with-default-names gnu-sed
 
       - name: Download and extract wasi-sysroot
         run: >
