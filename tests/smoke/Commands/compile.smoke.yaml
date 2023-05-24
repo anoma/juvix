@@ -33,7 +33,13 @@ tests:
         cd ./examples/milestone/
         cp -r HelloWorld "$temp"
         cd "$temp/HelloWorld"
-        sed -i '/^main:/d' juvix.yaml
+        if command -v gsed >/dev/null 2>&1; then
+          # gsed is available
+          sed_cmd="gsed"
+        else
+          sed_cmd="sed"
+        fi
+        $sed_cmd -i '/^main:/d' juvix.yaml
         juvix compile
     exit-status: 1
     stdout: |
