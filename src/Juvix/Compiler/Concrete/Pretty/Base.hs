@@ -72,7 +72,7 @@ groupStatements = \case
     g a b = case (a, b) of
       (StatementSyntax _, StatementSyntax _) -> True
       (StatementSyntax (SyntaxOperator o), s) -> definesSymbol (o ^. opSymbol) s
-      (StatementSyntax _, _) -> False
+      (StatementSyntax (SyntaxIterator i), s) -> definesSymbol (i ^. iterSymbol) s
       (StatementImport _, StatementImport _) -> True
       (StatementImport i, StatementOpenModule o) -> case sing :: SStage s of
         SParsed -> True
@@ -771,7 +771,7 @@ instance (SingI s) => PrettyCode (Iterator s) where
     is <- mapM ppCode _iteratorInitializers
     rngs <- mapM ppCode _iteratorRanges
     b <- ppExpression _iteratorBody
-    return $ n <+> hsep is <+> hsep rngs <+> b
+    return $ n <+> hsep (is ++ rngs) <+> b
 
 instance (SingI s) => PrettyCode (Initializer s) where
   ppCode Initializer {..} = do
