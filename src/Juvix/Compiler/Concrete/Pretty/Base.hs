@@ -6,7 +6,10 @@ module Juvix.Compiler.Concrete.Pretty.Base
 where
 
 import Data.List.NonEmpty.Extra qualified as NonEmpty
-import Juvix.Compiler.Concrete.Data.ScopedName (AbsModulePath, IsConcrete (..))
+import Juvix.Compiler.Concrete.Data.ScopedName
+  ( AbsModulePath,
+    IsConcrete (..),
+  )
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Extra (unfoldApplication)
 import Juvix.Compiler.Concrete.Keywords (delimJudocStart)
@@ -495,7 +498,7 @@ instance (SingI s) => PrettyCode (TypeSignature s) where
 instance (SingI s) => PrettyCode (Function s) where
   ppCode a = case sing :: SStage s of
     SParsed -> ppCode' a
-    SScoped -> apeHelper a (ppCode' a)
+    SScoped -> apeHelper a
     where
       ppCode' :: forall r. (Members '[Reader Options] r) => Function s -> Sem r (Doc Ann)
       ppCode' Function {..} = do
@@ -629,10 +632,7 @@ instance PrettyCode PatternArg where
     return $ (n' <&> (<> kwAt)) ?<> delimIf i (isJust n && not (isAtomic p)) p'
 
 instance PrettyCode PatternApp where
-  ppCode p@(PatternApp l r) = apeHelper p $ do
-    l' <- ppLeftExpression appFixity l
-    r' <- ppRightExpression appFixity r
-    return $ l' <+> r'
+  ppCode = apeHelper
 
 ppPatternParensType :: forall s r. (SingI s, Member (Reader Options) r) => PatternParensType s -> Sem r (Doc Ann)
 ppPatternParensType p = case sing :: SStage s of
@@ -678,27 +678,13 @@ instance PrettyCode Text where
   ppCode = return . pretty
 
 instance PrettyCode InfixApplication where
-  ppCode i@InfixApplication {..} =
-    apeHelper i $ do
-      infixAppLeft' <- ppLeftExpression (getFixity i) _infixAppLeft
-      infixAppOperator' <- ppCode _infixAppOperator
-      infixAppRight' <- ppRightExpression (getFixity i) _infixAppRight
-      return $ infixAppLeft' <+> infixAppOperator' <+> infixAppRight'
+  ppCode = apeHelper
 
 instance PrettyCode PostfixApplication where
-  ppCode i@PostfixApplication {..} =
-    apeHelper i $ do
-      postfixAppParameter' <- ppPostExpression (getFixity i) _postfixAppParameter
-      postfixAppOperator' <- ppCode _postfixAppOperator
-      return $ postfixAppParameter' <+> postfixAppOperator'
+  ppCode = apeHelper
 
 instance PrettyCode Application where
-  ppCode a =
-    apeHelper a $ do
-      let (f, args) = unfoldApplication a
-      f' <- ppCode f
-      args' <- mapM ppCodeAtom args
-      return $ PP.group (f' <+> nest' (vsep args'))
+  ppCode = apeHelper
 
 instance PrettyCode ApeLeaf where
   ppCode = \case
@@ -708,16 +694,12 @@ instance PrettyCode ApeLeaf where
     ApeLeafPattern r -> ppCode r
     ApeLeafPatternArg r -> ppCode r
 
-apeHelper :: (IsApe a ApeLeaf, Members '[Reader Options] r) => a -> Sem r (Doc CodeAnn) -> Sem r (Doc CodeAnn)
-apeHelper a alt = do
+apeHelper :: (IsApe a ApeLeaf, Members '[Reader Options] r) => a -> Sem r (Doc CodeAnn)
+apeHelper a = do
   opts <- ask @Options
-  if
-      | not (opts ^. optNoApe) ->
-          return $
-            let params :: ApeParams ApeLeaf
-                params = ApeParams (run . runReader opts . ppCode)
-             in runApe params a
-      | otherwise -> alt
+  let params :: ApeParams ApeLeaf
+      params = ApeParams (run . runReader opts . ppCode)
+  return $ runApe params a
 
 instance PrettyCode Literal where
   ppCode = \case
@@ -774,21 +756,8 @@ instance PrettyCode Pattern where
     PatternWildcard {} -> return kwWildcard
     PatternEmpty {} -> return $ parens mempty
     PatternConstructor constr -> ppCode constr
-    PatternInfixApplication i -> ppPatternInfixApp i
-    PatternPostfixApplication i -> ppPatternPostfixApp i
-    where
-      ppPatternInfixApp :: PatternInfixApp -> Sem r (Doc Ann)
-      ppPatternInfixApp p@PatternInfixApp {..} = apeHelper p $ do
-        patInfixConstructor' <- ppCode _patInfixConstructor
-        patInfixLeft' <- ppLeftExpression (getFixity p) _patInfixLeft
-        patInfixRight' <- ppRightExpression (getFixity p) _patInfixRight
-        return $ patInfixLeft' <+> patInfixConstructor' <+> patInfixRight'
-
-      ppPatternPostfixApp :: PatternPostfixApp -> Sem r (Doc Ann)
-      ppPatternPostfixApp p@PatternPostfixApp {..} = apeHelper p $ do
-        patPostfixConstructor' <- ppCode _patPostfixConstructor
-        patPostfixParameter' <- ppLeftExpression (getFixity p) _patPostfixParameter
-        return $ patPostfixParameter' <+> patPostfixConstructor'
+    PatternInfixApplication i -> apeHelper i
+    PatternPostfixApplication i -> apeHelper i
 
 ppPostExpression ::
   (PrettyCode a, HasAtomicity a, Member (Reader Options) r) =>

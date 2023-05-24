@@ -15,7 +15,6 @@ data GlobalOptions = GlobalOptions
     _globalShowNameIds :: Bool,
     _globalBuildDir :: Maybe (AppPath Dir),
     _globalOnlyErrors :: Bool,
-    _globalNoApe :: Bool,
     _globalStdin :: Bool,
     _globalNoTermination :: Bool,
     _globalNoPositivity :: Bool,
@@ -42,8 +41,7 @@ instance CanonicalProjection GlobalOptions Abstract.Options where
 instance CanonicalProjection GlobalOptions E.GenericOptions where
   project GlobalOptions {..} =
     E.GenericOptions
-      { E._showNameIds = _globalShowNameIds,
-        E._genericNoApe = _globalNoApe
+      { E._showNameIds = _globalShowNameIds
       }
 
 instance CanonicalProjection GlobalOptions Core.CoreOptions where
@@ -61,7 +59,6 @@ defaultGlobalOptions =
     { _globalNoColors = False,
       _globalShowNameIds = False,
       _globalOnlyErrors = False,
-      _globalNoApe = False,
       _globalNoTermination = False,
       _globalBuildDir = Nothing,
       _globalStdin = False,
@@ -91,11 +88,6 @@ parseGlobalFlags = do
           ( long "internal-build-dir"
               <> help "Directory for compiler internal output"
           )
-      )
-  _globalNoApe <-
-    switch
-      ( long "no-format"
-          <> help "Disable the new pretty printing algorithm"
       )
   _globalStdin <-
     switch

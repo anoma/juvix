@@ -31,6 +31,5 @@ parseScope = do
 instance CanonicalProjection (GlobalOptions, ScopeOptions) Scoper.Options where
   project (g, _) =
     Scoper.defaultOptions
-      { Scoper._optShowNameIds = g ^. globalShowNameIds,
-        Scoper._optNoApe = g ^. globalNoApe
+      { Scoper._optShowNameIds = g ^. globalShowNameIds
       }
