@@ -227,7 +227,8 @@ instance HasLoc OperatorSyntaxDef where
 data IteratorSyntaxDef = IteratorSyntaxDef
   { _iterSymbol :: Symbol,
     _iterAttribs :: Maybe ParsedIteratorAttribs,
-    _iterSyntaxKw :: KeywordRef
+    _iterSyntaxKw :: KeywordRef,
+    _iterIteratorKw :: KeywordRef
   }
   deriving stock (Show, Eq, Ord)
 

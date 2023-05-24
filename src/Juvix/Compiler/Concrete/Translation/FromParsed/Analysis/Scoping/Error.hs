@@ -38,6 +38,7 @@ data ScoperError
   | ErrModuleDoesNotExportSymbol ModuleDoesNotExportSymbol
   | ErrIteratorInitializer IteratorInitializer
   | ErrIteratorRange IteratorRange
+  | ErrIteratorUndefined IteratorUndefined
   deriving stock (Show)
 
 instance ToGenericError ScoperError where
@@ -69,3 +70,4 @@ instance ToGenericError ScoperError where
     ErrModuleDoesNotExportSymbol e -> genericError e
     ErrIteratorInitializer e -> genericError e
     ErrIteratorRange e -> genericError e
+    ErrIteratorUndefined e -> genericError e

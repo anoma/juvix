@@ -160,6 +160,7 @@ instance PrettyPrint IteratorSyntaxDef where
   ppCode IteratorSyntaxDef {..} = do
     iterSymbol' <- P.ppUnkindedSymbol _iterSymbol
     ppCode _iterSyntaxKw
+      <+> ppCode _iterIteratorKw
       <+> morpheme (getLoc _iterSymbol) iterSymbol'
       <+?> fmap ppCode _iterAttribs
 
