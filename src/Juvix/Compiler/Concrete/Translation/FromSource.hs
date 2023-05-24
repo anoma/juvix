@@ -486,8 +486,9 @@ operatorSyntaxDef _opSyntaxKw = do
 
 iteratorSyntaxDef :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => KeywordRef -> ParsecS r IteratorSyntaxDef
 iteratorSyntaxDef _iterSyntaxKw = do
-  _iterAttribs <- optional (withLoc (parseYaml "{" "}"))
+  _iterIteratorKw <- kw kwIterator
   _iterSymbol <- symbol
+  _iterAttribs <- optional (withLoc (parseYaml "{" "}"))
   return IteratorSyntaxDef {..}
 
 --------------------------------------------------------------------------------
@@ -599,7 +600,7 @@ range = do
   _rangePattern <- P.try $ do
     lparen
     pat <- parsePatternAtoms
-    kw kwAssign
+    kw kwIn
     return pat
   _rangeExpression <- parseExpressionAtoms
   rparen

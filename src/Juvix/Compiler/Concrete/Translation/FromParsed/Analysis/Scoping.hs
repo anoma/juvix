@@ -1285,7 +1285,11 @@ checkIterator iter = do
                     IteratorRange {_iteratorRangeIterator = iter}
                 )
         _ -> return ()
-    Nothing -> return ()
+    Nothing ->
+      throw
+        ( ErrIteratorUndefined
+            IteratorUndefined {_iteratorUndefinedIterator = iter}
+        )
   let inipats = map (^. initializerPattern) (iter ^. iteratorInitializers)
       inivals = map (^. initializerExpression) (iter ^. iteratorInitializers)
       rngpats = map (^. rangePattern) (iter ^. iteratorRanges)

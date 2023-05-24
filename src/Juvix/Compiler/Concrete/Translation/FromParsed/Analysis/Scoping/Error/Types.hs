@@ -721,3 +721,25 @@ instance ToGenericError IteratorRange where
     where
       i :: Interval
       i = getLoc _iteratorRangeIterator
+
+newtype IteratorUndefined = IteratorUndefined
+  { _iteratorUndefinedIterator :: Iterator 'Parsed
+  }
+  deriving stock (Show)
+
+instance ToGenericError IteratorUndefined where
+  genericError IteratorUndefined {..} = do
+    opts <- fromGenericOptions <$> ask
+    let msg =
+          "The identifier"
+            <+> ppCode opts (_iteratorUndefinedIterator ^. iteratorName)
+            <+> "has not been declared as an iterator"
+    return
+      GenericError
+        { _genericErrorLoc = i,
+          _genericErrorMessage = AnsiText msg,
+          _genericErrorIntervals = [i]
+        }
+    where
+      i :: Interval
+      i = getLoc _iteratorUndefinedIterator
