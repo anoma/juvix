@@ -227,9 +227,10 @@ runCommand opts = do
         ctx <- State.gets (^. replStateContext)
         gopts <- State.gets (^. replStateGlobalOptions)
         case ctx of
+          Nothing -> noFileLoadedMsg
           Just ctx' -> do
             compileRes <- liftIO (inferExpressionIO' ctx' (strip (pack input)))
-            let tbl :: Internal.InfoTable = ctx ^?! _Just . replContextArtifacts . artifactInternalTypedTable
+            let tbl :: Internal.InfoTable = ctx' ^. replContextArtifacts . artifactInternalTypedTable
 
                 printFunction :: Internal.FunctionName -> Repl ()
                 printFunction fun = do
@@ -260,7 +261,6 @@ runCommand opts = do
                   Internal.IdenInductive ind -> printInductive ind
                   Internal.IdenConstructor c -> printConstructor c
                   Internal.IdenFunction fun -> printFunction fun
-          Nothing -> noFileLoadedMsg
         where
           getIdentifier :: Internal.Expression -> Repl Internal.Iden
           getIdentifier = \case
