@@ -163,11 +163,19 @@ jobs:
           path: main
           submodules: true
 
+      - name: Install Sed
+        run: |
+          brew install gnu-sed
+          echo "$(brew --prefix)/opt/gnu-sed/libexec/gnubin" >> $GITHUB_PATH
+
+      - name: Test Sed
+        run: |
+          sed --version
+
       - name: Install ICU4C
         run: |
           brew install icu4c
           brew link icu4c --force
-
       - name: Download and extract wasi-sysroot
         run: >
           curl
@@ -181,7 +189,7 @@ jobs:
           echo "WASI_SYSROOT_PATH=$GITHUB_WORKSPACE/wasi-sysroot" >> $GITHUB_ENV
 
       - name: Setup Wasmer
-        uses: wasmerio/setup-wasmer@v2
+        uses: wasmerio/setup-wasmer@v3
 
       - name: Set homebrew LLVM CC and LIBTOOL vars (macOS)
         run: |

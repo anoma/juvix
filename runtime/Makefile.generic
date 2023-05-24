@@ -267,7 +267,7 @@ $(CPPPROGRAMS) : % : $(ALLOBJECTS)
 $(LIB) : % : $(OBJECTS)
 	$(LIBTOOL) $(LIBFLAGS) $@ $(OBJECTS)
 
-include $(DEPENDS)
+-include $(DEPENDS)
 
 clean:
 	-rm -f $(PROGRAMS) $(ALLOBJECTS) $(DEPENDS) $(LIB) $(CYSOURCES) $(HYSOURCES) $(CLEXSOURCES)

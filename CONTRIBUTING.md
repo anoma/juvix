@@ -57,7 +57,7 @@ All pull requests will be reviewed by at least one member of the development tea
 
 Thank you for contributing to Juvix!
 
-[installation]: https://docs.juvix.org/howto/installing.html
+[installation]: https://docs.juvix.org/dev/howto/installing/
 [juvix-codespace]: https://github.com/codespaces/new?hide_repo_select=true&ref=main&repo=102404734&machine=standardLinux32gb&location=WestEurope
 [stack]: https://docs.haskellstack.org/en/stable/README/
 [pre-commit]: https://pre-commit.com/
