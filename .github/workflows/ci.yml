@@ -163,20 +163,19 @@ jobs:
           path: main
           submodules: true
 
-      # - name: Install ICU4C
-      #   run: |
-      #     brew install icu4c
-      #     brew link icu4c --force
-
       - name: Install Sed
         run: |
           brew install gnu-sed
-          echo "PATH=$(brew --prefix coreutils)/libexec/gnubin:\$PATH" >> $GITHUB_ENV
+          echo "$(brew --prefix)/opt/gnu-sed/libexec/gnubin" >> $GITHUB_PATH
 
       - name: Test Sed
         run: |
           sed --version
 
+      # - name: Install ICU4C
+      #   run: |
+      #     brew install icu4c
+      #     brew link icu4c --force
       # - name: Download and extract wasi-sysroot
       #   run: >
       #     curl
