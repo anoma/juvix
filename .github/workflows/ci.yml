@@ -171,7 +171,8 @@ jobs:
       - name: Install Sed
         run: |
           brew install gnu-sed
-          echo "$(brew --prefix)/opt/gnu-sed/libexec/gnubin" >> $GITHUB_PATH
+          echo "PATH=$(brew --prefix)/opt/gnu-sed/libexec/gnubin:$PATH" >> $GITHUB_ENV
+          echo "$PATH"
           sed --version
 
       - name: Download and extract wasi-sysroot
