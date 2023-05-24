@@ -1,6 +1,26 @@
 working-directory: ./../../../tests/
 
 tests:
+  - name: repl-def
+    command:
+      - juvix
+      - repl
+      - ../examples/milestone/HelloWorld/HelloWorld.juvix
+    stdin: ":def Nat"
+    stdout:
+      contains: "zero"
+    exit-status: 0
+
+  - name: repl-def-error
+    command:
+      - juvix
+      - repl
+      - ../examples/milestone/HelloWorld/HelloWorld.juvix
+    stdin: ":def 1"
+    stdout:
+      contains: ":def expects a single identifier, but got:"
+    exit-status: 0
+
   - name: open
     command:
       - juvix
