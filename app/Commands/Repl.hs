@@ -232,6 +232,11 @@ runCommand opts = do
             compileRes <- liftIO (inferExpressionIO' ctx' (strip (pack input)))
             let tbl :: Internal.InfoTable = ctx' ^. replContextArtifacts . artifactInternalTypedTable
 
+                getIdentifier :: Internal.Expression -> Maybe Internal.Iden
+                getIdentifier = \case
+                  Internal.ExpressionIden n -> return n
+                  _ -> Nothing
+
                 printFunction :: Internal.FunctionName -> Repl ()
                 printFunction fun = do
                   let def :: Internal.FunctionDef = tbl ^?! Internal.infoFunctions . at fun . _Just . Internal.functionInfoDef
@@ -252,20 +257,20 @@ runCommand opts = do
                   let ind :: Internal.InductiveName = tbl ^?! Internal.infoConstructors . at c . _Just . Internal.constructorInfoInductive
                   printInductive ind
 
-            case compileRes of
+            case (^. Internal.typedExpression) <$> compileRes of
               Left err -> printError err
-              Right expr ->
-                getIdentifier (expr ^. Internal.typedExpression) >>= \case
-                  Internal.IdenAxiom a -> printAxiom a
-                  Internal.IdenVar {} -> impossible
-                  Internal.IdenInductive ind -> printInductive ind
-                  Internal.IdenConstructor c -> printConstructor c
-                  Internal.IdenFunction fun -> printFunction fun
-        where
-          getIdentifier :: Internal.Expression -> Repl Internal.Iden
-          getIdentifier = \case
-            Internal.ExpressionIden n -> return n
-            x -> error $ "Not an identifier: " <> Internal.ppTrace x
+              Right expr -> do
+                let m = getIdentifier (expr)
+                case m of
+                  Nothing -> do
+                    liftIO (putStrLn ":def expects a single identifier, but got: ")
+                    renderOut (Internal.ppOut (project' @GenericOptions gopts) expr)
+                  Just iden -> case iden of
+                    Internal.IdenAxiom a -> printAxiom a
+                    Internal.IdenVar {} -> impossible
+                    Internal.IdenInductive ind -> printInductive ind
+                    Internal.IdenConstructor c -> printConstructor c
+                    Internal.IdenFunction fun -> printFunction fun
 
       inferType :: String -> Repl ()
       inferType input = Repline.dontCrash $ do
