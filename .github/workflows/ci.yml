@@ -171,7 +171,7 @@ jobs:
       - name: Install Sed
         run: |
           brew install gnu-sed
-          echo "PATH=$(brew --prefix)/opt/gnu-sed/libexec/gnubin:$PATH" >> $GITHUB_ENV
+          echo "export PATH=$(brew --prefix coreutils)/libexec/gnubin:\$PATH" >> $GITHUB_ENV
           echo "$PATH"
           sed --version
 
