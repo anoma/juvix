@@ -1,0 +1,22 @@
+module Iterators;
+
+syntax iterator for {init: 1, range: 1};
+for : {A B : Type} → (A → B → A) → A → B → A;
+for f x y := f x y;
+
+syntax iterator bind {init: 1, range: 0};
+bind : {A B : Type} → (A → B) → A → B;
+bind f x := f x;
+
+builtin bool
+type Bool :=
+  | true : Bool
+  | false : Bool;
+
+main : Bool;
+main :=
+  bind (z := false)
+    for (x := true) (y in false)
+      case x
+        | true := y
+        | false := z;
