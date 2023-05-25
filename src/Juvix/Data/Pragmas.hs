@@ -1,8 +1,7 @@
 module Juvix.Data.Pragmas where
 
-import Data.Aeson.BetterErrors hiding ((<|>))
 import Data.Aeson.BetterErrors qualified as Aeson
-import Data.Yaml
+import Juvix.Data.Yaml
 import Juvix.Prelude.Base
 
 data PragmaInline
@@ -31,33 +30,31 @@ instance Hashable PragmaUnroll
 
 instance Hashable Pragmas
 
-type PragmaError = Text
-
 instance FromJSON Pragmas where
   parseJSON = toAesonParser id parsePragmas
     where
-      parsePragmas :: Parse PragmaError Pragmas
+      parsePragmas :: Parse YamlError Pragmas
       parsePragmas = do
         _pragmasInline <- keyMay "inline" parseInline
         _pragmasUnroll <- keyMay "unroll" parseUnroll
         return Pragmas {..}
 
-      parseInline :: Parse PragmaError PragmaInline
+      parseInline :: Parse YamlError PragmaInline
       parseInline = parseInlineArgsNum Aeson.<|> parseInlineBool
         where
-          parseInlineArgsNum :: Parse PragmaError PragmaInline
+          parseInlineArgsNum :: Parse YamlError PragmaInline
           parseInlineArgsNum = do
             _pragmaInlineArgsNum <- asIntegral
             return InlinePartiallyApplied {..}
 
-          parseInlineBool :: Parse PragmaError PragmaInline
+          parseInlineBool :: Parse YamlError PragmaInline
           parseInlineBool = do
             b <- asBool
             if
                 | b -> return InlineFullyApplied
                 | otherwise -> return InlineNever
 
-      parseUnroll :: Parse PragmaError PragmaUnroll
+      parseUnroll :: Parse YamlError PragmaUnroll
       parseUnroll = do
         _pragmaUnrollDepth <- asIntegral
         return PragmaUnroll {..}
