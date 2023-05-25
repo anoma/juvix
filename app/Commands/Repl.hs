@@ -166,7 +166,7 @@ displayVersion :: String -> Repl ()
 displayVersion _ = liftIO (putStrLn versionTag)
 
 replCommand :: ReplOptions -> String -> Repl ()
-replCommand opts input = Repline.dontCrash $ do
+replCommand opts input = catchAll $ do
   ctx <- replGetContext
   let tab = ctx ^. replContextArtifacts . artifactCoreTable
   evalRes <- compileThenEval ctx input
@@ -211,14 +211,14 @@ replCommand opts input = Repline.dontCrash $ do
           return res'
 
 core :: String -> Repl ()
-core input = Repline.dontCrash $ do
+core input = do
   ctx <- replGetContext
   opts <- Reader.asks (^. replOptions)
   compileRes <- liftIO (compileReplInputIO' ctx (strip (pack input))) >>= replFromEither . snd
   whenJust compileRes (renderOut . Core.ppOut opts)
 
 printDefinition :: String -> Repl ()
-printDefinition input = Repline.dontCrash $ do
+printDefinition input = do
   ctx <- replGetContext
   gopts <- State.gets (^. replStateGlobalOptions)
   compileRes <- liftIO (inferExpressionIO' ctx (strip (pack input)))
@@ -250,7 +250,7 @@ printDefinition input = Repline.dontCrash $ do
         printInductive ind
 
   case (^. Internal.typedExpression) <$> compileRes of
-    Left err -> printError err
+    Left err -> lift (printErrorS err)
     Right expr -> do
       let m = getIdentifier (expr)
       case m of
@@ -265,27 +265,44 @@ printDefinition input = Repline.dontCrash $ do
           Internal.IdenFunction fun -> printFunction fun
 
 inferType :: String -> Repl ()
-inferType input = Repline.dontCrash $ do
+inferType input = do
   ctx <- replGetContext
   gopts <- State.gets (^. replStateGlobalOptions)
   n <- liftIO (inferExpressionIO' ctx (strip (pack input))) >>= replFromEither
   renderOut (Internal.ppOut (project' @GenericOptions gopts) (n ^. Internal.typedType))
 
 replCommands :: [(String, String -> Repl ())]
-replCommands =
-  [ ("help", Repline.dontCrash . printHelpTxt),
-    -- `multiline` is included here for auto-completion purposes only.
-    -- `repline`'s `multilineCommand` logic overrides this no-op.
-    (multilineCmd, Repline.dontCrash . \_ -> return ()),
-    ("quit", quit),
-    ("load", Repline.dontCrash . loadFile . pSomeFile),
-    ("reload", Repline.dontCrash . reloadFile),
-    ("root", printRoot),
-    ("def", printDefinition),
-    ("type", inferType),
-    ("version", displayVersion),
-    ("core", core)
-  ]
+replCommands = catchable ++ nonCatchable
+  where
+    nonCatchable :: [(String, String -> Repl ())]
+    nonCatchable =
+      [ ("quit", quit)
+      ]
+    catchable :: [(String, String -> Repl ())]
+    catchable =
+      map
+        (second (catchAll .))
+        [ ("help", printHelpTxt),
+          -- `multiline` is included here for auto-completion purposes only.
+          -- `repline`'s `multilineCommand` logic overrides this no-op.
+          (multilineCmd, const (return ())),
+          ("load", loadFile . pSomeFile),
+          ("reload", reloadFile),
+          ("root", printRoot),
+          ("def", printDefinition),
+          ("type", inferType),
+          ("version", displayVersion),
+          ("core", core)
+        ]
+
+catchAll :: Repl () -> Repl ()
+catchAll = Repline.dontCrash . catchJuvixError
+  where
+    catchJuvixError :: Repl () -> Repl ()
+    catchJuvixError (HaskelineT m) = HaskelineT (mapInputT_ catchErrorS m)
+      where
+        catchErrorS :: ReplS () -> ReplS ()
+        catchErrorS = (`Except.catchError` printErrorS)
 
 defaultMatcher :: [(String, CompletionFunc ReplS)]
 defaultMatcher = [(":load", fileCompleter)]
@@ -431,8 +448,8 @@ render' t = do
 renderOut :: (P.HasAnsiBackend a, P.HasTextBackend a) => a -> Repl ()
 renderOut t = render' t >> liftIO (putStrLn "")
 
-printError :: JuvixError -> Repl ()
-printError e = do
+printErrorS :: JuvixError -> ReplS ()
+printErrorS e = do
   opts <- State.gets (^. replStateGlobalOptions)
   hasAnsi <- liftIO (Ansi.hSupportsANSIColor stderr)
   liftIO $ hPutStrLn stderr $ run (runReader (project' @GenericOptions opts) (Error.render (not (opts ^. globalNoColors) && hasAnsi) False e))
