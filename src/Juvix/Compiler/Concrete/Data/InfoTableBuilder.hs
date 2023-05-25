@@ -12,7 +12,7 @@ data InfoTableBuilder m a where
   RegisterAxiom :: AxiomDef 'Scoped -> InfoTableBuilder m ()
   RegisterConstructor :: InductiveConstructorDef 'Scoped -> InfoTableBuilder m ()
   RegisterInductive :: InductiveDef 'Scoped -> InfoTableBuilder m ()
-  RegisterFunction :: TypeSignature 'Scoped -> InfoTableBuilder m ()
+  RegisterTypeSignature :: TypeSignature 'Scoped -> InfoTableBuilder m ()
   RegisterFunctionClause :: FunctionClause 'Scoped -> InfoTableBuilder m ()
   RegisterName :: (HasLoc c) => S.Name' c -> InfoTableBuilder m ()
   RegisterModule :: Module 'Scoped 'ModuleTop -> InfoTableBuilder m ()
@@ -25,37 +25,41 @@ registerDoc k md = modify (set (highlightDoc . at k) md)
 toState :: Members '[HighlightBuilder] r => Sem (InfoTableBuilder ': r) a -> Sem (State InfoTable ': r) a
 toState = reinterpret $ \case
   RegisterAxiom d ->
-    let ref = AxiomRef' (S.unqualifiedSymbol (d ^. axiomName))
-        info = AxiomInfo {_axiomInfoType = d ^. axiomType}
+    let ref = d ^. axiomName . S.nameId
+        info = AxiomInfo d
         j = d ^. axiomDoc
      in do
           modify (over infoAxioms (HashMap.insert ref info))
           registerDoc (d ^. axiomName . nameId) j
   RegisterConstructor c ->
-    let ref = ConstructorRef' (S.unqualifiedSymbol (c ^. constructorName))
-        info = ConstructorInfo {_constructorInfoType = c ^. constructorType}
+    let ref = c ^. constructorName . S.nameId
+        info = ConstructorInfo c
         j = c ^. constructorDoc
      in do
           modify (over infoConstructors (HashMap.insert ref info))
           registerDoc (c ^. constructorName . nameId) j
   RegisterInductive ity ->
-    let ref = InductiveRef' (S.unqualifiedSymbol (ity ^. inductiveName))
+    let ref = ity ^. inductiveName . S.nameId
         info = InductiveInfo {_inductiveInfoDef = ity}
         j = ity ^. inductiveDoc
      in do
           modify (over infoInductives (HashMap.insert ref info))
           registerDoc (ity ^. inductiveName . nameId) j
-  RegisterFunction f ->
-    let ref = FunctionRef' (S.unqualifiedSymbol (f ^. sigName))
-        info = FunctionInfo {_functionInfoType = f ^. sigType}
+  RegisterTypeSignature f ->
+    let ref = f ^. sigName . S.nameId
+        info =
+          FunctionInfo
+            { _functionInfoType = f,
+              _functionInfoClauses = []
+            }
         j = f ^. sigDoc
      in do
-          modify (over infoFunctions (HashMap.insert ref info))
+          modify (set (infoFunctions . at ref) (Just info))
           registerDoc (f ^. sigName . nameId) j
   RegisterFunctionClause c ->
-    let key = c ^. clauseOwnerFunction
-        value = c
-     in do modify (over infoFunctionClauses (HashMap.insert key value))
+    -- assumes the signature has already been registered
+    let key = c ^. clauseOwnerFunction . S.nameId
+     in modify (over (infoFunctions . at key . _Just . functionInfoClauses) (`snoc` c))
   RegisterName n -> modify (over highlightNames (cons (S.AName n)))
   RegisterModule m -> do
     let j = m ^. moduleDoc

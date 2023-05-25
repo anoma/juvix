@@ -469,7 +469,7 @@ checkTypeSignature TypeSignature {..} = do
   sigName' <- bindFunctionSymbol _sigName
   sigDoc' <- mapM checkJudoc _sigDoc
   sigBody' <- mapM checkParseExpressionAtoms _sigBody
-  registerFunction
+  registerTypeSignature
     @$> TypeSignature
       { _sigName = sigName',
         _sigType = sigType',
