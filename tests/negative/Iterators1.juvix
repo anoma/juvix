@@ -1,0 +1,13 @@
+module Iterators1;
+
+syntax iterator map {init: 0};
+map : {A B : Type} → (A → B) → A → B;
+map f x := f x;
+
+builtin bool
+type Bool :=
+  | true : Bool
+  | false : Bool;
+
+main : Bool;
+main := map (y := false) (x in true) x;

@@ -32,23 +32,25 @@ data EvalData = EvalData
 
 makeLenses ''EvalData
 
+type JSONError = Text
+
 instance FromJSON EvalData where
   parseJSON = toAesonParser id parseEvalData
     where
-      parseEvalData :: Parse PragmaError EvalData
+      parseEvalData :: Parse JSONError EvalData
       parseEvalData = do
         _evalDataInput <- parseInputs
         _evalDataOutput <- key "out" asText
         return EvalData {..}
 
-      parseInputs :: Parse PragmaError [Text]
+      parseInputs :: Parse JSONError [Text]
       parseInputs = do
         mi <- keyMay "in" asText
         case mi of
           Nothing -> parseInputs' 1
           Just i -> return [i]
 
-      parseInputs' :: Int -> Parse PragmaError [Text]
+      parseInputs' :: Int -> Parse JSONError [Text]
       parseInputs' n = do
         mi <- keyMay ("in" <> show n) asText
         case mi of

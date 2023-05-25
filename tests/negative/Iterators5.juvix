@@ -1,0 +1,11 @@
+module Iterators5;
+
+syntax iterator map;
+
+builtin bool
+type Bool :=
+  | true : Bool
+  | false : Bool;
+
+main : Bool;
+main := true;

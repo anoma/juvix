@@ -252,5 +252,40 @@ scoperErrorTests =
       $(mkRelFile "Main.juvix")
       $ \case
         ErrModuleDoesNotExportSymbol {} -> Nothing
+        _ -> wrongError,
+    NegTest
+      "Wrong number of interator initializers"
+      $(mkRelDir ".")
+      $(mkRelFile "Iterators1.juvix")
+      $ \case
+        ErrIteratorInitializer {} -> Nothing
+        _ -> wrongError,
+    NegTest
+      "Wrong number of interator ranges"
+      $(mkRelDir ".")
+      $(mkRelFile "Iterators2.juvix")
+      $ \case
+        ErrIteratorRange {} -> Nothing
+        _ -> wrongError,
+    NegTest
+      "Undeclared iterator"
+      $(mkRelDir ".")
+      $(mkRelFile "Iterators3.juvix")
+      $ \case
+        ErrIteratorUndefined {} -> Nothing
+        _ -> wrongError,
+    NegTest
+      "Duplicate iterator declaration"
+      $(mkRelDir ".")
+      $(mkRelFile "Iterators4.juvix")
+      $ \case
+        ErrDuplicateIterator {} -> Nothing
+        _ -> wrongError,
+    NegTest
+      "Unused iterator declaration"
+      $(mkRelDir ".")
+      $(mkRelFile "Iterators5.juvix")
+      $ \case
+        ErrUnusedIteratorDef {} -> Nothing
         _ -> wrongError
   ]

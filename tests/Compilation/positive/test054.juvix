@@ -1,0 +1,30 @@
+-- Iterators
+module test054;
+
+import Stdlib.Prelude open;
+
+syntax iterator for;
+for : {A B : Type} → (A → B → A) → A → List B → A;
+for := foldl {_} {_};
+
+syntax iterator mymap {init: 0};
+mymap : {A B : Type} → (A → B) → List A → List B;
+mymap f nil := nil;
+mymap f (x :: xs) := f x :: mymap f xs;
+
+sum : List Nat → Nat;
+sum xs := for (acc := 0) (x in xs) acc + x;
+
+sum' : List Nat → Nat;
+sum' xs := for λ {acc x := acc + x} 0 xs;
+
+lst : List Nat;
+lst := 1 :: 2 :: 3 :: 4 :: 5 :: nil;
+
+main : Nat;
+main :=
+  sum lst
+    + sum' lst
+    + fst (for (a, b := 0, 0) (x in lst) b + x, a)
+    + for (a := 0) (x, y in mymap (x in lst) x, x + 1)
+        a + x * y;
