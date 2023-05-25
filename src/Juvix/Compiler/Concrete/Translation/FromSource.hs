@@ -286,8 +286,12 @@ parseYaml l r = do
   void (P.chunk l)
   off <- P.getOffset
   str <- P.manyTill P.anySingle (P.chunk r)
+  let str' =
+        if
+            | elem '\n' str -> str
+            | otherwise -> '{' : str ++ "}"
   space
-  let bs = BS.fromString str
+  let bs = BS.fromString str'
   case decodeEither' bs of
     Left err -> parseFailure off (prettyPrintParseException err)
     Right yaml -> return $ WithSource (fromString str) yaml
