@@ -132,6 +132,9 @@ hang' = hang 2
 oneLineOrNext :: Doc ann -> Doc ann
 oneLineOrNext x = PP.group (flatAlt (line <> indent' x) (space <> x))
 
+oneLineOrNextNoIndent :: Doc ann -> Doc ann
+oneLineOrNextNoIndent x = PP.group (flatAlt (line <> x) (space <> x))
+
 ordinal :: Int -> Doc a
 ordinal = \case
   1 -> "first"
