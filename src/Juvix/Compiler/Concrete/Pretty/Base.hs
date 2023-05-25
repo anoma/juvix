@@ -771,7 +771,7 @@ instance (SingI s) => PrettyCode (Iterator s) where
     is <- mapM ppCode _iteratorInitializers
     rngs <- mapM ppCode _iteratorRanges
     b <- ppExpression _iteratorBody
-    return $ n <+> hsep (is ++ rngs) <+> b
+    return $ hang' (n <+> hsep (is ++ rngs) <> oneLineOrNextNoIndent b)
 
 instance (SingI s) => PrettyCode (Initializer s) where
   ppCode Initializer {..} = do
