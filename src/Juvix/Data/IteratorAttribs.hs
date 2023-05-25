@@ -1,7 +1,6 @@
 module Juvix.Data.IteratorAttribs where
 
-import Data.Aeson.BetterErrors
-import Data.Yaml
+import Juvix.Data.Yaml
 import Juvix.Prelude.Base
 
 data IteratorAttribs = IteratorAttribs
@@ -13,8 +12,9 @@ data IteratorAttribs = IteratorAttribs
 instance FromJSON IteratorAttribs where
   parseJSON = toAesonParser id parseAttribs
     where
-      parseAttribs :: Parse Text IteratorAttribs
+      parseAttribs :: Parse YamlError IteratorAttribs
       parseAttribs = do
+        checkYamlKeys ["init", "range"]
         _iteratorAttribsInitNum <- keyMay "init" asIntegral
         _iteratorAttribsRangeNum <- keyMay "range" asIntegral
         return IteratorAttribs {..}
