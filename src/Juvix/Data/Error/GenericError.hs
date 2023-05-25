@@ -16,7 +16,7 @@ data GenericError = GenericError
     _genericErrorIntervals :: [Interval]
   }
 
-data GenericOptions = GenericOptions
+newtype GenericOptions = GenericOptions
   { _showNameIds :: Bool
   }
   deriving stock (Eq, Show)
@@ -47,6 +47,9 @@ genericErrorHeader g =
 
 class ToGenericError a where
   genericError :: (Member (Reader GenericOptions) r) => a -> Sem r GenericError
+
+instance ToGenericError GenericError where
+  genericError = return
 
 errorIntervals :: (ToGenericError e, Member (Reader GenericOptions) r) => e -> Sem r [Interval]
 errorIntervals e = do
