@@ -102,6 +102,11 @@ isDataValue = \case
   NCtr Constr {..} -> all isDataValue _constrArgs
   _ -> False
 
+isFailNode :: Node -> Bool
+isFailNode = \case
+  NBlt (BuiltinApp {..}) | _builtinAppOp == OpFail -> True
+  _ -> False
+
 freeVarsSortedMany :: [Node] -> Set Var
 freeVarsSortedMany n = Set.fromList (n ^.. each . freeVars)
 
