@@ -218,7 +218,7 @@ printDefinition input = do
             _ -> err
             where
               err :: Repl a
-              err = replError (AnsiText @Text ":def one or more identifiers")
+              err = replError (AnsiText @Text ":def expects one or more identifiers")
 
       printIdentifier :: Concrete.ScopedIden -> Repl ()
       printIdentifier = \case
