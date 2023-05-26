@@ -18,6 +18,7 @@ import Juvix.Data.Ape
 import Juvix.Data.CodeAnn
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude
+import Juvix.Compiler.Concrete.Data.InfoTable
 
 doc :: (PrettyCode c) => Options -> c -> Doc Ann
 doc opts =
@@ -118,6 +119,12 @@ groupStatements = \case
                   _inductiveName
                     ^. S.nameConcrete
                     : map (^. constructorName . S.nameConcrete) constructors
+
+instance PrettyCode FunctionInfo where
+  ppCode f = do
+    let ty = StatementTypeSignature (f ^. functionInfoType)
+        cs = map StatementFunctionClause (f ^. functionInfoClauses)
+    ppCode (ty : cs)
 
 instance (SingI s) => PrettyCode [Statement s] where
   ppCode ss = vsep2 <$> mapM (fmap vsep . mapM (fmap endSemicolon . ppCode)) (groupStatements ss)

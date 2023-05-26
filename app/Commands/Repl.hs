@@ -5,7 +5,7 @@ module Commands.Repl where
 import Commands.Base hiding
   ( command,
   )
-import Juvix.Compiler.Concrete.Print qualified as Concrete
+import Juvix.Compiler.Concrete.Pretty qualified as Concrete
 import Commands.Repl.Base
 import Juvix.Compiler.Concrete.Data.InfoTable qualified as Scoped
 import Commands.Repl.Options
@@ -28,7 +28,6 @@ import Juvix.Compiler.Core.Info.NoDisplayInfo qualified as Info
 import Juvix.Compiler.Core.Pretty qualified as Core
 import Juvix.Compiler.Core.Transformation qualified as Core
 import Juvix.Compiler.Core.Transformation.DisambiguateNames (disambiguateNames)
-import Juvix.Compiler.Internal.Data qualified as Internal
 import Juvix.Compiler.Internal.Language qualified as Internal
 import Juvix.Compiler.Internal.Pretty qualified as Internal
 import Juvix.Compiler.Pipeline.Repl
@@ -202,58 +201,56 @@ printDefinition :: String -> Repl ()
 printDefinition input = do
   ctx <- replGetContext
   gopts <- State.gets (^. replStateGlobalOptions)
-  compileRes <- replExpressionUpToScopedAtoms (strip (pack input))
   let tbl :: Scoped.InfoTable = ctx ^. replContextArtifacts . artifactScopeTable
+      popts :: GenericOptions = project' gopts
 
-      getIdentifier :: Concrete.ExpressionAtoms 'Concrete.Scoped -> Repl Concrete.ScopedIden
-      getIdentifier = \case
-        Concrete.AtomIdentifier i -> return i
-        Concrete.AtomParens p -> getIdentifier p
-        e -> err
-         where
-         err :: Repl a
-         err = undefined
+      getIdentifiers :: Concrete.ExpressionAtoms 'Concrete.Scoped -> Repl (NonEmpty Concrete.ScopedIden)
+      getIdentifiers as = mapM getIdentifier (as ^. Concrete.expressionAtoms)
+        where
+        getIdentifier :: Concrete.ExpressionAtom 'Concrete.Scoped -> Repl (Concrete.ScopedIden)
+        getIdentifier = \case
+          Concrete.AtomIdentifier a -> return a
+          Concrete.AtomParens p
+            | Concrete.ExpressionIdentifier a <- p -> return a
+            | Concrete.ExpressionParensIdentifier a <- p -> return a
+          _ -> err
+          where
+          err :: Repl a
+          err = undefined (Concrete.ppOut popts as)
+
+      printIdentifier :: Concrete.ScopedIden -> Repl ()
+      printIdentifier = \case
+        Concrete.ScopedAxiom a -> printAxiom (a ^. Concrete.axiomRefName . Scoped.nameId)
+        Concrete.ScopedInductive a -> printInductive (a ^. Concrete.inductiveRefName . Scoped.nameId)
+        Concrete.ScopedVar {} -> return ()
+        Concrete.ScopedFunction f -> printFunction (f ^. Concrete.functionRefName . Scoped.nameId)
+        Concrete.ScopedConstructor c -> printConstructor (c ^. Concrete.constructorRefName . Scoped.nameId)
 
       printFunction :: Scoped.NameId -> Repl ()
       printFunction fun = do
         let def :: Scoped.FunctionInfo = tbl ^?! Scoped.infoFunctions . at fun . _Just
-        renderOut (Concrete.ppOutNoComments (project' @GenericOptions gopts) def)
+        renderOut (Concrete.ppOut popts def)
 
       printInductive :: Scoped.NameId -> Repl ()
       printInductive ind = do
         let def :: Concrete.InductiveDef 'Concrete.Scoped = tbl ^?! Scoped.infoInductives . at ind . _Just . Scoped.inductiveInfoDef
-        renderOut (Concrete.ppOutNoComments (project' @GenericOptions gopts) def)
+        renderOut (Concrete.ppOut popts def)
 
       printAxiom :: Scoped.NameId -> Repl ()
       printAxiom ax = do
         let def :: Concrete.AxiomDef 'Concrete.Scoped = tbl ^?! Scoped.infoAxioms . at ax . _Just . Scoped.axiomInfoDef
-        renderOut (Concrete.ppOutNoComments (project' @GenericOptions gopts) def)
+        renderOut (Concrete.ppOut popts def)
 
       printConstructor :: Scoped.NameId -> Repl ()
       printConstructor c = do
         let ind :: Scoped.Symbol = tbl ^?! Scoped.infoConstructors . at c . _Just . Scoped.constructorInfoTypeName
         printInductive (ind ^. Scoped.nameId)
 
-  undefined
-
---   case (^. Internal.  typedExpression) <$> compileRes of
---     Left err -> lift (printErrorS err)
---     Right expr -> do
---       let m = getIdentifier (expr)
---       case m of
---         Nothing -> do
---           liftIO (putStrLn ":def expects a single identifier, but got: ")
---           renderOut (Internal.ppOut (project' @GenericOptions gopts) expr)
---         Just iden -> case iden of
---           Internal.IdenAxiom a -> printAxiom a
---           Internal.IdenVar {} -> impossible
---           Internal.IdenInductive ind -> printInductive ind
---           Internal.IdenConstructor c -> printConstructor c
---           Internal.IdenFunction fun -> printFunction fun
+  compileRes :: Concrete.ExpressionAtoms 'Concrete.Scoped <- replExpressionUpToScopedAtoms (strip (pack input))
+  getIdentifiers compileRes >>= mapM_ printIdentifier
 
 inferType :: String -> Repl ()
 inferType input = do
-  ctx <- replGetContext
   gopts <- State.gets (^. replStateGlobalOptions)
   n <- replExpressionUpToTyped (strip (pack input))
   renderOut (Internal.ppOut (project' @GenericOptions gopts) (n ^. Internal.typedType))

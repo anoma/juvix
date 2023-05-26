@@ -15,7 +15,6 @@ import Juvix.Data.Effect.ExactPrint
 import Juvix.Data.Keyword.All
 import Juvix.Prelude hiding ((<+>), (<+?>), (<?+>), (?<>))
 import Juvix.Prelude.Pretty (annotate, pretty)
-import Juvix.Compiler.Concrete.Data.InfoTable
 
 class PrettyPrint a where
   ppCode :: Members '[ExactPrint, Reader Options] r => a -> Sem r ()
@@ -440,11 +439,6 @@ instance PrettyPrint (InductiveDef 'Scoped) where
     where
       ppConstructorBlock :: NonEmpty (InductiveConstructorDef 'Scoped) -> Sem r ()
       ppConstructorBlock cs = vsep (ppCode <$> cs)
-
-instance PrettyPrint FunctionInfo where
-  ppCode f = do
-    ppCode (StatementTypeSignature (f ^. functionInfoType))
-    ppCode (map StatementFunctionClause (f ^. functionInfoClauses))
 
 instance PrettyPrint (Statement 'Scoped) where
   ppCode = \case
