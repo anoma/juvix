@@ -6,9 +6,13 @@ tests:
       - juvix
       - repl
       - ../examples/milestone/HelloWorld/HelloWorld.juvix
-    stdin: ":def Nat"
+    stdin: ":def suc"
     stdout:
-      contains: "zero"
+      contains: |
+        --- Inductive natural numbers. I.e. whole non-negative numbers.
+        builtin nat type Nat :=
+          | zero : Nat
+          | suc : Nat → Nat
     exit-status: 0
 
   - name: repl-def-error
@@ -16,9 +20,10 @@ tests:
       - juvix
       - repl
       - ../examples/milestone/HelloWorld/HelloWorld.juvix
-    stdin: ":def 1"
+    stdin: ":def 1 Nat"
     stdout:
-      contains: ":def expects a single identifier, but got:"
+      contains: |
+        :def expects one or more identifiers
     exit-status: 0
 
   - name: open
