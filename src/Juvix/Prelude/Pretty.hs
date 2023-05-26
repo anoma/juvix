@@ -12,6 +12,7 @@ import Prettyprinter qualified as PP
 import Prettyprinter.Render.Terminal (AnsiStyle)
 import Prettyprinter.Render.Terminal qualified as Ansi
 import Prettyprinter.Render.Text qualified as Text
+import Data.Text qualified as Text
 import Prettyprinter.Util (reflow)
 import Prelude
 
@@ -147,6 +148,18 @@ ordinal = \case
   11 -> "eleventh"
   12 -> "twelfth"
   n -> pretty n <> "th"
+
+isVowel :: Char -> Bool
+isVowel = (`elem` ("aeiouAEIOU" :: [Char]))
+
+withArticle :: Text -> Text
+withArticle n = articleFor n <> n
+
+articleFor :: Text -> Text
+articleFor n
+  | Text.null n = ""
+  | isVowel (Text.head n) = "an"
+  | otherwise = "a"
 
 itemize :: (Functor f, Foldable f) => f (Doc ann) -> Doc ann
 itemize = vsep . fmap ("• " <>)

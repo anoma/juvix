@@ -22,8 +22,40 @@ tests:
       - ../examples/milestone/HelloWorld/HelloWorld.juvix
     stdin: ":def 1 Nat"
     stdout:
+      matches: |
+        .*
+    stderr:
       contains: |
         :def expects one or more identifiers
+    exit-status: 0
+
+  - name: repl-def-infix
+    command:
+      - juvix
+      - repl
+      - ../examples/milestone/HelloWorld/HelloWorld.juvix
+    stdin: ":def +"
+    stdout:
+      contains: |
+        --- Addition for ;Nat;s.
+        builtin nat-plus + : Nat → Nat → Nat;
+        + zero b := b;
+        + (suc a) b := suc (a + b);
+    exit-status: 0
+
+  - name: repl-def-multiple
+    command:
+      - juvix
+      - repl
+      - ../examples/milestone/HelloWorld/HelloWorld.juvix
+    stdin: ":def + (+) (((+)))"
+    stdout:
+      contains: |
+        --- Addition for ;Nat;s.
+        builtin nat-plus + : Nat → Nat → Nat;
+        + zero b := b;
+        + (suc a) b := suc (a + b);
+        --- Addition for ;Nat;s.
     exit-status: 0
 
   - name: open

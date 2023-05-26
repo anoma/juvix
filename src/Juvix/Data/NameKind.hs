@@ -31,7 +31,13 @@ instance HasNameKind NameKind where
   getNameKind = id
 
 instance Pretty NameKind where
-  pretty = \case
+  pretty = pretty . nameKindText
+
+nameKindWithArticle :: NameKind -> Text
+nameKindWithArticle = withArticle . nameKindText
+
+nameKindText :: NameKind -> Text
+nameKindText = \case
     KNameConstructor -> "constructor"
     KNameInductive -> "inductive type"
     KNameFunction -> "function"

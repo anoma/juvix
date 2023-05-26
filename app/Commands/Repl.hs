@@ -199,57 +199,75 @@ core input = do
   compileRes <- liftIO (compileReplInputIO' ctx (strip (pack input))) >>= replFromEither . snd
   whenJust compileRes (renderOut . Core.ppOut opts)
 
+ppConcrete :: Concrete.PrettyCode a => a -> Repl AnsiText
+ppConcrete a = do
+  gopts <- State.gets (^. replStateGlobalOptions)
+  let popts :: GenericOptions = project' gopts
+  return (Concrete.ppOut popts a)
+
+printConcrete :: Concrete.PrettyCode a => a -> Repl ()
+printConcrete = ppConcrete >=> renderOut
+
 printDefinition :: String -> Repl ()
 printDefinition input = do
-  ctx <- replGetContext
-  gopts <- State.gets (^. replStateGlobalOptions)
-  let tbl :: Scoped.InfoTable = ctx ^. replContextArtifacts . artifactScopeTable
-      popts :: GenericOptions = project' gopts
+  replExpressionUpToScopedAtoms (strip (pack input))
+    >>= getIdentifiers
+    >>= printIdentifiers
+  where
+    getIdentifiers :: Concrete.ExpressionAtoms 'Concrete.Scoped -> Repl (NonEmpty Concrete.ScopedIden)
+    getIdentifiers as = mapM getIdentifier (as ^. Concrete.expressionAtoms)
+      where
+        getIdentifier :: Concrete.ExpressionAtom 'Concrete.Scoped -> Repl (Concrete.ScopedIden)
+        getIdentifier = \case
+          Concrete.AtomIdentifier a -> return a
+          Concrete.AtomParens p
+            | Concrete.ExpressionIdentifier a <- p -> return a
+            | Concrete.ExpressionParensIdentifier a <- p -> return a
+          _ -> err
+          where
+            err :: Repl a
+            err = replError (AnsiText @Text ":def expects one or more identifiers")
 
-      getIdentifiers :: Concrete.ExpressionAtoms 'Concrete.Scoped -> Repl (NonEmpty Concrete.ScopedIden)
-      getIdentifiers as = mapM getIdentifier (as ^. Concrete.expressionAtoms)
-        where
-          getIdentifier :: Concrete.ExpressionAtom 'Concrete.Scoped -> Repl (Concrete.ScopedIden)
-          getIdentifier = \case
-            Concrete.AtomIdentifier a -> return a
-            Concrete.AtomParens p
-              | Concrete.ExpressionIdentifier a <- p -> return a
-              | Concrete.ExpressionParensIdentifier a <- p -> return a
-            _ -> err
-            where
-              err :: Repl a
-              err = replError (AnsiText @Text ":def expects one or more identifiers")
+    printIdentifiers :: NonEmpty Concrete.ScopedIden -> Repl ()
+    printIdentifiers (d :| ds) = do
+        printIdentifier d
+        whenJust (nonEmpty ds) $ \ds' -> replNewline >> printIdentifiers ds'
+      where
+        printIdentifier :: Concrete.ScopedIden -> Repl ()
+        printIdentifier s = do
+          case s of
+            Concrete.ScopedAxiom a -> printAxiom (a ^. Concrete.axiomRefName . Scoped.nameId)
+            Concrete.ScopedInductive a -> printInductive (a ^. Concrete.inductiveRefName . Scoped.nameId)
+            Concrete.ScopedVar {} -> return ()
+            Concrete.ScopedFunction f -> printFunction (f ^. Concrete.functionRefName . Scoped.nameId)
+            Concrete.ScopedConstructor c -> printConstructor (c ^. Concrete.constructorRefName . Scoped.nameId)
 
-      printIdentifier :: Concrete.ScopedIden -> Repl ()
-      printIdentifier = \case
-        Concrete.ScopedAxiom a -> printAxiom (a ^. Concrete.axiomRefName . Scoped.nameId)
-        Concrete.ScopedInductive a -> printInductive (a ^. Concrete.inductiveRefName . Scoped.nameId)
-        Concrete.ScopedVar {} -> return ()
-        Concrete.ScopedFunction f -> printFunction (f ^. Concrete.functionRefName . Scoped.nameId)
-        Concrete.ScopedConstructor c -> printConstructor (c ^. Concrete.constructorRefName . Scoped.nameId)
+    getInfoTable :: Repl Scoped.InfoTable
+    getInfoTable = (^. replContextArtifacts . artifactScopeTable) <$> replGetContext
 
-      printFunction :: Scoped.NameId -> Repl ()
-      printFunction fun = do
-        let def :: Scoped.FunctionInfo = tbl ^?! Scoped.infoFunctions . at fun . _Just
-        renderOut (Concrete.ppOut popts def)
+    printFunction :: Scoped.NameId -> Repl ()
+    printFunction fun = do
+      tbl :: Scoped.InfoTable <- getInfoTable
+      let def :: Scoped.FunctionInfo = tbl ^?! Scoped.infoFunctions . at fun . _Just
+      printConcrete def
 
-      printInductive :: Scoped.NameId -> Repl ()
-      printInductive ind = do
-        let def :: Concrete.InductiveDef 'Concrete.Scoped = tbl ^?! Scoped.infoInductives . at ind . _Just . Scoped.inductiveInfoDef
-        renderOut (Concrete.ppOut popts def)
+    printInductive :: Scoped.NameId -> Repl ()
+    printInductive ind = do
+      tbl :: Scoped.InfoTable <- (^. replContextArtifacts . artifactScopeTable) <$> replGetContext
+      let def :: Concrete.InductiveDef 'Concrete.Scoped = tbl ^?! Scoped.infoInductives . at ind . _Just . Scoped.inductiveInfoDef
+      printConcrete def
 
-      printAxiom :: Scoped.NameId -> Repl ()
-      printAxiom ax = do
-        let def :: Concrete.AxiomDef 'Concrete.Scoped = tbl ^?! Scoped.infoAxioms . at ax . _Just . Scoped.axiomInfoDef
-        renderOut (Concrete.ppOut popts def)
+    printAxiom :: Scoped.NameId -> Repl ()
+    printAxiom ax = do
+      tbl :: Scoped.InfoTable <- (^. replContextArtifacts . artifactScopeTable) <$> replGetContext
+      let def :: Concrete.AxiomDef 'Concrete.Scoped = tbl ^?! Scoped.infoAxioms . at ax . _Just . Scoped.axiomInfoDef
+      printConcrete def
 
-      printConstructor :: Scoped.NameId -> Repl ()
-      printConstructor c = do
-        let ind :: Scoped.Symbol = tbl ^?! Scoped.infoConstructors . at c . _Just . Scoped.constructorInfoTypeName
-        printInductive (ind ^. Scoped.nameId)
-
-  compileRes :: Concrete.ExpressionAtoms 'Concrete.Scoped <- replExpressionUpToScopedAtoms (strip (pack input))
-  getIdentifiers compileRes >>= mapM_ printIdentifier
+    printConstructor :: Scoped.NameId -> Repl ()
+    printConstructor c = do
+      tbl :: Scoped.InfoTable <- (^. replContextArtifacts . artifactScopeTable) <$> replGetContext
+      let ind :: Scoped.Symbol = tbl ^?! Scoped.infoConstructors . at c . _Just . Scoped.constructorInfoTypeName
+      printInductive (ind ^. Scoped.nameId)
 
 inferType :: String -> Repl ()
 inferType input = do
@@ -448,8 +466,11 @@ render' t = do
   hasAnsi <- liftIO (Ansi.hSupportsANSIColor stdout)
   liftIO (P.renderIO (not (opts ^. globalNoColors) && hasAnsi) t)
 
+replNewline :: Repl ()
+replNewline = liftIO (putStrLn "")
+
 renderOut :: (P.HasAnsiBackend a, P.HasTextBackend a) => a -> Repl ()
-renderOut t = render' t >> liftIO (putStrLn "")
+renderOut t = render' t >> replNewline
 
 printErrorS :: JuvixError -> ReplS ()
 printErrorS e = do
