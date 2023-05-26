@@ -53,5 +53,6 @@ makeLenses ''AxiomInfo
 makeLenses ''FunctionInfo
 
 instance HasLoc FunctionInfo where
-  getLoc f = getLoc (f ^. functionInfoType) <>?
-    (getLocSpan <$> nonEmpty (f ^. functionInfoClauses))
+  getLoc f =
+    getLoc (f ^. functionInfoType)
+      <>? (getLocSpan <$> nonEmpty (f ^. functionInfoClauses))

@@ -49,7 +49,7 @@ expressionUpToAtomsScoped fp txt = do
     . runBuiltinsArtifacts
     . runScoperScopeArtifacts
     $ Parser.expressionFromTextSource fp txt
-    >>= Scoper.scopeCheckExpressionAtoms scopeTable
+      >>= Scoper.scopeCheckExpressionAtoms scopeTable
 
 scopeCheckExpression ::
   Members '[Error JuvixError, State Artifacts] r =>

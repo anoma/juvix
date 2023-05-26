@@ -6,6 +6,7 @@ module Juvix.Compiler.Concrete.Pretty.Base
 where
 
 import Data.List.NonEmpty.Extra qualified as NonEmpty
+import Juvix.Compiler.Concrete.Data.InfoTable
 import Juvix.Compiler.Concrete.Data.ScopedName
   ( AbsModulePath,
     IsConcrete (..),
@@ -18,7 +19,6 @@ import Juvix.Data.Ape
 import Juvix.Data.CodeAnn
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude
-import Juvix.Compiler.Concrete.Data.InfoTable
 
 doc :: (PrettyCode c) => Options -> c -> Doc Ann
 doc opts =

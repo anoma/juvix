@@ -5,9 +5,7 @@ module Commands.Repl where
 import Commands.Base hiding
   ( command,
   )
-import Juvix.Compiler.Concrete.Pretty qualified as Concrete
 import Commands.Repl.Base
-import Juvix.Compiler.Concrete.Data.InfoTable qualified as Scoped
 import Commands.Repl.Options
 import Control.Exception (throwIO)
 import Control.Monad.Except qualified as Except
@@ -16,10 +14,12 @@ import Control.Monad.State.Strict qualified as State
 import Control.Monad.Trans.Class (lift)
 import Data.String.Interpolate (i, __i)
 import Evaluator
+import Juvix.Compiler.Concrete.Data.InfoTable qualified as Scoped
 import Juvix.Compiler.Concrete.Data.Scope (scopePath)
-import Juvix.Compiler.Concrete.Language qualified as Concrete
-import Juvix.Compiler.Concrete.Data.ScopedName qualified as Scoped
 import Juvix.Compiler.Concrete.Data.ScopedName (absTopModulePath)
+import Juvix.Compiler.Concrete.Data.ScopedName qualified as Scoped
+import Juvix.Compiler.Concrete.Language qualified as Concrete
+import Juvix.Compiler.Concrete.Pretty qualified as Concrete
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver (runPathResolver)
 import Juvix.Compiler.Core qualified as Core
 import Juvix.Compiler.Core.Extra.Value
@@ -65,8 +65,8 @@ helpTxt =
 replDefaultLoc :: Interval
 replDefaultLoc = singletonInterval (mkInitialLoc replPath)
 
-replFromJust :: JuvixError -> Maybe a -> Repl a
-replFromJust err = maybe (lift (Except.throwError err)) return
+replFromJust :: Repl a -> Maybe a -> Repl a
+replFromJust err = maybe err return
 
 replFromEither :: Either JuvixError a -> Repl a
 replFromEither = either (lift . Except.throwError) return
@@ -74,16 +74,18 @@ replFromEither = either (lift . Except.throwError) return
 replGetContext :: Repl ReplContext
 replGetContext = State.gets (^. replStateContext) >>= replFromJust noFileLoadedErr
 
-replError :: AnsiText -> JuvixError
+replError :: AnsiText -> Repl a
 replError msg =
-  JuvixError $
-    GenericError
+  lift
+    . Except.throwError
+    . JuvixError
+    $ GenericError
       { _genericErrorLoc = replDefaultLoc,
         _genericErrorMessage = msg,
         _genericErrorIntervals = [replDefaultLoc]
       }
 
-noFileLoadedErr :: JuvixError
+noFileLoadedErr :: Repl a
 noFileLoadedErr = replError (AnsiText @Text "No file loaded. Load a file using the `:load FILE` command.")
 
 welcomeMsg :: MonadIO m => m ()
@@ -207,16 +209,16 @@ printDefinition input = do
       getIdentifiers :: Concrete.ExpressionAtoms 'Concrete.Scoped -> Repl (NonEmpty Concrete.ScopedIden)
       getIdentifiers as = mapM getIdentifier (as ^. Concrete.expressionAtoms)
         where
-        getIdentifier :: Concrete.ExpressionAtom 'Concrete.Scoped -> Repl (Concrete.ScopedIden)
-        getIdentifier = \case
-          Concrete.AtomIdentifier a -> return a
-          Concrete.AtomParens p
-            | Concrete.ExpressionIdentifier a <- p -> return a
-            | Concrete.ExpressionParensIdentifier a <- p -> return a
-          _ -> err
-          where
-          err :: Repl a
-          err = undefined (Concrete.ppOut popts as)
+          getIdentifier :: Concrete.ExpressionAtom 'Concrete.Scoped -> Repl (Concrete.ScopedIden)
+          getIdentifier = \case
+            Concrete.AtomIdentifier a -> return a
+            Concrete.AtomParens p
+              | Concrete.ExpressionIdentifier a <- p -> return a
+              | Concrete.ExpressionParensIdentifier a <- p -> return a
+            _ -> err
+            where
+              err :: Repl a
+              err = replError (AnsiText @Text ":def one or more identifiers")
 
       printIdentifier :: Concrete.ScopedIden -> Repl ()
       printIdentifier = \case
@@ -404,23 +406,25 @@ replMakeAbsolute = \case
 replExpressionUpToScopedAtoms :: Text -> Repl (Concrete.ExpressionAtoms 'Concrete.Scoped)
 replExpressionUpToScopedAtoms txt = do
   ctx <- replGetContext
-  x <- liftIO
-    . runM
-    . runError
-    . evalState (ctx ^. replContextArtifacts)
-    . runReader (ctx ^. replContextEntryPoint)
-    $ expressionUpToAtomsScoped replPath txt
+  x <-
+    liftIO
+      . runM
+      . runError
+      . evalState (ctx ^. replContextArtifacts)
+      . runReader (ctx ^. replContextEntryPoint)
+      $ expressionUpToAtomsScoped replPath txt
   replFromEither x
 
 replExpressionUpToTyped :: Text -> Repl Internal.TypedExpression
 replExpressionUpToTyped txt = do
   ctx <- replGetContext
-  x <- liftIO
-    . runM
-    . runError
-    . evalState (ctx ^. replContextArtifacts)
-    . runReader (ctx ^. replContextEntryPoint)
-    $ expressionUpToTyped replPath txt
+  x <-
+    liftIO
+      . runM
+      . runError
+      . evalState (ctx ^. replContextArtifacts)
+      . runReader (ctx ^. replContextEntryPoint)
+      $ expressionUpToTyped replPath txt
   replFromEither x
 
 compileReplInputIO' :: ReplContext -> Text -> IO (Artifacts, (Either JuvixError (Maybe Core.Node)))
