@@ -77,7 +77,7 @@ coreEvalAssertion' mode tab mainFile expectedFile step =
                   hout <- openFile (toFilePath outputFile) WriteMode
                   step "Evaluate"
                   let tyargs = typeArgs (lookupIdentifierInfo tab sym ^. identifierType)
-                      args = zipWith mkArg tyargs _evalDataInput
+                      args = zipWith mkArg (tyargs ++ repeat mkDynamic') _evalDataInput
                       node' = mkApps' node args
                   r' <- doEval mainFile hout tab node'
                   case r' of
@@ -105,8 +105,7 @@ coreEvalAssertion' mode tab mainFile expectedFile step =
                   if
                       | n == 0 -> mkConstr' (BuiltinTag TagFalse) []
                       | otherwise -> mkConstr' (BuiltinTag TagTrue) []
-              | isTypeInteger ty -> mkConstant' (ConstInteger n)
-              | otherwise -> impossible
+              | otherwise -> mkConstant' (ConstInteger n)
 
     readEvalData :: IO (Either String EvalData)
     readEvalData = case mode of
