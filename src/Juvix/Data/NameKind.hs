@@ -38,13 +38,13 @@ nameKindWithArticle = withArticle . nameKindText
 
 nameKindText :: NameKind -> Text
 nameKindText = \case
-    KNameConstructor -> "constructor"
-    KNameInductive -> "inductive type"
-    KNameFunction -> "function"
-    KNameLocal -> "variable"
-    KNameAxiom -> "axiom"
-    KNameLocalModule -> "local module"
-    KNameTopModule -> "module"
+  KNameConstructor -> "constructor"
+  KNameInductive -> "inductive type"
+  KNameFunction -> "function"
+  KNameLocal -> "variable"
+  KNameAxiom -> "axiom"
+  KNameLocalModule -> "local module"
+  KNameTopModule -> "module"
 
 isLocallyBounded :: (HasNameKind a) => a -> Bool
 isLocallyBounded k = case getNameKind k of

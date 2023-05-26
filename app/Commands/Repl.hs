@@ -8,7 +8,6 @@ import Commands.Base hiding
 import Commands.Repl.Base
 import Commands.Repl.Options
 import Control.Exception (throwIO)
-import Juvix.Data.NameKind
 import Control.Monad.Except qualified as Except
 import Control.Monad.Reader qualified as Reader
 import Control.Monad.State.Strict qualified as State
@@ -34,6 +33,7 @@ import Juvix.Compiler.Internal.Pretty qualified as Internal
 import Juvix.Compiler.Pipeline.Repl
 import Juvix.Compiler.Pipeline.Setup (entrySetup)
 import Juvix.Data.Error.GenericError qualified as Error
+import Juvix.Data.NameKind
 import Juvix.Extra.Paths
 import Juvix.Extra.Stdlib
 import Juvix.Extra.Version
@@ -231,8 +231,8 @@ printDefinition input = do
 
     printIdentifiers :: NonEmpty Concrete.ScopedIden -> Repl ()
     printIdentifiers (d :| ds) = do
-        printIdentifier d
-        whenJust (nonEmpty ds) $ \ds' -> replNewline >> printIdentifiers ds'
+      printIdentifier d
+      whenJust (nonEmpty ds) $ \ds' -> replNewline >> printIdentifiers ds'
       where
         getInfoTable :: Repl Scoped.InfoTable
         getInfoTable = (^. replContextArtifacts . artifactScopeTable) <$> replGetContext
@@ -246,39 +246,39 @@ printDefinition input = do
             Concrete.ScopedFunction f -> printFunction (f ^. Concrete.functionRefName . Scoped.nameId)
             Concrete.ScopedConstructor c -> printConstructor (c ^. Concrete.constructorRefName . Scoped.nameId)
           where
-          printLocation :: HasLoc s => s -> Repl ()
-          printLocation def = do
-            s' <- ppConcrete s
-            let txt :: Text = " is " <> prettyText (nameKindWithArticle (getNameKind s)) <> " defined at " <> prettyText (getLoc def)
-            renderOut s'
-            renderOutLn (AnsiText txt)
+            printLocation :: HasLoc s => s -> Repl ()
+            printLocation def = do
+              s' <- ppConcrete s
+              let txt :: Text = " is " <> prettyText (nameKindWithArticle (getNameKind s)) <> " defined at " <> prettyText (getLoc def)
+              renderOut s'
+              renderOutLn (AnsiText txt)
 
-          printFunction :: Scoped.NameId -> Repl ()
-          printFunction fun = do
-            tbl :: Scoped.InfoTable <- getInfoTable
-            let def :: Scoped.FunctionInfo = tbl ^?! Scoped.infoFunctions . at fun . _Just
-            printLocation def
-            printConcrete def
+            printFunction :: Scoped.NameId -> Repl ()
+            printFunction fun = do
+              tbl :: Scoped.InfoTable <- getInfoTable
+              let def :: Scoped.FunctionInfo = tbl ^?! Scoped.infoFunctions . at fun . _Just
+              printLocation def
+              printConcrete def
 
-          printInductive :: Scoped.NameId -> Repl ()
-          printInductive ind = do
-            tbl :: Scoped.InfoTable <- (^. replContextArtifacts . artifactScopeTable) <$> replGetContext
-            let def :: Concrete.InductiveDef 'Concrete.Scoped = tbl ^?! Scoped.infoInductives . at ind . _Just . Scoped.inductiveInfoDef
-            printLocation def
-            printConcrete def
+            printInductive :: Scoped.NameId -> Repl ()
+            printInductive ind = do
+              tbl :: Scoped.InfoTable <- (^. replContextArtifacts . artifactScopeTable) <$> replGetContext
+              let def :: Concrete.InductiveDef 'Concrete.Scoped = tbl ^?! Scoped.infoInductives . at ind . _Just . Scoped.inductiveInfoDef
+              printLocation def
+              printConcrete def
 
-          printAxiom :: Scoped.NameId -> Repl ()
-          printAxiom ax = do
-            tbl :: Scoped.InfoTable <- (^. replContextArtifacts . artifactScopeTable) <$> replGetContext
-            let def :: Concrete.AxiomDef 'Concrete.Scoped = tbl ^?! Scoped.infoAxioms . at ax . _Just . Scoped.axiomInfoDef
-            printLocation def
-            printConcrete def
+            printAxiom :: Scoped.NameId -> Repl ()
+            printAxiom ax = do
+              tbl :: Scoped.InfoTable <- (^. replContextArtifacts . artifactScopeTable) <$> replGetContext
+              let def :: Concrete.AxiomDef 'Concrete.Scoped = tbl ^?! Scoped.infoAxioms . at ax . _Just . Scoped.axiomInfoDef
+              printLocation def
+              printConcrete def
 
-          printConstructor :: Scoped.NameId -> Repl ()
-          printConstructor c = do
-            tbl :: Scoped.InfoTable <- (^. replContextArtifacts . artifactScopeTable) <$> replGetContext
-            let ind :: Scoped.Symbol = tbl ^?! Scoped.infoConstructors . at c . _Just . Scoped.constructorInfoTypeName
-            printInductive (ind ^. Scoped.nameId)
+            printConstructor :: Scoped.NameId -> Repl ()
+            printConstructor c = do
+              tbl :: Scoped.InfoTable <- (^. replContextArtifacts . artifactScopeTable) <$> replGetContext
+              let ind :: Scoped.Symbol = tbl ^?! Scoped.infoConstructors . at c . _Just . Scoped.constructorInfoTypeName
+              printInductive (ind ^. Scoped.nameId)
 
 inferType :: String -> Repl ()
 inferType input = do
