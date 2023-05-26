@@ -158,5 +158,11 @@ tests =
       "Test019: polymorphism"
       $(mkRelDir ".")
       $(mkRelFile "test019.juvix")
-      $(mkRelFile "data/test019.json")
+      $(mkRelFile "data/test019.json"),
+    posTest
+      8
+      "Test020: boolean target"
+      $(mkRelDir ".")
+      $(mkRelFile "test020.juvix")
+      $(mkRelFile "data/test020.json")
   ]

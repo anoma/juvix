@@ -9,19 +9,28 @@ import Juvix.Compiler.Core.Language as Core
 import Juvix.Compiler.Core.Transformation.DisambiguateNames (disambiguateNodeNames')
 
 fromCore :: InfoTable -> Program
-fromCore tab = fromCoreNode $ lookupIdentifierNode tab (fromJust (tab ^. infoMain))
+fromCore tab = fromCoreNode (ii ^. identifierType) node
+  where
+    sym = fromJust (tab ^. infoMain)
+    node = lookupIdentifierNode tab sym
+    ii = lookupIdentifierInfo tab sym
 
-fromCoreNode :: Node -> Program
-fromCoreNode node =
+fromCoreNode :: Type -> Node -> Program
+fromCoreNode ty node =
   let (lams, body) = unfoldLambdas (disambiguateNodeNames' disambiguate emptyInfoTable node)
       (defs, expr) = convertLets body
+      n = length lams
+      args = if n == 1 then ["in"] else map (\k -> "in" <> show k) [1 .. n]
+      isBoolTarget = isTypeBool (typeTarget ty)
    in Program
         { _programFunctions =
             [ Function
                 { _functionName = "main",
                   _functionArguments = map (^. lambdaLhsBinder . binderName) lams,
                   _functionLocalDefs = defs,
-                  _functionExpression = expr
+                  _functionExpression = expr,
+                  _functionInputs = args,
+                  _functionOutput = if isBoolTarget then "1" else "out"
                 }
             ]
         }

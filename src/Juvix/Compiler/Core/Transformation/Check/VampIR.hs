@@ -19,7 +19,7 @@ checkVampIR tab =
       unless (checkType (ii ^. identifierType)) $
         throw
           CoreError
-            { _coreErrorMsg = ppOutput "for this target the arguments and the result of the `main` function must be numbers",
+            { _coreErrorMsg = ppOutput "for this target the arguments and the result of the `main` function must be numbers or booleans",
               _coreErrorLoc = fromMaybe defaultLoc (ii ^. identifierLocation),
               _coreErrorNode = Nothing
             }
@@ -29,9 +29,7 @@ checkVampIR tab =
     checkType :: Node -> Bool
     checkType ty =
       let (tyargs, tgt) = unfoldPi' ty
-       in all isPrimInteger (tgt : tyargs)
+       in all isPrimIntegerOrBool (tgt : tyargs)
       where
-        isPrimInteger ty' = case ty' of
-          NPrim (TypePrim _ (PrimInteger _)) -> True
-          NDyn _ -> True
-          _ -> False
+        isPrimIntegerOrBool ty' =
+          isTypeInteger ty' || isTypeBool ty' || isDynamic ty'
