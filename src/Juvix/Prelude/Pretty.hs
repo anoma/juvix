@@ -153,7 +153,7 @@ isVowel :: Char -> Bool
 isVowel = (`elem` ("aeiouAEIOU" :: [Char]))
 
 withArticle :: Text -> Text
-withArticle n = articleFor n <> n
+withArticle n = articleFor n <> " " <> n
 
 articleFor :: Text -> Text
 articleFor n

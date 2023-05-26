@@ -8,6 +8,7 @@ import Commands.Base hiding
 import Commands.Repl.Base
 import Commands.Repl.Options
 import Control.Exception (throwIO)
+import Juvix.Data.NameKind
 import Control.Monad.Except qualified as Except
 import Control.Monad.Reader qualified as Reader
 import Control.Monad.State.Strict qualified as State
@@ -156,8 +157,8 @@ replCommand opts input = catchAll $ do
     if
         | Info.member Info.kNoDisplayInfo (Core.getInfo n) -> return ()
         | opts ^. replPrintValues ->
-            renderOut (Core.ppOut opts (toValue tab n))
-        | otherwise -> renderOut (Core.ppOut opts n)
+            renderOutLn (Core.ppOut opts (toValue tab n))
+        | otherwise -> renderOutLn (Core.ppOut opts n)
   where
     compileThenEval :: ReplContext -> String -> Repl (Maybe Core.Node)
     compileThenEval ctx s = compileString >>= mapM eval
@@ -197,7 +198,7 @@ core input = do
   ctx <- replGetContext
   opts <- Reader.asks (^. replOptions)
   compileRes <- liftIO (compileReplInputIO' ctx (strip (pack input))) >>= replFromEither . snd
-  whenJust compileRes (renderOut . Core.ppOut opts)
+  whenJust compileRes (renderOutLn . Core.ppOut opts)
 
 ppConcrete :: Concrete.PrettyCode a => a -> Repl AnsiText
 ppConcrete a = do
@@ -206,7 +207,7 @@ ppConcrete a = do
   return (Concrete.ppOut popts a)
 
 printConcrete :: Concrete.PrettyCode a => a -> Repl ()
-printConcrete = ppConcrete >=> renderOut
+printConcrete = ppConcrete >=> renderOutLn
 
 printDefinition :: String -> Repl ()
 printDefinition input = do
@@ -233,6 +234,9 @@ printDefinition input = do
         printIdentifier d
         whenJust (nonEmpty ds) $ \ds' -> replNewline >> printIdentifiers ds'
       where
+        getInfoTable :: Repl Scoped.InfoTable
+        getInfoTable = (^. replContextArtifacts . artifactScopeTable) <$> replGetContext
+
         printIdentifier :: Concrete.ScopedIden -> Repl ()
         printIdentifier s = do
           case s of
@@ -241,39 +245,46 @@ printDefinition input = do
             Concrete.ScopedVar {} -> return ()
             Concrete.ScopedFunction f -> printFunction (f ^. Concrete.functionRefName . Scoped.nameId)
             Concrete.ScopedConstructor c -> printConstructor (c ^. Concrete.constructorRefName . Scoped.nameId)
+          where
+          printLocation :: HasLoc s => s -> Repl ()
+          printLocation def = do
+            s' <- ppConcrete s
+            let txt :: Text = " is " <> prettyText (nameKindWithArticle (getNameKind s)) <> " defined at " <> prettyText (getLoc def)
+            renderOut s'
+            renderOutLn (AnsiText txt)
 
-    getInfoTable :: Repl Scoped.InfoTable
-    getInfoTable = (^. replContextArtifacts . artifactScopeTable) <$> replGetContext
+          printFunction :: Scoped.NameId -> Repl ()
+          printFunction fun = do
+            tbl :: Scoped.InfoTable <- getInfoTable
+            let def :: Scoped.FunctionInfo = tbl ^?! Scoped.infoFunctions . at fun . _Just
+            printLocation def
+            printConcrete def
 
-    printFunction :: Scoped.NameId -> Repl ()
-    printFunction fun = do
-      tbl :: Scoped.InfoTable <- getInfoTable
-      let def :: Scoped.FunctionInfo = tbl ^?! Scoped.infoFunctions . at fun . _Just
-      printConcrete def
+          printInductive :: Scoped.NameId -> Repl ()
+          printInductive ind = do
+            tbl :: Scoped.InfoTable <- (^. replContextArtifacts . artifactScopeTable) <$> replGetContext
+            let def :: Concrete.InductiveDef 'Concrete.Scoped = tbl ^?! Scoped.infoInductives . at ind . _Just . Scoped.inductiveInfoDef
+            printLocation def
+            printConcrete def
 
-    printInductive :: Scoped.NameId -> Repl ()
-    printInductive ind = do
-      tbl :: Scoped.InfoTable <- (^. replContextArtifacts . artifactScopeTable) <$> replGetContext
-      let def :: Concrete.InductiveDef 'Concrete.Scoped = tbl ^?! Scoped.infoInductives . at ind . _Just . Scoped.inductiveInfoDef
-      printConcrete def
+          printAxiom :: Scoped.NameId -> Repl ()
+          printAxiom ax = do
+            tbl :: Scoped.InfoTable <- (^. replContextArtifacts . artifactScopeTable) <$> replGetContext
+            let def :: Concrete.AxiomDef 'Concrete.Scoped = tbl ^?! Scoped.infoAxioms . at ax . _Just . Scoped.axiomInfoDef
+            printLocation def
+            printConcrete def
 
-    printAxiom :: Scoped.NameId -> Repl ()
-    printAxiom ax = do
-      tbl :: Scoped.InfoTable <- (^. replContextArtifacts . artifactScopeTable) <$> replGetContext
-      let def :: Concrete.AxiomDef 'Concrete.Scoped = tbl ^?! Scoped.infoAxioms . at ax . _Just . Scoped.axiomInfoDef
-      printConcrete def
-
-    printConstructor :: Scoped.NameId -> Repl ()
-    printConstructor c = do
-      tbl :: Scoped.InfoTable <- (^. replContextArtifacts . artifactScopeTable) <$> replGetContext
-      let ind :: Scoped.Symbol = tbl ^?! Scoped.infoConstructors . at c . _Just . Scoped.constructorInfoTypeName
-      printInductive (ind ^. Scoped.nameId)
+          printConstructor :: Scoped.NameId -> Repl ()
+          printConstructor c = do
+            tbl :: Scoped.InfoTable <- (^. replContextArtifacts . artifactScopeTable) <$> replGetContext
+            let ind :: Scoped.Symbol = tbl ^?! Scoped.infoConstructors . at c . _Just . Scoped.constructorInfoTypeName
+            printInductive (ind ^. Scoped.nameId)
 
 inferType :: String -> Repl ()
 inferType input = do
   gopts <- State.gets (^. replStateGlobalOptions)
   n <- replExpressionUpToTyped (strip (pack input))
-  renderOut (Internal.ppOut (project' @GenericOptions gopts) (n ^. Internal.typedType))
+  renderOutLn (Internal.ppOut (project' @GenericOptions gopts) (n ^. Internal.typedType))
 
 replCommands :: [(String, String -> Repl ())]
 replCommands = catchable ++ nonCatchable
@@ -470,7 +481,10 @@ replNewline :: Repl ()
 replNewline = liftIO (putStrLn "")
 
 renderOut :: (P.HasAnsiBackend a, P.HasTextBackend a) => a -> Repl ()
-renderOut t = render' t >> replNewline
+renderOut = render'
+
+renderOutLn :: (P.HasAnsiBackend a, P.HasTextBackend a) => a -> Repl ()
+renderOutLn t = renderOut t >> replNewline
 
 printErrorS :: JuvixError -> ReplS ()
 printErrorS e = do
