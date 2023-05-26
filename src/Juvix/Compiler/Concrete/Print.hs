@@ -16,3 +16,6 @@ ppOutDefault cs = AnsiText . PPOutput . doc defaultOptions cs
 
 ppOut :: (CanonicalProjection a Options, PrettyPrint c, HasLoc c) => a -> Comments -> c -> AnsiText
 ppOut o cs = AnsiText . PPOutput . doc (project o) cs
+
+ppOutNoComments :: (CanonicalProjection a Options, PrettyPrint c, HasLoc c) => a -> c -> AnsiText
+ppOutNoComments o = AnsiText . PPOutput . doc (project o) emptyComments

@@ -10,7 +10,7 @@ import Juvix.Prelude
 
 data InfoTableBuilder m a where
   RegisterAxiom :: AxiomDef 'Scoped -> InfoTableBuilder m ()
-  RegisterConstructor :: InductiveConstructorDef 'Scoped -> InfoTableBuilder m ()
+  RegisterConstructor :: S.Symbol -> InductiveConstructorDef 'Scoped -> InfoTableBuilder m ()
   RegisterInductive :: InductiveDef 'Scoped -> InfoTableBuilder m ()
   RegisterTypeSignature :: TypeSignature 'Scoped -> InfoTableBuilder m ()
   RegisterFunctionClause :: FunctionClause 'Scoped -> InfoTableBuilder m ()
@@ -31,9 +31,9 @@ toState = reinterpret $ \case
      in do
           modify (over infoAxioms (HashMap.insert ref info))
           registerDoc (d ^. axiomName . nameId) j
-  RegisterConstructor c ->
+  RegisterConstructor ind c ->
     let ref = c ^. constructorName . S.nameId
-        info = ConstructorInfo c
+        info = ConstructorInfo c ind
         j = c ^. constructorDoc
      in do
           modify (over infoConstructors (HashMap.insert ref info))

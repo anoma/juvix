@@ -10,13 +10,14 @@ data FunctionInfo = FunctionInfo
   }
   deriving stock (Eq, Show)
 
-newtype ConstructorInfo = ConstructorInfo
-  { _constructorDef :: InductiveConstructorDef 'Scoped
+data ConstructorInfo = ConstructorInfo
+  { _constructorInfoDef :: InductiveConstructorDef 'Scoped,
+    _constructorInfoTypeName :: S.Symbol
   }
   deriving stock (Eq, Show)
 
 newtype AxiomInfo = AxiomInfo
-  { _axiomDef :: AxiomDef 'Scoped
+  { _axiomInfoDef :: AxiomDef 'Scoped
   }
   deriving stock (Eq, Show)
 
@@ -50,3 +51,7 @@ makeLenses ''InductiveInfo
 makeLenses ''ConstructorInfo
 makeLenses ''AxiomInfo
 makeLenses ''FunctionInfo
+
+instance HasLoc FunctionInfo where
+  getLoc f = getLoc (f ^. functionInfoType) <>?
+    (getLocSpan <$> nonEmpty (f ^. functionInfoClauses))
