@@ -1,0 +1,12 @@
+-- boolean target
+module test020;
+
+import Stdlib.Prelude open;
+
+{-# unroll: 10 #-}
+compose : {A : Type} → Nat → (A → A) → A → A;
+compose zero _ := id;
+compose (suc n) f := f ∘ compose n f;
+
+main : Nat → Bool → Bool;
+main n b := compose n not b;

@@ -48,7 +48,9 @@ data Function = Function
   { _functionName :: Text,
     _functionArguments :: [Text],
     _functionLocalDefs :: [LocalDef],
-    _functionExpression :: Expression
+    _functionExpression :: Expression,
+    _functionInputs :: [Text],
+    _functionOutput :: Text
   }
 
 newtype Program = Program
