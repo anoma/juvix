@@ -327,9 +327,9 @@ replBanner = \case
               . scopePath
               . absTopModulePath
         )
-    case mmodulePath of
-      Just path -> return [i|#{unpack (P.prettyText path)}> |]
-      Nothing -> return "juvix> "
+    return $ case mmodulePath of
+      Just path -> [i|#{unpack (P.prettyText path)}> |]
+      Nothing -> "juvix> "
 
 replPrefix :: Maybe Char
 replPrefix = Just ':'
