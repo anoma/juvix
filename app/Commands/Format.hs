@@ -62,7 +62,7 @@ renderFormattedOutput target opts fInfo = do
   where
     outputResult :: FormatRenderMode -> Sem r ()
     outputResult = \case
-      EditInPlace i@(FormattedFileInfo {..}) ->
+      EditInPlace i@FormattedFileInfo {..} ->
         runTempFileIO $
           restoreFileOnError _formattedFileInfoPath $
             writeFile' _formattedFileInfoPath (i ^. formattedFileInfoContentsText)
@@ -80,5 +80,4 @@ runScopeFileApp = interpret $ \case
               _pathIsInput = False
             }
     runPipeline appFile upToScoping
-  ScopeStdin -> do
-    runPipelineNoFile upToScoping
+  ScopeStdin -> runPipelineNoFile upToScoping
