@@ -1,6 +1,62 @@
 working-directory: ./../../../tests/
 
 tests:
+  - name: repl-def
+    command:
+      - juvix
+      - repl
+      - ../examples/milestone/HelloWorld/HelloWorld.juvix
+    stdin: ":def suc"
+    stdout:
+      contains: |
+        --- Inductive natural numbers. I.e. whole non-negative numbers.
+        builtin nat type Nat :=
+          | zero : Nat
+          | suc : Nat → Nat
+    exit-status: 0
+
+  - name: repl-def-error
+    command:
+      - juvix
+      - repl
+      - ../examples/milestone/HelloWorld/HelloWorld.juvix
+    stdin: ":def 1 Nat"
+    stdout:
+      matches: |
+        .*
+    stderr:
+      contains: |
+        :def expects one or more identifiers
+    exit-status: 0
+
+  - name: repl-def-multiple
+    command:
+      - juvix
+      - repl
+      - ../examples/milestone/HelloWorld/HelloWorld.juvix
+    stdin: ":def + (+) (((+)))"
+    stdout:
+      contains: |
+        --- Addition for ;Nat;s.
+        builtin nat-plus + : Nat → Nat → Nat;
+        + zero b := b;
+        + (suc a) b := suc (a + b);
+    exit-status: 0
+
+  - name: repl-def-infix
+    command:
+      - juvix
+      - repl
+      - ../examples/milestone/HelloWorld/HelloWorld.juvix
+    stdin: ":def +"
+    stdout:
+      contains: |
+        --- Addition for ;Nat;s.
+        builtin nat-plus + : Nat → Nat → Nat;
+        + zero b := b;
+        + (suc a) b := suc (a + b);
+    exit-status: 0
+
   - name: open
     command:
       - juvix

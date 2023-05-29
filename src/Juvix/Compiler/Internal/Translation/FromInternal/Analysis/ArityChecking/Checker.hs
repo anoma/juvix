@@ -450,7 +450,7 @@ idenArity = \case
   IdenInductive i -> typeArity <$> inductiveType i
   IdenFunction f -> typeArity . (^. functionInfoDef . funDefType) <$> lookupFunction f
   IdenConstructor c -> typeArity <$> constructorType c
-  IdenAxiom a -> typeArity . (^. axiomInfoType) <$> lookupAxiom a
+  IdenAxiom a -> typeArity . (^. axiomInfoDef . axiomType) <$> lookupAxiom a
 
 -- | let x be some expression of type T. The argument of this function is T and it returns
 -- the arity of x. In other words, given (T : Type), it returns the arity of the elements of T.

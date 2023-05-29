@@ -6,6 +6,7 @@ module Juvix.Compiler.Concrete.Pretty.Base
 where
 
 import Data.List.NonEmpty.Extra qualified as NonEmpty
+import Juvix.Compiler.Concrete.Data.InfoTable
 import Juvix.Compiler.Concrete.Data.ScopedName
   ( AbsModulePath,
     IsConcrete (..),
@@ -118,6 +119,12 @@ groupStatements = \case
                   _inductiveName
                     ^. S.nameConcrete
                     : map (^. constructorName . S.nameConcrete) constructors
+
+instance PrettyCode FunctionInfo where
+  ppCode f = do
+    let ty = StatementTypeSignature (f ^. functionInfoType)
+        cs = map StatementFunctionClause (f ^. functionInfoClauses)
+    ppCode (ty : cs)
 
 instance (SingI s) => PrettyCode [Statement s] where
   ppCode ss = vsep2 <$> mapM (fmap vsep . mapM (fmap endSemicolon . ppCode)) (groupStatements ss)

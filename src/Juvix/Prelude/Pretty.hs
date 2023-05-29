@@ -6,6 +6,7 @@ module Juvix.Prelude.Pretty
   )
 where
 
+import Data.Text qualified as Text
 import Juvix.Prelude.Base
 import Prettyprinter hiding (concatWith, defaultLayoutOptions, hsep, sep, vsep)
 import Prettyprinter qualified as PP
@@ -147,6 +148,18 @@ ordinal = \case
   11 -> "eleventh"
   12 -> "twelfth"
   n -> pretty n <> "th"
+
+isVowel :: Char -> Bool
+isVowel = (`elem` ("aeiouAEIOU" :: [Char]))
+
+withArticle :: Text -> Text
+withArticle n = articleFor n <> " " <> n
+
+articleFor :: Text -> Text
+articleFor n
+  | Text.null n = ""
+  | isVowel (Text.head n) = "an"
+  | otherwise = "a"
 
 itemize :: (Functor f, Foldable f) => f (Doc ann) -> Doc ann
 itemize = vsep . fmap ("• " <>)

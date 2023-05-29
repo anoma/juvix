@@ -16,9 +16,8 @@ newtype FunctionInfo = FunctionInfo
   { _functionInfoDef :: FunctionDef
   }
 
-data AxiomInfo = AxiomInfo
-  { _axiomInfoType :: Expression,
-    _axiomInfoBuiltin :: Maybe BuiltinAxiom
+newtype AxiomInfo = AxiomInfo
+  { _axiomInfoDef :: AxiomDef
   }
 
 newtype InductiveInfo = InductiveInfo
@@ -157,21 +156,13 @@ buildTable1' m = do
     _infoAxioms :: HashMap Name AxiomInfo
     _infoAxioms =
       HashMap.fromList
-        [ (d ^. axiomName, AxiomInfo (d ^. axiomType) (d ^. axiomBuiltin))
+        [ (d ^. axiomName, AxiomInfo d)
           | StatementAxiom d <- ss
         ]
 
     ss :: [Statement]
     ss = m ^. moduleBody . moduleStatements
 
--- | Returns all statements in a module, including those in local modules
--- flattenModule :: Module -> [Statement]
--- flattenModule m = concatMap go (m ^. moduleBody . moduleStatements)
---   where
---     go :: Statement -> [Statement]
---     go = \case
---       StatementModule l -> flattenModule l
---       s -> [s]
 lookupConstructor :: (Member (Reader InfoTable) r) => Name -> Sem r ConstructorInfo
 lookupConstructor f = HashMap.lookupDefault impossible f <$> asks (^. infoConstructors)
 
@@ -239,7 +230,7 @@ getAxiomBuiltinInfo :: Member (Reader InfoTable) r => Name -> Sem r (Maybe Built
 getAxiomBuiltinInfo n = do
   maybeAxiomInfo <- HashMap.lookup n <$> asks (^. infoAxioms)
   return $ case maybeAxiomInfo of
-    Just axiomInfo -> axiomInfo ^. axiomInfoBuiltin
+    Just axiomInfo -> axiomInfo ^. axiomInfoDef . axiomBuiltin
     Nothing -> Nothing
 
 getFunctionBuiltinInfo :: Member (Reader InfoTable) r => Name -> Sem r (Maybe BuiltinFunction)

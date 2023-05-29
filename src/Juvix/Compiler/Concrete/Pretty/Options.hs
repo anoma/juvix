@@ -22,3 +22,6 @@ fromGenericOptions GenericOptions {..} =
 
 inJudocBlock :: Members '[Reader Options] r => Sem r a -> Sem r a
 inJudocBlock = local (set optInJudocBlock True)
+
+instance CanonicalProjection GenericOptions Options where
+  project = fromGenericOptions

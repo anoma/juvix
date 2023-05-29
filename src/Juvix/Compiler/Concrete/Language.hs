@@ -1624,5 +1624,13 @@ symbolEntryToSName = \case
   EntryModule m -> getModuleRefNameType m
   EntryVariable m -> m
 
+instance HasNameKind ScopedIden where
+  getNameKind = \case
+    ScopedAxiom {} -> KNameAxiom
+    ScopedInductive {} -> KNameInductive
+    ScopedConstructor {} -> KNameConstructor
+    ScopedVar {} -> KNameLocal
+    ScopedFunction {} -> KNameFunction
+
 instance HasNameKind SymbolEntry where
   getNameKind = getNameKind . entryName
