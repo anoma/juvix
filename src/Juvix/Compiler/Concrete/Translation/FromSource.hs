@@ -562,6 +562,7 @@ parseExpressionAtoms = do
 --------------------------------------------------------------------------------
 
 iterator ::
+  forall r.
   (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
   ParsecS r (Iterator 'Parsed)
 iterator = do
@@ -572,43 +573,44 @@ iterator = do
     b <- (kw kwAssign >> return True) <|> (kw kwIn >> return False)
     return (b, n, pat)
   val <- parseExpressionAtoms
-  rparen
   _iteratorInitializers <-
     if
-        | isInit -> (Initializer pat val :) <$> many initializer
-        | otherwise -> many initializer
+        | isInit -> do
+            inis <- many (semicolon >> initializer)
+            rparen
+            return (Initializer pat val : inis)
+        | otherwise -> return []
   _iteratorRanges <-
     if
-        | not isInit -> (Range pat val :) <$> many range
-        | otherwise -> many range
+        | not isInit -> do
+            rngs <- many (semicolon >> range)
+            rparen
+            return (Range pat val : rngs)
+        | otherwise -> fmap (maybe [] toList) $ optional $ do
+            lparen
+            rngs <- P.sepBy1 range semicolon
+            rparen
+            return rngs
   _iteratorBody <- parseExpressionAtoms
   return Iterator {..}
+  where
+    initializer :: ParsecS r (Initializer 'Parsed)
+    initializer = do
+      _initializerPattern <- P.try $ do
+        pat <- parsePatternAtoms
+        kw kwAssign
+        return pat
+      _initializerExpression <- parseExpressionAtoms
+      return Initializer {..}
 
-initializer ::
-  (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
-  ParsecS r (Initializer 'Parsed)
-initializer = do
-  _initializerPattern <- P.try $ do
-    lparen
-    pat <- parsePatternAtoms
-    kw kwAssign
-    return pat
-  _initializerExpression <- parseExpressionAtoms
-  rparen
-  return Initializer {..}
-
-range ::
-  (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
-  ParsecS r (Range 'Parsed)
-range = do
-  _rangePattern <- P.try $ do
-    lparen
-    pat <- parsePatternAtoms
-    kw kwIn
-    return pat
-  _rangeExpression <- parseExpressionAtoms
-  rparen
-  return Range {..}
+    range :: ParsecS r (Range 'Parsed)
+    range = do
+      _rangePattern <- P.try $ do
+        pat <- parsePatternAtoms
+        kw kwIn
+        return pat
+      _rangeExpression <- parseExpressionAtoms
+      return Range {..}
 
 --------------------------------------------------------------------------------
 -- Holes

@@ -8,6 +8,11 @@ syntax iterator bind {init: 1, range: 0};
 bind : {A B : Type} → (A → B) → A → B;
 bind f x := f x;
 
+syntax iterator itconst {init: 2, range: 2};
+itconst :
+  {A B C : Type} → (A → A → B → C → A) → A → A → B → C → A;
+itconst f := f;
+
 builtin bool
 type Bool :=
   | true : Bool
@@ -16,7 +21,8 @@ type Bool :=
 main : Bool;
 main :=
   bind (z := false)
-    for (x := true) (y in false)
-      case x
-        | true := y
-        | false := z;
+    itconst (a := true; b := false) (c in false; d in false)
+      for (x := true) (y in false)
+        case x
+          | true := y
+          | false := z;

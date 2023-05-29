@@ -770,20 +770,22 @@ instance (SingI s) => PrettyCode (Iterator s) where
     n <- ppName _iteratorName
     is <- mapM ppCode _iteratorInitializers
     rngs <- mapM ppCode _iteratorRanges
+    let is' = if null is then Nothing else Just (parens (hsep (punctuate semi is)))
+        rngs' = if null rngs then mempty else parens (hsep (punctuate semi rngs))
     b <- ppExpression _iteratorBody
-    return $ hang' (n <+> hsep (is ++ rngs) <> oneLineOrNextNoIndent b)
+    return $ hang' (n <+> is' <?+> rngs' <> oneLineOrNextNoIndent b)
 
 instance (SingI s) => PrettyCode (Initializer s) where
   ppCode Initializer {..} = do
     n <- ppPatternParensType _initializerPattern
     e <- ppExpression _initializerExpression
-    return $ parens (n <+> kwAssign <+> e)
+    return $ n <+> kwAssign <+> e
 
 instance (SingI s) => PrettyCode (Range s) where
   ppCode Range {..} = do
     n <- ppPatternParensType _rangePattern
     e <- ppExpression _rangeExpression
-    return $ parens (n <+> kwIn <+> e)
+    return $ n <+> kwIn <+> e
 
 instance PrettyCode Pattern where
   ppCode :: forall r. (Members '[Reader Options] r) => Pattern -> Sem r (Doc Ann)
