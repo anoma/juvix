@@ -85,10 +85,10 @@ canHaveFixity k = case getNameKind k of
 
 canBeIterator :: (HasNameKind a) => a -> Bool
 canBeIterator k = case getNameKind k of
-  KNameConstructor -> False
-  KNameInductive -> False
   KNameFunction -> True
   KNameAxiom -> True
+  KNameConstructor -> False
+  KNameInductive -> False
   KNameLocal -> False
   KNameLocalModule -> False
   KNameTopModule -> False

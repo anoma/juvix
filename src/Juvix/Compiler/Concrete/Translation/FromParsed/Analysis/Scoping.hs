@@ -128,12 +128,12 @@ scopeCheckOpenModule ::
   Sem r (OpenModule 'Scoped)
 scopeCheckOpenModule i = mapError (JuvixError @ScoperError) $ checkOpenModule i
 
-freshVariable :: Members '[NameIdGen, State ScoperFixities, State ScoperIterators, State ScoperIterators, State Scope, State ScoperState] r => Symbol -> Sem r S.Symbol
+freshVariable :: Members '[NameIdGen, State ScoperFixities, State ScoperIterators, State Scope, State ScoperState] r => Symbol -> Sem r S.Symbol
 freshVariable = freshSymbol S.KNameLocal
 
 freshSymbol ::
   forall r.
-  (Members '[State Scope, State ScoperState, NameIdGen, State ScoperFixities, State ScoperIterators, State ScoperIterators] r) =>
+  (Members '[State Scope, State ScoperState, NameIdGen, State ScoperFixities, State ScoperIterators] r) =>
   S.NameKind ->
   Symbol ->
   Sem r S.Symbol
@@ -478,7 +478,7 @@ readScopeModule import_ = do
 
 checkOperatorSyntaxDef ::
   forall r.
-  Members '[Error ScoperError, State Scope, State ScoperState, State ScoperFixities, State ScoperIterators, State ScoperIterators] r =>
+  Members '[Error ScoperError, State Scope, State ScoperState, State ScoperFixities, State ScoperIterators] r =>
   OperatorSyntaxDef ->
   Sem r ()
 checkOperatorSyntaxDef s@OperatorSyntaxDef {..} = do
@@ -498,7 +498,7 @@ checkOperatorSyntaxDef s@OperatorSyntaxDef {..} = do
 
 checkIteratorSyntaxDef ::
   forall r.
-  Members '[Error ScoperError, State Scope, State ScoperState, State ScoperFixities, State ScoperIterators, State ScoperIterators] r =>
+  Members '[Error ScoperError, State Scope, State ScoperState, State ScoperFixities, State ScoperIterators] r =>
   IteratorSyntaxDef ->
   Sem r ()
 checkIteratorSyntaxDef s@IteratorSyntaxDef {..} = do
