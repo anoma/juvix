@@ -478,7 +478,7 @@ goExpression = \case
       let lam =
             Abstract.ExpressionLambda $
               Abstract.Lambda $
-                Abstract.LambdaClause (NonEmpty.fromList (inipats' ++ rngpats')) expr :| []
+                Abstract.LambdaClause (nonEmpty' (inipats' ++ rngpats')) expr :| []
           fn = goIden _iteratorName
       inivals' <- mapM goExpression inivals
       rngvals' <- mapM goExpression rngvals
