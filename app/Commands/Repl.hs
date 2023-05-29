@@ -407,7 +407,8 @@ runTransformations shouldDisambiguate ts n = runCoreInfoTableBuilderArtifacts $ 
                 _identifierType = Core.mkDynamic',
                 _identifierIsExported = False,
                 _identifierBuiltin = Nothing,
-                _identifierPragmas = mempty
+                _identifierPragmas = mempty,
+                _identifierArgNames = []
               }
       Core.registerIdent name idenInfo
       return sym

@@ -83,6 +83,18 @@ disambiguateNodeNames tab = disambiguateNodeNames' disambiguate tab
     names :: HashSet Text
     names = identNames tab
 
+setArgNames :: InfoTable -> Symbol -> Node -> Node
+setArgNames tab sym node = reLambdas lhs' body
+  where
+    (lhs, body) = unfoldLambdas node
+    ii = lookupIdentifierInfo tab sym
+    lhs' =
+      zipWith
+        (\l mn -> over lambdaLhsBinder (over binderName (`fromMaybe` mn)) l)
+        lhs
+        (ii ^. identifierArgNames ++ repeat Nothing)
+
 disambiguateNames :: InfoTable -> InfoTable
 disambiguateNames tab =
-  mapAllNodes (disambiguateNodeNames tab) tab
+  let tab' = mapT (setArgNames tab) tab
+   in mapAllNodes (disambiguateNodeNames tab') tab'

@@ -119,7 +119,7 @@ runInfoTableBuilder tab =
         modify' (over identContext (HashMap.delete sym))
         modify' (over infoInductives (HashMap.delete sym))
       OverIdentArgs sym f -> do
-        args <- f <$> gets (^. identContext . at sym . _Just . to (map (^. piLhsBinder) . fst . unfoldPi))
+        args <- f <$> gets (^. identContext . at sym . _Just . to (map (^. lambdaLhsBinder) . fst . unfoldLambdas))
         modify' (set (infoIdentifiers . at sym . _Just . identifierArgsNum) (length args))
         modify' (over infoIdentifiers (HashMap.adjust (over identifierType (expandType args)) sym))
       GetIdent txt -> do
@@ -264,7 +264,8 @@ setupLiteralIntToNat mkNode = do
                 _identifierType = mkPi mempty (Binder "x" Nothing mkTypeInteger') ty,
                 _identifierIsExported = False,
                 _identifierBuiltin = Nothing,
-                _identifierPragmas = mempty
+                _identifierPragmas = mempty,
+                _identifierArgNames = [Just "x"]
               }
 
         targetType :: Sem r Node
@@ -299,7 +300,8 @@ setupLiteralIntToInt node = do
                 _identifierType = mkPi mempty (Binder "x" Nothing mkTypeInteger') ty,
                 _identifierIsExported = False,
                 _identifierBuiltin = Nothing,
-                _identifierPragmas = mempty
+                _identifierPragmas = mempty,
+                _identifierArgNames = [Just "x"]
               }
 
         targetType :: Sem r Node

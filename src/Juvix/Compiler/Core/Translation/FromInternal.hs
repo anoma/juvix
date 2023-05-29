@@ -244,7 +244,6 @@ preFunctionDef f = do
   sym <- freshSymbol
   funTy <- fromTopIndex (goType (f ^. Internal.funDefType))
   let _identifierName = f ^. Internal.funDefName . nameText
-
       info =
         IdentifierInfo
           { _identifierName = normalizeBuiltinName (f ^. Internal.funDefBuiltin) (f ^. Internal.funDefName . nameText),
@@ -260,7 +259,11 @@ preFunctionDef f = do
               over
                 pragmasInline
                 (fmap (adjustPragmaInline (implicitParametersNum (f ^. Internal.funDefType))))
-                (f ^. Internal.funDefPragmas)
+                (f ^. Internal.funDefPragmas),
+            _identifierArgNames =
+              map
+                getPatternName
+                (head (f ^. Internal.funDefClauses) ^. Internal.clausePatterns)
           }
   case f ^. Internal.funDefBuiltin of
     Just b
@@ -294,6 +297,13 @@ preFunctionDef f = do
     adjustPragmaInline n = \case
       InlinePartiallyApplied k -> InlinePartiallyApplied (k + n)
       x -> x
+
+    getPatternName :: Internal.PatternArg -> Maybe Text
+    getPatternName pat = case pat ^. Internal.patternArgName of
+      Just n -> Just (n ^. nameText)
+      Nothing -> case pat ^. Internal.patternArgPattern of
+        Internal.PatternVariable n -> Just (n ^. nameText)
+        _ -> Nothing
 
 goFunctionDef ::
   forall r.
@@ -344,7 +354,7 @@ mkBody ::
 mkBody ty loc clauses
   | nPatterns == 0 = goExpression (snd (head clauses))
   | otherwise = do
-      let values = mkVar Info.empty <$> vs
+      let values = map (mkVar Info.empty) vs
           argtys = take nPatterns (typeArgs ty)
           argbinders = take nPatterns (typeArgsBinders ty)
           values' = map fst $ filter (isInductive . snd) (zipExact values argtys)
@@ -644,6 +654,7 @@ goAxiomDef a = maybe goAxiomNotBuiltin builtinBody (a ^. Internal.axiomBuiltin)
                 _identifierIsExported = False,
                 _identifierBuiltin = Nothing,
                 _identifierPragmas = a ^. Internal.axiomPragmas,
+                _identifierArgNames = [],
                 _identifierName
               }
       registerIdent (mkIdentIndex name) info
