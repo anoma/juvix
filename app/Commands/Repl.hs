@@ -208,12 +208,15 @@ ppConcrete a = do
   return (Concrete.ppOut popts a)
 
 printConcrete :: Concrete.PrettyCode a => a -> Repl ()
-printConcrete = ppConcrete >=> renderOutLn
+printConcrete = ppConcrete >=> renderOut
+
+printConcreteLn :: Concrete.PrettyCode a => a -> Repl ()
+printConcreteLn = ppConcrete >=> renderOutLn
 
 replParseIdentifiers :: String -> Repl (NonEmpty Concrete.ScopedIden)
 replParseIdentifiers input =
   replExpressionUpToScopedAtoms (strip (pack input))
-  >>= getIdentifiers
+    >>= getIdentifiers
   where
     getIdentifiers :: Concrete.ExpressionAtoms 'Concrete.Scoped -> Repl (NonEmpty Concrete.ScopedIden)
     getIdentifiers as = mapM getIdentifier (as ^. Concrete.expressionAtoms)
@@ -228,7 +231,6 @@ replParseIdentifiers input =
           where
             err :: Repl a
             err = replError (AnsiText @Text ":def expects one or more identifiers")
-
 
 printDocumentation :: String -> Repl ()
 printDocumentation = replParseIdentifiers >=> printIdentifiers
@@ -315,21 +317,21 @@ printDefinition = replParseIdentifiers >=> printIdentifiers
               tbl :: Scoped.InfoTable <- getInfoTable
               let def :: Scoped.FunctionInfo = tbl ^?! Scoped.infoFunctions . at fun . _Just
               printLocation def
-              printConcrete def
+              printConcreteLn def
 
             printInductive :: Scoped.NameId -> Repl ()
             printInductive ind = do
               tbl :: Scoped.InfoTable <- (^. replContextArtifacts . artifactScopeTable) <$> replGetContext
               let def :: Concrete.InductiveDef 'Concrete.Scoped = tbl ^?! Scoped.infoInductives . at ind . _Just . Scoped.inductiveInfoDef
               printLocation def
-              printConcrete def
+              printConcreteLn def
 
             printAxiom :: Scoped.NameId -> Repl ()
             printAxiom ax = do
               tbl :: Scoped.InfoTable <- (^. replContextArtifacts . artifactScopeTable) <$> replGetContext
               let def :: Concrete.AxiomDef 'Concrete.Scoped = tbl ^?! Scoped.infoAxioms . at ax . _Just . Scoped.axiomInfoDef
               printLocation def
-              printConcrete def
+              printConcreteLn def
 
             printConstructor :: Scoped.NameId -> Repl ()
             printConstructor c = do
