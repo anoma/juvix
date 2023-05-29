@@ -243,20 +243,21 @@ printDocumentation = replParseIdentifiers >=> printIdentifiers
 
         printIdentifier :: Concrete.ScopedIden -> Repl ()
         printIdentifier s = do
-          d <- case s of
+          mdoc <- case s of
             Concrete.ScopedAxiom a -> getDocAxiom (a ^. Concrete.axiomRefName . Scoped.nameId)
             Concrete.ScopedInductive a -> getDocInductive (a ^. Concrete.inductiveRefName . Scoped.nameId)
             Concrete.ScopedVar {} -> return Nothing
             Concrete.ScopedFunction f -> getDocFunction (f ^. Concrete.functionRefName . Scoped.nameId)
             Concrete.ScopedConstructor c -> getDocConstructor (c ^. Concrete.constructorRefName . Scoped.nameId)
-          printDoc d
+          printDoc mdoc
           where
             printDoc :: Maybe (Concrete.Judoc 'Concrete.Scoped) -> Repl ()
             printDoc = \case
               Nothing -> do
-                s <- ppConcrete
+                s' <- ppConcrete s
                 renderOut (AnsiText @Text "No documentation available for ")
-                renderOutLn s
+                renderOutLn s'
+              Just ju -> printConcrete ju
 
             getDocFunction :: Scoped.NameId -> Repl (Maybe (Concrete.Judoc 'Concrete.Scoped))
             getDocFunction fun = do
