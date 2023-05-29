@@ -25,7 +25,7 @@ data EvalMode
   | EvalModeJSON
 
 data EvalData = EvalData
-  { _evalDataInput :: [Text],
+  { _evalDataInput :: [(Text, Text)],
     _evalDataOutput :: Text
   }
   deriving stock (Generic)
@@ -37,24 +37,10 @@ instance FromJSON EvalData where
     where
       parseEvalData :: Parse PragmaError EvalData
       parseEvalData = do
-        _evalDataInput <- parseInputs
+        _evalDataInput <- filter (\p -> fst p /= "out") <$> (eachInObject asText)
         mout <- keyMay "out" asText
         let _evalDataOutput = fromMaybe "true" mout
         return EvalData {..}
-
-      parseInputs :: Parse PragmaError [Text]
-      parseInputs = do
-        mi <- keyMay "in" asText
-        case mi of
-          Nothing -> parseInputs' 1
-          Just i -> return [i]
-
-      parseInputs' :: Int -> Parse PragmaError [Text]
-      parseInputs' n = do
-        mi <- keyMay ("in" <> show n) asText
-        case mi of
-          Nothing -> return []
-          Just i -> (i :) <$> parseInputs' (n + 1)
 
 coreEvalAssertion' ::
   EvalMode ->
@@ -67,7 +53,7 @@ coreEvalAssertion' mode tab mainFile expectedFile step =
   length (fromText (ppPrint tab) :: String) `seq`
     case HashMap.lookup sym (tab ^. identContext) of
       Just node -> do
-        d <- readEvalData
+        d <- readEvalData (ii ^. identifierArgNames)
         case d of
           Left msg -> assertFailure ("Error reading expected file: " <> msg)
           Right EvalData {..} ->
@@ -77,7 +63,7 @@ coreEvalAssertion' mode tab mainFile expectedFile step =
                   hout <- openFile (toFilePath outputFile) WriteMode
                   step "Evaluate"
                   let tyargs = typeArgs (lookupIdentifierInfo tab sym ^. identifierType)
-                      args = zipWith mkArg (tyargs ++ repeat mkDynamic') _evalDataInput
+                      args = zipWith mkArg (tyargs ++ repeat mkDynamic') (map snd _evalDataInput)
                       node' = mkApps' node args
                   r' <- doEval mainFile hout tab node'
                   case r' of
@@ -96,6 +82,7 @@ coreEvalAssertion' mode tab mainFile expectedFile step =
       Nothing -> assertFailure ("No main function registered in: " <> toFilePath mainFile)
   where
     sym = fromJust (tab ^. infoMain)
+    ii = lookupIdentifierInfo tab sym
 
     mkArg :: Type -> Text -> Node
     mkArg ty arg =
@@ -107,8 +94,8 @@ coreEvalAssertion' mode tab mainFile expectedFile step =
                       | otherwise -> mkConstr' (BuiltinTag TagTrue) []
               | otherwise -> mkConstant' (ConstInteger n)
 
-    readEvalData :: IO (Either String EvalData)
-    readEvalData = case mode of
+    readEvalData :: [Maybe Text] -> IO (Either String EvalData)
+    readEvalData argnames = case mode of
       EvalModePlain -> do
         expected <- TIO.readFile (toFilePath expectedFile)
         return $
@@ -117,8 +104,29 @@ coreEvalAssertion' mode tab mainFile expectedFile step =
               { _evalDataInput = [],
                 _evalDataOutput = expected
               }
-      EvalModeJSON ->
-        fmap (over evalDataOutput (<> "\n")) . eitherDecode <$> B.readFile (toFilePath expectedFile)
+      EvalModeJSON -> do
+        fmap
+          ( over evalDataInput sortArgs
+              . over evalDataOutput (<> "\n")
+          )
+          . eitherDecode
+          <$> B.readFile (toFilePath expectedFile)
+        where
+          sortArgs :: [(Text, Text)] -> [(Text, Text)]
+          sortArgs args = sortBy cmp args
+            where
+              cmp :: (Text, Text) -> (Text, Text) -> Ordering
+              cmp (k1, _) (k2, _) = compare i1 i2
+                where
+                  i1 = fromJust $ elemIndex k1 argnames'
+                  i2 = fromJust $ elemIndex k2 argnames'
+
+              argnames' =
+                if
+                    | length args == 1 ->
+                        [fromMaybe "in" (head (nonEmpty' argnames))]
+                    | otherwise ->
+                        zipWith (\n -> fromMaybe ("in" <> show n)) [1 .. length args] (argnames ++ repeat Nothing)
 
 coreEvalAssertion ::
   Path Abs File ->

@@ -58,7 +58,8 @@ setupMainFunction tab node =
           _identifierType = mkDynamic',
           _identifierBuiltin = Nothing,
           _identifierIsExported = True,
-          _identifierPragmas = mempty
+          _identifierPragmas = mempty,
+          _identifierArgNames = []
         }
 
 guardSymbolNotDefined ::
@@ -155,7 +156,8 @@ statementDef = do
                 _identifierArgsNum = 0,
                 _identifierIsExported = False,
                 _identifierBuiltin = Nothing,
-                _identifierPragmas = mempty
+                _identifierPragmas = mempty,
+                _identifierArgNames = []
               }
       lift $ registerIdent txt info
       void $ optional (parseDefinition sym ty)

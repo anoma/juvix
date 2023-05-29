@@ -1,6 +1,7 @@
 module Juvix.Compiler.Backend.VampIR.Translation.FromCore where
 
 import Data.Text qualified as T
+import Juvix.Compiler.Backend.VampIR.Extra (getVampIRInputs)
 import Juvix.Compiler.Backend.VampIR.Language as VampIR
 import Juvix.Compiler.Core.Data.InfoTable
 import Juvix.Compiler.Core.Extra
@@ -9,19 +10,19 @@ import Juvix.Compiler.Core.Language as Core
 import Juvix.Compiler.Core.Transformation.DisambiguateNames (disambiguateNodeNames')
 
 fromCore :: InfoTable -> Program
-fromCore tab = fromCoreNode (ii ^. identifierType) node
+fromCore tab = fromCoreNode ii node
   where
     sym = fromJust (tab ^. infoMain)
     node = lookupIdentifierNode tab sym
     ii = lookupIdentifierInfo tab sym
 
-fromCoreNode :: Type -> Node -> Program
-fromCoreNode ty node =
+fromCoreNode :: IdentifierInfo -> Node -> Program
+fromCoreNode ii node =
   let (lams, body) = unfoldLambdas (disambiguateNodeNames' disambiguate emptyInfoTable node)
       (defs, expr) = convertLets body
       n = length lams
-      args = if n == 1 then ["in"] else map (\k -> "in" <> show k) [1 .. n]
-      isBoolTarget = isTypeBool (typeTarget ty)
+      args = getVampIRInputs n (ii ^. identifierArgNames)
+      isBoolTarget = isTypeBool (typeTarget (ii ^. identifierType))
    in Program
         { _programFunctions =
             [ Function
