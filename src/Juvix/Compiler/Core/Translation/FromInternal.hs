@@ -260,10 +260,7 @@ preFunctionDef f = do
                 pragmasInline
                 (fmap (adjustPragmaInline (implicitParametersNum (f ^. Internal.funDefType))))
                 (f ^. Internal.funDefPragmas),
-            _identifierArgNames =
-              map
-                getPatternName
-                (head (f ^. Internal.funDefClauses) ^. Internal.clausePatterns)
+            _identifierArgNames = argnames
           }
   case f ^. Internal.funDefBuiltin of
     Just b
@@ -278,6 +275,15 @@ preFunctionDef f = do
         _preFunType = funTy
       }
   where
+    argnames :: [Maybe Text]
+    argnames = case f ^. Internal.funDefPragmas . pragmasArgNames of
+      Just argns ->
+        map Just (argns ^. pragmaArgNames)
+      Nothing ->
+        map
+          getPatternName
+          (head (f ^. Internal.funDefClauses) ^. Internal.clausePatterns)
+
     normalizeBuiltinName :: Maybe BuiltinFunction -> Text -> Text
     normalizeBuiltinName blt name = case blt of
       Just b | isNatBuiltin b -> show (pretty b)

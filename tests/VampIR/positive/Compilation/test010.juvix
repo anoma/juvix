@@ -102,5 +102,6 @@ hash16 : Nat -> Nat;
 hash16 x :=
   if (x < pow15) (hash15 x) (mod (div (x * x) pow13) pow6);
 
+{-# argnames: [val] #-}
 main : Nat -> Nat;
 main := hash16;
