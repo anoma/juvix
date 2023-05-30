@@ -592,6 +592,7 @@ iterator = do
             rparen
             return rngs
   _iteratorBody <- parseExpressionAtoms
+  let _iteratorParens = False
   return Iterator {..}
   where
     initializer :: ParsecS r (Initializer 'Parsed)

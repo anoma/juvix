@@ -1323,6 +1323,7 @@ checkIterator iter = do
     rngpats' <- mapM checkParsePatternAtoms rngpats
     let _iteratorInitializers = zipWithExact Initializer inipats' inivals'
         _iteratorRanges = zipWithExact Range rngpats' rngvals'
+        _iteratorParens = iter ^. iteratorParens
     _iteratorBody <- checkParseExpressionAtoms (iter ^. iteratorBody)
     return Iterator {..}
 
@@ -1365,6 +1366,7 @@ checkParens e@(ExpressionAtoms as _) = case as of
     scopedId <- checkName s
     let scopedIdenNoFix = idenOverName (set S.nameFixity Nothing) scopedId
     return (ExpressionParensIdentifier scopedIdenNoFix)
+  AtomIterator i :| [] -> ExpressionIterator . set iteratorParens True <$> checkIterator i
   AtomCase c :| [] -> ExpressionCase . set caseParens True <$> checkCase c
   _ -> checkParseExpressionAtoms e
 

@@ -51,7 +51,8 @@ main :=
   sum lst
     + sum' lst
     + fst (for (a, b := 0, 0) (x in lst) b + x, a)
-    + (for2 (acc := 0) (x in lst; y in 1 :: 2 :: nil) acc + x + y)
+    + (for2 (acc := 0) (x in lst; y in 1 :: 2 :: nil)
+         acc + x + y)
     + fst
       (myzip2 (a := 0; b := 0) (x in lst; y in reverse lst)
          a + x * y, b + y)

@@ -978,7 +978,10 @@ data Iterator s = Iterator
   { _iteratorName :: IdentifierType s,
     _iteratorInitializers :: [Initializer s],
     _iteratorRanges :: [Range s],
-    _iteratorBody :: ExpressionType s
+    _iteratorBody :: ExpressionType s,
+    -- | Due to limitations of the pretty printing algorithm, we store whether
+    -- the iterator was surrounded by parentheses in the code.
+    _iteratorParens :: Bool
   }
 
 deriving stock instance
@@ -1192,7 +1195,7 @@ expressionAtomicity e = case sing :: SStage s of
   SScoped -> atomicity e
 
 instance HasAtomicity (Iterator s) where
-  atomicity = const (Aggregate appFixity)
+  atomicity = const Atom
 
 instance HasAtomicity (Case s) where
   atomicity = const Atom
