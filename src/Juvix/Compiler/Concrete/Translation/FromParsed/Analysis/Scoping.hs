@@ -1014,18 +1014,6 @@ checkAxiomDef AxiomDef {..} = do
 entryToSymbol :: SymbolEntry -> Symbol -> S.Symbol
 entryToSymbol sentry csym = set S.nameConcrete csym (symbolEntryToSName sentry)
 
-checkEval ::
-  (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, Reader BindingStrategy] r) =>
-  Eval 'Parsed ->
-  Sem r (Eval 'Scoped)
-checkEval (Eval s) = Eval <$> withLocalScope (checkParseExpressionAtoms s)
-
-checkPrint ::
-  (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, Reader BindingStrategy] r) =>
-  Print 'Parsed ->
-  Sem r (Print 'Scoped)
-checkPrint (Print s) = Print <$> withLocalScope (checkParseExpressionAtoms s)
-
 checkFunction ::
   forall r.
   (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
