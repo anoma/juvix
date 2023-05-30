@@ -1,6 +1,28 @@
 working-directory: ./../../../tests/
 
 tests:
+  - name: repl-doc
+    command:
+      - juvix
+      - repl
+      - ../examples/milestone/HelloWorld/HelloWorld.juvix
+    stdin: ":doc Nat"
+    stdout:
+      contains: |
+        --- Inductive natural numbers. I.e. whole non-negative numbers.
+    exit-status: 0
+
+  - name: repl-doc-no-doc
+    command:
+      - juvix
+      - repl
+      - ../examples/milestone/HelloWorld/HelloWorld.juvix
+    stdin: ":doc suc"
+    stdout:
+      contains: |
+        No documentation available for suc
+    exit-status: 0
+
   - name: repl-def
     command:
       - juvix
