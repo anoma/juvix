@@ -77,6 +77,9 @@ open = "open"
 syntax :: (IsString s) => s
 syntax = "syntax"
 
+iterator :: (IsString s) => s
+iterator = "iterator"
+
 postfix :: (IsString s) => s
 postfix = "postfix"
 
