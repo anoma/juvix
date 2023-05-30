@@ -238,5 +238,9 @@ tests =
     PosTest
       "Iterators"
       $(mkRelDir ".")
-      $(mkRelFile "Iterators.juvix")
+      $(mkRelFile "Iterators.juvix"),
+    PosTest
+      "Format pragma"
+      $(mkRelDir ".")
+      $(mkRelFile "FormatPragma.juvix")
   ]
