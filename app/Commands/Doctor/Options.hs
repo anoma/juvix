@@ -2,8 +2,9 @@ module Commands.Doctor.Options where
 
 import CommonOptions
 
-newtype DoctorOptions = DoctorOptions
-  { _doctorOffline :: Bool
+data DoctorOptions = DoctorOptions
+  { _doctorOffline :: Bool,
+    _doctorVerbose :: Bool
   }
   deriving stock (Data)
 
@@ -13,5 +14,11 @@ parseDoctorOptions = do
     switch
       ( long "offline"
           <> help "Run the doctor offline"
+      )
+  _doctorVerbose <-
+    switch
+      ( long "verbose"
+          <> short 'v'
+          <> help "Print verbose output"
       )
   pure DoctorOptions {..}

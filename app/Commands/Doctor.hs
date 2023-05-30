@@ -1,6 +1,7 @@
 module Commands.Doctor where
 
 import Commands.Doctor.Options
+import Commands.Extra.Compile
 import Data.Aeson
 import Data.Aeson.TH
 import Juvix.Extra.Version qualified as V
@@ -64,26 +65,34 @@ heading = log . ("> " <>)
 warning :: (Member Log r) => Text -> Sem r ()
 warning = log . ("  ! " <>)
 
+info :: (Member Log r) => Text -> Sem r ()
+info = log . ("  | " <>)
+
 type DoctorEff = '[Log, Embed IO]
 
 checkCmdOnPath :: (Members DoctorEff r) => String -> [Text] -> Sem r ()
 checkCmdOnPath cmd errMsg =
   whenM (isNothing <$> findExecutable (relFile cmd)) (mapM_ warning errMsg)
 
-checkClangTargetSupported :: (Members DoctorEff r) => String -> [Text] -> Sem r ()
-checkClangTargetSupported target errMsg = do
+-- | Check that wasm-ld exists in the same LLVM distribution as the clang command
+checkWasmLd :: (Members DoctorEff r) => Path Abs File -> [Text] -> Sem r ()
+checkWasmLd clangPath errMsg =
+  unlessM (isExecutable (parent clangPath <//> $(mkRelFile "wasm-ld"))) (mapM_ warning errMsg)
+
+checkClangTargetSupported :: (Members DoctorEff r) => Path Abs File -> String -> [Text] -> Sem r ()
+checkClangTargetSupported clangPath target errMsg = do
   (code, _, _) <-
     embed
       ( P.readProcessWithExitCode
-          "clang"
+          (toFilePath clangPath)
           ["-target", target, "--print-supported-cpus"]
           ""
       )
   unless (code == ExitSuccess) (mapM_ warning errMsg)
 
-checkClangVersion :: (Members DoctorEff r) => Integer -> [Text] -> Sem r ()
-checkClangVersion expectedVersion errMsg = do
-  versionString <- embed (P.readProcess "clang" ["-dumpversion"] "")
+checkClangVersion :: (Members DoctorEff r) => Path Abs File -> Integer -> [Text] -> Sem r ()
+checkClangVersion clangPath expectedVersion errMsg = do
+  versionString <- embed (P.readProcess (toFilePath clangPath) ["-dumpversion"] "")
   case headMay (splitOn "." versionString) >>= readMaybe of
     Just majorVersion -> unless (majorVersion >= expectedVersion) (mapM_ warning errMsg)
     Nothing -> warning "Could not determine clang version"
@@ -110,29 +119,50 @@ checkVersion = do
       Nothing -> warning "Tag name is not present in release JSON from Github API"
     Nothing -> warning "Network error when fetching data from Github API"
 
-documentedCheck ::
-  ([Text] -> Sem r ()) -> DocumentedWarning -> Sem r ()
-documentedCheck check w = check msg
+renderDocumentedWarning :: DocumentedWarning -> [Text]
+renderDocumentedWarning w = [dmsg ^. documentedMessageMessage, dmsg ^. documentedMessageUrl]
   where
     dmsg :: DocumentedMessage
     dmsg = documentedMessage w
-    msg :: [Text]
-    msg = [dmsg ^. documentedMessageMessage, dmsg ^. documentedMessageUrl]
 
-checkClang :: (Members DoctorEff r) => Sem r ()
-checkClang = do
+documentedCheck ::
+  ([Text] -> Sem r ()) -> DocumentedWarning -> Sem r ()
+documentedCheck check w = check (renderDocumentedWarning w)
+
+findClangPath :: Members DoctorEff r => Sem r (Maybe ClangPath)
+findClangPath = findClang
+
+checkClang :: forall r. Members DoctorEff r => Bool -> Sem r ()
+checkClang printVerbose = do
   heading "Checking for clang..."
-  documentedCheck (checkCmdOnPath "clang") NoClang
-  heading "Checking clang version..."
-  documentedCheck (checkClangVersion minimumClangVersion) OldClang
-  heading "Checking for wasm-ld..."
-  documentedCheck (checkCmdOnPath "wasm-ld") NoWasmLd
-  heading "Checking that clang supports wasm32..."
-  documentedCheck (checkClangTargetSupported "wasm32") NoWasm32Target
-  heading "Checking that clang supports wasm32-wasi..."
-  documentedCheck (checkClangTargetSupported "wasm32-wasi") NoWasm32WasiTarget
+  clangPath <- findClangPath
+  case clangPath of
+    Just cp -> when printVerbose (printVerbosePath cp)
+    Nothing -> mapM_ warning (renderDocumentedWarning NoClang)
+
+  mapM_ checkClangProperties (extractClangPath <$> clangPath)
+
   heading "Checking that WASI_SYSROOT_PATH is set..."
   documentedCheck (checkEnvVarSet "WASI_SYSROOT_PATH") NoSysroot
+  where
+    checkClangProperties :: Path Abs File -> Sem r ()
+    checkClangProperties p = do
+      heading "Checking clang version..."
+      documentedCheck (checkClangVersion p minimumClangVersion) OldClang
+      heading "Checking for wasm-ld..."
+      documentedCheck (checkWasmLd p) NoWasmLd
+      heading "Checking that clang supports wasm32..."
+      documentedCheck (checkClangTargetSupported p "wasm32") NoWasm32Target
+      heading "Checking that clang supports wasm32-wasi..."
+      documentedCheck (checkClangTargetSupported p "wasm32-wasi") NoWasm32WasiTarget
+
+    baseClangMsg :: Path Abs File -> Text
+    baseClangMsg p = "Found clang at " <> show p
+
+    printVerbosePath :: ClangPath -> Sem r ()
+    printVerbosePath = \case
+      ClangEnvVarPath p -> info (baseClangMsg p <> (" using " <> pack llvmDistEnvironmentVar <> " environment variable"))
+      ClangSystemPath p -> info (baseClangMsg p <> (" using system PATH"))
 
 checkWasmer :: (Members DoctorEff r) => Sem r ()
 checkWasmer = do
@@ -141,6 +171,6 @@ checkWasmer = do
 
 runCommand :: (Members DoctorEff r) => DoctorOptions -> Sem r ()
 runCommand opts = do
-  checkClang
+  checkClang (opts ^. doctorVerbose)
   checkWasmer
   unless (opts ^. doctorOffline) checkVersion
