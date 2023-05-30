@@ -91,9 +91,11 @@ type family PatternAtType s = res | res -> s where
   PatternAtType 'Parsed = PatternBinding
   PatternAtType 'Scoped = PatternArg
 
-type family ImportType (s :: Stage) :: GHC.Type where
+type ImportType :: Stage -> GHC.Type
+type family ImportType s = res | res -> s where
   ImportType 'Parsed = TopModulePath
   ImportType 'Scoped = ModuleRef'' 'S.Concrete 'ModuleTop
+
 
 type ModulePathType :: Stage -> ModuleIsTop -> GHC.Type
 type family ModulePathType s t = res | res -> t s where
@@ -1634,3 +1636,5 @@ instance HasNameKind ScopedIden where
 
 instance HasNameKind SymbolEntry where
   getNameKind = getNameKind . entryName
+
+$(genDefunSymbols [''ImportType])

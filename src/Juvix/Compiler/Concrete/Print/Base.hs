@@ -5,6 +5,7 @@ module Juvix.Compiler.Concrete.Print.Base
   )
 where
 
+import Data.Kind qualified as GHC
 import Data.List.NonEmpty.Extra qualified as NonEmpty
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Language
@@ -15,6 +16,8 @@ import Juvix.Data.Effect.ExactPrint
 import Juvix.Data.Keyword.All
 import Juvix.Prelude hiding ((<+>), (<+?>), (<?+>), (?<>))
 import Juvix.Prelude.Pretty (annotate, pretty)
+
+type PrettyPrinting a = forall r. Members '[ExactPrint, Reader Options] r => a -> Sem r ()
 
 class PrettyPrint a where
   ppCode :: Members '[ExactPrint, Reader Options] r => a -> Sem r ()
@@ -128,6 +131,22 @@ ppMorpheme n = P.ppCode n >>= morpheme (getLoc n)
 
 instance PrettyPrint (ModuleRef'' 'S.Concrete 'ModuleTop) where
   ppCode m = ppCode (m ^. moduleRefName)
+
+ppImportType :: forall s. SingI s => PrettyPrinting (ImportType s)
+ppImportType = ps (Proxy @ImportTypeSym0) ppCode ppCode Proxy
+
+ps ::
+  forall (k :: Stage ~> GHC.Type) a (s :: Stage).
+  SingI s =>
+  Proxy k ->
+  (k @@ 'Parsed -> a) ->
+  (k @@ 'Scoped -> a) ->
+  Proxy s ->
+  k @@ s ->
+  a
+ps _pk fparsed fscoped _ps = case sing :: SStage s of
+  SParsed -> fparsed
+  SScoped -> fscoped
 
 instance PrettyPrint (Import 'Scoped) where
   ppCode :: forall r. Members '[ExactPrint, Reader Options] r => Import 'Scoped -> Sem r ()
