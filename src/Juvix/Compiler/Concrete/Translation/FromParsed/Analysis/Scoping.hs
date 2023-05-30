@@ -62,6 +62,29 @@ scopeCheck pr modules =
           _resultScoperState = scoperSt
         }
 
+-- TODO refactor to have less code duplication
+scopeCheckExpressionAtoms ::
+  forall r.
+  (Members '[Error JuvixError, NameIdGen, State Scope] r) =>
+  InfoTable ->
+  ExpressionAtoms 'Parsed ->
+  Sem r (ExpressionAtoms 'Scoped)
+scopeCheckExpressionAtoms tab as = mapError (JuvixError @ScoperError) $ do
+  fmap snd
+    . ignoreHighlightBuilder
+    . runInfoTableBuilder tab
+    . runReader iniScopeParameters
+    . evalState iniScoperState
+    . withLocalScope
+    $ checkExpressionAtoms as
+  where
+    iniScopeParameters :: ScopeParameters
+    iniScopeParameters =
+      ScopeParameters
+        { _scopeTopParents = mempty,
+          _scopeParsedModules = mempty
+        }
+
 scopeCheckExpression ::
   forall r.
   (Members '[Error JuvixError, NameIdGen, State Scope] r) =>
@@ -69,14 +92,13 @@ scopeCheckExpression ::
   ExpressionAtoms 'Parsed ->
   Sem r Expression
 scopeCheckExpression tab as = mapError (JuvixError @ScoperError) $ do
-  snd
-    <$> ( ignoreHighlightBuilder
-            . runInfoTableBuilder tab
-            . runReader iniScopeParameters
-            . evalState iniScoperState
-            . withLocalScope
-            $ checkParseExpressionAtoms as
-        )
+  fmap snd
+    . ignoreHighlightBuilder
+    . runInfoTableBuilder tab
+    . runReader iniScopeParameters
+    . evalState iniScoperState
+    . withLocalScope
+    $ checkParseExpressionAtoms as
   where
     iniScopeParameters :: ScopeParameters
     iniScopeParameters =
@@ -469,7 +491,7 @@ checkTypeSignature TypeSignature {..} = do
   sigName' <- bindFunctionSymbol _sigName
   sigDoc' <- mapM checkJudoc _sigDoc
   sigBody' <- mapM checkParseExpressionAtoms _sigBody
-  registerFunction
+  registerTypeSignature
     @$> TypeSignature
       { _sigName = sigName',
         _sigType = sigType',
@@ -499,7 +521,7 @@ checkInductiveDef InductiveDef {..} = do
     inductiveParameters' <- mapM checkInductiveParameters _inductiveParameters
     inductiveType' <- mapM checkParseExpressionAtoms _inductiveType
     inductiveDoc' <- mapM checkJudoc _inductiveDoc
-    inductiveConstructors' <- mapM checkConstructorDef _inductiveConstructors
+    inductiveConstructors' <- mapM (checkConstructorDef inductiveName') _inductiveConstructors
     return (inductiveParameters', inductiveType', inductiveDoc', inductiveConstructors')
   forM_ inductiveConstructors' bindConstructor
   registerInductive
@@ -526,12 +548,12 @@ checkInductiveDef InductiveDef {..} = do
               )
           )
     -- note that the constructor name is not bound here
-    checkConstructorDef :: InductiveConstructorDef 'Parsed -> Sem r (InductiveConstructorDef 'Scoped)
-    checkConstructorDef InductiveConstructorDef {..} = do
+    checkConstructorDef :: S.Symbol -> InductiveConstructorDef 'Parsed -> Sem r (InductiveConstructorDef 'Scoped)
+    checkConstructorDef tyName InductiveConstructorDef {..} = do
       constructorType' <- checkParseExpressionAtoms _constructorType
       constructorName' <- reserveSymbolOf S.KNameConstructor _constructorName
       doc' <- mapM checkJudoc _constructorDoc
-      registerConstructor
+      registerConstructor tyName
         @$> InductiveConstructorDef
           { _constructorName = constructorName',
             _constructorType = constructorType',

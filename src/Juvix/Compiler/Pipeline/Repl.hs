@@ -28,6 +28,41 @@ arityCheckExpression p = do
       >>= Internal.fromAbstractExpression
       >>= Internal.arityCheckExpression
 
+expressionUpToAtomsParsed ::
+  Members '[State Artifacts, Error JuvixError] r =>
+  Path Abs File ->
+  Text ->
+  Sem r (ExpressionAtoms 'Parsed)
+expressionUpToAtomsParsed fp txt =
+  runNameIdGenArtifacts
+    . runBuiltinsArtifacts
+    $ Parser.expressionFromTextSource fp txt
+
+expressionUpToAtomsScoped ::
+  Members '[State Artifacts, Error JuvixError] r =>
+  Path Abs File ->
+  Text ->
+  Sem r (ExpressionAtoms 'Scoped)
+expressionUpToAtomsScoped fp txt = do
+  scopeTable <- gets (^. artifactScopeTable)
+  runNameIdGenArtifacts
+    . runBuiltinsArtifacts
+    . runScoperScopeArtifacts
+    $ Parser.expressionFromTextSource fp txt
+      >>= Scoper.scopeCheckExpressionAtoms scopeTable
+
+scopeCheckExpression ::
+  Members '[Error JuvixError, State Artifacts] r =>
+  ExpressionAtoms 'Parsed ->
+  Sem r Expression
+scopeCheckExpression p = do
+  scopeTable <- gets (^. artifactScopeTable)
+  runNameIdGenArtifacts
+    . runBuiltinsArtifacts
+    . runScoperScopeArtifacts
+    . Scoper.scopeCheckExpression scopeTable
+    $ p
+
 openImportToInternal ::
   Members '[Reader EntryPoint, Error JuvixError, State Artifacts] r =>
   OpenModule 'Parsed ->
@@ -80,17 +115,6 @@ importToInternal' ::
   Sem r Internal.Include
 importToInternal' = Internal.arityCheckInclude >=> Internal.typeCheckInclude
 
-parseExpression ::
-  Members '[State Artifacts, Error JuvixError] r =>
-  Path Abs File ->
-  Text ->
-  Sem r (ExpressionAtoms 'Parsed)
-parseExpression fp txt =
-  ( runNameIdGenArtifacts
-      . runBuiltinsArtifacts
-  )
-    $ Parser.expressionFromTextSource fp txt
-
 parseReplInput ::
   Members '[PathResolver, Files, State Artifacts, Error JuvixError] r =>
   Path Abs File ->
@@ -103,15 +127,15 @@ parseReplInput fp txt =
   )
     $ Parser.replInputFromTextSource fp txt
 
-inferExpression ::
+expressionUpToTyped ::
   Members '[Error JuvixError, State Artifacts] r =>
   Path Abs File ->
   Text ->
-  Sem r Internal.Expression
-inferExpression fp txt = do
-  p <- parseExpression fp txt
+  Sem r Internal.TypedExpression
+expressionUpToTyped fp txt = do
+  p <- expressionUpToAtomsParsed fp txt
   arityCheckExpression p
-    >>= Internal.inferExpressionType
+    >>= Internal.typeCheckExpressionType
 
 compileExpression ::
   Members '[Error JuvixError, State Artifacts] r =>
@@ -179,10 +203,9 @@ compileReplInputIO fp txt =
         Parser.ReplImport i -> registerImport i $> ReplPipelineResultImport (i ^. importModule)
         Parser.ReplOpenImport i -> registerOpenImport i $> ReplPipelineResultOpenImport (i ^. openModuleName)
 
-inferExpressionIO ::
+expressionUpToTypedIO ::
   Members '[State Artifacts, Embed IO] r =>
   Path Abs File ->
   Text ->
-  Sem r (Either JuvixError Internal.Expression)
-inferExpressionIO fp txt =
-  runError (inferExpression fp txt)
+  Sem r (Either JuvixError Internal.TypedExpression)
+expressionUpToTypedIO fp txt = runError (expressionUpToTyped fp txt)
