@@ -698,7 +698,7 @@ instance ToGenericError IteratorInitializer where
     return
       GenericError
         { _genericErrorLoc = i,
-          _genericErrorMessage = AnsiText ("Wrong number of iterator initializers" :: Doc Ann),
+          _genericErrorMessage = mkAnsiText ("Wrong number of iterator initializers" :: Doc Ann),
           _genericErrorIntervals = [i]
         }
     where
@@ -715,7 +715,7 @@ instance ToGenericError IteratorRange where
     return
       GenericError
         { _genericErrorLoc = i,
-          _genericErrorMessage = AnsiText ("Wrong number of iterator ranges" :: Doc Ann),
+          _genericErrorMessage = mkAnsiText ("Wrong number of iterator ranges" :: Doc Ann),
           _genericErrorIntervals = [i]
         }
     where
@@ -737,7 +737,7 @@ instance ToGenericError IteratorUndefined where
     return
       GenericError
         { _genericErrorLoc = i,
-          _genericErrorMessage = AnsiText msg,
+          _genericErrorMessage = mkAnsiText msg,
           _genericErrorIntervals = [i]
         }
     where
