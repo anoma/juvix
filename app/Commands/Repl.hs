@@ -257,7 +257,7 @@ printDocumentation = replParseIdentifiers >=> printIdentifiers
             printDoc = \case
               Nothing -> do
                 s' <- ppConcrete s
-                renderOut (AnsiText @Text "No documentation available for ")
+                renderOut (mkAnsiText @Text "No documentation available for ")
                 renderOutLn s'
               Just ju -> printConcrete ju
 
