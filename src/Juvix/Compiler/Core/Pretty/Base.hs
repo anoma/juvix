@@ -598,6 +598,7 @@ instance PrettyCode Value where
     ValueConstant c -> ppCode c
     ValueWildcard -> return "_"
     ValueFun -> return "<fun>"
+    ValueType -> return "<type>"
 
 ppValueSequence :: Member (Reader Options) r => [Value] -> Sem r (Doc Ann)
 ppValueSequence vs = hsep <$> mapM (ppRightExpression appFixity) vs
