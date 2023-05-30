@@ -27,7 +27,7 @@ instance ToGenericError EvalError where
     return
       GenericError
         { _genericErrorLoc = defaultLoc,
-          _genericErrorMessage = AnsiText (pack $ S.show e),
+          _genericErrorMessage = mkAnsiText (pack (S.show e)),
           _genericErrorIntervals = []
         }
 

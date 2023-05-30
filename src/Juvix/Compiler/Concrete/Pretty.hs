@@ -11,7 +11,7 @@ import Juvix.Data.PPOutput
 import Juvix.Prelude
 
 ppOutDefault :: (PrettyCode c) => c -> AnsiText
-ppOutDefault = AnsiText . PPOutput . doc defaultOptions
+ppOutDefault = mkAnsiText . PPOutput . doc defaultOptions
 
 ppOut :: (CanonicalProjection a Options, PrettyCode c) => a -> c -> AnsiText
-ppOut o = AnsiText . PPOutput . doc (project o)
+ppOut o = mkAnsiText . PPOutput . doc (project o)

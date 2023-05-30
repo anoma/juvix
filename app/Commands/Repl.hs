@@ -87,7 +87,7 @@ replError msg =
       }
 
 noFileLoadedErr :: Repl a
-noFileLoadedErr = replError (AnsiText @Text "No file loaded. Load a file using the `:load FILE` command.")
+noFileLoadedErr = replError (mkAnsiText @Text "No file loaded. Load a file using the `:load FILE` command.")
 
 welcomeMsg :: MonadIO m => m ()
 welcomeMsg = liftIO (putStrLn [i|Juvix REPL version #{versionTag}: https://juvix.org. Run :help for help|])
@@ -227,7 +227,7 @@ printDefinition input = do
           _ -> err
           where
             err :: Repl a
-            err = replError (AnsiText @Text ":def expects one or more identifiers")
+            err = replError (mkAnsiText @Text ":def expects one or more identifiers")
 
     printIdentifiers :: NonEmpty Concrete.ScopedIden -> Repl ()
     printIdentifiers (d :| ds) = do
@@ -250,8 +250,7 @@ printDefinition input = do
             printLocation def = do
               s' <- ppConcrete s
               let txt :: Text = " is " <> prettyText (nameKindWithArticle (getNameKind s)) <> " defined at " <> prettyText (getLoc def)
-              renderOut s'
-              renderOutLn (AnsiText txt)
+              renderOutLn (s' <> mkAnsiText txt)
 
             printFunction :: Scoped.NameId -> Repl ()
             printFunction fun = do

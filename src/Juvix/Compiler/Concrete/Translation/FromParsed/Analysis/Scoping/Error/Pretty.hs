@@ -23,7 +23,7 @@ runPP :: Scoped.Options -> Sem '[Reader Scoped.Options] (Doc Scoped.Ann) -> Doc 
 runPP opts = code . runPP' opts
 
 prettyError :: Doc Ann -> AnsiText
-prettyError = AnsiText . PPOutput
+prettyError = mkAnsiText . PPOutput
 
 ppSymbolT :: Text -> Doc Ann
 ppSymbolT = code . pretty
