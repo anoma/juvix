@@ -324,5 +324,10 @@ tests =
       "Test053: Inlining"
       $(mkRelDir ".")
       $(mkRelFile "test053.juvix")
-      $(mkRelFile "out/test053.out")
+      $(mkRelFile "out/test053.out"),
+    posTest
+      "Test054: Iterators"
+      $(mkRelDir ".")
+      $(mkRelFile "test054.juvix")
+      $(mkRelFile "out/test054.out")
   ]

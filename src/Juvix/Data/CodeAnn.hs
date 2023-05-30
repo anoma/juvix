@@ -144,6 +144,9 @@ kwPublic = keyword Str.public
 kwSyntax :: Doc Ann
 kwSyntax = keyword Str.syntax
 
+kwIterator :: Doc Ann
+kwIterator = keyword Str.iterator
+
 kwPostfix :: Doc Ann
 kwPostfix = keyword Str.postfix
 

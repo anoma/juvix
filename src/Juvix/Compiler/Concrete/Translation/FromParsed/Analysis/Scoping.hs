@@ -23,6 +23,7 @@ import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
 import Juvix.Compiler.Concrete.Translation.FromSource.Data.Context (ParserResult)
 import Juvix.Compiler.Concrete.Translation.FromSource.Data.Context qualified as Parsed
 import Juvix.Compiler.Pipeline.EntryPoint
+import Juvix.Data.IteratorAttribs
 import Juvix.Prelude
 
 iniScoperState :: ScoperState
@@ -127,12 +128,12 @@ scopeCheckOpenModule ::
   Sem r (OpenModule 'Scoped)
 scopeCheckOpenModule i = mapError (JuvixError @ScoperError) $ checkOpenModule i
 
-freshVariable :: Members '[NameIdGen, State ScoperFixities, State Scope, State ScoperState] r => Symbol -> Sem r S.Symbol
+freshVariable :: Members '[NameIdGen, State ScoperFixities, State ScoperIterators, State Scope, State ScoperState] r => Symbol -> Sem r S.Symbol
 freshVariable = freshSymbol S.KNameLocal
 
 freshSymbol ::
   forall r.
-  (Members '[State Scope, State ScoperState, NameIdGen, State ScoperFixities] r) =>
+  (Members '[State Scope, State ScoperState, NameIdGen, State ScoperFixities, State ScoperIterators] r) =>
   S.NameKind ->
   Symbol ->
   Sem r S.Symbol
@@ -144,6 +145,7 @@ freshSymbol _nameKind _nameConcrete = do
       _nameVisibilityAnn = VisPublic
       _nameVerbatim = _nameConcrete ^. symbolText
   _nameFixity <- fixity
+  _nameIterator <- iter
   return S.Name' {..}
   where
     fixity :: Sem r (Maybe Fixity)
@@ -154,9 +156,22 @@ freshSymbol _nameKind _nameConcrete = do
           return mf
       | otherwise = return Nothing
 
+    iter :: Sem r (Maybe IteratorAttribs)
+    iter
+      | S.canBeIterator _nameKind = do
+          ma <- gets (^? scoperIterators . at _nameConcrete . _Just . symbolIteratorDef . iterAttribs)
+          case ma of
+            Just ma' -> do
+              let attrs = maybe emptyIteratorAttribs (^. withLocParam . withSourceValue) ma'
+              modify (set (scoperIterators . at _nameConcrete . _Just . symbolIteratorUsed) True)
+              return $ Just attrs
+            Nothing ->
+              return Nothing
+      | otherwise = return Nothing
+
 reserveSymbolOf ::
   forall r.
-  (Members '[Error ScoperError, NameIdGen, State ScoperFixities, State Scope, State ScoperState] r) =>
+  (Members '[Error ScoperError, NameIdGen, State ScoperFixities, State ScoperIterators, State ScoperIterators, State Scope, State ScoperState] r) =>
   S.NameKind ->
   Symbol ->
   Sem r S.Symbol
@@ -194,7 +209,7 @@ bindReservedSymbol s' entry = do
         BindingTop -> SymbolInfo (HashMap.insert path entry _symbolInfo)
 
 bindSymbolOf ::
-  (Members '[Error ScoperError, NameIdGen, State ScoperFixities, State Scope, InfoTableBuilder, State ScoperState, Reader BindingStrategy] r) =>
+  (Members '[Error ScoperError, NameIdGen, State ScoperFixities, State ScoperIterators, State ScoperIterators, State Scope, InfoTableBuilder, State ScoperState, Reader BindingStrategy] r) =>
   S.NameKind ->
   (S.Name' () -> SymbolEntry) ->
   Symbol ->
@@ -207,39 +222,42 @@ bindSymbolOf k mkEntry s = do
 ignoreFixities :: Sem (State ScoperFixities ': r) a -> Sem r a
 ignoreFixities = evalState mempty
 
+ignoreIterators :: Sem (State ScoperIterators ': r) a -> Sem r a
+ignoreIterators = evalState mempty
+
 -- variables are assumed to never be infix operators
 bindVariableSymbol ::
   Members '[Error ScoperError, NameIdGen, State Scope, InfoTableBuilder, State ScoperState] r =>
   Symbol ->
   Sem r S.Symbol
-bindVariableSymbol = localBindings . ignoreFixities . bindSymbolOf S.KNameLocal EntryVariable
+bindVariableSymbol = localBindings . ignoreFixities . ignoreIterators . bindSymbolOf S.KNameLocal EntryVariable
 
 bindFunctionSymbol ::
-  Members '[Error ScoperError, NameIdGen, State ScoperFixities, State Scope, InfoTableBuilder, State ScoperState, Reader BindingStrategy] r =>
+  Members '[Error ScoperError, NameIdGen, State ScoperFixities, State ScoperIterators, State Scope, InfoTableBuilder, State ScoperState, Reader BindingStrategy] r =>
   Symbol ->
   Sem r S.Symbol
 bindFunctionSymbol = bindSymbolOf S.KNameFunction (EntryFunction . FunctionRef')
 
 bindInductiveSymbol ::
-  Members '[Error ScoperError, NameIdGen, State ScoperFixities, State Scope, InfoTableBuilder, State ScoperState, Reader BindingStrategy] r =>
+  Members '[Error ScoperError, NameIdGen, State ScoperFixities, State ScoperIterators, State Scope, InfoTableBuilder, State ScoperState, Reader BindingStrategy] r =>
   Symbol ->
   Sem r S.Symbol
 bindInductiveSymbol = bindSymbolOf S.KNameInductive (EntryInductive . InductiveRef')
 
 bindAxiomSymbol ::
-  Members '[Error ScoperError, NameIdGen, State ScoperFixities, State Scope, InfoTableBuilder, State ScoperState, Reader BindingStrategy] r =>
+  Members '[Error ScoperError, NameIdGen, State ScoperFixities, State ScoperIterators, State Scope, InfoTableBuilder, State ScoperState, Reader BindingStrategy] r =>
   Symbol ->
   Sem r S.Symbol
 bindAxiomSymbol = bindSymbolOf S.KNameAxiom (EntryAxiom . AxiomRef')
 
 bindConstructorSymbol ::
-  Members '[Error ScoperError, NameIdGen, State ScoperFixities, State Scope, InfoTableBuilder, State ScoperState, Reader BindingStrategy] r =>
+  Members '[Error ScoperError, NameIdGen, State ScoperFixities, State ScoperIterators, State Scope, InfoTableBuilder, State ScoperState, Reader BindingStrategy] r =>
   Symbol ->
   Sem r S.Symbol
 bindConstructorSymbol = bindSymbolOf S.KNameConstructor (EntryConstructor . ConstructorRef')
 
 bindLocalModuleSymbol ::
-  Members '[Error ScoperError, NameIdGen, State ScoperFixities, State Scope, InfoTableBuilder, State ScoperState, Reader BindingStrategy] r =>
+  Members '[Error ScoperError, NameIdGen, State ScoperFixities, State ScoperIterators, State Scope, InfoTableBuilder, State ScoperState, Reader BindingStrategy] r =>
   ExportInfo ->
   Module 'Scoped 'ModuleLocal ->
   Symbol ->
@@ -460,7 +478,7 @@ readScopeModule import_ = do
 
 checkOperatorSyntaxDef ::
   forall r.
-  Members '[Error ScoperError, State Scope, State ScoperState, State ScoperFixities] r =>
+  Members '[Error ScoperError, State Scope, State ScoperState, State ScoperFixities, State ScoperIterators] r =>
   OperatorSyntaxDef ->
   Sem r ()
 checkOperatorSyntaxDef s@OperatorSyntaxDef {..} = do
@@ -478,12 +496,32 @@ checkOperatorSyntaxDef s@OperatorSyntaxDef {..} = do
         (HashMap.lookup _opSymbol <$> gets (^. scoperFixities))
         $ \s' -> throw (ErrDuplicateFixity (DuplicateFixity (s' ^. symbolFixityDef) s))
 
+checkIteratorSyntaxDef ::
+  forall r.
+  Members '[Error ScoperError, State Scope, State ScoperState, State ScoperFixities, State ScoperIterators] r =>
+  IteratorSyntaxDef ->
+  Sem r ()
+checkIteratorSyntaxDef s@IteratorSyntaxDef {..} = do
+  checkNotDefined
+  let sf =
+        SymbolIterator
+          { _symbolIteratorUsed = False,
+            _symbolIteratorDef = s
+          }
+  modify (over scoperIterators (HashMap.insert _iterSymbol sf))
+  where
+    checkNotDefined :: Sem r ()
+    checkNotDefined =
+      whenJustM
+        (HashMap.lookup _iterSymbol <$> gets (^. scoperIterators))
+        $ \s' -> throw (ErrDuplicateIterator (DuplicateIterator (s' ^. symbolIteratorDef) s))
+
 -- | Only used as syntactical convenience for registerX functions
 (@$>) :: Functor m => (a -> m ()) -> a -> m a
 (@$>) f a = f a $> a
 
 checkTypeSignature ::
-  (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, State ScoperFixities, Reader BindingStrategy] r) =>
+  (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, State ScoperFixities, State ScoperIterators, Reader BindingStrategy] r) =>
   TypeSignature 'Parsed ->
   Sem r (TypeSignature 'Scoped)
 checkTypeSignature TypeSignature {..} = do
@@ -512,7 +550,7 @@ checkInductiveParameters params = do
 
 checkInductiveDef ::
   forall r.
-  (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, State ScoperFixities] r) =>
+  (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, State ScoperFixities, State ScoperIterators, State ScoperIterators] r) =>
   InductiveDef 'Parsed ->
   Sem r (InductiveDef 'Scoped)
 checkInductiveDef InductiveDef {..} = do
@@ -623,6 +661,8 @@ checkTopModule m@Module {..} = do
           _nameVisibilityAnn = VisPublic
           _nameWhyInScope = S.BecauseDefined
           _nameVerbatim = N.topModulePathToDottedPath _modulePath
+          _nameIterator :: Maybe IteratorAttribs
+          _nameIterator = Nothing
           moduleName = S.Name' {..}
       registerName moduleName
       return moduleName
@@ -674,13 +714,20 @@ fixitiesBlock m =
     checkOrphanFixities
     return a
 
+iteratorsBlock :: Members '[Error ScoperError] r => Sem (State ScoperIterators ': r) a -> Sem r a
+iteratorsBlock m =
+  evalState (mempty :: ScoperIterators) $ do
+    a <- m
+    checkOrphanIterators
+    return a
+
 checkModuleBody ::
   forall r.
   Members '[Error ScoperError, State Scope, Reader ScopeParameters, State ScoperState, InfoTableBuilder, NameIdGen, Reader BindingStrategy] r =>
   [Statement 'Parsed] ->
   Sem r (ExportInfo, [Statement 'Scoped])
 checkModuleBody body = do
-  body' <- fixitiesBlock (mapM checkStatement body)
+  body' <- fixitiesBlock (iteratorsBlock (mapM checkStatement body))
   exported <- get >>= exportScope
   return (exported, body')
 
@@ -696,7 +743,7 @@ checkLocalModule Module {..} = do
       (e, b) <- checkModuleBody _moduleBody
       doc' <- mapM checkJudoc _moduleDoc
       return (e, b, doc')
-  _modulePath' <- ignoreFixities (reserveSymbolOf S.KNameLocalModule _modulePath)
+  _modulePath' <- ignoreFixities (ignoreIterators (reserveSymbolOf S.KNameLocalModule _modulePath))
   let moduleId = _modulePath' ^. S.nameId
       _moduleRefName = S.unConcrete _modulePath'
       _moduleRefModule =
@@ -734,6 +781,14 @@ checkOrphanFixities = do
   case unused of
     Nothing -> return ()
     Just x -> throw (ErrUnusedOperatorDef (UnusedOperatorDef x))
+
+checkOrphanIterators :: forall r. Members '[Error ScoperError, State ScoperIterators] r => Sem r ()
+checkOrphanIterators = do
+  declared <- gets (^. scoperIterators)
+  let unused = fmap (^. symbolIteratorDef) . find (^. symbolIteratorUsed . to not) . toList $ declared
+  case unused of
+    Nothing -> return ()
+    Just x -> throw (ErrUnusedIteratorDef (UnusedIteratorDef x))
 
 symbolInfoSingle :: SymbolEntry -> SymbolInfo
 symbolInfoSingle p = SymbolInfo $ HashMap.singleton (entryName p ^. S.nameDefinedIn) p
@@ -947,7 +1002,7 @@ checkFunctionClause clause@FunctionClause {..} = do
         err = throw (ErrLacksTypeSig (LacksTypeSig clause))
 
 checkAxiomDef ::
-  (Members '[InfoTableBuilder, Error ScoperError, State Scope, State ScoperState, NameIdGen, State ScoperFixities, Reader BindingStrategy] r) =>
+  (Members '[InfoTableBuilder, Error ScoperError, State Scope, State ScoperState, NameIdGen, State ScoperFixities, State ScoperIterators, Reader BindingStrategy] r) =>
   AxiomDef 'Parsed ->
   Sem r (AxiomDef 'Scoped)
 checkAxiomDef AxiomDef {..} = do
@@ -993,7 +1048,7 @@ checkLetClause ::
   (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
   LetClause 'Parsed ->
   Sem r (LetClause 'Scoped)
-checkLetClause lc = localBindings . ignoreFixities $ case lc of
+checkLetClause lc = localBindings . ignoreFixities . ignoreIterators $ case lc of
   LetTypeSig t -> LetTypeSig <$> checkTypeSignature t
   LetFunClause c -> LetFunClause <$> checkFunctionClause c
 
@@ -1226,6 +1281,69 @@ checkExpressionAtom e = case e of
   AtomFunArrow a -> return (AtomFunArrow a)
   AtomHole h -> AtomHole <$> checkHole h
   AtomLiteral l -> return (AtomLiteral l)
+  AtomIterator i -> AtomIterator <$> checkIterator i
+
+checkIterator ::
+  (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
+  Iterator 'Parsed ->
+  Sem r (Iterator 'Scoped)
+checkIterator iter = do
+  _iteratorName <- checkName (iter ^. iteratorName)
+  case identifierName _iteratorName ^. S.nameIterator of
+    Just IteratorAttribs {..} -> do
+      case _iteratorAttribsInitNum of
+        Just n
+          | n /= length (iter ^. iteratorInitializers) ->
+              throw
+                ( ErrIteratorInitializer
+                    IteratorInitializer {_iteratorInitializerIterator = iter}
+                )
+        _ -> return ()
+      case _iteratorAttribsRangeNum of
+        Just n
+          | n /= length (iter ^. iteratorRanges) ->
+              throw
+                ( ErrIteratorRange
+                    IteratorRange {_iteratorRangeIterator = iter}
+                )
+        _ -> return ()
+    Nothing ->
+      throw
+        ( ErrIteratorUndefined
+            IteratorUndefined {_iteratorUndefinedIterator = iter}
+        )
+  let inipats = map (^. initializerPattern) (iter ^. iteratorInitializers)
+      inivals = map (^. initializerExpression) (iter ^. iteratorInitializers)
+      rngpats = map (^. rangePattern) (iter ^. iteratorRanges)
+      rngvals = map (^. rangeExpression) (iter ^. iteratorRanges)
+  inivals' <- mapM checkParseExpressionAtoms inivals
+  rngvals' <- mapM checkParseExpressionAtoms rngvals
+  withLocalScope $ do
+    inipats' <- mapM checkParsePatternAtoms inipats
+    rngpats' <- mapM checkParsePatternAtoms rngpats
+    let _iteratorInitializers = zipWithExact Initializer inipats' inivals'
+        _iteratorRanges = zipWithExact Range rngpats' rngvals'
+        _iteratorParens = iter ^. iteratorParens
+    _iteratorBody <- checkParseExpressionAtoms (iter ^. iteratorBody)
+    return Iterator {..}
+
+checkInitializer ::
+  (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
+  Initializer 'Parsed ->
+  Sem r (Initializer 'Scoped)
+checkInitializer ini = do
+  _initializerPattern <- checkParsePatternAtoms (ini ^. initializerPattern)
+  _initializerExpression <- checkParseExpressionAtoms (ini ^. initializerExpression)
+  return Initializer {..}
+
+checkRange ::
+  (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
+  Range 'Parsed ->
+  Sem r (Range 'Scoped)
+checkRange rng = do
+  _rangePattern <- checkParsePatternAtoms (rng ^. rangePattern)
+  _rangeExpression <- checkParseExpressionAtoms (rng ^. rangeExpression)
+  return Range {..}
 
 checkHole ::
   (Members '[NameIdGen] r) =>
@@ -1248,6 +1366,7 @@ checkParens e@(ExpressionAtoms as _) = case as of
     scopedId <- checkName s
     let scopedIdenNoFix = idenOverName (set S.nameFixity Nothing) scopedId
     return (ExpressionParensIdentifier scopedIdenNoFix)
+  AtomIterator i :| [] -> ExpressionIterator . set iteratorParens True <$> checkIterator i
   AtomCase c :| [] -> ExpressionCase . set caseParens True <$> checkCase c
   _ -> checkParseExpressionAtoms e
 
@@ -1314,7 +1433,7 @@ checkParsePatternAtom ::
 checkParsePatternAtom = checkPatternAtom >=> parsePatternAtom
 
 checkStatement ::
-  (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, State ScoperFixities] r) =>
+  (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, State ScoperFixities, State ScoperIterators, State ScoperIterators] r) =>
   Statement 'Parsed ->
   Sem r (Statement 'Scoped)
 checkStatement s = topBindings $ case s of
@@ -1328,11 +1447,12 @@ checkStatement s = topBindings $ case s of
   StatementAxiom ax -> StatementAxiom <$> checkAxiomDef ax
 
 checkSyntaxDef ::
-  (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, State ScoperFixities] r) =>
+  (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, State ScoperFixities, State ScoperIterators, State ScoperIterators] r) =>
   SyntaxDef ->
   Sem r SyntaxDef
 checkSyntaxDef = \case
   SyntaxOperator opDef -> SyntaxOperator opDef <$ checkOperatorSyntaxDef opDef
+  SyntaxIterator iterDef -> SyntaxIterator iterDef <$ checkIteratorSyntaxDef iterDef
 
 -------------------------------------------------------------------------------
 -- Infix Expression
@@ -1343,6 +1463,7 @@ makeExpressionTable ::
 makeExpressionTable (ExpressionAtoms atoms _) = [appOpExplicit] : operators ++ [[functionOp]]
   where
     operators = mkSymbolTable idens
+
     idens :: [ScopedIden]
     idens = mapMaybe getIden (toList atoms)
       where
@@ -1350,6 +1471,7 @@ makeExpressionTable (ExpressionAtoms atoms _) = [appOpExplicit] : operators ++ [
         getIden a = case a of
           AtomIdentifier nm -> Just nm
           _ -> Nothing
+
     mkSymbolTable :: [ScopedIden] -> [[P.Operator Parse Expression]]
     mkSymbolTable = reverse . map (map snd) . groupSortOn' fst . mapMaybe mkOperator
       where
@@ -1375,6 +1497,7 @@ makeExpressionTable (ExpressionAtoms atoms _) = [appOpExplicit] : operators ++ [
           | otherwise = Nothing
           where
             S.Name' {..} = identifierName iden
+
         parseSymbolId :: S.NameId -> Parse ScopedIden
         parseSymbolId uid = P.token getIdentifierWithId mempty
           where
@@ -1464,6 +1587,7 @@ parseTerm =
       <|> parseCase
       <|> parseLiteral
       <|> parseLetBlock
+      <|> parseIterator
       <|> parseBraces
   where
     parseHole :: Parse Expression
@@ -1520,6 +1644,14 @@ parseTerm =
         letBlock :: ExpressionAtom 'Scoped -> Maybe (LetBlock 'Scoped)
         letBlock s = case s of
           AtomLetBlock u -> Just u
+          _ -> Nothing
+
+    parseIterator :: Parse Expression
+    parseIterator = ExpressionIterator <$> P.token iterator mempty
+      where
+        iterator :: ExpressionAtom 'Scoped -> Maybe (Iterator 'Scoped)
+        iterator s = case s of
+          AtomIterator u -> Just u
           _ -> Nothing
 
     parseNoInfixIdentifier :: Parse Expression

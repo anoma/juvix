@@ -234,5 +234,9 @@ tests =
     PosTest
       "Import as open"
       $(mkRelDir "ImportAsOpen")
-      $(mkRelFile "Main.juvix")
+      $(mkRelFile "Main.juvix"),
+    PosTest
+      "Iterators"
+      $(mkRelDir ".")
+      $(mkRelFile "Iterators.juvix")
   ]

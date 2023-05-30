@@ -1,0 +1,13 @@
+module Iterators2;
+
+syntax iterator bind {range: 0};
+bind : {A B : Type} → (A → B) → A → B;
+bind f x := f x;
+
+builtin bool
+type Bool :=
+  | true : Bool
+  | false : Bool;
+
+main : Bool;
+main := bind (x in true) x;

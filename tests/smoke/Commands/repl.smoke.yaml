@@ -448,3 +448,12 @@ tests:
     stdout:
       contains: "true"
     exit-status: 0
+
+  - name: infix-constructors
+    command:
+      - juvix
+      - repl
+    stdin: "(::) :: nil {Nat -> List Nat -> List Nat}"
+    stdout:
+      contains: "(::) :: nil"
+    exit-status: 0

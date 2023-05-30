@@ -14,7 +14,20 @@ toValue tab = \case
   NCtr c -> goConstr c
   NLam lam -> goLambda lam
   Closure {..} -> toValue tab (substEnv _closureEnv _closureNode)
-  _ -> impossible
+  NPi {} -> goType
+  NUniv {} -> goType
+  NTyp {} -> goType
+  NPrim {} -> goType
+  NVar {} -> impossible
+  NIdt {} -> impossible
+  NApp {} -> impossible
+  NBlt {} -> impossible
+  NLet {} -> impossible
+  NRec {} -> impossible
+  NCase {} -> impossible
+  NMatch {} -> impossible
+  NDyn {} -> impossible
+  NBot {} -> impossible
   where
     goConstr :: Constr -> Value
     goConstr Constr {..} =
@@ -29,6 +42,9 @@ toValue tab = \case
         ii = lookupInductiveInfo tab (ci ^. constructorInductive)
         paramsNum = length (ii ^. inductiveParams)
 
+    goType :: Value
+    goType = ValueType
+
     goLambda :: Lambda -> Value
     goLambda lam =
       let (lams, body) = unfoldLambdas (NLam lam)
@@ -40,5 +56,4 @@ toValue tab = \case
                   case body of
                     NCtr c ->
                       toValue tab (NCtr (over constrArgs (dropEnd n) c))
-                    _ ->
-                      ValueFun
+                    _ -> ValueFun

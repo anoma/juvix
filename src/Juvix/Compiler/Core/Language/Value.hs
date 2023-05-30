@@ -15,6 +15,7 @@ data Value
   | ValueConstant ConstantValue
   | ValueWildcard
   | ValueFun
+  | ValueType
 
 makeLenses ''ConstrApp
 
@@ -29,3 +30,4 @@ instance HasAtomicity Value where
     ValueConstant {} -> Atom
     ValueWildcard -> Atom
     ValueFun -> Atom
+    ValueType -> Atom

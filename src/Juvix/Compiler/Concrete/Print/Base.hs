@@ -144,6 +144,7 @@ instance PrettyPrint (Import 'Scoped) where
 instance PrettyPrint SyntaxDef where
   ppCode = \case
     SyntaxOperator op -> ppCode op
+    SyntaxIterator it -> ppCode it
 
 instance PrettyPrint OperatorSyntaxDef where
   ppCode OperatorSyntaxDef {..} = do
@@ -155,10 +156,21 @@ instance PrettyPrint OperatorSyntaxDef where
         p <- P.ppCode (_opFixity ^. fixityPrecedence)
         ppCode _opSyntaxKw <+> ppCode _opKw <+> noLoc p
 
+instance PrettyPrint IteratorSyntaxDef where
+  ppCode IteratorSyntaxDef {..} = do
+    iterSymbol' <- P.ppUnkindedSymbol _iterSymbol
+    ppCode _iterSyntaxKw
+      <+> ppCode _iterIteratorKw
+      <+> morpheme (getLoc _iterSymbol) iterSymbol'
+      <+?> fmap ppCode _iterAttribs
+
 instance PrettyPrint Expression where
   ppCode = ppMorpheme
 
 instance PrettyPrint ParsedPragmas where
+  ppCode = ppMorpheme
+
+instance PrettyPrint ParsedIteratorAttribs where
   ppCode = ppMorpheme
 
 ppJudocStart :: Members '[ExactPrint, Reader Options] r => Sem r (Maybe ())

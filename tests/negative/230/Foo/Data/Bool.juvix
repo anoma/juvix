@@ -23,4 +23,3 @@ syntax infixr 2 &&;
 if : {A : Type} → Bool → A → A → A;
 if true a _ := a;
 if false _ b := b;
-
