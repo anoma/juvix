@@ -133,9 +133,14 @@ instance PrettyPrint (ModuleRef'' 'S.Concrete 'ModuleTop) where
   ppCode m = ppCode (m ^. moduleRefName)
 
 ppImportType :: forall s. SingI s => PrettyPrinting (ImportType s)
-ppImportType = ps (Proxy @ImportTypeSym0) ppCode ppCode Proxy
+ppImportType = ppStage (Proxy @ImportTypeSym0) ppCode ppCode Proxy
 
-ppMagic ::
+ppImportType2 :: forall s. SingI s => PrettyPrinting (ImportType s)
+ppImportType2 = case sing :: SStage s of
+  SParsed -> ppCode
+  SScoped -> ppCode
+
+ppStage ::
   forall (k :: Stage ~> GHC.Type) a (s :: Stage).
   SingI s =>
   Proxy k ->
@@ -144,7 +149,7 @@ ppMagic ::
   Proxy s ->
   k @@ s ->
   a
-ppMagic _pk fparsed fscoped _ps = case sing :: SStage s of
+ppStage _pk fparsed fscoped _ps = case sing :: SStage s of
   SParsed -> fparsed
   SScoped -> fscoped
 
