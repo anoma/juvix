@@ -5,7 +5,6 @@ module Juvix.Compiler.Concrete.Print.Base
   )
 where
 
-import Data.Kind qualified as GHC
 import Data.List.NonEmpty.Extra qualified as NonEmpty
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Language
@@ -63,8 +62,112 @@ ppModulePathType x = case sing :: SStage s of
     SModuleLocal -> P.ppCode x >>= morpheme (getLoc x) . P.annSDef x
     SModuleTop -> P.ppCode x >>= morpheme (getLoc x) . P.annSDef x
 
-instance SingI t => PrettyPrint (Module 'Scoped t) where
-  ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => Module 'Scoped t -> Sem r ()
+ppSymbolType :: forall s. SingI s => PrettyPrinting (SymbolType s)
+ppSymbolType = case sing :: SStage s of
+  SParsed -> ppCode
+  SScoped -> ppCode
+
+ppIdentifierType :: forall s. SingI s => PrettyPrinting (IdentifierType s)
+ppIdentifierType = case sing :: SStage s of
+  SParsed -> ppCode
+  SScoped -> ppCode
+
+ppModuleRefType :: forall s. SingI s => PrettyPrinting (ModuleRefType s)
+ppModuleRefType = case sing :: SStage s of
+  SParsed -> ppCode
+  SScoped -> ppCode
+
+ppImportType :: forall s. SingI s => PrettyPrinting (ImportType s)
+ppImportType = case sing :: SStage s of
+  SParsed -> ppCode
+  SScoped -> ppCode
+
+ppHoleType :: forall s. SingI s => PrettyPrinting (HoleType s)
+ppHoleType w = case sing :: SStage s of
+  SParsed -> ppCode kwWildcard
+  SScoped -> ppCode w
+
+ppPatternAtomIdenType :: forall s. SingI s => PrettyPrinting (PatternAtomIdenType s)
+ppPatternAtomIdenType = case sing :: SStage s of
+  SParsed -> ppCode
+  SScoped -> ppCode
+
+ppExpressionType :: forall s. SingI s => PrettyPrinting (ExpressionType s)
+ppExpressionType = case sing :: SStage s of
+  SParsed -> ppCode
+  SScoped -> ppCode
+
+ppPatternType :: forall s. SingI s => PrettyPrinting (PatternType s)
+ppPatternType = case sing :: SStage s of
+  SParsed -> ppCode
+  SScoped -> ppCode
+
+ppPatternParensType :: forall s. SingI s => PrettyPrinting (PatternParensType s)
+ppPatternParensType = case sing :: SStage s of
+  SParsed -> ppCode
+  SScoped -> ppCode
+
+ppPatternAtType :: forall s. SingI s => PrettyPrinting (PatternAtType s)
+ppPatternAtType = case sing :: SStage s of
+  SParsed -> ppCode
+  SScoped -> ppCode
+
+instance PrettyPrint PatternBinding where
+  ppCode PatternBinding {..} = do
+    let n' = ppSymbolType _patternBindingName
+        p' = ppCode _patternBindingPattern
+    n' <> ppCode kwAt <> p'
+
+instance SingI s => PrettyPrint (PatternAtom s) where
+  ppCode = \case
+    PatternAtomIden n -> ppPatternAtomIdenType n
+    PatternAtomWildcard {} -> ppCode kwWildcard
+    PatternAtomEmpty {} -> parens (return ())
+    PatternAtomParens p -> parens (ppPatternParensType p)
+    PatternAtomBraces p -> braces (ppPatternParensType p)
+    PatternAtomAt p -> ppPatternAtType p
+
+instance SingI s => PrettyPrint (PatternAtoms s) where
+  ppCode (PatternAtoms ps _) = hsep (ppCode <$> ps)
+
+instance SingI s => PrettyPrint (ExpressionAtoms s) where
+  ppCode as = hsep (ppCode <$> as ^. expressionAtoms)
+
+instance SingI s => PrettyPrint (ExpressionAtom s) where
+  ppCode = \case
+    AtomIdentifier n -> ppIdentifierType n
+    AtomLambda l -> ppCode l
+    AtomLetBlock lb -> ppCode lb
+    AtomCase c -> ppCode c
+    AtomUniverse uni -> ppCode uni
+    AtomFunction fun -> ppCode fun
+    AtomLiteral lit -> ppCode lit
+    AtomFunArrow a -> ppCode a
+    AtomParens e -> parens (ppExpressionType e)
+    AtomBraces e -> braces (ppExpressionType (e ^. withLocParam))
+    AtomHole w -> ppHoleType w
+
+instance PrettyPrint PatternScopedIden where
+  ppCode = \case
+    PatternScopedVar v -> ppCode v
+    PatternScopedConstructor c -> ppCode c
+
+instance PrettyPrint Hole where
+  ppCode h = do
+    let uid = h ^. holeId
+    withNameIdSuffix uid (ppCode kwWildcard)
+
+withNameIdSuffix :: Members '[ExactPrint, Reader Options] r => S.NameId -> Sem r () -> Sem r ()
+withNameIdSuffix nid a = do
+  showNameId <- asks (^. optShowNameIds)
+  a
+  when showNameId (noLoc "@" <> ppCode nid)
+
+instance PrettyPrint S.NameId where
+  ppCode (S.NameId k) = noLoc (pretty k)
+
+instance (SingI t, SingI s) => PrettyPrint (Module s t) where
+  ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => Module s t -> Sem r ()
   ppCode Module {..} = do
     let moduleBody' = localIndent (ppCode _moduleBody)
         modulePath' = ppModulePathType _modulePath
@@ -100,11 +203,11 @@ instance SingI t => PrettyPrint (Module 'Scoped t) where
         SModuleLocal -> ppCode _moduleKwEnd
         SModuleTop -> end
 
-instance PrettyPrint [Statement 'Scoped] where
-  ppCode :: forall r. Members '[ExactPrint, Reader Options] r => [Statement 'Scoped] -> Sem r ()
+instance SingI s => PrettyPrint [Statement s] where
+  ppCode :: forall r. Members '[ExactPrint, Reader Options] r => [Statement s] -> Sem r ()
   ppCode ss = paragraphs (ppGroup <$> P.groupStatements ss)
     where
-      ppGroup :: NonEmpty (Statement 'Scoped) -> Sem r ()
+      ppGroup :: NonEmpty (Statement s) -> Sem r ()
       ppGroup = vsep . endSemicolon . fmap ppCode
 
 instance PrettyPrint TopModulePath where
@@ -132,38 +235,37 @@ ppMorpheme n = P.ppCode n >>= morpheme (getLoc n)
 instance PrettyPrint (ModuleRef'' 'S.Concrete 'ModuleTop) where
   ppCode m = ppCode (m ^. moduleRefName)
 
-ppImportType :: forall s. SingI s => PrettyPrinting (ImportType s)
-ppImportType = ppStage (Proxy @ImportTypeSym0) ppCode ppCode Proxy
+instance PrettyPrint AxiomRef where
+  ppCode a = ppCode (a ^. axiomRefName)
 
-ppImportType2 :: forall s. SingI s => PrettyPrinting (ImportType s)
-ppImportType2 = case sing :: SStage s of
-  SParsed -> ppCode
-  SScoped -> ppCode
+instance PrettyPrint InductiveRef where
+  ppCode a = ppCode (a ^. inductiveRefName)
 
-ppStage ::
-  forall (k :: Stage ~> GHC.Type) a (s :: Stage).
-  SingI s =>
-  Proxy k ->
-  (k @@ 'Parsed -> a) ->
-  (k @@ 'Scoped -> a) ->
-  Proxy s ->
-  k @@ s ->
-  a
-ppStage _pk fparsed fscoped _ps = case sing :: SStage s of
-  SParsed -> fparsed
-  SScoped -> fscoped
+instance PrettyPrint FunctionRef where
+  ppCode a = ppCode (a ^. functionRefName)
 
-instance PrettyPrint (Import 'Scoped) where
-  ppCode :: forall r. Members '[ExactPrint, Reader Options] r => Import 'Scoped -> Sem r ()
+instance PrettyPrint ConstructorRef where
+  ppCode a = ppCode (a ^. constructorRefName)
+
+instance PrettyPrint ScopedIden where
+  ppCode = \case
+    ScopedAxiom a -> ppCode a
+    ScopedInductive i -> ppCode i
+    ScopedVar n -> ppCode n
+    ScopedFunction f -> ppCode f
+    ScopedConstructor c -> ppCode c
+
+instance SingI s => PrettyPrint (Import s) where
+  ppCode :: forall r. Members '[ExactPrint, Reader Options] r => Import s -> Sem r ()
   ppCode i = do
     ppCode (i ^. importKw)
-      <+> ppCode (i ^. importModule)
+      <+> ppImportType (i ^. importModule)
       <+?> ppQual
     where
       ppQual :: Maybe (Sem r ())
       ppQual = case i ^. importAsName of
         Nothing -> Nothing
-        Just as -> Just (noLoc P.kwAs <+> ppMorpheme as)
+        Just as -> Just (noLoc P.kwAs <+> ppModulePathType as)
 
 instance PrettyPrint SyntaxDef where
   ppCode = \case
@@ -192,21 +294,21 @@ ppJudocStart = do
       | inBlock -> return Nothing
       | otherwise -> ppCode delimJudocStart $> Just ()
 
-instance PrettyPrint (Example 'Scoped) where
+instance SingI s => PrettyPrint (Example s) where
   ppCode e =
     ppJudocStart
       <??+> noLoc P.ppJudocExampleStart
-      <+> ppCode (e ^. exampleExpression)
+      <+> ppExpressionType (e ^. exampleExpression)
         <> noLoc P.kwSemicolon
 
-instance PrettyPrint (JudocParagraphLine 'Scoped) where
+instance SingI s => PrettyPrint (JudocParagraphLine s) where
   ppCode = ppMorpheme
 
-instance PrettyPrint (Judoc 'Scoped) where
-  ppCode :: forall r. Members '[ExactPrint, Reader Options] r => Judoc 'Scoped -> Sem r ()
+instance SingI s => PrettyPrint (Judoc s) where
+  ppCode :: forall r. Members '[ExactPrint, Reader Options] r => Judoc s -> Sem r ()
   ppCode (Judoc groups) = ppGroups groups <> line
     where
-      ppGroups :: NonEmpty (JudocGroup 'Scoped) -> Sem r ()
+      ppGroups :: NonEmpty (JudocGroup s) -> Sem r ()
       ppGroups = \case
         g :| [] -> ppCode g
         g :| b : bs -> ppCode g <> groupSep <> ppGroups (b :| bs)
@@ -218,15 +320,15 @@ instance PrettyPrint (Judoc 'Scoped) where
               (JudocGroupLines {}, JudocGroupLines {}) -> ppCode delimJudocStart <> line
               _ -> return ()
 
-instance PrettyPrint (JudocBlockParagraph 'Scoped) where
+instance SingI s => PrettyPrint (JudocBlockParagraph s) where
   ppCode p = do
     let start' = ppCode (p ^. judocBlockParagraphStart)
         contents' = inJudocBlock (vsep2 (ppCode <$> p ^. judocBlockParagraphBlocks))
         endpar' = ppCode (p ^. judocBlockParagraphEnd)
     start' <+> contents' <+> endpar'
 
-instance PrettyPrint (JudocGroup 'Scoped) where
-  ppCode :: forall r. Members '[ExactPrint, Reader Options] r => JudocGroup 'Scoped -> Sem r ()
+instance SingI s => PrettyPrint (JudocGroup s) where
+  ppCode :: forall r. Members '[ExactPrint, Reader Options] r => JudocGroup s -> Sem r ()
   ppCode = \case
     JudocGroupLines l -> goLines l
     JudocGroupBlock l -> ppCode l
@@ -236,7 +338,7 @@ instance PrettyPrint (JudocGroup 'Scoped) where
           blockSep :: Sem r ()
           blockSep = line >> ppJudocStart >> line
 
-instance PrettyPrint (JudocBlock 'Scoped) where
+instance SingI s => PrettyPrint (JudocBlock s) where
   ppCode = \case
     JudocParagraphLines l -> vsep (ppCode <$> l)
     JudocExample e -> ppCode e
@@ -253,8 +355,8 @@ instance PrettyPrint (JudocAtom 'Scoped) where
           semi :: Sem r ()
           semi = noLoc (annotate AnnComment (pretty @Text ";"))
 
-instance PrettyPrint (AxiomDef 'Scoped) where
-  ppCode :: forall r. Members '[ExactPrint, Reader Options] r => AxiomDef 'Scoped -> Sem r ()
+instance SingI s => PrettyPrint (AxiomDef s) where
+  ppCode :: forall r. Members '[ExactPrint, Reader Options] r => AxiomDef s -> Sem r ()
   ppCode AxiomDef {..} = do
     axiomName' <- P.annDef _axiomName <$> P.ppSymbol _axiomName
     let builtin' :: Maybe (Sem r ()) = (<> line) . (\x -> P.ppCode x >>= morpheme (getLoc x)) <$> _axiomBuiltin
@@ -264,9 +366,9 @@ instance PrettyPrint (AxiomDef 'Scoped) where
       ?<> _axiomPragmas'
       ?<> builtin'
       ?<> ppCode _axiomKw
-      <+> morpheme (getLoc _axiomName) axiomName'
+      <+> morpheme (getLocSymbolType _axiomName) axiomName'
       <+> noLoc P.kwColon
-      <+> ppCode _axiomType
+      <+> ppExpressionType _axiomType
 
 instance PrettyPrint (WithLoc BuiltinInductive) where
   ppCode b = P.ppCode (b ^. withLocParam) >>= morpheme (getLoc b)
@@ -274,18 +376,18 @@ instance PrettyPrint (WithLoc BuiltinInductive) where
 instance PrettyPrint (WithLoc BuiltinFunction) where
   ppCode b = P.ppCode (b ^. withLocParam) >>= morpheme (getLoc b)
 
-instance PrettyPrint (TypeSignature 'Scoped) where
-  ppCode :: forall r. Members '[ExactPrint, Reader Options] r => TypeSignature 'Scoped -> Sem r ()
+instance SingI s => PrettyPrint (TypeSignature s) where
+  ppCode :: forall r. Members '[ExactPrint, Reader Options] r => TypeSignature s -> Sem r ()
   ppCode TypeSignature {..} = do
     let termin' :: Maybe (Sem r ()) = (<> line) . ppCode <$> _sigTerminating
         doc' :: Maybe (Sem r ()) = ppCode <$> _sigDoc
         pragmas' :: Maybe (Sem r ()) = ppCode <$> _sigPragmas
         builtin' :: Maybe (Sem r ()) = (<> line) . ppCode <$> _sigBuiltin
-        type' = ppCode _sigType
-        name' = region (P.annDef _sigName) (ppCode _sigName)
+        type' = ppExpressionType _sigType
+        name' = region (P.annDef _sigName) (ppSymbolType _sigName)
         body' = case _sigBody of
           Nothing -> Nothing
-          Just body -> Just (noLoc P.kwAssign <> oneLineOrNext (ppCode body))
+          Just body -> Just (noLoc P.kwAssign <> oneLineOrNext (ppExpressionType body))
     doc'
       ?<> pragmas'
       ?<> builtin'
@@ -327,8 +429,8 @@ ppAtom c
   | isAtomic c = ppCode c
   | otherwise = parens (ppCode c)
 
-instance PrettyPrint (UsingHiding 'Scoped) where
-  ppCode :: forall r. Members '[ExactPrint, Reader Options] r => UsingHiding 'Scoped -> Sem r ()
+instance SingI s => PrettyPrint (UsingHiding s) where
+  ppCode :: forall r. Members '[ExactPrint, Reader Options] r => UsingHiding s -> Sem r ()
   ppCode uh = do
     let bracedList =
           encloseSep
@@ -345,27 +447,27 @@ instance PrettyPrint (UsingHiding 'Scoped) where
       ppItems :: NonEmpty (Sem r ())
       ppItems = case uh of
         Using s -> fmap ppCode s
-        Hiding s -> fmap ppCode s
+        Hiding s -> fmap ppSymbolType s
 
-instance PrettyPrint (UsingItem 'Scoped) where
-  ppCode :: forall r. Members '[ExactPrint, Reader Options] r => UsingItem 'Scoped -> Sem r ()
+instance SingI s => PrettyPrint (UsingItem s) where
+  ppCode :: forall r. Members '[ExactPrint, Reader Options] r => UsingItem s -> Sem r ()
   ppCode ui = do
     let kwAs' :: Sem r () = ppCode kwAs
-        as' = (kwAs' <+>) . ppCode <$> ui ^. usingAs
-        sym' = ppCode (ui ^. usingSymbol)
+        as' = (kwAs' <+>) . ppSymbolType <$> ui ^. usingAs
+        sym' = ppSymbolType (ui ^. usingSymbol)
     sym' <+?> as'
 
 instance PrettyPrint ModuleRef where
   ppCode (ModuleRef' (_ :&: ModuleRef'' {..})) = ppCode _moduleRefName
 
-instance PrettyPrint (OpenModule 'Scoped) where
-  ppCode :: forall r. Members '[ExactPrint, Reader Options] r => OpenModule 'Scoped -> Sem r ()
+instance SingI s => PrettyPrint (OpenModule s) where
+  ppCode :: forall r. Members '[ExactPrint, Reader Options] r => OpenModule s -> Sem r ()
   ppCode OpenModule {..} = do
-    let name' = ppCode _openModuleName
+    let name' = ppModuleRefType _openModuleName
         usingHiding' = ppCode <$> _openUsingHiding
         importkw' = ppCode <$> _openModuleImportKw
         openkw = ppCode _openModuleKw
-        alias' = (noLoc P.kwAs <+>) . ppCode <$> _openImportAsName
+        alias' = (noLoc P.kwAs <+>) . ppModulePathType <$> _openImportAsName
         public' = case _openPublic of
           Public -> Just (noLoc P.kwPublic)
           NoPublic -> Nothing
@@ -383,42 +485,43 @@ instance PrettyPrint (OpenModule 'Scoped) where
           <+?> usingHiding'
           <+?> public'
 
-instance PrettyPrint (FunctionClause 'Scoped) where
-  ppCode :: forall r. Members '[ExactPrint, Reader Options] r => FunctionClause 'Scoped -> Sem r ()
+instance SingI s => PrettyPrint (FunctionClause s) where
+  ppCode :: forall r. Members '[ExactPrint, Reader Options] r => FunctionClause s -> Sem r ()
   ppCode FunctionClause {..} = do
-    let clauseFun' = ppCode _clauseOwnerFunction
+    let clauseFun' = ppSymbolType _clauseOwnerFunction
         clausePatterns' = case nonEmpty _clausePatterns of
           Nothing -> Nothing
-          Just ne -> Just (hsep (ppPatternAtom <$> ne))
-        clauseBody' = ppCode _clauseBody
+          Just ne -> Just (hsep (ppPatternType <$> ne))
+        clauseBody' = ppExpressionType _clauseBody
     clauseFun'
       <+?> clausePatterns'
       <+> noLoc P.kwAssign
         <> oneLineOrNext clauseBody'
 
-ppPatternAtom :: forall r. (Members '[Reader Options, ExactPrint] r) => PatternArg -> Sem r ()
-ppPatternAtom pat =
-  case pat ^. patternArgPattern of
-    PatternVariable s | s ^. S.nameVerbatim == "=" -> parens (ppAtom pat)
-    _ -> ppAtom pat
+-- TODO was this necessary??
+-- instance PrettyPrint PatternArg where
+--   ppCode pat =
+--     case pat ^. patternArgPattern of
+--       PatternVariable s | s ^. S.nameVerbatim == "=" -> parens (ppAtom pat)
+--       _ -> ppAtom pat
 
-instance PrettyPrint (InductiveParameters 'Scoped) where
+instance SingI s => PrettyPrint (InductiveParameters s) where
   ppCode InductiveParameters {..} = do
-    let names' = fmap (\nm -> region (P.annDef nm) (ppCode nm)) _inductiveParametersNames
-        ty' = ppCode _inductiveParametersType
+    let names' = fmap (\nm -> region (P.annDef nm) (ppSymbolType nm)) _inductiveParametersNames
+        ty' = ppExpressionType _inductiveParametersType
     parens (hsep names' <+> ppCode kwColon <+> ty')
 
-instance PrettyPrint (NonEmpty (InductiveParameters 'Scoped)) where
+instance SingI s => PrettyPrint (NonEmpty (InductiveParameters s)) where
   ppCode = hsep . fmap ppCode
 
 instance (PrettyPrint a) => PrettyPrint (Irrelevant a) where
   ppCode (Irrelevant a) = ppCode a
 
-instance PrettyPrint (InductiveConstructorDef 'Scoped) where
-  ppCode :: forall r. Members '[ExactPrint, Reader Options] r => InductiveConstructorDef 'Scoped -> Sem r ()
+instance SingI s => PrettyPrint (InductiveConstructorDef s) where
+  ppCode :: forall r. Members '[ExactPrint, Reader Options] r => InductiveConstructorDef s -> Sem r ()
   ppCode InductiveConstructorDef {..} = do
-    let constructorName' = region (P.annDef _constructorName) (ppCode _constructorName)
-        constructorType' = ppCode _constructorType
+    let constructorName' = region (P.annDef _constructorName) (ppSymbolType _constructorName)
+        constructorType' = ppExpressionType _constructorType
         doc' = ppCode <$> _constructorDoc
         pragmas' = ppCode <$> _constructorPragmas
     nest (pipeHelper <+> doc' ?<> pragmas' ?<> constructorName' <+> noLoc P.kwColon <+> constructorType')
@@ -427,16 +530,16 @@ instance PrettyPrint (InductiveConstructorDef 'Scoped) where
       pipeHelper :: Sem r ()
       pipeHelper = case _constructorPipe ^. unIrrelevant of
         Just p -> ppCode p
-        Nothing -> P.ppCode kwPipe >>= morpheme (getLoc _constructorName)
+        Nothing -> P.ppCode kwPipe >>= morpheme (getLocSymbolType _constructorName)
 
-ppInductiveSignature :: forall r. Members '[ExactPrint, Reader Options] r => InductiveDef 'Scoped -> Sem r ()
+ppInductiveSignature :: SingI s => PrettyPrinting (InductiveDef s)
 ppInductiveSignature InductiveDef {..} = do
   let builtin' = (<> line) . ppCode <$> _inductiveBuiltin
-      name' = region (P.annDef _inductiveName) (ppCode _inductiveName)
+      name' = region (P.annDef _inductiveName) (ppSymbolType _inductiveName)
       params' = ppCode <$> nonEmpty _inductiveParameters
       ty' = case _inductiveType of
         Nothing -> Nothing
-        Just e -> Just (noLoc P.kwColon <+> ppCode e)
+        Just e -> Just (noLoc P.kwColon <+> ppExpressionType e)
       positive'
         | Just k <- _inductivePositive = (<> line) <$> Just (ppCode k)
         | otherwise = Nothing
@@ -447,8 +550,8 @@ ppInductiveSignature InductiveDef {..} = do
     <+?> params'
     <+?> ty'
 
-instance PrettyPrint (InductiveDef 'Scoped) where
-  ppCode :: forall r. Members '[ExactPrint, Reader Options] r => InductiveDef 'Scoped -> Sem r ()
+instance SingI s => PrettyPrint (InductiveDef s) where
+  ppCode :: forall r. Members '[ExactPrint, Reader Options] r => InductiveDef s -> Sem r ()
   ppCode d@InductiveDef {..} = do
     let doc' = ppCode <$> _inductiveDoc
         pragmas' = ppCode <$> _inductivePragmas
@@ -461,10 +564,10 @@ instance PrettyPrint (InductiveDef 'Scoped) where
         <> line
         <> (indent . align) constrs'
     where
-      ppConstructorBlock :: NonEmpty (InductiveConstructorDef 'Scoped) -> Sem r ()
+      ppConstructorBlock :: NonEmpty (InductiveConstructorDef s) -> Sem r ()
       ppConstructorBlock cs = vsep (ppCode <$> cs)
 
-instance PrettyPrint (Statement 'Scoped) where
+instance SingI s => PrettyPrint (Statement s) where
   ppCode = \case
     StatementSyntax s -> ppCode s
     StatementTypeSignature s -> ppCode s

@@ -96,7 +96,6 @@ type family ImportType s = res | res -> s where
   ImportType 'Parsed = TopModulePath
   ImportType 'Scoped = ModuleRef'' 'S.Concrete 'ModuleTop
 
-
 type ModulePathType :: Stage -> ModuleIsTop -> GHC.Type
 type family ModulePathType s t = res | res -> t s where
   ModulePathType 'Parsed 'ModuleTop = TopModulePath
@@ -1203,15 +1202,10 @@ instance HasLoc (LetBlock 'Scoped) where
   getLoc l = getLoc (l ^. letKw) <> getLoc (l ^. letExpression)
 
 instance SingI s => HasLoc (CaseBranch s) where
-  getLoc c = getLoc (c ^. caseBranchPipe) <> expressionLoc (c ^. caseBranchExpression)
+  getLoc c = getLoc (c ^. caseBranchPipe) <> getLocExpressionType (c ^. caseBranchExpression)
 
 instance SingI s => HasLoc (Case s) where
   getLoc c = getLoc (c ^. caseKw) <> getLoc (c ^. caseBranches . to last)
-
-expressionLoc :: forall s. SingI s => ExpressionType s -> Interval
-expressionLoc e = case sing :: SStage s of
-  SParsed -> getLoc e
-  SScoped -> getLoc e
 
 instance HasLoc Expression where
   getLoc = \case
@@ -1245,6 +1239,11 @@ instance (SingI s, SingI t) => HasLoc (Module s t) where
     SScoped -> case sing :: SModuleIsTop t of
       SModuleLocal -> getLoc (m ^. modulePath)
       SModuleTop -> getLoc (m ^. modulePath)
+
+getLocSymbolType :: forall s. SingI s => SymbolType s -> Interval
+getLocSymbolType = case sing :: SStage s of
+  SParsed -> getLoc
+  SScoped -> getLoc
 
 getLocExpressionType :: forall s. SingI s => ExpressionType s -> Interval
 getLocExpressionType = case sing :: SStage s of
