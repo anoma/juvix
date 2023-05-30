@@ -656,7 +656,7 @@ instance ToGenericError CaseBranchImplicitPattern where
     return
       GenericError
         { _genericErrorLoc = i,
-          _genericErrorMessage = AnsiText msg,
+          _genericErrorMessage = mkAnsiText msg,
           _genericErrorIntervals = [i]
         }
     where
@@ -681,7 +681,7 @@ instance ToGenericError ModuleDoesNotExportSymbol where
     return
       GenericError
         { _genericErrorLoc = i,
-          _genericErrorMessage = AnsiText msg,
+          _genericErrorMessage = mkAnsiText msg,
           _genericErrorIntervals = [i]
         }
     where
