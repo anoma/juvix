@@ -1009,34 +1009,6 @@ deriving stock instance
   Ord (Iterator s)
 
 --------------------------------------------------------------------------------
--- Debugging statements
---------------------------------------------------------------------------------
-
-newtype Eval (s :: Stage) = Eval {evalExpression :: ExpressionType s}
-
-deriving stock instance
-  (Show (ExpressionType s)) => Show (Eval s)
-
-deriving stock instance
-  (Eq (ExpressionType s)) => Eq (Eval s)
-
-deriving stock instance
-  (Ord (ExpressionType s)) => Ord (Eval s)
-
---------------------------------------------------------------------------------
-
-newtype Print (s :: Stage) = Print {printExpression :: ExpressionType s}
-
-deriving stock instance
-  (Show (ExpressionType s)) => Show (Print s)
-
-deriving stock instance
-  (Eq (ExpressionType s)) => Eq (Print s)
-
-deriving stock instance
-  (Ord (ExpressionType s)) => Ord (Print s)
-
---------------------------------------------------------------------------------
 -- Expression atom
 --------------------------------------------------------------------------------
 
