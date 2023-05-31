@@ -1,0 +1,14 @@
+{-# format: false #-}
+module FormatPragma;
+
+open import Stdlib.Prelude;
+
+-- Bam, bam!
+
+-- unformatted module
+
+fun : {A B C D : Type} -> (A -> A) -> (B -> C -> D) -> (A -> B -> C) -> (D -> C -> C) -> A -> B -> C;
+fun f g h i a b :=
+  i
+    (g b (h (f a) b))
+    (h a b);
