@@ -116,6 +116,9 @@ vsepHard = sequenceWith hardline
 vsep2 :: (Foldable l, Members '[ExactPrint] r) => l (Sem r ()) -> Sem r ()
 vsep2 = sequenceWith (line >> line)
 
+enclose1 :: Monad m => m () -> m () -> m ()
+enclose1 lr = enclose lr lr
+
 enclose :: Monad m => m () -> m () -> m () -> m ()
 enclose l r p = l >> p >> r
 
@@ -127,6 +130,9 @@ oneLineOrNext = region P.oneLineOrNext
 
 paragraphs :: (Foldable l, Members '[ExactPrint] r) => l (Sem r ()) -> Sem r ()
 paragraphs = sequenceWith (line >> ensureEmptyLine)
+
+keyword :: Members '[ExactPrint] r => Text -> Sem r ()
+keyword = annotated C.AnnKeyword . noLoc . P.pretty
 
 delimIf :: Members '[ExactPrint] r => IsImplicit -> Bool -> Sem r () -> Sem r ()
 delimIf Implicit _ = braces

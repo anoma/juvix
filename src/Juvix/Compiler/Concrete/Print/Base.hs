@@ -225,7 +225,7 @@ instance PrettyPrint TopModulePath where
   ppCode t@TopModulePath {..} =
     mapM P.ppSymbol (_modulePathDir ++ [_modulePathName]) >>= morpheme (getLoc t) . P.dotted
 
-instance (HasLoc n, P.PrettyCode n) => PrettyPrint (S.Name' n) where
+instance PrettyPrint n => PrettyPrint (S.Name' n) where
   ppCode :: forall r. Members '[ExactPrint, Reader Options] r => S.Name' n -> Sem r ()
   ppCode S.Name' {..} = do
     let nameConcrete' = region (C.annotateKind _nameKind) (ppCode _nameConcrete)
@@ -426,8 +426,8 @@ instance SingI s => PrettyPrint (Lambda s) where
           _ -> bracesIndent (ppPipeBlock _lambdaClauses)
     lambdaKw' <+> lambdaClauses'
 
-instance PrettyPrint LiteralLoc where
-  ppCode l = morpheme (getLoc l) (ppLiteral (l ^. withLocParam))
+-- instance PrettyPrint LiteralLoc where
+--   ppCode l = morpheme (getLoc l) (ppLiteral (l ^. withLocParam))
 
 instance PrettyPrint OperatorSyntaxDef where
   ppCode OperatorSyntaxDef {..} = do
@@ -438,9 +438,6 @@ instance PrettyPrint OperatorSyntaxDef where
       fi = do
         p <- P.ppCode (_opFixity ^. fixityPrecedence)
         ppCode _opSyntaxKw <+> ppCode _opKw <+> noLoc p
-
-instance PrettyPrint (WithLoc Expression) where
-  ppCode l = morphemeM (getLoc l) (ppCode (l ^. withLocParam))
 
 instance PrettyPrint Application where
   ppCode = apeHelper
@@ -467,11 +464,10 @@ instance PrettyPrint Expression where
     ExpressionFunction f -> ppCode f
     ExpressionCase c -> ppCode c
 
-instance PrettyPrint (WithLoc (WithSource Pragmas)) where
+instance PrettyPrint (WithSource Pragmas) where
   ppCode pragma =
-    let src = pragma ^. withLocParam
-        txt = pretty (Str.pragmasStart <> src ^. withSourceText <> Str.pragmasEnd)
-     in morphemeM (getLoc pragma) (annotated AnnComment (noLoc txt) <> line)
+    let txt = pretty (Str.pragmasStart <> pragma ^. withSourceText <> Str.pragmasEnd)
+     in annotated AnnComment (noLoc txt) <> line
 
 ppJudocStart :: Members '[ExactPrint, Reader Options] r => Sem r (Maybe ())
 ppJudocStart = do
@@ -487,8 +483,26 @@ instance SingI s => PrettyPrint (Example s) where
       <+> ppExpressionType (e ^. exampleExpression)
         <> noLoc P.kwSemicolon
 
+instance PrettyPrint a => PrettyPrint (WithLoc a) where
+  ppCode a = morphemeM (getLoc a) (ppCode a)
+
+instance SingI s => PrettyPrint (JudocAtom s) where
+  ppCode :: forall r. (Members '[Reader Options, ExactPrint] r) => JudocAtom s -> Sem r ()
+  ppCode = \case
+    JudocExpression e -> goExpression e
+    JudocText t -> annotated AnnJudoc (noLoc (pretty t))
+    where
+      goExpression :: ExpressionType s -> Sem r ()
+      goExpression = semiDelim . ppExpressionType
+      semiDelim :: Sem r () -> Sem r ()
+      semiDelim = enclose1 (annotated AnnJudoc (noLoc (";" :: Doc Ann)))
+
 instance SingI s => PrettyPrint (JudocParagraphLine s) where
-  ppCode = ppMorpheme
+  ppCode :: forall r. Members '[ExactPrint, Reader Options] r => JudocParagraphLine s -> Sem r ()
+  ppCode (JudocParagraphLine atoms) = do
+    let start' :: Sem r (Maybe ()) = ppJudocStart
+        atoms' = mapM_ ppCode atoms
+    start' <??+> atoms'
 
 instance SingI s => PrettyPrint (Judoc s) where
   ppCode :: forall r. Members '[ExactPrint, Reader Options] r => Judoc s -> Sem r ()
@@ -529,18 +543,6 @@ instance SingI s => PrettyPrint (JudocBlock s) where
     JudocParagraphLines l -> vsep (ppCode <$> l)
     JudocExample e -> ppCode e
 
-instance PrettyPrint (JudocAtom 'Scoped) where
-  ppCode :: forall r. Members '[ExactPrint, Reader Options] r => JudocAtom 'Scoped -> Sem r ()
-  ppCode = \case
-    JudocExpression e -> semiDelim (ppCode e)
-    JudocText t -> noLoc (annotate AnnComment (pretty t))
-    where
-      semiDelim :: Sem r () -> Sem r ()
-      semiDelim x = semi >> x >> semi
-        where
-          semi :: Sem r ()
-          semi = noLoc (annotate AnnComment (pretty @Text ";"))
-
 instance SingI s => PrettyPrint (AxiomDef s) where
   ppCode :: forall r. Members '[ExactPrint, Reader Options] r => AxiomDef s -> Sem r ()
   ppCode AxiomDef {..} = do
@@ -556,11 +558,14 @@ instance SingI s => PrettyPrint (AxiomDef s) where
       <+> noLoc P.kwColon
       <+> ppExpressionType _axiomType
 
-instance PrettyPrint (WithLoc BuiltinInductive) where
-  ppCode b = P.ppCode (b ^. withLocParam) >>= morpheme (getLoc b)
+instance PrettyPrint BuiltinInductive where
+  ppCode i = ppCode kwBuiltin <+> keyword (P.prettyText i)
 
-instance PrettyPrint (WithLoc BuiltinFunction) where
-  ppCode b = P.ppCode (b ^. withLocParam) >>= morpheme (getLoc b)
+instance PrettyPrint BuiltinFunction where
+  ppCode i = ppCode kwBuiltin <+> keyword (P.prettyText i)
+
+instance PrettyPrint BuiltinAxiom where
+  ppCode i = ppCode kwBuiltin <+> keyword (P.prettyText i)
 
 instance SingI s => PrettyPrint (TypeSignature s) where
   ppCode :: forall r. Members '[ExactPrint, Reader Options] r => TypeSignature s -> Sem r ()
@@ -609,8 +614,8 @@ instance PrettyPrint PatternArg where
       delimCond :: Bool
       delimCond = isJust _patternArgName && not (isAtomic _patternArgPattern)
 
-instance PrettyPrint (WithLoc Text) where
-  ppCode k = morpheme (getLoc k) (pretty (k ^. withLocParam))
+instance PrettyPrint Text where
+  ppCode = noLoc . pretty
 
 ppUnkindedSymbol :: Members '[Reader Options, ExactPrint] r => WithLoc Text -> Sem r ()
 ppUnkindedSymbol = region (annotate AnnUnkindedSym) . ppCode
