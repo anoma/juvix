@@ -36,11 +36,24 @@ class HasTextBackend a where
 
   toTextDoc :: a -> Doc b
 
-data AnsiText = forall t.
+data AnsiTextAtom = forall t.
   (HasAnsiBackend t, HasTextBackend t) =>
-  AnsiText
-  { _ansiText :: t
+  AnsiTextAtom
+  { _ansiTextAtom :: t
   }
+
+newtype AnsiText = AnsiText
+  { _ansiTextAtoms :: [AnsiTextAtom]
+  }
+  deriving newtype (Semigroup, Monoid)
+
+mkAnsiText ::
+  (HasAnsiBackend t, HasTextBackend t) =>
+  t ->
+  AnsiText
+mkAnsiText = AnsiText . pure . AnsiTextAtom
+
+makeLenses ''AnsiText
 
 instance HasTextBackend Text where
   toTextStream = toTextStream . pretty
@@ -49,13 +62,20 @@ instance HasTextBackend Text where
 instance HasAnsiBackend Text where
   toAnsiDoc = pretty
 
+instance HasTextBackend AnsiTextAtom where
+  toTextStream (AnsiTextAtom t) = toTextStream t
+  toTextDoc (AnsiTextAtom t) = toTextDoc t
+
+instance HasAnsiBackend AnsiTextAtom where
+  toAnsiStream (AnsiTextAtom t) = toAnsiStream t
+  toAnsiDoc (AnsiTextAtom t) = toAnsiDoc t
+
 instance HasTextBackend AnsiText where
-  toTextStream (AnsiText t) = toTextStream t
-  toTextDoc (AnsiText t) = toTextDoc t
+  toTextDoc :: AnsiText -> Doc b
+  toTextDoc (AnsiText l) = mconcatMap toTextDoc l
 
 instance HasAnsiBackend AnsiText where
-  toAnsiStream (AnsiText t) = toAnsiStream t
-  toAnsiDoc (AnsiText t) = toAnsiDoc t
+  toAnsiDoc (AnsiText l) = mconcatMap toAnsiDoc l
 
 instance HasTextBackend (Doc a) where
   toTextDoc = unAnnotate
@@ -65,11 +85,20 @@ instance HasAnsiBackend (Doc Ansi.AnsiStyle) where
   toAnsiDoc = id
   toAnsiStream = layoutPretty defaultLayoutOptions
 
+instance Show AnsiTextAtom where
+  show (AnsiTextAtom t) = unpack (Text.renderStrict (toTextStream t))
+
+instance Pretty AnsiTextAtom where
+  pretty (AnsiTextAtom t) = pretty (Text.renderStrict (toTextStream t))
+
+ansiTextToText :: AnsiText -> Text
+ansiTextToText = Text.renderStrict . layoutPretty defaultLayoutOptions . mconcatMap toAnsiDoc . (^. ansiTextAtoms)
+
 instance Show AnsiText where
-  show (AnsiText t) = unpack (Text.renderStrict (toTextStream t))
+  show = unpack . ansiTextToText
 
 instance Pretty AnsiText where
-  pretty (AnsiText t) = pretty (Text.renderStrict (toTextStream t))
+  pretty = pretty . ansiTextToText
 
 renderIO :: (HasAnsiBackend a, HasTextBackend a) => Bool -> a -> IO ()
 renderIO useColors = hRenderIO useColors stdout
