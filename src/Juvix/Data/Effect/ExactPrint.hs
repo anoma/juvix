@@ -132,3 +132,8 @@ delimIf :: Members '[ExactPrint] r => IsImplicit -> Bool -> Sem r () -> Sem r ()
 delimIf Implicit _ = braces
 delimIf Explicit True = parens
 delimIf Explicit False = id
+
+morphemeM :: forall r. Members '[ExactPrint] r => Interval -> Sem r () -> Sem r ()
+morphemeM loc doc = do
+  void (printCommentsUntil loc)
+  doc

@@ -13,8 +13,10 @@ import Juvix.Compiler.Concrete.Pretty.Options
 import Juvix.Data.Ape.Base
 import Juvix.Data.Ape.Print
 import Juvix.Data.CodeAnn (Ann, CodeAnn (..), ppStringLit)
+import Juvix.Data.CodeAnn qualified as C
 import Juvix.Data.Effect.ExactPrint
 import Juvix.Data.Keyword.All
+import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude hiding ((<+>), (<+?>), (<?+>), (?<>))
 import Juvix.Prelude.Pretty (annotate, pretty)
 
@@ -32,7 +34,14 @@ instance PrettyPrint Keyword where
         KeywordTypeJudoc -> AnnJudoc
 
 instance PrettyPrint KeywordRef where
-  ppCode = ppMorpheme
+  ppCode p =
+    morphemeM
+      (getLoc p)
+      ( annotated (C.kwTypeAnn (p ^. keywordRefKeyword . keywordType))
+          . noLoc
+          . pretty
+          $ p
+      )
 
 docNoComments :: PrettyPrint c => Options -> c -> Doc Ann
 docNoComments = docHelper Nothing
@@ -217,11 +226,17 @@ instance PrettyPrint TopModulePath where
     mapM P.ppSymbol (_modulePathDir ++ [_modulePathName]) >>= morpheme (getLoc t) . P.dotted
 
 instance (HasLoc n, P.PrettyCode n) => PrettyPrint (S.Name' n) where
-  ppCode = ppMorpheme
+  ppCode :: forall r. Members '[ExactPrint, Reader Options] r => S.Name' n -> Sem r ()
+  ppCode S.Name' {..} = do
+    let nameConcrete' = region (C.annotateKind _nameKind) (ppCode _nameConcrete)
+    annSRef (withNameIdSuffix _nameId nameConcrete')
+    where
+      annSRef :: Sem r () -> Sem r ()
+      annSRef = annotated (AnnRef (_nameDefinedIn ^. S.absTopModulePath) _nameId)
 
 instance PrettyPrint Name where
   ppCode n = case n of
-    NameUnqualified s -> ppMorpheme s
+    NameUnqualified s -> ppCode s
     NameQualified s -> ppCode s
 
 instance PrettyPrint QualifiedName where
@@ -231,8 +246,8 @@ instance PrettyPrint QualifiedName where
     str <- P.dotted <$> mapM P.ppSymbol symbols
     morpheme (getLoc q) str
 
-ppMorpheme :: (Members '[ExactPrint, Reader Options] r, P.PrettyCode c, HasLoc c) => c -> Sem r ()
-ppMorpheme n = P.ppCode n >>= morpheme (getLoc n)
+-- ppMorpheme :: (Members '[ExactPrint, Reader Options] r, P.PrettyCode c, HasLoc c) => c -> Sem r ()
+-- ppMorpheme n = P.ppCode n >>= morpheme (getLoc n)
 
 instance PrettyPrint (ModuleRef'' 'S.Concrete 'ModuleTop) where
   ppCode m = ppCode (m ^. moduleRefName)
@@ -424,11 +439,39 @@ instance PrettyPrint OperatorSyntaxDef where
         p <- P.ppCode (_opFixity ^. fixityPrecedence)
         ppCode _opSyntaxKw <+> ppCode _opKw <+> noLoc p
 
-instance PrettyPrint Expression where
-  ppCode = ppMorpheme
+instance PrettyPrint (WithLoc Expression) where
+  ppCode l = morphemeM (getLoc l) (ppCode (l ^. withLocParam))
 
-instance PrettyPrint ParsedPragmas where
-  ppCode = ppMorpheme
+instance PrettyPrint Application where
+  ppCode = apeHelper
+
+instance PrettyPrint InfixApplication where
+  ppCode = apeHelper
+
+instance PrettyPrint PostfixApplication where
+  ppCode = apeHelper
+
+instance PrettyPrint Expression where
+  ppCode = \case
+    ExpressionIdentifier n -> ppCode n
+    ExpressionHole w -> ppCode w
+    ExpressionParensIdentifier n -> parens (ppCode n)
+    ExpressionBraces b -> braces (ppCode b)
+    ExpressionApplication a -> ppCode a
+    ExpressionInfixApplication a -> ppCode a
+    ExpressionPostfixApplication a -> ppCode a
+    ExpressionLambda l -> ppCode l
+    ExpressionLetBlock lb -> ppCode lb
+    ExpressionUniverse u -> ppCode u
+    ExpressionLiteral l -> ppCode l
+    ExpressionFunction f -> ppCode f
+    ExpressionCase c -> ppCode c
+
+instance PrettyPrint (WithLoc (WithSource Pragmas)) where
+  ppCode pragma =
+    let src = pragma ^. withLocParam
+        txt = pretty (Str.pragmasStart <> src ^. withSourceText <> Str.pragmasEnd)
+     in morphemeM (getLoc pragma) (annotated AnnComment (noLoc txt) <> line)
 
 ppJudocStart :: Members '[ExactPrint, Reader Options] r => Sem r (Maybe ())
 ppJudocStart = do
@@ -544,7 +587,17 @@ instance SingI s => PrettyPrint (TypeSignature s) where
           )
 
 instance PrettyPrint Pattern where
-  ppCode = ppMorpheme
+  ppCode = \case
+    PatternVariable v -> annDef v (ppCode v)
+    PatternApplication (PatternApp l r) -> do
+      let l' = ppLeftExpression appFixity l
+          r' = ppRightExpression appFixity r
+      l' <+> r'
+    PatternWildcard {} -> ppCode kwWildcard
+    PatternEmpty {} -> parens (return ())
+    PatternConstructor constr -> ppCode constr
+    PatternInfixApplication i -> apeHelper i
+    PatternPostfixApplication i -> apeHelper i
 
 instance PrettyPrint PatternArg where
   ppCode PatternArg {..} = do
