@@ -6,6 +6,7 @@ where
 
 import Juvix.Data.CodeAnn qualified as C
 import Juvix.Data.Effect.ExactPrint.Base
+import Juvix.Data.IsImplicit
 import Juvix.Prelude.Base hiding ((<+>))
 import Juvix.Prelude.Pretty qualified as P
 
@@ -47,6 +48,9 @@ infixl 7 <+?>
 -- indent' :: forall ann r a. Sem (ExactPrint ann ': r) a -> Sem (ExactPrint ann ': r) a
 -- indent' = region @ann (P.indent 2)
 
+annotated :: Members '[ExactPrint] r => C.CodeAnn -> Sem r () -> Sem r ()
+annotated an = region (P.annotate an)
+
 parens :: Members '[ExactPrint] r => Sem r () -> Sem r ()
 parens = region C.parens
 
@@ -79,6 +83,9 @@ indent = region (P.indent 2)
 line :: Members '[ExactPrint] r => Sem r ()
 line = noLoc P.line
 
+hardline :: Members '[ExactPrint] r => Sem r ()
+hardline = noLoc P.hardline
+
 lbrace :: Members '[ExactPrint] r => Sem r ()
 lbrace = noLoc C.kwBraceL
 
@@ -91,6 +98,9 @@ bracesIndent d = braces (line <> indent d <> line)
 semicolon :: Members '[ExactPrint] r => Sem r ()
 semicolon = noLoc C.kwSemicolon
 
+blockIndent :: Members '[ExactPrint] r => Sem r () -> Sem r ()
+blockIndent d = line <> indent d <> line
+
 endSemicolon :: (Members '[ExactPrint] r, Functor l) => l (Sem r ()) -> l (Sem r ())
 endSemicolon = fmap (>> semicolon)
 
@@ -99,6 +109,9 @@ hsep = sequenceWith space
 
 vsep :: (Foldable l, Members '[ExactPrint] r) => l (Sem r ()) -> Sem r ()
 vsep = sequenceWith line
+
+vsepHard :: (Foldable l, Members '[ExactPrint] r) => l (Sem r ()) -> Sem r ()
+vsepHard = sequenceWith hardline
 
 vsep2 :: (Foldable l, Members '[ExactPrint] r) => l (Sem r ()) -> Sem r ()
 vsep2 = sequenceWith (line >> line)
@@ -114,3 +127,8 @@ oneLineOrNext = region P.oneLineOrNext
 
 paragraphs :: (Foldable l, Members '[ExactPrint] r) => l (Sem r ()) -> Sem r ()
 paragraphs = sequenceWith (line >> ensureEmptyLine)
+
+delimIf :: Members '[ExactPrint] r => IsImplicit -> Bool -> Sem r () -> Sem r ()
+delimIf Implicit _ = braces
+delimIf Explicit True = parens
+delimIf Explicit False = id

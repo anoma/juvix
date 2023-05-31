@@ -132,7 +132,7 @@ import Data.Semigroup (Semigroup, sconcat, (<>))
 import Data.Set (Set)
 import Data.Singletons hiding ((@@))
 import Data.Singletons.Sigma
-import Data.Singletons.TH (genSingletons, promoteOrdInstances, singOrdInstances, genDefunSymbols)
+import Data.Singletons.TH (genDefunSymbols, genSingletons, promoteOrdInstances, singOrdInstances)
 import Data.Stream (Stream)
 import Data.String
 import Data.Text (Text, pack, strip, unpack)

@@ -573,7 +573,7 @@ instance (SingI s) => PrettyCode (Case s) where
     branches <- indent' . vsepHard <$> mapM ppCode _caseBranches
     return $ parensIf _caseParens (kwCase <+> exp <> hardline <> branches)
 
-instance (SingI s) => PrettyCode (Lambda s) where
+instance SingI s => PrettyCode (Lambda s) where
   ppCode Lambda {..} = do
     lambdaKw' <- ppCode _lambdaKw
     lambdaClauses' <- case _lambdaClauses of

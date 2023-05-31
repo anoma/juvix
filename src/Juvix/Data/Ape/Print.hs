@@ -8,9 +8,10 @@ where
 
 import Juvix.Data.Ape.Base
 -- import Juvix.Data.CodeAnn
-import Juvix.Prelude hiding ((<+>), (<+?>), (<?+>), (?<>))
+
 -- import Juvix.Prelude.Pretty qualified as PP
 import Juvix.Data.Effect.ExactPrint
+import Juvix.Prelude hiding ((<+>), (<+?>), (<?+>), (?<>))
 
 newtype ApeParams a = ApeParams
   { _apePP :: forall r. Members '[ExactPrint] r => a -> Sem r ()

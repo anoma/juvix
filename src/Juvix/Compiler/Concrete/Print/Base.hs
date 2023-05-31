@@ -10,6 +10,8 @@ import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Pretty.Base qualified as P
 import Juvix.Compiler.Concrete.Pretty.Options
+import Juvix.Data.Ape.Base
+import Juvix.Data.Ape.Print
 import Juvix.Data.CodeAnn (Ann, CodeAnn (..), ppStringLit)
 import Juvix.Data.Effect.ExactPrint
 import Juvix.Data.Keyword.All
@@ -271,6 +273,147 @@ instance PrettyPrint SyntaxDef where
   ppCode = \case
     SyntaxOperator op -> ppCode op
 
+instance PrettyPrint Literal where
+  ppCode = noLoc . ppLiteral
+
+ppLiteral :: Literal -> Doc Ann
+ppLiteral = \case
+  LitInteger n -> annotate AnnLiteralInteger (pretty n)
+  LitString s -> ppStringLit s
+
+instance SingI s => PrettyPrint (LambdaClause s) where
+  ppCode LambdaClause {..} = do
+    let lambdaParameters' = hsep (ppPatternType <$> _lambdaParameters)
+        lambdaBody' = ppExpressionType _lambdaBody
+    lambdaParameters' <+> ppCode kwAssign <> oneLineOrNext lambdaBody'
+
+instance SingI s => PrettyPrint (LetBlock s) where
+  ppCode LetBlock {..} = do
+    let letClauses' = blockIndent (ppBlock _letClauses)
+        letExpression' = ppExpressionType _letExpression
+    ppCode kwLet <> letClauses' <> ppCode kwIn <+> letExpression'
+
+instance SingI s => PrettyPrint (Case s) where
+  ppCode Case {..} = do
+    let exp' = ppExpressionType _caseExpression
+        branches' = indent . vsepHard $ fmap ppCode _caseBranches
+    parensIf _caseParens (ppCode kwCase <+> exp' <> hardline <> branches')
+
+instance PrettyPrint Universe where
+  ppCode (Universe n _) = ppCode kwType <+?> (noLoc <$> (pretty <$> n))
+
+apeHelper :: (IsApe a ApeLeaf, Members '[Reader Options, ExactPrint] r) => a -> Sem r ()
+apeHelper a = do
+  opts <- ask @Options
+  let params :: ApeParams ApeLeaf
+      params = ApeParams (runReader opts . ppCode)
+  runApe params a
+
+instance PrettyPrint ApeLeaf where
+  ppCode = \case
+    ApeLeafExpression e -> ppCode e
+    ApeLeafFunctionParams a -> ppCode a
+    ApeLeafFunctionKw r -> ppCode r
+    ApeLeafPattern r -> ppCode r
+    ApeLeafPatternArg r -> ppCode r
+
+annDef :: forall s r. (SingI s, Members '[ExactPrint] r) => SymbolType s -> Sem r () -> Sem r ()
+annDef nm = case sing :: SStage s of
+  SScoped -> annSDef nm
+  SParsed -> id
+
+annSDef :: Members '[ExactPrint] r => S.Name' n -> Sem r () -> Sem r ()
+annSDef S.Name' {..} = annotated (AnnDef (_nameDefinedIn ^. S.absTopModulePath) _nameId)
+
+instance SingI s => PrettyPrint (FunctionParameters s) where
+  ppCode :: forall r. Members '[ExactPrint, Reader Options] r => FunctionParameters s -> Sem r ()
+  ppCode FunctionParameters {..} = do
+    case _paramNames of
+      [] -> ppLeftExpression' funFixity _paramType
+      _ -> do
+        let paramNames' = map ppParam _paramNames
+            paramType' = ppExpressionType _paramType
+        delimIf _paramImplicit True (hsep paramNames' <+> ppCode kwColon <+> paramType')
+    where
+      ppParam :: Maybe (SymbolType s) -> Sem r ()
+      ppParam = \case
+        Just n -> annDef n (ppSymbolType n)
+        Nothing -> ppCode kwWildcard
+
+      ppLeftExpression' = case sing :: SStage s of
+        SParsed -> ppLeftExpression
+        SScoped -> ppLeftExpression
+
+instance SingI s => PrettyPrint (Function s) where
+  ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => Function s -> Sem r ()
+  ppCode a = case sing :: SStage s of
+    SParsed -> helper a
+    SScoped -> apeHelper a
+    where
+      helper :: Function 'Parsed -> Sem r ()
+      helper Function {..} = do
+        let funParameter' = ppCode _funParameters
+            funReturn' = ppRightExpression' funFixity _funReturn
+            funKw' = ppCode _funKw
+        funParameter' <+> funKw' <+> funReturn'
+        where
+          ppRightExpression' = case sing :: SStage s of
+            SParsed -> ppRightExpression
+            SScoped -> ppRightExpression
+
+ppRightExpression ::
+  (PrettyPrint a, HasAtomicity a, Members [Reader Options, ExactPrint] r) =>
+  Fixity ->
+  a ->
+  Sem r ()
+ppRightExpression = ppLRExpression isRightAssoc
+
+ppLeftExpression ::
+  (PrettyPrint a, HasAtomicity a, Members '[Reader Options, ExactPrint] r) =>
+  Fixity ->
+  a ->
+  Sem r ()
+ppLeftExpression = ppLRExpression isLeftAssoc
+
+ppLRExpression ::
+  (HasAtomicity a, PrettyPrint a, Members '[Reader Options, ExactPrint] r) =>
+  (Fixity -> Bool) ->
+  Fixity ->
+  a ->
+  Sem r ()
+ppLRExpression associates fixlr e =
+  parensIf
+    (atomParens associates (atomicity e) fixlr)
+    (ppCode e)
+
+instance SingI s => PrettyPrint (CaseBranch s) where
+  ppCode CaseBranch {..} = do
+    let pat' = ppPatternParensType _caseBranchPattern
+        e' = ppExpressionType _caseBranchExpression
+    ppCode kwPipe <+> pat' <+> ppCode kwAssign <> oneLineOrNext e'
+
+instance SingI s => PrettyPrint (LetClause s) where
+  ppCode c = case c of
+    LetTypeSig sig -> ppCode sig
+    LetFunClause cl -> ppCode cl
+
+ppBlock :: (PrettyPrint a, Members '[Reader Options, ExactPrint] r, Traversable t) => t a -> Sem r ()
+ppBlock items = vsep (endSemicolon (fmap ppCode items))
+
+ppPipeBlock :: (PrettyPrint a, Members '[Reader Options, ExactPrint] r, Traversable t) => t a -> Sem r ()
+ppPipeBlock items = vsep (fmap ((ppCode kwPipe <+>) . ppCode) items)
+
+instance SingI s => PrettyPrint (Lambda s) where
+  ppCode Lambda {..} = do
+    let lambdaKw' = ppCode _lambdaKw
+        lambdaClauses' = case _lambdaClauses of
+          s :| [] -> braces (ppCode s)
+          _ -> bracesIndent (ppPipeBlock _lambdaClauses)
+    lambdaKw' <+> lambdaClauses'
+
+instance PrettyPrint LiteralLoc where
+  ppCode l = morpheme (getLoc l) (ppLiteral (l ^. withLocParam))
+
 instance PrettyPrint OperatorSyntaxDef where
   ppCode OperatorSyntaxDef {..} = do
     opSymbol' <- P.ppUnkindedSymbol _opSymbol
@@ -402,11 +545,6 @@ instance SingI s => PrettyPrint (TypeSignature s) where
 
 instance PrettyPrint Pattern where
   ppCode = ppMorpheme
-
-delimIf :: Members '[ExactPrint] r => IsImplicit -> Bool -> Sem r () -> Sem r ()
-delimIf Implicit _ = braces
-delimIf Explicit True = parens
-delimIf Explicit False = id
 
 instance PrettyPrint PatternArg where
   ppCode PatternArg {..} = do
