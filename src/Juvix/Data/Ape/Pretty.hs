@@ -17,7 +17,7 @@ newtype ApeParams a = ApeParams
 
 makeLenses ''ApeParams
 
-runApe :: forall a e. (IsApe a e) => ApeParams e -> a -> Doc CodeAnn
+runApe :: forall a e. IsApe a e => ApeParams e -> a -> Doc CodeAnn
 runApe p a = run . runReader p . ppApe $ ape
   where
     ape :: Ape e

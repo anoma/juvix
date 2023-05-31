@@ -58,6 +58,12 @@ parensIf b
 braces :: Members '[ExactPrint] r => Sem r () -> Sem r ()
 braces = region C.braces
 
+lineOrEmpty :: Members '[ExactPrint] r => Sem r ()
+lineOrEmpty = noLoc P.line'
+
+grouped :: Members '[ExactPrint] r => Sem r () -> Sem r ()
+grouped = region (P.group)
+
 nest :: Members '[ExactPrint] r => Sem r () -> Sem r ()
 nest = region (P.nest 2)
 
