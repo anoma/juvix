@@ -116,7 +116,9 @@ exampleFunction2 :
     -> Nat :=
     λ {_ _ _ _ _ _ _ :=
       undefined
+        -- comment after first
         + undefined
+        -- comment after second
         + undefined
         + undefined
         + undefined
