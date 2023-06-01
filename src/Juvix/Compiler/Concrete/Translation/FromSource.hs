@@ -328,7 +328,7 @@ stashJudoc = do
         JudocBlockParagraph {..}
 
     judocParagraphLines :: Bool -> ParsecS r (JudocBlock 'Parsed)
-    judocParagraphLines inBlock = JudocParagraphLines <$> some1 (paragraphLine inBlock)
+    judocParagraphLines inBlock = JudocLines <$> some1 (paragraphLine inBlock)
 
     judocExample :: Bool -> ParsecS r (JudocBlock 'Parsed)
     judocExample inBlock = do
@@ -341,11 +341,16 @@ stashJudoc = do
       space
       return (JudocExample Example {..})
 
-    paragraphLine :: Bool -> ParsecS r (JudocParagraphLine 'Parsed)
+    paragraphLine :: Bool -> ParsecS r (JudocLine 'Parsed)
     paragraphLine inBlock = do
-      unless inBlock $
-        P.try (judocStart >> P.notFollowedBy (P.choice [judocExampleStart, void P.newline]))
-      l <- JudocParagraphLine . trimEnds <$> some1 (withLoc (judocAtom inBlock))
+      kwstart <-
+        if
+            | inBlock -> return Nothing
+            | otherwise -> P.try $ do
+                s <- judocStart
+                P.notFollowedBy (P.choice [judocExampleStart, void P.newline])
+                return (Just s)
+      l <- JudocLine kwstart . trimEnds <$> some1 (withLoc (judocAtom inBlock))
       if
           | inBlock -> optional_ P.newline
           | otherwise -> void P.newline >> space

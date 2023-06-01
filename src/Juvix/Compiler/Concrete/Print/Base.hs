@@ -497,12 +497,12 @@ instance SingI s => PrettyPrint (JudocAtom s) where
       semiDelim :: Sem r () -> Sem r ()
       semiDelim = enclose1 (annotated AnnJudoc (noLoc (";" :: Doc Ann)))
 
-instance SingI s => PrettyPrint (JudocParagraphLine s) where
-  ppCode :: forall r. Members '[ExactPrint, Reader Options] r => JudocParagraphLine s -> Sem r ()
-  ppCode (JudocParagraphLine atoms) = do
-    let start' :: Sem r (Maybe ()) = ppJudocStart
+instance SingI s => PrettyPrint (JudocLine s) where
+  ppCode :: forall r. Members '[ExactPrint, Reader Options] r => JudocLine s -> Sem r ()
+  ppCode (JudocLine deli atoms) = do
+    let start' :: Maybe (Sem r ()) = (<> space) <$> fmap ppCode deli
         atoms' = mapM_ ppCode atoms
-    start' <??+> atoms'
+    start' <?+> atoms'
 
 instance SingI s => PrettyPrint (Judoc s) where
   ppCode :: forall r. Members '[ExactPrint, Reader Options] r => Judoc s -> Sem r ()
@@ -540,7 +540,7 @@ instance SingI s => PrettyPrint (JudocGroup s) where
 
 instance SingI s => PrettyPrint (JudocBlock s) where
   ppCode = \case
-    JudocParagraphLines l -> vsep (ppCode <$> l)
+    JudocLines l -> vsep (ppCode <$> l)
     JudocExample e -> ppCode e
 
 instance SingI s => PrettyPrint (AxiomDef s) where

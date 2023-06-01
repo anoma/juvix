@@ -1277,7 +1277,7 @@ checkJudocBlock ::
   JudocBlock 'Parsed ->
   Sem r (JudocBlock 'Scoped)
 checkJudocBlock = \case
-  JudocParagraphLines l -> JudocParagraphLines <$> mapM checkJudocLine l
+  JudocLines l -> JudocLines <$> mapM checkJudocLine l
   JudocExample e -> JudocExample <$> traverseOf exampleExpression checkParseExpressionAtoms e
 
 checkJudocBlockParagraph ::
@@ -1288,9 +1288,9 @@ checkJudocBlockParagraph = traverseOf judocBlockParagraphBlocks (mapM checkJudoc
 
 checkJudocLine ::
   (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
-  JudocParagraphLine 'Parsed ->
-  Sem r (JudocParagraphLine 'Scoped)
-checkJudocLine (JudocParagraphLine atoms) = JudocParagraphLine <$> mapM (mapM checkJudocAtom) atoms
+  JudocLine 'Parsed ->
+  Sem r (JudocLine 'Scoped)
+checkJudocLine (JudocLine delim atoms) = JudocLine delim <$> mapM (mapM checkJudocAtom) atoms
 
 checkJudocAtom ::
   (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>

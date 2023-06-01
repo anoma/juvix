@@ -436,12 +436,12 @@ instance SingI s => PrettyCode (JudocBlockParagraph s) where
 
 instance SingI s => PrettyCode (JudocBlock s) where
   ppCode = \case
-    JudocParagraphLines l -> vsep <$> mapM ppCode l
+    JudocLines l -> vsep <$> mapM ppCode l
     JudocExample e -> ppCode e
 
-instance (SingI s) => PrettyCode (JudocParagraphLine s) where
-  ppCode (JudocParagraphLine atoms) = do
-    start' <- ppJudocStart
+instance (SingI s) => PrettyCode (JudocLine s) where
+  ppCode (JudocLine deli atoms) = do
+    start' <- fmap (<> " ") <$> mapM ppCode deli
     atoms' <- mconcatMap ppCode atoms
     return (start' <?+> atoms')
 

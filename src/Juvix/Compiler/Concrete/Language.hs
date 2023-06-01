@@ -989,7 +989,7 @@ deriving stock instance (Eq (ExpressionType s), Eq (SymbolType s)) => Eq (JudocG
 deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (JudocGroup s)
 
 data JudocBlock (s :: Stage)
-  = JudocParagraphLines (NonEmpty (JudocParagraphLine s))
+  = JudocLines (NonEmpty (JudocLine s))
   | JudocExample (Example s)
 
 deriving stock instance (Show (ExpressionType s), Show (SymbolType s)) => Show (JudocBlock s)
@@ -998,14 +998,16 @@ deriving stock instance (Eq (ExpressionType s), Eq (SymbolType s)) => Eq (JudocB
 
 deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (JudocBlock s)
 
-newtype JudocParagraphLine (s :: Stage)
-  = JudocParagraphLine (NonEmpty (WithLoc (JudocAtom s)))
+data JudocLine (s :: Stage) = JudocLine
+  { _judocLineDelim :: Maybe KeywordRef,
+    _judocLineAtoms :: NonEmpty (WithLoc (JudocAtom s))
+  }
 
-deriving stock instance (Show (ExpressionType s), Show (SymbolType s)) => Show (JudocParagraphLine s)
+deriving stock instance (Show (ExpressionType s), Show (SymbolType s)) => Show (JudocLine s)
 
-deriving stock instance (Eq (ExpressionType s), Eq (SymbolType s)) => Eq (JudocParagraphLine s)
+deriving stock instance (Eq (ExpressionType s), Eq (SymbolType s)) => Eq (JudocLine s)
 
-deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (JudocParagraphLine s)
+deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (JudocLine s)
 
 data JudocAtom (s :: Stage)
   = JudocExpression (ExpressionType s)
@@ -1019,6 +1021,7 @@ deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (Jud
 
 makeLenses ''PatternArg
 makeLenses ''UsingItem
+makeLenses ''JudocLine
 makeLenses ''Example
 makeLenses ''Lambda
 makeLenses ''LambdaClause
@@ -1275,11 +1278,8 @@ instance HasLoc (JudocGroup s) where
 
 instance HasLoc (JudocBlock s) where
   getLoc = \case
-    JudocParagraphLines ls -> getLocSpan ls
+    JudocLines ls -> getLocSpan ls
     JudocExample e -> getLoc e
-
-instance HasLoc (JudocParagraphLine s) where
-  getLoc (JudocParagraphLine atoms) = getLocSpan atoms
 
 instance HasLoc PatternScopedIden where
   getLoc = \case
@@ -1310,6 +1310,9 @@ instance (SingI s) => HasLoc (PatternAtom s) where
       getLocParens p = case sing :: SStage r of
         SParsed -> getLoc p
         SScoped -> getLoc p
+
+instance HasLoc (JudocLine s) where
+  getLoc (JudocLine delim atoms) = fmap getLoc delim ?<> getLocSpan atoms
 
 instance HasLoc (PatternAtoms s) where
   getLoc = (^. patternAtomsLoc)
