@@ -15,6 +15,11 @@ newtype PragmaUnroll = PragmaUnroll
   }
   deriving stock (Show, Eq, Ord, Data, Generic)
 
+newtype PragmaArgNames = PragmaArgNames
+  { _pragmaArgNames :: [Text]
+  }
+  deriving stock (Show, Eq, Ord, Data, Generic)
+
 newtype PragmaFormat = PragmaFormat
   { _pragmaFormat :: Bool
   }
@@ -23,17 +28,21 @@ newtype PragmaFormat = PragmaFormat
 data Pragmas = Pragmas
   { _pragmasInline :: Maybe PragmaInline,
     _pragmasUnroll :: Maybe PragmaUnroll,
+    _pragmasArgNames :: Maybe PragmaArgNames,
     _pragmasFormat :: Maybe PragmaFormat
   }
   deriving stock (Show, Eq, Ord, Data, Generic)
 
 makeLenses ''PragmaUnroll
+makeLenses ''PragmaArgNames
 makeLenses ''PragmaFormat
 makeLenses ''Pragmas
 
 instance Hashable PragmaInline
 
 instance Hashable PragmaUnroll
+
+instance Hashable PragmaArgNames
 
 instance Hashable PragmaFormat
 
@@ -46,6 +55,7 @@ instance FromJSON Pragmas where
       parsePragmas = do
         _pragmasInline <- keyMay "inline" parseInline
         _pragmasUnroll <- keyMay "unroll" parseUnroll
+        _pragmasArgNames <- keyMay "argnames" parseArgNames
         _pragmasFormat <- keyMay "format" parseFormat
         return Pragmas {..}
 
@@ -69,6 +79,11 @@ instance FromJSON Pragmas where
         _pragmaUnrollDepth <- asIntegral
         return PragmaUnroll {..}
 
+      parseArgNames :: Parse YamlError PragmaArgNames
+      parseArgNames = do
+        _pragmaArgNames <- eachInArray asText
+        return PragmaArgNames {..}
+
       parseFormat :: Parse YamlError PragmaFormat
       parseFormat = do
         _pragmaFormat <- asBool
@@ -83,6 +98,7 @@ instance Semigroup Pragmas where
     Pragmas
       { _pragmasInline = p2 ^. pragmasInline <|> p1 ^. pragmasInline,
         _pragmasUnroll = p2 ^. pragmasUnroll <|> p1 ^. pragmasUnroll,
+        _pragmasArgNames = p2 ^. pragmasArgNames,
         _pragmasFormat = p2 ^. pragmasFormat <|> p1 ^. pragmasFormat
       }
 
@@ -91,5 +107,6 @@ instance Monoid Pragmas where
     Pragmas
       { _pragmasInline = Nothing,
         _pragmasUnroll = Nothing,
+        _pragmasArgNames = Nothing,
         _pragmasFormat = Nothing
       }

@@ -64,7 +64,8 @@ data IdentifierInfo = IdentifierInfo
     _identifierArgsNum :: Int,
     _identifierIsExported :: Bool,
     _identifierBuiltin :: Maybe BuiltinFunction,
-    _identifierPragmas :: Pragmas
+    _identifierPragmas :: Pragmas,
+    _identifierArgNames :: [Maybe Text]
   }
 
 data InductiveInfo = InductiveInfo
