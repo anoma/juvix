@@ -466,9 +466,6 @@ instance SingI s => PrettyPrint (Lambda s) where
           _ -> bracesIndent (ppPipeBlock _lambdaClauses)
     lambdaKw' <+> lambdaClauses'
 
--- instance PrettyPrint LiteralLoc where
---   ppCode l = morpheme (getLoc l) (ppLiteral (l ^. withLocParam))
-
 instance PrettyPrint Precedence where
   ppCode = \case
     PrecMinusOmega -> noLoc (pretty ("-ω" :: Text))

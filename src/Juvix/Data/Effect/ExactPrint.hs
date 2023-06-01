@@ -44,10 +44,6 @@ infixl 7 <+?>
 (<+?>) :: Members '[ExactPrint] r => Sem r () -> Maybe (Sem r ()) -> Sem r ()
 (<+?>) a = maybe a (a <+>)
 
--- NOTE that then you can use subsume indent' in the call site
--- indent' :: forall ann r a. Sem (ExactPrint ann ': r) a -> Sem (ExactPrint ann ': r) a
--- indent' = region @ann (P.indent 2)
-
 annotated :: Members '[ExactPrint] r => C.CodeAnn -> Sem r () -> Sem r ()
 annotated an = region (P.annotate an)
 

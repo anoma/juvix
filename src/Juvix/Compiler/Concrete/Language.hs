@@ -1745,5 +1745,3 @@ instance HasNameKind ScopedIden where
 
 instance HasNameKind SymbolEntry where
   getNameKind = getNameKind . entryName
-
-$(genDefunSymbols [''ImportType])

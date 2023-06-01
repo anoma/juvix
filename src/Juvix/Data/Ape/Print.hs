@@ -7,9 +7,6 @@ module Juvix.Data.Ape.Print
 where
 
 import Juvix.Data.Ape.Base
--- import Juvix.Data.CodeAnn
-
--- import Juvix.Prelude.Pretty qualified as PP
 import Juvix.Data.Effect.ExactPrint
 import Juvix.Prelude hiding ((<+>), (<+?>), (<?+>), (?<>))
 
