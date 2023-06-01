@@ -95,7 +95,7 @@ coreEvalAssertion' mode tab mainFile expectedFile step =
             (False, _) -> mkConstant' (ConstInteger n)
 
     readEvalData :: [Maybe Text] -> IO (Either String EvalData)
-    readEvalData = case mode of
+    readEvalData argnames = case mode of
       EvalModePlain -> do
         expected <- TIO.readFile (toFilePath expectedFile)
         return $
