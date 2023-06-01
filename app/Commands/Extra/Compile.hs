@@ -208,18 +208,67 @@ wasiArgs buildDir o outfile inputFile sysrootPath =
              | otherwise -> []
        )
 
+findClangOnPath :: Member (Embed IO) r => Sem r (Maybe (Path Abs File))
+findClangOnPath = findExecutable $(mkRelFile "clang")
+
+findClangUsingEnvVar :: forall r. Member (Embed IO) r => Sem r (Maybe (Path Abs File))
+findClangUsingEnvVar = do
+  p <- clangBinPath
+  join <$> mapM checkExecutable p
+  where
+    checkExecutable :: Path Abs File -> Sem r (Maybe (Path Abs File))
+    checkExecutable p = whenMaybeM (embed @IO (isExecutable p)) (return p)
+
+    clangBinPath :: Sem r (Maybe (Path Abs File))
+    clangBinPath = fmap (<//> $(mkRelFile "bin/clang")) <$> llvmDistPath
+
+    llvmDistPath :: Sem r (Maybe (Path Abs Dir))
+    llvmDistPath = do
+      p <- embed (lookupEnv llvmDistEnvironmentVar)
+      embed @IO (mapM parseAbsDir p)
+
+data ClangPath
+  = ClangSystemPath (Path Abs File)
+  | ClangEnvVarPath (Path Abs File)
+
+extractClangPath :: ClangPath -> Path Abs File
+extractClangPath = \case
+  ClangSystemPath p -> p
+  ClangEnvVarPath p -> p
+
+--- Try searching clang JUVIX_LLVM_DIST_PATH. Otherwise use the PATH
+findClang :: Member (Embed IO) r => Sem r (Maybe ClangPath)
+findClang = do
+  envVarPath <- findClangUsingEnvVar
+  case envVarPath of
+    Just p -> return (Just (ClangEnvVarPath p))
+    Nothing -> (fmap . fmap) ClangSystemPath findClangOnPath
+
 runClang ::
+  forall r.
   (Members '[Embed IO, Error Text] r) =>
   [String] ->
   Sem r ()
 runClang args = do
-  (exitCode, _, err) <- embed (P.readProcessWithExitCode "clang" args "")
+  cp <- clangBinPath
+  (exitCode, _, err) <- embed (P.readProcessWithExitCode cp args "")
   case exitCode of
     ExitSuccess -> return ()
     _ -> throw (pack err)
+  where
+    clangBinPath :: Sem r String
+    clangBinPath = do
+      p <- findClang
+      maybe (throw clangNotFoundErr) (return . toFilePath . extractClangPath) p
+
+    clangNotFoundErr :: Text
+    clangNotFoundErr = "Error: The clang executable was not found. Please install the LLVM toolchain"
 
 debugClangOptimizationLevel :: Int
 debugClangOptimizationLevel = 1
 
 defaultClangOptimizationLevel :: Int
 defaultClangOptimizationLevel = 1
+
+llvmDistEnvironmentVar :: String
+llvmDistEnvironmentVar = "JUVIX_LLVM_DIST_PATH"
