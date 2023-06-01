@@ -449,6 +449,15 @@ tests:
       contains: "true"
     exit-status: 0
 
+  - name: open-import-from-stdlib-new-syntax
+    command:
+      - juvix
+      - repl
+    stdin: "import Stdlib.Data.Int.Ord open\n1 == 1"
+    stdout:
+      contains: "true"
+    exit-status: 0
+
   - name: infix-constructors
     command:
       - juvix
