@@ -26,7 +26,7 @@ makeLenses ''PosTest
 root :: Path Abs Dir
 root = relToProject $(mkRelDir "tests/positive")
 
-renderCodeOld :: M.PrettyCode c => c -> Text
+renderCodeOld :: (HasLoc c, M.PrettyPrint c) => c -> Text
 renderCodeOld = toPlainText . M.ppOutDefault
 
 renderCodeNew :: (HasLoc c, P.PrettyPrint c) => c -> Text
@@ -35,7 +35,7 @@ renderCodeNew = toPlainText . P.ppOutDefault emptyComments
 testDescr :: PosTest -> [TestDescr]
 testDescr PosTest {..} = helper renderCodeOld "" : [helper renderCodeNew " (with comments)"]
   where
-    helper :: (forall c. (HasLoc c, P.PrettyPrint c, M.PrettyCode c) => c -> Text) -> String -> TestDescr
+    helper :: (forall c. (HasLoc c, P.PrettyPrint c) => c -> Text) -> String -> TestDescr
     helper renderer tag =
       let tRoot = root <//> _relDir
           file' = tRoot <//> _file

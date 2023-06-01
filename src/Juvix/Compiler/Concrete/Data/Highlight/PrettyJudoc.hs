@@ -26,10 +26,10 @@ ppInternal c = do
     mkOpts :: Options -> Internal.Options
     mkOpts = const (Internal.defaultOptions)
 
-ppScoped :: Members '[Reader Options] r => Scoped.PrettyCode c => c -> Sem r (Doc CodeAnn)
+ppScoped :: Members '[Reader Options] r => Scoped.PrettyPrint c => c -> Sem r (Doc CodeAnn)
 ppScoped c = do
   iopts <- mkOpts <$> ask
-  return (Scoped.runPrettyCode iopts c)
+  return (Scoped.docNoComments iopts c)
   where
     mkOpts :: Options -> Scoped.Options
     mkOpts = const (Scoped.defaultOptions)

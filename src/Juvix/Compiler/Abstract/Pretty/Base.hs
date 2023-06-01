@@ -30,7 +30,7 @@ class PrettyCode c where
 ppSCode :: (Members '[Reader Options] r, S.PrettyCode c) => c -> Sem r (Doc Ann)
 ppSCode c = do
   opts <- asks toSOptions
-  return $ S.runPrettyCode opts c
+  return $ S.doc opts c
 
 ppDefault :: (PrettyCode c) => c -> Doc Ann
 ppDefault = runPrettyCode defaultOptions

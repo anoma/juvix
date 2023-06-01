@@ -6,6 +6,7 @@ module Juvix.Compiler.Concrete.Print.Base
 where
 
 import Data.List.NonEmpty.Extra qualified as NonEmpty
+import Juvix.Compiler.Concrete.Data.InfoTable
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 -- import Juvix.Compiler.Concrete.Pretty.Base qualified as P
 
@@ -170,6 +171,16 @@ instance SingI s => PrettyPrint (Iterator s) where
         b = ppExpressionType _iteratorBody
     parensIf _iteratorParens $
       hang (n <+?> is' <+?> rngs' <> oneLineOrNextNoIndent b)
+
+instance PrettyPrint S.AName where
+  ppCode (S.AName n) = annotated (AnnKind (S.getNameKind n)) (noLoc (pretty (n ^. S.nameVerbatim)))
+
+-- TODO print without spaces when the type signature is not next to the clauses
+instance PrettyPrint FunctionInfo where
+  ppCode f = do
+    let ty = StatementTypeSignature (f ^. functionInfoType)
+        cs = map StatementFunctionClause (f ^. functionInfoClauses)
+    ppCode (ty : cs)
 
 instance SingI s => PrettyPrint (ExpressionAtom s) where
   ppCode = \case

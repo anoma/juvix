@@ -22,16 +22,10 @@ import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude
 
 doc :: (PrettyCode c) => Options -> c -> Doc Ann
-doc opts =
-  run
-    . runReader opts
-    . ppCode
+doc opts = run . runReader opts . ppCode
 
 class PrettyCode a where
   ppCode :: (Members '[Reader Options] r) => a -> Sem r (Doc Ann)
-
-runPrettyCode :: (PrettyCode c) => Options -> c -> Doc Ann
-runPrettyCode opts = run . runReader opts . ppCode
 
 ppModulePathType ::
   forall t s r.
