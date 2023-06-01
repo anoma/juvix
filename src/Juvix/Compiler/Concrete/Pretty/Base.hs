@@ -765,7 +765,7 @@ instance PrettyCode Expression where
     ExpressionCase c -> ppCode c
     ExpressionIterator i -> ppCode i
 
-instance (SingI s) => PrettyCode (Iterator s) where
+instance SingI s => PrettyCode (Iterator s) where
   ppCode Iterator {..} = do
     n <- ppName _iteratorName
     is <- mapM ppCode _iteratorInitializers

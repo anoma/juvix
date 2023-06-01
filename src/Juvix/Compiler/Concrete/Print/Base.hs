@@ -15,6 +15,7 @@ import Juvix.Data.Ape.Print
 import Juvix.Data.CodeAnn (Ann, CodeAnn (..), ppStringLit)
 import Juvix.Data.CodeAnn qualified as C
 import Juvix.Data.Effect.ExactPrint
+import Juvix.Data.IteratorAttribs
 import Juvix.Data.Keyword.All
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude hiding ((<+>), (<+?>), (<?+>), (?<>))
@@ -144,6 +145,29 @@ instance SingI s => PrettyPrint (PatternAtoms s) where
 instance SingI s => PrettyPrint (ExpressionAtoms s) where
   ppCode as = hsep (ppCode <$> as ^. expressionAtoms)
 
+instance SingI s => PrettyPrint (Initializer s) where
+  ppCode Initializer {..} = do
+    let n = ppPatternParensType _initializerPattern
+        e = ppExpressionType _initializerExpression
+    n <+> ppCode kwAssign <+> e
+
+instance SingI s => PrettyPrint (Range s) where
+  ppCode Range {..} = do
+    let n = ppPatternParensType _rangePattern
+        e = ppExpressionType _rangeExpression
+    n <+> ppCode kwIn <+> e
+
+instance SingI s => PrettyPrint (Iterator s) where
+  ppCode Iterator {..} = do
+    let n = ppIdentifierType _iteratorName
+        is = ppCode <$> _iteratorInitializers
+        rngs = ppCode <$> _iteratorRanges
+        is' = parens . sepSemicolon <$> nonEmpty is
+        rngs' = parens . sepSemicolon <$> nonEmpty rngs
+        b = ppExpressionType _iteratorBody
+    parensIf _iteratorParens $
+      hang (n <+?> is' <+?> rngs' <> oneLineOrNextNoIndent b)
+
 instance SingI s => PrettyPrint (ExpressionAtom s) where
   ppCode = \case
     AtomIdentifier n -> ppIdentifierType n
@@ -157,6 +181,7 @@ instance SingI s => PrettyPrint (ExpressionAtom s) where
     AtomParens e -> parens (ppExpressionType e)
     AtomBraces e -> braces (ppExpressionType (e ^. withLocParam))
     AtomHole w -> ppHoleType w
+    AtomIterator i -> ppCode i
 
 instance PrettyPrint PatternScopedIden where
   ppCode = \case
@@ -219,7 +244,7 @@ instance SingI s => PrettyPrint [Statement s] where
   ppCode ss = paragraphs (ppGroup <$> P.groupStatements ss)
     where
       ppGroup :: NonEmpty (Statement s) -> Sem r ()
-      ppGroup = vsep . endSemicolon . fmap ppCode
+      ppGroup = vsep . sepEndSemicolon . fmap ppCode
 
 instance PrettyPrint TopModulePath where
   ppCode t@TopModulePath {..} =
@@ -414,7 +439,7 @@ instance SingI s => PrettyPrint (LetClause s) where
     LetFunClause cl -> ppCode cl
 
 ppBlock :: (PrettyPrint a, Members '[Reader Options, ExactPrint] r, Traversable t) => t a -> Sem r ()
-ppBlock items = vsep (endSemicolon (fmap ppCode items))
+ppBlock items = vsep (sepEndSemicolon (fmap ppCode items))
 
 ppPipeBlock :: (PrettyPrint a, Members '[Reader Options, ExactPrint] r, Traversable t) => t a -> Sem r ()
 ppPipeBlock items = vsepHard (fmap ((ppCode kwPipe <+>) . ppCode) items)
@@ -472,14 +497,15 @@ instance PrettyPrint Expression where
     ExpressionLiteral l -> ppCode l
     ExpressionFunction f -> ppCode f
     ExpressionCase c -> ppCode c
+    ExpressionIterator i -> ppCode i
 
 instance PrettyPrint (WithSource Pragmas) where
   ppCode pragma =
     let txt = pretty (Str.pragmasStart <> pragma ^. withSourceText <> Str.pragmasEnd)
      in annotated AnnComment (noLoc txt) <> line
 
-instance PrettyPrint ParsedIteratorAttribs where
-  ppCode = ppMorpheme
+instance PrettyPrint (WithSource IteratorAttribs) where
+  ppCode = annotated AnnComment . braces . noLoc . pretty . (^. withSourceText)
 
 ppJudocStart :: Members '[ExactPrint, Reader Options] r => Sem r (Maybe ())
 ppJudocStart = do

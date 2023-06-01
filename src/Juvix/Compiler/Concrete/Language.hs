@@ -1331,7 +1331,7 @@ idenLoc e = case sing :: SStage s of
   SScoped -> getLoc e
 
 instance (SingI s) => HasLoc (Iterator s) where
-  getLoc Iterator {..} = idenLoc _iteratorName <> expressionLoc _iteratorBody
+  getLoc Iterator {..} = idenLoc _iteratorName <> getLocExpressionType _iteratorBody
 
 instance SingI s => HasLoc (Import s) where
   getLoc Import {..} = case sing :: SStage s of
