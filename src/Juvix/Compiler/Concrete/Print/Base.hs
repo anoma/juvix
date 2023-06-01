@@ -484,7 +484,7 @@ instance SingI s => PrettyPrint (Example s) where
         <> noLoc P.kwSemicolon
 
 instance PrettyPrint a => PrettyPrint (WithLoc a) where
-  ppCode a = morphemeM (getLoc a) (ppCode a)
+  ppCode a = morphemeM (getLoc a) (ppCode (a ^. withLocParam))
 
 instance SingI s => PrettyPrint (JudocAtom s) where
   ppCode :: forall r. (Members '[Reader Options, ExactPrint] r) => JudocAtom s -> Sem r ()
