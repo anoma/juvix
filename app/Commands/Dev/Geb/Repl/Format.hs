@@ -37,4 +37,4 @@ normal :: Text -> Doc ReplStyle
 normal = annotate ReplNormal . pretty
 
 ppOutput :: Doc ReplStyle -> AnsiText
-ppOutput = AnsiText . ReplMessageDoc
+ppOutput = mkAnsiText . ReplMessageDoc

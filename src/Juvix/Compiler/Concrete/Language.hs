@@ -28,6 +28,7 @@ import Juvix.Compiler.Concrete.Data.VisibilityAnn
 import Juvix.Data
 import Juvix.Data.Ape.Base as Ape
 import Juvix.Data.Fixity
+import Juvix.Data.IteratorAttribs
 import Juvix.Data.Keyword
 import Juvix.Data.NameKind
 import Juvix.Parser.Lexer (isDelimiterStr)
@@ -119,6 +120,12 @@ type family ModuleEndType t = res | res -> t where
 type ParsedPragmas = WithLoc (WithSource Pragmas)
 
 --------------------------------------------------------------------------------
+-- Iterator attributes
+--------------------------------------------------------------------------------
+
+type ParsedIteratorAttribs = WithLoc (WithSource IteratorAttribs)
+
+--------------------------------------------------------------------------------
 -- Top level statement
 --------------------------------------------------------------------------------
 
@@ -188,13 +195,15 @@ deriving stock instance (Ord (ModulePathType s 'ModuleTop), Ord (ImportType s)) 
 -- Syntax declaration
 --------------------------------------------------------------------------------
 
-newtype SyntaxDef
+data SyntaxDef
   = SyntaxOperator OperatorSyntaxDef
+  | SyntaxIterator IteratorSyntaxDef
   deriving stock (Show, Eq, Ord)
 
 instance HasLoc SyntaxDef where
   getLoc = \case
     SyntaxOperator t -> getLoc t
+    SyntaxIterator t -> getLoc t
 
 --------------------------------------------------------------------------------
 -- Operator syntax declaration
@@ -210,6 +219,21 @@ data OperatorSyntaxDef = OperatorSyntaxDef
 
 instance HasLoc OperatorSyntaxDef where
   getLoc OperatorSyntaxDef {..} = getLoc _opSyntaxKw <> getLoc _opSymbol
+
+--------------------------------------------------------------------------------
+-- Iterator syntax declaration
+--------------------------------------------------------------------------------
+
+data IteratorSyntaxDef = IteratorSyntaxDef
+  { _iterSymbol :: Symbol,
+    _iterAttribs :: Maybe ParsedIteratorAttribs,
+    _iterSyntaxKw :: KeywordRef,
+    _iterIteratorKw :: KeywordRef
+  }
+  deriving stock (Show, Eq, Ord)
+
+instance HasLoc IteratorSyntaxDef where
+  getLoc IteratorSyntaxDef {..} = getLoc _iterSyntaxKw <> getLoc _iterSymbol
 
 -------------------------------------------------------------------------------
 -- Type signature declaration
@@ -673,6 +697,7 @@ data Expression
   | ExpressionFunction (Function 'Scoped)
   | ExpressionHole (HoleType 'Scoped)
   | ExpressionBraces (WithLoc Expression)
+  | ExpressionIterator (Iterator 'Scoped)
   deriving stock (Show, Eq, Ord)
 
 instance HasAtomicity (Lambda s) where
@@ -892,32 +917,96 @@ deriving stock instance (Show (ExpressionType s), Show (PatternParensType s)) =>
 deriving stock instance (Ord (ExpressionType s), Ord (PatternParensType s)) => Ord (Case s)
 
 --------------------------------------------------------------------------------
--- Debugging statements
+-- Initializer expression
 --------------------------------------------------------------------------------
 
-newtype Eval (s :: Stage) = Eval {evalExpression :: ExpressionType s}
+data Initializer (s :: Stage) = Initializer
+  { _initializerPattern :: PatternParensType s,
+    _initializerExpression :: ExpressionType s
+  }
 
 deriving stock instance
-  (Show (ExpressionType s)) => Show (Eval s)
+  ( Show (PatternParensType s),
+    Show (ExpressionType s)
+  ) =>
+  Show (Initializer s)
 
 deriving stock instance
-  (Eq (ExpressionType s)) => Eq (Eval s)
+  ( Eq (PatternParensType s),
+    Eq (ExpressionType s)
+  ) =>
+  Eq (Initializer s)
 
 deriving stock instance
-  (Ord (ExpressionType s)) => Ord (Eval s)
+  ( Ord (PatternParensType s),
+    Ord (ExpressionType s)
+  ) =>
+  Ord (Initializer s)
 
 --------------------------------------------------------------------------------
+-- Range expression
+--------------------------------------------------------------------------------
 
-newtype Print (s :: Stage) = Print {printExpression :: ExpressionType s}
+data Range (s :: Stage) = Range
+  { _rangePattern :: PatternParensType s,
+    _rangeExpression :: ExpressionType s
+  }
 
 deriving stock instance
-  (Show (ExpressionType s)) => Show (Print s)
+  ( Show (PatternParensType s),
+    Show (ExpressionType s)
+  ) =>
+  Show (Range s)
 
 deriving stock instance
-  (Eq (ExpressionType s)) => Eq (Print s)
+  ( Eq (PatternParensType s),
+    Eq (ExpressionType s)
+  ) =>
+  Eq (Range s)
 
 deriving stock instance
-  (Ord (ExpressionType s)) => Ord (Print s)
+  ( Ord (PatternParensType s),
+    Ord (ExpressionType s)
+  ) =>
+  Ord (Range s)
+
+--------------------------------------------------------------------------------
+-- Iterator/mapper expression
+--------------------------------------------------------------------------------
+
+data Iterator s = Iterator
+  { _iteratorName :: IdentifierType s,
+    _iteratorInitializers :: [Initializer s],
+    _iteratorRanges :: [Range s],
+    _iteratorBody :: ExpressionType s,
+    -- | Due to limitations of the pretty printing algorithm, we store whether
+    -- the iterator was surrounded by parentheses in the code.
+    _iteratorParens :: Bool
+  }
+
+deriving stock instance
+  ( Show (Initializer s),
+    Show (Range s),
+    Show (ExpressionType s),
+    Show (IdentifierType s)
+  ) =>
+  Show (Iterator s)
+
+deriving stock instance
+  ( Eq (Initializer s),
+    Eq (Range s),
+    Eq (ExpressionType s),
+    Eq (IdentifierType s)
+  ) =>
+  Eq (Iterator s)
+
+deriving stock instance
+  ( Ord (Initializer s),
+    Ord (Range s),
+    Ord (ExpressionType s),
+    Ord (IdentifierType s)
+  ) =>
+  Ord (Iterator s)
 
 --------------------------------------------------------------------------------
 -- Expression atom
@@ -936,6 +1025,7 @@ data ExpressionAtom (s :: Stage)
   | AtomFunArrow KeywordRef
   | AtomLiteral LiteralLoc
   | AtomParens (ExpressionType s)
+  | AtomIterator (Iterator s)
 
 data ExpressionAtoms (s :: Stage) = ExpressionAtoms
   { _expressionAtoms :: NonEmpty (ExpressionAtom s),
@@ -1032,6 +1122,7 @@ makeLenses ''LetBlock
 makeLenses ''FunctionParameters
 makeLenses ''Import
 makeLenses ''OperatorSyntaxDef
+makeLenses ''IteratorSyntaxDef
 makeLenses ''InductiveConstructorDef
 makeLenses ''Module
 makeLenses ''TypeSignature
@@ -1049,6 +1140,9 @@ makeLenses ''CaseBranch
 makeLenses ''PatternBinding
 makeLenses ''PatternAtoms
 makeLenses ''ExpressionAtoms
+makeLenses ''Iterator
+makeLenses ''Initializer
+makeLenses ''Range
 
 instance HasAtomicity Expression where
   atomicity e = case e of
@@ -1065,11 +1159,15 @@ instance HasAtomicity Expression where
     ExpressionUniverse {} -> Atom
     ExpressionFunction {} -> Aggregate funFixity
     ExpressionCase c -> atomicity c
+    ExpressionIterator i -> atomicity i
 
 expressionAtomicity :: forall s. SingI s => ExpressionType s -> Atomicity
 expressionAtomicity e = case sing :: SStage s of
   SParsed -> atomicity e
   SScoped -> atomicity e
+
+instance HasAtomicity (Iterator s) where
+  atomicity = const Atom
 
 instance HasAtomicity (Case s) where
   atomicity = const Atom
@@ -1226,6 +1324,15 @@ instance HasLoc Expression where
     ExpressionFunction i -> getLoc i
     ExpressionHole i -> getLoc i
     ExpressionBraces i -> getLoc i
+    ExpressionIterator i -> getLoc i
+
+idenLoc :: forall s. SingI s => IdentifierType s -> Interval
+idenLoc e = case sing :: SStage s of
+  SParsed -> getLoc e
+  SScoped -> getLoc e
+
+instance (SingI s) => HasLoc (Iterator s) where
+  getLoc Iterator {..} = idenLoc _iteratorName <> expressionLoc _iteratorBody
 
 instance SingI s => HasLoc (Import s) where
   getLoc Import {..} = case sing :: SStage s of
@@ -1623,6 +1730,14 @@ symbolEntryToSName = \case
   EntryConstructor c -> c ^. constructorRefName
   EntryModule m -> getModuleRefNameType m
   EntryVariable m -> m
+
+instance HasNameKind ScopedIden where
+  getNameKind = \case
+    ScopedAxiom {} -> KNameAxiom
+    ScopedInductive {} -> KNameInductive
+    ScopedConstructor {} -> KNameConstructor
+    ScopedVar {} -> KNameLocal
+    ScopedFunction {} -> KNameFunction
 
 instance HasNameKind SymbolEntry where
   getNameKind = getNameKind . entryName

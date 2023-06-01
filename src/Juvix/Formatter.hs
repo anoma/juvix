@@ -90,7 +90,7 @@ formatProject p = do
       res <- combineResults <$> mapM format juvixFiles
       return (res, RecurseFilter (\hasJuvixYaml d -> not hasJuvixYaml && not (isHiddenDirectory d)))
 
-formatPath :: Member ScopeEff r => Path Abs File -> Sem r (NonEmpty AnsiText)
+formatPath :: Member ScopeEff r => Path Abs File -> Sem r (Maybe (NonEmpty AnsiText))
 formatPath p = do
   res <- scopeFile p
   formatScoperResult res
@@ -109,25 +109,38 @@ formatResultFromContents ::
   forall r.
   Members '[Output FormattedFileInfo] r =>
   Text ->
-  NonEmpty AnsiText ->
+  Maybe (NonEmpty AnsiText) ->
   Path Abs File ->
   Sem r FormatResult
-formatResultFromContents originalContents formattedContents filepath
-  | originalContents /= ansiPlainText formattedContents = do
-      output
-        ( FormattedFileInfo
-            { _formattedFileInfoPath = filepath,
-              _formattedFileInfoContentsAnsi = formattedContents
-            }
-        )
-      return FormatResultFail
-  | otherwise = return FormatResultOK
+formatResultFromContents originalContents mfc filepath =
+  case mfc of
+    Just formattedContents
+      | originalContents /= ansiPlainText formattedContents -> do
+          output
+            ( FormattedFileInfo
+                { _formattedFileInfoPath = filepath,
+                  _formattedFileInfoContentsAnsi = formattedContents
+                }
+            )
+          return FormatResultFail
+      | otherwise -> return FormatResultOK
+    Nothing ->
+      return FormatResultOK
 
-formatScoperResult :: Scoper.ScoperResult -> Sem r (NonEmpty AnsiText)
+formatScoperResult :: Scoper.ScoperResult -> Sem r (Maybe (NonEmpty AnsiText))
 formatScoperResult res = do
   let cs = res ^. Scoper.comments
       formattedModules = run (runReader cs (mapM formatTopModule (res ^. Scoper.resultModules)))
-  return formattedModules
+  case res ^. Scoper.mainModule . modulePragmas of
+    Just pragmas ->
+      case pragmas ^. withLocParam . withSourceValue . pragmasFormat of
+        Just PragmaFormat {..}
+          | not _pragmaFormat ->
+              return Nothing
+        _ ->
+          return (Just formattedModules)
+    Nothing ->
+      return (Just formattedModules)
   where
     formatTopModule :: Member (Reader Comments) r => Module 'Scoped 'ModuleTop -> Sem r AnsiText
     formatTopModule m = do

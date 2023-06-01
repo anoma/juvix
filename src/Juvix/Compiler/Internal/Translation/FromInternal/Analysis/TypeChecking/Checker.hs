@@ -699,7 +699,7 @@ inferExpression' hint e = case e of
         return (TypedExpression ty (ExpressionIden i))
       IdenAxiom v -> do
         info <- lookupAxiom v
-        return (TypedExpression (info ^. axiomInfoType) (ExpressionIden i))
+        return (TypedExpression (info ^. axiomInfoDef . axiomType) (ExpressionIden i))
       IdenInductive v -> do
         kind <- inductiveType v
         return (TypedExpression kind (ExpressionIden i))

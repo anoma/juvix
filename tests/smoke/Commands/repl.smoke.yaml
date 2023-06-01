@@ -1,6 +1,84 @@
 working-directory: ./../../../tests/
 
 tests:
+  - name: repl-doc
+    command:
+      - juvix
+      - repl
+      - ../examples/milestone/HelloWorld/HelloWorld.juvix
+    stdin: ":doc Nat"
+    stdout:
+      contains: |
+        --- Inductive natural numbers. I.e. whole non-negative numbers.
+    exit-status: 0
+
+  - name: repl-doc-no-doc
+    command:
+      - juvix
+      - repl
+      - ../examples/milestone/HelloWorld/HelloWorld.juvix
+    stdin: ":doc suc"
+    stdout:
+      contains: |
+        No documentation available for suc
+    exit-status: 0
+
+  - name: repl-def
+    command:
+      - juvix
+      - repl
+      - ../examples/milestone/HelloWorld/HelloWorld.juvix
+    stdin: ":def suc"
+    stdout:
+      contains: |
+        --- Inductive natural numbers. I.e. whole non-negative numbers.
+        builtin nat type Nat :=
+          | zero : Nat
+          | suc : Nat → Nat
+    exit-status: 0
+
+  - name: repl-def-error
+    command:
+      - juvix
+      - repl
+      - ../examples/milestone/HelloWorld/HelloWorld.juvix
+    stdin: ":def 1 Nat"
+    stdout:
+      matches: |
+        .*
+    stderr:
+      contains: |
+        :def expects one or more identifiers
+    exit-status: 0
+
+  - name: repl-def-multiple
+    command:
+      - juvix
+      - repl
+      - ../examples/milestone/HelloWorld/HelloWorld.juvix
+    stdin: ":def + (+) (((+)))"
+    stdout:
+      contains: |
+        --- Addition for ;Nat;s.
+        builtin nat-plus + : Nat → Nat → Nat;
+        + zero b := b;
+        + (suc a) b := suc (a + b);
+    exit-status: 0
+
+  - name: repl-def-infix
+    command:
+      - juvix
+      - repl
+      - ../examples/milestone/HelloWorld/HelloWorld.juvix
+    stdin: ":def +"
+    stdout:
+      contains: |
+        --- Addition for ;Nat;s.
+        builtin nat-plus + : Nat → Nat → Nat;
+        + zero b := b;
+        + (suc a) b := suc (a + b);
+    exit-status: 0
+
   - name: open
     command:
       - juvix
@@ -369,4 +447,13 @@ tests:
     stdin: "open import Stdlib.Data.Int.Ord\n1 == 1"
     stdout:
       contains: "true"
+    exit-status: 0
+
+  - name: infix-constructors
+    command:
+      - juvix
+      - repl
+    stdin: "(::) :: nil {Nat -> List Nat -> List Nat}"
+    stdout:
+      contains: "(::) :: nil"
     exit-status: 0

@@ -49,7 +49,7 @@ instance ToGenericError MegaparsecError where
     return
       GenericError
         { _genericErrorLoc = i,
-          _genericErrorMessage = AnsiText $ pretty @_ @AnsiStyle e,
+          _genericErrorMessage = mkAnsiText $ pretty @_ @AnsiStyle e,
           _genericErrorIntervals = [i]
         }
     where
@@ -67,7 +67,7 @@ instance ToGenericError TopModulePathError where
     return
       GenericError
         { _genericErrorLoc = i,
-          _genericErrorMessage = AnsiText msg,
+          _genericErrorMessage = mkAnsiText msg,
           _genericErrorIntervals = [i]
         }
     where
@@ -130,7 +130,7 @@ instance ToGenericError DanglingJudoc where
     return
       GenericError
         { _genericErrorLoc = i,
-          _genericErrorMessage = AnsiText msg,
+          _genericErrorMessage = mkAnsiText msg,
           _genericErrorIntervals = [i]
         }
     where

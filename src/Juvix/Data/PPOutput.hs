@@ -18,4 +18,4 @@ instance HasTextBackend PPOutput where
   toTextStream (PPOutput o) = layoutPretty defaultLayoutOptions (unAnnotate o)
 
 ppOutput :: Doc Ann -> AnsiText
-ppOutput = AnsiText . PPOutput
+ppOutput = mkAnsiText . PPOutput

@@ -88,6 +88,9 @@ kwSemicolon = asciiKw Str.semicolon
 kwSyntax :: Keyword
 kwSyntax = asciiKw Str.syntax
 
+kwIterator :: Keyword
+kwIterator = asciiKw Str.iterator
+
 kwPipe :: Keyword
 kwPipe = asciiKw Str.pipe
 

@@ -29,6 +29,7 @@ import Juvix.Data.Keyword.All
     kwInfix,
     kwInfixl,
     kwInfixr,
+    kwIterator,
     kwLambda,
     kwLet,
     kwMapsTo,
@@ -88,5 +89,6 @@ nonKeywords =
     kwInfix,
     kwInfixl,
     kwInfixr,
-    kwPostfix
+    kwPostfix,
+    kwIterator
   ]

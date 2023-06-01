@@ -13,10 +13,10 @@ import Juvix.Data.PPOutput
 import Prettyprinter.Render.Terminal qualified as Ansi
 
 ppOutDefault :: (HasAtomicity c, PrettyCode c) => c -> AnsiText
-ppOutDefault = AnsiText . PPOutput . doc defaultOptions
+ppOutDefault = mkAnsiText . PPOutput . doc defaultOptions
 
 ppOut :: (CanonicalProjection a Options, HasAtomicity c, PrettyCode c) => a -> c -> AnsiText
-ppOut o = AnsiText . PPOutput . doc (project o)
+ppOut o = mkAnsiText . PPOutput . doc (project o)
 
 ppTrace' :: (CanonicalProjection a Options, HasAtomicity c, PrettyCode c) => a -> c -> Text
 ppTrace' opts = Ansi.renderStrict . reAnnotateS stylize . layoutPretty defaultLayoutOptions . doc (project opts)
@@ -28,5 +28,5 @@ ppPrint :: (HasAtomicity c, PrettyCode c) => c -> Text
 ppPrint = show . ppOutDefault
 
 ppPrintLisp :: Text -> Text -> Morphism -> Object -> Text
-ppPrintLisp packageName entryName morph obj =
-  show $ AnsiText $ PPOutput $ docLisp defaultOptions packageName entryName morph obj
+ppPrintLisp packageName entryName morph =
+  show . mkAnsiText . PPOutput . docLisp defaultOptions packageName entryName morph

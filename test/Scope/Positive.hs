@@ -27,10 +27,10 @@ root :: Path Abs Dir
 root = relToProject $(mkRelDir "tests/positive")
 
 renderCodeOld :: M.PrettyCode c => c -> Text
-renderCodeOld = prettyText . M.ppOutDefault
+renderCodeOld = toPlainText . M.ppOutDefault
 
 renderCodeNew :: (HasLoc c, P.PrettyPrint c) => c -> Text
-renderCodeNew = prettyText . P.ppOutDefault emptyComments
+renderCodeNew = toPlainText . P.ppOutDefault emptyComments
 
 testDescr :: PosTest -> [TestDescr]
 testDescr PosTest {..} = helper renderCodeOld "" : [helper renderCodeNew " (with comments)"]
@@ -234,5 +234,13 @@ tests =
     PosTest
       "Import as open"
       $(mkRelDir "ImportAsOpen")
-      $(mkRelFile "Main.juvix")
+      $(mkRelFile "Main.juvix"),
+    PosTest
+      "Iterators"
+      $(mkRelDir ".")
+      $(mkRelFile "Iterators.juvix"),
+    PosTest
+      "Format pragma"
+      $(mkRelDir ".")
+      $(mkRelFile "FormatPragma.juvix")
   ]

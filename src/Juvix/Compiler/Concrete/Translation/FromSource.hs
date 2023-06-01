@@ -14,7 +14,7 @@ import Data.Yaml
 import Juvix.Compiler.Concrete.Data.Highlight.Input (HighlightBuilder, ignoreHighlightBuilder)
 import Juvix.Compiler.Concrete.Data.ParsedInfoTable
 import Juvix.Compiler.Concrete.Data.ParsedInfoTableBuilder
-import Juvix.Compiler.Concrete.Extra (MonadParsec (takeWhile1P))
+import Juvix.Compiler.Concrete.Extra (takeWhile1P)
 import Juvix.Compiler.Concrete.Extra qualified as P
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver
@@ -279,15 +279,22 @@ stashPragmas = do
   P.lift (put (Just pragmas))
   where
     parsePragmas :: ParsecS r (WithSource Pragmas)
-    parsePragmas = do
-      void (P.chunk Str.pragmasStart)
-      off <- P.getOffset
-      str <- P.manyTill P.anySingle (P.chunk Str.pragmasEnd)
-      space
-      let bs = BS.fromString str
-      case decodeEither' bs of
-        Left err -> parseFailure off (prettyPrintParseException err)
-        Right pragmas -> return $ WithSource (fromString str) pragmas
+    parsePragmas = parseYaml Str.pragmasStart Str.pragmasEnd
+
+parseYaml :: (Member InfoTableBuilder r, FromJSON a) => Text -> Text -> ParsecS r (WithSource a)
+parseYaml l r = do
+  void (P.chunk l)
+  off <- P.getOffset
+  str <- P.manyTill P.anySingle (P.chunk r)
+  let str' =
+        if
+            | elem '\n' str -> str
+            | otherwise -> '{' : str ++ "}"
+  space
+  let bs = BS.fromString str'
+  case decodeEither' bs of
+    Left err -> parseFailure off (prettyPrintParseException err)
+    Right yaml -> return $ WithSource (fromString str) yaml
 
 stashJudoc :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r ()
 stashJudoc = do
@@ -451,8 +458,9 @@ builtinStatement = do
 
 syntaxDef :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r SyntaxDef
 syntaxDef = do
-  s <- kw kwSyntax
-  SyntaxOperator <$> operatorSyntaxDef s
+  syn <- kw kwSyntax
+  (SyntaxOperator <$> operatorSyntaxDef syn)
+    <|> (SyntaxIterator <$> iteratorSyntaxDef syn)
 
 --------------------------------------------------------------------------------
 -- Operator syntax declaration
@@ -475,6 +483,17 @@ operatorSyntaxDef _opSyntaxKw = do
         <|> (Binary AssocLeft,) <$> kw kwInfixl
         <|> (Binary AssocNone,) <$> kw kwInfix
         <|> (Unary AssocPostfix,) <$> kw kwPostfix
+
+--------------------------------------------------------------------------------
+-- Iterator syntax declaration
+--------------------------------------------------------------------------------
+
+iteratorSyntaxDef :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => KeywordRef -> ParsecS r IteratorSyntaxDef
+iteratorSyntaxDef _iterSyntaxKw = do
+  _iterIteratorKw <- kw kwIterator
+  _iterSymbol <- symbol
+  _iterAttribs <- optional (withLoc (parseYaml "{" "}"))
+  return IteratorSyntaxDef {..}
 
 --------------------------------------------------------------------------------
 -- Import statement
@@ -519,6 +538,7 @@ expressionAtom :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdG
 expressionAtom =
   P.label "<expression>" $
     AtomLiteral <$> P.try literal
+      <|> (AtomIterator <$> iterator)
       <|> (AtomIdentifier <$> name)
       <|> (AtomUniverse <$> universe)
       <|> (AtomLambda <$> lambda)
@@ -536,6 +556,62 @@ parseExpressionAtoms ::
 parseExpressionAtoms = do
   (_expressionAtoms, _expressionAtomsLoc) <- interval (P.some expressionAtom)
   return ExpressionAtoms {..}
+
+--------------------------------------------------------------------------------
+-- Iterators
+--------------------------------------------------------------------------------
+
+iterator ::
+  forall r.
+  (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
+  ParsecS r (Iterator 'Parsed)
+iterator = do
+  (isInit, _iteratorName, pat) <- P.try $ do
+    n <- name
+    lparen
+    pat <- parsePatternAtoms
+    b <- (kw kwAssign >> return True) <|> (kw kwIn >> return False)
+    return (b, n, pat)
+  val <- parseExpressionAtoms
+  _iteratorInitializers <-
+    if
+        | isInit -> do
+            inis <- many (semicolon >> initializer)
+            rparen
+            return (Initializer pat val : inis)
+        | otherwise -> return []
+  _iteratorRanges <-
+    if
+        | not isInit -> do
+            rngs <- many (semicolon >> range)
+            rparen
+            return (Range pat val : rngs)
+        | otherwise -> fmap (maybe [] toList) $ optional $ do
+            lparen
+            rngs <- P.sepBy1 range semicolon
+            rparen
+            return rngs
+  _iteratorBody <- parseExpressionAtoms
+  let _iteratorParens = False
+  return Iterator {..}
+  where
+    initializer :: ParsecS r (Initializer 'Parsed)
+    initializer = do
+      _initializerPattern <- P.try $ do
+        pat <- parsePatternAtoms
+        kw kwAssign
+        return pat
+      _initializerExpression <- parseExpressionAtoms
+      return Initializer {..}
+
+    range :: ParsecS r (Range 'Parsed)
+    range = do
+      _rangePattern <- P.try $ do
+        pat <- parsePatternAtoms
+        kw kwIn
+        return pat
+      _rangeExpression <- parseExpressionAtoms
+      return Range {..}
 
 --------------------------------------------------------------------------------
 -- Holes

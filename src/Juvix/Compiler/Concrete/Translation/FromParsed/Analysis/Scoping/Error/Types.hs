@@ -223,6 +223,37 @@ instance ToGenericError DuplicateFixity where
               sym = _dupFixityFirst ^. opSymbol
               locs = vsep $ map (pretty . getLoc) [_dupFixityFirst, _dupFixityFirst]
 
+data DuplicateIterator = DuplicateIterator
+  { _dupIteratorFirst :: IteratorSyntaxDef,
+    _dupIteratorSecond :: IteratorSyntaxDef
+  }
+  deriving stock (Show)
+
+instance ToGenericError DuplicateIterator where
+  genericError DuplicateIterator {..} = ask >>= generr
+    where
+      generr opts =
+        return
+          GenericError
+            { _genericErrorLoc = i2,
+              _genericErrorMessage = prettyError msg,
+              _genericErrorIntervals = [i1, i2]
+            }
+        where
+          opts' = fromGenericOptions opts
+          i1 = getLoc _dupIteratorFirst
+          i2 = getLoc _dupIteratorSecond
+
+          msg =
+            "Multiple iterator declarations for symbol"
+              <+> ppCode opts' sym
+                <> ":"
+                <> line
+                <> indent' (align locs)
+            where
+              sym = _dupIteratorFirst ^. iterSymbol
+              locs = vsep $ map (pretty . getLoc) [_dupIteratorFirst, _dupIteratorFirst]
+
 data MultipleExportConflict = MultipleExportConflict
   { _multipleExportModule :: S.AbsModulePath,
     _multipleExportSymbol :: Symbol,
@@ -365,6 +396,29 @@ instance ToGenericError UnusedOperatorDef where
             "Unused operator syntax definition:"
               <> line
               <> ppCode opts' _unusedOperatorDef
+
+newtype UnusedIteratorDef = UnusedIteratorDef
+  { _unusedIteratorDef :: IteratorSyntaxDef
+  }
+  deriving stock (Show)
+
+instance ToGenericError UnusedIteratorDef where
+  genericError UnusedIteratorDef {..} = ask >>= generr
+    where
+      generr opts =
+        return
+          GenericError
+            { _genericErrorLoc = i,
+              _genericErrorMessage = prettyError msg,
+              _genericErrorIntervals = [i]
+            }
+        where
+          opts' = fromGenericOptions opts
+          i = getLoc _unusedIteratorDef
+          msg =
+            "Unused iterator syntax definition:"
+              <> line
+              <> ppCode opts' _unusedIteratorDef
 
 data AmbiguousSym = AmbiguousSym
   { _ambiguousSymName :: Name,
@@ -602,7 +656,7 @@ instance ToGenericError CaseBranchImplicitPattern where
     return
       GenericError
         { _genericErrorLoc = i,
-          _genericErrorMessage = AnsiText msg,
+          _genericErrorMessage = mkAnsiText msg,
           _genericErrorIntervals = [i]
         }
     where
@@ -627,9 +681,65 @@ instance ToGenericError ModuleDoesNotExportSymbol where
     return
       GenericError
         { _genericErrorLoc = i,
-          _genericErrorMessage = AnsiText msg,
+          _genericErrorMessage = mkAnsiText msg,
           _genericErrorIntervals = [i]
         }
     where
       i :: Interval
       i = getLoc _moduleDoesNotExportSymbol
+
+newtype IteratorInitializer = IteratorInitializer
+  { _iteratorInitializerIterator :: Iterator 'Parsed
+  }
+  deriving stock (Show)
+
+instance ToGenericError IteratorInitializer where
+  genericError IteratorInitializer {..} = do
+    return
+      GenericError
+        { _genericErrorLoc = i,
+          _genericErrorMessage = mkAnsiText ("Wrong number of iterator initializers" :: Doc Ann),
+          _genericErrorIntervals = [i]
+        }
+    where
+      i :: Interval
+      i = getLoc _iteratorInitializerIterator
+
+newtype IteratorRange = IteratorRange
+  { _iteratorRangeIterator :: Iterator 'Parsed
+  }
+  deriving stock (Show)
+
+instance ToGenericError IteratorRange where
+  genericError IteratorRange {..} = do
+    return
+      GenericError
+        { _genericErrorLoc = i,
+          _genericErrorMessage = mkAnsiText ("Wrong number of iterator ranges" :: Doc Ann),
+          _genericErrorIntervals = [i]
+        }
+    where
+      i :: Interval
+      i = getLoc _iteratorRangeIterator
+
+newtype IteratorUndefined = IteratorUndefined
+  { _iteratorUndefinedIterator :: Iterator 'Parsed
+  }
+  deriving stock (Show)
+
+instance ToGenericError IteratorUndefined where
+  genericError IteratorUndefined {..} = do
+    opts <- fromGenericOptions <$> ask
+    let msg =
+          "The identifier"
+            <+> ppCode opts (_iteratorUndefinedIterator ^. iteratorName)
+            <+> "has not been declared as an iterator"
+    return
+      GenericError
+        { _genericErrorLoc = i,
+          _genericErrorMessage = mkAnsiText msg,
+          _genericErrorIntervals = [i]
+        }
+    where
+      i :: Interval
+      i = getLoc _iteratorUndefinedIterator

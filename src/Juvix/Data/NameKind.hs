@@ -31,14 +31,20 @@ instance HasNameKind NameKind where
   getNameKind = id
 
 instance Pretty NameKind where
-  pretty = \case
-    KNameConstructor -> "constructor"
-    KNameInductive -> "inductive type"
-    KNameFunction -> "function"
-    KNameLocal -> "variable"
-    KNameAxiom -> "axiom"
-    KNameLocalModule -> "local module"
-    KNameTopModule -> "module"
+  pretty = pretty . nameKindText
+
+nameKindWithArticle :: NameKind -> Text
+nameKindWithArticle = withArticle . nameKindText
+
+nameKindText :: NameKind -> Text
+nameKindText = \case
+  KNameConstructor -> "constructor"
+  KNameInductive -> "inductive type"
+  KNameFunction -> "function"
+  KNameLocal -> "variable"
+  KNameAxiom -> "axiom"
+  KNameLocalModule -> "local module"
+  KNameTopModule -> "module"
 
 isLocallyBounded :: (HasNameKind a) => a -> Bool
 isLocallyBounded k = case getNameKind k of
@@ -73,6 +79,16 @@ canHaveFixity k = case getNameKind k of
   KNameInductive -> True
   KNameFunction -> True
   KNameAxiom -> True
+  KNameLocal -> False
+  KNameLocalModule -> False
+  KNameTopModule -> False
+
+canBeIterator :: (HasNameKind a) => a -> Bool
+canBeIterator k = case getNameKind k of
+  KNameFunction -> True
+  KNameAxiom -> True
+  KNameConstructor -> False
+  KNameInductive -> False
   KNameLocal -> False
   KNameLocalModule -> False
   KNameTopModule -> False

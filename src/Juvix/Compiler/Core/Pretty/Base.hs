@@ -558,7 +558,7 @@ instance (PrettyCode a) => PrettyCode [a] where
 
 goBinary :: Member (Reader Options) r => Fixity -> Doc Ann -> [Value] -> Sem r (Doc Ann)
 goBinary fixity name = \case
-  [] -> return name
+  [] -> return (parens name)
   [arg] -> do
     arg' <- ppRightExpression appFixity arg
     return $ parens name <+> arg'
@@ -571,7 +571,7 @@ goBinary fixity name = \case
 
 goUnary :: Member (Reader Options) r => Fixity -> Doc Ann -> [Value] -> Sem r (Doc Ann)
 goUnary fixity name = \case
-  [] -> return name
+  [] -> return (parens name)
   [arg] -> do
     arg' <- ppPostExpression fixity arg
     return $ arg' <+> name
@@ -597,7 +597,8 @@ instance PrettyCode Value where
     ValueConstrApp x -> ppCode x
     ValueConstant c -> ppCode c
     ValueWildcard -> return "_"
-    ValueFun -> return "<fun>"
+    ValueFun -> return "<function>"
+    ValueType -> return "<type>"
 
 ppValueSequence :: Member (Reader Options) r => [Value] -> Sem r (Doc Ann)
 ppValueSequence vs = hsep <$> mapM (ppRightExpression appFixity) vs

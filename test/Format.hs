@@ -20,7 +20,7 @@ root :: Path Abs Dir
 root = relToProject $(mkRelDir "tests/positive")
 
 renderCode :: (HasLoc a, P.PrettyPrint a) => P.Comments -> a -> Text
-renderCode c = prettyText . P.ppOutDefault c
+renderCode c = toPlainText . P.ppOutDefault c
 
 posTest :: String -> Path Rel Dir -> Path Rel File -> PosTest
 posTest _name rdir rfile =
