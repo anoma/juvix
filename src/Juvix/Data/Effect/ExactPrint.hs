@@ -95,6 +95,9 @@ rbrace = noLoc C.kwBraceR
 bracesIndent :: Members '[ExactPrint] r => Sem r () -> Sem r ()
 bracesIndent = braces . blockIndent
 
+colon :: Members '[ExactPrint] r => Sem r ()
+colon = noLoc C.kwColon
+
 semicolon :: Members '[ExactPrint] r => Sem r ()
 semicolon = noLoc C.kwSemicolon
 
@@ -103,6 +106,9 @@ blockIndent d = hardline <> indent d <> line
 
 sepSemicolon :: (Members '[ExactPrint] r, Foldable l) => l (Sem r ()) -> Sem r ()
 sepSemicolon = sequenceWith (semicolon <> space)
+
+dotted :: (Foldable f, Members '[ExactPrint] r) => f (Sem r ()) -> Sem r ()
+dotted = sequenceWith (noLoc C.kwDot)
 
 sepEndSemicolon :: (Members '[ExactPrint] r, Functor l) => l (Sem r ()) -> l (Sem r ())
 sepEndSemicolon = fmap (>> semicolon)
@@ -121,6 +127,9 @@ vsep2 = sequenceWith (line >> line)
 
 enclose1 :: Monad m => m () -> m () -> m ()
 enclose1 lr = enclose lr lr
+
+surround :: Monad m => m () -> m () -> m () -> m ()
+surround x l r = enclose l r x
 
 enclose :: Monad m => m () -> m () -> m () -> m ()
 enclose l r p = l >> p >> r
