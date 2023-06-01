@@ -204,9 +204,10 @@ topModuleDef = do
 replInput :: forall r. Members '[Files, PathResolver, InfoTableBuilder, JudocStash, NameIdGen, Error ParserError, State (Maybe ParsedPragmas)] r => ParsecS r ReplInput
 replInput =
   P.label "<repl input>" $
-    (ReplExpression <$> parseExpressionAtoms)
-      <|> (ReplImport <$> import_)
-      <|> (ReplOpenImport <$> openModule)
+    ReplExpression <$> parseExpressionAtoms
+      <|> P.try (ReplOpenImport <$> newOpenSyntax)
+      <|> ReplImport <$> import_
+      <|> ReplOpenImport <$> openModule
 
 --------------------------------------------------------------------------------
 -- Symbols and names
