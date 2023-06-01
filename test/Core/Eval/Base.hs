@@ -89,15 +89,13 @@ coreEvalAssertion' mode tab mainFile expectedFile step =
     mkArg :: Type -> Text -> Node
     mkArg ty arg =
       let n = fst $ fromRight' $ decimal arg
-       in if
-              | isTypeBool ty ->
-                  if
-                      | n == 0 -> mkConstr' (BuiltinTag TagFalse) []
-                      | otherwise -> mkConstr' (BuiltinTag TagTrue) []
-              | otherwise -> mkConstant' (ConstInteger n)
+       in case (isTypeBool ty, n) of
+            (True, 0) -> mkConstr' (BuiltinTag TagFalse) []
+            (True, _) -> mkConstr' (BuiltinTag TagTrue) []
+            (False, _) -> mkConstant' (ConstInteger n)
 
     readEvalData :: [Maybe Text] -> IO (Either String EvalData)
-    readEvalData argnames = case mode of
+    readEvalData = case mode of
       EvalModePlain -> do
         expected <- TIO.readFile (toFilePath expectedFile)
         return $
