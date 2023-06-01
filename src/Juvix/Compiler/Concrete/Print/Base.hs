@@ -8,8 +8,6 @@ where
 import Data.List.NonEmpty.Extra qualified as NonEmpty
 import Juvix.Compiler.Concrete.Data.InfoTable
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
--- import Juvix.Compiler.Concrete.Pretty.Base qualified as P
-
 import Juvix.Compiler.Concrete.Extra qualified as Concrete
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Pretty.Options

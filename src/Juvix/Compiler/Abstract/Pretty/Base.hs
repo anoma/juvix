@@ -7,7 +7,7 @@ where
 
 import Juvix.Compiler.Abstract.Extra
 import Juvix.Compiler.Abstract.Pretty.Options
-import Juvix.Compiler.Concrete.Pretty.Base qualified as S
+import Juvix.Compiler.Concrete.Print.Base qualified as S
 import Juvix.Data.CodeAnn
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude
@@ -27,10 +27,10 @@ toSOptions Options {..} =
 class PrettyCode c where
   ppCode :: (Members '[Reader Options] r) => c -> Sem r (Doc Ann)
 
-ppSCode :: (Members '[Reader Options] r, S.PrettyCode c) => c -> Sem r (Doc Ann)
+ppSCode :: (Members '[Reader Options] r, S.PrettyPrint c) => c -> Sem r (Doc Ann)
 ppSCode c = do
   opts <- asks toSOptions
-  return $ S.doc opts c
+  return (S.docNoComments opts c)
 
 ppDefault :: (PrettyCode c) => c -> Doc Ann
 ppDefault = runPrettyCode defaultOptions
