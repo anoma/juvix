@@ -70,10 +70,10 @@ instance PrettyCode Function where
 
 ppEquation :: Function -> Sem r (Doc Ann)
 ppEquation Function {..} = do
-  let n = length _functionArguments
-      args = if n == 1 then ["(in + 0)"] else map (\k -> "(in" <> show k <> " + 0)") [1 .. n]
+  let args = map (\arg -> "(" <> pretty arg <> " + 0)") _functionInputs
+      out = pretty _functionOutput
   fn <- ppName KNameFunction _functionName
-  return $ fn <+> hsep args <+> kwEq <+> "(out + 0)" <> semi
+  return $ fn <+> hsep args <+> kwEq <+> "(" <> out <> " + 0)" <> semi
 
 instance PrettyCode Program where
   ppCode Program {..} = do
