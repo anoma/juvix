@@ -17,6 +17,8 @@ newtype PragmaUnroll = PragmaUnroll
 
 newtype PragmaArgNames = PragmaArgNames
   { _pragmaArgNames :: [Text]
+  }
+  deriving stock (Show, Eq, Ord, Data, Generic)
 
 newtype PragmaFormat = PragmaFormat
   { _pragmaFormat :: Bool
@@ -77,7 +79,7 @@ instance FromJSON Pragmas where
         _pragmaUnrollDepth <- asIntegral
         return PragmaUnroll {..}
 
-      parseArgNames :: Parse PragmaError PragmaArgNames
+      parseArgNames :: Parse YamlError PragmaArgNames
       parseArgNames = do
         _pragmaArgNames <- eachInArray asText
         return PragmaArgNames {..}
