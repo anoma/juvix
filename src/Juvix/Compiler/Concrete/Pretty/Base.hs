@@ -441,7 +441,7 @@ instance SingI s => PrettyCode (JudocBlock s) where
 
 instance (SingI s) => PrettyCode (JudocLine s) where
   ppCode (JudocLine deli atoms) = do
-    start' <- fmap (<> " ") <$> mapM ppCode deli
+    start' <- mapM ppCode deli
     atoms' <- mconcatMap ppCode atoms
     return (start' <?+> atoms')
 

@@ -81,7 +81,7 @@ judocBlockStart :: Members '[InfoTableBuilder] r => ParsecS r KeywordRef
 judocBlockStart = kwBare delimJudocBlockStart
 
 judocStart :: Members '[InfoTableBuilder] r => ParsecS r KeywordRef
-judocStart = kw delimJudocStart <* hspace_
+judocStart = kwBare delimJudocStart <* hspace_
 
 -- | Does not consume space after it
 kwBare :: Member InfoTableBuilder r => Keyword -> ParsecS r KeywordRef

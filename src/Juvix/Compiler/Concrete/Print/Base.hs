@@ -500,7 +500,7 @@ instance SingI s => PrettyPrint (JudocAtom s) where
 instance SingI s => PrettyPrint (JudocLine s) where
   ppCode :: forall r. Members '[ExactPrint, Reader Options] r => JudocLine s -> Sem r ()
   ppCode (JudocLine deli atoms) = do
-    let start' :: Maybe (Sem r ()) = (<> space) <$> fmap ppCode deli
+    let start' :: Maybe (Sem r ()) = ppCode <$> deli
         atoms' = mapM_ ppCode atoms
     start' <?+> atoms'
 
@@ -536,7 +536,7 @@ instance SingI s => PrettyPrint (JudocGroup s) where
       goLines blocks = sequenceWith blockSep (fmap ppCode blocks)
         where
           blockSep :: Sem r ()
-          blockSep = line >> ppJudocStart >> line
+          blockSep = hardline >> ppJudocStart >> hardline
 
 instance SingI s => PrettyPrint (JudocBlock s) where
   ppCode = \case
