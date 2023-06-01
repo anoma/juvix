@@ -66,7 +66,7 @@ lineOrEmpty :: Members '[ExactPrint] r => Sem r ()
 lineOrEmpty = noLoc P.line'
 
 grouped :: Members '[ExactPrint] r => Sem r () -> Sem r ()
-grouped = region (P.group)
+grouped = region P.group
 
 nest :: Members '[ExactPrint] r => Sem r () -> Sem r ()
 nest = region (P.nest 2)
@@ -99,7 +99,7 @@ semicolon :: Members '[ExactPrint] r => Sem r ()
 semicolon = noLoc C.kwSemicolon
 
 blockIndent :: Members '[ExactPrint] r => Sem r () -> Sem r ()
-blockIndent d = line <> indent d <> line
+blockIndent d = hardline <> indent d <> line
 
 endSemicolon :: (Members '[ExactPrint] r, Functor l) => l (Sem r ()) -> l (Sem r ())
 endSemicolon = fmap (>> semicolon)

@@ -298,7 +298,7 @@ ppLiteral = \case
 
 instance SingI s => PrettyPrint (LambdaClause s) where
   ppCode LambdaClause {..} = do
-    let lambdaParameters' = hsep (ppPatternType <$> _lambdaParameters)
+    let lambdaParameters' = hsep (ppPatternAtom <$> _lambdaParameters)
         lambdaBody' = ppExpressionType _lambdaBody
     lambdaParameters' <+> ppCode kwAssign <> oneLineOrNext lambdaBody'
 
@@ -687,19 +687,25 @@ instance SingI s => PrettyPrint (FunctionClause s) where
     let clauseFun' = ppSymbolType _clauseOwnerFunction
         clausePatterns' = case nonEmpty _clausePatterns of
           Nothing -> Nothing
-          Just ne -> Just (hsep (ppPatternType <$> ne))
+          Just ne -> Just (hsep (ppPatternAtom <$> ne))
         clauseBody' = ppExpressionType _clauseBody
     clauseFun'
       <+?> clausePatterns'
       <+> noLoc P.kwAssign
         <> oneLineOrNext clauseBody'
 
--- TODO was this necessary??
--- instance PrettyPrint PatternArg where
---   ppCode pat =
---     case pat ^. patternArgPattern of
---       PatternVariable s | s ^. S.nameVerbatim == "=" -> parens (ppAtom pat)
---       _ -> ppAtom pat
+ppCodeAtom :: (HasAtomicity c, PrettyPrint c) => PrettyPrinting c
+ppCodeAtom c = do
+  let p' = ppCode c
+  if isAtomic c then p' else parens p'
+
+ppPatternAtom :: forall s. SingI s => PrettyPrinting (PatternType s)
+ppPatternAtom = case sing :: SStage s of
+  SParsed -> ppCodeAtom
+  SScoped -> \pat ->
+    case pat ^. patternArgPattern of
+      PatternVariable s | s ^. S.nameVerbatim == "=" -> parens (ppCodeAtom pat)
+      _ -> ppCodeAtom pat
 
 instance SingI s => PrettyPrint (InductiveParameters s) where
   ppCode InductiveParameters {..} = do
