@@ -32,7 +32,8 @@ tests:
     stdout:
       contains: |
         --- Inductive natural numbers. I.e. whole non-negative numbers.
-        builtin nat type Nat :=
+        builtin nat
+        type Nat :=
           | zero : Nat
           | suc : Nat → Nat
     exit-status: 0
@@ -60,7 +61,8 @@ tests:
     stdout:
       contains: |
         --- Addition for ;Nat;s.
-        builtin nat-plus + : Nat → Nat → Nat;
+        builtin nat-plus
+        + : Nat → Nat → Nat;
         + zero b := b;
         + (suc a) b := suc (a + b);
     exit-status: 0
@@ -74,7 +76,8 @@ tests:
     stdout:
       contains: |
         --- Addition for ;Nat;s.
-        builtin nat-plus + : Nat → Nat → Nat;
+        builtin nat-plus
+        + : Nat → Nat → Nat;
         + zero b := b;
         + (suc a) b := suc (a + b);
     exit-status: 0
