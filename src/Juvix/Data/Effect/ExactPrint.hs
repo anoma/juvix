@@ -93,7 +93,7 @@ rbrace :: Members '[ExactPrint] r => Sem r ()
 rbrace = noLoc C.kwBraceR
 
 bracesIndent :: Members '[ExactPrint] r => Sem r () -> Sem r ()
-bracesIndent d = braces (line <> indent d <> line)
+bracesIndent = braces . blockIndent
 
 semicolon :: Members '[ExactPrint] r => Sem r ()
 semicolon = noLoc C.kwSemicolon

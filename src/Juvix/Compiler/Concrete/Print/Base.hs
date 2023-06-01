@@ -416,7 +416,7 @@ ppBlock :: (PrettyPrint a, Members '[Reader Options, ExactPrint] r, Traversable 
 ppBlock items = vsep (endSemicolon (fmap ppCode items))
 
 ppPipeBlock :: (PrettyPrint a, Members '[Reader Options, ExactPrint] r, Traversable t) => t a -> Sem r ()
-ppPipeBlock items = vsep (fmap ((ppCode kwPipe <+>) . ppCode) items)
+ppPipeBlock items = vsepHard (fmap ((ppCode kwPipe <+>) . ppCode) items)
 
 instance SingI s => PrettyPrint (Lambda s) where
   ppCode Lambda {..} = do

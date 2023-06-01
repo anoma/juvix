@@ -13,9 +13,9 @@ isNull' :
   {A : Type} → List A → Bool :=
     let
       aux :
-          {A : Type} → List A → Bool :=
-            λ {
-              | nil := true
-              | _ := false
-            };
+        {A : Type} → List A → Bool :=
+          λ {
+            | nil := true
+            | _ := false
+          };
     in aux;
