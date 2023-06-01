@@ -128,6 +128,12 @@ ppPatternAtType = case sing :: SStage s of
   SParsed -> ppCode
   SScoped -> ppCode
 
+instance PrettyPrint S.AbsModulePath where
+  ppCode S.AbsModulePath {..} = do
+    let absLocalPath' = ppCode <$> _absLocalPath
+        absTopModulePath' = ppCode _absTopModulePath
+    dotted (absTopModulePath' : absLocalPath')
+
 instance PrettyPrint PatternBinding where
   ppCode PatternBinding {..} = do
     let n' = ppSymbolType _patternBindingName
@@ -479,6 +485,9 @@ instance PrettyPrint OperatorSyntaxDef where
       fi = do
         let p = ppCode (_opFixity ^. fixityPrecedence)
         ppCode _opSyntaxKw <+> ppCode _opKw <+> p
+
+instance PrettyPrint PatternApp where
+  ppCode = apeHelper
 
 instance PrettyPrint Application where
   ppCode = apeHelper
@@ -832,3 +841,24 @@ instance SingI s => PrettyPrint (Statement s) where
     StatementOpenModule o -> ppCode o
     StatementFunctionClause c -> ppCode c
     StatementAxiom a -> ppCode a
+
+instance PrettyPrint SymbolEntry where
+  ppCode ent =
+    noLoc
+      ( kindWord
+          P.<+> C.code (kindAnn (pretty (entryName ent ^. S.nameVerbatim)))
+          P.<+> "defined at"
+          P.<+> pretty (getLoc ent)
+      )
+    where
+      pretty' :: Text -> Doc a
+      pretty' = pretty
+      (kindAnn :: Doc Ann -> Doc Ann, kindWord :: Doc Ann) = case ent of
+        EntryAxiom {} -> (C.annotateKind S.KNameAxiom, pretty' Str.axiom)
+        EntryInductive {} -> (C.annotateKind S.KNameInductive, pretty' Str.inductive)
+        EntryFunction {} -> (C.annotateKind S.KNameFunction, pretty' Str.function)
+        EntryConstructor {} -> (C.annotateKind S.KNameConstructor, pretty' Str.constructor)
+        EntryVariable {} -> (C.annotateKind S.KNameLocal, pretty' Str.variable)
+        EntryModule (ModuleRef' (isTop :&: _))
+          | SModuleTop <- isTop -> (C.annotateKind S.KNameTopModule, pretty' Str.topModule)
+          | SModuleLocal <- isTop -> (C.annotateKind S.KNameLocalModule, pretty' Str.localModule)

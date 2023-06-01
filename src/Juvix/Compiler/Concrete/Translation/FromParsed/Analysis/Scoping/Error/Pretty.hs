@@ -4,23 +4,17 @@ module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error.Pre
   )
 where
 
-import Juvix.Compiler.Concrete.Pretty.Base qualified as Scoped
+import Juvix.Compiler.Concrete.Print.Base qualified as Scoped
 import Juvix.Data.CodeAnn
 import Juvix.Data.PPOutput
 import Juvix.Prelude
 import Text.EditDistance
 
-ppCode :: (Scoped.PrettyCode c) => Scoped.Options -> c -> Doc Ann
-ppCode opts = runPP opts . Scoped.ppCode
+ppCode :: Scoped.PrettyPrint c => Scoped.Options -> c -> Doc Ann
+ppCode opts = code . ppMessage opts
 
-ppMessage :: (Scoped.PrettyCode c) => Scoped.Options -> c -> Doc Ann
-ppMessage opts = runPP' opts . Scoped.ppCode
-
-runPP' :: Scoped.Options -> Sem '[Reader Scoped.Options] (Doc Scoped.Ann) -> Doc Ann
-runPP' opts = run . runReader opts
-
-runPP :: Scoped.Options -> Sem '[Reader Scoped.Options] (Doc Scoped.Ann) -> Doc Ann
-runPP opts = code . runPP' opts
+ppMessage :: Scoped.PrettyPrint c => Scoped.Options -> c -> Doc Ann
+ppMessage = Scoped.docNoComments
 
 prettyError :: Doc Ann -> AnsiText
 prettyError = mkAnsiText . PPOutput
