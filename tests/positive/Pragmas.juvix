@@ -29,6 +29,6 @@ h : Nat → Nat;
 h x := x + 5;
 
 --- Judoc comment
-{-# {inline: false, unroll: 10, unknownPragma: tratatata} #-}
+{-# inline: false, unroll: 10, unknownPragma: tratatata #-}
 main : Nat;
 main := 0;

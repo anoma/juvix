@@ -1,0 +1,60 @@
+-- Iterators
+module test054;
+
+import Stdlib.Prelude open;
+
+syntax iterator for;
+for : {A B : Type} → (A → B → A) → A → List B → A;
+for := foldl {_} {_};
+
+syntax iterator mymap {init: 0};
+mymap : {A B : Type} → (A → B) → List A → List B;
+mymap f nil := nil;
+mymap f (x :: xs) := f x :: mymap f xs;
+
+sum : List Nat → Nat;
+sum xs := for (acc := 0) (x in xs) acc + x;
+
+sum' : List Nat → Nat;
+sum' xs := for λ {acc x := acc + x} 0 xs;
+
+lst : List Nat;
+lst := 1 :: 2 :: 3 :: 4 :: 5 :: nil;
+
+syntax iterator for2 {init: 1, range: 2};
+for2 :
+  {A B C : Type}
+    → (A → B → C → A)
+    → A
+    → List B
+    → List C
+    → A;
+for2 f acc xs ys :=
+  for (acc' := acc) (x in xs)
+    for (acc'' := acc') (y in ys) f acc'' x y;
+
+syntax iterator myzip2 {init: 2, range: 2};
+myzip2 :
+  {A A' B C : Type}
+    → (A → A' → B → C → A × A')
+    → A
+    → A'
+    → List B
+    → List C
+    → A × A';
+myzip2 f a b xs ys :=
+  for (acc, acc' := a, b) (x, y in zip xs ys)
+    f acc acc' x y;
+
+main : Nat;
+main :=
+  sum lst
+    + sum' lst
+    + fst (for (a, b := 0, 0) (x in lst) b + x, a)
+    + (for2 (acc := 0) (x in lst; y in 1 :: 2 :: nil)
+         acc + x + y)
+    + fst
+      (myzip2 (a := 0; b := 0) (x in lst; y in reverse lst)
+         a + x * y, b + y)
+    + for (a := 0) (x, y in mymap (x in lst) x, x + 1)
+        a + x * y;

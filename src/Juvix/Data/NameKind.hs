@@ -83,6 +83,16 @@ canHaveFixity k = case getNameKind k of
   KNameLocalModule -> False
   KNameTopModule -> False
 
+canBeIterator :: (HasNameKind a) => a -> Bool
+canBeIterator k = case getNameKind k of
+  KNameFunction -> True
+  KNameAxiom -> True
+  KNameConstructor -> False
+  KNameInductive -> False
+  KNameLocal -> False
+  KNameLocalModule -> False
+  KNameTopModule -> False
+
 nameKindAnsi :: NameKind -> AnsiStyle
 nameKindAnsi k = case k of
   KNameConstructor -> colorDull Magenta

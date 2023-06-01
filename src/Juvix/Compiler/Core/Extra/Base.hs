@@ -236,6 +236,16 @@ isTypePrim = \case
   NPrim {} -> True
   _ -> False
 
+isTypeInteger :: Type -> Bool
+isTypeInteger = \case
+  NPrim (TypePrim _ (PrimInteger _)) -> True
+  _ -> False
+
+isTypeBool :: Type -> Bool
+isTypeBool = \case
+  NPrim (TypePrim _ (PrimBool _)) -> True
+  _ -> False
+
 -- | `expandType argtys ty` expands the dynamic target of `ty` to match the
 -- number of arguments with types specified by `argstys`. For example,
 -- `expandType [int, string] (int -> any) = int -> string -> any`.

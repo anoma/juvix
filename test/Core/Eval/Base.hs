@@ -32,23 +32,26 @@ data EvalData = EvalData
 
 makeLenses ''EvalData
 
+type JSONError = Text
+
 instance FromJSON EvalData where
   parseJSON = toAesonParser id parseEvalData
     where
-      parseEvalData :: Parse PragmaError EvalData
+      parseEvalData :: Parse JSONError EvalData
       parseEvalData = do
         _evalDataInput <- parseInputs
-        _evalDataOutput <- key "out" asText
+        mout <- keyMay "out" asText
+        let _evalDataOutput = fromMaybe "true" mout
         return EvalData {..}
 
-      parseInputs :: Parse PragmaError [Text]
+      parseInputs :: Parse JSONError [Text]
       parseInputs = do
         mi <- keyMay "in" asText
         case mi of
           Nothing -> parseInputs' 1
           Just i -> return [i]
 
-      parseInputs' :: Int -> Parse PragmaError [Text]
+      parseInputs' :: Int -> Parse JSONError [Text]
       parseInputs' n = do
         mi <- keyMay ("in" <> show n) asText
         case mi of
@@ -64,7 +67,7 @@ coreEvalAssertion' ::
   Assertion
 coreEvalAssertion' mode tab mainFile expectedFile step =
   length (fromText (ppPrint tab) :: String) `seq`
-    case (tab ^. infoMain) >>= ((tab ^. identContext) HashMap.!?) of
+    case HashMap.lookup sym (tab ^. identContext) of
       Just node -> do
         d <- readEvalData
         case d of
@@ -75,7 +78,8 @@ coreEvalAssertion' mode tab mainFile expectedFile step =
                   let outputFile = dirPath <//> $(mkRelFile "out.out")
                   hout <- openFile (toFilePath outputFile) WriteMode
                   step "Evaluate"
-                  let args = map (mkConstant' . ConstInteger . fst . fromRight' . decimal) _evalDataInput
+                  let tyargs = typeArgs (lookupIdentifierInfo tab sym ^. identifierType)
+                      args = zipWith mkArg (tyargs ++ repeat mkDynamic') _evalDataInput
                       node' = mkApps' node args
                   r' <- doEval mainFile hout tab node'
                   case r' of
@@ -93,6 +97,16 @@ coreEvalAssertion' mode tab mainFile expectedFile step =
               )
       Nothing -> assertFailure ("No main function registered in: " <> toFilePath mainFile)
   where
+    sym = fromJust (tab ^. infoMain)
+
+    mkArg :: Type -> Text -> Node
+    mkArg ty arg =
+      let n = fst $ fromRight' $ decimal arg
+       in case (isTypeBool ty, n) of
+            (True, 0) -> mkConstr' (BuiltinTag TagFalse) []
+            (True, _) -> mkConstr' (BuiltinTag TagTrue) []
+            (False, _) -> mkConstant' (ConstInteger n)
+
     readEvalData :: IO (Either String EvalData)
     readEvalData = case mode of
       EvalModePlain -> do

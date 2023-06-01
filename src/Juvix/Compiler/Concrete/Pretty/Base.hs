@@ -17,6 +17,7 @@ import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Pretty.Options
 import Juvix.Data.Ape
 import Juvix.Data.CodeAnn
+import Juvix.Data.IteratorAttribs
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude
 
@@ -71,6 +72,7 @@ groupStatements = \case
     g a b = case (a, b) of
       (StatementSyntax _, StatementSyntax _) -> True
       (StatementSyntax (SyntaxOperator o), s) -> definesSymbol (o ^. opSymbol) s
+      (StatementSyntax (SyntaxIterator i), s) -> definesSymbol (i ^. iterSymbol) s
       (StatementImport _, StatementImport _) -> True
       (StatementImport i, StatementOpenModule o) -> case sing :: SStage s of
         SParsed -> True
@@ -233,12 +235,19 @@ instance PrettyCode OperatorArity where
 instance PrettyCode SyntaxDef where
   ppCode = \case
     SyntaxOperator op -> ppCode op
+    SyntaxIterator i -> ppCode i
 
 instance PrettyCode OperatorSyntaxDef where
   ppCode OperatorSyntaxDef {..} = do
     opSymbol' <- ppUnkindedSymbol _opSymbol
     opFixity' <- ppCode _opFixity
     return $ kwSyntax <+> opFixity' <+> opSymbol'
+
+instance PrettyCode IteratorSyntaxDef where
+  ppCode IteratorSyntaxDef {..} = do
+    sym <- ppSymbol _iterSymbol
+    attr <- mapM ppCode _iterAttribs
+    return $ kwSyntax <+> kwIterator <+> sym <>? attr
 
 instance (SingI s) => PrettyCode (InductiveConstructorDef s) where
   ppCode InductiveConstructorDef {..} = do
@@ -410,6 +419,11 @@ instance PrettyCode (WithSource Pragmas) where
   ppCode pragma =
     return $
       annotate AnnComment (pretty (Str.pragmasStart <> pragma ^. withSourceText <> Str.pragmasEnd)) <> line
+
+instance PrettyCode (WithSource IteratorAttribs) where
+  ppCode attrib =
+    return $
+      annotate AnnComment (braces (pretty (attrib ^. withSourceText)))
 
 ppJudocStart :: Members '[Reader Options] r => Sem r (Maybe (Doc Ann))
 ppJudocStart = do
@@ -749,6 +763,31 @@ instance PrettyCode Expression where
     ExpressionLiteral l -> ppCode l
     ExpressionFunction f -> ppCode f
     ExpressionCase c -> ppCode c
+    ExpressionIterator i -> ppCode i
+
+instance (SingI s) => PrettyCode (Iterator s) where
+  ppCode Iterator {..} = do
+    n <- ppName _iteratorName
+    is <- mapM ppCode _iteratorInitializers
+    rngs <- mapM ppCode _iteratorRanges
+    let is' = if null is then Nothing else Just (parens (hsep (punctuate semi is)))
+        rngs' = if null rngs then Nothing else Just (parens (hsep (punctuate semi rngs)))
+    b <- ppExpression _iteratorBody
+    return $
+      parensIf _iteratorParens $
+        hang' (n <+?> is' <+?> rngs' <> oneLineOrNextNoIndent b)
+
+instance (SingI s) => PrettyCode (Initializer s) where
+  ppCode Initializer {..} = do
+    n <- ppPatternParensType _initializerPattern
+    e <- ppExpression _initializerExpression
+    return $ n <+> kwAssign <+> e
+
+instance (SingI s) => PrettyCode (Range s) where
+  ppCode Range {..} = do
+    n <- ppPatternParensType _rangePattern
+    e <- ppExpression _rangeExpression
+    return $ n <+> kwIn <+> e
 
 instance PrettyCode Pattern where
   ppCode :: forall r. (Members '[Reader Options] r) => Pattern -> Sem r (Doc Ann)
@@ -823,6 +862,7 @@ instance (SingI s) => PrettyCode (ExpressionAtom s) where
     AtomParens e -> parens <$> ppExpression e
     AtomBraces e -> braces <$> ppExpression (e ^. withLocParam)
     AtomHole w -> ppHole w
+    AtomIterator i -> ppCode i
 
 instance (SingI s) => PrettyCode (ExpressionAtoms s) where
   ppCode as = hsep <$> mapM ppCode (as ^. expressionAtoms)

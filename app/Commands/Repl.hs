@@ -55,6 +55,7 @@ helpTxt =
   :reload                   Reload the currently loaded file
   :type       EXPRESSION    Infer the type of an expression
   :def        IDENTIFIER    Print the definition of the identifier
+  :doc        IDENTIFIER    Print the documentation of the identifier
   :core       EXPRESSION    Translate the expression to JuvixCore
   :multiline                Start a multi-line input. Submit with <Ctrl-D>
   :root                     Print the current project root
@@ -207,13 +208,15 @@ ppConcrete a = do
   return (Concrete.ppOut popts a)
 
 printConcrete :: Concrete.PrettyCode a => a -> Repl ()
-printConcrete = ppConcrete >=> renderOutLn
+printConcrete = ppConcrete >=> renderOut
 
-printDefinition :: String -> Repl ()
-printDefinition input = do
+printConcreteLn :: Concrete.PrettyCode a => a -> Repl ()
+printConcreteLn = ppConcrete >=> renderOutLn
+
+replParseIdentifiers :: String -> Repl (NonEmpty Concrete.ScopedIden)
+replParseIdentifiers input =
   replExpressionUpToScopedAtoms (strip (pack input))
     >>= getIdentifiers
-    >>= printIdentifiers
   where
     getIdentifiers :: Concrete.ExpressionAtoms 'Concrete.Scoped -> Repl (NonEmpty Concrete.ScopedIden)
     getIdentifiers as = mapM getIdentifier (as ^. Concrete.expressionAtoms)
@@ -229,6 +232,62 @@ printDefinition input = do
             err :: Repl a
             err = replError (mkAnsiText @Text ":def expects one or more identifiers")
 
+printDocumentation :: String -> Repl ()
+printDocumentation = replParseIdentifiers >=> printIdentifiers
+  where
+    printIdentifiers :: NonEmpty Concrete.ScopedIden -> Repl ()
+    printIdentifiers (d :| ds) = do
+      printIdentifier d
+      whenJust (nonEmpty ds) $ \ds' -> replNewline >> printIdentifiers ds'
+      where
+        getInfoTable :: Repl Scoped.InfoTable
+        getInfoTable = (^. replContextArtifacts . artifactScopeTable) <$> replGetContext
+
+        printIdentifier :: Concrete.ScopedIden -> Repl ()
+        printIdentifier s = do
+          mdoc <- case s of
+            Concrete.ScopedAxiom a -> getDocAxiom (a ^. Concrete.axiomRefName . Scoped.nameId)
+            Concrete.ScopedInductive a -> getDocInductive (a ^. Concrete.inductiveRefName . Scoped.nameId)
+            Concrete.ScopedVar {} -> return Nothing
+            Concrete.ScopedFunction f -> getDocFunction (f ^. Concrete.functionRefName . Scoped.nameId)
+            Concrete.ScopedConstructor c -> getDocConstructor (c ^. Concrete.constructorRefName . Scoped.nameId)
+          printDoc mdoc
+          where
+            printDoc :: Maybe (Concrete.Judoc 'Concrete.Scoped) -> Repl ()
+            printDoc = \case
+              Nothing -> do
+                s' <- ppConcrete s
+                renderOut (mkAnsiText @Text "No documentation available for ")
+                renderOutLn s'
+              Just ju -> printConcrete ju
+
+            getDocFunction :: Scoped.NameId -> Repl (Maybe (Concrete.Judoc 'Concrete.Scoped))
+            getDocFunction fun = do
+              tbl :: Scoped.InfoTable <- getInfoTable
+              let def :: Scoped.FunctionInfo = tbl ^?! Scoped.infoFunctions . at fun . _Just
+              return (def ^. Scoped.functionInfoType . Concrete.sigDoc)
+
+            getDocInductive :: Scoped.NameId -> Repl (Maybe (Concrete.Judoc 'Concrete.Scoped))
+            getDocInductive ind = do
+              tbl :: Scoped.InfoTable <- (^. replContextArtifacts . artifactScopeTable) <$> replGetContext
+              let def :: Concrete.InductiveDef 'Concrete.Scoped = tbl ^?! Scoped.infoInductives . at ind . _Just . Scoped.inductiveInfoDef
+              return (def ^. Concrete.inductiveDoc)
+
+            getDocAxiom :: Scoped.NameId -> Repl (Maybe (Concrete.Judoc 'Concrete.Scoped))
+            getDocAxiom ax = do
+              tbl :: Scoped.InfoTable <- (^. replContextArtifacts . artifactScopeTable) <$> replGetContext
+              let def :: Concrete.AxiomDef 'Concrete.Scoped = tbl ^?! Scoped.infoAxioms . at ax . _Just . Scoped.axiomInfoDef
+              return (def ^. Concrete.axiomDoc)
+
+            getDocConstructor :: Scoped.NameId -> Repl (Maybe (Concrete.Judoc 'Concrete.Scoped))
+            getDocConstructor c = do
+              tbl :: Scoped.InfoTable <- (^. replContextArtifacts . artifactScopeTable) <$> replGetContext
+              let def :: Scoped.ConstructorInfo = tbl ^?! Scoped.infoConstructors . at c . _Just
+              return (def ^. Scoped.constructorInfoDef . Concrete.constructorDoc)
+
+printDefinition :: String -> Repl ()
+printDefinition = replParseIdentifiers >=> printIdentifiers
+  where
     printIdentifiers :: NonEmpty Concrete.ScopedIden -> Repl ()
     printIdentifiers (d :| ds) = do
       printIdentifier d
@@ -257,21 +316,21 @@ printDefinition input = do
               tbl :: Scoped.InfoTable <- getInfoTable
               let def :: Scoped.FunctionInfo = tbl ^?! Scoped.infoFunctions . at fun . _Just
               printLocation def
-              printConcrete def
+              printConcreteLn def
 
             printInductive :: Scoped.NameId -> Repl ()
             printInductive ind = do
               tbl :: Scoped.InfoTable <- (^. replContextArtifacts . artifactScopeTable) <$> replGetContext
               let def :: Concrete.InductiveDef 'Concrete.Scoped = tbl ^?! Scoped.infoInductives . at ind . _Just . Scoped.inductiveInfoDef
               printLocation def
-              printConcrete def
+              printConcreteLn def
 
             printAxiom :: Scoped.NameId -> Repl ()
             printAxiom ax = do
               tbl :: Scoped.InfoTable <- (^. replContextArtifacts . artifactScopeTable) <$> replGetContext
               let def :: Concrete.AxiomDef 'Concrete.Scoped = tbl ^?! Scoped.infoAxioms . at ax . _Just . Scoped.axiomInfoDef
               printLocation def
-              printConcrete def
+              printConcreteLn def
 
             printConstructor :: Scoped.NameId -> Repl ()
             printConstructor c = do
@@ -304,6 +363,7 @@ replCommands = catchable ++ nonCatchable
           ("reload", reloadFile),
           ("root", printRoot),
           ("def", printDefinition),
+          ("doc", printDocumentation),
           ("type", inferType),
           ("version", displayVersion),
           ("core", core)

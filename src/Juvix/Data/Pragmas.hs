@@ -1,8 +1,7 @@
 module Juvix.Data.Pragmas where
 
-import Data.Aeson.BetterErrors hiding ((<|>))
 import Data.Aeson.BetterErrors qualified as Aeson
-import Data.Yaml
+import Juvix.Data.Yaml
 import Juvix.Prelude.Base
 
 data PragmaInline
@@ -16,51 +15,64 @@ newtype PragmaUnroll = PragmaUnroll
   }
   deriving stock (Show, Eq, Ord, Data, Generic)
 
+newtype PragmaFormat = PragmaFormat
+  { _pragmaFormat :: Bool
+  }
+  deriving stock (Show, Eq, Ord, Data, Generic)
+
 data Pragmas = Pragmas
   { _pragmasInline :: Maybe PragmaInline,
-    _pragmasUnroll :: Maybe PragmaUnroll
+    _pragmasUnroll :: Maybe PragmaUnroll,
+    _pragmasFormat :: Maybe PragmaFormat
   }
   deriving stock (Show, Eq, Ord, Data, Generic)
 
 makeLenses ''PragmaUnroll
+makeLenses ''PragmaFormat
 makeLenses ''Pragmas
 
 instance Hashable PragmaInline
 
 instance Hashable PragmaUnroll
 
-instance Hashable Pragmas
+instance Hashable PragmaFormat
 
-type PragmaError = Text
+instance Hashable Pragmas
 
 instance FromJSON Pragmas where
   parseJSON = toAesonParser id parsePragmas
     where
-      parsePragmas :: Parse PragmaError Pragmas
+      parsePragmas :: Parse YamlError Pragmas
       parsePragmas = do
         _pragmasInline <- keyMay "inline" parseInline
         _pragmasUnroll <- keyMay "unroll" parseUnroll
+        _pragmasFormat <- keyMay "format" parseFormat
         return Pragmas {..}
 
-      parseInline :: Parse PragmaError PragmaInline
+      parseInline :: Parse YamlError PragmaInline
       parseInline = parseInlineArgsNum Aeson.<|> parseInlineBool
         where
-          parseInlineArgsNum :: Parse PragmaError PragmaInline
+          parseInlineArgsNum :: Parse YamlError PragmaInline
           parseInlineArgsNum = do
             _pragmaInlineArgsNum <- asIntegral
             return InlinePartiallyApplied {..}
 
-          parseInlineBool :: Parse PragmaError PragmaInline
+          parseInlineBool :: Parse YamlError PragmaInline
           parseInlineBool = do
             b <- asBool
             if
                 | b -> return InlineFullyApplied
                 | otherwise -> return InlineNever
 
-      parseUnroll :: Parse PragmaError PragmaUnroll
+      parseUnroll :: Parse YamlError PragmaUnroll
       parseUnroll = do
         _pragmaUnrollDepth <- asIntegral
         return PragmaUnroll {..}
+
+      parseFormat :: Parse YamlError PragmaFormat
+      parseFormat = do
+        _pragmaFormat <- asBool
+        return PragmaFormat {..}
 
 -- | The Semigroup `<>` is used to propagate pragmas from an enclosing context.
 -- For example, if `p1` are the pragmas declared for a module `M`, and `p2` the
@@ -70,12 +82,14 @@ instance Semigroup Pragmas where
   p1 <> p2 =
     Pragmas
       { _pragmasInline = p2 ^. pragmasInline <|> p1 ^. pragmasInline,
-        _pragmasUnroll = p2 ^. pragmasUnroll <|> p1 ^. pragmasUnroll
+        _pragmasUnroll = p2 ^. pragmasUnroll <|> p1 ^. pragmasUnroll,
+        _pragmasFormat = p2 ^. pragmasFormat <|> p1 ^. pragmasFormat
       }
 
 instance Monoid Pragmas where
   mempty =
     Pragmas
       { _pragmasInline = Nothing,
-        _pragmasUnroll = Nothing
+        _pragmasUnroll = Nothing,
+        _pragmasFormat = Nothing
       }

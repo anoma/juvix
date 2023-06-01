@@ -157,7 +157,8 @@ geval opts herr ctx env0 = eval' env0
     evalBody i bi env v body
       | opts ^. evalOptionsNormalize
           && isTypePrim (bi ^. binderType)
-          && not (isImmediate v) =
+          && not (isImmediate v)
+          && not (isFailNode v) =
           Closure env (mkLet i bi v body)
       | otherwise =
           eval' (v : env) body

@@ -287,6 +287,7 @@ instance SingI s => PrettyPrint (Import s) where
 instance PrettyPrint SyntaxDef where
   ppCode = \case
     SyntaxOperator op -> ppCode op
+    SyntaxIterator it -> ppCode it
 
 instance PrettyPrint Literal where
   ppCode = noLoc . ppLiteral
@@ -448,6 +449,14 @@ instance PrettyPrint InfixApplication where
 instance PrettyPrint PostfixApplication where
   ppCode = apeHelper
 
+instance PrettyPrint IteratorSyntaxDef where
+  ppCode IteratorSyntaxDef {..} = do
+    iterSymbol' <- P.ppUnkindedSymbol _iterSymbol
+    ppCode _iterSyntaxKw
+      <+> ppCode _iterIteratorKw
+      <+> morpheme (getLoc _iterSymbol) iterSymbol'
+      <+?> fmap ppCode _iterAttribs
+
 instance PrettyPrint Expression where
   ppCode = \case
     ExpressionIdentifier n -> ppCode n
@@ -468,6 +477,9 @@ instance PrettyPrint (WithSource Pragmas) where
   ppCode pragma =
     let txt = pretty (Str.pragmasStart <> pragma ^. withSourceText <> Str.pragmasEnd)
      in annotated AnnComment (noLoc txt) <> line
+
+instance PrettyPrint ParsedIteratorAttribs where
+  ppCode = ppMorpheme
 
 ppJudocStart :: Members '[ExactPrint, Reader Options] r => Sem r (Maybe ())
 ppJudocStart = do

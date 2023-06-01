@@ -558,7 +558,7 @@ instance (PrettyCode a) => PrettyCode [a] where
 
 goBinary :: Member (Reader Options) r => Fixity -> Doc Ann -> [Value] -> Sem r (Doc Ann)
 goBinary fixity name = \case
-  [] -> return name
+  [] -> return (parens name)
   [arg] -> do
     arg' <- ppRightExpression appFixity arg
     return $ parens name <+> arg'
@@ -571,7 +571,7 @@ goBinary fixity name = \case
 
 goUnary :: Member (Reader Options) r => Fixity -> Doc Ann -> [Value] -> Sem r (Doc Ann)
 goUnary fixity name = \case
-  [] -> return name
+  [] -> return (parens name)
   [arg] -> do
     arg' <- ppPostExpression fixity arg
     return $ arg' <+> name

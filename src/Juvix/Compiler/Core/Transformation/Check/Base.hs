@@ -72,7 +72,7 @@ checkBuiltins allowUntypedFail = dmapRM go
 
 -- | Checks that the root of the node is not `Bottom`. Currently the only way we
 -- create `Bottom` is when translating axioms that are not builtin. Hence it is
--- enought to check the root only.
+-- enough to check the root only.
 checkNoAxioms :: forall r. Member (Error CoreError) r => InfoTable -> Sem r ()
 checkNoAxioms = void . mapT' checkNodeNoAxiom
   where
@@ -127,7 +127,7 @@ checkNoRecursiveTypes tab =
   when (isCyclic (createTypeDependencyInfo tab)) $
     throw
       CoreError
-        { _coreErrorMsg = ppOutput "recursive types not supported for the GEB target",
+        { _coreErrorMsg = ppOutput "recursive types not supported for this target",
           _coreErrorNode = Nothing,
           _coreErrorLoc = defaultLoc
         }
