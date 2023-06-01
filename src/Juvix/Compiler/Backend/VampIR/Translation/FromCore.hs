@@ -20,7 +20,7 @@ fromCoreNode ty node =
   let (lams, body) = unfoldLambdas (disambiguateNodeNames' disambiguate emptyInfoTable node)
       (defs, expr) = convertLets body
       n = length lams
-      args = if n == 1 then ["in"] else map (\k -> "in" <> show k) [1 .. n]
+      args = map (\k -> "in" <> if n == 1 then "" else show k) [1 .. n]
       isBoolTarget = isTypeBool (typeTarget ty)
    in Program
         { _programFunctions =
