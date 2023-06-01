@@ -44,4 +44,41 @@ tests:
       > Checking that WASI_SYSROOT_PATH is set...
       > Checking for wasmer...
 
+  - name: cli-cmd-doctor-verbose-system
+    command:
+      - juvix
+      - doctor
+      - --verbose
+      - --offline
+    exit-status: 0
+    stdout:
+      matches:
+        regex: |-
+          Found clang(.*?)using system PATH
 
+  - name: cli-cmd-doctor-verbose-envvar
+    command:
+      shell:
+        - bash
+      script: |
+        CLANG_PATH=`which clang`
+        export JUVIX_LLVM_DIST_PATH=${CLANG_PATH%$'/bin/clang'}
+        juvix doctor --verbose --offline
+    exit-status: 0
+    stdout:
+      matches:
+        regex: |-
+          Found clang(.*?)using JUVIX_LLVM_DIST_PATH
+
+  - name: cli-cmd-doctor-verbose-envvar-system-fallback
+    command:
+      shell:
+        - bash
+      script: |
+        export JUVIX_LLVM_DIST_PATH=/tmp
+        juvix doctor --verbose --offline
+    exit-status: 0
+    stdout:
+      matches:
+        regex: |-
+          Found clang(.*?)using system PATH
