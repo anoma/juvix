@@ -32,15 +32,15 @@ renderCodeOld = toPlainText . M.ppOutDefault
 renderCodeNew :: (HasLoc c, P.PrettyPrint c) => c -> Text
 renderCodeNew = toPlainText . P.ppOutDefault emptyComments
 
-testDescr :: PosTest -> [TestDescr]
-testDescr PosTest {..} = helper renderCodeOld "" : [helper renderCodeNew " (with comments)"]
+testDescr :: PosTest -> TestDescr
+testDescr PosTest {..} = helper renderCodeNew
   where
-    helper :: (forall c. (HasLoc c, P.PrettyPrint c) => c -> Text) -> String -> TestDescr
-    helper renderer tag =
+    helper :: (forall c. (HasLoc c, P.PrettyPrint c) => c -> Text) -> TestDescr
+    helper renderer =
       let tRoot = root <//> _relDir
           file' = tRoot <//> _file
        in TestDescr
-            { _testName = _name <> tag,
+            { _testName = _name,
               _testRoot = tRoot,
               _testAssertion = Steps $ \step -> do
                 entryPoint <- defaultEntryPointCwdIO file'
@@ -115,7 +115,7 @@ allTests :: TestTree
 allTests =
   testGroup
     "Scope positive tests"
-    (map mkTest (concatMap testDescr tests))
+    (map (mkTest . testDescr) tests)
 
 tests :: [PosTest]
 tests =
