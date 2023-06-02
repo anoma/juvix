@@ -767,8 +767,8 @@ functionParams = do
   where
     pName :: ParsecS r (Maybe Symbol)
     pName =
-      (Just <$> symbol)
-        <|> (Nothing <$ kw kwWildcard)
+      Just <$> symbol
+        <|> Nothing <$ kw kwWildcard
 
 function :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (Function 'Parsed)
 function = do
