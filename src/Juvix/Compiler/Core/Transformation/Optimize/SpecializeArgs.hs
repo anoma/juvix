@@ -56,19 +56,21 @@ convertNode tab = dmapLRM go
                   Just PragmaSpecialiseArgs {..} -> do
                     args' <- mapM (dmapLRM' (bl, go)) args
                     -- assumption: all type variables are at the front
-                    let specargs =
+                    let specargs0 =
+                          filter
+                            ( \argNum ->
+                                argNum <= argsNum
+                                  && argNum <= length args'
+                                  && isSpecializable (args' !! (argNum - 1))
+                                  && isArgSpecializable tab _identSymbol argNum
+                            )
+                            _pragmaSpecialiseArgs
+                        specargs =
                           nub $
                             [1 .. length (takeWhile (isTypeConstr tab) tyargs)]
-                              ++ filter
-                                ( \argNum ->
-                                    argNum <= argsNum
-                                      && argNum <= length args'
-                                      && isSpecializable (args' !! (argNum - 1))
-                                      && isArgSpecializable tab _identSymbol argNum
-                                )
-                                _pragmaSpecialiseArgs
+                              ++ specargs0
                     if
-                        | null specargs ->
+                        | null specargs0 ->
                             return $ End (mkApps' h args')
                         | otherwise -> do
                             let def = lookupIdentifierNode tab _identSymbol
