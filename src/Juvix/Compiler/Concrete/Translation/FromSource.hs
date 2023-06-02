@@ -902,7 +902,7 @@ parsePatternAtomsNested = do
 --------------------------------------------------------------------------------
 
 functionClause :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => Symbol -> ParsecS r (FunctionClause 'Parsed)
-functionClause _clauseOwnerFunction = do
+functionClause _clauseOwnerFunction = P.label "clause" $ do
   _clausePatterns <- P.many patternAtom
   kw kwAssign
   _clauseBody <- parseExpressionAtoms
