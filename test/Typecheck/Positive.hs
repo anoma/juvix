@@ -226,6 +226,10 @@ tests =
       $(mkRelDir ".")
       $(mkRelFile "MutualLet.juvix"),
     posTest
+      "import inside local module"
+      $(mkRelDir "issue2163")
+      $(mkRelFile "Main.juvix"),
+    posTest
       "id application in type"
       $(mkRelDir ".")
       $(mkRelFile "IdInType.juvix"),
