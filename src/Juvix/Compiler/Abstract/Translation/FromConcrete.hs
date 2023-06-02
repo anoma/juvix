@@ -414,7 +414,7 @@ goExpression = \case
   ExpressionLiteral l -> return (Abstract.ExpressionLiteral l)
   ExpressionLambda l -> Abstract.ExpressionLambda <$> goLambda l
   ExpressionBraces b -> throw (ErrAppLeftImplicit (AppLeftImplicit b))
-  ExpressionLetBlock l -> Abstract.ExpressionLet <$> goLet l
+  ExpressionLet l -> Abstract.ExpressionLet <$> goLet l
   ExpressionUniverse uni -> return (Abstract.ExpressionUniverse (goUniverse uni))
   ExpressionFunction func -> Abstract.ExpressionFunction <$> goFunction func
   ExpressionHole h -> return (Abstract.ExpressionHole h)
@@ -428,7 +428,7 @@ goExpression = \case
       ScopedFunction fun -> Abstract.IdenFunction (Abstract.FunctionRef (goName (fun ^. Concrete.functionRefName)))
       ScopedConstructor c -> Abstract.IdenConstructor (Abstract.ConstructorRef (goName (c ^. Concrete.constructorRefName)))
 
-    goLet :: LetBlock 'Scoped -> Sem r Abstract.Let
+    goLet :: Let 'Scoped -> Sem r Abstract.Let
     goLet l = do
       _letExpression <- goExpression (l ^. letExpression)
       _letClauses <- goLetClauses (l ^. letClauses)

@@ -692,7 +692,7 @@ data Expression
   | ExpressionPostfixApplication PostfixApplication
   | ExpressionCase (Case 'Scoped)
   | ExpressionLambda (Lambda 'Scoped)
-  | ExpressionLetBlock (LetBlock 'Scoped)
+  | ExpressionLet (Let 'Scoped)
   | ExpressionUniverse Universe
   | ExpressionLiteral LiteralLoc
   | ExpressionFunction (Function 'Scoped)
@@ -826,7 +826,7 @@ instance HasFixity PostfixApplication where
 -- Let block expression
 --------------------------------------------------------------------------------
 
-data LetBlock (s :: Stage) = LetBlock
+data Let (s :: Stage) = Let
   { _letKw :: KeywordRef,
     _letClauses :: NonEmpty (LetClause s),
     _letExpression :: ExpressionType s
@@ -839,7 +839,7 @@ deriving stock instance
     Show (SymbolType s),
     Show (ExpressionType s)
   ) =>
-  Show (LetBlock s)
+  Show (Let s)
 
 deriving stock instance
   ( Eq (PatternType s),
@@ -848,7 +848,7 @@ deriving stock instance
     Eq (SymbolType s),
     Eq (ExpressionType s)
   ) =>
-  Eq (LetBlock s)
+  Eq (Let s)
 
 deriving stock instance
   ( Ord (PatternType s),
@@ -857,7 +857,7 @@ deriving stock instance
     Ord (SymbolType s),
     Ord (ExpressionType s)
   ) =>
-  Ord (LetBlock s)
+  Ord (Let s)
 
 data LetClause (s :: Stage)
   = LetTypeSig (TypeSignature s)
@@ -1020,7 +1020,7 @@ data ExpressionAtom (s :: Stage)
   | AtomCase (Case s)
   | AtomHole (HoleType s)
   | AtomBraces (WithLoc (ExpressionType s))
-  | AtomLetBlock (LetBlock s)
+  | AtomLet (Let s)
   | AtomUniverse Universe
   | AtomFunction (Function s)
   | AtomFunArrow KeywordRef
@@ -1122,7 +1122,7 @@ makeLenses ''InductiveDef
 makeLenses ''PostfixApplication
 makeLenses ''InfixApplication
 makeLenses ''Application
-makeLenses ''LetBlock
+makeLenses ''Let
 makeLenses ''FunctionParameters
 makeLenses ''Import
 makeLenses ''OperatorSyntaxDef
@@ -1158,7 +1158,7 @@ instance HasAtomicity Expression where
     ExpressionPostfixApplication a -> Aggregate (getFixity a)
     ExpressionLambda l -> atomicity l
     ExpressionLiteral l -> atomicity l
-    ExpressionLetBlock l -> atomicity l
+    ExpressionLet l -> atomicity l
     ExpressionBraces {} -> Atom
     ExpressionUniverse {} -> Atom
     ExpressionFunction {} -> Aggregate funFixity
@@ -1176,7 +1176,7 @@ instance HasAtomicity (Iterator s) where
 instance HasAtomicity (Case s) where
   atomicity = const Atom
 
-instance HasAtomicity (LetBlock 'Scoped) where
+instance HasAtomicity (Let 'Scoped) where
   atomicity l = atomicity (l ^. letExpression)
 
 instance Eq (ModuleRef'' 'S.Concrete t) where
@@ -1299,7 +1299,7 @@ instance HasLoc (FunctionParameters 'Scoped) where
 instance HasLoc (Function 'Scoped) where
   getLoc f = getLoc (f ^. funParameters) <> getLoc (f ^. funReturn)
 
-instance HasLoc (LetBlock 'Scoped) where
+instance HasLoc (Let 'Scoped) where
   getLoc l = getLoc (l ^. letKw) <> getLoc (l ^. letExpression)
 
 instance SingI s => HasLoc (CaseBranch s) where
@@ -1317,7 +1317,7 @@ instance HasLoc Expression where
     ExpressionPostfixApplication i -> getLoc i
     ExpressionLambda i -> getLoc i
     ExpressionCase i -> getLoc i
-    ExpressionLetBlock i -> getLoc i
+    ExpressionLet i -> getLoc i
     ExpressionUniverse i -> getLoc i
     ExpressionLiteral i -> getLoc i
     ExpressionFunction i -> getLoc i

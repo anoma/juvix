@@ -190,7 +190,7 @@ instance SingI s => PrettyPrint (ExpressionAtom s) where
   ppCode = \case
     AtomIdentifier n -> ppIdentifierType n
     AtomLambda l -> ppCode l
-    AtomLetBlock lb -> ppCode lb
+    AtomLet lb -> ppCode lb
     AtomCase c -> ppCode c
     AtomUniverse uni -> ppCode uni
     AtomFunction fun -> ppCode fun
@@ -342,8 +342,8 @@ instance SingI s => PrettyPrint (LambdaClause s) where
         lambdaBody' = ppExpressionType _lambdaBody
     lambdaParameters' <+> ppCode kwAssign <> oneLineOrNext lambdaBody'
 
-instance SingI s => PrettyPrint (LetBlock s) where
-  ppCode LetBlock {..} = do
+instance SingI s => PrettyPrint (Let s) where
+  ppCode Let {..} = do
     let letClauses' = blockIndent (ppBlock _letClauses)
         letExpression' = ppExpressionType _letExpression
     ppCode kwLet <> letClauses' <> ppCode kwIn <+> letExpression'
@@ -511,7 +511,7 @@ instance PrettyPrint Expression where
     ExpressionInfixApplication a -> ppCode a
     ExpressionPostfixApplication a -> ppCode a
     ExpressionLambda l -> ppCode l
-    ExpressionLetBlock lb -> ppCode lb
+    ExpressionLet lb -> ppCode lb
     ExpressionUniverse u -> ppCode u
     ExpressionLiteral l -> ppCode l
     ExpressionFunction f -> ppCode f

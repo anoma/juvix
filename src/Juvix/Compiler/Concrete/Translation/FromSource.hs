@@ -550,7 +550,7 @@ expressionAtom =
       <|> (AtomLambda <$> lambda)
       <|> (AtomCase <$> case_)
       <|> (AtomFunction <$> function)
-      <|> (AtomLetBlock <$> letBlock)
+      <|> (AtomLet <$> letBlock)
       <|> (AtomFunArrow <$> kw kwRightArrow)
       <|> (AtomHole <$> hole)
       <|> parens (AtomParens <$> parseExpressionAtoms)
@@ -650,13 +650,13 @@ literal = do
 letClause :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (LetClause 'Parsed)
 letClause = either LetTypeSig LetFunClause <$> auxTypeSigFunClause
 
-letBlock :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (LetBlock 'Parsed)
+letBlock :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (Let 'Parsed)
 letBlock = do
   _letKw <- kw kwLet
   _letClauses <- P.sepEndBy1 letClause semicolon
   kw kwIn
   _letExpression <- parseExpressionAtoms
-  return LetBlock {..}
+  return Let {..}
 
 caseBranch :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (CaseBranch 'Parsed)
 caseBranch = do
