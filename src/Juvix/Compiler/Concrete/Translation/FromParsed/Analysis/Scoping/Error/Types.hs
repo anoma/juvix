@@ -8,6 +8,7 @@ where
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
 import Data.List.NonEmpty.Extra qualified as NonEmpty
+import Data.Text qualified as Text
 import Juvix.Compiler.Concrete.Data.Scope
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Language
@@ -116,6 +117,42 @@ instance ToGenericError LacksTypeSig where
             "The declaration is missing a type signature:"
               <> line
               <> indent' (ppCode opts' _lacksTypeSigClause)
+              <> checkColon _lacksTypeSigClause
+
+          checkColon :: FunctionClause 'Parsed -> Doc Ann
+          checkColon fc@FunctionClause {..} =
+            case Text.splitOn ":" (_clauseOwnerFunction ^. withLocParam) of
+              [x, ""] ->
+                line
+                  <> "Perhaps you meant:"
+                  <> line
+                  <> indent'
+                    ( ppCode
+                        opts'
+                        ( over clauseOwnerFunction (set withLocParam x) $
+                            over clausePatterns (PatternAtomIden (NameUnqualified (set withLocParam ":" _clauseOwnerFunction)) :) fc
+                        )
+                    )
+              [x, y] ->
+                line
+                  <> "Perhaps you meant:"
+                  <> line
+                  <> indent'
+                    ( ppCode
+                        opts'
+                        ( over clauseOwnerFunction (set withLocParam x) $
+                            over
+                              clausePatterns
+                              ( [ PatternAtomIden (NameUnqualified (set withLocParam ":" _clauseOwnerFunction)),
+                                  PatternAtomIden (NameUnqualified (set withLocParam y _clauseOwnerFunction))
+                                ]
+                                  ++
+                              )
+                              fc
+                        )
+                    )
+              _ ->
+                mempty
 
 -- | type signature without a function clause
 newtype LacksFunctionClause = LacksFunctionClause
