@@ -4,6 +4,41 @@
 <img align="right" width="300" height="300" alt="Juvix Mascot" src="../assets/images/tara-smiling.svg" />
 </a>
 
+## [v0.3.5](https://github.com/anoma/juvix/tree/v0.3.5) (2023-06-02)
+
+[Full Changelog](https://github.com/anoma/juvix/compare/v0.3.4...v0.3.5)
+
+**Implemented enhancements:**
+
+- Update standard library for better readability, efficiency and iterator use [\#2153](https://github.com/anoma/juvix/pull/2153) ([lukaszcz](https://github.com/lukaszcz))
+- Use the`JUVIX_LLVM_DIST_PATH` environment variable to search for the clang executable [\#2152](https://github.com/anoma/juvix/pull/2152) ([paulcadman](https://github.com/paulcadman))
+- Finish the new pretty printing algorithm and delete the old one [\#2151](https://github.com/anoma/juvix/pull/2151) ([janmasrovira](https://github.com/janmasrovira))
+- Add `:doc` command to the repl [\#2142](https://github.com/anoma/juvix/pull/2142) ([janmasrovira](https://github.com/janmasrovira))
+- Allow to specify VampIR variable names [\#2141](https://github.com/anoma/juvix/pull/2141) ([lukaszcz](https://github.com/lukaszcz))
+- VampIR pipeline: handle booleans in the type of `main` [\#2137](https://github.com/anoma/juvix/pull/2137) ([lukaszcz](https://github.com/lukaszcz))
+- Add `main` field to `juvix.yaml` [\#2120](https://github.com/anoma/juvix/pull/2120) ([janmasrovira](https://github.com/janmasrovira))
+- Add `:def` command to the repl [\#2119](https://github.com/anoma/juvix/pull/2119) ([janmasrovira](https://github.com/janmasrovira))
+
+**Merged pull requests:**
+
+- Properly scan imports inside local modules [\#2165](https://github.com/anoma/juvix/pull/2165) ([janmasrovira](https://github.com/janmasrovira))
+- Add extra git dependencies to `cabal.project` [\#2158](https://github.com/anoma/juvix/pull/2158) ([janmasrovira](https://github.com/janmasrovira))
+- Support new `import ... open` syntax in REPL [\#2156](https://github.com/anoma/juvix/pull/2156) ([paulcadman](https://github.com/paulcadman))
+- Add the `format` pragma [\#2150](https://github.com/anoma/juvix/pull/2150) ([lukaszcz](https://github.com/lukaszcz))
+- Remove code for `Eval` and `Print` statements [\#2149](https://github.com/anoma/juvix/pull/2149) ([lukaszcz](https://github.com/lukaszcz))
+- Fix printing of infix constructor values [\#2144](https://github.com/anoma/juvix/pull/2144) ([lukaszcz](https://github.com/lukaszcz))
+- Add `ValueType` [\#2143](https://github.com/anoma/juvix/pull/2143) ([janmasrovira](https://github.com/janmasrovira))
+- Add `Semigroup` instance for `AnsiText` [\#2140](https://github.com/anoma/juvix/pull/2140) ([janmasrovira](https://github.com/janmasrovira))
+- Show unicode characters without escaping [\#2127](https://github.com/anoma/juvix/pull/2127) ([janmasrovira](https://github.com/janmasrovira))
+- Iterator syntax [\#2126](https://github.com/anoma/juvix/pull/2126) ([lukaszcz](https://github.com/lukaszcz))
+- Fix spurious messages from Makefile.generic [\#2125](https://github.com/anoma/juvix/pull/2125) ([lukaszcz](https://github.com/lukaszcz))
+- Add gnu-sed to the macOS build in the CI [\#2123](https://github.com/anoma/juvix/pull/2123) ([jonaprieto](https://github.com/jonaprieto))
+- Fix baseUrl for juvix docs in Doctor command [\#2122](https://github.com/anoma/juvix/pull/2122) ([vrom911](https://github.com/vrom911))
+- Remove --no-format option [\#2121](https://github.com/anoma/juvix/pull/2121) ([vrom911](https://github.com/vrom911))
+- Add Bottom node [\#2112](https://github.com/anoma/juvix/pull/2112) ([janmasrovira](https://github.com/janmasrovira))
+- VampIR integration [\#2103](https://github.com/anoma/juvix/pull/2103) ([lukaszcz](https://github.com/lukaszcz))
+- Add VampIR to the CI [\#2096](https://github.com/anoma/juvix/pull/2096) ([jonaprieto](https://github.com/jonaprieto))
+
 ## [v0.3.4](https://github.com/anoma/juvix/tree/v0.3.4) (2023-05-22)
 
 [Full Changelog](https://github.com/anoma/juvix/compare/v0.3.3...v0.3.4)
