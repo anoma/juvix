@@ -79,6 +79,9 @@ evalExactPrint' b = runState b . re
 append' :: forall r. Members '[State Builder] r => Doc Ann -> Sem r ()
 append' d = modify (over builderDoc (<> d))
 
+hardline' :: forall r. Members '[State Builder] r => Sem r ()
+hardline' = append' P.hardline
+
 line' :: forall r. Members '[State Builder] r => Sem r ()
 line' = append' P.line
 
@@ -100,7 +103,7 @@ printSpaceSpan = mapM_ printSpaceSection . (^. spaceSpan)
 printComment :: Members '[State Builder] r => Comment -> Sem r ()
 printComment c = do
   append' (annotate AnnComment (P.pretty c))
-  line'
+  hardline'
 
 printCommentsUntil' :: forall r. Members '[State Builder] r => Interval -> Sem r (Maybe SpaceSpan)
 printCommentsUntil' loc = do

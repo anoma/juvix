@@ -1040,18 +1040,18 @@ checkLetClause lc = localBindings . ignoreFixities . ignoreIterators $ case lc o
   LetTypeSig t -> LetTypeSig <$> checkTypeSignature t
   LetFunClause c -> LetFunClause <$> checkFunctionClause c
 
-checkLetBlock ::
+checkLet ::
   forall r.
   Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r =>
-  LetBlock 'Parsed ->
-  Sem r (LetBlock 'Scoped)
-checkLetBlock LetBlock {..} =
+  Let 'Parsed ->
+  Sem r (Let 'Scoped)
+checkLet Let {..} =
   withLocalScope $ do
     -- local definitions should not stay in scope
     letClauses' <- checkLetClauses _letClauses
     letExpression' <- checkParseExpressionAtoms _letExpression
     return
-      LetBlock
+      Let
         { _letClauses = letClauses',
           _letExpression = letExpression',
           _letKw
@@ -1261,7 +1261,7 @@ checkExpressionAtom e = case e of
   AtomIdentifier n -> AtomIdentifier <$> checkName n
   AtomLambda lam -> AtomLambda <$> checkLambda lam
   AtomCase c -> AtomCase <$> checkCase c
-  AtomLetBlock letBlock -> AtomLetBlock <$> checkLetBlock letBlock
+  AtomLet letBlock -> AtomLet <$> checkLet letBlock
   AtomUniverse uni -> return (AtomUniverse uni)
   AtomFunction fun -> AtomFunction <$> checkFunction fun
   AtomParens par -> AtomParens <$> checkParens par
@@ -1384,7 +1384,7 @@ checkJudocBlock ::
   JudocBlock 'Parsed ->
   Sem r (JudocBlock 'Scoped)
 checkJudocBlock = \case
-  JudocParagraphLines l -> JudocParagraphLines <$> mapM checkJudocLine l
+  JudocLines l -> JudocLines <$> mapM checkJudocLine l
   JudocExample e -> JudocExample <$> traverseOf exampleExpression checkParseExpressionAtoms e
 
 checkJudocBlockParagraph ::
@@ -1395,9 +1395,9 @@ checkJudocBlockParagraph = traverseOf judocBlockParagraphBlocks (mapM checkJudoc
 
 checkJudocLine ::
   (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
-  JudocParagraphLine 'Parsed ->
-  Sem r (JudocParagraphLine 'Scoped)
-checkJudocLine (JudocParagraphLine atoms) = JudocParagraphLine <$> mapM (mapM checkJudocAtom) atoms
+  JudocLine 'Parsed ->
+  Sem r (JudocLine 'Scoped)
+checkJudocLine (JudocLine delim atoms) = JudocLine delim <$> mapM (mapM checkJudocAtom) atoms
 
 checkJudocAtom ::
   (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
@@ -1574,7 +1574,7 @@ parseTerm =
       <|> parseLambda
       <|> parseCase
       <|> parseLiteral
-      <|> parseLetBlock
+      <|> parseLet
       <|> parseIterator
       <|> parseBraces
   where
@@ -1626,12 +1626,12 @@ parseTerm =
           AtomFunction u -> Just u
           _ -> Nothing
 
-    parseLetBlock :: Parse Expression
-    parseLetBlock = ExpressionLetBlock <$> P.token letBlock mempty
+    parseLet :: Parse Expression
+    parseLet = ExpressionLet <$> P.token letBlock mempty
       where
-        letBlock :: ExpressionAtom 'Scoped -> Maybe (LetBlock 'Scoped)
+        letBlock :: ExpressionAtom 'Scoped -> Maybe (Let 'Scoped)
         letBlock s = case s of
-          AtomLetBlock u -> Just u
+          AtomLet u -> Just u
           _ -> Nothing
 
     parseIterator :: Parse Expression

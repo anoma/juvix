@@ -123,8 +123,11 @@ mkComments cs = Comments {..}
         [ (_fileCommentsFile, FileComments {..})
           | filecomments :: NonEmpty SpaceSpan <- groupSortOn spSpanFile cs,
             let _fileCommentsFile = spSpanFile (head filecomments),
-            let _fileCommentsSorted = sortOn getLoc (toList filecomments)
+            let _fileCommentsSorted = sortRmDuplicates (toList filecomments)
         ]
+      where
+        sortRmDuplicates :: [SpaceSpan] -> [SpaceSpan]
+        sortRmDuplicates = map head . groupSortOn getLoc . toList
 
 emptyComments :: Comments
 emptyComments = Comments mempty

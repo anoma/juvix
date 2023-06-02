@@ -336,7 +336,7 @@ stashJudoc = do
         JudocBlockParagraph {..}
 
     judocParagraphLines :: Bool -> ParsecS r (JudocBlock 'Parsed)
-    judocParagraphLines inBlock = JudocParagraphLines <$> some1 (paragraphLine inBlock)
+    judocParagraphLines inBlock = JudocLines <$> some1 (paragraphLine inBlock)
 
     judocExample :: Bool -> ParsecS r (JudocBlock 'Parsed)
     judocExample inBlock = do
@@ -349,11 +349,16 @@ stashJudoc = do
       space
       return (JudocExample Example {..})
 
-    paragraphLine :: Bool -> ParsecS r (JudocParagraphLine 'Parsed)
+    paragraphLine :: Bool -> ParsecS r (JudocLine 'Parsed)
     paragraphLine inBlock = do
-      unless inBlock $
-        P.try (judocStart >> P.notFollowedBy (P.choice [judocExampleStart, void P.newline]))
-      l <- JudocParagraphLine . trimEnds <$> some1 (withLoc (judocAtom inBlock))
+      kwstart <-
+        if
+            | inBlock -> return Nothing
+            | otherwise -> P.try $ do
+                s <- judocStart
+                P.notFollowedBy (P.choice [judocExampleStart, void P.newline])
+                return (Just s)
+      l <- JudocLine kwstart . trimEnds <$> some1 (withLoc (judocAtom inBlock))
       if
           | inBlock -> optional_ P.newline
           | otherwise -> void P.newline >> space
@@ -545,7 +550,7 @@ expressionAtom =
       <|> (AtomLambda <$> lambda)
       <|> (AtomCase <$> case_)
       <|> (AtomFunction <$> function)
-      <|> (AtomLetBlock <$> letBlock)
+      <|> (AtomLet <$> letBlock)
       <|> (AtomFunArrow <$> kw kwRightArrow)
       <|> (AtomHole <$> hole)
       <|> parens (AtomParens <$> parseExpressionAtoms)
@@ -645,13 +650,13 @@ literal = do
 letClause :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (LetClause 'Parsed)
 letClause = either LetTypeSig LetFunClause <$> auxTypeSigFunClause
 
-letBlock :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (LetBlock 'Parsed)
+letBlock :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (Let 'Parsed)
 letBlock = do
   _letKw <- kw kwLet
   _letClauses <- P.sepEndBy1 letClause semicolon
   kw kwIn
   _letExpression <- parseExpressionAtoms
-  return LetBlock {..}
+  return Let {..}
 
 caseBranch :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (CaseBranch 'Parsed)
 caseBranch = do
@@ -762,8 +767,8 @@ functionParams = do
   where
     pName :: ParsecS r (Maybe Symbol)
     pName =
-      (Just <$> symbol)
-        <|> (Nothing <$ kw kwWildcard)
+      Just <$> symbol
+        <|> Nothing <$ kw kwWildcard
 
 function :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (Function 'Parsed)
 function = do

@@ -11,6 +11,7 @@ import Juvix.Data.Keyword.All
 
     delimJudocBlockEnd,
     delimJudocBlockStart,
+    delimJudocExample,
     delimJudocStart,
     -- keywords
     kwAs,

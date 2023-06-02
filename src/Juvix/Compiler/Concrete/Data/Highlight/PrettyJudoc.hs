@@ -26,10 +26,10 @@ ppInternal c = do
     mkOpts :: Options -> Internal.Options
     mkOpts = const (Internal.defaultOptions)
 
-ppScoped :: Members '[Reader Options] r => Scoped.PrettyCode c => c -> Sem r (Doc CodeAnn)
+ppScoped :: Members '[Reader Options] r => Scoped.PrettyPrint c => c -> Sem r (Doc CodeAnn)
 ppScoped c = do
   iopts <- mkOpts <$> ask
-  return (Scoped.runPrettyCode iopts c)
+  return (Scoped.docNoComments iopts c)
   where
     mkOpts :: Options -> Scoped.Options
     mkOpts = const (Scoped.defaultOptions)
@@ -65,11 +65,11 @@ ppJudoc (Judoc bs) = do
 
     ppBlock :: JudocBlock 'Scoped -> Sem r (Doc CodeAnn)
     ppBlock = \case
-      JudocParagraphLines ls -> hsep <$> mapM ppLine (toList ls)
+      JudocLines ls -> hsep <$> mapM ppLine (toList ls)
       JudocExample {} -> return mempty
 
-    ppLine :: JudocParagraphLine 'Scoped -> Sem r (Doc CodeAnn)
-    ppLine (JudocParagraphLine as) = mconcatMapM (ppAtom . (^. withLocParam)) (toList as)
+    ppLine :: JudocLine 'Scoped -> Sem r (Doc CodeAnn)
+    ppLine (JudocLine _ as) = mconcatMapM (ppAtom . (^. withLocParam)) (toList as)
 
     ppAtom :: JudocAtom 'Scoped -> Sem r (Doc CodeAnn)
     ppAtom = \case

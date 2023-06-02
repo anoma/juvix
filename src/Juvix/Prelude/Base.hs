@@ -338,8 +338,8 @@ nonEmpty' = fromJust . nonEmpty
 _nonEmpty :: Lens' [a] (Maybe (NonEmpty a))
 _nonEmpty f x = maybe [] toList <$> f (nonEmpty x)
 
-groupSortOn :: (Ord b) => (a -> b) -> [a] -> [NonEmpty a]
-groupSortOn f = map (fromJust . nonEmpty) . List.groupSortOn f
+groupSortOn :: Ord b => (a -> b) -> [a] -> [NonEmpty a]
+groupSortOn f = map nonEmpty' . List.groupSortOn f
 
 groupSortOn' :: (Ord b) => (a -> b) -> [a] -> [[a]]
 groupSortOn' = List.groupSortOn

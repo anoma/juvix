@@ -464,13 +464,13 @@ goLet :: forall r. (Members '[NameIdGen, Reader NameDependencyInfo] r) => Abstra
 goLet l = do
   _letExpression <- goExpression (l ^. Abstract.letExpression)
   mutualBlocks <- mapM goFunctionDef funDefs >>= buildLetMutualBlocks
-  let _letClauses = nonEmpty' (map goLetBlock mutualBlocks)
+  let _letClauses = nonEmpty' (map goLetClauses mutualBlocks)
   return Let {..}
   where
     funDefs :: [Abstract.FunctionDef]
     funDefs = [f | Abstract.LetFunDef f <- toList (l ^. Abstract.letClauses)]
-    goLetBlock :: SCC FunctionDef -> LetClause
-    goLetBlock = \case
+    goLetClauses :: SCC FunctionDef -> LetClause
+    goLetClauses = \case
       AcyclicSCC f -> LetFunDef f
       CyclicSCC m -> LetMutualBlock (MutualBlockLet (nonEmpty' m))
 

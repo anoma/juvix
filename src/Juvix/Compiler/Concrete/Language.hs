@@ -92,7 +92,8 @@ type family PatternAtType s = res | res -> s where
   PatternAtType 'Parsed = PatternBinding
   PatternAtType 'Scoped = PatternArg
 
-type family ImportType (s :: Stage) :: GHC.Type where
+type ImportType :: Stage -> GHC.Type
+type family ImportType s = res | res -> s where
   ImportType 'Parsed = TopModulePath
   ImportType 'Scoped = ModuleRef'' 'S.Concrete 'ModuleTop
 
@@ -691,7 +692,7 @@ data Expression
   | ExpressionPostfixApplication PostfixApplication
   | ExpressionCase (Case 'Scoped)
   | ExpressionLambda (Lambda 'Scoped)
-  | ExpressionLetBlock (LetBlock 'Scoped)
+  | ExpressionLet (Let 'Scoped)
   | ExpressionUniverse Universe
   | ExpressionLiteral LiteralLoc
   | ExpressionFunction (Function 'Scoped)
@@ -825,7 +826,7 @@ instance HasFixity PostfixApplication where
 -- Let block expression
 --------------------------------------------------------------------------------
 
-data LetBlock (s :: Stage) = LetBlock
+data Let (s :: Stage) = Let
   { _letKw :: KeywordRef,
     _letClauses :: NonEmpty (LetClause s),
     _letExpression :: ExpressionType s
@@ -838,7 +839,7 @@ deriving stock instance
     Show (SymbolType s),
     Show (ExpressionType s)
   ) =>
-  Show (LetBlock s)
+  Show (Let s)
 
 deriving stock instance
   ( Eq (PatternType s),
@@ -847,7 +848,7 @@ deriving stock instance
     Eq (SymbolType s),
     Eq (ExpressionType s)
   ) =>
-  Eq (LetBlock s)
+  Eq (Let s)
 
 deriving stock instance
   ( Ord (PatternType s),
@@ -856,7 +857,7 @@ deriving stock instance
     Ord (SymbolType s),
     Ord (ExpressionType s)
   ) =>
-  Ord (LetBlock s)
+  Ord (Let s)
 
 data LetClause (s :: Stage)
   = LetTypeSig (TypeSignature s)
@@ -1019,7 +1020,7 @@ data ExpressionAtom (s :: Stage)
   | AtomCase (Case s)
   | AtomHole (HoleType s)
   | AtomBraces (WithLoc (ExpressionType s))
-  | AtomLetBlock (LetBlock s)
+  | AtomLet (Let s)
   | AtomUniverse Universe
   | AtomFunction (Function s)
   | AtomFunArrow KeywordRef
@@ -1078,7 +1079,7 @@ deriving stock instance (Eq (ExpressionType s), Eq (SymbolType s)) => Eq (JudocG
 deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (JudocGroup s)
 
 data JudocBlock (s :: Stage)
-  = JudocParagraphLines (NonEmpty (JudocParagraphLine s))
+  = JudocLines (NonEmpty (JudocLine s))
   | JudocExample (Example s)
 
 deriving stock instance (Show (ExpressionType s), Show (SymbolType s)) => Show (JudocBlock s)
@@ -1087,14 +1088,16 @@ deriving stock instance (Eq (ExpressionType s), Eq (SymbolType s)) => Eq (JudocB
 
 deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (JudocBlock s)
 
-newtype JudocParagraphLine (s :: Stage)
-  = JudocParagraphLine (NonEmpty (WithLoc (JudocAtom s)))
+data JudocLine (s :: Stage) = JudocLine
+  { _judocLineDelim :: Maybe KeywordRef,
+    _judocLineAtoms :: NonEmpty (WithLoc (JudocAtom s))
+  }
 
-deriving stock instance (Show (ExpressionType s), Show (SymbolType s)) => Show (JudocParagraphLine s)
+deriving stock instance (Show (ExpressionType s), Show (SymbolType s)) => Show (JudocLine s)
 
-deriving stock instance (Eq (ExpressionType s), Eq (SymbolType s)) => Eq (JudocParagraphLine s)
+deriving stock instance (Eq (ExpressionType s), Eq (SymbolType s)) => Eq (JudocLine s)
 
-deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (JudocParagraphLine s)
+deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (JudocLine s)
 
 data JudocAtom (s :: Stage)
   = JudocExpression (ExpressionType s)
@@ -1108,6 +1111,7 @@ deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (Jud
 
 makeLenses ''PatternArg
 makeLenses ''UsingItem
+makeLenses ''JudocLine
 makeLenses ''Example
 makeLenses ''Lambda
 makeLenses ''LambdaClause
@@ -1118,7 +1122,7 @@ makeLenses ''InductiveDef
 makeLenses ''PostfixApplication
 makeLenses ''InfixApplication
 makeLenses ''Application
-makeLenses ''LetBlock
+makeLenses ''Let
 makeLenses ''FunctionParameters
 makeLenses ''Import
 makeLenses ''OperatorSyntaxDef
@@ -1154,7 +1158,7 @@ instance HasAtomicity Expression where
     ExpressionPostfixApplication a -> Aggregate (getFixity a)
     ExpressionLambda l -> atomicity l
     ExpressionLiteral l -> atomicity l
-    ExpressionLetBlock l -> atomicity l
+    ExpressionLet l -> atomicity l
     ExpressionBraces {} -> Atom
     ExpressionUniverse {} -> Atom
     ExpressionFunction {} -> Aggregate funFixity
@@ -1172,7 +1176,7 @@ instance HasAtomicity (Iterator s) where
 instance HasAtomicity (Case s) where
   atomicity = const Atom
 
-instance HasAtomicity (LetBlock 'Scoped) where
+instance HasAtomicity (Let 'Scoped) where
   atomicity l = atomicity (l ^. letExpression)
 
 instance Eq (ModuleRef'' 'S.Concrete t) where
@@ -1295,19 +1299,14 @@ instance HasLoc (FunctionParameters 'Scoped) where
 instance HasLoc (Function 'Scoped) where
   getLoc f = getLoc (f ^. funParameters) <> getLoc (f ^. funReturn)
 
-instance HasLoc (LetBlock 'Scoped) where
+instance HasLoc (Let 'Scoped) where
   getLoc l = getLoc (l ^. letKw) <> getLoc (l ^. letExpression)
 
 instance SingI s => HasLoc (CaseBranch s) where
-  getLoc c = getLoc (c ^. caseBranchPipe) <> expressionLoc (c ^. caseBranchExpression)
+  getLoc c = getLoc (c ^. caseBranchPipe) <> getLocExpressionType (c ^. caseBranchExpression)
 
 instance SingI s => HasLoc (Case s) where
   getLoc c = getLoc (c ^. caseKw) <> getLoc (c ^. caseBranches . to last)
-
-expressionLoc :: forall s. SingI s => ExpressionType s -> Interval
-expressionLoc e = case sing :: SStage s of
-  SParsed -> getLoc e
-  SScoped -> getLoc e
 
 instance HasLoc Expression where
   getLoc = \case
@@ -1318,7 +1317,7 @@ instance HasLoc Expression where
     ExpressionPostfixApplication i -> getLoc i
     ExpressionLambda i -> getLoc i
     ExpressionCase i -> getLoc i
-    ExpressionLetBlock i -> getLoc i
+    ExpressionLet i -> getLoc i
     ExpressionUniverse i -> getLoc i
     ExpressionLiteral i -> getLoc i
     ExpressionFunction i -> getLoc i
@@ -1332,7 +1331,7 @@ idenLoc e = case sing :: SStage s of
   SScoped -> getLoc e
 
 instance (SingI s) => HasLoc (Iterator s) where
-  getLoc Iterator {..} = idenLoc _iteratorName <> expressionLoc _iteratorBody
+  getLoc Iterator {..} = idenLoc _iteratorName <> getLocExpressionType _iteratorBody
 
 instance SingI s => HasLoc (Import s) where
   getLoc Import {..} = case sing :: SStage s of
@@ -1350,6 +1349,11 @@ instance (SingI s, SingI t) => HasLoc (Module s t) where
     SScoped -> case sing :: SModuleIsTop t of
       SModuleLocal -> getLoc (m ^. modulePath)
       SModuleTop -> getLoc (m ^. modulePath)
+
+getLocSymbolType :: forall s. SingI s => SymbolType s -> Interval
+getLocSymbolType = case sing :: SStage s of
+  SParsed -> getLoc
+  SScoped -> getLoc
 
 getLocExpressionType :: forall s. SingI s => ExpressionType s -> Interval
 getLocExpressionType = case sing :: SStage s of
@@ -1381,11 +1385,8 @@ instance HasLoc (JudocGroup s) where
 
 instance HasLoc (JudocBlock s) where
   getLoc = \case
-    JudocParagraphLines ls -> getLocSpan ls
+    JudocLines ls -> getLocSpan ls
     JudocExample e -> getLoc e
-
-instance HasLoc (JudocParagraphLine s) where
-  getLoc (JudocParagraphLine atoms) = getLocSpan atoms
 
 instance HasLoc PatternScopedIden where
   getLoc = \case
@@ -1416,6 +1417,9 @@ instance (SingI s) => HasLoc (PatternAtom s) where
       getLocParens p = case sing :: SStage r of
         SParsed -> getLoc p
         SScoped -> getLoc p
+
+instance HasLoc (JudocLine s) where
+  getLoc (JudocLine delim atoms) = fmap getLoc delim ?<> getLocSpan atoms
 
 instance HasLoc (PatternAtoms s) where
   getLoc = (^. patternAtomsLoc)

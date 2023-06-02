@@ -3,7 +3,6 @@ module Commands.Dev.Scope where
 import Commands.Base
 import Commands.Dev.Scope.Options
 import Juvix.Compiler.Concrete.Language
-import Juvix.Compiler.Concrete.Pretty qualified as Scoper
 import Juvix.Compiler.Concrete.Print qualified as Print
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
 import Juvix.Prelude.Pretty
@@ -18,7 +17,7 @@ runCommand opts = do
         | opts ^. scopeWithComments ->
             renderStdOut (Print.ppOut (globalOpts, opts) (res ^. Scoper.comments) s)
         | otherwise ->
-            renderStdOut (Scoper.ppOut (globalOpts, opts) s)
+            renderStdOut (Print.ppOutNoComments (globalOpts, opts) s)
   when (opts ^. scopeListComments) $ do
     newline
     newline

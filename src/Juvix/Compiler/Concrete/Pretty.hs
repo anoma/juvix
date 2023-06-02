@@ -1,17 +1,18 @@
 module Juvix.Compiler.Concrete.Pretty
   ( module Juvix.Compiler.Concrete.Pretty,
-    module Juvix.Compiler.Concrete.Pretty.Base,
     module Juvix.Compiler.Concrete.Pretty.Options,
+    module Juvix.Compiler.Concrete.Print,
   )
 where
 
-import Juvix.Compiler.Concrete.Pretty.Base
 import Juvix.Compiler.Concrete.Pretty.Options
+import Juvix.Compiler.Concrete.Print (PrettyPrint, doc, docNoComments)
+import Juvix.Compiler.Concrete.Print qualified as Print
 import Juvix.Data.PPOutput
 import Juvix.Prelude
 
-ppOutDefault :: (PrettyCode c) => c -> AnsiText
-ppOutDefault = mkAnsiText . PPOutput . doc defaultOptions
+ppOutDefault :: (PrettyPrint c, HasLoc c) => c -> AnsiText
+ppOutDefault = Print.ppOutNoComments defaultOptions
 
-ppOut :: (CanonicalProjection a Options, PrettyCode c) => a -> c -> AnsiText
-ppOut o = mkAnsiText . PPOutput . doc (project o)
+ppOut :: (HasLoc c, CanonicalProjection a Options, PrettyPrint c) => a -> c -> AnsiText
+ppOut = Print.ppOutNoComments

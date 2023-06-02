@@ -1,7 +1,5 @@
 module Juvix.Compiler.Concrete.Translation where
 
--- import Juvix.Compiler.Concrete.Translation.FromParsed
-
 import Juvix.Compiler.Concrete.Data.Highlight.Input (HighlightBuilder)
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Translation.FromParsed qualified as Scoper

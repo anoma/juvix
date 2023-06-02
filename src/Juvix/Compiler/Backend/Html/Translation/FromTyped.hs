@@ -368,11 +368,11 @@ goJudoc (Judoc bs) = mconcatMapM goGroup bs
 
     goBlock :: JudocBlock 'Scoped -> Sem r Html
     goBlock = \case
-      JudocParagraphLines ls -> Html.p . concatWith (\l r -> l <> " " <> r) <$> mapM goLine (toList ls)
+      JudocLines ls -> Html.p . concatWith (\l r -> l <> " " <> r) <$> mapM goLine (toList ls)
       JudocExample e -> goExample e
 
-    goLine :: JudocParagraphLine 'Scoped -> Sem r Html
-    goLine (JudocParagraphLine atoms) = mconcatMapM goAtom (fmap (^. withLocParam) atoms)
+    goLine :: JudocLine 'Scoped -> Sem r Html
+    goLine (JudocLine _ atoms) = mconcatMapM goAtom (fmap (^. withLocParam) atoms)
 
     goExample :: Example 'Scoped -> Sem r Html
     goExample ex = do

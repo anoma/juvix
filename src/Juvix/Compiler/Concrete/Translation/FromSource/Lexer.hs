@@ -80,8 +80,8 @@ judocBlockEnd = kw delimJudocBlockEnd
 judocBlockStart :: Members '[InfoTableBuilder] r => ParsecS r KeywordRef
 judocBlockStart = kwBare delimJudocBlockStart
 
-judocStart :: Members '[InfoTableBuilder] r => ParsecS r ()
-judocStart = judocText_ (P.chunk Str.judocStart) >> hspace_
+judocStart :: Members '[InfoTableBuilder] r => ParsecS r KeywordRef
+judocStart = kwBare delimJudocStart <* hspace_
 
 -- | Does not consume space after it
 kwBare :: Member InfoTableBuilder r => Keyword -> ParsecS r KeywordRef
