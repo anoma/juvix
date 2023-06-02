@@ -1,0 +1,8 @@
+module Main;
+
+  module B;
+
+  import Stdlib.Prelude open;
+  idNat : Nat -> Nat;
+  idNat x := x;
+  end;
