@@ -22,6 +22,7 @@ import Juvix.Data.Keyword.All
     kwCase,
     kwColon,
     kwEnd,
+    kwEq,
     kwHiding,
     kwHole,
     kwImport,
@@ -87,6 +88,7 @@ allKeywords =
 nonKeywords :: [Keyword]
 nonKeywords =
   [ kwAs,
+    kwEq,
     kwInfix,
     kwInfixl,
     kwInfixr,
