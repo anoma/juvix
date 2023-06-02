@@ -183,14 +183,15 @@ goDefinition = \case
   Abstract.StatementImport {} -> return []
 
 scanImports :: Abstract.ModuleBody -> [Abstract.TopModule]
-scanImports (Abstract.ModuleBody stmts) = mconcatMap go stmts where
-  go :: Abstract.Statement -> [Abstract.TopModule]
-  go = \case
-    Abstract.StatementLocalModule m -> scanImports (m ^. Abstract.moduleBody)
-    Abstract.StatementImport t -> [t]
-    Abstract.StatementInductive {} -> []
-    Abstract.StatementFunction {} -> []
-    Abstract.StatementAxiom {} -> []
+scanImports (Abstract.ModuleBody stmts) = mconcatMap go stmts
+  where
+    go :: Abstract.Statement -> [Abstract.TopModule]
+    go = \case
+      Abstract.StatementLocalModule m -> scanImports (m ^. Abstract.moduleBody)
+      Abstract.StatementImport t -> [t]
+      Abstract.StatementInductive {} -> []
+      Abstract.StatementFunction {} -> []
+      Abstract.StatementAxiom {} -> []
 
 goModuleBody ::
   forall r.
