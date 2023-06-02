@@ -26,6 +26,18 @@ pragmasStart = "{-#"
 pragmasEnd :: (IsString s) => s
 pragmasEnd = "#-}"
 
+braceL :: IsString s => s
+braceL = "{"
+
+braceR :: IsString s => s
+braceR = "}"
+
+parenL :: IsString s => s
+parenL = "("
+
+parenR :: IsString s => s
+parenR = ")"
+
 end :: (IsString s) => s
 end = "end"
 

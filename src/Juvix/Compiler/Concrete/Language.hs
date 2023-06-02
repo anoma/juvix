@@ -242,6 +242,7 @@ instance HasLoc IteratorSyntaxDef where
 
 data TypeSignature (s :: Stage) = TypeSignature
   { _sigName :: FunctionName s,
+    _sigColonKw :: Irrelevant KeywordRef,
     _sigType :: ExpressionType s,
     _sigDoc :: Maybe (Judoc s),
     _sigPragmas :: Maybe ParsedPragmas,
@@ -261,10 +262,11 @@ deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (Typ
 -------------------------------------------------------------------------------
 
 data AxiomDef (s :: Stage) = AxiomDef
-  { _axiomKw :: KeywordRef,
+  { _axiomKw :: Irrelevant KeywordRef,
     _axiomDoc :: Maybe (Judoc s),
     _axiomPragmas :: Maybe ParsedPragmas,
     _axiomName :: SymbolType s,
+    _axiomColonKw :: Irrelevant KeywordRef,
     _axiomBuiltin :: Maybe (WithLoc BuiltinAxiom),
     _axiomType :: ExpressionType s
   }
@@ -417,6 +419,7 @@ type FunctionName s = SymbolType s
 
 data FunctionClause (s :: Stage) = FunctionClause
   { _clauseOwnerFunction :: FunctionName s,
+    _clauseAssignKw :: Irrelevant KeywordRef,
     _clausePatterns :: [PatternType s],
     _clauseBody :: ExpressionType s
   }
@@ -525,6 +528,7 @@ deriving stock instance
   ) =>
   Ord (UsingItem s)
 
+-- TODO add location
 data UsingHiding (s :: Stage)
   = Using (NonEmpty (UsingItem s))
   | Hiding (NonEmpty (SymbolType s))
@@ -707,7 +711,7 @@ instance HasAtomicity (Lambda s) where
 --------------------------------------------------------------------------------
 -- Function expression
 --------------------------------------------------------------------------------
-
+-- TODO consider WithLoc
 data FunctionParameters (s :: Stage) = FunctionParameters
   { _paramNames :: [Maybe (SymbolType s)],
     _paramImplicit :: IsImplicit,
@@ -743,9 +747,6 @@ deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (Fun
 -- Lambda expression
 --------------------------------------------------------------------------------
 
--- Notes: An empty lambda, here called 'the impossible case', is a lambda
--- expression with empty list of arguments and empty body.
-
 data Lambda (s :: Stage) = Lambda
   { _lambdaKw :: KeywordRef,
     _lambdaClauses :: NonEmpty (LambdaClause s)
@@ -772,6 +773,7 @@ deriving stock instance
 data LambdaClause (s :: Stage) = LambdaClause
   { _lambdaPipe :: Irrelevant (Maybe KeywordRef),
     _lambdaParameters :: NonEmpty (PatternType s),
+    _lambdaAssignKw :: Irrelevant KeywordRef,
     _lambdaBody :: ExpressionType s
   }
 

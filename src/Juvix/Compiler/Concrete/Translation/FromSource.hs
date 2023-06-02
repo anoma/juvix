@@ -553,8 +553,8 @@ expressionAtom =
       <|> (AtomLet <$> letBlock)
       <|> (AtomFunArrow <$> kw kwRightArrow)
       <|> (AtomHole <$> hole)
-      <|> parens (AtomParens <$> parseExpressionAtoms)
-      <|> braces (AtomBraces <$> withLoc parseExpressionAtoms)
+      <|> (AtomParens <$> parens parseExpressionAtoms)
+      <|> (AtomBraces <$> withLoc (braces parseExpressionAtoms))
 
 parseExpressionAtoms ::
   (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
@@ -710,7 +710,7 @@ typeSignature ::
   Maybe (WithLoc BuiltinFunction) ->
   ParsecS r (TypeSignature 'Parsed)
 typeSignature _sigTerminating _sigName _sigBuiltin = P.label "<type signature>" $ do
-  kw kwColon
+  _sigColonKw <- Irrelevant <$> kw kwColon
   _sigType <- parseExpressionAtoms
   _sigDoc <- getJudoc
   _sigPragmas <- getPragmas
@@ -744,11 +744,11 @@ axiomDef ::
   Maybe (WithLoc BuiltinAxiom) ->
   ParsecS r (AxiomDef 'Parsed)
 axiomDef _axiomBuiltin = do
-  _axiomKw <- kw kwAxiom
+  _axiomKw <- Irrelevant <$> kw kwAxiom
   _axiomDoc <- getJudoc
   _axiomPragmas <- getPragmas
   _axiomName <- symbol
-  kw kwColon
+  _axiomColonKw <- Irrelevant <$> kw kwColon
   _axiomType <- parseExpressionAtoms
   return AxiomDef {..}
 
@@ -796,7 +796,7 @@ function = do
 lambdaClause :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => Irrelevant (Maybe KeywordRef) -> ParsecS r (LambdaClause 'Parsed)
 lambdaClause _lambdaPipe = do
   _lambdaParameters <- P.some patternAtom
-  kw kwAssign
+  _lambdaAssignKw <- Irrelevant <$> kw kwAssign
   _lambdaBody <- parseExpressionAtoms
   return LambdaClause {..}
 
@@ -904,7 +904,7 @@ parsePatternAtomsNested = do
 functionClause :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => Symbol -> ParsecS r (FunctionClause 'Parsed)
 functionClause _clauseOwnerFunction = do
   _clausePatterns <- P.many patternAtom
-  kw kwAssign
+  _clauseAssignKw <- Irrelevant <$> kw kwAssign
   _clauseBody <- parseExpressionAtoms
   return FunctionClause {..}
 

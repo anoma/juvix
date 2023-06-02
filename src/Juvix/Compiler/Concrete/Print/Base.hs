@@ -340,7 +340,7 @@ instance SingI s => PrettyPrint (LambdaClause s) where
   ppCode LambdaClause {..} = do
     let lambdaParameters' = hsep (ppPatternAtom <$> _lambdaParameters)
         lambdaBody' = ppExpressionType _lambdaBody
-    lambdaParameters' <+> ppCode kwAssign <> oneLineOrNext lambdaBody'
+    lambdaParameters' <+> ppCode _lambdaAssignKw <> oneLineOrNext lambdaBody'
 
 instance SingI s => PrettyPrint (Let s) where
   ppCode Let {..} = do
@@ -748,7 +748,7 @@ instance SingI s => PrettyPrint (FunctionClause s) where
         clauseBody' = ppExpressionType _clauseBody
     clauseFun'
       <+?> clausePatterns'
-      <+> ppCode kwAssign
+      <+> ppCode _clauseAssignKw
         <> oneLineOrNext clauseBody'
 
 ppCodeAtom :: (HasAtomicity c, PrettyPrint c) => PrettyPrinting c
@@ -773,7 +773,7 @@ instance SingI s => PrettyPrint (InductiveParameters s) where
 instance SingI s => PrettyPrint (NonEmpty (InductiveParameters s)) where
   ppCode = hsep . fmap ppCode
 
-instance (PrettyPrint a) => PrettyPrint (Irrelevant a) where
+instance PrettyPrint a => PrettyPrint (Irrelevant a) where
   ppCode (Irrelevant a) = ppCode a
 
 instance SingI s => PrettyPrint (InductiveConstructorDef s) where

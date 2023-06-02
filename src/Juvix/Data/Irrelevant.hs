@@ -2,6 +2,7 @@
 -- ignored when checking for equality/ordering
 module Juvix.Data.Irrelevant where
 
+import Juvix.Data.Loc
 import Juvix.Prelude.Base
 import Juvix.Prelude.Pretty
 
@@ -9,6 +10,9 @@ newtype Irrelevant a = Irrelevant
   { _unIrrelevant :: a
   }
   deriving stock (Show)
+
+instance HasLoc a => HasLoc (Irrelevant a) where
+  getLoc (Irrelevant a) = getLoc a
 
 instance Eq (Irrelevant a) where
   _ == _ = True

@@ -987,7 +987,8 @@ checkFunctionClause clause@FunctionClause {..} = do
     @$> FunctionClause
       { _clauseOwnerFunction = clauseOwnerFunction',
         _clausePatterns = clausePatterns',
-        _clauseBody = clauseBody'
+        _clauseBody = clauseBody',
+        _clauseAssignKw
       }
   where
     fun = _clauseOwnerFunction
@@ -1114,7 +1115,8 @@ checkLambdaClause LambdaClause {..} = withLocalScope $ do
     LambdaClause
       { _lambdaParameters = lambdaParameters',
         _lambdaBody = lambdaBody',
-        _lambdaPipe
+        _lambdaPipe,
+        _lambdaAssignKw
       }
 
 scopedVar ::

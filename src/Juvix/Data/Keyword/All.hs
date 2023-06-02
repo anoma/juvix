@@ -229,6 +229,18 @@ kwDollar = asciiKw Str.dollar
 kwMutual :: Keyword
 kwMutual = asciiKw Str.mutual
 
+delimBraceL :: Keyword
+delimBraceL = mkDelim Str.braceL
+
+delimBraceR :: Keyword
+delimBraceR = mkDelim Str.braceR
+
+delimParenL :: Keyword
+delimParenL = mkDelim Str.parenL
+
+delimParenR :: Keyword
+delimParenR = mkDelim Str.parenR
+
 delimJudocExample :: Keyword
 delimJudocExample = mkJudocDelim Str.judocExample
 
