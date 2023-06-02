@@ -182,15 +182,26 @@ goDefinition = \case
   Abstract.StatementAxiom a -> pure . PreAxiomDef <$> goAxiomDef a
   Abstract.StatementImport {} -> return []
 
+scanImports :: Abstract.ModuleBody -> [Abstract.TopModule]
+scanImports (Abstract.ModuleBody stmts) = mconcatMap go stmts
+  where
+    go :: Abstract.Statement -> [Abstract.TopModule]
+    go = \case
+      Abstract.StatementLocalModule m -> scanImports (m ^. Abstract.moduleBody)
+      Abstract.StatementImport t -> [t]
+      Abstract.StatementInductive {} -> []
+      Abstract.StatementFunction {} -> []
+      Abstract.StatementAxiom {} -> []
+
 goModuleBody ::
   forall r.
   Members '[Reader ExportsTable, Reader NameDependencyInfo, State TranslationState, NameIdGen] r =>
   Abstract.ModuleBody ->
   Sem r ModuleBody
-goModuleBody (Abstract.ModuleBody stmts) = do
+goModuleBody b@(Abstract.ModuleBody stmts) = do
   preDefs <- concatMapM goDefinition stmts
   sccs <- buildMutualBlocks preDefs
-  let imports :: [Abstract.TopModule] = [t | Abstract.StatementImport t <- stmts]
+  let imports :: [Abstract.TopModule] = scanImports b
       statements' = map goSCC sccs
   imports' <- map StatementInclude <$> mapMaybeM goImport imports
   return
@@ -235,17 +246,6 @@ goImport m = do
                   { _includeModule = m'
                   }
             )
-
--- goStatement ::
---   (Members '[Reader ExportsTable, State TranslationState, NameIdGen, Reader NameDependencyInfo] r) =>
---   Abstract.Statement ->
---   Sem r (Maybe Statement)
--- goStatement = \case
---   Abstract.StatementAxiom d -> Just . StatementAxiom <$> goAxiomDef d
---   Abstract.StatementFunction {} -> return Nothing
---   Abstract.StatementImport i -> fmap StatementInclude <$> goImport i
---   Abstract.StatementLocalModule m -> Just . StatementModule <$> goModule m
---   Abstract.StatementInductive i -> Just . StatementInductive <$> goInductiveDef i
 
 goTypeIden :: Abstract.Iden -> Iden
 goTypeIden = \case
