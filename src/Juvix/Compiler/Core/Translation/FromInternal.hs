@@ -1,6 +1,7 @@
 module Juvix.Compiler.Core.Translation.FromInternal where
 
 import Data.HashMap.Strict qualified as HashMap
+import Data.HashSet qualified as HashSet
 import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Compiler.Abstract.Data.Name
 import Juvix.Compiler.Core.Data
@@ -18,6 +19,8 @@ import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking qu
 import Juvix.Data.Loc qualified as Loc
 import Juvix.Data.PPOutput
 import Juvix.Extra.Strings qualified as Str
+
+type IncludesCache = HashSet Internal.Name
 
 data PreInductiveDef = PreInductiveDef
   { _preInductiveInternal :: Internal.InductiveDef,
@@ -46,14 +49,19 @@ mkIdentIndex = show . (^. Internal.nameId . Internal.unNameId)
 
 fromInternal :: Internal.InternalTypedResult -> Sem k CoreResult
 fromInternal i = do
-  (res, _) <- runInfoTableBuilder emptyInfoTable (evalState (i ^. InternalTyped.resultFunctions) (runReader (i ^. InternalTyped.resultIdenTypes) f))
+  (res, _) <-
+    runInfoTableBuilder emptyInfoTable
+      . evalState (i ^. InternalTyped.resultFunctions)
+      . runReader (i ^. InternalTyped.resultIdenTypes)
+      . evalState (mempty :: IncludesCache)
+      $ f
   return $
     CoreResult
       { _coreResultTable = res,
         _coreResultInternalTypedResult = i
       }
   where
-    f :: Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, State InternalTyped.FunctionsTable] r => Sem r ()
+    f :: Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, State InternalTyped.FunctionsTable, State IncludesCache] r => Sem r ()
     f = do
       reserveLiteralIntToNatSymbol
       reserveLiteralIntToIntSymbol
@@ -85,18 +93,42 @@ fromInternalExpression res exp = do
 
 goModule ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable] r) =>
+  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable, State IncludesCache] r =>
   Internal.Module ->
   Sem r ()
-goModule m = mapM_ go (m ^. Internal.moduleBody . Internal.moduleStatements)
+goModule = goModuleBody . (^. Internal.moduleBody)
+
+isCached ::
+  forall r.
+  Members '[State IncludesCache] r =>
+  Internal.Include ->
+  Sem r Bool
+isCached i = do
+  let name = i ^. Internal.includeModule . Internal.moduleName
+  b <- gets (HashSet.member name)
+  modify (HashSet.insert name)
+  return b
+
+goModuleBody ::
+  forall r.
+  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable, State IncludesCache] r =>
+  Internal.ModuleBody ->
+  Sem r ()
+goModuleBody b = do
+  mapM_ go (b ^. Internal.moduleStatements)
   where
+    goInclude :: Internal.Include -> Sem r ()
+    goInclude i =
+      unlessM (isCached i) $
+        mapM_ go (i ^. Internal.includeModule . Internal.moduleBody . Internal.moduleStatements)
+
     go :: Internal.Statement -> Sem r ()
     go = \case
       Internal.StatementAxiom a -> goAxiomInductive a >> goAxiomDef a
       Internal.StatementMutual f -> goMutualBlock f
-      Internal.StatementInclude i -> mapM_ go (i ^. Internal.includeModule . Internal.moduleBody . Internal.moduleStatements)
+      Internal.StatementInclude i -> goInclude i
 
--- | predefine an inductive definition
+-- | Predefine an inductive definition
 preInductiveDef ::
   forall r.
   (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable] r) =>

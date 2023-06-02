@@ -170,6 +170,7 @@ fromInternalInclude i = do
     . runFunctionsTableArtifacts
     . readerTypesTableArtifacts
     . runReader Core.initIndexTable
+    . evalState (mempty :: Core.IncludesCache)
     $ Core.goModule (i ^. Internal.includeModule)
 
 fromInternalExpression :: Members '[State Artifacts] r => Internal.Expression -> Sem r Core.Node
