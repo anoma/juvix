@@ -48,12 +48,17 @@ runCommand opts = do
 
 renderModeFromOptions :: FormatTarget -> FormatOptions -> FormattedFileInfo -> FormatRenderMode
 renderModeFromOptions target opts formattedInfo
-  | opts ^. formatInPlace = EditInPlace formattedInfo
+  | opts ^. formatInPlace = whenContentsModified (EditInPlace formattedInfo)
   | opts ^. formatCheck = NoEdit Silent
   | otherwise = case target of
       TargetFile -> NoEdit (ReformattedFile (formattedInfo ^. formattedFileInfoContentsAnsi))
-      TargetDir -> NoEdit (InputPath (formattedInfo ^. formattedFileInfoPath))
+      TargetDir -> whenContentsModified (NoEdit (InputPath (formattedInfo ^. formattedFileInfoPath)))
       TargetStdin -> NoEdit (ReformattedFile (formattedInfo ^. formattedFileInfoContentsAnsi))
+  where
+    whenContentsModified :: FormatRenderMode -> FormatRenderMode
+    whenContentsModified res
+      | formattedInfo ^. formattedFileInfoContentsModified = res
+      | otherwise = NoEdit Silent
 
 renderFormattedOutput :: forall r. Members '[Embed IO, App, Resource, Files] r => FormatTarget -> FormatOptions -> FormattedFileInfo -> Sem r ()
 renderFormattedOutput target opts fInfo = do

@@ -1,5 +1,6 @@
 module Juvix.Formatter where
 
+import Data.List.NonEmpty qualified as NonEmpty
 import Data.Text qualified as T
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Print (ppOutDefault)
@@ -10,9 +11,15 @@ import Juvix.Extra.Paths
 import Juvix.Prelude
 import Juvix.Prelude.Pretty
 
+data FormatResult
+  = FormatResultOK
+  | FormatResultFail
+  deriving stock (Eq)
+
 data FormattedFileInfo = FormattedFileInfo
   { _formattedFileInfoPath :: Path Abs File,
-    _formattedFileInfoContentsAnsi :: NonEmpty AnsiText
+    _formattedFileInfoContentsAnsi :: NonEmpty AnsiText,
+    _formattedFileInfoContentsModified :: Bool
   }
 
 data ScopeEff m a where
@@ -21,11 +28,6 @@ data ScopeEff m a where
 
 makeLenses ''FormattedFileInfo
 makeSem ''ScopeEff
-
-data FormatResult
-  = FormatResultOK
-  | FormatResultFail
-  deriving stock (Eq)
 
 combineResults :: [FormatResult] -> FormatResult
 combineResults rs
@@ -55,8 +57,9 @@ format ::
   Sem r FormatResult
 format p = do
   originalContents <- readFile' p
-  formattedContents <- formatPath p
-  formatResultFromContents originalContents formattedContents p
+  runReader originalContents $ do
+    formattedContents <- formatPath p
+    formatResultFromContents formattedContents p
 
 -- | Format a Juvix project.
 --
@@ -90,7 +93,7 @@ formatProject p = do
       res <- combineResults <$> mapM format juvixFiles
       return (res, RecurseFilter (\hasJuvixYaml d -> not hasJuvixYaml && not (isHiddenDirectory d)))
 
-formatPath :: Member ScopeEff r => Path Abs File -> Sem r (Maybe (NonEmpty AnsiText))
+formatPath :: Members [Reader Text, ScopeEff] r => Path Abs File -> Sem r (NonEmpty AnsiText)
 formatPath p = do
   res <- scopeFile p
   formatScoperResult res
@@ -102,32 +105,34 @@ formatStdin ::
 formatStdin = do
   res <- scopeStdin
   let originalContents = fromMaybe "" (res ^. Scoper.resultParserResult . resultEntry . entryPointStdin)
-  formattedContents <- formatScoperResult res
-  formatResultFromContents originalContents formattedContents formatStdinPath
+  runReader originalContents $ do
+    formattedContents <- formatScoperResult res
+    formatResultFromContents formattedContents formatStdinPath
 
 formatResultFromContents ::
   forall r.
-  Members '[Output FormattedFileInfo] r =>
-  Text ->
-  Maybe (NonEmpty AnsiText) ->
+  Members '[Reader Text, Output FormattedFileInfo] r =>
+  NonEmpty AnsiText ->
   Path Abs File ->
   Sem r FormatResult
-formatResultFromContents originalContents mfc filepath =
-  case mfc of
-    Just formattedContents
-      | originalContents /= ansiPlainText formattedContents -> do
-          output
-            ( FormattedFileInfo
-                { _formattedFileInfoPath = filepath,
-                  _formattedFileInfoContentsAnsi = formattedContents
-                }
-            )
-          return FormatResultFail
-      | otherwise -> return FormatResultOK
-    Nothing ->
-      return FormatResultOK
+formatResultFromContents formattedContents filepath = do
+  originalContents <- ask
+  if
+      | originalContents /= ansiPlainText formattedContents -> mkResult FormatResultFail
+      | otherwise -> mkResult FormatResultOK
+  where
+    mkResult :: FormatResult -> Sem r FormatResult
+    mkResult res = do
+      output
+        ( FormattedFileInfo
+            { _formattedFileInfoPath = filepath,
+              _formattedFileInfoContentsAnsi = formattedContents,
+              _formattedFileInfoContentsModified = res == FormatResultFail
+            }
+        )
+      return res
 
-formatScoperResult :: Scoper.ScoperResult -> Sem r (Maybe (NonEmpty AnsiText))
+formatScoperResult :: Member (Reader Text) r => Scoper.ScoperResult -> Sem r (NonEmpty AnsiText)
 formatScoperResult res = do
   let cs = res ^. Scoper.comments
       formattedModules = run (runReader cs (mapM formatTopModule (res ^. Scoper.resultModules)))
@@ -136,11 +141,11 @@ formatScoperResult res = do
       case pragmas ^. withLocParam . withSourceValue . pragmasFormat of
         Just PragmaFormat {..}
           | not _pragmaFormat ->
-              return Nothing
+              NonEmpty.singleton . mkAnsiText @Text <$> ask
         _ ->
-          return (Just formattedModules)
+          return formattedModules
     Nothing ->
-      return (Just formattedModules)
+      return formattedModules
   where
     formatTopModule :: Member (Reader Comments) r => Module 'Scoped 'ModuleTop -> Sem r AnsiText
     formatTopModule m = do
