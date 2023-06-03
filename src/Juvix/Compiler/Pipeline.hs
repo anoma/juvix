@@ -89,6 +89,14 @@ upToCore ::
 upToCore =
   upToInternalReachability >>= Core.fromInternal
 
+--- | A version of upToCore that does not filter out unreachable symbols.
+--- | Intended for use with the REPL.
+upToCoreRepl ::
+  Members '[HighlightBuilder, Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, PathResolver] r =>
+  Sem r Core.CoreResult
+upToCoreRepl =
+  upToInternalTyped >>= Core.fromInternal
+
 upToAsm ::
   (Members '[HighlightBuilder, Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, PathResolver] r) =>
   Sem r Asm.InfoTable
@@ -194,11 +202,11 @@ runIO opts entry = runIOEither entry >=> mayThrow
 runIO' :: EntryPoint -> Sem PipelineEff a -> IO (ResolverState, a)
 runIO' = runIO defaultGenericOptions
 
-corePipelineIO' :: EntryPoint -> IO Artifacts
-corePipelineIO' = corePipelineIO defaultGenericOptions
+corePipelineIO' :: Sem TopPipelineEff (Core.CoreResult) -> EntryPoint -> IO Artifacts
+corePipelineIO' p = corePipelineIO defaultGenericOptions p
 
-corePipelineIO :: GenericOptions -> EntryPoint -> IO Artifacts
-corePipelineIO opts entry = corePipelineIOEither entry >>= mayThrow
+corePipelineIO :: GenericOptions -> Sem TopPipelineEff (Core.CoreResult) -> EntryPoint -> IO Artifacts
+corePipelineIO opts p entry = corePipelineIOEither p entry >>= mayThrow
   where
     mayThrow :: Either JuvixError r -> IO r
     mayThrow = \case
@@ -206,9 +214,10 @@ corePipelineIO opts entry = corePipelineIOEither entry >>= mayThrow
       Right r -> return r
 
 corePipelineIOEither ::
+  Sem TopPipelineEff (Core.CoreResult) ->
   EntryPoint ->
   IO (Either JuvixError Artifacts)
-corePipelineIOEither entry = do
+corePipelineIOEither p entry = do
   eith <-
     runM
       . ignoreHighlightBuilder
@@ -219,7 +228,7 @@ corePipelineIOEither entry = do
       . runFilesIO
       . runReader entry
       . runPathResolverArtifacts
-      $ upToCore
+      $ p
   return $ case eith of
     Left err -> Left err
     Right (art, coreRes) ->
