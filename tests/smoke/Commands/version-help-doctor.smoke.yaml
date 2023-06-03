@@ -46,10 +46,11 @@ tests:
 
   - name: cli-cmd-doctor-verbose-system
     command:
-      - juvix
-      - doctor
-      - --verbose
-      - --offline
+      shell:
+        - bash
+      script: |
+        unset JUVIX_LLVM_DIST_PATH
+        juvix doctor --verbose --offline
     exit-status: 0
     stdout:
       matches:
