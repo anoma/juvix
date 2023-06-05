@@ -81,13 +81,12 @@ upToInternalReachability ::
   (Members '[HighlightBuilder, Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, PathResolver] r) =>
   Sem r Internal.InternalTypedResult
 upToInternalReachability =
-  Internal.filterUnreachable <$> upToInternalTyped
+  upToInternalTyped >>= Internal.filterUnreachable
 
 upToCore ::
   Members '[HighlightBuilder, Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, PathResolver] r =>
   Sem r Core.CoreResult
-upToCore =
-  upToInternalReachability >>= Core.fromInternal
+upToCore = upToInternalReachability >>= Core.fromInternal
 
 upToAsm ::
   (Members '[HighlightBuilder, Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, PathResolver] r) =>

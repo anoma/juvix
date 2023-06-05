@@ -469,3 +469,19 @@ tests:
     stdout:
       contains: "(::) :: nil"
     exit-status: 0
+
+  - name: repl-no-filter-unreachable
+    command:
+      shell:
+        - bash
+      script: |
+        temp=$(mktemp -d)
+        trap 'rm -rf -- "$temp"' EXIT
+        cd $temp
+        echo "module Test;import Stdlib.Prelude open" > Test.juvix
+        touch juvix.yaml
+        juvix repl Test.juvix
+    stdin: "suc 99"
+    stdout:
+      contains: "100"
+    exit-status: 0
