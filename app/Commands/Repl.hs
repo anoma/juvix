@@ -104,7 +104,7 @@ quit _ = liftIO (throwIO Interrupt)
 
 loadEntryPoint :: EntryPoint -> Repl ()
 loadEntryPoint ep = do
-  artif <- liftIO (corePipelineIO' upToCore ep)
+  artif <- liftIO (corePipelineIO' ep)
   let newCtx =
         ReplContext
           { _replContextArtifacts = artif,

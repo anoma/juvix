@@ -5,10 +5,14 @@ import Juvix.Compiler.Internal.Language
 import Juvix.Compiler.Internal.Translation.FromAbstract.Data.Context
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking qualified as Arity
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context qualified as Typed
+import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Prelude
 
-filterUnreachable :: Typed.InternalTypedResult -> Typed.InternalTypedResult
-filterUnreachable r = r {Typed._resultModules = modules'}
+filterUnreachable :: Members '[Reader EntryPoint] r => Typed.InternalTypedResult -> Sem r Typed.InternalTypedResult
+filterUnreachable r = do
+  asks (^. entryPointSymbolPruningMode) >>= \case
+    KeepAll -> return r
+    FilterUnreachable -> return (set Typed.resultModules modules' r)
   where
     depInfo = r ^. (Typed.resultInternalArityResult . Arity.resultInternalResult . resultDepInfo)
     modules = r ^. Typed.resultModules
