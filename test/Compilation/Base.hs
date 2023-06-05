@@ -21,7 +21,7 @@ compileAssertion ::
 compileAssertion mode mainFile expectedFile step = do
   step "Translate to JuvixCore"
   entryPoint <- defaultEntryPointCwdIO mainFile
-  tab <- (^. Core.coreResultTable) . snd <$> runIO' entryPoint (upToCore FilterUnreachable)
+  tab <- (^. Core.coreResultTable) . snd <$> runIO' entryPoint upToCore
   case run $ runReader Core.defaultCoreOptions $ runError $ Core.toEval' tab of
     Left err -> assertFailure (show (pretty (fromJuvixError @GenericError err)))
     Right tab' -> do
@@ -39,7 +39,7 @@ compileErrorAssertion ::
 compileErrorAssertion mainFile step = do
   step "Translate to JuvixCore"
   entryPoint <- defaultEntryPointCwdIO mainFile
-  tab <- (^. Core.coreResultTable) . snd <$> runIO' entryPoint (upToCore FilterUnreachable)
+  tab <- (^. Core.coreResultTable) . snd <$> runIO' entryPoint upToCore
   case run $ runReader Core.defaultCoreOptions $ runError @JuvixError $ Core.toStripped' tab of
     Left _ -> assertBool "" True
     Right _ -> assertFailure "no error"

@@ -43,11 +43,6 @@ type PipelineEff = '[PathResolver, Reader EntryPoint, Files, NameIdGen, Builtins
 
 type TopPipelineEff = '[PathResolver, Reader EntryPoint, Files, NameIdGen, Builtins, State Artifacts, Error JuvixError, HighlightBuilder, Embed IO]
 
---- An option specifiying how symbols should be pruned in the Internal to Core translation
-data SymbolPruningMode
-  = FilterUnreachable
-  | KeepAll
-
 --------------------------------------------------------------------------------
 -- Workflows
 --------------------------------------------------------------------------------
@@ -90,10 +85,10 @@ upToInternalReachability =
 
 upToCore ::
   Members '[HighlightBuilder, Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, PathResolver] r =>
-  SymbolPruningMode ->
   Sem r Core.CoreResult
-upToCore mode =
-  let toInternal = case mode of
+upToCore = do
+  pruningMode <- asks (^. entryPointSymbolPruningMode)
+  let toInternal = case pruningMode of
         FilterUnreachable -> upToInternalReachability
         KeepAll -> upToInternalTyped
    in toInternal >>= Core.fromInternal
@@ -102,7 +97,7 @@ upToAsm ::
   (Members '[HighlightBuilder, Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, PathResolver] r) =>
   Sem r Asm.InfoTable
 upToAsm =
-  upToCore FilterUnreachable >>= \Core.CoreResult {..} -> coreToAsm _coreResultTable
+  upToCore >>= \Core.CoreResult {..} -> coreToAsm _coreResultTable
 
 upToMiniC ::
   (Members '[HighlightBuilder, Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, PathResolver] r) =>
@@ -113,26 +108,26 @@ upToVampIR ::
   (Members '[HighlightBuilder, Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, PathResolver] r) =>
   Sem r VampIR.Result
 upToVampIR =
-  upToCore FilterUnreachable >>= \Core.CoreResult {..} -> coreToVampIR _coreResultTable
+  upToCore >>= \Core.CoreResult {..} -> coreToVampIR _coreResultTable
 
 upToGeb ::
   (Members '[HighlightBuilder, Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, PathResolver] r) =>
   Geb.ResultSpec ->
   Sem r Geb.Result
 upToGeb spec =
-  upToCore FilterUnreachable >>= \Core.CoreResult {..} -> coreToGeb spec _coreResultTable
+  upToCore >>= \Core.CoreResult {..} -> coreToGeb spec _coreResultTable
 
 upToCoreTypecheck ::
   (Members '[HighlightBuilder, Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, PathResolver] r) =>
   Sem r Core.CoreResult
 upToCoreTypecheck =
-  upToCore FilterUnreachable >>= \r -> Core.toTypechecked (r ^. Core.coreResultTable) >>= \tab -> return r {Core._coreResultTable = tab}
+  upToCore >>= \r -> Core.toTypechecked (r ^. Core.coreResultTable) >>= \tab -> return r {Core._coreResultTable = tab}
 
 upToEval ::
   (Members '[HighlightBuilder, Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, PathResolver] r) =>
   Sem r Core.CoreResult
-upToEval =
-  upToCore FilterUnreachable >>= \r -> Core.toEval (r ^. Core.coreResultTable) >>= \tab -> return r {Core._coreResultTable = tab}
+upToEval = do
+  upToCore >>= \r -> Core.toEval (r ^. Core.coreResultTable) >>= \tab -> return r {Core._coreResultTable = tab}
 
 --------------------------------------------------------------------------------
 -- Internal workflows

@@ -10,6 +10,12 @@ import Juvix.Compiler.Pipeline.Root
 import Juvix.Extra.Paths
 import Juvix.Prelude
 
+-- | An option specifiying how symbols should be pruned in the Internal to Core translation
+data SymbolPruningMode
+  = FilterUnreachable
+  | KeepAll
+  deriving stock (Eq, Show)
+
 -- | The head of _entryModulePaths is assumed to be the Main module
 data EntryPoint = EntryPoint
   { _entryPointRoot :: Path Abs Dir,
@@ -30,7 +36,8 @@ data EntryPoint = EntryPoint
     _entryPointOptimizationLevel :: Int,
     _entryPointInliningDepth :: Int,
     _entryPointGenericOptions :: GenericOptions,
-    _entryPointModulePaths :: [Path Abs File]
+    _entryPointModulePaths :: [Path Abs File],
+    _entryPointSymbolPruningMode :: SymbolPruningMode
   }
   deriving stock (Eq, Show)
 
@@ -73,7 +80,8 @@ defaultEntryPointNoFile roots =
       _entryPointUnrollLimit = defaultUnrollLimit,
       _entryPointOptimizationLevel = defaultOptimizationLevel,
       _entryPointInliningDepth = defaultInliningDepth,
-      _entryPointModulePaths = []
+      _entryPointModulePaths = [],
+      _entryPointSymbolPruningMode = FilterUnreachable
     }
 
 defaultUnrollLimit :: Int

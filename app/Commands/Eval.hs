@@ -8,7 +8,7 @@ import Juvix.Compiler.Core qualified as Core
 runCommand :: (Members '[Embed IO, App] r) => EvalOptions -> Sem r ()
 runCommand opts@EvalOptions {..} = do
   gopts <- askGlobalOptions
-  Core.CoreResult {..} <- runPipeline _evalInputFile (upToCore FilterUnreachable)
+  Core.CoreResult {..} <- runPipeline _evalInputFile upToCore
   let r =
         run $
           runReader (project gopts) $

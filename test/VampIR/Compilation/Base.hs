@@ -10,6 +10,6 @@ vampirCompileAssertion :: Int -> Path Abs File -> Path Abs File -> (String -> IO
 vampirCompileAssertion paramsNum mainFile dataFile step = do
   step "Translate to JuvixCore"
   entryPoint <- defaultEntryPointCwdIO mainFile
-  tab <- (^. coreResultTable) . snd <$> runIO' entryPoint (upToCore FilterUnreachable)
+  tab <- (^. coreResultTable) . snd <$> runIO' entryPoint upToCore
   coreVampIRAssertion' tab toVampIRTransformations mainFile dataFile step
   vampirAssertion' paramsNum tab dataFile step

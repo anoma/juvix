@@ -104,7 +104,7 @@ quit _ = liftIO (throwIO Interrupt)
 
 loadEntryPoint :: EntryPoint -> Repl ()
 loadEntryPoint ep = do
-  artif <- liftIO (corePipelineIO' (upToCore KeepAll) ep)
+  artif <- liftIO (corePipelineIO' upToCore ep)
   let newCtx =
         ReplContext
           { _replContextArtifacts = artif,
@@ -122,7 +122,7 @@ pSomeFile = mkPrepath
 
 loadFile :: Prepath File -> Repl ()
 loadFile f = do
-  entryPoint <- getReplEntryPoint f
+  entryPoint <- getReplEntryPointFromPrepath f
   loadEntryPoint entryPoint
 
 loadDefaultPrelude :: Repl ()
@@ -140,11 +140,17 @@ loadDefaultPrelude = whenJustM defaultPreludeEntryPoint $ \e -> do
     $ entrySetup
   loadEntryPoint e
 
-getReplEntryPoint :: Prepath File -> Repl EntryPoint
-getReplEntryPoint inputFile = do
+getReplEntryPoint :: (Roots -> a -> GlobalOptions -> IO EntryPoint) -> a -> Repl EntryPoint
+getReplEntryPoint f inputFile = do
   roots <- Reader.asks (^. replRoots)
   gopts <- State.gets (^. replStateGlobalOptions)
-  liftIO (entryPointFromGlobalOptionsPre roots inputFile gopts)
+  liftIO (set entryPointSymbolPruningMode KeepAll <$> f roots inputFile gopts)
+
+getReplEntryPointFromPrepath :: Prepath File -> Repl EntryPoint
+getReplEntryPointFromPrepath = getReplEntryPoint entryPointFromGlobalOptionsPre
+
+getReplEntryPointFromPath :: Path Abs File -> Repl EntryPoint
+getReplEntryPointFromPath = getReplEntryPoint entryPointFromGlobalOptions
 
 displayVersion :: String -> Repl ()
 displayVersion _ = liftIO (putStrLn versionTag)
@@ -169,7 +175,7 @@ replCommand opts input = catchAll $ do
 
         eval :: Core.Node -> Repl Core.Node
         eval n = do
-          ep <- getReplEntryPoint (mkPrepath (toFilePath replPath))
+          ep <- getReplEntryPointFromPrepath (mkPrepath (toFilePath replPath))
           let shouldDisambiguate :: Bool
               shouldDisambiguate = not (opts ^. replNoDisambiguate)
           (artif', n') <-
@@ -472,7 +478,6 @@ runCommand opts = do
 -- | If the package contains the stdlib as a dependency, loads the Prelude
 defaultPreludeEntryPoint :: Repl (Maybe EntryPoint)
 defaultPreludeEntryPoint = do
-  opts <- State.gets (^. replStateGlobalOptions)
   roots <- State.gets (^. replStateRoots)
   let buildDir = roots ^. rootsBuildDir
       root = roots ^. rootsRootDir
@@ -481,7 +486,7 @@ defaultPreludeEntryPoint = do
   case mstdlibPath of
     Just stdlibPath ->
       Just . set entryPointResolverRoot stdlibPath
-        <$> liftIO (entryPointFromGlobalOptions roots (stdlibPath <//> preludePath) opts)
+        <$> getReplEntryPointFromPath (stdlibPath <//> preludePath)
     Nothing -> return Nothing
 
 replMakeAbsolute :: SomeBase b -> Repl (Path Abs b)
