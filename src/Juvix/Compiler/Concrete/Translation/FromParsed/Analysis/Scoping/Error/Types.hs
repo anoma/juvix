@@ -122,27 +122,21 @@ instance ToGenericError LacksTypeSig where
           checkColon :: FunctionClause 'Parsed -> Doc Ann
           checkColon fc@FunctionClause {..} =
             case Text.splitOn ":" (_clauseOwnerFunction ^. withLocParam) of
-              [x, ""] ->
-                line
-                  <> "Perhaps you meant:"
-                  <> line
-                  <> indent'
-                    ( ppCode
-                        opts'
-                        (adjustPatterns x [":"])
-                    )
-              [x, y] ->
-                line
-                  <> "Perhaps you meant:"
-                  <> line
-                  <> indent'
-                    ( ppCode
-                        opts'
-                        (adjustPatterns x [":", y])
-                    )
-              _ ->
-                mempty
+              [x, ""] -> makeMessage x [":"]
+              [x, y] -> makeMessage x [":", y]
+              _ -> mempty
             where
+              makeMessage :: Text -> [Text] -> Doc Ann
+              makeMessage x xs =
+                line
+                  <> "Perhaps you meant:"
+                  <> line
+                  <> indent'
+                    ( ppCode
+                        opts'
+                        (adjustPatterns x xs)
+                    )
+
               adjustPatterns :: Text -> [Text] -> FunctionClause 'Parsed
               adjustPatterns x xs =
                 ( over clauseOwnerFunction (set withLocParam x) $
