@@ -597,7 +597,8 @@ checkInductiveDef InductiveDef {..} = do
             _constructorType = constructorType',
             _constructorDoc = doc',
             _constructorPragmas = _constructorPragmas,
-            _constructorPipe
+            _constructorPipe,
+            _constructorColonKw
           }
 
 createExportsTable :: ExportInfo -> HashSet NameId
@@ -1028,6 +1029,8 @@ checkFunction f = do
       Just p -> Just <$> bindVariableSymbol p
     _funReturn <- checkParseExpressionAtoms (f ^. funReturn)
     let _paramImplicit = f ^. funParameters . paramImplicit
+        _paramColon = f ^. funParameters . paramColon
+        _paramDelims = f ^. funParameters . paramDelims
         _funParameters = FunctionParameters {..}
         _funKw = f ^. funKw
     return Function {..}
@@ -1529,6 +1532,8 @@ makeExpressionTable (ExpressionAtoms atoms _) = [appOpExplicit] : operators ++ [
             param =
               FunctionParameters
                 { _paramNames = [],
+                  _paramDelims = Irrelevant Nothing,
+                  _paramColon = Irrelevant Nothing,
                   _paramImplicit = Explicit,
                   _paramType = a
                 }

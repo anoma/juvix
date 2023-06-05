@@ -388,7 +388,9 @@ instance SingI s => PrettyPrint (FunctionParameters s) where
       _ -> do
         let paramNames' = map ppParam _paramNames
             paramType' = ppExpressionType _paramType
-        delimIf _paramImplicit True (hsep paramNames' <+> ppCode kwColon <+> paramType')
+            delims' = over both ppCode <$> _paramDelims ^. unIrrelevant
+            colon' = ppCode (fromJust (_paramColon ^. unIrrelevant))
+        delimIf' delims' True (hsep paramNames' <+> colon' <+> paramType')
     where
       ppParam :: Maybe (SymbolType s) -> Sem r ()
       ppParam = \case
@@ -612,7 +614,7 @@ instance SingI s => PrettyPrint (AxiomDef s) where
       ?<> builtin'
       ?<> ppCode _axiomKw
       <+> axiomName'
-      <+> colon
+      <+> ppCode _axiomColonKw
       <+> ppExpressionType _axiomType
 
 instance PrettyPrint BuiltinInductive where
@@ -641,7 +643,7 @@ instance SingI s => PrettyPrint (TypeSignature s) where
       ?<> builtin'
       ?<> termin'
       ?<> ( name'
-              <+> colon
+              <+> ppCode _sigColonKw
                 <> oneLineOrNext
                   ( type'
                       <+?> body'
@@ -783,7 +785,7 @@ instance SingI s => PrettyPrint (InductiveConstructorDef s) where
         constructorType' = ppExpressionType _constructorType
         doc' = ppCode <$> _constructorDoc
         pragmas' = ppCode <$> _constructorPragmas
-    nest (pipeHelper <+> doc' ?<> pragmas' ?<> constructorName' <+> colon <+> constructorType')
+    nest (pipeHelper <+> doc' ?<> pragmas' ?<> constructorName' <+> ppCode _constructorColonKw <+> constructorType')
     where
       -- we use this helper so that comments appear before the first optional pipe if the pipe was omitted
       pipeHelper :: Sem r ()

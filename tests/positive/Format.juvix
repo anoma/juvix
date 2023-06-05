@@ -174,14 +174,28 @@ module Comments;
 
   -- attached to nothing
 
-  axiom a3 : Type;
+  axiom a3 -- comment before axiom :
+  : Type;
+
+  num -- comment before type sig :
+  :
+    -- comment after type sig :
+    Nat;
+  num -- comment before clause :=
+  :=
+    -- comment after clause :=
+    123;
 
   -- attached to nothing
   -- attached to nothing 2
 
   -- attached to nothing 3
 
-  axiom a4 : Type;
+  axiom a4 : -- before open pi brace
+    {-- after open pi brace
+    a -- before pi :
+    : Type}
+    -> Type;
 
   axiom a5 : Type;
 end;

@@ -145,6 +145,13 @@ paragraphs = sequenceWith (line >> ensureEmptyLine)
 keyword :: Members '[ExactPrint] r => Text -> Sem r ()
 keyword = annotated C.AnnKeyword . noLoc . P.pretty
 
+-- | The first argument contains the left and right delimiters, if any.
+-- If the second argument is True, then the delimiters *must* be given.
+delimIf' :: Maybe (Sem r (), Sem r ()) -> Bool -> Sem r () -> Sem r ()
+delimIf' d delim
+  | delim = uncurry enclose (fromJust d)
+  | otherwise = id
+
 delimIf :: Members '[ExactPrint] r => IsImplicit -> Bool -> Sem r () -> Sem r ()
 delimIf Implicit _ = braces
 delimIf Explicit True = parens

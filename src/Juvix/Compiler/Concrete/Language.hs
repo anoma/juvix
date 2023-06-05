@@ -287,6 +287,7 @@ type InductiveName s = SymbolType s
 
 data InductiveConstructorDef (s :: Stage) = InductiveConstructorDef
   { _constructorPipe :: Irrelevant (Maybe KeywordRef),
+    _constructorColonKw :: Irrelevant KeywordRef,
     _constructorName :: InductiveConstructorName s,
     _constructorDoc :: Maybe (Judoc s),
     _constructorPragmas :: Maybe ParsedPragmas,
@@ -711,10 +712,11 @@ instance HasAtomicity (Lambda s) where
 --------------------------------------------------------------------------------
 -- Function expression
 --------------------------------------------------------------------------------
--- TODO consider WithLoc
 data FunctionParameters (s :: Stage) = FunctionParameters
   { _paramNames :: [Maybe (SymbolType s)],
     _paramImplicit :: IsImplicit,
+    _paramDelims :: Irrelevant (Maybe (KeywordRef, KeywordRef)),
+    _paramColon :: Irrelevant (Maybe KeywordRef),
     _paramType :: ExpressionType s
   }
 
@@ -1296,7 +1298,9 @@ instance HasLoc (Lambda 'Scoped) where
   getLoc l = getLoc (l ^. lambdaKw) <> getLocSpan (l ^. lambdaClauses)
 
 instance HasLoc (FunctionParameters 'Scoped) where
-  getLoc p = (getLoc <$> join (listToMaybe (p ^. paramNames))) ?<> getLoc (p ^. paramType)
+  getLoc p = case p ^. paramDelims . unIrrelevant of
+    Nothing -> (getLoc <$> join (listToMaybe (p ^. paramNames))) ?<> getLoc (p ^. paramType)
+    Just (l, r) -> getLoc l <> getLoc r
 
 instance HasLoc (Function 'Scoped) where
   getLoc f = getLoc (f ^. funParameters) <> getLoc (f ^. funReturn)

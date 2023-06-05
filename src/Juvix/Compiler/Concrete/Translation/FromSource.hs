@@ -756,25 +756,26 @@ axiomDef _axiomBuiltin = do
 -- Function expression
 --------------------------------------------------------------------------------
 
-implicitOpen :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r IsImplicit
+implicitOpen :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (KeywordRef, IsImplicit)
 implicitOpen =
-  lbrace $> Implicit
-    <|> lparen $> Explicit
+  (,Implicit) <$> kw delimBraceL
+    <|> (,Explicit) <$> kw delimParenL
 
-implicitClose :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => IsImplicit -> ParsecS r ()
+implicitClose :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => IsImplicit -> ParsecS r KeywordRef
 implicitClose = \case
-  Implicit -> rbrace
-  Explicit -> rparen
+  Implicit -> kw delimBraceR
+  Explicit -> kw delimParenR
 
 functionParams :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (FunctionParameters 'Parsed)
 functionParams = do
-  (_paramNames, _paramImplicit) <- P.try $ do
-    impl <- implicitOpen
+  (openDelim, _paramNames, _paramImplicit, _paramColon) <- P.try $ do
+    (opn, impl) <- implicitOpen
     n <- some pName
-    kw kwColon
-    return (n, impl)
+    c <- Irrelevant . Just <$> kw kwColon
+    return (opn, n, impl, c)
   _paramType <- parseExpressionAtoms
-  implicitClose _paramImplicit
+  closeDelim <- implicitClose _paramImplicit
+  let _paramDelims = Irrelevant (Just (openDelim, closeDelim))
   return FunctionParameters {..}
   where
     pName :: ParsecS r (Maybe Symbol)
@@ -841,9 +842,8 @@ constructorDef _constructorPipe = do
   _constructorDoc <- optional stashJudoc >> getJudoc
   _constructorPragmas <- optional stashPragmas >> getPragmas
   _constructorName <- symbol P.<?> "<constructor name>"
-  _constructorType <-
-    kw kwColon >> parseExpressionAtoms
-      P.<?> "<constructor type signature (:)>"
+  _constructorColonKw <- Irrelevant <$> kw kwColon
+  _constructorType <- parseExpressionAtoms P.<?> "<constructor type>"
   return InductiveConstructorDef {..}
 
 wildcard :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r Wildcard
