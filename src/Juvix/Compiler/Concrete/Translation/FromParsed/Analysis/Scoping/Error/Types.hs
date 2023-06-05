@@ -129,9 +129,7 @@ instance ToGenericError LacksTypeSig where
                   <> indent'
                     ( ppCode
                         opts'
-                        ( over clauseOwnerFunction (set withLocParam x) $
-                            over clausePatterns (PatternAtomIden (NameUnqualified (set withLocParam ":" _clauseOwnerFunction)) :) fc
-                        )
+                        (adjustPatterns x [":"])
                     )
               [x, y] ->
                 line
@@ -140,19 +138,19 @@ instance ToGenericError LacksTypeSig where
                   <> indent'
                     ( ppCode
                         opts'
-                        ( over clauseOwnerFunction (set withLocParam x) $
-                            over
-                              clausePatterns
-                              ( [ PatternAtomIden (NameUnqualified (set withLocParam ":" _clauseOwnerFunction)),
-                                  PatternAtomIden (NameUnqualified (set withLocParam y _clauseOwnerFunction))
-                                ]
-                                  ++
-                              )
-                              fc
-                        )
+                        (adjustPatterns x [":", y])
                     )
               _ ->
                 mempty
+            where
+              adjustPatterns :: Text -> [Text] -> FunctionClause 'Parsed
+              adjustPatterns x xs =
+                ( over clauseOwnerFunction (set withLocParam x) $
+                    over clausePatterns (map mkpat xs ++) fc
+                )
+
+              mkpat :: Text -> PatternAtom 'Parsed
+              mkpat txt = PatternAtomIden (NameUnqualified (set withLocParam txt _clauseOwnerFunction))
 
 -- | type signature without a function clause
 newtype LacksFunctionClause = LacksFunctionClause
