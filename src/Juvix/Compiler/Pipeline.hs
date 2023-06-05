@@ -126,7 +126,7 @@ upToCoreTypecheck =
 upToEval ::
   (Members '[HighlightBuilder, Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, PathResolver] r) =>
   Sem r Core.CoreResult
-upToEval = do
+upToEval =
   upToCore >>= \r -> Core.toEval (r ^. Core.coreResultTable) >>= \tab -> return r {Core._coreResultTable = tab}
 
 --------------------------------------------------------------------------------
