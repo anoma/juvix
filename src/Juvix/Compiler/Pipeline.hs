@@ -81,17 +81,12 @@ upToInternalReachability ::
   (Members '[HighlightBuilder, Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, PathResolver] r) =>
   Sem r Internal.InternalTypedResult
 upToInternalReachability =
-  Internal.filterUnreachable <$> upToInternalTyped
+  upToInternalTyped >>= Internal.filterUnreachable
 
 upToCore ::
   Members '[HighlightBuilder, Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, PathResolver] r =>
   Sem r Core.CoreResult
-upToCore = do
-  pruningMode <- asks (^. entryPointSymbolPruningMode)
-  let toInternal = case pruningMode of
-        FilterUnreachable -> upToInternalReachability
-        KeepAll -> upToInternalTyped
-   in toInternal >>= Core.fromInternal
+upToCore = upToInternalReachability >>= Core.fromInternal
 
 upToAsm ::
   (Members '[HighlightBuilder, Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, PathResolver] r) =>
@@ -198,11 +193,11 @@ runIO opts entry = runIOEither entry >=> mayThrow
 runIO' :: EntryPoint -> Sem PipelineEff a -> IO (ResolverState, a)
 runIO' = runIO defaultGenericOptions
 
-corePipelineIO' :: Sem TopPipelineEff (Core.CoreResult) -> EntryPoint -> IO Artifacts
+corePipelineIO' :: EntryPoint -> IO Artifacts
 corePipelineIO' = corePipelineIO defaultGenericOptions
 
-corePipelineIO :: GenericOptions -> Sem TopPipelineEff (Core.CoreResult) -> EntryPoint -> IO Artifacts
-corePipelineIO opts p entry = corePipelineIOEither p entry >>= mayThrow
+corePipelineIO :: GenericOptions -> EntryPoint -> IO Artifacts
+corePipelineIO opts entry = corePipelineIOEither entry >>= mayThrow
   where
     mayThrow :: Either JuvixError r -> IO r
     mayThrow = \case
@@ -210,10 +205,9 @@ corePipelineIO opts p entry = corePipelineIOEither p entry >>= mayThrow
       Right r -> return r
 
 corePipelineIOEither ::
-  Sem TopPipelineEff (Core.CoreResult) ->
   EntryPoint ->
   IO (Either JuvixError Artifacts)
-corePipelineIOEither p entry = do
+corePipelineIOEither entry = do
   eith <-
     runM
       . ignoreHighlightBuilder
@@ -224,7 +218,7 @@ corePipelineIOEither p entry = do
       . runFilesIO
       . runReader entry
       . runPathResolverArtifacts
-      $ p
+      $ upToCore
   return $ case eith of
     Left err -> Left err
     Right (art, coreRes) ->
