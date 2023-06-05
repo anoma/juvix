@@ -47,7 +47,6 @@ type TopPipelineEff = '[PathResolver, Reader EntryPoint, Files, NameIdGen, Built
 data SymbolPruningMode
   = FilterUnreachable
   | KeepAll
-  deriving stock (Eq)
 
 --------------------------------------------------------------------------------
 -- Workflows
