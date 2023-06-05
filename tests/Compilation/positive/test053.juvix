@@ -1,5 +1,5 @@
 -- Inlining
-module test052;
+module test053;
 
 open import Stdlib.Prelude;
 

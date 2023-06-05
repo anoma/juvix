@@ -709,7 +709,7 @@ typeSignature ::
   Symbol ->
   Maybe (WithLoc BuiltinFunction) ->
   ParsecS r (TypeSignature 'Parsed)
-typeSignature _sigTerminating _sigName _sigBuiltin = do
+typeSignature _sigTerminating _sigName _sigBuiltin = P.label "<type signature>" $ do
   kw kwColon
   _sigType <- parseExpressionAtoms
   _sigDoc <- getJudoc
@@ -719,13 +719,25 @@ typeSignature _sigTerminating _sigName _sigBuiltin = do
 
 -- | Used to minimize the amount of required @P.try@s.
 auxTypeSigFunClause ::
+  forall r.
   (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
   ParsecS r (Either (TypeSignature 'Parsed) (FunctionClause 'Parsed))
 auxTypeSigFunClause = do
   terminating <- optional (kw kwTerminating)
   sym <- symbol
-  (Left <$> typeSignature terminating sym Nothing)
-    <|> (Right <$> functionClause sym)
+  if
+      | isJust terminating ->
+          Left <$> typeSignature terminating sym Nothing
+      | otherwise ->
+          checkEq
+            <|> (Left <$> typeSignature terminating sym Nothing)
+            <|> (Right <$> functionClause sym)
+  where
+    checkEq :: ParsecS r a
+    checkEq = do
+      off <- P.getOffset
+      kw kwEq
+      parseFailure off "expected \":=\" instead of \"=\""
 
 axiomDef ::
   Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r =>
@@ -889,7 +901,7 @@ parsePatternAtomsNested = do
 -- Function binding declaration
 --------------------------------------------------------------------------------
 
-functionClause :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => Symbol -> ParsecS r (FunctionClause 'Parsed)
+functionClause :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => Symbol -> ParsecS r (FunctionClause 'Parsed)
 functionClause _clauseOwnerFunction = do
   _clausePatterns <- P.many patternAtom
   kw kwAssign
