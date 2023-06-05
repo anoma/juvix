@@ -199,7 +199,7 @@ runIO' :: EntryPoint -> Sem PipelineEff a -> IO (ResolverState, a)
 runIO' = runIO defaultGenericOptions
 
 corePipelineIO' :: Sem TopPipelineEff (Core.CoreResult) -> EntryPoint -> IO Artifacts
-corePipelineIO' p = corePipelineIO defaultGenericOptions p
+corePipelineIO' = corePipelineIO defaultGenericOptions
 
 corePipelineIO :: GenericOptions -> Sem TopPipelineEff (Core.CoreResult) -> EntryPoint -> IO Artifacts
 corePipelineIO opts p entry = corePipelineIOEither p entry >>= mayThrow
