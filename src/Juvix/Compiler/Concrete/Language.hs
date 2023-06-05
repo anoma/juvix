@@ -360,6 +360,7 @@ instance HasFixity PatternPostfixApp where
 
 data PatternArg = PatternArg
   { _patternArgIsImplicit :: IsImplicit,
+    _patternArgBraces :: Irrelevant (Maybe (KeywordRef, KeywordRef)),
     _patternArgName :: Maybe S.Symbol,
     _patternArgPattern :: Pattern
   }
