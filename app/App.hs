@@ -65,7 +65,7 @@ runAppIO args@RunAppIOArgs {..} =
     AskBuildDir -> return (_runAppIOArgsRoots ^. rootsBuildDir)
     RunCorePipelineEither input -> do
       entry <- embed (getEntryPoint' args input)
-      embed (corePipelineIOEither upToCore entry)
+      embed (corePipelineIOEither (upToCore FilterUnreachable) entry)
     RunPipelineEither input p -> do
       entry <- embed (getEntryPoint' args input)
       embed (runIOEither entry p)

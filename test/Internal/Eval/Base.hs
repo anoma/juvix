@@ -16,7 +16,7 @@ internalCoreAssertion :: Path Abs File -> Path Abs File -> (String -> IO ()) -> 
 internalCoreAssertion mainFile expectedFile step = do
   step "Translate to Core"
   entryPoint <- defaultEntryPointCwdIO mainFile
-  tab0 <- (^. Core.coreResultTable) . snd <$> runIO' entryPoint upToCore
+  tab0 <- (^. Core.coreResultTable) . snd <$> runIO' entryPoint (upToCore FilterUnreachable)
   let tab = etaExpansionApps tab0
   case (tab ^. infoMain) >>= ((tab ^. identContext) HashMap.!?) of
     Just node -> do

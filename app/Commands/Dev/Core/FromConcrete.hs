@@ -13,7 +13,7 @@ import Juvix.Compiler.Core.Translation
 runCommand :: forall r. Members '[Embed IO, App] r => CoreFromConcreteOptions -> Sem r ()
 runCommand localOpts = do
   gopts <- askGlobalOptions
-  tab <- (^. coreResultTable) <$> runPipeline (localOpts ^. coreFromConcreteInputFile) upToCore
+  tab <- (^. coreResultTable) <$> runPipeline (localOpts ^. coreFromConcreteInputFile) (upToCore FilterUnreachable)
   path :: Path Abs File <- fromAppPathFile (localOpts ^. coreFromConcreteInputFile)
   let r = run $ runReader (project @GlobalOptions @Core.CoreOptions gopts) $ runError @JuvixError $ Core.applyTransformations (project localOpts ^. coreFromConcreteTransformations) tab
   tab0 :: InfoTable <- getRight r
