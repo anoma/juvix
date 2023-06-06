@@ -22,7 +22,7 @@ typedef struct {
 
 typedef struct {
     const char *name;
-    bool is_binary;
+    bool is_infix;
     fixity_t fixity;
 } constr_info_t;
 

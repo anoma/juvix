@@ -222,7 +222,7 @@ static size_t print_object(assoc_t assoc, fixity_t *fixity, char *buf, size_t n,
                     ASSERT(GET_UID(h) < juvix_constrs_num);
                     constr_info_t *ci = &juvix_constr_info[GET_UID(h)];
                     const char *str = ci->name;
-                    if (ci->is_binary && nargs == 2) {
+                    if (ci->is_infix && nargs == 2) {
                         bool needs_parens =
                             check_parens(assoc, fixity, &ci->fixity);
                         buf += print_binop(needs_parens, &ci->fixity, buf, n,
@@ -230,7 +230,7 @@ static size_t print_object(assoc_t assoc, fixity_t *fixity, char *buf, size_t n,
                     } else {
                         bool needs_parens =
                             check_parens(assoc, fixity, &app_fixity);
-                        buf += print_app(needs_parens, ci->is_binary, buf, n,
+                        buf += print_app(needs_parens, ci->is_infix, buf, n,
                                          str, get_constr_args(x), nargs);
                     }
                 }
