@@ -17,7 +17,7 @@ runCommand opts@EvalOptions {..} = do
   tab <- getRight r
   let mevalNode =
         if
-            | isJust (_evalSymbolName) -> getNode tab (selInfo tab)
+            | isJust _evalSymbolName -> getNode tab (selInfo tab)
             | otherwise -> getNode tab (mainInfo tab)
   case mevalNode of
     Just evalNode ->
