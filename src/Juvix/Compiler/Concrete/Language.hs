@@ -919,7 +919,7 @@ deriving stock instance
 
 data CaseBranch (s :: Stage) = CaseBranch
   { _caseBranchPipe :: Irrelevant KeywordRef,
-   _caseBranchAssignKw :: Irrelevant KeywordRef,
+    _caseBranchAssignKw :: Irrelevant KeywordRef,
     _caseBranchPattern :: PatternParensType s,
     _caseBranchExpression :: ExpressionType s
   }
@@ -1294,8 +1294,10 @@ instance HasLoc (AxiomDef 'Scoped) where
   getLoc m = getLoc (m ^. axiomKw) <> getLoc (m ^. axiomType)
 
 instance HasLoc (OpenModule 'Scoped) where
-  getLoc m = getLoc (m ^. openModuleKw) <> getLoc (m ^. openModuleName)
-    <>? fmap getLoc (m ^. openPublicKw . unIrrelevant)
+  getLoc m =
+    getLoc (m ^. openModuleKw)
+      <> getLoc (m ^. openModuleName)
+      <>? fmap getLoc (m ^. openPublicKw . unIrrelevant)
 
 instance HasLoc (Statement 'Scoped) where
   getLoc :: Statement 'Scoped -> Interval

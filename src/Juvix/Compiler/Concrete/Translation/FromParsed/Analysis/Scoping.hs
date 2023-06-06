@@ -572,6 +572,7 @@ checkInductiveDef InductiveDef {..} = do
         _inductiveConstructors = inductiveConstructors',
         _inductiveBuiltin,
         _inductivePositive,
+        _inductiveAssignKw,
         _inductiveKw
       }
   where
@@ -1025,8 +1026,8 @@ checkFunction f = do
   _paramType <- checkParseExpressionAtoms (f ^. funParameters . paramType)
   withLocalScope $ do
     _paramNames <- forM (f ^. funParameters . paramNames) $ \case
-      Nothing -> return Nothing
-      Just p -> Just <$> bindVariableSymbol p
+      FunctionParameterWildcard w -> return (FunctionParameterWildcard w)
+      FunctionParameterName p -> FunctionParameterName <$> bindVariableSymbol p
     _funReturn <- checkParseExpressionAtoms (f ^. funReturn)
     let _paramImplicit = f ^. funParameters . paramImplicit
         _paramColon = f ^. funParameters . paramColon
@@ -1058,7 +1059,8 @@ checkLet Let {..} =
       Let
         { _letClauses = letClauses',
           _letExpression = letExpression',
-          _letKw
+          _letKw,
+          _letInKw
         }
   where
     checkLetClauses :: NonEmpty (LetClause 'Parsed) -> Sem r (NonEmpty (LetClause 'Scoped))
@@ -1312,17 +1314,15 @@ checkIterator iter = do
         ( ErrIteratorUndefined
             IteratorUndefined {_iteratorUndefinedIterator = iter}
         )
-  let inipats = map (^. initializerPattern) (iter ^. iteratorInitializers)
-      inivals = map (^. initializerExpression) (iter ^. iteratorInitializers)
-      rngpats = map (^. rangePattern) (iter ^. iteratorRanges)
-      rngvals = map (^. rangeExpression) (iter ^. iteratorRanges)
-  inivals' <- mapM checkParseExpressionAtoms inivals
-  rngvals' <- mapM checkParseExpressionAtoms rngvals
+  inivals' <- mapM (checkParseExpressionAtoms . (^. initializerExpression)) (iter ^. iteratorInitializers)
+  rngvals' <- mapM (checkParseExpressionAtoms . (^. rangeExpression)) (iter ^. iteratorRanges)
+  let initAssignKws = iter ^.. iteratorInitializers . each . initializerAssignKw
+      rangesInKws = iter ^.. iteratorRanges . each . rangeInKw
   withLocalScope $ do
-    inipats' <- mapM checkParsePatternAtoms inipats
-    rngpats' <- mapM checkParsePatternAtoms rngpats
-    let _iteratorInitializers = zipWithExact Initializer inipats' inivals'
-        _iteratorRanges = zipWithExact Range rngpats' rngvals'
+    inipats' <- mapM (checkParsePatternAtoms . (^. initializerPattern)) (iter ^. iteratorInitializers)
+    rngpats' <- mapM (checkParsePatternAtoms . (^. rangePattern)) (iter ^. iteratorRanges)
+    let _iteratorInitializers = [Initializer p k v | ((p, k), v) <- zipExact (zipExact inipats' initAssignKws) inivals']
+        _iteratorRanges = [Range p k v | ((p, k), v) <- zipExact (zipExact rngpats' rangesInKws) rngvals']
         _iteratorParens = iter ^. iteratorParens
     _iteratorBody <- checkParseExpressionAtoms (iter ^. iteratorBody)
     return Iterator {..}
@@ -1334,7 +1334,11 @@ checkInitializer ::
 checkInitializer ini = do
   _initializerPattern <- checkParsePatternAtoms (ini ^. initializerPattern)
   _initializerExpression <- checkParseExpressionAtoms (ini ^. initializerExpression)
-  return Initializer {..}
+  return
+    Initializer
+      { _initializerAssignKw = ini ^. initializerAssignKw,
+        ..
+      }
 
 checkRange ::
   (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
@@ -1343,7 +1347,11 @@ checkRange ::
 checkRange rng = do
   _rangePattern <- checkParsePatternAtoms (rng ^. rangePattern)
   _rangeExpression <- checkParseExpressionAtoms (rng ^. rangeExpression)
-  return Range {..}
+  return
+    Range
+      { _rangeInKw = rng ^. rangeInKw,
+        ..
+      }
 
 checkHole ::
   (Members '[NameIdGen] r) =>

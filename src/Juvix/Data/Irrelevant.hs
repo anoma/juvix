@@ -33,4 +33,7 @@ instance Applicative Irrelevant where
   (<*>) :: Irrelevant (a -> b) -> Irrelevant a -> Irrelevant b
   Irrelevant f <*> Irrelevant a = Irrelevant (f a)
 
+instance Monad Irrelevant where
+  (Irrelevant mx) >>= f = f mx
+
 makeLenses ''Irrelevant

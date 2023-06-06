@@ -638,7 +638,7 @@ iterator = do
 --------------------------------------------------------------------------------
 
 hole :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (HoleType 'Parsed)
-hole = snd <$> interval (kw kwHole)
+hole = kw kwHole
 
 --------------------------------------------------------------------------------
 -- Literals
@@ -674,7 +674,7 @@ letBlock = do
 
 caseBranch :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (CaseBranch 'Parsed)
 caseBranch = do
-  _caseBranchPipe <- kw kwPipe
+  _caseBranchPipe <- Irrelevant <$> kw kwPipe
   _caseBranchPattern <- parsePatternAtoms
   _caseBranchAssignKw <- Irrelevant <$> kw kwAssign
   _caseBranchExpression <- parseExpressionAtoms
@@ -694,13 +694,14 @@ case_ = do
 
 universe :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r Universe
 universe = do
-  i <- snd <$> interval (kw kwType)
-  uni <- optional decimal
+  i <- kw kwType
+  lvl :: Maybe (WithLoc Natural) <- fmap (uncurry (flip WithLoc)) <$> optional decimal
   return
-    ( case uni of
-        Nothing -> Universe Nothing i
-        Just (lvl, i') -> Universe (Just lvl) (i <> i')
-    )
+    Universe
+      { _universeLevel = (^. withLocParam) <$> lvl,
+        _universeKw = i,
+        _universeLevelLoc = getLoc <$> lvl
+      }
 
 peekJudoc :: (Member JudocStash r) => ParsecS r (Maybe (Judoc 'Parsed))
 peekJudoc = P.lift get
@@ -728,7 +729,11 @@ typeSignature _sigTerminating _sigName _sigBuiltin = P.label "<type signature>" 
   _sigType <- parseExpressionAtoms
   _sigDoc <- getJudoc
   _sigPragmas <- getPragmas
-  _sigBody <- optional (kw kwAssign >> parseExpressionAtoms)
+  body <- optional $ do
+    k <- Irrelevant <$> kw kwAssign
+    (k,) <$> parseExpressionAtoms
+  let _sigBody = snd <$> body
+      _sigAssignKw = mapM fst body
   return TypeSignature {..}
 
 -- | Used to minimize the amount of required @P.try@s.
@@ -792,10 +797,10 @@ functionParams = do
   let _paramDelims = Irrelevant (Just (openDelim, closeDelim))
   return FunctionParameters {..}
   where
-    pName :: ParsecS r (Maybe Symbol)
+    pName :: ParsecS r (FunctionParameter 'Parsed)
     pName =
-      Just <$> symbol
-        <|> Nothing <$ kw kwWildcard
+      FunctionParameterName <$> symbol
+        <|> FunctionParameterWildcard <$> kw kwWildcard
 
 function :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (Function 'Parsed)
 function = do
@@ -968,7 +973,8 @@ openModule = do
   whenJust _openModuleImportKw (const (P.lift (importedModule (moduleNameToTopModulePath _openModuleName))))
   _openParameters <- many atomicExpression
   _openUsingHiding <- optional usingOrHiding
-  _openPublic <- maybe NoPublic (const Public) <$> optional (kw kwPublic)
+  _openPublicKw <- Irrelevant <$> optional (kw kwPublic)
+  let _openPublic = maybe NoPublic (const Public) (_openPublicKw ^. unIrrelevant)
   return
     OpenModule
       { _openImportAsName = Nothing,
@@ -986,8 +992,9 @@ newOpenSyntax = do
   _openModuleKw <- kw kwOpen
   _openParameters <- many atomicExpression
   _openUsingHiding <- optional usingOrHiding
-  _openPublic <- maybe NoPublic (const Public) <$> optional (kw kwPublic)
+  _openPublicKw <- Irrelevant <$> optional (kw kwPublic)
   let _openModuleName = topModulePathToName (im ^. importModule)
       _openModuleImportKw = Just (im ^. importKw)
       _openImportAsName = im ^. importAsName
+      _openPublic = maybe NoPublic (const Public) (_openPublicKw ^. unIrrelevant)
   return OpenModule {..}

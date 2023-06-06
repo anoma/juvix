@@ -8,7 +8,8 @@ import Juvix.Prelude.Base
 
 data Universe = Universe
   { _universeLevel :: Maybe Natural,
-    _universeKw :: KeywordRef
+    _universeKw :: KeywordRef,
+    _universeLevelLoc :: Maybe Interval
   }
   deriving stock (Show, Ord, Data)
 
@@ -32,6 +33,7 @@ mkUniverse :: Maybe Natural -> Interval -> Universe
 mkUniverse lvl loc =
   Universe
     { _universeLevel = lvl,
+      _universeLevelLoc = Nothing,
       _universeKw =
         KeywordRef
           { _keywordRefInterval = loc,
