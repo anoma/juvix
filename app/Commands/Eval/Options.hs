@@ -5,9 +5,7 @@ import Evaluator qualified as Eval
 import Juvix.Compiler.Core.Pretty.Options qualified as Core
 
 data EvalOptions = EvalOptions
-  { _evalShowDeBruijn :: Bool,
-    _evalNoIO :: Bool,
-    _evalInputFile :: AppPath File,
+  { _evalInputFile :: AppPath File,
     _evalSymbolName :: Maybe Text
   }
   deriving stock (Data)
@@ -15,31 +13,22 @@ data EvalOptions = EvalOptions
 makeLenses ''EvalOptions
 
 instance CanonicalProjection EvalOptions Core.Options where
-  project c =
+  project _ =
     Core.defaultOptions
-      { Core._optShowDeBruijnIndices = c ^. evalShowDeBruijn
+      { Core._optShowDeBruijnIndices = False
       }
 
 instance CanonicalProjection EvalOptions Eval.EvalOptions where
   project c =
     Eval.EvalOptions
       { _evalInputFile = c ^. evalInputFile,
-        _evalNoIO = c ^. evalNoIO,
-        _evalNoDisambiguate = False
+        _evalNoIO = False,
+        _evalNoDisambiguate = False,
+        _evalPrintValues = True
       }
 
 parseEvalOptions :: Parser EvalOptions
 parseEvalOptions = do
-  _evalShowDeBruijn <-
-    switch
-      ( long "show-de-bruijn"
-          <> help "Show variable de Bruijn indices"
-      )
-  _evalNoIO <-
-    switch
-      ( long "no-io"
-          <> help "Don't interpret the IO effects"
-      )
   _evalInputFile <- parseInputJuvixFile
   _evalSymbolName <-
     optional $

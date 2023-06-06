@@ -29,7 +29,8 @@ instance CanonicalProjection CoreEvalOptions Eval.EvalOptions where
     Eval.EvalOptions
       { _evalInputFile = c ^. coreEvalInputFile,
         _evalNoIO = c ^. coreEvalNoIO,
-        _evalNoDisambiguate = c ^. coreEvalNoDisambiguate
+        _evalNoDisambiguate = c ^. coreEvalNoDisambiguate,
+        _evalPrintValues = False
       }
 
 parseCoreEvalOptions :: Parser CoreEvalOptions
