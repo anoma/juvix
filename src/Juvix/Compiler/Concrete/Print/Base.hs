@@ -641,7 +641,7 @@ instance SingI s => PrettyPrint (TypeSignature s) where
       ?<> pragmas'
       ?<> builtin'
       ?<> termin'
-      ?<> hang
+      ?<>
         ( name'
             <+> ppCode _sigColonKw
               <> oneLineOrNext
