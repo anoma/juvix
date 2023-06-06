@@ -45,15 +45,16 @@ runCommand opts = do
                       "Use the --help option to display more usage information."
                     ]
                 return FormatResultFail
-    let exitFail = embed (exitWith (ExitFailure 1))
+    let exitFail :: IO a
+        exitFail = exitWith (ExitFailure 1)
     case res of
-      FormatResultFail -> exitFail
+      FormatResultFail -> embed exitFail
       FormatResultNotFormatted ->
         {- use exit code 1 for
          * unformatted files when using --check
          * when running the formatter on a Juvix project
         -}
-        when (opts ^. formatCheck || target == TargetDir) exitFail
+        when (opts ^. formatCheck || target == TargetDir) (embed exitFail)
       FormatResultOK -> pure ()
 
 renderModeFromOptions :: FormatTarget -> FormatOptions -> FormattedFileInfo -> FormatRenderMode
