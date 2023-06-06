@@ -1,0 +1,20 @@
+working-directory: ./../../../tests/
+
+tests:
+  - name: eval-file
+    command:
+      - juvix
+      - eval
+      - Compilation/positive/test001.juvix
+    stdin: ""
+    stdout: "11\n"
+    exit-status: 0
+
+  - name: eval-no-main
+    command:
+      - juvix
+      - eval
+      - positive/LambdaCalculus.juvix
+    stdin: ""
+    stdout: "function not found: main\n"
+    exit-status: 1
