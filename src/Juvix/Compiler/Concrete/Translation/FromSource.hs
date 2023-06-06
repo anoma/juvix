@@ -804,7 +804,10 @@ lambdaClause _lambdaPipe = do
 lambda :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (Lambda 'Parsed)
 lambda = do
   _lambdaKw <- kw kwLambda
-  _lambdaClauses <- braces (pipeSep1 lambdaClause)
+  brl <- kw delimBraceL
+  _lambdaClauses <- pipeSep1 lambdaClause
+  brr <- kw delimBraceR
+  let _lambdaBraces = Irrelevant (brl, brr)
   return Lambda {..}
 
 -------------------------------------------------------------------------------
@@ -867,7 +870,7 @@ patternAtomNamed nested = do
   off <- P.getOffset
   n <- name
   case n of
-    NameQualified _ -> return (PatternAtomIden n)
+    NameQualified {} -> return (PatternAtomIden n)
     NameUnqualified s -> do
       checkWrongEq off s
       patternAtomAt s <|> return (PatternAtomIden n)
@@ -973,7 +976,4 @@ newOpenSyntax = do
   let _openModuleName = topModulePathToName (im ^. importModule)
       _openModuleImportKw = Just (im ^. importKw)
       _openImportAsName = im ^. importAsName
-  return
-    OpenModule
-      { ..
-      }
+  return OpenModule {..}

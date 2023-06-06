@@ -141,11 +141,13 @@ idLambda := λ {x := x};
 f : Nat -> Nat;
 f :=
   \ {
+    -- comment before lambda pipe
     | zero :=
       let
         foo : Nat := 1;
       in foo
-    | _ := 1
+    | _ -- comment before lambda :=
+    := 1
   };
 
 module Patterns;
@@ -196,6 +198,11 @@ module Comments;
     a -- before pi :
     : Type}
     -> Type;
+
+  id2 : {A : Type} -> A -> Nat -> A;
+  id2 -- before patternarg braces
+    {A} a -- before open patternarg parens
+    (suc b) := idLambda {A} a;
 
   axiom a5 : Type;
 end;

@@ -13,7 +13,8 @@ import Prettyprinter qualified as P
 
 data ExactPrint m a where
   NoLoc :: Doc Ann -> ExactPrint m ()
-  Morpheme :: Interval -> Doc Ann -> ExactPrint m ()
+  -- | Used to print parentheses after comments.
+  Enqueue :: Doc Ann -> ExactPrint m ()
   PrintCommentsUntil :: Interval -> ExactPrint m (Maybe SpaceSpan)
   EnsureEmptyLine :: ExactPrint m ()
   Region :: (Doc Ann -> Doc Ann) -> m b -> ExactPrint m b
@@ -24,6 +25,8 @@ makeSem ''ExactPrint
 data Builder = Builder
   { -- | comments sorted by starting location
     _builderComments :: [SpaceSpan],
+    -- | New elements are put at the front
+    _builderQueue :: [Doc Ann],
     _builderDoc :: Doc Ann,
     _builderEnsureEmptyLine :: Bool,
     _builderEnd :: FileLoc
@@ -39,6 +42,7 @@ runExactPrint cs = fmap (first (^. builderDoc)) . runState ini . re
       Builder
         { _builderComments = fromMaybe [] (cs ^? _Just . fileCommentsSorted),
           _builderDoc = mempty,
+          _builderQueue = mempty,
           _builderEnsureEmptyLine = False,
           _builderEnd = FileLoc 0 0 0
         }
@@ -56,8 +60,8 @@ re = reinterpretH h
     h = \case
       NoLoc p -> append' p >>= pureT
       EnsureEmptyLine -> modify' (set builderEnsureEmptyLine True) >>= pureT
-      Morpheme l p -> morpheme' l p >>= pureT
       End -> end' >>= pureT
+      Enqueue d -> enqueue' d >>= pureT
       PrintCommentsUntil l -> printCommentsUntil' l >>= pureT
       Region f m -> do
         st0 :: Builder <- set builderDoc mempty <$> get
@@ -69,12 +73,16 @@ re = reinterpretH h
             { _builderDoc = doc' <> f (st' ^. builderDoc),
               _builderComments = st' ^. builderComments,
               _builderEnd = st' ^. builderEnd,
+              _builderQueue = st' ^. builderQueue,
               _builderEnsureEmptyLine = st' ^. builderEnsureEmptyLine
             }
         return fx
 
 evalExactPrint' :: Builder -> Sem (ExactPrint ': r) a -> Sem r (Builder, a)
 evalExactPrint' b = runState b . re
+
+enqueue' :: forall r. Members '[State Builder] r => Doc Ann -> Sem r ()
+enqueue' d = modify (over builderQueue (d :))
 
 append' :: forall r. Members '[State Builder] r => Doc Ann -> Sem r ()
 append' d = modify (over builderDoc (<> d))
@@ -108,12 +116,13 @@ printComment c = do
 printCommentsUntil' :: forall r. Members '[State Builder] r => Interval -> Sem r (Maybe SpaceSpan)
 printCommentsUntil' loc = do
   forceLine <- popEnsureLine
-  g <- fmap sconcat . nonEmpty <$> whileJustM popSpaceSpan
+  g :: Maybe SpaceSpan <- fmap sconcat . nonEmpty <$> whileJustM popSpaceSpan
   let noSpaceLines = fromMaybe True $ do
         g' <- (^. spaceSpan) <$> g
         return (not (any (has _SpaceLines) g'))
   when (forceLine && noSpaceLines) line'
   whenJust g printSpaceSpan
+  popQueue
   return g
   where
     cmp :: SpaceSpan -> Bool
@@ -125,6 +134,12 @@ printCommentsUntil' loc = do
       modify' (set builderEnsureEmptyLine False)
       return b
 
+    popQueue :: Sem r ()
+    popQueue = do
+      q <- gets (^. builderQueue)
+      modify' (set builderQueue mempty)
+      append' (mconcat (reverse q))
+
     popSpaceSpan :: Sem r (Maybe SpaceSpan)
     popSpaceSpan = do
       cs <- gets (^. builderComments)
@@ -134,8 +149,3 @@ printCommentsUntil' loc = do
               modify' (set builderComments hs)
               return (Just h)
         _ -> return Nothing
-
-morpheme' :: forall r. Members '[State Builder] r => Interval -> Doc Ann -> Sem r ()
-morpheme' loc doc = do
-  void (printCommentsUntil' loc)
-  append' doc

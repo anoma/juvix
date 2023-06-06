@@ -8,7 +8,6 @@ where
 import Juvix.Data.Keyword
 import Juvix.Data.Keyword.All
   ( -- delimiters
-
     delimBraceL,
     delimBraceR,
     delimJudocBlockEnd,

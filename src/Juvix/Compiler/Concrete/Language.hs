@@ -43,6 +43,8 @@ data Stage
 
 $(genSingletons [''Stage])
 
+type Delims = Irrelevant (Maybe (KeywordRef, KeywordRef))
+
 --------------------------------------------------------------------------------
 -- Parsing stages
 --------------------------------------------------------------------------------
@@ -360,7 +362,6 @@ instance HasFixity PatternPostfixApp where
 
 data PatternArg = PatternArg
   { _patternArgIsImplicit :: IsImplicit,
-    _patternArgBraces :: Irrelevant (Maybe (KeywordRef, KeywordRef)),
     _patternArgName :: Maybe S.Symbol,
     _patternArgPattern :: Pattern
   }
@@ -716,7 +717,7 @@ instance HasAtomicity (Lambda s) where
 data FunctionParameters (s :: Stage) = FunctionParameters
   { _paramNames :: [Maybe (SymbolType s)],
     _paramImplicit :: IsImplicit,
-    _paramDelims :: Irrelevant (Maybe (KeywordRef, KeywordRef)),
+    _paramDelims :: Delims,
     _paramColon :: Irrelevant (Maybe KeywordRef),
     _paramType :: ExpressionType s
   }
@@ -752,6 +753,7 @@ deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (Fun
 
 data Lambda (s :: Stage) = Lambda
   { _lambdaKw :: KeywordRef,
+    _lambdaBraces :: Irrelevant (KeywordRef, KeywordRef),
     _lambdaClauses :: NonEmpty (LambdaClause s)
   }
 
@@ -1293,10 +1295,13 @@ instance HasLoc PostfixApplication where
   getLoc (PostfixApplication l o) = getLoc l <> getLoc o
 
 instance HasLoc (LambdaClause 'Scoped) where
-  getLoc c = getLocSpan (c ^. lambdaParameters) <> getLoc (c ^. lambdaBody)
+  getLoc c =
+    fmap getLoc (c ^. lambdaPipe . unIrrelevant)
+      ?<> getLocSpan (c ^. lambdaParameters)
+      <> getLoc (c ^. lambdaBody)
 
 instance HasLoc (Lambda 'Scoped) where
-  getLoc l = getLoc (l ^. lambdaKw) <> getLocSpan (l ^. lambdaClauses)
+  getLoc l = getLoc (l ^. lambdaKw) <> getLoc (l ^. lambdaBraces . unIrrelevant . _2)
 
 instance HasLoc (FunctionParameters 'Scoped) where
   getLoc p = case p ^. paramDelims . unIrrelevant of
@@ -1403,7 +1408,7 @@ instance HasLoc PatternScopedIden where
 instance HasLoc PatternBinding where
   getLoc (PatternBinding n p) = getLoc n <> getLoc p
 
-instance (SingI s) => HasLoc (PatternAtom s) where
+instance SingI s => HasLoc (PatternAtom s) where
   getLoc = \case
     PatternAtomIden i -> getLocIden i
     PatternAtomWildcard w -> getLoc w

@@ -1105,7 +1105,14 @@ checkLambda ::
   (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
   Lambda 'Parsed ->
   Sem r (Lambda 'Scoped)
-checkLambda Lambda {..} = Lambda _lambdaKw <$> mapM checkLambdaClause _lambdaClauses
+checkLambda Lambda {..} = do
+  clauses' <- mapM checkLambdaClause _lambdaClauses
+  return
+    Lambda
+      { _lambdaClauses = clauses',
+        _lambdaKw,
+        _lambdaBraces
+      }
 
 checkLambdaClause ::
   (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
@@ -1220,11 +1227,11 @@ checkPatternBinding ::
   PatternBinding ->
   Sem r PatternArg
 checkPatternBinding (PatternBinding n p) = do
-  n' <- bindVariableSymbol n
   p' <- checkParsePatternAtom p
+  n' <- bindVariableSymbol n
   if
       | isJust (p' ^. patternArgName) -> throw (ErrDoubleBinderPattern (DoubleBinderPattern n' p'))
-      | otherwise -> return $ set patternArgName (Just n') p'
+      | otherwise -> return (set patternArgName (Just n') p')
 
 checkPatternAtoms ::
   (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
@@ -1739,10 +1746,12 @@ makePatternTable (PatternAtoms latoms _) = [appOp] : operators
             )
 
 explicitP :: Pattern -> PatternArg
-explicitP = PatternArg Explicit Nothing
-
-implicitP :: Pattern -> PatternArg
-implicitP = PatternArg Implicit Nothing
+explicitP _patternArgPattern =
+  PatternArg
+    { _patternArgIsImplicit = Explicit,
+      _patternArgName = Nothing,
+      _patternArgPattern
+    }
 
 parsePatternTerm ::
   forall r.

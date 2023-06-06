@@ -98,7 +98,7 @@ ppImportType = case sing :: SStage s of
 
 ppHoleType :: forall s. SingI s => PrettyPrinting (HoleType s)
 ppHoleType w = case sing :: SStage s of
-  SParsed -> ppCode kwWildcard
+  SParsed -> morpheme w C.kwWildcard
   SScoped -> ppCode w
 
 ppPatternAtomIdenType :: forall s. SingI s => PrettyPrinting (PatternAtomIdenType s)
@@ -340,7 +340,8 @@ instance SingI s => PrettyPrint (LambdaClause s) where
   ppCode LambdaClause {..} = do
     let lambdaParameters' = hsep (ppPatternAtom <$> _lambdaParameters)
         lambdaBody' = ppExpressionType _lambdaBody
-    lambdaParameters' <+> ppCode _lambdaAssignKw <> oneLineOrNext lambdaBody'
+        lambdaPipe' = ppCode <$> _lambdaPipe ^. unIrrelevant
+    lambdaPipe' <?+> lambdaParameters' <+> ppCode _lambdaAssignKw <> oneLineOrNext lambdaBody'
 
 instance SingI s => PrettyPrint (Let s) where
   ppCode Let {..} = do
@@ -390,12 +391,12 @@ instance SingI s => PrettyPrint (FunctionParameters s) where
             paramType' = ppExpressionType _paramType
             delims' = over both ppCode <$> _paramDelims ^. unIrrelevant
             colon' = ppCode (fromJust (_paramColon ^. unIrrelevant))
-        delimIf' delims' True (hsep paramNames' <+> colon' <+> paramType')
+        delimIf' delims' _paramImplicit True (hsep paramNames' <+> colon' <+> paramType')
     where
       ppParam :: Maybe (SymbolType s) -> Sem r ()
       ppParam = \case
         Just n -> annDef n (ppSymbolType n)
-        Nothing -> ppCode kwWildcard
+        Nothing -> ppCode kwWildcard -- TODO proper location
 
       ppLeftExpression' = case sing :: SStage s of
         SParsed -> ppLeftExpression
@@ -457,15 +458,13 @@ instance SingI s => PrettyPrint (LetClause s) where
 ppBlock :: (PrettyPrint a, Members '[Reader Options, ExactPrint] r, Traversable t) => t a -> Sem r ()
 ppBlock items = vsep (sepEndSemicolon (fmap ppCode items))
 
-ppPipeBlock :: (PrettyPrint a, Members '[Reader Options, ExactPrint] r, Traversable t) => t a -> Sem r ()
-ppPipeBlock items = vsepHard (fmap ((ppCode kwPipe <+>) . ppCode) items)
-
 instance SingI s => PrettyPrint (Lambda s) where
   ppCode Lambda {..} = do
     let lambdaKw' = ppCode _lambdaKw
+        braces' = uncurry enclose (over both ppCode (_lambdaBraces ^. unIrrelevant))
         lambdaClauses' = case _lambdaClauses of
-          s :| [] -> braces (ppCode s)
-          _ -> bracesIndent (ppPipeBlock _lambdaClauses)
+          s :| [] ->  braces' (ppCode s)
+          _ -> braces' (blockIndent (vsepHard (ppCode <$> _lambdaClauses)))
     lambdaKw' <+> lambdaClauses'
 
 instance PrettyPrint Precedence where
@@ -618,13 +617,13 @@ instance SingI s => PrettyPrint (AxiomDef s) where
       <+> ppExpressionType _axiomType
 
 instance PrettyPrint BuiltinInductive where
-  ppCode i = ppCode kwBuiltin <+> keyword (P.prettyText i)
+  ppCode i = ppCode kwBuiltin <+> keywordText (P.prettyText i)
 
 instance PrettyPrint BuiltinFunction where
-  ppCode i = ppCode kwBuiltin <+> keyword (P.prettyText i)
+  ppCode i = ppCode kwBuiltin <+> keywordText (P.prettyText i)
 
 instance PrettyPrint BuiltinAxiom where
-  ppCode i = ppCode kwBuiltin <+> keyword (P.prettyText i)
+  ppCode i = ppCode kwBuiltin <+> keywordText (P.prettyText i)
 
 instance SingI s => PrettyPrint (TypeSignature s) where
   ppCode :: forall r. Members '[ExactPrint, Reader Options] r => TypeSignature s -> Sem r ()
@@ -650,6 +649,9 @@ instance SingI s => PrettyPrint (TypeSignature s) where
                   )
           )
 
+instance PrettyPrint Wildcard where
+  ppCode w = morpheme (getLoc w) C.kwWildcard
+
 instance PrettyPrint Pattern where
   ppCode = \case
     PatternVariable v -> annDef v (ppCode v)
@@ -657,7 +659,7 @@ instance PrettyPrint Pattern where
       let l' = ppLeftExpression appFixity l
           r' = ppRightExpression appFixity r
       l' <+> r'
-    PatternWildcard {} -> ppCode kwWildcard
+    PatternWildcard w -> ppCode w
     PatternEmpty {} -> parens (return ())
     PatternConstructor constr -> ppCode constr
     PatternInfixApplication i -> apeHelper i
@@ -679,20 +681,10 @@ instance PrettyPrint Text where
 ppUnkindedSymbol :: Members '[Reader Options, ExactPrint] r => WithLoc Text -> Sem r ()
 ppUnkindedSymbol = region (annotate AnnUnkindedSym) . ppCode
 
-ppAtom :: (HasAtomicity c, PrettyPrint c, Members '[ExactPrint, Reader Options] r) => c -> Sem r ()
-ppAtom c
-  | isAtomic c = ppCode c
-  | otherwise = parens (ppCode c)
-
 instance SingI s => PrettyPrint (UsingHiding s) where
   ppCode :: forall r. Members '[ExactPrint, Reader Options] r => UsingHiding s -> Sem r ()
   ppCode uh = do
-    let bracedList =
-          encloseSep
-            lbrace
-            rbrace
-            (semicolon <> space)
-            ppItems
+    let bracedList = braces (sequenceWith (semicolon <> space) ppItems)
     kw' <+> bracedList
     where
       kw' :: Sem r ()
@@ -748,8 +740,10 @@ instance SingI s => PrettyPrint (FunctionClause s) where
           Nothing -> Nothing
           Just ne -> Just (hsep (ppPatternAtom <$> ne))
         clauseBody' = ppExpressionType _clauseBody
-    clauseFun'
-      <+?> clausePatterns'
+    hang
+      ( clauseFun'
+          <+?> clausePatterns'
+      )
       <+> ppCode _clauseAssignKw
         <> oneLineOrNext clauseBody'
 

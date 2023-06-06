@@ -5,6 +5,7 @@ module Juvix.Data.Effect.ExactPrint
 where
 
 import Juvix.Data.CodeAnn qualified as C
+import Juvix.Data.Keyword.All
 import Juvix.Data.Effect.ExactPrint.Base
 import Juvix.Data.IsImplicit
 import Juvix.Prelude.Base hiding ((<+>))
@@ -47,16 +48,18 @@ infixl 7 <+?>
 annotated :: Members '[ExactPrint] r => C.CodeAnn -> Sem r () -> Sem r ()
 annotated an = region (P.annotate an)
 
+-- | Opening parenthesis is printed after comments
 parens :: Members '[ExactPrint] r => Sem r () -> Sem r ()
-parens = region C.parens
+parens = enclose (enqueue C.kwParenL) (noLoc C.kwParenR)
 
 parensIf :: Members '[ExactPrint] r => Bool -> Sem r () -> Sem r ()
 parensIf b
   | b = parens
   | otherwise = id
 
+-- | Opening brace is printed after comments
 braces :: Members '[ExactPrint] r => Sem r () -> Sem r ()
-braces = region C.braces
+braces = enclose (enqueue C.kwBraceL) (noLoc C.kwBraceR)
 
 lineOrEmpty :: Members '[ExactPrint] r => Sem r ()
 lineOrEmpty = noLoc P.line'
@@ -81,15 +84,6 @@ line = noLoc P.line
 
 hardline :: Members '[ExactPrint] r => Sem r ()
 hardline = noLoc P.hardline
-
-lbrace :: Members '[ExactPrint] r => Sem r ()
-lbrace = noLoc C.kwBraceL
-
-rbrace :: Members '[ExactPrint] r => Sem r ()
-rbrace = noLoc C.kwBraceR
-
-bracesIndent :: Members '[ExactPrint] r => Sem r () -> Sem r ()
-bracesIndent = braces . blockIndent
 
 colon :: Members '[ExactPrint] r => Sem r ()
 colon = noLoc C.kwColon
@@ -131,7 +125,7 @@ enclose :: Monad m => m () -> m () -> m () -> m ()
 enclose l r p = l >> p >> r
 
 encloseSep :: (Monad m, Foldable f) => m () -> m () -> m () -> f (m ()) -> m ()
-encloseSep l r sep f = l >> sequenceWith sep f >> r
+encloseSep l r sep f = enclose l r (sequenceWith sep f)
 
 oneLineOrNextNoIndent :: Members '[ExactPrint] r => Sem r () -> Sem r ()
 oneLineOrNextNoIndent = region P.oneLineOrNextNoIndent
@@ -142,20 +136,28 @@ oneLineOrNext = region P.oneLineOrNext
 paragraphs :: (Foldable l, Members '[ExactPrint] r) => l (Sem r ()) -> Sem r ()
 paragraphs = sequenceWith (line >> ensureEmptyLine)
 
-keyword :: Members '[ExactPrint] r => Text -> Sem r ()
-keyword = annotated C.AnnKeyword . noLoc . P.pretty
+kw :: Members '[ExactPrint] r => Keyword -> Sem r ()
+kw = annotated C.AnnKeyword . noLoc . P.pretty
+
+keywordText :: Members '[ExactPrint] r => Text -> Sem r ()
+keywordText = annotated C.AnnKeyword . noLoc . P.pretty
 
 -- | The first argument contains the left and right delimiters, if any.
 -- If the second argument is True, then the delimiters *must* be given.
-delimIf' :: Maybe (Sem r (), Sem r ()) -> Bool -> Sem r () -> Sem r ()
-delimIf' d delim
-  | delim = uncurry enclose (fromJust d)
+delimIf' :: Maybe (Sem r (), Sem r ()) -> IsImplicit -> Bool -> Sem r () -> Sem r ()
+delimIf' d impl delim
+  | delim || impl == Implicit = uncurry enclose (fromJust d)
   | otherwise = id
 
 delimIf :: Members '[ExactPrint] r => IsImplicit -> Bool -> Sem r () -> Sem r ()
 delimIf Implicit _ = braces
 delimIf Explicit True = parens
 delimIf Explicit False = id
+
+morpheme :: forall r. Members '[ExactPrint] r => Interval -> Doc C.CodeAnn -> Sem r ()
+morpheme loc doc = do
+  void (printCommentsUntil loc)
+  noLoc doc
 
 morphemeM :: forall r. Members '[ExactPrint] r => Interval -> Sem r () -> Sem r ()
 morphemeM loc doc = do
