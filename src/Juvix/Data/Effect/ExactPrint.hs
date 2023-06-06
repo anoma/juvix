@@ -5,9 +5,9 @@ module Juvix.Data.Effect.ExactPrint
 where
 
 import Juvix.Data.CodeAnn qualified as C
-import Juvix.Data.Keyword.All
 import Juvix.Data.Effect.ExactPrint.Base
 import Juvix.Data.IsImplicit
+import Juvix.Data.Keyword.All
 import Juvix.Prelude.Base hiding ((<+>))
 import Juvix.Prelude.Pretty qualified as P
 

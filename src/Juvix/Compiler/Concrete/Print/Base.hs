@@ -397,7 +397,6 @@ instance SingI s => PrettyPrint (FunctionParameters s) where
       ppParam = \case
         Just n -> annDef n (ppSymbolType n)
         Nothing -> ppCode kwWildcard -- TODO proper location
-
       ppLeftExpression' = case sing :: SStage s of
         SParsed -> ppLeftExpression
         SScoped -> ppLeftExpression
@@ -463,7 +462,7 @@ instance SingI s => PrettyPrint (Lambda s) where
     let lambdaKw' = ppCode _lambdaKw
         braces' = uncurry enclose (over both ppCode (_lambdaBraces ^. unIrrelevant))
         lambdaClauses' = case _lambdaClauses of
-          s :| [] ->  braces' (ppCode s)
+          s :| [] -> braces' (ppCode s)
           _ -> braces' (blockIndent (vsepHard (ppCode <$> _lambdaClauses)))
     lambdaKw' <+> lambdaClauses'
 
