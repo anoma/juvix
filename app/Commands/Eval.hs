@@ -23,7 +23,7 @@ runCommand opts@EvalOptions {..} = do
     Just evalNode ->
       Eval.evalAndPrint opts tab evalNode
     Nothing -> do
-      let name = fromMaybe "main" _evalSymbolName
+      let name = fromMaybe Str.main _evalSymbolName
       printFailureExit ("function not found: " <> name)
   where
     mainInfo :: Core.InfoTable -> Maybe Core.IdentifierInfo
