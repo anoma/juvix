@@ -205,7 +205,9 @@ module Comments;
     (suc b) :=
     idLambda
       -- before implicit app
-      {A}
+      {-- inside implicit arg
+      A}
+      -- before closing implicit arg
       a;
 
   type color : Type :=
