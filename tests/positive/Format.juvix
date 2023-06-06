@@ -202,7 +202,11 @@ module Comments;
   id2 : {A : Type} -> A -> Nat -> A;
   id2 -- before patternarg braces
     {A} a -- before open patternarg parens
-    (suc b) := idLambda {A} a;
+    (suc b) :=
+    idLambda
+      -- before implicit app
+      {A}
+      a;
 
   axiom a5 : Type;
 end;

@@ -58,7 +58,7 @@ re = reinterpretH h
       ExactPrint (Sem rInitial) x ->
       Tactical ExactPrint (Sem rInitial) (State Builder ': r) x
     h = \case
-      NoLoc p -> append' p >>= pureT
+      NoLoc p -> noLoc' p >>= pureT
       EnsureEmptyLine -> modify' (set builderEnsureEmptyLine True) >>= pureT
       End -> end' >>= pureT
       Enqueue d -> enqueue' d >>= pureT
@@ -83,6 +83,11 @@ evalExactPrint' b = runState b . re
 
 enqueue' :: forall r. Members '[State Builder] r => Doc Ann -> Sem r ()
 enqueue' d = modify (over builderQueue (d :))
+
+noLoc' :: forall r. Members '[State Builder] r => Doc Ann -> Sem r ()
+noLoc' d = do
+  popQueue
+  append' d
 
 append' :: forall r. Members '[State Builder] r => Doc Ann -> Sem r ()
 append' d = modify (over builderDoc (<> d))
@@ -113,6 +118,12 @@ printComment c = do
   append' (annotate AnnComment (P.pretty c))
   hardline'
 
+popQueue :: Members '[State Builder] r => Sem r ()
+popQueue = do
+  q <- gets (^. builderQueue)
+  modify' (set builderQueue mempty)
+  append' (mconcat (reverse q))
+
 printCommentsUntil' :: forall r. Members '[State Builder] r => Interval -> Sem r (Maybe SpaceSpan)
 printCommentsUntil' loc = do
   forceLine <- popEnsureLine
@@ -133,12 +144,6 @@ printCommentsUntil' loc = do
       b <- gets (^. builderEnsureEmptyLine)
       modify' (set builderEnsureEmptyLine False)
       return b
-
-    popQueue :: Sem r ()
-    popQueue = do
-      q <- gets (^. builderQueue)
-      modify' (set builderQueue mempty)
-      append' (mconcat (reverse q))
 
     popSpaceSpan :: Sem r (Maybe SpaceSpan)
     popSpaceSpan = do
