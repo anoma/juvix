@@ -4,6 +4,7 @@ import Commands.Base
 import Commands.Eval.Options
 import Evaluator qualified as Eval
 import Juvix.Compiler.Core qualified as Core
+import Juvix.Extra.Strings qualified as Str
 
 runCommand :: (Members '[Embed IO, App] r) => EvalOptions -> Sem r ()
 runCommand opts@EvalOptions {..} = do
