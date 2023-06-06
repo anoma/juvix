@@ -7,14 +7,14 @@ where
 
 import Juvix.Data.Keyword
 import Juvix.Data.Keyword.All
-  ( kwArg,
+  ( delimSemicolon,
+    kwArg,
     kwColon,
     kwDollar,
     kwFalse,
     kwFun,
     kwInductive,
     kwRightArrow,
-    kwSemicolon,
     kwStar,
     kwTmp,
     kwTrue,
@@ -28,10 +28,10 @@ allKeywordStrings = keywordsStrings allKeywords
 
 allKeywords :: [Keyword]
 allKeywords =
-  [ kwFun,
+  [ delimSemicolon,
+    kwFun,
     kwInductive,
     kwColon,
-    kwSemicolon,
     kwStar,
     kwRightArrow,
     kwTrue,

@@ -16,22 +16,22 @@ module M;
   axiom , : String → String → String;
 end;
 
--- qualified commas
-t4 : String;
+  -- qualified commas
+  t4 : String;
 t4 := "a" M., "b" M., "c" M., "d";
 
 open M;
 
--- mix qualified and unqualified commas
-t5 : String;
+  -- mix qualified and unqualified commas
+  t5 : String;
 t5 := "a" M., "b" M., "c", "d";
 
--- comma chain fits in a line
-t2 : String;
+  -- comma chain fits in a line
+  t2 : String;
 t2 := "a", "b", "c", "d";
 
--- comma chain does not fit in a line
-t3 : String;
+  -- comma chain does not fit in a line
+  t3 : String;
 t3 :=
   "a"
     , "b"
@@ -46,8 +46,8 @@ t3 :=
     , "k"
     , "1234";
 
--- escaping in String literals
-e1 : String;
+  -- escaping in String literals
+  e1 : String;
 e1 := "\"\n";
 
 syntax infixl 7 +l7;
@@ -65,8 +65,8 @@ axiom +l6 : String → String → String;
 syntax infixr 6 +r6;
 axiom +r6 : String → String → String;
 
--- nesting of chains
-t : String;
+  -- nesting of chains
+  t : String;
 t :=
   "Hellooooooooo"
     +l1 "Hellooooooooo"
@@ -83,62 +83,62 @@ t :=
       , "hi"
       , "hi";
 
--- function with single wildcard parameter
-g : (_ : Type) -> Nat;
+  -- function with single wildcard parameter
+  g : (_ : Type) -> Nat;
 g _ := 1;
 
--- grouping of type arguments
-exampleFunction1 :
-  {A : Type}
-    -> List A
-    -> List A
-    -> List A
-    -> List A
-    -> List A
-    -> List A
-    -> List A
-    -> Nat;
+  -- grouping of type arguments
+  exampleFunction1 :
+    {A : Type}
+      -> List A
+      -> List A
+      -> List A
+      -> List A
+      -> List A
+      -> List A
+      -> List A
+      -> Nat;
 exampleFunction1 _ _ _ _ _ _ _ := 1;
 
 axiom undefined : {A : Type} -> A;
 
--- 200 in the body is idented with respect to the start of the chain
--- (at {A : Type})
-exampleFunction2 :
-  {A : Type}
-    -> List A
-    -> List A
-    -> List A
-    -> List A
-    -> List A
-    -> List A
-    -> List A
-    -> Nat :=
-    λ {_ _ _ _ _ _ _ :=
-      undefined
-        -- comment after first
-        + undefined
-        -- comment after second
-        + undefined
-        + undefined
-        + undefined
-        + undefined
-        + undefined
-        + undefined
-        + undefined
-        + undefined
-        + undefined};
+  -- 200 in the body is idented with respect to the start of the chain
+  -- (at {A : Type})
+  exampleFunction2 :
+    {A : Type}
+      -> List A
+      -> List A
+      -> List A
+      -> List A
+      -> List A
+      -> List A
+      -> List A
+      -> Nat :=
+      λ {_ _ _ _ _ _ _ :=
+        undefined
+          -- comment after first
+          + undefined
+          -- comment after second
+          + undefined
+          + undefined
+          + undefined
+          + undefined
+          + undefined
+          + undefined
+          + undefined
+          + undefined
+          + undefined};
 
 positive
 type T0 (A : Type) :=
   | c0 : (A -> T0 A) -> T0 A;
 
--- Single Lambda clause
-idLambda : {A : Type} -> A -> A;
+  -- Single Lambda clause
+  idLambda : {A : Type} -> A -> A;
 idLambda := λ {x := x};
 
--- Lambda clauses
-f : Nat -> Nat;
+  -- Lambda clauses
+  f : Nat -> Nat;
 f :=
   \ {
     -- comment before lambda pipe
@@ -156,7 +156,7 @@ module Patterns;
   type × (A : Type) (B : Type) :=
     | , : A → B → A × B;
 
-  f : Nat × Nat × Nat × Nat -> Nat;
+    f : Nat × Nat × Nat × Nat -> Nat;
   f (a, b, c, d) := a;
 end;
 
@@ -179,10 +179,10 @@ module Comments;
   axiom a3 -- comment before axiom :
   : Type;
 
-  num -- comment before type sig :
-  :
-    -- comment after type sig :
-    Nat;
+    num -- comment before type sig :
+    :
+      -- comment after type sig :
+      Nat;
   num -- comment before clause :=
   :=
     -- comment after clause :=
@@ -199,7 +199,7 @@ module Comments;
     : Type}
     -> Type;
 
-  id2 : {A : Type} -> A -> Nat -> A;
+    id2 : {A : Type} -> A -> Nat -> A;
   id2 -- before patternarg braces
     {A} a -- before open patternarg parens
     (suc b) :=
@@ -207,6 +207,14 @@ module Comments;
       -- before implicit app
       {A}
       a;
+
+  type color : Type :=
+    -- comment before pipe
+      | black : color
+    | white : color
+    | red : color
+    -- comment before pipe
+      | blue : color;
 
   axiom a5 : Type;
 end;

@@ -1354,7 +1354,7 @@ checkHole h = do
   return
     Hole
       { _holeId = i,
-        _holeLoc = h
+        _holeKw = h
       }
 
 checkParens ::

@@ -66,7 +66,7 @@ type family IdentifierType s = res | res -> s where
 
 type HoleType :: Stage -> GHC.Type
 type family HoleType s = res | res -> s where
-  HoleType 'Parsed = Interval
+  HoleType 'Parsed = KeywordRef
   HoleType 'Scoped = Hole
 
 type PatternAtomIdenType :: Stage -> GHC.Type
@@ -247,6 +247,7 @@ data TypeSignature (s :: Stage) = TypeSignature
     _sigColonKw :: Irrelevant KeywordRef,
     _sigType :: ExpressionType s,
     _sigDoc :: Maybe (Judoc s),
+    _sigAssignKw :: Irrelevant (Maybe KeywordRef),
     _sigPragmas :: Maybe ParsedPragmas,
     _sigBuiltin :: Maybe (WithLoc BuiltinFunction),
     _sigBody :: Maybe (ExpressionType s),
@@ -314,7 +315,8 @@ deriving stock instance (Eq (ExpressionType s), Eq (SymbolType s)) => Eq (Induct
 deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (InductiveParameters s)
 
 data InductiveDef (s :: Stage) = InductiveDef
-  { _inductiveKw :: KeywordRef,
+  { _inductiveKw :: Irrelevant KeywordRef,
+    _inductiveAssignKw :: Irrelevant KeywordRef,
     _inductiveBuiltin :: Maybe (WithLoc BuiltinInductive),
     _inductiveDoc :: Maybe (Judoc s),
     _inductivePragmas :: Maybe ParsedPragmas,
@@ -624,6 +626,7 @@ data OpenModule (s :: Stage) = OpenModule
     _openModuleImportKw :: Maybe KeywordRef,
     _openImportAsName :: Maybe (ModulePathType s 'ModuleTop),
     _openUsingHiding :: Maybe (UsingHiding s),
+    _openPublicKw :: Irrelevant (Maybe KeywordRef),
     _openPublic :: PublicAnn
   }
 
@@ -714,8 +717,24 @@ instance HasAtomicity (Lambda s) where
 --------------------------------------------------------------------------------
 -- Function expression
 --------------------------------------------------------------------------------
+data FunctionParameter (s :: Stage)
+  = FunctionParameterName (SymbolType s)
+  | FunctionParameterWildcard KeywordRef
+
+deriving stock instance
+  (Show (ExpressionType s), Show (SymbolType s)) =>
+  Show (FunctionParameter s)
+
+deriving stock instance
+  (Eq (ExpressionType s), Eq (SymbolType s)) =>
+  Eq (FunctionParameter s)
+
+deriving stock instance
+  (Ord (ExpressionType s), Ord (SymbolType s)) =>
+  Ord (FunctionParameter s)
+
 data FunctionParameters (s :: Stage) = FunctionParameters
-  { _paramNames :: [Maybe (SymbolType s)],
+  { _paramNames :: [FunctionParameter s],
     _paramImplicit :: IsImplicit,
     _paramDelims :: Delims,
     _paramColon :: Irrelevant (Maybe KeywordRef),
@@ -835,6 +854,7 @@ instance HasFixity PostfixApplication where
 
 data Let (s :: Stage) = Let
   { _letKw :: KeywordRef,
+    _letInKw :: Irrelevant KeywordRef,
     _letClauses :: NonEmpty (LetClause s),
     _letExpression :: ExpressionType s
   }
@@ -898,7 +918,8 @@ deriving stock instance
   Ord (LetClause s)
 
 data CaseBranch (s :: Stage) = CaseBranch
-  { _caseBranchPipe :: KeywordRef,
+  { _caseBranchPipe :: Irrelevant KeywordRef,
+   _caseBranchAssignKw :: Irrelevant KeywordRef,
     _caseBranchPattern :: PatternParensType s,
     _caseBranchExpression :: ExpressionType s
   }
@@ -930,6 +951,7 @@ deriving stock instance (Ord (ExpressionType s), Ord (PatternParensType s)) => O
 
 data Initializer (s :: Stage) = Initializer
   { _initializerPattern :: PatternParensType s,
+    _initializerAssignKw :: Irrelevant KeywordRef,
     _initializerExpression :: ExpressionType s
   }
 
@@ -957,6 +979,7 @@ deriving stock instance
 
 data Range (s :: Stage) = Range
   { _rangePattern :: PatternParensType s,
+    _rangeInKw :: Irrelevant KeywordRef,
     _rangeExpression :: ExpressionType s
   }
 
@@ -1272,6 +1295,7 @@ instance HasLoc (AxiomDef 'Scoped) where
 
 instance HasLoc (OpenModule 'Scoped) where
   getLoc m = getLoc (m ^. openModuleKw) <> getLoc (m ^. openModuleName)
+    <>? fmap getLoc (m ^. openPublicKw . unIrrelevant)
 
 instance HasLoc (Statement 'Scoped) where
   getLoc :: Statement 'Scoped -> Interval
@@ -1303,9 +1327,14 @@ instance HasLoc (LambdaClause 'Scoped) where
 instance HasLoc (Lambda 'Scoped) where
   getLoc l = getLoc (l ^. lambdaKw) <> getLoc (l ^. lambdaBraces . unIrrelevant . _2)
 
+instance HasLoc (FunctionParameter 'Scoped) where
+  getLoc = \case
+    FunctionParameterName n -> getLoc n
+    FunctionParameterWildcard w -> getLoc w
+
 instance HasLoc (FunctionParameters 'Scoped) where
   getLoc p = case p ^. paramDelims . unIrrelevant of
-    Nothing -> (getLoc <$> join (listToMaybe (p ^. paramNames))) ?<> getLoc (p ^. paramType)
+    Nothing -> (getLoc <$> listToMaybe (p ^. paramNames)) ?<> getLoc (p ^. paramType)
     Just (l, r) -> getLoc l <> getLoc r
 
 instance HasLoc (Function 'Scoped) where

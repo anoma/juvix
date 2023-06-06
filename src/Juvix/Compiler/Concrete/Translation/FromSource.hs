@@ -572,26 +572,40 @@ iterator ::
   (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
   ParsecS r (Iterator 'Parsed)
 iterator = do
-  (isInit, _iteratorName, pat) <- P.try $ do
+  (isInit, keywordRef, _iteratorName, pat) <- P.try $ do
     n <- name
     lparen
     pat <- parsePatternAtoms
-    b <- (kw kwAssign >> return True) <|> (kw kwIn >> return False)
-    return (b, n, pat)
+    (isInit, kwr) <-
+      ((True,) <$> kw kwAssign)
+        <|> ((False,) <$> kw kwIn)
+    return (isInit, Irrelevant kwr, n, pat)
   val <- parseExpressionAtoms
   _iteratorInitializers <-
     if
         | isInit -> do
             inis <- many (semicolon >> initializer)
             rparen
-            return (Initializer pat val : inis)
+            let ini =
+                  Initializer
+                    { _initializerPattern = pat,
+                      _initializerAssignKw = keywordRef,
+                      _initializerExpression = val
+                    }
+            return (ini : inis)
         | otherwise -> return []
   _iteratorRanges <-
     if
         | not isInit -> do
             rngs <- many (semicolon >> range)
             rparen
-            return (Range pat val : rngs)
+            let ran =
+                  Range
+                    { _rangeExpression = val,
+                      _rangePattern = pat,
+                      _rangeInKw = keywordRef
+                    }
+            return (ran : rngs)
         | otherwise -> fmap (maybe [] toList) $ optional $ do
             lparen
             rngs <- P.sepBy1 range semicolon
@@ -603,19 +617,19 @@ iterator = do
   where
     initializer :: ParsecS r (Initializer 'Parsed)
     initializer = do
-      _initializerPattern <- P.try $ do
+      (_initializerPattern, _initializerAssignKw) <- P.try $ do
         pat <- parsePatternAtoms
-        kw kwAssign
-        return pat
+        r <- Irrelevant <$> kw kwAssign
+        return (pat, r)
       _initializerExpression <- parseExpressionAtoms
       return Initializer {..}
 
     range :: ParsecS r (Range 'Parsed)
     range = do
-      _rangePattern <- P.try $ do
+      (_rangePattern, _rangeInKw) <- P.try $ do
         pat <- parsePatternAtoms
-        kw kwIn
-        return pat
+        r <- Irrelevant <$> kw kwIn
+        return (pat, r)
       _rangeExpression <- parseExpressionAtoms
       return Range {..}
 
@@ -654,7 +668,7 @@ letBlock :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r)
 letBlock = do
   _letKw <- kw kwLet
   _letClauses <- P.sepEndBy1 letClause semicolon
-  kw kwIn
+  _letInKw <- Irrelevant <$> kw kwIn
   _letExpression <- parseExpressionAtoms
   return Let {..}
 
@@ -662,7 +676,7 @@ caseBranch :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] 
 caseBranch = do
   _caseBranchPipe <- kw kwPipe
   _caseBranchPattern <- parsePatternAtoms
-  kw kwAssign
+  _caseBranchAssignKw <- Irrelevant <$> kw kwAssign
   _caseBranchExpression <- parseExpressionAtoms
   return CaseBranch {..}
 
@@ -817,7 +831,7 @@ lambda = do
 inductiveDef :: Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r => Maybe (WithLoc BuiltinInductive) -> ParsecS r (InductiveDef 'Parsed)
 inductiveDef _inductiveBuiltin = do
   _inductivePositive <- optional (kw kwPositive)
-  _inductiveKw <- kw kwInductive
+  _inductiveKw <- Irrelevant <$> kw kwInductive
   _inductiveDoc <- getJudoc
   _inductivePragmas <- getPragmas
   _inductiveName <- symbol P.<?> "<type name>"
@@ -827,7 +841,7 @@ inductiveDef _inductiveBuiltin = do
   _inductiveType <-
     optional (kw kwColon >> parseExpressionAtoms)
       P.<?> "<type annotation e.g. ': Type'>"
-  kw kwAssign P.<?> "<assignment symbol ':='>"
+  _inductiveAssignKw <- Irrelevant <$> kw kwAssign P.<?> "<assignment symbol ':='>"
   _inductiveConstructors <-
     pipeSep1 constructorDef
       P.<?> "<constructor definition>"

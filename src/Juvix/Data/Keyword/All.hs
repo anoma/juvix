@@ -82,9 +82,6 @@ kwPublic = asciiKw Str.public
 kwRightArrow :: Keyword
 kwRightArrow = unicodeKw Str.toAscii Str.toUnicode
 
-kwSemicolon :: Keyword
-kwSemicolon = asciiKw Str.semicolon
-
 kwSyntax :: Keyword
 kwSyntax = asciiKw Str.syntax
 
@@ -252,3 +249,6 @@ delimJudocBlockStart = mkJudocDelim Str.judocBlockStart
 
 delimJudocBlockEnd :: Keyword
 delimJudocBlockEnd = mkJudocDelim Str.judocBlockEnd
+
+delimSemicolon :: Keyword
+delimSemicolon = mkDelim Str.semicolon

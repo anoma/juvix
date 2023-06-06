@@ -261,7 +261,7 @@ toApplicationArg p =
           ( ExpressionHole
               ( Hole
                   { _holeId = error "hole with no id",
-                    _holeLoc = error "hole with no location"
+                    _holeKw = error "hole with no location"
                   }
               )
           )
@@ -337,6 +337,6 @@ freshHole = do
     ExpressionHole
       ( Hole
           { _holeId = uid,
-            _holeLoc = error "freshHole with no location"
+            _holeKw = error "freshHole with no location"
           }
       )

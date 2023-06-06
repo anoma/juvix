@@ -1,12 +1,14 @@
 module Juvix.Data.Universe where
 
 import Juvix.Data.Fixity
+import Juvix.Data.Keyword
+import Juvix.Data.Keyword.All (kwType)
 import Juvix.Data.Loc
 import Juvix.Prelude.Base
 
 data Universe = Universe
   { _universeLevel :: Maybe Natural,
-    _universeLoc :: Interval
+    _universeKw :: KeywordRef
   }
   deriving stock (Show, Ord, Data)
 
@@ -26,6 +28,18 @@ getUniverseLevel Universe {..} = fromMaybe defaultLevel _universeLevel
 instance Eq Universe where
   (==) = (==) `on` getUniverseLevel
 
+mkUniverse :: Maybe Natural -> Interval -> Universe
+mkUniverse lvl loc =
+  Universe
+    { _universeLevel = lvl,
+      _universeKw =
+        KeywordRef
+          { _keywordRefInterval = loc,
+            _keywordRefKeyword = kwType,
+            _keywordRefUnicode = Ascii
+          }
+    }
+
 defaultLevel :: Natural
 defaultLevel = 0
 
@@ -36,7 +50,7 @@ makeLenses ''Universe
 makeLenses ''SmallUniverse
 
 smallUniverse :: Interval -> Universe
-smallUniverse = Universe (Just smallLevel)
+smallUniverse = mkUniverse (Just smallLevel)
 
 isSmallUniverse :: Universe -> Bool
 isSmallUniverse = (== smallLevel) . getUniverseLevel
@@ -53,7 +67,7 @@ instance HasAtomicity SmallUniverse where
   atomicity _ = Atom
 
 instance HasLoc Universe where
-  getLoc = (^. universeLoc)
+  getLoc = getLoc . (^. universeKw)
 
 instance HasLoc SmallUniverse where
   getLoc = (^. smallUniverseLoc)
