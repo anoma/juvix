@@ -217,6 +217,11 @@ module Comments;
       | blue : color;
 
   axiom a5 : Type;
+
+  open Patterns -- before using
+  using -- before brace
+  {-- before first f
+  f; f};
 end;
 
 -- Comment at the end of a module
