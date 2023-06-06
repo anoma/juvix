@@ -61,10 +61,10 @@ evalAndPrint opts tab node = do
     Right node'
       | project opts ^. evalPrintValues -> do
           renderStdOut (Core.ppOut opts (Core.toValue tab node'))
-          embed (putStrLn "")
+          newline
       | otherwise -> do
           renderStdOut (Core.ppOut opts node'')
-          embed (putStrLn "")
+          newline
       where
         node'' = if project opts ^. evalNoDisambiguate then node' else Core.disambiguateNodeNames tab node'
   where
