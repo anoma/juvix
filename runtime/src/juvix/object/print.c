@@ -36,40 +36,98 @@ static size_t print_long(char *buf, size_t n, long_t x) {
     return k + sign;
 }
 
+static bool check_parens(assoc_t assoc, fixity_t *op_fixity,
+                         fixity_t *arg_fixity) {
+    if (op_fixity == NULL) {
+        return false;
+    } else if (arg_fixity->precedence > op_fixity->precedence) {
+        return false;
+    } else if (arg_fixity->precedence < op_fixity->precedence) {
+        return true;
+    } else if (op_fixity->assoc == assoc) {
+        return false;
+    } else {
+        return true;
+    }
+}
+
 #define PUTC(c)                          \
     do {                                 \
         *buf++ = c;                      \
         if (--n == 0) return buf - buf0; \
     } while (0)
 
-static size_t print_object(bool is_top, char *buf, size_t n, word_t x);
+static size_t print_object(assoc_t assoc, fixity_t *fixity, char *buf, size_t n,
+                           word_t x);
 
-static size_t print_args(bool is_top, char *restrict buf, size_t n,
-                         const char *restrict str, word_t *args, size_t nargs) {
+static size_t print_app(bool needs_parens, bool is_binop, char *restrict buf,
+                        size_t n, const char *restrict str, word_t *args,
+                        size_t nargs) {
     ASSERT(n >= 1);
     char *buf0 = buf;
-    if (!is_top && nargs > 0) {
+    if (needs_parens && nargs > 0) {
+        PUTC('(');
+    }
+    if (is_binop) {
         PUTC('(');
     }
     while (*str) {
         PUTC(*str++);
     }
+    if (is_binop) {
+        PUTC(')');
+    }
     for (size_t i = 0; i < nargs; ++i) {
         PUTC(' ');
-        size_t delta = print_object(false, buf, n, args[i]);
+        size_t delta = print_object(assoc_right, &app_fixity, buf, n, args[i]);
         buf += delta;
         n -= delta;
         if (n == 0) {
             return buf - buf0;
         }
     }
-    if (!is_top && nargs > 0) {
+    if (needs_parens && nargs > 0) {
         PUTC(')');
     }
     return buf - buf0;
 }
 
-static size_t print_object(bool is_top, char *buf, size_t n, word_t x) {
+static size_t print_binop(bool needs_parens, fixity_t *op_fixity,
+                          char *restrict buf, size_t n,
+                          const char *restrict str, word_t *args) {
+    ASSERT(n >= 1);
+    char *buf0 = buf;
+    if (needs_parens) {
+        PUTC('(');
+    }
+    // print left arg
+    size_t delta = print_object(assoc_left, op_fixity, buf, n, args[0]);
+    buf += delta;
+    n -= delta;
+    if (n == 0) {
+        return buf - buf0;
+    }
+    // print constructor name
+    PUTC(' ');
+    while (*str) {
+        PUTC(*str++);
+    }
+    PUTC(' ');
+    // print right arg
+    delta = print_object(assoc_right, op_fixity, buf, n, args[1]);
+    buf += delta;
+    n -= delta;
+    if (n == 0) {
+        return buf - buf0;
+    }
+    if (needs_parens) {
+        PUTC(')');
+    }
+    return buf - buf0;
+}
+
+static size_t print_object(assoc_t assoc, fixity_t *fixity, char *buf, size_t n,
+                           word_t x) {
     ASSERT(n >= 1);
     switch (GET_KIND(x)) {
         case KIND_UNBOXED0:
@@ -89,12 +147,14 @@ static size_t print_object(bool is_top, char *buf, size_t n, word_t x) {
                                 get_closure_fuid(x) < juvix_functions_num
                                     ? juvix_function_info[get_closure_fuid(x)]
                                           .name
-                                    : "<closure>";
+                                    : "<function>";
 #else
-                            const char *str = "<closure>";
+                            const char *str = "<function>";
 #endif
-                            buf += print_args(is_top, buf, n, str,
-                                              get_closure_args(x), nargs);
+                            bool needs_parens =
+                                check_parens(assoc, fixity, &app_fixity);
+                            buf += print_app(needs_parens, false, buf, n, str,
+                                             get_closure_args(x), nargs);
                             break;
                         }
                         case SUID_CSTRING: {
@@ -158,13 +218,23 @@ static size_t print_object(bool is_top, char *buf, size_t n, word_t x) {
                 } else {
                     size_t nargs = GET_NFIELDS(h);
                     ASSERT(GET_UID(h) < juvix_constrs_num);
-                    const char *str = juvix_constr_info[GET_UID(h)].name;
-                    buf += print_args(is_top, buf, n, str, get_constr_args(x),
-                                      nargs);
+                    constr_info_t *ci = &juvix_constr_info[GET_UID(h)];
+                    const char *str = ci->name;
+                    if (ci->is_binary && nargs == 2) {
+                        bool needs_parens =
+                            check_parens(assoc, fixity, &ci->fixity);
+                        buf += print_binop(needs_parens, &ci->fixity, buf, n,
+                                           str, get_constr_args(x));
+                    } else {
+                        bool needs_parens =
+                            check_parens(assoc, fixity, &app_fixity);
+                        buf += print_app(needs_parens, ci->is_binary, buf, n,
+                                         str, get_constr_args(x), nargs);
+                    }
                 }
             } else {
                 PUTC('(');
-                delta = print_object(true, buf, n, FST(x));
+                delta = print_object(assoc_none, &app_fixity, buf, n, FST(x));
                 n -= delta;
                 buf += delta;
                 if (n == 0) {
@@ -172,7 +242,7 @@ static size_t print_object(bool is_top, char *buf, size_t n, word_t x) {
                 }
                 PUTC(',');
                 PUTC(' ');
-                delta = print_object(true, buf, n, SND(x));
+                delta = print_object(assoc_none, &app_fixity, buf, n, SND(x));
                 n -= delta;
                 buf += delta;
                 if (n == 0) {
@@ -200,7 +270,7 @@ static size_t print_object(bool is_top, char *buf, size_t n, word_t x) {
 
 size_t print_to_buf(char *buf, size_t n, word_t x) {
     ASSERT(n >= 1);
-    size_t k = print_object(true, buf, n, x);
+    size_t k = print_object(assoc_none, NULL, buf, n, x);
     if (k < n) {
         buf[k] = 0;
     }

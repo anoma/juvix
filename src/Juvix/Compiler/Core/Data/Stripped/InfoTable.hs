@@ -44,7 +44,8 @@ data ConstructorInfo = ConstructorInfo
     _constructorLocation :: Maybe Location,
     _constructorInductive :: Symbol,
     _constructorTag :: Tag,
-    _constructorType :: Type
+    _constructorType :: Type,
+    _constructorFixity :: Maybe Fixity
   }
 
 data ParameterInfo = ParameterInfo

@@ -37,7 +37,8 @@ fromAsm tab =
           _constructorTag = ci ^. Asm.constructorTag,
           _constructorArgsNum = ci ^. Asm.constructorArgsNum,
           _constructorInductive = ci ^. Asm.constructorInductive,
-          _constructorRepresentation = ci ^. Asm.constructorRepresentation
+          _constructorRepresentation = ci ^. Asm.constructorRepresentation,
+          _constructorFixity = ci ^. Asm.constructorFixity
         }
 
     convertInductive :: Asm.InductiveInfo -> InductiveInfo

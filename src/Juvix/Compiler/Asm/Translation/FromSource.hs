@@ -43,7 +43,8 @@ createBuiltinConstr sym btag name ty i =
           _constructorType = ty,
           _constructorArgsNum = n,
           _constructorInductive = sym,
-          _constructorRepresentation = MemRepConstr
+          _constructorRepresentation = MemRepConstr,
+          _constructorFixity = Nothing
         }
 
 declareBuiltins :: (Member InfoTableBuilder r) => ParsecS r ()
@@ -187,7 +188,8 @@ constrDecl symInd = do
             _constructorArgsNum = length (typeArgs ty'),
             _constructorType = ty',
             _constructorInductive = symInd,
-            _constructorRepresentation = MemRepConstr
+            _constructorRepresentation = MemRepConstr,
+            _constructorFixity = Nothing
           }
   lift $ registerConstr ci
   return ci

@@ -11,6 +11,7 @@ import Juvix.Compiler.Backend.C.Translation.FromReg.Base
 import Juvix.Compiler.Reg.Data.InfoTable qualified as Reg
 import Juvix.Compiler.Reg.Extra qualified as Reg
 import Juvix.Compiler.Reg.Language qualified as Reg
+import Juvix.Data.Fixity qualified as Fixity
 import Juvix.Prelude
 
 fromReg :: Limits -> Reg.InfoTable -> MiniCResult
@@ -39,9 +40,42 @@ fromReg lims tab =
                 ListInitializer $
                   ExprInitializer (macroVar "BUILTIN_UIDS_INFO")
                     : map
-                      (\ci -> ListInitializer [ExprInitializer $ string (ci ^. Reg.constructorName)])
+                      ( \ci ->
+                          ListInitializer
+                            [ ExprInitializer $ string (ci ^. Reg.constructorName),
+                              ExprInitializer $ constrIsBinop (ci ^. Reg.constructorFixity),
+                              constrFixity (ci ^. Reg.constructorFixity)
+                            ]
+                      )
                       (Reg.userConstrs tab)
           }
+      where
+        constrIsBinop :: Maybe Fixity -> Expression
+        constrIsBinop = \case
+          Just fixity -> integer (fromEnum (isBinary fixity))
+          Nothing -> integer (0 :: Int)
+
+        constrFixity :: Maybe Fixity -> Initializer
+        constrFixity = \case
+          Just fixity ->
+            ListInitializer
+              [ ExprInitializer $ getPrec (fixity ^. fixityPrecedence),
+                ExprInitializer $ ExpressionVar $ getAssoc (fixity ^. fixityArity)
+              ]
+          Nothing -> ExprInitializer $ macroVar "APP_FIXITY"
+
+        getPrec :: Precedence -> Expression
+        getPrec = \case
+          PrecMinusOmega -> macroVar "PREC_MINUS_OMEGA"
+          PrecOmega -> macroVar "PREC_OMEGA"
+          PrecNat n -> integer n
+
+        getAssoc :: OperatorArity -> Text
+        getAssoc = \case
+          Fixity.Unary _ -> "assoc_none"
+          Fixity.Binary AssocNone -> "assoc_none"
+          Fixity.Binary AssocLeft -> "assoc_left"
+          Fixity.Binary AssocRight -> "assoc_right"
 
     functionInfo :: CCode
     functionInfo =
