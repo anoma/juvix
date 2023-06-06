@@ -876,8 +876,8 @@ checkOpenModuleNoImport OpenModule {..}
 
       let checkUsingHiding :: UsingHiding 'Parsed -> Sem r (UsingHiding 'Scoped)
           checkUsingHiding = \case
-            Hiding h -> Hiding <$> mapM scopeSymbol h
-            Using uh -> Using <$> mapM checkUsingItem uh
+            Hiding h -> Hiding <$> checkHidingList h
+            Using uh -> Using <$> checkUsingList uh
             where
               scopeSymbol :: Symbol -> Sem r S.Symbol
               scopeSymbol s = do
@@ -897,6 +897,29 @@ checkOpenModuleNoImport OpenModule {..}
                 registerName (S.unqualifiedSymbol scopedSym)
                 return scopedSym
 
+              checkHidingList :: HidingList 'Parsed -> Sem r (HidingList 'Scoped)
+              checkHidingList l = do
+                items' <- mapM checkHidingItem (l ^. hidingList)
+                return
+                  HidingList
+                    { _hidingKw = l ^. hidingKw,
+                      _hidingBraces = l ^. hidingBraces,
+                      _hidingList = items'
+                    }
+
+              checkUsingList :: UsingList 'Parsed -> Sem r (UsingList 'Scoped)
+              checkUsingList l = do
+                items' <- mapM checkUsingItem (l ^. usingList)
+                return
+                  UsingList
+                    { _usingKw = l ^. usingKw,
+                      _usingBraces = l ^. usingBraces,
+                      _usingList = items'
+                    }
+
+              checkHidingItem :: HidingItem 'Parsed -> Sem r (HidingItem 'Scoped)
+              checkHidingItem h = HidingItem <$> scopeSymbol (h ^. hidingSymbol)
+
               checkUsingItem :: UsingItem 'Parsed -> Sem r (UsingItem 'Scoped)
               checkUsingItem i = do
                 scopedSym <- scopeSymbol (i ^. usingSymbol)
@@ -907,7 +930,8 @@ checkOpenModuleNoImport OpenModule {..}
                 return
                   UsingItem
                     { _usingSymbol = scopedSym,
-                      _usingAs = scopedAs
+                      _usingAs = scopedAs,
+                      _usingAsKw = i ^. usingAsKw
                     }
 
       usingHiding' <- mapM checkUsingHiding _openUsingHiding
@@ -955,13 +979,17 @@ checkOpenModuleNoImport OpenModule {..}
                 mayAs' <- u ^. at (symbolEntryNameId e)
                 return (fromMaybe sym mayAs', e)
               u :: HashMap NameId (Maybe Symbol)
-              u = HashMap.fromList [(i ^. usingSymbol . S.nameId, i ^? usingAs . _Just . S.nameConcrete) | i <- toList l]
+              u =
+                HashMap.fromList
+                  [ (i ^. usingSymbol . S.nameId, i ^? usingAs . _Just . S.nameConcrete)
+                    | i <- toList (l ^. usingList)
+                  ]
           Just (Hiding l) -> over exportSymbols (HashMap.filter (not . inHiding))
             where
               inHiding :: SymbolEntry -> Bool
               inHiding e = HashSet.member (symbolEntryNameId e) u
               u :: HashSet NameId
-              u = HashSet.fromList (map (^. S.nameId) (toList l))
+              u = HashSet.fromList (map (^. hidingSymbol . S.nameId) (toList (l ^. hidingList)))
           Nothing -> id
 
 checkOpenModule ::

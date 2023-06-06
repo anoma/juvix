@@ -232,14 +232,39 @@ mkTopModulePath l = TopModulePath (NonEmpty.init l) (NonEmpty.last l)
 usingItem :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (UsingItem 'Parsed)
 usingItem = do
   _usingSymbol <- symbol
-  _usingAs <- optional (kw kwAs >> symbol)
+  alias <- optional $ do
+    k <- Irrelevant <$> kw kwAs
+    (k,) <$> symbol
+  let _usingAsKw = mapM fst alias
+      _usingAs = snd <$> alias
   return UsingItem {..}
 
-usingItems :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (NonEmpty (UsingItem 'Parsed))
-usingItems = braces (P.sepBy1 usingItem semicolon)
+hidingItem :: Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r => ParsecS r (HidingItem 'Parsed)
+hidingItem = HidingItem <$> symbol
 
-symbolList :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (NonEmpty Symbol)
-symbolList = braces (P.sepBy1 symbol semicolon)
+phidingList :: Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r => ParsecS r (HidingList 'Parsed)
+phidingList = do
+  _hidingKw <- Irrelevant <$> kw kwHiding
+  l <- kw delimBraceL
+  _hidingList <- P.sepBy1 hidingItem semicolon
+  r <- kw delimBraceR
+  return
+    HidingList
+      { _hidingBraces = Irrelevant (l, r),
+        ..
+      }
+
+pusingList :: Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r => ParsecS r (UsingList 'Parsed)
+pusingList = do
+  _usingKw <- Irrelevant <$> kw kwUsing
+  l <- kw delimBraceL
+  _usingList <- P.sepBy1 usingItem semicolon
+  r <- kw delimBraceR
+  return
+    UsingList
+      { _usingBraces = Irrelevant (l, r),
+        ..
+      }
 
 topModulePath :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r TopModulePath
 topModulePath = mkTopModulePath <$> dottedSymbol
@@ -983,8 +1008,8 @@ openModule = do
 
 usingOrHiding :: (Members '[Error ParserError, InfoTableBuilder, JudocStash, NameIdGen, PragmasStash] r) => ParsecS r (UsingHiding 'Parsed)
 usingOrHiding =
-  (kw kwUsing >> Using <$> usingItems)
-    <|> (kw kwHiding >> Hiding <$> symbolList)
+  Using <$> pusingList
+    <|> Hiding <$> phidingList
 
 newOpenSyntax :: forall r. (Members '[Error ParserError, PathResolver, Files, InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (OpenModule 'Parsed)
 newOpenSyntax = do

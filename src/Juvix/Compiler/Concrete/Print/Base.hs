@@ -682,28 +682,34 @@ instance PrettyPrint Text where
 ppUnkindedSymbol :: Members '[Reader Options, ExactPrint] r => WithLoc Text -> Sem r ()
 ppUnkindedSymbol = region (annotate AnnUnkindedSym) . ppCode
 
+instance SingI s => PrettyPrint (HidingItem s) where
+  ppCode = ppSymbolType . (^. hidingSymbol)
+
+instance SingI s => PrettyPrint (HidingList s) where
+  ppCode HidingList {..} = do
+    let (openb, closeb) = _hidingBraces ^. unIrrelevant
+        items' = sequenceWith (semicolon <> space) (ppCode <$> _hidingList)
+    ppCode _hidingKw <+> ppCode openb <> items' <> ppCode closeb
+
+instance SingI s => PrettyPrint (UsingList s) where
+  ppCode UsingList {..} = do
+    let (openb, closeb) = _usingBraces ^. unIrrelevant
+        items' = sequenceWith (semicolon <> space) (ppCode <$> _usingList)
+    ppCode _usingKw <+> ppCode openb <> items' <> ppCode closeb
+
 instance SingI s => PrettyPrint (UsingHiding s) where
   ppCode :: forall r. Members '[ExactPrint, Reader Options] r => UsingHiding s -> Sem r ()
-  ppCode uh = do
-    let bracedList = braces (sequenceWith (semicolon <> space) ppItems)
-    kw' <+> bracedList
-    where
-      kw' :: Sem r ()
-      kw' = case uh of
-        Using {} -> ppCode Kw.kwUsing -- TODO
-        Hiding {} -> ppCode Kw.kwHiding -- TODO
-      ppItems :: NonEmpty (Sem r ())
-      ppItems = case uh of
-        Using s -> fmap ppCode s
-        Hiding s -> fmap ppSymbolType s
+  ppCode = \case
+    Using u -> ppCode u
+    Hiding h -> ppCode h
 
 instance SingI s => PrettyPrint (UsingItem s) where
   ppCode :: forall r. Members '[ExactPrint, Reader Options] r => UsingItem s -> Sem r ()
   ppCode ui = do
-    let kwAs' :: Sem r () = ppCode Kw.kwAs -- TODO
-        as' = (kwAs' <+>) . ppSymbolType <$> ui ^. usingAs
+    let kwAs' :: Maybe (Sem r ()) = ppCode <$> ui ^. usingAsKw . unIrrelevant
+        alias' = ppSymbolType <$> ui ^. usingAs
         sym' = ppSymbolType (ui ^. usingSymbol)
-    sym' <+?> as'
+    sym' <+?> kwAs' <+?> alias'
 
 instance PrettyPrint ModuleRef where
   ppCode (ModuleRef' (_ :&: ModuleRef'' {..})) = ppCode _moduleRefName

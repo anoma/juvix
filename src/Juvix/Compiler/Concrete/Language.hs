@@ -513,8 +513,28 @@ deriving stock instance
   ) =>
   Ord (Module s t)
 
+newtype HidingItem (s :: Stage) = HidingItem
+  { _hidingSymbol :: SymbolType s
+  }
+
+deriving stock instance
+  ( Show (SymbolType s)
+  ) =>
+  Show (HidingItem s)
+
+deriving stock instance
+  ( Eq (SymbolType s)
+  ) =>
+  Eq (HidingItem s)
+
+deriving stock instance
+  ( Ord (SymbolType s)
+  ) =>
+  Ord (HidingItem s)
+
 data UsingItem (s :: Stage) = UsingItem
   { _usingSymbol :: SymbolType s,
+    _usingAsKw :: Irrelevant (Maybe KeywordRef),
     _usingAs :: Maybe (SymbolType s)
   }
 
@@ -533,10 +553,51 @@ deriving stock instance
   ) =>
   Ord (UsingItem s)
 
--- TODO add location
+data UsingList (s :: Stage) = UsingList
+  { _usingKw :: Irrelevant KeywordRef,
+    _usingBraces :: Irrelevant (KeywordRef, KeywordRef),
+    _usingList :: NonEmpty (UsingItem s)
+  }
+
+deriving stock instance
+  ( Show (SymbolType s)
+  ) =>
+  Show (UsingList s)
+
+deriving stock instance
+  ( Eq (SymbolType s)
+  ) =>
+  Eq (UsingList s)
+
+deriving stock instance
+  ( Ord (SymbolType s)
+  ) =>
+  Ord (UsingList s)
+
+data HidingList (s :: Stage) = HidingList
+  { _hidingKw :: Irrelevant KeywordRef,
+    _hidingBraces :: Irrelevant (KeywordRef, KeywordRef),
+    _hidingList :: NonEmpty (HidingItem s)
+  }
+
+deriving stock instance
+  ( Show (SymbolType s)
+  ) =>
+  Show (HidingList s)
+
+deriving stock instance
+  ( Eq (SymbolType s)
+  ) =>
+  Eq (HidingList s)
+
+deriving stock instance
+  ( Ord (SymbolType s)
+  ) =>
+  Ord (HidingList s)
+
 data UsingHiding (s :: Stage)
-  = Using (NonEmpty (UsingItem s))
-  | Hiding (NonEmpty (SymbolType s))
+  = Using (UsingList s)
+  | Hiding (HidingList s)
 
 deriving stock instance
   ( Show (SymbolType s)
@@ -1141,6 +1202,9 @@ deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (Jud
 
 makeLenses ''PatternArg
 makeLenses ''UsingItem
+makeLenses ''HidingItem
+makeLenses ''HidingList
+makeLenses ''UsingList
 makeLenses ''JudocLine
 makeLenses ''Example
 makeLenses ''Lambda
