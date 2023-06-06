@@ -538,7 +538,7 @@ goFunctionParameters FunctionParameters {..} = do
             Abstract._paramName = goSymbol <$> param
           }
   return . fromMaybe (pure (mkParam Nothing)) . nonEmpty $
-    mkParam . goFunctionParameter <$> (_paramNames)
+    mkParam . goFunctionParameter <$> _paramNames
   where
     goFunctionParameter :: FunctionParameter 'Scoped -> Maybe (SymbolType 'Scoped)
     goFunctionParameter = \case
