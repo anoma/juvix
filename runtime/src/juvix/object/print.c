@@ -108,7 +108,9 @@ static size_t print_binop(bool needs_parens, fixity_t *op_fixity,
         return buf - buf0;
     }
     // print constructor name
-    PUTC(' ');
+    if (str[0] != ',') {
+        PUTC(' ');
+    }
     while (*str) {
         PUTC(*str++);
     }

@@ -556,8 +556,8 @@ instance (PrettyCode a) => PrettyCode [a] where
 -- printing values
 --------------------------------------------------------------------------------
 
-goBinary :: Member (Reader Options) r => Fixity -> Doc Ann -> [Value] -> Sem r (Doc Ann)
-goBinary fixity name = \case
+goBinary :: Member (Reader Options) r => Bool -> Fixity -> Doc Ann -> [Value] -> Sem r (Doc Ann)
+goBinary isComma fixity name = \case
   [] -> return (parens name)
   [arg] -> do
     arg' <- ppRightExpression appFixity arg
@@ -565,7 +565,11 @@ goBinary fixity name = \case
   [arg1, arg2] -> do
     arg1' <- ppLeftExpression fixity arg1
     arg2' <- ppRightExpression fixity arg2
-    return $ arg1' <+> name <+> arg2'
+    if
+        | isComma ->
+            return $ arg1' <> name <+> arg2'
+        | otherwise ->
+            return $ arg1' <+> name <+> arg2'
   _ ->
     impossible
 
@@ -587,7 +591,7 @@ instance PrettyCode ConstrApp where
         return $ hsep (n : args)
       Just fixity
         | isBinary fixity ->
-            goBinary fixity n _constrAppArgs
+            goBinary (_constrAppName == ",") fixity n _constrAppArgs
         | isUnary fixity ->
             goUnary fixity n _constrAppArgs
       _ -> impossible

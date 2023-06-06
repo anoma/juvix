@@ -12,6 +12,7 @@ import Juvix.Compiler.Core.Data.InfoTable
 import Juvix.Compiler.Core.Error
 import Juvix.Compiler.Core.Evaluator
 import Juvix.Compiler.Core.Extra
+import Juvix.Compiler.Core.Extra.Value
 import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Info.NoDisplayInfo
 import Juvix.Compiler.Core.Language
@@ -75,7 +76,7 @@ coreEvalAssertion' mode tab mainFile expectedFile step =
                     Right value -> do
                       unless
                         (Info.member kNoDisplayInfo (getInfo value))
-                        (hPutStrLn hout (ppPrint value))
+                        (hPutStrLn hout (ppPrint (toValue tab value)))
                       hClose hout
                       actualOutput <- TIO.readFile (toFilePath outputFile)
                       step "Compare expected and actual program output"
