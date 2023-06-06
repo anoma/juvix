@@ -641,14 +641,13 @@ instance SingI s => PrettyPrint (TypeSignature s) where
       ?<> pragmas'
       ?<> builtin'
       ?<> termin'
-      ?<>
-        ( name'
-            <+> ppCode _sigColonKw
-              <> oneLineOrNext
-                ( type'
-                    <+?> body'
-                )
-        )
+      ?<> ( name'
+              <+> ppCode _sigColonKw
+                <> oneLineOrNext
+                  ( type'
+                      <+?> body'
+                  )
+          )
 
 instance PrettyPrint Wildcard where
   ppCode w = morpheme (getLoc w) C.kwWildcard
