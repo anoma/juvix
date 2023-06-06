@@ -28,7 +28,8 @@ instance CanonicalProjection CoreNormalizeOptions Eval.EvalOptions where
     Eval.EvalOptions
       { _evalInputFile = c ^. coreNormalizeInputFile,
         _evalNoIO = True,
-        _evalNoDisambiguate = c ^. coreNormalizeNoDisambiguate
+        _evalNoDisambiguate = c ^. coreNormalizeNoDisambiguate,
+        _evalPrintValues = False
       }
 
 parseCoreNormalizeOptions :: Parser CoreNormalizeOptions

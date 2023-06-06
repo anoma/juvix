@@ -35,7 +35,8 @@ instance CanonicalProjection CoreFromConcreteOptions Eval.EvalOptions where
     Eval.EvalOptions
       { _evalInputFile = c ^. coreFromConcreteInputFile,
         _evalNoIO = c ^. coreFromConcreteNoIO,
-        _evalNoDisambiguate = c ^. coreFromConcreteNoDisambiguate
+        _evalNoDisambiguate = c ^. coreFromConcreteNoDisambiguate,
+        _evalPrintValues = False
       }
 
 parseCoreFromConcreteOptions :: Parser CoreFromConcreteOptions

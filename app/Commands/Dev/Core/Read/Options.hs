@@ -45,7 +45,8 @@ instance CanonicalProjection CoreReadOptions Evaluator.EvalOptions where
     Evaluator.EvalOptions
       { _evalNoIO = False,
         _evalNoDisambiguate = x ^. coreReadNoDisambiguate,
-        _evalInputFile = x ^. coreReadInputFile
+        _evalInputFile = x ^. coreReadInputFile,
+        _evalPrintValues = False
       }
 
 parseCoreReadOptions :: Parser CoreReadOptions

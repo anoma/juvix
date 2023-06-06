@@ -6,6 +6,7 @@ import Juvix.Compiler.Core.Data.InfoTable qualified as Core
 import Juvix.Compiler.Core.Error qualified as Core
 import Juvix.Compiler.Core.Evaluator qualified as Core
 import Juvix.Compiler.Core.Extra.Base qualified as Core
+import Juvix.Compiler.Core.Extra.Value qualified as Core
 import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Info.NoDisplayInfo qualified as Info
 import Juvix.Compiler.Core.Language qualified as Core
@@ -16,7 +17,8 @@ import Juvix.Compiler.Core.Transformation.DisambiguateNames qualified as Core
 data EvalOptions = EvalOptions
   { _evalInputFile :: AppPath File,
     _evalNoIO :: Bool,
-    _evalNoDisambiguate :: Bool
+    _evalNoDisambiguate :: Bool,
+    _evalPrintValues :: Bool
   }
 
 makeLenses ''EvalOptions
@@ -56,9 +58,13 @@ evalAndPrint opts tab node = do
     Right node'
       | Info.member Info.kNoDisplayInfo (Core.getInfo node') ->
           return ()
-    Right node' -> do
-      renderStdOut (Core.ppOut opts node'')
-      embed (putStrLn "")
+    Right node'
+      | project opts ^. evalPrintValues -> do
+          renderStdOut (Core.ppOut opts (Core.toValue tab node'))
+          newline
+      | otherwise -> do
+          renderStdOut (Core.ppOut opts node'')
+          newline
       where
         node'' = if project opts ^. evalNoDisambiguate then node' else Core.disambiguateNodeNames tab node'
   where
