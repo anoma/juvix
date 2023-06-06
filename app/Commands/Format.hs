@@ -19,6 +19,7 @@ data FormatTarget
   = TargetFile
   | TargetDir
   | TargetStdin
+  deriving stock (Eq)
 
 runCommand :: forall r. Members '[Embed IO, App, Resource, Files] r => FormatOptions -> Sem r ()
 runCommand opts = do
@@ -44,7 +45,16 @@ runCommand opts = do
                       "Use the --help option to display more usage information."
                     ]
                 return FormatResultFail
-    when (res == FormatResultFail) (embed (exitWith (ExitFailure 1)))
+    let exitFail = embed (exitWith (ExitFailure 1))
+    case res of
+      FormatResultFail -> exitFail
+      FormatResultNotFormatted ->
+        {- use exit code 1 for
+         * unformatted files when using --check
+         * when running the formatter on a Juvix project
+        -}
+        when (opts ^. formatCheck || target == TargetDir) exitFail
+      FormatResultOK -> pure ()
 
 renderModeFromOptions :: FormatTarget -> FormatOptions -> FormattedFileInfo -> FormatRenderMode
 renderModeFromOptions target opts formattedInfo

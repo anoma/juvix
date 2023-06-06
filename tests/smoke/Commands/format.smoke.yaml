@@ -31,7 +31,7 @@ tests:
         juvix format Foo.juvix
     stdout:
       contains: module Foo;
-    exit-status: 1
+    exit-status: 0
 
   - name: format-unformatted-file-check-no-stdout
     command:
@@ -168,7 +168,7 @@ tests:
 
         main : Nat;
         main := 5;
-    exit-status: 1
+    exit-status: 0
 
   - name: format-stdin-file-does-not-exist
     command:
@@ -207,7 +207,7 @@ tests:
 
         main : Nat;
         main := 5;
-    exit-status: 1
+    exit-status: 0
 
   - name: format-no-stdin-no-file-name
     command:
