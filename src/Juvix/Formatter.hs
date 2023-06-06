@@ -1,17 +1,17 @@
 module Juvix.Formatter where
 
-import qualified Data.Text                                                       as T
-import           Juvix.Compiler.Concrete.Language
-import           Juvix.Compiler.Concrete.Print                                   (ppOutDefault)
-import qualified Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping as Scoper
-import           Juvix.Compiler.Concrete.Translation.FromSource.Data.Context
-import           Juvix.Compiler.Pipeline.EntryPoint
-import           Juvix.Extra.Paths
-import           Juvix.Prelude
-import           Juvix.Prelude.Pretty
+import Data.Text qualified as T
+import Juvix.Compiler.Concrete.Language
+import Juvix.Compiler.Concrete.Print (ppOutDefault)
+import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
+import Juvix.Compiler.Concrete.Translation.FromSource.Data.Context
+import Juvix.Compiler.Pipeline.EntryPoint
+import Juvix.Extra.Paths
+import Juvix.Prelude
+import Juvix.Prelude.Pretty
 
 data FormattedFileInfo = FormattedFileInfo
-  { _formattedFileInfoPath         :: Path Abs File,
+  { _formattedFileInfoPath :: Path Abs File,
     _formattedFileInfoContentsAnsi :: NonEmpty AnsiText
   }
 
@@ -29,11 +29,11 @@ data FormatResult
   deriving stock (Eq)
 
 instance Semigroup FormatResult where
-  FormatResultFail <> _         = FormatResultFail
-  _ <> FormatResultFail         = FormatResultFail
+  FormatResultFail <> _ = FormatResultFail
+  _ <> FormatResultFail = FormatResultFail
   FormatResultNotFormatted <> _ = FormatResultNotFormatted
   _ <> FormatResultNotFormatted = FormatResultNotFormatted
-  _ <> _                        = FormatResultOK
+  _ <> _ = FormatResultOK
 
 instance Monoid FormatResult where
   mempty = FormatResultOK
