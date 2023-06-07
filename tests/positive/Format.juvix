@@ -212,11 +212,11 @@ module Comments;
 
   type color : Type :=
     -- comment before pipe
-      | black : color
+    | black : color
     | white : color
     | red : color
     -- comment before pipe
-      | blue : color;
+    | blue : color;
 
   axiom a5 : Type;
 

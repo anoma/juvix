@@ -783,7 +783,7 @@ instance SingI s => PrettyPrint (InductiveConstructorDef s) where
         constructorType' = ppExpressionType _constructorType
         doc' = ppCode <$> _constructorDoc
         pragmas' = ppCode <$> _constructorPragmas
-    nest (pipeHelper <+> doc' ?<> pragmas' ?<> constructorName' <+> ppCode _constructorColonKw <+> constructorType')
+    pipeHelper <+> nest (doc' ?<> pragmas' ?<> constructorName' <+> ppCode _constructorColonKw <+> constructorType')
     where
       -- we use this helper so that comments appear before the first optional pipe if the pipe was omitted
       pipeHelper :: Sem r ()
@@ -821,7 +821,7 @@ instance SingI s => PrettyPrint (InductiveDef s) where
       ?<> sig'
       <+> ppCode _inductiveAssignKw
         <> line
-        <> (indent . align) constrs'
+        <> indent constrs'
     where
       ppConstructorBlock :: NonEmpty (InductiveConstructorDef s) -> Sem r ()
       ppConstructorBlock cs = vsep (ppCode <$> cs)
