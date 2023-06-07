@@ -1,9 +1,20 @@
-module Format;
+{-- This is Judoc block comment --}
+module -- Declaring a top module of name:
+Format;
 
-import Stdlib.Prelude open hiding {,};
+import -- Import a module of name:
+Stdlib.Prelude open -- Bring all names into scope but..
+hiding -- Hide some names
+{-- like this 
+,; -- don't want , here
+-- Bool either 
+Bool; true; false};
+
 import Stdlib.Data.Nat.Ord open;
 
+-- Lorem ipsum dolor sit amet, consectetur adipiscing elit
 terminating
+-- Comment between terminating and type sig
 go : Nat → Nat → Nat;
 go n s :=
   if
@@ -11,8 +22,10 @@ go n s :=
     (go (sub n 1) s)
     (go n (sub s n) + go (sub n 1) s);
 
-module M;
-  syntax infixr 4 ,;
+module {- local module -}
+M;
+  syntax -- syntax in local modules
+  infixr 4 ,;
   axiom , : String → String → String;
 end;
 
