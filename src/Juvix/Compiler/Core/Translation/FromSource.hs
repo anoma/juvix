@@ -79,7 +79,7 @@ parseToplevel = do
   lift declareBoolBuiltins
   lift declareNatBuiltins
   space
-  P.endBy statement (kw kwSemicolon)
+  P.endBy statement (kw delimSemicolon)
   r <- optional expression
   P.eof
   return r
@@ -206,7 +206,7 @@ statementInductive = do
             _inductivePragmas = mempty
           }
   lift $ registerInductive txt ii
-  ctrs <- braces $ P.sepEndBy (constrDecl sym) (kw kwSemicolon)
+  ctrs <- braces $ P.sepEndBy (constrDecl sym) (kw delimSemicolon)
   lift $ registerInductive txt ii {_inductiveConstructors = map (^. constructorTag) ctrs}
 
 constrDecl ::
@@ -751,7 +751,7 @@ letrecDefs names varsNum0 vars0 varsNum vars = forM names letrecItem
         parseFailure off "identifier name doesn't match letrec signature"
       kw kwAssign
       v <- bracedExpr varsNum vars
-      kw kwSemicolon
+      kw delimSemicolon
       let ty = fromMaybe mkDynamic' mty
       return $ LetItem (Binder txt (Just i) ty) v
 
@@ -804,7 +804,7 @@ exprCase' ::
   HashMap Text Level ->
   ParsecS r Node
 exprCase' off value varsNum vars = do
-  bs <- P.sepEndBy (caseBranchP varsNum vars) (kw kwSemicolon)
+  bs <- P.sepEndBy (caseBranchP varsNum vars) (kw delimSemicolon)
   let bss = map fromLeft' $ filter isLeft bs
   let def' = map fromRight' $ filter isRight bs
   case bss of
@@ -959,7 +959,7 @@ exprMatch' ::
 exprMatch' vals rty varsNum vars = do
   let values = map fst vals
       types = map snd vals
-  bs <- P.sepEndBy (matchBranch (length values) varsNum vars) (kw kwSemicolon)
+  bs <- P.sepEndBy (matchBranch (length values) varsNum vars) (kw delimSemicolon)
   return $ mkMatch' (fromList types) rty (fromList values) bs
 
 matchBranch ::

@@ -665,4 +665,4 @@ checkExpression hintArity expr = case expr of
               (ArityUnknown, p : ps) -> (p :) <$> go (succ idx) ArityUnknown ps
 
 newHole :: (Member NameIdGen r) => Interval -> Sem r Hole
-newHole loc = (`Hole` loc) <$> freshNameId
+newHole loc = mkHole loc <$> freshNameId

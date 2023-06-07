@@ -95,7 +95,7 @@ instance PrettyCode Application where
     return $ l' <+> r'
 
 instance PrettyCode Universe where
-  ppCode (Universe n _) = return $ kwType <+?> (pretty <$> n)
+  ppCode Universe {..} = return $ kwType <+?> (pretty <$> _universeLevel)
 
 instance PrettyCode PatternArg where
   ppCode (PatternArg i n p) = do

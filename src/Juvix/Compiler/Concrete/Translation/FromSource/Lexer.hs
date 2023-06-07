@@ -115,7 +115,6 @@ lparen = delim "("
 rparen :: (Members '[InfoTableBuilder] r) => ParsecS r ()
 rparen = delim ")"
 
--- TODO Consider using this instead of kw kwPipe
 pipe :: (Members '[InfoTableBuilder] r) => ParsecS r ()
 pipe = delim "|"
 

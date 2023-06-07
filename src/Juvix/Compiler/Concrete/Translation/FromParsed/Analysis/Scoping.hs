@@ -572,6 +572,7 @@ checkInductiveDef InductiveDef {..} = do
         _inductiveConstructors = inductiveConstructors',
         _inductiveBuiltin,
         _inductivePositive,
+        _inductiveAssignKw,
         _inductiveKw
       }
   where
@@ -597,7 +598,8 @@ checkInductiveDef InductiveDef {..} = do
             _constructorType = constructorType',
             _constructorDoc = doc',
             _constructorPragmas = _constructorPragmas,
-            _constructorPipe
+            _constructorPipe,
+            _constructorColonKw
           }
 
 createExportsTable :: ExportInfo -> HashSet NameId
@@ -874,8 +876,8 @@ checkOpenModuleNoImport OpenModule {..}
 
       let checkUsingHiding :: UsingHiding 'Parsed -> Sem r (UsingHiding 'Scoped)
           checkUsingHiding = \case
-            Hiding h -> Hiding <$> mapM scopeSymbol h
-            Using uh -> Using <$> mapM checkUsingItem uh
+            Hiding h -> Hiding <$> checkHidingList h
+            Using uh -> Using <$> checkUsingList uh
             where
               scopeSymbol :: Symbol -> Sem r S.Symbol
               scopeSymbol s = do
@@ -895,6 +897,29 @@ checkOpenModuleNoImport OpenModule {..}
                 registerName (S.unqualifiedSymbol scopedSym)
                 return scopedSym
 
+              checkHidingList :: HidingList 'Parsed -> Sem r (HidingList 'Scoped)
+              checkHidingList l = do
+                items' <- mapM checkHidingItem (l ^. hidingList)
+                return
+                  HidingList
+                    { _hidingKw = l ^. hidingKw,
+                      _hidingBraces = l ^. hidingBraces,
+                      _hidingList = items'
+                    }
+
+              checkUsingList :: UsingList 'Parsed -> Sem r (UsingList 'Scoped)
+              checkUsingList l = do
+                items' <- mapM checkUsingItem (l ^. usingList)
+                return
+                  UsingList
+                    { _usingKw = l ^. usingKw,
+                      _usingBraces = l ^. usingBraces,
+                      _usingList = items'
+                    }
+
+              checkHidingItem :: HidingItem 'Parsed -> Sem r (HidingItem 'Scoped)
+              checkHidingItem h = HidingItem <$> scopeSymbol (h ^. hidingSymbol)
+
               checkUsingItem :: UsingItem 'Parsed -> Sem r (UsingItem 'Scoped)
               checkUsingItem i = do
                 scopedSym <- scopeSymbol (i ^. usingSymbol)
@@ -905,7 +930,8 @@ checkOpenModuleNoImport OpenModule {..}
                 return
                   UsingItem
                     { _usingSymbol = scopedSym,
-                      _usingAs = scopedAs
+                      _usingAs = scopedAs,
+                      _usingAsKw = i ^. usingAsKw
                     }
 
       usingHiding' <- mapM checkUsingHiding _openUsingHiding
@@ -953,13 +979,17 @@ checkOpenModuleNoImport OpenModule {..}
                 mayAs' <- u ^. at (symbolEntryNameId e)
                 return (fromMaybe sym mayAs', e)
               u :: HashMap NameId (Maybe Symbol)
-              u = HashMap.fromList [(i ^. usingSymbol . S.nameId, i ^? usingAs . _Just . S.nameConcrete) | i <- toList l]
+              u =
+                HashMap.fromList
+                  [ (i ^. usingSymbol . S.nameId, i ^? usingAs . _Just . S.nameConcrete)
+                    | i <- toList (l ^. usingList)
+                  ]
           Just (Hiding l) -> over exportSymbols (HashMap.filter (not . inHiding))
             where
               inHiding :: SymbolEntry -> Bool
               inHiding e = HashSet.member (symbolEntryNameId e) u
               u :: HashSet NameId
-              u = HashSet.fromList (map (^. S.nameId) (toList l))
+              u = HashSet.fromList (map (^. hidingSymbol . S.nameId) (toList (l ^. hidingList)))
           Nothing -> id
 
 checkOpenModule ::
@@ -987,7 +1017,8 @@ checkFunctionClause clause@FunctionClause {..} = do
     @$> FunctionClause
       { _clauseOwnerFunction = clauseOwnerFunction',
         _clausePatterns = clausePatterns',
-        _clauseBody = clauseBody'
+        _clauseBody = clauseBody',
+        _clauseAssignKw
       }
   where
     fun = _clauseOwnerFunction
@@ -1023,10 +1054,12 @@ checkFunction f = do
   _paramType <- checkParseExpressionAtoms (f ^. funParameters . paramType)
   withLocalScope $ do
     _paramNames <- forM (f ^. funParameters . paramNames) $ \case
-      Nothing -> return Nothing
-      Just p -> Just <$> bindVariableSymbol p
+      FunctionParameterWildcard w -> return (FunctionParameterWildcard w)
+      FunctionParameterName p -> FunctionParameterName <$> bindVariableSymbol p
     _funReturn <- checkParseExpressionAtoms (f ^. funReturn)
     let _paramImplicit = f ^. funParameters . paramImplicit
+        _paramColon = f ^. funParameters . paramColon
+        _paramDelims = f ^. funParameters . paramDelims
         _funParameters = FunctionParameters {..}
         _funKw = f ^. funKw
     return Function {..}
@@ -1054,7 +1087,8 @@ checkLet Let {..} =
       Let
         { _letClauses = letClauses',
           _letExpression = letExpression',
-          _letKw
+          _letKw,
+          _letInKw
         }
   where
     checkLetClauses :: NonEmpty (LetClause 'Parsed) -> Sem r (NonEmpty (LetClause 'Scoped))
@@ -1101,7 +1135,14 @@ checkLambda ::
   (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
   Lambda 'Parsed ->
   Sem r (Lambda 'Scoped)
-checkLambda Lambda {..} = Lambda _lambdaKw <$> mapM checkLambdaClause _lambdaClauses
+checkLambda Lambda {..} = do
+  clauses' <- mapM checkLambdaClause _lambdaClauses
+  return
+    Lambda
+      { _lambdaClauses = clauses',
+        _lambdaKw,
+        _lambdaBraces
+      }
 
 checkLambdaClause ::
   (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
@@ -1114,7 +1155,8 @@ checkLambdaClause LambdaClause {..} = withLocalScope $ do
     LambdaClause
       { _lambdaParameters = lambdaParameters',
         _lambdaBody = lambdaBody',
-        _lambdaPipe
+        _lambdaPipe,
+        _lambdaAssignKw
       }
 
 scopedVar ::
@@ -1215,11 +1257,11 @@ checkPatternBinding ::
   PatternBinding ->
   Sem r PatternArg
 checkPatternBinding (PatternBinding n p) = do
-  n' <- bindVariableSymbol n
   p' <- checkParsePatternAtom p
+  n' <- bindVariableSymbol n
   if
       | isJust (p' ^. patternArgName) -> throw (ErrDoubleBinderPattern (DoubleBinderPattern n' p'))
-      | otherwise -> return $ set patternArgName (Just n') p'
+      | otherwise -> return (set patternArgName (Just n') p')
 
 checkPatternAtoms ::
   (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
@@ -1300,17 +1342,15 @@ checkIterator iter = do
         ( ErrIteratorUndefined
             IteratorUndefined {_iteratorUndefinedIterator = iter}
         )
-  let inipats = map (^. initializerPattern) (iter ^. iteratorInitializers)
-      inivals = map (^. initializerExpression) (iter ^. iteratorInitializers)
-      rngpats = map (^. rangePattern) (iter ^. iteratorRanges)
-      rngvals = map (^. rangeExpression) (iter ^. iteratorRanges)
-  inivals' <- mapM checkParseExpressionAtoms inivals
-  rngvals' <- mapM checkParseExpressionAtoms rngvals
+  inivals' <- mapM (checkParseExpressionAtoms . (^. initializerExpression)) (iter ^. iteratorInitializers)
+  rngvals' <- mapM (checkParseExpressionAtoms . (^. rangeExpression)) (iter ^. iteratorRanges)
+  let initAssignKws = iter ^.. iteratorInitializers . each . initializerAssignKw
+      rangesInKws = iter ^.. iteratorRanges . each . rangeInKw
   withLocalScope $ do
-    inipats' <- mapM checkParsePatternAtoms inipats
-    rngpats' <- mapM checkParsePatternAtoms rngpats
-    let _iteratorInitializers = zipWithExact Initializer inipats' inivals'
-        _iteratorRanges = zipWithExact Range rngpats' rngvals'
+    inipats' <- mapM (checkParsePatternAtoms . (^. initializerPattern)) (iter ^. iteratorInitializers)
+    rngpats' <- mapM (checkParsePatternAtoms . (^. rangePattern)) (iter ^. iteratorRanges)
+    let _iteratorInitializers = [Initializer p k v | ((p, k), v) <- zipExact (zipExact inipats' initAssignKws) inivals']
+        _iteratorRanges = [Range p k v | ((p, k), v) <- zipExact (zipExact rngpats' rangesInKws) rngvals']
         _iteratorParens = iter ^. iteratorParens
     _iteratorBody <- checkParseExpressionAtoms (iter ^. iteratorBody)
     return Iterator {..}
@@ -1322,7 +1362,11 @@ checkInitializer ::
 checkInitializer ini = do
   _initializerPattern <- checkParsePatternAtoms (ini ^. initializerPattern)
   _initializerExpression <- checkParseExpressionAtoms (ini ^. initializerExpression)
-  return Initializer {..}
+  return
+    Initializer
+      { _initializerAssignKw = ini ^. initializerAssignKw,
+        ..
+      }
 
 checkRange ::
   (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
@@ -1331,7 +1375,11 @@ checkRange ::
 checkRange rng = do
   _rangePattern <- checkParsePatternAtoms (rng ^. rangePattern)
   _rangeExpression <- checkParseExpressionAtoms (rng ^. rangeExpression)
-  return Range {..}
+  return
+    Range
+      { _rangeInKw = rng ^. rangeInKw,
+        ..
+      }
 
 checkHole ::
   (Members '[NameIdGen] r) =>
@@ -1342,7 +1390,7 @@ checkHole h = do
   return
     Hole
       { _holeId = i,
-        _holeLoc = h
+        _holeKw = h
       }
 
 checkParens ::
@@ -1527,6 +1575,8 @@ makeExpressionTable (ExpressionAtoms atoms _) = [appOpExplicit] : operators ++ [
             param =
               FunctionParameters
                 { _paramNames = [],
+                  _paramDelims = Irrelevant Nothing,
+                  _paramColon = Irrelevant Nothing,
                   _paramImplicit = Explicit,
                   _paramType = a
                 }
@@ -1732,10 +1782,12 @@ makePatternTable (PatternAtoms latoms _) = [appOp] : operators
             )
 
 explicitP :: Pattern -> PatternArg
-explicitP = PatternArg Explicit Nothing
-
-implicitP :: Pattern -> PatternArg
-implicitP = PatternArg Implicit Nothing
+explicitP _patternArgPattern =
+  PatternArg
+    { _patternArgIsImplicit = Explicit,
+      _patternArgName = Nothing,
+      _patternArgPattern
+    }
 
 parsePatternTerm ::
   forall r.

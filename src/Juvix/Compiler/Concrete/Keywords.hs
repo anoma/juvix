@@ -8,11 +8,15 @@ where
 import Juvix.Data.Keyword
 import Juvix.Data.Keyword.All
   ( -- delimiters
-
+    delimBraceL,
+    delimBraceR,
     delimJudocBlockEnd,
     delimJudocBlockStart,
     delimJudocExample,
     delimJudocStart,
+    delimParenL,
+    delimParenR,
+    delimSemicolon,
     -- keywords
     kwAs,
     kwAssign,
@@ -42,7 +46,6 @@ import Juvix.Data.Keyword.All
     kwPostfix,
     kwPublic,
     kwRightArrow,
-    kwSemicolon,
     kwSyntax,
     kwTerminating,
     kwType,
@@ -57,7 +60,8 @@ allKeywordStrings = keywordsStrings allKeywords
 
 allKeywords :: [Keyword]
 allKeywords =
-  [ kwAssign,
+  [ delimSemicolon,
+    kwAssign,
     kwAt,
     kwAxiom,
     kwCase,
@@ -75,7 +79,6 @@ allKeywords =
     kwPipe,
     kwPublic,
     kwRightArrow,
-    kwSemicolon,
     kwSyntax,
     kwType,
     kwUsing,
