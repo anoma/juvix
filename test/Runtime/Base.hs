@@ -24,6 +24,8 @@ clangCompile mkClangArgs inputFile outputFile execute step =
         execute outputFile'
     )
 
+-- The same as `P.readProcess` but instead of inheriting `stderr` redirects it
+-- to the child's `stdout`.
 readProcess :: FilePath -> [String] -> Text -> IO Text
 readProcess cmd args stdinText =
   withTempDir'
