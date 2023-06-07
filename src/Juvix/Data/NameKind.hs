@@ -95,9 +95,9 @@ canBeIterator k = case getNameKind k of
 
 nameKindAnsi :: NameKind -> AnsiStyle
 nameKindAnsi k = case k of
-  KNameConstructor -> colorDull Magenta
+  KNameConstructor -> colorDull Blue
   KNameInductive -> colorDull Green
-  KNameAxiom -> colorDull Red
+  KNameAxiom -> colorDull Magenta
   KNameLocalModule -> color Cyan
   KNameFunction -> colorDull Yellow
   KNameLocal -> mempty

@@ -529,18 +529,21 @@ goFunctionParameters ::
   (Members '[Error ScoperError, Reader Pragmas, InfoTableBuilder] r) =>
   FunctionParameters 'Scoped ->
   Sem r (NonEmpty Abstract.FunctionParameter)
-goFunctionParameters (FunctionParameters {..}) = do
+goFunctionParameters FunctionParameters {..} = do
   _paramType' <- goExpression _paramType
-  return $
-    fmap
-      ( \param ->
-          Abstract.FunctionParameter
-            { Abstract._paramType = _paramType',
-              Abstract._paramImplicit = _paramImplicit,
-              Abstract._paramName = goSymbol <$> param
-            }
-      )
-      (fromMaybe (pure Nothing) (nonEmpty _paramNames))
+  let mkParam param =
+        Abstract.FunctionParameter
+          { Abstract._paramType = _paramType',
+            Abstract._paramImplicit = _paramImplicit,
+            Abstract._paramName = goSymbol <$> param
+          }
+  return . fromMaybe (pure (mkParam Nothing)) . nonEmpty $
+    mkParam . goFunctionParameter <$> _paramNames
+  where
+    goFunctionParameter :: FunctionParameter 'Scoped -> Maybe (SymbolType 'Scoped)
+    goFunctionParameter = \case
+      FunctionParameterName n -> Just n
+      FunctionParameterWildcard {} -> Nothing
 
 goPatternApplication ::
   (Members '[Error ScoperError, InfoTableBuilder] r) =>

@@ -14,6 +14,13 @@ defaultOptions =
       _optInJudocBlock = False
     }
 
+traceOptions :: Options
+traceOptions =
+  Options
+    { _optShowNameIds = True,
+      _optInJudocBlock = False
+    }
+
 makeLenses ''Options
 
 fromGenericOptions :: GenericOptions -> Options

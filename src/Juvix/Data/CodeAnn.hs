@@ -42,7 +42,7 @@ stylize a = case a of
   AnnJudoc -> colorDull Cyan
   AnnDelimiter -> colorDull White
   AnnLiteralString -> colorDull Red
-  AnnLiteralInteger -> colorDull Cyan
+  AnnLiteralInteger -> colorDull Green
   AnnDef {} -> mempty
   AnnRef {} -> mempty
 

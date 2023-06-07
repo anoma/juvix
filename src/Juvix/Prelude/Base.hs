@@ -140,7 +140,7 @@ import Data.Text qualified as Text
 import Data.Text.Encoding
 import Data.Text.IO
 import Data.Traversable
-import Data.Tuple.Extra
+import Data.Tuple.Extra hiding (both)
 import Data.Typeable hiding (TyCon)
 import Data.Void
 import Data.Word
@@ -152,7 +152,7 @@ import GHC.Num
 import GHC.Real
 import GHC.Stack.Types
 import Language.Haskell.TH.Syntax (Lift)
-import Lens.Micro.Platform hiding (both)
+import Lens.Micro.Platform
 import Path
 import Path.IO qualified as Path
 import Polysemy

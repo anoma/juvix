@@ -486,9 +486,7 @@ checkPattern = go
           return (Right (ind, zipExact params args))
 
 freshHole :: (Members '[Inference, NameIdGen] r) => Interval -> Sem r Hole
-freshHole l = do
-  uid <- freshNameId
-  return (Hole uid l)
+freshHole l = mkHole l <$> freshNameId
 
 inferExpression' ::
   forall r.

@@ -23,9 +23,9 @@ full _ := fail "full";
 
 diagonals : List (List Square) → List (List Square);
 diagonals ((a1 :: _ :: b1 :: nil)
-  :: (_ :: c :: _ :: nil)
-  :: (b2 :: _ :: a2 :: nil)
-  :: nil) :=
+    :: (_ :: c :: _ :: nil)
+    :: (b2 :: _ :: a2 :: nil)
+    :: nil) :=
   (a1 :: c :: a2 :: nil) :: (b1 :: c :: b2 :: nil) :: nil;
 diagonals _ := fail "diagonals";
 

@@ -1,9 +1,20 @@
-module Format;
+{-- This is Judoc block comment --}
+module -- Declaring a top module of name:
+Format;
 
-import Stdlib.Prelude open hiding {,};
+import -- Import a module of name:
+Stdlib.Prelude open -- Bring all names into scope but..
+hiding -- Hide some names
+{-- like this 
+,; -- don't want , here
+-- Bool either 
+Bool; true; false};
+
 import Stdlib.Data.Nat.Ord open;
 
+-- Lorem ipsum dolor sit amet, consectetur adipiscing elit
 terminating
+-- Comment between terminating and type sig
 go : Nat → Nat → Nat;
 go n s :=
   if
@@ -11,8 +22,10 @@ go n s :=
     (go (sub n 1) s)
     (go n (sub s n) + go (sub n 1) s);
 
-module M;
-  syntax infixr 4 ,;
+module {- local module -}
+M;
+  syntax -- syntax in local modules
+  infixr 4 ,;
   axiom , : String → String → String;
 end;
 
@@ -141,11 +154,13 @@ idLambda := λ {x := x};
 f : Nat -> Nat;
 f :=
   \ {
+    -- comment before lambda pipe
     | zero :=
       let
         foo : Nat := 1;
       in foo
-    | _ := 1
+    | _ -- comment before lambda :=
+    := 1
   };
 
 module Patterns;
@@ -174,16 +189,54 @@ module Comments;
 
   -- attached to nothing
 
-  axiom a3 : Type;
+  axiom a3 -- comment before axiom :
+  : Type;
+
+  num -- comment before type sig :
+  :
+    -- comment after type sig :
+    Nat;
+  num -- comment before clause :=
+  :=
+    -- comment after clause :=
+    123;
 
   -- attached to nothing
   -- attached to nothing 2
 
   -- attached to nothing 3
 
-  axiom a4 : Type;
+  axiom a4 : -- before open pi brace
+    {-- after open pi brace
+    a -- before pi :
+    : Type}
+    -> Type;
+
+  id2 : {A : Type} -> A -> Nat -> A;
+  id2 -- before patternarg braces
+    {A} a -- before open patternarg parens
+    (suc b) :=
+    idLambda
+      -- before implicit app
+      {-- inside implicit arg
+      A}
+      -- before closing implicit arg
+      a;
+
+  type color : Type :=
+    -- comment before pipe
+    | black : color
+    | white : color
+    | red : color
+    -- comment before pipe
+    | blue : color;
 
   axiom a5 : Type;
+
+  open Patterns -- before using
+  using -- before brace
+  {-- before first f
+  f; f};
 end;
 
 -- Comment at the end of a module

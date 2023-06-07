@@ -43,6 +43,8 @@ data Stage
 
 $(genSingletons [''Stage])
 
+type Delims = Irrelevant (Maybe (KeywordRef, KeywordRef))
+
 --------------------------------------------------------------------------------
 -- Parsing stages
 --------------------------------------------------------------------------------
@@ -64,7 +66,7 @@ type family IdentifierType s = res | res -> s where
 
 type HoleType :: Stage -> GHC.Type
 type family HoleType s = res | res -> s where
-  HoleType 'Parsed = Interval
+  HoleType 'Parsed = KeywordRef
   HoleType 'Scoped = Hole
 
 type PatternAtomIdenType :: Stage -> GHC.Type
@@ -242,8 +244,10 @@ instance HasLoc IteratorSyntaxDef where
 
 data TypeSignature (s :: Stage) = TypeSignature
   { _sigName :: FunctionName s,
+    _sigColonKw :: Irrelevant KeywordRef,
     _sigType :: ExpressionType s,
     _sigDoc :: Maybe (Judoc s),
+    _sigAssignKw :: Irrelevant (Maybe KeywordRef),
     _sigPragmas :: Maybe ParsedPragmas,
     _sigBuiltin :: Maybe (WithLoc BuiltinFunction),
     _sigBody :: Maybe (ExpressionType s),
@@ -261,10 +265,11 @@ deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (Typ
 -------------------------------------------------------------------------------
 
 data AxiomDef (s :: Stage) = AxiomDef
-  { _axiomKw :: KeywordRef,
+  { _axiomKw :: Irrelevant KeywordRef,
     _axiomDoc :: Maybe (Judoc s),
     _axiomPragmas :: Maybe ParsedPragmas,
     _axiomName :: SymbolType s,
+    _axiomColonKw :: Irrelevant KeywordRef,
     _axiomBuiltin :: Maybe (WithLoc BuiltinAxiom),
     _axiomType :: ExpressionType s
   }
@@ -285,6 +290,7 @@ type InductiveName s = SymbolType s
 
 data InductiveConstructorDef (s :: Stage) = InductiveConstructorDef
   { _constructorPipe :: Irrelevant (Maybe KeywordRef),
+    _constructorColonKw :: Irrelevant KeywordRef,
     _constructorName :: InductiveConstructorName s,
     _constructorDoc :: Maybe (Judoc s),
     _constructorPragmas :: Maybe ParsedPragmas,
@@ -309,7 +315,8 @@ deriving stock instance (Eq (ExpressionType s), Eq (SymbolType s)) => Eq (Induct
 deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (InductiveParameters s)
 
 data InductiveDef (s :: Stage) = InductiveDef
-  { _inductiveKw :: KeywordRef,
+  { _inductiveKw :: Irrelevant KeywordRef,
+    _inductiveAssignKw :: Irrelevant KeywordRef,
     _inductiveBuiltin :: Maybe (WithLoc BuiltinInductive),
     _inductiveDoc :: Maybe (Judoc s),
     _inductivePragmas :: Maybe ParsedPragmas,
@@ -417,6 +424,7 @@ type FunctionName s = SymbolType s
 
 data FunctionClause (s :: Stage) = FunctionClause
   { _clauseOwnerFunction :: FunctionName s,
+    _clauseAssignKw :: Irrelevant KeywordRef,
     _clausePatterns :: [PatternType s],
     _clauseBody :: ExpressionType s
   }
@@ -505,8 +513,28 @@ deriving stock instance
   ) =>
   Ord (Module s t)
 
+newtype HidingItem (s :: Stage) = HidingItem
+  { _hidingSymbol :: SymbolType s
+  }
+
+deriving stock instance
+  ( Show (SymbolType s)
+  ) =>
+  Show (HidingItem s)
+
+deriving stock instance
+  ( Eq (SymbolType s)
+  ) =>
+  Eq (HidingItem s)
+
+deriving stock instance
+  ( Ord (SymbolType s)
+  ) =>
+  Ord (HidingItem s)
+
 data UsingItem (s :: Stage) = UsingItem
   { _usingSymbol :: SymbolType s,
+    _usingAsKw :: Irrelevant (Maybe KeywordRef),
     _usingAs :: Maybe (SymbolType s)
   }
 
@@ -525,9 +553,51 @@ deriving stock instance
   ) =>
   Ord (UsingItem s)
 
+data UsingList (s :: Stage) = UsingList
+  { _usingKw :: Irrelevant KeywordRef,
+    _usingBraces :: Irrelevant (KeywordRef, KeywordRef),
+    _usingList :: NonEmpty (UsingItem s)
+  }
+
+deriving stock instance
+  ( Show (SymbolType s)
+  ) =>
+  Show (UsingList s)
+
+deriving stock instance
+  ( Eq (SymbolType s)
+  ) =>
+  Eq (UsingList s)
+
+deriving stock instance
+  ( Ord (SymbolType s)
+  ) =>
+  Ord (UsingList s)
+
+data HidingList (s :: Stage) = HidingList
+  { _hidingKw :: Irrelevant KeywordRef,
+    _hidingBraces :: Irrelevant (KeywordRef, KeywordRef),
+    _hidingList :: NonEmpty (HidingItem s)
+  }
+
+deriving stock instance
+  ( Show (SymbolType s)
+  ) =>
+  Show (HidingList s)
+
+deriving stock instance
+  ( Eq (SymbolType s)
+  ) =>
+  Eq (HidingList s)
+
+deriving stock instance
+  ( Ord (SymbolType s)
+  ) =>
+  Ord (HidingList s)
+
 data UsingHiding (s :: Stage)
-  = Using (NonEmpty (UsingItem s))
-  | Hiding (NonEmpty (SymbolType s))
+  = Using (UsingList s)
+  | Hiding (HidingList s)
 
 deriving stock instance
   ( Show (SymbolType s)
@@ -617,6 +687,7 @@ data OpenModule (s :: Stage) = OpenModule
     _openModuleImportKw :: Maybe KeywordRef,
     _openImportAsName :: Maybe (ModulePathType s 'ModuleTop),
     _openUsingHiding :: Maybe (UsingHiding s),
+    _openPublicKw :: Irrelevant (Maybe KeywordRef),
     _openPublic :: PublicAnn
   }
 
@@ -707,10 +778,27 @@ instance HasAtomicity (Lambda s) where
 --------------------------------------------------------------------------------
 -- Function expression
 --------------------------------------------------------------------------------
+data FunctionParameter (s :: Stage)
+  = FunctionParameterName (SymbolType s)
+  | FunctionParameterWildcard KeywordRef
+
+deriving stock instance
+  (Show (ExpressionType s), Show (SymbolType s)) =>
+  Show (FunctionParameter s)
+
+deriving stock instance
+  (Eq (ExpressionType s), Eq (SymbolType s)) =>
+  Eq (FunctionParameter s)
+
+deriving stock instance
+  (Ord (ExpressionType s), Ord (SymbolType s)) =>
+  Ord (FunctionParameter s)
 
 data FunctionParameters (s :: Stage) = FunctionParameters
-  { _paramNames :: [Maybe (SymbolType s)],
+  { _paramNames :: [FunctionParameter s],
     _paramImplicit :: IsImplicit,
+    _paramDelims :: Delims,
+    _paramColon :: Irrelevant (Maybe KeywordRef),
     _paramType :: ExpressionType s
   }
 
@@ -743,11 +831,9 @@ deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (Fun
 -- Lambda expression
 --------------------------------------------------------------------------------
 
--- Notes: An empty lambda, here called 'the impossible case', is a lambda
--- expression with empty list of arguments and empty body.
-
 data Lambda (s :: Stage) = Lambda
   { _lambdaKw :: KeywordRef,
+    _lambdaBraces :: Irrelevant (KeywordRef, KeywordRef),
     _lambdaClauses :: NonEmpty (LambdaClause s)
   }
 
@@ -772,6 +858,7 @@ deriving stock instance
 data LambdaClause (s :: Stage) = LambdaClause
   { _lambdaPipe :: Irrelevant (Maybe KeywordRef),
     _lambdaParameters :: NonEmpty (PatternType s),
+    _lambdaAssignKw :: Irrelevant KeywordRef,
     _lambdaBody :: ExpressionType s
   }
 
@@ -828,6 +915,7 @@ instance HasFixity PostfixApplication where
 
 data Let (s :: Stage) = Let
   { _letKw :: KeywordRef,
+    _letInKw :: Irrelevant KeywordRef,
     _letClauses :: NonEmpty (LetClause s),
     _letExpression :: ExpressionType s
   }
@@ -891,7 +979,8 @@ deriving stock instance
   Ord (LetClause s)
 
 data CaseBranch (s :: Stage) = CaseBranch
-  { _caseBranchPipe :: KeywordRef,
+  { _caseBranchPipe :: Irrelevant KeywordRef,
+    _caseBranchAssignKw :: Irrelevant KeywordRef,
     _caseBranchPattern :: PatternParensType s,
     _caseBranchExpression :: ExpressionType s
   }
@@ -923,6 +1012,7 @@ deriving stock instance (Ord (ExpressionType s), Ord (PatternParensType s)) => O
 
 data Initializer (s :: Stage) = Initializer
   { _initializerPattern :: PatternParensType s,
+    _initializerAssignKw :: Irrelevant KeywordRef,
     _initializerExpression :: ExpressionType s
   }
 
@@ -950,6 +1040,7 @@ deriving stock instance
 
 data Range (s :: Stage) = Range
   { _rangePattern :: PatternParensType s,
+    _rangeInKw :: Irrelevant KeywordRef,
     _rangeExpression :: ExpressionType s
   }
 
@@ -1111,6 +1202,9 @@ deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (Jud
 
 makeLenses ''PatternArg
 makeLenses ''UsingItem
+makeLenses ''HidingItem
+makeLenses ''HidingList
+makeLenses ''UsingList
 makeLenses ''JudocLine
 makeLenses ''Example
 makeLenses ''Lambda
@@ -1264,7 +1358,10 @@ instance HasLoc (AxiomDef 'Scoped) where
   getLoc m = getLoc (m ^. axiomKw) <> getLoc (m ^. axiomType)
 
 instance HasLoc (OpenModule 'Scoped) where
-  getLoc m = getLoc (m ^. openModuleKw) <> getLoc (m ^. openModuleName)
+  getLoc m =
+    getLoc (m ^. openModuleKw)
+      <> getLoc (m ^. openModuleName)
+      <>? fmap getLoc (m ^. openPublicKw . unIrrelevant)
 
 instance HasLoc (Statement 'Scoped) where
   getLoc :: Statement 'Scoped -> Interval
@@ -1288,13 +1385,23 @@ instance HasLoc PostfixApplication where
   getLoc (PostfixApplication l o) = getLoc l <> getLoc o
 
 instance HasLoc (LambdaClause 'Scoped) where
-  getLoc c = getLocSpan (c ^. lambdaParameters) <> getLoc (c ^. lambdaBody)
+  getLoc c =
+    fmap getLoc (c ^. lambdaPipe . unIrrelevant)
+      ?<> getLocSpan (c ^. lambdaParameters)
+      <> getLoc (c ^. lambdaBody)
 
 instance HasLoc (Lambda 'Scoped) where
-  getLoc l = getLoc (l ^. lambdaKw) <> getLocSpan (l ^. lambdaClauses)
+  getLoc l = getLoc (l ^. lambdaKw) <> getLoc (l ^. lambdaBraces . unIrrelevant . _2)
+
+instance HasLoc (FunctionParameter 'Scoped) where
+  getLoc = \case
+    FunctionParameterName n -> getLoc n
+    FunctionParameterWildcard w -> getLoc w
 
 instance HasLoc (FunctionParameters 'Scoped) where
-  getLoc p = (getLoc <$> join (listToMaybe (p ^. paramNames))) ?<> getLoc (p ^. paramType)
+  getLoc p = case p ^. paramDelims . unIrrelevant of
+    Nothing -> (getLoc <$> listToMaybe (p ^. paramNames)) ?<> getLoc (p ^. paramType)
+    Just (l, r) -> getLoc l <> getLoc r
 
 instance HasLoc (Function 'Scoped) where
   getLoc f = getLoc (f ^. funParameters) <> getLoc (f ^. funReturn)
@@ -1396,7 +1503,7 @@ instance HasLoc PatternScopedIden where
 instance HasLoc PatternBinding where
   getLoc (PatternBinding n p) = getLoc n <> getLoc p
 
-instance (SingI s) => HasLoc (PatternAtom s) where
+instance SingI s => HasLoc (PatternAtom s) where
   getLoc = \case
     PatternAtomIden i -> getLocIden i
     PatternAtomWildcard w -> getLoc w

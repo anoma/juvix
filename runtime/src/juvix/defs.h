@@ -19,6 +19,15 @@ extern int errno;
 /**********************************************/
 /* Basic primitive functions and macros */
 
+static inline void print_err_msg(const char *msg) {
+#if defined(API_LIBC)
+    fputs(msg, stderr);
+    fputs("\n", stderr);
+#elif defined(API_WASI)
+    puts(msg);
+#endif
+}
+
 static inline void print_msg(const char *msg) {
 #if defined(API_LIBC) || defined(API_WASI)
     puts(msg);
@@ -42,7 +51,7 @@ _Noreturn static inline void error_exit() {
 }
 
 _Noreturn static inline void error_exit_msg(const char *msg) {
-    print_msg(msg);
+    print_err_msg(msg);
     error_exit();
 }
 

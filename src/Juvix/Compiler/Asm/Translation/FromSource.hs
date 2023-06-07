@@ -116,7 +116,7 @@ statementFunction = do
             _functionMaxTempStackHeight = -1
           }
   lift $ registerFunction fi0
-  mcode <- (kw kwSemicolon $> Nothing) <|> optional (braces parseCode)
+  mcode <- (kw delimSemicolon $> Nothing) <|> optional (braces parseCode)
   let fi = fi0 {_functionCode = fromMaybe [] mcode}
   case idt of
     Just (IdentFwd _) -> do
@@ -155,7 +155,7 @@ statementInductive = do
             _inductiveRepresentation = IndRepStandard
           }
   lift $ registerInductive ii
-  ctrs <- braces $ P.sepEndBy (constrDecl sym) (kw kwSemicolon)
+  ctrs <- braces $ P.sepEndBy (constrDecl sym) (kw delimSemicolon)
   lift $ registerInductive ii {_inductiveConstructors = map (^. constructorTag) ctrs}
 
 functionArguments ::
@@ -252,7 +252,7 @@ typeNamed = do
 parseCode ::
   (Member InfoTableBuilder r) =>
   ParsecS r Code
-parseCode = P.sepEndBy command (kw kwSemicolon)
+parseCode = P.sepEndBy command (kw delimSemicolon)
 
 command ::
   (Member InfoTableBuilder r) =>
