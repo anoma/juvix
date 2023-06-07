@@ -117,12 +117,12 @@ static word_t io_readln() {
 
 void io_trace(word_t x) {
     if (x == OBJ_VOID) {
-        print_msg("void");
+        print_err_msg("void");
     } else {
         io_write(x);
         ASSERT(io_index < PAGE_SIZE);
         io_buffer[io_index] = 0;
-        print_msg(io_buffer);
+        print_err_msg(io_buffer);
         io_index = 0;
     }
 }
