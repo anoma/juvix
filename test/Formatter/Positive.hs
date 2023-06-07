@@ -25,7 +25,8 @@ makeFormatTest' Scope.PosTest {..} =
             d <- runM $ runError $ runOutputList @FormattedFileInfo $ runScopeEffIO $ runFilesIO $ format file'
             case d of
               Right (_, FormatResultOK) -> return ()
-              Right (_, FormatResultFail) -> assertFailure ("File: " <> show file' <> " is not formatted")
+              Right (_, FormatResultNotFormatted) -> assertFailure ("File: " <> show file' <> " is not formatted")
+              Right (_, FormatResultFail) -> assertFailure ("File: " <> show file' <> " is failed to format")
               Left {} -> assertFailure ("Error: ")
         }
 

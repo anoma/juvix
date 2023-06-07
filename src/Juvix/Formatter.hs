@@ -24,13 +24,22 @@ makeSem ''ScopeEff
 
 data FormatResult
   = FormatResultOK
+  | FormatResultNotFormatted
   | FormatResultFail
   deriving stock (Eq)
 
+instance Semigroup FormatResult where
+  FormatResultFail <> _ = FormatResultFail
+  _ <> FormatResultFail = FormatResultFail
+  FormatResultNotFormatted <> _ = FormatResultNotFormatted
+  _ <> FormatResultNotFormatted = FormatResultNotFormatted
+  _ <> _ = FormatResultOK
+
+instance Monoid FormatResult where
+  mempty = FormatResultOK
+
 combineResults :: [FormatResult] -> FormatResult
-combineResults rs
-  | FormatResultFail `elem` rs = FormatResultFail
-  | otherwise = FormatResultOK
+combineResults = mconcat
 
 ansiPlainText :: NonEmpty AnsiText -> Text
 ansiPlainText = T.concat . toList . fmap toPlainText
@@ -43,11 +52,11 @@ formattedFileInfoContentsText = to infoToPlainText
 
 -- | Format a single Juvix file.
 --
--- If the file requires formatting then the function returns FormatResultFail
+-- If the file requires formatting then the function returns 'FormatResultNotFormatted'
 -- and outputs a FormattedFileInfo containing the formatted contents of the file.
 --
 -- If the file does not require formatting then the function returns
--- FormatResultOK and nothing is output.
+-- 'FormatResultOK' and nothing is output.
 format ::
   forall r.
   Members '[ScopeEff, Files, Output FormattedFileInfo] r =>
@@ -62,12 +71,12 @@ format p = do
 --
 -- Format all files in the Juvix project containing the passed directory.
 --
--- If any file requires formatting then the function returns FormatResultFail.
+-- If any file requires formatting then the function returns 'FormatResultNotFormatted'
 -- This function also outputs a FormattedFileInfo (containing the formatted
 -- contents of a file) for every file in the project that requires formatting.
 --
 -- If all files in the project are already formatted then the function returns
--- FormatResultOK and nothing is output.
+-- 'FormatResultOK' and nothing is output.
 --
 -- NB: This function does not traverse into Juvix sub-projects, i.e into
 -- subdirectories that contain a juvix.yaml file.
@@ -122,7 +131,7 @@ formatResultFromContents originalContents mfc filepath =
                   _formattedFileInfoContentsAnsi = formattedContents
                 }
             )
-          return FormatResultFail
+          return FormatResultNotFormatted
       | otherwise -> return FormatResultOK
     Nothing ->
       return FormatResultOK
