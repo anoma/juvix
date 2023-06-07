@@ -6,8 +6,8 @@
 
 #define CONSTRS_NUM (BUILTIN_UIDS_NUM + 1)
 
-static constr_info_t juvix_constr_info_array[CONSTRS_NUM] = {BUILTIN_UIDS_INFO,
-                                                             {"box"}};
+static constr_info_t juvix_constr_info_array[CONSTRS_NUM] = {
+    BUILTIN_UIDS_INFO, {"box", 0, APP_FIXITY}};
 
 int main() {
     JUVIX_DECL_ARGS;

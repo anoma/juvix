@@ -329,5 +329,10 @@ tests =
       "Test054: Iterators"
       $(mkRelDir ".")
       $(mkRelFile "test054.juvix")
-      $(mkRelFile "out/test054.out")
+      $(mkRelFile "out/test054.out"),
+    posTest
+      "Test055: Constructor printing"
+      $(mkRelDir ".")
+      $(mkRelFile "test055.juvix")
+      $(mkRelFile "out/test055.out")
   ]

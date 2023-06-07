@@ -80,7 +80,8 @@ translateConstructorInfo ConstructorInfo {..} =
       _constructorLocation = _constructorLocation,
       _constructorInductive = _constructorInductive,
       _constructorTag = _constructorTag,
-      _constructorType = translateType _constructorType
+      _constructorType = translateType _constructorType,
+      _constructorFixity
     }
 
 translateFunction :: Int -> Node -> Stripped.Node

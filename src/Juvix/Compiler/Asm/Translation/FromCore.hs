@@ -345,7 +345,8 @@ translateConstructorInfo ci =
       _constructorArgsNum = length (typeArgs ty),
       _constructorType = ty,
       _constructorInductive = ci ^. Core.constructorInductive,
-      _constructorRepresentation = MemRepConstr
+      _constructorRepresentation = MemRepConstr,
+      _constructorFixity = ci ^. Core.constructorFixity
     }
   where
     ty = convertType 0 (ci ^. Core.constructorType)

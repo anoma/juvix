@@ -43,7 +43,8 @@ data ConstructorInfo = ConstructorInfo
     -- _constructorType == _constructorType`
     _constructorType :: Type,
     _constructorInductive :: Symbol,
-    _constructorRepresentation :: MemRep
+    _constructorRepresentation :: MemRep,
+    _constructorFixity :: Maybe Fixity
   }
 
 data InductiveInfo = InductiveInfo

@@ -25,7 +25,8 @@ data ConstructorInfo = ConstructorInfo
     _constructorTag :: Tag,
     _constructorArgsNum :: Int,
     _constructorInductive :: Symbol,
-    _constructorRepresentation :: MemRep
+    _constructorRepresentation :: MemRep,
+    _constructorFixity :: Maybe Fixity
   }
 
 data InductiveInfo = InductiveInfo
