@@ -174,7 +174,7 @@ instance SingI s => PrettyPrint (Iterator s) where
         rngs' = parens . sepSemicolon <$> nonEmpty rngs
         b = ppExpressionType _iteratorBody
     parensIf _iteratorParens $
-      hang (n <+?> is' <+?> rngs' <> oneLineOrNextNoIndent b)
+      nest (n <+?> is' <+?> rngs' <> oneLineOrNextNoIndent b)
 
 instance PrettyPrint S.AName where
   ppCode (S.AName n) = annotated (AnnKind (S.getNameKind n)) (noLoc (pretty (n ^. S.nameVerbatim)))
@@ -744,7 +744,7 @@ instance SingI s => PrettyPrint (FunctionClause s) where
           Nothing -> Nothing
           Just ne -> Just (hsep (ppPatternAtom <$> ne))
         clauseBody' = ppExpressionType _clauseBody
-    hang
+    nest
       ( clauseFun'
           <+?> clausePatterns'
       )
