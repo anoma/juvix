@@ -4,6 +4,26 @@
 <img align="right" width="300" height="300" alt="Juvix Mascot" src="../assets/images/tara-smiling.svg" />
 </a>
 
+## [v0.4.0 - Prague!](https://github.com/anoma/juvix/tree/v0.4.0) (2023-06-02)
+
+[Full Changelog](https://github.com/anoma/juvix/compare/v0.3.5...v0.4.0)
+
+**Implemented enhancements:**
+
+- Always print source of formatted file unless --check is specified [\#2173](https://github.com/anoma/juvix/pull/2173) ([paulcadman](https://github.com/paulcadman))
+- Improve parsing error messages [\#2170](https://github.com/anoma/juvix/pull/2170) ([lukaszcz](https://github.com/lukaszcz))
+
+**Merged pull requests:**
+
+- Use stderr for errors in the runtime [\#2184](https://github.com/anoma/juvix/pull/2184) ([lukaszcz](https://github.com/lukaszcz))
+- Change terminal colours to be more align with the scheme [\#2183](https://github.com/anoma/juvix/pull/2183) ([vrom911](https://github.com/vrom911))
+- Respect fixity in runtime printer [\#2182](https://github.com/anoma/juvix/pull/2182) ([lukaszcz](https://github.com/lukaszcz))
+- Format returns 0 when file is not formatted [\#2181](https://github.com/anoma/juvix/pull/2181) ([vrom911](https://github.com/vrom911))
+- Print values in `juvix eval` [\#2179](https://github.com/anoma/juvix/pull/2179) ([lukaszcz](https://github.com/lukaszcz))
+- Fix 'function not found' error in `juvix eval` [\#2178](https://github.com/anoma/juvix/pull/2178) ([lukaszcz](https://github.com/lukaszcz))
+- Store source location of \(almost\) everything [\#2174](https://github.com/anoma/juvix/pull/2174) ([janmasrovira](https://github.com/janmasrovira))
+- Do not filter unreachable symbols when compiling for REPL [\#2172](https://github.com/anoma/juvix/pull/2172) ([paulcadman](https://github.com/paulcadman))
+
 ## [v0.3.5](https://github.com/anoma/juvix/tree/v0.3.5) (2023-06-02)
 
 [Full Changelog](https://github.com/anoma/juvix/compare/v0.3.4...v0.3.5)
