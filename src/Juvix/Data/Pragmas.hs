@@ -91,14 +91,6 @@ instance FromJSON Pragmas where
             unless (isFirstLetter name' && all isValidChar name') $
               throwCustomError ("invalid argument name: " <> name)
 
-          isValidChar :: Char -> Bool
-          isValidChar c = c == '_' || ((isLetter c || isDigit c) && isAscii c)
-
-          isFirstLetter :: String -> Bool
-          isFirstLetter = \case
-            h : _ -> isLetter h
-            _ -> False
-
       parseFormat :: Parse YamlError PragmaFormat
       parseFormat = do
         _pragmaFormat <- asBool

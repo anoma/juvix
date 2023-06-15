@@ -36,9 +36,6 @@ fromCoreNode ii node =
             ]
         }
   where
-    isValidChar :: Char -> Bool
-    isValidChar c = c == '_' || ((isLetter c || isDigit c) && isAscii c)
-
     mkName :: Text -> Text
     mkName ident = "var_" <> T.filter isValidChar ident
 

@@ -10,9 +10,6 @@ import Juvix.Prelude
 
 mkCIdent :: Text -> Text
 mkCIdent ident = T.filter isValidChar ident
-  where
-    isValidChar :: Char -> Bool
-    isValidChar c = c == '_' || ((isLetter c || isDigit c) && isAscii c)
 
 getFunctionName :: Reg.ExtraInfo -> Reg.Symbol -> Text
 getFunctionName info sym = ((info ^. Reg.extraInfoTable . Reg.infoFunctions) HashMap.! sym) ^. Reg.functionName
