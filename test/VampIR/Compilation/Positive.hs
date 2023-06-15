@@ -33,7 +33,7 @@ toTestDescr PosTest {..} =
 allTests :: TestTree
 allTests =
   testGroup
-    "Juvix compilation pipeline positive tests"
+    "Juvix to VampIR compilation positive tests"
     (map (mkTest . toTestDescr) tests)
 
 posTest :: Int -> String -> Path Rel Dir -> Path Rel File -> Path Rel File -> PosTest
