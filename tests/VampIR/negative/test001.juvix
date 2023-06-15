@@ -1,0 +1,9 @@
+module test001;
+
+import Stdlib.Prelude open;
+import Stdlib.Data.Nat.Ord open;
+
+{-# argnames: [a, b
+                c] #-}
+main : Nat -> Nat -> Nat -> Bool;
+main x y z := x + y == z;
