@@ -23,9 +23,9 @@ vampirCompileErrorAssertion mainFile step = do
   entryPoint <- defaultEntryPointCwdIO mainFile
   r <- runIOEither entryPoint upToCore
   case r of
-    Left _ -> assertBool "" True
+    Left _ -> return ()
     Right res ->
       let tab = snd res ^. coreResultTable
        in case run $ runReader defaultCoreOptions $ runError @JuvixError $ toVampIR' tab of
-            Left _ -> assertBool "" True
+            Left _ -> return ()
             Right _ -> assertFailure "no error"
