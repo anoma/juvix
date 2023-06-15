@@ -10,7 +10,10 @@
 #define CONSTRS_NUM (BUILTIN_UIDS_NUM + 3)
 
 static constr_info_t juvix_constr_info_array[CONSTRS_NUM] = {
-    BUILTIN_UIDS_INFO, {"nil"}, {"cons"}, {"pair"}};
+    BUILTIN_UIDS_INFO,
+    {"nil", 0, APP_FIXITY},
+    {"cons", 0, APP_FIXITY},
+    {"pair", 0, APP_FIXITY}};
 
 #define UID_NIL FIRST_USER_UID
 #define UID_CONS (FIRST_USER_UID + 1)
