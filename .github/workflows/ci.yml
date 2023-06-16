@@ -24,8 +24,8 @@ concurrency:
 
 env:
   SKIP: ormolu,format-juvix-files,typecheck-juvix-examples
-  VAMPIRREPO: jonaprieto/vamp-ir
-  VAMPIRVERSION: 2
+  VAMPIRREPO: anoma/vamp-ir
+  VAMPIRVERSION: v0.1.3
 
 jobs:
   pre-commit:
