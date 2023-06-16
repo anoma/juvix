@@ -34,7 +34,6 @@ do
             cd juvix
             for f in *.juvix; do
                 execute "juvix compile -o `basename $f .juvix`.exe $f"
-                execute "juvix compile --target=wasm -o `basename $f .juvix`.wasm $f"
             done
             cd ..
         fi
