@@ -1,0 +1,18 @@
+-- Euclid's algorithm
+module test023;
+
+import Stdlib.Prelude open;
+import Stdlib.Data.Nat.Ord open;
+
+{-# unroll: 1 #-}
+terminating
+gcd : Nat → Nat → Nat;
+gcd a b :=
+  let
+    terminating
+    gcd' : Nat → Nat → Nat;
+    gcd' x y := if (x == 0) y (gcd' (mod y x) x);
+  in if (a > b) (gcd b a) (gcd' a b);
+
+main : Nat → Nat → Nat;
+main := gcd;

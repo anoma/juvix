@@ -1,0 +1,23 @@
+-- fast exponentiation (exponential unrolling blow-up)
+module test021;
+
+import Stdlib.Prelude open;
+import Stdlib.Data.Nat.Ord open;
+
+{-# unroll: 7 #-}
+terminating
+power' : Nat → Nat → Nat → Nat;
+power' acc a b :=
+  if
+    (b == 0)
+    acc
+    (if
+      (mod b 2 == 0)
+      (power' acc (a * a) (div b 2))
+      (power' (acc * a) (a * a) (div b 2)));
+
+power : Nat → Nat → Nat;
+power := power' 1;
+
+main : Nat -> Nat -> Nat;
+main := power;

@@ -164,5 +164,23 @@ tests =
       "Test020: boolean target"
       $(mkRelDir ".")
       $(mkRelFile "test020.juvix")
-      $(mkRelFile "data/test020.json")
+      $(mkRelFile "data/test020.json"),
+    posTest
+      14
+      "Test021: fast exponentiation (exponential unrolling)"
+      $(mkRelDir ".")
+      $(mkRelFile "test021.juvix")
+      $(mkRelFile "data/test021.json"),
+    posTest
+      10
+      "Test022: fast exponentiation"
+      $(mkRelDir ".")
+      $(mkRelFile "test022.juvix")
+      $(mkRelFile "data/test022.json"),
+    posTest
+      13
+      "Test023: Euclid's algorithm"
+      $(mkRelDir ".")
+      $(mkRelFile "test023.juvix")
+      $(mkRelFile "data/test023.json")
   ]
