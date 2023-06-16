@@ -4,7 +4,7 @@ module test021;
 import Stdlib.Prelude open;
 import Stdlib.Data.Nat.Ord open;
 
-{-# unroll: 7 #-}
+{-# unroll: 4 #-}
 terminating
 power' : Nat → Nat → Nat → Nat;
 power' acc a b :=
