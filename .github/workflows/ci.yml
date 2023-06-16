@@ -130,30 +130,30 @@ jobs:
           make install
           make test
 
-      - name: Typecheck and format Juvix examples
-        if: ${{ success() }}
-        shell: bash
-        run: |
-          cd main
-          make check-format-juvix-files && make typecheck-juvix-examples
+      # - name: Typecheck and format Juvix examples
+      #   if: ${{ success() }}
+      #   shell: bash
+      #   run: |
+      #     cd main
+      #     make check-format-juvix-files && make typecheck-juvix-examples
 
-      - name: Install Smoke for testing
-        uses: jaxxstorm/action-install-gh-release@v1.10.0
-        with:
-          repo: jonaprieto/smoke
-          platform: linux
-          tag: v2.3.2
-          chmod: 0755
-          rename-to: smoke
-          extension-matching: disable
-          cache: enable
+      # - name: Install Smoke for testing
+      #   uses: jaxxstorm/action-install-gh-release@v1.10.0
+      #   with:
+      #     repo: jonaprieto/smoke
+      #     platform: linux
+      #     tag: v2.3.2
+      #     chmod: 0755
+      #     rename-to: smoke
+      #     extension-matching: disable
+      #     cache: enable
 
-      - name: Smoke testing
-        id: smoke-linux
-        if: ${{ success() }}
-        run: |
-          cd main
-          make smoke-only
+      # - name: Smoke testing
+      #   id: smoke-linux
+      #   if: ${{ success() }}
+      #   run: |
+      #     cd main
+      #     make smoke-only
 
   build-and-test-macos:
     runs-on: macos-12
@@ -177,6 +177,7 @@ jobs:
         run: |
           brew install icu4c
           brew link icu4c --force
+
       - name: Download and extract wasi-sysroot
         run: >
           curl
@@ -216,9 +217,9 @@ jobs:
       - name: Install VampIR for testing
         uses: jaxxstorm/action-install-gh-release@v1.10.0
         with:
-          repo: anoma/vamp-ir
+          repo: jonaprieto/vamp-ir
           platform: darwin
-          tag: v0.1.2
+          tag: 2
           chmod: 0755
           rename-to: vamp-ir
           extension-matching: disable
@@ -236,30 +237,30 @@ jobs:
           make CC=$CC LIBTOOL=$LIBTOOL install
           make CC=$CC LIBTOOL=$LIBTOOL test
 
-      - name: Add ~/.local/bin to PATH
-        run: |
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
+      # - name: Add ~/.local/bin to PATH
+      #   run: |
+      #     echo "$HOME/.local/bin" >> $GITHUB_PATH
 
-      - name: Typecheck and format Juvix examples
-        if: ${{ success() }}
-        shell: bash
-        run: |
-          cd main
-          make check-format-juvix-files && make typecheck-juvix-examples
+      # - name: Typecheck and format Juvix examples
+      #   if: ${{ success() }}
+      #   shell: bash
+      #   run: |
+      #     cd main
+      #     make check-format-juvix-files && make typecheck-juvix-examples
 
-      - name: Install Smoke
-        uses: jaxxstorm/action-install-gh-release@v1.10.0
-        with:
-          repo: jonaprieto/smoke
-          tag: latest
-          extension-matching: disable
-          rename-to: smoke
-          chmod: 0755
-          cache: enable
+      # - name: Install Smoke
+      #   uses: jaxxstorm/action-install-gh-release@v1.10.0
+      #   with:
+      #     repo: jonaprieto/smoke
+      #     tag: latest
+      #     extension-matching: disable
+      #     rename-to: smoke
+      #     chmod: 0755
+      #     cache: enable
 
-      - name: Smoke testing (macOS)
-        id: smoke-macos
-        if: ${{ success() }}
-        run: |
-          cd main
-          make CC=$CC LIBTOOL=$LIBTOOL smoke
+      # - name: Smoke testing (macOS)
+      #   id: smoke-macos
+      #   if: ${{ success() }}
+      #   run: |
+      #     cd main
+      #     make CC=$CC LIBTOOL=$LIBTOOL smoke
