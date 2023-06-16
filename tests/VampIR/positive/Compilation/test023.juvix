@@ -1,0 +1,9 @@
+-- permutative conversions
+module test023;
+
+import Stdlib.Prelude open;
+import Stdlib.Data.Nat.Ord open;
+
+main : Nat → Nat → Nat;
+main x y := case (λ { z := if (x == z) (x, 0) (x, z) } (y + x))
+  | (a, b) := a + b
