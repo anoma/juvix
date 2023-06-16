@@ -243,8 +243,8 @@ freshName :: HashSet Text -> Text -> Text
 freshName names name | HashSet.member name names = freshName names (prime name)
 freshName _ name = name
 
-isValidChar :: Char -> Bool
-isValidChar c = c == '_' || ((isLetter c || isDigit c) && isAscii c)
+isValidIdentChar :: Char -> Bool
+isValidIdentChar c = c == '_' || ((isLetter c || isDigit c) && isAscii c)
 
 isFirstLetter :: String -> Bool
 isFirstLetter = \case

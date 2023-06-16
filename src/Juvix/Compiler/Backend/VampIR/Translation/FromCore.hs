@@ -37,7 +37,7 @@ fromCoreNode ii node =
         }
   where
     mkName :: Text -> Text
-    mkName ident = "var_" <> T.filter isValidChar ident
+    mkName ident = "var_" <> T.filter isValidIdentChar ident
 
     disambiguate :: BinderList Binder -> Text -> Text
     disambiguate bl name = mkName name <> "_" <> show (length bl)

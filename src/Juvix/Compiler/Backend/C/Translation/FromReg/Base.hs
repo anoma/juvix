@@ -9,7 +9,7 @@ import Juvix.Compiler.Reg.Language qualified as Reg
 import Juvix.Prelude
 
 mkCIdent :: Text -> Text
-mkCIdent ident = T.filter isValidChar ident
+mkCIdent ident = T.filter isValidIdentChar ident
 
 getFunctionName :: Reg.ExtraInfo -> Reg.Symbol -> Text
 getFunctionName info sym = ((info ^. Reg.extraInfoTable . Reg.infoFunctions) HashMap.! sym) ^. Reg.functionName
