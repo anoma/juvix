@@ -101,8 +101,8 @@ jobs:
           tag: 2
           chmod: 0755
           rename-to: vamp-ir
-          extension-matching: disable
-          cache: enable
+          # extension-matching: disable
+          # cache: enable
           arch: x86-64
 
       - name: Test VampIR
@@ -222,8 +222,8 @@ jobs:
           tag: 2
           chmod: 0755
           rename-to: vamp-ir
-          extension-matching: disable
-          cache: enable
+          # extension-matching: disable
+          # cache: enable
 
       - name: Test VampIR
         shell: bash
