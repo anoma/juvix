@@ -299,7 +299,8 @@ goMatchToCase recur node = case node of
                 row
                   { _patternRowPatterns =
                       map (PatWildcard . PatternWildcard mempty . Binder "_" Nothing) argtys
-                        ++ row ^. patternRowPatterns,
+                        ++ row
+                          ^. patternRowPatterns,
                     _patternRowBinderChangesRev = BCAdd argsNum : row ^. patternRowBinderChangesRev,
                     _patternRowIgnoredPatternsNum = argsNum + row ^. patternRowIgnoredPatternsNum
                   }

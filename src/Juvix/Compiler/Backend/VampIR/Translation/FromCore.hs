@@ -36,11 +36,8 @@ fromCoreNode ii node =
             ]
         }
   where
-    isValidChar :: Char -> Bool
-    isValidChar c = c == '_' || ((isLetter c || isDigit c) && isAscii c)
-
     mkName :: Text -> Text
-    mkName ident = "var_" <> T.filter isValidChar ident
+    mkName ident = "var_" <> T.filter isValidIdentChar ident
 
     disambiguate :: BinderList Binder -> Text -> Text
     disambiguate bl name = mkName name <> "_" <> show (length bl)

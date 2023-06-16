@@ -88,16 +88,8 @@ instance FromJSON Pragmas where
           checkArgName :: Text -> Parse YamlError ()
           checkArgName name = do
             let name' = unpack name
-            unless (isFirstLetter name' && all isValidChar name') $
+            unless (isFirstLetter name' && all isValidIdentChar name') $
               throwCustomError ("invalid argument name: " <> name)
-
-          isValidChar :: Char -> Bool
-          isValidChar c = c == '_' || ((isLetter c || isDigit c) && isAscii c)
-
-          isFirstLetter :: String -> Bool
-          isFirstLetter = \case
-            h : _ -> isLetter h
-            _ -> False
 
       parseFormat :: Parse YamlError PragmaFormat
       parseFormat = do
