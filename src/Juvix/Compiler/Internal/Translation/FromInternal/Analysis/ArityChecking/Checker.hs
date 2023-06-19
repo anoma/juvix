@@ -124,6 +124,7 @@ checkFunctionDef FunctionDef {..} = do
         _funDefExamples = _funDefExamples',
         _funDefType = _funDefType',
         _funDefName,
+        _funDefTerminating,
         _funDefBuiltin,
         _funDefPragmas
       }

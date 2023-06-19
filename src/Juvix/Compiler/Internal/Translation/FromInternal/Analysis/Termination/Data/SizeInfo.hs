@@ -1,6 +1,6 @@
-module Juvix.Compiler.Internal.Translation.FromAbstract.Analysis.Termination.Data.SizeInfo where
+module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Data.SizeInfo where
 
-import Juvix.Compiler.Abstract.Extra
+import Juvix.Compiler.Internal.Extra
 import Juvix.Prelude
 
 -- | i = SizeInfo [v] ⇔ v is smaller than argument i of the caller function.

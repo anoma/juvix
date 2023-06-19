@@ -1,7 +1,7 @@
 module Termination.Negative (module Termination.Negative) where
 
 import Base
-import Juvix.Compiler.Internal.Translation.FromAbstract.Analysis.Termination
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination
 
 type FailMsg = String
 

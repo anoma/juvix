@@ -9,7 +9,6 @@ import Juvix.Compiler.Abstract.Extra
 import Juvix.Compiler.Abstract.Pretty.Options
 import Juvix.Compiler.Concrete.Print.Base qualified as S
 import Juvix.Data.CodeAnn
-import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude
 
 doc :: (PrettyCode c) => Options -> c -> Doc Ann
@@ -37,12 +36,6 @@ ppDefault = runPrettyCode defaultOptions
 
 runPrettyCode :: (PrettyCode c) => Options -> c -> Doc Ann
 runPrettyCode opts = run . runReader opts . ppCode
-
-kwQuestion :: Doc Ann
-kwQuestion = keyword Str.questionMark
-
-kwWaveArrow :: Doc Ann
-kwWaveArrow = keyword Str.waveArrow
 
 ppPostExpression ::
   (PrettyCode a, HasAtomicity a, Member (Reader Options) r) =>

@@ -1,6 +1,6 @@
-module Juvix.Compiler.Internal.Translation.FromAbstract.Analysis.Termination.Error.Types where
+module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Error.Types where
 
-import Juvix.Compiler.Abstract.Language
+import Juvix.Compiler.Internal.Language
 import Juvix.Data.PPOutput
 import Juvix.Prelude
 

@@ -1,10 +1,13 @@
-module Juvix.Compiler.Internal.Translation.FromAbstract.Analysis.Termination.Data.FunctionCall (module Juvix.Compiler.Internal.Translation.FromAbstract.Analysis.Termination.Data.FunctionCall) where
+module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Data.FunctionCall (module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Data.FunctionCall) where
 
 import Data.HashMap.Strict qualified as HashMap
-import Juvix.Compiler.Abstract.Language
-import Juvix.Compiler.Abstract.Pretty.Base
-import Juvix.Compiler.Internal.Translation.FromAbstract.Analysis.Termination.Data.SizeRelation
+import Juvix.Compiler.Internal.Language
+import Juvix.Compiler.Internal.Pretty.Base
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Data.SizeRelation
+import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude
+
+type FunctionRef = FunctionName
 
 newtype CallMap = CallMap
   { _callMap :: HashMap FunctionRef (HashMap FunctionRef [FunCall])
@@ -21,11 +24,12 @@ newtype CallRow = CallRow
   }
   deriving stock (Eq, Show, Generic)
 
-makeLenses ''CallRow
-
 instance Hashable CallRow
 
-type CallMatrix = [CallRow]
+newtype CallMatrix = CallMatrix
+  { _unCallMatrix :: [CallRow]
+  }
+  deriving newtype (Eq, Show, Hashable)
 
 data Call = Call
   { _callFrom :: FunctionName,
@@ -35,6 +39,8 @@ data Call = Call
 
 newtype LexOrder = LexOrder (NonEmpty Int)
 
+makeLenses ''CallMatrix
+makeLenses ''CallRow
 makeLenses ''FunCall
 makeLenses ''CallMap
 
@@ -44,7 +50,7 @@ filterCallMap funNames =
     callMap
     ( HashMap.filterWithKey
         ( \k _ ->
-            (k ^. functionRefName . nameText)
+            (k ^. nameText)
               `elem` funNames
         )
     )
@@ -102,4 +108,10 @@ instance PrettyCode CallRow where
       pretty i <+> annotate AnnKeyword (pretty r')
 
 instance PrettyCode CallMatrix where
-  ppCode l = vsep <$> mapM ppCode l
+  ppCode l = vsep <$> mapM ppCode (l ^. unCallMatrix)
+
+kwQuestion :: Doc Ann
+kwQuestion = keyword Str.questionMark
+
+kwWaveArrow :: Doc Ann
+kwWaveArrow = keyword Str.waveArrow

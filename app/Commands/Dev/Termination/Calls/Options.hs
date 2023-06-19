@@ -3,11 +3,11 @@ module Commands.Dev.Termination.Calls.Options where
 import CommonOptions
 import Data.Text qualified as Text
 import GlobalOptions
-import Juvix.Compiler.Abstract.Pretty.Base qualified as Abstract
+import Juvix.Compiler.Internal.Pretty.Options qualified as Internal
 
 data CallsOptions = CallsOptions
   { _callsFunctionNameFilter :: Maybe (NonEmpty Text),
-    _callsShowDecreasingArgs :: Abstract.ShowDecrArgs,
+    _callsShowDecreasingArgs :: Internal.ShowDecrArgs,
     _callsInputFile :: AppPath File
   }
   deriving stock (Data)
@@ -31,23 +31,23 @@ parseCalls = do
       decrArgsParser
       ( long "show-decreasing-args"
           <> short 'd'
-          <> value Abstract.ArgRel
+          <> value Internal.ArgRel
           <> help "possible values: argument, relation, both"
       )
   _callsInputFile <- parseInputJuvixFile
   pure CallsOptions {..}
   where
-    decrArgsParser :: ReadM Abstract.ShowDecrArgs
+    decrArgsParser :: ReadM Internal.ShowDecrArgs
     decrArgsParser = eitherReader $ \s ->
       case map toLower s of
-        "argument" -> return Abstract.OnlyArg
-        "relation" -> return Abstract.OnlyRel
-        "both" -> return Abstract.ArgRel
+        "argument" -> return Internal.OnlyArg
+        "relation" -> return Internal.OnlyRel
+        "both" -> return Internal.ArgRel
         _ -> Left "bad argument"
 
-instance CanonicalProjection (GlobalOptions, CallsOptions) Abstract.Options where
+instance CanonicalProjection (GlobalOptions, CallsOptions) Internal.Options where
   project (GlobalOptions {..}, CallsOptions {..}) =
-    Abstract.defaultOptions
-      { Abstract._optShowNameIds = _globalShowNameIds,
-        Abstract._optShowDecreasingArgs = _callsShowDecreasingArgs
+    Internal.defaultOptions
+      { Internal._optShowNameIds = _globalShowNameIds,
+        Internal._optShowDecreasingArgs = _callsShowDecreasingArgs
       }

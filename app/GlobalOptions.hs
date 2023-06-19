@@ -28,7 +28,7 @@ makeLenses ''GlobalOptions
 
 instance CanonicalProjection GlobalOptions Internal.Options where
   project g =
-    Internal.Options
+    Internal.defaultOptions
       { Internal._optShowNameIds = g ^. globalShowNameIds
       }
 
