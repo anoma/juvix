@@ -134,7 +134,7 @@ parseUtility =
                   ( vsep
                       [ "juvix format is used to format Juvix source files.",
                         "",
-                        "Given an unformatted file, it prints the reformatted source to standard output.",
+                        "Given a file, it prints the reformatted source to standard output.",
                         "Given a project directory it prints a list of unformatted files in the project."
                       ]
                   )

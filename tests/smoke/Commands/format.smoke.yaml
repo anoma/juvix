@@ -16,7 +16,8 @@ tests:
       - format
       - positive/Format.juvix
     exit-status: 0
-    stdout: ''
+    stdout:
+      contains: "module -- Declaring a top module of name:\nFormat;"
 
   - name: format-unformatted-file
     command:
@@ -28,6 +29,36 @@ tests:
         cd $temp
         touch juvix.yaml
         echo "module Foo ;" >> Foo.juvix
+        juvix format Foo.juvix
+    stdout:
+      contains: module Foo;
+    exit-status: 0
+
+  - name: format-unformatted-file-pragma-false
+    command:
+      shell:
+        - bash
+      script: |
+        temp=$(mktemp -d)
+        trap 'rm -rf -- "$temp"' EXIT
+        cd $temp
+        touch juvix.yaml
+        echo -e '{-# format: false #-}\nmodule Foo ;' >> Foo.juvix
+        juvix format Foo.juvix
+    stdout:
+      contains: module Foo ;
+    exit-status: 0
+
+  - name: format-unformatted-file-pragma-true
+    command:
+      shell:
+        - bash
+      script: |
+        temp=$(mktemp -d)
+        trap 'rm -rf -- "$temp"' EXIT
+        cd $temp
+        touch juvix.yaml
+        echo -e '{-# format: true #-}\nmodule Foo ;' >> Foo.juvix
         juvix format Foo.juvix
     stdout:
       contains: module Foo;
