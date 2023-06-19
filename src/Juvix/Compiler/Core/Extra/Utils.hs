@@ -345,3 +345,19 @@ translateCase translateIf dflt Case {..} = case _caseBranches of
 checkDepth :: Int -> Node -> Bool
 checkDepth 0 _ = False
 checkDepth d node = all (checkDepth (d - 1)) (childrenNodes node)
+
+isCaseBoolean :: [CaseBranch] -> Bool
+isCaseBoolean = \case
+  [CaseBranch {..}]
+    | _caseBranchTag == BuiltinTag TagTrue -> True
+  [CaseBranch {..}]
+    | _caseBranchTag == BuiltinTag TagFalse -> True
+  [br1, br2]
+    | br1 ^. caseBranchTag == BuiltinTag TagTrue
+        && br2 ^. caseBranchTag == BuiltinTag TagFalse ->
+        True
+    | br1 ^. caseBranchTag == BuiltinTag TagFalse
+        && br2 ^. caseBranchTag == BuiltinTag TagTrue ->
+        True
+  _ ->
+    False

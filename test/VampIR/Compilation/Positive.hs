@@ -58,7 +58,7 @@ tests =
       $(mkRelFile "test002.juvix")
       $(mkRelFile "data/test002.json"),
     posTest
-      5
+      6
       "Test003: inductive types"
       $(mkRelDir ".")
       $(mkRelFile "test003.juvix")
@@ -176,5 +176,11 @@ tests =
       "Test022: fast exponentiation"
       $(mkRelDir ".")
       $(mkRelFile "test022.juvix")
-      $(mkRelFile "data/test022.json")
+      $(mkRelFile "data/test022.json"),
+    posTest
+      5
+      "Test023: permutative conversions"
+      $(mkRelDir ".")
+      $(mkRelFile "test023.juvix")
+      $(mkRelFile "data/test023.json")
   ]

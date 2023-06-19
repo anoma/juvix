@@ -65,7 +65,7 @@ tests =
       $(mkRelFile "test002.jvc")
       $(mkRelFile "data/test002.json"),
     PosTest
-      5
+      6
       "Test003: inductive types"
       $(mkRelDir "Core")
       $(mkRelFile "test003.jvc")
