@@ -100,10 +100,10 @@ formatProject p = do
       [Path Rel File] ->
       FormatResult ->
       Sem r (FormatResult, Recurse Rel)
-    handler cd _ files _ = do
+    handler cd _ files res = do
       let juvixFiles = [cd <//> f | f <- files, isJuvixFile f]
-      res <- combineResults <$> mapM format juvixFiles
-      return (res, RecurseFilter (\hasJuvixYaml d -> not hasJuvixYaml && not (isHiddenDirectory d)))
+      subRes <- combineResults <$> mapM format juvixFiles
+      return (res <> subRes, RecurseFilter (\hasJuvixYaml d -> not hasJuvixYaml && not (isHiddenDirectory d)))
 
 formatPath :: Members [Reader Text, ScopeEff] r => Path Abs File -> Sem r (NonEmpty AnsiText)
 formatPath p = do

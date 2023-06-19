@@ -110,7 +110,7 @@ tests:
     stdout: ''
     exit-status: 0
 
-  - name: format-dir-containing-unformatted
+  - name: format-dir-containing-unformatted-and-formatted
     command:
       shell:
         - bash
@@ -121,6 +121,8 @@ tests:
         cp positive/Format.juvix $temp
         cd $temp
         echo "module Foo ;" >> Foo.juvix
+        mkdir Subdir
+        echo "module Subdir.Bar;" >> Subdir/Bar.juvix
         juvix format $temp
     stdout:
       contains: 'Foo.juvix'
