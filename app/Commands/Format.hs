@@ -16,35 +16,45 @@ data FormatRenderMode
   | NoEdit FormatNoEditRenderMode
 
 data FormatTarget
-  = TargetFile
-  | TargetDir
+  = TargetFile (Path Abs File)
+  | TargetProject (Path Abs Dir)
   | TargetStdin
-  deriving stock (Eq)
 
-runCommand :: forall r. Members '[Embed IO, App, Resource, Files] r => FormatOptions -> Sem r ()
-runCommand opts = do
+isTargetProject :: FormatTarget -> Bool
+isTargetProject = \case
+  TargetProject {} -> True
+  _ -> False
+
+targetFromOptions :: Members '[Embed IO, App] r => FormatOptions -> Sem r FormatTarget
+targetFromOptions opts = do
   globalOpts <- askGlobalOptions
   let isStdin = globalOpts ^. globalStdin
   f <- mapM filePathToAbs (opts ^. formatInput)
+  pkgDir <- askPkgDir
+  case f of
+    Just (Left p) -> return (TargetFile p)
+    Just (Right {}) -> return (TargetProject pkgDir)
+    Nothing -> do
+      isPackageGlobal <- askPackageGlobal
+      if
+          | isStdin -> return TargetStdin
+          | not (isPackageGlobal) -> return (TargetProject pkgDir)
+          | otherwise -> do
+              printFailureExit $
+                Text.unlines
+                  [ "juvix format error: either 'JUVIX_FILE_OR_PROJECT' or '--stdin' option must be specified",
+                    "Use the --help option to display more usage information."
+                  ]
 
-  let target = case f of
-        Just Left {} -> TargetFile
-        Just Right {} -> TargetDir
-        Nothing -> TargetStdin
+runCommand :: forall r. Members '[Embed IO, App, Resource, Files] r => FormatOptions -> Sem r ()
+runCommand opts = do
+  target <- targetFromOptions opts
   runOutputSem (renderFormattedOutput target opts) $ runScopeFileApp $ do
-    res <- case f of
-      Just (Left p) -> format p
-      Just (Right p) -> formatProject p
-      Nothing ->
-        if
-            | isStdin -> formatStdin
-            | otherwise -> do
-                printFailureExit $
-                  Text.unlines
-                    [ "juvix format error: either 'JUVIX_FILE_OR_PROJECT' or '--stdin' option must be specified",
-                      "Use the --help option to display more usage information."
-                    ]
-                return FormatResultFail
+    res <- case target of
+      TargetFile p -> format p
+      TargetProject p -> formatProject p
+      TargetStdin -> formatStdin
+
     let exitFail :: IO a
         exitFail = exitWith (ExitFailure 1)
     case res of
@@ -54,7 +64,7 @@ runCommand opts = do
          * unformatted files when using --check
          * when running the formatter on a Juvix project
         -}
-        when (opts ^. formatCheck || target == TargetDir) (embed exitFail)
+        when (opts ^. formatCheck || isTargetProject target) (embed exitFail)
       FormatResultOK -> pure ()
 
 renderModeFromOptions :: FormatTarget -> FormatOptions -> FormattedFileInfo -> FormatRenderMode
@@ -62,8 +72,8 @@ renderModeFromOptions target opts formattedInfo
   | opts ^. formatInPlace = whenContentsModified (EditInPlace formattedInfo)
   | opts ^. formatCheck = NoEdit Silent
   | otherwise = case target of
-      TargetFile -> NoEdit (ReformattedFile (formattedInfo ^. formattedFileInfoContentsAnsi))
-      TargetDir -> whenContentsModified (NoEdit (InputPath (formattedInfo ^. formattedFileInfoPath)))
+      TargetFile {} -> NoEdit (ReformattedFile (formattedInfo ^. formattedFileInfoContentsAnsi))
+      TargetProject {} -> whenContentsModified (NoEdit (InputPath (formattedInfo ^. formattedFileInfoPath)))
       TargetStdin -> NoEdit (ReformattedFile (formattedInfo ^. formattedFileInfoContentsAnsi))
   where
     whenContentsModified :: FormatRenderMode -> FormatRenderMode
