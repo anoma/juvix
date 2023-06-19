@@ -1352,6 +1352,7 @@ checkIterator iter = do
     let _iteratorInitializers = [Initializer p k v | ((p, k), v) <- zipExact (zipExact inipats' initAssignKws) inivals']
         _iteratorRanges = [Range p k v | ((p, k), v) <- zipExact (zipExact rngpats' rangesInKws) rngvals']
         _iteratorParens = iter ^. iteratorParens
+        _iteratorBraces = iter ^. iteratorBraces
     _iteratorBody <- checkParseExpressionAtoms (iter ^. iteratorBody)
     return Iterator {..}
 
