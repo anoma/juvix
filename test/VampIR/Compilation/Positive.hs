@@ -33,7 +33,7 @@ toTestDescr PosTest {..} =
 allTests :: TestTree
 allTests =
   testGroup
-    "Juvix compilation pipeline positive tests"
+    "Juvix to VampIR compilation positive tests"
     (map (mkTest . toTestDescr) tests)
 
 posTest :: Int -> String -> Path Rel Dir -> Path Rel File -> Path Rel File -> PosTest
@@ -58,7 +58,7 @@ tests =
       $(mkRelFile "test002.juvix")
       $(mkRelFile "data/test002.json"),
     posTest
-      5
+      6
       "Test003: inductive types"
       $(mkRelDir ".")
       $(mkRelFile "test003.juvix")
@@ -164,5 +164,23 @@ tests =
       "Test020: boolean target"
       $(mkRelDir ".")
       $(mkRelFile "test020.juvix")
-      $(mkRelFile "data/test020.json")
+      $(mkRelFile "data/test020.json"),
+    posTest
+      11
+      "Test021: fast exponentiation (exponential unrolling)"
+      $(mkRelDir ".")
+      $(mkRelFile "test021.juvix")
+      $(mkRelFile "data/test021.json"),
+    posTest
+      10
+      "Test022: fast exponentiation"
+      $(mkRelDir ".")
+      $(mkRelFile "test022.juvix")
+      $(mkRelFile "data/test022.json"),
+    posTest
+      5
+      "Test023: permutative conversions"
+      $(mkRelDir ".")
+      $(mkRelFile "test023.juvix")
+      $(mkRelFile "data/test023.json")
   ]

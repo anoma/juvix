@@ -82,7 +82,14 @@ instance FromJSON Pragmas where
       parseArgNames :: Parse YamlError PragmaArgNames
       parseArgNames = do
         _pragmaArgNames <- eachInArray asText
+        mapM_ checkArgName _pragmaArgNames
         return PragmaArgNames {..}
+        where
+          checkArgName :: Text -> Parse YamlError ()
+          checkArgName name = do
+            let name' = unpack name
+            unless (isFirstLetter name' && all isValidIdentChar name') $
+              throwCustomError ("invalid argument name: " <> name)
 
       parseFormat :: Parse YamlError PragmaFormat
       parseFormat = do

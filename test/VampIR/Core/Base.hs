@@ -41,7 +41,8 @@ vampirAssertion' paramsNum tab dataFile step = do
 
 setupParamsArgs :: Int -> Path Abs Dir -> [String]
 setupParamsArgs paramsNum dirPath =
-  [ "plonk",
+  [ "-q",
+    "plonk",
     "setup",
     "-m",
     show paramsNum,
@@ -51,7 +52,8 @@ setupParamsArgs paramsNum dirPath =
 
 compileArgs :: Path Abs File -> Path Abs Dir -> [String]
 compileArgs inputFile dirPath =
-  [ "plonk",
+  [ "-q",
+    "plonk",
     "compile",
     "-u",
     toFilePath (dirPath <//> $(mkRelFile "params.pp")),
@@ -63,7 +65,8 @@ compileArgs inputFile dirPath =
 
 proveArgs :: Path Abs File -> Path Abs Dir -> [String]
 proveArgs dataFile dirPath =
-  [ "plonk",
+  [ "-q",
+    "plonk",
     "prove",
     "-u",
     toFilePath (dirPath <//> $(mkRelFile "params.pp")),
@@ -77,7 +80,8 @@ proveArgs dataFile dirPath =
 
 verifyArgs :: Path Abs Dir -> [String]
 verifyArgs dirPath =
-  [ "plonk",
+  [ "-q",
+    "plonk",
     "verify",
     "-u",
     toFilePath (dirPath <//> $(mkRelFile "params.pp")),

@@ -9,7 +9,11 @@
 #define CONSTRS_NUM (BUILTIN_UIDS_NUM + 4)
 
 static constr_info_t juvix_constr_info_array[CONSTRS_NUM] = {
-    BUILTIN_UIDS_INFO, {"leaf"}, {"node"}, {"nothing"}, {"just"}};
+    BUILTIN_UIDS_INFO,
+    {"leaf", 0, APP_FIXITY},
+    {"node", 0, APP_FIXITY},
+    {"nothing", 0, APP_FIXITY},
+    {"just", 0, APP_FIXITY}};
 
 #define UID_LEAF FIRST_USER_UID
 #define UID_NODE (FIRST_USER_UID + 1)

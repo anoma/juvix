@@ -342,16 +342,17 @@ geval opts herr ctx env0 = eval' env0
               (_letItem ^. letItemValue)
               (goBody _letBody)
           )
-      Closure env' (NCase Case {..}) ->
-        Closure
-          env'
-          ( mkCase
-              _caseInfo
-              _caseInductive
-              _caseValue
-              (map (over caseBranchBody goBody) _caseBranches)
-              (fmap goBody _caseDefault)
-          )
+      Closure env' (NCase Case {..})
+        | not (isCaseBoolean bs) ->
+            Closure
+              env'
+              ( mkCase
+                  _caseInfo
+                  _caseInductive
+                  _caseValue
+                  (map (over caseBranchBody goBody) _caseBranches)
+                  (fmap goBody _caseDefault)
+              )
       _ ->
         Closure env (mkCase i sym v bs def)
       where
