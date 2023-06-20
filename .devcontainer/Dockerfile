@@ -65,11 +65,8 @@ RUN sudo bash -c 'mkdir -p /home/vscode/.local/juvix'
 RUN sudo bash -c 'chmod -R a+rXw /home/vscode/.local/juvix'
 
 
-RUN sudo bash -c 'curl --proto "=https" --tlsv1.2 -sSf https://raw.githubusercontent.com/anoma/juvix-installer/main/juvix-installer.sh \
-      | sudo JUVIX_INSTALLER_INSTALL_VAMPIR_YES=true JUVIX_INSTALLER_ASSUME_YES=true sh \
-      && sudo mv /root/.local/bin/juvix /home/vscode/.local/bin/ \
-      && sudo mv /root/.local/bin/vamp-ir /home/vscode/.local/bin/'
-
+RUN sudo bash -c 'curl --proto "=https" --tlsv1.2 -sSf https://get.juvix.org \
+      | sudo XDG_BIN_HOME=/home/vscode/.local/bin JUVIX_INSTALLER_INSTALL_VAMPIR_YES=true JUVIX_INSTALLER_ASSUME_YES=true sh'
 
 RUN sudo bash -c 'mkdir -p /home/vscode/.local/wasi-sysroot'
 RUN sudo bash -c 'curl -s https://api.github.com/repos/WebAssembly/wasi-sdk/releases/tags/wasi-sdk-16 \
