@@ -42,7 +42,7 @@ normalize tab0 = run . evalInfoTableBuilder tab0 . runReader normEnv . normalize
       return $ geval opts stdout (tab ^. identContext) env node
       where
         opts =
-          EvalOptions
+          defaultEvalOptions
             { _evalOptionsNormalize = True
             }
 

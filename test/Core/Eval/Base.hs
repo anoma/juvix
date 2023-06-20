@@ -68,7 +68,7 @@ coreEvalAssertion' mode tab mainFile expectedFile step =
                   let tyargs = typeArgs (lookupIdentifierInfo tab sym ^. identifierType)
                       args = zipWith mkArg (tyargs ++ repeat mkDynamic') (map snd _evalDataInput)
                       node' = mkApps' node args
-                  r' <- doEval mainFile hout tab node'
+                  r' <- doEval' opts mainFile hout tab node'
                   case r' of
                     Left err -> do
                       hClose hout
@@ -86,6 +86,10 @@ coreEvalAssertion' mode tab mainFile expectedFile step =
   where
     sym = fromJust (tab ^. infoMain)
     ii = lookupIdentifierInfo tab sym
+
+    opts = case mode of
+      EvalModePlain -> defaultEvalOptions
+      EvalModeJSON -> defaultEvalOptions {_evalOptionsNoFailure = True}
 
     mkArg :: Type -> Text -> Node
     mkArg ty arg =
@@ -178,13 +182,22 @@ parseFile f = do
   s <- readFile f'
   return $ runParser f emptyInfoTable s
 
+doEval' ::
+  EvalOptions ->
+  Path Abs File ->
+  Handle ->
+  InfoTable ->
+  Node ->
+  IO (Either CoreError Node)
+doEval' opts f hout tab node =
+  catchEvalErrorIO defaultLoc (hEvalIO' opts hout stdin hout (tab ^. identContext) [] node)
+  where
+    defaultLoc = singletonInterval (mkInitialLoc f)
+
 doEval ::
   Path Abs File ->
   Handle ->
   InfoTable ->
   Node ->
   IO (Either CoreError Node)
-doEval f hout tab node =
-  catchEvalErrorIO defaultLoc (hEvalIO hout stdin hout (tab ^. identContext) [] node)
-  where
-    defaultLoc = singletonInterval (mkInitialLoc f)
+doEval = doEval' defaultEvalOptions

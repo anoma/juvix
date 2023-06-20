@@ -21,11 +21,19 @@ import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Core.Pretty
 import Text.Read qualified as T
 
-newtype EvalOptions = EvalOptions
-  { _evalOptionsNormalize :: Bool
+data EvalOptions = EvalOptions
+  { _evalOptionsNormalize :: Bool,
+    _evalOptionsNoFailure :: Bool
   }
 
 makeLenses ''EvalOptions
+
+defaultEvalOptions :: EvalOptions
+defaultEvalOptions =
+  EvalOptions
+    { _evalOptionsNormalize = False,
+      _evalOptionsNoFailure = False
+    }
 
 data EvalError = EvalError
   { _evalErrorMsg :: !Text,
@@ -63,12 +71,7 @@ evalInfoTable herr info = eval herr idenCtxt [] mainNode
 -- `env`. All nodes in `ctx` must be closed. All nodes in `env` must be values.
 -- Invariant for values v: eval ctx env v = v
 eval :: Handle -> IdentContext -> Env -> Node -> Node
-eval herr ctx env = geval opts herr ctx env
-  where
-    opts =
-      EvalOptions
-        { _evalOptionsNormalize = False
-        }
+eval herr ctx env = geval defaultEvalOptions herr ctx env
 
 geval :: EvalOptions -> Handle -> IdentContext -> Env -> Node -> Node
 geval opts herr ctx env0 = eval' env0
@@ -266,7 +269,7 @@ geval opts herr ctx env0 = eval' env0
         failOp :: [Node] -> Node
         failOp = unary $ \msg ->
           if
-              | opts ^. evalOptionsNormalize ->
+              | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
                   mkBuiltinApp' OpFail [eval' env msg]
               | otherwise ->
                   Exception.throw (EvalError ("failure: " <> printNode (eval' env msg)) Nothing)
@@ -361,15 +364,15 @@ geval opts herr ctx env0 = eval' env0
           mkCase i sym b (map (substEnvInBranch env) bs) (fmap (substEnv env) def)
 
 -- Evaluate `node` and interpret the builtin IO actions.
-hEvalIO :: Handle -> Handle -> Handle -> IdentContext -> Env -> Node -> IO Node
-hEvalIO herr hin hout ctx env node =
-  let node' = eval herr ctx env node
+hEvalIO' :: EvalOptions -> Handle -> Handle -> Handle -> IdentContext -> Env -> Node -> IO Node
+hEvalIO' opts herr hin hout ctx env node =
+  let node' = geval opts herr ctx env node
    in case node' of
         NCtr (Constr _ (BuiltinTag TagReturn) [x]) ->
           return x
         NCtr (Constr _ (BuiltinTag TagBind) [x, f]) -> do
-          x' <- hEvalIO herr hin hout ctx env x
-          hEvalIO herr hin hout ctx env (mkApp Info.empty f x')
+          x' <- hEvalIO' opts herr hin hout ctx env x
+          hEvalIO' opts herr hin hout ctx env (mkApp Info.empty f x')
         NCtr (Constr _ (BuiltinTag TagWrite) [NCst (Constant _ (ConstString s))]) -> do
           hPutStr hout s
           return unitNode
@@ -383,6 +386,9 @@ hEvalIO herr hin hout ctx env node =
           return node'
   where
     unitNode = mkConstr (Info.singleton (NoDisplayInfo ())) (BuiltinTag TagTrue) []
+
+hEvalIO :: Handle -> Handle -> Handle -> IdentContext -> Env -> Node -> IO Node
+hEvalIO = hEvalIO' defaultEvalOptions
 
 evalIO :: IdentContext -> Env -> Node -> IO Node
 evalIO = hEvalIO stderr stdin stdout

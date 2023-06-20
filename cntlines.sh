@@ -30,6 +30,8 @@ BACK=$((BACKENDC + GEB + VAMPIR + REG + ASM + CORE))
 OTHER=$((APP + HTML + EXTRA + DATA + PRELUDE))
 TESTS=$(count test/)
 
+TOTAL=$((FRONT+BACK+OTHER+TESTS))
+
 echo "Front end: $FRONT LOC"
 echo "   Concrete: $CONCRETE LOC"
 echo "   Abstract: $ABSTRACT LOC"
@@ -51,3 +53,5 @@ echo "   Extra: $EXTRA LOC"
 echo "   Data: $DATA LOC"
 echo "   Prelude: $PRELUDE LOC"
 echo "Tests: $TESTS LOC"
+echo ""
+echo "Total: $TOTAL Haskell LOC + $RUNTIME C LOC"
