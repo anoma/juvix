@@ -7,16 +7,16 @@ import Juvix.Compiler.Core
 import Juvix.Prelude.Pretty
 import System.Process qualified as P
 
-vampirAssertion :: Int -> Path Abs File -> Path Abs File -> (String -> IO ()) -> Assertion
-vampirAssertion paramsNum mainFile dataFile step = do
+vampirAssertion :: Path Abs File -> Path Abs File -> (String -> IO ()) -> Assertion
+vampirAssertion mainFile dataFile step = do
   step "Parse"
   s <- readFile (toFilePath mainFile)
   case runParserMain mainFile emptyInfoTable s of
     Left err -> assertFailure (show err)
-    Right tab -> vampirAssertion' paramsNum tab dataFile step
+    Right tab -> vampirAssertion' tab dataFile step
 
-vampirAssertion' :: Int -> InfoTable -> Path Abs File -> (String -> IO ()) -> Assertion
-vampirAssertion' paramsNum tab dataFile step = do
+vampirAssertion' :: InfoTable -> Path Abs File -> (String -> IO ()) -> Assertion
+vampirAssertion' tab dataFile step = do
   withTempDir'
     ( \dirPath -> do
         step "Translate to VampIR"
@@ -29,8 +29,6 @@ vampirAssertion' paramsNum tab dataFile step = do
             step "Check vamp-ir on path"
             assertCmdExists $(mkRelFile "vamp-ir")
 
-            step "VampIR setup parameters"
-            P.callProcess "vamp-ir" (setupParamsArgs paramsNum dirPath)
             step "VampIR compile"
             P.callProcess "vamp-ir" (compileArgs vampirFile dirPath)
             step "VampIR prove"
@@ -39,41 +37,26 @@ vampirAssertion' paramsNum tab dataFile step = do
             P.callProcess "vamp-ir" (verifyArgs dirPath)
     )
 
-setupParamsArgs :: Int -> Path Abs Dir -> [String]
-setupParamsArgs paramsNum dirPath =
-  [ "-q",
-    "plonk",
-    "setup",
-    "-m",
-    show paramsNum,
-    "-o",
-    toFilePath (dirPath <//> $(mkRelFile "params.pp"))
-  ]
-
 compileArgs :: Path Abs File -> Path Abs Dir -> [String]
 compileArgs inputFile dirPath =
   [ "-q",
-    "plonk",
+    "halo2",
     "compile",
-    "-u",
-    toFilePath (dirPath <//> $(mkRelFile "params.pp")),
     "-s",
     toFilePath inputFile,
     "-o",
-    toFilePath (dirPath <//> $(mkRelFile "circuit.plonk"))
+    toFilePath (dirPath <//> $(mkRelFile "circuit.halo2"))
   ]
 
 proveArgs :: Path Abs File -> Path Abs Dir -> [String]
 proveArgs dataFile dirPath =
   [ "-q",
-    "plonk",
+    "halo2",
     "prove",
-    "-u",
-    toFilePath (dirPath <//> $(mkRelFile "params.pp")),
     "-c",
-    toFilePath (dirPath <//> $(mkRelFile "circuit.plonk")),
+    toFilePath (dirPath <//> $(mkRelFile "circuit.halo2")),
     "-o",
-    toFilePath (dirPath <//> $(mkRelFile "proof.plonk")),
+    toFilePath (dirPath <//> $(mkRelFile "proof.halo2")),
     "-i",
     toFilePath dataFile
   ]
@@ -81,12 +64,10 @@ proveArgs dataFile dirPath =
 verifyArgs :: Path Abs Dir -> [String]
 verifyArgs dirPath =
   [ "-q",
-    "plonk",
+    "halo2",
     "verify",
-    "-u",
-    toFilePath (dirPath <//> $(mkRelFile "params.pp")),
     "-c",
-    toFilePath (dirPath <//> $(mkRelFile "circuit.plonk")),
+    toFilePath (dirPath <//> $(mkRelFile "circuit.halo2")),
     "-p",
-    toFilePath (dirPath <//> $(mkRelFile "proof.plonk"))
+    toFilePath (dirPath <//> $(mkRelFile "proof.halo2"))
   ]

@@ -41,13 +41,11 @@ allTests =
 tests :: [PosTest]
 tests =
   [ PosTest
-      5
       "Test001"
       $(mkRelDir "translation")
       $(mkRelFile "test001.jvc")
       $(mkRelFile "data/test001.json"),
     PosTest
-      5
       "Test002"
       $(mkRelDir "translation")
       $(mkRelFile "test002.jvc")
