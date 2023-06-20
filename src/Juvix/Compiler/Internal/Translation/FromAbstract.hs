@@ -1,6 +1,5 @@
 module Juvix.Compiler.Internal.Translation.FromAbstract
   ( module Juvix.Compiler.Internal.Translation.FromAbstract.Data.Context,
-    module Juvix.Compiler.Internal.Translation.FromAbstract.Analysis.Termination,
     TranslationState (..),
     iniState,
     fromAbstract,
@@ -18,8 +17,8 @@ import Juvix.Compiler.Abstract.Language qualified as Abstract
 import Juvix.Compiler.Abstract.Translation.FromConcrete.Data.Context qualified as Abstract
 import Juvix.Compiler.Internal.Extra
 import Juvix.Compiler.Internal.Pretty.Base
-import Juvix.Compiler.Internal.Translation.FromAbstract.Analysis.Termination
 import Juvix.Compiler.Internal.Translation.FromAbstract.Data.Context
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker
 import Juvix.Compiler.Pipeline.EntryPoint qualified as E
 import Juvix.Prelude
 
@@ -42,26 +41,24 @@ iniState =
 makeLenses ''TranslationState
 
 fromAbstract ::
-  (Members '[Error JuvixError, NameIdGen] r) =>
+  Members '[Error JuvixError, NameIdGen] r =>
   Abstract.AbstractResult ->
   Sem r InternalResult
 fromAbstract abstractResults = do
+  let abstractModules = abstractResults ^. Abstract.resultModules
+      exportsTbl = abstractResults ^. Abstract.resultExports
+  _resultModules' <-
+    runReader exportsTbl
+      . evalState iniState
+      $ mapM goModule abstractModules
+  let topModule = head _resultModules'
+      tbl = buildTable _resultModules'
   unless
     noTerminationOption
     ( mapError
         (JuvixError @TerminationError)
-        (checkTermination topModule infoTable)
+        (checkTermination tbl topModule)
     )
-  let abstractModules = abstractResults ^. Abstract.resultModules
-      exportsTbl = abstractResults ^. Abstract.resultExports
-  _resultModules' <-
-    runReader exportsTbl $
-      evalState
-        iniState
-        ( mapM
-            goModule
-            abstractModules
-        )
   return
     InternalResult
       { _resultAbstract = abstractResults,
@@ -69,8 +66,6 @@ fromAbstract abstractResults = do
         _resultDepInfo = depInfo
       }
   where
-    topModule = head (abstractResults ^. Abstract.resultModules)
-    infoTable = abstractResults ^. Abstract.resultTable
     noTerminationOption =
       abstractResults
         ^. Abstract.abstractResultEntryPoint
@@ -305,7 +300,8 @@ goFunctionDef f = do
         _funDefClauses = _funDefClauses',
         _funDefExamples = _funDefExamples',
         _funDefBuiltin = f ^. Abstract.funDefBuiltin,
-        _funDefPragmas = f ^. Abstract.funDefPragmas
+        _funDefPragmas = f ^. Abstract.funDefPragmas,
+        _funDefTerminating = f ^. Abstract.funDefTerminating
       }
   where
     _funDefName' :: Name

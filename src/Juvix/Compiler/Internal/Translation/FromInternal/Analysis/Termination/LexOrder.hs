@@ -1,12 +1,12 @@
-module Juvix.Compiler.Internal.Translation.FromAbstract.Analysis.Termination.LexOrder
-  ( module Juvix.Compiler.Internal.Translation.FromAbstract.Analysis.Termination.LexOrder,
+module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.LexOrder
+  ( module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.LexOrder,
   )
 where
 
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
-import Juvix.Compiler.Abstract.Extra
-import Juvix.Compiler.Internal.Translation.FromAbstract.Analysis.Termination.Data
+import Juvix.Compiler.Internal.Extra
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Data
 import Juvix.Prelude
 
 fromEdgeList :: [Edge] -> EdgeMap
@@ -44,7 +44,7 @@ edgesCount :: EdgeMap -> Int
 edgesCount es = sum [HashSet.size (e ^. edgeMatrices) | e <- toList es]
 
 multiply :: CallMatrix -> CallMatrix -> CallMatrix
-multiply a b = map sumProdRow a
+multiply (CallMatrix a) (CallMatrix b) = CallMatrix (map sumProdRow a)
   where
     rowB :: Int -> CallRow
     rowB i = CallRow $ case b !? i of
@@ -63,9 +63,9 @@ multiplyMany r s = HashSet.fromList [multiply a b | a <- toList r, b <- toList s
 fromFunCall :: FunctionRef -> FunCall -> Call
 fromFunCall caller fc =
   Call
-    { _callFrom = caller ^. functionRefName,
-      _callTo = fc ^. callRef . functionRefName,
-      _callMatrix = map fst (fc ^. callArgs)
+    { _callFrom = caller,
+      _callTo = fc ^. callRef,
+      _callMatrix = CallMatrix (map fst (fc ^. callArgs))
     }
 
 -- | IMPORTANT: the resulting call graph is not complete. Use this function
@@ -116,7 +116,7 @@ reflexiveEdges (CompleteCallGraph es) = mapMaybe reflexive (toList es)
       | otherwise = Nothing
 
 callMatrixDiag :: CallMatrix -> [SizeRel]
-callMatrixDiag m = [col i r | (i, r) <- zip [0 :: Int ..] m]
+callMatrixDiag (CallMatrix m) = [col i r | (i, r) <- zip [0 :: Int ..] m]
   where
     col :: Int -> CallRow -> SizeRel
     col i (CallRow row) = case row of

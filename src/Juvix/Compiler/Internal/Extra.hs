@@ -18,6 +18,13 @@ type Subs = HashMap VarName Expression
 
 type VarMap = HashMap VarName VarName
 
+data ApplicationArg = ApplicationArg
+  { _appArgIsImplicit :: IsImplicit,
+    _appArg :: Expression
+  }
+
+makeLenses ''ApplicationArg
+
 class HasExpressions a where
   leafExpressions :: Traversal' a Expression
 
@@ -169,6 +176,7 @@ instance HasExpressions FunctionDef where
         { _funDefClauses = clauses',
           _funDefType = ty',
           _funDefExamples = examples',
+          _funDefTerminating,
           _funDefName,
           _funDefBuiltin,
           _funDefPragmas
@@ -349,11 +357,90 @@ reachableModules = fst . run . runOutputList . evalState (mempty :: HashSet Name
 (-->) a b =
   ExpressionFunction
     ( Function
-        ( FunctionParameter
-            { _paramName = Nothing,
-              _paramImplicit = Explicit,
-              _paramType = a
-            }
-        )
+        FunctionParameter
+          { _paramName = Nothing,
+            _paramImplicit = Explicit,
+            _paramType = a
+          }
         b
     )
+
+-- | A fold over all transitive children, including self
+patternCosmos :: SimpleFold Pattern Pattern
+patternCosmos f p = case p of
+  PatternVariable {} -> f p
+  PatternConstructorApp ConstructorApp {..} ->
+    f p *> do
+      args' <- traverse (traverseOf patternArgPattern (patternCosmos f)) _constrAppParameters
+      pure $
+        PatternConstructorApp
+          ConstructorApp
+            { _constrAppParameters = args',
+              _constrAppConstructor,
+              _constrAppType
+            }
+
+patternArgNameFold :: SimpleFold (Maybe Name) Pattern
+patternArgNameFold f = \case
+  Nothing -> mempty
+  Just n -> Const (getConst (f (PatternVariable n)))
+
+-- | A fold over all transitive children, including self
+patternArgCosmos :: SimpleFold PatternArg Pattern
+patternArgCosmos f p = do
+  _patternArgPattern <- patternCosmos f (p ^. patternArgPattern)
+  _patternArgName <- patternArgNameFold f (p ^. patternArgName)
+  pure PatternArg {..}
+  where
+    _patternArgIsImplicit = p ^. patternArgIsImplicit
+
+-- | A fold over all transitive children, excluding self
+patternSubCosmos :: SimpleFold Pattern Pattern
+patternSubCosmos f p = case p of
+  PatternVariable {} -> pure p
+  PatternConstructorApp ConstructorApp {..} -> do
+    args' <- traverse (patternArgCosmos f) _constrAppParameters
+    pure $
+      PatternConstructorApp
+        ConstructorApp
+          { _constrAppParameters = args',
+            _constrAppConstructor,
+            _constrAppType
+          }
+
+viewAppArgAsPattern :: ApplicationArg -> Maybe PatternArg
+viewAppArgAsPattern a = do
+  p' <- viewExpressionAsPattern (a ^. appArg)
+  return
+    ( PatternArg
+        { _patternArgIsImplicit = a ^. appArgIsImplicit,
+          _patternArgName = Nothing,
+          _patternArgPattern = p'
+        }
+    )
+
+viewApp :: Expression -> (Expression, [ApplicationArg])
+viewApp e =
+  case e of
+    ExpressionApplication (Application l r i) ->
+      second (`snoc` ApplicationArg i r) (viewApp l)
+    _ -> (e, [])
+
+viewExpressionAsPattern :: Expression -> Maybe Pattern
+viewExpressionAsPattern e = case viewApp e of
+  (f, args)
+    | Just c <- getConstructor f -> do
+        args' <- mapM viewAppArgAsPattern args
+        Just $ PatternConstructorApp (ConstructorApp c args' Nothing)
+  (f, [])
+    | Just v <- getVariable f -> Just (PatternVariable v)
+  _ -> Nothing
+  where
+    getConstructor :: Expression -> Maybe ConstructorName
+    getConstructor f = case f of
+      ExpressionIden (IdenConstructor n) -> Just n
+      _ -> Nothing
+    getVariable :: Expression -> Maybe VarName
+    getVariable f = case f of
+      ExpressionIden (IdenVar n) -> Just n
+      _ -> Nothing

@@ -1,37 +1,36 @@
-module Juvix.Compiler.Internal.Translation.FromAbstract.Analysis.Termination.Checker
-  ( module Juvix.Compiler.Internal.Translation.FromAbstract.Analysis.Termination.Checker,
-    module Juvix.Compiler.Internal.Translation.FromAbstract.Analysis.Termination.FunctionCall,
-    module Juvix.Compiler.Internal.Translation.FromAbstract.Analysis.Termination.Error,
+module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker
+  ( module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker,
+    module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.FunctionCall,
+    module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Error,
   )
 where
 
 import Data.HashMap.Internal.Strict qualified as HashMap
-import Juvix.Compiler.Abstract.Data.InfoTable as Abstract
-import Juvix.Compiler.Abstract.Language as Abstract
-import Juvix.Compiler.Internal.Translation.FromAbstract.Analysis.Termination.Data
-import Juvix.Compiler.Internal.Translation.FromAbstract.Analysis.Termination.Error
-import Juvix.Compiler.Internal.Translation.FromAbstract.Analysis.Termination.FunctionCall
-import Juvix.Compiler.Internal.Translation.FromAbstract.Analysis.Termination.LexOrder
+import Juvix.Compiler.Internal.Data.InfoTable as Internal
+import Juvix.Compiler.Internal.Language as Internal
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.FunctionCall
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Data
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Error
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.LexOrder
 import Juvix.Prelude
 
 checkTermination ::
-  (Members '[Error TerminationError] r) =>
-  TopModule ->
+  Members '[Error TerminationError] r =>
   InfoTable ->
+  Module ->
   Sem r ()
-checkTermination topModule infotable = do
+checkTermination infotable topModule = do
   let callmap = buildCallMap infotable topModule
       completeGraph = completeCallGraph callmap
       rEdges = reflexiveEdges completeGraph
       recBehav = map recursiveBehaviour rEdges
   forM_ recBehav $ \r -> do
     let funName = r ^. recursiveBehaviourFun
-        markedTerminating :: Bool = funInfo ^. (Abstract.functionInfoDef . Abstract.funDefTerminating)
-        funRef = FunctionRef funName
+        markedTerminating :: Bool = funInfo ^. (Internal.functionInfoDef . Internal.funDefTerminating)
         funInfo :: FunctionInfo
-        funInfo = HashMap.lookupDefault err funRef (infotable ^. Abstract.infoFunctions)
+        funInfo = HashMap.lookupDefault err funName (infotable ^. Internal.infoFunctions)
           where
-            err = error ("Impossible: function not found: " <> funRef ^. functionRefName . nameText)
+            err = error ("Impossible: function not found: " <> funName ^. nameText)
     if
         | markedTerminating -> return ()
         | otherwise ->
@@ -39,33 +38,30 @@ checkTermination topModule infotable = do
               Nothing -> throw (ErrNoLexOrder (NoLexOrder funName))
               Just _ -> return ()
 
-buildCallMap :: InfoTable -> TopModule -> CallMap
+buildCallMap :: InfoTable -> Module -> CallMap
 buildCallMap infotable = run . execState mempty . runReader infotable . scanModule
 
 scanModule ::
-  (Members '[State CallMap] r) =>
-  TopModule ->
+  Members '[State CallMap] r =>
+  Module ->
   Sem r ()
 scanModule m = scanModuleBody (m ^. moduleBody)
 
 scanModuleBody :: (Members '[State CallMap] r) => ModuleBody -> Sem r ()
-scanModuleBody body = do
+scanModuleBody body =
   mapM_ scanFunctionDef moduleFunctions
-  mapM_ scanLocalModule moduleLocalModules
   where
-    moduleFunctions = [f | StatementFunction f <- body ^. moduleStatements]
-    moduleLocalModules = [f | StatementLocalModule f <- body ^. moduleStatements]
-
-scanLocalModule :: (Members '[State CallMap] r) => LocalModule -> Sem r ()
-scanLocalModule m = scanModuleBody (m ^. moduleBody)
+    moduleFunctions =
+      [ f | StatementMutual (MutualBlock m) <- body ^. moduleStatements, StatementFunction f <- toList m
+      ]
 
 scanFunctionDef ::
   (Members '[State CallMap] r) =>
   FunctionDef ->
   Sem r ()
 scanFunctionDef FunctionDef {..} =
-  runReader (FunctionRef _funDefName) $ do
-    scanTypeSignature _funDefTypeSig
+  runReader _funDefName $ do
+    scanTypeSignature _funDefType
     mapM_ scanFunctionClause _funDefClauses
 
 scanTypeSignature ::
@@ -83,7 +79,7 @@ scanFunctionClause FunctionClause {..} = go (reverse _clausePatterns) _clauseBod
   where
     go :: [PatternArg] -> Expression -> Sem r ()
     go revArgs body = case body of
-      ExpressionLambda (Lambda cl) -> mapM_ goClause cl
+      ExpressionLambda Lambda {..} -> mapM_ goClause _lambdaClauses
       _ -> runReader (mkSizeInfo (reverse revArgs)) (scanExpression body)
       where
         goClause :: LambdaClause -> Sem r ()
@@ -112,9 +108,13 @@ scanLet l = do
   scanExpression (l ^. letExpression)
 
 -- NOTE that we forget about the arguments of the hosting function
-scanLetClause :: (Members '[State CallMap] r) => LetClause -> Sem r ()
+scanLetClause :: Members '[State CallMap] r => LetClause -> Sem r ()
 scanLetClause = \case
   LetFunDef d -> scanFunctionDef d
+  LetMutualBlock m -> scanMutualBlockLet m
+
+scanMutualBlockLet :: Members '[State CallMap] r => MutualBlockLet -> Sem r ()
+scanMutualBlockLet MutualBlockLet {..} = mapM_ scanFunctionDef _mutualLet
 
 scanExpression ::
   (Members '[State CallMap, Reader FunctionRef, Reader SizeInfo] r) =>
@@ -131,17 +131,25 @@ scanExpression e =
       ExpressionLambda l -> scanLambda l
       ExpressionLet l -> scanLet l
       ExpressionCase l -> scanCase l
+      ExpressionSimpleLambda l -> scanSimpleLambda l
       ExpressionIden {} -> return ()
       ExpressionHole {} -> return ()
       ExpressionUniverse {} -> return ()
       ExpressionLiteral {} -> return ()
+
+scanSimpleLambda ::
+  forall r.
+  (Members '[State CallMap, Reader FunctionRef, Reader SizeInfo] r) =>
+  SimpleLambda ->
+  Sem r ()
+scanSimpleLambda SimpleLambda {..} = scanExpression _slambdaBody
 
 scanLambda ::
   forall r.
   (Members '[State CallMap, Reader FunctionRef, Reader SizeInfo] r) =>
   Lambda ->
   Sem r ()
-scanLambda (Lambda cl) = mapM_ scanClause cl
+scanLambda Lambda {..} = mapM_ scanClause _lambdaClauses
   where
     scanClause :: LambdaClause -> Sem r ()
     scanClause LambdaClause {..} = scanExpression _lambdaBody

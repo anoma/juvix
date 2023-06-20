@@ -1,4 +1,4 @@
-module Juvix.Compiler.Internal.Translation.FromAbstract.Analysis.Termination.Data.SizeRelation where
+module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Data.SizeRelation where
 
 import Juvix.Prelude
 import Prettyprinter

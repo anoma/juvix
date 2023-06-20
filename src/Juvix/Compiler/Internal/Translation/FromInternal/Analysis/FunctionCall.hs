@@ -1,11 +1,11 @@
-module Juvix.Compiler.Internal.Translation.FromAbstract.Analysis.Termination.FunctionCall
-  ( module Juvix.Compiler.Internal.Translation.FromAbstract.Analysis.Termination.FunctionCall,
+module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.FunctionCall
+  ( module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.FunctionCall,
   )
 where
 
 import Data.HashMap.Strict qualified as HashMap
-import Juvix.Compiler.Abstract.Extra
-import Juvix.Compiler.Internal.Translation.FromAbstract.Analysis.Termination.Data
+import Juvix.Compiler.Internal.Extra
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Data
 import Juvix.Prelude
 
 viewCall ::
