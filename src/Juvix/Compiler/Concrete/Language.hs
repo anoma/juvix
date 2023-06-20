@@ -1071,6 +1071,8 @@ data Iterator s = Iterator
     _iteratorInitializers :: [Initializer s],
     _iteratorRanges :: [Range s],
     _iteratorBody :: ExpressionType s,
+    -- | Was the body enclosed in braces?
+    _iteratorBraces :: Bool,
     -- | Due to limitations of the pretty printing algorithm, we store whether
     -- the iterator was surrounded by parentheses in the code.
     _iteratorParens :: Bool

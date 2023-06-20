@@ -636,7 +636,9 @@ iterator = do
             rngs <- P.sepBy1 range semicolon
             rparen
             return rngs
-  _iteratorBody <- parseExpressionAtoms
+  (_iteratorBody, _iteratorBraces) <-
+    fmap (,True) (braces parseExpressionAtoms)
+      <|> fmap (,False) parseExpressionAtoms
   let _iteratorParens = False
   return Iterator {..}
   where

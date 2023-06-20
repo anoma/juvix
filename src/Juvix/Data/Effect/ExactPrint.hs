@@ -133,6 +133,9 @@ oneLineOrNextNoIndent = region P.oneLineOrNextNoIndent
 oneLineOrNext :: Members '[ExactPrint] r => Sem r () -> Sem r ()
 oneLineOrNext = region P.oneLineOrNext
 
+nextLine :: Members '[ExactPrint] r => Sem r () -> Sem r ()
+nextLine = region P.nextLine
+
 paragraphs :: (Foldable l, Members '[ExactPrint] r) => l (Sem r ()) -> Sem r ()
 paragraphs = sequenceWith (line >> ensureEmptyLine)
 

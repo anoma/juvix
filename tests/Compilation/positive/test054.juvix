@@ -13,7 +13,7 @@ mymap f nil := nil;
 mymap f (x :: xs) := f x :: mymap f xs;
 
 sum : List Nat → Nat;
-sum xs := myfor (acc := 0) (x in xs) acc + x;
+sum xs := myfor (acc := 0) (x in xs) {acc + x};
 
 sum' : List Nat → Nat;
 sum' xs := myfor λ {acc x := acc + x} 0 xs;
@@ -31,7 +31,8 @@ myfor2 :
     → A;
 myfor2 f acc xs ys :=
   myfor (acc' := acc) (x in xs)
-    myfor (acc'' := acc') (y in ys) f acc'' x y;
+    myfor (acc'' := acc') (y in ys)
+      f acc'' x y;
 
 syntax iterator myzip2 {init: 2, range: 2};
 myzip2 :
@@ -52,9 +53,9 @@ main :=
     + sum' lst
     + fst (myfor (a, b := 0, 0) (x in lst) b + x, a)
     + (myfor2 (acc := 0) (x in lst; y in 1 :: 2 :: nil)
-         acc + x + y)
+        acc + x + y)
     + fst
       (myzip2 (a := 0; b := 0) (x in lst; y in reverse lst)
-         a + x * y, b + y)
-    + myfor (a := 0) (x, y in mymap (x in lst) x, x + 1)
+        a + x * y, b + y)
+    + myfor (a := 0) (x, y in mymap (x in lst) {x, x + 1})
         a + x * y;

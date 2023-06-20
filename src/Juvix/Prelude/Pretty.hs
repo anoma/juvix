@@ -165,6 +165,9 @@ oneLineOrNext x = PP.group (flatAlt (line <> indent' x) (space <> x))
 oneLineOrNextNoIndent :: Doc ann -> Doc ann
 oneLineOrNextNoIndent x = PP.group (flatAlt (line <> x) (space <> x))
 
+nextLine :: Doc ann -> Doc ann
+nextLine x = PP.group (line <> x)
+
 ordinal :: Int -> Doc a
 ordinal = \case
   1 -> "first"
