@@ -131,7 +131,7 @@ processPackage :: forall r. (Members '[Error Text] r) => BuildDir -> RawPackage 
 processPackage buildDir pkg = do
   let _packageName = fromMaybe defaultPackageName (pkg ^. packageName)
       base :: SomeBase Dir = (resolveBuildDir buildDir) <///> relStdlibDir
-      stdlib = Dependency (mkPrepath (fromSomeDir base))
+      stdlib = mkPathDependency (fromSomeDir base)
       _packageDependencies = fromMaybe [stdlib] (pkg ^. packageDependencies)
   _packageVersion <- getVersion
   return
@@ -149,7 +149,7 @@ processPackage buildDir pkg = do
         Left err -> throw (pack (errorBundlePretty err))
 
 defaultStdlibDep :: BuildDir -> Dependency
-defaultStdlibDep buildDir = Dependency (mkPrepath (fromSomeDir (resolveBuildDir buildDir <///> relStdlibDir)))
+defaultStdlibDep buildDir = mkPathDependency (fromSomeDir (resolveBuildDir buildDir <///> relStdlibDir))
 
 defaultPackageName :: Text
 defaultPackageName = "my-project"

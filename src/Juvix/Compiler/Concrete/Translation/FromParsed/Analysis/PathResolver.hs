@@ -104,9 +104,11 @@ withPathFile :: (Members '[PathResolver] r) => TopModulePath -> (Either PathReso
 withPathFile m f = withPath m (f . mapRight (uncurry (<//>)))
 
 getDependencyPath :: Members '[Reader ResolverEnv, Files] r => Dependency -> Sem r (Path Abs Dir)
-getDependencyPath (Dependency p) = do
-  r <- asks (^. envRoot)
-  canonicalDir r p
+getDependencyPath = \case
+  DependencyPath p -> do
+    r <- asks (^. envRoot)
+    canonicalDir r (p ^. pathDependencyPath)
+  DependencyGit {} -> error "git dependency is not currently supported"
 
 registerDependencies' ::
   (Members '[Reader EntryPoint, State ResolverState, Reader ResolverEnv, Files, Error Text] r) =>
@@ -117,9 +119,9 @@ registerDependencies' = do
   if
       | isGlobal -> do
           glob <- globalRoot
-          let globDep = Dependency (mkPrepath (toFilePath glob))
+          let globDep = mkPathDependency (toFilePath glob)
           addDependency' (Just e) globDep
-      | otherwise -> addDependency' (Just e) (Dependency (mkPrepath (toFilePath (e ^. entryPointRoot))))
+      | otherwise -> addDependency' (Just e) (mkPathDependency (toFilePath (e ^. entryPointRoot)))
 
 addDependency' ::
   (Members '[State ResolverState, Reader ResolverEnv, Files, Error Text] r) =>
