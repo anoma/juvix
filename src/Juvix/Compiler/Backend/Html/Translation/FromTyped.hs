@@ -89,6 +89,13 @@ createIndexFile ps = do
         Html.div ! Attr.id "content" $
           Html.div ! Attr.id "module-list" $
             (p ! Attr.class_ "caption" $ "Modules")
+              <> ( button
+                     ! Attr.class_ "collapse-button"
+                     ! Attr.onclick "closeAll()"
+                     $ Html.span ! Attr.class_ "collapse-icon"
+                     $ "▼"
+                       <> "Collapse All"
+                 )
               <> tree'
 
     tree :: ModuleTree
@@ -106,7 +113,7 @@ createIndexFile ps = do
         nodeRow = case lbl of
           Nothing ->
             return $
-              Html.p ! Attr.class_ attrBare $
+              Html.span ! Attr.class_ attrBare $
                 toHtml (prettyText s)
           Just lbl' -> do
             lnk <- nameIdAttrRef lbl' Nothing
@@ -121,21 +128,17 @@ createIndexFile ps = do
         attrBare = attrBase <> " directory"
 
         node :: Sem r Html
-        node = do
-          row' <- nodeRow
-          childs' <- childs
-          return (row' <>? childs')
+        node = nodeRow >>= getRowWithChilds
           where
-            childs :: Sem r (Maybe Html)
-            childs
-              | null children = return Nothing
+            getRowWithChilds :: Html -> Sem r Html
+            getRowWithChilds row'
+              | null children = return row'
               | otherwise = do
                   c' <- mapM (uncurry goChild) (HashMap.toList children)
                   return $
-                    Just $
-                      details ! Attr.open "open" $
-                        summary "Subtree"
-                          <> ul (mconcatMap li c')
+                    details ! Attr.open "open" $
+                      summary row'
+                        <> ul (mconcatMap li c')
 
 writeHtml :: (Members '[Embed IO] r) => Path Abs File -> Html -> Sem r ()
 writeHtml f h = Prelude.embed $ do
@@ -223,6 +226,7 @@ template rightMenu' content' = do
             <> livejs
             <> ayuTheme
             <> judocTheme
+            <> closeAll
 
       titleStr :: Html
       titleStr = "Juvix Documentation"
