@@ -1,5 +1,7 @@
 module Juvix.Compiler.Backend.VampIR.Pretty.Base where
 
+import Data.ByteString.UTF8 qualified as UTF8
+import Data.FileEmbed qualified as FE
 import Juvix.Compiler.Backend.VampIR.Language
 import Juvix.Compiler.Backend.VampIR.Pretty.Keywords
 import Juvix.Compiler.Backend.VampIR.Pretty.Options
@@ -79,30 +81,19 @@ instance PrettyCode Program where
   ppCode Program {..} = do
     fns <- mapM ppCode _programFunctions
     eqns <- mapM ppEquation _programFunctions
-    return $ vsep vampIRDefs <> line <> line <> vsep fns <> line <> line <> vsep eqns
+    bits <- asks (^. optIntegerBits)
+    return $ pretty (vampIRDefs bits) <> line <> line <> vsep fns <> line <> line <> vsep eqns
 
 --------------------------------------------------------------------------------
 -- VampIR definitions
 --------------------------------------------------------------------------------
 
-vampIRDefs :: [Doc Ann]
-vampIRDefs =
-  [ "def add x y = x + y;",
-    "def sub x y = x - y;",
-    "def mul x y = x * y;",
-    "def isZero x = {def xi = fresh (1 | x); x * (1 - xi * x) = 0; 1 - xi * x};",
-    "def equal x y = isZero (x - y);",
-    "def isBool x = (x * (x - 1) = 0);",
-    "def isNegative a = {def e = 2^30; def b = a + e; def b0 = fresh (b % e); def b1 = fresh (b \\ e); isBool b1; b = b0 + e * b1; 1 - b1};",
-    "def lessThan x y = isNegative (x - y);",
-    "def lessOrEqual x y = lessThan x (y + 1);",
-    "def divRem a b = {def q = fresh (a\\b); def r = fresh (a%b); isNegative r = 0; lessThan r b = 1; a = b * q + r; (q, r) };",
-    "def fst (x, y) = x;",
-    "def snd (x, y) = y;",
-    "def div x y = fst (divRem x y);",
-    "def rem x y = snd (divRem x y);",
-    "def if b x y = b * x + (1 - b) * y;"
-  ]
+vampIRDefs :: Int -> String
+vampIRDefs bits =
+  "def integerBits = "
+    <> show bits
+    <> ";\n"
+    <> UTF8.toString $(FE.makeRelativeToProject "runtime/vampir/stdlib.pir" >>= FE.embedFile)
 
 --------------------------------------------------------------------------------
 -- helper functions

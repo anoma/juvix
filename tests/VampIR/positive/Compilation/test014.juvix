@@ -7,7 +7,7 @@ g : (Nat → Nat) → Nat → Nat;
 g f zero := 0;
 g f (suc x) := f x;
 
-{-# unroll: 21 #-}
+{-# unroll: 11 #-}
 terminating
 f : Nat → Nat;
 f x := x + g f x;

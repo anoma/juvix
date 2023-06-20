@@ -7,7 +7,7 @@ sumb : Nat → (Nat → Nat → Nat) → Nat → Nat;
 sumb acc f zero := acc;
 sumb acc f (suc x) := f acc x;
 
-{-# unroll: 21 #-}
+{-# unroll: 11 #-}
 terminating
 sum' : Nat → Nat → Nat;
 sum' acc x := sumb (x + acc) sum' x;

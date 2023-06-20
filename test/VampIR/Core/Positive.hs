@@ -14,7 +14,7 @@ toTestDescr = Normalize.toTestDescr' vampirAssertion
 allTests :: TestTree
 allTests =
   testGroup
-    "VampIR translation positive tests"
+    "Core to VampIR translation positive tests"
     ( map
         (mkTest . toTestDescr)
         ( tests
