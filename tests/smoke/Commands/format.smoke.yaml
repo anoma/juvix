@@ -110,6 +110,20 @@ tests:
     stdout: ''
     exit-status: 0
 
+  - name: format-project-with-all-formatted
+    command:
+      shell:
+        - bash
+      script: |
+        temp=$(mktemp -d)
+        trap 'rm -rf -- "$temp"' EXIT
+        touch $temp/juvix.yaml
+        cp positive/Format.juvix $temp
+        cd $temp
+        juvix format
+    stdout: ''
+    exit-status: 0
+
   - name: format-dir-containing-unformatted-and-formatted
     command:
       shell:
@@ -124,6 +138,42 @@ tests:
         mkdir Subdir
         echo "module Subdir.Bar;" >> Subdir/Bar.juvix
         juvix format $temp
+    stdout:
+      contains: 'Foo.juvix'
+    exit-status: 1
+
+  - name: format-project-containing-unformatted-and-unformatted
+    command:
+      shell:
+        - bash
+      script: |
+        temp=$(mktemp -d)
+        trap 'rm -rf -- "$temp"' EXIT
+        touch $temp/juvix.yaml
+        cp positive/Format.juvix $temp
+        cd $temp
+        echo "module Foo ;" >> Foo.juvix
+        mkdir Subdir
+        echo "module Subdir.Bar;" >> Subdir/Bar.juvix
+        juvix format
+    stdout:
+      contains: 'Foo.juvix'
+    exit-status: 1
+
+  - name: format-project-containing-unformatted-from-subdir
+    command:
+      shell:
+        - bash
+      script: |
+        temp=$(mktemp -d)
+        trap 'rm -rf -- "$temp"' EXIT
+        touch $temp/juvix.yaml
+        cp positive/Format.juvix $temp
+        cd $temp
+        echo "module Foo ;" >> Foo.juvix
+        mkdir -p $temp/subdir
+        cd $temp/subdir
+        juvix format
     stdout:
       contains: 'Foo.juvix'
     exit-status: 1
@@ -159,6 +209,22 @@ tests:
     stdout: ''
     exit-status: 1
 
+  - name: format-project-containing-unformatted-check-no-stdout
+    command:
+      shell:
+        - bash
+      script: |
+        temp=$(mktemp -d)
+        trap 'rm -rf -- "$temp"' EXIT
+        touch $temp/juvix.yaml
+        cp positive/Format.juvix $temp
+        cd $temp
+        echo "module Foo ;" >> Foo.juvix
+        cd $temp
+        juvix format --check
+    stdout: ''
+    exit-status: 1
+
   - name: format-dir-with-all-formatted-check-no-stdout
     command:
       shell:
@@ -169,6 +235,20 @@ tests:
         touch $temp/juvix.yaml
         cp positive/Format.juvix $temp
         juvix format --check $temp
+    stdout: ''
+    exit-status: 0
+
+  - name: format-project-with-all-formatted-check-no-stdout
+    command:
+      shell:
+        - bash
+      script: |
+        temp=$(mktemp -d)
+        trap 'rm -rf -- "$temp"' EXIT
+        touch $temp/juvix.yaml
+        cp positive/Format.juvix $temp
+        cd $temp
+        juvix format --check
     stdout: ''
     exit-status: 0
 

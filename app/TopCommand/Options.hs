@@ -135,7 +135,8 @@ parseUtility =
                       [ "juvix format is used to format Juvix source files.",
                         "",
                         "Given a file, it prints the reformatted source to standard output.",
-                        "Given a project directory it prints a list of unformatted files in the project."
+                        "Given a project directory it prints a list of unformatted files in the project.",
+                        "Given no argument it prints a list of unformatted files in the project which contains the current directory."
                       ]
                   )
               )
