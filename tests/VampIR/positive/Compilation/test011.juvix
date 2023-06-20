@@ -3,7 +3,7 @@ module test011;
 
 open import Stdlib.Prelude;
 
-{-# unroll: 21 #-}
+{-# unroll: 11 #-}
 sum : Nat → Nat;
 sum zero := 0;
 sum (suc x) := suc x + sum x;

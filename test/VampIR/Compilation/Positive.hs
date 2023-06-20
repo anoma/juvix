@@ -64,7 +64,7 @@ tests =
       $(mkRelFile "test003.juvix")
       $(mkRelFile "data/test003.json"),
     posTest
-      7
+      11
       "Test004: arithmetic"
       $(mkRelDir ".")
       $(mkRelFile "test004.juvix")
@@ -100,37 +100,37 @@ tests =
       $(mkRelFile "test009.juvix")
       $(mkRelFile "data/test009.json"),
     posTest
-      10
+      14
       "Test010: mid-square hashing (unrolled)"
       $(mkRelDir ".")
       $(mkRelFile "test010.juvix")
       $(mkRelFile "data/test010.json"),
     posTest
-      9
+      12
       "Test011: recursion"
       $(mkRelDir ".")
       $(mkRelFile "test011.juvix")
       $(mkRelFile "data/test011.json"),
     posTest
-      9
+      12
       "Test012: tail recursion"
       $(mkRelDir ".")
       $(mkRelFile "test012.juvix")
       $(mkRelFile "data/test012.json"),
     posTest
-      9
+      12
       "Test013: tail recursion: Fibonacci numbers in linear time"
       $(mkRelDir ".")
       $(mkRelFile "test013.juvix")
       $(mkRelFile "data/test013.json"),
     posTest
-      9
+      12
       "Test014: recursion through higher-order functions"
       $(mkRelDir ".")
       $(mkRelFile "test014.juvix")
       $(mkRelFile "data/test014.json"),
     posTest
-      9
+      12
       "Test015: tail recursion through higher-order functions"
       $(mkRelDir ".")
       $(mkRelFile "test015.juvix")
@@ -142,13 +142,13 @@ tests =
       $(mkRelFile "test016.juvix")
       $(mkRelFile "data/test016.json"),
     posTest
-      11
+      14
       "Test017: mutual recursion"
       $(mkRelDir ".")
       $(mkRelFile "test017.juvix")
       $(mkRelFile "data/test017.json"),
     posTest
-      10
+      14
       "Test018: mid-square hashing"
       $(mkRelDir ".")
       $(mkRelFile "test018.juvix")
@@ -160,19 +160,19 @@ tests =
       $(mkRelFile "test019.juvix")
       $(mkRelFile "data/test019.json"),
     posTest
-      8
+      12
       "Test020: boolean target"
       $(mkRelDir ".")
       $(mkRelFile "test020.juvix")
       $(mkRelFile "data/test020.json"),
     posTest
-      11
+      15
       "Test021: fast exponentiation (exponential unrolling)"
       $(mkRelDir ".")
       $(mkRelFile "test021.juvix")
       $(mkRelFile "data/test021.json"),
     posTest
-      10
+      14
       "Test022: fast exponentiation"
       $(mkRelDir ".")
       $(mkRelFile "test022.juvix")

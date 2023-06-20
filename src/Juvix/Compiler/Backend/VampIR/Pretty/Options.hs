@@ -2,14 +2,17 @@ module Juvix.Compiler.Backend.VampIR.Pretty.Options where
 
 import Juvix.Prelude
 
--- no fields for now, but make it easier to add options in the future I don't
--- remove this datatype entirely
-data Options = Options
+newtype Options = Options
+  { _optIntegerBits :: Int
+  }
 
 makeLenses ''Options
 
 defaultOptions :: Options
-defaultOptions = Options
+defaultOptions =
+  Options
+    { _optIntegerBits = 24
+    }
 
 traceOptions :: Options
 traceOptions = defaultOptions

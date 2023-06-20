@@ -83,7 +83,7 @@ tests =
       $(mkRelFile "test005.jvc")
       $(mkRelFile "data/test005.json"),
     PosTest
-      6
+      9
       "Test006: arithmetic"
       $(mkRelDir "Core")
       $(mkRelFile "test006.jvc")
@@ -101,7 +101,7 @@ tests =
       $(mkRelFile "test008.jvc")
       $(mkRelFile "data/test008.json"),
     PosTest
-      5
+      9
       "Test009: comparisons"
       $(mkRelDir "Core")
       $(mkRelFile "test009.jvc")
@@ -125,7 +125,7 @@ tests =
       $(mkRelFile "test012.jvc")
       $(mkRelFile "data/test012.json"),
     PosTest
-      10
+      14
       "Test013: mid-square hashing (unrolled)"
       $(mkRelDir "Core")
       $(mkRelFile "test013.jvc")
@@ -197,7 +197,7 @@ tests =
       $(mkRelFile "test024.jvc")
       $(mkRelFile "data/test024.json"),
     PosTest
-      10
+      14
       "Test025: mid-square hashing"
       $(mkRelDir "Core")
       $(mkRelFile "test025.jvc")
@@ -221,7 +221,7 @@ tests =
       $(mkRelFile "test028.jvc")
       $(mkRelFile "data/test028.json"),
     PosTest
-      6
+      10
       "Test029: let hoisting"
       $(mkRelDir "Core")
       $(mkRelFile "test029.jvc")
