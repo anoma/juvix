@@ -4,15 +4,8 @@ module Juvix.Compiler.Core.Extra.Recursors.Map where
 
 import Data.Functor.Identity
 import Data.Kind qualified as GHC
-import Data.Singletons.TH
 import Juvix.Compiler.Core.Extra.Base
 import Juvix.Compiler.Core.Extra.Recursors.Base
-import Juvix.Compiler.Core.Extra.Recursors.Parameters
-
-type DirTy :: Direction -> GHC.Type -> GHC.Type
-type family DirTy d c = res | res -> d where
-  DirTy 'TopDown c = Recur' c
-  DirTy 'BottomUp _ = Node -- For bottom up maps we never recur on the children
 
 -- | `umapG` maps the nodes bottom-up, i.e., when invoking the mapper function the
 -- recursive subnodes have already been mapped
@@ -119,14 +112,3 @@ fromRecur' d =
         End' x -> End' x
         Recur' (c, x) -> Recur' ((c, d), x)
     )
-
-nodeMapG' ::
-  (Monad m) =>
-  Sing dir ->
-  Collector (Int, [Binder]) c ->
-  (c -> Node -> m (DirTy dir c)) ->
-  Node ->
-  m Node
-nodeMapG' sdir = case sdir of
-  STopDown -> dmapG
-  SBottomUp -> umapG
