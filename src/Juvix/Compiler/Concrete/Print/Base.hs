@@ -174,8 +174,8 @@ instance SingI s => PrettyPrint (Iterator s) where
         rngs' = parens . sepSemicolon <$> nonEmpty rngs
         b = ppExpressionType _iteratorBody
         b'
-            | _iteratorBraces = braces (oneLineOrNextNoIndent b)
-            | otherwise = line <> b
+          | _iteratorBraces = braces (oneLineOrNextNoIndent b)
+          | otherwise = line <> b
     parensIf _iteratorParens $
       hang (n <+?> is' <+?> rngs' <> b')
 
