@@ -74,17 +74,18 @@ convertNode tab = rmap go
                   0 ->
                     recur [] $ mkIf _caseInfo sym (mkBuiltinApp' OpEq [_caseValue, mkConstant' (ConstInteger 0)]) _caseBranchBody br
                   1 ->
-                    mkLet mempty binder' (mkBuiltinApp' OpIntSub [go recur _caseValue, mkConstant' (ConstInteger 1)]) $
+                    mkLet mempty binder' (go recur _caseValue) $
                       mkIf
                         _caseInfo
                         sym
-                        (mkBuiltinApp' OpIntLe [mkConstant' (ConstInteger 0), mkVar (Info.singleton (NameInfo name)) 0])
-                        (go (recur . (BCKeep binder :)) _caseBranchBody)
+                        (mkBuiltinApp' OpEq [mkConstant' (ConstInteger 0), mkVar (Info.singleton (NameInfo name)) 0])
                         (go (recur . (BCAdd 1 :)) br)
+                        (go (recur . ([BCAdd 1, BCRemove (BinderRemove binder subNode)] ++)) _caseBranchBody)
                     where
                       binder = List.head _caseBranchBinders
                       name = binder ^. binderName
                       binder' = over binderType (go recur) binder
+                      subNode = mkBuiltinApp' OpIntSub [mkVar (Info.singleton (NameInfo name)) 0, mkConstant' (ConstInteger 1)]
                   _ -> impossible
           maybeBranch :: Maybe Node -> Node
           maybeBranch = fromMaybe (mkBuiltinApp' OpFail [mkConstant' (ConstString "no matching branch")])

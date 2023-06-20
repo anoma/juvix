@@ -12,9 +12,9 @@ g : Nat → Nat;
 terminating
 h : Nat → Nat;
 
-f x := if (x < 1) 1 (2 * x + g (sub x 1));
-g x := if (x < 1) 1 (x + h (sub x 1));
-h x := if (x < 1) 1 (x * f (sub x 1));
+f x := case x | zero := 1 | suc y := 2 * x + g y;
+g x := case x | zero := 1 | suc y := x + h y;
+h x := case x | zero := 1 | suc y := x * f y;
 
 main : Nat → Nat;
 main x := f x + f (2 * x);

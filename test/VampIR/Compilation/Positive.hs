@@ -106,31 +106,31 @@ tests =
       $(mkRelFile "test010.juvix")
       $(mkRelFile "data/test010.json"),
     posTest
-      12
+      8
       "Test011: recursion"
       $(mkRelDir ".")
       $(mkRelFile "test011.juvix")
       $(mkRelFile "data/test011.json"),
     posTest
-      12
+      8
       "Test012: tail recursion"
       $(mkRelDir ".")
       $(mkRelFile "test012.juvix")
       $(mkRelFile "data/test012.json"),
     posTest
-      12
+      8
       "Test013: tail recursion: Fibonacci numbers in linear time"
       $(mkRelDir ".")
       $(mkRelFile "test013.juvix")
       $(mkRelFile "data/test013.json"),
     posTest
-      12
+      8
       "Test014: recursion through higher-order functions"
       $(mkRelDir ".")
       $(mkRelFile "test014.juvix")
       $(mkRelFile "data/test014.json"),
     posTest
-      12
+      8
       "Test015: tail recursion through higher-order functions"
       $(mkRelDir ".")
       $(mkRelFile "test015.juvix")
@@ -142,7 +142,7 @@ tests =
       $(mkRelFile "test016.juvix")
       $(mkRelFile "data/test016.json"),
     posTest
-      14
+      9
       "Test017: mutual recursion"
       $(mkRelDir ".")
       $(mkRelFile "test017.juvix")
@@ -160,7 +160,7 @@ tests =
       $(mkRelFile "test019.juvix")
       $(mkRelFile "data/test019.json"),
     posTest
-      12
+      8
       "Test020: boolean target"
       $(mkRelDir ".")
       $(mkRelFile "test020.juvix")
