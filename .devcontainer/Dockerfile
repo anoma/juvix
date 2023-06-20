@@ -12,45 +12,47 @@ ENV BOOTSTRAP_HASKELL_INSTALL_HLS=1
 
 # OS packages for ghcup and juvix runtime
 RUN apt-get update && \
-    apt-get -y install --no-install-recommends \
-    curl \
-    sudo \
-    wget \
-    unzip \
-    git \
-    jq \
-    bc \
-    make \
-    cmake \
-    clang \
-    lldb \
-    lld \
-    llvm \
-    automake \
-    rsync \
-    htop \
-    build-essential \
-    lsb-release \
-    pkg-config \
-    libffi-dev \
-    libgmp-dev \
-    libgmp10 \
-    software-properties-common \
-    libssl-dev \
-    libicu-dev \
-    libtinfo-dev \
-    libsystemd-dev \
-    zlib1g-dev \
-    g++ \
-    libncurses-dev \
-    libncursesw5 \
-    libtinfo5 \
-    libtool \
-    autoconf && apt-get clean
+      apt-get -y install --no-install-recommends \
+      curl \
+      sudo \
+      wget \
+      unzip \
+      git \
+      jq \
+      bc \
+      make \
+      cmake \
+      clang \
+      lldb \
+      lld \
+      llvm \
+      automake \
+      rsync \
+      htop \
+      build-essential \
+      lsb-release \
+      pkg-config \
+      libffi-dev \
+      libgmp-dev \
+      libgmp10 \
+      software-properties-common \
+      libssl-dev \
+      libicu-dev \
+      libtinfo-dev \
+      libsystemd-dev \
+      zlib1g-dev \
+      g++ \
+      libncurses-dev \
+      libncursesw5 \
+      libtinfo5 \
+      libtool \
+      autoconf && apt-get clean
 
 RUN sudo bash -c 'curl -sSL https://get.haskellstack.org/ | sh'
 
 ENV PATH=${PATH}:/home/vscode/.ghcup/bin
+
+RUN sudo bash -c "curl --proto '=https' --tlsv1.2 -sSf https://get-ghcup.haskell.org | sh"
 
 ENV PATH=${PATH}:/home/vscode/.local/bin
 RUN sudo bash -c 'mkdir -p /home/vscode/.local/bin'
@@ -62,13 +64,8 @@ RUN sudo bash -c 'curl https://get.wasmer.io -sSfL | sudo WASMER_DIR=/home/vscod
 RUN sudo bash -c 'mkdir -p /home/vscode/.local/juvix'
 RUN sudo bash -c 'chmod -R a+rXw /home/vscode/.local/juvix'
 
-RUN sudo bash -c 'curl -s https://api.github.com/repos/anoma/juvix/releases/latest \
-      | grep -a "browser_download_url.*linux" \
-      | cut -d : -f 2,3 \
-      | tr -d \" \
-      | wget --output-document juvix.zip -qi - \
-      && unzip juvix.zip \
-      && mv juvix /home/vscode/.local/bin/juvix'
+RUN sudo bash -c 'curl --proto "=https" --tlsv1.2 -sSfL https://get.juvix.org \
+      | sudo  XDG_BIN_HOME=/home/vscode/.local/bin JUVIX_INSTALLER_INSTALL_VAMPIR_YES=true JUVIX_INSTALLER_ASSUME_YES=true sh'
 
 RUN sudo bash -c 'mkdir -p /home/vscode/.local/wasi-sysroot'
 RUN sudo bash -c 'curl -s https://api.github.com/repos/WebAssembly/wasi-sdk/releases/tags/wasi-sdk-16 \
@@ -86,6 +83,3 @@ RUN sudo bash -c 'curl -s https://api.github.com/repos/jonaprieto/smoke/releases
       | wget --output-document smoke -qi - \
       && mv smoke /home/vscode/.local/bin/smoke \
       && chmod a+x /home/vscode/.local/bin/smoke'
-
-USER vscode
-RUN bash -c "curl --proto '=https' --tlsv1.2 -sSf https://get-ghcup.haskell.org | sh"
