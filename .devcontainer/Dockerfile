@@ -68,7 +68,7 @@ ENV XDG_BIN_HOME=/home/vscode/.local/bin
 ENV XDG_DATA_HOME=/home/vscode/.local/share
 ENV JUVIX_INSTALLER_INSTALL_VAMPIR_YES=true
 ENV JUVIX_INSTALLER_ASSUME_YES=true
-RUN sudo bash -c 'curl --proto "=https" --tlsv1.2 -sSf https://get.juvix.org | sudo sh'
+RUN sudo bash -c 'curl --proto "=https" --tlsv1.2 -sSfL https://get.juvix.org | sudo sh'
 
 RUN sudo bash -c 'mkdir -p /home/vscode/.local/wasi-sysroot'
 RUN sudo bash -c 'curl -s https://api.github.com/repos/WebAssembly/wasi-sdk/releases/tags/wasi-sdk-16 \
