@@ -25,6 +25,9 @@ data ApplicationArg = ApplicationArg
 
 makeLenses ''ApplicationArg
 
+instance HasLoc ApplicationArg where
+  getLoc = getLoc . (^. appArg)
+
 class HasExpressions a where
   leafExpressions :: Traversal' a Expression
 
@@ -304,7 +307,7 @@ foldFunType l r = go l
       [] -> r
       arg : args -> ExpressionFunction (Function arg (go args))
 
--- -- | a -> (b -> c)  ==> ([a, b], c)
+-- | a -> (b -> c)  ==> ([a, b], c)
 unfoldFunType :: Expression -> ([FunctionParameter], Expression)
 unfoldFunType t = case t of
   ExpressionFunction (Function l r) -> first (l :) (unfoldFunType r)
@@ -317,24 +320,24 @@ unfoldTypeAbsType t = case t of
   _ -> ([], t)
 
 foldExplicitApplication :: Expression -> [Expression] -> Expression
-foldExplicitApplication f = foldApplication f . map (Explicit,)
+foldExplicitApplication f = foldApplication f . map (ApplicationArg Explicit)
 
-foldApplication :: Expression -> [(IsImplicit, Expression)] -> Expression
-foldApplication f = \case
+foldApplication :: Expression -> [ApplicationArg] -> Expression
+foldApplication f args = case args of
   [] -> f
-  (i, a) : as -> foldApplication (ExpressionApplication (Application f a i)) as
+  ((ApplicationArg i a) : as) -> foldApplication (ExpressionApplication (Application f a i)) as
 
-unfoldApplication' :: Application -> (Expression, NonEmpty (IsImplicit, Expression))
-unfoldApplication' (Application l' r' i') = second (|: (i', r')) (unfoldExpressionApp l')
+unfoldApplication' :: Application -> (Expression, NonEmpty ApplicationArg)
+unfoldApplication' (Application l' r' i') = second (|: (ApplicationArg i' r')) (unfoldExpressionApp l')
 
-unfoldExpressionApp :: Expression -> (Expression, [(IsImplicit, Expression)])
+unfoldExpressionApp :: Expression -> (Expression, [ApplicationArg])
 unfoldExpressionApp = \case
   ExpressionApplication (Application l r i) ->
-    second (`snoc` (i, r)) (unfoldExpressionApp l)
+    second (`snoc` ApplicationArg i r) (unfoldExpressionApp l)
   e -> (e, [])
 
 unfoldApplication :: Application -> (Expression, NonEmpty Expression)
-unfoldApplication = fmap (fmap snd) . unfoldApplication'
+unfoldApplication = fmap (fmap (^. appArg)) . unfoldApplication'
 
 reachableModules :: Module -> [Module]
 reachableModules = fst . run . runOutputList . evalState (mempty :: HashSet Name) . go
@@ -444,3 +447,46 @@ viewExpressionAsPattern e = case viewApp e of
     getVariable f = case f of
       ExpressionIden (IdenVar n) -> Just n
       _ -> Nothing
+
+class IsExpression a where
+  toExpression :: a -> Expression
+
+instance IsExpression Iden where
+  toExpression = ExpressionIden
+
+instance IsExpression Expression where
+  toExpression = id
+
+instance IsExpression Name where
+  toExpression n = ExpressionIden (mkIden n)
+    where
+      mkIden = case n ^. nameKind of
+        KNameConstructor -> IdenConstructor
+        KNameInductive -> IdenInductive
+        KNameFunction -> IdenFunction
+        KNameAxiom -> IdenAxiom
+        KNameLocal -> IdenVar
+        KNameLocalModule -> impossible
+        KNameTopModule -> impossible
+
+instance IsExpression SmallUniverse where
+  toExpression = ExpressionUniverse
+
+instance IsExpression Application where
+  toExpression = ExpressionApplication
+
+instance IsExpression Function where
+  toExpression = ExpressionFunction
+
+instance IsExpression ConstructorApp where
+  toExpression (ConstructorApp c args _) =
+    foldApplication (toExpression c) (map toApplicationArg args)
+
+toApplicationArg :: PatternArg -> ApplicationArg
+toApplicationArg p =
+  set appArgIsImplicit (p ^. patternArgIsImplicit) (helper (p ^. patternArgPattern))
+  where
+    helper :: Pattern -> ApplicationArg
+    helper = \case
+      PatternVariable v -> ApplicationArg Explicit (toExpression v)
+      PatternConstructorApp a -> ApplicationArg Explicit (toExpression a)

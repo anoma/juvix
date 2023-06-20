@@ -198,7 +198,7 @@ guessArity = \case
         Nothing -> ArityUnknown
         Just a' -> foldArity (set ufoldArityParams a' u)
       where
-        (f, args) = second (map fst . toList) (unfoldApplication' a)
+        (f, args) = second (map (^. appArgIsImplicit) . toList) (unfoldApplication' a)
 
         refine :: [IsImplicit] -> [ArityParameter] -> Maybe [ArityParameter]
         refine as ps = case (as, ps) of
@@ -542,7 +542,7 @@ checkExpression hintArity expr = case expr of
           _paramType <- checkType (p ^. paramType)
           return FunctionParameter {..}
 
-    goApp :: Expression -> [(IsImplicit, Expression)] -> Sem r Expression
+    goApp :: Expression -> [ApplicationArg] -> Sem r Expression
     goApp f args = do
       case f of
         ExpressionIden (IdenAxiom n) -> do
@@ -561,7 +561,7 @@ checkExpression hintArity expr = case expr of
             _ -> appHelper f args
         _ -> appHelper f args
 
-    goBuiltinApp :: Name -> Int -> Int -> Expression -> [(IsImplicit, Expression)] -> Sem r Expression
+    goBuiltinApp :: Name -> Int -> Int -> Expression -> [ApplicationArg] -> Sem r Expression
     goBuiltinApp n implArgsNum argsNum f args = do
       args' <- goImplArgs implArgsNum args
       if
@@ -574,14 +574,14 @@ checkExpression hintArity expr = case expr of
                       _builtinNotFullyAplliedExpectedArgsNum = argsNum
                     }
       where
-        goImplArgs :: Int -> [(IsImplicit, Expression)] -> Sem r [(IsImplicit, Expression)]
+        goImplArgs :: Int -> [ApplicationArg] -> Sem r [ApplicationArg]
         goImplArgs 0 as = return as
-        goImplArgs k ((Implicit, _) : as) = goImplArgs (k - 1) as
+        goImplArgs k ((ApplicationArg Implicit _) : as) = goImplArgs (k - 1) as
         goImplArgs _ as = return as
 
-    appHelper :: Expression -> [(IsImplicit, Expression)] -> Sem r Expression
+    appHelper :: Expression -> [ApplicationArg] -> Sem r Expression
     appHelper fun0 args = do
-      (fun', args') :: (Expression, [(IsImplicit, Expression)]) <- case fun0 of
+      (fun', args') :: (Expression, [ApplicationArg]) <- case fun0 of
         ExpressionHole {} -> (fun0,) <$> mapM (secondM (checkExpression ArityUnknown)) args
         ExpressionIden i -> (fun0,) <$> (idenArity i >>= helper (getLoc i))
         ExpressionLiteral l -> (fun0,) <$> helper (getLoc l) arityLiteral
@@ -607,7 +607,7 @@ checkExpression hintArity expr = case expr of
         ExpressionApplication {} -> impossible
       return (foldApplication fun' args')
       where
-        helper :: Interval -> Arity -> Sem r [(IsImplicit, Expression)]
+        helper :: Interval -> Arity -> Sem r [ApplicationArg]
         helper i ari = do
           let argsAris :: [Arity]
               argsAris = map toArity (unfoldArity ari)
@@ -615,36 +615,36 @@ checkExpression hintArity expr = case expr of
               toArity = \case
                 ParamExplicit a -> a
                 ParamImplicit -> ArityUnit
-          argsWithHoles :: [(IsImplicit, Expression)] <- addHoles i hintArity ari args
+          argsWithHoles :: [ApplicationArg] <- addHoles i hintArity ari args
           let argsWithAris :: [(IsImplicit, (Arity, Expression))]
-              argsWithAris = [(i', (a, e')) | (a, (i', e')) <- zip (argsAris ++ repeat ArityUnknown) argsWithHoles]
-          mapM (secondM (uncurry checkExpression)) argsWithAris
+              argsWithAris = [(i', (a, e')) | (a, (ApplicationArg i' e')) <- zip (argsAris ++ repeat ArityUnknown) argsWithHoles]
+          mapM (fmap (uncurry ApplicationArg) . secondM (uncurry checkExpression)) argsWithAris
         addHoles ::
           Interval ->
           Arity ->
           Arity ->
-          [(IsImplicit, Expression)] ->
-          Sem r [(IsImplicit, Expression)]
+          [ApplicationArg] ->
+          Sem r [ApplicationArg]
         addHoles loc hint = go 0
           where
             go ::
               Int ->
               Arity ->
-              [(IsImplicit, Expression)] ->
-              Sem r [(IsImplicit, Expression)]
+              [ApplicationArg] ->
+              Sem r [ApplicationArg]
             go idx ari goargs = case (ari, goargs) of
-              (ArityFunction (FunctionArity ParamImplicit r), (Implicit, e) : rest) ->
-                ((Implicit, e) :) <$> go (succ idx) r rest
-              (ArityFunction (FunctionArity (ParamExplicit {}) r), (Explicit, e) : rest) ->
-                ((Explicit, e) :) <$> go (succ idx) r rest
+              (ArityFunction (FunctionArity ParamImplicit r), (ApplicationArg Implicit e) : rest) ->
+                ((ApplicationArg Implicit e) :) <$> go (succ idx) r rest
+              (ArityFunction (FunctionArity (ParamExplicit {}) r), (ApplicationArg Explicit e) : rest) ->
+                ((ApplicationArg Explicit e) :) <$> go (succ idx) r rest
               (ArityFunction (FunctionArity ParamImplicit _), [])
                 -- When there are no remaining arguments and the expected arity of the
                 -- expression matches the current arity we should *not* insert a hole.
                 | ari == hint -> return []
               (ArityFunction (FunctionArity ParamImplicit r), _) -> do
                 h <- newHole loc
-                ((Implicit, ExpressionHole h) :) <$> go (succ idx) r goargs
-              (ArityFunction (FunctionArity (ParamExplicit {}) _), (Implicit, _) : _) ->
+                ((ApplicationArg Implicit (ExpressionHole h)) :) <$> go (succ idx) r goargs
+              (ArityFunction (FunctionArity (ParamExplicit {}) _), (ApplicationArg Implicit _) : _) ->
                 throw
                   ( ErrExpectedExplicitArgument
                       ExpectedExplicitArgument

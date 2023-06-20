@@ -5,7 +5,6 @@ import Commands.Dev.Termination.CallGraph.Options
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Internal.Language qualified as Internal
 import Juvix.Compiler.Internal.Pretty qualified as Internal
--- import Juvix.Compiler.Internal.Translation.FromConcrete qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromAbstract.Data.Context qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination qualified as Termination
 import Juvix.Prelude.Pretty

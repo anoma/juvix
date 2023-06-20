@@ -21,11 +21,13 @@ runPP opts = highlight_ . run . runReader opts
 highlight_ :: Doc Ann -> Doc Ann
 highlight_ = annotate AnnCode
 
-ppApp :: Micro.Options -> (Expression, [(IsImplicit, Expression)]) -> Doc Ann
+ppApp :: Micro.Options -> (Expression, [ApplicationArg]) -> Doc Ann
 ppApp opts (fun, args) =
-  hsep (ppAtom opts fun : map (uncurry (ppArg opts)) args)
+  hsep (ppAtom opts fun : map (ppArg opts) args)
 
-ppArg :: Micro.Options -> IsImplicit -> Expression -> Doc Ann
-ppArg opts im arg = case im of
-  Implicit -> braces (ppCode opts arg)
-  Explicit -> ppAtom opts arg
+ppArg :: Micro.Options -> ApplicationArg -> Doc Ann
+ppArg opts arg = case arg ^. appArgIsImplicit of
+  Implicit -> braces (ppCode opts e)
+  Explicit -> ppAtom opts e
+  where
+    e = arg ^. appArg

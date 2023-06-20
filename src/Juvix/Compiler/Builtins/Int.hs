@@ -1,6 +1,6 @@
 module Juvix.Compiler.Builtins.Int where
 
-import Juvix.Compiler.Abstract.Extra
+import Juvix.Compiler.Internal.Extra
 import Juvix.Compiler.Builtins.Effect
 import Juvix.Prelude
 

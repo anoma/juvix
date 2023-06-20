@@ -4,8 +4,8 @@ module Juvix.Compiler.Builtins.Effect
 where
 
 import Data.HashSet qualified as HashSet
-import Juvix.Compiler.Abstract.Extra
-import Juvix.Compiler.Abstract.Pretty
+import Juvix.Compiler.Internal.Extra
+import Juvix.Compiler.Internal.Pretty
 import Juvix.Compiler.Builtins.Error
 import Juvix.Prelude
 

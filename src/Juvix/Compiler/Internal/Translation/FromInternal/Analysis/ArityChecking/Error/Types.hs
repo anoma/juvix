@@ -102,7 +102,7 @@ instance ToGenericError WrongPatternIsImplicit where
               <+> ppCode opts' pat
 
 data ExpectedExplicitArgument = ExpectedExplicitArgument
-  { _expectedExplicitArgumentApp :: (Expression, [(IsImplicit, Expression)]),
+  { _expectedExplicitArgumentApp :: (Expression, [ApplicationArg]),
     _expectedExplicitArgumentIx :: Int
   }
 
@@ -122,8 +122,8 @@ instance ToGenericError ExpectedExplicitArgument where
           opts' = fromGenericOptions opts
           app@(f, args) = e ^. expectedExplicitArgumentApp
           idx = e ^. expectedExplicitArgumentIx
-          arg :: Expression
-          arg = snd (toList args !! idx)
+          arg :: ApplicationArg
+          arg = (toList args !! idx)
           i = getLoc arg
           msg =
             "Expected an explicit argument as the"
@@ -131,7 +131,7 @@ instance ToGenericError ExpectedExplicitArgument where
               <+> "argument of"
               <+> ppCode opts' f
               <+> "but found"
-              <+> ppArg opts' Implicit arg
+              <+> ppArg opts' arg
                 <> "."
                 <> softline
                 <> "In the application"
@@ -162,7 +162,7 @@ instance ToGenericError PatternFunction where
               <+> "Function types cannot be pattern matched"
 
 data TooManyArguments = TooManyArguments
-  { _tooManyArgumentsApp :: (Expression, [(IsImplicit, Expression)]),
+  { _tooManyArgumentsApp :: (Expression, [ApplicationArg]),
     _tooManyArgumentsUnexpected :: Int
   }
 
@@ -180,13 +180,13 @@ instance ToGenericError TooManyArguments where
             }
         where
           opts' = fromGenericOptions opts
-          i = getLocSpan (fromJust (nonEmpty (map snd unexpectedArgs)))
+          i = getLocSpan (nonEmpty' (map (^. appArg) unexpectedArgs))
           (fun, args) = e ^. tooManyArgumentsApp
           numUnexpected :: Int
           numUnexpected = e ^. tooManyArgumentsUnexpected
-          unexpectedArgs :: [(IsImplicit, Expression)]
+          unexpectedArgs :: [ApplicationArg]
           unexpectedArgs = reverse . take numUnexpected . reverse $ args
-          ppUnexpectedArgs = hsep (map (uncurry (ppArg opts')) unexpectedArgs)
+          ppUnexpectedArgs = hsep (map (ppArg opts') unexpectedArgs)
           app :: Expression
           app = foldApplication fun args
           msg =
@@ -207,7 +207,7 @@ instance ToGenericError TooManyArguments where
 
 data FunctionApplied = FunctionApplied
   { _functionAppliedFunction :: Function,
-    _functionAppliedArguments :: [(IsImplicit, Expression)]
+    _functionAppliedArguments :: [ApplicationArg]
   }
 
 makeLenses ''FunctionApplied
@@ -224,7 +224,7 @@ instance ToGenericError FunctionApplied where
             }
         where
           opts' = fromGenericOptions opts
-          i = getLocSpan (fun :| map snd args)
+          i = getLocSpan (fun :| map (^. appArg) args)
           args = e ^. functionAppliedArguments
           fun = ExpressionFunction (e ^. functionAppliedFunction)
           msg =
