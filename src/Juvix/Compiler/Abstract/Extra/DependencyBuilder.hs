@@ -10,12 +10,6 @@ import Juvix.Prelude
 -- adjacency set representation
 type DependencyGraph = HashMap Name (HashSet Name)
 
-newtype VisitedModules = VisitedModules
-  { _visitedModulesSet :: HashSet Name
-  }
-
-makeLenses ''VisitedModules
-
 type StartNodes = HashSet Name
 
 type ExportsTable = HashSet NameId
@@ -32,8 +26,7 @@ buildDependencyInfoHelper ::
   ( Sem
       '[ Reader ExportsTable,
          State DependencyGraph,
-         State StartNodes,
-         State VisitedModules
+         State StartNodes
        ]
       ()
   ) ->
@@ -43,11 +36,11 @@ buildDependencyInfoHelper tbl m = createDependencyInfo graph startNodes
     startNodes :: StartNodes
     graph :: DependencyGraph
     (startNodes, graph) =
-      run $
-        evalState (VisitedModules mempty) $
-          runState HashSet.empty $
-            execState HashMap.empty $
-              runReader tbl m
+      run
+        . runState HashSet.empty
+        . execState HashMap.empty
+        . runReader tbl
+        $ m
 
 addStartNode :: (Member (State StartNodes) r) => Name -> Sem r ()
 addStartNode n = modify (HashSet.insert n)
@@ -87,29 +80,26 @@ checkBuiltinInductiveStartNode i = whenJust (i ^. inductiveBuiltin) go
     addInductiveStartNode :: Sem r ()
     addInductiveStartNode = addStartNode (i ^. inductiveName)
 
-guardNotVisited :: (Member (State VisitedModules) r) => Name -> Sem r () -> Sem r ()
-guardNotVisited n cont =
-  unlessM
-    (HashSet.member n . (^. visitedModulesSet) <$> get)
-    (modify (over visitedModulesSet (HashSet.insert n)) >> cont)
-
-goModule :: (Members '[Reader ExportsTable, State DependencyGraph, State StartNodes, State VisitedModules] r) => Module -> Sem r ()
+goModule :: (Members '[Reader ExportsTable, State DependencyGraph, State StartNodes] r) => Module -> Sem r ()
 goModule m = do
   checkStartNode (m ^. moduleName)
   mapM_ (goStatement (m ^. moduleName)) (m ^. moduleBody . moduleStatements)
 
-goLocalModule :: (Members '[Reader ExportsTable, State DependencyGraph, State StartNodes, State VisitedModules] r) => Name -> Module -> Sem r ()
+goLocalModule :: (Members '[Reader ExportsTable, State DependencyGraph, State StartNodes] r) => Name -> Module -> Sem r ()
 goLocalModule parentModule m = do
   addEdge (m ^. moduleName) parentModule
   goModule m
 
--- Declarations in a module depend on the module, not the other way round (a
+goInclude :: Members '[Reader ExportsTable, State DependencyGraph, State StartNodes] r => Include -> Sem r ()
+goInclude (Include m) = goModule m
+
+-- | Declarations in a module depend on the module, not the other way round (a
 -- module is reachable if at least one of the declarations in it is reachable)
-goStatement :: forall r. Members '[Reader ExportsTable, State DependencyGraph, State StartNodes, State VisitedModules] r => Name -> Statement -> Sem r ()
+goStatement :: forall r. Members '[Reader ExportsTable, State DependencyGraph, State StartNodes] r => Name -> Statement -> Sem r ()
 goStatement parentModule = \case
   StatementAxiom ax -> goAxiom ax
   StatementFunction f -> goTopFunctionDef parentModule f
-  StatementImport m -> guardNotVisited (m ^. moduleName) (goModule m)
+  StatementInclude m -> goInclude m
   StatementLocalModule m -> goLocalModule parentModule m
   StatementInductive i -> goInductive i
   where

@@ -20,14 +20,27 @@ import Juvix.Prelude
 unsupported :: Text -> a
 unsupported msg = error $ msg <> "Scoped to Abstract: not yet supported"
 
+-- newtype TranslationState = TranslationState
+--   { -- | Top modules are supposed to be included at most once.
+--     _translationStateIncluded :: HashSet Abstract.TopModuleName
+--   }
+
+-- iniState :: TranslationState
+-- iniState =
+--   TranslationState
+--     { _translationStateIncluded = mempty
+--     }
+
+-- makeLenses ''TranslationState
+
 fromConcrete :: (Members '[Error JuvixError, Builtins, NameIdGen] r) => Scoper.ScoperResult -> Sem r AbstractResult
 fromConcrete _resultScoper =
   mapError (JuvixError @ScoperError) $ do
     (_resultTable, (_resultModulesCache, _resultModules)) <-
-      runInfoTableBuilder $
-        runReader @Pragmas mempty $
-          runState (ModulesCache mempty) $
-            mapM goTopModule ms
+      runInfoTableBuilder
+        . runReader @Pragmas mempty
+        . runState (ModulesCache mempty)
+        $ (nonEmpty' <$> mapMaybeM goTopModule (toList ms))
     let _resultExports = _resultScoper ^. Scoper.resultExports
     return AbstractResult {..}
   where
@@ -40,7 +53,10 @@ fromConcreteImport ::
   Members '[Error JuvixError, NameIdGen, Builtins, InfoTableBuilder, State ModulesCache] r =>
   Scoper.Import 'Scoped ->
   Sem r Abstract.TopModule
-fromConcreteImport = mapError (JuvixError @ScoperError) . runReader @Pragmas mempty . goImport
+fromConcreteImport =
+  mapError (JuvixError @ScoperError)
+    . runReader @Pragmas mempty
+    . goImportCacheMiss
 
 fromConcreteOpenImport ::
   Members '[Error JuvixError, NameIdGen, Builtins, InfoTableBuilder, State ModulesCache] r =>
@@ -48,53 +64,63 @@ fromConcreteOpenImport ::
   Sem r (Maybe Abstract.TopModule)
 fromConcreteOpenImport = mapError (JuvixError @ScoperError) . runReader @Pragmas mempty . goOpenModule'
 
-goTopModule ::
+goTopModuleFirst ::
+  forall r.
   (Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ModulesCache] r) =>
   Module 'Scoped 'ModuleTop ->
   Sem r Abstract.TopModule
-goTopModule = goModule
+goTopModuleFirst m = do
+  let moduleNameId :: S.NameId
+      moduleNameId = m ^. Concrete.modulePath . S.nameId
+  am <- goModule' m
+  modify (over cachedModules (HashMap.insert moduleNameId am))
+  return am
+
+goTopModule ::
+  forall r.
+  (Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ModulesCache] r) =>
+  Module 'Scoped 'ModuleTop ->
+  Sem r (Maybe Abstract.TopModule)
+goTopModule m = do
+  cache <- gets (^. cachedModules)
+  let moduleNameId :: S.NameId
+      moduleNameId = m ^. Concrete.modulePath . S.nameId
+      processModule :: Sem r Abstract.Module
+      processModule = do
+        am <- goModule' m
+        modify (over cachedModules (HashMap.insert moduleNameId am))
+        return am
+  if
+      | isJust (cache ^. at moduleNameId) -> return Nothing
+      | otherwise -> Just <$> processModule
 
 goLocalModule ::
   (Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ModulesCache] r) =>
   Module 'Scoped 'ModuleLocal ->
   Sem r Abstract.LocalModule
-goLocalModule = goModule
+goLocalModule = goModule'
 
-goModule ::
+goModule' ::
   forall r t.
   (Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ModulesCache] r, SingI t) =>
   Module 'Scoped t ->
   Sem r Abstract.Module
-goModule m = case sing :: SModuleIsTop t of
-  SModuleTop -> do
-    cache <- gets (^. cachedModules)
-    let moduleNameId :: S.NameId
-        moduleNameId = m ^. Concrete.modulePath . S.nameId
-    let processModule :: Sem r Abstract.Module
-        processModule = do
-          am <- goModule' m
-          modify (over cachedModules (HashMap.insert moduleNameId am))
-          return am
-    maybe processModule return (cache ^. at moduleNameId)
-  SModuleLocal -> goModule' m
+goModule' Module {..} = do
+  pragmas' <- goPragmas _modulePragmas
+  body' <- local (const pragmas') (goModuleBody _moduleBody)
+  examples' <- goExamples _moduleDoc
+  return
+    Abstract.Module
+      { _moduleName = name',
+        _moduleBody = body',
+        _moduleExamples = examples',
+        _modulePragmas = pragmas'
+      }
   where
-    goModule' :: Module 'Scoped t -> Sem r Abstract.Module
-    goModule' Module {..} = do
-      pragmas' <- goPragmas _modulePragmas
-      body' <- local (const pragmas') (goModuleBody _moduleBody)
-      examples' <- goExamples _moduleDoc
-      return
-        Abstract.Module
-          { _moduleName = name',
-            _moduleBody = body',
-            _moduleExamples = examples',
-            _modulePragmas = pragmas'
-          }
-      where
-        name' :: Abstract.Name
-        name' = case sing :: SModuleIsTop t of
-          SModuleTop -> goSymbol (S.topModulePathName _modulePath)
-          SModuleLocal -> goSymbol _modulePath
+    name' :: Abstract.Name
+    name' = case sing :: SModuleIsTop t of
+      SModuleTop -> goSymbol (S.topModulePathName _modulePath)
+      SModuleLocal -> goSymbol _modulePath
 
 goPragmas :: Member (Reader Pragmas) r => Maybe ParsedPragmas -> Sem r Pragmas
 goPragmas p = do
@@ -119,13 +145,22 @@ goSymbol s =
       _nameFixity = s ^. S.nameFixity
     }
 
+-- TODO give a better name?
+traverseM' ::
+  forall r s t a b.
+  (Monad r, Monad s, Traversable t) =>
+  (a -> r (s b)) ->
+  t a ->
+  r (s (t b))
+traverseM' f x = sequence <$> traverse f x
+
 goModuleBody ::
   forall r.
   (Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ModulesCache] r) =>
   [Statement 'Scoped] ->
   Sem r Abstract.ModuleBody
 goModuleBody ss' = do
-  otherThanFunctions <- mapMaybeM goStatement ss
+  otherThanFunctions :: [Indexed Abstract.Statement] <- mapMaybeM (traverseM' goStatement) ss
   functions <- map (fmap Abstract.StatementFunction) <$> compiledFunctions
   let _moduleStatements =
         map
@@ -153,38 +188,44 @@ goModuleBody ss' = do
         sigs :: [Indexed (TypeSignature 'Scoped)]
         sigs = [Indexed i t | (Indexed i (StatementTypeSignature t)) <- ss]
 
-goImport ::
+goImportCacheMiss ::
   forall r.
   (Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, State ModulesCache, Reader Pragmas] r) =>
   Import 'Scoped ->
   Sem r Abstract.TopModule
-goImport t = goModule (t ^. importModule . moduleRefModule)
+goImportCacheMiss t = goTopModuleFirst (t ^. importModule . moduleRefModule)
+
+goImport ::
+  forall r.
+  (Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, State ModulesCache, Reader Pragmas] r) =>
+  Import 'Scoped ->
+  Sem r (Maybe Abstract.TopModule)
+goImport Import {..} = goTopModule (_importModule ^. moduleRefModule)
 
 goStatement ::
   forall r.
-  (Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ModulesCache] r) =>
-  Indexed (Statement 'Scoped) ->
-  Sem r (Maybe (Indexed Abstract.Statement))
-goStatement (Indexed idx s) =
-  fmap (Indexed idx) <$> case s of
-    StatementAxiom d -> Just . Abstract.StatementAxiom <$> goAxiom d
-    StatementImport t -> Just . Abstract.StatementImport <$> goImport t
-    StatementSyntax {} -> return Nothing
-    StatementOpenModule o -> goOpenModule o
-    StatementInductive i -> Just . Abstract.StatementInductive <$> goInductive i
-    StatementModule f -> Just . Abstract.StatementLocalModule <$> goLocalModule f
-    StatementTypeSignature {} -> return Nothing
-    StatementFunctionClause {} -> return Nothing
+  Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ModulesCache] r =>
+  Statement 'Scoped ->
+  Sem r (Maybe Abstract.Statement)
+goStatement = \case
+  StatementAxiom d -> Just . Abstract.StatementAxiom <$> goAxiom d
+  StatementImport t -> fmap (Abstract.StatementInclude . Abstract.Include) <$> goImport t
+  StatementSyntax {} -> return Nothing
+  StatementOpenModule o -> goOpenModule o
+  StatementInductive i -> Just . Abstract.StatementInductive <$> goInductive i
+  StatementModule f -> Just . Abstract.StatementLocalModule <$> goLocalModule f
+  StatementTypeSignature {} -> return Nothing
+  StatementFunctionClause {} -> return Nothing
 
 goOpenModule' ::
   forall r.
-  (Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, State ModulesCache, Reader Pragmas] r) =>
+  Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, State ModulesCache, Reader Pragmas] r =>
   OpenModule 'Scoped ->
   Sem r (Maybe Abstract.TopModule)
 goOpenModule' o
   | isJust (o ^. openModuleImportKw) =
       case o ^. openModuleName of
-        ModuleRef' (SModuleTop :&: m) -> Just <$> goModule (m ^. moduleRefModule)
+        ModuleRef' (SModuleTop :&: m) -> goTopModule (m ^. moduleRefModule)
         _ -> impossible
   | otherwise = return Nothing
 
@@ -193,7 +234,7 @@ goOpenModule ::
   (Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ModulesCache] r) =>
   OpenModule 'Scoped ->
   Sem r (Maybe Abstract.Statement)
-goOpenModule o = fmap Abstract.StatementImport <$> goOpenModule' o
+goOpenModule o = fmap (Abstract.StatementInclude . Abstract.Include) <$> goOpenModule' o
 
 goLetFunctionDef ::
   (Members '[InfoTableBuilder, Reader Pragmas, Error ScoperError] r) =>
@@ -273,7 +314,6 @@ goFunctionClause FunctionClause {..} = do
         _clauseBody = _clauseBody'
       }
 
-
 goInductiveParameters ::
   Members '[Error ScoperError, Reader Pragmas, InfoTableBuilder] r =>
   InductiveParameters 'Scoped ->
@@ -287,9 +327,10 @@ goInductiveParameters InductiveParameters {..} = do
     _ -> unsupported "only type variables of small types are allowed"
 
   let goInductiveParameter :: S.Symbol -> Abstract.InductiveParameter
-      goInductiveParameter var = Abstract.InductiveParameter
-            { _inductiveParamName = goSymbol var
-            }
+      goInductiveParameter var =
+        Abstract.InductiveParameter
+          { _inductiveParamName = goSymbol var
+          }
   return (map goInductiveParameter (toList _inductiveParametersNames))
 
 registerBuiltinInductive ::

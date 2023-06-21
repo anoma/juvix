@@ -40,10 +40,15 @@ newtype ModuleBody = ModuleBody
   }
   deriving stock (Eq, Show)
 
+newtype Include = Include
+  { _includeModule :: Module
+  }
+  deriving stock (Show, Eq)
+
 data Statement
   = StatementInductive InductiveDef
   | StatementFunction FunctionDef
-  | StatementImport TopModule
+  | StatementInclude Include
   | StatementLocalModule LocalModule
   | StatementAxiom AxiomDef
   deriving stock (Eq, Show)
@@ -106,13 +111,14 @@ data Let = Let
 data Expression
   = ExpressionIden Iden
   | ExpressionApplication Application
-  | ExpressionLet Let
-  | ExpressionCase Case
-  | ExpressionUniverse Universe
   | ExpressionFunction Function
   | ExpressionLiteral LiteralLoc
   | ExpressionHole Hole
+  | ExpressionLet Let
+  | ExpressionUniverse Universe
   | ExpressionLambda Lambda
+  | -- | ExpressionSimpleLambda SimpleLambda -- NOTE note needed
+    ExpressionCase Case
   deriving stock (Eq, Show)
 
 data Application = Application

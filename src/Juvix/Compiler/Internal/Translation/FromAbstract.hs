@@ -175,7 +175,7 @@ goDefinition = \case
   Abstract.StatementInductive i -> pure . PreInductiveDef <$> goInductiveDef i
   Abstract.StatementFunction i -> pure . PreFunctionDef <$> goFunctionDef i
   Abstract.StatementAxiom a -> pure . PreAxiomDef <$> goAxiomDef a
-  Abstract.StatementImport {} -> return []
+  Abstract.StatementInclude {} -> return []
 
 scanImports :: Abstract.ModuleBody -> [Abstract.TopModule]
 scanImports (Abstract.ModuleBody stmts) = mconcatMap go stmts
@@ -183,7 +183,7 @@ scanImports (Abstract.ModuleBody stmts) = mconcatMap go stmts
     go :: Abstract.Statement -> [Abstract.TopModule]
     go = \case
       Abstract.StatementLocalModule m -> scanImports (m ^. Abstract.moduleBody)
-      Abstract.StatementImport t -> [t]
+      Abstract.StatementInclude (Abstract.Include t) -> [t]
       Abstract.StatementInductive {} -> []
       Abstract.StatementFunction {} -> []
       Abstract.StatementAxiom {} -> []
