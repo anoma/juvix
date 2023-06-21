@@ -214,6 +214,10 @@ jobs:
           echo "version=$ICUVERSION" >> $GITHUB_OUTPUT
 
       - name: Build smoke
+        env:
+          LDFLAGS: -L/usr/local/opt/icu4c/lib
+          CPPFLAGS: -I/usr/local/opt/icu4c/include
+          PKG_CONFIG_PATH: /usr/local/opt/icu4c/lib/pkgconfig
         uses: freckle/stack-action@v4
         with:
           test: false
