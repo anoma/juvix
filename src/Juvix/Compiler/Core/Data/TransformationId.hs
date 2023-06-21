@@ -27,9 +27,11 @@ data TransformationId
   | LetHoisting
   | Inlining
   | FoldTypeSynonyms
+  | CaseCallLifting
   | OptPhaseEval
   | OptPhaseExec
   | OptPhaseGeb
+  | OptPhaseVampIR
   | OptPhaseMain
   deriving stock (Data, Bounded, Enum, Show)
 

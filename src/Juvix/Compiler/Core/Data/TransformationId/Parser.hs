@@ -87,9 +87,11 @@ transformationText = \case
   LetHoisting -> strLetHoisting
   Inlining -> strInlining
   FoldTypeSynonyms -> strFoldTypeSynonyms
+  CaseCallLifting -> strCaseCallLifting
   OptPhaseEval -> strOptPhaseEval
   OptPhaseExec -> strOptPhaseExec
   OptPhaseGeb -> strOptPhaseGeb
+  OptPhaseVampIR -> strOptPhaseVampIR
   OptPhaseMain -> strOptPhaseMain
 
 parsePipeline :: MonadParsec e Text m => m PipelineId
@@ -188,6 +190,9 @@ strInlining = "inlining"
 strFoldTypeSynonyms :: Text
 strFoldTypeSynonyms = "fold-type-synonyms"
 
+strCaseCallLifting :: Text
+strCaseCallLifting = "case-call-lifting"
+
 strOptPhaseEval :: Text
 strOptPhaseEval = "opt-phase-eval"
 
@@ -196,6 +201,9 @@ strOptPhaseExec = "opt-phase-exec"
 
 strOptPhaseGeb :: Text
 strOptPhaseGeb = "opt-phase-geb"
+
+strOptPhaseVampIR :: Text
+strOptPhaseVampIR = "opt-phase-vampir"
 
 strOptPhaseMain :: Text
 strOptPhaseMain = "opt-phase-main"
