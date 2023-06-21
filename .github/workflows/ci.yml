@@ -187,6 +187,40 @@ jobs:
       - name: Setup Wasmer
         uses: wasmerio/setup-wasmer@v3
 
+      # smoke dynamically links to icu4c, so a cached binary of smoke will break
+      # when brew bumps the icu4c version. In the following steps we use the
+      # icu4c version in the cache key of the smoke build to avoid this issue.
+      #
+      # NB: The smoke build cannot be done as a separate job because the smoke
+      # binary must be built using exactly the same version of the macos-12
+      # runner image as the smoke testing step to make sure that the icu4c
+      # versions match.
+      - name: Checkout smoke repo
+        uses: actions/checkout@v3
+        with:
+          repository: jonaprieto/smoke
+          ref: regex-icu
+          path: smoke-repo
+
+      - name: Install ICU4C
+        run: |
+          brew install icu4c
+          brew link icu4c --force
+
+      - name: Get ICU4C version
+        id: icuversion
+        run: |
+          ICUVERSION=$(echo -n $(brew list --versions icu4c | head -n 1 | sed -E 's/ /-/g'))
+          echo "version=$ICUVERSION" >> $GITHUB_OUTPUT
+
+      - name: Build smoke
+        uses: freckle/stack-action@v4
+        with:
+          test: false
+          stack-arguments: --copy-bins
+          working-directory: smoke-repo
+          cache-prefix: ${{ steps.icuversion.outputs.version }}
+
       - name: Set homebrew LLVM CC and LIBTOOL vars (macOS)
         run: |
           echo "CC=$(brew --prefix llvm@15)/bin/clang" >> $GITHUB_ENV
@@ -239,40 +273,6 @@ jobs:
         run: |
           cd main
           make check-format-juvix-files && make typecheck-juvix-examples
-
-      # smoke dynamically links to icu4c, so a cached binary of smoke will break
-      # when brew bumps the icu4c version. In the following steps we use the
-      # icu4c version in the cache key of the smoke build to avoid this issue.
-      #
-      # NB: The smoke build cannot be done as a separate job because the smoke
-      # binary must be built using exactly the same version of the macos-12
-      # runner image as the smoke testing step to make sure that the icu4c
-      # versions match.
-      - name: Checkout smoke repo
-        uses: actions/checkout@v3
-        with:
-          repository: jonaprieto/smoke
-          ref: regex-icu
-          path: smoke-repo
-
-      - name: Install ICU4C
-        run: |
-          brew install icu4c
-          brew link icu4c --force
-
-      - name: Get ICU4C version
-        id: icuversion
-        run: |
-          ICUVERSION=$(echo -n $(brew list --versions icu4c | head -n 1 | sed -E 's/ /-/g'))
-          echo "version=$ICUVERSION" >> $GITHUB_OUTPUT
-
-      - name: Build smoke
-        uses: freckle/stack-action@v4
-        with:
-          test: false
-          stack-arguments: --copy-bins
-          working-directory: smoke-repo
-          cache-prefix: ${{ steps.icuversion.outputs.version }}
 
       - name: Smoke testing (macOS)
         id: smoke-macos
