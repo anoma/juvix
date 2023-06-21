@@ -199,11 +199,13 @@ instance HasExpressions InductiveDef where
     params' <- traverse (leafExpressions f) _inductiveParameters
     constrs' <- traverse (leafExpressions f) _inductiveConstructors
     examples' <- traverse (leafExpressions f) _inductiveExamples
+    ty' <- leafExpressions f _inductiveType
     pure
       InductiveDef
         { _inductiveParameters = params',
           _inductiveConstructors = constrs',
           _inductiveExamples = examples',
+          _inductiveType = ty',
           _inductiveName,
           _inductiveBuiltin,
           _inductivePositive,
@@ -211,7 +213,6 @@ instance HasExpressions InductiveDef where
         }
 
 instance HasExpressions InductiveConstructorDef where
-  -- leafExpressions f InductiveConstructorDef c args ret = do
   leafExpressions f InductiveConstructorDef {..} = do
     args' <- traverse (leafExpressions f) _inductiveConstructorParameters
     ret' <- leafExpressions f _inductiveConstructorReturnType
@@ -307,6 +308,14 @@ foldFunType l r = go l
       [] -> r
       arg : args -> ExpressionFunction (Function arg (go args))
 
+-- | It does *only* include the explicit arguments of the constructor, not the
+-- implicit arguments inherited from its inductive type
+constructorFunctionType :: InductiveConstructorDef -> Expression
+constructorFunctionType c = foldFunTypeExplicit (c ^. inductiveConstructorParameters) (c ^. inductiveConstructorReturnType)
+
+foldFunTypeExplicit :: [Expression] -> Expression -> Expression
+foldFunTypeExplicit = foldFunType . map unnamedParameter
+
 -- | a -> (b -> c)  ==> ([a, b], c)
 unfoldFunType :: Expression -> ([FunctionParameter], Expression)
 unfoldFunType t = case t of
@@ -355,18 +364,6 @@ reachableModules = fst . run . runOutputList . evalState (mempty :: HashSet Name
         goStatement = \case
           StatementInclude (Include inc) -> go inc
           _ -> return ()
-
-(-->) :: Expression -> Expression -> Expression
-(-->) a b =
-  ExpressionFunction
-    ( Function
-        FunctionParameter
-          { _paramName = Nothing,
-            _paramImplicit = Explicit,
-            _paramType = a
-          }
-        b
-    )
 
 -- | A fold over all transitive children, including self
 patternCosmos :: SimpleFold Pattern Pattern
@@ -457,6 +454,9 @@ instance IsExpression Iden where
 instance IsExpression Expression where
   toExpression = id
 
+instance IsExpression Hole where
+  toExpression = ExpressionHole
+
 instance IsExpression Name where
   toExpression n = ExpressionIden (mkIden n)
     where
@@ -490,3 +490,168 @@ toApplicationArg p =
     helper = \case
       PatternVariable v -> ApplicationArg Explicit (toExpression v)
       PatternConstructorApp a -> ApplicationArg Explicit (toExpression a)
+
+expressionArrow :: (IsExpression a, IsExpression b) => IsImplicit -> a -> b -> Expression
+expressionArrow isImpl a b =
+  ExpressionFunction
+    ( Function
+        ( FunctionParameter
+            { _paramName = Nothing,
+              _paramImplicit = isImpl,
+              _paramType = toExpression a
+            }
+        )
+        (toExpression b)
+    )
+
+infixr 0 <>-->
+
+(<>-->) :: (IsExpression a, IsExpression b) => a -> b -> Expression
+(<>-->) = expressionArrow Implicit
+
+infixr 0 -->
+
+(-->) :: (IsExpression a, IsExpression b) => a -> b -> Expression
+(-->) = expressionArrow Explicit
+
+infix 4 ===
+
+(===) :: (IsExpression a, IsExpression b) => a -> b -> Bool
+a === b = (toExpression a ==% toExpression b) mempty
+
+leftEq :: (IsExpression a, IsExpression b) => a -> b -> HashSet Name -> Bool
+leftEq a b free =
+  isRight
+    . run
+    . runError @Text
+    . runReader free
+    . evalState (mempty @(HashMap Name Name))
+    $ matchExpressions (toExpression a) (toExpression b)
+
+clauseLhsAsExpression :: FunctionClause -> Expression
+clauseLhsAsExpression cl =
+  foldApplication (toExpression (cl ^. clauseName)) (map toApplicationArg (cl ^. clausePatterns))
+
+infix 4 ==%
+
+(==%) :: (IsExpression a, IsExpression b) => a -> b -> HashSet Name -> Bool
+(==%) a b free = leftEq a b free || leftEq b a free
+
+infixl 9 @@
+
+(@@) :: (IsExpression a, IsExpression b) => a -> b -> Expression
+a @@ b = toExpression (Application (toExpression a) (toExpression b) Explicit)
+
+freshVar :: (Member NameIdGen r) => Text -> Sem r VarName
+freshVar n = do
+  uid <- freshNameId
+  return
+    Name
+      { _nameId = uid,
+        _nameText = n,
+        _nameKind = KNameLocal,
+        _namePretty = n,
+        _nameFixity = Nothing,
+        _nameLoc = error "freshVar with no location"
+      }
+
+freshHole :: Members '[NameIdGen] r => Interval -> Sem r Hole
+freshHole l = mkHole l <$> freshNameId
+
+mkFreshHole :: Members '[NameIdGen] r => Interval -> Sem r Expression
+mkFreshHole l = ExpressionHole <$> freshHole l
+
+-- TODO consider using the machinery in Inference
+matchExpressions ::
+  forall r.
+  (Members '[State (HashMap Name Name), Reader (HashSet VarName), Error Text] r) =>
+  Expression ->
+  Expression ->
+  Sem r ()
+matchExpressions = go
+  where
+    -- Soft free vars are allowed to be matched
+    isSoftFreeVar :: VarName -> Sem r Bool
+    isSoftFreeVar = asks . HashSet.member
+    go :: Expression -> Expression -> Sem r ()
+    go a b = case (a, b) of
+      (ExpressionIden ia, ExpressionIden ib) -> case (ia, ib) of
+        (IdenVar va, IdenVar vb) -> do
+          addIfFreeVar va vb
+          addIfFreeVar vb va
+          unlessM ((== Just vb) <$> gets @(HashMap Name Name) (^. at va)) err
+        (_, _) -> unless (ia == ib) err
+      (ExpressionIden {}, _) -> err
+      (_, ExpressionIden {}) -> err
+      (ExpressionApplication ia, ExpressionApplication ib) ->
+        goApp ia ib
+      (ExpressionApplication {}, _) -> err
+      (_, ExpressionApplication {}) -> err
+      (ExpressionLambda ia, ExpressionLambda ib) ->
+        goLambda ia ib
+      (ExpressionLambda {}, _) -> err
+      (_, ExpressionLambda {}) -> err
+      (ExpressionCase {}, ExpressionCase {}) -> error "not implemented"
+      (ExpressionCase {}, _) -> err
+      (_, ExpressionCase {}) -> err
+      (ExpressionUniverse ia, ExpressionUniverse ib) ->
+        unless (ia == ib) err
+      (ExpressionUniverse {}, _) -> err
+      (_, ExpressionUniverse {}) -> err
+      (ExpressionFunction ia, ExpressionFunction ib) ->
+        goFunction ia ib
+      (ExpressionFunction {}, _) -> err
+      (_, ExpressionFunction {}) -> err
+      (ExpressionLiteral ia, ExpressionLiteral ib) ->
+        unless (ia == ib) err
+      (ExpressionLiteral {}, _) -> err
+      (_, ExpressionLiteral {}) -> err
+      (ExpressionLet {}, ExpressionLet {}) -> error "not implemented"
+      (ExpressionSimpleLambda {}, ExpressionSimpleLambda {}) -> error "not implemented"
+      (ExpressionSimpleLambda {}, _) -> err
+      (_, ExpressionSimpleLambda {}) -> err
+      (_, ExpressionLet {}) -> err
+      (ExpressionLet {}, _) -> err
+      (ExpressionHole _, ExpressionHole _) -> return ()
+    addIfFreeVar :: VarName -> VarName -> Sem r ()
+    addIfFreeVar va vb = whenM (isSoftFreeVar va) (addName va vb)
+    err :: Sem r a
+    err = throw @Text "Expression missmatch"
+    goLambda :: Lambda -> Lambda -> Sem r ()
+    goLambda = error "TODO not implemented yet"
+    goApp :: Application -> Application -> Sem r ()
+    goApp (Application al ar aim) (Application bl br bim) = do
+      unless (aim == bim) err
+      go al bl
+      go ar br
+    goFunction :: Function -> Function -> Sem r ()
+    goFunction (Function al ar) (Function bl br) = do
+      matchFunctionParameter al bl
+      matchExpressions ar br
+
+addName :: (Member (State (HashMap Name Name)) r) => Name -> Name -> Sem r ()
+addName na nb = modify (HashMap.insert na nb)
+
+matchFunctionParameter ::
+  forall r.
+  (Members '[State (HashMap Name Name), Reader (HashSet VarName), Error Text] r) =>
+  FunctionParameter ->
+  FunctionParameter ->
+  Sem r ()
+matchFunctionParameter pa pb = do
+  goParamName (pa ^. paramName) (pb ^. paramName)
+  goParamImplicit (pa ^. paramImplicit) (pb ^. paramImplicit)
+  goParamType (pa ^. paramType) (pb ^. paramType)
+  where
+    goParamType :: Expression -> Expression -> Sem r ()
+    goParamType ua ub = matchExpressions ua ub
+    goParamImplicit :: IsImplicit -> IsImplicit -> Sem r ()
+    goParamImplicit ua ub = unless (ua == ub) (throw @Text "implicit mismatch")
+    goParamName :: Maybe VarName -> Maybe VarName -> Sem r ()
+    goParamName (Just va) (Just vb) = addName va vb
+    goParamName _ _ = return ()
+
+isSmallUniverse' :: Expression -> Bool
+isSmallUniverse' = \case
+  ExpressionUniverse {} -> True
+  _ -> False

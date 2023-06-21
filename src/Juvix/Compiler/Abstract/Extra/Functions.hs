@@ -212,6 +212,9 @@ instance IsExpression FunctionRef where
 instance IsExpression AxiomRef where
   toExpression = toExpression . IdenAxiom
 
+instance IsExpression Hole where
+  toExpression = ExpressionHole
+
 instance IsExpression Iden where
   toExpression = ExpressionIden
 

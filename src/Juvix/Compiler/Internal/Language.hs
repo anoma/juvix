@@ -259,6 +259,7 @@ data InductiveDef = InductiveDef
   { _inductiveName :: InductiveName,
     _inductiveBuiltin :: Maybe BuiltinInductive,
     _inductiveExamples :: [Example],
+    _inductiveType :: Expression,
     _inductiveParameters :: [InductiveParameter],
     _inductiveConstructors :: [InductiveConstructorDef],
     _inductivePositive :: Bool,
@@ -372,6 +373,10 @@ instance HasAtomicity Pattern where
 
 instance HasLoc AxiomDef where
   getLoc a = getLoc (a ^. axiomName) <> getLoc (a ^. axiomType)
+
+instance HasLoc InductiveConstructorDef where
+  getLoc InductiveConstructorDef {..} =
+    getLoc _inductiveConstructorName <>? (getLocSpan <$> nonEmpty _inductiveConstructorParameters)
 
 instance HasLoc InductiveParameter where
   getLoc (InductiveParameter n) = getLoc n

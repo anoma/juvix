@@ -76,13 +76,15 @@ checkInductiveDef ::
   Sem r InductiveDef
 checkInductiveDef InductiveDef {..} = runInferenceDef $ do
   constrs' <- mapM goConstructor _inductiveConstructors
-  ty <- inductiveType _inductiveName
+  ty <- lookupInductiveType _inductiveName
   registerNameIdType (_inductiveName ^. nameId) ty
   examples' <- mapM checkExample _inductiveExamples
+  inductiveType' <- runReader paramLocals (checkDefType _inductiveType)
   let d =
         InductiveDef
           { _inductiveConstructors = constrs',
             _inductiveExamples = examples',
+            _inductiveType = inductiveType',
             _inductiveName,
             _inductiveBuiltin,
             _inductivePositive,
@@ -154,7 +156,7 @@ checkFunctionDef ::
   Sem r FunctionDef
 checkFunctionDef FunctionDef {..} = do
   funDef <- do
-    _funDefType' <- checkFunctionDefType _funDefType
+    _funDefType' <- checkDefType _funDefType
     registerIdenType _funDefName _funDefType'
     _funDefClauses' <- mapM (checkFunctionClause _funDefType') _funDefClauses
     return
@@ -173,12 +175,12 @@ checkIsType ::
   Sem r Expression
 checkIsType = checkExpression . smallUniverseE
 
-checkFunctionDefType ::
+checkDefType ::
   forall r.
   (Members '[HighlightBuilder, Reader InfoTable, State FunctionsTable, Error TypeCheckerError, NameIdGen, Reader LocalVars, Inference, Builtins, Output Example, State TypesTable] r) =>
   Expression ->
   Sem r Expression
-checkFunctionDefType ty = checkIsType loc ty
+checkDefType ty = checkIsType loc ty
   where
     loc = getLoc ty
 
@@ -401,7 +403,7 @@ checkPattern = go
                   indName = IdenInductive (info ^. constructorInfoInductive)
                   loc = getLoc a
               paramHoles <- map ExpressionHole <$> replicateM numIndParams (freshHole loc)
-              let patternTy = foldApplication (ExpressionIden indName) (map (Explicit,) paramHoles)
+              let patternTy = foldApplication (ExpressionIden indName) (map (ApplicationArg Explicit) paramHoles)
               whenJustM
                 (matchTypes patternTy (ExpressionHole hole))
                 err
@@ -484,9 +486,6 @@ checkPattern = go
                 )
             )
           return (Right (ind, zipExact params args))
-
-freshHole :: (Members '[Inference, NameIdGen] r) => Interval -> Sem r Hole
-freshHole l = mkHole l <$> freshNameId
 
 inferExpression' ::
   forall r.
@@ -699,7 +698,7 @@ inferExpression' hint e = case e of
         info <- lookupAxiom v
         return (TypedExpression (info ^. axiomInfoDef . axiomType) (ExpressionIden i))
       IdenInductive v -> do
-        kind <- inductiveType v
+        kind <- lookupInductiveType v
         return (TypedExpression kind (ExpressionIden i))
 
     goApplication :: Application -> Sem r TypedExpression

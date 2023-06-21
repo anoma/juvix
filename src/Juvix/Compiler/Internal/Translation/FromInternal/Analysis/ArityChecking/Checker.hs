@@ -60,6 +60,7 @@ checkInductive d = do
   (localVars, _inductiveParameters) <- checkParameters (d ^. inductiveParameters)
   _inductiveExamples <- runReader localVars (mapM checkExample (d ^. inductiveExamples))
   _inductiveConstructors <- runReader localVars (mapM checkConstructor (d ^. inductiveConstructors))
+  _inductiveType <- runReader localVars (checkType (d ^. inductiveType))
   return InductiveDef {..}
   where
     checkParameters :: [InductiveParameter] -> Sem r (LocalVars, [InductiveParameter])
@@ -448,7 +449,7 @@ checkLambda ari l = do
 idenArity :: (Members '[Reader LocalVars, Reader InfoTable] r) => Iden -> Sem r Arity
 idenArity = \case
   IdenVar v -> getLocalArity v
-  IdenInductive i -> typeArity <$> inductiveType i
+  IdenInductive i -> typeArity <$> lookupInductiveType i
   IdenFunction f -> typeArity . (^. functionInfoDef . funDefType) <$> lookupFunction f
   IdenConstructor c -> typeArity <$> constructorType c
   IdenAxiom a -> typeArity . (^. axiomInfoDef . axiomType) <$> lookupAxiom a
@@ -582,7 +583,7 @@ checkExpression hintArity expr = case expr of
     appHelper :: Expression -> [ApplicationArg] -> Sem r Expression
     appHelper fun0 args = do
       (fun', args') :: (Expression, [ApplicationArg]) <- case fun0 of
-        ExpressionHole {} -> (fun0,) <$> mapM (secondM (checkExpression ArityUnknown)) args
+        ExpressionHole {} -> (fun0,) <$> mapM (traverseOf appArg (checkExpression ArityUnknown)) args
         ExpressionIden i -> (fun0,) <$> (idenArity i >>= helper (getLoc i))
         ExpressionLiteral l -> (fun0,) <$> helper (getLoc l) arityLiteral
         ExpressionUniverse l -> (fun0,) <$> helper (getLoc l) arityUniverse

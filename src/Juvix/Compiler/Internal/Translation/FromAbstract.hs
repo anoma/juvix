@@ -493,6 +493,7 @@ goInductiveDef i
           goConstructorDef
           (i ^. Abstract.inductiveConstructors)
       examples' <- mapM goExample (i ^. Abstract.inductiveExamples)
+      ty' <- goExpression (i ^. Abstract.inductiveType)
       return
         InductiveDef
           { _inductiveName = indTypeName,
@@ -500,6 +501,7 @@ goInductiveDef i
             _inductiveBuiltin = i ^. Abstract.inductiveBuiltin,
             _inductiveConstructors = inductiveConstructors',
             _inductiveExamples = examples',
+            _inductiveType = ty',
             _inductivePositive = i ^. Abstract.inductivePositive,
             _inductivePragmas = i ^. Abstract.inductivePragmas
           }

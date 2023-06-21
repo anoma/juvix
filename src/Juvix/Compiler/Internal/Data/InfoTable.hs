@@ -178,8 +178,8 @@ lookupFunction f = HashMap.lookupDefault impossible f <$> asks (^. infoFunctions
 lookupAxiom :: (Member (Reader InfoTable) r) => Name -> Sem r AxiomInfo
 lookupAxiom f = HashMap.lookupDefault impossible f <$> asks (^. infoAxioms)
 
-inductiveType :: (Member (Reader InfoTable) r) => Name -> Sem r Expression
-inductiveType v = do
+lookupInductiveType :: Member (Reader InfoTable) r => Name -> Sem r Expression
+lookupInductiveType v = do
   info <- lookupInductive v
   let ps = info ^. inductiveInfoDef . inductiveParameters
   return $
@@ -196,7 +196,7 @@ constructorArgTypes i =
     i ^. constructorInfoArgs
   )
 
-constructorType :: (Member (Reader InfoTable) r) => ConstrName -> Sem r Expression
+constructorType :: Member (Reader InfoTable) r => ConstrName -> Sem r Expression
 constructorType c = do
   info <- lookupConstructor c
   let (inductiveParams, constrArgs) = constructorArgTypes info
@@ -206,7 +206,7 @@ constructorType c = do
   saturatedTy <- constructorReturnType c
   return (foldFunType args saturatedTy)
 
-constructorReturnType :: (Member (Reader InfoTable) r) => ConstrName -> Sem r Expression
+constructorReturnType :: Member (Reader InfoTable) r => ConstrName -> Sem r Expression
 constructorReturnType c = do
   info <- lookupConstructor c
   let inductiveParams = fst (constructorArgTypes info)
