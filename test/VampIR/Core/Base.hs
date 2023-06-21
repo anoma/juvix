@@ -7,16 +7,18 @@ import Juvix.Compiler.Core
 import Juvix.Prelude.Pretty
 import System.Process qualified as P
 
-vampirAssertion :: Path Abs File -> Path Abs File -> (String -> IO ()) -> Assertion
-vampirAssertion mainFile dataFile step = do
+data VampirBackend = VampirHalo2 | VampirPlonk
+
+vampirAssertion :: VampirBackend -> Path Abs File -> Path Abs File -> (String -> IO ()) -> Assertion
+vampirAssertion backend mainFile dataFile step = do
   step "Parse"
   s <- readFile (toFilePath mainFile)
   case runParserMain mainFile emptyInfoTable s of
     Left err -> assertFailure (show err)
-    Right tab -> vampirAssertion' tab dataFile step
+    Right tab -> vampirAssertion' backend tab dataFile step
 
-vampirAssertion' :: InfoTable -> Path Abs File -> (String -> IO ()) -> Assertion
-vampirAssertion' tab dataFile step = do
+vampirAssertion' :: VampirBackend -> InfoTable -> Path Abs File -> (String -> IO ()) -> Assertion
+vampirAssertion' backend tab dataFile step = do
   withTempDir'
     ( \dirPath -> do
         step "Translate to VampIR"
@@ -29,45 +31,101 @@ vampirAssertion' tab dataFile step = do
             step "Check vamp-ir on path"
             assertCmdExists $(mkRelFile "vamp-ir")
 
+            vampirSetupArgs backend dirPath step
+
             step "VampIR compile"
-            P.callProcess "vamp-ir" (compileArgs vampirFile dirPath)
+            P.callProcess "vamp-ir" (compileArgs vampirFile dirPath backend)
             step "VampIR prove"
-            P.callProcess "vamp-ir" (proveArgs dataFile dirPath)
+            P.callProcess "vamp-ir" (proveArgs dataFile dirPath backend)
             step "VampIR verify"
-            P.callProcess "vamp-ir" (verifyArgs dirPath)
+            P.callProcess "vamp-ir" (verifyArgs dirPath backend)
     )
 
-compileArgs :: Path Abs File -> Path Abs Dir -> [String]
-compileArgs inputFile dirPath =
-  [ "-q",
-    "halo2",
-    "compile",
-    "-s",
-    toFilePath inputFile,
-    "-o",
-    toFilePath (dirPath <//> $(mkRelFile "circuit.halo2"))
-  ]
+vampirSetupArgs :: VampirBackend -> Path Abs Dir -> (String -> IO ()) -> Assertion
+vampirSetupArgs VampirHalo2 _ _ = return ()
+vampirSetupArgs VampirPlonk dirPath step = do
+  step "VampIR setup parameters"
+  P.callProcess "vamp-ir" setupParamsArgs
+  where
+    setupParamsArgs =
+      [ "-q",
+        "plonk",
+        "setup",
+        "-m",
+        "8",
+        "-o",
+        toFilePath (dirPath <//> $(mkRelFile "params.pp"))
+      ]
 
-proveArgs :: Path Abs File -> Path Abs Dir -> [String]
-proveArgs dataFile dirPath =
-  [ "-q",
-    "halo2",
-    "prove",
-    "-c",
-    toFilePath (dirPath <//> $(mkRelFile "circuit.halo2")),
-    "-o",
-    toFilePath (dirPath <//> $(mkRelFile "proof.halo2")),
-    "-i",
-    toFilePath dataFile
-  ]
+compileArgs :: Path Abs File -> Path Abs Dir -> VampirBackend -> [String]
+compileArgs inputFile dirPath = \case
+  VampirHalo2 ->
+    [ "-q",
+      "halo2",
+      "compile",
+      "-s",
+      toFilePath inputFile,
+      "-o",
+      toFilePath (dirPath <//> $(mkRelFile "circuit.halo2"))
+    ]
+  VampirPlonk ->
+    [ "-q",
+      "plonk",
+      "compile",
+      "-u",
+      toFilePath (dirPath <//> $(mkRelFile "params.pp")),
+      "-s",
+      toFilePath inputFile,
+      "-o",
+      toFilePath (dirPath <//> $(mkRelFile "circuit.plonk"))
+    ]
 
-verifyArgs :: Path Abs Dir -> [String]
-verifyArgs dirPath =
-  [ "-q",
-    "halo2",
-    "verify",
-    "-c",
-    toFilePath (dirPath <//> $(mkRelFile "circuit.halo2")),
-    "-p",
-    toFilePath (dirPath <//> $(mkRelFile "proof.halo2"))
-  ]
+proveArgs :: Path Abs File -> Path Abs Dir -> VampirBackend -> [String]
+proveArgs dataFile dirPath = \case
+  VampirHalo2 ->
+    [ "-q",
+      "halo2",
+      "prove",
+      "-c",
+      toFilePath (dirPath <//> $(mkRelFile "circuit.halo2")),
+      "-o",
+      toFilePath (dirPath <//> $(mkRelFile "proof.halo2")),
+      "-i",
+      toFilePath dataFile
+    ]
+  VampirPlonk ->
+    [ "-q",
+      "plonk",
+      "prove",
+      "-u",
+      toFilePath (dirPath <//> $(mkRelFile "params.pp")),
+      "-c",
+      toFilePath (dirPath <//> $(mkRelFile "circuit.plonk")),
+      "-o",
+      toFilePath (dirPath <//> $(mkRelFile "proof.plonk")),
+      "-i",
+      toFilePath dataFile
+    ]
+
+verifyArgs :: Path Abs Dir -> VampirBackend -> [String]
+verifyArgs dirPath = \case
+  VampirHalo2 ->
+    [ "-q",
+      "halo2",
+      "verify",
+      "-c",
+      toFilePath (dirPath <//> $(mkRelFile "circuit.halo2")),
+      "-p",
+      toFilePath (dirPath <//> $(mkRelFile "proof.halo2"))
+    ]
+  VampirPlonk ->
+    [ "-q",
+      "plonk",
+      "verify",
+      "-u",
+      toFilePath (dirPath <//> $(mkRelFile "params.pp")),
+      "-c",
+      toFilePath (dirPath <//> $(mkRelFile "circuit.plonk")),
+      "-p",
+      toFilePath (dirPath <//> $(mkRelFile "proof.plonk"))
+    ]
