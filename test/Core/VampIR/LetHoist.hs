@@ -10,7 +10,7 @@ fromTest :: PosTest -> TestTree
 fromTest = mkTest . toTestDescr
 
 toTestDescr :: PosTest -> TestDescr
-toTestDescr = Normalize.toTestDescr' (const (coreVampIRAssertion [LetHoisting]))
+toTestDescr = Normalize.toTestDescr' (coreVampIRAssertion [LetHoisting])
 
 allTests :: TestTree
 allTests =
@@ -21,19 +21,16 @@ allTests =
 tests :: [PosTest]
 tests =
   [ PosTest
-      5
       "Test010: Lets"
       $(mkRelDir "Core")
       $(mkRelFile "test010.jvc")
       $(mkRelFile "data/test010.json"),
     PosTest
-      5
       "Test028: Let hoisting"
       $(mkRelDir "Core")
       $(mkRelFile "test028.jvc")
       $(mkRelFile "data/test028.json"),
     PosTest
-      5
       "Test029: Let hoisting"
       $(mkRelDir "Core")
       $(mkRelFile "test029.jvc")
