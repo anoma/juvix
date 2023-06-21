@@ -28,11 +28,11 @@ appVariables f = traverseOf constrAppParameters (traverse (patternArgVariables f
 
 idenName :: Iden -> Name
 idenName = \case
-  IdenFunction (FunctionRef f) -> f
+  IdenFunction f -> f
   IdenConstructor c -> c
   IdenVar v -> v
-  IdenInductive (InductiveRef i) -> i
-  IdenAxiom (AxiomRef a) -> a
+  IdenInductive i -> i
+  IdenAxiom a -> a
 
 -- | A fold over all transitive children, including self
 patternCosmos :: SimpleFold Pattern Pattern
@@ -200,15 +200,6 @@ matchExpressions = go
 class IsExpression a where
   toExpression :: a -> Expression
 
-instance IsExpression InductiveRef where
-  toExpression = toExpression . IdenInductive
-
-instance IsExpression FunctionRef where
-  toExpression = toExpression . IdenFunction
-
-instance IsExpression AxiomRef where
-  toExpression = toExpression . IdenAxiom
-
 instance IsExpression Hole where
   toExpression = ExpressionHole
 
@@ -221,9 +212,9 @@ instance IsExpression Expression where
 instance IsExpression Name where
   toExpression n = ExpressionIden $ case n ^. nameKind of
     KNameConstructor -> IdenConstructor n
-    KNameInductive -> IdenInductive (InductiveRef n)
-    KNameFunction -> IdenFunction (FunctionRef n)
-    KNameAxiom -> IdenAxiom (AxiomRef n)
+    KNameInductive -> IdenInductive n
+    KNameFunction -> IdenFunction n
+    KNameAxiom -> IdenAxiom n
     KNameLocal -> IdenVar n
     KNameLocalModule -> impossible
     KNameTopModule -> impossible

@@ -244,11 +244,11 @@ goImport m = do
 
 goTypeIden :: Abstract.Iden -> Iden
 goTypeIden = \case
-  Abstract.IdenFunction f -> IdenFunction (f ^. Abstract.functionRefName)
+  Abstract.IdenFunction f -> IdenFunction f
   Abstract.IdenConstructor {} -> unsupported "constructors in types"
   Abstract.IdenVar v -> IdenVar v
-  Abstract.IdenInductive d -> IdenInductive (d ^. Abstract.inductiveRefName)
-  Abstract.IdenAxiom a -> IdenAxiom (a ^. Abstract.axiomRefName)
+  Abstract.IdenInductive d -> IdenInductive d
+  Abstract.IdenAxiom a -> IdenAxiom a
 
 goAxiomDef :: Abstract.AxiomDef -> Sem r AxiomDef
 goAxiomDef a = do
@@ -401,11 +401,11 @@ goApplication (Abstract.Application f x i) = do
 
 goIden :: Abstract.Iden -> Iden
 goIden i = case i of
-  Abstract.IdenFunction n -> IdenFunction (n ^. Abstract.functionRefName)
+  Abstract.IdenFunction n -> IdenFunction n
   Abstract.IdenConstructor c -> IdenConstructor c
   Abstract.IdenVar v -> IdenVar v
-  Abstract.IdenAxiom a -> IdenAxiom (a ^. Abstract.axiomRefName)
-  Abstract.IdenInductive a -> IdenInductive (a ^. Abstract.inductiveRefName)
+  Abstract.IdenAxiom a -> IdenAxiom a
+  Abstract.IdenInductive a -> IdenInductive a
 
 goExpressionFunction :: forall r. Members '[NameIdGen, Reader NameDependencyInfo] r => Abstract.Function -> Sem r Function
 goExpressionFunction f = do

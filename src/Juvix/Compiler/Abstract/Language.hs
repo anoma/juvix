@@ -72,27 +72,12 @@ data FunctionClause = FunctionClause
   }
   deriving stock (Eq, Show)
 
-newtype FunctionRef = FunctionRef
-  {_functionRefName :: Name}
-  deriving stock (Eq, Show)
-  deriving newtype (Hashable)
-
-newtype InductiveRef = InductiveRef
-  {_inductiveRefName :: Name}
-  deriving stock (Eq, Show)
-  deriving newtype (Hashable)
-
-newtype AxiomRef = AxiomRef
-  {_axiomRefName :: Name}
-  deriving stock (Eq, Show)
-  deriving newtype (Hashable)
-
 data Iden
-  = IdenFunction FunctionRef
-  | IdenConstructor Name
+  = IdenFunction FunctionName
+  | IdenConstructor ConstrName
   | IdenVar VarName
-  | IdenInductive InductiveRef
-  | IdenAxiom AxiomRef
+  | IdenInductive InductiveName
+  | IdenAxiom AxiomName
   deriving stock (Eq, Show)
 
 data CaseBranch = CaseBranch
@@ -235,9 +220,6 @@ makeLenses ''InductiveDef
 makeLenses ''ModuleBody
 makeLenses ''InductiveConstructorDef
 makeLenses ''ConstructorApp
-makeLenses ''FunctionRef
-makeLenses ''InductiveRef
-makeLenses ''AxiomRef
 makeLenses ''AxiomDef
 
 instance HasAtomicity Expression where

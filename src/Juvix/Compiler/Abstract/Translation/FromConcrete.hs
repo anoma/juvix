@@ -424,10 +424,10 @@ goExpression = \case
   where
     goIden :: Concrete.ScopedIden -> Abstract.Expression
     goIden x = Abstract.ExpressionIden $ case x of
-      ScopedAxiom a -> Abstract.IdenAxiom (Abstract.AxiomRef (goName (a ^. Concrete.axiomRefName)))
-      ScopedInductive i -> Abstract.IdenInductive (Abstract.InductiveRef (goName (i ^. Concrete.inductiveRefName)))
+      ScopedAxiom a -> Abstract.IdenAxiom (goName (a ^. Concrete.axiomRefName))
+      ScopedInductive i -> Abstract.IdenInductive (goName (i ^. Concrete.inductiveRefName))
       ScopedVar v -> Abstract.IdenVar (goSymbol v)
-      ScopedFunction fun -> Abstract.IdenFunction (Abstract.FunctionRef (goName (fun ^. Concrete.functionRefName)))
+      ScopedFunction fun -> Abstract.IdenFunction (goName (fun ^. Concrete.functionRefName))
       ScopedConstructor c -> Abstract.IdenConstructor (goName (c ^. Concrete.constructorRefName))
 
     goLet :: Let 'Scoped -> Sem r Abstract.Let

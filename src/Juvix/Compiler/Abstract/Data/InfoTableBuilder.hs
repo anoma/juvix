@@ -32,7 +32,7 @@ registerAxiom' a = registerAxiom a $> a
 toState :: Sem (InfoTableBuilder ': r) a -> Sem (State InfoTable ': r) a
 toState = reinterpret $ \case
   RegisterAxiom d ->
-    let ref = AxiomRef (d ^. axiomName)
+    let ref = d ^. axiomName
         info =
           AxiomInfo
             { _axiomInfoType = d ^. axiomType
@@ -47,14 +47,14 @@ toState = reinterpret $ \case
             }
      in modify (over infoConstructors (HashMap.insert ref info))
   RegisterInductive ity ->
-    let ref = InductiveRef (ity ^. inductiveName)
+    let ref = ity ^. inductiveName
         info =
           InductiveInfo
             { _inductiveInfoDef = ity
             }
      in modify (over infoInductives (HashMap.insert ref info)) $> info
   RegisterFunction _functionInfoDef ->
-    let ref = FunctionRef (_functionInfoDef ^. funDefName)
+    let ref = _functionInfoDef ^. funDefName
         info =
           FunctionInfo
             { ..
