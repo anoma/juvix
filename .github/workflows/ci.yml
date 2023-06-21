@@ -224,6 +224,7 @@ jobs:
           stack-arguments: --copy-bins
           working-directory: smoke-repo
           cache-prefix: ${{ steps.icuversion.outputs.version }}
+          pedantic: false
 
       - name: Set homebrew LLVM CC and LIBTOOL vars (macOS)
         run: |
