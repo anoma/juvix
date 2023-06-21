@@ -267,7 +267,6 @@ jobs:
           echo "version=$ICUVERSION" >> $GITHUB_OUTPUT
 
       - name: Build smoke
-        id: stack
         uses: freckle/stack-action@v4
         with:
           test: false
