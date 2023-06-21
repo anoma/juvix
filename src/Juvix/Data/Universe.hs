@@ -63,6 +63,9 @@ smallUniverseNoLoc = SmallUniverse (error "SmallUniverse with no location")
 smallUniverseNoLocAbstract :: Universe
 smallUniverseNoLocAbstract = smallUniverse (error "no loc")
 
+isSmallUni :: Universe -> Bool
+isSmallUni u = 0 == fromMaybe defaultLevel (u ^. universeLevel)
+
 instance HasAtomicity Universe where
   atomicity u = case u ^. universeLevel of
     Nothing -> Atom

@@ -114,7 +114,7 @@ ppBlock :: (PrettyCode a, Members '[Reader Options] r, Traversable t) => t a -> 
 ppBlock items = vsep . toList <$> mapM (fmap endSemicolon . ppCode) items
 
 instance PrettyCode ConstructorApp where
-  ppCode (ConstructorApp ctr args) = do
+  ppCode (ConstructorApp ctr args _) = do
     ctr' <- ppCode ctr
     if
         | null args -> do
@@ -204,15 +204,3 @@ instance PrettyCode Function where
     funParameter' <- ppCode _funParameter
     funReturn' <- ppRightExpression funFixity _funReturn
     return $ funParameter' <+> kwArrow <+> funReturn'
-
-instance PrettyCode FunctionRef where
-  ppCode FunctionRef {..} = ppCode _functionRefName
-
-instance PrettyCode ConstructorRef where
-  ppCode ConstructorRef {..} = ppCode _constructorRefName
-
-instance PrettyCode InductiveRef where
-  ppCode InductiveRef {..} = ppCode _inductiveRefName
-
-instance PrettyCode AxiomRef where
-  ppCode AxiomRef {..} = ppCode _axiomRefName

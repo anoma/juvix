@@ -124,7 +124,7 @@ goStatement parentModule = \case
       checkStartNode (i ^. inductiveName)
       checkBuiltinInductiveStartNode i
       addEdge (i ^. inductiveName) parentModule
-      mapM_ (goFunctionParameter (Just (i ^. inductiveName))) (i ^. inductiveParameters)
+      mapM_ (goInductiveParameter (Just (i ^. inductiveName))) (i ^. inductiveParameters)
       goExpression (Just (i ^. inductiveName)) (i ^. inductiveType)
       mapM_ (goConstructorDef (i ^. inductiveName)) (i ^. inductiveConstructors)
 
@@ -162,8 +162,8 @@ goPattern n p = case p ^. patternArgPattern of
   PatternConstructorApp a -> goApp a
   where
     goApp :: ConstructorApp -> Sem r ()
-    goApp (ConstructorApp ctr ps) = do
-      addEdgeMay n (ctr ^. constructorRefName)
+    goApp (ConstructorApp ctr ps _) = do
+      addEdgeMay n ctr
       mapM_ (goPattern n) ps
 
 goExpression ::
@@ -214,9 +214,19 @@ goExpression p e = case e of
         addEdgeMay p (f ^. funDefName)
         goFunctionDefHelper f
 
+goInductiveParameter ::
+  (Members '[State DependencyGraph, State StartNodes, Reader ExportsTable] r) =>
+  Maybe Name ->
+  InductiveParameter ->
+  Sem r ()
+goInductiveParameter p param =
+  addEdgeMay p (param ^. inductiveParamName)
+
 goFunctionParameter ::
   (Members '[State DependencyGraph, State StartNodes, Reader ExportsTable] r) =>
   Maybe Name ->
   FunctionParameter ->
   Sem r ()
-goFunctionParameter p param = goExpression p (param ^. paramType)
+goFunctionParameter p param = do
+  whenJust (param ^. paramName) (addEdgeMay p)
+  goExpression p (param ^. paramType)

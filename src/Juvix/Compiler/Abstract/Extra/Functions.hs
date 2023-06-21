@@ -29,7 +29,7 @@ appVariables f = traverseOf constrAppParameters (traverse (patternArgVariables f
 idenName :: Iden -> Name
 idenName = \case
   IdenFunction (FunctionRef f) -> f
-  IdenConstructor (ConstructorRef c) -> c
+  IdenConstructor c -> c
   IdenVar v -> v
   IdenInductive (InductiveRef i) -> i
   IdenAxiom (AxiomRef a) -> a
@@ -40,10 +40,10 @@ patternCosmos f p = case p of
   PatternVariable {} -> f p
   PatternWildcard {} -> f p
   PatternEmpty {} -> f p
-  PatternConstructorApp (ConstructorApp r args) ->
+  PatternConstructorApp (ConstructorApp r args ty) ->
     f p *> do
       args' <- traverse (traverseOf patternArgPattern (patternCosmos f)) args
-      pure (PatternConstructorApp (ConstructorApp r args'))
+      pure (PatternConstructorApp (ConstructorApp r args' ty))
 
 patternArgNameFold :: SimpleFold (Maybe Name) Pattern
 patternArgNameFold f = \case
@@ -65,9 +65,9 @@ patternSubCosmos f p = case p of
   PatternVariable {} -> pure p
   PatternWildcard {} -> pure p
   PatternEmpty {} -> pure p
-  PatternConstructorApp (ConstructorApp r args) -> do
+  PatternConstructorApp (ConstructorApp r args ty) -> do
     args' <- traverse (patternArgCosmos f) args
-    pure (PatternConstructorApp (ConstructorApp r args'))
+    pure (PatternConstructorApp (ConstructorApp r args' ty))
 
 viewApp :: Expression -> (Expression, [ApplicationArg])
 viewApp e =
@@ -92,12 +92,12 @@ viewExpressionAsPattern e = case viewApp e of
   (f, args)
     | Just c <- getConstructor f -> do
         args' <- mapM viewAppArgAsPattern args
-        Just $ PatternConstructorApp (ConstructorApp c args')
+        Just $ PatternConstructorApp (ConstructorApp c args' Nothing)
   (f, [])
     | Just v <- getVariable f -> Just (PatternVariable v)
   _ -> Nothing
   where
-    getConstructor :: Expression -> Maybe ConstructorRef
+    getConstructor :: Expression -> Maybe Name
     getConstructor f = case f of
       ExpressionIden (IdenConstructor n) -> Just n
       _ -> Nothing
@@ -200,9 +200,6 @@ matchExpressions = go
 class IsExpression a where
   toExpression :: a -> Expression
 
-instance IsExpression ConstructorRef where
-  toExpression = toExpression . IdenConstructor
-
 instance IsExpression InductiveRef where
   toExpression = toExpression . IdenInductive
 
@@ -222,12 +219,12 @@ instance IsExpression Expression where
   toExpression = id
 
 instance IsExpression Name where
-  toExpression n = case n ^. nameKind of
-    KNameConstructor -> toExpression (ConstructorRef n)
-    KNameInductive -> toExpression (InductiveRef n)
-    KNameFunction -> toExpression (FunctionRef n)
-    KNameAxiom -> toExpression (AxiomRef n)
-    KNameLocal -> toExpression (IdenVar n)
+  toExpression n = ExpressionIden $ case n ^. nameKind of
+    KNameConstructor -> IdenConstructor n
+    KNameInductive -> IdenInductive (InductiveRef n)
+    KNameFunction -> IdenFunction (FunctionRef n)
+    KNameAxiom -> IdenAxiom (AxiomRef n)
+    KNameLocal -> IdenVar n
     KNameLocalModule -> impossible
     KNameTopModule -> impossible
 
@@ -241,7 +238,7 @@ instance IsExpression Function where
   toExpression = ExpressionFunction
 
 instance IsExpression ConstructorApp where
-  toExpression (ConstructorApp c args) =
+  toExpression (ConstructorApp c args _) =
     foldApplication (toExpression c) (map toApplicationArg args)
 
 isSmallUniverse' :: Expression -> Bool

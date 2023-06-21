@@ -273,22 +273,24 @@ goFunctionClause FunctionClause {..} = do
         _clauseBody = _clauseBody'
       }
 
+
 goInductiveParameters ::
-  (Members '[Error ScoperError, Reader Pragmas, InfoTableBuilder] r) =>
+  Members '[Error ScoperError, Reader Pragmas, InfoTableBuilder] r =>
   InductiveParameters 'Scoped ->
-  Sem r [Abstract.FunctionParameter]
+  Sem r [Abstract.InductiveParameter]
 goInductiveParameters InductiveParameters {..} = do
   paramType' <- goExpression _inductiveParametersType
-  return $
-    map
-      ( \nm ->
-          Abstract.FunctionParameter
-            { _paramType = paramType',
-              _paramName = Just (goSymbol nm),
-              _paramImplicit = Explicit
+
+  case paramType' of
+    Abstract.ExpressionUniverse u
+      | isSmallUni u -> return ()
+    _ -> unsupported "only type variables of small types are allowed"
+
+  let goInductiveParameter :: S.Symbol -> Abstract.InductiveParameter
+      goInductiveParameter var = Abstract.InductiveParameter
+            { _inductiveParamName = goSymbol var
             }
-      )
-      (toList _inductiveParametersNames)
+  return (map goInductiveParameter (toList _inductiveParametersNames))
 
 registerBuiltinInductive ::
   (Members '[InfoTableBuilder, Error ScoperError, Builtins] r) =>
@@ -426,7 +428,7 @@ goExpression = \case
       ScopedInductive i -> Abstract.IdenInductive (Abstract.InductiveRef (goName (i ^. Concrete.inductiveRefName)))
       ScopedVar v -> Abstract.IdenVar (goSymbol v)
       ScopedFunction fun -> Abstract.IdenFunction (Abstract.FunctionRef (goName (fun ^. Concrete.functionRefName)))
-      ScopedConstructor c -> Abstract.IdenConstructor (Abstract.ConstructorRef (goName (c ^. Concrete.constructorRefName)))
+      ScopedConstructor c -> Abstract.IdenConstructor (goName (c ^. Concrete.constructorRefName))
 
     goLet :: Let 'Scoped -> Sem r Abstract.Let
     goLet l = do
@@ -545,31 +547,34 @@ goFunctionParameters FunctionParameters {..} = do
       FunctionParameterName n -> Just n
       FunctionParameterWildcard {} -> Nothing
 
+mkConstructorApp :: Abstract.ConstrName -> [Abstract.PatternArg] -> Abstract.ConstructorApp
+mkConstructorApp a b = Abstract.ConstructorApp a b Nothing
+
 goPatternApplication ::
   (Members '[Error ScoperError, InfoTableBuilder] r) =>
   PatternApp ->
   Sem r Abstract.ConstructorApp
-goPatternApplication a = uncurry Abstract.ConstructorApp <$> viewApp (PatternApplication a)
+goPatternApplication a = uncurry mkConstructorApp <$> viewApp (PatternApplication a)
 
 goPatternConstructor ::
   (Members '[Error ScoperError, InfoTableBuilder] r) =>
   ConstructorRef ->
   Sem r Abstract.ConstructorApp
-goPatternConstructor a = uncurry Abstract.ConstructorApp <$> viewApp (PatternConstructor a)
+goPatternConstructor a = uncurry mkConstructorApp <$> viewApp (PatternConstructor a)
 
 goInfixPatternApplication ::
   (Members '[Error ScoperError, InfoTableBuilder] r) =>
   PatternInfixApp ->
   Sem r Abstract.ConstructorApp
-goInfixPatternApplication a = uncurry Abstract.ConstructorApp <$> viewApp (PatternInfixApplication a)
+goInfixPatternApplication a = uncurry mkConstructorApp <$> viewApp (PatternInfixApplication a)
 
 goPostfixPatternApplication ::
   (Members '[Error ScoperError, InfoTableBuilder] r) =>
   PatternPostfixApp ->
   Sem r Abstract.ConstructorApp
-goPostfixPatternApplication a = uncurry Abstract.ConstructorApp <$> viewApp (PatternPostfixApplication a)
+goPostfixPatternApplication a = uncurry mkConstructorApp <$> viewApp (PatternPostfixApplication a)
 
-viewApp :: forall r. (Members '[Error ScoperError, InfoTableBuilder] r) => Pattern -> Sem r (Abstract.ConstructorRef, [Abstract.PatternArg])
+viewApp :: forall r. (Members '[Error ScoperError, InfoTableBuilder] r) => Pattern -> Sem r (Abstract.ConstrName, [Abstract.PatternArg])
 viewApp p = case p of
   PatternConstructor c -> return (goConstructorRef c, [])
   PatternApplication app@(PatternApp _ r) -> do
@@ -586,14 +591,14 @@ viewApp p = case p of
   PatternWildcard {} -> err
   PatternEmpty {} -> err
   where
-    viewAppLeft :: PatternApp -> Sem r (Abstract.ConstructorRef, [Abstract.PatternArg])
+    viewAppLeft :: PatternApp -> Sem r (Abstract.ConstrName, [Abstract.PatternArg])
     viewAppLeft app@(PatternApp l _)
       | Implicit <- l ^. patternArgIsImplicit = throw (ErrImplicitPatternLeftApplication (ImplicitPatternLeftApplication app))
       | otherwise = viewApp (l ^. patternArgPattern)
     err = throw (ErrConstructorExpectedLeftApplication (ConstructorExpectedLeftApplication p))
 
-goConstructorRef :: ConstructorRef -> Abstract.ConstructorRef
-goConstructorRef (ConstructorRef' n) = Abstract.ConstructorRef (goName n)
+goConstructorRef :: ConstructorRef -> Abstract.Name
+goConstructorRef (ConstructorRef' n) = goName n
 
 goPatternArg :: (Members '[Error ScoperError, InfoTableBuilder] r) => PatternArg -> Sem r Abstract.PatternArg
 goPatternArg p = do

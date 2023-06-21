@@ -39,7 +39,7 @@ toState = reinterpret $ \case
             }
      in modify (over infoAxioms (HashMap.insert ref info))
   RegisterConstructor _constructorInfoInductive def ->
-    let ref = ConstructorRef (def ^. constructorName)
+    let ref = def ^. constructorName
         info =
           ConstructorInfo
             { _constructorInfoType = def ^. constructorType,

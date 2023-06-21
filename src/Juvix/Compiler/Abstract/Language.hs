@@ -77,11 +77,6 @@ newtype FunctionRef = FunctionRef
   deriving stock (Eq, Show)
   deriving newtype (Hashable)
 
-newtype ConstructorRef = ConstructorRef
-  {_constructorRefName :: Name}
-  deriving stock (Eq, Show)
-  deriving newtype (Hashable)
-
 newtype InductiveRef = InductiveRef
   {_inductiveRefName :: Name}
   deriving stock (Eq, Show)
@@ -94,7 +89,7 @@ newtype AxiomRef = AxiomRef
 
 data Iden
   = IdenFunction FunctionRef
-  | IdenConstructor ConstructorRef
+  | IdenConstructor Name
   | IdenVar VarName
   | IdenInductive InductiveRef
   | IdenAxiom AxiomRef
@@ -159,6 +154,11 @@ data FunctionParameter = FunctionParameter
   }
   deriving stock (Eq, Show)
 
+newtype InductiveParameter = InductiveParameter
+  { _inductiveParamName :: VarName
+  }
+  deriving stock (Eq, Show, Data)
+
 data Function = Function
   { _funParameter :: FunctionParameter,
     _funReturn :: Expression
@@ -170,8 +170,10 @@ instance HasAtomicity Function where
 
 -- | Fully applied constructor in a pattern.
 data ConstructorApp = ConstructorApp
-  { _constrAppConstructor :: ConstructorRef,
-    _constrAppParameters :: [PatternArg]
+  { _constrAppConstructor :: Name,
+    _constrAppParameters :: [PatternArg],
+    -- | ignore this field
+    _constrAppType :: Maybe Expression
   }
   deriving stock (Eq, Show)
 
@@ -192,9 +194,9 @@ data Pattern
 data InductiveDef = InductiveDef
   { _inductiveName :: InductiveName,
     _inductiveBuiltin :: Maybe BuiltinInductive,
-    _inductiveParameters :: [FunctionParameter],
-    _inductiveType :: Expression,
     _inductiveExamples :: [Example],
+    _inductiveType :: Expression,
+    _inductiveParameters :: [InductiveParameter],
     _inductiveConstructors :: [InductiveConstructorDef],
     _inductivePositive :: Bool,
     _inductivePragmas :: Pragmas
@@ -218,6 +220,7 @@ data AxiomDef = AxiomDef
   deriving stock (Eq, Show)
 
 makeLenses ''Module
+makeLenses ''InductiveParameter
 makeLenses ''Case
 makeLenses ''CaseBranch
 makeLenses ''Let
@@ -233,7 +236,6 @@ makeLenses ''ModuleBody
 makeLenses ''InductiveConstructorDef
 makeLenses ''ConstructorApp
 makeLenses ''FunctionRef
-makeLenses ''ConstructorRef
 makeLenses ''InductiveRef
 makeLenses ''AxiomRef
 makeLenses ''AxiomDef
@@ -263,8 +265,8 @@ instance HasAtomicity Lambda where
   atomicity = const Atom
 
 instance HasAtomicity ConstructorApp where
-  atomicity (ConstructorApp _ ps)
-    | null ps = Atom
+  atomicity ConstructorApp {..}
+    | null _constrAppParameters = Atom
     | otherwise = Aggregate appFixity
 
 instance HasAtomicity Pattern where

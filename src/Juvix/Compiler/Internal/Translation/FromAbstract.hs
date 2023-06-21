@@ -349,7 +349,7 @@ goConstructorApp c = do
   _constrAppParameters' <- mapM goPatternArg (c ^. Abstract.constrAppParameters)
   return
     ConstructorApp
-      { _constrAppConstructor = c ^. Abstract.constrAppConstructor . Abstract.constructorRefName,
+      { _constrAppConstructor = c ^. Abstract.constrAppConstructor,
         _constrAppParameters = _constrAppParameters',
         _constrAppType = Nothing
       }
@@ -358,9 +358,6 @@ isSmallType :: Abstract.Expression -> Bool
 isSmallType e = case e of
   Abstract.ExpressionUniverse u -> isSmallUni u
   _ -> False
-
-isSmallUni :: Universe -> Bool
-isSmallUni u = 0 == fromMaybe 0 (u ^. universeLevel)
 
 goUniverse :: Universe -> SmallUniverse
 goUniverse u
@@ -405,7 +402,7 @@ goApplication (Abstract.Application f x i) = do
 goIden :: Abstract.Iden -> Iden
 goIden i = case i of
   Abstract.IdenFunction n -> IdenFunction (n ^. Abstract.functionRefName)
-  Abstract.IdenConstructor c -> IdenConstructor (c ^. Abstract.constructorRefName)
+  Abstract.IdenConstructor c -> IdenConstructor c
   Abstract.IdenVar v -> IdenVar v
   Abstract.IdenAxiom a -> IdenAxiom (a ^. Abstract.axiomRefName)
   Abstract.IdenInductive a -> IdenInductive (a ^. Abstract.inductiveRefName)
@@ -470,24 +467,18 @@ goLet l = do
       AcyclicSCC f -> LetFunDef f
       CyclicSCC m -> LetMutualBlock (MutualBlockLet (nonEmpty' m))
 
-goInductiveParameter :: Abstract.FunctionParameter -> Sem r InductiveParameter
+goInductiveParameter :: Abstract.InductiveParameter -> InductiveParameter
 goInductiveParameter f =
-  case (f ^. Abstract.paramName, f ^. Abstract.paramType) of
-    (Just var, Abstract.ExpressionUniverse u)
-      | isSmallUni u ->
-          return
-            InductiveParameter
-              { _inductiveParamName = var
-              }
-    (Just {}, _) -> unsupported "only type variables of small types are allowed"
-    (Nothing, _) -> unsupported "unnamed inductive parameters"
+  InductiveParameter
+    { _inductiveParamName = f ^. Abstract.inductiveParamName
+    }
 
 goInductiveDef :: forall r. Members '[NameIdGen, Reader NameDependencyInfo] r => Abstract.InductiveDef -> Sem r InductiveDef
 goInductiveDef i
   | not (isSmallType (i ^. Abstract.inductiveType)) = unsupported "inductive indices"
   | otherwise = do
-      inductiveParameters' <- mapM goInductiveParameter (i ^. Abstract.inductiveParameters)
-      let indTypeName = i ^. Abstract.inductiveName
+      let inductiveParameters' = map goInductiveParameter (i ^. Abstract.inductiveParameters)
+          indTypeName = i ^. Abstract.inductiveName
       inductiveConstructors' <-
         mapM
           goConstructorDef

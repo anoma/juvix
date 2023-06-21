@@ -22,7 +22,7 @@ newtype InductiveInfo = InductiveInfo
   }
 
 data InfoTable = InfoTable
-  { _infoConstructors :: HashMap ConstructorRef ConstructorInfo,
+  { _infoConstructors :: HashMap ConstrName ConstructorInfo,
     _infoAxioms :: HashMap AxiomRef AxiomInfo,
     _infoInductives :: HashMap InductiveRef InductiveInfo,
     _infoFunctions :: HashMap FunctionRef FunctionInfo
