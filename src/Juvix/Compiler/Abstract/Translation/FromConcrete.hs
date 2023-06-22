@@ -34,7 +34,8 @@ makeLenses ''TranslationState
 unsupported :: Text -> a
 unsupported msg = error $ msg <> "Scoped to Abstract: not yet supported"
 
-fromConcrete :: (Members '[Error JuvixError, Builtins, NameIdGen] r) => Scoper.ScoperResult -> Sem r AbstractResult
+fromConcrete :: Members '[Error JuvixError, Builtins, NameIdGen] r =>
+  Scoper.ScoperResult -> Sem r AbstractResult
 fromConcrete _resultScoper =
   mapError (JuvixError @ScoperError) $ do
     (_resultTable, (_resultModulesCache, _resultModules)) <-
