@@ -86,7 +86,7 @@ openImportToInternal o = do
           >>= Abstract.fromConcreteOpenImport
       case mTopModule of
         Nothing -> return Nothing
-        Just m -> Internal.fromAbstractImport m
+        Just m -> Just <$> Internal.fromAbstractInclude m
 
 importToInternal ::
   Members '[Reader EntryPoint, Error JuvixError, State Artifacts] r =>
@@ -107,7 +107,7 @@ importToInternal i = do
     )
     $ Scoper.scopeCheckImport i
       >>= Abstract.fromConcreteImport
-      >>= Internal.fromAbstractImport
+      >>= mapM Internal.fromAbstractInclude
 
 importToInternal' ::
   Members '[Reader EntryPoint, Error JuvixError, State Artifacts] r =>
@@ -121,10 +121,9 @@ parseReplInput ::
   Text ->
   Sem r Parser.ReplInput
 parseReplInput fp txt =
-  ( runNameIdGenArtifacts
-      . runBuiltinsArtifacts
-      . runParserInfoTableBuilderArtifacts
-  )
+  runNameIdGenArtifacts
+    . runBuiltinsArtifacts
+    . runParserInfoTableBuilderArtifacts
     $ Parser.replInputFromTextSource fp txt
 
 expressionUpToTyped ::

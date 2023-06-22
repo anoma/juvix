@@ -19,7 +19,6 @@ import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver
 import Juvix.Compiler.Core.Data.InfoTableBuilder qualified as Core
 import Juvix.Compiler.Internal.Data.InfoTable qualified as Internal
 import Juvix.Compiler.Internal.Language qualified as Internal
-import Juvix.Compiler.Internal.Translation.FromAbstract qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Prelude
@@ -37,15 +36,15 @@ data Artifacts = Artifacts
     _artifactScopeExports :: HashSet NameId,
     _artifactMainModuleScope :: Maybe Scope,
     _artifactScoperState :: Scoped.ScoperState,
+    -- Concrete -> Abstract
+    _artifactAbstractModuleCache :: Abstract.ModulesCache,
+    _artifactInternalTranslationState :: Abstract.TranslationState,
+    -- Abstract -> Internal
     -- Typechecking
     _artifactTypes :: TypesTable,
     _artifactFunctions :: FunctionsTable,
     -- | This includes the InfoTable from all type checked modules
     _artifactInternalTypedTable :: Internal.InfoTable,
-    -- Concrete -> Abstract
-    _artifactAbstractModuleCache :: Abstract.ModulesCache,
-    -- Abstract -> Internal
-    _artifactInternalTranslationState :: Internal.TranslationState,
     -- Core
     _artifactCoreTable :: Core.InfoTable
   }

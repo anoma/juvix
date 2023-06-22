@@ -1,15 +1,12 @@
 module Juvix.Compiler.Internal.Translation.FromAbstract
   ( module Juvix.Compiler.Internal.Translation.FromAbstract.Data.Context,
-    TranslationState (..),
-    iniState,
     fromAbstract,
     fromAbstractExpression,
-    fromAbstractImport,
+    fromAbstractInclude,
   )
 where
 
 import Data.HashMap.Strict qualified as HashMap
-import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Abstract.Data.NameDependencyInfo
 import Juvix.Compiler.Abstract.Extra.DependencyBuilder
 import Juvix.Compiler.Abstract.Extra.DependencyBuilder qualified as Abstract
@@ -27,19 +24,6 @@ data PreStatement
   | PreInductiveDef InductiveDef
   | PreAxiomDef AxiomDef
 
-newtype TranslationState = TranslationState
-  { -- | Top modules are supposed to be included at most once.
-    _translationStateIncluded :: HashSet Abstract.TopModuleName
-  }
-
-iniState :: TranslationState
-iniState =
-  TranslationState
-    { _translationStateIncluded = mempty
-    }
-
-makeLenses ''TranslationState
-
 fromAbstract ::
   Members '[Error JuvixError, NameIdGen] r =>
   Abstract.AbstractResult ->
@@ -49,7 +33,6 @@ fromAbstract abstractResults = do
       exportsTbl :: HashSet NameId = abstractResults ^. Abstract.resultExports
   _resultModules' <-
     runReader exportsTbl
-      . evalState iniState
       $ mapM goModule abstractModules
   let topModule = head _resultModules'
       tbl = buildTable _resultModules'
@@ -78,14 +61,20 @@ fromAbstractExpression e = runReader depInfo (goExpression e)
     depInfo :: NameDependencyInfo
     depInfo = buildDependencyInfoExpr e
 
-fromAbstractImport ::
-  Members '[Reader ExportsTable, State TranslationState, NameIdGen] r =>
-  Abstract.TopModule ->
-  Sem r (Maybe Include)
-fromAbstractImport = goImport
+fromAbstractInclude ::
+  Members '[Reader ExportsTable, NameIdGen] r =>
+  Abstract.Include ->
+  Sem r Include
+fromAbstractInclude = goInclude
+
+goInclude ::
+  Members '[Reader ExportsTable, NameIdGen] r =>
+  Abstract.Include
+  -> Sem r Include
+goInclude (Abstract.Include m) = Include <$> goModule m
 
 goModule ::
-  (Members '[Reader ExportsTable, State TranslationState, NameIdGen] r) =>
+  Members '[Reader ExportsTable, NameIdGen] r =>
   Abstract.TopModule ->
   Sem r Module
 goModule m = do
@@ -167,7 +156,7 @@ unsupported thing = error ("Abstract to Internal: Not yet supported: " <> thing)
 -- | Note that it ignores import statements
 goDefinition ::
   forall r.
-  Members '[Reader ExportsTable, Reader NameDependencyInfo, State TranslationState, NameIdGen] r =>
+  Members '[Reader ExportsTable, Reader NameDependencyInfo, NameIdGen] r =>
   Abstract.Statement ->
   Sem r [PreStatement]
 goDefinition = \case
@@ -177,28 +166,28 @@ goDefinition = \case
   Abstract.StatementAxiom a -> pure . PreAxiomDef <$> goAxiomDef a
   Abstract.StatementInclude {} -> return []
 
-scanImports :: Abstract.ModuleBody -> [Abstract.TopModule]
+scanImports :: Abstract.ModuleBody -> [Abstract.Include]
 scanImports (Abstract.ModuleBody stmts) = mconcatMap go stmts
   where
-    go :: Abstract.Statement -> [Abstract.TopModule]
+    go :: Abstract.Statement -> [Abstract.Include]
     go = \case
       Abstract.StatementLocalModule m -> scanImports (m ^. Abstract.moduleBody)
-      Abstract.StatementInclude (Abstract.Include t) -> [t]
+      Abstract.StatementInclude t -> [t]
       Abstract.StatementInductive {} -> []
       Abstract.StatementFunction {} -> []
       Abstract.StatementAxiom {} -> []
 
 goModuleBody ::
   forall r.
-  Members '[Reader ExportsTable, Reader NameDependencyInfo, State TranslationState, NameIdGen] r =>
+  Members '[Reader ExportsTable, Reader NameDependencyInfo, NameIdGen] r =>
   Abstract.ModuleBody ->
   Sem r ModuleBody
 goModuleBody b@(Abstract.ModuleBody stmts) = do
   preDefs <- concatMapM goDefinition stmts
   sccs <- buildMutualBlocks preDefs
-  let imports :: [Abstract.TopModule] = scanImports b
+  let imports :: [Abstract.Include] = scanImports b
       statements' = map goSCC sccs
-  imports' <- map StatementInclude <$> mapMaybeM goImport imports
+  imports' <- map StatementInclude <$> mapM goInclude imports
   return
     ModuleBody
       { _moduleStatements = imports' <> statements'
@@ -227,20 +216,20 @@ goModuleBody b@(Abstract.ModuleBody stmts) = do
             one :: MutualStatement -> Statement
             one = StatementMutual . MutualBlock . pure
 
-goImport :: (Members '[Reader ExportsTable, State TranslationState, NameIdGen] r) => Abstract.TopModule -> Sem r (Maybe Include)
-goImport m = do
-  inc <- gets (HashSet.member (m ^. Abstract.moduleName) . (^. translationStateIncluded))
-  if
-      | inc -> return Nothing
-      | otherwise -> do
-          modify (over translationStateIncluded (HashSet.insert (m ^. Abstract.moduleName)))
-          m' <- goModule m
-          return
-            ( Just
-                Include
-                  { _includeModule = m'
-                  }
-            )
+-- goImport :: (Members '[Reader ExportsTable, NameIdGen] r) => Abstract.TopModule -> Sem r (Maybe Include)
+-- goImport m = do
+--   inc <- gets (HashSet.member (m ^. Abstract.moduleName) . (^. translationStateIncluded))
+--   if
+--       | inc -> return Nothing
+--       | otherwise -> do
+--           modify (over translationStateIncluded (HashSet.insert (m ^. Abstract.moduleName)))
+--           m' <- goModule m
+--           return
+--             ( Just
+--                 Include
+--                   { _includeModule = m'
+--                   }
+--             )
 
 goTypeIden :: Abstract.Iden -> Iden
 goTypeIden = \case

@@ -3,6 +3,7 @@ module Juvix.Compiler.Internal.Data.InfoTable where
 import Data.Generics.Uniplate.Data
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Internal.Extra
+import Juvix.Compiler.Internal.Pretty (ppTrace)
 import Juvix.Prelude
 
 data ConstructorInfo = ConstructorInfo
@@ -169,8 +170,21 @@ lookupConstructor f = HashMap.lookupDefault impossible f <$> asks (^. infoConstr
 lookupConstructorArgTypes :: (Member (Reader InfoTable) r) => Name -> Sem r ([VarName], [Expression])
 lookupConstructorArgTypes = fmap constructorArgTypes . lookupConstructor
 
-lookupInductive :: (Member (Reader InfoTable) r) => InductiveName -> Sem r InductiveInfo
-lookupInductive f = HashMap.lookupDefault impossible f <$> asks (^. infoInductives)
+lookupInductive :: forall r. Member (Reader InfoTable) r => InductiveName -> Sem r InductiveInfo
+lookupInductive f = do
+  err <- impossibleErr
+  HashMap.lookupDefault err f <$> asks (^. infoInductives)
+  where
+    impossibleErr :: Sem r a
+    impossibleErr = do
+      tbl <- asks (^. infoInductives)
+      return
+        . error
+        $ "impossible: "
+          <> ppTrace f
+          <> " is not in the InfoTable\n"
+          <> "The registered inductives are: "
+          <> ppTrace (HashMap.keys tbl)
 
 lookupFunction :: (Member (Reader InfoTable) r) => Name -> Sem r FunctionInfo
 lookupFunction f = HashMap.lookupDefault impossible f <$> asks (^. infoFunctions)
