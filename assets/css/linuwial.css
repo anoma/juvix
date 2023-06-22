@@ -884,8 +884,8 @@ p.directory {
 
 /* @end */
 
-/* Styles for the collapse button */
-.collapse-button {
+/* Styles for the toggle button */
+.toggle-button {
   display: inline-block;
   padding: 5px 10px;
   background-color: #D84E53;
@@ -894,12 +894,12 @@ p.directory {
   cursor: pointer;
 }
 
-.collapse-button:hover {
+.toggle-button:hover {
   background-color: #803353;
 }
 
-/* Styles for the collapse icon */
-.collapse-icon {
+/* Styles for the toggle icon */
+.toggle-icon {
   display: inline-block;
   margin-right: 5px;
   font-weight: bold;

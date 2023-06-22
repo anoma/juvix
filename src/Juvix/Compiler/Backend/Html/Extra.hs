@@ -51,11 +51,8 @@ jsLink js = do
       ! Attr.type_ "text/javascript"
     $ mempty
 
-closeAll :: Html
-closeAll =
-  script
-    ! Attr.type_ "text/javascript"
-    $ "function closeAll() { document.body.querySelectorAll('summary').forEach((e) => { document.body.querySelectorAll('details').forEach((e) => (e.hasAttribute('open')) ? e.removeAttribute('open') : '')})}"
+toggleJs :: (Members '[Reader HtmlOptions] r) => Sem r Html
+toggleJs = jsLink "toggle.js"
 
 linuwialCss :: (Members '[Reader HtmlOptions] r) => Sem r Html
 linuwialCss = cssLink "linuwial.css"

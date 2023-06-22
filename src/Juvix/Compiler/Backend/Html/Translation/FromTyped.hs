@@ -90,11 +90,13 @@ createIndexFile ps = do
           Html.div ! Attr.id "module-list" $
             (p ! Attr.class_ "caption" $ "Modules")
               <> ( button
-                     ! Attr.class_ "collapse-button"
-                     ! Attr.onclick "closeAll()"
-                     $ Html.span ! Attr.class_ "collapse-icon"
-                     $ "▼"
-                       <> "Collapse All"
+                     ! Attr.id "toggle-all-button"
+                     ! Attr.class_ "toggle-button opened"
+                     ! Attr.onclick "toggle()"
+                     $ Html.span
+                       ! Attr.id "toggle-button-text"
+                       ! Attr.class_ "toggle-icon"
+                     $ "▼ Close all"
                  )
               <> tree'
 
@@ -212,6 +214,7 @@ template rightMenu' content' = do
   mathJax <- mathJaxCdn
   ayuTheme <- ayuCss
   judocTheme <- linuwialCss
+  toggle <- toggleJs
   let mhead :: Html
       mhead =
         Html.head $
@@ -226,7 +229,7 @@ template rightMenu' content' = do
             <> livejs
             <> ayuTheme
             <> judocTheme
-            <> closeAll
+            <> toggle
 
       titleStr :: Html
       titleStr = "Juvix Documentation"
