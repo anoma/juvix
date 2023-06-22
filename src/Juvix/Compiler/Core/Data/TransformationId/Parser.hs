@@ -88,6 +88,7 @@ transformationText = \case
   Inlining -> strInlining
   FoldTypeSynonyms -> strFoldTypeSynonyms
   CaseCallLifting -> strCaseCallLifting
+  SimplifyIfs -> strSimplifyIfs
   OptPhaseEval -> strOptPhaseEval
   OptPhaseExec -> strOptPhaseExec
   OptPhaseGeb -> strOptPhaseGeb
@@ -192,6 +193,9 @@ strFoldTypeSynonyms = "fold-type-synonyms"
 
 strCaseCallLifting :: Text
 strCaseCallLifting = "case-call-lifting"
+
+strSimplifyIfs :: Text
+strSimplifyIfs = "simplify-ifs"
 
 strOptPhaseEval :: Text
 strOptPhaseEval = "opt-phase-eval"
