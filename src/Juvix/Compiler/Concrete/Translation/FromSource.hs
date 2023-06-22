@@ -689,7 +689,9 @@ literal = do
   P.lift (registerLiteral l)
 
 letClause :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (LetClause 'Parsed)
-letClause = either LetTypeSig LetFunClause <$> auxTypeSigFunClause
+letClause = do
+  optional_ stashPragmas
+  either LetTypeSig LetFunClause <$> auxTypeSigFunClause
 
 letBlock :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (Let 'Parsed)
 letBlock = do

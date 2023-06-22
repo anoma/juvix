@@ -19,5 +19,7 @@ main : Nat;
 main :=
   let f : Nat -> Nat := mycompose λ{x := x + 1} λ{x := x * 2};
       g : Nat -> Nat -> Nat := myflip myconst;
+      {-# inline: false #-}
+      myid : Nat -> Nat := λ{x := x};
   in
-  f 3 + g 7 9;
+  myid (f 3 + g 7 9);

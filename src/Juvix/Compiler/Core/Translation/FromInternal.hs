@@ -8,6 +8,7 @@ import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Info.LocationInfo
 import Juvix.Compiler.Core.Info.NameInfo
+import Juvix.Compiler.Core.Info.PragmaInfo
 import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Core.Translation.FromInternal.Builtins.Int
 import Juvix.Compiler.Core.Translation.FromInternal.Builtins.Nat
@@ -502,18 +503,21 @@ goLet l = goClauses (toList (l ^. Internal.letClauses))
               rest <- localAddName (f ^. Internal.funDefName) (goClauses cs)
               let name = f ^. Internal.funDefName . nameText
                   loc = f ^. Internal.funDefName . nameLoc
-              return $ mkLet mempty (Binder name (Just loc) funTy) funBody rest
+                  info = setInfoPragma (f ^. Internal.funDefPragmas) mempty
+                  body = modifyInfo (setInfoPragma (f ^. Internal.funDefPragmas)) funBody
+              return $ mkLet info (Binder name (Just loc) funTy) body rest
           goMutual :: Internal.MutualBlockLet -> Sem r Node
           goMutual (Internal.MutualBlockLet funs) = do
             let lfuns = toList funs
                 names = map (^. Internal.funDefName) lfuns
                 tys = map (^. Internal.funDefType) lfuns
+                pragmas = map (^. Internal.funDefPragmas) lfuns
             tys' <- mapM goType tys
             localAddNames names $ do
               vals' <- sequence [mkFunBody ty f | (ty, f) <- zipExact tys' lfuns]
               let items = nonEmpty' (zipWith3Exact (\ty n v -> LetItem (Binder (n ^. nameText) (Just $ n ^. nameLoc) ty) v) tys' names vals')
               rest <- goClauses cs
-              return (mkLetRec mempty items rest)
+              return (mkLetRec (setInfoPragmas pragmas mempty) items rest)
 
 goAxiomInductive ::
   forall r.
