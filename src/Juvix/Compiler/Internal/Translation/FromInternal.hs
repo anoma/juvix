@@ -46,8 +46,8 @@ arityCheckExpression ::
 arityCheckExpression exp = do
   table <- extendedTableReplArtifacts exp
   mapError (JuvixError @ArityChecking.ArityCheckerError)
-    $ runReader table
-      . runNameIdGenArtifacts
+    . runReader table
+    . runNameIdGenArtifacts
     $ ArityChecking.inferReplExpression exp
 
 arityCheckInclude ::
@@ -55,10 +55,11 @@ arityCheckInclude ::
   Include ->
   Sem r Include
 arityCheckInclude i = do
-  let table = buildTable [i ^. includeModule]
+  artiTable <- gets (^. artifactInternalTypedTable)
+  let table = buildTable [i ^. includeModule] <> artiTable
   mapError (JuvixError @ArityChecking.ArityCheckerError)
-    $ runReader table
-      . runNameIdGenArtifacts
+    . runReader table
+    . runNameIdGenArtifacts
     $ ArityChecking.checkInclude i
 
 typeCheckExpressionType ::
@@ -69,15 +70,15 @@ typeCheckExpressionType ::
 typeCheckExpressionType exp = do
   table <- extendedTableReplArtifacts exp
   mapError (JuvixError @TypeCheckerError)
-    $ runTypesTableArtifacts
-      . ignoreHighlightBuilder
-      . runFunctionsTableArtifacts
-      . runBuiltinsArtifacts
-      . runNameIdGenArtifacts
-      . runReader table
-      . ignoreOutput @Example
-      . withEmptyVars
-      . runInferenceDef
+    . runTypesTableArtifacts
+    . ignoreHighlightBuilder
+    . runFunctionsTableArtifacts
+    . runBuiltinsArtifacts
+    . runNameIdGenArtifacts
+    . runReader table
+    . ignoreOutput @Example
+    . withEmptyVars
+    . runInferenceDef
     $ inferExpression' Nothing exp >>= traverseOf typedType strongNormalize
 
 typeCheckExpression ::
@@ -91,17 +92,18 @@ typeCheckInclude ::
   Include ->
   Sem r Include
 typeCheckInclude i = do
-  let table = buildTable [i ^. includeModule]
+  artiTable <- gets (^. artifactInternalTypedTable)
+  let table = buildTable [i ^. includeModule] <> artiTable
   modify (set artifactInternalTypedTable table)
   mapError (JuvixError @TypeCheckerError)
-    $ runTypesTableArtifacts
-      . runFunctionsTableArtifacts
-      . ignoreHighlightBuilder
-      . runBuiltinsArtifacts
-      . runNameIdGenArtifacts
-      . ignoreOutput @Example
-      . runReader table
-      . withEmptyVars
+    . runTypesTableArtifacts
+    . runFunctionsTableArtifacts
+    . ignoreHighlightBuilder
+    . runBuiltinsArtifacts
+    . runNameIdGenArtifacts
+    . ignoreOutput @Example
+    . runReader table
+    . withEmptyVars
     $ checkInclude i
 
 typeChecking ::

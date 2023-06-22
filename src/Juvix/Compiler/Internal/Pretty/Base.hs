@@ -5,6 +5,8 @@ module Juvix.Compiler.Internal.Pretty.Base
   )
 where
 
+import Data.HashMap.Strict qualified as HashMap
+import Juvix.Compiler.Internal.Data.InfoTable.Base
 import Juvix.Compiler.Internal.Extra
 import Juvix.Compiler.Internal.Pretty.Options
 import Juvix.Data.CodeAnn
@@ -275,6 +277,18 @@ instance PrettyCode Module where
           <> line
           <> body'
           <> line
+
+instance PrettyCode InfoTable where
+  ppCode tbl = do
+    inds <- ppCode (HashMap.keys (tbl ^. infoInductives))
+    constrs <- ppCode (HashMap.keys (tbl ^. infoConstructors))
+    return $
+      "InfoTable"
+        <> "\n========="
+        <> "\nInductives: "
+        <> inds
+        <> "\nConstructors: "
+        <> constrs
 
 ppPostExpression ::
   (PrettyCode a, HasAtomicity a, Member (Reader Options) r) =>

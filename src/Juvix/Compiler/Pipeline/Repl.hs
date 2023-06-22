@@ -163,7 +163,8 @@ registerOpenImport o = do
 
 fromInternalInclude :: Members '[State Artifacts] r => Internal.Include -> Sem r ()
 fromInternalInclude i = do
-  let table = Internal.buildTable [i ^. Internal.includeModule]
+  artiTable <- gets (^. artifactInternalTypedTable)
+  let table = Internal.buildTable [i ^. Internal.includeModule] <> artiTable
   runReader table
     . runCoreInfoTableBuilderArtifacts
     . runFunctionsTableArtifacts

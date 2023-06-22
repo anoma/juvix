@@ -26,7 +26,7 @@ checkModule Module {..} = do
       }
 
 checkModuleBody ::
-  (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r) =>
+  Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r =>
   ModuleBody ->
   Sem r ModuleBody
 checkModuleBody ModuleBody {..} = do

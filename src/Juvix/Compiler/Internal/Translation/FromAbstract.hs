@@ -32,8 +32,8 @@ fromAbstract abstractResults = do
   let abstractModules = abstractResults ^. Abstract.resultModules
       exportsTbl :: HashSet NameId = abstractResults ^. Abstract.resultExports
   _resultModules' <-
-    runReader exportsTbl
-      $ mapM goModule abstractModules
+    runReader exportsTbl $
+      mapM goModule abstractModules
   let topModule = head _resultModules'
       tbl = buildTable _resultModules'
   unless
@@ -69,8 +69,8 @@ fromAbstractInclude = goInclude
 
 goInclude ::
   Members '[Reader ExportsTable, NameIdGen] r =>
-  Abstract.Include
-  -> Sem r Include
+  Abstract.Include ->
+  Sem r Include
 goInclude (Abstract.Include m) = Include <$> goModule m
 
 goModule ::

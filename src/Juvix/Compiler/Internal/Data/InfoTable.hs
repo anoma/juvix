@@ -1,60 +1,15 @@
-module Juvix.Compiler.Internal.Data.InfoTable where
+module Juvix.Compiler.Internal.Data.InfoTable
+  ( module Juvix.Compiler.Internal.Data.InfoTable,
+    module Juvix.Compiler.Internal.Data.InfoTable.Base,
+  )
+where
 
 import Data.Generics.Uniplate.Data
 import Data.HashMap.Strict qualified as HashMap
+import Juvix.Compiler.Internal.Data.InfoTable.Base
 import Juvix.Compiler.Internal.Extra
 import Juvix.Compiler.Internal.Pretty (ppTrace)
 import Juvix.Prelude
-
-data ConstructorInfo = ConstructorInfo
-  { _constructorInfoInductiveParameters :: [InductiveParameter],
-    _constructorInfoArgs :: [Expression],
-    _constructorInfoInductive :: InductiveName,
-    _constructorInfoBuiltin :: Maybe BuiltinConstructor
-  }
-
-newtype FunctionInfo = FunctionInfo
-  { _functionInfoDef :: FunctionDef
-  }
-
-newtype AxiomInfo = AxiomInfo
-  { _axiomInfoDef :: AxiomDef
-  }
-
-newtype InductiveInfo = InductiveInfo
-  { _inductiveInfoDef :: InductiveDef
-  }
-
-data InfoTable = InfoTable
-  { _infoConstructors :: HashMap Name ConstructorInfo,
-    _infoAxioms :: HashMap Name AxiomInfo,
-    _infoFunctions :: HashMap Name FunctionInfo,
-    _infoInductives :: HashMap Name InductiveInfo
-  }
-
-makeLenses ''InfoTable
-makeLenses ''FunctionInfo
-makeLenses ''ConstructorInfo
-makeLenses ''AxiomInfo
-makeLenses ''InductiveInfo
-
-instance Semigroup InfoTable where
-  a <> b =
-    InfoTable
-      { _infoConstructors = a ^. infoConstructors <> b ^. infoConstructors,
-        _infoAxioms = a ^. infoAxioms <> b ^. infoAxioms,
-        _infoFunctions = a ^. infoFunctions <> b ^. infoFunctions,
-        _infoInductives = a ^. infoInductives <> b ^. infoInductives
-      }
-
-instance Monoid InfoTable where
-  mempty =
-    InfoTable
-      { _infoConstructors = mempty,
-        _infoAxioms = mempty,
-        _infoFunctions = mempty,
-        _infoInductives = mempty
-      }
 
 buildTable :: (Foldable f) => f Module -> InfoTable
 buildTable = mconcatMap buildTable1
@@ -164,8 +119,21 @@ buildTable1' m = do
     ss :: [Statement]
     ss = m ^. moduleBody . moduleStatements
 
-lookupConstructor :: (Member (Reader InfoTable) r) => Name -> Sem r ConstructorInfo
-lookupConstructor f = HashMap.lookupDefault impossible f <$> asks (^. infoConstructors)
+lookupConstructor :: forall r. Member (Reader InfoTable) r => Name -> Sem r ConstructorInfo
+lookupConstructor f = do
+  err <- impossibleErr
+  HashMap.lookupDefault err f <$> asks (^. infoConstructors)
+  where
+    impossibleErr :: Sem r a
+    impossibleErr = do
+      tbl <- asks (^. infoConstructors)
+      return
+        . error
+        $ "impossible: "
+          <> ppTrace f
+          <> " is not in the InfoTable\n"
+          <> "The registered constructors are: "
+          <> ppTrace (HashMap.keys tbl)
 
 lookupConstructorArgTypes :: (Member (Reader InfoTable) r) => Name -> Sem r ([VarName], [Expression])
 lookupConstructorArgTypes = fmap constructorArgTypes . lookupConstructor
