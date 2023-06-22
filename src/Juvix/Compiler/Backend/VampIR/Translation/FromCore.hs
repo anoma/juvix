@@ -23,6 +23,11 @@ fromCoreNode ii node =
       n = length lams
       args = getVampIRInputs n (ii ^. identifierArgNames)
       isBoolTarget = isTypeBool (typeTarget (ii ^. identifierType))
+      publicInputs =
+        maybe
+          []
+          (filter (`elem` args) . (^. pragmaPublic))
+          (ii ^. identifierPragmas . pragmasPublic)
    in Program
         { _programFunctions =
             [ Function
@@ -33,7 +38,8 @@ fromCoreNode ii node =
                   _functionInputs = args,
                   _functionOutput = if isBoolTarget then "1" else "out"
                 }
-            ]
+            ],
+          _programPublicInputs = publicInputs
         }
   where
     mkName :: Text -> Text
