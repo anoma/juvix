@@ -77,12 +77,16 @@ ppEquation Function {..} = do
   fn <- ppName KNameFunction _functionName
   return $ fn <+> hsep args <+> kwEq <+> "(" <> out <> " + 0)" <> semi
 
+ppPub :: Text -> Sem r (Doc Ann)
+ppPub p = return $ "pub " <> pretty p <> semi
+
 instance PrettyCode Program where
   ppCode Program {..} = do
+    pubs <- mapM ppPub _programPublicInputs
     fns <- mapM ppCode _programFunctions
     eqns <- mapM ppEquation _programFunctions
     bits <- asks (^. optIntegerBits)
-    return $ pretty (vampIRDefs bits) <> line <> line <> vsep fns <> line <> line <> vsep eqns
+    return $ vsep pubs <> line <> line <> pretty (vampIRDefs bits) <> line <> line <> vsep fns <> line <> line <> vsep eqns
 
 --------------------------------------------------------------------------------
 -- VampIR definitions

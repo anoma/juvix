@@ -10,6 +10,7 @@ checkVampIR :: forall r. Member (Error CoreError) r => InfoTable -> Sem r InfoTa
 checkVampIR tab =
   checkMainExists tab
     >> checkMainType
+    >> checkPublicInputs
     >> checkNoAxioms tab
     >> mapAllNodesM checkNoIO tab
     >> mapAllNodesM (checkBuiltins True) tab
@@ -33,3 +34,16 @@ checkVampIR tab =
       where
         isPrimIntegerOrBool ty' =
           isTypeInteger ty' || isTypeBool ty' || isDynamic ty'
+
+    checkPublicInputs :: Sem r ()
+    checkPublicInputs =
+      unless (maybe True (all (`elem` argnames) . (^. pragmaPublic)) (ii ^. identifierPragmas . pragmasPublic)) $
+        throw
+          CoreError
+            { _coreErrorMsg = ppOutput "invalid public input: not an argument name",
+              _coreErrorLoc = fromMaybe defaultLoc (ii ^. identifierLocation),
+              _coreErrorNode = Nothing
+            }
+      where
+        ii = lookupIdentifierInfo tab (fromJust (tab ^. infoMain))
+        argnames = map (fromMaybe "") (ii ^. identifierArgNames)

@@ -20,6 +20,11 @@ newtype PragmaArgNames = PragmaArgNames
   }
   deriving stock (Show, Eq, Ord, Data, Generic)
 
+newtype PragmaPublic = PragmaPublic
+  { _pragmaPublic :: [Text]
+  }
+  deriving stock (Show, Eq, Ord, Data, Generic)
+
 newtype PragmaFormat = PragmaFormat
   { _pragmaFormat :: Bool
   }
@@ -29,12 +34,14 @@ data Pragmas = Pragmas
   { _pragmasInline :: Maybe PragmaInline,
     _pragmasUnroll :: Maybe PragmaUnroll,
     _pragmasArgNames :: Maybe PragmaArgNames,
+    _pragmasPublic :: Maybe PragmaPublic,
     _pragmasFormat :: Maybe PragmaFormat
   }
   deriving stock (Show, Eq, Ord, Data, Generic)
 
 makeLenses ''PragmaUnroll
 makeLenses ''PragmaArgNames
+makeLenses ''PragmaPublic
 makeLenses ''PragmaFormat
 makeLenses ''Pragmas
 
@@ -43,6 +50,8 @@ instance Hashable PragmaInline
 instance Hashable PragmaUnroll
 
 instance Hashable PragmaArgNames
+
+instance Hashable PragmaPublic
 
 instance Hashable PragmaFormat
 
@@ -56,6 +65,7 @@ instance FromJSON Pragmas where
         _pragmasInline <- keyMay "inline" parseInline
         _pragmasUnroll <- keyMay "unroll" parseUnroll
         _pragmasArgNames <- keyMay "argnames" parseArgNames
+        _pragmasPublic <- keyMay "public" parsePublicArgs
         _pragmasFormat <- keyMay "format" parseFormat
         return Pragmas {..}
 
@@ -84,17 +94,23 @@ instance FromJSON Pragmas where
         _pragmaArgNames <- eachInArray asText
         mapM_ checkArgName _pragmaArgNames
         return PragmaArgNames {..}
-        where
-          checkArgName :: Text -> Parse YamlError ()
-          checkArgName name = do
-            let name' = unpack name
-            unless (isFirstLetter name' && all isValidIdentChar name') $
-              throwCustomError ("invalid argument name: " <> name)
+
+      parsePublicArgs :: Parse YamlError PragmaPublic
+      parsePublicArgs = do
+        _pragmaPublic <- eachInArray asText
+        mapM_ checkArgName _pragmaPublic
+        return PragmaPublic {..}
 
       parseFormat :: Parse YamlError PragmaFormat
       parseFormat = do
         _pragmaFormat <- asBool
         return PragmaFormat {..}
+
+      checkArgName :: Text -> Parse YamlError ()
+      checkArgName name = do
+        let name' = unpack name
+        unless (isFirstLetter name' && all isValidIdentChar name') $
+          throwCustomError ("invalid argument name: " <> name)
 
 -- | The Semigroup `<>` is used to propagate pragmas from an enclosing context.
 -- For example, if `p1` are the pragmas declared for a module `M`, and `p2` the
@@ -106,6 +122,7 @@ instance Semigroup Pragmas where
       { _pragmasInline = p2 ^. pragmasInline <|> p1 ^. pragmasInline,
         _pragmasUnroll = p2 ^. pragmasUnroll <|> p1 ^. pragmasUnroll,
         _pragmasArgNames = p2 ^. pragmasArgNames,
+        _pragmasPublic = p2 ^. pragmasPublic,
         _pragmasFormat = p2 ^. pragmasFormat <|> p1 ^. pragmasFormat
       }
 
@@ -115,5 +132,6 @@ instance Monoid Pragmas where
       { _pragmasInline = Nothing,
         _pragmasUnroll = Nothing,
         _pragmasArgNames = Nothing,
+        _pragmasPublic = Nothing,
         _pragmasFormat = Nothing
       }

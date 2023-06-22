@@ -53,8 +53,9 @@ data Function = Function
     _functionOutput :: Text
   }
 
-newtype Program = Program
-  { _programFunctions :: [Function]
+data Program = Program
+  { _programFunctions :: [Function],
+    _programPublicInputs :: [Text]
   }
 
 makeLenses ''Var
