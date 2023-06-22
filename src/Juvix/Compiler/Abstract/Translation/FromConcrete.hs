@@ -20,19 +20,6 @@ import Juvix.Prelude
 unsupported :: Text -> a
 unsupported msg = error $ msg <> "Scoped to Abstract: not yet supported"
 
--- newtype TranslationState = TranslationState
---   { -- | Top modules are supposed to be included at most once.
---     _translationStateIncluded :: HashSet Abstract.TopModuleName
---   }
-
--- iniState :: TranslationState
--- iniState =
---   TranslationState
---     { _translationStateIncluded = mempty
---     }
-
--- makeLenses ''TranslationState
-
 fromConcrete :: (Members '[Error JuvixError, Builtins, NameIdGen] r) => Scoper.ScoperResult -> Sem r AbstractResult
 fromConcrete _resultScoper =
   mapError (JuvixError @ScoperError) $ do
@@ -40,7 +27,7 @@ fromConcrete _resultScoper =
       runInfoTableBuilder
         . runReader @Pragmas mempty
         . runState (ModulesCache mempty)
-        $ (nonEmpty' <$> mapMaybeM goTopModule (toList ms))
+        $ mapM (fmap snd . goTopModule) ms
     let _resultExports = _resultScoper ^. Scoper.resultExports
     return AbstractResult {..}
   where
@@ -56,7 +43,9 @@ fromConcreteImport ::
 fromConcreteImport =
   mapError (JuvixError @ScoperError)
     . runReader @Pragmas mempty
-    . goImportCacheMiss
+    . fmap snd
+    . goTopModule
+    . (^. importModule . moduleRefModule)
 
 fromConcreteOpenImport ::
   Members '[Error JuvixError, NameIdGen, Builtins, InfoTableBuilder, State ModulesCache] r =>
@@ -64,25 +53,13 @@ fromConcreteOpenImport ::
   Sem r (Maybe Abstract.TopModule)
 fromConcreteOpenImport = mapError (JuvixError @ScoperError) . runReader @Pragmas mempty . goOpenModule'
 
-goTopModuleFirst ::
-  forall r.
-  (Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ModulesCache] r) =>
-  Module 'Scoped 'ModuleTop ->
-  Sem r Abstract.TopModule
-goTopModuleFirst m = do
-  let moduleNameId :: S.NameId
-      moduleNameId = m ^. Concrete.modulePath . S.nameId
-  am <- goModule' m
-  modify (over cachedModules (HashMap.insert moduleNameId am))
-  return am
-
+-- | returns (cacheHit, module)
 goTopModule ::
   forall r.
   (Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ModulesCache] r) =>
   Module 'Scoped 'ModuleTop ->
-  Sem r (Maybe Abstract.TopModule)
+  Sem r (Bool, Abstract.TopModule)
 goTopModule m = do
-  cache <- gets (^. cachedModules)
   let moduleNameId :: S.NameId
       moduleNameId = m ^. Concrete.modulePath . S.nameId
       processModule :: Sem r Abstract.Module
@@ -90,9 +67,10 @@ goTopModule m = do
         am <- goModule' m
         modify (over cachedModules (HashMap.insert moduleNameId am))
         return am
-  if
-      | isJust (cache ^. at moduleNameId) -> return Nothing
-      | otherwise -> Just <$> processModule
+  cache <- gets (^. cachedModules)
+  case cache ^. at moduleNameId of
+    Nothing -> (False,) <$> processModule
+    Just m' -> return (True, m')
 
 goLocalModule ::
   (Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ModulesCache] r) =>
@@ -193,14 +171,19 @@ goImportCacheMiss ::
   (Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, State ModulesCache, Reader Pragmas] r) =>
   Import 'Scoped ->
   Sem r Abstract.TopModule
-goImportCacheMiss t = goTopModuleFirst (t ^. importModule . moduleRefModule)
+goImportCacheMiss t = snd <$> (goTopModule (t ^. importModule . moduleRefModule))
 
 goImport ::
   forall r.
   (Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, State ModulesCache, Reader Pragmas] r) =>
   Import 'Scoped ->
   Sem r (Maybe Abstract.TopModule)
-goImport Import {..} = goTopModule (_importModule ^. moduleRefModule)
+goImport Import {..} = guardNotCached <$> goTopModule (_importModule ^. moduleRefModule)
+
+guardNotCached :: (Bool, Abstract.TopModule) -> Maybe Abstract.TopModule
+guardNotCached (hit, m) =
+  -- guard (not hit) $>
+  return m
 
 goStatement ::
   forall r.
@@ -225,7 +208,7 @@ goOpenModule' ::
 goOpenModule' o
   | isJust (o ^. openModuleImportKw) =
       case o ^. openModuleName of
-        ModuleRef' (SModuleTop :&: m) -> goTopModule (m ^. moduleRefModule)
+        ModuleRef' (SModuleTop :&: m) -> Just . snd <$> goTopModule (m ^. moduleRefModule)
         _ -> impossible
   | otherwise = return Nothing
 

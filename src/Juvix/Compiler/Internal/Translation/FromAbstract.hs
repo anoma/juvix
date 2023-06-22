@@ -46,7 +46,7 @@ fromAbstract ::
   Sem r InternalResult
 fromAbstract abstractResults = do
   let abstractModules = abstractResults ^. Abstract.resultModules
-      exportsTbl = abstractResults ^. Abstract.resultExports
+      exportsTbl :: HashSet NameId = abstractResults ^. Abstract.resultExports
   _resultModules' <-
     runReader exportsTbl
       . evalState iniState
