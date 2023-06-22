@@ -115,7 +115,7 @@ data Expression
   | ExpressionLiteral LiteralLoc
   | ExpressionHole Hole
   | ExpressionLet Let
-  | ExpressionUniverse Universe
+  | ExpressionUniverse SmallUniverse
   | ExpressionLambda Lambda
   | -- | ExpressionSimpleLambda SimpleLambda -- NOTE note needed
     ExpressionCase Case

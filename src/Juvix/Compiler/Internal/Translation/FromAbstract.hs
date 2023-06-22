@@ -10,6 +10,7 @@ import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Abstract.Data.NameDependencyInfo
 import Juvix.Compiler.Abstract.Extra.DependencyBuilder
 import Juvix.Compiler.Abstract.Extra.DependencyBuilder qualified as Abstract
+import Juvix.Compiler.Abstract.Extra.Functions qualified as Abstract
 import Juvix.Compiler.Abstract.Language qualified as Abstract
 import Juvix.Compiler.Abstract.Translation.FromConcrete.Data.Context qualified as Abstract
 import Juvix.Compiler.Internal.Extra
@@ -216,21 +217,6 @@ goModuleBody b@(Abstract.ModuleBody stmts) = do
             one :: MutualStatement -> Statement
             one = StatementMutual . MutualBlock . pure
 
--- goImport :: (Members '[Reader ExportsTable, NameIdGen] r) => Abstract.TopModule -> Sem r (Maybe Include)
--- goImport m = do
---   inc <- gets (HashSet.member (m ^. Abstract.moduleName) . (^. translationStateIncluded))
---   if
---       | inc -> return Nothing
---       | otherwise -> do
---           modify (over translationStateIncluded (HashSet.insert (m ^. Abstract.moduleName)))
---           m' <- goModule m
---           return
---             ( Just
---                 Include
---                   { _includeModule = m'
---                   }
---             )
-
 goTypeIden :: Abstract.Iden -> Iden
 goTypeIden = \case
   Abstract.IdenFunction f -> IdenFunction f
@@ -251,25 +237,14 @@ goAxiomDef a = do
       }
 
 goFunctionParameter :: Abstract.FunctionParameter -> Sem r FunctionParameter
-goFunctionParameter f = case f ^. Abstract.paramName of
-  Just var
-    | isSmallType (f ^. Abstract.paramType) ->
-        return
-          FunctionParameter
-            { _paramName = Just var,
-              _paramImplicit = f ^. Abstract.paramImplicit,
-              _paramType = smallUniverseE (getLoc var)
-            }
-    | otherwise -> unsupported "named function arguments only for small types"
-  Nothing
-    | otherwise -> do
-        _paramType <- goType (f ^. Abstract.paramType)
-        return
-          FunctionParameter
-            { _paramName = Nothing,
-              _paramImplicit = f ^. Abstract.paramImplicit,
-              _paramType
-            }
+goFunctionParameter f = do
+  _paramType <- goType (f ^. Abstract.paramType)
+  return
+    FunctionParameter
+      { _paramName = f ^. Abstract.paramName,
+        _paramImplicit = f ^. Abstract.paramImplicit,
+        _paramType
+      }
 
 goFunction :: Abstract.Function -> Sem r Function
 goFunction (Abstract.Function l r) = do
@@ -343,20 +318,10 @@ goConstructorApp c = do
         _constrAppType = Nothing
       }
 
-isSmallType :: Abstract.Expression -> Bool
-isSmallType e = case e of
-  Abstract.ExpressionUniverse u -> isSmallUni u
-  _ -> False
-
-goUniverse :: Universe -> SmallUniverse
-goUniverse u
-  | isSmallUni u = SmallUniverse (getLoc u)
-  | otherwise = unsupported "big universes"
-
 goType :: Abstract.Expression -> Sem r Expression
 goType e = case e of
   Abstract.ExpressionIden i -> return (ExpressionIden (goTypeIden i))
-  Abstract.ExpressionUniverse u -> return (ExpressionUniverse (goUniverse u))
+  Abstract.ExpressionUniverse u -> return (ExpressionUniverse u)
   Abstract.ExpressionApplication a -> ExpressionApplication <$> goTypeApplication a
   Abstract.ExpressionFunction f -> ExpressionFunction <$> goFunction f
   Abstract.ExpressionLiteral {} -> unsupported "literals in types"
@@ -410,7 +375,7 @@ goExpressionFunction f = do
 goExpression :: Members '[NameIdGen, Reader NameDependencyInfo] r => Abstract.Expression -> Sem r Expression
 goExpression e = case e of
   Abstract.ExpressionIden i -> return (ExpressionIden (goIden i))
-  Abstract.ExpressionUniverse u -> return (ExpressionUniverse (goUniverse u))
+  Abstract.ExpressionUniverse u -> return (ExpressionUniverse u)
   Abstract.ExpressionFunction f -> ExpressionFunction <$> goExpressionFunction f
   Abstract.ExpressionApplication a -> ExpressionApplication <$> goApplication a
   Abstract.ExpressionLambda l -> ExpressionLambda <$> goLambda l
@@ -464,7 +429,7 @@ goInductiveParameter f =
 
 goInductiveDef :: forall r. Members '[NameIdGen, Reader NameDependencyInfo] r => Abstract.InductiveDef -> Sem r InductiveDef
 goInductiveDef i
-  | not (isSmallType (i ^. Abstract.inductiveType)) = unsupported "inductive indices"
+  | not (Abstract.isSmallUniverse' (i ^. Abstract.inductiveType)) = unsupported "inductive indices"
   | otherwise = do
       let inductiveParameters' = map goInductiveParameter (i ^. Abstract.inductiveParameters)
           indTypeName = i ^. Abstract.inductiveName

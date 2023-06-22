@@ -6,7 +6,7 @@ import Juvix.Prelude
 
 registerSeq :: (Members '[Builtins, NameIdGen] r) => FunctionDef -> Sem r ()
 registerSeq f = do
-  let u = ExpressionUniverse smallUniverseNoLocAbstract
+  let u = ExpressionUniverse smallUniverseNoLoc
   a <- freshVar "a"
   b <- freshVar "b"
   let seq = f ^. funDefName

@@ -219,7 +219,7 @@ instance IsExpression Name where
     KNameLocalModule -> impossible
     KNameTopModule -> impossible
 
-instance IsExpression Universe where
+instance IsExpression SmallUniverse where
   toExpression = ExpressionUniverse
 
 instance IsExpression Application where
@@ -234,7 +234,7 @@ instance IsExpression ConstructorApp where
 
 isSmallUniverse' :: Expression -> Bool
 isSmallUniverse' = \case
-  ExpressionUniverse u -> isSmallUniverse u
+  ExpressionUniverse {} -> True
   _ -> False
 
 toApplicationArg :: PatternArg -> ApplicationArg

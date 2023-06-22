@@ -87,6 +87,9 @@ instance PrettyCode Application where
       Implicit -> implicitDelim i <$> ppCode r
     return $ l' <+> r'
 
+instance PrettyCode SmallUniverse where
+  ppCode _ = return kwType
+
 instance PrettyCode Universe where
   ppCode Universe {..} = return $ kwType <+?> (pretty <$> _universeLevel)
 

@@ -339,10 +339,8 @@ goInductiveParameters ::
   Sem r [Abstract.InductiveParameter]
 goInductiveParameters InductiveParameters {..} = do
   paramType' <- goExpression _inductiveParametersType
-
   case paramType' of
-    Abstract.ExpressionUniverse u
-      | isSmallUni u -> return ()
+    Abstract.ExpressionUniverse {} -> return ()
     _ -> unsupported "only type variables of small types are allowed"
 
   let goInductiveParameter :: S.Symbol -> Abstract.InductiveParameter
@@ -434,7 +432,7 @@ goInductive ty@InductiveDef {..} = do
           { _inductiveParameters = _inductiveParameters',
             _inductiveBuiltin = (^. withLocParam) <$> _inductiveBuiltin,
             _inductiveName = goSymbol _inductiveName,
-            _inductiveType = fromMaybe (Abstract.ExpressionUniverse (smallUniverse loc)) _inductiveType',
+            _inductiveType = fromMaybe (Abstract.ExpressionUniverse (SmallUniverse loc)) _inductiveType',
             _inductiveConstructors = toList _inductiveConstructors',
             _inductiveExamples = _inductiveExamples',
             _inductivePragmas = _inductivePragmas',
@@ -576,8 +574,10 @@ goLambda l = Abstract.Lambda <$> mapM goClause (l ^. lambdaClauses)
       b' <- goExpression (lc ^. lambdaBody)
       return (Abstract.LambdaClause ps' b')
 
-goUniverse :: Universe -> Universe
-goUniverse = id
+goUniverse :: Universe -> SmallUniverse
+goUniverse u
+  | isSmallUniverse u = SmallUniverse (getLoc u)
+  | otherwise = error "only small universe is supported"
 
 goFunction :: (Members '[Error ScoperError, Reader Pragmas, InfoTableBuilder] r) => Function 'Scoped -> Sem r Abstract.Function
 goFunction f = do
