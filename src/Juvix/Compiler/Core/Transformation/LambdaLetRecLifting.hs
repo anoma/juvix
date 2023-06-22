@@ -8,6 +8,7 @@ import Juvix.Compiler.Core.Data.BinderList qualified as BL
 import Juvix.Compiler.Core.Data.InfoTableBuilder
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Info.NameInfo
+import Juvix.Compiler.Core.Info.PragmaInfo
 import Juvix.Compiler.Core.Pretty
 import Juvix.Compiler.Core.Transformation.Base
 import Juvix.Compiler.Core.Transformation.ComputeTypeInfo (computeNodeType)
@@ -68,7 +69,7 @@ lambdaLiftNode aboveBl top =
                     _identifierArgsNum = argsNum,
                     _identifierIsExported = False,
                     _identifierBuiltin = Nothing,
-                    _identifierPragmas = mempty,
+                    _identifierPragmas = getInfoPragma (l ^. lambdaInfo),
                     _identifierArgNames = []
                   }
               registerIdentNode f fBody'
@@ -85,6 +86,8 @@ lambdaLiftNode aboveBl top =
               ndefs = length defs
               binders :: [Binder]
               binders = letr ^.. letRecValues . each . letItemBinder
+              pragmas :: [Pragmas]
+              pragmas = getInfoPragmas (letr ^. letRecInfo)
 
           letRecBinders' :: [Binder] <- mapM (lambdaLiftBinder bl) binders
           topSyms :: [Symbol] <- forM defs (const freshSymbol)
@@ -140,16 +143,19 @@ lambdaLiftNode aboveBl top =
                             _identifierArgsNum = argsNum,
                             _identifierIsExported = False,
                             _identifierBuiltin = Nothing,
-                            _identifierPragmas = mempty,
+                            _identifierPragmas = pragma,
                             _identifierArgNames = []
                           }
-                    | ((sym, name), (itemBinder, (b, bty))) <-
-                        zipExact
-                          topSymsWithName
+                    | (((sym, name), (itemBinder, (b, bty))), pragma) <-
+                        zip
                           ( zipExact
-                              letRecBinders'
-                              (zipExact liftedDefs defsTypes)
+                              topSymsWithName
+                              ( zipExact
+                                  letRecBinders'
+                                  (zipExact liftedDefs defsTypes)
+                              )
                           )
+                          (pragmas ++ repeat mempty)
                   ]
           declareTopSyms
 
