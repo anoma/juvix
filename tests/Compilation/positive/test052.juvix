@@ -1,4 +1,4 @@
---- Simple lambda claculus
+--- Simple lambda calculus
 module test052;
 
 open import Stdlib.Prelude;

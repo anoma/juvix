@@ -245,6 +245,7 @@ preFunctionDef f = do
   sym <- freshSymbol
   funTy <- fromTopIndex (goType (f ^. Internal.funDefType))
   let _identifierName = f ^. Internal.funDefName . nameText
+      implParamsNum = implicitParametersNum (f ^. Internal.funDefType)
       info =
         IdentifierInfo
           { _identifierName = normalizeBuiltinName (f ^. Internal.funDefBuiltin) (f ^. Internal.funDefName . nameText),
@@ -259,8 +260,11 @@ preFunctionDef f = do
             _identifierPragmas =
               over
                 pragmasInline
-                (fmap (adjustPragmaInline (implicitParametersNum (f ^. Internal.funDefType))))
-                (f ^. Internal.funDefPragmas),
+                (fmap (adjustPragmaInline implParamsNum))
+                $ over
+                  pragmasSpecialiseArgs
+                  (fmap (over pragmaSpecialiseArgs (map (implParamsNum +))))
+                  (f ^. Internal.funDefPragmas),
             _identifierArgNames = argnames
           }
   case f ^. Internal.funDefBuiltin of

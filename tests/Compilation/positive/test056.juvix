@@ -1,0 +1,11 @@
+module test056;
+
+import Stdlib.Prelude open;
+
+{-# specialize: [1] #-}
+mymap : {A B : Type} -> (A -> B) -> List A -> List B;
+mymap f nil := nil;
+mymap f (x :: xs) := f x :: mymap f xs;
+
+main : Nat;
+main := length (mymap λ{x := x + 3} (1 :: 2 :: 3 :: 4 :: nil));
