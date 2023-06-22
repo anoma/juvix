@@ -4,7 +4,6 @@ import Data.HashSet qualified as HashSet
 import Data.List qualified as List
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Transformation.Base
-import Juvix.Compiler.Core.Transformation.ComputeTypeInfo (computeNodeTypeInfo)
 
 convertNode :: InfoTable -> Node -> Node
 convertNode tab = umap go
@@ -46,16 +45,22 @@ convertNode tab = umap go
           idx = length syms
           args0 = map (fromJust . gatherAppArgs sym . (^. caseBranchBody)) brs
           dargs0 = fmap (fromJust . gatherAppArgs sym) def
-          val' = shift lvl val
-          app = mkApps' (mkIdent' sym) (computeArgs args0 dargs0)
-          ty = computeNodeTypeInfo tab app
+          appArgs = computeArgs args0 dargs0
+          app = mkApps' (mkIdent' sym) appArgs
+          (tyargs, tgt) = unfoldPi' (lookupIdentifierInfo tab sym ^. identifierType)
+          tyargs' = drop (length appArgs) tyargs
+          ty = substs appArgs (mkPis' tyargs' tgt)
           brs' = map (\br -> over caseBranchBody (substApps sym (mkVar' (br ^. caseBranchBindersNum + idx))) br) brs
           def' = fmap (substApps sym (mkVar' idx)) def
 
           computeArgs :: [[Node]] -> Maybe [Node] -> [Node]
-          computeArgs [] _ = []
-          computeArgs args dargs =
-            mkCase' ind val' (zipWithExact (set caseBranchBody) hbs brs) hdef : computeArgs args' dargs'
+          computeArgs args dargs
+            | null (List.head args) = []
+            | otherwise =
+                shift
+                  (-idx - 1)
+                  (mkCase' ind (shift (lvl + 1) val) (zipWithExact (set caseBranchBody) hbs brs) hdef)
+                  : computeArgs args' dargs'
             where
               hbs = map List.head args
               hdef = fmap List.head dargs
