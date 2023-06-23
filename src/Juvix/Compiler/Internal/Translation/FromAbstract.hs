@@ -10,7 +10,6 @@ import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Abstract.Data.NameDependencyInfo
 import Juvix.Compiler.Abstract.Extra.DependencyBuilder
 import Juvix.Compiler.Abstract.Extra.DependencyBuilder qualified as Abstract
-import Juvix.Compiler.Abstract.Extra.Functions qualified as Abstract
 import Juvix.Compiler.Abstract.Language qualified as Abstract
 import Juvix.Compiler.Abstract.Translation.FromConcrete.Data.Context qualified as Abstract
 import Juvix.Compiler.Internal.Extra
@@ -428,39 +427,36 @@ goInductiveParameter f =
     }
 
 goInductiveDef :: forall r. Members '[NameIdGen, Reader NameDependencyInfo] r => Abstract.InductiveDef -> Sem r InductiveDef
-goInductiveDef i
-  | not (Abstract.isSmallUniverse' (i ^. Abstract.inductiveType)) = unsupported "inductive indices"
-  | otherwise = do
-      let inductiveParameters' = map goInductiveParameter (i ^. Abstract.inductiveParameters)
-          indTypeName = i ^. Abstract.inductiveName
-      inductiveConstructors' <-
-        mapM
-          goConstructorDef
-          (i ^. Abstract.inductiveConstructors)
-      examples' <- mapM goExample (i ^. Abstract.inductiveExamples)
-      ty' <- goExpression (i ^. Abstract.inductiveType)
-      return
-        InductiveDef
-          { _inductiveName = indTypeName,
-            _inductiveParameters = inductiveParameters',
-            _inductiveBuiltin = i ^. Abstract.inductiveBuiltin,
-            _inductiveConstructors = inductiveConstructors',
-            _inductiveExamples = examples',
-            _inductiveType = ty',
-            _inductivePositive = i ^. Abstract.inductivePositive,
-            _inductivePragmas = i ^. Abstract.inductivePragmas
-          }
+goInductiveDef i = do
+  let inductiveParameters' = map goInductiveParameter (i ^. Abstract.inductiveParameters)
+      indTypeName = i ^. Abstract.inductiveName
+  inductiveConstructors' <-
+    mapM
+      goConstructorDef
+      (i ^. Abstract.inductiveConstructors)
+  examples' <- mapM goExample (i ^. Abstract.inductiveExamples)
+  ty' <- goExpression (i ^. Abstract.inductiveType)
+  return
+    InductiveDef
+      { _inductiveName = indTypeName,
+        _inductiveParameters = inductiveParameters',
+        _inductiveBuiltin = i ^. Abstract.inductiveBuiltin,
+        _inductiveConstructors = inductiveConstructors',
+        _inductiveExamples = examples',
+        _inductiveType = ty',
+        _inductivePositive = i ^. Abstract.inductivePositive,
+        _inductivePragmas = i ^. Abstract.inductivePragmas
+      }
   where
     goConstructorDef :: Abstract.InductiveConstructorDef -> Sem r InductiveConstructorDef
     goConstructorDef c = do
-      (cParams, cReturnType) <- viewConstructorType (c ^. Abstract.constructorType)
+      ty' <- goExpression (c ^. Abstract.constructorType)
       examples' <- mapM goExample (c ^. Abstract.constructorExamples)
       return
         InductiveConstructorDef
           { _inductiveConstructorName = c ^. Abstract.constructorName,
-            _inductiveConstructorParameters = cParams,
             _inductiveConstructorExamples = examples',
-            _inductiveConstructorReturnType = cReturnType,
+            _inductiveConstructorType = ty',
             _inductiveConstructorPragmas = c ^. Abstract.constructorPragmas
           }
 
@@ -469,25 +465,3 @@ goTypeApplication (Abstract.Application l r i) = do
   l' <- goType l
   r' <- goType r
   return (Application l' r' i)
-
-viewConstructorType :: Abstract.Expression -> Sem r ([Expression], Expression)
-viewConstructorType = \case
-  Abstract.ExpressionFunction f -> first toList <$> viewFunctionType f
-  Abstract.ExpressionIden i -> return ([], ExpressionIden (goTypeIden i))
-  Abstract.ExpressionHole h -> return ([], ExpressionHole h)
-  Abstract.ExpressionApplication a -> do
-    a' <- goTypeApplication a
-    return ([], ExpressionApplication a')
-  Abstract.ExpressionUniverse u -> return ([], smallUniverseE (getLoc u))
-  Abstract.ExpressionLiteral {} -> unsupported "literal in a type"
-  Abstract.ExpressionLambda {} -> unsupported "lambda in a constructor type"
-  Abstract.ExpressionLet {} -> unsupported "let in a constructor type"
-  Abstract.ExpressionCase {} -> unsupported "case in a constructor type"
-  where
-    viewFunctionType :: Abstract.Function -> Sem r (NonEmpty Expression, Expression)
-    viewFunctionType (Abstract.Function p r) = do
-      (args, ret) <- viewConstructorType r
-      p' <- goFunctionParameter p
-      return $ case p' ^. paramName of
-        Just {} -> unsupported "named argument in constructor type"
-        Nothing -> (p' ^. paramType :| args, ret)

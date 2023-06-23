@@ -214,14 +214,12 @@ instance HasExpressions InductiveDef where
 
 instance HasExpressions InductiveConstructorDef where
   leafExpressions f InductiveConstructorDef {..} = do
-    args' <- traverse (leafExpressions f) _inductiveConstructorParameters
-    ret' <- leafExpressions f _inductiveConstructorReturnType
+    ty' <- leafExpressions f _inductiveConstructorType
     examples' <- traverse (leafExpressions f) _inductiveConstructorExamples
     pure
       InductiveConstructorDef
         { _inductiveConstructorExamples = examples',
-          _inductiveConstructorParameters = args',
-          _inductiveConstructorReturnType = ret',
+          _inductiveConstructorType = ty',
           _inductiveConstructorName,
           _inductiveConstructorPragmas
         }
@@ -308,13 +306,14 @@ foldFunType l r = go l
       [] -> r
       arg : args -> ExpressionFunction (Function arg (go args))
 
--- | It does *only* include the explicit arguments of the constructor, not the
--- implicit arguments inherited from its inductive type
-constructorFunctionType :: InductiveConstructorDef -> Expression
-constructorFunctionType c = foldFunTypeExplicit (c ^. inductiveConstructorParameters) (c ^. inductiveConstructorReturnType)
-
 foldFunTypeExplicit :: [Expression] -> Expression -> Expression
 foldFunTypeExplicit = foldFunType . map unnamedParameter
+
+viewConstructorType :: Expression -> ([Expression], Expression)
+viewConstructorType = first (map (^. paramType)) . unfoldFunType
+
+constructorArgs :: Expression -> [Expression]
+constructorArgs = fst . viewConstructorType
 
 -- | a -> (b -> c)  ==> ([a, b], c)
 unfoldFunType :: Expression -> ([FunctionParameter], Expression)

@@ -5,7 +5,7 @@ import Juvix.Prelude
 
 data ConstructorInfo = ConstructorInfo
   { _constructorInfoInductiveParameters :: [InductiveParameter],
-    _constructorInfoArgs :: [Expression],
+    _constructorInfoType :: Expression,
     _constructorInfoInductive :: InductiveName,
     _constructorInfoBuiltin :: Maybe BuiltinConstructor
   }

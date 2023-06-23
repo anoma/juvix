@@ -39,10 +39,11 @@ checkPositivity ty = do
   noCheckPositivity <- asks (^. E.entryPointNoPositivity)
   forM_ (ty ^. inductiveConstructors) $ \ctor -> do
     let ctorName = ctor ^. inductiveConstructorName
+        args = constructorArgs (ctor ^. inductiveConstructorType)
     unless (noCheckPositivity || ty ^. inductivePositive) $
-      mapM_
+      forM_
+        args
         (checkStrictlyPositiveOccurrences ty ctorName indName numInductives Nothing)
-        (ctor ^. inductiveConstructorParameters)
 
 checkStrictlyPositiveOccurrences ::
   forall r.
@@ -155,7 +156,8 @@ checkStrictlyPositiveOccurrences ty ctorName name recLimit ref =
               when (recLimit > 0) $
                 forM_ (indType' ^. inductiveConstructors) $ \ctor' -> do
                   let ctorName' = ctor' ^. inductiveConstructorName
-                  let errorRef = fromMaybe tyArg ref
+                      errorRef = fromMaybe tyArg ref
+                      args = constructorArgs (ctor' ^. inductiveConstructorType)
                   mapM_
                     ( checkStrictlyPositiveOccurrences
                         indType'
@@ -164,7 +166,7 @@ checkStrictlyPositiveOccurrences ty ctorName name recLimit ref =
                         (recLimit - 1)
                         (Just errorRef)
                     )
-                    (ctor' ^. inductiveConstructorParameters)
+                    args
             helperInductiveApp indType' ps
           [] -> return ()
 

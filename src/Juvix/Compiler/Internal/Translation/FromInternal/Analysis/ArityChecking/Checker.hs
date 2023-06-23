@@ -73,9 +73,8 @@ checkConstructor :: (Members '[Reader LocalVars, Reader InfoTable, NameIdGen, Er
 checkConstructor c = do
   let _inductiveConstructorName = c ^. inductiveConstructorName
       _inductiveConstructorPragmas = c ^. inductiveConstructorPragmas
-  _inductiveConstructorParameters <- mapM checkType (c ^. inductiveConstructorParameters)
+  _inductiveConstructorType <- checkType (c ^. inductiveConstructorType)
   _inductiveConstructorExamples <- mapM checkExample (c ^. inductiveConstructorExamples)
-  _inductiveConstructorReturnType <- checkType (c ^. inductiveConstructorReturnType)
   return InductiveConstructorDef {..}
 
 -- | check the arity of some ty : Type
@@ -356,7 +355,7 @@ checkConstructorApp ::
   Sem r ConstructorApp
 checkConstructorApp ca = do
   let c = ca ^. constrAppConstructor
-  args <- (^. constructorInfoArgs) <$> lookupConstructor c
+  args <- constructorArgs . (^. constructorInfoType) <$> lookupConstructor c
   let arities = map typeArity args
       n = length arities
       ps = ca ^. constrAppParameters

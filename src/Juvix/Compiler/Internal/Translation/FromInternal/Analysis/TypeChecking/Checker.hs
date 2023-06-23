@@ -103,23 +103,22 @@ checkInductiveDef InductiveDef {..} = runInferenceDef $ do
     goConstructor :: InductiveConstructorDef -> Sem (Inference ': r) InductiveConstructorDef
     goConstructor InductiveConstructorDef {..} = do
       expectedRetTy <- constructorReturnType _inductiveConstructorName
-      cty' <- runReader paramLocals $ do
-        void (checkIsType (getLoc ret) ret)
-        mapM (checkIsType (getLoc _inductiveConstructorName)) _inductiveConstructorParameters
+      cty' <-
+        runReader paramLocals $
+          checkIsType (getLoc _inductiveConstructorType) _inductiveConstructorType
       examples' <- mapM checkExample _inductiveConstructorExamples
       whenJustM (matchTypes expectedRetTy ret) (const (errRet expectedRetTy))
       let c' =
             InductiveConstructorDef
-              { _inductiveConstructorParameters = cty',
+              { _inductiveConstructorType = cty',
                 _inductiveConstructorExamples = examples',
-                _inductiveConstructorReturnType,
                 _inductiveConstructorName,
                 _inductiveConstructorPragmas
               }
       registerConstructor c'
       return c'
       where
-        ret = _inductiveConstructorReturnType
+        ret = snd (viewConstructorType _inductiveConstructorType)
         errRet :: Expression -> Sem (Inference ': r) a
         errRet expected =
           throw
@@ -247,9 +246,9 @@ checkConstructorReturnType ::
   Sem r ()
 checkConstructorReturnType indType ctor = do
   let ctorName = ctor ^. inductiveConstructorName
-      ctorReturnType = ctor ^. inductiveConstructorReturnType
       tyName = indType ^. inductiveName
       indParams = map (^. inductiveParamName) (indType ^. inductiveParameters)
+      ctorReturnType = snd (viewConstructorType (ctor ^. inductiveConstructorType))
       expectedReturnType =
         foldExplicitApplication
           (ExpressionIden (IdenInductive tyName))

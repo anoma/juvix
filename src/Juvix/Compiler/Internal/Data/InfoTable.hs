@@ -83,14 +83,14 @@ buildTable1' m = do
     _infoConstructors :: HashMap Name ConstructorInfo
     _infoConstructors =
       HashMap.fromList
-        [ (c ^. inductiveConstructorName, ConstructorInfo params args ind builtin)
+        [ (c ^. inductiveConstructorName, ConstructorInfo params ty ind builtin)
           | d <- inductives,
             let ind = d ^. inductiveName
                 n = length (d ^. inductiveConstructors)
                 params = d ^. inductiveParameters
                 builtins = maybe (replicate n Nothing) (map Just . builtinConstructors) (d ^. inductiveBuiltin),
             (builtin, c) <- zipExact builtins (d ^. inductiveConstructors),
-            let args = c ^. inductiveConstructorParameters
+            let ty = c ^. inductiveConstructorType
         ]
 
     _infoFunctions :: HashMap Name FunctionInfo
@@ -175,7 +175,7 @@ lookupInductiveType v = do
 constructorArgTypes :: ConstructorInfo -> ([VarName], [Expression])
 constructorArgTypes i =
   ( map (^. inductiveParamName) (i ^. constructorInfoInductiveParameters),
-    i ^. constructorInfoArgs
+    constructorArgs (i ^. constructorInfoType)
   )
 
 constructorType :: Member (Reader InfoTable) r => ConstrName -> Sem r Expression

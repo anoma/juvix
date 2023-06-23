@@ -156,8 +156,8 @@ instance PrettyCode Hole where
 instance PrettyCode InductiveConstructorDef where
   ppCode c = do
     constructorName' <- ppCode (c ^. inductiveConstructorName)
-    constructorParameters' <- mapM ppCodeAtom (c ^. inductiveConstructorParameters)
-    return (hsep $ constructorName' : constructorParameters')
+    ty' <- ppCode (c ^. inductiveConstructorType)
+    return (constructorName' <+> kwColon <+> ty')
 
 ppBlock ::
   (PrettyCode a, Members '[Reader Options] r, Traversable t) =>

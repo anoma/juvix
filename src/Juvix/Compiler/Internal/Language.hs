@@ -269,9 +269,8 @@ data InductiveDef = InductiveDef
 
 data InductiveConstructorDef = InductiveConstructorDef
   { _inductiveConstructorName :: ConstrName,
-    _inductiveConstructorParameters :: [Expression],
     _inductiveConstructorExamples :: [Example],
-    _inductiveConstructorReturnType :: Expression,
+    _inductiveConstructorType :: Expression,
     _inductiveConstructorPragmas :: Pragmas
   }
   deriving stock (Data)
@@ -376,7 +375,7 @@ instance HasLoc AxiomDef where
 
 instance HasLoc InductiveConstructorDef where
   getLoc InductiveConstructorDef {..} =
-    getLoc _inductiveConstructorName <>? (getLocSpan <$> nonEmpty _inductiveConstructorParameters)
+    getLoc _inductiveConstructorName <> getLoc _inductiveConstructorType
 
 instance HasLoc InductiveParameter where
   getLoc (InductiveParameter n) = getLoc n
