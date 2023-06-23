@@ -89,6 +89,15 @@ createIndexFile ps = do
         Html.div ! Attr.id "content" $
           Html.div ! Attr.id "module-list" $
             (p ! Attr.class_ "caption" $ "Modules")
+              <> ( button
+                     ! Attr.id "toggle-all-button"
+                     ! Attr.class_ "toggle-button opened"
+                     ! Attr.onclick "toggle()"
+                     $ Html.span
+                       ! Attr.id "toggle-button-text"
+                       ! Attr.class_ "toggle-icon"
+                     $ "▼ Hide all modules"
+                 )
               <> tree'
 
     tree :: ModuleTree
@@ -106,7 +115,7 @@ createIndexFile ps = do
         nodeRow = case lbl of
           Nothing ->
             return $
-              Html.p ! Attr.class_ attrBare $
+              Html.span ! Attr.class_ attrBare $
                 toHtml (prettyText s)
           Just lbl' -> do
             lnk <- nameIdAttrRef lbl' Nothing
@@ -121,21 +130,17 @@ createIndexFile ps = do
         attrBare = attrBase <> " directory"
 
         node :: Sem r Html
-        node = do
-          row' <- nodeRow
-          childs' <- childs
-          return (row' <>? childs')
+        node = nodeRow >>= getRowWithChilds
           where
-            childs :: Sem r (Maybe Html)
-            childs
-              | null children = return Nothing
+            getRowWithChilds :: Html -> Sem r Html
+            getRowWithChilds row'
+              | null children = return row'
               | otherwise = do
                   c' <- mapM (uncurry goChild) (HashMap.toList children)
                   return $
-                    Just $
-                      details ! Attr.open "open" $
-                        summary "Subtree"
-                          <> ul (mconcatMap li c')
+                    details ! Attr.open "open" $
+                      summary row'
+                        <> ul (mconcatMap li c')
 
 writeHtml :: (Members '[Embed IO] r) => Path Abs File -> Html -> Sem r ()
 writeHtml f h = Prelude.embed $ do
@@ -209,6 +214,7 @@ template rightMenu' content' = do
   mathJax <- mathJaxCdn
   ayuTheme <- ayuCss
   judocTheme <- linuwialCss
+  toggle <- toggleJs
   let mhead :: Html
       mhead =
         Html.head $
@@ -223,6 +229,7 @@ template rightMenu' content' = do
             <> livejs
             <> ayuTheme
             <> judocTheme
+            <> toggle
 
       titleStr :: Html
       titleStr = "Juvix Documentation"

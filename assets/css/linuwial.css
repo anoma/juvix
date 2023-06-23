@@ -883,3 +883,26 @@ p.directory {
 }
 
 /* @end */
+
+/* Styles for the toggle button */
+.toggle-button {
+  display: inline-block;
+  padding: 5px 10px;
+  background-color: #D84E53;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  width: 165px;
+  text-align: left;
+}
+
+.toggle-button:hover {
+  background-color: #803353;
+}
+
+/* Styles for the toggle icon */
+.toggle-icon {
+  display: inline-block;
+  margin-right: 5px;
+  font-weight: bold;
+}

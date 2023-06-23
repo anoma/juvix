@@ -51,6 +51,9 @@ jsLink js = do
       ! Attr.type_ "text/javascript"
     $ mempty
 
+toggleJs :: (Members '[Reader HtmlOptions] r) => Sem r Html
+toggleJs = jsLink "toggle.js"
+
 linuwialCss :: (Members '[Reader HtmlOptions] r) => Sem r Html
 linuwialCss = cssLink "linuwial.css"
 
