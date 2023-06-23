@@ -78,7 +78,6 @@ checkBuiltinInductiveStartNode i = whenJust (i ^. inductiveBuiltin) go
     addInductiveStartNode :: Sem r ()
     addInductiveStartNode = addStartNode (i ^. inductiveName)
 
-
 -- | Declarations in a module depend on the module, not the other way round (a
 -- module is reachable if at least one of the declarations in it is reachable)
 goPreStatement :: forall r. Members '[Reader ExportsTable, State DependencyGraph, State StartNodes] r => Name -> PreStatement -> Sem r ()

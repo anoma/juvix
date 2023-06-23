@@ -21,8 +21,6 @@ import Juvix.Data.Universe
 import Juvix.Data.Wildcard
 import Juvix.Prelude
 
-type LocalModule = Module
-
 type TopModule = Module
 
 type TopModuleName = Name
@@ -49,7 +47,6 @@ data Statement
   = StatementInductive InductiveDef
   | StatementFunction FunctionDef
   | StatementInclude Include
-  | StatementLocalModule LocalModule
   | StatementAxiom AxiomDef
   deriving stock (Eq, Show)
 

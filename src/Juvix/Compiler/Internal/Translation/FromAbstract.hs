@@ -180,7 +180,6 @@ goDefinition ::
   Abstract.Statement ->
   Sem r [PreStatement]
 goDefinition = \case
-  Abstract.StatementLocalModule m -> concatMapM goDefinition (m ^. Abstract.moduleBody . Abstract.moduleStatements)
   Abstract.StatementInductive i -> pure . PreInductiveDef <$> goInductiveDef i
   Abstract.StatementFunction i -> pure . PreFunctionDef <$> goFunctionDef i
   Abstract.StatementAxiom a -> pure . PreAxiomDef <$> goAxiomDef a
@@ -191,7 +190,6 @@ scanImports (Abstract.ModuleBody stmts) = mconcatMap go stmts
   where
     go :: Abstract.Statement -> [Abstract.Include]
     go = \case
-      Abstract.StatementLocalModule m -> scanImports (m ^. Abstract.moduleBody)
       Abstract.StatementInclude t -> [t]
       Abstract.StatementInductive {} -> []
       Abstract.StatementFunction {} -> []

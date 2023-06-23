@@ -18,8 +18,7 @@ import Juvix.Data.WithLoc
 import Juvix.Prelude
 
 data PreModule = PreModule
-  {
-    _preModuleName :: Name,
+  { _preModuleName :: Name,
     _preModule :: [PreStatement]
   }
 

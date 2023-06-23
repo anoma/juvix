@@ -89,8 +89,8 @@ goTopModule m = do
 goLocalModule ::
   (Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ModulesCache, State TranslationState] r) =>
   Module 'Scoped 'ModuleLocal ->
-  Sem r Abstract.LocalModule
-goLocalModule = goModule'
+  Sem r [Abstract.Statement]
+goLocalModule = concatMapM goStatement . (^. moduleBody)
 
 goModule' ::
   forall r t.
@@ -152,7 +152,7 @@ goModuleBody ::
   [Statement 'Scoped] ->
   Sem r Abstract.ModuleBody
 goModuleBody ss' = do
-  otherThanFunctions :: [Indexed Abstract.Statement] <- mapMaybeM (traverseM' goStatement) ss
+  otherThanFunctions :: [Indexed Abstract.Statement] <- concatMapM (traverseM' goStatement) ss
   functions <- map (fmap Abstract.StatementFunction) <$> compiledFunctions
   let _moduleStatements =
         map
@@ -218,16 +218,16 @@ goStatement ::
   forall r.
   Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ModulesCache, State TranslationState] r =>
   Statement 'Scoped ->
-  Sem r (Maybe Abstract.Statement)
+  Sem r [Abstract.Statement]
 goStatement = \case
-  StatementAxiom d -> Just . Abstract.StatementAxiom <$> goAxiom d
-  StatementImport t -> fmap Abstract.StatementInclude <$> goImport t
-  StatementSyntax {} -> return Nothing
-  StatementOpenModule o -> goOpenModule o
-  StatementInductive i -> Just . Abstract.StatementInductive <$> goInductive i
-  StatementModule f -> Just . Abstract.StatementLocalModule <$> goLocalModule f
-  StatementTypeSignature {} -> return Nothing
-  StatementFunctionClause {} -> return Nothing
+  StatementAxiom d -> pure . Abstract.StatementAxiom <$> goAxiom d
+  StatementImport t -> maybeToList . fmap Abstract.StatementInclude <$> goImport t
+  StatementSyntax {} -> return []
+  StatementOpenModule o -> maybeToList <$> goOpenModule o
+  StatementInductive i -> pure . Abstract.StatementInductive <$> goInductive i
+  StatementModule f -> goLocalModule f
+  StatementTypeSignature {} -> return []
+  StatementFunctionClause {} -> return []
 
 goOpenModule' ::
   forall r.

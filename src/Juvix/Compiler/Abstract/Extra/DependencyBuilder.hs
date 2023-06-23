@@ -79,11 +79,6 @@ goModule m = do
   checkStartNode (m ^. moduleName)
   mapM_ (goStatement (m ^. moduleName)) (m ^. moduleBody . moduleStatements)
 
-goLocalModule :: (Members '[Reader ExportsTable, State DependencyGraph, State StartNodes] r) => Name -> Module -> Sem r ()
-goLocalModule parentModule m = do
-  addEdge (m ^. moduleName) parentModule
-  goModule m
-
 goInclude :: Members '[Reader ExportsTable, State DependencyGraph, State StartNodes] r => Include -> Sem r ()
 goInclude (Include m) = goModule m
 
@@ -94,7 +89,6 @@ goStatement parentModule = \case
   StatementAxiom ax -> goAxiom ax
   StatementFunction f -> goTopFunctionDef parentModule f
   StatementInclude m -> goInclude m
-  StatementLocalModule m -> goLocalModule parentModule m
   StatementInductive i -> goInductive i
   where
     goAxiom :: AxiomDef -> Sem r ()
