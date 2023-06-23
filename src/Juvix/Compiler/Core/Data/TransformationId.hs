@@ -27,9 +27,12 @@ data TransformationId
   | LetHoisting
   | Inlining
   | FoldTypeSynonyms
+  | CaseCallLifting
+  | SimplifyIfs
   | OptPhaseEval
   | OptPhaseExec
   | OptPhaseGeb
+  | OptPhaseVampIR
   | OptPhaseMain
   deriving stock (Data, Bounded, Enum, Show)
 
@@ -69,7 +72,7 @@ toNormalizeTransformations :: [TransformationId]
 toNormalizeTransformations = toEvalTransformations ++ [LetRecLifting, LetFolding, UnrollRecursion]
 
 toVampIRTransformations :: [TransformationId]
-toVampIRTransformations = toEvalTransformations ++ [CheckVampIR, LetRecLifting, LetFolding, UnrollRecursion, Normalize, LetHoisting]
+toVampIRTransformations = toEvalTransformations ++ [CheckVampIR, LetRecLifting, OptPhaseVampIR, UnrollRecursion, Normalize, LetHoisting]
 
 toStrippedTransformations :: [TransformationId]
 toStrippedTransformations =
