@@ -12,6 +12,7 @@ import Juvix.Compiler.Abstract.Language qualified as Abstract
 import Juvix.Compiler.Abstract.Translation.FromConcrete.Data.Context
 import Juvix.Compiler.Builtins
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
+import Juvix.Compiler.Concrete.Extra qualified as Concrete
 import Juvix.Compiler.Concrete.Language qualified as Concrete
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
@@ -151,7 +152,7 @@ goModuleBody ::
   (Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ModulesCache, State TranslationState] r) =>
   [Statement 'Scoped] ->
   Sem r Abstract.ModuleBody
-goModuleBody ss' = do
+goModuleBody stmts = do
   otherThanFunctions :: [Indexed Abstract.Statement] <- concatMapM (traverseM' goStatement) ss
   functions <- map (fmap Abstract.StatementFunction) <$> compiledFunctions
   let _moduleStatements =
@@ -163,6 +164,8 @@ goModuleBody ss' = do
           )
   return Abstract.ModuleBody {..}
   where
+    ss' = concatMap Concrete.flattenStatement stmts
+
     ss :: [Indexed (Statement 'Scoped)]
     ss = zipWith Indexed [0 ..] ss'
 
@@ -179,13 +182,6 @@ goModuleBody ss' = do
         getClauses name = [c | StatementFunctionClause c <- ss', name == c ^. clauseOwnerFunction]
         sigs :: [Indexed (TypeSignature 'Scoped)]
         sigs = [Indexed i t | (Indexed i (StatementTypeSignature t)) <- ss]
-
--- goImportCacheMiss ::
---   forall r.
---   (Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, State ModulesCache, Reader Pragmas] r) =>
---   Import 'Scoped ->
---   Sem r Abstract.TopModule
--- goImportCacheMiss t = snd <$> (goTopModule (t ^. importModule . moduleRefModule))
 
 goImport ::
   forall r.

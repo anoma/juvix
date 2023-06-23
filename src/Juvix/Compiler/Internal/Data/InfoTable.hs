@@ -11,8 +11,8 @@ import Juvix.Compiler.Internal.Extra
 import Juvix.Compiler.Internal.Pretty (ppTrace)
 import Juvix.Prelude
 
-buildTable :: (Foldable f) => f Module -> InfoTable
-buildTable = mconcatMap buildTable1
+buildTable :: Foldable f => f Module -> InfoTable
+buildTable = run . evalState (mempty :: Cache) . buildTable'
 
 buildTable1 :: Module -> InfoTable
 buildTable1 = run . evalState (mempty :: Cache) . buildTable1'
@@ -154,8 +154,21 @@ lookupInductive f = do
           <> "The registered inductives are: "
           <> ppTrace (HashMap.keys tbl)
 
-lookupFunction :: (Member (Reader InfoTable) r) => Name -> Sem r FunctionInfo
-lookupFunction f = HashMap.lookupDefault impossible f <$> asks (^. infoFunctions)
+lookupFunction :: forall r. Member (Reader InfoTable) r => Name -> Sem r FunctionInfo
+lookupFunction f = do
+  err <- impossibleErr
+  HashMap.lookupDefault err f <$> asks (^. infoFunctions)
+  where
+    impossibleErr :: Sem r a
+    impossibleErr = do
+      tbl <- asks (^. infoFunctions)
+      return
+        . error
+        $ "impossible: "
+          <> ppTrace f
+          <> " is not in the InfoTable\n"
+          <> "The registered functions are: "
+          <> ppTrace (HashMap.keys tbl)
 
 lookupAxiom :: (Member (Reader InfoTable) r) => Name -> Sem r AxiomInfo
 lookupAxiom f = HashMap.lookupDefault impossible f <$> asks (^. infoAxioms)

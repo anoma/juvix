@@ -5,6 +5,7 @@ module Juvix.Compiler.Concrete.Extra
     getModuleFilePath,
     unfoldApplication,
     groupStatements,
+    flattenStatement,
   )
 where
 
@@ -128,3 +129,8 @@ groupStatements = \case
                   _inductiveName
                     ^. S.nameConcrete
                     : map (^. constructorName . S.nameConcrete) constructors
+
+flattenStatement :: Statement s -> [Statement s]
+flattenStatement = \case
+  StatementModule m -> concatMap flattenStatement (m ^. moduleBody)
+  s -> [s]
