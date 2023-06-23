@@ -6,13 +6,20 @@ import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Transformation.Base
 import Juvix.Compiler.Core.Transformation.LambdaLetRecLifting (lambdaLiftNode')
 
-isSpecializable :: Node -> Bool
-isSpecializable = \case
-  NIdt {} -> True
-  NLam {} -> True
-  NApp {} -> False
-  _ -> False
+isSpecializable :: InfoTable -> Node -> Bool
+isSpecializable tab node =
+  isTypeConstr tab node
+    || case node of
+      NIdt {} -> True
+      NLam {} -> True
+      NCst {} -> True
+      NCtr Constr {..} -> all (isSpecializable tab) _constrArgs
+      NApp {} ->
+        let (h, _) = unfoldApps' node
+         in isSpecializable tab h
+      _ -> False
 
+-- Checks if an argument is passed without modification to recursive calls.
 isArgSpecializable :: InfoTable -> Symbol -> Int -> Bool
 isArgSpecializable tab sym argNum = run $ execState True $ dmapNRM go body
   where
@@ -61,41 +68,45 @@ convertNode tab = dmapLRM go
                             ( \argNum ->
                                 argNum <= argsNum
                                   && argNum <= length args'
-                                  && isSpecializable (args' !! (argNum - 1))
+                                  && isSpecializable tab (args' !! (argNum - 1))
                                   && isArgSpecializable tab _identSymbol argNum
                             )
                             _pragmaSpecialiseArgs
+                        tyargsNum = length (takeWhile (isTypeConstr tab) tyargs)
                         -- in addition to the arguments explicitly marked for
                         -- specialisation, also specialise all type arguments
                         specargs =
                           nub $
-                            [1 .. length (takeWhile (isTypeConstr tab) tyargs)]
+                            [1 .. tyargsNum]
                               ++ specargs0
                     if
                         | null specargs0 ->
                             return $ End (mkApps' h args')
                         | otherwise -> do
+                            eassert (tyargsNum < argsNum)
                             let def = lookupIdentifierNode tab _identSymbol
                                 (lams, body) = unfoldLambdas def
+                            eassert (length lams == argsNum)
+                            eassert (argsNum <= length tyargs)
+                            let -- We're adding the letrec binder, so need to shift by 1
+                                sargs = map (shift 1) args'
                                 body' =
                                   replaceIdent _identSymbol argsNum specargs $
-                                    replaceArgs argsNum specargs args' body
-                                tyargs' = removeSpecTypeArgs specargs args' tyargs
-                                -- `replaceArgs` accounts for the `letrec`
-                                -- binding added, so we need to shift by -1
-                                -- since the type is not in scope of the letrec
-                                -- binding
-                                tgt' = shift (-1) (replaceArgs argsNum specargs args' tgt)
+                                    replaceArgs argsNum specargs sargs body
+                                tyargs' = removeSpecTypeArgs specargs sargs (take argsNum tyargs)
+                                tgt' = replaceArgs argsNum specargs sargs (mkPis' (drop argsNum tyargs) tgt)
+                                ty' = mkPis' tyargs' tgt'
                                 lams' =
-                                  zipWith
+                                  zipWithExact
                                     (\lam ty -> over lambdaLhsBinder (set binderType ty) lam)
                                     (removeSpecargs specargs lams)
                                     tyargs'
-                                args'' = removeSpecargs specargs args'
+                                args'' = removeSpecargs specargs sargs
                                 letitem =
                                   mkLetItem
                                     (ii ^. identifierName)
-                                    (mkPis' tyargs' tgt')
+                                    -- the type is not in the scope of the binder
+                                    (shift (-1) ty')
                                     (reLambdas lams' body')
                                 node' =
                                   mkLetRec
@@ -116,6 +127,8 @@ convertNode tab = dmapLRM go
       _ ->
         return $ Recur node
 
+    -- assumption: all type arguments are substituted, so no binders in the type
+    -- list refer to other elements in the list
     removeSpecTypeArgs :: [Int] -> [Node] -> [Type] -> [Type]
     removeSpecTypeArgs = goRemove 1
       where
@@ -124,7 +137,8 @@ convertNode tab = dmapLRM go
           ([], []) -> []
           (ty : tys', arg : args')
             | n `elem` specargs ->
-                goRemove (n + 1) specargs args' (substDrop [arg] tys)
+                let tys'' = zipWith (\ty' k -> substVar k (shift k arg) ty') tys' [0 ..]
+                 in goRemove (n + 1) specargs args' tys''
             | otherwise ->
                 ty : goRemove (n + 1) specargs (map (shift 1) args') tys'
           _ -> impossible
@@ -175,7 +189,7 @@ convertNode tab = dmapLRM go
                         if
                             | argNum `elem` specargs ->
                                 -- paste in the argument we specialise by
-                                shift (lvl + argsNum' + 1) (args !! (argNum - 1))
+                                shift (lvl + argsNum') (args !! (argNum - 1))
                             | otherwise ->
                                 -- decrease de Bruijn index by the number of lambdas removed below the binder
                                 NVar $

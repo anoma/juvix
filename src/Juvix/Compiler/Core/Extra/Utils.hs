@@ -238,18 +238,6 @@ freeVarsCtxMany ctx =
             freevarsbi' = Set.mapMonotonic (over varIndex (+ (idx + 1))) fbi
         go (freevarsbi' <> vs)
 
--- | subst for multiple bindings; the first element in the list of substitutions
--- corresponds to de Bruijn index 0
-substs :: [Node] -> Node -> Node
-substs t = umapN go
-  where
-    len = length t
-    go k n = case n of
-      NVar (Var i idx)
-        | idx >= k, idx - k < len -> shift k (t !! (idx - k))
-        | idx > k -> mkVar i (idx - len)
-      _ -> n
-
 -- | Increase the indices of free variables in the binderType by a given value
 shiftBinder :: Int -> Binder -> Binder
 shiftBinder = over binderType . shift
@@ -262,23 +250,35 @@ shiftLetItem n l =
       _letItemValue = shift n (l ^. letItemValue)
     }
 
+-- | subst for multiple bindings; the first element in the list of substitutions
+-- corresponds to de Bruijn index 0
+substs :: [Node] -> Node -> Node
+substs t = umapN go
+  where
+    len = length t
+    go k n = case n of
+      NVar (Var i idx)
+        | idx >= k, idx - k < len -> shift k (t !! (idx - k))
+        | idx > k -> mkVar i (idx - len)
+      _ -> n
+
 -- | substitute a term t for the free variable with de Bruijn index 0, avoiding
 -- variable capture; shifts all free variabes with de Bruijn index > 0 by -1 (as
 -- if the topmost binder was removed)
 subst :: Node -> Node -> Node
 subst t = substs [t]
 
--- | `substDrop args argtys` drops `length args` from `argtys` and substitutes
--- the corresponding variables with `args`. For example:
--- ```
--- substDrop [Nat, Var 3] [Type, Type, Var 1, Var 1] =
---   [Nat, Var 4]
--- ``
-substDrop :: [Node] -> [Node] -> [Node]
-substDrop args argtys =
-  reverse $ snd $ foldl' (\(args', acc) ty -> (mkVar' 0 : map (shift 1) args', substs args' ty : acc)) (reverse args, []) (drop k argtys)
+-- | substitute a term t for the free variable with de Bruijn index idx, avoiding
+-- variable capture; shifts all free variabes with de Bruijn index > idx by -1 (as
+-- if the binder idx was removed)
+substVar :: Index -> Node -> Node -> Node
+substVar idx t = umapN go
   where
-    k = length args
+    go k n = case n of
+      NVar (Var {..})
+        | _varIndex == k + idx -> shift k t
+        | _varIndex > k + idx -> mkVar _varInfo (_varIndex - 1)
+      _ -> n
 
 etaExpand :: [Type] -> Node -> Node
 etaExpand [] n = n
