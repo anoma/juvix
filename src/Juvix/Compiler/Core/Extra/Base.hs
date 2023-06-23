@@ -66,6 +66,9 @@ mkLambdas is bs n = foldl' (flip (uncurry mkLambda)) n (reverse (zipExact is bs)
 mkLambdas' :: [Type] -> Node -> Node
 mkLambdas' tys n = foldl' (flip mkLambda') n (reverse tys)
 
+mkLetItem :: Text -> Type -> Node -> LetItem
+mkLetItem name ty = LetItem (mkBinder name ty)
+
 mkLetItem' :: Type -> Node -> LetItem
 mkLetItem' ty = LetItem (mkBinder' ty)
 

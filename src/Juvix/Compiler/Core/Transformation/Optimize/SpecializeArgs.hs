@@ -16,12 +16,12 @@ isSpecializable = \case
 isArgSpecializable :: InfoTable -> Symbol -> Int -> Bool
 isArgSpecializable tab sym argNum = run $ execState True $ dmapNRM go body
   where
-    node = lookupIdentifierNode tab sym
-    (lams, body) = unfoldLambdas node
+    nodeSym = lookupIdentifierNode tab sym
+    (lams, body) = unfoldLambdas nodeSym
     n = length lams
 
     go :: Member (State Bool) r => Level -> Node -> Sem r Recur
-    go lvl = \case
+    go lvl node = case node of
       NApp {} ->
         let (h, args) = unfoldApps' node
          in case h of
@@ -65,6 +65,8 @@ convertNode tab = dmapLRM go
                                   && isArgSpecializable tab _identSymbol argNum
                             )
                             _pragmaSpecialiseArgs
+                        -- in addition to the arguments explicitly marked for
+                        -- specialisation, also specialise all type arguments
                         specargs =
                           nub $
                             [1 .. length (takeWhile (isTypeConstr tab) tyargs)]
@@ -76,15 +78,30 @@ convertNode tab = dmapLRM go
                             let def = lookupIdentifierNode tab _identSymbol
                                 (lams, body) = unfoldLambdas def
                                 body' =
-                                  replaceArgs argsNum specargs args' $
-                                    replaceIdent _identSymbol argsNum specargs body
-                                lams' = removeSpecargs specargs lams
+                                  replaceIdent _identSymbol argsNum specargs $
+                                    replaceArgs argsNum specargs args' body
+                                tyargs' = removeSpecTypeArgs specargs args' tyargs
+                                -- `replaceArgs` accounts for the `letrec`
+                                -- binding added, so we need to shift by -1
+                                -- since the type is not in scope of the letrec
+                                -- binding
+                                tgt' = shift (-1) (replaceArgs argsNum specargs args' tgt)
+                                lams' =
+                                  zipWith
+                                    (\lam ty -> over lambdaLhsBinder (set binderType ty) lam)
+                                    (removeSpecargs specargs lams)
+                                    tyargs'
                                 args'' = removeSpecargs specargs args'
+                                letitem =
+                                  mkLetItem
+                                    (ii ^. identifierName)
+                                    (mkPis' tyargs' tgt')
+                                    (reLambdas lams' body')
                                 node' =
-                                  mkLetRec'
-                                    (NonEmpty.singleton (mkDynamic', reLambdas lams' body'))
+                                  mkLetRec
+                                    mempty
+                                    (NonEmpty.singleton letitem)
                                     (mkApps' (mkVar' 0) args'')
-                            -- TODO: adjust de Bruijn indices in the types in `lams'`
                             node'' <- lambdaLiftNode' True bl node'
                             return $ End node''
                   Nothing ->
@@ -93,11 +110,24 @@ convertNode tab = dmapLRM go
                   ii = lookupIdentifierInfo tab _identSymbol
                   pspec = ii ^. identifierPragmas . pragmasSpecialiseArgs
                   argsNum = ii ^. identifierArgsNum
-                  tyargs = typeArgs (ii ^. identifierType)
+                  (tyargs, tgt) = unfoldPi' (ii ^. identifierType)
               _ ->
                 return $ Recur node
       _ ->
         return $ Recur node
+
+    removeSpecTypeArgs :: [Int] -> [Node] -> [Type] -> [Type]
+    removeSpecTypeArgs = goRemove 1
+      where
+        goRemove :: Int -> [Int] -> [Node] -> [Type] -> [Type]
+        goRemove n specargs args tys = case (tys, args) of
+          ([], []) -> []
+          (ty : tys', arg : args')
+            | n `elem` specargs ->
+                goRemove (n + 1) specargs args' (substDrop [arg] tys)
+            | otherwise ->
+                ty : goRemove (n + 1) specargs (map (shift 1) args') tys'
+          _ -> impossible
 
     removeSpecargs :: [Int] -> [a] -> [a]
     removeSpecargs specargs args =
@@ -106,6 +136,8 @@ convertNode tab = dmapLRM go
           (not . (`elem` specargs) . snd)
           (zip args [1 ..])
 
+    -- replace the calls to the function being specialised with the specialised
+    -- version (omitting the specialised arguments)
     replaceIdent :: Symbol -> Int -> [Int] -> Node -> Node
     replaceIdent sym argsNum specargs = dmapNR goReplace
       where
@@ -119,14 +151,16 @@ convertNode tab = dmapLRM go
                   NIdt Ident {..}
                     | _identSymbol == sym ->
                         let args' =
-                              map (replaceIdent sym argsNum specargs) $
-                                removeSpecargs specargs args
+                              map
+                                (replaceIdent sym argsNum specargs)
+                                (removeSpecargs specargs args)
                          in End $ mkApps' (mkVar' (lvl + argsNum')) args'
                   _ ->
                     Recur node
           _ ->
             Recur node
 
+    -- replace the arguments being specialised with the actual argument values
     replaceArgs :: Int -> [Int] -> [Node] -> Node -> Node
     replaceArgs argsNum specargs args = umapN goReplace
       where

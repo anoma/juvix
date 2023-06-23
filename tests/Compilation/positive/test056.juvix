@@ -1,3 +1,4 @@
+-- argument specialization
 module test056;
 
 import Stdlib.Prelude open;
