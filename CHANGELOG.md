@@ -4,6 +4,38 @@
 <img align="right" width="300" height="300" alt="Juvix Mascot" src="../assets/images/tara-smiling.svg" />
 </a>
 
+## [v0.4.1](https://github.com/anoma/juvix/tree/v0.4.1) (2023-06-23)
+
+[Full Changelog](https://github.com/anoma/juvix/compare/v0.4.0...v0.4.1)
+
+**Implemented enhancements:**
+
+- The `public` pragma [\#2223](https://github.com/anoma/juvix/pull/2223) ([lukaszcz](https://github.com/lukaszcz))
+- Local pragmas [\#2222](https://github.com/anoma/juvix/pull/2222) ([lukaszcz](https://github.com/lukaszcz))
+- Lifting calls out of cases for the VampIR backend [\#2218](https://github.com/anoma/juvix/pull/2218) ([lukaszcz](https://github.com/lukaszcz))
+- Use equality instead of less-equal when translating matching on Nats [\#2215](https://github.com/anoma/juvix/pull/2215) ([lukaszcz](https://github.com/lukaszcz))
+- Support juvix format with no argument to format a project [\#2208](https://github.com/anoma/juvix/pull/2208) ([paulcadman](https://github.com/paulcadman))
+- Always print source of formatted file unless --check is specified [\#2205](https://github.com/anoma/juvix/pull/2205) ([paulcadman](https://github.com/paulcadman))
+- Improve iterator formatting and syntax [\#2204](https://github.com/anoma/juvix/pull/2204) ([lukaszcz](https://github.com/lukaszcz))
+- Restrict permutative conversions on cases to non-booleans [\#2201](https://github.com/anoma/juvix/pull/2201) ([lukaszcz](https://github.com/lukaszcz))
+
+**Merged pull requests:**
+
+- Build and cache smoke binary keyed using icu4c version [\#2221](https://github.com/anoma/juvix/pull/2221) ([paulcadman](https://github.com/paulcadman))
+- Switch to Halo2 for VampIR backend tests [\#2216](https://github.com/anoma/juvix/pull/2216) ([lukaszcz](https://github.com/lukaszcz))
+- Remove Subtree sections, all collapse all button [\#2213](https://github.com/anoma/juvix/pull/2213) ([vrom911](https://github.com/vrom911))
+- Fix `isNegative` in the VampIR runtime [\#2212](https://github.com/anoma/juvix/pull/2212) ([lukaszcz](https://github.com/lukaszcz))
+- Use juvix-installer in CodeSpaces, install vamp-ir [\#2210](https://github.com/anoma/juvix/pull/2210) ([vrom911](https://github.com/vrom911))
+- Move termination checker to Internal [\#2209](https://github.com/anoma/juvix/pull/2209) ([janmasrovira](https://github.com/janmasrovira))
+- Propogate formatter results when traversing subdirs [\#2207](https://github.com/anoma/juvix/pull/2207) ([paulcadman](https://github.com/paulcadman))
+- Update vamp-ir CI installation [\#2199](https://github.com/anoma/juvix/pull/2199) ([jonaprieto](https://github.com/jonaprieto))
+- More tests for the VampIR compilation pipeline [\#2197](https://github.com/anoma/juvix/pull/2197) ([lukaszcz](https://github.com/lukaszcz))
+- Fix runtime C maybe benchmark example [\#2195](https://github.com/anoma/juvix/pull/2195) ([paulcadman](https://github.com/paulcadman))
+- Refactor isValidChar [\#2194](https://github.com/anoma/juvix/pull/2194) ([jonaprieto](https://github.com/jonaprieto))
+- Check valid argument names in YAML [\#2193](https://github.com/anoma/juvix/pull/2193) ([lukaszcz](https://github.com/lukaszcz))
+- Fix benchmark runtime C examples [\#2192](https://github.com/anoma/juvix/pull/2192) ([paulcadman](https://github.com/paulcadman))
+- Update to the new version of VampIR [\#2138](https://github.com/anoma/juvix/pull/2138) ([lukaszcz](https://github.com/lukaszcz))
+
 ## [v0.4.0 - Prague!](https://github.com/anoma/juvix/tree/v0.4.0) (2023-06-02)
 
 [Full Changelog](https://github.com/anoma/juvix/compare/v0.3.5...v0.4.0)
