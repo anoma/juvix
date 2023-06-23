@@ -148,7 +148,6 @@ goPattern :: forall r. (Member (State DependencyGraph) r) => Maybe Name -> Patte
 goPattern n p = case p ^. patternArgPattern of
   PatternVariable {} -> return ()
   PatternWildcard {} -> return ()
-  PatternEmpty -> return ()
   PatternConstructorApp a -> goApp a
   where
     goApp :: ConstructorApp -> Sem r ()

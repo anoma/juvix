@@ -4,6 +4,7 @@ module Juvix.Compiler.Internal.Extra
   )
 where
 
+import Data.Generics.Uniplate.Data hiding (holes)
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Internal.Data.LocalVars
@@ -654,3 +655,9 @@ isSmallUniverse' :: Expression -> Bool
 isSmallUniverse' = \case
   ExpressionUniverse {} -> True
   _ -> False
+
+allTypeSignatures :: Data a => a -> [Expression]
+allTypeSignatures a =
+  [f ^. funDefType | f@FunctionDef {} <- universeBi a]
+    <> [f ^. axiomType | f@AxiomDef {} <- universeBi a]
+    <> [f ^. inductiveType | f@InductiveDef {} <- universeBi a]

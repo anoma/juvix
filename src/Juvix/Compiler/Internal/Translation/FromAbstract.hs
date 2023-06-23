@@ -56,7 +56,7 @@ fromAbstract abstractResults = do
     depInfo = buildDependencyInfo (abstractResults ^. Abstract.resultModules) (abstractResults ^. Abstract.resultExports)
 
 fromAbstractExpression :: Members '[NameIdGen] r => Abstract.Expression -> Sem r Expression
-fromAbstractExpression e = runReader depInfo (goExpression e)
+fromAbstractExpression e = runReader depInfo (goExpression e) >>= checkTypesSupported
   where
     depInfo :: NameDependencyInfo
     depInfo = buildDependencyInfoExpr e
@@ -84,13 +84,38 @@ goModule m = do
   runReader depInfo $ do
     _moduleBody' <- goModuleBody (m ^. Abstract.moduleBody)
     examples' <- mapM goExample (m ^. Abstract.moduleExamples)
-    return
+    checkTypesSupported $
       Module
         { _moduleName = m ^. Abstract.moduleName,
           _moduleExamples = examples',
           _moduleBody = _moduleBody',
           _modulePragmas = m ^. Abstract.modulePragmas
         }
+
+checkTypesSupported :: Data a => a -> Sem r a
+checkTypesSupported a = do
+  mapM_ checkType (allTypeSignatures a)
+  return a
+  where
+    checkTypeIden :: Iden -> Sem r ()
+    checkTypeIden = \case
+      IdenConstructor {} -> unsupported "constructors in types"
+      IdenFunction {} -> return ()
+      IdenAxiom {} -> return ()
+      IdenVar {} -> return ()
+      IdenInductive {} -> return ()
+    checkType :: Expression -> Sem r ()
+    checkType = \case
+      ExpressionLiteral {} -> unsupported "literals in types"
+      ExpressionLambda {} -> unsupported "lambda in types"
+      ExpressionLet {} -> unsupported "let in types"
+      ExpressionCase {} -> unsupported "case in types"
+      ExpressionIden i -> checkTypeIden i
+      ExpressionApplication {} -> return ()
+      ExpressionFunction {} -> return ()
+      ExpressionHole {} -> return ()
+      ExpressionUniverse {} -> return ()
+      ExpressionSimpleLambda {} -> return ()
 
 buildLetMutualBlocks ::
   Members '[Reader NameDependencyInfo] r =>
@@ -216,17 +241,9 @@ goModuleBody b@(Abstract.ModuleBody stmts) = do
             one :: MutualStatement -> Statement
             one = StatementMutual . MutualBlock . pure
 
-goTypeIden :: Abstract.Iden -> Iden
-goTypeIden = \case
-  Abstract.IdenFunction f -> IdenFunction f
-  Abstract.IdenConstructor {} -> unsupported "constructors in types"
-  Abstract.IdenVar v -> IdenVar v
-  Abstract.IdenInductive d -> IdenInductive d
-  Abstract.IdenAxiom a -> IdenAxiom a
-
-goAxiomDef :: Abstract.AxiomDef -> Sem r AxiomDef
+goAxiomDef :: Members '[NameIdGen, Reader NameDependencyInfo] r => Abstract.AxiomDef -> Sem r AxiomDef
 goAxiomDef a = do
-  _axiomType' <- goType (a ^. Abstract.axiomType)
+  _axiomType' <- goExpression (a ^. Abstract.axiomType)
   return
     AxiomDef
       { _axiomName = a ^. Abstract.axiomName,
@@ -235,9 +252,9 @@ goAxiomDef a = do
         _axiomPragmas = a ^. Abstract.axiomPragmas
       }
 
-goFunctionParameter :: Abstract.FunctionParameter -> Sem r FunctionParameter
+goFunctionParameter :: Members '[NameIdGen, Reader NameDependencyInfo] r => Abstract.FunctionParameter -> Sem r FunctionParameter
 goFunctionParameter f = do
-  _paramType <- goType (f ^. Abstract.paramType)
+  _paramType <- goExpression (f ^. Abstract.paramType)
   return
     FunctionParameter
       { _paramName = f ^. Abstract.paramName,
@@ -245,16 +262,16 @@ goFunctionParameter f = do
         _paramType
       }
 
-goFunction :: Abstract.Function -> Sem r Function
+goFunction :: Members '[NameIdGen, Reader NameDependencyInfo] r => Abstract.Function -> Sem r Function
 goFunction (Abstract.Function l r) = do
   l' <- goFunctionParameter l
-  r' <- goType r
+  r' <- goExpression r
   return (Function l' r')
 
 goFunctionDef :: Members '[NameIdGen, Reader NameDependencyInfo] r => Abstract.FunctionDef -> Sem r FunctionDef
 goFunctionDef f = do
   _funDefClauses' <- mapM (goFunctionClause _funDefName') (f ^. Abstract.funDefClauses)
-  _funDefType' <- goType (f ^. Abstract.funDefTypeSig)
+  _funDefType' <- goExpression (f ^. Abstract.funDefTypeSig)
   _funDefExamples' <- mapM goExample (f ^. Abstract.funDefExamples)
   return
     FunctionDef
@@ -305,7 +322,6 @@ goPattern p = case p of
   Abstract.PatternVariable v -> return (PatternVariable v)
   Abstract.PatternConstructorApp c -> PatternConstructorApp <$> goConstructorApp c
   Abstract.PatternWildcard w -> PatternVariable <$> varFromWildcard w
-  Abstract.PatternEmpty -> unsupported "pattern empty"
 
 goConstructorApp :: (Members '[NameIdGen] r) => Abstract.ConstructorApp -> Sem r ConstructorApp
 goConstructorApp c = do
@@ -316,18 +332,6 @@ goConstructorApp c = do
         _constrAppParameters = _constrAppParameters',
         _constrAppType = Nothing
       }
-
-goType :: Abstract.Expression -> Sem r Expression
-goType e = case e of
-  Abstract.ExpressionIden i -> return (ExpressionIden (goTypeIden i))
-  Abstract.ExpressionUniverse u -> return (ExpressionUniverse u)
-  Abstract.ExpressionApplication a -> ExpressionApplication <$> goTypeApplication a
-  Abstract.ExpressionFunction f -> ExpressionFunction <$> goFunction f
-  Abstract.ExpressionLiteral {} -> unsupported "literals in types"
-  Abstract.ExpressionHole h -> return (ExpressionHole h)
-  Abstract.ExpressionLambda {} -> unsupported "lambda in types"
-  Abstract.ExpressionLet {} -> unsupported "let in types"
-  Abstract.ExpressionCase {} -> unsupported "case in types"
 
 goLambda :: forall r. Members '[NameIdGen, Reader NameDependencyInfo] r => Abstract.Lambda -> Sem r Lambda
 goLambda (Abstract.Lambda cl') = do
@@ -360,22 +364,11 @@ goIden i = case i of
   Abstract.IdenAxiom a -> IdenAxiom a
   Abstract.IdenInductive a -> IdenInductive a
 
-goExpressionFunction :: forall r. Members '[NameIdGen, Reader NameDependencyInfo] r => Abstract.Function -> Sem r Function
-goExpressionFunction f = do
-  l' <- goParam (f ^. Abstract.funParameter)
-  r' <- goExpression (f ^. Abstract.funReturn)
-  return (Function l' r')
-  where
-    goParam :: Abstract.FunctionParameter -> Sem r FunctionParameter
-    goParam p = do
-      ty' <- goExpression (p ^. Abstract.paramType)
-      return (FunctionParameter (p ^. Abstract.paramName) (p ^. Abstract.paramImplicit) ty')
-
 goExpression :: Members '[NameIdGen, Reader NameDependencyInfo] r => Abstract.Expression -> Sem r Expression
 goExpression e = case e of
   Abstract.ExpressionIden i -> return (ExpressionIden (goIden i))
   Abstract.ExpressionUniverse u -> return (ExpressionUniverse u)
-  Abstract.ExpressionFunction f -> ExpressionFunction <$> goExpressionFunction f
+  Abstract.ExpressionFunction f -> ExpressionFunction <$> goFunction f
   Abstract.ExpressionApplication a -> ExpressionApplication <$> goApplication a
   Abstract.ExpressionLambda l -> ExpressionLambda <$> goLambda l
   Abstract.ExpressionLiteral l -> return (ExpressionLiteral (goLiteral l))
@@ -459,9 +452,3 @@ goInductiveDef i = do
             _inductiveConstructorType = ty',
             _inductiveConstructorPragmas = c ^. Abstract.constructorPragmas
           }
-
-goTypeApplication :: Abstract.Application -> Sem r Application
-goTypeApplication (Abstract.Application l r i) = do
-  l' <- goType l
-  r' <- goType r
-  return (Application l' r' i)

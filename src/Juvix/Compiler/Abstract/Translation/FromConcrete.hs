@@ -678,7 +678,7 @@ goPattern p = case p of
   PatternInfixApplication a -> Abstract.PatternConstructorApp <$> goInfixPatternApplication a
   PatternPostfixApplication a -> Abstract.PatternConstructorApp <$> goPostfixPatternApplication a
   PatternWildcard i -> return (Abstract.PatternWildcard i)
-  PatternEmpty {} -> return Abstract.PatternEmpty
+  PatternEmpty {} -> error "unsupported empty pattern"
 
 goAxiom :: (Members '[InfoTableBuilder, Reader Pragmas, Error ScoperError, Builtins, NameIdGen] r) => AxiomDef 'Scoped -> Sem r Abstract.AxiomDef
 goAxiom a = do
