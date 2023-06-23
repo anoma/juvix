@@ -23,7 +23,7 @@ unfoldPolyApplication a =
         _ -> impossible
 
 filterCompileTimeArgsOrPatterns :: (Member (Reader TypesTable) r) => Name -> [a] -> Sem r [a]
-filterCompileTimeArgsOrPatterns idenName lst = do
+filterCompileTimeArgsOrPatterns idenname lst = do
   tab <- ask
   let funParams = fst (unfoldFunType (ty tab))
       typedArgs =
@@ -32,7 +32,7 @@ filterCompileTimeArgsOrPatterns idenName lst = do
             zip lst (map (^. paramType) funParams)
   return $ typedArgs ++ drop (length funParams) lst
   where
-    ty = HashMap.lookupDefault impossible (idenName ^. nameId)
+    ty = HashMap.lookupDefault impossible (idenname ^. nameId)
     isUniverse :: Expression -> Bool
     isUniverse = \case
       (ExpressionUniverse {}) -> True

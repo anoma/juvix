@@ -19,11 +19,6 @@ import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Che
 import Juvix.Compiler.Pipeline.EntryPoint qualified as E
 import Juvix.Prelude
 
-data PreStatement
-  = PreFunctionDef FunctionDef
-  | PreInductiveDef InductiveDef
-  | PreAxiomDef AxiomDef
-
 fromAbstract ::
   Members '[Error JuvixError, NameIdGen] r =>
   Abstract.AbstractResult ->

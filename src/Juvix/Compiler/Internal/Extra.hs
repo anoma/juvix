@@ -661,3 +661,11 @@ allTypeSignatures a =
   [f ^. funDefType | f@FunctionDef {} <- universeBi a]
     <> [f ^. axiomType | f@AxiomDef {} <- universeBi a]
     <> [f ^. inductiveType | f@InductiveDef {} <- universeBi a]
+
+idenName :: Iden -> Name
+idenName = \case
+  IdenFunction f -> f
+  IdenConstructor c -> c
+  IdenVar v -> v
+  IdenInductive i -> i
+  IdenAxiom a -> a

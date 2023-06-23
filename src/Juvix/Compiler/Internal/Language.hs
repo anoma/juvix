@@ -17,6 +17,17 @@ import Juvix.Data.Universe hiding (smallUniverse)
 import Juvix.Data.WithLoc
 import Juvix.Prelude
 
+data PreModule = PreModule
+  {
+    _preModuleName :: Name,
+    _preModule :: [PreStatement]
+  }
+
+data PreStatement
+  = PreFunctionDef FunctionDef
+  | PreInductiveDef InductiveDef
+  | PreAxiomDef AxiomDef
+
 data Module = Module
   { _moduleName :: Name,
     _moduleExamples :: [Example],
@@ -292,6 +303,7 @@ data Function = Function
 
 instance Hashable Function
 
+makeLenses ''PreModule
 makeLenses ''Case
 makeLenses ''CaseBranch
 makeLenses ''Module

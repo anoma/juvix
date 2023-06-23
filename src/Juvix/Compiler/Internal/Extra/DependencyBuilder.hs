@@ -1,10 +1,9 @@
-module Juvix.Compiler.Abstract.Extra.DependencyBuilder (buildDependencyInfo, buildDependencyInfoExpr, ExportsTable) where
+module Juvix.Compiler.Internal.Extra.DependencyBuilder (buildDependencyInfo, buildDependencyInfoExpr, ExportsTable) where
 
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Abstract.Data.NameDependencyInfo
-import Juvix.Compiler.Abstract.Extra.Functions
-import Juvix.Compiler.Abstract.Language
+import Juvix.Compiler.Internal.Extra
 import Juvix.Prelude
 
 -- adjacency set representation
@@ -14,9 +13,9 @@ type StartNodes = HashSet Name
 
 type ExportsTable = HashSet NameId
 
-buildDependencyInfo :: NonEmpty TopModule -> ExportsTable -> NameDependencyInfo
+buildDependencyInfo :: NonEmpty PreModule -> ExportsTable -> NameDependencyInfo
 buildDependencyInfo ms tab =
-  buildDependencyInfoHelper tab (mapM_ goModule ms)
+  buildDependencyInfoHelper tab (mapM_ goPreModule ms)
 
 buildDependencyInfoExpr :: Expression -> NameDependencyInfo
 buildDependencyInfoExpr = buildDependencyInfoHelper mempty . goExpression Nothing
@@ -60,6 +59,11 @@ checkStartNode n = do
     (HashSet.member (n ^. nameId) tab)
     (addStartNode n)
 
+goPreModule :: Members '[Reader ExportsTable, State DependencyGraph, State StartNodes] r => PreModule -> Sem r ()
+goPreModule m = do
+  checkStartNode (m ^. preModuleName)
+  mapM_ (goPreStatement (m ^. preModuleName)) (m ^. preModule)
+
 -- BuiltinBool and BuiltinNat are required by the Internal to Core translation
 -- when translating literal integers to Nats.
 checkBuiltinInductiveStartNode :: forall r. Member (State StartNodes) r => InductiveDef -> Sem r ()
@@ -74,28 +78,14 @@ checkBuiltinInductiveStartNode i = whenJust (i ^. inductiveBuiltin) go
     addInductiveStartNode :: Sem r ()
     addInductiveStartNode = addStartNode (i ^. inductiveName)
 
-goModule :: (Members '[Reader ExportsTable, State DependencyGraph, State StartNodes] r) => Module -> Sem r ()
-goModule m = do
-  checkStartNode (m ^. moduleName)
-  mapM_ (goStatement (m ^. moduleName)) (m ^. moduleBody . moduleStatements)
-
-goLocalModule :: (Members '[Reader ExportsTable, State DependencyGraph, State StartNodes] r) => Name -> Module -> Sem r ()
-goLocalModule parentModule m = do
-  addEdge (m ^. moduleName) parentModule
-  goModule m
-
-goInclude :: Members '[Reader ExportsTable, State DependencyGraph, State StartNodes] r => Include -> Sem r ()
-goInclude (Include m) = goModule m
 
 -- | Declarations in a module depend on the module, not the other way round (a
 -- module is reachable if at least one of the declarations in it is reachable)
-goStatement :: forall r. Members '[Reader ExportsTable, State DependencyGraph, State StartNodes] r => Name -> Statement -> Sem r ()
-goStatement parentModule = \case
-  StatementAxiom ax -> goAxiom ax
-  StatementFunction f -> goTopFunctionDef parentModule f
-  StatementInclude m -> goInclude m
-  StatementLocalModule m -> goLocalModule parentModule m
-  StatementInductive i -> goInductive i
+goPreStatement :: forall r. Members '[Reader ExportsTable, State DependencyGraph, State StartNodes] r => Name -> PreStatement -> Sem r ()
+goPreStatement parentModule = \case
+  PreAxiomDef ax -> goAxiom ax
+  PreFunctionDef f -> goTopFunctionDef parentModule f
+  PreInductiveDef i -> goInductive i
   where
     goAxiom :: AxiomDef -> Sem r ()
     goAxiom ax = do
@@ -123,15 +113,15 @@ goFunctionDefHelper ::
   Sem r ()
 goFunctionDefHelper f = do
   checkStartNode (f ^. funDefName)
-  goExpression (Just (f ^. funDefName)) (f ^. funDefTypeSig)
+  goExpression (Just (f ^. funDefName)) (f ^. funDefType)
   mapM_ (goFunctionClause (f ^. funDefName)) (f ^. funDefClauses)
 
 -- constructors of an inductive type depend on the inductive type, not the other
 -- way round; an inductive type depends on the types of its constructors
 goConstructorDef :: (Members '[State DependencyGraph, State StartNodes, Reader ExportsTable] r) => Name -> InductiveConstructorDef -> Sem r ()
 goConstructorDef indName c = do
-  addEdge (c ^. constructorName) indName
-  goExpression (Just indName) (c ^. constructorType)
+  addEdge (c ^. inductiveConstructorName) indName
+  goExpression (Just indName) (c ^. inductiveConstructorType)
 
 goFunctionClause :: (Members '[State DependencyGraph, State StartNodes, Reader ExportsTable] r) => Name -> FunctionClause -> Sem r ()
 goFunctionClause p c = do
@@ -141,7 +131,6 @@ goFunctionClause p c = do
 goPattern :: forall r. (Member (State DependencyGraph) r) => Maybe Name -> PatternArg -> Sem r ()
 goPattern n p = case p ^. patternArgPattern of
   PatternVariable {} -> return ()
-  PatternWildcard {} -> return ()
   PatternConstructorApp a -> goApp a
   where
     goApp :: ConstructorApp -> Sem r ()
@@ -159,8 +148,8 @@ goExpression p e = case e of
   ExpressionIden i -> addEdgeMay p (idenName i)
   ExpressionUniverse {} -> return ()
   ExpressionFunction f -> do
-    goFunctionParameter p (f ^. funParameter)
-    goExpression p (f ^. funReturn)
+    goFunctionParameter p (f ^. functionLeft)
+    goExpression p (f ^. functionRight)
   ExpressionApplication (Application l r _) -> do
     goExpression p l
     goExpression p r
@@ -169,9 +158,14 @@ goExpression p e = case e of
   ExpressionHole {} -> return ()
   ExpressionLambda l -> goLambda l
   ExpressionLet l -> goLet l
+  ExpressionSimpleLambda l -> goSimpleLambda l
   where
+    goSimpleLambda :: SimpleLambda -> Sem r ()
+    goSimpleLambda l = do
+      addEdgeMay p (l ^. slambdaVar)
+
     goLambda :: Lambda -> Sem r ()
-    goLambda (Lambda clauses) = mapM_ goClause clauses
+    goLambda Lambda {..} = mapM_ goClause _lambdaClauses
       where
         goClause :: LambdaClause -> Sem r ()
         goClause (LambdaClause {..}) = do
@@ -196,6 +190,7 @@ goExpression p e = case e of
       LetFunDef f -> do
         addEdgeMay p (f ^. funDefName)
         goFunctionDefHelper f
+      LetMutualBlock MutualBlockLet {..} -> mapM_ goFunctionDefHelper _mutualLet
 
 goInductiveParameter ::
   (Members '[State DependencyGraph, State StartNodes, Reader ExportsTable] r) =>

@@ -101,7 +101,7 @@ instance PrettyCode PatternArg where
 
 instance PrettyCode LambdaClause where
   ppCode LambdaClause {..} = do
-    lambdaParameters' <- hsep . toList <$> mapM ppCode _lambdaParameters
+    lambdaParameters' <- hsep . toList <$> mapM ppCode _lambdaPatterns
     lambdaBody' <- ppCode _lambdaBody
     return $ lambdaParameters' <+> kwAssign <+> lambdaBody'
 
