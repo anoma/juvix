@@ -892,6 +892,8 @@ p.directory {
   color: #fff;
   border: none;
   cursor: pointer;
+  width: 165px;
+  text-align: left;
 }
 
 .toggle-button:hover {

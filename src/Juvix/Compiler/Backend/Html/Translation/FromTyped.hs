@@ -96,7 +96,7 @@ createIndexFile ps = do
                      $ Html.span
                        ! Attr.id "toggle-button-text"
                        ! Attr.class_ "toggle-icon"
-                     $ "▼ Close all"
+                     $ "▼ Hide all modules"
                  )
               <> tree'
 
