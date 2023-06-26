@@ -89,13 +89,16 @@ goModule ::
   (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable] r) =>
   Internal.Module ->
   Sem r ()
-goModule m = mapM_ go (m ^. Internal.moduleBody . Internal.moduleStatements)
+goModule m = do
+  mapM_ goInclude (m ^. Internal.moduleBody . Internal.moduleIncludes)
+  mapM_ go (m ^. Internal.moduleBody . Internal.moduleStatements)
   where
     go :: Internal.Statement -> Sem r ()
     go = \case
       Internal.StatementAxiom a -> goAxiomInductive a >> goAxiomDef a
       Internal.StatementMutual f -> goMutualBlock f
-      Internal.StatementInclude i -> mapM_ go (i ^. Internal.includeModule . Internal.moduleBody . Internal.moduleStatements)
+    goInclude :: Internal.Include -> Sem r ()
+    goInclude i = mapM_ go (i ^. Internal.includeModule . Internal.moduleBody . Internal.moduleStatements)
 
 -- | predefine an inductive definition
 preInductiveDef ::

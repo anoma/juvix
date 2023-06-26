@@ -12,6 +12,7 @@ import Juvix.Compiler.Abstract.Extra.DependencyBuilder
 import Juvix.Compiler.Abstract.Extra.DependencyBuilder qualified as Abstract
 import Juvix.Compiler.Abstract.Language qualified as Abstract
 import Juvix.Compiler.Abstract.Translation.FromConcrete.Data.Context qualified as Abstract
+import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Data.Context qualified as Scoped
 import Juvix.Compiler.Internal.Extra
 import Juvix.Compiler.Internal.Pretty.Base
 import Juvix.Compiler.Internal.Translation.FromAbstract.Data.Context
@@ -25,7 +26,6 @@ fromAbstract ::
   Sem r InternalResult
 fromAbstract abstractResults = do
   let abstractModules = abstractResults ^. Abstract.resultModules
-      exportsTbl :: HashSet NameId = abstractResults ^. Abstract.resultExports
   _resultModules' <-
     runReader exportsTbl $
       mapM goModule abstractModules
@@ -44,11 +44,12 @@ fromAbstract abstractResults = do
         _resultDepInfo = depInfo
       }
   where
+    exportsTbl :: HashSet NameId = abstractResults ^. Abstract.resultScoper . Scoped.resultExports
     noTerminationOption =
       abstractResults
         ^. Abstract.abstractResultEntryPoint
           . E.entryPointNoTermination
-    depInfo = buildDependencyInfo (abstractResults ^. Abstract.resultModules) (abstractResults ^. Abstract.resultExports)
+    depInfo = buildDependencyInfo (abstractResults ^. Abstract.resultModules) exportsTbl
 
 fromAbstractExpression :: Members '[NameIdGen] r => Abstract.Expression -> Sem r Expression
 fromAbstractExpression e = runReader depInfo (goExpression e) >>= checkTypesSupported
@@ -173,66 +174,29 @@ buildMutualBlocks ss = do
 unsupported :: Text -> a
 unsupported thing = error ("Abstract to Internal: Not yet supported: " <> thing)
 
--- | Note that it ignores import statements
-goDefinition ::
+goStatement ::
   forall r.
   Members '[Reader ExportsTable, Reader NameDependencyInfo, NameIdGen] r =>
   Abstract.Statement ->
-  Sem r [PreStatement]
-goDefinition = \case
-  Abstract.StatementInductive i -> pure . PreInductiveDef <$> goInductiveDef i
-  Abstract.StatementFunction i -> pure . PreFunctionDef <$> goFunctionDef i
-  Abstract.StatementAxiom a -> pure . PreAxiomDef <$> goAxiomDef a
-  Abstract.StatementInclude {} -> return []
-
-scanImports :: Abstract.ModuleBody -> [Abstract.Include]
-scanImports (Abstract.ModuleBody stmts) = mconcatMap go stmts
-  where
-    go :: Abstract.Statement -> [Abstract.Include]
-    go = \case
-      Abstract.StatementInclude t -> [t]
-      Abstract.StatementInductive {} -> []
-      Abstract.StatementFunction {} -> []
-      Abstract.StatementAxiom {} -> []
+  Sem r [Statement]
+goStatement = \case
+  Abstract.StatementAxiom a -> pure . StatementAxiom <$> goAxiomDef a
+  Abstract.StatementMutual {} -> impossible
 
 goModuleBody ::
   forall r.
   Members '[Reader ExportsTable, Reader NameDependencyInfo, NameIdGen] r =>
   Abstract.ModuleBody ->
   Sem r ModuleBody
-goModuleBody b@(Abstract.ModuleBody stmts) = do
-  preDefs <- concatMapM goDefinition stmts
-  sccs <- buildMutualBlocks preDefs
-  let imports :: [Abstract.Include] = scanImports b
-      statements' = map goSCC sccs
-  imports' <- map StatementInclude <$> mapM goInclude imports
+goModuleBody Abstract.ModuleBody {..} = do
+  stmts <- concatMapM goStatement _moduleStatements
+  let imports :: [Abstract.Include] = _moduleIncludes
+  imports' <- mapM goInclude imports
   return
     ModuleBody
-      { _moduleStatements = imports' <> statements'
+      { _moduleStatements = stmts,
+        _moduleIncludes = imports'
       }
-  where
-    goSCC :: SCC PreStatement -> Statement
-    goSCC = \case
-      AcyclicSCC s -> goAcyclic s
-      CyclicSCC c -> goCyclic (nonEmpty' c)
-      where
-        goCyclic :: NonEmpty PreStatement -> Statement
-        goCyclic c = StatementMutual (MutualBlock (goMutual <$> c))
-          where
-            goMutual :: PreStatement -> MutualStatement
-            goMutual = \case
-              PreInductiveDef i -> StatementInductive i
-              PreFunctionDef i -> StatementFunction i
-              _ -> impossible
-
-        goAcyclic :: PreStatement -> Statement
-        goAcyclic = \case
-          PreInductiveDef i -> one (StatementInductive i)
-          PreFunctionDef i -> one (StatementFunction i)
-          PreAxiomDef i -> StatementAxiom i
-          where
-            one :: MutualStatement -> Statement
-            one = StatementMutual . MutualBlock . pure
 
 goAxiomDef :: Members '[NameIdGen, Reader NameDependencyInfo] r => Abstract.AxiomDef -> Sem r AxiomDef
 goAxiomDef a = do
@@ -405,42 +369,42 @@ goLet l = do
       AcyclicSCC f -> LetFunDef f
       CyclicSCC m -> LetMutualBlock (MutualBlockLet (nonEmpty' m))
 
-goInductiveParameter :: Abstract.InductiveParameter -> InductiveParameter
-goInductiveParameter f =
-  InductiveParameter
-    { _inductiveParamName = f ^. Abstract.inductiveParamName
-    }
+-- goInductiveParameter :: Abstract.InductiveParameter -> InductiveParameter
+-- goInductiveParameter f =
+--   InductiveParameter
+--     { _inductiveParamName = f ^. Abstract.inductiveParamName
+--     }
 
-goInductiveDef :: forall r. Members '[NameIdGen, Reader NameDependencyInfo] r => Abstract.InductiveDef -> Sem r InductiveDef
-goInductiveDef i = do
-  let inductiveParameters' = map goInductiveParameter (i ^. Abstract.inductiveParameters)
-      indTypeName = i ^. Abstract.inductiveName
-  inductiveConstructors' <-
-    mapM
-      goConstructorDef
-      (i ^. Abstract.inductiveConstructors)
-  examples' <- mapM goExample (i ^. Abstract.inductiveExamples)
-  ty' <- goExpression (i ^. Abstract.inductiveType)
-  return
-    InductiveDef
-      { _inductiveName = indTypeName,
-        _inductiveParameters = inductiveParameters',
-        _inductiveBuiltin = i ^. Abstract.inductiveBuiltin,
-        _inductiveConstructors = inductiveConstructors',
-        _inductiveExamples = examples',
-        _inductiveType = ty',
-        _inductivePositive = i ^. Abstract.inductivePositive,
-        _inductivePragmas = i ^. Abstract.inductivePragmas
-      }
-  where
-    goConstructorDef :: Abstract.InductiveConstructorDef -> Sem r InductiveConstructorDef
-    goConstructorDef c = do
-      ty' <- goExpression (c ^. Abstract.constructorType)
-      examples' <- mapM goExample (c ^. Abstract.constructorExamples)
-      return
-        InductiveConstructorDef
-          { _inductiveConstructorName = c ^. Abstract.constructorName,
-            _inductiveConstructorExamples = examples',
-            _inductiveConstructorType = ty',
-            _inductiveConstructorPragmas = c ^. Abstract.constructorPragmas
-          }
+-- goInductiveDef :: forall r. Members '[NameIdGen, Reader NameDependencyInfo] r => Abstract.InductiveDef -> Sem r InductiveDef
+-- goInductiveDef i = do
+--   let inductiveParameters' = map goInductiveParameter (i ^. Abstract.inductiveParameters)
+--       indTypeName = i ^. Abstract.inductiveName
+--   inductiveConstructors' <-
+--     mapM
+--       goConstructorDef
+--       (i ^. Abstract.inductiveConstructors)
+--   examples' <- mapM goExample (i ^. Abstract.inductiveExamples)
+--   ty' <- goExpression (i ^. Abstract.inductiveType)
+--   return
+--     InductiveDef
+--       { _inductiveName = indTypeName,
+--         _inductiveParameters = inductiveParameters',
+--         _inductiveBuiltin = i ^. Abstract.inductiveBuiltin,
+--         _inductiveConstructors = inductiveConstructors',
+--         _inductiveExamples = examples',
+--         _inductiveType = ty',
+--         _inductivePositive = i ^. Abstract.inductivePositive,
+--         _inductivePragmas = i ^. Abstract.inductivePragmas
+--       }
+--   where
+--     goConstructorDef :: Abstract.InductiveConstructorDef -> Sem r InductiveConstructorDef
+--     goConstructorDef c = do
+--       ty' <- goExpression (c ^. Abstract.constructorType)
+--       examples' <- mapM goExample (c ^. Abstract.constructorExamples)
+--       return
+--         InductiveConstructorDef
+--           { _inductiveConstructorName = c ^. Abstract.constructorName,
+--             _inductiveConstructorExamples = examples',
+--             _inductiveConstructorType = ty',
+--             _inductiveConstructorPragmas = c ^. Abstract.constructorPragmas
+--           }

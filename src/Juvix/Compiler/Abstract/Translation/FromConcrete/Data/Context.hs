@@ -20,7 +20,6 @@ data AbstractResult = AbstractResult
   { _resultScoper :: Concrete.ScoperResult,
     _resultTable :: InfoTable,
     _resultModules :: NonEmpty TopModule,
-    _resultExports :: HashSet NameId,
     _resultModulesCache :: ModulesCache
   }
 

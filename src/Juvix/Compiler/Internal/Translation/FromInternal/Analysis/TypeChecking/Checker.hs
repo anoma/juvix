@@ -47,9 +47,11 @@ checkModuleBody ::
   Sem r ModuleBody
 checkModuleBody ModuleBody {..} = do
   _moduleStatements' <- mapM checkStatement _moduleStatements
+  _moduleIncludes' <- mapM checkInclude _moduleIncludes
   return
     ModuleBody
-      { _moduleStatements = _moduleStatements'
+      { _moduleStatements = _moduleStatements',
+        _moduleIncludes = _moduleIncludes'
       }
 
 checkInclude ::
@@ -64,7 +66,6 @@ checkStatement ::
   Sem r Statement
 checkStatement s = case s of
   StatementMutual mut -> StatementMutual <$> runReader emptyLocalVars (checkTopMutualBlock mut)
-  StatementInclude i -> StatementInclude <$> checkInclude i
   StatementAxiom ax -> do
     registerNameIdType (ax ^. axiomName . nameId) (ax ^. axiomType)
     return s

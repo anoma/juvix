@@ -13,9 +13,13 @@ type StartNodes = HashSet Name
 
 type ExportsTable = HashSet NameId
 
-buildDependencyInfo :: NonEmpty PreModule -> ExportsTable -> NameDependencyInfo
+buildDependencyInfoPreModule :: PreModule -> ExportsTable -> NameDependencyInfo
+buildDependencyInfoPreModule ms tab =
+  buildDependencyInfoHelper tab (goPreModule ms)
+
+buildDependencyInfo :: NonEmpty Module -> ExportsTable -> NameDependencyInfo
 buildDependencyInfo ms tab =
-  buildDependencyInfoHelper tab (mapM_ goPreModule ms)
+  buildDependencyInfoHelper tab (goModule ms)
 
 buildDependencyInfoExpr :: Expression -> NameDependencyInfo
 buildDependencyInfoExpr = buildDependencyInfoHelper mempty . goExpression Nothing
@@ -59,24 +63,22 @@ checkStartNode n = do
     (HashSet.member (n ^. nameId) tab)
     (addStartNode n)
 
+goModule :: Members '[Reader ExportsTable, State DependencyGraph, State StartNodes] r => Module -> Sem r ()
+goModule m = do
+  checkStartNode (m ^. moduleName)
+  let b = m ^. moduleBody
+  mapM_ (goStatement (m ^. moduleName)) (b ^. moduleStatements)
+  mapM_ (goInclude (m ^. moduleName)) (b ^. moduleIncludes)
+
+goInclude :: Members '[Reader ExportsTable, State DependencyGraph, State StartNodes] r => Include -> Sem r ()
+goInclude (Include m) = goModule m
+
+-- | Ignores includes
 goPreModule :: Members '[Reader ExportsTable, State DependencyGraph, State StartNodes] r => PreModule -> Sem r ()
 goPreModule m = do
-  checkStartNode (m ^. preModuleName)
-  mapM_ (goPreStatement (m ^. preModuleName)) (m ^. preModule)
-
--- BuiltinBool and BuiltinNat are required by the Internal to Core translation
--- when translating literal integers to Nats.
-checkBuiltinInductiveStartNode :: forall r. Member (State StartNodes) r => InductiveDef -> Sem r ()
-checkBuiltinInductiveStartNode i = whenJust (i ^. inductiveBuiltin) go
-  where
-    go :: BuiltinInductive -> Sem r ()
-    go = \case
-      BuiltinNat -> addInductiveStartNode
-      BuiltinBool -> addInductiveStartNode
-      BuiltinInt -> addInductiveStartNode
-
-    addInductiveStartNode :: Sem r ()
-    addInductiveStartNode = addStartNode (i ^. inductiveName)
+  checkStartNode (m ^. moduleName)
+  let b = m ^. moduleBody
+  mapM_ (goPreStatement (m ^. moduleName)) (b ^. moduleStatements)
 
 -- | Declarations in a module depend on the module, not the other way round (a
 -- module is reachable if at least one of the declarations in it is reachable)
@@ -100,6 +102,20 @@ goPreStatement parentModule = \case
       mapM_ (goInductiveParameter (Just (i ^. inductiveName))) (i ^. inductiveParameters)
       goExpression (Just (i ^. inductiveName)) (i ^. inductiveType)
       mapM_ (goConstructorDef (i ^. inductiveName)) (i ^. inductiveConstructors)
+
+-- BuiltinBool and BuiltinNat are required by the Internal to Core translation
+-- when translating literal integers to Nats.
+checkBuiltinInductiveStartNode :: forall r. Member (State StartNodes) r => InductiveDef -> Sem r ()
+checkBuiltinInductiveStartNode i = whenJust (i ^. inductiveBuiltin) go
+  where
+    go :: BuiltinInductive -> Sem r ()
+    go = \case
+      BuiltinNat -> addInductiveStartNode
+      BuiltinBool -> addInductiveStartNode
+      BuiltinInt -> addInductiveStartNode
+
+    addInductiveStartNode :: Sem r ()
+    addInductiveStartNode = addStartNode (i ^. inductiveName)
 
 goTopFunctionDef :: (Members '[State DependencyGraph, State StartNodes, Reader ExportsTable] r) => Name -> FunctionDef -> Sem r ()
 goTopFunctionDef modName f = do

@@ -17,20 +17,23 @@ import Juvix.Data.Universe hiding (smallUniverse)
 import Juvix.Data.WithLoc
 import Juvix.Prelude
 
-data PreModule = PreModule
-  { _preModuleName :: Name,
-    _preModule :: [PreStatement]
-  }
+type Module = Module' Statement
+
+type PreModule = Module' PreStatement
+
+type ModuleBody = ModuleBody' Statement
+
+type PreModuleBody = ModuleBody' PreStatement
 
 data PreStatement
   = PreFunctionDef FunctionDef
   | PreInductiveDef InductiveDef
   | PreAxiomDef AxiomDef
 
-data Module = Module
+data Module' stmt = Module
   { _moduleName :: Name,
     _moduleExamples :: [Example],
-    _moduleBody :: ModuleBody,
+    _moduleBody :: ModuleBody' stmt,
     _modulePragmas :: Pragmas
   }
   deriving stock (Data)
@@ -40,15 +43,15 @@ newtype Include = Include
   }
   deriving stock (Data)
 
-newtype ModuleBody = ModuleBody
-  { _moduleStatements :: [Statement]
+data ModuleBody' stmt = ModuleBody
+  { _moduleIncludes :: [Include],
+    _moduleStatements :: [stmt]
   }
   deriving stock (Data)
 
 data Statement
   = StatementMutual MutualBlock
   | StatementAxiom AxiomDef
-  | StatementInclude Include
   deriving stock (Data)
 
 data MutualStatement
@@ -302,10 +305,9 @@ data Function = Function
 
 instance Hashable Function
 
-makeLenses ''PreModule
 makeLenses ''Case
 makeLenses ''CaseBranch
-makeLenses ''Module
+makeLenses ''Module'
 makeLenses ''Let
 makeLenses ''MutualBlockLet
 makeLenses ''MutualBlock
@@ -316,7 +318,7 @@ makeLenses ''FunctionDef
 makeLenses ''FunctionClause
 makeLenses ''InductiveDef
 makeLenses ''AxiomDef
-makeLenses ''ModuleBody
+makeLenses ''ModuleBody'
 makeLenses ''Application
 makeLenses ''TypedExpression
 makeLenses ''Function

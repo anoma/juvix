@@ -25,16 +25,30 @@ type TopModule = Module
 
 type TopModuleName = Name
 
-data Module = Module
+type Module = Module' Statement
+
+type PreModule = Module' PreStatement
+
+type ModuleBody = ModuleBody' Statement
+
+type PreModuleBody = ModuleBody' PreStatement
+
+data PreStatement
+  = PreFunctionDef FunctionDef
+  | PreInductiveDef InductiveDef
+  | PreAxiomDef AxiomDef
+
+data Module' stmt = Module
   { _moduleName :: Name,
     _moduleExamples :: [Example],
-    _moduleBody :: ModuleBody,
+    _moduleBody :: ModuleBody' stmt,
     _modulePragmas :: Pragmas
   }
   deriving stock (Eq, Show)
 
-newtype ModuleBody = ModuleBody
-  { _moduleStatements :: [Statement]
+data ModuleBody' stmt = ModuleBody
+  { _moduleIncludes :: [Include],
+    _moduleStatements :: [stmt]
   }
   deriving stock (Eq, Show)
 
@@ -44,11 +58,19 @@ newtype Include = Include
   deriving stock (Show, Eq)
 
 data Statement
+  = StatementAxiom AxiomDef
+  | StatementMutual MutualBlock
+  deriving stock (Eq, Show)
+
+data MutualStatement
   = StatementInductive InductiveDef
   | StatementFunction FunctionDef
-  | StatementInclude Include
-  | StatementAxiom AxiomDef
-  deriving stock (Eq, Show)
+  deriving stock (Generic, Show, Eq)
+
+newtype MutualBlock = MutualBlock
+  { _mutualStatements :: NonEmpty MutualStatement
+  }
+  deriving stock (Generic, Show, Eq)
 
 data Example = Example
   { _exampleId :: NameId,
@@ -205,7 +227,8 @@ data AxiomDef = AxiomDef
   }
   deriving stock (Eq, Show)
 
-makeLenses ''Module
+makeLenses ''Module'
+makeLenses ''ModuleBody'
 makeLenses ''InductiveParameter
 makeLenses ''Case
 makeLenses ''CaseBranch
@@ -218,7 +241,6 @@ makeLenses ''Function
 makeLenses ''FunctionDef
 makeLenses ''FunctionClause
 makeLenses ''InductiveDef
-makeLenses ''ModuleBody
 makeLenses ''InductiveConstructorDef
 makeLenses ''ConstructorApp
 makeLenses ''AxiomDef

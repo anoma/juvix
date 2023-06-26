@@ -31,9 +31,11 @@ checkModuleBody ::
   Sem r ModuleBody
 checkModuleBody ModuleBody {..} = do
   _moduleStatements' <- mapM checkStatement _moduleStatements
+  _moduleIncludes' <- mapM checkInclude _moduleIncludes
   return
     ModuleBody
-      { _moduleStatements = _moduleStatements'
+      { _moduleStatements = _moduleStatements',
+        _moduleIncludes = _moduleIncludes'
       }
 
 checkInclude ::
@@ -48,7 +50,6 @@ checkStatement ::
   Sem r Statement
 checkStatement s = case s of
   StatementMutual b -> StatementMutual <$> checkMutualBlock b
-  StatementInclude i -> StatementInclude <$> checkInclude i
   StatementAxiom a -> StatementAxiom <$> checkAxiom a
 
 checkInductive :: forall r. (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r) => InductiveDef -> Sem r InductiveDef

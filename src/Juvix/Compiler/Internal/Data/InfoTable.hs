@@ -58,7 +58,7 @@ buildTable1' m = do
       return (InfoTable {..} <> infoInc)
 
     includes :: [Include]
-    includes = [i | StatementInclude i <- ss]
+    includes = m ^. moduleBody . moduleIncludes
 
     mutuals :: [MutualStatement]
     mutuals =
@@ -100,14 +100,9 @@ buildTable1' m = do
           | StatementFunction f <- mutuals
         ]
           <> [ (f ^. funDefName, FunctionInfo f)
-               | s <- filter (not . isInclude) ss,
+               | s <- ss,
                  f <- letFunctionDefs s
              ]
-      where
-        isInclude :: Statement -> Bool
-        isInclude = \case
-          StatementInclude {} -> True
-          _ -> False
 
     _infoAxioms :: HashMap Name AxiomInfo
     _infoAxioms =

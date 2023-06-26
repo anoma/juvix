@@ -257,12 +257,12 @@ instance PrettyCode Statement where
   ppCode = \case
     StatementMutual f -> ppCode f
     StatementAxiom f -> ppCode f
-    StatementInclude i -> ppCode i
 
 instance PrettyCode ModuleBody where
   ppCode m = do
+    includes <- mapM ppCode (m ^. moduleIncludes)
     everything <- mapM ppCode (m ^. moduleStatements)
-    return $ vsep2 everything
+    return $ vsep2 (includes <> everything)
 
 instance PrettyCode Module where
   ppCode :: Member (Reader Options) r => Module -> Sem r (Doc Ann)

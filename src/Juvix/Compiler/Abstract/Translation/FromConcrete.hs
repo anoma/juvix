@@ -8,6 +8,7 @@ import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
 import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Compiler.Abstract.Data.InfoTableBuilder
+import Juvix.Compiler.Abstract.Data.NameDependencyInfo qualified as Abstract
 import Juvix.Compiler.Abstract.Language (varFromWildcard)
 import Juvix.Compiler.Abstract.Language qualified as Abstract
 import Juvix.Compiler.Abstract.Translation.FromConcrete.Data.Context
@@ -48,10 +49,67 @@ fromConcrete _resultScoper =
         . runState (ModulesCache mempty)
         . evalState iniState
         $ mapM goTopModule ms
-    let _resultExports = _resultScoper ^. Scoper.resultExports
     return AbstractResult {..}
   where
     ms = _resultScoper ^. Scoper.resultModules
+
+-- | `StatementInclude`s are no included in the result
+buildMutualBlocks ::
+  Members '[Reader Abstract.NameDependencyInfo] r =>
+  [Abstract.PreStatement] ->
+  Sem r [SCC Abstract.PreStatement]
+buildMutualBlocks ss = do
+  depInfo <- ask
+  let scomponents :: [SCC Abstract.Name] = buildSCCs depInfo
+  return (boolHack (mapMaybe nameToPreStatement scomponents))
+  where
+    -- If the builtin bool definition is found, it is moved at the front.
+    --
+    -- This is a hack needed to translate BuiltinStringToNat in
+    -- internal-to-core. BuiltinStringToNat is the only function that depends on
+    -- Bool implicitly (i.e. without mentioning it in its type). Eventually
+    -- BuiltinStringToNat needs to be removed and so this hack.
+    boolHack :: [SCC Abstract.PreStatement] -> [SCC Abstract.PreStatement]
+    boolHack s = case popFirstJust isBuiltinBool s of
+      (Nothing, _) -> s
+      (Just boolDef, rest) -> AcyclicSCC (Abstract.PreInductiveDef boolDef) : rest
+      where
+        isBuiltinBool :: SCC Abstract.PreStatement -> Maybe Abstract.InductiveDef
+        isBuiltinBool = \case
+          CyclicSCC [Abstract.PreInductiveDef b]
+            | Just BuiltinBool <- b ^. Abstract.inductiveBuiltin -> Just b
+          _ -> Nothing
+
+    statementsByName :: HashMap Abstract.Name Abstract.PreStatement
+    statementsByName = HashMap.fromList (map mkAssoc ss)
+      where
+        mkAssoc :: Abstract.PreStatement -> (Abstract.Name, Abstract.PreStatement)
+        mkAssoc s = case s of
+          Abstract.PreInductiveDef i -> (i ^. Abstract.inductiveName, s)
+          Abstract.PreFunctionDef i -> (i ^. Abstract.funDefName, s)
+          Abstract.PreAxiomDef i -> (i ^. Abstract.axiomName, s)
+
+    getStmt :: Abstract.Name -> Maybe Abstract.PreStatement
+    getStmt n = statementsByName ^. at n
+
+    nameToPreStatement :: SCC Abstract.Name -> Maybe (SCC Abstract.PreStatement)
+    nameToPreStatement = nonEmptySCC . fmap getStmt
+      where
+        nonEmptySCC :: SCC (Maybe a) -> Maybe (SCC a)
+        nonEmptySCC = \case
+          AcyclicSCC a -> AcyclicSCC <$> a
+          CyclicSCC p -> CyclicSCC . toList <$> nonEmpty (catMaybes p)
+
+buildLetMutualBlocks ::
+  Members '[Reader Abstract.NameDependencyInfo] r =>
+  [Abstract.FunctionDef] ->
+  Sem r [SCC Abstract.FunctionDef]
+buildLetMutualBlocks = fmap (map (fmap fromStmt)) . buildMutualBlocks . map Abstract.PreFunctionDef
+  where
+    fromStmt :: Abstract.PreStatement -> Abstract.FunctionDef
+    fromStmt = \case
+      Abstract.PreFunctionDef f -> f
+      _ -> impossible
 
 fromConcreteExpression :: (Members '[Error JuvixError, NameIdGen] r) => Scoper.Expression -> Sem r Abstract.Expression
 fromConcreteExpression = mapError (JuvixError @ScoperError) . ignoreInfoTableBuilder . runReader @Pragmas mempty . goExpression
@@ -89,9 +147,9 @@ goTopModule m = do
   maybe processModule return (cache ^. at moduleNameId)
 
 goLocalModule ::
-  (Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ModulesCache, State TranslationState] r) =>
+  Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ModulesCache, State TranslationState] r =>
   Module 'Scoped 'ModuleLocal ->
-  Sem r [Abstract.Statement]
+  Sem r [Abstract.PreStatement]
 goLocalModule = concatMapM goStatement . (^. moduleBody)
 
 goModule' ::
@@ -101,7 +159,7 @@ goModule' ::
   Sem r Abstract.Module
 goModule' Module {..} = do
   pragmas' <- goPragmas _modulePragmas
-  body' <- local (const pragmas') (goModuleBody _moduleBody)
+  body' <- local (const pragmas') (goModuleBody _moduleBody >>= goPreModuleBody)
   examples' <- goExamples _moduleDoc
   return
     Abstract.Module
@@ -148,14 +206,49 @@ traverseM' ::
   r (s (t b))
 traverseM' f x = sequence <$> traverse f x
 
+goPreModuleBody ::
+  forall r.
+  (Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ModulesCache, State TranslationState] r) =>
+  Abstract.PreModuleBody ->
+  Sem r Abstract.ModuleBody
+goPreModuleBody b = do
+  exportInfo :: Abstract.ExportsTable <- undefined
+  let depInfo = buildDependencyInfo exportTable b
+  sccs <- buildMutualBlocks (b ^. Abstract.moduleStatements)
+  let moduleStatements' = map goSCC sccs
+  return (set Abstract.moduleStatements moduleStatements' b)
+  where
+    goSCC :: SCC Abstract.PreStatement -> Abstract.Statement
+    goSCC = \case
+      AcyclicSCC s -> goAcyclic s
+      CyclicSCC c -> goCyclic (nonEmpty' c)
+      where
+        goCyclic :: NonEmpty Abstract.PreStatement -> Abstract.Statement
+        goCyclic c = Abstract.StatementMutual (Abstract.MutualBlock (goMutual <$> c))
+          where
+            goMutual :: Abstract.PreStatement -> Abstract.MutualStatement
+            goMutual = \case
+              Abstract.PreInductiveDef i -> Abstract.StatementInductive i
+              Abstract.PreFunctionDef i -> Abstract.StatementFunction i
+              _ -> impossible
+
+        goAcyclic :: Abstract.PreStatement -> Abstract.Statement
+        goAcyclic = \case
+          Abstract.PreInductiveDef i -> one (Abstract.StatementInductive i)
+          Abstract.PreFunctionDef i -> one (Abstract.StatementFunction i)
+          Abstract.PreAxiomDef i -> Abstract.StatementAxiom i
+          where
+            one :: Abstract.MutualStatement -> Abstract.Statement
+            one = Abstract.StatementMutual . Abstract.MutualBlock . pure
+
 goModuleBody ::
   forall r.
   (Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ModulesCache, State TranslationState] r) =>
   [Statement 'Scoped] ->
-  Sem r Abstract.ModuleBody
+  Sem r Abstract.PreModuleBody
 goModuleBody stmts = do
-  otherThanFunctions :: [Indexed Abstract.Statement] <- concatMapM (traverseM' goStatement) ss
-  functions <- map (fmap Abstract.StatementFunction) <$> compiledFunctions
+  otherThanFunctions :: [Indexed Abstract.PreStatement] <- concatMapM (traverseM' goStatement) ss
+  functions <- map (fmap Abstract.PreFunctionDef) <$> compiledFunctions
   let _moduleStatements =
         map
           (^. indexedThing)
@@ -163,6 +256,7 @@ goModuleBody stmts = do
               (^. indexedIx)
               (otherThanFunctions <> functions)
           )
+  _moduleIncludes <- mapMaybeM goImport (scanImports stmts)
   return Abstract.ModuleBody {..}
   where
     ss' = concatMap Concrete.flattenStatement stmts
@@ -172,7 +266,7 @@ goModuleBody stmts = do
 
     compiledFunctions :: Sem r [Indexed Abstract.FunctionDef]
     compiledFunctions =
-      sequence $
+      sequence
         [ Indexed i <$> funDef
           | Indexed i sig <- sigs,
             let name = sig ^. sigName,
@@ -190,13 +284,13 @@ scanImports stmts = mconcatMap go stmts
     go :: Statement 'Scoped -> [Import 'Scoped]
     go = \case
       StatementImport t -> [t]
+      StatementModule m -> concatMap go (m ^. moduleBody)
+      StatementOpenModule o -> maybeToList (openImport o)
       StatementInductive {} -> []
       StatementFunctionClause {} -> []
       StatementTypeSignature {} -> []
       StatementAxiom {} -> []
       StatementSyntax {} -> []
-      StatementModule m -> concatMap go (m ^. moduleBody)
-      StatementOpenModule o -> maybeToList (openImport o)
       where
         openImport :: OpenModule 'Scoped -> Maybe (Import 'Scoped)
         openImport o = case o ^. openModuleImportKw of
@@ -213,10 +307,11 @@ scanImports stmts = mconcatMap go stmts
 
 goImport ::
   forall r.
-  (Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, State ModulesCache, Reader Pragmas, State TranslationState] r) =>
+  Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, State ModulesCache, Reader Pragmas, State TranslationState] r =>
   Import 'Scoped ->
   Sem r (Maybe Abstract.Include)
 goImport Import {..} = do
+  -- TOOD cache???
   -- guardNotCached <$> goTopModule (_importModule ^. moduleRefModule)
   let m = _importModule ^. moduleRefModule
       mname = m ^. Concrete.modulePath
@@ -242,14 +337,14 @@ goStatement ::
   forall r.
   Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ModulesCache, State TranslationState] r =>
   Statement 'Scoped ->
-  Sem r [Abstract.Statement]
+  Sem r [Abstract.PreStatement]
 goStatement = \case
-  StatementAxiom d -> pure . Abstract.StatementAxiom <$> goAxiom d
-  StatementImport t -> maybeToList . fmap Abstract.StatementInclude <$> goImport t
-  StatementSyntax {} -> return []
-  StatementOpenModule o -> maybeToList <$> goOpenModule o
-  StatementInductive i -> pure . Abstract.StatementInductive <$> goInductive i
+  StatementInductive i -> pure . Abstract.PreInductiveDef <$> goInductive i
+  StatementAxiom d -> pure . Abstract.PreAxiomDef <$> goAxiom d
   StatementModule f -> goLocalModule f
+  StatementImport {} -> return []
+  StatementSyntax {} -> return []
+  StatementOpenModule {} -> return []
   StatementTypeSignature {} -> return []
   StatementFunctionClause {} -> return []
 
@@ -276,8 +371,8 @@ goOpenModule ::
   forall r.
   Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ModulesCache, State TranslationState] r =>
   OpenModule 'Scoped ->
-  Sem r (Maybe Abstract.Statement)
-goOpenModule o = fmap Abstract.StatementInclude <$> goOpenModule' o
+  Sem r (Maybe Abstract.Include)
+goOpenModule o = goOpenModule' o
 
 goLetFunctionDef ::
   Members '[NameIdGen, InfoTableBuilder, Reader Pragmas, Error ScoperError] r =>

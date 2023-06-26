@@ -351,7 +351,7 @@ unfoldApplication = fmap (fmap (^. appArg)) . unfoldApplication'
 reachableModules :: Module -> [Module]
 reachableModules = fst . run . runOutputList . evalState (mempty :: HashSet Name) . go
   where
-    go :: forall r. (Members '[State (HashSet Name), Output Module] r) => Module -> Sem r ()
+    go :: forall r. Members '[State (HashSet Name), Output Module] r => Module -> Sem r ()
     go m = do
       s <- get
       unless
@@ -359,11 +359,7 @@ reachableModules = fst . run . runOutputList . evalState (mempty :: HashSet Name
         (output m >> goBody (m ^. moduleBody))
       where
         goBody :: ModuleBody -> Sem r ()
-        goBody = mapM_ goStatement . (^. moduleStatements)
-        goStatement :: Statement -> Sem r ()
-        goStatement = \case
-          StatementInclude (Include inc) -> go inc
-          _ -> return ()
+        goBody = mapM_ (go . (^. includeModule)) . (^. moduleIncludes)
 
 -- | A fold over all transitive children, including self
 patternCosmos :: SimpleFold Pattern Pattern

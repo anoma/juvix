@@ -42,12 +42,14 @@ goStatement :: forall r. Member (Reader NameDependencyInfo) r => Statement -> Se
 goStatement s = case s of
   StatementMutual m -> fmap StatementMutual <$> goMutual m
   StatementAxiom ax -> returnIfReachable (ax ^. axiomName) s
-  StatementInclude i -> do
-    m <- goModule (i ^. includeModule)
-    return (Just (StatementInclude i {_includeModule = m}))
   where
     -- note that the first mutual statement is reachable iff all are reachable
     goMutual :: MutualBlock -> Sem r (Maybe MutualBlock)
     goMutual b@(MutualBlock (m :| _)) = case m of
       StatementFunction f -> returnIfReachable (f ^. funDefName) b
       StatementInductive f -> returnIfReachable (f ^. inductiveName) b
+
+goInclude :: forall r. Member (Reader NameDependencyInfo) r => Include -> Sem r Include
+goInclude i = do
+  _includeModule <- goModule (i ^. includeModule)
+  return Include {..}

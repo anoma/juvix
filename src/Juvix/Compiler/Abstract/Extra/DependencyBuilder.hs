@@ -1,4 +1,10 @@
-module Juvix.Compiler.Abstract.Extra.DependencyBuilder (buildDependencyInfo, buildDependencyInfoExpr, ExportsTable) where
+module Juvix.Compiler.Abstract.Extra.DependencyBuilder
+  ( buildDependencyInfo,
+    buildDependencyInfoPreModule,
+    buildDependencyInfoExpr,
+    ExportsTable,
+  )
+where
 
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
@@ -7,16 +13,20 @@ import Juvix.Compiler.Abstract.Extra.Functions
 import Juvix.Compiler.Abstract.Language
 import Juvix.Prelude
 
--- adjacency set representation
+-- | Adjacency set representation
 type DependencyGraph = HashMap Name (HashSet Name)
 
 type StartNodes = HashSet Name
 
 type ExportsTable = HashSet NameId
 
-buildDependencyInfo :: NonEmpty TopModule -> ExportsTable -> NameDependencyInfo
+buildDependencyInfoPreModule :: PreModule -> ExportsTable -> NameDependencyInfo
+buildDependencyInfoPreModule ms tab =
+  buildDependencyInfoHelper tab (goPreModule ms)
+
+buildDependencyInfo :: NonEmpty Module -> ExportsTable -> NameDependencyInfo
 buildDependencyInfo ms tab =
-  buildDependencyInfoHelper tab (mapM_ goModule ms)
+  buildDependencyInfoHelper tab (goModule ms)
 
 buildDependencyInfoExpr :: Expression -> NameDependencyInfo
 buildDependencyInfoExpr = buildDependencyInfoHelper mempty . goExpression Nothing
@@ -74,22 +84,20 @@ checkBuiltinInductiveStartNode i = whenJust (i ^. inductiveBuiltin) go
     addInductiveStartNode :: Sem r ()
     addInductiveStartNode = addStartNode (i ^. inductiveName)
 
-goModule :: (Members '[Reader ExportsTable, State DependencyGraph, State StartNodes] r) => Module -> Sem r ()
-goModule m = do
+goPreModule :: Members '[Reader ExportsTable, State DependencyGraph, State StartNodes] r => PreModule -> Sem r ()
+goPreModule m = do
   checkStartNode (m ^. moduleName)
-  mapM_ (goStatement (m ^. moduleName)) (m ^. moduleBody . moduleStatements)
-
-goInclude :: Members '[Reader ExportsTable, State DependencyGraph, State StartNodes] r => Include -> Sem r ()
-goInclude (Include m) = goModule m
+  let b = m ^. moduleBody
+  -- TODO ignoring includes... is this ok?
+  mapM_ (goPreStatement (m ^. moduleName)) (b ^. moduleStatements)
 
 -- | Declarations in a module depend on the module, not the other way round (a
 -- module is reachable if at least one of the declarations in it is reachable)
-goStatement :: forall r. Members '[Reader ExportsTable, State DependencyGraph, State StartNodes] r => Name -> Statement -> Sem r ()
-goStatement parentModule = \case
-  StatementAxiom ax -> goAxiom ax
-  StatementFunction f -> goTopFunctionDef parentModule f
-  StatementInclude m -> goInclude m
-  StatementInductive i -> goInductive i
+goPreStatement :: forall r. Members '[Reader ExportsTable, State DependencyGraph, State StartNodes] r => Name -> PreStatement -> Sem r ()
+goPreStatement parentModule = \case
+  PreAxiomDef ax -> goAxiom ax
+  PreFunctionDef f -> goTopFunctionDef parentModule f
+  PreInductiveDef i -> goInductive i
   where
     goAxiom :: AxiomDef -> Sem r ()
     goAxiom ax = do
