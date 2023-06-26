@@ -7,6 +7,7 @@ import Juvix.Compiler.Core.Transformation.Optimize.FilterUnreachable
 import Juvix.Compiler.Core.Transformation.Optimize.Inlining
 import Juvix.Compiler.Core.Transformation.Optimize.LambdaFolding
 import Juvix.Compiler.Core.Transformation.Optimize.LetFolding
+import Juvix.Compiler.Core.Transformation.Optimize.SpecializeArgs (specializeArgs)
 
 optimize' :: CoreOptions -> InfoTable -> InfoTable
 optimize' CoreOptions {..} tab =
@@ -18,6 +19,7 @@ optimize' CoreOptions {..} tab =
           . inlining' _optInliningDepth (recursiveIdents tab)
           . letFolding' (isInlineableLambda _optInliningDepth)
           . lambdaFolding
+          . specializeArgs
       )
     . letFolding
     $ tab
