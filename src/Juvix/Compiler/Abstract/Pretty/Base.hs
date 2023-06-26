@@ -128,7 +128,6 @@ instance PrettyCode ConstructorApp where
 instance PrettyCode Pattern where
   ppCode = \case
     PatternVariable v -> ppCode v
-    PatternWildcard {} -> return kwWildcard
     PatternConstructorApp constr -> ppCode constr
 
 instance PrettyCode Expression where

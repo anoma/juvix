@@ -135,7 +135,6 @@ goFunctionClause p c = do
 goPattern :: forall r. (Member (State DependencyGraph) r) => Maybe Name -> PatternArg -> Sem r ()
 goPattern n p = case p ^. patternArgPattern of
   PatternVariable {} -> return ()
-  PatternWildcard {} -> return ()
   PatternConstructorApp a -> goApp a
   where
     goApp :: ConstructorApp -> Sem r ()

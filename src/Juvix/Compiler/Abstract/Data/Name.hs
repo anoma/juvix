@@ -25,7 +25,7 @@ data Name = Name
 
 makeLenses ''Name
 
-varFromWildcard :: (Members '[NameIdGen] r) => Wildcard -> Sem r VarName
+varFromWildcard :: Members '[NameIdGen] r => Wildcard -> Sem r VarName
 varFromWildcard w = do
   _nameId <- freshNameId
   let _nameText :: Text = "_ω" <> prettyText _nameId

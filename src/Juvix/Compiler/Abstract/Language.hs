@@ -175,7 +175,6 @@ data PatternArg = PatternArg
 data Pattern
   = PatternVariable VarName
   | PatternConstructorApp ConstructorApp
-  | PatternWildcard Wildcard
   deriving stock (Eq, Show)
 
 data InductiveDef = InductiveDef
@@ -257,7 +256,6 @@ instance HasAtomicity Pattern where
   atomicity = \case
     PatternVariable {} -> Atom
     PatternConstructorApp a -> atomicity a
-    PatternWildcard {} -> Atom
 
 instance HasAtomicity PatternArg where
   atomicity p

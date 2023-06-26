@@ -314,7 +314,6 @@ goPattern :: (Members '[NameIdGen] r) => Abstract.Pattern -> Sem r Pattern
 goPattern p = case p of
   Abstract.PatternVariable v -> return (PatternVariable v)
   Abstract.PatternConstructorApp c -> PatternConstructorApp <$> goConstructorApp c
-  Abstract.PatternWildcard w -> PatternVariable <$> varFromWildcard w
 
 goConstructorApp :: (Members '[NameIdGen] r) => Abstract.ConstructorApp -> Sem r ConstructorApp
 goConstructorApp c = do

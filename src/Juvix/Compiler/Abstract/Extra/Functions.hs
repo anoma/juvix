@@ -16,7 +16,6 @@ makeLenses ''ApplicationArg
 patternVariables :: Traversal' Pattern VarName
 patternVariables f p = case p of
   PatternVariable v -> PatternVariable <$> f v
-  PatternWildcard {} -> pure p
   PatternConstructorApp app -> PatternConstructorApp <$> appVariables f app
 
 patternArgVariables :: Traversal' PatternArg VarName
@@ -37,7 +36,6 @@ idenName = \case
 patternCosmos :: SimpleFold Pattern Pattern
 patternCosmos f p = case p of
   PatternVariable {} -> f p
-  PatternWildcard {} -> f p
   PatternConstructorApp (ConstructorApp r args ty) ->
     f p *> do
       args' <- traverse (traverseOf patternArgPattern (patternCosmos f)) args
@@ -61,7 +59,6 @@ patternArgCosmos f p = do
 patternSubCosmos :: SimpleFold Pattern Pattern
 patternSubCosmos f p = case p of
   PatternVariable {} -> pure p
-  PatternWildcard {} -> pure p
   PatternConstructorApp (ConstructorApp r args ty) -> do
     args' <- traverse (patternArgCosmos f) args
     pure (PatternConstructorApp (ConstructorApp r args' ty))
@@ -242,16 +239,17 @@ toApplicationArg p =
     helper = \case
       PatternVariable v -> ApplicationArg Explicit (toExpression v)
       PatternConstructorApp a -> ApplicationArg Explicit (toExpression a)
-      PatternWildcard _ ->
-        ApplicationArg
-          Explicit
-          ( ExpressionHole
-              ( Hole
-                  { _holeId = error "hole with no id",
-                    _holeKw = error "hole with no location"
-                  }
-              )
-          )
+
+-- PatternWildcard _ ->
+--   ApplicationArg
+--     Explicit
+--     ( ExpressionHole
+--         ( Hole
+--             { _holeId = error "hole with no id",
+--               _holeKw = error "hole with no location"
+--             }
+--         )
+--     )
 
 clauseLhsAsExpression :: FunctionClause -> Expression
 clauseLhsAsExpression cl =
