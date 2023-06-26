@@ -30,6 +30,7 @@ import Juvix.Compiler.Core.Transformation.NaiveMatchToCase qualified as Naive
 import Juvix.Compiler.Core.Transformation.NatToPrimInt
 import Juvix.Compiler.Core.Transformation.Normalize
 import Juvix.Compiler.Core.Transformation.Optimize.CaseCallLifting
+import Juvix.Compiler.Core.Transformation.Optimize.CaseFolding
 import Juvix.Compiler.Core.Transformation.Optimize.Inlining
 import Juvix.Compiler.Core.Transformation.Optimize.LambdaFolding
 import Juvix.Compiler.Core.Transformation.Optimize.LetFolding
@@ -76,6 +77,7 @@ applyTransformations ts tbl = foldM (flip appTrans) tbl ts
       CaseCallLifting -> return . caseCallLifting
       SimplifyIfs -> return . simplifyIfs
       SpecializeArgs -> return . specializeArgs
+      CaseFolding -> return . caseFolding
       OptPhaseEval -> Phase.Eval.optimize
       OptPhaseExec -> Phase.Exec.optimize
       OptPhaseGeb -> Phase.Geb.optimize

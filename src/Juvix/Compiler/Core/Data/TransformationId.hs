@@ -30,6 +30,7 @@ data TransformationId
   | CaseCallLifting
   | SimplifyIfs
   | SpecializeArgs
+  | CaseFolding
   | OptPhaseEval
   | OptPhaseExec
   | OptPhaseGeb

@@ -339,5 +339,10 @@ tests =
       "Test056: Argument specialization"
       $(mkRelDir ".")
       $(mkRelFile "test056.juvix")
-      $(mkRelFile "out/test056.out")
+      $(mkRelFile "out/test056.out"),
+    posTest
+      "Test057: Case folding"
+      $(mkRelDir ".")
+      $(mkRelFile "test057.juvix")
+      $(mkRelFile "out/test057.out")
   ]
