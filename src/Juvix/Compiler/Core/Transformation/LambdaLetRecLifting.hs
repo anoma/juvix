@@ -159,8 +159,7 @@ lambdaLiftNode aboveBl top =
                   ]
           declareTopSyms
 
-          let -- TODO it can probably be simplified
-              shiftHelper :: Node -> NonEmpty (Node, Binder) -> Node
+          let shiftHelper :: Node -> NonEmpty (Node, Binder) -> Node
               shiftHelper b = goShift 0
                 where
                   goShift :: Int -> NonEmpty (Node, Binder) -> Node
@@ -171,7 +170,7 @@ lambdaLiftNode aboveBl top =
                         | otherwise -> impossible
                       (y : ys) -> mkLet mempty bnd' (shift k x) (goShift (k + 1) (y :| ys))
                       where
-                        bnd' = over binderType (shift k . subsCalls) bnd
+                        bnd' = over binderType (shift k) bnd
           let res :: Node
               res = shiftHelper body' (nonEmpty' (zipExact letItems letRecBinders'))
           return (Recur res)
