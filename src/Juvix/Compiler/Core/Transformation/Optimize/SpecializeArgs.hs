@@ -19,7 +19,7 @@ isSpecializable tab node =
          in isSpecializable tab h
       _ -> False
 
--- Checks if an argument is passed without modification to recursive calls.
+-- | Checks if an argument is passed without modification to recursive calls.
 isArgSpecializable :: InfoTable -> Symbol -> Int -> Bool
 isArgSpecializable tab sym argNum = run $ execState True $ dmapNRM go body
   where
@@ -58,74 +58,78 @@ convertNode tab = dmapLRM go
       NApp {} ->
         let (h, args) = unfoldApps' node
          in case h of
-              NIdt Ident {..} ->
-                case pspec of
-                  Just PragmaSpecialiseArgs {..} -> do
-                    args' <- mapM (dmapLRM' (bl, go)) args
-                    -- assumption: all type variables are at the front
-                    let specargs0 =
-                          filter
-                            ( \argNum ->
-                                argNum <= argsNum
-                                  && argNum <= length args'
-                                  && isSpecializable tab (args' !! (argNum - 1))
-                                  && isArgSpecializable tab _identSymbol argNum
-                            )
-                            _pragmaSpecialiseArgs
-                        tyargsNum = length (takeWhile (isTypeConstr tab) tyargs)
-                        -- in addition to the arguments explicitly marked for
-                        -- specialisation, also specialise all type arguments
-                        specargs =
-                          nub $
-                            [1 .. tyargsNum]
-                              ++ specargs0
-                    if
-                        | null specargs0 ->
-                            return $ End (mkApps' h args')
-                        | otherwise -> do
-                            eassert (tyargsNum < argsNum)
-                            let def = lookupIdentifierNode tab _identSymbol
-                                (lams, body) = unfoldLambdas def
-                            eassert (length lams == argsNum)
-                            eassert (argsNum <= length tyargs)
-                            let -- We're adding the letrec binder, so need to shift by 1
-                                sargs = map (shift 1) args'
-                                body' =
-                                  replaceIdent _identSymbol argsNum specargs $
-                                    replaceArgs argsNum specargs sargs body
-                                tyargs' = removeSpecTypeArgs specargs sargs (take argsNum tyargs)
-                                tgt' = replaceArgs argsNum specargs sargs (mkPis' (drop argsNum tyargs) tgt)
-                                ty' = mkPis' tyargs' tgt'
-                                lams' =
-                                  zipWithExact
-                                    (\lam ty -> over lambdaLhsBinder (set binderType ty) lam)
-                                    (removeSpecargs specargs lams)
-                                    tyargs'
-                                args'' = removeSpecargs specargs sargs
-                                letitem =
-                                  mkLetItem
-                                    (ii ^. identifierName)
-                                    -- the type is not in the scope of the binder
-                                    (shift (-1) ty')
-                                    (reLambdas lams' body')
-                                node' =
-                                  mkLetRec
-                                    mempty
-                                    (NonEmpty.singleton letitem)
-                                    (mkApps' (mkVar' 0) args'')
-                            node'' <- lambdaLiftNode' True bl node'
-                            return $ End node''
-                  Nothing ->
-                    return $ Recur node
-                where
-                  ii = lookupIdentifierInfo tab _identSymbol
-                  pspec = ii ^. identifierPragmas . pragmasSpecialiseArgs
-                  argsNum = ii ^. identifierArgsNum
-                  (tyargs, tgt) = unfoldPi' (ii ^. identifierType)
+              NIdt idt ->
+                goIdentApp bl idt args
               _ ->
                 return $ Recur node
       _ ->
         return $ Recur node
+
+    goIdentApp :: BinderList Binder -> Ident -> [Node] -> Sem r Recur
+    goIdentApp bl idt@Ident {..} args =
+      case pspec of
+        Just PragmaSpecialiseArgs {..} -> do
+          args' <- mapM (dmapLRM' (bl, go)) args
+          -- assumption: all type variables are at the front
+          let specargs0 =
+                filter
+                  ( \argNum ->
+                      argNum <= argsNum
+                        && argNum <= length args'
+                        && isSpecializable tab (args' !! (argNum - 1))
+                        && isArgSpecializable tab _identSymbol argNum
+                  )
+                  _pragmaSpecialiseArgs
+              tyargsNum = length (takeWhile (isTypeConstr tab) tyargs)
+              -- in addition to the arguments explicitly marked for
+              -- specialisation, also specialise all type arguments
+              specargs =
+                nub $
+                  [1 .. tyargsNum]
+                    ++ specargs0
+          if
+              | null specargs0 ->
+                  return $ End (mkApps' (NIdt idt) args')
+              | otherwise -> do
+                  eassert (tyargsNum < argsNum)
+                  let def = lookupIdentifierNode tab _identSymbol
+                      (lams, body) = unfoldLambdas def
+                  eassert (length lams == argsNum)
+                  eassert (argsNum <= length tyargs)
+                  let -- We're adding the letrec binder, so need to shift by 1
+                      sargs = map (shift 1) args'
+                      body' =
+                        replaceIdent _identSymbol argsNum specargs $
+                          replaceArgs argsNum specargs sargs body
+                      tyargs' = removeSpecTypeArgs specargs sargs (take argsNum tyargs)
+                      tgt' = replaceArgs argsNum specargs sargs (mkPis' (drop argsNum tyargs) tgt)
+                      ty' = mkPis' tyargs' tgt'
+                      lams' =
+                        zipWithExact
+                          (\lam ty -> over lambdaLhsBinder (set binderType ty) lam)
+                          (removeSpecargs specargs lams)
+                          tyargs'
+                      args'' = removeSpecargs specargs sargs
+                      letitem =
+                        mkLetItem
+                          (ii ^. identifierName)
+                          -- the type is not in the scope of the binder
+                          (shift (-1) ty')
+                          (reLambdas lams' body')
+                      node' =
+                        mkLetRec
+                          mempty
+                          (NonEmpty.singleton letitem)
+                          (mkApps' (mkVar' 0) args'')
+                  node'' <- lambdaLiftNode' True bl node'
+                  return $ End node''
+        Nothing ->
+          return $ Recur $ mkApps' (NIdt idt) args
+      where
+        ii = lookupIdentifierInfo tab _identSymbol
+        pspec = ii ^. identifierPragmas . pragmasSpecialiseArgs
+        argsNum = ii ^. identifierArgsNum
+        (tyargs, tgt) = unfoldPi' (ii ^. identifierType)
 
     -- assumption: all type arguments are substituted, so no binders in the type
     -- list refer to other elements in the list

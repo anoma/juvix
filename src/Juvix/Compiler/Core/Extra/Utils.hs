@@ -283,7 +283,7 @@ substVar :: Index -> Node -> Node -> Node
 substVar idx t = umapN go
   where
     go k n = case n of
-      NVar (Var {..})
+      NVar Var {..}
         | _varIndex == k + idx -> shift k t
         | _varIndex > k + idx -> mkVar _varInfo (_varIndex - 1)
       _ -> n
