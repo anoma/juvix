@@ -514,7 +514,7 @@ goLet l = goClauses (toList (l ^. Internal.letClauses))
                 pragmas = map (^. Internal.funDefPragmas) lfuns
             tys' <- mapM goType tys
             localAddNames names $ do
-              vals' <- sequence [mkFunBody ty f | (ty, f) <- zipExact tys' lfuns]
+              vals' <- sequence [mkFunBody (shift (length names) ty) f | (ty, f) <- zipExact tys' lfuns]
               let items = nonEmpty' (zipWith3Exact (\ty n v -> LetItem (Binder (n ^. nameText) (Just $ n ^. nameLoc) ty) v) tys' names vals')
               rest <- goClauses cs
               return (mkLetRec (setInfoPragmas pragmas mempty) items rest)
