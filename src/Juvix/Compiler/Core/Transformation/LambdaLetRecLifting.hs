@@ -159,8 +159,7 @@ lambdaLiftNode aboveBl top =
                   ]
           declareTopSyms
 
-          let -- TODO it can probably be simplified, and it's wrong
-              shiftHelper :: Node -> NonEmpty (Node, Binder) -> Node
+          let shiftHelper :: Node -> NonEmpty (Node, Binder) -> Node
               shiftHelper b = goShift 0
                 where
                   goShift :: Int -> NonEmpty (Node, Binder) -> Node
