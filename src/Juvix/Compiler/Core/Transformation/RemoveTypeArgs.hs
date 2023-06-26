@@ -116,11 +116,22 @@ convertIdent :: InfoTable -> IdentifierInfo -> IdentifierInfo
 convertIdent tab ii =
   ii
     { _identifierType = ty',
-      _identifierArgsNum = length tyargs'
+      _identifierArgsNum = length tyargs',
+      _identifierArgNames = filterArgNames (ii ^. identifierType) (ii ^. identifierArgNames)
     }
   where
     ty' = convertNode tab (ii ^. identifierType)
     tyargs' = typeArgs ty'
+
+    filterArgNames :: Type -> [Maybe Text] -> [Maybe Text]
+    filterArgNames ty argnames = case (ty, argnames) of
+      (NPi Pi {..}, name : argnames')
+        | isTypeConstr tab (_piBinder ^. binderType) ->
+            filterArgNames _piBody argnames'
+        | otherwise ->
+            name : filterArgNames _piBody argnames'
+      _ ->
+        argnames
 
 convertConstructor :: InfoTable -> ConstructorInfo -> ConstructorInfo
 convertConstructor tab ci =
