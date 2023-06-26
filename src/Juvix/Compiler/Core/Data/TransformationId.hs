@@ -29,6 +29,7 @@ data TransformationId
   | FoldTypeSynonyms
   | CaseCallLifting
   | SimplifyIfs
+  | SpecializeArgs
   | OptPhaseEval
   | OptPhaseExec
   | OptPhaseGeb

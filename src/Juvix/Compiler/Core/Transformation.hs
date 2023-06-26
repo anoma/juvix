@@ -39,6 +39,7 @@ import Juvix.Compiler.Core.Transformation.Optimize.Phase.Geb qualified as Phase.
 import Juvix.Compiler.Core.Transformation.Optimize.Phase.Main qualified as Phase.Main
 import Juvix.Compiler.Core.Transformation.Optimize.Phase.VampIR qualified as Phase.VampIR
 import Juvix.Compiler.Core.Transformation.Optimize.SimplifyIfs
+import Juvix.Compiler.Core.Transformation.Optimize.SpecializeArgs
 import Juvix.Compiler.Core.Transformation.RemoveTypeArgs
 import Juvix.Compiler.Core.Transformation.TopEtaExpand
 import Juvix.Compiler.Core.Transformation.UnrollRecursion
@@ -74,6 +75,7 @@ applyTransformations ts tbl = foldM (flip appTrans) tbl ts
       FoldTypeSynonyms -> return . foldTypeSynonyms
       CaseCallLifting -> return . caseCallLifting
       SimplifyIfs -> return . simplifyIfs
+      SpecializeArgs -> return . specializeArgs
       OptPhaseEval -> Phase.Eval.optimize
       OptPhaseExec -> Phase.Exec.optimize
       OptPhaseGeb -> Phase.Geb.optimize

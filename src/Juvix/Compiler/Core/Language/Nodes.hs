@@ -102,10 +102,10 @@ data LetItem' a ty = LetItem
 
 -- | Represents a block of mutually recursive local definitions. Both in the
 -- body and in the values `length _letRecValues` implicit binders are introduced
--- which hold the functions/values being defined.
--- the last item in _letRecValues will have have index $0 in the body.
--- The values are *not* in scope of the binders. I.e.
--- the binders of the values cannot refer to the values
+-- which hold the functions/values being defined. The last item in _letRecValues
+-- has index $0 in the body. The types of the binders (in LetItems) are *not* in
+-- the scope of the binders, i.e., the binders of the values cannot refer to the
+-- values.
 data LetRec' i a ty = LetRec
   { _letRecInfo :: i,
     _letRecValues :: !(NonEmpty (LetItem' a ty)),

@@ -334,5 +334,10 @@ tests =
       "Test055: Constructor printing"
       $(mkRelDir ".")
       $(mkRelFile "test055.juvix")
-      $(mkRelFile "out/test055.out")
+      $(mkRelFile "out/test055.out"),
+    posTest
+      "Test056: Argument specialization"
+      $(mkRelDir ".")
+      $(mkRelFile "test056.juvix")
+      $(mkRelFile "out/test056.out")
   ]

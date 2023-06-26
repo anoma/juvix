@@ -367,6 +367,9 @@ undefined = Err.error "undefined"
 impossible :: (HasCallStack) => a
 impossible = Err.error "impossible"
 
+eassert :: Bool -> Sem r ()
+eassert b = assert b $ return ()
+
 --------------------------------------------------------------------------------
 
 infixl 7 <+?>

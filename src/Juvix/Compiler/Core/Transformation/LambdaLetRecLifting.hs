@@ -18,6 +18,9 @@ lambdaLiftBinder bl = traverseOf binderType (lambdaLiftNode bl)
 
 type OnlyLetRec = Bool
 
+lambdaLiftNode' :: forall r. Member InfoTableBuilder r => Bool -> BinderList Binder -> Node -> Sem r Node
+lambdaLiftNode' onlyLetRec bl top = runReader onlyLetRec $ lambdaLiftNode bl top
+
 lambdaLiftNode :: forall r. Members '[Reader OnlyLetRec, InfoTableBuilder] r => BinderList Binder -> Node -> Sem r Node
 lambdaLiftNode aboveBl top =
   let topArgs :: [LambdaLhs]

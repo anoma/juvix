@@ -44,9 +44,9 @@ letHoist n = do
   let il = indexFrom 0 l
       tbl = mkLetsTable il
       nlets = length il
-      mkLetItem :: Indexed LItem -> LetItem
-      mkLetItem i = shiftLetItem (i ^. indexedIx) (i ^. indexedThing . itemLet)
-      letItems = map mkLetItem il
+      mkLetItemFromLItem :: Indexed LItem -> LetItem
+      mkLetItemFromLItem i = shiftLetItem (i ^. indexedIx) (i ^. indexedThing . itemLet)
+      letItems = map mkLetItemFromLItem il
       body'' = substPlaceholders tbl (mkLets letItems (shift nlets body'))
   return (reLambdas topLambdas body'')
 
