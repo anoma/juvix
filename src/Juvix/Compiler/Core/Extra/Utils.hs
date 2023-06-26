@@ -85,15 +85,23 @@ isType = \case
 
 -- | True for nodes whose evaluation immediately returns a value, i.e.,
 -- no reduction or memory allocation in the runtime is required.
-isImmediate :: Node -> Bool
-isImmediate = \case
+isImmediate :: InfoTable -> Node -> Bool
+isImmediate tab = \case
   NVar {} -> True
   NIdt {} -> True
   NCst {} -> True
   node@(NApp {}) ->
-    let (_, args) = unfoldApps' node
-     in all isType args
+    let (h, args) = unfoldApps' node
+     in case h of
+          NIdt Ident {..}
+            | Just ii <- lookupIdentifierInfo' tab _identSymbol ->
+                let paramsNum = length (takeWhile (isTypeConstr tab) (typeArgs (ii ^. identifierType)))
+                 in length args <= paramsNum
+          _ -> all isType args
   node -> isType node
+
+isImmediate' :: Node -> Bool
+isImmediate' = isImmediate emptyInfoTable
 
 -- | True if the argument is fully evaluated first-order data
 isDataValue :: Node -> Bool

@@ -16,6 +16,8 @@ optimize' CoreOptions {..} tab =
       ( compose 2 (letFolding' (isInlineableLambda _optInliningDepth))
           . lambdaFolding
           . inlining' _optInliningDepth (recursiveIdents tab)
+          . letFolding' (isInlineableLambda _optInliningDepth)
+          . lambdaFolding
       )
     . letFolding
     $ tab

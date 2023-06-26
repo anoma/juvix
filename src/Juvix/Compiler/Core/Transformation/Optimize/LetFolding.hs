@@ -15,14 +15,14 @@ module Juvix.Compiler.Core.Transformation.Optimize.LetFolding where
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Transformation.Base
 
-convertNode :: (Node -> Bool) -> Node -> Node
-convertNode isFoldable = rmap go
+convertNode :: (Node -> Bool) -> InfoTable -> Node -> Node
+convertNode isFoldable tab = rmap go
   where
     go :: ([BinderChange] -> Node -> Node) -> Node -> Node
     go recur = \case
       NLet Let {..}
-        | isImmediate (_letItem ^. letItemValue)
-            || _letBody == mkVar' 0
+        | isImmediate tab (_letItem ^. letItemValue)
+            || isVarApp _letBody
             || isFoldable (_letItem ^. letItemValue) ->
             go (recur . (mkBCRemove (_letItem ^. letItemBinder) val' :)) _letBody
         where
@@ -30,8 +30,13 @@ convertNode isFoldable = rmap go
       node ->
         recur [] node
 
+    isVarApp :: Node -> Bool
+    isVarApp node =
+      let (h, _) = unfoldApps' node
+       in h == mkVar' 0
+
 letFolding' :: (Node -> Bool) -> InfoTable -> InfoTable
-letFolding' isFoldable = mapAllNodes (convertNode isFoldable)
+letFolding' isFoldable tab = mapAllNodes (convertNode isFoldable tab) tab
 
 letFolding :: InfoTable -> InfoTable
 letFolding = letFolding' (const False)

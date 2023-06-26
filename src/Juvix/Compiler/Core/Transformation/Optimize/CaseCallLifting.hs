@@ -13,7 +13,7 @@ convertNode tab = umap go
       NCase Case {..}
         | not (null idents) ->
             if
-                | isCaseBoolean _caseBranches && not (isImmediate _caseValue) ->
+                | isCaseBoolean _caseBranches && not (isImmediate tab _caseValue) ->
                     mkLet'
                       mkTypeBool'
                       _caseValue
