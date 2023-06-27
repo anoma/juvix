@@ -14,7 +14,8 @@ convertNode = dmap go
             case find ((== _constrTag) . (^. caseBranchTag)) _caseBranches of
               Just CaseBranch {..} ->
                 goBranch 0 _caseBranchBinders _constrArgs _caseBranchBody
-              Nothing -> node
+              Nothing ->
+                fromMaybe node _caseDefault
           _ -> node
       _ -> node
 
