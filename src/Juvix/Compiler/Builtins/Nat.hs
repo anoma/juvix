@@ -1,8 +1,8 @@
 module Juvix.Compiler.Builtins.Nat where
 
-import Juvix.Compiler.Abstract.Extra
-import Juvix.Compiler.Abstract.Pretty
 import Juvix.Compiler.Builtins.Effect
+import Juvix.Compiler.Internal.Extra
+import Juvix.Compiler.Internal.Pretty
 import Juvix.Data.Effect.NameIdGen
 import Juvix.Prelude
 
@@ -17,16 +17,16 @@ registerNatDef d = do
 
 registerZero :: (Member Builtins r) => InductiveConstructorDef -> Sem r ()
 registerZero d@InductiveConstructorDef {..} = do
-  let zero = _constructorName
-      ty = _constructorType
+  let zero = _inductiveConstructorName
+      ty = _inductiveConstructorType
   nat <- getBuiltinName (getLoc d) BuiltinNat
   unless (ty === nat) (error $ "zero has the wrong type " <> ppTrace ty <> " | " <> ppTrace nat)
   registerBuiltin BuiltinNatZero zero
 
 registerSuc :: (Member Builtins r) => InductiveConstructorDef -> Sem r ()
 registerSuc d@InductiveConstructorDef {..} = do
-  let suc = _constructorName
-      ty = _constructorType
+  let suc = _inductiveConstructorName
+      ty = _inductiveConstructorType
   nat <- getBuiltinName (getLoc d) BuiltinNat
   unless (ty === (nat --> nat)) (error "suc has the wrong type")
   registerBuiltin BuiltinNatSuc suc

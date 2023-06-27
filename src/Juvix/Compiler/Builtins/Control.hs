@@ -1,7 +1,7 @@
 module Juvix.Compiler.Builtins.Control where
 
-import Juvix.Compiler.Abstract.Extra
 import Juvix.Compiler.Builtins.Effect
+import Juvix.Compiler.Internal.Extra
 import Juvix.Prelude
 
 registerSeq :: (Members '[Builtins, NameIdGen] r) => FunctionDef -> Sem r ()

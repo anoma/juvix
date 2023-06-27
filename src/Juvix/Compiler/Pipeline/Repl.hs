@@ -1,6 +1,5 @@
 module Juvix.Compiler.Pipeline.Repl where
 
-import Juvix.Compiler.Abstract.Translation qualified as Abstract
 import Juvix.Compiler.Concrete.Data.ParsedInfoTableBuilder.BuilderState qualified as C
 import Juvix.Compiler.Concrete.Data.Scope qualified as Scoper
 import Juvix.Compiler.Concrete.Language
@@ -24,8 +23,7 @@ arityCheckExpression p = do
       . runScoperScopeArtifacts
     )
     $ Scoper.scopeCheckExpression scopeTable p
-      >>= Abstract.fromConcreteExpression
-      >>= Internal.fromAbstractExpression
+      >>= Internal.fromConcreteExpression
       >>= Internal.arityCheckExpression
 
 expressionUpToAtomsParsed ::
@@ -71,22 +69,16 @@ openImportToInternal o = do
   parsedModules <- gets (^. artifactParsing . C.stateModules)
   ( runNameIdGenArtifacts
       . runBuiltinsArtifacts
-      . runAbstractInfoTableBuilderArtifacts
       . runScoperInfoTableBuilderArtifacts
       . runScoperScopeArtifacts
       . runStateArtifacts artifactInternalTranslationState
       . runReaderArtifacts artifactScopeExports
       . runReader (Scoper.ScopeParameters mempty parsedModules)
-      . runStateArtifacts artifactAbstractModuleCache
+      . runStateArtifacts artifactInternalModuleCache
       . runStateArtifacts artifactScoperState
     )
-    $ do
-      mTopModule <-
-        Scoper.scopeCheckOpenModule o
-          >>= Abstract.fromConcreteOpenImport
-      case mTopModule of
-        Nothing -> return Nothing
-        Just m -> Just <$> Internal.fromAbstractInclude m
+    $ Scoper.scopeCheckOpenModule o
+      >>= Internal.fromConcreteOpenImport
 
 importToInternal ::
   Members '[Reader EntryPoint, Error JuvixError, State Artifacts] r =>
@@ -96,18 +88,16 @@ importToInternal i = do
   parsedModules <- gets (^. artifactParsing . C.stateModules)
   ( runNameIdGenArtifacts
       . runBuiltinsArtifacts
-      . runAbstractInfoTableBuilderArtifacts
       . runScoperInfoTableBuilderArtifacts
       . runScoperScopeArtifacts
       . runStateArtifacts artifactInternalTranslationState
       . runReaderArtifacts artifactScopeExports
       . runReader (Scoper.ScopeParameters mempty parsedModules)
-      . runStateArtifacts artifactAbstractModuleCache
+      . runStateArtifacts artifactInternalModuleCache
       . runStateArtifacts artifactScoperState
     )
     $ Scoper.scopeCheckImport i
-      >>= Abstract.fromConcreteImport
-      >>= mapM Internal.fromAbstractInclude
+      >>= Internal.fromConcreteImport
 
 importToInternal' ::
   Members '[Reader EntryPoint, Error JuvixError, State Artifacts] r =>

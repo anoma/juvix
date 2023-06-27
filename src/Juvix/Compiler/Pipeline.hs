@@ -6,7 +6,6 @@ module Juvix.Compiler.Pipeline
   )
 where
 
-import Juvix.Compiler.Abstract.Translation qualified as Abstract
 import Juvix.Compiler.Asm.Error qualified as Asm
 import Juvix.Compiler.Asm.Options qualified as Asm
 import Juvix.Compiler.Asm.Pipeline qualified as Asm
@@ -57,15 +56,10 @@ upToScoping ::
   Sem r Scoper.ScoperResult
 upToScoping = upToParsing >>= Scoper.fromParsed
 
-upToAbstract ::
-  (Members '[HighlightBuilder, Reader EntryPoint, Files, NameIdGen, Builtins, Error JuvixError, PathResolver] r) =>
-  Sem r Abstract.AbstractResult
-upToAbstract = upToScoping >>= Abstract.fromConcrete
-
 upToInternal ::
   (Members '[HighlightBuilder, Reader EntryPoint, Files, NameIdGen, Builtins, Error JuvixError, PathResolver] r) =>
   Sem r Internal.InternalResult
-upToInternal = upToAbstract >>= Internal.fromAbstract
+upToInternal = upToScoping >>= Internal.fromConcrete
 
 upToInternalArity ::
   (Members '[HighlightBuilder, Reader EntryPoint, Files, NameIdGen, Builtins, Error JuvixError, PathResolver] r) =>
@@ -236,16 +230,19 @@ corePipelineIOEither entry = do
           typedTable :: Internal.InfoTable
           typedTable = typedResult ^. Typed.resultInfoTable
 
+          internalResult :: Internal.InternalResult
+          internalResult =
+            typedResult
+              ^. Typed.resultInternalArityResult
+                . Arity.resultInternalResult
+
           coreTable :: Core.InfoTable
           coreTable = coreRes ^. Core.coreResultTable
 
           scopedResult :: Scoped.ScoperResult
           scopedResult =
-            typedResult
-              ^. Typed.resultInternalArityResult
-                . Arity.resultInternalResult
-                . Internal.resultAbstract
-                . Abstract.resultScoper
+            internalResult
+              ^. Internal.resultScoper
 
           parserResult :: P.ParserResult
           parserResult = scopedResult ^. Scoped.resultParserResult
@@ -255,23 +252,19 @@ corePipelineIOEither entry = do
 
           mainModuleScope_ :: Scope
           mainModuleScope_ = Scoped.mainModuleSope scopedResult
-
-          abstractResult :: Abstract.AbstractResult
-          abstractResult = typedResult ^. Typed.resultInternalArityResult . Arity.resultInternalResult . Internal.resultAbstract
        in Right $
             foldl'
               (flip ($))
               art
               [ set artifactMainModuleScope (Just mainModuleScope_),
                 set artifactParsing (parserResult ^. P.resultBuilderState),
-                set artifactAbstractInfoTable (abstractResult ^. Abstract.resultTable),
+                set artifactInternalModuleCache (internalResult ^. Internal.resultModulesCache),
                 set artifactInternalTypedTable typedTable,
                 set artifactCoreTable coreTable,
                 set artifactScopeTable resultScoperTable,
                 set artifactScopeExports (scopedResult ^. Scoped.resultExports),
                 set artifactTypes typesTable,
                 set artifactFunctions functionsTable,
-                set artifactAbstractModuleCache (abstractResult ^. Abstract.resultModulesCache),
                 set artifactScoperState (scopedResult ^. Scoped.resultScoperState)
               ]
   where
@@ -279,7 +272,6 @@ corePipelineIOEither entry = do
     initialArtifacts =
       Artifacts
         { _artifactParsing = Concrete.iniState,
-          _artifactAbstractInfoTable = Abstract.emptyInfoTable,
           _artifactMainModuleScope = Nothing,
           _artifactInternalTypedTable = mempty,
           _artifactTypes = mempty,
@@ -290,7 +282,7 @@ corePipelineIOEither entry = do
           _artifactScopeTable = Scoped.emptyInfoTable,
           _artifactBuiltins = iniBuiltins,
           _artifactScopeExports = mempty,
-          _artifactInternalTranslationState = Abstract.TranslationState mempty,
-          _artifactAbstractModuleCache = Abstract.ModulesCache mempty,
+          _artifactInternalTranslationState = Internal.TranslationState mempty,
+          _artifactInternalModuleCache = Internal.ModulesCache mempty,
           _artifactScoperState = Scoper.iniScoperState
         }

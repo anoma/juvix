@@ -5,8 +5,6 @@
 -- `runStateLikeArtifacts` wrapper.
 module Juvix.Compiler.Pipeline.Artifacts where
 
-import Juvix.Compiler.Abstract.Data.InfoTableBuilder qualified as Abstract
-import Juvix.Compiler.Abstract.Translation.FromConcrete qualified as Abstract
 import Juvix.Compiler.Builtins
 import Juvix.Compiler.Concrete.Data.InfoTable qualified as Scoped
 import Juvix.Compiler.Concrete.Data.InfoTableBuilder qualified as Scoped
@@ -17,8 +15,9 @@ import Juvix.Compiler.Concrete.Data.Scope qualified as S
 import Juvix.Compiler.Concrete.Data.Scope qualified as Scoped
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver
 import Juvix.Compiler.Core.Data.InfoTableBuilder qualified as Core
-import Juvix.Compiler.Internal.Data.InfoTable qualified as Internal
 import Juvix.Compiler.Internal.Language qualified as Internal
+import Juvix.Compiler.Internal.Translation.FromConcrete qualified as Internal
+import Juvix.Compiler.Internal.Translation.FromConcrete.Data.Context qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Prelude
@@ -27,7 +26,6 @@ import Juvix.Prelude
 -- restarted while preserving existing state.
 data Artifacts = Artifacts
   { _artifactParsing :: BuilderState,
-    _artifactAbstractInfoTable :: Abstract.InfoTable,
     -- Scoping
     _artifactResolver :: ResolverState,
     _artifactBuiltins :: BuiltinsState,
@@ -36,10 +34,9 @@ data Artifacts = Artifacts
     _artifactScopeExports :: HashSet NameId,
     _artifactMainModuleScope :: Maybe Scope,
     _artifactScoperState :: Scoped.ScoperState,
-    -- Concrete -> Abstract
-    _artifactAbstractModuleCache :: Abstract.ModulesCache,
-    _artifactInternalTranslationState :: Abstract.TranslationState,
-    -- Abstract -> Internal
+    -- Concrete -> Internal
+    _artifactInternalModuleCache :: Internal.ModulesCache,
+    _artifactInternalTranslationState :: Internal.TranslationState,
     -- Typechecking
     _artifactTypes :: TypesTable,
     _artifactFunctions :: FunctionsTable,
@@ -70,9 +67,6 @@ runPathResolverArtifacts = runStateLikeArtifacts runPathResolverPipe' artifactRe
 
 runBuiltinsArtifacts :: Members '[Error JuvixError, State Artifacts] r => Sem (Builtins ': r) a -> Sem r a
 runBuiltinsArtifacts = runStateLikeArtifacts runBuiltins artifactBuiltins
-
-runAbstractInfoTableBuilderArtifacts :: Members '[State Artifacts] r => Sem (Abstract.InfoTableBuilder : r) a -> Sem r a
-runAbstractInfoTableBuilderArtifacts = runStateLikeArtifacts Abstract.runInfoTableBuilder' artifactAbstractInfoTable
 
 runParserInfoTableBuilderArtifacts :: Members '[State Artifacts] r => Sem (Concrete.InfoTableBuilder : r) a -> Sem r a
 runParserInfoTableBuilderArtifacts = runStateLikeArtifacts Concrete.runParserInfoTableBuilderRepl artifactParsing

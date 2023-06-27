@@ -1,7 +1,7 @@
 module Juvix.Compiler.Builtins.Int where
 
-import Juvix.Compiler.Abstract.Extra
 import Juvix.Compiler.Builtins.Effect
+import Juvix.Compiler.Internal.Extra
 import Juvix.Prelude
 
 registerIntDef :: Member Builtins r => InductiveDef -> Sem r ()
@@ -15,8 +15,8 @@ registerIntDef d = do
 
 registerIntCtor :: (Member Builtins r) => BuiltinConstructor -> InductiveConstructorDef -> Sem r ()
 registerIntCtor ctor d@InductiveConstructorDef {..} = do
-  let ctorName = _constructorName
-      ty = _constructorType
+  let ctorName = _inductiveConstructorName
+      ty = _inductiveConstructorType
       loc = getLoc d
   int <- getBuiltinName loc BuiltinInt
   nat <- getBuiltinName loc BuiltinNat
@@ -72,7 +72,7 @@ registerIntSubNat f = do
   let loc = getLoc f
   int <- getBuiltinName loc BuiltinInt
   nat <- getBuiltinName loc BuiltinNat
-  unless (f ^. funDefTypeSig === (nat --> nat --> int)) (error "int-sub-nat has the wrong type signature")
+  unless (f ^. funDefType === (nat --> nat --> int)) (error "int-sub-nat has the wrong type signature")
   registerBuiltin BuiltinIntSubNat (f ^. funDefName)
 
 registerIntPlus :: forall r. Members '[Builtins, NameIdGen] r => FunctionDef -> Sem r ()

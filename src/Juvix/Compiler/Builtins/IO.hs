@@ -1,7 +1,7 @@
 module Juvix.Compiler.Builtins.IO where
 
-import Juvix.Compiler.Abstract.Extra
 import Juvix.Compiler.Builtins.Effect
+import Juvix.Compiler.Internal.Extra
 import Juvix.Prelude
 
 registerIO :: (Member Builtins r) => AxiomDef -> Sem r ()

@@ -4,9 +4,9 @@ module Juvix.Compiler.Builtins.Effect
 where
 
 import Data.HashSet qualified as HashSet
-import Juvix.Compiler.Abstract.Extra
-import Juvix.Compiler.Abstract.Pretty
 import Juvix.Compiler.Builtins.Error
+import Juvix.Compiler.Internal.Extra
+import Juvix.Compiler.Internal.Pretty
 import Juvix.Prelude
 
 data Builtins m a where
@@ -87,7 +87,7 @@ registerFun ::
   Sem r ()
 registerFun fi = do
   let op = fi ^. funInfoDef . funDefName
-      ty = fi ^. funInfoDef . funDefTypeSig
+      ty = fi ^. funInfoDef . funDefType
       sig = fi ^. funInfoSignature
   unless ((sig ==% ty) (HashSet.fromList (fi ^. funInfoFreeTypeVars))) (error "builtin has the wrong type signature")
   registerBuiltin (fi ^. funInfoBuiltin) op

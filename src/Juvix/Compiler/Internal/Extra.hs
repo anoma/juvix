@@ -538,8 +538,8 @@ infixl 9 @@
 (@@) :: (IsExpression a, IsExpression b) => a -> b -> Expression
 a @@ b = toExpression (Application (toExpression a) (toExpression b) Explicit)
 
-freshVar :: (Member NameIdGen r) => Text -> Sem r VarName
-freshVar n = do
+freshVar :: (Member NameIdGen r) => Interval -> Text -> Sem r VarName
+freshVar _nameLoc n = do
   uid <- freshNameId
   return
     Name
@@ -548,7 +548,7 @@ freshVar n = do
         _nameKind = KNameLocal,
         _namePretty = n,
         _nameFixity = Nothing,
-        _nameLoc = error "freshVar with no location"
+        _nameLoc
       }
 
 freshHole :: Members '[NameIdGen] r => Interval -> Sem r Hole

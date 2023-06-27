@@ -2,7 +2,7 @@ module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Reachability wh
 
 import Juvix.Compiler.Abstract.Data.NameDependencyInfo
 import Juvix.Compiler.Internal.Language
-import Juvix.Compiler.Internal.Translation.FromAbstract.Data.Context
+import Juvix.Compiler.Internal.Translation.FromConcrete.Data.Context
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking qualified as Arity
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context qualified as Typed
 import Juvix.Compiler.Pipeline.EntryPoint

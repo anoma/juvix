@@ -6,7 +6,7 @@ where
 
 import Juvix.Compiler.Internal.Extra
 import Juvix.Compiler.Internal.Pretty
-import Juvix.Compiler.Internal.Translation.FromAbstract.Data.Context
+import Juvix.Compiler.Internal.Translation.FromConcrete.Data.Context
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Data.LocalVars
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Data.Types
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Error

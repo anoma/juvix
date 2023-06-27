@@ -1,8 +1,8 @@
 module Juvix.Compiler.Builtins.Debug where
 
 import Data.HashSet qualified as HashSet
-import Juvix.Compiler.Abstract.Extra
 import Juvix.Compiler.Builtins.Effect
+import Juvix.Compiler.Internal.Extra
 import Juvix.Prelude
 
 registerTrace :: Members '[Builtins, NameIdGen] r => AxiomDef -> Sem r ()
