@@ -26,7 +26,7 @@ buildDependencyInfoPreModule ms tab =
 
 buildDependencyInfo :: NonEmpty Module -> ExportsTable -> NameDependencyInfo
 buildDependencyInfo ms tab =
-  buildDependencyInfoHelper tab (goModule ms)
+  buildDependencyInfoHelper tab (mapM_ goModule ms)
 
 buildDependencyInfoExpr :: Expression -> NameDependencyInfo
 buildDependencyInfoExpr = buildDependencyInfoHelper mempty . goExpression Nothing
@@ -84,35 +84,58 @@ checkBuiltinInductiveStartNode i = whenJust (i ^. inductiveBuiltin) go
     addInductiveStartNode :: Sem r ()
     addInductiveStartNode = addStartNode (i ^. inductiveName)
 
+goModule :: Members '[Reader ExportsTable, State DependencyGraph, State StartNodes] r => Module -> Sem r ()
+goModule m = do
+  checkStartNode (m ^. moduleName)
+  let b = m ^. moduleBody
+  mapM_ (goStatement (m ^. moduleName)) (b ^. moduleStatements)
+  mapM_ goInclude (b ^. moduleIncludes)
+
+goInclude :: Members '[Reader ExportsTable, State DependencyGraph, State StartNodes] r => Include -> Sem r ()
+goInclude (Include m) = goModule m
+
+-- | Ignores includes
 goPreModule :: Members '[Reader ExportsTable, State DependencyGraph, State StartNodes] r => PreModule -> Sem r ()
 goPreModule m = do
   checkStartNode (m ^. moduleName)
   let b = m ^. moduleBody
-  -- TODO ignoring includes... is this ok?
   mapM_ (goPreStatement (m ^. moduleName)) (b ^. moduleStatements)
+
+goStatement :: forall r. Members '[Reader ExportsTable, State DependencyGraph, State StartNodes] r => Name -> Statement -> Sem r ()
+goStatement parentModule = \case
+  StatementAxiom ax -> goAxiom parentModule ax
+  StatementMutual f -> goMutual parentModule f
+
+goMutual :: forall r. Members '[Reader ExportsTable, State DependencyGraph, State StartNodes] r => Name -> MutualBlock -> Sem r ()
+goMutual parentModule (MutualBlock s) = mapM_ go s
+  where
+    go :: MutualStatement -> Sem r ()
+    go = \case
+      StatementInductive i -> goInductive parentModule i
+      StatementFunction i -> goTopFunctionDef parentModule i
 
 -- | Declarations in a module depend on the module, not the other way round (a
 -- module is reachable if at least one of the declarations in it is reachable)
 goPreStatement :: forall r. Members '[Reader ExportsTable, State DependencyGraph, State StartNodes] r => Name -> PreStatement -> Sem r ()
 goPreStatement parentModule = \case
-  PreAxiomDef ax -> goAxiom ax
+  PreAxiomDef ax -> goAxiom parentModule ax
   PreFunctionDef f -> goTopFunctionDef parentModule f
-  PreInductiveDef i -> goInductive i
-  where
-    goAxiom :: AxiomDef -> Sem r ()
-    goAxiom ax = do
-      checkStartNode (ax ^. axiomName)
-      addEdge (ax ^. axiomName) parentModule
-      goExpression (Just (ax ^. axiomName)) (ax ^. axiomType)
+  PreInductiveDef i -> goInductive parentModule i
 
-    goInductive :: InductiveDef -> Sem r ()
-    goInductive i = do
-      checkStartNode (i ^. inductiveName)
-      checkBuiltinInductiveStartNode i
-      addEdge (i ^. inductiveName) parentModule
-      mapM_ (goInductiveParameter (Just (i ^. inductiveName))) (i ^. inductiveParameters)
-      goExpression (Just (i ^. inductiveName)) (i ^. inductiveType)
-      mapM_ (goConstructorDef (i ^. inductiveName)) (i ^. inductiveConstructors)
+goAxiom :: forall r. Members '[Reader ExportsTable, State DependencyGraph, State StartNodes] r => Name -> AxiomDef -> Sem r ()
+goAxiom parentModule ax = do
+  checkStartNode (ax ^. axiomName)
+  addEdge (ax ^. axiomName) parentModule
+  goExpression (Just (ax ^. axiomName)) (ax ^. axiomType)
+
+goInductive :: forall r. Members '[Reader ExportsTable, State DependencyGraph, State StartNodes] r => Name -> InductiveDef -> Sem r ()
+goInductive parentModule i = do
+  checkStartNode (i ^. inductiveName)
+  checkBuiltinInductiveStartNode i
+  addEdge (i ^. inductiveName) parentModule
+  mapM_ (goInductiveParameter (Just (i ^. inductiveName))) (i ^. inductiveParameters)
+  goExpression (Just (i ^. inductiveName)) (i ^. inductiveType)
+  mapM_ (goConstructorDef (i ^. inductiveName)) (i ^. inductiveConstructors)
 
 goTopFunctionDef :: (Members '[State DependencyGraph, State StartNodes, Reader ExportsTable] r) => Name -> FunctionDef -> Sem r ()
 goTopFunctionDef modName f = do

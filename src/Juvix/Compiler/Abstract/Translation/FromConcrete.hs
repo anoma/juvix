@@ -9,6 +9,7 @@ import Data.HashSet qualified as HashSet
 import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Compiler.Abstract.Data.InfoTableBuilder
 import Juvix.Compiler.Abstract.Data.NameDependencyInfo qualified as Abstract
+import Juvix.Compiler.Abstract.Extra.DependencyBuilder
 import Juvix.Compiler.Abstract.Language (varFromWildcard)
 import Juvix.Compiler.Abstract.Language qualified as Abstract
 import Juvix.Compiler.Abstract.Translation.FromConcrete.Data.Context
@@ -46,12 +47,14 @@ fromConcrete _resultScoper =
     (_resultTable, (_resultModulesCache, _resultModules)) <-
       runInfoTableBuilder
         . runReader @Pragmas mempty
+        . runReader @ExportsTable exportTbl
         . runState (ModulesCache mempty)
         . evalState iniState
         $ mapM goTopModule ms
     return AbstractResult {..}
   where
     ms = _resultScoper ^. Scoper.resultModules
+    exportTbl = _resultScoper ^. Scoper.resultExports
 
 -- | `StatementInclude`s are no included in the result
 buildMutualBlocks ::
@@ -115,7 +118,7 @@ fromConcreteExpression :: (Members '[Error JuvixError, NameIdGen] r) => Scoper.E
 fromConcreteExpression = mapError (JuvixError @ScoperError) . ignoreInfoTableBuilder . runReader @Pragmas mempty . goExpression
 
 fromConcreteImport ::
-  Members '[Error JuvixError, NameIdGen, Builtins, InfoTableBuilder, State ModulesCache, State TranslationState] r =>
+  Members '[Reader ExportsTable, Error JuvixError, NameIdGen, Builtins, InfoTableBuilder, State ModulesCache, State TranslationState] r =>
   Scoper.Import 'Scoped ->
   Sem r (Maybe Abstract.Include)
 fromConcreteImport =
@@ -124,7 +127,7 @@ fromConcreteImport =
     . goImport
 
 fromConcreteOpenImport ::
-  Members '[Error JuvixError, NameIdGen, Builtins, InfoTableBuilder, State ModulesCache, State TranslationState] r =>
+  Members '[Reader ExportsTable, Error JuvixError, NameIdGen, Builtins, InfoTableBuilder, State ModulesCache, State TranslationState] r =>
   Scoper.OpenModule 'Scoped ->
   Sem r (Maybe Abstract.Include)
 fromConcreteOpenImport = mapError (JuvixError @ScoperError) . runReader @Pragmas mempty . goOpenModule'
@@ -132,7 +135,7 @@ fromConcreteOpenImport = mapError (JuvixError @ScoperError) . runReader @Pragmas
 -- | returns (cacheHit, module)
 goTopModule ::
   forall r.
-  (Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ModulesCache, State TranslationState] r) =>
+  (Members '[Reader ExportsTable, InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ModulesCache, State TranslationState] r) =>
   Module 'Scoped 'ModuleTop ->
   Sem r Abstract.TopModule
 goTopModule m = do
@@ -154,25 +157,14 @@ goLocalModule = concatMapM goStatement . (^. moduleBody)
 
 goModule' ::
   forall r t.
-  (Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ModulesCache, State TranslationState] r, SingI t) =>
+  (Members '[Reader ExportsTable, InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ModulesCache, State TranslationState] r, SingI t) =>
   Module 'Scoped t ->
   Sem r Abstract.Module
-goModule' Module {..} = do
-  pragmas' <- goPragmas _modulePragmas
-  body' <- local (const pragmas') (goModuleBody _moduleBody >>= goPreModuleBody)
-  examples' <- goExamples _moduleDoc
-  return
-    Abstract.Module
-      { _moduleName = name',
-        _moduleBody = body',
-        _moduleExamples = examples',
-        _modulePragmas = pragmas'
-      }
-  where
-    name' :: Abstract.Name
-    name' = case sing :: SModuleIsTop t of
-      SModuleTop -> goSymbol (S.topModulePathName _modulePath)
-      SModuleLocal -> goSymbol _modulePath
+goModule' m = do
+  p <- toPreModule m
+  tbl <- ask
+  let depInfo = buildDependencyInfoPreModule p tbl
+  runReader depInfo (fromPreModule p)
 
 goPragmas :: Member (Reader Pragmas) r => Maybe ParsedPragmas -> Sem r Pragmas
 goPragmas p = do
@@ -206,14 +198,41 @@ traverseM' ::
   r (s (t b))
 traverseM' f x = sequence <$> traverse f x
 
-goPreModuleBody ::
+toPreModule ::
+  forall r t.
+  (SingI t, Members '[Reader ExportsTable, InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ModulesCache, State TranslationState] r) =>
+  Module 'Scoped t ->
+  Sem r Abstract.PreModule
+toPreModule Module {..} = do
+  pragmas' <- goPragmas _modulePragmas
+  body' <- local (const pragmas') (goModuleBody _moduleBody)
+  examples' <- goExamples _moduleDoc
+  return
+    Abstract.Module
+      { _moduleName = name',
+        _moduleBody = body',
+        _moduleExamples = examples',
+        _modulePragmas = pragmas'
+      }
+  where
+    name' :: Abstract.Name
+    name' = case sing :: SModuleIsTop t of
+      SModuleTop -> goSymbol (S.topModulePathName _modulePath)
+      SModuleLocal -> goSymbol _modulePath
+
+fromPreModule ::
   forall r.
-  (Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ModulesCache, State TranslationState] r) =>
+  Members '[Reader Abstract.NameDependencyInfo, InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ModulesCache, State TranslationState] r =>
+  Abstract.PreModule ->
+  Sem r Abstract.Module
+fromPreModule = traverseOf Abstract.moduleBody fromPreModuleBody
+
+fromPreModuleBody ::
+  forall r.
+  Members '[Reader Abstract.NameDependencyInfo, InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ModulesCache, State TranslationState] r =>
   Abstract.PreModuleBody ->
   Sem r Abstract.ModuleBody
-goPreModuleBody b = do
-  exportInfo :: Abstract.ExportsTable <- undefined
-  let depInfo = buildDependencyInfo exportTable b
+fromPreModuleBody b = do
   sccs <- buildMutualBlocks (b ^. Abstract.moduleStatements)
   let moduleStatements' = map goSCC sccs
   return (set Abstract.moduleStatements moduleStatements' b)
@@ -243,7 +262,7 @@ goPreModuleBody b = do
 
 goModuleBody ::
   forall r.
-  (Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ModulesCache, State TranslationState] r) =>
+  (Members '[Reader ExportsTable, InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ModulesCache, State TranslationState] r) =>
   [Statement 'Scoped] ->
   Sem r Abstract.PreModuleBody
 goModuleBody stmts = do
@@ -307,7 +326,7 @@ scanImports stmts = mconcatMap go stmts
 
 goImport ::
   forall r.
-  Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, State ModulesCache, Reader Pragmas, State TranslationState] r =>
+  Members '[Reader ExportsTable, InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, State ModulesCache, Reader Pragmas, State TranslationState] r =>
   Import 'Scoped ->
   Sem r (Maybe Abstract.Include)
 goImport Import {..} = do
@@ -350,7 +369,7 @@ goStatement = \case
 
 goOpenModule' ::
   forall r.
-  Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, State ModulesCache, Reader Pragmas, State TranslationState] r =>
+  Members '[Reader ExportsTable, InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, State ModulesCache, Reader Pragmas, State TranslationState] r =>
   OpenModule 'Scoped ->
   Sem r (Maybe Abstract.Include)
 goOpenModule' o =
@@ -369,7 +388,7 @@ goOpenModule' o =
 
 goOpenModule ::
   forall r.
-  Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ModulesCache, State TranslationState] r =>
+  Members '[Reader ExportsTable, InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ModulesCache, State TranslationState] r =>
   OpenModule 'Scoped ->
   Sem r (Maybe Abstract.Include)
 goOpenModule o = goOpenModule' o
