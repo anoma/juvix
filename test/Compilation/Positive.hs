@@ -344,5 +344,10 @@ tests =
       "Test057: Case folding"
       $(mkRelDir ".")
       $(mkRelFile "test057.juvix")
-      $(mkRelFile "out/test057.out")
+      $(mkRelFile "out/test057.out"),
+    posTest
+      "Test058: Ranges"
+      $(mkRelDir ".")
+      $(mkRelFile "test058.juvix")
+      $(mkRelFile "out/test058.out")
   ]
