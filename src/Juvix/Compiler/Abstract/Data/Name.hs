@@ -25,6 +25,19 @@ data Name = Name
 
 makeLenses ''Name
 
+varFromHole :: Hole -> VarName
+varFromHole h =
+  Name
+    { _nameText = pp,
+      _nameKind = KNameLocal,
+      _namePretty = pp,
+      _nameLoc = getLoc h,
+      _nameId = h ^. holeId,
+      _nameFixity = Nothing
+    }
+  where
+    pp = "_ω" <> prettyText (h ^. holeId)
+
 varFromWildcard :: Members '[NameIdGen] r => Wildcard -> Sem r VarName
 varFromWildcard w = do
   _nameId <- freshNameId

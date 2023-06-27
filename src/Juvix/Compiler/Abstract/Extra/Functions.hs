@@ -4,9 +4,9 @@ import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Abstract.Language
 import Juvix.Data.Effect.NameIdGen
-import Juvix.Prelude
 import Juvix.Data.Keyword
 import Juvix.Data.Keyword.All (kwWildcard)
+import Juvix.Prelude
 
 data ApplicationArg = ApplicationArg
   { _appArgIsImplicit :: IsImplicit,
@@ -146,8 +146,10 @@ matchExpressions = go
         (IdenVar va, IdenVar vb) -> do
           addIfFreeVar va vb
           addIfFreeVar vb va
-          unlessM ((== Just vb) <$> gets @(HashMap Name Name) (^. at va)) err
+          unlessM (matchVars va vb) err
         (_, _) -> unless (ia == ib) err
+      (ExpressionIden (IdenVar va), ExpressionHole h) -> goHole va h
+      (ExpressionHole h, ExpressionIden (IdenVar vb)) -> goHole vb h
       (ExpressionIden {}, _) -> err
       (_, ExpressionIden {}) -> err
       (ExpressionApplication ia, ExpressionApplication ib) ->
@@ -177,17 +179,31 @@ matchExpressions = go
       (_, ExpressionLet {}) -> err
       (ExpressionLet {}, _) -> err
       (ExpressionHole _, ExpressionHole _) -> return ()
-    addIfFreeVar :: VarName -> VarName -> Sem r ()
-    addIfFreeVar va vb = whenM (isSoftFreeVar va) (addName va vb)
+
     err :: Sem r a
     err = throw @Text "Expression missmatch"
+
+    matchVars :: Name -> Name -> Sem r Bool
+    matchVars va vb = (== Just vb) <$> gets @(HashMap Name Name) (^. at va)
+
+    goHole :: Name -> Hole -> Sem r ()
+    goHole var h = do
+      whenM (gets @(HashMap Name Name) (HashMap.member var)) err
+      let vh = varFromHole h
+      addName var vh
+
+    addIfFreeVar :: VarName -> VarName -> Sem r ()
+    addIfFreeVar va vb = whenM (isSoftFreeVar va) (addName va vb)
+
     goLambda :: Lambda -> Lambda -> Sem r ()
     goLambda = error "TODO not implemented yet"
+
     goApp :: Application -> Application -> Sem r ()
     goApp (Application al ar aim) (Application bl br bim) = do
       unless (aim == bim) err
       go al bl
       go ar br
+
     goFunction :: Function -> Function -> Sem r ()
     goFunction (Function al ar) (Function bl br) = do
       matchFunctionParameter al bl
@@ -322,7 +338,7 @@ freshHole i = do
   uid <- freshNameId
   return $
     ExpressionHole
-       Hole
-          { _holeId = uid,
-            _holeKw = KeywordRef kwWildcard i Ascii
-          }
+      Hole
+        { _holeId = uid,
+          _holeKw = KeywordRef kwWildcard i Ascii
+        }
