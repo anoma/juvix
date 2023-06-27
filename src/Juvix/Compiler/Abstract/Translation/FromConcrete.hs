@@ -266,6 +266,7 @@ goModuleBody ::
   [Statement 'Scoped] ->
   Sem r Abstract.PreModuleBody
 goModuleBody stmts = do
+  _moduleIncludes <- mapMaybeM goImport (scanImports stmts)
   otherThanFunctions :: [Indexed Abstract.PreStatement] <- concatMapM (traverseM' goStatement) ss
   functions <- map (fmap Abstract.PreFunctionDef) <$> compiledFunctions
   let _moduleStatements =
@@ -275,7 +276,6 @@ goModuleBody stmts = do
               (^. indexedIx)
               (otherThanFunctions <> functions)
           )
-  _moduleIncludes <- mapMaybeM goImport (scanImports stmts)
   return Abstract.ModuleBody {..}
   where
     ss' = concatMap Concrete.flattenStatement stmts
