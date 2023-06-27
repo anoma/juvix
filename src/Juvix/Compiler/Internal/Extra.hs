@@ -557,7 +557,6 @@ freshHole l = mkHole l <$> freshNameId
 mkFreshHole :: Members '[NameIdGen] r => Interval -> Sem r Expression
 mkFreshHole l = ExpressionHole <$> freshHole l
 
--- TODO consider using the machinery in Inference
 matchExpressions ::
   forall r.
   (Members '[State (HashMap Name Name), Reader (HashSet VarName), Error Text] r) =>
@@ -575,8 +574,10 @@ matchExpressions = go
         (IdenVar va, IdenVar vb) -> do
           addIfFreeVar va vb
           addIfFreeVar vb va
-          unlessM ((== Just vb) <$> gets @(HashMap Name Name) (^. at va)) err
+          unlessM (matchVars va vb) err
         (_, _) -> unless (ia == ib) err
+      (ExpressionIden (IdenVar va), ExpressionHole h) -> goHole va h
+      (ExpressionHole h, ExpressionIden (IdenVar vb)) -> goHole vb h
       (ExpressionIden {}, _) -> err
       (_, ExpressionIden {}) -> err
       (ExpressionApplication ia, ExpressionApplication ib) ->
@@ -598,28 +599,42 @@ matchExpressions = go
         goFunction ia ib
       (ExpressionFunction {}, _) -> err
       (_, ExpressionFunction {}) -> err
+      (ExpressionSimpleLambda {}, ExpressionSimpleLambda {}) -> error "not implemented"
+      (ExpressionSimpleLambda {}, _) -> err
+      (_, ExpressionSimpleLambda {}) -> err
       (ExpressionLiteral ia, ExpressionLiteral ib) ->
         unless (ia == ib) err
       (ExpressionLiteral {}, _) -> err
       (_, ExpressionLiteral {}) -> err
       (ExpressionLet {}, ExpressionLet {}) -> error "not implemented"
-      (ExpressionSimpleLambda {}, ExpressionSimpleLambda {}) -> error "not implemented"
-      (ExpressionSimpleLambda {}, _) -> err
-      (_, ExpressionSimpleLambda {}) -> err
       (_, ExpressionLet {}) -> err
       (ExpressionLet {}, _) -> err
       (ExpressionHole _, ExpressionHole _) -> return ()
-    addIfFreeVar :: VarName -> VarName -> Sem r ()
-    addIfFreeVar va vb = whenM (isSoftFreeVar va) (addName va vb)
+
     err :: Sem r a
     err = throw @Text "Expression missmatch"
+
+    matchVars :: Name -> Name -> Sem r Bool
+    matchVars va vb = (== Just vb) <$> gets @(HashMap Name Name) (^. at va)
+
+    goHole :: Name -> Hole -> Sem r ()
+    goHole var h = do
+      whenM (gets @(HashMap Name Name) (HashMap.member var)) err
+      let vh = varFromHole h
+      addName var vh
+
+    addIfFreeVar :: VarName -> VarName -> Sem r ()
+    addIfFreeVar va vb = whenM (isSoftFreeVar va) (addName va vb)
+
     goLambda :: Lambda -> Lambda -> Sem r ()
     goLambda = error "TODO not implemented yet"
+
     goApp :: Application -> Application -> Sem r ()
     goApp (Application al ar aim) (Application bl br bim) = do
       unless (aim == bim) err
       go al bl
       go ar br
+
     goFunction :: Function -> Function -> Sem r ()
     goFunction (Function al ar) (Function bl br) = do
       matchFunctionParameter al bl
