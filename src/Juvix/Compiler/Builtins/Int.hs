@@ -38,10 +38,11 @@ registerIntEq f = do
   tybool <- builtinName BuiltinBool
   false <- toExpression <$> builtinName BuiltinBoolFalse
   natEq <- toExpression <$> builtinName BuiltinNatEq
-  varm <- freshVar "m"
-  varn <- freshVar "n"
-  h1 <- freshHole
-  h2 <- freshHole
+  let l = getLoc f
+  varm <- freshVar l "m"
+  varn <- freshVar l "n"
+  h1 <- freshHole l
+  h2 <- freshHole l
   let eq = f ^. funDefName
       m = toExpression varm
       n = toExpression varn
@@ -84,8 +85,9 @@ registerIntPlus f = do
   natPlus <- toExpression <$> getBuiltinName loc BuiltinNatPlus
   intSubNat <- toExpression <$> getBuiltinName loc BuiltinIntSubNat
   let plus = f ^. funDefName
-  varn <- freshVar "m"
-  varm <- freshVar "n"
+      l = getLoc f
+  varn <- freshVar l "m"
+  varm <- freshVar l "n"
   let m = toExpression varm
       n = toExpression varn
       (.+.) :: (IsExpression a, IsExpression b) => a -> b -> Expression
@@ -115,7 +117,8 @@ registerIntNegNat f = do
   negSuc <- toExpression <$> builtinName BuiltinIntNegSuc
   zero <- toExpression <$> builtinName BuiltinNatZero
   suc <- toExpression <$> builtinName BuiltinNatSuc
-  varn <- freshVar "n"
+  let l = getLoc f
+  varn <- freshVar l "n"
   let negNat = f ^. funDefName
       n = toExpression varn
       exClauses :: [(Expression, Expression)]
@@ -143,7 +146,8 @@ registerIntNeg f = do
   negSuc <- toExpression <$> builtinName BuiltinIntNegSuc
   negNat <- toExpression <$> builtinName BuiltinIntNegNat
   suc <- toExpression <$> builtinName BuiltinNatSuc
-  varn <- freshVar "n"
+  let l = getLoc f
+  varn <- freshVar l "n"
   let neg = f ^. funDefName
       n = toExpression varn
       exClauses :: [(Expression, Expression)]
@@ -172,8 +176,9 @@ registerIntMul f = do
   negNat <- toExpression <$> builtinName BuiltinIntNegNat
   natMul <- toExpression <$> builtinName BuiltinNatMul
   natSuc <- toExpression <$> builtinName BuiltinNatSuc
-  varm <- freshVar "m"
-  varn <- freshVar "n"
+  let l = getLoc f
+  varm <- freshVar l "m"
+  varn <- freshVar l "n"
   let mul = f ^. funDefName
       m = toExpression varm
       n = toExpression varn
@@ -205,8 +210,9 @@ registerIntDiv f = do
   negNat <- toExpression <$> builtinName BuiltinIntNegNat
   natDiv <- toExpression <$> builtinName BuiltinNatDiv
   natSuc <- toExpression <$> builtinName BuiltinNatSuc
-  varm <- freshVar "m"
-  varn <- freshVar "n"
+  let l = getLoc f
+  varm <- freshVar l "m"
+  varn <- freshVar l "n"
   let intDiv = f ^. funDefName
       m = toExpression varm
       n = toExpression varn
@@ -238,8 +244,9 @@ registerIntMod f = do
   negNat <- toExpression <$> builtinName BuiltinIntNegNat
   natMod <- toExpression <$> builtinName BuiltinNatMod
   natSuc <- toExpression <$> builtinName BuiltinNatSuc
-  varm <- freshVar "m"
-  varn <- freshVar "n"
+  let l = getLoc f
+  varm <- freshVar l "m"
+  varn <- freshVar l "n"
   let intMod = f ^. funDefName
       m = toExpression varm
       n = toExpression varn
@@ -268,8 +275,9 @@ registerIntSub f = do
   int <- builtinName BuiltinInt
   neg <- toExpression <$> builtinName BuiltinIntNeg
   intPlus <- toExpression <$> builtinName BuiltinIntPlus
-  varm <- freshVar "m"
-  varn <- freshVar "n"
+  let l = getLoc f
+  varm <- freshVar l "m"
+  varn <- freshVar l "n"
   let intSub = f ^. funDefName
       m = toExpression varm
       n = toExpression varn
@@ -298,8 +306,9 @@ registerIntNonNeg f = do
   negSuc <- toExpression <$> builtinName BuiltinIntNegSuc
   true <- toExpression <$> builtinName BuiltinBoolTrue
   false <- toExpression <$> builtinName BuiltinBoolFalse
-  varn <- freshVar "n"
-  h <- freshHole
+  let l = getLoc l
+  varn <- freshVar l "n"
+  h <- freshHole l
   let intNonNeg = f ^. funDefName
       n = toExpression varn
 
@@ -334,8 +343,9 @@ registerIntLe f = do
   bool_ <- builtinName BuiltinBool
   nonNeg <- toExpression <$> builtinName BuiltinIntNonNeg
   intSub <- toExpression <$> builtinName BuiltinIntSub
-  varm <- freshVar "m"
-  varn <- freshVar "n"
+  let l = getLoc f
+  varm <- freshVar l "m"
+  varn <- freshVar l "n"
   let intLe = f ^. funDefName
       (.-.) :: (IsExpression a, IsExpression b) => a -> b -> Expression
       x .-. y = intSub @@ x @@ y
@@ -363,8 +373,9 @@ registerIntLt f = do
   bool_ <- builtinName BuiltinBool
   intLe <- toExpression <$> builtinName BuiltinIntLe
   intPlus <- toExpression <$> builtinName BuiltinIntPlus
-  varm <- freshVar "m"
-  varn <- freshVar "n"
+  let l = getLoc f
+  varm <- freshVar l "m"
+  varn <- freshVar l "n"
   let intLt = f ^. funDefName
       (.+.) :: (IsExpression a, IsExpression b) => a -> b -> Expression
       x .+. y = intPlus @@ x @@ y

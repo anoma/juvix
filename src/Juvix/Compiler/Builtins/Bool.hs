@@ -37,9 +37,10 @@ registerIf f = do
   false_ <- toExpression <$> getBuiltinName (getLoc f) BuiltinBoolFalse
   let if_ = f ^. funDefName
       u = ExpressionUniverse smallUniverseNoLoc
-  vart <- freshVar "t"
-  vare <- freshVar "e"
-  hole <- freshHole
+      l = getLoc f
+  vart <- freshVar l "t"
+  vare <- freshVar l "e"
+  hole <- freshHole l
   let e = toExpression vare
       exClauses :: [(Expression, Expression)]
       exClauses =
@@ -62,8 +63,9 @@ registerOr f = do
   true_ <- toExpression <$> getBuiltinName (getLoc f) BuiltinBoolTrue
   false_ <- toExpression <$> getBuiltinName (getLoc f) BuiltinBoolFalse
   let or_ = f ^. funDefName
-  vare <- freshVar "e"
-  hole <- freshHole
+      l = getLoc f
+  vare <- freshVar l "e"
+  hole <- freshHole l
   let e = toExpression vare
       exClauses :: [(Expression, Expression)]
       exClauses =
@@ -86,8 +88,9 @@ registerAnd f = do
   true_ <- toExpression <$> getBuiltinName (getLoc f) BuiltinBoolTrue
   false_ <- toExpression <$> getBuiltinName (getLoc f) BuiltinBoolFalse
   let and_ = f ^. funDefName
-  vare <- freshVar "e"
-  hole <- freshHole
+      l = getLoc f
+  vare <- freshVar l "e"
+  hole <- freshHole l
   let e = toExpression vare
       exClauses :: [(Expression, Expression)]
       exClauses =

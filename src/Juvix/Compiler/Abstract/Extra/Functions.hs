@@ -5,6 +5,8 @@ import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Abstract.Language
 import Juvix.Data.Effect.NameIdGen
 import Juvix.Prelude
+import Juvix.Data.Keyword
+import Juvix.Data.Keyword.All (kwWildcard)
 
 data ApplicationArg = ApplicationArg
   { _appArgIsImplicit :: IsImplicit,
@@ -302,8 +304,8 @@ infixl 9 @@
 (@@) :: (IsExpression a, IsExpression b) => a -> b -> Expression
 a @@ b = toExpression (Application (toExpression a) (toExpression b) Explicit)
 
-freshVar :: (Member NameIdGen r) => Text -> Sem r VarName
-freshVar n = do
+freshVar :: Member NameIdGen r => Interval -> Text -> Sem r VarName
+freshVar _nameLoc n = do
   uid <- freshNameId
   return
     Name
@@ -312,16 +314,15 @@ freshVar n = do
         _nameKind = KNameLocal,
         _namePretty = n,
         _nameFixity = Nothing,
-        _nameLoc = error "freshVar with no location"
+        _nameLoc
       }
 
-freshHole :: (Member NameIdGen r) => Sem r Expression
-freshHole = do
+freshHole :: Member NameIdGen r => Interval -> Sem r Expression
+freshHole i = do
   uid <- freshNameId
   return $
     ExpressionHole
-      ( Hole
+       Hole
           { _holeId = uid,
-            _holeKw = error "freshHole with no location"
+            _holeKw = KeywordRef kwWildcard i Ascii
           }
-      )

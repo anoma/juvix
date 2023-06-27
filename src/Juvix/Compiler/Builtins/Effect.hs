@@ -101,5 +101,9 @@ registerFun fi = do
   case zipExactMay (fi ^. funInfoClauses) clauses of
     Nothing -> error "builtin has the wrong number of clauses"
     Just z -> forM_ z $ \((exLhs, exBody), (lhs, body)) -> do
-      unless (exLhs =% lhs) (error ("clause lhs does not match for " <> ppTrace op))
+      unless (exLhs =% lhs) (error ("clause lhs does not match for "
+                                    <> ppTrace op
+                                    <> "\nExpected: " <> ppTrace exLhs
+                                    <> "\nActual: " <> ppTrace lhs
+                                   ))
       unless (exBody =% body) (error $ "clause body does not match " <> ppTrace exBody <> " | " <> ppTrace body)
