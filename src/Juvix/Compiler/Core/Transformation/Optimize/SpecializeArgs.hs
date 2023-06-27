@@ -97,11 +97,13 @@ convertNode tab = dmapLRM go
                   eassert (length lams == argsNum)
                   eassert (length args' == argsNum)
                   eassert (argsNum <= length tyargs)
+                  sym' <- freshSymbol
                   let -- We're adding the letrec binder, so need to shift by 1
                       sargs = map (shift 1) args'
                       body' =
-                        replaceIdent _identSymbol argsNum specargs $
-                          replaceArgs argsNum specargs sargs body
+                        substSym sym' (argsNum - length specargs) $
+                          replaceArgs argsNum specargs sargs $
+                            replaceIdent _identSymbol sym' argsNum specargs body
                       tyargs' = removeSpecTypeArgs specargs sargs (take argsNum tyargs)
                       tgt' = replaceArgs argsNum specargs sargs (mkPis' (drop argsNum tyargs) tgt)
                       ty' = mkPis' tyargs' tgt'
@@ -155,15 +157,17 @@ convertNode tab = dmapLRM go
           (not . (`elem` specargs) . snd)
           (zip args [1 ..])
 
-    -- replace the calls to the function being specialised with the specialised
-    -- version (omitting the specialised arguments)
-    replaceIdent :: Symbol -> Int -> [Int] -> Node -> Node
-    replaceIdent sym argsNum specargs = dmapNR goReplace
+    -- Replace the calls to the function being specialised with the specialised
+    -- version (omitting the specialised arguments). We need to first replace
+    -- with a fresh identifier, and only substitute the variable after replacing
+    -- the arguments, to avoid erroneous substitution when one of the
+    -- specialized arguments refers to the function being specialized, e.g., `map
+    -- (map f)`.
+    replaceIdent :: Symbol -> Symbol -> Int -> [Int] -> Node -> Node
+    replaceIdent sym sym' argsNum specargs = dmapR goReplace
       where
-        argsNum' = argsNum - length specargs
-
-        goReplace :: Level -> Node -> Recur
-        goReplace lvl node = case node of
+        goReplace :: Node -> Recur
+        goReplace node = case node of
           NApp {} ->
             let (h, args) = unfoldApps' node
              in case h of
@@ -171,13 +175,24 @@ convertNode tab = dmapLRM go
                     | _identSymbol == sym ->
                         let args' =
                               map
-                                (replaceIdent sym argsNum specargs)
+                                (replaceIdent sym sym' argsNum specargs)
                                 (removeSpecargs specargs args)
-                         in End $ mkApps' (mkVar' (lvl + argsNum')) args'
+                         in End $ mkApps' (mkIdent' sym') args'
                   _ ->
                     Recur node
           _ ->
             Recur node
+
+    substSym :: Symbol -> Int -> Node -> Node
+    substSym sym k = umapN goSubst
+      where
+        goSubst :: Level -> Node -> Node
+        goSubst lvl = \case
+          NIdt Ident {..}
+            | _identSymbol == sym ->
+                mkVar' (lvl + k)
+          node ->
+            node
 
     -- replace the arguments being specialised with the actual argument values
     replaceArgs :: Int -> [Int] -> [Node] -> Node -> Node

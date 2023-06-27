@@ -22,6 +22,7 @@ sum xs := for (acc := 0) (x in xs) {x + acc};
 main : Nat;
 main :=
   sum (mymap λ{x := x + 3} (1 :: 2 :: 3 :: 4 :: nil)) +
+  sum (flatten (mymap (mymap λ{x := x + 2}) ((1 :: nil) :: (2 :: 3 :: nil) :: nil))) +
     myf 3 (*) 2 5 true +
     myf 1 (+) 2 0 false +
     myf' 7 (const (+)) 2 0;
