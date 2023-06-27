@@ -178,10 +178,22 @@ goStatement ::
   forall r.
   Members '[Reader ExportsTable, Reader NameDependencyInfo, NameIdGen] r =>
   Abstract.Statement ->
-  Sem r [Statement]
+  Sem r Statement
 goStatement = \case
-  Abstract.StatementAxiom a -> pure . StatementAxiom <$> goAxiomDef a
-  Abstract.StatementMutual {} -> impossible
+  Abstract.StatementAxiom a -> StatementAxiom <$> goAxiomDef a
+  Abstract.StatementMutual b -> StatementMutual <$> goMutual b
+
+goMutual ::
+  forall r.
+  Members '[Reader ExportsTable, Reader NameDependencyInfo, NameIdGen] r =>
+  Abstract.MutualBlock ->
+  Sem r MutualBlock
+goMutual (Abstract.MutualBlock b) = MutualBlock <$> mapM go b
+  where
+    go :: Abstract.MutualStatement -> Sem r MutualStatement
+    go = \case
+      Abstract.StatementInductive d -> StatementInductive <$> goInductiveDef d
+      Abstract.StatementFunction d -> StatementFunction <$> goFunctionDef d
 
 goModuleBody ::
   forall r.
@@ -189,7 +201,7 @@ goModuleBody ::
   Abstract.ModuleBody ->
   Sem r ModuleBody
 goModuleBody Abstract.ModuleBody {..} = do
-  stmts <- concatMapM goStatement _moduleStatements
+  stmts <- mapM goStatement _moduleStatements
   let imports :: [Abstract.Include] = _moduleIncludes
   imports' <- mapM goInclude imports
   return
@@ -369,42 +381,42 @@ goLet l = do
       AcyclicSCC f -> LetFunDef f
       CyclicSCC m -> LetMutualBlock (MutualBlockLet (nonEmpty' m))
 
--- goInductiveParameter :: Abstract.InductiveParameter -> InductiveParameter
--- goInductiveParameter f =
---   InductiveParameter
---     { _inductiveParamName = f ^. Abstract.inductiveParamName
---     }
+goInductiveParameter :: Abstract.InductiveParameter -> InductiveParameter
+goInductiveParameter f =
+  InductiveParameter
+    { _inductiveParamName = f ^. Abstract.inductiveParamName
+    }
 
--- goInductiveDef :: forall r. Members '[NameIdGen, Reader NameDependencyInfo] r => Abstract.InductiveDef -> Sem r InductiveDef
--- goInductiveDef i = do
---   let inductiveParameters' = map goInductiveParameter (i ^. Abstract.inductiveParameters)
---       indTypeName = i ^. Abstract.inductiveName
---   inductiveConstructors' <-
---     mapM
---       goConstructorDef
---       (i ^. Abstract.inductiveConstructors)
---   examples' <- mapM goExample (i ^. Abstract.inductiveExamples)
---   ty' <- goExpression (i ^. Abstract.inductiveType)
---   return
---     InductiveDef
---       { _inductiveName = indTypeName,
---         _inductiveParameters = inductiveParameters',
---         _inductiveBuiltin = i ^. Abstract.inductiveBuiltin,
---         _inductiveConstructors = inductiveConstructors',
---         _inductiveExamples = examples',
---         _inductiveType = ty',
---         _inductivePositive = i ^. Abstract.inductivePositive,
---         _inductivePragmas = i ^. Abstract.inductivePragmas
---       }
---   where
---     goConstructorDef :: Abstract.InductiveConstructorDef -> Sem r InductiveConstructorDef
---     goConstructorDef c = do
---       ty' <- goExpression (c ^. Abstract.constructorType)
---       examples' <- mapM goExample (c ^. Abstract.constructorExamples)
---       return
---         InductiveConstructorDef
---           { _inductiveConstructorName = c ^. Abstract.constructorName,
---             _inductiveConstructorExamples = examples',
---             _inductiveConstructorType = ty',
---             _inductiveConstructorPragmas = c ^. Abstract.constructorPragmas
---           }
+goInductiveDef :: forall r. Members '[NameIdGen, Reader NameDependencyInfo] r => Abstract.InductiveDef -> Sem r InductiveDef
+goInductiveDef i = do
+  let inductiveParameters' = map goInductiveParameter (i ^. Abstract.inductiveParameters)
+      indTypeName = i ^. Abstract.inductiveName
+  inductiveConstructors' <-
+    mapM
+      goConstructorDef
+      (i ^. Abstract.inductiveConstructors)
+  examples' <- mapM goExample (i ^. Abstract.inductiveExamples)
+  ty' <- goExpression (i ^. Abstract.inductiveType)
+  return
+    InductiveDef
+      { _inductiveName = indTypeName,
+        _inductiveParameters = inductiveParameters',
+        _inductiveBuiltin = i ^. Abstract.inductiveBuiltin,
+        _inductiveConstructors = inductiveConstructors',
+        _inductiveExamples = examples',
+        _inductiveType = ty',
+        _inductivePositive = i ^. Abstract.inductivePositive,
+        _inductivePragmas = i ^. Abstract.inductivePragmas
+      }
+  where
+    goConstructorDef :: Abstract.InductiveConstructorDef -> Sem r InductiveConstructorDef
+    goConstructorDef c = do
+      ty' <- goExpression (c ^. Abstract.constructorType)
+      examples' <- mapM goExample (c ^. Abstract.constructorExamples)
+      return
+        InductiveConstructorDef
+          { _inductiveConstructorName = c ^. Abstract.constructorName,
+            _inductiveConstructorExamples = examples',
+            _inductiveConstructorType = ty',
+            _inductiveConstructorPragmas = c ^. Abstract.constructorPragmas
+          }
