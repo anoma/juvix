@@ -78,7 +78,7 @@ toVampIRTransformations = toEvalTransformations ++ [CheckVampIR, LetRecLifting, 
 
 toStrippedTransformations :: [TransformationId]
 toStrippedTransformations =
-  toEvalTransformations ++ [CheckExec, LambdaLetRecLifting, OptPhaseExec, TopEtaExpand, MoveApps, RemoveTypeArgs]
+  toEvalTransformations ++ [CheckExec, LambdaLetRecLifting, TopEtaExpand, OptPhaseExec, MoveApps, RemoveTypeArgs]
 
 toGebTransformations :: [TransformationId]
 toGebTransformations = toEvalTransformations ++ [CheckGeb, LetRecLifting, OptPhaseGeb, UnrollRecursion, FoldTypeSynonyms, ComputeTypeInfo]

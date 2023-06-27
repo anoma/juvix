@@ -68,7 +68,7 @@ convertNode tab = dmapLRM go
     goIdentApp :: BinderList Binder -> Ident -> [Node] -> Sem r Recur
     goIdentApp bl idt@Ident {..} args =
       case pspec of
-        Just PragmaSpecialiseArgs {..} -> do
+        Just PragmaSpecialiseArgs {..} | length args == argsNum -> do
           args' <- mapM (dmapLRM' (bl, go)) args
           -- assumption: all type variables are at the front
           let specargs0 =
@@ -95,6 +95,7 @@ convertNode tab = dmapLRM go
                   let def = lookupIdentifierNode tab _identSymbol
                       (lams, body) = unfoldLambdas def
                   eassert (length lams == argsNum)
+                  eassert (length args' == argsNum)
                   eassert (argsNum <= length tyargs)
                   let -- We're adding the letrec binder, so need to shift by 1
                       sargs = map (shift 1) args'
@@ -123,7 +124,7 @@ convertNode tab = dmapLRM go
                           (mkApps' (mkVar' 0) args'')
                   node'' <- lambdaLiftNode' True bl node'
                   return $ End node''
-        Nothing ->
+        _ ->
           return $ Recur $ mkApps' (NIdt idt) args
       where
         ii = lookupIdentifierInfo tab _identSymbol
