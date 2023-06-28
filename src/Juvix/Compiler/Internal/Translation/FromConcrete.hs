@@ -330,8 +330,6 @@ goImport ::
   Import 'Scoped ->
   Sem r (Maybe Internal.Include)
 goImport Import {..} = do
-  -- TODO cache???
-  -- guardNotCached <$> goTopModule (_importModule ^. moduleRefModule)
   let m = _importModule ^. moduleRefModule
       mname = m ^. Concrete.modulePath
   inc <- gets (HashSet.member mname . (^. translationStateIncluded))
