@@ -5,7 +5,7 @@ import Stdlib.Prelude open;
 
 syntax iterator myfor;
 myfor : {A B : Type} → (A → B → A) → A → List B → A;
-myfor := foldl {_} {_};
+myfor {A} {B} := foldl {B} {A};
 
 syntax iterator mymap {init: 0};
 mymap : {A B : Type} → (A → B) → List A → List B;
