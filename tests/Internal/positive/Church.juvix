@@ -17,5 +17,3 @@ toNat n := n {_} ((+) (suc zero)) zero;
 main : IO;
 main :=
   printNatLn (toNat (csuc (czero)));
-
-end;

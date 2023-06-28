@@ -1,5 +1,5 @@
-module Juvix.Compiler.Abstract.Data.Name
-  ( module Juvix.Compiler.Abstract.Data.Name,
+module Juvix.Compiler.Internal.Data.Name
+  ( module Juvix.Compiler.Internal.Data.Name,
     module Juvix.Data.NameKind,
     module Juvix.Data.NameId,
     module Juvix.Data.Fixity,

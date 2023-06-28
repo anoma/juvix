@@ -7,7 +7,6 @@ where
 
 import Data.HashMap.Strict qualified as HashMap
 import Data.Map.Strict qualified as Map
-import Juvix.Compiler.Abstract.Data.Name
 import Juvix.Compiler.Core.Data.BinderList qualified as BL
 import Juvix.Compiler.Core.Data.InfoTable
 import Juvix.Compiler.Core.Data.Stripped.InfoTable qualified as Stripped
@@ -18,6 +17,7 @@ import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Core.Language.Stripped qualified as Stripped
 import Juvix.Compiler.Core.Language.Value
 import Juvix.Compiler.Core.Pretty.Options
+import Juvix.Compiler.Internal.Data.Name
 import Juvix.Data.CodeAnn
 import Juvix.Extra.Strings qualified as Str
 

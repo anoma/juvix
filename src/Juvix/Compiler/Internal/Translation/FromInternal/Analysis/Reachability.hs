@@ -1,6 +1,6 @@
 module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Reachability where
 
-import Juvix.Compiler.Abstract.Data.NameDependencyInfo
+import Juvix.Compiler.Internal.Data.NameDependencyInfo
 import Juvix.Compiler.Internal.Language
 import Juvix.Compiler.Internal.Translation.FromConcrete.Data.Context
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking qualified as Arity

@@ -1,6 +1,6 @@
 module Juvix.Compiler.Internal.Language
   ( module Juvix.Compiler.Internal.Language,
-    module Juvix.Compiler.Abstract.Data.Name,
+    module Juvix.Compiler.Internal.Data.Name,
     module Juvix.Data.WithLoc,
     module Juvix.Data.IsImplicit,
     module Juvix.Data.Universe,
@@ -9,8 +9,8 @@ module Juvix.Compiler.Internal.Language
   )
 where
 
-import Juvix.Compiler.Abstract.Data.Name
 import Juvix.Compiler.Concrete.Data.Builtins
+import Juvix.Compiler.Internal.Data.Name
 import Juvix.Data.Hole
 import Juvix.Data.IsImplicit
 import Juvix.Data.Universe hiding (smallUniverse)

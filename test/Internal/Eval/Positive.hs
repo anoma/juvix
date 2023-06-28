@@ -175,7 +175,7 @@ tests =
       $(mkRelFile "HigherOrderLambda.juvix")
       $(mkRelFile "out/HigherOrderLambda.out"),
     PosTest
-      "Type Aliases"
+      "Type Aliases (Church)"
       $(mkRelDir ".")
       $(mkRelFile "Church.juvix")
       $(mkRelFile "out/Church.out"),

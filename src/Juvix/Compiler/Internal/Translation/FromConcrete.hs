@@ -7,13 +7,13 @@ where
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
 import Data.List.NonEmpty qualified as NonEmpty
-import Juvix.Compiler.Abstract.Data.NameDependencyInfo qualified as Abstract
 import Juvix.Compiler.Builtins
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Extra qualified as Concrete
 import Juvix.Compiler.Concrete.Language qualified as Concrete
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
+import Juvix.Compiler.Internal.Data.NameDependencyInfo qualified as Internal
 import Juvix.Compiler.Internal.Extra.DependencyBuilder
 import Juvix.Compiler.Internal.Language (varFromWildcard)
 import Juvix.Compiler.Internal.Language qualified as Internal
@@ -58,7 +58,7 @@ fromConcrete _resultScoper =
 
 -- | `StatementInclude`s are no included in the result
 buildMutualBlocks ::
-  Members '[Reader Abstract.NameDependencyInfo] r =>
+  Members '[Reader Internal.NameDependencyInfo] r =>
   [Internal.PreStatement] ->
   Sem r [SCC Internal.PreStatement]
 buildMutualBlocks ss = do
@@ -104,7 +104,7 @@ buildMutualBlocks ss = do
           CyclicSCC p -> CyclicSCC . toList <$> nonEmpty (catMaybes p)
 
 buildLetMutualBlocks ::
-  Members '[Reader Abstract.NameDependencyInfo] r =>
+  Members '[Reader Internal.NameDependencyInfo] r =>
   [Internal.FunctionDef] ->
   Sem r [SCC Internal.FunctionDef]
 buildLetMutualBlocks = fmap (map (fmap fromStmt)) . buildMutualBlocks . map Internal.PreFunctionDef
@@ -222,14 +222,14 @@ toPreModule Module {..} = do
 
 fromPreModule ::
   forall r.
-  Members '[Reader Abstract.NameDependencyInfo, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ModulesCache, State TranslationState] r =>
+  Members '[Reader Internal.NameDependencyInfo, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ModulesCache, State TranslationState] r =>
   Internal.PreModule ->
   Sem r Internal.Module
 fromPreModule = traverseOf Internal.moduleBody fromPreModuleBody
 
 fromPreModuleBody ::
   forall r.
-  Members '[Reader Abstract.NameDependencyInfo, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ModulesCache, State TranslationState] r =>
+  Members '[Reader Internal.NameDependencyInfo, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ModulesCache, State TranslationState] r =>
   Internal.PreModuleBody ->
   Sem r Internal.ModuleBody
 fromPreModuleBody b = do
@@ -330,7 +330,7 @@ goImport ::
   Import 'Scoped ->
   Sem r (Maybe Internal.Include)
 goImport Import {..} = do
-  -- TOOD cache???
+  -- TODO cache???
   -- guardNotCached <$> goTopModule (_importModule ^. moduleRefModule)
   let m = _importModule ^. moduleRefModule
       mname = m ^. Concrete.modulePath
