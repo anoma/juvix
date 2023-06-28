@@ -21,7 +21,7 @@ defaultOptions =
 traceOptions :: Options
 traceOptions =
   Options
-    { _optShowIdentIds = False,
+    { _optShowIdentIds = True,
       _optShowDeBruijnIndices = True,
       _optShowArgsNum = True
     }

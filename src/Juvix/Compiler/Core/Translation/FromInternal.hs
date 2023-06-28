@@ -9,11 +9,13 @@ import Juvix.Compiler.Core.Info.LocationInfo
 import Juvix.Compiler.Core.Info.NameInfo
 import Juvix.Compiler.Core.Info.PragmaInfo
 import Juvix.Compiler.Core.Language
+import Juvix.Compiler.Core.Pretty qualified as Core
 import Juvix.Compiler.Core.Translation.FromInternal.Builtins.Int
 import Juvix.Compiler.Core.Translation.FromInternal.Builtins.Nat
 import Juvix.Compiler.Core.Translation.FromInternal.Data
 import Juvix.Compiler.Internal.Data.Name
 import Juvix.Compiler.Internal.Extra qualified as Internal
+import Juvix.Compiler.Internal.Pretty qualified as Internal
 import Juvix.Compiler.Internal.Translation.Extra qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking qualified as InternalTyped
 import Juvix.Data.Loc qualified as Loc
@@ -123,7 +125,7 @@ preInductiveDef i = do
               ParameterInfo
                 { _paramName = p ^. Internal.inductiveParamName . nameText,
                   _paramLocation = Just $ p ^. Internal.inductiveParamName . nameLoc,
-                  _paramIsImplicit = False, -- TODO: not currently easily available in Internal
+                  _paramIsImplicit = False,
                   _paramKind = mkSmallUniv
                 }
           )
@@ -832,55 +834,81 @@ goIden ::
   Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable] r =>
   Internal.Iden ->
   Sem r Node
-goIden i = case i of
-  Internal.IdenVar n -> do
-    k <- HashMap.lookupDefault impossible id_ <$> asks (^. indexTableVars)
-    varsNum <- asks (^. indexTableVarsNum)
-    return (mkVar (setInfoLocation (n ^. nameLoc) (Info.singleton (NameInfo (n ^. nameText)))) (varsNum - k - 1))
-  Internal.IdenFunction n -> do
-    funInfoBuiltin <- Internal.getFunctionBuiltinInfo n
-    case funInfoBuiltin of
-      Just Internal.BuiltinBoolIf -> error "internal to core: if must be called with 3 arguments"
-      Just Internal.BuiltinBoolOr -> error "internal to core: || must be called with 2 arguments"
-      Just Internal.BuiltinBoolAnd -> error "internal to core: && must be called with 2 arguments"
-      Just Internal.BuiltinSeq -> error "internal to core: seq must be called with 2 arguments"
-      _ -> return ()
-    -- if the function was defined by a let, then in Core it is stored in a variable
-    vars <- asks (^. indexTableVars)
-    case HashMap.lookup id_ vars of
-      Nothing -> do
-        m <- getIdent identIndex
-        return $ case m of
-          Just (IdentFun sym) -> mkIdent (setInfoLocation (n ^. nameLoc) (Info.singleton (NameInfo (n ^. namePretty)))) sym
-          Just _ -> error ("internal to core: not a function: " <> txt)
-          Nothing -> error ("internal to core: undeclared identifier: " <> txt)
-      Just k -> do
-        varsNum <- asks (^. indexTableVarsNum)
-        return (mkVar (setInfoLocation (n ^. nameLoc) (Info.singleton (NameInfo (n ^. nameText)))) (varsNum - k - 1))
-  Internal.IdenInductive n -> do
-    m <- getIdent identIndex
-    return $ case m of
-      Just (IdentInd sym) -> mkTypeConstr (setInfoLocation (n ^. nameLoc) (Info.singleton (NameInfo (n ^. namePretty)))) sym []
-      Just _ -> error ("internal to core: not an inductive: " <> txt)
-      Nothing -> error ("internal to core: undeclared identifier: " <> txt)
-  Internal.IdenConstructor n -> do
-    m <- getIdent identIndex
-    case m of
-      Just (IdentConstr tag) -> return (mkConstr (setInfoLocation (n ^. nameLoc) (Info.singleton (NameInfo (n ^. namePretty)))) tag [])
-      Just _ -> error ("internal to core: not a constructor " <> txt)
-      Nothing -> error ("internal to core: undeclared identifier: " <> txt)
-  Internal.IdenAxiom n -> do
-    axiomInfoBuiltin <- Internal.getAxiomBuiltinInfo n
-    case axiomInfoBuiltin of
-      Just Internal.BuiltinIOSequence -> error "internal to core: >> must be called with 2 arguments"
-      Just Internal.BuiltinTrace -> error "internal to core: trace must be called with 1 argument"
-      _ -> return ()
-    m <- getIdent identIndex
-    return $ case m of
-      Just (IdentFun sym) -> mkIdent (setInfoLocation (n ^. nameLoc) (Info.singleton (NameInfo (n ^. namePretty)))) sym
-      Just (IdentInd sym) -> mkTypeConstr (setInfoLocation (n ^. nameLoc) (Info.singleton (NameInfo (n ^. namePretty)))) sym []
-      Just _ -> error ("internal to core: not an axiom: " <> txt)
-      Nothing -> error ("internal to core: undeclared identifier: " <> txt)
+goIden i = do
+  infoTableDebug <- Core.ppTrace <$> getInfoTable
+  case i of
+    Internal.IdenVar n -> do
+      k <- HashMap.lookupDefault impossible id_ <$> asks (^. indexTableVars)
+      varsNum <- asks (^. indexTableVarsNum)
+      return (mkVar (setInfoLocation (n ^. nameLoc) (Info.singleton (NameInfo (n ^. nameText)))) (varsNum - k - 1))
+    Internal.IdenFunction n -> do
+      funInfoBuiltin <- Internal.getFunctionBuiltinInfo n
+      case funInfoBuiltin of
+        Just Internal.BuiltinBoolIf -> error "internal to core: if must be called with 3 arguments"
+        Just Internal.BuiltinBoolOr -> error "internal to core: || must be called with 2 arguments"
+        Just Internal.BuiltinBoolAnd -> error "internal to core: && must be called with 2 arguments"
+        Just Internal.BuiltinSeq -> error "internal to core: seq must be called with 2 arguments"
+        _ -> return ()
+      -- if the function was defined by a let, then in Core it is stored in a variable
+      vars <- asks (^. indexTableVars)
+      case HashMap.lookup id_ vars of
+        Nothing -> do
+          m <- getIdent identIndex
+          return $ case m of
+            Just (IdentFun sym) -> mkIdent (setInfoLocation (n ^. nameLoc) (Info.singleton (NameInfo (n ^. namePretty)))) sym
+            Just _ -> error ("internal to core: not a function: " <> txt)
+            Nothing ->
+              error
+                ( "internal to core: undeclared identifier: "
+                    <> txt
+                    <> "\n"
+                    <> infoTableDebug
+                )
+        Just k -> do
+          varsNum <- asks (^. indexTableVarsNum)
+          return (mkVar (setInfoLocation (n ^. nameLoc) (Info.singleton (NameInfo (n ^. nameText)))) (varsNum - k - 1))
+    Internal.IdenInductive n -> do
+      m <- getIdent identIndex
+      return $ case m of
+        Just (IdentInd sym) -> mkTypeConstr (setInfoLocation (n ^. nameLoc) (Info.singleton (NameInfo (n ^. namePretty)))) sym []
+        Just _ -> error ("internal to core: not an inductive: " <> txt)
+        Nothing ->
+          error
+            ( "internal to core: undeclared identifier: "
+                <> txt
+                <> "\n"
+                <> infoTableDebug
+            )
+    Internal.IdenConstructor n -> do
+      m <- getIdent identIndex
+      case m of
+        Just (IdentConstr tag) -> return (mkConstr (setInfoLocation (n ^. nameLoc) (Info.singleton (NameInfo (n ^. namePretty)))) tag [])
+        Just _ -> error ("internal to core: not a constructor " <> txt)
+        Nothing ->
+          error
+            ( "internal to core: undeclared identifier: "
+                <> txt
+                <> "\n"
+                <> infoTableDebug
+            )
+    Internal.IdenAxiom n -> do
+      axiomInfoBuiltin <- Internal.getAxiomBuiltinInfo n
+      case axiomInfoBuiltin of
+        Just Internal.BuiltinIOSequence -> error "internal to core: >> must be called with 2 arguments"
+        Just Internal.BuiltinTrace -> error "internal to core: trace must be called with 1 argument"
+        _ -> return ()
+      m <- getIdent identIndex
+      return $ case m of
+        Just (IdentFun sym) -> mkIdent (setInfoLocation (n ^. nameLoc) (Info.singleton (NameInfo (n ^. namePretty)))) sym
+        Just (IdentInd sym) -> mkTypeConstr (setInfoLocation (n ^. nameLoc) (Info.singleton (NameInfo (n ^. namePretty)))) sym []
+        Just _ -> error ("internal to core: not an axiom: " <> txt)
+        Nothing ->
+          error
+            ( "internal to core: undeclared identifier: "
+                <> txt
+                <> "\n"
+                <> infoTableDebug
+            )
   where
     identIndex :: Text
     identIndex = mkIdentIndex (Internal.getName i)
@@ -889,7 +917,7 @@ goIden i = case i of
     id_ = Internal.getName i ^. nameId
 
     txt :: Text
-    txt = Internal.getName i ^. Internal.nameText
+    txt = Internal.ppTrace (Internal.getName i)
 
 goExpression ::
   forall r.

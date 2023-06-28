@@ -1,6 +1,5 @@
 module Church;
 
--- open import Stdlib.Prelude hiding {toNat};
 open import Stdlib.Data.Nat.Base;
 open import Stdlib.Function;
 open import Stdlib.System.IO;

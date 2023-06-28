@@ -440,11 +440,31 @@ instance PrettyCode ConstructorInfo where
 instance PrettyCode InfoTable where
   ppCode :: forall r. (Member (Reader Options) r) => InfoTable -> Sem r (Doc Ann)
   ppCode tbl = do
+    debugMode <- asks (^. optShowIdentIds)
+    let header x
+          | debugMode = x <> line
+          | otherwise = mempty
     tys <- ppInductives (toList (tbl ^. infoInductives))
     sigs <- ppSigs (sortOn (^. identifierSymbol) $ toList (tbl ^. infoIdentifiers))
     ctx' <- ppContext (tbl ^. identContext)
+    axioms <- vsep <$> mapM ppCode (tbl ^. infoAxioms)
     main <- maybe (return "") (\s -> (<> line) . (line <>) <$> ppName KNameFunction (identName tbl s)) (tbl ^. infoMain)
-    return (tys <> line <> line <> sigs <> line <> ctx' <> line <> main)
+    return
+      ( header "Inductives:"
+          <> tys
+          <> line
+          <> header "Identifiers:"
+          <> sigs
+          <> line
+          <> header "Axioms:"
+          <> axioms
+          <> line
+          <> header "Context:"
+          <> ctx'
+          <> line
+          <> header "Main:"
+          <> main
+      )
     where
       ppSig :: Symbol -> Sem r (Maybe (Doc Ann))
       ppSig s = do
@@ -466,7 +486,7 @@ instance PrettyCode InfoTable where
             let tydoc
                   | isDynamic ty = mempty
                   | otherwise = space <> colon <+> ty'
-                blt = if isJust (ii ^. identifierBuiltin) then (Str.builtin <+> mempty) else mempty
+                blt = if isJust (ii ^. identifierBuiltin) then (kwBuiltin <+> mempty) else mempty
             return (Just (blt <> kwDef <+> sym' <> argsNum <> tydoc))
 
       ppSigs :: [IdentifierInfo] -> Sem r (Doc Ann)
@@ -499,6 +519,12 @@ instance PrettyCode InfoTable where
             name <- ppName KNameInductive (ii ^. inductiveName)
             ctrs <- mapM (fmap (<> semi) . ppCode . lookupConstructorInfo tbl) (ii ^. inductiveConstructors)
             return (kwInductive <+> name <+> braces (line <> indent' (vsep ctrs) <> line) <> kwSemicolon)
+
+instance PrettyCode AxiomInfo where
+  ppCode ii = do
+    name <- ppName KNameAxiom (ii ^. axiomName)
+    ty <- ppCode (ii ^. axiomType)
+    return (kwAxiom <+> name <+> kwColon <+> ty <> kwSemicolon)
 
 instance PrettyCode Stripped.ArgumentInfo where
   ppCode :: (Member (Reader Options) r) => Stripped.ArgumentInfo -> Sem r (Doc Ann)
