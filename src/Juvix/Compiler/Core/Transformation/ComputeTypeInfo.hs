@@ -75,7 +75,7 @@ computeNodeTypeInfo tab = umapL go
         Just nd -> Info.getNodeType nd
         Nothing -> case _caseBranches of
           CaseBranch {..} : _ ->
-            Info.getNodeType _caseBranchBody
+            shift (-_caseBranchBindersNum) (Info.getNodeType _caseBranchBody)
           [] -> error "case with no branches"
       NMatch Match {} ->
         error "match unsupported"

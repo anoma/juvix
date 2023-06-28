@@ -153,6 +153,7 @@ coreEvalAssertion mainFile expectedFile trans testTrans step = do
       case run $ runReader defaultCoreOptions $ runError $ applyTransformations trans (setupMainFunction tabIni node) of
         Left err -> assertFailure (show (pretty (fromJuvixError @GenericError err)))
         Right tab -> do
+          assertBool "Check info table" (checkInfoTable tab)
           testTrans tab
           coreEvalAssertion' EvalModePlain tab mainFile expectedFile step
 
