@@ -369,3 +369,9 @@ isCaseBoolean = \case
         True
   _ ->
     False
+
+checkInfoTable :: InfoTable -> Bool
+checkInfoTable tab =
+  all isClosed (tab ^. identContext)
+    && all isClosed (fmap (^. identifierType) (tab ^. infoIdentifiers))
+    && all isClosed (fmap (^. constructorType) (tab ^. infoConstructors))

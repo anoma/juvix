@@ -33,13 +33,13 @@ ufoldA uplus f = ufoldG unitCollector uplus (const f)
 ufoldLA :: (Applicative f) => (a -> [a] -> a) -> (BinderList Binder -> Node -> f a) -> Node -> f a
 ufoldLA uplus f = ufoldG binderInfoCollector uplus f
 
-ufoldNA :: (Applicative f) => (a -> [a] -> a) -> (Index -> Node -> f a) -> Node -> f a
+ufoldNA :: (Applicative f) => (a -> [a] -> a) -> (Level -> Node -> f a) -> Node -> f a
 ufoldNA uplus f = ufoldG binderNumCollector uplus f
 
 walk :: (Applicative f) => (Node -> f ()) -> Node -> f ()
 walk = ufoldA (foldr mappend)
 
-walkN :: (Applicative f) => (Index -> Node -> f ()) -> Node -> f ()
+walkN :: (Applicative f) => (Level -> Node -> f ()) -> Node -> f ()
 walkN = ufoldNA (foldr mappend)
 
 walkL :: (Applicative f) => (BinderList Binder -> Node -> f ()) -> Node -> f ()
@@ -51,7 +51,7 @@ ufold uplus f = runIdentity . ufoldA uplus (return . f)
 ufoldL :: (a -> [a] -> a) -> (BinderList Binder -> Node -> a) -> Node -> a
 ufoldL uplus f = runIdentity . ufoldLA uplus (\is -> return . f is)
 
-ufoldN :: (a -> [a] -> a) -> (Index -> Node -> a) -> Node -> a
+ufoldN :: (a -> [a] -> a) -> (Level -> Node -> a) -> Node -> a
 ufoldN uplus f = runIdentity . ufoldNA uplus (\idx -> return . f idx)
 
 gather :: (a -> Node -> a) -> a -> Node -> a

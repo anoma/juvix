@@ -8,6 +8,7 @@ import Data.Text.IO qualified as TIO
 import GHC.Base (seq)
 import Juvix.Compiler.Asm.Pretty qualified as Asm
 import Juvix.Compiler.Asm.Translation.FromCore qualified as Asm
+import Juvix.Compiler.Core.Extra.Utils
 import Juvix.Compiler.Core.Options
 import Juvix.Compiler.Core.Pipeline
 import Juvix.Compiler.Core.Translation.FromSource
@@ -48,6 +49,7 @@ coreCompileAssertion' tab mainFile expectedFile stdinText step = do
   case run $ runReader defaultCoreOptions $ runError $ toStripped' tab of
     Left err -> assertFailure (show (pretty (fromJuvixError @GenericError err)))
     Right tab0 -> do
+      assertBool "Check info table" (checkInfoTable tab0)
       let tab' = Asm.fromCore $ Stripped.fromCore $ tab0
       length (fromText (Asm.ppPrint tab' tab') :: String) `seq`
         Asm.asmCompileAssertion' tab' mainFile expectedFile stdinText step
