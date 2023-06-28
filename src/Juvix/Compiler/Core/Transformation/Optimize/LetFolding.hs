@@ -23,7 +23,6 @@ convertNode isFoldable tab = rmap go
     go recur = \case
       NLet Let {..}
         | isImmediate tab (_letItem ^. letItemValue)
-            || isVarApp _letBody
             || Info.freeVarOccurrences 0 _letBody <= 1
             || isFoldable (_letItem ^. letItemValue) ->
             go (recur . (mkBCRemove (_letItem ^. letItemBinder) val' :)) _letBody
@@ -31,11 +30,6 @@ convertNode isFoldable tab = rmap go
           val' = go recur (_letItem ^. letItemValue)
       node ->
         recur [] node
-
-    isVarApp :: Node -> Bool
-    isVarApp node =
-      let (h, _) = unfoldApps' node
-       in h == mkVar' 0
 
 letFolding' :: (Node -> Bool) -> InfoTable -> InfoTable
 letFolding' isFoldable tab =
