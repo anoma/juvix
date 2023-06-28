@@ -229,7 +229,7 @@ instance PrettyCode FunctionClause where
 instance PrettyCode Import where
   ppCode i = do
     name' <- ppCode (i ^. importModule . moduleIxModule . moduleName)
-    return $ kwInclude <+> name'
+    return $ kwImport <+> name'
 
 instance PrettyCode BuiltinAxiom where
   ppCode = return . annotate AnnKeyword . pretty
@@ -262,7 +262,7 @@ instance PrettyCode ModuleBody where
   ppCode m = do
     includes <- mapM ppCode (m ^. moduleImports)
     everything <- mapM ppCode (m ^. moduleStatements)
-    return $ vsep2 (includes <> everything)
+    return (vsep includes <> line <> line <> vsep2 everything)
 
 instance PrettyCode Module where
   ppCode :: Member (Reader Options) r => Module -> Sem r (Doc Ann)

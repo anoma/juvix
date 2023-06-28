@@ -829,7 +829,7 @@ addPatternVariableNames p lvl vars =
 
 goIden ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable] r) =>
+  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable] r =>
   Internal.Iden ->
   Sem r Node
 goIden i = case i of

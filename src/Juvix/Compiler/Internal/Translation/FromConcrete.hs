@@ -155,12 +155,15 @@ goName name =
     prettyStr = prettyText name
 
 goSymbol :: S.Symbol -> Internal.Name
-goSymbol s =
+goSymbol s = goSymbolPretty (S.symbolText s) s
+
+goSymbolPretty :: Text -> S.Symbol -> Internal.Name
+goSymbolPretty pp s =
   Internal.Name
     { _nameText = S.symbolText s,
       _nameId = s ^. S.nameId,
       _nameKind = getNameKind s,
-      _namePretty = S.symbolText s,
+      _namePretty = pp,
       _nameLoc = s ^. S.nameConcrete . symbolLoc,
       _nameFixity = s ^. S.nameFixity
     }
@@ -193,8 +196,11 @@ toPreModule Module {..} = do
   where
     name' :: Internal.Name
     name' = case sing :: SModuleIsTop t of
-      SModuleTop -> goSymbol (S.topModulePathName _modulePath)
+      SModuleTop -> goTopModulePath _modulePath
       SModuleLocal -> goSymbol _modulePath
+
+goTopModulePath :: S.TopModulePath -> Internal.Name
+goTopModulePath p = goSymbolPretty (prettyText p) (S.topModulePathName p)
 
 fromPreModule ::
   forall r.
