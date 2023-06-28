@@ -13,11 +13,19 @@ import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.E
 import Juvix.Data.Effect.NameIdGen
 import Juvix.Prelude hiding (fromEither)
 
+type MCache = Cache ModuleIndex Module
+
 checkModule ::
-  (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r) =>
+  Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError, MCache] r =>
   Module ->
   Sem r Module
-checkModule Module {..} = do
+checkModule = cacheGet . ModuleIndex
+
+checkModuleIndexNoCache ::
+  Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError, MCache] r =>
+  ModuleIndex ->
+  Sem r Module
+checkModuleIndexNoCache (ModuleIndex Module {..}) = do
   _moduleBody' <- checkModuleBody _moduleBody
   return
     Module
@@ -26,23 +34,29 @@ checkModule Module {..} = do
       }
 
 checkModuleBody ::
-  Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r =>
+  Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError, MCache] r =>
   ModuleBody ->
   Sem r ModuleBody
 checkModuleBody ModuleBody {..} = do
   _moduleStatements' <- mapM checkStatement _moduleStatements
-  _moduleIncludes' <- mapM checkInclude _moduleIncludes
+  _moduleImports' <- mapM checkImport _moduleImports
   return
     ModuleBody
       { _moduleStatements = _moduleStatements',
-        _moduleIncludes = _moduleIncludes'
+        _moduleImports = _moduleImports'
       }
 
-checkInclude ::
-  (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r) =>
-  Include ->
-  Sem r Include
-checkInclude = traverseOf includeModule checkModule
+checkModuleIndex ::
+  Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError, MCache] r =>
+  ModuleIndex ->
+  Sem r ModuleIndex
+checkModuleIndex (ModuleIndex m) = ModuleIndex <$> checkModule m
+
+checkImport ::
+  Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError, MCache] r =>
+  Import ->
+  Sem r Import
+checkImport = traverseOf importModule checkModuleIndex
 
 checkStatement ::
   (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r) =>

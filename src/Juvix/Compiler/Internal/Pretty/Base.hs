@@ -226,9 +226,9 @@ instance PrettyCode FunctionClause where
     clauseBody' <- ppCode (c ^. clauseBody)
     return $ nest 2 (funName <+?> clausePatterns' <+> kwAssign <+> clauseBody')
 
-instance PrettyCode Include where
+instance PrettyCode Import where
   ppCode i = do
-    name' <- ppCode (i ^. includeModule . moduleName)
+    name' <- ppCode (i ^. importModule . moduleIxModule . moduleName)
     return $ kwInclude <+> name'
 
 instance PrettyCode BuiltinAxiom where
@@ -260,7 +260,7 @@ instance PrettyCode Statement where
 
 instance PrettyCode ModuleBody where
   ppCode m = do
-    includes <- mapM ppCode (m ^. moduleIncludes)
+    includes <- mapM ppCode (m ^. moduleImports)
     everything <- mapM ppCode (m ^. moduleStatements)
     return $ vsep2 (includes <> everything)
 

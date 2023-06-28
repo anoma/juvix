@@ -18,6 +18,8 @@ import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Data.Effect.NameIdGen
 import Juvix.Prelude hiding (fromEither)
 
+type MCache = Cache ModuleIndex Module
+
 registerConstructor :: Members '[HighlightBuilder, State TypesTable, Reader InfoTable] r => InductiveConstructorDef -> Sem r ()
 registerConstructor ctr = do
   ty <- constructorType (ctr ^. inductiveConstructorName)
@@ -29,10 +31,22 @@ registerNameIdType uid ty = do
   modify (set (highlightTypes . at uid) (Just ty))
 
 checkModule ::
-  (Members '[HighlightBuilder, Reader EntryPoint, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example, Builtins] r) =>
+  Members '[HighlightBuilder, Reader EntryPoint, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example, Builtins, MCache] r =>
   Module ->
   Sem r Module
-checkModule Module {..} = do
+checkModule = cacheGet . ModuleIndex
+
+checkModuleIndex ::
+  Members '[HighlightBuilder, Reader EntryPoint, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example, Builtins, MCache] r =>
+  ModuleIndex ->
+  Sem r ModuleIndex
+checkModuleIndex = fmap ModuleIndex . cacheGet
+
+checkModuleNoCache ::
+  Members '[HighlightBuilder, Reader EntryPoint, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example, Builtins, MCache] r =>
+  ModuleIndex ->
+  Sem r Module
+checkModuleNoCache (ModuleIndex Module {..}) = do
   _moduleBody' <-
     (evalState (mempty :: NegativeTypeParameters) . checkModuleBody) _moduleBody
   return
@@ -42,23 +56,23 @@ checkModule Module {..} = do
       }
 
 checkModuleBody ::
-  (Members '[HighlightBuilder, Reader EntryPoint, State NegativeTypeParameters, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example, Builtins] r) =>
+  Members '[HighlightBuilder, Reader EntryPoint, State NegativeTypeParameters, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example, Builtins, MCache] r =>
   ModuleBody ->
   Sem r ModuleBody
 checkModuleBody ModuleBody {..} = do
   _moduleStatements' <- mapM checkStatement _moduleStatements
-  _moduleIncludes' <- mapM checkInclude _moduleIncludes
+  _moduleImports' <- mapM checkImport _moduleImports
   return
     ModuleBody
       { _moduleStatements = _moduleStatements',
-        _moduleIncludes = _moduleIncludes'
+        _moduleImports = _moduleImports'
       }
 
-checkInclude ::
-  (Members '[HighlightBuilder, Reader EntryPoint, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example, Builtins] r) =>
-  Include ->
-  Sem r Include
-checkInclude = traverseOf includeModule checkModule
+checkImport ::
+  Members '[HighlightBuilder, Reader EntryPoint, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example, Builtins, MCache] r =>
+  Import ->
+  Sem r Import
+checkImport = traverseOf importModule checkModuleIndex
 
 checkStatement ::
   (Members '[HighlightBuilder, Reader EntryPoint, State NegativeTypeParameters, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example, Builtins] r) =>

@@ -14,7 +14,9 @@ import Juvix.Compiler.Concrete.Data.Scope
 import Juvix.Compiler.Concrete.Data.Scope qualified as S
 import Juvix.Compiler.Concrete.Data.Scope qualified as Scoped
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver
+import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping (ScoperError)
 import Juvix.Compiler.Core.Data.InfoTableBuilder qualified as Core
+import Juvix.Compiler.Internal.Extra.DependencyBuilder (ExportsTable)
 import Juvix.Compiler.Internal.Language qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromConcrete qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context
@@ -35,7 +37,6 @@ data Artifacts = Artifacts
     _artifactScoperState :: Scoped.ScoperState,
     -- Concrete -> Internal
     _artifactInternalModuleCache :: Internal.ModulesCache,
-    _artifactInternalTranslationState :: Internal.TranslationState,
     -- Typechecking
     _artifactTypes :: TypesTable,
     _artifactFunctions :: FunctionsTable,
@@ -114,3 +115,23 @@ runStateLikeArtifacts runEff l m = do
   (s', a) <- runEff s m
   modify' (set l s')
   return a
+
+runCacheArtifacts ::
+  (Hashable k, Members '[State Artifacts] r) =>
+  Lens' Artifacts (HashMap k v) ->
+  (k -> Sem (Cache k v ': r) v) ->
+  (Sem (Cache k v ': r) a) ->
+  Sem r a
+runCacheArtifacts l f = runStateLikeArtifacts (runCache f) l
+
+runFromConcreteCache ::
+  Members '[State Artifacts, Builtins, NameIdGen, Reader ExportsTable, Error JuvixError] r =>
+  Sem (Internal.MCache ': r) a ->
+  Sem r a
+runFromConcreteCache =
+  runCacheArtifacts
+    (artifactInternalModuleCache . Internal.cachedModules)
+    ( mapError (JuvixError @ScoperError)
+        . runReader (mempty :: Pragmas)
+        . Internal.goModuleNoCache
+    )

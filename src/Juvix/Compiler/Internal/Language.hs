@@ -38,13 +38,13 @@ data Module' stmt = Module
   }
   deriving stock (Data)
 
-newtype Include = Include
-  { _includeModule :: Module
+newtype Import = Import
+  { _importModule :: ModuleIndex
   }
   deriving stock (Data)
 
 data ModuleBody' stmt = ModuleBody
-  { _moduleIncludes :: [Include],
+  { _moduleImports :: [Import],
     _moduleStatements :: [stmt]
   }
   deriving stock (Data)
@@ -305,6 +305,12 @@ data Function = Function
 
 instance Hashable Function
 
+newtype ModuleIndex = ModuleIndex
+  { _moduleIxModule :: Module
+  }
+  deriving stock (Data)
+
+makeLenses ''ModuleIndex
 makeLenses ''Case
 makeLenses ''CaseBranch
 makeLenses ''Module'
@@ -313,7 +319,7 @@ makeLenses ''MutualBlockLet
 makeLenses ''MutualBlock
 makeLenses ''Example
 makeLenses ''PatternArg
-makeLenses ''Include
+makeLenses ''Import
 makeLenses ''FunctionDef
 makeLenses ''FunctionClause
 makeLenses ''InductiveDef
@@ -329,6 +335,16 @@ makeLenses ''FunctionParameter
 makeLenses ''InductiveParameter
 makeLenses ''InductiveConstructorDef
 makeLenses ''ConstructorApp
+
+instance Eq ModuleIndex where
+  (==) = (==) `on` (^. moduleIxModule . moduleName)
+
+instance Hashable ModuleIndex where
+  hashWithSalt s = hashWithSalt s . (^. moduleIxModule . moduleName)
+
+deriving newtype instance (Eq Import)
+
+deriving newtype instance (Hashable Import)
 
 instance HasAtomicity Case where
   atomicity = const Atom

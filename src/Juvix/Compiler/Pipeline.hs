@@ -282,7 +282,6 @@ corePipelineIOEither entry = do
           _artifactScopeTable = Scoped.emptyInfoTable,
           _artifactBuiltins = iniBuiltins,
           _artifactScopeExports = mempty,
-          _artifactInternalTranslationState = Internal.TranslationState mempty,
           _artifactInternalModuleCache = Internal.ModulesCache mempty,
           _artifactScoperState = Scoper.iniScoperState
         }

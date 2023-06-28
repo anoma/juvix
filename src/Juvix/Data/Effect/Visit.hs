@@ -1,8 +1,9 @@
 -- | Visit every key at most once
 module Juvix.Data.Effect.Visit
   ( runVisit,
-    runVisit',
+    runVisitEmpty,
     evalVisit,
+    evalVisitEmpty,
     Visit,
     visit,
   )
@@ -17,29 +18,38 @@ data Visit k m a where
 makeSem ''Visit
 
 -- | Run a 'Visit' effect purely.
-runVisit' ::
+runVisit ::
   Hashable k =>
   (k -> Sem (Visit k ': r) ()) ->
   HashSet k ->
   Sem (Visit k ': r) a ->
   Sem r (HashSet k, a)
-runVisit' f c = runState c . re f
-{-# INLINE runVisit' #-}
+runVisit f c = runState c . re f
+{-# INLINE runVisit #-}
 
-runVisit ::
+runVisitEmpty ::
   Hashable k =>
   (k -> Sem (Visit k ': r) ()) ->
   Sem (Visit k ': r) a ->
   Sem r (HashSet k, a)
-runVisit f = runVisit' f mempty
-{-# INLINE runVisit #-}
+runVisitEmpty f = runVisit f mempty
+{-# INLINE runVisitEmpty #-}
 
-evalVisit ::
+evalVisitEmpty ::
   Hashable k =>
   (k -> Sem (Visit k ': r) ()) ->
   Sem (Visit k ': r) a ->
   Sem r a
-evalVisit f = fmap snd . runVisit f
+evalVisitEmpty f = fmap snd . runVisitEmpty f
+{-# INLINE evalVisitEmpty #-}
+
+evalVisit ::
+  Hashable k =>
+  (k -> Sem (Visit k ': r) ()) ->
+  HashSet k ->
+  Sem (Visit k ': r) a ->
+  Sem r a
+evalVisit f c = fmap snd . runVisit f c
 {-# INLINE evalVisit #-}
 
 re ::

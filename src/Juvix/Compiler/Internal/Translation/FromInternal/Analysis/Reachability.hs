@@ -8,6 +8,8 @@ import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Da
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Prelude
 
+type MCache = Cache ModuleIndex Module
+
 filterUnreachable :: Members '[Reader EntryPoint] r => Typed.InternalTypedResult -> Sem r Typed.InternalTypedResult
 filterUnreachable r = do
   asks (^. entryPointSymbolPruningMode) >>= \case
@@ -16,7 +18,11 @@ filterUnreachable r = do
   where
     depInfo = r ^. (Typed.resultInternalArityResult . Arity.resultInternalResult . resultDepInfo)
     modules = r ^. Typed.resultModules
-    modules' = run $ runReader depInfo (mapM goModule modules)
+    modules' =
+      run
+        . runReader depInfo
+        . evalCacheEmpty goModuleNoCache
+        $ mapM goModule modules
 
 askIsReachable :: Member (Reader NameDependencyInfo) r => Name -> Sem r Bool
 askIsReachable n = do
@@ -31,12 +37,19 @@ returnIfReachable n a = do
         | r -> Just a
         | otherwise -> Nothing
 
-goModule :: (Member (Reader NameDependencyInfo) r) => Module -> Sem r Module
-goModule m = do
+goModuleNoCache :: Members [Reader NameDependencyInfo, MCache] r => ModuleIndex -> Sem r Module
+goModuleNoCache (ModuleIndex m) = do
   stmts <- mapM goStatement (body ^. moduleStatements)
-  return m {_moduleBody = body {_moduleStatements = catMaybes stmts}}
+  let body' = set moduleStatements (catMaybes stmts) body
+  return (set moduleBody body' m)
   where
     body = m ^. moduleBody
+
+goModule :: Members [Reader NameDependencyInfo, MCache] r => Module -> Sem r Module
+goModule = cacheGet . ModuleIndex
+
+goModuleIndex :: Members [Reader NameDependencyInfo, MCache] r => ModuleIndex -> Sem r ModuleIndex
+goModuleIndex = fmap ModuleIndex . cacheGet
 
 goStatement :: forall r. Member (Reader NameDependencyInfo) r => Statement -> Sem r (Maybe Statement)
 goStatement s = case s of
@@ -49,7 +62,7 @@ goStatement s = case s of
       StatementFunction f -> returnIfReachable (f ^. funDefName) b
       StatementInductive f -> returnIfReachable (f ^. inductiveName) b
 
-goInclude :: forall r. Member (Reader NameDependencyInfo) r => Include -> Sem r Include
+goInclude :: forall r. Members [Reader NameDependencyInfo, MCache] r => Import -> Sem r Import
 goInclude i = do
-  _includeModule <- goModule (i ^. includeModule)
-  return Include {..}
+  _importModule <- goModuleIndex (i ^. importModule)
+  return Import {..}

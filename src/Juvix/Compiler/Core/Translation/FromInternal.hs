@@ -20,6 +20,8 @@ import Juvix.Data.Loc qualified as Loc
 import Juvix.Data.PPOutput
 import Juvix.Extra.Strings qualified as Str
 
+type MVisit = Visit Internal.ModuleIndex
+
 data PreInductiveDef = PreInductiveDef
   { _preInductiveInternal :: Internal.InductiveDef,
     _preInductiveInfo :: InductiveInfo
@@ -47,7 +49,11 @@ mkIdentIndex = show . (^. Internal.nameId . Internal.unNameId)
 
 fromInternal :: Internal.InternalTypedResult -> Sem k CoreResult
 fromInternal i = do
-  (res, _) <- runInfoTableBuilder emptyInfoTable (evalState (i ^. InternalTyped.resultFunctions) (runReader (i ^. InternalTyped.resultIdenTypes) f))
+  res <-
+    execInfoTableBuilder emptyInfoTable
+      . evalState (i ^. InternalTyped.resultFunctions)
+      . runReader (i ^. InternalTyped.resultIdenTypes)
+      $ f
   return $
     CoreResult
       { _coreResultTable = res,
@@ -59,7 +65,9 @@ fromInternal i = do
       reserveLiteralIntToNatSymbol
       reserveLiteralIntToIntSymbol
       let resultModules = toList (i ^. InternalTyped.resultModules)
-      runReader (Internal.buildTable resultModules) (mapM_ goModule resultModules)
+      runReader (Internal.buildTable resultModules)
+        . evalVisitEmpty goModuleNoVisit
+        $ mapM_ goModule resultModules
       tab <- getInfoTable
       when
         (isNothing (lookupBuiltinInductive tab BuiltinBool))
@@ -70,35 +78,35 @@ fromInternal i = do
 fromInternalExpression :: CoreResult -> Internal.Expression -> Sem r Node
 fromInternalExpression res exp = do
   let modules = res ^. coreResultInternalTypedResult . InternalTyped.resultModules
-  snd
-    <$> runReader
-      (Internal.buildTable modules)
-      ( runInfoTableBuilder
-          (res ^. coreResultTable)
-          ( evalState
-              (res ^. coreResultInternalTypedResult . InternalTyped.resultFunctions)
-              ( runReader
-                  (res ^. coreResultInternalTypedResult . InternalTyped.resultIdenTypes)
-                  (fromTopIndex (goExpression exp))
-              )
-          )
-      )
+  fmap snd
+    . runReader (Internal.buildTable modules)
+    . runInfoTableBuilder (res ^. coreResultTable)
+    . evalState (res ^. coreResultInternalTypedResult . InternalTyped.resultFunctions)
+    . runReader (res ^. coreResultInternalTypedResult . InternalTyped.resultIdenTypes)
+    $ fromTopIndex (goExpression exp)
 
 goModule ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable] r) =>
+  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable, MVisit] r =>
   Internal.Module ->
   Sem r ()
-goModule m = do
-  mapM_ goInclude (m ^. Internal.moduleBody . Internal.moduleIncludes)
+goModule = visit . Internal.ModuleIndex
+
+goModuleNoVisit ::
+  forall r.
+  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable, MVisit] r =>
+  Internal.ModuleIndex ->
+  Sem r ()
+goModuleNoVisit (Internal.ModuleIndex m) = do
+  mapM_ goImport (m ^. Internal.moduleBody . Internal.moduleImports)
   mapM_ go (m ^. Internal.moduleBody . Internal.moduleStatements)
   where
     go :: Internal.Statement -> Sem r ()
     go = \case
       Internal.StatementAxiom a -> goAxiomInductive a >> goAxiomDef a
       Internal.StatementMutual f -> goMutualBlock f
-    goInclude :: Internal.Include -> Sem r ()
-    goInclude i = mapM_ go (i ^. Internal.includeModule . Internal.moduleBody . Internal.moduleStatements)
+    goImport :: Internal.Import -> Sem r ()
+    goImport i = mapM_ go (i ^. Internal.importModule . Internal.moduleIxModule . Internal.moduleBody . Internal.moduleStatements)
 
 -- | predefine an inductive definition
 preInductiveDef ::

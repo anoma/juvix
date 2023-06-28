@@ -1,6 +1,8 @@
 module Juvix.Data.Effect.Cache
   ( runCache,
     evalCache,
+    evalCacheEmpty,
+    runCacheEmpty,
     cacheGet,
     cacheLookup,
     Cache,
@@ -33,6 +35,22 @@ evalCache ::
   Sem r a
 evalCache f c = fmap snd . runCache f c
 {-# INLINE evalCache #-}
+
+evalCacheEmpty ::
+  Hashable k =>
+  (k -> Sem (Cache k v ': r) v) ->
+  Sem (Cache k v ': r) a ->
+  Sem r a
+evalCacheEmpty f = evalCache f mempty
+{-# INLINE evalCacheEmpty #-}
+
+runCacheEmpty ::
+  Hashable k =>
+  (k -> Sem (Cache k v ': r) v) ->
+  Sem (Cache k v ': r) a ->
+  Sem r (HashMap k v, a)
+runCacheEmpty f = runCache f mempty
+{-# INLINE runCacheEmpty #-}
 
 re ::
   forall k v r a.

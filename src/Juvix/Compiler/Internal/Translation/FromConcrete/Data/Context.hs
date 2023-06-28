@@ -4,7 +4,7 @@ module Juvix.Compiler.Internal.Translation.FromConcrete.Data.Context
   )
 where
 
-import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
+import Juvix.Compiler.Concrete.Language qualified as Concrete
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Data.Context qualified as Concrete
 import Juvix.Compiler.Concrete.Translation.FromSource.Data.Context qualified as Concrete
 import Juvix.Compiler.Internal.Data.InfoTable
@@ -16,7 +16,7 @@ import Juvix.Prelude
 
 -- | Top modules cache
 newtype ModulesCache = ModulesCache
-  {_cachedModules :: HashMap S.NameId Internal.Module}
+  {_cachedModules :: HashMap Concrete.ModuleIndex Internal.Module}
 
 data InternalResult = InternalResult
   { _resultScoper :: Concrete.ScoperResult,

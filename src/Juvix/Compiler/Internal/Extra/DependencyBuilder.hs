@@ -25,14 +25,14 @@ buildDependencyInfoPreModule ms tab =
 
 buildDependencyInfo :: NonEmpty Module -> ExportsTable -> NameDependencyInfo
 buildDependencyInfo ms tab =
-  buildDependencyInfoHelper tab (mapM_ goModule ms)
+  buildDependencyInfoHelper tab (mapM_ (visit . ModuleIndex) ms)
 
 buildDependencyInfoExpr :: Expression -> NameDependencyInfo
 buildDependencyInfoExpr = buildDependencyInfoHelper mempty . goExpression Nothing
 
 buildDependencyInfoHelper ::
   ExportsTable ->
-  Sem '[Reader ExportsTable, State DependencyGraph, State StartNodes] () ->
+  Sem '[Visit ModuleIndex, Reader ExportsTable, State DependencyGraph, State StartNodes] () ->
   NameDependencyInfo
 buildDependencyInfoHelper tbl m = createDependencyInfo graph startNodes
   where
@@ -43,6 +43,7 @@ buildDependencyInfoHelper tbl m = createDependencyInfo graph startNodes
         . runState HashSet.empty
         . execState HashMap.empty
         . runReader tbl
+        . evalVisitEmpty visitModuleIndex
         $ m
 
 addStartNode :: (Member (State StartNodes) r) => Name -> Sem r ()
@@ -69,15 +70,15 @@ checkStartNode n = do
     (HashSet.member (n ^. nameId) tab)
     (addStartNode n)
 
-goModule :: Members '[Reader ExportsTable, State DependencyGraph, State StartNodes] r => Module -> Sem r ()
-goModule m = do
+visitModuleIndex :: forall r. Members '[Reader ExportsTable, State DependencyGraph, State StartNodes, Visit ModuleIndex] r => ModuleIndex -> Sem r ()
+visitModuleIndex (ModuleIndex m) = do
   checkStartNode (m ^. moduleName)
   let b = m ^. moduleBody
   mapM_ (goStatement (m ^. moduleName)) (b ^. moduleStatements)
-  mapM_ goInclude (b ^. moduleIncludes)
+  mapM_ goImport (b ^. moduleImports)
 
-goInclude :: Members '[Reader ExportsTable, State DependencyGraph, State StartNodes] r => Include -> Sem r ()
-goInclude (Include m) = goModule m
+goImport :: Members '[Reader ExportsTable, State DependencyGraph, State StartNodes, Visit ModuleIndex] r => Import -> Sem r ()
+goImport (Import m) = visit m
 
 -- | Ignores includes
 goPreModule :: Members '[Reader ExportsTable, State DependencyGraph, State StartNodes] r => PreModule -> Sem r ()

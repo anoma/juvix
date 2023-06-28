@@ -1,6 +1,19 @@
 module Juvix.Compiler.Internal.Data.InfoTable
-  ( module Juvix.Compiler.Internal.Data.InfoTable,
-    module Juvix.Compiler.Internal.Data.InfoTable.Base,
+  ( module Juvix.Compiler.Internal.Data.InfoTable.Base,
+    buildTable,
+    buildTable1,
+    extendWithReplExpression,
+    lookupConstructor,
+    lookupConstructorArgTypes,
+    lookupFunction,
+    constructorReturnType,
+    constructorArgTypes,
+    lookupInductive,
+    lookupAxiom,
+    lookupInductiveType,
+    constructorType,
+    getAxiomBuiltinInfo,
+    getFunctionBuiltinInfo,
   )
 where
 
@@ -51,11 +64,11 @@ computeTable (ModuleIndex m) = compute
   where
     compute :: Sem r InfoTable
     compute = do
-      infoInc <- getMany (map (^. includeModule) includes)
+      infoInc <- mconcatMapM (cacheGet . (^. importModule)) imports
       return (InfoTable {..} <> infoInc)
 
-    includes :: [Include]
-    includes = m ^. moduleBody . moduleIncludes
+    imports :: [Import]
+    imports = m ^. moduleBody . moduleImports
 
     mutuals :: [MutualStatement]
     mutuals =

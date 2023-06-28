@@ -5,7 +5,6 @@ module Juvix.Compiler.Internal.Translation.FromConcrete
 where
 
 import Data.HashMap.Strict qualified as HashMap
-import Data.HashSet qualified as HashSet
 import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Compiler.Builtins
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
@@ -21,18 +20,7 @@ import Juvix.Compiler.Internal.Translation.FromConcrete.Data.Context
 import Juvix.Data.NameKind
 import Juvix.Prelude
 
-newtype TranslationState = TranslationState
-  { -- | Top modules are supposed to be included at most once.
-    _translationStateIncluded :: HashSet S.TopModulePath
-  }
-
-iniState :: TranslationState
-iniState =
-  TranslationState
-    { _translationStateIncluded = mempty
-    }
-
-makeLenses ''TranslationState
+type MCache = Cache Concrete.ModuleIndex Internal.Module
 
 unsupported :: Text -> a
 unsupported msg = error $ msg <> "Scoped to Internal: not yet supported"
@@ -43,14 +31,14 @@ fromConcrete ::
   Sem r InternalResult
 fromConcrete _resultScoper =
   mapError (JuvixError @ScoperError) $ do
-    (_resultModulesCache, _resultModules) <-
+    (modulesCache, _resultModules) <-
       runReader @Pragmas mempty
         . runReader @ExportsTable exportTbl
-        . runState (ModulesCache mempty)
-        . evalState iniState
+        . runCacheEmpty goModuleNoCache
         $ mapM goTopModule ms
     let _resultTable = buildTable _resultModules
         _resultDepInfo = buildDependencyInfo _resultModules exportTbl
+        _resultModulesCache = ModulesCache modulesCache
     return InternalResult {..}
   where
     ms = _resultScoper ^. Scoper.resultModules
@@ -118,49 +106,37 @@ fromConcreteExpression :: (Members '[Error JuvixError, NameIdGen] r) => Scoper.E
 fromConcreteExpression = mapError (JuvixError @ScoperError) . runReader @Pragmas mempty . goExpression
 
 fromConcreteImport ::
-  Members '[Reader ExportsTable, Error JuvixError, NameIdGen, Builtins, State ModulesCache, State TranslationState] r =>
+  Members '[Reader ExportsTable, Error JuvixError, NameIdGen, Builtins, MCache] r =>
   Scoper.Import 'Scoped ->
-  Sem r (Maybe Internal.Include)
+  Sem r Internal.Import
 fromConcreteImport =
   mapError (JuvixError @ScoperError)
     . runReader @Pragmas mempty
     . goImport
 
 fromConcreteOpenImport ::
-  Members '[Reader ExportsTable, Error JuvixError, NameIdGen, Builtins, State ModulesCache, State TranslationState] r =>
+  Members '[Reader ExportsTable, Error JuvixError, NameIdGen, Builtins, MCache] r =>
   Scoper.OpenModule 'Scoped ->
-  Sem r (Maybe Internal.Include)
+  Sem r (Maybe Internal.Import)
 fromConcreteOpenImport = mapError (JuvixError @ScoperError) . runReader @Pragmas mempty . goOpenModule'
 
--- | returns (cacheHit, module)
-goTopModule ::
-  forall r.
-  (Members '[Reader ExportsTable, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ModulesCache, State TranslationState] r) =>
-  Module 'Scoped 'ModuleTop ->
-  Sem r Internal.Module
-goTopModule m = do
-  let moduleNameId :: S.NameId
-      moduleNameId = m ^. Concrete.modulePath . S.nameId
-      processModule :: Sem r Internal.Module
-      processModule = do
-        am <- goModule' m
-        modify (over cachedModules (HashMap.insert moduleNameId am))
-        return am
-  cache <- gets (^. cachedModules)
-  maybe processModule return (cache ^. at moduleNameId)
-
 goLocalModule ::
-  Members '[Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ModulesCache, State TranslationState] r =>
+  Members '[Error ScoperError, Builtins, NameIdGen, Reader Pragmas] r =>
   Module 'Scoped 'ModuleLocal ->
   Sem r [Internal.PreStatement]
 goLocalModule = concatMapM goStatement . (^. moduleBody)
 
-goModule' ::
-  forall r t.
-  (Members '[Reader ExportsTable, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ModulesCache, State TranslationState] r, SingI t) =>
-  Module 'Scoped t ->
+goTopModule ::
+  Members '[Reader ExportsTable, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, MCache] r =>
+  Module 'Scoped 'ModuleTop ->
   Sem r Internal.Module
-goModule' m = do
+goTopModule = cacheGet . ModuleIndex
+
+goModuleNoCache ::
+  Members '[Reader ExportsTable, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, MCache] r =>
+  ModuleIndex ->
+  Sem r Internal.Module
+goModuleNoCache (ModuleIndex m) = do
   p <- toPreModule m
   tbl <- ask
   let depInfo = buildDependencyInfoPreModule p tbl
@@ -200,7 +176,7 @@ traverseM' f x = sequence <$> traverse f x
 
 toPreModule ::
   forall r t.
-  (SingI t, Members '[Reader ExportsTable, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ModulesCache, State TranslationState] r) =>
+  (SingI t, Members '[Reader ExportsTable, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, MCache] r) =>
   Module 'Scoped t ->
   Sem r Internal.PreModule
 toPreModule Module {..} = do
@@ -222,14 +198,14 @@ toPreModule Module {..} = do
 
 fromPreModule ::
   forall r.
-  Members '[Reader Internal.NameDependencyInfo, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ModulesCache, State TranslationState] r =>
+  Members '[Reader Internal.NameDependencyInfo, Error ScoperError, Builtins, NameIdGen, Reader Pragmas] r =>
   Internal.PreModule ->
   Sem r Internal.Module
 fromPreModule = traverseOf Internal.moduleBody fromPreModuleBody
 
 fromPreModuleBody ::
   forall r.
-  Members '[Reader Internal.NameDependencyInfo, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ModulesCache, State TranslationState] r =>
+  Members '[Reader Internal.NameDependencyInfo, Error ScoperError, Builtins, NameIdGen, Reader Pragmas] r =>
   Internal.PreModuleBody ->
   Sem r Internal.ModuleBody
 fromPreModuleBody b = do
@@ -262,11 +238,11 @@ fromPreModuleBody b = do
 
 goModuleBody ::
   forall r.
-  (Members '[Reader ExportsTable, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ModulesCache, State TranslationState] r) =>
+  Members '[Reader ExportsTable, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, MCache] r =>
   [Statement 'Scoped] ->
   Sem r Internal.PreModuleBody
 goModuleBody stmts = do
-  _moduleIncludes <- mapMaybeM goImport (scanImports stmts)
+  _moduleImports <- mapM goImport (scanImports stmts)
   otherThanFunctions :: [Indexed Internal.PreStatement] <- concatMapM (traverseM' goStatement) ss
   functions <- map (fmap Internal.PreFunctionDef) <$> compiledFunctions
   let _moduleStatements =
@@ -326,24 +302,17 @@ scanImports stmts = mconcatMap go stmts
 
 goImport ::
   forall r.
-  Members '[Reader ExportsTable, Error ScoperError, Builtins, NameIdGen, State ModulesCache, Reader Pragmas, State TranslationState] r =>
+  Members '[Reader ExportsTable, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, MCache] r =>
   Import 'Scoped ->
-  Sem r (Maybe Internal.Include)
+  Sem r Internal.Import
 goImport Import {..} = do
   let m = _importModule ^. moduleRefModule
-      mname = m ^. Concrete.modulePath
-  inc <- gets (HashSet.member mname . (^. translationStateIncluded))
-  if
-      | inc -> return Nothing
-      | otherwise -> do
-          modify (over translationStateIncluded (HashSet.insert mname))
-          m' <- goTopModule m
-          return
-            ( Just
-                Internal.Include
-                  { _includeModule = m'
-                  }
-            )
+  m' <- goTopModule m
+  return
+    ( Internal.Import
+        { _importModule = Internal.ModuleIndex m'
+        }
+    )
 
 guardNotCached :: (Bool, Internal.Module) -> Maybe Internal.Module
 guardNotCached (hit, m) = do
@@ -352,7 +321,7 @@ guardNotCached (hit, m) = do
 
 goStatement ::
   forall r.
-  Members '[Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ModulesCache, State TranslationState] r =>
+  Members '[Error ScoperError, Builtins, NameIdGen, Reader Pragmas] r =>
   Statement 'Scoped ->
   Sem r [Internal.PreStatement]
 goStatement = \case
@@ -367,28 +336,29 @@ goStatement = \case
 
 goOpenModule' ::
   forall r.
-  Members '[Reader ExportsTable, Error ScoperError, Builtins, NameIdGen, State ModulesCache, Reader Pragmas, State TranslationState] r =>
+  Members '[Reader ExportsTable, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, MCache] r =>
   OpenModule 'Scoped ->
-  Sem r (Maybe Internal.Include)
+  Sem r (Maybe Internal.Import)
 goOpenModule' o =
   case o ^. openModuleImportKw of
     Just kw ->
       case o ^. openModuleName of
         ModuleRef' (SModuleTop :&: m) ->
-          goImport
-            Import
-              { _importKw = kw,
-                _importModule = m,
-                _importAsName = o ^. openImportAsName
-              }
+          Just
+            <$> goImport
+              Import
+                { _importKw = kw,
+                  _importModule = m,
+                  _importAsName = o ^. openImportAsName
+                }
         _ -> impossible
     Nothing -> return Nothing
 
 goOpenModule ::
   forall r.
-  Members '[Reader ExportsTable, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ModulesCache, State TranslationState] r =>
+  Members '[Reader ExportsTable, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, MCache] r =>
   OpenModule 'Scoped ->
-  Sem r (Maybe Internal.Include)
+  Sem r (Maybe Internal.Import)
 goOpenModule o = goOpenModule' o
 
 goLetFunctionDef ::
