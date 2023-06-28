@@ -97,7 +97,7 @@ vampIRDefs bits =
   "def integerBits = "
     <> show bits
     <> ";\n"
-    <> UTF8.toString $(FE.makeRelativeToProject "runtime/vampir/stdlib.pir" >>= FE.embedFile)
+    <> UTF8.toString $(FE.makeRelativeToProject "runtime/src/vampir/stdlib.pir" >>= FE.embedFile)
 
 --------------------------------------------------------------------------------
 -- helper functions
