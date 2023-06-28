@@ -17,6 +17,8 @@ import Juvix.Compiler.Internal.Extra.DependencyBuilder
 import Juvix.Compiler.Internal.Language (varFromWildcard)
 import Juvix.Compiler.Internal.Language qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromConcrete.Data.Context
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker
+import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Data.NameKind
 import Juvix.Prelude
 
@@ -26,7 +28,7 @@ unsupported :: Text -> a
 unsupported msg = error $ msg <> "Scoped to Internal: not yet supported"
 
 fromConcrete ::
-  Members '[Error JuvixError, Builtins, NameIdGen] r =>
+  Members '[Reader EntryPoint, Error JuvixError, Builtins, NameIdGen] r =>
   Scoper.ScoperResult ->
   Sem r InternalResult
 fromConcrete _resultScoper =
@@ -148,14 +150,24 @@ goTopModule ::
 goTopModule = cacheGet . ModuleIndex
 
 goModuleNoCache ::
-  Members '[Reader ExportsTable, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, MCache] r =>
+  Members '[Reader EntryPoint, Reader ExportsTable, Error JuvixError, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, MCache] r =>
   ModuleIndex ->
   Sem r Internal.Module
 goModuleNoCache (ModuleIndex m) = do
   p <- toPreModule m
   tbl <- ask
   let depInfo = buildDependencyInfoPreModule p tbl
-  runReader depInfo (fromPreModule p)
+  r <- runReader depInfo (fromPreModule p)
+  noTerminationOption <- asks (^. entryPointNoTermination)
+  -- TODO we should reuse this table
+  let itbl = buildTable1 r
+  unless
+    noTerminationOption
+    ( mapError
+        (JuvixError @TerminationError)
+        (checkTermination itbl r)
+    )
+  return r
 
 goPragmas :: Member (Reader Pragmas) r => Maybe ParsedPragmas -> Sem r Pragmas
 goPragmas p = do

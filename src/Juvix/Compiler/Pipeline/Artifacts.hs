@@ -125,7 +125,7 @@ runCacheArtifacts ::
 runCacheArtifacts l f = runStateLikeArtifacts (runCache f) l
 
 runFromConcreteCache ::
-  Members '[State Artifacts, Builtins, NameIdGen, Reader ExportsTable, Error JuvixError] r =>
+  Members '[Reader EntryPoint, State Artifacts, Builtins, NameIdGen, Reader ExportsTable, Error JuvixError] r =>
   Sem (Internal.MCache ': r) a ->
   Sem r a
 runFromConcreteCache =

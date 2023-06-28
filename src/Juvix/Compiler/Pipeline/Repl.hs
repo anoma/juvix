@@ -65,7 +65,7 @@ scopeCheckExpression p = do
     $ p
 
 runToInternal ::
-  Members '[State Artifacts, Error JuvixError] r =>
+  Members '[Reader EntryPoint, State Artifacts, Error JuvixError] r =>
   Sem
     ( State Scoper.ScoperState
         : FromConcrete.MCache
