@@ -11,14 +11,16 @@ import Juvix.Compiler.Internal.Extra
 import Juvix.Compiler.Internal.Pretty (ppTrace)
 import Juvix.Prelude
 
+type MCache = Cache ModuleIndex InfoTable
+
 buildTable :: Foldable f => f Module -> InfoTable
-buildTable = run . evalState (mempty :: Cache) . buildTable'
+buildTable = run . evalCache computeTable mempty . getMany
 
 buildTable1 :: Module -> InfoTable
-buildTable1 = run . evalState (mempty :: Cache) . buildTable1'
+buildTable1 = buildTable . pure @[]
 
-buildTable' :: (Members '[State Cache] r, Foldable f) => f Module -> Sem r InfoTable
-buildTable' = mconcatMap buildTable1'
+getMany :: (Members '[MCache] r, Foldable f) => f Module -> Sem r InfoTable
+getMany = mconcatMap (cacheGet . ModuleIndex)
 
 extendWithReplExpression :: Expression -> InfoTable -> InfoTable
 extendWithReplExpression e =
@@ -44,17 +46,12 @@ letFunctionDefs e =
       LetFunDef f -> pure f
       LetMutualBlock (MutualBlockLet fs) -> fs
 
--- | moduleName ↦ infoTable
-type Cache = HashMap Name InfoTable
-
-buildTable1' :: forall r. (Members '[State Cache] r) => Module -> Sem r InfoTable
-buildTable1' m = do
-  mi <- gets @Cache (^. at (m ^. moduleName))
-  maybe compute return mi
+computeTable :: forall r. (Members '[MCache] r) => ModuleIndex -> Sem r InfoTable
+computeTable (ModuleIndex m) = compute
   where
     compute :: Sem r InfoTable
     compute = do
-      infoInc <- buildTable' (map (^. includeModule) includes)
+      infoInc <- getMany (map (^. includeModule) includes)
       return (InfoTable {..} <> infoInc)
 
     includes :: [Include]
