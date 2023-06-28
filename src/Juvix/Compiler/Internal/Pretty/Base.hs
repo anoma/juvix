@@ -278,16 +278,20 @@ instance PrettyCode Module where
           <> body'
           <> line
 
+instance PrettyCode Interval where
+  ppCode = return . annotate AnnCode . pretty
+
 instance PrettyCode InfoTable where
   ppCode tbl = do
     inds <- ppCode (HashMap.keys (tbl ^. infoInductives))
     constrs <- ppCode (HashMap.keys (tbl ^. infoConstructors))
+    let header :: Text -> Doc Ann = annotate AnnImportant . pretty
     return $
-      "InfoTable"
+      header "InfoTable"
         <> "\n========="
-        <> "\nInductives: "
+        <> header "\nInductives: "
         <> inds
-        <> "\nConstructors: "
+        <> header "\nConstructors: "
         <> constrs
 
 ppPostExpression ::

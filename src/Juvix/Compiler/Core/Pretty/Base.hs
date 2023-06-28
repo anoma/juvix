@@ -442,7 +442,7 @@ instance PrettyCode InfoTable where
   ppCode tbl = do
     debugMode <- asks (^. optShowIdentIds)
     let header x
-          | debugMode = x <> line
+          | debugMode = annotate AnnImportant x <> line
           | otherwise = mempty
     tys <- ppInductives (toList (tbl ^. infoInductives))
     sigs <- ppSigs (sortOn (^. identifierSymbol) $ toList (tbl ^. infoIdentifiers))

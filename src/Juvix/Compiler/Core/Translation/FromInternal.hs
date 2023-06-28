@@ -108,7 +108,7 @@ goModuleNoVisit (Internal.ModuleIndex m) = do
       Internal.StatementAxiom a -> goAxiomInductive a >> goAxiomDef a
       Internal.StatementMutual f -> goMutualBlock f
     goImport :: Internal.Import -> Sem r ()
-    goImport i = mapM_ go (i ^. Internal.importModule . Internal.moduleIxModule . Internal.moduleBody . Internal.moduleStatements)
+    goImport (Internal.Import i) = visit i
 
 -- | predefine an inductive definition
 preInductiveDef ::
@@ -836,6 +836,15 @@ goIden ::
   Sem r Node
 goIden i = do
   infoTableDebug <- Core.ppTrace <$> getInfoTable
+  let undeclared =
+        error
+          ( "internal to core: undeclared identifier: "
+              <> txt
+              <> "\nat "
+              <> Internal.ppTrace (getLoc i)
+              <> "\n"
+              <> infoTableDebug
+          )
   case i of
     Internal.IdenVar n -> do
       k <- HashMap.lookupDefault impossible id_ <$> asks (^. indexTableVars)
@@ -857,13 +866,7 @@ goIden i = do
           return $ case m of
             Just (IdentFun sym) -> mkIdent (setInfoLocation (n ^. nameLoc) (Info.singleton (NameInfo (n ^. namePretty)))) sym
             Just _ -> error ("internal to core: not a function: " <> txt)
-            Nothing ->
-              error
-                ( "internal to core: undeclared identifier: "
-                    <> txt
-                    <> "\n"
-                    <> infoTableDebug
-                )
+            Nothing -> undeclared
         Just k -> do
           varsNum <- asks (^. indexTableVarsNum)
           return (mkVar (setInfoLocation (n ^. nameLoc) (Info.singleton (NameInfo (n ^. nameText)))) (varsNum - k - 1))
@@ -872,25 +875,13 @@ goIden i = do
       return $ case m of
         Just (IdentInd sym) -> mkTypeConstr (setInfoLocation (n ^. nameLoc) (Info.singleton (NameInfo (n ^. namePretty)))) sym []
         Just _ -> error ("internal to core: not an inductive: " <> txt)
-        Nothing ->
-          error
-            ( "internal to core: undeclared identifier: "
-                <> txt
-                <> "\n"
-                <> infoTableDebug
-            )
+        Nothing -> undeclared
     Internal.IdenConstructor n -> do
       m <- getIdent identIndex
-      case m of
-        Just (IdentConstr tag) -> return (mkConstr (setInfoLocation (n ^. nameLoc) (Info.singleton (NameInfo (n ^. namePretty)))) tag [])
+      return $ case m of
+        Just (IdentConstr tag) -> (mkConstr (setInfoLocation (n ^. nameLoc) (Info.singleton (NameInfo (n ^. namePretty)))) tag [])
         Just _ -> error ("internal to core: not a constructor " <> txt)
-        Nothing ->
-          error
-            ( "internal to core: undeclared identifier: "
-                <> txt
-                <> "\n"
-                <> infoTableDebug
-            )
+        Nothing -> undeclared
     Internal.IdenAxiom n -> do
       axiomInfoBuiltin <- Internal.getAxiomBuiltinInfo n
       case axiomInfoBuiltin of
@@ -902,13 +893,7 @@ goIden i = do
         Just (IdentFun sym) -> mkIdent (setInfoLocation (n ^. nameLoc) (Info.singleton (NameInfo (n ^. namePretty)))) sym
         Just (IdentInd sym) -> mkTypeConstr (setInfoLocation (n ^. nameLoc) (Info.singleton (NameInfo (n ^. namePretty)))) sym []
         Just _ -> error ("internal to core: not an axiom: " <> txt)
-        Nothing ->
-          error
-            ( "internal to core: undeclared identifier: "
-                <> txt
-                <> "\n"
-                <> infoTableDebug
-            )
+        Nothing -> undeclared
   where
     identIndex :: Text
     identIndex = mkIdentIndex (Internal.getName i)

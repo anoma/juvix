@@ -44,7 +44,7 @@ testDescr PosTest {..} =
 getNames :: Internal.Module -> [Text]
 getNames m =
   concatMap getDeclName (m ^. Internal.moduleBody . Internal.moduleStatements)
-    <> concatMap (getNames . (^. Internal.includeModule)) (m ^. Internal.moduleBody . Internal.moduleIncludes)
+    <> concatMap (getNames . (^. Internal.importModule . Internal.moduleIxModule)) (m ^. Internal.moduleBody . Internal.moduleImports)
   where
     getDeclName :: Internal.Statement -> [Text]
     getDeclName = \case

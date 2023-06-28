@@ -92,15 +92,30 @@ buildMutualBlocks ss = do
           CyclicSCC p -> CyclicSCC . toList <$> nonEmpty (catMaybes p)
 
 buildLetMutualBlocks ::
-  Members '[Reader Internal.NameDependencyInfo] r =>
-  [Internal.FunctionDef] ->
-  Sem r [SCC Internal.FunctionDef]
-buildLetMutualBlocks = fmap (map (fmap fromStmt)) . buildMutualBlocks . map Internal.PreFunctionDef
+  NonEmpty Internal.PreLetStatement ->
+  NonEmpty (SCC Internal.PreLetStatement)
+buildLetMutualBlocks ss = nonEmpty' . mapMaybe nameToPreStatement $ scomponents
   where
-    fromStmt :: Internal.PreStatement -> Internal.FunctionDef
-    fromStmt = \case
-      Internal.PreFunctionDef f -> f
-      _ -> impossible
+    -- TODO buildDependencyInfoLet is repeating too much work when there are big nested lets
+    depInfo = buildDependencyInfoLet ss
+    scomponents :: [SCC Internal.Name] = buildSCCs depInfo
+    statementsByName :: HashMap Internal.Name Internal.PreLetStatement
+    statementsByName = HashMap.fromList (map mkAssoc (toList ss))
+      where
+        mkAssoc :: Internal.PreLetStatement -> (Internal.Name, Internal.PreLetStatement)
+        mkAssoc s = case s of
+          Internal.PreLetFunctionDef i -> (i ^. Internal.funDefName, s)
+
+    getStmt :: Internal.Name -> Maybe Internal.PreLetStatement
+    getStmt n = statementsByName ^. at n
+
+    nameToPreStatement :: SCC Internal.Name -> Maybe (SCC Internal.PreLetStatement)
+    nameToPreStatement = nonEmptySCC . fmap getStmt
+      where
+        nonEmptySCC :: SCC (Maybe a) -> Maybe (SCC a)
+        nonEmptySCC = \case
+          AcyclicSCC a -> AcyclicSCC <$> a
+          CyclicSCC p -> CyclicSCC . toList <$> nonEmpty (catMaybes p)
 
 fromConcreteExpression :: (Members '[Error JuvixError, NameIdGen] r) => Scoper.Expression -> Sem r Internal.Expression
 fromConcreteExpression = mapError (JuvixError @ScoperError) . runReader @Pragmas mempty . goExpression
@@ -612,16 +627,32 @@ goExpression = \case
       return Internal.Let {..}
       where
         goLetClauses :: NonEmpty (LetClause 'Scoped) -> Sem r (NonEmpty Internal.LetClause)
-        goLetClauses cl =
-          nonEmpty' <$> sequence [Internal.LetFunDef <$> goSig sig | LetTypeSig sig <- toList cl]
+        goLetClauses cl = fmap goSCC <$> preLetStatements cl
+
+        preLetStatements :: NonEmpty (LetClause 'Scoped) -> Sem r (NonEmpty (SCC Internal.PreLetStatement))
+        preLetStatements cl = do
+          pre <- nonEmpty' <$> sequence [Internal.PreLetFunctionDef <$> goSig sig | LetTypeSig sig <- toList cl]
+          return (buildLetMutualBlocks pre)
           where
             goSig :: TypeSignature 'Scoped -> Sem r Internal.FunctionDef
-            goSig sig = goLetFunctionDef sig getClauses
+            goSig sig = goLetFunctionDef sig clauses
               where
-                getClauses :: [FunctionClause 'Scoped]
-                getClauses =
+                clauses :: [FunctionClause 'Scoped]
+                clauses =
                   [ c | LetFunClause c <- toList cl, sig ^. sigName == c ^. clauseOwnerFunction
                   ]
+
+        goSCC :: SCC Internal.PreLetStatement -> Internal.LetClause
+        goSCC = \case
+          AcyclicSCC (Internal.PreLetFunctionDef f) -> Internal.LetFunDef f
+          CyclicSCC fs -> Internal.LetMutualBlock (Internal.MutualBlockLet fs')
+            where
+              fs' :: NonEmpty Internal.FunctionDef
+              fs' = nonEmpty' (map getFun fs)
+                where
+                  getFun :: Internal.PreLetStatement -> Internal.FunctionDef
+                  getFun = \case
+                    Internal.PreLetFunctionDef f -> f
 
     goApplication :: Application -> Sem r Internal.Application
     goApplication (Application l arg) = do

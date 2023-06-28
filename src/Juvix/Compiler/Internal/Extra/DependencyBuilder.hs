@@ -2,6 +2,7 @@ module Juvix.Compiler.Internal.Extra.DependencyBuilder
   ( buildDependencyInfo,
     buildDependencyInfoPreModule,
     buildDependencyInfoExpr,
+    buildDependencyInfoLet,
     ExportsTable,
   )
 where
@@ -29,6 +30,9 @@ buildDependencyInfo ms tab =
 
 buildDependencyInfoExpr :: Expression -> NameDependencyInfo
 buildDependencyInfoExpr = buildDependencyInfoHelper mempty . goExpression Nothing
+
+buildDependencyInfoLet :: NonEmpty PreLetStatement -> NameDependencyInfo
+buildDependencyInfoLet = buildDependencyInfoHelper mempty . mapM_ goPreLetStatement
 
 buildDependencyInfoHelper ::
   ExportsTable ->
@@ -99,6 +103,14 @@ goMutual parentModule (MutualBlock s) = mapM_ go s
     go = \case
       StatementInductive i -> goInductive parentModule i
       StatementFunction i -> goTopFunctionDef parentModule i
+
+goPreLetStatement ::
+  forall r.
+  Members '[Reader ExportsTable, State DependencyGraph, State StartNodes] r =>
+  PreLetStatement ->
+  Sem r ()
+goPreLetStatement = \case
+  PreLetFunctionDef f -> goFunctionDefHelper f
 
 -- | Declarations in a module depend on the module, not the other way round (a
 -- module is reachable if at least one of the declarations in it is reachable)

@@ -1,21 +1,6 @@
 module Church;
 
-open import Stdlib.Data.Nat.Base;
-open import Stdlib.Function;
-open import Stdlib.System.IO;
+open import Stdlib.Prelude;
 
-Num : Type;
-Num := {A : Type} → (A → A) → A → A;
-
-czero : Num;
-czero {_} f x := x;
-
-csuc : Num → Num;
-csuc n {_} f := f ∘ n {_} f;
-
-toNat : Num → Nat;
-toNat n := n {_} ((+) (suc zero)) zero;
-
-main : IO;
-main :=
-  printNatLn (toNat (csuc (czero)));
+x : Nat;
+x := 123;

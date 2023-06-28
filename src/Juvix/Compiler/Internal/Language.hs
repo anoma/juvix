@@ -25,6 +25,9 @@ type ModuleBody = ModuleBody' Statement
 
 type PreModuleBody = ModuleBody' PreStatement
 
+newtype PreLetStatement
+  = PreLetFunctionDef FunctionDef
+
 data PreStatement
   = PreFunctionDef FunctionDef
   | PreInductiveDef InductiveDef
