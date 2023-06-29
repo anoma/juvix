@@ -160,7 +160,7 @@ goModuleNoCache (ModuleIndex m) = do
   r <- runReader depInfo (fromPreModule p)
   noTerminationOption <- asks (^. entryPointNoTermination)
   -- TODO we should reuse this table
-  let itbl = buildTable1 r
+  let itbl = buildTableShallow r
   unless
     noTerminationOption
     ( mapError

@@ -47,7 +47,7 @@ buildDependencyInfoHelper tbl m = createDependencyInfo graph startNodes
         . runState HashSet.empty
         . execState HashMap.empty
         . runReader tbl
-        . evalVisitEmpty visitModuleIndex
+        . evalVisitEmpty goModuleNoVisited
         $ m
 
 addStartNode :: (Member (State StartNodes) r) => Name -> Sem r ()
@@ -74,8 +74,8 @@ checkStartNode n = do
     (HashSet.member (n ^. nameId) tab)
     (addStartNode n)
 
-visitModuleIndex :: forall r. Members '[Reader ExportsTable, State DependencyGraph, State StartNodes, Visit ModuleIndex] r => ModuleIndex -> Sem r ()
-visitModuleIndex (ModuleIndex m) = do
+goModuleNoVisited :: forall r. Members '[Reader ExportsTable, State DependencyGraph, State StartNodes, Visit ModuleIndex] r => ModuleIndex -> Sem r ()
+goModuleNoVisited (ModuleIndex m) = do
   checkStartNode (m ^. moduleName)
   let b = m ^. moduleBody
   mapM_ (goStatement (m ^. moduleName)) (b ^. moduleStatements)

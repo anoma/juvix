@@ -16,7 +16,7 @@ filterUnreachable r = do
     KeepAll -> return r
     FilterUnreachable -> return (set Typed.resultModules modules' r)
   where
-    depInfo = r ^. (Typed.resultInternalArityResult . Arity.resultInternalResult . resultDepInfo)
+    depInfo = r ^. Typed.resultInternalArityResult . Arity.resultInternalResult . resultDepInfo
     modules = r ^. Typed.resultModules
     modules' =
       run
@@ -29,13 +29,10 @@ askIsReachable n = do
   depInfo <- ask
   return (isReachable depInfo n)
 
-returnIfReachable :: (Member (Reader NameDependencyInfo) r) => Name -> a -> Sem r (Maybe a)
+returnIfReachable :: Member (Reader NameDependencyInfo) r => Name -> a -> Sem r (Maybe a)
 returnIfReachable n a = do
   r <- askIsReachable n
-  return
-    if
-        | r -> Just a
-        | otherwise -> Nothing
+  return (guard r $> a)
 
 goModuleNoCache :: Members [Reader NameDependencyInfo, MCache] r => ModuleIndex -> Sem r Module
 goModuleNoCache (ModuleIndex m) = do

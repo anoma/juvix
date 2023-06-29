@@ -14,6 +14,7 @@ module Juvix.Compiler.Internal.Data.InfoTable
     constructorType,
     getAxiomBuiltinInfo,
     getFunctionBuiltinInfo,
+    buildTableShallow,
   )
 where
 
@@ -31,6 +32,11 @@ buildTable = run . evalCache computeTable mempty . getMany
 
 buildTable1 :: Module -> InfoTable
 buildTable1 = buildTable . pure @[]
+
+-- TODO do not recurse into imports
+buildTableShallow :: Module -> InfoTable
+buildTableShallow = buildTable . pure @[]
+
 
 getMany :: (Members '[MCache] r, Foldable f) => f Module -> Sem r InfoTable
 getMany = mconcatMap (cacheGet . ModuleIndex)
