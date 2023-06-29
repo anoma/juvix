@@ -4,16 +4,11 @@ import Juvix.Compiler.VM.Language.Base
 
 type SmallInt = Int
 
-data Instruction = Instruction
-  { _instructionOpcode :: Opcode,
-    _instructionReg :: SmallInt,
-    _instructionVal1 :: Value,
-    _instructionVal2 :: Value
-  }
+type RegRef = Int
 
 data Value
   = Const SmallInt
-  | RegRef SmallInt
+  | RegRef RegRef
 
 -- Constructor representation: tag, field1, .., fieldn
 --
@@ -25,45 +20,130 @@ data Value
 -- The tag and the address can be read/written using ordinary load/store with
 -- offset 0.
 
--- val: register reference or constant
--- dest, src, reg: register references
--- offset, tag, num, addr: constant
+-- | Bytecode VM instructions.
+data Instruction
+  = Binop BinaryOp
+  | -- | Loads src[offset] (heap value at `offset` relative to the value of
+    -- register `src`) into register `dest`. JVB opcode: 'load dest, src,
+    -- offset'.
+    Load InstrLoad
+  | -- | JVB opcode: 'store reg, offset, val'.
+    Store InstrStore
+  | -- | JVB opcode: 'move reg, val'.
+    Move InstrMove
+  | -- | JVB opcode: 'halt'.
+    Halt
+  | -- | Allocates `num` fields on the heap and stores the pointer in dest. JVB
+    -- opcode: 'alloc reg, num'.
+    Alloc InstrAlloc
+  | -- | JVB opcode: 'push reg'.
+    Push InstrPush
+  | -- | JVB opcode: 'pop reg'.
+    Pop InstrPop
+  | -- | JVB opcode: 'jump val'.
+    Jump InstrJump
+  | -- | JVB opcode: 'jumpz reg, val'.
+    JumpOnZero InstrJumpOnZero
+  | -- | JVB opcode: 'label labelName'
+    Label InstrLabel
+
+data BinaryOp = BinaryOp
+  { _binaryOpCode :: Opcode,
+    _binaryOpResult :: RegRef,
+    _binaryOpArg1 :: Value,
+    _binaryOpArg2 :: Value
+  }
+
+data InstrLoad = InstrLoad
+  { _instrLoadDest :: RegRef,
+    _instrLoadSrc :: RegRef,
+    _instrLoadOffset :: SmallInt
+  }
+
+data InstrStore = InstrStore
+  { _instrStoreDest :: RegRef,
+    _instrStoreOffset :: SmallInt,
+    _instrStoreValue :: Value
+  }
+
+data InstrMove = InstrMove
+  { _instrMoveDest :: RegRef,
+    _instrMoveValue :: Value
+  }
+
+data InstrAlloc = InstrAlloc
+  { _instrAllocDest :: RegRef,
+    _instrAllocNum :: SmallInt
+  }
+
+newtype InstrPush = InstrPush
+  { _instrPushSrc :: RegRef
+  }
+
+newtype InstrPop = InstrPop
+  { _instrPopDest :: RegRef
+  }
+
+newtype InstrJump = InstrJump
+  { _instrJumpAddr :: SmallInt
+  }
+
+data InstrJumpOnZero = InstrJumpOnZero
+  { _instrJumpOnZeroReg :: RegRef,
+    _instrJumpOnZeroAddr :: SmallInt
+  }
+
+data InstrLabel = InstrLabel
+  { _instrLabelName :: Text,
+    _instrLabelSymbol :: Symbol
+  }
+
+-- | Binary operation opcodes.
 data Opcode
-  = -- add dest, val1, val2
+  = -- | JVB opcode: 'add reg, val1, val2'.
     OpIntAdd
-  | -- sub dest, val1, val2
+  | -- | JVB opcode: 'sub reg, val1, val2'.
     OpIntSub
-  | -- mul dest, val1, val2
+  | -- | JVB opcode: 'mul reg, val1, val2'.
     OpIntMul
-  | -- div dest, val1, val2
+  | -- | JVB opcode: 'div reg, val1, val2'.
     OpIntDiv
-  | -- mod dest, val1, val2
+  | -- | JVB opcode: 'mod reg, val1, val2'.
     OpIntMod
-  | -- lt dest, val1, val2
+  | -- | JVB opcode: 'lt reg, val1, val2'.
     OpIntLt
-  | -- eq dest, val1, val2
-    OpEq
-  | -- load dest, src, offset
-    -- Loads src[offset] (field at offset in data pointed to by src) into dest.
-    OpLoad
-  | -- store dest, offset, val
-    OpStore
-  | -- move dest, val, 0
-    OpMove
-  | -- halt 0, 0, 0
-    OpHalt
-  | -- alloc dest, num, 0
-    -- Allocates `num` fields on the heap and stores the pointer in dest.
-    OpAlloc
-  | -- push src, 0, 0
-    OpPush
-  | -- pop dest, 0, 0
-    OpPop
-  | -- jump 0, val, 0
-    OpJump
-  | -- jumpz reg, val, 0
-    -- Jumps to address `val` if the contents of register `reg` is 0.
-    OpJumpOnZero
-  | -- label num, 0, 0
-    -- Declare a label with id `n`. Used only in the relative-jump code version.
-    OpLabel
+  | -- | JVB opcode: 'eq reg, val1, val2'.
+    OpIntEq
+
+instructionOpcode :: Instruction -> Int
+instructionOpcode = \case
+  Binop BinaryOp {..} ->
+    case _binaryOpCode of
+      OpIntAdd -> 0
+      OpIntSub -> 1
+      OpIntMul -> 2
+      OpIntDiv -> 3
+      OpIntMod -> 4
+      OpIntLt -> 5
+      OpIntEq -> 6
+  Load {} -> 7
+  Store {} -> 8
+  Move {} -> 9
+  Halt -> 10
+  Alloc {} -> 11
+  Push {} -> 12
+  Pop {} -> 13
+  Jump {} -> 14
+  JumpOnZero {} -> 15
+  Label {} -> impossible
+
+makeLenses ''BinaryOp
+makeLenses ''InstrLoad
+makeLenses ''InstrStore
+makeLenses ''InstrMove
+makeLenses ''InstrAlloc
+makeLenses ''InstrPush
+makeLenses ''InstrPop
+makeLenses ''InstrJump
+makeLenses ''InstrJumpOnZero
+makeLenses ''InstrLabel

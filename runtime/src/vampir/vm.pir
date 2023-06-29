@@ -160,10 +160,26 @@ def exec_jumpz reg val _ (pc, sp, hp, regs, stack, heap) = {
     (if (isZero v) addr pc, sp, hp, regs, stack, heap)
 };
 
-def opcodes = ((OpIntAdd, exec_add):(OpIntSub, exec_sub):(OpIntMul, exec_mul):(OpIntDiv, exec_div):(OpIntMod, exec_mod):(OpIntLt, exec_lt):(OpIntEq, exec_eq):(OpIntLoad, exec_load):(OpIntStore, exec_store):(OpIntMove, exec_move):(OpIntHalt, exec_halt):(OpIntAlloc, exec_alloc):(OpIntPush, exec_push):(OpIntPop, exec_pop):(OpIntJump, exec_jump):(OpIntJumpOnZero, exec_jumpz):[]);
+def opcodes = ( (OpIntAdd, exec_add):
+                (OpIntSub, exec_sub):
+                (OpIntMul, exec_mul):
+                (OpIntDiv, exec_div):
+                (OpIntMod, exec_mod):
+                (OpIntLt, exec_lt):
+                (OpIntEq, exec_eq):
+                (OpIntLoad, exec_load):
+                (OpIntStore, exec_store):
+                (OpIntMove, exec_move):
+                (OpIntHalt, exec_halt):
+                (OpIntAlloc, exec_alloc):
+                (OpIntPush, exec_push):
+                (OpIntPop, exec_pop):
+                (OpIntJump, exec_jump):
+                (OpIntJumpOnZero, exec_jumpz):
+                []);
 
-def run_rec code state (pc, sp, hp, hp, regs, stack, heap) = {
-    def (pc, sp, hp, hp, regs, stack, heap) = state;
+def run_rec code state = {
+    def (pc, sp, hp, regs, stack, heap) = state;
     def (op, reg, val1, val2) = read code pc;
     sum (map (fun (opcode, f) {equal opcode op * f reg val1 val2 state}) opcodes)
 };
