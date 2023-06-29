@@ -4,7 +4,14 @@ function count() {
     cloc $1 | grep 'SUM:' | awk '{print $5}'
 }
 
-RUNTIME=$(count runtime/src)
+function count_pir () {
+    find $1 -name '*.pir' -print | xargs sed '/^[[:space:]]*$/d' | wc -l | tr -d ' '
+}
+
+RUNTIME_C=$(count runtime/src/juvix)
+RUNTIME_VAMPIR=$(count_pir runtime/src/vampir)
+
+RUNTIME=$((RUNTIME_C+RUNTIME_VAMPIR))
 
 BACKENDC=$(count src/Juvix/Compiler/Backend/C/)
 GEB=$(count src/Juvix/Compiler/Backend/Geb/)
@@ -46,6 +53,8 @@ echo "   JuvixReg: $REG LOC"
 echo "   JuvixAsm: $ASM LOC"
 echo "   JuvixCore: $CORE LOC"
 echo "Runtime: $RUNTIME LOC"
+echo "   C runtime: $RUNTIME_C LOC"
+echo "   VampIR runtime: $RUNTIME_VAMPIR LOC"
 echo "Other: $OTHER LOC"
 echo "   Application: $APP LOC"
 echo "   Html: $HTML LOC"
@@ -54,4 +63,4 @@ echo "   Data: $DATA LOC"
 echo "   Prelude: $PRELUDE LOC"
 echo "Tests: $TESTS LOC"
 echo ""
-echo "Total: $TOTAL Haskell LOC + $RUNTIME C LOC"
+echo "Total: $TOTAL Haskell LOC + $RUNTIME_C C LOC + $RUNTIME_VAMPIR VampIR LOC"
