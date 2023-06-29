@@ -7,6 +7,7 @@ where
 
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Internal.Data.InfoTable.Base
+import Juvix.Compiler.Internal.Data.NameDependencyInfo
 import Juvix.Compiler.Internal.Extra
 import Juvix.Compiler.Internal.Pretty.Options
 import Juvix.Data.CodeAnn
@@ -117,6 +118,30 @@ instance PrettyCode Literal where
 
 ppPipeBlock :: (PrettyCode a, Members '[Reader Options] r, Traversable t) => t a -> Sem r (Doc Ann)
 ppPipeBlock items = vsep <$> mapM (fmap (kwPipe <+>) . ppCode) items
+
+instance (PrettyCode a, PrettyCode b, PrettyCode c) => PrettyCode (a, b, c) where
+  ppCode (a, b, c) = do
+    a' <- ppCode a
+    b' <- ppCode b
+    c' <- ppCode c
+    return $ tuple [a', b', c']
+
+instance PrettyCode NameDependencyInfo where
+  ppCode DependencyInfo {..} = do
+    let header x = annotate AnnImportant x <> line
+    edges' <- vsep <$> mapM ppCode _depInfoEdgeList
+    reachable' <- ppCode (toList _depInfoReachable)
+    topsort' <- ppCode _depInfoTopSort
+    return $
+      header "Edges:"
+        <> edges'
+        <> line
+        <> header "Reachable:"
+        <> reachable'
+        <> line
+        <> header "Topologically sorted:"
+        <> topsort'
+        <> line
 
 instance PrettyCode LambdaClause where
   ppCode LambdaClause {..} = do
@@ -335,16 +360,19 @@ instance PrettyCode a => PrettyCode (Maybe a) where
     Nothing -> return "Nothing"
     Just p -> ("Just" <+>) <$> ppCode p
 
+tuple :: [Doc ann] -> Doc ann
+tuple = encloseSep "(" ")" ", "
+
 instance (PrettyCode a, PrettyCode b) => PrettyCode (a, b) where
   ppCode (x, y) = do
     x' <- ppCode x
     y' <- ppCode y
-    return $ encloseSep "(" ")" ", " [x', y']
+    return $ tuple [x', y']
 
-instance (PrettyCode a) => PrettyCode [a] where
+instance PrettyCode a => PrettyCode [a] where
   ppCode x = do
     cs <- mapM ppCode (toList x)
     return $ encloseSep "[" "]" ", " cs
 
-instance (PrettyCode a) => PrettyCode (NonEmpty a) where
+instance PrettyCode a => PrettyCode (NonEmpty a) where
   ppCode x = ppCode (toList x)

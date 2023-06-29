@@ -37,7 +37,6 @@ buildTable1 = buildTable . pure @[]
 buildTableShallow :: Module -> InfoTable
 buildTableShallow = buildTable . pure @[]
 
-
 getMany :: (Members '[MCache] r, Foldable f) => f Module -> Sem r InfoTable
 getMany = mconcatMap (cacheGet . ModuleIndex)
 
