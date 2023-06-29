@@ -13,8 +13,8 @@ def msb n x = {
     b
 };
 
-def isNegative x = 1 - msb integerBits (x + 2^(integerBits - 1));
-def isNegativeD x = 1 - msb (2*integerBits) (x + 2^(2*integerBits - 1));
+def isNegativeN n x = 1 - msb n (x + 2^(n - 1));
+def isNegative x = isNegativeN integerBits;
 
 def add x y = x + y;
 def sub x y = x - y;
@@ -29,7 +29,7 @@ def equal x y = isZero (x - y);
 
 def if b x y = b * x + (1 - b) * y;
 
-def lessThan x y = isNegativeD (x - y);
+def lessThan x y = isNegativeN (integerBits + 1) (x - y);
 def lessOrEqual x y = lessThan x (y + 1);
 
 def divRem a b = {
