@@ -58,6 +58,7 @@ module Juvix.Prelude.Base
     module Polysemy.Fixpoint,
     module Polysemy.Output,
     module Polysemy.Reader,
+    module Polysemy.Tagged,
     module Polysemy.Resource,
     module Polysemy.State,
     module Language.Haskell.TH.Syntax,
@@ -163,6 +164,7 @@ import Polysemy.Output
 import Polysemy.Reader
 import Polysemy.Resource
 import Polysemy.State
+import Polysemy.Tagged hiding (tag)
 import Prettyprinter (Doc, (<+>))
 import Safe.Exact
 import Safe.Foldable
@@ -191,8 +193,6 @@ import Text.Show (Show)
 import Text.Show qualified as Show
 import Text.Show.Unicode (urecover, ushow)
 import Prelude (Double)
-
---------------------------------------------------------------------------------
 
 traverseM ::
   (Monad m, Traversable m, Applicative f) =>

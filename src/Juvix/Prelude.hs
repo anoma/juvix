@@ -4,6 +4,7 @@ module Juvix.Prelude
     module Juvix.Prelude.Trace,
     module Juvix.Prelude.Path,
     module Juvix.Prelude.Prepath,
+    module Juvix.Prelude.Tagged,
     module Juvix.Data,
   )
 where
@@ -13,4 +14,5 @@ import Juvix.Prelude.Base
 import Juvix.Prelude.Lens
 import Juvix.Prelude.Path
 import Juvix.Prelude.Prepath
+import Juvix.Prelude.Tagged
 import Juvix.Prelude.Trace
