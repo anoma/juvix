@@ -3,6 +3,11 @@ def hd (x:_) = x;
 
 def zeros n = iter n (fun xs {0:xs}) [];
 
+def map_rec f x acc = (f x):acc;
+def map f xs = fold xs (map_rec f) [];
+
+def sum xs = fold xs (fun x y {x + y}) 0;
+
 /////////////////////////////////////////////////////////
 
 def Cst x = x * 2;
@@ -157,9 +162,10 @@ def exec_jumpz reg val _ (pc, sp, hp, regs, stack, heap) = {
 
 def opcodes = ((OpIntAdd, exec_add):(OpIntSub, exec_sub):(OpIntMul, exec_mul):(OpIntDiv, exec_div):(OpIntMod, exec_mod):(OpIntLt, exec_lt):(OpIntEq, exec_eq):(OpIntLoad, exec_load):(OpIntStore, exec_store):(OpIntMove, exec_move):(OpIntHalt, exec_halt):(OpIntAlloc, exec_alloc):(OpIntPush, exec_push):(OpIntPop, exec_pop):(OpIntJump, exec_jump):(OpIntJumpOnZero, exec_jumpz):[]);
 
-def run_rec code (pc, sp, hp, hp, regs, stack, heap) = {
+def run_rec code state (pc, sp, hp, hp, regs, stack, heap) = {
+    def (pc, sp, hp, hp, regs, stack, heap) = state;
     def (op, reg, val1, val2) = read code pc;
-    switch opcodes reg val1 val2 (pc, sp, hp, hp, regs, stack, heap)
+    sum (map (fun (opcode, f) {equal opcode op * f reg val1 val2 state}) opcodes)
 };
 
 def run n code = {

@@ -64,3 +64,6 @@ data Opcode
   | -- jumpz reg, val, 0
     -- Jumps to address `val` if the contents of register `reg` is 0.
     OpJumpOnZero
+  | -- label num, 0, 0
+    -- Declare a label with id `n`. Used only in the relative-jump code version.
+    OpLabel
