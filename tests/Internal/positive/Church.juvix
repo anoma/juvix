@@ -1,6 +1,21 @@
 module Church;
 
-open import Stdlib.Prelude;
+open import Stdlib.Prelude hiding {toNat};
 
-x : Nat;
-x := 123;
+Num : Type;
+Num := {A : Type} → (A → A) → A → A;
+
+czero : Num;
+czero {_} f x := x;
+
+csuc : Num → Num;
+csuc n {_} f := f ∘ n {_} f;
+
+toNat : Num → Nat;
+toNat n := n {_} ((+) (suc zero)) zero;
+
+main : IO;
+main :=
+  printNatLn (toNat (csuc (czero)));
+
+end;
