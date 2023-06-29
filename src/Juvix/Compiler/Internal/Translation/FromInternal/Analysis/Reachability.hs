@@ -1,4 +1,4 @@
-module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Reachability where
+module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Reachability (filterUnreachable) where
 
 import Juvix.Compiler.Internal.Data.NameDependencyInfo
 import Juvix.Compiler.Internal.Language
@@ -34,13 +34,16 @@ returnIfReachable n a = do
   r <- askIsReachable n
   return (guard r $> a)
 
-goModuleNoCache :: Members [Reader NameDependencyInfo, MCache] r => ModuleIndex -> Sem r Module
+goModuleNoCache :: forall r. Members [Reader NameDependencyInfo, MCache] r => ModuleIndex -> Sem r Module
 goModuleNoCache (ModuleIndex m) = do
-  stmts <- mapM goStatement (body ^. moduleStatements)
-  let body' = set moduleStatements (catMaybes stmts) body
+  body' <- goBody (m ^. moduleBody)
   return (set moduleBody body' m)
   where
-    body = m ^. moduleBody
+    goBody :: ModuleBody -> Sem r ModuleBody
+    goBody body = do
+      _moduleStatements <- mapMaybeM goStatement (body ^. moduleStatements)
+      _moduleImports <- mapM goImport (body ^. moduleImports)
+      return ModuleBody {..}
 
 goModule :: Members [Reader NameDependencyInfo, MCache] r => Module -> Sem r Module
 goModule = cacheGet . ModuleIndex
@@ -59,7 +62,7 @@ goStatement s = case s of
       StatementFunction f -> returnIfReachable (f ^. funDefName) b
       StatementInductive f -> returnIfReachable (f ^. inductiveName) b
 
-goInclude :: forall r. Members [Reader NameDependencyInfo, MCache] r => Import -> Sem r Import
-goInclude i = do
+goImport :: forall r. Members [Reader NameDependencyInfo, MCache] r => Import -> Sem r Import
+goImport i = do
   _importModule <- goModuleIndex (i ^. importModule)
   return Import {..}
