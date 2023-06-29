@@ -440,7 +440,7 @@ instance PrettyCode ConstructorInfo where
 instance PrettyCode InfoTable where
   ppCode :: forall r. (Member (Reader Options) r) => InfoTable -> Sem r (Doc Ann)
   ppCode tbl = do
-    let header x = annotate AnnImportant (Str.comment <+> x) <> line
+    let header x = annotate AnnImportant ("--" <+> x) <> line
     tys <- ppInductives (toList (tbl ^. infoInductives))
     sigs <- ppSigs (sortOn (^. identifierSymbol) $ toList (tbl ^. infoIdentifiers))
     ctx' <- ppContext (tbl ^. identContext)
