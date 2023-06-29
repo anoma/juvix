@@ -264,9 +264,9 @@ checkLhs loc guessedBody ariSignature pats = do
       [] -> case tailHelper a of
         Nothing -> return ([], a)
         Just tailUnderscores -> do
-          wildcard <- genWildcard
           let a' = foldArity (over ufoldArityParams (drop tailUnderscores) (unfoldArity' a))
-          return (replicate tailUnderscores wildcard, a')
+          wildcards <- replicateM tailUnderscores genWildcard
+          return (wildcards, a')
       lhs@(p : ps) -> case a of
         ArityUnit ->
           throw
