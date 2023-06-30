@@ -1,6 +1,6 @@
 module Juvix.Compiler.Internal.Language
   ( module Juvix.Compiler.Internal.Language,
-    module Juvix.Compiler.Abstract.Data.Name,
+    module Juvix.Compiler.Internal.Data.Name,
     module Juvix.Data.WithLoc,
     module Juvix.Data.IsImplicit,
     module Juvix.Data.Universe,
@@ -9,36 +9,52 @@ module Juvix.Compiler.Internal.Language
   )
 where
 
-import Juvix.Compiler.Abstract.Data.Name
 import Juvix.Compiler.Concrete.Data.Builtins
+import Juvix.Compiler.Internal.Data.Name
 import Juvix.Data.Hole
 import Juvix.Data.IsImplicit
 import Juvix.Data.Universe hiding (smallUniverse)
 import Juvix.Data.WithLoc
 import Juvix.Prelude
 
-data Module = Module
+type Module = Module' Statement
+
+type PreModule = Module' PreStatement
+
+type ModuleBody = ModuleBody' Statement
+
+type PreModuleBody = ModuleBody' PreStatement
+
+newtype PreLetStatement
+  = PreLetFunctionDef FunctionDef
+
+data PreStatement
+  = PreFunctionDef FunctionDef
+  | PreInductiveDef InductiveDef
+  | PreAxiomDef AxiomDef
+
+data Module' stmt = Module
   { _moduleName :: Name,
     _moduleExamples :: [Example],
-    _moduleBody :: ModuleBody,
+    _moduleBody :: ModuleBody' stmt,
     _modulePragmas :: Pragmas
   }
   deriving stock (Data)
 
-newtype Include = Include
-  { _includeModule :: Module
+newtype Import = Import
+  { _importModule :: ModuleIndex
   }
   deriving stock (Data)
 
-newtype ModuleBody = ModuleBody
-  { _moduleStatements :: [Statement]
+data ModuleBody' stmt = ModuleBody
+  { _moduleImports :: [Import],
+    _moduleStatements :: [stmt]
   }
   deriving stock (Data)
 
 data Statement
   = StatementMutual MutualBlock
   | StatementAxiom AxiomDef
-  | StatementInclude Include
   deriving stock (Data)
 
 data MutualStatement
@@ -259,6 +275,7 @@ data InductiveDef = InductiveDef
   { _inductiveName :: InductiveName,
     _inductiveBuiltin :: Maybe BuiltinInductive,
     _inductiveExamples :: [Example],
+    _inductiveType :: Expression,
     _inductiveParameters :: [InductiveParameter],
     _inductiveConstructors :: [InductiveConstructorDef],
     _inductivePositive :: Bool,
@@ -268,9 +285,8 @@ data InductiveDef = InductiveDef
 
 data InductiveConstructorDef = InductiveConstructorDef
   { _inductiveConstructorName :: ConstrName,
-    _inductiveConstructorParameters :: [Expression],
     _inductiveConstructorExamples :: [Example],
-    _inductiveConstructorReturnType :: Expression,
+    _inductiveConstructorType :: Expression,
     _inductiveConstructorPragmas :: Pragmas
   }
   deriving stock (Data)
@@ -292,20 +308,26 @@ data Function = Function
 
 instance Hashable Function
 
+newtype ModuleIndex = ModuleIndex
+  { _moduleIxModule :: Module
+  }
+  deriving stock (Data)
+
+makeLenses ''ModuleIndex
 makeLenses ''Case
 makeLenses ''CaseBranch
-makeLenses ''Module
+makeLenses ''Module'
 makeLenses ''Let
 makeLenses ''MutualBlockLet
 makeLenses ''MutualBlock
 makeLenses ''Example
 makeLenses ''PatternArg
-makeLenses ''Include
+makeLenses ''Import
 makeLenses ''FunctionDef
 makeLenses ''FunctionClause
 makeLenses ''InductiveDef
 makeLenses ''AxiomDef
-makeLenses ''ModuleBody
+makeLenses ''ModuleBody'
 makeLenses ''Application
 makeLenses ''TypedExpression
 makeLenses ''Function
@@ -316,6 +338,16 @@ makeLenses ''FunctionParameter
 makeLenses ''InductiveParameter
 makeLenses ''InductiveConstructorDef
 makeLenses ''ConstructorApp
+
+instance Eq ModuleIndex where
+  (==) = (==) `on` (^. moduleIxModule . moduleName)
+
+instance Hashable ModuleIndex where
+  hashWithSalt s = hashWithSalt s . (^. moduleIxModule . moduleName)
+
+deriving newtype instance (Eq Import)
+
+deriving newtype instance (Hashable Import)
 
 instance HasAtomicity Case where
   atomicity = const Atom
@@ -372,6 +404,10 @@ instance HasAtomicity Pattern where
 
 instance HasLoc AxiomDef where
   getLoc a = getLoc (a ^. axiomName) <> getLoc (a ^. axiomType)
+
+instance HasLoc InductiveConstructorDef where
+  getLoc InductiveConstructorDef {..} =
+    getLoc _inductiveConstructorName <> getLoc _inductiveConstructorType
 
 instance HasLoc InductiveParameter where
   getLoc (InductiveParameter n) = getLoc n

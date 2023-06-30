@@ -1,8 +1,8 @@
 module Juvix.Compiler.Core.Translation.FromInternal.Data.IndexTable where
 
 import Data.HashMap.Strict qualified as HashMap
-import Juvix.Compiler.Abstract.Data.Name
 import Juvix.Compiler.Core.Language
+import Juvix.Compiler.Internal.Data.Name
 
 data IndexTable = IndexTable
   { _indexTableVarsNum :: Index,

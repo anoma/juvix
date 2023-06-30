@@ -1,17 +1,18 @@
 module Juvix.Compiler.Builtins.Control where
 
-import Juvix.Compiler.Abstract.Extra
 import Juvix.Compiler.Builtins.Effect
+import Juvix.Compiler.Internal.Extra
 import Juvix.Prelude
 
 registerSeq :: (Members '[Builtins, NameIdGen] r) => FunctionDef -> Sem r ()
 registerSeq f = do
   let u = ExpressionUniverse smallUniverseNoLoc
-  a <- freshVar "a"
-  b <- freshVar "b"
+      l = getLoc f
+  a <- freshVar l "a"
+  b <- freshVar l "b"
   let seq = f ^. funDefName
-  varn <- freshVar "n"
-  varm <- freshVar "m"
+  varn <- freshVar l "n"
+  varm <- freshVar l "m"
   let n = toExpression varn
       m = toExpression varm
       exClauses :: [(Expression, Expression)]

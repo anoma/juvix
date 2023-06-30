@@ -1,8 +1,8 @@
 module Juvix.Compiler.Builtins.Nat where
 
-import Juvix.Compiler.Abstract.Extra
-import Juvix.Compiler.Abstract.Pretty
 import Juvix.Compiler.Builtins.Effect
+import Juvix.Compiler.Internal.Extra
+import Juvix.Compiler.Internal.Pretty
 import Juvix.Data.Effect.NameIdGen
 import Juvix.Prelude
 
@@ -17,16 +17,16 @@ registerNatDef d = do
 
 registerZero :: (Member Builtins r) => InductiveConstructorDef -> Sem r ()
 registerZero d@InductiveConstructorDef {..} = do
-  let zero = _constructorName
-      ty = _constructorType
+  let zero = _inductiveConstructorName
+      ty = _inductiveConstructorType
   nat <- getBuiltinName (getLoc d) BuiltinNat
   unless (ty === nat) (error $ "zero has the wrong type " <> ppTrace ty <> " | " <> ppTrace nat)
   registerBuiltin BuiltinNatZero zero
 
 registerSuc :: (Member Builtins r) => InductiveConstructorDef -> Sem r ()
 registerSuc d@InductiveConstructorDef {..} = do
-  let suc = _constructorName
-      ty = _constructorType
+  let suc = _inductiveConstructorName
+      ty = _inductiveConstructorType
   nat <- getBuiltinName (getLoc d) BuiltinNat
   unless (ty === (nat --> nat)) (error "suc has the wrong type")
   registerBuiltin BuiltinNatSuc suc
@@ -44,8 +44,9 @@ registerNatPlus f = do
   zero <- toExpression <$> getBuiltinName (getLoc f) BuiltinNatZero
   suc <- toExpression <$> getBuiltinName (getLoc f) BuiltinNatSuc
   let plus = f ^. funDefName
-  varn <- freshVar "n"
-  varm <- freshVar "m"
+      l = getLoc f
+  varn <- freshVar l "n"
+  varm <- freshVar l "m"
   let n = toExpression varn
       m = toExpression varm
       (.+.) :: (IsExpression a, IsExpression b) => a -> b -> Expression
@@ -72,9 +73,10 @@ registerNatMul f = do
   suc <- toExpression <$> getBuiltinName (getLoc f) BuiltinNatSuc
   plus <- toExpression <$> getBuiltinName (getLoc f) BuiltinNatPlus
   let mul = f ^. funDefName
-  varn <- freshVar "n"
-  varm <- freshVar "m"
-  h <- freshHole
+      l = getLoc f
+  varn <- freshVar l "n"
+  varm <- freshVar l "m"
+  h <- freshHole l
   let n = toExpression varn
       m = toExpression varm
       (.*.) :: (IsExpression a, IsExpression b) => a -> b -> Expression
@@ -100,9 +102,10 @@ registerNatSub f = do
   zero <- toExpression <$> getBuiltinName (getLoc f) BuiltinNatZero
   suc <- toExpression <$> getBuiltinName (getLoc f) BuiltinNatSuc
   let sub = f ^. funDefName
-  varn <- freshVar "n"
-  varm <- freshVar "m"
-  h <- freshHole
+      l = getLoc f
+  varn <- freshVar l "n"
+  varm <- freshVar l "m"
+  h <- freshHole l
   let n = toExpression varn
       m = toExpression varm
       (.-.) :: (IsExpression a, IsExpression b) => a -> b -> Expression
@@ -130,9 +133,10 @@ registerNatUDiv f = do
   suc <- toExpression <$> getBuiltinName (getLoc f) BuiltinNatSuc
   sub <- toExpression <$> getBuiltinName (getLoc f) BuiltinNatSub
   let divop = f ^. funDefName
-  varn <- freshVar "n"
-  varm <- freshVar "m"
-  h <- freshHole
+      l = getLoc l
+  varn <- freshVar l "n"
+  varm <- freshVar l "m"
+  h <- freshHole l
   let n = toExpression varn
       m = toExpression varm
       (./.) :: (IsExpression a, IsExpression b) => a -> b -> Expression
@@ -152,15 +156,16 @@ registerNatUDiv f = do
         _funInfoFreeTypeVars = []
       }
 
-registerNatDiv :: (Members '[Builtins, NameIdGen] r) => FunctionDef -> Sem r ()
+registerNatDiv :: Members '[Builtins, NameIdGen] r => FunctionDef -> Sem r ()
 registerNatDiv f = do
   nat <- getBuiltinName (getLoc f) BuiltinNat
   suc <- toExpression <$> getBuiltinName (getLoc f) BuiltinNatSuc
   udiv <- toExpression <$> getBuiltinName (getLoc f) BuiltinNatUDiv
   sub <- toExpression <$> getBuiltinName (getLoc f) BuiltinNatSub
   let divop = f ^. funDefName
-  varn <- freshVar "n"
-  varm <- freshVar "m"
+      l = getLoc f
+  varn <- freshVar l "n"
+  varm <- freshVar l "m"
   let n = toExpression varn
       m = toExpression varm
       (./.) :: (IsExpression a, IsExpression b) => a -> b -> Expression
@@ -186,8 +191,9 @@ registerNatMod f = do
   divop <- toExpression <$> getBuiltinName (getLoc f) BuiltinNatDiv
   mul <- toExpression <$> getBuiltinName (getLoc f) BuiltinNatMul
   let modop = f ^. funDefName
-  varn <- freshVar "n"
-  varm <- freshVar "m"
+      l = getLoc f
+  varn <- freshVar l "n"
+  varm <- freshVar l "m"
   let n = toExpression varn
       m = toExpression varm
       exClauses =
@@ -212,9 +218,10 @@ registerNatLe f = do
   true <- toExpression <$> getBuiltinName (getLoc f) BuiltinBoolTrue
   false <- toExpression <$> getBuiltinName (getLoc f) BuiltinBoolFalse
   let le = f ^. funDefName
-  varn <- freshVar "n"
-  varm <- freshVar "m"
-  h <- freshHole
+      l = getLoc f
+  varn <- freshVar l "n"
+  varm <- freshVar l "m"
+  h <- freshHole l
   let n = toExpression varn
       m = toExpression varm
       (.<=.) :: (IsExpression a, IsExpression b) => a -> b -> Expression
@@ -242,8 +249,9 @@ registerNatLt f = do
   le <- toExpression <$> getBuiltinName (getLoc f) BuiltinNatLe
   tybool <- getBuiltinName (getLoc f) BuiltinBool
   let lt = f ^. funDefName
-  varn <- freshVar "n"
-  varm <- freshVar "m"
+      l = getLoc f
+  varn <- freshVar l "n"
+  varm <- freshVar l "m"
   let n = toExpression varn
       m = toExpression varm
       exClauses :: [(Expression, Expression)]
@@ -269,9 +277,10 @@ registerNatEq f = do
   true <- toExpression <$> getBuiltinName (getLoc f) BuiltinBoolTrue
   false <- toExpression <$> getBuiltinName (getLoc f) BuiltinBoolFalse
   let eq = f ^. funDefName
-  varn <- freshVar "n"
-  varm <- freshVar "m"
-  h <- freshHole
+      l = getLoc f
+  varn <- freshVar l "n"
+  varm <- freshVar l "m"
+  h <- freshHole l
   let n = toExpression varn
       m = toExpression varm
       (.==.) :: (IsExpression a, IsExpression b) => a -> b -> Expression

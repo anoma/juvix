@@ -2,7 +2,6 @@ module Juvix.Compiler.Core.Translation.FromInternal where
 
 import Data.HashMap.Strict qualified as HashMap
 import Data.List.NonEmpty qualified as NonEmpty
-import Juvix.Compiler.Abstract.Data.Name
 import Juvix.Compiler.Core.Data
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Info qualified as Info
@@ -10,15 +9,20 @@ import Juvix.Compiler.Core.Info.LocationInfo
 import Juvix.Compiler.Core.Info.NameInfo
 import Juvix.Compiler.Core.Info.PragmaInfo
 import Juvix.Compiler.Core.Language
+import Juvix.Compiler.Core.Pretty qualified as Core
 import Juvix.Compiler.Core.Translation.FromInternal.Builtins.Int
 import Juvix.Compiler.Core.Translation.FromInternal.Builtins.Nat
 import Juvix.Compiler.Core.Translation.FromInternal.Data
+import Juvix.Compiler.Internal.Data.Name
 import Juvix.Compiler.Internal.Extra qualified as Internal
+import Juvix.Compiler.Internal.Pretty qualified as Internal
 import Juvix.Compiler.Internal.Translation.Extra qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking qualified as InternalTyped
 import Juvix.Data.Loc qualified as Loc
 import Juvix.Data.PPOutput
 import Juvix.Extra.Strings qualified as Str
+
+type MVisit = Visit Internal.ModuleIndex
 
 data PreInductiveDef = PreInductiveDef
   { _preInductiveInternal :: Internal.InductiveDef,
@@ -47,7 +51,11 @@ mkIdentIndex = show . (^. Internal.nameId . Internal.unNameId)
 
 fromInternal :: Internal.InternalTypedResult -> Sem k CoreResult
 fromInternal i = do
-  (res, _) <- runInfoTableBuilder emptyInfoTable (evalState (i ^. InternalTyped.resultFunctions) (runReader (i ^. InternalTyped.resultIdenTypes) f))
+  res <-
+    execInfoTableBuilder emptyInfoTable
+      . evalState (i ^. InternalTyped.resultFunctions)
+      . runReader (i ^. InternalTyped.resultIdenTypes)
+      $ f
   return $
     CoreResult
       { _coreResultTable = res,
@@ -59,7 +67,9 @@ fromInternal i = do
       reserveLiteralIntToNatSymbol
       reserveLiteralIntToIntSymbol
       let resultModules = toList (i ^. InternalTyped.resultModules)
-      runReader (Internal.buildTable resultModules) (mapM_ goModule resultModules)
+      runReader (Internal.buildTable resultModules)
+        . evalVisitEmpty goModuleNoVisit
+        $ mapM_ goModule resultModules
       tab <- getInfoTable
       when
         (isNothing (lookupBuiltinInductive tab BuiltinBool))
@@ -70,32 +80,35 @@ fromInternal i = do
 fromInternalExpression :: CoreResult -> Internal.Expression -> Sem r Node
 fromInternalExpression res exp = do
   let modules = res ^. coreResultInternalTypedResult . InternalTyped.resultModules
-  snd
-    <$> runReader
-      (Internal.buildTable modules)
-      ( runInfoTableBuilder
-          (res ^. coreResultTable)
-          ( evalState
-              (res ^. coreResultInternalTypedResult . InternalTyped.resultFunctions)
-              ( runReader
-                  (res ^. coreResultInternalTypedResult . InternalTyped.resultIdenTypes)
-                  (fromTopIndex (goExpression exp))
-              )
-          )
-      )
+  fmap snd
+    . runReader (Internal.buildTable modules)
+    . runInfoTableBuilder (res ^. coreResultTable)
+    . evalState (res ^. coreResultInternalTypedResult . InternalTyped.resultFunctions)
+    . runReader (res ^. coreResultInternalTypedResult . InternalTyped.resultIdenTypes)
+    $ fromTopIndex (goExpression exp)
 
 goModule ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable] r) =>
+  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable, MVisit] r =>
   Internal.Module ->
   Sem r ()
-goModule m = mapM_ go (m ^. Internal.moduleBody . Internal.moduleStatements)
+goModule = visit . Internal.ModuleIndex
+
+goModuleNoVisit ::
+  forall r.
+  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable, MVisit] r =>
+  Internal.ModuleIndex ->
+  Sem r ()
+goModuleNoVisit (Internal.ModuleIndex m) = do
+  mapM_ goImport (m ^. Internal.moduleBody . Internal.moduleImports)
+  mapM_ go (m ^. Internal.moduleBody . Internal.moduleStatements)
   where
     go :: Internal.Statement -> Sem r ()
     go = \case
       Internal.StatementAxiom a -> goAxiomInductive a >> goAxiomDef a
       Internal.StatementMutual f -> goMutualBlock f
-      Internal.StatementInclude i -> mapM_ go (i ^. Internal.includeModule . Internal.moduleBody . Internal.moduleStatements)
+    goImport :: Internal.Import -> Sem r ()
+    goImport (Internal.Import i) = visit i
 
 -- | predefine an inductive definition
 preInductiveDef ::
@@ -112,7 +125,7 @@ preInductiveDef i = do
               ParameterInfo
                 { _paramName = p ^. Internal.inductiveParamName . nameText,
                   _paramLocation = Just $ p ^. Internal.inductiveParamName . nameLoc,
-                  _paramIsImplicit = False, -- TODO: not currently easily available in Internal
+                  _paramIsImplicit = False,
                   _paramKind = mkSmallUniv
                 }
           )
@@ -816,17 +829,23 @@ addPatternVariableNames p lvl vars =
       Internal.PatternVariable n -> [Just n]
       Internal.PatternConstructorApp {} -> impossible
 
-goExpression ::
+goIden ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable] r) =>
-  Internal.Expression ->
+  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable] r =>
+  Internal.Iden ->
   Sem r Node
-goExpression = \case
-  Internal.ExpressionLet l -> goLet l
-  Internal.ExpressionLiteral l -> do
-    tab <- getInfoTable
-    return (goLiteral (fromJust $ tab ^. infoLiteralIntToNat) (fromJust $ tab ^. infoLiteralIntToInt) l)
-  Internal.ExpressionIden i -> case i of
+goIden i = do
+  infoTableDebug <- Core.ppTrace <$> getInfoTable
+  let undeclared =
+        error
+          ( "internal to core: undeclared identifier: "
+              <> txt
+              <> "\nat "
+              <> Internal.ppTrace (getLoc i)
+              <> "\n"
+              <> infoTableDebug
+          )
+  case i of
     Internal.IdenVar n -> do
       k <- HashMap.lookupDefault impossible id_ <$> asks (^. indexTableVars)
       varsNum <- asks (^. indexTableVarsNum)
@@ -847,7 +866,7 @@ goExpression = \case
           return $ case m of
             Just (IdentFun sym) -> mkIdent (setInfoLocation (n ^. nameLoc) (Info.singleton (NameInfo (n ^. namePretty)))) sym
             Just _ -> error ("internal to core: not a function: " <> txt)
-            Nothing -> error ("internal to core: undeclared identifier: " <> txt)
+            Nothing -> undeclared
         Just k -> do
           varsNum <- asks (^. indexTableVarsNum)
           return (mkVar (setInfoLocation (n ^. nameLoc) (Info.singleton (NameInfo (n ^. nameText)))) (varsNum - k - 1))
@@ -856,13 +875,13 @@ goExpression = \case
       return $ case m of
         Just (IdentInd sym) -> mkTypeConstr (setInfoLocation (n ^. nameLoc) (Info.singleton (NameInfo (n ^. namePretty)))) sym []
         Just _ -> error ("internal to core: not an inductive: " <> txt)
-        Nothing -> error ("internal to core: undeclared identifier: " <> txt)
+        Nothing -> undeclared
     Internal.IdenConstructor n -> do
       m <- getIdent identIndex
-      case m of
-        Just (IdentConstr tag) -> return (mkConstr (setInfoLocation (n ^. nameLoc) (Info.singleton (NameInfo (n ^. namePretty)))) tag [])
+      return $ case m of
+        Just (IdentConstr tag) -> (mkConstr (setInfoLocation (n ^. nameLoc) (Info.singleton (NameInfo (n ^. namePretty)))) tag [])
         Just _ -> error ("internal to core: not a constructor " <> txt)
-        Nothing -> error ("internal to core: undeclared identifier: " <> txt)
+        Nothing -> undeclared
     Internal.IdenAxiom n -> do
       axiomInfoBuiltin <- Internal.getAxiomBuiltinInfo n
       case axiomInfoBuiltin of
@@ -874,16 +893,28 @@ goExpression = \case
         Just (IdentFun sym) -> mkIdent (setInfoLocation (n ^. nameLoc) (Info.singleton (NameInfo (n ^. namePretty)))) sym
         Just (IdentInd sym) -> mkTypeConstr (setInfoLocation (n ^. nameLoc) (Info.singleton (NameInfo (n ^. namePretty)))) sym []
         Just _ -> error ("internal to core: not an axiom: " <> txt)
-        Nothing -> error ("internal to core: undeclared identifier: " <> txt)
-    where
-      identIndex :: Text
-      identIndex = mkIdentIndex (Internal.getName i)
+        Nothing -> undeclared
+  where
+    identIndex :: Text
+    identIndex = mkIdentIndex (Internal.getName i)
 
-      id_ :: NameId
-      id_ = Internal.getName i ^. nameId
+    id_ :: NameId
+    id_ = Internal.getName i ^. nameId
 
-      txt :: Text
-      txt = Internal.getName i ^. Internal.nameText
+    txt :: Text
+    txt = Internal.ppTrace (Internal.getName i)
+
+goExpression ::
+  forall r.
+  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable] r) =>
+  Internal.Expression ->
+  Sem r Node
+goExpression = \case
+  Internal.ExpressionLet l -> goLet l
+  Internal.ExpressionLiteral l -> do
+    tab <- getInfoTable
+    return (goLiteral (fromJust $ tab ^. infoLiteralIntToNat) (fromJust $ tab ^. infoLiteralIntToInt) l)
+  Internal.ExpressionIden i -> goIden i
   Internal.ExpressionApplication a -> goApplication a
   Internal.ExpressionSimpleLambda l -> goSimpleLambda l
   Internal.ExpressionLambda l -> goLambda l

@@ -9,7 +9,6 @@ import Data.ByteString.Builder qualified as Builder
 import Data.HashMap.Strict qualified as HashMap
 import Data.Time.Clock
 import Data.Versions (prettySemVer)
-import Juvix.Compiler.Abstract.Translation.FromConcrete qualified as Abstract
 import Juvix.Compiler.Backend.Html.Data
 import Juvix.Compiler.Backend.Html.Extra
 import Juvix.Compiler.Backend.Html.Translation.FromTyped.Source hiding (go)
@@ -18,7 +17,7 @@ import Juvix.Compiler.Concrete.Extra
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Print
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoped
-import Juvix.Compiler.Internal.Translation.FromAbstract qualified as Internal
+import Juvix.Compiler.Internal.Translation.FromConcrete qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Data.Context qualified as InternalArity
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking qualified as InternalTyped
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context
@@ -162,8 +161,7 @@ genJudocHtml JudocArgs {..} =
       _judocArgsCtx
         ^. resultInternalArityResult
           . InternalArity.resultInternalResult
-          . Internal.resultAbstract
-          . Abstract.resultScoper
+          . Internal.resultScoper
           . Scoped.comments
 
     entry :: EntryPoint
@@ -177,8 +175,7 @@ genJudocHtml JudocArgs {..} =
       _judocArgsCtx
         ^. InternalTyped.resultInternalArityResult
           . InternalArity.resultInternalResult
-          . Internal.resultAbstract
-          . Abstract.resultScoper
+          . Internal.resultScoper
           . Scoped.mainModule
 
     htmlOpts :: HtmlOptions

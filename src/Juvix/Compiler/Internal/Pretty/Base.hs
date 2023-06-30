@@ -5,6 +5,9 @@ module Juvix.Compiler.Internal.Pretty.Base
   )
 where
 
+import Data.HashMap.Strict qualified as HashMap
+import Juvix.Compiler.Internal.Data.InfoTable.Base
+import Juvix.Compiler.Internal.Data.NameDependencyInfo
 import Juvix.Compiler.Internal.Extra
 import Juvix.Compiler.Internal.Pretty.Options
 import Juvix.Data.CodeAnn
@@ -116,6 +119,30 @@ instance PrettyCode Literal where
 ppPipeBlock :: (PrettyCode a, Members '[Reader Options] r, Traversable t) => t a -> Sem r (Doc Ann)
 ppPipeBlock items = vsep <$> mapM (fmap (kwPipe <+>) . ppCode) items
 
+instance (PrettyCode a, PrettyCode b, PrettyCode c) => PrettyCode (a, b, c) where
+  ppCode (a, b, c) = do
+    a' <- ppCode a
+    b' <- ppCode b
+    c' <- ppCode c
+    return $ tuple [a', b', c']
+
+instance PrettyCode NameDependencyInfo where
+  ppCode DependencyInfo {..} = do
+    let header x = annotate AnnImportant x <> line
+    edges' <- vsep <$> mapM ppCode _depInfoEdgeList
+    reachable' <- ppCode (toList _depInfoReachable)
+    topsort' <- ppCode _depInfoTopSort
+    return $
+      header "Edges:"
+        <> edges'
+        <> line
+        <> header "Reachable:"
+        <> reachable'
+        <> line
+        <> header "Topologically sorted:"
+        <> topsort'
+        <> line
+
 instance PrettyCode LambdaClause where
   ppCode LambdaClause {..} = do
     lambdaParameters' <- hsep <$> mapM ppCodeAtom _lambdaPatterns
@@ -154,8 +181,8 @@ instance PrettyCode Hole where
 instance PrettyCode InductiveConstructorDef where
   ppCode c = do
     constructorName' <- ppCode (c ^. inductiveConstructorName)
-    constructorParameters' <- mapM ppCodeAtom (c ^. inductiveConstructorParameters)
-    return (hsep $ constructorName' : constructorParameters')
+    ty' <- ppCode (c ^. inductiveConstructorType)
+    return (constructorName' <+> kwColon <+> ty')
 
 ppBlock ::
   (PrettyCode a, Members '[Reader Options] r, Traversable t) =>
@@ -224,10 +251,10 @@ instance PrettyCode FunctionClause where
     clauseBody' <- ppCode (c ^. clauseBody)
     return $ nest 2 (funName <+?> clausePatterns' <+> kwAssign <+> clauseBody')
 
-instance PrettyCode Include where
+instance PrettyCode Import where
   ppCode i = do
-    name' <- ppCode (i ^. includeModule . moduleName)
-    return $ kwInclude <+> name'
+    name' <- ppCode (i ^. importModule . moduleIxModule . moduleName)
+    return $ kwImport <+> name'
 
 instance PrettyCode BuiltinAxiom where
   ppCode = return . annotate AnnKeyword . pretty
@@ -255,12 +282,12 @@ instance PrettyCode Statement where
   ppCode = \case
     StatementMutual f -> ppCode f
     StatementAxiom f -> ppCode f
-    StatementInclude i -> ppCode i
 
 instance PrettyCode ModuleBody where
   ppCode m = do
+    includes <- mapM ppCode (m ^. moduleImports)
     everything <- mapM ppCode (m ^. moduleStatements)
-    return $ vsep2 everything
+    return (vsep includes <> line <> line <> vsep2 everything)
 
 instance PrettyCode Module where
   ppCode :: Member (Reader Options) r => Module -> Sem r (Doc Ann)
@@ -275,6 +302,22 @@ instance PrettyCode Module where
           <> line
           <> body'
           <> line
+
+instance PrettyCode Interval where
+  ppCode = return . annotate AnnCode . pretty
+
+instance PrettyCode InfoTable where
+  ppCode tbl = do
+    inds <- ppCode (HashMap.keys (tbl ^. infoInductives))
+    constrs <- ppCode (HashMap.keys (tbl ^. infoConstructors))
+    let header :: Text -> Doc Ann = annotate AnnImportant . pretty
+    return $
+      header "InfoTable"
+        <> "\n========="
+        <> header "\nInductives: "
+        <> inds
+        <> header "\nConstructors: "
+        <> constrs
 
 ppPostExpression ::
   (PrettyCode a, HasAtomicity a, Member (Reader Options) r) =>
@@ -317,16 +360,19 @@ instance PrettyCode a => PrettyCode (Maybe a) where
     Nothing -> return "Nothing"
     Just p -> ("Just" <+>) <$> ppCode p
 
+tuple :: [Doc ann] -> Doc ann
+tuple = encloseSep "(" ")" ", "
+
 instance (PrettyCode a, PrettyCode b) => PrettyCode (a, b) where
   ppCode (x, y) = do
     x' <- ppCode x
     y' <- ppCode y
-    return $ encloseSep "(" ")" ", " [x', y']
+    return $ tuple [x', y']
 
-instance (PrettyCode a) => PrettyCode [a] where
+instance PrettyCode a => PrettyCode [a] where
   ppCode x = do
     cs <- mapM ppCode (toList x)
     return $ encloseSep "[" "]" ", " cs
 
-instance (PrettyCode a) => PrettyCode (NonEmpty a) where
+instance PrettyCode a => PrettyCode (NonEmpty a) where
   ppCode x = ppCode (toList x)

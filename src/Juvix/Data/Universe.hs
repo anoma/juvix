@@ -57,8 +57,11 @@ smallUniverse = mkUniverse (Just smallLevel)
 isSmallUniverse :: Universe -> Bool
 isSmallUniverse = (== smallLevel) . getUniverseLevel
 
-smallUniverseNoLoc :: Universe
-smallUniverseNoLoc = smallUniverse (error "Universe with no location")
+smallUniverseNoLoc :: SmallUniverse
+smallUniverseNoLoc = SmallUniverse (error "SmallUniverse with no location")
+
+isSmallUni :: Universe -> Bool
+isSmallUni u = 0 == fromMaybe defaultLevel (u ^. universeLevel)
 
 instance HasAtomicity Universe where
   atomicity u = case u ^. universeLevel of

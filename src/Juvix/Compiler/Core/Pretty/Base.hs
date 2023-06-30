@@ -7,7 +7,6 @@ where
 
 import Data.HashMap.Strict qualified as HashMap
 import Data.Map.Strict qualified as Map
-import Juvix.Compiler.Abstract.Data.Name
 import Juvix.Compiler.Core.Data.BinderList qualified as BL
 import Juvix.Compiler.Core.Data.InfoTable
 import Juvix.Compiler.Core.Data.Stripped.InfoTable qualified as Stripped
@@ -18,6 +17,7 @@ import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Core.Language.Stripped qualified as Stripped
 import Juvix.Compiler.Core.Language.Value
 import Juvix.Compiler.Core.Pretty.Options
+import Juvix.Compiler.Internal.Data.Name
 import Juvix.Data.CodeAnn
 import Juvix.Extra.Strings qualified as Str
 
@@ -440,11 +440,28 @@ instance PrettyCode ConstructorInfo where
 instance PrettyCode InfoTable where
   ppCode :: forall r. (Member (Reader Options) r) => InfoTable -> Sem r (Doc Ann)
   ppCode tbl = do
+    let header x = annotate AnnImportant ("--" <+> x) <> line
     tys <- ppInductives (toList (tbl ^. infoInductives))
     sigs <- ppSigs (sortOn (^. identifierSymbol) $ toList (tbl ^. infoIdentifiers))
     ctx' <- ppContext (tbl ^. identContext)
+    axioms <- vsep <$> mapM ppCode (tbl ^. infoAxioms)
     main <- maybe (return "") (\s -> (<> line) . (line <>) <$> ppName KNameFunction (identName tbl s)) (tbl ^. infoMain)
-    return (tys <> line <> line <> sigs <> line <> ctx' <> line <> main)
+    return
+      ( header "Inductives:"
+          <> tys
+          <> line
+          <> header "Identifiers:"
+          <> sigs
+          <> line
+          <> header "Axioms:"
+          <> axioms
+          <> line
+          <> header "Context:"
+          <> ctx'
+          <> line
+          <> header "Main:"
+          <> main
+      )
     where
       ppSig :: Symbol -> Sem r (Maybe (Doc Ann))
       ppSig s = do
@@ -466,7 +483,7 @@ instance PrettyCode InfoTable where
             let tydoc
                   | isDynamic ty = mempty
                   | otherwise = space <> colon <+> ty'
-                blt = if isJust (ii ^. identifierBuiltin) then (Str.builtin <+> mempty) else mempty
+                blt = if isJust (ii ^. identifierBuiltin) then (kwBuiltin <+> mempty) else mempty
             return (Just (blt <> kwDef <+> sym' <> argsNum <> tydoc))
 
       ppSigs :: [IdentifierInfo] -> Sem r (Doc Ann)
@@ -499,6 +516,12 @@ instance PrettyCode InfoTable where
             name <- ppName KNameInductive (ii ^. inductiveName)
             ctrs <- mapM (fmap (<> semi) . ppCode . lookupConstructorInfo tbl) (ii ^. inductiveConstructors)
             return (kwInductive <+> name <+> braces (line <> indent' (vsep ctrs) <> line) <> kwSemicolon)
+
+instance PrettyCode AxiomInfo where
+  ppCode ii = do
+    name <- ppName KNameAxiom (ii ^. axiomName)
+    ty <- ppCode (ii ^. axiomType)
+    return (kwAxiom <+> name <+> kwColon <+> ty <> kwSemicolon)
 
 instance PrettyCode Stripped.ArgumentInfo where
   ppCode :: (Member (Reader Options) r) => Stripped.ArgumentInfo -> Sem r (Doc Ann)

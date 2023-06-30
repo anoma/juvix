@@ -8,12 +8,12 @@ import Data.Foldable
 import Data.HashMap.Strict qualified as HashMap
 import Data.List.NonEmpty qualified as NonEmpty
 import Data.Text qualified as Text
-import Juvix.Compiler.Abstract.Data.Name
 import Juvix.Compiler.Asm.Data.InfoTable
 import Juvix.Compiler.Asm.Interpreter.Base
 import Juvix.Compiler.Asm.Interpreter.RuntimeState
 import Juvix.Compiler.Asm.Pretty.Options
 import Juvix.Compiler.Core.Pretty.Base qualified as Core
+import Juvix.Compiler.Internal.Data.Name
 import Juvix.Data.CodeAnn
 import Juvix.Extra.Strings qualified as Str
 

@@ -18,6 +18,8 @@ import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Data.Effect.NameIdGen
 import Juvix.Prelude hiding (fromEither)
 
+type MCache = Cache ModuleIndex Module
+
 registerConstructor :: Members '[HighlightBuilder, State TypesTable, Reader InfoTable] r => InductiveConstructorDef -> Sem r ()
 registerConstructor ctr = do
   ty <- constructorType (ctr ^. inductiveConstructorName)
@@ -29,10 +31,22 @@ registerNameIdType uid ty = do
   modify (set (highlightTypes . at uid) (Just ty))
 
 checkModule ::
-  (Members '[HighlightBuilder, Reader EntryPoint, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example, Builtins] r) =>
+  Members '[HighlightBuilder, Reader EntryPoint, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example, Builtins, MCache] r =>
   Module ->
   Sem r Module
-checkModule Module {..} = do
+checkModule = cacheGet . ModuleIndex
+
+checkModuleIndex ::
+  Members '[HighlightBuilder, Reader EntryPoint, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example, Builtins, MCache] r =>
+  ModuleIndex ->
+  Sem r ModuleIndex
+checkModuleIndex = fmap ModuleIndex . cacheGet
+
+checkModuleNoCache ::
+  Members '[HighlightBuilder, Reader EntryPoint, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example, Builtins, MCache] r =>
+  ModuleIndex ->
+  Sem r Module
+checkModuleNoCache (ModuleIndex Module {..}) = do
   _moduleBody' <-
     (evalState (mempty :: NegativeTypeParameters) . checkModuleBody) _moduleBody
   return
@@ -42,21 +56,23 @@ checkModule Module {..} = do
       }
 
 checkModuleBody ::
-  (Members '[HighlightBuilder, Reader EntryPoint, State NegativeTypeParameters, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example, Builtins] r) =>
+  Members '[HighlightBuilder, Reader EntryPoint, State NegativeTypeParameters, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example, Builtins, MCache] r =>
   ModuleBody ->
   Sem r ModuleBody
 checkModuleBody ModuleBody {..} = do
   _moduleStatements' <- mapM checkStatement _moduleStatements
+  _moduleImports' <- mapM checkImport _moduleImports
   return
     ModuleBody
-      { _moduleStatements = _moduleStatements'
+      { _moduleStatements = _moduleStatements',
+        _moduleImports = _moduleImports'
       }
 
-checkInclude ::
-  (Members '[HighlightBuilder, Reader EntryPoint, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example, Builtins] r) =>
-  Include ->
-  Sem r Include
-checkInclude = traverseOf includeModule checkModule
+checkImport ::
+  Members '[HighlightBuilder, Reader EntryPoint, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example, Builtins, MCache] r =>
+  Import ->
+  Sem r Import
+checkImport = traverseOf importModule checkModuleIndex
 
 checkStatement ::
   (Members '[HighlightBuilder, Reader EntryPoint, State NegativeTypeParameters, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example, Builtins] r) =>
@@ -64,7 +80,6 @@ checkStatement ::
   Sem r Statement
 checkStatement s = case s of
   StatementMutual mut -> StatementMutual <$> runReader emptyLocalVars (checkTopMutualBlock mut)
-  StatementInclude i -> StatementInclude <$> checkInclude i
   StatementAxiom ax -> do
     registerNameIdType (ax ^. axiomName . nameId) (ax ^. axiomType)
     return s
@@ -76,13 +91,15 @@ checkInductiveDef ::
   Sem r InductiveDef
 checkInductiveDef InductiveDef {..} = runInferenceDef $ do
   constrs' <- mapM goConstructor _inductiveConstructors
-  ty <- inductiveType _inductiveName
+  ty <- lookupInductiveType _inductiveName
   registerNameIdType (_inductiveName ^. nameId) ty
   examples' <- mapM checkExample _inductiveExamples
+  inductiveType' <- runReader paramLocals (checkDefType _inductiveType)
   let d =
         InductiveDef
           { _inductiveConstructors = constrs',
             _inductiveExamples = examples',
+            _inductiveType = inductiveType',
             _inductiveName,
             _inductiveBuiltin,
             _inductivePositive,
@@ -101,23 +118,22 @@ checkInductiveDef InductiveDef {..} = runInferenceDef $ do
     goConstructor :: InductiveConstructorDef -> Sem (Inference ': r) InductiveConstructorDef
     goConstructor InductiveConstructorDef {..} = do
       expectedRetTy <- constructorReturnType _inductiveConstructorName
-      cty' <- runReader paramLocals $ do
-        void (checkIsType (getLoc ret) ret)
-        mapM (checkIsType (getLoc _inductiveConstructorName)) _inductiveConstructorParameters
+      cty' <-
+        runReader paramLocals $
+          checkIsType (getLoc _inductiveConstructorType) _inductiveConstructorType
       examples' <- mapM checkExample _inductiveConstructorExamples
       whenJustM (matchTypes expectedRetTy ret) (const (errRet expectedRetTy))
       let c' =
             InductiveConstructorDef
-              { _inductiveConstructorParameters = cty',
+              { _inductiveConstructorType = cty',
                 _inductiveConstructorExamples = examples',
-                _inductiveConstructorReturnType,
                 _inductiveConstructorName,
                 _inductiveConstructorPragmas
               }
       registerConstructor c'
       return c'
       where
-        ret = _inductiveConstructorReturnType
+        ret = snd (viewConstructorType _inductiveConstructorType)
         errRet :: Expression -> Sem (Inference ': r) a
         errRet expected =
           throw
@@ -154,7 +170,7 @@ checkFunctionDef ::
   Sem r FunctionDef
 checkFunctionDef FunctionDef {..} = do
   funDef <- do
-    _funDefType' <- checkFunctionDefType _funDefType
+    _funDefType' <- checkDefType _funDefType
     registerIdenType _funDefName _funDefType'
     _funDefClauses' <- mapM (checkFunctionClause _funDefType') _funDefClauses
     return
@@ -173,12 +189,12 @@ checkIsType ::
   Sem r Expression
 checkIsType = checkExpression . smallUniverseE
 
-checkFunctionDefType ::
+checkDefType ::
   forall r.
   (Members '[HighlightBuilder, Reader InfoTable, State FunctionsTable, Error TypeCheckerError, NameIdGen, Reader LocalVars, Inference, Builtins, Output Example, State TypesTable] r) =>
   Expression ->
   Sem r Expression
-checkFunctionDefType ty = checkIsType loc ty
+checkDefType ty = checkIsType loc ty
   where
     loc = getLoc ty
 
@@ -245,9 +261,9 @@ checkConstructorReturnType ::
   Sem r ()
 checkConstructorReturnType indType ctor = do
   let ctorName = ctor ^. inductiveConstructorName
-      ctorReturnType = ctor ^. inductiveConstructorReturnType
       tyName = indType ^. inductiveName
       indParams = map (^. inductiveParamName) (indType ^. inductiveParameters)
+      ctorReturnType = snd (viewConstructorType (ctor ^. inductiveConstructorType))
       expectedReturnType =
         foldExplicitApplication
           (ExpressionIden (IdenInductive tyName))
@@ -401,7 +417,7 @@ checkPattern = go
                   indName = IdenInductive (info ^. constructorInfoInductive)
                   loc = getLoc a
               paramHoles <- map ExpressionHole <$> replicateM numIndParams (freshHole loc)
-              let patternTy = foldApplication (ExpressionIden indName) (map (Explicit,) paramHoles)
+              let patternTy = foldApplication (ExpressionIden indName) (map (ApplicationArg Explicit) paramHoles)
               whenJustM
                 (matchTypes patternTy (ExpressionHole hole))
                 err
@@ -484,9 +500,6 @@ checkPattern = go
                 )
             )
           return (Right (ind, zipExact params args))
-
-freshHole :: (Members '[Inference, NameIdGen] r) => Interval -> Sem r Hole
-freshHole l = mkHole l <$> freshNameId
 
 inferExpression' ::
   forall r.
@@ -699,7 +712,7 @@ inferExpression' hint e = case e of
         info <- lookupAxiom v
         return (TypedExpression (info ^. axiomInfoDef . axiomType) (ExpressionIden i))
       IdenInductive v -> do
-        kind <- inductiveType v
+        kind <- lookupInductiveType v
         return (TypedExpression kind (ExpressionIden i))
 
     goApplication :: Application -> Sem r TypedExpression

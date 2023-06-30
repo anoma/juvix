@@ -4,7 +4,6 @@ module GlobalOptions
 where
 
 import CommonOptions
-import Juvix.Compiler.Abstract.Pretty.Options qualified as Abstract
 import Juvix.Compiler.Core.Options qualified as Core
 import Juvix.Compiler.Internal.Pretty.Options qualified as Internal
 import Juvix.Compiler.Pipeline
@@ -30,12 +29,6 @@ instance CanonicalProjection GlobalOptions Internal.Options where
   project g =
     Internal.defaultOptions
       { Internal._optShowNameIds = g ^. globalShowNameIds
-      }
-
-instance CanonicalProjection GlobalOptions Abstract.Options where
-  project g =
-    Abstract.defaultOptions
-      { Abstract._optShowNameIds = g ^. globalShowNameIds
       }
 
 instance CanonicalProjection GlobalOptions E.GenericOptions where

@@ -5,8 +5,6 @@
 -- `runStateLikeArtifacts` wrapper.
 module Juvix.Compiler.Pipeline.Artifacts where
 
-import Juvix.Compiler.Abstract.Data.InfoTableBuilder qualified as Abstract
-import Juvix.Compiler.Abstract.Translation.FromConcrete qualified as Abstract
 import Juvix.Compiler.Builtins
 import Juvix.Compiler.Concrete.Data.InfoTable qualified as Scoped
 import Juvix.Compiler.Concrete.Data.InfoTableBuilder qualified as Scoped
@@ -16,10 +14,11 @@ import Juvix.Compiler.Concrete.Data.Scope
 import Juvix.Compiler.Concrete.Data.Scope qualified as S
 import Juvix.Compiler.Concrete.Data.Scope qualified as Scoped
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver
+import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping (ScoperError)
 import Juvix.Compiler.Core.Data.InfoTableBuilder qualified as Core
-import Juvix.Compiler.Internal.Data.InfoTable qualified as Internal
+import Juvix.Compiler.Internal.Extra.DependencyBuilder (ExportsTable)
 import Juvix.Compiler.Internal.Language qualified as Internal
-import Juvix.Compiler.Internal.Translation.FromAbstract qualified as Internal
+import Juvix.Compiler.Internal.Translation.FromConcrete qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Prelude
@@ -28,7 +27,6 @@ import Juvix.Prelude
 -- restarted while preserving existing state.
 data Artifacts = Artifacts
   { _artifactParsing :: BuilderState,
-    _artifactAbstractInfoTable :: Abstract.InfoTable,
     -- Scoping
     _artifactResolver :: ResolverState,
     _artifactBuiltins :: BuiltinsState,
@@ -37,15 +35,13 @@ data Artifacts = Artifacts
     _artifactScopeExports :: HashSet NameId,
     _artifactMainModuleScope :: Maybe Scope,
     _artifactScoperState :: Scoped.ScoperState,
+    -- Concrete -> Internal
+    _artifactInternalModuleCache :: Internal.ModulesCache,
     -- Typechecking
     _artifactTypes :: TypesTable,
     _artifactFunctions :: FunctionsTable,
     -- | This includes the InfoTable from all type checked modules
     _artifactInternalTypedTable :: Internal.InfoTable,
-    -- Concrete -> Abstract
-    _artifactAbstractModuleCache :: Abstract.ModulesCache,
-    -- Abstract -> Internal
-    _artifactInternalTranslationState :: Internal.TranslationState,
     -- Core
     _artifactCoreTable :: Core.InfoTable
   }
@@ -71,9 +67,6 @@ runPathResolverArtifacts = runStateLikeArtifacts runPathResolverPipe' artifactRe
 
 runBuiltinsArtifacts :: Members '[Error JuvixError, State Artifacts] r => Sem (Builtins ': r) a -> Sem r a
 runBuiltinsArtifacts = runStateLikeArtifacts runBuiltins artifactBuiltins
-
-runAbstractInfoTableBuilderArtifacts :: Members '[State Artifacts] r => Sem (Abstract.InfoTableBuilder : r) a -> Sem r a
-runAbstractInfoTableBuilderArtifacts = runStateLikeArtifacts Abstract.runInfoTableBuilder' artifactAbstractInfoTable
 
 runParserInfoTableBuilderArtifacts :: Members '[State Artifacts] r => Sem (Concrete.InfoTableBuilder : r) a -> Sem r a
 runParserInfoTableBuilderArtifacts = runStateLikeArtifacts Concrete.runParserInfoTableBuilderRepl artifactParsing
@@ -122,3 +115,23 @@ runStateLikeArtifacts runEff l m = do
   (s', a) <- runEff s m
   modify' (set l s')
   return a
+
+runCacheArtifacts ::
+  (Hashable k, Members '[State Artifacts] r) =>
+  Lens' Artifacts (HashMap k v) ->
+  (k -> Sem (Cache k v ': r) v) ->
+  (Sem (Cache k v ': r) a) ->
+  Sem r a
+runCacheArtifacts l f = runStateLikeArtifacts (runCache f) l
+
+runFromConcreteCache ::
+  Members '[Reader EntryPoint, State Artifacts, Builtins, NameIdGen, Reader ExportsTable, Error JuvixError] r =>
+  Sem (Internal.MCache ': r) a ->
+  Sem r a
+runFromConcreteCache =
+  runCacheArtifacts
+    (artifactInternalModuleCache . Internal.cachedModules)
+    ( mapError (JuvixError @ScoperError)
+        . runReader (mempty :: Pragmas)
+        . Internal.goModuleNoCache
+    )

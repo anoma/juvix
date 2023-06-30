@@ -6,18 +6,26 @@ where
 
 import Juvix.Compiler.Internal.Extra
 import Juvix.Compiler.Internal.Pretty
-import Juvix.Compiler.Internal.Translation.FromAbstract.Data.Context
+import Juvix.Compiler.Internal.Translation.FromConcrete.Data.Context
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Data.LocalVars
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Data.Types
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Error
 import Juvix.Data.Effect.NameIdGen
 import Juvix.Prelude hiding (fromEither)
 
+type MCache = Cache ModuleIndex Module
+
 checkModule ::
-  (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r) =>
+  Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError, MCache] r =>
   Module ->
   Sem r Module
-checkModule Module {..} = do
+checkModule = cacheGet . ModuleIndex
+
+checkModuleIndexNoCache ::
+  Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError, MCache] r =>
+  ModuleIndex ->
+  Sem r Module
+checkModuleIndexNoCache (ModuleIndex Module {..}) = do
   _moduleBody' <- checkModuleBody _moduleBody
   return
     Module
@@ -26,21 +34,29 @@ checkModule Module {..} = do
       }
 
 checkModuleBody ::
-  (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r) =>
+  Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError, MCache] r =>
   ModuleBody ->
   Sem r ModuleBody
 checkModuleBody ModuleBody {..} = do
   _moduleStatements' <- mapM checkStatement _moduleStatements
+  _moduleImports' <- mapM checkImport _moduleImports
   return
     ModuleBody
-      { _moduleStatements = _moduleStatements'
+      { _moduleStatements = _moduleStatements',
+        _moduleImports = _moduleImports'
       }
 
-checkInclude ::
-  (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r) =>
-  Include ->
-  Sem r Include
-checkInclude = traverseOf includeModule checkModule
+checkModuleIndex ::
+  Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError, MCache] r =>
+  ModuleIndex ->
+  Sem r ModuleIndex
+checkModuleIndex (ModuleIndex m) = ModuleIndex <$> checkModule m
+
+checkImport ::
+  Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError, MCache] r =>
+  Import ->
+  Sem r Import
+checkImport = traverseOf importModule checkModuleIndex
 
 checkStatement ::
   (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r) =>
@@ -48,7 +64,6 @@ checkStatement ::
   Sem r Statement
 checkStatement s = case s of
   StatementMutual b -> StatementMutual <$> checkMutualBlock b
-  StatementInclude i -> StatementInclude <$> checkInclude i
   StatementAxiom a -> StatementAxiom <$> checkAxiom a
 
 checkInductive :: forall r. (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r) => InductiveDef -> Sem r InductiveDef
@@ -60,6 +75,7 @@ checkInductive d = do
   (localVars, _inductiveParameters) <- checkParameters (d ^. inductiveParameters)
   _inductiveExamples <- runReader localVars (mapM checkExample (d ^. inductiveExamples))
   _inductiveConstructors <- runReader localVars (mapM checkConstructor (d ^. inductiveConstructors))
+  _inductiveType <- runReader localVars (checkType (d ^. inductiveType))
   return InductiveDef {..}
   where
     checkParameters :: [InductiveParameter] -> Sem r (LocalVars, [InductiveParameter])
@@ -72,9 +88,8 @@ checkConstructor :: (Members '[Reader LocalVars, Reader InfoTable, NameIdGen, Er
 checkConstructor c = do
   let _inductiveConstructorName = c ^. inductiveConstructorName
       _inductiveConstructorPragmas = c ^. inductiveConstructorPragmas
-  _inductiveConstructorParameters <- mapM checkType (c ^. inductiveConstructorParameters)
+  _inductiveConstructorType <- checkType (c ^. inductiveConstructorType)
   _inductiveConstructorExamples <- mapM checkExample (c ^. inductiveConstructorExamples)
-  _inductiveConstructorReturnType <- checkType (c ^. inductiveConstructorReturnType)
   return InductiveConstructorDef {..}
 
 -- | check the arity of some ty : Type
@@ -198,7 +213,7 @@ guessArity = \case
         Nothing -> ArityUnknown
         Just a' -> foldArity (set ufoldArityParams a' u)
       where
-        (f, args) = second (map fst . toList) (unfoldApplication' a)
+        (f, args) = second (map (^. appArgIsImplicit) . toList) (unfoldApplication' a)
 
         refine :: [IsImplicit] -> [ArityParameter] -> Maybe [ArityParameter]
         refine as ps = case (as, ps) of
@@ -355,7 +370,7 @@ checkConstructorApp ::
   Sem r ConstructorApp
 checkConstructorApp ca = do
   let c = ca ^. constrAppConstructor
-  args <- (^. constructorInfoArgs) <$> lookupConstructor c
+  args <- constructorArgs . (^. constructorInfoType) <$> lookupConstructor c
   let arities = map typeArity args
       n = length arities
       ps = ca ^. constrAppParameters
@@ -448,7 +463,7 @@ checkLambda ari l = do
 idenArity :: (Members '[Reader LocalVars, Reader InfoTable] r) => Iden -> Sem r Arity
 idenArity = \case
   IdenVar v -> getLocalArity v
-  IdenInductive i -> typeArity <$> inductiveType i
+  IdenInductive i -> typeArity <$> lookupInductiveType i
   IdenFunction f -> typeArity . (^. functionInfoDef . funDefType) <$> lookupFunction f
   IdenConstructor c -> typeArity <$> constructorType c
   IdenAxiom a -> typeArity . (^. axiomInfoDef . axiomType) <$> lookupAxiom a
@@ -542,7 +557,7 @@ checkExpression hintArity expr = case expr of
           _paramType <- checkType (p ^. paramType)
           return FunctionParameter {..}
 
-    goApp :: Expression -> [(IsImplicit, Expression)] -> Sem r Expression
+    goApp :: Expression -> [ApplicationArg] -> Sem r Expression
     goApp f args = do
       case f of
         ExpressionIden (IdenAxiom n) -> do
@@ -561,7 +576,7 @@ checkExpression hintArity expr = case expr of
             _ -> appHelper f args
         _ -> appHelper f args
 
-    goBuiltinApp :: Name -> Int -> Int -> Expression -> [(IsImplicit, Expression)] -> Sem r Expression
+    goBuiltinApp :: Name -> Int -> Int -> Expression -> [ApplicationArg] -> Sem r Expression
     goBuiltinApp n implArgsNum argsNum f args = do
       args' <- goImplArgs implArgsNum args
       if
@@ -574,15 +589,15 @@ checkExpression hintArity expr = case expr of
                       _builtinNotFullyAplliedExpectedArgsNum = argsNum
                     }
       where
-        goImplArgs :: Int -> [(IsImplicit, Expression)] -> Sem r [(IsImplicit, Expression)]
+        goImplArgs :: Int -> [ApplicationArg] -> Sem r [ApplicationArg]
         goImplArgs 0 as = return as
-        goImplArgs k ((Implicit, _) : as) = goImplArgs (k - 1) as
+        goImplArgs k ((ApplicationArg Implicit _) : as) = goImplArgs (k - 1) as
         goImplArgs _ as = return as
 
-    appHelper :: Expression -> [(IsImplicit, Expression)] -> Sem r Expression
+    appHelper :: Expression -> [ApplicationArg] -> Sem r Expression
     appHelper fun0 args = do
-      (fun', args') :: (Expression, [(IsImplicit, Expression)]) <- case fun0 of
-        ExpressionHole {} -> (fun0,) <$> mapM (secondM (checkExpression ArityUnknown)) args
+      (fun', args') :: (Expression, [ApplicationArg]) <- case fun0 of
+        ExpressionHole {} -> (fun0,) <$> mapM (traverseOf appArg (checkExpression ArityUnknown)) args
         ExpressionIden i -> (fun0,) <$> (idenArity i >>= helper (getLoc i))
         ExpressionLiteral l -> (fun0,) <$> helper (getLoc l) arityLiteral
         ExpressionUniverse l -> (fun0,) <$> helper (getLoc l) arityUniverse
@@ -607,7 +622,7 @@ checkExpression hintArity expr = case expr of
         ExpressionApplication {} -> impossible
       return (foldApplication fun' args')
       where
-        helper :: Interval -> Arity -> Sem r [(IsImplicit, Expression)]
+        helper :: Interval -> Arity -> Sem r [ApplicationArg]
         helper i ari = do
           let argsAris :: [Arity]
               argsAris = map toArity (unfoldArity ari)
@@ -615,36 +630,36 @@ checkExpression hintArity expr = case expr of
               toArity = \case
                 ParamExplicit a -> a
                 ParamImplicit -> ArityUnit
-          argsWithHoles :: [(IsImplicit, Expression)] <- addHoles i hintArity ari args
+          argsWithHoles :: [ApplicationArg] <- addHoles i hintArity ari args
           let argsWithAris :: [(IsImplicit, (Arity, Expression))]
-              argsWithAris = [(i', (a, e')) | (a, (i', e')) <- zip (argsAris ++ repeat ArityUnknown) argsWithHoles]
-          mapM (secondM (uncurry checkExpression)) argsWithAris
+              argsWithAris = [(i', (a, e')) | (a, (ApplicationArg i' e')) <- zip (argsAris ++ repeat ArityUnknown) argsWithHoles]
+          mapM (fmap (uncurry ApplicationArg) . secondM (uncurry checkExpression)) argsWithAris
         addHoles ::
           Interval ->
           Arity ->
           Arity ->
-          [(IsImplicit, Expression)] ->
-          Sem r [(IsImplicit, Expression)]
+          [ApplicationArg] ->
+          Sem r [ApplicationArg]
         addHoles loc hint = go 0
           where
             go ::
               Int ->
               Arity ->
-              [(IsImplicit, Expression)] ->
-              Sem r [(IsImplicit, Expression)]
+              [ApplicationArg] ->
+              Sem r [ApplicationArg]
             go idx ari goargs = case (ari, goargs) of
-              (ArityFunction (FunctionArity ParamImplicit r), (Implicit, e) : rest) ->
-                ((Implicit, e) :) <$> go (succ idx) r rest
-              (ArityFunction (FunctionArity (ParamExplicit {}) r), (Explicit, e) : rest) ->
-                ((Explicit, e) :) <$> go (succ idx) r rest
+              (ArityFunction (FunctionArity ParamImplicit r), (ApplicationArg Implicit e) : rest) ->
+                ((ApplicationArg Implicit e) :) <$> go (succ idx) r rest
+              (ArityFunction (FunctionArity (ParamExplicit {}) r), (ApplicationArg Explicit e) : rest) ->
+                ((ApplicationArg Explicit e) :) <$> go (succ idx) r rest
               (ArityFunction (FunctionArity ParamImplicit _), [])
                 -- When there are no remaining arguments and the expected arity of the
                 -- expression matches the current arity we should *not* insert a hole.
                 | ari == hint -> return []
               (ArityFunction (FunctionArity ParamImplicit r), _) -> do
                 h <- newHole loc
-                ((Implicit, ExpressionHole h) :) <$> go (succ idx) r goargs
-              (ArityFunction (FunctionArity (ParamExplicit {}) _), (Implicit, _) : _) ->
+                ((ApplicationArg Implicit (ExpressionHole h)) :) <$> go (succ idx) r goargs
+              (ArityFunction (FunctionArity (ParamExplicit {}) _), (ApplicationArg Implicit _) : _) ->
                 throw
                   ( ErrExpectedExplicitArgument
                       ExpectedExplicitArgument

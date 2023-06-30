@@ -1,68 +1,44 @@
-module Juvix.Compiler.Internal.Data.InfoTable where
+module Juvix.Compiler.Internal.Data.InfoTable
+  ( module Juvix.Compiler.Internal.Data.InfoTable.Base,
+    buildTable,
+    buildTable1,
+    extendWithReplExpression,
+    lookupConstructor,
+    lookupConstructorArgTypes,
+    lookupFunction,
+    constructorReturnType,
+    constructorArgTypes,
+    lookupInductive,
+    lookupAxiom,
+    lookupInductiveType,
+    constructorType,
+    getAxiomBuiltinInfo,
+    getFunctionBuiltinInfo,
+    buildTableShallow,
+  )
+where
 
 import Data.Generics.Uniplate.Data
 import Data.HashMap.Strict qualified as HashMap
+import Juvix.Compiler.Internal.Data.InfoTable.Base
 import Juvix.Compiler.Internal.Extra
+import Juvix.Compiler.Internal.Pretty (ppTrace)
 import Juvix.Prelude
 
-data ConstructorInfo = ConstructorInfo
-  { _constructorInfoInductiveParameters :: [InductiveParameter],
-    _constructorInfoArgs :: [Expression],
-    _constructorInfoInductive :: InductiveName,
-    _constructorInfoBuiltin :: Maybe BuiltinConstructor
-  }
+type MCache = Cache ModuleIndex InfoTable
 
-newtype FunctionInfo = FunctionInfo
-  { _functionInfoDef :: FunctionDef
-  }
-
-newtype AxiomInfo = AxiomInfo
-  { _axiomInfoDef :: AxiomDef
-  }
-
-newtype InductiveInfo = InductiveInfo
-  { _inductiveInfoDef :: InductiveDef
-  }
-
-data InfoTable = InfoTable
-  { _infoConstructors :: HashMap Name ConstructorInfo,
-    _infoAxioms :: HashMap Name AxiomInfo,
-    _infoFunctions :: HashMap Name FunctionInfo,
-    _infoInductives :: HashMap Name InductiveInfo
-  }
-
-makeLenses ''InfoTable
-makeLenses ''FunctionInfo
-makeLenses ''ConstructorInfo
-makeLenses ''AxiomInfo
-makeLenses ''InductiveInfo
-
-instance Semigroup InfoTable where
-  a <> b =
-    InfoTable
-      { _infoConstructors = a ^. infoConstructors <> b ^. infoConstructors,
-        _infoAxioms = a ^. infoAxioms <> b ^. infoAxioms,
-        _infoFunctions = a ^. infoFunctions <> b ^. infoFunctions,
-        _infoInductives = a ^. infoInductives <> b ^. infoInductives
-      }
-
-instance Monoid InfoTable where
-  mempty =
-    InfoTable
-      { _infoConstructors = mempty,
-        _infoAxioms = mempty,
-        _infoFunctions = mempty,
-        _infoInductives = mempty
-      }
-
-buildTable :: (Foldable f) => f Module -> InfoTable
-buildTable = mconcatMap buildTable1
+buildTable :: Foldable f => f Module -> InfoTable
+buildTable = run . evalCache computeTable mempty . getMany
 
 buildTable1 :: Module -> InfoTable
-buildTable1 = run . evalState (mempty :: Cache) . buildTable1'
+buildTable1 = buildTable . pure @[]
 
-buildTable' :: (Members '[State Cache] r, Foldable f) => f Module -> Sem r InfoTable
-buildTable' = mconcatMap buildTable1'
+-- TODO do not recurse into imports
+buildTableShallow :: Module -> InfoTable
+buildTableShallow = buildTable . pure @[]
+
+getMany :: (Members '[MCache] r, Foldable f) => f Module -> Sem r InfoTable
+getMany = mconcatMap (cacheGet . ModuleIndex)
 
 extendWithReplExpression :: Expression -> InfoTable -> InfoTable
 extendWithReplExpression e =
@@ -88,21 +64,16 @@ letFunctionDefs e =
       LetFunDef f -> pure f
       LetMutualBlock (MutualBlockLet fs) -> fs
 
--- | moduleName ↦ infoTable
-type Cache = HashMap Name InfoTable
-
-buildTable1' :: forall r. (Members '[State Cache] r) => Module -> Sem r InfoTable
-buildTable1' m = do
-  mi <- gets @Cache (^. at (m ^. moduleName))
-  maybe compute return mi
+computeTable :: forall r. (Members '[MCache] r) => ModuleIndex -> Sem r InfoTable
+computeTable (ModuleIndex m) = compute
   where
     compute :: Sem r InfoTable
     compute = do
-      infoInc <- buildTable' (map (^. includeModule) includes)
+      infoInc <- mconcatMapM (cacheGet . (^. importModule)) imports
       return (InfoTable {..} <> infoInc)
 
-    includes :: [Include]
-    includes = [i | StatementInclude i <- ss]
+    imports :: [Import]
+    imports = m ^. moduleBody . moduleImports
 
     mutuals :: [MutualStatement]
     mutuals =
@@ -127,14 +98,14 @@ buildTable1' m = do
     _infoConstructors :: HashMap Name ConstructorInfo
     _infoConstructors =
       HashMap.fromList
-        [ (c ^. inductiveConstructorName, ConstructorInfo params args ind builtin)
+        [ (c ^. inductiveConstructorName, ConstructorInfo params ty ind builtin)
           | d <- inductives,
             let ind = d ^. inductiveName
                 n = length (d ^. inductiveConstructors)
                 params = d ^. inductiveParameters
                 builtins = maybe (replicate n Nothing) (map Just . builtinConstructors) (d ^. inductiveBuiltin),
             (builtin, c) <- zipExact builtins (d ^. inductiveConstructors),
-            let args = c ^. inductiveConstructorParameters
+            let ty = c ^. inductiveConstructorType
         ]
 
     _infoFunctions :: HashMap Name FunctionInfo
@@ -144,14 +115,9 @@ buildTable1' m = do
           | StatementFunction f <- mutuals
         ]
           <> [ (f ^. funDefName, FunctionInfo f)
-               | s <- filter (not . isInclude) ss,
+               | s <- ss,
                  f <- letFunctionDefs s
              ]
-      where
-        isInclude :: Statement -> Bool
-        isInclude = \case
-          StatementInclude {} -> True
-          _ -> False
 
     _infoAxioms :: HashMap Name AxiomInfo
     _infoAxioms =
@@ -163,23 +129,62 @@ buildTable1' m = do
     ss :: [Statement]
     ss = m ^. moduleBody . moduleStatements
 
-lookupConstructor :: (Member (Reader InfoTable) r) => Name -> Sem r ConstructorInfo
-lookupConstructor f = HashMap.lookupDefault impossible f <$> asks (^. infoConstructors)
+lookupConstructor :: forall r. Member (Reader InfoTable) r => Name -> Sem r ConstructorInfo
+lookupConstructor f = do
+  err <- impossibleErr
+  HashMap.lookupDefault err f <$> asks (^. infoConstructors)
+  where
+    impossibleErr :: Sem r a
+    impossibleErr = do
+      tbl <- asks (^. infoConstructors)
+      return
+        . error
+        $ "impossible: "
+          <> ppTrace f
+          <> " is not in the InfoTable\n"
+          <> "The registered constructors are: "
+          <> ppTrace (HashMap.keys tbl)
 
 lookupConstructorArgTypes :: (Member (Reader InfoTable) r) => Name -> Sem r ([VarName], [Expression])
 lookupConstructorArgTypes = fmap constructorArgTypes . lookupConstructor
 
-lookupInductive :: (Member (Reader InfoTable) r) => InductiveName -> Sem r InductiveInfo
-lookupInductive f = HashMap.lookupDefault impossible f <$> asks (^. infoInductives)
+lookupInductive :: forall r. Member (Reader InfoTable) r => InductiveName -> Sem r InductiveInfo
+lookupInductive f = do
+  err <- impossibleErr
+  HashMap.lookupDefault err f <$> asks (^. infoInductives)
+  where
+    impossibleErr :: Sem r a
+    impossibleErr = do
+      tbl <- asks (^. infoInductives)
+      return
+        . error
+        $ "impossible: "
+          <> ppTrace f
+          <> " is not in the InfoTable\n"
+          <> "The registered inductives are: "
+          <> ppTrace (HashMap.keys tbl)
 
-lookupFunction :: (Member (Reader InfoTable) r) => Name -> Sem r FunctionInfo
-lookupFunction f = HashMap.lookupDefault impossible f <$> asks (^. infoFunctions)
+lookupFunction :: forall r. Member (Reader InfoTable) r => Name -> Sem r FunctionInfo
+lookupFunction f = do
+  err <- impossibleErr
+  HashMap.lookupDefault err f <$> asks (^. infoFunctions)
+  where
+    impossibleErr :: Sem r a
+    impossibleErr = do
+      tbl <- asks (^. infoFunctions)
+      return
+        . error
+        $ "impossible: "
+          <> ppTrace f
+          <> " is not in the InfoTable\n"
+          <> "The registered functions are: "
+          <> ppTrace (HashMap.keys tbl)
 
 lookupAxiom :: (Member (Reader InfoTable) r) => Name -> Sem r AxiomInfo
 lookupAxiom f = HashMap.lookupDefault impossible f <$> asks (^. infoAxioms)
 
-inductiveType :: (Member (Reader InfoTable) r) => Name -> Sem r Expression
-inductiveType v = do
+lookupInductiveType :: Member (Reader InfoTable) r => Name -> Sem r Expression
+lookupInductiveType v = do
   info <- lookupInductive v
   let ps = info ^. inductiveInfoDef . inductiveParameters
   return $
@@ -193,10 +198,10 @@ inductiveType v = do
 constructorArgTypes :: ConstructorInfo -> ([VarName], [Expression])
 constructorArgTypes i =
   ( map (^. inductiveParamName) (i ^. constructorInfoInductiveParameters),
-    i ^. constructorInfoArgs
+    constructorArgs (i ^. constructorInfoType)
   )
 
-constructorType :: (Member (Reader InfoTable) r) => ConstrName -> Sem r Expression
+constructorType :: Member (Reader InfoTable) r => ConstrName -> Sem r Expression
 constructorType c = do
   info <- lookupConstructor c
   let (inductiveParams, constrArgs) = constructorArgTypes info
@@ -206,7 +211,7 @@ constructorType c = do
   saturatedTy <- constructorReturnType c
   return (foldFunType args saturatedTy)
 
-constructorReturnType :: (Member (Reader InfoTable) r) => ConstrName -> Sem r Expression
+constructorReturnType :: Member (Reader InfoTable) r => ConstrName -> Sem r Expression
 constructorReturnType c = do
   info <- lookupConstructor c
   let inductiveParams = fst (constructorArgTypes info)

@@ -1202,6 +1202,10 @@ deriving stock instance (Eq (ExpressionType s), Eq (SymbolType s)) => Eq (JudocA
 
 deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (JudocAtom s)
 
+newtype ModuleIndex = ModuleIndex
+  { _moduleIxModule :: Module 'Scoped 'ModuleTop
+  }
+
 makeLenses ''PatternArg
 makeLenses ''UsingItem
 makeLenses ''HidingItem
@@ -1243,6 +1247,13 @@ makeLenses ''ExpressionAtoms
 makeLenses ''Iterator
 makeLenses ''Initializer
 makeLenses ''Range
+makeLenses ''ModuleIndex
+
+instance Eq ModuleIndex where
+  (==) = (==) `on` (^. moduleIxModule . modulePath)
+
+instance Hashable ModuleIndex where
+  hashWithSalt s = hashWithSalt s . (^. moduleIxModule . modulePath)
 
 instance HasAtomicity Expression where
   atomicity e = case e of

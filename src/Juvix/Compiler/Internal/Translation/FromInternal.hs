@@ -5,8 +5,8 @@ module Juvix.Compiler.Internal.Translation.FromInternal
     typeCheckExpression,
     typeCheckExpressionType,
     arityCheckExpression,
-    arityCheckInclude,
-    typeCheckInclude,
+    arityCheckImport,
+    typeCheckImport,
   )
 where
 
@@ -14,7 +14,7 @@ import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Builtins.Effect
 import Juvix.Compiler.Concrete.Data.Highlight.Input
 import Juvix.Compiler.Internal.Language
-import Juvix.Compiler.Internal.Translation.FromAbstract.Data.Context
+import Juvix.Compiler.Internal.Translation.FromConcrete.Data.Context
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking qualified as ArityChecking
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Reachability
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking
@@ -29,7 +29,10 @@ arityChecking ::
   Sem r ArityChecking.InternalArityResult
 arityChecking res@InternalResult {..} =
   mapError (JuvixError @ArityChecking.ArityCheckerError) $ do
-    r <- runReader table (mapM ArityChecking.checkModule _resultModules)
+    r <-
+      runReader table
+        . evalCacheEmpty ArityChecking.checkModuleIndexNoCache
+        $ mapM ArityChecking.checkModule _resultModules
     return
       ArityChecking.InternalArityResult
         { _resultInternalResult = res,
@@ -46,20 +49,22 @@ arityCheckExpression ::
 arityCheckExpression exp = do
   table <- extendedTableReplArtifacts exp
   mapError (JuvixError @ArityChecking.ArityCheckerError)
-    $ runReader table
-      . runNameIdGenArtifacts
+    . runReader table
+    . runNameIdGenArtifacts
     $ ArityChecking.inferReplExpression exp
 
-arityCheckInclude ::
+arityCheckImport ::
   Members '[Error JuvixError, State Artifacts] r =>
-  Include ->
-  Sem r Include
-arityCheckInclude i = do
-  let table = buildTable [i ^. includeModule]
+  Import ->
+  Sem r Import
+arityCheckImport i = do
+  artiTable <- gets (^. artifactInternalTypedTable)
+  let table = buildTable [i ^. importModule . moduleIxModule] <> artiTable
   mapError (JuvixError @ArityChecking.ArityCheckerError)
-    $ runReader table
-      . runNameIdGenArtifacts
-    $ ArityChecking.checkInclude i
+    . runReader table
+    . runNameIdGenArtifacts
+    . evalCacheEmpty ArityChecking.checkModuleIndexNoCache
+    $ ArityChecking.checkImport i
 
 typeCheckExpressionType ::
   forall r.
@@ -69,15 +74,15 @@ typeCheckExpressionType ::
 typeCheckExpressionType exp = do
   table <- extendedTableReplArtifacts exp
   mapError (JuvixError @TypeCheckerError)
-    $ runTypesTableArtifacts
-      . ignoreHighlightBuilder
-      . runFunctionsTableArtifacts
-      . runBuiltinsArtifacts
-      . runNameIdGenArtifacts
-      . runReader table
-      . ignoreOutput @Example
-      . withEmptyVars
-      . runInferenceDef
+    . runTypesTableArtifacts
+    . ignoreHighlightBuilder
+    . runFunctionsTableArtifacts
+    . runBuiltinsArtifacts
+    . runNameIdGenArtifacts
+    . runReader table
+    . ignoreOutput @Example
+    . withEmptyVars
+    . runInferenceDef
     $ inferExpression' Nothing exp >>= traverseOf typedType strongNormalize
 
 typeCheckExpression ::
@@ -86,23 +91,26 @@ typeCheckExpression ::
   Sem r Expression
 typeCheckExpression exp = (^. typedExpression) <$> typeCheckExpressionType exp
 
-typeCheckInclude ::
+typeCheckImport ::
   Members '[Reader EntryPoint, Error JuvixError, State Artifacts] r =>
-  Include ->
-  Sem r Include
-typeCheckInclude i = do
-  let table = buildTable [i ^. includeModule]
+  Import ->
+  Sem r Import
+typeCheckImport i = do
+  artiTable <- gets (^. artifactInternalTypedTable)
+  let table = buildTable [i ^. importModule . moduleIxModule] <> artiTable
   modify (set artifactInternalTypedTable table)
   mapError (JuvixError @TypeCheckerError)
-    $ runTypesTableArtifacts
-      . runFunctionsTableArtifacts
-      . ignoreHighlightBuilder
-      . runBuiltinsArtifacts
-      . runNameIdGenArtifacts
-      . ignoreOutput @Example
-      . runReader table
-      . withEmptyVars
-    $ checkInclude i
+    . runTypesTableArtifacts
+    . runFunctionsTableArtifacts
+    . ignoreHighlightBuilder
+    . runBuiltinsArtifacts
+    . runNameIdGenArtifacts
+    . ignoreOutput @Example
+    . runReader table
+    . withEmptyVars
+    -- TODO Store cache in Artifacts and use it here
+    . evalCacheEmpty checkModuleNoCache
+    $ checkImport i
 
 typeChecking ::
   Members '[HighlightBuilder, Error JuvixError, Builtins, NameIdGen] r =>
@@ -116,6 +124,7 @@ typeChecking res@ArityChecking.InternalArityResult {..} =
         . runState (mempty :: TypesTable)
         . runState (mempty :: FunctionsTable)
         . runReader table
+        . evalCacheEmpty checkModuleNoCache
         $ mapM checkModule _resultModules
     return
       InternalTypedResult

@@ -42,13 +42,14 @@ testDescr PosTest {..} =
     check n = assertBool ("unreachable not filtered: " ++ unpack n) (HashSet.member (unpack n) _reachable)
 
 getNames :: Internal.Module -> [Text]
-getNames m = concatMap getDeclName (m ^. (Internal.moduleBody . Internal.moduleStatements))
+getNames m =
+  concatMap getDeclName (m ^. Internal.moduleBody . Internal.moduleStatements)
+    <> concatMap (getNames . (^. Internal.importModule . Internal.moduleIxModule)) (m ^. Internal.moduleBody . Internal.moduleImports)
   where
     getDeclName :: Internal.Statement -> [Text]
     getDeclName = \case
       Internal.StatementMutual (Internal.MutualBlock f) -> map getMutualName (toList f)
       Internal.StatementAxiom ax -> [ax ^. (Internal.axiomName . Internal.nameText)]
-      Internal.StatementInclude i -> getNames (i ^. Internal.includeModule)
     getMutualName :: Internal.MutualStatement -> Text
     getMutualName = \case
       Internal.StatementFunction f -> f ^. Internal.funDefName . Internal.nameText
