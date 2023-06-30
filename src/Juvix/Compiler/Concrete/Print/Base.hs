@@ -111,8 +111,8 @@ ppExpressionType = case sing :: SStage s of
   SParsed -> ppCode
   SScoped -> ppCode
 
-ppPatternType :: forall s. SingI s => PrettyPrinting (PatternType s)
-ppPatternType = case sing :: SStage s of
+ppPatternAtomType :: forall s. SingI s => PrettyPrinting (PatternAtomType s)
+ppPatternAtomType = case sing :: SStage s of
   SParsed -> ppCode
   SScoped -> ppCode
 
@@ -138,10 +138,18 @@ instance PrettyPrint PatternBinding where
         p' = ppCode _patternBindingPattern
     n' <> ppCode Kw.kwAt <> p'
 
+instance SingI s => PrettyPrint (ListPattern s) where
+  ppCode ListPattern {..} = do
+    let l = ppCode _listpBracketL
+        r = ppCode _listpBracketR
+        e = sepSemicolon (map ppPatternParensType _listpItems)
+    l <> e <> r
+
 instance SingI s => PrettyPrint (PatternAtom s) where
   ppCode = \case
     PatternAtomIden n -> ppPatternAtomIdenType n
     PatternAtomWildcard w -> ppCode w
+    PatternAtomList l -> ppCode l
     PatternAtomEmpty {} -> parens (return ())
     PatternAtomParens p -> parens (ppPatternParensType p)
     PatternAtomBraces p -> braces (ppPatternParensType p)
@@ -672,6 +680,7 @@ instance PrettyPrint Pattern where
           r' = ppRightExpression appFixity r
       l' <+> r'
     PatternWildcard w -> ppCode w
+    PatternList w -> ppCode w
     PatternEmpty {} -> parens (return ())
     PatternConstructor constr -> ppCode constr
     PatternInfixApplication i -> apeHelper i
@@ -768,7 +777,7 @@ ppCodeAtom c = do
   let p' = ppCode c
   if isAtomic c then p' else parens p'
 
-ppPatternAtom :: forall s. SingI s => PrettyPrinting (PatternType s)
+ppPatternAtom :: forall s. SingI s => PrettyPrinting (PatternAtomType s)
 ppPatternAtom = case sing :: SStage s of
   SParsed -> ppCodeAtom
   SScoped -> \pat ->

@@ -1067,6 +1067,17 @@ checkLetClause lc = localBindings . ignoreFixities . ignoreIterators $ case lc o
   LetTypeSig t -> LetTypeSig <$> checkTypeSignature t
   LetFunClause c -> LetFunClause <$> checkFunctionClause c
 
+checkListPattern ::
+  forall r.
+  Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r =>
+  ListPattern 'Parsed ->
+  Sem r (ListPattern 'Scoped)
+checkListPattern l = do
+  let _listpBracketL = l ^. listpBracketL
+      _listpBracketR = l ^. listpBracketR
+  _listpItems <- mapM checkParsePatternAtoms (l ^. listpItems)
+  return ListPattern {..}
+
 checkList ::
   forall r.
   Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r =>
@@ -1291,6 +1302,7 @@ checkPatternAtom = \case
   PatternAtomParens e -> PatternAtomParens <$> checkParsePatternAtoms e
   PatternAtomBraces e -> PatternAtomBraces <$> checkParsePatternAtoms e
   PatternAtomAt p -> PatternAtomAt <$> checkPatternBinding p
+  PatternAtomList l -> PatternAtomList <$> checkListPattern l
 
 checkName ::
   (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder] r) =>
@@ -1818,6 +1830,7 @@ parsePatternTerm = do
       <|> parseWildcard
       <|> parseEmpty
       <|> parseAt
+      <|> parseList
   where
     parseNoInfixConstructor :: ParsePat PatternArg
     parseNoInfixConstructor =
@@ -1838,6 +1851,14 @@ parsePatternTerm = do
         isWildcard :: PatternAtom 'Scoped -> Maybe Wildcard
         isWildcard s = case s of
           PatternAtomWildcard i -> Just i
+          _ -> Nothing
+
+    parseList :: ParsePat PatternArg
+    parseList = explicitP . PatternList <$> P.token isList mempty
+      where
+        isList :: PatternAtom 'Scoped -> Maybe (ListPattern 'Scoped)
+        isList s = case s of
+          PatternAtomList i -> Just i
           _ -> Nothing
 
     parseEmpty :: ParsePat PatternArg

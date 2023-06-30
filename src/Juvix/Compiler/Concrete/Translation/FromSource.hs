@@ -570,7 +570,7 @@ expressionAtom =
   P.label "<expression>" $
     AtomLiteral <$> P.try literal
       <|> (AtomIterator <$> iterator)
-      <|> (AtomList <$> plist)
+      <|> (AtomList <$> parseList)
       <|> (AtomIdentifier <$> name)
       <|> (AtomUniverse <$> universe)
       <|> (AtomLambda <$> lambda)
@@ -668,8 +668,15 @@ iterator = do
 hole :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (HoleType 'Parsed)
 hole = kw kwHole
 
-plist :: Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r => ParsecS r (List 'Parsed)
-plist = do
+parseListPattern :: Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r => ParsecS r (ListPattern 'Parsed)
+parseListPattern = do
+  _listpBracketL <- Irrelevant <$> kw kwBracketL
+  _listpItems <- P.sepBy parsePatternAtoms (kw delimSemicolon)
+  _listpBracketR <- Irrelevant <$> kw kwBracketR
+  return ListPattern {..}
+
+parseList :: Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r => ParsecS r (List 'Parsed)
+parseList = do
   _listBracketL <- Irrelevant <$> kw kwBracketL
   _listItems <- P.sepBy parseExpressionAtoms (kw delimSemicolon)
   _listBracketR <- Irrelevant <$> kw kwBracketR
@@ -917,6 +924,7 @@ patternAtomAnon =
   PatternAtomWildcard <$> wildcard
     <|> PatternAtomParens <$> parens parsePatternAtomsNested
     <|> PatternAtomBraces <$> braces parsePatternAtomsNested
+    <|> PatternAtomList <$> parseListPattern
 
 patternAtomAt :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => SymbolType 'Parsed -> ParsecS r (PatternAtom 'Parsed)
 patternAtomAt s = kw kwAt >> PatternAtomAt . PatternBinding s <$> patternAtom

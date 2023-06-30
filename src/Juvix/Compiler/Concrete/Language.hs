@@ -79,10 +79,10 @@ type family ExpressionType s = res | res -> s where
   ExpressionType 'Parsed = ExpressionAtoms 'Parsed
   ExpressionType 'Scoped = Expression
 
-type PatternType :: Stage -> GHC.Type
-type family PatternType s = res | res -> s where
-  PatternType 'Parsed = PatternAtom 'Parsed
-  PatternType 'Scoped = PatternArg
+type PatternAtomType :: Stage -> GHC.Type
+type family PatternAtomType s = res | res -> s where
+  PatternAtomType 'Parsed = PatternAtom 'Parsed
+  PatternAtomType 'Scoped = PatternArg
 
 type PatternParensType :: Stage -> GHC.Type
 type family PatternParensType s = res | res -> s where
@@ -146,7 +146,7 @@ deriving stock instance
   ( Show (ImportType s),
     Show (ModulePathType s 'ModuleLocal),
     Show (ModulePathType s 'ModuleTop),
-    Show (PatternType s),
+    Show (PatternAtomType s),
     Show (SymbolType s),
     Show (IdentifierType s),
     Show (ModuleRefType s),
@@ -156,7 +156,7 @@ deriving stock instance
 
 deriving stock instance
   ( Eq (ImportType s),
-    Eq (PatternType s),
+    Eq (PatternAtomType s),
     Eq (ModulePathType s 'ModuleLocal),
     Eq (ModulePathType s 'ModuleTop),
     Eq (SymbolType s),
@@ -168,7 +168,7 @@ deriving stock instance
 
 deriving stock instance
   ( Ord (ImportType s),
-    Ord (PatternType s),
+    Ord (PatternAtomType s),
     Ord (ModulePathType s 'ModuleLocal),
     Ord (ModulePathType s 'ModuleTop),
     Ord (SymbolType s),
@@ -373,11 +373,15 @@ data Pattern
   = PatternVariable (SymbolType 'Scoped)
   | PatternConstructor ConstructorRef
   | PatternApplication PatternApp
+  | PatternList (ListPattern 'Scoped)
   | PatternInfixApplication PatternInfixApp
   | PatternPostfixApplication PatternPostfixApp
   | PatternWildcard Wildcard
   | PatternEmpty Interval
   deriving stock (Show, Eq, Ord)
+
+instance HasAtomicity (ListPattern s) where
+  atomicity = const Atom
 
 instance HasAtomicity Pattern where
   atomicity e = case e of
@@ -387,6 +391,7 @@ instance HasAtomicity Pattern where
     PatternInfixApplication a -> Aggregate (getFixity a)
     PatternPostfixApplication p -> Aggregate (getFixity p)
     PatternWildcard {} -> Atom
+    PatternList l -> atomicity l
     PatternEmpty {} -> Atom
 
 --------------------------------------------------------------------------------
@@ -403,10 +408,23 @@ data PatternBinding = PatternBinding
     _patternBindingPattern :: PatternAtom 'Parsed
   }
 
+data ListPattern (s :: Stage) = ListPattern
+  { _listpBracketL :: Irrelevant KeywordRef,
+    _listpBracketR :: Irrelevant KeywordRef,
+    _listpItems :: [PatternParensType s]
+  }
+
+deriving stock instance (Show (PatternParensType s)) => Show (ListPattern s)
+
+deriving stock instance (Eq (PatternParensType s)) => Eq (ListPattern s)
+
+deriving stock instance (Ord (PatternParensType s)) => Ord (ListPattern s)
+
 data PatternAtom (s :: Stage)
   = PatternAtomIden (PatternAtomIdenType s)
   | PatternAtomWildcard Wildcard
   | PatternAtomEmpty Interval
+  | PatternAtomList (ListPattern s)
   | PatternAtomParens (PatternParensType s)
   | PatternAtomBraces (PatternParensType s)
   | PatternAtomAt (PatternAtType s)
@@ -425,12 +443,12 @@ type FunctionName s = SymbolType s
 data FunctionClause (s :: Stage) = FunctionClause
   { _clauseOwnerFunction :: FunctionName s,
     _clauseAssignKw :: Irrelevant KeywordRef,
-    _clausePatterns :: [PatternType s],
+    _clausePatterns :: [PatternAtomType s],
     _clauseBody :: ExpressionType s
   }
 
 deriving stock instance
-  ( Show (PatternType s),
+  ( Show (PatternAtomType s),
     Show (IdentifierType s),
     Show (ModuleRefType s),
     Show (SymbolType s),
@@ -439,7 +457,7 @@ deriving stock instance
   Show (FunctionClause s)
 
 deriving stock instance
-  ( Eq (PatternType s),
+  ( Eq (PatternAtomType s),
     Eq (IdentifierType s),
     Eq (ModuleRefType s),
     Eq (SymbolType s),
@@ -448,7 +466,7 @@ deriving stock instance
   Eq (FunctionClause s)
 
 deriving stock instance
-  ( Ord (PatternType s),
+  ( Ord (PatternAtomType s),
     Ord (IdentifierType s),
     Ord (ModuleRefType s),
     Ord (SymbolType s),
@@ -476,7 +494,7 @@ deriving stock instance
     Show (ModulePathType s 'ModuleLocal),
     Show (ModulePathType s 'ModuleTop),
     Show (ImportType s),
-    Show (PatternType s),
+    Show (PatternAtomType s),
     Show (IdentifierType s),
     Show (ModuleRefType s),
     Show (SymbolType s),
@@ -490,7 +508,7 @@ deriving stock instance
     Eq (ModulePathType s 'ModuleLocal),
     Eq (ModulePathType s 'ModuleTop),
     Eq (ImportType s),
-    Eq (PatternType s),
+    Eq (PatternAtomType s),
     Eq (IdentifierType s),
     Eq (ModuleRefType s),
     Eq (SymbolType s),
@@ -504,7 +522,7 @@ deriving stock instance
     Ord (ModulePathType s 'ModuleLocal),
     Ord (ModulePathType s 'ModuleTop),
     Ord (ImportType s),
-    Ord (PatternType s),
+    Ord (PatternAtomType s),
     Ord (IdentifierType s),
     Ord (ModuleRefType s),
     Ord (SymbolType s),
@@ -696,7 +714,7 @@ deriving stock instance
     Eq (SymbolType s),
     Eq (ModuleRefType s),
     Eq (ModulePathType s 'ModuleTop),
-    Eq (PatternType s),
+    Eq (PatternAtomType s),
     Eq (ExpressionType s)
   ) =>
   Eq (OpenModule s)
@@ -704,7 +722,7 @@ deriving stock instance
 deriving stock instance
   ( Ord (IdentifierType s),
     Ord (SymbolType s),
-    Ord (PatternType s),
+    Ord (PatternAtomType s),
     Ord (ModulePathType s 'ModuleTop),
     Ord (ModuleRefType s),
     Ord (ExpressionType s)
@@ -839,44 +857,44 @@ data Lambda (s :: Stage) = Lambda
   }
 
 deriving stock instance
-  ( Show (PatternType s),
+  ( Show (PatternAtomType s),
     Show (ExpressionType s)
   ) =>
   Show (Lambda s)
 
 deriving stock instance
-  ( Eq (PatternType s),
+  ( Eq (PatternAtomType s),
     Eq (ExpressionType s)
   ) =>
   Eq (Lambda s)
 
 deriving stock instance
-  ( Ord (PatternType s),
+  ( Ord (PatternAtomType s),
     Ord (ExpressionType s)
   ) =>
   Ord (Lambda s)
 
 data LambdaClause (s :: Stage) = LambdaClause
   { _lambdaPipe :: Irrelevant (Maybe KeywordRef),
-    _lambdaParameters :: NonEmpty (PatternType s),
+    _lambdaParameters :: NonEmpty (PatternAtomType s),
     _lambdaAssignKw :: Irrelevant KeywordRef,
     _lambdaBody :: ExpressionType s
   }
 
 deriving stock instance
-  ( Show (PatternType s),
+  ( Show (PatternAtomType s),
     Show (ExpressionType s)
   ) =>
   Show (LambdaClause s)
 
 deriving stock instance
-  ( Eq (PatternType s),
+  ( Eq (PatternAtomType s),
     Eq (ExpressionType s)
   ) =>
   Eq (LambdaClause s)
 
 deriving stock instance
-  ( Ord (PatternType s),
+  ( Ord (PatternAtomType s),
     Ord (ExpressionType s)
   ) =>
   Ord (LambdaClause s)
@@ -922,7 +940,7 @@ data Let (s :: Stage) = Let
   }
 
 deriving stock instance
-  ( Show (PatternType s),
+  ( Show (PatternAtomType s),
     Show (IdentifierType s),
     Show (ModuleRefType s),
     Show (SymbolType s),
@@ -931,7 +949,7 @@ deriving stock instance
   Show (Let s)
 
 deriving stock instance
-  ( Eq (PatternType s),
+  ( Eq (PatternAtomType s),
     Eq (IdentifierType s),
     Eq (ModuleRefType s),
     Eq (SymbolType s),
@@ -940,7 +958,7 @@ deriving stock instance
   Eq (Let s)
 
 deriving stock instance
-  ( Ord (PatternType s),
+  ( Ord (PatternAtomType s),
     Ord (IdentifierType s),
     Ord (ModuleRefType s),
     Ord (SymbolType s),
@@ -953,7 +971,7 @@ data LetClause (s :: Stage)
   | LetFunClause (FunctionClause s)
 
 deriving stock instance
-  ( Show (PatternType s),
+  ( Show (PatternAtomType s),
     Show (IdentifierType s),
     Show (ModuleRefType s),
     Show (SymbolType s),
@@ -962,7 +980,7 @@ deriving stock instance
   Show (LetClause s)
 
 deriving stock instance
-  ( Eq (PatternType s),
+  ( Eq (PatternAtomType s),
     Eq (IdentifierType s),
     Eq (ModuleRefType s),
     Eq (SymbolType s),
@@ -971,7 +989,7 @@ deriving stock instance
   Eq (LetClause s)
 
 deriving stock instance
-  ( Ord (PatternType s),
+  ( Ord (PatternAtomType s),
     Ord (IdentifierType s),
     Ord (ModuleRefType s),
     Ord (SymbolType s),
@@ -1231,6 +1249,7 @@ newtype ModuleIndex = ModuleIndex
 
 makeLenses ''PatternArg
 makeLenses ''List
+makeLenses ''ListPattern
 makeLenses ''UsingItem
 makeLenses ''HidingItem
 makeLenses ''HidingList
@@ -1345,30 +1364,33 @@ deriving stock instance
 deriving stock instance
   ( Show (ExpressionType s),
     Show (IdentifierType s),
+    Show (ListPattern s),
     Show (PatternAtomIdenType s),
     Show (PatternParensType s),
     Show (PatternAtType s),
-    Show (PatternType s)
+    Show (PatternAtomType s)
   ) =>
   Show (PatternAtom s)
 
 deriving stock instance
   ( Eq (ExpressionType s),
     Eq (IdentifierType s),
+    Eq (ListPattern s),
     Eq (PatternAtomIdenType s),
     Eq (PatternParensType s),
     Eq (PatternAtType s),
-    Eq (PatternType s)
+    Eq (PatternAtomType s)
   ) =>
   Eq (PatternAtom s)
 
 deriving stock instance
   ( Ord (ExpressionType s),
     Ord (IdentifierType s),
+    Ord (ListPattern s),
     Ord (PatternAtomIdenType s),
     Ord (PatternParensType s),
     Ord (PatternAtType s),
-    Ord (PatternType s)
+    Ord (PatternAtomType s)
   ) =>
   Ord (PatternAtom s)
 
@@ -1545,11 +1567,15 @@ instance HasLoc PatternScopedIden where
 instance HasLoc PatternBinding where
   getLoc (PatternBinding n p) = getLoc n <> getLoc p
 
+instance HasLoc (ListPattern s) where
+  getLoc l = getLoc (l ^. listpBracketL) <> getLoc (l ^. listpBracketR)
+
 instance SingI s => HasLoc (PatternAtom s) where
   getLoc = \case
     PatternAtomIden i -> getLocIden i
     PatternAtomWildcard w -> getLoc w
     PatternAtomEmpty i -> i
+    PatternAtomList l -> getLoc l
     PatternAtomParens p -> getLocParens p
     PatternAtomBraces p -> getLocParens p
     PatternAtomAt p -> getLocAt p
@@ -1592,6 +1618,7 @@ instance HasLoc Pattern where
     PatternConstructor c -> getLoc c
     PatternApplication a -> getLoc a
     PatternWildcard w -> getLoc w
+    PatternList w -> getLoc w
     PatternEmpty i -> i
     PatternInfixApplication i -> getLoc i
     PatternPostfixApplication i -> getLoc i
@@ -1609,7 +1636,7 @@ deriving stock instance
     Show (HoleType s),
     Show (SymbolType s),
     Show (PatternParensType s),
-    Show (PatternType s)
+    Show (PatternAtomType s)
   ) =>
   Show (ExpressionAtom s)
 
@@ -1620,7 +1647,7 @@ deriving stock instance
     Eq (ModuleRefType s),
     Eq (SymbolType s),
     Eq (PatternParensType s),
-    Eq (PatternType s)
+    Eq (PatternAtomType s)
   ) =>
   Eq (ExpressionAtom s)
 
@@ -1631,7 +1658,7 @@ deriving stock instance
     Ord (HoleType s),
     Ord (SymbolType s),
     Ord (PatternParensType s),
-    Ord (PatternType s)
+    Ord (PatternAtomType s)
   ) =>
   Ord (ExpressionAtom s)
 
@@ -1642,7 +1669,7 @@ deriving stock instance
     Show (HoleType s),
     Show (SymbolType s),
     Show (PatternParensType s),
-    Show (PatternType s)
+    Show (PatternAtomType s)
   ) =>
   Show (ExpressionAtoms s)
 
@@ -1668,7 +1695,7 @@ instance
     Eq (HoleType s),
     Eq (SymbolType s),
     Eq (PatternParensType s),
-    Eq (PatternType s)
+    Eq (PatternAtomType s)
   ) =>
   Eq (ExpressionAtoms s)
   where
@@ -1681,7 +1708,7 @@ instance
     Ord (HoleType s),
     Ord (SymbolType s),
     Ord (PatternParensType s),
-    Ord (PatternType s)
+    Ord (PatternAtomType s)
   ) =>
   Ord (ExpressionAtoms s)
   where

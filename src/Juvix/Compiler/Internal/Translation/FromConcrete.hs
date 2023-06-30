@@ -604,6 +604,40 @@ goLiteral = fmap go
       LitString s -> Internal.LitString s
       LitInteger i -> Internal.LitInteger i
 
+goListPattern :: Members '[Builtins, Error ScoperError, NameIdGen] r => Concrete.ListPattern 'Scoped -> Sem r Internal.Pattern
+goListPattern l = do
+  nil_ <- getBuiltinName loc BuiltinListNil
+  cons_ <- getBuiltinName loc BuiltinListCons
+  let mkcons :: Internal.Pattern -> Internal.Pattern -> Internal.Pattern
+      mkcons a as =
+        Internal.PatternConstructorApp
+          Internal.ConstructorApp
+            { _constrAppConstructor = cons_,
+              _constrAppParameters = map mkpat [a, as],
+              _constrAppType = Nothing
+            }
+
+      mkpat :: Internal.Pattern -> Internal.PatternArg
+      mkpat p =
+        Internal.PatternArg
+          { _patternArgIsImplicit = Explicit,
+            _patternArgPattern = p,
+            _patternArgName = Nothing
+          }
+
+      mknil :: Internal.Pattern
+      mknil =
+        Internal.PatternConstructorApp
+          Internal.ConstructorApp
+            { _constrAppConstructor = nil_,
+              _constrAppParameters = [],
+              _constrAppType = Nothing
+            }
+  items <- mapM (goPattern . (^. patternArgPattern)) (l ^. Concrete.listpItems)
+  return (foldr mkcons mknil items)
+  where
+    loc = getLoc l
+
 goExpression ::
   forall r.
   Members [Builtins, NameIdGen, Error ScoperError, Reader Pragmas] r =>
@@ -793,30 +827,30 @@ mkConstructorApp :: Internal.ConstrName -> [Internal.PatternArg] -> Internal.Con
 mkConstructorApp a b = Internal.ConstructorApp a b Nothing
 
 goPatternApplication ::
-  Members '[NameIdGen, Error ScoperError] r =>
+  Members '[Builtins, NameIdGen, Error ScoperError] r =>
   PatternApp ->
   Sem r Internal.ConstructorApp
 goPatternApplication a = uncurry mkConstructorApp <$> viewApp (PatternApplication a)
 
 goPatternConstructor ::
-  Members '[NameIdGen, Error ScoperError] r =>
+  Members '[Builtins, NameIdGen, Error ScoperError] r =>
   ConstructorRef ->
   Sem r Internal.ConstructorApp
 goPatternConstructor a = uncurry mkConstructorApp <$> viewApp (PatternConstructor a)
 
 goInfixPatternApplication ::
-  Members '[NameIdGen, Error ScoperError] r =>
+  Members '[Builtins, NameIdGen, Error ScoperError] r =>
   PatternInfixApp ->
   Sem r Internal.ConstructorApp
 goInfixPatternApplication a = uncurry mkConstructorApp <$> viewApp (PatternInfixApplication a)
 
 goPostfixPatternApplication ::
-  Members '[NameIdGen, Error ScoperError] r =>
+  Members '[Builtins, NameIdGen, Error ScoperError] r =>
   PatternPostfixApp ->
   Sem r Internal.ConstructorApp
 goPostfixPatternApplication a = uncurry mkConstructorApp <$> viewApp (PatternPostfixApplication a)
 
-viewApp :: forall r. Members '[NameIdGen, Error ScoperError] r => Pattern -> Sem r (Internal.ConstrName, [Internal.PatternArg])
+viewApp :: forall r. Members '[Builtins, NameIdGen, Error ScoperError] r => Pattern -> Sem r (Internal.ConstrName, [Internal.PatternArg])
 viewApp p = case p of
   PatternConstructor c -> return (goConstructorRef c, [])
   PatternApplication app@(PatternApp _ r) -> do
@@ -832,6 +866,7 @@ viewApp p = case p of
   PatternVariable {} -> err
   PatternWildcard {} -> err
   PatternEmpty {} -> err
+  PatternList {} -> err
   where
     viewAppLeft :: PatternApp -> Sem r (Internal.ConstrName, [Internal.PatternArg])
     viewAppLeft app@(PatternApp l _)
@@ -842,7 +877,7 @@ viewApp p = case p of
 goConstructorRef :: ConstructorRef -> Internal.Name
 goConstructorRef (ConstructorRef' n) = goName n
 
-goPatternArg :: Members '[NameIdGen, Error ScoperError] r => PatternArg -> Sem r Internal.PatternArg
+goPatternArg :: Members '[Builtins, NameIdGen, Error ScoperError] r => PatternArg -> Sem r Internal.PatternArg
 goPatternArg p = do
   pat' <- goPattern (p ^. patternArgPattern)
   return
@@ -852,9 +887,10 @@ goPatternArg p = do
         _patternArgPattern = pat'
       }
 
-goPattern :: Members '[NameIdGen, Error ScoperError] r => Pattern -> Sem r Internal.Pattern
+goPattern :: Members '[Builtins, NameIdGen, Error ScoperError] r => Pattern -> Sem r Internal.Pattern
 goPattern p = case p of
   PatternVariable a -> return $ Internal.PatternVariable (goSymbol a)
+  PatternList a -> goListPattern a
   PatternConstructor c -> Internal.PatternConstructorApp <$> goPatternConstructor c
   PatternApplication a -> Internal.PatternConstructorApp <$> goPatternApplication a
   PatternInfixApplication a -> Internal.PatternConstructorApp <$> goInfixPatternApplication a
