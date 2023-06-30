@@ -1,0 +1,4 @@
+dependencies:
+- .juvix-build/stdlib/
+name: tests
+version: 0.0.0
