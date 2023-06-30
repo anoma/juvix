@@ -22,7 +22,6 @@ ASM=$(count src/Juvix/Compiler/Asm/)
 CORE=$(count src/Juvix/Compiler/Core/)
 
 CONCRETE=$(count src/Juvix/Compiler/Concrete/)
-ABSTRACT=$(count src/Juvix/Compiler/Abstract/)
 INTERNAL=$(count src/Juvix/Compiler/Internal/)
 BUILTINS=$(count src/Juvix/Compiler/Builtins/)
 PIPELINE=$(count src/Juvix/Compiler/Pipeline/)
@@ -33,7 +32,7 @@ EXTRA=$(count src/Juvix/Extra/)
 DATA=$(count src/Juvix/Data/)
 PRELUDE=$(count src/Juvix/Prelude/)
 
-FRONT=$((CONCRETE + ABSTRACT + INTERNAL + BUILTINS + PIPELINE))
+FRONT=$((CONCRETE + INTERNAL + BUILTINS + PIPELINE))
 BACK=$((BACKENDC + GEB + VAMPIR + VM + REG + ASM + CORE))
 OTHER=$((APP + HTML + EXTRA + DATA + PRELUDE))
 TESTS=$(count test/)
@@ -42,7 +41,6 @@ TOTAL=$((FRONT+BACK+OTHER+TESTS))
 
 echo "Front end: $FRONT LOC"
 echo "   Concrete: $CONCRETE LOC"
-echo "   Abstract: $ABSTRACT LOC"
 echo "   Internal: $INTERNAL LOC"
 echo "   Builtins: $BUILTINS LOC"
 echo "   Pipeline: $PIPELINE LOC"
