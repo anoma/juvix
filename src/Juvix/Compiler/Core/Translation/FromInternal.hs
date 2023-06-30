@@ -210,6 +210,8 @@ goConstructor sym ctor = do
       Just Internal.BuiltinNatSuc -> freshTag
       Just Internal.BuiltinIntOfNat -> freshTag
       Just Internal.BuiltinIntNegSuc -> freshTag
+      Just Internal.BuiltinListNil -> freshTag
+      Just Internal.BuiltinListCons -> freshTag
       Nothing -> freshTag
 
     ctorType :: Sem r Type

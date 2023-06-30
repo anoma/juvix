@@ -761,6 +761,7 @@ data Expression
   | ExpressionApplication Application
   | ExpressionInfixApplication InfixApplication
   | ExpressionPostfixApplication PostfixApplication
+  | ExpressionList (List 'Scoped)
   | ExpressionCase (Case 'Scoped)
   | ExpressionLambda (Lambda 'Scoped)
   | ExpressionLet (Let 'Scoped)
@@ -1102,6 +1103,27 @@ deriving stock instance
   ) =>
   Ord (Iterator s)
 
+data List (s :: Stage) = List
+  { _listBracketL :: Irrelevant KeywordRef,
+    _listBracketR :: Irrelevant KeywordRef,
+    _listItems :: [ExpressionType s]
+  }
+
+deriving stock instance
+  ( Show (ExpressionType s)
+  ) =>
+  Show (List s)
+
+deriving stock instance
+  ( Eq (ExpressionType s)
+  ) =>
+  Eq (List s)
+
+deriving stock instance
+  ( Ord (ExpressionType s)
+  ) =>
+  Ord (List s)
+
 --------------------------------------------------------------------------------
 -- Expression atom
 --------------------------------------------------------------------------------
@@ -1110,6 +1132,7 @@ deriving stock instance
 data ExpressionAtom (s :: Stage)
   = AtomIdentifier (IdentifierType s)
   | AtomLambda (Lambda s)
+  | AtomList (List s)
   | AtomCase (Case s)
   | AtomHole (HoleType s)
   | AtomBraces (WithLoc (ExpressionType s))
@@ -1207,6 +1230,7 @@ newtype ModuleIndex = ModuleIndex
   }
 
 makeLenses ''PatternArg
+makeLenses ''List
 makeLenses ''UsingItem
 makeLenses ''HidingItem
 makeLenses ''HidingList
@@ -1267,6 +1291,7 @@ instance HasAtomicity Expression where
     ExpressionLiteral l -> atomicity l
     ExpressionLet l -> atomicity l
     ExpressionBraces {} -> Atom
+    ExpressionList {} -> Atom
     ExpressionUniverse {} -> Atom
     ExpressionFunction {} -> Aggregate funFixity
     ExpressionCase c -> atomicity c
@@ -1428,6 +1453,9 @@ instance SingI s => HasLoc (CaseBranch s) where
 instance SingI s => HasLoc (Case s) where
   getLoc c = getLoc (c ^. caseKw) <> getLoc (c ^. caseBranches . to last)
 
+instance HasLoc (List s) where
+  getLoc List {..} = getLoc _listBracketL <> getLoc _listBracketR
+
 instance HasLoc Expression where
   getLoc = \case
     ExpressionIdentifier i -> getLoc i
@@ -1436,6 +1464,7 @@ instance HasLoc Expression where
     ExpressionInfixApplication i -> getLoc i
     ExpressionPostfixApplication i -> getLoc i
     ExpressionLambda i -> getLoc i
+    ExpressionList l -> getLoc l
     ExpressionCase i -> getLoc i
     ExpressionLet i -> getLoc i
     ExpressionUniverse i -> getLoc i

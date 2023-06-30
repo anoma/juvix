@@ -26,6 +26,12 @@ pragmasStart = "{-#"
 pragmasEnd :: (IsString s) => s
 pragmasEnd = "#-}"
 
+bracketL :: IsString s => s
+bracketL = "["
+
+bracketR :: IsString s => s
+bracketR = "]"
+
 braceL :: IsString s => s
 braceL = "{"
 
@@ -136,6 +142,9 @@ stringToNat = "string-to-nat"
 
 bool_ :: (IsString s) => s
 bool_ = "bool"
+
+list :: (IsString s) => s
+list = "list"
 
 int_ :: (IsString s) => s
 int_ = "int"

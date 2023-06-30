@@ -108,12 +108,6 @@ scopeCheckExpression tab as = mapError (JuvixError @ScoperError) $ do
           _scopeParsedModules = mempty
         }
 
-checkParseExpressionAtoms' ::
-  (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
-  ExpressionAtoms 'Parsed ->
-  Sem r Expression
-checkParseExpressionAtoms' = checkExpressionAtoms >=> parseExpressionAtoms
-
 scopeCheckImport ::
   forall r.
   Members '[Error JuvixError, InfoTableBuilder, NameIdGen, State Scope, Reader ScopeParameters, State ScoperState] r =>
@@ -1073,6 +1067,17 @@ checkLetClause lc = localBindings . ignoreFixities . ignoreIterators $ case lc o
   LetTypeSig t -> LetTypeSig <$> checkTypeSignature t
   LetFunClause c -> LetFunClause <$> checkFunctionClause c
 
+checkList ::
+  forall r.
+  Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r =>
+  List 'Parsed ->
+  Sem r (List 'Scoped)
+checkList l = do
+  let _listBracketL = l ^. listBracketL
+      _listBracketR = l ^. listBracketR
+  _listItems <- mapM checkParseExpressionAtoms (l ^. listItems)
+  return List {..}
+
 checkLet ::
   forall r.
   Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r =>
@@ -1311,6 +1316,7 @@ checkExpressionAtom e = case e of
   AtomFunArrow a -> return (AtomFunArrow a)
   AtomHole h -> AtomHole <$> checkHole h
   AtomLiteral l -> return (AtomLiteral l)
+  AtomList l -> AtomList <$> checkList l
   AtomIterator i -> AtomIterator <$> checkIterator i
 
 checkIterator ::
@@ -1383,7 +1389,7 @@ checkRange rng = do
       }
 
 checkHole ::
-  (Members '[NameIdGen] r) =>
+  Members '[NameIdGen] r =>
   HoleType 'Parsed ->
   Sem r Hole
 checkHole h = do
@@ -1624,6 +1630,7 @@ parseTerm =
       <|> parseFunction
       <|> parseLambda
       <|> parseCase
+      <|> parseList
       <|> parseLiteral
       <|> parseLet
       <|> parseIterator
@@ -1659,6 +1666,14 @@ parseTerm =
         case_ :: ExpressionAtom 'Scoped -> Maybe (Case 'Scoped)
         case_ s = case s of
           AtomCase l -> Just l
+          _ -> Nothing
+
+    parseList :: Parse Expression
+    parseList = ExpressionList <$> P.token case_ mempty
+      where
+        case_ :: ExpressionAtom 'Scoped -> Maybe (List 'Scoped)
+        case_ s = case s of
+          AtomList l -> Just l
           _ -> Nothing
 
     parseUniverse :: Parse Expression

@@ -40,11 +40,13 @@ builtinConstructors = \case
   BuiltinNat -> [BuiltinNatZero, BuiltinNatSuc]
   BuiltinBool -> [BuiltinBoolTrue, BuiltinBoolFalse]
   BuiltinInt -> [BuiltinIntOfNat, BuiltinIntNegSuc]
+  BuiltinList -> [BuiltinListNil, BuiltinListCons]
 
 data BuiltinInductive
   = BuiltinNat
   | BuiltinBool
   | BuiltinInt
+  | BuiltinList
   deriving stock (Show, Eq, Ord, Enum, Bounded, Generic, Data)
 
 instance Hashable BuiltinInductive
@@ -54,6 +56,7 @@ instance Pretty BuiltinInductive where
     BuiltinNat -> Str.nat
     BuiltinBool -> Str.bool_
     BuiltinInt -> Str.int_
+    BuiltinList -> Str.list
 
 data BuiltinConstructor
   = BuiltinNatZero
@@ -62,6 +65,8 @@ data BuiltinConstructor
   | BuiltinBoolFalse
   | BuiltinIntOfNat
   | BuiltinIntNegSuc
+  | BuiltinListNil
+  | BuiltinListCons
   deriving stock (Show, Eq, Ord, Generic, Data)
 
 instance Hashable BuiltinConstructor

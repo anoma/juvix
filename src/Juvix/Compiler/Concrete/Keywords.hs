@@ -22,6 +22,8 @@ import Juvix.Data.Keyword.All
     kwAssign,
     kwAt,
     kwAxiom,
+    kwBracketL,
+    kwBracketR,
     kwBuiltin,
     kwCase,
     kwColon,

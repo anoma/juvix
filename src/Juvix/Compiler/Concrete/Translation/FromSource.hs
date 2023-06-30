@@ -570,6 +570,7 @@ expressionAtom =
   P.label "<expression>" $
     AtomLiteral <$> P.try literal
       <|> (AtomIterator <$> iterator)
+      <|> (AtomList <$> plist)
       <|> (AtomIdentifier <$> name)
       <|> (AtomUniverse <$> universe)
       <|> (AtomLambda <$> lambda)
@@ -666,6 +667,13 @@ iterator = do
 
 hole :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (HoleType 'Parsed)
 hole = kw kwHole
+
+plist :: Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r => ParsecS r (List 'Parsed)
+plist = do
+  _listBracketL <- Irrelevant <$> kw kwBracketL
+  _listItems <- P.sepBy parseExpressionAtoms (kw delimSemicolon)
+  _listBracketR <- Irrelevant <$> kw kwBracketR
+  return List {..}
 
 --------------------------------------------------------------------------------
 -- Literals

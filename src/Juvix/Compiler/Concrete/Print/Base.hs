@@ -189,12 +189,20 @@ instance PrettyPrint FunctionInfo where
         cs = map StatementFunctionClause (f ^. functionInfoClauses)
     ppCode (ty : cs)
 
+instance SingI s => PrettyPrint (List s) where
+  ppCode List {..} = do
+    let l = ppCode _listBracketL
+        r = ppCode _listBracketR
+        e = sepSemicolon (map ppExpressionType _listItems)
+    l <> e <> r
+
 instance SingI s => PrettyPrint (ExpressionAtom s) where
   ppCode = \case
     AtomIdentifier n -> ppIdentifierType n
     AtomLambda l -> ppCode l
     AtomLet lb -> ppCode lb
     AtomCase c -> ppCode c
+    AtomList l -> ppCode l
     AtomUniverse uni -> ppCode uni
     AtomFunction fun -> ppCode fun
     AtomLiteral lit -> ppCode lit
@@ -512,6 +520,7 @@ instance PrettyPrint Expression where
     ExpressionParensIdentifier n -> parens (ppCode n)
     ExpressionBraces b -> braces (ppCode b)
     ExpressionApplication a -> ppCode a
+    ExpressionList a -> ppCode a
     ExpressionInfixApplication a -> ppCode a
     ExpressionPostfixApplication a -> ppCode a
     ExpressionLambda l -> ppCode l
