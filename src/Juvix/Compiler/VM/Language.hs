@@ -1,6 +1,10 @@
-module Juvix.Compiler.VM.Language where
+module Juvix.Compiler.VM.Language
+  ( module Juvix.Compiler.VM.Language,
+    module Juvix.Compiler.VM.Language.Base,
+  )
+where
 
-import Juvix.Compiler.VM.Language.Base
+import Juvix.Compiler.VM.Language.Base hiding (Const)
 
 type SmallInt = Int
 
@@ -9,6 +13,7 @@ type RegRef = Int
 data Value
   = Const SmallInt
   | RegRef RegRef
+  | LabelRef Text
 
 -- Constructor representation: tag, field1, .., fieldn
 --
@@ -44,7 +49,7 @@ data Instruction
     Jump InstrJump
   | -- | JVB opcode: 'jumpz reg, val'.
     JumpOnZero InstrJumpOnZero
-  | -- | JVB opcode: 'label labelName'
+  | -- | JVB opcode: 'labelName:'
     Label InstrLabel
 
 data BinaryOp = BinaryOp
@@ -85,17 +90,16 @@ newtype InstrPop = InstrPop
   }
 
 newtype InstrJump = InstrJump
-  { _instrJumpAddr :: SmallInt
+  { _instrJumpDest :: Value
   }
 
 data InstrJumpOnZero = InstrJumpOnZero
   { _instrJumpOnZeroReg :: RegRef,
-    _instrJumpOnZeroAddr :: SmallInt
+    _instrJumpOnZeroDest :: Value
   }
 
-data InstrLabel = InstrLabel
-  { _instrLabelName :: Text,
-    _instrLabelSymbol :: Symbol
+newtype InstrLabel = InstrLabel
+  { _instrLabelName :: Text
   }
 
 -- | Binary operation opcodes.

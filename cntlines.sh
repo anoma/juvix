@@ -16,6 +16,7 @@ RUNTIME=$((RUNTIME_C+RUNTIME_VAMPIR))
 BACKENDC=$(count src/Juvix/Compiler/Backend/C/)
 GEB=$(count src/Juvix/Compiler/Backend/Geb/)
 VAMPIR=$(count src/Juvix/Compiler/Backend/VampIR/)
+VM=$(count src/Juvix/Compiler/VM/)
 REG=$(count src/Juvix/Compiler/Reg/)
 ASM=$(count src/Juvix/Compiler/Asm/)
 CORE=$(count src/Juvix/Compiler/Core/)
@@ -33,7 +34,7 @@ DATA=$(count src/Juvix/Data/)
 PRELUDE=$(count src/Juvix/Prelude/)
 
 FRONT=$((CONCRETE + ABSTRACT + INTERNAL + BUILTINS + PIPELINE))
-BACK=$((BACKENDC + GEB + VAMPIR + REG + ASM + CORE))
+BACK=$((BACKENDC + GEB + VAMPIR + VM + REG + ASM + CORE))
 OTHER=$((APP + HTML + EXTRA + DATA + PRELUDE))
 TESTS=$(count test/)
 
@@ -49,6 +50,7 @@ echo "Middle and back end: $BACK LOC"
 echo "   VampIR backend: $VAMPIR LOC"
 echo "   GEB backend: $GEB LOC"
 echo "   C backend: $BACKENDC LOC"
+echo "   JuvixVM: $VM LOC"
 echo "   JuvixReg: $REG LOC"
 echo "   JuvixAsm: $ASM LOC"
 echo "   JuvixCore: $CORE LOC"
