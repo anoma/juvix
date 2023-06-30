@@ -11,7 +11,7 @@ registerListDef d = do
   registerBuiltin BuiltinList (d ^. inductiveName)
   case d ^. inductiveConstructors of
     [c1, c2] -> registerNil param c1 >> registerCons param c2
-    _ -> error "List numbers should have exactly two constructors"
+    _ -> error "List should have exactly two constructors"
   where
     param :: VarName
     param = case d ^. inductiveParameters of
