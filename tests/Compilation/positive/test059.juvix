@@ -14,7 +14,7 @@ mylist : List Nat;
 mylist := [1; 2; 3 + 1];
 
 mylist2 : List (List Nat);
-mylist2 := [[10]; [2]; [3 + 1]];
+mylist2 := [[10]; [2]; 3 + 1 :: nil] ;
 
 head : {a : Type} -> a -> List a -> a;
 head a nil := a;
