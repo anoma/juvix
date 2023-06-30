@@ -108,7 +108,7 @@ typeCheckImport i = do
     . ignoreOutput @Example
     . runReader table
     . withEmptyVars
-    -- TODO Sotre cache in Artifacts and use it here
+    -- TODO Store cache in Artifacts and use it here
     . evalCacheEmpty checkModuleNoCache
     $ checkImport i
 
