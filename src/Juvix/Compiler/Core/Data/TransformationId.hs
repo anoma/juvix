@@ -68,7 +68,7 @@ toTypecheckTransformations :: [TransformationId]
 toTypecheckTransformations = [MatchToCase]
 
 toEvalTransformations :: [TransformationId]
-toEvalTransformations = [EtaExpandApps, MatchToCase, NatToPrimInt, IntToPrimInt, ConvertBuiltinTypes, OptPhaseEval]
+toEvalTransformations = [EtaExpandApps, MatchToCase, NatToPrimInt, IntToPrimInt, ConvertBuiltinTypes, OptPhaseEval, DisambiguateNames]
 
 toNormalizeTransformations :: [TransformationId]
 toNormalizeTransformations = toEvalTransformations ++ [LetRecLifting, LetFolding, UnrollRecursion]

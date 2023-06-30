@@ -35,13 +35,19 @@ newtype PragmaSpecialiseArgs = PragmaSpecialiseArgs
   }
   deriving stock (Show, Eq, Ord, Data, Generic)
 
+newtype PragmaSpecialiseBy = PragmaSpecialiseBy
+  { _pragmaSpecialiseBy :: [Text]
+  }
+  deriving stock (Show, Eq, Ord, Data, Generic)
+
 data Pragmas = Pragmas
   { _pragmasInline :: Maybe PragmaInline,
     _pragmasUnroll :: Maybe PragmaUnroll,
     _pragmasArgNames :: Maybe PragmaArgNames,
     _pragmasPublic :: Maybe PragmaPublic,
     _pragmasFormat :: Maybe PragmaFormat,
-    _pragmasSpecialiseArgs :: Maybe PragmaSpecialiseArgs
+    _pragmasSpecialiseArgs :: Maybe PragmaSpecialiseArgs,
+    _pragmasSpecialiseBy :: Maybe PragmaSpecialiseBy
   }
   deriving stock (Show, Eq, Ord, Data, Generic)
 
@@ -50,6 +56,7 @@ makeLenses ''PragmaArgNames
 makeLenses ''PragmaPublic
 makeLenses ''PragmaFormat
 makeLenses ''PragmaSpecialiseArgs
+makeLenses ''PragmaSpecialiseBy
 makeLenses ''Pragmas
 
 instance Hashable PragmaInline
@@ -63,6 +70,8 @@ instance Hashable PragmaPublic
 instance Hashable PragmaFormat
 
 instance Hashable PragmaSpecialiseArgs
+
+instance Hashable PragmaSpecialiseBy
 
 instance Hashable Pragmas
 
@@ -79,6 +88,9 @@ instance FromJSON Pragmas where
         specargs <- keyMay "specialise" parseSpecialiseArgs
         specargs' <- keyMay "specialize" parseSpecialiseArgs
         let _pragmasSpecialiseArgs = specargs <|> specargs'
+        specby <- keyMay "specialise-by" parseSpecialiseBy
+        specby' <- keyMay "specialize-by" parseSpecialiseBy
+        let _pragmasSpecialiseBy = specby <|> specby'
         return Pragmas {..}
 
       parseInline :: Parse YamlError PragmaInline
@@ -123,6 +135,11 @@ instance FromJSON Pragmas where
         _pragmaSpecialiseArgs <- eachInArray asIntegral
         return PragmaSpecialiseArgs {..}
 
+      parseSpecialiseBy :: Parse YamlError PragmaSpecialiseBy
+      parseSpecialiseBy = do
+        _pragmaSpecialiseBy <- eachInArray asText
+        return PragmaSpecialiseBy {..}
+
       checkArgName :: Text -> Parse YamlError ()
       checkArgName name = do
         let name' = unpack name
@@ -141,7 +158,8 @@ instance Semigroup Pragmas where
         _pragmasArgNames = p2 ^. pragmasArgNames,
         _pragmasPublic = p2 ^. pragmasPublic,
         _pragmasFormat = p2 ^. pragmasFormat <|> p1 ^. pragmasFormat,
-        _pragmasSpecialiseArgs = p2 ^. pragmasSpecialiseArgs <|> p1 ^. pragmasSpecialiseArgs
+        _pragmasSpecialiseArgs = p2 ^. pragmasSpecialiseArgs <|> p1 ^. pragmasSpecialiseArgs,
+        _pragmasSpecialiseBy = p2 ^. pragmasSpecialiseBy <|> p1 ^. pragmasSpecialiseBy
       }
 
 instance Monoid Pragmas where
@@ -152,5 +170,6 @@ instance Monoid Pragmas where
         _pragmasArgNames = Nothing,
         _pragmasPublic = Nothing,
         _pragmasFormat = Nothing,
-        _pragmasSpecialiseArgs = Nothing
+        _pragmasSpecialiseArgs = Nothing,
+        _pragmasSpecialiseBy = Nothing
       }

@@ -352,7 +352,11 @@ translateCase translateIf dflt Case {..} = case _caseBranches of
 
 checkDepth :: Int -> Node -> Bool
 checkDepth 0 _ = False
-checkDepth d node = all (checkDepth (d - 1)) (childrenNodes node)
+checkDepth d node = case node of
+  NApp App {..} ->
+    checkDepth d _appLeft && checkDepth (d - 1) _appRight
+  _ ->
+    all (checkDepth (d - 1)) (childrenNodes node)
 
 isCaseBoolean :: [CaseBranch] -> Bool
 isCaseBoolean = \case

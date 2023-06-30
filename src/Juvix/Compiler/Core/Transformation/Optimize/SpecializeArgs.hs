@@ -66,10 +66,12 @@ convertNode tab = dmapLRM go
         return $ Recur node
 
     goIdentApp :: BinderList Binder -> Ident -> [Node] -> Sem r Recur
-    goIdentApp bl idt@Ident {..} args =
-      case pspec of
-        Just PragmaSpecialiseArgs {..} | length args == argsNum -> do
+    goIdentApp bl idt@Ident {..} args
+      | (isJust pspec || isJust pspecby) && length args == argsNum = do
           args' <- mapM (dmapLRM' (bl, go)) args
+          let psargs1 = maybe [] (^. pragmaSpecialiseArgs) pspec
+              psargs2 = maybe [] (map (+ 1) . mapMaybe (`elemIndex` argnames) . (^. pragmaSpecialiseBy)) pspecby
+              psargs = nubSort (psargs1 ++ psargs2)
           -- assumption: all type variables are at the front
           let specargs0 =
                 filter
@@ -79,7 +81,7 @@ convertNode tab = dmapLRM go
                         && isSpecializable tab (args' !! (argNum - 1))
                         && isArgSpecializable tab _identSymbol argNum
                   )
-                  _pragmaSpecialiseArgs
+                  psargs
               tyargsNum = length (takeWhile (isTypeConstr tab) tyargs)
               -- in addition to the arguments explicitly marked for
               -- specialisation, also specialise all type arguments
@@ -92,8 +94,6 @@ convertNode tab = dmapLRM go
                   return $ End (mkApps' (NIdt idt) args')
               | otherwise -> do
                   eassert (tyargsNum < argsNum)
-                  let def = lookupIdentifierNode tab _identSymbol
-                      (lams, body) = unfoldLambdas def
                   eassert (length lams == argsNum)
                   eassert (length args' == argsNum)
                   eassert (argsNum <= length tyargs)
@@ -126,13 +126,17 @@ convertNode tab = dmapLRM go
                           (mkApps' (mkVar' 0) args'')
                   node'' <- lambdaLiftNode' True bl node'
                   return $ End node''
-        _ ->
+      | otherwise =
           return $ Recur $ mkApps' (NIdt idt) args
       where
         ii = lookupIdentifierInfo tab _identSymbol
         pspec = ii ^. identifierPragmas . pragmasSpecialiseArgs
+        pspecby = ii ^. identifierPragmas . pragmasSpecialiseBy
         argsNum = ii ^. identifierArgsNum
         (tyargs, tgt) = unfoldPi' (ii ^. identifierType)
+        def = lookupIdentifierNode tab _identSymbol
+        (lams, body) = unfoldLambdas def
+        argnames = map (^. lambdaLhsBinder . binderName) lams
 
     -- assumption: all type arguments are substituted, so no binders in the type
     -- list refer to other elements in the list

@@ -19,10 +19,20 @@ myf' a0 f a b := myf a0 (f a0) a b true;
 sum : List Nat -> Nat;
 sum xs := for (acc := 0) (x in xs) {x + acc};
 
+funa : {A : Type} -> (A -> A) -> A -> A;
+funa {A} f a :=
+  let
+    {-# specialize-by: [f] #-}
+    go : Nat -> A;
+    go zero := a;
+    go (suc n) := f (go n);
+  in go 10;
+
 main : Nat;
 main :=
   sum (mymap λ{x := x + 3} (1 :: 2 :: 3 :: 4 :: nil)) +
   sum (flatten (mymap (mymap λ{x := x + 2}) ((1 :: nil) :: (2 :: 3 :: nil) :: nil))) +
     myf 3 (*) 2 5 true +
     myf 1 (+) 2 0 false +
-    myf' 7 (const (+)) 2 0;
+    myf' 7 (const (+)) 2 0 +
+    funa ((+) 1) 5;

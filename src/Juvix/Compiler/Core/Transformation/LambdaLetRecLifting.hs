@@ -59,6 +59,8 @@ lambdaLiftNode aboveBl top =
                   allfreevars = map fst freevarsAssocs
                   argsNum :: Int
                   argsNum = length (fst (unfoldLambdas fBody'))
+                  freeVarsNum :: Int
+                  freeVarsNum = length allfreevars
               f <- freshSymbol
               let name = uniqueName "lambda" f
               ty <- nodeType fBody'
@@ -72,7 +74,7 @@ lambdaLiftNode aboveBl top =
                     _identifierArgsNum = argsNum,
                     _identifierIsExported = False,
                     _identifierBuiltin = Nothing,
-                    _identifierPragmas = getInfoPragma (l ^. lambdaInfo),
+                    _identifierPragmas = adjustPragmas freeVarsNum (getInfoPragma (l ^. lambdaInfo)),
                     _identifierArgNames = []
                   }
               registerIdentNode f fBody'
@@ -135,6 +137,8 @@ lambdaLiftNode aboveBl top =
                               (b, bty)
                           argsNum :: Int
                           argsNum = length (fst (unfoldLambdas topBody))
+                          freeVarsNum :: Int
+                          freeVarsNum = length recItemsFreeVars
                       registerIdentNode sym topBody
                       registerIdent
                         name
@@ -146,7 +150,7 @@ lambdaLiftNode aboveBl top =
                             _identifierArgsNum = argsNum,
                             _identifierIsExported = False,
                             _identifierBuiltin = Nothing,
-                            _identifierPragmas = pragma,
+                            _identifierPragmas = adjustPragmas freeVarsNum pragma,
                             _identifierArgNames = []
                           }
                     | (((sym, name), (itemBinder, (b, bty))), pragma) <-
@@ -177,6 +181,17 @@ lambdaLiftNode aboveBl top =
           let res :: Node
               res = shiftHelper body' (nonEmpty' (zipExact letItems letRecBinders'))
           return (Recur res)
+
+        adjustPragmas :: Int -> Pragmas -> Pragmas
+        adjustPragmas fvnum pragmas =
+          over pragmasInline (fmap adjustInline) $
+            over pragmasSpecialiseArgs (fmap (over pragmaSpecialiseArgs (map (fvnum +)))) pragmas
+          where
+            adjustInline :: PragmaInline -> PragmaInline
+            adjustInline = \case
+              InlineNever -> InlineNever
+              InlineFullyApplied -> InlineFullyApplied
+              InlinePartiallyApplied n -> InlinePartiallyApplied (n + fvnum)
 
 lifting :: Bool -> InfoTable -> InfoTable
 lifting onlyLetRec = run . runReader onlyLetRec . mapT' (const (lambdaLiftNode mempty))
