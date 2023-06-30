@@ -19,9 +19,9 @@ fromCore :: Core.InfoTable -> InfoTable
 fromCore tab =
   InfoTable
     { _infoMainFunction = tab ^. Core.infoMain,
-      _infoFunctions = fmap (genCode tab) (tab ^. Core.infoFunctions),
-      _infoInductives = fmap translateInductiveInfo (tab ^. Core.infoInductives),
-      _infoConstrs = fmap translateConstructorInfo (tab ^. Core.infoConstructors)
+      _infoFunctions = genCode tab <$> tab ^. Core.infoFunctions,
+      _infoInductives = translateInductiveInfo <$> tab ^. Core.infoInductives,
+      _infoConstrs = translateConstructorInfo <$> tab ^. Core.infoConstructors
     }
 
 -- Generate code for a single function.

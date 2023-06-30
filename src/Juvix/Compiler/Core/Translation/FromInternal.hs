@@ -138,7 +138,7 @@ preInductiveDef i = do
             _inductiveConstructors = [],
             _inductiveParams = params,
             _inductivePositive = i ^. Internal.inductivePositive,
-            _inductiveBuiltin = fmap BuiltinTypeInductive (i ^. Internal.inductiveBuiltin),
+            _inductiveBuiltin = BuiltinTypeInductive <$> i ^. Internal.inductiveBuiltin,
             _inductivePragmas = i ^. Internal.inductivePragmas,
             _inductiveName
           }
@@ -163,7 +163,8 @@ goInductiveDef PreInductiveDef {..} = do
       idx = mkIdentIndex (i ^. Internal.inductiveName)
       sym = info ^. inductiveSymbol
   ctorInfos <- mapM (goConstructor sym) (i ^. Internal.inductiveConstructors)
-  registerInductive idx info {_inductiveConstructors = map (^. constructorTag) ctorInfos}
+  let ctorTags = map (^. constructorTag) ctorInfos
+  registerInductive idx (set inductiveConstructors ctorTags info)
 
 goConstructor ::
   forall r.

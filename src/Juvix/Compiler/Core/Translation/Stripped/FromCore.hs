@@ -20,13 +20,72 @@ fromCore tab =
   where
     tab' =
       tab
-        { _infoIdentifiers = HashMap.filter (\ii -> isNothing (ii ^. identifierBuiltin)) (tab ^. infoIdentifiers),
-          _infoInductives = HashMap.filter (\ii -> isNothing (ii ^. inductiveBuiltin) || isIO (ii ^. inductiveBuiltin)) (tab ^. infoInductives),
-          _infoConstructors = HashMap.filter (\ci -> isNothing (ci ^. constructorBuiltin)) (tab ^. infoConstructors)
+        { _infoIdentifiers = HashMap.filter (maybe True shouldKeepFunction . (^. identifierBuiltin)) (tab ^. infoIdentifiers),
+          _infoInductives = HashMap.filter (maybe True shouldKeepType . (^. inductiveBuiltin)) (tab ^. infoInductives),
+          _infoConstructors = HashMap.filter (maybe True shouldKeepConstructor . (^. constructorBuiltin)) (tab ^. infoConstructors)
         }
-    isIO :: Maybe BuiltinType -> Bool
-    isIO (Just (BuiltinTypeAxiom BuiltinIO)) = True
-    isIO _ = False
+    shouldKeepFunction :: BuiltinFunction -> Bool
+    shouldKeepFunction = \case
+      BuiltinNatPlus -> False
+      BuiltinNatSub -> False
+      BuiltinNatMul -> False
+      BuiltinNatUDiv -> False
+      BuiltinNatDiv -> False
+      BuiltinNatMod -> False
+      BuiltinNatLe -> False
+      BuiltinNatLt -> False
+      BuiltinNatEq -> False
+      BuiltinBoolIf -> False
+      BuiltinBoolOr -> False
+      BuiltinBoolAnd -> False
+      BuiltinIntEq -> False
+      BuiltinIntPlus -> False
+      BuiltinIntSubNat -> False
+      BuiltinIntNegNat -> False
+      BuiltinIntNeg -> False
+      BuiltinIntMul -> False
+      BuiltinIntDiv -> False
+      BuiltinIntMod -> False
+      BuiltinIntSub -> False
+      BuiltinIntNonNeg -> False
+      BuiltinIntLe -> False
+      BuiltinIntLt -> False
+      BuiltinSeq -> False
+
+    shouldKeepConstructor :: BuiltinConstructor -> Bool
+    shouldKeepConstructor = \case
+      BuiltinListNil -> True
+      BuiltinListCons -> True
+      BuiltinNatZero -> False
+      BuiltinNatSuc -> False
+      BuiltinBoolTrue -> False
+      BuiltinBoolFalse -> False
+      BuiltinIntOfNat -> False
+      BuiltinIntNegSuc -> False
+
+    shouldKeepType :: BuiltinType -> Bool
+    shouldKeepType = \case
+      BuiltinTypeAxiom a -> case a of
+        BuiltinIO -> True
+        BuiltinNatPrint -> False
+        BuiltinNatToString -> False
+        BuiltinStringPrint -> False
+        BuiltinStringConcat -> False
+        BuiltinStringEq -> False
+        BuiltinStringToNat -> False
+        BuiltinBoolPrint -> False
+        BuiltinString -> False
+        BuiltinIOSequence -> False
+        BuiltinIOReadline -> False
+        BuiltinTrace -> False
+        BuiltinFail -> False
+        BuiltinIntToString -> False
+        BuiltinIntPrint -> False
+      BuiltinTypeInductive i -> case i of
+        BuiltinList -> True
+        BuiltinNat -> False
+        BuiltinInt -> False
+        BuiltinBool -> False
 
 translateFunctionInfo :: InfoTable -> IdentifierInfo -> Stripped.FunctionInfo
 translateFunctionInfo tab IdentifierInfo {..} =
