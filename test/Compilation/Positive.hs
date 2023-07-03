@@ -349,5 +349,10 @@ tests =
       "Test058: Ranges"
       $(mkRelDir ".")
       $(mkRelFile "test058.juvix")
-      $(mkRelFile "out/test058.out")
+      $(mkRelFile "out/test058.out"),
+    posTest
+      "Test059: Builtin list"
+      $(mkRelDir ".")
+      $(mkRelFile "test059.juvix")
+      $(mkRelFile "out/test059.out")
   ]

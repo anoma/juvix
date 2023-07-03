@@ -602,7 +602,10 @@ matchExpressions = go
     err = throw @Text "Expression missmatch"
 
     matchVars :: Name -> Name -> Sem r Bool
-    matchVars va vb = (== Just vb) <$> gets @(HashMap Name Name) (^. at va)
+    matchVars va vb = do
+      let eq = va == vb
+      uni <- (== Just vb) <$> gets @(HashMap Name Name) (^. at va)
+      return (uni || eq)
 
     goHole :: Name -> Hole -> Sem r ()
     goHole var h = do

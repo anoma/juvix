@@ -145,6 +145,7 @@ checkBuiltinInductiveStartNode i = whenJust (i ^. inductiveBuiltin) go
       BuiltinNat -> addInductiveStartNode
       BuiltinBool -> addInductiveStartNode
       BuiltinInt -> addInductiveStartNode
+      BuiltinList -> return ()
 
     addInductiveStartNode :: Sem r ()
     addInductiveStartNode = addStartNode (i ^. inductiveName)

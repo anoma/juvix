@@ -13,9 +13,9 @@ import Juvix.Compiler.Concrete.Language qualified as Concrete
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
 import Juvix.Compiler.Internal.Data.NameDependencyInfo qualified as Internal
+import Juvix.Compiler.Internal.Extra qualified as Internal
 import Juvix.Compiler.Internal.Extra.DependencyBuilder
 import Juvix.Compiler.Internal.Language (varFromWildcard)
-import Juvix.Compiler.Internal.Language qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromConcrete.Data.Context
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker
 import Juvix.Compiler.Pipeline.EntryPoint
@@ -119,7 +119,7 @@ buildLetMutualBlocks ss = nonEmpty' . mapMaybe nameToPreStatement $ scomponents
           AcyclicSCC a -> AcyclicSCC <$> a
           CyclicSCC p -> CyclicSCC . toList <$> nonEmpty (catMaybes p)
 
-fromConcreteExpression :: (Members '[Error JuvixError, NameIdGen] r) => Scoper.Expression -> Sem r Internal.Expression
+fromConcreteExpression :: (Members '[Builtins, Error JuvixError, NameIdGen] r) => Scoper.Expression -> Sem r Internal.Expression
 fromConcreteExpression = mapError (JuvixError @ScoperError) . runReader @Pragmas mempty . goExpression
 
 fromConcreteImport ::
@@ -395,7 +395,7 @@ goOpenModule ::
 goOpenModule o = goOpenModule' o
 
 goLetFunctionDef ::
-  Members '[NameIdGen, Reader Pragmas, Error ScoperError] r =>
+  Members '[Builtins, NameIdGen, Reader Pragmas, Error ScoperError] r =>
   TypeSignature 'Scoped ->
   [FunctionClause 'Scoped] ->
   Sem r Internal.FunctionDef
@@ -403,7 +403,7 @@ goLetFunctionDef = goFunctionDefHelper
 
 goFunctionDefHelper ::
   forall r.
-  Members '[NameIdGen, Reader Pragmas, Error ScoperError] r =>
+  Members '[Builtins, NameIdGen, Reader Pragmas, Error ScoperError] r =>
   TypeSignature 'Scoped ->
   [FunctionClause 'Scoped] ->
   Sem r Internal.FunctionDef
@@ -443,7 +443,7 @@ goTopFunctionDef sig clauses = do
 
 goExamples ::
   forall r.
-  Members '[NameIdGen, Error ScoperError, Reader Pragmas] r =>
+  Members '[Builtins, NameIdGen, Error ScoperError, Reader Pragmas] r =>
   Maybe (Judoc 'Scoped) ->
   Sem r [Internal.Example]
 goExamples = mapM goExample . maybe [] judocExamples
@@ -458,7 +458,7 @@ goExamples = mapM goExample . maybe [] judocExamples
           }
 
 goFunctionClause ::
-  Members '[NameIdGen, Error ScoperError, Reader Pragmas] r =>
+  Members '[Builtins, NameIdGen, Error ScoperError, Reader Pragmas] r =>
   FunctionClause 'Scoped ->
   Sem r Internal.FunctionClause
 goFunctionClause FunctionClause {..} = do
@@ -472,7 +472,7 @@ goFunctionClause FunctionClause {..} = do
       }
 
 goInductiveParameters ::
-  Members '[NameIdGen, Error ScoperError, Reader Pragmas] r =>
+  Members '[Builtins, NameIdGen, Error ScoperError, Reader Pragmas] r =>
   InductiveParameters 'Scoped ->
   Sem r [Internal.InductiveParameter]
 goInductiveParameters InductiveParameters {..} = do
@@ -497,6 +497,7 @@ registerBuiltinInductive d = \case
   BuiltinNat -> registerNatDef d
   BuiltinBool -> registerBoolDef d
   BuiltinInt -> registerIntDef d
+  BuiltinList -> registerListDef d
 
 registerBuiltinFunction ::
   (Members '[Error ScoperError, Builtins, NameIdGen] r) =>
@@ -580,7 +581,7 @@ goInductive ty@InductiveDef {..} = do
   return indDef
 
 goConstructorDef ::
-  Members [NameIdGen, Error ScoperError, Reader Pragmas] r =>
+  Members [Builtins, NameIdGen, Error ScoperError, Reader Pragmas] r =>
   InductiveConstructorDef 'Scoped ->
   Sem r Internal.InductiveConstructorDef
 goConstructorDef InductiveConstructorDef {..} = do
@@ -603,9 +604,43 @@ goLiteral = fmap go
       LitString s -> Internal.LitString s
       LitInteger i -> Internal.LitInteger i
 
+goListPattern :: Members '[Builtins, Error ScoperError, NameIdGen] r => Concrete.ListPattern 'Scoped -> Sem r Internal.Pattern
+goListPattern l = do
+  nil_ <- getBuiltinName loc BuiltinListNil
+  cons_ <- getBuiltinName loc BuiltinListCons
+  let mkcons :: Internal.Pattern -> Internal.Pattern -> Internal.Pattern
+      mkcons a as =
+        Internal.PatternConstructorApp
+          Internal.ConstructorApp
+            { _constrAppConstructor = cons_,
+              _constrAppParameters = map mkpat [a, as],
+              _constrAppType = Nothing
+            }
+
+      mkpat :: Internal.Pattern -> Internal.PatternArg
+      mkpat p =
+        Internal.PatternArg
+          { _patternArgIsImplicit = Explicit,
+            _patternArgPattern = p,
+            _patternArgName = Nothing
+          }
+
+      mknil :: Internal.Pattern
+      mknil =
+        Internal.PatternConstructorApp
+          Internal.ConstructorApp
+            { _constrAppConstructor = nil_,
+              _constrAppParameters = [],
+              _constrAppType = Nothing
+            }
+  items <- mapM (goPattern . (^. patternArgPattern)) (l ^. Concrete.listpItems)
+  return (foldr mkcons mknil items)
+  where
+    loc = getLoc l
+
 goExpression ::
   forall r.
-  Members [NameIdGen, Error ScoperError, Reader Pragmas] r =>
+  Members [Builtins, NameIdGen, Error ScoperError, Reader Pragmas] r =>
   Expression ->
   Sem r Internal.Expression
 goExpression = \case
@@ -619,11 +654,21 @@ goExpression = \case
   ExpressionLambda l -> Internal.ExpressionLambda <$> goLambda l
   ExpressionBraces b -> throw (ErrAppLeftImplicit (AppLeftImplicit b))
   ExpressionLet l -> Internal.ExpressionLet <$> goLet l
+  ExpressionList l -> goList l
   ExpressionUniverse uni -> return (Internal.ExpressionUniverse (goUniverse uni))
   ExpressionFunction func -> Internal.ExpressionFunction <$> goFunction func
   ExpressionHole h -> return (Internal.ExpressionHole h)
   ExpressionIterator i -> goIterator i
   where
+    goList :: Concrete.List 'Scoped -> Sem r Internal.Expression
+    goList l = do
+      nil_ <- getBuiltinName loc BuiltinListNil
+      cons_ <- getBuiltinName loc BuiltinListCons
+      items <- mapM goExpression (l ^. Concrete.listItems)
+      return (foldr (\a b -> cons_ Internal.@@ a Internal.@@ b) (Internal.toExpression nil_) items)
+      where
+        loc = getLoc l
+
     goIden :: Concrete.ScopedIden -> Internal.Expression
     goIden x = Internal.ExpressionIden $ case x of
       ScopedAxiom a -> Internal.IdenAxiom (goName (a ^. Concrete.axiomRefName))
@@ -715,7 +760,7 @@ goExpression = \case
         mkApp :: Internal.Expression -> Internal.Expression -> Internal.Expression
         mkApp a1 a2 = Internal.ExpressionApplication $ Internal.Application a1 a2 Explicit
 
-goCase :: forall r. Members '[NameIdGen, Error ScoperError, Reader Pragmas] r => Case 'Scoped -> Sem r Internal.Case
+goCase :: forall r. Members '[Builtins, NameIdGen, Error ScoperError, Reader Pragmas] r => Case 'Scoped -> Sem r Internal.Case
 goCase c = do
   _caseExpression <- goExpression (c ^. caseExpression)
   _caseBranches <- mapM goBranch (c ^. caseBranches)
@@ -730,7 +775,7 @@ goCase c = do
       _caseBranchExpression <- goExpression (b ^. caseBranchExpression)
       return Internal.CaseBranch {..}
 
-goLambda :: forall r. Members '[NameIdGen, Error ScoperError, Reader Pragmas] r => Lambda 'Scoped -> Sem r Internal.Lambda
+goLambda :: forall r. Members '[Builtins, NameIdGen, Error ScoperError, Reader Pragmas] r => Lambda 'Scoped -> Sem r Internal.Lambda
 goLambda l = do
   clauses' <- mapM goClause (l ^. lambdaClauses)
   return
@@ -750,7 +795,7 @@ goUniverse u
   | isSmallUniverse u = SmallUniverse (getLoc u)
   | otherwise = error "only small universe is supported"
 
-goFunction :: Members '[NameIdGen, Error ScoperError, Reader Pragmas] r => Function 'Scoped -> Sem r Internal.Function
+goFunction :: Members '[Builtins, NameIdGen, Error ScoperError, Reader Pragmas] r => Function 'Scoped -> Sem r Internal.Function
 goFunction f = do
   params <- goFunctionParameters (f ^. funParameters)
   ret <- goExpression (f ^. funReturn)
@@ -759,7 +804,7 @@ goFunction f = do
       foldr (\param acc -> Internal.ExpressionFunction $ Internal.Function param acc) ret (NonEmpty.tail params)
 
 goFunctionParameters ::
-  Members '[NameIdGen, Error ScoperError, Reader Pragmas] r =>
+  Members '[Builtins, NameIdGen, Error ScoperError, Reader Pragmas] r =>
   FunctionParameters 'Scoped ->
   Sem r (NonEmpty Internal.FunctionParameter)
 goFunctionParameters FunctionParameters {..} = do
@@ -782,30 +827,30 @@ mkConstructorApp :: Internal.ConstrName -> [Internal.PatternArg] -> Internal.Con
 mkConstructorApp a b = Internal.ConstructorApp a b Nothing
 
 goPatternApplication ::
-  Members '[NameIdGen, Error ScoperError] r =>
+  Members '[Builtins, NameIdGen, Error ScoperError] r =>
   PatternApp ->
   Sem r Internal.ConstructorApp
 goPatternApplication a = uncurry mkConstructorApp <$> viewApp (PatternApplication a)
 
 goPatternConstructor ::
-  Members '[NameIdGen, Error ScoperError] r =>
+  Members '[Builtins, NameIdGen, Error ScoperError] r =>
   ConstructorRef ->
   Sem r Internal.ConstructorApp
 goPatternConstructor a = uncurry mkConstructorApp <$> viewApp (PatternConstructor a)
 
 goInfixPatternApplication ::
-  Members '[NameIdGen, Error ScoperError] r =>
+  Members '[Builtins, NameIdGen, Error ScoperError] r =>
   PatternInfixApp ->
   Sem r Internal.ConstructorApp
 goInfixPatternApplication a = uncurry mkConstructorApp <$> viewApp (PatternInfixApplication a)
 
 goPostfixPatternApplication ::
-  Members '[NameIdGen, Error ScoperError] r =>
+  Members '[Builtins, NameIdGen, Error ScoperError] r =>
   PatternPostfixApp ->
   Sem r Internal.ConstructorApp
 goPostfixPatternApplication a = uncurry mkConstructorApp <$> viewApp (PatternPostfixApplication a)
 
-viewApp :: forall r. Members '[NameIdGen, Error ScoperError] r => Pattern -> Sem r (Internal.ConstrName, [Internal.PatternArg])
+viewApp :: forall r. Members '[Builtins, NameIdGen, Error ScoperError] r => Pattern -> Sem r (Internal.ConstrName, [Internal.PatternArg])
 viewApp p = case p of
   PatternConstructor c -> return (goConstructorRef c, [])
   PatternApplication app@(PatternApp _ r) -> do
@@ -821,6 +866,7 @@ viewApp p = case p of
   PatternVariable {} -> err
   PatternWildcard {} -> err
   PatternEmpty {} -> err
+  PatternList {} -> err
   where
     viewAppLeft :: PatternApp -> Sem r (Internal.ConstrName, [Internal.PatternArg])
     viewAppLeft app@(PatternApp l _)
@@ -831,7 +877,7 @@ viewApp p = case p of
 goConstructorRef :: ConstructorRef -> Internal.Name
 goConstructorRef (ConstructorRef' n) = goName n
 
-goPatternArg :: Members '[NameIdGen, Error ScoperError] r => PatternArg -> Sem r Internal.PatternArg
+goPatternArg :: Members '[Builtins, NameIdGen, Error ScoperError] r => PatternArg -> Sem r Internal.PatternArg
 goPatternArg p = do
   pat' <- goPattern (p ^. patternArgPattern)
   return
@@ -841,9 +887,10 @@ goPatternArg p = do
         _patternArgPattern = pat'
       }
 
-goPattern :: Members '[NameIdGen, Error ScoperError] r => Pattern -> Sem r Internal.Pattern
+goPattern :: Members '[Builtins, NameIdGen, Error ScoperError] r => Pattern -> Sem r Internal.Pattern
 goPattern p = case p of
   PatternVariable a -> return $ Internal.PatternVariable (goSymbol a)
+  PatternList a -> goListPattern a
   PatternConstructor c -> Internal.PatternConstructorApp <$> goPatternConstructor c
   PatternApplication a -> Internal.PatternConstructorApp <$> goPatternApplication a
   PatternInfixApplication a -> Internal.PatternConstructorApp <$> goInfixPatternApplication a
