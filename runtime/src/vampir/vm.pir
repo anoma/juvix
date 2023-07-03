@@ -145,7 +145,7 @@ def exec_push reg _ _ (pc, sp, hp, regs, stack, heap) = {
 };
 
 def exec_pop reg _ _ (pc, sp, hp, regs, stack, heap) = {
-    def v = read stack sp;
+    def v = read stack (sp - 1);
     (pc + 1, sp - 1, hp, write regs reg v, stack, heap)
 };
 

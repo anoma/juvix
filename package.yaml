@@ -76,6 +76,7 @@ dependencies:
   - unix-compat == 0.5.*
   - unordered-containers == 0.2.*
   - utf8-string == 1.0.*
+  - vector == 0.12.*
   - versions == 5.0.*
   - xdg-basedir == 0.2.*
   - yaml == 0.11.*

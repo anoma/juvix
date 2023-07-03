@@ -31,3 +31,33 @@ mkJumpOnZero reg val = JumpOnZero $ InstrJumpOnZero reg val
 
 mkLabel :: Text -> Instruction
 mkLabel lab = Label $ InstrLabel lab
+
+maxValueReg :: Value -> Int
+maxValueReg = \case
+  RegRef r -> r
+  _ -> 0
+
+maxInstrReg :: Instruction -> Int
+maxInstrReg = \case
+  Binop BinaryOp {..} ->
+    maximum [_binaryOpResult, maxValueReg _binaryOpArg1, maxValueReg _binaryOpArg2]
+  Load InstrLoad {..} ->
+    max _instrLoadDest _instrLoadSrc
+  Store InstrStore {..} ->
+    max _instrStoreDest (maxValueReg _instrStoreValue)
+  Move InstrMove {..} ->
+    max _instrMoveDest (maxValueReg _instrMoveValue)
+  Halt ->
+    0
+  Alloc InstrAlloc {..} ->
+    _instrAllocDest
+  Push InstrPush {..} ->
+    _instrPushSrc
+  Pop InstrPop {..} ->
+    _instrPopDest
+  Jump InstrJump {..} ->
+    maxValueReg _instrJumpDest
+  JumpOnZero InstrJumpOnZero {..} ->
+    max _instrJumpOnZeroReg (maxValueReg _instrJumpOnZeroDest)
+  Label {} ->
+    0
