@@ -23,6 +23,7 @@ import Commands.Dev.Repl.Options
 import Commands.Dev.Runtime.Options
 import Commands.Dev.Scope.Options
 import Commands.Dev.Termination.Options
+import Commands.Dev.VM.Options
 import Commands.Repl.Options
 import CommonOptions
 
@@ -33,6 +34,7 @@ data DevCommand
   | Core CoreCommand
   | Geb GebCommand
   | Asm AsmCommand
+  | VM VMCommand
   | Runtime RuntimeCommand
   | Parse ParseOptions
   | Scope ScopeOptions
@@ -49,6 +51,7 @@ parseDevCommand =
           commandCore,
           commandGeb,
           commandAsm,
+          commandVM,
           commandRuntime,
           commandParse,
           commandScope,
@@ -92,6 +95,13 @@ commandAsm =
     info
       (Asm <$> parseAsmCommand)
       (progDesc "Subcommands related to JuvixAsm")
+
+commandVM :: Mod CommandFields DevCommand
+commandVM =
+  command "vm" $
+    info
+      (VM <$> parseVMCommand)
+      (progDesc "Subcommands related to JuvixVM")
 
 commandRuntime :: Mod CommandFields DevCommand
 commandRuntime =

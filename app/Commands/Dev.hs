@@ -16,6 +16,7 @@ import Commands.Dev.Parse qualified as Parse
 import Commands.Dev.Runtime qualified as Runtime
 import Commands.Dev.Scope qualified as Scope
 import Commands.Dev.Termination qualified as Termination
+import Commands.Dev.VM qualified as VM
 import Commands.Repl qualified as Repl
 
 runCommand :: (Members '[Embed IO, App] r) => DevCommand -> Sem r ()
@@ -28,6 +29,7 @@ runCommand = \case
   Core opts -> Core.runCommand opts
   Geb opts -> Geb.runCommand opts
   Asm opts -> Asm.runCommand opts
+  VM opts -> VM.runCommand opts
   Runtime opts -> Runtime.runCommand opts
   DisplayRoot opts -> DisplayRoot.runCommand opts
   JuvixDevRepl opts -> Repl.runCommand opts
