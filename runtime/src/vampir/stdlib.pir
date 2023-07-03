@@ -14,7 +14,7 @@ def msb n x = {
 };
 
 def isNegativeN n x = 1 - msb n (x + 2^(n - 1));
-def isNegative x = isNegativeN integerBits;
+def isNegative x = isNegativeN integerBits x;
 
 def add x y = x + y;
 def sub x y = x - y;
