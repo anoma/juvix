@@ -13,6 +13,7 @@ data InfoTableBuilder m a where
   RegisterConstructor :: S.Symbol -> InductiveConstructorDef 'Scoped -> InfoTableBuilder m ()
   RegisterInductive :: InductiveDef 'Scoped -> InfoTableBuilder m ()
   RegisterTypeSignature :: TypeSignature 'Scoped -> InfoTableBuilder m ()
+  RegisterNewTypeSignature :: NewTypeSignature 'Scoped -> InfoTableBuilder m ()
   RegisterFunctionClause :: FunctionClause 'Scoped -> InfoTableBuilder m ()
   RegisterName :: (HasLoc c) => S.Name' c -> InfoTableBuilder m ()
   RegisterModule :: Module 'Scoped 'ModuleTop -> InfoTableBuilder m ()
@@ -45,13 +46,21 @@ toState = reinterpret $ \case
      in do
           modify (over infoInductives (HashMap.insert ref info))
           registerDoc (ity ^. inductiveName . nameId) j
+  RegisterNewTypeSignature f ->
+    let ref = f ^. signName . S.nameId
+        info = FunctionInfoNew f
+        j = f ^. signDoc
+     in do
+          modify (set (infoFunctions . at ref) (Just info))
+          registerDoc (f ^. signName . nameId) j
   RegisterTypeSignature f ->
     let ref = f ^. sigName . S.nameId
         info =
-          FunctionInfo
-            { _functionInfoType = f,
-              _functionInfoClauses = []
-            }
+          FunctionInfoOld
+            OldFunctionInfo
+              { _functionInfoType = f,
+                _functionInfoClauses = []
+              }
         j = f ^. sigDoc
      in do
           modify (set (infoFunctions . at ref) (Just info))
@@ -59,7 +68,7 @@ toState = reinterpret $ \case
   RegisterFunctionClause c ->
     -- assumes the signature has already been registered
     let key = c ^. clauseOwnerFunction . S.nameId
-     in modify (over (infoFunctions . at key . _Just . functionInfoClauses) (`snoc` c))
+     in modify (over (infoFunctions . at key . _Just . _FunctionInfoOld . functionInfoClauses) (`snoc` c))
   RegisterName n -> modify (over highlightNames (cons (S.AName n)))
   RegisterModule m -> do
     let j = m ^. moduleDoc

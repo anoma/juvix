@@ -135,6 +135,7 @@ type ParsedIteratorAttribs = WithLoc (WithSource IteratorAttribs)
 data Statement (s :: Stage)
   = StatementSyntax SyntaxDef
   | StatementTypeSignature (TypeSignature s)
+  | StatementNewTypeSignature (NewTypeSignature s)
   | StatementImport (Import s)
   | StatementInductive (InductiveDef s)
   | StatementModule (Module s 'ModuleLocal)
@@ -241,6 +242,123 @@ instance HasLoc IteratorSyntaxDef where
 -------------------------------------------------------------------------------
 -- Type signature declaration
 -------------------------------------------------------------------------------
+
+data SigArg (s :: Stage) = SigArg
+  { _sigArgDelims :: Irrelevant (KeywordRef, KeywordRef),
+    _sigArgImplicit :: IsImplicit,
+    _sigArgNames :: NonEmpty (SymbolType s),
+    _sigArgType :: ExpressionType s
+  }
+
+deriving stock instance (Show (ExpressionType s), Show (SymbolType s)) => Show (SigArg s)
+
+deriving stock instance (Eq (ExpressionType s), Eq (SymbolType s)) => Eq (SigArg s)
+
+deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (SigArg s)
+
+data NewFunctionClause (s :: Stage) = NewFunctionClause
+  { _clausenPipeKw :: Irrelevant KeywordRef,
+    _clausenPatterns :: NonEmpty (PatternAtomType s),
+    _clausenBody :: ExpressionType s
+  }
+
+deriving stock instance
+  ( Show (PatternAtomType s),
+    Show (IdentifierType s),
+    Show (ModuleRefType s),
+    Show (SymbolType s),
+    Show (ExpressionType s)
+  ) =>
+  Show (NewFunctionClause s)
+
+deriving stock instance
+  ( Eq (PatternAtomType s),
+    Eq (IdentifierType s),
+    Eq (ModuleRefType s),
+    Eq (SymbolType s),
+    Eq (ExpressionType s)
+  ) =>
+  Eq (NewFunctionClause s)
+
+deriving stock instance
+  ( Ord (PatternAtomType s),
+    Ord (IdentifierType s),
+    Ord (ModuleRefType s),
+    Ord (SymbolType s),
+    Ord (ExpressionType s)
+  ) =>
+  Ord (NewFunctionClause s)
+
+data NewTypeSignatureBody (s :: Stage)
+  = SigBodyExpression (ExpressionType s)
+  | SigBodyClauses (NonEmpty (NewFunctionClause s))
+
+deriving stock instance
+  ( Show (PatternAtomType s),
+    Show (IdentifierType s),
+    Show (ModuleRefType s),
+    Show (SymbolType s),
+    Show (ExpressionType s)
+  ) =>
+  Show (NewTypeSignatureBody s)
+
+deriving stock instance
+  ( Eq (PatternAtomType s),
+    Eq (IdentifierType s),
+    Eq (ModuleRefType s),
+    Eq (SymbolType s),
+    Eq (ExpressionType s)
+  ) =>
+  Eq (NewTypeSignatureBody s)
+
+deriving stock instance
+  ( Ord (PatternAtomType s),
+    Ord (IdentifierType s),
+    Ord (ModuleRefType s),
+    Ord (SymbolType s),
+    Ord (ExpressionType s)
+  ) =>
+  Ord (NewTypeSignatureBody s)
+
+data NewTypeSignature (s :: Stage) = NewTypeSignature
+  { _signName :: FunctionName s,
+    _signArgs :: [SigArg s],
+    _signColonKw :: Irrelevant KeywordRef,
+    _signRetType :: ExpressionType s,
+    _signDoc :: Maybe (Judoc s),
+    _signAssignKw :: Irrelevant (Maybe KeywordRef),
+    _signPragmas :: Maybe ParsedPragmas,
+    _signBuiltin :: Maybe (WithLoc BuiltinFunction),
+    _signBody :: NewTypeSignatureBody s,
+    _signTerminating :: Maybe KeywordRef
+  }
+
+deriving stock instance
+  ( Show (PatternAtomType s),
+    Show (IdentifierType s),
+    Show (ModuleRefType s),
+    Show (SymbolType s),
+    Show (ExpressionType s)
+  ) =>
+  Show (NewTypeSignature s)
+
+deriving stock instance
+  ( Eq (PatternAtomType s),
+    Eq (IdentifierType s),
+    Eq (ModuleRefType s),
+    Eq (SymbolType s),
+    Eq (ExpressionType s)
+  ) =>
+  Eq (NewTypeSignature s)
+
+deriving stock instance
+  ( Ord (PatternAtomType s),
+    Ord (IdentifierType s),
+    Ord (ModuleRefType s),
+    Ord (SymbolType s),
+    Ord (ExpressionType s)
+  ) =>
+  Ord (NewTypeSignature s)
 
 data TypeSignature (s :: Stage) = TypeSignature
   { _sigName :: FunctionName s,
@@ -1273,6 +1391,7 @@ makeLenses ''IteratorSyntaxDef
 makeLenses ''InductiveConstructorDef
 makeLenses ''Module
 makeLenses ''TypeSignature
+makeLenses ''NewTypeSignature
 makeLenses ''AxiomDef
 makeLenses ''FunctionClause
 makeLenses ''InductiveParameters
@@ -1428,6 +1547,7 @@ instance HasLoc (Statement 'Scoped) where
   getLoc = \case
     StatementSyntax t -> getLoc t
     StatementTypeSignature t -> getLoc t
+    StatementNewTypeSignature t -> getLoc t
     StatementImport t -> getLoc t
     StatementInductive t -> getLoc t
     StatementModule t -> getLoc t
@@ -1531,13 +1651,29 @@ getLocExpressionType = case sing :: SStage s of
   SParsed -> getLoc
   SScoped -> getLoc
 
+instance HasLoc (SigArg s) where
+  getLoc SigArg {..} = getLoc l <> getLoc r
+    where
+      Irrelevant (l, r) = _sigArgDelims
+
+instance SingI s => HasLoc (NewTypeSignature s) where
+  getLoc NewTypeSignature {..} =
+    (getLoc <$> _signDoc)
+      ?<> (getLoc <$> _signPragmas)
+      ?<> (getLoc <$> _signBuiltin)
+      ?<> (getLoc <$> _signTerminating)
+      ?<> getLocSymbolType _signName
+      -- <> (getLocExpressionType <$> _signBody)
+      <> getLocExpressionType _signRetType
+
 instance SingI s => HasLoc (TypeSignature s) where
   getLoc TypeSignature {..} =
     (getLoc <$> _sigDoc)
       ?<> (getLoc <$> _sigPragmas)
       ?<> (getLoc <$> _sigBuiltin)
       ?<> (getLoc <$> _sigTerminating)
-      ?<> (getLocExpressionType <$> _sigBody)
+      ?<> getLocSymbolType _sigName
+      <> (getLocExpressionType <$> _sigBody)
       ?<> getLocExpressionType _sigType
 
 instance HasLoc (Example s) where

@@ -98,6 +98,8 @@ groupStatements = \case
       (StatementModule {}, _) -> False
       (StatementAxiom {}, StatementAxiom {}) -> False
       (StatementAxiom {}, _) -> False
+      (StatementNewTypeSignature {}, _) -> False
+      (_, StatementNewTypeSignature {}) -> False
       (StatementTypeSignature sig, StatementFunctionClause fun) ->
         case sing :: SStage s of
           SParsed -> sig ^. sigName == fun ^. clauseOwnerFunction

@@ -514,6 +514,24 @@ checkIteratorSyntaxDef s@IteratorSyntaxDef {..} = do
 (@$>) :: Functor m => (a -> m ()) -> a -> m a
 (@$>) f a = f a $> a
 
+checkNewTypeSignature ::
+  (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, State ScoperFixities, State ScoperIterators, Reader BindingStrategy] r) =>
+  NewTypeSignature 'Parsed ->
+  Sem r (NewTypeSignature 'Scoped)
+checkNewTypeSignature NewTypeSignature {..} = do
+  sigType' <- checkParseExpressionAtoms _sigType
+  sigName' <- bindFunctionSymbol _sigName
+  sigDoc' <- mapM checkJudoc _sigDoc
+  sigBody' <- mapM checkParseExpressionAtoms _sigBody
+  registerTypeSignature
+    @$> NewTypeSignature
+      { _sigName = sigName',
+        _sigType = sigType',
+        _sigDoc = sigDoc',
+        _sigBody = sigBody',
+        ..
+      }
+
 checkTypeSignature ::
   (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, State ScoperFixities, State ScoperIterators, Reader BindingStrategy] r) =>
   TypeSignature 'Parsed ->
@@ -1494,6 +1512,7 @@ checkStatement ::
 checkStatement s = topBindings $ case s of
   StatementSyntax synDef -> StatementSyntax <$> checkSyntaxDef synDef
   StatementTypeSignature tySig -> StatementTypeSignature <$> checkTypeSignature tySig
+  StatementNewTypeSignature tySig -> StatementNewTypeSignature <$> checkNewTypeSignature tySig
   StatementImport imp -> StatementImport <$> checkImport imp
   StatementInductive dt -> StatementInductive <$> checkInductiveDef dt
   StatementModule dt -> StatementModule <$> checkLocalModule dt

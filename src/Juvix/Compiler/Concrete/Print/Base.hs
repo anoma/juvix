@@ -6,7 +6,6 @@ module Juvix.Compiler.Concrete.Print.Base
 where
 
 import Data.List.NonEmpty.Extra qualified as NonEmpty
-import Juvix.Compiler.Concrete.Data.InfoTable
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Extra qualified as Concrete
 import Juvix.Compiler.Concrete.Keywords qualified as Kw
@@ -191,11 +190,11 @@ instance PrettyPrint S.AName where
   ppCode (S.AName n) = annotated (AnnKind (S.getNameKind n)) (noLoc (pretty (n ^. S.nameVerbatim)))
 
 -- TODO print without spaces when the type signature is not next to the clauses
-instance PrettyPrint FunctionInfo where
-  ppCode f = do
-    let ty = StatementTypeSignature (f ^. functionInfoType)
-        cs = map StatementFunctionClause (f ^. functionInfoClauses)
-    ppCode (ty : cs)
+-- instance PrettyPrint FunctionInfo where
+--   ppCode f = do
+--     let ty = StatementTypeSignature (f ^. functionInfoType)
+--         cs = map StatementFunctionClause (f ^. functionInfoClauses)
+--     ppCode (ty : cs)
 
 instance SingI s => PrettyPrint (List s) where
   ppCode List {..} = do
@@ -851,6 +850,7 @@ instance SingI s => PrettyPrint (Statement s) where
   ppCode = \case
     StatementSyntax s -> ppCode s
     StatementTypeSignature s -> ppCode s
+    StatementNewTypeSignature {} -> undefined
     StatementImport i -> ppCode i
     StatementInductive i -> ppCode i
     StatementModule m -> ppCode m

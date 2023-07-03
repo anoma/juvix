@@ -4,11 +4,21 @@ import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Language
 import Juvix.Prelude
 
-data FunctionInfo = FunctionInfo
+data OldFunctionInfo = OldFunctionInfo
   { _functionInfoType :: TypeSignature 'Scoped,
     _functionInfoClauses :: [FunctionClause 'Scoped]
   }
   deriving stock (Eq, Show)
+
+data FunctionInfo
+  = FunctionInfoOld OldFunctionInfo
+  | FunctionInfoNew (NewTypeSignature 'Scoped)
+  deriving stock (Eq, Show)
+
+_FunctionInfoOld :: Traversal' FunctionInfo OldFunctionInfo
+_FunctionInfoOld f = \case
+  FunctionInfoOld x -> FunctionInfoOld <$> f x
+  r@FunctionInfoNew {} -> pure r
 
 data ConstructorInfo = ConstructorInfo
   { _constructorInfoDef :: InductiveConstructorDef 'Scoped,
@@ -50,9 +60,9 @@ makeLenses ''InfoTable
 makeLenses ''InductiveInfo
 makeLenses ''ConstructorInfo
 makeLenses ''AxiomInfo
-makeLenses ''FunctionInfo
+makeLenses ''OldFunctionInfo
 
-instance HasLoc FunctionInfo where
-  getLoc f =
-    getLoc (f ^. functionInfoType)
-      <>? (getLocSpan <$> nonEmpty (f ^. functionInfoClauses))
+-- instance HasLoc FunctionInfo where
+--   getLoc f =
+--     getLoc (f ^. functionInfoType)
+--       <>? (getLocSpan <$> nonEmpty (f ^. functionInfoClauses))
