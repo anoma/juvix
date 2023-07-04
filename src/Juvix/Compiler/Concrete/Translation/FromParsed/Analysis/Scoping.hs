@@ -195,16 +195,24 @@ reserveSymbolOf k s = do
   path <- gets (^. scopePath)
   strat <- ask
   modify (set (scopeLocalSymbols . at s) (Just s'))
-  let entry :: SymbolEntry
-      entry = undefined
-      addS :: Maybe SymbolInfo -> SymbolInfo
-      addS m = case m of
+  let c = S.unConcrete s'
+      mentry :: Maybe SymbolEntry
+      mentry = case k of
+        S.KNameConstructor -> Just (EntryConstructor c)
+        S.KNameInductive -> Just (EntryInductive c)
+        S.KNameFunction -> Just (EntryFunction c)
+        S.KNameAxiom -> Just (EntryAxiom c)
+        S.KNameLocal -> Just (EntryVariable c)
+        S.KNameLocalModule -> Nothing
+        S.KNameTopModule -> Nothing
+      addS :: SymbolEntry -> Maybe SymbolInfo -> SymbolInfo
+      addS entry m = case m of
         Nothing -> symbolInfoSingle entry
         Just SymbolInfo {..} -> case strat of
           BindingLocal -> symbolInfoSingle entry
           BindingTop -> SymbolInfo (HashMap.insert path entry _symbolInfo)
-
-  modify (over scopeSymbols (HashMap.alter (Just . addS) s))
+  whenJust mentry $ \entry ->
+   modify (over scopeSymbols (HashMap.alter (Just . addS entry) s))
 
   return s'
   where
@@ -228,6 +236,7 @@ bindReservedSymbol ::
 bindReservedSymbol s' entry = do
   path <- gets (^. scopePath)
   strat <- ask
+  -- TODO only modules are meant to be stored here?
   modify (over scopeSymbols (HashMap.alter (Just . addS strat path) s))
   registerName (S.unqualifiedSymbol s')
   where
