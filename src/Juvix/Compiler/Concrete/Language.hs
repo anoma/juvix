@@ -246,6 +246,7 @@ instance HasLoc IteratorSyntaxDef where
 data SigArg (s :: Stage) = SigArg
   { _sigArgDelims :: Irrelevant (KeywordRef, KeywordRef),
     _sigArgImplicit :: IsImplicit,
+    _sigArgColon :: Irrelevant KeywordRef,
     _sigArgNames :: NonEmpty (SymbolType s),
     _sigArgType :: ExpressionType s
   }
@@ -327,7 +328,6 @@ data NewTypeSignature (s :: Stage) = NewTypeSignature
     _signColonKw :: Irrelevant KeywordRef,
     _signRetType :: ExpressionType s,
     _signDoc :: Maybe (Judoc s),
-    _signAssignKw :: Irrelevant (Maybe KeywordRef),
     _signPragmas :: Maybe ParsedPragmas,
     _signBuiltin :: Maybe (WithLoc BuiltinFunction),
     _signBody :: NewTypeSignatureBody s,

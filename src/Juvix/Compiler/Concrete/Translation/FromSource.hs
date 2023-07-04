@@ -280,7 +280,10 @@ statement = P.label "<top level statement>" $ do
   ms <-
     optional
       ( StatementSyntax <$> syntaxDef
+          -- TODO remove try after removing old syntax
           <|> P.try (StatementOpenModule <$> newOpenSyntax)
+          -- TODO remove try after removing old syntax
+          <|> P.try (StatementNewTypeSignature <$> newTypeSignature Nothing)
           <|> StatementOpenModule <$> openModule
           <|> StatementImport <$> import_
           <|> StatementInductive <$> inductiveDef Nothing
@@ -476,11 +479,18 @@ builtinTypeSig b = do
   fun <- symbol
   typeSignature terminating fun (Just b)
 
+builtinNewTypeSig ::
+  Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r =>
+  WithLoc BuiltinFunction ->
+  ParsecS r (NewTypeSignature 'Parsed)
+builtinNewTypeSig = newTypeSignature . Just
+
 builtinStatement :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (Statement 'Parsed)
 builtinStatement = do
   void (kw kwBuiltin)
   (builtinInductive >>= fmap StatementInductive . builtinInductiveDef)
     <|> (builtinFunction >>= fmap StatementTypeSignature . builtinTypeSig)
+    <|> (builtinFunction >>= fmap StatementNewTypeSignature . builtinNewTypeSig)
     <|> (builtinAxiom >>= fmap StatementAxiom . builtinAxiomDef)
 
 --------------------------------------------------------------------------------
@@ -793,14 +803,61 @@ auxTypeSigFunClause = do
           Left <$> typeSignature terminating sym Nothing
       | otherwise ->
           checkEq
-            <|> (Left <$> typeSignature terminating sym Nothing)
-            <|> (Right <$> functionClause sym)
+            <|> Left <$> typeSignature terminating sym Nothing
+            <|> Right <$> functionClause sym
   where
     checkEq :: ParsecS r a
     checkEq = do
       off <- P.getOffset
       kw kwEq
       parseFailure off "expected \":=\" instead of \"=\""
+
+newTypeSignature ::
+  forall r.
+  Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r =>
+  Maybe (WithLoc BuiltinFunction) ->
+  ParsecS r (NewTypeSignature 'Parsed)
+newTypeSignature _signBuiltin = P.label "<function definition>" $ do
+  _signTerminating <- optional (kw kwTerminating)
+  _signName <- symbol
+  _signArgs <- many parseArg
+  _signColonKw <- Irrelevant <$> kw kwColon
+  _signRetType <- parseExpressionAtoms
+  _signDoc <- getJudoc
+  _signPragmas <- getPragmas
+  _signBody <- parseBody
+  return NewTypeSignature {..}
+  where
+    parseArg :: ParsecS r (SigArg 'Parsed)
+    parseArg = do
+      (openDelim, _sigArgNames, _sigArgImplicit, _sigArgColon) <- P.try $ do
+        (opn, impl) <- implicitOpen
+        n <- some1 symbol
+        c <- Irrelevant <$> kw kwColon
+        return (opn, n, impl, c)
+      _sigArgType <- parseExpressionAtoms
+      closeDelim <- implicitClose _sigArgImplicit
+      let _sigArgDelims = Irrelevant (openDelim, closeDelim)
+      return SigArg {..}
+
+    parseBody :: ParsecS r (NewTypeSignatureBody 'Parsed)
+    parseBody =
+      SigBodyExpression <$> bodyExpr
+        <|> (SigBodyClauses <$> bodyClauses)
+      where
+        bodyClause :: ParsecS r (NewFunctionClause 'Parsed)
+        bodyClause = do
+          _clausenPipeKw <- Irrelevant <$> kw kwPipe
+          _clausenPatterns <- some1 patternAtom
+          _clausenAssignKw <- Irrelevant <$> kw kwAssign
+          _clausenBody <- parseExpressionAtoms
+          return NewFunctionClause {..}
+        bodyClauses :: ParsecS r (NonEmpty (NewFunctionClause 'Parsed))
+        bodyClauses = some1 bodyClause
+        bodyExpr :: ParsecS r (ExpressionAtoms 'Parsed)
+        bodyExpr = do
+          void (kw kwAssign)
+          parseExpressionAtoms
 
 axiomDef ::
   Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r =>

@@ -654,12 +654,22 @@ instance SingI s => PrettyPrint (NewFunctionClause s) where
         e' = ppExpressionType _clausenBody
     ppCode _clausenPipeKw <+> pats' <+> ppCode _clausenAssignKw <> oneLineOrNext e'
 
+instance SingI s => PrettyPrint (SigArg s) where
+  ppCode :: Members '[ExactPrint, Reader Options] r => SigArg s -> Sem r ()
+  ppCode SigArg {..} = do
+    let Irrelevant (l, r) = _sigArgDelims
+        names' = hsep (ppSymbolType <$> _sigArgNames)
+        colon' = ppCode _sigArgColon
+        ty' = ppExpressionType _sigArgType
+    ppCode l <> names' <+> colon' <+> ty' <> ppCode r
+
 instance SingI s => PrettyPrint (NewTypeSignature s) where
   ppCode :: forall r. Members '[ExactPrint, Reader Options] r => NewTypeSignature s -> Sem r ()
   ppCode NewTypeSignature {..} = do
     let termin' :: Maybe (Sem r ()) = (<> line) . ppCode <$> _signTerminating
         doc' :: Maybe (Sem r ()) = ppCode <$> _signDoc
         pragmas' :: Maybe (Sem r ()) = ppCode <$> _signPragmas
+        args' = hsep (map ppCode _signArgs)
         builtin' :: Maybe (Sem r ()) = (<> line) . ppCode <$> _signBuiltin
         type' = ppExpressionType _signRetType
         name' = annDef _signName (ppSymbolType _signName)
@@ -671,11 +681,9 @@ instance SingI s => PrettyPrint (NewTypeSignature s) where
       ?<> builtin'
       ?<> termin'
       ?<> ( name'
-              <+> ppCode _signColonKw
-                <> oneLineOrNext
-                  ( type'
-                      <+> body'
-                  )
+              <+> args'
+                <> oneLineOrNext (ppCode _signColonKw <+> type')
+                <> body'
           )
 
 instance SingI s => PrettyPrint (TypeSignature s) where

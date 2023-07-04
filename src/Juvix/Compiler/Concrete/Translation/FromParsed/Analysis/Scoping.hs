@@ -522,10 +522,11 @@ checkNewTypeSignature ::
 checkNewTypeSignature NewTypeSignature {..} = do
   sigName' <- bindFunctionSymbol _signName
   sigDoc' <- mapM checkJudoc _signDoc
-  -- TODO local scope
-  args' <- mapM checkArg _signArgs
-  sigType' <- checkParseExpressionAtoms _signRetType
-  sigBody' <- checkBody
+  (args', sigType', sigBody') <- withLocalScope $ do
+    a' <- mapM checkArg _signArgs
+    t' <- checkParseExpressionAtoms _signRetType
+    b' <- checkBody
+    return (a', t', b')
   registerNewTypeSignature
     @$> NewTypeSignature
       { _signName = sigName',
