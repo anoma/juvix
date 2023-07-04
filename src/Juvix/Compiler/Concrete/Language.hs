@@ -132,6 +132,37 @@ type ParsedIteratorAttribs = WithLoc (WithSource IteratorAttribs)
 -- Top level statement
 --------------------------------------------------------------------------------
 
+-- | We group consecutive definitions and reserve symbols in advance, so that we
+-- don't need extra syntax for mutually recursive definitions. Also, it allows
+-- us to be more flexible with the ordering of the definitions.
+data StatementSections (s :: Stage)
+  = SectionsDefinitions (DefinitionsSection s)
+  | SectionsNonDefinitions (NonDefinitionsSection s)
+  | SectionsEmpty
+
+data DefinitionsSection (s :: Stage) = DefinitionsSection
+  { _definitionsSection :: NonEmpty (Definition s),
+    _definitionsNext :: Maybe (NonDefinitionsSection s)
+  }
+
+data NonDefinitionsSection (s :: Stage) = NonDefinitionsSection
+  { _nonDefinitionsSection :: NonEmpty (NonDefinition s),
+    _nonDefinitionsNext :: Maybe (DefinitionsSection s)
+  }
+
+data Definition (s :: Stage)
+  = DefinitionNewTypeSignature (NewTypeSignature s)
+  | DefinitionInductive (InductiveDef s)
+  | DefinitionAxiom (AxiomDef s)
+  | DefinitionTypeSignature (TypeSignature s)
+
+data NonDefinition (s :: Stage)
+  = NonDefinitionSyntax SyntaxDef
+  | NonDefinitionImport (Import s)
+  | NonDefinitionModule (Module s 'ModuleLocal)
+  | NonDefinitionFunctionClause (FunctionClause s)
+  | NonDefinitionOpenModule (OpenModule s)
+
 data Statement (s :: Stage)
   = StatementSyntax SyntaxDef
   | StatementTypeSignature (TypeSignature s)
@@ -464,22 +495,22 @@ data PatternApp = PatternApp
 
 data PatternInfixApp = PatternInfixApp
   { _patInfixLeft :: PatternArg,
-    _patInfixConstructor :: ConstructorRef,
+    _patInfixConstructor :: S.Name,
     _patInfixRight :: PatternArg
   }
   deriving stock (Show, Eq, Ord)
 
 instance HasFixity PatternInfixApp where
-  getFixity (PatternInfixApp _ op _) = fromMaybe impossible (op ^. constructorRefName . S.nameFixity)
+  getFixity (PatternInfixApp _ op _) = fromMaybe impossible (op ^. S.nameFixity)
 
 data PatternPostfixApp = PatternPostfixApp
   { _patPostfixParameter :: PatternArg,
-    _patPostfixConstructor :: ConstructorRef
+    _patPostfixConstructor :: S.Name
   }
   deriving stock (Show, Eq, Ord)
 
 instance HasFixity PatternPostfixApp where
-  getFixity (PatternPostfixApp _ op) = fromMaybe impossible (op ^. constructorRefName . S.nameFixity)
+  getFixity (PatternPostfixApp _ op) = fromMaybe impossible (op ^. S.nameFixity)
 
 data PatternArg = PatternArg
   { _patternArgIsImplicit :: IsImplicit,
@@ -490,7 +521,7 @@ data PatternArg = PatternArg
 
 data Pattern
   = PatternVariable (SymbolType 'Scoped)
-  | PatternConstructor ConstructorRef
+  | PatternConstructor S.Name
   | PatternApplication PatternApp
   | PatternList (ListPattern 'Scoped)
   | PatternInfixApplication PatternInfixApp
@@ -519,7 +550,7 @@ instance HasAtomicity Pattern where
 
 data PatternScopedIden
   = PatternScopedVar S.Symbol
-  | PatternScopedConstructor ConstructorRef
+  | PatternScopedConstructor S.Name
   deriving stock (Show, Ord, Eq)
 
 data PatternBinding = PatternBinding
@@ -801,10 +832,10 @@ instance (Show (RefNameType s)) => Show (ModuleRef'' s t) where
   show ModuleRef'' {..} = show _moduleRefName
 
 data SymbolEntry
-  = EntryAxiom (AxiomRef' 'S.NotConcrete)
-  | EntryInductive (InductiveRef' 'S.NotConcrete)
-  | EntryFunction (FunctionRef' 'S.NotConcrete)
-  | EntryConstructor (ConstructorRef' 'S.NotConcrete)
+  = EntryAxiom (RefNameType 'S.NotConcrete)
+  | EntryInductive (RefNameType 'S.NotConcrete)
+  | EntryFunction (RefNameType 'S.NotConcrete)
+  | EntryConstructor (RefNameType 'S.NotConcrete)
   | EntryModule (ModuleRef' 'S.NotConcrete)
   | EntryVariable (S.Name' ())
   deriving stock (Show)
@@ -864,11 +895,11 @@ deriving stock instance
 type ScopedIden = ScopedIden' 'S.Concrete
 
 data ScopedIden' (n :: S.IsConcrete)
-  = ScopedAxiom (AxiomRef' n)
-  | ScopedInductive (InductiveRef' n)
+  = ScopedAxiom (RefNameType n)
+  | ScopedInductive (RefNameType n)
   | ScopedVar S.Symbol
-  | ScopedFunction (FunctionRef' n)
-  | ScopedConstructor (ConstructorRef' n)
+  | ScopedFunction (RefNameType n)
+  | ScopedConstructor (RefNameType n)
 
 deriving stock instance
   (Eq (RefNameType s)) => Eq (ScopedIden' s)
@@ -881,16 +912,16 @@ deriving stock instance
 
 identifierName :: forall n. (SingI n) => ScopedIden' n -> RefNameType n
 identifierName = \case
-  ScopedAxiom a -> a ^. axiomRefName
-  ScopedInductive i -> i ^. inductiveRefName
+  ScopedAxiom a -> a
+  ScopedInductive i -> i
   ScopedVar v ->
     ( case sing :: S.SIsConcrete n of
         S.SConcrete -> id
         S.SNotConcrete -> set S.nameConcrete ()
     )
       (unqualifiedSymbol v)
-  ScopedFunction f -> f ^. functionRefName
-  ScopedConstructor c -> c ^. constructorRefName
+  ScopedFunction f -> f
+  ScopedConstructor c -> c
 
 data Expression
   = ExpressionIdentifier ScopedIden
@@ -1908,7 +1939,7 @@ instance IsApe PatternInfixApp ApeLeaf where
         { _infixFixity = getFixity i,
           _infixLeft = toApe l,
           _infixRight = toApe r,
-          _infixIsDelimiter = isDelimiterStr (prettyText (op ^. constructorRefName . S.nameConcrete)),
+          _infixIsDelimiter = isDelimiterStr (prettyText (op ^. S.nameConcrete)),
           _infixOp = ApeLeafPattern (PatternConstructor op)
         }
 
@@ -1984,18 +2015,18 @@ instance HasAtomicity PatternArg where
 
 idenOverName :: (forall s. S.Name' s -> S.Name' s) -> ScopedIden -> ScopedIden
 idenOverName f = \case
-  ScopedAxiom a -> ScopedAxiom (over axiomRefName f a)
-  ScopedInductive i -> ScopedInductive (over inductiveRefName f i)
+  ScopedAxiom a -> ScopedAxiom (f a)
+  ScopedInductive i -> ScopedInductive (f i)
   ScopedVar v -> ScopedVar (f v)
-  ScopedFunction fun -> ScopedFunction (over functionRefName f fun)
-  ScopedConstructor c -> ScopedConstructor (over constructorRefName f c)
+  ScopedFunction fun -> ScopedFunction (f fun)
+  ScopedConstructor c -> ScopedConstructor (f c)
 
 entryPrism :: (S.Name' () -> S.Name' ()) -> SymbolEntry -> (S.Name' (), SymbolEntry)
 entryPrism f = \case
-  EntryAxiom a -> (a ^. axiomRefName, EntryAxiom (over axiomRefName f a))
-  EntryInductive i -> (i ^. inductiveRefName, EntryInductive (over inductiveRefName f i))
-  EntryFunction fun -> (fun ^. functionRefName, EntryFunction (over functionRefName f fun))
-  EntryConstructor c -> (c ^. constructorRefName, EntryConstructor (over constructorRefName f c))
+  EntryAxiom a -> (a, EntryAxiom (f a))
+  EntryInductive i -> (i, EntryInductive (f i))
+  EntryFunction fun -> (fun, EntryFunction (f fun))
+  EntryConstructor c -> (c, EntryConstructor (f c))
   EntryModule m -> (getModuleRefNameType m, EntryModule (overModuleRef'' (over moduleRefName f) m))
   EntryVariable m -> (m, EntryVariable (f m))
 
@@ -2041,10 +2072,10 @@ symbolEntryNameId = (^. S.nameId) . symbolEntryToSName
 
 symbolEntryToSName :: SymbolEntry -> S.Name' ()
 symbolEntryToSName = \case
-  EntryAxiom a -> a ^. axiomRefName
-  EntryInductive i -> i ^. inductiveRefName
-  EntryFunction f -> f ^. functionRefName
-  EntryConstructor c -> c ^. constructorRefName
+  EntryAxiom a -> a
+  EntryInductive i -> i
+  EntryFunction f -> f
+  EntryConstructor c -> c
   EntryModule m -> getModuleRefNameType m
   EntryVariable m -> m
 

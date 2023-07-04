@@ -429,7 +429,7 @@ goFunctionDefHelper sig@TypeSignature {..} clauses = do
   _funDefPragmas <- goPragmas _sigPragmas
   _funDefClauses <- case (_sigBody, nonEmpty clauses) of
     (Nothing, Nothing) -> throw (ErrLacksFunctionClause (LacksFunctionClause sig))
-    (Just {}, Just clauses') -> throw (ErrDuplicateFunctionClause (DuplicateFunctionClause sig (head clauses')))
+    (Just {}, Just {}) -> error "duplicate function clause. TODO remove this when old function syntax is removed"
     (Just body, Nothing) -> do
       body' <- goExpression body
       return
@@ -743,11 +743,11 @@ goExpression = \case
 
     goIden :: Concrete.ScopedIden -> Internal.Expression
     goIden x = Internal.ExpressionIden $ case x of
-      ScopedAxiom a -> Internal.IdenAxiom (goName (a ^. Concrete.axiomRefName))
-      ScopedInductive i -> Internal.IdenInductive (goName (i ^. Concrete.inductiveRefName))
+      ScopedAxiom a -> Internal.IdenAxiom (goName a)
+      ScopedInductive i -> Internal.IdenInductive (goName i)
       ScopedVar v -> Internal.IdenVar (goSymbol v)
-      ScopedFunction fun -> Internal.IdenFunction (goName (fun ^. Concrete.functionRefName))
-      ScopedConstructor c -> Internal.IdenConstructor (goName (c ^. Concrete.constructorRefName))
+      ScopedFunction fun -> Internal.IdenFunction (goName fun)
+      ScopedConstructor c -> Internal.IdenConstructor (goName c)
 
     goLet :: Let 'Scoped -> Sem r Internal.Let
     goLet l = do
@@ -906,7 +906,7 @@ goPatternApplication a = uncurry mkConstructorApp <$> viewApp (PatternApplicatio
 
 goPatternConstructor ::
   Members '[Builtins, NameIdGen, Error ScoperError] r =>
-  ConstructorRef ->
+  S.Name ->
   Sem r Internal.ConstructorApp
 goPatternConstructor a = uncurry mkConstructorApp <$> viewApp (PatternConstructor a)
 
@@ -946,8 +946,8 @@ viewApp p = case p of
       | otherwise = viewApp (l ^. patternArgPattern)
     err = throw (ErrConstructorExpectedLeftApplication (ConstructorExpectedLeftApplication p))
 
-goConstructorRef :: ConstructorRef -> Internal.Name
-goConstructorRef (ConstructorRef' n) = goName n
+goConstructorRef :: S.Name -> Internal.Name
+goConstructorRef n = goName n
 
 goPatternArg :: Members '[Builtins, NameIdGen, Error ScoperError] r => PatternArg -> Sem r Internal.PatternArg
 goPatternArg p = do

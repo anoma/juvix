@@ -312,18 +312,6 @@ instance PrettyPrint QualifiedName where
 instance PrettyPrint (ModuleRef'' 'S.Concrete 'ModuleTop) where
   ppCode m = ppCode (m ^. moduleRefName)
 
-instance PrettyPrint AxiomRef where
-  ppCode a = ppCode (a ^. axiomRefName)
-
-instance PrettyPrint InductiveRef where
-  ppCode a = ppCode (a ^. inductiveRefName)
-
-instance PrettyPrint FunctionRef where
-  ppCode a = ppCode (a ^. functionRefName)
-
-instance PrettyPrint ConstructorRef where
-  ppCode a = ppCode (a ^. constructorRefName)
-
 instance PrettyPrint ScopedIden where
   ppCode = \case
     ScopedAxiom a -> ppCode a
