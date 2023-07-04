@@ -1,0 +1,11 @@
+-- arithmetic
+move r0, 7
+add r0, r0, 3
+mul r0, r0, 2
+sub r0, r0, 3
+mul r0, r0, 5
+div r0, r0, 5
+move r1, 4
+add r0, r1, r0
+halt
+-- result: 21

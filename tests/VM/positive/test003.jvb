@@ -1,0 +1,16 @@
+-- direct call
+
+  move r0, 2
+  move r1, 3
+  move r2, 5
+  push return_label_1
+  jump calculate
+return_label_1:
+  halt
+  -- result: 11
+
+calculate:
+  mul r0, r0, r1
+  add r0, r0, r2
+  pop r1
+  jump r1

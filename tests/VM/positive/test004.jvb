@@ -1,0 +1,45 @@
+-- indirect call
+
+  alloc r0, 5
+  store r0, 0, calculate
+  store r0, 1, 2
+  store r0, 2, 1
+  store r0, 3, 2
+  store r0, 4, 3
+  move r1, 1
+  move r2, return_label_1
+  push 5
+  jump ccall_exact
+return_label_1:
+  halt
+  -- result: 11
+
+-- r0 = closure
+-- r2 = return address
+ccall_exact:
+  load r4, r0, 0
+  load r1, r0, 1 -- r1 = stored args num
+  add r0, r0, r1
+  add r0, r0, 2
+  -- now r0 points at the last stored argument
+ccall_exact_loop_1:
+  jumpz r1, ccall_exact_exit_1
+  load r3, r0, 0
+  push r3
+  sub r0, r0, 1
+  sub r1, r1, 1
+  jump ccall_exact_loop_1
+ccall_exact_exit_1:
+  push r2
+  jump r4
+
+calculate:
+  pop r3
+  pop r0
+  pop r1
+  pop r2
+  push r3
+  mul r0, r0, r1
+  add r0, r0, r2
+  pop r1
+  jump r1

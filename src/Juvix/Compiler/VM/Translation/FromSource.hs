@@ -25,12 +25,14 @@ runParser fileName input =
 
 parseToplevel :: ParsecS r [Instruction]
 parseToplevel = do
-  instrs <- P.sepEndBy statement (kw delimSemicolon)
+  instrs <- P.many statement
   P.eof
   return instrs
 
 statement :: ParsecS r Instruction
-statement = label <|> instruction
+statement = do
+  space
+  label <|> instruction
 
 label :: ParsecS r Instruction
 label = P.try $ do
@@ -65,6 +67,8 @@ instruction = do
       Move <$> parseMoveArgs
     "halt" ->
       return Halt
+    "alloc" ->
+      Alloc <$> parseAllocArgs
     "push" ->
       Push <$> parsePushArgs
     "pop" ->
@@ -110,8 +114,15 @@ parseMoveArgs = do
   val <- value
   return $ InstrMove dest val
 
+parseAllocArgs :: ParsecS r InstrAlloc
+parseAllocArgs = do
+  dest <- register
+  comma
+  val <- value
+  return $ InstrAlloc dest val
+
 parsePushArgs :: ParsecS r InstrPush
-parsePushArgs = InstrPush <$> register
+parsePushArgs = InstrPush <$> value
 
 parsePopArgs :: ParsecS r InstrPop
 parsePopArgs = InstrPop <$> register

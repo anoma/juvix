@@ -24,7 +24,7 @@ runCode instrs0 = runST goCode
       heap <- MV.replicate heapSize 0
       stack <- MV.replicate stackSize 0
       regs <- MV.replicate regsNum 0
-      go 0 0 0 regs stack heap
+      go 0 0 1 regs stack heap
       MV.read regs 0
 
     go ::
@@ -65,10 +65,9 @@ runCode instrs0 = runST goCode
       MV.MVector s Int ->
       ST s ()
     goBinop BinaryOp {..} pc sp hp regs stack heap = do
-      reg <- MV.read regs _binaryOpResult
       val1 <- readValue regs _binaryOpArg1
       val2 <- readValue regs _binaryOpArg2
-      MV.write regs reg (computeBinop val1 val2)
+      MV.write regs _binaryOpResult (computeBinop val1 val2)
       go (pc + 1) sp hp regs stack heap
       where
         computeBinop :: Int -> Int -> Int
@@ -91,10 +90,9 @@ runCode instrs0 = runST goCode
       MV.MVector s Int ->
       ST s ()
     goLoad InstrLoad {..} pc sp hp regs stack heap = do
-      dest <- MV.read regs _instrLoadDest
       src <- MV.read regs _instrLoadSrc
       v <- MV.read heap (src + _instrLoadOffset)
-      MV.write regs dest v
+      MV.write regs _instrLoadDest v
       go (pc + 1) sp hp regs stack heap
 
     goStore ::
@@ -136,8 +134,9 @@ runCode instrs0 = runST goCode
       MV.MVector s Int ->
       ST s ()
     goAlloc InstrAlloc {..} pc sp hp regs stack heap = do
+      v <- readValue regs _instrAllocSize
       MV.write regs _instrAllocDest hp
-      go (pc + 1) sp (hp + _instrAllocNum) regs stack heap
+      go (pc + 1) sp (hp + v) regs stack heap
 
     goPush ::
       InstrPush ->
@@ -149,7 +148,7 @@ runCode instrs0 = runST goCode
       MV.MVector s Int ->
       ST s ()
     goPush InstrPush {..} pc sp hp regs stack heap = do
-      v <- MV.read regs _instrPushSrc
+      v <- readValue regs _instrPushValue
       MV.write stack sp v
       go (pc + 1) (sp + 1) hp regs stack heap
 
@@ -192,4 +191,4 @@ runCode instrs0 = runST goCode
     goJumpOnZero InstrJumpOnZero {..} pc sp hp regs stack heap = do
       addr <- readValue regs _instrJumpOnZeroDest
       v <- MV.read regs _instrJumpOnZeroReg
-      go (if v == 0 then addr else pc) sp hp regs stack heap
+      go (if v == 0 then addr else pc + 1) sp hp regs stack heap

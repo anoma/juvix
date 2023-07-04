@@ -14,11 +14,11 @@ mkStore dest off val = Store $ InstrStore dest off val
 mkMove :: RegRef -> Value -> Instruction
 mkMove reg val = Move $ InstrMove reg val
 
-mkAlloc :: RegRef -> SmallInt -> Instruction
-mkAlloc reg num = Alloc $ InstrAlloc reg num
+mkAlloc :: RegRef -> Value -> Instruction
+mkAlloc reg val = Alloc $ InstrAlloc reg val
 
-mkPush :: RegRef -> Instruction
-mkPush reg = Push $ InstrPush reg
+mkPush :: Value -> Instruction
+mkPush val = Push $ InstrPush val
 
 mkPop :: RegRef -> Instruction
 mkPop reg = Pop $ InstrPop reg
@@ -52,7 +52,7 @@ maxInstrReg = \case
   Alloc InstrAlloc {..} ->
     _instrAllocDest
   Push InstrPush {..} ->
-    _instrPushSrc
+    maxValueReg _instrPushValue
   Pop InstrPop {..} ->
     _instrPopDest
   Jump InstrJump {..} ->

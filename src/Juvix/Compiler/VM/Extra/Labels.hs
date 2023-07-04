@@ -2,10 +2,35 @@ module Juvix.Compiler.VM.Extra.Labels where
 
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.VM.Language
+import Juvix.Data.PPOutput
 
 data LabelError = ErrUndeclaredLabel Text | ErrDuplicateLabel Text
 
 makeLenses ''LabelError
+
+instance ToGenericError LabelError where
+  genericError :: (Member (Reader GenericOptions) r) => LabelError -> Sem r GenericError
+  genericError e = ask >>= generr
+    where
+      generr :: GenericOptions -> Sem r GenericError
+      generr _ =
+        return
+          GenericError
+            { _genericErrorLoc = i,
+              _genericErrorMessage = ppOutput (pretty msg),
+              _genericErrorIntervals = [i]
+            }
+        where
+          i = defaultLoc
+          msg = case e of
+            ErrUndeclaredLabel lab -> "undeclared label: " <> lab
+            ErrDuplicateLabel lab -> "duplicate label: " <> lab
+
+          mockFile :: Path Abs File
+          mockFile = $(mkAbsFile "/vm-run")
+
+          defaultLoc :: Interval
+          defaultLoc = singletonInterval (mkInitialLoc mockFile)
 
 resolveLabels ::
   Member (Error LabelError) r => [Instruction] -> Sem r [Instruction]
@@ -52,7 +77,6 @@ resolveLabels instrs0 = do
           Jump x -> Jump <$> goJump x
           JumpOnZero x -> JumpOnZero <$> goJumpOnZero x
           Label {} -> impossible
-
       return $ instr' : instrs'
       where
         adjustValue :: Value -> Sem r Value
@@ -83,7 +107,7 @@ resolveLabels instrs0 = do
         goAlloc = return
 
         goPush :: InstrPush -> Sem r InstrPush
-        goPush = return
+        goPush = overM instrPushValue adjustValue
 
         goPop :: InstrPop -> Sem r InstrPop
         goPop = return

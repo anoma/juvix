@@ -59,9 +59,9 @@ def OpStore = 8;
 def OpMove = 9;
 // halt 0, 0, 0
 def OpHalt = 10;
-// alloc dest, num, 0
+// alloc dest, val, 0
 def OpAlloc = 11;
-// push src, 0, 0
+// push 0, val, 0
 def OpPush = 12;
 // pop dest, 0, 0
 def OpPop = 13;
@@ -115,7 +115,7 @@ def exec_eq reg val1 val2 (pc, sp, hp, regs, stack, heap) = {
 };
 
 def exec_load dest src off (pc, sp, hp, regs, stack, heap) = {
-    def addr = read_val regs src;
+    def addr = read regs src;
     def v = read heap (addr + off);
     (pc + 1, sp, hp, write regs dest v, stack, heap)
 };
@@ -135,12 +135,13 @@ def exec_halt reg val1 val2 (pc, sp, hp, regs, stack, heap) = {
     (pc, sp, hp, regs, stack, heap)
 };
 
-def exec_alloc reg num _ (pc, sp, hp, regs, stack, heap) = {
-    (pc + 1, sp, hp + num, write regs reg hp, stack, heap)
+def exec_alloc reg val _ (pc, sp, hp, regs, stack, heap) = {
+    def v = read_val regs val;
+    (pc + 1, sp, hp + v, write regs reg hp, stack, heap)
 };
 
-def exec_push reg _ _ (pc, sp, hp, regs, stack, heap) = {
-    def v = read regs reg;
+def exec_push _ val _ (pc, sp, hp, regs, stack, heap) = {
+    def v = read_val regs val;
     (pc + 1, sp + 1, hp, regs, write stack sp v, heap)
 };
 
@@ -157,7 +158,7 @@ def exec_jump _ val _ (pc, sp, hp, regs, stack, heap) = {
 def exec_jumpz reg val _ (pc, sp, hp, regs, stack, heap) = {
     def addr = read_val regs val;
     def v = read regs reg;
-    (if (isZero v) addr pc, sp, hp, regs, stack, heap)
+    (if (isZero v) addr (pc + 1), sp, hp, regs, stack, heap)
 };
 
 def opcodes = ( (OpIntAdd, exec_add):
@@ -185,6 +186,6 @@ def run_rec code state = {
 };
 
 def run n code = {
-    def (_, _, regs, _, _) = iter n (run_rec code) (0, 0, 0, zeros regsNum, zeros stackSize, zeros heapSize);
+    def (_, _, regs, _, _) = iter n (run_rec code) (0, 0, 1, zeros regsNum, zeros stackSize, zeros heapSize);
     hd regs
 };

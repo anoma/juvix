@@ -14,13 +14,14 @@ data Value
   = Const SmallInt
   | RegRef RegRef
   | LabelRef Text
+  deriving stock (Show)
 
 -- Constructor representation: tag, field1, .., fieldn
 --
 -- Closure representation: addr, n, m, arg1, .., argn
 --
--- Here `m` is the total number of arguments the function accepts and `n` is the
--- number of arguments actually stored in the closure.
+-- Here `n` is the number of arguments stored in the closure and `m` is the
+-- remaining number of arguments to the function.
 --
 -- The tag and the address can be read/written using ordinary load/store with
 -- offset 0.
@@ -51,6 +52,7 @@ data Instruction
     JumpOnZero InstrJumpOnZero
   | -- | JVB opcode: 'labelName:'
     Label InstrLabel
+  deriving stock (Show)
 
 data BinaryOp = BinaryOp
   { _binaryOpCode :: Opcode,
@@ -58,49 +60,59 @@ data BinaryOp = BinaryOp
     _binaryOpArg1 :: Value,
     _binaryOpArg2 :: Value
   }
+  deriving stock (Show)
 
 data InstrLoad = InstrLoad
   { _instrLoadDest :: RegRef,
     _instrLoadSrc :: RegRef,
     _instrLoadOffset :: SmallInt
   }
+  deriving stock (Show)
 
 data InstrStore = InstrStore
   { _instrStoreDest :: RegRef,
     _instrStoreOffset :: SmallInt,
     _instrStoreValue :: Value
   }
+  deriving stock (Show)
 
 data InstrMove = InstrMove
   { _instrMoveDest :: RegRef,
     _instrMoveValue :: Value
   }
+  deriving stock (Show)
 
 data InstrAlloc = InstrAlloc
   { _instrAllocDest :: RegRef,
-    _instrAllocNum :: SmallInt
+    _instrAllocSize :: Value
   }
+  deriving stock (Show)
 
 newtype InstrPush = InstrPush
-  { _instrPushSrc :: RegRef
+  { _instrPushValue :: Value
   }
+  deriving stock (Show)
 
 newtype InstrPop = InstrPop
   { _instrPopDest :: RegRef
   }
+  deriving stock (Show)
 
 newtype InstrJump = InstrJump
   { _instrJumpDest :: Value
   }
+  deriving stock (Show)
 
 data InstrJumpOnZero = InstrJumpOnZero
   { _instrJumpOnZeroReg :: RegRef,
     _instrJumpOnZeroDest :: Value
   }
+  deriving stock (Show)
 
 newtype InstrLabel = InstrLabel
   { _instrLabelName :: Text
   }
+  deriving stock (Show)
 
 -- | Binary operation opcodes.
 data Opcode
@@ -118,6 +130,7 @@ data Opcode
     OpIntLt
   | -- | JVB opcode: 'eq reg, val1, val2'.
     OpIntEq
+  deriving stock (Show)
 
 instructionOpcode :: Instruction -> Int
 instructionOpcode = \case

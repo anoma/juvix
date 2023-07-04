@@ -1,0 +1,92 @@
+-- lists
+
+  move r0, 100
+  push return_label_1
+  jump gen
+return_label_1:
+  push r0
+  move r1, r0
+  alloc r0, 3
+  store r0, 0, plus_one
+  store r0, 1, 0
+  store r0, 2, 1
+  push return_label_2
+  jump map
+return_label_2:
+  pop r0
+  push return_label_3
+  jump sum
+return_label_3:
+  halt
+  -- result: 5150
+
+plus_one:
+  pop r1
+  pop r0
+  add r0, r0, 1
+  jump r1
+
+sum:
+  move r1, 0
+sum_loop:
+  jumpz r0, sum_exit
+  load r2, r0, 0
+  add r1, r1, r2
+  load r0, r0, 1
+  jump sum_loop
+sum_exit:
+  move r0, r1
+  pop r1
+  jump r1
+
+map:
+  jumpz r1, map_exit
+  push r0
+  push r1
+  move r2, map_return_1
+  load r1, r1, 0
+  push r1
+  jump ccall_exact
+map_return_1:
+  pop r1
+  store r1, 0, r0
+  pop r0
+  load r1, r1, 1
+  jump map
+map_exit:
+  pop r1
+  jump r1
+
+gen:
+  move r2, r0
+  move r0, 0
+gen_loop:
+  jumpz r2, gen_loop_exit
+  move r1, r0
+  alloc r0, 2
+  store r0, 0, r2
+  store r0, 1, r1
+  sub r2, r2, 1
+  jump gen_loop
+gen_loop_exit:
+  pop r1
+  jump r1
+
+-- r0 = closure
+-- r2 = return address
+ccall_exact:
+  load r4, r0, 0
+  load r1, r0, 1 -- r1 = stored args num
+  add r0, r0, r1
+  add r0, r0, 2
+  -- now r0 points at the last stored argument
+ccall_exact_loop_1:
+  jumpz r1, ccall_exact_exit_1
+  load r3, r0, 0
+  push r3
+  sub r0, r0, 1
+  sub r1, r1, 1
+  jump ccall_exact_loop_1
+ccall_exact_exit_1:
+  push r2
+  jump r4

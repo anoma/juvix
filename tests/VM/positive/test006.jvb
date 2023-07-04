@@ -1,0 +1,15 @@
+-- comparisons
+
+move r0, 7
+move r1, 13
+add r2, r1, r0
+eq r3, r1, r2
+sub r2, r2, r3
+sub r2, r2, r0
+eq r2, r2, r1
+lt r0, r0, r1
+add r0, r0, r2
+lt r1, r1, r1
+add r0, r0, r1
+halt
+-- result: 2
