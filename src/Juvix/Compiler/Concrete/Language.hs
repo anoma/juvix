@@ -259,6 +259,7 @@ deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (Sig
 data NewFunctionClause (s :: Stage) = NewFunctionClause
   { _clausenPipeKw :: Irrelevant KeywordRef,
     _clausenPatterns :: NonEmpty (PatternAtomType s),
+    _clausenAssignKw :: Irrelevant KeywordRef,
     _clausenBody :: ExpressionType s
   }
 

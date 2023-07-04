@@ -6,6 +6,7 @@ module Juvix.Compiler.Concrete.Print.Base
 where
 
 import Data.List.NonEmpty.Extra qualified as NonEmpty
+import Juvix.Compiler.Concrete.Data.InfoTable
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Extra qualified as Concrete
 import Juvix.Compiler.Concrete.Keywords qualified as Kw
@@ -190,11 +191,13 @@ instance PrettyPrint S.AName where
   ppCode (S.AName n) = annotated (AnnKind (S.getNameKind n)) (noLoc (pretty (n ^. S.nameVerbatim)))
 
 -- TODO print without spaces when the type signature is not next to the clauses
--- instance PrettyPrint FunctionInfo where
---   ppCode f = do
---     let ty = StatementTypeSignature (f ^. functionInfoType)
---         cs = map StatementFunctionClause (f ^. functionInfoClauses)
---     ppCode (ty : cs)
+instance PrettyPrint FunctionInfo where
+  ppCode = \case
+    FunctionInfoOld f -> do
+      let ty = StatementTypeSignature (f ^. oldFunctionInfoType)
+          cs = map StatementFunctionClause (f ^. oldFunctionInfoClauses)
+      ppCode (ty : cs)
+    FunctionInfoNew f -> ppCode f
 
 instance SingI s => PrettyPrint (List s) where
   ppCode List {..} = do
@@ -644,6 +647,37 @@ instance PrettyPrint BuiltinFunction where
 instance PrettyPrint BuiltinAxiom where
   ppCode i = ppCode Kw.kwBuiltin <+> keywordText (P.prettyText i)
 
+instance SingI s => PrettyPrint (NewFunctionClause s) where
+  ppCode :: forall r. Members '[ExactPrint, Reader Options] r => NewFunctionClause s -> Sem r ()
+  ppCode NewFunctionClause {..} = do
+    let pats' = mapM_ ppPatternAtomType _clausenPatterns
+        e' = ppExpressionType _clausenBody
+    ppCode _clausenPipeKw <+> pats' <+> ppCode _clausenAssignKw <> oneLineOrNext e'
+
+instance SingI s => PrettyPrint (NewTypeSignature s) where
+  ppCode :: forall r. Members '[ExactPrint, Reader Options] r => NewTypeSignature s -> Sem r ()
+  ppCode NewTypeSignature {..} = do
+    let termin' :: Maybe (Sem r ()) = (<> line) . ppCode <$> _signTerminating
+        doc' :: Maybe (Sem r ()) = ppCode <$> _signDoc
+        pragmas' :: Maybe (Sem r ()) = ppCode <$> _signPragmas
+        builtin' :: Maybe (Sem r ()) = (<> line) . ppCode <$> _signBuiltin
+        type' = ppExpressionType _signRetType
+        name' = annDef _signName (ppSymbolType _signName)
+        body' = oneLineOrNext $ case _signBody of
+          SigBodyExpression e -> ppCode Kw.kwAssign <+> ppExpressionType e
+          SigBodyClauses k -> mapM_ ppCode k
+    doc'
+      ?<> pragmas'
+      ?<> builtin'
+      ?<> termin'
+      ?<> ( name'
+              <+> ppCode _signColonKw
+                <> oneLineOrNext
+                  ( type'
+                      <+> body'
+                  )
+          )
+
 instance SingI s => PrettyPrint (TypeSignature s) where
   ppCode :: forall r. Members '[ExactPrint, Reader Options] r => TypeSignature s -> Sem r ()
   ppCode TypeSignature {..} = do
@@ -850,7 +884,7 @@ instance SingI s => PrettyPrint (Statement s) where
   ppCode = \case
     StatementSyntax s -> ppCode s
     StatementTypeSignature s -> ppCode s
-    StatementNewTypeSignature {} -> undefined
+    StatementNewTypeSignature f -> ppCode f
     StatementImport i -> ppCode i
     StatementInductive i -> ppCode i
     StatementModule m -> ppCode m

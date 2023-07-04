@@ -5,8 +5,8 @@ import Juvix.Compiler.Concrete.Language
 import Juvix.Prelude
 
 data OldFunctionInfo = OldFunctionInfo
-  { _functionInfoType :: TypeSignature 'Scoped,
-    _functionInfoClauses :: [FunctionClause 'Scoped]
+  { _oldFunctionInfoType :: TypeSignature 'Scoped,
+    _oldFunctionInfoClauses :: [FunctionClause 'Scoped]
   }
   deriving stock (Eq, Show)
 
@@ -14,11 +14,6 @@ data FunctionInfo
   = FunctionInfoOld OldFunctionInfo
   | FunctionInfoNew (NewTypeSignature 'Scoped)
   deriving stock (Eq, Show)
-
-_FunctionInfoOld :: Traversal' FunctionInfo OldFunctionInfo
-_FunctionInfoOld f = \case
-  FunctionInfoOld x -> FunctionInfoOld <$> f x
-  r@FunctionInfoNew {} -> pure r
 
 data ConstructorInfo = ConstructorInfo
   { _constructorInfoDef :: InductiveConstructorDef 'Scoped,
@@ -62,7 +57,23 @@ makeLenses ''ConstructorInfo
 makeLenses ''AxiomInfo
 makeLenses ''OldFunctionInfo
 
--- instance HasLoc FunctionInfo where
---   getLoc f =
---     getLoc (f ^. functionInfoType)
---       <>? (getLocSpan <$> nonEmpty (f ^. functionInfoClauses))
+_FunctionInfoOld :: Traversal' FunctionInfo OldFunctionInfo
+_FunctionInfoOld f = \case
+  FunctionInfoOld x -> FunctionInfoOld <$> f x
+  r@FunctionInfoNew {} -> pure r
+
+functionInfoDoc :: Lens' FunctionInfo (Maybe (Judoc 'Scoped))
+functionInfoDoc f = \case
+  FunctionInfoOld i -> do
+    i' <- traverseOf (oldFunctionInfoType . sigDoc) f i
+    pure (FunctionInfoOld i')
+  FunctionInfoNew i -> do
+    i' <- traverseOf signDoc f i
+    pure (FunctionInfoNew i')
+
+instance HasLoc FunctionInfo where
+  getLoc = \case
+    FunctionInfoOld f ->
+      getLoc (f ^. oldFunctionInfoType)
+        <>? (getLocSpan <$> nonEmpty (f ^. oldFunctionInfoClauses))
+    FunctionInfoNew f -> getLoc f

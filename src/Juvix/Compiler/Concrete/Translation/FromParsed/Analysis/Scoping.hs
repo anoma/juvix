@@ -515,22 +515,54 @@ checkIteratorSyntaxDef s@IteratorSyntaxDef {..} = do
 (@$>) f a = f a $> a
 
 checkNewTypeSignature ::
-  (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, State ScoperFixities, State ScoperIterators, Reader BindingStrategy] r) =>
+  forall r.
+  Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, State ScoperFixities, State ScoperIterators, Reader BindingStrategy] r =>
   NewTypeSignature 'Parsed ->
   Sem r (NewTypeSignature 'Scoped)
 checkNewTypeSignature NewTypeSignature {..} = do
-  sigType' <- checkParseExpressionAtoms _sigType
-  sigName' <- bindFunctionSymbol _sigName
-  sigDoc' <- mapM checkJudoc _sigDoc
-  sigBody' <- mapM checkParseExpressionAtoms _sigBody
-  registerTypeSignature
+  sigName' <- bindFunctionSymbol _signName
+  sigDoc' <- mapM checkJudoc _signDoc
+  -- TODO local scope
+  args' <- mapM checkArg _signArgs
+  sigType' <- checkParseExpressionAtoms _signRetType
+  sigBody' <- checkBody
+  registerNewTypeSignature
     @$> NewTypeSignature
-      { _sigName = sigName',
-        _sigType = sigType',
-        _sigDoc = sigDoc',
-        _sigBody = sigBody',
+      { _signName = sigName',
+        _signRetType = sigType',
+        _signDoc = sigDoc',
+        _signBody = sigBody',
+        _signArgs = args',
         ..
       }
+  where
+    checkArg :: SigArg 'Parsed -> Sem r (SigArg 'Scoped)
+    checkArg SigArg {..} = do
+      names' <- mapM bindVariableSymbol _sigArgNames
+      ty' <- checkParseExpressionAtoms _sigArgType
+      return
+        SigArg
+          { _sigArgNames = names',
+            _sigArgType = ty',
+            ..
+          }
+    checkBody :: Sem r (NewTypeSignatureBody 'Scoped)
+    checkBody = case _signBody of
+      SigBodyExpression e -> SigBodyExpression <$> checkParseExpressionAtoms e
+      SigBodyClauses cls -> SigBodyClauses <$> mapM checkClause cls
+    checkClause :: NewFunctionClause 'Parsed -> Sem r (NewFunctionClause 'Scoped)
+    checkClause NewFunctionClause {..} = do
+      (patterns', body') <- withLocalScope $ do
+        p <- mapM checkParsePatternAtom _clausenPatterns
+        b <- checkParseExpressionAtoms _clausenBody
+        return (p, b)
+      return
+        NewFunctionClause
+          { _clausenBody = body',
+            _clausenPatterns = patterns',
+            _clausenPipeKw,
+            _clausenAssignKw
+          }
 
 checkTypeSignature ::
   (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, State ScoperFixities, State ScoperIterators, Reader BindingStrategy] r) =>

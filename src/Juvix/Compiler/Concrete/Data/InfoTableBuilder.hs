@@ -58,8 +58,8 @@ toState = reinterpret $ \case
         info =
           FunctionInfoOld
             OldFunctionInfo
-              { _functionInfoType = f,
-                _functionInfoClauses = []
+              { _oldFunctionInfoType = f,
+                _oldFunctionInfoClauses = []
               }
         j = f ^. sigDoc
      in do
@@ -68,7 +68,7 @@ toState = reinterpret $ \case
   RegisterFunctionClause c ->
     -- assumes the signature has already been registered
     let key = c ^. clauseOwnerFunction . S.nameId
-     in modify (over (infoFunctions . at key . _Just . _FunctionInfoOld . functionInfoClauses) (`snoc` c))
+     in modify (over (infoFunctions . at key . _Just . _FunctionInfoOld . oldFunctionInfoClauses) (`snoc` c))
   RegisterName n -> modify (over highlightNames (cons (S.AName n)))
   RegisterModule m -> do
     let j = m ^. moduleDoc
