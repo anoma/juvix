@@ -28,6 +28,9 @@ kwPair = keyword Str.gebPair
 kwLamb :: Doc Ann
 kwLamb = keyword Str.gebLamb
 
+kwList :: Doc Ann
+kwList = keyword Str.gebList
+
 kwClosure :: Doc Ann
 kwClosure = keyword Str.gebValueClosure
 

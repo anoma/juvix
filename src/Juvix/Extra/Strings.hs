@@ -584,6 +584,9 @@ gebSnd = "snd"
 gebLamb :: IsString s => s
 gebLamb = "lamb"
 
+gebList :: IsString s => s
+gebList = "list"
+
 gebValueClosure :: IsString s => s
 gebValueClosure = "cls"
 
@@ -615,7 +618,7 @@ gebMod :: IsString s => s
 gebMod = "mod"
 
 gebFail :: IsString s => s
-gebFail = "fail"
+gebFail = "err"
 
 gebEq :: IsString s => s
 gebEq = "eq"
