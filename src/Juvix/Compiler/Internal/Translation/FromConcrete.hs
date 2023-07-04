@@ -460,20 +460,21 @@ goTopNewFunctionDef NewTypeSignature {..} = do
   where
     goBody :: Sem r (NonEmpty Internal.FunctionClause)
     goBody = do
+      commonPatterns <- concatMapM (fmap toList . argToPattern) _signArgs
       let _clauseName = goSymbol _signName
+          goClause :: NewFunctionClause 'Scoped -> Sem r Internal.FunctionClause
+          goClause NewFunctionClause {..} = do
+            let _clauseName = goSymbol _signName
+            _clauseBody <- goExpression _clausenBody
+            extraPatterns <- toList <$> (mapM goPatternArg _clausenPatterns)
+            let _clausePatterns = commonPatterns <> extraPatterns
+            return Internal.FunctionClause {..}
       case _signBody of
         SigBodyExpression body -> do
           _clauseBody <- goExpression body
-          _clausePatterns <- concatMapM (fmap toList . argToPattern) _signArgs
+          let _clausePatterns = commonPatterns
           return (pure Internal.FunctionClause {..})
         SigBodyClauses cls -> mapM goClause cls
-      where
-        goClause :: NewFunctionClause 'Scoped -> Sem r Internal.FunctionClause
-        goClause NewFunctionClause {..} = do
-          let _clauseName = goSymbol _signName
-          _clauseBody <- goExpression _clausenBody
-          _clausePatterns <- toList <$> (mapM goPatternArg _clausenPatterns)
-          return Internal.FunctionClause {..}
 
     goDefType :: Sem r Internal.Expression
     goDefType = do
