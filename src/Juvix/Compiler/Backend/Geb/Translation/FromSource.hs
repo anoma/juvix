@@ -170,9 +170,8 @@ morphismBinop = do
 morphismFail :: ParsecS r Geb.Failure
 morphismFail = do
   P.label "<geb MorphismFail>" $ do
-    kw kwFail
-    msg <- fst <$> string
-    Geb.Failure msg <$> object
+    kw kwErr
+    Geb.Failure "" <$> object
 
 object :: ParsecS r Geb.Object
 object =

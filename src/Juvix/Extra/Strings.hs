@@ -317,6 +317,9 @@ trace_ = "trace"
 fail_ :: (IsString s) => s
 fail_ = "fail"
 
+err :: (IsString s) => s
+err = "err"
+
 show_ :: (IsString s) => s
 show_ = "show"
 

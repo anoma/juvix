@@ -196,6 +196,9 @@ kwTrace = asciiKw Str.trace_
 kwFail :: Keyword
 kwFail = asciiKw Str.fail_
 
+kwErr :: Keyword
+kwErr = asciiKw Str.err
+
 kwList :: Keyword
 kwList = asciiKw Str.list
 
