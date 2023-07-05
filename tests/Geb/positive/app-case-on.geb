@@ -1,47 +1,22 @@
 (typed
   (app
-    (coprod
-      int
-      int)
-    (coprod
-      int
-      int)
     (lamb
-      (coprod
-        int
-        int)
-      (coprod
-        int
-        int)
-      (case-on
-        int
-        int
+      (list
         (coprod
           int
-          int)
+          int))
+      (case-on
         (index 0)
-        (lamb
+        (right
           int
-          (coprod
-            int
-            int)
-          (right
-            int
-            int
-            1))
-        (lamb
+          1)
+        (left
           int
-          (coprod
-            int
-            int)
-          (left
-            int
-            int
-            2))))
-    (left
-      int
-      int
-      3))
+          2)))
+    (list
+      (left
+        int
+        3)))
   (coprod
     int
     int))

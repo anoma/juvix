@@ -639,7 +639,7 @@ gebCoprod :: IsString s => s
 gebCoprod = "coprod"
 
 gebHom :: IsString s => s
-gebHom = "!->"
+gebHom = "so-hom-obj"
 
 gebInteger :: IsString s => s
 gebInteger = "int"

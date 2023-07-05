@@ -1,15 +1,13 @@
 (typed
   (lamb
-    so1
-    (!->
-      so1
+    (list
       so1)
     (lamb
-      so1
-      so1
+      (list
+        so1)
       (index 1)))
-  (!->
+  (so-hom-obj
     so1
-    (!->
+    (so-hom-obj
       so1
       so1)))

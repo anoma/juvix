@@ -1,17 +1,14 @@
 (typed
   (app
-    (prod int int)
-    int
     (lamb
-      (prod int int)
-      int
+      (list
+        (prod
+          int
+          int))
       (fst
-        int
-        int
         (index 0)))
-    (pair
-      int
-      int
-      10
-      20))
+    (list
+      (pair
+        10
+        20)))
   int)

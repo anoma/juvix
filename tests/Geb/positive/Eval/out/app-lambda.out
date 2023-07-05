@@ -4,12 +4,10 @@
       (env
         nil)
       (lamb
-        so1
-        so1
+        (list
+          so1)
         (index 0))))
   (lamb
-    int
-    (!->
-      so1
-      so1)
+    (list
+      int)
     (index 1)))

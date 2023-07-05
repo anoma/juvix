@@ -1,14 +1,11 @@
 (typed
   (lamb
-    so1
-    (coprod
-      so1
+    (list
       so1)
     (left
       so1
-      so1
-      unit))
-  (!->
+      (unit)))
+  (so-hom-obj
     so1
     (coprod
       so1
