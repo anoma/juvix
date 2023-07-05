@@ -273,18 +273,31 @@ topModulePath = mkTopModulePath <$> dottedSymbol
 -- Top level statement
 --------------------------------------------------------------------------------
 
-statement :: (Members '[Files, Error ParserError, PathResolver, InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (Statement 'Parsed)
+infixl 3 <?|>
+
+-- | Tries the left alternative. If it fails, backtracks and restores the contents of the pragmas and judoc stashes. Then parses the right atlernative
+(<?|>) :: Members '[PragmasStash, JudocStash] r => ParsecS r a -> ParsecS r a -> ParsecS r a
+l <?|> r = do
+  p <- P.lift (get @(Maybe ParsedPragmas))
+  j <- P.lift (get @(Maybe (Judoc 'Parsed)))
+  let recover = do
+        P.lift (put p)
+        P.lift (put j)
+        r
+  P.withRecovery (const recover) (P.try l)
+
+statement :: Members '[Files, Error ParserError, PathResolver, InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r => ParsecS r (Statement 'Parsed)
 statement = P.label "<top level statement>" $ do
   optional_ stashJudoc
   optional_ stashPragmas
   ms <-
     optional
       ( StatementSyntax <$> syntaxDef
-          -- TODO remove try after removing old syntax
-          <|> P.try (StatementOpenModule <$> newOpenSyntax)
-          -- TODO remove try after removing old syntax
-          <|> P.try (StatementNewTypeSignature <$> newTypeSignature Nothing)
-          <|> StatementOpenModule <$> openModule
+          -- TODO remove <?|> after removing old syntax
+          <|> StatementOpenModule <$> newOpenSyntax
+          -- TODO remove <?|> after removing old syntax
+          <?|> StatementNewTypeSignature <$> newTypeSignature Nothing
+          <?|> StatementOpenModule <$> openModule
           <|> StatementImport <$> import_
           <|> StatementInductive <$> inductiveDef Nothing
           <|> StatementModule <$> moduleDef

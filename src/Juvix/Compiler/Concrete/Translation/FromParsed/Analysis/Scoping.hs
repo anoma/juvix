@@ -212,7 +212,7 @@ reserveSymbolOf k s = do
           BindingLocal -> symbolInfoSingle entry
           BindingTop -> SymbolInfo (HashMap.insert path entry _symbolInfo)
   whenJust mentry $ \entry ->
-   modify (over scopeSymbols (HashMap.alter (Just . addS entry) s))
+    modify (over scopeSymbols (HashMap.alter (Just . addS entry) s))
 
   return s'
   where
