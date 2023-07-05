@@ -1,0 +1,23 @@
+module Syntax;
+
+compose {A B C : Type} (f : B -> C) (g : A -> B) (x : A) : C
+  := f (g x);
+
+compose' {A B C : Type} (f : B -> C) (g : A -> B) : A -> C
+  | x := f (g x);
+
+type Bool :=
+  | false : Bool
+  | true : Bool;
+
+type Nat :=
+  | zero : Nat
+  | suc : Nat -> Nat;
+
+even : Nat -> Bool
+ | zero := true
+ | (suc n) := odd n;
+
+odd : Nat -> Bool
+ | zero := false
+ | (suc n) := even n;

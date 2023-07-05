@@ -240,6 +240,10 @@ tests =
       $(mkRelDir ".")
       $(mkRelFile "Iterators.juvix"),
     PosTest
+      "New function syntax"
+      $(mkRelDir ".")
+      $(mkRelFile "Syntax.juvix")
+    PosTest
       "Format pragma"
       $(mkRelDir ".")
       $(mkRelFile "FormatPragma.juvix")
