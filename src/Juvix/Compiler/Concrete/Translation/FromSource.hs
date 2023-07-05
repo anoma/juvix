@@ -293,11 +293,14 @@ statement = P.label "<top level statement>" $ do
   ms <-
     optional
       ( StatementSyntax <$> syntaxDef
-          -- TODO remove <?|> after removing old syntax
-          <|> StatementOpenModule <$> newOpenSyntax
-          -- TODO remove <?|> after removing old syntax
-          <?|> StatementNewTypeSignature <$> newTypeSignature Nothing
-          <?|> StatementOpenModule <$> openModule
+          <|> StatementOpenModule
+            <$> newOpenSyntax
+              -- TODO remove <?|> after removing old syntax
+              <?|> StatementNewTypeSignature
+            <$> newTypeSignature Nothing
+              -- TODO remove <?|> after removing old syntax
+              <?|> StatementOpenModule
+            <$> openModule
           <|> StatementImport <$> import_
           <|> StatementInductive <$> inductiveDef Nothing
           <|> StatementModule <$> moduleDef

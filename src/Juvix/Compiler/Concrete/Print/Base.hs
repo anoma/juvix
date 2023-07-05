@@ -659,18 +659,18 @@ instance SingI s => PrettyPrint (NewTypeSignature s) where
         pragmas' :: Maybe (Sem r ()) = ppCode <$> _signPragmas
         args' = hsep . fmap ppCode <$> nonEmpty _signArgs
         builtin' :: Maybe (Sem r ()) = (<> line) . ppCode <$> _signBuiltin
-        type' = ppExpressionType _signRetType
+        type' = oneLineOrNext (ppCode _signColonKw <+> ppExpressionType _signRetType)
         name' = annDef _signName (ppSymbolType _signName)
-        body' = oneLineOrNext $ case _signBody of
-          SigBodyExpression e -> ppCode Kw.kwAssign <+> ppExpressionType e
-          SigBodyClauses k -> mapM_ ppCode k
+        body' = case _signBody of
+          SigBodyExpression e -> space <> ppCode Kw.kwAssign <> oneLineOrNext (ppExpressionType e)
+          SigBodyClauses k -> line <> mapM_ ppCode k
     doc'
       ?<> pragmas'
       ?<> builtin'
       ?<> termin'
       ?<> ( name'
               <+?> args'
-                <> oneLineOrNext (ppCode _signColonKw <+> type')
+                <> type'
                 <> body'
           )
 
