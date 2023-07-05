@@ -18,7 +18,7 @@ runCode opts instrs0 = runST goCode
     stackSize :: Int
     stackSize = opts ^. optStackSize
     regsNum :: Int
-    regsNum = maximum (map maxInstrReg instrs0) + 1
+    regsNum = computeRegsNum instrs0
 
     goCode :: ST s Int
     goCode = do

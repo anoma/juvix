@@ -16,3 +16,6 @@ defaultStackSize = 1024
 
 defaultHeapSize :: Int
 defaultHeapSize = 1024
+
+defaultVampIRIntegerBits :: Int
+defaultVampIRIntegerBits = 24

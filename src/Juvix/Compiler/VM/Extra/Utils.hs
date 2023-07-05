@@ -61,3 +61,6 @@ maxInstrReg = \case
     max _instrJumpOnZeroReg (maxValueReg _instrJumpOnZeroDest)
   Label {} ->
     0
+
+computeRegsNum :: [Instruction] -> Int
+computeRegsNum instrs = maximum (map maxInstrReg instrs) + 1

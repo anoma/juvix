@@ -6,7 +6,8 @@ import Juvix.Prelude
 data Options = Options
   { _optStackSize :: Int,
     _optHeapSize :: Int,
-    _optStepsNum :: Int
+    _optStepsNum :: Int,
+    _optIntegerBits :: Int
   }
 
 makeLenses ''Options
@@ -16,5 +17,6 @@ defaultOptions =
   Options
     { _optStackSize = defaultStackSize,
       _optHeapSize = defaultHeapSize,
-      _optStepsNum = defaultUnrollLimit
+      _optStepsNum = defaultUnrollLimit,
+      _optIntegerBits = defaultVampIRIntegerBits
     }

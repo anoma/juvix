@@ -50,7 +50,7 @@ def OpIntMod = 4;
 // lt dest, val1, val2
 def OpIntLt = 5;
 // eq dest, val1, val2
-def OpEq = 6;
+def OpIntEq = 6;
 // load dest, src, offset
 def OpLoad = 7;
 // store dest, offset, val
