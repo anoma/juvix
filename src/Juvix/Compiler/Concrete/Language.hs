@@ -151,14 +151,14 @@ data NonDefinitionsSection (s :: Stage) = NonDefinitionsSection
   }
 
 data Definition (s :: Stage)
-  = DefinitionNewTypeSignature (NewTypeSignature s)
+  = DefinitionSyntax SyntaxDef
+  | DefinitionNewTypeSignature (NewTypeSignature s)
   | DefinitionInductive (InductiveDef s)
   | DefinitionAxiom (AxiomDef s)
   | DefinitionTypeSignature (TypeSignature s)
 
 data NonDefinition (s :: Stage)
-  = NonDefinitionSyntax SyntaxDef
-  | NonDefinitionImport (Import s)
+  = NonDefinitionImport (Import s)
   | NonDefinitionModule (Module s 'ModuleLocal)
   | NonDefinitionFunctionClause (FunctionClause s)
   | NonDefinitionOpenModule (OpenModule s)

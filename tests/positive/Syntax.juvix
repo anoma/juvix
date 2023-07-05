@@ -1,7 +1,7 @@
 module Syntax;
 
-compose {A B C : Type} (f : B -> C) (g : A -> B) (x : A) : C
-  := f (g x);
+compose {A B C : Type} (f : B -> C) (g : A -> B) (x : A)
+  : C := f (g x);
 
 compose' {A B C : Type} (f : B -> C) (g : A -> B) : A -> C
   | x := f (g x);
@@ -15,9 +15,24 @@ type Nat :=
   | suc : Nat -> Nat;
 
 even : Nat -> Bool
- | zero := true
- | (suc n) := odd n;
+  | zero := true
+  | (suc n) := odd n;
 
 odd : Nat -> Bool
- | zero := false
- | (suc n) := even n;
+  | zero := false
+  | (suc n) := even n;
+
+syntax infixl 4 ==1;
+
+==1 : Nat -> Nat -> Bool
+  | zero zero := true
+  | (suc a) (suc b) := a ==2 b
+  | _ _ := false;
+
+-- note that ==2 is used before its infix definition
+syntax infixl 4 ==2;
+
+==2 : Nat -> Nat -> Bool
+  | zero zero := true
+  | (suc a) (suc b) := a ==1 b
+  | _ _ := false;

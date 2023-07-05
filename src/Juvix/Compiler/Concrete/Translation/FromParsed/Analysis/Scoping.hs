@@ -876,7 +876,6 @@ checkModuleBody body = do
           where
             go :: NonDefinition s -> Sem t ()
             go = \case
-              NonDefinitionSyntax d -> output @(Statement s) (StatementSyntax d)
               NonDefinitionImport d -> output (StatementImport d)
               NonDefinitionModule d -> output (StatementModule d)
               NonDefinitionFunctionClause d -> output (StatementFunctionClause d)
@@ -889,7 +888,8 @@ checkModuleBody body = do
           where
             go :: Definition s -> Sem t ()
             go = \case
-              DefinitionAxiom d -> output @(Statement s) (StatementAxiom d)
+              DefinitionSyntax d -> output @(Statement s) (StatementSyntax d)
+              DefinitionAxiom d -> output (StatementAxiom d)
               DefinitionNewTypeSignature d -> output @(Statement s) (StatementNewTypeSignature d)
               DefinitionInductive d -> output @(Statement s) (StatementInductive d)
               DefinitionTypeSignature d -> output @(Statement s) (StatementTypeSignature d)
@@ -916,7 +916,6 @@ checkSections sec = topBindings $ case sec of
       where
         goNonDefinition :: NonDefinition 'Parsed -> Sem (Reader BindingStrategy ': r) (NonDefinition 'Scoped)
         goNonDefinition = \case
-          NonDefinitionSyntax s -> NonDefinitionSyntax <$> checkSyntaxDef s
           NonDefinitionModule m -> NonDefinitionModule <$> checkLocalModule m
           NonDefinitionImport i -> NonDefinitionImport <$> checkImport i
           NonDefinitionFunctionClause i -> NonDefinitionFunctionClause <$> checkFunctionClause i
@@ -935,6 +934,7 @@ checkSections sec = topBindings $ case sec of
       where
         reserveDefinition :: Definition 'Parsed -> Sem (Reader BindingStrategy ': r) ()
         reserveDefinition = \case
+          DefinitionSyntax s -> void (checkSyntaxDef s)
           DefinitionNewTypeSignature d -> void (reserveFunctionSymbol (d ^. signName))
           DefinitionTypeSignature d -> void (reserveFunctionSymbol (d ^. sigName))
           DefinitionAxiom d -> void (reserveAxiomSymbol (d ^. axiomName))
@@ -943,6 +943,7 @@ checkSections sec = topBindings $ case sec of
             forM_ (d ^.. inductiveConstructors . each . constructorName) reserveConstructorSymbol
         goDefinition :: Definition 'Parsed -> Sem (Reader BindingStrategy ': r) (Definition 'Scoped)
         goDefinition = \case
+          DefinitionSyntax s -> return (DefinitionSyntax s)
           DefinitionNewTypeSignature d -> DefinitionNewTypeSignature <$> checkNewTypeSignature d
           DefinitionTypeSignature d -> DefinitionTypeSignature <$> checkTypeSignature d
           DefinitionAxiom d -> DefinitionAxiom <$> checkAxiomDef d
@@ -1012,7 +1013,7 @@ mkSections = \case
       StatementTypeSignature t -> Left (DefinitionTypeSignature t)
       StatementNewTypeSignature n -> Left (DefinitionNewTypeSignature n)
       StatementInductive i -> Left (DefinitionInductive i)
-      StatementSyntax s -> Right (NonDefinitionSyntax s)
+      StatementSyntax s -> Left (DefinitionSyntax s)
       StatementImport i -> Right (NonDefinitionImport i)
       StatementModule m -> Right (NonDefinitionModule m)
       StatementOpenModule o -> Right (NonDefinitionOpenModule o)
@@ -1386,6 +1387,7 @@ checkLetClauses =
               DefinitionNewTypeSignature {} -> impossible
               DefinitionInductive {} -> impossible
               DefinitionAxiom {} -> impossible
+              DefinitionSyntax {} -> impossible
         fromNonDefs :: NonDefinitionsSection s -> NonEmpty (LetClause s)
         fromNonDefs NonDefinitionsSection {..} =
           (fromNonDef <$> _nonDefinitionsSection) <>? (fromDefs <$> _nonDefinitionsNext)
@@ -1393,7 +1395,6 @@ checkLetClauses =
             fromNonDef :: NonDefinition s -> LetClause s
             fromNonDef = \case
               NonDefinitionFunctionClause f -> LetFunClause f
-              NonDefinitionSyntax {} -> impossible
               NonDefinitionImport {} -> impossible
               NonDefinitionModule {} -> impossible
               NonDefinitionOpenModule {} -> impossible

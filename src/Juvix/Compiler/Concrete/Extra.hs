@@ -136,3 +136,6 @@ flattenStatement :: Statement s -> [Statement s]
 flattenStatement = \case
   StatementModule m -> concatMap flattenStatement (m ^. moduleBody)
   s -> [s]
+
+migrateFunctionSyntax :: Module 'Scoped t -> Module 'Scoped t
+migrateFunctionSyntax = undefined

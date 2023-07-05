@@ -113,8 +113,8 @@ ppExpressionType = case sing :: SStage s of
 
 ppPatternAtomType :: forall s. SingI s => PrettyPrinting (PatternAtomType s)
 ppPatternAtomType = case sing :: SStage s of
-  SParsed -> ppCode
-  SScoped -> ppCode
+  SParsed -> ppCodeAtom
+  SScoped -> ppCodeAtom
 
 ppPatternParensType :: forall s. SingI s => PrettyPrinting (PatternParensType s)
 ppPatternParensType = case sing :: SStage s of
@@ -638,7 +638,7 @@ instance PrettyPrint BuiltinAxiom where
 instance SingI s => PrettyPrint (NewFunctionClause s) where
   ppCode :: forall r. Members '[ExactPrint, Reader Options] r => NewFunctionClause s -> Sem r ()
   ppCode NewFunctionClause {..} = do
-    let pats' = mapM_ ppPatternAtomType _clausenPatterns
+    let pats' = hsep (ppPatternAtomType <$> _clausenPatterns)
         e' = ppExpressionType _clausenBody
     ppCode _clausenPipeKw <+> pats' <+> ppCode _clausenAssignKw <> oneLineOrNext e'
 
@@ -663,7 +663,7 @@ instance SingI s => PrettyPrint (NewTypeSignature s) where
         name' = annDef _signName (ppSymbolType _signName)
         body' = case _signBody of
           SigBodyExpression e -> space <> ppCode Kw.kwAssign <> oneLineOrNext (ppExpressionType e)
-          SigBodyClauses k -> line <> mapM_ ppCode k
+          SigBodyClauses k -> line <> indent (vsep (ppCode <$> k))
     doc'
       ?<> pragmas'
       ?<> builtin'
