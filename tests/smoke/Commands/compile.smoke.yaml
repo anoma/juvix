@@ -33,7 +33,7 @@ tests:
         cd ./examples/milestone/
         cp -r HelloWorld "$temp"
         cd "$temp/HelloWorld"
-        sed -i '' '/^main:/d' juvix.yaml
+        sed -i '/^main:/d' juvix.yaml
         juvix compile
     exit-status: 1
     stdout: |
