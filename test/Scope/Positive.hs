@@ -242,7 +242,7 @@ tests =
     PosTest
       "New function syntax"
       $(mkRelDir ".")
-      $(mkRelFile "Syntax.juvix")
+      $(mkRelFile "Syntax.juvix"),
     PosTest
       "Format pragma"
       $(mkRelDir ".")

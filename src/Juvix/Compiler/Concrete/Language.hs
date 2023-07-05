@@ -1689,8 +1689,9 @@ instance HasLoc (SigArg s) where
       Irrelevant (l, r) = _sigArgDelims
 
 instance SingI s => HasLoc (NewFunctionClause s) where
-  getLoc NewFunctionClause {..} = getLoc _clausenPipeKw
-    <> getLocExpressionType _clausenBody
+  getLoc NewFunctionClause {..} =
+    getLoc _clausenPipeKw
+      <> getLocExpressionType _clausenBody
 
 instance SingI s => HasLoc (NewTypeSignatureBody s) where
   getLoc = \case
