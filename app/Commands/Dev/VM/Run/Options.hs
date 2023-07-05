@@ -6,7 +6,8 @@ import Juvix.Compiler.VM.Options qualified as VM
 data VMRunOptions = VMRunOptions
   { _vmRunInputFile :: AppPath File,
     _vmRunStackSize :: Int,
-    _vmRunHeapSize :: Int
+    _vmRunHeapSize :: Int,
+    _vmRunInputsFile :: Maybe (AppPath File)
   }
   deriving stock (Data)
 
@@ -17,6 +18,14 @@ parseVMRunOptions = do
   _vmRunInputFile <- parseInputJuvixVMFile
   _vmRunStackSize <- optStackSize
   _vmRunHeapSize <- optHeapSize
+  _vmRunInputsFile <-
+    option
+      fileOpt
+      ( short 'i'
+          <> long "input"
+          <> value Nothing
+          <> help "File with input data"
+      )
   pure VMRunOptions {..}
 
 instance CanonicalProjection VMRunOptions VM.Options where

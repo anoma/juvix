@@ -83,6 +83,7 @@ resolveLabels instrs0 = do
         adjustValue = \case
           RegRef r -> return $ RegRef r
           Const num -> return $ Const num
+          VarRef x -> return $ VarRef x
           LabelRef lab -> do
             maddr <- asks (HashMap.lookup lab)
             case maddr of

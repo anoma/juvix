@@ -1,6 +1,7 @@
 module Juvix.Compiler.VM.Interpreter where
 
 import Control.Monad.ST
+import Data.HashMap.Strict qualified as HashMap
 import Data.Vector qualified as Vec
 import Data.Vector.Unboxed.Mutable qualified as MV
 import Juvix.Compiler.VM.Extra.Utils
@@ -8,8 +9,8 @@ import Juvix.Compiler.VM.Language
 import Juvix.Compiler.VM.Options
 
 -- | Runs VM bytecode. Returns the contents of r0 at the end of execution.
-runCode :: Options -> [Instruction] -> Int
-runCode opts instrs0 = runST goCode
+runCode :: Options -> HashMap Text Int -> [Instruction] -> Int
+runCode opts vars instrs0 = runST goCode
   where
     instrs :: Vec.Vector Instruction
     instrs = Vec.fromList instrs0
@@ -55,6 +56,8 @@ runCode opts instrs0 = runST goCode
       Const x -> return x
       RegRef r -> MV.read regs r
       LabelRef {} -> impossible
+      VarRef x ->
+        return $ fromMaybe (error ("unbound variable: " <> x)) $ HashMap.lookup x vars
 
     goBinop ::
       BinaryOp ->

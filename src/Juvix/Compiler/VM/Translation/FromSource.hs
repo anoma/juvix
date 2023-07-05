@@ -138,13 +138,18 @@ parseJumpOnZeroArgs = do
   return $ InstrJumpOnZero reg val
 
 value :: ParsecS r Value
-value = registerRef <|> integerValue <|> labelValue
+value = registerRef <|> integerValue <|> varValue <|> labelValue
 
 registerRef :: ParsecS r Value
 registerRef = RegRef <$> register
 
 integerValue :: ParsecS r Value
 integerValue = Const <$> smallInt
+
+varValue :: ParsecS r Value
+varValue = do
+  kw kwDollar
+  VarRef <$> identifier
 
 labelValue :: ParsecS r Value
 labelValue = LabelRef <$> identifier

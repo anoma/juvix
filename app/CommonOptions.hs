@@ -131,6 +131,11 @@ parseGenericOutputDir m = do
       )
   pure AppPath {_pathIsInput = False, ..}
 
+fileOpt :: ReadM (Maybe (AppPath File))
+fileOpt = do
+  _pathPath <- mkPrepath <$> str
+  pure $ Just $ AppPath {_pathIsInput = False, ..}
+
 somePreDirOpt :: ReadM (Prepath Dir)
 somePreDirOpt = mkPrepath <$> str
 

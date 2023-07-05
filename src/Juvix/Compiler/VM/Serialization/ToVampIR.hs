@@ -10,7 +10,7 @@ import Juvix.Compiler.VM.Options
 serialize :: Member (Error LabelError) r => Options -> [Instruction] -> Sem r ByteString
 serialize opts instrs0 = do
   instrs <- resolveLabels instrs0
-  let code = BS.concat (fmap go instrs) <> "nil"
+  let code = BS.concat (fmap go instrs) <> "[]"
   return $
     vampirPrelude (computeRegsNum instrs) opts
       <> "run ("
@@ -126,6 +126,7 @@ serialize opts instrs0 = do
       Const x -> "Cst " <> show x
       RegRef x -> "Reg " <> show x
       LabelRef {} -> impossible
+      VarRef x -> fromText x
 
     goOpcode :: Opcode -> ByteString
     goOpcode = \case

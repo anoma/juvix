@@ -7,7 +7,8 @@ data Options = Options
   { _optStackSize :: Int,
     _optHeapSize :: Int,
     _optStepsNum :: Int,
-    _optIntegerBits :: Int
+    _optIntegerBits :: Int,
+    _optInputsFile :: Maybe (Path Abs File)
   }
 
 makeLenses ''Options
@@ -18,5 +19,6 @@ defaultOptions =
     { _optStackSize = defaultStackSize,
       _optHeapSize = defaultHeapSize,
       _optStepsNum = defaultUnrollLimit,
-      _optIntegerBits = defaultVampIRIntegerBits
+      _optIntegerBits = defaultVampIRIntegerBits,
+      _optInputsFile = Nothing
     }
