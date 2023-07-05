@@ -1688,6 +1688,15 @@ instance HasLoc (SigArg s) where
     where
       Irrelevant (l, r) = _sigArgDelims
 
+instance SingI s => HasLoc (NewFunctionClause s) where
+  getLoc NewFunctionClause {..} = getLoc _clausenPipeKw
+    <> getLocExpressionType _clausenBody
+
+instance SingI s => HasLoc (NewTypeSignatureBody s) where
+  getLoc = \case
+    SigBodyExpression e -> getLocExpressionType e
+    SigBodyClauses cl -> getLocSpan cl
+
 instance SingI s => HasLoc (NewTypeSignature s) where
   getLoc NewTypeSignature {..} =
     (getLoc <$> _signDoc)
@@ -1695,8 +1704,7 @@ instance SingI s => HasLoc (NewTypeSignature s) where
       ?<> (getLoc <$> _signBuiltin)
       ?<> (getLoc <$> _signTerminating)
       ?<> getLocSymbolType _signName
-      -- <> (getLocExpressionType <$> _signBody)
-      <> getLocExpressionType _signRetType
+      <> getLoc _signBody
 
 instance SingI s => HasLoc (TypeSignature s) where
   getLoc TypeSignature {..} =
