@@ -10,6 +10,7 @@ import Juvix.Compiler.Backend.C qualified as C
 import Juvix.Compiler.Backend.Geb qualified as Geb
 import Juvix.Compiler.Backend.VampIR.Translation qualified as VampIR
 import Juvix.Compiler.Core.Data.InfoTable qualified as Core
+import Juvix.Compiler.Defaults
 import System.FilePath (takeBaseName)
 
 data PipelineArg = PipelineArg

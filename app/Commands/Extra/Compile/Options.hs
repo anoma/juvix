@@ -1,7 +1,7 @@
 module Commands.Extra.Compile.Options where
 
 import CommonOptions hiding (show)
-import Juvix.Compiler.Pipeline.EntryPoint
+import Juvix.Compiler.Defaults
 import Prelude (Show (show))
 
 data CompileTarget

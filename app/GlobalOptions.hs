@@ -5,6 +5,7 @@ where
 
 import CommonOptions
 import Juvix.Compiler.Core.Options qualified as Core
+import Juvix.Compiler.Defaults
 import Juvix.Compiler.Internal.Pretty.Options qualified as Internal
 import Juvix.Compiler.Pipeline
 import Juvix.Data.Error.GenericError qualified as E

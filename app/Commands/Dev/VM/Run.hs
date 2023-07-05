@@ -11,7 +11,7 @@ runCommand opts = do
   s <- embed (readFile (toFilePath afile))
   case VM.runParser (toFilePath afile) s of
     Left err -> exitJuvixError (JuvixError err)
-    Right instrs -> runVM instrs
+    Right instrs -> runVM opts instrs
   where
     file :: AppPath File
     file = opts ^. vmRunInputFile

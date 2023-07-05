@@ -8,6 +8,7 @@ where
 
 import Control.Exception qualified as GHC
 import Juvix.Compiler.Core.Data.TransformationId.Parser
+import Juvix.Compiler.Defaults
 import Juvix.Prelude
 import Options.Applicative
 import System.Process
@@ -280,6 +281,24 @@ optNoDisambiguate =
   switch
     ( long "no-disambiguate"
         <> help "Don't disambiguate the names of bound variables"
+    )
+
+optStackSize :: Parser Int
+optStackSize =
+  option
+    (fromIntegral <$> naturalNumberOpt)
+    ( long "stack"
+        <> value defaultStackSize
+        <> help "Stack size limit"
+    )
+
+optHeapSize :: Parser Int
+optHeapSize =
+  option
+    (fromIntegral <$> naturalNumberOpt)
+    ( long "heap"
+        <> value defaultHeapSize
+        <> help "Heap size limit"
     )
 
 optTransformationIds :: Parser [TransformationId]

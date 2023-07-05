@@ -1,5 +1,6 @@
 module Juvix.Compiler.Core.Options where
 
+import Juvix.Compiler.Defaults
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Prelude
 

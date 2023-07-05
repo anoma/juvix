@@ -5,6 +5,7 @@ module Juvix.Compiler.Pipeline.EntryPoint
 where
 
 import Juvix.Compiler.Backend
+import Juvix.Compiler.Defaults
 import Juvix.Compiler.Pipeline.Package
 import Juvix.Compiler.Pipeline.Root
 import Juvix.Extra.Paths
@@ -83,15 +84,6 @@ defaultEntryPointNoFile roots =
       _entryPointModulePaths = [],
       _entryPointSymbolPruningMode = FilterUnreachable
     }
-
-defaultUnrollLimit :: Int
-defaultUnrollLimit = 140
-
-defaultOptimizationLevel :: Int
-defaultOptimizationLevel = 1
-
-defaultInliningDepth :: Int
-defaultInliningDepth = 2
 
 mainModulePath :: Traversal' EntryPoint (Path Abs File)
 mainModulePath = entryPointModulePaths . _head
