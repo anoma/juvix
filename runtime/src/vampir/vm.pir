@@ -1,3 +1,6 @@
+/////////////////////////////////////////////////////////
+// VampIR runtime VM primitives
+/////////////////////////////////////////////////////////
 
 def hd (x:_) = x;
 
@@ -7,6 +10,9 @@ def map_rec f x acc = (f x):acc;
 def map f xs = fold xs (map_rec f) [];
 
 def sum xs = fold xs (fun x y {x + y}) 0;
+
+def zipWith_rec f x z (y:ys) = (f x y):(z ys);
+def zipWith f xs = fold xs (zipWith_rec f) (fun x {[]});
 
 /////////////////////////////////////////////////////////
 
@@ -28,12 +34,18 @@ def write_rec n v x step idx = {
     def e = equal idx n;
     (v * e + (1 - e) * x):(step (idx + 1))
 };
-def write mem n v = fold mem (write_rec n v) (fun idx {[]}) 0 0;
+def write mem n v = fold mem (write_rec n v) (fun idx {[]}) 0;
 
 def read_val mem val = {
     def (v, isReg) = decomp2 val;
     if isReg (read mem v) v
 };
+
+def read_code_rec n (x1, x2, x3, x4) step (acc1, acc2, acc3, acc4) idx = {
+    def e = equal idx n;
+    step (acc1 + x1 * e, acc2 + x2 * e, acc3 + x3 * e, acc4 + x4 * e) (idx + 1)
+};
+def read_code mem n = fold mem (read_code_rec n) (fun acc idx {acc}) (0, 0, 0, 0) 0;
 
 /////////////////////////////////////////////////////////
 
@@ -179,13 +191,30 @@ def opcodes = ( (OpIntAdd, exec_add):
                 (OpIntJumpOnZero, exec_jumpz):
                 []);
 
+def zeroState = (0, 0, 0, zeros regsNum, zeros stackSize, zeros heapSize);
+
+def exec_rec op reg val1 val2 state (opcode, f) step (apc, asp, ahp, aregs, astack, aheap) = {
+    def e = equal opcode op;
+    def (pc, sp, hp, regs, stack, heap) = f reg val1 val2 state;
+    (
+        apc + e * pc,
+        asp + e * sp,
+        ahp + e * hp,
+        zipWith (fun x1 x2 {x1 + e * x2}) aregs regs,
+        zipWith (fun x1 x2 {x1 + e * x2}) astack stack,
+        zipWith (fun x1 x2 {x1 + e * x2}) aheap heap
+    )
+};
+
+def exec op reg val1 val2 state = fold opcodes (exec_rec op reg val1 val2 state) (fun acc {acc}) zeroState;
+
 def run_rec code state = {
     def (pc, sp, hp, regs, stack, heap) = state;
-    def (op, reg, val1, val2) = read code pc;
-    sum (map (fun (opcode, f) {equal opcode op * f reg val1 val2 state}) opcodes)
+    def (op, reg, val1, val2) = read_code code pc;
+    exec op reg val1 val2 state
 };
 
 def run n code = {
-    def (_, _, regs, _, _) = iter n (run_rec code) (0, 0, 1, zeros regsNum, zeros stackSize, zeros heapSize);
+    def (_, _, _, regs, _, _) = iter n (run_rec code) (0, 0, 1, zeros regsNum, zeros stackSize, zeros heapSize);
     hd regs
 };

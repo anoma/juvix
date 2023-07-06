@@ -18,7 +18,7 @@ serialize opts instrs0 = do
       <> ")"
       <> " ("
       <> code
-      <> ") = 1;"
+      <> ") = 1;\n"
   where
     go :: Instruction -> ByteString
     go = \case
@@ -151,8 +151,8 @@ vampirPrelude regsNum opts =
     <> ";\n"
     <> "def heapSize = "
     <> show (opts ^. optHeapSize)
-    <> ";\n"
+    <> ";\n\n"
     <> $(FE.makeRelativeToProject "runtime/src/vampir/stdlib.pir" >>= FE.embedFile)
-    <> ";\n"
+    <> "\n"
     <> $(FE.makeRelativeToProject "runtime/src/vampir/vm.pir" >>= FE.embedFile)
     <> "\n"
