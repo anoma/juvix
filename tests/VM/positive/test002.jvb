@@ -1,5 +1,5 @@
 -- loops
-  move r1, 100
+  move r1, $x
   move r0, 0
 loop:
   add r0, r0, r1
@@ -7,5 +7,5 @@ loop:
   jumpz r1, exit
   jump loop
 exit:
+  eq r0, r0, 5050
   halt
--- result: 5050

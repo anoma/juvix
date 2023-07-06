@@ -16,6 +16,7 @@ import Runtime qualified
 import Scope qualified
 import Termination qualified
 import Typecheck qualified
+import VM qualified
 import VampIR qualified
 
 slowTests :: TestTree
@@ -29,7 +30,8 @@ slowTests =
       Internal.allTests,
       Compilation.allTests,
       Examples.allTests,
-      VampIR.allTests
+      VampIR.allTests,
+      VM.allTests
     ]
 
 fastTests :: TestTree

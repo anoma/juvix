@@ -17,20 +17,23 @@ instance ToGenericError LabelError where
         return
           GenericError
             { _genericErrorLoc = i,
-              _genericErrorMessage = ppOutput (pretty msg),
+              _genericErrorMessage = ppOutput (pretty e),
               _genericErrorIntervals = [i]
             }
         where
           i = defaultLoc
-          msg = case e of
-            ErrUndeclaredLabel lab -> "undeclared label: " <> lab
-            ErrDuplicateLabel lab -> "duplicate label: " <> lab
 
           mockFile :: Path Abs File
           mockFile = $(mkAbsFile "/vm-run")
 
           defaultLoc :: Interval
           defaultLoc = singletonInterval (mkInitialLoc mockFile)
+
+instance Pretty LabelError where
+  pretty e =
+    case e of
+      ErrUndeclaredLabel lab -> "undeclared label: " <> pretty lab
+      ErrDuplicateLabel lab -> "duplicate label: " <> pretty lab
 
 resolveLabels ::
   Member (Error LabelError) r => [Instruction] -> Sem r [Instruction]

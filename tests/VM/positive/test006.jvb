@@ -1,7 +1,7 @@
 -- comparisons
 
-move r0, 7
-move r1, 13
+move r0, $x
+move r1, $y
 add r2, r1, r0
 eq r3, r1, r2
 sub r2, r2, r3
@@ -11,5 +11,5 @@ lt r0, r0, r1
 add r0, r0, r2
 lt r1, r1, r1
 add r0, r0, r1
+eq r0, r0, 2
 halt
--- result: 2

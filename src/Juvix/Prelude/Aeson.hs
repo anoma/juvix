@@ -11,6 +11,7 @@ import Data.Aeson.Text
 import Data.HashMap.Strict qualified as HashMap
 import Data.Text.Lazy qualified as Lazy
 import Juvix.Prelude.Base
+import Text.Read (read)
 
 newtype JSONIntData = JSONIntData
   { _jsonIntDataMap :: HashMap Text Int
@@ -25,7 +26,7 @@ instance FromJSON JSONIntData where
     where
       parseData :: Parse JSONError JSONIntData
       parseData = do
-        d <- eachInObject asIntegral
+        d <- map (second read) <$> eachInObject asString
         let _jsonIntDataMap = HashMap.fromList d
         return JSONIntData {..}
 

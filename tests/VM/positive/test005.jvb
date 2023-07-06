@@ -1,6 +1,6 @@
 -- lists
 
-  move r0, 100
+  move r0, $x
   push return_label_1
   jump gen
 return_label_1:
@@ -17,8 +17,8 @@ return_label_2:
   push return_label_3
   jump sum
 return_label_3:
+  eq r0, r0, 5150
   halt
-  -- result: 5150
 
 plus_one:
   pop r1

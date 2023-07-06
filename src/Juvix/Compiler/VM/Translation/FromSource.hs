@@ -148,7 +148,7 @@ integerValue = Const <$> smallInt
 
 varValue :: ParsecS r Value
 varValue = do
-  kw kwDollar
+  symbol "$"
   VarRef <$> identifier
 
 labelValue :: ParsecS r Value

@@ -4,15 +4,15 @@
   store r0, 0, calculate
   store r0, 1, 2
   store r0, 2, 1
-  store r0, 3, 2
-  store r0, 4, 3
+  store r0, 3, $x
+  store r0, 4, $y
   move r1, 1
   move r2, return_label_1
-  push 5
+  push $z
   jump ccall_exact
 return_label_1:
+  eq r0, r0, 11
   halt
-  -- result: 11
 
 -- r0 = closure
 -- r2 = return address

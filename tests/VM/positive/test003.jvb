@@ -1,13 +1,13 @@
 -- direct call
 
-  move r0, 2
-  move r1, 3
-  move r2, 5
+  move r0, $x
+  move r1, $y
+  move r2, $z
   push return_label_1
   jump calculate
 return_label_1:
+  eq r0, r0, 11
   halt
-  -- result: 11
 
 calculate:
   mul r0, r0, r1
