@@ -579,12 +579,12 @@ checkIteratorSyntaxDef s@IteratorSyntaxDef {..} = do
 (@$>) :: Functor m => (a -> m ()) -> a -> m a
 (@$>) f a = f a $> a
 
-checkNewTypeSignature ::
+checkFunctionDef ::
   forall r.
   Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, State ScoperFixities, State ScoperIterators, Reader BindingStrategy] r =>
-  NewTypeSignature 'Parsed ->
-  Sem r (NewTypeSignature 'Scoped)
-checkNewTypeSignature NewTypeSignature {..} = do
+  FunctionDef 'Parsed ->
+  Sem r (FunctionDef 'Scoped)
+checkFunctionDef FunctionDef {..} = do
   sigName' <- bindFunctionSymbol _signName
   sigDoc' <- mapM checkJudoc _signDoc
   (args', sigType', sigBody') <- withLocalScope $ do
@@ -592,8 +592,8 @@ checkNewTypeSignature NewTypeSignature {..} = do
     t' <- checkParseExpressionAtoms _signRetType
     b' <- checkBody
     return (a', t', b')
-  registerNewTypeSignature
-    @$> NewTypeSignature
+  registerFunctionDef
+    @$> FunctionDef
       { _signName = sigName',
         _signRetType = sigType',
         _signDoc = sigDoc',
@@ -612,7 +612,7 @@ checkNewTypeSignature NewTypeSignature {..} = do
             _sigArgType = ty',
             ..
           }
-    checkBody :: Sem r (NewTypeSignatureBody 'Scoped)
+    checkBody :: Sem r (FunctionDefBody 'Scoped)
     checkBody = case _signBody of
       SigBodyExpression e -> SigBodyExpression <$> checkParseExpressionAtoms e
       SigBodyClauses cls -> SigBodyClauses <$> mapM checkClause cls
@@ -880,7 +880,7 @@ checkModuleBody body = do
             go = \case
               DefinitionSyntax d -> output @(Statement s) (StatementSyntax d)
               DefinitionAxiom d -> output (StatementAxiom d)
-              DefinitionNewTypeSignature d -> output @(Statement s) (StatementNewTypeSignature d)
+              DefinitionFunctionDef d -> output @(Statement s) (StatementFunctionDef d)
               DefinitionInductive d -> output @(Statement s) (StatementInductive d)
               DefinitionTypeSignature d -> output @(Statement s) (StatementTypeSignature d)
 
@@ -925,7 +925,7 @@ checkSections sec = topBindings $ case sec of
         reserveDefinition :: Definition 'Parsed -> Sem (Reader BindingStrategy ': r) ()
         reserveDefinition = \case
           DefinitionSyntax s -> void (checkSyntaxDef s)
-          DefinitionNewTypeSignature d -> void (reserveFunctionSymbol (d ^. signName))
+          DefinitionFunctionDef d -> void (reserveFunctionSymbol (d ^. signName))
           DefinitionTypeSignature d -> void (reserveFunctionSymbol (d ^. sigName))
           DefinitionAxiom d -> void (reserveAxiomSymbol (d ^. axiomName))
           DefinitionInductive d -> do
@@ -934,7 +934,7 @@ checkSections sec = topBindings $ case sec of
         goDefinition :: Definition 'Parsed -> Sem (Reader BindingStrategy ': r) (Definition 'Scoped)
         goDefinition = \case
           DefinitionSyntax s -> return (DefinitionSyntax s)
-          DefinitionNewTypeSignature d -> DefinitionNewTypeSignature <$> checkNewTypeSignature d
+          DefinitionFunctionDef d -> DefinitionFunctionDef <$> checkFunctionDef d
           DefinitionTypeSignature d -> DefinitionTypeSignature <$> checkTypeSignature d
           DefinitionAxiom d -> DefinitionAxiom <$> checkAxiomDef d
           DefinitionInductive d -> DefinitionInductive <$> checkInductiveDef d
@@ -946,7 +946,7 @@ checkStatement ::
 checkStatement s = topBindings $ case s of
   StatementSyntax synDef -> StatementSyntax <$> checkSyntaxDef synDef
   StatementTypeSignature tySig -> StatementTypeSignature <$> checkTypeSignature tySig
-  StatementNewTypeSignature tySig -> StatementNewTypeSignature <$> checkNewTypeSignature tySig
+  StatementFunctionDef tySig -> StatementFunctionDef <$> checkFunctionDef tySig
   StatementImport imp -> StatementImport <$> checkImport imp
   StatementInductive dt -> StatementInductive <$> checkInductiveDef dt
   StatementModule dt -> StatementModule <$> checkLocalModule dt
@@ -1001,7 +1001,7 @@ mkSections = \case
     fromStatement = \case
       StatementAxiom a -> Left (DefinitionAxiom a)
       StatementTypeSignature t -> Left (DefinitionTypeSignature t)
-      StatementNewTypeSignature n -> Left (DefinitionNewTypeSignature n)
+      StatementFunctionDef n -> Left (DefinitionFunctionDef n)
       StatementInductive i -> Left (DefinitionInductive i)
       StatementSyntax s -> Left (DefinitionSyntax s)
       StatementImport i -> Right (NonDefinitionImport i)
@@ -1374,7 +1374,7 @@ checkLetClauses =
             fromDef :: Definition s -> LetClause s
             fromDef = \case
               DefinitionTypeSignature d -> LetTypeSig d
-              DefinitionNewTypeSignature {} -> impossible
+              DefinitionFunctionDef {} -> impossible
               DefinitionInductive {} -> impossible
               DefinitionAxiom {} -> impossible
               DefinitionSyntax {} -> impossible

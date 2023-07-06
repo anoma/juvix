@@ -98,8 +98,8 @@ groupStatements = \case
       (StatementModule {}, _) -> False
       (StatementAxiom {}, StatementAxiom {}) -> False
       (StatementAxiom {}, _) -> False
-      (StatementNewTypeSignature {}, _) -> False
-      (_, StatementNewTypeSignature {}) -> False
+      (StatementFunctionDef {}, _) -> False
+      (_, StatementFunctionDef {}) -> False
       (StatementTypeSignature sig, StatementFunctionClause fun) ->
         case sing :: SStage s of
           SParsed -> sig ^. sigName == fun ^. clauseOwnerFunction
@@ -136,3 +136,6 @@ flattenStatement :: Statement s -> [Statement s]
 flattenStatement = \case
   StatementModule m -> concatMap flattenStatement (m ^. moduleBody)
   s -> [s]
+
+migrateFunctionSyntax :: Module 'Scoped t -> Module 'Scoped t
+migrateFunctionSyntax = undefined

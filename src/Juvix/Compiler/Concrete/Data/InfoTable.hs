@@ -12,7 +12,7 @@ data OldFunctionInfo = OldFunctionInfo
 
 data FunctionInfo
   = FunctionInfoOld OldFunctionInfo
-  | FunctionInfoNew (NewTypeSignature 'Scoped)
+  | FunctionInfoNew (FunctionDef 'Scoped)
   deriving stock (Eq, Show)
 
 data ConstructorInfo = ConstructorInfo

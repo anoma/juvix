@@ -152,7 +152,7 @@ data NonDefinitionsSection (s :: Stage) = NonDefinitionsSection
 
 data Definition (s :: Stage)
   = DefinitionSyntax SyntaxDef
-  | DefinitionNewTypeSignature (NewTypeSignature s)
+  | DefinitionFunctionDef (FunctionDef s)
   | DefinitionInductive (InductiveDef s)
   | DefinitionAxiom (AxiomDef s)
   | DefinitionTypeSignature (TypeSignature s)
@@ -166,7 +166,7 @@ data NonDefinition (s :: Stage)
 data Statement (s :: Stage)
   = StatementSyntax SyntaxDef
   | StatementTypeSignature (TypeSignature s)
-  | StatementNewTypeSignature (NewTypeSignature s)
+  | StatementFunctionDef (FunctionDef s)
   | StatementImport (Import s)
   | StatementInductive (InductiveDef s)
   | StatementModule (Module s 'ModuleLocal)
@@ -322,7 +322,7 @@ deriving stock instance
   ) =>
   Ord (NewFunctionClause s)
 
-data NewTypeSignatureBody (s :: Stage)
+data FunctionDefBody (s :: Stage)
   = SigBodyExpression (ExpressionType s)
   | SigBodyClauses (NonEmpty (NewFunctionClause s))
 
@@ -333,7 +333,7 @@ deriving stock instance
     Show (SymbolType s),
     Show (ExpressionType s)
   ) =>
-  Show (NewTypeSignatureBody s)
+  Show (FunctionDefBody s)
 
 deriving stock instance
   ( Eq (PatternAtomType s),
@@ -342,7 +342,7 @@ deriving stock instance
     Eq (SymbolType s),
     Eq (ExpressionType s)
   ) =>
-  Eq (NewTypeSignatureBody s)
+  Eq (FunctionDefBody s)
 
 deriving stock instance
   ( Ord (PatternAtomType s),
@@ -351,9 +351,9 @@ deriving stock instance
     Ord (SymbolType s),
     Ord (ExpressionType s)
   ) =>
-  Ord (NewTypeSignatureBody s)
+  Ord (FunctionDefBody s)
 
-data NewTypeSignature (s :: Stage) = NewTypeSignature
+data FunctionDef (s :: Stage) = FunctionDef
   { _signName :: FunctionName s,
     _signArgs :: [SigArg s],
     _signColonKw :: Irrelevant KeywordRef,
@@ -361,7 +361,7 @@ data NewTypeSignature (s :: Stage) = NewTypeSignature
     _signDoc :: Maybe (Judoc s),
     _signPragmas :: Maybe ParsedPragmas,
     _signBuiltin :: Maybe (WithLoc BuiltinFunction),
-    _signBody :: NewTypeSignatureBody s,
+    _signBody :: FunctionDefBody s,
     _signTerminating :: Maybe KeywordRef
   }
 
@@ -372,7 +372,7 @@ deriving stock instance
     Show (SymbolType s),
     Show (ExpressionType s)
   ) =>
-  Show (NewTypeSignature s)
+  Show (FunctionDef s)
 
 deriving stock instance
   ( Eq (PatternAtomType s),
@@ -381,7 +381,7 @@ deriving stock instance
     Eq (SymbolType s),
     Eq (ExpressionType s)
   ) =>
-  Eq (NewTypeSignature s)
+  Eq (FunctionDef s)
 
 deriving stock instance
   ( Ord (PatternAtomType s),
@@ -390,7 +390,7 @@ deriving stock instance
     Ord (SymbolType s),
     Ord (ExpressionType s)
   ) =>
-  Ord (NewTypeSignature s)
+  Ord (FunctionDef s)
 
 data TypeSignature (s :: Stage) = TypeSignature
   { _sigName :: FunctionName s,
@@ -1423,7 +1423,7 @@ makeLenses ''IteratorSyntaxDef
 makeLenses ''InductiveConstructorDef
 makeLenses ''Module
 makeLenses ''TypeSignature
-makeLenses ''NewTypeSignature
+makeLenses ''FunctionDef
 makeLenses ''AxiomDef
 makeLenses ''FunctionClause
 makeLenses ''InductiveParameters
@@ -1579,7 +1579,7 @@ instance HasLoc (Statement 'Scoped) where
   getLoc = \case
     StatementSyntax t -> getLoc t
     StatementTypeSignature t -> getLoc t
-    StatementNewTypeSignature t -> getLoc t
+    StatementFunctionDef t -> getLoc t
     StatementImport t -> getLoc t
     StatementInductive t -> getLoc t
     StatementModule t -> getLoc t
@@ -1693,13 +1693,13 @@ instance SingI s => HasLoc (NewFunctionClause s) where
     getLoc _clausenPipeKw
       <> getLocExpressionType _clausenBody
 
-instance SingI s => HasLoc (NewTypeSignatureBody s) where
+instance SingI s => HasLoc (FunctionDefBody s) where
   getLoc = \case
     SigBodyExpression e -> getLocExpressionType e
     SigBodyClauses cl -> getLocSpan cl
 
-instance SingI s => HasLoc (NewTypeSignature s) where
-  getLoc NewTypeSignature {..} =
+instance SingI s => HasLoc (FunctionDef s) where
+  getLoc FunctionDef {..} =
     (getLoc <$> _signDoc)
       ?<> (getLoc <$> _signPragmas)
       ?<> (getLoc <$> _signBuiltin)

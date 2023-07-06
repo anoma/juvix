@@ -298,7 +298,7 @@ goModuleBody stmts = do
     newCompiledFunctions =
       sequence
         [ Indexed i <$> funDef
-          | Indexed i (StatementNewTypeSignature f) <- ss,
+          | Indexed i (StatementFunctionDef f) <- ss,
             let funDef = goTopNewFunctionDef f
         ]
 
@@ -329,7 +329,7 @@ scanImports stmts = mconcatMap go stmts
       StatementTypeSignature {} -> []
       StatementAxiom {} -> []
       StatementSyntax {} -> []
-      StatementNewTypeSignature {} -> []
+      StatementFunctionDef {} -> []
       where
         openImport :: OpenModule 'Scoped -> Maybe (Import 'Scoped)
         openImport o = case o ^. openModuleImportKw of
@@ -374,7 +374,7 @@ goStatement = \case
   StatementAxiom d -> pure . Internal.PreAxiomDef <$> goAxiom d
   StatementModule f -> goLocalModule f
   StatementImport {} -> return []
-  StatementNewTypeSignature {} -> return []
+  StatementFunctionDef {} -> return []
   StatementSyntax {} -> return []
   StatementOpenModule {} -> return []
   StatementTypeSignature {} -> return []
@@ -446,9 +446,9 @@ goFunctionDefHelper sig@TypeSignature {..} clauses = do
 goTopNewFunctionDef ::
   forall r.
   (Members '[Reader Pragmas, Error ScoperError, Builtins, NameIdGen] r) =>
-  NewTypeSignature 'Scoped ->
+  FunctionDef 'Scoped ->
   Sem r Internal.FunctionDef
-goTopNewFunctionDef NewTypeSignature {..} = do
+goTopNewFunctionDef FunctionDef {..} = do
   let _funDefName = goSymbol _signName
       _funDefTerminating = isJust _signTerminating
       _funDefBuiltin = (^. withLocParam) <$> _signBuiltin

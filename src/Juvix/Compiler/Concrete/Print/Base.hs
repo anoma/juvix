@@ -657,9 +657,9 @@ instance SingI s => PrettyPrint (SigArg s) where
         ty' = ppExpressionType _sigArgType
     ppCode l <> names' <+> colon' <+> ty' <> ppCode r
 
-instance SingI s => PrettyPrint (NewTypeSignature s) where
-  ppCode :: forall r. Members '[ExactPrint, Reader Options] r => NewTypeSignature s -> Sem r ()
-  ppCode NewTypeSignature {..} = do
+instance SingI s => PrettyPrint (FunctionDef s) where
+  ppCode :: forall r. Members '[ExactPrint, Reader Options] r => FunctionDef s -> Sem r ()
+  ppCode FunctionDef {..} = do
     let termin' :: Maybe (Sem r ()) = (<> line) . ppCode <$> _signTerminating
         doc' :: Maybe (Sem r ()) = ppCode <$> _signDoc
         pragmas' :: Maybe (Sem r ()) = ppCode <$> _signPragmas
@@ -886,7 +886,7 @@ instance SingI s => PrettyPrint (Statement s) where
   ppCode = \case
     StatementSyntax s -> ppCode s
     StatementTypeSignature s -> ppCode s
-    StatementNewTypeSignature f -> ppCode f
+    StatementFunctionDef f -> ppCode f
     StatementImport i -> ppCode i
     StatementInductive i -> ppCode i
     StatementModule m -> ppCode m

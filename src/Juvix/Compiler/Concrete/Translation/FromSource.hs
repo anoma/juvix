@@ -296,7 +296,7 @@ statement = P.label "<top level statement>" $ do
           <|> StatementOpenModule
             <$> newOpenSyntax
               -- TODO remove <?|> after removing old syntax
-              <?|> StatementNewTypeSignature
+              <?|> StatementFunctionDef
             <$> newTypeSignature Nothing
               -- TODO remove <?|> after removing old syntax
               <?|> StatementOpenModule
@@ -498,7 +498,7 @@ builtinTypeSig b = do
 builtinNewTypeSig ::
   Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r =>
   WithLoc BuiltinFunction ->
-  ParsecS r (NewTypeSignature 'Parsed)
+  ParsecS r (FunctionDef 'Parsed)
 builtinNewTypeSig = newTypeSignature . Just
 
 builtinStatement :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (Statement 'Parsed)
@@ -506,7 +506,7 @@ builtinStatement = do
   void (kw kwBuiltin)
   (builtinInductive >>= fmap StatementInductive . builtinInductiveDef)
     <|> (builtinFunction >>= fmap StatementTypeSignature . builtinTypeSig)
-    <|> (builtinFunction >>= fmap StatementNewTypeSignature . builtinNewTypeSig)
+    <|> (builtinFunction >>= fmap StatementFunctionDef . builtinNewTypeSig)
     <|> (builtinAxiom >>= fmap StatementAxiom . builtinAxiomDef)
 
 --------------------------------------------------------------------------------
@@ -832,7 +832,7 @@ newTypeSignature ::
   forall r.
   Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r =>
   Maybe (WithLoc BuiltinFunction) ->
-  ParsecS r (NewTypeSignature 'Parsed)
+  ParsecS r (FunctionDef 'Parsed)
 newTypeSignature _signBuiltin = P.label "<function definition>" $ do
   _signTerminating <- optional (kw kwTerminating)
   _signName <- symbol
@@ -842,7 +842,7 @@ newTypeSignature _signBuiltin = P.label "<function definition>" $ do
   _signDoc <- getJudoc
   _signPragmas <- getPragmas
   _signBody <- parseBody
-  return NewTypeSignature {..}
+  return FunctionDef {..}
   where
     parseArg :: ParsecS r (SigArg 'Parsed)
     parseArg = do
@@ -856,7 +856,7 @@ newTypeSignature _signBuiltin = P.label "<function definition>" $ do
       let _sigArgDelims = Irrelevant (openDelim, closeDelim)
       return SigArg {..}
 
-    parseBody :: ParsecS r (NewTypeSignatureBody 'Parsed)
+    parseBody :: ParsecS r (FunctionDefBody 'Parsed)
     parseBody =
       SigBodyExpression <$> bodyExpr
         <|> (SigBodyClauses <$> bodyClauses)

@@ -13,7 +13,7 @@ data InfoTableBuilder m a where
   RegisterConstructor :: S.Symbol -> InductiveConstructorDef 'Scoped -> InfoTableBuilder m ()
   RegisterInductive :: InductiveDef 'Scoped -> InfoTableBuilder m ()
   RegisterTypeSignature :: TypeSignature 'Scoped -> InfoTableBuilder m ()
-  RegisterNewTypeSignature :: NewTypeSignature 'Scoped -> InfoTableBuilder m ()
+  RegisterFunctionDef :: FunctionDef 'Scoped -> InfoTableBuilder m ()
   RegisterFunctionClause :: FunctionClause 'Scoped -> InfoTableBuilder m ()
   RegisterName :: (HasLoc c) => S.Name' c -> InfoTableBuilder m ()
   RegisterModule :: Module 'Scoped 'ModuleTop -> InfoTableBuilder m ()
@@ -46,7 +46,7 @@ toState = reinterpret $ \case
      in do
           modify (over infoInductives (HashMap.insert ref info))
           registerDoc (ity ^. inductiveName . nameId) j
-  RegisterNewTypeSignature f ->
+  RegisterFunctionDef f ->
     let ref = f ^. signName . S.nameId
         info = FunctionInfoNew f
         j = f ^. signDoc
