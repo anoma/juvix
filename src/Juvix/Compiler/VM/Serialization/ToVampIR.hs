@@ -13,10 +13,7 @@ serialize opts instrs0 = do
   let code = BS.concat (fmap go instrs) <> "[]"
   return $
     vampirPrelude (computeRegsNum instrs) opts
-      <> "run ("
-      <> show (opts ^. optStepsNum)
-      <> ")"
-      <> " ("
+      <> "run stepsNum ("
       <> code
       <> ") = 1;\n"
   where
@@ -50,7 +47,7 @@ serialize opts instrs0 = do
     goValue = \case
       Const x -> "Cst " <> show x
       RegRef x -> "Reg " <> show x
-      VarRef x -> "(" <> fromText x <> " + 0)"
+      VarRef x -> "Cst (" <> fromText x <> " + 0)"
       LabelRef {} -> impossible
 
     goOpcode :: Opcode -> ByteString
@@ -151,6 +148,9 @@ vampirPrelude regsNum opts =
     <> ";\n"
     <> "def heapSize = "
     <> show (opts ^. optHeapSize)
+    <> ";\n"
+    <> "def stepsNum = "
+    <> show (opts ^. optStepsNum)
     <> ";\n\n"
     <> $(FE.makeRelativeToProject "runtime/src/vampir/stdlib.pir" >>= FE.embedFile)
     <> "\n"
