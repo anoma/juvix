@@ -207,16 +207,16 @@ core input = do
   compileRes <- liftIO (compileReplInputIO' ctx (strip (pack input))) >>= replFromEither . snd
   whenJust compileRes (renderOutLn . Core.ppOut opts)
 
-ppConcrete :: (HasLoc a, Concrete.PrettyPrint a) => a -> Repl AnsiText
+ppConcrete :: Concrete.PrettyPrint a => a -> Repl AnsiText
 ppConcrete a = do
   gopts <- State.gets (^. replStateGlobalOptions)
   let popts :: GenericOptions = project' gopts
   return (Concrete.ppOut popts a)
 
-printConcrete :: (HasLoc a, Concrete.PrettyPrint a) => a -> Repl ()
+printConcrete :: Concrete.PrettyPrint a => a -> Repl ()
 printConcrete = ppConcrete >=> renderOut
 
-printConcreteLn :: (HasLoc a, Concrete.PrettyPrint a) => a -> Repl ()
+printConcreteLn :: Concrete.PrettyPrint a => a -> Repl ()
 printConcreteLn = ppConcrete >=> renderOutLn
 
 replParseIdentifiers :: String -> Repl (NonEmpty Concrete.ScopedIden)

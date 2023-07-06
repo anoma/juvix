@@ -18,6 +18,7 @@ import Juvix.Compiler.Concrete.Data.Scope
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Extra qualified as P
 import Juvix.Compiler.Concrete.Language
+import Juvix.Compiler.Concrete.Pretty (ppTrace)
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Data.Context
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
 import Juvix.Compiler.Concrete.Translation.FromSource.Data.Context (ParserResult)
@@ -163,26 +164,6 @@ freshSymbol _nameKind _nameConcrete = do
               return Nothing
       | otherwise = return Nothing
 
--- bindReservedSymbol ::
---   Members '[State Scope, InfoTableBuilder, Reader BindingStrategy] r =>
---   S.Symbol ->
---   SymbolEntry ->
---   Sem r ()
--- bindReservedSymbol s' entry = do
---   path <- gets (^. scopePath)
---   strat <- ask
---   modify (over scopeSymbols (HashMap.alter (Just . addS strat path) s))
---   registerName (S.unqualifiedSymbol s')
---   where
---     s :: Symbol
---     s = s' ^. S.nameConcrete
---     addS :: BindingStrategy -> S.AbsModulePath -> Maybe SymbolInfo -> SymbolInfo
---     addS strat path m = case m of
---       Nothing -> symbolInfoSingle entry
---       Just SymbolInfo {..} -> case strat of
---         BindingLocal -> symbolInfoSingle entry
---         BindingTop -> SymbolInfo (HashMap.insert path entry _symbolInfo)
-
 reserveSymbolOf ::
   forall r.
   Members '[Error ScoperError, NameIdGen, State ScoperFixities, State ScoperIterators, State ScoperIterators, State Scope, State ScoperState, Reader BindingStrategy] r =>
@@ -266,7 +247,9 @@ bindReservedDefinitionSymbol ::
   Symbol ->
   Sem r S.Symbol
 bindReservedDefinitionSymbol mkEntry s = do
-  s' <- fromJust <$> gets (^. scopeLocalSymbols . at s)
+  m <- gets (^. scopeLocalSymbols)
+  let s' = fromMaybe err (m ^. at s)
+      err = error ("impossible. Contents of scope:\n" <> ppTrace (toList m))
   bindReservedSymbol s' (mkEntry (S.unConcrete s'))
   return s'
 
@@ -681,12 +664,20 @@ checkInductiveDef ::
   InductiveDef 'Parsed ->
   Sem r (InductiveDef 'Scoped)
 checkInductiveDef InductiveDef {..} = do
-  inductiveName' <- topBindings (bindInductiveSymbol _inductiveName)
+  (inductiveName', constructorNames' :: NonEmpty S.Symbol) <- topBindings $ do
+    i <- bindInductiveSymbol _inductiveName
+    cs <- mapM (bindConstructorSymbol . (^. constructorName)) _inductiveConstructors
+    return (i, cs)
   (inductiveParameters', inductiveType', inductiveDoc', inductiveConstructors') <- withLocalScope $ do
     inductiveParameters' <- mapM checkInductiveParameters _inductiveParameters
     inductiveType' <- mapM checkParseExpressionAtoms _inductiveType
     inductiveDoc' <- mapM checkJudoc _inductiveDoc
-    inductiveConstructors' <- mapM (checkConstructorDef inductiveName') _inductiveConstructors
+    inductiveConstructors' <-
+      nonEmpty'
+        <$> sequence
+          [ checkConstructorDef inductiveName' cname cdef
+            | (cname, cdef) <- zipExact (toList constructorNames') (toList _inductiveConstructors)
+          ]
     return (inductiveParameters', inductiveType', inductiveDoc', inductiveConstructors')
   forM_ inductiveConstructors' bindConstructor
   registerInductive
@@ -713,10 +704,9 @@ checkInductiveDef InductiveDef {..} = do
               )
           )
     -- note that the constructor name is not bound here
-    checkConstructorDef :: S.Symbol -> InductiveConstructorDef 'Parsed -> Sem r (InductiveConstructorDef 'Scoped)
-    checkConstructorDef tyName InductiveConstructorDef {..} = do
+    checkConstructorDef :: S.Symbol -> S.Symbol -> InductiveConstructorDef 'Parsed -> Sem r (InductiveConstructorDef 'Scoped)
+    checkConstructorDef tyName constructorName' InductiveConstructorDef {..} = do
       constructorType' <- checkParseExpressionAtoms _constructorType
-      constructorName' <- reserveSymbolOf S.KNameConstructor _constructorName
       doc' <- mapM checkJudoc _constructorDoc
       registerConstructor tyName
         @$> InductiveConstructorDef
@@ -940,7 +930,7 @@ checkSections sec = topBindings $ case sec of
           DefinitionAxiom d -> void (reserveAxiomSymbol (d ^. axiomName))
           DefinitionInductive d -> do
             void (reserveInductiveSymbol (d ^. inductiveName))
-            forM_ (d ^.. inductiveConstructors . each . constructorName) reserveConstructorSymbol
+            mapM_ reserveConstructorSymbol (d ^.. inductiveConstructors . each . constructorName)
         goDefinition :: Definition 'Parsed -> Sem (Reader BindingStrategy ': r) (Definition 'Scoped)
         goDefinition = \case
           DefinitionSyntax s -> return (DefinitionSyntax s)

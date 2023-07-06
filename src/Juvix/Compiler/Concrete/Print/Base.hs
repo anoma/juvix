@@ -57,6 +57,9 @@ docHelper cs opts x =
     . ppCode
     $ x
 
+docNoLoc :: PrettyPrint c => Options -> c -> Doc Ann
+docNoLoc opts x = docHelper Nothing opts x
+
 doc :: (PrettyPrint c, HasLoc c) => Options -> Comments -> c -> Doc Ann
 doc opts cs x = docHelper (Just (fileComments file cs)) opts x
   where
@@ -190,13 +193,12 @@ instance SingI s => PrettyPrint (Iterator s) where
 instance PrettyPrint S.AName where
   ppCode (S.AName n) = annotated (AnnKind (S.getNameKind n)) (noLoc (pretty (n ^. S.nameVerbatim)))
 
--- TODO print without spaces when the type signature is not next to the clauses
 instance PrettyPrint FunctionInfo where
   ppCode = \case
     FunctionInfoOld f -> do
       let ty = StatementTypeSignature (f ^. oldFunctionInfoType)
           cs = map StatementFunctionClause (f ^. oldFunctionInfoClauses)
-      ppCode (ty : cs)
+      ppStatements (ty : cs)
     FunctionInfoNew f -> ppCode f
 
 instance SingI s => PrettyPrint (List s) where
@@ -244,7 +246,7 @@ instance PrettyPrint S.NameId where
 instance (SingI t, SingI s) => PrettyPrint (Module s t) where
   ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => Module s t -> Sem r ()
   ppCode Module {..} = do
-    let moduleBody' = localIndent (ppCode _moduleBody)
+    let moduleBody' = localIndent (ppStatements _moduleBody)
         modulePath' = ppModulePathType _modulePath
         moduleDoc' = whenJust _moduleDoc ppCode
         modulePragmas' = whenJust _modulePragmas ppCode
@@ -278,12 +280,16 @@ instance (SingI t, SingI s) => PrettyPrint (Module s t) where
         SModuleLocal -> ppCode _moduleKwEnd
         SModuleTop -> end
 
-instance SingI s => PrettyPrint [Statement s] where
-  ppCode :: forall r. Members '[ExactPrint, Reader Options] r => [Statement s] -> Sem r ()
-  ppCode ss = paragraphs (ppGroup <$> Concrete.groupStatements ss)
-    where
-      ppGroup :: NonEmpty (Statement s) -> Sem r ()
-      ppGroup = vsep . sepEndSemicolon . fmap ppCode
+instance PrettyPrint a => PrettyPrint [a] where
+  ppCode x = do
+    let cs = map ppCode (toList x)
+    encloseSep (ppCode @Text "[") (ppCode @Text "]") (ppCode @Text ", ") cs
+
+ppStatements :: forall s r. (SingI s, Members '[ExactPrint, Reader Options] r) => [Statement s] -> Sem r ()
+ppStatements ss = paragraphs (ppGroup <$> Concrete.groupStatements ss)
+  where
+    ppGroup :: NonEmpty (Statement s) -> Sem r ()
+    ppGroup = vsep . sepEndSemicolon . fmap ppCode
 
 instance PrettyPrint TopModulePath where
   ppCode TopModulePath {..} =

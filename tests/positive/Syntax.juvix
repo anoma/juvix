@@ -14,6 +14,10 @@ type Nat :=
   | zero : Nat
   | suc : Nat -> Nat;
 
+not : Bool -> Bool
+  | false := true
+  | true := false;
+
 even : Nat -> Bool
   | zero := true
   | (suc n) := odd n;
@@ -36,3 +40,21 @@ syntax infixl 4 ==2;
   | zero zero := true
   | (suc a) (suc b) := a ==1 b
   | _ _ := false;
+
+module MutualTypes;
+  -- we use Tree and isEmpty before their definition
+  isNotEmpty {a : Type} (t : Tree a) : Bool :=
+    not (isEmpty t);
+
+  isEmpty {a : Type} : (t : Tree a) -> Bool
+    | empty := true
+    | (node _ _) := false;
+
+  type Tree (a : Type) :=
+    | empty : Tree a
+    | node : a -> Forest a -> Tree a;
+
+  type Forest (a : Type) :=
+    | nil : Forest a
+    | cons : Tree a -> Forest a;
+end;

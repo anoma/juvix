@@ -6,7 +6,6 @@ import Juvix.Compiler.Builtins (evalTopBuiltins)
 import Juvix.Compiler.Concrete qualified as Concrete
 import Juvix.Compiler.Concrete.Data.Highlight (ignoreHighlightBuilder)
 import Juvix.Compiler.Concrete.Extra
-import Juvix.Compiler.Concrete.Pretty qualified as M
 import Juvix.Compiler.Concrete.Print qualified as P
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
@@ -26,11 +25,8 @@ makeLenses ''PosTest
 root :: Path Abs Dir
 root = relToProject $(mkRelDir "tests/positive")
 
-renderCodeOld :: (HasLoc c, M.PrettyPrint c) => c -> Text
-renderCodeOld = toPlainText . M.ppOutDefault
-
-renderCodeNew :: (HasLoc c, P.PrettyPrint c) => c -> Text
-renderCodeNew = toPlainText . P.ppOutDefault emptyComments
+renderCodeNew :: P.PrettyPrint c => c -> Text
+renderCodeNew = toPlainText . P.ppOutNoComments P.defaultOptions
 
 testDescr :: PosTest -> TestDescr
 testDescr PosTest {..} = helper renderCodeNew
@@ -84,7 +80,7 @@ testDescr PosTest {..} = helper renderCodeNew
                     fsParsed :: HashMap (Path Abs File) Text
                     fsParsed =
                       HashMap.fromList $
-                        [ (getModuleFilePath m, renderCodeOld m)
+                        [ (getModuleFilePath m, renderCodeNew m)
                           | m <- toList (p ^. Parser.resultTable . Parser.infoParsedModules)
                         ]
                           <> yamlFiles
