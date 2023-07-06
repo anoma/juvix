@@ -6,12 +6,14 @@ module Juvix.Compiler.Concrete.Extra
     unfoldApplication,
     groupStatements,
     flattenStatement,
+    migrateFunctionSyntax,
   )
 where
 
 import Data.HashMap.Strict qualified as HashMap
 import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
+import Juvix.Compiler.Concrete.Keywords
 import Juvix.Compiler.Concrete.Language
 import Juvix.Prelude hiding (some)
 import Juvix.Prelude.Parsing
@@ -138,4 +140,51 @@ flattenStatement = \case
   s -> [s]
 
 migrateFunctionSyntax :: Module 'Scoped t -> Module 'Scoped t
-migrateFunctionSyntax = undefined
+migrateFunctionSyntax m = over moduleBody (mapMaybe goStatement) m
+  where
+    goStatement :: Statement 'Scoped -> Maybe (Statement 'Scoped)
+    goStatement s = case s of
+      StatementSyntax {} -> Just s
+      StatementImport {} -> Just s
+      StatementAxiom {} -> Just s
+      StatementModule l -> Just (StatementModule (migrateFunctionSyntax l))
+      StatementInductive {} -> Just s
+      StatementOpenModule {} -> Just s
+      StatementFunctionDef {} -> Just s
+      StatementFunctionClause {} -> Nothing
+      StatementTypeSignature sig -> Just (StatementFunctionDef (mkFunctionDef sig (getClauses (sig ^. sigName))))
+
+    ss' :: [Statement 'Scoped]
+    ss' = m ^. moduleBody
+
+    mkFunctionDef :: TypeSignature 'Scoped -> [FunctionClause 'Scoped] -> FunctionDef 'Scoped
+    mkFunctionDef sig cls =
+      FunctionDef
+        { _signName = sig ^. sigName,
+          _signColonKw = sig ^. sigColonKw,
+          _signRetType = sig ^. sigType,
+          _signDoc = sig ^. sigDoc,
+          _signPragmas = sig ^. sigPragmas,
+          _signTerminating = sig ^. sigTerminating,
+          _signBuiltin = sig ^. sigBuiltin,
+          _signArgs = [],
+          _signBody = case sig ^. sigBody of
+            Just e -> SigBodyExpression e
+            Nothing -> case cls of
+              [] -> impossible
+              [c]
+                | null (c ^. clausePatterns) -> SigBodyExpression (c ^. clauseBody)
+                | otherwise -> SigBodyClauses (pure (mkClause c))
+              c : cs -> SigBodyClauses (mkClause <$> c :| cs)
+        }
+      where
+        mkClause :: FunctionClause 'Scoped -> NewFunctionClause 'Scoped
+        mkClause c =
+          NewFunctionClause
+            { _clausenPipeKw = Irrelevant (KeywordRef kwPipe (getLoc (c ^. clauseOwnerFunction)) Ascii),
+              _clausenAssignKw = c ^. clauseAssignKw,
+              _clausenBody = c ^. clauseBody,
+              _clausenPatterns = nonEmpty' (c ^. clausePatterns)
+            }
+    getClauses :: S.Symbol -> [FunctionClause 'Scoped]
+    getClauses name = [c | StatementFunctionClause c <- ss', name == c ^. clauseOwnerFunction]
