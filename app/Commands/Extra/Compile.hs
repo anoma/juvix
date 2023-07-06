@@ -33,6 +33,7 @@ runCompile inputFile o = do
     TargetVampIR -> return $ Right ()
     TargetCore -> return $ Right ()
     TargetAsm -> return $ Right ()
+    TargetVampIRVM -> return $ Right ()
 
 prepareRuntime :: forall r. (Members '[App, Embed IO] r) => Path Abs Dir -> CompileOptions -> Sem r ()
 prepareRuntime buildDir o = do
@@ -46,6 +47,7 @@ prepareRuntime buildDir o = do
     TargetVampIR -> return ()
     TargetCore -> return ()
     TargetAsm -> return ()
+    TargetVampIRVM -> return ()
   where
     wasiReleaseRuntime :: BS.ByteString
     wasiReleaseRuntime = $(FE.makeRelativeToProject "runtime/_build.wasm32-wasi/libjuvix.a" >>= FE.embedFile)
@@ -106,6 +108,8 @@ outputFile opts inputFile =
           replaceExtension' ".jvc" baseOutputFile
         TargetAsm ->
           replaceExtension' ".jva" baseOutputFile
+        TargetVampIRVM ->
+          replaceExtension' ".pir" baseOutputFile
 
 clangNativeCompile ::
   forall r.

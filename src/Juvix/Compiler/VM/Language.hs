@@ -13,8 +13,8 @@ type RegRef = Int
 data Value
   = Const SmallInt
   | RegRef RegRef
-  | LabelRef Text
   | VarRef Text
+  | LabelRef Text
   deriving stock (Show)
 
 -- Constructor representation: tag, field1, .., fieldn

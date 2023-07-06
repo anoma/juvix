@@ -46,6 +46,23 @@ serialize opts instrs0 = do
         <> arg2
         <> "):"
 
+    goValue :: Value -> ByteString
+    goValue = \case
+      Const x -> "Cst " <> show x
+      RegRef x -> "Reg " <> show x
+      VarRef x -> "(" <> fromText x <> " + 0)"
+      LabelRef {} -> impossible
+
+    goOpcode :: Opcode -> ByteString
+    goOpcode = \case
+      OpIntAdd -> "OpIntAdd"
+      OpIntSub -> "OpIntSub"
+      OpIntMul -> "OpIntMul"
+      OpIntDiv -> "OpIntDiv"
+      OpIntMod -> "OpIntMod"
+      OpIntLt -> "OpIntLt"
+      OpIntEq -> "OpIntEq"
+
     goBinop :: BinaryOp -> ByteString
     goBinop BinaryOp {..} =
       quad
@@ -120,23 +137,6 @@ serialize opts instrs0 = do
         (show _instrJumpOnZeroReg)
         (goValue _instrJumpOnZeroDest)
         "0"
-
-    goValue :: Value -> ByteString
-    goValue = \case
-      Const x -> "Cst " <> show x
-      RegRef x -> "Reg " <> show x
-      LabelRef {} -> impossible
-      VarRef x -> fromText x
-
-    goOpcode :: Opcode -> ByteString
-    goOpcode = \case
-      OpIntAdd -> "OpIntAdd"
-      OpIntSub -> "OpIntSub"
-      OpIntMul -> "OpIntMul"
-      OpIntDiv -> "OpIntDiv"
-      OpIntMod -> "OpIntMod"
-      OpIntLt -> "OpIntLt"
-      OpIntEq -> "OpIntEq"
 
 vampirPrelude :: Int -> Options -> ByteString
 vampirPrelude regsNum opts =

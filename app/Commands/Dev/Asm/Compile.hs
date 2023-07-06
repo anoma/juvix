@@ -43,6 +43,7 @@ runCommand opts = do
       TargetVampIR -> exitMsg (ExitFailure 1) "error: VampIR target not supported for JuvixAsm"
       TargetCore -> exitMsg (ExitFailure 1) "error: JuvixCore target not supported for JuvixAsm"
       TargetAsm -> exitMsg (ExitFailure 1) "error: JuvixAsm target not supported for JuvixAsm"
+      TargetVampIRVM -> exitMsg (ExitFailure 1) "error: vampir-vm target not yet supported for JuvixAsm"
 
 inputCFile :: (Members '[App] r) => Path Abs File -> Sem r (Path Abs File)
 inputCFile inputFileCompile = do

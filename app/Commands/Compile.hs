@@ -26,6 +26,7 @@ runCommand opts@CompileOptions {..} = do
     TargetVampIR -> Compile.runVampIRPipeline arg
     TargetCore -> writeCoreFile arg
     TargetAsm -> Compile.runAsmPipeline arg
+    TargetVampIRVM -> exitMsg (ExitFailure 1) "vampir-vm target not yet supported"
 
 writeCoreFile :: (Members '[Embed IO, App] r) => Compile.PipelineArg -> Sem r ()
 writeCoreFile pa@Compile.PipelineArg {..} = do

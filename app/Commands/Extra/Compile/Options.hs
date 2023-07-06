@@ -11,6 +11,7 @@ data CompileTarget
   | TargetVampIR
   | TargetCore
   | TargetAsm
+  | TargetVampIRVM
   deriving stock (Eq, Data, Bounded, Enum)
 
 instance Show CompileTarget where
@@ -21,6 +22,7 @@ instance Show CompileTarget where
     TargetVampIR -> "vampir"
     TargetCore -> "core"
     TargetAsm -> "asm"
+    TargetVampIRVM -> "vampir-vm"
 
 data CompileOptions = CompileOptions
   { _compileDebug :: Bool,

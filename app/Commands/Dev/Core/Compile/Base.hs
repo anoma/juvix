@@ -38,6 +38,7 @@ getEntry PipelineArg {..} = do
       TargetVampIR -> Backend.TargetVampIR
       TargetCore -> Backend.TargetCore
       TargetAsm -> Backend.TargetAsm
+      TargetVampIRVM -> Backend.TargetVampIR
 
     defaultOptLevel :: Int
     defaultOptLevel
