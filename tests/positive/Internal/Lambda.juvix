@@ -159,9 +159,9 @@ t
   id {({X : Type} → List X) → _} λ {f := f {_}, f {_}};
 
 type Box (A : Type) :=
-  | b : A → Box A;
+  | box : A → Box A;
 
-x : Box ((A : Type) → A → A) := b λ {A a := a};
+x : Box ((A : Type) → A → A) := box λ {A a := a};
 
 t1 : {A : Type} → Box ((A : Type) → A → A) → A → A
-  | {A} := λ {(b f) := f A};
+  | {A} := λ {(box f) := f A};
