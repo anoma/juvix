@@ -505,8 +505,8 @@ builtinStatement :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameI
 builtinStatement = do
   void (kw kwBuiltin)
   (builtinInductive >>= fmap StatementInductive . builtinInductiveDef)
-    <|> (builtinFunction >>= fmap StatementTypeSignature . builtinTypeSig)
     <|> (builtinFunction >>= fmap StatementFunctionDef . builtinNewTypeSig)
+    <?|> (builtinFunction >>= fmap StatementTypeSignature . builtinTypeSig)
     <|> (builtinAxiom >>= fmap StatementAxiom . builtinAxiomDef)
 
 --------------------------------------------------------------------------------
