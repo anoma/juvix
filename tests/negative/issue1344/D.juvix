@@ -3,6 +3,5 @@ module D;
 import Other;
 import U;
 
-u : Other.Unit;
-u := U.t;
+u : Other.Unit := U.t;
 

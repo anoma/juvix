@@ -3,8 +3,8 @@ module Main;
 module M;
   axiom A : Type;
 
-  id : {A : Type} -> A -> A;
-  id a := a;
+  id : {A : Type} -> A -> A
+    | a := a;
 
   axiom B : Type;
 end;
@@ -12,5 +12,4 @@ end;
 open M using {A; id as myId};
 open M hiding {B};
 
-t : {X : Type} -> X -> X;
-t := myId;
+t : {X : Type} -> X -> X := myId;

@@ -3,5 +3,5 @@ module TooManyArguments;
 type T (A : Type) :=
   | c : A → T A;
 
-f : {A : Type} → A → T A;
-f {A} a := c {A} a a {a};
+f : {A : Type} → A → T A
+  | {A} a := c {A} a a {a};

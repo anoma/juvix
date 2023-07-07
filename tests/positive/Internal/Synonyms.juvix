@@ -2,21 +2,18 @@ module Synonyms;
 
 import Stdlib.Prelude open;
 
-Ty1 : Type;
-Ty1 := Bool → Bool;
+Ty1 : Type := Bool → Bool;
 
-Ty2 : Type;
-Ty2 := Ty1;
+Ty2 : Type := Ty1;
 
-k : Ty2;
-k x := x;
+k : Ty2
+  | x := x;
 
-Num : Type;
-Num := {A : Type} → (A → A) → A → A;
+Num : Type := {A : Type} → (A → A) → A → A;
 
 -- we need the explicit `{_}` since we do not normalize types in the arity checker
-czero : Num;
-czero {_} f x := x;
+czero : Num
+  | {_} f x := x;
 
-csuc : Num → Num;
-csuc n {_} f := f ∘ n {_} f;
+csuc : Num → Num
+  | n {_} f := f ∘ n {_} f;

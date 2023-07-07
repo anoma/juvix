@@ -1,7 +1,6 @@
 module Parsing;
 
-let' : Type;
-let' := Type;
+let' : Type := Type;
 
 {- block comment -}
 -- line comment
@@ -23,5 +22,4 @@ block comment 2
 -}
 -}
 
-TypeMine : Type;
-TypeMine := Type;
+TypeMine : Type := Type;

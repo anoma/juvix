@@ -14,8 +14,8 @@ type T :=
   id; example
 --- hahahah
 --- and another one ;T;
-id : {A : Type} → A → A;
-id a := a;
+id : {A : Type} → A → A
+  | a := a;
 
 --- hellowww
 {-- judoc block --}
@@ -25,9 +25,9 @@ block --}
 {--  --}
 {-- f
 z ;Type; --}
-id2 : {A : Type} → A → A;
-id2 a := a;
-id2 a := a;
+id2 : {A : Type} → A → A
+  | a := a
+  | a := a;
 
 -- }
 --- testing double minus --

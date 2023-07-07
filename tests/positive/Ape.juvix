@@ -20,14 +20,12 @@ axiom ++ : String → String → String;
 
 axiom f : String → String;
 
-x : String;
-x := "" + ("" ++ "");
+x : String := "" + ("" ++ "");
 
 axiom wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww : String
   → String;
 
-nesting : String;
-nesting :=
+nesting : String :=
   wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww
     (wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww
       (wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww
@@ -50,8 +48,7 @@ nesting :=
                                         (wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww
                                           ("" + "" + "" + "" + ""))))))))))))))))))));
 
-t : String;
-t :=
+t : String :=
   "Hellooooooooo"
     >> "Hellooooooooo"
     >> "Hellooooooooo"

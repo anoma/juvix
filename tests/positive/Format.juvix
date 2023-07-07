@@ -17,12 +17,12 @@ import Stdlib.Data.Nat.Ord open;
 -- Lorem ipsum dolor sit amet, consectetur adipiscing elit
 terminating
 -- Comment between terminating and type sig
-go : Nat → Nat → Nat;
-go n s :=
-  if
-    (s < n)
-    (go (sub n 1) s)
-    (go n (sub s n) + go (sub n 1) s);
+go : Nat → Nat → Nat
+  | n s :=
+    if
+      (s < n)
+      (go (sub n 1) s)
+      (go n (sub s n) + go (sub n 1) s);
 
 module {- local module -}
 M;
@@ -32,22 +32,18 @@ M;
 end;
 
 -- qualified commas
-t4 : String;
-t4 := "a" M., "b" M., "c" M., "d";
+t4 : String := "a" M., "b" M., "c" M., "d";
 
 open M;
 
 -- mix qualified and unqualified commas
-t5 : String;
-t5 := "a" M., "b" M., "c", "d";
+t5 : String := "a" M., "b" M., "c", "d";
 
 -- comma chain fits in a line
-t2 : String;
-t2 := "a", "b", "c", "d";
+t2 : String := "a", "b", "c", "d";
 
 -- comma chain does not fit in a line
-t3 : String;
-t3 :=
+t3 : String :=
   "a"
     , "b"
     , "c"
@@ -62,8 +58,7 @@ t3 :=
     , "1234";
 
 -- escaping in String literals
-e1 : String;
-e1 := "\"\n";
+e1 : String := "\"\n";
 
 syntax infixl 7 +l7;
 axiom +l7 : String → String → String;
@@ -81,8 +76,7 @@ syntax infixr 6 +r6;
 axiom +r6 : String → String → String;
 
 -- nesting of chains
-t : String;
-t :=
+t : String :=
   "Hellooooooooo"
     +l1 "Hellooooooooo"
     +l1 "Hellooooooooo"
@@ -99,12 +93,12 @@ t :=
       , "hi";
 
 -- function with single wildcard parameter
-g : (_ : Type) -> Nat;
-g _ := 1;
+g : (_ : Type) -> Nat
+  | _ := 1;
 
 -- grouping of type arguments
-exampleFunction1 :
-  {A : Type}
+exampleFunction1
+  : {A : Type}
     -> List A
     -> List A
     -> List A
@@ -112,8 +106,8 @@ exampleFunction1 :
     -> List A
     -> List A
     -> List A
-    -> Nat;
-exampleFunction1 _ _ _ _ _ _ _ := 1;
+    -> Nat
+  | _ _ _ _ _ _ _ := 1;
 
 axiom undefined : {A : Type} -> A;
 
@@ -149,12 +143,10 @@ type T0 (A : Type) :=
   | c0 : (A -> T0 A) -> T0 A;
 
 -- Single Lambda clause
-idLambda : {A : Type} -> A -> A;
-idLambda := λ {x := x};
+idLambda : {A : Type} -> A -> A := λ {x := x};
 
 -- Lambda clauses
-f : Nat -> Nat;
-f :=
+f : Nat -> Nat :=
   \ {
     -- comment before lambda pipe
     | zero :=
@@ -171,15 +163,14 @@ module Patterns;
   type × (A : Type) (B : Type) :=
     | , : A → B → A × B;
 
-  f : Nat × Nat × Nat × Nat -> Nat;
-  f (a, b, c, d) := a;
+  f : Nat × Nat × Nat × Nat -> Nat
+    | (a, b, c, d) := a;
 end;
 
 import Stdlib.Prelude open using {Nat as Natural};
 
 module UnicodeStrings;
-  a : String;
-  a := "λ";
+  a : String := "λ";
 end;
 
 module Comments;
@@ -194,12 +185,11 @@ module Comments;
   axiom a3 -- comment before axiom :
   : Type;
 
-  num -- comment before type sig :
-  :
-    -- comment after type sig :
-    Nat;
-  num -- comment before clause :=
-  :=
+  num
+    -- comment before type sig :
+    : -- comment after type sig :
+    Nat :=
+    -- comment before clause :=
     -- comment after clause :=
     123;
 
@@ -214,16 +204,16 @@ module Comments;
     : Type}
     -> Type;
 
-  id2 : {A : Type} -> A -> Nat -> A;
-  id2 -- before patternarg braces
+  id2 : {A : Type} -> A -> Nat -> A
+    | -- before patternarg braces
     {A} a -- before open patternarg parens
     (suc b) :=
-    idLambda
-      -- before implicit app
-      {-- inside implicit arg
-      A}
-      -- before closing implicit arg
-      a;
+      idLambda
+        -- before implicit app
+        {-- inside implicit arg
+        A}
+        -- before closing implicit arg
+        a;
 
   type color : Type :=
     -- comment before pipe

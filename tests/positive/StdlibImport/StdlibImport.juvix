@@ -4,8 +4,6 @@ import Stdlib.Prelude open;
 
 import A;
 
-two : Nat;
-two := 1 + 1;
+two : Nat := 1 + 1;
 
-foo : A.Foo;
-foo := A.bar;
+foo : A.Foo := A.bar;

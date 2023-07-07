@@ -8,16 +8,16 @@ type Nat :=
   | zero : Nat
   | suc : Nat → Nat;
 
-not : _;
-not false := true;
-not true := false;
+not : _
+  | false := true
+  | true := false;
 
-odd : _;
+odd : _
+  
+  | zero := false
+  | (suc n) := even n;
 
-even : _;
-
-odd zero := false;
-odd (suc n) := even n;
-
-even zero := true;
-even (suc n) := odd n;
+even : _
+  
+  | zero := true
+  | (suc n) := odd n;

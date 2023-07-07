@@ -3,5 +3,4 @@ module O;
 import M open public;
 import Stdlib.Data.Bool open;
 
-k : Bool;
-k := true;
+k : Bool := true;

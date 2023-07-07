@@ -2,8 +2,7 @@ module LiteralIntegerString;
 
 import Stdlib.Prelude open;
 
-f : String -> Nat;
-f _ := 0;
+f : String -> Nat
+  | _ := 0;
 
-g : Nat;
-g := f 2;
+g : Nat := f 2;

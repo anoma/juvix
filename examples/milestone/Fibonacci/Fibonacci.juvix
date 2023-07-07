@@ -2,12 +2,11 @@ module Fibonacci;
 
 import Stdlib.Prelude open;
 
-fib : Nat → Nat → Nat → Nat;
-fib zero x1 _ := x1;
-fib (suc n) x1 x2 := fib n x2 (x1 + x2);
+fib : Nat → Nat → Nat → Nat
+  | zero x1 _ := x1
+  | (suc n) x1 x2 := fib n x2 (x1 + x2);
 
-fibonacci : Nat → Nat;
-fibonacci n := fib n 0 1;
+fibonacci : Nat → Nat
+  | n := fib n 0 1;
 
-main : IO;
-main := readLn (printNatLn ∘ fibonacci ∘ stringToNat);
+main : IO := readLn (printNatLn ∘ fibonacci ∘ stringToNat);

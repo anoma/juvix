@@ -3,8 +3,8 @@ module IdInType;
 type Unit :=
   | unit : Unit;
 
-id : {a : Type} -> a -> a;
-id a := a;
+id : {a : Type} -> a -> a
+  | a := a;
 
-f : id Unit -> Unit;
-f _ := unit;
+f : id Unit -> Unit
+  | _ := unit;

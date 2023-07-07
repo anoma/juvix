@@ -3,8 +3,7 @@ module LetSynonym;
 type T :=
   | t : T;
 
-main : T;
-main :=
+main : T :=
   let
     A : Type;
     A := T;

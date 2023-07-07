@@ -11,17 +11,17 @@ type Symbol :=
     X : Symbol;
 
 --- Equality for ;Symbol;s
-==Symbol : Symbol → Symbol → Bool;
-==Symbol O O := true;
-==Symbol X X := true;
-==Symbol _ _ := false;
+==Symbol : Symbol → Symbol → Bool
+  | O O := true
+  | X X := true
+  | _ _ := false;
 
 --- Turns ;O; into ;X; and ;X; into ;O;
-switch : Symbol → Symbol;
-switch O := X;
-switch X := O;
+switch : Symbol → Symbol
+  | O := X
+  | X := O;
 
 --- Textual representation of a ;Symbol;
-showSymbol : Symbol → String;
-showSymbol O := "O";
-showSymbol X := "X";
+showSymbol : Symbol → String
+  | O := "O"
+  | X := "X";

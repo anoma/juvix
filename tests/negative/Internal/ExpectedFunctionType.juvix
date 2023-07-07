@@ -6,5 +6,5 @@ type Pair (A : Type) :=
 type B :=
   | b : B;
 
-f : Pair B → Pair B;
-f (mkPair a b) := a b;
+f : Pair B → Pair B
+  | (mkPair a b) := a b;

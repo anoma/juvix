@@ -5,19 +5,21 @@ type Bool :=
   | false : Bool;
 
 syntax infixr 2 ||;
-|| : Bool → Bool → Bool;
-|| false a := a;
-|| true _ := true;
+
+|| : Bool → Bool → Bool
+  | false a := a
+  | true _ := true;
 
 syntax infixr 2 &&;
-&& : Bool → Bool → Bool;
-&& false _ := false;
-&& true a := a;
 
-ite : (a : Type) → Bool → a → a → a;
-ite _ true a _ := a;
-ite _ false _ b := b;
+&& : Bool → Bool → Bool
+  | false _ := false
+  | true a := a;
 
-not : Bool → Bool;
-not true := false;
-not false := true;
+ite : (a : Type) → Bool → a → a → a
+  | _ true a _ := a
+  | _ false _ b := b;
+
+not : Bool → Bool
+  | true := false
+  | false := true;

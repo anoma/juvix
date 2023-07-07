@@ -10,103 +10,104 @@ type × (A : Type) (B : Type) :=
   | , : A → B → A × B;
 
 syntax infixr 9 ∘;
-∘ :
-  {A : Type}
+
+∘
+  : {A : Type}
     → {B : Type}
     → {C : Type}
     → (B → C)
     → (A → B)
     → A
-    → C;
-∘ {_} {B} {_} := λ {f g x := f (g x)};
+    → C
+  | {_} {B} {_} := λ {f g x := f (g x)};
 
-id : {A : Type} → A → A;
-id := λ {a := a};
+id : {A : Type} → A → A := λ {a := a};
 
-id2 : {A : Type} → {B : Type} → A → A;
-id2 := λ {a := a};
+id2 : {A : Type} → {B : Type} → A → A := λ {a := a};
 
-id' : (A : Type) → A → A;
-id' := λ {A a := a};
+id' : (A : Type) → A → A := λ {A a := a};
 
-id'' : (A : Type) → A → A;
-id'' := λ {A := λ {a := a}};
+id'' : (A : Type) → A → A := λ {A := λ {a := a}};
 
-uncurry :
-  {A : Type}
+uncurry
+  : {A : Type}
     → {B : Type}
     → {C : Type}
     → (A → B → C)
     → A × B
-    → C;
-uncurry := λ {f (a, b) := f a b};
+    → C := λ {f (a, b) := f a b};
 
-idB : {A : Type} → A → A;
-idB a := λ {a := a} a;
+idB : {A : Type} → A → A
+  | a := λ {a := a} a;
 
-mapB : {A : Type} → (A → A) → A → A;
-mapB := λ {f a := f a};
+mapB : {A : Type} → (A → A) → A → A := λ {f a := f a};
 
-add : Nat → Nat → Nat;
-add :=
+add : Nat → Nat → Nat :=
   λ {
     | zero n := n
     | (suc n) := λ {m := suc (add n m)}
   };
 
-fst : {A : Type} → {B : Type} → A × B → A;
-fst {_} := λ {(a, _) := a};
+fst : {A : Type} → {B : Type} → A × B → A
+  | {_} := λ {(a, _) := a};
 
-swap : {A : Type} → {B : Type} → A × B → B × A;
-swap {_} {_} := λ {(a, b) := b, a};
+swap : {A : Type} → {B : Type} → A × B → B × A
+  | {_} {_} := λ {(a, b) := b, a};
 
-first :
-  {A : Type}
+first
+  : {A : Type}
     → {B : Type}
     → {A' : Type}
     → (A → A')
     → A × B
-    → A' × B;
-first := λ {f (a, b) := f a, b};
+    → A' × B := λ {f (a, b) := f a, b};
 
-second :
-  {A : Type}
+second
+  : {A : Type}
     → {B : Type}
     → {B' : Type}
     → (B → B')
     → A × B
-    → A × B';
-second f (a, b) := a, f b;
+    → A × B'
+  | f (a, b) := a, f b;
 
-both : {A : Type} → {B : Type} → (A → B) → A × A → B × B;
-both {_} {B} := λ {f (a, b) := f a, f b};
+both : {A : Type} → {B : Type} → (A → B) → A × A → B × B
+  | {_} {B} := λ {f (a, b) := f a, f b};
 
 syntax infixr 5 ::;
 type List (a : Type) :=
   | nil : List a
   | :: : a → List a → List a;
 
-map : {A : Type} → {B : Type} → (A → B) → List A → List B;
-map {_} :=
-  λ {
-    | f nil := nil
-    | f (x :: xs) := f x :: map f xs
-  };
+map : {A : Type} → {B : Type} → (A → B) → List A → List B
+  | {_} :=
+    λ {
+      | f nil := nil
+      | f (x :: xs) := f x :: map f xs
+    };
 
-pairEval : {A : Type} → {B : Type} → (A → B) × A → B;
-pairEval := λ {(f, x) := f x};
+pairEval : {A : Type} → {B : Type} → (A → B) × A → B :=
+  λ {(f, x) := f x};
 
-foldr :
-  {A : Type} → {B : Type} → (A → B → B) → B → List A → B;
-foldr :=
+foldr
+  : {A : Type}
+    → {B : Type}
+    → (A → B → B)
+    → B
+    → List A
+    → B :=
   λ {
     | _ z nil := z
     | f z (h :: hs) := f h (foldr f z hs)
   };
 
-foldl :
-  {A : Type} → {B : Type} → (B → A → B) → B → List A → B;
-foldl :=
+foldl
+  : {A : Type}
+    → {B : Type}
+    → (B → A → B)
+    → B
+    → List A
+    → B :=
   λ {
     | f z nil := z
     | f z (h :: hs) := foldl f (f z h) hs
@@ -116,56 +117,51 @@ type Bool :=
   | true : Bool
   | false : Bool;
 
-if : {A : Type} → Bool → A → A → A;
-if :=
+if : {A : Type} → Bool → A → A → A :=
   λ {
     | true a _ := a
     | false _ b := b
   };
 
-filter : {A : Type} → (A → Bool) → List A → List A;
-filter :=
+filter : {A : Type} → (A → Bool) → List A → List A :=
   λ {
     | _ nil := nil
     | f (h :: hs) := if (f h) (h :: filter f hs) (filter f hs)
   };
 
-partition :
-  {A : Type} → (A → Bool) → List A → List A × List A;
-partition :=
+partition
+  : {A : Type} → (A → Bool) → List A → List A × List A :=
   λ {
     | _ nil := nil, nil
     | f (x :: xs) :=
       if (f x) first second ((::) x) (partition f xs)
   };
 
-zipWith :
-  {A : Type}
+zipWith
+  : {A : Type}
     → {B : Type}
     → {C : Type}
     → (_ → _ → _)
     → List A
     → List B
-    → List C;
-zipWith :=
+    → List C :=
   λ {
     | _ nil _ := nil
     | _ _ nil := nil
     | f (x :: xs) (y :: ys) := f x y :: zipWith f xs ys
   };
 
-t :
-  {A : Type}
+t
+  : {A : Type}
     → {B : Type}
     → ({X : Type} → List X)
-    → List A × List B;
-t := id {({X : Type} → List X) → _} λ {f := f {_}, f {_}};
+    → List A × List B :=
+  id {({X : Type} → List X) → _} λ {f := f {_}, f {_}};
 
 type Box (A : Type) :=
   | b : A → Box A;
 
-x : Box ((A : Type) → A → A);
-x := b λ {A a := a};
+x : Box ((A : Type) → A → A) := b λ {A a := a};
 
-t1 : {A : Type} → Box ((A : Type) → A → A) → A → A;
-t1 {A} := λ {(b f) := f A};
+t1 : {A : Type} → Box ((A : Type) → A → A) → A → A
+  | {A} := λ {(b f) := f A};

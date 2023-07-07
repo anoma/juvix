@@ -3,5 +3,5 @@ module WrongConstructorArity;
 type T :=
   | A : T → T;
 
-f : T → T;
-f (A i x) := i;
+f : T → T
+  | (A i x) := i;

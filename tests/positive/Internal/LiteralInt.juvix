@@ -8,8 +8,6 @@ type A :=
 type B :=
   | b : B;
 
-f : Nat;
-f := 1;
+f : Nat := 1;
 
-main : IO;
-main := printNatLn 2;
+main : IO := printNatLn 2;

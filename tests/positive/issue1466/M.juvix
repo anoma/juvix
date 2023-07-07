@@ -4,13 +4,12 @@ type ℕ :=
   | z : ℕ
   | s : ℕ → ℕ;
 
-nat : Type;
-nat := ℕ;
+nat : Type := ℕ;
 
-nat2 : Type;
-nat2 := nat;
+nat2 : Type := nat;
 
 syntax infixl 1 +;
-+ : nat2 → nat → nat;
-+ z b := b;
-+ (s a) b := s (a + b);
+
++ : nat2 → nat → nat
+  | z b := b
+  | (s a) b := s (a + b);

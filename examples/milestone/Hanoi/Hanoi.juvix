@@ -18,20 +18,19 @@ import Stdlib.Prelude open;
 --- ;concat (("a" :: nil) :: "b" :: nil); evaluates to ;"a"
   :: "b"
   :: nil;
-concat : List String → String;
-concat := foldl (++str) "";
+concat : List String → String := foldl (++str) "";
 
-intercalate : String → List String → String;
-intercalate sep xs := concat (intersperse sep xs);
+intercalate : String → List String → String
+  | sep xs := concat (intersperse sep xs);
 
 --- Produce a singleton List
-singleton : {A : Type} → A → List A;
-singleton a := a :: nil;
+singleton : {A : Type} → A → List A
+  | a := a :: nil;
 
 --- Produce a ;String; representation of a ;List Nat;
-showList : List Nat → String;
-showList xs :=
-  "[" ++str intercalate "," (map natToString xs) ++str "]";
+showList : List Nat → String
+  | xs :=
+    "[" ++str intercalate "," (map natToString xs) ++str "]";
 
 --- A Peg represents a peg in the towers of Hanoi game
 type Peg :=
@@ -39,28 +38,27 @@ type Peg :=
   | middle : Peg
   | right : Peg;
 
-showPeg : Peg → String;
-showPeg left := "left";
-showPeg middle := "middle";
-showPeg right := "right";
+showPeg : Peg → String
+  | left := "left"
+  | middle := "middle"
+  | right := "right";
 
 --- A Move represents a move between pegs
 type Move :=
   | move : Peg → Peg → Move;
 
-showMove : Move → String;
-showMove (move from to) :=
-  showPeg from ++str " -> " ++str showPeg to;
+showMove : Move → String
+  | (move from to) :=
+    showPeg from ++str " -> " ++str showPeg to;
 
 --- Produce a list of ;Move;s that solves the towers of Hanoi game
-hanoi : Nat → Peg → Peg → Peg → List Move;
-hanoi zero _ _ _ := nil;
-hanoi (suc n) p1 p2 p3 :=
-  hanoi n p1 p3 p2
-    ++ singleton (move p1 p2)
-    ++ hanoi n p3 p2 p1;
+hanoi : Nat → Peg → Peg → Peg → List Move
+  | zero _ _ _ := nil
+  | (suc n) p1 p2 p3 :=
+    hanoi n p1 p3 p2
+      ++ singleton (move p1 p2)
+      ++ hanoi n p3 p2 p1;
 
-main : IO;
-main :=
+main : IO :=
   printStringLn
     (unlines (map showMove (hanoi 5 left middle right)));

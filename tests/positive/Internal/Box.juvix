@@ -6,11 +6,9 @@ type Box (A : Type) :=
 type T :=
   | t : T;
 
-b : Box _;
-b := box t;
+b : Box _ := box t;
 
-id : {A : Type} → A → A;
-id x := x;
+id : {A : Type} → A → A
+  | x := x;
 
-tt : _;
-tt := id t;
+tt : _ := id t;

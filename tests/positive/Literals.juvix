@@ -6,17 +6,12 @@ axiom String : Type;
 
 axiom + : Int → Int → Int;
 
-a : Int;
-a := 12313;
+a : Int := 12313;
 
-b : Int;
-b := -8;
+b : Int := -8;
 
-- : Int;
-- := 10;
+- : Int := 10;
 
--+-- : Int;
--+-- := - + -+--;
+-+-- : Int := - + -+--;
 
-c : String;
-c := "hellooooo";
+c : String := "hellooooo";

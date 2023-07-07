@@ -11,12 +11,12 @@ type Nat :=
   | zero : Nat
   | suc : Nat → Nat;
 
-f : _;
-f false false := true;
-f true _ := false;
+f : _
+  | false false := true
+  | true _ := false;
 
 type Pair (A : Type) (B : Type) :=
   | mkPair : A → B → Pair A B;
 
-g : _;
-g (mkPair (mkPair zero false) true) := mkPair false zero;
+g : _
+  | (mkPair (mkPair zero false) true) := mkPair false zero;

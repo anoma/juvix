@@ -4,6 +4,6 @@ type Nat :=
   | O : Nat
   | S : Nat -> Nat;
 
-fun : Nat -> Nat;
-fun (S {S {x}}) := x;
+fun : Nat -> Nat
+  | (S {S {x}}) := x;
 
