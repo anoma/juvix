@@ -506,7 +506,7 @@ builtinStatement = do
   void (kw kwBuiltin)
   (builtinInductive >>= fmap StatementInductive . builtinInductiveDef)
     <|> (builtinFunction >>= fmap StatementFunctionDef . builtinNewTypeSig)
-    <?|> (builtinFunction >>= fmap StatementTypeSignature . builtinTypeSig)
+      <?|> (builtinFunction >>= fmap StatementTypeSignature . builtinTypeSig)
     <|> (builtinAxiom >>= fmap StatementAxiom . builtinAxiomDef)
 
 --------------------------------------------------------------------------------
