@@ -22,7 +22,14 @@ makeFormatTest' Scope.PosTest {..} =
         { _testName = _name,
           _testRoot = tRoot,
           _testAssertion = Single $ do
-            d <- runM $ runError $ runOutputList @FormattedFileInfo $ runScopeEffIO $ runFilesIO $ format file'
+            d <-
+              runM
+                . runError
+                . runOutputList @FormattedFileInfo
+                . runScopeEffIO
+                . runFilesIO
+                . runReader (NewSyntax False)
+                $ format file'
             case d of
               Right (_, FormatResultOK) -> return ()
               Right (_, FormatResultNotFormatted) -> assertFailure ("File: " <> show file' <> " is not formatted")
