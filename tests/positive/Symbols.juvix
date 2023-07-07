@@ -26,5 +26,5 @@ syntax infixl 7 ·;
 axiom = : Type;
 
 K : Nat → Nat → Nat
-  | =a@zero = := =a · =
-  | =a@(suc =) == := = · ==;
+  | =a@zero =b := =a · =b
+  | =a@(suc =b) == := =b · ==;
