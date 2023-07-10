@@ -48,11 +48,16 @@ checkModuleNoCache ::
   Sem r Module
 checkModuleNoCache (ModuleIndex Module {..}) = do
   _moduleBody' <-
-    (evalState (mempty :: NegativeTypeParameters) . checkModuleBody) _moduleBody
+    evalState (mempty :: NegativeTypeParameters)
+      . checkModuleBody
+      $ _moduleBody
+  _moduleExamples <- mapM checkExample _moduleExamples
   return
     Module
       { _moduleBody = _moduleBody',
-        ..
+        _moduleName,
+        _moduleExamples,
+        _modulePragmas
       }
 
 checkModuleBody ::
@@ -60,8 +65,8 @@ checkModuleBody ::
   ModuleBody ->
   Sem r ModuleBody
 checkModuleBody ModuleBody {..} = do
-  _moduleStatements' <- mapM checkStatement _moduleStatements
   _moduleImports' <- mapM checkImport _moduleImports
+  _moduleStatements' <- mapM checkStatement _moduleStatements
   return
     ModuleBody
       { _moduleStatements = _moduleStatements',
