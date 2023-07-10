@@ -105,9 +105,3 @@ emptyScope absPath =
       _scopeTopModules = mempty,
       _scopeLocalSymbols = mempty
     }
-
-newtype Reserved = Reserved
-  { _reserved :: HashMap Symbol S.Symbol
-  }
-
-makeLenses ''Reserved
