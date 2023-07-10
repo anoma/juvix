@@ -17,7 +17,6 @@ data ScoperError
   | ErrMultipleDeclarations MultipleDeclarations
   | ErrLacksTypeSig LacksTypeSig
   | ErrLacksFunctionClause LacksFunctionClause
-  | ErrDuplicateFunctionClause DuplicateFunctionClause
   | ErrImportCycle ImportCycle
   | ErrSymNotInScope NotInScope
   | ErrQualSymNotInScope QualSymNotInScope
@@ -44,7 +43,6 @@ data ScoperError
 instance ToGenericError ScoperError where
   genericError = \case
     ErrCaseBranchImplicitPattern e -> genericError e
-    ErrDuplicateFunctionClause e -> genericError e
     ErrInfixParser e -> genericError e
     ErrAppLeftImplicit e -> genericError e
     ErrInfixPattern e -> genericError e

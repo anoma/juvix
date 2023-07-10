@@ -62,9 +62,9 @@ tests:
       contains: |
         --- Addition for ;Nat;s.
         builtin nat-plus
-        + : Nat → Nat → Nat;
-        + zero b := b;
-        + (suc a) b := suc (a + b);
+        + : Nat → Nat → Nat
+          | zero b := b
+          | (suc a) b := suc (a + b)
     exit-status: 0
 
   - name: repl-def-infix
@@ -77,9 +77,9 @@ tests:
       contains: |
         --- Addition for ;Nat;s.
         builtin nat-plus
-        + : Nat → Nat → Nat;
-        + zero b := b;
-        + (suc a) b := suc (a + b);
+        + : Nat → Nat → Nat
+          | zero b := b
+          | (suc a) b := suc (a + b)
     exit-status: 0
 
   - name: open

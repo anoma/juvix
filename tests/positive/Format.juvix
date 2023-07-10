@@ -5,9 +5,9 @@ Format;
 import -- Import a module of name:
 Stdlib.Prelude open -- Bring all names into scope but..
 hiding -- Hide some names
-{-- like this 
+{-- like this
 ,; -- don't want , here
--- Bool either 
+-- Bool either
 Bool; true; false};
 
 import Stdlib.Data.Nat.Ord open;
@@ -117,8 +117,8 @@ axiom undefined : {A : Type} -> A;
 
 -- 200 in the body is idented with respect to the start of the chain
 -- (at {A : Type})
-exampleFunction2 :
-  {A : Type}
+exampleFunction2
+  : {A : Type}
     -> List A
     -> List A
     -> List A
@@ -127,20 +127,20 @@ exampleFunction2 :
     -> List A
     -> List A
     -> Nat :=
-    λ {_ _ _ _ _ _ _ :=
-      undefined
-        -- comment after first
-        + undefined
-        -- comment after second
-        + undefined
-        + undefined
-        + undefined
-        + undefined
-        + undefined
-        + undefined
-        + undefined
-        + undefined
-        + undefined};
+  λ {_ _ _ _ _ _ _ :=
+    undefined
+      -- comment after first
+      + undefined
+      -- comment after second
+      + undefined
+      + undefined
+      + undefined
+      + undefined
+      + undefined
+      + undefined
+      + undefined
+      + undefined
+      + undefined};
 
 positive
 type T0 (A : Type) :=

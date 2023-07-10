@@ -1,0 +1,60 @@
+module Syntax;
+
+compose {A B C : Type} (f : B -> C) (g : A -> B) (x : A)
+  : C := f (g x);
+
+compose' {A B C : Type} (f : B -> C) (g : A -> B) : A -> C
+  | x := f (g x);
+
+type Bool :=
+  | false : Bool
+  | true : Bool;
+
+type Nat :=
+  | zero : Nat
+  | suc : Nat -> Nat;
+
+not : Bool -> Bool
+  | false := true
+  | true := false;
+
+even : Nat -> Bool
+  | zero := true
+  | (suc n) := odd n;
+
+odd : Nat -> Bool
+  | zero := false
+  | (suc n) := even n;
+
+syntax infixl 4 ==1;
+
+==1 : Nat -> Nat -> Bool
+  | zero zero := true
+  | (suc a) (suc b) := a ==2 b
+  | _ _ := false;
+
+-- note that ==2 is used before its infix definition
+syntax infixl 4 ==2;
+
+==2 : Nat -> Nat -> Bool
+  | zero zero := true
+  | (suc a) (suc b) := a ==1 b
+  | _ _ := false;
+
+module MutualTypes;
+  -- we use Tree and isEmpty before their definition
+  isNotEmpty {a : Type} (t : Tree a) : Bool :=
+    not (isEmpty t);
+
+  isEmpty {a : Type} : (t : Tree a) -> Bool
+    | empty := true
+    | (node _ _) := false;
+
+  type Tree (a : Type) :=
+    | empty : Tree a
+    | node : a -> Forest a -> Tree a;
+
+  type Forest (a : Type) :=
+    | nil : Forest a
+    | cons : Tree a -> Forest a;
+end;

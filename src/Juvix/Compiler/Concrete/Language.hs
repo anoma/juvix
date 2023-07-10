@@ -132,9 +132,41 @@ type ParsedIteratorAttribs = WithLoc (WithSource IteratorAttribs)
 -- Top level statement
 --------------------------------------------------------------------------------
 
+-- | We group consecutive definitions and reserve symbols in advance, so that we
+-- don't need extra syntax for mutually recursive definitions. Also, it allows
+-- us to be more flexible with the ordering of the definitions.
+data StatementSections (s :: Stage)
+  = SectionsDefinitions (DefinitionsSection s)
+  | SectionsNonDefinitions (NonDefinitionsSection s)
+  | SectionsEmpty
+
+data DefinitionsSection (s :: Stage) = DefinitionsSection
+  { _definitionsSection :: NonEmpty (Definition s),
+    _definitionsNext :: Maybe (NonDefinitionsSection s)
+  }
+
+data NonDefinitionsSection (s :: Stage) = NonDefinitionsSection
+  { _nonDefinitionsSection :: NonEmpty (NonDefinition s),
+    _nonDefinitionsNext :: Maybe (DefinitionsSection s)
+  }
+
+data Definition (s :: Stage)
+  = DefinitionSyntax SyntaxDef
+  | DefinitionFunctionDef (FunctionDef s)
+  | DefinitionInductive (InductiveDef s)
+  | DefinitionAxiom (AxiomDef s)
+  | DefinitionTypeSignature (TypeSignature s)
+
+data NonDefinition (s :: Stage)
+  = NonDefinitionImport (Import s)
+  | NonDefinitionModule (Module s 'ModuleLocal)
+  | NonDefinitionFunctionClause (FunctionClause s)
+  | NonDefinitionOpenModule (OpenModule s)
+
 data Statement (s :: Stage)
   = StatementSyntax SyntaxDef
   | StatementTypeSignature (TypeSignature s)
+  | StatementFunctionDef (FunctionDef s)
   | StatementImport (Import s)
   | StatementInductive (InductiveDef s)
   | StatementModule (Module s 'ModuleLocal)
@@ -242,6 +274,124 @@ instance HasLoc IteratorSyntaxDef where
 -- Type signature declaration
 -------------------------------------------------------------------------------
 
+data SigArg (s :: Stage) = SigArg
+  { _sigArgDelims :: Irrelevant (KeywordRef, KeywordRef),
+    _sigArgImplicit :: IsImplicit,
+    _sigArgColon :: Irrelevant KeywordRef,
+    _sigArgNames :: NonEmpty (SymbolType s),
+    _sigArgType :: ExpressionType s
+  }
+
+deriving stock instance (Show (ExpressionType s), Show (SymbolType s)) => Show (SigArg s)
+
+deriving stock instance (Eq (ExpressionType s), Eq (SymbolType s)) => Eq (SigArg s)
+
+deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (SigArg s)
+
+data NewFunctionClause (s :: Stage) = NewFunctionClause
+  { _clausenPipeKw :: Irrelevant KeywordRef,
+    _clausenPatterns :: NonEmpty (PatternAtomType s),
+    _clausenAssignKw :: Irrelevant KeywordRef,
+    _clausenBody :: ExpressionType s
+  }
+
+deriving stock instance
+  ( Show (PatternAtomType s),
+    Show (IdentifierType s),
+    Show (ModuleRefType s),
+    Show (SymbolType s),
+    Show (ExpressionType s)
+  ) =>
+  Show (NewFunctionClause s)
+
+deriving stock instance
+  ( Eq (PatternAtomType s),
+    Eq (IdentifierType s),
+    Eq (ModuleRefType s),
+    Eq (SymbolType s),
+    Eq (ExpressionType s)
+  ) =>
+  Eq (NewFunctionClause s)
+
+deriving stock instance
+  ( Ord (PatternAtomType s),
+    Ord (IdentifierType s),
+    Ord (ModuleRefType s),
+    Ord (SymbolType s),
+    Ord (ExpressionType s)
+  ) =>
+  Ord (NewFunctionClause s)
+
+data FunctionDefBody (s :: Stage)
+  = SigBodyExpression (ExpressionType s)
+  | SigBodyClauses (NonEmpty (NewFunctionClause s))
+
+deriving stock instance
+  ( Show (PatternAtomType s),
+    Show (IdentifierType s),
+    Show (ModuleRefType s),
+    Show (SymbolType s),
+    Show (ExpressionType s)
+  ) =>
+  Show (FunctionDefBody s)
+
+deriving stock instance
+  ( Eq (PatternAtomType s),
+    Eq (IdentifierType s),
+    Eq (ModuleRefType s),
+    Eq (SymbolType s),
+    Eq (ExpressionType s)
+  ) =>
+  Eq (FunctionDefBody s)
+
+deriving stock instance
+  ( Ord (PatternAtomType s),
+    Ord (IdentifierType s),
+    Ord (ModuleRefType s),
+    Ord (SymbolType s),
+    Ord (ExpressionType s)
+  ) =>
+  Ord (FunctionDefBody s)
+
+data FunctionDef (s :: Stage) = FunctionDef
+  { _signName :: FunctionName s,
+    _signArgs :: [SigArg s],
+    _signColonKw :: Irrelevant KeywordRef,
+    _signRetType :: ExpressionType s,
+    _signDoc :: Maybe (Judoc s),
+    _signPragmas :: Maybe ParsedPragmas,
+    _signBuiltin :: Maybe (WithLoc BuiltinFunction),
+    _signBody :: FunctionDefBody s,
+    _signTerminating :: Maybe KeywordRef
+  }
+
+deriving stock instance
+  ( Show (PatternAtomType s),
+    Show (IdentifierType s),
+    Show (ModuleRefType s),
+    Show (SymbolType s),
+    Show (ExpressionType s)
+  ) =>
+  Show (FunctionDef s)
+
+deriving stock instance
+  ( Eq (PatternAtomType s),
+    Eq (IdentifierType s),
+    Eq (ModuleRefType s),
+    Eq (SymbolType s),
+    Eq (ExpressionType s)
+  ) =>
+  Eq (FunctionDef s)
+
+deriving stock instance
+  ( Ord (PatternAtomType s),
+    Ord (IdentifierType s),
+    Ord (ModuleRefType s),
+    Ord (SymbolType s),
+    Ord (ExpressionType s)
+  ) =>
+  Ord (FunctionDef s)
+
 data TypeSignature (s :: Stage) = TypeSignature
   { _sigName :: FunctionName s,
     _sigColonKw :: Irrelevant KeywordRef,
@@ -345,22 +495,22 @@ data PatternApp = PatternApp
 
 data PatternInfixApp = PatternInfixApp
   { _patInfixLeft :: PatternArg,
-    _patInfixConstructor :: ConstructorRef,
+    _patInfixConstructor :: S.Name,
     _patInfixRight :: PatternArg
   }
   deriving stock (Show, Eq, Ord)
 
 instance HasFixity PatternInfixApp where
-  getFixity (PatternInfixApp _ op _) = fromMaybe impossible (op ^. constructorRefName . S.nameFixity)
+  getFixity (PatternInfixApp _ op _) = fromMaybe impossible (op ^. S.nameFixity)
 
 data PatternPostfixApp = PatternPostfixApp
   { _patPostfixParameter :: PatternArg,
-    _patPostfixConstructor :: ConstructorRef
+    _patPostfixConstructor :: S.Name
   }
   deriving stock (Show, Eq, Ord)
 
 instance HasFixity PatternPostfixApp where
-  getFixity (PatternPostfixApp _ op) = fromMaybe impossible (op ^. constructorRefName . S.nameFixity)
+  getFixity (PatternPostfixApp _ op) = fromMaybe impossible (op ^. S.nameFixity)
 
 data PatternArg = PatternArg
   { _patternArgIsImplicit :: IsImplicit,
@@ -371,7 +521,7 @@ data PatternArg = PatternArg
 
 data Pattern
   = PatternVariable (SymbolType 'Scoped)
-  | PatternConstructor ConstructorRef
+  | PatternConstructor S.Name
   | PatternApplication PatternApp
   | PatternList (ListPattern 'Scoped)
   | PatternInfixApplication PatternInfixApp
@@ -400,7 +550,7 @@ instance HasAtomicity Pattern where
 
 data PatternScopedIden
   = PatternScopedVar S.Symbol
-  | PatternScopedConstructor ConstructorRef
+  | PatternScopedConstructor S.Name
   deriving stock (Show, Ord, Eq)
 
 data PatternBinding = PatternBinding
@@ -682,10 +832,10 @@ instance (Show (RefNameType s)) => Show (ModuleRef'' s t) where
   show ModuleRef'' {..} = show _moduleRefName
 
 data SymbolEntry
-  = EntryAxiom (AxiomRef' 'S.NotConcrete)
-  | EntryInductive (InductiveRef' 'S.NotConcrete)
-  | EntryFunction (FunctionRef' 'S.NotConcrete)
-  | EntryConstructor (ConstructorRef' 'S.NotConcrete)
+  = EntryAxiom (RefNameType 'S.NotConcrete)
+  | EntryInductive (RefNameType 'S.NotConcrete)
+  | EntryFunction (RefNameType 'S.NotConcrete)
+  | EntryConstructor (RefNameType 'S.NotConcrete)
   | EntryModule (ModuleRef' 'S.NotConcrete)
   | EntryVariable (S.Name' ())
   deriving stock (Show)
@@ -745,11 +895,11 @@ deriving stock instance
 type ScopedIden = ScopedIden' 'S.Concrete
 
 data ScopedIden' (n :: S.IsConcrete)
-  = ScopedAxiom (AxiomRef' n)
-  | ScopedInductive (InductiveRef' n)
+  = ScopedAxiom (RefNameType n)
+  | ScopedInductive (RefNameType n)
   | ScopedVar S.Symbol
-  | ScopedFunction (FunctionRef' n)
-  | ScopedConstructor (ConstructorRef' n)
+  | ScopedFunction (RefNameType n)
+  | ScopedConstructor (RefNameType n)
 
 deriving stock instance
   (Eq (RefNameType s)) => Eq (ScopedIden' s)
@@ -762,16 +912,16 @@ deriving stock instance
 
 identifierName :: forall n. (SingI n) => ScopedIden' n -> RefNameType n
 identifierName = \case
-  ScopedAxiom a -> a ^. axiomRefName
-  ScopedInductive i -> i ^. inductiveRefName
+  ScopedAxiom a -> a
+  ScopedInductive i -> i
   ScopedVar v ->
     ( case sing :: S.SIsConcrete n of
         S.SConcrete -> id
         S.SNotConcrete -> set S.nameConcrete ()
     )
       (unqualifiedSymbol v)
-  ScopedFunction f -> f ^. functionRefName
-  ScopedConstructor c -> c ^. constructorRefName
+  ScopedFunction f -> f
+  ScopedConstructor c -> c
 
 data Expression
   = ExpressionIdentifier ScopedIden
@@ -1273,6 +1423,7 @@ makeLenses ''IteratorSyntaxDef
 makeLenses ''InductiveConstructorDef
 makeLenses ''Module
 makeLenses ''TypeSignature
+makeLenses ''FunctionDef
 makeLenses ''AxiomDef
 makeLenses ''FunctionClause
 makeLenses ''InductiveParameters
@@ -1428,6 +1579,7 @@ instance HasLoc (Statement 'Scoped) where
   getLoc = \case
     StatementSyntax t -> getLoc t
     StatementTypeSignature t -> getLoc t
+    StatementFunctionDef t -> getLoc t
     StatementImport t -> getLoc t
     StatementInductive t -> getLoc t
     StatementModule t -> getLoc t
@@ -1531,13 +1683,38 @@ getLocExpressionType = case sing :: SStage s of
   SParsed -> getLoc
   SScoped -> getLoc
 
+instance HasLoc (SigArg s) where
+  getLoc SigArg {..} = getLoc l <> getLoc r
+    where
+      Irrelevant (l, r) = _sigArgDelims
+
+instance SingI s => HasLoc (NewFunctionClause s) where
+  getLoc NewFunctionClause {..} =
+    getLoc _clausenPipeKw
+      <> getLocExpressionType _clausenBody
+
+instance SingI s => HasLoc (FunctionDefBody s) where
+  getLoc = \case
+    SigBodyExpression e -> getLocExpressionType e
+    SigBodyClauses cl -> getLocSpan cl
+
+instance SingI s => HasLoc (FunctionDef s) where
+  getLoc FunctionDef {..} =
+    (getLoc <$> _signDoc)
+      ?<> (getLoc <$> _signPragmas)
+      ?<> (getLoc <$> _signBuiltin)
+      ?<> (getLoc <$> _signTerminating)
+      ?<> getLocSymbolType _signName
+      <> getLoc _signBody
+
 instance SingI s => HasLoc (TypeSignature s) where
   getLoc TypeSignature {..} =
     (getLoc <$> _sigDoc)
       ?<> (getLoc <$> _sigPragmas)
       ?<> (getLoc <$> _sigBuiltin)
       ?<> (getLoc <$> _sigTerminating)
-      ?<> (getLocExpressionType <$> _sigBody)
+      ?<> getLocSymbolType _sigName
+      <> (getLocExpressionType <$> _sigBody)
       ?<> getLocExpressionType _sigType
 
 instance HasLoc (Example s) where
@@ -1771,7 +1948,7 @@ instance IsApe PatternInfixApp ApeLeaf where
         { _infixFixity = getFixity i,
           _infixLeft = toApe l,
           _infixRight = toApe r,
-          _infixIsDelimiter = isDelimiterStr (prettyText (op ^. constructorRefName . S.nameConcrete)),
+          _infixIsDelimiter = isDelimiterStr (prettyText (op ^. S.nameConcrete)),
           _infixOp = ApeLeafPattern (PatternConstructor op)
         }
 
@@ -1847,18 +2024,18 @@ instance HasAtomicity PatternArg where
 
 idenOverName :: (forall s. S.Name' s -> S.Name' s) -> ScopedIden -> ScopedIden
 idenOverName f = \case
-  ScopedAxiom a -> ScopedAxiom (over axiomRefName f a)
-  ScopedInductive i -> ScopedInductive (over inductiveRefName f i)
+  ScopedAxiom a -> ScopedAxiom (f a)
+  ScopedInductive i -> ScopedInductive (f i)
   ScopedVar v -> ScopedVar (f v)
-  ScopedFunction fun -> ScopedFunction (over functionRefName f fun)
-  ScopedConstructor c -> ScopedConstructor (over constructorRefName f c)
+  ScopedFunction fun -> ScopedFunction (f fun)
+  ScopedConstructor c -> ScopedConstructor (f c)
 
 entryPrism :: (S.Name' () -> S.Name' ()) -> SymbolEntry -> (S.Name' (), SymbolEntry)
 entryPrism f = \case
-  EntryAxiom a -> (a ^. axiomRefName, EntryAxiom (over axiomRefName f a))
-  EntryInductive i -> (i ^. inductiveRefName, EntryInductive (over inductiveRefName f i))
-  EntryFunction fun -> (fun ^. functionRefName, EntryFunction (over functionRefName f fun))
-  EntryConstructor c -> (c ^. constructorRefName, EntryConstructor (over constructorRefName f c))
+  EntryAxiom a -> (a, EntryAxiom (f a))
+  EntryInductive i -> (i, EntryInductive (f i))
+  EntryFunction fun -> (fun, EntryFunction (f fun))
+  EntryConstructor c -> (c, EntryConstructor (f c))
   EntryModule m -> (getModuleRefNameType m, EntryModule (overModuleRef'' (over moduleRefName f) m))
   EntryVariable m -> (m, EntryVariable (f m))
 
@@ -1904,10 +2081,10 @@ symbolEntryNameId = (^. S.nameId) . symbolEntryToSName
 
 symbolEntryToSName :: SymbolEntry -> S.Name' ()
 symbolEntryToSName = \case
-  EntryAxiom a -> a ^. axiomRefName
-  EntryInductive i -> i ^. inductiveRefName
-  EntryFunction f -> f ^. functionRefName
-  EntryConstructor c -> c ^. constructorRefName
+  EntryAxiom a -> a
+  EntryInductive i -> i
+  EntryFunction f -> f
+  EntryConstructor c -> c
   EntryModule m -> getModuleRefNameType m
   EntryVariable m -> m
 

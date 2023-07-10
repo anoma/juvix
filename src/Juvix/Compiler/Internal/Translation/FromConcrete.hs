@@ -278,19 +278,29 @@ goModuleBody stmts = do
   _moduleImports <- mapM goImport (scanImports stmts)
   otherThanFunctions :: [Indexed Internal.PreStatement] <- concatMapM (traverseM' goStatement) ss
   functions <- map (fmap Internal.PreFunctionDef) <$> compiledFunctions
+  newFunctions <- map (fmap Internal.PreFunctionDef) <$> newCompiledFunctions
   let _moduleStatements =
         map
           (^. indexedThing)
           ( sortOn
               (^. indexedIx)
-              (otherThanFunctions <> functions)
+              (otherThanFunctions <> functions <> newFunctions)
           )
   return Internal.ModuleBody {..}
   where
+    ss' :: [Statement 'Scoped]
     ss' = concatMap Concrete.flattenStatement stmts
 
     ss :: [Indexed (Statement 'Scoped)]
     ss = zipWith Indexed [0 ..] ss'
+
+    newCompiledFunctions :: Sem r [Indexed Internal.FunctionDef]
+    newCompiledFunctions =
+      sequence
+        [ Indexed i <$> funDef
+          | Indexed i (StatementFunctionDef f) <- ss,
+            let funDef = goTopNewFunctionDef f
+        ]
 
     compiledFunctions :: Sem r [Indexed Internal.FunctionDef]
     compiledFunctions =
@@ -304,7 +314,7 @@ goModuleBody stmts = do
         getClauses :: S.Symbol -> [FunctionClause 'Scoped]
         getClauses name = [c | StatementFunctionClause c <- ss', name == c ^. clauseOwnerFunction]
         sigs :: [Indexed (TypeSignature 'Scoped)]
-        sigs = [Indexed i t | (Indexed i (StatementTypeSignature t)) <- ss]
+        sigs = [Indexed i t | Indexed i (StatementTypeSignature t) <- ss]
 
 scanImports :: [Statement 'Scoped] -> [Import 'Scoped]
 scanImports stmts = mconcatMap go stmts
@@ -319,6 +329,7 @@ scanImports stmts = mconcatMap go stmts
       StatementTypeSignature {} -> []
       StatementAxiom {} -> []
       StatementSyntax {} -> []
+      StatementFunctionDef {} -> []
       where
         openImport :: OpenModule 'Scoped -> Maybe (Import 'Scoped)
         openImport o = case o ^. openModuleImportKw of
@@ -352,6 +363,7 @@ guardNotCached (hit, m) = do
   guard (not hit)
   return m
 
+-- | Ignores functions
 goStatement ::
   forall r.
   Members '[Error ScoperError, Builtins, NameIdGen, Reader Pragmas] r =>
@@ -362,6 +374,7 @@ goStatement = \case
   StatementAxiom d -> pure . Internal.PreAxiomDef <$> goAxiom d
   StatementModule f -> goLocalModule f
   StatementImport {} -> return []
+  StatementFunctionDef {} -> return []
   StatementSyntax {} -> return []
   StatementOpenModule {} -> return []
   StatementTypeSignature {} -> return []
@@ -416,7 +429,7 @@ goFunctionDefHelper sig@TypeSignature {..} clauses = do
   _funDefPragmas <- goPragmas _sigPragmas
   _funDefClauses <- case (_sigBody, nonEmpty clauses) of
     (Nothing, Nothing) -> throw (ErrLacksFunctionClause (LacksFunctionClause sig))
-    (Just {}, Just clauses') -> throw (ErrDuplicateFunctionClause (DuplicateFunctionClause sig (head clauses')))
+    (Just {}, Just {}) -> error "duplicate function clause. TODO remove this when old function syntax is removed"
     (Just body, Nothing) -> do
       body' <- goExpression body
       return
@@ -429,6 +442,65 @@ goFunctionDefHelper sig@TypeSignature {..} clauses = do
         )
     (Nothing, Just clauses') -> mapM goFunctionClause clauses'
   return Internal.FunctionDef {..}
+
+goTopNewFunctionDef ::
+  forall r.
+  (Members '[Reader Pragmas, Error ScoperError, Builtins, NameIdGen] r) =>
+  FunctionDef 'Scoped ->
+  Sem r Internal.FunctionDef
+goTopNewFunctionDef FunctionDef {..} = do
+  let _funDefName = goSymbol _signName
+      _funDefTerminating = isJust _signTerminating
+      _funDefBuiltin = (^. withLocParam) <$> _signBuiltin
+  _funDefType <- goDefType
+  _funDefExamples <- goExamples _signDoc
+  _funDefPragmas <- goPragmas _signPragmas
+  _funDefClauses <- goBody
+  return Internal.FunctionDef {..}
+  where
+    goBody :: Sem r (NonEmpty Internal.FunctionClause)
+    goBody = do
+      commonPatterns <- concatMapM (fmap toList . argToPattern) _signArgs
+      let _clauseName = goSymbol _signName
+          goClause :: NewFunctionClause 'Scoped -> Sem r Internal.FunctionClause
+          goClause NewFunctionClause {..} = do
+            let _clauseName = goSymbol _signName
+            _clauseBody <- goExpression _clausenBody
+            extraPatterns <- toList <$> (mapM goPatternArg _clausenPatterns)
+            let _clausePatterns = commonPatterns <> extraPatterns
+            return Internal.FunctionClause {..}
+      case _signBody of
+        SigBodyExpression body -> do
+          _clauseBody <- goExpression body
+          let _clausePatterns = commonPatterns
+          return (pure Internal.FunctionClause {..})
+        SigBodyClauses cls -> mapM goClause cls
+
+    goDefType :: Sem r Internal.Expression
+    goDefType = do
+      args <- concatMapM (fmap toList . argToParam) _signArgs
+      ret <- goExpression _signRetType
+      return (Internal.foldFunType args ret)
+      where
+        argToParam :: SigArg 'Scoped -> Sem r (NonEmpty Internal.FunctionParameter)
+        argToParam SigArg {..} = do
+          _paramType <- goExpression _sigArgType
+          let _paramImplicit = _sigArgImplicit
+              mk :: S.Symbol -> Sem r Internal.FunctionParameter
+              mk s =
+                let _paramName = Just (goSymbol s)
+                 in return Internal.FunctionParameter {..}
+          mapM mk _sigArgNames
+
+    argToPattern :: SigArg 'Scoped -> Sem r (NonEmpty Internal.PatternArg)
+    argToPattern SigArg {..} = do
+      let _patternArgIsImplicit = _sigArgImplicit
+          _patternArgName :: Maybe Internal.Name = Nothing
+          mk :: S.Symbol -> Sem r Internal.PatternArg
+          mk s = do
+            let _patternArgPattern = Internal.PatternVariable (goSymbol s)
+            return Internal.PatternArg {..}
+      mapM mk _sigArgNames
 
 goTopFunctionDef ::
   forall r.
@@ -671,11 +743,11 @@ goExpression = \case
 
     goIden :: Concrete.ScopedIden -> Internal.Expression
     goIden x = Internal.ExpressionIden $ case x of
-      ScopedAxiom a -> Internal.IdenAxiom (goName (a ^. Concrete.axiomRefName))
-      ScopedInductive i -> Internal.IdenInductive (goName (i ^. Concrete.inductiveRefName))
+      ScopedAxiom a -> Internal.IdenAxiom (goName a)
+      ScopedInductive i -> Internal.IdenInductive (goName i)
       ScopedVar v -> Internal.IdenVar (goSymbol v)
-      ScopedFunction fun -> Internal.IdenFunction (goName (fun ^. Concrete.functionRefName))
-      ScopedConstructor c -> Internal.IdenConstructor (goName (c ^. Concrete.constructorRefName))
+      ScopedFunction fun -> Internal.IdenFunction (goName fun)
+      ScopedConstructor c -> Internal.IdenConstructor (goName c)
 
     goLet :: Let 'Scoped -> Sem r Internal.Let
     goLet l = do
@@ -834,7 +906,7 @@ goPatternApplication a = uncurry mkConstructorApp <$> viewApp (PatternApplicatio
 
 goPatternConstructor ::
   Members '[Builtins, NameIdGen, Error ScoperError] r =>
-  ConstructorRef ->
+  S.Name ->
   Sem r Internal.ConstructorApp
 goPatternConstructor a = uncurry mkConstructorApp <$> viewApp (PatternConstructor a)
 
@@ -874,8 +946,8 @@ viewApp p = case p of
       | otherwise = viewApp (l ^. patternArgPattern)
     err = throw (ErrConstructorExpectedLeftApplication (ConstructorExpectedLeftApplication p))
 
-goConstructorRef :: ConstructorRef -> Internal.Name
-goConstructorRef (ConstructorRef' n) = goName n
+goConstructorRef :: S.Name -> Internal.Name
+goConstructorRef n = goName n
 
 goPatternArg :: Members '[Builtins, NameIdGen, Error ScoperError] r => PatternArg -> Sem r Internal.PatternArg
 goPatternArg p = do

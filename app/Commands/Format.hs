@@ -33,7 +33,7 @@ targetFromOptions opts = do
   pkgDir <- askPkgDir
   case f of
     Just (Left p) -> return (TargetFile p)
-    Just (Right {}) -> return (TargetProject pkgDir)
+    Just Right {} -> return (TargetProject pkgDir)
     Nothing -> do
       isPackageGlobal <- askPackageGlobal
       if
@@ -49,8 +49,9 @@ targetFromOptions opts = do
 runCommand :: forall r. Members '[Embed IO, App, Resource, Files] r => FormatOptions -> Sem r ()
 runCommand opts = do
   target <- targetFromOptions opts
+  let newSyntax = NewSyntax (opts ^. formatNewSyntax)
   runOutputSem (renderFormattedOutput target opts) $ runScopeFileApp $ do
-    res <- case target of
+    res <- runReader newSyntax $ case target of
       TargetFile p -> format p
       TargetProject p -> formatProject p
       TargetStdin -> formatStdin
@@ -89,9 +90,9 @@ renderFormattedOutput target opts fInfo = do
     outputResult :: FormatRenderMode -> Sem r ()
     outputResult = \case
       EditInPlace i@FormattedFileInfo {..} ->
-        runTempFileIO $
-          restoreFileOnError _formattedFileInfoPath $
-            writeFile' _formattedFileInfoPath (i ^. formattedFileInfoContentsText)
+        runTempFileIO
+          . restoreFileOnError _formattedFileInfoPath
+          $ writeFile' _formattedFileInfoPath (i ^. formattedFileInfoContentsText)
       NoEdit m -> case m of
         ReformattedFile ts -> forM_ ts renderStdOut
         InputPath p -> say (pack (toFilePath p))

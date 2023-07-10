@@ -207,16 +207,16 @@ core input = do
   compileRes <- liftIO (compileReplInputIO' ctx (strip (pack input))) >>= replFromEither . snd
   whenJust compileRes (renderOutLn . Core.ppOut opts)
 
-ppConcrete :: (HasLoc a, Concrete.PrettyPrint a) => a -> Repl AnsiText
+ppConcrete :: Concrete.PrettyPrint a => a -> Repl AnsiText
 ppConcrete a = do
   gopts <- State.gets (^. replStateGlobalOptions)
   let popts :: GenericOptions = project' gopts
   return (Concrete.ppOut popts a)
 
-printConcrete :: (HasLoc a, Concrete.PrettyPrint a) => a -> Repl ()
+printConcrete :: Concrete.PrettyPrint a => a -> Repl ()
 printConcrete = ppConcrete >=> renderOut
 
-printConcreteLn :: (HasLoc a, Concrete.PrettyPrint a) => a -> Repl ()
+printConcreteLn :: Concrete.PrettyPrint a => a -> Repl ()
 printConcreteLn = ppConcrete >=> renderOutLn
 
 replParseIdentifiers :: String -> Repl (NonEmpty Concrete.ScopedIden)
@@ -252,11 +252,11 @@ printDocumentation = replParseIdentifiers >=> printIdentifiers
         printIdentifier :: Concrete.ScopedIden -> Repl ()
         printIdentifier s = do
           mdoc <- case s of
-            Concrete.ScopedAxiom a -> getDocAxiom (a ^. Concrete.axiomRefName . Scoped.nameId)
-            Concrete.ScopedInductive a -> getDocInductive (a ^. Concrete.inductiveRefName . Scoped.nameId)
+            Concrete.ScopedAxiom a -> getDocAxiom (a ^. Scoped.nameId)
+            Concrete.ScopedInductive a -> getDocInductive (a ^. Scoped.nameId)
             Concrete.ScopedVar {} -> return Nothing
-            Concrete.ScopedFunction f -> getDocFunction (f ^. Concrete.functionRefName . Scoped.nameId)
-            Concrete.ScopedConstructor c -> getDocConstructor (c ^. Concrete.constructorRefName . Scoped.nameId)
+            Concrete.ScopedFunction f -> getDocFunction (f ^. Scoped.nameId)
+            Concrete.ScopedConstructor c -> getDocConstructor (c ^. Scoped.nameId)
           printDoc mdoc
           where
             printDoc :: Maybe (Concrete.Judoc 'Concrete.Scoped) -> Repl ()
@@ -271,7 +271,7 @@ printDocumentation = replParseIdentifiers >=> printIdentifiers
             getDocFunction fun = do
               tbl :: Scoped.InfoTable <- getInfoTable
               let def :: Scoped.FunctionInfo = tbl ^?! Scoped.infoFunctions . at fun . _Just
-              return (def ^. Scoped.functionInfoType . Concrete.sigDoc)
+              return (def ^. Scoped.functionInfoDoc)
 
             getDocInductive :: Scoped.NameId -> Repl (Maybe (Concrete.Judoc 'Concrete.Scoped))
             getDocInductive ind = do
@@ -305,11 +305,11 @@ printDefinition = replParseIdentifiers >=> printIdentifiers
         printIdentifier :: Concrete.ScopedIden -> Repl ()
         printIdentifier s = do
           case s of
-            Concrete.ScopedAxiom a -> printAxiom (a ^. Concrete.axiomRefName . Scoped.nameId)
-            Concrete.ScopedInductive a -> printInductive (a ^. Concrete.inductiveRefName . Scoped.nameId)
+            Concrete.ScopedAxiom a -> printAxiom (a ^. Scoped.nameId)
+            Concrete.ScopedInductive a -> printInductive (a ^. Scoped.nameId)
             Concrete.ScopedVar {} -> return ()
-            Concrete.ScopedFunction f -> printFunction (f ^. Concrete.functionRefName . Scoped.nameId)
-            Concrete.ScopedConstructor c -> printConstructor (c ^. Concrete.constructorRefName . Scoped.nameId)
+            Concrete.ScopedFunction f -> printFunction (f ^. Scoped.nameId)
+            Concrete.ScopedConstructor c -> printConstructor (c ^. Scoped.nameId)
           where
             printLocation :: HasLoc s => s -> Repl ()
             printLocation def = do

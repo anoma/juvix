@@ -57,6 +57,9 @@ docHelper cs opts x =
     . ppCode
     $ x
 
+docNoLoc :: PrettyPrint c => Options -> c -> Doc Ann
+docNoLoc opts x = docHelper Nothing opts x
+
 doc :: (PrettyPrint c, HasLoc c) => Options -> Comments -> c -> Doc Ann
 doc opts cs x = docHelper (Just (fileComments file cs)) opts x
   where
@@ -113,8 +116,8 @@ ppExpressionType = case sing :: SStage s of
 
 ppPatternAtomType :: forall s. SingI s => PrettyPrinting (PatternAtomType s)
 ppPatternAtomType = case sing :: SStage s of
-  SParsed -> ppCode
-  SScoped -> ppCode
+  SParsed -> ppCodeAtom
+  SScoped -> ppCodeAtom
 
 ppPatternParensType :: forall s. SingI s => PrettyPrinting (PatternParensType s)
 ppPatternParensType = case sing :: SStage s of
@@ -190,12 +193,13 @@ instance SingI s => PrettyPrint (Iterator s) where
 instance PrettyPrint S.AName where
   ppCode (S.AName n) = annotated (AnnKind (S.getNameKind n)) (noLoc (pretty (n ^. S.nameVerbatim)))
 
--- TODO print without spaces when the type signature is not next to the clauses
 instance PrettyPrint FunctionInfo where
-  ppCode f = do
-    let ty = StatementTypeSignature (f ^. functionInfoType)
-        cs = map StatementFunctionClause (f ^. functionInfoClauses)
-    ppCode (ty : cs)
+  ppCode = \case
+    FunctionInfoOld f -> do
+      let ty = StatementTypeSignature (f ^. oldFunctionInfoType)
+          cs = map StatementFunctionClause (f ^. oldFunctionInfoClauses)
+      ppStatements (ty : cs)
+    FunctionInfoNew f -> ppCode f
 
 instance SingI s => PrettyPrint (List s) where
   ppCode List {..} = do
@@ -242,7 +246,7 @@ instance PrettyPrint S.NameId where
 instance (SingI t, SingI s) => PrettyPrint (Module s t) where
   ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => Module s t -> Sem r ()
   ppCode Module {..} = do
-    let moduleBody' = localIndent (ppCode _moduleBody)
+    let moduleBody' = localIndent (ppStatements _moduleBody)
         modulePath' = ppModulePathType _modulePath
         moduleDoc' = whenJust _moduleDoc ppCode
         modulePragmas' = whenJust _modulePragmas ppCode
@@ -276,12 +280,16 @@ instance (SingI t, SingI s) => PrettyPrint (Module s t) where
         SModuleLocal -> ppCode _moduleKwEnd
         SModuleTop -> end
 
-instance SingI s => PrettyPrint [Statement s] where
-  ppCode :: forall r. Members '[ExactPrint, Reader Options] r => [Statement s] -> Sem r ()
-  ppCode ss = paragraphs (ppGroup <$> Concrete.groupStatements ss)
-    where
-      ppGroup :: NonEmpty (Statement s) -> Sem r ()
-      ppGroup = vsep . sepEndSemicolon . fmap ppCode
+instance PrettyPrint a => PrettyPrint [a] where
+  ppCode x = do
+    let cs = map ppCode (toList x)
+    encloseSep (ppCode @Text "[") (ppCode @Text "]") (ppCode @Text ", ") cs
+
+ppStatements :: forall s r. (SingI s, Members '[ExactPrint, Reader Options] r) => [Statement s] -> Sem r ()
+ppStatements ss = paragraphs (ppGroup <$> Concrete.groupStatements ss)
+  where
+    ppGroup :: NonEmpty (Statement s) -> Sem r ()
+    ppGroup = vsep . sepEndSemicolon . fmap ppCode
 
 instance PrettyPrint TopModulePath where
   ppCode TopModulePath {..} =
@@ -309,18 +317,6 @@ instance PrettyPrint QualifiedName where
 
 instance PrettyPrint (ModuleRef'' 'S.Concrete 'ModuleTop) where
   ppCode m = ppCode (m ^. moduleRefName)
-
-instance PrettyPrint AxiomRef where
-  ppCode a = ppCode (a ^. axiomRefName)
-
-instance PrettyPrint InductiveRef where
-  ppCode a = ppCode (a ^. inductiveRefName)
-
-instance PrettyPrint FunctionRef where
-  ppCode a = ppCode (a ^. functionRefName)
-
-instance PrettyPrint ConstructorRef where
-  ppCode a = ppCode (a ^. constructorRefName)
 
 instance PrettyPrint ScopedIden where
   ppCode = \case
@@ -645,6 +641,45 @@ instance PrettyPrint BuiltinFunction where
 instance PrettyPrint BuiltinAxiom where
   ppCode i = ppCode Kw.kwBuiltin <+> keywordText (P.prettyText i)
 
+instance SingI s => PrettyPrint (NewFunctionClause s) where
+  ppCode :: forall r. Members '[ExactPrint, Reader Options] r => NewFunctionClause s -> Sem r ()
+  ppCode NewFunctionClause {..} = do
+    let pats' = hsep (ppPatternAtomType <$> _clausenPatterns)
+        e' = ppExpressionType _clausenBody
+    ppCode _clausenPipeKw <+> pats' <+> ppCode _clausenAssignKw <> oneLineOrNext e'
+
+instance SingI s => PrettyPrint (SigArg s) where
+  ppCode :: Members '[ExactPrint, Reader Options] r => SigArg s -> Sem r ()
+  ppCode SigArg {..} = do
+    let Irrelevant (l, r) = _sigArgDelims
+        names' = hsep (ppSymbolType <$> _sigArgNames)
+        colon' = ppCode _sigArgColon
+        ty' = ppExpressionType _sigArgType
+    ppCode l <> names' <+> colon' <+> ty' <> ppCode r
+
+instance SingI s => PrettyPrint (FunctionDef s) where
+  ppCode :: forall r. Members '[ExactPrint, Reader Options] r => FunctionDef s -> Sem r ()
+  ppCode FunctionDef {..} = do
+    let termin' :: Maybe (Sem r ()) = (<> line) . ppCode <$> _signTerminating
+        doc' :: Maybe (Sem r ()) = ppCode <$> _signDoc
+        pragmas' :: Maybe (Sem r ()) = ppCode <$> _signPragmas
+        args' = hsep . fmap ppCode <$> nonEmpty _signArgs
+        builtin' :: Maybe (Sem r ()) = (<> line) . ppCode <$> _signBuiltin
+        type' = oneLineOrNext (ppCode _signColonKw <+> ppExpressionType _signRetType)
+        name' = annDef _signName (ppSymbolType _signName)
+        body' = case _signBody of
+          SigBodyExpression e -> space <> ppCode Kw.kwAssign <> oneLineOrNext (ppExpressionType e)
+          SigBodyClauses k -> line <> indent (vsep (ppCode <$> k))
+    doc'
+      ?<> pragmas'
+      ?<> builtin'
+      ?<> termin'
+      ?<> ( name'
+              <+?> args'
+                <> type'
+                <> body'
+          )
+
 instance SingI s => PrettyPrint (TypeSignature s) where
   ppCode :: forall r. Members '[ExactPrint, Reader Options] r => TypeSignature s -> Sem r ()
   ppCode TypeSignature {..} = do
@@ -851,6 +886,7 @@ instance SingI s => PrettyPrint (Statement s) where
   ppCode = \case
     StatementSyntax s -> ppCode s
     StatementTypeSignature s -> ppCode s
+    StatementFunctionDef f -> ppCode f
     StatementImport i -> ppCode i
     StatementInductive i -> ppCode i
     StatementModule m -> ppCode m

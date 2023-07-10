@@ -114,7 +114,7 @@ JUVIXFILESTOFORMAT=$(shell find  \
 	-type d \( -name ".juvix-build" -o -name "FancyPaths" \) -prune -o \
 	-type f -name "*.juvix" -print)
 
-JUVIXFORMATFLAGS?=--in-place
+JUVIXFORMATFLAGS?=--in-place --new-function-syntax
 JUVIXTYPECHECKFLAGS?=--only-errors
 
 .PHONY: format-juvix-files
@@ -124,12 +124,12 @@ format-juvix-files:
 		exit_code=$$?; \
 		if [ $$exit_code -eq 0 ]; then \
 			echo "[OK] $$file"; \
-      	elif [[ $$exit_code -ne 0 && "$$file" == *"tests/"* ]]; then \
+		elif [[ $$exit_code -ne 0 && "$$file" == *"tests/"* ]]; then \
 			echo "[CONTINUE] $$file is in tests directory."; \
-      	else \
- 			echo "[FAIL] $$file formatting failed" && exit 1; \
-      	fi; \
-      	done;
+		else \
+			echo "[FAIL] $$file formatting failed" && exit 1; \
+		fi; \
+		done;
 
 .PHONY: check-format-juvix-files
 check-format-juvix-files:
@@ -147,8 +147,8 @@ typecheck-juvix-examples:
 		if [ $$exit_code -eq 0 ]; then \
 			echo "[OK] $$file typechecks"; \
 		else \
- 			echo "[FAIL] Typecking failed for $$file" && exit 1; \
-      	fi; \
+			echo "[FAIL] Typecking failed for $$file" && exit 1; \
+		fi; \
 	done
 
 .PHONY: check-ormolu

@@ -273,15 +273,34 @@ topModulePath = mkTopModulePath <$> dottedSymbol
 -- Top level statement
 --------------------------------------------------------------------------------
 
-statement :: (Members '[Files, Error ParserError, PathResolver, InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (Statement 'Parsed)
+infixl 3 <?|>
+
+-- | Tries the left alternative. If it fails, backtracks and restores the contents of the pragmas and judoc stashes. Then parses the right atlernative
+(<?|>) :: Members '[PragmasStash, JudocStash] r => ParsecS r a -> ParsecS r a -> ParsecS r a
+l <?|> r = do
+  p <- P.lift (get @(Maybe ParsedPragmas))
+  j <- P.lift (get @(Maybe (Judoc 'Parsed)))
+  let recover = do
+        P.lift (put p)
+        P.lift (put j)
+        r
+  P.withRecovery (const recover) (P.try l)
+
+statement :: Members '[Files, Error ParserError, PathResolver, InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r => ParsecS r (Statement 'Parsed)
 statement = P.label "<top level statement>" $ do
   optional_ stashJudoc
   optional_ stashPragmas
   ms <-
     optional
       ( StatementSyntax <$> syntaxDef
-          <|> P.try (StatementOpenModule <$> newOpenSyntax)
-          <|> StatementOpenModule <$> openModule
+          <|> StatementOpenModule
+            <$> newOpenSyntax
+              -- TODO remove <?|> after removing old syntax
+              <?|> StatementFunctionDef
+            <$> newTypeSignature Nothing
+              -- TODO remove <?|> after removing old syntax
+              <?|> StatementOpenModule
+            <$> openModule
           <|> StatementImport <$> import_
           <|> StatementInductive <$> inductiveDef Nothing
           <|> StatementModule <$> moduleDef
@@ -476,11 +495,18 @@ builtinTypeSig b = do
   fun <- symbol
   typeSignature terminating fun (Just b)
 
+builtinNewTypeSig ::
+  Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r =>
+  WithLoc BuiltinFunction ->
+  ParsecS r (FunctionDef 'Parsed)
+builtinNewTypeSig = newTypeSignature . Just
+
 builtinStatement :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (Statement 'Parsed)
 builtinStatement = do
   void (kw kwBuiltin)
   (builtinInductive >>= fmap StatementInductive . builtinInductiveDef)
-    <|> (builtinFunction >>= fmap StatementTypeSignature . builtinTypeSig)
+    <|> (builtinFunction >>= fmap StatementFunctionDef . builtinNewTypeSig)
+      <?|> (builtinFunction >>= fmap StatementTypeSignature . builtinTypeSig)
     <|> (builtinAxiom >>= fmap StatementAxiom . builtinAxiomDef)
 
 --------------------------------------------------------------------------------
@@ -793,14 +819,61 @@ auxTypeSigFunClause = do
           Left <$> typeSignature terminating sym Nothing
       | otherwise ->
           checkEq
-            <|> (Left <$> typeSignature terminating sym Nothing)
-            <|> (Right <$> functionClause sym)
+            <|> Left <$> typeSignature terminating sym Nothing
+            <|> Right <$> functionClause sym
   where
     checkEq :: ParsecS r a
     checkEq = do
       off <- P.getOffset
       kw kwEq
       parseFailure off "expected \":=\" instead of \"=\""
+
+newTypeSignature ::
+  forall r.
+  Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r =>
+  Maybe (WithLoc BuiltinFunction) ->
+  ParsecS r (FunctionDef 'Parsed)
+newTypeSignature _signBuiltin = P.label "<function definition>" $ do
+  _signTerminating <- optional (kw kwTerminating)
+  _signName <- symbol
+  _signArgs <- many parseArg
+  _signColonKw <- Irrelevant <$> kw kwColon
+  _signRetType <- parseExpressionAtoms
+  _signDoc <- getJudoc
+  _signPragmas <- getPragmas
+  _signBody <- parseBody
+  return FunctionDef {..}
+  where
+    parseArg :: ParsecS r (SigArg 'Parsed)
+    parseArg = do
+      (openDelim, _sigArgNames, _sigArgImplicit, _sigArgColon) <- P.try $ do
+        (opn, impl) <- implicitOpen
+        n <- some1 symbol
+        c <- Irrelevant <$> kw kwColon
+        return (opn, n, impl, c)
+      _sigArgType <- parseExpressionAtoms
+      closeDelim <- implicitClose _sigArgImplicit
+      let _sigArgDelims = Irrelevant (openDelim, closeDelim)
+      return SigArg {..}
+
+    parseBody :: ParsecS r (FunctionDefBody 'Parsed)
+    parseBody =
+      SigBodyExpression <$> bodyExpr
+        <|> (SigBodyClauses <$> bodyClauses)
+      where
+        bodyClause :: ParsecS r (NewFunctionClause 'Parsed)
+        bodyClause = do
+          _clausenPipeKw <- Irrelevant <$> kw kwPipe
+          _clausenPatterns <- some1 patternAtom
+          _clausenAssignKw <- Irrelevant <$> kw kwAssign
+          _clausenBody <- parseExpressionAtoms
+          return NewFunctionClause {..}
+        bodyClauses :: ParsecS r (NonEmpty (NewFunctionClause 'Parsed))
+        bodyClauses = some1 bodyClause
+        bodyExpr :: ParsecS r (ExpressionAtoms 'Parsed)
+        bodyExpr = do
+          void (kw kwAssign)
+          parseExpressionAtoms
 
 axiomDef ::
   Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r =>

@@ -2,6 +2,7 @@
 module test052;
 
 open import Stdlib.Prelude;
+import Stdlib.Trait.Show as Show;
 
 fromShow : {a : Type} -> Show a -> a -> String;
 fromShow (mkShow s) a := s a;
@@ -84,7 +85,7 @@ module ExprTraits;
   toString (num n) := natToString n;
 
   --- ;Show; instance for ;Expr;.
-  Show : Show Expr;
+  Show : Show.Show Expr;
   Show := mkShow toString;
 end;
 
@@ -94,7 +95,7 @@ module ValTraits;
 
   --- ;Show; instance for ;Val;.
   terminating
-  Show : Show Val;
+  Show : Show.Show Val;
   Show := mkShow valToString;
 
   valToString (vnum n) := natToString n;
