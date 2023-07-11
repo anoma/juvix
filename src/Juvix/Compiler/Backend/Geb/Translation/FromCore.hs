@@ -99,9 +99,7 @@ fromCore tab = case tab ^. Core.infoMain of
         return $
           MorphismApplication
             Application
-              { _applicationDomainType = argty,
-                _applicationCodomainType = nodeType,
-                _applicationLeft = lamb,
+              { _applicationLeft = lamb,
                 _applicationRight = arg
               }
         where
@@ -114,11 +112,8 @@ fromCore tab = case tab ^. Core.infoMain of
               MorphismLambda
                 Lambda
                   { _lambdaVarType = argty,
-                    _lambdaBodyType = nodeType,
                     _lambdaBody = body
                   }
-      where
-        nodeType = convertType (Info.getNodeType node)
 
     convertNode :: Core.Node -> Trans Morphism
     convertNode = \case
@@ -172,9 +167,7 @@ fromCore tab = case tab ^. Core.infoMain of
       return $
         MorphismApplication
           Application
-            { _applicationDomainType = convertType (Info.getNodeType _appRight),
-              _applicationCodomainType = convertType (Info.getInfoType _appInfo),
-              _applicationLeft,
+            { _applicationLeft,
               _applicationRight
             }
 
@@ -216,17 +209,10 @@ fromCore tab = case tab ^. Core.infoMain of
               MorphismLambda
                 Lambda
                   { _lambdaVarType = ObjectInteger,
-                    _lambdaBodyType =
-                      ObjectHom
-                        Hom
-                          { _homDomain = ObjectInteger,
-                            _homCodomain = objectBool
-                          },
                     _lambdaBody =
                       MorphismLambda
                         Lambda
                           { _lambdaVarType = ObjectInteger,
-                            _lambdaBodyType = objectBool,
                             _lambdaBody =
                               mkOr
                                 ( MorphismBinop
@@ -248,19 +234,10 @@ fromCore tab = case tab ^. Core.infoMain of
          in return $
               MorphismApplication
                 Application
-                  { _applicationDomainType = ObjectInteger,
-                    _applicationCodomainType = objectBool,
-                    _applicationLeft =
+                  { _applicationLeft =
                       MorphismApplication
                         Application
-                          { _applicationDomainType = ObjectInteger,
-                            _applicationCodomainType =
-                              ObjectHom
-                                Hom
-                                  { _homDomain = ObjectInteger,
-                                    _homCodomain = objectBool
-                                  },
-                            _applicationLeft = le,
+                          { _applicationLeft = le,
                             _applicationRight = arg1'
                           },
                     _applicationRight = arg2'
@@ -311,8 +288,7 @@ fromCore tab = case tab ^. Core.infoMain of
             lInj x =
               MorphismLeft
                 LeftInj
-                  { _leftInjLeftType = lType,
-                    _leftInjRightType = rType,
+                  { _leftInjRightType = rType,
                     _leftInjValue = x
                   }
             rInj :: Morphism -> Morphism
@@ -320,7 +296,6 @@ fromCore tab = case tab ^. Core.infoMain of
               MorphismRight
                 RightInj
                   { _rightInjLeftType = lType,
-                    _rightInjRightType = rType,
                     _rightInjValue = x
                   }
         lInj : map (rInj .) (mkConstructors rType)
@@ -346,9 +321,7 @@ fromCore tab = case tab ^. Core.infoMain of
             z =
               MorphismPair
                 Pair
-                  { _pairLeftType = xty,
-                    _pairRightType = yty,
-                    _pairLeft = x,
+                  { _pairLeft = x,
                     _pairRight = y
                   }
             zty =
@@ -362,18 +335,14 @@ fromCore tab = case tab ^. Core.infoMain of
     convertLet Core.Let {..} = do
       _lambdaBody <- underBinder (convertNode _letBody)
       let domty = convertType (_letItem ^. Core.letItemBinder . Core.binderType)
-          codty = convertType (Info.getNodeType _letBody)
       arg <- convertNode (_letItem ^. Core.letItemValue)
       return $
         MorphismApplication
           Application
-            { _applicationDomainType = domty,
-              _applicationCodomainType = codty,
-              _applicationLeft =
+            { _applicationLeft =
                 MorphismLambda
                   Lambda
                     { _lambdaVarType = domty,
-                      _lambdaBodyType = codty,
                       _lambdaBody
                     },
               _applicationRight = arg
@@ -386,7 +355,6 @@ fromCore tab = case tab ^. Core.infoMain of
         MorphismLambda
           Lambda
             { _lambdaVarType = convertType (_lambdaBinder ^. Core.binderType),
-              _lambdaBodyType = convertType (Info.getNodeType _lambdaBody),
               _lambdaBody = body
             }
 
@@ -410,13 +378,10 @@ fromCore tab = case tab ^. Core.infoMain of
               return $
                 MorphismApplication
                   Application
-                    { _applicationDomainType = ty,
-                      _applicationCodomainType = ty,
-                      _applicationLeft =
+                    { _applicationLeft =
                         MorphismLambda
                           Lambda
                             { _lambdaVarType = ty,
-                              _lambdaBodyType = ty,
                               _lambdaBody = body
                             },
                       _applicationRight = arg
@@ -474,24 +439,9 @@ fromCore tab = case tab ^. Core.infoMain of
             return $
               MorphismCase
                 Case
-                  { _caseLeftType = lty,
-                    _caseRightType = rty,
-                    _caseCodomainType = codomainType,
-                    _caseOn = val,
-                    _caseLeft =
-                      MorphismLambda
-                        Lambda
-                          { _lambdaVarType = lty,
-                            _lambdaBodyType = codomainType,
-                            _lambdaBody = bodyLeft
-                          },
-                    _caseRight =
-                      MorphismLambda
-                        Lambda
-                          { _lambdaVarType = rty,
-                            _lambdaBodyType = codomainType,
-                            _lambdaBody = bodyRight
-                          }
+                  { _caseOn = val,
+                    _caseLeft = bodyLeft,
+                    _caseRight = bodyRight
                   }
             where
               (lty, rty) = case ty of
@@ -508,42 +458,35 @@ fromCore tab = case tab ^. Core.infoMain of
                   return $
                     MorphismApplication
                       Application
-                        { _applicationDomainType = valType,
-                          _applicationCodomainType = codomainType,
-                          _applicationLeft =
+                        { _applicationLeft =
                             MorphismLambda
                               Lambda
                                 { _lambdaVarType = valType,
-                                  _lambdaBodyType = codomainType,
                                   _lambdaBody = branch
                                 },
                           _applicationRight = val
                         }
               | otherwise ->
-                  return $ mkApps (mkLambs branch argtys) val valType argtys
+                  return $ mkApps (mkLambs branch argtys) val argtys
           where
             argtys = destructProduct valType
 
             -- `mkApps` creates applications of `acc` to extracted components of
             -- `v` which is a product (right-nested)
-            mkApps :: Morphism -> Morphism -> Object -> [Object] -> Morphism
-            mkApps acc v vty = \case
-              ty : tys ->
-                mkApps acc' v' rty tys
+            mkApps :: Morphism -> Morphism -> [Object] -> Morphism
+            mkApps acc v = \case
+              _ : tys ->
+                mkApps acc' v' tys
                 where
                   v' =
                     MorphismSecond
                       Second
-                        { _secondLeftType = lty,
-                          _secondRightType = rty,
-                          _secondValue = v
+                        { _secondValue = v
                         }
                   acc' =
                     MorphismApplication
                       Application
-                        { _applicationDomainType = ty,
-                          _applicationCodomainType = mkHoms tys codomainType,
-                          _applicationLeft = acc,
+                        { _applicationLeft = acc,
                           _applicationRight =
                             if
                                 | null tys ->
@@ -551,14 +494,9 @@ fromCore tab = case tab ^. Core.infoMain of
                                 | otherwise ->
                                     MorphismFirst
                                       First
-                                        { _firstLeftType = lty,
-                                          _firstRightType = rty,
-                                          _firstValue = v
+                                        { _firstValue = v
                                         }
                         }
-                  (lty, rty) = case vty of
-                    ObjectProduct Product {..} -> (_productLeft, _productRight)
-                    _ -> impossible
               [] ->
                 acc
 
@@ -570,7 +508,6 @@ fromCore tab = case tab ^. Core.infoMain of
                       ( MorphismLambda
                           Lambda
                             { _lambdaVarType = ty,
-                              _lambdaBodyType = accty,
                               _lambdaBody = acc
                             },
                         ObjectHom

@@ -1,40 +1,23 @@
 (typed
   (app
-    so1
-    so1
     (app
-      int
-      (!->
-        so1
-        so1)
       (app
-        (!->
-          so1
-          so1)
-        (!->
-          int
-          (!->
-            so1
-            so1))
         (lamb
-          (!->
-            so1
-            so1)
-          (!->
-            int
-            (!->
+          (list
+            (so-hom-obj
               so1
               so1))
           (lamb
-            int
-            (!->
-              so1
-              so1)
+            (list
+              int)
             (index 1)))
-        (lamb
-          so1
-          so1
-          (index 0)))
-      12345)
-    unit)
+        (list
+          (lamb
+            (list
+              so1)
+            (index 0))))
+      (list
+        12345))
+    (list
+      (unit)))
   so1)

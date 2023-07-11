@@ -21,11 +21,11 @@ doc opts x =
         Aggregate _ -> parens <$> ppCode x
 
 docLisp :: Options -> Text -> Text -> Morphism -> Object -> Doc Ann
-docLisp opts packageName entryName morph obj =
+docLisp opts packageName entryName morph _ =
   "(defpackage #:"
     <> pretty packageName
     <> line
-    <> indent' "(:shadowing-import-from :geb.lambda.spec #:func #:pair)"
+    <> indent' "(:shadowing-import-from :geb.lambda.spec #:pair #:right #:left)"
     <> line
     <> indent' "(:shadowing-import-from :geb.spec #:case)"
     <> line
@@ -42,13 +42,7 @@ docLisp opts packageName entryName morph obj =
           <+> pretty entryName
             <> line
             <> indent'
-              ( parens
-                  ( kwTyped
-                      <> line
-                      <> indent'
-                        (vsep [doc opts morph, doc opts obj])
-                  )
-              )
+              (doc opts morph)
       )
 
 class PrettyCode c where
@@ -59,50 +53,39 @@ ppCode' opts = run . runReader opts . ppCode
 
 instance PrettyCode Case where
   ppCode Case {..} = do
-    lty <- ppArg _caseLeftType
-    rty <- ppArg _caseRightType
-    cod <- ppArg _caseCodomainType
     val <- ppArg _caseOn
     left <- ppArg _caseLeft
     right <- ppArg _caseRight
     return $
-      kwCaseOn <> line <> indent 2 (vsep [lty, rty, cod, val, left, right])
+      kwCaseOn <> line <> indent 2 (vsep [val, left, right])
 
 instance (HasAtomicity a, PrettyCode a) => PrettyCode (Pair' a) where
   ppCode Pair {..} = do
-    lty <- ppArg _pairLeftType
-    rty <- ppArg _pairRightType
     left <- ppArg _pairLeft
     right <- ppArg _pairRight
-    return $ kwPair <> line <> indent' (vsep [lty, rty, left, right])
+    return $ kwPair <> line <> indent' (vsep [left, right])
 
 instance PrettyCode First where
   ppCode First {..} = do
-    lty <- ppArg _firstLeftType
-    rty <- ppArg _firstRightType
     val <- ppArg _firstValue
-    return $ kwFst <> line <> indent' (vsep [lty, rty, val])
+    return $ kwFst <> line <> indent' val
 
 instance PrettyCode Second where
   ppCode Second {..} = do
-    lty <- ppArg _secondLeftType
-    rty <- ppArg _secondRightType
     val <- ppArg _secondValue
-    return $ kwSnd <> line <> indent' (vsep [lty, rty, val])
+    return $ kwSnd <> line <> indent' val
 
 instance (HasAtomicity a, PrettyCode a) => PrettyCode (LeftInj' a) where
   ppCode LeftInj {..} = do
-    lty <- ppArg _leftInjLeftType
     rty <- ppArg _leftInjRightType
     val <- ppArg _leftInjValue
-    return $ kwLeft <> line <> indent' (vsep [lty, rty, val])
+    return $ kwLeft <> line <> indent' (vsep [rty, val])
 
 instance (HasAtomicity a, PrettyCode a) => PrettyCode (RightInj' a) where
   ppCode RightInj {..} = do
     lty <- ppArg _rightInjLeftType
-    rty <- ppArg _rightInjRightType
     val <- ppArg _rightInjValue
-    return $ kwRight <> line <> indent' (vsep [lty, rty, val])
+    return $ kwRight <> line <> indent' (vsep [lty, val])
 
 instance PrettyCode Absurd where
   ppCode Absurd {..} = do
@@ -113,17 +96,14 @@ instance PrettyCode Absurd where
 instance PrettyCode Lambda where
   ppCode Lambda {..} = do
     vty <- ppArg _lambdaVarType
-    bty <- ppArg _lambdaBodyType
     body <- ppArg _lambdaBody
-    return $ kwLamb <> line <> indent' (vsep [vty, bty, body])
+    return $ kwLamb <> line <> indent' (vsep [parens (kwList <> line <> indent' vty), body])
 
 instance PrettyCode Application where
   ppCode Application {..} = do
-    dom <- ppArg _applicationDomainType
-    cod <- ppArg _applicationCodomainType
     left <- ppArg _applicationLeft
     right <- ppArg _applicationRight
-    return $ kwApp <> line <> indent' (vsep [dom, cod, left, right])
+    return $ kwApp <> line <> indent' (vsep [left, parens (kwList <> line <> indent' right)])
 
 instance PrettyCode Opcode where
   ppCode = \case
@@ -145,7 +125,7 @@ instance PrettyCode Binop where
 instance PrettyCode Failure where
   ppCode Failure {..} = do
     ty <- ppArg _failureType
-    return $ kwFail <+> ppStringLit _failureMessage <+> ty
+    return $ kwFail <+> ty
 
 instance PrettyCode Var where
   ppCode Var {..} = do
@@ -156,7 +136,7 @@ instance PrettyCode Var where
 instance PrettyCode Morphism where
   ppCode = \case
     MorphismAbsurd val -> ppCode val
-    MorphismUnit -> return kwUnit
+    MorphismUnit -> return $ parens kwUnit
     MorphismLeft val -> ppCode val
     MorphismRight val -> ppCode val
     MorphismCase x -> ppCode x

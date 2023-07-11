@@ -16,8 +16,7 @@ morphismTrue :: Morphism
 morphismTrue =
   MorphismLeft
     LeftInj
-      { _leftInjLeftType = ObjectTerminal,
-        _leftInjRightType = ObjectTerminal,
+      { _leftInjRightType = ObjectTerminal,
         _leftInjValue = MorphismUnit
       }
 
@@ -26,7 +25,6 @@ morphismFalse =
   MorphismRight
     RightInj
       { _rightInjLeftType = ObjectTerminal,
-        _rightInjRightType = ObjectTerminal,
         _rightInjValue = MorphismUnit
       }
 
@@ -35,40 +33,9 @@ mkOr :: Morphism -> Morphism -> Morphism
 mkOr arg1 arg2 =
   MorphismCase
     Case
-      { _caseLeftType = ObjectTerminal,
-        _caseRightType = ObjectTerminal,
-        _caseCodomainType = objectBool,
-        _caseOn = arg1,
-        _caseLeft =
-          MorphismLambda
-            Lambda
-              { _lambdaVarType = ObjectTerminal,
-                _lambdaBodyType = objectBool,
-                _lambdaBody = morphismTrue
-              },
-        _caseRight =
-          MorphismLambda
-            Lambda
-              { _lambdaVarType = ObjectTerminal,
-                _lambdaBodyType = objectBool,
-                _lambdaBody = arg2
-              }
-      }
-
-objectLeftCase :: Case -> Object
-objectLeftCase Case {..} =
-  ObjectHom
-    Hom
-      { _homDomain = _caseLeftType,
-        _homCodomain = _caseCodomainType
-      }
-
-objectRightCase :: Case -> Object
-objectRightCase Case {..} =
-  ObjectHom
-    Hom
-      { _homDomain = _caseRightType,
-        _homCodomain = _caseCodomainType
+      { _caseOn = arg1,
+        _caseLeft = morphismTrue,
+        _caseRight = arg2
       }
 
 mkHoms :: [Object] -> Object -> Object

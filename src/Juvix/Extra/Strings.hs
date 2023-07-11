@@ -317,6 +317,9 @@ trace_ = "trace"
 fail_ :: (IsString s) => s
 fail_ = "fail"
 
+err :: (IsString s) => s
+err = "err"
+
 show_ :: (IsString s) => s
 show_ = "show"
 
@@ -584,6 +587,9 @@ gebSnd = "snd"
 gebLamb :: IsString s => s
 gebLamb = "lamb"
 
+gebList :: IsString s => s
+gebList = "list"
+
 gebValueClosure :: IsString s => s
 gebValueClosure = "cls"
 
@@ -615,7 +621,7 @@ gebMod :: IsString s => s
 gebMod = "mod"
 
 gebFail :: IsString s => s
-gebFail = "fail"
+gebFail = "err"
 
 gebEq :: IsString s => s
 gebEq = "eq"
@@ -636,7 +642,7 @@ gebCoprod :: IsString s => s
 gebCoprod = "coprod"
 
 gebHom :: IsString s => s
-gebHom = "!->"
+gebHom = "so-hom-obj"
 
 gebInteger :: IsString s => s
 gebInteger = "int"

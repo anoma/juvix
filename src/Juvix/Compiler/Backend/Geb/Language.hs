@@ -17,10 +17,7 @@ import Juvix.Prelude hiding (First, Product)
 -- _caseCodomainType` and `_caseRight` has type `_caseRightType ->
 -- _caseCodomainType`.
 data Case = Case
-  { _caseLeftType :: Object,
-    _caseRightType :: Object,
-    _caseCodomainType :: Object,
-    _caseOn :: Morphism,
+  { _caseOn :: Morphism,
     _caseLeft :: Morphism,
     _caseRight :: Morphism
   }
@@ -33,8 +30,7 @@ data Absurd = Absurd
   deriving stock (Show, Eq, Generic)
 
 data LeftInj' a = LeftInj
-  { _leftInjLeftType :: Object,
-    _leftInjRightType :: Object,
+  { _leftInjRightType :: Object,
     _leftInjValue :: a
   }
   deriving stock (Show, Eq, Generic)
@@ -43,7 +39,6 @@ type LeftInj = LeftInj' Morphism
 
 data RightInj' a = RightInj
   { _rightInjLeftType :: Object,
-    _rightInjRightType :: Object,
     _rightInjValue :: a
   }
   deriving stock (Show, Eq, Generic)
@@ -51,40 +46,31 @@ data RightInj' a = RightInj
 type RightInj = RightInj' Morphism
 
 data Pair' a = Pair
-  { _pairLeftType :: Object,
-    _pairRightType :: Object,
-    _pairLeft :: a,
+  { _pairLeft :: a,
     _pairRight :: a
   }
   deriving stock (Show, Eq, Generic)
 
 type Pair = Pair' Morphism
 
-data First = First
-  { _firstLeftType :: Object,
-    _firstRightType :: Object,
-    _firstValue :: Morphism
+newtype First = First
+  { _firstValue :: Morphism
   }
   deriving stock (Show, Eq, Generic)
 
-data Second = Second
-  { _secondLeftType :: Object,
-    _secondRightType :: Object,
-    _secondValue :: Morphism
+newtype Second = Second
+  { _secondValue :: Morphism
   }
   deriving stock (Show, Eq, Generic)
 
 data Lambda = Lambda
   { _lambdaVarType :: Object,
-    _lambdaBodyType :: Object,
     _lambdaBody :: Morphism
   }
   deriving stock (Show, Eq, Generic)
 
 data Application = Application
-  { _applicationDomainType :: Object,
-    _applicationCodomainType :: Object,
-    _applicationLeft :: Morphism,
+  { _applicationLeft :: Morphism,
     _applicationRight :: Morphism
   }
   deriving stock (Show, Eq, Generic)

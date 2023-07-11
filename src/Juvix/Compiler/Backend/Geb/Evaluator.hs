@@ -106,9 +106,7 @@ evalPair pair = do
     GebValueMorphismPair $
       Pair
         { _pairLeft = left,
-          _pairRight = right,
-          _pairLeftType = pair ^. pairLeftType,
-          _pairRightType = pair ^. pairRightType
+          _pairRight = right
         }
 
 evalFirst :: EvalEffects r => First -> Sem r GebValue
@@ -144,7 +142,6 @@ evalLeftInj s = do
     GebValueMorphismLeft $
       LeftInj
         { _leftInjValue = res,
-          _leftInjLeftType = s ^. leftInjLeftType,
           _leftInjRightType = s ^. leftInjRightType
         }
 
@@ -155,8 +152,7 @@ evalRightInj s = do
     GebValueMorphismRight $
       RightInj
         { _rightInjValue = res,
-          _rightInjLeftType = s ^. rightInjLeftType,
-          _rightInjRightType = s ^. rightInjRightType
+          _rightInjLeftType = s ^. rightInjLeftType
         }
 
 evalApp :: EvalEffects r => Application -> Sem r GebValue
@@ -186,6 +182,12 @@ apply fun' arg = do
             _evalErrorGebExpression = Nothing
           }
 
+evalExtendContext :: EvalEffects r => GebValue -> Morphism -> Sem r GebValue
+evalExtendContext v m = do
+  ctx <- asks (^. envContext)
+  local (set envContext (Context.cons v ctx)) $
+    eval m
+
 evalLambda :: EvalEffects r => Lambda -> Sem r GebValue
 evalLambda lambda = do
   ctx <- asks (^. envContext)
@@ -200,8 +202,8 @@ evalCase :: EvalEffects r => Case -> Sem r GebValue
 evalCase c = do
   vCaseOn <- eval $ c ^. caseOn
   case vCaseOn of
-    GebValueMorphismLeft leftArg -> apply (c ^. caseLeft) (leftArg ^. leftInjValue)
-    GebValueMorphismRight rightArg -> apply (c ^. caseRight) (rightArg ^. rightInjValue)
+    GebValueMorphismLeft leftArg -> evalExtendContext (leftArg ^. leftInjValue) (c ^. caseLeft)
+    GebValueMorphismRight rightArg -> evalExtendContext (rightArg ^. rightInjValue) (c ^. caseRight)
     _ ->
       throw
         EvalError
@@ -221,9 +223,7 @@ evalBinop binop = do
         ( GebValueMorphismPair
             ( Pair
                 { _pairLeft = m1,
-                  _pairRight = m2,
-                  _pairLeftType = ObjectInteger,
-                  _pairRightType = ObjectInteger
+                  _pairRight = m2
                 }
             )
         )
@@ -289,7 +289,6 @@ valueTrue =
   GebValueMorphismLeft $
     LeftInj
       { _leftInjValue = GebValueMorphismUnit,
-        _leftInjLeftType = ObjectTerminal,
         _leftInjRightType = ObjectTerminal
       }
 
@@ -298,8 +297,7 @@ valueFalse =
   GebValueMorphismRight $
     RightInj
       { _rightInjValue = GebValueMorphismUnit,
-        _rightInjLeftType = ObjectTerminal,
-        _rightInjRightType = ObjectTerminal
+        _rightInjLeftType = ObjectTerminal
       }
 
 quote :: GebValue -> Morphism
@@ -323,9 +321,7 @@ quoteValueMorphismPair vpair =
    in MorphismPair
         Pair
           { _pairLeft = pLeft,
-            _pairRight = pRight,
-            _pairLeftType = vpair ^. pairLeftType,
-            _pairRightType = vpair ^. pairRightType
+            _pairRight = pRight
           }
 
 quoteValueMorphismLeft :: ValueLeftInj -> Morphism
@@ -334,7 +330,6 @@ quoteValueMorphismLeft m =
    in MorphismLeft
         LeftInj
           { _leftInjValue = leftMorphism,
-            _leftInjLeftType = m ^. leftInjLeftType,
             _leftInjRightType = m ^. leftInjRightType
           }
 
@@ -344,6 +339,5 @@ quoteValueMorphismRight m =
    in MorphismRight
         RightInj
           { _rightInjValue = rightMorphism,
-            _rightInjLeftType = m ^. rightInjLeftType,
-            _rightInjRightType = m ^. rightInjRightType
+            _rightInjLeftType = m ^. rightInjLeftType
           }

@@ -19,13 +19,16 @@ check :: Members '[Reader CheckingEnv, Error CheckingError] r => Morphism -> Obj
 check morph obj' = do
   ctx <- ask @CheckingEnv
   obj <- runReader ctx (inferObject morph)
+  checkTypesEqual obj obj'
+
+checkTypesEqual :: Members '[Reader CheckingEnv, Error CheckingError] r => Object -> Object -> Sem r ()
+checkTypesEqual obj obj' =
   unless
     (obj == obj')
     ( throw $
         CheckingErrorTypeMismatch
           TypeMismatch
-            { _typeMismatchMorphism = morph,
-              _typeMismatchExpected = obj,
+            { _typeMismatchExpected = obj,
               _typeMismatchActual = obj'
             }
     )
@@ -69,23 +72,28 @@ inferObjectAbsurd x = do
 
 inferObjectApplication :: InferEffects r => Application -> Sem r Object
 inferObjectApplication app = do
-  let lType = app ^. applicationDomainType
-      rType = app ^. applicationCodomainType
-      homTy =
-        ObjectHom $
-          Hom {_homDomain = lType, _homCodomain = rType}
-  check (app ^. applicationLeft) homTy
-  check (app ^. applicationRight) lType
-  return rType
+  homTy <- inferObject (app ^. applicationLeft)
+  lType <- inferObject (app ^. applicationRight)
+  case homTy of
+    ObjectHom Hom {..} -> do
+      checkTypesEqual _homDomain lType
+      return _homCodomain
+    _ ->
+      throw $
+        CheckingErrorExpectedType
+          ExpectedType
+            { _expectedTypeObject = homTy,
+              _expectedTypeKind = "hom object"
+            }
 
 inferObjectLambda :: InferEffects r => Lambda -> Sem r Object
 inferObjectLambda l = do
   let aType = l ^. lambdaVarType
-      bType = l ^. lambdaBodyType
   ctx <- ask @CheckingEnv
-  local
-    (const (Context.cons aType ctx))
-    (check (l ^. lambdaBody) bType)
+  bType <-
+    local
+      (const (Context.cons aType ctx))
+      (inferObject (l ^. lambdaBody))
   return $
     ObjectHom $
       Hom
@@ -95,10 +103,8 @@ inferObjectLambda l = do
 
 inferObjectPair :: InferEffects r => Pair -> Sem r Object
 inferObjectPair pair = do
-  let lType = pair ^. pairLeftType
-      rType = pair ^. pairRightType
-  check (pair ^. pairLeft) lType
-  check (pair ^. pairRight) rType
+  lType <- inferObject (pair ^. pairLeft)
+  rType <- inferObject (pair ^. pairRight)
   return $
     ObjectProduct
       Product
@@ -108,57 +114,55 @@ inferObjectPair pair = do
 
 inferObjectCase :: InferEffects r => Case -> Sem r Object
 inferObjectCase c = do
-  let aType = c ^. caseLeftType
-      bType = c ^. caseRightType
-      vType =
-        ObjectCoproduct $
-          Coproduct
-            { _coproductLeft = aType,
-              _coproductRight = bType
+  vType <- inferObject (c ^. caseOn)
+  case vType of
+    ObjectCoproduct Coproduct {..} -> do
+      ctx <- ask @CheckingEnv
+      leftType <-
+        local
+          (const (Context.cons _coproductLeft ctx))
+          (inferObject (c ^. caseLeft))
+      rightType <-
+        local
+          (const (Context.cons _coproductRight ctx))
+          (inferObject (c ^. caseRight))
+      checkTypesEqual leftType rightType
+      return leftType
+    _ ->
+      throw $
+        CheckingErrorExpectedType
+          ExpectedType
+            { _expectedTypeObject = vType,
+              _expectedTypeKind = "coproduct"
             }
-      cType = c ^. caseCodomainType
-      leftType =
-        ObjectHom $
-          Hom
-            { _homDomain = aType,
-              _homCodomain = cType
-            }
-      rightType =
-        ObjectHom $
-          Hom
-            { _homDomain = bType,
-              _homCodomain = cType
-            }
-  check (c ^. caseOn) vType
-  check (c ^. caseLeft) leftType
-  check (c ^. caseRight) rightType
-  return cType
 
 inferObjectFirst :: InferEffects r => First -> Sem r Object
 inferObjectFirst p = do
-  let leftType = p ^. firstLeftType
-      rightType = p ^. firstRightType
-      pairType =
-        ObjectProduct $
-          Product
-            { _productLeft = leftType,
-              _productRight = rightType
+  pairType <- inferObject (p ^. firstValue)
+  case pairType of
+    ObjectProduct Product {..} ->
+      return _productLeft
+    _ ->
+      throw $
+        CheckingErrorExpectedType
+          ExpectedType
+            { _expectedTypeObject = pairType,
+              _expectedTypeKind = "product"
             }
-  check (p ^. firstValue) pairType
-  return leftType
 
 inferObjectSecond :: InferEffects r => Second -> Sem r Object
 inferObjectSecond p = do
-  let leftType = p ^. secondLeftType
-      rightType = p ^. secondRightType
-      pairType =
-        ObjectProduct $
-          Product
-            { _productLeft = leftType,
-              _productRight = rightType
+  pairType <- inferObject (p ^. secondValue)
+  case pairType of
+    ObjectProduct Product {..} ->
+      return _productRight
+    _ ->
+      throw $
+        CheckingErrorExpectedType
+          ExpectedType
+            { _expectedTypeObject = pairType,
+              _expectedTypeKind = "product"
             }
-  check (p ^. secondValue) pairType
-  return rightType
 
 inferObjectVar :: InferEffects r => Var -> Sem r Object
 inferObjectVar v = do
@@ -197,20 +201,20 @@ inferObjectBinop opApp = do
 
 inferObjectLeft :: InferEffects r => LeftInj -> Sem r Object
 inferObjectLeft LeftInj {..} = do
-  check _leftInjValue _leftInjLeftType
+  lType <- inferObject _leftInjValue
   return $
     ObjectCoproduct $
       Coproduct
-        { _coproductLeft = _leftInjLeftType,
+        { _coproductLeft = lType,
           _coproductRight = _leftInjRightType
         }
 
 inferObjectRight :: InferEffects r => RightInj -> Sem r Object
 inferObjectRight RightInj {..} = do
-  check _rightInjValue _rightInjRightType
+  rType <- inferObject _rightInjValue
   return $
     ObjectCoproduct $
       Coproduct
         { _coproductLeft = _rightInjLeftType,
-          _coproductRight = _rightInjRightType
+          _coproductRight = rType
         }

@@ -1,28 +1,21 @@
-;; ↓ app fun arg where
-;;     fun := cls (λ . (index 1)) with env := []
-;;     arg := cls (index 0) with env := []
-;; → (eval (λ . (index 1)) with env := (arg : [])
-;; → cls (arg : []) (index 1).
-
-;; λ.(λ.0)
 (typed
-(app 
-   (!-> so1 so1)
-   (!-> int (!-> so1 so1))
-    ;; fun: ↓ cls [] (lamb (index 1))
-    ;; λλ.1
-   (lamb
-     (!-> so1 so1)
-     (!-> int (!-> so1 so1))
-     (lamb
-       int
-       (!-> so1 so1)
-       (index 1)))
-   ;; ↓ arg: cls [] (index 0)   
-   ;; λ.0
+  (app
+    (lamb
+      (list
+        (so-hom-obj
+          so1
+          so1))
       (lamb
-        so1
-        so1
-        (index 0)))
-
-(!-> int (!-> so1 so1)))
+        (list
+          int)
+        (index 1)))
+    (list
+      (lamb
+        (list
+          so1)
+        (index 0))))
+  (so-hom-obj
+    int
+    (so-hom-obj
+      so1
+      so1)))

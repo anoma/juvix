@@ -1,32 +1,14 @@
 (typed
   (case-on
-    so1
-    int
-    (coprod
-      so1
-      so1)
     (right
       so1
-      int
-      10)
-    (lamb
+      (unit))
+    (right
       so1
-      (coprod
-        so1
-        so1)
-      (right
-        so1
-        so1
-        unit))
-    (lamb
-      int
-      (coprod
-        so1
-        so1)
-      (left
-        so1
-        so1
-        unit)))
+      (unit))
+    (left
+      so1
+      (unit)))
   (coprod
     so1
     so1))

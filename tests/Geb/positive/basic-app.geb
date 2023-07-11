@@ -1,12 +1,11 @@
 (typed
   (app
-    int
-    int
     (lamb
-      int
-      int
+      (list
+        int)
       (index 0))
-    (add
-      1000
-      2000))
+    (list
+      (add
+        1000
+        2000)))
   int)

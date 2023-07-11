@@ -14,7 +14,7 @@ import Text.Megaparsec.Char.Lexer qualified as P
 
 data LispDefParameter = LispDefParameter
   { _lispDefParameterName :: Text,
-    _lispDefParameterMorphism :: Geb.TypedMorphism
+    _lispDefParameterMorphism :: Geb.Morphism
   }
 
 makeLenses ''LispDefParameter
@@ -82,7 +82,7 @@ parseDefParameter =
     parens $ do
       symbol "defparameter"
       n <- parseLispSymbol
-      m <- parseTypedMorphism
+      m <- morphism
       return
         LispDefParameter
           { _lispDefParameterName = n,
@@ -97,7 +97,7 @@ parseGebLisp = do
   entry <- parseDefParameter
   P.eof
   return $
-    Geb.ExpressionTypedMorphism $
+    Geb.ExpressionMorphism $
       entry
         ^. lispDefParameterMorphism
 
@@ -117,7 +117,8 @@ morphism =
     morphismUnit
       <|> Geb.MorphismInteger <$> morphismInteger
       <|> parens
-        ( Geb.MorphismAbsurd <$> morphismAbsurd
+        ( morphismUnit
+            <|> Geb.MorphismAbsurd <$> morphismAbsurd
             <|> Geb.MorphismLeft <$> morphismLeftInj
             <|> Geb.MorphismRight <$> morphismRightInj
             <|> Geb.MorphismCase <$> morphismCase
@@ -130,6 +131,11 @@ morphism =
             <|> Geb.MorphismBinop <$> morphismBinop
             <|> Geb.MorphismFail <$> morphismFail
         )
+
+morphismList :: ParsecS r Geb.Morphism
+morphismList = parens $ do
+  kw kwList
+  morphism
 
 parseNatural :: ParsecS r Integer
 parseNatural = lexeme P.decimal
@@ -164,9 +170,8 @@ morphismBinop = do
 morphismFail :: ParsecS r Geb.Failure
 morphismFail = do
   P.label "<geb MorphismFail>" $ do
-    kw kwFail
-    msg <- fst <$> string
-    Geb.Failure msg <$> object
+    kw kwErr
+    Geb.Failure "" <$> object
 
 object :: ParsecS r Geb.Object
 object =
@@ -179,6 +184,11 @@ object =
             <|> Geb.ObjectCoproduct <$> objectCoproduct
             <|> Geb.ObjectHom <$> objectHom
         )
+
+objectList :: ParsecS r Geb.Object
+objectList = parens $ do
+  kw kwList
+  object
 
 morphismUnit :: ParsecS r Geb.Morphism
 morphismUnit = do
@@ -202,13 +212,11 @@ morphismLeftInj :: ParsecS r Geb.LeftInj
 morphismLeftInj = do
   P.label "<geb MorphismLeft>" $ do
     kw kwGebMorphismLeft
-    lType <- object
     rType <- object
     lValue <- morphism
     return $
       Geb.LeftInj
-        { _leftInjLeftType = lType,
-          _leftInjRightType = rType,
+        { _leftInjRightType = rType,
           _leftInjValue = lValue
         }
 
@@ -217,12 +225,10 @@ morphismRightInj = do
   P.label "<geb MorphismRight>" $ do
     kw kwGebMorphismRight
     lType <- object
-    rType <- object
     rValue <- morphism
     return $
       Geb.RightInj
         { _rightInjLeftType = lType,
-          _rightInjRightType = rType,
           _rightInjValue = rValue
         }
 
@@ -230,9 +236,6 @@ morphismCase :: ParsecS r Geb.Case
 morphismCase = do
   P.label "<geb MorphismCase>" $ do
     kw kwGebMorphismCase
-    _caseLeftType <- object
-    _caseRightType <- object
-    _caseCodomainType <- object
     _caseOn <- morphism
     _caseLeft <- morphism
     _caseRight <- morphism
@@ -242,8 +245,6 @@ morphismPair :: ParsecS r Geb.Pair
 morphismPair = do
   P.label "<geb MorphismPair>" $ do
     kw kwGebMorphismPair
-    _pairLeftType <- object
-    _pairRightType <- object
     _pairLeft <- morphism
     _pairRight <- morphism
     return Geb.Pair {..}
@@ -252,8 +253,6 @@ morphismFirst :: ParsecS r Geb.First
 morphismFirst = do
   P.label "<geb MorphismFirst>" $ do
     kw kwGebMorphismFirst
-    _firstLeftType <- object
-    _firstRightType <- object
     _firstValue <- morphism
     return Geb.First {..}
 
@@ -261,8 +260,6 @@ morphismSecond :: ParsecS r Geb.Second
 morphismSecond = do
   P.label "<geb MorphismSecond>" $ do
     kw kwGebMorphismSecond
-    _secondLeftType <- object
-    _secondRightType <- object
     _secondValue <- morphism
     return Geb.Second {..}
 
@@ -270,8 +267,7 @@ morphismLambda :: ParsecS r Geb.Lambda
 morphismLambda = do
   P.label "<geb MorphismLambda>" $ do
     kw kwGebMorphismLambda
-    _lambdaVarType <- object
-    _lambdaBodyType <- object
+    _lambdaVarType <- objectList
     _lambdaBody <- morphism
     return Geb.Lambda {..}
 
@@ -279,10 +275,8 @@ morphismApplication :: ParsecS r Geb.Application
 morphismApplication = do
   P.label "<geb MorphismApplication>" $ do
     kw kwGebMorphismApplication
-    _applicationDomainType <- object
-    _applicationCodomainType <- object
     _applicationLeft <- morphism
-    _applicationRight <- morphism
+    _applicationRight <- morphismList
     return Geb.Application {..}
 
 morphismVar :: ParsecS r Geb.Var
