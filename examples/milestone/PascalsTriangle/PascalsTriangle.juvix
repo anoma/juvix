@@ -7,39 +7,38 @@ module PascalsTriangle;
 import Stdlib.Prelude open;
 
 --- Return a list of repeated applications of a given function
-scanIterate : {A : Type} → Nat → (A → A) → A → List A;
-scanIterate zero _ _ := nil;
-scanIterate (suc n) f a := a :: scanIterate n f (f a);
+scanIterate : {A : Type} → Nat → (A → A) → A → List A
+  | zero _ _ := nil
+  | (suc n) f a := a :: scanIterate n f (f a);
 
 --- Produce a singleton List
-singleton : {A : Type} → A → List A;
-singleton a := a :: nil;
+singleton : {A : Type} → A → List A
+  | a := a :: nil;
 
 --- Concatenates a list of strings
 --- ;concat (("a" :: nil) :: "b" :: nil); evaluates to ;"a"
   :: "b"
   :: nil;
-concat : List String → String;
-concat := foldl (++str) "";
+concat : List String → String := foldl (++str) "";
 
-intercalate : String → List String → String;
-intercalate sep xs := concat (intersperse sep xs);
+intercalate : String → List String → String
+  | sep xs := concat (intersperse sep xs);
 
-showList : List Nat → String;
-showList xs :=
-  "[" ++str intercalate "," (map natToString xs) ++str "]";
+showList : List Nat → String
+  | xs :=
+    "[" ++str intercalate "," (map natToString xs) ++str "]";
 
 --- Compute the next row of Pascal's triangle
-pascalNextRow : List Nat → List Nat;
-pascalNextRow row :=
-  zipWith
-    (+)
-    (singleton zero ++ row)
-    (row ++ singleton zero);
+pascalNextRow : List Nat → List Nat
+  | row :=
+    zipWith
+      (+)
+      (singleton zero ++ row)
+      (row ++ singleton zero);
 
 --- Produce Pascal's triangle to a given depth
-pascal : Nat → List (List Nat);
-pascal rows := scanIterate rows pascalNextRow (singleton 1);
+pascal : Nat → List (List Nat)
+  | rows := scanIterate rows pascalNextRow (singleton 1);
 
-main : IO;
-main := printStringLn (unlines (map showList (pascal 10)));
+main : IO :=
+  printStringLn (unlines (map showList (pascal 10)));

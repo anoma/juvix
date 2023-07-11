@@ -8,8 +8,8 @@ type Nat :=
   | zero : Nat
   | suc : Nat → Nat;
 
-is-zero : Nat → Bool;
-is-zero n :=
-  case n
-    | zero := true
-    | suc _ := false;
+is-zero : Nat → Bool
+  | n :=
+    case n
+      | zero := true
+      | suc _ := false;

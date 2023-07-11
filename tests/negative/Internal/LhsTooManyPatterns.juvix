@@ -3,5 +3,5 @@ module LhsTooManyPatterns;
 type T :=
   | A : T;
 
-f : T → T;
-f A x := A;
+f : T → T
+  | A x := A;

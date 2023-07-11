@@ -9,5 +9,4 @@ type A :=
 type B :=
   | b : B;
 
-f : String;
-f := "a";
+f : String := "a";

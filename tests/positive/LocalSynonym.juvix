@@ -3,10 +3,8 @@ module LocalSynonym;
 type Unit :=
   | unit : Unit;
 
-myUnit : Type;
-myUnit := Unit;
+myUnit : Type := Unit;
 
 module L;
-  haha : myUnit;
-  haha := unit;
+  haha : myUnit := unit;
 end;

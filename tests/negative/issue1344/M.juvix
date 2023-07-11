@@ -5,6 +5,5 @@ import Other;
 type Unit :=
   | t : Unit;
 
-u : Other.Unit;
-u := t;
+u : Other.Unit := t;
 

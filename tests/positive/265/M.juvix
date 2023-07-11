@@ -7,6 +7,6 @@ type Bool :=
 type Pair (A : Type) (B : Type) :=
   | mkPair : A → B → Pair A B;
 
-f : _ → _;
-f (mkPair false true) := true;
-f _ := false;
+f : _ → _
+  | (mkPair false true) := true
+  | _ := false;

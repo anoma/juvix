@@ -2,35 +2,29 @@ module Symbols;
 
 import Stdlib.Data.Nat open;
 
-╘⑽╛ : Nat;
-╘⑽╛ := suc 9;
+╘⑽╛ : Nat := suc 9;
 
 -- no - function!?
-- : Nat -> Nat -> Nat;
-- := (+);
+- : Nat -> Nat -> Nat := (+);
 
-（-） : Nat -> Nat -> Nat;
-（-） := (-);
+（-） : Nat -> Nat -> Nat := (-);
 
-（*） : Nat -> Nat -> Nat;
-（*） := (*);
+（*） : Nat -> Nat -> Nat := (*);
 
 syntax infixl 6 －;
-－ : Nat -> Nat -> Nat;
-－ := （-）;
+
+－ : Nat -> Nat -> Nat := （-）;
 
 syntax infixl 7 ·;
-· : Nat -> Nat -> Nat;
-· := （*）;
 
-（0） : Nat;
-（0） := ╘⑽╛ － ╘⑽╛ · zero;
+· : Nat -> Nat -> Nat := （*）;
 
-主功能 : Nat;
-主功能 := （0）;
+（0） : Nat := ╘⑽╛ － ╘⑽╛ · zero;
+
+主功能 : Nat := （0）;
 
 axiom = : Type;
 
-K : Nat → Nat → Nat;
-K =a@zero (=) := =a · =;
-K =a@(suc =) == := = · ==;
+K : Nat → Nat → Nat
+  | =a@zero =b := =a · =b
+  | =a@(suc =b) == := =b · ==;

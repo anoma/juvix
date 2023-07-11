@@ -2,12 +2,11 @@ module TerminatingG;
 
 axiom A : Type;
 
-f : A -> A -> A;
+f : A -> A -> A
+  
+  | x y := g x (f x x);
 
 terminating
-g : A -> A -> A;
-
-g x y := f x x;
-
-f x y := g x (f x x);
+g : A -> A -> A
+  | x y := f x x;
 

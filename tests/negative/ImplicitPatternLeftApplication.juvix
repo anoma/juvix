@@ -1,5 +1,5 @@
 module ImplicitPatternLeftApplication;
 
-f : {A : Type} -> A -> A;
-f ({x} y) := y;
+f : {A : Type} -> A -> A
+  | ({x} y) := y;
 

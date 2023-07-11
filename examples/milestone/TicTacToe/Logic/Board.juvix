@@ -11,34 +11,33 @@ type Board :=
   | board : List (List Square) → Board;
 
 --- Returns the list of numbers corresponding to the empty ;Square;s
-possibleMoves : List Square → List Nat;
-possibleMoves nil := nil;
-possibleMoves (empty n :: xs) := n :: possibleMoves xs;
-possibleMoves (_ :: xs) := possibleMoves xs;
+possibleMoves : List Square → List Nat
+  | nil := nil
+  | (empty n :: xs) := n :: possibleMoves xs
+  | (_ :: xs) := possibleMoves xs;
 
 --- ;true; if all the ;Square;s in the list are equal
-full : List Square → Bool;
-full (a :: b :: c :: nil) := ==Square a b && ==Square b c;
-full _ := fail "full";
+full : List Square → Bool
+  | (a :: b :: c :: nil) := ==Square a b && ==Square b c
+  | _ := fail "full";
 
-diagonals : List (List Square) → List (List Square);
-diagonals ((a1 :: _ :: b1 :: nil)
+diagonals : List (List Square) → List (List Square)
+  | ((a1 :: _ :: b1 :: nil)
     :: (_ :: c :: _ :: nil)
     :: (b2 :: _ :: a2 :: nil)
     :: nil) :=
-  (a1 :: c :: a2 :: nil) :: (b1 :: c :: b2 :: nil) :: nil;
-diagonals _ := fail "diagonals";
+    (a1 :: c :: a2 :: nil) :: (b1 :: c :: b2 :: nil) :: nil
+  | _ := fail "diagonals";
 
-columns : List (List Square) → List (List Square);
-columns := transpose;
+columns : List (List Square) → List (List Square) :=
+  transpose;
 
-rows : List (List Square) → List (List Square);
-rows := id;
+rows : List (List Square) → List (List Square) := id;
 
 --- Textual representation of a ;List Square;
-showRow : List Square → String;
-showRow xs := concat (surround "|" (map showSquare xs));
+showRow : List Square → String
+  | xs := concat (surround "|" (map showSquare xs));
 
-showBoard : Board → String;
-showBoard (board squares) :=
-  unlines (surround "+---+---+---+" (map showRow squares));
+showBoard : Board → String
+  | (board squares) :=
+    unlines (surround "+---+---+---+" (map showRow squares));

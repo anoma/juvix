@@ -6,5 +6,4 @@ type A :=
 type B :=
   | b : B;
 
-f : A;
-f := b;
+f : A := b;

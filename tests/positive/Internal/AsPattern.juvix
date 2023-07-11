@@ -1,15 +1,16 @@
 module AsPattern;
 
 syntax infixr 9 ∘;
-∘ :
-  {A : Type}
+
+∘
+  : {A : Type}
     → {B : Type}
     → {C : Type}
     → (B → C)
     → (A → B)
     → A
-    → C;
-∘ {_} {B} {_} f g x := f (g x);
+    → C
+  | {_} {B} {_} f g x := f (g x);
 
 builtin nat
 type Nat :=
@@ -17,27 +18,28 @@ type Nat :=
   | suc : Nat → Nat;
 
 syntax infixl 6 +;
+
 builtin nat-plus
-+ : Nat → Nat → Nat;
-+ zero b := b;
-+ (suc a) b := suc (a + b);
++ : Nat → Nat → Nat
+  | zero b := b
+  | (suc a) b := suc (a + b);
 
 syntax infixr 2 ×;
 syntax infixr 4 ,;
 type × (A : Type) (B : Type) :=
   | , : A → B → A × B;
 
-fst : {A : Type} → {B : Type} → A × B → A;
-fst p@(a, _) := a;
+fst : {A : Type} → {B : Type} → A × B → A
+  | p@(a, _) := a;
 
-snd : {A : Type} → {B : Type} → A × B → B;
-snd p@(_, b) := b;
+snd : {A : Type} → {B : Type} → A × B → B
+  | p@(_, b) := b;
 
-lambda : Nat → Nat → Nat;
-lambda x := λ {a@(suc _) := a + x + zero};
+lambda : Nat → Nat → Nat
+  | x := λ {a@(suc _) := a + x + zero};
 
-a : {A : Type} → A × Nat → Nat;
-a p@(x, s@zero) := snd p + 1;
+a : {A : Type} → A × Nat → Nat
+  | p@(x, s@zero) := snd p + 1;
 
-b : {A : Type} → A × Nat → ({B : Type} → B → B) → A;
-b p@(_, zero) f := (f ∘ fst) p;
+b : {A : Type} → A × Nat → ({B : Type} → B → B) → A
+  | p@(_, zero) f := (f ∘ fst) p;

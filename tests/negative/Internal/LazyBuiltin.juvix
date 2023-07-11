@@ -6,10 +6,10 @@ type Bool :=
   | false : Bool;
 
 builtin bool-if
-if : {A : Type} -> Bool -> A -> A -> A;
-if true x _ := x;
-if false _ x := x;
+if : {A : Type} -> Bool -> A -> A -> A
+  | true x _ := x
+  | false _ x := x;
 
-f : Bool -> Bool;
-f x := if x;
+f : Bool -> Bool
+  | x := if x;
 

@@ -11,12 +11,12 @@ axiom a : Nat;
   unroll: 100
   inline: false
 #-}
-f : Nat → Nat;
-f x := x;
+f : Nat → Nat
+  | x := x;
 
 {-# inline: true #-}
-g : Nat → Nat;
-g x := suc x;
+g : Nat → Nat
+  | x := suc x;
 
 {-
 Multiline highlighting
@@ -25,10 +25,9 @@ Multiline highlighting
 --- Judoc comment 2
 {-# unroll: 0 #-}
 terminating
-h : Nat → Nat;
-h x := x + 5;
+h : Nat → Nat
+  | x := x + 5;
 
 --- Judoc comment
 {-# inline: false, unroll: 10, unknownPragma: tratatata #-}
-main : Nat;
-main := 0;
+main : Nat := 0;

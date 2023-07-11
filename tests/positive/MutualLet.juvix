@@ -3,8 +3,7 @@ module MutualLet;
 import Stdlib.Data.Nat open;
 import Stdlib.Data.Bool open;
 
-main : _;
-main :=
+main : _ :=
   let
     odd : _;
     even : _;

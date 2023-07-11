@@ -6,8 +6,6 @@ type A :=
 type B :=
   | b : B;
 
-f : A;
-f := b;
+f : A := b;
 
-g : B;
-g := a;
+g : B := a;

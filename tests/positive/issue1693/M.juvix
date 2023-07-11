@@ -2,24 +2,22 @@ module M;
 
 import Stdlib.Prelude open;
 
-S :
-  {A : Type}
+S
+  : {A : Type}
     → {B : Type}
     → {C : Type}
     → (A → B → C)
     → (A → B)
     → A
-    → C;
-S x y z := x z (y z);
+    → C
+  | x y z := x z (y z);
 
-K : {A : Type} → {B : Type} → A → B → A;
-K x y := x;
+K : {A : Type} → {B : Type} → A → B → A
+  | x y := x;
 
-I : {A : Type} → A → A;
-I := S K (K {_} {Bool});
+I : {A : Type} → A → A := S K (K {_} {Bool});
 
-main : IO;
-main :=
+main : IO :=
   printNatLn
     $ I {Nat} 1
       + I I 1

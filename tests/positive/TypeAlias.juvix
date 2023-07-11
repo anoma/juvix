@@ -6,40 +6,36 @@ type T :=
 type T2 :=
   | t2 : T2;
 
-alias : Type;
-alias := T;
+alias : Type := T;
 
-x : alias;
-x := t;
+x : alias := t;
 
-id : Type → Type;
-id x := x;
+id : Type → Type
+  | x := x;
 
 syntax infixr 9 ⊙;
-⊙ : (Type → Type) → (Type → Type) → Type → Type;
-⊙ f g x := f (g x);
 
-x2 : (id ⊙ id) alias;
-x2 := t;
+⊙ : (Type → Type) → (Type → Type) → Type → Type
+  | f g x := f (g x);
 
-flip :
-  (Type → Type → Type) → id Type → Type → (id ⊙ id) Type;
-flip f a b := f b a;
+x2 : (id ⊙ id) alias := t;
+
+flip
+  : (Type → Type → Type) → id Type → Type → (id ⊙ id) Type
+  | f a b := f b a;
 
 type Pair (A : Type) (B : Type) :=
   | mkPair : id T → id (id A) → B → Pair A B;
 
-p : {A : Type} → A → Pair A A;
-p a := mkPair t a a;
+p : {A : Type} → A → Pair A A
+  | a := mkPair t a a;
 
-x' : flip Pair (id _) T2;
-x' := mkPair x t2 t;
+x' : flip Pair (id _) T2 := mkPair x t2 t;
 
-funAlias : Type -> Type;
-funAlias a := a -> a;
+funAlias : Type -> Type
+  | a := a -> a;
 
-f : funAlias T;
-f := \ {t := t};
+f : funAlias T := \ {t := t};
 
-f' : funAlias T;
-f' t := t;
+f' : funAlias T
+  | t := t;

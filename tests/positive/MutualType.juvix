@@ -8,10 +8,10 @@ type List (a : Type) :=
   | --- An element followed by a list
     :: : a → List a → List a;
 
-Forest : Type -> Type;
+Forest : Type -> Type
+  
+  | A := List (Tree A);
 
 --- N-Ary tree.
 type Tree (A : Type) :=
   | node : A -> Forest A -> Tree A;
-
-Forest A := List (Tree A);

@@ -8,5 +8,4 @@ import Stdlib.Prelude open;
 -- bring comparison operators on Nat into scope
 import Stdlib.Data.Nat.Ord open;
 
-main : IO;
-main := printStringLn "Hello world!";
+main : IO := printStringLn "Hello world!";

@@ -3,29 +3,26 @@ module Collatz;
 import Stdlib.Prelude open;
 import Stdlib.Data.Nat.Ord open;
 
-collatzNext : Nat → Nat;
-collatzNext n := if (mod n 2 == 0) (div n 2) (3 * n + 1);
+collatzNext : Nat → Nat
+  | n := if (mod n 2 == 0) (div n 2) (3 * n + 1);
 
-collatz : Nat → Nat;
-collatz zero := zero;
-collatz (suc zero) := suc zero;
-collatz n := collatzNext n;
+collatz : Nat → Nat
+  | zero := zero
+  | (suc zero) := suc zero
+  | n := collatzNext n;
 
 terminating
-run : (Nat → Nat) → Nat → IO;
-run _ (suc zero) :=
-  printNatLn 1 >> printStringLn "Finished!";
-run f n := printNatLn n >> run f (f n);
+run : (Nat → Nat) → Nat → IO
+  | _ (suc zero) :=
+    printNatLn 1 >> printStringLn "Finished!"
+  | f n := printNatLn n >> run f (f n);
 
-welcome : String;
-welcome :=
+welcome : String :=
   "Collatz calculator\n------------------\n\nType a number then ENTER";
 
-resultHeading : String;
-resultHeading := "Collatz sequence:";
+resultHeading : String := "Collatz sequence:";
 
-main : IO;
-main :=
+main : IO :=
   printStringLn welcome
     >> readLn
       λ {s :=

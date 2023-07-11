@@ -1,5 +1,5 @@
 module ConstructorExpectedLeftApplication;
 
-f : {A : Type} -> A -> A;
-f (x y) := x;
+f : {A : Type} -> A -> A
+  | (x y) := x;
 

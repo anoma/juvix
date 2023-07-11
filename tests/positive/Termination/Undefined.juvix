@@ -3,5 +3,4 @@ module Undefined;
 axiom A : Type;
 
 terminating
-undefined : A;
-undefined := undefined;
+undefined : A := undefined;

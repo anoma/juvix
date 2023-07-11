@@ -6,11 +6,11 @@ import Data.Product open;
 import Data.Bool open;
 import Data.Ord open;
 
-f : Bool -> Bool;
-f x := x;
+f : Bool -> Bool
+  | x := x;
 
-g : {A : Type} -> A -> Bool -> Bool;
-g x y := f y;
+g : {A : Type} -> A -> Bool -> Bool
+  | x y := f y;
 
-h : {A : Type} -> A -> Maybe Bool;
-h x := nothing;
+h : {A : Type} -> A -> Maybe Bool
+  | x := nothing;

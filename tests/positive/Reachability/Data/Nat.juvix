@@ -5,11 +5,13 @@ type ℕ :=
   | suc : ℕ → ℕ;
 
 syntax infixl 6 +;
-+ : ℕ → ℕ → ℕ;
-+ zero b := b;
-+ (suc a) b := suc (a + b);
+
++ : ℕ → ℕ → ℕ
+  | zero b := b
+  | (suc a) b := suc (a + b);
 
 syntax infixl 7 *;
-* : ℕ → ℕ → ℕ;
-* zero b := zero;
-* (suc a) b := b + a * b;
+
+* : ℕ → ℕ → ℕ
+  | zero b := zero
+  | (suc a) b := b + a * b;

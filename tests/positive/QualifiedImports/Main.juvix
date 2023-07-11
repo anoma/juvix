@@ -9,8 +9,7 @@ axiom a : Nat;
 
 axiom b : Longer.For.No.Reason.Nat;
 
-main : Prelude.Nat;
-main := 123;
+main : Prelude.Nat := 123;
 
 -- Merging imports
 import Stdlib.Data.Nat as X;

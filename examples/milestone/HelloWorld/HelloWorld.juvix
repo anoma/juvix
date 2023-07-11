@@ -3,5 +3,4 @@ module HelloWorld;
 
 import Stdlib.Prelude open;
 
-main : IO;
-main := printStringLn "hello world!";
+main : IO := printStringLn "hello world!";

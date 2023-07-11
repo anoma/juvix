@@ -3,6 +3,5 @@ module UnsolvedMeta;
 type Proxy (A : Type) :=
   | x : Proxy A;
 
-t : Proxy _;
-t := x;
+t : Proxy _ := x;
 

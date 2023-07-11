@@ -2,41 +2,41 @@ module Case;
 
 import Stdlib.Prelude open;
 
-isZero : Nat → Bool;
-isZero n :=
-  case n
-    | zero := true
-    | k@(suc _) := false;
+isZero : Nat → Bool
+  | n :=
+    case n
+      | zero := true
+      | k@(suc _) := false;
 
-id' : Bool → {A : Type} → A → A;
-id' b :=
-  case b
-    | true := id
-    | false := id;
+id' : Bool → {A : Type} → A → A
+  | b :=
+    case b
+      | true := id
+      | false := id;
 
-pred : Nat → Nat;
-pred n :=
-  case n
-    | zero := zero
-    | suc n := n;
+pred : Nat → Nat
+  | n :=
+    case n
+      | zero := zero
+      | suc n := n;
 
-appIf : {A : Type} → Bool → (A → A) → A → A;
-appIf b f :=
-  case b
-    | true := f
-    | false := id;
-
-appIf2 : {A : Type} → Bool → (A → A) → A → A;
-appIf2 b f a :=
-  (case b
+appIf : {A : Type} → Bool → (A → A) → A → A
+  | b f :=
+    case b
       | true := f
-      | false := id)
-    a;
+      | false := id;
 
-nestedCase1 : {A : Type} → Bool → (A → A) → A → A;
-nestedCase1 b f :=
-  case b
-    | true :=
-      (case b
-        | _ := id)
-    | false := id;
+appIf2 : {A : Type} → Bool → (A → A) → A → A
+  | b f a :=
+    (case b
+        | true := f
+        | false := id)
+      a;
+
+nestedCase1 : {A : Type} → Bool → (A → A) → A → A
+  | b f :=
+    case b
+      | true :=
+        (case b
+          | _ := id)
+      | false := id;

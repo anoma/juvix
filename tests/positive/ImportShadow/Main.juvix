@@ -5,17 +5,15 @@ import Nat open;
 type Unit :=
   | unit : Unit;
 
-f : Nat;
-f :=
+f : Nat :=
   case unit
     | is-zero := zero;
 
-f2 : Nat;
-f2 :=
+f2 : Nat :=
   case suc zero
     | suc is-zero := zero
     | _ := zero;
 
-f3 : Nat → Nat;
-f3 (suc is-zero) := is-zero;
-f3 zero := zero;
+f3 : Nat → Nat
+  | (suc is-zero) := is-zero
+  | zero := zero;

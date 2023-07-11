@@ -13,5 +13,5 @@ end;
 
 import M;
 
-f : M.N.T;
-f (_ M.N.t _) := Type M.+ Type M.+ M.MType;
+f : M.N.T
+  | (_ M.N.t _) := Type M.+ Type M.+ M.MType;

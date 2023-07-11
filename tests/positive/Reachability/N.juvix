@@ -3,8 +3,8 @@ module N;
 import M open;
 import Stdlib.Prelude open hiding {Unit};
 
-test : {A : Type} -> A -> A;
-test x := x;
+test : {A : Type} -> A -> A
+  | x := x;
 
 type Unit :=
   | unit : Unit;

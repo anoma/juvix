@@ -2,5 +2,4 @@ module LiteralInteger;
 
 import Stdlib.Prelude open;
 
-h : Nat;
-h := div 1 -2;
+h : Nat := div 1 -2;

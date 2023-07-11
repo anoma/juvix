@@ -10,11 +10,9 @@ import Stdlib.Data.Nat.Ord open;
 
 import Stdlib.Data.Nat as Nat;
 
-Address : Type;
-Address := Nat;
+Address : Type := Nat;
 
-bankAddress : Address;
-bankAddress := 1234;
+bankAddress : Address := 1234;
 
 --- Some field type.
 axiom Field : Type;
@@ -28,47 +26,45 @@ module Token;
       mkToken : Address -> Nat -> Nat -> Token;
 
   --- Retrieves the owner from a ;Token;
-  getOwner : Token -> Address;
-  getOwner (mkToken o _ _) := o;
+  getOwner : Token -> Address
+    | (mkToken o _ _) := o;
 
   --- Retrieves the amount from a ;Token;
-  getAmount : Token -> Nat;
-  getAmount (mkToken _ _ a) := a;
+  getAmount : Token -> Nat
+    | (mkToken _ _ a) := a;
 
   --- Retrieves the gates from a ;Token;
-  getGates : Token -> Nat;
-  getGates (mkToken _ g _) := g;
+  getGates : Token -> Nat
+    | (mkToken _ g _) := g;
 end;
 
 open Token;
 
 --- This module defines the type for balances and its associated operations.
 module Balances;
-  Balances : Type;
-  Balances := List (Field × Nat);
+  Balances : Type := List (Field × Nat);
 
   --- Increments the amount associated with a certain ;Field;.
-  increment : Field -> Nat -> Balances -> Balances;
-  increment f n nil := (f, n) :: nil;
-  increment f n ((b, bn) :: bs) :=
-    if
-      (eqField f b)
-      ((b, bn + n) :: bs)
-      ((b, bn) :: increment f n bs);
+  increment : Field -> Nat -> Balances -> Balances
+    | f n nil := (f, n) :: nil
+    | f n ((b, bn) :: bs) :=
+      if
+        (eqField f b)
+        ((b, bn + n) :: bs)
+        ((b, bn) :: increment f n bs);
 
   --- Decrements the amount associated with a certain ;Field;.
   --- If the ;Field; is not found, it does nothing.
   --- Subtraction is truncated to ;zero;.
-  decrement : Field -> Nat -> Balances -> Balances;
-  decrement _ _ nil := nil;
-  decrement f n ((b, bn) :: bs) :=
-    if
-      (eqField f b)
-      ((b, sub bn n) :: bs)
-      ((b, bn) :: decrement f n bs);
+  decrement : Field -> Nat -> Balances -> Balances
+    | _ _ nil := nil
+    | f n ((b, bn) :: bs) :=
+      if
+        (eqField f b)
+        ((b, sub bn n) :: bs)
+        ((b, bn) :: decrement f n bs);
 
-  emtpyBalances : Balances;
-  emtpyBalances := nil;
+  emtpyBalances : Balances := nil;
 
   --- Commit balances changes to the chain.
   axiom commitBalances : Balances -> IO;
@@ -83,17 +79,17 @@ axiom runOnChain : {B : Type} -> IO -> B -> B;
 axiom hashAddress : Address -> Field;
 
 --- Returns the total amount of tokens after compounding interest.
-calculateInterest : Nat -> Nat -> Nat -> Nat;
-calculateInterest principal rate periods :=
-  let
-    amount : Nat := principal;
-    incrAmount : Nat -> Nat;
-    incrAmount a := div (a * rate) 10000;
-  in iterate (min 100 periods) incrAmount amount;
+calculateInterest : Nat -> Nat -> Nat -> Nat
+  | principal rate periods :=
+    let
+      amount : Nat := principal;
+      incrAmount : Nat -> Nat;
+      incrAmount a := div (a * rate) 10000;
+    in iterate (min 100 periods) incrAmount amount;
 
 --- Asserts some ;Bool; condition.
-assert : {A : Type} -> Bool -> A -> A;
-assert c a := if c a (fail "assertion failed");
+assert : {A : Type} -> Bool -> A -> A
+  | c a := if c a (fail "assertion failed");
 
 --- Returns a new ;Token;. Arguments are:
 ---
@@ -102,9 +98,9 @@ assert c a := if c a (fail "assertion failed");
 --- `amount`: The amount of  tokens to issue
 ---
 --- `caller`: Who is creating the transaction. It must be the bank.
-issue : Address -> Address -> Nat -> Token;
-issue caller owner amount :=
-  assert (caller == bankAddress) (mkToken owner 0 amount);
+issue : Address -> Address -> Nat -> Token
+  | caller owner amount :=
+    assert (caller == bankAddress) (mkToken owner 0 amount);
 
 {-
 -- TODO: Uncomment this block once we fix

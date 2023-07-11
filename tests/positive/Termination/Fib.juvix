@@ -5,11 +5,12 @@ type Nat :=
   | suc : Nat → Nat;
 
 syntax infixl 6 +;
-+ : Nat → Nat → Nat;
-+ zero b := b;
-+ (suc a) b := suc (a + b);
 
-fib : Nat -> Nat;
-fib zero := zero;
-fib (suc zero) := suc zero;
-fib (suc (suc n)) := fib (suc n) + fib n;
++ : Nat → Nat → Nat
+  | zero b := b
+  | (suc a) b := suc (a + b);
+
+fib : Nat -> Nat
+  | zero := zero
+  | (suc zero) := suc zero
+  | (suc (suc n)) := fib (suc n) + fib n;

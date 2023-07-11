@@ -3,8 +3,8 @@ module E11;
 type T0 (A : Type) :=
   | t : (A -> T0 A) -> T0 _;
 
-alias : Type -> Type -> Type;
-alias A B := A -> B;
+alias : Type -> Type -> Type
+  | A B := A -> B;
 
 type T1 :=
   | c : alias T1 T1 -> _;
