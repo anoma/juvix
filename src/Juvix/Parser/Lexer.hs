@@ -79,7 +79,7 @@ space' special =
           when
             special
             ( notFollowedBy
-                ( P.chunk Str.judocStart
+                ( (P.chunk Str.judocStart >> P.chunk " ")
                     <|> P.chunk Str.judocBlockEnd
                 )
             )
