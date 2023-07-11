@@ -236,7 +236,11 @@ tests =
     posTest
       "Nested pattern match with type variables"
       $(mkRelDir ".")
-      $(mkRelFile "NestedPatterns.juvix")
+      $(mkRelFile "NestedPatterns.juvix"),
+    posTest
+      "issue2248: Import type alias"
+      $(mkRelDir "issue2248")
+      $(mkRelFile "Main.juvix")
   ]
     <> [ compilationTest t | t <- Compilation.tests
        ]

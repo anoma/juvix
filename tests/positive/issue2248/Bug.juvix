@@ -1,0 +1,8 @@
+module Bug;
+
+type A := mkA : A;
+
+aliasA : Type;
+aliasA := A;
+
+type C := mkC : aliasA -> C;

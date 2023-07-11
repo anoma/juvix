@@ -422,7 +422,7 @@ addIdens idens = do
 functionDefEval :: forall r'. Member (State FunctionsTable) r' => FunctionDef -> Sem r' (Maybe Expression)
 functionDefEval = runFail . goTop
   where
-    goTop :: forall r. (Members '[Fail, State FunctionsTable] r) => FunctionDef -> Sem r Expression
+    goTop :: forall r. Members '[Fail, State FunctionsTable] r => FunctionDef -> Sem r Expression
     goTop f =
       case f ^. funDefClauses of
         c :| [] -> goClause c
@@ -458,7 +458,7 @@ functionDefEval = runFail . goTop
             go :: [(PatternArg, Expression)] -> Sem r Expression
             go = \case
               [] -> return (c ^. clauseBody)
-              ((p, ty) : ps)
+              (p, ty) : ps
                 | Implicit <- p ^. patternArgIsImplicit -> fail
                 | otherwise -> go ps >>= goPattern (p ^. patternArgPattern, ty)
 

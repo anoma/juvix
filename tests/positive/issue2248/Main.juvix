@@ -1,0 +1,5 @@
+module Main;
+
+import Bug open;
+
+c : C := mkC mkA;
