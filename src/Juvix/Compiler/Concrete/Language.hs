@@ -21,6 +21,7 @@ import Juvix.Compiler.Concrete.Data.Literal
 import Juvix.Compiler.Concrete.Data.ModuleIsTop
 import Juvix.Compiler.Concrete.Data.Name
 import Juvix.Compiler.Concrete.Data.NameRef
+import Juvix.Compiler.Concrete.Data.NameSignature.Base (NameSignature)
 import Juvix.Compiler.Concrete.Data.PublicAnn
 import Juvix.Compiler.Concrete.Data.ScopedName (unqualifiedSymbol)
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
@@ -40,6 +41,9 @@ data Stage
   = Parsed
   | Scoped
   deriving stock (Eq, Show)
+
+type AnyStage (k :: Stage -> GHC.Type) =
+  Σ Stage (TyCon1 k)
 
 $(genSingletons [''Stage])
 
@@ -98,6 +102,16 @@ type ImportType :: Stage -> GHC.Type
 type family ImportType s = res | res -> s where
   ImportType 'Parsed = TopModulePath
   ImportType 'Scoped = ModuleRef'' 'S.Concrete 'ModuleTop
+
+type NameSignatureType :: Stage -> GHC.Type
+type family NameSignatureType s = res | res -> s where
+  NameSignatureType 'Parsed = ()
+  NameSignatureType 'Scoped = NameSignature
+
+type AmbiguousIteratorType :: Stage -> GHC.Type
+type family AmbiguousIteratorType s = res | res -> s where
+  AmbiguousIteratorType 'Parsed = AmbiguousIterator
+  AmbiguousIteratorType 'Scoped = Void
 
 type ModulePathType :: Stage -> ModuleIsTop -> GHC.Type
 type family ModulePathType s t = res | res -> t s where
@@ -788,7 +802,7 @@ newtype ModuleRef' (c :: S.IsConcrete) = ModuleRef'
   { _unModuleRef' :: Σ ModuleIsTop (TyCon1 (ModuleRef'' c))
   }
 
-instance (SingI c) => Show (ModuleRef' c) where
+instance SingI c => Show (ModuleRef' c) where
   show (ModuleRef' (isTop :&: r)) = case isTop of
     SModuleLocal -> case sing :: S.SIsConcrete c of
       S.SConcrete -> show r
@@ -939,6 +953,7 @@ data Expression
   | ExpressionHole (HoleType 'Scoped)
   | ExpressionBraces (WithLoc Expression)
   | ExpressionIterator (Iterator 'Scoped)
+  | ExpressionNamedApplication (NamedApplication 'Scoped)
   deriving stock (Show, Eq, Ord)
 
 instance HasAtomicity (Lambda s) where
@@ -1241,7 +1256,7 @@ data Iterator s = Iterator
     _iteratorRanges :: [Range s],
     _iteratorBody :: ExpressionType s,
     -- | Was the body enclosed in braces?
-    _iteratorBraces :: Bool,
+    _iteratorBodyBraces :: Bool,
     -- | Due to limitations of the pretty printing algorithm, we store whether
     -- the iterator was surrounded by parentheses in the code.
     _iteratorParens :: Bool
@@ -1271,6 +1286,37 @@ deriving stock instance
   ) =>
   Ord (Iterator s)
 
+-- | Either an Iterator or a NamedApplication. Has the form:
+-- f (sym := expr; .. ; symn := expr) -- not followed by range
+data AmbiguousIterator = AmbiguousIterator
+  { _ambiguousIteratorName :: Name,
+    _ambiguousIteratorInitializers :: NonEmpty (NamedArgument 'Parsed),
+    _ambiguousIteratorBody :: ExpressionType 'Parsed,
+    -- | Was the body enclosed in braces?
+    _ambiguousIteratorBodyBraces :: Bool,
+    -- | Due to limitations of the pretty printing algorithm, we store whether
+    -- the iterator was surrounded by parentheses in the code.
+    _ambiguousIteratorParens :: Bool
+  }
+
+deriving stock instance
+  ( Show (PatternAtoms 'Parsed),
+    Show (PatternAtom 'Parsed)
+  ) =>
+  Show (AmbiguousIterator)
+
+deriving stock instance
+  ( Eq (PatternAtoms 'Parsed),
+    Eq (ExpressionAtoms 'Parsed)
+  ) =>
+  Eq (AmbiguousIterator)
+
+deriving stock instance
+  ( Ord (ExpressionAtoms 'Parsed),
+    Ord (PatternAtoms 'Parsed)
+  ) =>
+  Ord (AmbiguousIterator)
+
 data List (s :: Stage) = List
   { _listBracketL :: Irrelevant KeywordRef,
     _listBracketR :: Irrelevant KeywordRef,
@@ -1292,9 +1338,81 @@ deriving stock instance
   ) =>
   Ord (List s)
 
---------------------------------------------------------------------------------
--- Expression atom
---------------------------------------------------------------------------------
+data NamedArgument (s :: Stage) = NamedArgument
+  { _namedArgName :: Symbol,
+    _namedArgAssignKw :: Irrelevant KeywordRef,
+    _namedArgValue :: ExpressionType s
+  }
+
+deriving stock instance
+  ( Show (ExpressionType s),
+    Show (SymbolType s)
+  ) =>
+  Show (NamedArgument s)
+
+deriving stock instance
+  ( Eq (ExpressionType s),
+    Eq (SymbolType s)
+  ) =>
+  Eq (NamedArgument s)
+
+deriving stock instance
+  ( Ord (ExpressionType s),
+    Ord (SymbolType s)
+  ) =>
+  Ord (NamedArgument s)
+
+data ArgumentBlock (s :: Stage) = ArgumentBlock
+  { _argBlockDelims :: Irrelevant (Maybe (KeywordRef, KeywordRef)),
+    _argBlockImplicit :: IsImplicit,
+    _argBlockArgs :: NonEmpty (NamedArgument s)
+  }
+
+deriving stock instance
+  ( Show (ExpressionType s),
+    Show (SymbolType s)
+  ) =>
+  Show (ArgumentBlock s)
+
+deriving stock instance
+  ( Eq (ExpressionType s),
+    Eq (SymbolType s)
+  ) =>
+  Eq (ArgumentBlock s)
+
+deriving stock instance
+  ( Ord (ExpressionType s),
+    Ord (SymbolType s)
+  ) =>
+  Ord (ArgumentBlock s)
+
+data NamedApplication (s :: Stage) = NamedApplication
+  { _namedAppName :: IdentifierType s,
+    _namedAppArgs :: NonEmpty (ArgumentBlock s),
+    _namedAppSignature :: Irrelevant (NameSignatureType s)
+  }
+
+deriving stock instance
+  ( Show (ExpressionType s),
+    Show (SymbolType s),
+    Show (NameSignatureType s),
+    Show (IdentifierType s)
+  ) =>
+  Show (NamedApplication s)
+
+deriving stock instance
+  ( Eq (ExpressionType s),
+    Eq (SymbolType s),
+    Eq (IdentifierType s)
+  ) =>
+  Eq (NamedApplication s)
+
+deriving stock instance
+  ( Ord (ExpressionType s),
+    Ord (SymbolType s),
+    Ord (IdentifierType s)
+  ) =>
+  Ord (NamedApplication s)
 
 -- | Expressions without application
 data ExpressionAtom (s :: Stage)
@@ -1311,11 +1429,63 @@ data ExpressionAtom (s :: Stage)
   | AtomLiteral LiteralLoc
   | AtomParens (ExpressionType s)
   | AtomIterator (Iterator s)
+  | AtomAmbiguousIterator (AmbiguousIteratorType s)
+  | AtomNamedApplication (NamedApplication s)
+
+deriving stock instance
+  ( Show (ExpressionType s),
+    Show (IdentifierType s),
+    Show (NameSignatureType s),
+    Show (ModuleRefType s),
+    Show (AmbiguousIteratorType s),
+    Show (HoleType s),
+    Show (SymbolType s),
+    Show (PatternParensType s),
+    Show (PatternAtomType s)
+  ) =>
+  Show (ExpressionAtom s)
+
+deriving stock instance
+  ( Eq (ExpressionType s),
+    Eq (IdentifierType s),
+    Eq (AmbiguousIteratorType s),
+    Eq (HoleType s),
+    Eq (ModuleRefType s),
+    Eq (SymbolType s),
+    Eq (PatternParensType s),
+    Eq (PatternAtomType s)
+  ) =>
+  Eq (ExpressionAtom s)
+
+deriving stock instance
+  ( Ord (ExpressionType s),
+    Ord (IdentifierType s),
+    Ord (ModuleRefType s),
+    Ord (AmbiguousIteratorType s),
+    Ord (HoleType s),
+    Ord (SymbolType s),
+    Ord (PatternParensType s),
+    Ord (PatternAtomType s)
+  ) =>
+  Ord (ExpressionAtom s)
 
 data ExpressionAtoms (s :: Stage) = ExpressionAtoms
   { _expressionAtoms :: NonEmpty (ExpressionAtom s),
     _expressionAtomsLoc :: Interval
   }
+
+deriving stock instance
+  ( Show (ExpressionType s),
+    Show (IdentifierType s),
+    Show (NameSignatureType s),
+    Show (ModuleRefType s),
+    Show (AmbiguousIteratorType s),
+    Show (HoleType s),
+    Show (SymbolType s),
+    Show (PatternParensType s),
+    Show (PatternAtomType s)
+  ) =>
+  Show (ExpressionAtoms s)
 
 newtype Judoc (s :: Stage) = Judoc
   { _judocGroups :: NonEmpty (JudocGroup s)
@@ -1423,6 +1593,7 @@ makeLenses ''IteratorSyntaxDef
 makeLenses ''InductiveConstructorDef
 makeLenses ''Module
 makeLenses ''TypeSignature
+makeLenses ''SigArg
 makeLenses ''FunctionDef
 makeLenses ''AxiomDef
 makeLenses ''FunctionClause
@@ -1439,15 +1610,35 @@ makeLenses ''PatternBinding
 makeLenses ''PatternAtoms
 makeLenses ''ExpressionAtoms
 makeLenses ''Iterator
+makeLenses ''AmbiguousIterator
 makeLenses ''Initializer
 makeLenses ''Range
 makeLenses ''ModuleIndex
+makeLenses ''ArgumentBlock
+makeLenses ''NamedArgument
+makeLenses ''NamedApplication
 
 instance Eq ModuleIndex where
   (==) = (==) `on` (^. moduleIxModule . modulePath)
 
 instance Hashable ModuleIndex where
   hashWithSalt s = hashWithSalt s . (^. moduleIxModule . modulePath)
+
+instance SingI s => HasLoc (NamedArgument s) where
+  getLoc NamedArgument {..} = getLocSymbolType _namedArgName <> getLocExpressionType _namedArgValue
+
+instance SingI s => HasLoc (ArgumentBlock s) where
+  getLoc ArgumentBlock {..} = case d of
+    Just (l, r) -> getLoc l <> getLoc r
+    Nothing -> getLocSpan _argBlockArgs
+    where
+      Irrelevant d = _argBlockDelims
+
+instance HasAtomicity (ArgumentBlock s) where
+  atomicity = const Atom
+
+instance HasAtomicity (NamedApplication s) where
+  atomicity = const (Aggregate appFixity)
 
 instance HasAtomicity Expression where
   atomicity e = case e of
@@ -1466,6 +1657,7 @@ instance HasAtomicity Expression where
     ExpressionFunction {} -> Aggregate funFixity
     ExpressionCase c -> atomicity c
     ExpressionIterator i -> atomicity i
+    ExpressionNamedApplication i -> atomicity i
 
 expressionAtomicity :: forall s. SingI s => ExpressionType s -> Atomicity
 expressionAtomicity e = case sing :: SStage s of
@@ -1630,6 +1822,9 @@ instance SingI s => HasLoc (Case s) where
 instance HasLoc (List s) where
   getLoc List {..} = getLoc _listBracketL <> getLoc _listBracketR
 
+instance SingI s => HasLoc (NamedApplication s) where
+  getLoc NamedApplication {..} = getLocIdentifierType _namedAppName <> getLoc (last _namedAppArgs)
+
 instance HasLoc Expression where
   getLoc = \case
     ExpressionIdentifier i -> getLoc i
@@ -1647,14 +1842,15 @@ instance HasLoc Expression where
     ExpressionHole i -> getLoc i
     ExpressionBraces i -> getLoc i
     ExpressionIterator i -> getLoc i
+    ExpressionNamedApplication i -> getLoc i
 
-idenLoc :: forall s. SingI s => IdentifierType s -> Interval
-idenLoc e = case sing :: SStage s of
+getLocIdentifierType :: forall s. SingI s => IdentifierType s -> Interval
+getLocIdentifierType e = case sing :: SStage s of
   SParsed -> getLoc e
   SScoped -> getLoc e
 
-instance (SingI s) => HasLoc (Iterator s) where
-  getLoc Iterator {..} = idenLoc _iteratorName <> getLocExpressionType _iteratorBody
+instance SingI s => HasLoc (Iterator s) where
+  getLoc Iterator {..} = getLocIdentifierType _iteratorName <> getLocExpressionType _iteratorBody
 
 instance SingI s => HasLoc (Import s) where
   getLoc Import {..} = case sing :: SStage s of
@@ -1806,50 +2002,6 @@ instance (Eq (PatternAtom s)) => Eq (PatternAtoms s) where
 instance (Ord (PatternAtom s)) => Ord (PatternAtoms s) where
   compare = compare `on` (^. patternAtoms)
 
-deriving stock instance
-  ( Show (ExpressionType s),
-    Show (IdentifierType s),
-    Show (ModuleRefType s),
-    Show (HoleType s),
-    Show (SymbolType s),
-    Show (PatternParensType s),
-    Show (PatternAtomType s)
-  ) =>
-  Show (ExpressionAtom s)
-
-deriving stock instance
-  ( Eq (ExpressionType s),
-    Eq (IdentifierType s),
-    Eq (HoleType s),
-    Eq (ModuleRefType s),
-    Eq (SymbolType s),
-    Eq (PatternParensType s),
-    Eq (PatternAtomType s)
-  ) =>
-  Eq (ExpressionAtom s)
-
-deriving stock instance
-  ( Ord (ExpressionType s),
-    Ord (IdentifierType s),
-    Ord (ModuleRefType s),
-    Ord (HoleType s),
-    Ord (SymbolType s),
-    Ord (PatternParensType s),
-    Ord (PatternAtomType s)
-  ) =>
-  Ord (ExpressionAtom s)
-
-deriving stock instance
-  ( Show (ExpressionType s),
-    Show (IdentifierType s),
-    Show (ModuleRefType s),
-    Show (HoleType s),
-    Show (SymbolType s),
-    Show (PatternParensType s),
-    Show (PatternAtomType s)
-  ) =>
-  Show (ExpressionAtoms s)
-
 instance HasLoc (ExpressionAtoms s) where
   getLoc = (^. expressionAtomsLoc)
 
@@ -1870,6 +2022,7 @@ instance
     Eq (IdentifierType s),
     Eq (ModuleRefType s),
     Eq (HoleType s),
+    Eq (AmbiguousIteratorType s),
     Eq (SymbolType s),
     Eq (PatternParensType s),
     Eq (PatternAtomType s)
@@ -1882,6 +2035,7 @@ instance
   ( Ord (ExpressionType s),
     Ord (IdentifierType s),
     Ord (ModuleRefType s),
+    Ord (AmbiguousIteratorType s),
     Ord (HoleType s),
     Ord (SymbolType s),
     Ord (PatternParensType s),
@@ -1891,14 +2045,14 @@ instance
   where
   compare = compare `on` (^. expressionAtoms)
 
---------------------------------------------------------------------------------
-
 data ApeLeaf
   = ApeLeafExpression Expression
   | ApeLeafFunctionParams (FunctionParameters 'Scoped)
+  | ApeLeafArgumentBlock (AnyStage ArgumentBlock)
   | ApeLeafFunctionKw KeywordRef
   | ApeLeafPattern Pattern
   | ApeLeafPatternArg PatternArg
+  | ApeLeafAtom (AnyStage ExpressionAtom)
 
 instance IsApe PatternApp ApeLeaf where
   toApe (PatternApp l r) =
@@ -1952,6 +2106,43 @@ instance IsApe PatternInfixApp ApeLeaf where
           _infixOp = ApeLeafPattern (PatternConstructor op)
         }
 
+instance IsApe ScopedIden ApeLeaf where
+  toApe iden =
+    ApeLeaf
+      ( Leaf
+          { _leafAtomicity = Atom,
+            _leafExpr = ApeLeafExpression (ExpressionIdentifier iden)
+          }
+      )
+
+instance SingI s => IsApe (ArgumentBlock s) ApeLeaf where
+  toApe b =
+    ApeLeaf
+      ( Leaf
+          { _leafAtomicity = atomicity b,
+            _leafExpr = ApeLeafArgumentBlock (sing :&: b)
+          }
+      )
+
+toApeIdentifierType :: forall s. SingI s => IdentifierType s -> Ape ApeLeaf
+toApeIdentifierType = case sing :: SStage s of
+  SParsed -> toApe
+  SScoped -> toApe
+
+instance IsApe Name ApeLeaf where
+  toApe n =
+    ApeLeaf
+      ( Leaf
+          { _leafAtomicity = atomicity n,
+            _leafExpr = ApeLeafAtom (sing :&: AtomIdentifier n)
+          }
+      )
+
+instance SingI s => IsApe (NamedApplication s) ApeLeaf where
+  toApe NamedApplication {..} = mkApps f (toApe <$> _namedAppArgs)
+    where
+      f = toApeIdentifierType _namedAppName
+
 instance IsApe Application ApeLeaf where
   toApe (Application l r) =
     ApeApp
@@ -1992,18 +2183,31 @@ instance IsApe (Function 'Scoped) ApeLeaf where
         }
 
 instance IsApe Expression ApeLeaf where
-  toApe = \case
+  toApe e = case e of
     ExpressionApplication a -> toApe a
     ExpressionInfixApplication a -> toApe a
     ExpressionPostfixApplication a -> toApe a
     ExpressionFunction a -> toApe a
-    e ->
-      ApeLeaf
-        ( Leaf
-            { _leafAtomicity = atomicity e,
-              _leafExpr = ApeLeafExpression e
-            }
-        )
+    ExpressionNamedApplication a -> toApe a
+    ExpressionParensIdentifier {} -> leaf
+    ExpressionIdentifier {} -> leaf
+    ExpressionList {} -> leaf
+    ExpressionCase {} -> leaf
+    ExpressionLambda {} -> leaf
+    ExpressionLet {} -> leaf
+    ExpressionUniverse {} -> leaf
+    ExpressionHole {} -> leaf
+    ExpressionLiteral {} -> leaf
+    ExpressionBraces {} -> leaf
+    ExpressionIterator {} -> leaf
+    where
+      leaf =
+        ApeLeaf
+          ( Leaf
+              { _leafAtomicity = atomicity e,
+                _leafExpr = ApeLeafExpression e
+              }
+          )
 
 instance IsApe (FunctionParameters 'Scoped) ApeLeaf where
   toApe f

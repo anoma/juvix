@@ -1,3 +1,5 @@
+{-# LANGUAGE QuantifiedConstraints #-}
+
 module Juvix.Compiler.Concrete.Print.Base
   ( module Juvix.Compiler.Concrete.Print.Base,
     module Juvix.Data.CodeAnn,
@@ -7,7 +9,9 @@ where
 
 import Data.List.NonEmpty.Extra qualified as NonEmpty
 import Juvix.Compiler.Concrete.Data.InfoTable
+import Juvix.Compiler.Concrete.Data.NameSignature.Base
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
+import Juvix.Compiler.Concrete.Extra (fromAmbiguousIterator)
 import Juvix.Compiler.Concrete.Extra qualified as Concrete
 import Juvix.Compiler.Concrete.Keywords qualified as Kw
 import Juvix.Compiler.Concrete.Language
@@ -18,6 +22,7 @@ import Juvix.Data.CodeAnn (Ann, CodeAnn (..), ppStringLit)
 import Juvix.Data.CodeAnn qualified as C
 import Juvix.Data.Effect.ExactPrint
 import Juvix.Data.IteratorAttribs
+import Juvix.Data.Keyword.All qualified as Kw
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude hiding ((<+>), (<+?>), (<?+>), (?<>))
 import Juvix.Prelude.Pretty (annotate, pretty)
@@ -114,6 +119,11 @@ ppExpressionType = case sing :: SStage s of
   SParsed -> ppCode
   SScoped -> ppCode
 
+ppAmbiguousIteratorType :: forall s. SingI s => PrettyPrinting (AmbiguousIteratorType s)
+ppAmbiguousIteratorType = case sing :: SStage s of
+  SParsed -> ppCode
+  SScoped -> ppCode
+
 ppPatternAtomType :: forall s. SingI s => PrettyPrinting (PatternAtomType s)
 ppPatternAtomType = case sing :: SStage s of
   SParsed -> ppCodeAtom
@@ -128,6 +138,11 @@ ppPatternAtType :: forall s. SingI s => PrettyPrinting (PatternAtType s)
 ppPatternAtType = case sing :: SStage s of
   SParsed -> ppCode
   SScoped -> ppCode
+
+ppAnyStage :: forall k. (forall s. SingI s => PrettyPrint (k s)) => PrettyPrinting (AnyStage k)
+ppAnyStage (s :&: p) = case s of
+  SParsed -> ppCode p
+  SScoped -> ppCode p
 
 instance PrettyPrint S.AbsModulePath where
   ppCode S.AbsModulePath {..} = do
@@ -147,6 +162,27 @@ instance SingI s => PrettyPrint (ListPattern s) where
         r = ppCode _listpBracketR
         e = sepSemicolon (map ppPatternParensType _listpItems)
     l <> e <> r
+
+instance PrettyPrint Void where
+  ppCode = absurd
+
+instance PrettyPrint NameBlock where
+  ppCode :: forall r. Members '[ExactPrint, Reader Options] r => NameBlock -> Sem r ()
+  ppCode NameBlock {..} = do
+    let delims = case _nameImplicit of
+          Implicit -> braces
+          Explicit -> parens
+        ppElem :: (Symbol, Int) -> Sem r ()
+        ppElem (sym, idx) = ppCode sym <> ppCode Kw.kwExclamation <> noLoc (pretty idx)
+    delims (sepSemicolon (map ppElem (toList _nameBlock)))
+
+instance (PrettyPrint a, PrettyPrint b) => PrettyPrint (a, b) where
+  ppCode (a, b) = tuple [ppCode a, ppCode b]
+
+instance PrettyPrint NameSignature where
+  ppCode NameSignature {..}
+    | null _nameSignatureArgs = noLoc (pretty @Text "<empty name signature>")
+    | otherwise = hsep . map ppCode $ _nameSignatureArgs
 
 instance SingI s => PrettyPrint (PatternAtom s) where
   ppCode = \case
@@ -185,7 +221,7 @@ instance SingI s => PrettyPrint (Iterator s) where
         rngs' = parens . sepSemicolon <$> nonEmpty rngs
         b = ppExpressionType _iteratorBody
         b'
-          | _iteratorBraces = braces (oneLineOrNextNoIndent b)
+          | _iteratorBodyBraces = braces (oneLineOrNextNoIndent b)
           | otherwise = line <> b
     parensIf _iteratorParens $
       hang (n <+?> is' <+?> rngs' <> b')
@@ -208,6 +244,30 @@ instance SingI s => PrettyPrint (List s) where
         e = sepSemicolon (map ppExpressionType _listItems)
     l <> e <> r
 
+instance PrettyPrint AmbiguousIterator where
+  ppCode = ppCode . fromAmbiguousIterator
+
+instance SingI s => PrettyPrint (NamedArgument s) where
+  ppCode NamedArgument {..} = do
+    let s = ppCode _namedArgName
+        kwassign = ppCode _namedArgAssignKw
+        val = ppExpressionType _namedArgValue
+    s <+> kwassign <+> val
+
+instance SingI s => PrettyPrint (ArgumentBlock s) where
+  ppCode ArgumentBlock {..} = do
+    let args' = ppCode <$> _argBlockArgs
+        (l, r) = case d of
+          Nothing -> (enqueue C.kwParenL, noLoc C.kwParenR)
+          Just (l', r') -> (ppCode l', ppCode r')
+    l <> sepSemicolon args' <> r
+    where
+      Irrelevant d = _argBlockDelims
+
+instance SingI s => PrettyPrint (NamedApplication s) where
+  -- ppCode :: Members '[ExactPrint, Reader Options] r => NamedApplication s -> Sem r ()
+  ppCode = apeHelper
+
 instance SingI s => PrettyPrint (ExpressionAtom s) where
   ppCode = \case
     AtomIdentifier n -> ppIdentifierType n
@@ -223,6 +283,8 @@ instance SingI s => PrettyPrint (ExpressionAtom s) where
     AtomBraces e -> braces (ppExpressionType (e ^. withLocParam))
     AtomHole w -> ppHoleType w
     AtomIterator i -> ppCode i
+    AtomAmbiguousIterator i -> ppAmbiguousIteratorType i
+    AtomNamedApplication i -> ppCode i
 
 instance PrettyPrint PatternScopedIden where
   ppCode = \case
@@ -387,6 +449,8 @@ instance PrettyPrint ApeLeaf where
     ApeLeafFunctionKw r -> ppCode r
     ApeLeafPattern r -> ppCode r
     ApeLeafPatternArg r -> ppCode r
+    ApeLeafAtom r -> ppAnyStage r
+    ApeLeafArgumentBlock r -> ppAnyStage r
 
 annDef :: forall s r. (SingI s, Members '[ExactPrint] r) => SymbolType s -> Sem r () -> Sem r ()
 annDef nm = case sing :: SStage s of
@@ -534,6 +598,7 @@ instance PrettyPrint Expression where
     ExpressionFunction f -> ppCode f
     ExpressionCase c -> ppCode c
     ExpressionIterator i -> ppCode i
+    ExpressionNamedApplication i -> ppCode i
 
 instance PrettyPrint (WithSource Pragmas) where
   ppCode pragma =

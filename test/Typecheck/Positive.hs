@@ -240,7 +240,11 @@ tests =
     posTest
       "issue2248: Import type alias"
       $(mkRelDir "issue2248")
-      $(mkRelFile "Main.juvix")
+      $(mkRelFile "Main.juvix"),
+    posTest
+      "Named arguments"
+      $(mkRelDir ".")
+      $(mkRelFile "NamedArguments.juvix")
   ]
     <> [ compilationTest t | t <- Compilation.tests
        ]

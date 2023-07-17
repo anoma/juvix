@@ -223,7 +223,7 @@ scoperErrorTests =
       $(mkRelDir ".")
       $(mkRelFile "DuplicateInductiveParameterName.juvix")
       $ \case
-        ErrMultipleDeclarations {} -> Nothing
+        ErrNameSignature (ErrDuplicateName DuplicateName {}) -> Nothing
         _ -> wrongError,
     NegTest
       "A function lacks a type signature"

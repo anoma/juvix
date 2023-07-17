@@ -17,6 +17,7 @@
         - LambdaCase
         - NoImplicitPrelude
         - OverloadedStrings
+        - QuantifiedConstraints
         - QuasiQuotes
         - RecordWildCards
         - StandaloneKindSignatures

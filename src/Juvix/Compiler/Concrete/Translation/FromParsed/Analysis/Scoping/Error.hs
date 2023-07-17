@@ -1,13 +1,14 @@
 module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
   ( module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error.Types,
     module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error,
-    -- ,
-    -- module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error.Pretty,
+    module Juvix.Compiler.Concrete.Data.NameSignature.Error,
   )
 where
 
+import Juvix.Compiler.Concrete.Data.NameSignature.Error
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error.Pretty
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error.Types
+import Juvix.Compiler.Internal.Translation.FromConcrete.NamedArguments.Error
 import Juvix.Prelude
 
 data ScoperError
@@ -38,6 +39,9 @@ data ScoperError
   | ErrIteratorInitializer IteratorInitializer
   | ErrIteratorRange IteratorRange
   | ErrIteratorUndefined IteratorUndefined
+  | ErrNameSignature NameSignatureError
+  | ErrNoNameSignature NoNameSignature
+  | ErrNamedArgumentsError NamedArgumentsError
   deriving stock (Show)
 
 instance ToGenericError ScoperError where
@@ -69,3 +73,6 @@ instance ToGenericError ScoperError where
     ErrIteratorInitializer e -> genericError e
     ErrIteratorRange e -> genericError e
     ErrIteratorUndefined e -> genericError e
+    ErrNameSignature e -> genericError e
+    ErrNoNameSignature e -> genericError e
+    ErrNamedArgumentsError e -> genericError e

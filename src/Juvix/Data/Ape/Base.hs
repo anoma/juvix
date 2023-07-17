@@ -79,6 +79,9 @@ makeLenses ''Infix
 makeLenses ''Postfix
 makeLenses ''Link
 
+mkApps :: Foldable t => Ape a -> t (Ape a) -> Ape a
+mkApps = foldl' (\x -> ApeApp . App x)
+
 toCape :: forall a. Ape a -> Cape a
 toCape = \case
   ApeLeaf l -> CapeLeaf l

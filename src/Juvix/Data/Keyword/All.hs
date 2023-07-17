@@ -22,6 +22,9 @@ kwAny = asciiKw Str.any
 kwAssign :: Keyword
 kwAssign = asciiKw Str.assignAscii
 
+kwExclamation :: Keyword
+kwExclamation = asciiKw Str.exclamation
+
 kwAt :: Keyword
 kwAt = asciiKw Str.at_
 

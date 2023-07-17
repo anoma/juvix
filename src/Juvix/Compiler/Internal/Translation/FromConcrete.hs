@@ -17,6 +17,7 @@ import Juvix.Compiler.Internal.Extra qualified as Internal
 import Juvix.Compiler.Internal.Extra.DependencyBuilder
 import Juvix.Compiler.Internal.Language (varFromWildcard)
 import Juvix.Compiler.Internal.Translation.FromConcrete.Data.Context
+import Juvix.Compiler.Internal.Translation.FromConcrete.NamedArguments
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Data.NameKind
@@ -731,7 +732,11 @@ goExpression = \case
   ExpressionFunction func -> Internal.ExpressionFunction <$> goFunction func
   ExpressionHole h -> return (Internal.ExpressionHole h)
   ExpressionIterator i -> goIterator i
+  ExpressionNamedApplication i -> goNamedApplication i
   where
+    goNamedApplication :: Concrete.NamedApplication 'Scoped -> Sem r Internal.Expression
+    goNamedApplication = runNamedArguments >=> goExpression
+
     goList :: Concrete.List 'Scoped -> Sem r Internal.Expression
     goList l = do
       nil_ <- getBuiltinName loc BuiltinListNil
