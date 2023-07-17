@@ -21,6 +21,8 @@ data NameSignatureBuilder m a where
 data BuilderState = BuilderState
   { _stateCurrentImplicit :: Maybe IsImplicit,
     _stateNextIx :: Int,
+    -- | maps to itself
+    _stateSymbols :: HashMap Symbol Symbol,
     _stateReverseClosedBlocks :: [NameBlock],
     _stateCurrentBlock :: HashMap Symbol (Symbol, Int)
   }
@@ -55,7 +57,7 @@ mkNameSignature ::
   d ->
   Sem r NameSignature
 mkNameSignature d = do
-  sig <- fmap (fromBuilderState . fromLeft impossible)
+  fmap (fromBuilderState . fromLeft impossible)
     . mapError ErrNameSignature
     . runError @BuilderState
     . evalState iniBuilderState
@@ -63,15 +65,13 @@ mkNameSignature d = do
     $ do
       addArgs d
       endBuild
-  -- TODO we need to ensure that no repeated names appear in the whole signature.
-  -- checkDuplicates
-  return sig
 
 iniBuilderState :: BuilderState
 iniBuilderState =
   BuilderState
     { _stateCurrentImplicit = Nothing,
       _stateNextIx = 0,
+      _stateSymbols = mempty,
       _stateReverseClosedBlocks = [],
       _stateCurrentBlock = mempty
     }
@@ -150,7 +150,8 @@ addSymbol' impl sym = do
     addToCurrentBlock = do
       idx <- (sym,) <$> gets (^. stateNextIx)
       modify' (over stateNextIx succ)
-      whenJustM (gets (^. stateCurrentBlock . at sym)) (errDuplicateName . fst)
+      whenJustM (gets (^. stateSymbols . at sym)) errDuplicateName
+      modify' (set (stateSymbols . at sym) (Just sym))
       modify' (set (stateCurrentBlock . at sym) (Just idx))
 
     startNewBlock :: Sem (Re r) ()

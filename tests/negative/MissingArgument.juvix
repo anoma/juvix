@@ -1,0 +1,7 @@
+module MissingArgument;
+
+type T := t : T;
+
+f (a : T) (b : T) : T := t;
+
+x : T := f (b := t);

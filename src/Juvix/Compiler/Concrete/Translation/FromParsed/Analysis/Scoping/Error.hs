@@ -2,6 +2,7 @@ module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
   ( module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error.Types,
     module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error,
     module Juvix.Compiler.Concrete.Data.NameSignature.Error,
+    module Juvix.Compiler.Internal.Translation.FromConcrete.NamedArguments.Error,
   )
 where
 

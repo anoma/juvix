@@ -8,7 +8,6 @@ import Data.IntMap.Strict qualified as IntMap
 import Juvix.Compiler.Concrete.Data.NameSignature.Base
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
-import Juvix.Compiler.Internal.Translation.FromConcrete.NamedArguments.Error
 import Juvix.Prelude
 
 data BuilderState = BuilderState

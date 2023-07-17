@@ -27,9 +27,12 @@ instance ToGenericError DuplicateArgument where
     opts <- fromGenericOptions <$> ask
     let _genericErrorLoc = getLocSpan _duplicateArguments
         _genericErrorMessage :: AnsiText
+        argumentStr = plural "argument" "arguments" (length _duplicateArguments)
         _genericErrorMessage =
           prettyError $
-            "Duplicate arguments in named application:"
+            "Duplicate"
+              <+> argumentStr
+              <+> "in named application:"
               <+> hsep (ppCode opts <$> _duplicateArguments)
         _genericErrorIntervals = getLoc <$> toList _duplicateArguments
     return GenericError {..}
