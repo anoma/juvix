@@ -57,7 +57,7 @@ helper loc = do
       emitImplicit False sig mempty
       moreNames <- not . null <$> gets (^. stateRemainingNames)
       if
-          | moreNames -> modify' (over stateRemainingArgs (ArgumentBlock impossible Explicit (nonEmpty' pendingArgs) :))
+          | moreNames -> modify' (over stateRemainingArgs (ArgumentBlock (Irrelevant Nothing) Explicit (nonEmpty' pendingArgs) :))
           | otherwise -> throw . ErrUnexpectedArguments $ UnexpectedArguments pendingArgs'
     helper loc
   where
@@ -124,10 +124,9 @@ helper loc = do
       where
         go :: Int -> [(Int, Expression)] -> Sem r ()
         go n = \case
-          [] ->
-            if
-                | lastBlock -> return ()
-                | otherwise -> whenJust maxIx (fillUntil . succ)
+          []
+            | lastBlock -> return ()
+            | otherwise -> whenJust maxIx (fillUntil . succ)
           (n', e) : rest -> do
             fillUntil n'
             output (ExpressionBraces (WithLoc (getLoc e) e))
