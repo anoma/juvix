@@ -14,16 +14,16 @@ registerBoolDef d = do
     [c1, c2] -> registerTrue c1 >> registerFalse c2
     _ -> error "Bool should have exactly two constructors"
 
-registerTrue :: (Member Builtins r) => InductiveConstructorDef -> Sem r ()
-registerTrue d@InductiveConstructorDef {..} = do
+registerTrue :: (Member Builtins r) => ConstructorDef -> Sem r ()
+registerTrue d@ConstructorDef {..} = do
   let ctorTrue = _inductiveConstructorName
       ctorTy = _inductiveConstructorType
   boolTy <- getBuiltinName (getLoc d) BuiltinBool
   unless (ctorTy === boolTy) (error $ "true has the wrong type " <> ppTrace ctorTy <> " | " <> ppTrace boolTy)
   registerBuiltin BuiltinBoolTrue ctorTrue
 
-registerFalse :: (Member Builtins r) => InductiveConstructorDef -> Sem r ()
-registerFalse d@InductiveConstructorDef {..} = do
+registerFalse :: (Member Builtins r) => ConstructorDef -> Sem r ()
+registerFalse d@ConstructorDef {..} = do
   let ctorFalse = _inductiveConstructorName
       ctorTy = _inductiveConstructorType
   boolTy <- getBuiltinName (getLoc d) BuiltinBool

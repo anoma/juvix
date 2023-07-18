@@ -655,14 +655,14 @@ goInductive ty@InductiveDef {..} = do
 
 goConstructorDef ::
   Members [Builtins, NameIdGen, Error ScoperError, Reader Pragmas] r =>
-  InductiveConstructorDef 'Scoped ->
-  Sem r Internal.InductiveConstructorDef
-goConstructorDef InductiveConstructorDef {..} = do
+  ConstructorDef 'Scoped ->
+  Sem r Internal.ConstructorDef
+goConstructorDef ConstructorDef {..} = do
   ty' <- goExpression _constructorType
   examples' <- goExamples _constructorDoc
   pragmas' <- goPragmas _constructorPragmas
   return
-    Internal.InductiveConstructorDef
+    Internal.ConstructorDef
       { _inductiveConstructorType = ty',
         _inductiveConstructorExamples = examples',
         _inductiveConstructorName = goSymbol _constructorName,

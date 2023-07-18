@@ -277,13 +277,13 @@ data InductiveDef = InductiveDef
     _inductiveExamples :: [Example],
     _inductiveType :: Expression,
     _inductiveParameters :: [InductiveParameter],
-    _inductiveConstructors :: [InductiveConstructorDef],
+    _inductiveConstructors :: [ConstructorDef],
     _inductivePositive :: Bool,
     _inductivePragmas :: Pragmas
   }
   deriving stock (Data)
 
-data InductiveConstructorDef = InductiveConstructorDef
+data ConstructorDef = ConstructorDef
   { _inductiveConstructorName :: ConstrName,
     _inductiveConstructorExamples :: [Example],
     _inductiveConstructorType :: Expression,
@@ -336,7 +336,7 @@ makeLenses ''Lambda
 makeLenses ''LambdaClause
 makeLenses ''FunctionParameter
 makeLenses ''InductiveParameter
-makeLenses ''InductiveConstructorDef
+makeLenses ''ConstructorDef
 makeLenses ''ConstructorApp
 
 instance Eq ModuleIndex where
@@ -405,8 +405,8 @@ instance HasAtomicity Pattern where
 instance HasLoc AxiomDef where
   getLoc a = getLoc (a ^. axiomName) <> getLoc (a ^. axiomType)
 
-instance HasLoc InductiveConstructorDef where
-  getLoc InductiveConstructorDef {..} =
+instance HasLoc ConstructorDef where
+  getLoc ConstructorDef {..} =
     getLoc _inductiveConstructorName <> getLoc _inductiveConstructorType
 
 instance HasLoc InductiveParameter where

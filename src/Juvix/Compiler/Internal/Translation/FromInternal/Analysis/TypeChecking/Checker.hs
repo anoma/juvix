@@ -20,7 +20,7 @@ import Juvix.Prelude hiding (fromEither)
 
 type MCache = Cache ModuleIndex Module
 
-registerConstructor :: Members '[HighlightBuilder, State TypesTable, Reader InfoTable] r => InductiveConstructorDef -> Sem r ()
+registerConstructor :: Members '[HighlightBuilder, State TypesTable, Reader InfoTable] r => ConstructorDef -> Sem r ()
 registerConstructor ctr = do
   ty <- constructorType (ctr ^. inductiveConstructorName)
   registerNameIdType (ctr ^. inductiveConstructorName . nameId) ty
@@ -120,8 +120,8 @@ checkInductiveDef InductiveDef {..} = runInferenceDef $ do
         { _localTypes = HashMap.fromList [(p ^. inductiveParamName, smallUniverseE (getLoc p)) | p <- _inductiveParameters],
           _localTyMap = mempty
         }
-    goConstructor :: InductiveConstructorDef -> Sem (Inference ': r) InductiveConstructorDef
-    goConstructor InductiveConstructorDef {..} = do
+    goConstructor :: ConstructorDef -> Sem (Inference ': r) ConstructorDef
+    goConstructor ConstructorDef {..} = do
       expectedRetTy <- constructorReturnType _inductiveConstructorName
       cty' <-
         runReader paramLocals $
@@ -129,7 +129,7 @@ checkInductiveDef InductiveDef {..} = runInferenceDef $ do
       examples' <- mapM checkExample _inductiveConstructorExamples
       whenJustM (matchTypes expectedRetTy ret) (const (errRet expectedRetTy))
       let c' =
-            InductiveConstructorDef
+            ConstructorDef
               { _inductiveConstructorType = cty',
                 _inductiveConstructorExamples = examples',
                 _inductiveConstructorName,
@@ -255,14 +255,14 @@ checkConstructorDef ::
       r
   ) =>
   InductiveDef ->
-  InductiveConstructorDef ->
+  ConstructorDef ->
   Sem r ()
 checkConstructorDef ty ctor = checkConstructorReturnType ty ctor
 
 checkConstructorReturnType ::
   (Members '[Reader InfoTable, Error TypeCheckerError] r) =>
   InductiveDef ->
-  InductiveConstructorDef ->
+  ConstructorDef ->
   Sem r ()
 checkConstructorReturnType indType ctor = do
   let ctorName = ctor ^. inductiveConstructorName

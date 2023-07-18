@@ -287,7 +287,7 @@ reserveInductiveSymbol d = reserveSymbolSignatureOf S.KNameInductive d (d ^. ind
 reserveConstructorSymbol ::
   Members '[Error ScoperError, NameIdGen, State ScoperFixities, State ScoperIterators, State Scope, State ScoperState, Reader BindingStrategy] r =>
   InductiveDef 'Parsed ->
-  InductiveConstructorDef 'Parsed ->
+  ConstructorDef 'Parsed ->
   Sem r S.Symbol
 reserveConstructorSymbol d c = reserveSymbolSignatureOf S.KNameConstructor (d, c) (c ^. constructorName)
 
@@ -708,7 +708,7 @@ checkInductiveDef InductiveDef {..} = do
         _inductiveKw
       }
   where
-    bindConstructor :: InductiveConstructorDef 'Scoped -> Sem r ()
+    bindConstructor :: ConstructorDef 'Scoped -> Sem r ()
     bindConstructor d =
       topBindings $
         bindReservedSymbol
@@ -718,12 +718,12 @@ checkInductiveDef InductiveDef {..} = do
               )
           )
     -- note that the constructor name is not bound here
-    checkConstructorDef :: S.Symbol -> S.Symbol -> InductiveConstructorDef 'Parsed -> Sem r (InductiveConstructorDef 'Scoped)
-    checkConstructorDef tyName constructorName' InductiveConstructorDef {..} = do
+    checkConstructorDef :: S.Symbol -> S.Symbol -> ConstructorDef 'Parsed -> Sem r (ConstructorDef 'Scoped)
+    checkConstructorDef tyName constructorName' ConstructorDef {..} = do
       constructorType' <- checkParseExpressionAtoms _constructorType
       doc' <- mapM checkJudoc _constructorDoc
       registerConstructor tyName
-        @$> InductiveConstructorDef
+        @$> ConstructorDef
           { _constructorName = constructorName',
             _constructorType = constructorType',
             _constructorDoc = doc',

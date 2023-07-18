@@ -15,16 +15,16 @@ registerNatDef d = do
     [c1, c2] -> registerZero c1 >> registerSuc c2
     _ -> error "Nat numbers should have exactly two constructors"
 
-registerZero :: (Member Builtins r) => InductiveConstructorDef -> Sem r ()
-registerZero d@InductiveConstructorDef {..} = do
+registerZero :: (Member Builtins r) => ConstructorDef -> Sem r ()
+registerZero d@ConstructorDef {..} = do
   let zero = _inductiveConstructorName
       ty = _inductiveConstructorType
   nat <- getBuiltinName (getLoc d) BuiltinNat
   unless (ty === nat) (error $ "zero has the wrong type " <> ppTrace ty <> " | " <> ppTrace nat)
   registerBuiltin BuiltinNatZero zero
 
-registerSuc :: (Member Builtins r) => InductiveConstructorDef -> Sem r ()
-registerSuc d@InductiveConstructorDef {..} = do
+registerSuc :: (Member Builtins r) => ConstructorDef -> Sem r ()
+registerSuc d@ConstructorDef {..} = do
   let suc = _inductiveConstructorName
       ty = _inductiveConstructorType
   nat <- getBuiltinName (getLoc d) BuiltinNat

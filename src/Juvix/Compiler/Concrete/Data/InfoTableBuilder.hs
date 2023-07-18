@@ -10,7 +10,7 @@ import Juvix.Prelude
 
 data InfoTableBuilder m a where
   RegisterAxiom :: AxiomDef 'Scoped -> InfoTableBuilder m ()
-  RegisterConstructor :: S.Symbol -> InductiveConstructorDef 'Scoped -> InfoTableBuilder m ()
+  RegisterConstructor :: S.Symbol -> ConstructorDef 'Scoped -> InfoTableBuilder m ()
   RegisterInductive :: InductiveDef 'Scoped -> InfoTableBuilder m ()
   RegisterTypeSignature :: TypeSignature 'Scoped -> InfoTableBuilder m ()
   RegisterFunctionDef :: FunctionDef 'Scoped -> InfoTableBuilder m ()
