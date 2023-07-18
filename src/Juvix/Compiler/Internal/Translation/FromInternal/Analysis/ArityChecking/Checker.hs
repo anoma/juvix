@@ -84,13 +84,13 @@ checkInductive d = do
         checkParam :: InductiveParameter -> Sem (State LocalVars ': r) InductiveParameter
         checkParam = return
 
-checkConstructor :: (Members '[Reader LocalVars, Reader InfoTable, NameIdGen, Error ArityCheckerError] r) => InductiveConstructorDef -> Sem r InductiveConstructorDef
+checkConstructor :: (Members '[Reader LocalVars, Reader InfoTable, NameIdGen, Error ArityCheckerError] r) => ConstructorDef -> Sem r ConstructorDef
 checkConstructor c = do
   let _inductiveConstructorName = c ^. inductiveConstructorName
       _inductiveConstructorPragmas = c ^. inductiveConstructorPragmas
   _inductiveConstructorType <- checkType (c ^. inductiveConstructorType)
   _inductiveConstructorExamples <- mapM checkExample (c ^. inductiveConstructorExamples)
-  return InductiveConstructorDef {..}
+  return ConstructorDef {..}
 
 -- | check the arity of some ty : Type
 checkType :: (Members '[Reader LocalVars, Reader InfoTable, NameIdGen, Error ArityCheckerError] r) => Expression -> Sem r Expression

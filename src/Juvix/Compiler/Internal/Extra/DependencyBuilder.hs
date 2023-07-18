@@ -166,7 +166,7 @@ goFunctionDefHelper f = do
 
 -- constructors of an inductive type depend on the inductive type, not the other
 -- way round; an inductive type depends on the types of its constructors
-goConstructorDef :: (Members '[State DependencyGraph, State StartNodes, Reader ExportsTable] r) => Name -> InductiveConstructorDef -> Sem r ()
+goConstructorDef :: (Members '[State DependencyGraph, State StartNodes, Reader ExportsTable] r) => Name -> ConstructorDef -> Sem r ()
 goConstructorDef indName c = do
   addEdge (c ^. inductiveConstructorName) indName
   goExpression (Just indName) (c ^. inductiveConstructorType)

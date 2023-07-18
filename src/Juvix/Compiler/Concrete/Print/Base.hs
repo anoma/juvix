@@ -897,9 +897,9 @@ instance SingI s => PrettyPrint (NonEmpty (InductiveParameters s)) where
 instance PrettyPrint a => PrettyPrint (Irrelevant a) where
   ppCode (Irrelevant a) = ppCode a
 
-instance SingI s => PrettyPrint (InductiveConstructorDef s) where
-  ppCode :: forall r. Members '[ExactPrint, Reader Options] r => InductiveConstructorDef s -> Sem r ()
-  ppCode InductiveConstructorDef {..} = do
+instance SingI s => PrettyPrint (ConstructorDef s) where
+  ppCode :: forall r. Members '[ExactPrint, Reader Options] r => ConstructorDef s -> Sem r ()
+  ppCode ConstructorDef {..} = do
     let constructorName' = annDef _constructorName (ppSymbolType _constructorName)
         constructorType' = ppExpressionType _constructorType
         doc' = ppCode <$> _constructorDoc
@@ -944,7 +944,7 @@ instance SingI s => PrettyPrint (InductiveDef s) where
         <> line
         <> indent constrs'
     where
-      ppConstructorBlock :: NonEmpty (InductiveConstructorDef s) -> Sem r ()
+      ppConstructorBlock :: NonEmpty (ConstructorDef s) -> Sem r ()
       ppConstructorBlock cs = vsep (ppCode <$> cs)
 
 instance SingI s => PrettyPrint (Statement s) where

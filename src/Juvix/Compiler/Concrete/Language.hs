@@ -452,7 +452,7 @@ type InductiveConstructorName s = SymbolType s
 
 type InductiveName s = SymbolType s
 
-data InductiveConstructorDef (s :: Stage) = InductiveConstructorDef
+data ConstructorDef (s :: Stage) = ConstructorDef
   { _constructorPipe :: Irrelevant (Maybe KeywordRef),
     _constructorColonKw :: Irrelevant KeywordRef,
     _constructorName :: InductiveConstructorName s,
@@ -461,11 +461,11 @@ data InductiveConstructorDef (s :: Stage) = InductiveConstructorDef
     _constructorType :: ExpressionType s
   }
 
-deriving stock instance (Show (ExpressionType s), Show (SymbolType s)) => Show (InductiveConstructorDef s)
+deriving stock instance (Show (ExpressionType s), Show (SymbolType s)) => Show (ConstructorDef s)
 
-deriving stock instance (Eq (ExpressionType s), Eq (SymbolType s)) => Eq (InductiveConstructorDef s)
+deriving stock instance (Eq (ExpressionType s), Eq (SymbolType s)) => Eq (ConstructorDef s)
 
-deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (InductiveConstructorDef s)
+deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (ConstructorDef s)
 
 data InductiveParameters (s :: Stage) = InductiveParameters
   { _inductiveParametersNames :: NonEmpty (SymbolType s),
@@ -487,7 +487,7 @@ data InductiveDef (s :: Stage) = InductiveDef
     _inductiveName :: InductiveName s,
     _inductiveParameters :: [InductiveParameters s],
     _inductiveType :: Maybe (ExpressionType s),
-    _inductiveConstructors :: NonEmpty (InductiveConstructorDef s),
+    _inductiveConstructors :: NonEmpty (ConstructorDef s),
     _inductivePositive :: Maybe KeywordRef
   }
 
@@ -1590,7 +1590,7 @@ makeLenses ''FunctionParameters
 makeLenses ''Import
 makeLenses ''OperatorSyntaxDef
 makeLenses ''IteratorSyntaxDef
-makeLenses ''InductiveConstructorDef
+makeLenses ''ConstructorDef
 makeLenses ''Module
 makeLenses ''TypeSignature
 makeLenses ''SigArg

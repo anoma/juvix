@@ -213,12 +213,12 @@ instance HasExpressions InductiveDef where
           _inductivePragmas
         }
 
-instance HasExpressions InductiveConstructorDef where
-  leafExpressions f InductiveConstructorDef {..} = do
+instance HasExpressions ConstructorDef where
+  leafExpressions f ConstructorDef {..} = do
     ty' <- leafExpressions f _inductiveConstructorType
     examples' <- traverse (leafExpressions f) _inductiveConstructorExamples
     pure
-      InductiveConstructorDef
+      ConstructorDef
         { _inductiveConstructorExamples = examples',
           _inductiveConstructorType = ty',
           _inductiveConstructorName,

@@ -13,8 +13,8 @@ registerIntDef d = do
     [c1, c2] -> registerIntCtor BuiltinIntOfNat c1 >> registerIntCtor BuiltinIntNegSuc c2
     _ -> error "Int should have exactly two constructors"
 
-registerIntCtor :: (Member Builtins r) => BuiltinConstructor -> InductiveConstructorDef -> Sem r ()
-registerIntCtor ctor d@InductiveConstructorDef {..} = do
+registerIntCtor :: (Member Builtins r) => BuiltinConstructor -> ConstructorDef -> Sem r ()
+registerIntCtor ctor d@ConstructorDef {..} = do
   let ctorName = _inductiveConstructorName
       ty = _inductiveConstructorType
       loc = getLoc d

@@ -178,7 +178,7 @@ instance PrettyCode Hole where
     showNameId <- asks (^. optShowNameIds)
     return (addNameIdTag showNameId (h ^. holeId) kwHole)
 
-instance PrettyCode InductiveConstructorDef where
+instance PrettyCode ConstructorDef where
   ppCode c = do
     constructorName' <- ppCode (c ^. inductiveConstructorName)
     ty' <- ppCode (c ^. inductiveConstructorType)

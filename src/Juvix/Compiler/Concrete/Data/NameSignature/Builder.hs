@@ -42,7 +42,7 @@ instance HasNameSignature (FunctionDef 'Parsed) where
     mapM_ addSigArg (a ^. signArgs)
     addAtoms (a ^. signRetType)
 
-instance HasNameSignature (InductiveDef 'Parsed, InductiveConstructorDef 'Parsed) where
+instance HasNameSignature (InductiveDef 'Parsed, ConstructorDef 'Parsed) where
   addArgs (i, c) = do
     mapM_ addConstructorParams (i ^. inductiveParameters)
     addAtoms (c ^. constructorType)

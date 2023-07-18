@@ -18,8 +18,8 @@ registerListDef d = do
       [v] -> v ^. inductiveParamName
       _ -> error "List should have exactly one type parameter"
 
-registerNil :: Member Builtins r => VarName -> InductiveConstructorDef -> Sem r ()
-registerNil a d@InductiveConstructorDef {..} = do
+registerNil :: Member Builtins r => VarName -> ConstructorDef -> Sem r ()
+registerNil a d@ConstructorDef {..} = do
   let nil = _inductiveConstructorName
       ty = _inductiveConstructorType
   list_ <- getBuiltinName (getLoc d) BuiltinList
@@ -27,8 +27,8 @@ registerNil a d@InductiveConstructorDef {..} = do
   unless (ty === nilty) (error $ "nil has the wrong type " <> ppTrace ty <> " | " <> ppTrace nilty)
   registerBuiltin BuiltinListNil nil
 
-registerCons :: Member Builtins r => VarName -> InductiveConstructorDef -> Sem r ()
-registerCons a d@InductiveConstructorDef {..} = do
+registerCons :: Member Builtins r => VarName -> ConstructorDef -> Sem r ()
+registerCons a d@ConstructorDef {..} = do
   let cons_ = _inductiveConstructorName
       ty = _inductiveConstructorType
   list_ <- getBuiltinName (getLoc d) BuiltinList

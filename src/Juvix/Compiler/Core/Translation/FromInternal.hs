@@ -170,7 +170,7 @@ goConstructor ::
   forall r.
   (Members '[InfoTableBuilder, Reader Internal.InfoTable, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable] r) =>
   Symbol ->
-  Internal.InductiveConstructorDef ->
+  Internal.ConstructorDef ->
   Sem r ConstructorInfo
 goConstructor sym ctor = do
   mblt <- mBuiltin

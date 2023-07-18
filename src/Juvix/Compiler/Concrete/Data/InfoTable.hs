@@ -16,7 +16,7 @@ data FunctionInfo
   deriving stock (Eq, Show)
 
 data ConstructorInfo = ConstructorInfo
-  { _constructorInfoDef :: InductiveConstructorDef 'Scoped,
+  { _constructorInfoDef :: ConstructorDef 'Scoped,
     _constructorInfoTypeName :: S.Symbol
   }
   deriving stock (Eq, Show)

@@ -1028,14 +1028,14 @@ inductiveParams = parens $ do
   _inductiveParametersType <- parseExpressionAtoms
   return InductiveParameters {..}
 
-constructorDef :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => Irrelevant (Maybe KeywordRef) -> ParsecS r (InductiveConstructorDef 'Parsed)
+constructorDef :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => Irrelevant (Maybe KeywordRef) -> ParsecS r (ConstructorDef 'Parsed)
 constructorDef _constructorPipe = do
   _constructorDoc <- optional stashJudoc >> getJudoc
   _constructorPragmas <- optional stashPragmas >> getPragmas
   _constructorName <- symbol P.<?> "<constructor name>"
   _constructorColonKw <- Irrelevant <$> kw kwColon
   _constructorType <- parseExpressionAtoms P.<?> "<constructor type>"
-  return InductiveConstructorDef {..}
+  return ConstructorDef {..}
 
 wildcard :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r Wildcard
 wildcard = Wildcard . snd <$> interval (kw kwWildcard)
