@@ -357,11 +357,10 @@ type InductiveName s = SymbolType s
 
 data ConstructorDef (s :: Stage) = ConstructorDef
   { _constructorPipe :: Irrelevant (Maybe KeywordRef),
-    _constructorColonKw :: Irrelevant KeywordRef,
     _constructorName :: InductiveConstructorName s,
     _constructorDoc :: Maybe (Judoc s),
     _constructorPragmas :: Maybe ParsedPragmas,
-    _constructorType :: ExpressionType s
+    _constructorRhs :: ConstructorRhs s
   }
 
 deriving stock instance Show (ConstructorDef 'Parsed)
@@ -375,6 +374,32 @@ deriving stock instance Eq (ConstructorDef 'Scoped)
 deriving stock instance Ord (ConstructorDef 'Parsed)
 
 deriving stock instance Ord (ConstructorDef 'Scoped)
+
+data RhsGadt (s :: Stage) = RhsGadt
+  { _rhsGadtColon :: Irrelevant KeywordRef,
+    _rhsGadtType :: ExpressionType s
+  }
+
+instance SingI s => Show (RhsGadt s) where
+  show = deriveStageShow
+
+instance SingI s => Eq (RhsGadt s) where
+  (==) = deriveStageEq
+
+instance SingI s => Ord (RhsGadt s) where
+  compare = deriveStageOrd
+
+newtype ConstructorRhs (s :: Stage)
+  = ConstructorRhsGadt (RhsGadt s)
+
+instance SingI s => Show (ConstructorRhs s) where
+  show = deriveStageShow
+
+instance SingI s => Eq (ConstructorRhs s) where
+  (==) = deriveStageEq
+
+instance SingI s => Ord (ConstructorRhs s) where
+  compare = deriveStageOrd
 
 data InductiveParameters (s :: Stage) = InductiveParameters
   { _inductiveParametersNames :: NonEmpty (SymbolType s),
@@ -1334,6 +1359,7 @@ newtype ModuleIndex = ModuleIndex
   }
 
 makeLenses ''PatternArg
+makeLenses ''RhsGadt
 makeLenses ''List
 makeLenses ''ListPattern
 makeLenses ''UsingItem

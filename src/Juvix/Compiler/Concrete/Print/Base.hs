@@ -897,14 +897,22 @@ instance SingI s => PrettyPrint (NonEmpty (InductiveParameters s)) where
 instance PrettyPrint a => PrettyPrint (Irrelevant a) where
   ppCode (Irrelevant a) = ppCode a
 
+instance SingI s => PrettyPrint (RhsGadt s) where
+  ppCode RhsGadt {..} =
+    ppCode _rhsGadtColon <+> ppExpressionType _rhsGadtType
+
+instance SingI s => PrettyPrint (ConstructorRhs s) where
+  ppCode = \case
+    ConstructorRhsGadt r -> ppCode r
+
 instance SingI s => PrettyPrint (ConstructorDef s) where
   ppCode :: forall r. Members '[ExactPrint, Reader Options] r => ConstructorDef s -> Sem r ()
   ppCode ConstructorDef {..} = do
     let constructorName' = annDef _constructorName (ppSymbolType _constructorName)
-        constructorType' = ppExpressionType _constructorType
+        constructorRhs' = ppCode _constructorRhs
         doc' = ppCode <$> _constructorDoc
         pragmas' = ppCode <$> _constructorPragmas
-    pipeHelper <+> nest (doc' ?<> pragmas' ?<> constructorName' <+> ppCode _constructorColonKw <+> constructorType')
+    pipeHelper <+> nest (doc' ?<> pragmas' ?<> constructorName' <+> constructorRhs')
     where
       -- we use this helper so that comments appear before the first optional pipe if the pipe was omitted
       pipeHelper :: Sem r ()

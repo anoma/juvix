@@ -654,11 +654,12 @@ goInductive ty@InductiveDef {..} = do
   return indDef
 
 goConstructorDef ::
+  forall r.
   Members [Builtins, NameIdGen, Error ScoperError, Reader Pragmas] r =>
   ConstructorDef 'Scoped ->
   Sem r Internal.ConstructorDef
 goConstructorDef ConstructorDef {..} = do
-  ty' <- goExpression _constructorType
+  ty' <- goRhs _constructorRhs
   examples' <- goExamples _constructorDoc
   pragmas' <- goPragmas _constructorPragmas
   return
@@ -668,6 +669,13 @@ goConstructorDef ConstructorDef {..} = do
         _inductiveConstructorName = goSymbol _constructorName,
         _inductiveConstructorPragmas = pragmas'
       }
+  where
+    goGadt :: Concrete.RhsGadt 'Scoped -> Sem r Internal.Expression
+    goGadt = goExpression . (^. Concrete.rhsGadtType)
+
+    goRhs :: Concrete.ConstructorRhs 'Scoped -> Sem r Internal.Expression
+    goRhs = \case
+      ConstructorRhsGadt r -> goGadt r
 
 goLiteral :: LiteralLoc -> Internal.LiteralLoc
 goLiteral = fmap go

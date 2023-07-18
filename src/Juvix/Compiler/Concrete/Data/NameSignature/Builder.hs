@@ -43,9 +43,18 @@ instance HasNameSignature (FunctionDef 'Parsed) where
     addAtoms (a ^. signRetType)
 
 instance HasNameSignature (InductiveDef 'Parsed, ConstructorDef 'Parsed) where
+  addArgs ::
+    forall r.
+    Members '[NameSignatureBuilder] r =>
+    (InductiveDef 'Parsed, ConstructorDef 'Parsed) ->
+    Sem r ()
   addArgs (i, c) = do
     mapM_ addConstructorParams (i ^. inductiveParameters)
-    addAtoms (c ^. constructorType)
+    addRhs (c ^. constructorRhs)
+    where
+      addRhs :: ConstructorRhs 'Parsed -> Sem r ()
+      addRhs = \case
+        ConstructorRhsGadt g -> addAtoms (g ^. rhsGadtType)
 
 instance HasNameSignature (InductiveDef 'Parsed) where
   addArgs a = do
