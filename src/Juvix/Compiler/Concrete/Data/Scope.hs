@@ -5,6 +5,7 @@ module Juvix.Compiler.Concrete.Data.Scope
 where
 
 import Juvix.Compiler.Concrete.Data.InfoTable
+import Juvix.Compiler.Concrete.Data.NameSignature.Base
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Language
 import Juvix.Prelude
@@ -65,7 +66,8 @@ makeLenses ''ScopeParameters
 data ScoperState = ScoperState
   { _scoperModulesCache :: ModulesCache,
     _scoperModules :: HashMap S.ModuleNameId (ModuleRef' 'S.NotConcrete),
-    _scoperScope :: HashMap TopModulePath Scope
+    _scoperScope :: HashMap TopModulePath Scope,
+    _scoperSignatures :: HashMap S.NameId NameSignature
   }
 
 makeLenses ''ScoperState

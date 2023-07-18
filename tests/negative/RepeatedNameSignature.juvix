@@ -1,0 +1,6 @@
+module RepeatedNameSignature;
+
+type T := t : T;
+
+f (a : T) {b : T} : (a : T) -> T
+ | a := t;

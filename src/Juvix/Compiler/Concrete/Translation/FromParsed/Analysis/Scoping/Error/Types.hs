@@ -743,3 +743,25 @@ instance ToGenericError IteratorUndefined where
     where
       i :: Interval
       i = getLoc _iteratorUndefinedIterator
+
+newtype NoNameSignature = NoNameSignature
+  { _noNameSignatureIden :: ScopedIden
+  }
+  deriving stock (Show)
+
+instance ToGenericError NoNameSignature where
+  genericError NoNameSignature {..} = do
+    opts <- fromGenericOptions <$> ask
+    let msg =
+          "The identifier"
+            <+> ppCode opts _noNameSignatureIden
+            <+> "does not have a type signature with named arguments"
+    return
+      GenericError
+        { _genericErrorLoc = i,
+          _genericErrorMessage = mkAnsiText msg,
+          _genericErrorIntervals = [i]
+        }
+    where
+      i :: Interval
+      i = getLoc _noNameSignatureIden

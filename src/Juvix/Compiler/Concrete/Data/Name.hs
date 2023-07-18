@@ -22,6 +22,9 @@ instance HasLoc Name where
     NameQualified q -> getLoc q
     NameUnqualified s -> getLoc s
 
+instance HasAtomicity Name where
+  atomicity = const Atom
+
 instance Pretty QualifiedName where
   pretty (QualifiedName (SymbolPath path) s) =
     let symbols = snoc (toList path) s

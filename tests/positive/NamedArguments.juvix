@@ -1,0 +1,93 @@
+module NamedArguments;
+
+axiom a : Type;
+
+axiom b : Type;
+
+axiom c : Type;
+
+axiom d : Type;
+
+axiom e : Type;
+
+axiom f : Type;
+
+axiom g : Type;
+
+axiom h : Type;
+
+type Unit :=
+  | unit : Unit;
+
+axiom fun1 : (a : Type) -> (b : Type) -> {c : Type} -> Type;
+
+-- all provided by name
+t1 : Type := fun1 (a := a) (b := b) {c := c};
+
+-- skip implicit at the end
+t1' : {_ : Type} -> Type := fun1 (b := b) (a := a);
+
+axiom fun2 : (a : Type)
+  -> (b : Type)
+  -> {c : Type}
+  -> {d : Type}
+  -> Type;
+
+-- skip implicit in implicit group
+t2 : {_ : Type} -> Type := fun2 (a := a) (b := b) {c := d};
+
+axiom fun3 : (a : Type)
+  -> (b : Type)
+  -> {c : Type}
+  -> {d : c}
+  -> Type;
+
+-- skip implicit in the middle
+t3 : Type := fun3 (a := a) (b := b) {d := unit};
+
+axiom fun4 : (a : Type)
+  -> (b : Type)
+  -> {c : Type}
+  -> (d : c)
+  -> Type;
+
+-- skip implicit in the middle
+t4 : Type := fun4 (a := a) (b := b) (d := unit);
+
+axiom fun5 : (a : Type)
+  -> (b : Type)
+  -> {c c' : Type}
+  -> (d : c)
+  -> (d' : c')
+  -> Type;
+
+t5 : Type :=
+  fun5 (a := a) (b := b) (d' := unit) (d := unit);
+
+t5' : Type :=
+  fun5 (a := a; b := b) (d' := unit) (d := unit);
+
+axiom fun6 : {a : Type}
+  -> (b : Type)
+  -> {c c' : Type}
+  -> (d : c)
+  -> (d' : c')
+  -> (a' : a)
+  -> Type;
+
+t6 : Type :=
+  fun6 (b := b) (d' := unit) (d := unit) (a' := unit);
+
+t6' : Type :=
+  fun6 (d' := unit; d := unit; a' := unit; b := b);
+
+module FakeRecord;
+  type Pair (A B : Type) :=
+    | mkPair : (fst : A) -> (snd : B) -> Pair A B;
+
+  pp : Pair (B := Unit; A := Type) :=
+    mkPair (snd := unit; fst := Type);
+
+  pp2 : Pair (B := Unit; A := Type) :=
+    mkPair (fst := Type) unit;
+end;

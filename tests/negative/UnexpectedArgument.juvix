@@ -1,0 +1,7 @@
+module UnexpectedArgument;
+
+type T := t : T;
+
+f (a : T) : T := t;
+
+x : T := f (x := t);

@@ -595,18 +595,19 @@ expressionAtom :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdG
 expressionAtom =
   P.label "<expression>" $
     AtomLiteral <$> P.try literal
-      <|> (AtomIterator <$> iterator)
-      <|> (AtomList <$> parseList)
-      <|> (AtomIdentifier <$> name)
-      <|> (AtomUniverse <$> universe)
-      <|> (AtomLambda <$> lambda)
-      <|> (AtomCase <$> case_)
-      <|> (AtomFunction <$> function)
-      <|> (AtomLet <$> letBlock)
-      <|> (AtomFunArrow <$> kw kwRightArrow)
-      <|> (AtomHole <$> hole)
-      <|> (AtomParens <$> parens parseExpressionAtoms)
-      <|> (AtomBraces <$> withLoc (braces parseExpressionAtoms))
+      <|> either AtomIterator AtomAmbiguousIterator <$> iterator
+      <|> AtomNamedApplication <$> namedApplication
+      <|> AtomList <$> parseList
+      <|> AtomIdentifier <$> name
+      <|> AtomUniverse <$> universe
+      <|> AtomLambda <$> lambda
+      <|> AtomCase <$> case_
+      <|> AtomFunction <$> function
+      <|> AtomLet <$> letBlock
+      <|> AtomFunArrow <$> kw kwRightArrow
+      <|> AtomHole <$> hole
+      <|> AtomParens <$> parens parseExpressionAtoms
+      <|> AtomBraces <$> withLoc (braces parseExpressionAtoms)
 
 parseExpressionAtoms ::
   (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
@@ -619,77 +620,128 @@ parseExpressionAtoms = do
 -- Iterators
 --------------------------------------------------------------------------------
 
+-- | Checks whether an iterator is ambiguous
+ambiguousIterator :: Iterator 'Parsed -> Either (Iterator 'Parsed) AmbiguousIterator
+ambiguousIterator i@Iterator {..} = maybe (Left i) Right . run . runFail $ mkAmbiguousIterator
+  where
+    mkAmbiguousIterator :: forall r. Members '[Fail] r => Sem r AmbiguousIterator
+    mkAmbiguousIterator = do
+      failUnless (null _iteratorRanges)
+      _ambiguousIteratorInitializers <- nonEmpty' <$> mapM mkNamedArgument _iteratorInitializers
+      let _ambiguousIteratorBodyBraces = _iteratorBodyBraces
+          _ambiguousIteratorParens = _iteratorParens
+          _ambiguousIteratorName = _iteratorName
+          _ambiguousIteratorBody = _iteratorBody
+      return AmbiguousIterator {..}
+      where
+        mkNamedArgument :: Initializer 'Parsed -> Sem r (NamedArgument 'Parsed)
+        mkNamedArgument Initializer {..} = do
+          let _namedArgAssignKw = _initializerAssignKw
+              _namedArgValue = _initializerExpression
+          _namedArgName <- case _initializerPattern ^. patternAtoms of
+            PatternAtomIden (NameUnqualified n) :| [] -> return n
+            _ -> fail
+          return NamedArgument {..}
+
 iterator ::
   forall r.
-  (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
-  ParsecS r (Iterator 'Parsed)
-iterator = do
-  (isInit, keywordRef, _iteratorName, pat) <- P.try $ do
-    n <- name
-    lparen
-    pat <- parsePatternAtoms
-    (isInit, kwr) <-
-      ((True,) <$> kw kwAssign)
-        <|> ((False,) <$> kw kwIn)
-    return (isInit, Irrelevant kwr, n, pat)
-  val <- parseExpressionAtoms
-  _iteratorInitializers <-
-    if
-        | isInit -> do
-            inis <- many (semicolon >> initializer)
-            rparen
-            let ini =
-                  Initializer
-                    { _initializerPattern = pat,
-                      _initializerAssignKw = keywordRef,
-                      _initializerExpression = val
-                    }
-            return (ini : inis)
-        | otherwise -> return []
-  _iteratorRanges <-
-    if
-        | not isInit -> do
-            rngs <- many (semicolon >> range)
-            rparen
-            let ran =
-                  Range
-                    { _rangeExpression = val,
-                      _rangePattern = pat,
-                      _rangeInKw = keywordRef
-                    }
-            return (ran : rngs)
-        | otherwise -> fmap (maybe [] toList) $ optional $ do
-            lparen
-            rngs <- P.sepBy1 range semicolon
-            rparen
-            return rngs
-  (_iteratorBody, _iteratorBraces) <-
-    fmap (,True) (braces parseExpressionAtoms)
-      <|> fmap (,False) parseExpressionAtoms
-  let _iteratorParens = False
-  return Iterator {..}
+  Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r =>
+  ParsecS r (Either (Iterator 'Parsed) AmbiguousIterator)
+iterator = fmap ambiguousIterator iteratorHelper
   where
-    initializer :: ParsecS r (Initializer 'Parsed)
-    initializer = do
-      (_initializerPattern, _initializerAssignKw) <- P.try $ do
+    iteratorHelper :: ParsecS r (Iterator 'Parsed)
+    iteratorHelper = P.try $ do
+      -- TODO remove top P.Try
+      (firstIsInit, keywordRef, _iteratorName, pat) <- P.try $ do
+        n <- name
+        lparen
         pat <- parsePatternAtoms
-        r <- Irrelevant <$> kw kwAssign
-        return (pat, r)
-      _initializerExpression <- parseExpressionAtoms
-      return Initializer {..}
+        (isInit, kwr) <-
+          (True,) <$> kw kwAssign
+            <|> (False,) <$> kw kwIn
+        return (isInit, Irrelevant kwr, n, pat)
+      val <- parseExpressionAtoms
+      _iteratorInitializers <-
+        if
+            | firstIsInit -> do
+                inis <- many (semicolon >> initializer)
+                rparen
+                let ini =
+                      Initializer
+                        { _initializerPattern = pat,
+                          _initializerAssignKw = keywordRef,
+                          _initializerExpression = val
+                        }
+                return (ini : inis)
+            | otherwise -> return []
+      _iteratorRanges <-
+        if
+            | not firstIsInit -> do
+                rngs <- many (semicolon >> range)
+                rparen
+                let ran =
+                      Range
+                        { _rangeExpression = val,
+                          _rangePattern = pat,
+                          _rangeInKw = keywordRef
+                        }
+                return (ran : rngs)
+            | otherwise -> fmap (maybe [] toList) . optional $ do
+                lparen
+                rngs <- P.sepBy1 range semicolon
+                rparen
+                return rngs
+      (_iteratorBody, _iteratorBodyBraces) <-
+        (,True) <$> braces parseExpressionAtoms
+          <|> (,False) <$> parseExpressionAtoms
+      let _iteratorParens = False
+      return Iterator {..}
+      where
+        initializer :: ParsecS r (Initializer 'Parsed)
+        initializer = do
+          (_initializerPattern, _initializerAssignKw) <- P.try $ do
+            pat <- parsePatternAtoms
+            r <- Irrelevant <$> kw kwAssign
+            return (pat, r)
+          _initializerExpression <- parseExpressionAtoms
+          return Initializer {..}
 
-    range :: ParsecS r (Range 'Parsed)
-    range = do
-      (_rangePattern, _rangeInKw) <- P.try $ do
-        pat <- parsePatternAtoms
-        r <- Irrelevant <$> kw kwIn
-        return (pat, r)
-      _rangeExpression <- parseExpressionAtoms
-      return Range {..}
+        range :: ParsecS r (Range 'Parsed)
+        range = do
+          (_rangePattern, _rangeInKw) <- P.try $ do
+            pat <- parsePatternAtoms
+            r <- Irrelevant <$> kw kwIn
+            return (pat, r)
+          _rangeExpression <- parseExpressionAtoms
+          return Range {..}
 
---------------------------------------------------------------------------------
--- Holes
---------------------------------------------------------------------------------
+namedApplication ::
+  forall r.
+  Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r =>
+  ParsecS r (NamedApplication 'Parsed)
+namedApplication = P.label "<named application>" $ do
+  (_namedAppName, firstBlock) <- P.try $ do
+    n <- name
+    b <- argumentBlock
+    return (n, b)
+  tailBlocks <- many argumentBlock
+  let _namedAppArgs = firstBlock :| tailBlocks
+      _namedAppSignature = Irrelevant ()
+  return NamedApplication {..}
+  where
+    namedArgument :: ParsecS r (NamedArgument 'Parsed)
+    namedArgument = do
+      _namedArgName <- symbol
+      _namedArgAssignKw <- Irrelevant <$> kw kwAssign
+      _namedArgValue <- parseExpressionAtoms
+      return NamedArgument {..}
+    argumentBlock :: ParsecS r (ArgumentBlock 'Parsed)
+    argumentBlock = P.try $ do
+      (l, _argBlockImplicit) <- implicitOpen
+      _argBlockArgs <- P.sepEndBy1 namedArgument semicolon
+      r <- implicitClose _argBlockImplicit
+      let _argBlockDelims = Irrelevant (Just (l, r))
+      return ArgumentBlock {..}
 
 hole :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (HoleType 'Parsed)
 hole = kw kwHole

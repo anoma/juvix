@@ -31,7 +31,7 @@ instance Hashable BuiltinPrim
 instance Pretty BuiltinPrim where
   pretty = \case
     BuiltinsInductive i -> pretty i
-    BuiltinsConstructor {} -> impossible
+    BuiltinsConstructor c -> pretty c
     BuiltinsFunction f -> pretty f
     BuiltinsAxiom a -> pretty a
 
@@ -57,6 +57,17 @@ instance Pretty BuiltinInductive where
     BuiltinBool -> Str.bool_
     BuiltinInt -> Str.int_
     BuiltinList -> Str.list
+
+instance Pretty BuiltinConstructor where
+  pretty = \case
+    BuiltinNatZero -> Str.zero
+    BuiltinNatSuc -> Str.suc
+    BuiltinBoolTrue -> Str.true
+    BuiltinBoolFalse -> Str.false
+    BuiltinIntOfNat -> Str.ofNat
+    BuiltinIntNegSuc -> Str.negSuc
+    BuiltinListNil -> Str.nil
+    BuiltinListCons -> Str.cons
 
 data BuiltinConstructor
   = BuiltinNatZero

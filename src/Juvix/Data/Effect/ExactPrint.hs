@@ -166,3 +166,6 @@ morphemeM :: forall r. Members '[ExactPrint] r => Interval -> Sem r () -> Sem r 
 morphemeM loc doc = do
   void (printCommentsUntil loc)
   doc
+
+tuple :: (Members '[ExactPrint] r, Foldable l) => l (Sem r ()) -> Sem r ()
+tuple = encloseSep (enqueue C.kwParenL) (noLoc C.kwParenR) (noLoc ", ")

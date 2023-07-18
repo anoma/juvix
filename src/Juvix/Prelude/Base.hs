@@ -255,6 +255,18 @@ isFirstLetter = \case
 -- Foldable
 --------------------------------------------------------------------------------
 
+-- | Returns the repeated elements
+findRepeated :: forall a. Ord a => [a] -> [a]
+findRepeated = mapMaybe rep . groupSortOn' id
+  where
+    rep :: [a] -> Maybe a
+    rep = \case
+      a : _ : _ -> Just a
+      _ -> Nothing
+
+allDifferent :: forall a. Ord a => [a] -> Bool
+allDifferent = null . findRepeated
+
 allSame :: forall t a. (Eq a, Foldable t) => t a -> Bool
 allSame t
   | null t = True
@@ -262,6 +274,9 @@ allSame t
   where
     h :: a
     h = foldr1 const t
+
+sconcatMap :: Semigroup c => (a -> c) -> NonEmpty a -> c
+sconcatMap f = sconcat . fmap f
 
 mconcatMap :: (Monoid c, Foldable t) => (a -> c) -> t a -> c
 mconcatMap f = List.mconcatMap f . toList
@@ -349,7 +364,7 @@ _nonEmpty f x = maybe [] toList <$> f (nonEmpty x)
 groupSortOn :: Ord b => (a -> b) -> [a] -> [NonEmpty a]
 groupSortOn f = map nonEmpty' . List.groupSortOn f
 
-groupSortOn' :: (Ord b) => (a -> b) -> [a] -> [[a]]
+groupSortOn' :: Ord b => (a -> b) -> [a] -> [[a]]
 groupSortOn' = List.groupSortOn
 
 --------------------------------------------------------------------------------

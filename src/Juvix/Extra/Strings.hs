@@ -685,3 +685,27 @@ vampirLessOrEqual = "lessOrEqual"
 
 vampirIf :: IsString s => s
 vampirIf = "if"
+
+zero :: IsString s => s
+zero = "zero"
+
+suc :: IsString s => s
+suc = "suc"
+
+true :: IsString s => s
+true = "true"
+
+false :: IsString s => s
+false = "false"
+
+ofNat :: IsString s => s
+ofNat = "ofNat"
+
+negSuc :: IsString s => s
+negSuc = "negSuc"
+
+nil :: IsString s => s
+nil = "nil"
+
+cons :: IsString s => s
+cons = "cons"

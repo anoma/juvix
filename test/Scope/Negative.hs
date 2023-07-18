@@ -223,7 +223,7 @@ scoperErrorTests =
       $(mkRelDir ".")
       $(mkRelFile "DuplicateInductiveParameterName.juvix")
       $ \case
-        ErrMultipleDeclarations {} -> Nothing
+        ErrNameSignature (ErrDuplicateName DuplicateName {}) -> Nothing
         _ -> wrongError,
     NegTest
       "A function lacks a type signature"
@@ -280,5 +280,40 @@ scoperErrorTests =
       $(mkRelFile "Iterators5.juvix")
       $ \case
         ErrUnusedIteratorDef {} -> Nothing
+        _ -> wrongError,
+    NegTest
+      "Repeated name in named application"
+      $(mkRelDir ".")
+      $(mkRelFile "DuplicateArgument.juvix")
+      $ \case
+        ErrNamedArgumentsError (ErrDuplicateArgument {}) -> Nothing
+        _ -> wrongError,
+    NegTest
+      "Unexpected named argument after wildcard"
+      $(mkRelDir ".")
+      $(mkRelFile "UnexpectedArgumentWildcard.juvix")
+      $ \case
+        ErrNamedArgumentsError ErrUnexpectedArguments {} -> Nothing
+        _ -> wrongError,
+    NegTest
+      "Unexpected named argument"
+      $(mkRelDir ".")
+      $(mkRelFile "UnexpectedArgument.juvix")
+      $ \case
+        ErrNamedArgumentsError ErrUnexpectedArguments {} -> Nothing
+        _ -> wrongError,
+    NegTest
+      "Missing argument"
+      $(mkRelDir ".")
+      $(mkRelFile "MissingArgument.juvix")
+      $ \case
+        ErrNamedArgumentsError ErrMissingArguments {} -> Nothing
+        _ -> wrongError,
+    NegTest
+      "Repeated name in name signature"
+      $(mkRelDir ".")
+      $(mkRelFile "RepeatedNameSignature.juvix")
+      $ \case
+        ErrNameSignature ErrDuplicateName {} -> Nothing
         _ -> wrongError
   ]
