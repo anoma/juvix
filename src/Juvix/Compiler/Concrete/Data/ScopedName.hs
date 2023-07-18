@@ -1,10 +1,12 @@
 module Juvix.Compiler.Concrete.Data.ScopedName
   ( module Juvix.Compiler.Concrete.Data.ScopedName,
+    module Juvix.Compiler.Concrete.Data.IsConcrete,
     module Juvix.Data.NameKind,
     module Juvix.Data.NameId,
   )
 where
 
+import Juvix.Compiler.Concrete.Data.IsConcrete
 import Juvix.Compiler.Concrete.Data.Name qualified as C
 import Juvix.Compiler.Concrete.Data.VisibilityAnn
 import Juvix.Data.Fixity qualified as C
@@ -13,16 +15,6 @@ import Juvix.Data.NameId
 import Juvix.Data.NameKind
 import Juvix.Prelude
 import Juvix.Prelude.Pretty
-
---------------------------------------------------------------------------------
--- Names
---------------------------------------------------------------------------------
-
-data IsConcrete
-  = NotConcrete
-  | Concrete
-
-$(genSingletons [''IsConcrete])
 
 data AbsModulePath = AbsModulePath
   { _absTopModulePath :: C.TopModulePath,

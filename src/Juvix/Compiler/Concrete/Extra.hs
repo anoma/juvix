@@ -206,14 +206,14 @@ fromAmbiguousIterator AmbiguousIterator {..} =
     mkInitializer a@NamedArgument {..} =
       Initializer
         { _initializerAssignKw = _namedArgAssignKw,
-          _initializerPattern = PatternAtoms (pure (PatternAtomIden (NameUnqualified _namedArgName))) (getLoc a),
+          _initializerPattern = PatternAtoms (pure (PatternAtomIden (NameUnqualified _namedArgName))) (Irrelevant (getLoc a)),
           _initializerExpression = _namedArgValue
         }
 
 ambiguousIteratorToAtoms :: AmbiguousIterator -> ExpressionAtoms 'Parsed
 ambiguousIteratorToAtoms AmbiguousIterator {..} =
   ExpressionAtoms
-    { _expressionAtomsLoc = getLoc napp,
+    { _expressionAtomsLoc = Irrelevant (getLoc napp),
       _expressionAtoms = pure (AtomNamedApplication napp) <> body
     }
   where

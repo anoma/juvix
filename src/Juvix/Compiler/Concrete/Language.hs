@@ -3,6 +3,7 @@
 module Juvix.Compiler.Concrete.Language
   ( module Juvix.Compiler.Concrete.Language,
     module Juvix.Compiler.Concrete.Data.Name,
+    module Juvix.Compiler.Concrete.Data.Stage,
     module Juvix.Compiler.Concrete.Data.NameRef,
     module Juvix.Data.Keyword,
     module Juvix.Compiler.Concrete.Data.Builtins,
@@ -25,6 +26,7 @@ import Juvix.Compiler.Concrete.Data.NameSignature.Base (NameSignature)
 import Juvix.Compiler.Concrete.Data.PublicAnn
 import Juvix.Compiler.Concrete.Data.ScopedName (unqualifiedSymbol)
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
+import Juvix.Compiler.Concrete.Data.Stage
 import Juvix.Compiler.Concrete.Data.VisibilityAnn
 import Juvix.Data
 import Juvix.Data.Ape.Base as Ape
@@ -37,21 +39,7 @@ import Juvix.Prelude hiding (show)
 import Juvix.Prelude.Pretty (prettyText)
 import Prelude (show)
 
-data Stage
-  = Parsed
-  | Scoped
-  deriving stock (Eq, Show)
-
-type AnyStage (k :: Stage -> GHC.Type) =
-  Σ Stage (TyCon1 k)
-
-$(genSingletons [''Stage])
-
 type Delims = Irrelevant (Maybe (KeywordRef, KeywordRef))
-
---------------------------------------------------------------------------------
--- Parsing stages
---------------------------------------------------------------------------------
 
 type SymbolType :: Stage -> GHC.Type
 type family SymbolType s = res | res -> s where
@@ -125,26 +113,14 @@ type family ModuleEndType t = res | res -> t where
   ModuleEndType 'ModuleTop = ()
   ModuleEndType 'ModuleLocal = KeywordRef
 
---------------------------------------------------------------------------------
--- Pragmas
---------------------------------------------------------------------------------
-
--- We keep the exact source of the pragma text. This is necessary, because
+-- | We keep the exact source of the pragma text. This is necessary, because
 -- pragmas are supposed to be backwards-compatible. Unrecognised pragmas
 -- should be ignored, but they still need to be printed out when
 -- pretty-printing. Also, we probably don't want to impose pragma formatting
 -- choices on the user.
 type ParsedPragmas = WithLoc (WithSource Pragmas)
 
---------------------------------------------------------------------------------
--- Iterator attributes
---------------------------------------------------------------------------------
-
 type ParsedIteratorAttribs = WithLoc (WithSource IteratorAttribs)
-
---------------------------------------------------------------------------------
--- Top level statement
---------------------------------------------------------------------------------
 
 -- | We group consecutive definitions and reserve symbols in advance, so that we
 -- don't need extra syntax for mutually recursive definitions. Also, it allows
@@ -188,45 +164,14 @@ data Statement (s :: Stage)
   | StatementFunctionClause (FunctionClause s)
   | StatementAxiom (AxiomDef s)
 
-deriving stock instance
-  ( Show (ImportType s),
-    Show (ModulePathType s 'ModuleLocal),
-    Show (ModulePathType s 'ModuleTop),
-    Show (PatternAtomType s),
-    Show (SymbolType s),
-    Show (IdentifierType s),
-    Show (ModuleRefType s),
-    Show (ExpressionType s)
-  ) =>
-  Show (Statement s)
+instance SingI s => Show (Statement s) where
+  show = deriveStageShow
 
-deriving stock instance
-  ( Eq (ImportType s),
-    Eq (PatternAtomType s),
-    Eq (ModulePathType s 'ModuleLocal),
-    Eq (ModulePathType s 'ModuleTop),
-    Eq (SymbolType s),
-    Eq (IdentifierType s),
-    Eq (ModuleRefType s),
-    Eq (ExpressionType s)
-  ) =>
-  Eq (Statement s)
+instance SingI s => Eq (Statement s) where
+  (==) = deriveStageEq
 
-deriving stock instance
-  ( Ord (ImportType s),
-    Ord (PatternAtomType s),
-    Ord (ModulePathType s 'ModuleLocal),
-    Ord (ModulePathType s 'ModuleTop),
-    Ord (SymbolType s),
-    Ord (IdentifierType s),
-    Ord (ModuleRefType s),
-    Ord (ExpressionType s)
-  ) =>
-  Ord (Statement s)
-
---------------------------------------------------------------------------------
--- Import statement
---------------------------------------------------------------------------------
+instance SingI s => Ord (Statement s) where
+  compare = deriveStageOrd
 
 data Import (s :: Stage) = Import
   { _importKw :: KeywordRef,
@@ -234,15 +179,14 @@ data Import (s :: Stage) = Import
     _importAsName :: Maybe (ModulePathType s 'ModuleTop)
   }
 
-deriving stock instance (Show (ModulePathType s 'ModuleTop), Show (ImportType s)) => Show (Import s)
+instance SingI s => Show (Import s) where
+  show = deriveStageShow
 
-deriving stock instance (Eq (ModulePathType s 'ModuleTop), Eq (ImportType s)) => Eq (Import s)
+instance SingI s => Eq (Import s) where
+  (==) = deriveStageEq
 
-deriving stock instance (Ord (ModulePathType s 'ModuleTop), Ord (ImportType s)) => Ord (Import s)
-
---------------------------------------------------------------------------------
--- Syntax declaration
---------------------------------------------------------------------------------
+instance SingI s => Ord (Import s) where
+  compare = deriveStageOrd
 
 data SyntaxDef
   = SyntaxOperator OperatorSyntaxDef
@@ -253,10 +197,6 @@ instance HasLoc SyntaxDef where
   getLoc = \case
     SyntaxOperator t -> getLoc t
     SyntaxIterator t -> getLoc t
-
---------------------------------------------------------------------------------
--- Operator syntax declaration
---------------------------------------------------------------------------------
 
 data OperatorSyntaxDef = OperatorSyntaxDef
   { _opSymbol :: Symbol,
@@ -269,10 +209,6 @@ data OperatorSyntaxDef = OperatorSyntaxDef
 instance HasLoc OperatorSyntaxDef where
   getLoc OperatorSyntaxDef {..} = getLoc _opSyntaxKw <> getLoc _opSymbol
 
---------------------------------------------------------------------------------
--- Iterator syntax declaration
---------------------------------------------------------------------------------
-
 data IteratorSyntaxDef = IteratorSyntaxDef
   { _iterSymbol :: Symbol,
     _iterAttribs :: Maybe ParsedIteratorAttribs,
@@ -284,10 +220,6 @@ data IteratorSyntaxDef = IteratorSyntaxDef
 instance HasLoc IteratorSyntaxDef where
   getLoc IteratorSyntaxDef {..} = getLoc _iterSyntaxKw <> getLoc _iterSymbol
 
--------------------------------------------------------------------------------
--- Type signature declaration
--------------------------------------------------------------------------------
-
 data SigArg (s :: Stage) = SigArg
   { _sigArgDelims :: Irrelevant (KeywordRef, KeywordRef),
     _sigArgImplicit :: IsImplicit,
@@ -296,11 +228,14 @@ data SigArg (s :: Stage) = SigArg
     _sigArgType :: ExpressionType s
   }
 
-deriving stock instance (Show (ExpressionType s), Show (SymbolType s)) => Show (SigArg s)
+instance SingI s => Show (SigArg s) where
+  show = deriveStageShow
 
-deriving stock instance (Eq (ExpressionType s), Eq (SymbolType s)) => Eq (SigArg s)
+instance SingI s => Eq (SigArg s) where
+  (==) = deriveStageEq
 
-deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (SigArg s)
+instance SingI s => Ord (SigArg s) where
+  compare = deriveStageOrd
 
 data NewFunctionClause (s :: Stage) = NewFunctionClause
   { _clausenPipeKw :: Irrelevant KeywordRef,
@@ -309,63 +244,27 @@ data NewFunctionClause (s :: Stage) = NewFunctionClause
     _clausenBody :: ExpressionType s
   }
 
-deriving stock instance
-  ( Show (PatternAtomType s),
-    Show (IdentifierType s),
-    Show (ModuleRefType s),
-    Show (SymbolType s),
-    Show (ExpressionType s)
-  ) =>
-  Show (NewFunctionClause s)
+instance SingI s => Show (NewFunctionClause s) where
+  show = deriveStageShow
 
-deriving stock instance
-  ( Eq (PatternAtomType s),
-    Eq (IdentifierType s),
-    Eq (ModuleRefType s),
-    Eq (SymbolType s),
-    Eq (ExpressionType s)
-  ) =>
-  Eq (NewFunctionClause s)
+instance SingI s => Eq (NewFunctionClause s) where
+  (==) = deriveStageEq
 
-deriving stock instance
-  ( Ord (PatternAtomType s),
-    Ord (IdentifierType s),
-    Ord (ModuleRefType s),
-    Ord (SymbolType s),
-    Ord (ExpressionType s)
-  ) =>
-  Ord (NewFunctionClause s)
+instance SingI s => Ord (NewFunctionClause s) where
+  compare = deriveStageOrd
 
 data FunctionDefBody (s :: Stage)
   = SigBodyExpression (ExpressionType s)
   | SigBodyClauses (NonEmpty (NewFunctionClause s))
 
-deriving stock instance
-  ( Show (PatternAtomType s),
-    Show (IdentifierType s),
-    Show (ModuleRefType s),
-    Show (SymbolType s),
-    Show (ExpressionType s)
-  ) =>
-  Show (FunctionDefBody s)
+instance SingI s => Show (FunctionDefBody s) where
+  show = deriveStageShow
 
-deriving stock instance
-  ( Eq (PatternAtomType s),
-    Eq (IdentifierType s),
-    Eq (ModuleRefType s),
-    Eq (SymbolType s),
-    Eq (ExpressionType s)
-  ) =>
-  Eq (FunctionDefBody s)
+instance SingI s => Eq (FunctionDefBody s) where
+  (==) = deriveStageEq
 
-deriving stock instance
-  ( Ord (PatternAtomType s),
-    Ord (IdentifierType s),
-    Ord (ModuleRefType s),
-    Ord (SymbolType s),
-    Ord (ExpressionType s)
-  ) =>
-  Ord (FunctionDefBody s)
+instance SingI s => Ord (FunctionDefBody s) where
+  compare = deriveStageOrd
 
 data FunctionDef (s :: Stage) = FunctionDef
   { _signName :: FunctionName s,
@@ -379,32 +278,14 @@ data FunctionDef (s :: Stage) = FunctionDef
     _signTerminating :: Maybe KeywordRef
   }
 
-deriving stock instance
-  ( Show (PatternAtomType s),
-    Show (IdentifierType s),
-    Show (ModuleRefType s),
-    Show (SymbolType s),
-    Show (ExpressionType s)
-  ) =>
-  Show (FunctionDef s)
+instance SingI s => Show (FunctionDef s) where
+  show = deriveStageShow
 
-deriving stock instance
-  ( Eq (PatternAtomType s),
-    Eq (IdentifierType s),
-    Eq (ModuleRefType s),
-    Eq (SymbolType s),
-    Eq (ExpressionType s)
-  ) =>
-  Eq (FunctionDef s)
+instance SingI s => Eq (FunctionDef s) where
+  (==) = deriveStageEq
 
-deriving stock instance
-  ( Ord (PatternAtomType s),
-    Ord (IdentifierType s),
-    Ord (ModuleRefType s),
-    Ord (SymbolType s),
-    Ord (ExpressionType s)
-  ) =>
-  Ord (FunctionDef s)
+instance SingI s => Ord (FunctionDef s) where
+  compare = deriveStageOrd
 
 data TypeSignature (s :: Stage) = TypeSignature
   { _sigName :: FunctionName s,
@@ -418,15 +299,14 @@ data TypeSignature (s :: Stage) = TypeSignature
     _sigTerminating :: Maybe KeywordRef
   }
 
-deriving stock instance (Show (ExpressionType s), Show (SymbolType s)) => Show (TypeSignature s)
+instance SingI s => Show (TypeSignature s) where
+  show = deriveStageShow
 
-deriving stock instance (Eq (ExpressionType s), Eq (SymbolType s)) => Eq (TypeSignature s)
+instance SingI s => Eq (TypeSignature s) where
+  (==) = deriveStageEq
 
-deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (TypeSignature s)
-
--------------------------------------------------------------------------------
--- Axioms
--------------------------------------------------------------------------------
+instance SingI s => Ord (TypeSignature s) where
+  compare = deriveStageOrd
 
 data AxiomDef (s :: Stage) = AxiomDef
   { _axiomKw :: Irrelevant KeywordRef,
@@ -438,15 +318,14 @@ data AxiomDef (s :: Stage) = AxiomDef
     _axiomType :: ExpressionType s
   }
 
-deriving stock instance (Show (ExpressionType s), Show (SymbolType s)) => Show (AxiomDef s)
+instance SingI s => Show (AxiomDef s) where
+  show = deriveStageShow
 
-deriving stock instance (Eq (ExpressionType s), Eq (SymbolType s)) => Eq (AxiomDef s)
+instance SingI s => Eq (AxiomDef s) where
+  (==) = deriveStageEq
 
-deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (AxiomDef s)
-
--------------------------------------------------------------------------------
--- Lift type construction declaration
--------------------------------------------------------------------------------
+instance SingI s => Ord (AxiomDef s) where
+  compare = deriveStageOrd
 
 type InductiveConstructorName s = SymbolType s
 
@@ -461,22 +340,28 @@ data ConstructorDef (s :: Stage) = ConstructorDef
     _constructorType :: ExpressionType s
   }
 
-deriving stock instance (Show (ExpressionType s), Show (SymbolType s)) => Show (ConstructorDef s)
+instance SingI s => Show (ConstructorDef s) where
+  show = deriveStageShow
 
-deriving stock instance (Eq (ExpressionType s), Eq (SymbolType s)) => Eq (ConstructorDef s)
+instance SingI s => Eq (ConstructorDef s) where
+  (==) = deriveStageEq
 
-deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (ConstructorDef s)
+instance SingI s => Ord (ConstructorDef s) where
+  compare = deriveStageOrd
 
 data InductiveParameters (s :: Stage) = InductiveParameters
   { _inductiveParametersNames :: NonEmpty (SymbolType s),
     _inductiveParametersType :: ExpressionType s
   }
 
-deriving stock instance (Show (ExpressionType s), Show (SymbolType s)) => Show (InductiveParameters s)
+instance SingI s => Show (InductiveParameters s) where
+  show = deriveStageShow
 
-deriving stock instance (Eq (ExpressionType s), Eq (SymbolType s)) => Eq (InductiveParameters s)
+instance SingI s => Eq (InductiveParameters s) where
+  (==) = deriveStageEq
 
-deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (InductiveParameters s)
+instance SingI s => Ord (InductiveParameters s) where
+  compare = deriveStageOrd
 
 data InductiveDef (s :: Stage) = InductiveDef
   { _inductiveKw :: Irrelevant KeywordRef,
@@ -491,15 +376,14 @@ data InductiveDef (s :: Stage) = InductiveDef
     _inductivePositive :: Maybe KeywordRef
   }
 
-deriving stock instance (Show (ExpressionType s), Show (SymbolType s)) => Show (InductiveDef s)
+instance SingI s => Show (InductiveDef s) where
+  show = deriveStageShow
 
-deriving stock instance (Eq (ExpressionType s), Eq (SymbolType s)) => Eq (InductiveDef s)
+instance SingI s => Eq (InductiveDef s) where
+  (==) = deriveStageEq
 
-deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (InductiveDef s)
-
---------------------------------------------------------------------------------
--- Pattern
---------------------------------------------------------------------------------
+instance SingI s => Ord (InductiveDef s) where
+  compare = deriveStageOrd
 
 data PatternApp = PatternApp
   { _patAppLeft :: PatternArg,
@@ -558,10 +442,6 @@ instance HasAtomicity Pattern where
     PatternList l -> atomicity l
     PatternEmpty {} -> Atom
 
---------------------------------------------------------------------------------
--- Pattern section
---------------------------------------------------------------------------------
-
 data PatternScopedIden
   = PatternScopedVar S.Symbol
   | PatternScopedConstructor S.Name
@@ -571,6 +451,7 @@ data PatternBinding = PatternBinding
   { _patternBindingName :: Symbol,
     _patternBindingPattern :: PatternAtom 'Parsed
   }
+  deriving stock (Ord, Eq, Show)
 
 data ListPattern (s :: Stage) = ListPattern
   { _listpBracketL :: Irrelevant KeywordRef,
@@ -578,11 +459,14 @@ data ListPattern (s :: Stage) = ListPattern
     _listpItems :: [PatternParensType s]
   }
 
-deriving stock instance (Show (PatternParensType s)) => Show (ListPattern s)
+instance SingI s => Show (ListPattern s) where
+  show = deriveStageShow
 
-deriving stock instance (Eq (PatternParensType s)) => Eq (ListPattern s)
+instance SingI s => Eq (ListPattern s) where
+  (==) = deriveStageEq
 
-deriving stock instance (Ord (PatternParensType s)) => Ord (ListPattern s)
+instance SingI s => Ord (ListPattern s) where
+  compare = deriveStageOrd
 
 data PatternAtom (s :: Stage)
   = PatternAtomIden (PatternAtomIdenType s)
@@ -593,14 +477,28 @@ data PatternAtom (s :: Stage)
   | PatternAtomBraces (PatternParensType s)
   | PatternAtomAt (PatternAtType s)
 
+instance SingI s => Show (PatternAtom s) where
+  show = deriveStageShow
+
+instance SingI s => Eq (PatternAtom s) where
+  (==) = deriveStageEq
+
+instance SingI s => Ord (PatternAtom s) where
+  compare = deriveStageOrd
+
 data PatternAtoms (s :: Stage) = PatternAtoms
   { _patternAtoms :: NonEmpty (PatternAtom s),
-    _patternAtomsLoc :: Interval
+    _patternAtomsLoc :: Irrelevant Interval
   }
 
---------------------------------------------------------------------------------
--- Function binding declaration
---------------------------------------------------------------------------------
+instance SingI s => Show (PatternAtoms s) where
+  show = deriveStageShow
+
+instance SingI s => Eq (PatternAtoms s) where
+  (==) = deriveStageEq
+
+instance SingI s => Ord (PatternAtoms s) where
+  compare = deriveStageOrd
 
 type FunctionName s = SymbolType s
 
@@ -611,36 +509,14 @@ data FunctionClause (s :: Stage) = FunctionClause
     _clauseBody :: ExpressionType s
   }
 
-deriving stock instance
-  ( Show (PatternAtomType s),
-    Show (IdentifierType s),
-    Show (ModuleRefType s),
-    Show (SymbolType s),
-    Show (ExpressionType s)
-  ) =>
-  Show (FunctionClause s)
+instance SingI s => Show (FunctionClause s) where
+  show = deriveStageShow
 
-deriving stock instance
-  ( Eq (PatternAtomType s),
-    Eq (IdentifierType s),
-    Eq (ModuleRefType s),
-    Eq (SymbolType s),
-    Eq (ExpressionType s)
-  ) =>
-  Eq (FunctionClause s)
+instance SingI s => Eq (FunctionClause s) where
+  (==) = deriveStageEq
 
-deriving stock instance
-  ( Ord (PatternAtomType s),
-    Ord (IdentifierType s),
-    Ord (ModuleRefType s),
-    Ord (SymbolType s),
-    Ord (ExpressionType s)
-  ) =>
-  Ord (FunctionClause s)
-
---------------------------------------------------------------------------------
--- Module declaration
---------------------------------------------------------------------------------
+instance SingI s => Ord (FunctionClause s) where
+  compare = deriveStageOrd
 
 type LocalModuleName s = SymbolType s
 
@@ -653,66 +529,45 @@ data Module (s :: Stage) (t :: ModuleIsTop) = Module
     _moduleKwEnd :: ModuleEndType t
   }
 
-deriving stock instance
-  ( Show (ModulePathType s t),
-    Show (ModulePathType s 'ModuleLocal),
-    Show (ModulePathType s 'ModuleTop),
-    Show (ImportType s),
-    Show (PatternAtomType s),
-    Show (IdentifierType s),
-    Show (ModuleRefType s),
-    Show (SymbolType s),
-    Show (ModuleEndType t),
-    Show (ExpressionType s)
-  ) =>
-  Show (Module s t)
+instance (SingI s, SingI t) => Show (Module s t) where
+  show = case sing :: SStage s of
+    SParsed -> case sing :: SModuleIsTop t of
+      SModuleLocal -> show
+      SModuleTop -> show
+    SScoped -> case sing :: SModuleIsTop t of
+      SModuleLocal -> show
+      SModuleTop -> show
 
-deriving stock instance
-  ( Eq (ModulePathType s t),
-    Eq (ModulePathType s 'ModuleLocal),
-    Eq (ModulePathType s 'ModuleTop),
-    Eq (ImportType s),
-    Eq (PatternAtomType s),
-    Eq (IdentifierType s),
-    Eq (ModuleRefType s),
-    Eq (SymbolType s),
-    Eq (ModuleEndType t),
-    Eq (ExpressionType s)
-  ) =>
-  Eq (Module s t)
+instance (SingI s, SingI t) => Eq (Module s t) where
+  (==) = case sing :: SStage s of
+    SParsed -> case sing :: SModuleIsTop t of
+      SModuleLocal -> (==)
+      SModuleTop -> (==)
+    SScoped -> case sing :: SModuleIsTop t of
+      SModuleLocal -> (==)
+      SModuleTop -> (==)
 
-deriving stock instance
-  ( Ord (ModulePathType s t),
-    Ord (ModulePathType s 'ModuleLocal),
-    Ord (ModulePathType s 'ModuleTop),
-    Ord (ImportType s),
-    Ord (PatternAtomType s),
-    Ord (IdentifierType s),
-    Ord (ModuleRefType s),
-    Ord (SymbolType s),
-    Ord (ModuleEndType t),
-    Ord (ExpressionType s)
-  ) =>
-  Ord (Module s t)
+instance (SingI s, SingI t) => Ord (Module s t) where
+  compare = case sing :: SStage s of
+    SParsed -> case sing :: SModuleIsTop t of
+      SModuleLocal -> compare
+      SModuleTop -> compare
+    SScoped -> case sing :: SModuleIsTop t of
+      SModuleLocal -> compare
+      SModuleTop -> compare
 
 newtype HidingItem (s :: Stage) = HidingItem
   { _hidingSymbol :: SymbolType s
   }
 
-deriving stock instance
-  ( Show (SymbolType s)
-  ) =>
-  Show (HidingItem s)
+instance SingI s => Show (HidingItem s) where
+  show = deriveStageShow
 
-deriving stock instance
-  ( Eq (SymbolType s)
-  ) =>
-  Eq (HidingItem s)
+instance SingI s => Eq (HidingItem s) where
+  (==) = deriveStageEq
 
-deriving stock instance
-  ( Ord (SymbolType s)
-  ) =>
-  Ord (HidingItem s)
+instance SingI s => Ord (HidingItem s) where
+  compare = deriveStageOrd
 
 data UsingItem (s :: Stage) = UsingItem
   { _usingSymbol :: SymbolType s,
@@ -720,20 +575,14 @@ data UsingItem (s :: Stage) = UsingItem
     _usingAs :: Maybe (SymbolType s)
   }
 
-deriving stock instance
-  ( Show (SymbolType s)
-  ) =>
-  Show (UsingItem s)
+instance SingI s => Show (UsingItem s) where
+  show = deriveStageShow
 
-deriving stock instance
-  ( Eq (SymbolType s)
-  ) =>
-  Eq (UsingItem s)
+instance SingI s => Eq (UsingItem s) where
+  (==) = deriveStageEq
 
-deriving stock instance
-  ( Ord (SymbolType s)
-  ) =>
-  Ord (UsingItem s)
+instance SingI s => Ord (UsingItem s) where
+  compare = deriveStageOrd
 
 data UsingList (s :: Stage) = UsingList
   { _usingKw :: Irrelevant KeywordRef,
@@ -741,20 +590,14 @@ data UsingList (s :: Stage) = UsingList
     _usingList :: NonEmpty (UsingItem s)
   }
 
-deriving stock instance
-  ( Show (SymbolType s)
-  ) =>
-  Show (UsingList s)
+instance SingI s => Show (UsingList s) where
+  show = deriveStageShow
 
-deriving stock instance
-  ( Eq (SymbolType s)
-  ) =>
-  Eq (UsingList s)
+instance SingI s => Eq (UsingList s) where
+  (==) = deriveStageEq
 
-deriving stock instance
-  ( Ord (SymbolType s)
-  ) =>
-  Ord (UsingList s)
+instance SingI s => Ord (UsingList s) where
+  compare = deriveStageOrd
 
 data HidingList (s :: Stage) = HidingList
   { _hidingKw :: Irrelevant KeywordRef,
@@ -762,39 +605,27 @@ data HidingList (s :: Stage) = HidingList
     _hidingList :: NonEmpty (HidingItem s)
   }
 
-deriving stock instance
-  ( Show (SymbolType s)
-  ) =>
-  Show (HidingList s)
+instance SingI s => Show (HidingList s) where
+  show = deriveStageShow
 
-deriving stock instance
-  ( Eq (SymbolType s)
-  ) =>
-  Eq (HidingList s)
+instance SingI s => Eq (HidingList s) where
+  (==) = deriveStageEq
 
-deriving stock instance
-  ( Ord (SymbolType s)
-  ) =>
-  Ord (HidingList s)
+instance SingI s => Ord (HidingList s) where
+  compare = deriveStageOrd
 
 data UsingHiding (s :: Stage)
   = Using (UsingList s)
   | Hiding (HidingList s)
 
-deriving stock instance
-  ( Show (SymbolType s)
-  ) =>
-  Show (UsingHiding s)
+instance SingI s => Show (UsingHiding s) where
+  show = deriveStageShow
 
-deriving stock instance
-  ( Eq (SymbolType s)
-  ) =>
-  Eq (UsingHiding s)
+instance SingI s => Eq (UsingHiding s) where
+  (==) = deriveStageEq
 
-deriving stock instance
-  ( Ord (SymbolType s)
-  ) =>
-  Ord (UsingHiding s)
+instance SingI s => Ord (UsingHiding s) where
+  compare = deriveStageOrd
 
 type ModuleRef = ModuleRef' 'S.Concrete
 
@@ -811,7 +642,7 @@ instance SingI c => Show (ModuleRef' c) where
       S.SConcrete -> show r
       S.SNotConcrete -> show r
 
-getNameRefId :: forall c. (SingI c) => RefNameType c -> S.NameId
+getNameRefId :: forall c. SingI c => RefNameType c -> S.NameId
 getNameRefId = case sing :: S.SIsConcrete c of
   S.SConcrete -> (^. S.nameId)
   S.SNotConcrete -> (^. S.nameId)
@@ -873,38 +704,14 @@ data OpenModule (s :: Stage) = OpenModule
     _openPublic :: PublicAnn
   }
 
-deriving stock instance
-  ( Eq (IdentifierType s),
-    Eq (SymbolType s),
-    Eq (ModuleRefType s),
-    Eq (ModulePathType s 'ModuleTop),
-    Eq (PatternAtomType s),
-    Eq (ExpressionType s)
-  ) =>
-  Eq (OpenModule s)
+instance SingI s => Show (OpenModule s) where
+  show = deriveStageShow
 
-deriving stock instance
-  ( Ord (IdentifierType s),
-    Ord (SymbolType s),
-    Ord (PatternAtomType s),
-    Ord (ModulePathType s 'ModuleTop),
-    Ord (ModuleRefType s),
-    Ord (ExpressionType s)
-  ) =>
-  Ord (OpenModule s)
+instance SingI s => Eq (OpenModule s) where
+  (==) = deriveStageEq
 
-deriving stock instance
-  ( Show (IdentifierType s),
-    Show (ModuleRefType s),
-    Show (SymbolType s),
-    Show (ModulePathType s 'ModuleTop),
-    Show (ExpressionType s)
-  ) =>
-  Show (OpenModule s)
-
---------------------------------------------------------------------------------
--- Expression
---------------------------------------------------------------------------------
+instance SingI s => Ord (OpenModule s) where
+  compare = deriveStageOrd
 
 type ScopedIden = ScopedIden' 'S.Concrete
 
@@ -959,24 +766,18 @@ data Expression
 instance HasAtomicity (Lambda s) where
   atomicity = const Atom
 
---------------------------------------------------------------------------------
--- Function expression
---------------------------------------------------------------------------------
 data FunctionParameter (s :: Stage)
   = FunctionParameterName (SymbolType s)
   | FunctionParameterWildcard KeywordRef
 
-deriving stock instance
-  (Show (ExpressionType s), Show (SymbolType s)) =>
-  Show (FunctionParameter s)
+instance SingI s => Show (FunctionParameter s) where
+  show = deriveStageShow
 
-deriving stock instance
-  (Eq (ExpressionType s), Eq (SymbolType s)) =>
-  Eq (FunctionParameter s)
+instance SingI s => Eq (FunctionParameter s) where
+  (==) = deriveStageEq
 
-deriving stock instance
-  (Ord (ExpressionType s), Ord (SymbolType s)) =>
-  Ord (FunctionParameter s)
+instance SingI s => Ord (FunctionParameter s) where
+  compare = deriveStageOrd
 
 data FunctionParameters (s :: Stage) = FunctionParameters
   { _paramNames :: [FunctionParameter s],
@@ -986,17 +787,14 @@ data FunctionParameters (s :: Stage) = FunctionParameters
     _paramType :: ExpressionType s
   }
 
-deriving stock instance
-  (Show (ExpressionType s), Show (SymbolType s)) =>
-  Show (FunctionParameters s)
+instance SingI s => Show (FunctionParameters s) where
+  show = deriveStageShow
 
-deriving stock instance
-  (Eq (ExpressionType s), Eq (SymbolType s)) =>
-  Eq (FunctionParameters s)
+instance SingI s => Eq (FunctionParameters s) where
+  (==) = deriveStageEq
 
-deriving stock instance
-  (Ord (ExpressionType s), Ord (SymbolType s)) =>
-  Ord (FunctionParameters s)
+instance SingI s => Ord (FunctionParameters s) where
+  compare = deriveStageOrd
 
 -- | Function *type* representation
 data Function (s :: Stage) = Function
@@ -1005,15 +803,14 @@ data Function (s :: Stage) = Function
     _funReturn :: ExpressionType s
   }
 
-deriving stock instance (Show (ExpressionType s), Show (SymbolType s)) => Show (Function s)
+instance SingI s => Show (Function s) where
+  show = deriveStageShow
 
-deriving stock instance (Eq (ExpressionType s), Eq (SymbolType s)) => Eq (Function s)
+instance SingI s => Eq (Function s) where
+  (==) = deriveStageEq
 
-deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (Function s)
-
---------------------------------------------------------------------------------
--- Lambda expression
---------------------------------------------------------------------------------
+instance SingI s => Ord (Function s) where
+  compare = deriveStageOrd
 
 data Lambda (s :: Stage) = Lambda
   { _lambdaKw :: KeywordRef,
@@ -1021,23 +818,14 @@ data Lambda (s :: Stage) = Lambda
     _lambdaClauses :: NonEmpty (LambdaClause s)
   }
 
-deriving stock instance
-  ( Show (PatternAtomType s),
-    Show (ExpressionType s)
-  ) =>
-  Show (Lambda s)
+instance SingI s => Show (Lambda s) where
+  show = deriveStageShow
 
-deriving stock instance
-  ( Eq (PatternAtomType s),
-    Eq (ExpressionType s)
-  ) =>
-  Eq (Lambda s)
+instance SingI s => Eq (Lambda s) where
+  (==) = deriveStageEq
 
-deriving stock instance
-  ( Ord (PatternAtomType s),
-    Ord (ExpressionType s)
-  ) =>
-  Ord (Lambda s)
+instance SingI s => Ord (Lambda s) where
+  compare = deriveStageOrd
 
 data LambdaClause (s :: Stage) = LambdaClause
   { _lambdaPipe :: Irrelevant (Maybe KeywordRef),
@@ -1046,27 +834,14 @@ data LambdaClause (s :: Stage) = LambdaClause
     _lambdaBody :: ExpressionType s
   }
 
-deriving stock instance
-  ( Show (PatternAtomType s),
-    Show (ExpressionType s)
-  ) =>
-  Show (LambdaClause s)
+instance SingI s => Show (LambdaClause s) where
+  show = deriveStageShow
 
-deriving stock instance
-  ( Eq (PatternAtomType s),
-    Eq (ExpressionType s)
-  ) =>
-  Eq (LambdaClause s)
+instance SingI s => Eq (LambdaClause s) where
+  (==) = deriveStageEq
 
-deriving stock instance
-  ( Ord (PatternAtomType s),
-    Ord (ExpressionType s)
-  ) =>
-  Ord (LambdaClause s)
-
---------------------------------------------------------------------------------
--- Application expression
---------------------------------------------------------------------------------
+instance SingI s => Ord (LambdaClause s) where
+  compare = deriveStageOrd
 
 data Application = Application
   { _applicationFunction :: Expression,
@@ -1093,10 +868,6 @@ data PostfixApplication = PostfixApplication
 instance HasFixity PostfixApplication where
   getFixity (PostfixApplication _ op) = fromMaybe impossible (identifierName op ^. S.nameFixity)
 
---------------------------------------------------------------------------------
--- Let block expression
---------------------------------------------------------------------------------
-
 data Let (s :: Stage) = Let
   { _letKw :: KeywordRef,
     _letInKw :: Irrelevant KeywordRef,
@@ -1104,63 +875,27 @@ data Let (s :: Stage) = Let
     _letExpression :: ExpressionType s
   }
 
-deriving stock instance
-  ( Show (PatternAtomType s),
-    Show (IdentifierType s),
-    Show (ModuleRefType s),
-    Show (SymbolType s),
-    Show (ExpressionType s)
-  ) =>
-  Show (Let s)
+instance SingI s => Show (Let s) where
+  show = deriveStageShow
 
-deriving stock instance
-  ( Eq (PatternAtomType s),
-    Eq (IdentifierType s),
-    Eq (ModuleRefType s),
-    Eq (SymbolType s),
-    Eq (ExpressionType s)
-  ) =>
-  Eq (Let s)
+instance SingI s => Eq (Let s) where
+  (==) = deriveStageEq
 
-deriving stock instance
-  ( Ord (PatternAtomType s),
-    Ord (IdentifierType s),
-    Ord (ModuleRefType s),
-    Ord (SymbolType s),
-    Ord (ExpressionType s)
-  ) =>
-  Ord (Let s)
+instance SingI s => Ord (Let s) where
+  compare = deriveStageOrd
 
 data LetClause (s :: Stage)
   = LetTypeSig (TypeSignature s)
   | LetFunClause (FunctionClause s)
 
-deriving stock instance
-  ( Show (PatternAtomType s),
-    Show (IdentifierType s),
-    Show (ModuleRefType s),
-    Show (SymbolType s),
-    Show (ExpressionType s)
-  ) =>
-  Show (LetClause s)
+instance SingI s => Show (LetClause s) where
+  show = deriveStageShow
 
-deriving stock instance
-  ( Eq (PatternAtomType s),
-    Eq (IdentifierType s),
-    Eq (ModuleRefType s),
-    Eq (SymbolType s),
-    Eq (ExpressionType s)
-  ) =>
-  Eq (LetClause s)
+instance SingI s => Eq (LetClause s) where
+  (==) = deriveStageEq
 
-deriving stock instance
-  ( Ord (PatternAtomType s),
-    Ord (IdentifierType s),
-    Ord (ModuleRefType s),
-    Ord (SymbolType s),
-    Ord (ExpressionType s)
-  ) =>
-  Ord (LetClause s)
+instance SingI s => Ord (LetClause s) where
+  compare = deriveStageOrd
 
 data CaseBranch (s :: Stage) = CaseBranch
   { _caseBranchPipe :: Irrelevant KeywordRef,
@@ -1169,11 +904,14 @@ data CaseBranch (s :: Stage) = CaseBranch
     _caseBranchExpression :: ExpressionType s
   }
 
-deriving stock instance (Eq (ExpressionType s), Eq (PatternParensType s)) => Eq (CaseBranch s)
+instance SingI s => Show (CaseBranch s) where
+  show = deriveStageShow
 
-deriving stock instance (Show (ExpressionType s), Show (PatternParensType s)) => Show (CaseBranch s)
+instance SingI s => Eq (CaseBranch s) where
+  (==) = deriveStageEq
 
-deriving stock instance (Ord (ExpressionType s), Ord (PatternParensType s)) => Ord (CaseBranch s)
+instance SingI s => Ord (CaseBranch s) where
+  compare = deriveStageOrd
 
 data Case (s :: Stage) = Case
   { _caseKw :: KeywordRef,
@@ -1184,15 +922,14 @@ data Case (s :: Stage) = Case
     _caseBranches :: NonEmpty (CaseBranch s)
   }
 
-deriving stock instance (Eq (ExpressionType s), Eq (PatternParensType s)) => Eq (Case s)
+instance SingI s => Show (Case s) where
+  show = deriveStageShow
 
-deriving stock instance (Show (ExpressionType s), Show (PatternParensType s)) => Show (Case s)
+instance SingI s => Eq (Case s) where
+  (==) = deriveStageEq
 
-deriving stock instance (Ord (ExpressionType s), Ord (PatternParensType s)) => Ord (Case s)
-
---------------------------------------------------------------------------------
--- Initializer expression
---------------------------------------------------------------------------------
+instance SingI s => Ord (Case s) where
+  compare = deriveStageOrd
 
 data Initializer (s :: Stage) = Initializer
   { _initializerPattern :: PatternParensType s,
@@ -1200,27 +937,14 @@ data Initializer (s :: Stage) = Initializer
     _initializerExpression :: ExpressionType s
   }
 
-deriving stock instance
-  ( Show (PatternParensType s),
-    Show (ExpressionType s)
-  ) =>
-  Show (Initializer s)
+instance SingI s => Show (Initializer s) where
+  show = deriveStageShow
 
-deriving stock instance
-  ( Eq (PatternParensType s),
-    Eq (ExpressionType s)
-  ) =>
-  Eq (Initializer s)
+instance SingI s => Eq (Initializer s) where
+  (==) = deriveStageEq
 
-deriving stock instance
-  ( Ord (PatternParensType s),
-    Ord (ExpressionType s)
-  ) =>
-  Ord (Initializer s)
-
---------------------------------------------------------------------------------
--- Range expression
---------------------------------------------------------------------------------
+instance SingI s => Ord (Initializer s) where
+  compare = deriveStageOrd
 
 data Range (s :: Stage) = Range
   { _rangePattern :: PatternParensType s,
@@ -1228,27 +952,14 @@ data Range (s :: Stage) = Range
     _rangeExpression :: ExpressionType s
   }
 
-deriving stock instance
-  ( Show (PatternParensType s),
-    Show (ExpressionType s)
-  ) =>
-  Show (Range s)
+instance SingI s => Show (Range s) where
+  show = deriveStageShow
 
-deriving stock instance
-  ( Eq (PatternParensType s),
-    Eq (ExpressionType s)
-  ) =>
-  Eq (Range s)
+instance SingI s => Eq (Range s) where
+  (==) = deriveStageEq
 
-deriving stock instance
-  ( Ord (PatternParensType s),
-    Ord (ExpressionType s)
-  ) =>
-  Ord (Range s)
-
---------------------------------------------------------------------------------
--- Iterator/mapper expression
---------------------------------------------------------------------------------
+instance SingI s => Ord (Range s) where
+  compare = deriveStageOrd
 
 data Iterator s = Iterator
   { _iteratorName :: IdentifierType s,
@@ -1262,29 +973,14 @@ data Iterator s = Iterator
     _iteratorParens :: Bool
   }
 
-deriving stock instance
-  ( Show (Initializer s),
-    Show (Range s),
-    Show (ExpressionType s),
-    Show (IdentifierType s)
-  ) =>
-  Show (Iterator s)
+instance SingI s => Show (Iterator s) where
+  show = deriveStageShow
 
-deriving stock instance
-  ( Eq (Initializer s),
-    Eq (Range s),
-    Eq (ExpressionType s),
-    Eq (IdentifierType s)
-  ) =>
-  Eq (Iterator s)
+instance SingI s => Eq (Iterator s) where
+  (==) = deriveStageEq
 
-deriving stock instance
-  ( Ord (Initializer s),
-    Ord (Range s),
-    Ord (ExpressionType s),
-    Ord (IdentifierType s)
-  ) =>
-  Ord (Iterator s)
+instance SingI s => Ord (Iterator s) where
+  compare = deriveStageOrd
 
 -- | Either an Iterator or a NamedApplication. Has the form:
 -- f (sym := expr; .. ; symn := expr) -- not followed by range
@@ -1298,24 +994,7 @@ data AmbiguousIterator = AmbiguousIterator
     -- the iterator was surrounded by parentheses in the code.
     _ambiguousIteratorParens :: Bool
   }
-
-deriving stock instance
-  ( Show (PatternAtoms 'Parsed),
-    Show (PatternAtom 'Parsed)
-  ) =>
-  Show (AmbiguousIterator)
-
-deriving stock instance
-  ( Eq (PatternAtoms 'Parsed),
-    Eq (ExpressionAtoms 'Parsed)
-  ) =>
-  Eq (AmbiguousIterator)
-
-deriving stock instance
-  ( Ord (ExpressionAtoms 'Parsed),
-    Ord (PatternAtoms 'Parsed)
-  ) =>
-  Ord (AmbiguousIterator)
+  deriving stock (Show, Eq, Ord)
 
 data List (s :: Stage) = List
   { _listBracketL :: Irrelevant KeywordRef,
@@ -1323,20 +1002,14 @@ data List (s :: Stage) = List
     _listItems :: [ExpressionType s]
   }
 
-deriving stock instance
-  ( Show (ExpressionType s)
-  ) =>
-  Show (List s)
+instance SingI s => Show (List s) where
+  show = deriveStageShow
 
-deriving stock instance
-  ( Eq (ExpressionType s)
-  ) =>
-  Eq (List s)
+instance SingI s => Eq (List s) where
+  (==) = deriveStageEq
 
-deriving stock instance
-  ( Ord (ExpressionType s)
-  ) =>
-  Ord (List s)
+instance SingI s => Ord (List s) where
+  compare = deriveStageOrd
 
 data NamedArgument (s :: Stage) = NamedArgument
   { _namedArgName :: Symbol,
@@ -1344,23 +1017,14 @@ data NamedArgument (s :: Stage) = NamedArgument
     _namedArgValue :: ExpressionType s
   }
 
-deriving stock instance
-  ( Show (ExpressionType s),
-    Show (SymbolType s)
-  ) =>
-  Show (NamedArgument s)
+instance SingI s => Show (NamedArgument s) where
+  show = deriveStageShow
 
-deriving stock instance
-  ( Eq (ExpressionType s),
-    Eq (SymbolType s)
-  ) =>
-  Eq (NamedArgument s)
+instance SingI s => Eq (NamedArgument s) where
+  (==) = deriveStageEq
 
-deriving stock instance
-  ( Ord (ExpressionType s),
-    Ord (SymbolType s)
-  ) =>
-  Ord (NamedArgument s)
+instance SingI s => Ord (NamedArgument s) where
+  compare = deriveStageOrd
 
 data ArgumentBlock (s :: Stage) = ArgumentBlock
   { _argBlockDelims :: Irrelevant (Maybe (KeywordRef, KeywordRef)),
@@ -1368,23 +1032,14 @@ data ArgumentBlock (s :: Stage) = ArgumentBlock
     _argBlockArgs :: NonEmpty (NamedArgument s)
   }
 
-deriving stock instance
-  ( Show (ExpressionType s),
-    Show (SymbolType s)
-  ) =>
-  Show (ArgumentBlock s)
+instance SingI s => Show (ArgumentBlock s) where
+  show = deriveStageShow
 
-deriving stock instance
-  ( Eq (ExpressionType s),
-    Eq (SymbolType s)
-  ) =>
-  Eq (ArgumentBlock s)
+instance SingI s => Eq (ArgumentBlock s) where
+  (==) = deriveStageEq
 
-deriving stock instance
-  ( Ord (ExpressionType s),
-    Ord (SymbolType s)
-  ) =>
-  Ord (ArgumentBlock s)
+instance SingI s => Ord (ArgumentBlock s) where
+  compare = deriveStageOrd
 
 data NamedApplication (s :: Stage) = NamedApplication
   { _namedAppName :: IdentifierType s,
@@ -1392,27 +1047,14 @@ data NamedApplication (s :: Stage) = NamedApplication
     _namedAppSignature :: Irrelevant (NameSignatureType s)
   }
 
-deriving stock instance
-  ( Show (ExpressionType s),
-    Show (SymbolType s),
-    Show (NameSignatureType s),
-    Show (IdentifierType s)
-  ) =>
-  Show (NamedApplication s)
+instance SingI s => Show (NamedApplication s) where
+  show = deriveStageShow
 
-deriving stock instance
-  ( Eq (ExpressionType s),
-    Eq (SymbolType s),
-    Eq (IdentifierType s)
-  ) =>
-  Eq (NamedApplication s)
+instance SingI s => Eq (NamedApplication s) where
+  (==) = deriveStageEq
 
-deriving stock instance
-  ( Ord (ExpressionType s),
-    Ord (SymbolType s),
-    Ord (IdentifierType s)
-  ) =>
-  Ord (NamedApplication s)
+instance SingI s => Ord (NamedApplication s) where
+  compare = deriveStageOrd
 
 -- | Expressions without application
 data ExpressionAtom (s :: Stage)
@@ -1432,71 +1074,42 @@ data ExpressionAtom (s :: Stage)
   | AtomAmbiguousIterator (AmbiguousIteratorType s)
   | AtomNamedApplication (NamedApplication s)
 
-deriving stock instance
-  ( Show (ExpressionType s),
-    Show (IdentifierType s),
-    Show (NameSignatureType s),
-    Show (ModuleRefType s),
-    Show (AmbiguousIteratorType s),
-    Show (HoleType s),
-    Show (SymbolType s),
-    Show (PatternParensType s),
-    Show (PatternAtomType s)
-  ) =>
-  Show (ExpressionAtom s)
+instance SingI s => Show (ExpressionAtom s) where
+  show = deriveStageShow
 
-deriving stock instance
-  ( Eq (ExpressionType s),
-    Eq (IdentifierType s),
-    Eq (AmbiguousIteratorType s),
-    Eq (HoleType s),
-    Eq (ModuleRefType s),
-    Eq (SymbolType s),
-    Eq (PatternParensType s),
-    Eq (PatternAtomType s)
-  ) =>
-  Eq (ExpressionAtom s)
+instance SingI s => Eq (ExpressionAtom s) where
+  (==) = deriveStageEq
 
-deriving stock instance
-  ( Ord (ExpressionType s),
-    Ord (IdentifierType s),
-    Ord (ModuleRefType s),
-    Ord (AmbiguousIteratorType s),
-    Ord (HoleType s),
-    Ord (SymbolType s),
-    Ord (PatternParensType s),
-    Ord (PatternAtomType s)
-  ) =>
-  Ord (ExpressionAtom s)
+instance SingI s => Ord (ExpressionAtom s) where
+  compare = deriveStageOrd
 
 data ExpressionAtoms (s :: Stage) = ExpressionAtoms
   { _expressionAtoms :: NonEmpty (ExpressionAtom s),
-    _expressionAtomsLoc :: Interval
+    _expressionAtomsLoc :: Irrelevant Interval
   }
 
-deriving stock instance
-  ( Show (ExpressionType s),
-    Show (IdentifierType s),
-    Show (NameSignatureType s),
-    Show (ModuleRefType s),
-    Show (AmbiguousIteratorType s),
-    Show (HoleType s),
-    Show (SymbolType s),
-    Show (PatternParensType s),
-    Show (PatternAtomType s)
-  ) =>
-  Show (ExpressionAtoms s)
+instance SingI s => Show (ExpressionAtoms s) where
+  show = deriveStageShow
+
+instance SingI s => Eq (ExpressionAtoms s) where
+  (==) = deriveStageEq
+
+instance SingI s => Ord (ExpressionAtoms s) where
+  compare = deriveStageOrd
 
 newtype Judoc (s :: Stage) = Judoc
   { _judocGroups :: NonEmpty (JudocGroup s)
   }
   deriving newtype (Semigroup)
 
-deriving stock instance (Show (ExpressionType s), Show (SymbolType s)) => Show (Judoc s)
+instance SingI s => Show (Judoc s) where
+  show = deriveStageShow
 
-deriving stock instance (Eq (ExpressionType s), Eq (SymbolType s)) => Eq (Judoc s)
+instance SingI s => Eq (Judoc s) where
+  (==) = deriveStageEq
 
-deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (Judoc s)
+instance SingI s => Ord (Judoc s) where
+  compare = deriveStageOrd
 
 data Example (s :: Stage) = Example
   { _exampleId :: NameId,
@@ -1504,11 +1117,14 @@ data Example (s :: Stage) = Example
     _exampleExpression :: ExpressionType s
   }
 
-deriving stock instance (Show (ExpressionType s)) => Show (Example s)
+instance SingI s => Show (Example s) where
+  show = deriveStageShow
 
-deriving stock instance (Eq (ExpressionType s)) => Eq (Example s)
+instance SingI s => Eq (Example s) where
+  (==) = deriveStageEq
 
-deriving stock instance (Ord (ExpressionType s)) => Ord (Example s)
+instance SingI s => Ord (Example s) where
+  compare = deriveStageOrd
 
 data JudocBlockParagraph (s :: Stage) = JudocBlockParagraph
   { _judocBlockParagraphStart :: KeywordRef,
@@ -1516,52 +1132,67 @@ data JudocBlockParagraph (s :: Stage) = JudocBlockParagraph
     _judocBlockParagraphEnd :: KeywordRef
   }
 
-deriving stock instance (Show (ExpressionType s), Show (SymbolType s)) => Show (JudocBlockParagraph s)
+instance SingI s => Show (JudocBlockParagraph s) where
+  show = deriveStageShow
 
-deriving stock instance (Eq (ExpressionType s), Eq (SymbolType s)) => Eq (JudocBlockParagraph s)
+instance SingI s => Eq (JudocBlockParagraph s) where
+  (==) = deriveStageEq
 
-deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (JudocBlockParagraph s)
+instance SingI s => Ord (JudocBlockParagraph s) where
+  compare = deriveStageOrd
 
 data JudocGroup (s :: Stage)
   = JudocGroupBlock (JudocBlockParagraph s)
   | JudocGroupLines (NonEmpty (JudocBlock s))
 
-deriving stock instance (Show (ExpressionType s), Show (SymbolType s)) => Show (JudocGroup s)
+instance SingI s => Show (JudocGroup s) where
+  show = deriveStageShow
 
-deriving stock instance (Eq (ExpressionType s), Eq (SymbolType s)) => Eq (JudocGroup s)
+instance SingI s => Eq (JudocGroup s) where
+  (==) = deriveStageEq
 
-deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (JudocGroup s)
+instance SingI s => Ord (JudocGroup s) where
+  compare = deriveStageOrd
 
 data JudocBlock (s :: Stage)
   = JudocLines (NonEmpty (JudocLine s))
   | JudocExample (Example s)
 
-deriving stock instance (Show (ExpressionType s), Show (SymbolType s)) => Show (JudocBlock s)
+instance SingI s => Show (JudocBlock s) where
+  show = deriveStageShow
 
-deriving stock instance (Eq (ExpressionType s), Eq (SymbolType s)) => Eq (JudocBlock s)
+instance SingI s => Eq (JudocBlock s) where
+  (==) = deriveStageEq
 
-deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (JudocBlock s)
+instance SingI s => Ord (JudocBlock s) where
+  compare = deriveStageOrd
 
 data JudocLine (s :: Stage) = JudocLine
   { _judocLineDelim :: Maybe KeywordRef,
     _judocLineAtoms :: NonEmpty (WithLoc (JudocAtom s))
   }
 
-deriving stock instance (Show (ExpressionType s), Show (SymbolType s)) => Show (JudocLine s)
+instance SingI s => Show (JudocLine s) where
+  show = deriveStageShow
 
-deriving stock instance (Eq (ExpressionType s), Eq (SymbolType s)) => Eq (JudocLine s)
+instance SingI s => Eq (JudocLine s) where
+  (==) = deriveStageEq
 
-deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (JudocLine s)
+instance SingI s => Ord (JudocLine s) where
+  compare = deriveStageOrd
 
 data JudocAtom (s :: Stage)
   = JudocExpression (ExpressionType s)
   | JudocText Text
 
-deriving stock instance (Show (ExpressionType s), Show (SymbolType s)) => Show (JudocAtom s)
+instance SingI s => Show (JudocAtom s) where
+  show = deriveStageShow
 
-deriving stock instance (Eq (ExpressionType s), Eq (SymbolType s)) => Eq (JudocAtom s)
+instance SingI s => Eq (JudocAtom s) where
+  (==) = deriveStageEq
 
-deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (JudocAtom s)
+instance SingI s => Ord (JudocAtom s) where
+  compare = deriveStageOrd
 
 newtype ModuleIndex = ModuleIndex
   { _moduleIxModule :: Module 'Scoped 'ModuleTop
@@ -1685,60 +1316,6 @@ instance SingI s => HasAtomicity (FunctionParameters s) where
     | otherwise = case sing :: SStage s of
         SParsed -> atomicity (p ^. paramType)
         SScoped -> atomicity (p ^. paramType)
-
-deriving stock instance
-  ( Show Symbol,
-    Show (PatternAtom 'Parsed)
-  ) =>
-  Show PatternBinding
-
-deriving stock instance
-  ( Eq Symbol,
-    Eq (PatternAtom 'Parsed)
-  ) =>
-  Eq PatternBinding
-
-deriving stock instance
-  ( Ord Symbol,
-    Ord (PatternAtom 'Parsed)
-  ) =>
-  Ord PatternBinding
-
-deriving stock instance
-  ( Show (ExpressionType s),
-    Show (IdentifierType s),
-    Show (ListPattern s),
-    Show (PatternAtomIdenType s),
-    Show (PatternParensType s),
-    Show (PatternAtType s),
-    Show (PatternAtomType s)
-  ) =>
-  Show (PatternAtom s)
-
-deriving stock instance
-  ( Eq (ExpressionType s),
-    Eq (IdentifierType s),
-    Eq (ListPattern s),
-    Eq (PatternAtomIdenType s),
-    Eq (PatternParensType s),
-    Eq (PatternAtType s),
-    Eq (PatternAtomType s)
-  ) =>
-  Eq (PatternAtom s)
-
-deriving stock instance
-  ( Ord (ExpressionType s),
-    Ord (IdentifierType s),
-    Ord (ListPattern s),
-    Ord (PatternAtomIdenType s),
-    Ord (PatternParensType s),
-    Ord (PatternAtType s),
-    Ord (PatternAtomType s)
-  ) =>
-  Ord (PatternAtom s)
-
-deriving stock instance
-  (Show (PatternAtom s)) => Show (PatternAtoms s)
 
 instance HasLoc ScopedIden where
   getLoc = \case
@@ -1970,7 +1547,7 @@ instance HasLoc (JudocLine s) where
   getLoc (JudocLine delim atoms) = fmap getLoc delim ?<> getLocSpan atoms
 
 instance HasLoc (PatternAtoms s) where
-  getLoc = (^. patternAtomsLoc)
+  getLoc = getLoc . (^. patternAtomsLoc)
 
 instance HasLoc PatternArg where
   getLoc a = fmap getLoc (a ^. patternArgName) ?<> getLoc (a ^. patternArgPattern)
@@ -1996,14 +1573,8 @@ instance HasLoc Pattern where
     PatternInfixApplication i -> getLoc i
     PatternPostfixApplication i -> getLoc i
 
-instance (Eq (PatternAtom s)) => Eq (PatternAtoms s) where
-  (==) = (==) `on` (^. patternAtoms)
-
-instance (Ord (PatternAtom s)) => Ord (PatternAtoms s) where
-  compare = compare `on` (^. patternAtoms)
-
 instance HasLoc (ExpressionAtoms s) where
-  getLoc = (^. expressionAtomsLoc)
+  getLoc = getLoc . (^. expressionAtomsLoc)
 
 instance HasAtomicity (ExpressionAtoms 'Parsed) where
   atomicity ExpressionAtoms {..} = case _expressionAtoms of
@@ -2016,34 +1587,6 @@ instance HasAtomicity (ExpressionAtoms 'Parsed) where
         isArrow = \case
           AtomFunArrow {} -> True
           _ -> False
-
-instance
-  ( Eq (ExpressionType s),
-    Eq (IdentifierType s),
-    Eq (ModuleRefType s),
-    Eq (HoleType s),
-    Eq (AmbiguousIteratorType s),
-    Eq (SymbolType s),
-    Eq (PatternParensType s),
-    Eq (PatternAtomType s)
-  ) =>
-  Eq (ExpressionAtoms s)
-  where
-  (==) = (==) `on` (^. expressionAtoms)
-
-instance
-  ( Ord (ExpressionType s),
-    Ord (IdentifierType s),
-    Ord (ModuleRefType s),
-    Ord (AmbiguousIteratorType s),
-    Ord (HoleType s),
-    Ord (SymbolType s),
-    Ord (PatternParensType s),
-    Ord (PatternAtomType s)
-  ) =>
-  Ord (ExpressionAtoms s)
-  where
-  compare = compare `on` (^. expressionAtoms)
 
 data ApeLeaf
   = ApeLeafExpression Expression
