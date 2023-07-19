@@ -6,6 +6,11 @@ import Juvix.Prelude.Base
 _head1 :: Lens' (NonEmpty a) a
 _head1 = singular each
 
+_tail1 :: Lens' (NonEmpty a) [a]
+_tail1 f (h :| hs) = do
+  hs' <- f hs
+  pure (h :| hs')
+
 -- | View a non-empty list as the init part plus the last element.
 _unsnoc1 :: Lens (NonEmpty a) (NonEmpty b) ([a], a) ([b], b)
 _unsnoc1 afb la = uncurryF (|:) (afb (maybe [] toList minit, lasta))
