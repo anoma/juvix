@@ -736,25 +736,6 @@ checkInductiveDef InductiveDef {..} = do
       ConstructorRhsGadt r -> ConstructorRhsGadt <$> checkGadt r
       ConstructorRhsRecord r -> ConstructorRhsRecord <$> checkRecord r
 
-    -- checkFunction ::
-    --   forall r.
-    --   Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r =>
-    --   Function 'Parsed ->
-    --   Sem r (Function 'Scoped)
-    -- checkFunction f = do
-    --   _paramType <- checkParseExpressionAtoms (f ^. funParameters . paramType)
-    --   withLocalScope $ do
-    --     _paramNames <- forM (f ^. funParameters . paramNames) $ \case
-    --       FunctionParameterWildcard w -> return (FunctionParameterWildcard w)
-    --       FunctionParameterName p -> FunctionParameterName <$> bindVariableSymbol p
-    --     _funReturn <- checkParseExpressionAtoms (f ^. funReturn)
-    --     let _paramImplicit = f ^. funParameters . paramImplicit
-    --         _paramColon = f ^. funParameters . paramColon
-    --         _paramDelims = f ^. funParameters . paramDelims
-    --         _funParameters = FunctionParameters {..}
-    --         _funKw = f ^. funKw
-    --     return Function {..}
-
     checkRecord :: RhsRecord 'Parsed -> Sem r (RhsRecord 'Scoped)
     checkRecord RhsRecord {..} = do
       fields' <- checkFields _rhsRecordFields
