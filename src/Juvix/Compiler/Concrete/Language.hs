@@ -381,55 +381,67 @@ data RecordField (s :: Stage) = RecordField
     _fieldType :: ExpressionType s
   }
 
-instance SingI s => Show (RecordField s) where
-  show = deriveStageShow
+deriving stock instance Show (RecordField 'Parsed)
 
-instance SingI s => Eq (RecordField s) where
-  (==) = deriveStageEq
+deriving stock instance Show (RecordField 'Scoped)
 
-instance SingI s => Ord (RecordField s) where
-  compare = deriveStageOrd
+deriving stock instance Eq (RecordField 'Parsed)
+
+deriving stock instance Eq (RecordField 'Scoped)
+
+deriving stock instance Ord (RecordField 'Parsed)
+
+deriving stock instance Ord (RecordField 'Scoped)
 
 data RhsRecord (s :: Stage) = RhsRecord
   { _rhsRecordDelim :: Irrelevant (KeywordRef, KeywordRef),
     _rhsRecordFields :: NonEmpty (RecordField s)
   }
 
-instance SingI s => Show (RhsRecord s) where
-  show = deriveStageShow
+deriving stock instance Show (RhsRecord 'Parsed)
 
-instance SingI s => Eq (RhsRecord s) where
-  (==) = deriveStageEq
+deriving stock instance Show (RhsRecord 'Scoped)
 
-instance SingI s => Ord (RhsRecord s) where
-  compare = deriveStageOrd
+deriving stock instance Eq (RhsRecord 'Parsed)
+
+deriving stock instance Eq (RhsRecord 'Scoped)
+
+deriving stock instance Ord (RhsRecord 'Parsed)
+
+deriving stock instance Ord (RhsRecord 'Scoped)
 
 data RhsGadt (s :: Stage) = RhsGadt
   { _rhsGadtColon :: Irrelevant KeywordRef,
     _rhsGadtType :: ExpressionType s
   }
 
-instance SingI s => Show (RhsGadt s) where
-  show = deriveStageShow
+deriving stock instance Show (RhsGadt 'Parsed)
 
-instance SingI s => Eq (RhsGadt s) where
-  (==) = deriveStageEq
+deriving stock instance Show (RhsGadt 'Scoped)
 
-instance SingI s => Ord (RhsGadt s) where
-  compare = deriveStageOrd
+deriving stock instance Eq (RhsGadt 'Parsed)
+
+deriving stock instance Eq (RhsGadt 'Scoped)
+
+deriving stock instance Ord (RhsGadt 'Parsed)
+
+deriving stock instance Ord (RhsGadt 'Scoped)
 
 data ConstructorRhs (s :: Stage)
   = ConstructorRhsGadt (RhsGadt s)
   | ConstructorRhsRecord (RhsRecord s)
 
-instance SingI s => Show (ConstructorRhs s) where
-  show = deriveStageShow
+deriving stock instance Show (ConstructorRhs 'Parsed)
 
-instance SingI s => Eq (ConstructorRhs s) where
-  (==) = deriveStageEq
+deriving stock instance Show (ConstructorRhs 'Scoped)
 
-instance SingI s => Ord (ConstructorRhs s) where
-  compare = deriveStageOrd
+deriving stock instance Eq (ConstructorRhs 'Parsed)
+
+deriving stock instance Eq (ConstructorRhs 'Scoped)
+
+deriving stock instance Ord (ConstructorRhs 'Parsed)
+
+deriving stock instance Ord (ConstructorRhs 'Scoped)
 
 data InductiveParameters (s :: Stage) = InductiveParameters
   { _inductiveParametersNames :: NonEmpty (SymbolType s),
