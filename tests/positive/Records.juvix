@@ -6,7 +6,7 @@ type T :=
 type Pair (A B : Type) :=
   | mkPair {
       fst : A;
-      snd : A
+      snd : B
     };
 
 p1 : Pair T T :=
