@@ -613,7 +613,7 @@ parseExpressionAtoms ::
   (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
   ParsecS r (ExpressionAtoms 'Parsed)
 parseExpressionAtoms = do
-  (_expressionAtoms, _expressionAtomsLoc) <- interval (P.some expressionAtom)
+  (_expressionAtoms, _expressionAtomsLoc) <- second Irrelevant <$> interval (P.some expressionAtom)
   return ExpressionAtoms {..}
 
 --------------------------------------------------------------------------------
@@ -1081,12 +1081,12 @@ patternAtom' nested = P.label "<pattern>" $ patternAtomNamed nested <|> patternA
 
 parsePatternAtoms :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (PatternAtoms 'Parsed)
 parsePatternAtoms = do
-  (_patternAtoms, _patternAtomsLoc) <- interval (P.some patternAtom)
+  (_patternAtoms, _patternAtomsLoc) <- second Irrelevant <$> interval (P.some patternAtom)
   return PatternAtoms {..}
 
 parsePatternAtomsNested :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (PatternAtoms 'Parsed)
 parsePatternAtomsNested = do
-  (_patternAtoms, _patternAtomsLoc) <- interval (P.some patternAtomNested)
+  (_patternAtoms, _patternAtomsLoc) <- second Irrelevant <$> interval (P.some patternAtomNested)
   return PatternAtoms {..}
 
 --------------------------------------------------------------------------------
@@ -1133,7 +1133,7 @@ atomicExpression = do
   case atom of
     AtomFunArrow {} -> P.failure Nothing mempty
     _ -> return ()
-  return $ ExpressionAtoms (NonEmpty.singleton atom) loc
+  return $ ExpressionAtoms (NonEmpty.singleton atom) (Irrelevant loc)
 
 openModule :: forall r. (Members '[Error ParserError, PathResolver, Files, InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (OpenModule 'Parsed)
 openModule = do

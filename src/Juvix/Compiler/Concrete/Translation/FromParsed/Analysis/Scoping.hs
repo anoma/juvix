@@ -2311,7 +2311,7 @@ parsePatternAtom ::
 parsePatternAtom = parsePatternAtoms . singletonAtom
   where
     singletonAtom :: PatternAtom 'Scoped -> PatternAtoms 'Scoped
-    singletonAtom a = PatternAtoms (NonEmpty.singleton a) (getLoc a)
+    singletonAtom a = PatternAtoms (NonEmpty.singleton a) (Irrelevant (getLoc a))
 
 parsePatternAtoms ::
   (Members '[Error ScoperError, State Scope] r) =>
