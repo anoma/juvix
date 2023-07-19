@@ -734,6 +734,50 @@ checkInductiveDef InductiveDef {..} = do
     checkRhs :: ConstructorRhs 'Parsed -> Sem r (ConstructorRhs 'Scoped)
     checkRhs = \case
       ConstructorRhsGadt r -> ConstructorRhsGadt <$> checkGadt r
+      ConstructorRhsRecord r -> ConstructorRhsRecord <$> checkRecord r
+
+    -- checkFunction ::
+    --   forall r.
+    --   Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r =>
+    --   Function 'Parsed ->
+    --   Sem r (Function 'Scoped)
+    -- checkFunction f = do
+    --   _paramType <- checkParseExpressionAtoms (f ^. funParameters . paramType)
+    --   withLocalScope $ do
+    --     _paramNames <- forM (f ^. funParameters . paramNames) $ \case
+    --       FunctionParameterWildcard w -> return (FunctionParameterWildcard w)
+    --       FunctionParameterName p -> FunctionParameterName <$> bindVariableSymbol p
+    --     _funReturn <- checkParseExpressionAtoms (f ^. funReturn)
+    --     let _paramImplicit = f ^. funParameters . paramImplicit
+    --         _paramColon = f ^. funParameters . paramColon
+    --         _paramDelims = f ^. funParameters . paramDelims
+    --         _funParameters = FunctionParameters {..}
+    --         _funKw = f ^. funKw
+    --     return Function {..}
+
+    checkRecord :: RhsRecord 'Parsed -> Sem r (RhsRecord 'Scoped)
+    checkRecord RhsRecord {..} = do
+      fields' <- checkFields _rhsRecordFields
+      return
+        RhsRecord
+          { _rhsRecordFields = fields',
+            _rhsRecordDelim
+          }
+      where
+        checkFields :: NonEmpty (RecordField 'Parsed) -> Sem r (NonEmpty (RecordField 'Scoped))
+        checkFields (RecordField {..} :| fs) = do
+          type' <- checkParseExpressionAtoms _fieldType
+          withLocalScope $ do
+            name' <- bindVariableSymbol _fieldName
+            let f =
+                  RecordField
+                    { _fieldType = type',
+                      _fieldName = name',
+                      ..
+                    }
+            case nonEmpty fs of
+              Nothing -> return (pure f)
+              Just fs1 -> (pure f <>) <$> checkFields fs1
 
     checkGadt :: RhsGadt 'Parsed -> Sem r (RhsGadt 'Scoped)
     checkGadt RhsGadt {..} = do

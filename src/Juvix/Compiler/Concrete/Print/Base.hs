@@ -901,9 +901,20 @@ instance SingI s => PrettyPrint (RhsGadt s) where
   ppCode RhsGadt {..} =
     ppCode _rhsGadtColon <+> ppExpressionType _rhsGadtType
 
+instance SingI s => PrettyPrint (RecordField s) where
+  ppCode RecordField {..} =
+    ppSymbolType _fieldName <+> ppCode _fieldColon <+> ppExpressionType _fieldType
+
+instance SingI s => PrettyPrint (RhsRecord s) where
+  ppCode RhsRecord {..} = do
+    let Irrelevant (l, r) = _rhsRecordDelim
+        fields' = sepSemicolon (ppCode <$> _rhsRecordFields)
+    ppCode l <> oneLineOrNext fields' <> ppCode r
+
 instance SingI s => PrettyPrint (ConstructorRhs s) where
   ppCode = \case
     ConstructorRhsGadt r -> ppCode r
+    ConstructorRhsRecord r -> ppCode r
 
 instance SingI s => PrettyPrint (ConstructorDef s) where
   ppCode :: forall r. Members '[ExactPrint, Reader Options] r => ConstructorDef s -> Sem r ()

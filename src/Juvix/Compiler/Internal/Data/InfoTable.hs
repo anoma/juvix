@@ -216,6 +216,7 @@ constructorReturnType c = do
   info <- lookupConstructor c
   let inductiveParams = fst (constructorArgTypes info)
       ind = ExpressionIden (IdenInductive (info ^. constructorInfoInductive))
+      saturatedTy1 = foldExplicitApplication ind (map (ExpressionIden . IdenVar) inductiveParams)
       saturatedTy =
         foldl'
           ( \t v ->
@@ -229,6 +230,7 @@ constructorReturnType c = do
           )
           ind
           inductiveParams
+  unless (saturatedTy1 == saturatedTy) impossible
   return saturatedTy
 
 getAxiomBuiltinInfo :: Member (Reader InfoTable) r => Name -> Sem r (Maybe BuiltinAxiom)

@@ -52,9 +52,15 @@ instance HasNameSignature (InductiveDef 'Parsed, ConstructorDef 'Parsed) where
     mapM_ addConstructorParams (i ^. inductiveParameters)
     addRhs (c ^. constructorRhs)
     where
+      addRecord :: RhsRecord 'Parsed -> Sem r ()
+      addRecord RhsRecord {..} = mapM_ addField _rhsRecordFields
+        where
+          addField :: RecordField 'Parsed -> Sem r ()
+          addField RecordField {..} = addSymbol Explicit _fieldName
       addRhs :: ConstructorRhs 'Parsed -> Sem r ()
       addRhs = \case
         ConstructorRhsGadt g -> addAtoms (g ^. rhsGadtType)
+        ConstructorRhsRecord g -> addRecord g
 
 instance HasNameSignature (InductiveDef 'Parsed) where
   addArgs a = do

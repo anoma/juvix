@@ -375,6 +375,35 @@ deriving stock instance Ord (ConstructorDef 'Parsed)
 
 deriving stock instance Ord (ConstructorDef 'Scoped)
 
+data RecordField (s :: Stage) = RecordField
+  { _fieldName :: SymbolType s,
+    _fieldColon :: Irrelevant (KeywordRef),
+    _fieldType :: ExpressionType s
+  }
+
+instance SingI s => Show (RecordField s) where
+  show = deriveStageShow
+
+instance SingI s => Eq (RecordField s) where
+  (==) = deriveStageEq
+
+instance SingI s => Ord (RecordField s) where
+  compare = deriveStageOrd
+
+data RhsRecord (s :: Stage) = RhsRecord
+  { _rhsRecordDelim :: Irrelevant (KeywordRef, KeywordRef),
+    _rhsRecordFields :: NonEmpty (RecordField s)
+  }
+
+instance SingI s => Show (RhsRecord s) where
+  show = deriveStageShow
+
+instance SingI s => Eq (RhsRecord s) where
+  (==) = deriveStageEq
+
+instance SingI s => Ord (RhsRecord s) where
+  compare = deriveStageOrd
+
 data RhsGadt (s :: Stage) = RhsGadt
   { _rhsGadtColon :: Irrelevant KeywordRef,
     _rhsGadtType :: ExpressionType s
@@ -389,8 +418,9 @@ instance SingI s => Eq (RhsGadt s) where
 instance SingI s => Ord (RhsGadt s) where
   compare = deriveStageOrd
 
-newtype ConstructorRhs (s :: Stage)
+data ConstructorRhs (s :: Stage)
   = ConstructorRhsGadt (RhsGadt s)
+  | ConstructorRhsRecord (RhsRecord s)
 
 instance SingI s => Show (ConstructorRhs s) where
   show = deriveStageShow
@@ -1359,6 +1389,8 @@ newtype ModuleIndex = ModuleIndex
   }
 
 makeLenses ''PatternArg
+makeLenses ''RecordField
+makeLenses ''RhsRecord
 makeLenses ''RhsGadt
 makeLenses ''List
 makeLenses ''ListPattern

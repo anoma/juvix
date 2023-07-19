@@ -1034,9 +1034,25 @@ rhsGadt = P.label "<constructor gadt>" $ do
   _rhsGadtType <- parseExpressionAtoms P.<?> "<constructor type>"
   return RhsGadt {..}
 
+recordField :: Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r => ParsecS r (RecordField 'Parsed)
+recordField = do
+  _fieldName <- symbol
+  _fieldColon <- Irrelevant <$> kw kwColon
+  _fieldType <- parseExpressionAtoms
+  return RecordField {..}
+
+rhsRecord :: Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r => ParsecS r (RhsRecord 'Parsed)
+rhsRecord = P.label "<constructor record>" $ do
+  l <- kw delimBraceL
+  _rhsRecordFields <- P.sepEndBy1 recordField semicolon
+  r <- kw delimBraceR
+  let _rhsRecordDelim = Irrelevant (l, r)
+  return RhsRecord {..}
+
 pconstructorRhs :: Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r => ParsecS r (ConstructorRhs 'Parsed)
 pconstructorRhs =
   ConstructorRhsGadt <$> rhsGadt
+    <|> ConstructorRhsRecord <$> rhsRecord
 
 constructorDef :: Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r => Irrelevant (Maybe KeywordRef) -> ParsecS r (ConstructorDef 'Parsed)
 constructorDef _constructorPipe = do
