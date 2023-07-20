@@ -176,8 +176,8 @@ def exec_jumpz reg val _ (pc, sp, hp, regs, stack, heap) = {
 def opcodes = ( (OpIntAdd, exec_add):
                 (OpIntSub, exec_sub):
                 (OpIntMul, exec_mul):
-                (OpIntDiv, exec_div):
-                (OpIntMod, exec_mod):
+//                (OpIntDiv, exec_div):
+//                (OpIntMod, exec_mod):
                 (OpIntLt, exec_lt):
                 (OpIntEq, exec_eq):
                 (OpLoad, exec_load):
