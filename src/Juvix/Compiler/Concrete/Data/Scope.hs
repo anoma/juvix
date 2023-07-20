@@ -12,13 +12,17 @@ import Juvix.Prelude
 
 type LocalVariable = S.Symbol
 
-newtype SymbolInfo = SymbolInfo
+newtype SymbolInfo' entry = SymbolInfo
   { -- | This map must have at least one entry. If there are more than one
     -- entry, it means that the same symbol has been brought into scope from two
     -- different places
-    _symbolInfo :: HashMap S.AbsModulePath SymbolEntry
+    _symbolInfo :: HashMap S.AbsModulePath entry
   }
   deriving newtype (Show, Semigroup, Monoid)
+
+type SymbolInfo = SymbolInfo' SymbolEntry
+
+type ModuleSymbolInfo = SymbolInfo' ModuleSymbolEntry
 
 mkModuleRef' :: SingI t => ModuleRef'' 'S.NotConcrete t -> ModuleRef' 'S.NotConcrete
 mkModuleRef' m = ModuleRef' (sing :&: m)
@@ -32,6 +36,7 @@ data BindingStrategy
 data Scope = Scope
   { _scopePath :: S.AbsModulePath,
     _scopeSymbols :: HashMap Symbol SymbolInfo,
+    _scopeModuleSymbols :: HashMap Symbol ModuleSymbolInfo,
     -- | The map from S.NameId to Modules is needed because we support merging
     -- several imports under the same name. E.g.
     -- import A as X;
@@ -46,7 +51,7 @@ data Scope = Scope
   deriving stock (Show)
 
 makeLenses ''ExportInfo
-makeLenses ''SymbolInfo
+makeLenses ''SymbolInfo'
 makeLenses ''Scope
 
 newtype ModulesCache = ModulesCache
@@ -104,6 +109,7 @@ emptyScope absPath =
   Scope
     { _scopePath = absPath,
       _scopeSymbols = mempty,
+      _scopeModuleSymbols = mempty,
       _scopeTopModules = mempty,
       _scopeLocalSymbols = mempty
     }

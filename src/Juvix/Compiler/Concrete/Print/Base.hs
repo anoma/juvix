@@ -23,6 +23,7 @@ import Juvix.Data.CodeAnn qualified as C
 import Juvix.Data.Effect.ExactPrint
 import Juvix.Data.IteratorAttribs
 import Juvix.Data.Keyword.All qualified as Kw
+import Juvix.Data.NameKind
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude hiding ((<+>), (<+?>), (<?+>), (?<>))
 import Juvix.Prelude.Pretty (annotate, pretty)
@@ -377,16 +378,14 @@ instance PrettyPrint QualifiedName where
     let symbols = _qualifiedPath ^. pathParts NonEmpty.|> _qualifiedSymbol
     dotted (ppSymbolType <$> symbols)
 
-instance PrettyPrint (ModuleRef'' 'S.Concrete 'ModuleTop) where
+instance SingI t => PrettyPrint (ModuleRef'' 'S.NotConcrete t) where
+  ppCode = ppCode @(ModuleRef' 'S.NotConcrete) . project
+
+instance PrettyPrint (ModuleRef'' 'S.Concrete t) where
   ppCode m = ppCode (m ^. moduleRefName)
 
 instance PrettyPrint ScopedIden where
-  ppCode = \case
-    ScopedAxiom a -> ppCode a
-    ScopedInductive i -> ppCode i
-    ScopedVar n -> ppCode n
-    ScopedFunction f -> ppCode f
-    ScopedConstructor c -> ppCode c
+  ppCode = ppCode . (^. scopedIden)
 
 instance SingI s => PrettyPrint (Import s) where
   ppCode :: forall r. Members '[ExactPrint, Reader Options] r => Import s -> Sem r ()
@@ -831,6 +830,14 @@ instance SingI s => PrettyPrint (UsingItem s) where
         sym' = ppSymbolType (ui ^. usingSymbol)
     sym' <+?> kwAs' <+?> alias'
 
+instance PrettyPrint (ModuleRef' 'S.NotConcrete) where
+  ppCode (ModuleRef' (t :&: m)) =
+    let path = m ^. moduleRefModule . modulePath
+        txt = case t of
+          SModuleTop -> annotate (AnnKind KNameTopModule) (pretty path)
+          SModuleLocal -> annotate (AnnKind KNameLocalModule) (pretty path)
+     in noLoc txt
+
 instance PrettyPrint ModuleRef where
   ppCode (ModuleRef' (_ :&: ModuleRef'' {..})) = ppCode _moduleRefName
 
@@ -991,19 +998,26 @@ instance PrettyPrint SymbolEntry where
   ppCode ent =
     noLoc
       ( kindWord
-          P.<+> C.code (kindAnn (pretty (entryName ent ^. S.nameVerbatim)))
+          P.<+> C.code (kindAnn (pretty (ent ^. symbolEntry . S.nameVerbatim)))
           P.<+> "defined at"
           P.<+> pretty (getLoc ent)
       )
     where
       pretty' :: Text -> Doc a
       pretty' = pretty
-      (kindAnn :: Doc Ann -> Doc Ann, kindWord :: Doc Ann) = case ent of
-        EntryAxiom {} -> (C.annotateKind S.KNameAxiom, pretty' Str.axiom)
-        EntryInductive {} -> (C.annotateKind S.KNameInductive, pretty' Str.inductive)
-        EntryFunction {} -> (C.annotateKind S.KNameFunction, pretty' Str.function)
-        EntryConstructor {} -> (C.annotateKind S.KNameConstructor, pretty' Str.constructor)
-        EntryVariable {} -> (C.annotateKind S.KNameLocal, pretty' Str.variable)
-        EntryModule (ModuleRef' (isTop :&: _))
-          | SModuleTop <- isTop -> (C.annotateKind S.KNameTopModule, pretty' Str.topModule)
-          | SModuleLocal <- isTop -> (C.annotateKind S.KNameLocalModule, pretty' Str.localModule)
+      (kindAnn :: Doc Ann -> Doc Ann, kindWord :: Doc Ann) =
+        let k = getNameKind ent
+         in (annotate (AnnKind k), pretty' (nameKindText k))
+
+instance PrettyPrint ModuleSymbolEntry where
+  ppCode ent = do
+    let mname = ppCode (ent ^. moduleEntry)
+    noLoc
+       kindWord
+       <+> mname
+       <+> noLoc "defined at"
+       <+> noLoc (pretty (getLoc ent))
+    where
+      kindWord :: Doc Ann =
+        let k = getNameKind ent
+         in (pretty (nameKindText k))

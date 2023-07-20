@@ -469,11 +469,11 @@ instance ToGenericError AmbiguousSym where
           opts' = fromGenericOptions opts
           i = getLoc _ambiguousSymName
           is = map getLoc _ambiguousSymEntires
-          msg = ambiguousMessage opts' _ambiguousSymName _ambiguousSymEntires
+          msg = ambiguousMessage opts' _ambiguousSymName (map (ppCode opts') _ambiguousSymEntires)
 
 data AmbiguousModuleSym = AmbiguousModuleSym
   { _ambiguousModName :: Name,
-    _ambiguousModSymEntires :: [SymbolEntry]
+    _ambiguousModSymEntires :: NonEmpty ModuleSymbolEntry
   }
   deriving stock (Show)
 
@@ -490,8 +490,9 @@ instance ToGenericError AmbiguousModuleSym where
         where
           opts' = fromGenericOptions opts
           i = getLoc _ambiguousModName
-          is = map getLoc _ambiguousModSymEntires
-          msg = ambiguousMessage opts' _ambiguousModName _ambiguousModSymEntires
+          entries = toList _ambiguousModSymEntires
+          is = map getLoc entries
+          msg = ambiguousMessage opts' _ambiguousModName (map (ppCode opts') entries)
 
 infixErrorAux :: Doc Ann -> Doc Ann -> Doc Ann
 infixErrorAux kind pp =
@@ -501,7 +502,7 @@ infixErrorAux kind pp =
       <> line
       <> indent' pp
 
-ambiguousMessage :: Options -> Name -> [SymbolEntry] -> Doc Ann
+ambiguousMessage :: Options -> Name -> [Doc Ann] -> Doc Ann
 ambiguousMessage opts' n es =
   "The symbol"
     <+> ppCode opts' n
@@ -511,7 +512,7 @@ ambiguousMessage opts' n es =
       <> line
       <> "It could be any of:"
       <> line
-      <> itemize (map (ppMessage opts') es)
+      <> itemize es
 
 newtype DoubleBracesPattern = DoubleBracesPattern
   { _doubleBracesPatternArg :: PatternArg
