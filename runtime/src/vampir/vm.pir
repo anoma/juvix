@@ -180,15 +180,15 @@ def opcodes = ( (OpIntAdd, exec_add):
                 (OpIntMod, exec_mod):
                 (OpIntLt, exec_lt):
                 (OpIntEq, exec_eq):
-                (OpIntLoad, exec_load):
-                (OpIntStore, exec_store):
-                (OpIntMove, exec_move):
-                (OpIntHalt, exec_halt):
-                (OpIntAlloc, exec_alloc):
-                (OpIntPush, exec_push):
-                (OpIntPop, exec_pop):
-                (OpIntJump, exec_jump):
-                (OpIntJumpOnZero, exec_jumpz):
+                (OpLoad, exec_load):
+                (OpStore, exec_store):
+                (OpMove, exec_move):
+                (OpHalt, exec_halt):
+                (OpAlloc, exec_alloc):
+                (OpPush, exec_push):
+                (OpPop, exec_pop):
+                (OpJump, exec_jump):
+                (OpJumpOnZero, exec_jumpz):
                 []);
 
 def zeroState = (0, 0, 0, zeros regsNum, zeros stackSize, zeros heapSize);
@@ -196,7 +196,7 @@ def zeroState = (0, 0, 0, zeros regsNum, zeros stackSize, zeros heapSize);
 def exec_rec op reg val1 val2 state (opcode, f) step (apc, asp, ahp, aregs, astack, aheap) = {
     def e = equal opcode op;
     def (pc, sp, hp, regs, stack, heap) = f reg val1 val2 state;
-    (
+    step (
         apc + e * pc,
         asp + e * sp,
         ahp + e * hp,

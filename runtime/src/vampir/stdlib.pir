@@ -41,7 +41,8 @@ def divRem a b = {
     def r = fresh (a%b);
     isNegative r = 0;
     lessThan r b = 1;
-    a = b * q + r; (q, r)
+    a = b * q + r;
+    (q, r)
 };
 
 def fst (x, y) = x;
