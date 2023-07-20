@@ -805,8 +805,9 @@ newtype SymbolEntry = SymbolEntry
   }
   deriving stock (Show)
 
-newtype ModuleSymbolEntry = ModuleSymbolEntry {
-  _moduleEntry :: ModuleRef' 'S.NotConcrete}
+newtype ModuleSymbolEntry = ModuleSymbolEntry
+  { _moduleEntry :: ModuleRef' 'S.NotConcrete
+  }
   deriving stock (Show)
 
 instance SingI t => CanonicalProjection (ModuleRef'' c t) (ModuleRef' c) where

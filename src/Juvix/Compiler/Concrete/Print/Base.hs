@@ -1013,10 +1013,10 @@ instance PrettyPrint ModuleSymbolEntry where
   ppCode ent = do
     let mname = ppCode (ent ^. moduleEntry)
     noLoc
-       kindWord
-       <+> mname
-       <+> noLoc "defined at"
-       <+> noLoc (pretty (getLoc ent))
+      kindWord
+      <+> mname
+      <+> noLoc "defined at"
+      <+> noLoc (pretty (getLoc ent))
     where
       kindWord :: Doc Ann =
         let k = getNameKind ent

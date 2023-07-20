@@ -338,6 +338,7 @@ bindLocalModuleSymbol ::
   Symbol ->
   Sem r S.Symbol
 bindLocalModuleSymbol _moduleExportInfo _moduleRefModule = undefined
+
 -- bindSymbolOf
 --   S.KNameLocalModule
 --   (\_moduleRefName -> EntryModule (mkModuleRef' (ModuleRef'' {..})))
@@ -447,8 +448,11 @@ lookupQualifiedSymbol ::
   Sem r ([SymbolEntry], [ModuleSymbolEntry])
 lookupQualifiedSymbol = runOutputList . execOutputList . go
   where
-    go :: forall r'. Members [State Scope, Output SymbolEntry, Output ModuleSymbolEntry] r'
-        => ([Symbol], Symbol) -> Sem r' ()
+    go ::
+      forall r'.
+      Members [State Scope, Output SymbolEntry, Output ModuleSymbolEntry] r' =>
+      ([Symbol], Symbol) ->
+      Sem r' ()
     go (path, sym) = do
       here
       there
@@ -1280,7 +1284,8 @@ checkOpenModuleNoImport OpenModule {..}
       where
         alterEntry :: SymbolEntry -> SymbolEntry
         alterEntry =
-          over symbolEntry
+          over
+            symbolEntry
             ( set S.nameWhyInScope S.BecauseImportedOpened
                 . set S.nameVisibilityAnn (publicAnnToVis _openPublic)
             )

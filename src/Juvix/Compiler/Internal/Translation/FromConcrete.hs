@@ -774,12 +774,15 @@ goExpression = \case
         loc = getLoc l
 
     goIden :: Concrete.ScopedIden -> Internal.Expression
-    goIden x = Internal.ExpressionIden $ case x of
-      ScopedAxiom a -> Internal.IdenAxiom (goName a)
-      ScopedInductive i -> Internal.IdenInductive (goName i)
-      ScopedVar v -> Internal.IdenVar (goSymbol v)
-      ScopedFunction fun -> Internal.IdenFunction (goName fun)
-      ScopedConstructor c -> Internal.IdenConstructor (goName c)
+    goIden x = Internal.ExpressionIden $ case getNameKind x of
+      KNameAxiom {} -> Internal.IdenAxiom n'
+      KNameInductive {} -> Internal.IdenInductive n'
+      KNameLocal {} -> Internal.IdenVar n'
+      KNameFunction {} -> Internal.IdenFunction n'
+      KNameConstructor {} -> Internal.IdenConstructor n'
+      _ -> impossible
+      where
+        n' = goName (x ^. scopedIden)
 
     goLet :: Let 'Scoped -> Sem r Internal.Let
     goLet l = do
