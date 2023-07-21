@@ -127,10 +127,15 @@ serialize opts instrs0 = do
     goPop :: InstrPop -> ByteString
     goPop InstrPop {..} =
       quad
-        "OpLoad"
-        (goReg _instrPopDest)
-        "Cst 0"
-        "Cst 0"
+        "OpIntSub"
+        "Sp"
+        "Sp"
+        "Cst 1"
+        <> quad
+          "OpLoad"
+          (goReg _instrPopDest)
+          "Cst 0"
+          "Cst 0"
 
     goJump :: InstrJump -> ByteString
     goJump InstrJump {..} =

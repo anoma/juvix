@@ -167,6 +167,6 @@ def run_rec code state = {
 };
 
 def run n code = {
-    def (_, regs, _) = iter n (run_rec code) (0, write (zeros regsNum) Hp stackSize, zeros (stackSize + heapSize));
+    def (_, regs, _) = iter n (run_rec code) (0, write (zeros regsNum) Hp stackSize, zeros memSize);
     hd (tl (tl regs))
 };
