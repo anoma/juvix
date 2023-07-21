@@ -286,7 +286,7 @@ instance ToGenericError DuplicateIterator where
 data MultipleExportConflict = MultipleExportConflict
   { _multipleExportModule :: S.AbsModulePath,
     _multipleExportSymbol :: Symbol,
-    _multipleExportEntries :: NonEmpty SymbolEntry
+    _multipleExportEntries :: Either (NonEmpty SymbolEntry) (NonEmpty ModuleSymbolEntry)
   }
   deriving stock (Show)
 

@@ -189,7 +189,6 @@ reserveSymbolOf k nameSig s = do
   strat <- ask
   modify (set (scopeLocalSymbols . at s) (Just s'))
   let c = S.unConcrete s'
-      -- TODO What about modules?
       mentry :: Maybe SymbolEntry
       mentry =
         let e = SymbolEntry c
@@ -207,6 +206,7 @@ reserveSymbolOf k nameSig s = do
         Just SymbolInfo {..} -> case strat of
           BindingLocal -> symbolInfoSingle entry
           BindingTop -> SymbolInfo (HashMap.insert path entry _symbolInfo)
+  -- TODO What about modules?
   whenJust mentry $ \entry ->
     modify (over scopeSymbols (HashMap.alter (Just . addS entry) s))
 
@@ -511,25 +511,39 @@ exportScope ::
   Scope ->
   Sem r ExportInfo
 exportScope Scope {..} = do
-  _exportSymbols <- getExportSymbols
+  _exportSymbols <- HashMap.fromList <$> mapMaybeM (mkentry symbolErr symbolShouldExport) (HashMap.toList _scopeSymbols)
+  _exportModuleSymbols <- HashMap.fromList <$> mapMaybeM (mkentry moduleErr moduleShouldExport) (HashMap.toList _scopeModuleSymbols)
   return ExportInfo {..}
   where
-    getExportSymbols :: Sem r (HashMap Symbol SymbolEntry)
-    getExportSymbols = HashMap.fromList <$> mapMaybeM mkentry (HashMap.toList _scopeSymbols)
-      where
-        shouldExport :: SymbolEntry -> Bool
-        shouldExport ent = ent ^. symbolEntry . S.nameVisibilityAnn == VisPublic
+    moduleShouldExport :: ModuleSymbolEntry -> Bool
+    moduleShouldExport ent = undefined
 
-        mkentry :: (Symbol, SymbolInfo) -> Sem r (Maybe (Symbol, SymbolEntry))
-        mkentry (s, SymbolInfo {..}) =
-          case filter shouldExport (toList _symbolInfo) of
-            [] -> return Nothing
-            [e] -> return (Just (s, e))
-            e : es ->
-              throw
-                ( ErrMultipleExport
-                    (MultipleExportConflict _scopePath s (e :| es))
-                )
+    symbolShouldExport :: SymbolEntry -> Bool
+    symbolShouldExport ent = ent ^. symbolEntry . S.nameVisibilityAnn == VisPublic
+
+    symbolErr :: Symbol -> NonEmpty SymbolEntry -> Sem r a
+    symbolErr s es =
+      throw
+        ( ErrMultipleExport
+            (MultipleExportConflict _scopePath s (Left es))
+        )
+    moduleErr :: Symbol -> NonEmpty ModuleSymbolEntry -> Sem r a
+    moduleErr s es =
+      throw
+        ( ErrMultipleExport
+            (MultipleExportConflict _scopePath s (Right es))
+        )
+
+    mkentry ::
+      (forall a. Symbol -> NonEmpty entry -> Sem r a) ->
+      (entry -> Bool) ->
+      (Symbol, SymbolInfo' entry) ->
+      Sem r (Maybe (Symbol, entry))
+    mkentry err shouldExport (s, SymbolInfo {..}) =
+      case filter shouldExport (toList _symbolInfo) of
+        [] -> return Nothing
+        [e] -> return (Just (s, e))
+        e : es -> err s (e :| es)
 
 getParsedModule :: Members '[Reader ScopeParameters] r => TopModulePath -> Sem r (Module 'Parsed 'ModuleTop)
 getParsedModule i = asks (^?! scopeParsedModules . at i . _Just)
@@ -1096,10 +1110,12 @@ checkLocalModule Module {..} = do
       modify (over scopeSymbols (fmap inheritSymbol))
       where
         inheritSymbol :: SymbolInfo -> SymbolInfo
-        inheritSymbol (SymbolInfo s) = SymbolInfo (fmap inheritEntry s)
+        inheritSymbol (SymbolInfo s) = SymbolInfo (inheritEntry <$> s)
 
         inheritEntry :: SymbolEntry -> SymbolEntry
-        inheritEntry = (over (symbolEntry . S.nameWhyInScope) S.BecauseInherited . set (symbolEntry . S.nameVisibilityAnn) VisPrivate)
+        inheritEntry =
+          over (symbolEntry . S.nameWhyInScope) S.BecauseInherited
+            . set (symbolEntry . S.nameVisibilityAnn) VisPrivate
 
 checkOrphanFixities :: forall r. Members '[Error ScoperError, State ScoperFixities] r => Sem r ()
 checkOrphanFixities = do
@@ -1271,9 +1287,13 @@ checkOpenModuleNoImport OpenModule {..}
           }
   where
     mergeScope :: ExportInfo -> Sem r ()
-    mergeScope ExportInfo {..} =
+    mergeScope ExportInfo {..} = do
       mapM_ mergeSymbol (HashMap.toList _exportSymbols)
+      mapM_ mergeModuleSymbol (HashMap.toList _exportModuleSymbols)
       where
+        mergeModuleSymbol :: (Symbol, ModuleSymbolEntry) -> Sem r ()
+        mergeModuleSymbol = undefined
+
         mergeSymbol :: (Symbol, SymbolEntry) -> Sem r ()
         mergeSymbol (s, entry) =
           modify
@@ -1282,6 +1302,9 @@ checkOpenModuleNoImport OpenModule {..}
     alterScope :: Maybe (UsingHiding 'Scoped) -> ExportInfo -> ExportInfo
     alterScope openModif = alterEntries . filterScope
       where
+        alterModuleEntry :: ModuleSymbolEntry -> ModuleSymbolEntry
+        alterModuleEntry = undefined
+
         alterEntry :: SymbolEntry -> SymbolEntry
         alterEntry =
           over
