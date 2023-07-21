@@ -709,3 +709,9 @@ nil = "nil"
 
 cons :: IsString s => s
 cons = "cons"
+
+sp :: IsString s => s
+sp = "sp"
+
+hp :: IsString s => s
+hp = "hp"

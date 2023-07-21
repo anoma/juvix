@@ -9,10 +9,11 @@ import Juvix.Prelude
 import Juvix.Prelude.Parsing qualified as P
 import Text.Megaparsec.Char.Lexer qualified as L
 
-register :: ParsecS r Int
-register = P.try $ do
+registerR :: ParsecS r Int
+registerR = P.try $ do
   _ <- P.char 'r'
-  lexeme L.decimal
+  i <- lexeme L.decimal
+  return (i + 2)
 
 offset :: ParsecS r Int
 offset = fst <$> number 0 128

@@ -1,4 +1,4 @@
--- arithmetic
+-- arithmetic (stack 0, heap 0, steps < 20)
 move r0, $x
 add r0, r0, $y
 mul r0, r0, 2

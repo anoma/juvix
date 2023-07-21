@@ -19,3 +19,6 @@ defaultHeapSize = 1024
 
 defaultVampIRIntegerBits :: Int
 defaultVampIRIntegerBits = 24
+
+defaultStepsNum :: Int
+defaultStepsNum = 100

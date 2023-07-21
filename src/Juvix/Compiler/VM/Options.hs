@@ -18,7 +18,7 @@ defaultOptions =
   Options
     { _optStackSize = defaultStackSize,
       _optHeapSize = defaultHeapSize,
-      _optStepsNum = defaultUnrollLimit,
+      _optStepsNum = defaultStepsNum,
       _optIntegerBits = defaultVampIRIntegerBits,
       _optInputsFile = Nothing
     }

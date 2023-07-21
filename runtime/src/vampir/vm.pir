@@ -16,9 +16,7 @@ def sum xs = fold xs (fun x y {x + y}) 0;
 /////////////////////////////////////////////////////////
 
 def Cst x = x * 2;
-def Reg x = (x + 2) * 2 + 1;
-def Sp = 0 * 2 + 1;
-def Hp = 1 * 2 + 1;
+def Reg x = x * 2 + 1;
 
 def decomp2 x = {
     def a = fresh (x \ 2);
@@ -73,9 +71,9 @@ def OpMove = 9;
 // halt 0, 0, 0
 def OpHalt = 10;
 // jump 0, val, 0
-def OpJump = 14;
+def OpJump = 11;
 // jumpz reg, val, 0
-def OpJumpOnZero = 15;
+def OpJumpOnZero = 12;
 
 /////////////////////////////////////////////////////////
 
@@ -167,6 +165,6 @@ def run_rec code state = {
 };
 
 def run n code = {
-    def (_, regs, _) = iter n (run_rec code) (0, write (zeros regsNum) Hp stackSize, zeros memSize);
+    def (_, regs, _) = iter n (run_rec code) (0, write (zeros regsNum) 1 stackSize, zeros memSize);
     hd (tl (tl regs))
 };

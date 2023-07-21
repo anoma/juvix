@@ -241,6 +241,12 @@ kwBracketL = asciiKw Str.bracketL
 kwBracketR :: Keyword
 kwBracketR = asciiKw Str.bracketR
 
+kwSP :: Keyword
+kwSP = asciiKw Str.sp
+
+kwHP :: Keyword
+kwHP = asciiKw Str.hp
+
 delimBraceL :: Keyword
 delimBraceL = mkDelim Str.braceL
 

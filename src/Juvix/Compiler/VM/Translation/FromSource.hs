@@ -11,6 +11,7 @@ where
 import Juvix.Compiler.VM.Extra.Utils
 import Juvix.Compiler.VM.Language
 import Juvix.Compiler.VM.Translation.FromSource.Lexer
+import Juvix.Data.Keyword.All (kwHP, kwSP)
 import Juvix.Parser.Error
 import Text.Megaparsec qualified as P
 
@@ -67,18 +68,25 @@ instruction = do
       Move <$> parseMoveArgs
     "halt" ->
       return Halt
-    "alloc" ->
-      Alloc <$> parseAllocArgs
-    "push" ->
-      Push <$> parsePushArgs
-    "pop" ->
-      Pop <$> parsePopArgs
     "jump" ->
       Jump <$> parseJumpArgs
     "jumpz" ->
       JumpOnZero <$> parseJumpOnZeroArgs
     _ ->
       parseFailure off ("unknown instruction: " ++ fromText txt)
+
+registerSP :: ParsecS r Int
+registerSP = do
+  kw kwSP
+  return 0
+
+registerHP :: ParsecS r Int
+registerHP = do
+  kw kwHP
+  return 1
+
+register :: ParsecS r Int
+register = registerSP <|> registerHP <|> registerR
 
 parseBinopArgs :: Opcode -> ParsecS r BinaryOp
 parseBinopArgs op = do

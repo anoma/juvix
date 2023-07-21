@@ -74,9 +74,6 @@ resolveLabels instrs0 = do
           Store x -> Store <$> goStore x
           Move x -> Move <$> goMove x
           Halt -> return Halt
-          Alloc x -> Alloc <$> goAlloc x
-          Push x -> Push <$> goPush x
-          Pop x -> Pop <$> goPop x
           Jump x -> Jump <$> goJump x
           JumpOnZero x -> JumpOnZero <$> goJumpOnZero x
           Label {} -> impossible
@@ -106,15 +103,6 @@ resolveLabels instrs0 = do
 
         goMove :: InstrMove -> Sem r InstrMove
         goMove = overM instrMoveValue adjustValue
-
-        goAlloc :: InstrAlloc -> Sem r InstrAlloc
-        goAlloc = return
-
-        goPush :: InstrPush -> Sem r InstrPush
-        goPush = overM instrPushValue adjustValue
-
-        goPop :: InstrPop -> Sem r InstrPop
-        goPop = return
 
         goJump :: InstrJump -> Sem r InstrJump
         goJump = overM instrJumpDest adjustValue

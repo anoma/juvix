@@ -34,7 +34,10 @@ data CompileOptions = CompileOptions
     _compileTarget :: CompileTarget,
     _compileInputFile :: Maybe (AppPath File),
     _compileOptimizationLevel :: Maybe Int,
-    _compileInliningDepth :: Int
+    _compileInliningDepth :: Int,
+    _compileStackSize :: Int,
+    _compileHeapSize :: Int,
+    _compileStepsNum :: Int
   }
   deriving stock (Data)
 
@@ -100,6 +103,39 @@ parseCompileOptions supportedTargets parseInputFile = do
           <> value defaultInliningDepth
           <> help ("Automatic inlining depth limit, logarithmic in the function size (default: " <> show defaultInliningDepth <> ")")
       )
+  _compileStackSize <-
+    if
+        | elem TargetVampIRVM supportedTargets ->
+            option
+              (fromIntegral <$> naturalNumberOpt)
+              ( long "stack"
+                  <> value defaultStackSize
+                  <> help "Stack size limit (for targets: vampir-vm)"
+              )
+        | otherwise ->
+            pure 0
+  _compileHeapSize <-
+    if
+        | elem TargetVampIRVM supportedTargets ->
+            option
+              (fromIntegral <$> naturalNumberOpt)
+              ( long "heap"
+                  <> value defaultHeapSize
+                  <> help "Heap size limit (for targets: vampir-vm)"
+              )
+        | otherwise ->
+            pure 0
+  _compileStepsNum <-
+    if
+        | elem TargetVampIRVM supportedTargets ->
+            option
+              (fromIntegral <$> naturalNumberOpt)
+              ( long "steps"
+                  <> value defaultStepsNum
+                  <> help "Steps limit (for targets: vampir-vm)"
+              )
+        | otherwise ->
+            pure 0
   _compileTarget <- optCompileTarget supportedTargets
   _compileOutputFile <- optional parseGenericOutputFile
   _compileInputFile <- optional parseInputFile

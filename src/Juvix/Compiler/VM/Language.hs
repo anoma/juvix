@@ -40,13 +40,6 @@ data Instruction
     Move InstrMove
   | -- | JVB opcode: 'halt'.
     Halt
-  | -- | Allocates `num` fields on the heap and stores the pointer in dest. JVB
-    -- opcode: 'alloc reg, num'.
-    Alloc InstrAlloc
-  | -- | JVB opcode: 'push reg'.
-    Push InstrPush
-  | -- | JVB opcode: 'pop reg'.
-    Pop InstrPop
   | -- | JVB opcode: 'jump val'.
     Jump InstrJump
   | -- | JVB opcode: 'jumpz reg, val'.
@@ -148,11 +141,8 @@ instructionOpcode = \case
   Store {} -> 8
   Move {} -> 9
   Halt -> 10
-  Alloc {} -> 11
-  Push {} -> 12
-  Pop {} -> 13
-  Jump {} -> 14
-  JumpOnZero {} -> 15
+  Jump {} -> 11
+  JumpOnZero {} -> 12
   Label {} -> impossible
 
 makeLenses ''BinaryOp

@@ -1,9 +1,10 @@
--- direct call
+-- direct call (stack < 10, heap 0, steps < 20)
 
   move r0, $x
   move r1, $y
   move r2, $z
-  push return_label_1
+  store sp, 0, return_label_1
+  add sp, sp, 1
   jump calculate
 return_label_1:
   eq r0, r0, 11
@@ -12,5 +13,6 @@ return_label_1:
 calculate:
   mul r0, r0, r1
   add r0, r0, r2
-  pop r1
+  sub sp, sp, 1
+  load r1, sp, 0
   jump r1

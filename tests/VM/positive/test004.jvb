@@ -1,6 +1,7 @@
 -- indirect call
 
-  alloc r0, 5
+  move r0, hp
+  add hp, hp, 5
   store r0, 0, calculate
   store r0, 1, 2
   store r0, 2, 1
@@ -8,7 +9,8 @@
   store r0, 4, $y
   move r1, 1
   move r2, return_label_1
-  push $z
+  store sp, 0, $z
+  add sp, sp, 1
   jump ccall_exact
 return_label_1:
   eq r0, r0, 11
@@ -25,21 +27,29 @@ ccall_exact:
 ccall_exact_loop_1:
   jumpz r1, ccall_exact_exit_1
   load r3, r0, 0
-  push r3
+  store sp, 0, r3
+  add sp, sp, 1
   sub r0, r0, 1
   sub r1, r1, 1
   jump ccall_exact_loop_1
 ccall_exact_exit_1:
-  push r2
+  store sp, 0, r2
+  add sp, sp, 1
   jump r4
 
 calculate:
-  pop r3
-  pop r0
-  pop r1
-  pop r2
-  push r3
+  sub sp, sp, 1
+  load r3, sp, 0
+  sub sp, sp, 1
+  load r0, sp, 0
+  sub sp, sp, 1
+  load r1, sp, 0
+  sub sp, sp, 1
+  load r2, sp, 0
+  store sp, 0, r3
+  add sp, sp, 1
   mul r0, r0, r1
   add r0, r0, r2
-  pop r1
+  sub sp, sp, 1
+  load r1, sp, 0
   jump r1

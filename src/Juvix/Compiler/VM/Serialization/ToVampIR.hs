@@ -18,7 +18,7 @@ serialize opts instrs0 = do
       <> ") = 1;\n"
   where
     regsNum :: Int
-    regsNum = computeRegsNum instrs0 + 2
+    regsNum = computeRegsNum instrs0
 
     go :: Instruction -> ByteString
     go = \case
@@ -27,9 +27,6 @@ serialize opts instrs0 = do
       Store x -> goStore x
       Move x -> goMove x
       Halt -> goHalt
-      Alloc x -> goAlloc x
-      Push x -> goPush x
-      Pop x -> goPop x
       Jump x -> goJump x
       JumpOnZero x -> goJumpOnZero x
       Label {} -> impossible
@@ -98,45 +95,6 @@ serialize opts instrs0 = do
     goHalt :: ByteString
     goHalt = quad "OpHalt" "0" "0" "0"
 
-    goAlloc :: InstrAlloc -> ByteString
-    goAlloc InstrAlloc {..} =
-      quad
-        "OpMove"
-        (goReg _instrAllocDest)
-        "Hp"
-        "0"
-        <> quad
-          "OpIntAdd"
-          "Hp"
-          "Hp"
-          (goValue _instrAllocSize)
-
-    goPush :: InstrPush -> ByteString
-    goPush InstrPush {..} =
-      quad
-        "OpStore"
-        "Sp"
-        "Cst 0"
-        (goValue _instrPushValue)
-        <> quad
-          "OpAdd"
-          "Sp"
-          "Sp"
-          "Cst 1"
-
-    goPop :: InstrPop -> ByteString
-    goPop InstrPop {..} =
-      quad
-        "OpIntSub"
-        "Sp"
-        "Sp"
-        "Cst 1"
-        <> quad
-          "OpLoad"
-          (goReg _instrPopDest)
-          "Cst 0"
-          "Cst 0"
-
     goJump :: InstrJump -> ByteString
     goJump InstrJump {..} =
       quad
@@ -154,7 +112,7 @@ serialize opts instrs0 = do
         (goValue _instrJumpOnZeroDest)
 
     goReg :: Int -> ByteString
-    goReg r = show (r + 2)
+    goReg r = show r
 
 vampirPrelude :: Int -> Options -> ByteString
 vampirPrelude regsNum opts =

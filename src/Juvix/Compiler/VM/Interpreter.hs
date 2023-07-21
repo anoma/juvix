@@ -17,38 +17,34 @@ runCode opts vars instrs0 = runST goCode
     heapSize :: Int
     heapSize = opts ^. optHeapSize
     stackSize :: Int
-    stackSize = opts ^. optStackSize
+    stackSize = max 1 (opts ^. optStackSize)
+    memSize :: Int
+    memSize = stackSize + heapSize
     regsNum :: Int
-    regsNum = computeRegsNum instrs0
+    regsNum = max 3 (computeRegsNum instrs0)
 
     goCode :: ST s Int
     goCode = do
-      heap <- MV.replicate heapSize 0
-      stack <- MV.replicate stackSize 0
+      mem <- MV.replicate memSize 0
       regs <- MV.replicate regsNum 0
-      go 0 0 1 regs stack heap
-      MV.read regs 0
+      MV.write regs 1 stackSize
+      go 0 regs mem
+      MV.read regs 2
 
     go ::
       Int ->
-      Int ->
-      Int ->
-      MV.MVector s Int ->
       MV.MVector s Int ->
       MV.MVector s Int ->
       ST s ()
-    go pc sp hp regs stack heap =
+    go pc regs mem =
       case instrs Vec.! pc of
-        Binop x -> goBinop x pc sp hp regs stack heap
-        Load x -> goLoad x pc sp hp regs stack heap
-        Store x -> goStore x pc sp hp regs stack heap
-        Move x -> goMove x pc sp hp regs stack heap
+        Binop x -> goBinop x pc regs mem
+        Load x -> goLoad x pc regs mem
+        Store x -> goStore x pc regs mem
+        Move x -> goMove x pc regs mem
         Halt -> return ()
-        Alloc x -> goAlloc x pc sp hp regs stack heap
-        Push x -> goPush x pc sp hp regs stack heap
-        Pop x -> goPop x pc sp hp regs stack heap
-        Jump x -> goJump x pc sp hp regs stack heap
-        JumpOnZero x -> goJumpOnZero x pc sp hp regs stack heap
+        Jump x -> goJump x pc regs mem
+        JumpOnZero x -> goJumpOnZero x pc regs mem
         Label {} -> impossible
 
     readValue :: MV.MVector s Int -> Value -> ST s Int
@@ -62,17 +58,14 @@ runCode opts vars instrs0 = runST goCode
     goBinop ::
       BinaryOp ->
       Int ->
-      Int ->
-      Int ->
-      MV.MVector s Int ->
       MV.MVector s Int ->
       MV.MVector s Int ->
       ST s ()
-    goBinop BinaryOp {..} pc sp hp regs stack heap = do
+    goBinop BinaryOp {..} pc regs mem = do
       val1 <- readValue regs _binaryOpArg1
       val2 <- readValue regs _binaryOpArg2
       MV.write regs _binaryOpResult (computeBinop val1 val2)
-      go (pc + 1) sp hp regs stack heap
+      go (pc + 1) regs mem
       where
         computeBinop :: Int -> Int -> Int
         computeBinop v1 v2 = case _binaryOpCode of
@@ -87,112 +80,55 @@ runCode opts vars instrs0 = runST goCode
     goLoad ::
       InstrLoad ->
       Int ->
-      Int ->
-      Int ->
-      MV.MVector s Int ->
       MV.MVector s Int ->
       MV.MVector s Int ->
       ST s ()
-    goLoad InstrLoad {..} pc sp hp regs stack heap = do
+    goLoad InstrLoad {..} pc regs mem = do
       src <- MV.read regs _instrLoadSrc
-      v <- MV.read heap (src + _instrLoadOffset)
+      v <- MV.read mem (src + _instrLoadOffset)
       MV.write regs _instrLoadDest v
-      go (pc + 1) sp hp regs stack heap
+      go (pc + 1) regs mem
 
     goStore ::
       InstrStore ->
       Int ->
-      Int ->
-      Int ->
-      MV.MVector s Int ->
       MV.MVector s Int ->
       MV.MVector s Int ->
       ST s ()
-    goStore InstrStore {..} pc sp hp regs stack heap = do
+    goStore InstrStore {..} pc regs mem = do
       dest <- MV.read regs _instrStoreDest
       v <- readValue regs _instrStoreValue
-      MV.write heap (dest + _instrStoreOffset) v
-      go (pc + 1) sp hp regs stack heap
+      MV.write mem (dest + _instrStoreOffset) v
+      go (pc + 1) regs mem
 
     goMove ::
       InstrMove ->
       Int ->
-      Int ->
-      Int ->
-      MV.MVector s Int ->
       MV.MVector s Int ->
       MV.MVector s Int ->
       ST s ()
-    goMove InstrMove {..} pc sp hp regs stack heap = do
+    goMove InstrMove {..} pc regs mem = do
       v <- readValue regs _instrMoveValue
       MV.write regs _instrMoveDest v
-      go (pc + 1) sp hp regs stack heap
-
-    goAlloc ::
-      InstrAlloc ->
-      Int ->
-      Int ->
-      Int ->
-      MV.MVector s Int ->
-      MV.MVector s Int ->
-      MV.MVector s Int ->
-      ST s ()
-    goAlloc InstrAlloc {..} pc sp hp regs stack heap = do
-      v <- readValue regs _instrAllocSize
-      MV.write regs _instrAllocDest hp
-      go (pc + 1) sp (hp + v) regs stack heap
-
-    goPush ::
-      InstrPush ->
-      Int ->
-      Int ->
-      Int ->
-      MV.MVector s Int ->
-      MV.MVector s Int ->
-      MV.MVector s Int ->
-      ST s ()
-    goPush InstrPush {..} pc sp hp regs stack heap = do
-      v <- readValue regs _instrPushValue
-      MV.write stack sp v
-      go (pc + 1) (sp + 1) hp regs stack heap
-
-    goPop ::
-      InstrPop ->
-      Int ->
-      Int ->
-      Int ->
-      MV.MVector s Int ->
-      MV.MVector s Int ->
-      MV.MVector s Int ->
-      ST s ()
-    goPop InstrPop {..} pc sp hp regs stack heap = do
-      v <- MV.read stack (sp - 1)
-      MV.write regs _instrPopDest v
-      go (pc + 1) (sp - 1) hp regs stack heap
+      go (pc + 1) regs mem
 
     goJump ::
       InstrJump ->
       Int ->
-      Int ->
-      Int ->
-      MV.MVector s Int ->
       MV.MVector s Int ->
       MV.MVector s Int ->
       ST s ()
-    goJump InstrJump {..} _ sp hp regs stack heap = do
+    goJump InstrJump {..} _ regs mem = do
       addr <- readValue regs _instrJumpDest
-      go addr sp hp regs stack heap
+      go addr regs mem
 
     goJumpOnZero ::
       InstrJumpOnZero ->
       Int ->
-      Int ->
-      Int ->
-      MV.MVector s Int ->
       MV.MVector s Int ->
       MV.MVector s Int ->
       ST s ()
-    goJumpOnZero InstrJumpOnZero {..} pc sp hp regs stack heap = do
+    goJumpOnZero InstrJumpOnZero {..} pc regs mem = do
       addr <- readValue regs _instrJumpOnZeroDest
       v <- MV.read regs _instrJumpOnZeroReg
-      go (if v == 0 then addr else pc + 1) sp hp regs stack heap
+      go (if v == 0 then addr else pc + 1) regs mem

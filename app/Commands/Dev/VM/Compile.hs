@@ -35,4 +35,9 @@ runCommand opts = do
         Right bs ->
           embed (BS.writeFile (toFilePath out) bs)
 
-    opts' = VM.defaultOptions
+    opts' =
+      VM.defaultOptions
+        { VM._optHeapSize = opts ^. compileHeapSize,
+          VM._optStackSize = opts ^. compileStackSize,
+          VM._optStepsNum = opts ^. compileStepsNum
+        }

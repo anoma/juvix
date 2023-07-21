@@ -1,4 +1,4 @@
--- loops
+-- loops (stack 0, heap 0, steps < 100)
   move r1, $x
   move r0, 0
 loop:
@@ -7,5 +7,5 @@ loop:
   jumpz r1, exit
   jump loop
 exit:
-  eq r0, r0, 5050
+  eq r0, r0, 55
   halt
