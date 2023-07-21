@@ -62,7 +62,7 @@ def read_code_rec n (x1, x2, x3, x4) step (acc1, acc2, acc3, acc4) idx = {
 def read_code mem n = fold mem (read_code_rec n) (fun acc idx {acc}) (0, 0, 0, 0) 0;
 
 def write_reg regs reg val = {
-    def (r0, isMem) = decomp2 val;
+    def (r0, isMem) = decomp2 reg;
     def r = if isMem regsNum r0;
     write regs r val
 };
@@ -160,7 +160,7 @@ def exec op reg val1 val2 (pc, regs, mem) = {
     def v1 = read_val regs mem val1;
     def v2 = read_val regs mem val2;
     def (pc, v) = fold opcodes (exec_rec op reg v1 v2 pc) (fun acc {acc}) (0, 0);
-    (pc, write_reg regs reg v, write_mem mem reg v)
+    (pc, write_reg regs reg v, write_mem regs mem reg v)
 };
 
 def run_rec code state = {

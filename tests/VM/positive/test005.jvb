@@ -1,4 +1,4 @@
--- lists
+-- lists (stack < 10, heap < 20, steps < 400)
 
   move r0, $x
   move [sp], return_label_1

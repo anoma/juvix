@@ -87,7 +87,7 @@ serialize opts instrs0 = do
     goJump InstrJump {..} =
       quad
         "OpJumpOnZero"
-        (show regsNum)
+        ("LReg " <> show regsNum)
         "Cst 0"
         (goValue _instrJumpDest)
 
@@ -95,7 +95,7 @@ serialize opts instrs0 = do
     goJumpOnZero InstrJumpOnZero {..} =
       quad
         "OpJumpOnZero"
-        (show regsNum)
+        ("LReg " <> show regsNum)
         (goValue _instrJumpOnZeroValue)
         (goValue _instrJumpOnZeroDest)
 

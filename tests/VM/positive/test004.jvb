@@ -1,4 +1,4 @@
--- indirect call
+-- indirect call (stack < 10, heap < 10, steps < 70)
 
   move r0, hp
   move [hp], calculate
