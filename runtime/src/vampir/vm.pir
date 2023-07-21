@@ -2,22 +2,23 @@
 // VampIR runtime VM primitives
 /////////////////////////////////////////////////////////
 
+def memSize = stackSize + heapSize;
+
+/////////////////////////////////////////////////////////
+
 def hd (x:_) = x;
+def tl (_:xs) = xs;
 
 def zeros n = iter n (fun xs {0:xs}) [];
 
-def map_rec f x acc = (f x):acc;
-def map f xs = fold xs (map_rec f) [];
-
 def sum xs = fold xs (fun x y {x + y}) 0;
-
-def zipWith_rec f x z (y:ys) = (f x y):(z ys);
-def zipWith f xs = fold xs (zipWith_rec f) (fun x {[]});
 
 /////////////////////////////////////////////////////////
 
 def Cst x = x * 2;
-def Reg x = x * 2 + 1;
+def Reg x = (x + 2) * 2 + 1;
+def Sp = 0 * 2 + 1;
+def Hp = 1 * 2 + 1;
 
 def decomp2 x = {
     def a = fresh (x \ 2);
@@ -71,12 +72,6 @@ def OpStore = 8;
 def OpMove = 9;
 // halt 0, 0, 0
 def OpHalt = 10;
-// alloc dest, val, 0
-def OpAlloc = 11;
-// push 0, val, 0
-def OpPush = 12;
-// pop dest, 0, 0
-def OpPop = 13;
 // jump 0, val, 0
 def OpJump = 14;
 // jumpz reg, val, 0
@@ -84,93 +79,54 @@ def OpJumpOnZero = 15;
 
 /////////////////////////////////////////////////////////
 
-def exec_add reg val1 val2 (pc, sp, hp, regs, stack, heap) = {
-    def v1 = read_val regs val1;
-    def v2 = read_val regs val2;
-    (pc + 1, sp, hp, write regs reg (v1 + v2), stack, heap)
+def exec_add reg val1 val2 (pc, regs, mem) = {
+    (pc + 1, val1 + val2, memSize)
 };
 
-def exec_sub reg val1 val2 (pc, sp, hp, regs, stack, heap) = {
-    def v1 = read_val regs val1;
-    def v2 = read_val regs val2;
-    (pc + 1, sp, hp, write regs reg (v1 - v2), stack, heap)
+def exec_sub reg val1 val2 (pc, regs, mem) = {
+    (pc + 1, val1 - val2, memSize)
 };
 
-def exec_mul reg val1 val2 (pc, sp, hp, regs, stack, heap) = {
-    def v1 = read_val regs val1;
-    def v2 = read_val regs val2;
-    (pc + 1, sp, hp, write regs reg (v1 * v2), stack, heap)
+def exec_mul reg val1 val2 (pc, regs, mem) = {
+    (pc + 1, val1 * val2, memSize)
 };
 
-def exec_div reg val1 val2 (pc, sp, hp, regs, stack, heap) = {
-    def v1 = read_val regs val1;
-    def v2 = read_val regs val2;
-    (pc + 1, sp, hp, write regs reg (div v1 v2), stack, heap)
+def exec_div reg val1 val2 (pc, regs, mem) = {
+    (pc + 1, div val1 val2, memSize)
 };
 
-def exec_mod reg val1 val2 (pc, sp, hp, regs, stack, heap) = {
-    def v1 = read_val regs val1;
-    def v2 = read_val regs val2;
-    (pc + 1, sp, hp, write regs reg (rem v1 v2), stack, heap)
+def exec_mod reg val1 val2 (pc, regs, mem) = {
+    (pc + 1, rem val1 val2, memSize)
 };
 
-def exec_lt reg val1 val2 (pc, sp, hp, regs, stack, heap) = {
-    def v1 = read_val regs val1;
-    def v2 = read_val regs val2;
-    (pc + 1, sp, hp, write regs reg (lessThan v1 v2), stack, heap)
+def exec_lt reg val1 val2 (pc, regs, mem) = {
+    (pc + 1, lessThan val1 val2, memSize)
 };
 
-def exec_eq reg val1 val2 (pc, sp, hp, regs, stack, heap) = {
-    def v1 = read_val regs val1;
-    def v2 = read_val regs val2;
-    (pc + 1, sp, hp, write regs reg (equal v1 v2), stack, heap)
+def exec_eq reg val1 val2 (pc, regs, mem) = {
+    (pc + 1, equal val1 val2, memSize)
 };
 
-def exec_load dest src off (pc, sp, hp, regs, stack, heap) = {
-    def addr = read regs src;
-    def v = read heap (addr + off);
-    (pc + 1, sp, hp, write regs dest v, stack, heap)
+def exec_load reg addr off (pc, regs, mem) = {
+    def v = read mem (addr + off);
+    (pc + 1, v, memSize)
 };
 
-def exec_store dest off val (pc, sp, hp, regs, stack, heap) = {
-    def v = read_val regs val;
+def exec_move reg val _ (pc, regs, mem) = {
+    (pc + 1, val, memSize)
+};
+
+def exec_halt reg val1 val2 (pc, regs, mem) = {
+    (pc, 0, memSize)
+};
+
+def exec_jumpz reg val addr (pc, regs, mem) = {
+    (if (isZero val) addr (pc + 1), 0, memSize)
+};
+
+def exec_store dest off val (pc, regs, mem) = {
     def addr = read regs dest;
-    (pc + 1, sp, hp, regs, stack, write heap (addr + off) v)
-};
-
-def exec_move reg val _ (pc, sp, hp, regs, stack, heap) = {
-    def v = read_val regs val;
-    (pc + 1, sp, hp, write regs reg v, stack, heap)
-};
-
-def exec_halt reg val1 val2 (pc, sp, hp, regs, stack, heap) = {
-    (pc, sp, hp, regs, stack, heap)
-};
-
-def exec_alloc reg val _ (pc, sp, hp, regs, stack, heap) = {
-    def v = read_val regs val;
-    (pc + 1, sp, hp + v, write regs reg hp, stack, heap)
-};
-
-def exec_push _ val _ (pc, sp, hp, regs, stack, heap) = {
-    def v = read_val regs val;
-    (pc + 1, sp + 1, hp, regs, write stack sp v, heap)
-};
-
-def exec_pop reg _ _ (pc, sp, hp, regs, stack, heap) = {
-    def v = read stack (sp - 1);
-    (pc + 1, sp - 1, hp, write regs reg v, stack, heap)
-};
-
-def exec_jump _ val _ (pc, sp, hp, regs, stack, heap) = {
-    def addr = read_val regs val;
-    (addr, sp, hp, regs, stack, heap)
-};
-
-def exec_jumpz reg val _ (pc, sp, hp, regs, stack, heap) = {
-    def addr = read_val regs val;
-    def v = read regs reg;
-    (if (isZero v) addr (pc + 1), sp, hp, regs, stack, heap)
+    (pc + 1, addr, addr + off)
 };
 
 def opcodes = ( (OpIntAdd, exec_add):
@@ -184,37 +140,33 @@ def opcodes = ( (OpIntAdd, exec_add):
                 (OpStore, exec_store):
                 (OpMove, exec_move):
                 (OpHalt, exec_halt):
-                (OpAlloc, exec_alloc):
-                (OpPush, exec_push):
-                (OpPop, exec_pop):
-                (OpJump, exec_jump):
                 (OpJumpOnZero, exec_jumpz):
                 []);
 
-def zeroState = (0, 0, 0, zeros regsNum, zeros stackSize, zeros heapSize);
-
-def exec_rec op reg val1 val2 state (opcode, f) step (apc, asp, ahp, aregs, astack, aheap) = {
+def exec_rec op reg val1 val2 state (opcode, f) step (apc, av, aaddr) = {
     def e = equal opcode op;
-    def (pc, sp, hp, regs, stack, heap) = f reg val1 val2 state;
+    def (pc, v, addr) = f reg val1 val2 state;
     step (
         apc + e * pc,
-        asp + e * sp,
-        ahp + e * hp,
-        zipWith (fun x1 x2 {x1 + e * x2}) aregs regs,
-        zipWith (fun x1 x2 {x1 + e * x2}) astack stack,
-        zipWith (fun x1 x2 {x1 + e * x2}) aheap heap
+        av + e * v,
+        aaddr + e * addr
     )
 };
 
-def exec op reg val1 val2 state = fold opcodes (exec_rec op reg val1 val2 state) (fun acc {acc}) zeroState;
+def exec op reg val1 val2 (pc, regs, mem) = {
+    def v1 = read_val regs val1;
+    def v2 = read_val regs val2;
+    def (pc, v, addr) = fold opcodes (exec_rec op reg v1 v2 (pc, regs, mem)) (fun acc {acc}) (0, 0, 0);
+    (pc, write regs reg v, write mem addr v)
+};
 
 def run_rec code state = {
-    def (pc, sp, hp, regs, stack, heap) = state;
+    def (pc, regs, mem) = state;
     def (op, reg, val1, val2) = read_code code pc;
     exec op reg val1 val2 state
 };
 
 def run n code = {
-    def (_, _, _, regs, _, _) = iter n (run_rec code) (0, 0, 1, zeros regsNum, zeros stackSize, zeros heapSize);
-    hd regs
+    def (_, regs, _) = iter n (run_rec code) (0, write (zeros regsNum) Hp stackSize, zeros (stackSize + heapSize));
+    hd (tl (tl regs))
 };

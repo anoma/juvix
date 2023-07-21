@@ -12,11 +12,14 @@ serialize opts instrs0 = do
   instrs <- resolveLabels instrs0
   let code = BS.concat (fmap go instrs) <> "[]"
   return $
-    vampirPrelude (computeRegsNum instrs) opts
+    vampirPrelude regsNum opts
       <> "run stepsNum ("
       <> code
       <> ") = 1;\n"
   where
+    regsNum :: Int
+    regsNum = computeRegsNum instrs0 + 2
+
     go :: Instruction -> ByteString
     go = \case
       Binop x -> goBinop x
@@ -64,7 +67,7 @@ serialize opts instrs0 = do
     goBinop BinaryOp {..} =
       quad
         (goOpcode _binaryOpCode)
-        (show _binaryOpResult)
+        (goReg _binaryOpResult)
         (goValue _binaryOpArg1)
         (goValue _binaryOpArg2)
 
@@ -72,23 +75,23 @@ serialize opts instrs0 = do
     goLoad InstrLoad {..} =
       quad
         "OpLoad"
-        (show _instrLoadDest)
-        (show _instrLoadSrc)
-        (show _instrLoadOffset)
+        (goReg _instrLoadDest)
+        ("Cst " <> goReg _instrLoadSrc)
+        ("Cst " <> show _instrLoadOffset)
 
     goStore :: InstrStore -> ByteString
     goStore InstrStore {..} =
       quad
         "OpStore"
-        (show _instrStoreDest)
-        (show _instrStoreOffset)
+        (goReg _instrStoreDest)
+        ("Cst " <> show _instrStoreOffset)
         (goValue _instrStoreValue)
 
     goMove :: InstrMove -> ByteString
     goMove InstrMove {..} =
       quad
         "OpMove"
-        (show _instrMoveDest)
+        (goReg _instrMoveDest)
         (goValue _instrMoveValue)
         "0"
 
@@ -98,42 +101,55 @@ serialize opts instrs0 = do
     goAlloc :: InstrAlloc -> ByteString
     goAlloc InstrAlloc {..} =
       quad
-        "OpAlloc"
-        (show _instrAllocDest)
-        (goValue _instrAllocSize)
+        "OpMove"
+        (goReg _instrAllocDest)
+        "Hp"
         "0"
+        <> quad
+          "OpIntAdd"
+          "Hp"
+          "Hp"
+          (goValue _instrAllocSize)
 
     goPush :: InstrPush -> ByteString
     goPush InstrPush {..} =
       quad
-        "OpPush"
-        "0"
+        "OpStore"
+        "Sp"
+        "Cst 0"
         (goValue _instrPushValue)
-        "0"
+        <> quad
+          "OpAdd"
+          "Sp"
+          "Sp"
+          "Cst 1"
 
     goPop :: InstrPop -> ByteString
     goPop InstrPop {..} =
       quad
-        "OpPop"
-        (show _instrPopDest)
-        "0"
-        "0"
+        "OpLoad"
+        (goReg _instrPopDest)
+        "Cst 0"
+        "Cst 0"
 
     goJump :: InstrJump -> ByteString
     goJump InstrJump {..} =
       quad
-        "OpJump"
-        "0"
+        "OpJumpOnZero"
+        (show regsNum)
+        "Cst 0"
         (goValue _instrJumpDest)
-        "0"
 
     goJumpOnZero :: InstrJumpOnZero -> ByteString
     goJumpOnZero InstrJumpOnZero {..} =
       quad
         "OpJumpOnZero"
-        (show _instrJumpOnZeroReg)
+        (show regsNum)
+        ("Reg " <> show _instrJumpOnZeroReg)
         (goValue _instrJumpOnZeroDest)
-        "0"
+
+    goReg :: Int -> ByteString
+    goReg r = show (r + 2)
 
 vampirPrelude :: Int -> Options -> ByteString
 vampirPrelude regsNum opts =
@@ -144,7 +160,7 @@ vampirPrelude regsNum opts =
     <> show regsNum
     <> ";\n"
     <> "def stackSize = "
-    <> show (opts ^. optStackSize)
+    <> show (max (opts ^. optStackSize) 1)
     <> ";\n"
     <> "def heapSize = "
     <> show (opts ^. optHeapSize)
