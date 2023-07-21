@@ -70,18 +70,17 @@ resolveLabels instrs0 = do
       instr' <-
         case instr of
           Binop x -> Binop <$> goBinop x
-          Load x -> Load <$> goLoad x
-          Store x -> Store <$> goStore x
-          Move x -> Move <$> goMove x
-          Halt -> return Halt
-          Jump x -> Jump <$> goJump x
           JumpOnZero x -> JumpOnZero <$> goJumpOnZero x
+          Halt -> return Halt
+          Move x -> Move <$> goMove x
+          Jump x -> Jump <$> goJump x
           Label {} -> impossible
       return $ instr' : instrs'
       where
         adjustValue :: Value -> Sem r Value
         adjustValue = \case
           RegRef r -> return $ RegRef r
+          MemRef r -> return $ MemRef r
           Const num -> return $ Const num
           VarRef x -> return $ VarRef x
           LabelRef lab -> do
@@ -94,12 +93,6 @@ resolveLabels instrs0 = do
         goBinop =
           overM binaryOpArg1 adjustValue
             >=> overM binaryOpArg2 adjustValue
-
-        goLoad :: InstrLoad -> Sem r InstrLoad
-        goLoad = return
-
-        goStore :: InstrStore -> Sem r InstrStore
-        goStore = overM instrStoreValue adjustValue
 
         goMove :: InstrMove -> Sem r InstrMove
         goMove = overM instrMoveValue adjustValue

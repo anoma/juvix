@@ -23,12 +23,10 @@ serialize opts instrs0 = do
     go :: Instruction -> ByteString
     go = \case
       Binop x -> goBinop x
-      Load x -> goLoad x
-      Store x -> goStore x
-      Move x -> goMove x
+      JumpOnZero x -> goJumpOnZero x
       Halt -> goHalt
       Jump x -> goJump x
-      JumpOnZero x -> goJumpOnZero x
+      Move x -> goMove x
       Label {} -> impossible
 
     quad :: ByteString -> ByteString -> ByteString -> ByteString -> ByteString
@@ -47,16 +45,22 @@ serialize opts instrs0 = do
     goValue = \case
       Const x -> "Cst " <> show x
       RegRef x -> "Reg " <> show x
+      MemRef x -> "Mem " <> show x
       VarRef x -> "Cst (" <> fromText x <> " + 0)"
       LabelRef {} -> impossible
+
+    goLValue :: LValue -> ByteString
+    goLValue = \case
+      LRegRef x -> "LReg " <> show x
+      LMemRef x -> "LMem " <> show x
 
     goOpcode :: Opcode -> ByteString
     goOpcode = \case
       OpIntAdd -> "OpIntAdd"
       OpIntSub -> "OpIntSub"
       OpIntMul -> "OpIntMul"
-      OpIntDiv -> "OpIntDiv"
-      OpIntMod -> "OpIntMod"
+      OpIntDiv -> error "OpIntDiv not implemented"
+      OpIntMod -> error "OpIntMod not implemented"
       OpIntLt -> "OpIntLt"
       OpIntEq -> "OpIntEq"
 
@@ -64,33 +68,17 @@ serialize opts instrs0 = do
     goBinop BinaryOp {..} =
       quad
         (goOpcode _binaryOpCode)
-        (goReg _binaryOpResult)
+        (goLValue _binaryOpResult)
         (goValue _binaryOpArg1)
         (goValue _binaryOpArg2)
-
-    goLoad :: InstrLoad -> ByteString
-    goLoad InstrLoad {..} =
-      quad
-        "OpLoad"
-        (goReg _instrLoadDest)
-        ("Cst " <> goReg _instrLoadSrc)
-        ("Cst " <> show _instrLoadOffset)
-
-    goStore :: InstrStore -> ByteString
-    goStore InstrStore {..} =
-      quad
-        "OpStore"
-        (goReg _instrStoreDest)
-        ("Cst " <> show _instrStoreOffset)
-        (goValue _instrStoreValue)
 
     goMove :: InstrMove -> ByteString
     goMove InstrMove {..} =
       quad
-        "OpMove"
-        (goReg _instrMoveDest)
+        "OpIntAdd"
+        (goLValue _instrMoveDest)
         (goValue _instrMoveValue)
-        "0"
+        "Cst 0"
 
     goHalt :: ByteString
     goHalt = quad "OpHalt" "0" "0" "0"
@@ -108,11 +96,8 @@ serialize opts instrs0 = do
       quad
         "OpJumpOnZero"
         (show regsNum)
-        ("Reg " <> show _instrJumpOnZeroReg)
+        (goValue _instrJumpOnZeroValue)
         (goValue _instrJumpOnZeroDest)
-
-    goReg :: Int -> ByteString
-    goReg r = show r
 
 vampirPrelude :: Int -> Options -> ByteString
 vampirPrelude regsNum opts =

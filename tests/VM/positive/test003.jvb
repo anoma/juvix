@@ -3,7 +3,7 @@
   move r0, $x
   move r1, $y
   move r2, $z
-  store sp, 0, return_label_1
+  move [sp], return_label_1
   add sp, sp, 1
   jump calculate
 return_label_1:
@@ -14,5 +14,5 @@ calculate:
   mul r0, r0, r1
   add r0, r0, r2
   sub sp, sp, 1
-  load r1, sp, 0
+  move r1, [sp]
   jump r1

@@ -39,21 +39,29 @@ runCode opts vars instrs0 = runST goCode
     go pc regs mem =
       case instrs Vec.! pc of
         Binop x -> goBinop x pc regs mem
-        Load x -> goLoad x pc regs mem
-        Store x -> goStore x pc regs mem
-        Move x -> goMove x pc regs mem
-        Halt -> return ()
-        Jump x -> goJump x pc regs mem
         JumpOnZero x -> goJumpOnZero x pc regs mem
+        Halt -> return ()
+        Move x -> goMove x pc regs mem
+        Jump x -> goJump x pc regs mem
         Label {} -> impossible
 
-    readValue :: MV.MVector s Int -> Value -> ST s Int
-    readValue regs = \case
+    readValue :: MV.MVector s Int -> MV.MVector s Int -> Value -> ST s Int
+    readValue regs mem = \case
       Const x -> return x
       RegRef r -> MV.read regs r
+      MemRef r -> do
+        addr <- MV.read regs r
+        MV.read mem addr
       LabelRef {} -> impossible
       VarRef x ->
         return $ fromMaybe (error ("unbound variable: " <> x)) $ HashMap.lookup x vars
+
+    writeLValue :: MV.MVector s Int -> MV.MVector s Int -> LValue -> Int -> ST s ()
+    writeLValue regs mem lval v = case lval of
+      LRegRef r -> MV.write regs r v
+      LMemRef r -> do
+        addr <- MV.read regs r
+        MV.write mem addr v
 
     goBinop ::
       BinaryOp ->
@@ -62,9 +70,9 @@ runCode opts vars instrs0 = runST goCode
       MV.MVector s Int ->
       ST s ()
     goBinop BinaryOp {..} pc regs mem = do
-      val1 <- readValue regs _binaryOpArg1
-      val2 <- readValue regs _binaryOpArg2
-      MV.write regs _binaryOpResult (computeBinop val1 val2)
+      val1 <- readValue regs mem _binaryOpArg1
+      val2 <- readValue regs mem _binaryOpArg2
+      writeLValue regs mem _binaryOpResult (computeBinop val1 val2)
       go (pc + 1) regs mem
       where
         computeBinop :: Int -> Int -> Int
@@ -77,30 +85,6 @@ runCode opts vars instrs0 = runST goCode
           OpIntLt -> if v1 < v2 then 1 else 0
           OpIntEq -> if v1 == v2 then 1 else 0
 
-    goLoad ::
-      InstrLoad ->
-      Int ->
-      MV.MVector s Int ->
-      MV.MVector s Int ->
-      ST s ()
-    goLoad InstrLoad {..} pc regs mem = do
-      src <- MV.read regs _instrLoadSrc
-      v <- MV.read mem (src + _instrLoadOffset)
-      MV.write regs _instrLoadDest v
-      go (pc + 1) regs mem
-
-    goStore ::
-      InstrStore ->
-      Int ->
-      MV.MVector s Int ->
-      MV.MVector s Int ->
-      ST s ()
-    goStore InstrStore {..} pc regs mem = do
-      dest <- MV.read regs _instrStoreDest
-      v <- readValue regs _instrStoreValue
-      MV.write mem (dest + _instrStoreOffset) v
-      go (pc + 1) regs mem
-
     goMove ::
       InstrMove ->
       Int ->
@@ -108,8 +92,8 @@ runCode opts vars instrs0 = runST goCode
       MV.MVector s Int ->
       ST s ()
     goMove InstrMove {..} pc regs mem = do
-      v <- readValue regs _instrMoveValue
-      MV.write regs _instrMoveDest v
+      v <- readValue regs mem _instrMoveValue
+      writeLValue regs mem _instrMoveDest v
       go (pc + 1) regs mem
 
     goJump ::
@@ -119,7 +103,7 @@ runCode opts vars instrs0 = runST goCode
       MV.MVector s Int ->
       ST s ()
     goJump InstrJump {..} _ regs mem = do
-      addr <- readValue regs _instrJumpDest
+      addr <- readValue regs mem _instrJumpDest
       go addr regs mem
 
     goJumpOnZero ::
@@ -129,6 +113,6 @@ runCode opts vars instrs0 = runST goCode
       MV.MVector s Int ->
       ST s ()
     goJumpOnZero InstrJumpOnZero {..} pc regs mem = do
-      addr <- readValue regs _instrJumpOnZeroDest
-      v <- MV.read regs _instrJumpOnZeroReg
+      addr <- readValue regs mem _instrJumpOnZeroDest
+      v <- readValue regs mem _instrJumpOnZeroValue
       go (if v == 0 then addr else pc + 1) regs mem

@@ -60,18 +60,14 @@ instruction = do
       Binop <$> parseBinopArgs OpIntLt
     "eq" ->
       Binop <$> parseBinopArgs OpIntEq
-    "load" ->
-      Load <$> parseLoadArgs
-    "store" ->
-      Store <$> parseStoreArgs
-    "move" ->
-      Move <$> parseMoveArgs
-    "halt" ->
-      return Halt
-    "jump" ->
-      Jump <$> parseJumpArgs
     "jumpz" ->
       JumpOnZero <$> parseJumpOnZeroArgs
+    "halt" ->
+      return Halt
+    "move" ->
+      Move <$> parseMoveArgs
+    "jump" ->
+      Jump <$> parseJumpArgs
     _ ->
       parseFailure off ("unknown instruction: " ++ fromText txt)
 
@@ -88,65 +84,47 @@ registerHP = do
 register :: ParsecS r Int
 register = registerSP <|> registerHP <|> registerR
 
+indirect :: ParsecS r Int
+indirect = do
+  symbol "["
+  r <- register
+  symbol "]"
+  return r
+
+lvalue :: ParsecS r LValue
+lvalue = (LMemRef <$> indirect) <|> (LRegRef <$> register)
+
 parseBinopArgs :: Opcode -> ParsecS r BinaryOp
 parseBinopArgs op = do
-  reg <- register
+  lval <- lvalue
   comma
   val1 <- value
   comma
   val2 <- value
-  return $ BinaryOp op reg val1 val2
-
-parseLoadArgs :: ParsecS r InstrLoad
-parseLoadArgs = do
-  dest <- register
-  comma
-  src <- register
-  comma
-  off <- offset
-  return $ InstrLoad dest src off
-
-parseStoreArgs :: ParsecS r InstrStore
-parseStoreArgs = do
-  dest <- register
-  comma
-  off <- offset
-  comma
-  val <- value
-  return $ InstrStore dest off val
+  return $ BinaryOp op lval val1 val2
 
 parseMoveArgs :: ParsecS r InstrMove
 parseMoveArgs = do
-  dest <- register
+  lval <- lvalue
   comma
   val <- value
-  return $ InstrMove dest val
-
-parseAllocArgs :: ParsecS r InstrAlloc
-parseAllocArgs = do
-  dest <- register
-  comma
-  val <- value
-  return $ InstrAlloc dest val
-
-parsePushArgs :: ParsecS r InstrPush
-parsePushArgs = InstrPush <$> value
-
-parsePopArgs :: ParsecS r InstrPop
-parsePopArgs = InstrPop <$> register
+  return $ InstrMove lval val
 
 parseJumpArgs :: ParsecS r InstrJump
 parseJumpArgs = InstrJump <$> value
 
 parseJumpOnZeroArgs :: ParsecS r InstrJumpOnZero
 parseJumpOnZeroArgs = do
-  reg <- register
-  comma
   val <- value
-  return $ InstrJumpOnZero reg val
+  comma
+  dest <- value
+  return $ InstrJumpOnZero val dest
 
 value :: ParsecS r Value
-value = registerRef <|> integerValue <|> varValue <|> labelValue
+value = indirectRef <|> registerRef <|> integerValue <|> varValue <|> labelValue
+
+indirectRef :: ParsecS r Value
+indirectRef = MemRef <$> indirect
 
 registerRef :: ParsecS r Value
 registerRef = RegRef <$> register

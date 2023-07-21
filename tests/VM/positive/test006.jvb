@@ -1,4 +1,4 @@
--- comparisons
+-- comparisons (stack 0, heap 0, steps < 20)
 
 move r0, $x
 move r1, $y

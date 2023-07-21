@@ -1,25 +1,27 @@
 -- lists
 
   move r0, $x
-  store sp, 0, return_label_1
+  move [sp], return_label_1
   add sp, sp, 1
   jump gen
 return_label_1:
-  store sp, 0, r0
+  move [sp], r0
   add sp, sp, 1
   move r1, r0
   move r0, hp
-  add hp, hp, 3
-  store r0, 0, plus_one
-  store r0, 1, 0
-  store r0, 2, 1
-  store sp, 0, return_label_2
+  move [hp], plus_one
+  add hp, hp, 1
+  move [hp], 0
+  add hp, hp, 1
+  move [hp], 1
+  add hp, hp, 1
+  move [sp], return_label_2
   add sp, sp, 1
   jump map
 return_label_2:
   sub sp, sp, 1
-  load r0, sp, 0
-  store sp, 0, return_label_3
+  move r0, [sp]
+  move [sp], return_label_3
   add sp, sp, 1
   jump sum
 return_label_3:
@@ -28,9 +30,9 @@ return_label_3:
 
 plus_one:
   sub sp, sp, 1
-  load r1, sp, 0
+  move r1, [sp]
   sub sp, sp, 1
-  load r0, sp, 0
+  move r0, [sp]
   add r0, r0, 1
   jump r1
 
@@ -38,38 +40,39 @@ sum:
   move r1, 0
 sum_loop:
   jumpz r0, sum_exit
-  load r2, r0, 0
+  move r2, [r0]
   add r1, r1, r2
-  load r0, r0, 1
+  add r0, r0, 1
+  move r0, [r0]
   jump sum_loop
 sum_exit:
   move r0, r1
   sub sp, sp, 1
-  load r1, sp, 0
+  move r1, [sp]
   jump r1
 
 map:
   jumpz r1, map_exit
-  store sp, 0, r0
+  move [sp], r0
   add sp, sp, 1
-  store sp, 0, r1
+  move [sp], r1
   add sp, sp, 1
   move r2, map_return_1
-  load r1, r1, 0
-  store sp, 0, r1
+  move [sp], [r1]
   add sp, sp, 1
   jump ccall_exact
 map_return_1:
   sub sp, sp, 1
-  load r1, sp, 0
-  store r1, 0, r0
+  move r1, [sp]
+  move [r1], r0
   sub sp, sp, 1
-  load r0, sp, 0
-  load r1, r1, 1
+  move r0, [sp]
+  add r1, r1, 1
+  move r1, [r1]
   jump map
 map_exit:
   sub sp, sp, 1
-  load r1, sp, 0
+  move r1, [sp]
   jump r1
 
 gen:
@@ -79,33 +82,34 @@ gen_loop:
   jumpz r2, gen_loop_exit
   move r1, r0
   move r0, hp
-  add hp, hp, 2
-  store r0, 0, r2
-  store r0, 1, r1
+  move [hp], r2
+  add hp, hp, 1
+  move [hp], r1
+  add hp, hp, 1
   sub r2, r2, 1
   jump gen_loop
 gen_loop_exit:
   sub sp, sp, 1
-  load r1, sp, 0
+  move r1, [sp]
   jump r1
 
 -- r0 = closure
 -- r2 = return address
 ccall_exact:
-  load r4, r0, 0
-  load r1, r0, 1 -- r1 = stored args num
+  move r4, [r0]
+  add r0, r0, 1
+  move r1, [r0] -- r1 = stored args num
+  add r0, r0, 1
   add r0, r0, r1
-  add r0, r0, 2
   -- now r0 points at the last stored argument
 ccall_exact_loop_1:
   jumpz r1, ccall_exact_exit_1
-  load r3, r0, 0
-  store sp, 0, r3
+  move [sp], [r3]
   add sp, sp, 1
   sub r0, r0, 1
   sub r1, r1, 1
   jump ccall_exact_loop_1
 ccall_exact_exit_1:
-  store sp, 0, r2
+  move [sp], r2
   add sp, sp, 1
   jump r4

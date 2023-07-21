@@ -13,8 +13,14 @@ type RegRef = Int
 data Value
   = Const SmallInt
   | RegRef RegRef
+  | MemRef RegRef
   | VarRef Text
   | LabelRef Text
+  deriving stock (Show)
+
+data LValue
+  = LRegRef RegRef
+  | LMemRef RegRef
   deriving stock (Show)
 
 -- Constructor representation: tag, field1, .., fieldn
@@ -30,65 +36,29 @@ data Value
 -- | Bytecode VM instructions.
 data Instruction
   = Binop BinaryOp
-  | -- | Loads src[offset] (heap value at `offset` relative to the value of
-    -- register `src`) into register `dest`. JVB opcode: 'load dest, src,
-    -- offset'.
-    Load InstrLoad
-  | -- | JVB opcode: 'store reg, offset, val'.
-    Store InstrStore
-  | -- | JVB opcode: 'move reg, val'.
-    Move InstrMove
-  | -- | JVB opcode: 'halt'.
-    Halt
-  | -- | JVB opcode: 'jump val'.
-    Jump InstrJump
   | -- | JVB opcode: 'jumpz reg, val'.
     JumpOnZero InstrJumpOnZero
+  | -- | JVB opcode: 'halt'.
+    Halt
+  | -- | JVB opcode: 'move reg, val'.
+    Move InstrMove
+  | -- | JVB opcode: 'jump val'.
+    Jump InstrJump
   | -- | JVB opcode: 'labelName:'
     Label InstrLabel
   deriving stock (Show)
 
 data BinaryOp = BinaryOp
   { _binaryOpCode :: Opcode,
-    _binaryOpResult :: RegRef,
+    _binaryOpResult :: LValue,
     _binaryOpArg1 :: Value,
     _binaryOpArg2 :: Value
   }
   deriving stock (Show)
 
-data InstrLoad = InstrLoad
-  { _instrLoadDest :: RegRef,
-    _instrLoadSrc :: RegRef,
-    _instrLoadOffset :: SmallInt
-  }
-  deriving stock (Show)
-
-data InstrStore = InstrStore
-  { _instrStoreDest :: RegRef,
-    _instrStoreOffset :: SmallInt,
-    _instrStoreValue :: Value
-  }
-  deriving stock (Show)
-
 data InstrMove = InstrMove
-  { _instrMoveDest :: RegRef,
+  { _instrMoveDest :: LValue,
     _instrMoveValue :: Value
-  }
-  deriving stock (Show)
-
-data InstrAlloc = InstrAlloc
-  { _instrAllocDest :: RegRef,
-    _instrAllocSize :: Value
-  }
-  deriving stock (Show)
-
-newtype InstrPush = InstrPush
-  { _instrPushValue :: Value
-  }
-  deriving stock (Show)
-
-newtype InstrPop = InstrPop
-  { _instrPopDest :: RegRef
   }
   deriving stock (Show)
 
@@ -98,7 +68,7 @@ newtype InstrJump = InstrJump
   deriving stock (Show)
 
 data InstrJumpOnZero = InstrJumpOnZero
-  { _instrJumpOnZeroReg :: RegRef,
+  { _instrJumpOnZeroValue :: Value,
     _instrJumpOnZeroDest :: Value
   }
   deriving stock (Show)
@@ -126,32 +96,8 @@ data Opcode
     OpIntEq
   deriving stock (Show)
 
-instructionOpcode :: Instruction -> Int
-instructionOpcode = \case
-  Binop BinaryOp {..} ->
-    case _binaryOpCode of
-      OpIntAdd -> 0
-      OpIntSub -> 1
-      OpIntMul -> 2
-      OpIntDiv -> 3
-      OpIntMod -> 4
-      OpIntLt -> 5
-      OpIntEq -> 6
-  Load {} -> 7
-  Store {} -> 8
-  Move {} -> 9
-  Halt -> 10
-  Jump {} -> 11
-  JumpOnZero {} -> 12
-  Label {} -> impossible
-
 makeLenses ''BinaryOp
-makeLenses ''InstrLoad
-makeLenses ''InstrStore
 makeLenses ''InstrMove
-makeLenses ''InstrAlloc
-makeLenses ''InstrPush
-makeLenses ''InstrPop
 makeLenses ''InstrJump
 makeLenses ''InstrJumpOnZero
 makeLenses ''InstrLabel
