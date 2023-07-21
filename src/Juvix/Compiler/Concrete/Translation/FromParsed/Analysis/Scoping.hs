@@ -241,9 +241,9 @@ bindReservedSymbol s' entry = do
     addS :: BindingStrategy -> S.AbsModulePath -> Maybe SymbolInfo -> SymbolInfo
     addS strat path m = case m of
       Nothing -> symbolInfoSingle entry
-      Just SymbolInfo {..} -> case strat of
+      Just si -> case strat of
         BindingLocal -> symbolInfoSingle entry
-        BindingTop -> SymbolInfo (HashMap.insert path entry _symbolInfo)
+        BindingTop -> over symbolInfo (HashMap.insert path entry) si
 
 -- | Only for variables and local modules
 bindSymbolOf ::
@@ -394,10 +394,15 @@ getTopModulePath Module {..} =
       S._absLocalPath = mempty
     }
 
+-- getModuleRef :: Members '[State ScoperState] r => ModuleSymbolEntry -> Sem r
+
+getModuleExportInfo :: Members '[State ScoperState] r => ModuleSymbolEntry -> Sem r ExportInfo
+getModuleExportInfo m = gets (^?! scoperModules . at (m ^. moduleEntry . S.nameId) . _Just . to getModuleRefExportInfo)
+
 -- | Do not call directly. Looks for a symbol in (possibly) nested local modules
 lookupSymbolAux ::
   forall r.
-  Members '[State Scope, Output ModuleSymbolEntry, Output SymbolEntry] r =>
+  Members '[State ScoperState, State Scope, Output ModuleSymbolEntry, Output SymbolEntry] r =>
   [Symbol] ->
   Symbol ->
   Sem r ()
@@ -415,16 +420,22 @@ lookupSymbolAux modules final = do
           helper scopeModuleSymbols
         p : ps ->
           gets (^.. scopeModuleSymbols . at p . _Just . symbolInfo . each)
-            >>= mapM_ (lookInExport final ps . getModuleExportInfo)
+            >>= mapM_ (getModuleExportInfo >=> lookInExport final ps)
     importedTopModule :: Sem r ()
     importedTopModule = do
       tbl <- gets (^. scopeTopModules)
-      mapM_ output (tbl ^.. at path . _Just . each . to (ModuleSymbolEntry . mkModuleRef'))
+      mapM_ output (tbl ^.. at path . _Just . each . to (mkModuleEntry . mkModuleRef'))
       where
         path = TopModulePath modules final
 
+mkModuleEntry :: ModuleRef' 'S.NotConcrete -> ModuleSymbolEntry
+mkModuleEntry (ModuleRef' (t :&: m)) = ModuleSymbolEntry $ case t of
+  SModuleTop -> S.unConcrete (m ^. moduleRefModule . modulePath)
+  SModuleLocal -> S.unConcrete (m ^. moduleRefModule . modulePath)
+
 lookInExport ::
-  Members '[Output SymbolEntry, Output ModuleSymbolEntry] r =>
+  forall r.
+  Members '[State ScoperState, Output SymbolEntry, Output ModuleSymbolEntry] r =>
   Symbol ->
   [Symbol] ->
   ExportInfo ->
@@ -433,11 +444,11 @@ lookInExport sym remaining e = case remaining of
   [] -> do
     whenJust (e ^. exportSymbols . at sym) output
     whenJust (e ^. exportModuleSymbols . at sym) output
-  s : ss -> whenJust (mayModule e s) (lookInExport sym ss)
+  s : ss -> whenJustM (mayModule e s) (lookInExport sym ss)
   where
-    mayModule :: ExportInfo -> Symbol -> Maybe ExportInfo
+    mayModule :: ExportInfo -> Symbol -> Sem r (Maybe ExportInfo)
     mayModule ExportInfo {..} s =
-      getModuleExportInfo <$> HashMap.lookup s _exportModuleSymbols
+      mapM getModuleExportInfo (HashMap.lookup s _exportModuleSymbols)
 
 -- | We return a list of entries because qualified names can point to different
 -- modules due to nesting.
@@ -1109,6 +1120,8 @@ checkLocalModule Module {..} = do
       modify (set scopePath absPath)
       modify (over scopeSymbols (fmap inheritSymbol))
       where
+        -- TODO modules
+
         inheritSymbol :: SymbolInfo -> SymbolInfo
         inheritSymbol (SymbolInfo s) = SymbolInfo (inheritEntry <$> s)
 
@@ -1136,6 +1149,15 @@ checkOrphanIterators = do
 symbolInfoSingle :: SymbolEntry -> SymbolInfo
 symbolInfoSingle p = SymbolInfo $ HashMap.singleton (p ^. symbolEntry . S.nameDefinedIn) p
 
+getModuleRef ::
+  Members '[State ScoperState] r =>
+  ModuleSymbolEntry ->
+  Name ->
+  Sem r ModuleRef
+getModuleRef e n =
+  overModuleRef'' (set (moduleRefName . S.nameConcrete) n)
+    <$> gets (^?! scoperModules . at (e ^. moduleEntry . S.nameId) . _Just)
+
 lookupModuleSymbol ::
   Members '[Error ScoperError, State Scope, State ScoperState] r =>
   Name ->
@@ -1144,18 +1166,13 @@ lookupModuleSymbol n = do
   es <- snd <$> lookupQualifiedSymbol (path, sym)
   case nonEmpty es of
     Nothing -> notInScope
-    Just (x :| []) -> return (overModuleRef'' (set (moduleRefName . S.nameConcrete) n) (x ^. moduleEntry))
+    Just (x :| []) -> getModuleRef x n
     Just more -> throw (ErrAmbiguousModuleSym (AmbiguousModuleSym n more))
   where
     notInScope = throw (ErrModuleNotInScope (ModuleNotInScope n))
     (path, sym) = case n of
       NameUnqualified s -> ([], s)
       NameQualified (QualifiedName (SymbolPath p) s) -> (toList p, s)
-
--- getModuleRef :: SymbolEntry -> Maybe (ModuleRef' 'S.NotConcrete)
--- getModuleRef = \case
---   EntryModule m -> Just m
---   _ -> Nothing
 
 getExportInfo ::
   forall r.

@@ -228,7 +228,7 @@ toPreModule Module {..} = do
       SModuleLocal -> goSymbol _modulePath
 
 goTopModulePath :: S.TopModulePath -> Internal.Name
-goTopModulePath p = goSymbolPretty (prettyText p) (S.topModulePathName p)
+goTopModulePath p = goSymbolPretty (prettyText p) (S.topModulePathSymbol p)
 
 fromPreModule ::
   forall r.

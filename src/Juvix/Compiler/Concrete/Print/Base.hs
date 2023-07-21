@@ -1011,7 +1011,7 @@ instance PrettyPrint SymbolEntry where
 
 instance PrettyPrint ModuleSymbolEntry where
   ppCode ent = do
-    let mname = ppCode (ent ^. moduleEntry)
+    let mname = ppCode (ent ^. moduleEntry . S.nameVerbatim)
     noLoc
       kindWord
       <+> mname

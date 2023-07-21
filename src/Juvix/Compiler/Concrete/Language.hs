@@ -771,8 +771,8 @@ getNameRefId = case sing :: S.SIsConcrete c of
   S.SConcrete -> (^. S.nameId)
   S.SNotConcrete -> (^. S.nameId)
 
-getModuleExportInfo :: ModuleSymbolEntry -> ExportInfo
-getModuleExportInfo (ModuleSymbolEntry (ModuleRef' (_ :&: ModuleRef'' {..}))) = _moduleExportInfo
+getModuleRefExportInfo :: ModuleRef' c -> ExportInfo
+getModuleRefExportInfo (ModuleRef' (_ :&: ModuleRef'' {..})) = _moduleExportInfo
 
 getModuleRefNameType :: ModuleRef' c -> RefNameType c
 getModuleRefNameType (ModuleRef' (_ :&: ModuleRef'' {..})) = _moduleRefName
@@ -806,7 +806,7 @@ newtype SymbolEntry = SymbolEntry
   deriving stock (Show)
 
 newtype ModuleSymbolEntry = ModuleSymbolEntry
-  { _moduleEntry :: ModuleRef' 'S.NotConcrete
+  { _moduleEntry :: S.Name' ()
   }
   deriving stock (Show)
 
@@ -1977,15 +1977,16 @@ judocExamples (Judoc bs) = concatMap goGroup bs
 instance HasLoc SymbolEntry where
   getLoc = (^. symbolEntry . S.nameDefined)
 
+-- instance HasNameKind ModuleSymbolEntry where
+--   getNameKind (ModuleSymbolEntry (ModuleRef' (t :&: _))) = case t of
+--     SModuleTop -> KNameTopModule
+--     SModuleLocal -> KNameLocalModule
+
 instance HasNameKind ModuleSymbolEntry where
-  getNameKind (ModuleSymbolEntry (ModuleRef' (t :&: _))) = case t of
-    SModuleTop -> KNameTopModule
-    SModuleLocal -> KNameLocalModule
+  getNameKind (ModuleSymbolEntry s) = getNameKind s
 
 instance HasLoc ModuleSymbolEntry where
-  getLoc (ModuleSymbolEntry (ModuleRef' (t :&: m))) = case t of
-    SModuleTop -> getLoc (m ^. moduleRefModule . modulePath)
-    SModuleLocal -> getLoc (m ^. moduleRefModule . modulePath)
+  getLoc (ModuleSymbolEntry s) = s ^. S.nameDefined
 
 overModuleRef'' :: forall s s'. (forall t. ModuleRef'' s t -> ModuleRef'' s' t) -> ModuleRef' s -> ModuleRef' s'
 overModuleRef'' f = over unModuleRef' (\(t :&: m'') -> t :&: f m'')
