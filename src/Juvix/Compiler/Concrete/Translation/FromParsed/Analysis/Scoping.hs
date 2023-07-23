@@ -118,14 +118,14 @@ scopeCheckImport ::
   Members '[Error JuvixError, InfoTableBuilder, NameIdGen, State Scope, Reader ScopeParameters, State ScoperState] r =>
   Import 'Parsed ->
   Sem r (Import 'Scoped)
-scopeCheckImport i = mapError (JuvixError @ScoperError) $ checkImport i
+scopeCheckImport = mapError (JuvixError @ScoperError) . checkImport
 
 scopeCheckOpenModule ::
   forall r.
   Members '[Error JuvixError, InfoTableBuilder, NameIdGen, State Scope, Reader ScopeParameters, State ScoperState] r =>
   OpenModule 'Parsed ->
   Sem r (OpenModule 'Scoped)
-scopeCheckOpenModule i = mapError (JuvixError @ScoperError) $ checkOpenModule i
+scopeCheckOpenModule = mapError (JuvixError @ScoperError) . checkOpenModule
 
 freshVariable :: Members '[NameIdGen, State ScoperFixities, State ScoperIterators, State Scope, State ScoperState] r => Symbol -> Sem r S.Symbol
 freshVariable = freshSymbol S.KNameLocal
@@ -165,7 +165,7 @@ freshSymbol _nameKind _nameConcrete = do
 
 reserveSymbolSignatureOf ::
   forall r d.
-  (Members '[Error ScoperError, NameIdGen, State ScoperFixities, State ScoperIterators, State ScoperIterators, State Scope, State ScoperState, Reader BindingStrategy] r, HasNameSignature d) =>
+  (Members '[Error ScoperError, NameIdGen, State ScoperFixities, State ScoperIterators, State ScoperIterators, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder] r, HasNameSignature d) =>
   S.NameKind ->
   d ->
   Symbol ->
@@ -176,22 +176,22 @@ reserveSymbolSignatureOf k d s = do
 
 reserveSymbolOf ::
   forall r.
-  Members '[Error ScoperError, NameIdGen, State ScoperFixities, State ScoperIterators, State ScoperIterators, State Scope, State ScoperState, Reader BindingStrategy] r =>
+  Members '[Error ScoperError, NameIdGen, State ScoperFixities, State ScoperIterators, State ScoperIterators, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder] r =>
   S.NameKind ->
   Maybe NameSignature ->
   Symbol ->
   Sem r S.Symbol
 reserveSymbolOf k nameSig s = do
   checkNotBound
-  s' <- freshSymbol k s
-  whenJust nameSig (modify' . set (scoperSignatures . at (s' ^. S.nameId)) . Just)
   path <- gets (^. scopePath)
   strat <- ask
+  s' <- freshSymbol k s
+  whenJust nameSig (modify' . set (scoperSignatures . at (s' ^. S.nameId)) . Just)
   modify (set (scopeLocalSymbols . at s) (Just s'))
-  let c = S.unConcrete s'
-      mentry :: Maybe SymbolEntry
+  registerName (S.unqualifiedSymbol s')
+  let mentry :: Maybe SymbolEntry
       mentry =
-        let e = SymbolEntry c
+        let e = SymbolEntry (S.unConcrete s')
          in case k of
               S.KNameConstructor -> Just e
               S.KNameInductive -> Just e
@@ -200,7 +200,7 @@ reserveSymbolOf k nameSig s = do
               S.KNameLocal -> Just e
               S.KNameLocalModule -> Nothing
               S.KNameTopModule -> Nothing
-      addS :: SymbolEntry -> Maybe SymbolInfo -> SymbolInfo
+      addS :: SingI ns => NameSpaceEntryType ns -> Maybe (SymbolInfo ns) -> SymbolInfo ns
       addS entry m = case m of
         Nothing -> symbolInfoSingle entry
         Just SymbolInfo {..} -> case strat of
@@ -224,37 +224,13 @@ reserveSymbolOf k nameSig s = do
                 }
           )
 
-bindReservedSymbol ::
-  Members '[State Scope, InfoTableBuilder, Reader BindingStrategy] r =>
-  S.Symbol ->
-  SymbolEntry ->
-  Sem r ()
-bindReservedSymbol s' entry = do
-  path <- gets (^. scopePath)
-  strat <- ask
-  -- TODO only modules are meant to be stored here?
-  modify (over scopeSymbols (HashMap.alter (Just . addS strat path) s))
-  registerName (S.unqualifiedSymbol s')
-  where
-    s :: Symbol
-    s = s' ^. S.nameConcrete
-    addS :: BindingStrategy -> S.AbsModulePath -> Maybe SymbolInfo -> SymbolInfo
-    addS strat path m = case m of
-      Nothing -> symbolInfoSingle entry
-      Just si -> case strat of
-        BindingLocal -> symbolInfoSingle entry
-        BindingTop -> over symbolInfo (HashMap.insert path entry) si
-
 -- | Only for variables and local modules
 bindSymbolOf ::
   Members '[Error ScoperError, NameIdGen, State ScoperFixities, State ScoperIterators, State ScoperIterators, State Scope, InfoTableBuilder, State ScoperState, Reader BindingStrategy] r =>
   S.NameKind ->
   Symbol ->
   Sem r S.Symbol
-bindSymbolOf k s = do
-  s' <- reserveSymbolOf k Nothing s
-  bindReservedSymbol s' (SymbolEntry (S.unConcrete s'))
-  return s'
+bindSymbolOf k = reserveSymbolOf k Nothing
 
 bindReservedDefinitionSymbol ::
   Members '[Error ScoperError, NameIdGen, State ScoperFixities, State ScoperIterators, State ScoperIterators, State Scope, InfoTableBuilder, State ScoperState, Reader BindingStrategy] r =>
@@ -264,7 +240,6 @@ bindReservedDefinitionSymbol s = do
   m <- gets (^. scopeLocalSymbols)
   let s' = fromMaybe err (m ^. at s)
       err = error ("impossible. Contents of scope:\n" <> ppTrace (toList m))
-  bindReservedSymbol s' (SymbolEntry (S.unConcrete s'))
   return s'
 
 ignoreFixities :: Sem (State ScoperFixities ': r) a -> Sem r a
@@ -281,27 +256,27 @@ bindVariableSymbol ::
 bindVariableSymbol = localBindings . ignoreFixities . ignoreIterators . bindSymbolOf S.KNameLocal
 
 reserveInductiveSymbol ::
-  Members '[Error ScoperError, NameIdGen, State ScoperFixities, State ScoperIterators, State Scope, State ScoperState, Reader BindingStrategy] r =>
+  Members '[Error ScoperError, NameIdGen, State ScoperFixities, State ScoperIterators, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder] r =>
   InductiveDef 'Parsed ->
   Sem r S.Symbol
 reserveInductiveSymbol d = reserveSymbolSignatureOf S.KNameInductive d (d ^. inductiveName)
 
 reserveConstructorSymbol ::
-  Members '[Error ScoperError, NameIdGen, State ScoperFixities, State ScoperIterators, State Scope, State ScoperState, Reader BindingStrategy] r =>
+  Members '[Error ScoperError, NameIdGen, State ScoperFixities, State ScoperIterators, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder] r =>
   InductiveDef 'Parsed ->
   ConstructorDef 'Parsed ->
   Sem r S.Symbol
 reserveConstructorSymbol d c = reserveSymbolSignatureOf S.KNameConstructor (d, c) (c ^. constructorName)
 
 reserveFunctionSymbol ::
-  Members '[Error ScoperError, NameIdGen, State ScoperFixities, State ScoperIterators, State Scope, State ScoperState, Reader BindingStrategy] r =>
+  Members '[Error ScoperError, NameIdGen, State ScoperFixities, State ScoperIterators, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder] r =>
   FunctionDef 'Parsed ->
   Sem r S.Symbol
 reserveFunctionSymbol f =
   reserveSymbolSignatureOf S.KNameFunction f (f ^. signName)
 
 reserveAxiomSymbol ::
-  Members '[Error ScoperError, NameIdGen, State ScoperFixities, State ScoperIterators, State Scope, State ScoperState, Reader BindingStrategy] r =>
+  Members '[Error ScoperError, NameIdGen, State ScoperFixities, State ScoperIterators, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder] r =>
   AxiomDef 'Parsed ->
   Sem r S.Symbol
 reserveAxiomSymbol a = reserveSymbolSignatureOf S.KNameAxiom a (a ^. axiomName)
@@ -330,18 +305,6 @@ bindConstructorSymbol ::
   Symbol ->
   Sem r S.Symbol
 bindConstructorSymbol = bindReservedDefinitionSymbol
-
-bindLocalModuleSymbol ::
-  Members '[Error ScoperError, NameIdGen, State ScoperFixities, State ScoperIterators, State Scope, InfoTableBuilder, State ScoperState, Reader BindingStrategy] r =>
-  ExportInfo ->
-  Module 'Scoped 'ModuleLocal ->
-  Symbol ->
-  Sem r S.Symbol
-bindLocalModuleSymbol _moduleExportInfo _moduleRefModule = undefined
-
--- bindSymbolOf
---   S.KNameLocalModule
---   (\_moduleRefName -> EntryModule (mkModuleRef' (ModuleRef'' {..})))
 
 checkImport ::
   forall r.
@@ -413,11 +376,15 @@ lookupSymbolAux modules final = do
     hereOrInLocalModule :: Sem r () =
       case modules of
         [] -> do
-          let helper :: Members '[Output e, State Scope] r' => Lens' Scope (HashMap Symbol (SymbolInfo' e)) -> Sem r' ()
-              helper symbolsLens =
-                gets (^.. symbolsLens . at final . _Just . symbolInfo . each) >>= mapM_ output
-          helper scopeSymbols
-          helper scopeModuleSymbols
+          let helper ::
+                forall ns r'.
+                (SingI ns, Members '[Output (NameSpaceEntryType ns), State Scope] r') =>
+                Proxy ns ->
+                Sem r' ()
+              helper Proxy =
+                gets (^.. scopeNameSpace @ns . at final . _Just . symbolInfo . each) >>= mapM_ output
+          helper (Proxy @'NameSpaceSymbols)
+          helper (Proxy @'NameSpaceModules)
         p : ps ->
           gets (^.. scopeModuleSymbols . at p . _Just . symbolInfo . each)
             >>= mapM_ (getModuleExportInfo >=> lookInExport final ps)
@@ -454,14 +421,14 @@ lookInExport sym remaining e = case remaining of
 -- modules due to nesting.
 lookupQualifiedSymbol ::
   forall r.
-  Members '[State Scope] r =>
+  Members '[State Scope, State ScoperState] r =>
   ([Symbol], Symbol) ->
   Sem r ([SymbolEntry], [ModuleSymbolEntry])
 lookupQualifiedSymbol = runOutputList . execOutputList . go
   where
     go ::
       forall r'.
-      Members [State Scope, Output SymbolEntry, Output ModuleSymbolEntry] r' =>
+      Members [State ScoperState, State Scope, Output SymbolEntry, Output ModuleSymbolEntry] r' =>
       ([Symbol], Symbol) ->
       Sem r' ()
     go (path, sym) = do
@@ -522,39 +489,37 @@ exportScope ::
   Scope ->
   Sem r ExportInfo
 exportScope Scope {..} = do
-  _exportSymbols <- HashMap.fromList <$> mapMaybeM (mkentry symbolErr symbolShouldExport) (HashMap.toList _scopeSymbols)
-  _exportModuleSymbols <- HashMap.fromList <$> mapMaybeM (mkentry moduleErr moduleShouldExport) (HashMap.toList _scopeModuleSymbols)
+  _exportSymbols <- HashMap.fromList <$> mapMaybeM mkentry (HashMap.toList _scopeSymbols)
+  _exportModuleSymbols <- HashMap.fromList <$> mapMaybeM mkentry (HashMap.toList _scopeModuleSymbols)
   return ExportInfo {..}
   where
-    moduleShouldExport :: ModuleSymbolEntry -> Bool
-    moduleShouldExport ent = undefined
-
-    symbolShouldExport :: SymbolEntry -> Bool
-    symbolShouldExport ent = ent ^. symbolEntry . S.nameVisibilityAnn == VisPublic
-
-    symbolErr :: Symbol -> NonEmpty SymbolEntry -> Sem r a
-    symbolErr s es =
-      throw
-        ( ErrMultipleExport
-            (MultipleExportConflict _scopePath s (Left es))
-        )
-    moduleErr :: Symbol -> NonEmpty ModuleSymbolEntry -> Sem r a
-    moduleErr s es =
-      throw
-        ( ErrMultipleExport
-            (MultipleExportConflict _scopePath s (Right es))
-        )
-
     mkentry ::
-      (forall a. Symbol -> NonEmpty entry -> Sem r a) ->
-      (entry -> Bool) ->
-      (Symbol, SymbolInfo' entry) ->
-      Sem r (Maybe (Symbol, entry))
-    mkentry err shouldExport (s, SymbolInfo {..}) =
+      forall ns.
+      SingI ns =>
+      (Symbol, SymbolInfo ns) ->
+      Sem r (Maybe (Symbol, NameSpaceEntryType ns))
+    mkentry (s, SymbolInfo {..}) =
       case filter shouldExport (toList _symbolInfo) of
         [] -> return Nothing
         [e] -> return (Just (s, e))
-        e : es -> err s (e :| es)
+        e : es -> err (e :| es)
+      where
+        shouldExport :: NameSpaceEntryType ns -> Bool
+        shouldExport ent = ent ^. nsEntry . S.nameVisibilityAnn == VisPublic
+
+        err :: NonEmpty (NameSpaceEntryType ns) -> Sem r a
+        err es =
+          throw
+            ( ErrMultipleExport
+                ( MultipleExportConflict
+                    _scopePath
+                    s
+                    ( case sing :: SNameSpace ns of
+                        SNameSpaceSymbols -> Left es
+                        SNameSpaceModules -> Right es
+                    )
+                )
+            )
 
 getParsedModule :: Members '[Reader ScopeParameters] r => TopModulePath -> Sem r (Module 'Parsed 'ModuleTop)
 getParsedModule i = asks (^?! scopeParsedModules . at i . _Just)
@@ -714,7 +679,6 @@ checkInductiveDef InductiveDef {..} = do
             | (cname, cdef) <- zipExact (toList constructorNames') (toList _inductiveConstructors)
           ]
     return (inductiveParameters', inductiveType', inductiveDoc', inductiveConstructors')
-  forM_ inductiveConstructors' bindConstructor
   registerInductive
     @$> InductiveDef
       { _inductiveName = inductiveName',
@@ -729,15 +693,6 @@ checkInductiveDef InductiveDef {..} = do
         _inductiveKw
       }
   where
-    bindConstructor :: ConstructorDef 'Scoped -> Sem r ()
-    bindConstructor d =
-      topBindings $
-        bindReservedSymbol
-          (d ^. constructorName)
-          ( SymbolEntry
-              ( S.unConcrete (d ^. constructorName)
-              )
-          )
     -- note that the constructor name is not bound here
     checkConstructorDef :: S.Symbol -> S.Symbol -> ConstructorDef 'Parsed -> Sem r (ConstructorDef 'Scoped)
     checkConstructorDef tyName constructorName' ConstructorDef {..} = do
@@ -790,12 +745,8 @@ checkInductiveDef InductiveDef {..} = do
             _rhsGadtColon
           }
 
--- TODO add modules  to the table
 createExportsTable :: ExportInfo -> HashSet NameId
-createExportsTable ei = foldr (HashSet.insert . getNameId) HashSet.empty (HashMap.elems (ei ^. exportSymbols))
-  where
-    getNameId :: SymbolEntry -> NameId
-    getNameId = (^. symbolEntry . S.nameId)
+createExportsTable = HashSet.fromList . (^.. exportAllNames . S.nameId)
 
 checkTopModules ::
   forall r.
@@ -1083,12 +1034,27 @@ reserveLocalModuleSymbol ::
 reserveLocalModuleSymbol =
   ignoreFixities . ignoreIterators . reserveSymbolOf S.KNameLocalModule Nothing
 
+-- bindReservedSymbol :: forall ns r.
+--   (SingI ns, Members '[State Scope, Reader BindingStrategy] r) =>
+--   S.Symbol ->
+--   NameSpaceEntryType ns ->
+--   Sem r ()
+-- bindReservedSymbol s' entry = do
+--   path <- gets (^. scopePath)
+--   strat <- ask
+--   -- TODO only modules are meant to be stored here?
+--   modify (over scopeNameSpace (HashMap.alter (Just . addS strat path) s))
+--   where
+--     s :: Symbol
+--     s = s' ^. S.nameConcrete
+
 checkLocalModule ::
   forall r.
   Members '[Error ScoperError, State Scope, Reader ScopeParameters, State ScoperState, InfoTableBuilder, NameIdGen, Reader BindingStrategy] r =>
   Module 'Parsed 'ModuleLocal ->
   Sem r (Module 'Scoped 'ModuleLocal)
 checkLocalModule Module {..} = do
+  strat <- ask
   (_moduleExportInfo, moduleBody', moduleDoc') <-
     withLocalScope $ do
       inheritScope
@@ -1097,6 +1063,7 @@ checkLocalModule Module {..} = do
       return (e, b, doc')
   _modulePath' <- reserveLocalModuleSymbol _modulePath
   let moduleId = _modulePath' ^. S.nameId
+      entry = ModuleSymbolEntry (S.unConcrete _modulePath')
       _moduleRefName = S.unConcrete _modulePath'
       _moduleRefModule =
         Module
@@ -1107,11 +1074,19 @@ checkLocalModule Module {..} = do
             _moduleKw,
             _moduleKwEnd
           }
-      entry :: ModuleRef' 'S.NotConcrete
-      entry = mkModuleRef' @'ModuleLocal ModuleRef'' {..}
-  bindReservedSymbol _modulePath' (undefined entry)
+      addS :: S.AbsModulePath -> Maybe (SymbolInfo 'NameSpaceModules) -> (SymbolInfo 'NameSpaceModules)
+      addS path m = case m of
+        Nothing -> symbolInfoSingle entry
+        Just si -> case strat of
+          BindingLocal -> symbolInfoSingle entry
+          BindingTop -> set (symbolInfo . at path) (Just entry) si
+
+      mref :: ModuleRef' 'S.NotConcrete
+      mref = mkModuleRef' @'ModuleLocal ModuleRef'' {..}
+  path <- gets (^. scopePath)
+  modify (over scopeModuleSymbols (HashMap.alter (Just . addS path) _modulePath))
+  modify (over scoperModules (HashMap.insert moduleId mref))
   registerName (S.unqualifiedSymbol _modulePath')
-  modify (over scoperModules (HashMap.insert moduleId entry))
   return _moduleRefModule
   where
     inheritScope :: Sem r ()
@@ -1119,16 +1094,15 @@ checkLocalModule Module {..} = do
       absPath <- (S.<.> _modulePath) <$> gets (^. scopePath)
       modify (set scopePath absPath)
       modify (over scopeSymbols (fmap inheritSymbol))
+      modify (over scopeModuleSymbols (fmap inheritSymbol))
       where
-        -- TODO modules
-
-        inheritSymbol :: SymbolInfo -> SymbolInfo
+        inheritSymbol :: forall ns. SingI ns => SymbolInfo ns -> SymbolInfo ns
         inheritSymbol (SymbolInfo s) = SymbolInfo (inheritEntry <$> s)
-
-        inheritEntry :: SymbolEntry -> SymbolEntry
-        inheritEntry =
-          over (symbolEntry . S.nameWhyInScope) S.BecauseInherited
-            . set (symbolEntry . S.nameVisibilityAnn) VisPrivate
+          where
+            inheritEntry :: NameSpaceEntryType ns -> NameSpaceEntryType ns
+            inheritEntry =
+              over (nsEntry . S.nameWhyInScope) S.BecauseInherited
+                . set (nsEntry . S.nameVisibilityAnn) VisPrivate
 
 checkOrphanFixities :: forall r. Members '[Error ScoperError, State ScoperFixities] r => Sem r ()
 checkOrphanFixities = do
@@ -1146,8 +1120,8 @@ checkOrphanIterators = do
     Nothing -> return ()
     Just x -> throw (ErrUnusedIteratorDef (UnusedIteratorDef x))
 
-symbolInfoSingle :: SymbolEntry -> SymbolInfo
-symbolInfoSingle p = SymbolInfo $ HashMap.singleton (p ^. symbolEntry . S.nameDefinedIn) p
+symbolInfoSingle :: SingI ns => NameSpaceEntryType ns -> SymbolInfo ns
+symbolInfoSingle p = SymbolInfo $ HashMap.singleton (p ^. nsEntry . S.nameDefinedIn) p
 
 getModuleRef ::
   Members '[State ScoperState] r =>
@@ -1164,7 +1138,7 @@ lookupModuleSymbol ::
   Sem r ModuleRef
 lookupModuleSymbol n = do
   es <- snd <$> lookupQualifiedSymbol (path, sym)
-  case nonEmpty es of
+  case nonEmpty (resolveShadowing es) of
     Nothing -> notInScope
     Just (x :| []) -> getModuleRef x n
     Just more -> throw (ErrAmbiguousModuleSym (AmbiguousModuleSym n more))
@@ -1306,32 +1280,30 @@ checkOpenModuleNoImport OpenModule {..}
     mergeScope :: ExportInfo -> Sem r ()
     mergeScope ExportInfo {..} = do
       mapM_ mergeSymbol (HashMap.toList _exportSymbols)
-      mapM_ mergeModuleSymbol (HashMap.toList _exportModuleSymbols)
+      mapM_ mergeSymbol (HashMap.toList _exportModuleSymbols)
       where
-        mergeModuleSymbol :: (Symbol, ModuleSymbolEntry) -> Sem r ()
-        mergeModuleSymbol = undefined
-
-        mergeSymbol :: (Symbol, SymbolEntry) -> Sem r ()
+        mergeSymbol :: SingI ns => (Symbol, NameSpaceEntryType ns) -> Sem r ()
         mergeSymbol (s, entry) =
           modify
-            (over scopeSymbols (HashMap.insertWith (<>) s (symbolInfoSingle entry)))
+            (over scopeNameSpace (HashMap.insertWith (<>) s (symbolInfoSingle entry)))
 
     alterScope :: Maybe (UsingHiding 'Scoped) -> ExportInfo -> ExportInfo
     alterScope openModif = alterEntries . filterScope
       where
-        alterModuleEntry :: ModuleSymbolEntry -> ModuleSymbolEntry
-        alterModuleEntry = undefined
+        alterEntries :: ExportInfo -> ExportInfo
+        alterEntries nfo =
+          ExportInfo
+            { _exportSymbols = alterEntry <$> nfo ^. exportSymbols,
+              _exportModuleSymbols = alterEntry <$> nfo ^. exportModuleSymbols
+            }
 
-        alterEntry :: SymbolEntry -> SymbolEntry
+        alterEntry :: SingI ns => NameSpaceEntryType ns -> NameSpaceEntryType ns
         alterEntry =
           over
-            symbolEntry
+            nsEntry
             ( set S.nameWhyInScope S.BecauseImportedOpened
                 . set S.nameVisibilityAnn (publicAnnToVis _openPublic)
             )
-        alterEntries :: ExportInfo -> ExportInfo
-        alterEntries = over exportSymbols (fmap alterEntry)
-
         publicAnnToVis :: PublicAnn -> VisibilityAnn
         publicAnnToVis = \case
           Public -> VisPublic
@@ -1605,9 +1577,7 @@ checkUnqualified s = do
   scope <- get
   -- Lookup at the global scope
   let err = throw (ErrSymNotInScope (NotInScope s scope))
-  entries <-
-    filter S.isExprKind . fst
-      <$> lookupQualifiedSymbol ([], s)
+  entries <- fst <$> lookupQualifiedSymbol ([], s)
   case resolveShadowing entries of
     [] -> err
     [x] -> entryToScopedIden n x
@@ -1619,10 +1589,10 @@ checkUnqualified s = do
 -- shadowing rules for modules. For example, a symbol defined in the outer
 -- module with the same name as a symbol defined in the inner module will be
 -- removed.
-resolveShadowing :: [SymbolEntry] -> [SymbolEntry]
-resolveShadowing es = go [(e, e ^. symbolEntry . S.nameWhyInScope) | e <- es]
+resolveShadowing :: forall ns. SingI ns => [NameSpaceEntryType ns] -> [NameSpaceEntryType ns]
+resolveShadowing es = go [(e, e ^. nsEntry . S.nameWhyInScope) | e <- es]
   where
-    go :: [(SymbolEntry, S.WhyInScope)] -> [SymbolEntry]
+    go :: [(NameSpaceEntryType ns, S.WhyInScope)] -> [NameSpaceEntryType ns]
     go itms
       | any (((== S.BecauseImportedOpened) .||. (== S.BecauseDefined)) . snd) itms =
           [e | (e, w) <- itms, not (isInherited w)]

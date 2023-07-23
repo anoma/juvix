@@ -15,7 +15,7 @@ data InfoTableBuilder m a where
   RegisterTypeSignature :: TypeSignature 'Scoped -> InfoTableBuilder m ()
   RegisterFunctionDef :: FunctionDef 'Scoped -> InfoTableBuilder m ()
   RegisterFunctionClause :: FunctionClause 'Scoped -> InfoTableBuilder m ()
-  RegisterName :: (HasLoc c) => S.Name' c -> InfoTableBuilder m ()
+  RegisterName :: HasLoc c => S.Name' c -> InfoTableBuilder m ()
   RegisterModule :: Module 'Scoped 'ModuleTop -> InfoTableBuilder m ()
 
 makeSem ''InfoTableBuilder

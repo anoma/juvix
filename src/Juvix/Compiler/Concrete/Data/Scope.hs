@@ -1,28 +1,37 @@
 module Juvix.Compiler.Concrete.Data.Scope
   ( module Juvix.Compiler.Concrete.Data.Scope,
     module Juvix.Compiler.Concrete.Data.InfoTable,
+    module Juvix.Compiler.Concrete.Data.NameSpace,
   )
 where
 
+import Data.Kind qualified as GHC
 import Juvix.Compiler.Concrete.Data.InfoTable
 import Juvix.Compiler.Concrete.Data.NameSignature.Base
+import Juvix.Compiler.Concrete.Data.NameSpace
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Language
 import Juvix.Prelude
 
 type LocalVariable = S.Symbol
 
-newtype SymbolInfo' entry = SymbolInfo
+newtype SymbolInfo (n :: NameSpace) = SymbolInfo
   { -- | This map must have at least one entry. If there are more than one
     -- entry, it means that the same symbol has been brought into scope from two
     -- different places
-    _symbolInfo :: HashMap S.AbsModulePath entry
+    _symbolInfo :: HashMap S.AbsModulePath (NameSpaceEntryType n)
   }
-  deriving newtype (Show, Semigroup, Monoid)
+  deriving newtype (Semigroup, Monoid)
 
-type SymbolInfo = SymbolInfo' SymbolEntry
+type NameSpaceEntryType :: NameSpace -> GHC.Type
+type family NameSpaceEntryType s = res | res -> s where
+  NameSpaceEntryType 'NameSpaceSymbols = SymbolEntry
+  NameSpaceEntryType 'NameSpaceModules = ModuleSymbolEntry
 
-type ModuleSymbolInfo = SymbolInfo' ModuleSymbolEntry
+nsEntry :: forall ns. SingI ns => Lens' (NameSpaceEntryType ns) (S.Name' ())
+nsEntry = case sing :: SNameSpace ns of
+  SNameSpaceModules -> moduleEntry
+  SNameSpaceSymbols -> symbolEntry
 
 mkModuleRef' :: SingI t => ModuleRef'' 'S.NotConcrete t -> ModuleRef' 'S.NotConcrete
 mkModuleRef' m = ModuleRef' (sing :&: m)
@@ -35,8 +44,8 @@ data BindingStrategy
 
 data Scope = Scope
   { _scopePath :: S.AbsModulePath,
-    _scopeSymbols :: HashMap Symbol SymbolInfo,
-    _scopeModuleSymbols :: HashMap Symbol ModuleSymbolInfo,
+    _scopeSymbols :: HashMap Symbol (SymbolInfo 'NameSpaceSymbols),
+    _scopeModuleSymbols :: HashMap Symbol (SymbolInfo 'NameSpaceModules),
     -- | The map from S.NameId to Modules is needed because we support merging
     -- several imports under the same name. E.g.
     -- import A as X;
@@ -48,11 +57,14 @@ data Scope = Scope
     -- original symbol
     _scopeLocalSymbols :: HashMap Symbol S.Symbol
   }
-  deriving stock (Show)
 
-makeLenses ''ExportInfo
-makeLenses ''SymbolInfo'
+makeLenses ''SymbolInfo
 makeLenses ''Scope
+
+scopeNameSpace :: forall ns. SingI ns => Lens' Scope (HashMap Symbol (SymbolInfo ns))
+scopeNameSpace = case sing :: SNameSpace ns of
+  SNameSpaceSymbols -> scopeSymbols
+  SNameSpaceModules -> scopeModuleSymbols
 
 newtype ModulesCache = ModulesCache
   { _cachedModules :: HashMap TopModulePath (ModuleRef'' 'S.NotConcrete 'ModuleTop)

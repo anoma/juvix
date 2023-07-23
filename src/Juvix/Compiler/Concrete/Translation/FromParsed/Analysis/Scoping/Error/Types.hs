@@ -313,7 +313,6 @@ data NotInScope = NotInScope
   { _notInScopeSymbol :: Symbol,
     _notInScopeScope :: Scope
   }
-  deriving stock (Show)
 
 makeLenses ''NotInScope
 

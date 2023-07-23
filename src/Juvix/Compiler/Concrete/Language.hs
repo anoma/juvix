@@ -1424,6 +1424,7 @@ makeLenses ''TypeSignature
 makeLenses ''SigArg
 makeLenses ''FunctionDef
 makeLenses ''AxiomDef
+makeLenses ''ExportInfo
 makeLenses ''FunctionClause
 makeLenses ''InductiveParameters
 makeLenses ''ModuleRef'
@@ -1999,3 +2000,16 @@ instance HasNameKind ScopedIden where
 
 instance HasNameKind SymbolEntry where
   getNameKind = getNameKind . (^. symbolEntry)
+
+-- TODO move to prelude
+
+-- | Like a Traversal but requires `Semigroup (f s)` so that we can join
+-- traversals using `<>`.
+type TraversalS s t a b = forall f. (Applicative f, Semigroup (f s)) => LensLike f s t a b
+
+type TraversalS' s a = TraversalS s s a a
+
+exportAllNames :: TraversalS' ExportInfo (S.Name' ())
+exportAllNames =
+  exportSymbols . each . symbolEntry
+    <> exportModuleSymbols . each . moduleEntry
