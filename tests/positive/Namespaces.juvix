@@ -32,3 +32,15 @@ module Test2;
 
   open M;
 end;
+
+module Test3;
+  open Main using {M};
+
+  axiom x2 : M;
+
+  module M;
+
+  end;
+
+  open M;
+end;
