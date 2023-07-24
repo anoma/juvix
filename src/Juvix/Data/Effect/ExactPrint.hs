@@ -95,7 +95,13 @@ blockIndent :: Members '[ExactPrint] r => Sem r () -> Sem r ()
 blockIndent d = hardline <> indent d <> line
 
 sepSemicolon :: (Members '[ExactPrint] r, Foldable l) => l (Sem r ()) -> Sem r ()
-sepSemicolon = sequenceWith (semicolon <> space)
+sepSemicolon = grouped . vsepSemicolon
+
+vsepSemicolon :: (Members '[ExactPrint] r, Foldable l) => l (Sem r ()) -> Sem r ()
+vsepSemicolon = sequenceWith (semicolon <> line)
+
+hsepSemicolon :: (Members '[ExactPrint] r, Foldable l) => l (Sem r ()) -> Sem r ()
+hsepSemicolon = sequenceWith (semicolon <> space)
 
 dotted :: (Foldable f, Members '[ExactPrint] r) => f (Sem r ()) -> Sem r ()
 dotted = sequenceWith (noLoc C.kwDot)

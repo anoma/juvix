@@ -160,7 +160,7 @@ instance SingI s => PrettyPrint (ListPattern s) where
   ppCode ListPattern {..} = do
     let l = ppCode _listpBracketL
         r = ppCode _listpBracketR
-        e = sepSemicolon (map ppPatternParensType _listpItems)
+        e = hsepSemicolon (map ppPatternParensType _listpItems)
     l <> e <> r
 
 instance PrettyPrint Void where
@@ -174,7 +174,7 @@ instance PrettyPrint NameBlock where
           Explicit -> parens
         ppElem :: (Symbol, Int) -> Sem r ()
         ppElem (sym, idx) = ppCode sym <> ppCode Kw.kwExclamation <> noLoc (pretty idx)
-    delims (sepSemicolon (map ppElem (toList _nameBlock)))
+    delims (hsepSemicolon (map ppElem (toList _nameBlock)))
 
 instance (PrettyPrint a, PrettyPrint b) => PrettyPrint (a, b) where
   ppCode (a, b) = tuple [ppCode a, ppCode b]
@@ -217,8 +217,8 @@ instance SingI s => PrettyPrint (Iterator s) where
     let n = ppIdentifierType _iteratorName
         is = ppCode <$> _iteratorInitializers
         rngs = ppCode <$> _iteratorRanges
-        is' = parens . sepSemicolon <$> nonEmpty is
-        rngs' = parens . sepSemicolon <$> nonEmpty rngs
+        is' = parens . hsepSemicolon <$> nonEmpty is
+        rngs' = parens . hsepSemicolon <$> nonEmpty rngs
         b = ppExpressionType _iteratorBody
         b'
           | _iteratorBodyBraces = braces (oneLineOrNextNoIndent b)
@@ -241,7 +241,7 @@ instance SingI s => PrettyPrint (List s) where
   ppCode List {..} = do
     let l = ppCode _listBracketL
         r = ppCode _listBracketR
-        e = sepSemicolon (map ppExpressionType _listItems)
+        e = hsepSemicolon (map ppExpressionType _listItems)
     l <> e <> r
 
 instance PrettyPrint AmbiguousIterator where
@@ -260,7 +260,7 @@ instance SingI s => PrettyPrint (ArgumentBlock s) where
         (l, r) = case d of
           Nothing -> (enqueue C.kwParenL, noLoc C.kwParenR)
           Just (l', r') -> (ppCode l', ppCode r')
-    l <> sepSemicolon args' <> r
+    l <> align (sepSemicolon args') <> r
     where
       Irrelevant d = _argBlockDelims
 
@@ -897,14 +897,42 @@ instance SingI s => PrettyPrint (NonEmpty (InductiveParameters s)) where
 instance PrettyPrint a => PrettyPrint (Irrelevant a) where
   ppCode (Irrelevant a) = ppCode a
 
+instance SingI s => PrettyPrint (RhsGadt s) where
+  ppCode RhsGadt {..} =
+    ppCode _rhsGadtColon <+> ppExpressionType _rhsGadtType
+
+instance SingI s => PrettyPrint (RecordField s) where
+  ppCode RecordField {..} =
+    ppSymbolType _fieldName <+> ppCode _fieldColon <+> ppExpressionType _fieldType
+
+instance SingI s => PrettyPrint (RhsRecord s) where
+  ppCode RhsRecord {..} = do
+    let Irrelevant (l, r) = _rhsRecordDelim
+        fields'
+          | null (_rhsRecordFields ^. _tail1) = ppCode (_rhsRecordFields ^. _head1)
+          | otherwise =
+              line
+                <> indent
+                  ( sequenceWith
+                      (semicolon >> line)
+                      (ppCode <$> _rhsRecordFields)
+                  )
+                <> line
+    ppCode l <> fields' <> ppCode r
+
+instance SingI s => PrettyPrint (ConstructorRhs s) where
+  ppCode = \case
+    ConstructorRhsGadt r -> ppCode r
+    ConstructorRhsRecord r -> ppCode r
+
 instance SingI s => PrettyPrint (ConstructorDef s) where
   ppCode :: forall r. Members '[ExactPrint, Reader Options] r => ConstructorDef s -> Sem r ()
   ppCode ConstructorDef {..} = do
     let constructorName' = annDef _constructorName (ppSymbolType _constructorName)
-        constructorType' = ppExpressionType _constructorType
+        constructorRhs' = ppCode _constructorRhs
         doc' = ppCode <$> _constructorDoc
         pragmas' = ppCode <$> _constructorPragmas
-    pipeHelper <+> nest (doc' ?<> pragmas' ?<> constructorName' <+> ppCode _constructorColonKw <+> constructorType')
+    pipeHelper <+> nest (doc' ?<> pragmas' ?<> constructorName' <+> constructorRhs')
     where
       -- we use this helper so that comments appear before the first optional pipe if the pipe was omitted
       pipeHelper :: Sem r ()

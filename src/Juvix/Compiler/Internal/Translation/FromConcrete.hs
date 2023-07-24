@@ -634,16 +634,18 @@ goInductive ty@InductiveDef {..} = do
   _inductiveParameters' <- concatMapM goInductiveParameters _inductiveParameters
   _inductiveType' <- mapM goExpression _inductiveType
   _inductivePragmas' <- goPragmas _inductivePragmas
+  let inductiveName' = goSymbol _inductiveName
+      constrRetType = Internal.foldExplicitApplication (Internal.toExpression inductiveName') (map (Internal.ExpressionIden . Internal.IdenVar . (^. Internal.inductiveParamName)) _inductiveParameters')
   _inductiveConstructors' <-
     local (const _inductivePragmas') $
-      mapM goConstructorDef _inductiveConstructors
+      mapM (goConstructorDef constrRetType) _inductiveConstructors
   _inductiveExamples' <- goExamples _inductiveDoc
   let loc = getLoc _inductiveName
       indDef =
         Internal.InductiveDef
           { _inductiveParameters = _inductiveParameters',
             _inductiveBuiltin = (^. withLocParam) <$> _inductiveBuiltin,
-            _inductiveName = goSymbol _inductiveName,
+            _inductiveName = inductiveName',
             _inductiveType = fromMaybe (Internal.ExpressionUniverse (SmallUniverse loc)) _inductiveType',
             _inductiveConstructors = toList _inductiveConstructors',
             _inductiveExamples = _inductiveExamples',
@@ -654,11 +656,13 @@ goInductive ty@InductiveDef {..} = do
   return indDef
 
 goConstructorDef ::
+  forall r.
   Members [Builtins, NameIdGen, Error ScoperError, Reader Pragmas] r =>
+  Internal.Expression ->
   ConstructorDef 'Scoped ->
   Sem r Internal.ConstructorDef
-goConstructorDef ConstructorDef {..} = do
-  ty' <- goExpression _constructorType
+goConstructorDef retTy ConstructorDef {..} = do
+  ty' <- goRhs _constructorRhs
   examples' <- goExamples _constructorDoc
   pragmas' <- goPragmas _constructorPragmas
   return
@@ -668,6 +672,29 @@ goConstructorDef ConstructorDef {..} = do
         _inductiveConstructorName = goSymbol _constructorName,
         _inductiveConstructorPragmas = pragmas'
       }
+  where
+    goRecord :: Concrete.RhsRecord 'Scoped -> Sem r Internal.Expression
+    goRecord RhsRecord {..} = do
+      params <- mapM goField _rhsRecordFields
+      return (Internal.foldFunType (toList params) retTy)
+      where
+        goField :: Concrete.RecordField 'Scoped -> Sem r Internal.FunctionParameter
+        goField RecordField {..} = do
+          ty' <- goExpression _fieldType
+          return
+            Internal.FunctionParameter
+              { _paramName = Just (goSymbol _fieldName),
+                _paramImplicit = Explicit,
+                _paramType = ty'
+              }
+
+    goGadt :: Concrete.RhsGadt 'Scoped -> Sem r Internal.Expression
+    goGadt = goExpression . (^. Concrete.rhsGadtType)
+
+    goRhs :: Concrete.ConstructorRhs 'Scoped -> Sem r Internal.Expression
+    goRhs = \case
+      ConstructorRhsGadt r -> goGadt r
+      ConstructorRhsRecord r -> goRecord r
 
 goLiteral :: LiteralLoc -> Internal.LiteralLoc
 goLiteral = fmap go

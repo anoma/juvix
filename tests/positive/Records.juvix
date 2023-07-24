@@ -1,0 +1,31 @@
+module Records;
+
+type T :=
+  | constructT : T;
+
+type Pair (A B : Type) :=
+  | mkPair {
+      fst : A;
+      snd : B
+    };
+
+p1 : Pair T T :=
+  mkPair (fst := constructT; snd := constructT);
+
+type EnumRecord :=
+  | C1 {
+      c1a : T;
+      c1b : T
+    }
+  | C2 {
+      c2a : T;
+      c2b : T
+    };
+
+p2 : Pair EnumRecord EnumRecord :=
+  mkPair
+    (fst := C1 (c1a := constructT; c1b := constructT);
+     snd := C2 (c2a := constructT; c2b := constructT));
+
+type newtype :=
+  | mknewtype {f : T};

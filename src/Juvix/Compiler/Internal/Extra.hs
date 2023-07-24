@@ -265,7 +265,7 @@ patternVariables f p = case p of
     goApp :: Traversal' ConstructorApp VarName
     goApp g = traverseOf constrAppParameters (traverse (patternArgVariables g))
 
-inductiveTypeVarsAssoc :: (Foldable f) => InductiveDef -> f a -> HashMap VarName a
+inductiveTypeVarsAssoc :: Foldable f => InductiveDef -> f a -> HashMap VarName a
 inductiveTypeVarsAssoc def l
   | length vars < n = impossible
   | otherwise = HashMap.fromList (zip vars (toList l))
@@ -334,7 +334,7 @@ foldExplicitApplication f = foldApplication f . map (ApplicationArg Explicit)
 foldApplication :: Expression -> [ApplicationArg] -> Expression
 foldApplication f args = case args of
   [] -> f
-  ((ApplicationArg i a) : as) -> foldApplication (ExpressionApplication (Application f a i)) as
+  ApplicationArg i a : as -> foldApplication (ExpressionApplication (Application f a i)) as
 
 unfoldApplication' :: Application -> (Expression, NonEmpty ApplicationArg)
 unfoldApplication' (Application l' r' i') = second (|: (ApplicationArg i' r')) (unfoldExpressionApp l')

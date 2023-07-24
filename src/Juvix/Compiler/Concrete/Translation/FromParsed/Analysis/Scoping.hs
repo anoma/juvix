@@ -720,16 +720,53 @@ checkInductiveDef InductiveDef {..} = do
     -- note that the constructor name is not bound here
     checkConstructorDef :: S.Symbol -> S.Symbol -> ConstructorDef 'Parsed -> Sem r (ConstructorDef 'Scoped)
     checkConstructorDef tyName constructorName' ConstructorDef {..} = do
-      constructorType' <- checkParseExpressionAtoms _constructorType
       doc' <- mapM checkJudoc _constructorDoc
+      rhs' <- checkRhs _constructorRhs
       registerConstructor tyName
         @$> ConstructorDef
           { _constructorName = constructorName',
-            _constructorType = constructorType',
+            _constructorRhs = rhs',
             _constructorDoc = doc',
             _constructorPragmas = _constructorPragmas,
-            _constructorPipe,
-            _constructorColonKw
+            _constructorPipe
+          }
+
+    checkRhs :: ConstructorRhs 'Parsed -> Sem r (ConstructorRhs 'Scoped)
+    checkRhs = \case
+      ConstructorRhsGadt r -> ConstructorRhsGadt <$> checkGadt r
+      ConstructorRhsRecord r -> ConstructorRhsRecord <$> checkRecord r
+
+    checkRecord :: RhsRecord 'Parsed -> Sem r (RhsRecord 'Scoped)
+    checkRecord RhsRecord {..} = do
+      fields' <- checkFields _rhsRecordFields
+      return
+        RhsRecord
+          { _rhsRecordFields = fields',
+            _rhsRecordDelim
+          }
+      where
+        checkFields :: NonEmpty (RecordField 'Parsed) -> Sem r (NonEmpty (RecordField 'Scoped))
+        checkFields (RecordField {..} :| fs) = do
+          type' <- checkParseExpressionAtoms _fieldType
+          withLocalScope $ do
+            name' <- bindVariableSymbol _fieldName
+            let f =
+                  RecordField
+                    { _fieldType = type',
+                      _fieldName = name',
+                      ..
+                    }
+            case nonEmpty fs of
+              Nothing -> return (pure f)
+              Just fs1 -> (pure f <>) <$> checkFields fs1
+
+    checkGadt :: RhsGadt 'Parsed -> Sem r (RhsGadt 'Scoped)
+    checkGadt RhsGadt {..} = do
+      constructorType' <- checkParseExpressionAtoms _rhsGadtType
+      return
+        RhsGadt
+          { _rhsGadtType = constructorType',
+            _rhsGadtColon
           }
 
 createExportsTable :: ExportInfo -> HashSet NameId

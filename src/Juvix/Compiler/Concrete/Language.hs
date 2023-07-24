@@ -357,11 +357,10 @@ type InductiveName s = SymbolType s
 
 data ConstructorDef (s :: Stage) = ConstructorDef
   { _constructorPipe :: Irrelevant (Maybe KeywordRef),
-    _constructorColonKw :: Irrelevant KeywordRef,
     _constructorName :: InductiveConstructorName s,
     _constructorDoc :: Maybe (Judoc s),
     _constructorPragmas :: Maybe ParsedPragmas,
-    _constructorType :: ExpressionType s
+    _constructorRhs :: ConstructorRhs s
   }
 
 deriving stock instance Show (ConstructorDef 'Parsed)
@@ -375,6 +374,74 @@ deriving stock instance Eq (ConstructorDef 'Scoped)
 deriving stock instance Ord (ConstructorDef 'Parsed)
 
 deriving stock instance Ord (ConstructorDef 'Scoped)
+
+data RecordField (s :: Stage) = RecordField
+  { _fieldName :: SymbolType s,
+    _fieldColon :: Irrelevant (KeywordRef),
+    _fieldType :: ExpressionType s
+  }
+
+deriving stock instance Show (RecordField 'Parsed)
+
+deriving stock instance Show (RecordField 'Scoped)
+
+deriving stock instance Eq (RecordField 'Parsed)
+
+deriving stock instance Eq (RecordField 'Scoped)
+
+deriving stock instance Ord (RecordField 'Parsed)
+
+deriving stock instance Ord (RecordField 'Scoped)
+
+data RhsRecord (s :: Stage) = RhsRecord
+  { _rhsRecordDelim :: Irrelevant (KeywordRef, KeywordRef),
+    _rhsRecordFields :: NonEmpty (RecordField s)
+  }
+
+deriving stock instance Show (RhsRecord 'Parsed)
+
+deriving stock instance Show (RhsRecord 'Scoped)
+
+deriving stock instance Eq (RhsRecord 'Parsed)
+
+deriving stock instance Eq (RhsRecord 'Scoped)
+
+deriving stock instance Ord (RhsRecord 'Parsed)
+
+deriving stock instance Ord (RhsRecord 'Scoped)
+
+data RhsGadt (s :: Stage) = RhsGadt
+  { _rhsGadtColon :: Irrelevant KeywordRef,
+    _rhsGadtType :: ExpressionType s
+  }
+
+deriving stock instance Show (RhsGadt 'Parsed)
+
+deriving stock instance Show (RhsGadt 'Scoped)
+
+deriving stock instance Eq (RhsGadt 'Parsed)
+
+deriving stock instance Eq (RhsGadt 'Scoped)
+
+deriving stock instance Ord (RhsGadt 'Parsed)
+
+deriving stock instance Ord (RhsGadt 'Scoped)
+
+data ConstructorRhs (s :: Stage)
+  = ConstructorRhsGadt (RhsGadt s)
+  | ConstructorRhsRecord (RhsRecord s)
+
+deriving stock instance Show (ConstructorRhs 'Parsed)
+
+deriving stock instance Show (ConstructorRhs 'Scoped)
+
+deriving stock instance Eq (ConstructorRhs 'Parsed)
+
+deriving stock instance Eq (ConstructorRhs 'Scoped)
+
+deriving stock instance Ord (ConstructorRhs 'Parsed)
+
+deriving stock instance Ord (ConstructorRhs 'Scoped)
 
 data InductiveParameters (s :: Stage) = InductiveParameters
   { _inductiveParametersNames :: NonEmpty (SymbolType s),
@@ -1334,6 +1401,9 @@ newtype ModuleIndex = ModuleIndex
   }
 
 makeLenses ''PatternArg
+makeLenses ''RecordField
+makeLenses ''RhsRecord
+makeLenses ''RhsGadt
 makeLenses ''List
 makeLenses ''ListPattern
 makeLenses ''UsingItem
