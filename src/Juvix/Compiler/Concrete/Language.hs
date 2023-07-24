@@ -1985,11 +1985,6 @@ judocExamples (Judoc bs) = concatMap goGroup bs
 instance HasLoc SymbolEntry where
   getLoc = (^. symbolEntry . S.nameDefined)
 
--- instance HasNameKind ModuleSymbolEntry where
---   getNameKind (ModuleSymbolEntry (ModuleRef' (t :&: _))) = case t of
---     SModuleTop -> KNameTopModule
---     SModuleLocal -> KNameLocalModule
-
 instance HasNameKind ModuleSymbolEntry where
   getNameKind (ModuleSymbolEntry s) = getNameKind s
 
