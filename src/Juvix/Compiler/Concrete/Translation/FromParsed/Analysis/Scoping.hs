@@ -1044,7 +1044,6 @@ checkLocalModule ::
   Module 'Parsed 'ModuleLocal ->
   Sem r (Module 'Scoped 'ModuleLocal)
 checkLocalModule Module {..} = do
-  -- path <- gets (^. scopePath)
   (_moduleExportInfo, moduleBody', moduleDoc') <-
     withLocalScope $ do
       inheritScope
@@ -1052,14 +1051,6 @@ checkLocalModule Module {..} = do
       doc' <- mapM checkJudoc _moduleDoc
       return (e, b, doc')
   _modulePath' <- reserveLocalModuleSymbol _modulePath
-  -- let entry = ModuleSymbolEntry (S.unConcrete _modulePath')
-
-  --     addS :: Maybe (SymbolInfo 'NameSpaceModules) -> SymbolInfo 'NameSpaceModules
-  --     addS m = case m of
-  --       Nothing -> symbolInfoSingle entry
-  --       Just si -> case strat of
-  --         BindingLocal -> symbolInfoSingle entry
-  --         BindingTop -> set (symbolInfo . at path) (Just entry) si
 
   -- modify (over scopeModuleSymbols (HashMap.alter (Just . addS) _modulePath))
   let moduleId = _modulePath' ^. S.nameId

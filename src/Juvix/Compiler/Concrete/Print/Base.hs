@@ -802,7 +802,10 @@ ppUnkindedSymbol :: Members '[Reader Options, ExactPrint] r => WithLoc Text -> S
 ppUnkindedSymbol = region (annotate AnnUnkindedSym) . ppCode
 
 instance SingI s => PrettyPrint (HidingItem s) where
-  ppCode = ppSymbolType . (^. hidingSymbol)
+  ppCode h = do
+    let sym = ppSymbolType (h ^. hidingSymbol)
+        kwmodule = ppCode <$> (h ^. hidingModuleKw)
+    kwmodule <?+> sym
 
 instance SingI s => PrettyPrint (HidingList s) where
   ppCode HidingList {..} = do
@@ -828,7 +831,8 @@ instance SingI s => PrettyPrint (UsingItem s) where
     let kwAs' :: Maybe (Sem r ()) = ppCode <$> ui ^. usingAsKw . unIrrelevant
         alias' = ppSymbolType <$> ui ^. usingAs
         sym' = ppSymbolType (ui ^. usingSymbol)
-    sym' <+?> kwAs' <+?> alias'
+        kwmodule = ppCode <$> (ui ^. usingModuleKw)
+    kwmodule <?+> (sym' <+?> kwAs' <+?> alias')
 
 instance PrettyPrint (ModuleRef' 'S.NotConcrete) where
   ppCode (ModuleRef' (t :&: m)) =

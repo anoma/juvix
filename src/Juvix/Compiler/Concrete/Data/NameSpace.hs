@@ -1,8 +1,8 @@
 module Juvix.Compiler.Concrete.Data.NameSpace where
 
 import Data.Kind qualified as GHC
-import Juvix.Prelude
 import Juvix.Data.NameKind
+import Juvix.Prelude
 
 data NameSpace
   = NameSpaceSymbols
