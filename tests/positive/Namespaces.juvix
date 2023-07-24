@@ -1,7 +1,6 @@
 module Namespaces;
 
 module Main;
-
   module M;
     axiom A : Type;
   end;
