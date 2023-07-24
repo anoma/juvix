@@ -1299,6 +1299,7 @@ checkOpenModuleNoImport OpenModule {..}
             ( set S.nameWhyInScope S.BecauseImportedOpened
                 . set S.nameVisibilityAnn (publicAnnToVis _openPublic)
             )
+
         publicAnnToVis :: PublicAnn -> VisibilityAnn
         publicAnnToVis = \case
           Public -> VisPublic
@@ -1306,11 +1307,17 @@ checkOpenModuleNoImport OpenModule {..}
 
         filterScope :: ExportInfo -> ExportInfo
         filterScope = case openModif of
-          Just (Using l) -> over exportSymbols (HashMap.fromList . mapMaybe inUsing . HashMap.toList)
+          Just (Using l) ->
+            over exportSymbols (HashMap.fromList . mapMaybe inUsing . HashMap.toList)
+              . over exportModuleSymbols (HashMap.fromList . mapMaybe inUsing . HashMap.toList)
             where
-              inUsing :: (Symbol, SymbolEntry) -> Maybe (Symbol, SymbolEntry)
+              inUsing ::
+                forall (ns :: NameSpace).
+                SingI ns =>
+                (Symbol, NameSpaceEntryType ns) ->
+                Maybe (Symbol, NameSpaceEntryType ns)
               inUsing (sym, e) = do
-                mayAs' <- u ^. at (symbolEntryNameId e)
+                mayAs' <- u ^. at (e ^. nsEntry . S.nameId)
                 return (fromMaybe sym mayAs', e)
               u :: HashMap NameId (Maybe Symbol)
               u =
@@ -1318,10 +1325,12 @@ checkOpenModuleNoImport OpenModule {..}
                   [ (i ^. usingSymbol . S.nameId, i ^? usingAs . _Just . S.nameConcrete)
                     | i <- toList (l ^. usingList)
                   ]
-          Just (Hiding l) -> over exportSymbols (HashMap.filter (not . inHiding))
+          Just (Hiding l) ->
+            over exportSymbols (HashMap.filter (not . inHiding))
+              . over exportModuleSymbols (HashMap.filter (not . inHiding))
             where
-              inHiding :: SymbolEntry -> Bool
-              inHiding e = HashSet.member (symbolEntryNameId e) u
+              inHiding :: forall ns. SingI ns => NameSpaceEntryType ns -> Bool
+              inHiding e = HashSet.member (e ^. nsEntry . S.nameId) u
               u :: HashSet NameId
               u = HashSet.fromList (map (^. hidingSymbol . S.nameId) (toList (l ^. hidingList)))
           Nothing -> id
