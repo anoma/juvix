@@ -117,6 +117,6 @@ vampirPrelude regsNum opts =
     <> show (opts ^. optStepsNum)
     <> ";\n\n"
     <> $(FE.makeRelativeToProject "runtime/src/vampir/stdlib.pir" >>= FE.embedFile)
-    <> "\n"
+    <> "\n\n"
     <> $(FE.makeRelativeToProject "runtime/src/vampir/vm.pir" >>= FE.embedFile)
-    <> "\n"
+    <> "\n\n"

@@ -173,3 +173,5 @@ def run n code = {
     def (_, regs, _) = iter n (run_rec code) (0, write (zeros regsNum) 1 stackSize, zeros memSize);
     hd (tl (tl regs))
 };
+
+/////////////////////////////////////////////////////////

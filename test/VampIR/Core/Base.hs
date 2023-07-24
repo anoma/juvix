@@ -27,19 +27,22 @@ vampirAssertion' backend tab dataFile step = do
           Left err -> assertFailure (show (pretty (fromJuvixError @GenericError err)))
           Right VampIR.Result {..} -> do
             TIO.writeFile (toFilePath vampirFile) _resultCode
-
-            step "Check vamp-ir on path"
-            assertCmdExists $(mkRelFile "vamp-ir")
-
-            vampirSetupArgs backend dirPath step
-
-            step "VampIR compile"
-            P.callProcess "vamp-ir" (compileArgs vampirFile dirPath backend)
-            step "VampIR prove"
-            P.callProcess "vamp-ir" (proveArgs dataFile dirPath backend)
-            step "VampIR verify"
-            P.callProcess "vamp-ir" (verifyArgs dirPath backend)
+            vampirRunAssertion backend dirPath dataFile vampirFile step
     )
+
+vampirRunAssertion :: VampirBackend -> Path Abs Dir -> Path Abs File -> Path Abs File -> (String -> IO ()) -> Assertion
+vampirRunAssertion backend dirPath dataFile vampirFile step = do
+  step "Check vamp-ir on path"
+  assertCmdExists $(mkRelFile "vamp-ir")
+
+  vampirSetupArgs backend dirPath step
+
+  step "VampIR compile"
+  P.callProcess "vamp-ir" (compileArgs vampirFile dirPath backend)
+  step "VampIR prove"
+  P.callProcess "vamp-ir" (proveArgs dataFile dirPath backend)
+  step "VampIR verify"
+  P.callProcess "vamp-ir" (verifyArgs dirPath backend)
 
 vampirSetupArgs :: VampirBackend -> Path Abs Dir -> (String -> IO ()) -> Assertion
 vampirSetupArgs VampirHalo2 _ _ = return ()
