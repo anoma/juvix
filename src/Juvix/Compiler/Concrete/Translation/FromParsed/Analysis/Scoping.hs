@@ -128,12 +128,12 @@ scopeCheckOpenModule ::
 scopeCheckOpenModule = mapError (JuvixError @ScoperError) . checkOpenModule
 
 freshVariable :: Members '[NameIdGen, State ScoperFixities, State ScoperIterators, State Scope, State ScoperState] r => Symbol -> Sem r S.Symbol
-freshVariable = freshSymbol S.KNameLocal
+freshVariable = freshSymbol KNameLocal
 
 freshSymbol ::
   forall r.
   Members '[State Scope, State ScoperState, NameIdGen, State ScoperFixities, State ScoperIterators] r =>
-  S.NameKind ->
+  NameKind ->
   Symbol ->
   Sem r S.Symbol
 freshSymbol _nameKind _nameConcrete = do
@@ -164,9 +164,12 @@ freshSymbol _nameKind _nameConcrete = do
       return attrs
 
 reserveSymbolSignatureOf ::
-  forall r d.
-  (Members '[Error ScoperError, NameIdGen, State ScoperFixities, State ScoperIterators, State ScoperIterators, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder] r, HasNameSignature d) =>
-  S.NameKind ->
+  forall (k :: NameKind) r d.
+  ( Members '[Error ScoperError, NameIdGen, State ScoperFixities, State ScoperIterators, State ScoperIterators, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder] r,
+    HasNameSignature d,
+    SingI (NameKindNameSpace k)
+  ) =>
+  Sing k ->
   d ->
   Symbol ->
   Sem r S.Symbol
@@ -175,9 +178,12 @@ reserveSymbolSignatureOf k d s = do
   reserveSymbolOf k (Just sig) s
 
 reserveSymbolOf ::
-  forall r.
-  Members '[Error ScoperError, NameIdGen, State ScoperFixities, State ScoperIterators, State ScoperIterators, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder] r =>
-  S.NameKind ->
+  forall (k :: NameKind) (ns :: NameSpace) r.
+  ( Members '[Error ScoperError, NameIdGen, State ScoperFixities, State ScoperIterators, State ScoperIterators, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder] r,
+    ns ~ NameKindNameSpace k,
+    SingI ns
+  ) =>
+  Sing k ->
   Maybe NameSignature ->
   Symbol ->
   Sem r S.Symbol
@@ -185,36 +191,35 @@ reserveSymbolOf k nameSig s = do
   checkNotBound
   path <- gets (^. scopePath)
   strat <- ask
-  s' <- freshSymbol k s
+  s' <- freshSymbol (fromSing k) s
   whenJust nameSig (modify' . set (scoperSignatures . at (s' ^. S.nameId)) . Just)
-  modify (set (scopeLocalSymbols . at s) (Just s'))
+  modify (set (scopeNameSpaceLocal sns . at s) (Just s'))
   registerName (S.unqualifiedSymbol s')
-  let mentry :: Maybe SymbolEntry
-      mentry =
-        let e = SymbolEntry (S.unConcrete s')
+  let entry :: NameSpaceEntryType (NameKindNameSpace k)
+      entry =
+        let symE = SymbolEntry (S.unConcrete s')
+            modE = ModuleSymbolEntry (S.unConcrete s')
          in case k of
-              S.KNameConstructor -> Just e
-              S.KNameInductive -> Just e
-              S.KNameFunction -> Just e
-              S.KNameAxiom -> Just e
-              S.KNameLocal -> Just e
-              S.KNameLocalModule -> Nothing
-              S.KNameTopModule -> Nothing
-      addS :: SingI ns => NameSpaceEntryType ns -> Maybe (SymbolInfo ns) -> SymbolInfo ns
-      addS entry m = case m of
-        Nothing -> symbolInfoSingle entry
+              SKNameConstructor -> symE
+              SKNameInductive -> symE
+              SKNameFunction -> symE
+              SKNameAxiom -> symE
+              SKNameLocal -> symE
+              SKNameLocalModule -> modE
+              SKNameTopModule -> modE
+      addS :: NameSpaceEntryType ns -> Maybe (SymbolInfo ns) -> SymbolInfo ns
+      addS mentry m = case m of
+        Nothing -> symbolInfoSingle mentry
         Just SymbolInfo {..} -> case strat of
-          BindingLocal -> symbolInfoSingle entry
-          BindingTop -> SymbolInfo (HashMap.insert path entry _symbolInfo)
-  -- TODO What about modules?
-  whenJust mentry $ \entry ->
-    modify (over scopeSymbols (HashMap.alter (Just . addS entry) s))
-
+          BindingLocal -> symbolInfoSingle mentry
+          BindingTop -> SymbolInfo (HashMap.insert path mentry _symbolInfo)
+  modify (over scopeNameSpace (HashMap.alter (Just . addS entry) s))
   return s'
   where
+    sns :: Sing ns = sing
     checkNotBound :: Sem r ()
     checkNotBound = do
-      exists <- HashMap.lookup s <$> gets (^. scopeLocalSymbols)
+      exists <- HashMap.lookup s <$> gets (^. scopeNameSpaceLocal sns)
       whenJust exists $ \d ->
         throw
           ( ErrMultipleDeclarations
@@ -224,19 +229,11 @@ reserveSymbolOf k nameSig s = do
                 }
           )
 
--- | Only for variables and local modules
-bindSymbolOf ::
-  Members '[Error ScoperError, NameIdGen, State ScoperFixities, State ScoperIterators, State ScoperIterators, State Scope, InfoTableBuilder, State ScoperState, Reader BindingStrategy] r =>
-  S.NameKind ->
-  Symbol ->
-  Sem r S.Symbol
-bindSymbolOf k = reserveSymbolOf k Nothing
-
-bindReservedDefinitionSymbol ::
+getReservedDefinitionSymbol ::
   Members '[Error ScoperError, NameIdGen, State ScoperFixities, State ScoperIterators, State ScoperIterators, State Scope, InfoTableBuilder, State ScoperState, Reader BindingStrategy] r =>
   Symbol ->
   Sem r S.Symbol
-bindReservedDefinitionSymbol s = do
+getReservedDefinitionSymbol s = do
   m <- gets (^. scopeLocalSymbols)
   let s' = fromMaybe err (m ^. at s)
       err = error ("impossible. Contents of scope:\n" <> ppTrace (toList m))
@@ -253,58 +250,57 @@ bindVariableSymbol ::
   Members '[Error ScoperError, NameIdGen, State Scope, InfoTableBuilder, State ScoperState] r =>
   Symbol ->
   Sem r S.Symbol
-bindVariableSymbol = localBindings . ignoreFixities . ignoreIterators . bindSymbolOf S.KNameLocal
+bindVariableSymbol = localBindings . ignoreFixities . ignoreIterators . reserveSymbolOf SKNameLocal Nothing
 
 reserveInductiveSymbol ::
   Members '[Error ScoperError, NameIdGen, State ScoperFixities, State ScoperIterators, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder] r =>
   InductiveDef 'Parsed ->
   Sem r S.Symbol
-reserveInductiveSymbol d = reserveSymbolSignatureOf S.KNameInductive d (d ^. inductiveName)
+reserveInductiveSymbol d = reserveSymbolSignatureOf SKNameInductive d (d ^. inductiveName)
 
 reserveConstructorSymbol ::
   Members '[Error ScoperError, NameIdGen, State ScoperFixities, State ScoperIterators, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder] r =>
   InductiveDef 'Parsed ->
   ConstructorDef 'Parsed ->
   Sem r S.Symbol
-reserveConstructorSymbol d c = reserveSymbolSignatureOf S.KNameConstructor (d, c) (c ^. constructorName)
+reserveConstructorSymbol d c = reserveSymbolSignatureOf SKNameConstructor (d, c) (c ^. constructorName)
 
 reserveFunctionSymbol ::
   Members '[Error ScoperError, NameIdGen, State ScoperFixities, State ScoperIterators, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder] r =>
   FunctionDef 'Parsed ->
   Sem r S.Symbol
 reserveFunctionSymbol f =
-  reserveSymbolSignatureOf S.KNameFunction f (f ^. signName)
+  reserveSymbolSignatureOf SKNameFunction f (f ^. signName)
 
 reserveAxiomSymbol ::
   Members '[Error ScoperError, NameIdGen, State ScoperFixities, State ScoperIterators, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder] r =>
   AxiomDef 'Parsed ->
   Sem r S.Symbol
-reserveAxiomSymbol a = reserveSymbolSignatureOf S.KNameAxiom a (a ^. axiomName)
+reserveAxiomSymbol a = reserveSymbolSignatureOf SKNameAxiom a (a ^. axiomName)
 
--- | symbols must be reserved in advance
 bindFunctionSymbol ::
   Members '[Error ScoperError, NameIdGen, State ScoperFixities, State ScoperIterators, State Scope, InfoTableBuilder, State ScoperState, Reader BindingStrategy] r =>
   Symbol ->
   Sem r S.Symbol
-bindFunctionSymbol = bindReservedDefinitionSymbol
+bindFunctionSymbol = getReservedDefinitionSymbol
 
 bindInductiveSymbol ::
   Members '[Error ScoperError, NameIdGen, State ScoperFixities, State ScoperIterators, State Scope, InfoTableBuilder, State ScoperState, Reader BindingStrategy] r =>
   Symbol ->
   Sem r S.Symbol
-bindInductiveSymbol = bindReservedDefinitionSymbol
+bindInductiveSymbol = getReservedDefinitionSymbol
 
 bindAxiomSymbol ::
   Members '[Error ScoperError, NameIdGen, State ScoperFixities, State ScoperIterators, State Scope, InfoTableBuilder, State ScoperState, Reader BindingStrategy] r =>
   Symbol ->
   Sem r S.Symbol
-bindAxiomSymbol = bindReservedDefinitionSymbol
+bindAxiomSymbol = getReservedDefinitionSymbol
 
 bindConstructorSymbol ::
   Members '[Error ScoperError, NameIdGen, State ScoperFixities, State ScoperIterators, State Scope, InfoTableBuilder, State ScoperState, Reader BindingStrategy] r =>
   Symbol ->
   Sem r S.Symbol
-bindConstructorSymbol = bindReservedDefinitionSymbol
+bindConstructorSymbol = getReservedDefinitionSymbol
 
 checkImport ::
   forall r.
@@ -790,7 +786,7 @@ checkTopModule m@Module {..} = do
       let _nameDefinedIn = S.topModulePathToAbsPath _modulePath
           _nameConcrete = _modulePath
           _nameDefined = getLoc (_modulePath ^. modulePathName)
-          _nameKind = S.KNameTopModule
+          _nameKind = KNameTopModule
           _nameFixity :: Maybe Fixity
           _nameFixity = Nothing
           -- This visibility annotation is not relevant
@@ -830,14 +826,22 @@ checkTopModule m@Module {..} = do
 withTopScope :: Members '[State Scope] r => Sem r a -> Sem r a
 withTopScope ma = do
   before <- get @Scope
-  let scope' = set scopeLocalSymbols mempty before
+  let scope' =
+        ( set scopeLocalSymbols mempty
+            . set scopeLocalModuleSymbols mempty
+        )
+          before
   put scope'
   ma
 
 withLocalScope :: Members '[State Scope] r => Sem r a -> Sem r a
 withLocalScope ma = do
   before <- get @Scope
-  let scope' = set scopeLocalSymbols mempty before
+  let scope' =
+        ( set scopeLocalSymbols mempty
+            . set scopeLocalModuleSymbols mempty
+        )
+          before
   put scope'
   x <- ma
   put before
@@ -944,7 +948,7 @@ checkSections sec = topBindings $ case sec of
         reserveDefinition = \case
           DefinitionSyntax s -> void (checkSyntaxDef s)
           DefinitionFunctionDef d -> void (reserveFunctionSymbol d)
-          DefinitionTypeSignature d -> void (reserveSymbolOf S.KNameFunction Nothing (d ^. sigName))
+          DefinitionTypeSignature d -> void (reserveSymbolOf SKNameFunction Nothing (d ^. sigName))
           DefinitionAxiom d -> void (reserveAxiomSymbol d)
           DefinitionInductive d -> do
             void (reserveInductiveSymbol d)
@@ -1032,21 +1036,7 @@ reserveLocalModuleSymbol ::
   Symbol ->
   Sem r S.Symbol
 reserveLocalModuleSymbol =
-  ignoreFixities . ignoreIterators . reserveSymbolOf S.KNameLocalModule Nothing
-
--- bindReservedSymbol :: forall ns r.
---   (SingI ns, Members '[State Scope, Reader BindingStrategy] r) =>
---   S.Symbol ->
---   NameSpaceEntryType ns ->
---   Sem r ()
--- bindReservedSymbol s' entry = do
---   path <- gets (^. scopePath)
---   strat <- ask
---   -- TODO only modules are meant to be stored here?
---   modify (over scopeNameSpace (HashMap.alter (Just . addS strat path) s))
---   where
---     s :: Symbol
---     s = s' ^. S.nameConcrete
+  ignoreFixities . ignoreIterators . reserveSymbolOf SKNameLocalModule Nothing
 
 checkLocalModule ::
   forall r.
@@ -1054,7 +1044,7 @@ checkLocalModule ::
   Module 'Parsed 'ModuleLocal ->
   Sem r (Module 'Scoped 'ModuleLocal)
 checkLocalModule Module {..} = do
-  strat <- ask
+  -- path <- gets (^. scopePath)
   (_moduleExportInfo, moduleBody', moduleDoc') <-
     withLocalScope $ do
       inheritScope
@@ -1062,8 +1052,17 @@ checkLocalModule Module {..} = do
       doc' <- mapM checkJudoc _moduleDoc
       return (e, b, doc')
   _modulePath' <- reserveLocalModuleSymbol _modulePath
+  -- let entry = ModuleSymbolEntry (S.unConcrete _modulePath')
+
+  --     addS :: Maybe (SymbolInfo 'NameSpaceModules) -> SymbolInfo 'NameSpaceModules
+  --     addS m = case m of
+  --       Nothing -> symbolInfoSingle entry
+  --       Just si -> case strat of
+  --         BindingLocal -> symbolInfoSingle entry
+  --         BindingTop -> set (symbolInfo . at path) (Just entry) si
+
+  -- modify (over scopeModuleSymbols (HashMap.alter (Just . addS) _modulePath))
   let moduleId = _modulePath' ^. S.nameId
-      entry = ModuleSymbolEntry (S.unConcrete _modulePath')
       _moduleRefName = S.unConcrete _modulePath'
       _moduleRefModule =
         Module
@@ -1074,17 +1073,8 @@ checkLocalModule Module {..} = do
             _moduleKw,
             _moduleKwEnd
           }
-      addS :: S.AbsModulePath -> Maybe (SymbolInfo 'NameSpaceModules) -> (SymbolInfo 'NameSpaceModules)
-      addS path m = case m of
-        Nothing -> symbolInfoSingle entry
-        Just si -> case strat of
-          BindingLocal -> symbolInfoSingle entry
-          BindingTop -> set (symbolInfo . at path) (Just entry) si
-
       mref :: ModuleRef' 'S.NotConcrete
       mref = mkModuleRef' @'ModuleLocal ModuleRef'' {..}
-  path <- gets (^. scopePath)
-  modify (over scopeModuleSymbols (HashMap.alter (Just . addS path) _modulePath))
   modify (over scoperModules (HashMap.insert moduleId mref))
   registerName (S.unqualifiedSymbol _modulePath')
   return _moduleRefModule
@@ -1255,7 +1245,7 @@ checkOpenModuleNoImport OpenModule {..}
                 scopedSym <-
                   if
                       | isJust (h ^. hidingModuleKw) -> scopeSymbol SNameSpaceModules s
-                      | otherwise -> scopeSymbol SNameSpaceModules s
+                      | otherwise -> scopeSymbol SNameSpaceSymbols s
                 return
                   HidingItem
                     { _hidingSymbol = scopedSym,
@@ -1268,7 +1258,7 @@ checkOpenModuleNoImport OpenModule {..}
                 scopedSym <-
                   if
                       | isJust (i ^. usingModuleKw) -> scopeSymbol SNameSpaceModules s
-                      | otherwise -> scopeSymbol SNameSpaceModules s
+                      | otherwise -> scopeSymbol SNameSpaceSymbols s
                 let scopedAs = do
                       c <- i ^. usingAs
                       return (set S.nameConcrete c scopedSym)
@@ -2197,7 +2187,7 @@ makePatternTable (PatternAtoms latoms _) = [appOp] : operators
         unqualifiedSymbolOp :: S.Name -> Maybe (Precedence, P.Operator ParsePat PatternArg)
         unqualifiedSymbolOp S.Name' {..}
           | Just Fixity {..} <- _nameFixity,
-            _nameKind == S.KNameConstructor = Just $
+            _nameKind == KNameConstructor = Just $
               case _fixityArity of
                 Unary u -> (_fixityPrecedence, P.Postfix (unaryApp <$> parseSymbolId _nameId))
                   where

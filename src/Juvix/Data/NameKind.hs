@@ -21,6 +21,8 @@ data NameKind
     KNameTopModule
   deriving stock (Show, Eq, Data)
 
+$(genSingletons [''NameKind])
+
 class HasNameKind a where
   getNameKind :: a -> NameKind
 
@@ -45,11 +47,6 @@ nameKindText = \case
   KNameAxiom -> "axiom"
   KNameLocalModule -> "local module"
   KNameTopModule -> "module"
-
-isLocallyBounded :: HasNameKind a => a -> Bool
-isLocallyBounded k = case getNameKind k of
-  KNameLocal -> True
-  _ -> False
 
 isExprKind :: HasNameKind a => a -> Bool
 isExprKind k = case getNameKind k of

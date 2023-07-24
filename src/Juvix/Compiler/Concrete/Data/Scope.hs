@@ -49,16 +49,22 @@ data Scope = Scope
     -- should map to itself. This is needed because we may query it with a
     -- symbol with a different location but we may want the location of the
     -- original symbol
-    _scopeLocalSymbols :: HashMap Symbol S.Symbol
+    _scopeLocalSymbols :: HashMap Symbol S.Symbol,
+    _scopeLocalModuleSymbols :: HashMap Symbol S.Symbol
   }
 
 makeLenses ''SymbolInfo
 makeLenses ''Scope
 
-scopeNameSpace :: forall ns. SingI ns => Lens' Scope (HashMap Symbol (SymbolInfo ns))
+scopeNameSpace :: forall (ns :: NameSpace). SingI ns => Lens' Scope (HashMap Symbol (SymbolInfo ns))
 scopeNameSpace = case sing :: SNameSpace ns of
   SNameSpaceSymbols -> scopeSymbols
   SNameSpaceModules -> scopeModuleSymbols
+
+scopeNameSpaceLocal :: forall (ns :: NameSpace). Sing ns -> Lens' Scope (HashMap Symbol S.Symbol)
+scopeNameSpaceLocal s = case s of
+  SNameSpaceSymbols -> scopeLocalSymbols
+  SNameSpaceModules -> scopeLocalModuleSymbols
 
 newtype ModulesCache = ModulesCache
   { _cachedModules :: HashMap TopModulePath (ModuleRef'' 'S.NotConcrete 'ModuleTop)
@@ -118,5 +124,6 @@ emptyScope absPath =
       _scopeSymbols = mempty,
       _scopeModuleSymbols = mempty,
       _scopeTopModules = mempty,
-      _scopeLocalSymbols = mempty
+      _scopeLocalSymbols = mempty,
+      _scopeLocalModuleSymbols = mempty
     }
