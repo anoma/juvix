@@ -1051,8 +1051,6 @@ checkLocalModule Module {..} = do
       doc' <- mapM checkJudoc _moduleDoc
       return (e, b, doc')
   _modulePath' <- reserveLocalModuleSymbol _modulePath
-
-  -- modify (over scopeModuleSymbols (HashMap.alter (Just . addS) _modulePath))
   let moduleId = _modulePath' ^. S.nameId
       _moduleRefName = S.unConcrete _modulePath'
       _moduleRefModule =
