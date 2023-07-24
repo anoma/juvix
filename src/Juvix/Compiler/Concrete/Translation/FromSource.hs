@@ -1144,7 +1144,6 @@ moduleDef = P.label "<module definition>" $ do
   _moduleDoc <- getJudoc
   _modulePragmas <- getPragmas
   _modulePath <- pmodulePath
-  _moduleParameters <- many inductiveParams
   semicolon
   _moduleBody <- P.sepEndBy statement semicolon
   _moduleKwEnd <- endModule

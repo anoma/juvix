@@ -128,6 +128,14 @@ scopeCheckOpenModule = mapError (JuvixError @ScoperError) . checkOpenModule
 freshVariable :: Members '[NameIdGen, State ScoperFixities, State ScoperIterators, State Scope, State ScoperState] r => Symbol -> Sem r S.Symbol
 freshVariable = freshSymbol KNameLocal
 
+generateSymbol ::
+    forall r.
+  Members '[State Scope, State ScoperState, NameIdGen, State ScoperFixities, State ScoperIterators, Reader Interval] r =>
+  NameKind ->
+  Text ->
+  Sem r S.Symbol
+generateSymbol = undefined
+
 freshSymbol ::
   forall r.
   Members '[State Scope, State ScoperState, NameIdGen, State ScoperFixities, State ScoperIterators] r =>
@@ -900,9 +908,9 @@ checkModuleBody body = do
             go = \case
               DefinitionSyntax d -> output @(Statement s) (StatementSyntax d)
               DefinitionAxiom d -> output (StatementAxiom d)
-              DefinitionFunctionDef d -> output @(Statement s) (StatementFunctionDef d)
-              DefinitionInductive d -> output @(Statement s) (StatementInductive d)
-              DefinitionTypeSignature d -> output @(Statement s) (StatementTypeSignature d)
+              DefinitionFunctionDef d -> output (StatementFunctionDef d)
+              DefinitionInductive d -> output (StatementInductive d)
+              DefinitionTypeSignature d -> output (StatementTypeSignature d)
 
 checkSections ::
   forall r.
@@ -934,6 +942,7 @@ checkSections sec = topBindings $ case sec of
     goDefinitions :: DefinitionsSection 'Parsed -> Sem (Reader BindingStrategy ': r) (DefinitionsSection 'Scoped)
     goDefinitions DefinitionsSection {..} = do
       mapM_ reserveDefinition _definitionsSection
+      mapM_ defineInductiveModule (_definitionsSection ^.. each . _DefinitionInductive)
       sec' <- mapM goDefinition _definitionsSection
       next' <- mapM goNonDefinitions _definitionsNext
       return
@@ -948,9 +957,13 @@ checkSections sec = topBindings $ case sec of
           DefinitionFunctionDef d -> void (reserveFunctionSymbol d)
           DefinitionTypeSignature d -> void (reserveSymbolOf SKNameFunction Nothing (d ^. sigName))
           DefinitionAxiom d -> void (reserveAxiomSymbol d)
-          DefinitionInductive d -> do
+          DefinitionInductive d -> reserveInductive d
+          where
+           reserveInductive :: InductiveDef 'Parsed -> Sem (Reader BindingStrategy ': r) ()
+           reserveInductive d = do
             void (reserveInductiveSymbol d)
             mapM_ (reserveConstructorSymbol d) (d ^.. inductiveConstructors . each)
+
         goDefinition :: Definition 'Parsed -> Sem (Reader BindingStrategy ': r) (Definition 'Scoped)
         goDefinition = \case
           DefinitionSyntax s -> return (DefinitionSyntax s)
@@ -958,6 +971,9 @@ checkSections sec = topBindings $ case sec of
           DefinitionTypeSignature d -> DefinitionTypeSignature <$> checkTypeSignature d
           DefinitionAxiom d -> DefinitionAxiom <$> checkAxiomDef d
           DefinitionInductive d -> DefinitionInductive <$> checkInductiveDef d
+
+        defineInductiveModule :: InductiveDef 'Parsed -> Sem (Reader BindingStrategy ': r) ()
+        defineInductiveModule = undefined
 
 checkStatement ::
   Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, State ScoperFixities, State ScoperIterators, State ScoperIterators] r =>

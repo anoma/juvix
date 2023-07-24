@@ -152,6 +152,11 @@ data Definition (s :: Stage)
   | DefinitionAxiom (AxiomDef s)
   | DefinitionTypeSignature (TypeSignature s)
 
+_DefinitionInductive :: Traversal' (Definition s) (InductiveDef s)
+_DefinitionInductive f = \case
+  DefinitionInductive i -> DefinitionInductive <$> f i
+  d -> pure d
+
 data NonDefinition (s :: Stage)
   = NonDefinitionImport (Import s)
   | NonDefinitionModule (Module s 'ModuleLocal)
