@@ -1203,7 +1203,7 @@ checkOpenModuleNoImport OpenModule {..}
   | isJust _openModuleImportKw = impossible
   | otherwise = do
       openModuleName'@(ModuleRef' (_ :&: moduleRef'')) <- lookupModuleSymbol _openModuleName
-      let exportInfo@(ExportInfo {..}) = moduleRef'' ^. moduleExportInfo
+      let exportInfo = moduleRef'' ^. moduleExportInfo
       registerName (moduleRef'' ^. moduleRefName)
 
       let checkUsingHiding :: UsingHiding 'Parsed -> Sem r (UsingHiding 'Scoped)
@@ -1211,10 +1211,10 @@ checkOpenModuleNoImport OpenModule {..}
             Hiding h -> Hiding <$> checkHidingList h
             Using uh -> Using <$> checkUsingList uh
             where
-              scopeSymbol :: Symbol -> Sem r S.Symbol
-              scopeSymbol s = do
-                let mentry :: Maybe SymbolEntry
-                    mentry = _exportSymbols ^. at s
+              scopeSymbol :: forall (ns :: NameSpace). SingI ns => Sing ns -> Symbol -> Sem r S.Symbol
+              scopeSymbol _ s = do
+                let mentry :: Maybe (NameSpaceEntryType ns)
+                    mentry = exportInfo ^. exportNameSpace . at s
                     err =
                       throw
                         ( ErrModuleDoesNotExportSymbol
@@ -1250,11 +1250,25 @@ checkOpenModuleNoImport OpenModule {..}
                     }
 
               checkHidingItem :: HidingItem 'Parsed -> Sem r (HidingItem 'Scoped)
-              checkHidingItem h = HidingItem <$> scopeSymbol (h ^. hidingSymbol)
+              checkHidingItem h = do
+                let s = h ^. hidingSymbol
+                scopedSym <-
+                  if
+                      | isJust (h ^. hidingModuleKw) -> scopeSymbol SNameSpaceModules s
+                      | otherwise -> scopeSymbol SNameSpaceModules s
+                return
+                  HidingItem
+                    { _hidingSymbol = scopedSym,
+                      _hidingModuleKw = h ^. hidingModuleKw
+                    }
 
               checkUsingItem :: UsingItem 'Parsed -> Sem r (UsingItem 'Scoped)
               checkUsingItem i = do
-                scopedSym <- scopeSymbol (i ^. usingSymbol)
+                let s = i ^. usingSymbol
+                scopedSym <-
+                  if
+                      | isJust (i ^. usingModuleKw) -> scopeSymbol SNameSpaceModules s
+                      | otherwise -> scopeSymbol SNameSpaceModules s
                 let scopedAs = do
                       c <- i ^. usingAs
                       return (set S.nameConcrete c scopedSym)
@@ -1381,8 +1395,8 @@ checkAxiomDef AxiomDef {..} = do
   axiomDoc' <- withLocalScope (mapM checkJudoc _axiomDoc)
   registerAxiom @$> AxiomDef {_axiomName = axiomName', _axiomType = axiomType', _axiomDoc = axiomDoc', ..}
 
-entryToSymbol :: SymbolEntry -> Symbol -> S.Symbol
-entryToSymbol sentry csym = set S.nameConcrete csym (sentry ^. symbolEntry)
+entryToSymbol :: forall (ns :: NameSpace). SingI ns => NameSpaceEntryType ns -> Symbol -> S.Symbol
+entryToSymbol sentry csym = set S.nameConcrete csym (sentry ^. nsEntry)
 
 checkFunction ::
   forall r.

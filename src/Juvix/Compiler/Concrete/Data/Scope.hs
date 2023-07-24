@@ -5,7 +5,6 @@ module Juvix.Compiler.Concrete.Data.Scope
   )
 where
 
-import Data.Kind qualified as GHC
 import Juvix.Compiler.Concrete.Data.InfoTable
 import Juvix.Compiler.Concrete.Data.NameSignature.Base
 import Juvix.Compiler.Concrete.Data.NameSpace
@@ -22,11 +21,6 @@ newtype SymbolInfo (n :: NameSpace) = SymbolInfo
     _symbolInfo :: HashMap S.AbsModulePath (NameSpaceEntryType n)
   }
   deriving newtype (Semigroup, Monoid)
-
-type NameSpaceEntryType :: NameSpace -> GHC.Type
-type family NameSpaceEntryType s = res | res -> s where
-  NameSpaceEntryType 'NameSpaceSymbols = SymbolEntry
-  NameSpaceEntryType 'NameSpaceModules = ModuleSymbolEntry
 
 nsEntry :: forall ns. SingI ns => Lens' (NameSpaceEntryType ns) (S.Name' ())
 nsEntry = case sing :: SNameSpace ns of

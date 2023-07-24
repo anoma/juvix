@@ -23,6 +23,7 @@ import Juvix.Compiler.Concrete.Data.ModuleIsTop
 import Juvix.Compiler.Concrete.Data.Name
 import Juvix.Compiler.Concrete.Data.NameRef
 import Juvix.Compiler.Concrete.Data.NameSignature.Base (NameSignature)
+import Juvix.Compiler.Concrete.Data.NameSpace
 import Juvix.Compiler.Concrete.Data.PublicAnn
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Data.Stage
@@ -39,6 +40,11 @@ import Juvix.Prelude.Pretty (prettyText)
 import Prelude (show)
 
 type Delims = Irrelevant (Maybe (KeywordRef, KeywordRef))
+
+type NameSpaceEntryType :: NameSpace -> GHC.Type
+type family NameSpaceEntryType s = res | res -> s where
+  NameSpaceEntryType 'NameSpaceSymbols = SymbolEntry
+  NameSpaceEntryType 'NameSpaceModules = ModuleSymbolEntry
 
 type SymbolType :: Stage -> GHC.Type
 type family SymbolType s = res | res -> s where
@@ -664,8 +670,9 @@ deriving stock instance Ord (Module 'Parsed 'ModuleLocal)
 
 deriving stock instance Ord (Module 'Scoped 'ModuleLocal)
 
-newtype HidingItem (s :: Stage) = HidingItem
-  { _hidingSymbol :: SymbolType s
+data HidingItem (s :: Stage) = HidingItem
+  { _hidingSymbol :: SymbolType s,
+    _hidingModuleKw :: Maybe KeywordRef
   }
 
 deriving stock instance Show (HidingItem 'Parsed)
@@ -2013,3 +2020,8 @@ exportAllNames :: TraversalS' ExportInfo (S.Name' ())
 exportAllNames =
   exportSymbols . each . symbolEntry
     <> exportModuleSymbols . each . moduleEntry
+
+exportNameSpace :: forall ns. SingI ns => Lens' ExportInfo (HashMap Symbol (NameSpaceEntryType ns))
+exportNameSpace = case sing :: SNameSpace ns of
+  SNameSpaceSymbols -> exportSymbols
+  SNameSpaceModules -> exportModuleSymbols

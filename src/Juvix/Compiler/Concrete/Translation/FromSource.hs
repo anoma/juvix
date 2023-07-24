@@ -231,6 +231,7 @@ mkTopModulePath l = TopModulePath (NonEmpty.init l) (NonEmpty.last l)
 
 usingItem :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (UsingItem 'Parsed)
 usingItem = do
+  _usingModuleKw <- optional (kw kwModule)
   _usingSymbol <- symbol
   alias <- optional $ do
     k <- Irrelevant <$> kw kwAs
@@ -240,7 +241,10 @@ usingItem = do
   return UsingItem {..}
 
 hidingItem :: Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r => ParsecS r (HidingItem 'Parsed)
-hidingItem = HidingItem <$> symbol
+hidingItem = do
+  _hidingModuleKw <- optional (kw kwModule)
+  _hidingSymbol <- symbol
+  return HidingItem {..}
 
 phidingList :: Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r => ParsecS r (HidingList 'Parsed)
 phidingList = do
