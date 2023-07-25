@@ -99,6 +99,7 @@ translateFunctionInfo tab IdentifierInfo {..} =
             _identifierArgsNum
             (fromJust $ HashMap.lookup _identifierSymbol (tab ^. identContext)),
         _functionType = translateType _identifierType,
+        _functionArgNames = _identifierArgNames,
         _functionArgsNum = _identifierArgsNum,
         _functionArgsInfo = map translateArgInfo (typeArgsBinders _identifierType),
         _functionIsExported = _identifierIsExported

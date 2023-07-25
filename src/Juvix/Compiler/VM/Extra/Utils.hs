@@ -17,6 +17,12 @@ mkJumpOnZero val dest = JumpOnZero $ InstrJumpOnZero val dest
 mkLabel :: Text -> Instruction
 mkLabel lab = Label $ InstrLabel lab
 
+regSp :: Int
+regSp = 0
+
+regHp :: Int
+regHp = 1
+
 maxValueReg :: Value -> Int
 maxValueReg = \case
   RegRef r -> r

@@ -40,6 +40,7 @@ genCode infoTable fi =
         { _functionName = fi ^. Core.functionName,
           _functionLocation = fi ^. Core.functionLocation,
           _functionSymbol = fi ^. Core.functionSymbol,
+          _functionArgNames = fi ^. Core.functionArgNames,
           _functionArgsNum = fi ^. Core.functionArgsNum,
           _functionType = convertType (fi ^. Core.functionArgsNum) (fi ^. Core.functionType),
           _functionCode = code,

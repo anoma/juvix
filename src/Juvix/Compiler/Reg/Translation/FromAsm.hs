@@ -23,6 +23,7 @@ fromAsm tab =
         { _functionName = fi ^. Asm.functionName,
           _functionLocation = fi ^. Asm.functionLocation,
           _functionSymbol = fi ^. Asm.functionSymbol,
+          _functionArgNames = fi ^. Asm.functionArgNames,
           _functionArgsNum = fi ^. Asm.functionArgsNum,
           _functionStackVarsNum = fi ^. Asm.functionMaxValueStackHeight,
           _functionTempVarsNum = fi ^. Asm.functionMaxTempStackHeight,

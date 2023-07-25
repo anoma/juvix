@@ -1,6 +1,7 @@
 module Juvix.Compiler.VM.Options where
 
 import Juvix.Compiler.Defaults
+import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Prelude
 
 data Options = Options
@@ -21,4 +22,12 @@ defaultOptions =
       _optStepsNum = defaultStepsNum,
       _optIntegerBits = defaultVampIRIntegerBits,
       _optInputsFile = Nothing
+    }
+
+fromEntryPoint :: EntryPoint -> Options
+fromEntryPoint EntryPoint {..} =
+  defaultOptions
+    { _optStackSize = _entryPointStackSize,
+      _optHeapSize = _entryPointHeapSize,
+      _optStepsNum = _entryPointStepsNum
     }

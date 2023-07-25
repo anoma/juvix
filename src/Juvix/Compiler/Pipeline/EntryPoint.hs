@@ -36,6 +36,9 @@ data EntryPoint = EntryPoint
     _entryPointUnrollLimit :: Int,
     _entryPointOptimizationLevel :: Int,
     _entryPointInliningDepth :: Int,
+    _entryPointStackSize :: Int,
+    _entryPointHeapSize :: Int,
+    _entryPointStepsNum :: Int,
     _entryPointGenericOptions :: GenericOptions,
     _entryPointModulePaths :: [Path Abs File],
     _entryPointSymbolPruningMode :: SymbolPruningMode
@@ -81,6 +84,9 @@ defaultEntryPointNoFile roots =
       _entryPointUnrollLimit = defaultUnrollLimit,
       _entryPointOptimizationLevel = defaultOptimizationLevel,
       _entryPointInliningDepth = defaultInliningDepth,
+      _entryPointStackSize = defaultStackSize,
+      _entryPointHeapSize = defaultHeapSize,
+      _entryPointStepsNum = defaultStepsNum,
       _entryPointModulePaths = [],
       _entryPointSymbolPruningMode = FilterUnreachable
     }

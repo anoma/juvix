@@ -18,6 +18,7 @@ data FunctionInfo = FunctionInfo
     -- function arguments
     _functionBody :: Node,
     _functionType :: Type,
+    _functionArgNames :: [Maybe Text],
     -- a function can have 0 arguments
     _functionArgsNum :: Int,
     _functionArgsInfo :: [ArgumentInfo],

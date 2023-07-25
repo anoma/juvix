@@ -3,6 +3,7 @@ module Commands.Dev.Core.Compile.Base where
 import Commands.Base
 import Commands.Dev.Core.Compile.Options
 import Commands.Extra.Compile qualified as Compile
+import Data.ByteString qualified as BS
 import Data.Text.IO qualified as TIO
 import Juvix.Compiler.Asm.Pretty qualified as Asm
 import Juvix.Compiler.Backend qualified as Backend
@@ -27,7 +28,10 @@ getEntry PipelineArg {..} = do
       { _entryPointTarget = getTarget (_pipelineArgOptions ^. compileTarget),
         _entryPointDebug = _pipelineArgOptions ^. compileDebug,
         _entryPointOptimizationLevel = fromMaybe defaultOptLevel (_pipelineArgOptions ^. compileOptimizationLevel),
-        _entryPointInliningDepth = _pipelineArgOptions ^. compileInliningDepth
+        _entryPointInliningDepth = _pipelineArgOptions ^. compileInliningDepth,
+        _entryPointStackSize = _pipelineArgOptions ^. compileStackSize,
+        _entryPointHeapSize = _pipelineArgOptions ^. compileHeapSize,
+        _entryPointStepsNum = _pipelineArgOptions ^. compileStepsNum
       }
   where
     getTarget :: CompileTarget -> Backend.Target
@@ -38,7 +42,7 @@ getEntry PipelineArg {..} = do
       TargetVampIR -> Backend.TargetVampIR
       TargetCore -> Backend.TargetCore
       TargetAsm -> Backend.TargetAsm
-      TargetVampIRVM -> Backend.TargetVampIR
+      TargetVampIRVM -> Backend.TargetVampIRVM
 
     defaultOptLevel :: Int
     defaultOptLevel
@@ -98,6 +102,17 @@ runVampIRPipeline pa@PipelineArg {..} = do
   vampirFile <- Compile.outputFile _pipelineArgOptions _pipelineArgFile
   VampIR.Result {..} <- getRight (run (runReader entryPoint (runError (coreToVampIR _pipelineArgInfoTable :: Sem '[Error JuvixError, Reader EntryPoint] VampIR.Result))))
   embed $ TIO.writeFile (toFilePath vampirFile) _resultCode
+
+runVampIRVMPipeline ::
+  forall r.
+  (Members '[Embed IO, App] r) =>
+  PipelineArg ->
+  Sem r ()
+runVampIRVMPipeline pa@PipelineArg {..} = do
+  entryPoint <- getEntry pa
+  vampirFile <- Compile.outputFile _pipelineArgOptions _pipelineArgFile
+  bs <- getRight (run (runReader entryPoint (runError (coreToVampIRVM _pipelineArgInfoTable :: Sem '[Error JuvixError, Reader EntryPoint] ByteString))))
+  embed $ BS.writeFile (toFilePath vampirFile) bs
 
 runAsmPipeline :: (Members '[Embed IO, App] r) => PipelineArg -> Sem r ()
 runAsmPipeline pa@PipelineArg {..} = do

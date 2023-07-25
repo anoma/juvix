@@ -6,6 +6,8 @@ where
 
 import Juvix.Compiler.VM.Language.Base hiding (Const)
 
+type Code = [Instruction]
+
 type SmallInt = Int
 
 type RegRef = Int

@@ -8,6 +8,7 @@ data Target
   | TargetCNative64
   | TargetGeb
   | TargetVampIR
+  | TargetVampIRVM
   | TargetCore
   | TargetAsm
   deriving stock (Data, Eq, Show)
@@ -64,6 +65,8 @@ getLimits tgt debug = case tgt of
   TargetGeb ->
     defaultLimits
   TargetVampIR ->
+    defaultLimits
+  TargetVampIRVM ->
     defaultLimits
   TargetCore ->
     defaultLimits

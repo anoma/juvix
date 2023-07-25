@@ -17,6 +17,7 @@ coreSupportedTargets =
       TargetNative64,
       TargetGeb,
       TargetVampIR,
+      TargetVampIRVM,
       TargetAsm
     ]
 

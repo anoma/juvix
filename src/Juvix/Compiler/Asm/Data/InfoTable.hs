@@ -21,6 +21,7 @@ data FunctionInfo = FunctionInfo
   { _functionName :: Text,
     _functionLocation :: Maybe Location,
     _functionSymbol :: Symbol,
+    _functionArgNames :: [Maybe Text],
     -- | `_functionArgsNum` may be different from `length (typeArgs
     -- (_functionType))` only if it is 0 (the "function" takes zero arguments)
     -- and the result is a function.

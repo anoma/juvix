@@ -44,7 +44,8 @@ instance CanonicalProjection GlobalOptions Core.CoreOptions where
       { Core._optCheckCoverage = not _globalNoCoverage,
         Core._optUnrollLimit = _globalUnrollLimit,
         Core._optOptimizationLevel = defaultOptimizationLevel,
-        Core._optInliningDepth = defaultInliningDepth
+        Core._optInliningDepth = defaultInliningDepth,
+        Core._optAllowFunction = False
       }
 
 defaultGlobalOptions :: GlobalOptions

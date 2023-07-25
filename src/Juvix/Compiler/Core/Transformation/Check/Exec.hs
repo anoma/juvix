@@ -2,12 +2,14 @@ module Juvix.Compiler.Core.Transformation.Check.Exec where
 
 import Juvix.Compiler.Core.Error
 import Juvix.Compiler.Core.Extra
+import Juvix.Compiler.Core.Options (CoreOptions, optAllowFunction)
 import Juvix.Compiler.Core.Transformation.Base
 import Juvix.Compiler.Core.Transformation.Check.Base
 import Juvix.Data.PPOutput
 
-checkExec :: forall r. Member (Error CoreError) r => InfoTable -> Sem r InfoTable
+checkExec :: forall r. Members '[Error CoreError, Reader CoreOptions] r => InfoTable -> Sem r InfoTable
 checkExec tab = do
+  allowFun <- asks (^. optAllowFunction)
   checkNoAxioms tab
   case tab ^. infoMain of
     Nothing ->
@@ -19,13 +21,14 @@ checkExec tab = do
           }
     Just sym ->
       case ii ^. identifierType of
-        NPi {} ->
-          throw
-            CoreError
-              { _coreErrorMsg = ppOutput "`main` cannot have a function type for this target",
-                _coreErrorNode = Nothing,
-                _coreErrorLoc = loc
-              }
+        NPi {}
+          | not allowFun ->
+              throw
+                CoreError
+                  { _coreErrorMsg = ppOutput "`main` cannot have a function type for this target",
+                    _coreErrorNode = Nothing,
+                    _coreErrorLoc = loc
+                  }
         ty
           | isTypeConstr tab ty ->
               throw

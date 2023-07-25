@@ -36,6 +36,9 @@ import Juvix.Compiler.Pipeline.Root
 import Juvix.Compiler.Pipeline.Setup
 import Juvix.Compiler.Reg.Data.InfoTable qualified as Reg
 import Juvix.Compiler.Reg.Translation.FromAsm qualified as Reg
+import Juvix.Compiler.VM.Language qualified as VM
+import Juvix.Compiler.VM.Pipeline qualified as VM
+import Juvix.Compiler.VM.Translation.FromReg qualified as VM
 import Juvix.Prelude
 
 type PipelineEff = '[PathResolver, Reader EntryPoint, Files, NameIdGen, Builtins, Error JuvixError, HighlightBuilder, Embed IO]
@@ -99,6 +102,18 @@ upToVampIR ::
 upToVampIR =
   upToCore >>= \Core.CoreResult {..} -> coreToVampIR _coreResultTable
 
+upToVM ::
+  (Members '[HighlightBuilder, Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, PathResolver] r) =>
+  Sem r VM.Code
+upToVM =
+  upToCore >>= \Core.CoreResult {..} -> coreToVM _coreResultTable
+
+upToVampIRVM ::
+  (Members '[HighlightBuilder, Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, PathResolver] r) =>
+  Sem r ByteString
+upToVampIRVM =
+  upToVM >>= VM.toVampIR
+
 upToGeb ::
   (Members '[HighlightBuilder, Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, PathResolver] r) =>
   Geb.ResultSpec ->
@@ -124,6 +139,12 @@ upToEval =
 
 coreToAsm :: Members '[Error JuvixError, Reader EntryPoint] r => Core.InfoTable -> Sem r Asm.InfoTable
 coreToAsm = Core.toStripped >=> return . Asm.fromCore . Stripped.fromCore
+
+coreToVM :: Members '[Error JuvixError, Reader EntryPoint] r => Core.InfoTable -> Sem r VM.Code
+coreToVM = coreToAsm >=> Asm.toReg >=> return . VM.fromReg . Reg.fromAsm
+
+coreToVampIRVM :: Members '[Error JuvixError, Reader EntryPoint] r => Core.InfoTable -> Sem r ByteString
+coreToVampIRVM = coreToVM >=> VM.toVampIR
 
 coreToMiniC :: Members '[Error JuvixError, Reader EntryPoint] r => Core.InfoTable -> Sem r C.MiniCResult
 coreToMiniC = coreToAsm >=> asmToMiniC

@@ -110,6 +110,7 @@ statementFunction = do
             _functionSymbol = sym,
             _functionLocation = Just i,
             _functionCode = [],
+            _functionArgNames = replicate (length argtys) Nothing,
             _functionArgsNum = length argtys,
             _functionType = mkTypeFun argtys (fromMaybe TyDynamic mrty),
             _functionMaxValueStackHeight = -1, -- computed later

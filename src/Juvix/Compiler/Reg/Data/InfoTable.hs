@@ -13,6 +13,7 @@ data FunctionInfo = FunctionInfo
   { _functionName :: Text,
     _functionLocation :: Maybe Location,
     _functionSymbol :: Symbol,
+    _functionArgNames :: [Maybe Text],
     _functionArgsNum :: Int,
     _functionStackVarsNum :: Int,
     _functionTempVarsNum :: Int,
