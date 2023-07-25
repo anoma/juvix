@@ -1527,17 +1527,20 @@ instance SingI s => HasAtomicity (FunctionParameters s) where
 instance HasLoc ScopedIden where
   getLoc = getLoc . (^. scopedIden)
 
-instance HasLoc (InductiveDef 'Scoped) where
+instance SingI s => HasLoc (InductiveParameters s) where
+  getLoc i = getLocSymbolType (i ^. inductiveParametersNames . _head1) <> getLocExpressionType (i ^. inductiveParametersType)
+
+instance HasLoc (InductiveDef s) where
   getLoc i = (getLoc <$> i ^. inductivePositive) ?<> getLoc (i ^. inductiveKw)
 
-instance HasLoc (FunctionClause 'Scoped) where
-  getLoc c = getLoc (c ^. clauseOwnerFunction) <> getLoc (c ^. clauseBody)
+instance SingI s => HasLoc (FunctionClause s) where
+  getLoc c = getLocSymbolType (c ^. clauseOwnerFunction) <> getLocExpressionType (c ^. clauseBody)
 
 instance HasLoc ModuleRef where
   getLoc (ModuleRef' (_ :&: r)) = getLoc r
 
-instance HasLoc (AxiomDef 'Scoped) where
-  getLoc m = getLoc (m ^. axiomKw) <> getLoc (m ^. axiomType)
+instance SingI s => HasLoc (AxiomDef s) where
+  getLoc m = getLoc (m ^. axiomKw) <> getLocExpressionType (m ^. axiomType)
 
 instance HasLoc (OpenModule 'Scoped) where
   getLoc m =
