@@ -4,6 +4,36 @@
 <img align="right" width="300" height="300" alt="Juvix Mascot" src="../assets/images/tara-smiling.svg" />
 </a>
 
+## [v0.4.1](https://github.com/anoma/juvix/tree/v0.4.2) (2023-07-25)
+
+[Full Changelog](https://github.com/anoma/juvix/compare/v0.4.1...v0.4.2)
+
+**Implemented enhancements:**
+
+- Fold lets when the bound variable occurs at most once [\#2231](https://github.com/anoma/juvix/pull/2231) ([lukaszcz](https://github.com/lukaszcz))
+- Case folding [\#2229](https://github.com/anoma/juvix/pull/2229) ([lukaszcz](https://github.com/lukaszcz))
+- Specialization optimisation [\#2164](https://github.com/anoma/juvix/pull/2164) ([lukaszcz](https://github.com/lukaszcz))
+
+**Merged pull requests:**
+
+- Refactor deriving statements in `Concrete.Language` [\#2256](https://github.com/anoma/juvix/pull/2256) ([janmasrovira](https://github.com/janmasrovira))
+- Rename inductive constructor [\#2255](https://github.com/anoma/juvix/pull/2255) ([janmasrovira](https://github.com/janmasrovira))
+- Add record declaration syntax [\#2254](https://github.com/anoma/juvix/pull/2254) ([janmasrovira](https://github.com/janmasrovira))
+- Typcheck imports before statements [\#2253](https://github.com/anoma/juvix/pull/2253) ([janmasrovira](https://github.com/janmasrovira))
+- Named arguments [\#2250](https://github.com/anoma/juvix/pull/2250) ([janmasrovira](https://github.com/janmasrovira))
+- Format juvix files using new function syntax [\#2245](https://github.com/anoma/juvix/pull/2245) ([janmasrovira](https://github.com/janmasrovira))
+- Update to GEB version 0.3.2 [\#2244](https://github.com/anoma/juvix/pull/2244) ([lukaszcz](https://github.com/lukaszcz))
+- New syntax for function definitions [\#2243](https://github.com/anoma/juvix/pull/2243) ([janmasrovira](https://github.com/janmasrovira))
+- Parse many consecutive `-` as a comment [\#2240](https://github.com/anoma/juvix/pull/2240) ([janmasrovira](https://github.com/janmasrovira))
+- Add syntax for builtin list [\#2239](https://github.com/anoma/juvix/pull/2239) ([janmasrovira](https://github.com/janmasrovira))
+- Fix bug in aritychecker [\#2238](https://github.com/anoma/juvix/pull/2238) ([janmasrovira](https://github.com/janmasrovira))
+- Local pragmas improvements [\#2236](https://github.com/anoma/juvix/pull/2236) ([lukaszcz](https://github.com/lukaszcz))
+- Fix bug in `computeTypeInfo` [\#2234](https://github.com/anoma/juvix/pull/2234) ([lukaszcz](https://github.com/lukaszcz))
+- Numeric range types [\#2232](https://github.com/anoma/juvix/pull/2232) ([lukaszcz](https://github.com/lukaszcz))
+- Use specialization pragmas in the standard library [\#2230](https://github.com/anoma/juvix/pull/2230) ([lukaszcz](https://github.com/lukaszcz))
+- Fix de Bruijn indices in LetRecs [\#2227](https://github.com/anoma/juvix/pull/2227) ([lukaszcz](https://github.com/lukaszcz))
+- Remove abstract [\#2219](https://github.com/anoma/juvix/pull/2219) ([janmasrovira](https://github.com/janmasrovira))
+
 ## [v0.4.1](https://github.com/anoma/juvix/tree/v0.4.1) (2023-06-23)
 
 [Full Changelog](https://github.com/anoma/juvix/compare/v0.4.0...v0.4.1)
