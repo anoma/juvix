@@ -775,12 +775,13 @@ goExpression = \case
 
     goIden :: Concrete.ScopedIden -> Internal.Expression
     goIden x = Internal.ExpressionIden $ case getNameKind x of
-      KNameAxiom {} -> Internal.IdenAxiom n'
-      KNameInductive {} -> Internal.IdenInductive n'
-      KNameLocal {} -> Internal.IdenVar n'
-      KNameFunction {} -> Internal.IdenFunction n'
-      KNameConstructor {} -> Internal.IdenConstructor n'
-      _ -> impossible
+      KNameAxiom -> Internal.IdenAxiom n'
+      KNameInductive -> Internal.IdenInductive n'
+      KNameLocal -> Internal.IdenVar n'
+      KNameFunction -> Internal.IdenFunction n'
+      KNameConstructor -> Internal.IdenConstructor n'
+      KNameLocalModule -> impossible
+      KNameTopModule -> impossible
       where
         n' = goName (x ^. scopedIden)
 

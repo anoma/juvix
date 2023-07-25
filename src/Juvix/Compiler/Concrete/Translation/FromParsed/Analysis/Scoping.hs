@@ -1,5 +1,3 @@
--- | Limitations:
--- 1. A symbol introduced by a type signature can only be used once per Module.
 module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping
   ( module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping,
     module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Data.Context,
@@ -178,12 +176,12 @@ reserveSymbolSignatureOf k d s = do
   reserveSymbolOf k (Just sig) s
 
 reserveSymbolOf ::
-  forall (k :: NameKind) (ns :: NameSpace) r.
+  forall (nameKind :: NameKind) (ns :: NameSpace) r.
   ( Members '[Error ScoperError, NameIdGen, State ScoperFixities, State ScoperIterators, State ScoperIterators, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder] r,
-    ns ~ NameKindNameSpace k,
+    ns ~ NameKindNameSpace nameKind,
     SingI ns
   ) =>
-  Sing k ->
+  Sing nameKind ->
   Maybe NameSignature ->
   Symbol ->
   Sem r S.Symbol
@@ -195,7 +193,7 @@ reserveSymbolOf k nameSig s = do
   whenJust nameSig (modify' . set (scoperSignatures . at (s' ^. S.nameId)) . Just)
   modify (set (scopeNameSpaceLocal sns . at s) (Just s'))
   registerName (S.unqualifiedSymbol s')
-  let entry :: NameSpaceEntryType (NameKindNameSpace k)
+  let entry :: NameSpaceEntryType (NameKindNameSpace nameKind)
       entry =
         let symE = SymbolEntry (S.unConcrete s')
             modE = ModuleSymbolEntry (S.unConcrete s')
@@ -1271,11 +1269,11 @@ checkOpenModuleNoImport OpenModule {..}
           }
   where
     mergeScope :: ExportInfo -> Sem r ()
-    mergeScope ExportInfo {..} = do
-      mapM_ mergeSymbol (HashMap.toList _exportSymbols)
-      mapM_ mergeSymbol (HashMap.toList _exportModuleSymbols)
+    mergeScope ei = do
+      mapM_ mergeSymbol (HashMap.toList (ei ^. exportSymbols))
+      mapM_ mergeSymbol (HashMap.toList (ei ^. exportModuleSymbols))
       where
-        mergeSymbol :: SingI ns => (Symbol, NameSpaceEntryType ns) -> Sem r ()
+        mergeSymbol :: forall ns. SingI ns => (Symbol, NameSpaceEntryType ns) -> Sem r ()
         mergeSymbol (s, entry) =
           modify
             (over scopeNameSpace (HashMap.insertWith (<>) s (symbolInfoSingle entry)))

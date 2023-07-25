@@ -7,6 +7,7 @@ newtype NameId = NameId
   { _unNameId :: Word64
   }
   deriving stock (Show, Eq, Ord, Generic, Data)
+  deriving newtype (Enum)
 
 makeLenses ''NameId
 
