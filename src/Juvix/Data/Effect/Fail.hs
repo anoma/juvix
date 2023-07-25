@@ -15,6 +15,12 @@ runFail ::
 runFail = fmap (^? _Right) . runError @() . reinterpret (\Fail -> throw ())
 {-# INLINE runFail #-}
 
+ignoreFail ::
+  Sem (Fail ': r) a ->
+  Sem r ()
+ignoreFail = void . runFail
+{-# INLINE ignoreFail #-}
+
 failWhen :: Member Fail r => Bool -> Sem r ()
 failWhen c = when c fail
 {-# INLINE failWhen #-}
