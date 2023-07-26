@@ -319,7 +319,7 @@ instance (SingI t, SingI s) => PrettyPrint (Module s t) where
               topSpace
                 <> moduleBody'
                 <> line
-    moduleDoc'
+    hideIfInductive $ moduleDoc'
       <> modulePragmas'
       <> ppCode _moduleKw
       <+> modulePath'
@@ -328,6 +328,13 @@ instance (SingI t, SingI s) => PrettyPrint (Module s t) where
         <> body'
         <> ending
     where
+      hideIfInductive :: Sem r () -> Sem r ()
+      hideIfInductive m = do
+        let shouldHide = case sing :: SModuleIsTop t of
+              SModuleLocal -> _moduleInductive
+              SModuleTop -> False
+        unless shouldHide m
+
       topSpace :: Sem r ()
       topSpace = case sing :: SModuleIsTop t of
         SModuleLocal -> mempty
@@ -988,6 +995,13 @@ instance SingI s => PrettyPrint (InductiveDef s) where
       ppConstructorBlock :: NonEmpty (ConstructorDef s) -> Sem r ()
       ppConstructorBlock cs = vsep (ppCode <$> cs)
 
+instance PrettyPrint (ProjectionDef s) where
+  ppCode ProjectionDef {..} = do
+    noLoc "projection"
+     <+> noLoc (pretty _projectionFieldIx)
+     <+> noLoc "for"
+     <+> ppCode _projectionConstructor
+
 instance SingI s => PrettyPrint (Statement s) where
   ppCode = \case
     StatementSyntax s -> ppCode s
@@ -999,6 +1013,7 @@ instance SingI s => PrettyPrint (Statement s) where
     StatementOpenModule o -> ppCode o
     StatementFunctionClause c -> ppCode c
     StatementAxiom a -> ppCode a
+    StatementProjectionDef a -> ppCode a
 
 instance PrettyPrint SymbolEntry where
   ppCode ent =

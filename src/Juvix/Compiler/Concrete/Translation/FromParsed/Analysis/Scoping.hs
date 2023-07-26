@@ -7,6 +7,7 @@ where
 
 import Control.Monad.Combinators.Expr qualified as P
 import Data.HashMap.Strict qualified as HashMap
+import Juvix.Compiler.Concrete.Gen qualified as G
 import Data.HashSet qualified as HashSet
 import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Compiler.Concrete.Data.Highlight.Input
@@ -17,7 +18,6 @@ import Juvix.Compiler.Concrete.Data.Scope
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Extra (fromAmbiguousIterator)
 import Juvix.Compiler.Concrete.Extra qualified as P
-import Juvix.Compiler.Concrete.Gen qualified as G
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Pretty (ppTrace)
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Data.Context
@@ -128,6 +128,19 @@ scopeCheckOpenModule = mapError (JuvixError @ScoperError) . checkOpenModule
 
 freshVariable :: Members '[NameIdGen, State ScoperFixities, State ScoperIterators, State Scope, State ScoperState] r => Symbol -> Sem r S.Symbol
 freshVariable = freshSymbol KNameLocal
+
+checkProjectionDef ::
+  forall r.
+  Members '[State Scope, State ScoperState, NameIdGen, State ScoperFixities, State ScoperIterators] r =>
+  ProjectionDef 'Parsed ->
+  Sem r (ProjectionDef 'Scoped)
+checkProjectionDef p = do
+  _projectionField <- freshSymbol KNameFunction (p ^. projectionField)
+  return ProjectionDef {
+    _projectionFieldIx = p ^. projectionFieldIx,
+    _projectionConstructor = p ^. projectionConstructor,
+    _projectionField
+                       }
 
 freshSymbol ::
   forall r.
@@ -256,6 +269,12 @@ reserveInductiveSymbol ::
   InductiveDef 'Parsed ->
   Sem r S.Symbol
 reserveInductiveSymbol d = reserveSymbolSignatureOf SKNameInductive d (d ^. inductiveName)
+
+reserveProjectionSymbol ::
+  Members '[Error ScoperError, NameIdGen, State ScoperFixities, State ScoperIterators, State Scope, Reader BindingStrategy, InfoTableBuilder, State ScoperState] r =>
+   ProjectionDef 'Parsed ->
+  Sem r S.Symbol
+reserveProjectionSymbol d = reserveSymbolOf SKNameFunction Nothing (d ^. projectionField)
 
 reserveConstructorSymbol ::
   Members '[Error ScoperError, NameIdGen, State ScoperFixities, State ScoperIterators, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder] r =>
@@ -815,6 +834,7 @@ checkTopModule m@Module {..} = do
                     _moduleDoc = doc',
                     _modulePragmas = _modulePragmas,
                     _moduleKw,
+                    _moduleInductive,
                     _moduleKwEnd
                   }
               _moduleRefName = S.unConcrete path'
@@ -882,28 +902,29 @@ checkModuleBody body = do
       where
         goNonDefinitions :: forall t. Members '[Output (Statement s)] t => NonDefinitionsSection s -> Sem t ()
         goNonDefinitions NonDefinitionsSection {..} = do
-          mapM_ go _nonDefinitionsSection
+          mapM_ (output . toStatement) _nonDefinitionsSection
           whenJust _nonDefinitionsNext goDefinitions
           where
-            go :: NonDefinition s -> Sem t ()
-            go = \case
-              NonDefinitionImport d -> output (StatementImport d)
-              NonDefinitionModule d -> output (StatementModule d)
-              NonDefinitionFunctionClause d -> output (StatementFunctionClause d)
-              NonDefinitionOpenModule d -> output (StatementOpenModule d)
+            toStatement :: NonDefinition s -> Statement s
+            toStatement = \case
+              NonDefinitionImport d -> StatementImport d
+              NonDefinitionModule d -> StatementModule d
+              NonDefinitionFunctionClause d -> StatementFunctionClause d
+              NonDefinitionOpenModule d -> StatementOpenModule d
 
         goDefinitions :: forall t. Members '[Output (Statement s)] t => DefinitionsSection s -> Sem t ()
         goDefinitions DefinitionsSection {..} = do
-          mapM_ go _definitionsSection
+          mapM_ (output . toStatement) _definitionsSection
           whenJust _definitionsNext goNonDefinitions
           where
-            go :: Definition s -> Sem t ()
-            go = \case
-              DefinitionSyntax d -> output @(Statement s) (StatementSyntax d)
-              DefinitionAxiom d -> output (StatementAxiom d)
-              DefinitionFunctionDef d -> output (StatementFunctionDef d)
-              DefinitionInductive d -> output (StatementInductive d)
-              DefinitionTypeSignature d -> output (StatementTypeSignature d)
+            toStatement :: Definition s -> Statement s
+            toStatement = \case
+              DefinitionSyntax d -> StatementSyntax d
+              DefinitionAxiom d -> StatementAxiom d
+              DefinitionFunctionDef d -> StatementFunctionDef d
+              DefinitionInductive d -> StatementInductive d
+              DefinitionTypeSignature d -> StatementTypeSignature d
+              DefinitionProjectionDef d -> StatementProjectionDef d
 
 checkSections ::
   forall r.
@@ -935,7 +956,6 @@ checkSections sec = topBindings $ case sec of
     goDefinitions :: DefinitionsSection 'Parsed -> Sem (Reader BindingStrategy ': r) (DefinitionsSection 'Scoped)
     goDefinitions DefinitionsSection {..} = do
       mapM_ reserveDefinition _definitionsSection
-      mapM_ defineInductiveModule (_definitionsSection ^.. each . _DefinitionInductive)
       sec' <- mapM goDefinition _definitionsSection
       next' <- mapM goNonDefinitions _definitionsNext
       return
@@ -950,12 +970,14 @@ checkSections sec = topBindings $ case sec of
           DefinitionFunctionDef d -> void (reserveFunctionSymbol d)
           DefinitionTypeSignature d -> void (reserveSymbolOf SKNameFunction Nothing (d ^. sigName))
           DefinitionAxiom d -> void (reserveAxiomSymbol d)
+          DefinitionProjectionDef d -> void (reserveProjectionSymbol d)
           DefinitionInductive d -> reserveInductive d
           where
             reserveInductive :: InductiveDef 'Parsed -> Sem (Reader BindingStrategy ': r) ()
             reserveInductive d = do
               void (reserveInductiveSymbol d)
-              mapM_ (reserveConstructorSymbol d) (d ^.. inductiveConstructors . each)
+              constrs <- mapM (reserveConstructorSymbol d) (d ^. inductiveConstructors)
+              void (defineInductiveModule (head constrs) d)
 
         goDefinition :: Definition 'Parsed -> Sem (Reader BindingStrategy ': r) (Definition 'Scoped)
         goDefinition = \case
@@ -964,20 +986,22 @@ checkSections sec = topBindings $ case sec of
           DefinitionTypeSignature d -> DefinitionTypeSignature <$> checkTypeSignature d
           DefinitionAxiom d -> DefinitionAxiom <$> checkAxiomDef d
           DefinitionInductive d -> DefinitionInductive <$> checkInductiveDef d
+          DefinitionProjectionDef d -> DefinitionProjectionDef <$> checkProjectionDef d
 
-        defineInductiveModule :: InductiveDef 'Parsed -> Sem (Reader BindingStrategy ': r) (Module 'Parsed 'ModuleLocal)
-        defineInductiveModule i = runReader (getLoc (i ^. inductiveName)) genModule
+        defineInductiveModule :: S.Symbol -> InductiveDef 'Parsed -> Sem (Reader BindingStrategy ': r) (Module 'Parsed 'ModuleLocal)
+        defineInductiveModule headConstr i = runReader (getLoc (i ^. inductiveName)) genModule
           where
             genModule :: forall r'. Members '[Reader Interval] r' => Sem r' (Module 'Parsed 'ModuleLocal)
             genModule = do
               _moduleKw <- G.kw G.kwModule
               _moduleKwEnd <- G.kw G.kwEnd
-              _modulePath <- G.symbolVerbatim (i ^. inductiveName . withLocParam)
+              let _modulePath = i ^. inductiveName
               _moduleBody <- genBody
               return
                 Module
                   { _moduleDoc = Nothing,
                     _modulePragmas = Nothing,
+                    _moduleInductive = True,
                     ..
                   }
               where
@@ -987,36 +1011,23 @@ checkSections sec = topBindings $ case sec of
                     genFieldProjections :: Sem (Fail ': r') [Statement 'Parsed]
                     genFieldProjections = do
                       fs <- indexFrom 0 . toList <$> getFields
-                      let n = length fs
-                      map StatementFunctionDef <$> mapM (mkProjection n) fs
+                      return (map (StatementProjectionDef . mkProjection) fs)
                       where
                         mkProjection ::
-                          Members '[Reader Interval] s =>
-                          Int ->
                           Indexed (RecordField 'Parsed) ->
-                          Sem s (FunctionDef 'Parsed)
-                        mkProjection ixMax = undefined
+                          ProjectionDef 'Parsed
+                        mkProjection (Indexed idx field) = ProjectionDef {
+                            _projectionConstructor = headConstr,
+                            _projectionField = field ^. fieldName,
+                            _projectionFieldIx = idx
+                                               }
+
                         getFields :: Sem (Fail ': r') (NonEmpty (RecordField 'Parsed))
                         getFields = case i ^. inductiveConstructors of
                           c :| [] -> case c ^. constructorRhs of
                             ConstructorRhsRecord r -> return (r ^. rhsRecordFields)
                             _ -> fail
                           _ -> fail
-
-checkStatement ::
-  Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, State ScoperFixities, State ScoperIterators, State ScoperIterators] r =>
-  Statement 'Parsed ->
-  Sem r (Statement 'Scoped)
-checkStatement s = topBindings $ case s of
-  StatementSyntax synDef -> StatementSyntax <$> checkSyntaxDef synDef
-  StatementTypeSignature tySig -> StatementTypeSignature <$> checkTypeSignature tySig
-  StatementFunctionDef tySig -> StatementFunctionDef <$> checkFunctionDef tySig
-  StatementImport imp -> StatementImport <$> checkImport imp
-  StatementInductive dt -> StatementInductive <$> checkInductiveDef dt
-  StatementModule dt -> StatementModule <$> checkLocalModule dt
-  StatementOpenModule open -> StatementOpenModule <$> checkOpenModule open
-  StatementFunctionClause clause -> StatementFunctionClause <$> checkFunctionClause clause
-  StatementAxiom ax -> StatementAxiom <$> checkAxiomDef ax
 
 mkLetSections :: [LetClause 'Parsed] -> StatementSections 'Parsed
 mkLetSections = mkSections . map fromLetClause
@@ -1068,6 +1079,7 @@ mkSections = \case
       StatementFunctionDef n -> Left (DefinitionFunctionDef n)
       StatementInductive i -> Left (DefinitionInductive i)
       StatementSyntax s -> Left (DefinitionSyntax s)
+      StatementProjectionDef s -> Left (DefinitionProjectionDef s)
       StatementImport i -> Right (NonDefinitionImport i)
       StatementModule m -> Right (NonDefinitionModule m)
       StatementOpenModule o -> Right (NonDefinitionOpenModule o)
@@ -1102,6 +1114,7 @@ checkLocalModule Module {..} = do
             _moduleDoc = moduleDoc',
             _modulePragmas = _modulePragmas,
             _moduleKw,
+            _moduleInductive,
             _moduleKwEnd
           }
       mref :: ModuleRef' 'S.NotConcrete
@@ -1476,6 +1489,7 @@ checkLetClauses =
               DefinitionTypeSignature d -> LetTypeSig d
               DefinitionFunctionDef {} -> impossible
               DefinitionInductive {} -> impossible
+              DefinitionProjectionDef {} -> impossible
               DefinitionAxiom {} -> impossible
               DefinitionSyntax {} -> impossible
         fromNonDefs :: NonDefinitionsSection s -> NonEmpty (LetClause s)

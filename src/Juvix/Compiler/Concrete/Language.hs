@@ -71,11 +71,6 @@ type family PatternAtomIdenType s = res | res -> s where
   PatternAtomIdenType 'Parsed = Name
   PatternAtomIdenType 'Scoped = PatternScopedIden
 
-type ProjectionDefType :: Stage -> GHC.Type
-type family ProjectionDefType s = res | res -> s where
-  ProjectionDefType 'Parsed = Void
-  ProjectionDefType 'Scoped = ProjectionDef
-
 type ExpressionType :: Stage -> GHC.Type
 type family ExpressionType s = res | res -> s where
   ExpressionType 'Parsed = ExpressionAtoms 'Parsed
@@ -118,6 +113,11 @@ type family ModulePathType s t = res | res -> t s where
   ModulePathType 'Parsed 'ModuleLocal = Symbol
   ModulePathType 'Scoped 'ModuleLocal = S.Symbol
 
+type ModuleInductiveType :: ModuleIsTop -> GHC.Type
+type family ModuleInductiveType t = res | res -> t where
+  ModuleInductiveType 'ModuleTop = ()
+  ModuleInductiveType 'ModuleLocal = Bool
+
 type ModuleEndType :: ModuleIsTop -> GHC.Type
 type family ModuleEndType t = res | res -> t where
   ModuleEndType 'ModuleTop = ()
@@ -156,6 +156,7 @@ data Definition (s :: Stage)
   | DefinitionInductive (InductiveDef s)
   | DefinitionAxiom (AxiomDef s)
   | DefinitionTypeSignature (TypeSignature s)
+  | DefinitionProjectionDef (ProjectionDef s)
 
 _DefinitionInductive :: Traversal' (Definition s) (InductiveDef s)
 _DefinitionInductive f = \case
@@ -178,7 +179,7 @@ data Statement (s :: Stage)
   | StatementOpenModule (OpenModule s)
   | StatementFunctionClause (FunctionClause s)
   | StatementAxiom (AxiomDef s)
-  | StatementProjectionDef (ProjectionDefType s)
+  | StatementProjectionDef (ProjectionDef s)
 
 deriving stock instance Show (Statement 'Parsed)
 
@@ -192,11 +193,23 @@ deriving stock instance Ord (Statement 'Parsed)
 
 deriving stock instance Ord (Statement 'Scoped)
 
-data ProjectionDef = ProjectionDef
+data ProjectionDef s = ProjectionDef
   { _projectionConstructor :: S.Symbol,
+    _projectionField :: SymbolType s,
     _projectionFieldIx :: Int
   }
-  deriving stock (Show, Eq, Ord)
+
+deriving stock instance Show (ProjectionDef 'Parsed)
+
+deriving stock instance Show (ProjectionDef 'Scoped)
+
+deriving stock instance Eq (ProjectionDef 'Parsed)
+
+deriving stock instance Eq (ProjectionDef 'Scoped)
+
+deriving stock instance Ord (ProjectionDef 'Parsed)
+
+deriving stock instance Ord (ProjectionDef 'Scoped)
 
 data Import (s :: Stage) = Import
   { _importKw :: KeywordRef,
@@ -660,7 +673,8 @@ data Module (s :: Stage) (t :: ModuleIsTop) = Module
     _moduleDoc :: Maybe (Judoc s),
     _modulePragmas :: Maybe ParsedPragmas,
     _moduleBody :: [Statement s],
-    _moduleKwEnd :: ModuleEndType t
+    _moduleKwEnd :: ModuleEndType t,
+    _moduleInductive :: ModuleInductiveType t
   }
 
 deriving stock instance Show (Module 'Parsed 'ModuleTop)
@@ -1561,7 +1575,7 @@ instance HasLoc (OpenModule 'Scoped) where
       <> getLoc (m ^. openModuleName)
       <>? fmap getLoc (m ^. openPublicKw . unIrrelevant)
 
-instance HasLoc ProjectionDef where
+instance HasLoc (ProjectionDef s) where
   getLoc = getLoc . (^. projectionConstructor)
 
 instance HasLoc (Statement 'Scoped) where

@@ -457,12 +457,12 @@ goFunctionDefHelper sig@TypeSignature {..} clauses = do
 goProjectionDef ::
   forall r.
   Members '[NameIdGen, State ConstructorInfos] r =>
-  ProjectionDef ->
+  ProjectionDef 'Scoped ->
   Sem r Internal.FunctionDef
 goProjectionDef ProjectionDef {..} = do
   let c = goSymbol _projectionConstructor
   info <- gets @ConstructorInfos (^?! at c . _Just)
-  Internal.genFieldProjection c info _projectionFieldIx
+  Internal.genFieldProjection (goSymbol _projectionField) info _projectionFieldIx
 
 goTopNewFunctionDef ::
   forall r.

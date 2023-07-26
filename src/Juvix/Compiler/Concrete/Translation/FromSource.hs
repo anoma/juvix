@@ -1149,6 +1149,11 @@ moduleDef = P.label "<module definition>" $ do
   _moduleKwEnd <- endModule
   return Module {..}
   where
+    _moduleInductive :: ModuleInductiveType t
+    _moduleInductive = case sing :: SModuleIsTop t of
+      SModuleLocal -> False
+      SModuleTop -> ()
+
     endModule :: ParsecS r (ModuleEndType t)
     endModule = case sing :: SModuleIsTop t of
       SModuleLocal -> kw kwEnd
