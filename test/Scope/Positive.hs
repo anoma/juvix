@@ -246,5 +246,9 @@ tests =
     PosTest
       "Namespaces"
       $(mkRelDir ".")
-      $(mkRelFile "Namespaces.juvix")
+      $(mkRelFile "Namespaces.juvix"),
+    PosTest
+      "Imports2"
+      $(mkRelDir ".")
+      $(mkRelFile "Imports2.juvix")
   ]

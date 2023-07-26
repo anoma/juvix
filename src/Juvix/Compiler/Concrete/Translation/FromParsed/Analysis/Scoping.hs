@@ -372,8 +372,6 @@ getTopModulePath Module {..} =
       S._absLocalPath = mempty
     }
 
--- getModuleRef :: Members '[State ScoperState] r => ModuleSymbolEntry -> Sem r
-
 getModuleExportInfo :: Members '[State ScoperState] r => ModuleSymbolEntry -> Sem r ExportInfo
 getModuleExportInfo m = gets (^?! scoperModules . at (m ^. moduleEntry . S.nameId) . _Just . to getModuleRefExportInfo)
 
