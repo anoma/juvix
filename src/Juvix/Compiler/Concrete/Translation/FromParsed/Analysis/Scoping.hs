@@ -131,11 +131,11 @@ freshVariable = freshSymbol KNameLocal
 
 checkProjectionDef ::
   forall r.
-  Members '[State Scope, State ScoperState, NameIdGen, State ScoperFixities, State ScoperIterators] r =>
+  Members '[Error ScoperError, InfoTableBuilder, Reader BindingStrategy, State Scope, State ScoperState, NameIdGen, State ScoperFixities, State ScoperIterators] r =>
   ProjectionDef 'Parsed ->
   Sem r (ProjectionDef 'Scoped)
 checkProjectionDef p = do
-  _projectionField <- freshSymbol KNameFunction (p ^. projectionField)
+  _projectionField <- getReservedDefinitionSymbol (p ^. projectionField)
   return
     ProjectionDef
       { _projectionFieldIx = p ^. projectionFieldIx,

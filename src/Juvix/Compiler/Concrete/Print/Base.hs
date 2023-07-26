@@ -996,9 +996,11 @@ instance SingI s => PrettyPrint (InductiveDef s) where
       ppConstructorBlock :: NonEmpty (ConstructorDef s) -> Sem r ()
       ppConstructorBlock cs = vsep (ppCode <$> cs)
 
-instance PrettyPrint (ProjectionDef s) where
-  ppCode ProjectionDef {..} = do
-    noLoc "projection"
+instance SingI s => PrettyPrint (ProjectionDef s) where
+  ppCode ProjectionDef {..} =
+    do
+      ppSymbolType _projectionField
+      <+> noLoc ":= projection"
       <+> noLoc (pretty _projectionFieldIx)
       <+> noLoc "for"
       <+> ppCode _projectionConstructor

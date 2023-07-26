@@ -11,6 +11,7 @@ import Juvix.Compiler.Internal.Data.InfoTable.Base
 import Juvix.Compiler.Internal.Data.LocalVars
 import Juvix.Compiler.Internal.Language
 import Juvix.Prelude
+import Data.Stream qualified as Stream
 
 type SubsE = HashMap VarName Expression
 
@@ -707,7 +708,7 @@ genConstructorPattern :: Members '[NameIdGen] r => ConstructorInfo -> Sem r (Pat
 genConstructorPattern info = do
   let nargs = length (snd (constructorArgTypes info))
       loc = getLoc (info ^. constructorInfoName)
-  vars <- replicateM nargs (freshVar loc "a")
+  vars <- mapM (freshVar loc) (Stream.take nargs allWords)
   let app =
         ConstructorApp
           { _constrAppConstructor = info ^. constructorInfoName,

@@ -31,3 +31,7 @@ type newtype :=
   | mknewtype {f : T};
 
 p3 : Pair T T -> T := Pair.fst;
+
+open Pair;
+
+p4 : Pair T T -> T := fst;
