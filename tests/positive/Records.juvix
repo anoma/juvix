@@ -29,3 +29,5 @@ p2 : Pair EnumRecord EnumRecord :=
 
 type newtype :=
   | mknewtype {f : T};
+
+p3 : Pair T T -> T := Pair.fst;

@@ -1428,6 +1428,8 @@ newtype ModuleIndex = ModuleIndex
   }
 
 makeLenses ''PatternArg
+makeLenses ''NonDefinitionsSection
+makeLenses ''DefinitionsSection
 makeLenses ''ProjectionDef
 makeLenses ''ScopedIden'
 makeLenses ''SymbolEntry
