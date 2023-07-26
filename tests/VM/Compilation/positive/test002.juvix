@@ -1,0 +1,9 @@
+module test002;
+
+import Stdlib.Prelude open;
+import Stdlib.Data.Nat.Ord open;
+
+terminating
+f2 (n : Nat) : Nat := if (n > 10) 11 (f2 (f2 (n + 1)));
+
+main (x : Nat) : Bool := f2 x == 11;

@@ -28,7 +28,8 @@ fromReg tab = jumpMainFunction ++ fns
           ++ [ mkMove (LMemRef regSp) (LabelRef exitLabel),
                mkBinop OpIntAdd (LRegRef regSp) (RegRef regSp) (Const 1),
                mkJump (LabelRef (getLabel info main)),
-               mkLabel exitLabel
+               mkLabel exitLabel,
+               Halt
              ]
         where
           mainInfo = fromJust $ HashMap.lookup main (tab ^. Reg.infoFunctions)
@@ -36,7 +37,7 @@ fromReg tab = jumpMainFunction ++ fns
 
     mkArgAssigns :: [Value] -> [Instruction]
     mkArgAssigns vals =
-      zipWith (\val reg -> mkMove (LMemRef reg) val) vals [2 ..]
+      zipWith (\val reg -> mkMove (LRegRef reg) val) vals [2 ..]
 
     fns :: [Instruction]
     fns = run $ runBuilder $ concatMapM (fromRegFunction info) (HashMap.elems (tab ^. Reg.infoFunctions))
@@ -154,7 +155,7 @@ fromRegInstr info funInfo = \case
     mkArgAssigns vals =
       concatMap
         ( ( \((instrs, val), reg) ->
-              instrs ++ [mkMove (LMemRef reg) val]
+              instrs ++ [mkMove (LRegRef reg) val]
           )
             . first fromValue
         )

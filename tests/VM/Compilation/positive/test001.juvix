@@ -1,0 +1,7 @@
+-- Basic arithmetic (stack < 10, heap = 0, steps < 20)
+module test001;
+
+import Stdlib.Prelude open;
+import Stdlib.Data.Nat.Ord open;
+
+main (x y : Nat) : Bool := x * 2 + y == 11;

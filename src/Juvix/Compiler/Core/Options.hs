@@ -10,7 +10,7 @@ data CoreOptions = CoreOptions
     _optUnrollLimit :: Int,
     _optOptimizationLevel :: Int,
     _optInliningDepth :: Int,
-    _optAllowFunction :: Bool
+    _optCircuitTarget :: Bool
   }
 
 makeLenses ''CoreOptions
@@ -22,7 +22,7 @@ defaultCoreOptions =
       _optUnrollLimit = defaultUnrollLimit,
       _optOptimizationLevel = defaultOptimizationLevel,
       _optInliningDepth = defaultInliningDepth,
-      _optAllowFunction = False
+      _optCircuitTarget = False
     }
 
 fromEntryPoint :: EntryPoint -> CoreOptions
@@ -32,5 +32,5 @@ fromEntryPoint EntryPoint {..} =
       _optUnrollLimit = _entryPointUnrollLimit,
       _optOptimizationLevel = _entryPointOptimizationLevel,
       _optInliningDepth = _entryPointInliningDepth,
-      _optAllowFunction = (_entryPointTarget == TargetVampIRVM)
+      _optCircuitTarget = (_entryPointTarget == TargetVampIRVM)
     }
