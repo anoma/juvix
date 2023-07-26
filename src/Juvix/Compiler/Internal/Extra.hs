@@ -7,11 +7,11 @@ where
 import Data.Generics.Uniplate.Data hiding (holes)
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
+import Data.Stream qualified as Stream
 import Juvix.Compiler.Internal.Data.InfoTable.Base
 import Juvix.Compiler.Internal.Data.LocalVars
 import Juvix.Compiler.Internal.Language
 import Juvix.Prelude
-import Data.Stream qualified as Stream
 
 type SubsE = HashMap VarName Expression
 

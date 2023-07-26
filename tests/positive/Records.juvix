@@ -34,4 +34,4 @@ p3 : Pair T T -> T := Pair.fst;
 
 open Pair;
 
-p4 : Pair T T -> T := fst;
+p4 {A : Type} : Pair A T -> A := fst;
