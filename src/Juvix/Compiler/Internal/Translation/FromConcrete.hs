@@ -25,6 +25,9 @@ import Juvix.Prelude
 
 type MCache = Cache Concrete.ModuleIndex Internal.Module
 
+-- | Needed to generate field projections.
+type ConstructorInfos = HashMap Internal.ConstructorName ConstructorInfo
+
 unsupported :: Text -> a
 unsupported msg = error $ msg <> "Scoped to Internal: not yet supported"
 
@@ -37,6 +40,7 @@ fromConcrete _resultScoper =
     (modulesCache, _resultModules) <-
       runReader @Pragmas mempty
         . runReader @ExportsTable exportTbl
+        . evalState @ConstructorInfos mempty
         . runCacheEmpty goModuleNoCache
         $ mapM goTopModule ms
     let _resultTable = buildTable _resultModules
@@ -139,10 +143,10 @@ fromConcreteOpenImport ::
 fromConcreteOpenImport = mapError (JuvixError @ScoperError) . runReader @Pragmas mempty . goOpenModule'
 
 goLocalModule ::
-  Members '[Error ScoperError, Builtins, NameIdGen, Reader Pragmas] r =>
+  Members '[Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ConstructorInfos] r =>
   Module 'Scoped 'ModuleLocal ->
   Sem r [Internal.PreStatement]
-goLocalModule = concatMapM goStatement . (^. moduleBody)
+goLocalModule = concatMapM goAxiomInductive . (^. moduleBody)
 
 goTopModule ::
   Members '[Reader ExportsTable, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, MCache] r =>
@@ -151,7 +155,7 @@ goTopModule ::
 goTopModule = cacheGet . ModuleIndex
 
 goModuleNoCache ::
-  Members '[Reader EntryPoint, Reader ExportsTable, Error JuvixError, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, MCache] r =>
+  Members '[Reader EntryPoint, Reader ExportsTable, Error JuvixError, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, MCache, State ConstructorInfos] r =>
   ModuleIndex ->
   Sem r Internal.Module
 goModuleNoCache (ModuleIndex m) = do
@@ -207,7 +211,7 @@ traverseM' f x = sequence <$> traverse f x
 
 toPreModule ::
   forall r t.
-  (SingI t, Members '[Reader ExportsTable, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, MCache] r) =>
+  (SingI t, Members '[Reader ExportsTable, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, MCache, State ConstructorInfos] r) =>
   Module 'Scoped t ->
   Sem r Internal.PreModule
 toPreModule Module {..} = do
@@ -272,21 +276,17 @@ fromPreModuleBody b = do
 
 goModuleBody ::
   forall r.
-  Members '[Reader ExportsTable, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, MCache] r =>
+  Members '[Reader ExportsTable, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, MCache, State ConstructorInfos] r =>
   [Statement 'Scoped] ->
   Sem r Internal.PreModuleBody
 goModuleBody stmts = do
   _moduleImports <- mapM goImport (scanImports stmts)
-  otherThanFunctions :: [Indexed Internal.PreStatement] <- concatMapM (traverseM' goStatement) ss
+  otherThanFunctions :: [Indexed Internal.PreStatement] <- concatMapM (traverseM' goAxiomInductive) ss
   functions <- map (fmap Internal.PreFunctionDef) <$> compiledFunctions
   newFunctions <- map (fmap Internal.PreFunctionDef) <$> newCompiledFunctions
-  let _moduleStatements =
-        map
-          (^. indexedThing)
-          ( sortOn
-              (^. indexedIx)
-              (otherThanFunctions <> functions <> newFunctions)
-          )
+  projections <- map (fmap Internal.PreFunctionDef) <$> mkProjections
+  let unsorted = otherThanFunctions <> functions <> newFunctions <> projections
+      _moduleStatements = map (^. indexedThing) (sortOn (^. indexedIx) unsorted)
   return Internal.ModuleBody {..}
   where
     ss' :: [Statement 'Scoped]
@@ -294,6 +294,14 @@ goModuleBody stmts = do
 
     ss :: [Indexed (Statement 'Scoped)]
     ss = zipWith Indexed [0 ..] ss'
+
+    mkProjections :: Sem r [Indexed Internal.FunctionDef]
+    mkProjections =
+      sequence
+        [ Indexed i <$> funDef
+          | Indexed i (StatementProjectionDef f) <- ss,
+            let funDef = goProjectionDef f
+        ]
 
     newCompiledFunctions :: Sem r [Indexed Internal.FunctionDef]
     newCompiledFunctions =
@@ -331,6 +339,7 @@ scanImports stmts = mconcatMap go stmts
       StatementAxiom {} -> []
       StatementSyntax {} -> []
       StatementFunctionDef {} -> []
+      StatementProjectionDef {} -> []
       where
         openImport :: OpenModule 'Scoped -> Maybe (Import 'Scoped)
         openImport o = case o ^. openModuleImportKw of
@@ -365,12 +374,12 @@ guardNotCached (hit, m) = do
   return m
 
 -- | Ignores functions
-goStatement ::
+goAxiomInductive ::
   forall r.
-  Members '[Error ScoperError, Builtins, NameIdGen, Reader Pragmas] r =>
+  Members '[Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ConstructorInfos] r =>
   Statement 'Scoped ->
   Sem r [Internal.PreStatement]
-goStatement = \case
+goAxiomInductive = \case
   StatementInductive i -> pure . Internal.PreInductiveDef <$> goInductive i
   StatementAxiom d -> pure . Internal.PreAxiomDef <$> goAxiom d
   StatementModule f -> goLocalModule f
@@ -380,6 +389,7 @@ goStatement = \case
   StatementOpenModule {} -> return []
   StatementTypeSignature {} -> return []
   StatementFunctionClause {} -> return []
+  StatementProjectionDef {} -> return []
 
 goOpenModule' ::
   forall r.
@@ -444,9 +454,19 @@ goFunctionDefHelper sig@TypeSignature {..} clauses = do
     (Nothing, Just clauses') -> mapM goFunctionClause clauses'
   return Internal.FunctionDef {..}
 
+goProjectionDef ::
+  forall r.
+  Members '[NameIdGen, State ConstructorInfos] r =>
+  ProjectionDef ->
+  Sem r Internal.FunctionDef
+goProjectionDef ProjectionDef {..} = do
+  let c = goSymbol _projectionConstructor
+  info <- gets @ConstructorInfos (^?! at c . _Just)
+  Internal.genFieldProjection c info _projectionFieldIx
+
 goTopNewFunctionDef ::
   forall r.
-  (Members '[Reader Pragmas, Error ScoperError, Builtins, NameIdGen] r) =>
+  Members '[Reader Pragmas, Error ScoperError, Builtins, NameIdGen] r =>
   FunctionDef 'Scoped ->
   Sem r Internal.FunctionDef
 goTopNewFunctionDef FunctionDef {..} = do
@@ -627,7 +647,7 @@ registerBuiltinAxiom d = \case
   BuiltinIntPrint -> registerIntPrint d
 
 goInductive ::
-  Members '[NameIdGen, Reader Pragmas, Builtins, Error ScoperError] r =>
+  Members '[NameIdGen, Reader Pragmas, Builtins, Error ScoperError, State ConstructorInfos] r =>
   InductiveDef 'Scoped ->
   Sem r Internal.InductiveDef
 goInductive ty@InductiveDef {..} = do
@@ -653,7 +673,14 @@ goInductive ty@InductiveDef {..} = do
             _inductivePositive = isJust (ty ^. inductivePositive)
           }
   whenJust ((^. withLocParam) <$> _inductiveBuiltin) (registerBuiltinInductive indDef)
+  registerInductiveConstructors indDef
   return indDef
+
+-- | Registers constructors so we can access them for generating field projections
+registerInductiveConstructors :: Members '[State ConstructorInfos] r => Internal.InductiveDef -> Sem r ()
+registerInductiveConstructors indDef = do
+  m <- get
+  put (foldr (uncurry HashMap.insert) m (mkConstructorEntries indDef))
 
 goConstructorDef ::
   forall r.

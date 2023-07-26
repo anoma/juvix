@@ -17,6 +17,7 @@ import Juvix.Compiler.Concrete.Data.Scope
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Extra (fromAmbiguousIterator)
 import Juvix.Compiler.Concrete.Extra qualified as P
+import Juvix.Compiler.Concrete.Gen qualified as G
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Pretty (ppTrace)
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Data.Context
@@ -127,14 +128,6 @@ scopeCheckOpenModule = mapError (JuvixError @ScoperError) . checkOpenModule
 
 freshVariable :: Members '[NameIdGen, State ScoperFixities, State ScoperIterators, State Scope, State ScoperState] r => Symbol -> Sem r S.Symbol
 freshVariable = freshSymbol KNameLocal
-
-generateSymbol ::
-    forall r.
-  Members '[State Scope, State ScoperState, NameIdGen, State ScoperFixities, State ScoperIterators, Reader Interval] r =>
-  NameKind ->
-  Text ->
-  Sem r S.Symbol
-generateSymbol = undefined
 
 freshSymbol ::
   forall r.
@@ -959,10 +952,10 @@ checkSections sec = topBindings $ case sec of
           DefinitionAxiom d -> void (reserveAxiomSymbol d)
           DefinitionInductive d -> reserveInductive d
           where
-           reserveInductive :: InductiveDef 'Parsed -> Sem (Reader BindingStrategy ': r) ()
-           reserveInductive d = do
-            void (reserveInductiveSymbol d)
-            mapM_ (reserveConstructorSymbol d) (d ^.. inductiveConstructors . each)
+            reserveInductive :: InductiveDef 'Parsed -> Sem (Reader BindingStrategy ': r) ()
+            reserveInductive d = do
+              void (reserveInductiveSymbol d)
+              mapM_ (reserveConstructorSymbol d) (d ^.. inductiveConstructors . each)
 
         goDefinition :: Definition 'Parsed -> Sem (Reader BindingStrategy ': r) (Definition 'Scoped)
         goDefinition = \case
@@ -972,8 +965,43 @@ checkSections sec = topBindings $ case sec of
           DefinitionAxiom d -> DefinitionAxiom <$> checkAxiomDef d
           DefinitionInductive d -> DefinitionInductive <$> checkInductiveDef d
 
-        defineInductiveModule :: InductiveDef 'Parsed -> Sem (Reader BindingStrategy ': r) ()
-        defineInductiveModule = undefined
+        defineInductiveModule :: InductiveDef 'Parsed -> Sem (Reader BindingStrategy ': r) (Module 'Parsed 'ModuleLocal)
+        defineInductiveModule i = runReader (getLoc (i ^. inductiveName)) genModule
+          where
+            genModule :: forall r'. Members '[Reader Interval] r' => Sem r' (Module 'Parsed 'ModuleLocal)
+            genModule = do
+              _moduleKw <- G.kw G.kwModule
+              _moduleKwEnd <- G.kw G.kwEnd
+              _modulePath <- G.symbolVerbatim (i ^. inductiveName . withLocParam)
+              _moduleBody <- genBody
+              return
+                Module
+                  { _moduleDoc = Nothing,
+                    _modulePragmas = Nothing,
+                    ..
+                  }
+              where
+                genBody :: Sem r' [Statement 'Parsed]
+                genBody = fromMaybe [] <$> runFail genFieldProjections
+                  where
+                    genFieldProjections :: Sem (Fail ': r') [Statement 'Parsed]
+                    genFieldProjections = do
+                      fs <- indexFrom 0 . toList <$> getFields
+                      let n = length fs
+                      map StatementFunctionDef <$> mapM (mkProjection n) fs
+                      where
+                        mkProjection ::
+                          Members '[Reader Interval] s =>
+                          Int ->
+                          Indexed (RecordField 'Parsed) ->
+                          Sem s (FunctionDef 'Parsed)
+                        mkProjection ixMax = undefined
+                        getFields :: Sem (Fail ': r') (NonEmpty (RecordField 'Parsed))
+                        getFields = case i ^. inductiveConstructors of
+                          c :| [] -> case c ^. constructorRhs of
+                            ConstructorRhsRecord r -> return (r ^. rhsRecordFields)
+                            _ -> fail
+                          _ -> fail
 
 checkStatement ::
   Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, State ScoperFixities, State ScoperIterators, State ScoperIterators] r =>

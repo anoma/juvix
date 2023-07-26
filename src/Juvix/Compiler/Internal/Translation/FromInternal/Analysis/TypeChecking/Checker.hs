@@ -22,7 +22,7 @@ type MCache = Cache ModuleIndex Module
 
 registerConstructor :: Members '[HighlightBuilder, State TypesTable, Reader InfoTable] r => ConstructorDef -> Sem r ()
 registerConstructor ctr = do
-  ty <- constructorType (ctr ^. inductiveConstructorName)
+  ty <- lookupConstructorType (ctr ^. inductiveConstructorName)
   registerNameIdType (ctr ^. inductiveConstructorName . nameId) ty
 
 registerNameIdType :: Members '[HighlightBuilder, State TypesTable, Reader InfoTable] r => NameId -> Expression -> Sem r ()
@@ -122,7 +122,7 @@ checkInductiveDef InductiveDef {..} = runInferenceDef $ do
         }
     goConstructor :: ConstructorDef -> Sem (Inference ': r) ConstructorDef
     goConstructor ConstructorDef {..} = do
-      expectedRetTy <- constructorReturnType _inductiveConstructorName
+      expectedRetTy <- lookupConstructorReturnType _inductiveConstructorName
       cty' <-
         runReader paramLocals $
           checkIsType (getLoc _inductiveConstructorType) _inductiveConstructorType
@@ -708,7 +708,7 @@ inferExpression' hint e = case e of
         info <- lookupFunction fun
         return (TypedExpression (info ^. functionInfoDef . funDefType) (ExpressionIden i))
       IdenConstructor c -> do
-        ty <- constructorType c
+        ty <- lookupConstructorType c
         return (TypedExpression ty (ExpressionIden i))
       IdenVar v -> do
         ty <- lookupVar v

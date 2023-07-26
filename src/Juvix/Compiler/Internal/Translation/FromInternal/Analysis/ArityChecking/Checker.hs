@@ -465,7 +465,7 @@ idenArity = \case
   IdenVar v -> getLocalArity v
   IdenInductive i -> typeArity <$> lookupInductiveType i
   IdenFunction f -> typeArity . (^. functionInfoDef . funDefType) <$> lookupFunction f
-  IdenConstructor c -> typeArity <$> constructorType c
+  IdenConstructor c -> typeArity <$> lookupConstructorType c
   IdenAxiom a -> typeArity . (^. axiomInfoDef . axiomType) <$> lookupAxiom a
 
 -- | let x be some expression of type T. The argument of this function is T and it returns

@@ -71,6 +71,11 @@ type family PatternAtomIdenType s = res | res -> s where
   PatternAtomIdenType 'Parsed = Name
   PatternAtomIdenType 'Scoped = PatternScopedIden
 
+type ProjectionDefType :: Stage -> GHC.Type
+type family ProjectionDefType s = res | res -> s where
+  ProjectionDefType 'Parsed = Void
+  ProjectionDefType 'Scoped = ProjectionDef
+
 type ExpressionType :: Stage -> GHC.Type
 type family ExpressionType s = res | res -> s where
   ExpressionType 'Parsed = ExpressionAtoms 'Parsed
@@ -173,6 +178,7 @@ data Statement (s :: Stage)
   | StatementOpenModule (OpenModule s)
   | StatementFunctionClause (FunctionClause s)
   | StatementAxiom (AxiomDef s)
+  | StatementProjectionDef (ProjectionDefType s)
 
 deriving stock instance Show (Statement 'Parsed)
 
@@ -185,6 +191,12 @@ deriving stock instance Eq (Statement 'Scoped)
 deriving stock instance Ord (Statement 'Parsed)
 
 deriving stock instance Ord (Statement 'Scoped)
+
+data ProjectionDef = ProjectionDef
+  { _projectionConstructor :: S.Symbol,
+    _projectionFieldIx :: Int
+  }
+  deriving stock (Show, Eq, Ord)
 
 data Import (s :: Stage) = Import
   { _importKw :: KeywordRef,
@@ -1402,6 +1414,7 @@ newtype ModuleIndex = ModuleIndex
   }
 
 makeLenses ''PatternArg
+makeLenses ''ProjectionDef
 makeLenses ''ScopedIden'
 makeLenses ''SymbolEntry
 makeLenses ''ModuleSymbolEntry
@@ -1548,6 +1561,9 @@ instance HasLoc (OpenModule 'Scoped) where
       <> getLoc (m ^. openModuleName)
       <>? fmap getLoc (m ^. openPublicKw . unIrrelevant)
 
+instance HasLoc ProjectionDef where
+  getLoc = getLoc . (^. projectionConstructor)
+
 instance HasLoc (Statement 'Scoped) where
   getLoc :: Statement 'Scoped -> Interval
   getLoc = \case
@@ -1560,6 +1576,7 @@ instance HasLoc (Statement 'Scoped) where
     StatementOpenModule t -> getLoc t
     StatementFunctionClause t -> getLoc t
     StatementAxiom t -> getLoc t
+    StatementProjectionDef t -> getLoc t
 
 instance HasLoc Application where
   getLoc (Application l r) = getLoc l <> getLoc r

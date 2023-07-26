@@ -219,7 +219,7 @@ goConstructor sym ctor = do
     ctorType =
       runReader
         initIndexTable
-        ( Internal.constructorType ctorName
+        ( Internal.lookupConstructorType ctorName
             >>= goType
         )
 
