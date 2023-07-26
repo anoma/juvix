@@ -228,7 +228,7 @@ toPreModule Module {..} = do
       SModuleLocal -> goSymbol _modulePath
 
 goTopModulePath :: S.TopModulePath -> Internal.Name
-goTopModulePath p = goSymbolPretty (prettyText p) (S.topModulePathName p)
+goTopModulePath p = goSymbolPretty (prettyText p) (S.topModulePathSymbol p)
 
 fromPreModule ::
   forall r.
@@ -774,12 +774,16 @@ goExpression = \case
         loc = getLoc l
 
     goIden :: Concrete.ScopedIden -> Internal.Expression
-    goIden x = Internal.ExpressionIden $ case x of
-      ScopedAxiom a -> Internal.IdenAxiom (goName a)
-      ScopedInductive i -> Internal.IdenInductive (goName i)
-      ScopedVar v -> Internal.IdenVar (goSymbol v)
-      ScopedFunction fun -> Internal.IdenFunction (goName fun)
-      ScopedConstructor c -> Internal.IdenConstructor (goName c)
+    goIden x = Internal.ExpressionIden $ case getNameKind x of
+      KNameAxiom -> Internal.IdenAxiom n'
+      KNameInductive -> Internal.IdenInductive n'
+      KNameLocal -> Internal.IdenVar n'
+      KNameFunction -> Internal.IdenFunction n'
+      KNameConstructor -> Internal.IdenConstructor n'
+      KNameLocalModule -> impossible
+      KNameTopModule -> impossible
+      where
+        n' = goName (x ^. scopedIden)
 
     goLet :: Let 'Scoped -> Sem r Internal.Let
     goLet l = do

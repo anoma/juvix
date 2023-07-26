@@ -23,8 +23,8 @@ import Juvix.Compiler.Concrete.Data.ModuleIsTop
 import Juvix.Compiler.Concrete.Data.Name
 import Juvix.Compiler.Concrete.Data.NameRef
 import Juvix.Compiler.Concrete.Data.NameSignature.Base (NameSignature)
+import Juvix.Compiler.Concrete.Data.NameSpace
 import Juvix.Compiler.Concrete.Data.PublicAnn
-import Juvix.Compiler.Concrete.Data.ScopedName (unqualifiedSymbol)
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Data.Stage
 import Juvix.Compiler.Concrete.Data.VisibilityAnn
@@ -40,6 +40,11 @@ import Juvix.Prelude.Pretty (prettyText)
 import Prelude (show)
 
 type Delims = Irrelevant (Maybe (KeywordRef, KeywordRef))
+
+type NameSpaceEntryType :: NameSpace -> GHC.Type
+type family NameSpaceEntryType s = res | res -> s where
+  NameSpaceEntryType 'NameSpaceSymbols = SymbolEntry
+  NameSpaceEntryType 'NameSpaceModules = ModuleSymbolEntry
 
 type SymbolType :: Stage -> GHC.Type
 type family SymbolType s = res | res -> s where
@@ -665,8 +670,9 @@ deriving stock instance Ord (Module 'Parsed 'ModuleLocal)
 
 deriving stock instance Ord (Module 'Scoped 'ModuleLocal)
 
-newtype HidingItem (s :: Stage) = HidingItem
-  { _hidingSymbol :: SymbolType s
+data HidingItem (s :: Stage) = HidingItem
+  { _hidingSymbol :: SymbolType s,
+    _hidingModuleKw :: Maybe KeywordRef
   }
 
 deriving stock instance Show (HidingItem 'Parsed)
@@ -683,6 +689,7 @@ deriving stock instance Ord (HidingItem 'Scoped)
 
 data UsingItem (s :: Stage) = UsingItem
   { _usingSymbol :: SymbolType s,
+    _usingModuleKw :: Maybe KeywordRef,
     _usingAsKw :: Irrelevant (Maybe KeywordRef),
     _usingAs :: Maybe (SymbolType s)
   }
@@ -771,8 +778,8 @@ getNameRefId = case sing :: S.SIsConcrete c of
   S.SConcrete -> (^. S.nameId)
   S.SNotConcrete -> (^. S.nameId)
 
-getModuleExportInfo :: ModuleRef' c -> ExportInfo
-getModuleExportInfo (ModuleRef' (_ :&: ModuleRef'' {..})) = _moduleExportInfo
+getModuleRefExportInfo :: ModuleRef' c -> ExportInfo
+getModuleRefExportInfo (ModuleRef' (_ :&: ModuleRef'' {..})) = _moduleExportInfo
 
 getModuleRefNameType :: ModuleRef' c -> RefNameType c
 getModuleRefNameType (ModuleRef' (_ :&: ModuleRef'' {..})) = _moduleRefName
@@ -800,21 +807,23 @@ instance Eq (ModuleRef'' 'S.Concrete t) where
 instance Ord (ModuleRef'' 'S.Concrete t) where
   compare (ModuleRef'' n _ _) (ModuleRef'' n' _ _) = compare n n'
 
-data SymbolEntry
-  = EntryAxiom (RefNameType 'S.NotConcrete)
-  | EntryInductive (RefNameType 'S.NotConcrete)
-  | EntryFunction (RefNameType 'S.NotConcrete)
-  | EntryConstructor (RefNameType 'S.NotConcrete)
-  | EntryModule (ModuleRef' 'S.NotConcrete)
-  | EntryVariable (S.Name' ())
+newtype SymbolEntry = SymbolEntry
+  { _symbolEntry :: S.Name' ()
+  }
+  deriving stock (Show)
+
+newtype ModuleSymbolEntry = ModuleSymbolEntry
+  { _moduleEntry :: S.Name' ()
+  }
   deriving stock (Show)
 
 instance SingI t => CanonicalProjection (ModuleRef'' c t) (ModuleRef' c) where
   project r = ModuleRef' (sing :&: r)
 
 -- | Symbols that a module exports
-newtype ExportInfo = ExportInfo
-  { _exportSymbols :: HashMap Symbol SymbolEntry
+data ExportInfo = ExportInfo
+  { _exportSymbols :: HashMap Symbol SymbolEntry,
+    _exportModuleSymbols :: HashMap Symbol ModuleSymbolEntry
   }
   deriving stock (Show)
 
@@ -842,12 +851,9 @@ deriving stock instance Ord (OpenModule 'Scoped)
 
 type ScopedIden = ScopedIden' 'S.Concrete
 
-data ScopedIden' (n :: S.IsConcrete)
-  = ScopedAxiom (RefNameType n)
-  | ScopedInductive (RefNameType n)
-  | ScopedVar S.Symbol
-  | ScopedFunction (RefNameType n)
-  | ScopedConstructor (RefNameType n)
+newtype ScopedIden' (n :: S.IsConcrete) = ScopedIden
+  { _scopedIden :: RefNameType n
+  }
 
 deriving stock instance
   (Eq (RefNameType s)) => Eq (ScopedIden' s)
@@ -858,18 +864,8 @@ deriving stock instance
 deriving stock instance
   (Show (RefNameType s)) => Show (ScopedIden' s)
 
-identifierName :: forall n. (SingI n) => ScopedIden' n -> RefNameType n
-identifierName = \case
-  ScopedAxiom a -> a
-  ScopedInductive i -> i
-  ScopedVar v ->
-    ( case sing :: S.SIsConcrete n of
-        S.SConcrete -> id
-        S.SNotConcrete -> set S.nameConcrete ()
-    )
-      (unqualifiedSymbol v)
-  ScopedFunction f -> f
-  ScopedConstructor c -> c
+identifierName :: forall n. ScopedIden' n -> RefNameType n
+identifierName (ScopedIden n) = n
 
 data Expression
   = ExpressionIdentifier ScopedIden
@@ -1401,6 +1397,9 @@ newtype ModuleIndex = ModuleIndex
   }
 
 makeLenses ''PatternArg
+makeLenses ''ScopedIden'
+makeLenses ''SymbolEntry
+makeLenses ''ModuleSymbolEntry
 makeLenses ''RecordField
 makeLenses ''RhsRecord
 makeLenses ''RhsGadt
@@ -1432,6 +1431,7 @@ makeLenses ''TypeSignature
 makeLenses ''SigArg
 makeLenses ''FunctionDef
 makeLenses ''AxiomDef
+makeLenses ''ExportInfo
 makeLenses ''FunctionClause
 makeLenses ''InductiveParameters
 makeLenses ''ModuleRef'
@@ -1520,12 +1520,7 @@ instance SingI s => HasAtomicity (FunctionParameters s) where
         SScoped -> atomicity (p ^. paramType)
 
 instance HasLoc ScopedIden where
-  getLoc = \case
-    ScopedAxiom a -> getLoc a
-    ScopedConstructor a -> getLoc a
-    ScopedInductive a -> getLoc a
-    ScopedFunction a -> getLoc a
-    ScopedVar a -> getLoc a
+  getLoc = getLoc . (^. scopedIden)
 
 instance HasLoc (InductiveDef 'Scoped) where
   getLoc i = (getLoc <$> i ^. inductivePositive) ?<> getLoc (i ^. inductiveKw)
@@ -1971,38 +1966,6 @@ instance HasAtomicity PatternArg where
     | isJust (p ^. patternArgName) = Atom
     | otherwise = atomicity (p ^. patternArgPattern)
 
-idenOverName :: (forall s. S.Name' s -> S.Name' s) -> ScopedIden -> ScopedIden
-idenOverName f = \case
-  ScopedAxiom a -> ScopedAxiom (f a)
-  ScopedInductive i -> ScopedInductive (f i)
-  ScopedVar v -> ScopedVar (f v)
-  ScopedFunction fun -> ScopedFunction (f fun)
-  ScopedConstructor c -> ScopedConstructor (f c)
-
-entryPrism :: (S.Name' () -> S.Name' ()) -> SymbolEntry -> (S.Name' (), SymbolEntry)
-entryPrism f = \case
-  EntryAxiom a -> (a, EntryAxiom (f a))
-  EntryInductive i -> (i, EntryInductive (f i))
-  EntryFunction fun -> (fun, EntryFunction (f fun))
-  EntryConstructor c -> (c, EntryConstructor (f c))
-  EntryModule m -> (getModuleRefNameType m, EntryModule (overModuleRef'' (over moduleRefName f) m))
-  EntryVariable m -> (m, EntryVariable (f m))
-
-entryOverName :: (S.Name' () -> S.Name' ()) -> SymbolEntry -> SymbolEntry
-entryOverName f = snd . entryPrism f
-
-entryName :: SymbolEntry -> S.Name' ()
-entryName = fst . entryPrism id
-
-entryIsExpression :: SymbolEntry -> Bool
-entryIsExpression = \case
-  EntryAxiom {} -> True
-  EntryInductive {} -> True
-  EntryFunction {} -> True
-  EntryConstructor {} -> True
-  EntryVariable {} -> True
-  EntryModule {} -> False
-
 judocExamples :: Judoc s -> [Example s]
 judocExamples (Judoc bs) = concatMap goGroup bs
   where
@@ -2020,30 +1983,32 @@ judocExamples (Judoc bs) = concatMap goGroup bs
       _ -> mempty
 
 instance HasLoc SymbolEntry where
-  getLoc = (^. S.nameDefined) . entryName
+  getLoc = (^. symbolEntry . S.nameDefined)
+
+instance HasNameKind ModuleSymbolEntry where
+  getNameKind (ModuleSymbolEntry s) = getNameKind s
+
+instance HasLoc ModuleSymbolEntry where
+  getLoc (ModuleSymbolEntry s) = s ^. S.nameDefined
 
 overModuleRef'' :: forall s s'. (forall t. ModuleRef'' s t -> ModuleRef'' s' t) -> ModuleRef' s -> ModuleRef' s'
 overModuleRef'' f = over unModuleRef' (\(t :&: m'') -> t :&: f m'')
 
 symbolEntryNameId :: SymbolEntry -> NameId
-symbolEntryNameId = (^. S.nameId) . symbolEntryToSName
-
-symbolEntryToSName :: SymbolEntry -> S.Name' ()
-symbolEntryToSName = \case
-  EntryAxiom a -> a
-  EntryInductive i -> i
-  EntryFunction f -> f
-  EntryConstructor c -> c
-  EntryModule m -> getModuleRefNameType m
-  EntryVariable m -> m
+symbolEntryNameId = (^. symbolEntry . S.nameId)
 
 instance HasNameKind ScopedIden where
-  getNameKind = \case
-    ScopedAxiom {} -> KNameAxiom
-    ScopedInductive {} -> KNameInductive
-    ScopedConstructor {} -> KNameConstructor
-    ScopedVar {} -> KNameLocal
-    ScopedFunction {} -> KNameFunction
+  getNameKind = getNameKind . (^. scopedIden)
 
 instance HasNameKind SymbolEntry where
-  getNameKind = getNameKind . entryName
+  getNameKind = getNameKind . (^. symbolEntry)
+
+exportAllNames :: SimpleFold ExportInfo (S.Name' ())
+exportAllNames =
+  exportSymbols . each . symbolEntry
+    <> exportModuleSymbols . each . moduleEntry
+
+exportNameSpace :: forall ns. SingI ns => Lens' ExportInfo (HashMap Symbol (NameSpaceEntryType ns))
+exportNameSpace = case sing :: SNameSpace ns of
+  SNameSpaceSymbols -> exportSymbols
+  SNameSpaceModules -> exportModuleSymbols

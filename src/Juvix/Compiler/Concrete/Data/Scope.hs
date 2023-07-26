@@ -1,24 +1,31 @@
 module Juvix.Compiler.Concrete.Data.Scope
   ( module Juvix.Compiler.Concrete.Data.Scope,
     module Juvix.Compiler.Concrete.Data.InfoTable,
+    module Juvix.Compiler.Concrete.Data.NameSpace,
   )
 where
 
 import Juvix.Compiler.Concrete.Data.InfoTable
 import Juvix.Compiler.Concrete.Data.NameSignature.Base
+import Juvix.Compiler.Concrete.Data.NameSpace
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Language
 import Juvix.Prelude
 
 type LocalVariable = S.Symbol
 
-newtype SymbolInfo = SymbolInfo
+newtype SymbolInfo (n :: NameSpace) = SymbolInfo
   { -- | This map must have at least one entry. If there are more than one
     -- entry, it means that the same symbol has been brought into scope from two
     -- different places
-    _symbolInfo :: HashMap S.AbsModulePath SymbolEntry
+    _symbolInfo :: HashMap S.AbsModulePath (NameSpaceEntryType n)
   }
-  deriving newtype (Show, Semigroup, Monoid)
+  deriving newtype (Semigroup, Monoid)
+
+nsEntry :: forall ns. SingI ns => Lens' (NameSpaceEntryType ns) (S.Name' ())
+nsEntry = case sing :: SNameSpace ns of
+  SNameSpaceModules -> moduleEntry
+  SNameSpaceSymbols -> symbolEntry
 
 mkModuleRef' :: SingI t => ModuleRef'' 'S.NotConcrete t -> ModuleRef' 'S.NotConcrete
 mkModuleRef' m = ModuleRef' (sing :&: m)
@@ -31,7 +38,8 @@ data BindingStrategy
 
 data Scope = Scope
   { _scopePath :: S.AbsModulePath,
-    _scopeSymbols :: HashMap Symbol SymbolInfo,
+    _scopeSymbols :: HashMap Symbol (SymbolInfo 'NameSpaceSymbols),
+    _scopeModuleSymbols :: HashMap Symbol (SymbolInfo 'NameSpaceModules),
     -- | The map from S.NameId to Modules is needed because we support merging
     -- several imports under the same name. E.g.
     -- import A as X;
@@ -41,13 +49,22 @@ data Scope = Scope
     -- should map to itself. This is needed because we may query it with a
     -- symbol with a different location but we may want the location of the
     -- original symbol
-    _scopeLocalSymbols :: HashMap Symbol S.Symbol
+    _scopeLocalSymbols :: HashMap Symbol S.Symbol,
+    _scopeLocalModuleSymbols :: HashMap Symbol S.Symbol
   }
-  deriving stock (Show)
 
-makeLenses ''ExportInfo
 makeLenses ''SymbolInfo
 makeLenses ''Scope
+
+scopeNameSpace :: forall (ns :: NameSpace). SingI ns => Lens' Scope (HashMap Symbol (SymbolInfo ns))
+scopeNameSpace = case sing :: SNameSpace ns of
+  SNameSpaceSymbols -> scopeSymbols
+  SNameSpaceModules -> scopeModuleSymbols
+
+scopeNameSpaceLocal :: forall (ns :: NameSpace). Sing ns -> Lens' Scope (HashMap Symbol S.Symbol)
+scopeNameSpaceLocal s = case s of
+  SNameSpaceSymbols -> scopeLocalSymbols
+  SNameSpaceModules -> scopeLocalModuleSymbols
 
 newtype ModulesCache = ModulesCache
   { _cachedModules :: HashMap TopModulePath (ModuleRef'' 'S.NotConcrete 'ModuleTop)
@@ -65,6 +82,7 @@ makeLenses ''ScopeParameters
 
 data ScoperState = ScoperState
   { _scoperModulesCache :: ModulesCache,
+    -- | Local and top modules
     _scoperModules :: HashMap S.ModuleNameId (ModuleRef' 'S.NotConcrete),
     _scoperScope :: HashMap TopModulePath Scope,
     _scoperSignatures :: HashMap S.NameId NameSignature
@@ -104,6 +122,8 @@ emptyScope absPath =
   Scope
     { _scopePath = absPath,
       _scopeSymbols = mempty,
+      _scopeModuleSymbols = mempty,
       _scopeTopModules = mempty,
-      _scopeLocalSymbols = mempty
+      _scopeLocalSymbols = mempty,
+      _scopeLocalModuleSymbols = mempty
     }

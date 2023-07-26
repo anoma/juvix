@@ -251,12 +251,15 @@ printDocumentation = replParseIdentifiers >=> printIdentifiers
 
         printIdentifier :: Concrete.ScopedIden -> Repl ()
         printIdentifier s = do
-          mdoc <- case s of
-            Concrete.ScopedAxiom a -> getDocAxiom (a ^. Scoped.nameId)
-            Concrete.ScopedInductive a -> getDocInductive (a ^. Scoped.nameId)
-            Concrete.ScopedVar {} -> return Nothing
-            Concrete.ScopedFunction f -> getDocFunction (f ^. Scoped.nameId)
-            Concrete.ScopedConstructor c -> getDocConstructor (c ^. Scoped.nameId)
+          let n = s ^. Concrete.scopedIden . Scoped.nameId
+          mdoc <- case getNameKind s of
+            KNameAxiom -> getDocAxiom n
+            KNameInductive -> getDocInductive n
+            KNameLocal -> return Nothing
+            KNameFunction -> getDocFunction n
+            KNameConstructor -> getDocConstructor n
+            KNameLocalModule -> impossible
+            KNameTopModule -> impossible
           printDoc mdoc
           where
             printDoc :: Maybe (Concrete.Judoc 'Concrete.Scoped) -> Repl ()
@@ -303,13 +306,16 @@ printDefinition = replParseIdentifiers >=> printIdentifiers
         getInfoTable = (^. replContextArtifacts . artifactScopeTable) <$> replGetContext
 
         printIdentifier :: Concrete.ScopedIden -> Repl ()
-        printIdentifier s = do
-          case s of
-            Concrete.ScopedAxiom a -> printAxiom (a ^. Scoped.nameId)
-            Concrete.ScopedInductive a -> printInductive (a ^. Scoped.nameId)
-            Concrete.ScopedVar {} -> return ()
-            Concrete.ScopedFunction f -> printFunction (f ^. Scoped.nameId)
-            Concrete.ScopedConstructor c -> printConstructor (c ^. Scoped.nameId)
+        printIdentifier s =
+          let n = s ^. Concrete.scopedIden . Scoped.nameId
+           in case getNameKind s of
+                KNameAxiom -> printAxiom n
+                KNameInductive -> printInductive n
+                KNameLocal -> return ()
+                KNameFunction -> printFunction n
+                KNameConstructor -> printConstructor n
+                KNameLocalModule -> impossible
+                KNameTopModule -> impossible
           where
             printLocation :: HasLoc s => s -> Repl ()
             printLocation def = do

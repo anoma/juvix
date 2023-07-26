@@ -10,7 +10,6 @@ import Juvix.Compiler.Concrete.Data.NameSignature.Error
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error.Pretty
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error.Types
 import Juvix.Compiler.Internal.Translation.FromConcrete.NamedArguments.Error
-import Juvix.Prelude
 
 data ScoperError
   = ErrInfixParser InfixError
@@ -43,7 +42,6 @@ data ScoperError
   | ErrNameSignature NameSignatureError
   | ErrNoNameSignature NoNameSignature
   | ErrNamedArgumentsError NamedArgumentsError
-  deriving stock (Show)
 
 instance ToGenericError ScoperError where
   genericError = \case

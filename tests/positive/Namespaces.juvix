@@ -1,0 +1,45 @@
+module Namespaces;
+
+module Main;
+  module M;
+    axiom A : Type;
+  end;
+
+  axiom M : Type;
+
+end;
+
+module Test1;
+  open Main using {module M; M};
+  open M;
+
+  axiom x : M.A;
+
+  axiom x1 : A;
+
+  axiom x2 : M;
+end;
+
+module Test2;
+  open Main hiding {module M};
+
+  axiom x2 : M;
+
+  module M;
+
+  end;
+
+  open M;
+end;
+
+module Test3;
+  open Main using {M};
+
+  axiom x2 : M;
+
+  module M;
+
+  end;
+
+  open M;
+end;

@@ -21,6 +21,8 @@ data NameKind
     KNameTopModule
   deriving stock (Show, Eq, Data)
 
+$(genSingletons [''NameKind])
+
 class HasNameKind a where
   getNameKind :: a -> NameKind
 
@@ -46,24 +48,19 @@ nameKindText = \case
   KNameLocalModule -> "local module"
   KNameTopModule -> "module"
 
-isLocallyBounded :: (HasNameKind a) => a -> Bool
-isLocallyBounded k = case getNameKind k of
-  KNameLocal -> True
-  _ -> False
-
-isExprKind :: (HasNameKind a) => a -> Bool
+isExprKind :: HasNameKind a => a -> Bool
 isExprKind k = case getNameKind k of
   KNameLocalModule -> False
   KNameTopModule -> False
   _ -> True
 
-isModuleKind :: (HasNameKind a) => a -> Bool
+isModuleKind :: HasNameKind a => a -> Bool
 isModuleKind k = case getNameKind k of
   KNameLocalModule -> True
   KNameTopModule -> True
   _ -> False
 
-canBeCompiled :: (HasNameKind a) => a -> Bool
+canBeCompiled :: HasNameKind a => a -> Bool
 canBeCompiled k = case getNameKind k of
   KNameConstructor -> True
   KNameInductive -> True
@@ -73,7 +70,7 @@ canBeCompiled k = case getNameKind k of
   KNameLocalModule -> False
   KNameTopModule -> False
 
-canHaveFixity :: (HasNameKind a) => a -> Bool
+canHaveFixity :: HasNameKind a => a -> Bool
 canHaveFixity k = case getNameKind k of
   KNameConstructor -> True
   KNameInductive -> True
@@ -83,7 +80,7 @@ canHaveFixity k = case getNameKind k of
   KNameLocalModule -> False
   KNameTopModule -> False
 
-canBeIterator :: (HasNameKind a) => a -> Bool
+canBeIterator :: HasNameKind a => a -> Bool
 canBeIterator k = case getNameKind k of
   KNameFunction -> True
   KNameAxiom -> True
@@ -103,7 +100,7 @@ nameKindAnsi k = case k of
   KNameLocal -> mempty
   KNameTopModule -> color Cyan
 
-isFunctionKind :: (HasNameKind a) => a -> Bool
+isFunctionKind :: HasNameKind a => a -> Bool
 isFunctionKind k = case getNameKind k of
   KNameFunction -> True
   _ -> False

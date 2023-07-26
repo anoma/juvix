@@ -112,8 +112,11 @@ isConstructor n = case n ^. nameKind of
 fromQualifiedName :: C.QualifiedName -> C.Symbol
 fromQualifiedName (C.QualifiedName _ s) = s
 
-topModulePathName :: TopModulePath -> Symbol
-topModulePathName = over nameConcrete (^. C.modulePathName)
+topModulePathSymbol :: TopModulePath -> Symbol
+topModulePathSymbol = over nameConcrete (^. C.modulePathName)
+
+topModulePathName :: TopModulePath -> Name
+topModulePathName = over nameConcrete C.topModulePathToName
 
 unConcrete :: Name' a -> Name' ()
 unConcrete = set nameConcrete ()

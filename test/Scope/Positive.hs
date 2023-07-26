@@ -242,5 +242,9 @@ tests =
     PosTest
       "Format pragma"
       $(mkRelDir ".")
-      $(mkRelFile "FormatPragma.juvix")
+      $(mkRelFile "FormatPragma.juvix"),
+    PosTest
+      "Namespaces"
+      $(mkRelDir ".")
+      $(mkRelFile "Namespaces.juvix")
   ]
