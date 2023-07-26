@@ -7,7 +7,6 @@ where
 
 import Control.Monad.Combinators.Expr qualified as P
 import Data.HashMap.Strict qualified as HashMap
-import Juvix.Compiler.Concrete.Gen qualified as G
 import Data.HashSet qualified as HashSet
 import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Compiler.Concrete.Data.Highlight.Input
@@ -18,6 +17,7 @@ import Juvix.Compiler.Concrete.Data.Scope
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Extra (fromAmbiguousIterator)
 import Juvix.Compiler.Concrete.Extra qualified as P
+import Juvix.Compiler.Concrete.Gen qualified as G
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Pretty (ppTrace)
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Data.Context
@@ -136,11 +136,12 @@ checkProjectionDef ::
   Sem r (ProjectionDef 'Scoped)
 checkProjectionDef p = do
   _projectionField <- freshSymbol KNameFunction (p ^. projectionField)
-  return ProjectionDef {
-    _projectionFieldIx = p ^. projectionFieldIx,
-    _projectionConstructor = p ^. projectionConstructor,
-    _projectionField
-                       }
+  return
+    ProjectionDef
+      { _projectionFieldIx = p ^. projectionFieldIx,
+        _projectionConstructor = p ^. projectionConstructor,
+        _projectionField
+      }
 
 freshSymbol ::
   forall r.
@@ -272,7 +273,7 @@ reserveInductiveSymbol d = reserveSymbolSignatureOf SKNameInductive d (d ^. indu
 
 reserveProjectionSymbol ::
   Members '[Error ScoperError, NameIdGen, State ScoperFixities, State ScoperIterators, State Scope, Reader BindingStrategy, InfoTableBuilder, State ScoperState] r =>
-   ProjectionDef 'Parsed ->
+  ProjectionDef 'Parsed ->
   Sem r S.Symbol
 reserveProjectionSymbol d = reserveSymbolOf SKNameFunction Nothing (d ^. projectionField)
 
@@ -1016,11 +1017,12 @@ checkSections sec = topBindings $ case sec of
                         mkProjection ::
                           Indexed (RecordField 'Parsed) ->
                           ProjectionDef 'Parsed
-                        mkProjection (Indexed idx field) = ProjectionDef {
-                            _projectionConstructor = headConstr,
-                            _projectionField = field ^. fieldName,
-                            _projectionFieldIx = idx
-                                               }
+                        mkProjection (Indexed idx field) =
+                          ProjectionDef
+                            { _projectionConstructor = headConstr,
+                              _projectionField = field ^. fieldName,
+                              _projectionFieldIx = idx
+                            }
 
                         getFields :: Sem (Fail ': r') (NonEmpty (RecordField 'Parsed))
                         getFields = case i ^. inductiveConstructors of

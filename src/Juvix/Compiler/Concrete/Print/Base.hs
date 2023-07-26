@@ -319,14 +319,15 @@ instance (SingI t, SingI s) => PrettyPrint (Module s t) where
               topSpace
                 <> moduleBody'
                 <> line
-    hideIfInductive $ moduleDoc'
-      <> modulePragmas'
-      <> ppCode _moduleKw
-      <+> modulePath'
-        <> ppCode Kw.delimSemicolon
-        <> line
-        <> body'
-        <> ending
+    hideIfInductive $
+      moduleDoc'
+        <> modulePragmas'
+        <> ppCode _moduleKw
+        <+> modulePath'
+          <> ppCode Kw.delimSemicolon
+          <> line
+          <> body'
+          <> ending
     where
       hideIfInductive :: Sem r () -> Sem r ()
       hideIfInductive m = do
@@ -998,9 +999,9 @@ instance SingI s => PrettyPrint (InductiveDef s) where
 instance PrettyPrint (ProjectionDef s) where
   ppCode ProjectionDef {..} = do
     noLoc "projection"
-     <+> noLoc (pretty _projectionFieldIx)
-     <+> noLoc "for"
-     <+> ppCode _projectionConstructor
+      <+> noLoc (pretty _projectionFieldIx)
+      <+> noLoc "for"
+      <+> ppCode _projectionConstructor
 
 instance SingI s => PrettyPrint (Statement s) where
   ppCode = \case
