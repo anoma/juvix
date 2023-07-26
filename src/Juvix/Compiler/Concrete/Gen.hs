@@ -17,5 +17,3 @@ kw k = do
         _keywordRefUnicode = Ascii,
         _keywordRefInterval = loc
       }
-
--- symbolVerbatim :: Members '[Reader Interval] r => Keyword -> Sem r KeywordRef
