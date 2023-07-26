@@ -248,7 +248,11 @@ tests =
     posTest
       "Record declaration"
       $(mkRelDir ".")
-      $(mkRelFile "Records.juvix")
+      $(mkRelFile "Records.juvix"),
+    posTest
+      "Record projections"
+      $(mkRelDir ".")
+      $(mkRelFile "Projections.juvix")
   ]
     <> [ compilationTest t | t <- Compilation.tests
        ]
