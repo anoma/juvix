@@ -319,23 +319,15 @@ instance (SingI t, SingI s) => PrettyPrint (Module s t) where
               topSpace
                 <> moduleBody'
                 <> line
-    hideIfInductive $
-      moduleDoc'
-        <> modulePragmas'
-        <> ppCode _moduleKw
-        <+> modulePath'
-          <> ppCode Kw.delimSemicolon
-          <> line
-          <> body'
-          <> ending
+    moduleDoc'
+      <> modulePragmas'
+      <> ppCode _moduleKw
+      <+> modulePath'
+        <> ppCode Kw.delimSemicolon
+        <> line
+        <> body'
+        <> ending
     where
-      hideIfInductive :: Sem r () -> Sem r ()
-      hideIfInductive m = do
-        let shouldHide = case sing :: SModuleIsTop t of
-              SModuleLocal -> _moduleInductive
-              SModuleTop -> False
-        unless shouldHide m
-
       topSpace :: Sem r ()
       topSpace = case sing :: SModuleIsTop t of
         SModuleLocal -> mempty
@@ -357,8 +349,12 @@ instance PrettyPrint a => PrettyPrint [a] where
     encloseSep (ppCode @Text "[") (ppCode @Text "]") (ppCode @Text ", ") cs
 
 ppStatements :: forall s r. (SingI s, Members '[ExactPrint, Reader Options] r) => [Statement s] -> Sem r ()
-ppStatements ss = paragraphs (ppGroup <$> Concrete.groupStatements ss)
+ppStatements ss = paragraphs (ppGroup <$> Concrete.groupStatements (filter (not . isInductiveModule) ss))
   where
+    isInductiveModule :: Statement s -> Bool
+    isInductiveModule = \case
+      StatementModule m -> m ^. moduleInductive
+      _ -> False
     ppGroup :: NonEmpty (Statement s) -> Sem r ()
     ppGroup = vsep . sepEndSemicolon . fmap ppCode
 
