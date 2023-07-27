@@ -29,7 +29,7 @@ extra-source-files:
   - juvix-stdlib/**/*.juvix
   - runtime/include/**/*.h
   - runtime/**/*.a
-  - runtime/vampir/*.pir
+  - runtime/src/vampir/*.pir
 
 dependencies:
   - aeson == 2.0.*
