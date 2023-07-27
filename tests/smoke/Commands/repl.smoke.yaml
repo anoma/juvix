@@ -1,17 +1,6 @@
 working-directory: ./../../../tests/
 
 tests:
-  - name: import-from-stdlib
-    command:
-      - juvix
-      - repl
-    stdin: |
-      import Stdlib.Data.Int.Ord as Int
-      1 Int.== 1
-    stdout:
-      contains: "true"
-    exit-status: 0
-
   - name: repl-doc
     command:
       - juvix
@@ -434,6 +423,17 @@ tests:
     stderr:
       contains:
         is expected to have type
+    exit-status: 0
+
+  - name: import-from-stdlib
+    command:
+      - juvix
+      - repl
+    stdin: |
+      import Stdlib.Data.Int.Ord as Int
+      1 Int.== 1
+    stdout:
+      contains: "true"
     exit-status: 0
 
   - name: import-then-open-from-stdlib
