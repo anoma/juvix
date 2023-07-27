@@ -438,7 +438,7 @@ tests:
     command:
       - juvix
       - repl
-    stdin: "import Stdlib.Data.Int.Ord as Int\nopen Int\n1 == 1"
+    stdin: "import Stdlib.Data.Int.Ord as Int open\n1 == 1"
     stdout:
       contains: "true"
     exit-status: 0

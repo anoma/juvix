@@ -1241,27 +1241,27 @@ checkOpenImportModule op
                       _openImportAsName = Nothing,
                       _openModuleName = maybe (op ^. openModuleName) topModulePathToName (op ^. openImportAsName)
                     }
-            scopedOpen <- checkOpenModuleNoImport op'
+            scopedOpen <- checkOpenModuleNoImport (Just (import' ^. importModule)) op'
             return
               scopedOpen
                 { _openModuleImportKw = Just k,
                   _openModuleName = project (import' ^. importModule),
-                  _openImportAsName =
-                    if
-                        | Just asTxt <- (op ^. openImportAsName) -> Just (set S.nameConcrete asTxt topName)
-                        | otherwise -> Nothing
+                  _openImportAsName = (\asTxt -> set S.nameConcrete asTxt topName) <$> op ^. openImportAsName
                 }
   | otherwise = impossible
 
 checkOpenModuleNoImport ::
   forall r.
-  (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
+  Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r =>
+  Maybe (ModuleRef'' 'S.Concrete 'ModuleTop) ->
   OpenModule 'Parsed ->
   Sem r (OpenModule 'Scoped)
-checkOpenModuleNoImport OpenModule {..}
+checkOpenModuleNoImport importModuleHint OpenModule {..}
   | isJust _openModuleImportKw = impossible
   | otherwise = do
-      openModuleName'@(ModuleRef' (_ :&: moduleRef'')) <- lookupModuleSymbol _openModuleName
+      openModuleName'@(ModuleRef' (_ :&: moduleRef'')) <- case importModuleHint of
+        Nothing -> lookupModuleSymbol _openModuleName
+        Just m -> return (project m)
       let exportInfo = moduleRef'' ^. moduleExportInfo
       registerName (moduleRef'' ^. moduleRefName)
 
@@ -1420,7 +1420,7 @@ checkOpenModule ::
   Sem r (OpenModule 'Scoped)
 checkOpenModule op
   | isJust (op ^. openModuleImportKw) = checkOpenImportModule op
-  | otherwise = checkOpenModuleNoImport op
+  | otherwise = checkOpenModuleNoImport Nothing op
 
 checkFunctionClause ::
   forall r.
