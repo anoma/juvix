@@ -55,9 +55,16 @@ mkAnsiText = AnsiText . pure . AnsiTextAtom
 
 makeLenses ''AnsiText
 
+instance HasTextBackend String where
+  toTextStream = toTextStream . pretty
+  toTextDoc = toTextDoc . pretty
+
 instance HasTextBackend Text where
   toTextStream = toTextStream . pretty
   toTextDoc = toTextDoc . pretty
+
+instance HasAnsiBackend String where
+  toAnsiDoc = pretty
 
 instance HasAnsiBackend Text where
   toAnsiDoc = pretty

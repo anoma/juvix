@@ -21,10 +21,10 @@ arityCheckExpression ::
   Sem r Internal.Expression
 arityCheckExpression p = do
   scopeTable <- gets (^. artifactScopeTable)
-  ( runNameIdGenArtifacts
-      . runBuiltinsArtifacts
-      . runScoperScopeArtifacts
-    )
+  runNameIdGenArtifacts
+    . runBuiltinsArtifacts
+    . runScoperScopeArtifacts
+    . runStateArtifacts artifactScoperState
     $ Scoper.scopeCheckExpression scopeTable p
       >>= Internal.fromConcreteExpression
       >>= Internal.arityCheckExpression
@@ -61,6 +61,7 @@ scopeCheckExpression p = do
   runNameIdGenArtifacts
     . runBuiltinsArtifacts
     . runScoperScopeArtifacts
+    . runStateArtifacts artifactScoperState
     . Scoper.scopeCheckExpression scopeTable
     $ p
 

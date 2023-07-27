@@ -49,3 +49,7 @@ module M2;
 end;
 
 proj1 {A B : Type} (p : M2.Pair A B) : A := M2.fst p;
+
+import Stdlib.Data.Int.Ord as Int;
+
+x : _ := 1 Int.== 1;

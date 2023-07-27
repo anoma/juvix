@@ -92,7 +92,7 @@ scopeCheckExpressionAtoms tab as = mapError (JuvixError @ScoperError) $ do
 
 scopeCheckExpression ::
   forall r.
-  (Members '[Error JuvixError, NameIdGen, State Scope] r) =>
+  (Members '[Error JuvixError, NameIdGen, State Scope, State ScoperState] r) =>
   InfoTable ->
   ExpressionAtoms 'Parsed ->
   Sem r Expression
@@ -101,7 +101,6 @@ scopeCheckExpression tab as = mapError (JuvixError @ScoperError) $ do
     . ignoreHighlightBuilder
     . runInfoTableBuilder tab
     . runReader iniScopeParameters
-    . evalState iniScoperState
     . withLocalScope
     $ checkParseExpressionAtoms as
   where
@@ -372,8 +371,18 @@ getTopModulePath Module {..} =
       S._absLocalPath = mempty
     }
 
-getModuleExportInfo :: Members '[State ScoperState] r => ModuleSymbolEntry -> Sem r ExportInfo
-getModuleExportInfo m = gets (^?! scoperModules . at (m ^. moduleEntry . S.nameId) . _Just . to getModuleRefExportInfo)
+getModuleExportInfo :: forall r. Members '[State ScoperState] r => ModuleSymbolEntry -> Sem r ExportInfo
+getModuleExportInfo m = fromMaybeM err (gets (^? scoperModules . at (m ^. moduleEntry . S.nameId) . _Just . to getModuleRefExportInfo))
+  where
+    err :: Sem r a
+    err = do
+      ms <- toList <$> gets (^. scoperModules)
+      error
+        ( "impossible. Could not find "
+            <> ppTrace m
+            <> "\nModules in the state: "
+            <> ppTrace ms
+        )
 
 -- | Do not call directly. Looks for a symbol in (possibly) nested local modules
 lookupSymbolAux ::
@@ -1207,18 +1216,6 @@ lookupModuleSymbol n = do
       NameUnqualified s -> ([], s)
       NameQualified (QualifiedName (SymbolPath p) s) -> (toList p, s)
 
-getExportInfo ::
-  forall r.
-  (Members '[State ScoperState] r) =>
-  S.ModuleNameId ->
-  Sem r ExportInfo
-getExportInfo modId = do
-  l <-
-    HashMap.lookupDefault impossible modId
-      <$> gets (^. scoperModules)
-  return $ case l ^. unModuleRef' of
-    _ :&: ent -> ent ^. moduleExportInfo
-
 checkOpenImportModule ::
   (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
   OpenModule 'Parsed ->
@@ -1633,8 +1630,8 @@ checkLambdaClause LambdaClause {..} = withLocalScope $ do
       }
 
 scopedVar ::
-  (Members '[InfoTableBuilder] r) =>
-  LocalVariable ->
+  Members '[InfoTableBuilder] r =>
+  S.Symbol ->
   Symbol ->
   Sem r S.Symbol
 scopedVar s n = do

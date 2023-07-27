@@ -60,6 +60,7 @@ helpTxt =
   :multiline                Start a multi-line input. Submit with <Ctrl-D>
   :root                     Print the current project root
   :version                  Display the Juvix version
+  :dev        DEV CMD       Command reserved for debugging
   :quit                     Exit the REPL
   |]
     )
@@ -206,6 +207,25 @@ core input = do
   opts <- Reader.asks (^. replOptions)
   compileRes <- liftIO (compileReplInputIO' ctx (strip (pack input))) >>= replFromEither . snd
   whenJust compileRes (renderOutLn . Core.ppOut opts)
+
+dev :: String -> Repl ()
+dev input = do
+  ctx <- replGetContext
+  if
+      | input == scoperStateCmd -> do
+          renderOutLn (Concrete.ppTrace (ctx ^. replContextArtifacts . artifactScoperState))
+      | otherwise ->
+          renderOutLn
+            ( "Unrecognized command "
+                <> input
+                <> "\nAvailable commands: "
+                <> unwords cmds
+            )
+  where
+    cmds :: [String]
+    cmds = [scoperStateCmd]
+    scoperStateCmd :: String
+    scoperStateCmd = "scoperState"
 
 ppConcrete :: Concrete.PrettyPrint a => a -> Repl AnsiText
 ppConcrete a = do
@@ -378,7 +398,8 @@ replCommands = catchable ++ nonCatchable
           ("doc", printDocumentation),
           ("type", inferType),
           ("version", displayVersion),
-          ("core", core)
+          ("core", core),
+          ("dev", dev)
         ]
 
 catchAll :: Repl () -> Repl ()

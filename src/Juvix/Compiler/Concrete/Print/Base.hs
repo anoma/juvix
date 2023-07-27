@@ -7,9 +7,11 @@ module Juvix.Compiler.Concrete.Print.Base
   )
 where
 
+import Data.HashMap.Strict qualified as HashMap
 import Data.List.NonEmpty.Extra qualified as NonEmpty
 import Juvix.Compiler.Concrete.Data.InfoTable
 import Juvix.Compiler.Concrete.Data.NameSignature.Base
+import Juvix.Compiler.Concrete.Data.Scope.Base
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Extra (fromAmbiguousIterator)
 import Juvix.Compiler.Concrete.Extra qualified as Concrete
@@ -1041,3 +1043,13 @@ instance PrettyPrint ModuleSymbolEntry where
       kindWord :: Doc Ann =
         let k = getNameKind ent
          in (pretty (nameKindText k))
+
+header :: Members '[ExactPrint] r => Text -> Sem r ()
+header txt = annotated AnnImportant (noLoc (pretty (txt <> "\n")))
+
+instance PrettyPrint ScoperState where
+  ppCode :: Members '[ExactPrint, Reader Options] r => ScoperState -> Sem r ()
+  ppCode s =
+    do
+      header "scoperModules"
+      <> sepSemicolon (map ppCode (HashMap.toList (s ^. scoperModules)))
