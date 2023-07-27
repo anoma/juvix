@@ -405,6 +405,24 @@ deriving stock instance Ord (ConstructorDef 'Parsed)
 
 deriving stock instance Ord (ConstructorDef 'Scoped)
 
+data RecordUpdateField (s :: Stage) = RecordUpdateField
+  { _fieldUpdateName :: Symbol,
+    _fieldUpdateAssignKw :: Irrelevant (KeywordRef),
+    _fieldUpdateValue :: ExpressionType s
+  }
+
+deriving stock instance Show (RecordUpdateField 'Parsed)
+
+deriving stock instance Show (RecordUpdateField 'Scoped)
+
+deriving stock instance Eq (RecordUpdateField 'Parsed)
+
+deriving stock instance Eq (RecordUpdateField 'Scoped)
+
+deriving stock instance Ord (RecordUpdateField 'Parsed)
+
+deriving stock instance Ord (RecordUpdateField 'Scoped)
+
 data RecordField (s :: Stage) = RecordField
   { _fieldName :: SymbolType s,
     _fieldColon :: Irrelevant (KeywordRef),
@@ -1252,6 +1270,25 @@ deriving stock instance Ord (ArgumentBlock 'Parsed)
 
 deriving stock instance Ord (ArgumentBlock 'Scoped)
 
+data RecordUpdate (s :: Stage) = RecordUpdate
+  { _recordUpdateAtKw :: Irrelevant KeywordRef,
+    _recordUpdateDelims :: Irrelevant (KeywordRef, KeywordRef),
+    _recordUpdateTypeName :: IdentifierType s,
+    _recordUpdateFields :: NonEmpty (RecordUpdateField s)
+  }
+
+deriving stock instance Show (RecordUpdate 'Parsed)
+
+deriving stock instance Show (RecordUpdate 'Scoped)
+
+deriving stock instance Eq (RecordUpdate 'Parsed)
+
+deriving stock instance Eq (RecordUpdate 'Scoped)
+
+deriving stock instance Ord (RecordUpdate 'Parsed)
+
+deriving stock instance Ord (RecordUpdate 'Scoped)
+
 data NamedApplication (s :: Stage) = NamedApplication
   { _namedAppName :: IdentifierType s,
     _namedAppArgs :: NonEmpty (ArgumentBlock s),
@@ -1279,6 +1316,7 @@ data ExpressionAtom (s :: Stage)
   | AtomHole (HoleType s)
   | AtomBraces (WithLoc (ExpressionType s))
   | AtomLet (Let s)
+  | AtomRecordUpdate (RecordUpdate s)
   | AtomUniverse Universe
   | AtomFunction (Function s)
   | AtomFunArrow KeywordRef
@@ -1440,6 +1478,8 @@ newtype ModuleIndex = ModuleIndex
   }
 
 makeLenses ''PatternArg
+makeLenses ''RecordUpdate
+makeLenses ''RecordUpdateField
 makeLenses ''NonDefinitionsSection
 makeLenses ''DefinitionsSection
 makeLenses ''ProjectionDef

@@ -97,3 +97,8 @@ moduleNameToTopModulePath = \case
   NameQualified (QualifiedName (SymbolPath p) s) -> TopModulePath (toList p) s
 
 instance Hashable TopModulePath
+
+splitName :: Name -> ([Symbol], Symbol)
+splitName = \case
+  NameQualified (QualifiedName (SymbolPath p) s) -> (toList p, s)
+  NameUnqualified s -> ([], s)

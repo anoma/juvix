@@ -1711,23 +1711,31 @@ checkPatternName n = do
       return (PatternScopedConstructor constr) -- the symbol is a constructor
     Nothing -> PatternScopedVar <$> bindVariableSymbol sym -- the symbol is a variable
   where
-    (path, sym) = case n of
-      NameQualified (QualifiedName (SymbolPath p) s) -> (toList p, s)
-      NameUnqualified s -> ([], s)
-    -- check whether the symbol is a constructor in scope
+    sym = snd (splitName n)
     getConstructorRef :: Sem r (Maybe S.Name)
-    getConstructorRef = do
-      entries <- mapMaybe getConstructor . fst <$> lookupQualifiedSymbol (path, sym)
-      case entries of
-        [] -> case SymbolPath <$> nonEmpty path of
-          Nothing -> return Nothing -- There is no constructor with such a name
-          Just pth -> throw (ErrQualSymNotInScope (QualSymNotInScope (QualifiedName pth sym)))
-        [e] -> return (Just (set S.nameConcrete n e)) -- There is one constructor with such a name
-        es -> throw (ErrAmbiguousSym (AmbiguousSym n (map SymbolEntry es)))
-    getConstructor :: SymbolEntry -> Maybe (S.Name' ())
-    getConstructor e = case getNameKind e of
-      KNameConstructor -> Just (e ^. symbolEntry)
-      _ -> Nothing
+    getConstructorRef = lookupSymbolOfKind KNameConstructor n
+
+lookupSymbolOfKind ::
+  forall r.
+  Members '[Error ScoperError, State Scope, NameIdGen, State ScoperState, InfoTableBuilder] r =>
+  NameKind ->
+  Name ->
+  Sem r (Maybe S.Name)
+lookupSymbolOfKind nameKind n = do
+  entries <- mapMaybe filterEntry . fst <$> lookupQualifiedSymbol (path, sym)
+  case entries of
+    [] -> case SymbolPath <$> nonEmpty path of
+      -- TODO! handle Nothing differnently for non-constructors!!!
+      Nothing -> return Nothing -- There is no constructor with such a name
+      Just pth -> throw (ErrQualSymNotInScope (QualSymNotInScope (QualifiedName pth sym)))
+    [e] -> return (Just (set S.nameConcrete n e)) -- There is one constructor with such a name
+    es -> throw (ErrAmbiguousSym (AmbiguousSym n (map SymbolEntry es)))
+  where
+    (path, sym) = splitName n
+    filterEntry :: SymbolEntry -> Maybe (S.Name' ())
+    filterEntry e
+      | nameKind == getNameKind e = Just (e ^. symbolEntry)
+      | otherwise = Nothing
 
 checkPatternBinding ::
   Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r =>
@@ -1793,6 +1801,21 @@ checkExpressionAtom e = case e of
   AtomIterator i -> pure . AtomIterator <$> checkIterator i
   AtomNamedApplication i -> pure . AtomNamedApplication <$> checkNamedApplication i
   AtomAmbiguousIterator i -> checkAmbiguousIterator i
+  AtomRecordUpdate i -> pure . AtomRecordUpdate <$> checkRecordUpdate i
+
+checkRecordUpdate :: forall r. RecordUpdate 'Parsed -> Sem r (RecordUpdate 'Scoped)
+checkRecordUpdate RecordUpdate {..} = do
+  tyName' <- fromMaybeM notInScope (lookupSymbolOfKind KNameInductive _recordUpdateTypeName)
+  return
+    RecordUpdate
+      { _recordUpdateTypeName = ScopedIden (tyName'),
+        _recordUpdateAtKw,
+        _recordUpdateDelims
+      }
+  where
+    notInScope :: Sem r a
+    notInScope = do
+      throw (ErrQualSymNotInScope (QualSymNotInScope _recordUpdateTypeName))
 
 checkAmbiguousIterator ::
   forall r.

@@ -591,11 +591,24 @@ importedModule t = unlessM (moduleVisited t) go
       txt <- readFile' path
       eitherM throw (const (return ())) (runModuleParser path txt)
 
---------------------------------------------------------------------------------
--- Expression
---------------------------------------------------------------------------------
+recordUpdateField :: Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r => ParsecS r (RecordUpdateField 'Parsed)
+recordUpdateField = do
+  _fieldUpdateName <- symbol
+  _fieldUpdateAssignKw <- Irrelevant <$> kw kwColon
+  _fieldUpdateValue <- parseExpressionAtoms
+  return RecordUpdateField {..}
 
-expressionAtom :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (ExpressionAtom 'Parsed)
+recordUpdate :: Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r => ParsecS r (RecordUpdate 'Parsed)
+recordUpdate = do
+  _recordUpdateAtKw <- Irrelevant <$> kw kwAt
+  _recordUpdateTypeName <- name
+  l <- kw delimBraceL
+  _recordUpdateFields <- P.sepEndBy1 recordUpdateField semicolon
+  r <- kw delimBraceL
+  let _recordUpdateDelims = Irrelevant (l, r)
+  return RecordUpdate {..}
+
+expressionAtom :: Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r => ParsecS r (ExpressionAtom 'Parsed)
 expressionAtom =
   P.label "<expression>" $
     AtomLiteral <$> P.try literal
@@ -612,6 +625,7 @@ expressionAtom =
       <|> AtomHole <$> hole
       <|> AtomParens <$> parens parseExpressionAtoms
       <|> AtomBraces <$> withLoc (braces parseExpressionAtoms)
+      <|> AtomRecordUpdate <$> recordUpdate
 
 parseExpressionAtoms ::
   (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) =>

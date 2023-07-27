@@ -319,12 +319,13 @@ makeLenses ''NotInScope
 instance ToGenericError NotInScope where
   genericError e@NotInScope {..} = ask >>= generr
     where
+      loc =getLoc  (e ^. notInScopeSymbol)
       generr opts =
         return
           GenericError
-            { _genericErrorLoc = e ^. notInScopeSymbol . symbolLoc,
+            { _genericErrorLoc = loc,
               _genericErrorMessage = prettyError msg,
-              _genericErrorIntervals = [e ^. notInScopeSymbol . symbolLoc]
+              _genericErrorIntervals = [loc]
             }
         where
           opts' = fromGenericOptions opts

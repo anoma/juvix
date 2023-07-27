@@ -271,6 +271,29 @@ instance SingI s => PrettyPrint (NamedApplication s) where
   -- ppCode :: Members '[ExactPrint, Reader Options] r => NamedApplication s -> Sem r ()
   ppCode = apeHelper
 
+instance SingI s => PrettyPrint (RecordUpdateField s) where
+  ppCode RecordUpdateField {..} =
+    ppCode _fieldUpdateName <+> ppCode _fieldUpdateAssignKw <+> ppExpressionType _fieldUpdateValue
+
+instance SingI s => PrettyPrint (RecordUpdate s) where
+  ppCode RecordUpdate {..} = do
+    let Irrelevant (l, r) = _recordUpdateDelims
+        fields'
+          | null (_recordUpdateFields ^. _tail1) = ppCode (_recordUpdateFields ^. _head1)
+          | otherwise =
+              line
+                <> indent
+                  ( sequenceWith
+                      (semicolon >> line)
+                      (ppCode <$> _recordUpdateFields)
+                  )
+                <> line
+    ppCode _recordUpdateAtKw
+      <> ppIdentifierType _recordUpdateTypeName
+      <> ppCode l
+      <> fields'
+      <> ppCode r
+
 instance SingI s => PrettyPrint (ExpressionAtom s) where
   ppCode = \case
     AtomIdentifier n -> ppIdentifierType n
@@ -279,6 +302,7 @@ instance SingI s => PrettyPrint (ExpressionAtom s) where
     AtomCase c -> ppCode c
     AtomList l -> ppCode l
     AtomUniverse uni -> ppCode uni
+    AtomRecordUpdate u -> ppCode u
     AtomFunction fun -> ppCode fun
     AtomLiteral lit -> ppCode lit
     AtomFunArrow a -> ppCode a
