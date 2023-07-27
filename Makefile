@@ -37,6 +37,8 @@ else
 	THREADS := $(shell echo %NUMBER_OF_PROCESSORS%)
 endif
 
+all: build
+
 clean: clean-runtime
 	@${STACK} clean --full
 	@rm -rf .hie
