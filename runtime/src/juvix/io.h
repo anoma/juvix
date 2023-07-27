@@ -9,6 +9,12 @@ void io_flush();
 void io_trace(word_t x);
 void io_print_toplevel(word_t x);
 
+#if defined(ARCH_ZKLLVM)
+
+#define IO_INTERPRET
+
+#else
+
 // If the returned value is true, `ret` constains a closure and `arg` an
 // argument that should be supplied to this closure. If the returned value is
 // false, `ret` contains the value in the monad.
@@ -42,5 +48,7 @@ bool io_interpret(word_t x, word_t *ret, word_t *arg);
     }                                                                    \
     juvix_io_interpret_end:                                              \
     io_flush();
+
+#endif  // defined(ARCH_ZKLLVM)
 
 #endif

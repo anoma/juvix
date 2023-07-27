@@ -28,6 +28,14 @@ void pfree(void *ptr, size_t n) {
     free(ptr);
 }
 
+#elif defined(ARCH_ZKLLVM)
+
+#include <stdlib.h>
+
+void *palloc(size_t n) { return malloc(n * PAGE_SIZE); }
+
+void pfree(void *ptr, size_t n) { free(ptr); }
+
 #elif defined(ARCH_WASM32)
 
 #define WASM_PAGE_SIZE_LOG2 16U

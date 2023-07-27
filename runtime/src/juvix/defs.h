@@ -42,7 +42,11 @@ static inline void print_msg_nonl(const char *msg) {
 #endif
 }
 
-_Noreturn static inline void error_exit() {
+#if defined(API_LIBC) || defined(ARCH_WASM32)
+_Noreturn
+#endif
+    static inline void
+    error_exit() {
 #if defined(API_LIBC)
     abort();
 #elif defined(ARCH_WASM32)
@@ -50,7 +54,11 @@ _Noreturn static inline void error_exit() {
 #endif
 }
 
-_Noreturn static inline void error_exit_msg(const char *msg) {
+#if defined(API_LIBC) || defined(ARCH_WASM32)
+_Noreturn
+#endif
+    static inline void
+    error_exit_msg(const char *msg) {
     print_err_msg(msg);
     error_exit();
 }

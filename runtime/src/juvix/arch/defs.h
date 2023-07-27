@@ -6,7 +6,7 @@
 // Number of bits in a word
 #if defined(ARCH_WASM32) || defined(ARCH_NATIVE32)
 #define BITS32
-#elif defined(ARCH_NATIVE64)
+#elif defined(ARCH_NATIVE64) || defined(ARCH_ZKLLVM)
 #define BITS64
 #else
 #error "Unsupported configuration"
@@ -48,7 +48,8 @@
 #endif
 
 // typedefs for basic integer types
-#if (defined(COMPILER_CLANG) || defined(COMPILER_GCC)) && !defined(API_LIBC)
+#if (defined(COMPILER_CLANG) || defined(COMPILER_GCC)) && \
+    !defined(API_LIBC) && !defined(API_ZKLLVM)
 
 typedef __SIZE_TYPE__ size_t;
 typedef __UINT8_TYPE__ uint8_t;
@@ -59,12 +60,16 @@ typedef __INT32_TYPE__ int32_t;
 typedef __INT64_TYPE__ int64_t;
 typedef __UINTPTR_TYPE__ uintptr_t;
 
-#elif defined(API_LIBC)
+#elif defined(API_LIBC) || defined(API_ZKLLVM)
 
 #include <stdint.h>
 
 #else
 #error "Unsupported configuration"
+#endif
+
+#if defined(API_ZKLLVM)
+typedef __SIZE_TYPE__ size_t;
 #endif
 
 typedef unsigned uint;

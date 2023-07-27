@@ -5,6 +5,16 @@
 #include <juvix/object/cstring.h>
 #include <juvix/object/print.h>
 
+#if defined(ARCH_ZKLLVM)
+
+void io_init() {}
+void io_flush() {}
+
+void io_trace(word_t x) {}
+void io_print_toplevel(word_t x) {}
+
+#else
+
 static char *io_buffer = NULL;
 static uint io_index = 0;
 
@@ -166,3 +176,5 @@ bool io_interpret(word_t x, word_t *ret, word_t *arg) {
         return false;
     }
 }
+
+#endif  // defined(ARCH_ZKLLVM)
