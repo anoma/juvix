@@ -700,6 +700,21 @@ goConstructorDef retTy ConstructorDef {..} = do
         _inductiveConstructorPragmas = pragmas'
       }
   where
+    goAdt :: Concrete.RhsAdt 'Scoped -> Sem r Internal.Expression
+    goAdt RhsAdt {..} = do
+      args <- mapM goArg _rhsAdtArguments
+      return (Internal.foldFunType args retTy)
+      where
+        goArg :: Concrete.Expression -> Sem r Internal.FunctionParameter
+        goArg ty = do
+          ty' <- goExpression ty
+          return
+            Internal.FunctionParameter
+              { _paramName = Nothing,
+                _paramImplicit = Explicit,
+                _paramType = ty'
+              }
+
     goRecord :: Concrete.RhsRecord 'Scoped -> Sem r Internal.Expression
     goRecord RhsRecord {..} = do
       params <- mapM goField _rhsRecordFields
@@ -722,6 +737,7 @@ goConstructorDef retTy ConstructorDef {..} = do
     goRhs = \case
       ConstructorRhsGadt r -> goGadt r
       ConstructorRhsRecord r -> goRecord r
+      ConstructorRhsAdt r -> goAdt r
 
 goLiteral :: LiteralLoc -> Internal.LiteralLoc
 goLiteral = fmap go

@@ -939,10 +939,14 @@ instance SingI s => PrettyPrint (RhsRecord s) where
                 <> line
     ppCode l <> fields' <> ppCode r
 
+instance SingI s => PrettyPrint (RhsAdt s) where
+  ppCode = align . sep . fmap ppExpressionType . (^. rhsAdtArguments)
+
 instance SingI s => PrettyPrint (ConstructorRhs s) where
   ppCode = \case
     ConstructorRhsGadt r -> ppCode r
     ConstructorRhsRecord r -> ppCode r
+    ConstructorRhsAdt r -> ppCode r
 
 instance SingI s => PrettyPrint (ConstructorDef s) where
   ppCode :: forall r. Members '[ExactPrint, Reader Options] r => ConstructorDef s -> Sem r ()

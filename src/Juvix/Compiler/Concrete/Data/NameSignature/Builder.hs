@@ -61,6 +61,7 @@ instance HasNameSignature (InductiveDef 'Parsed, ConstructorDef 'Parsed) where
       addRhs = \case
         ConstructorRhsGadt g -> addAtoms (g ^. rhsGadtType)
         ConstructorRhsRecord g -> addRecord g
+        ConstructorRhsAdt {} -> return ()
 
 instance HasNameSignature (InductiveDef 'Parsed) where
   addArgs a = do

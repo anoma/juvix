@@ -1045,6 +1045,11 @@ recordField = do
   _fieldType <- parseExpressionAtoms
   return RecordField {..}
 
+rhsAdt :: Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r => ParsecS r (RhsAdt 'Parsed)
+rhsAdt = P.label "<constructor arguments>" $ do
+  _rhsAdtArguments <- many atomicExpression
+  return RhsAdt {..}
+
 rhsRecord :: Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r => ParsecS r (RhsRecord 'Parsed)
 rhsRecord = P.label "<constructor record>" $ do
   l <- kw delimBraceL
@@ -1057,6 +1062,7 @@ pconstructorRhs :: Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdG
 pconstructorRhs =
   ConstructorRhsGadt <$> rhsGadt
     <|> ConstructorRhsRecord <$> rhsRecord
+    <|> ConstructorRhsAdt <$> rhsAdt
 
 constructorDef :: Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r => Irrelevant (Maybe KeywordRef) -> ParsecS r (ConstructorDef 'Parsed)
 constructorDef _constructorPipe = do
@@ -1174,7 +1180,6 @@ openModule = do
   _openModuleImportKw <- optional (kw kwImport)
   _openModuleName <- name
   whenJust _openModuleImportKw (const (P.lift (importedModule (moduleNameToTopModulePath _openModuleName))))
-  _openParameters <- many atomicExpression
   _openUsingHiding <- optional usingOrHiding
   _openPublicKw <- Irrelevant <$> optional (kw kwPublic)
   let _openPublic = maybe NoPublic (const Public) (_openPublicKw ^. unIrrelevant)
@@ -1193,7 +1198,6 @@ newOpenSyntax :: forall r. (Members '[Error ParserError, PathResolver, Files, In
 newOpenSyntax = do
   im <- import_
   _openModuleKw <- kw kwOpen
-  _openParameters <- many atomicExpression
   _openUsingHiding <- optional usingOrHiding
   _openPublicKw <- Irrelevant <$> optional (kw kwPublic)
   let _openModuleName = topModulePathToName (im ^. importModule)
