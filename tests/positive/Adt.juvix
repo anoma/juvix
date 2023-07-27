@@ -2,7 +2,7 @@ module Adt;
 
 type Bool :=
   | true
-  | false ;
+  | false;
 
 type Pair (A B : Type) :=
   | mkPair A B;
