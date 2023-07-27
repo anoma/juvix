@@ -961,12 +961,12 @@ instance SingI s => PrettyPrint (ConstructorDef s) where
       constructorRhsHelper :: ConstructorRhs s -> Sem r ()
       constructorRhsHelper r = spaceMay <> ppCode r
         where
-        spaceMay = case r of
-          ConstructorRhsGadt {} -> space
-          ConstructorRhsRecord {} -> space
-          ConstructorRhsAdt a
-            | null (a ^. rhsAdtArguments) -> mempty
-            | otherwise -> space
+          spaceMay = case r of
+            ConstructorRhsGadt {} -> space
+            ConstructorRhsRecord {} -> space
+            ConstructorRhsAdt a
+              | null (a ^. rhsAdtArguments) -> mempty
+              | otherwise -> space
 
       -- we use this helper so that comments appear before the first optional pipe if the pipe was omitted
       pipeHelper :: Sem r ()
