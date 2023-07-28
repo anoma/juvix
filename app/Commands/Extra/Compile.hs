@@ -200,7 +200,7 @@ commonArgs buildDir o outfile =
          toFilePath outfile
        ]
     <> ( if
-             | not (o ^. compilePreprocess || o ^. compileAssembly) ->
+             | not (o ^. compilePreprocess || o ^. compileAssembly || o ^. compileTarget == TargetZKLLVM) ->
                  [ "-L",
                    toFilePath buildDir
                  ]
@@ -255,7 +255,8 @@ zkllvmArgs buildDir o outfile inputFile =
     <> [ "-DARCH_ZKLLVM",
          "-DAPI_ZKLLVM",
          "-O" <> show (maybe defaultOptLevel (max 1) (o ^. compileOptimizationLevel)),
-         "-target assigner",
+         "-target",
+         "assigner",
          "-Xclang",
          "-no-opaque-pointers",
          "-emit-llvm",

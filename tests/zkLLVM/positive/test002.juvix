@@ -1,0 +1,22 @@
+-- pattern matching
+module test002;
+
+import Stdlib.Prelude open;
+import Stdlib.Data.Nat.Ord open;
+
+type optbool :=
+  | Just : Bool -> optbool
+  | Nothing : optbool;
+
+natToBool : Nat -> Bool;
+natToBool x := if (x == 0) false true;
+
+{-# public: [b] #-}
+main : Nat -> Nat -> Bool;
+main a b :=
+  λ {
+      | x (Just b) := if x false b
+      | _ Nothing := false
+    }
+    (natToBool a)
+    (Just (natToBool b));

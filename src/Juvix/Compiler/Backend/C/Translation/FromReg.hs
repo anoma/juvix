@@ -141,10 +141,12 @@ fromReg target debug tab =
 
     mainBody :: [Statement]
     mainBody =
-      prologueDecls
+      argDecls
+        ++ prologueDecls
         ++ jumpMainFunction
         ++ juvixFunctions
         ++ epilogueDecls
+        ++ [StatementReturn (Just (integer (0 :: Int)))]
 
     circuitFunction :: CCode
     circuitFunction =
@@ -160,32 +162,43 @@ fromReg target debug tab =
         { _funcReturnType = DeclTypeDefType "int",
           _funcQualifier = None,
           _funcName = "juvix_circuit",
-          _funcArgs = replicate mainArgsNum (mkTypeDecl "int")
+          _funcArgs = map (mkTypeDecl "int") [0 .. mainArgsNum - 1]
         }
       where
-        mkTypeDecl :: Text -> Declaration
-        mkTypeDecl ty =
+        mkTypeDecl :: Text -> Int -> Declaration
+        mkTypeDecl ty argnum =
           Declaration
             { _declType = DeclTypeDefType ty,
-              _declName = Nothing,
+              _declName = Just ("juvix_circuit_arg_" <> show argnum),
               _declInitializer = Nothing
             }
 
     circuitBody :: [Statement]
     circuitBody =
-      prologueDecls
+      argDecls
+        ++ circuitArgAssigns
+        ++ prologueDecls
         ++ jumpMainFunction
         ++ juvixFunctions
         ++ epilogueDecls
+        ++ [StatementReturn (Just (macroCall "get_unboxed_int" [ExpressionVar "juvix_result"]))]
+
+    circuitArgAssigns :: [Statement]
+    circuitArgAssigns = map mkAssign [0 .. mainArgsNum - 1]
+      where
+        mkAssign :: Int -> Statement
+        mkAssign argnum =
+          stmtAssign
+            (macroCall "ARG" [integer argnum])
+            (macroCall "make_smallint" [ExpressionVar $ "juvix_circuit_arg_" <> show argnum])
 
     prologueDecls :: [Statement]
     prologueDecls =
-      argDecls
-        ++ [ StatementExpr $
-               macroCall
-                 "JUVIX_PROLOGUE"
-                 [integer (info ^. Reg.extraInfoMaxArgsNum + info ^. Reg.extraInfoMaxCallClosuresArgsNum)]
-           ]
+      [ StatementExpr $
+          macroCall
+            "JUVIX_PROLOGUE"
+            [integer (info ^. Reg.extraInfoMaxArgsNum + info ^. Reg.extraInfoMaxCallClosuresArgsNum)]
+      ]
         ++ makeCStrings
         ++ [ stmtAssign (ExpressionVar "juvix_constrs_num") (integer (info ^. Reg.extraInfoConstrsNum)),
              stmtAssign (ExpressionVar "juvix_constr_info") (ExpressionVar "juvix_constr_info_array"),
@@ -194,10 +207,7 @@ fromReg target debug tab =
            ]
 
     epilogueDecls :: [Statement]
-    epilogueDecls =
-      [ StatementExpr $ macroVar "JUVIX_EPILOGUE",
-        StatementReturn (Just (integer (0 :: Int)))
-      ]
+    epilogueDecls = [StatementExpr $ macroVar "JUVIX_EPILOGUE"]
 
     argDecls :: [Statement]
     argDecls =

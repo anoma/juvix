@@ -4,6 +4,7 @@ module GlobalOptions
 where
 
 import CommonOptions
+import Juvix.Compiler.Asm (Target (TargetCNative64))
 import Juvix.Compiler.Core.Options qualified as Core
 import Juvix.Compiler.Internal.Pretty.Options qualified as Internal
 import Juvix.Compiler.Pipeline
@@ -45,7 +46,8 @@ instance CanonicalProjection GlobalOptions Core.CoreOptions where
       { Core._optCheckCoverage = not _globalNoCoverage,
         Core._optUnrollLimit = _globalUnrollLimit,
         Core._optOptimizationLevel = defaultOptimizationLevel,
-        Core._optInliningDepth = defaultInliningDepth
+        Core._optInliningDepth = defaultInliningDepth,
+        Core._optTarget = TargetCNative64
       }
 
 defaultGlobalOptions :: GlobalOptions
