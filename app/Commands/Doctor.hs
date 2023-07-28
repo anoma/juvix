@@ -130,7 +130,7 @@ documentedCheck ::
 documentedCheck check w = check (renderDocumentedWarning w)
 
 findClangPath :: (Members DoctorEff r) => Sem r (Maybe ClangPath)
-findClangPath = findClang
+findClangPath = findClang $(mkRelFile "clang")
 
 checkClang :: forall r. (Members DoctorEff r) => Bool -> Sem r ()
 checkClang printVerbose = do

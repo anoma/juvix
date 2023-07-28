@@ -29,6 +29,7 @@ runCompile inputFile o = do
   case o ^. compileTarget of
     TargetWasm32Wasi -> runError (clangWasmWasiCompile inputFile o)
     TargetNative64 -> runError (clangNativeCompile inputFile o)
+    TargetZKLLVM -> runError (clangZKLLVMCompile inputFile o)
     TargetGeb -> return $ Right ()
     TargetVampIR -> return $ Right ()
     TargetCore -> return $ Right ()
@@ -42,6 +43,7 @@ prepareRuntime buildDir o = do
     TargetWasm32Wasi -> writeRuntime wasiReleaseRuntime
     TargetNative64 | o ^. compileDebug -> writeRuntime nativeDebugRuntime
     TargetNative64 -> writeRuntime nativeReleaseRuntime
+    TargetZKLLVM -> writeZKLLVMRuntime
     TargetGeb -> return ()
     TargetVampIR -> return ()
     TargetCore -> return ()
@@ -59,10 +61,19 @@ prepareRuntime buildDir o = do
     nativeDebugRuntime :: BS.ByteString
     nativeDebugRuntime = $(FE.makeRelativeToProject "runtime/_build.native64-debug/libjuvix.a" >>= FE.embedFile)
 
-    writeRuntime :: BS.ByteString -> Sem r ()
-    writeRuntime =
+    zkllvmRuntime :: BS.ByteString
+    zkllvmRuntime = $(FE.makeRelativeToProject "runtime/_build.zkllvm/libjuvix.ll" >>= FE.embedFile)
+
+    writeRuntime' :: Path Rel File -> BS.ByteString -> Sem r ()
+    writeRuntime' f =
       embed
-        . BS.writeFile (toFilePath (buildDir <//> $(mkRelFile "libjuvix.a")))
+        . BS.writeFile (toFilePath (buildDir <//> f))
+
+    writeRuntime :: BS.ByteString -> Sem r ()
+    writeRuntime = writeRuntime' $(mkRelFile "libjuvix.a")
+
+    writeZKLLVMRuntime :: Sem r ()
+    writeZKLLVMRuntime = writeRuntime' $(mkRelFile "libjuvix.ll") zkllvmRuntime
 
     headersDir :: [(Path Rel File, BS.ByteString)]
     headersDir = map (first relFile) $(FE.makeRelativeToProject "runtime/include" >>= FE.embedDir)
@@ -96,6 +107,12 @@ outputFile opts inputFile =
               | opts ^. compilePreprocess -> addExtension' cFileExt (addExtension' ".out" (removeExtension' inputFile))
               | opts ^. compileAssembly -> replaceExtension' ".wat" inputFile
               | otherwise -> replaceExtension' ".wasm" baseOutputFile
+        TargetZKLLVM ->
+          if
+              | opts ^. compileCOutput -> replaceExtension' ".c" inputFile
+              | opts ^. compilePreprocess -> addExtension' ".c" (addExtension' ".out" (removeExtension' inputFile))
+              | opts ^. compileAssembly -> replaceExtension' ".ll" inputFile
+              | otherwise -> replaceExtension' ".ll" baseOutputFile
         TargetGeb ->
           if
               | opts ^. compileTerm -> replaceExtension' juvixGebFileExt inputFile
@@ -145,6 +162,26 @@ clangWasmWasiCompile inputFile o = do
       where
         msg :: Text
         msg = "Missing environment variable WASI_SYSROOT_PATH"
+
+clangZKLLVMCompile ::
+  forall r.
+  (Members '[App, Embed IO, Error Text] r) =>
+  Path Abs File ->
+  CompileOptions ->
+  Sem r ()
+clangZKLLVMCompile inputFile o = do
+  outputFile' <- outputFile o inputFile
+  buildDir <- askBuildDir
+  if
+      | o ^. compileCOutput ->
+          copyFile inputFile outputFile'
+      | o ^. compileAssembly ->
+          runClang (zkllvmArgs buildDir o outputFile' inputFile)
+      | otherwise -> do
+          let tempFile = buildDir <//> $(mkRelFile "program.ll")
+              libFile = buildDir <//> $(mkRelFile "libjuvix.ll")
+          runClang (zkllvmArgs buildDir o tempFile inputFile)
+          runLLVMLink outputFile' tempFile libFile
 
 commonArgs :: Path Abs Dir -> CompileOptions -> Path Abs File -> [String]
 commonArgs buildDir o outfile =
@@ -212,11 +249,33 @@ wasiArgs buildDir o outfile inputFile sysrootPath =
              | otherwise -> []
        )
 
-findClangOnPath :: (Member (Embed IO) r) => Sem r (Maybe (Path Abs File))
-findClangOnPath = findExecutable $(mkRelFile "clang")
+zkllvmArgs :: Path Abs Dir -> CompileOptions -> Path Abs File -> Path Abs File -> [String]
+zkllvmArgs buildDir o outfile inputFile =
+  commonArgs buildDir o' outfile
+    <> [ "-DARCH_ZKLLVM",
+         "-DAPI_ZKLLVM",
+         "-O" <> show (maybe defaultOptLevel (max 1) (o ^. compileOptimizationLevel)),
+         "-target assigner",
+         "-Xclang",
+         "-no-opaque-pointers",
+         "-emit-llvm",
+         "-S",
+         "-Izkllvm/libs/stdlib/libc/include",
+         toFilePath inputFile
+       ]
+  where
+    defaultOptLevel :: Int
+    defaultOptLevel
+      | o ^. compileDebug = debugClangOptimizationLevel
+      | otherwise = defaultClangOptimizationLevel
 
-findClangUsingEnvVar :: forall r. (Member (Embed IO) r) => Sem r (Maybe (Path Abs File))
-findClangUsingEnvVar = do
+    o' = o {_compileDebug = False, _compileAssembly = False}
+
+findClangOnPath :: (Member (Embed IO)) r => Path Rel File -> Sem r (Maybe (Path Abs File))
+findClangOnPath = findExecutable
+
+findClangUsingEnvVar :: forall r. (Member (Embed IO)) r => Path Rel File -> Sem r (Maybe (Path Abs File))
+findClangUsingEnvVar binary = do
   p <- clangBinPath
   join <$> mapM checkExecutable p
   where
@@ -224,7 +283,7 @@ findClangUsingEnvVar = do
     checkExecutable p = whenMaybeM (embed @IO (isExecutable p)) (return p)
 
     clangBinPath :: Sem r (Maybe (Path Abs File))
-    clangBinPath = fmap (<//> $(mkRelFile "bin/clang")) <$> llvmDistPath
+    clangBinPath = fmap (<//> $(mkRelDir "bin") <//> binary) <$> llvmDistPath
 
     llvmDistPath :: Sem r (Maybe (Path Abs Dir))
     llvmDistPath = do
@@ -241,12 +300,12 @@ extractClangPath = \case
   ClangEnvVarPath p -> p
 
 --- Try searching clang JUVIX_LLVM_DIST_PATH. Otherwise use the PATH
-findClang :: (Member (Embed IO) r) => Sem r (Maybe ClangPath)
-findClang = do
-  envVarPath <- findClangUsingEnvVar
+findClang :: (Member (Embed IO) r) => Path Rel File -> Sem r (Maybe ClangPath)
+findClang binary = do
+  envVarPath <- findClangUsingEnvVar binary
   case envVarPath of
     Just p -> return (Just (ClangEnvVarPath p))
-    Nothing -> (fmap . fmap) ClangSystemPath findClangOnPath
+    Nothing -> (fmap . fmap) ClangSystemPath (findClangOnPath binary)
 
 runClang ::
   forall r.
@@ -262,11 +321,43 @@ runClang args = do
   where
     clangBinPath :: Sem r String
     clangBinPath = do
-      p <- findClang
+      p <- findClang $(mkRelFile "clang")
       maybe (throw clangNotFoundErr) (return . toFilePath . extractClangPath) p
 
     clangNotFoundErr :: Text
     clangNotFoundErr = "Error: The clang executable was not found. Please install the LLVM toolchain"
+
+runLLVMLink ::
+  forall r.
+  (Members '[Embed IO, Error Text] r) =>
+  Path Abs File ->
+  Path Abs File ->
+  Path Abs File ->
+  Sem r ()
+runLLVMLink outputFile' progFile libFile = do
+  cp <- llvmLinkBinPath
+  (exitCode, _, err) <- embed (P.readProcessWithExitCode cp (llvmLinkArgs outputFile' progFile libFile) "")
+  case exitCode of
+    ExitSuccess -> return ()
+    _ -> throw (pack err)
+  where
+    llvmLinkBinPath :: Sem r String
+    llvmLinkBinPath = do
+      p <- findClang $(mkRelFile "llvm-link")
+      maybe (throw clangNotFoundErr) (return . toFilePath . extractClangPath) p
+
+    clangNotFoundErr :: Text
+    clangNotFoundErr = "Error: The llvm-link executable was not found. Please install the LLVM toolchain"
+
+llvmLinkArgs :: Path Abs File -> Path Abs File -> Path Abs File -> [String]
+llvmLinkArgs outputFile' progFile libFile =
+  [ "-opaque-pointers=0",
+    "-S",
+    "-o",
+    toFilePath outputFile',
+    toFilePath progFile,
+    toFilePath libFile
+  ]
 
 debugClangOptimizationLevel :: Int
 debugClangOptimizationLevel = 1

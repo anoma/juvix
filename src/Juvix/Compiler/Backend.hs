@@ -6,6 +6,7 @@ import Juvix.Prelude
 data Target
   = TargetCWasm32Wasi
   | TargetCNative64
+  | TargetCZKLLVM
   | TargetGeb
   | TargetVampIR
   | TargetCore
@@ -63,6 +64,20 @@ getLimits tgt debug = case tgt of
         _limitsDispatchStackSize = 4,
         _limitsBuiltinUIDsNum = 8,
         _limitsSpecialisedApply = 3
+      }
+  TargetCZKLLVM ->
+    Limits
+      { _limitsMaxConstrs = 1048568,
+        _limitsMaxConstrArgs = 255,
+        _limitsMaxFunctionArgs = 253,
+        _limitsMaxLocalVars = 1024,
+        _limitsMaxClosureSize = 253 + 3,
+        _limitsClosureHeadSize = 2,
+        _limitsMaxStringSize = 255 + 1,
+        _limitsMaxStackDelta = 8184,
+        _limitsMaxFunctionAlloc = 8184,
+        _limitsDispatchStackSize = 4,
+        _limitsBuiltinUIDsNum = 8
       }
   TargetGeb ->
     defaultLimits

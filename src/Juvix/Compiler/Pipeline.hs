@@ -11,7 +11,6 @@ import Juvix.Compiler.Asm.Error qualified as Asm
 import Juvix.Compiler.Asm.Options qualified as Asm
 import Juvix.Compiler.Asm.Pipeline qualified as Asm
 import Juvix.Compiler.Asm.Translation.FromCore qualified as Asm
-import Juvix.Compiler.Backend qualified as Backend
 import Juvix.Compiler.Backend.C qualified as C
 import Juvix.Compiler.Backend.Geb qualified as Geb
 import Juvix.Compiler.Backend.VampIR.Translation qualified as VampIR
@@ -145,7 +144,7 @@ asmToMiniC = Asm.toReg >=> regToMiniC . Reg.fromAsm
 regToMiniC :: (Member (Reader EntryPoint) r) => Reg.InfoTable -> Sem r C.MiniCResult
 regToMiniC tab = do
   e <- ask
-  return $ C.fromReg (Backend.getLimits (e ^. entryPointTarget) (e ^. entryPointDebug)) tab
+  return $ C.fromReg (e ^. entryPointTarget) (e ^. entryPointDebug) tab
 
 coreToGeb :: (Members '[Error JuvixError, Reader EntryPoint] r) => Geb.ResultSpec -> Core.InfoTable -> Sem r Geb.Result
 coreToGeb spec = Core.toGeb >=> return . uncurry (Geb.toResult spec) . Geb.fromCore
@@ -159,7 +158,7 @@ asmToMiniC' = mapError (JuvixError @Asm.AsmError) . Asm.toReg' >=> regToMiniC' .
 regToMiniC' :: (Member (Reader Asm.Options) r) => Reg.InfoTable -> Sem r C.MiniCResult
 regToMiniC' tab = do
   e <- ask
-  return $ C.fromReg (e ^. Asm.optLimits) tab
+  return $ C.fromReg (e ^. Asm.optTarget) (e ^. Asm.optDebug) tab
 
 coreToVampIR' :: (Members '[Error JuvixError, Reader Core.CoreOptions] r) => Core.InfoTable -> Sem r VampIR.Result
 coreToVampIR' = Core.toVampIR' >=> return . VampIR.fromCore' False

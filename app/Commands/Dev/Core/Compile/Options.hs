@@ -15,6 +15,7 @@ coreSupportedTargets =
   NonEmpty.fromList
     [ TargetWasm32Wasi,
       TargetNative64,
+      TargetZKLLVM,
       TargetGeb,
       TargetVampIR,
       TargetAsm

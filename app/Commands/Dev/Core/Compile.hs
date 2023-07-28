@@ -15,6 +15,7 @@ runCommand opts = do
   case opts ^. compileTarget of
     TargetWasm32Wasi -> runCPipeline arg
     TargetNative64 -> runCPipeline arg
+    TargetZKLLVM -> runCPipeline arg
     TargetGeb -> runGebPipeline arg
     TargetVampIR -> runVampIRPipeline arg
     TargetCore -> return ()

@@ -14,12 +14,36 @@ import Juvix.Compiler.Reg.Language qualified as Reg
 import Juvix.Data.Fixity qualified as Fixity
 import Juvix.Prelude
 
-fromReg :: Limits -> Reg.InfoTable -> MiniCResult
-fromReg lims tab =
-  MiniCResult $ serialize $ CCodeUnit [includeApi, constrInfo, functionInfo, mainFunction]
+fromReg :: Target -> Bool -> Reg.InfoTable -> MiniCResult
+fromReg target debug tab =
+  MiniCResult $ serialize $ CCodeUnit code
   where
+    lims :: Limits
+    lims = getLimits target debug
+
     info :: Reg.ExtraInfo
     info = Reg.computeExtraInfo lims tab
+
+    code :: [CCode]
+    code = case target of
+      TargetCZKLLVM ->
+        [ includeApi,
+          constrInfo,
+          functionInfo,
+          Verbatim "__attribute__((circuit))",
+          circuitFunction
+        ]
+      _ ->
+        [ includeApi,
+          constrInfo,
+          functionInfo,
+          mainFunction
+        ]
+
+    mainArgsNum :: Int
+    mainArgsNum = case tab ^. Reg.infoMainFunction of
+      Nothing -> error "no main function"
+      Just main -> fromJust (HashMap.lookup main (tab ^. Reg.infoFunctions)) ^. Reg.functionArgsNum
 
     includeApi :: CCode
     includeApi = ExternalMacro (CppIncludeSystem "juvix/api.h")
@@ -117,6 +141,45 @@ fromReg lims tab =
 
     mainBody :: [Statement]
     mainBody =
+      prologueDecls
+        ++ jumpMainFunction
+        ++ juvixFunctions
+        ++ epilogueDecls
+
+    circuitFunction :: CCode
+    circuitFunction =
+      ExternalFunc $
+        Function
+          { _funcSig = circuitSig,
+            _funcBody = map BodyStatement circuitBody
+          }
+
+    circuitSig :: FunctionSig
+    circuitSig =
+      FunctionSig
+        { _funcReturnType = DeclTypeDefType "int",
+          _funcQualifier = None,
+          _funcName = "juvix_circuit",
+          _funcArgs = replicate mainArgsNum (mkTypeDecl "int")
+        }
+      where
+        mkTypeDecl :: Text -> Declaration
+        mkTypeDecl ty =
+          Declaration
+            { _declType = DeclTypeDefType ty,
+              _declName = Nothing,
+              _declInitializer = Nothing
+            }
+
+    circuitBody :: [Statement]
+    circuitBody =
+      prologueDecls
+        ++ jumpMainFunction
+        ++ juvixFunctions
+        ++ epilogueDecls
+
+    prologueDecls :: [Statement]
+    prologueDecls =
       argDecls
         ++ [ StatementExpr $
                macroCall
@@ -129,11 +192,12 @@ fromReg lims tab =
              stmtAssign (ExpressionVar "juvix_functions_num") (integer (info ^. Reg.extraInfoFunctionsNum)),
              stmtAssign (ExpressionVar "juvix_function_info") (ExpressionVar "juvix_function_info_array")
            ]
-        ++ jumpMainFunction
-        ++ juvixFunctions
-        ++ [ StatementExpr $ macroVar "JUVIX_EPILOGUE",
-             StatementReturn (Just (integer (0 :: Int)))
-           ]
+
+    epilogueDecls :: [Statement]
+    epilogueDecls =
+      [ StatementExpr $ macroVar "JUVIX_EPILOGUE",
+        StatementReturn (Just (integer (0 :: Int)))
+      ]
 
     argDecls :: [Statement]
     argDecls =

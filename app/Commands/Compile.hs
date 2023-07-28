@@ -24,6 +24,7 @@ runCommand opts@CompileOptions {..} = do
     TargetWasm32Wasi -> Compile.runCPipeline arg
     TargetGeb -> Compile.runGebPipeline arg
     TargetVampIR -> Compile.runVampIRPipeline arg
+    TargetZKLLVM -> Compile.runCPipeline arg
     TargetCore -> writeCoreFile arg
     TargetAsm -> Compile.runAsmPipeline arg
 

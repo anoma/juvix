@@ -36,6 +36,7 @@ getEntry PipelineArg {..} = do
       TargetNative64 -> Backend.TargetCNative64
       TargetGeb -> Backend.TargetGeb
       TargetVampIR -> Backend.TargetVampIR
+      TargetZKLLVM -> Backend.TargetCZKLLVM
       TargetCore -> Backend.TargetCore
       TargetAsm -> Backend.TargetAsm
 
