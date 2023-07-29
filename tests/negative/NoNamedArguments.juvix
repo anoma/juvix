@@ -1,0 +1,5 @@
+module NoNamedArguments;
+
+axiom T : Type;
+
+axiom B : T (x := Type);

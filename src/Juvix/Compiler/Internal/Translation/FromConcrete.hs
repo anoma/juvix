@@ -803,9 +803,14 @@ goExpression = \case
   ExpressionHole h -> return (Internal.ExpressionHole h)
   ExpressionIterator i -> goIterator i
   ExpressionNamedApplication i -> goNamedApplication i
+  ExpressionRecordUpdate i -> goRecordUpdate i
   where
     goNamedApplication :: Concrete.NamedApplication 'Scoped -> Sem r Internal.Expression
     goNamedApplication = runNamedArguments >=> goExpression
+
+    -- TODO record update
+    goRecordUpdate :: Concrete.RecordUpdateApp -> Sem r Internal.Expression
+    goRecordUpdate = goExpression . (^. Concrete.recordAppExpression)
 
     goList :: Concrete.List 'Scoped -> Sem r Internal.Expression
     goList l = do

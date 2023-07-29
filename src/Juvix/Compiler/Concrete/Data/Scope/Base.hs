@@ -52,7 +52,9 @@ data ScoperState = ScoperState
     -- | Local and top modules
     _scoperModules :: HashMap S.ModuleNameId (ModuleRef' 'S.NotConcrete),
     _scoperScope :: HashMap TopModulePath Scope,
-    _scoperSignatures :: HashMap S.NameId NameSignature
+    _scoperSignatures :: HashMap S.NameId NameSignature,
+    -- | Indexed by the inductive type. This is meant to be used for record updates
+    _scoperRecordSignatures :: HashMap S.NameId RecordNameSignature
   }
 
 data SymbolFixity = SymbolFixity

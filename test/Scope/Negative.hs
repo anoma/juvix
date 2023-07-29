@@ -315,5 +315,12 @@ scoperErrorTests =
       $(mkRelFile "RepeatedNameSignature.juvix")
       $ \case
         ErrNameSignature ErrDuplicateName {} -> Nothing
+        _ -> wrongError,
+    NegTest
+      "No named arguments"
+      $(mkRelDir ".")
+      $(mkRelFile "NoNamedArguments.juvix")
+      $ \case
+        ErrNoNameSignature ErrNoNameSignature {} -> Nothing
         _ -> wrongError
   ]

@@ -594,7 +594,7 @@ importedModule t = unlessM (moduleVisited t) go
 recordUpdateField :: Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r => ParsecS r (RecordUpdateField 'Parsed)
 recordUpdateField = do
   _fieldUpdateName <- symbol
-  _fieldUpdateAssignKw <- Irrelevant <$> kw kwColon
+  _fieldUpdateAssignKw <- Irrelevant <$> kw kwAssign
   _fieldUpdateValue <- parseExpressionAtoms
   return RecordUpdateField {..}
 
@@ -604,7 +604,7 @@ recordUpdate = do
   _recordUpdateTypeName <- name
   l <- kw delimBraceL
   _recordUpdateFields <- P.sepEndBy1 recordUpdateField semicolon
-  r <- kw delimBraceL
+  r <- kw delimBraceR
   let _recordUpdateDelims = Irrelevant (l, r)
   return RecordUpdate {..}
 

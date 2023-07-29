@@ -319,7 +319,7 @@ makeLenses ''NotInScope
 instance ToGenericError NotInScope where
   genericError e@NotInScope {..} = ask >>= generr
     where
-      loc =getLoc  (e ^. notInScopeSymbol)
+      loc = getLoc (e ^. notInScopeSymbol)
       generr opts =
         return
           GenericError
@@ -766,3 +766,25 @@ instance ToGenericError NoNameSignature where
     where
       i :: Interval
       i = getLoc _noNameSignatureIden
+
+newtype NotARecord = NotARecord
+  { _notARecord :: ScopedIden
+  }
+  deriving stock (Show)
+
+instance ToGenericError NotARecord where
+  genericError NotARecord {..} = do
+    opts <- fromGenericOptions <$> ask
+    let msg =
+          "The identifier"
+            <+> ppCode opts _notARecord
+            <+> "is not a record type"
+    return
+      GenericError
+        { _genericErrorLoc = i,
+          _genericErrorMessage = mkAnsiText msg,
+          _genericErrorIntervals = [i]
+        }
+    where
+      i :: Interval
+      i = getLoc _notARecord

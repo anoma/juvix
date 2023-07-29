@@ -2,21 +2,15 @@ module Juvix.Data.Fixity where
 
 import Juvix.Prelude.Base
 
+-- | Note that the order of the constructors is important due to the `Ord`
+-- instance.
+-- TODO should we rename PrecMinusOmega to PrecApp, PrecMinusOmega1 to PrecUpdate, and PrecOmega to PrecFunction/Arrow?
 data Precedence
-  = PrecMinusOmega
+  = PrecMinusOmega1
+  | PrecMinusOmega
   | PrecNat Natural
   | PrecOmega
-  deriving stock (Show, Eq, Data)
-
-instance Ord Precedence where
-  compare a b = case (a, b) of
-    (PrecMinusOmega, PrecMinusOmega) -> EQ
-    (PrecMinusOmega, _) -> LT
-    (PrecNat _, PrecMinusOmega) -> GT
-    (PrecNat n, PrecNat m) -> compare n m
-    (PrecNat _, PrecOmega) -> LT
-    (PrecOmega, PrecOmega) -> EQ
-    (PrecOmega, _) -> GT
+  deriving stock (Show, Eq, Data, Ord)
 
 data UnaryAssoc = AssocPostfix
   deriving stock (Show, Eq, Ord, Data)
@@ -79,6 +73,9 @@ appFixity = Fixity PrecOmega (Binary AssocLeft)
 
 funFixity :: Fixity
 funFixity = Fixity PrecMinusOmega (Binary AssocRight)
+
+updateFixity :: Fixity
+updateFixity = Fixity PrecMinusOmega1 (Unary AssocPostfix)
 
 atomParens :: (Fixity -> Bool) -> Atomicity -> Fixity -> Bool
 atomParens associates argAtom opInf = case argAtom of

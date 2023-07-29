@@ -577,6 +577,7 @@ instance SingI s => PrettyPrint (Lambda s) where
 
 instance PrettyPrint Precedence where
   ppCode = \case
+    PrecMinusOmega1 -> noLoc (pretty ("-ω₁" :: Text))
     PrecMinusOmega -> noLoc (pretty ("-ω" :: Text))
     PrecNat n -> noLoc (pretty n)
     PrecOmega -> noLoc (pretty ("ω" :: Text))
@@ -610,6 +611,9 @@ instance PrettyPrint IteratorSyntaxDef where
       <+> iterSymbol'
       <+?> fmap ppCode _iterAttribs
 
+instance PrettyPrint RecordUpdateApp where
+  ppCode = apeHelper
+
 instance PrettyPrint Expression where
   ppCode = \case
     ExpressionIdentifier n -> ppCode n
@@ -628,6 +632,7 @@ instance PrettyPrint Expression where
     ExpressionCase c -> ppCode c
     ExpressionIterator i -> ppCode i
     ExpressionNamedApplication i -> ppCode i
+    ExpressionRecordUpdate i -> ppCode i
 
 instance PrettyPrint (WithSource Pragmas) where
   ppCode pragma = do

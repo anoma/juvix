@@ -35,3 +35,12 @@ p3 : Pair T T -> T := Pair.fst;
 open Pair;
 
 p4 {A : Type} : Pair A T -> A := fst;
+
+type Bool := false | true;
+
+module Update;
+ x : Pair Bool Bool := mkPair false false;
+
+ x' : Pair Bool Bool := x @Pair {fst := true};
+
+end;

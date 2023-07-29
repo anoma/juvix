@@ -35,7 +35,8 @@ iniScoperState =
     { _scoperModulesCache = ModulesCache mempty,
       _scoperModules = mempty,
       _scoperScope = mempty,
-      _scoperSignatures = mempty
+      _scoperSignatures = mempty,
+      _scoperRecordSignatures = mempty
     }
 
 scopeCheck ::
@@ -1015,9 +1016,23 @@ checkSections sec = do
               where
                 reserveInductive :: InductiveDef 'Parsed -> Sem r' ()
                 reserveInductive d = do
-                  void (reserveInductiveSymbol d)
+                  i <- reserveInductiveSymbol d
                   constrs <- mapM (reserveConstructorSymbol d) (d ^. inductiveConstructors)
                   void (defineInductiveModule (head constrs) d)
+                  ignoreFail (registerRecord i)
+                  where
+                    registerRecord :: S.Symbol -> Sem (Fail ': r') ()
+                    registerRecord ind = do
+                      case d ^. inductiveConstructors of
+                        mkRec :| [] -> do
+                          fs <-
+                            failMaybe $
+                              mkRec
+                                ^? constructorRhs
+                                . _ConstructorRhsRecord
+                                . to mkRecordNameSignature
+                          modify' (set (scoperRecordSignatures . at (ind ^. S.nameId)) (Just fs))
+                        _ -> fail
 
             goDefinition :: Definition 'Parsed -> Sem r' (Definition 'Scoped)
             goDefinition = \case
@@ -1709,25 +1724,40 @@ checkPatternName n = do
     Just constr -> do
       registerName constr
       return (PatternScopedConstructor constr) -- the symbol is a constructor
-    Nothing -> PatternScopedVar <$> bindVariableSymbol sym -- the symbol is a variable
+    Nothing -> case n of
+      NameUnqualified {} -> PatternScopedVar <$> bindVariableSymbol sym -- the symbol is a variable
+      NameQualified {} -> nameNotInScope n
   where
     sym = snd (splitName n)
     getConstructorRef :: Sem r (Maybe S.Name)
-    getConstructorRef = lookupSymbolOfKind KNameConstructor n
+    getConstructorRef = lookupNameOfKind KNameConstructor n
 
-lookupSymbolOfKind ::
+nameNotInScope :: forall r a. Members '[Error ScoperError, State Scope] r => Name -> Sem r a
+nameNotInScope n = err >>= throw
+  where
+    err :: Sem r ScoperError
+    err = case n of
+      NameQualified q -> return (ErrQualSymNotInScope (QualSymNotInScope q))
+      NameUnqualified s -> ErrSymNotInScope . NotInScope s <$> get
+
+getNameOfKind ::
   forall r.
-  Members '[Error ScoperError, State Scope, NameIdGen, State ScoperState, InfoTableBuilder] r =>
+  Members '[Error ScoperError, State Scope, State ScoperState] r =>
+  NameKind ->
+  Name ->
+  Sem r S.Name
+getNameOfKind nameKind n = fromMaybeM (nameNotInScope n) (lookupNameOfKind nameKind n)
+
+lookupNameOfKind ::
+  forall r.
+  Members '[Error ScoperError, State Scope, State ScoperState] r =>
   NameKind ->
   Name ->
   Sem r (Maybe S.Name)
-lookupSymbolOfKind nameKind n = do
+lookupNameOfKind nameKind n = do
   entries <- mapMaybe filterEntry . fst <$> lookupQualifiedSymbol (path, sym)
   case entries of
-    [] -> case SymbolPath <$> nonEmpty path of
-      -- TODO! handle Nothing differnently for non-constructors!!!
-      Nothing -> return Nothing -- There is no constructor with such a name
-      Just pth -> throw (ErrQualSymNotInScope (QualSymNotInScope (QualifiedName pth sym)))
+    [] -> return Nothing
     [e] -> return (Just (set S.nameConcrete n e)) -- There is one constructor with such a name
     es -> throw (ErrAmbiguousSym (AmbiguousSym n (map SymbolEntry es)))
   where
@@ -1803,19 +1833,31 @@ checkExpressionAtom e = case e of
   AtomAmbiguousIterator i -> checkAmbiguousIterator i
   AtomRecordUpdate i -> pure . AtomRecordUpdate <$> checkRecordUpdate i
 
-checkRecordUpdate :: forall r. RecordUpdate 'Parsed -> Sem r (RecordUpdate 'Scoped)
+checkRecordUpdate :: forall r. Members '[Error ScoperError, State Scope, State ScoperState, Reader ScopeParameters, InfoTableBuilder, NameIdGen] r => RecordUpdate 'Parsed -> Sem r (RecordUpdate 'Scoped)
 checkRecordUpdate RecordUpdate {..} = do
-  tyName' <- fromMaybeM notInScope (lookupSymbolOfKind KNameInductive _recordUpdateTypeName)
+  tyName' <- getNameOfKind KNameInductive _recordUpdateTypeName
+  sig <- getRecordNameSignature (ScopedIden tyName')
+  fields' <- mapM (checkField sig) _recordUpdateFields
   return
     RecordUpdate
-      { _recordUpdateTypeName = ScopedIden (tyName'),
+      { _recordUpdateTypeName = ScopedIden tyName',
+        _recordUpdateFields = fields',
         _recordUpdateAtKw,
         _recordUpdateDelims
       }
   where
-    notInScope :: Sem r a
-    notInScope = do
-      throw (ErrQualSymNotInScope (QualSymNotInScope _recordUpdateTypeName))
+    -- TODO check repetitions
+    -- TODO check membership
+    -- TODO should we do this when translating to internal?
+    checkField :: RecordNameSignature -> RecordUpdateField 'Parsed -> Sem r (RecordUpdateField 'Scoped)
+    checkField _ f = do
+      value' <- checkParseExpressionAtoms (f ^. fieldUpdateValue)
+      return
+        RecordUpdateField
+          { _fieldUpdateName = f ^. fieldUpdateName,
+            _fieldUpdateAssignKw = f ^. fieldUpdateAssignKw,
+            _fieldUpdateValue = value'
+          }
 
 checkAmbiguousIterator ::
   forall r.
@@ -1852,16 +1894,27 @@ checkNamedApplication napp = do
       _argBlockArgs <- mapM checkNamedArg (b ^. argBlockArgs)
       return ArgumentBlock {..}
 
+getRecordNameSignature ::
+  forall r.
+  Members '[State ScoperState, Error ScoperError] r =>
+  ScopedIden ->
+  Sem r RecordNameSignature
+getRecordNameSignature indTy =
+  fromMaybeM err (gets (^. scoperRecordSignatures . at (indTy ^. scopedIden . S.nameId)))
+  where
+    err :: Sem r a
+    err = throw (ErrNotARecord (NotARecord indTy))
+
 getNameSignature :: Members '[State ScoperState, Error ScoperError] r => ScopedIden -> Sem r NameSignature
 getNameSignature s = do
-  sig <- maybeM (throw err) return (getNameSignatureMay s)
+  sig <- maybeM (throw err) return (lookupNameSignature (s ^. scopedIden . S.nameId))
   when (null (sig ^. nameSignatureArgs)) (throw err)
   return sig
   where
     err = ErrNoNameSignature (NoNameSignature s)
 
-getNameSignatureMay :: Members '[State ScoperState] r => ScopedIden -> Sem r (Maybe NameSignature)
-getNameSignatureMay s = gets (^. scoperSignatures . at (identifierName s ^. S.nameId))
+lookupNameSignature :: Members '[State ScoperState] r => S.NameId -> Sem r (Maybe NameSignature)
+lookupNameSignature s = gets (^. scoperSignatures . at s)
 
 checkIterator ::
   Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r =>
@@ -2033,7 +2086,7 @@ checkSyntaxDef = \case
 
 makeExpressionTable ::
   ExpressionAtoms 'Scoped -> [[P.Operator Parse Expression]]
-makeExpressionTable (ExpressionAtoms atoms _) = [appOpExplicit] : operators ++ [[functionOp]]
+makeExpressionTable (ExpressionAtoms atoms _) = [recordUpdate] : [appOpExplicit] : operators ++ [[functionOp]]
   where
     operators = mkSymbolTable idens
 
@@ -2080,13 +2133,23 @@ makeExpressionTable (ExpressionAtoms atoms _) = [appOpExplicit] : operators ++ [
                 | uid == identifierName iden ^. S.nameId -> Just iden
               _ -> Nothing
 
+    recordUpdate :: P.Operator Parse Expression
+    recordUpdate = P.Postfix (mkRecUpdate <$> P.token getRecUpdate mempty)
+      where
+        getRecUpdate :: ExpressionAtom 'Scoped -> (Maybe (RecordUpdate 'Scoped))
+        getRecUpdate = \case
+          AtomRecordUpdate u -> Just u
+          _ -> Nothing
+        mkRecUpdate :: RecordUpdate 'Scoped -> Expression -> Expression
+        mkRecUpdate u = ExpressionRecordUpdate . RecordUpdateApp u
+
     -- Application by juxtaposition.
     appOpExplicit :: P.Operator Parse Expression
     appOpExplicit = P.InfixL (return app)
       where
         app :: Expression -> Expression -> Expression
         app f x =
-          ExpressionApplication
+          ExpressionApplication $
             Application
               { _applicationFunction = f,
                 _applicationParameter = x

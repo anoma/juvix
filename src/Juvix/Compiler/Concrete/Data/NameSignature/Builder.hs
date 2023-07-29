@@ -1,5 +1,6 @@
 module Juvix.Compiler.Concrete.Data.NameSignature.Builder
   ( mkNameSignature,
+    mkRecordNameSignature,
     HasNameSignature,
     module Juvix.Compiler.Concrete.Data.NameSignature.Base,
     -- to supress unused warning
@@ -7,6 +8,7 @@ module Juvix.Compiler.Concrete.Data.NameSignature.Builder
   )
 where
 
+import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Concrete.Data.NameSignature.Base
 import Juvix.Compiler.Concrete.Data.NameSignature.Error
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
@@ -182,3 +184,11 @@ addSymbol' impl sym = do
 
 endBuild' :: Sem (Re r) a
 endBuild' = get @BuilderState >>= throw
+
+mkRecordNameSignature :: RhsRecord 'Parsed -> RecordNameSignature
+mkRecordNameSignature rhs =
+  RecordNameSignature
+    ( HashMap.fromList
+        [ (s, (s, idx)) | (Indexed idx field) <- indexFrom 0 (toList (rhs ^. rhsRecordFields)), let s = field ^. fieldName
+        ]
+    )
