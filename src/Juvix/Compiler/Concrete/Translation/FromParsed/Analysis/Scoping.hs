@@ -15,7 +15,6 @@ import Juvix.Compiler.Concrete.Data.Name qualified as N
 import Juvix.Compiler.Concrete.Data.NameSignature
 import Juvix.Compiler.Concrete.Data.Scope
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
-import Juvix.Compiler.Concrete.Extra (fromAmbiguousIterator)
 import Juvix.Compiler.Concrete.Extra qualified as P
 import Juvix.Compiler.Concrete.Gen qualified as G
 import Juvix.Compiler.Concrete.Language
@@ -1792,18 +1791,6 @@ checkExpressionAtom e = case e of
   AtomList l -> pure . AtomList <$> checkList l
   AtomIterator i -> pure . AtomIterator <$> checkIterator i
   AtomNamedApplication i -> pure . AtomNamedApplication <$> checkNamedApplication i
-  AtomAmbiguousIterator i -> checkAmbiguousIterator i
-
-checkAmbiguousIterator ::
-  forall r.
-  Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r =>
-  AmbiguousIterator ->
-  Sem r (NonEmpty (ExpressionAtom 'Scoped))
-checkAmbiguousIterator a = do
-  nm <- checkName (a ^. ambiguousIteratorName)
-  if
-      | isJust (identifierName nm ^. S.nameIterator) -> pure . AtomIterator <$> checkIterator (fromAmbiguousIterator a)
-      | otherwise -> (^. expressionAtoms) <$> checkExpressionAtoms (P.ambiguousIteratorToAtoms a)
 
 checkNamedApplication ::
   forall r.
