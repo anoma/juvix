@@ -23,7 +23,7 @@ parseHtml = do
   _htmlNonRecursive <-
     switch
       ( long "non-recursive"
-          <> help "Export imported modules recursively"
+          <> help "Don't process imported modules recursively"
       )
   _htmlOnlySource <-
     switch
