@@ -44,11 +44,16 @@ import System.Console.Haskeline
 import System.Console.Repline
 import System.Console.Repline qualified as Repline
 
-helpTxt :: MonadIO m => m ()
-helpTxt =
-  liftIO
-    ( putStrLn
-        [__i|
+printHelpTxt :: ReplOptions -> Repl ()
+printHelpTxt opts = do
+  liftIO $ do
+    putStrLn normalCmds
+    let isDev = opts ^. replIsDev
+    when isDev (putStrLn devCmds)
+  where
+    normalCmds :: Text
+    normalCmds =
+      [__i|
   EXPRESSION                Evaluate an expression in the context of the currently loaded module
   :help                     Print help text and describe options
   :load       FILE          Load a file into the REPL
@@ -60,10 +65,14 @@ helpTxt =
   :multiline                Start a multi-line input. Submit with <Ctrl-D>
   :root                     Print the current project root
   :version                  Display the Juvix version
-  :dev        DEV CMD       Command reserved for debugging
   :quit                     Exit the REPL
   |]
-    )
+
+    devCmds :: Text
+    devCmds =
+      [__i|
+  :dev        DEV CMD       Command reserved for debugging
+  |]
 
 replDefaultLoc :: Interval
 replDefaultLoc = singletonInterval (mkInitialLoc replPath)
@@ -93,9 +102,6 @@ noFileLoadedErr = replError (mkAnsiText @Text "No file loaded. Load a file using
 
 welcomeMsg :: MonadIO m => m ()
 welcomeMsg = liftIO (putStrLn [i|Juvix REPL version #{versionTag}: https://juvix.org. Run :help for help|])
-
-printHelpTxt :: String -> Repl ()
-printHelpTxt _ = helpTxt
 
 multilineCmd :: String
 multilineCmd = "multiline"
@@ -376,8 +382,8 @@ inferType input = do
   n <- replExpressionUpToTyped (strip (pack input))
   renderOutLn (Internal.ppOut (project' @GenericOptions gopts) (n ^. Internal.typedType))
 
-replCommands :: [(String, String -> Repl ())]
-replCommands = catchable ++ nonCatchable
+replCommands :: ReplOptions -> [(String, String -> Repl ())]
+replCommands opts = catchable ++ nonCatchable
   where
     nonCatchable :: [(String, String -> Repl ())]
     nonCatchable =
@@ -387,7 +393,7 @@ replCommands = catchable ++ nonCatchable
     catchable =
       map
         (second (catchAll .))
-        [ ("help", printHelpTxt),
+        [ ("help", const (printHelpTxt opts)),
           -- `multiline` is included here for auto-completion purposes only.
           -- `repline`'s `multilineCommand` logic overrides this no-op.
           (multilineCmd, const (return ())),
@@ -416,7 +422,8 @@ defaultMatcher = [(":load", fileCompleter)]
 
 optsCompleter :: WordCompleter ReplS
 optsCompleter n = do
-  let names = (":" <>) . fst <$> replCommands
+  opts <- Reader.asks (^. replOptions)
+  let names = (":" <>) . fst <$> replCommands opts
   return (filter (isPrefixOf n) names)
 
 replBanner :: MultiLine -> Repl String
@@ -477,7 +484,7 @@ runCommand opts = do
               finaliser = replFinaliser,
               tabComplete = replTabComplete,
               command = replCommand opts,
-              options = replCommands,
+              options = replCommands opts,
               banner = replBanner
             }
   globalOptions <- askGlobalOptions
