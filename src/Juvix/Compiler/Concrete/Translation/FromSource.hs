@@ -596,6 +596,7 @@ recordUpdateField = do
   _fieldUpdateName <- symbol
   _fieldUpdateAssignKw <- Irrelevant <$> kw kwAssign
   _fieldUpdateValue <- parseExpressionAtoms
+  let _fieldUpdateArgIx = ()
   return RecordUpdateField {..}
 
 recordUpdate :: Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r => ParsecS r (RecordUpdate 'Parsed)
@@ -606,6 +607,7 @@ recordUpdate = do
   _recordUpdateFields <- P.sepEndBy1 recordUpdateField semicolon
   r <- kw delimBraceR
   let _recordUpdateDelims = Irrelevant (l, r)
+      _recordUpdateExtra = Irrelevant ()
   return RecordUpdate {..}
 
 expressionAtom :: Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r => ParsecS r (ExpressionAtom 'Parsed)

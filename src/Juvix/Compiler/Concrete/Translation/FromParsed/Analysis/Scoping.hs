@@ -1019,10 +1019,10 @@ checkSections sec = do
                   i <- reserveInductiveSymbol d
                   constrs <- mapM (reserveConstructorSymbol d) (d ^. inductiveConstructors)
                   void (defineInductiveModule (head constrs) d)
-                  ignoreFail (registerRecord i)
+                  ignoreFail (registerRecord (head constrs) i)
                   where
-                    registerRecord :: S.Symbol -> Sem (Fail ': r') ()
-                    registerRecord ind = do
+                    registerRecord :: S.Symbol -> S.Symbol -> Sem (Fail ': r') ()
+                    registerRecord mconstr ind = do
                       case d ^. inductiveConstructors of
                         mkRec :| [] -> do
                           fs <-
@@ -1031,7 +1031,12 @@ checkSections sec = do
                                 ^? constructorRhs
                                 . _ConstructorRhsRecord
                                 . to mkRecordNameSignature
-                          modify' (set (scoperRecordSignatures . at (ind ^. S.nameId)) (Just fs))
+                          let info =
+                                RecordInfo
+                                  { _recordInfoSignature = fs,
+                                    _recordInfoConstructor = mconstr
+                                  }
+                          modify' (set (scoperRecordSignatures . at (ind ^. S.nameId)) (Just info))
                         _ -> fail
 
             goDefinition :: Definition 'Parsed -> Sem r' (Definition 'Scoped)
@@ -1837,29 +1842,39 @@ checkRecordUpdate :: forall r. Members '[Error ScoperError, State Scope, State S
 checkRecordUpdate RecordUpdate {..} = do
   tyName' <- getNameOfKind KNameInductive _recordUpdateTypeName
   registerName tyName'
-  sig <- getRecordNameSignature (ScopedIden tyName')
+  info <- getRecordInfo (ScopedIden tyName')
+  let sig = info ^. recordInfoSignature
   fields' <- withLocalScope $ mapM (checkField sig) _recordUpdateFields
+  let extra' =
+        RecordUpdateExtra
+          { _recordUpdateExtraSignature = sig,
+            _recordUpdateExtraConstructor = info ^. recordInfoConstructor
+          }
   return
     RecordUpdate
       { _recordUpdateTypeName = ScopedIden tyName',
         _recordUpdateFields = fields',
+        _recordUpdateExtra = Irrelevant extra',
         _recordUpdateAtKw,
         _recordUpdateDelims
       }
   where
-    -- TODO check repetitions? done by bindvariablesymbol
-    -- TODO check membership
-    -- TODO should we do this when translating to internal?
+    -- TODO check repetitions? done by bindvariablesymbol, but error msg is not that good
     checkField :: RecordNameSignature -> RecordUpdateField 'Parsed -> Sem r (RecordUpdateField 'Scoped)
-    checkField _ f = do
+    checkField sig f = do
       name' <- bindVariableSymbol (f ^. fieldUpdateName)
       value' <- checkParseExpressionAtoms (f ^. fieldUpdateValue)
+      idx' <- maybe (throw unexpectedField) return (sig ^? recordNames . at (f ^. fieldUpdateName) . _Just . _2)
       return
         RecordUpdateField
           { _fieldUpdateName = name',
+            _fieldUpdateArgIx = idx',
             _fieldUpdateAssignKw = f ^. fieldUpdateAssignKw,
             _fieldUpdateValue = value'
           }
+      where
+        unexpectedField :: ScoperError
+        unexpectedField = error "TODO: unexpected field"
 
 checkAmbiguousIterator ::
   forall r.
@@ -1896,12 +1911,12 @@ checkNamedApplication napp = do
       _argBlockArgs <- mapM checkNamedArg (b ^. argBlockArgs)
       return ArgumentBlock {..}
 
-getRecordNameSignature ::
+getRecordInfo ::
   forall r.
   Members '[State ScoperState, Error ScoperError] r =>
   ScopedIden ->
-  Sem r RecordNameSignature
-getRecordNameSignature indTy =
+  Sem r RecordInfo
+getRecordInfo indTy =
   fromMaybeM err (gets (^. scoperRecordSignatures . at (indTy ^. scopedIden . S.nameId)))
   where
     err :: Sem r a
