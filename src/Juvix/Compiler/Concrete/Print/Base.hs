@@ -600,9 +600,11 @@ instance PrettyPrint Expression where
     ExpressionNamedApplication i -> ppCode i
 
 instance PrettyPrint (WithSource Pragmas) where
-  ppCode pragma =
-    let txt = pretty (Str.pragmasStart <> pragma ^. withSourceText <> Str.pragmasEnd)
-     in annotated AnnComment (noLoc txt) <> line
+  ppCode pragma = do
+    b <- asks (^. optPrintPragmas)
+    when b $
+      let txt = pretty (Str.pragmasStart <> pragma ^. withSourceText <> Str.pragmasEnd)
+       in annotated AnnComment (noLoc txt) <> line
 
 instance PrettyPrint (WithSource IteratorAttribs) where
   ppCode = annotated AnnComment . braces . noLoc . pretty . (^. withSourceText)

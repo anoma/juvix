@@ -493,7 +493,9 @@ goTypeSignature sig = do
     uid :: NameId
     uid = sig ^. sigName . S.nameId
     typeSig :: Sem r Html
-    typeSig = ppCodeHtml defaultOptions (set sigDoc Nothing sig)
+    typeSig = ppCodeHtml opts (set sigDoc Nothing sig)
+    opts :: Options
+    opts = set optPrintPragmas False defaultOptions
 
 sourceAndSelfLink :: (Members '[Reader HtmlOptions] r) => TopModulePath -> NameId -> Sem r Html
 sourceAndSelfLink tmp name = do
