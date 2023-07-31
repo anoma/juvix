@@ -354,5 +354,10 @@ tests =
       "Test059: Builtin list"
       $(mkRelDir ".")
       $(mkRelFile "test059.juvix")
-      $(mkRelFile "out/test059.out")
+      $(mkRelFile "out/test059.out"),
+    posTest
+      "Test060: Record update"
+      $(mkRelDir ".")
+      $(mkRelFile "test060.juvix")
+      $(mkRelFile "out/test060.out")
   ]

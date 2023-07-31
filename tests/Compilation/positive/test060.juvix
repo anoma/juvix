@@ -1,0 +1,24 @@
+-- record updates
+module test060;
+
+import Stdlib.Data.Nat open;
+import Stdlib.System.IO open;
+
+type Triple (A B C : Type) :=
+  | mkTriple {
+      fst : A;
+      snd : B;
+      thd : C;
+    };
+
+main : Triple Nat Nat Nat;
+main :=
+  let
+    p : Triple Nat Nat Nat := mkTriple 2 2 2;
+    p' :
+      Triple Nat Nat Nat :=
+        p @Triple{
+          fst := fst + 1;
+          snd := snd * 3
+        };
+  in p';
