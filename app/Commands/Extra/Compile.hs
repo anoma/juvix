@@ -175,7 +175,7 @@ clangZKLLVMCompile inputFile o = do
   if
       | o ^. compileCOutput ->
           copyFile inputFile outputFile'
-      | o ^. compileAssembly ->
+      | o ^. compileAssembly || o ^. compilePreprocess ->
           runClang (zkllvmArgs buildDir o outputFile' inputFile)
       | otherwise -> do
           let tempFile = buildDir <//> $(mkRelFile "program.ll")
@@ -258,10 +258,16 @@ zkllvmArgs buildDir o outfile inputFile =
          "-target",
          "assigner",
          "-Xclang",
-         "-no-opaque-pointers",
-         "-emit-llvm",
-         "-S",
-         "-Izkllvm/libs/stdlib/libc/include",
+         "-no-opaque-pointers"
+       ]
+    ++ ( if
+             | o ^. compilePreprocess -> []
+             | otherwise ->
+                 [ "-emit-llvm",
+                   "-S"
+                 ]
+       )
+    ++ [ "-Izkllvm/libs/stdlib/libc/include",
          toFilePath inputFile
        ]
   where
