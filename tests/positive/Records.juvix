@@ -36,11 +36,13 @@ open Pair;
 
 p4 {A : Type} : Pair A T -> A := fst;
 
-type Bool := false | true;
+type Bool :=
+  | false
+  | true;
 
 module Update;
- x : Pair Bool Bool := mkPair false false;
+  x : Pair Bool Bool := mkPair false false;
 
- x' : Pair Bool Bool := x @Pair {fst := true};
-
+  x' : Pair Bool Bool := x @Pair{fst := fst true};
+  -- x' : Pair Bool Bool := λ {(Pair fst0 snd1) := Pair (val1 [ghost ↦ fst0]) (val2)} x @Pair{fst := true};
 end;

@@ -273,7 +273,7 @@ instance SingI s => PrettyPrint (NamedApplication s) where
 
 instance SingI s => PrettyPrint (RecordUpdateField s) where
   ppCode RecordUpdateField {..} =
-    ppCode _fieldUpdateName <+> ppCode _fieldUpdateAssignKw <+> ppExpressionType _fieldUpdateValue
+    ppSymbolType _fieldUpdateName <+> ppCode _fieldUpdateAssignKw <+> ppExpressionType _fieldUpdateValue
 
 instance SingI s => PrettyPrint (RecordUpdate s) where
   ppCode RecordUpdate {..} = do

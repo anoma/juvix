@@ -22,7 +22,7 @@ import Juvix.Compiler.Concrete.Data.Literal
 import Juvix.Compiler.Concrete.Data.ModuleIsTop
 import Juvix.Compiler.Concrete.Data.Name
 import Juvix.Compiler.Concrete.Data.NameRef
-import Juvix.Compiler.Concrete.Data.NameSignature.Base (NameSignature)
+import Juvix.Compiler.Concrete.Data.NameSignature.Base
 import Juvix.Compiler.Concrete.Data.NameSpace
 import Juvix.Compiler.Concrete.Data.PublicAnn
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
@@ -45,6 +45,16 @@ type NameSpaceEntryType :: NameSpace -> GHC.Type
 type family NameSpaceEntryType s = res | res -> s where
   NameSpaceEntryType 'NameSpaceSymbols = SymbolEntry
   NameSpaceEntryType 'NameSpaceModules = ModuleSymbolEntry
+
+type RecordUpdateExtraType :: Stage -> GHC.Type
+type family RecordUpdateExtraType s = res | res -> s where
+  RecordUpdateExtraType 'Parsed = ()
+  RecordUpdateExtraType 'Scoped = RecordUpdateExtra
+
+type FieldUpdateArgIxType :: Stage -> GHC.Type
+type family FieldUpdateArgIxType s = res | res -> s where
+  FieldUpdateArgIxType 'Parsed = ()
+  FieldUpdateArgIxType 'Scoped = Int
 
 type SymbolType :: Stage -> GHC.Type
 type family SymbolType s = res | res -> s where
@@ -406,7 +416,8 @@ deriving stock instance Ord (ConstructorDef 'Parsed)
 deriving stock instance Ord (ConstructorDef 'Scoped)
 
 data RecordUpdateField (s :: Stage) = RecordUpdateField
-  { _fieldUpdateName :: Symbol,
+  { _fieldUpdateName :: SymbolType s,
+    _fieldUpdateArgIx :: FieldUpdateArgIxType s,
     _fieldUpdateAssignKw :: Irrelevant (KeywordRef),
     _fieldUpdateValue :: ExpressionType s
   }
@@ -1271,10 +1282,17 @@ deriving stock instance Ord (ArgumentBlock 'Parsed)
 
 deriving stock instance Ord (ArgumentBlock 'Scoped)
 
+data RecordUpdateExtra = RecordUpdateExtra
+  { _recordUpdateExtraConstructor :: S.Symbol,
+    _recordUpdateExtraSignature :: RecordNameSignature
+  }
+  deriving stock (Show)
+
 data RecordUpdate (s :: Stage) = RecordUpdate
   { _recordUpdateAtKw :: Irrelevant KeywordRef,
     _recordUpdateDelims :: Irrelevant (KeywordRef, KeywordRef),
     _recordUpdateTypeName :: IdentifierType s,
+    _recordUpdateExtra :: Irrelevant (RecordUpdateExtraType s),
     _recordUpdateFields :: NonEmpty (RecordUpdateField s)
   }
 
@@ -1485,6 +1503,7 @@ newtype ModuleIndex = ModuleIndex
   }
 
 makeLenses ''PatternArg
+makeLenses ''RecordUpdateExtra
 makeLenses ''RecordUpdate
 makeLenses ''RecordUpdateApp
 makeLenses ''RecordUpdateField
@@ -1703,7 +1722,7 @@ instance SingI s => HasLoc (NamedApplication s) where
   getLoc NamedApplication {..} = getLocIdentifierType _namedAppName <> getLoc (last _namedAppArgs)
 
 instance SingI s => HasLoc (RecordUpdateField s) where
-  getLoc f = getLoc (f ^. fieldUpdateName) <> getLocExpressionType (f ^. fieldUpdateValue)
+  getLoc f = getLocSymbolType (f ^. fieldUpdateName) <> getLocExpressionType (f ^. fieldUpdateValue)
 
 instance SingI s => HasLoc (RecordUpdate s) where
   getLoc r = getLoc (r ^. recordUpdateAtKw) <> getLocSpan (r ^. recordUpdateFields)

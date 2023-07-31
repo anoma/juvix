@@ -1836,8 +1836,9 @@ checkExpressionAtom e = case e of
 checkRecordUpdate :: forall r. Members '[Error ScoperError, State Scope, State ScoperState, Reader ScopeParameters, InfoTableBuilder, NameIdGen] r => RecordUpdate 'Parsed -> Sem r (RecordUpdate 'Scoped)
 checkRecordUpdate RecordUpdate {..} = do
   tyName' <- getNameOfKind KNameInductive _recordUpdateTypeName
+  registerName tyName'
   sig <- getRecordNameSignature (ScopedIden tyName')
-  fields' <- mapM (checkField sig) _recordUpdateFields
+  fields' <- withLocalScope $ mapM (checkField sig) _recordUpdateFields
   return
     RecordUpdate
       { _recordUpdateTypeName = ScopedIden tyName',
@@ -1846,15 +1847,16 @@ checkRecordUpdate RecordUpdate {..} = do
         _recordUpdateDelims
       }
   where
-    -- TODO check repetitions
+    -- TODO check repetitions? done by bindvariablesymbol
     -- TODO check membership
     -- TODO should we do this when translating to internal?
     checkField :: RecordNameSignature -> RecordUpdateField 'Parsed -> Sem r (RecordUpdateField 'Scoped)
     checkField _ f = do
+      name' <- bindVariableSymbol (f ^. fieldUpdateName)
       value' <- checkParseExpressionAtoms (f ^. fieldUpdateValue)
       return
         RecordUpdateField
-          { _fieldUpdateName = f ^. fieldUpdateName,
+          { _fieldUpdateName = name',
             _fieldUpdateAssignKw = f ^. fieldUpdateAssignKw,
             _fieldUpdateValue = value'
           }
