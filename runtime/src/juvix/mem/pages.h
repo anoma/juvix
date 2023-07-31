@@ -3,6 +3,8 @@
 
 #include <juvix/defs.h>
 
+#ifndef SIMPLE_HEAP
+
 extern size_t juvix_max_allocated_pages_num;
 extern size_t juvix_allocated_pages_num;
 
@@ -27,5 +29,7 @@ static inline bool is_next_page(void *p, uint n) {
 static inline void *page_start(void *p) {
     return (void *)((uintptr_t)p & ~(uintptr_t)PAGE_MASK);
 }
+
+#endif  // ndef SIMPLE_HEAP
 
 #endif

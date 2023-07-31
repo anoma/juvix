@@ -7,6 +7,8 @@
 #include <juvix/object/object.h>
 #include <juvix/object/print.h>
 
+#ifndef ARCH_ZKLLVM
+
 static size_t print_long(char *buf, size_t n, long_t x) {
     ASSERT(n >= 1);
     if (x == 0) {
@@ -301,3 +303,5 @@ void printout(word_t x) {
     print_msg(buf);
     free_strbuf(buf);
 }
+
+#endif  // ndef ARCH_ZKLLVM

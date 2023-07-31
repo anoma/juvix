@@ -6,6 +6,15 @@
 
 #define DECL_STACK_POINTER register word_t *juvix_stack_pointer
 
+#ifdef SIMPLE_STACK
+
+word_t *stack_init();
+
+#define STACK_ENTER(n)
+#define STACK_LEAVE
+
+#else
+
 // The following functions return the stack pointer
 word_t *stack_init();
 word_t *stack_grow(word_t *sp);
@@ -25,6 +34,8 @@ word_t *stack_shrink(word_t *sp);
             juvix_stack_pointer = stack_shrink(juvix_stack_pointer); \
         }                                                            \
     } while (0)
+
+#endif  // not SIMPLE_STACK
 
 #define STACK_PUSH(val) (*juvix_stack_pointer++ = (word_t)(val))
 #define STACK_POP(var) (var = *--juvix_stack_pointer)

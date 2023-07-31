@@ -28,8 +28,6 @@ fromReg target debug tab =
     code = case target of
       TargetCZKLLVM ->
         [ includeApi,
-          constrInfo,
-          functionInfo,
           Verbatim "__attribute__((circuit))",
           circuitFunction
         ]
@@ -143,6 +141,7 @@ fromReg target debug tab =
     mainBody =
       argDecls
         ++ prologueDecls
+        ++ infoDecls
         ++ jumpMainFunction
         ++ juvixFunctions
         ++ epilogueDecls
@@ -199,12 +198,15 @@ fromReg target debug tab =
             "JUVIX_PROLOGUE"
             [integer (info ^. Reg.extraInfoMaxArgsNum + info ^. Reg.extraInfoMaxCallClosuresArgsNum)]
       ]
-        ++ makeCStrings
-        ++ [ stmtAssign (ExpressionVar "juvix_constrs_num") (integer (info ^. Reg.extraInfoConstrsNum)),
-             stmtAssign (ExpressionVar "juvix_constr_info") (ExpressionVar "juvix_constr_info_array"),
-             stmtAssign (ExpressionVar "juvix_functions_num") (integer (info ^. Reg.extraInfoFunctionsNum)),
-             stmtAssign (ExpressionVar "juvix_function_info") (ExpressionVar "juvix_function_info_array")
-           ]
+        : makeCStrings
+
+    infoDecls :: [Statement]
+    infoDecls =
+      [ stmtAssign (ExpressionVar "juvix_constrs_num") (integer (info ^. Reg.extraInfoConstrsNum)),
+        stmtAssign (ExpressionVar "juvix_constr_info") (ExpressionVar "juvix_constr_info_array"),
+        stmtAssign (ExpressionVar "juvix_functions_num") (integer (info ^. Reg.extraInfoFunctionsNum)),
+        stmtAssign (ExpressionVar "juvix_function_info") (ExpressionVar "juvix_function_info_array")
+      ]
 
     epilogueDecls :: [Statement]
     epilogueDecls = [StatementExpr $ macroVar "JUVIX_EPILOGUE"]

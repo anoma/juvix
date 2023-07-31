@@ -3,6 +3,8 @@
 #include <juvix/mem/gens.h>
 #include <juvix/opts.h>
 
+#ifndef SIMPLE_HEAP
+
 generation_t *alloc_youngest_generation;
 
 void alloc_init() {
@@ -47,3 +49,5 @@ word_t *alloc(size_t n) {
            alloc_youngest_generation->memory->free_end);
     return ptr;
 }
+
+#endif  // ndef SIMPLE_HEAP

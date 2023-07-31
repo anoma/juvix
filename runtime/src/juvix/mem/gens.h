@@ -4,6 +4,8 @@
 #include <juvix/defs.h>
 #include <juvix/limits.h>
 
+#ifndef SIMPLE_HEAP
+
 typedef struct Pool {
     struct Pool *next;
     void *data;
@@ -38,5 +40,7 @@ void gen_free(generation_t *gen);
 
 // Merge the given generation with the previous one.
 void gen_merge(generation_t *gen);
+
+#endif  // ndef SIMPLE_HEAP
 
 #endif

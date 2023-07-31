@@ -2,6 +2,8 @@
 #include <juvix/mem/pages.h>
 #include <juvix/opts.h>
 
+#ifndef SIMPLE_HEAP
+
 size_t juvix_max_allocated_pages_num = 0;
 size_t juvix_allocated_pages_num = 0;
 
@@ -27,14 +29,6 @@ void pfree(void *ptr, size_t n) {
     juvix_allocated_pages_num -= n;
     free(ptr);
 }
-
-#elif defined(ARCH_ZKLLVM)
-
-#include <stdlib.h>
-
-void *palloc(size_t n) { return malloc(n * PAGE_SIZE); }
-
-void pfree(void *ptr, size_t n) { free(ptr); }
 
 #elif defined(ARCH_WASM32)
 
@@ -134,3 +128,5 @@ void pfree(void *ptr, size_t n) {
 #else
 #error "Unsupported configuration"
 #endif
+
+#endif  // ndef SIMPLE_HEAP

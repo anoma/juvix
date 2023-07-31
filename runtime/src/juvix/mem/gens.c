@@ -2,6 +2,8 @@
 #include <juvix/mem/gens.h>
 #include <juvix/mem/pages.h>
 
+#ifndef SIMPLE_HEAP
+
 #define MAX_GENERATIONS 32
 
 static generation_t gens_pool[MAX_GENERATIONS];
@@ -99,3 +101,5 @@ void gen_merge(generation_t *gen) {
     gen->next = next_free_gen;
     next_free_gen = gen;
 }
+
+#endif  // ndef SIMPLE_HEAP

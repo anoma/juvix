@@ -4,6 +4,8 @@
 #include <juvix/defs.h>
 #include <juvix/limits.h>
 
+#ifndef ARCH_ZKLLVM
+
 typedef enum { assoc_left, assoc_right, assoc_none } assoc_t;
 
 typedef struct {
@@ -34,5 +36,7 @@ extern size_t juvix_functions_num;
 extern size_t juvix_constrs_num;
 
 extern fixity_t app_fixity;
+
+#endif  // ndef ARCH_ZKLLVM
 
 #endif

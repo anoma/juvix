@@ -3,11 +3,15 @@
 
 #include <juvix/defs.h>
 
+#ifndef SIMPLE_HEAP
+
 // How many pages should be requested from the OS at once when we've run out of
 // memory?
 extern size_t opt_heap_grow_pages;
 // The minimum number of pages in a generation.
 extern size_t opt_generation_min_pages;
+
+#endif  // ndef SIMPLE_HEAP
 
 /*******************************/
 /* Default values */

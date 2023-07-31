@@ -11,9 +11,19 @@
     DECL_MEMORY_POINTER; \
     DECL_STACK_POINTER
 
+#ifdef SIMPLE_HEAP
+
+#define MEM_INIT  \
+    alloc_init(); \
+    juvix_stack_pointer = stack_init()
+
+#else
+
 #define MEM_INIT                                   \
     alloc_init();                                  \
     juvix_memory_pointer = alloc_memory_pointer(); \
     juvix_stack_pointer = stack_init()
+
+#endif
 
 #endif

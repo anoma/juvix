@@ -11,6 +11,27 @@
 #include <juvix/mem/gens.h>
 #include <juvix/mem/pages.h>
 
+#ifdef SIMPLE_HEAP
+
+#include <juvix/mem/xmalloc.h>
+
+#define DECL_MEMORY_POINTER
+
+static inline void alloc_init() {}
+static inline void alloc_cleanup() {}
+
+#define SAVE_MEMORY_POINTERS
+#define RESTORE_MEMORY_POINTERS
+
+#define PREALLOC(n, SAVE, RESTORE)
+
+// Allocate an n-word object and assign it to `ptr`.
+#define ALLOC(ptr, n) (ptr = alloc(n))
+
+static inline word_t *alloc(size_t n) { return xmalloc(n * sizeof(word_t)); }
+
+#else
+
 #define DECL_MEMORY_POINTER register word_t *juvix_memory_pointer
 
 extern generation_t *alloc_youngest_generation;
@@ -57,5 +78,7 @@ static inline void alloc_save_memory_pointer(word_t *ptr) {
 // beforehand and restore them afterwards (with SAVE_MEMORY_POINTERS and
 // RESTORE_MEMORY_POINTERS).
 word_t *alloc(size_t n);
+
+#endif  // not SIMPLE_HEAP
 
 #endif

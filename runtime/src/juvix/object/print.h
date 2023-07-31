@@ -3,6 +3,8 @@
 
 #include <juvix/defs.h>
 
+#ifndef ARCH_ZKLLVM
+
 // Returns the number of characters printed. If `buf` was big enough then the
 // return value is strictly less than `n` and the string in `buf` is
 // 0-terminated. Otherwise, the return value is equal to `n`.
@@ -13,5 +15,7 @@ void free_strbuf(char *buf);
 
 // Prints using print_msg
 void printout(word_t x);
+
+#endif  // ndef ARCH_ZKLLVM
 
 #endif

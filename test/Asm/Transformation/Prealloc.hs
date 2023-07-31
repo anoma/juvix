@@ -22,5 +22,6 @@ liftTest _testEval =
     opts =
       Options
         { _optDebug = True,
-          _optLimits = getLimits TargetCWasm32Wasi True
+          _optLimits = getLimits TargetCWasm32Wasi True,
+          _optTarget = TargetCWasm32Wasi
         }

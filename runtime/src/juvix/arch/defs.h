@@ -125,4 +125,10 @@ typedef void *label_addr_t;
     "The \"labels as values\" compiler extension is required (use GCC or clang)."
 #endif
 
+#ifdef ARCH_ZKLLVM
+#define SIMPLE_HEAP
+#define SIMPLE_STACK
+#define SIMPLE_STACK_SIZE (64 * 1024)
+#endif
+
 #endif
