@@ -158,11 +158,6 @@ data Definition (s :: Stage)
   | DefinitionTypeSignature (TypeSignature s)
   | DefinitionProjectionDef (ProjectionDef s)
 
-_DefinitionInductive :: Traversal' (Definition s) (InductiveDef s)
-_DefinitionInductive f = \case
-  DefinitionInductive i -> DefinitionInductive <$> f i
-  d -> pure d
-
 data NonDefinition (s :: Stage)
   = NonDefinitionImport (Import s)
   | NonDefinitionModule (Module s 'ModuleLocal)
