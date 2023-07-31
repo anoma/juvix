@@ -614,6 +614,9 @@ instance PrettyPrint IteratorSyntaxDef where
 instance PrettyPrint RecordUpdateApp where
   ppCode = apeHelper
 
+instance PrettyPrint ParensRecordUpdate where
+  ppCode = parens . ppCode . (^. parensRecordUpdate)
+
 instance PrettyPrint Expression where
   ppCode = \case
     ExpressionIdentifier n -> ppCode n
@@ -633,6 +636,7 @@ instance PrettyPrint Expression where
     ExpressionIterator i -> ppCode i
     ExpressionNamedApplication i -> ppCode i
     ExpressionRecordUpdate i -> ppCode i
+    ExpressionParensRecordUpdate i -> ppCode i
 
 instance PrettyPrint (WithSource Pragmas) where
   ppCode pragma = do

@@ -807,6 +807,7 @@ goExpression = \case
   ExpressionIterator i -> goIterator i
   ExpressionNamedApplication i -> goNamedApplication i
   ExpressionRecordUpdate i -> goRecordUpdateApp i
+  ExpressionParensRecordUpdate i -> Internal.ExpressionLambda <$> goRecordUpdate (i ^. parensRecordUpdate)
   where
     goNamedApplication :: Concrete.NamedApplication 'Scoped -> Sem r Internal.Expression
     goNamedApplication = runNamedArguments >=> goExpression
@@ -832,25 +833,25 @@ goExpression = \case
 
         mkArgs :: [Indexed Internal.VarName] -> Sem r [Internal.Expression]
         mkArgs = execOutputList . go (uncurry Indexed <$> IntMap.toAscList fieldMap)
-         where
-         go :: [Indexed (RecordUpdateField 'Scoped)] -> [Indexed Internal.VarName] -> Sem (Output Internal.Expression ': r) ()
-         go fields = \case
-           [] -> return ()
-           Indexed idx var : vars' -> case getArg idx of
-               Nothing -> do
-                 output (Internal.toExpression var)
-                 go fields vars'
-               Just (arg, fields') -> do
-                 let fieldVar = goSymbol (arg ^. fieldUpdateName)
-                 val' <- goExpression (arg ^. fieldUpdateValue)
-                 output (Internal.renameVar fieldVar var val')
-                 go fields' vars'
-           where
-           getArg :: Int -> Maybe (RecordUpdateField 'Scoped, [Indexed (RecordUpdateField 'Scoped)])
-           getArg idx = do
-             Indexed fidx arg :| fs <- nonEmpty fields
-             guard (idx == fidx)
-             return (arg, fs)
+          where
+            go :: [Indexed (RecordUpdateField 'Scoped)] -> [Indexed Internal.VarName] -> Sem (Output Internal.Expression ': r) ()
+            go fields = \case
+              [] -> return ()
+              Indexed idx var : vars' -> case getArg idx of
+                Nothing -> do
+                  output (Internal.toExpression var)
+                  go fields vars'
+                Just (arg, fields') -> do
+                  let fieldVar = goSymbol (arg ^. fieldUpdateName)
+                  val' <- goExpression (arg ^. fieldUpdateValue)
+                  output (Internal.renameVar fieldVar var val')
+                  go fields' vars'
+              where
+                getArg :: Int -> Maybe (RecordUpdateField 'Scoped, [Indexed (RecordUpdateField 'Scoped)])
+                getArg idx = do
+                  Indexed fidx arg :| fs <- nonEmpty fields
+                  guard (idx == fidx)
+                  return (arg, fs)
 
         mkClause :: Sem r Internal.LambdaClause
         mkClause = do

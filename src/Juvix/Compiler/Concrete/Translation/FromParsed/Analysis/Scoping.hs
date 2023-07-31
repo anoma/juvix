@@ -2019,12 +2019,15 @@ checkParens ::
   ExpressionAtoms 'Parsed ->
   Sem r Expression
 checkParens e@(ExpressionAtoms as _) = case as of
-  AtomIdentifier s :| [] -> do
-    scopedId <- checkName s
-    let scopedIdenNoFix = over scopedIden (set S.nameFixity Nothing) scopedId
-    return (ExpressionParensIdentifier scopedIdenNoFix)
-  AtomIterator i :| [] -> ExpressionIterator . set iteratorParens True <$> checkIterator i
-  AtomCase c :| [] -> ExpressionCase . set caseParens True <$> checkCase c
+  p :| [] -> case p of
+    AtomIdentifier s -> do
+      scopedId <- checkName s
+      let scopedIdenNoFix = over scopedIden (set S.nameFixity Nothing) scopedId
+      return (ExpressionParensIdentifier scopedIdenNoFix)
+    AtomIterator i -> ExpressionIterator . set iteratorParens True <$> checkIterator i
+    AtomCase c -> ExpressionCase . set caseParens True <$> checkCase c
+    AtomRecordUpdate u -> ExpressionParensRecordUpdate . ParensRecordUpdate <$> checkRecordUpdate u
+    _ -> checkParseExpressionAtoms e
   _ -> checkParseExpressionAtoms e
 
 checkExpressionAtoms ::

@@ -954,6 +954,7 @@ data Expression
   | ExpressionFunction (Function 'Scoped)
   | ExpressionHole (HoleType 'Scoped)
   | ExpressionRecordUpdate RecordUpdateApp
+  | ExpressionParensRecordUpdate ParensRecordUpdate
   | ExpressionBraces (WithLoc Expression)
   | ExpressionIterator (Iterator 'Scoped)
   | ExpressionNamedApplication (NamedApplication 'Scoped)
@@ -1288,6 +1289,11 @@ data RecordUpdateExtra = RecordUpdateExtra
   }
   deriving stock (Show)
 
+newtype ParensRecordUpdate = ParensRecordUpdate
+  { _parensRecordUpdate :: RecordUpdate 'Scoped
+  }
+  deriving stock (Show, Eq, Ord)
+
 data RecordUpdate (s :: Stage) = RecordUpdate
   { _recordUpdateAtKw :: Irrelevant KeywordRef,
     _recordUpdateDelims :: Irrelevant (KeywordRef, KeywordRef),
@@ -1503,6 +1509,7 @@ newtype ModuleIndex = ModuleIndex
   }
 
 makeLenses ''PatternArg
+makeLenses ''ParensRecordUpdate
 makeLenses ''RecordUpdateExtra
 makeLenses ''RecordUpdate
 makeLenses ''RecordUpdateApp
@@ -1609,6 +1616,7 @@ instance HasAtomicity Expression where
     ExpressionIterator i -> atomicity i
     ExpressionNamedApplication i -> atomicity i
     ExpressionRecordUpdate {} -> Aggregate updateFixity
+    ExpressionParensRecordUpdate {} -> Atom
 
 expressionAtomicity :: forall s. SingI s => ExpressionType s -> Atomicity
 expressionAtomicity e = case sing :: SStage s of
@@ -1730,6 +1738,9 @@ instance SingI s => HasLoc (RecordUpdate s) where
 instance HasLoc RecordUpdateApp where
   getLoc r = getLoc (r ^. recordAppExpression) <> getLoc (r ^. recordAppUpdate)
 
+instance HasLoc ParensRecordUpdate where
+  getLoc = getLoc . (^. parensRecordUpdate)
+
 instance HasLoc Expression where
   getLoc = \case
     ExpressionIdentifier i -> getLoc i
@@ -1749,6 +1760,7 @@ instance HasLoc Expression where
     ExpressionIterator i -> getLoc i
     ExpressionNamedApplication i -> getLoc i
     ExpressionRecordUpdate i -> getLoc i
+    ExpressionParensRecordUpdate i -> getLoc i
 
 getLocIdentifierType :: forall s. SingI s => IdentifierType s -> Interval
 getLocIdentifierType e = case sing :: SStage s of
@@ -2072,6 +2084,7 @@ instance IsApe Expression ApeLeaf where
     ExpressionFunction a -> toApe a
     ExpressionNamedApplication a -> toApe a
     ExpressionRecordUpdate a -> toApe a
+    ExpressionParensRecordUpdate {} -> leaf
     ExpressionParensIdentifier {} -> leaf
     ExpressionIdentifier {} -> leaf
     ExpressionList {} -> leaf

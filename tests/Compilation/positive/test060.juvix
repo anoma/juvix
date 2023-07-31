@@ -21,4 +21,5 @@ main :=
           fst := fst + 1;
           snd := snd * 3
         };
-  in p';
+    f : Triple Nat Nat Nat -> Triple Nat Nat Nat := (@Triple {fst := fst * 10});
+  in f p';
