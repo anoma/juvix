@@ -129,6 +129,7 @@ typedef void *label_addr_t;
 #define SIMPLE_HEAP
 #define SIMPLE_STACK
 #define SIMPLE_STACK_SIZE (64 * 1024)
+#define SIMPLE_INTS
 #endif
 
 #endif

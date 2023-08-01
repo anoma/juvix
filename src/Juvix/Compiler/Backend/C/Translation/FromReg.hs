@@ -180,7 +180,7 @@ fromReg target debug tab =
         ++ jumpMainFunction
         ++ juvixFunctions
         ++ epilogueDecls
-        ++ [StatementReturn (Just (macroCall "get_unboxed_int" [ExpressionVar "juvix_result"]))]
+        ++ [StatementReturn (Just (macroCall "get_smallint" [ExpressionVar "juvix_result"]))]
 
     circuitArgAssigns :: [Statement]
     circuitArgAssigns = map mkAssign [0 .. mainArgsNum - 1]
