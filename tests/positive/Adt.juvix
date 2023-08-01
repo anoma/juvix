@@ -10,3 +10,18 @@ type Pair (A B : Type) :=
 type Nat :=
   | zero
   | suc Nat;
+
+c1 : Bool;
+c1 := true;
+
+c2 : Bool;
+c2 := false;
+
+c3 : Pair Bool Bool;
+c3 := mkPair true false;
+
+c4 : Nat;
+c4 := zero;
+
+c5 : Nat;
+c5 := suc zero;
