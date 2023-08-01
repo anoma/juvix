@@ -423,6 +423,22 @@ deriving stock instance Ord (RecordField 'Parsed)
 
 deriving stock instance Ord (RecordField 'Scoped)
 
+newtype RhsAdt (s :: Stage) = RhsAdt
+  { _rhsAdtArguments :: [ExpressionType s]
+  }
+
+deriving stock instance Show (RhsAdt 'Parsed)
+
+deriving stock instance Show (RhsAdt 'Scoped)
+
+deriving stock instance Eq (RhsAdt 'Parsed)
+
+deriving stock instance Eq (RhsAdt 'Scoped)
+
+deriving stock instance Ord (RhsAdt 'Parsed)
+
+deriving stock instance Ord (RhsAdt 'Scoped)
+
 data RhsRecord (s :: Stage) = RhsRecord
   { _rhsRecordDelim :: Irrelevant (KeywordRef, KeywordRef),
     _rhsRecordFields :: NonEmpty (RecordField s)
@@ -460,6 +476,7 @@ deriving stock instance Ord (RhsGadt 'Scoped)
 data ConstructorRhs (s :: Stage)
   = ConstructorRhsGadt (RhsGadt s)
   | ConstructorRhsRecord (RhsRecord s)
+  | ConstructorRhsAdt (RhsAdt s)
 
 deriving stock instance Show (ConstructorRhs 'Parsed)
 
@@ -1431,6 +1448,7 @@ makeLenses ''SymbolEntry
 makeLenses ''ModuleSymbolEntry
 makeLenses ''RecordField
 makeLenses ''RhsRecord
+makeLenses ''RhsAdt
 makeLenses ''RhsGadt
 makeLenses ''List
 makeLenses ''ListPattern

@@ -94,6 +94,9 @@ semicolon = noLoc C.kwSemicolon
 blockIndent :: Members '[ExactPrint] r => Sem r () -> Sem r ()
 blockIndent d = hardline <> indent d <> line
 
+sep :: (Members '[ExactPrint] r, Foldable l) => l (Sem r ()) -> Sem r ()
+sep = grouped . vsep
+
 sepSemicolon :: (Members '[ExactPrint] r, Foldable l) => l (Sem r ()) -> Sem r ()
 sepSemicolon = grouped . vsepSemicolon
 
@@ -131,7 +134,7 @@ enclose :: Monad m => m () -> m () -> m () -> m ()
 enclose l r p = l >> p >> r
 
 encloseSep :: (Monad m, Foldable f) => m () -> m () -> m () -> f (m ()) -> m ()
-encloseSep l r sep f = enclose l r (sequenceWith sep f)
+encloseSep l r separator f = enclose l r (sequenceWith separator f)
 
 oneLineOrNextNoIndent :: Members '[ExactPrint] r => Sem r () -> Sem r ()
 oneLineOrNextNoIndent = region P.oneLineOrNextNoIndent

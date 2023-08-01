@@ -733,6 +733,7 @@ checkInductiveDef InductiveDef {..} = do
     checkRhs = \case
       ConstructorRhsGadt r -> ConstructorRhsGadt <$> checkGadt r
       ConstructorRhsRecord r -> ConstructorRhsRecord <$> checkRecord r
+      ConstructorRhsAdt r -> ConstructorRhsAdt <$> checkAdt r
 
     checkRecord :: RhsRecord 'Parsed -> Sem r (RhsRecord 'Scoped)
     checkRecord RhsRecord {..} = do
@@ -757,6 +758,14 @@ checkInductiveDef InductiveDef {..} = do
             case nonEmpty fs of
               Nothing -> return (pure f)
               Just fs1 -> (pure f <>) <$> checkFields fs1
+
+    checkAdt :: RhsAdt 'Parsed -> Sem r (RhsAdt 'Scoped)
+    checkAdt RhsAdt {..} = do
+      args' <- mapM checkParseExpressionAtoms _rhsAdtArguments
+      return
+        RhsAdt
+          { _rhsAdtArguments = args'
+          }
 
     checkGadt :: RhsGadt 'Parsed -> Sem r (RhsGadt 'Scoped)
     checkGadt RhsGadt {..} = do
