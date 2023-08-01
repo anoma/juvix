@@ -322,5 +322,12 @@ scoperErrorTests =
       $(mkRelFile "NoNamedArguments.juvix")
       $ \case
         ErrNoNameSignature NoNameSignature {} -> Nothing
+        _ -> wrongError,
+    NegTest
+      "Not a record"
+      $(mkRelDir ".")
+      $(mkRelFile "NotARecord.juvix")
+      $ \case
+        ErrNotARecord NotARecord {} -> Nothing
         _ -> wrongError
   ]
