@@ -126,6 +126,10 @@ tests =
       $(mkRelDir ".")
       $(mkRelFile "Inductive.juvix"),
     posTest
+      "ADT"
+      $(mkRelDir ".")
+      $(mkRelFile "Adt.juvix"),
+    posTest
       "Operators"
       $(mkRelDir ".")
       $(mkRelFile "Operators.juvix"),
