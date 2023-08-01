@@ -7,6 +7,7 @@ data ConstructorInfo = ConstructorInfo
   { _constructorInfoInductiveParameters :: [InductiveParameter],
     _constructorInfoType :: Expression,
     _constructorInfoInductive :: InductiveName,
+    _constructorInfoName :: ConstructorName,
     _constructorInfoBuiltin :: Maybe BuiltinConstructor
   }
 

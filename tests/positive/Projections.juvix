@@ -1,0 +1,55 @@
+module Projections;
+
+type Maybe (A : Type) :=
+  | nothing : Maybe A
+  | just : A -> Maybe A;
+
+type T :=
+  | t : T;
+
+module M;
+  type RecA (A B : Type) :=
+    | mkRecA {
+        arg : Maybe (RecB B A);
+        arg2 : A
+      };
+
+  type RecB (A B : Type) :=
+    | mkRecB {
+        arg : RecA B A;
+        arg2 : T
+      };
+
+  p1 : RecA T (Maybe T) :=
+    mkRecA
+      (arg := just
+         (mkRecB
+           (arg := mkRecA (arg := nothing; arg2 := t); arg2 := t));
+       arg2 := t);
+end;
+
+p3 : T := M.RecA.arg2 M.p1;
+
+open M;
+
+p2 : T := RecA.arg2 p1;
+
+open M.RecA;
+
+p4 : T := arg2 p1;
+
+module M2;
+  type Pair (A B : Type) :=
+    | mkPair {
+        fst : A;
+        snd : B
+      };
+
+  open Pair public;
+end;
+
+proj1 {A B : Type} (p : M2.Pair A B) : A := M2.fst p;
+
+import Stdlib.Data.Int.Ord as Int;
+
+x : _ := 1 Int.== 1;

@@ -114,6 +114,8 @@ groupStatements = \case
           SParsed -> fun1 ^. clauseOwnerFunction == fun2 ^. clauseOwnerFunction
           SScoped -> fun1 ^. clauseOwnerFunction == fun2 ^. clauseOwnerFunction
       (StatementFunctionClause {}, _) -> False
+      (StatementProjectionDef {}, StatementProjectionDef {}) -> True
+      (StatementProjectionDef {}, _) -> False
     definesSymbol :: Symbol -> Statement s -> Bool
     definesSymbol n s = case s of
       StatementTypeSignature sig -> n == symbolParsed (sig ^. sigName)
@@ -154,6 +156,7 @@ migrateFunctionSyntax m = over moduleBody (mapMaybe goStatement) m
       StatementOpenModule {} -> Just s
       StatementFunctionDef {} -> Just s
       StatementFunctionClause {} -> Nothing
+      StatementProjectionDef {} -> Just s
       StatementTypeSignature sig -> Just (StatementFunctionDef (mkFunctionDef sig (getClauses (sig ^. sigName))))
 
     ss' :: [Statement 'Scoped]

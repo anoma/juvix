@@ -7,6 +7,8 @@ where
 import Data.Generics.Uniplate.Data hiding (holes)
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
+import Data.Stream qualified as Stream
+import Juvix.Compiler.Internal.Data.InfoTable.Base
 import Juvix.Compiler.Internal.Data.LocalVars
 import Juvix.Compiler.Internal.Language
 import Juvix.Prelude
@@ -525,7 +527,7 @@ infixl 9 @@
 (@@) :: (IsExpression a, IsExpression b) => a -> b -> Expression
 a @@ b = toExpression (Application (toExpression a) (toExpression b) Explicit)
 
-freshVar :: (Member NameIdGen r) => Interval -> Text -> Sem r VarName
+freshVar :: Member NameIdGen r => Interval -> Text -> Sem r VarName
 freshVar _nameLoc n = do
   uid <- freshNameId
   return
@@ -670,3 +672,90 @@ idenName = \case
   IdenVar v -> v
   IdenInductive i -> i
   IdenAxiom a -> a
+
+constructorArgTypes :: ConstructorInfo -> ([VarName], [Expression])
+constructorArgTypes i =
+  ( map (^. inductiveParamName) (i ^. constructorInfoInductiveParameters),
+    constructorArgs (i ^. constructorInfoType)
+  )
+
+constructorReturnType :: ConstructorInfo -> Expression
+constructorReturnType info =
+  let inductiveParams = fst (constructorArgTypes info)
+      ind = ExpressionIden (IdenInductive (info ^. constructorInfoInductive))
+      saturatedTy = foldExplicitApplication ind (map (ExpressionIden . IdenVar) inductiveParams)
+   in saturatedTy
+
+constructorType :: ConstructorInfo -> Expression
+constructorType info =
+  let (inductiveParams, constrArgs) = constructorArgTypes info
+      args =
+        map (typeAbstraction Implicit) inductiveParams
+          ++ map unnamedParameter constrArgs
+      saturatedTy = constructorReturnType info
+   in foldFunType args saturatedTy
+
+patternArgFromVar :: IsImplicit -> VarName -> PatternArg
+patternArgFromVar i v =
+  PatternArg
+    { _patternArgIsImplicit = i,
+      _patternArgName = Nothing,
+      _patternArgPattern = PatternVariable v
+    }
+
+-- | Given `mkPair`, returns (mkPair a b, [a, b])
+genConstructorPattern :: Members '[NameIdGen] r => ConstructorInfo -> Sem r (PatternArg, [VarName])
+genConstructorPattern info = do
+  let nargs = length (snd (constructorArgTypes info))
+      loc = getLoc (info ^. constructorInfoName)
+  vars <- mapM (freshVar loc) (Stream.take nargs allWords)
+  let app =
+        ConstructorApp
+          { _constrAppConstructor = info ^. constructorInfoName,
+            _constrAppParameters = map (patternArgFromVar Explicit) vars,
+            _constrAppType = Nothing
+          }
+      pat =
+        PatternArg
+          { _patternArgIsImplicit = Explicit,
+            _patternArgName = Nothing,
+            _patternArgPattern = PatternConstructorApp app
+          }
+  return (pat, vars)
+
+-- | Assumes the constructor does not have implicit arguments (which is not
+-- allowed at the moment).
+genFieldProjection ::
+  forall r.
+  Members '[NameIdGen] r =>
+  FunctionName ->
+  ConstructorInfo ->
+  Int ->
+  Sem r FunctionDef
+genFieldProjection _funDefName info fieldIx = do
+  clause <- genClause
+  let (inductiveParams, constrArgs) = constructorArgTypes info
+      saturatedTy = unnamedParameter (constructorReturnType info)
+      inductiveArgs = map (typeAbstraction Implicit) inductiveParams
+      retTy = constrArgs !! fieldIx
+  return
+    FunctionDef
+      { _funDefExamples = [],
+        _funDefTerminating = False,
+        _funDefBuiltin = Nothing,
+        _funDefPragmas = mempty,
+        _funDefClauses = pure clause,
+        _funDefType = foldFunType (inductiveArgs ++ [saturatedTy]) retTy,
+        ..
+      }
+  where
+    genClause :: Sem r FunctionClause
+    genClause = do
+      (pat, vars) <- genConstructorPattern info
+      let body = toExpression (vars !! fieldIx)
+      return
+        FunctionClause
+          { _clauseName = _funDefName,
+            _clausePatterns = [pat],
+            _clauseBody = body
+          }

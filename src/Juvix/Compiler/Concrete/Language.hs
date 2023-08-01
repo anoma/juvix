@@ -113,6 +113,11 @@ type family ModulePathType s t = res | res -> t s where
   ModulePathType 'Parsed 'ModuleLocal = Symbol
   ModulePathType 'Scoped 'ModuleLocal = S.Symbol
 
+type ModuleInductiveType :: ModuleIsTop -> GHC.Type
+type family ModuleInductiveType t = res | res -> t where
+  ModuleInductiveType 'ModuleTop = ()
+  ModuleInductiveType 'ModuleLocal = Bool
+
 type ModuleEndType :: ModuleIsTop -> GHC.Type
 type family ModuleEndType t = res | res -> t where
   ModuleEndType 'ModuleTop = ()
@@ -151,6 +156,7 @@ data Definition (s :: Stage)
   | DefinitionInductive (InductiveDef s)
   | DefinitionAxiom (AxiomDef s)
   | DefinitionTypeSignature (TypeSignature s)
+  | DefinitionProjectionDef (ProjectionDef s)
 
 data NonDefinition (s :: Stage)
   = NonDefinitionImport (Import s)
@@ -168,6 +174,7 @@ data Statement (s :: Stage)
   | StatementOpenModule (OpenModule s)
   | StatementFunctionClause (FunctionClause s)
   | StatementAxiom (AxiomDef s)
+  | StatementProjectionDef (ProjectionDef s)
 
 deriving stock instance Show (Statement 'Parsed)
 
@@ -180,6 +187,24 @@ deriving stock instance Eq (Statement 'Scoped)
 deriving stock instance Ord (Statement 'Parsed)
 
 deriving stock instance Ord (Statement 'Scoped)
+
+data ProjectionDef s = ProjectionDef
+  { _projectionConstructor :: S.Symbol,
+    _projectionField :: SymbolType s,
+    _projectionFieldIx :: Int
+  }
+
+deriving stock instance Show (ProjectionDef 'Parsed)
+
+deriving stock instance Show (ProjectionDef 'Scoped)
+
+deriving stock instance Eq (ProjectionDef 'Parsed)
+
+deriving stock instance Eq (ProjectionDef 'Scoped)
+
+deriving stock instance Ord (ProjectionDef 'Parsed)
+
+deriving stock instance Ord (ProjectionDef 'Scoped)
 
 data Import (s :: Stage) = Import
   { _importKw :: KeywordRef,
@@ -643,7 +668,8 @@ data Module (s :: Stage) (t :: ModuleIsTop) = Module
     _moduleDoc :: Maybe (Judoc s),
     _modulePragmas :: Maybe ParsedPragmas,
     _moduleBody :: [Statement s],
-    _moduleKwEnd :: ModuleEndType t
+    _moduleKwEnd :: ModuleEndType t,
+    _moduleInductive :: ModuleInductiveType t
   }
 
 deriving stock instance Show (Module 'Parsed 'ModuleTop)
@@ -1397,6 +1423,9 @@ newtype ModuleIndex = ModuleIndex
   }
 
 makeLenses ''PatternArg
+makeLenses ''NonDefinitionsSection
+makeLenses ''DefinitionsSection
+makeLenses ''ProjectionDef
 makeLenses ''ScopedIden'
 makeLenses ''SymbolEntry
 makeLenses ''ModuleSymbolEntry
@@ -1522,23 +1551,29 @@ instance SingI s => HasAtomicity (FunctionParameters s) where
 instance HasLoc ScopedIden where
   getLoc = getLoc . (^. scopedIden)
 
-instance HasLoc (InductiveDef 'Scoped) where
+instance SingI s => HasLoc (InductiveParameters s) where
+  getLoc i = getLocSymbolType (i ^. inductiveParametersNames . _head1) <> getLocExpressionType (i ^. inductiveParametersType)
+
+instance HasLoc (InductiveDef s) where
   getLoc i = (getLoc <$> i ^. inductivePositive) ?<> getLoc (i ^. inductiveKw)
 
-instance HasLoc (FunctionClause 'Scoped) where
-  getLoc c = getLoc (c ^. clauseOwnerFunction) <> getLoc (c ^. clauseBody)
+instance SingI s => HasLoc (FunctionClause s) where
+  getLoc c = getLocSymbolType (c ^. clauseOwnerFunction) <> getLocExpressionType (c ^. clauseBody)
 
 instance HasLoc ModuleRef where
   getLoc (ModuleRef' (_ :&: r)) = getLoc r
 
-instance HasLoc (AxiomDef 'Scoped) where
-  getLoc m = getLoc (m ^. axiomKw) <> getLoc (m ^. axiomType)
+instance SingI s => HasLoc (AxiomDef s) where
+  getLoc m = getLoc (m ^. axiomKw) <> getLocExpressionType (m ^. axiomType)
 
 instance HasLoc (OpenModule 'Scoped) where
   getLoc m =
     getLoc (m ^. openModuleKw)
       <> getLoc (m ^. openModuleName)
       <>? fmap getLoc (m ^. openPublicKw . unIrrelevant)
+
+instance HasLoc (ProjectionDef s) where
+  getLoc = getLoc . (^. projectionConstructor)
 
 instance HasLoc (Statement 'Scoped) where
   getLoc :: Statement 'Scoped -> Interval
@@ -1552,6 +1587,7 @@ instance HasLoc (Statement 'Scoped) where
     StatementOpenModule t -> getLoc t
     StatementFunctionClause t -> getLoc t
     StatementAxiom t -> getLoc t
+    StatementProjectionDef t -> getLoc t
 
 instance HasLoc Application where
   getLoc (Application l r) = getLoc l <> getLoc r

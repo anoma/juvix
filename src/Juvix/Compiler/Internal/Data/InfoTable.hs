@@ -1,20 +1,19 @@
 module Juvix.Compiler.Internal.Data.InfoTable
   ( module Juvix.Compiler.Internal.Data.InfoTable.Base,
     buildTable,
-    buildTable1,
     extendWithReplExpression,
     lookupConstructor,
     lookupConstructorArgTypes,
     lookupFunction,
-    constructorReturnType,
-    constructorArgTypes,
+    lookupConstructorReturnType,
     lookupInductive,
     lookupAxiom,
     lookupInductiveType,
-    constructorType,
+    lookupConstructorType,
     getAxiomBuiltinInfo,
     getFunctionBuiltinInfo,
     buildTableShallow,
+    mkConstructorEntries,
   )
 where
 
@@ -28,14 +27,13 @@ import Juvix.Prelude
 type MCache = Cache ModuleIndex InfoTable
 
 buildTable :: Foldable f => f Module -> InfoTable
-buildTable = run . evalCache computeTable mempty . getMany
+buildTable = run . evalCache (computeTable True) mempty . getMany
 
-buildTable1 :: Module -> InfoTable
-buildTable1 = buildTable . pure @[]
+buildTable' :: Foldable f => Bool -> f Module -> InfoTable
+buildTable' recurIntoImports = run . evalCache (computeTable recurIntoImports) mempty . getMany
 
--- TODO do not recurse into imports
 buildTableShallow :: Module -> InfoTable
-buildTableShallow = buildTable . pure @[]
+buildTableShallow = buildTable' False . pure @[]
 
 getMany :: (Members '[MCache] r, Foldable f) => f Module -> Sem r InfoTable
 getMany = mconcatMap (cacheGet . ModuleIndex)
@@ -64,8 +62,8 @@ letFunctionDefs e =
       LetFunDef f -> pure f
       LetMutualBlock (MutualBlockLet fs) -> fs
 
-computeTable :: forall r. (Members '[MCache] r) => ModuleIndex -> Sem r InfoTable
-computeTable (ModuleIndex m) = compute
+computeTable :: forall r. Members '[MCache] r => Bool -> ModuleIndex -> Sem r InfoTable
+computeTable recurIntoImports (ModuleIndex m) = compute
   where
     compute :: Sem r InfoTable
     compute = do
@@ -73,7 +71,9 @@ computeTable (ModuleIndex m) = compute
       return (InfoTable {..} <> infoInc)
 
     imports :: [Import]
-    imports = m ^. moduleBody . moduleImports
+    imports
+      | recurIntoImports = m ^. moduleBody . moduleImports
+      | otherwise = []
 
     mutuals :: [MutualStatement]
     mutuals =
@@ -98,14 +98,9 @@ computeTable (ModuleIndex m) = compute
     _infoConstructors :: HashMap Name ConstructorInfo
     _infoConstructors =
       HashMap.fromList
-        [ (c ^. inductiveConstructorName, ConstructorInfo params ty ind builtin)
+        [ e
           | d <- inductives,
-            let ind = d ^. inductiveName
-                n = length (d ^. inductiveConstructors)
-                params = d ^. inductiveParameters
-                builtins = maybe (replicate n Nothing) (map Just . builtinConstructors) (d ^. inductiveBuiltin),
-            (builtin, c) <- zipExact builtins (d ^. inductiveConstructors),
-            let ty = c ^. inductiveConstructorType
+            e <- mkConstructorEntries d
         ]
 
     _infoFunctions :: HashMap Name FunctionInfo
@@ -195,43 +190,11 @@ lookupInductiveType v = do
   where
     uni = smallUniverseE (getLoc v)
 
-constructorArgTypes :: ConstructorInfo -> ([VarName], [Expression])
-constructorArgTypes i =
-  ( map (^. inductiveParamName) (i ^. constructorInfoInductiveParameters),
-    constructorArgs (i ^. constructorInfoType)
-  )
+lookupConstructorType :: Member (Reader InfoTable) r => ConstrName -> Sem r Expression
+lookupConstructorType = fmap constructorType . lookupConstructor
 
-constructorType :: Member (Reader InfoTable) r => ConstrName -> Sem r Expression
-constructorType c = do
-  info <- lookupConstructor c
-  let (inductiveParams, constrArgs) = constructorArgTypes info
-      args =
-        map (typeAbstraction Implicit) inductiveParams
-          ++ map unnamedParameter constrArgs
-  saturatedTy <- constructorReturnType c
-  return (foldFunType args saturatedTy)
-
-constructorReturnType :: Member (Reader InfoTable) r => ConstrName -> Sem r Expression
-constructorReturnType c = do
-  info <- lookupConstructor c
-  let inductiveParams = fst (constructorArgTypes info)
-      ind = ExpressionIden (IdenInductive (info ^. constructorInfoInductive))
-      saturatedTy1 = foldExplicitApplication ind (map (ExpressionIden . IdenVar) inductiveParams)
-      saturatedTy =
-        foldl'
-          ( \t v ->
-              ExpressionApplication
-                ( Application
-                    { _appLeft = t,
-                      _appRight = ExpressionIden (IdenVar v),
-                      _appImplicit = Explicit
-                    }
-                )
-          )
-          ind
-          inductiveParams
-  unless (saturatedTy1 == saturatedTy) impossible
-  return saturatedTy
+lookupConstructorReturnType :: Member (Reader InfoTable) r => ConstrName -> Sem r Expression
+lookupConstructorReturnType = fmap constructorReturnType . lookupConstructor
 
 getAxiomBuiltinInfo :: Member (Reader InfoTable) r => Name -> Sem r (Maybe BuiltinAxiom)
 getAxiomBuiltinInfo n = do
@@ -246,3 +209,15 @@ getFunctionBuiltinInfo n = do
   return $ case maybeFunInfo of
     Just funInfo -> funInfo ^. functionInfoDef . funDefBuiltin
     Nothing -> Nothing
+
+mkConstructorEntries :: InductiveDef -> [(ConstructorName, ConstructorInfo)]
+mkConstructorEntries d =
+  [ (c ^. inductiveConstructorName, ConstructorInfo {..})
+    | let _constructorInfoInductive = d ^. inductiveName
+          n = length (d ^. inductiveConstructors)
+          _constructorInfoInductiveParameters = d ^. inductiveParameters
+          builtins = maybe (replicate n Nothing) (map Just . builtinConstructors) (d ^. inductiveBuiltin),
+      (_constructorInfoBuiltin, c) <- zipExact builtins (d ^. inductiveConstructors),
+      let _constructorInfoType = c ^. inductiveConstructorType,
+      let _constructorInfoName = c ^. inductiveConstructorName
+  ]

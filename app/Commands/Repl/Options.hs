@@ -5,7 +5,8 @@ import Juvix.Compiler.Core.Pretty.Options qualified as Core
 import Juvix.Compiler.Core.Transformation
 
 data ReplOptions = ReplOptions
-  { _replInputFile :: Maybe (AppPath File),
+  { _replIsDev :: Bool,
+    _replInputFile :: Maybe (AppPath File),
     _replShowDeBruijn :: Bool,
     _replNoPrelude :: Bool,
     _replTransformations :: [TransformationId],
@@ -28,6 +29,7 @@ parseRepl = do
       _replShowDeBruijn = False
       _replNoDisambiguate = False
       _replPrintValues = True
+      _replIsDev = False
   _replInputFile <- optional parseInputJuvixFile
   _replNoPrelude <-
     switch

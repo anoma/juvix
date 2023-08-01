@@ -1144,12 +1144,16 @@ moduleDef = P.label "<module definition>" $ do
   _moduleDoc <- getJudoc
   _modulePragmas <- getPragmas
   _modulePath <- pmodulePath
-  _moduleParameters <- many inductiveParams
   semicolon
   _moduleBody <- P.sepEndBy statement semicolon
   _moduleKwEnd <- endModule
   return Module {..}
   where
+    _moduleInductive :: ModuleInductiveType t
+    _moduleInductive = case sing :: SModuleIsTop t of
+      SModuleLocal -> False
+      SModuleTop -> ()
+
     endModule :: ParsecS r (ModuleEndType t)
     endModule = case sing :: SModuleIsTop t of
       SModuleLocal -> kw kwEnd

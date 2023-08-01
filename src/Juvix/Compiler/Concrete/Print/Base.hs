@@ -7,9 +7,11 @@ module Juvix.Compiler.Concrete.Print.Base
   )
 where
 
+import Data.HashMap.Strict qualified as HashMap
 import Data.List.NonEmpty.Extra qualified as NonEmpty
 import Juvix.Compiler.Concrete.Data.InfoTable
 import Juvix.Compiler.Concrete.Data.NameSignature.Base
+import Juvix.Compiler.Concrete.Data.Scope.Base
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Extra (fromAmbiguousIterator)
 import Juvix.Compiler.Concrete.Extra qualified as Concrete
@@ -349,8 +351,12 @@ instance PrettyPrint a => PrettyPrint [a] where
     encloseSep (ppCode @Text "[") (ppCode @Text "]") (ppCode @Text ", ") cs
 
 ppStatements :: forall s r. (SingI s, Members '[ExactPrint, Reader Options] r) => [Statement s] -> Sem r ()
-ppStatements ss = paragraphs (ppGroup <$> Concrete.groupStatements ss)
+ppStatements ss = paragraphs (ppGroup <$> Concrete.groupStatements (filter (not . isInductiveModule) ss))
   where
+    isInductiveModule :: Statement s -> Bool
+    isInductiveModule = \case
+      StatementModule m -> m ^. moduleInductive
+      _ -> False
     ppGroup :: NonEmpty (Statement s) -> Sem r ()
     ppGroup = vsep . sepEndSemicolon . fmap ppCode
 
@@ -988,6 +994,15 @@ instance SingI s => PrettyPrint (InductiveDef s) where
       ppConstructorBlock :: NonEmpty (ConstructorDef s) -> Sem r ()
       ppConstructorBlock cs = vsep (ppCode <$> cs)
 
+instance SingI s => PrettyPrint (ProjectionDef s) where
+  ppCode ProjectionDef {..} =
+    do
+      ppSymbolType _projectionField
+      <+> noLoc ":= projection"
+      <+> noLoc (pretty _projectionFieldIx)
+      <+> noLoc "for"
+      <+> ppCode _projectionConstructor
+
 instance SingI s => PrettyPrint (Statement s) where
   ppCode = \case
     StatementSyntax s -> ppCode s
@@ -999,6 +1014,7 @@ instance SingI s => PrettyPrint (Statement s) where
     StatementOpenModule o -> ppCode o
     StatementFunctionClause c -> ppCode c
     StatementAxiom a -> ppCode a
+    StatementProjectionDef a -> ppCode a
 
 instance PrettyPrint SymbolEntry where
   ppCode ent =
@@ -1027,3 +1043,13 @@ instance PrettyPrint ModuleSymbolEntry where
       kindWord :: Doc Ann =
         let k = getNameKind ent
          in (pretty (nameKindText k))
+
+header :: Members '[ExactPrint] r => Text -> Sem r ()
+header txt = annotated AnnImportant (noLoc (pretty (txt <> "\n")))
+
+instance PrettyPrint ScoperState where
+  ppCode :: Members '[ExactPrint, Reader Options] r => ScoperState -> Sem r ()
+  ppCode s =
+    do
+      header "scoperModules"
+      <> sepSemicolon (map ppCode (HashMap.toList (s ^. scoperModules)))
