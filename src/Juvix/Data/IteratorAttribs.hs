@@ -19,7 +19,7 @@ instance FromJSON IteratorAttribs where
         _iteratorAttribsRangeNum <- keyMay "range" asIntegral
         unless
           (maybe True (> 0) _iteratorAttribsRangeNum)
-          (throwCustomError "the number of ranges must be positive")
+          (throwCustomError "the iterator must have at least one range")
         return IteratorAttribs {..}
 
 emptyIteratorAttribs :: IteratorAttribs
