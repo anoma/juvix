@@ -106,6 +106,11 @@ type family ImportType s = res | res -> s where
   ImportType 'Parsed = TopModulePath
   ImportType 'Scoped = ModuleRef'' 'S.Concrete 'ModuleTop
 
+type RecordNameSignatureType :: Stage -> GHC.Type
+type family RecordNameSignatureType s = res | res -> s where
+  RecordNameSignatureType 'Parsed = ()
+  RecordNameSignatureType 'Scoped = RecordNameSignature
+
 type NameSignatureType :: Stage -> GHC.Type
 type family NameSignatureType s = res | res -> s where
   NameSignatureType 'Parsed = ()
@@ -701,6 +706,7 @@ deriving stock instance Ord (RecordPatternItem 'Scoped)
 
 data RecordPattern (s :: Stage) = RecordPattern
   { _recordPatternConstructor :: IdentifierType s,
+    _recordPatternSignature :: Irrelevant (RecordNameSignatureType s),
     _recordPatternItems :: [RecordPatternItem s]
   }
 
@@ -1926,8 +1932,9 @@ getLocPatternParensType = case sing :: SStage s of
   SParsed -> getLoc
 
 instance SingI s => HasLoc (RecordPatternAssign s) where
-  getLoc a = getLoc (a ^. recordPatternAssignField)
-    <>  getLocPatternParensType (a ^. recordPatternAssignPattern)
+  getLoc a =
+    getLoc (a ^. recordPatternAssignField)
+      <> getLocPatternParensType (a ^. recordPatternAssignPattern)
 
 instance HasLoc (FieldPun s) where
   getLoc f = getLoc (f ^. fieldPunField)
@@ -1938,7 +1945,7 @@ instance SingI s => HasLoc (RecordPatternItem s) where
     RecordPatternItemFieldPun a -> getLoc a
 
 instance SingI s => HasLoc (RecordPattern s) where
-  getLoc r = getLocIdentifierType (r ^. recordPatternConstructor) <>? (getLocSpan  <$> nonEmpty (r ^. recordPatternItems))
+  getLoc r = getLocIdentifierType (r ^. recordPatternConstructor) <>? (getLocSpan <$> nonEmpty (r ^. recordPatternItems))
 
 instance SingI s => HasLoc (PatternAtom s) where
   getLoc = \case

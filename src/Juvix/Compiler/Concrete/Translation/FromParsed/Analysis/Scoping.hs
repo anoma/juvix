@@ -36,7 +36,8 @@ iniScoperState =
       _scoperModules = mempty,
       _scoperScope = mempty,
       _scoperSignatures = mempty,
-      _scoperRecordSignatures = mempty
+      _scoperRecordFields = mempty,
+      _scoperConstructorFields = mempty
     }
 
 scopeCheck ::
@@ -1017,27 +1018,36 @@ checkSections sec = do
                 reserveInductive :: InductiveDef 'Parsed -> Sem r' ()
                 reserveInductive d = do
                   i <- reserveInductiveSymbol d
-                  constrs <- mapM (reserveConstructorSymbol d) (d ^. inductiveConstructors)
+                  constrs <- mapM reserveConstructor (d ^. inductiveConstructors)
                   void (defineInductiveModule (head constrs) d)
-                  ignoreFail (registerRecord (head constrs) i)
+                  ignoreFail (registerRecordType (head constrs) i)
                   where
-                    registerRecord :: S.Symbol -> S.Symbol -> Sem (Fail ': r') ()
-                    registerRecord mconstr ind = do
+                    reserveConstructor :: ConstructorDef 'Parsed -> Sem r' S.Symbol
+                    reserveConstructor c = do
+                      c' <- reserveConstructorSymbol d c
+                      let storeSig :: RecordNameSignature -> Sem r' ()
+                          storeSig sig = modify' (set (scoperConstructorFields . at (c' ^. S.nameId)) (Just sig))
+                      whenJust (c ^? constructorRhs . _ConstructorRhsRecord) (storeSig . mkRecordNameSignature)
+                      return c'
+
+                    registerRecordType :: S.Symbol -> S.Symbol -> Sem (Fail ': r') ()
+                    registerRecordType mconstr ind = do
                       case d ^. inductiveConstructors of
-                        mkRec :| [] -> do
-                          fs <-
-                            failMaybe $
-                              mkRec
-                                ^? constructorRhs
-                                . _ConstructorRhsRecord
-                                . to mkRecordNameSignature
-                          let info =
-                                RecordInfo
-                                  { _recordInfoSignature = fs,
-                                    _recordInfoConstructor = mconstr
-                                  }
-                          modify' (set (scoperRecordSignatures . at (ind ^. S.nameId)) (Just info))
-                        _ -> fail
+                        mkRec :| cs
+                          | not (null cs) -> fail
+                          | otherwise -> do
+                              fs <-
+                                failMaybe $
+                                  mkRec
+                                    ^? constructorRhs
+                                    . _ConstructorRhsRecord
+                                    . to mkRecordNameSignature
+                              let info =
+                                    RecordInfo
+                                      { _recordInfoSignature = fs,
+                                        _recordInfoConstructor = mconstr
+                                      }
+                              modify' (set (scoperRecordFields . at (ind ^. S.nameId)) (Just info))
 
             goDefinition :: Definition 'Parsed -> Sem r' (Definition 'Scoped)
             goDefinition = \case
@@ -1554,6 +1564,65 @@ checkLetClauses =
               NonDefinitionModule {} -> impossible
               NonDefinitionOpenModule {} -> impossible
 
+checkRecordPattern ::
+  forall r.
+  Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r =>
+  RecordPattern 'Parsed ->
+  Sem r (RecordPattern 'Scoped)
+checkRecordPattern r = do
+  c' <- getNameOfKind KNameConstructor (r ^. recordPatternConstructor)
+  fields <- fromMaybeM (return (RecordNameSignature mempty)) (gets (^. scoperConstructorFields . at (c' ^. S.nameId)))
+  l' <-
+    if
+        | null (r ^. recordPatternItems) -> return []
+        | otherwise -> do
+            runReader fields (mapM checkItem (r ^. recordPatternItems))
+  return
+    RecordPattern
+      { _recordPatternConstructor = ScopedIden c',
+        _recordPatternSignature = Irrelevant fields,
+        _recordPatternItems = l'
+      }
+  where
+    -- TODO do we want to keep this error? Yes
+    noFields :: ScopedIden -> ScoperError
+    noFields = ErrConstructorNotARecord . ConstructorNotARecord
+    -- TODO check for repeated items
+    checkItem ::
+      forall r'.
+      Members '[Reader RecordNameSignature, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r' =>
+      RecordPatternItem 'Parsed ->
+      Sem r' (RecordPatternItem 'Scoped)
+    checkItem = \case
+      RecordPatternItemAssign a -> RecordPatternItemAssign <$> checkAssign a
+      RecordPatternItemFieldPun a -> RecordPatternItemFieldPun <$> checkPun a
+      where
+        findField :: Symbol -> Sem r' Int
+        findField f = fromMaybeM (throw err) (asks (^? recordNames . at f . _Just . _2))
+          where
+            err :: ScoperError
+            err = ErrUnexpectedField (UnexpectedField f)
+
+        checkAssign :: RecordPatternAssign 'Parsed -> Sem r' (RecordPatternAssign 'Scoped)
+        checkAssign RecordPatternAssign {..} = do
+          idx' <- findField _recordPatternAssignField
+          pat' <- checkParsePatternAtoms _recordPatternAssignPattern
+          return
+            RecordPatternAssign
+              { _recordPatternAssignFieldIx = idx',
+                _recordPatternAssignPattern = pat',
+                ..
+              }
+
+        checkPun :: FieldPun 'Parsed -> Sem r' (FieldPun 'Scoped)
+        checkPun f = do
+          idx' <- findField (f ^. fieldPunField)
+          return
+            FieldPun
+              { _fieldPunIdx = idx',
+                _fieldPunField = f ^. fieldPunField
+              }
+
 checkListPattern ::
   forall r.
   Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r =>
@@ -1807,6 +1876,7 @@ checkPatternAtom = \case
   PatternAtomBraces e -> PatternAtomBraces <$> checkParsePatternAtoms e
   PatternAtomAt p -> PatternAtomAt <$> checkPatternBinding p
   PatternAtomList l -> PatternAtomList <$> checkListPattern l
+  PatternAtomRecord l -> PatternAtomRecord <$> checkRecordPattern l
 
 checkName ::
   (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder] r) =>
@@ -1907,7 +1977,7 @@ getRecordInfo ::
   ScopedIden ->
   Sem r RecordInfo
 getRecordInfo indTy =
-  fromMaybeM err (gets (^. scoperRecordSignatures . at (indTy ^. scopedIden . S.nameId)))
+  fromMaybeM err (gets (^. scoperRecordFields . at (indTy ^. scopedIden . S.nameId)))
   where
     err :: Sem r a
     err = throw (ErrNotARecord (NotARecord indTy))
@@ -2431,6 +2501,7 @@ parsePatternTerm = do
       <|> parseEmpty
       <|> parseAt
       <|> parseList
+      <|> parseRecord
   where
     parseNoInfixConstructor :: ParsePat PatternArg
     parseNoInfixConstructor =
@@ -2459,6 +2530,14 @@ parsePatternTerm = do
         isList :: PatternAtom 'Scoped -> Maybe (ListPattern 'Scoped)
         isList s = case s of
           PatternAtomList i -> Just i
+          _ -> Nothing
+
+    parseRecord :: ParsePat PatternArg
+    parseRecord = explicitP . PatternRecord <$> P.token isRecord mempty
+      where
+        isRecord :: PatternAtom 'Scoped -> Maybe (RecordPattern 'Scoped)
+        isRecord s = case s of
+          PatternAtomRecord i -> Just i
           _ -> Nothing
 
     parseEmpty :: ParsePat PatternArg

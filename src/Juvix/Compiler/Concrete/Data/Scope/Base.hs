@@ -58,8 +58,10 @@ data ScoperState = ScoperState
     _scoperModules :: HashMap S.ModuleNameId (ModuleRef' 'S.NotConcrete),
     _scoperScope :: HashMap TopModulePath Scope,
     _scoperSignatures :: HashMap S.NameId NameSignature,
-    -- | Indexed by the inductive type. This is meant to be used for record updates
-    _scoperRecordSignatures :: HashMap S.NameId RecordInfo
+    -- | Indexed by the inductive type. This is used for record updates
+    _scoperRecordFields :: HashMap S.NameId RecordInfo,
+    -- | Indexed by constructor. This is used for record patterns
+    _scoperConstructorFields :: HashMap S.NameId RecordNameSignature
   }
 
 data SymbolFixity = SymbolFixity

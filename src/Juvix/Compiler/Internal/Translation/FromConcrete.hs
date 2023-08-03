@@ -1084,6 +1084,7 @@ viewApp p = case p of
     l' <- goPatternArg l
     return (goConstructorRef c, [l'])
   PatternVariable {} -> err
+  PatternRecord {} -> err
   PatternWildcard {} -> err
   PatternEmpty {} -> err
   PatternList {} -> err
@@ -1116,7 +1117,31 @@ goPattern p = case p of
   PatternInfixApplication a -> Internal.PatternConstructorApp <$> goInfixPatternApplication a
   PatternPostfixApplication a -> Internal.PatternConstructorApp <$> goPostfixPatternApplication a
   PatternWildcard i -> Internal.PatternVariable <$> varFromWildcard i
+  PatternRecord i -> goRecordPattern i
   PatternEmpty {} -> error "unsupported empty pattern"
+
+goRecordPattern :: forall r. Members '[NameIdGen] r => RecordPattern 'Scoped -> Sem r Internal.Pattern
+goRecordPattern r = do
+  let constr = goName (r ^. recordPatternConstructor . scopedIden)
+  params' <- map mkArg <$> mkPatterns
+  return
+    ( Internal.PatternConstructorApp
+        Internal.ConstructorApp
+          { _constrAppConstructor = constr,
+            _constrAppType = Nothing,
+            _constrAppParameters = params'
+          }
+    )
+  where
+    mkArg :: Internal.Pattern -> Internal.PatternArg
+    mkArg p =
+      Internal.PatternArg
+        { _patternArgIsImplicit = Explicit,
+          _patternArgName = Nothing,
+          _patternArgPattern = p
+        }
+    mkPatterns :: Sem r [Internal.Pattern]
+    mkPatterns = undefined
 
 goAxiom :: (Members '[Reader Pragmas, Error ScoperError, Builtins, NameIdGen] r) => AxiomDef 'Scoped -> Sem r Internal.AxiomDef
 goAxiom a = do
