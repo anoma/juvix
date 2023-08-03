@@ -17,6 +17,9 @@ instance FromJSON IteratorAttribs where
         checkYamlKeys ["init", "range"]
         _iteratorAttribsInitNum <- keyMay "init" asIntegral
         _iteratorAttribsRangeNum <- keyMay "range" asIntegral
+        unless
+          (maybe True (> 0) _iteratorAttribsRangeNum)
+          (throwCustomError "the iterator must have at least one range")
         return IteratorAttribs {..}
 
 emptyIteratorAttribs :: IteratorAttribs
