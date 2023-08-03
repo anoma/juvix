@@ -597,9 +597,13 @@ data Pattern
   | PatternPostfixApplication PatternPostfixApp
   | PatternWildcard Wildcard
   | PatternEmpty Interval
+  | PatternRecord (RecordPattern 'Scoped)
   deriving stock (Show, Eq, Ord)
 
 instance HasAtomicity (ListPattern s) where
+  atomicity = const Atom
+
+instance HasAtomicity (RecordPattern s) where
   atomicity = const Atom
 
 instance HasAtomicity Pattern where
@@ -612,6 +616,7 @@ instance HasAtomicity Pattern where
     PatternWildcard {} -> Atom
     PatternList l -> atomicity l
     PatternEmpty {} -> Atom
+    PatternRecord r -> atomicity r
 
 data PatternScopedIden
   = PatternScopedVar S.Symbol
@@ -642,11 +647,81 @@ deriving stock instance Ord (ListPattern 'Parsed)
 
 deriving stock instance Ord (ListPattern 'Scoped)
 
+data RecordPatternAssign (s :: Stage) = RecordPatternAssign
+  { _recordPatternAssignKw :: Irrelevant KeywordRef,
+    _recordPatternAssignField :: Symbol,
+    _recordPatternAssignFieldIx :: FieldUpdateArgIxType s,
+    _recordPatternAssignPattern :: PatternParensType s
+  }
+
+deriving stock instance Show (RecordPatternAssign 'Parsed)
+
+deriving stock instance Show (RecordPatternAssign 'Scoped)
+
+deriving stock instance Eq (RecordPatternAssign 'Parsed)
+
+deriving stock instance Eq (RecordPatternAssign 'Scoped)
+
+deriving stock instance Ord (RecordPatternAssign 'Parsed)
+
+deriving stock instance Ord (RecordPatternAssign 'Scoped)
+
+data FieldPun (s :: Stage) = FieldPun
+  { _fieldPunIdx :: FieldUpdateArgIxType s,
+    _fieldPunField :: Symbol
+  }
+
+deriving stock instance Show (FieldPun 'Parsed)
+
+deriving stock instance Show (FieldPun 'Scoped)
+
+deriving stock instance Eq (FieldPun 'Parsed)
+
+deriving stock instance Eq (FieldPun 'Scoped)
+
+deriving stock instance Ord (FieldPun 'Parsed)
+
+deriving stock instance Ord (FieldPun 'Scoped)
+
+data RecordPatternItem (s :: Stage)
+  = RecordPatternItemFieldPun (FieldPun s)
+  | RecordPatternItemAssign (RecordPatternAssign s)
+
+deriving stock instance Show (RecordPatternItem 'Parsed)
+
+deriving stock instance Show (RecordPatternItem 'Scoped)
+
+deriving stock instance Eq (RecordPatternItem 'Parsed)
+
+deriving stock instance Eq (RecordPatternItem 'Scoped)
+
+deriving stock instance Ord (RecordPatternItem 'Parsed)
+
+deriving stock instance Ord (RecordPatternItem 'Scoped)
+
+data RecordPattern (s :: Stage) = RecordPattern
+  { _recordPatternConstructor :: IdentifierType s,
+    _recordPatternItems :: [RecordPatternItem s]
+  }
+
+deriving stock instance Show (RecordPattern 'Parsed)
+
+deriving stock instance Show (RecordPattern 'Scoped)
+
+deriving stock instance Eq (RecordPattern 'Parsed)
+
+deriving stock instance Eq (RecordPattern 'Scoped)
+
+deriving stock instance Ord (RecordPattern 'Parsed)
+
+deriving stock instance Ord (RecordPattern 'Scoped)
+
 data PatternAtom (s :: Stage)
   = PatternAtomIden (PatternAtomIdenType s)
   | PatternAtomWildcard Wildcard
   | PatternAtomEmpty Interval
   | PatternAtomList (ListPattern s)
+  | PatternAtomRecord (RecordPattern s)
   | PatternAtomParens (PatternParensType s)
   | PatternAtomBraces (PatternParensType s)
   | PatternAtomAt (PatternAtType s)
@@ -1491,6 +1566,9 @@ newtype ModuleIndex = ModuleIndex
   }
 
 makeLenses ''PatternArg
+makeLenses ''FieldPun
+makeLenses ''RecordPatternAssign
+makeLenses ''RecordPattern
 makeLenses ''ParensRecordUpdate
 makeLenses ''RecordUpdateExtra
 makeLenses ''RecordUpdate
@@ -1842,6 +1920,26 @@ instance HasLoc PatternBinding where
 instance HasLoc (ListPattern s) where
   getLoc l = getLoc (l ^. listpBracketL) <> getLoc (l ^. listpBracketR)
 
+getLocPatternParensType :: forall s. SingI s => PatternParensType s -> Interval
+getLocPatternParensType = case sing :: SStage s of
+  SScoped -> getLoc
+  SParsed -> getLoc
+
+instance SingI s => HasLoc (RecordPatternAssign s) where
+  getLoc a = getLoc (a ^. recordPatternAssignField)
+    <>  getLocPatternParensType (a ^. recordPatternAssignPattern)
+
+instance HasLoc (FieldPun s) where
+  getLoc f = getLoc (f ^. fieldPunField)
+
+instance SingI s => HasLoc (RecordPatternItem s) where
+  getLoc = \case
+    RecordPatternItemAssign a -> getLoc a
+    RecordPatternItemFieldPun a -> getLoc a
+
+instance SingI s => HasLoc (RecordPattern s) where
+  getLoc r = getLocIdentifierType (r ^. recordPatternConstructor) <>? (getLocSpan  <$> nonEmpty (r ^. recordPatternItems))
+
 instance SingI s => HasLoc (PatternAtom s) where
   getLoc = \case
     PatternAtomIden i -> getLocIden i
@@ -1851,6 +1949,7 @@ instance SingI s => HasLoc (PatternAtom s) where
     PatternAtomParens p -> getLocParens p
     PatternAtomBraces p -> getLocParens p
     PatternAtomAt p -> getLocAt p
+    PatternAtomRecord p -> getLoc p
     where
       getLocAt :: forall r. (SingI r) => PatternAtType r -> Interval
       getLocAt p = case sing :: SStage r of
@@ -1894,6 +1993,7 @@ instance HasLoc Pattern where
     PatternEmpty i -> i
     PatternInfixApplication i -> getLoc i
     PatternPostfixApplication i -> getLoc i
+    PatternRecord i -> getLoc i
 
 instance HasLoc (ExpressionAtoms s) where
   getLoc = getLoc . (^. expressionAtomsLoc)
