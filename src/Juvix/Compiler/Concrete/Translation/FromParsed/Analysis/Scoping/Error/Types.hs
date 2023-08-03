@@ -788,3 +788,24 @@ instance ToGenericError NotARecord where
     where
       i :: Interval
       i = getLoc _notARecord
+
+newtype UnexpectedField = UnexpectedField
+  { _unexpectedField :: Symbol
+  }
+  deriving stock (Show)
+
+instance ToGenericError UnexpectedField where
+  genericError UnexpectedField {..} = do
+    opts <- fromGenericOptions <$> ask
+    let msg =
+          "Unexpected field"
+            <+> ppCode opts _unexpectedField
+    return
+      GenericError
+        { _genericErrorLoc = i,
+          _genericErrorMessage = mkAnsiText msg,
+          _genericErrorIntervals = [i]
+        }
+    where
+      i :: Interval
+      i = getLoc _unexpectedField

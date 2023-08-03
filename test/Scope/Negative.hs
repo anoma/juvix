@@ -329,5 +329,12 @@ scoperErrorTests =
       $(mkRelFile "NotARecord.juvix")
       $ \case
         ErrNotARecord NotARecord {} -> Nothing
+        _ -> wrongError,
+    NegTest
+      "Unexpected field in record update"
+      $(mkRelDir ".")
+      $(mkRelFile "UnexpectedFieldUpdate.juvix")
+      $ \case
+        ErrUnexpectedField UnexpectedField {} -> Nothing
         _ -> wrongError
   ]

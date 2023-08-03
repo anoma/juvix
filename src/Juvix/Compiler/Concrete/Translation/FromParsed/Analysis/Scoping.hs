@@ -1857,7 +1857,7 @@ checkRecordUpdate RecordUpdate {..} = do
         _recordUpdateDelims
       }
   where
-    -- TODO check repetitions? done by bindvariablesymbol, but error msg is not that good
+    -- TODO checking repetitions is done by bindVariableSymbol, but error msg is not that good
     checkField :: RecordNameSignature -> RecordUpdateField 'Parsed -> Sem r (RecordUpdateField 'Scoped)
     checkField sig f = do
       name' <- bindVariableSymbol (f ^. fieldUpdateName)
@@ -1872,7 +1872,7 @@ checkRecordUpdate RecordUpdate {..} = do
           }
       where
         unexpectedField :: ScoperError
-        unexpectedField = error "TODO: unexpected field"
+        unexpectedField = ErrUnexpectedField (UnexpectedField (f ^. fieldUpdateName))
 
 checkNamedApplication ::
   forall r.
