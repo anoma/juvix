@@ -31,6 +31,7 @@ import Juvix.Compiler.Concrete.Data.VisibilityAnn
 import Juvix.Data
 import Juvix.Data.Ape.Base as Ape
 import Juvix.Data.Fixity
+import Juvix.Data.FixityInfo (FixityInfo)
 import Juvix.Data.IteratorAttribs
 import Juvix.Data.Keyword
 import Juvix.Data.NameKind
@@ -45,6 +46,7 @@ type NameSpaceEntryType :: NameSpace -> GHC.Type
 type family NameSpaceEntryType s = res | res -> s where
   NameSpaceEntryType 'NameSpaceSymbols = SymbolEntry
   NameSpaceEntryType 'NameSpaceModules = ModuleSymbolEntry
+  NameSpaceEntryType 'NameSpaceFixities = FixitySymbolEntry
 
 type RecordUpdateExtraType :: Stage -> GHC.Type
 type family RecordUpdateExtraType s = res | res -> s where
@@ -142,6 +144,8 @@ type ParsedPragmas = WithLoc (WithSource Pragmas)
 
 type ParsedIteratorAttribs = WithLoc (WithSource IteratorAttribs)
 
+type ParsedFixityInfo = WithLoc (WithSource FixityInfo)
+
 -- | We group consecutive definitions and reserve symbols in advance, so that we
 -- don't need extra syntax for mutually recursive definitions. Also, it allows
 -- us to be more flexible with the ordering of the definitions.
@@ -161,7 +165,7 @@ data NonDefinitionsSection (s :: Stage) = NonDefinitionsSection
   }
 
 data Definition (s :: Stage)
-  = DefinitionSyntax SyntaxDef
+  = DefinitionSyntax (SyntaxDef s)
   | DefinitionFunctionDef (FunctionDef s)
   | DefinitionInductive (InductiveDef s)
   | DefinitionAxiom (AxiomDef s)
@@ -175,7 +179,7 @@ data NonDefinition (s :: Stage)
   | NonDefinitionOpenModule (OpenModule s)
 
 data Statement (s :: Stage)
-  = StatementSyntax SyntaxDef
+  = StatementSyntax (SyntaxDef s)
   | StatementTypeSignature (TypeSignature s)
   | StatementFunctionDef (FunctionDef s)
   | StatementImport (Import s)
@@ -234,19 +238,62 @@ deriving stock instance Ord (Import 'Parsed)
 
 deriving stock instance Ord (Import 'Scoped)
 
-data SyntaxDef
-  = SyntaxOperator OperatorSyntaxDef
+data SyntaxDef (s :: Stage)
+  = SyntaxFixity (FixitySyntaxDef s)
+  | SyntaxOperator OperatorSyntaxDef
   | SyntaxIterator IteratorSyntaxDef
-  deriving stock (Show, Eq, Ord)
 
-instance HasLoc SyntaxDef where
+deriving stock instance (Show (SyntaxDef 'Parsed))
+
+deriving stock instance (Show (SyntaxDef 'Scoped))
+
+deriving stock instance (Eq (SyntaxDef 'Parsed))
+
+deriving stock instance (Eq (SyntaxDef 'Scoped))
+
+deriving stock instance (Ord (SyntaxDef 'Parsed))
+
+deriving stock instance (Ord (SyntaxDef 'Scoped))
+
+instance HasLoc (SyntaxDef s) where
   getLoc = \case
+    SyntaxFixity t -> getLoc t
     SyntaxOperator t -> getLoc t
     SyntaxIterator t -> getLoc t
 
+data FixitySyntaxDef (s :: Stage) = FixitySyntaxDef
+  { _fixitySymbol :: SymbolType s,
+    _fixityDoc :: Maybe (Judoc s),
+    _fixityInfo :: ParsedFixityInfo,
+    _fixityKw :: KeywordRef,
+    _fixitySyntaxKw :: KeywordRef
+  }
+
+deriving stock instance (Show (FixitySyntaxDef 'Parsed))
+
+deriving stock instance (Show (FixitySyntaxDef 'Scoped))
+
+deriving stock instance (Eq (FixitySyntaxDef 'Parsed))
+
+deriving stock instance (Eq (FixitySyntaxDef 'Scoped))
+
+deriving stock instance (Ord (FixitySyntaxDef 'Parsed))
+
+deriving stock instance (Ord (FixitySyntaxDef 'Scoped))
+
+data FixityDef = FixityDef
+  { _fixityDefSyntaxDef :: FixitySyntaxDef 'Scoped,
+    _fixityDefFixity :: Fixity,
+    _fixityDefPrec :: Int
+  }
+  deriving stock (Show, Eq, Ord)
+
+instance HasLoc (FixitySyntaxDef s) where
+  getLoc FixitySyntaxDef {..} = getLoc _fixitySyntaxKw <> getLoc _fixityInfo
+
 data OperatorSyntaxDef = OperatorSyntaxDef
   { _opSymbol :: Symbol,
-    _opFixity :: Fixity,
+    _opFixity :: Symbol,
     _opKw :: KeywordRef,
     _opSyntaxKw :: KeywordRef
   }
@@ -965,13 +1012,19 @@ newtype ModuleSymbolEntry = ModuleSymbolEntry
   }
   deriving stock (Show)
 
+newtype FixitySymbolEntry = FixitySymbolEntry
+  { _fixityEntry :: S.Name' ()
+  }
+  deriving stock (Show)
+
 instance SingI t => CanonicalProjection (ModuleRef'' c t) (ModuleRef' c) where
   project r = ModuleRef' (sing :&: r)
 
 -- | Symbols that a module exports
 data ExportInfo = ExportInfo
   { _exportSymbols :: HashMap Symbol SymbolEntry,
-    _exportModuleSymbols :: HashMap Symbol ModuleSymbolEntry
+    _exportModuleSymbols :: HashMap Symbol ModuleSymbolEntry,
+    _exportFixitySymbols :: HashMap Symbol FixitySymbolEntry
   }
   deriving stock (Show)
 
@@ -1586,6 +1639,8 @@ makeLenses ''ProjectionDef
 makeLenses ''ScopedIden'
 makeLenses ''SymbolEntry
 makeLenses ''ModuleSymbolEntry
+makeLenses ''FixitySymbolEntry
+makeLenses ''FixityDef
 makeLenses ''RecordField
 makeLenses ''RhsRecord
 makeLenses ''RhsAdt
@@ -1610,6 +1665,7 @@ makeLenses ''Application
 makeLenses ''Let
 makeLenses ''FunctionParameters
 makeLenses ''Import
+makeLenses ''FixitySyntaxDef
 makeLenses ''OperatorSyntaxDef
 makeLenses ''IteratorSyntaxDef
 makeLenses ''ConstructorDef
@@ -2256,6 +2312,7 @@ exportNameSpace :: forall ns. SingI ns => Lens' ExportInfo (HashMap Symbol (Name
 exportNameSpace = case sing :: SNameSpace ns of
   SNameSpaceSymbols -> exportSymbols
   SNameSpaceModules -> exportModuleSymbols
+  SNameSpaceFixities -> exportFixitySymbols
 
 _ConstructorRhsRecord :: Traversal' (ConstructorRhs s) (RhsRecord s)
 _ConstructorRhsRecord f rhs = case rhs of

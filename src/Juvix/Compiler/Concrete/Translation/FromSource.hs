@@ -517,10 +517,11 @@ builtinStatement = do
 -- Syntax declaration
 --------------------------------------------------------------------------------
 
-syntaxDef :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r SyntaxDef
+syntaxDef :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (SyntaxDef 'Parsed)
 syntaxDef = do
   syn <- kw kwSyntax
-  (SyntaxOperator <$> operatorSyntaxDef syn)
+  (SyntaxFixity <$> fixitySyntaxDef syn)
+    <|> (SyntaxOperator <$> operatorSyntaxDef syn)
     <|> (SyntaxIterator <$> iteratorSyntaxDef syn)
 
 --------------------------------------------------------------------------------
@@ -530,20 +531,20 @@ syntaxDef = do
 precedence :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r Precedence
 precedence = PrecNat <$> (fst <$> decimal)
 
+fixitySyntaxDef :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => KeywordRef -> ParsecS r (FixitySyntaxDef 'Parsed)
+fixitySyntaxDef _fixitySyntaxKw = do
+  _fixityKw <- kw kwFixity
+  _fixityDoc <- getJudoc
+  _fixitySymbol <- symbol
+  _fixityInfo <- withLoc (parseYaml "{" "}")
+  return FixitySyntaxDef {..}
+
 operatorSyntaxDef :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => KeywordRef -> ParsecS r OperatorSyntaxDef
 operatorSyntaxDef _opSyntaxKw = do
-  (_fixityArity, _opKw) <- arity
-  _fixityPrecedence <- precedence
+  _opKw <- kw kwOperator
   _opSymbol <- symbol
-  let _opFixity = Fixity {..}
+  _opFixity <- symbol
   return OperatorSyntaxDef {..}
-  where
-    arity :: ParsecS r (OperatorArity, KeywordRef)
-    arity =
-      (Binary AssocRight,) <$> kw kwInfixr
-        <|> (Binary AssocLeft,) <$> kw kwInfixl
-        <|> (Binary AssocNone,) <$> kw kwInfix
-        <|> (Unary AssocPostfix,) <$> kw kwPostfix
 
 --------------------------------------------------------------------------------
 -- Iterator syntax declaration

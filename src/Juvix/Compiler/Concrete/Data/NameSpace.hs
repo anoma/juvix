@@ -7,6 +7,7 @@ import Juvix.Prelude
 data NameSpace
   = NameSpaceSymbols
   | NameSpaceModules
+  | NameSpaceFixities
   deriving stock (Eq, Generic, Enum, Bounded, Show, Ord)
 
 instance Hashable NameSpace
@@ -25,3 +26,4 @@ type family NameKindNameSpace s = res where
   NameKindNameSpace 'KNameAxiom = 'NameSpaceSymbols
   NameKindNameSpace 'KNameLocalModule = 'NameSpaceModules
   NameKindNameSpace 'KNameTopModule = 'NameSpaceModules
+  NameKindNameSpace 'KNameFixity = 'NameSpaceFixities

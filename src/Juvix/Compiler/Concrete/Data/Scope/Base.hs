@@ -24,6 +24,7 @@ data Scope = Scope
   { _scopePath :: S.AbsModulePath,
     _scopeSymbols :: HashMap Symbol (SymbolInfo 'NameSpaceSymbols),
     _scopeModuleSymbols :: HashMap Symbol (SymbolInfo 'NameSpaceModules),
+    _scopeFixitySymbols :: HashMap Symbol (SymbolInfo 'NameSpaceFixities),
     -- | The map from S.NameId to Modules is needed because we support merging
     -- several imports under the same name. E.g.
     -- import A as X;
@@ -34,7 +35,8 @@ data Scope = Scope
     -- symbol with a different location but we may want the location of the
     -- original symbol
     _scopeLocalSymbols :: HashMap Symbol S.Symbol,
-    _scopeLocalModuleSymbols :: HashMap Symbol S.Symbol
+    _scopeLocalModuleSymbols :: HashMap Symbol S.Symbol,
+    _scopeLocalFixitySymbols :: HashMap Symbol S.Symbol
   }
 
 newtype ModulesCache = ModulesCache
@@ -64,13 +66,14 @@ data ScoperState = ScoperState
     _scoperConstructorFields :: HashMap S.NameId RecordNameSignature
   }
 
-data SymbolFixity = SymbolFixity
-  { _symbolFixityUsed :: Bool,
-    _symbolFixityDef :: OperatorSyntaxDef
+data SymbolOperator = SymbolOperator
+  { _symbolOperatorUsed :: Bool,
+    _symbolOperatorFixity :: Fixity,
+    _symbolOperatorDef :: OperatorSyntaxDef
   }
 
-newtype ScoperFixities = ScoperFixites
-  { _scoperFixities :: HashMap Symbol SymbolFixity
+newtype ScoperOperators = ScoperOperators
+  { _scoperOperators :: HashMap Symbol SymbolOperator
   }
   deriving newtype (Semigroup, Monoid)
 
@@ -84,12 +87,21 @@ newtype ScoperIterators = ScoperIterators
   }
   deriving newtype (Semigroup, Monoid)
 
+data ScoperSyntax = ScoperSyntax
+  { _scoperSyntaxOperators :: ScoperOperators,
+    _scoperSyntaxIterators :: ScoperIterators
+  }
+
+emptyScoperSyntax :: ScoperSyntax
+emptyScoperSyntax = ScoperSyntax mempty mempty
+
 makeLenses ''ScoperIterators
+makeLenses ''SymbolOperator
 makeLenses ''SymbolIterator
 makeLenses ''SymbolInfo
 makeLenses ''Scope
-makeLenses ''ScoperFixities
-makeLenses ''SymbolFixity
+makeLenses ''ScoperOperators
+makeLenses ''ScoperSyntax
 makeLenses ''ScoperState
 makeLenses ''ScopeParameters
 makeLenses ''ModulesCache

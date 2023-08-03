@@ -8,7 +8,7 @@ import Juvix.Prelude.Base
 data Precedence
   = PrecMinusOmega1
   | PrecMinusOmega
-  | PrecNat Natural
+  | PrecNat Int
   | PrecOmega
   deriving stock (Show, Eq, Data, Ord)
 

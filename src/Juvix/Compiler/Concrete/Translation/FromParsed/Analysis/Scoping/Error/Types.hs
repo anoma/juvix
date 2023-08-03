@@ -221,14 +221,14 @@ instance ToGenericError QualSymNotInScope where
           i = getLoc _qualSymNotInScope
           msg = "Qualified symbol not in scope:" <+> ppCode opts' _qualSymNotInScope
 
-data DuplicateFixity = DuplicateFixity
-  { _dupFixityFirst :: OperatorSyntaxDef,
-    _dupFixitySecond :: OperatorSyntaxDef
+data DuplicateOperator = DuplicateOperator
+  { _dupOperatorFirst :: OperatorSyntaxDef,
+    _dupOperatorSecond :: OperatorSyntaxDef
   }
   deriving stock (Show)
 
-instance ToGenericError DuplicateFixity where
-  genericError DuplicateFixity {..} = ask >>= generr
+instance ToGenericError DuplicateOperator where
+  genericError DuplicateOperator {..} = ask >>= generr
     where
       generr opts =
         return
@@ -239,18 +239,18 @@ instance ToGenericError DuplicateFixity where
             }
         where
           opts' = fromGenericOptions opts
-          i1 = getLoc _dupFixityFirst
-          i2 = getLoc _dupFixitySecond
+          i1 = getLoc _dupOperatorFirst
+          i2 = getLoc _dupOperatorSecond
 
           msg =
-            "Multiple fixity declarations for symbol"
+            "Multiple operator declarations for symbol"
               <+> ppCode opts' sym
                 <> ":"
                 <> line
                 <> indent' (align locs)
             where
-              sym = _dupFixityFirst ^. opSymbol
-              locs = vsep $ map (pretty . getLoc) [_dupFixityFirst, _dupFixityFirst]
+              sym = _dupOperatorFirst ^. opSymbol
+              locs = vsep $ map (pretty . getLoc) [_dupOperatorFirst, _dupOperatorSecond]
 
 data DuplicateIterator = DuplicateIterator
   { _dupIteratorFirst :: IteratorSyntaxDef,
@@ -283,10 +283,16 @@ instance ToGenericError DuplicateIterator where
               sym = _dupIteratorFirst ^. iterSymbol
               locs = vsep $ map (pretty . getLoc) [_dupIteratorFirst, _dupIteratorFirst]
 
+data ExportEntries
+  = ExportEntriesSymbols (NonEmpty SymbolEntry)
+  | ExportEntriesModules (NonEmpty ModuleSymbolEntry)
+  | ExportEntriesFixities (NonEmpty FixitySymbolEntry)
+  deriving stock (Show)
+
 data MultipleExportConflict = MultipleExportConflict
   { _multipleExportModule :: S.AbsModulePath,
     _multipleExportSymbol :: Symbol,
-    _multipleExportEntries :: Either (NonEmpty SymbolEntry) (NonEmpty ModuleSymbolEntry)
+    _multipleExportEntries :: ExportEntries
   }
   deriving stock (Show)
 

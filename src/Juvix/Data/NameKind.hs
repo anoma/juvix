@@ -19,6 +19,8 @@ data NameKind
     KNameLocalModule
   | -- | A top module name.
     KNameTopModule
+  | -- | A fixity name
+    KNameFixity
   deriving stock (Show, Eq, Data)
 
 $(genSingletons [''NameKind])
@@ -47,6 +49,7 @@ nameKindText = \case
   KNameAxiom -> "axiom"
   KNameLocalModule -> "local module"
   KNameTopModule -> "module"
+  KNameFixity -> "fixity"
 
 isExprKind :: HasNameKind a => a -> Bool
 isExprKind k = case getNameKind k of
@@ -69,6 +72,7 @@ canBeCompiled k = case getNameKind k of
   KNameLocal -> False
   KNameLocalModule -> False
   KNameTopModule -> False
+  KNameFixity -> False
 
 canHaveFixity :: HasNameKind a => a -> Bool
 canHaveFixity k = case getNameKind k of
@@ -79,6 +83,7 @@ canHaveFixity k = case getNameKind k of
   KNameLocal -> False
   KNameLocalModule -> False
   KNameTopModule -> False
+  KNameFixity -> False
 
 canBeIterator :: HasNameKind a => a -> Bool
 canBeIterator k = case getNameKind k of
@@ -89,6 +94,7 @@ canBeIterator k = case getNameKind k of
   KNameLocal -> False
   KNameLocalModule -> False
   KNameTopModule -> False
+  KNameFixity -> False
 
 nameKindAnsi :: NameKind -> AnsiStyle
 nameKindAnsi k = case k of
@@ -99,6 +105,7 @@ nameKindAnsi k = case k of
   KNameFunction -> colorDull Yellow
   KNameLocal -> mempty
   KNameTopModule -> color Cyan
+  KNameFixity -> mempty
 
 isFunctionKind :: HasNameKind a => a -> Bool
 isFunctionKind k = case getNameKind k of

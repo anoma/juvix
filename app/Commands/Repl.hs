@@ -286,6 +286,7 @@ printDocumentation = replParseIdentifiers >=> printIdentifiers
             KNameConstructor -> getDocConstructor n
             KNameLocalModule -> impossible
             KNameTopModule -> impossible
+            KNameFixity -> undefined
           printDoc mdoc
           where
             printDoc :: Maybe (Concrete.Judoc 'Concrete.Scoped) -> Repl ()
@@ -342,6 +343,7 @@ printDefinition = replParseIdentifiers >=> printIdentifiers
                 KNameConstructor -> printConstructor n
                 KNameLocalModule -> impossible
                 KNameTopModule -> impossible
+                KNameFixity -> undefined
           where
             printLocation :: HasLoc s => s -> Repl ()
             printLocation def = do
