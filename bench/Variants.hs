@@ -64,7 +64,7 @@ defaultExt :: [String]
 defaultExt = [".exe"]
 
 runWasm :: Path Abs File -> IO ()
-runWasm p = void (readProcess "wasmer" [toFilePath p, "--disable-cache"] "")
+runWasm p = void (readProcess "wasmer" [toFilePath p] "")
 
 runExe :: Path Abs File -> IO ()
 runExe p = void (readProcess (toFilePath p) [] "")
