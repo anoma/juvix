@@ -2,13 +2,8 @@ module Iterators;
 
 syntax iterator for {init: 1, range: 1};
 
-for : {A B : Type} → (A → B → A) → A → B → A
-  | f x y := f x y;
-
-syntax iterator bind {init: 1, range: 0};
-
-bind : {A B : Type} → (A → B) → A → B
-  | f x := f x;
+for {A B : Type} (f : A → B → A) (x : A) (y : B) : A :=
+  f x y;
 
 syntax iterator itconst {init: 2, range: 2};
 
@@ -22,9 +17,10 @@ type Bool :=
   | false : Bool;
 
 main : Bool :=
-  bind (z := false)
-    itconst (a := true; b := false) (c in false; d in false)
-      for (x := true) (y in false)
-        case x
-          | true := y
-          | false := z;
+  let
+    z : Bool := false;
+  in itconst (a := true; b := false) (c in false; d in false)
+       for (x := true) (y in false)
+         case x
+           | true := y
+           | false := z;

@@ -7,8 +7,6 @@ module Juvix.Compiler.Concrete.Extra
     groupStatements,
     flattenStatement,
     migrateFunctionSyntax,
-    fromAmbiguousIterator,
-    ambiguousIteratorToAtoms,
   )
 where
 
@@ -193,46 +191,3 @@ migrateFunctionSyntax m = over moduleBody (mapMaybe goStatement) m
             }
     getClauses :: S.Symbol -> [FunctionClause 'Scoped]
     getClauses name = [c | StatementFunctionClause c <- ss', name == c ^. clauseOwnerFunction]
-
-fromAmbiguousIterator :: AmbiguousIterator -> Iterator 'Parsed
-fromAmbiguousIterator AmbiguousIterator {..} =
-  Iterator
-    { _iteratorName = _ambiguousIteratorName,
-      _iteratorRanges = [],
-      _iteratorBody = _ambiguousIteratorBody,
-      _iteratorBodyBraces = _ambiguousIteratorBodyBraces,
-      _iteratorInitializers = map mkInitializer (toList _ambiguousIteratorInitializers),
-      _iteratorParens = _ambiguousIteratorParens
-    }
-  where
-    mkInitializer :: NamedArgument 'Parsed -> Initializer 'Parsed
-    mkInitializer a@NamedArgument {..} =
-      Initializer
-        { _initializerAssignKw = _namedArgAssignKw,
-          _initializerPattern = PatternAtoms (pure (PatternAtomIden (NameUnqualified _namedArgName))) (Irrelevant (getLoc a)),
-          _initializerExpression = _namedArgValue
-        }
-
-ambiguousIteratorToAtoms :: AmbiguousIterator -> ExpressionAtoms 'Parsed
-ambiguousIteratorToAtoms AmbiguousIterator {..} =
-  ExpressionAtoms
-    { _expressionAtomsLoc = Irrelevant (getLoc napp),
-      _expressionAtoms = pure (AtomNamedApplication napp) <> body
-    }
-  where
-    body :: NonEmpty (ExpressionAtom 'Parsed)
-    body
-      | _ambiguousIteratorBodyBraces = pure (AtomBraces (WithLoc (getLoc _ambiguousIteratorBody) _ambiguousIteratorBody))
-      | otherwise = _ambiguousIteratorBody ^. expressionAtoms
-    napp =
-      NamedApplication
-        { _namedAppName = _ambiguousIteratorName,
-          _namedAppSignature = Irrelevant (),
-          _namedAppArgs =
-            pure
-              ArgumentBlock
-                { _argBlockDelims = Irrelevant Nothing,
-                  _argBlockImplicit = Explicit,
-                  _argBlockArgs = _ambiguousIteratorInitializers
-                }
-        }

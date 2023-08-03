@@ -111,11 +111,6 @@ type family NameSignatureType s = res | res -> s where
   NameSignatureType 'Parsed = ()
   NameSignatureType 'Scoped = NameSignature
 
-type AmbiguousIteratorType :: Stage -> GHC.Type
-type family AmbiguousIteratorType s = res | res -> s where
-  AmbiguousIteratorType 'Parsed = AmbiguousIterator
-  AmbiguousIteratorType 'Scoped = Void
-
 type ModulePathType :: Stage -> ModuleIsTop -> GHC.Type
 type family ModulePathType s t = res | res -> t s where
   ModulePathType 'Parsed 'ModuleTop = TopModulePath
@@ -1215,20 +1210,6 @@ deriving stock instance Ord (Iterator 'Parsed)
 
 deriving stock instance Ord (Iterator 'Scoped)
 
--- | Either an Iterator or a NamedApplication. Has the form:
--- f (sym := expr; .. ; symn := expr) -- not followed by range
-data AmbiguousIterator = AmbiguousIterator
-  { _ambiguousIteratorName :: Name,
-    _ambiguousIteratorInitializers :: NonEmpty (NamedArgument 'Parsed),
-    _ambiguousIteratorBody :: ExpressionType 'Parsed,
-    -- | Was the body enclosed in braces?
-    _ambiguousIteratorBodyBraces :: Bool,
-    -- | Due to limitations of the pretty printing algorithm, we store whether
-    -- the iterator was surrounded by parentheses in the code.
-    _ambiguousIteratorParens :: Bool
-  }
-  deriving stock (Show, Eq, Ord)
-
 data List (s :: Stage) = List
   { _listBracketL :: Irrelevant KeywordRef,
     _listBracketR :: Irrelevant KeywordRef,
@@ -1354,7 +1335,6 @@ data ExpressionAtom (s :: Stage)
   | AtomLiteral LiteralLoc
   | AtomParens (ExpressionType s)
   | AtomIterator (Iterator s)
-  | AtomAmbiguousIterator (AmbiguousIteratorType s)
   | AtomNamedApplication (NamedApplication s)
 
 deriving stock instance Show (ExpressionAtom 'Parsed)
@@ -1567,7 +1547,6 @@ makeLenses ''PatternBinding
 makeLenses ''PatternAtoms
 makeLenses ''ExpressionAtoms
 makeLenses ''Iterator
-makeLenses ''AmbiguousIterator
 makeLenses ''Initializer
 makeLenses ''Range
 makeLenses ''ModuleIndex

@@ -13,7 +13,6 @@ import Juvix.Compiler.Concrete.Data.InfoTable
 import Juvix.Compiler.Concrete.Data.NameSignature.Base
 import Juvix.Compiler.Concrete.Data.Scope.Base
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
-import Juvix.Compiler.Concrete.Extra (fromAmbiguousIterator)
 import Juvix.Compiler.Concrete.Extra qualified as Concrete
 import Juvix.Compiler.Concrete.Keywords qualified as Kw
 import Juvix.Compiler.Concrete.Language
@@ -119,11 +118,6 @@ ppPatternAtomIdenType = case sing :: SStage s of
 
 ppExpressionType :: forall s. SingI s => PrettyPrinting (ExpressionType s)
 ppExpressionType = case sing :: SStage s of
-  SParsed -> ppCode
-  SScoped -> ppCode
-
-ppAmbiguousIteratorType :: forall s. SingI s => PrettyPrinting (AmbiguousIteratorType s)
-ppAmbiguousIteratorType = case sing :: SStage s of
   SParsed -> ppCode
   SScoped -> ppCode
 
@@ -247,9 +241,6 @@ instance SingI s => PrettyPrint (List s) where
         e = hsepSemicolon (map ppExpressionType _listItems)
     l <> e <> r
 
-instance PrettyPrint AmbiguousIterator where
-  ppCode = ppCode . fromAmbiguousIterator
-
 instance SingI s => PrettyPrint (NamedArgument s) where
   ppCode NamedArgument {..} = do
     let s = ppCode _namedArgName
@@ -310,7 +301,6 @@ instance SingI s => PrettyPrint (ExpressionAtom s) where
     AtomBraces e -> braces (ppExpressionType (e ^. withLocParam))
     AtomHole w -> ppHoleType w
     AtomIterator i -> ppCode i
-    AtomAmbiguousIterator i -> ppAmbiguousIteratorType i
     AtomNamedApplication i -> ppCode i
 
 instance PrettyPrint PatternScopedIden where
