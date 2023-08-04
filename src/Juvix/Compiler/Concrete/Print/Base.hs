@@ -190,6 +190,7 @@ instance SingI s => PrettyPrint (PatternAtom s) where
     PatternAtomParens p -> parens (ppPatternParensType p)
     PatternAtomBraces p -> braces (ppPatternParensType p)
     PatternAtomAt p -> ppPatternAtType p
+    PatternAtomRecord p -> ppCode p
 
 instance SingI s => PrettyPrint (PatternAtoms s) where
   ppCode (PatternAtoms ps _) = hsep (ppCode <$> ps)
@@ -802,6 +803,26 @@ instance SingI s => PrettyPrint (TypeSignature s) where
 instance PrettyPrint Wildcard where
   ppCode w = morpheme (getLoc w) C.kwWildcard
 
+instance SingI s => PrettyPrint (FieldPun s) where
+  ppCode = ppSymbolType . (^. fieldPunField)
+
+instance SingI s => PrettyPrint (RecordPatternAssign s) where
+  ppCode a = do
+    ppCode (a ^. recordPatternAssignField)
+      <+> ppCode (a ^. recordPatternAssignKw)
+      <+> ppPatternParensType (a ^. recordPatternAssignPattern)
+
+instance SingI s => PrettyPrint (RecordPatternItem s) where
+  ppCode = \case
+    RecordPatternItemFieldPun f -> ppCode f
+    RecordPatternItemAssign f -> ppCode f
+
+instance SingI s => PrettyPrint (RecordPattern s) where
+  ppCode r = do
+    let c = ppIdentifierType (r ^. recordPatternConstructor)
+        items = sepSemicolon (map ppCode (r ^. recordPatternItems))
+    c <> noLoc C.kwAt <> braces items
+
 instance PrettyPrint Pattern where
   ppCode = \case
     PatternVariable v -> annDef v (ppCode v)
@@ -815,6 +836,7 @@ instance PrettyPrint Pattern where
     PatternConstructor constr -> ppCode constr
     PatternInfixApplication i -> apeHelper i
     PatternPostfixApplication i -> apeHelper i
+    PatternRecord i -> ppCode i
 
 instance PrettyPrint PatternArg where
   ppCode PatternArg {..} = do
