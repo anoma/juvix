@@ -11,3 +11,17 @@ swap {A B : Type} : Pair A B -> Pair B A
 
 swapPun {A B : Type} : Pair A B -> Pair B A
   | mkPair@{fst; snd} := mkPair snd fst;
+
+type Sum (A B : Type) :=
+  | inj1 {
+      fst : A;
+      snd : B
+    }
+  | inj2 {
+      fst : A;
+      snd2 : B
+    };
+
+sumSwap {A B : Type} : Sum A B -> Sum B A
+  | inj1@{fst; snd := y} := inj2 y fst
+  | inj2@{snd2 := y; fst := fst} := inj1 y fst;
