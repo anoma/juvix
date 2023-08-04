@@ -830,8 +830,8 @@ goExpression = \case
               whenM (gets @(IntMap (RecordUpdateField 'Scoped)) (IntMap.member idx)) (throw repeated)
               modify' (IntMap.insert idx f)
               where
-              repeated :: ScoperError
-              repeated = ErrRepeatedField (RepeatedField (f ^. fieldUpdateName))
+                repeated :: ScoperError
+                repeated = ErrRepeatedField (RepeatedField (f ^. fieldUpdateName))
 
         mkArgs :: [Indexed Internal.VarName] -> Sem r [Internal.Expression]
         mkArgs vs = do
