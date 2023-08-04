@@ -2,6 +2,7 @@ module Scope.Negative (allTests) where
 
 import Base
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
+import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error.Types (RepeatedField(RepeatedField))
 
 type FailMsg = String
 
@@ -336,5 +337,12 @@ scoperErrorTests =
       $(mkRelFile "UnexpectedFieldUpdate.juvix")
       $ \case
         ErrUnexpectedField UnexpectedField {} -> Nothing
+        _ -> wrongError,
+    NegTest
+      "Repeated field in record pattern"
+      $(mkRelDir ".")
+      $(mkRelFile "RepeatedFieldPattern.juvix")
+      $ \case
+        ErrRepeatedField RepeatedField {} -> Nothing
         _ -> wrongError
   ]

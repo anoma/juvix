@@ -1,0 +1,13 @@
+module RepeatedField;
+
+type T :=
+  | t;
+
+type R :=
+  | mkR {
+      a : T;
+      b : T
+    };
+
+f : R -> T
+  | mkR@{a := x; a := y} := x;
