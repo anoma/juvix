@@ -895,6 +895,7 @@ goExpression = \case
       KNameConstructor -> Internal.IdenConstructor n'
       KNameLocalModule -> impossible
       KNameTopModule -> impossible
+      KNameFixity -> impossible
       where
         n' = goName (x ^. scopedIden)
 

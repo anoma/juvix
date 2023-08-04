@@ -858,3 +858,24 @@ instance ToGenericError RepeatedField where
     where
       i :: Interval
       i = getLoc _repeatedField
+
+newtype PrecedenceInconsistencyError = PrecedenceInconsistencyError
+  { _precedenceInconsistencyErrorFixityDef :: FixitySyntaxDef 'Scoped
+  }
+  deriving stock (Show)
+
+instance ToGenericError PrecedenceInconsistencyError where
+  genericError PrecedenceInconsistencyError {..} = do
+    opts <- fromGenericOptions <$> ask
+    let msg =
+          "Cannot resolve precedence ordering for "
+            <+> ppCode opts (_precedenceInconsistencyErrorFixityDef ^. fixitySymbol)
+    return
+      GenericError
+        { _genericErrorLoc = i,
+          _genericErrorMessage = mkAnsiText msg,
+          _genericErrorIntervals = [i]
+        }
+    where
+      i :: Interval
+      i = getLoc _precedenceInconsistencyErrorFixityDef

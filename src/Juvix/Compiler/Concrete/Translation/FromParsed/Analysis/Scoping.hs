@@ -299,13 +299,6 @@ reserveAxiomSymbol ::
   Sem r S.Symbol
 reserveAxiomSymbol a = reserveSymbolSignatureOf SKNameAxiom a (a ^. axiomName)
 
-reserveFixitySymbol ::
-  Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder] r =>
-  FunctionDef 'Parsed ->
-  Sem r S.Symbol
-reserveFixitySymbol f =
-  reserveSymbolSignatureOf SKNameFixity f (f ^. signName)
-
 bindFunctionSymbol ::
   Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, InfoTableBuilder, State ScoperState, Reader BindingStrategy] r =>
   Symbol ->
@@ -334,7 +327,11 @@ bindFixitySymbol ::
   Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, InfoTableBuilder, State ScoperState, Reader BindingStrategy] r =>
   Symbol ->
   Sem r S.Symbol
-bindFixitySymbol = getReservedDefinitionSymbol
+bindFixitySymbol s = do
+  m <- gets (^. scopeLocalFixitySymbols)
+  let s' = fromMaybe err (m ^. at s)
+      err = error ("impossible. Contents of scope:\n" <> ppTrace (toList m))
+  return s'
 
 checkImport ::
   forall r.
@@ -600,16 +597,24 @@ checkFixitySyntaxDef FixitySyntaxDef {..} = topBindings $ do
   above <- mapM (checkFixitySymbol . WithLoc loc) $ fi ^. FI.fixityPrecAbove
   tab <- getInfoTable
   let samePrec = getPrec tab <$> same
-      belowPrec = maximum (minInt : map (getPrec tab) below)
-      abovePrec = minimum (maxInt : map (getPrec tab) above)
-  when (abovePrec >= belowPrec) $
-    undefined
+      belowPrec = maximum (minInt + 1 : map (getPrec tab) below)
+      abovePrec = minimum (maxInt - 1 : map (getPrec tab) above)
+  when (belowPrec >= abovePrec + 1) $
+    throw (ErrPrecedenceInconsistency (PrecedenceInconsistencyError fdef))
   when (isJust same && not (null below && null above)) $
-    undefined
+    throw (ErrPrecedenceInconsistency (PrecedenceInconsistencyError fdef))
   let prec = fromMaybe ((abovePrec + belowPrec) `div` 2) samePrec
       fx =
         Fixity
-          { _fixityPrecedence = PrecNat prec
+          { _fixityPrecedence = PrecNat prec,
+            _fixityArity =
+              case fi ^. FI.fixityArity of
+                FI.Unary -> Unary AssocPostfix
+                FI.Binary -> case fi ^. FI.fixityAssoc of
+                  Nothing -> Binary AssocLeft
+                  Just FI.AssocLeft -> Binary AssocLeft
+                  Just FI.AssocRight -> Binary AssocRight
+                  Just FI.AssocNone -> Binary AssocNone
           }
   registerFixity
     @$> FixityDef
@@ -621,7 +626,7 @@ checkFixitySyntaxDef FixitySyntaxDef {..} = topBindings $ do
   where
     checkMaybeFixity ::
       forall r'.
-      Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder] r' =>
+      Members '[Error ScoperError, State Scope, State ScoperState] r' =>
       Interval ->
       Maybe Text ->
       Sem r' (Maybe S.Symbol)
@@ -634,16 +639,19 @@ checkFixitySyntaxDef FixitySyntaxDef {..} = topBindings $ do
 
 checkOperatorSyntaxDef ::
   forall r.
-  Members '[Error ScoperError, State Scope, State ScoperState, State ScoperSyntax] r =>
+  Members '[Error ScoperError, State Scope, State ScoperState, State ScoperSyntax, InfoTableBuilder] r =>
   OperatorSyntaxDef ->
   Sem r ()
 checkOperatorSyntaxDef s@OperatorSyntaxDef {..} = do
   checkNotDefined
-  let sf =
+  sym <- checkFixitySymbol _opFixity
+  tab <- getInfoTable
+  let fx = fromJust (HashMap.lookup (sym ^. S.nameId) (tab ^. infoFixities)) ^. fixityDefFixity
+      sf =
         SymbolOperator
           { _symbolOperatorUsed = False,
             _symbolOperatorDef = s,
-            _symbolOperatorFixity = undefined
+            _symbolOperatorFixity = fx
           }
   modify (over scoperSyntaxOperators (over scoperOperators (HashMap.insert _opSymbol sf)))
   where
@@ -1837,7 +1845,7 @@ checkUnqualified s = do
     n = NameUnqualified s
 
 checkFixitySymbol ::
-  (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder] r) =>
+  (Members '[Error ScoperError, State Scope, State ScoperState] r) =>
   Symbol ->
   Sem r S.Symbol
 checkFixitySymbol s = do

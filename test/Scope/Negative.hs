@@ -100,11 +100,11 @@ scoperErrorTests =
         ErrInfixPattern {} -> Nothing
         _ -> wrongError,
     NegTest
-      "Duplicate fixity declaration"
+      "Duplicate operator declaration"
       $(mkRelDir ".")
-      $(mkRelFile "DuplicateFixity.juvix")
+      $(mkRelFile "DuplicateOperator.juvix")
       $ \case
-        ErrDuplicateFixity {} -> Nothing
+        ErrDuplicateOperator {} -> Nothing
         _ -> wrongError,
     NegTest
       "Multiple export conflict"
