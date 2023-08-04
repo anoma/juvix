@@ -70,14 +70,26 @@ tests:
       shell:
         - bash
       script: |
-        temp=$(mktemp -d)
-        cd ./examples/milestone/HelloWorld
-        juvix compile HelloWorld.juvix --internal-build-dir "$temp"
-        find "$temp" | wc -l
-        rm -rf "$temp"
-    stdout:
-      matches: |
-        \s*([2-9]|[1-9][0-9]+)
+        buildDir=$(mktemp -d)
+        rootDir=$(mktemp -d)
+        trap 'rm -rf -- "$buildDir"' EXIT
+        trap 'rm -rf -- "$rootDir"' EXIT
+
+        cp ./examples/milestone/HelloWorld/HelloWorld.juvix "$rootDir"
+        touch "$rootDir/juvix.yaml"
+
+        cd "$rootDir"
+        juvix compile HelloWorld.juvix --internal-build-dir "$buildDir"
+
+        num_files=$(ls -1qA "$buildDir" | wc -l)
+        if [ $num_files -le 0 ]; then
+          exit 1
+        fi
+
+        if [ -d "$rootDir/.juvix-build" ]; then
+          exit 1
+        fi
+    stdout: ""
     exit-status: 0
 
   - name: default-output-file-in-invoke-dir
