@@ -1118,7 +1118,7 @@ patternAtomRecord :: Members '[InfoTableBuilder, PragmasStash, JudocStash, NameI
 patternAtomRecord _recordPatternConstructor = do
   -- The try is needed to disambiguate from `at` pattern
   P.try (void (kw kwAt >> kw delimBraceL))
-  _recordPatternItems <- many recordPatternItem
+  _recordPatternItems <- P.sepEndBy recordPatternItem semicolon
   kw delimBraceR
   return
     RecordPattern

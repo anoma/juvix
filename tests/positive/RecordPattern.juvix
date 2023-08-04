@@ -1,0 +1,13 @@
+module RecordPattern;
+
+type Pair (A B : Type) :=
+  | mkPair {
+      fst : A;
+      snd : B
+    };
+
+swap {A B : Type} : Pair A B -> Pair B A
+  | mkPair@{fst := c1; snd := c2} := mkPair c2 c1;
+
+swapPun {A B : Type} : Pair A B -> Pair B A
+  | mkPair@{fst; snd} := mkPair snd fst;
