@@ -45,7 +45,6 @@ data ScoperError
   | ErrNotARecord NotARecord
   | ErrUnexpectedField UnexpectedField
   | ErrRepeatedField RepeatedField
-  | ErrConstructorNotARecord ConstructorNotARecord
 
 instance ToGenericError ScoperError where
   genericError = \case
@@ -81,6 +80,4 @@ instance ToGenericError ScoperError where
     ErrNamedArgumentsError e -> genericError e
     ErrNotARecord e -> genericError e
     ErrUnexpectedField e -> genericError e
-    ErrRepeatedField e -> genericError e
-    ErrConstructorNotARecord e -> genericError e
     ErrRepeatedField e -> genericError e
