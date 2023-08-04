@@ -20,6 +20,7 @@ where
 
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
+import Data.Text qualified as T
 import Juvix.Compiler.Concrete.Data.Name
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Base
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Error
@@ -108,7 +109,10 @@ getDependencyPath = \case
   DependencyPath p -> do
     r <- asks (^. envRoot)
     canonicalDir r (p ^. pathDependencyPath)
-  DependencyGit {} -> error "git dependency is not currently supported"
+  DependencyGit g -> do
+    r <- rootBuildDir <$> asks (^. envRoot)
+    let cloneDir = r <//> $(mkRelDir "deps") <//> relDir (T.unpack (g ^. gitDependencyName))
+    return cloneDir
 
 registerDependencies' ::
   (Members '[Reader EntryPoint, State ResolverState, Reader ResolverEnv, Files, Error Text] r) =>

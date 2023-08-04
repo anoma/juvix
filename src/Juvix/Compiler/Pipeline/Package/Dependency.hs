@@ -25,7 +25,8 @@ mkPathDependency = DependencyPath . PathDependency . mkPrepath
 
 data GitDependency = GitDependency
   { _gitDependencyUrl :: Text,
-    _gitDependencyHash :: Text
+    _gitDependencyHash :: Text,
+    _gitDependencyName :: Text
   }
   deriving stock (Generic, Eq, Show)
 
@@ -84,4 +85,5 @@ instance FromJSON GitDependency where
       p = do
         _gitDependencyUrl <- key "url" asText
         _gitDependencyHash <- key "hash" asText
+        _gitDependencyName <- key "name" asText
         return GitDependency {..}
