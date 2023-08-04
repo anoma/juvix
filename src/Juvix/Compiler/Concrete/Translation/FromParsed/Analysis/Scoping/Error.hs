@@ -83,3 +83,4 @@ instance ToGenericError ScoperError where
     ErrUnexpectedField e -> genericError e
     ErrRepeatedField e -> genericError e
     ErrConstructorNotARecord e -> genericError e
+    ErrRepeatedField e -> genericError e

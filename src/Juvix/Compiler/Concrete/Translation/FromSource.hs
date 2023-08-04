@@ -1110,7 +1110,7 @@ recordPatternItem = do
     fieldPun :: Symbol -> FieldPun 'Parsed
     fieldPun f =
       FieldPun
-        { _fieldPunIdx = (),
+        { _fieldPunIx = (),
           _fieldPunField = f
         }
 
@@ -1120,7 +1120,11 @@ patternAtomRecord _recordPatternConstructor = do
   P.try (void (kw kwAt >> kw delimBraceL))
   _recordPatternItems <- many recordPatternItem
   kw delimBraceR
-  return RecordPattern {..}
+  return
+    RecordPattern
+      { _recordPatternSignature = Irrelevant (),
+        ..
+      }
 
 -- | A pattern that starts with an identifier
 patternAtomNamed :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => Bool -> ParsecS r (PatternAtom 'Parsed)

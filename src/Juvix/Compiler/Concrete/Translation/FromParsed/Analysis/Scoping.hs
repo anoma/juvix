@@ -1571,23 +1571,23 @@ checkRecordPattern ::
   Sem r (RecordPattern 'Scoped)
 checkRecordPattern r = do
   c' <- getNameOfKind KNameConstructor (r ^. recordPatternConstructor)
+  let s = ScopedIden c'
   fields <- fromMaybeM (return (RecordNameSignature mempty)) (gets (^. scoperConstructorFields . at (c' ^. S.nameId)))
   l' <-
     if
         | null (r ^. recordPatternItems) -> return []
         | otherwise -> do
+            when (null (fields ^. recordNames)) (throw (noFields s))
             runReader fields (mapM checkItem (r ^. recordPatternItems))
   return
     RecordPattern
-      { _recordPatternConstructor = ScopedIden c',
+      { _recordPatternConstructor = s,
         _recordPatternSignature = Irrelevant fields,
         _recordPatternItems = l'
       }
   where
-    -- TODO do we want to keep this error? Yes
     noFields :: ScopedIden -> ScoperError
     noFields = ErrConstructorNotARecord . ConstructorNotARecord
-    -- TODO check for repeated items
     checkItem ::
       forall r'.
       Members '[Reader RecordNameSignature, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r' =>
@@ -1617,10 +1617,11 @@ checkRecordPattern r = do
         checkPun :: FieldPun 'Parsed -> Sem r' (FieldPun 'Scoped)
         checkPun f = do
           idx' <- findField (f ^. fieldPunField)
+          f' <- bindVariableSymbol (f ^. fieldPunField)
           return
             FieldPun
-              { _fieldPunIdx = idx',
-                _fieldPunField = f ^. fieldPunField
+              { _fieldPunIx = idx',
+                _fieldPunField = f'
               }
 
 checkListPattern ::

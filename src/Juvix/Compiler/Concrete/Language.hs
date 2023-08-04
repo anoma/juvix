@@ -672,8 +672,8 @@ deriving stock instance Ord (RecordPatternAssign 'Parsed)
 deriving stock instance Ord (RecordPatternAssign 'Scoped)
 
 data FieldPun (s :: Stage) = FieldPun
-  { _fieldPunIdx :: FieldUpdateArgIxType s,
-    _fieldPunField :: Symbol
+  { _fieldPunIx :: FieldUpdateArgIxType s,
+    _fieldPunField :: SymbolType s
   }
 
 deriving stock instance Show (FieldPun 'Parsed)
@@ -1936,8 +1936,8 @@ instance SingI s => HasLoc (RecordPatternAssign s) where
     getLoc (a ^. recordPatternAssignField)
       <> getLocPatternParensType (a ^. recordPatternAssignPattern)
 
-instance HasLoc (FieldPun s) where
-  getLoc f = getLoc (f ^. fieldPunField)
+instance SingI s => HasLoc (FieldPun s) where
+  getLoc f = getLocSymbolType (f ^. fieldPunField)
 
 instance SingI s => HasLoc (RecordPatternItem s) where
   getLoc = \case
