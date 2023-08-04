@@ -1,0 +1,15 @@
+module Records2;
+
+import Stdlib.Data.Nat.Base open;
+
+type Pair (A B : Type) :=
+  | mkPair {
+      pfst : A;
+      psnd : B
+    };
+
+main : Pair Nat Nat;
+main :=
+  let
+    p : Pair Nat Nat := mkPair 2 2;
+  in p @Pair{pfst := pfst + psnd};
