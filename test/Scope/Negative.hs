@@ -2,7 +2,6 @@ module Scope.Negative (allTests) where
 
 import Base
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
-import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error.Types (RepeatedField(RepeatedField))
 
 type FailMsg = String
 
