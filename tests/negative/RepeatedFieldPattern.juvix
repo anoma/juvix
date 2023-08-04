@@ -1,4 +1,4 @@
-module RepeatedField;
+module RepeatedFieldPattern;
 
 type T :=
   | t;
