@@ -831,7 +831,7 @@ goExpression = \case
               modify' (IntMap.insert idx f)
               where
                 repeated :: ScoperError
-                repeated = undefined
+                repeated = ErrRepeatedField (RepeatedField (f ^. fieldUpdateName))
 
         mkArgs :: [Indexed Internal.VarName] -> Sem r [Internal.Expression]
         mkArgs vs = do
