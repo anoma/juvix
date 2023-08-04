@@ -809,3 +809,24 @@ instance ToGenericError UnexpectedField where
     where
       i :: Interval
       i = getLoc _unexpectedField
+
+newtype RepeatedField = RepeatedField
+  { _repeatedField :: Symbol
+  }
+  deriving stock (Show)
+
+instance ToGenericError RepeatedField where
+  genericError RepeatedField {..} = do
+    opts <- fromGenericOptions <$> ask
+    let msg =
+          "Repeated field"
+            <+> ppCode opts _repeatedField
+    return
+      GenericError
+        { _genericErrorLoc = i,
+          _genericErrorMessage = mkAnsiText msg,
+          _genericErrorIntervals = [i]
+        }
+    where
+      i :: Interval
+      i = getLoc _repeatedField

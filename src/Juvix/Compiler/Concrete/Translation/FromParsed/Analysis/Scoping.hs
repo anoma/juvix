@@ -15,6 +15,7 @@ import Juvix.Compiler.Concrete.Data.Name qualified as N
 import Juvix.Compiler.Concrete.Data.NameSignature
 import Juvix.Compiler.Concrete.Data.Scope
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
+import Juvix.Compiler.Concrete.Extra (recordNameSignatureByIndex)
 import Juvix.Compiler.Concrete.Extra qualified as P
 import Juvix.Compiler.Concrete.Gen qualified as G
 import Juvix.Compiler.Concrete.Language
@@ -1842,10 +1843,14 @@ checkRecordUpdate RecordUpdate {..} = do
   registerName tyName'
   info <- getRecordInfo (ScopedIden tyName')
   let sig = info ^. recordInfoSignature
-  fields' <- withLocalScope $ mapM (checkField sig) _recordUpdateFields
+  (vars', fields') <- withLocalScope $ do
+    vs <- mapM bindVariableSymbol (toList (recordNameSignatureByIndex sig))
+    fs <- mapM (checkField sig) _recordUpdateFields
+    return (vs, fs)
   let extra' =
         RecordUpdateExtra
           { _recordUpdateExtraSignature = sig,
+            _recordUpdateExtraVars = vars',
             _recordUpdateExtraConstructor = info ^. recordInfoConstructor
           }
   return
@@ -1857,15 +1862,13 @@ checkRecordUpdate RecordUpdate {..} = do
         _recordUpdateDelims
       }
   where
-    -- TODO checking repetitions is done by bindVariableSymbol, but error msg is not that good
     checkField :: RecordNameSignature -> RecordUpdateField 'Parsed -> Sem r (RecordUpdateField 'Scoped)
     checkField sig f = do
-      name' <- bindVariableSymbol (f ^. fieldUpdateName)
       value' <- checkParseExpressionAtoms (f ^. fieldUpdateValue)
       idx' <- maybe (throw unexpectedField) return (sig ^? recordNames . at (f ^. fieldUpdateName) . _Just . _2)
       return
         RecordUpdateField
-          { _fieldUpdateName = name',
+          { _fieldUpdateName = f ^. fieldUpdateName,
             _fieldUpdateArgIx = idx',
             _fieldUpdateAssignKw = f ^. fieldUpdateAssignKw,
             _fieldUpdateValue = value'

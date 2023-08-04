@@ -256,9 +256,6 @@ unnamedParameter ty =
 singletonRename :: VarName -> VarName -> Rename
 singletonRename = HashMap.singleton
 
-renameVar :: VarName -> VarName -> Expression -> Expression
-renameVar a b = substitutionE (renameToSubsE (singletonRename a b))
-
 renameToSubsE :: Rename -> SubsE
 renameToSubsE = fmap (ExpressionIden . IdenVar)
 
@@ -717,19 +714,21 @@ genConstructorPattern loc info = genConstructorPattern' loc (info ^. constructor
 genConstructorPattern' :: Members '[NameIdGen] r => Interval -> Name -> Int -> Sem r (PatternArg, [VarName])
 genConstructorPattern' loc cname cargs = do
   vars <- mapM (freshVar loc) (Stream.take cargs allWords)
-  let app =
-        ConstructorApp
-          { _constrAppConstructor = cname,
-            _constrAppParameters = map (patternArgFromVar Explicit) vars,
-            _constrAppType = Nothing
-          }
-      pat =
-        PatternArg
-          { _patternArgIsImplicit = Explicit,
-            _patternArgName = Nothing,
-            _patternArgPattern = PatternConstructorApp app
-          }
-  return (pat, vars)
+  return (mkConstructorVarPattern cname vars, vars)
+
+mkConstructorVarPattern :: Name -> [VarName] -> PatternArg
+mkConstructorVarPattern c vars =
+  PatternArg
+    { _patternArgIsImplicit = Explicit,
+      _patternArgName = Nothing,
+      _patternArgPattern =
+        PatternConstructorApp
+          ConstructorApp
+            { _constrAppConstructor = c,
+              _constrAppType = Nothing,
+              _constrAppParameters = map (patternArgFromVar Explicit) vars
+            }
+    }
 
 -- | Assumes the constructor does not have implicit arguments (which is not
 -- allowed at the moment).

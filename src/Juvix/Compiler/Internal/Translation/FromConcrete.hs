@@ -8,7 +8,6 @@ import Data.HashMap.Strict qualified as HashMap
 import Data.IntMap.Strict qualified as IntMap
 import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Compiler.Builtins
-import Juvix.Compiler.Concrete.Data.NameSignature.Base
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Extra qualified as Concrete
 import Juvix.Compiler.Concrete.Language qualified as Concrete
@@ -821,18 +820,24 @@ goExpression = \case
             _lambdaClauses = pure cl
           }
       where
-        numFields = length (r ^. recordUpdateExtra . unIrrelevant . recordUpdateExtraSignature . recordNames)
-
         -- fields indexed by field index.
-        fieldMap :: IntMap (RecordUpdateField 'Scoped)
-        fieldMap =
-          IntMap.fromList
-            [ (f ^. fieldUpdateArgIx, f)
-              | f <- r ^.. recordUpdateFields . each
-            ]
+        mkFieldmap :: Sem r (IntMap (RecordUpdateField 'Scoped))
+        mkFieldmap = execState mempty $ mapM go (r ^. recordUpdateFields)
+          where
+            go :: RecordUpdateField 'Scoped -> Sem (State (IntMap (RecordUpdateField 'Scoped)) ': r) ()
+            go f = do
+              let idx = f ^. fieldUpdateArgIx
+              whenM (gets @(IntMap (RecordUpdateField 'Scoped)) (IntMap.member idx)) (throw repeated)
+              modify' (IntMap.insert idx f)
+              where
+              repeated :: ScoperError
+              repeated = undefined
 
         mkArgs :: [Indexed Internal.VarName] -> Sem r [Internal.Expression]
-        mkArgs = execOutputList . go (uncurry Indexed <$> IntMap.toAscList fieldMap)
+        mkArgs vs = do
+          fieldMap <- mkFieldmap
+          execOutputList $
+            go (uncurry Indexed <$> IntMap.toAscList fieldMap) vs
           where
             go :: [Indexed (RecordUpdateField 'Scoped)] -> [Indexed Internal.VarName] -> Sem (Output Internal.Expression ': r) ()
             go fields = \case
@@ -842,9 +847,8 @@ goExpression = \case
                   output (Internal.toExpression var)
                   go fields vars'
                 Just (arg, fields') -> do
-                  let fieldVar = goSymbol (arg ^. fieldUpdateName)
                   val' <- goExpression (arg ^. fieldUpdateValue)
-                  output (Internal.renameVar fieldVar var val')
+                  output val'
                   go fields' vars'
               where
                 getArg :: Int -> Maybe (RecordUpdateField 'Scoped, [Indexed (RecordUpdateField 'Scoped)])
@@ -855,9 +859,10 @@ goExpression = \case
 
         mkClause :: Sem r Internal.LambdaClause
         mkClause = do
-          let loc = getLoc r
-              constr = goSymbol (r ^. recordUpdateExtra . unIrrelevant . recordUpdateExtraConstructor)
-          (patArg, vars) <- Internal.genConstructorPattern' loc constr numFields
+          let extra = r ^. recordUpdateExtra . unIrrelevant
+              constr = goSymbol (extra ^. recordUpdateExtraConstructor)
+              vars = map goSymbol (extra ^. recordUpdateExtraVars)
+              patArg = Internal.mkConstructorVarPattern constr vars
           args <- mkArgs (indexFrom 0 vars)
           return
             Internal.LambdaClause

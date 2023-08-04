@@ -411,7 +411,7 @@ deriving stock instance Ord (ConstructorDef 'Parsed)
 deriving stock instance Ord (ConstructorDef 'Scoped)
 
 data RecordUpdateField (s :: Stage) = RecordUpdateField
-  { _fieldUpdateName :: SymbolType s,
+  { _fieldUpdateName :: Symbol,
     _fieldUpdateArgIx :: FieldUpdateArgIxType s,
     _fieldUpdateAssignKw :: Irrelevant (KeywordRef),
     _fieldUpdateValue :: ExpressionType s
@@ -1266,6 +1266,8 @@ deriving stock instance Ord (ArgumentBlock 'Scoped)
 
 data RecordUpdateExtra = RecordUpdateExtra
   { _recordUpdateExtraConstructor :: S.Symbol,
+    -- | Implicitly bound fields sorted by index
+    _recordUpdateExtraVars :: [S.Symbol],
     _recordUpdateExtraSignature :: RecordNameSignature
   }
   deriving stock (Show)

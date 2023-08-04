@@ -7,11 +7,14 @@ module Juvix.Compiler.Concrete.Extra
     groupStatements,
     flattenStatement,
     migrateFunctionSyntax,
+    recordNameSignatureByIndex,
   )
 where
 
 import Data.HashMap.Strict qualified as HashMap
+import Data.IntMap.Strict qualified as IntMap
 import Data.List.NonEmpty qualified as NonEmpty
+import Juvix.Compiler.Concrete.Data.NameSignature.Base
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Keywords
 import Juvix.Compiler.Concrete.Language
@@ -191,3 +194,6 @@ migrateFunctionSyntax m = over moduleBody (mapMaybe goStatement) m
             }
     getClauses :: S.Symbol -> [FunctionClause 'Scoped]
     getClauses name = [c | StatementFunctionClause c <- ss', name == c ^. clauseOwnerFunction]
+
+recordNameSignatureByIndex :: RecordNameSignature -> IntMap Symbol
+recordNameSignatureByIndex = IntMap.fromList . (^.. recordNames . each . to swap)
