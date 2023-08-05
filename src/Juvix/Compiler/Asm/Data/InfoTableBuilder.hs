@@ -47,7 +47,7 @@ runInfoTableBuilder =
     . runState emptyBuilderState
     . reinterpret interp
   where
-    interp :: InfoTableBuilder m a -> Sem (State BuilderState : r) a
+    interp :: InfoTableBuilder m a -> Sem (State BuilderState ': r) a
     interp = \case
       FreshSymbol -> do
         s <- get

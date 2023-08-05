@@ -4,6 +4,7 @@ module Juvix.Compiler.Pipeline.Package
     RawPackage,
     Package,
     Package' (..),
+    defaultVersion,
     defaultStdlibDep,
     packageName,
     packageBuildDir,
@@ -154,7 +155,7 @@ defaultPackageName :: Text
 defaultPackageName = "my-project"
 
 defaultVersion :: SemVer
-defaultVersion = SemVer 0 0 0 [] Nothing
+defaultVersion = SemVer 0 0 0 Nothing Nothing
 
 globalPackage :: Package
 globalPackage =

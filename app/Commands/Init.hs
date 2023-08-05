@@ -105,7 +105,7 @@ getVersion :: forall r. (Members '[Embed IO] r) => Sem r SemVer
 getVersion = do
   txt <- embed getLine
   if
-      | Text.null txt -> return mempty
+      | Text.null txt -> return defaultVersion
       | otherwise -> case parse semver' txt of
           Right r -> return r
           Left err -> do

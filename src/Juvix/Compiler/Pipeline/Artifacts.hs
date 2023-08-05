@@ -68,13 +68,13 @@ runPathResolverArtifacts = runStateLikeArtifacts runPathResolverPipe' artifactRe
 runBuiltinsArtifacts :: Members '[Error JuvixError, State Artifacts] r => Sem (Builtins ': r) a -> Sem r a
 runBuiltinsArtifacts = runStateLikeArtifacts runBuiltins artifactBuiltins
 
-runParserInfoTableBuilderArtifacts :: Members '[State Artifacts] r => Sem (Concrete.InfoTableBuilder : r) a -> Sem r a
+runParserInfoTableBuilderArtifacts :: Members '[State Artifacts] r => Sem (Concrete.InfoTableBuilder ': r) a -> Sem r a
 runParserInfoTableBuilderArtifacts = runStateLikeArtifacts Concrete.runParserInfoTableBuilderRepl artifactParsing
 
-runScoperInfoTableBuilderArtifacts :: Members '[State Artifacts] r => Sem (Scoped.InfoTableBuilder : r) a -> Sem r a
+runScoperInfoTableBuilderArtifacts :: Members '[State Artifacts] r => Sem (Scoped.InfoTableBuilder ': r) a -> Sem r a
 runScoperInfoTableBuilderArtifacts = runStateLikeArtifacts Scoped.runInfoTableBuilderRepl artifactScopeTable
 
-runScoperScopeArtifacts :: Members '[State Artifacts] r => Sem (State S.Scope : r) a -> Sem r a
+runScoperScopeArtifacts :: Members '[State Artifacts] r => Sem (State S.Scope ': r) a -> Sem r a
 runScoperScopeArtifacts m = do
   s <- fromJust <$> gets (^. artifactMainModuleScope)
   (s', a) <- runState s m

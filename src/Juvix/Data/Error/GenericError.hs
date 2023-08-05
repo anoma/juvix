@@ -104,6 +104,6 @@ runErrorIO =
 
 runErrorIO' ::
   (ToGenericError a, Member (Embed IO) r) =>
-  Sem (Error a : r) b ->
+  Sem (Error a ': r) b ->
   Sem r b
 runErrorIO' = runReader defaultGenericOptions . runErrorIO . raiseUnder

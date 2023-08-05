@@ -24,7 +24,7 @@ runCBuilder =
   evalState emptyCBuilderState
     . reinterpret interp
   where
-    interp :: CBuilder m a -> Sem (State CBuilderState : r) a
+    interp :: CBuilder m a -> Sem (State CBuilderState ': r) a
     interp = \case
       FreshLabel -> do
         s <- get

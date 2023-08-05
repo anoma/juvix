@@ -1,8 +1,12 @@
 ghc-options:
   "$locals": -optP-Wno-nonportable-include-path
-resolver: lts-20.21
+resolver: lts-21.6
 extra-deps:
   - git: https://github.com/janmasrovira/repline.git
     commit: a735ab1459db408adda080eb5ea21b96fb4a6011
   - git: https://github.com/janmasrovira/haskeline.git
     commit: 81e393e156508a20fcc197acc945b0f44aa4f82b
+  - aeson-better-errors-0.9.1.1
+allow-newer: true
+allow-newer-deps:
+  - aeson-better-errors

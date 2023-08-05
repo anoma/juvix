@@ -172,7 +172,7 @@ withLocalTypeVar v = withLocalVar v ArityUnit
 withLocalVar :: Members '[Reader LocalVars] r => VarName -> Arity -> Sem r a -> Sem r a
 withLocalVar v = local . withArity v
 
-withEmptyLocalVars :: Sem (Reader LocalVars : r) a -> Sem r a
+withEmptyLocalVars :: Sem (Reader LocalVars ': r) a -> Sem r a
 withEmptyLocalVars = runReader emptyLocalVars
 
 arityLet :: (Members '[Reader InfoTable] r) => Let -> Sem r Arity

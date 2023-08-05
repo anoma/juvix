@@ -35,7 +35,7 @@ re :: forall r a. (Member (Error JuvixError) r) => Sem (Builtins ': r) a -> Sem 
 re = reinterpret $ \case
   GetBuiltinName' i b -> fromMaybeM notDefined (gets (^. builtinsTable . at b))
     where
-      notDefined :: Sem (State BuiltinsState : r) x
+      notDefined :: Sem (State BuiltinsState ': r) x
       notDefined =
         throw $
           JuvixError
@@ -52,7 +52,7 @@ re = reinterpret $ \case
         modify (over builtinsNameTable (set (at n) (Just b)))
       Just {} -> alreadyDefined
     where
-      alreadyDefined :: Sem (State BuiltinsState : r) x
+      alreadyDefined :: Sem (State BuiltinsState ': r) x
       alreadyDefined =
         throw $
           JuvixError

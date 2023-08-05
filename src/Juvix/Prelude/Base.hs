@@ -80,6 +80,7 @@ module Juvix.Prelude.Base
     IsString (..),
     Alternative (..),
     MonadIO (..),
+    type (~),
   )
 where
 
@@ -142,6 +143,7 @@ import Data.Text.Encoding
 import Data.Text.IO
 import Data.Traversable
 import Data.Tuple.Extra hiding (both)
+import Data.Type.Equality (type (~))
 import Data.Typeable hiding (TyCon)
 import Data.Void
 import Data.Word

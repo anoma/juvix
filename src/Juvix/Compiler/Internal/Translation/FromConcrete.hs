@@ -687,7 +687,7 @@ registerInductiveConstructors indDef = do
 
 goConstructorDef ::
   forall r.
-  Members [Builtins, NameIdGen, Error ScoperError, Reader Pragmas] r =>
+  Members '[Builtins, NameIdGen, Error ScoperError, Reader Pragmas] r =>
   Internal.Expression ->
   ConstructorDef 'Scoped ->
   Sem r Internal.ConstructorDef
@@ -786,7 +786,7 @@ goListPattern l = do
 
 goExpression ::
   forall r.
-  Members [Builtins, NameIdGen, Error ScoperError, Reader Pragmas] r =>
+  Members '[Builtins, NameIdGen, Error ScoperError, Reader Pragmas] r =>
   Expression ->
   Sem r Internal.Expression
 goExpression = \case

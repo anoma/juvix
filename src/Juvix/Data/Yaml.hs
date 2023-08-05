@@ -6,7 +6,7 @@ module Juvix.Data.Yaml
 where
 
 import Data.Aeson.BetterErrors hiding (mapError, (<|>))
-import Data.Aeson.Internal (formatError)
+import Data.Aeson.Types (formatError)
 import Data.Yaml (FromJSON (..), ParseException (..), prettyPrintParseException)
 import Data.Yaml.Internal (Warning (..), decodeHelper)
 import GHC.IO (unsafePerformIO)
