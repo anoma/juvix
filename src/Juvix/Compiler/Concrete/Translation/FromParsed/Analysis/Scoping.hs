@@ -163,7 +163,8 @@ freshSymbol _nameKind _nameConcrete = do
   _nameIterator <- iter
   return S.Name' {..}
   where
-    fixity :: Sem r (Maybe Fixity)
+    fixity ::
+      Sem r (Maybe Fixity)
     fixity
       | S.canHaveFixity _nameKind = do
           mf <- gets (^? scoperSyntaxOperators . scoperOperators . at _nameConcrete . _Just . symbolOperatorFixity)
@@ -172,12 +173,17 @@ freshSymbol _nameKind _nameConcrete = do
       | otherwise = return Nothing
 
     iter :: Sem r (Maybe IteratorAttribs)
-    iter = runFail $ do
-      failUnless (S.canBeIterator _nameKind)
-      ma <- gets (^? scoperSyntaxIterators . scoperIterators . at _nameConcrete . _Just . symbolIteratorDef . iterAttribs) >>= failMaybe
-      let attrs = maybe emptyIteratorAttribs (^. withLocParam . withSourceValue) ma
-      modify (set (scoperSyntaxIterators . scoperIterators . at _nameConcrete . _Just . symbolIteratorUsed) True)
-      return attrs
+    iter
+      | S.canBeIterator _nameKind = do
+          mma <- gets (^? scoperSyntaxIterators . scoperIterators . at _nameConcrete . _Just . symbolIteratorDef . iterAttribs)
+          case mma of
+            Just ma -> do
+              let attrs = maybe emptyIteratorAttribs (^. withLocParam . withSourceValue) ma
+              modify (set (scoperSyntaxIterators . scoperIterators . at _nameConcrete . _Just . symbolIteratorUsed) True)
+              return $ Just attrs
+            Nothing ->
+              return Nothing
+      | otherwise = return Nothing
 
 reserveSymbolSignatureOf ::
   forall (k :: NameKind) r d.
@@ -248,6 +254,7 @@ reserveSymbolOf k nameSig s = do
           )
 
 getReservedDefinitionSymbol ::
+  forall r.
   Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, InfoTableBuilder, State ScoperState, Reader BindingStrategy] r =>
   Symbol ->
   Sem r S.Symbol
@@ -584,13 +591,22 @@ checkFixitySyntaxDef ::
 checkFixitySyntaxDef FixitySyntaxDef {..} = topBindings $ do
   sym <- bindFixitySymbol _fixitySymbol
   doc <- mapM checkJudoc _fixityDoc
-  let fdef =
-        FixitySyntaxDef
-          { _fixitySymbol = sym,
-            _fixityDoc = doc,
-            ..
-          }
-      loc = getLoc _fixityInfo
+  registerHighlightDoc (sym ^. S.nameId) doc
+  return
+    FixitySyntaxDef
+      { _fixitySymbol = sym,
+        _fixityDoc = doc,
+        ..
+      }
+
+resolveFixitySyntaxDef ::
+  forall r.
+  Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, State ScoperSyntax, NameIdGen, InfoTableBuilder] r =>
+  FixitySyntaxDef 'Parsed ->
+  Sem r ()
+resolveFixitySyntaxDef fdef@FixitySyntaxDef {..} = topBindings $ do
+  sym <- reserveSymbolOf SKNameFixity Nothing _fixitySymbol
+  let loc = getLoc _fixityInfo
       fi = _fixityInfo ^. withLocParam . withSourceValue
   same <- checkMaybeFixity loc $ fi ^. FI.fixityPrecSame
   below <- mapM (checkFixitySymbol . WithLoc loc) $ fi ^. FI.fixityPrecBelow
@@ -618,11 +634,11 @@ checkFixitySyntaxDef FixitySyntaxDef {..} = topBindings $ do
           }
   registerFixity
     @$> FixityDef
-      { _fixityDefSyntaxDef = fdef,
+      { _fixityDefSymbol = sym,
         _fixityDefFixity = fx,
         _fixityDefPrec = prec
       }
-  return fdef
+  return ()
   where
     checkMaybeFixity ::
       forall r'.
@@ -637,12 +653,12 @@ checkFixitySyntaxDef FixitySyntaxDef {..} = topBindings $ do
     getPrec :: InfoTable -> S.Symbol -> Int
     getPrec tab = (^. fixityDefPrec) . fromJust . flip HashMap.lookup (tab ^. infoFixities) . (^. S.nameId)
 
-checkOperatorSyntaxDef ::
+resolveOperatorSyntaxDef ::
   forall r.
   Members '[Error ScoperError, State Scope, State ScoperState, State ScoperSyntax, InfoTableBuilder] r =>
   OperatorSyntaxDef ->
   Sem r ()
-checkOperatorSyntaxDef s@OperatorSyntaxDef {..} = do
+resolveOperatorSyntaxDef s@OperatorSyntaxDef {..} = do
   checkNotDefined
   sym <- checkFixitySymbol _opFixity
   tab <- getInfoTable
@@ -661,12 +677,12 @@ checkOperatorSyntaxDef s@OperatorSyntaxDef {..} = do
         (HashMap.lookup _opSymbol <$> gets (^. scoperSyntaxOperators . scoperOperators))
         $ \s' -> throw (ErrDuplicateOperator (DuplicateOperator (s' ^. symbolOperatorDef) s))
 
-checkIteratorSyntaxDef ::
+resolveIteratorSyntaxDef ::
   forall r.
   Members '[Error ScoperError, State Scope, State ScoperState, State ScoperSyntax] r =>
   IteratorSyntaxDef ->
   Sem r ()
-checkIteratorSyntaxDef s@IteratorSyntaxDef {..} = do
+resolveIteratorSyntaxDef s@IteratorSyntaxDef {..} = do
   checkNotDefined
   let sf =
         SymbolIterator
@@ -1083,7 +1099,7 @@ checkSections sec = do
           where
             reserveDefinition :: Definition 'Parsed -> Sem r' ()
             reserveDefinition = \case
-              DefinitionSyntax s -> reserveSyntax s
+              DefinitionSyntax s -> resolveSyntaxDef s
               DefinitionFunctionDef d -> void (reserveFunctionSymbol d)
               DefinitionTypeSignature d -> void (reserveSymbolOf SKNameFunction Nothing (d ^. sigName))
               DefinitionAxiom d -> void (reserveAxiomSymbol d)
@@ -1123,12 +1139,6 @@ checkSections sec = do
                                         _recordInfoConstructor = mconstr
                                       }
                               modify' (set (scoperRecordFields . at (ind ^. S.nameId)) (Just info))
-
-                reserveSyntax :: SyntaxDef 'Parsed -> Sem r' ()
-                reserveSyntax = \case
-                  SyntaxFixity FixitySyntaxDef {..} -> void (reserveSymbolOf SKNameFixity Nothing _fixitySymbol)
-                  SyntaxOperator {} -> return ()
-                  SyntaxIterator {} -> return ()
 
             goDefinition :: Definition 'Parsed -> Sem r' (Definition 'Scoped)
             goDefinition = \case
@@ -2254,8 +2264,17 @@ checkSyntaxDef ::
   Sem r (SyntaxDef 'Scoped)
 checkSyntaxDef = \case
   SyntaxFixity fixDef -> SyntaxFixity <$> checkFixitySyntaxDef fixDef
-  SyntaxOperator opDef -> SyntaxOperator opDef <$ checkOperatorSyntaxDef opDef
-  SyntaxIterator iterDef -> SyntaxIterator iterDef <$ checkIteratorSyntaxDef iterDef
+  SyntaxOperator opDef -> return $ SyntaxOperator opDef
+  SyntaxIterator iterDef -> return $ SyntaxIterator iterDef
+
+resolveSyntaxDef ::
+  (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, State ScoperSyntax] r) =>
+  SyntaxDef 'Parsed ->
+  Sem r ()
+resolveSyntaxDef = \case
+  SyntaxFixity fixDef -> resolveFixitySyntaxDef fixDef
+  SyntaxOperator opDef -> resolveOperatorSyntaxDef opDef
+  SyntaxIterator iterDef -> resolveIteratorSyntaxDef iterDef
 
 -------------------------------------------------------------------------------
 -- Infix Expression

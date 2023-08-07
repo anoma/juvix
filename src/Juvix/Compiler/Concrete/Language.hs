@@ -282,7 +282,7 @@ deriving stock instance (Ord (FixitySyntaxDef 'Parsed))
 deriving stock instance (Ord (FixitySyntaxDef 'Scoped))
 
 data FixityDef = FixityDef
-  { _fixityDefSyntaxDef :: FixitySyntaxDef 'Scoped,
+  { _fixityDefSymbol :: S.Symbol,
     _fixityDefFixity :: Fixity,
     _fixityDefPrec :: Int
   }

@@ -860,7 +860,7 @@ instance ToGenericError RepeatedField where
       i = getLoc _repeatedField
 
 newtype PrecedenceInconsistencyError = PrecedenceInconsistencyError
-  { _precedenceInconsistencyErrorFixityDef :: FixitySyntaxDef 'Scoped
+  { _precedenceInconsistencyErrorFixityDef :: FixitySyntaxDef 'Parsed
   }
   deriving stock (Show)
 

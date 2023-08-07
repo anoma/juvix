@@ -286,7 +286,7 @@ printDocumentation = replParseIdentifiers >=> printIdentifiers
             KNameConstructor -> getDocConstructor n
             KNameLocalModule -> impossible
             KNameTopModule -> impossible
-            KNameFixity -> getDocFixity n
+            KNameFixity -> impossible
           printDoc mdoc
           where
             printDoc :: Maybe (Concrete.Judoc 'Concrete.Scoped) -> Repl ()
@@ -321,12 +321,6 @@ printDocumentation = replParseIdentifiers >=> printIdentifiers
               let def :: Scoped.ConstructorInfo = tbl ^?! Scoped.infoConstructors . at c . _Just
               return (def ^. Scoped.constructorInfoDef . Concrete.constructorDoc)
 
-            getDocFixity :: Scoped.NameId -> Repl (Maybe (Concrete.Judoc 'Concrete.Scoped))
-            getDocFixity c = do
-              tbl :: Scoped.InfoTable <- (^. replContextArtifacts . artifactScopeTable) <$> replGetContext
-              let def :: Concrete.FixityDef = tbl ^?! Scoped.infoFixities . at c . _Just
-              return (def ^. Concrete.fixityDefSyntaxDef . Concrete.fixityDoc)
-
 printDefinition :: String -> Repl ()
 printDefinition = replParseIdentifiers >=> printIdentifiers
   where
@@ -349,7 +343,7 @@ printDefinition = replParseIdentifiers >=> printIdentifiers
                 KNameConstructor -> printConstructor n
                 KNameLocalModule -> impossible
                 KNameTopModule -> impossible
-                KNameFixity -> printFixity n
+                KNameFixity -> impossible
           where
             printLocation :: HasLoc s => s -> Repl ()
             printLocation def = do
@@ -383,13 +377,6 @@ printDefinition = replParseIdentifiers >=> printIdentifiers
               tbl :: Scoped.InfoTable <- (^. replContextArtifacts . artifactScopeTable) <$> replGetContext
               let ind :: Scoped.Symbol = tbl ^?! Scoped.infoConstructors . at c . _Just . Scoped.constructorInfoTypeName
               printInductive (ind ^. Scoped.nameId)
-
-            printFixity :: Scoped.NameId -> Repl ()
-            printFixity n = do
-              tbl :: Scoped.InfoTable <- (^. replContextArtifacts . artifactScopeTable) <$> replGetContext
-              let def :: Concrete.FixitySyntaxDef 'Concrete.Scoped = tbl ^?! Scoped.infoFixities . at n . _Just . Concrete.fixityDefSyntaxDef
-              printLocation def
-              printConcreteLn def
 
 inferType :: String -> Repl ()
 inferType input = do

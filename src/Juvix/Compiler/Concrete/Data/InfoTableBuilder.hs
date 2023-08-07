@@ -19,6 +19,7 @@ data InfoTableBuilder m a where
   RegisterName :: HasLoc c => S.Name' c -> InfoTableBuilder m ()
   RegisterModule :: Module 'Scoped 'ModuleTop -> InfoTableBuilder m ()
   RegisterFixity :: FixityDef -> InfoTableBuilder m ()
+  RegisterHighlightDoc :: S.NameId -> Maybe (Judoc 'Scoped) -> InfoTableBuilder m ()
   GetInfoTable :: InfoTableBuilder m InfoTable
 
 makeSem ''InfoTableBuilder
@@ -78,11 +79,11 @@ toState = reinterpret $ \case
     modify (over infoModules (HashMap.insert (m ^. modulePath) m))
     registerDoc (m ^. modulePath . nameId) j
   RegisterFixity f -> do
-    let j = f ^. fixityDefSyntaxDef . fixityDoc
-        fid = f ^. fixityDefSyntaxDef . fixitySymbol . S.nameId
+    let fid = f ^. fixityDefSymbol . S.nameId
     modify (over infoFixities (HashMap.insert fid f))
     modify (over infoPriorities (IntSet.insert (f ^. fixityDefPrec)))
-    registerDoc fid j
+  RegisterHighlightDoc fid doc ->
+    registerDoc fid doc
   GetInfoTable ->
     get
 

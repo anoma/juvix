@@ -71,6 +71,7 @@ data SymbolOperator = SymbolOperator
     _symbolOperatorFixity :: Fixity,
     _symbolOperatorDef :: OperatorSyntaxDef
   }
+  deriving stock (Show)
 
 newtype ScoperOperators = ScoperOperators
   { _scoperOperators :: HashMap Symbol SymbolOperator
