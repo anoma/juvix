@@ -6,9 +6,9 @@ import Juvix.Prelude.Base
 -- instance.
 data Precedence
   = PrecUpdate
-  | PrecApp
-  | PrecNat Int
   | PrecArrow
+  | PrecNat Int
+  | PrecApp
   deriving stock (Show, Eq, Data, Ord)
 
 data UnaryAssoc = AssocPostfix

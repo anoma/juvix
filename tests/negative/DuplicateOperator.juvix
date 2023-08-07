@@ -1,0 +1,9 @@
+module DuplicateOperator;
+
+  syntax fixity add {arity: binary};
+
+  syntax operator + add;
+
+  syntax operator + add;
+  axiom + : Type → Type → Type;
+end;
