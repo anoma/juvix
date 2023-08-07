@@ -1,15 +1,17 @@
 module Lambda;
 
+import Stdlib.Data.Fixity open;
+
 type Nat :=
   | zero : Nat
   | suc : Nat → Nat;
 
-syntax infixr 2 ×;
-syntax infixr 4 ,;
+syntax operator × functor;
+syntax operator , pair;
 type × (A : Type) (B : Type) :=
   | , : A → B → A × B;
 
-syntax infixr 9 ∘;
+syntax operator ∘ composition;
 
 ∘
   : {A : Type}
@@ -74,7 +76,7 @@ second
 both : {A : Type} → {B : Type} → (A → B) → A × A → B × B
   | {_} {B} := λ {f (a, b) := f a, f b};
 
-syntax infixr 5 ::;
+syntax operator :: cons;
 type List (a : Type) :=
   | nil : List a
   | :: : a → List a → List a;

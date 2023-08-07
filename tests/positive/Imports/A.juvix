@@ -1,13 +1,17 @@
 module A;
 
+syntax fixity i3 {arity: binary};
+
 module M;
   module N;
-    syntax infix 3 t;
+    syntax operator t i3;
     type T :=
       | t : T;
   end;
 
-  syntax infixr 2 +;
+  syntax fixity add {arity: binary, assoc: right, below: [i3]};
+
+  syntax operator + add;
   axiom + : Type → Type → Type;
 end;
 

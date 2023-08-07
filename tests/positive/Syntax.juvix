@@ -26,7 +26,9 @@ odd : Nat -> Bool
   | zero := false
   | (suc n) := even n;
 
-syntax infixl 4 ==1;
+syntax fixity cmp {arity: binary};
+
+syntax operator ==1 cmp;
 
 ==1 : Nat -> Nat -> Bool
   | zero zero := true
@@ -34,7 +36,7 @@ syntax infixl 4 ==1;
   | _ _ := false;
 
 -- note that ==2 is used before its infix definition
-syntax infixl 4 ==2;
+syntax operator ==2 cmp;
 
 ==2 : Nat -> Nat -> Bool
   | zero zero := true

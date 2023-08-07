@@ -1,6 +1,8 @@
 module InfixError;
 
-  syntax infix 5 + ;
+  syntax fixity add {arity: binary, assoc: none};
+
+  syntax operator + add;
   axiom + : Type → Type → Type;
 
   axiom T : Type + Type + ;

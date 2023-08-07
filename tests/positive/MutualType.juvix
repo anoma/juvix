@@ -1,6 +1,8 @@
 module MutualType;
 
-syntax infixr 5 ::;
+syntax fixity cons {arity: binary, assoc: right};
+
+syntax operator :: cons;
 --- Inductive list.
 type List (a : Type) :=
   | --- The empty list
@@ -9,7 +11,7 @@ type List (a : Type) :=
     :: : a → List a → List a;
 
 Forest : Type -> Type
-  
+
   | A := List (Tree A);
 
 --- N-Ary tree.

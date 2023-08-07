@@ -1,3 +1,4 @@
 module UnusedOperatorDef;
-  syntax infixl 12 + ;
+  syntax fixity add {arity: binary};
+  syntax operator + add;
 end ;

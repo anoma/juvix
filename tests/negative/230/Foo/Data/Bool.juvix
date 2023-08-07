@@ -2,6 +2,8 @@ module Foo.Data.Bool;
 
 import Stdlib.Data.Bool;
 
+syntax fixity logical {arity: binary, assoc: right};
+
 type Bool :=
   | true : Bool
   | false : Bool;
@@ -10,13 +12,13 @@ not : Bool → Bool
   | true := false
   | false := true;
 
-syntax infixr 2 ||;
+syntax operator || logical;
 
 || : Bool → Bool → Bool
   | false a := a
   | true _ := true;
 
-syntax infixr 2 &&;
+syntax operator && logical;
 
 && : Bool → Bool → Bool
   | false _ := false
