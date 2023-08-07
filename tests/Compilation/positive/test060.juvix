@@ -19,7 +19,7 @@ main :=
       Triple Nat Nat Nat :=
         p @Triple{
           fst := fst + 1;
-          snd := snd * 3
+          snd := snd * 3 + thd + fst
         };
     f : Triple Nat Nat Nat -> Triple Nat Nat Nat := (@Triple {fst := fst * 10});
   in f p';
