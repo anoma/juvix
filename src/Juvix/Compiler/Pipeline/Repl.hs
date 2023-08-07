@@ -13,6 +13,7 @@ import Juvix.Compiler.Internal qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromConcrete qualified as FromConcrete
 import Juvix.Compiler.Pipeline.Artifacts
 import Juvix.Compiler.Pipeline.EntryPoint
+import Juvix.Data.Effect.Process (runProcessIO)
 import Juvix.Prelude
 
 arityCheckExpression ::
@@ -195,6 +196,9 @@ compileReplInputIO ::
 compileReplInputIO fp txt =
   runError
     . runFilesIO
+    . mapError (JuvixError @GitError)
+    . runProcessIO
+    . runGit
     . runPathResolverArtifacts
     $ do
       p <- parseReplInput fp txt

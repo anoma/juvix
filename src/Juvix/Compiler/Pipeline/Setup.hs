@@ -5,6 +5,6 @@ import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Prelude
 
 entrySetup ::
-  (Members '[Reader EntryPoint, Files, PathResolver] r) =>
+  (Members '[Reader EntryPoint, Files, Git, PathResolver] r) =>
   Sem r ()
 entrySetup = registerDependencies

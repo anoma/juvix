@@ -62,7 +62,7 @@ tmpCoreInfoTableBuilderArtifacts m = do
   modify' (set artifactCoreTable tbl)
   return a
 
-runPathResolverArtifacts :: Members '[Files, Reader EntryPoint, State Artifacts] r => Sem (PathResolver ': r) a -> Sem r a
+runPathResolverArtifacts :: Members '[Files, Reader EntryPoint, State Artifacts, Git] r => Sem (PathResolver ': r) a -> Sem r a
 runPathResolverArtifacts = runStateLikeArtifacts runPathResolverPipe' artifactResolver
 
 runBuiltinsArtifacts :: Members '[Error JuvixError, State Artifacts] r => Sem (Builtins ': r) a -> Sem r a

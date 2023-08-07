@@ -36,84 +36,85 @@ import Juvix.Compiler.Pipeline.Root
 import Juvix.Compiler.Pipeline.Setup
 import Juvix.Compiler.Reg.Data.InfoTable qualified as Reg
 import Juvix.Compiler.Reg.Translation.FromAsm qualified as Reg
+import Juvix.Data.Effect.Process
 import Juvix.Prelude
 
-type PipelineEff = '[PathResolver, Reader EntryPoint, Files, NameIdGen, Builtins, Error JuvixError, HighlightBuilder, Embed IO]
+type PipelineEff = '[PathResolver, Git, Error GitError, Process, Reader EntryPoint, Files, NameIdGen, Builtins, Error JuvixError, HighlightBuilder, Embed IO]
 
-type TopPipelineEff = '[PathResolver, Reader EntryPoint, Files, NameIdGen, Builtins, State Artifacts, Error JuvixError, HighlightBuilder, Embed IO]
+type TopPipelineEff = '[PathResolver, Git, Error GitError, Process, Reader EntryPoint, Files, NameIdGen, Builtins, State Artifacts, Error JuvixError, HighlightBuilder, Embed IO]
 
 --------------------------------------------------------------------------------
 -- Workflows
 --------------------------------------------------------------------------------
 
 upToParsing ::
-  (Members '[HighlightBuilder, Reader EntryPoint, Files, Error JuvixError, NameIdGen, PathResolver] r) =>
+  (Members '[HighlightBuilder, Reader EntryPoint, Files, Error JuvixError, NameIdGen, Git, PathResolver] r) =>
   Sem r Parser.ParserResult
 upToParsing = entrySetup >> ask >>= Parser.fromSource
 
 upToScoping ::
-  (Members '[HighlightBuilder, Reader EntryPoint, Files, NameIdGen, Error JuvixError, PathResolver] r) =>
+  (Members '[HighlightBuilder, Reader EntryPoint, Files, NameIdGen, Error JuvixError, Git, PathResolver] r) =>
   Sem r Scoper.ScoperResult
 upToScoping = upToParsing >>= Scoper.fromParsed
 
 upToInternal ::
-  (Members '[HighlightBuilder, Reader EntryPoint, Files, NameIdGen, Builtins, Error JuvixError, PathResolver] r) =>
+  (Members '[HighlightBuilder, Reader EntryPoint, Files, NameIdGen, Builtins, Error JuvixError, Git, PathResolver] r) =>
   Sem r Internal.InternalResult
 upToInternal = upToScoping >>= Internal.fromConcrete
 
 upToInternalArity ::
-  (Members '[HighlightBuilder, Reader EntryPoint, Files, NameIdGen, Builtins, Error JuvixError, PathResolver] r) =>
+  (Members '[HighlightBuilder, Reader EntryPoint, Files, NameIdGen, Builtins, Error JuvixError, Git, PathResolver] r) =>
   Sem r Internal.InternalArityResult
 upToInternalArity = upToInternal >>= Internal.arityChecking
 
 upToInternalTyped ::
-  (Members '[HighlightBuilder, Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, PathResolver] r) =>
+  (Members '[HighlightBuilder, Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, Git, PathResolver] r) =>
   Sem r Internal.InternalTypedResult
 upToInternalTyped = upToInternalArity >>= Internal.typeChecking
 
 upToInternalReachability ::
-  (Members '[HighlightBuilder, Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, PathResolver] r) =>
+  (Members '[HighlightBuilder, Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, Git, PathResolver] r) =>
   Sem r Internal.InternalTypedResult
 upToInternalReachability =
   upToInternalTyped >>= Internal.filterUnreachable
 
 upToCore ::
-  Members '[HighlightBuilder, Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, PathResolver] r =>
+  Members '[HighlightBuilder, Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, Git, PathResolver] r =>
   Sem r Core.CoreResult
 upToCore = upToInternalReachability >>= Core.fromInternal
 
 upToAsm ::
-  (Members '[HighlightBuilder, Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, PathResolver] r) =>
+  (Members '[HighlightBuilder, Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, Git, PathResolver] r) =>
   Sem r Asm.InfoTable
 upToAsm =
   upToCore >>= \Core.CoreResult {..} -> coreToAsm _coreResultTable
 
 upToMiniC ::
-  (Members '[HighlightBuilder, Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, PathResolver] r) =>
+  (Members '[HighlightBuilder, Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, Git, PathResolver] r) =>
   Sem r C.MiniCResult
 upToMiniC = upToAsm >>= asmToMiniC
 
 upToVampIR ::
-  (Members '[HighlightBuilder, Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, PathResolver] r) =>
+  (Members '[HighlightBuilder, Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, Git, PathResolver] r) =>
   Sem r VampIR.Result
 upToVampIR =
   upToCore >>= \Core.CoreResult {..} -> coreToVampIR _coreResultTable
 
 upToGeb ::
-  (Members '[HighlightBuilder, Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, PathResolver] r) =>
+  (Members '[HighlightBuilder, Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, Git, PathResolver] r) =>
   Geb.ResultSpec ->
   Sem r Geb.Result
 upToGeb spec =
   upToCore >>= \Core.CoreResult {..} -> coreToGeb spec _coreResultTable
 
 upToCoreTypecheck ::
-  (Members '[HighlightBuilder, Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, PathResolver] r) =>
+  (Members '[HighlightBuilder, Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, Git, PathResolver] r) =>
   Sem r Core.CoreResult
 upToCoreTypecheck =
   upToCore >>= \r -> Core.toTypechecked (r ^. Core.coreResultTable) >>= \tab -> return r {Core._coreResultTable = tab}
 
 upToEval ::
-  (Members '[HighlightBuilder, Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, PathResolver] r) =>
+  (Members '[HighlightBuilder, Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, Git, PathResolver] r) =>
   Sem r Core.CoreResult
 upToEval =
   upToCore >>= \r -> Core.toEval (r ^. Core.coreResultTable) >>= \tab -> return r {Core._coreResultTable = tab}
@@ -174,6 +175,9 @@ runIOEitherHelper entry =
     . evalTopNameIdGen
     . runFilesIO
     . runReader entry
+    . runProcessIO
+    . mapError (JuvixError @GitError)
+    . runGit
     . runPathResolverPipe
 
 runIO :: GenericOptions -> EntryPoint -> Sem PipelineEff a -> IO (ResolverState, a)
@@ -211,6 +215,9 @@ corePipelineIOEither entry = do
       . runNameIdGenArtifacts
       . runFilesIO
       . runReader entry
+      . mapError (JuvixError @GitError)
+      . runProcessIO
+      . runGit
       . runPathResolverArtifacts
       $ upToCore
   return $ case eith of
