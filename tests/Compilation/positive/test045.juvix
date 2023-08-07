@@ -6,7 +6,9 @@ module test045;
     | zero : Nat
     | suc : Nat → Nat;
 
-  syntax infixl 6 +;
+  syntax fixity additive {arity: binary, assoc: left};
+
+  syntax operator + additive;
   + : Nat → Nat → Nat;
   + zero b := b;
   + (suc a) b := suc (a + b);

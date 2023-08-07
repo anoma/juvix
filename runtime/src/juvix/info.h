@@ -7,13 +7,13 @@
 typedef enum { assoc_left, assoc_right, assoc_none } assoc_t;
 
 typedef struct {
-    int precedence;
+    int64_t precedence;
     assoc_t assoc;
 } fixity_t;
 
-#define PREC_UPDATE (-(1 << 30))
+#define PREC_UPDATE (-(1LL << 62))
 #define PREC_APP (PREC_UPDATE + 1)
-#define PREC_ARROW (1 << 30)
+#define PREC_ARROW (1LL << 63)
 
 #define APP_FIXITY \
     { PREC_APP, assoc_left }
