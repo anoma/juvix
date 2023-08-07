@@ -2,6 +2,7 @@
 #define JUVIX_INFO_H
 
 #include <juvix/defs.h>
+#include <juvix/limits.h>
 
 typedef enum { assoc_left, assoc_right, assoc_none } assoc_t;
 
@@ -10,12 +11,12 @@ typedef struct {
     assoc_t assoc;
 } fixity_t;
 
-#define PREC_MINUS_OMEGA1 (-2)
-#define PREC_MINUS_OMEGA (-1)
-#define PREC_OMEGA 100000
+#define PREC_UPDATE (-(1 << 30))
+#define PREC_APP (PREC_UPDATE + 1)
+#define PREC_ARROW (1 << 30)
 
 #define APP_FIXITY \
-    { PREC_OMEGA, assoc_left }
+    { PREC_APP, assoc_left }
 
 typedef struct {
     const char *name;
