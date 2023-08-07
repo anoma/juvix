@@ -254,6 +254,10 @@ tests =
       $(mkRelDir ".")
       $(mkRelFile "Records.juvix"),
     posTest
+      "Record update"
+      $(mkRelDir ".")
+      $(mkRelFile "Records2.juvix"),
+    posTest
       "Record projections"
       $(mkRelDir ".")
       $(mkRelFile "Projections.juvix")

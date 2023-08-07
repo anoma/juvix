@@ -319,12 +319,13 @@ makeLenses ''NotInScope
 instance ToGenericError NotInScope where
   genericError e@NotInScope {..} = ask >>= generr
     where
+      loc = getLoc (e ^. notInScopeSymbol)
       generr opts =
         return
           GenericError
-            { _genericErrorLoc = e ^. notInScopeSymbol . symbolLoc,
+            { _genericErrorLoc = loc,
               _genericErrorMessage = prettyError msg,
-              _genericErrorIntervals = [e ^. notInScopeSymbol . symbolLoc]
+              _genericErrorIntervals = [loc]
             }
         where
           opts' = fromGenericOptions opts
@@ -765,3 +766,67 @@ instance ToGenericError NoNameSignature where
     where
       i :: Interval
       i = getLoc _noNameSignatureIden
+
+newtype NotARecord = NotARecord
+  { _notARecord :: ScopedIden
+  }
+  deriving stock (Show)
+
+instance ToGenericError NotARecord where
+  genericError NotARecord {..} = do
+    opts <- fromGenericOptions <$> ask
+    let msg =
+          "The identifier"
+            <+> ppCode opts _notARecord
+            <+> "is not a record type"
+    return
+      GenericError
+        { _genericErrorLoc = i,
+          _genericErrorMessage = mkAnsiText msg,
+          _genericErrorIntervals = [i]
+        }
+    where
+      i :: Interval
+      i = getLoc _notARecord
+
+newtype UnexpectedField = UnexpectedField
+  { _unexpectedField :: Symbol
+  }
+  deriving stock (Show)
+
+instance ToGenericError UnexpectedField where
+  genericError UnexpectedField {..} = do
+    opts <- fromGenericOptions <$> ask
+    let msg =
+          "Unexpected field"
+            <+> ppCode opts _unexpectedField
+    return
+      GenericError
+        { _genericErrorLoc = i,
+          _genericErrorMessage = mkAnsiText msg,
+          _genericErrorIntervals = [i]
+        }
+    where
+      i :: Interval
+      i = getLoc _unexpectedField
+
+newtype RepeatedField = RepeatedField
+  { _repeatedField :: Symbol
+  }
+  deriving stock (Show)
+
+instance ToGenericError RepeatedField where
+  genericError RepeatedField {..} = do
+    opts <- fromGenericOptions <$> ask
+    let msg =
+          "Repeated field"
+            <+> ppCode opts _repeatedField
+    return
+      GenericError
+        { _genericErrorLoc = i,
+          _genericErrorMessage = mkAnsiText msg,
+          _genericErrorIntervals = [i]
+        }
+    where
+      i :: Interval
+      i = getLoc _repeatedField

@@ -1,0 +1,6 @@
+module NotARecord;
+
+type T := t;
+
+f : T;
+f := t @T{x := 1};

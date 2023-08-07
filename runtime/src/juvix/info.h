@@ -10,6 +10,7 @@ typedef struct {
     assoc_t assoc;
 } fixity_t;
 
+#define PREC_MINUS_OMEGA1 (-2)
 #define PREC_MINUS_OMEGA (-1)
 #define PREC_OMEGA 100000
 

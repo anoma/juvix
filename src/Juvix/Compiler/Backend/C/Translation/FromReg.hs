@@ -66,6 +66,7 @@ fromReg lims tab =
 
         getPrec :: Precedence -> Expression
         getPrec = \case
+          PrecMinusOmega1 -> macroVar "PREC_MINUS_OMEGA1"
           PrecMinusOmega -> macroVar "PREC_MINUS_OMEGA"
           PrecOmega -> macroVar "PREC_OMEGA"
           PrecNat n -> integer n

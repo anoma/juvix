@@ -253,6 +253,9 @@ unnamedParameter ty =
       _paramType = ty
     }
 
+singletonRename :: VarName -> VarName -> Rename
+singletonRename = HashMap.singleton
+
 renameToSubsE :: Rename -> SubsE
 renameToSubsE = fmap (ExpressionIden . IdenVar)
 
@@ -704,24 +707,28 @@ patternArgFromVar i v =
     }
 
 -- | Given `mkPair`, returns (mkPair a b, [a, b])
-genConstructorPattern :: Members '[NameIdGen] r => ConstructorInfo -> Sem r (PatternArg, [VarName])
-genConstructorPattern info = do
-  let nargs = length (snd (constructorArgTypes info))
-      loc = getLoc (info ^. constructorInfoName)
-  vars <- mapM (freshVar loc) (Stream.take nargs allWords)
-  let app =
-        ConstructorApp
-          { _constrAppConstructor = info ^. constructorInfoName,
-            _constrAppParameters = map (patternArgFromVar Explicit) vars,
-            _constrAppType = Nothing
-          }
-      pat =
-        PatternArg
-          { _patternArgIsImplicit = Explicit,
-            _patternArgName = Nothing,
-            _patternArgPattern = PatternConstructorApp app
-          }
-  return (pat, vars)
+genConstructorPattern :: Members '[NameIdGen] r => Interval -> ConstructorInfo -> Sem r (PatternArg, [VarName])
+genConstructorPattern loc info = genConstructorPattern' loc (info ^. constructorInfoName) (length (snd (constructorArgTypes info)))
+
+-- | Given `mkPair`, returns (mkPair a b, [a, b])
+genConstructorPattern' :: Members '[NameIdGen] r => Interval -> Name -> Int -> Sem r (PatternArg, [VarName])
+genConstructorPattern' loc cname cargs = do
+  vars <- mapM (freshVar loc) (Stream.take cargs allWords)
+  return (mkConstructorVarPattern cname vars, vars)
+
+mkConstructorVarPattern :: Name -> [VarName] -> PatternArg
+mkConstructorVarPattern c vars =
+  PatternArg
+    { _patternArgIsImplicit = Explicit,
+      _patternArgName = Nothing,
+      _patternArgPattern =
+        PatternConstructorApp
+          ConstructorApp
+            { _constrAppConstructor = c,
+              _constrAppType = Nothing,
+              _constrAppParameters = map (patternArgFromVar Explicit) vars
+            }
+    }
 
 -- | Assumes the constructor does not have implicit arguments (which is not
 -- allowed at the moment).
@@ -751,7 +758,7 @@ genFieldProjection _funDefName info fieldIx = do
   where
     genClause :: Sem r FunctionClause
     genClause = do
-      (pat, vars) <- genConstructorPattern info
+      (pat, vars) <- genConstructorPattern (getLoc _funDefName) info
       let body = toExpression (vars !! fieldIx)
       return
         FunctionClause

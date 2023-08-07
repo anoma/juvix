@@ -22,7 +22,7 @@ import Juvix.Compiler.Concrete.Data.Literal
 import Juvix.Compiler.Concrete.Data.ModuleIsTop
 import Juvix.Compiler.Concrete.Data.Name
 import Juvix.Compiler.Concrete.Data.NameRef
-import Juvix.Compiler.Concrete.Data.NameSignature.Base (NameSignature)
+import Juvix.Compiler.Concrete.Data.NameSignature.Base
 import Juvix.Compiler.Concrete.Data.NameSpace
 import Juvix.Compiler.Concrete.Data.PublicAnn
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
@@ -45,6 +45,16 @@ type NameSpaceEntryType :: NameSpace -> GHC.Type
 type family NameSpaceEntryType s = res | res -> s where
   NameSpaceEntryType 'NameSpaceSymbols = SymbolEntry
   NameSpaceEntryType 'NameSpaceModules = ModuleSymbolEntry
+
+type RecordUpdateExtraType :: Stage -> GHC.Type
+type family RecordUpdateExtraType s = res | res -> s where
+  RecordUpdateExtraType 'Parsed = ()
+  RecordUpdateExtraType 'Scoped = RecordUpdateExtra
+
+type FieldUpdateArgIxType :: Stage -> GHC.Type
+type family FieldUpdateArgIxType s = res | res -> s where
+  FieldUpdateArgIxType 'Parsed = ()
+  FieldUpdateArgIxType 'Scoped = Int
 
 type SymbolType :: Stage -> GHC.Type
 type family SymbolType s = res | res -> s where
@@ -399,6 +409,25 @@ deriving stock instance Eq (ConstructorDef 'Scoped)
 deriving stock instance Ord (ConstructorDef 'Parsed)
 
 deriving stock instance Ord (ConstructorDef 'Scoped)
+
+data RecordUpdateField (s :: Stage) = RecordUpdateField
+  { _fieldUpdateName :: Symbol,
+    _fieldUpdateArgIx :: FieldUpdateArgIxType s,
+    _fieldUpdateAssignKw :: Irrelevant (KeywordRef),
+    _fieldUpdateValue :: ExpressionType s
+  }
+
+deriving stock instance Show (RecordUpdateField 'Parsed)
+
+deriving stock instance Show (RecordUpdateField 'Scoped)
+
+deriving stock instance Eq (RecordUpdateField 'Parsed)
+
+deriving stock instance Eq (RecordUpdateField 'Scoped)
+
+deriving stock instance Ord (RecordUpdateField 'Parsed)
+
+deriving stock instance Ord (RecordUpdateField 'Scoped)
 
 data RecordField (s :: Stage) = RecordField
   { _fieldName :: SymbolType s,
@@ -919,6 +948,8 @@ data Expression
   | ExpressionLiteral LiteralLoc
   | ExpressionFunction (Function 'Scoped)
   | ExpressionHole (HoleType 'Scoped)
+  | ExpressionRecordUpdate RecordUpdateApp
+  | ExpressionParensRecordUpdate ParensRecordUpdate
   | ExpressionBraces (WithLoc Expression)
   | ExpressionIterator (Iterator 'Scoped)
   | ExpressionNamedApplication (NamedApplication 'Scoped)
@@ -1233,6 +1264,45 @@ deriving stock instance Ord (ArgumentBlock 'Parsed)
 
 deriving stock instance Ord (ArgumentBlock 'Scoped)
 
+data RecordUpdateExtra = RecordUpdateExtra
+  { _recordUpdateExtraConstructor :: S.Symbol,
+    -- | Implicitly bound fields sorted by index
+    _recordUpdateExtraVars :: [S.Symbol],
+    _recordUpdateExtraSignature :: RecordNameSignature
+  }
+  deriving stock (Show)
+
+newtype ParensRecordUpdate = ParensRecordUpdate
+  { _parensRecordUpdate :: RecordUpdate 'Scoped
+  }
+  deriving stock (Show, Eq, Ord)
+
+data RecordUpdate (s :: Stage) = RecordUpdate
+  { _recordUpdateAtKw :: Irrelevant KeywordRef,
+    _recordUpdateDelims :: Irrelevant (KeywordRef, KeywordRef),
+    _recordUpdateTypeName :: IdentifierType s,
+    _recordUpdateExtra :: Irrelevant (RecordUpdateExtraType s),
+    _recordUpdateFields :: NonEmpty (RecordUpdateField s)
+  }
+
+deriving stock instance Show (RecordUpdate 'Parsed)
+
+deriving stock instance Show (RecordUpdate 'Scoped)
+
+deriving stock instance Eq (RecordUpdate 'Parsed)
+
+deriving stock instance Eq (RecordUpdate 'Scoped)
+
+deriving stock instance Ord (RecordUpdate 'Parsed)
+
+deriving stock instance Ord (RecordUpdate 'Scoped)
+
+data RecordUpdateApp = RecordUpdateApp
+  { _recordAppUpdate :: RecordUpdate 'Scoped,
+    _recordAppExpression :: Expression
+  }
+  deriving stock (Show, Eq, Ord)
+
 data NamedApplication (s :: Stage) = NamedApplication
   { _namedAppName :: IdentifierType s,
     _namedAppArgs :: NonEmpty (ArgumentBlock s),
@@ -1260,6 +1330,7 @@ data ExpressionAtom (s :: Stage)
   | AtomHole (HoleType s)
   | AtomBraces (WithLoc (ExpressionType s))
   | AtomLet (Let s)
+  | AtomRecordUpdate (RecordUpdate s)
   | AtomUniverse Universe
   | AtomFunction (Function s)
   | AtomFunArrow KeywordRef
@@ -1420,6 +1491,11 @@ newtype ModuleIndex = ModuleIndex
   }
 
 makeLenses ''PatternArg
+makeLenses ''ParensRecordUpdate
+makeLenses ''RecordUpdateExtra
+makeLenses ''RecordUpdate
+makeLenses ''RecordUpdateApp
+makeLenses ''RecordUpdateField
 makeLenses ''NonDefinitionsSection
 makeLenses ''DefinitionsSection
 makeLenses ''ProjectionDef
@@ -1520,6 +1596,8 @@ instance HasAtomicity Expression where
     ExpressionCase c -> atomicity c
     ExpressionIterator i -> atomicity i
     ExpressionNamedApplication i -> atomicity i
+    ExpressionRecordUpdate {} -> Aggregate updateFixity
+    ExpressionParensRecordUpdate {} -> Atom
 
 expressionAtomicity :: forall s. SingI s => ExpressionType s -> Atomicity
 expressionAtomicity e = case sing :: SStage s of
@@ -1632,6 +1710,18 @@ instance HasLoc (List s) where
 instance SingI s => HasLoc (NamedApplication s) where
   getLoc NamedApplication {..} = getLocIdentifierType _namedAppName <> getLoc (last _namedAppArgs)
 
+instance SingI s => HasLoc (RecordUpdateField s) where
+  getLoc f = getLocSymbolType (f ^. fieldUpdateName) <> getLocExpressionType (f ^. fieldUpdateValue)
+
+instance SingI s => HasLoc (RecordUpdate s) where
+  getLoc r = getLoc (r ^. recordUpdateAtKw) <> getLocSpan (r ^. recordUpdateFields)
+
+instance HasLoc RecordUpdateApp where
+  getLoc r = getLoc (r ^. recordAppExpression) <> getLoc (r ^. recordAppUpdate)
+
+instance HasLoc ParensRecordUpdate where
+  getLoc = getLoc . (^. parensRecordUpdate)
+
 instance HasLoc Expression where
   getLoc = \case
     ExpressionIdentifier i -> getLoc i
@@ -1650,6 +1740,8 @@ instance HasLoc Expression where
     ExpressionBraces i -> getLoc i
     ExpressionIterator i -> getLoc i
     ExpressionNamedApplication i -> getLoc i
+    ExpressionRecordUpdate i -> getLoc i
+    ExpressionParensRecordUpdate i -> getLoc i
 
 getLocIdentifierType :: forall s. SingI s => IdentifierType s -> Interval
 getLocIdentifierType e = case sing :: SStage s of
@@ -1955,6 +2047,16 @@ instance IsApe (Function 'Scoped) ApeLeaf where
           _infixOp = ApeLeafFunctionKw kw
         }
 
+instance IsApe RecordUpdateApp ApeLeaf where
+  toApe :: RecordUpdateApp -> Ape ApeLeaf
+  toApe a =
+    ApePostfix
+      Postfix
+        { _postfixFixity = updateFixity,
+          _postfixOp = ApeLeafAtom (sing :&: AtomRecordUpdate (a ^. recordAppUpdate)),
+          _postfixLeft = toApe (a ^. recordAppExpression)
+        }
+
 instance IsApe Expression ApeLeaf where
   toApe e = case e of
     ExpressionApplication a -> toApe a
@@ -1962,6 +2064,8 @@ instance IsApe Expression ApeLeaf where
     ExpressionPostfixApplication a -> toApe a
     ExpressionFunction a -> toApe a
     ExpressionNamedApplication a -> toApe a
+    ExpressionRecordUpdate a -> toApe a
+    ExpressionParensRecordUpdate {} -> leaf
     ExpressionParensIdentifier {} -> leaf
     ExpressionIdentifier {} -> leaf
     ExpressionList {} -> leaf
@@ -2045,3 +2149,8 @@ exportNameSpace :: forall ns. SingI ns => Lens' ExportInfo (HashMap Symbol (Name
 exportNameSpace = case sing :: SNameSpace ns of
   SNameSpaceSymbols -> exportSymbols
   SNameSpaceModules -> exportModuleSymbols
+
+_ConstructorRhsRecord :: Traversal' (ConstructorRhs s) (RhsRecord s)
+_ConstructorRhsRecord f rhs = case rhs of
+  ConstructorRhsRecord r -> ConstructorRhsRecord <$> f r
+  _ -> pure rhs

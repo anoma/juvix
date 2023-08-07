@@ -15,6 +15,7 @@ import Juvix.Compiler.Concrete.Data.Name qualified as N
 import Juvix.Compiler.Concrete.Data.NameSignature
 import Juvix.Compiler.Concrete.Data.Scope
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
+import Juvix.Compiler.Concrete.Extra (recordNameSignatureByIndex)
 import Juvix.Compiler.Concrete.Extra qualified as P
 import Juvix.Compiler.Concrete.Gen qualified as G
 import Juvix.Compiler.Concrete.Language
@@ -34,7 +35,8 @@ iniScoperState =
     { _scoperModulesCache = ModulesCache mempty,
       _scoperModules = mempty,
       _scoperScope = mempty,
-      _scoperSignatures = mempty
+      _scoperSignatures = mempty,
+      _scoperRecordSignatures = mempty
     }
 
 scopeCheck ::
@@ -1014,9 +1016,28 @@ checkSections sec = do
               where
                 reserveInductive :: InductiveDef 'Parsed -> Sem r' ()
                 reserveInductive d = do
-                  void (reserveInductiveSymbol d)
+                  i <- reserveInductiveSymbol d
                   constrs <- mapM (reserveConstructorSymbol d) (d ^. inductiveConstructors)
                   void (defineInductiveModule (head constrs) d)
+                  ignoreFail (registerRecord (head constrs) i)
+                  where
+                    registerRecord :: S.Symbol -> S.Symbol -> Sem (Fail ': r') ()
+                    registerRecord mconstr ind = do
+                      case d ^. inductiveConstructors of
+                        mkRec :| [] -> do
+                          fs <-
+                            failMaybe $
+                              mkRec
+                                ^? constructorRhs
+                                . _ConstructorRhsRecord
+                                . to mkRecordNameSignature
+                          let info =
+                                RecordInfo
+                                  { _recordInfoSignature = fs,
+                                    _recordInfoConstructor = mconstr
+                                  }
+                          modify' (set (scoperRecordSignatures . at (ind ^. S.nameId)) (Just info))
+                        _ -> fail
 
             goDefinition :: Definition 'Parsed -> Sem r' (Definition 'Scoped)
             goDefinition = \case
@@ -1708,25 +1729,48 @@ checkPatternName n = do
     Just constr -> do
       registerName constr
       return (PatternScopedConstructor constr) -- the symbol is a constructor
-    Nothing -> PatternScopedVar <$> bindVariableSymbol sym -- the symbol is a variable
+    Nothing -> case n of
+      NameUnqualified {} -> PatternScopedVar <$> bindVariableSymbol sym -- the symbol is a variable
+      NameQualified {} -> nameNotInScope n
   where
-    (path, sym) = case n of
-      NameQualified (QualifiedName (SymbolPath p) s) -> (toList p, s)
-      NameUnqualified s -> ([], s)
-    -- check whether the symbol is a constructor in scope
+    sym = snd (splitName n)
     getConstructorRef :: Sem r (Maybe S.Name)
-    getConstructorRef = do
-      entries <- mapMaybe getConstructor . fst <$> lookupQualifiedSymbol (path, sym)
-      case entries of
-        [] -> case SymbolPath <$> nonEmpty path of
-          Nothing -> return Nothing -- There is no constructor with such a name
-          Just pth -> throw (ErrQualSymNotInScope (QualSymNotInScope (QualifiedName pth sym)))
-        [e] -> return (Just (set S.nameConcrete n e)) -- There is one constructor with such a name
-        es -> throw (ErrAmbiguousSym (AmbiguousSym n (map SymbolEntry es)))
-    getConstructor :: SymbolEntry -> Maybe (S.Name' ())
-    getConstructor e = case getNameKind e of
-      KNameConstructor -> Just (e ^. symbolEntry)
-      _ -> Nothing
+    getConstructorRef = lookupNameOfKind KNameConstructor n
+
+nameNotInScope :: forall r a. Members '[Error ScoperError, State Scope] r => Name -> Sem r a
+nameNotInScope n = err >>= throw
+  where
+    err :: Sem r ScoperError
+    err = case n of
+      NameQualified q -> return (ErrQualSymNotInScope (QualSymNotInScope q))
+      NameUnqualified s -> ErrSymNotInScope . NotInScope s <$> get
+
+getNameOfKind ::
+  forall r.
+  Members '[Error ScoperError, State Scope, State ScoperState] r =>
+  NameKind ->
+  Name ->
+  Sem r S.Name
+getNameOfKind nameKind n = fromMaybeM (nameNotInScope n) (lookupNameOfKind nameKind n)
+
+lookupNameOfKind ::
+  forall r.
+  Members '[Error ScoperError, State Scope, State ScoperState] r =>
+  NameKind ->
+  Name ->
+  Sem r (Maybe S.Name)
+lookupNameOfKind nameKind n = do
+  entries <- mapMaybe filterEntry . fst <$> lookupQualifiedSymbol (path, sym)
+  case entries of
+    [] -> return Nothing
+    [e] -> return (Just (set S.nameConcrete n e)) -- There is one constructor with such a name
+    es -> throw (ErrAmbiguousSym (AmbiguousSym n (map SymbolEntry es)))
+  where
+    (path, sym) = splitName n
+    filterEntry :: SymbolEntry -> Maybe (S.Name' ())
+    filterEntry e
+      | nameKind == getNameKind e = Just (e ^. symbolEntry)
+      | otherwise = Nothing
 
 checkPatternBinding ::
   Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r =>
@@ -1791,6 +1835,47 @@ checkExpressionAtom e = case e of
   AtomList l -> pure . AtomList <$> checkList l
   AtomIterator i -> pure . AtomIterator <$> checkIterator i
   AtomNamedApplication i -> pure . AtomNamedApplication <$> checkNamedApplication i
+  AtomRecordUpdate i -> pure . AtomRecordUpdate <$> checkRecordUpdate i
+
+checkRecordUpdate :: forall r. Members '[Error ScoperError, State Scope, State ScoperState, Reader ScopeParameters, InfoTableBuilder, NameIdGen] r => RecordUpdate 'Parsed -> Sem r (RecordUpdate 'Scoped)
+checkRecordUpdate RecordUpdate {..} = do
+  tyName' <- getNameOfKind KNameInductive _recordUpdateTypeName
+  registerName tyName'
+  info <- getRecordInfo (ScopedIden tyName')
+  let sig = info ^. recordInfoSignature
+  (vars', fields') <- withLocalScope $ do
+    vs <- mapM bindVariableSymbol (toList (recordNameSignatureByIndex sig))
+    fs <- mapM (checkField sig) _recordUpdateFields
+    return (vs, fs)
+  let extra' =
+        RecordUpdateExtra
+          { _recordUpdateExtraSignature = sig,
+            _recordUpdateExtraVars = vars',
+            _recordUpdateExtraConstructor = info ^. recordInfoConstructor
+          }
+  return
+    RecordUpdate
+      { _recordUpdateTypeName = ScopedIden tyName',
+        _recordUpdateFields = fields',
+        _recordUpdateExtra = Irrelevant extra',
+        _recordUpdateAtKw,
+        _recordUpdateDelims
+      }
+  where
+    checkField :: RecordNameSignature -> RecordUpdateField 'Parsed -> Sem r (RecordUpdateField 'Scoped)
+    checkField sig f = do
+      value' <- checkParseExpressionAtoms (f ^. fieldUpdateValue)
+      idx' <- maybe (throw unexpectedField) return (sig ^? recordNames . at (f ^. fieldUpdateName) . _Just . _2)
+      return
+        RecordUpdateField
+          { _fieldUpdateName = f ^. fieldUpdateName,
+            _fieldUpdateArgIx = idx',
+            _fieldUpdateAssignKw = f ^. fieldUpdateAssignKw,
+            _fieldUpdateValue = value'
+          }
+      where
+        unexpectedField :: ScoperError
+        unexpectedField = ErrUnexpectedField (UnexpectedField (f ^. fieldUpdateName))
 
 checkNamedApplication ::
   forall r.
@@ -1816,16 +1901,27 @@ checkNamedApplication napp = do
       _argBlockArgs <- mapM checkNamedArg (b ^. argBlockArgs)
       return ArgumentBlock {..}
 
+getRecordInfo ::
+  forall r.
+  Members '[State ScoperState, Error ScoperError] r =>
+  ScopedIden ->
+  Sem r RecordInfo
+getRecordInfo indTy =
+  fromMaybeM err (gets (^. scoperRecordSignatures . at (indTy ^. scopedIden . S.nameId)))
+  where
+    err :: Sem r a
+    err = throw (ErrNotARecord (NotARecord indTy))
+
 getNameSignature :: Members '[State ScoperState, Error ScoperError] r => ScopedIden -> Sem r NameSignature
 getNameSignature s = do
-  sig <- maybeM (throw err) return (getNameSignatureMay s)
+  sig <- maybeM (throw err) return (lookupNameSignature (s ^. scopedIden . S.nameId))
   when (null (sig ^. nameSignatureArgs)) (throw err)
   return sig
   where
     err = ErrNoNameSignature (NoNameSignature s)
 
-getNameSignatureMay :: Members '[State ScoperState] r => ScopedIden -> Sem r (Maybe NameSignature)
-getNameSignatureMay s = gets (^. scoperSignatures . at (identifierName s ^. S.nameId))
+lookupNameSignature :: Members '[State ScoperState] r => S.NameId -> Sem r (Maybe NameSignature)
+lookupNameSignature s = gets (^. scoperSignatures . at s)
 
 checkIterator ::
   Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r =>
@@ -1913,12 +2009,15 @@ checkParens ::
   ExpressionAtoms 'Parsed ->
   Sem r Expression
 checkParens e@(ExpressionAtoms as _) = case as of
-  AtomIdentifier s :| [] -> do
-    scopedId <- checkName s
-    let scopedIdenNoFix = over scopedIden (set S.nameFixity Nothing) scopedId
-    return (ExpressionParensIdentifier scopedIdenNoFix)
-  AtomIterator i :| [] -> ExpressionIterator . set iteratorParens True <$> checkIterator i
-  AtomCase c :| [] -> ExpressionCase . set caseParens True <$> checkCase c
+  p :| [] -> case p of
+    AtomIdentifier s -> do
+      scopedId <- checkName s
+      let scopedIdenNoFix = over scopedIden (set S.nameFixity Nothing) scopedId
+      return (ExpressionParensIdentifier scopedIdenNoFix)
+    AtomIterator i -> ExpressionIterator . set iteratorParens True <$> checkIterator i
+    AtomCase c -> ExpressionCase . set caseParens True <$> checkCase c
+    AtomRecordUpdate u -> ExpressionParensRecordUpdate . ParensRecordUpdate <$> checkRecordUpdate u
+    _ -> checkParseExpressionAtoms e
   _ -> checkParseExpressionAtoms e
 
 checkExpressionAtoms ::
@@ -1997,7 +2096,7 @@ checkSyntaxDef = \case
 
 makeExpressionTable ::
   ExpressionAtoms 'Scoped -> [[P.Operator Parse Expression]]
-makeExpressionTable (ExpressionAtoms atoms _) = [appOpExplicit] : operators ++ [[functionOp]]
+makeExpressionTable (ExpressionAtoms atoms _) = [recordUpdate] : [appOpExplicit] : operators ++ [[functionOp]]
   where
     operators = mkSymbolTable idens
 
@@ -2044,13 +2143,23 @@ makeExpressionTable (ExpressionAtoms atoms _) = [appOpExplicit] : operators ++ [
                 | uid == identifierName iden ^. S.nameId -> Just iden
               _ -> Nothing
 
+    recordUpdate :: P.Operator Parse Expression
+    recordUpdate = P.Postfix (mkRecUpdate <$> P.token getRecUpdate mempty)
+      where
+        getRecUpdate :: ExpressionAtom 'Scoped -> (Maybe (RecordUpdate 'Scoped))
+        getRecUpdate = \case
+          AtomRecordUpdate u -> Just u
+          _ -> Nothing
+        mkRecUpdate :: RecordUpdate 'Scoped -> Expression -> Expression
+        mkRecUpdate u = ExpressionRecordUpdate . RecordUpdateApp u
+
     -- Application by juxtaposition.
     appOpExplicit :: P.Operator Parse Expression
     appOpExplicit = P.InfixL (return app)
       where
         app :: Expression -> Expression -> Expression
         app f x =
-          ExpressionApplication
+          ExpressionApplication $
             Application
               { _applicationFunction = f,
                 _applicationParameter = x

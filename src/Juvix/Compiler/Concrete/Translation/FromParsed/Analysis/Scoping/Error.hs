@@ -42,6 +42,9 @@ data ScoperError
   | ErrNameSignature NameSignatureError
   | ErrNoNameSignature NoNameSignature
   | ErrNamedArgumentsError NamedArgumentsError
+  | ErrNotARecord NotARecord
+  | ErrUnexpectedField UnexpectedField
+  | ErrRepeatedField RepeatedField
 
 instance ToGenericError ScoperError where
   genericError = \case
@@ -75,3 +78,6 @@ instance ToGenericError ScoperError where
     ErrNameSignature e -> genericError e
     ErrNoNameSignature e -> genericError e
     ErrNamedArgumentsError e -> genericError e
+    ErrNotARecord e -> genericError e
+    ErrUnexpectedField e -> genericError e
+    ErrRepeatedField e -> genericError e

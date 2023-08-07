@@ -5,6 +5,7 @@ module Juvix.Compiler.Internal.Translation.FromConcrete
 where
 
 import Data.HashMap.Strict qualified as HashMap
+import Data.IntMap.Strict qualified as IntMap
 import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Compiler.Builtins
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
@@ -13,6 +14,7 @@ import Juvix.Compiler.Concrete.Language qualified as Concrete
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
 import Juvix.Compiler.Internal.Data.NameDependencyInfo qualified as Internal
+import Juvix.Compiler.Internal.Extra (foldExplicitApplication)
 import Juvix.Compiler.Internal.Extra qualified as Internal
 import Juvix.Compiler.Internal.Extra.DependencyBuilder
 import Juvix.Compiler.Internal.Language (varFromWildcard)
@@ -803,9 +805,76 @@ goExpression = \case
   ExpressionHole h -> return (Internal.ExpressionHole h)
   ExpressionIterator i -> goIterator i
   ExpressionNamedApplication i -> goNamedApplication i
+  ExpressionRecordUpdate i -> goRecordUpdateApp i
+  ExpressionParensRecordUpdate i -> Internal.ExpressionLambda <$> goRecordUpdate (i ^. parensRecordUpdate)
   where
     goNamedApplication :: Concrete.NamedApplication 'Scoped -> Sem r Internal.Expression
     goNamedApplication = runNamedArguments >=> goExpression
+
+    goRecordUpdate :: Concrete.RecordUpdate 'Scoped -> Sem r Internal.Lambda
+    goRecordUpdate r = do
+      cl <- mkClause
+      return
+        Internal.Lambda
+          { _lambdaType = Nothing,
+            _lambdaClauses = pure cl
+          }
+      where
+        -- fields indexed by field index.
+        mkFieldmap :: Sem r (IntMap (RecordUpdateField 'Scoped))
+        mkFieldmap = execState mempty $ mapM go (r ^. recordUpdateFields)
+          where
+            go :: RecordUpdateField 'Scoped -> Sem (State (IntMap (RecordUpdateField 'Scoped)) ': r) ()
+            go f = do
+              let idx = f ^. fieldUpdateArgIx
+              whenM (gets @(IntMap (RecordUpdateField 'Scoped)) (IntMap.member idx)) (throw repeated)
+              modify' (IntMap.insert idx f)
+              where
+                repeated :: ScoperError
+                repeated = ErrRepeatedField (RepeatedField (f ^. fieldUpdateName))
+
+        mkArgs :: [Indexed Internal.VarName] -> Sem r [Internal.Expression]
+        mkArgs vs = do
+          fieldMap <- mkFieldmap
+          execOutputList $
+            go (uncurry Indexed <$> IntMap.toAscList fieldMap) vs
+          where
+            go :: [Indexed (RecordUpdateField 'Scoped)] -> [Indexed Internal.VarName] -> Sem (Output Internal.Expression ': r) ()
+            go fields = \case
+              [] -> return ()
+              Indexed idx var : vars' -> case getArg idx of
+                Nothing -> do
+                  output (Internal.toExpression var)
+                  go fields vars'
+                Just (arg, fields') -> do
+                  val' <- goExpression (arg ^. fieldUpdateValue)
+                  output val'
+                  go fields' vars'
+              where
+                getArg :: Int -> Maybe (RecordUpdateField 'Scoped, [Indexed (RecordUpdateField 'Scoped)])
+                getArg idx = do
+                  Indexed fidx arg :| fs <- nonEmpty fields
+                  guard (idx == fidx)
+                  return (arg, fs)
+
+        mkClause :: Sem r Internal.LambdaClause
+        mkClause = do
+          let extra = r ^. recordUpdateExtra . unIrrelevant
+              constr = goSymbol (extra ^. recordUpdateExtraConstructor)
+              vars = map goSymbol (extra ^. recordUpdateExtraVars)
+              patArg = Internal.mkConstructorVarPattern constr vars
+          args <- mkArgs (indexFrom 0 vars)
+          return
+            Internal.LambdaClause
+              { _lambdaPatterns = pure patArg,
+                _lambdaBody = foldExplicitApplication (Internal.toExpression constr) args
+              }
+
+    goRecordUpdateApp :: Concrete.RecordUpdateApp -> Sem r Internal.Expression
+    goRecordUpdateApp r = do
+      expr' <- goExpression (r ^. recordAppExpression)
+      lam <- Internal.ExpressionLambda <$> goRecordUpdate (r ^. recordAppUpdate)
+      return $ foldExplicitApplication lam [expr']
 
     goList :: Concrete.List 'Scoped -> Sem r Internal.Expression
     goList l = do

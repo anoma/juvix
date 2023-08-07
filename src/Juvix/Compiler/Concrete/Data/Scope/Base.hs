@@ -47,12 +47,19 @@ data ScopeParameters = ScopeParameters
     _scopeParsedModules :: HashMap TopModulePath (Module 'Parsed 'ModuleTop)
   }
 
+data RecordInfo = RecordInfo
+  { _recordInfoConstructor :: S.Symbol,
+    _recordInfoSignature :: RecordNameSignature
+  }
+
 data ScoperState = ScoperState
   { _scoperModulesCache :: ModulesCache,
     -- | Local and top modules
     _scoperModules :: HashMap S.ModuleNameId (ModuleRef' 'S.NotConcrete),
     _scoperScope :: HashMap TopModulePath Scope,
-    _scoperSignatures :: HashMap S.NameId NameSignature
+    _scoperSignatures :: HashMap S.NameId NameSignature,
+    -- | Indexed by the inductive type. This is meant to be used for record updates
+    _scoperRecordSignatures :: HashMap S.NameId RecordInfo
   }
 
 data SymbolFixity = SymbolFixity
@@ -84,3 +91,4 @@ makeLenses ''SymbolFixity
 makeLenses ''ScoperState
 makeLenses ''ScopeParameters
 makeLenses ''ModulesCache
+makeLenses ''RecordInfo

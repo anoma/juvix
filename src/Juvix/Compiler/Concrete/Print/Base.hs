@@ -262,6 +262,29 @@ instance SingI s => PrettyPrint (NamedApplication s) where
   -- ppCode :: Members '[ExactPrint, Reader Options] r => NamedApplication s -> Sem r ()
   ppCode = apeHelper
 
+instance SingI s => PrettyPrint (RecordUpdateField s) where
+  ppCode RecordUpdateField {..} =
+    ppSymbolType _fieldUpdateName <+> ppCode _fieldUpdateAssignKw <+> ppExpressionType _fieldUpdateValue
+
+instance SingI s => PrettyPrint (RecordUpdate s) where
+  ppCode RecordUpdate {..} = do
+    let Irrelevant (l, r) = _recordUpdateDelims
+        fields'
+          | null (_recordUpdateFields ^. _tail1) = ppCode (_recordUpdateFields ^. _head1)
+          | otherwise =
+              line
+                <> indent
+                  ( sequenceWith
+                      (semicolon >> line)
+                      (ppCode <$> _recordUpdateFields)
+                  )
+                <> line
+    ppCode _recordUpdateAtKw
+      <> ppIdentifierType _recordUpdateTypeName
+      <> ppCode l
+      <> fields'
+      <> ppCode r
+
 instance SingI s => PrettyPrint (ExpressionAtom s) where
   ppCode = \case
     AtomIdentifier n -> ppIdentifierType n
@@ -270,6 +293,7 @@ instance SingI s => PrettyPrint (ExpressionAtom s) where
     AtomCase c -> ppCode c
     AtomList l -> ppCode l
     AtomUniverse uni -> ppCode uni
+    AtomRecordUpdate u -> ppCode u
     AtomFunction fun -> ppCode fun
     AtomLiteral lit -> ppCode lit
     AtomFunArrow a -> ppCode a
@@ -543,6 +567,7 @@ instance SingI s => PrettyPrint (Lambda s) where
 
 instance PrettyPrint Precedence where
   ppCode = \case
+    PrecMinusOmega1 -> noLoc (pretty ("-ω₁" :: Text))
     PrecMinusOmega -> noLoc (pretty ("-ω" :: Text))
     PrecNat n -> noLoc (pretty n)
     PrecOmega -> noLoc (pretty ("ω" :: Text))
@@ -576,6 +601,12 @@ instance PrettyPrint IteratorSyntaxDef where
       <+> iterSymbol'
       <+?> fmap ppCode _iterAttribs
 
+instance PrettyPrint RecordUpdateApp where
+  ppCode = apeHelper
+
+instance PrettyPrint ParensRecordUpdate where
+  ppCode = parens . ppCode . (^. parensRecordUpdate)
+
 instance PrettyPrint Expression where
   ppCode = \case
     ExpressionIdentifier n -> ppCode n
@@ -594,6 +625,8 @@ instance PrettyPrint Expression where
     ExpressionCase c -> ppCode c
     ExpressionIterator i -> ppCode i
     ExpressionNamedApplication i -> ppCode i
+    ExpressionRecordUpdate i -> ppCode i
+    ExpressionParensRecordUpdate i -> ppCode i
 
 instance PrettyPrint (WithSource Pragmas) where
   ppCode pragma = do

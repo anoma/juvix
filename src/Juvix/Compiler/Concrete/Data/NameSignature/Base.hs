@@ -17,5 +17,11 @@ newtype NameSignature = NameSignature
   }
   deriving stock (Show)
 
+newtype RecordNameSignature = RecordNameSignature
+  { _recordNames :: HashMap Symbol (Symbol, Int)
+  }
+  deriving stock (Show)
+
 makeLenses ''NameSignature
+makeLenses ''RecordNameSignature
 makeLenses ''NameBlock

@@ -1,0 +1,10 @@
+module UnexpectedFieldUpdate;
+
+type T := t;
+
+type R := mkR {
+ r : T;
+};
+
+f : R;
+f := (mkR t) @R{x := 1};

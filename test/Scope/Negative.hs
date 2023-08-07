@@ -315,5 +315,26 @@ scoperErrorTests =
       $(mkRelFile "RepeatedNameSignature.juvix")
       $ \case
         ErrNameSignature ErrDuplicateName {} -> Nothing
+        _ -> wrongError,
+    NegTest
+      "No named arguments"
+      $(mkRelDir ".")
+      $(mkRelFile "NoNamedArguments.juvix")
+      $ \case
+        ErrNoNameSignature NoNameSignature {} -> Nothing
+        _ -> wrongError,
+    NegTest
+      "Not a record"
+      $(mkRelDir ".")
+      $(mkRelFile "NotARecord.juvix")
+      $ \case
+        ErrNotARecord NotARecord {} -> Nothing
+        _ -> wrongError,
+    NegTest
+      "Unexpected field in record update"
+      $(mkRelDir ".")
+      $(mkRelFile "UnexpectedFieldUpdate.juvix")
+      $ \case
+        ErrUnexpectedField UnexpectedField {} -> Nothing
         _ -> wrongError
   ]
