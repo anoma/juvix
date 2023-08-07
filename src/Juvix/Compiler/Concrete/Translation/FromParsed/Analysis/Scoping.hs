@@ -613,13 +613,16 @@ resolveFixitySyntaxDef fdef@FixitySyntaxDef {..} = topBindings $ do
   above <- mapM (checkFixitySymbol . WithLoc loc) $ fi ^. FI.fixityPrecAbove
   tab <- getInfoTable
   let samePrec = getPrec tab <$> same
-      belowPrec = maximum (minInt + 1 : map (getPrec tab) below)
-      abovePrec = minimum (maxInt - 1 : map (getPrec tab) above)
+      belowPrec :: Integer
+      belowPrec = fromIntegral $ maximum (minInt + 1 : map (getPrec tab) above)
+      abovePrec :: Integer
+      abovePrec = fromIntegral $ minimum (maxInt - 1 : map (getPrec tab) below)
   when (belowPrec >= abovePrec + 1) $
     throw (ErrPrecedenceInconsistency (PrecedenceInconsistencyError fdef))
   when (isJust same && not (null below && null above)) $
     throw (ErrPrecedenceInconsistency (PrecedenceInconsistencyError fdef))
-  let prec = fromMaybe ((abovePrec + belowPrec) `div` 2) samePrec
+  -- we need Integer to avoid overflow when computing prec
+  let prec = fromMaybe (fromInteger $ (abovePrec + belowPrec) `div` 2) samePrec
       fx =
         Fixity
           { _fixityPrecedence = PrecNat prec,
