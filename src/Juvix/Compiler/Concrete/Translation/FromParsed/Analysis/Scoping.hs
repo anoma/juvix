@@ -1481,6 +1481,7 @@ checkOpenModuleNoImport importModuleHint OpenModule {..}
     mergeScope ei = do
       mapM_ mergeSymbol (HashMap.toList (ei ^. exportSymbols))
       mapM_ mergeSymbol (HashMap.toList (ei ^. exportModuleSymbols))
+      mapM_ mergeSymbol (HashMap.toList (ei ^. exportFixitySymbols))
       where
         mergeSymbol :: forall ns. SingI ns => (Symbol, NameSpaceEntryType ns) -> Sem r ()
         mergeSymbol (s, entry) =
@@ -1516,6 +1517,7 @@ checkOpenModuleNoImport importModuleHint OpenModule {..}
           Just (Using l) ->
             over exportSymbols (HashMap.fromList . mapMaybe inUsing . HashMap.toList)
               . over exportModuleSymbols (HashMap.fromList . mapMaybe inUsing . HashMap.toList)
+              . over exportFixitySymbols (HashMap.fromList . mapMaybe inUsing . HashMap.toList)
             where
               inUsing ::
                 forall (ns :: NameSpace).
@@ -1534,6 +1536,7 @@ checkOpenModuleNoImport importModuleHint OpenModule {..}
           Just (Hiding l) ->
             over exportSymbols (HashMap.filter (not . inHiding))
               . over exportModuleSymbols (HashMap.filter (not . inHiding))
+              . over exportFixitySymbols (HashMap.filter (not . inHiding))
             where
               inHiding :: forall ns. SingI ns => NameSpaceEntryType ns -> Bool
               inHiding e = HashSet.member (e ^. nsEntry . S.nameId) u

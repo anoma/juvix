@@ -2307,6 +2307,7 @@ exportAllNames :: SimpleFold ExportInfo (S.Name' ())
 exportAllNames =
   exportSymbols . each . symbolEntry
     <> exportModuleSymbols . each . moduleEntry
+    <> exportFixitySymbols . each . fixityEntry
 
 exportNameSpace :: forall ns. SingI ns => Lens' ExportInfo (HashMap Symbol (NameSpaceEntryType ns))
 exportNameSpace = case sing :: SNameSpace ns of
