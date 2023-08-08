@@ -96,12 +96,12 @@ instance FromJSON RawPackage where
       err = error "Failed to parse juvix.yaml"
 
 -- | This is used when juvix.yaml exists but it is empty
-emptyPackage :: Package
-emptyPackage =
+emptyPackage :: Maybe (SomeBase Dir) -> Package
+emptyPackage mbuildDir =
   Package
     { _packageName = defaultPackageName,
       _packageVersion = defaultVersion,
-      _packageDependencies = [defaultStdlibDep],
+      _packageDependencies = [defaultStdlibDep mbuildDir],
       _packageMain = Nothing,
       _packageBuildDir = Nothing
     }
@@ -137,8 +137,11 @@ processPackage buildDir pkg = do
         Right v -> return v
         Left err -> throw (pack (errorBundlePretty err))
 
-defaultStdlibDep :: Dependency
-defaultStdlibDep = Dependency (mkPrepath (toFilePath (relBuildDir <//> relStdlibDir)))
+defaultStdlibDep :: Maybe (SomeBase Dir) -> Dependency
+defaultStdlibDep mbuildDir = Dependency (mkPrepath (fromSomeDir (buildDir <///> relStdlibDir)))
+  where
+    buildDir :: SomeBase Dir
+    buildDir = fromMaybe (Rel relBuildDir) mbuildDir
 
 defaultPackageName :: Text
 defaultPackageName = "my-project"
@@ -149,7 +152,7 @@ defaultVersion = SemVer 0 0 0 [] Nothing
 globalPackage :: Package
 globalPackage =
   Package
-    { _packageDependencies = [defaultStdlibDep],
+    { _packageDependencies = [defaultStdlibDep Nothing],
       _packageName = "global-juvix-package",
       _packageVersion = defaultVersion,
       _packageMain = Nothing,
@@ -166,7 +169,7 @@ readPackage ::
 readPackage root buildDir = do
   bs <- readFileBS' yamlPath
   if
-      | ByteString.null bs -> return emptyPackage
+      | ByteString.null bs -> return (emptyPackage buildDir)
       | otherwise -> either (throw . pack . prettyPrintParseException) (processPackage buildDir) (decodeEither' bs)
   where
     yamlPath = root <//> juvixYamlFile
