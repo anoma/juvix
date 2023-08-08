@@ -630,7 +630,7 @@ resolveFixitySyntaxDef fdef@FixitySyntaxDef {..} = topBindings $ do
               case fi ^. FI.fixityArity of
                 FI.Unary -> Unary AssocPostfix
                 FI.Binary -> case fi ^. FI.fixityAssoc of
-                  Nothing -> Binary AssocLeft
+                  Nothing -> Binary AssocNone
                   Just FI.AssocLeft -> Binary AssocLeft
                   Just FI.AssocRight -> Binary AssocRight
                   Just FI.AssocNone -> Binary AssocNone
