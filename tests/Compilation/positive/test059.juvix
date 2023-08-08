@@ -1,14 +1,7 @@
 -- builtin list
 module test059;
 
-import Stdlib.Data.Nat open;
-import Stdlib.System.IO open;
-
-syntax infixr 5 ::;
-builtin list
-type List (a : Type) :=
-  | nil : List a
-  | :: : a → List a → List a;
+import Stdlib.Prelude open hiding {head};
 
 mylist : List Nat;
 mylist := [1; 2; 3 + 1];
