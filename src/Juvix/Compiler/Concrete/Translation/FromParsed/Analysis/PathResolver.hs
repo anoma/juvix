@@ -118,7 +118,7 @@ getDependencyPath = \case
       ( GitCloneSpec
           { _gitSpecClonePath = cloneDir,
             _gitSpecRepoUrl = g ^. gitDependencyUrl,
-            _gitSpecRepoRef = g ^. gitDependencyHash
+            _gitSpecRepoRef = g ^. gitDependencyRef
           }
       )
     return cloneDir
