@@ -92,6 +92,27 @@ tests:
     stdout: ""
     exit-status: 0
 
+  - name: stdlib-in-default-build-dir
+    command:
+      shell:
+        - bash
+      script: |
+        rootDir=$(mktemp -d)
+        trap 'rm -rf -- "$rootDir"' EXIT
+
+        cp ./examples/milestone/HelloWorld/HelloWorld.juvix "$rootDir"
+        touch "$rootDir/juvix.yaml"
+        echo "dependencies: [.juvix-build/stdlib]" >> "$rootDir/juvix.yaml"
+
+        cd "$rootDir"
+        juvix compile HelloWorld.juvix
+
+        if [ ! -d "$rootDir/.juvix-build" ]; then
+          exit 1
+        fi
+    stdout: ""
+    exit-status: 0
+
   - name: default-output-file-in-invoke-dir
     command:
       shell:
