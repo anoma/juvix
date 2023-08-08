@@ -74,9 +74,9 @@ mkPackageInfo ::
   Sem r PackageInfo
 mkPackageInfo mpackageEntry _packageRoot = do
   let buildDir :: Path Abs Dir = maybe (rootBuildDir _packageRoot) (someBaseToAbs _packageRoot . (^. entryPointBuildDir)) mpackageEntry
-      buildDirDep :: Maybe (SomeBase Dir)
-        | isJust mpackageEntry = Just (Abs buildDir)
-        | otherwise = Nothing
+      buildDirDep :: BuildDir
+        | isJust mpackageEntry = CustomBuildDir (Abs buildDir)
+        | otherwise = DefaultBuildDir
 
   _packagePackage <- maybe (readPackage _packageRoot buildDirDep) (return . (^. entryPointPackage)) mpackageEntry
   let deps :: [Dependency] = _packagePackage ^. packageDependencies

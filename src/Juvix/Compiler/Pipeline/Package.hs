@@ -1,5 +1,6 @@
 module Juvix.Compiler.Pipeline.Package
   ( module Juvix.Compiler.Pipeline.Package.Dependency,
+    BuildDir (..),
     RawPackage,
     Package,
     Package' (..),
@@ -95,13 +96,22 @@ instance FromJSON RawPackage where
       err :: a
       err = error "Failed to parse juvix.yaml"
 
+data BuildDir
+  = DefaultBuildDir
+  | CustomBuildDir (SomeBase Dir)
+
+resolveBuildDir :: BuildDir -> SomeBase Dir
+resolveBuildDir = \case
+  DefaultBuildDir -> Rel (relBuildDir)
+  CustomBuildDir d -> d
+
 -- | This is used when juvix.yaml exists but it is empty
-emptyPackage :: Maybe (SomeBase Dir) -> Package
-emptyPackage mbuildDir =
+emptyPackage :: BuildDir -> Package
+emptyPackage buildDir =
   Package
     { _packageName = defaultPackageName,
       _packageVersion = defaultVersion,
-      _packageDependencies = [defaultStdlibDep mbuildDir],
+      _packageDependencies = [defaultStdlibDep buildDir],
       _packageMain = Nothing,
       _packageBuildDir = Nothing
     }
@@ -116,10 +126,10 @@ rawPackage pkg =
       _packageMain = pkg ^. packageMain
     }
 
-processPackage :: forall r. (Members '[Error Text] r) => Maybe (SomeBase Dir) -> RawPackage -> Sem r Package
+processPackage :: forall r. (Members '[Error Text] r) => BuildDir -> RawPackage -> Sem r Package
 processPackage buildDir pkg = do
   let _packageName = fromMaybe defaultPackageName (pkg ^. packageName)
-      base :: SomeBase Dir = fromMaybe (Rel relBuildDir) buildDir <///> relStdlibDir
+      base :: SomeBase Dir = (resolveBuildDir buildDir) <///> relStdlibDir
       stdlib = Dependency (mkPrepath (fromSomeDir base))
       _packageDependencies = fromMaybe [stdlib] (pkg ^. packageDependencies)
   _packageVersion <- getVersion
@@ -137,11 +147,8 @@ processPackage buildDir pkg = do
         Right v -> return v
         Left err -> throw (pack (errorBundlePretty err))
 
-defaultStdlibDep :: Maybe (SomeBase Dir) -> Dependency
-defaultStdlibDep mbuildDir = Dependency (mkPrepath (fromSomeDir (buildDir <///> relStdlibDir)))
-  where
-    buildDir :: SomeBase Dir
-    buildDir = fromMaybe (Rel relBuildDir) mbuildDir
+defaultStdlibDep :: BuildDir -> Dependency
+defaultStdlibDep buildDir = Dependency (mkPrepath (fromSomeDir (resolveBuildDir buildDir <///> relStdlibDir)))
 
 defaultPackageName :: Text
 defaultPackageName = "my-project"
@@ -152,7 +159,7 @@ defaultVersion = SemVer 0 0 0 [] Nothing
 globalPackage :: Package
 globalPackage =
   Package
-    { _packageDependencies = [defaultStdlibDep Nothing],
+    { _packageDependencies = [defaultStdlibDep DefaultBuildDir],
       _packageName = "global-juvix-package",
       _packageVersion = defaultVersion,
       _packageMain = Nothing,
@@ -164,7 +171,7 @@ readPackage ::
   forall r.
   (Members '[Files, Error Text] r) =>
   Path Abs Dir ->
-  Maybe (SomeBase Dir) ->
+  BuildDir ->
   Sem r Package
 readPackage root buildDir = do
   bs <- readFileBS' yamlPath
@@ -174,10 +181,10 @@ readPackage root buildDir = do
   where
     yamlPath = root <//> juvixYamlFile
 
-readPackageIO :: Path Abs Dir -> SomeBase Dir -> IO Package
+readPackageIO :: Path Abs Dir -> BuildDir -> IO Package
 readPackageIO root buildDir = do
   let x :: Sem '[Error Text, Files, Embed IO] Package
-      x = readPackage root (Just buildDir)
+      x = readPackage root buildDir
   m <- runM $ runFilesIO (runError x)
   case m of
     Left err -> putStrLn err >> exitFailure
@@ -194,7 +201,7 @@ readGlobalPackage :: Members '[Error Text, Files] r => Sem r Package
 readGlobalPackage = do
   yamlPath <- globalYaml
   unlessM (fileExists' yamlPath) writeGlobalPackage
-  readPackage (parent yamlPath) Nothing
+  readPackage (parent yamlPath) DefaultBuildDir
 
 writeGlobalPackage :: Members '[Files] r => Sem r ()
 writeGlobalPackage = do
