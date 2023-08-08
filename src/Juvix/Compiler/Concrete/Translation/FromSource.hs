@@ -681,9 +681,12 @@ iterator = do
                       _rangeInKw = keywordRef
                     }
             return (ran : rngs)
-        | otherwise -> fmap (maybe [] toList) . optional $ P.try $ do
-            lparen
-            rngs <- P.sepBy1 range semicolon
+        | otherwise -> fmap (maybe [] toList) . optional $ do
+            s <- P.try $ do
+              lparen
+              rangeStart
+            r <- rangeCont s
+            rngs <- (r :) <$> many (semicolon >> range)
             rparen
             return rngs
   if
@@ -716,14 +719,21 @@ iterator = do
       _initializerExpression <- parseExpressionAtoms
       return Initializer {..}
 
-    range :: ParsecS r (Range 'Parsed)
-    range = do
-      (_rangePattern, _rangeInKw) <- P.try $ do
-        pat <- parsePatternAtoms
-        r <- Irrelevant <$> kw kwIn
-        return (pat, r)
+    rangeStart :: ParsecS r (PatternAtoms 'Parsed, Irrelevant KeywordRef)
+    rangeStart = do
+      pat <- parsePatternAtoms
+      r <- Irrelevant <$> kw kwIn
+      return (pat, r)
+
+    rangeCont :: (PatternAtoms 'Parsed, Irrelevant KeywordRef) -> ParsecS r (Range 'Parsed)
+    rangeCont (_rangePattern, _rangeInKw) = do
       _rangeExpression <- parseExpressionAtoms
       return Range {..}
+
+    range :: ParsecS r (Range 'Parsed)
+    range = do
+      s <- P.try rangeStart
+      rangeCont s
 
     mkNamedArgument :: Int -> Initializer 'Parsed -> ParsecS r (NamedArgument 'Parsed)
     mkNamedArgument off Initializer {..} = do
@@ -739,10 +749,11 @@ namedApplication ::
   Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r =>
   ParsecS r (NamedApplication 'Parsed)
 namedApplication = P.label "<named application>" $ do
-  (_namedAppName, firstBlock) <- P.try $ do
+  (_namedAppName, firstBlockStart) <- P.try $ do
     n <- name
-    b <- argumentBlock
-    return (n, b)
+    bs <- argumentBlockStart
+    return (n, bs)
+  firstBlock <- argumentBlockCont firstBlockStart
   tailBlocks <- many argumentBlock
   let _namedAppArgs = firstBlock :| tailBlocks
       _namedAppSignature = Irrelevant ()
@@ -758,16 +769,36 @@ namedArgument = do
   _namedArgValue <- parseExpressionAtoms
   return NamedArgument {..}
 
+argumentBlockStart ::
+  forall r.
+  Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r =>
+  ParsecS r (KeywordRef, IsImplicit, Symbol, Irrelevant KeywordRef)
+argumentBlockStart = do
+  (l, impl) <- implicitOpen
+  n <- symbol
+  a <- Irrelevant <$> kw kwAssign
+  return (l, impl, n, a)
+
+argumentBlockCont ::
+  forall r.
+  Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r =>
+  (KeywordRef, IsImplicit, Symbol, Irrelevant KeywordRef) ->
+  ParsecS r (ArgumentBlock 'Parsed)
+argumentBlockCont (l, _argBlockImplicit, _namedArgName, _namedArgAssignKw) = do
+  _namedArgValue <- parseExpressionAtoms
+  let arg = NamedArgument {..}
+  _argBlockArgs <- nonEmpty' . (arg :) <$> many (semicolon >> namedArgument)
+  r <- implicitClose _argBlockImplicit
+  let _argBlockDelims = Irrelevant (Just (l, r))
+  return ArgumentBlock {..}
+
 argumentBlock ::
   forall r.
   Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r =>
   ParsecS r (ArgumentBlock 'Parsed)
 argumentBlock = do
-  (l, _argBlockImplicit) <- implicitOpen
-  _argBlockArgs <- P.sepEndBy1 namedArgument semicolon
-  r <- implicitClose _argBlockImplicit
-  let _argBlockDelims = Irrelevant (Just (l, r))
-  return ArgumentBlock {..}
+  s <- P.try argumentBlockStart
+  argumentBlockCont s
 
 hole :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (HoleType 'Parsed)
 hole = kw kwHole

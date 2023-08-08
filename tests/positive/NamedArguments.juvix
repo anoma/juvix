@@ -89,5 +89,5 @@ module FakeRecord;
     mkPair (snd := unit; fst := Type);
 
   pp2 : Pair (B := Unit; A := Type) :=
-    mkPair (fst := Type) unit;
+    mkPair (fst := Type) (unit);
 end;
