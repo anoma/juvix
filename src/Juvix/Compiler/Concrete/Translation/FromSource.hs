@@ -1085,18 +1085,61 @@ patternAtomAnon =
     <|> PatternAtomBraces <$> braces parsePatternAtomsNested
     <|> PatternAtomList <$> parseListPattern
 
-patternAtomAt :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => SymbolType 'Parsed -> ParsecS r (PatternAtom 'Parsed)
-patternAtomAt s = kw kwAt >> PatternAtomAt . PatternBinding s <$> patternAtom
+patternAtomAt :: Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r => Symbol -> ParsecS r PatternBinding
+patternAtomAt s = do
+  void (kw kwAt)
+  PatternBinding s <$> patternAtom
 
+recordPatternItem :: forall r. Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r => ParsecS r (RecordPatternItem 'Parsed)
+recordPatternItem = do
+  f <- symbol
+  RecordPatternItemAssign <$> recordPatternItemAssign f
+    <|> return (RecordPatternItemFieldPun (fieldPun f))
+  where
+    recordPatternItemAssign :: Symbol -> ParsecS r (RecordPatternAssign 'Parsed)
+    recordPatternItemAssign f = do
+      _recordPatternAssignKw <- Irrelevant <$> kw kwAssign
+      pat' <- parsePatternAtomsNested
+      return
+        RecordPatternAssign
+          { _recordPatternAssignField = f,
+            _recordPatternAssignFieldIx = (),
+            _recordPatternAssignPattern = pat',
+            ..
+          }
+    fieldPun :: Symbol -> FieldPun 'Parsed
+    fieldPun f =
+      FieldPun
+        { _fieldPunIx = (),
+          _fieldPunField = f
+        }
+
+patternAtomRecord :: Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r => Name -> ParsecS r (RecordPattern 'Parsed)
+patternAtomRecord _recordPatternConstructor = do
+  -- The try is needed to disambiguate from `at` pattern
+  P.try (void (kw kwAt >> kw delimBraceL))
+  _recordPatternItems <- P.sepEndBy recordPatternItem semicolon
+  kw delimBraceR
+  return
+    RecordPattern
+      { _recordPatternSignature = Irrelevant (),
+        ..
+      }
+
+-- | A pattern that starts with an identifier
 patternAtomNamed :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => Bool -> ParsecS r (PatternAtom 'Parsed)
 patternAtomNamed nested = do
   off <- P.getOffset
   n <- name
   case n of
-    NameQualified {} -> return (PatternAtomIden n)
+    NameQualified {} ->
+      PatternAtomRecord <$> patternAtomRecord n
+        <|> return (PatternAtomIden n)
     NameUnqualified s -> do
       checkWrongEq off s
-      patternAtomAt s <|> return (PatternAtomIden n)
+      PatternAtomRecord <$> patternAtomRecord n
+        <|> PatternAtomAt <$> patternAtomAt s
+        <|> return (PatternAtomIden n)
   where
     checkWrongEq :: Int -> WithLoc Text -> ParsecS r ()
     checkWrongEq off t =
@@ -1111,7 +1154,10 @@ patternAtom :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen]
 patternAtom = patternAtom' False
 
 patternAtom' :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => Bool -> ParsecS r (PatternAtom 'Parsed)
-patternAtom' nested = P.label "<pattern>" $ patternAtomNamed nested <|> patternAtomAnon
+patternAtom' nested =
+  P.label "<pattern>" $
+    patternAtomNamed nested
+      <|> patternAtomAnon
 
 parsePatternAtoms :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (PatternAtoms 'Parsed)
 parsePatternAtoms = do

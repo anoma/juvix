@@ -767,6 +767,28 @@ instance ToGenericError NoNameSignature where
       i :: Interval
       i = getLoc _noNameSignatureIden
 
+newtype ConstructorNotARecord = ConstructorNotARecord
+  { _constructorNotARecord :: ScopedIden
+  }
+  deriving stock (Show)
+
+instance ToGenericError ConstructorNotARecord where
+  genericError ConstructorNotARecord {..} = do
+    opts <- fromGenericOptions <$> ask
+    let msg =
+          "The constructor"
+            <+> ppCode opts _constructorNotARecord
+            <+> "is not defined as a record"
+    return
+      GenericError
+        { _genericErrorLoc = i,
+          _genericErrorMessage = mkAnsiText msg,
+          _genericErrorIntervals = [i]
+        }
+    where
+      i :: Interval
+      i = getLoc _constructorNotARecord
+
 newtype NotARecord = NotARecord
   { _notARecord :: ScopedIden
   }

@@ -8,6 +8,7 @@ import Data.HashMap.Strict qualified as HashMap
 import Data.IntMap.Strict qualified as IntMap
 import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Compiler.Builtins
+import Juvix.Compiler.Concrete.Data.NameSignature.Base
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Extra qualified as Concrete
 import Juvix.Compiler.Concrete.Language qualified as Concrete
@@ -1084,6 +1085,7 @@ viewApp p = case p of
     l' <- goPatternArg l
     return (goConstructorRef c, [l'])
   PatternVariable {} -> err
+  PatternRecord {} -> err
   PatternWildcard {} -> err
   PatternEmpty {} -> err
   PatternList {} -> err
@@ -1116,7 +1118,71 @@ goPattern p = case p of
   PatternInfixApplication a -> Internal.PatternConstructorApp <$> goInfixPatternApplication a
   PatternPostfixApplication a -> Internal.PatternConstructorApp <$> goPostfixPatternApplication a
   PatternWildcard i -> Internal.PatternVariable <$> varFromWildcard i
+  PatternRecord i -> goRecordPattern i
   PatternEmpty {} -> error "unsupported empty pattern"
+
+goRecordPattern :: forall r. Members '[NameIdGen, Error ScoperError, Builtins] r => RecordPattern 'Scoped -> Sem r Internal.Pattern
+goRecordPattern r = do
+  let constr = goName (r ^. recordPatternConstructor . scopedIden)
+  params' <- mkPatterns
+  return
+    ( Internal.PatternConstructorApp
+        Internal.ConstructorApp
+          { _constrAppConstructor = constr,
+            _constrAppType = Nothing,
+            _constrAppParameters = params'
+          }
+    )
+  where
+    itemField :: RecordPatternItem 'Scoped -> Symbol
+    itemField = \case
+      RecordPatternItemAssign a -> a ^. recordPatternAssignField
+      RecordPatternItemFieldPun a -> a ^. fieldPunField . S.nameConcrete
+
+    goPatternItem :: RecordPatternItem 'Scoped -> Sem r (Int, Internal.PatternArg)
+    goPatternItem = \case
+      RecordPatternItemAssign a -> do
+        arg' <- goPatternArg (a ^. recordPatternAssignPattern)
+        return (a ^. recordPatternAssignFieldIx, arg')
+      RecordPatternItemFieldPun f -> return (f ^. fieldPunIx, arg)
+        where
+          arg =
+            Internal.PatternArg
+              { _patternArgIsImplicit = Explicit,
+                _patternArgName = Nothing,
+                _patternArgPattern = Internal.PatternVariable (goSymbol (f ^. fieldPunField))
+              }
+
+    byIndex :: Sem r (IntMap Internal.PatternArg)
+    byIndex = execState mempty (mapM_ go (r ^. recordPatternItems))
+      where
+        go :: RecordPatternItem 'Scoped -> Sem (State (IntMap Internal.PatternArg) ': r) ()
+        go i = do
+          (idx, arg) <- raise (goPatternItem i)
+          whenM (gets @(IntMap Internal.PatternArg) (IntMap.member idx)) (throw (repeatedField (itemField i)))
+          modify' (IntMap.insert idx arg)
+
+    repeatedField :: Symbol -> ScoperError
+    repeatedField = ErrRepeatedField . RepeatedField
+
+    mkPatterns :: Sem r [Internal.PatternArg]
+    mkPatterns = do
+      args <- IntMap.toAscList <$> byIndex
+      execOutputList (go 0 args)
+      where
+        loc = getLoc r
+        maxIdx :: Int
+        maxIdx = length (r ^. recordPatternSignature . unIrrelevant . recordNames) - 1
+        go :: Int -> [(Int, Internal.PatternArg)] -> Sem (Output Internal.PatternArg ': r) ()
+        go idx args
+          | idx > maxIdx = return ()
+          | (ix', arg') : args' <- args,
+            ix' == idx = do
+              output arg'
+              go (idx + 1) args'
+          | otherwise = do
+              v <- Internal.freshVar loc ("x" <> show idx)
+              output (Internal.patternArgFromVar Internal.Explicit v)
 
 goAxiom :: (Members '[Reader Pragmas, Error ScoperError, Builtins, NameIdGen] r) => AxiomDef 'Scoped -> Sem r Internal.AxiomDef
 goAxiom a = do

@@ -336,5 +336,12 @@ scoperErrorTests =
       $(mkRelFile "UnexpectedFieldUpdate.juvix")
       $ \case
         ErrUnexpectedField UnexpectedField {} -> Nothing
+        _ -> wrongError,
+    NegTest
+      "Repeated field in record pattern"
+      $(mkRelDir ".")
+      $(mkRelFile "RepeatedFieldPattern.juvix")
+      $ \case
+        ErrRepeatedField RepeatedField {} -> Nothing
         _ -> wrongError
   ]

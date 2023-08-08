@@ -36,10 +36,16 @@ snd : {A : Type} → {B : Type} → A × B → B
   | p@(_, b) := b;
 
 lambda : Nat → Nat → Nat
-  | x := λ {a@(suc _) := a + x + zero};
+  | x :=
+    λ {
+      a@(suc _) := a + x + zero
+      | zero := zero
+    };
 
 a : {A : Type} → A × Nat → Nat
-  | p@(x, s@zero) := snd p + 1;
+  | {A'@_} p@(x, s@zero) := snd p + 1
+  | p@(x, s@_) := snd p + 1;
 
 b : {A : Type} → A × Nat → ({B : Type} → B → B) → A
-  | p@(_, zero) f := (f ∘ fst) p;
+  | p@(_, zero) f := (f ∘ fst) p
+  | p@(_, _) f := (f ∘ fst) p;
