@@ -7,6 +7,8 @@ We use this image to make static linux binaries.
 
 ## Building the image
 
+Update the `ARGS` delcarations at the top of the [Dockerfile](./Dockerfile-ghc-alpine) to match the GHC version you're building for.
+
 The tag of the image should be prefixed by the location of the GitHub docker
 repository that you're pushing to. In this case the repository is `
 ghcr.io/paulcadman`.
