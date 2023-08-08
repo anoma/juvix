@@ -229,6 +229,9 @@ module Comments;
   using -- before brace
   {-- before first f
   f; f};
+
+  type list (A : Type) : Type :=
+    | cons A (list A);
 end;
 
 -- Comment at the end of a module
