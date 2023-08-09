@@ -121,6 +121,11 @@ ppExpressionType = case sing :: SStage s of
   SParsed -> ppCode
   SScoped -> ppCode
 
+ppExpressionAtomType :: forall s. SingI s => PrettyPrinting (ExpressionType s)
+ppExpressionAtomType = case sing :: SStage s of
+  SParsed -> ppCodeAtom
+  SScoped -> ppCodeAtom
+
 ppPatternAtomType :: forall s. SingI s => PrettyPrinting (PatternAtomType s)
 ppPatternAtomType = case sing :: SStage s of
   SParsed -> ppCodeAtom
@@ -985,7 +990,7 @@ instance SingI s => PrettyPrint (RhsRecord s) where
     ppCode l <> fields' <> ppCode r
 
 instance SingI s => PrettyPrint (RhsAdt s) where
-  ppCode = align . sep . fmap ppExpressionType . (^. rhsAdtArguments)
+  ppCode = align . sep . fmap ppExpressionAtomType . (^. rhsAdtArguments)
 
 instance SingI s => PrettyPrint (ConstructorRhs s) where
   ppCode :: Members '[ExactPrint, Reader Options] r => ConstructorRhs s -> Sem r ()
