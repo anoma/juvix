@@ -1,5 +1,7 @@
 module Data.Product;
 
-syntax infixr 2 ×;
+syntax fixity prod {arity: binary};
+
+syntax operator × prod;
 type × (a : Type) (b : Type) :=
   | , : a → b → a × b;

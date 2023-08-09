@@ -13,20 +13,24 @@ type Nat :=
   | zero : Nat
   | suc : Nat → Nat;
 
-syntax infix 3 ==;
+syntax fixity cmp {arity: binary};
+syntax fixity add {arity: binary, assoc: left, above: [cmp]};
+syntax fixity cons {arity: binary, assoc: right, above: [add]};
+
+syntax operator == cmp;
 
 == : Nat → Nat → Bool
   | zero zero := true
   | (suc a) (suc b) := a == b
   | _ _ := false;
 
-syntax infixl 4 +;
+syntax operator + add;
 
 + : Nat → Nat → Nat
   | zero b := b
   | (suc a) b := suc (a + b);
 
-syntax infixr 5 ::;
+syntax operator :: cons;
 type List :=
   | nil : List
   | :: : Nat → List → List;

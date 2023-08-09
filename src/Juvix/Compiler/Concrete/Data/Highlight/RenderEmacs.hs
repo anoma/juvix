@@ -16,6 +16,7 @@ nameKindFace = \case
   KNameLocalModule -> Just FaceModule
   KNameAxiom -> Just FaceAxiom
   KNameLocal -> Nothing
+  KNameFixity -> Nothing
 
 fromCodeAnn :: CodeAnn -> Maybe EmacsProperty
 fromCodeAnn = \case

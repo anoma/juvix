@@ -38,7 +38,9 @@ data InfoTable = InfoTable
     _infoModules :: HashMap S.TopModulePath (Module 'Scoped 'ModuleTop),
     _infoAxioms :: HashMap S.NameId AxiomInfo,
     _infoInductives :: HashMap S.NameId InductiveInfo,
-    _infoFunctions :: HashMap S.NameId FunctionInfo
+    _infoFunctions :: HashMap S.NameId FunctionInfo,
+    _infoFixities :: HashMap S.NameId FixityDef,
+    _infoPriorities :: IntSet
   }
 
 emptyInfoTable :: InfoTable
@@ -48,7 +50,9 @@ emptyInfoTable =
       _infoAxioms = mempty,
       _infoModules = mempty,
       _infoInductives = mempty,
-      _infoFunctions = mempty
+      _infoFunctions = mempty,
+      _infoFixities = mempty,
+      _infoPriorities = mempty
     }
 
 makeLenses ''InfoTable

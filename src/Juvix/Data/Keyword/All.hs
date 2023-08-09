@@ -58,6 +58,9 @@ kwInfixl = asciiKw Str.infixl_
 kwInfixr :: Keyword
 kwInfixr = asciiKw Str.infixr_
 
+kwOperator :: Keyword
+kwOperator = asciiKw Str.operator
+
 kwLambda :: Keyword
 kwLambda = unicodeKw Str.lambdaAscii Str.lambdaUnicode
 
@@ -76,9 +79,6 @@ kwModule = asciiKw Str.module_
 kwOpen :: Keyword
 kwOpen = asciiKw Str.open
 
-kwPostfix :: Keyword
-kwPostfix = asciiKw Str.postfix
-
 kwPublic :: Keyword
 kwPublic = asciiKw Str.public
 
@@ -87,6 +87,9 @@ kwRightArrow = unicodeKw Str.toAscii Str.toUnicode
 
 kwSyntax :: Keyword
 kwSyntax = asciiKw Str.syntax
+
+kwFixity :: Keyword
+kwFixity = asciiKw Str.fixity
 
 kwIterator :: Keyword
 kwIterator = asciiKw Str.iterator

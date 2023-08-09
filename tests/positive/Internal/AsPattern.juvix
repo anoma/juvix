@@ -1,6 +1,8 @@
 module AsPattern;
 
-syntax infixr 9 ∘;
+import Stdlib.Data.Fixity open;
+
+syntax operator ∘ composition;
 
 ∘
   : {A : Type}
@@ -17,15 +19,15 @@ type Nat :=
   | zero : Nat
   | suc : Nat → Nat;
 
-syntax infixl 6 +;
+syntax operator + additive;
 
 builtin nat-plus
 + : Nat → Nat → Nat
   | zero b := b
   | (suc a) b := suc (a + b);
 
-syntax infixr 2 ×;
-syntax infixr 4 ,;
+syntax operator × functor;
+syntax operator , pair;
 type × (A : Type) (B : Type) :=
   | , : A → B → A × B;
 

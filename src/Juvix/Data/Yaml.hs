@@ -11,6 +11,7 @@ import Juvix.Prelude.Base
 
 type YamlError = Text
 
+-- | Check that all keys are in the given list.
 checkYamlKeys :: [Text] -> Parse Text ()
 checkYamlKeys keys = do
   forEachInObject

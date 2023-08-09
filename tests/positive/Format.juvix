@@ -27,7 +27,7 @@ go : Nat → Nat → Nat
 module {- local module -}
 M;
   syntax -- syntax in local modules
-  infixr 4 ,;
+  operator , pair;
   axiom , : String → String → String;
 end;
 
@@ -60,19 +60,25 @@ t3 : String :=
 -- escaping in String literals
 e1 : String := "\"\n";
 
-syntax infixl 7 +l7;
+syntax fixity l1 {arity: binary, assoc: left, below: [pair]};
+syntax fixity r3 {arity: binary, assoc: right, above: [pair]};
+syntax fixity l6 {arity: binary, assoc: left, above: [r3]};
+syntax fixity r6 {arity: binary, assoc: right, same: l6};
+syntax fixity l7 {arity: binary, assoc: left, above: [l6]};
+
+syntax operator +l7 l7;
 axiom +l7 : String → String → String;
 
-syntax infixr 3 +r3;
+syntax operator +r3 r3;
 axiom +r3 : String → String → String;
 
-syntax infixl 1 +l1;
+syntax operator +l1 l1;
 axiom +l1 : String → String → String;
 
-syntax infixl 6 +l6;
+syntax operator +l6 l6;
 axiom +l6 : String → String → String;
 
-syntax infixr 6 +r6;
+syntax operator +r6 r6;
 axiom +r6 : String → String → String;
 
 -- nesting of chains
@@ -158,8 +164,8 @@ f : Nat -> Nat :=
   };
 
 module Patterns;
-  syntax infixr 2 ×;
-  syntax infixr 4 ,;
+  syntax operator × functor;
+  syntax operator , pair;
   type × (A : Type) (B : Type) :=
     | , : A → B → A × B;
 

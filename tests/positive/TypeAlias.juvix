@@ -13,7 +13,9 @@ x : alias := t;
 id : Type → Type
   | x := x;
 
-syntax infixr 9 ⊙;
+syntax fixity composition {arity: binary, assoc: right};
+
+syntax operator ⊙ composition;
 
 ⊙ : (Type → Type) → (Type → Type) → Type → Type
   | f g x := f (g x);

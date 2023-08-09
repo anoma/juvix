@@ -294,6 +294,7 @@ putTag ann x = case ann of
               S.KNameAxiom -> "ju-axiom"
               S.KNameLocalModule -> "ju-var"
               S.KNameTopModule -> "ju-var"
+              S.KNameFixity -> "ju-fixity"
           )
 
 nameIdAttr :: S.NameId -> AttributeValue

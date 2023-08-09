@@ -456,6 +456,7 @@ instance IsExpression Name where
         KNameLocal -> IdenVar
         KNameLocalModule -> impossible
         KNameTopModule -> impossible
+        KNameFixity -> impossible
 
 instance IsExpression SmallUniverse where
   toExpression = ExpressionUniverse

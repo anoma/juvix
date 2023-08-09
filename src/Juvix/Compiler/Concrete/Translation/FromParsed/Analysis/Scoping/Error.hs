@@ -22,7 +22,7 @@ data ScoperError
   | ErrSymNotInScope NotInScope
   | ErrQualSymNotInScope QualSymNotInScope
   | ErrModuleNotInScope ModuleNotInScope
-  | ErrDuplicateFixity DuplicateFixity
+  | ErrDuplicateOperator DuplicateOperator
   | ErrDuplicateIterator DuplicateIterator
   | ErrMultipleExport MultipleExportConflict
   | ErrAmbiguousSym AmbiguousSym
@@ -46,6 +46,7 @@ data ScoperError
   | ErrUnexpectedField UnexpectedField
   | ErrRepeatedField RepeatedField
   | ErrConstructorNotARecord ConstructorNotARecord
+  | ErrPrecedenceInconsistency PrecedenceInconsistencyError
 
 instance ToGenericError ScoperError where
   genericError = \case
@@ -59,7 +60,7 @@ instance ToGenericError ScoperError where
     ErrSymNotInScope e -> genericError e
     ErrQualSymNotInScope e -> genericError e
     ErrModuleNotInScope e -> genericError e
-    ErrDuplicateFixity e -> genericError e
+    ErrDuplicateOperator e -> genericError e
     ErrDuplicateIterator e -> genericError e
     ErrMultipleExport e -> genericError e
     ErrAmbiguousSym e -> genericError e
@@ -83,3 +84,4 @@ instance ToGenericError ScoperError where
     ErrUnexpectedField e -> genericError e
     ErrRepeatedField e -> genericError e
     ErrConstructorNotARecord e -> genericError e
+    ErrPrecedenceInconsistency e -> genericError e

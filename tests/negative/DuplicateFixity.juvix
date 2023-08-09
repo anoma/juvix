@@ -1,8 +1,0 @@
-module DuplicateFixity;
-
-
-  syntax infixl 3 +;
-
-  syntax infixl 3 +;
-  axiom + : Type → Type → Type;
-end;

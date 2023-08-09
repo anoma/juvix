@@ -9,6 +9,7 @@ import Control.Monad.Combinators.Expr qualified as P
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
 import Data.List.NonEmpty qualified as NonEmpty
+import GHC.Base (maxInt, minInt)
 import Juvix.Compiler.Concrete.Data.Highlight.Input
 import Juvix.Compiler.Concrete.Data.InfoTableBuilder
 import Juvix.Compiler.Concrete.Data.Name qualified as N
@@ -25,6 +26,7 @@ import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
 import Juvix.Compiler.Concrete.Translation.FromSource.Data.Context (ParserResult)
 import Juvix.Compiler.Concrete.Translation.FromSource.Data.Context qualified as Parsed
 import Juvix.Compiler.Pipeline.EntryPoint
+import Juvix.Data.FixityInfo qualified as FI
 import Juvix.Data.IteratorAttribs
 import Juvix.Data.NameKind
 import Juvix.Prelude
@@ -127,12 +129,12 @@ scopeCheckOpenModule ::
   Sem r (OpenModule 'Scoped)
 scopeCheckOpenModule = mapError (JuvixError @ScoperError) . checkOpenModule
 
-freshVariable :: Members '[NameIdGen, State ScoperFixities, State ScoperIterators, State Scope, State ScoperState] r => Symbol -> Sem r S.Symbol
+freshVariable :: Members '[NameIdGen, State ScoperSyntax, State Scope, State ScoperState] r => Symbol -> Sem r S.Symbol
 freshVariable = freshSymbol KNameLocal
 
 checkProjectionDef ::
   forall r.
-  Members '[Error ScoperError, InfoTableBuilder, Reader BindingStrategy, State Scope, State ScoperState, NameIdGen, State ScoperFixities, State ScoperIterators] r =>
+  Members '[Error ScoperError, InfoTableBuilder, Reader BindingStrategy, State Scope, State ScoperState, NameIdGen, State ScoperSyntax] r =>
   ProjectionDef 'Parsed ->
   Sem r (ProjectionDef 'Scoped)
 checkProjectionDef p = do
@@ -146,7 +148,7 @@ checkProjectionDef p = do
 
 freshSymbol ::
   forall r.
-  Members '[State Scope, State ScoperState, NameIdGen, State ScoperFixities, State ScoperIterators] r =>
+  Members '[State Scope, State ScoperState, NameIdGen, State ScoperSyntax] r =>
   NameKind ->
   Symbol ->
   Sem r S.Symbol
@@ -161,25 +163,31 @@ freshSymbol _nameKind _nameConcrete = do
   _nameIterator <- iter
   return S.Name' {..}
   where
-    fixity :: Sem r (Maybe Fixity)
+    fixity ::
+      Sem r (Maybe Fixity)
     fixity
       | S.canHaveFixity _nameKind = do
-          mf <- gets (^? scoperFixities . at _nameConcrete . _Just . symbolFixityDef . opFixity)
-          when (isJust mf) (modify (set (scoperFixities . at _nameConcrete . _Just . symbolFixityUsed) True))
+          mf <- gets (^? scoperSyntaxOperators . scoperOperators . at _nameConcrete . _Just . symbolOperatorFixity)
+          when (isJust mf) (modify (set (scoperSyntaxOperators . scoperOperators . at _nameConcrete . _Just . symbolOperatorUsed) True))
           return mf
       | otherwise = return Nothing
 
     iter :: Sem r (Maybe IteratorAttribs)
-    iter = runFail $ do
-      failUnless (S.canBeIterator _nameKind)
-      ma <- gets (^? scoperIterators . at _nameConcrete . _Just . symbolIteratorDef . iterAttribs) >>= failMaybe
-      let attrs = maybe emptyIteratorAttribs (^. withLocParam . withSourceValue) ma
-      modify (set (scoperIterators . at _nameConcrete . _Just . symbolIteratorUsed) True)
-      return attrs
+    iter
+      | S.canBeIterator _nameKind = do
+          mma <- gets (^? scoperSyntaxIterators . scoperIterators . at _nameConcrete . _Just . symbolIteratorDef . iterAttribs)
+          case mma of
+            Just ma -> do
+              let attrs = maybe emptyIteratorAttribs (^. withLocParam . withSourceValue) ma
+              modify (set (scoperSyntaxIterators . scoperIterators . at _nameConcrete . _Just . symbolIteratorUsed) True)
+              return $ Just attrs
+            Nothing ->
+              return Nothing
+      | otherwise = return Nothing
 
 reserveSymbolSignatureOf ::
   forall (k :: NameKind) r d.
-  ( Members '[Error ScoperError, NameIdGen, State ScoperFixities, State ScoperIterators, State ScoperIterators, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder] r,
+  ( Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder] r,
     HasNameSignature d,
     SingI (NameKindNameSpace k)
   ) =>
@@ -193,7 +201,7 @@ reserveSymbolSignatureOf k d s = do
 
 reserveSymbolOf ::
   forall (nameKind :: NameKind) (ns :: NameSpace) r.
-  ( Members '[Error ScoperError, NameIdGen, State ScoperFixities, State ScoperIterators, State ScoperIterators, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder] r,
+  ( Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder] r,
     ns ~ NameKindNameSpace nameKind,
     SingI ns
   ) =>
@@ -213,6 +221,7 @@ reserveSymbolOf k nameSig s = do
       entry =
         let symE = SymbolEntry (S.unConcrete s')
             modE = ModuleSymbolEntry (S.unConcrete s')
+            fixE = FixitySymbolEntry (S.unConcrete s')
          in case k of
               SKNameConstructor -> symE
               SKNameInductive -> symE
@@ -221,6 +230,7 @@ reserveSymbolOf k nameSig s = do
               SKNameLocal -> symE
               SKNameLocalModule -> modE
               SKNameTopModule -> modE
+              SKNameFixity -> fixE
       addS :: NameSpaceEntryType ns -> Maybe (SymbolInfo ns) -> SymbolInfo ns
       addS mentry m = case m of
         Nothing -> symbolInfoSingle mentry
@@ -244,7 +254,8 @@ reserveSymbolOf k nameSig s = do
           )
 
 getReservedDefinitionSymbol ::
-  Members '[Error ScoperError, NameIdGen, State ScoperFixities, State ScoperIterators, State ScoperIterators, State Scope, InfoTableBuilder, State ScoperState, Reader BindingStrategy] r =>
+  forall r.
+  Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, InfoTableBuilder, State ScoperState, Reader BindingStrategy] r =>
   Symbol ->
   Sem r S.Symbol
 getReservedDefinitionSymbol s = do
@@ -253,74 +264,81 @@ getReservedDefinitionSymbol s = do
       err = error ("impossible. Contents of scope:\n" <> ppTrace (toList m))
   return s'
 
-ignoreFixities :: Sem (State ScoperFixities ': r) a -> Sem r a
-ignoreFixities = evalState mempty
-
-ignoreIterators :: Sem (State ScoperIterators ': r) a -> Sem r a
-ignoreIterators = evalState mempty
+ignoreSyntax :: Sem (State ScoperSyntax ': r) a -> Sem r a
+ignoreSyntax = evalState emptyScoperSyntax
 
 -- | Variables are assumed to never be infix operators
 bindVariableSymbol ::
   Members '[Error ScoperError, NameIdGen, State Scope, InfoTableBuilder, State ScoperState] r =>
   Symbol ->
   Sem r S.Symbol
-bindVariableSymbol = localBindings . ignoreFixities . ignoreIterators . reserveSymbolOf SKNameLocal Nothing
+bindVariableSymbol = localBindings . ignoreSyntax . reserveSymbolOf SKNameLocal Nothing
 
 reserveInductiveSymbol ::
-  Members '[Error ScoperError, NameIdGen, State ScoperFixities, State ScoperIterators, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder] r =>
+  Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder] r =>
   InductiveDef 'Parsed ->
   Sem r S.Symbol
 reserveInductiveSymbol d = reserveSymbolSignatureOf SKNameInductive d (d ^. inductiveName)
 
 reserveProjectionSymbol ::
-  Members '[Error ScoperError, NameIdGen, State ScoperFixities, State ScoperIterators, State Scope, Reader BindingStrategy, InfoTableBuilder, State ScoperState] r =>
+  Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, Reader BindingStrategy, InfoTableBuilder, State ScoperState] r =>
   ProjectionDef 'Parsed ->
   Sem r S.Symbol
 reserveProjectionSymbol d = reserveSymbolOf SKNameFunction Nothing (d ^. projectionField)
 
 reserveConstructorSymbol ::
-  Members '[Error ScoperError, NameIdGen, State ScoperFixities, State ScoperIterators, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder] r =>
+  Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder] r =>
   InductiveDef 'Parsed ->
   ConstructorDef 'Parsed ->
   Sem r S.Symbol
 reserveConstructorSymbol d c = reserveSymbolSignatureOf SKNameConstructor (d, c) (c ^. constructorName)
 
 reserveFunctionSymbol ::
-  Members '[Error ScoperError, NameIdGen, State ScoperFixities, State ScoperIterators, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder] r =>
+  Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder] r =>
   FunctionDef 'Parsed ->
   Sem r S.Symbol
 reserveFunctionSymbol f =
   reserveSymbolSignatureOf SKNameFunction f (f ^. signName)
 
 reserveAxiomSymbol ::
-  Members '[Error ScoperError, NameIdGen, State ScoperFixities, State ScoperIterators, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder] r =>
+  Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder] r =>
   AxiomDef 'Parsed ->
   Sem r S.Symbol
 reserveAxiomSymbol a = reserveSymbolSignatureOf SKNameAxiom a (a ^. axiomName)
 
 bindFunctionSymbol ::
-  Members '[Error ScoperError, NameIdGen, State ScoperFixities, State ScoperIterators, State Scope, InfoTableBuilder, State ScoperState, Reader BindingStrategy] r =>
+  Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, InfoTableBuilder, State ScoperState, Reader BindingStrategy] r =>
   Symbol ->
   Sem r S.Symbol
 bindFunctionSymbol = getReservedDefinitionSymbol
 
 bindInductiveSymbol ::
-  Members '[Error ScoperError, NameIdGen, State ScoperFixities, State ScoperIterators, State Scope, InfoTableBuilder, State ScoperState, Reader BindingStrategy] r =>
+  Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, InfoTableBuilder, State ScoperState, Reader BindingStrategy] r =>
   Symbol ->
   Sem r S.Symbol
 bindInductiveSymbol = getReservedDefinitionSymbol
 
 bindAxiomSymbol ::
-  Members '[Error ScoperError, NameIdGen, State ScoperFixities, State ScoperIterators, State Scope, InfoTableBuilder, State ScoperState, Reader BindingStrategy] r =>
+  Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, InfoTableBuilder, State ScoperState, Reader BindingStrategy] r =>
   Symbol ->
   Sem r S.Symbol
 bindAxiomSymbol = getReservedDefinitionSymbol
 
 bindConstructorSymbol ::
-  Members '[Error ScoperError, NameIdGen, State ScoperFixities, State ScoperIterators, State Scope, InfoTableBuilder, State ScoperState, Reader BindingStrategy] r =>
+  Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, InfoTableBuilder, State ScoperState, Reader BindingStrategy] r =>
   Symbol ->
   Sem r S.Symbol
 bindConstructorSymbol = getReservedDefinitionSymbol
+
+bindFixitySymbol ::
+  Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, InfoTableBuilder, State ScoperState, Reader BindingStrategy] r =>
+  Symbol ->
+  Sem r S.Symbol
+bindFixitySymbol s = do
+  m <- gets (^. scopeLocalFixitySymbols)
+  let s' = fromMaybe err (m ^. at s)
+      err = error ("impossible. Contents of scope:\n" <> ppTrace (toList m))
+  return s'
 
 checkImport ::
   forall r.
@@ -389,7 +407,7 @@ getModuleExportInfo m = fromMaybeM err (gets (^? scoperModules . at (m ^. module
 -- | Do not call directly. Looks for a symbol in (possibly) nested local modules
 lookupSymbolAux ::
   forall r.
-  Members '[State ScoperState, State Scope, Output ModuleSymbolEntry, Output SymbolEntry] r =>
+  Members '[State ScoperState, State Scope, Output ModuleSymbolEntry, Output SymbolEntry, Output FixitySymbolEntry] r =>
   [Symbol] ->
   Symbol ->
   Sem r ()
@@ -409,6 +427,7 @@ lookupSymbolAux modules final = do
                 gets (^.. scopeNameSpace @ns . at final . _Just . symbolInfo . each) >>= mapM_ output
           helper (Proxy @'NameSpaceSymbols)
           helper (Proxy @'NameSpaceModules)
+          helper (Proxy @'NameSpaceFixities)
         p : ps ->
           gets (^.. scopeModuleSymbols . at p . _Just . symbolInfo . each)
             >>= mapM_ (getModuleExportInfo >=> lookInExport final ps)
@@ -426,7 +445,7 @@ mkModuleEntry (ModuleRef' (t :&: m)) = ModuleSymbolEntry $ case t of
 
 lookInExport ::
   forall r.
-  Members '[State ScoperState, Output SymbolEntry, Output ModuleSymbolEntry] r =>
+  Members '[State ScoperState, Output SymbolEntry, Output ModuleSymbolEntry, Output FixitySymbolEntry] r =>
   Symbol ->
   [Symbol] ->
   ExportInfo ->
@@ -435,6 +454,7 @@ lookInExport sym remaining e = case remaining of
   [] -> do
     whenJust (e ^. exportSymbols . at sym) output
     whenJust (e ^. exportModuleSymbols . at sym) output
+    whenJust (e ^. exportFixitySymbols . at sym) output
   s : ss -> whenJustM (mayModule e s) (lookInExport sym ss)
   where
     mayModule :: ExportInfo -> Symbol -> Sem r (Maybe ExportInfo)
@@ -447,12 +467,14 @@ lookupQualifiedSymbol ::
   forall r.
   Members '[State Scope, State ScoperState] r =>
   ([Symbol], Symbol) ->
-  Sem r ([SymbolEntry], [ModuleSymbolEntry])
-lookupQualifiedSymbol = runOutputList . execOutputList . go
+  Sem r ([SymbolEntry], [ModuleSymbolEntry], [FixitySymbolEntry])
+lookupQualifiedSymbol sms = do
+  (es, (ms, fs)) <- runOutputList $ runOutputList $ execOutputList $ go sms
+  return (es, ms, fs)
   where
     go ::
       forall r'.
-      Members [State ScoperState, State Scope, Output SymbolEntry, Output ModuleSymbolEntry] r' =>
+      Members [State ScoperState, State Scope, Output SymbolEntry, Output ModuleSymbolEntry, Output FixitySymbolEntry] r' =>
       ([Symbol], Symbol) ->
       Sem r' ()
     go (path, sym) = do
@@ -490,7 +512,7 @@ checkQualifiedExpr ::
   QualifiedName ->
   Sem r ScopedIden
 checkQualifiedExpr q@(QualifiedName (SymbolPath p) sym) = do
-  es <- fst <$> lookupQualifiedSymbol (toList p, sym)
+  es <- fst3 <$> lookupQualifiedSymbol (toList p, sym)
   case es of
     [] -> notInScope
     [e] -> entryToScopedIden q' e
@@ -515,6 +537,7 @@ exportScope ::
 exportScope Scope {..} = do
   _exportSymbols <- HashMap.fromList <$> mapMaybeM mkentry (HashMap.toList _scopeSymbols)
   _exportModuleSymbols <- HashMap.fromList <$> mapMaybeM mkentry (HashMap.toList _scopeModuleSymbols)
+  _exportFixitySymbols <- HashMap.fromList <$> mapMaybeM mkentry (HashMap.toList _scopeFixitySymbols)
   return ExportInfo {..}
   where
     mkentry ::
@@ -539,8 +562,9 @@ exportScope Scope {..} = do
                     _scopePath
                     s
                     ( case sing :: SNameSpace ns of
-                        SNameSpaceSymbols -> Left es
-                        SNameSpaceModules -> Right es
+                        SNameSpaceSymbols -> ExportEntriesSymbols es
+                        SNameSpaceModules -> ExportEntriesModules es
+                        SNameSpaceFixities -> ExportEntriesFixities es
                     )
                 )
             )
@@ -559,44 +583,121 @@ readScopeModule import_ = do
     addImport :: ScopeParameters -> ScopeParameters
     addImport = over scopeTopParents (cons import_)
 
-checkOperatorSyntaxDef ::
+checkFixitySyntaxDef ::
   forall r.
-  Members '[Error ScoperError, State Scope, State ScoperState, State ScoperFixities, State ScoperIterators] r =>
+  Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, State ScoperSyntax, NameIdGen, InfoTableBuilder] r =>
+  FixitySyntaxDef 'Parsed ->
+  Sem r (FixitySyntaxDef 'Scoped)
+checkFixitySyntaxDef FixitySyntaxDef {..} = topBindings $ do
+  sym <- bindFixitySymbol _fixitySymbol
+  doc <- mapM checkJudoc _fixityDoc
+  registerHighlightDoc (sym ^. S.nameId) doc
+  return
+    FixitySyntaxDef
+      { _fixitySymbol = sym,
+        _fixityDoc = doc,
+        ..
+      }
+
+resolveFixitySyntaxDef ::
+  forall r.
+  Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, State ScoperSyntax, NameIdGen, InfoTableBuilder] r =>
+  FixitySyntaxDef 'Parsed ->
+  Sem r ()
+resolveFixitySyntaxDef fdef@FixitySyntaxDef {..} = topBindings $ do
+  sym <- reserveSymbolOf SKNameFixity Nothing _fixitySymbol
+  let loc = getLoc _fixityInfo
+      fi = _fixityInfo ^. withLocParam . withSourceValue
+  same <- checkMaybeFixity loc $ fi ^. FI.fixityPrecSame
+  below <- mapM (checkFixitySymbol . WithLoc loc) $ fi ^. FI.fixityPrecBelow
+  above <- mapM (checkFixitySymbol . WithLoc loc) $ fi ^. FI.fixityPrecAbove
+  tab <- getInfoTable
+  let samePrec = getPrec tab <$> same
+      belowPrec :: Integer
+      belowPrec = fromIntegral $ maximum (minInt + 1 : map (getPrec tab) above)
+      abovePrec :: Integer
+      abovePrec = fromIntegral $ minimum (maxInt - 1 : map (getPrec tab) below)
+  when (belowPrec >= abovePrec + 1) $
+    throw (ErrPrecedenceInconsistency (PrecedenceInconsistencyError fdef))
+  when (isJust same && not (null below && null above)) $
+    throw (ErrPrecedenceInconsistency (PrecedenceInconsistencyError fdef))
+  -- we need Integer to avoid overflow when computing prec
+  let prec = fromMaybe (fromInteger $ (abovePrec + belowPrec) `div` 2) samePrec
+      fx =
+        Fixity
+          { _fixityPrecedence = PrecNat prec,
+            _fixityArity =
+              case fi ^. FI.fixityArity of
+                FI.Unary -> Unary AssocPostfix
+                FI.Binary -> case fi ^. FI.fixityAssoc of
+                  Nothing -> Binary AssocNone
+                  Just FI.AssocLeft -> Binary AssocLeft
+                  Just FI.AssocRight -> Binary AssocRight
+                  Just FI.AssocNone -> Binary AssocNone
+          }
+  registerFixity
+    @$> FixityDef
+      { _fixityDefSymbol = sym,
+        _fixityDefFixity = fx,
+        _fixityDefPrec = prec
+      }
+  return ()
+  where
+    checkMaybeFixity ::
+      forall r'.
+      Members '[Error ScoperError, State Scope, State ScoperState] r' =>
+      Interval ->
+      Maybe Text ->
+      Sem r' (Maybe S.Symbol)
+    checkMaybeFixity loc = \case
+      Just same -> Just <$> checkFixitySymbol (WithLoc loc same)
+      Nothing -> return Nothing
+
+    getPrec :: InfoTable -> S.Symbol -> Int
+    getPrec tab = (^. fixityDefPrec) . fromJust . flip HashMap.lookup (tab ^. infoFixities) . (^. S.nameId)
+
+resolveOperatorSyntaxDef ::
+  forall r.
+  Members '[Error ScoperError, State Scope, State ScoperState, State ScoperSyntax, InfoTableBuilder] r =>
   OperatorSyntaxDef ->
   Sem r ()
-checkOperatorSyntaxDef s@OperatorSyntaxDef {..} = do
+resolveOperatorSyntaxDef s@OperatorSyntaxDef {..} = do
   checkNotDefined
-  let sf =
-        SymbolFixity
-          { _symbolFixityUsed = False,
-            _symbolFixityDef = s
+  sym <- checkFixitySymbol _opFixity
+  tab <- getInfoTable
+  let fx = fromJust (HashMap.lookup (sym ^. S.nameId) (tab ^. infoFixities)) ^. fixityDefFixity
+      sf =
+        SymbolOperator
+          { _symbolOperatorUsed = False,
+            _symbolOperatorDef = s,
+            _symbolOperatorFixity = fx
           }
-  modify (over scoperFixities (HashMap.insert _opSymbol sf))
+  modify (over scoperSyntaxOperators (over scoperOperators (HashMap.insert _opSymbol sf)))
   where
     checkNotDefined :: Sem r ()
     checkNotDefined =
       whenJustM
-        (HashMap.lookup _opSymbol <$> gets (^. scoperFixities))
-        $ \s' -> throw (ErrDuplicateFixity (DuplicateFixity (s' ^. symbolFixityDef) s))
+        (HashMap.lookup _opSymbol <$> gets (^. scoperSyntaxOperators . scoperOperators))
+        $ \s' -> throw (ErrDuplicateOperator (DuplicateOperator (s' ^. symbolOperatorDef) s))
 
-checkIteratorSyntaxDef ::
+resolveIteratorSyntaxDef ::
   forall r.
-  Members '[Error ScoperError, State Scope, State ScoperState, State ScoperFixities, State ScoperIterators] r =>
+  Members '[Error ScoperError, State Scope, State ScoperState, State ScoperSyntax] r =>
   IteratorSyntaxDef ->
   Sem r ()
-checkIteratorSyntaxDef s@IteratorSyntaxDef {..} = do
+resolveIteratorSyntaxDef s@IteratorSyntaxDef {..} = do
   checkNotDefined
   let sf =
         SymbolIterator
           { _symbolIteratorUsed = False,
             _symbolIteratorDef = s
           }
-  modify (set (scoperIterators . at _iterSymbol) (Just sf))
+  modify (set (scoperSyntaxIterators . scoperIterators . at _iterSymbol) (Just sf))
   where
     checkNotDefined :: Sem r ()
     checkNotDefined =
       whenJustM
-        (HashMap.lookup _iterSymbol <$> gets (^. scoperIterators))
+        (HashMap.lookup _iterSymbol <$> gets (^. scoperSyntaxIterators . scoperIterators))
         $ \s' -> throw (ErrDuplicateIterator (DuplicateIterator (s' ^. symbolIteratorDef) s))
 
 -- | Only used as syntactical convenience for registerX functions
@@ -605,7 +706,7 @@ checkIteratorSyntaxDef s@IteratorSyntaxDef {..} = do
 
 checkFunctionDef ::
   forall r.
-  Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, State ScoperFixities, State ScoperIterators, Reader BindingStrategy] r =>
+  Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, State ScoperSyntax, Reader BindingStrategy] r =>
   FunctionDef 'Parsed ->
   Sem r (FunctionDef 'Scoped)
 checkFunctionDef FunctionDef {..} = do
@@ -655,7 +756,7 @@ checkFunctionDef FunctionDef {..} = do
           }
 
 checkTypeSignature ::
-  Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, State ScoperFixities, State ScoperIterators, Reader BindingStrategy] r =>
+  Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, State ScoperSyntax, Reader BindingStrategy] r =>
   TypeSignature 'Parsed ->
   Sem r (TypeSignature 'Scoped)
 checkTypeSignature TypeSignature {..} = do
@@ -684,7 +785,7 @@ checkInductiveParameters params = do
 
 checkInductiveDef ::
   forall r.
-  Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, State ScoperFixities, State ScoperIterators, State ScoperIterators, Reader BindingStrategy] r =>
+  Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, State ScoperSyntax, Reader BindingStrategy] r =>
   InductiveDef 'Parsed ->
   Sem r (InductiveDef 'Scoped)
 checkInductiveDef InductiveDef {..} = do
@@ -885,17 +986,11 @@ withLocalScope ma = do
   put before
   return x
 
-fixitiesBlock :: Members '[Error ScoperError] r => Sem (State ScoperFixities ': r) a -> Sem r a
-fixitiesBlock m =
-  evalState (mempty :: ScoperFixities) $ do
+syntaxBlock :: Members '[Error ScoperError] r => Sem (State ScoperSyntax ': r) a -> Sem r a
+syntaxBlock m =
+  evalState emptyScoperSyntax $ do
     a <- m
-    checkOrphanFixities
-    return a
-
-iteratorsBlock :: Members '[Error ScoperError] r => Sem (State ScoperIterators ': r) a -> Sem r a
-iteratorsBlock m =
-  evalState (mempty :: ScoperIterators) $ do
-    a <- m
+    checkOrphanOperators
     checkOrphanIterators
     return a
 
@@ -907,8 +1002,7 @@ checkModuleBody ::
 checkModuleBody body = do
   body' <-
     fmap flattenSections
-      . fixitiesBlock
-      . iteratorsBlock
+      . syntaxBlock
       $ checkSections (mkSections body)
   exported <- get >>= exportScope
   return (exported, body')
@@ -947,7 +1041,7 @@ checkModuleBody body = do
 
 checkSections ::
   forall r.
-  Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, State ScoperFixities, State ScoperIterators, State ScoperIterators] r =>
+  Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, State ScoperSyntax] r =>
   StatementSections 'Parsed ->
   Sem r (StatementSections 'Scoped)
 checkSections sec = do
@@ -1008,7 +1102,7 @@ checkSections sec = do
           where
             reserveDefinition :: Definition 'Parsed -> Sem r' ()
             reserveDefinition = \case
-              DefinitionSyntax s -> void (checkSyntaxDef s)
+              DefinitionSyntax s -> resolveSyntaxDef s
               DefinitionFunctionDef d -> void (reserveFunctionSymbol d)
               DefinitionTypeSignature d -> void (reserveSymbolOf SKNameFunction Nothing (d ^. sigName))
               DefinitionAxiom d -> void (reserveAxiomSymbol d)
@@ -1051,7 +1145,7 @@ checkSections sec = do
 
             goDefinition :: Definition 'Parsed -> Sem r' (Definition 'Scoped)
             goDefinition = \case
-              DefinitionSyntax s -> return (DefinitionSyntax s)
+              DefinitionSyntax s -> DefinitionSyntax <$> checkSyntaxDef s
               DefinitionFunctionDef d -> DefinitionFunctionDef <$> checkFunctionDef d
               DefinitionTypeSignature d -> DefinitionTypeSignature <$> checkTypeSignature d
               DefinitionAxiom d -> DefinitionAxiom <$> checkAxiomDef d
@@ -1163,7 +1257,7 @@ reserveLocalModuleSymbol ::
   Symbol ->
   Sem r S.Symbol
 reserveLocalModuleSymbol =
-  ignoreFixities . ignoreIterators . reserveSymbolOf SKNameLocalModule Nothing
+  ignoreSyntax . reserveSymbolOf SKNameLocalModule Nothing
 
 checkLocalModule ::
   forall r.
@@ -1211,17 +1305,17 @@ checkLocalModule Module {..} = do
               over (nsEntry . S.nameWhyInScope) S.BecauseInherited
                 . set (nsEntry . S.nameVisibilityAnn) VisPrivate
 
-checkOrphanFixities :: forall r. Members '[Error ScoperError, State ScoperFixities] r => Sem r ()
-checkOrphanFixities = do
-  declared <- gets (^. scoperFixities)
-  let unused = fmap (^. symbolFixityDef) . find (^. symbolFixityUsed . to not) . toList $ declared
+checkOrphanOperators :: forall r. Members '[Error ScoperError, State ScoperSyntax] r => Sem r ()
+checkOrphanOperators = do
+  declared <- gets (^. scoperSyntaxOperators . scoperOperators)
+  let unused = fmap (^. symbolOperatorDef) . find (^. symbolOperatorUsed . to not) . toList $ declared
   case unused of
     Nothing -> return ()
     Just x -> throw (ErrUnusedOperatorDef (UnusedOperatorDef x))
 
-checkOrphanIterators :: forall r. Members '[Error ScoperError, State ScoperIterators] r => Sem r ()
+checkOrphanIterators :: forall r. Members '[Error ScoperError, State ScoperSyntax] r => Sem r ()
 checkOrphanIterators = do
-  declared <- gets (^. scoperIterators)
+  declared <- gets (^. scoperSyntaxIterators . scoperIterators)
   let unused = fmap (^. symbolIteratorDef) . find (^. symbolIteratorUsed . to not) . toList $ declared
   case unused of
     Nothing -> return ()
@@ -1244,7 +1338,7 @@ lookupModuleSymbol ::
   Name ->
   Sem r ModuleRef
 lookupModuleSymbol n = do
-  es <- snd <$> lookupQualifiedSymbol (path, sym)
+  es <- snd3 <$> lookupQualifiedSymbol (path, sym)
   case nonEmpty (resolveShadowing es) of
     Nothing -> notInScope
     Just (x :| []) -> getModuleRef x n
@@ -1390,6 +1484,7 @@ checkOpenModuleNoImport importModuleHint OpenModule {..}
     mergeScope ei = do
       mapM_ mergeSymbol (HashMap.toList (ei ^. exportSymbols))
       mapM_ mergeSymbol (HashMap.toList (ei ^. exportModuleSymbols))
+      mapM_ mergeSymbol (HashMap.toList (ei ^. exportFixitySymbols))
       where
         mergeSymbol :: forall ns. SingI ns => (Symbol, NameSpaceEntryType ns) -> Sem r ()
         mergeSymbol (s, entry) =
@@ -1403,7 +1498,8 @@ checkOpenModuleNoImport importModuleHint OpenModule {..}
         alterEntries nfo =
           ExportInfo
             { _exportSymbols = alterEntry <$> nfo ^. exportSymbols,
-              _exportModuleSymbols = alterEntry <$> nfo ^. exportModuleSymbols
+              _exportModuleSymbols = alterEntry <$> nfo ^. exportModuleSymbols,
+              _exportFixitySymbols = alterEntry <$> nfo ^. exportFixitySymbols
             }
 
         alterEntry :: SingI ns => NameSpaceEntryType ns -> NameSpaceEntryType ns
@@ -1424,6 +1520,7 @@ checkOpenModuleNoImport importModuleHint OpenModule {..}
           Just (Using l) ->
             over exportSymbols (HashMap.fromList . mapMaybe inUsing . HashMap.toList)
               . over exportModuleSymbols (HashMap.fromList . mapMaybe inUsing . HashMap.toList)
+              . over exportFixitySymbols (HashMap.fromList . mapMaybe inUsing . HashMap.toList)
             where
               inUsing ::
                 forall (ns :: NameSpace).
@@ -1442,6 +1539,7 @@ checkOpenModuleNoImport importModuleHint OpenModule {..}
           Just (Hiding l) ->
             over exportSymbols (HashMap.filter (not . inHiding))
               . over exportModuleSymbols (HashMap.filter (not . inHiding))
+              . over exportFixitySymbols (HashMap.filter (not . inHiding))
             where
               inHiding :: forall ns. SingI ns => NameSpaceEntryType ns -> Bool
               inHiding e = HashSet.member (e ^. nsEntry . S.nameId) u
@@ -1490,7 +1588,7 @@ checkFunctionClause clause@FunctionClause {..} = do
         err = throw (ErrLacksTypeSig (LacksTypeSig clause))
 
 checkAxiomDef ::
-  Members '[Reader ScopeParameters, InfoTableBuilder, Error ScoperError, State Scope, State ScoperState, NameIdGen, State ScoperFixities, State ScoperIterators, Reader BindingStrategy] r =>
+  Members '[Reader ScopeParameters, InfoTableBuilder, Error ScoperError, State Scope, State ScoperState, NameIdGen, State ScoperSyntax, Reader BindingStrategy] r =>
   AxiomDef 'Parsed ->
   Sem r (AxiomDef 'Scoped)
 checkAxiomDef AxiomDef {..} = do
@@ -1528,8 +1626,7 @@ checkLetClauses ::
   Sem r (NonEmpty (LetClause 'Scoped))
 checkLetClauses =
   localBindings
-    . ignoreFixities
-    . ignoreIterators
+    . ignoreSyntax
     . fmap fromSections
     . checkSections
     . mkLetSections
@@ -1755,12 +1852,26 @@ checkUnqualified ::
 checkUnqualified s = do
   scope <- get
   -- Lookup at the global scope
-  let err = throw (ErrSymNotInScope (NotInScope s scope))
-  entries <- fst <$> lookupQualifiedSymbol ([], s)
+  entries <- fst3 <$> lookupQualifiedSymbol ([], s)
   case resolveShadowing entries of
-    [] -> err
+    [] -> throw (ErrSymNotInScope (NotInScope s scope))
     [x] -> entryToScopedIden n x
     es -> throw (ErrAmbiguousSym (AmbiguousSym n es))
+  where
+    n = NameUnqualified s
+
+checkFixitySymbol ::
+  (Members '[Error ScoperError, State Scope, State ScoperState] r) =>
+  Symbol ->
+  Sem r S.Symbol
+checkFixitySymbol s = do
+  scope <- get
+  -- Lookup at the global scope
+  entries <- thd3 <$> lookupQualifiedSymbol ([], s)
+  case resolveShadowing entries of
+    [] -> throw (ErrSymNotInScope (NotInScope s scope))
+    [x] -> return $ entryToSymbol x s
+    es -> throw (ErrAmbiguousSym (AmbiguousSym n (map (SymbolEntry . (^. fixityEntry)) es)))
   where
     n = NameUnqualified s
 
@@ -1830,7 +1941,7 @@ lookupNameOfKind ::
   Name ->
   Sem r (Maybe S.Name)
 lookupNameOfKind nameKind n = do
-  entries <- mapMaybe filterEntry . fst <$> lookupQualifiedSymbol (path, sym)
+  entries <- mapMaybe filterEntry . fst3 <$> lookupQualifiedSymbol (path, sym)
   case entries of
     [] -> return Nothing
     [e] -> return (Just (set S.nameConcrete n e)) -- There is one constructor with such a name
@@ -2154,12 +2265,22 @@ checkParsePatternAtom ::
 checkParsePatternAtom = checkPatternAtom >=> parsePatternAtom
 
 checkSyntaxDef ::
-  (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, State ScoperFixities, State ScoperIterators, State ScoperIterators] r) =>
-  SyntaxDef ->
-  Sem r SyntaxDef
+  (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, State ScoperSyntax] r) =>
+  SyntaxDef 'Parsed ->
+  Sem r (SyntaxDef 'Scoped)
 checkSyntaxDef = \case
-  SyntaxOperator opDef -> SyntaxOperator opDef <$ checkOperatorSyntaxDef opDef
-  SyntaxIterator iterDef -> SyntaxIterator iterDef <$ checkIteratorSyntaxDef iterDef
+  SyntaxFixity fixDef -> SyntaxFixity <$> checkFixitySyntaxDef fixDef
+  SyntaxOperator opDef -> return $ SyntaxOperator opDef
+  SyntaxIterator iterDef -> return $ SyntaxIterator iterDef
+
+resolveSyntaxDef ::
+  (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, State ScoperSyntax] r) =>
+  SyntaxDef 'Parsed ->
+  Sem r ()
+resolveSyntaxDef = \case
+  SyntaxFixity fixDef -> resolveFixitySyntaxDef fixDef
+  SyntaxOperator opDef -> resolveOperatorSyntaxDef opDef
+  SyntaxIterator iterDef -> resolveIteratorSyntaxDef iterDef
 
 -------------------------------------------------------------------------------
 -- Infix Expression

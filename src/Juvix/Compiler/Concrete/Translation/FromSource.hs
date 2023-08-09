@@ -279,7 +279,7 @@ topModulePath = mkTopModulePath <$> dottedSymbol
 
 infixl 3 <?|>
 
--- | Tries the left alternative. If it fails, backtracks and restores the contents of the pragmas and judoc stashes. Then parses the right atlernative
+-- | Tries the left alternative. If it fails, backtracks and restores the contents of the pragmas and judoc stashes. Then parses the right alternative
 (<?|>) :: Members '[PragmasStash, JudocStash] r => ParsecS r a -> ParsecS r a -> ParsecS r a
 l <?|> r = do
   p <- P.lift (get @(Maybe ParsedPragmas))
@@ -296,15 +296,15 @@ statement = P.label "<top level statement>" $ do
   optional_ stashPragmas
   ms <-
     optional
-      ( StatementSyntax <$> syntaxDef
-          <|> StatementOpenModule
-            <$> newOpenSyntax
-              -- TODO remove <?|> after removing old syntax
-              <?|> StatementFunctionDef
-            <$> newTypeSignature Nothing
-              -- TODO remove <?|> after removing old syntax
-              <?|> StatementOpenModule
-            <$> openModule
+      ( StatementOpenModule
+          <$> newOpenSyntax
+            -- TODO remove <?|> after removing old syntax
+            <?|> StatementFunctionDef
+          <$> newTypeSignature Nothing
+            -- TODO remove <?|> after removing old syntax
+            <?|> StatementOpenModule
+          <$> openModule
+          <|> StatementSyntax <$> syntaxDef
           <|> StatementImport <$> import_
           <|> StatementInductive <$> inductiveDef Nothing
           <|> StatementModule <$> moduleDef
@@ -517,10 +517,11 @@ builtinStatement = do
 -- Syntax declaration
 --------------------------------------------------------------------------------
 
-syntaxDef :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r SyntaxDef
+syntaxDef :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (SyntaxDef 'Parsed)
 syntaxDef = do
   syn <- kw kwSyntax
-  (SyntaxOperator <$> operatorSyntaxDef syn)
+  (SyntaxFixity <$> fixitySyntaxDef syn)
+    <|> (SyntaxOperator <$> operatorSyntaxDef syn)
     <|> (SyntaxIterator <$> iteratorSyntaxDef syn)
 
 --------------------------------------------------------------------------------
@@ -530,20 +531,20 @@ syntaxDef = do
 precedence :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r Precedence
 precedence = PrecNat <$> (fst <$> decimal)
 
+fixitySyntaxDef :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => KeywordRef -> ParsecS r (FixitySyntaxDef 'Parsed)
+fixitySyntaxDef _fixitySyntaxKw = P.label "<fixity declaration>" $ do
+  _fixityKw <- kw kwFixity
+  _fixitySymbol <- symbol
+  _fixityInfo <- withLoc (parseYaml "{" "}")
+  _fixityDoc <- getJudoc
+  return FixitySyntaxDef {..}
+
 operatorSyntaxDef :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => KeywordRef -> ParsecS r OperatorSyntaxDef
 operatorSyntaxDef _opSyntaxKw = do
-  (_fixityArity, _opKw) <- arity
-  _fixityPrecedence <- precedence
+  _opKw <- kw kwOperator
   _opSymbol <- symbol
-  let _opFixity = Fixity {..}
+  _opFixity <- symbol
   return OperatorSyntaxDef {..}
-  where
-    arity :: ParsecS r (OperatorArity, KeywordRef)
-    arity =
-      (Binary AssocRight,) <$> kw kwInfixr
-        <|> (Binary AssocLeft,) <$> kw kwInfixl
-        <|> (Binary AssocNone,) <$> kw kwInfix
-        <|> (Unary AssocPostfix,) <$> kw kwPostfix
 
 --------------------------------------------------------------------------------
 -- Iterator syntax declaration

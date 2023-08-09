@@ -1,5 +1,6 @@
 module Symbols;
 
+import Stdlib.Data.Fixity open;
 import Stdlib.Data.Nat open;
 
 ╘⑽╛ : Nat := suc 9;
@@ -11,11 +12,11 @@ import Stdlib.Data.Nat open;
 
 （*） : Nat -> Nat -> Nat := (*);
 
-syntax infixl 6 －;
+syntax operator － additive;
 
 － : Nat -> Nat -> Nat := （-）;
 
-syntax infixl 7 ·;
+syntax operator · multiplicative;
 
 · : Nat -> Nat -> Nat := （*）;
 

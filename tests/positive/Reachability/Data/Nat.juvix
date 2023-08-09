@@ -1,16 +1,19 @@
 module Data.Nat;
 
+syntax fixity add {arity: binary, assoc: left};
+syntax fixity mul {arity: binary, assoc: left, above: [add]};
+
 type ℕ :=
   | zero : ℕ
   | suc : ℕ → ℕ;
 
-syntax infixl 6 +;
+syntax operator + add;
 
 + : ℕ → ℕ → ℕ
   | zero b := b
   | (suc a) b := suc (a + b);
 
-syntax infixl 7 *;
+syntax operator * mul;
 
 * : ℕ → ℕ → ℕ
   | zero b := zero

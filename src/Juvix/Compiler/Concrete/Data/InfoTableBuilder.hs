@@ -1,6 +1,7 @@
 module Juvix.Compiler.Concrete.Data.InfoTableBuilder where
 
 import Data.HashMap.Strict qualified as HashMap
+import Data.IntSet qualified as IntSet
 import Juvix.Compiler.Concrete.Data.Highlight.Input
 import Juvix.Compiler.Concrete.Data.Scope
 import Juvix.Compiler.Concrete.Data.ScopedName
@@ -17,6 +18,9 @@ data InfoTableBuilder m a where
   RegisterFunctionClause :: FunctionClause 'Scoped -> InfoTableBuilder m ()
   RegisterName :: HasLoc c => S.Name' c -> InfoTableBuilder m ()
   RegisterModule :: Module 'Scoped 'ModuleTop -> InfoTableBuilder m ()
+  RegisterFixity :: FixityDef -> InfoTableBuilder m ()
+  RegisterHighlightDoc :: S.NameId -> Maybe (Judoc 'Scoped) -> InfoTableBuilder m ()
+  GetInfoTable :: InfoTableBuilder m InfoTable
 
 makeSem ''InfoTableBuilder
 
@@ -74,6 +78,14 @@ toState = reinterpret $ \case
     let j = m ^. moduleDoc
     modify (over infoModules (HashMap.insert (m ^. modulePath) m))
     registerDoc (m ^. modulePath . nameId) j
+  RegisterFixity f -> do
+    let fid = f ^. fixityDefSymbol . S.nameId
+    modify (over infoFixities (HashMap.insert fid f))
+    modify (over infoPriorities (IntSet.insert (f ^. fixityDefPrec)))
+  RegisterHighlightDoc fid doc ->
+    registerDoc fid doc
+  GetInfoTable ->
+    get
 
 runInfoTableBuilderRepl :: InfoTable -> Sem (InfoTableBuilder ': r) a -> Sem r (InfoTable, a)
 runInfoTableBuilderRepl tab = ignoreHighlightBuilder . runInfoTableBuilder tab . raiseUnder

@@ -1,10 +1,12 @@
 module Fib;
 
+syntax fixity add {arity: binary, assoc: left};
+
 type Nat :=
   | zero : Nat
   | suc : Nat → Nat;
 
-syntax infixl 6 +;
+syntax operator + add;
 
 + : Nat → Nat → Nat
   | zero b := b

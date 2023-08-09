@@ -89,11 +89,17 @@ infixl_ = "infixl"
 infixr_ :: (IsString s) => s
 infixr_ = "infixr"
 
+operator :: (IsString s) => s
+operator = "operator"
+
 open :: (IsString s) => s
 open = "open"
 
 syntax :: (IsString s) => s
 syntax = "syntax"
+
+fixity :: (IsString s) => s
+fixity = "fixity"
 
 iterator :: (IsString s) => s
 iterator = "iterator"

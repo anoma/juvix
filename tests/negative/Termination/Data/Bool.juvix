@@ -1,16 +1,18 @@
 module Data.Bool;
 
+syntax fixity logical {arity: binary, assoc: right};
+
 type Bool :=
   | true : Bool
   | false : Bool;
 
-syntax infixr 2 ||;
+syntax operator || logical;
 
 || : Bool → Bool → Bool
   | false a := a
   | true _ := true;
 
-syntax infixr 2 &&;
+syntax operator && logical;
 
 && : Bool → Bool → Bool
   | false _ := false

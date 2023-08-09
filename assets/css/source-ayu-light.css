@@ -35,6 +35,10 @@ body {
     color: #5c6166;
 }
 
+.ju-fixity {
+    color: #3d4247;
+}
+
 .ju-number {
     color: #000000;
 }
@@ -43,11 +47,13 @@ body {
     font-weight: bold;
 }
 
-a:hover, a.hover-highlight {
-    background-color: #dadbdc ;
+a:hover,
+a.hover-highlight {
+    background-color: #dadbdc;
 }
 
-a:link, a:visited {
+a:link,
+a:visited {
     text-decoration: none;
 }
 

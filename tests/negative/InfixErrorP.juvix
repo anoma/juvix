@@ -1,6 +1,8 @@
 module InfixErrorP;
 
-  syntax infix 5 , ;
+  syntax fixity pair {arity: binary};
+
+  syntax operator , pair;
 
   type Pair :=
    , : Type → Type → Pair;

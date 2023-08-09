@@ -425,8 +425,9 @@ instance SingI s => PrettyPrint (Import s) where
         Nothing -> Nothing
         Just as -> Just (ppCode Kw.kwAs <+> ppModulePathType as)
 
-instance PrettyPrint SyntaxDef where
+instance SingI s => PrettyPrint (SyntaxDef s) where
   ppCode = \case
+    SyntaxFixity f -> ppCode f
     SyntaxOperator op -> ppCode op
     SyntaxIterator it -> ppCode it
 
@@ -573,19 +574,22 @@ instance SingI s => PrettyPrint (Lambda s) where
 
 instance PrettyPrint Precedence where
   ppCode = \case
-    PrecMinusOmega1 -> noLoc (pretty ("-ω₁" :: Text))
-    PrecMinusOmega -> noLoc (pretty ("-ω" :: Text))
+    PrecUpdate -> noLoc (pretty ("-ω₁" :: Text))
+    PrecArrow -> noLoc (pretty ("-ω" :: Text))
     PrecNat n -> noLoc (pretty n)
-    PrecOmega -> noLoc (pretty ("ω" :: Text))
+    PrecApp -> noLoc (pretty ("ω" :: Text))
+
+instance SingI s => PrettyPrint (FixitySyntaxDef s) where
+  ppCode FixitySyntaxDef {..} = do
+    let sym' = ppSymbolType _fixitySymbol
+    let txt = pretty (_fixityInfo ^. withLocParam . withSourceText)
+    ppCode _fixitySyntaxKw <+> ppCode _fixityKw <+> sym' <+> braces (noLoc txt)
 
 instance PrettyPrint OperatorSyntaxDef where
   ppCode OperatorSyntaxDef {..} = do
     let opSymbol' = ppUnkindedSymbol _opSymbol
-    fi <+> opSymbol'
-    where
-      fi = do
-        let p = ppCode (_opFixity ^. fixityPrecedence)
-        ppCode _opSyntaxKw <+> ppCode _opKw <+> p
+    let p = ppUnkindedSymbol _opFixity
+    ppCode _opSyntaxKw <+> ppCode _opKw <+> opSymbol' <+> p
 
 instance PrettyPrint PatternApp where
   ppCode = apeHelper
@@ -642,7 +646,7 @@ instance PrettyPrint (WithSource Pragmas) where
        in annotated AnnComment (noLoc txt) <> line
 
 instance PrettyPrint (WithSource IteratorAttribs) where
-  ppCode = annotated AnnComment . braces . noLoc . pretty . (^. withSourceText)
+  ppCode = braces . noLoc . pretty . (^. withSourceText)
 
 ppJudocStart :: Members '[ExactPrint, Reader Options] r => Sem r (Maybe ())
 ppJudocStart = do

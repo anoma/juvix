@@ -1,6 +1,8 @@
 module Operators;
 
-syntax infixl 5 +;
+syntax fixity add {arity: binary, assoc: left};
+
+syntax operator + add;
 axiom + : Type → Type → Type;
 
 plus : Type → Type → Type := (+);

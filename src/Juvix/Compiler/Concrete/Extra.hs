@@ -84,6 +84,7 @@ groupStatements = \case
     g :: Statement s -> Statement s -> Bool
     g a b = case (a, b) of
       (StatementSyntax _, StatementSyntax _) -> True
+      (StatementSyntax (SyntaxFixity _), _) -> False
       (StatementSyntax (SyntaxOperator o), s) -> definesSymbol (o ^. opSymbol) s
       (StatementSyntax (SyntaxIterator i), s) -> definesSymbol (i ^. iterSymbol) s
       (StatementImport _, StatementImport _) -> True
