@@ -74,9 +74,9 @@ mkPackageInfo ::
   Sem r PackageInfo
 mkPackageInfo mpackageEntry _packageRoot = do
   let buildDir :: Path Abs Dir = maybe (rootBuildDir _packageRoot) (someBaseToAbs _packageRoot . (^. entryPointBuildDir)) mpackageEntry
-      buildDirDep :: Maybe (SomeBase Dir)
-        | isJust mpackageEntry = Just (Abs buildDir)
-        | otherwise = Nothing
+      buildDirDep :: BuildDir
+        | isJust mpackageEntry = CustomBuildDir (Abs buildDir)
+        | otherwise = DefaultBuildDir
 
   _packagePackage <- maybe (readPackage _packageRoot buildDirDep) (return . (^. entryPointPackage)) mpackageEntry
   let deps :: [Dependency] = _packagePackage ^. packageDependencies
@@ -118,14 +118,15 @@ registerDependencies' = do
       | isGlobal -> do
           glob <- globalRoot
           let globDep = Dependency (mkPrepath (toFilePath glob))
-          addDependency' globDep
-      | otherwise -> addDependency' (Dependency (mkPrepath (toFilePath (e ^. entryPointRoot))))
+          addDependency' (Just e) globDep
+      | otherwise -> addDependency' (Just e) (Dependency (mkPrepath (toFilePath (e ^. entryPointRoot))))
 
 addDependency' ::
   (Members '[State ResolverState, Reader ResolverEnv, Files, Error Text] r) =>
+  Maybe EntryPoint ->
   Dependency ->
   Sem r ()
-addDependency' = addDependencyHelper Nothing
+addDependency' me = addDependencyHelper me
 
 addDependencyHelper ::
   (Members '[State ResolverState, Reader ResolverEnv, Files, Error Text] r) =>
@@ -139,7 +140,7 @@ addDependencyHelper me d = do
     modify' (set (resolverPackages . at p) (Just pkgInfo))
     forM_ (pkgInfo ^. packageRelativeFiles) $ \f -> do
       modify' (over resolverFiles (HashMap.insertWith (<>) f (pure pkgInfo)))
-    forM_ (pkgInfo ^. packagePackage . packageDependencies) addDependency'
+    forM_ (pkgInfo ^. packagePackage . packageDependencies) (addDependency' Nothing)
 
 currentPackage :: (Members '[State ResolverState, Reader ResolverEnv] r) => Sem r PackageInfo
 currentPackage = do

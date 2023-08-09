@@ -50,7 +50,7 @@ getPackage = do
         _packageVersion = tversion,
         _packageBuildDir = Nothing,
         _packageMain = Nothing,
-        _packageDependencies = [defaultStdlibDep]
+        _packageDependencies = [defaultStdlibDep DefaultBuildDir]
       }
 
 getProjName :: forall r. (Members '[Embed IO] r) => Sem r Text
