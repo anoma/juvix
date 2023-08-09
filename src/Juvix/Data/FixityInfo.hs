@@ -31,6 +31,8 @@ instance FromJSON FixityInfo where
         _fixityPrecSame <- keyMay "same" asText
         _fixityPrecBelow <- fromMaybe [] <$> keyMay "below" (eachInArray asText)
         _fixityPrecAbove <- fromMaybe [] <$> keyMay "above" (eachInArray asText)
+        when (isJust _fixityPrecSame && not (null _fixityPrecBelow && null _fixityPrecAbove)) $
+          throwCustomError "'same' cannot be provided together with 'above' or 'below'"
         return FixityInfo {..}
 
       parseArity :: Parse YamlError Arity
