@@ -3,12 +3,6 @@ module test059;
 
 import Stdlib.Prelude open hiding {head};
 
-syntax operator :: cons;
-builtin list
-type List (a : Type) :=
-  | nil : List a
-  | :: : a → List a → List a;
-
 mylist : List Nat;
 mylist := [1; 2; 3 + 1];
 
