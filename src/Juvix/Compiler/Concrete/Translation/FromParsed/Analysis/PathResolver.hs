@@ -21,7 +21,6 @@ where
 
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
-import Data.Text qualified as T
 import Juvix.Compiler.Concrete.Data.Name
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Base
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Error
@@ -98,10 +97,8 @@ mkPackageInfo mpackageEntry _packageRoot = do
         newJuvixFiles :: [Path Abs File]
         newJuvixFiles = [cd <//> f | f <- files, isJuvixFile f]
 
-dependencyCached :: (Members '[State ResolverState, Reader ResolverEnv, Files, Git] r) => Dependency -> Sem r Bool
-dependencyCached d = do
-  p <- getDependencyPath d
-  HashMap.member p <$> gets (^. resolverPackages)
+dependencyCached :: (Members '[State ResolverState, Reader ResolverEnv, Files, Git] r) => Path Abs Dir -> Sem r Bool
+dependencyCached p = HashMap.member p <$> gets (^. resolverPackages)
 
 withPathFile :: (Members '[PathResolver] r) => TopModulePath -> (Either PathResolverError (Path Abs File) -> Sem r a) -> Sem r a
 withPathFile m f = withPath m (f . mapRight (uncurry (<//>)))
@@ -113,15 +110,7 @@ getDependencyPath = \case
     canonicalDir r (p ^. pathDependencyPath)
   DependencyGit g -> do
     r <- rootBuildDir <$> asks (^. envRoot)
-    let cloneDir = r <//> $(mkRelDir "deps") <//> relDir (T.unpack (g ^. gitDependencyName))
-    clone
-      ( GitCloneSpec
-          { _gitSpecClonePath = cloneDir,
-            _gitSpecRepoUrl = g ^. gitDependencyUrl,
-            _gitSpecRepoRef = g ^. gitDependencyRef
-          }
-      )
-    return cloneDir
+    clone r g
 
 registerDependencies' ::
   (Members '[Reader EntryPoint, State ResolverState, Reader ResolverEnv, Files, Error Text, Git] r) =>
@@ -150,7 +139,7 @@ addDependencyHelper ::
   Sem r ()
 addDependencyHelper me d = do
   p <- getDependencyPath d
-  unlessM (dependencyCached d) $ withEnvRoot p $ do
+  unlessM (dependencyCached p) $ withEnvRoot p $ do
     pkgInfo <- mkPackageInfo me p
     modify' (set (resolverPackages . at p) (Just pkgInfo))
     forM_ (pkgInfo ^. packageRelativeFiles) $ \f -> do
