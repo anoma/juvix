@@ -1,0 +1,6 @@
+module PragmasDuplicateKeys;
+
+type Bool := true | false;
+
+{-# inline: true, inline: false #-}
+main : Bool := true;
