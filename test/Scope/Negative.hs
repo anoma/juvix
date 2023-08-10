@@ -343,5 +343,12 @@ scoperErrorTests =
       $(mkRelFile "RepeatedFieldPattern.juvix")
       $ \case
         ErrRepeatedField RepeatedField {} -> Nothing
+        _ -> wrongError,
+    NegTest
+      "Incomparable precedences"
+      $(mkRelDir ".")
+      $(mkRelFile "IncomparablePrecedences.juvix")
+      $ \case
+        ErrIncomparablePrecedences {} -> Nothing
         _ -> wrongError
   ]
