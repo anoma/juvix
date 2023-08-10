@@ -9,7 +9,7 @@ on:
         default: "main"
 
 env:
-  STACK_VERSION: 2.22.1
+  STACK_VERSION: 2.11.1
 
 jobs:
   build:
