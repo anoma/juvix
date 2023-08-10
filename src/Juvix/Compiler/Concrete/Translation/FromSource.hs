@@ -958,9 +958,13 @@ newTypeSignature _signBuiltin = P.label "<function definition>" $ do
       (openDelim, _sigArgNames, _sigArgImplicit, _sigArgColon) <- P.try $ do
         (opn, impl) <- implicitOpen
         n <- some1 ((ArgumentSymbol <$> symbol) <|> (ArgumentWildcard <$> wildcard))
-        c <- Irrelevant <$> kw kwColon
+        c <- case impl of
+          Implicit -> optional (Irrelevant <$> kw kwColon)
+          Explicit -> Just . Irrelevant <$> kw kwColon
         return (opn, n, impl, c)
-      _sigArgType <- parseExpressionAtoms
+      _sigArgType <- case _sigArgColon of
+        Just {} -> parseExpressionAtoms
+        Nothing -> return $ ExpressionAtoms (AtomHole openDelim :| []) (Irrelevant $ getLoc openDelim)
       closeDelim <- implicitClose _sigArgImplicit
       let _sigArgDelims = Irrelevant (openDelim, closeDelim)
       return SigArg {..}

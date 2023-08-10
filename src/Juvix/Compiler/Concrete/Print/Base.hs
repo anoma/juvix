@@ -764,9 +764,13 @@ instance SingI s => PrettyPrint (SigArg s) where
   ppCode SigArg {..} = do
     let Irrelevant (l, r) = _sigArgDelims
         names' = hsep (fmap ppCode _sigArgNames)
-        colon' = ppCode _sigArgColon
-        ty' = ppExpressionType _sigArgType
-    ppCode l <> names' <+> colon' <+> ty' <> ppCode r
+    case _sigArgColon of
+      Just c -> do
+        let colon' = ppCode c
+            ty' = ppExpressionType _sigArgType
+        ppCode l <> names' <+> colon' <+> ty' <> ppCode r
+      Nothing ->
+        ppCode l <> names' <> ppCode r
 
 instance SingI s => PrettyPrint (FunctionDef s) where
   ppCode :: forall r. Members '[ExactPrint, Reader Options] r => FunctionDef s -> Sem r ()

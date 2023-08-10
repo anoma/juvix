@@ -332,7 +332,7 @@ instance HasLoc IteratorSyntaxDef where
 data SigArg (s :: Stage) = SigArg
   { _sigArgDelims :: Irrelevant (KeywordRef, KeywordRef),
     _sigArgImplicit :: IsImplicit,
-    _sigArgColon :: Irrelevant KeywordRef,
+    _sigArgColon :: Maybe (Irrelevant KeywordRef),
     _sigArgNames :: NonEmpty (Argument s),
     _sigArgType :: ExpressionType s
   }
