@@ -1,14 +1,15 @@
 module Juvix.Data.Fixity where
 
+import Juvix.Data.NameId
 import Juvix.Prelude.Base
 
 -- | Note that the order of the constructors is important due to the `Ord`
 -- instance.
 data Precedence
-  = PrecUpdate
-  | PrecArrow
+  = PrecArrow
   | PrecNat Int
   | PrecApp
+  | PrecUpdate
   deriving stock (Show, Eq, Data, Ord)
 
 data UnaryAssoc = AssocPostfix
@@ -27,7 +28,8 @@ data OperatorArity
 
 data Fixity = Fixity
   { _fixityPrecedence :: Precedence,
-    _fixityArity :: OperatorArity
+    _fixityArity :: OperatorArity,
+    _fixityId :: Maybe NameId
   }
   deriving stock (Show, Eq, Ord, Data)
 
@@ -68,13 +70,13 @@ isUnary :: Fixity -> Bool
 isUnary = not . isBinary
 
 appFixity :: Fixity
-appFixity = Fixity PrecApp (Binary AssocLeft)
+appFixity = Fixity PrecApp (Binary AssocLeft) Nothing
 
 funFixity :: Fixity
-funFixity = Fixity PrecArrow (Binary AssocRight)
+funFixity = Fixity PrecArrow (Binary AssocRight) Nothing
 
 updateFixity :: Fixity
-updateFixity = Fixity PrecUpdate (Unary AssocPostfix)
+updateFixity = Fixity PrecUpdate (Unary AssocPostfix) Nothing
 
 atomParens :: (Fixity -> Bool) -> Atomicity -> Fixity -> Bool
 atomParens associates argAtom opInf = case argAtom of

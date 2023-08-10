@@ -1,6 +1,7 @@
 module Juvix.Compiler.Concrete.Data.InfoTableBuilder where
 
 import Data.HashMap.Strict qualified as HashMap
+import Data.HashSet qualified as HashSet
 import Data.IntSet qualified as IntSet
 import Juvix.Compiler.Concrete.Data.Highlight.Input
 import Juvix.Compiler.Concrete.Data.Scope
@@ -19,6 +20,7 @@ data InfoTableBuilder m a where
   RegisterName :: HasLoc c => S.Name' c -> InfoTableBuilder m ()
   RegisterModule :: Module 'Scoped 'ModuleTop -> InfoTableBuilder m ()
   RegisterFixity :: FixityDef -> InfoTableBuilder m ()
+  RegisterPrecedence :: S.NameId -> S.NameId -> InfoTableBuilder m ()
   RegisterHighlightDoc :: S.NameId -> Maybe (Judoc 'Scoped) -> InfoTableBuilder m ()
   GetInfoTable :: InfoTableBuilder m InfoTable
 
@@ -79,9 +81,14 @@ toState = reinterpret $ \case
     modify (over infoModules (HashMap.insert (m ^. modulePath) m))
     registerDoc (m ^. modulePath . nameId) j
   RegisterFixity f -> do
-    let fid = f ^. fixityDefSymbol . S.nameId
-    modify (over infoFixities (HashMap.insert fid f))
+    let sid = f ^. fixityDefSymbol . S.nameId
+    modify (over infoFixities (HashMap.insert sid f))
     modify (over infoPriorities (IntSet.insert (f ^. fixityDefPrec)))
+    case f ^. fixityDefFixity . fixityId of
+      Just fid -> modify (over infoPrecedenceGraph (HashMap.alter (Just . fromMaybe mempty) fid))
+      Nothing -> return ()
+  RegisterPrecedence l h ->
+    modify (over infoPrecedenceGraph (HashMap.alter (Just . HashSet.insert h . fromMaybe mempty) l))
   RegisterHighlightDoc fid doc ->
     registerDoc fid doc
   GetInfoTable ->

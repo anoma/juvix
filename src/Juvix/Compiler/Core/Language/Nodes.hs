@@ -307,7 +307,7 @@ instance HasAtomicity (Bottom' i a) where
   atomicity _ = Atom
 
 lambdaFixity :: Fixity
-lambdaFixity = Fixity (PrecNat 0) (Unary AssocPostfix)
+lambdaFixity = Fixity (PrecNat 0) (Unary AssocPostfix) Nothing
 
 makeLenses ''LambdaLhs'
 makeLenses ''PiLhs'

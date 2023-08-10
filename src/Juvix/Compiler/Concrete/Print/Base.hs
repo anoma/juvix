@@ -574,10 +574,10 @@ instance SingI s => PrettyPrint (Lambda s) where
 
 instance PrettyPrint Precedence where
   ppCode = \case
-    PrecUpdate -> noLoc (pretty ("-ω₁" :: Text))
     PrecArrow -> noLoc (pretty ("-ω" :: Text))
     PrecNat n -> noLoc (pretty n)
     PrecApp -> noLoc (pretty ("ω" :: Text))
+    PrecUpdate -> noLoc (pretty ("ω₁" :: Text))
 
 instance SingI s => PrettyPrint (FixitySyntaxDef s) where
   ppCode FixitySyntaxDef {..} = do

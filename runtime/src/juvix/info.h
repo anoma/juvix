@@ -11,9 +11,9 @@ typedef struct {
     assoc_t assoc;
 } fixity_t;
 
-#define PREC_UPDATE (-(1LL << 63))
-#define PREC_ARROW (PREC_UPDATE + 1)
-#define PREC_APP (9223372036854775807LL)
+#define PREC_ARROW (-(1LL << 63))
+#define PREC_UPDATE (9223372036854775807LL)
+#define PREC_APP (PREC_UPDATE - 1)
 
 #define APP_FIXITY \
     { PREC_APP, assoc_left }

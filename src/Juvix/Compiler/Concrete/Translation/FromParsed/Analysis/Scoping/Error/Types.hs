@@ -879,3 +879,28 @@ instance ToGenericError PrecedenceInconsistencyError where
     where
       i :: Interval
       i = getLoc _precedenceInconsistencyErrorFixityDef
+
+data IncomaprablePrecedences = IncomaprablePrecedences
+  { _incomparablePrecedencesName1 :: S.Name,
+    _incomparablePrecedencesName2 :: S.Name
+  }
+  deriving stock (Show)
+
+instance ToGenericError IncomaprablePrecedences where
+  genericError IncomaprablePrecedences {..} = do
+    opts <- fromGenericOptions <$> ask
+    let msg =
+          "Operators"
+            <+> ppCode opts _incomparablePrecedencesName1
+            <+> "and"
+            <+> ppCode opts _incomparablePrecedencesName2
+            <+> "have incomparable precedences"
+    return
+      GenericError
+        { _genericErrorLoc = i,
+          _genericErrorMessage = mkAnsiText msg,
+          _genericErrorIntervals = [i]
+        }
+    where
+      i :: Interval
+      i = getLoc _incomparablePrecedencesName1
