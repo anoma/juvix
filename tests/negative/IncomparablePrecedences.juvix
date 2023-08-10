@@ -1,0 +1,19 @@
+module IncomparablePrecedences;
+
+type Bool := true | false;
+
+syntax fixity log1 {arity: binary, assoc: left};
+syntax fixity log2 {arity: binary, assoc: right};
+
+syntax operator && log1;
+syntax operator || log2;
+
+&& : Bool -> Bool -> Bool
+  | true x := x
+  | false _ := false;
+
+|| : Bool -> Bool -> Bool
+  | true _ := true
+  | false x := x;
+
+main : Bool := false && true || true;
