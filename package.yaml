@@ -12,7 +12,7 @@ author:
     Lukasz Czajka,
     Github's contributors,
   ]
-tested-with: ghc == 9.2.7
+tested-with: ghc == 9.4.5
 homepage: https://juvix.org
 bug-reports: https://github.com/anoma/juvix/issues
 description: The Juvix compiler
