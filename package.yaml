@@ -19,6 +19,15 @@ description: The Juvix compiler
 category: Compilers/Interpreters
 github: anoma/juvix
 
+flags:
+  # This flag can only be used in an environment that contains static libraries
+  # for all dependencies, including libc We use this when doing a static build
+  # using the ghc-musl alpine container
+  static:
+    description: Build static executable
+    default: false
+    manual: true
+
 extra-source-files:
   - README.md
   - assets/css/*.css
@@ -146,6 +155,11 @@ executables:
       - string-interpolate == 0.3.*
     verbatim:
       default-language: GHC2021
+    when:
+      - condition: flag(static)
+        ld-options:
+          - -static
+          - -pthread
 
 tests:
   juvix-test:
