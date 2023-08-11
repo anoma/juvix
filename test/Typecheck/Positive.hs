@@ -264,7 +264,11 @@ tests =
     posTest
       "Record patterns"
       $(mkRelDir ".")
-      $(mkRelFile "RecordPattern.juvix")
+      $(mkRelFile "RecordPattern.juvix"),
+    posTest
+      "Wildcard arguments"
+      $(mkRelDir ".")
+      $(mkRelFile "WildcardArguments.juvix")
   ]
     <> [ compilationTest t | t <- Compilation.tests
        ]
