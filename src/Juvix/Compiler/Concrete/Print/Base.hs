@@ -525,7 +525,7 @@ instance SingI s => PrettyPrint (Function s) where
             SScoped -> ppRightExpression
 
 ppRightExpression ::
-  (PrettyPrint a, HasAtomicity a, Members [Reader Options, ExactPrint] r) =>
+  (PrettyPrint a, HasAtomicity a, Members '[Reader Options, ExactPrint] r) =>
   Fixity ->
   a ->
   Sem r ()

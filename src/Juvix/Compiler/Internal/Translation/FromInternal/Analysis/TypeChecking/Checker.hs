@@ -150,7 +150,7 @@ checkInductiveDef InductiveDef {..} = runInferenceDef $ do
                   }
             )
 
-withEmptyVars :: Sem (Reader LocalVars : r) a -> Sem r a
+withEmptyVars :: Sem (Reader LocalVars ': r) a -> Sem r a
 withEmptyVars = runReader emptyLocalVars
 
 -- TODO should we register functions (type synonyms) first?

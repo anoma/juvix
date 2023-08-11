@@ -474,7 +474,7 @@ lookupQualifiedSymbol sms = do
   where
     go ::
       forall r'.
-      Members [State ScoperState, State Scope, Output SymbolEntry, Output ModuleSymbolEntry, Output FixitySymbolEntry] r' =>
+      Members '[State ScoperState, State Scope, Output SymbolEntry, Output ModuleSymbolEntry, Output FixitySymbolEntry] r' =>
       ([Symbol], Symbol) ->
       Sem r' ()
     go (path, sym) = do

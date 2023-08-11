@@ -223,7 +223,7 @@ combineCompiledPatterns ps = go indexedPatterns
 -- (wildcard, binder or constructor) introduces an auxiliary binder.
 -- The arguments are then compiled recursively using a new CompileState context.
 -- The default case points to the next branch pattern.
-compilePattern :: forall r. Members [Reader CompileState, Reader CompileStateNode, InfoTableBuilder] r => Int -> Int -> Int -> Pattern -> Sem r CompiledPattern
+compilePattern :: forall r. Members '[Reader CompileState, Reader CompileStateNode, InfoTableBuilder] r => Int -> Int -> Int -> Pattern -> Sem r CompiledPattern
 compilePattern baseShift branchNum numPatterns = \case
   PatWildcard w -> do
     auxPatternsNum <- length . filter isAuxiliaryBinder <$> asks (^. compileStateCompiledPattern . compiledPatBinders)

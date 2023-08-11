@@ -586,7 +586,7 @@ goAxiomInductive a = whenJust (a ^. Internal.axiomBuiltin) builtinInductive
       registerInductive (mkIdentIndex (a ^. Internal.axiomName)) info
       mapM_ (\ci -> registerConstructor (ci ^. constructorName) ci) ctrs'
 
-fromTopIndex :: Sem (Reader IndexTable : r) a -> Sem r a
+fromTopIndex :: Sem (Reader IndexTable ': r) a -> Sem r a
 fromTopIndex = runReader initIndexTable
 
 goAxiomDef ::

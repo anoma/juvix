@@ -69,14 +69,14 @@ runToInternal ::
   Members '[Reader EntryPoint, State Artifacts, Error JuvixError] r =>
   Sem
     ( State Scoper.ScoperState
-        : FromConcrete.MCache
-        : Reader Scoper.ScopeParameters
-        : Reader (HashSet NameId)
-        : State Scoper.Scope
-        : Concrete.InfoTableBuilder
-        : Builtins
-        : NameIdGen
-        : r
+        ': FromConcrete.MCache
+        ': Reader Scoper.ScopeParameters
+        ': Reader (HashSet NameId)
+        ': State Scoper.Scope
+        ': Concrete.InfoTableBuilder
+        ': Builtins
+        ': NameIdGen
+        ': r
     )
     b ->
   Sem r b

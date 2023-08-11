@@ -108,7 +108,7 @@ formatProject p = do
       subRes <- combineResults <$> mapM format juvixFiles
       return (res <> subRes, RecurseFilter (\hasJuvixYaml d -> not hasJuvixYaml && not (isHiddenDirectory d)))
 
-formatPath :: Members [Reader NewSyntax, Reader Text, ScopeEff] r => Path Abs File -> Sem r (NonEmpty AnsiText)
+formatPath :: Members '[Reader NewSyntax, Reader Text, ScopeEff] r => Path Abs File -> Sem r (NonEmpty AnsiText)
 formatPath p = do
   res <- scopeFile p
   formatScoperResult res
@@ -147,7 +147,7 @@ formatResultFromContents formattedContents filepath = do
         )
       return res
 
-formatScoperResult :: Members [Reader NewSyntax, Reader Text] r => Scoper.ScoperResult -> Sem r (NonEmpty AnsiText)
+formatScoperResult :: Members '[Reader NewSyntax, Reader Text] r => Scoper.ScoperResult -> Sem r (NonEmpty AnsiText)
 formatScoperResult res = do
   let cs = res ^. Scoper.comments
   formattedModules <-
@@ -165,7 +165,7 @@ formatScoperResult res = do
     Nothing ->
       return formattedModules
   where
-    formatTopModule :: Members [Reader NewSyntax, Reader Comments] r => Module 'Scoped 'ModuleTop -> Sem r AnsiText
+    formatTopModule :: Members '[Reader NewSyntax, Reader Comments] r => Module 'Scoped 'ModuleTop -> Sem r AnsiText
     formatTopModule m = do
       NewSyntax newSyntax <- ask
       cs <- ask

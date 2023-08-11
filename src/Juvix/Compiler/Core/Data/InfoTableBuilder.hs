@@ -71,7 +71,7 @@ runInfoTableBuilder tab =
   runState tab
     . reinterpret interp
   where
-    interp :: InfoTableBuilder m b -> Sem (State InfoTable : r) b
+    interp :: InfoTableBuilder m b -> Sem (State InfoTable ': r) b
     interp = \case
       FreshSymbol -> do
         s <- get

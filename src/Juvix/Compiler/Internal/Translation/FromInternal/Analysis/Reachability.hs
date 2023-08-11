@@ -34,7 +34,7 @@ returnIfReachable n a = do
   r <- askIsReachable n
   return (guard r $> a)
 
-goModuleNoCache :: forall r. Members [Reader NameDependencyInfo, MCache] r => ModuleIndex -> Sem r Module
+goModuleNoCache :: forall r. Members '[Reader NameDependencyInfo, MCache] r => ModuleIndex -> Sem r Module
 goModuleNoCache (ModuleIndex m) = do
   body' <- goBody (m ^. moduleBody)
   return (set moduleBody body' m)
@@ -45,10 +45,10 @@ goModuleNoCache (ModuleIndex m) = do
       _moduleImports <- mapM goImport (body ^. moduleImports)
       return ModuleBody {..}
 
-goModule :: Members [Reader NameDependencyInfo, MCache] r => Module -> Sem r Module
+goModule :: Members '[Reader NameDependencyInfo, MCache] r => Module -> Sem r Module
 goModule = cacheGet . ModuleIndex
 
-goModuleIndex :: Members [Reader NameDependencyInfo, MCache] r => ModuleIndex -> Sem r ModuleIndex
+goModuleIndex :: Members '[Reader NameDependencyInfo, MCache] r => ModuleIndex -> Sem r ModuleIndex
 goModuleIndex = fmap ModuleIndex . cacheGet
 
 goStatement :: forall r. Member (Reader NameDependencyInfo) r => Statement -> Sem r (Maybe Statement)
@@ -62,7 +62,7 @@ goStatement s = case s of
       StatementFunction f -> returnIfReachable (f ^. funDefName) b
       StatementInductive f -> returnIfReachable (f ^. inductiveName) b
 
-goImport :: forall r. Members [Reader NameDependencyInfo, MCache] r => Import -> Sem r Import
+goImport :: forall r. Members '[Reader NameDependencyInfo, MCache] r => Import -> Sem r Import
 goImport i = do
   _importModule <- goModuleIndex (i ^. importModule)
   return Import {..}
