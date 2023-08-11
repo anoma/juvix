@@ -268,7 +268,11 @@ tests =
     posTest
       "Wildcard arguments"
       $(mkRelDir ".")
-      $(mkRelFile "WildcardArguments.juvix")
+      $(mkRelFile "WildcardArguments.juvix"),
+    posTest
+      "Omit Type annotation"
+      $(mkRelDir ".")
+      $(mkRelFile "OmitType.juvix")
   ]
     <> [ compilationTest t | t <- Compilation.tests
        ]
