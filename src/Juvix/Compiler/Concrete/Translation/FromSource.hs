@@ -957,7 +957,7 @@ newTypeSignature _signBuiltin = P.label "<function definition>" $ do
     parseArg = do
       (openDelim, _sigArgNames, _sigArgImplicit, _sigArgColon) <- P.try $ do
         (opn, impl) <- implicitOpen
-        n <- some1 symbol
+        n <- some1 ((ArgumentSymbol <$> symbol) <|> (ArgumentWildcard <$> wildcard))
         c <- Irrelevant <$> kw kwColon
         return (opn, n, impl, c)
       _sigArgType <- parseExpressionAtoms

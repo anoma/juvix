@@ -753,11 +753,17 @@ instance SingI s => PrettyPrint (NewFunctionClause s) where
         e' = ppExpressionType _clausenBody
     ppCode _clausenPipeKw <+> pats' <+> ppCode _clausenAssignKw <> oneLineOrNext e'
 
+instance SingI s => PrettyPrint (Argument s) where
+  ppCode :: Members '[ExactPrint, Reader Options] r => Argument s -> Sem r ()
+  ppCode = \case
+    ArgumentSymbol s -> ppSymbolType s
+    ArgumentWildcard w -> ppCode w
+
 instance SingI s => PrettyPrint (SigArg s) where
   ppCode :: Members '[ExactPrint, Reader Options] r => SigArg s -> Sem r ()
   ppCode SigArg {..} = do
     let Irrelevant (l, r) = _sigArgDelims
-        names' = hsep (ppSymbolType <$> _sigArgNames)
+        names' = hsep (fmap ppCode _sigArgNames)
         colon' = ppCode _sigArgColon
         ty' = ppExpressionType _sigArgType
     ppCode l <> names' <+> colon' <+> ty' <> ppCode r

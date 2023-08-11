@@ -510,20 +510,27 @@ goTopNewFunctionDef FunctionDef {..} = do
         argToParam SigArg {..} = do
           _paramType <- goExpression _sigArgType
           let _paramImplicit = _sigArgImplicit
-              mk :: S.Symbol -> Sem r Internal.FunctionParameter
-              mk s =
-                let _paramName = Just (goSymbol s)
-                 in return Internal.FunctionParameter {..}
+              mk :: Concrete.Argument 'Scoped -> Sem r Internal.FunctionParameter
+              mk = \case
+                Concrete.ArgumentSymbol s ->
+                  let _paramName = Just (goSymbol s)
+                   in return Internal.FunctionParameter {..}
+                Concrete.ArgumentWildcard {} ->
+                  return Internal.FunctionParameter {_paramName = Nothing, ..}
           mapM mk _sigArgNames
 
     argToPattern :: SigArg 'Scoped -> Sem r (NonEmpty Internal.PatternArg)
     argToPattern SigArg {..} = do
       let _patternArgIsImplicit = _sigArgImplicit
           _patternArgName :: Maybe Internal.Name = Nothing
-          mk :: S.Symbol -> Sem r Internal.PatternArg
-          mk s = do
-            let _patternArgPattern = Internal.PatternVariable (goSymbol s)
-            return Internal.PatternArg {..}
+          mk :: Concrete.Argument 'Scoped -> Sem r Internal.PatternArg
+          mk = \case
+            Concrete.ArgumentSymbol s ->
+              let _patternArgPattern = Internal.PatternVariable (goSymbol s)
+               in return Internal.PatternArg {..}
+            Concrete.ArgumentWildcard w -> do
+              _patternArgPattern <- Internal.PatternVariable <$> varFromWildcard w
+              return Internal.PatternArg {..}
       mapM mk _sigArgNames
 
 goTopFunctionDef ::
