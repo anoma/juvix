@@ -73,6 +73,13 @@ parserErrorTests =
       $(mkRelFile "PragmasFormat.juvix")
       $ \case
         ErrMegaparsec {} -> Nothing
+        _ -> wrongError,
+    negTest
+      "Pragmas duplicate keys error"
+      $(mkRelDir ".")
+      $(mkRelFile "PragmasDuplicateKeys.juvix")
+      $ \case
+        ErrMegaparsec {} -> Nothing
         _ -> wrongError
   ]
 

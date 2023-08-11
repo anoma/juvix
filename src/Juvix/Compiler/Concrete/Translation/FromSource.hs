@@ -10,7 +10,6 @@ import Data.ByteString.UTF8 qualified as BS
 import Data.List.NonEmpty.Extra qualified as NonEmpty
 import Data.Singletons
 import Data.Text qualified as Text
-import Data.Yaml
 import Juvix.Compiler.Concrete.Data.Highlight.Input (HighlightBuilder, ignoreHighlightBuilder)
 import Juvix.Compiler.Concrete.Data.ParsedInfoTable
 import Juvix.Compiler.Concrete.Data.ParsedInfoTableBuilder
@@ -23,6 +22,7 @@ import Juvix.Compiler.Concrete.Translation.FromSource.Lexer hiding
   ( symbol,
   )
 import Juvix.Compiler.Pipeline.EntryPoint
+import Juvix.Data.Yaml
 import Juvix.Extra.Paths
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Parser.Error
@@ -341,7 +341,7 @@ parseYaml l r = do
             | otherwise -> '{' : str ++ "}"
   space
   let bs = BS.fromString str'
-  case decodeEither' bs of
+  case decodeEither bs of
     Left err -> parseFailure off (prettyPrintParseException err)
     Right yaml -> return $ WithSource (fromString str) yaml
 
