@@ -584,7 +584,8 @@ deriving stock instance Ord (ConstructorRhs 'Scoped)
 
 data InductiveParameters (s :: Stage) = InductiveParameters
   { _inductiveParametersNames :: NonEmpty (SymbolType s),
-    _inductiveParametersType :: ExpressionType s
+    _inductiveParametersType :: ExpressionType s,
+    _inductiveParametersColon :: Maybe KeywordRef
   }
 
 deriving stock instance Show (InductiveParameters 'Parsed)

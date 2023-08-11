@@ -964,7 +964,7 @@ newTypeSignature _signBuiltin = P.label "<function definition>" $ do
         return (opn, n, impl, c)
       _sigArgType <- case _sigArgColon of
         Just {} -> parseExpressionAtoms
-        Nothing -> return $ ExpressionAtoms (AtomHole openDelim :| []) (Irrelevant $ getLoc openDelim)
+        Nothing -> return $ mkAtomHole (getLoc openDelim)
       closeDelim <- implicitClose _sigArgImplicit
       let _sigArgDelims = Irrelevant (openDelim, closeDelim)
       return SigArg {..}
@@ -1082,12 +1082,25 @@ inductiveDef _inductiveBuiltin = do
       P.<?> "<constructor definition>"
   return InductiveDef {..}
 
-inductiveParams :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (InductiveParameters 'Parsed)
-inductiveParams = parens $ do
+inductiveParamsLong :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (InductiveParameters 'Parsed)
+inductiveParamsLong = parens $ do
   _inductiveParametersNames <- some1 symbol
-  kw kwColon
-  _inductiveParametersType <- parseExpressionAtoms
+  _inductiveParametersColon <- optional (kw kwColon)
+  _inductiveParametersType <- case _inductiveParametersColon of
+    Just {} -> parseExpressionAtoms
+    Nothing -> return $ mkAtomUniverse (getLoc (head _inductiveParametersNames))
   return InductiveParameters {..}
+
+inductiveParamsShort :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (InductiveParameters 'Parsed)
+inductiveParamsShort = do
+  _inductiveParametersNames <- some1 symbol
+  let _inductiveParametersType = mkAtomUniverse (getLoc (head _inductiveParametersNames))
+      _inductiveParametersColon :: Maybe KeywordRef
+      _inductiveParametersColon = Nothing
+  return InductiveParameters {..}
+
+inductiveParams :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (InductiveParameters 'Parsed)
+inductiveParams = inductiveParamsLong <|> inductiveParamsShort
 
 rhsGadt :: Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r => ParsecS r (RhsGadt 'Parsed)
 rhsGadt = P.label "<constructor gadt>" $ do
@@ -1308,3 +1321,29 @@ newOpenSyntax = do
       _openImportAsName = im ^. importAsName
       _openPublic = maybe NoPublic (const Public) (_openPublicKw ^. unIrrelevant)
   return OpenModule {..}
+
+mkAtomHole :: Interval -> ExpressionAtoms 'Parsed
+mkAtomHole loc = ExpressionAtoms (AtomHole r :| []) (Irrelevant loc)
+  where
+    r =
+      KeywordRef
+        { _keywordRefKeyword = kwWildcard,
+          _keywordRefInterval = loc,
+          _keywordRefUnicode = Ascii
+        }
+
+mkAtomUniverse :: Interval -> ExpressionAtoms 'Parsed
+mkAtomUniverse loc = ExpressionAtoms (AtomUniverse u :| []) (Irrelevant loc)
+  where
+    u =
+      Universe
+        { _universeLevel = Nothing,
+          _universeKw = r,
+          _universeLevelLoc = Nothing
+        }
+    r =
+      KeywordRef
+        { _keywordRefKeyword = kwWildcard,
+          _keywordRefInterval = loc,
+          _keywordRefUnicode = Ascii
+        }

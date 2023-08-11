@@ -795,6 +795,7 @@ checkInductiveParameters ::
 checkInductiveParameters params = do
   _inductiveParametersType <- checkParseExpressionAtoms (params ^. inductiveParametersType)
   _inductiveParametersNames <- mapM bindVariableSymbol (params ^. inductiveParametersNames)
+  let _inductiveParametersColon = params ^. inductiveParametersColon
   return InductiveParameters {..}
 
 checkInductiveDef ::

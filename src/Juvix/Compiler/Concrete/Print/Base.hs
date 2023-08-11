@@ -972,7 +972,9 @@ instance SingI s => PrettyPrint (InductiveParameters s) where
   ppCode InductiveParameters {..} = do
     let names' = fmap (\nm -> annDef nm (ppSymbolType nm)) _inductiveParametersNames
         ty' = ppExpressionType _inductiveParametersType
-    parens (hsep names' <+> ppCode Kw.kwColon <+> ty')
+    case _inductiveParametersColon of
+      Just {} -> parens (hsep names' <+> ppCode Kw.kwColon <+> ty')
+      Nothing -> hsep names'
 
 instance SingI s => PrettyPrint (NonEmpty (InductiveParameters s)) where
   ppCode = hsep . fmap ppCode
