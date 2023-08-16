@@ -2327,26 +2327,14 @@ checkExpressionPrecedences (ExpressionAtoms atoms _) =
   checkPrecedences opers
   where
     opers :: [S.Name]
-    opers = mapMaybe getIden (toList atoms)
-
-    getIden :: ExpressionAtom 'Scoped -> Maybe S.Name
-    getIden a = case a of
-      AtomIdentifier nm -> Just (nm ^. scopedIden)
-      _ -> Nothing
+    opers = mapMaybe P.getExpressionAtomIden (toList atoms)
 
 checkPatternPrecedences :: Members '[Error ScoperError, InfoTableBuilder] r => PatternAtoms 'Scoped -> Sem r ()
 checkPatternPrecedences (PatternAtoms atoms _) =
   checkPrecedences opers
   where
     opers :: [S.Name]
-    opers = mapMaybe getIden (toList atoms)
-
-    getIden :: PatternAtom 'Scoped -> Maybe S.Name
-    getIden = \case
-      PatternAtomIden i -> case i of
-        PatternScopedConstructor c -> Just c
-        _ -> Nothing
-      _ -> Nothing
+    opers = mapMaybe P.getPatternAtomIden (toList atoms)
 
 -------------------------------------------------------------------------------
 -- Infix Expression

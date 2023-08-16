@@ -70,13 +70,28 @@ isUnary :: Fixity -> Bool
 isUnary = not . isBinary
 
 appFixity :: Fixity
-appFixity = Fixity PrecApp (Binary AssocLeft) Nothing
+appFixity =
+  Fixity
+    { _fixityPrecedence = PrecApp,
+      _fixityArity = (Binary AssocLeft),
+      _fixityId = Nothing
+    }
 
 funFixity :: Fixity
-funFixity = Fixity PrecArrow (Binary AssocRight) Nothing
+funFixity =
+  Fixity
+    { _fixityPrecedence = PrecArrow,
+      _fixityArity = (Binary AssocRight),
+      _fixityId = Nothing
+    }
 
 updateFixity :: Fixity
-updateFixity = Fixity PrecUpdate (Unary AssocPostfix) Nothing
+updateFixity =
+  Fixity
+    { _fixityPrecedence = PrecUpdate,
+      _fixityArity = (Unary AssocPostfix),
+      _fixityId = Nothing
+    }
 
 atomParens :: (Fixity -> Bool) -> Atomicity -> Fixity -> Bool
 atomParens associates argAtom opInf = case argAtom of

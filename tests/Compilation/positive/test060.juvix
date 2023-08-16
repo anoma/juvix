@@ -17,8 +17,7 @@ type Pair (A B : Type) :=
     };
 
 mf : Pair (Pair Bool (List Nat)) (List Nat) → Bool
-  | mkPair@{fst := mkPair@{fst; snd := nil};
-  snd := zero :: _} := fst
+  | mkPair@{fst := mkPair@{fst; snd := nil}; snd := zero :: _} := fst
   | _ := false;
 
 main : Triple Nat Nat Nat :=
@@ -33,7 +32,7 @@ main : Triple Nat Nat Nat :=
     f :
       Triple Nat Nat Nat -> Triple Nat Nat Nat :=
         (@Triple{fst := fst * 10});
-  in if
-    (mf (mkPair (fst := mkPair true nil; snd := 0 :: nil)))
+  in
+  if (mf (mkPair (fst := mkPair true nil; snd := 0 :: nil)))
     (f p')
     (mkTriple (fst := 0; thd := 0; snd := 0));
