@@ -134,7 +134,9 @@ addConstructorParams :: Members '[NameSignatureBuilder] r => InductiveParameters
 addConstructorParams = addInductiveParams' Implicit
 
 addSigArg :: Members '[NameSignatureBuilder] r => SigArg 'Parsed -> Sem r ()
-addSigArg a = forM_ (a ^. sigArgNames) (addSymbol (a ^. sigArgImplicit))
+addSigArg a = forM_ (a ^. sigArgNames) $ \case
+  ArgumentSymbol s -> addSymbol (a ^. sigArgImplicit) s
+  ArgumentWildcard {} -> return ()
 
 type Re r = State BuilderState ': Error BuilderState ': Error NameSignatureError ': r
 

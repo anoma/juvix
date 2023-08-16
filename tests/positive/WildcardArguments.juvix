@@ -1,0 +1,3 @@
+module WildcardArguments;
+
+fn {A : Type} (a _ _ : A) : A := a;

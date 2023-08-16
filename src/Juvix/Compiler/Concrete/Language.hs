@@ -146,6 +146,22 @@ type ParsedIteratorAttribs = WithLoc (WithSource IteratorAttribs)
 
 type ParsedFixityInfo = WithLoc (WithSource FixityInfo)
 
+data Argument (s :: Stage)
+  = ArgumentSymbol (SymbolType s)
+  | ArgumentWildcard Wildcard
+
+deriving stock instance Show (Argument 'Parsed)
+
+deriving stock instance Show (Argument 'Scoped)
+
+deriving stock instance Eq (Argument 'Parsed)
+
+deriving stock instance Eq (Argument 'Scoped)
+
+deriving stock instance Ord (Argument 'Parsed)
+
+deriving stock instance Ord (Argument 'Scoped)
+
 -- | We group consecutive definitions and reserve symbols in advance, so that we
 -- don't need extra syntax for mutually recursive definitions. Also, it allows
 -- us to be more flexible with the ordering of the definitions.
@@ -317,7 +333,7 @@ data SigArg (s :: Stage) = SigArg
   { _sigArgDelims :: Irrelevant (KeywordRef, KeywordRef),
     _sigArgImplicit :: IsImplicit,
     _sigArgColon :: Irrelevant KeywordRef,
-    _sigArgNames :: NonEmpty (SymbolType s),
+    _sigArgNames :: NonEmpty (Argument s),
     _sigArgType :: ExpressionType s
   }
 

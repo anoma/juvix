@@ -741,7 +741,9 @@ checkFunctionDef FunctionDef {..} = do
   where
     checkArg :: SigArg 'Parsed -> Sem r (SigArg 'Scoped)
     checkArg SigArg {..} = do
-      names' <- mapM bindVariableSymbol _sigArgNames
+      names' <- forM _sigArgNames $ \case
+        ArgumentSymbol s -> ArgumentSymbol <$> bindVariableSymbol s
+        ArgumentWildcard w -> return $ ArgumentWildcard w
       ty' <- checkParseExpressionAtoms _sigArgType
       return
         SigArg
