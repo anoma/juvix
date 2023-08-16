@@ -8,6 +8,8 @@ module Juvix.Compiler.Concrete.Extra
     flattenStatement,
     migrateFunctionSyntax,
     recordNameSignatureByIndex,
+    getExpressionAtomIden,
+    getPatternAtomIden,
   )
 where
 
@@ -198,3 +200,15 @@ migrateFunctionSyntax m = over moduleBody (mapMaybe goStatement) m
 
 recordNameSignatureByIndex :: RecordNameSignature -> IntMap Symbol
 recordNameSignatureByIndex = IntMap.fromList . (^.. recordNames . each . to swap)
+
+getExpressionAtomIden :: ExpressionAtom 'Scoped -> Maybe S.Name
+getExpressionAtomIden = \case
+  AtomIdentifier nm -> Just (nm ^. scopedIden)
+  _ -> Nothing
+
+getPatternAtomIden :: PatternAtom 'Scoped -> Maybe S.Name
+getPatternAtomIden = \case
+  PatternAtomIden i -> case i of
+    PatternScopedConstructor c -> Just c
+    _ -> Nothing
+  _ -> Nothing

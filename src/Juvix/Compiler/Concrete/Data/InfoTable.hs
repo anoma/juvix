@@ -40,7 +40,8 @@ data InfoTable = InfoTable
     _infoInductives :: HashMap S.NameId InductiveInfo,
     _infoFunctions :: HashMap S.NameId FunctionInfo,
     _infoFixities :: HashMap S.NameId FixityDef,
-    _infoPriorities :: IntSet
+    _infoPriorities :: IntSet,
+    _infoPrecedenceGraph :: HashMap S.NameId (HashSet S.NameId)
   }
 
 emptyInfoTable :: InfoTable
@@ -52,7 +53,8 @@ emptyInfoTable =
       _infoInductives = mempty,
       _infoFunctions = mempty,
       _infoFixities = mempty,
-      _infoPriorities = mempty
+      _infoPriorities = mempty,
+      _infoPrecedenceGraph = mempty
     }
 
 makeLenses ''InfoTable

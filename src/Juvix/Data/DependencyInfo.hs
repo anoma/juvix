@@ -6,10 +6,6 @@ import Data.HashSet qualified as HashSet
 import Juvix.Prelude.Base
 import Juvix.Prelude.Pretty
 
--- | DependencyInfo is polymorphic to anticipate future use with other identifier
--- types in JuvixCore and further. The graph algorithms don't depend on the
--- exact type of names (the polymorphic type n), so there is no reason to
--- specialise DependencyInfo to any particular name type
 data DependencyInfo n = DependencyInfo
   { _depInfoGraph :: Graph,
     _depInfoNodeFromVertex :: Vertex -> (n, HashSet n),
@@ -59,6 +55,12 @@ nameFromVertex depInfo = fst . (depInfo ^. depInfoNodeFromVertex)
 
 isReachable :: (Hashable n) => DependencyInfo n -> n -> Bool
 isReachable depInfo n = HashSet.member n (depInfo ^. depInfoReachable)
+
+isPath :: DependencyInfo n -> n -> n -> Bool
+isPath depInfo n n' = Graph.path (depInfo ^. depInfoGraph) v v'
+  where
+    v = fromJust $ (depInfo ^. depInfoVertexFromName) n
+    v' = fromJust $ (depInfo ^. depInfoVertexFromName) n'
 
 buildSCCs :: Ord n => DependencyInfo n -> [SCC n]
 buildSCCs = Graph.stronglyConnComp . (^. depInfoEdgeList)

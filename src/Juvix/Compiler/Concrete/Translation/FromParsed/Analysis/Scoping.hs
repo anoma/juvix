@@ -612,6 +612,11 @@ resolveFixitySyntaxDef fdef@FixitySyntaxDef {..} = topBindings $ do
   below <- mapM (checkFixitySymbol . WithLoc loc) $ fi ^. FI.fixityPrecBelow
   above <- mapM (checkFixitySymbol . WithLoc loc) $ fi ^. FI.fixityPrecAbove
   tab <- getInfoTable
+  fid <- maybe freshNameId (return . getFixityId tab) same
+  let below' = map (getFixityId tab) below
+      above' = map (getFixityId tab) above
+  forM_ above' (`registerPrecedence` fid)
+  forM_ below' (registerPrecedence fid)
   let samePrec = getPrec tab <$> same
       belowPrec :: Integer
       belowPrec = fromIntegral $ maximum (minInt + 1 : map (getPrec tab) above)
@@ -625,7 +630,8 @@ resolveFixitySyntaxDef fdef@FixitySyntaxDef {..} = topBindings $ do
   let prec = fromMaybe (fromInteger $ (abovePrec + belowPrec) `div` 2) samePrec
       fx =
         Fixity
-          { _fixityPrecedence = PrecNat prec,
+          { _fixityId = Just fid,
+            _fixityPrecedence = PrecNat prec,
             _fixityArity =
               case fi ^. FI.fixityArity of
                 FI.Unary -> Unary AssocPostfix
@@ -653,8 +659,14 @@ resolveFixitySyntaxDef fdef@FixitySyntaxDef {..} = topBindings $ do
       Just same -> Just <$> checkFixitySymbol (WithLoc loc same)
       Nothing -> return Nothing
 
+    getFixityDef :: InfoTable -> S.Symbol -> FixityDef
+    getFixityDef tab = fromJust . flip HashMap.lookup (tab ^. infoFixities) . (^. S.nameId)
+
     getPrec :: InfoTable -> S.Symbol -> Int
-    getPrec tab = (^. fixityDefPrec) . fromJust . flip HashMap.lookup (tab ^. infoFixities) . (^. S.nameId)
+    getPrec tab = (^. fixityDefPrec) . getFixityDef tab
+
+    getFixityId :: InfoTable -> S.Symbol -> S.NameId
+    getFixityId tab = fromJust . (^. fixityDefFixity . fixityId) . getFixityDef tab
 
 resolveOperatorSyntaxDef ::
   forall r.
@@ -2283,6 +2295,48 @@ resolveSyntaxDef = \case
   SyntaxIterator iterDef -> resolveIteratorSyntaxDef iterDef
 
 -------------------------------------------------------------------------------
+-- Check precedences are comparable
+-------------------------------------------------------------------------------
+
+checkPrecedences ::
+  forall r.
+  Members '[Error ScoperError, InfoTableBuilder] r =>
+  [S.Name] ->
+  Sem r ()
+checkPrecedences opers = do
+  tab <- getInfoTable
+  let fids = mapMaybe (^. fixityId) $ mapMaybe (^. S.nameFixity) opers
+      deps = createDependencyInfo (tab ^. infoPrecedenceGraph) mempty
+  mapM_ (uncurry (checkPath deps)) $
+    [(fid1, fid2) | fid1 <- fids, fid2 <- fids, fid1 /= fid2]
+  where
+    checkPath :: DependencyInfo S.NameId -> S.NameId -> S.NameId -> Sem r ()
+    checkPath deps fid1 fid2 =
+      unless (isPath deps fid1 fid2 || isPath deps fid2 fid1) $
+        throw (ErrIncomparablePrecedences (IncomaprablePrecedences (findOper fid1) (findOper fid2)))
+
+    findOper :: S.NameId -> S.Name
+    findOper fid =
+      fromJust $
+        find
+          (maybe False (\fx -> Just fid == (fx ^. fixityId)) . (^. S.nameFixity))
+          opers
+
+checkExpressionPrecedences :: Members '[Error ScoperError, InfoTableBuilder] r => ExpressionAtoms 'Scoped -> Sem r ()
+checkExpressionPrecedences (ExpressionAtoms atoms _) =
+  checkPrecedences opers
+  where
+    opers :: [S.Name]
+    opers = mapMaybe P.getExpressionAtomIden (toList atoms)
+
+checkPatternPrecedences :: Members '[Error ScoperError, InfoTableBuilder] r => PatternAtoms 'Scoped -> Sem r ()
+checkPatternPrecedences (PatternAtoms atoms _) =
+  checkPrecedences opers
+  where
+    opers :: [S.Name]
+    opers = mapMaybe P.getPatternAtomIden (toList atoms)
+
+-------------------------------------------------------------------------------
 -- Infix Expression
 -------------------------------------------------------------------------------
 
@@ -2385,10 +2439,11 @@ makeExpressionTable (ExpressionAtoms atoms _) = [recordUpdate] : [appOpExplicit]
 
 parseExpressionAtoms ::
   forall r.
-  (Members '[Error ScoperError, State Scope] r) =>
+  (Members '[Error ScoperError, State Scope, InfoTableBuilder] r) =>
   ExpressionAtoms 'Scoped ->
   Sem r Expression
-parseExpressionAtoms a@(ExpressionAtoms sections _) = do
+parseExpressionAtoms a@(ExpressionAtoms atoms _) = do
+  checkExpressionPrecedences a
   case res of
     Left {} ->
       throw
@@ -2399,7 +2454,7 @@ parseExpressionAtoms a@(ExpressionAtoms sections _) = do
   where
     parser :: Parse Expression
     parser = runM (mkExpressionParser tbl) <* P.eof
-    res = P.parse parser filePath (toList sections)
+    res = P.parse parser filePath (toList atoms)
     tbl = makeExpressionTable a
     filePath :: FilePath
     filePath = ""
@@ -2731,7 +2786,7 @@ mkPatternParser table = embed @ParsePat pPattern
         parseTermRec = runReader pPattern parsePatternTerm
 
 parsePatternAtom ::
-  (Members '[Error ScoperError, State Scope] r) =>
+  (Members '[Error ScoperError, State Scope, InfoTableBuilder] r) =>
   PatternAtom 'Scoped ->
   Sem r PatternArg
 parsePatternAtom = parsePatternAtoms . singletonAtom
@@ -2740,10 +2795,11 @@ parsePatternAtom = parsePatternAtoms . singletonAtom
     singletonAtom a = PatternAtoms (NonEmpty.singleton a) (Irrelevant (getLoc a))
 
 parsePatternAtoms ::
-  (Members '[Error ScoperError, State Scope] r) =>
+  (Members '[Error ScoperError, State Scope, InfoTableBuilder] r) =>
   PatternAtoms 'Scoped ->
   Sem r PatternArg
 parsePatternAtoms atoms@(PatternAtoms sec' _) = do
+  checkPatternPrecedences atoms
   case run (runError res) of
     Left e -> throw e -- Scoper effect error
     Right Left {} -> throw (ErrInfixPattern (InfixErrorP atoms)) -- Megaparsec error
