@@ -964,7 +964,7 @@ newTypeSignature _signBuiltin = P.label "<function definition>" $ do
         return (opn, n, impl, c)
       _sigArgType <- case _sigArgColon of
         Just {} -> parseExpressionAtoms
-        Nothing -> return $ mkAtomHole (getLoc openDelim)
+        Nothing -> return $ mkAtomUniverse (getLoc openDelim)
       closeDelim <- implicitClose _sigArgImplicit
       let _sigArgDelims = Irrelevant (openDelim, closeDelim)
       return SigArg {..}
@@ -1321,16 +1321,6 @@ newOpenSyntax = do
       _openImportAsName = im ^. importAsName
       _openPublic = maybe NoPublic (const Public) (_openPublicKw ^. unIrrelevant)
   return OpenModule {..}
-
-mkAtomHole :: Interval -> ExpressionAtoms 'Parsed
-mkAtomHole loc = ExpressionAtoms (AtomHole r :| []) (Irrelevant loc)
-  where
-    r =
-      KeywordRef
-        { _keywordRefKeyword = kwWildcard,
-          _keywordRefInterval = loc,
-          _keywordRefUnicode = Ascii
-        }
 
 mkAtomUniverse :: Interval -> ExpressionAtoms 'Parsed
 mkAtomUniverse loc = ExpressionAtoms (AtomUniverse u :| []) (Irrelevant loc)
