@@ -955,19 +955,25 @@ newTypeSignature _signBuiltin = P.label "<function definition>" $ do
   where
     parseArg :: ParsecS r (SigArg 'Parsed)
     parseArg = do
-      (openDelim, _sigArgNames, _sigArgImplicit, _sigArgColon) <- P.try $ do
+      (openDelim, _sigArgNames, _sigArgImplicit, colonMay) <- P.try $ do
         (opn, impl) <- implicitOpen
-        n <- some1 ((ArgumentSymbol <$> symbol) <|> (ArgumentWildcard <$> wildcard))
+        let parseArgumentName :: ParsecS r (Argument 'Parsed) =
+              ArgumentSymbol <$> symbol
+                <|> ArgumentWildcard <$> wildcard
+        n <- some1 parseArgumentName
         c <- case impl of
           Implicit -> optional (Irrelevant <$> kw kwColon)
           Explicit -> Just . Irrelevant <$> kw kwColon
         return (opn, n, impl, c)
-      _sigArgType <- case _sigArgColon of
-        Just {} -> parseExpressionAtoms
-        Nothing -> return $ mkAtomUniverse (getLoc openDelim)
+      _sigArgRhs <- mapM parseRhs colonMay
       closeDelim <- implicitClose _sigArgImplicit
       let _sigArgDelims = Irrelevant (openDelim, closeDelim)
       return SigArg {..}
+      where
+        parseRhs :: Irrelevant KeywordRef -> ParsecS r (SigArgRhs 'Parsed)
+        parseRhs _sigArgColon = do
+          _sigArgType <- parseExpressionAtoms
+          return SigArgRhs {..}
 
     parseBody :: ParsecS r (FunctionDefBody 'Parsed)
     parseBody =
@@ -1082,22 +1088,26 @@ inductiveDef _inductiveBuiltin = do
       P.<?> "<constructor definition>"
   return InductiveDef {..}
 
-inductiveParamsLong :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (InductiveParameters 'Parsed)
+inductiveParamsLong :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (InductiveParameters 'Parsed)
 inductiveParamsLong = parens $ do
   _inductiveParametersNames <- some1 symbol
-  _inductiveParametersColon <- optional (kw kwColon)
-  _inductiveParametersType <- case _inductiveParametersColon of
-    Just {} -> parseExpressionAtoms
-    Nothing -> return $ mkAtomUniverse (getLoc (head _inductiveParametersNames))
+  colonMay <- optional (Irrelevant <$> kw kwColon)
+  _inductiveParametersRhs <- mapM parseRhs colonMay
   return InductiveParameters {..}
+  where
+    parseRhs :: Irrelevant KeywordRef -> ParsecS r (InductiveParametersRhs 'Parsed)
+    parseRhs _inductiveParametersColon = do
+      _inductiveParametersType <- parseExpressionAtoms
+      return InductiveParametersRhs {..}
 
 inductiveParamsShort :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (InductiveParameters 'Parsed)
 inductiveParamsShort = do
   _inductiveParametersNames <- some1 symbol
-  let _inductiveParametersType = mkAtomUniverse (getLoc (head _inductiveParametersNames))
-      _inductiveParametersColon :: Maybe KeywordRef
-      _inductiveParametersColon = Nothing
-  return InductiveParameters {..}
+  return
+    InductiveParameters
+      { _inductiveParametersRhs = Nothing,
+        ..
+      }
 
 inductiveParams :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (InductiveParameters 'Parsed)
 inductiveParams = inductiveParamsLong <|> inductiveParamsShort
@@ -1321,19 +1331,3 @@ newOpenSyntax = do
       _openImportAsName = im ^. importAsName
       _openPublic = maybe NoPublic (const Public) (_openPublicKw ^. unIrrelevant)
   return OpenModule {..}
-
-mkAtomUniverse :: Interval -> ExpressionAtoms 'Parsed
-mkAtomUniverse loc = ExpressionAtoms (AtomUniverse u :| []) (Irrelevant loc)
-  where
-    u =
-      Universe
-        { _universeLevel = Nothing,
-          _universeKw = r,
-          _universeLevelLoc = Nothing
-        }
-    r =
-      KeywordRef
-        { _keywordRefKeyword = kwWildcard,
-          _keywordRefInterval = loc,
-          _keywordRefUnicode = Ascii
-        }
