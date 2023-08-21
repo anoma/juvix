@@ -759,18 +759,18 @@ instance SingI s => PrettyPrint (Argument s) where
     ArgumentSymbol s -> ppSymbolType s
     ArgumentWildcard w -> ppCode w
 
+instance SingI s => PrettyPrint (SigArgRhs s) where
+  ppCode :: (Members '[ExactPrint, Reader Options] r) => SigArgRhs s -> Sem r ()
+  ppCode SigArgRhs {..} =
+    ppCode _sigArgColon <+> ppExpressionType _sigArgType
+
 instance SingI s => PrettyPrint (SigArg s) where
   ppCode :: Members '[ExactPrint, Reader Options] r => SigArg s -> Sem r ()
   ppCode SigArg {..} = do
     let Irrelevant (l, r) = _sigArgDelims
         names' = hsep (fmap ppCode _sigArgNames)
-    case _sigArgColon of
-      Just c -> do
-        let colon' = ppCode c
-            ty' = ppExpressionType _sigArgType
-        ppCode l <> names' <+> colon' <+> ty' <> ppCode r
-      Nothing ->
-        ppCode l <> names' <> ppCode r
+        rhs = ppCode <$> _sigArgRhs
+    ppCode l <> names' <+?> rhs <> ppCode r
 
 instance SingI s => PrettyPrint (FunctionDef s) where
   ppCode :: forall r. Members '[ExactPrint, Reader Options] r => FunctionDef s -> Sem r ()
@@ -968,12 +968,15 @@ ppPatternAtom = case sing :: SStage s of
       PatternVariable s | s ^. S.nameVerbatim == "=" -> parens (ppCodeAtom pat)
       _ -> ppCodeAtom pat
 
+instance SingI s => PrettyPrint (InductiveParametersRhs s) where
+  ppCode InductiveParametersRhs {..} =
+    ppCode _inductiveParametersColon <+> ppExpressionType _inductiveParametersType
+
 instance SingI s => PrettyPrint (InductiveParameters s) where
   ppCode InductiveParameters {..} = do
     let names' = fmap (\nm -> annDef nm (ppSymbolType nm)) _inductiveParametersNames
-        ty' = ppExpressionType _inductiveParametersType
-    case _inductiveParametersColon of
-      Just {} -> parens (hsep names' <+> ppCode Kw.kwColon <+> ty')
+    case _inductiveParametersRhs of
+      Just rhs -> parens (hsep names' <+> ppCode rhs)
       Nothing -> hsep names'
 
 instance SingI s => PrettyPrint (NonEmpty (InductiveParameters s)) where
