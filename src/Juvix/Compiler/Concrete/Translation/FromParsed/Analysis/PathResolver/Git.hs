@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
+
 module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Git
   ( module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Git,
     module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Git.Error,
@@ -6,10 +8,10 @@ where
 
 import Data.Text qualified as T
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Git.Error
-import Juvix.Data.Effect.Process
-import Juvix.Prelude
 import Juvix.Compiler.Pipeline.Package
+import Juvix.Data.Effect.Process
 import Juvix.Extra.Paths
+import Juvix.Prelude
 
 data Git m a where
   Clone :: Path Abs Dir -> GitDependency -> Git m (Path Abs Dir)
@@ -20,7 +22,7 @@ cloneDir :: Path Abs Dir -> GitDependency -> Path Abs Dir
 cloneDir r d = r <//> relDependenciesDir <//> relDir (T.unpack (d ^. gitDependencyName))
 
 -- | Run a git command in the current working direcotory of the parent process.
-runGitCmd :: Members [Process, Error GitError] r => [Text] -> Sem r Text
+runGitCmd :: Members '[Process, Error GitError] r => [Text] -> Sem r Text
 runGitCmd args = do
   mcmd <- findExecutable' $(mkRelFile "git")
   case mcmd of
@@ -42,26 +44,26 @@ runGitCmd args = do
         ExitSuccess -> return ""
 
 -- | Run a git command within a directory, throws an error if the directory is not a valid clone
-runGitCmdInDir :: Members [Process, Error GitError, Reader (Path Abs Dir)] r => [Text] -> Sem r Text
+runGitCmdInDir :: Members '[Process, Error GitError, Reader (Path Abs Dir)] r => [Text] -> Sem r Text
 runGitCmdInDir args = do
   checkValidGitClone
   runGitCmdInDir' args
 
 -- | Run a git command within a directory
-runGitCmdInDir' :: Members [Process, Error GitError, Reader (Path Abs Dir)] r => [Text] -> Sem r Text
+runGitCmdInDir' :: Members '[Process, Error GitError, Reader (Path Abs Dir)] r => [Text] -> Sem r Text
 runGitCmdInDir' args = do
   p :: Path Abs Dir <- ask
   runGitCmd (["-C", T.pack (toFilePath p)] <> args)
 
 -- | Throws an error if the directory is not a valid git clone
-checkValidGitClone :: Members [Process, Error GitError, Reader (Path Abs Dir)] r => Sem r ()
+checkValidGitClone :: Members '[Process, Error GitError, Reader (Path Abs Dir)] r => Sem r ()
 checkValidGitClone = void gitHeadRef
 
-isValidGitClone :: Members '[Process, Reader (Path Abs Dir)] r =>  Sem r Bool
+isValidGitClone :: Members '[Process, Reader (Path Abs Dir)] r => Sem r Bool
 isValidGitClone = isRight <$> runError @GitError checkValidGitClone
 
 -- | Return the HEAD ref of the clone, throws NotAGitClone if the clone is invalid
-gitHeadRef :: Members [Process, Error GitError, Reader (Path Abs Dir)] r =>  Sem r Text
+gitHeadRef :: Members '[Process, Error GitError, Reader (Path Abs Dir)] r => Sem r Text
 gitHeadRef = catch (T.strip <$> runGitCmdInDir' ["rev-parse", "HEAD"]) $ \case
   (GitCmdError GitCmdErrorDetails {_gitCmdErrorDetailsExitCode = ExitFailure 128}) -> do
     p <- ask
