@@ -30,9 +30,18 @@ data GitDependency = GitDependency
   }
   deriving stock (Generic, Eq, Show)
 
+data PackageDependencyInfo = PackageDependencyInfo
+  { _packageDependencyInfoPackageFile :: Path Abs File,
+    _packageDepdendencyInfoDependency :: Dependency
+  }
+
+makeLenses ''PackageDependencyInfo
 makeLenses ''Dependency
 makeLenses ''GitDependency
 makeLenses ''PathDependency
+
+mkPackageDependencyInfo :: Path Abs File -> Dependency -> PackageDependencyInfo
+mkPackageDependencyInfo = PackageDependencyInfo
 
 instance Pretty PathDependency where
   pretty (PathDependency p) = pretty p

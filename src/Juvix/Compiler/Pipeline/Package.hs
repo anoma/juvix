@@ -11,6 +11,7 @@ module Juvix.Compiler.Pipeline.Package
     packageVersion,
     packageDependencies,
     packageMain,
+    packageFile,
     rawPackage,
     readPackage,
     readPackageIO,
@@ -18,6 +19,7 @@ module Juvix.Compiler.Pipeline.Package
     globalPackage,
     emptyPackage,
     readGlobalPackage,
+    mkPackageFilePath,
   )
 where
 
@@ -177,6 +179,9 @@ globalPackage =
       _packageFile = ()
     }
 
+mkPackageFilePath :: Path Abs Dir -> Path Abs File
+mkPackageFilePath = (<//> juvixYamlFile)
+
 -- | Given some directory d it tries to read the file d/juvix.yaml and parse its contents
 readPackage ::
   forall r.
@@ -190,7 +195,7 @@ readPackage root buildDir = do
       | ByteString.null bs -> return (emptyPackage buildDir yamlPath)
       | otherwise -> either (throw . pack . prettyPrintParseException) (processPackage yamlPath buildDir) (decodeEither' bs)
   where
-    yamlPath = root <//> juvixYamlFile
+    yamlPath = mkPackageFilePath root
 
 readPackageIO :: Path Abs Dir -> BuildDir -> IO Package
 readPackageIO root buildDir = do

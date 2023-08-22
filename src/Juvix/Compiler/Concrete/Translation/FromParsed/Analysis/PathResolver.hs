@@ -68,6 +68,19 @@ iniResolverState =
 withEnvRoot :: Members '[Reader ResolverEnv] r => Path Abs Dir -> Sem r a -> Sem r a
 withEnvRoot root' = local (set envRoot root')
 
+mkPackage ::
+  forall r.
+  (Members '[Files, Error Text, Reader ResolverEnv, Git] r) =>
+  Maybe EntryPoint ->
+  Path Abs Dir ->
+  Sem r Package
+mkPackage mpackageEntry _packageRoot = do
+  let buildDir :: Path Abs Dir = maybe (rootBuildDir _packageRoot) (someBaseToAbs _packageRoot . (^. entryPointBuildDir)) mpackageEntry
+      buildDirDep :: BuildDir
+        | isJust mpackageEntry = CustomBuildDir (Abs buildDir)
+        | otherwise = DefaultBuildDir
+  maybe (readPackage _packageRoot buildDirDep) (return . (^. entryPointPackage)) mpackageEntry
+
 mkPackageInfo ::
   forall r.
   (Members '[Files, Error Text, Reader ResolverEnv, Git] r) =>
@@ -76,13 +89,9 @@ mkPackageInfo ::
   Sem r PackageInfo
 mkPackageInfo mpackageEntry _packageRoot = do
   let buildDir :: Path Abs Dir = maybe (rootBuildDir _packageRoot) (someBaseToAbs _packageRoot . (^. entryPointBuildDir)) mpackageEntry
-      buildDirDep :: BuildDir
-        | isJust mpackageEntry = CustomBuildDir (Abs buildDir)
-        | otherwise = DefaultBuildDir
-
-  _packagePackage <- maybe (readPackage _packageRoot buildDirDep) (return . (^. entryPointPackage)) mpackageEntry
+  _packagePackage <- mkPackage mpackageEntry _packageRoot
   let deps :: [Dependency] = _packagePackage ^. packageDependencies
-  depsPaths <- mapM getDependencyPath deps
+  depsPaths <- mapM (getDependencyPath . mkPackageDependencyInfo (_packagePackage ^. packageFile)) deps
   ensureStdlib _packageRoot buildDir deps
   files :: [Path Rel File] <-
     map (fromJust . stripProperPrefix _packageRoot) <$> walkDirRelAccum juvixAccum _packageRoot []
@@ -103,14 +112,20 @@ dependencyCached p = HashMap.member p <$> gets (^. resolverPackages)
 withPathFile :: (Members '[PathResolver] r) => TopModulePath -> (Either PathResolverError (Path Abs File) -> Sem r a) -> Sem r a
 withPathFile m f = withPath m (f . mapRight (uncurry (<//>)))
 
-getDependencyPath :: Members '[Reader ResolverEnv, Files, Git] r => Dependency -> Sem r (Path Abs Dir)
-getDependencyPath = \case
+getDependencyPath :: (Members '[Reader ResolverEnv, Files, Git] r) => PackageDependencyInfo -> Sem r (Path Abs Dir)
+getDependencyPath i = case i ^. packageDepdendencyInfoDependency of
   DependencyPath p -> do
     r <- asks (^. envRoot)
     canonicalDir r (p ^. pathDependencyPath)
   DependencyGit g -> do
     r <- rootBuildDir <$> asks (^. envRoot)
-    clone r g
+    clone
+      r
+      ( GitDepInfo
+          { _gitDepInfoPackageFile = i ^. packageDependencyInfoPackageFile,
+            _gitDepInfoDependency = g
+          }
+      )
 
 registerDependencies' ::
   (Members '[Reader EntryPoint, State ResolverState, Reader ResolverEnv, Files, Error Text, Git] r) =>
@@ -122,20 +137,23 @@ registerDependencies' = do
       | isGlobal -> do
           glob <- globalRoot
           let globDep = mkPathDependency (toFilePath glob)
-          addDependency' (Just e) globDep
-      | otherwise -> addDependency' (Just e) (mkPathDependency (toFilePath (e ^. entryPointRoot)))
+              globalPackageFile = mkPackageFilePath glob
+          addDependency' (Just e) (mkPackageDependencyInfo globalPackageFile globDep)
+      | otherwise -> do
+          let f = mkPackageFilePath (e ^. entryPointRoot)
+          addDependency' (Just e) (mkPackageDependencyInfo f (mkPathDependency (toFilePath (e ^. entryPointRoot))))
 
 addDependency' ::
   (Members '[State ResolverState, Reader ResolverEnv, Files, Error Text, Git] r) =>
   Maybe EntryPoint ->
-  Dependency ->
+  PackageDependencyInfo ->
   Sem r ()
 addDependency' me = addDependencyHelper me
 
 addDependencyHelper ::
   (Members '[State ResolverState, Reader ResolverEnv, Files, Error Text, Git] r) =>
   Maybe EntryPoint ->
-  Dependency ->
+  PackageDependencyInfo ->
   Sem r ()
 addDependencyHelper me d = do
   p <- getDependencyPath d
@@ -144,7 +162,8 @@ addDependencyHelper me d = do
     modify' (set (resolverPackages . at p) (Just pkgInfo))
     forM_ (pkgInfo ^. packageRelativeFiles) $ \f -> do
       modify' (over resolverFiles (HashMap.insertWith (<>) f (pure pkgInfo)))
-    forM_ (pkgInfo ^. packagePackage . packageDependencies) (addDependency' Nothing)
+    let packagePath = pkgInfo ^. packagePackage . packageFile
+    forM_ (pkgInfo ^. packagePackage . packageDependencies) (addDependency' Nothing . mkPackageDependencyInfo packagePath)
 
 currentPackage :: (Members '[State ResolverState, Reader ResolverEnv] r) => Sem r PackageInfo
 currentPackage = do
@@ -180,7 +199,7 @@ resolvePath' mp = do
               }
         )
 
-expectedPath' :: Members '[Reader ResolverEnv] r => Path Abs File -> TopModulePath -> Sem r (Maybe (Path Abs File))
+expectedPath' :: (Members '[Reader ResolverEnv] r) => Path Abs File -> TopModulePath -> Sem r (Maybe (Path Abs File))
 expectedPath' actualPath m = do
   root <- asks (^. envRoot)
   msingle <- asks (^. envSingleFile)

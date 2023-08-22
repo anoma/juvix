@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
-
 module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Git
   ( module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Git,
     module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Git.Error,
@@ -13,25 +11,43 @@ import Juvix.Data.Effect.Process
 import Juvix.Extra.Paths
 import Juvix.Prelude
 
+data GitDepInfo = GitDepInfo
+  { _gitDepInfoDependency :: GitDependency,
+    _gitDepInfoPackageFile :: Path Abs File
+  }
+
 data Git m a where
-  Clone :: Path Abs Dir -> GitDependency -> Git m (Path Abs Dir)
+  Clone :: Path Abs Dir -> GitDepInfo -> Git m (Path Abs Dir)
+
+data GitCloneInfo = GitCloneInfo
+  { _gitCloneInfoCloneDir :: Path Abs Dir,
+    _gitCloneInfoPackageFile :: Path Abs File
+  }
 
 makeSem ''Git
+
+makeLenses ''GitDepInfo
+makeLenses ''GitCloneInfo
 
 cloneDir :: Path Abs Dir -> GitDependency -> Path Abs Dir
 cloneDir r d = r <//> relDependenciesDir <//> relDir (T.unpack (d ^. gitDependencyName))
 
+throwGitError :: (Members '[Reader GitCloneInfo, Error GitError] r) => GitErrorCause -> Sem r a
+throwGitError _gitErrorCause = do
+  _gitErrorPackageFile <- asks (^. gitCloneInfoPackageFile)
+  throw GitError {..}
+
 -- | Run a git command in the current working direcotory of the parent process.
-runGitCmd :: Members '[Process, Error GitError] r => [Text] -> Sem r Text
+runGitCmd :: (Members '[Process, Error GitError, Reader GitCloneInfo] r) => [Text] -> Sem r Text
 runGitCmd args = do
   mcmd <- findExecutable' $(mkRelFile "git")
   case mcmd of
-    Nothing -> throw GitCmdNotFound
+    Nothing -> throwGitError GitCmdNotFound
     Just cmd -> do
       res <- readProcess' (ProcessCall {_processCallPath = cmd, _processCallArgs = args})
       case res ^. processResultExitCode of
         ExitFailure {} ->
-          throw
+          throwGitError
             ( GitCmdError
                 ( GitCmdErrorDetails
                     { _gitCmdErrorDetailsCmdPath = cmd,
@@ -44,42 +60,46 @@ runGitCmd args = do
         ExitSuccess -> return ""
 
 -- | Run a git command within a directory, throws an error if the directory is not a valid clone
-runGitCmdInDir :: Members '[Process, Error GitError, Reader (Path Abs Dir)] r => [Text] -> Sem r Text
+runGitCmdInDir :: (Members '[Process, Error GitError, Reader GitCloneInfo] r) => [Text] -> Sem r Text
 runGitCmdInDir args = do
   checkValidGitClone
   runGitCmdInDir' args
 
 -- | Run a git command within a directory
-runGitCmdInDir' :: Members '[Process, Error GitError, Reader (Path Abs Dir)] r => [Text] -> Sem r Text
+runGitCmdInDir' :: (Members '[Process, Error GitError, Reader GitCloneInfo] r) => [Text] -> Sem r Text
 runGitCmdInDir' args = do
-  p :: Path Abs Dir <- ask
+  p :: Path Abs Dir <- asks (^. gitCloneInfoCloneDir)
   runGitCmd (["-C", T.pack (toFilePath p)] <> args)
 
 -- | Throws an error if the directory is not a valid git clone
-checkValidGitClone :: Members '[Process, Error GitError, Reader (Path Abs Dir)] r => Sem r ()
+checkValidGitClone :: (Members '[Process, Error GitError, Reader GitCloneInfo] r) => Sem r ()
 checkValidGitClone = void gitHeadRef
 
-isValidGitClone :: Members '[Process, Reader (Path Abs Dir)] r => Sem r Bool
+isValidGitClone :: (Members '[Process, Reader GitCloneInfo] r) => Sem r Bool
 isValidGitClone = isRight <$> runError @GitError checkValidGitClone
 
 -- | Return the HEAD ref of the clone, throws NotAGitClone if the clone is invalid
-gitHeadRef :: Members '[Process, Error GitError, Reader (Path Abs Dir)] r => Sem r Text
+gitHeadRef :: (Members '[Process, Error GitError, Reader GitCloneInfo] r) => Sem r Text
 gitHeadRef = catch (T.strip <$> runGitCmdInDir' ["rev-parse", "HEAD"]) $ \case
-  (GitCmdError GitCmdErrorDetails {_gitCmdErrorDetailsExitCode = ExitFailure 128}) -> do
-    p <- ask
-    throw (NotAGitClone p)
+  GitError {_gitErrorCause = GitCmdError GitCmdErrorDetails {_gitCmdErrorDetailsExitCode = ExitFailure 128}} -> do
+    p <- asks (^. gitCloneInfoCloneDir)
+    throwGitError (NotAGitClone p)
   e -> throw e
 
-cloneGitRepo :: Members '[Files, Process, Error GitError, Reader (Path Abs Dir)] r => Text -> Sem r ()
+cloneGitRepo :: (Members '[Files, Process, Error GitError, Reader GitCloneInfo] r) => Text -> Sem r ()
 cloneGitRepo url = do
   -- (dirs, files) <- listDirRel p
   -- unless (null dirs && null files) (throw (NotAnEmptyDir p))
-  p :: Path Abs Dir <- ask
+  p :: Path Abs Dir <- asks (^. gitCloneInfoCloneDir)
   void (runGitCmd ["clone", url, T.pack (toFilePath p)])
 
-initGitRepo :: Members '[Files, Process, Error GitError, Reader (Path Abs Dir)] r => GitDependency -> Sem r ()
+initGitRepo :: (Members '[Files, Process, Error GitError, Reader GitCloneInfo] r) => GitDependency -> Sem r ()
 initGitRepo d = unlessM isValidGitClone (cloneGitRepo (d ^. gitDependencyUrl))
 
-runGit :: Members '[Files, Process, Error GitError] r => Sem (Git ': r) a -> Sem r a
+runGit :: (Members '[Files, Process, Error GitError] r) => Sem (Git ': r) a -> Sem r a
 runGit = interpret $ \case
-  Clone r d -> let outputDir = cloneDir r d in runReader (cloneDir r d) (initGitRepo d) >> return outputDir
+  Clone r d ->
+    let dep = d ^. gitDepInfoDependency
+        _gitCloneInfoCloneDir = cloneDir r dep
+        _gitCloneInfoPackageFile = d ^. gitDepInfoPackageFile
+     in runReader (GitCloneInfo {..}) (initGitRepo dep) >> return _gitCloneInfoCloneDir
