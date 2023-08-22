@@ -34,8 +34,8 @@ tests:
         --- Inductive natural numbers. I.e. whole non-negative numbers.
         builtin nat
         type Nat :=
-          | zero : Nat
-          | suc : Nat → Nat
+          | zero
+          | suc Nat
     exit-status: 0
 
   - name: repl-def-error
