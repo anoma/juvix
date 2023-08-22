@@ -8,13 +8,15 @@ import Juvix.Compiler.Core.Transformation.Base
 computeNodeType :: InfoTable -> Node -> Type
 computeNodeType tab = Info.getNodeType . computeNodeTypeInfo tab
 
--- | Computes the TypeInfo for each subnode.
+-- | Computes the TypeInfo for each subnode of a well-typed node.
 --
 -- Assumptions:
--- 1. All binders and identifiers are decorated with correct full type information.
--- 2. All cases have at least one branch.
--- 3. No `Match` nodes.
--- 4. All inductives and function types are in universe 0.
+-- 1. The node is well-typed.
+-- 2. All binders and identifiers are decorated with correct full type
+--    information.
+-- 3. All cases have at least one branch.
+-- 4. No `Match` nodes.
+-- 5. All inductives and function types are in universe 0.
 computeNodeTypeInfo :: InfoTable -> Node -> Node
 computeNodeTypeInfo tab = umapL go
   where
