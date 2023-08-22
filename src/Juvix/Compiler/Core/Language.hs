@@ -65,10 +65,8 @@ type Bottom = Bottom' Info Node
 
 {---------------------------------------------------------------------------------}
 
--- | `Node` is the type of nodes in the program tree. The nodes themselves
--- contain only runtime-relevant information. Runtime-irrelevant annotations
--- (including all type information) are stored in the infos associated with each
--- node.
+-- | `Node` is the type of nodes in the program tree. Extra
+-- annotations are stored in the infos associated with each node.
 data Node
   = NVar {-# UNPACK #-} !Var
   | NIdt {-# UNPACK #-} !Ident
@@ -97,7 +95,6 @@ data Node
 -- Other things we might need in the future:
 -- - laziness annotations (converting these to closure/thunk creation should be
 --   done further down the pipeline)
--- - neutral nodes (for evaluating open terms)
 
 -- A node (term) is closed if it has no free variables, i.e., no de Bruijn
 -- indices pointing outside the term.
@@ -111,7 +108,7 @@ data Node
 -- doesn't matter much outside the evaluator. See also:
 -- Juvix.Compiler.Core.Language.Value.
 
--- All nodes in an environment must be values.
+-- | All nodes in an environment must be values.
 type Env = [Node]
 
 instance HasAtomicity Node where
