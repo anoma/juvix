@@ -1250,12 +1250,12 @@ atomicExpression = do
 openModule :: forall r. (Members '[Error ParserError, PathResolver, Files, InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (OpenModule 'Parsed)
 openModule = do
   _openModuleKw <- kw kwOpen
-  _openModuleImportKw <- optional (kw kwImport)
   _openModuleName <- name
-  whenJust _openModuleImportKw (const (P.lift (importedModule (moduleNameToTopModulePath _openModuleName))))
   _openUsingHiding <- optional usingOrHiding
   _openPublicKw <- Irrelevant <$> optional (kw kwPublic)
   let _openPublic = maybe NoPublic (const Public) (_openPublicKw ^. unIrrelevant)
+      _openModuleImportKw :: Maybe KeywordRef
+      _openModuleImportKw = Nothing
   return
     OpenModule
       { _openImportAsName = Nothing,
