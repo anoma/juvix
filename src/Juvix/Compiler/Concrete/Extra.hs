@@ -18,7 +18,6 @@ import Data.IntMap.Strict qualified as IntMap
 import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Compiler.Concrete.Data.NameSignature.Base
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
-import Juvix.Compiler.Concrete.Keywords
 import Juvix.Compiler.Concrete.Language
 import Juvix.Prelude hiding (some)
 import Juvix.Prelude.Parsing
@@ -108,21 +107,10 @@ groupStatements = \case
       (StatementAxiom {}, _) -> False
       (StatementFunctionDef {}, _) -> False
       (_, StatementFunctionDef {}) -> False
-      (StatementTypeSignature sig, StatementFunctionClause fun) ->
-        case sing :: SStage s of
-          SParsed -> sig ^. sigName == fun ^. clauseOwnerFunction
-          SScoped -> sig ^. sigName == fun ^. clauseOwnerFunction
-      (StatementTypeSignature {}, _) -> False
-      (StatementFunctionClause fun1, StatementFunctionClause fun2) ->
-        case sing :: SStage s of
-          SParsed -> fun1 ^. clauseOwnerFunction == fun2 ^. clauseOwnerFunction
-          SScoped -> fun1 ^. clauseOwnerFunction == fun2 ^. clauseOwnerFunction
-      (StatementFunctionClause {}, _) -> False
       (StatementProjectionDef {}, StatementProjectionDef {}) -> True
       (StatementProjectionDef {}, _) -> False
     definesSymbol :: Symbol -> Statement s -> Bool
     definesSymbol n s = case s of
-      StatementTypeSignature sig -> n == symbolParsed (sig ^. sigName)
       StatementInductive d -> n `elem` syms d
       StatementAxiom d -> n == symbolParsed (d ^. axiomName)
       _ -> False
@@ -159,44 +147,7 @@ migrateFunctionSyntax m = over moduleBody (mapMaybe goStatement) m
       StatementInductive {} -> Just s
       StatementOpenModule {} -> Just s
       StatementFunctionDef {} -> Just s
-      StatementFunctionClause {} -> Nothing
       StatementProjectionDef {} -> Just s
-      StatementTypeSignature sig -> Just (StatementFunctionDef (mkFunctionDef sig (getClauses (sig ^. sigName))))
-
-    ss' :: [Statement 'Scoped]
-    ss' = m ^. moduleBody
-
-    mkFunctionDef :: TypeSignature 'Scoped -> [FunctionClause 'Scoped] -> FunctionDef 'Scoped
-    mkFunctionDef sig cls =
-      FunctionDef
-        { _signName = sig ^. sigName,
-          _signColonKw = sig ^. sigColonKw,
-          _signRetType = sig ^. sigType,
-          _signDoc = sig ^. sigDoc,
-          _signPragmas = sig ^. sigPragmas,
-          _signTerminating = sig ^. sigTerminating,
-          _signBuiltin = sig ^. sigBuiltin,
-          _signArgs = [],
-          _signBody = case sig ^. sigBody of
-            Just e -> SigBodyExpression e
-            Nothing -> case cls of
-              [] -> impossible
-              [c]
-                | null (c ^. clausePatterns) -> SigBodyExpression (c ^. clauseBody)
-                | otherwise -> SigBodyClauses (pure (mkClause c))
-              c : cs -> SigBodyClauses (mkClause <$> c :| cs)
-        }
-      where
-        mkClause :: FunctionClause 'Scoped -> NewFunctionClause 'Scoped
-        mkClause c =
-          NewFunctionClause
-            { _clausenPipeKw = Irrelevant (KeywordRef kwPipe (getLoc (c ^. clauseOwnerFunction)) Ascii),
-              _clausenAssignKw = c ^. clauseAssignKw,
-              _clausenBody = c ^. clauseBody,
-              _clausenPatterns = nonEmpty' (c ^. clausePatterns)
-            }
-    getClauses :: S.Symbol -> [FunctionClause 'Scoped]
-    getClauses name = [c | StatementFunctionClause c <- ss', name == c ^. clauseOwnerFunction]
 
 recordNameSignatureByIndex :: RecordNameSignature -> IntMap Symbol
 recordNameSignatureByIndex = IntMap.fromList . (^.. recordNames . each . to swap)

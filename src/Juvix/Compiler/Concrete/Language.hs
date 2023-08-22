@@ -185,24 +185,20 @@ data Definition (s :: Stage)
   | DefinitionFunctionDef (FunctionDef s)
   | DefinitionInductive (InductiveDef s)
   | DefinitionAxiom (AxiomDef s)
-  | DefinitionTypeSignature (TypeSignature s)
   | DefinitionProjectionDef (ProjectionDef s)
 
 data NonDefinition (s :: Stage)
   = NonDefinitionImport (Import s)
   | NonDefinitionModule (Module s 'ModuleLocal)
-  | NonDefinitionFunctionClause (FunctionClause s)
   | NonDefinitionOpenModule (OpenModule s)
 
 data Statement (s :: Stage)
   = StatementSyntax (SyntaxDef s)
-  | StatementTypeSignature (TypeSignature s)
   | StatementFunctionDef (FunctionDef s)
   | StatementImport (Import s)
   | StatementInductive (InductiveDef s)
   | StatementModule (Module s 'ModuleLocal)
   | StatementOpenModule (OpenModule s)
-  | StatementFunctionClause (FunctionClause s)
   | StatementAxiom (AxiomDef s)
   | StatementProjectionDef (ProjectionDef s)
 
@@ -1263,7 +1259,7 @@ instance HasFixity PostfixApplication where
 data Let (s :: Stage) = Let
   { _letKw :: KeywordRef,
     _letInKw :: Irrelevant KeywordRef,
-    _letClauses :: NonEmpty (LetClause s),
+    _letFunDefs :: NonEmpty (FunctionDef s),
     _letExpression :: ExpressionType s
   }
 
@@ -1278,22 +1274,6 @@ deriving stock instance Eq (Let 'Scoped)
 deriving stock instance Ord (Let 'Parsed)
 
 deriving stock instance Ord (Let 'Scoped)
-
-data LetClause (s :: Stage)
-  = LetTypeSig (TypeSignature s)
-  | LetFunClause (FunctionClause s)
-
-deriving stock instance Show (LetClause 'Parsed)
-
-deriving stock instance Show (LetClause 'Scoped)
-
-deriving stock instance Eq (LetClause 'Parsed)
-
-deriving stock instance Eq (LetClause 'Scoped)
-
-deriving stock instance Ord (LetClause 'Parsed)
-
-deriving stock instance Ord (LetClause 'Scoped)
 
 data CaseBranch (s :: Stage) = CaseBranch
   { _caseBranchPipe :: Irrelevant KeywordRef,
@@ -1847,13 +1827,11 @@ instance HasLoc (Statement 'Scoped) where
   getLoc :: Statement 'Scoped -> Interval
   getLoc = \case
     StatementSyntax t -> getLoc t
-    StatementTypeSignature t -> getLoc t
     StatementFunctionDef t -> getLoc t
     StatementImport t -> getLoc t
     StatementInductive t -> getLoc t
     StatementModule t -> getLoc t
     StatementOpenModule t -> getLoc t
-    StatementFunctionClause t -> getLoc t
     StatementAxiom t -> getLoc t
     StatementProjectionDef t -> getLoc t
 

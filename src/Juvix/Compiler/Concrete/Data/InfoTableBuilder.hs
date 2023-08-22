@@ -14,9 +14,7 @@ data InfoTableBuilder m a where
   RegisterAxiom :: AxiomDef 'Scoped -> InfoTableBuilder m ()
   RegisterConstructor :: S.Symbol -> ConstructorDef 'Scoped -> InfoTableBuilder m ()
   RegisterInductive :: InductiveDef 'Scoped -> InfoTableBuilder m ()
-  RegisterTypeSignature :: TypeSignature 'Scoped -> InfoTableBuilder m ()
   RegisterFunctionDef :: FunctionDef 'Scoped -> InfoTableBuilder m ()
-  RegisterFunctionClause :: FunctionClause 'Scoped -> InfoTableBuilder m ()
   RegisterName :: HasLoc c => S.Name' c -> InfoTableBuilder m ()
   RegisterModule :: Module 'Scoped 'ModuleTop -> InfoTableBuilder m ()
   RegisterFixity :: FixityDef -> InfoTableBuilder m ()
@@ -54,27 +52,11 @@ toState = reinterpret $ \case
           registerDoc (ity ^. inductiveName . nameId) j
   RegisterFunctionDef f ->
     let ref = f ^. signName . S.nameId
-        info = FunctionInfoNew f
+        info = FunctionInfo f
         j = f ^. signDoc
      in do
           modify (set (infoFunctions . at ref) (Just info))
           registerDoc (f ^. signName . nameId) j
-  RegisterTypeSignature f ->
-    let ref = f ^. sigName . S.nameId
-        info =
-          FunctionInfoOld
-            OldFunctionInfo
-              { _oldFunctionInfoType = f,
-                _oldFunctionInfoClauses = []
-              }
-        j = f ^. sigDoc
-     in do
-          modify (set (infoFunctions . at ref) (Just info))
-          registerDoc (f ^. sigName . nameId) j
-  RegisterFunctionClause c ->
-    -- assumes the signature has already been registered
-    let key = c ^. clauseOwnerFunction . S.nameId
-     in modify (over (infoFunctions . at key . _Just . _FunctionInfoOld . oldFunctionInfoClauses) (`snoc` c))
   RegisterName n -> modify (over highlightNames (cons (S.AName n)))
   RegisterModule m -> do
     let j = m ^. moduleDoc

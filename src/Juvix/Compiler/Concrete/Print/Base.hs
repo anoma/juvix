@@ -234,11 +234,7 @@ instance PrettyPrint S.AName where
 
 instance PrettyPrint FunctionInfo where
   ppCode = \case
-    FunctionInfoOld f -> do
-      let ty = StatementTypeSignature (f ^. oldFunctionInfoType)
-          cs = map StatementFunctionClause (f ^. oldFunctionInfoClauses)
-      ppStatements (ty : cs)
-    FunctionInfoNew f -> ppCode f
+    FunctionInfo f -> ppCode f
 
 instance SingI s => PrettyPrint (List s) where
   ppCode List {..} = do
@@ -448,9 +444,9 @@ instance SingI s => PrettyPrint (LambdaClause s) where
 
 instance SingI s => PrettyPrint (Let s) where
   ppCode Let {..} = do
-    let letClauses' = blockIndent (ppBlock _letClauses)
+    let letFunDefs' = blockIndent (ppBlock _letFunDefs)
         letExpression' = ppExpressionType _letExpression
-    ppCode _letKw <> letClauses' <> ppCode _letInKw <+> letExpression'
+    ppCode _letKw <> letFunDefs' <> ppCode _letInKw <+> letExpression'
 
 instance SingI s => PrettyPrint (Case s) where
   ppCode Case {..} = do
@@ -554,11 +550,6 @@ instance SingI s => PrettyPrint (CaseBranch s) where
     let pat' = ppPatternParensType _caseBranchPattern
         e' = ppExpressionType _caseBranchExpression
     ppCode _caseBranchPipe <+> pat' <+> ppCode _caseBranchAssignKw <> oneLineOrNext e'
-
-instance SingI s => PrettyPrint (LetClause s) where
-  ppCode c = case c of
-    LetTypeSig sig -> ppCode sig
-    LetFunClause cl -> ppCode cl
 
 ppBlock :: (PrettyPrint a, Members '[Reader Options, ExactPrint] r, Traversable t) => t a -> Sem r ()
 ppBlock items = vsep (sepEndSemicolon (fmap ppCode items))
@@ -1090,13 +1081,11 @@ instance SingI s => PrettyPrint (ProjectionDef s) where
 instance SingI s => PrettyPrint (Statement s) where
   ppCode = \case
     StatementSyntax s -> ppCode s
-    StatementTypeSignature s -> ppCode s
     StatementFunctionDef f -> ppCode f
     StatementImport i -> ppCode i
     StatementInductive i -> ppCode i
     StatementModule m -> ppCode m
     StatementOpenModule o -> ppCode o
-    StatementFunctionClause c -> ppCode c
     StatementAxiom a -> ppCode a
     StatementProjectionDef a -> ppCode a
 

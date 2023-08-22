@@ -778,24 +778,6 @@ checkFunctionDef FunctionDef {..} = do
             _clausenAssignKw
           }
 
-checkTypeSignature ::
-  Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, State ScoperSyntax, Reader BindingStrategy] r =>
-  TypeSignature 'Parsed ->
-  Sem r (TypeSignature 'Scoped)
-checkTypeSignature TypeSignature {..} = do
-  sigType' <- checkParseExpressionAtoms _sigType
-  sigName' <- bindFunctionSymbol _sigName
-  sigDoc' <- mapM checkJudoc _sigDoc
-  sigBody' <- mapM checkParseExpressionAtoms _sigBody
-  registerTypeSignature
-    @$> TypeSignature
-      { _sigName = sigName',
-        _sigType = sigType',
-        _sigDoc = sigDoc',
-        _sigBody = sigBody',
-        ..
-      }
-
 checkInductiveParameters ::
   forall r.
   Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r =>
@@ -1051,7 +1033,6 @@ checkModuleBody body = do
             toStatement = \case
               NonDefinitionImport d -> StatementImport d
               NonDefinitionModule d -> StatementModule d
-              NonDefinitionFunctionClause d -> StatementFunctionClause d
               NonDefinitionOpenModule d -> StatementOpenModule d
 
         goDefinitions :: forall t. Members '[Output (Statement s)] t => DefinitionsSection s -> Sem t ()
@@ -1065,7 +1046,6 @@ checkModuleBody body = do
               DefinitionAxiom d -> StatementAxiom d
               DefinitionFunctionDef d -> StatementFunctionDef d
               DefinitionInductive d -> StatementInductive d
-              DefinitionTypeSignature d -> StatementTypeSignature d
               DefinitionProjectionDef d -> StatementProjectionDef d
 
 checkSections ::
@@ -1115,7 +1095,6 @@ checkSections sec = do
             goNonDefinition = \case
               NonDefinitionModule m -> NonDefinitionModule <$> checkLocalModule m
               NonDefinitionImport i -> NonDefinitionImport <$> checkImport i
-              NonDefinitionFunctionClause i -> NonDefinitionFunctionClause <$> checkFunctionClause i
               NonDefinitionOpenModule i -> NonDefinitionOpenModule <$> checkOpenModule i
 
         goDefinitions :: DefinitionsSection 'Parsed -> Sem r' (DefinitionsSection 'Scoped)
@@ -1133,7 +1112,6 @@ checkSections sec = do
             reserveDefinition = \case
               DefinitionSyntax s -> resolveSyntaxDef s
               DefinitionFunctionDef d -> void (reserveFunctionSymbol d)
-              DefinitionTypeSignature d -> void (reserveSymbolOf SKNameFunction Nothing (d ^. sigName))
               DefinitionAxiom d -> void (reserveAxiomSymbol d)
               DefinitionProjectionDef d -> void (reserveProjectionSymbol d)
               DefinitionInductive d -> reserveInductive d
@@ -1176,7 +1154,6 @@ checkSections sec = do
             goDefinition = \case
               DefinitionSyntax s -> DefinitionSyntax <$> checkSyntaxDef s
               DefinitionFunctionDef d -> DefinitionFunctionDef <$> checkFunctionDef d
-              DefinitionTypeSignature d -> DefinitionTypeSignature <$> checkTypeSignature d
               DefinitionAxiom d -> DefinitionAxiom <$> checkAxiomDef d
               DefinitionInductive d -> DefinitionInductive <$> checkInductiveDef d
               DefinitionProjectionDef d -> DefinitionProjectionDef <$> checkProjectionDef d
@@ -1225,13 +1202,8 @@ checkSections sec = do
                                 _ -> fail
                               _ -> fail
 
-mkLetSections :: [LetClause 'Parsed] -> StatementSections 'Parsed
-mkLetSections = mkSections . map fromLetClause
-  where
-    fromLetClause :: LetClause 'Parsed -> Statement 'Parsed
-    fromLetClause = \case
-      LetTypeSig t -> StatementTypeSignature t
-      LetFunClause c -> StatementFunctionClause c
+mkLetSections :: [FunctionDef 'Parsed] -> StatementSections 'Parsed
+mkLetSections = mkSections . map StatementFunctionDef
 
 mkSections :: [Statement 'Parsed] -> StatementSections 'Parsed
 mkSections = \case
@@ -1271,7 +1243,6 @@ mkSections = \case
     fromStatement :: Statement 'Parsed -> Either (Definition 'Parsed) (NonDefinition 'Parsed)
     fromStatement = \case
       StatementAxiom a -> Left (DefinitionAxiom a)
-      StatementTypeSignature t -> Left (DefinitionTypeSignature t)
       StatementFunctionDef n -> Left (DefinitionFunctionDef n)
       StatementInductive i -> Left (DefinitionInductive i)
       StatementSyntax s -> Left (DefinitionSyntax s)
@@ -1279,7 +1250,6 @@ mkSections = \case
       StatementImport i -> Right (NonDefinitionImport i)
       StatementModule m -> Right (NonDefinitionModule m)
       StatementOpenModule o -> Right (NonDefinitionOpenModule o)
-      StatementFunctionClause c -> Right (NonDefinitionFunctionClause c)
 
 reserveLocalModuleSymbol ::
   Members '[Error ScoperError, State Scope, Reader ScopeParameters, State ScoperState, InfoTableBuilder, NameIdGen, Reader BindingStrategy] r =>
@@ -1585,37 +1555,6 @@ checkOpenModule op
   | isJust (op ^. openModuleImportKw) = checkOpenImportModule op
   | otherwise = checkOpenModuleNoImport Nothing op
 
-checkFunctionClause ::
-  forall r.
-  Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, Reader BindingStrategy] r =>
-  FunctionClause 'Parsed ->
-  Sem r (FunctionClause 'Scoped)
-checkFunctionClause clause@FunctionClause {..} = do
-  clauseOwnerFunction' <- checkTypeSigInScope
-  registerName (S.unqualifiedSymbol clauseOwnerFunction')
-  (clausePatterns', clauseBody') <- withLocalScope $ do
-    clp <- mapM checkParsePatternAtom _clausePatterns
-    clb <- checkParseExpressionAtoms _clauseBody
-    return (clp, clb)
-  registerFunctionClause
-    @$> FunctionClause
-      { _clauseOwnerFunction = clauseOwnerFunction',
-        _clausePatterns = clausePatterns',
-        _clauseBody = clauseBody',
-        _clauseAssignKw
-      }
-  where
-    fun = _clauseOwnerFunction
-    checkTypeSigInScope :: Sem r S.Symbol
-    checkTypeSigInScope = do
-      ms <- HashMap.lookup fun <$> gets (^. scopeLocalSymbols)
-      sym <- maybe err return ms
-      unless (S.isFunctionKind sym) err
-      return (set S.nameConcrete _clauseOwnerFunction sym)
-      where
-        err :: Sem r a
-        err = throw (ErrLacksTypeSig (LacksTypeSig clause))
-
 checkAxiomDef ::
   Members '[Reader ScopeParameters, InfoTableBuilder, Error ScoperError, State Scope, State ScoperState, NameIdGen, State ScoperSyntax, Reader BindingStrategy] r =>
   AxiomDef 'Parsed ->
@@ -1649,11 +1588,11 @@ checkFunction f = do
     return Function {..}
 
 -- | for now functions defined in let clauses cannot be infix operators
-checkLetClauses ::
+checkLetFunDefs ::
   Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r =>
-  NonEmpty (LetClause 'Parsed) ->
-  Sem r (NonEmpty (LetClause 'Scoped))
-checkLetClauses =
+  NonEmpty (FunctionDef 'Parsed) ->
+  Sem r (NonEmpty (FunctionDef 'Scoped))
+checkLetFunDefs =
   localBindings
     . ignoreSyntax
     . fmap fromSections
@@ -1661,31 +1600,29 @@ checkLetClauses =
     . mkLetSections
     . toList
   where
-    fromSections :: StatementSections s -> NonEmpty (LetClause s)
+    fromSections :: StatementSections s -> NonEmpty (FunctionDef s)
     fromSections = \case
       SectionsEmpty -> impossible
       SectionsDefinitions d -> fromDefs d
       SectionsNonDefinitions d -> fromNonDefs d
       where
-        fromDefs :: DefinitionsSection s -> NonEmpty (LetClause s)
+        fromDefs :: DefinitionsSection s -> NonEmpty (FunctionDef s)
         fromDefs DefinitionsSection {..} =
           (fromDef <$> _definitionsSection) <>? (fromNonDefs <$> _definitionsNext)
           where
-            fromDef :: Definition s -> LetClause s
+            fromDef :: Definition s -> FunctionDef s
             fromDef = \case
-              DefinitionTypeSignature d -> LetTypeSig d
-              DefinitionFunctionDef {} -> impossible
+              DefinitionFunctionDef d -> d
               DefinitionInductive {} -> impossible
               DefinitionProjectionDef {} -> impossible
               DefinitionAxiom {} -> impossible
               DefinitionSyntax {} -> impossible
-        fromNonDefs :: NonDefinitionsSection s -> NonEmpty (LetClause s)
+        fromNonDefs :: NonDefinitionsSection s -> NonEmpty (FunctionDef s)
         fromNonDefs NonDefinitionsSection {..} =
           (fromNonDef <$> _nonDefinitionsSection) <>? (fromDefs <$> _nonDefinitionsNext)
           where
-            fromNonDef :: NonDefinition s -> LetClause s
+            fromNonDef :: NonDefinition s -> FunctionDef s
             fromNonDef = \case
-              NonDefinitionFunctionClause f -> LetFunClause f
               NonDefinitionImport {} -> impossible
               NonDefinitionModule {} -> impossible
               NonDefinitionOpenModule {} -> impossible
@@ -1779,11 +1716,11 @@ checkLet ::
   Sem r (Let 'Scoped)
 checkLet Let {..} =
   withLocalScope $ do
-    letClauses' <- checkLetClauses _letClauses
+    letFunDefs' <- checkLetFunDefs _letFunDefs
     letExpression' <- checkParseExpressionAtoms _letExpression
     return
       Let
-        { _letClauses = letClauses',
+        { _letFunDefs = letFunDefs',
           _letExpression = letExpression',
           _letKw,
           _letInKw
