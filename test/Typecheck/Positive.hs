@@ -272,7 +272,11 @@ tests =
     posTest
       "Omit Type annotation"
       $(mkRelDir ".")
-      $(mkRelFile "OmitType.juvix")
+      $(mkRelFile "OmitType.juvix"),
+    posTest
+      "Issue 2296 (Pi types with lhs arity other than unit)"
+      $(mkRelDir "issue2296")
+      $(mkRelFile "M.juvix")
   ]
     <> [ compilationTest t | t <- Compilation.tests
        ]
