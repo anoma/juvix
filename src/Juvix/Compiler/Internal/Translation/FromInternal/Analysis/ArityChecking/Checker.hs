@@ -166,11 +166,8 @@ checkFunctionClause ari cl = do
 simplelambda :: a
 simplelambda = error "simple lambda expressions are not supported by the arity checker"
 
-withLocalTypeVar :: Members '[Reader LocalVars] r => VarName -> Sem r a -> Sem r a
-withLocalTypeVar v = withLocalVar v ArityUnit
-
-withLocalVar :: Members '[Reader LocalVars] r => VarName -> Arity -> Sem r a -> Sem r a
-withLocalVar v = local . withArity v
+withLocalVar :: Members '[Reader LocalVars] r => Arity -> VarName -> Sem r a -> Sem r a
+withLocalVar ari v = local (withArity v ari)
 
 withEmptyLocalVars :: Sem (Reader LocalVars ': r) a -> Sem r a
 withEmptyLocalVars = runReader emptyLocalVars
@@ -547,7 +544,8 @@ checkExpression hintArity expr = case expr of
     goFunction :: Function -> Sem r Function
     goFunction (Function l r) = do
       l' <- goFunctionParameter l
-      r' <- maybe id withLocalTypeVar (l ^. paramName) (checkType r)
+      let ari = typeArity (l' ^. paramType)
+      r' <- maybe id (withLocalVar ari) (l ^. paramName) (checkType r)
       return (Function l' r')
       where
         goFunctionParameter :: FunctionParameter -> Sem r FunctionParameter
