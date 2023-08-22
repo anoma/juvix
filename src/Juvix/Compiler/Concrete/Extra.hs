@@ -87,6 +87,7 @@ groupStatements = \case
       (StatementSyntax (SyntaxFixity _), _) -> False
       (StatementSyntax (SyntaxOperator o), s) -> definesSymbol (o ^. opSymbol) s
       (StatementSyntax (SyntaxIterator i), s) -> definesSymbol (i ^. iterSymbol) s
+      (StatementSyntax (SyntaxAlias {}), _) -> False
       (StatementImport _, StatementImport _) -> True
       (StatementImport i, StatementOpenModule o) -> case sing :: SStage s of
         SParsed -> True

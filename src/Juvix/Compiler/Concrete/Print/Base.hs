@@ -421,11 +421,17 @@ instance SingI s => PrettyPrint (Import s) where
         Nothing -> Nothing
         Just as -> Just (ppCode Kw.kwAs <+> ppModulePathType as)
 
+instance SingI s => PrettyPrint (AliasDef s) where
+  ppCode AliasDef {..} =
+    ppCode _aliasSyntaxKw <+> ppCode _aliasAliasKw <+> ppSymbolType _aliasName
+      <+> ppCode Kw.kwAssign <+> ppIdentifierType _aliasAsName
+
 instance SingI s => PrettyPrint (SyntaxDef s) where
   ppCode = \case
     SyntaxFixity f -> ppCode f
     SyntaxOperator op -> ppCode op
     SyntaxIterator it -> ppCode it
+    SyntaxAlias it -> ppCode it
 
 instance PrettyPrint Literal where
   ppCode = noLoc . ppLiteral

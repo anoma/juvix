@@ -39,6 +39,7 @@ import Juvix.Data.Keyword.All
     kwLambda,
     kwLet,
     kwMapsTo,
+    kwAlias,
     kwModule,
     kwOpen,
     kwOperator,
@@ -94,5 +95,6 @@ nonKeywords =
     kwEq,
     kwFixity,
     kwOperator,
+    kwAlias,
     kwIterator
   ]

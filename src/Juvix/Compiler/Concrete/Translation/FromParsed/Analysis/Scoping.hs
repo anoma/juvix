@@ -2236,8 +2236,20 @@ checkSyntaxDef ::
   Sem r (SyntaxDef 'Scoped)
 checkSyntaxDef = \case
   SyntaxFixity fixDef -> SyntaxFixity <$> checkFixitySyntaxDef fixDef
+  SyntaxAlias a -> SyntaxAlias <$> checkAliasDef a
   SyntaxOperator opDef -> return $ SyntaxOperator opDef
   SyntaxIterator iterDef -> return $ SyntaxIterator iterDef
+
+checkAliasDef ::
+  (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, State ScoperSyntax] r) =>
+  AliasDef 'Parsed ->
+  Sem r (AliasDef 'Scoped)
+checkAliasDef = undefined
+
+reserveAliasDef :: (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, State ScoperSyntax] r) =>
+  AliasDef 'Parsed ->
+  Sem r ()
+reserveAliasDef = undefined
 
 resolveSyntaxDef ::
   (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, State ScoperSyntax] r) =>
@@ -2247,6 +2259,7 @@ resolveSyntaxDef = \case
   SyntaxFixity fixDef -> resolveFixitySyntaxDef fixDef
   SyntaxOperator opDef -> resolveOperatorSyntaxDef opDef
   SyntaxIterator iterDef -> resolveIteratorSyntaxDef iterDef
+  SyntaxAlias a -> reserveAliasDef a
 
 -------------------------------------------------------------------------------
 -- Check precedences are comparable
