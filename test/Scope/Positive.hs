@@ -11,6 +11,7 @@ import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
 import Juvix.Compiler.Pipeline.Setup
+import Juvix.Data.Effect.Process
 import Juvix.Prelude.Aeson
 import Juvix.Prelude.Pretty
 
@@ -49,6 +50,9 @@ testDescr PosTest {..} = helper renderCodeNew
                         . evalTopNameIdGen
                         . runFilesPure files tRoot
                         . runReader entryPoint
+                        . runProcessIO
+                        . mapError (JuvixError @GitError)
+                        . runGit
                         . runPathResolverPipe
                     evalHelper :: HashMap (Path Abs File) Text -> Sem PipelineEff a -> IO a
                     evalHelper files = fmap snd . runHelper files
