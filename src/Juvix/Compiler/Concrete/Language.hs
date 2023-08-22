@@ -329,12 +329,30 @@ data IteratorSyntaxDef = IteratorSyntaxDef
 instance HasLoc IteratorSyntaxDef where
   getLoc IteratorSyntaxDef {..} = getLoc _iterSyntaxKw <> getLoc _iterSymbol
 
+data SigArgRhs (s :: Stage) = SigArgRhs
+  { _sigArgColon :: Irrelevant KeywordRef,
+    _sigArgType :: ExpressionType s
+  }
+
+deriving stock instance Show (SigArgRhs 'Parsed)
+
+deriving stock instance Show (SigArgRhs 'Scoped)
+
+deriving stock instance Eq (SigArgRhs 'Parsed)
+
+deriving stock instance Eq (SigArgRhs 'Scoped)
+
+deriving stock instance Ord (SigArgRhs 'Parsed)
+
+deriving stock instance Ord (SigArgRhs 'Scoped)
+
 data SigArg (s :: Stage) = SigArg
   { _sigArgDelims :: Irrelevant (KeywordRef, KeywordRef),
     _sigArgImplicit :: IsImplicit,
-    _sigArgColon :: Irrelevant KeywordRef,
     _sigArgNames :: NonEmpty (Argument s),
-    _sigArgType :: ExpressionType s
+    -- | The rhs is only optional for implicit arguments. Omitting the rhs is
+    -- equivalent to writing `: Type`.
+    _sigArgRhs :: Maybe (SigArgRhs s)
   }
 
 deriving stock instance Show (SigArg 'Parsed)
@@ -582,9 +600,26 @@ deriving stock instance Ord (ConstructorRhs 'Parsed)
 
 deriving stock instance Ord (ConstructorRhs 'Scoped)
 
+data InductiveParametersRhs (s :: Stage) = InductiveParametersRhs
+  { _inductiveParametersColon :: Irrelevant KeywordRef,
+    _inductiveParametersType :: ExpressionType s
+  }
+
+deriving stock instance Show (InductiveParametersRhs 'Parsed)
+
+deriving stock instance Show (InductiveParametersRhs 'Scoped)
+
+deriving stock instance Eq (InductiveParametersRhs 'Parsed)
+
+deriving stock instance Eq (InductiveParametersRhs 'Scoped)
+
+deriving stock instance Ord (InductiveParametersRhs 'Parsed)
+
+deriving stock instance Ord (InductiveParametersRhs 'Scoped)
+
 data InductiveParameters (s :: Stage) = InductiveParameters
   { _inductiveParametersNames :: NonEmpty (SymbolType s),
-    _inductiveParametersType :: ExpressionType s
+    _inductiveParametersRhs :: Maybe (InductiveParametersRhs s)
   }
 
 deriving stock instance Show (InductiveParameters 'Parsed)
@@ -1688,11 +1723,13 @@ makeLenses ''ConstructorDef
 makeLenses ''Module
 makeLenses ''TypeSignature
 makeLenses ''SigArg
+makeLenses ''SigArgRhs
 makeLenses ''FunctionDef
 makeLenses ''AxiomDef
 makeLenses ''ExportInfo
 makeLenses ''FunctionClause
 makeLenses ''InductiveParameters
+makeLenses ''InductiveParametersRhs
 makeLenses ''ModuleRef'
 makeLenses ''ModuleRef''
 makeLenses ''OpenModule
@@ -1783,7 +1820,7 @@ instance HasLoc ScopedIden where
   getLoc = getLoc . (^. scopedIden)
 
 instance SingI s => HasLoc (InductiveParameters s) where
-  getLoc i = getLocSymbolType (i ^. inductiveParametersNames . _head1) <> getLocExpressionType (i ^. inductiveParametersType)
+  getLoc i = getLocSymbolType (i ^. inductiveParametersNames . _head1) <>? (getLocExpressionType <$> (i ^? inductiveParametersRhs . _Just . inductiveParametersType))
 
 instance HasLoc (InductiveDef s) where
   getLoc i = (getLoc <$> i ^. inductivePositive) ?<> getLoc (i ^. inductiveKw)

@@ -507,9 +507,12 @@ goTopNewFunctionDef FunctionDef {..} = do
       return (Internal.foldFunType args ret)
       where
         argToParam :: SigArg 'Scoped -> Sem r (NonEmpty Internal.FunctionParameter)
-        argToParam SigArg {..} = do
-          _paramType <- goExpression _sigArgType
+        argToParam a@SigArg {..} = do
           let _paramImplicit = _sigArgImplicit
+          _paramType <- case _sigArgRhs of
+            Nothing -> return (Internal.smallUniverseE (getLoc a))
+            Just rhs -> goExpression (rhs ^. sigArgType)
+          let _paramImpligoExpressioncit = _sigArgImplicit
               mk :: Concrete.Argument 'Scoped -> Sem r Internal.FunctionParameter
               mk = \case
                 Concrete.ArgumentSymbol s ->
@@ -575,11 +578,12 @@ goFunctionClause FunctionClause {..} = do
       }
 
 goInductiveParameters ::
+  forall r.
   Members '[Builtins, NameIdGen, Error ScoperError, Reader Pragmas] r =>
   InductiveParameters 'Scoped ->
   Sem r [Internal.InductiveParameter]
-goInductiveParameters InductiveParameters {..} = do
-  paramType' <- goExpression _inductiveParametersType
+goInductiveParameters params@InductiveParameters {..} = do
+  paramType' <- goRhs _inductiveParametersRhs
   case paramType' of
     Internal.ExpressionUniverse {} -> return ()
     _ -> unsupported "only type variables of small types are allowed"
@@ -590,6 +594,11 @@ goInductiveParameters InductiveParameters {..} = do
           { _inductiveParamName = goSymbol var
           }
   return (map goInductiveParameter (toList _inductiveParametersNames))
+  where
+    goRhs :: Maybe (InductiveParametersRhs 'Scoped) -> Sem r Internal.Expression
+    goRhs = \case
+      Nothing -> return (Internal.smallUniverseE (getLoc params))
+      Just rhs -> goExpression (rhs ^. inductiveParametersType)
 
 registerBuiltinInductive ::
   (Members '[Error ScoperError, Builtins] r) =>

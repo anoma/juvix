@@ -93,6 +93,8 @@ instance ToGenericError InfixErrorP where
             "Error solving infixities:"
               <> line
               <> indent' (ppCode opts' _infixErrorAtomsP)
+              <> line
+              <> "Perhaps you forgot parentheses around a pattern?"
 
 -- | function clause without a type signature.
 newtype LacksTypeSig = LacksTypeSig

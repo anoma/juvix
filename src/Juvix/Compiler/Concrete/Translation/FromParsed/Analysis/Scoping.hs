@@ -744,13 +744,22 @@ checkFunctionDef FunctionDef {..} = do
       names' <- forM _sigArgNames $ \case
         ArgumentSymbol s -> ArgumentSymbol <$> bindVariableSymbol s
         ArgumentWildcard w -> return $ ArgumentWildcard w
-      ty' <- checkParseExpressionAtoms _sigArgType
+      rhs' <- mapM checkArgRhs _sigArgRhs
       return
         SigArg
           { _sigArgNames = names',
-            _sigArgType = ty',
+            _sigArgRhs = rhs',
             ..
           }
+      where
+        checkArgRhs :: SigArgRhs 'Parsed -> Sem r (SigArgRhs 'Scoped)
+        checkArgRhs SigArgRhs {..} = do
+          ty' <- checkParseExpressionAtoms _sigArgType
+          return
+            SigArgRhs
+              { _sigArgType = ty',
+                _sigArgColon
+              }
     checkBody :: Sem r (FunctionDefBody 'Scoped)
     checkBody = case _signBody of
       SigBodyExpression e -> SigBodyExpression <$> checkParseExpressionAtoms e
@@ -793,9 +802,15 @@ checkInductiveParameters ::
   InductiveParameters 'Parsed ->
   Sem r (InductiveParameters 'Scoped)
 checkInductiveParameters params = do
-  _inductiveParametersType <- checkParseExpressionAtoms (params ^. inductiveParametersType)
+  _inductiveParametersRhs <- mapM checkRhs (params ^. inductiveParametersRhs)
   _inductiveParametersNames <- mapM bindVariableSymbol (params ^. inductiveParametersNames)
   return InductiveParameters {..}
+  where
+    checkRhs :: InductiveParametersRhs 'Parsed -> Sem r (InductiveParametersRhs 'Scoped)
+    checkRhs rhs = do
+      let _inductiveParametersColon = rhs ^. inductiveParametersColon
+      _inductiveParametersType <- checkParseExpressionAtoms (rhs ^. inductiveParametersType)
+      return InductiveParametersRhs {..}
 
 checkInductiveDef ::
   forall r.
