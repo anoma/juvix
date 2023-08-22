@@ -1,18 +1,18 @@
 --- Simple lambda calculus
 module test052;
 
-open import Stdlib.Prelude;
+import Stdlib.Prelude open;
+
 import Stdlib.Trait.Show as Show;
 
-fromShow : {a : Type} -> Show a -> a -> String;
-fromShow (mkShow s) a := s a;
+fromShow : {a : Type} -> Show a -> a -> String
+  | (mkShow s) a := s a;
 
-LambdaTy : Type -> Type;
+LambdaTy : Type -> Type := Lambda';
 
-AppTy : Type -> Type;
+AppTy : Type -> Type := App';
 
 syntax operator :+: additive;
-
 --- An ;Expr'; is an expression in our language.
 type Expr' (v : Type) :=
   | ! : v -> Expr' v
@@ -29,20 +29,13 @@ type Lambda' (v : Type) :=
 type App' (v : Type) :=
   | mkApp : Expr' v -> Expr' v -> App' v;
 
-LambdaTy := Lambda';
+Expr : Type := Expr' Nat;
 
-AppTy := App';
+Lambda : Type := Lambda' Nat;
 
-Expr : Type;
-Expr := Expr' Nat;
+App : Type := App' Nat;
 
-Lambda : Type;
-Lambda := Lambda' Nat;
-
-App : Type;
-App := App' Nat;
-
-ValTy : Type -> Type;
+ValTy : Type -> Type := Val';
 
 --- A ;Closure'; is a context (;List; of ;ValTy;) and an ;Expr'; in that context.
 type Closure' (v : Type) :=
@@ -53,13 +46,9 @@ type Val' (v : Type) :=
   | vnum : Nat -> Val' v
   | closure : Closure' v -> Val' v;
 
-ValTy := Val';
+Val : Type := Val' Nat;
 
-Val : Type;
-Val := Val' Nat;
-
-Closure : Type;
-Closure := Closure' Nat;
+Closure : Type := Closure' Nat;
 
 --- Sum type.
 type Either (a : Type) (b : Type) :=
@@ -67,54 +56,50 @@ type Either (a : Type) (b : Type) :=
   | right : b -> Either a b;
 
 module ExprTraits;
-  toString : Expr -> String;
-  toString (! v) := "[" ++str natToString v ++str "]";
-  toString (lam (mkLambda b)) :=
-    "\955 {" ++str toString b ++str "}";
-  toString (app (mkApp l r)) :=
-    "("
-      ++str toString l
-      ++str " # "
-      ++str toString r
-      ++str ")";
-  toString (l :+: r) :=
-    "("
-      ++str toString l
-      ++str " + "
-      ++str toString r
-      ++str ")";
-  toString (num n) := natToString n;
+  toString : Expr -> String
+    | (! v) := "[" ++str natToString v ++str "]"
+    | (lam (mkLambda b)) := "λ {" ++str toString b ++str "}"
+    | (app (mkApp l r)) :=
+      "("
+        ++str toString l
+        ++str " # "
+        ++str toString r
+        ++str ")"
+    | (l :+: r) :=
+      "("
+        ++str toString l
+        ++str " + "
+        ++str toString r
+        ++str ")"
+    | (num n) := natToString n;
 
   --- ;Show; instance for ;Expr;.
-  Show : Show.Show Expr;
-  Show := mkShow toString;
+  Show : Show.Show Expr := mkShow toString;
 end;
 
 module ValTraits;
   terminating
-  valToString : Val -> String;
+  valToString : Val -> String
+    | (vnum n) := natToString n
+    | (closure (mkClosure ctx n)) :=
+      fromShow (ListTraits.Show Show) ctx
+        ++str " ⊢ "
+        ++str ExprTraits.toString n;
 
   --- ;Show; instance for ;Val;.
   terminating
-  Show : Show.Show Val;
-  Show := mkShow valToString;
-
-  valToString (vnum n) := natToString n;
-  valToString (closure (mkClosure ctx n)) :=
-    fromShow (ListTraits.Show Show) ctx
-      ++str " \8866 "
-      ++str ExprTraits.toString n;
+  Show : Show.Show Val := mkShow valToString;
 end;
 
 syntax operator >>= seq;
 --- Monadic binding for ;Either;.
->>= :
-  {e a b : Type}
+>>=
+  : {e a b : Type}
     -> Either e a
     -> (a -> Either e b)
-    -> Either e b;
->>= (left e) _ := left e;
->>= (right a) f := f a;
+    -> Either e b
+  | (left e) _ := left e
+  | (right a) f := f a;
 
 --- An evaluation error.
 type Error :=
@@ -126,96 +111,82 @@ type Error :=
     ExpectedLambda : Error;
 
 --- Returns the first item of a ;List;, if it exists.
-headMay : {a : Type} -> List a -> Maybe a;
-headMay nil := nothing;
-headMay (x :: _) := just x;
+headMay : {a : Type} -> List a -> Maybe a
+  | nil := nothing
+  | (x :: _) := just x;
 
 --- ;List; indexing.
-index : {a : Type} -> List a -> Nat -> Maybe a;
-index l n := headMay (drop n l);
+index : {a : Type} -> List a -> Nat -> Maybe a
+  | l n := headMay (drop n l);
 
 --- Get a ;Nat; from a ;Val; or return an ;Error;.
-getNat : Val -> Either Error Nat;
-getNat (vnum n) := right n;
-getNat e := left (ExpectedNat e);
+getNat : Val -> Either Error Nat
+  | (vnum n) := right n
+  | e := left (ExpectedNat e);
 
 --- Evaluates an ;Expr; and returns a ;Val;.
 --- If an error occurs during evaluation, returns ;Error;.
-eval : Expr -> Either Error Val;
-eval topExpr :=
-  let
-    getClosure : Val -> Either Error Closure;
-    getClosure (closure l) := right l;
-    getClosure _ := left ExpectedLambda;
-    terminating
-    go : List Val -> Expr -> Either Error Val;
-    go ctx (! v) :=
-      maybe (left (ScopeError v ctx)) right (index ctx v);
-    go ctx (app (mkApp fun x)) :=
-      let
-        terminating
-        applyClosure : Closure -> Either Error Val;
-        applyClosure (mkClosure closCtx body) :=
-          go ctx x
-            >>= λ {
-              | x' := go (x' :: closCtx) body
-            };
-      in go ctx fun >>= getClosure >>= applyClosure;
-    go ctx (lam (mkLambda body)) :=
-      right (closure (mkClosure ctx body));
-    go _ (num n) := right (vnum n);
-    go ctx (l :+: r) :=
-      go ctx l
-        >>= getNat
-        >>= λ {
-          | l' :=
-            go ctx r
-              >>= getNat
-              >>= λ {
-                | r' := right (vnum (l' + r'))
-              }
-        };
-  in go nil topExpr;
+eval : Expr -> Either Error Val
+  | topExpr :=
+    let
+      getClosure : Val -> Either Error Closure
+        | (closure l) := right l
+        | _ := left ExpectedLambda;
+      terminating
+      go : List Val -> Expr -> Either Error Val
+        | ctx (! v) :=
+          maybe (left (ScopeError v ctx)) right (index ctx v)
+        | ctx (app (mkApp fun x)) :=
+          let
+            terminating
+            applyClosure : Closure -> Either Error Val
+              | (mkClosure closCtx body) :=
+                go ctx x >>= λ {| x' := go (x' :: closCtx) body};
+          in go ctx fun >>= getClosure >>= applyClosure
+        | ctx (lam (mkLambda body)) :=
+          right (closure (mkClosure ctx body))
+        | _ (num n) := right (vnum n)
+        | ctx (l :+: r) :=
+          go ctx l
+            >>= getNat
+            >>= λ {| l' :=
+              go ctx r
+                >>= getNat
+                >>= λ {| r' := right (vnum (l' + r'))}};
+    in go nil topExpr;
 
 --- Evaluate an ;Expr; and try to extract a ;Nat;.
 terminating
-evalNat : Expr -> Either Error Nat;
-evalNat topExpr := eval topExpr >>= getNat;
+evalNat : Expr -> Either Error Nat
+  | topExpr := eval topExpr >>= getNat;
 
 --- Syntactical helper for creating a ;lam;.
-Λ : Expr -> Expr;
-Λ body := lam (mkLambda body);
+Λ : Expr -> Expr
+  | body := lam (mkLambda body);
 
 syntax fixity app {arity: binary, assoc: left, above: [composition]};
 
 syntax operator # app;
 --- Syntactical helper for creating an ;app;.
-# : Expr -> Expr -> Expr;
-# f x := app (mkApp f x);
+# : Expr -> Expr -> Expr
+  | f x := app (mkApp f x);
 
 --- ;Expr; that doubles a number.
-double : Expr;
-double := Λ (! 0 :+: ! 0);
+double : Expr := Λ (! 0 :+: ! 0);
 
 --- ;Expr; that adds 1 to a number.
-+1 : Expr;
-+1 := Λ (! 0 :+: num 1);
++1 : Expr := Λ (! 0 :+: num 1);
 
-apps : Expr -> List Expr -> Expr;
-apps := foldl (#);
+apps : Expr -> List Expr -> Expr := foldl (#);
 
 --- ;Expr; for function composition.
-compose : Expr;
-compose := Λ (Λ (Λ (! 2 # (! 1 # ! 0))));
+compose : Expr := Λ (Λ (Λ (! 2 # (! 1 # ! 0))));
 
-double+1 : Expr;
-double+1 := Λ (compose # +1 # double # ! 0);
+double+1 : Expr := Λ (compose # +1 # double # ! 0);
 
-res : Either Error Val;
-res := eval (double+1 # num 7);
+res : Either Error Val := eval (double+1 # num 7);
 
-main : IO;
-main :=
+main : IO :=
   case res
     | left (ScopeError n ctx) :=
       printStringLn

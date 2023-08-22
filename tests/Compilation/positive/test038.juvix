@@ -1,9 +1,12 @@
 -- Simple case expression
 module test038;
 
-open import Stdlib.Prelude;
+import Stdlib.Prelude open;
 
-main : IO;
-main := printNatLn (case 1, 2 | suc _, zero := 0 | suc _, suc x := x | _ := 19);
+main : IO :=
+  printNatLn
+    (case 1, 2
+      | suc _, zero := 0
+      | suc _, suc x := x
+      | _ := 19);
 
-end;

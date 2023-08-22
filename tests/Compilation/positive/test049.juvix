@@ -1,43 +1,49 @@
 -- Builtin Int
 module test049;
 
-open import Stdlib.Prelude hiding {+;*;div;mod};
-open import Stdlib.Data.Int.Ord;
-open import Stdlib.Data.Int;
+import Stdlib.Prelude open hiding {+; *; div; mod};
+import Stdlib.Data.Int.Ord open;
+import Stdlib.Data.Int open;
 
-f : Int -> Nat;
-f (negSuc n) := n;
-f (ofNat n) := n;
+f : Int -> Nat
+  | (negSuc n) := n
+  | (ofNat n) := n;
 
-main : IO;
-main := printStringLn (intToString 1)
-   >> printStringLn (intToString -1)
-   >> printIntLn (ofNat 1)
-   >> printIntLn (negSuc 0)
-   >> printIntLn (ofNat (suc zero))
-   >> printIntLn (negSuc zero)
-   >> printStringLn (natToString (f 1))
-   >> printNatLn (f (-1))
-   >> printNatLn (f (ofNat (suc zero)))
-   >> printNatLn (f (negSuc (suc zero)))
-   >> printBoolLn (-1 == -2)
-   >> printBoolLn (-1 == -1)
-   >> printBoolLn (1 == 1)
-   >> printBoolLn (-1 == 1)
-   >> printIntLn (-1 + 1)
-   >> printIntLn (negNat (suc zero))
-   >> printIntLn (let g : Nat -> Int := negNat in g (suc zero))
-   >> printIntLn (neg -1)
-   >> printIntLn (let g : Int -> Int := neg in g -1)
-   >> printIntLn (-2 * 2)
-   >> printIntLn (div 4 -2)
-   >> printIntLn (2 - 2)
-   >> printBoolLn (nonNeg 0)
-   >> printBoolLn (nonNeg -1)
-   >> printIntLn (mod -5 -2)
-   >> printBoolLn (0 < 0)
-   >> printBoolLn (0 <= 0)
-   >> printBoolLn (0 < 1)
-   >> printBoolLn (1 <= 0)
-   >> printIntLn (mod 5 -3)
-   >> printIntLn (div 5 -3);
+main : IO :=
+  printStringLn (intToString 1)
+    >> printStringLn (intToString -1)
+    >> printIntLn (ofNat 1)
+    >> printIntLn (negSuc 0)
+    >> printIntLn (ofNat (suc zero))
+    >> printIntLn (negSuc zero)
+    >> printStringLn (natToString (f 1))
+    >> printNatLn (f -1)
+    >> printNatLn (f (ofNat (suc zero)))
+    >> printNatLn (f (negSuc (suc zero)))
+    >> printBoolLn (-1 == -2)
+    >> printBoolLn (-1 == -1)
+    >> printBoolLn (1 == 1)
+    >> printBoolLn (-1 == 1)
+    >> printIntLn (-1 + 1)
+    >> printIntLn (negNat (suc zero))
+    >> printIntLn
+      (let
+        g : Nat -> Int := negNat;
+      in g (suc zero))
+    >> printIntLn (neg -1)
+    >> printIntLn
+      (let
+        g : Int -> Int := neg;
+      in g -1)
+    >> printIntLn (-2 * 2)
+    >> printIntLn (div 4 -2)
+    >> printIntLn (2 - 2)
+    >> printBoolLn (nonNeg 0)
+    >> printBoolLn (nonNeg -1)
+    >> printIntLn (mod -5 -2)
+    >> printBoolLn (0 < 0)
+    >> printBoolLn (0 <= 0)
+    >> printBoolLn (0 < 1)
+    >> printBoolLn (1 <= 0)
+    >> printIntLn (mod 5 -3)
+    >> printIntLn (div 5 -3);

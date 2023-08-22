@@ -113,6 +113,7 @@ groupStatements = \case
     definesSymbol n s = case s of
       StatementInductive d -> n `elem` syms d
       StatementAxiom d -> n == symbolParsed (d ^. axiomName)
+      StatementFunctionDef d -> n == symbolParsed (d ^. signName)
       _ -> False
       where
         symbolParsed :: SymbolType s -> Symbol

@@ -1,17 +1,14 @@
 -- recursion through higher-order functions
 module test016;
 
-open import Stdlib.Prelude;
+import Stdlib.Prelude open;
 
-g : (Nat → Nat) → Nat → Nat;
-g f zero := 0;
-g f (suc x) := f x;
+g (f : Nat → Nat) : Nat → Nat
+  | zero := 0
+  | (suc x) := f x;
 
 terminating
-f : Nat → Nat;
-f x := x + g f x;
+f (x : Nat) : Nat := x + g f x;
 
-main : IO;
-main := printNatLn (f 10); -- 55
-
-end;
+main : IO := printNatLn (f 10);
+-- 55

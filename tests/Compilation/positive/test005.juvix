@@ -1,18 +1,20 @@
 -- Higher-order functions
 module test005;
 
-open import Stdlib.Prelude;
+import Stdlib.Prelude open;
 
-S : {A B C : Type} → (A → B → C) → (A → B) → A → C;
-S x y z := x z (y z);
+S {A B C} (x : A → B → C) (y : A → B) (z : A) : C :=
+  x z (y z);
 
-K : {A B : Type} → A → B → A;
-K x y := x;
+K {A B} (x : A) (_ : B) : A := x;
 
-I : {A : Type} → A → A;
-I := S K (K {_} {Bool});
+I {A} : A → A := S K (K {_} {Bool});
 
-main : IO;
-main := printNatLn (I 1 + I I 1 + I (I 1) + I I I 1 + I (I I) I (I I I) 1 + I I I (I I I (I I)) I (I I) I I I 1);
-
-end;
+main : IO :=
+  printNatLn
+    (I 1
+      + I I 1
+      + I (I 1)
+      + I I I 1
+      + I (I I) I (I I I) 1
+      + I I I (I I I (I I)) I (I I) I I I 1);

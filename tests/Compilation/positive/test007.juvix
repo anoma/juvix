@@ -1,34 +1,34 @@
 -- pattern matching and lambda-case
 module test007;
 
-open import Stdlib.Prelude;
+import Stdlib.Prelude open;
 
-map' : {A : Type} → {B : Type} → (A → B) → List A → List B;
-map' f := \{ nil := nil | (h :: t) := f h :: map' f t};
+map' {A B} (f : A → B) : List A → List B :=
+  \ {
+    | nil := nil
+    | (h :: t) := f h :: map' f t
+  };
 
 terminating
-map'' : {A : Type} → {B : Type} → (A → B) → List A → List B;
-map'' f x := if (null x) nil (f (head x) :: map'' f (tail x));
+map'' {A B} (f : A → B) (x : List A) : List B :=
+  if (null x) nil (f (head x) :: map'' f (tail x));
 
-lst : List Nat;
-lst := 0 :: 1 :: nil;
+lst : List Nat := 0 :: 1 :: nil;
 
-printNatList : List Nat → IO;
-printNatList nil := printString "nil";
-printNatList (h :: t) := printNat h >> printString " :: " >> printNatList t;
+printNatList : List Nat → IO
+  | nil := printString "nil"
+  | (h :: t) :=
+    printNat h >> printString " :: " >> printNatList t;
 
-printNatListLn : List Nat → IO;
-printNatListLn lst := printNatList lst >> printString "\n";
+printNatListLn (lst : List Nat) : IO :=
+  printNatList lst >> printString "\n";
 
-main : IO;
-main :=
-    printBoolLn (null lst) >>
-    printBoolLn (null (nil {Nat})) >>
-    printNatLn (head lst) >>
-    printNatListLn (tail lst) >>
-    printNatLn (head (tail lst)) >>
-    printNatListLn (map ((+) 1) lst) >>
-    printNatListLn (map' ((+) 1) lst) >>
-    printNatListLn (map'' ((+) 1) lst);
-
-end;
+main : IO :=
+  printBoolLn (null lst)
+    >> printBoolLn (null (nil {Nat}))
+    >> printNatLn (head lst)
+    >> printNatListLn (tail lst)
+    >> printNatLn (head (tail lst))
+    >> printNatListLn (map ((+) 1) lst)
+    >> printNatListLn (map' ((+) 1) lst)
+    >> printNatListLn (map'' ((+) 1) lst);

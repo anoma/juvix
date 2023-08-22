@@ -1,49 +1,51 @@
 -- streams without memoization
 module test028;
 
-open import Stdlib.Prelude;
-open import Stdlib.Data.Nat.Ord;
+import Stdlib.Prelude open;
+import Stdlib.Data.Nat.Ord open;
 
-type Stream := cons : Nat → (Unit → Stream) → Stream;
+type Stream :=
+  | cons : Nat → (Unit → Stream) → Stream;
 
-force : (Unit → Stream) → Stream;
-force f := f unit;
-
-terminating
-sfilter : (Nat → Bool) → (Unit → Stream) → Unit → Stream;
-sfilter p s unit := case force s
-  | cons h t := if (p h) (cons h (sfilter p t)) (force (sfilter p t));
-
-shead : Stream → Nat;
-shead (cons h _) := h;
-
-stail : Stream → Unit → Stream;
-stail (cons _ t) := t;
-
-snth : Nat → (Unit → Stream) → Nat;
-snth zero s := shead (force s);
-snth (suc n) s := snth n (stail (force s));
+force : (Unit → Stream) → Stream
+  | f := f unit;
 
 terminating
-numbers : Nat → Unit → Stream;
-numbers n unit := cons n (numbers (suc n));
+sfilter : (Nat → Bool) → (Unit → Stream) → Unit → Stream
+  | p s unit :=
+    case force s
+      | cons h t :=
+        if (p h) (cons h (sfilter p t)) (force (sfilter p t));
 
-indivisible : Nat → Nat → Bool;
-indivisible n x := not (mod x n == 0);
+shead : Stream → Nat
+  | (cons h _) := h;
+
+stail : Stream → Unit → Stream
+  | (cons _ t) := t;
+
+snth : Nat → (Unit → Stream) → Nat
+  | zero s := shead (force s)
+  | (suc n) s := snth n (stail (force s));
 
 terminating
-eratostenes : (Unit → Stream) → Unit → Stream;
-eratostenes s unit := case force s
-  | cons n t := cons n (eratostenes (sfilter (indivisible n) t));
+numbers : Nat → Unit → Stream
+  | n unit := cons n (numbers (suc n));
 
-primes : Unit → Stream;
-primes := eratostenes (numbers 2);
+indivisible : Nat → Nat → Bool
+  | n x := not (mod x n == 0);
 
-main : IO;
-main :=
-  printNatLn (snth 10 primes) >>
-  printNatLn (snth 50 primes) >>
-  printNatLn (snth 100 primes) >>
-  printNatLn (snth 200 primes);
+terminating
+eratostenes : (Unit → Stream) → Unit → Stream
+  | s unit :=
+    case force s
+      | cons n t :=
+        cons n (eratostenes (sfilter (indivisible n) t));
 
-end;
+primes : Unit → Stream := eratostenes (numbers 2);
+
+main : IO :=
+  printNatLn (snth 10 primes)
+    >> printNatLn (snth 50 primes)
+    >> printNatLn (snth 100 primes)
+    >> printNatLn (snth 200 primes);
+

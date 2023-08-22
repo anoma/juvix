@@ -1,7 +1,6 @@
 -- String quoting
 module test048;
 
-open import Stdlib.Prelude;
+import Stdlib.Prelude open;
 
-main : String;
-main := "hello!\n\b\t\r";
+main : String := "hello!\n\b\t\r";

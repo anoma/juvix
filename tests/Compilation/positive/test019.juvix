@@ -1,13 +1,11 @@
 -- self-application
 module test019;
 
-open import Stdlib.Prelude;
+import Stdlib.Prelude open;
 
 -- change this to a lambda once we have type annotations for lambdas
-app : ({A : Type} → A → A) → {A : Type} → A → A;
-app x := x x;
+app : ({A : Type} → A → A) → {A : Type} → A → A
+  | x := x x;
 
-main : IO;
-main := printNatLn (app id (3 + 4));
+main : IO := printNatLn (app id (3 + 4));
 
-end;

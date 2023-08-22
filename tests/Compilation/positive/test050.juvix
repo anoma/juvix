@@ -1,14 +1,13 @@
 -- Pattern matching with integers
 module test050;
 
-open import Stdlib.Prelude hiding {+;*;div;mod};
-open import Stdlib.Data.Int.Ord;
-open import Stdlib.Data.Int;
+import Stdlib.Prelude open hiding {+; *; div; mod};
+import Stdlib.Data.Int.Ord open;
+import Stdlib.Data.Int open;
 
-f : Int -> Int;
-f (negSuc zero) := ofNat 0;
-f (negSuc m@(suc n)) := ofNat n + ofNat m;
-f (ofNat n) := neg (ofNat n - 7);
+f : Int -> Int
+  | (negSuc zero) := ofNat 0
+  | (negSuc m@(suc n)) := ofNat n + ofNat m
+  | (ofNat n) := neg (ofNat n - 7);
 
-main : Int;
-main := f -10 - f 1 + f -1;
+main : Int := f -10 - f 1 + f -1;

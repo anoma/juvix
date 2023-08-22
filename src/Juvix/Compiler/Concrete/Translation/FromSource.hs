@@ -818,10 +818,18 @@ literal = do
       <|> literalString
   P.lift (registerLiteral l)
 
+letFunDef ::
+  forall r.
+  Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r =>
+  ParsecS r (FunctionDef 'Parsed)
+letFunDef = do
+  optional_ stashPragmas
+  functionDefinition Nothing
+
 letBlock :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (Let 'Parsed)
 letBlock = do
   _letKw <- kw kwLet
-  _letFunDefs <- P.sepEndBy1 (functionDefinition Nothing) semicolon
+  _letFunDefs <- P.sepEndBy1 letFunDef semicolon
   _letInKw <- Irrelevant <$> kw kwIn
   _letExpression <- parseExpressionAtoms
   return Let {..}

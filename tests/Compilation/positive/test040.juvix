@@ -1,8 +1,8 @@
 -- pattern matching nullary constructor
 module test040;
 
-open import Stdlib.System.IO;
-open import Stdlib.Data.Bool;
+import Stdlib.System.IO open;
+import Stdlib.Data.Bool open;
 
 type Unit :=
   | unit : Unit;
@@ -10,8 +10,7 @@ type Unit :=
 type Foo (A : Type) :=
   | foo : Unit -> A -> Foo A;
 
-f : {A : Type} -> Foo A -> A;
-f (foo unit a) := a;
+f : {A : Type} -> Foo A -> A
+  | (foo unit a) := a;
 
-main : IO;
-main := printBoolLn (f (foo unit true));
+main : IO := printBoolLn (f (foo unit true));

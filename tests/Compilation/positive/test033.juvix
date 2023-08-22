@@ -1,38 +1,41 @@
 -- eta-expansion of builtins and constructors
 module test033;
 
-open import Stdlib.Prelude;
+import Stdlib.Prelude open;
 
-f : (Nat → Nat) → Nat;
-f g := g 2;
+f : (Nat → Nat) → Nat
+  | g := g 2;
 
-f' : Nat → Nat;
-f' x := f ((+) x);
+f' : Nat → Nat
+  | x := f ((+) x);
 
-g : (Nat → Nat × Nat) → Nat × Nat;
-g f := f 2;
+g : (Nat → Nat × Nat) → Nat × Nat
+  | f := f 2;
 
-g' : Nat → Nat × Nat;
-g' x := g ((,) x);
+g' : Nat → Nat × Nat
+  | x := g ((,) x);
 
-f1' : Nat → Nat → Nat;
-f1' x y := f ((+) (div x y));
+f1' : Nat → Nat → Nat
+  | x y := f ((+) (div x y));
 
-g1' : Nat → Nat → Nat × Nat;
-g1' x y := g ((,) (div x y));
+g1' : Nat → Nat → Nat × Nat
+  | x y := g ((,) (div x y));
 
-h : (Nat → Nat → Nat × Nat) → Nat × Nat;
-h f := f 1 2;
+h : (Nat → Nat → Nat × Nat) → Nat × Nat
+  | f := f 1 2;
 
-printPairNatLn : Nat × Nat → IO;
-printPairNatLn (x, y) := printString "(" >> printNat x >> printString ", " >> printNat y >> printStringLn ")";
+printPairNatLn : Nat × Nat → IO
+  | (x, y) :=
+    printString "("
+      >> printNat x
+      >> printString ", "
+      >> printNat y
+      >> printStringLn ")";
 
-main : IO;
-main :=
-  printNatLn (f' 7) >>
-  printPairNatLn (g' 7) >>
-  printNatLn (f1' 7 2) >>
-  printPairNatLn (g1' 7 2) >>
-  printPairNatLn (h (,));
+main : IO :=
+  printNatLn (f' 7)
+    >> printPairNatLn (g' 7)
+    >> printNatLn (f1' 7 2)
+    >> printPairNatLn (g1' 7 2)
+    >> printPairNatLn (h (,));
 
-end;

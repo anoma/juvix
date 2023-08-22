@@ -1,14 +1,12 @@
 -- pattern matching coverage
 module test001;
 
-open import Stdlib.Prelude;
+import Stdlib.Prelude open;
 
-f : List Nat -> List Nat -> Nat;
-f (x :: xs) (y :: ys) := x + y;
-f _ (_ :: (z :: zs)) := z;
-f _ nil := 0;
+f : List Nat -> List Nat -> Nat
+  | (x :: xs) (y :: ys) := x + y
+  | _ (_ :: z :: zs) := z
+  | _ nil := 0;
 
-main : Nat;
-main := f (1 :: nil) (2 :: nil);
+main : Nat := f (1 :: nil) (2 :: nil);
 
-end;
