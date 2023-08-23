@@ -40,6 +40,11 @@ jobs:
       - name: Stack permissions bug workaround
         run: "chown -R $(id -un):$(id -gn) ~"
 
+      # Without this the git command used by githash TemplateHaskell fails with permission error
+      # https://github.com/anoma/juvix/issues/2294
+      - name: Git permissions workaround
+        run: "chown -R $(id -un):$(id -gn) ."
+
       - name: Install clang14
         run: apk add --update clang14
 
