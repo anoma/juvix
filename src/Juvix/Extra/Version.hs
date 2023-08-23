@@ -1,7 +1,7 @@
 module Juvix.Extra.Version where
 
 import Data.Version (showVersion)
-import Development.GitRev (gitBranch, gitCommitDate, gitHash)
+import GitHash
 import Juvix.Prelude.Base hiding (Doc)
 import Juvix.Prelude.Path
 import Paths_juvix qualified
@@ -12,20 +12,26 @@ import System.Environment (getProgName)
 versionDir :: Path Rel Dir
 versionDir = relDir (unpack versionDoc)
 
+gitInfo :: Maybe GitInfo
+gitInfo = eitherToMaybe $$tGitInfoCwdTry
+
+projectOrUnknown :: (GitInfo -> String) -> Text
+projectOrUnknown p = maybe "UNKNOWN" (pack . p) gitInfo
+
 versionDoc :: Text
 versionDoc = pack (showVersion Paths_juvix.version)
 
 branch :: Text
-branch = pack $(gitBranch)
+branch = projectOrUnknown giBranch
 
 commit :: Text
-commit = pack $(gitHash)
+commit = projectOrUnknown giHash
 
 commitDate :: Text
-commitDate = pack $(gitCommitDate)
+commitDate = projectOrUnknown giCommitDate
 
 shortHash :: Text
-shortHash = pack (take 7 $(gitHash))
+shortHash = projectOrUnknown (take 7 . giHash)
 
 versionTag :: Text
 versionTag = versionDoc <> "-" <> shortHash
