@@ -545,8 +545,10 @@ entryToScopedIden ::
   PreSymbolEntry ->
   Sem r ScopedIden
 entryToScopedIden name e = do
-  let scopedName :: S.Name
-      scopedName = set S.nameConcrete name (e ^. preSymbolName)
+  let helper :: S.Name' x -> S.Name
+      helper = set S.nameConcrete name
+      scopedName :: S.Name
+      scopedName = helper (e ^. preSymbolName)
   si <- case e of
     PreSymbolFinal {} ->
       return
@@ -558,10 +560,10 @@ entryToScopedIden name e = do
       e' <- normalizePreSymbolEntry e
       return
         ScopedIden
-          { _scopedIdenAlias = Just scopedName,
-            _scopedIden = set S.nameConcrete name (e' ^. symbolEntry)
+          { _scopedIdenAlias = Just (set S.nameKind (getNameKind e') scopedName),
+            _scopedIden = helper (e' ^. symbolEntry)
           }
-  registerName scopedName
+  registerName (si ^. scopedIdenName)
   return si
 
 -- | We gather all symbols which have been defined or marked to be public in the given scope.

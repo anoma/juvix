@@ -406,6 +406,7 @@ instance SingI t => PrettyPrint (ModuleRef'' 'S.NotConcrete t) where
 instance PrettyPrint (ModuleRef'' 'S.Concrete t) where
   ppCode m = ppCode (m ^. moduleRefName)
 
+-- FIXME this is wrong
 instance PrettyPrint ScopedIden where
   ppCode = ppCode . (^. scopedIden)
 

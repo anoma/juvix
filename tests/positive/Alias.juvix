@@ -1,11 +1,13 @@
 module Alias;
 
-module M;
-  axiom T : Type; -- line 4
-  syntax alias A := T; -- line 5
-end;
-syntax alias A := M.T; -- line 7
-open M;
-axiom K : A; -- line 9
+syntax alias Boolean := Bool;
+syntax alias ⊥ := false;
+syntax alias ⊤ := true;
 
-end;
+type Bool :=
+  | false
+  | true;
+
+not : Boolean -> Boolean
+  | ⊥ := ⊤
+  | ⊤ := ⊥;
