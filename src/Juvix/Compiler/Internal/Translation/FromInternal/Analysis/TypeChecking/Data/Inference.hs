@@ -417,13 +417,30 @@ addIdens idens = do
   modify (HashMap.union idens)
   modify (over highlightTypes (HashMap.union idens))
 
--- | Assumes the given function has been type checked
--- | NOTE: Registers the function *only* if the result type is Type
-functionDefEval :: forall r'. Member (State FunctionsTable) r' => FunctionDef -> Sem r' (Maybe Expression)
-functionDefEval = runFail . goTop
+-- | Assumes the given function has been type checked.
+-- Does *not* register the function.
+-- Throws an error if the return type is Type and returns Nothing.
+functionDefEval :: forall r'. Members '[State FunctionsTable, Error TypeCheckerError] r' => FunctionDef -> Sem r' (Maybe Expression)
+functionDefEval f = do
+  r <- runFail goTop
+  retTy <- returnsType
+  when (isNothing r && retTy) (throw (ErrUnsupportedTypeFunction (UnsupportedTypeFunction f)))
+  return r
   where
-    goTop :: forall r. Members '[Fail, State FunctionsTable] r => FunctionDef -> Sem r Expression
-    goTop f =
+    isUniverse :: Members '[State FunctionsTable] r => Expression -> Sem r Bool
+    isUniverse e = do
+      e' <- evalState iniState (weakNormalize' e)
+      case e' of
+        ExpressionUniverse {} -> return True
+        _ -> return False
+
+    (params, ret) = unfoldFunType (f ^. funDefType)
+
+    returnsType :: Members '[State FunctionsTable] r => Sem r Bool
+    returnsType = isUniverse ret
+
+    goTop :: forall r. Members '[Fail, State FunctionsTable, Error TypeCheckerError] r => Sem r Expression
+    goTop =
       case f ^. funDefClauses of
         c :| [] -> goClause c
         _ -> fail
@@ -431,22 +448,15 @@ functionDefEval = runFail . goTop
         goClause :: FunctionClause -> Sem r Expression
         goClause c = do
           let pats = c ^. clausePatterns
-              n = length (c ^. clausePatterns)
-          patsTys <- splitNExplicitParams n (f ^. funDefType)
+          patsTys <- splitExplicitParams
           go (zipExact pats patsTys)
           where
-            splitNExplicitParams :: Int -> Expression -> Sem r [Expression]
-            splitNExplicitParams n fun = do
-              let (params, r) = unfoldFunType fun
-              unlessM (isUniverse r) fail
+            splitExplicitParams :: Sem r [Expression]
+            splitExplicitParams = do
+              let n = length (c ^. clausePatterns)
+              unlessM returnsType fail
               nfirst <- failMaybe (takeExactMay n params)
               mapM simpleExplicitParam nfirst
-            isUniverse :: Expression -> Sem r Bool
-            isUniverse e = do
-              e' <- evalState iniState (weakNormalize' e)
-              case e' of
-                ExpressionUniverse {} -> return True
-                _ -> return False
             simpleExplicitParam :: FunctionParameter -> Sem r Expression
             simpleExplicitParam = \case
               FunctionParameter Nothing Explicit ty -> return ty
@@ -462,6 +472,6 @@ functionDefEval = runFail . goTop
                 | Implicit <- p ^. patternArgIsImplicit -> fail
                 | otherwise -> go ps >>= goPattern (p ^. patternArgPattern, ty)
 
-registerFunctionDef :: Member (State FunctionsTable) r => FunctionDef -> Sem r ()
+registerFunctionDef :: Members '[State FunctionsTable, Error TypeCheckerError] r => FunctionDef -> Sem r ()
 registerFunctionDef f = whenJustM (functionDefEval f) $ \e ->
   modify (over functionsTable (HashMap.insert (f ^. funDefName) e))
