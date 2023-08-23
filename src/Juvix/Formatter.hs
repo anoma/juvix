@@ -2,7 +2,6 @@ module Juvix.Formatter where
 
 import Data.List.NonEmpty qualified as NonEmpty
 import Data.Text qualified as T
-import Juvix.Compiler.Concrete.Extra (migrateFunctionSyntax)
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Print (ppOutDefault)
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
@@ -17,8 +16,6 @@ data FormattedFileInfo = FormattedFileInfo
     _formattedFileInfoContentsAnsi :: NonEmpty AnsiText,
     _formattedFileInfoContentsModified :: Bool
   }
-
-newtype NewSyntax = NewSyntax Bool
 
 data ScopeEff m a where
   ScopeFile :: Path Abs File -> ScopeEff m Scoper.ScoperResult
@@ -65,7 +62,7 @@ formattedFileInfoContentsText = to infoToPlainText
 -- contents of the file.
 format ::
   forall r.
-  Members '[Reader NewSyntax, ScopeEff, Files, Output FormattedFileInfo] r =>
+  Members '[ScopeEff, Files, Output FormattedFileInfo] r =>
   Path Abs File ->
   Sem r FormatResult
 format p = do
@@ -91,7 +88,7 @@ format p = do
 -- subdirectories that contain a juvix.yaml file.
 formatProject ::
   forall r.
-  Members '[Reader NewSyntax, ScopeEff, Files, Output FormattedFileInfo] r =>
+  Members '[ScopeEff, Files, Output FormattedFileInfo] r =>
   Path Abs Dir ->
   Sem r FormatResult
 formatProject p = do
@@ -108,14 +105,14 @@ formatProject p = do
       subRes <- combineResults <$> mapM format juvixFiles
       return (res <> subRes, RecurseFilter (\hasJuvixYaml d -> not hasJuvixYaml && not (isHiddenDirectory d)))
 
-formatPath :: Members '[Reader NewSyntax, Reader Text, ScopeEff] r => Path Abs File -> Sem r (NonEmpty AnsiText)
+formatPath :: Members '[Reader Text, ScopeEff] r => Path Abs File -> Sem r (NonEmpty AnsiText)
 formatPath p = do
   res <- scopeFile p
   formatScoperResult res
 
 formatStdin ::
   forall r.
-  Members '[Reader NewSyntax, ScopeEff, Files, Output FormattedFileInfo] r =>
+  Members '[ScopeEff, Files, Output FormattedFileInfo] r =>
   Sem r FormatResult
 formatStdin = do
   res <- scopeStdin
@@ -147,7 +144,7 @@ formatResultFromContents formattedContents filepath = do
         )
       return res
 
-formatScoperResult :: Members '[Reader NewSyntax, Reader Text] r => Scoper.ScoperResult -> Sem r (NonEmpty AnsiText)
+formatScoperResult :: Members '[Reader Text] r => Scoper.ScoperResult -> Sem r (NonEmpty AnsiText)
 formatScoperResult res = do
   let cs = res ^. Scoper.comments
   formattedModules <-
@@ -165,11 +162,7 @@ formatScoperResult res = do
     Nothing ->
       return formattedModules
   where
-    formatTopModule :: Members '[Reader NewSyntax, Reader Comments] r => Module 'Scoped 'ModuleTop -> Sem r AnsiText
+    formatTopModule :: Members '[Reader Comments] r => Module 'Scoped 'ModuleTop -> Sem r AnsiText
     formatTopModule m = do
-      NewSyntax newSyntax <- ask
       cs <- ask
-      let m'
-            | newSyntax = migrateFunctionSyntax m
-            | otherwise = m
-      return (ppOutDefault cs m')
+      return (ppOutDefault cs m)

@@ -6,7 +6,6 @@ module Juvix.Compiler.Concrete.Extra
     unfoldApplication,
     groupStatements,
     flattenStatement,
-    migrateFunctionSyntax,
     recordNameSignatureByIndex,
     getExpressionAtomIden,
     getPatternAtomIden,
@@ -135,20 +134,6 @@ flattenStatement :: Statement s -> [Statement s]
 flattenStatement = \case
   StatementModule m -> concatMap flattenStatement (m ^. moduleBody)
   s -> [s]
-
-migrateFunctionSyntax :: Module 'Scoped t -> Module 'Scoped t
-migrateFunctionSyntax m = over moduleBody (mapMaybe goStatement) m
-  where
-    goStatement :: Statement 'Scoped -> Maybe (Statement 'Scoped)
-    goStatement s = case s of
-      StatementSyntax {} -> Just s
-      StatementImport {} -> Just s
-      StatementAxiom {} -> Just s
-      StatementModule l -> Just (StatementModule (migrateFunctionSyntax l))
-      StatementInductive {} -> Just s
-      StatementOpenModule {} -> Just s
-      StatementFunctionDef {} -> Just s
-      StatementProjectionDef {} -> Just s
 
 recordNameSignatureByIndex :: RecordNameSignature -> IntMap Symbol
 recordNameSignatureByIndex = IntMap.fromList . (^.. recordNames . each . to swap)
