@@ -55,7 +55,7 @@ dependencies:
   - extra == 1.7.*
   - file-embed == 0.0.*
   - filepath == 1.4.*
-  - gitrev == 1.3.*
+  - githash == 0.1.*
   - hashable == 1.4.*
   - language-c == 0.9.*
   - libyaml == 0.1.*
