@@ -1,19 +1,18 @@
 -- fold a list of N integers
 module fold;
-  open import Stdlib.Prelude;
-  open import Stdlib.Data.Nat.Ord;
 
-  plusMod : Nat → Nat → Nat;
-  plusMod x y := mod (x + y) 268435456;
+import Stdlib.Prelude open;
+import Stdlib.Data.Nat.Ord open;
 
-  run : Nat → Nat → List Nat → Nat;
-  run zero acc lst := foldl plusMod acc lst;
-  run (suc n) acc lst := run n (foldl plusMod acc lst) lst;
+plusMod : Nat → Nat → Nat
+  | x y := mod (x + y) 268435456;
 
-  gen : Nat → List Nat → List Nat;
-  gen zero acc := acc;
-  gen (suc n) acc := gen n (suc n :: acc);
+run : Nat → Nat → List Nat → Nat
+  | zero acc lst := foldl plusMod acc lst
+  | (suc n) acc lst := run n (foldl plusMod acc lst) lst;
 
-  main : IO;
-  main := printNatLn (run 1000 0 (gen 100000 nil));
-end;
+gen : Nat → List Nat → List Nat
+  | zero acc := acc
+  | (suc n) acc := gen n (suc n :: acc);
+
+main : IO := printNatLn (run 1000 0 (gen 100000 nil));
