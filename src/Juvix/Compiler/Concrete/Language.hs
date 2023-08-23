@@ -422,30 +422,6 @@ deriving stock instance Ord (FunctionDef 'Parsed)
 
 deriving stock instance Ord (FunctionDef 'Scoped)
 
-data TypeSignature (s :: Stage) = TypeSignature
-  { _sigName :: FunctionName s,
-    _sigColonKw :: Irrelevant KeywordRef,
-    _sigType :: ExpressionType s,
-    _sigDoc :: Maybe (Judoc s),
-    _sigAssignKw :: Irrelevant (Maybe KeywordRef),
-    _sigPragmas :: Maybe ParsedPragmas,
-    _sigBuiltin :: Maybe (WithLoc BuiltinFunction),
-    _sigBody :: Maybe (ExpressionType s),
-    _sigTerminating :: Maybe KeywordRef
-  }
-
-deriving stock instance Show (TypeSignature 'Parsed)
-
-deriving stock instance Show (TypeSignature 'Scoped)
-
-deriving stock instance Eq (TypeSignature 'Parsed)
-
-deriving stock instance Eq (TypeSignature 'Scoped)
-
-deriving stock instance Ord (TypeSignature 'Parsed)
-
-deriving stock instance Ord (TypeSignature 'Scoped)
-
 data AxiomDef (s :: Stage) = AxiomDef
   { _axiomKw :: Irrelevant KeywordRef,
     _axiomDoc :: Maybe (Judoc s),
@@ -856,25 +832,6 @@ deriving stock instance Ord (PatternAtoms 'Parsed)
 deriving stock instance Ord (PatternAtoms 'Scoped)
 
 type FunctionName s = SymbolType s
-
-data FunctionClause (s :: Stage) = FunctionClause
-  { _clauseOwnerFunction :: FunctionName s,
-    _clauseAssignKw :: Irrelevant KeywordRef,
-    _clausePatterns :: [PatternAtomType s],
-    _clauseBody :: ExpressionType s
-  }
-
-deriving stock instance Show (FunctionClause 'Parsed)
-
-deriving stock instance Show (FunctionClause 'Scoped)
-
-deriving stock instance Eq (FunctionClause 'Parsed)
-
-deriving stock instance Eq (FunctionClause 'Scoped)
-
-deriving stock instance Ord (FunctionClause 'Parsed)
-
-deriving stock instance Ord (FunctionClause 'Scoped)
 
 type LocalModuleName s = SymbolType s
 
@@ -1701,13 +1658,11 @@ makeLenses ''OperatorSyntaxDef
 makeLenses ''IteratorSyntaxDef
 makeLenses ''ConstructorDef
 makeLenses ''Module
-makeLenses ''TypeSignature
 makeLenses ''SigArg
 makeLenses ''SigArgRhs
 makeLenses ''FunctionDef
 makeLenses ''AxiomDef
 makeLenses ''ExportInfo
-makeLenses ''FunctionClause
 makeLenses ''InductiveParameters
 makeLenses ''InductiveParametersRhs
 makeLenses ''ModuleRef'
@@ -1804,9 +1759,6 @@ instance SingI s => HasLoc (InductiveParameters s) where
 
 instance HasLoc (InductiveDef s) where
   getLoc i = (getLoc <$> i ^. inductivePositive) ?<> getLoc (i ^. inductiveKw)
-
-instance SingI s => HasLoc (FunctionClause s) where
-  getLoc c = getLocSymbolType (c ^. clauseOwnerFunction) <> getLocExpressionType (c ^. clauseBody)
 
 instance HasLoc ModuleRef where
   getLoc (ModuleRef' (_ :&: r)) = getLoc r
@@ -1972,16 +1924,6 @@ instance SingI s => HasLoc (FunctionDef s) where
       ?<> (getLoc <$> _signTerminating)
       ?<> getLocSymbolType _signName
       <> getLoc _signBody
-
-instance SingI s => HasLoc (TypeSignature s) where
-  getLoc TypeSignature {..} =
-    (getLoc <$> _sigDoc)
-      ?<> (getLoc <$> _sigPragmas)
-      ?<> (getLoc <$> _sigBuiltin)
-      ?<> (getLoc <$> _sigTerminating)
-      ?<> getLocSymbolType _sigName
-      <> (getLocExpressionType <$> _sigBody)
-      ?<> getLocExpressionType _sigType
 
 instance HasLoc (Example s) where
   getLoc e = e ^. exampleLoc

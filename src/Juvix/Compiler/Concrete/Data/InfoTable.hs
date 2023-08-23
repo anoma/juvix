@@ -4,12 +4,6 @@ import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Language
 import Juvix.Prelude
 
-data OldFunctionInfo = OldFunctionInfo
-  { _oldFunctionInfoType :: TypeSignature 'Scoped,
-    _oldFunctionInfoClauses :: [FunctionClause 'Scoped]
-  }
-  deriving stock (Eq, Show)
-
 newtype FunctionInfo = FunctionInfo (FunctionDef 'Scoped)
   deriving stock (Eq, Show)
 
@@ -59,7 +53,6 @@ makeLenses ''InfoTable
 makeLenses ''InductiveInfo
 makeLenses ''ConstructorInfo
 makeLenses ''AxiomInfo
-makeLenses ''OldFunctionInfo
 
 functionInfoDoc :: Lens' FunctionInfo (Maybe (Judoc 'Scoped))
 functionInfoDoc f = \case

@@ -786,30 +786,6 @@ instance SingI s => PrettyPrint (FunctionDef s) where
                 <> body'
           )
 
-instance SingI s => PrettyPrint (TypeSignature s) where
-  ppCode :: forall r. Members '[ExactPrint, Reader Options] r => TypeSignature s -> Sem r ()
-  ppCode TypeSignature {..} = do
-    let termin' :: Maybe (Sem r ()) = (<> line) . ppCode <$> _sigTerminating
-        doc' :: Maybe (Sem r ()) = ppCode <$> _sigDoc
-        pragmas' :: Maybe (Sem r ()) = ppCode <$> _sigPragmas
-        builtin' :: Maybe (Sem r ()) = (<> line) . ppCode <$> _sigBuiltin
-        type' = ppExpressionType _sigType
-        name' = annDef _sigName (ppSymbolType _sigName)
-        body' = case _sigBody of
-          Nothing -> Nothing
-          Just body -> Just (ppCode (fromJust <$> _sigAssignKw) <> oneLineOrNext (ppExpressionType body))
-    doc'
-      ?<> pragmas'
-      ?<> builtin'
-      ?<> termin'
-      ?<> ( name'
-              <+> ppCode _sigColonKw
-                <> oneLineOrNext
-                  ( type'
-                      <+?> body'
-                  )
-          )
-
 instance PrettyPrint Wildcard where
   ppCode w = morpheme (getLoc w) C.kwWildcard
 
@@ -930,21 +906,6 @@ instance SingI s => PrettyPrint (OpenModule s) where
           <+> openkw
           <+?> usingHiding'
           <+?> public'
-
-instance SingI s => PrettyPrint (FunctionClause s) where
-  ppCode :: forall r. Members '[ExactPrint, Reader Options] r => FunctionClause s -> Sem r ()
-  ppCode FunctionClause {..} = do
-    let clauseFun' = ppSymbolType _clauseOwnerFunction
-        clausePatterns' = case nonEmpty _clausePatterns of
-          Nothing -> Nothing
-          Just ne -> Just (hsep (ppPatternAtom <$> ne))
-        clauseBody' = ppExpressionType _clauseBody
-    nest
-      ( clauseFun'
-          <+?> clausePatterns'
-      )
-      <+> ppCode _clauseAssignKw
-        <> oneLineOrNext clauseBody'
 
 ppCodeAtom :: (HasAtomicity c, PrettyPrint c) => PrettyPrinting c
 ppCodeAtom c = do

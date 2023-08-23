@@ -408,35 +408,6 @@ goLetFunctionDef ::
   Sem r Internal.FunctionDef
 goLetFunctionDef = goTopFunctionDef
 
-goFunctionDefHelper ::
-  forall r.
-  Members '[Builtins, NameIdGen, Reader Pragmas, Error ScoperError] r =>
-  TypeSignature 'Scoped ->
-  [FunctionClause 'Scoped] ->
-  Sem r Internal.FunctionDef
-goFunctionDefHelper sig@TypeSignature {..} clauses = do
-  let _funDefName = goSymbol _sigName
-      _funDefTerminating = isJust _sigTerminating
-      _funDefBuiltin = (^. withLocParam) <$> _sigBuiltin
-  _funDefType <- goExpression _sigType
-  _funDefExamples <- goExamples _sigDoc
-  _funDefPragmas <- goPragmas _sigPragmas
-  _funDefClauses <- case (_sigBody, nonEmpty clauses) of
-    (Nothing, Nothing) -> throw (ErrLacksFunctionClause (LacksFunctionClause sig))
-    (Just {}, Just {}) -> error "duplicate function clause. TODO remove this when old function syntax is removed"
-    (Just body, Nothing) -> do
-      body' <- goExpression body
-      return
-        ( pure
-            Internal.FunctionClause
-              { _clauseName = _funDefName,
-                _clausePatterns = [],
-                _clauseBody = body'
-              }
-        )
-    (Nothing, Just clauses') -> mapM goFunctionClause clauses'
-  return Internal.FunctionDef {..}
-
 goProjectionDef ::
   forall r.
   Members '[NameIdGen, State ConstructorInfos] r =>
@@ -518,17 +489,6 @@ goTopFunctionDef FunctionDef {..} = do
               return Internal.PatternArg {..}
       mapM mk _sigArgNames
 
-goTopFunctionDef' ::
-  forall r.
-  (Members '[Reader Pragmas, Error ScoperError, Builtins, NameIdGen] r) =>
-  TypeSignature 'Scoped ->
-  [FunctionClause 'Scoped] ->
-  Sem r Internal.FunctionDef
-goTopFunctionDef' sig clauses = do
-  fun <- goFunctionDefHelper sig clauses
-  whenJust (sig ^. sigBuiltin) (registerBuiltinFunction fun . (^. withLocParam))
-  return fun
-
 goExamples ::
   forall r.
   Members '[Builtins, NameIdGen, Error ScoperError, Reader Pragmas] r =>
@@ -544,20 +504,6 @@ goExamples = mapM goExample . maybe [] judocExamples
           { _exampleExpression = e',
             _exampleId = ex ^. exampleId
           }
-
-goFunctionClause ::
-  Members '[Builtins, NameIdGen, Error ScoperError, Reader Pragmas] r =>
-  FunctionClause 'Scoped ->
-  Sem r Internal.FunctionClause
-goFunctionClause FunctionClause {..} = do
-  _clausePatterns' <- mapM goPatternArg _clausePatterns
-  _clauseBody' <- goExpression _clauseBody
-  return
-    Internal.FunctionClause
-      { _clauseName = goSymbol _clauseOwnerFunction,
-        _clausePatterns = _clausePatterns',
-        _clauseBody = _clauseBody'
-      }
 
 goInductiveParameters ::
   forall r.

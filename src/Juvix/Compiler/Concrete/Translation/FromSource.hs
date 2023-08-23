@@ -1194,17 +1194,6 @@ parsePatternAtomsNested = do
   return PatternAtoms {..}
 
 --------------------------------------------------------------------------------
--- Function binding declaration
---------------------------------------------------------------------------------
-
-functionClause :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => Symbol -> ParsecS r (FunctionClause 'Parsed)
-functionClause _clauseOwnerFunction = do
-  _clausePatterns <- P.many patternAtom
-  _clauseAssignKw <- Irrelevant <$> kw kwAssign
-  _clauseBody <- parseExpressionAtoms
-  return FunctionClause {..}
-
---------------------------------------------------------------------------------
 -- Module declaration
 --------------------------------------------------------------------------------
 
