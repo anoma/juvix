@@ -209,7 +209,7 @@ instance ToGenericError DuplicateIterator where
               locs = vsep $ map (pretty . getLoc) [_dupIteratorFirst, _dupIteratorFirst]
 
 data ExportEntries
-  = ExportEntriesSymbols (NonEmpty SymbolEntry)
+  = ExportEntriesSymbols (NonEmpty PreSymbolEntry)
   | ExportEntriesModules (NonEmpty ModuleSymbolEntry)
   | ExportEntriesFixities (NonEmpty FixitySymbolEntry)
   deriving stock (Show)
@@ -382,7 +382,7 @@ instance ToGenericError UnusedIteratorDef where
 
 data AmbiguousSym = AmbiguousSym
   { _ambiguousSymName :: Name,
-    _ambiguousSymEntires :: [SymbolEntry]
+    _ambiguousSymEntires :: [PreSymbolEntry]
   }
   deriving stock (Show)
 

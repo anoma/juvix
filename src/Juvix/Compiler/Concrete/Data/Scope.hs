@@ -16,7 +16,7 @@ import Juvix.Prelude
 nsEntry :: forall ns. SingI ns => Lens' (NameSpaceEntryType ns) (S.Name' ())
 nsEntry = case sing :: SNameSpace ns of
   SNameSpaceModules -> moduleEntry
-  SNameSpaceSymbols -> symbolEntry
+  SNameSpaceSymbols -> preSymbolName
   SNameSpaceFixities -> fixityEntry
 
 mkModuleRef' :: SingI t => ModuleRef'' 'S.NotConcrete t -> ModuleRef' 'S.NotConcrete

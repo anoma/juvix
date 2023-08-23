@@ -423,8 +423,8 @@ instance SingI s => PrettyPrint (Import s) where
 
 instance SingI s => PrettyPrint (AliasDef s) where
   ppCode AliasDef {..} =
-    ppCode _aliasSyntaxKw <+> ppCode _aliasAliasKw <+> ppSymbolType _aliasName
-      <+> ppCode Kw.kwAssign <+> ppIdentifierType _aliasAsName
+    ppCode _aliasDefSyntaxKw <+> ppCode _aliasDefAliasKw <+> ppSymbolType _aliasDefName
+      <+> ppCode Kw.kwAssign <+> ppIdentifierType _aliasDefAsName
 
 instance SingI s => PrettyPrint (SyntaxDef s) where
   ppCode = \case
@@ -1055,6 +1055,11 @@ instance SingI s => PrettyPrint (Statement s) where
     StatementOpenModule o -> ppCode o
     StatementAxiom a -> ppCode a
     StatementProjectionDef a -> ppCode a
+
+instance PrettyPrint PreSymbolEntry where
+  ppCode = \case
+    PreSymbolAlias a -> undefined
+    PreSymbolFinal a -> undefined
 
 instance PrettyPrint SymbolEntry where
   ppCode ent =

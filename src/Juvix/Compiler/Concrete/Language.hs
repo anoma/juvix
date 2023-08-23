@@ -44,7 +44,7 @@ type Delims = Irrelevant (Maybe (KeywordRef, KeywordRef))
 
 type NameSpaceEntryType :: NameSpace -> GHC.Type
 type family NameSpaceEntryType s = res | res -> s where
-  NameSpaceEntryType 'NameSpaceSymbols = SymbolEntry
+  NameSpaceEntryType 'NameSpaceSymbols = PreSymbolEntry
   NameSpaceEntryType 'NameSpaceModules = ModuleSymbolEntry
   NameSpaceEntryType 'NameSpaceFixities = FixitySymbolEntry
 
@@ -251,11 +251,10 @@ deriving stock instance Ord (Import 'Parsed)
 deriving stock instance Ord (Import 'Scoped)
 
 data AliasDef (s :: Stage) = AliasDef
-  {
-    _aliasSyntaxKw :: Irrelevant KeywordRef,
-    _aliasAliasKw :: Irrelevant KeywordRef,
-    _aliasName :: SymbolType s,
-    _aliasAsName :: IdentifierType s
+  { _aliasDefSyntaxKw :: Irrelevant KeywordRef,
+    _aliasDefAliasKw :: Irrelevant KeywordRef,
+    _aliasDefName :: SymbolType s,
+    _aliasDefAsName :: IdentifierType s
   }
 
 deriving stock instance (Show (AliasDef 'Parsed))
@@ -1021,10 +1020,24 @@ instance Eq (ModuleRef'' 'S.Concrete t) where
 instance Ord (ModuleRef'' 'S.Concrete t) where
   compare (ModuleRef'' n _ _) (ModuleRef'' n' _ _) = compare n n'
 
+newtype Alias = Alias
+  { _aliasName :: S.Name' ()
+  }
+  deriving stock (Show)
+
+-- | Either an alias or a symbol entry.
+data PreSymbolEntry
+  = PreSymbolAlias Alias
+  | PreSymbolFinal SymbolEntry
+  deriving stock (Show)
+
+-- | A symbol which is not an alias.
 newtype SymbolEntry = SymbolEntry
   { _symbolEntry :: S.Name' ()
   }
-  deriving stock (Show)
+  deriving stock (Show, Eq, Ord, Generic)
+
+instance Hashable SymbolEntry
 
 newtype ModuleSymbolEntry = ModuleSymbolEntry
   { _moduleEntry :: S.Name' ()
@@ -1041,7 +1054,7 @@ instance (SingI t) => CanonicalProjection (ModuleRef'' c t) (ModuleRef' c) where
 
 -- | Symbols that a module exports
 data ExportInfo = ExportInfo
-  { _exportSymbols :: HashMap Symbol SymbolEntry,
+  { _exportSymbols :: HashMap Symbol PreSymbolEntry,
     _exportModuleSymbols :: HashMap Symbol ModuleSymbolEntry,
     _exportFixitySymbols :: HashMap Symbol FixitySymbolEntry
   }
@@ -1069,23 +1082,11 @@ deriving stock instance Ord (OpenModule 'Parsed)
 
 deriving stock instance Ord (OpenModule 'Scoped)
 
-type ScopedIden = ScopedIden' 'S.Concrete
-
-newtype ScopedIden' (n :: S.IsConcrete) = ScopedIden
-  { _scopedIden :: RefNameType n
+data ScopedIden = ScopedIden
+  { _scopedIden :: S.Name,
+    _scopedIdenAlias :: Maybe S.Name
   }
-
-deriving stock instance
-  (Eq (RefNameType s)) => Eq (ScopedIden' s)
-
-deriving stock instance
-  (Ord (RefNameType s)) => Ord (ScopedIden' s)
-
-deriving stock instance
-  (Show (RefNameType s)) => Show (ScopedIden' s)
-
-identifierName :: forall n. ScopedIden' n -> RefNameType n
-identifierName (ScopedIden n) = n
+  deriving stock (Show, Eq, Ord)
 
 data Expression
   = ExpressionIdentifier ScopedIden
@@ -1216,17 +1217,11 @@ data InfixApplication = InfixApplication
   }
   deriving stock (Show, Eq, Ord)
 
-instance HasFixity InfixApplication where
-  getFixity (InfixApplication _ op _) = fromMaybe impossible (identifierName op ^. S.nameFixity)
-
 data PostfixApplication = PostfixApplication
   { _postfixAppParameter :: Expression,
     _postfixAppOperator :: ScopedIden
   }
   deriving stock (Show, Eq, Ord)
-
-instance HasFixity PostfixApplication where
-  getFixity (PostfixApplication _ op) = fromMaybe impossible (identifierName op ^. S.nameFixity)
 
 data Let (s :: Stage) = Let
   { _letKw :: KeywordRef,
@@ -1628,6 +1623,7 @@ newtype ModuleIndex = ModuleIndex
   }
 
 makeLenses ''PatternArg
+makeLenses ''Alias
 makeLenses ''FieldPun
 makeLenses ''RecordPatternAssign
 makeLenses ''RecordPattern
@@ -1639,7 +1635,7 @@ makeLenses ''RecordUpdateField
 makeLenses ''NonDefinitionsSection
 makeLenses ''DefinitionsSection
 makeLenses ''ProjectionDef
-makeLenses ''ScopedIden'
+makeLenses ''ScopedIden
 makeLenses ''SymbolEntry
 makeLenses ''ModuleSymbolEntry
 makeLenses ''FixitySymbolEntry
@@ -1700,10 +1696,10 @@ makeLenses ''NamedArgument
 makeLenses ''NamedApplication
 makeLenses ''AliasDef
 
-instance SingI s => HasLoc (AliasDef s) where
-  getLoc AliasDef {..} = getLoc _aliasSyntaxKw <> getLocIdentifierType _aliasAsName
+instance (SingI s) => HasLoc (AliasDef s) where
+  getLoc AliasDef {..} = getLoc _aliasDefSyntaxKw <> getLocIdentifierType _aliasDefAsName
 
-instance SingI s => HasLoc (SyntaxDef s) where
+instance (SingI s) => HasLoc (SyntaxDef s) where
   getLoc = \case
     SyntaxFixity t -> getLoc t
     SyntaxOperator t -> getLoc t
@@ -2185,7 +2181,7 @@ instance IsApe InfixApplication ApeLeaf where
         { _infixFixity = getFixity i,
           _infixLeft = toApe l,
           _infixRight = toApe r,
-          _infixIsDelimiter = isDelimiterStr (prettyText (identifierName op ^. S.nameConcrete)),
+          _infixIsDelimiter = isDelimiterStr (prettyText (op ^. scopedIden . S.nameConcrete)),
           _infixOp = ApeLeafExpression (ExpressionIdentifier op)
         }
 
@@ -2281,6 +2277,14 @@ judocExamples (Judoc bs) = concatMap goGroup bs
       JudocExample e -> [e]
       _ -> mempty
 
+instance HasLoc Alias where
+  getLoc = (^. aliasName . S.nameDefined)
+
+instance HasLoc PreSymbolEntry where
+  getLoc = \case
+    PreSymbolAlias a -> getLoc a
+    PreSymbolFinal a -> getLoc a
+
 instance HasLoc SymbolEntry where
   getLoc = (^. symbolEntry . S.nameDefined)
 
@@ -2306,7 +2310,7 @@ exportAllNames :: SimpleFold ExportInfo (S.Name' ())
 exportAllNames =
   exportSymbols
     . each
-    . symbolEntry
+    . preSymbolName
     <> exportModuleSymbols
     . each
     . moduleEntry
@@ -2324,3 +2328,29 @@ _ConstructorRhsRecord :: Traversal' (ConstructorRhs s) (RhsRecord s)
 _ConstructorRhsRecord f rhs = case rhs of
   ConstructorRhsRecord r -> ConstructorRhsRecord <$> f r
   _ -> pure rhs
+
+_DefinitionSyntax :: Traversal' (Definition s) (SyntaxDef s)
+_DefinitionSyntax f x = case x of
+  DefinitionSyntax r -> DefinitionSyntax <$> f r
+  _ -> pure x
+
+_SyntaxAlias :: Traversal' (SyntaxDef s) (AliasDef s)
+_SyntaxAlias f x = case x of
+  SyntaxAlias r -> SyntaxAlias <$> f r
+  _ -> pure x
+
+instance HasFixity PostfixApplication where
+  getFixity (PostfixApplication _ op) = fromMaybe impossible (op ^. scopedIden . S.nameFixity)
+
+instance HasFixity InfixApplication where
+  getFixity (InfixApplication _ op _) = fromMaybe impossible (op ^. scopedIden . S.nameFixity)
+
+-- preSymbolFinal :: Lens' PreSymbolEntry SymbolEntry
+-- preSymbolFinal f = \case
+--   PreSymbolAlias a -> PreSymbolAlias <$> traverseOf aliasEntry (preSymbolFinal f) a
+--   PreSymbolFinal a -> PreSymbolFinal <$> f a
+
+preSymbolName :: Lens' PreSymbolEntry (S.Name' ())
+preSymbolName f = \case
+  PreSymbolAlias a -> PreSymbolAlias <$> traverseOf aliasName f a
+  PreSymbolFinal a -> PreSymbolFinal <$> traverseOf symbolEntry f a

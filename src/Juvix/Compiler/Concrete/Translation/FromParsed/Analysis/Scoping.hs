@@ -39,6 +39,7 @@ iniScoperState =
       _scoperScope = mempty,
       _scoperSignatures = mempty,
       _scoperRecordFields = mempty,
+      _scoperAlias = mempty,
       _scoperConstructorFields = mempty
     }
 
@@ -197,7 +198,7 @@ reserveSymbolSignatureOf ::
   Sem r S.Symbol
 reserveSymbolSignatureOf k d s = do
   sig <- mkNameSignature d
-  reserveSymbolOf k (Just sig) s
+  reserveSymbolOf False k (Just sig) s
 
 reserveSymbolOf ::
   forall (nameKind :: NameKind) (ns :: NameSpace) r.
@@ -205,11 +206,12 @@ reserveSymbolOf ::
     ns ~ NameKindNameSpace nameKind,
     SingI ns
   ) =>
+  Bool ->
   Sing nameKind ->
   Maybe NameSignature ->
   Symbol ->
   Sem r S.Symbol
-reserveSymbolOf k nameSig s = do
+reserveSymbolOf isAlias k nameSig s = do
   checkNotBound
   path <- gets (^. scopePath)
   strat <- ask
@@ -217,11 +219,15 @@ reserveSymbolOf k nameSig s = do
   whenJust nameSig (modify' . set (scoperSignatures . at (s' ^. S.nameId)) . Just)
   modify (set (scopeNameSpaceLocal sns . at s) (Just s'))
   registerName (S.unqualifiedSymbol s')
-  let entry :: NameSpaceEntryType (NameKindNameSpace nameKind)
+  let
+      u = S.unConcrete s'
+      entry :: NameSpaceEntryType (NameKindNameSpace nameKind)
       entry =
-        let symE = SymbolEntry (S.unConcrete s')
-            modE = ModuleSymbolEntry (S.unConcrete s')
-            fixE = FixitySymbolEntry (S.unConcrete s')
+        let symE
+             | isAlias = PreSymbolAlias (Alias u)
+             | otherwise = PreSymbolFinal (SymbolEntry u)
+            modE = ModuleSymbolEntry u
+            fixE = FixitySymbolEntry u
          in case k of
               SKNameConstructor -> symE
               SKNameInductive -> symE
@@ -272,7 +278,7 @@ bindVariableSymbol ::
   Members '[Error ScoperError, NameIdGen, State Scope, InfoTableBuilder, State ScoperState] r =>
   Symbol ->
   Sem r S.Symbol
-bindVariableSymbol = localBindings . ignoreSyntax . reserveSymbolOf SKNameLocal Nothing
+bindVariableSymbol = localBindings . ignoreSyntax . reserveSymbolOf False SKNameLocal Nothing
 
 reserveInductiveSymbol ::
   Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder] r =>
@@ -284,7 +290,7 @@ reserveProjectionSymbol ::
   Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, Reader BindingStrategy, InfoTableBuilder, State ScoperState] r =>
   ProjectionDef 'Parsed ->
   Sem r S.Symbol
-reserveProjectionSymbol d = reserveSymbolOf SKNameFunction Nothing (d ^. projectionField)
+reserveProjectionSymbol d = reserveSymbolOf False SKNameFunction Nothing (d ^. projectionField)
 
 reserveConstructorSymbol ::
   Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder] r =>
@@ -407,7 +413,7 @@ getModuleExportInfo m = fromMaybeM err (gets (^? scoperModules . at (m ^. module
 -- | Do not call directly. Looks for a symbol in (possibly) nested local modules
 lookupSymbolAux ::
   forall r.
-  Members '[State ScoperState, State Scope, Output ModuleSymbolEntry, Output SymbolEntry, Output FixitySymbolEntry] r =>
+  Members '[State ScoperState, State Scope, Output ModuleSymbolEntry, Output PreSymbolEntry, Output FixitySymbolEntry] r =>
   [Symbol] ->
   Symbol ->
   Sem r ()
@@ -467,7 +473,7 @@ lookupQualifiedSymbol ::
   forall r.
   Members '[State Scope, State ScoperState] r =>
   ([Symbol], Symbol) ->
-  Sem r ([SymbolEntry], [ModuleSymbolEntry], [FixitySymbolEntry])
+  Sem r ([PreSymbolEntry], [ModuleSymbolEntry], [FixitySymbolEntry])
 lookupQualifiedSymbol sms = do
   (es, (ms, fs)) <- runOutputList $ runOutputList $ execOutputList $ go sms
   return (es, ms, fs)
@@ -507,12 +513,19 @@ lookupQualifiedSymbol sms = do
                     ref <- toList t
                 ]
 
+-- | This assumes that alias do not have cycles.
+normalizePreSymbolEntry :: Members '[State ScoperState] r => PreSymbolEntry -> Sem r SymbolEntry
+normalizePreSymbolEntry = \case
+  PreSymbolFinal a -> return a
+  PreSymbolAlias a -> gets (^?! scoperAlias . at (a ^. aliasName . S.nameId) . _Just) >>= normalizePreSymbolEntry
+
 checkQualifiedExpr ::
   (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder] r) =>
   QualifiedName ->
   Sem r ScopedIden
 checkQualifiedExpr q@(QualifiedName (SymbolPath p) sym) = do
   es <- fst3 <$> lookupQualifiedSymbol (toList p, sym)
+  -- TODO handle aliases
   case es of
     [] -> notInScope
     [e] -> entryToScopedIden q' e
@@ -521,12 +534,19 @@ checkQualifiedExpr q@(QualifiedName (SymbolPath p) sym) = do
     q' = NameQualified q
     notInScope = throw (ErrQualSymNotInScope (QualSymNotInScope q))
 
-entryToScopedIden :: Members '[InfoTableBuilder] r => Name -> SymbolEntry -> Sem r ScopedIden
+entryToScopedIden :: Members '[InfoTableBuilder, State ScoperState] r =>
+   Name -> PreSymbolEntry -> Sem r ScopedIden
 entryToScopedIden name e = do
   let scopedName :: S.Name
-      scopedName = set S.nameConcrete name (e ^. symbolEntry)
+      scopedName = set S.nameConcrete name (e ^. preSymbolName)
+  si <- case e of
+    PreSymbolFinal f -> return ScopedIden {
+                      _scopedIden = set S.nameConcrete name (f ^. symbolEntry),
+                      _scopedIdenAlias = Nothing
+                                          }
+    PreSymbolAlias {} -> undefined
   registerName scopedName
-  return (ScopedIden (set S.nameConcrete name (e ^. symbolEntry)))
+  return si
 
 -- | We gather all symbols which have been defined or marked to be public in the given scope.
 exportScope ::
@@ -605,7 +625,7 @@ resolveFixitySyntaxDef ::
   FixitySyntaxDef 'Parsed ->
   Sem r ()
 resolveFixitySyntaxDef fdef@FixitySyntaxDef {..} = topBindings $ do
-  sym <- reserveSymbolOf SKNameFixity Nothing _fixitySymbol
+  sym <- reserveSymbolOf False SKNameFixity Nothing _fixitySymbol
   let loc = getLoc _fixityInfo
       fi = _fixityInfo ^. withLocParam . withSourceValue
   same <- checkMaybeFixity loc $ fi ^. FI.fixityPrecSame
@@ -1100,6 +1120,7 @@ checkSections sec = do
         goDefinitions :: DefinitionsSection 'Parsed -> Sem r' (DefinitionsSection 'Scoped)
         goDefinitions DefinitionsSection {..} = do
           mapM_ reserveDefinition _definitionsSection
+          mapM_ scanAlias (_definitionsSection ^.. each . _DefinitionSyntax . _SyntaxAlias)
           sec' <- mapM goDefinition _definitionsSection
           next' <- mapM goNonDefinitions _definitionsNext
           return
@@ -1108,6 +1129,9 @@ checkSections sec = do
                 _definitionsSection = sec'
               }
           where
+            scanAlias :: AliasDef 'Parsed -> Sem r' ()
+            scanAlias = undefined
+
             reserveDefinition :: Definition 'Parsed -> Sem r' ()
             reserveDefinition = \case
               DefinitionSyntax s -> resolveSyntaxDef s
@@ -1256,7 +1280,7 @@ reserveLocalModuleSymbol ::
   Symbol ->
   Sem r S.Symbol
 reserveLocalModuleSymbol =
-  ignoreSyntax . reserveSymbolOf SKNameLocalModule Nothing
+  ignoreSyntax . reserveSymbolOf False SKNameLocalModule Nothing
 
 checkLocalModule ::
   forall r.
@@ -1634,7 +1658,10 @@ checkRecordPattern ::
   Sem r (RecordPattern 'Scoped)
 checkRecordPattern r = do
   c' <- getNameOfKind KNameConstructor (r ^. recordPatternConstructor)
-  let s = ScopedIden c'
+  let s = ScopedIden {
+        _scopedIden = c',
+        _scopedIdenAlias = undefined
+                     }
   fields <- fromMaybeM (return (RecordNameSignature mempty)) (gets (^. scoperConstructorFields . at (c' ^. S.nameId)))
   l' <-
     if
@@ -1819,6 +1846,7 @@ checkUnqualified s = do
   scope <- get
   -- Lookup at the global scope
   entries <- fst3 <$> lookupQualifiedSymbol ([], s)
+  -- TODO handle aliases
   case resolveShadowing entries of
     [] -> throw (ErrSymNotInScope (NotInScope s scope))
     [x] -> entryToScopedIden n x
@@ -1837,7 +1865,7 @@ checkFixitySymbol s = do
   case resolveShadowing entries of
     [] -> throw (ErrSymNotInScope (NotInScope s scope))
     [x] -> return $ entryToSymbol x s
-    es -> throw (ErrAmbiguousSym (AmbiguousSym n (map (SymbolEntry . (^. fixityEntry)) es)))
+    es -> throw (ErrAmbiguousSym (AmbiguousSym n (map (PreSymbolFinal . SymbolEntry . (^. fixityEntry)) es)))
   where
     n = NameUnqualified s
 
@@ -1907,6 +1935,7 @@ lookupNameOfKind ::
   Name ->
   Sem r (Maybe S.Name)
 lookupNameOfKind nameKind n = do
+  -- TODO handle alias
   entries <- mapMaybe filterEntry . fst3 <$> lookupQualifiedSymbol (path, sym)
   case entries of
     [] -> return Nothing
@@ -2077,7 +2106,7 @@ checkIterator ::
   Sem r (Iterator 'Scoped)
 checkIterator iter = do
   _iteratorName <- checkName (iter ^. iteratorName)
-  case identifierName _iteratorName ^. S.nameIterator of
+  case _iteratorName ^. scopedIden . S.nameIterator of
     Just IteratorAttribs {..} -> do
       case _iteratorAttribsInitNum of
         Just n
@@ -2345,7 +2374,7 @@ makeExpressionTable (ExpressionAtoms atoms _) = [recordUpdate] : [appOpExplicit]
                       AssocNone -> P.InfixN
           | otherwise = Nothing
           where
-            S.Name' {..} = identifierName iden
+            S.Name' {..} = iden ^. scopedIden
 
         parseSymbolId :: S.NameId -> Parse ScopedIden
         parseSymbolId uid = P.token getIdentifierWithId mempty
@@ -2353,7 +2382,7 @@ makeExpressionTable (ExpressionAtoms atoms _) = [recordUpdate] : [appOpExplicit]
             getIdentifierWithId :: ExpressionAtom 'Scoped -> Maybe ScopedIden
             getIdentifierWithId s = case s of
               AtomIdentifier iden
-                | uid == identifierName iden ^. S.nameId -> Just iden
+                | uid == iden ^. scopedIden . S.nameId -> Just iden
               _ -> Nothing
 
     recordUpdate :: P.Operator Parse Expression
@@ -2540,7 +2569,7 @@ parseTerm =
         identifierNoFixity :: ExpressionAtom 'Scoped -> Maybe ScopedIden
         identifierNoFixity s = case s of
           AtomIdentifier iden
-            | not (S.hasFixity (identifierName iden)) -> Just iden
+            | not (S.hasFixity (iden ^. scopedIden)) -> Just iden
           _ -> Nothing
 
     parseBraces :: Parse Expression
