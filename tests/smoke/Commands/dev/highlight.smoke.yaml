@@ -57,8 +57,7 @@ tests:
 
       import Stdlib.Prelude open;
 
-      main : Nat;
-      main := 5;
+      main : Nat := 5;
     stdout:
       contains: 'function'
     exit-status: 0
