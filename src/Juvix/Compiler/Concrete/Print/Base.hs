@@ -1065,7 +1065,15 @@ instance PrettyPrint PreSymbolEntry where
     PreSymbolFinal a -> ppCode a
 
 instance PrettyPrint Alias where
-  ppCode _ = noLoc "TODO PrettyPrint Alias"
+  ppCode a =
+    noLoc
+      ( kindWord
+          P.<+> C.code ((pretty (a ^. aliasName . S.nameVerbatim)))
+          P.<+> "defined at"
+          P.<+> pretty (getLoc a)
+      )
+    where
+      kindWord :: Doc Ann = "Alias"
 
 instance PrettyPrint SymbolEntry where
   ppCode ent =
