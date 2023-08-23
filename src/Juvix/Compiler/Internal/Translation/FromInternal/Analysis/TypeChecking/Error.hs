@@ -22,6 +22,7 @@ data TypeCheckerError
   | ErrTooFewArgumentsIndType WrongNumberArgumentsIndType
   | ErrImpracticalPatternMatching ImpracticalPatternMatching
   | ErrNoPositivity NoPositivity
+  | ErrUnsupportedTypeFunction UnsupportedTypeFunction
 
 instance ToGenericError TypeCheckerError where
   genericError :: (Member (Reader GenericOptions) r) => TypeCheckerError -> Sem r GenericError
@@ -36,3 +37,4 @@ instance ToGenericError TypeCheckerError where
     ErrTooFewArgumentsIndType e -> genericError e
     ErrImpracticalPatternMatching e -> genericError e
     ErrNoPositivity e -> genericError e
+    ErrUnsupportedTypeFunction e -> genericError e

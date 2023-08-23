@@ -322,3 +322,26 @@ instance ToGenericError NoPositivity where
                 <> line
                 <> "It appears at a negative position in one of the arguments of the constructor"
               <+> ppCode opts' ctor <> "."
+
+newtype UnsupportedTypeFunction = UnsupportedTypeFunction
+  { _unsupportedTypeFunction :: FunctionDef
+  }
+
+instance ToGenericError UnsupportedTypeFunction where
+  genericError UnsupportedTypeFunction {..} = do
+    opts <- fromGenericOptions <$> ask
+    let msg =
+          "Unsupported type function"
+            <+> ppCode opts (_unsupportedTypeFunction ^. funDefName)
+              <> "."
+              <> line
+              <> "Only functions with a single clause and no pattern matching are supported."
+    return
+      GenericError
+        { _genericErrorLoc = i,
+          _genericErrorMessage = mkAnsiText msg,
+          _genericErrorIntervals = [i]
+        }
+    where
+      i :: Interval
+      i = getLoc _unsupportedTypeFunction

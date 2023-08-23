@@ -138,6 +138,13 @@ tests =
       $(mkRelFile "LiteralIntegerString.juvix")
       $ \case
         ErrWrongType {} -> Nothing
+        _ -> wrongError,
+    NegTest
+      "Unsupported type function"
+      $(mkRelDir "Internal")
+      $(mkRelFile "UnsupportedTypeFunction.juvix")
+      $ \case
+        ErrUnsupportedTypeFunction {} -> Nothing
         _ -> wrongError
   ]
 

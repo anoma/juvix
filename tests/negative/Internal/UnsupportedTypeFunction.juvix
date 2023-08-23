@@ -1,0 +1,9 @@
+module UnsupportedTypeFunction;
+
+type Bool :=
+  | true
+  | false;
+
+f : Bool → Type
+  | true := Type
+  | false := Bool;
