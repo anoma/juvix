@@ -1,12 +1,11 @@
 module Iterators3;
 
-map : {A B : Type} → (A → B) → A → B;
-map f x := f x;
+map : {A B : Type} → (A → B) → A → B
+| f x := f x;
 
 builtin bool
 type Bool :=
   | true : Bool
   | false : Bool;
 
-main : Bool;
-main := map (x in true) x;
+main : Bool := map (x in true) x;

@@ -3,7 +3,5 @@ module BuiltinInductive;
 builtin string
 axiom MyString : Type;
 
-main : Type;
-main := MyString;
+main : Type := MyString;
 
-end;

@@ -1,11 +1,16 @@
 -- pattern matching
 module test002;
 
-open import Stdlib.Prelude;
+import Stdlib.Prelude open;
 
 type optbool :=
-|  Just : Bool -> optbool
-|  Nothing : optbool;
+  | Just : Bool -> optbool
+  | Nothing : optbool;
 
-main : Bool;
-main := λ{ x (Just b) := if x true b | _ Nothing := false } false (Just true);
+main : Bool :=
+  λ {
+      x (Just b) := if x true b
+      | _ Nothing := false
+    }
+    false
+    (Just true);

@@ -8,8 +8,7 @@ type Pair (A B : Type) :=
       psnd : B
     };
 
-main : Pair Nat Nat;
-main :=
+main : Pair Nat Nat :=
   let
     p : Pair Nat Nat := mkPair 2 2;
   in p @Pair{pfst := pfst + psnd};

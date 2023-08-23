@@ -11,9 +11,9 @@ import Stdlib.Prelude open;
 concat : List String → String := foldl (++str) "";
 
 --- It inserts the first ;String; at the beginning, in between, and at the end of the second list
-surround : String → List String → List String
-  | x xs := (x :: intersperse x xs) ++ x :: nil;
+surround (x : String) (xs : List String) : List String :=
+  (x :: intersperse x xs) ++ x :: nil;
 
 --- It inserts the first ;String; in between the ;String;s in the second list and concatenates the result
-intercalate : String → List String → String
-  | sep xs := concat (intersperse sep xs);
+intercalate (sep : String) (xs : List String) : String :=
+  concat (intersperse sep xs);

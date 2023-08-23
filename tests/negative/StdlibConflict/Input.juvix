@@ -1,5 +1,5 @@
 module Input;
 
-open import Stdlib.Data.Bool;
+import Stdlib.Data.Bool open;
 
 end;

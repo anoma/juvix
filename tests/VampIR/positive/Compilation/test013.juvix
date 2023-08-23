@@ -1,15 +1,13 @@
 -- tail recursion: Fibonacci numbers in linear time
 module test013;
 
-open import Stdlib.Prelude;
+import Stdlib.Prelude open;
 
 {-# unroll: 11 #-}
-fib' : Nat → Nat → Nat → Nat;
-fib' x y zero := x;
-fib' x y (suc n) := fib' y (x + y) n;
+fib' : Nat → Nat → Nat → Nat
+  | x y zero := x
+  | x y (suc n) := fib' y (x + y) n;
 
-fib : Nat → Nat;
-fib := fib' 0 1;
+fib : Nat → Nat := fib' 0 1;
 
-main : Nat -> Nat;
-main := fib;
+main : Nat -> Nat := fib;

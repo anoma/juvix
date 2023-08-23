@@ -1,18 +1,16 @@
 -- tail recursion through higher-order functions
 module test018;
 
-open import Stdlib.Prelude;
+import Stdlib.Prelude open;
 
-sumb : Nat → (Nat → Nat → Nat) → Nat → Nat;
-sumb acc f zero := acc;
-sumb acc f (suc x) := f acc x;
+sumb : Nat → (Nat → Nat → Nat) → Nat → Nat
+  | acc f zero := acc
+  | acc f (suc x) := f acc x;
 
 terminating
-sum' : Nat → Nat → Nat;
-sum' acc x := sumb (x + acc) sum' x;
+sum' : Nat → Nat → Nat
+  | acc x := sumb (x + acc) sum' x;
 
-sum : Nat → Nat;
-sum := sum' 0;
+sum : Nat → Nat := sum' 0;
 
-main : Nat;
-main := sum 100;
+main : Nat := sum 100;

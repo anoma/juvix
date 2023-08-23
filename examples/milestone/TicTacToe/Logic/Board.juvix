@@ -35,8 +35,8 @@ columns : List (List Square) → List (List Square) :=
 rows : List (List Square) → List (List Square) := id;
 
 --- Textual representation of a ;List Square;
-showRow : List Square → String
-  | xs := concat (surround "|" (map showSquare xs));
+showRow (xs : List Square) : String :=
+  concat (surround "|" (map showSquare xs));
 
 showBoard : Board → String
   | (board squares) :=

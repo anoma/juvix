@@ -1,12 +1,12 @@
 module PatternArgs;
 
-open import Stdlib.Prelude;
+import Stdlib.Prelude open;
 
-f : Nat -> Nat -> Nat;
-f zero zero := zero;
-f n1@(suc m1) n2@(suc m2) := n1 + m1 + (suc (suc zero)) * (n2 + m2);
+f : Nat -> Nat -> Nat
+  | zero zero := zero
+  | n1@(suc m1) n2@(suc m2) :=
+    n1 + m1 + suc (suc zero) * (n2 + m2);
 
-main : IO;
-main := printNatLn (f (suc (suc zero)) (suc (suc (suc zero))));
+main : IO :=
+  printNatLn (f (suc (suc zero)) (suc (suc (suc zero))));
 
-end;

@@ -6,5 +6,4 @@ type R := mkR {
  r : T;
 };
 
-f : R;
-f := (mkR t) @R{x := 1};
+f : R := (mkR t) @R{x := 1};

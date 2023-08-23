@@ -5,8 +5,6 @@ type T :=
 
 main : T :=
   let
-    A : Type;
-    A := T;
-    x : A;
-    x := t;
+    A : Type := T;
+    x : A := t;
   in x;

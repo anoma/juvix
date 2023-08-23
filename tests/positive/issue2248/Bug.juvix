@@ -2,7 +2,6 @@ module Bug;
 
 type A := mkA : A;
 
-aliasA : Type;
-aliasA := A;
+aliasA : Type := A;
 
 type C := mkC : aliasA -> C;
