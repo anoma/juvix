@@ -195,6 +195,7 @@ compileReplInputIO ::
   Sem r (Either JuvixError ReplPipelineResult)
 compileReplInputIO fp txt =
   runError
+    . runLogIO
     . runFilesIO
     . mapError (JuvixError @GitError)
     . runProcessIO

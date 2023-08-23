@@ -7,6 +7,7 @@ where
 import Data.Text qualified as T
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Git.Error
 import Juvix.Compiler.Pipeline.Package
+import Juvix.Data.Effect.Log
 import Juvix.Data.Effect.Process
 import Juvix.Extra.Paths
 import Juvix.Prelude
@@ -86,17 +87,18 @@ gitHeadRef = catch (T.strip <$> runGitCmdInDir' ["rev-parse", "HEAD"]) $ \case
     throwGitError (NotAGitClone p)
   e -> throw e
 
-cloneGitRepo :: (Members '[Files, Process, Error GitError, Reader GitCloneInfo] r) => Text -> Sem r ()
+cloneGitRepo :: (Members '[Log, Files, Process, Error GitError, Reader GitCloneInfo] r) => Text -> Sem r ()
 cloneGitRepo url = do
   -- (dirs, files) <- listDirRel p
   -- unless (null dirs && null files) (throw (NotAnEmptyDir p))
   p :: Path Abs Dir <- asks (^. gitCloneInfoCloneDir)
+  log ("cloning " <> url <> " to " <> pack (toFilePath p))
   void (runGitCmd ["clone", url, T.pack (toFilePath p)])
 
-initGitRepo :: (Members '[Files, Process, Error GitError, Reader GitCloneInfo] r) => GitDependency -> Sem r ()
+initGitRepo :: (Members '[Log, Files, Process, Error GitError, Reader GitCloneInfo] r) => GitDependency -> Sem r ()
 initGitRepo d = unlessM isValidGitClone (cloneGitRepo (d ^. gitDependencyUrl))
 
-runGit :: (Members '[Files, Process, Error GitError] r) => Sem (Git ': r) a -> Sem r a
+runGit :: (Members '[Log, Files, Process, Error GitError] r) => Sem (Git ': r) a -> Sem r a
 runGit = interpret $ \case
   Clone r d ->
     let dep = d ^. gitDepInfoDependency

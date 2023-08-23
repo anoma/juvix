@@ -39,9 +39,9 @@ import Juvix.Compiler.Reg.Translation.FromAsm qualified as Reg
 import Juvix.Data.Effect.Process
 import Juvix.Prelude
 
-type PipelineEff = '[PathResolver, Git, Error GitError, Process, Reader EntryPoint, Files, NameIdGen, Builtins, Error JuvixError, HighlightBuilder, Embed IO]
+type PipelineEff = '[PathResolver, Git, Error GitError, Process, Log, Reader EntryPoint, Files, NameIdGen, Builtins, Error JuvixError, HighlightBuilder, Embed IO]
 
-type TopPipelineEff = '[PathResolver, Git, Error GitError, Process, Reader EntryPoint, Files, NameIdGen, Builtins, State Artifacts, Error JuvixError, HighlightBuilder, Embed IO]
+type TopPipelineEff = '[PathResolver, Git, Error GitError, Process, Log, Reader EntryPoint, Files, NameIdGen, Builtins, State Artifacts, Error JuvixError, HighlightBuilder, Embed IO]
 
 --------------------------------------------------------------------------------
 -- Workflows
@@ -175,6 +175,7 @@ runIOEitherHelper entry =
     . evalTopNameIdGen
     . runFilesIO
     . runReader entry
+    . runLogIO
     . runProcessIO
     . mapError (JuvixError @GitError)
     . runGit
@@ -215,6 +216,7 @@ corePipelineIOEither entry = do
       . runNameIdGenArtifacts
       . runFilesIO
       . runReader entry
+      . runLogIO
       . mapError (JuvixError @GitError)
       . runProcessIO
       . runGit

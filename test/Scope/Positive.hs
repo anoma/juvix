@@ -50,6 +50,7 @@ testDescr PosTest {..} = helper renderCodeNew
                         . evalTopNameIdGen
                         . runFilesPure files tRoot
                         . runReader entryPoint
+                        . ignoreLog
                         . runProcessIO
                         . mapError (JuvixError @GitError)
                         . runGit

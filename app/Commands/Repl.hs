@@ -145,6 +145,7 @@ loadDefaultPrelude = whenJustM defaultPreludeEntryPoint $ \e -> do
     . runFilesIO
     . runError @Text
     . runReader e
+    . runLogIO
     . runProcessIO
     . runError @GitError
     . runGit
