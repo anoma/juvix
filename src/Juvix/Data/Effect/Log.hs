@@ -18,3 +18,7 @@ runLogIO sem = do
         Log txt -> embed (Text.hPutStrLn stdout txt)
     )
     sem
+
+ignoreLog :: InterpreterFor Log r
+ignoreLog = interpret $ \case
+  Log _ -> return ()
