@@ -83,8 +83,7 @@ calculateInterest : Nat -> Nat -> Nat -> Nat
   | principal rate periods :=
     let
       amount : Nat := principal;
-      incrAmount : Nat -> Nat;
-      incrAmount a := div (a * rate) 10000;
+      incrAmount (a : Nat) : Nat := div (a * rate) 10000;
     in iterate (min 100 periods) incrAmount amount;
 
 --- Asserts some ;Bool; condition.
