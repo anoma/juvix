@@ -18,6 +18,8 @@ import Juvix.Data.Keyword.All
     delimParenR,
     delimSemicolon,
     -- keywords
+
+    kwAlias,
     kwAs,
     kwAssign,
     kwAt,
@@ -39,7 +41,6 @@ import Juvix.Data.Keyword.All
     kwLambda,
     kwLet,
     kwMapsTo,
-    kwAlias,
     kwModule,
     kwOpen,
     kwOperator,

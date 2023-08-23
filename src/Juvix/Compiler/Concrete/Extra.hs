@@ -147,6 +147,6 @@ getExpressionAtomIden = \case
 getPatternAtomIden :: PatternAtom 'Scoped -> Maybe S.Name
 getPatternAtomIden = \case
   PatternAtomIden i -> case i of
-    PatternScopedConstructor c -> Just c
+    PatternScopedConstructor c -> Just (c ^. scopedIdenName)
     _ -> Nothing
   _ -> Nothing

@@ -423,8 +423,11 @@ instance SingI s => PrettyPrint (Import s) where
 
 instance SingI s => PrettyPrint (AliasDef s) where
   ppCode AliasDef {..} =
-    ppCode _aliasDefSyntaxKw <+> ppCode _aliasDefAliasKw <+> ppSymbolType _aliasDefName
-      <+> ppCode Kw.kwAssign <+> ppIdentifierType _aliasDefAsName
+    ppCode _aliasDefSyntaxKw
+      <+> ppCode _aliasDefAliasKw
+      <+> ppSymbolType _aliasDefName
+      <+> ppCode Kw.kwAssign
+      <+> ppIdentifierType _aliasDefAsName
 
 instance SingI s => PrettyPrint (SyntaxDef s) where
   ppCode = \case

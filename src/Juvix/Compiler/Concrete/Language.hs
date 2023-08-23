@@ -653,22 +653,16 @@ data PatternApp = PatternApp
 
 data PatternInfixApp = PatternInfixApp
   { _patInfixLeft :: PatternArg,
-    _patInfixConstructor :: S.Name,
+    _patInfixConstructor :: ScopedIden,
     _patInfixRight :: PatternArg
   }
   deriving stock (Show, Eq, Ord)
 
-instance HasFixity PatternInfixApp where
-  getFixity (PatternInfixApp _ op _) = fromMaybe impossible (op ^. S.nameFixity)
-
 data PatternPostfixApp = PatternPostfixApp
   { _patPostfixParameter :: PatternArg,
-    _patPostfixConstructor :: S.Name
+    _patPostfixConstructor :: ScopedIden
   }
   deriving stock (Show, Eq, Ord)
-
-instance HasFixity PatternPostfixApp where
-  getFixity (PatternPostfixApp _ op) = fromMaybe impossible (op ^. S.nameFixity)
 
 data PatternArg = PatternArg
   { _patternArgIsImplicit :: IsImplicit,
@@ -679,7 +673,7 @@ data PatternArg = PatternArg
 
 data Pattern
   = PatternVariable (SymbolType 'Scoped)
-  | PatternConstructor S.Name
+  | PatternConstructor ScopedIden
   | PatternApplication PatternApp
   | PatternList (ListPattern 'Scoped)
   | PatternInfixApplication PatternInfixApp
@@ -689,27 +683,9 @@ data Pattern
   | PatternRecord (RecordPattern 'Scoped)
   deriving stock (Show, Eq, Ord)
 
-instance HasAtomicity (ListPattern s) where
-  atomicity = const Atom
-
-instance HasAtomicity (RecordPattern s) where
-  atomicity = const Atom
-
-instance HasAtomicity Pattern where
-  atomicity e = case e of
-    PatternVariable {} -> Atom
-    PatternConstructor {} -> Atom
-    PatternApplication {} -> Aggregate appFixity
-    PatternInfixApplication a -> Aggregate (getFixity a)
-    PatternPostfixApplication p -> Aggregate (getFixity p)
-    PatternWildcard {} -> Atom
-    PatternList l -> atomicity l
-    PatternEmpty {} -> Atom
-    PatternRecord r -> atomicity r
-
 data PatternScopedIden
   = PatternScopedVar S.Symbol
-  | PatternScopedConstructor S.Name
+  | PatternScopedConstructor ScopedIden
   deriving stock (Show, Ord, Eq)
 
 data PatternBinding = PatternBinding
@@ -2125,7 +2101,7 @@ instance IsApe PatternInfixApp ApeLeaf where
         { _infixFixity = getFixity i,
           _infixLeft = toApe l,
           _infixRight = toApe r,
-          _infixIsDelimiter = isDelimiterStr (prettyText (op ^. S.nameConcrete)),
+          _infixIsDelimiter = isDelimiterStr (prettyText (op ^. scopedIdenName . S.nameConcrete)),
           _infixOp = ApeLeafPattern (PatternConstructor op)
         }
 
@@ -2312,11 +2288,11 @@ exportAllNames =
     . each
     . preSymbolName
     <> exportModuleSymbols
-    . each
-    . moduleEntry
+      . each
+      . moduleEntry
     <> exportFixitySymbols
-    . each
-    . fixityEntry
+      . each
+      . fixityEntry
 
 exportNameSpace :: forall ns. (SingI ns) => Lens' ExportInfo (HashMap Symbol (NameSpaceEntryType ns))
 exportNameSpace = case sing :: SNameSpace ns of
@@ -2339,18 +2315,50 @@ _SyntaxAlias f x = case x of
   SyntaxAlias r -> SyntaxAlias <$> f r
   _ -> pure x
 
+scopedIdenName :: Lens' ScopedIden S.Name
+scopedIdenName f n = case n ^. scopedIdenAlias of
+  Nothing -> scopedIden f n
+  Just a -> do
+    a' <- f a
+    pure (set scopedIdenAlias (Just a') n)
+
+scopedIdenFixity :: ScopedIden -> Maybe Fixity
+scopedIdenFixity s = fromMaybe (s ^. scopedIden . S.nameFixity) (s ^? scopedIdenAlias . _Just . S.nameFixity)
+
+scopedIdenNameId :: ScopedIden -> NameId
+scopedIdenNameId s = fromMaybe (s ^. scopedIden . S.nameId) (s ^? scopedIdenAlias . _Just . S.nameId)
+
 instance HasFixity PostfixApplication where
   getFixity (PostfixApplication _ op) = fromMaybe impossible (op ^. scopedIden . S.nameFixity)
 
 instance HasFixity InfixApplication where
   getFixity (InfixApplication _ op _) = fromMaybe impossible (op ^. scopedIden . S.nameFixity)
 
--- preSymbolFinal :: Lens' PreSymbolEntry SymbolEntry
--- preSymbolFinal f = \case
---   PreSymbolAlias a -> PreSymbolAlias <$> traverseOf aliasEntry (preSymbolFinal f) a
---   PreSymbolFinal a -> PreSymbolFinal <$> f a
-
 preSymbolName :: Lens' PreSymbolEntry (S.Name' ())
 preSymbolName f = \case
   PreSymbolAlias a -> PreSymbolAlias <$> traverseOf aliasName f a
   PreSymbolFinal a -> PreSymbolFinal <$> traverseOf symbolEntry f a
+
+instance HasFixity PatternInfixApp where
+  getFixity (PatternInfixApp _ op _) = fromMaybe impossible (op ^. scopedIdenName . S.nameFixity)
+
+instance HasFixity PatternPostfixApp where
+  getFixity (PatternPostfixApp _ op) = fromMaybe impossible (op ^. scopedIdenName . S.nameFixity)
+
+instance HasAtomicity (ListPattern s) where
+  atomicity = const Atom
+
+instance HasAtomicity (RecordPattern s) where
+  atomicity = const Atom
+
+instance HasAtomicity Pattern where
+  atomicity e = case e of
+    PatternVariable {} -> Atom
+    PatternConstructor {} -> Atom
+    PatternApplication {} -> Aggregate appFixity
+    PatternInfixApplication a -> Aggregate (getFixity a)
+    PatternPostfixApplication p -> Aggregate (getFixity p)
+    PatternWildcard {} -> Atom
+    PatternList l -> atomicity l
+    PatternEmpty {} -> Atom
+    PatternRecord r -> atomicity r

@@ -219,13 +219,12 @@ reserveSymbolOf isAlias k nameSig s = do
   whenJust nameSig (modify' . set (scoperSignatures . at (s' ^. S.nameId)) . Just)
   modify (set (scopeNameSpaceLocal sns . at s) (Just s'))
   registerName (S.unqualifiedSymbol s')
-  let
-      u = S.unConcrete s'
+  let u = S.unConcrete s'
       entry :: NameSpaceEntryType (NameKindNameSpace nameKind)
       entry =
         let symE
-             | isAlias = PreSymbolAlias (Alias u)
-             | otherwise = PreSymbolFinal (SymbolEntry u)
+              | isAlias = PreSymbolAlias (Alias u)
+              | otherwise = PreSymbolFinal (SymbolEntry u)
             modE = ModuleSymbolEntry u
             fixE = FixitySymbolEntry u
          in case k of
@@ -451,7 +450,7 @@ mkModuleEntry (ModuleRef' (t :&: m)) = ModuleSymbolEntry $ case t of
 
 lookInExport ::
   forall r.
-  Members '[State ScoperState, Output SymbolEntry, Output ModuleSymbolEntry, Output FixitySymbolEntry] r =>
+  Members '[State ScoperState, Output PreSymbolEntry, Output ModuleSymbolEntry, Output FixitySymbolEntry] r =>
   Symbol ->
   [Symbol] ->
   ExportInfo ->
@@ -475,12 +474,12 @@ lookupQualifiedSymbol ::
   ([Symbol], Symbol) ->
   Sem r ([PreSymbolEntry], [ModuleSymbolEntry], [FixitySymbolEntry])
 lookupQualifiedSymbol sms = do
-  (es, (ms, fs)) <- runOutputList $ runOutputList $ execOutputList $ go sms
+  (es, (ms, fs)) <- runOutputList . runOutputList . execOutputList $ go sms
   return (es, ms, fs)
   where
     go ::
       forall r'.
-      Members '[State ScoperState, State Scope, Output SymbolEntry, Output ModuleSymbolEntry, Output FixitySymbolEntry] r' =>
+      Members '[State ScoperState, State Scope, Output PreSymbolEntry, Output ModuleSymbolEntry, Output FixitySymbolEntry] r' =>
       ([Symbol], Symbol) ->
       Sem r' ()
     go (path, sym) = do
@@ -534,17 +533,28 @@ checkQualifiedExpr q@(QualifiedName (SymbolPath p) sym) = do
     q' = NameQualified q
     notInScope = throw (ErrQualSymNotInScope (QualSymNotInScope q))
 
-entryToScopedIden :: Members '[InfoTableBuilder, State ScoperState] r =>
-   Name -> PreSymbolEntry -> Sem r ScopedIden
+entryToScopedIden ::
+  Members '[InfoTableBuilder, State ScoperState] r =>
+  Name ->
+  PreSymbolEntry ->
+  Sem r ScopedIden
 entryToScopedIden name e = do
   let scopedName :: S.Name
       scopedName = set S.nameConcrete name (e ^. preSymbolName)
   si <- case e of
-    PreSymbolFinal f -> return ScopedIden {
-                      _scopedIden = set S.nameConcrete name (f ^. symbolEntry),
-                      _scopedIdenAlias = Nothing
-                                          }
-    PreSymbolAlias {} -> undefined
+    PreSymbolFinal {} ->
+      return
+        ScopedIden
+          { _scopedIden = scopedName,
+            _scopedIdenAlias = Nothing
+          }
+    PreSymbolAlias {} -> do
+      e' <- normalizePreSymbolEntry e
+      return
+        ScopedIden
+          { _scopedIdenAlias = Just scopedName,
+            _scopedIden = set S.nameConcrete name (e' ^. symbolEntry)
+          }
   registerName scopedName
   return si
 
@@ -1130,7 +1140,7 @@ checkSections sec = do
               }
           where
             scanAlias :: AliasDef 'Parsed -> Sem r' ()
-            scanAlias = undefined
+            scanAlias a = undefined
 
             reserveDefinition :: Definition 'Parsed -> Sem r' ()
             reserveDefinition = \case
@@ -1658,20 +1668,16 @@ checkRecordPattern ::
   Sem r (RecordPattern 'Scoped)
 checkRecordPattern r = do
   c' <- getNameOfKind KNameConstructor (r ^. recordPatternConstructor)
-  let s = ScopedIden {
-        _scopedIden = c',
-        _scopedIdenAlias = undefined
-                     }
-  fields <- fromMaybeM (return (RecordNameSignature mempty)) (gets (^. scoperConstructorFields . at (c' ^. S.nameId)))
+  fields <- fromMaybeM (return (RecordNameSignature mempty)) (gets (^. scoperConstructorFields . at (c' ^. scopedIden . S.nameId)))
   l' <-
     if
         | null (r ^. recordPatternItems) -> return []
         | otherwise -> do
-            when (null (fields ^. recordNames)) (throw (noFields s))
+            when (null (fields ^. recordNames)) (throw (noFields c'))
             runReader fields (mapM checkItem (r ^. recordPatternItems))
   return
     RecordPattern
-      { _recordPatternConstructor = s,
+      { _recordPatternConstructor = c',
         _recordPatternSignature = Irrelevant fields,
         _recordPatternItems = l'
       }
@@ -1901,15 +1907,13 @@ checkPatternName ::
 checkPatternName n = do
   c <- getConstructorRef
   case c of
-    Just constr -> do
-      registerName constr
-      return (PatternScopedConstructor constr) -- the symbol is a constructor
+    Just constr -> return (PatternScopedConstructor constr) -- the symbol is a constructor
     Nothing -> case n of
       NameUnqualified {} -> PatternScopedVar <$> bindVariableSymbol sym -- the symbol is a variable
       NameQualified {} -> nameNotInScope n
   where
     sym = snd (splitName n)
-    getConstructorRef :: Sem r (Maybe S.Name)
+    getConstructorRef :: Sem r (Maybe ScopedIden)
     getConstructorRef = lookupNameOfKind KNameConstructor n
 
 nameNotInScope :: forall r a. Members '[Error ScoperError, State Scope] r => Name -> Sem r a
@@ -1922,31 +1926,32 @@ nameNotInScope n = err >>= throw
 
 getNameOfKind ::
   forall r.
-  Members '[Error ScoperError, State Scope, State ScoperState] r =>
+  Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder] r =>
   NameKind ->
   Name ->
-  Sem r S.Name
+  Sem r ScopedIden
 getNameOfKind nameKind n = fromMaybeM (nameNotInScope n) (lookupNameOfKind nameKind n)
 
 lookupNameOfKind ::
   forall r.
-  Members '[Error ScoperError, State Scope, State ScoperState] r =>
+  Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder] r =>
   NameKind ->
   Name ->
-  Sem r (Maybe S.Name)
+  Sem r (Maybe ScopedIden)
 lookupNameOfKind nameKind n = do
-  -- TODO handle alias
-  entries <- mapMaybe filterEntry . fst3 <$> lookupQualifiedSymbol (path, sym)
+  entries <- lookupQualifiedSymbol (path, sym) >>= mapMaybeM filterEntry . fst3
   case entries of
     [] -> return Nothing
-    [e] -> return (Just (set S.nameConcrete n e)) -- There is one constructor with such a name
-    es -> throw (ErrAmbiguousSym (AmbiguousSym n (map SymbolEntry es)))
+    [(_, s)] -> return (Just s) -- There is one constructor with such a name
+    es -> throw (ErrAmbiguousSym (AmbiguousSym n (map fst es)))
   where
     (path, sym) = splitName n
-    filterEntry :: SymbolEntry -> Maybe (S.Name' ())
-    filterEntry e
-      | nameKind == getNameKind e = Just (e ^. symbolEntry)
-      | otherwise = Nothing
+    filterEntry :: PreSymbolEntry -> Sem r (Maybe (PreSymbolEntry, ScopedIden))
+    filterEntry e = do
+      e' <- entryToScopedIden n e
+      return $ do
+        guard (nameKind == getNameKind e')
+        return (e, e')
 
 checkPatternBinding ::
   Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r =>
@@ -2017,8 +2022,7 @@ checkExpressionAtom e = case e of
 checkRecordUpdate :: forall r. Members '[Error ScoperError, State Scope, State ScoperState, Reader ScopeParameters, InfoTableBuilder, NameIdGen] r => RecordUpdate 'Parsed -> Sem r (RecordUpdate 'Scoped)
 checkRecordUpdate RecordUpdate {..} = do
   tyName' <- getNameOfKind KNameInductive _recordUpdateTypeName
-  registerName tyName'
-  info <- getRecordInfo (ScopedIden tyName')
+  info <- getRecordInfo tyName'
   let sig = info ^. recordInfoSignature
   (vars', fields') <- withLocalScope $ do
     vs <- mapM bindVariableSymbol (toList (recordNameSignatureByIndex sig))
@@ -2032,7 +2036,7 @@ checkRecordUpdate RecordUpdate {..} = do
           }
   return
     RecordUpdate
-      { _recordUpdateTypeName = ScopedIden tyName',
+      { _recordUpdateTypeName = tyName',
         _recordUpdateFields = fields',
         _recordUpdateExtra = Irrelevant extra',
         _recordUpdateAtKw,
@@ -2275,7 +2279,8 @@ checkAliasDef ::
   Sem r (AliasDef 'Scoped)
 checkAliasDef = undefined
 
-reserveAliasDef :: (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, State ScoperSyntax] r) =>
+reserveAliasDef ::
+  (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, State ScoperSyntax] r) =>
   AliasDef 'Parsed ->
   Sem r ()
 reserveAliasDef = undefined
@@ -2598,43 +2603,42 @@ makePatternTable ::
   PatternAtoms 'Scoped -> [[P.Operator ParsePat PatternArg]]
 makePatternTable (PatternAtoms latoms _) = [appOp] : operators
   where
-    getConstructorRef :: PatternAtom 'Scoped -> Maybe S.Name
+    getConstructorRef :: PatternAtom 'Scoped -> Maybe ScopedIden
     getConstructorRef = \case
       PatternAtomIden i -> case i of
         PatternScopedConstructor c -> Just c
         _ -> Nothing
       _ -> Nothing
     operators = mkSymbolTable (mapMaybe getConstructorRef (toList latoms))
-    mkSymbolTable :: [S.Name] -> [[P.Operator ParsePat PatternArg]]
+    mkSymbolTable :: [ScopedIden] -> [[P.Operator ParsePat PatternArg]]
     mkSymbolTable = reverse . map (map snd) . groupSortOn' fst . mapMaybe unqualifiedSymbolOp
       where
-        unqualifiedSymbolOp :: S.Name -> Maybe (Precedence, P.Operator ParsePat PatternArg)
-        unqualifiedSymbolOp S.Name' {..}
-          | Just Fixity {..} <- _nameFixity,
-            _nameKind == KNameConstructor = Just $
-              case _fixityArity of
-                Unary u -> (_fixityPrecedence, P.Postfix (unaryApp <$> parseSymbolId _nameId))
-                  where
-                    unaryApp :: S.Name -> PatternArg -> PatternArg
-                    unaryApp constrName = case u of
-                      AssocPostfix -> explicitP . PatternPostfixApplication . (`PatternPostfixApp` constrName)
-                Binary b -> (_fixityPrecedence, infixLRN (binaryInfixApp <$> parseSymbolId _nameId))
-                  where
-                    binaryInfixApp :: S.Name -> PatternArg -> PatternArg -> PatternArg
-                    binaryInfixApp name argLeft = explicitP . PatternInfixApplication . PatternInfixApp argLeft name
-                    infixLRN :: ParsePat (PatternArg -> PatternArg -> PatternArg) -> P.Operator ParsePat PatternArg
-                    infixLRN = case b of
-                      AssocLeft -> P.InfixL
-                      AssocRight -> P.InfixR
-                      AssocNone -> P.InfixN
-          | otherwise = Nothing
-        parseSymbolId :: S.NameId -> ParsePat S.Name
+        unqualifiedSymbolOp :: ScopedIden -> Maybe (Precedence, P.Operator ParsePat PatternArg)
+        unqualifiedSymbolOp constr = run . runFail $ do
+          Fixity {..} <- failMaybe (scopedIdenFixity constr)
+          let _nameId = scopedIdenNameId constr
+          return $ case _fixityArity of
+            Unary u -> (_fixityPrecedence, P.Postfix (unaryApp <$> parseSymbolId _nameId))
+              where
+                unaryApp :: ScopedIden -> PatternArg -> PatternArg
+                unaryApp constrName = case u of
+                  AssocPostfix -> explicitP . PatternPostfixApplication . (`PatternPostfixApp` constrName)
+            Binary b -> (_fixityPrecedence, infixLRN (binaryInfixApp <$> parseSymbolId _nameId))
+              where
+                binaryInfixApp :: ScopedIden -> PatternArg -> PatternArg -> PatternArg
+                binaryInfixApp name argLeft = explicitP . PatternInfixApplication . PatternInfixApp argLeft name
+                infixLRN :: ParsePat (PatternArg -> PatternArg -> PatternArg) -> P.Operator ParsePat PatternArg
+                infixLRN = case b of
+                  AssocLeft -> P.InfixL
+                  AssocRight -> P.InfixR
+                  AssocNone -> P.InfixN
+        parseSymbolId :: S.NameId -> ParsePat ScopedIden
         parseSymbolId uid = P.token getConstructorRefWithId mempty
           where
-            getConstructorRefWithId :: PatternAtom 'Scoped -> Maybe S.Name
+            getConstructorRefWithId :: PatternAtom 'Scoped -> Maybe ScopedIden
             getConstructorRefWithId s = do
               ref <- getConstructorRef s
-              guard (ref ^. S.nameId == uid)
+              guard (scopedIdenNameId ref == uid)
               return ref
 
     -- Application by juxtaposition.
@@ -2681,10 +2685,10 @@ parsePatternTerm = do
       explicitP . PatternConstructor
         <$> P.token constructorNoFixity mempty
       where
-        constructorNoFixity :: PatternAtom 'Scoped -> Maybe S.Name
+        constructorNoFixity :: PatternAtom 'Scoped -> Maybe ScopedIden
         constructorNoFixity s = case s of
           PatternAtomIden (PatternScopedConstructor ref)
-            | not (S.hasFixity n) -> Just ref
+            | not (S.hasFixity (n ^. scopedIdenName)) -> Just ref
             where
               n = ref
           _ -> Nothing
