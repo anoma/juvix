@@ -322,5 +322,12 @@ scoperErrorTests =
       $(mkRelFile "IncomparablePrecedences.juvix")
       $ \case
         ErrIncomparablePrecedences {} -> Nothing
+        _ -> wrongError,
+    NegTest
+      "Alias cycle"
+      $(mkRelDir ".")
+      $(mkRelFile "AliasCycle.juvix")
+      $ \case
+        ErrAliasCycle {} -> Nothing
         _ -> wrongError
   ]

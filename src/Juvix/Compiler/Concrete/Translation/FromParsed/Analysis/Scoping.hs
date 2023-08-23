@@ -528,21 +528,16 @@ normalizePreSymbolEntry = \case
 checkQualifiedName ::
   (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder] r) =>
   QualifiedName ->
-  Sem r ScopedIden
+  Sem r PreSymbolEntry
 checkQualifiedName q@(QualifiedName (SymbolPath p) sym) = do
   es <- fst3 <$> lookupQualifiedSymbol (toList p, sym)
   case es of
     [] -> notInScope
-    [e] -> entryToScopedIden q' e
+    [e] -> return e
     _ -> throw (ErrAmbiguousSym (AmbiguousSym q' es))
   where
     q' = NameQualified q
     notInScope = throw (ErrQualSymNotInScope (QualSymNotInScope q))
-
-scopedIdenToPreSymbolEntry :: ScopedIden -> PreSymbolEntry
-scopedIdenToPreSymbolEntry s = case s ^. scopedIdenAlias of
-  Just a -> PreSymbolAlias (Alias (S.unConcrete a))
-  Nothing -> PreSymbolFinal (SymbolEntry (S.unConcrete (s ^. scopedIden)))
 
 entryToScopedIden ::
   Members '[InfoTableBuilder, State ScoperState] r =>
@@ -1153,7 +1148,7 @@ checkSections sec = do
             scanAlias :: AliasDef 'Parsed -> Sem r' ()
             scanAlias a = do
               aliasId <- gets (^?! scopeLocalSymbols . at (a ^. aliasDefName) . _Just . S.nameId)
-              asName <- scopedIdenToPreSymbolEntry <$> checkName (a ^. aliasDefAsName)
+              asName <- checkName (a ^. aliasDefAsName)
               modify' (set (scoperAlias . at aliasId) (Just asName))
               checkLoop aliasId
               where
@@ -1868,17 +1863,17 @@ scopedFunction fref n = do
   registerName scoped
   return scoped
 
-checkUnqualified ::
+checkUnqualifiedName ::
   (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder] r) =>
   Symbol ->
-  Sem r ScopedIden
-checkUnqualified s = do
+  Sem r PreSymbolEntry
+checkUnqualifiedName s = do
   scope <- get
   -- Lookup at the global scope
   entries <- fst3 <$> lookupQualifiedSymbol ([], s)
   case resolveShadowing entries of
     [] -> throw (ErrSymNotInScope (NotInScope s scope))
-    [x] -> entryToScopedIden n x
+    [x] -> return x
     es -> throw (ErrAmbiguousSym (AmbiguousSym n es))
   where
     n = NameUnqualified s
@@ -2016,17 +2011,23 @@ checkPatternAtom = \case
 checkName ::
   (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder] r) =>
   Name ->
-  Sem r ScopedIden
+  Sem r PreSymbolEntry
 checkName n = case n of
   NameQualified q -> checkQualifiedName q
-  NameUnqualified s -> checkUnqualified s
+  NameUnqualified s -> checkUnqualifiedName s
+
+checkScopedIden ::
+  (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder] r) =>
+  Name ->
+  Sem r ScopedIden
+checkScopedIden n = checkName n >>= entryToScopedIden n
 
 checkExpressionAtom ::
   Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r =>
   ExpressionAtom 'Parsed ->
   Sem r (NonEmpty (ExpressionAtom 'Scoped))
 checkExpressionAtom e = case e of
-  AtomIdentifier n -> pure . AtomIdentifier <$> checkName n
+  AtomIdentifier n -> pure . AtomIdentifier <$> checkScopedIden n
   AtomLambda lam -> pure . AtomLambda <$> checkLambda lam
   AtomCase c -> pure . AtomCase <$> checkCase c
   AtomLet letBlock -> pure . AtomLet <$> checkLet letBlock
@@ -2087,7 +2088,7 @@ checkNamedApplication ::
   NamedApplication 'Parsed ->
   Sem r (NamedApplication 'Scoped)
 checkNamedApplication napp = do
-  _namedAppName <- checkName (napp ^. namedAppName)
+  _namedAppName <- checkScopedIden (napp ^. namedAppName)
   _namedAppSignature <- Irrelevant <$> getNameSignature _namedAppName
   _namedAppArgs <- mapM checkArgumentBlock (napp ^. namedAppArgs)
   return NamedApplication {..}
@@ -2132,7 +2133,7 @@ checkIterator ::
   Iterator 'Parsed ->
   Sem r (Iterator 'Scoped)
 checkIterator iter = do
-  _iteratorName <- checkName (iter ^. iteratorName)
+  _iteratorName <- checkScopedIden (iter ^. iteratorName)
   case _iteratorName ^. scopedIden . S.nameIterator of
     Just IteratorAttribs {..} -> do
       case _iteratorAttribsInitNum of
@@ -2215,7 +2216,7 @@ checkParens ::
 checkParens e@(ExpressionAtoms as _) = case as of
   p :| [] -> case p of
     AtomIdentifier s -> do
-      scopedId <- checkName s
+      scopedId <- checkScopedIden s
       let scopedIdenNoFix = over scopedIden (set S.nameFixity Nothing) scopedId
       return (ExpressionParensIdentifier scopedIdenNoFix)
     AtomIterator i -> ExpressionIterator . set iteratorParens True <$> checkIterator i
@@ -2302,7 +2303,7 @@ checkAliasDef ::
   Sem r (AliasDef 'Scoped)
 checkAliasDef AliasDef {..} = do
   aliasName' :: S.Symbol <- gets (^?! scopeLocalSymbols . at _aliasDefName . _Just)
-  asName' <- checkName _aliasDefAsName
+  asName' <- checkScopedIden _aliasDefAsName
   return
     AliasDef
       { _aliasDefName = aliasName',
