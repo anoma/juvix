@@ -37,7 +37,7 @@ import Juvix.Data.Keyword
 import Juvix.Data.NameKind
 import Juvix.Parser.Lexer (isDelimiterStr)
 import Juvix.Prelude hiding (show)
-import Juvix.Prelude.Pretty (prettyText)
+import Juvix.Prelude.Pretty (Pretty, pretty, prettyText)
 import Prelude (show)
 
 type Delims = Irrelevant (Maybe (KeywordRef, KeywordRef))
@@ -1748,6 +1748,9 @@ instance (SingI s) => HasAtomicity (FunctionParameters s) where
     | otherwise = case sing :: SStage s of
         SParsed -> atomicity (p ^. paramType)
         SScoped -> atomicity (p ^. paramType)
+
+instance Pretty ScopedIden where
+  pretty = pretty . (^. scopedIdenName)
 
 instance HasLoc ScopedIden where
   getLoc = getLoc . (^. scopedIden)

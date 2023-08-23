@@ -1061,8 +1061,11 @@ instance SingI s => PrettyPrint (Statement s) where
 
 instance PrettyPrint PreSymbolEntry where
   ppCode = \case
-    PreSymbolAlias a -> undefined
-    PreSymbolFinal a -> undefined
+    PreSymbolAlias a -> ppCode a
+    PreSymbolFinal a -> ppCode a
+
+instance PrettyPrint Alias where
+  ppCode _ = noLoc "TODO PrettyPrint Alias"
 
 instance PrettyPrint SymbolEntry where
   ppCode ent =

@@ -500,9 +500,19 @@ builtinStatement = do
 syntaxDef :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (SyntaxDef 'Parsed)
 syntaxDef = do
   syn <- kw kwSyntax
-  (SyntaxFixity <$> fixitySyntaxDef syn)
-    <|> (SyntaxOperator <$> operatorSyntaxDef syn)
-    <|> (SyntaxIterator <$> iteratorSyntaxDef syn)
+  SyntaxFixity <$> fixitySyntaxDef syn
+    <|> SyntaxOperator <$> operatorSyntaxDef syn
+    <|> SyntaxIterator <$> iteratorSyntaxDef syn
+    <|> SyntaxAlias <$> aliasDef syn
+
+aliasDef :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => KeywordRef -> ParsecS r (AliasDef 'Parsed)
+aliasDef synKw = do
+  let _aliasDefSyntaxKw = Irrelevant synKw
+  _aliasDefAliasKw <- Irrelevant <$> kw kwAlias
+  _aliasDefName <- symbol
+  kw kwAssign
+  _aliasDefAsName <- name
+  return AliasDef {..}
 
 --------------------------------------------------------------------------------
 -- Operator syntax declaration

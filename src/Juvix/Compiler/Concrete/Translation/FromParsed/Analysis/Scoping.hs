@@ -285,6 +285,13 @@ reserveInductiveSymbol ::
   Sem r S.Symbol
 reserveInductiveSymbol d = reserveSymbolSignatureOf SKNameInductive d (d ^. inductiveName)
 
+-- | The NameKind assigned to the alias is irrelevant.
+reserveAliasSymbol ::
+  Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, Reader BindingStrategy, InfoTableBuilder, State ScoperState] r =>
+  Symbol ->
+  Sem r S.Symbol
+reserveAliasSymbol = reserveSymbolOf True SKNameLocal Nothing
+
 reserveProjectionSymbol ::
   Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, Reader BindingStrategy, InfoTableBuilder, State ScoperState] r =>
   ProjectionDef 'Parsed ->
@@ -518,13 +525,12 @@ normalizePreSymbolEntry = \case
   PreSymbolFinal a -> return a
   PreSymbolAlias a -> gets (^?! scoperAlias . at (a ^. aliasName . S.nameId) . _Just) >>= normalizePreSymbolEntry
 
-checkQualifiedExpr ::
+checkQualifiedName ::
   (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder] r) =>
   QualifiedName ->
   Sem r ScopedIden
-checkQualifiedExpr q@(QualifiedName (SymbolPath p) sym) = do
+checkQualifiedName q@(QualifiedName (SymbolPath p) sym) = do
   es <- fst3 <$> lookupQualifiedSymbol (toList p, sym)
-  -- TODO handle aliases
   case es of
     [] -> notInScope
     [e] -> entryToScopedIden q' e
@@ -532,6 +538,11 @@ checkQualifiedExpr q@(QualifiedName (SymbolPath p) sym) = do
   where
     q' = NameQualified q
     notInScope = throw (ErrQualSymNotInScope (QualSymNotInScope q))
+
+scopedIdenToPreSymbolEntry :: ScopedIden -> PreSymbolEntry
+scopedIdenToPreSymbolEntry s = case s ^. scopedIdenAlias of
+  Just a -> PreSymbolAlias (Alias (S.unConcrete a))
+  Nothing -> PreSymbolFinal (SymbolEntry (S.unConcrete (s ^. scopedIden)))
 
 entryToScopedIden ::
   Members '[InfoTableBuilder, State ScoperState] r =>
@@ -1140,7 +1151,20 @@ checkSections sec = do
               }
           where
             scanAlias :: AliasDef 'Parsed -> Sem r' ()
-            scanAlias a = undefined
+            scanAlias a = do
+              aliasId <- gets (^?! scopeLocalSymbols . at (a ^. aliasDefName) . _Just . S.nameId)
+              asName <- scopedIdenToPreSymbolEntry <$> checkName (a ^. aliasDefAsName)
+              modify' (set (scoperAlias . at aliasId) (Just asName))
+              checkLoop aliasId
+              where
+                checkLoop :: NameId -> Sem r' ()
+                checkLoop = evalState (mempty :: HashSet NameId) . go
+                  where
+                    go :: Members '[State (HashSet NameId), Error ScoperError, State ScoperState] s => NameId -> Sem s ()
+                    go i = do
+                      whenM (gets (HashSet.member i)) (throw (ErrAliasCycle (AliasCycle a)))
+                      modify' (HashSet.insert i)
+                      whenJustM (gets (^? scoperAlias . at i . _Just . preSymbolName . S.nameId)) go
 
             reserveDefinition :: Definition 'Parsed -> Sem r' ()
             reserveDefinition = \case
@@ -1852,7 +1876,6 @@ checkUnqualified s = do
   scope <- get
   -- Lookup at the global scope
   entries <- fst3 <$> lookupQualifiedSymbol ([], s)
-  -- TODO handle aliases
   case resolveShadowing entries of
     [] -> throw (ErrSymNotInScope (NotInScope s scope))
     [x] -> entryToScopedIden n x
@@ -1995,7 +2018,7 @@ checkName ::
   Name ->
   Sem r ScopedIden
 checkName n = case n of
-  NameQualified q -> checkQualifiedExpr q
+  NameQualified q -> checkQualifiedName q
   NameUnqualified s -> checkUnqualified s
 
 checkExpressionAtom ::
@@ -2277,16 +2300,24 @@ checkAliasDef ::
   (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, State ScoperSyntax] r) =>
   AliasDef 'Parsed ->
   Sem r (AliasDef 'Scoped)
-checkAliasDef = undefined
+checkAliasDef AliasDef {..} = do
+  aliasName' :: S.Symbol <- gets (^?! scopeLocalSymbols . at _aliasDefName . _Just)
+  asName' <- checkName _aliasDefAsName
+  return
+    AliasDef
+      { _aliasDefName = aliasName',
+        _aliasDefAsName = asName',
+        ..
+      }
 
 reserveAliasDef ::
-  (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, State ScoperSyntax] r) =>
+  (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, State ScoperSyntax, Reader BindingStrategy] r) =>
   AliasDef 'Parsed ->
   Sem r ()
-reserveAliasDef = undefined
+reserveAliasDef = void . reserveAliasSymbol . (^. aliasDefName)
 
 resolveSyntaxDef ::
-  (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, State ScoperSyntax] r) =>
+  (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, State ScoperSyntax, Reader BindingStrategy] r) =>
   SyntaxDef 'Parsed ->
   Sem r ()
 resolveSyntaxDef = \case

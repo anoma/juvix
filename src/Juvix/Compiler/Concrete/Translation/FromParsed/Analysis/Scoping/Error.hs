@@ -46,6 +46,7 @@ data ScoperError
   | ErrConstructorNotARecord ConstructorNotARecord
   | ErrPrecedenceInconsistency PrecedenceInconsistencyError
   | ErrIncomparablePrecedences IncomaprablePrecedences
+  | ErrAliasCycle AliasCycle
 
 instance ToGenericError ScoperError where
   genericError = \case
@@ -83,3 +84,4 @@ instance ToGenericError ScoperError where
     ErrConstructorNotARecord e -> genericError e
     ErrPrecedenceInconsistency e -> genericError e
     ErrIncomparablePrecedences e -> genericError e
+    ErrAliasCycle e -> genericError e
