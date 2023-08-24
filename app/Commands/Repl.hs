@@ -286,6 +286,7 @@ printDocumentation = replParseIdentifiers >=> printIdentifiers
             KNameConstructor -> getDocConstructor n
             KNameLocalModule -> impossible
             KNameTopModule -> impossible
+            KNameAlias -> impossible
             KNameFixity -> impossible
           printDoc mdoc
           where
@@ -344,6 +345,7 @@ printDefinition = replParseIdentifiers >=> printIdentifiers
                 KNameLocalModule -> impossible
                 KNameTopModule -> impossible
                 KNameFixity -> impossible
+                KNameAlias -> impossible
           where
             printLocation :: HasLoc s => s -> Repl ()
             printLocation def = do

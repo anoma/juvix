@@ -47,9 +47,10 @@ type Pair :=
 syntax operator , pair;
 syntax alias , := mkPair;
 
-myPair : Pair := one , ⊥;
+myPair : Pair := one, ⊥;
 
 localAlias : Binary -> Binary
- | b := let
- syntax alias b' := b
- in b';
+  | b :=
+    let
+      syntax alias b' := b;
+    in b';

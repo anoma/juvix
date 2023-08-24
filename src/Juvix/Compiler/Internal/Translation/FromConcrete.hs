@@ -834,6 +834,7 @@ goExpression = \case
       KNameFunction -> Internal.IdenFunction n'
       KNameConstructor -> Internal.IdenConstructor n'
       KNameLocalModule -> impossible
+      KNameAlias -> impossible
       KNameTopModule -> impossible
       KNameFixity -> impossible
       where

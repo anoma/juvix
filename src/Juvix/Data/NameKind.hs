@@ -19,8 +19,10 @@ data NameKind
     KNameLocalModule
   | -- | A top module name.
     KNameTopModule
-  | -- | A fixity name
+  | -- | A fixity name.
     KNameFixity
+  | -- | An alias name. Only used in the declaration site.
+    KNameAlias
   deriving stock (Show, Eq, Data)
 
 $(genSingletons [''NameKind])
@@ -50,6 +52,7 @@ nameKindText = \case
   KNameLocalModule -> "local module"
   KNameTopModule -> "module"
   KNameFixity -> "fixity"
+  KNameAlias -> "alias"
 
 isExprKind :: HasNameKind a => a -> Bool
 isExprKind k = case getNameKind k of
@@ -73,6 +76,7 @@ canBeCompiled k = case getNameKind k of
   KNameLocalModule -> False
   KNameTopModule -> False
   KNameFixity -> False
+  KNameAlias -> False
 
 canHaveFixity :: HasNameKind a => a -> Bool
 canHaveFixity k = case getNameKind k of
@@ -80,6 +84,7 @@ canHaveFixity k = case getNameKind k of
   KNameInductive -> True
   KNameFunction -> True
   KNameAxiom -> True
+  KNameAlias -> True
   KNameLocal -> False
   KNameLocalModule -> False
   KNameTopModule -> False
@@ -90,6 +95,7 @@ canBeIterator k = case getNameKind k of
   KNameFunction -> True
   KNameAxiom -> True
   KNameConstructor -> False
+  KNameAlias -> False
   KNameInductive -> False
   KNameLocal -> False
   KNameLocalModule -> False
@@ -104,10 +110,6 @@ nameKindAnsi k = case k of
   KNameLocalModule -> color Cyan
   KNameFunction -> colorDull Yellow
   KNameLocal -> mempty
+  KNameAlias -> mempty
   KNameTopModule -> color Cyan
   KNameFixity -> mempty
-
-isFunctionKind :: HasNameKind a => a -> Bool
-isFunctionKind k = case getNameKind k of
-  KNameFunction -> True
-  _ -> False

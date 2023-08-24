@@ -198,7 +198,7 @@ reserveSymbolSignatureOf ::
   Sem r S.Symbol
 reserveSymbolSignatureOf k d s = do
   sig <- mkNameSignature d
-  reserveSymbolOf False k (Just sig) s
+  reserveSymbolOf k (Just sig) s
 
 reserveSymbolOf ::
   forall (nameKind :: NameKind) (ns :: NameSpace) r.
@@ -206,12 +206,11 @@ reserveSymbolOf ::
     ns ~ NameKindNameSpace nameKind,
     SingI ns
   ) =>
-  Bool ->
   Sing nameKind ->
   Maybe NameSignature ->
   Symbol ->
   Sem r S.Symbol
-reserveSymbolOf isAlias k nameSig s = do
+reserveSymbolOf k nameSig s = do
   checkNotBound
   path <- gets (^. scopePath)
   strat <- ask
@@ -229,6 +228,7 @@ reserveSymbolOf isAlias k nameSig s = do
             fixE = FixitySymbolEntry u
          in case k of
               SKNameConstructor -> symE
+              SKNameAlias -> symE
               SKNameInductive -> symE
               SKNameFunction -> symE
               SKNameAxiom -> symE
@@ -245,6 +245,9 @@ reserveSymbolOf isAlias k nameSig s = do
   modify (over scopeNameSpace (HashMap.alter (Just . addS entry) s))
   return s'
   where
+    isAlias  = case k of
+      SKNameAlias -> True
+      _ -> False
     sns :: Sing ns = sing
     checkNotBound :: Sem r ()
     checkNotBound = do
@@ -277,7 +280,7 @@ bindVariableSymbol ::
   Members '[Error ScoperError, NameIdGen, State Scope, InfoTableBuilder, State ScoperState] r =>
   Symbol ->
   Sem r S.Symbol
-bindVariableSymbol = localBindings . ignoreSyntax . reserveSymbolOf False SKNameLocal Nothing
+bindVariableSymbol = localBindings . ignoreSyntax . reserveSymbolOf SKNameLocal Nothing
 
 reserveInductiveSymbol ::
   Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder] r =>
@@ -285,18 +288,17 @@ reserveInductiveSymbol ::
   Sem r S.Symbol
 reserveInductiveSymbol d = reserveSymbolSignatureOf SKNameInductive d (d ^. inductiveName)
 
--- | The NameKind assigned to the alias is irrelevant. We assign it KNameFunction so it can have fixity.
 reserveAliasSymbol ::
   Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, Reader BindingStrategy, InfoTableBuilder, State ScoperState] r =>
   Symbol ->
   Sem r S.Symbol
-reserveAliasSymbol = reserveSymbolOf True SKNameFunction Nothing
+reserveAliasSymbol = reserveSymbolOf SKNameAlias Nothing
 
 reserveProjectionSymbol ::
   Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, Reader BindingStrategy, InfoTableBuilder, State ScoperState] r =>
   ProjectionDef 'Parsed ->
   Sem r S.Symbol
-reserveProjectionSymbol d = reserveSymbolOf False SKNameFunction Nothing (d ^. projectionField)
+reserveProjectionSymbol d = reserveSymbolOf SKNameFunction Nothing (d ^. projectionField)
 
 reserveConstructorSymbol ::
   Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder] r =>
@@ -643,7 +645,7 @@ resolveFixitySyntaxDef ::
   FixitySyntaxDef 'Parsed ->
   Sem r ()
 resolveFixitySyntaxDef fdef@FixitySyntaxDef {..} = topBindings $ do
-  sym <- reserveSymbolOf False SKNameFixity Nothing _fixitySymbol
+  sym <- reserveSymbolOf SKNameFixity Nothing _fixitySymbol
   let loc = getLoc _fixityInfo
       fi = _fixityInfo ^. withLocParam . withSourceValue
   same <- checkMaybeFixity loc $ fi ^. FI.fixityPrecSame
@@ -1316,7 +1318,7 @@ reserveLocalModuleSymbol ::
   Symbol ->
   Sem r S.Symbol
 reserveLocalModuleSymbol =
-  ignoreSyntax . reserveSymbolOf False SKNameLocalModule Nothing
+  ignoreSyntax . reserveSymbolOf SKNameLocalModule Nothing
 
 checkLocalModule ::
   forall r.
