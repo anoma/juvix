@@ -293,6 +293,7 @@ putTag ann x = case ann of
               S.KNameLocal -> "ju-var"
               S.KNameAxiom -> "ju-axiom"
               S.KNameLocalModule -> "ju-var"
+              S.KNameAlias -> "ju-var"
               S.KNameTopModule -> "ju-var"
               S.KNameFixity -> "ju-fixity"
           )
