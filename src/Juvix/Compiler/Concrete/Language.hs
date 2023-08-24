@@ -1059,7 +1059,7 @@ deriving stock instance Ord (OpenModule 'Parsed)
 deriving stock instance Ord (OpenModule 'Scoped)
 
 data ScopedIden = ScopedIden
-  { _scopedIden :: S.Name,
+  { _scopedIdenFinal :: S.Name,
     _scopedIdenAlias :: Maybe S.Name
   }
   deriving stock (Show, Eq, Ord)
@@ -2176,7 +2176,7 @@ instance IsApe InfixApplication ApeLeaf where
         { _infixFixity = getFixity i,
           _infixLeft = toApe l,
           _infixRight = toApe r,
-          _infixIsDelimiter = isDelimiterStr (prettyText (op ^. scopedIden . S.nameConcrete)),
+          _infixIsDelimiter = isDelimiterStr (prettyText (op ^. scopedIdenName . S.nameConcrete)),
           _infixOp = ApeLeafExpression (ExpressionIdentifier op)
         }
 
@@ -2296,7 +2296,7 @@ symbolEntryNameId :: SymbolEntry -> NameId
 symbolEntryNameId = (^. symbolEntry . S.nameId)
 
 instance HasNameKind ScopedIden where
-  getNameKind = getNameKind . (^. scopedIden)
+  getNameKind = getNameKind . (^. scopedIdenFinal)
 
 instance HasNameKind SymbolEntry where
   getNameKind = getNameKind . (^. symbolEntry)
@@ -2336,22 +2336,16 @@ _SyntaxAlias f x = case x of
 
 scopedIdenName :: Lens' ScopedIden S.Name
 scopedIdenName f n = case n ^. scopedIdenAlias of
-  Nothing -> scopedIden f n
+  Nothing -> scopedIdenFinal f n
   Just a -> do
     a' <- f a
     pure (set scopedIdenAlias (Just a') n)
 
-scopedIdenFixity :: ScopedIden -> Maybe Fixity
-scopedIdenFixity s = fromMaybe (s ^. scopedIden . S.nameFixity) (s ^? scopedIdenAlias . _Just . S.nameFixity)
-
-scopedIdenNameId :: ScopedIden -> NameId
-scopedIdenNameId s = fromMaybe (s ^. scopedIden . S.nameId) (s ^? scopedIdenAlias . _Just . S.nameId)
-
 instance HasFixity PostfixApplication where
-  getFixity (PostfixApplication _ op) = fromMaybe impossible (op ^. scopedIden . S.nameFixity)
+  getFixity (PostfixApplication _ op) = fromMaybe impossible (op ^. scopedIdenName . S.nameFixity)
 
 instance HasFixity InfixApplication where
-  getFixity (InfixApplication _ op _) = fromMaybe impossible (op ^. scopedIden . S.nameFixity)
+  getFixity (InfixApplication _ op _) = fromMaybe impossible (op ^. scopedIdenName . S.nameFixity)
 
 preSymbolName :: Lens' PreSymbolEntry (S.Name' ())
 preSymbolName f = \case

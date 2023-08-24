@@ -187,7 +187,7 @@ goScopedIden iden =
   set Internal.namePretty prettyStr (goSymbol (S.nameUnqualify name))
   where
     name :: S.Name
-    name = iden ^. scopedIden
+    name = iden ^. scopedIdenFinal
     prettyStr :: Text
     prettyStr = prettyText name
 

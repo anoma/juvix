@@ -553,7 +553,7 @@ entryToScopedIden name e = do
     PreSymbolFinal {} ->
       return
         ScopedIden
-          { _scopedIden = scopedName,
+          { _scopedIdenFinal = scopedName,
             _scopedIdenAlias = Nothing
           }
     PreSymbolAlias {} -> do
@@ -561,7 +561,7 @@ entryToScopedIden name e = do
       return
         ScopedIden
           { _scopedIdenAlias = Just (set S.nameKind (getNameKind e') scopedName),
-            _scopedIden = helper (e' ^. symbolEntry)
+            _scopedIdenFinal = helper (e' ^. symbolEntry)
           }
   registerScopedIden si
   return si
@@ -2106,14 +2106,14 @@ getRecordInfo ::
   ScopedIden ->
   Sem r RecordInfo
 getRecordInfo indTy =
-  fromMaybeM err (gets (^. scoperRecordFields . at (indTy ^. scopedIden . S.nameId)))
+  fromMaybeM err (gets (^. scoperRecordFields . at (indTy ^. scopedIdenFinal . S.nameId)))
   where
     err :: Sem r a
     err = throw (ErrNotARecord (NotARecord indTy))
 
 getNameSignature :: Members '[State ScoperState, Error ScoperError] r => ScopedIden -> Sem r NameSignature
 getNameSignature s = do
-  sig <- maybeM (throw err) return (lookupNameSignature (s ^. scopedIden . S.nameId))
+  sig <- maybeM (throw err) return (lookupNameSignature (s ^. scopedIdenFinal . S.nameId))
   when (null (sig ^. nameSignatureArgs)) (throw err)
   return sig
   where
@@ -2641,8 +2641,8 @@ makePatternTable (PatternAtoms latoms _) = [appOp] : operators
       where
         unqualifiedSymbolOp :: ScopedIden -> Maybe (Precedence, P.Operator ParsePat PatternArg)
         unqualifiedSymbolOp constr = run . runFail $ do
-          Fixity {..} <- failMaybe (scopedIdenFixity constr)
-          let _nameId = scopedIdenNameId constr
+          Fixity {..} <- failMaybe (constr ^. scopedIdenName . S.nameFixity)
+          let _nameId = constr ^. scopedIdenName . S.nameId
           return $ case _fixityArity of
             Unary u -> (_fixityPrecedence, P.Postfix (unaryApp <$> parseSymbolId _nameId))
               where
@@ -2664,7 +2664,7 @@ makePatternTable (PatternAtoms latoms _) = [appOp] : operators
             getConstructorRefWithId :: PatternAtom 'Scoped -> Maybe ScopedIden
             getConstructorRefWithId s = do
               ref <- getConstructorRef s
-              guard (scopedIdenNameId ref == uid)
+              guard (ref ^. scopedIdenName . S.nameId == uid)
               return ref
 
     -- Application by juxtaposition.

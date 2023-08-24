@@ -141,7 +141,7 @@ recordNameSignatureByIndex = IntMap.fromList . (^.. recordNames . each . to swap
 
 getExpressionAtomIden :: ExpressionAtom 'Scoped -> Maybe S.Name
 getExpressionAtomIden = \case
-  AtomIdentifier nm -> Just (nm ^. scopedIden)
+  AtomIdentifier nm -> Just (nm ^. scopedIdenName)
   _ -> Nothing
 
 getPatternAtomIden :: PatternAtom 'Scoped -> Maybe S.Name

@@ -92,7 +92,7 @@ anameFromScopedIden s =
   AName
     { _anameLoc = getLoc s,
       _anameKind = getNameKind s,
-      _anameDocId = s ^. scopedIden . nameId,
+      _anameDocId = s ^. scopedIdenFinal . nameId,
       _anameDefinedLoc = s ^. scopedIdenName . nameDefined,
       _anameVerbatim = s ^. scopedIdenName . nameVerbatim
     }

@@ -277,7 +277,7 @@ printDocumentation = replParseIdentifiers >=> printIdentifiers
 
         printIdentifier :: Concrete.ScopedIden -> Repl ()
         printIdentifier s = do
-          let n = s ^. Concrete.scopedIden . Scoped.nameId
+          let n = s ^. Concrete.scopedIdenFinal . Scoped.nameId
           mdoc <- case getNameKind s of
             KNameAxiom -> getDocAxiom n
             KNameInductive -> getDocInductive n
@@ -334,7 +334,7 @@ printDefinition = replParseIdentifiers >=> printIdentifiers
 
         printIdentifier :: Concrete.ScopedIden -> Repl ()
         printIdentifier s =
-          let n = s ^. Concrete.scopedIden . Scoped.nameId
+          let n = s ^. Concrete.scopedIdenFinal . Scoped.nameId
            in case getNameKind s of
                 KNameAxiom -> printAxiom n
                 KNameInductive -> printInductive n
