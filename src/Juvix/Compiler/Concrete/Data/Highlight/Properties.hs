@@ -32,6 +32,7 @@ data Face
   | FaceString
   | FaceNumber
   | FaceComment
+  | FacePragma
   | FaceJudoc
   | FaceError
 
@@ -40,6 +41,7 @@ faceSymbolStr = \case
   FaceAxiom -> Str.axiom
   FaceInductive -> Str.inductive
   FaceConstructor -> Str.constructor
+  FacePragma -> Str.pragma
   FaceModule -> Str.module_
   FaceKeyword -> Str.keyword
   FaceDelimiter -> Str.delimiter

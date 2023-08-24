@@ -57,7 +57,7 @@ registerPragmas i =
   registerItem
     ParsedItem
       { _parsedLoc = i,
-        _parsedTag = ParsedTagComment
+        _parsedTag = ParsedTagPragma
       }
 
 registerLiteral :: (Member InfoTableBuilder r) => LiteralLoc -> Sem r LiteralLoc

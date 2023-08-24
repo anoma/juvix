@@ -59,6 +59,9 @@ include = "include"
 alias :: (IsString s) => s
 alias = "alias"
 
+pragma :: (IsString s) => s
+pragma = "pragma"
+
 import_ :: (IsString s) => s
 import_ = "import"
 
