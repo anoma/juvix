@@ -1,17 +1,17 @@
 -- higher-order inductive types
 module test008;
 
-open import Stdlib.Prelude;
+import Stdlib.Prelude open;
 
 type enum :=
-|  opt0 : enum
-|  opt1 : Bool -> enum
-|  opt2 : Bool -> (Bool -> Bool) -> enum
-|  opt3 : Bool -> (Bool -> Bool -> Bool) -> Bool -> enum;
+  | opt0 : enum
+  | opt1 : Bool -> enum
+  | opt2 : Bool -> (Bool -> Bool) -> enum
+  | opt3 : Bool -> (Bool -> Bool -> Bool) -> Bool -> enum;
 
-main : Bool;
-main := case (opt3 true (λ{ x y := if y false x }) false)
-  | opt0 := false
-  | opt1 b := b
-  | opt2 b f := f b
-  | opt3 b1 f b2 := f b1 b2;
+main : Bool :=
+  case opt3 true λ {x y := if y false x} false
+    | opt0 := false
+    | opt1 b := b
+    | opt2 b f := f b
+    | opt3 b1 f b2 := f b1 b2;

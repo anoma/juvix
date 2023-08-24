@@ -94,7 +94,7 @@ tests:
     command:
       - juvix
       - repl
-    stdin: ":type let even : _; odd : _; odd zero := false; odd (suc n) := not (even n); even zero := true; even (suc n) := not (odd n) in even 10"
+    stdin: ":type let odd : _ | zero := false | (suc n) := not (even n); even : _ | zero := true | (suc n) := not (odd n) in even 10"
     stdout:
       contains:
         "Bool"
@@ -104,7 +104,7 @@ tests:
     command:
       - juvix
       - repl
-    stdin: "let even : _; odd : _; odd zero := false; odd (suc n) := not (even n); even zero := true; even (suc n) := not (odd n) in even 10"
+    stdin: "let odd : _ | zero := false | (suc n) := not (even n); even : _ | zero := true | (suc n) := not (odd n) in even 10"
     stdout:
       contains:
         "true"
@@ -223,7 +223,7 @@ tests:
     command:
       - juvix
       - repl
-    stdin: "let x : Nat; x := 2 + 1 in x"
+    stdin: "let x : Nat := 2 + 1 in x"
     stdout:
       contains:
         "3"
@@ -446,15 +446,6 @@ tests:
     exit-status: 0
 
   - name: open-import-from-stdlib
-    command:
-      - juvix
-      - repl
-    stdin: "open import Stdlib.Data.Int.Ord\n1 == 1"
-    stdout:
-      contains: "true"
-    exit-status: 0
-
-  - name: open-import-from-stdlib-new-syntax
     command:
       - juvix
       - repl

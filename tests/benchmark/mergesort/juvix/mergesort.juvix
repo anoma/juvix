@@ -1,51 +1,52 @@
 -- Merge sort a list of N integers
 module mergesort;
-  open import Stdlib.Prelude;
-  open import Stdlib.Data.Nat.Ord;
 
-  split_go : {A : Type} → List A → List A → List A → List A
-    × List A;
-  split_go nil ys zs := ys , zs;
-  split_go (x :: xs') ys zs := split_go xs' zs (x :: ys);
+import Stdlib.Prelude open;
+import Stdlib.Data.Nat.Ord open;
 
-  split : {A : Type} → List A → List A × List A;
-  split xs := split_go xs nil nil;
+split_go
+  : {A : Type} → List A → List A → List A → List A × List A
+  | nil ys zs := ys, zs
+  | (x :: xs') ys zs := split_go xs' zs (x :: ys);
 
-  revappend : {A : Type} → List A → List A → List A;
-  revappend nil ys := ys;
-  revappend (x :: xs) ys := revappend xs (x :: ys);
+split : {A : Type} → List A → List A × List A
+  | xs := split_go xs nil nil;
 
-  merget : List Nat → List Nat → List Nat → List Nat;
-  merget nil ys acc := revappend acc ys;
-  merget xs nil acc := revappend acc xs;
-  merget (x :: xs') (y :: ys') acc := if
-    (x <= y)
-    (merget xs' (y :: ys') (x :: acc))
-    (merget (x :: xs') ys' (y :: acc));
+revappend : {A : Type} → List A → List A → List A
+  | nil ys := ys
+  | (x :: xs) ys := revappend xs (x :: ys);
 
-  terminating
-  sort' : List Nat × List Nat → List Nat;
+merget : List Nat → List Nat → List Nat → List Nat
+  | nil ys acc := revappend acc ys
+  | xs nil acc := revappend acc xs
+  | (x :: xs') (y :: ys') acc :=
+    if
+      (x <= y)
+      (merget xs' (y :: ys') (x :: acc))
+      (merget (x :: xs') ys' (y :: acc));
 
-  terminating
-  sort : List Nat → List Nat;
-  sort nil := nil;
-  sort (x :: nil) := x :: nil;
-  sort xs := sort' (split xs);
+terminating
+sort' : List Nat × List Nat → List Nat
+  
+  | (l1, l2) := merget (sort l1) (sort l2) nil;
 
-  sort' (l1 , l2) := merget (sort l1) (sort l2) nil;
+terminating
+sort : List Nat → List Nat
+  | nil := nil
+  | (x :: nil) := x :: nil
+  | xs := sort' (split xs);
 
-  sorted : List Nat → Bool;
-  sorted nil := true;
-  sorted (_ :: nil) := true;
-  sorted (x :: y :: t) := if (x <= y) (sorted (y :: t)) false;
+sorted : List Nat → Bool
+  | nil := true
+  | (_ :: nil) := true
+  | (x :: y :: t) := if (x <= y) (sorted (y :: t)) false;
 
-  gen : Nat → List Nat → List Nat;
-  gen zero acc := acc;
-  gen (suc n) acc := gen n (suc n :: acc);
+gen : Nat → List Nat → List Nat
+  | zero acc := acc
+  | (suc n) acc := gen n (suc n :: acc);
 
-  main : IO;
-  main := if
+main : IO :=
+  if
     (sorted (sort (gen 2000000 nil)))
     (printStringLn "true")
     (printStringLn "false");
-end;

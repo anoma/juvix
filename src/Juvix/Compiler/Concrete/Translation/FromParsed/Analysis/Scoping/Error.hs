@@ -16,8 +16,6 @@ data ScoperError
   | ErrAppLeftImplicit AppLeftImplicit
   | ErrInfixPattern InfixErrorP
   | ErrMultipleDeclarations MultipleDeclarations
-  | ErrLacksTypeSig LacksTypeSig
-  | ErrLacksFunctionClause LacksFunctionClause
   | ErrImportCycle ImportCycle
   | ErrSymNotInScope NotInScope
   | ErrQualSymNotInScope QualSymNotInScope
@@ -56,7 +54,6 @@ instance ToGenericError ScoperError where
     ErrAppLeftImplicit e -> genericError e
     ErrInfixPattern e -> genericError e
     ErrMultipleDeclarations e -> genericError e
-    ErrLacksTypeSig e -> genericError e
     ErrImportCycle e -> genericError e
     ErrSymNotInScope e -> genericError e
     ErrQualSymNotInScope e -> genericError e
@@ -68,7 +65,6 @@ instance ToGenericError ScoperError where
     ErrAmbiguousModuleSym e -> genericError e
     ErrUnusedOperatorDef e -> genericError e
     ErrUnusedIteratorDef e -> genericError e
-    ErrLacksFunctionClause e -> genericError e
     ErrDoubleBracesPattern e -> genericError e
     ErrDoubleBinderPattern e -> genericError e
     ErrAliasBinderPattern e -> genericError e

@@ -1,4 +1,4 @@
 module M;
 
-f : (F : Type → Type) → (A : Type) → F A → F A;
-f _ _ x := x;
+f : (F : Type → Type) → (A : Type) → F A → F A
+  | _ _ x := x;

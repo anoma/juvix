@@ -1,8 +1,5 @@
 module test001;
 
-open import Stdlib.Prelude;
+import Stdlib.Prelude open;
 
-main : IO;
-main := printNatLn (5 + 2 * 3);
-
-end;
+main : IO := printNatLn (5 + 2 * 3);

@@ -5,10 +5,10 @@ import Stdlib.Data.Bool open;
 
 main : _ :=
   let
-    odd : _;
-    even : _;
-    odd zero := false;
-    odd (suc n) := not (even n);
-    even zero := true;
-    even (suc n) := not (odd n);
+    odd : _
+      | zero := false
+      | (suc n) := not (even n);
+    even : _
+      | zero := true
+      | (suc n) := not (odd n);
   in even 5;

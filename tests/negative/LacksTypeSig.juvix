@@ -1,6 +1,0 @@
-module LacksTypeSig;
-
- some := Type;
-
-
-end;

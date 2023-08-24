@@ -397,7 +397,6 @@ goJudoc (Judoc bs) = mconcatMapM goGroup bs
 
 goStatement :: (Members '[Reader HtmlOptions, Reader NormalizedTable] r) => Statement 'Scoped -> Sem r Html
 goStatement = \case
-  StatementTypeSignature t -> goTypeSignature t
   StatementAxiom t -> goAxiom t
   StatementInductive t -> goInductive t
   StatementOpenModule t -> goOpen t
@@ -482,20 +481,6 @@ defHeader tmp uid sig mjudoc = do
     functionHeader = do
       sourceLink' <- sourceAndSelfLink tmp uid
       return $ noDefHeader (sig <> sourceLink')
-
-goTypeSignature :: forall r. (Members '[Reader HtmlOptions, Reader NormalizedTable] r) => TypeSignature 'Scoped -> Sem r Html
-goTypeSignature sig = do
-  sig' <- typeSig
-  defHeader tmp uid sig' (sig ^. sigDoc)
-  where
-    tmp :: TopModulePath
-    tmp = sig ^. sigName . S.nameDefinedIn . S.absTopModulePath
-    uid :: NameId
-    uid = sig ^. sigName . S.nameId
-    typeSig :: Sem r Html
-    typeSig = ppCodeHtml opts (set sigDoc Nothing sig)
-    opts :: Options
-    opts = set optPrintPragmas False defaultOptions
 
 sourceAndSelfLink :: (Members '[Reader HtmlOptions] r) => TopModulePath -> NameId -> Sem r Html
 sourceAndSelfLink tmp name = do

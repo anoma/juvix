@@ -43,5 +43,5 @@ playMove : Maybe Nat → GameState → GameState
           noError));
 
 --- Returns ;just; if the given ;Nat; is in range of 1..9
-validMove : Nat → Maybe Nat
-  | n := if (n <= 9 && n >= 1) (just n) nothing;
+validMove (n : Nat) : Maybe Nat :=
+  if (n <= 9 && n >= 1) (just n) nothing;

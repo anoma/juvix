@@ -1,10 +1,9 @@
 module Prod;
 
-open import Stdlib.Prelude;
-open import Foo;
-     import Foo.Data.Bool;
+import Stdlib.Prelude open;
+import Foo open;
+import Foo.Data.Bool;
 
-fi : Foo.Data.Bool;
-fi := Foo.Data.Bool.false;
+fi : Foo.Data.Bool := Foo.Data.Bool.false;
 
 end;

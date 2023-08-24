@@ -1,30 +1,25 @@
 -- local modules
 module test047;
 
-open import Stdlib.Prelude;
+import Stdlib.Prelude open;
 
 module Local;
-  t : Nat;
-  t := 2;
+  t : Nat := 2;
 
   module Nested;
-    t : Nat;
-    t := 3;
+    t : Nat := 3;
 
     -- module shadowing
     module Nested;
-      t : Nat;
-      t := 5;
+      t : Nat := 5;
     end;
 
     module Nested2;
-      t : Nat;
-      t := 7;
+      t : Nat := 7;
 
       -- module shadowing
       module Nested;
-        t : Nat;
-        t := 11;
+        t : Nat := 11;
       end;
     end;
   end;
@@ -36,16 +31,13 @@ module Public;
   open Nested public;
 end;
 
-tt : Nat;
-tt := t;
+tt : Nat := t;
 
-x : Nat;
-x :=
+x : Nat :=
   t
     * Local.t
     * Local.Nested.t
     * Nested.Nested2.Nested.t
     * Public.Nested.t;
 
-main : IO;
-main := printNatLn x;
+main : IO := printNatLn x;

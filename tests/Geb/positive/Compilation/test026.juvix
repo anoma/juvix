@@ -1,30 +1,26 @@
 -- recursive let
 module test026;
 
-open import Stdlib.Prelude;
-open import Stdlib.Data.Nat.Ord;
+import Stdlib.Prelude open;
+import Stdlib.Data.Nat.Ord open;
 
-sum : Nat → Nat;
-sum := let
-    sum' : Nat → Nat;
-    sum' := λ {
+sum : Nat → Nat :=
+  let
+    sum' : Nat → Nat :=
+      λ {
         zero := zero
         | (suc n) := suc n + sum' n
       };
-    in sum';
+  in sum';
 
-mutrec : Nat;
-mutrec := let
+mutrec : Nat :=
+  let
     terminating
-    f : Nat → Nat;
+    f (x : Nat) : Nat := if (x < 1) 1 (g (sub x 1) + 2 * x);
     terminating
-    g : Nat → Nat;
+    g (x : Nat) : Nat := if (x < 1) 1 (x + h (sub x 1));
     terminating
-    h : Nat → Nat;
-    f x := if (x < 1) 1 (g (sub x 1) + 2 * x);
-    g x := if (x < 1) 1 (x + h (sub x 1));
-    h x := if (x < 1) 1 (x * f (sub x 1));
+    h (x : Nat) : Nat := if (x < 1) 1 (x * f (sub x 1));
   in f 5 + f 10 + g 5 + h 5;
 
-main : Nat;
-main := sum 100 + mutrec;
+main : Nat := sum 100 + mutrec;

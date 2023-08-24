@@ -1,6 +1,6 @@
 module NestedAsPatterns;
 
-f : Type -> Type;
-f a@b@_ := a;
+f : Type -> Type
+| a@b@_ := a;
 
 end;

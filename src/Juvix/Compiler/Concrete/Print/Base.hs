@@ -234,11 +234,7 @@ instance PrettyPrint S.AName where
 
 instance PrettyPrint FunctionInfo where
   ppCode = \case
-    FunctionInfoOld f -> do
-      let ty = StatementTypeSignature (f ^. oldFunctionInfoType)
-          cs = map StatementFunctionClause (f ^. oldFunctionInfoClauses)
-      ppStatements (ty : cs)
-    FunctionInfoNew f -> ppCode f
+    FunctionInfo f -> ppCode f
 
 instance SingI s => PrettyPrint (List s) where
   ppCode List {..} = do
@@ -448,9 +444,9 @@ instance SingI s => PrettyPrint (LambdaClause s) where
 
 instance SingI s => PrettyPrint (Let s) where
   ppCode Let {..} = do
-    let letClauses' = blockIndent (ppBlock _letClauses)
+    let letFunDefs' = blockIndent (ppBlock _letFunDefs)
         letExpression' = ppExpressionType _letExpression
-    ppCode _letKw <> letClauses' <> ppCode _letInKw <+> letExpression'
+    ppCode _letKw <> letFunDefs' <> ppCode _letInKw <+> letExpression'
 
 instance SingI s => PrettyPrint (Case s) where
   ppCode Case {..} = do
@@ -554,11 +550,6 @@ instance SingI s => PrettyPrint (CaseBranch s) where
     let pat' = ppPatternParensType _caseBranchPattern
         e' = ppExpressionType _caseBranchExpression
     ppCode _caseBranchPipe <+> pat' <+> ppCode _caseBranchAssignKw <> oneLineOrNext e'
-
-instance SingI s => PrettyPrint (LetClause s) where
-  ppCode c = case c of
-    LetTypeSig sig -> ppCode sig
-    LetFunClause cl -> ppCode cl
 
 ppBlock :: (PrettyPrint a, Members '[Reader Options, ExactPrint] r, Traversable t) => t a -> Sem r ()
 ppBlock items = vsep (sepEndSemicolon (fmap ppCode items))
@@ -795,30 +786,6 @@ instance SingI s => PrettyPrint (FunctionDef s) where
                 <> body'
           )
 
-instance SingI s => PrettyPrint (TypeSignature s) where
-  ppCode :: forall r. Members '[ExactPrint, Reader Options] r => TypeSignature s -> Sem r ()
-  ppCode TypeSignature {..} = do
-    let termin' :: Maybe (Sem r ()) = (<> line) . ppCode <$> _sigTerminating
-        doc' :: Maybe (Sem r ()) = ppCode <$> _sigDoc
-        pragmas' :: Maybe (Sem r ()) = ppCode <$> _sigPragmas
-        builtin' :: Maybe (Sem r ()) = (<> line) . ppCode <$> _sigBuiltin
-        type' = ppExpressionType _sigType
-        name' = annDef _sigName (ppSymbolType _sigName)
-        body' = case _sigBody of
-          Nothing -> Nothing
-          Just body -> Just (ppCode (fromJust <$> _sigAssignKw) <> oneLineOrNext (ppExpressionType body))
-    doc'
-      ?<> pragmas'
-      ?<> builtin'
-      ?<> termin'
-      ?<> ( name'
-              <+> ppCode _sigColonKw
-                <> oneLineOrNext
-                  ( type'
-                      <+?> body'
-                  )
-          )
-
 instance PrettyPrint Wildcard where
   ppCode w = morpheme (getLoc w) C.kwWildcard
 
@@ -939,21 +906,6 @@ instance SingI s => PrettyPrint (OpenModule s) where
           <+> openkw
           <+?> usingHiding'
           <+?> public'
-
-instance SingI s => PrettyPrint (FunctionClause s) where
-  ppCode :: forall r. Members '[ExactPrint, Reader Options] r => FunctionClause s -> Sem r ()
-  ppCode FunctionClause {..} = do
-    let clauseFun' = ppSymbolType _clauseOwnerFunction
-        clausePatterns' = case nonEmpty _clausePatterns of
-          Nothing -> Nothing
-          Just ne -> Just (hsep (ppPatternAtom <$> ne))
-        clauseBody' = ppExpressionType _clauseBody
-    nest
-      ( clauseFun'
-          <+?> clausePatterns'
-      )
-      <+> ppCode _clauseAssignKw
-        <> oneLineOrNext clauseBody'
 
 ppCodeAtom :: (HasAtomicity c, PrettyPrint c) => PrettyPrinting c
 ppCodeAtom c = do
@@ -1090,13 +1042,11 @@ instance SingI s => PrettyPrint (ProjectionDef s) where
 instance SingI s => PrettyPrint (Statement s) where
   ppCode = \case
     StatementSyntax s -> ppCode s
-    StatementTypeSignature s -> ppCode s
     StatementFunctionDef f -> ppCode f
     StatementImport i -> ppCode i
     StatementInductive i -> ppCode i
     StatementModule m -> ppCode m
     StatementOpenModule o -> ppCode o
-    StatementFunctionClause c -> ppCode c
     StatementAxiom a -> ppCode a
     StatementProjectionDef a -> ppCode a
 

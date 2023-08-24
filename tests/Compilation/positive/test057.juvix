@@ -3,11 +3,11 @@ module test057;
 
 import Stdlib.Prelude open;
 
-myfun : {A : Type} -> (A -> A -> A) -> A -> List A -> A;
-myfun f x xs := case x :: xs
-          | nil := x
-          | y :: nil := y
-          | y :: z :: _ := f y z;
+myfun : {A : Type} -> (A -> A -> A) -> A -> List A -> A
+  | f x xs :=
+    case x :: xs
+      | nil := x
+      | y :: nil := y
+      | y :: z :: _ := f y z;
 
-main : Nat;
-main := myfun (+) 1 (7 :: 3 :: nil);
+main : Nat := myfun (+) 1 (7 :: 3 :: nil);

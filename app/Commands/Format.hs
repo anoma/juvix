@@ -49,9 +49,8 @@ targetFromOptions opts = do
 runCommand :: forall r. Members '[Embed IO, App, Resource, Files] r => FormatOptions -> Sem r ()
 runCommand opts = do
   target <- targetFromOptions opts
-  let newSyntax = NewSyntax (opts ^. formatNewSyntax)
   runOutputSem (renderFormattedOutput target opts) $ runScopeFileApp $ do
-    res <- runReader newSyntax $ case target of
+    res <- case target of
       TargetFile p -> format p
       TargetProject p -> formatProject p
       TargetStdin -> formatStdin

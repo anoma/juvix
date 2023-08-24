@@ -5,5 +5,4 @@ import Stdlib.Data.Nat.Ord open;
 
 {-# argnames: [a, b
                 c] #-}
-main : Nat -> Nat -> Nat -> Bool;
-main x y z := x + y == z;
+main (x y z : Nat) : Bool := x + y == z;

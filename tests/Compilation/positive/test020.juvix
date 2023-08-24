@@ -1,30 +1,26 @@
 -- recursive functions
 module test020;
 
-open import Stdlib.Prelude;
-open import Stdlib.Data.Nat.Ord;
+import Stdlib.Prelude open;
+import Stdlib.Data.Nat.Ord open;
 
 -- McCarthy's 91 function
 terminating
-f91 : Nat → Nat;
-f91 n := if (n > 100) (sub n 10) (f91 (f91 (n + 11)));
+f91 : Nat → Nat
+  | n := if (n > 100) (sub n 10) (f91 (f91 (n + 11)));
 
 -- subtraction by increments
 terminating
-subp : Nat → Nat → Nat;
-subp i j := if (i == j) 0 (subp i (j + 1) + 1);
+subp : Nat → Nat → Nat
+  | i j := if (i == j) 0 (subp i (j + 1) + 1);
 
-main : IO;
-main :=
-  printNatLn (f91 101) >>
-  printNatLn (f91 95) >>
-  printNatLn (f91 16) >>
-  printNatLn (f91 5) >>
-
-  printNatLn (subp 101 1) >>
-  printNatLn (subp 11 5) >>
-  printNatLn (subp 10 4) >>
-  printNatLn (subp 1000 600) >>
-  printNatLn (subp 10000 6000);
-
-end;
+main : IO :=
+  printNatLn (f91 101)
+    >> printNatLn (f91 95)
+    >> printNatLn (f91 16)
+    >> printNatLn (f91 5)
+    >> printNatLn (subp 101 1)
+    >> printNatLn (subp 11 5)
+    >> printNatLn (subp 10 4)
+    >> printNatLn (subp 1000 600)
+    >> printNatLn (subp 10000 6000);

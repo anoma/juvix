@@ -1,9 +1,7 @@
 module FunctionType;
 
 type A :=
-  a : A;
+  | a : A;
 
-main : Type;
-main := (A : Type) -> (B : Type) -> A -> B;
+main : Type := (A : Type) -> (B : Type) -> A -> B;
 
-end;

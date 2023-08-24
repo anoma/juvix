@@ -1,7 +1,6 @@
 -- definitions
 module test004;
 
-open import Stdlib.Prelude;
+import Stdlib.Prelude open;
 
-main : Bool;
-main := and (not false) (not (not true));
+main : Bool := and (not false) (not (not true));

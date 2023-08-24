@@ -2,5 +2,4 @@ module NotARecord;
 
 type T := t;
 
-f : T;
-f := t @T{x := 1};
+f : T := t @T{x := 1};

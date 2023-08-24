@@ -7,5 +7,4 @@ type Bool :=
   | true : Bool
   | false : Bool;
 
-main : Bool;
-main := true;
+main : Bool := true;

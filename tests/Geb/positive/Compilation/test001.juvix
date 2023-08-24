@@ -1,7 +1,6 @@
 -- not function
 module test001;
 
-open import Stdlib.Prelude;
+import Stdlib.Prelude open;
 
-main : Bool;
-main := λ{x := if x false true} true;
+main : Bool := λ {x := if x false true} true;

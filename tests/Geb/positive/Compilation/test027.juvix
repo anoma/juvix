@@ -1,11 +1,14 @@
 -- Simple case expression
 module test027;
 
-open import Stdlib.Prelude;
+import Stdlib.Prelude open;
 
-type Pair := pair : Nat -> Nat -> Pair;
+type Pair :=
+  | pair : Nat -> Nat -> Pair;
 
-main : Nat;
-main := case pair 1 2 | pair (suc _) zero := 0 | pair (suc _) (suc x) := x | _ := 19;
+main : Nat :=
+  case pair 1 2
+    | pair (suc _) zero := 0
+    | pair (suc _) (suc x) := x
+    | _ := 19;
 
-end;

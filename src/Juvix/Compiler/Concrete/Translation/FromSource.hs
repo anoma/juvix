@@ -205,9 +205,7 @@ replInput :: forall r. Members '[Files, PathResolver, InfoTableBuilder, JudocSta
 replInput =
   P.label "<repl input>" $
     ReplExpression <$> parseExpressionAtoms
-      <|> P.try (ReplOpenImport <$> newOpenSyntax)
-      <|> ReplImport <$> import_
-      <|> ReplOpenImport <$> openModule
+      <|> either ReplImport ReplOpenImport <$> importOpenSyntax
 
 --------------------------------------------------------------------------------
 -- Symbols and names
@@ -296,22 +294,14 @@ statement = P.label "<top level statement>" $ do
   optional_ stashPragmas
   ms <-
     optional
-      ( StatementOpenModule
-          <$> newOpenSyntax
-            -- TODO remove <?|> after removing old syntax
-            <?|> StatementFunctionDef
-          <$> newTypeSignature Nothing
-            -- TODO remove <?|> after removing old syntax
-            <?|> StatementOpenModule
-          <$> openModule
+      ( either StatementImport StatementOpenModule <$> importOpenSyntax
+          <|> StatementOpenModule <$> openModule
           <|> StatementSyntax <$> syntaxDef
-          <|> StatementImport <$> import_
           <|> StatementInductive <$> inductiveDef Nothing
           <|> StatementModule <$> moduleDef
           <|> StatementAxiom <$> axiomDef Nothing
           <|> builtinStatement
-          <|> either StatementTypeSignature StatementFunctionClause
-            <$> auxTypeSigFunClause
+          <|> StatementFunctionDef <$> functionDefinition Nothing
       )
   case ms of
     Just s -> return s
@@ -490,27 +480,17 @@ builtinAxiomDef ::
   ParsecS r (AxiomDef 'Parsed)
 builtinAxiomDef = axiomDef . Just
 
-builtinTypeSig ::
-  Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r =>
-  WithLoc BuiltinFunction ->
-  ParsecS r (TypeSignature 'Parsed)
-builtinTypeSig b = do
-  terminating <- optional (kw kwTerminating)
-  fun <- symbol
-  typeSignature terminating fun (Just b)
-
-builtinNewTypeSig ::
+builtinFunctionDef ::
   Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r =>
   WithLoc BuiltinFunction ->
   ParsecS r (FunctionDef 'Parsed)
-builtinNewTypeSig = newTypeSignature . Just
+builtinFunctionDef = functionDefinition . Just
 
 builtinStatement :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (Statement 'Parsed)
 builtinStatement = do
   void (kw kwBuiltin)
   (builtinInductive >>= fmap StatementInductive . builtinInductiveDef)
-    <|> (builtinFunction >>= fmap StatementFunctionDef . builtinNewTypeSig)
-      <?|> (builtinFunction >>= fmap StatementTypeSignature . builtinTypeSig)
+    <|> (builtinFunction >>= fmap StatementFunctionDef . builtinFunctionDef)
     <|> (builtinAxiom >>= fmap StatementAxiom . builtinAxiomDef)
 
 --------------------------------------------------------------------------------
@@ -838,15 +818,18 @@ literal = do
       <|> literalString
   P.lift (registerLiteral l)
 
-letClause :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (LetClause 'Parsed)
-letClause = do
+letFunDef ::
+  forall r.
+  Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r =>
+  ParsecS r (FunctionDef 'Parsed)
+letFunDef = do
   optional_ stashPragmas
-  either LetTypeSig LetFunClause <$> auxTypeSigFunClause
+  functionDefinition Nothing
 
 letBlock :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (Let 'Parsed)
 letBlock = do
   _letKw <- kw kwLet
-  _letClauses <- P.sepEndBy1 letClause semicolon
+  _letFunDefs <- P.sepEndBy1 letFunDef semicolon
   _letInKw <- Irrelevant <$> kw kwIn
   _letExpression <- parseExpressionAtoms
   return Let {..}
@@ -897,52 +880,12 @@ getPragmas = P.lift $ do
   put (Nothing @ParsedPragmas)
   return j
 
-typeSignature ::
-  Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r =>
-  Maybe KeywordRef ->
-  Symbol ->
-  Maybe (WithLoc BuiltinFunction) ->
-  ParsecS r (TypeSignature 'Parsed)
-typeSignature _sigTerminating _sigName _sigBuiltin = P.label "<type signature>" $ do
-  _sigColonKw <- Irrelevant <$> kw kwColon
-  _sigType <- parseExpressionAtoms
-  _sigDoc <- getJudoc
-  _sigPragmas <- getPragmas
-  body <- optional $ do
-    k <- Irrelevant <$> kw kwAssign
-    (k,) <$> parseExpressionAtoms
-  let _sigBody = snd <$> body
-      _sigAssignKw = mapM fst body
-  return TypeSignature {..}
-
--- | Used to minimize the amount of required @P.try@s.
-auxTypeSigFunClause ::
-  forall r.
-  (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
-  ParsecS r (Either (TypeSignature 'Parsed) (FunctionClause 'Parsed))
-auxTypeSigFunClause = do
-  terminating <- optional (kw kwTerminating)
-  sym <- symbol
-  if
-      | isJust terminating ->
-          Left <$> typeSignature terminating sym Nothing
-      | otherwise ->
-          checkEq
-            <|> Left <$> typeSignature terminating sym Nothing
-            <|> Right <$> functionClause sym
-  where
-    checkEq :: ParsecS r a
-    checkEq = do
-      off <- P.getOffset
-      kw kwEq
-      parseFailure off "expected \":=\" instead of \"=\""
-
-newTypeSignature ::
+functionDefinition ::
   forall r.
   Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r =>
   Maybe (WithLoc BuiltinFunction) ->
   ParsecS r (FunctionDef 'Parsed)
-newTypeSignature _signBuiltin = P.label "<function definition>" $ do
+functionDefinition _signBuiltin = P.label "<function definition>" $ do
   _signTerminating <- optional (kw kwTerminating)
   _signName <- symbol
   _signArgs <- many parseArg
@@ -1251,17 +1194,6 @@ parsePatternAtomsNested = do
   return PatternAtoms {..}
 
 --------------------------------------------------------------------------------
--- Function binding declaration
---------------------------------------------------------------------------------
-
-functionClause :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => Symbol -> ParsecS r (FunctionClause 'Parsed)
-functionClause _clauseOwnerFunction = do
-  _clausePatterns <- P.many patternAtom
-  _clauseAssignKw <- Irrelevant <$> kw kwAssign
-  _clauseBody <- parseExpressionAtoms
-  return FunctionClause {..}
-
---------------------------------------------------------------------------------
 -- Module declaration
 --------------------------------------------------------------------------------
 
@@ -1320,9 +1252,8 @@ usingOrHiding =
   Using <$> pusingList
     <|> Hiding <$> phidingList
 
-newOpenSyntax :: forall r. (Members '[Error ParserError, PathResolver, Files, InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (OpenModule 'Parsed)
-newOpenSyntax = do
-  im <- import_
+openSyntax :: forall r. (Members '[Error ParserError, PathResolver, Files, InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => Import 'Parsed -> ParsecS r (OpenModule 'Parsed)
+openSyntax im = do
   _openModuleKw <- kw kwOpen
   _openUsingHiding <- optional usingOrHiding
   _openPublicKw <- Irrelevant <$> optional (kw kwPublic)
@@ -1331,3 +1262,8 @@ newOpenSyntax = do
       _openImportAsName = im ^. importAsName
       _openPublic = maybe NoPublic (const Public) (_openPublicKw ^. unIrrelevant)
   return OpenModule {..}
+
+importOpenSyntax :: forall r. (Members '[Error ParserError, PathResolver, Files, InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (Either (Import 'Parsed) (OpenModule 'Parsed))
+importOpenSyntax = do
+  im <- import_
+  (Right <$> openSyntax im) <|> return (Left im)

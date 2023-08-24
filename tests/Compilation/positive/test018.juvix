@@ -1,18 +1,16 @@
 -- higher-order functions & recursion
 module test018;
 
-open import Stdlib.Prelude;
+import Stdlib.Prelude open;
 
-f : (Nat → Nat) → Nat;
-f g := g 5;
+f : (Nat → Nat) → Nat
+  | g := g 5;
 
-h : Nat → Nat → Nat;
-h x z := x + z;
+h : Nat → Nat → Nat
+  | x z := x + z;
 
-u : Nat → Nat;
-u x := f (h 4) + x;
+u : Nat → Nat
+  | x := f (h 4) + x;
 
-main : IO;
-main := printNatLn (u 2);
+main : IO := printNatLn (u 2);
 
-end;

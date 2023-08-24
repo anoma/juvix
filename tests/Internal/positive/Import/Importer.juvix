@@ -1,9 +1,8 @@
 module Importer;
 
-open import Stdlib.Prelude;
-open import Importee;
+import Stdlib.Prelude open;
+import Importee open;
 
-main : Nat;
-main := f;
+main : Nat := f;
 
 end;

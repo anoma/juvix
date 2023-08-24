@@ -23,10 +23,10 @@ showSquare : Square → String
   | (empty n) := " " ++str natToString n ++str " "
   | (occupied s) := " " ++str showSymbol s ++str " ";
 
-replace : Symbol → Nat → Square → Square
-  | player k (empty n) :=
+replace (player : Symbol) (k : Nat) : Square → Square
+  | (empty n) :=
     if
       (n Stdlib.Data.Nat.Ord.== k)
       (occupied player)
       (empty n)
-  | _ _ s := s;
+  | s := s;

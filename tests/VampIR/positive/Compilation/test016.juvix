@@ -1,16 +1,15 @@
 -- higher-order functions
 module test016;
 
-open import Stdlib.Prelude;
+import Stdlib.Prelude open;
 
-f : (Nat → Nat) → Nat;
-f g := g 5;
+f : (Nat → Nat) → Nat
+  | g := g 5;
 
-h : Nat → Nat → Nat;
-h x z := x + z;
+h : Nat → Nat → Nat
+  | x z := x + z;
 
-u : Nat → Nat → Nat;
-u x y := f (h y) + x;
+u : Nat → Nat → Nat
+  | x y := f (h y) + x;
 
-main : Nat → Nat → Nat;
-main := u;
+main : Nat → Nat → Nat := u;

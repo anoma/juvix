@@ -3,7 +3,7 @@ module Clause;
   type Pair (a : Type) (b : Type) :=
    mkPair : a → b → Pair a b;
 
-  fst : (a : Type) → (b : Type) → Pair a b → a ;
-  fst _ _ (mkPair _ _ x x) := x;
+  fst : (a : Type) → (b : Type) → Pair a b → a
+    | _ _ (mkPair _ _ x x) := x;
 
 end;

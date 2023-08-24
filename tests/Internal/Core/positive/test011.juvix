@@ -1,16 +1,15 @@
 module test011;
 
-open import Stdlib.Prelude;
-open import Stdlib.Data.Nat.Ord;
+import Stdlib.Prelude open;
+import Stdlib.Data.Nat.Ord open;
 
-fib' : Nat -> Nat -> Nat -> Nat;
-fib' zero x _ := x;
-fib' (suc n) x y := fib' n y (x + y);
+fib' : Nat -> Nat -> Nat -> Nat
+  | zero x _ := x
+  | (suc n) x y := fib' n y (x + y);
 
-fib : Nat -> Nat;
-fib n := fib' n zero (suc zero);
+fib (n : Nat) : Nat := fib' n zero (suc zero);
 
-main : IO;
-main := printNatLn (fib (suc (suc (suc (suc (suc (suc (suc (suc (suc zero))))))))));
-
-end;
+main : IO :=
+  printNatLn
+    (fib
+      (suc (suc (suc (suc (suc (suc (suc (suc (suc zero))))))))));

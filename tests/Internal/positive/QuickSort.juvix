@@ -1,38 +1,45 @@
 module QuickSort;
 
-open import Stdlib.Prelude hiding {quickSort};
-open import Stdlib.Data.Nat.Ord;
+import Stdlib.Prelude open hiding {quickSort};
+import Stdlib.Data.Nat.Ord open;
 
-qsHelper : {A : Type} → A → List A × List A → List A;
-qsHelper a (l , r) := l ++ (a :: nil) ++ r;
+qsHelper : {A : Type} → A → List A × List A → List A
+  | a (l, r) := l ++ (a :: nil) ++ r;
 
 terminating
-quickSort : {A : Type} → (A → A → Ordering) → List A → List A;
-quickSort _ nil := nil;
-quickSort _ (x :: nil) := x :: nil;
-quickSort cmp (x :: xs) := qsHelper x
-          (both (quickSort cmp) (partition (isGT ∘ cmp x) xs));
+quickSort
+  : {A : Type} → (A → A → Ordering) → List A → List A
+  | _ nil := nil
+  | _ (x :: nil) := x :: nil
+  | cmp (x :: xs) :=
+    qsHelper
+      x
+      (both (quickSort cmp) (partition (isGT ∘ cmp x) xs));
 
-uniq : {A : Type} -> (A -> A -> Ordering) -> List A -> List A;
-uniq _ nil := nil;
-uniq _ y@(x :: nil) := y;
-uniq cmp (x :: x' :: xs) := if (isEQ (cmp x x')) (uniq cmp (x' :: xs)) (x :: (uniq cmp (x' :: xs)));
+uniq
+  : {A : Type} -> (A -> A -> Ordering) -> List A -> List A
+  | _ nil := nil
+  | _ y@(x :: nil) := y
+  | cmp (x :: x' :: xs) :=
+    if
+      (isEQ (cmp x x'))
+      (uniq cmp (x' :: xs))
+      (x :: uniq cmp (x' :: xs));
 
-gen : Nat -> (Nat -> Nat) -> List Nat -> List Nat;
-gen zero _ acc := acc;
-gen n@(suc n') f acc := gen n' f (f n :: acc);
+gen : Nat -> (Nat -> Nat) -> List Nat -> List Nat
+  | zero _ acc := acc
+  | n@(suc n') f acc := gen n' f (f n :: acc);
 
-gen2 : Nat -> Nat -> List (List Nat) -> List (List Nat);
-gen2 _ zero acc := acc;
-gen2 m n@(suc n') acc := gen2 m n' ((gen m ((+) n) nil) :: acc);
+gen2 : Nat -> Nat -> List (List Nat) -> List (List Nat)
+  | _ zero acc := acc
+  | m n@(suc n') acc := gen2 m n' (gen m ((+) n) nil :: acc);
 
-three : Nat;
-three := suc (suc (suc zero));
+three : Nat := suc (suc (suc zero));
 
-four : Nat;
-four := suc three;
+four : Nat := suc three;
 
-main : List Nat;
-main := uniq compare (quickSort compare (flatten (gen2 three four nil)));
+main : List Nat :=
+  uniq
+    compare
+    (quickSort compare (flatten (gen2 three four nil)));
 
-end;

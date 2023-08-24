@@ -185,24 +185,20 @@ data Definition (s :: Stage)
   | DefinitionFunctionDef (FunctionDef s)
   | DefinitionInductive (InductiveDef s)
   | DefinitionAxiom (AxiomDef s)
-  | DefinitionTypeSignature (TypeSignature s)
   | DefinitionProjectionDef (ProjectionDef s)
 
 data NonDefinition (s :: Stage)
   = NonDefinitionImport (Import s)
   | NonDefinitionModule (Module s 'ModuleLocal)
-  | NonDefinitionFunctionClause (FunctionClause s)
   | NonDefinitionOpenModule (OpenModule s)
 
 data Statement (s :: Stage)
   = StatementSyntax (SyntaxDef s)
-  | StatementTypeSignature (TypeSignature s)
   | StatementFunctionDef (FunctionDef s)
   | StatementImport (Import s)
   | StatementInductive (InductiveDef s)
   | StatementModule (Module s 'ModuleLocal)
   | StatementOpenModule (OpenModule s)
-  | StatementFunctionClause (FunctionClause s)
   | StatementAxiom (AxiomDef s)
   | StatementProjectionDef (ProjectionDef s)
 
@@ -425,30 +421,6 @@ deriving stock instance Eq (FunctionDef 'Scoped)
 deriving stock instance Ord (FunctionDef 'Parsed)
 
 deriving stock instance Ord (FunctionDef 'Scoped)
-
-data TypeSignature (s :: Stage) = TypeSignature
-  { _sigName :: FunctionName s,
-    _sigColonKw :: Irrelevant KeywordRef,
-    _sigType :: ExpressionType s,
-    _sigDoc :: Maybe (Judoc s),
-    _sigAssignKw :: Irrelevant (Maybe KeywordRef),
-    _sigPragmas :: Maybe ParsedPragmas,
-    _sigBuiltin :: Maybe (WithLoc BuiltinFunction),
-    _sigBody :: Maybe (ExpressionType s),
-    _sigTerminating :: Maybe KeywordRef
-  }
-
-deriving stock instance Show (TypeSignature 'Parsed)
-
-deriving stock instance Show (TypeSignature 'Scoped)
-
-deriving stock instance Eq (TypeSignature 'Parsed)
-
-deriving stock instance Eq (TypeSignature 'Scoped)
-
-deriving stock instance Ord (TypeSignature 'Parsed)
-
-deriving stock instance Ord (TypeSignature 'Scoped)
 
 data AxiomDef (s :: Stage) = AxiomDef
   { _axiomKw :: Irrelevant KeywordRef,
@@ -861,25 +833,6 @@ deriving stock instance Ord (PatternAtoms 'Scoped)
 
 type FunctionName s = SymbolType s
 
-data FunctionClause (s :: Stage) = FunctionClause
-  { _clauseOwnerFunction :: FunctionName s,
-    _clauseAssignKw :: Irrelevant KeywordRef,
-    _clausePatterns :: [PatternAtomType s],
-    _clauseBody :: ExpressionType s
-  }
-
-deriving stock instance Show (FunctionClause 'Parsed)
-
-deriving stock instance Show (FunctionClause 'Scoped)
-
-deriving stock instance Eq (FunctionClause 'Parsed)
-
-deriving stock instance Eq (FunctionClause 'Scoped)
-
-deriving stock instance Ord (FunctionClause 'Parsed)
-
-deriving stock instance Ord (FunctionClause 'Scoped)
-
 type LocalModuleName s = SymbolType s
 
 data Module (s :: Stage) (t :: ModuleIsTop) = Module
@@ -1263,7 +1216,7 @@ instance HasFixity PostfixApplication where
 data Let (s :: Stage) = Let
   { _letKw :: KeywordRef,
     _letInKw :: Irrelevant KeywordRef,
-    _letClauses :: NonEmpty (LetClause s),
+    _letFunDefs :: NonEmpty (FunctionDef s),
     _letExpression :: ExpressionType s
   }
 
@@ -1278,22 +1231,6 @@ deriving stock instance Eq (Let 'Scoped)
 deriving stock instance Ord (Let 'Parsed)
 
 deriving stock instance Ord (Let 'Scoped)
-
-data LetClause (s :: Stage)
-  = LetTypeSig (TypeSignature s)
-  | LetFunClause (FunctionClause s)
-
-deriving stock instance Show (LetClause 'Parsed)
-
-deriving stock instance Show (LetClause 'Scoped)
-
-deriving stock instance Eq (LetClause 'Parsed)
-
-deriving stock instance Eq (LetClause 'Scoped)
-
-deriving stock instance Ord (LetClause 'Parsed)
-
-deriving stock instance Ord (LetClause 'Scoped)
 
 data CaseBranch (s :: Stage) = CaseBranch
   { _caseBranchPipe :: Irrelevant KeywordRef,
@@ -1721,13 +1658,11 @@ makeLenses ''OperatorSyntaxDef
 makeLenses ''IteratorSyntaxDef
 makeLenses ''ConstructorDef
 makeLenses ''Module
-makeLenses ''TypeSignature
 makeLenses ''SigArg
 makeLenses ''SigArgRhs
 makeLenses ''FunctionDef
 makeLenses ''AxiomDef
 makeLenses ''ExportInfo
-makeLenses ''FunctionClause
 makeLenses ''InductiveParameters
 makeLenses ''InductiveParametersRhs
 makeLenses ''ModuleRef'
@@ -1825,9 +1760,6 @@ instance SingI s => HasLoc (InductiveParameters s) where
 instance HasLoc (InductiveDef s) where
   getLoc i = (getLoc <$> i ^. inductivePositive) ?<> getLoc (i ^. inductiveKw)
 
-instance SingI s => HasLoc (FunctionClause s) where
-  getLoc c = getLocSymbolType (c ^. clauseOwnerFunction) <> getLocExpressionType (c ^. clauseBody)
-
 instance HasLoc ModuleRef where
   getLoc (ModuleRef' (_ :&: r)) = getLoc r
 
@@ -1847,13 +1779,11 @@ instance HasLoc (Statement 'Scoped) where
   getLoc :: Statement 'Scoped -> Interval
   getLoc = \case
     StatementSyntax t -> getLoc t
-    StatementTypeSignature t -> getLoc t
     StatementFunctionDef t -> getLoc t
     StatementImport t -> getLoc t
     StatementInductive t -> getLoc t
     StatementModule t -> getLoc t
     StatementOpenModule t -> getLoc t
-    StatementFunctionClause t -> getLoc t
     StatementAxiom t -> getLoc t
     StatementProjectionDef t -> getLoc t
 
@@ -1994,16 +1924,6 @@ instance SingI s => HasLoc (FunctionDef s) where
       ?<> (getLoc <$> _signTerminating)
       ?<> getLocSymbolType _signName
       <> getLoc _signBody
-
-instance SingI s => HasLoc (TypeSignature s) where
-  getLoc TypeSignature {..} =
-    (getLoc <$> _sigDoc)
-      ?<> (getLoc <$> _sigPragmas)
-      ?<> (getLoc <$> _sigBuiltin)
-      ?<> (getLoc <$> _sigTerminating)
-      ?<> getLocSymbolType _sigName
-      <> (getLocExpressionType <$> _sigBody)
-      ?<> getLocExpressionType _sigType
 
 instance HasLoc (Example s) where
   getLoc e = e ^. exampleLoc

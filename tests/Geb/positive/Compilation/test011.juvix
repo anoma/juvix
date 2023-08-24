@@ -1,33 +1,34 @@
 -- applications with lets and cases in function position
 module test011;
 
-open import Stdlib.Prelude;
+import Stdlib.Prelude open;
 
 type Pair :=
-  pair : ((Nat → Nat) → Nat → Nat) → Nat → Pair;
+  | pair : ((Nat → Nat) → Nat → Nat) → Nat → Pair;
 
-id' : Nat → Nat;
-id' x := x;
+id' : Nat → Nat
+  | x := x;
 
-id'' : (Nat → Nat) → Nat → Nat;
-id'' x := x;
+id'' : (Nat → Nat) → Nat → Nat
+  | x := x;
 
-id''' : ((Nat → Nat) → Nat → Nat) → (Nat → Nat) → Nat → Nat;
-id''' x := x;
+id''' : ((Nat → Nat) → Nat → Nat) → (Nat → Nat) → Nat → Nat
+  | x := x;
 
-f : Pair → Nat;
-f l := (case l
-      | pair x zero := x
-      | _ := id'')
-  (let
-      y : Nat → Nat;
-      y := id';
+f : Pair → Nat
+  | l :=
+    (case l
+        | pair x zero := x
+        | _ := id'')
+      (let
+        y : Nat → Nat := id';
       in (let
-        z : (Nat → Nat) → Nat → Nat;
-        z := id'';
-        in (case l | pair _ zero := id''' | _ := id''') z)
-    y)
-  7;
+          z : (Nat → Nat) → Nat → Nat := id'';
+        in (case l
+            | pair _ zero := id'''
+            | _ := id''')
+          z)
+        y)
+      7;
 
-main : Nat;
-main := f (pair λ{| x y := x y + 2 } 0);
+main : Nat := f (pair λ {| x y := x y + 2} 0);

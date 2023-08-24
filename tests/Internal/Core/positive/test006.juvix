@@ -1,16 +1,13 @@
 module test006;
 
-open import Stdlib.Prelude;
-open import Stdlib.Data.Nat.Ord;
+import Stdlib.Prelude open;
+import Stdlib.Data.Nat.Ord open;
 
 terminating
-loop : Nat;
-loop := loop;
+loop : Nat := loop;
 
-e : Nat;
-e := (if (3 > 0) 1 loop) + (if (2 < 1) loop (if (7 >= 8) loop 1));
+e : Nat := (if (3 > 0) 1 loop) + (if (2 < 1) loop (if (7 >= 8) loop 1));
 
-main : IO;
-main := printNatLn e;
+main : IO := printNatLn e;
 
 end;

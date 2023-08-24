@@ -11,17 +11,12 @@ type Nat :=
   | zero
   | suc Nat;
 
-c1 : Bool;
-c1 := true;
+c1 : Bool := true;
 
-c2 : Bool;
-c2 := false;
+c2 : Bool := false;
 
-c3 : Pair Bool Bool;
-c3 := mkPair true false;
+c3 : Pair Bool Bool := mkPair true false;
 
-c4 : Nat;
-c4 := zero;
+c4 : Nat := zero;
 
-c5 : Nat;
-c5 := suc zero;
+c5 : Nat := suc zero;

@@ -1,14 +1,16 @@
 module HigherOrderLambda;
 
-open import Stdlib.Prelude;
+import Stdlib.Prelude open;
 
-map' : {A : Type} → {B : Type} → (A → B) → List A → List B;
-map' f := \{ nil := nil | (h :: t) := f h :: map' f t};
+map' : {A : Type} → {B : Type} → (A → B) → List A → List B
+  | f :=
+    \ {
+      nil := nil
+      | (h :: t) := f h :: map' f t
+    };
 
-lst : List Nat;
-lst := zero :: suc zero :: nil;
+lst : List Nat := zero :: suc zero :: nil;
 
-main : IO;
-main := printNatLn (foldr (+) zero (map' ((+) (suc zero)) lst));
+main : IO :=
+  printNatLn (foldr (+) zero (map' ((+) (suc zero)) lst));
 
-end;

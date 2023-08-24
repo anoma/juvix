@@ -1,31 +1,28 @@
 -- Ackermann function (higher-order definition)
 module test030;
 
-open import Stdlib.Prelude hiding {iterate};
+import Stdlib.Prelude open hiding {iterate};
 
-iterate : {A : Type} → (A → A) → Nat → A → A;
--- clauses with differing number of patterns not yet supported
--- iterate f zero x := x;
-iterate f zero := id;
-iterate f (suc n) := f ∘ (iterate f n);
+iterate : {A : Type} → (A → A) → Nat → A → A
+  -- clauses with differing number of patterns not yet supported
+  -- iterate f zero x := x;
+  | f zero := id
+  | f (suc n) := f ∘ iterate f n;
 
-plus : Nat → Nat → Nat;
-plus := iterate suc;
+plus : Nat → Nat → Nat := iterate suc;
 
-mult : Nat → Nat → Nat;
-mult m n := iterate (plus n) m 0;
+mult : Nat → Nat → Nat
+  | m n := iterate (plus n) m 0;
 
-exp : Nat → Nat → Nat;
-exp m n := iterate (mult m) n 1;
+exp : Nat → Nat → Nat
+  | m n := iterate (mult m) n 1;
 
-ackermann : Nat → Nat → Nat;
-ackermann m := iterate (λ{f n := iterate f (suc n) 1}) m suc;
+ackermann : Nat → Nat → Nat
+  | m := iterate λ {f n := iterate f (suc n) 1} m suc;
 
-main : IO;
-main :=
-  printNatLn (plus 3 7) >>
-  printNatLn (mult 3 7) >>
-  printNatLn (exp 3 7) >>
-  printNatLn (ackermann 3 7);
+main : IO :=
+  printNatLn (plus 3 7)
+    >> printNatLn (mult 3 7)
+    >> printNatLn (exp 3 7)
+    >> printNatLn (ackermann 3 7);
 
-end;

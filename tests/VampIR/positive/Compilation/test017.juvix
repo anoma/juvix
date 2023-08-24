@@ -1,20 +1,31 @@
 -- mutual recursion
 module test017;
 
-open import Stdlib.Prelude;
-open import Stdlib.Data.Nat.Ord;
+import Stdlib.Prelude open;
+import Stdlib.Data.Nat.Ord open;
 
 {-# unroll: 11 #-}
 terminating
-f : Nat → Nat;
-terminating
-g : Nat → Nat;
-terminating
-h : Nat → Nat;
+f : Nat → Nat
+  
+  | x :=
+    case x
+      | zero := 1
+      | suc y := 2 * x + g y;
 
-f x := case x | zero := 1 | suc y := 2 * x + g y;
-g x := case x | zero := 1 | suc y := x + h y;
-h x := case x | zero := 1 | suc y := x * f y;
+terminating
+g : Nat → Nat
+  | x :=
+    case x
+      | zero := 1
+      | suc y := x + h y;
 
-main : Nat → Nat;
-main x := f x + f (2 * x);
+terminating
+h : Nat → Nat
+  | x :=
+    case x
+      | zero := 1
+      | suc y := x * f y;
+
+main : Nat → Nat
+  | x := f x + f (2 * x);

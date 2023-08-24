@@ -4,11 +4,10 @@ module test058;
 import Stdlib.Prelude open hiding {for};
 import Stdlib.Data.Nat.Range open;
 
-sum : Nat → Nat;
-sum x := for (acc := 0) (n in 1 to x) {acc + n};
+sum : Nat → Nat
+  | x := for (acc := 0) (n in 1 to x) {acc + n};
 
-sum' : Nat → Nat;
-sum' x := for (acc := 0) (n in 1 to x step 2) {acc + n};
+sum' : Nat → Nat
+  | x := for (acc := 0) (n in 1 to x step 2) {acc + n};
 
-main : Nat;
-main := sum 100 + sum' 100;
+main : Nat := sum 100 + sum' 100;

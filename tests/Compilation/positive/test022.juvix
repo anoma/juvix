@@ -1,30 +1,29 @@
 -- lists
 module test022;
 
-open import Stdlib.Prelude;
-open import Stdlib.Data.Nat.Ord;
+import Stdlib.Prelude open;
+import Stdlib.Data.Nat.Ord open;
 
-gen : Nat → List Nat;
-gen zero := nil;
-gen n@(suc m) := n :: gen m;
+gen : Nat → List Nat
+  | zero := nil
+  | n@(suc m) := n :: gen m;
 
-sum : Nat → Nat;
-sum n := foldl (+) 0 (gen n);
+sum : Nat → Nat
+  | n := foldl (+) 0 (gen n);
 
-sum' : Nat → Nat;
-sum' n := foldr (+) 0 (gen n);
+sum' : Nat → Nat
+  | n := foldr (+) 0 (gen n);
 
-printListNatLn : List Nat → IO;
-printListNatLn nil := printStringLn "nil";
-printListNatLn (h :: t) := printNat h >> printString " :: " >> printListNatLn t;
+printListNatLn : List Nat → IO
+  | nil := printStringLn "nil"
+  | (h :: t) :=
+    printNat h >> printString " :: " >> printListNatLn t;
 
-main : IO;
-main :=
-  printListNatLn (gen 10) >>
-  printListNatLn (reverse (gen 10)) >>
-  printListNatLn (filter ((<) 5) (gen 10)) >>
-  printListNatLn (reverse (map (flip sub 1) (gen 10))) >>
-  printNatLn (sum 10000) >>
-  printNatLn (sum' 10000);
+main : IO :=
+  printListNatLn (gen 10)
+    >> printListNatLn (reverse (gen 10))
+    >> printListNatLn (filter ((<) 5) (gen 10))
+    >> printListNatLn (reverse (map (flip sub 1) (gen 10)))
+    >> printNatLn (sum 10000)
+    >> printNatLn (sum' 10000);
 
-end;

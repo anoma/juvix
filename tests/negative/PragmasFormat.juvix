@@ -3,5 +3,4 @@ module PragmasFormat;
 open import Stdlib.Prelude;
 
 {-# inline: Tre #-}
-main : Nat;
-main := 0;
+main : Nat := 0;

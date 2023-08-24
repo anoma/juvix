@@ -1,20 +1,18 @@
 -- Ackermann function
 module test029;
 
-open import Stdlib.Prelude;
+import Stdlib.Prelude open;
 
-ack : Nat → Nat → Nat;
-ack zero n := n + 1;
-ack (suc m) zero := ack m 1;
-ack (suc m) (suc n) := ack m (ack (suc m) n);
+ack : Nat → Nat → Nat
+  | zero n := n + 1
+  | (suc m) zero := ack m 1
+  | (suc m) (suc n) := ack m (ack (suc m) n);
 
-main : IO;
-main :=
-  printNatLn (ack 0 7) >>
-  printNatLn (ack 1 7) >>
-  printNatLn (ack 1 13) >>
-  printNatLn (ack 2 7) >>
-  printNatLn (ack 2 13) >>
-  printNatLn (ack 3 7);
+main : IO :=
+  printNatLn (ack 0 7)
+    >> printNatLn (ack 1 7)
+    >> printNatLn (ack 1 13)
+    >> printNatLn (ack 2 7)
+    >> printNatLn (ack 2 13)
+    >> printNatLn (ack 3 7);
 
-end;

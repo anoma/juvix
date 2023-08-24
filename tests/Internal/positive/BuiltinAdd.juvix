@@ -1,14 +1,10 @@
 module BuiltinAdd;
 
-open import Stdlib.Prelude;
+import Stdlib.Prelude open;
 
-n : Nat;
-n := (suc (suc zero));
+n : Nat := suc (suc zero);
 
-m : Nat;
-m := (suc zero);
+m : Nat := suc zero;
 
-main : Nat;
-main := m + n;
+main : Nat := m + n;
 
-end;

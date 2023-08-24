@@ -1,20 +1,21 @@
 -- builtin trace
 module test043;
 
-builtin nat type Nat :=
+builtin nat
+type Nat :=
   | zero : Nat
   | suc : Nat → Nat;
 
-builtin string axiom String : Type;
+builtin string
+axiom String : Type;
 
-builtin trace axiom trace : {A : Type} → A → A;
+builtin trace
+axiom trace : {A : Type} → A → A;
 
 builtin seq
-seq : {A B : Type} → A → B → B;
-seq x y := y;
+seq : {A B : Type} → A → B → B
+  | x y := y;
 
-f : Nat;
-f := seq (trace "a") 1;
+f : Nat := seq (trace "a") 1;
 
-main : Nat;
-main := f;
+main : Nat := f;

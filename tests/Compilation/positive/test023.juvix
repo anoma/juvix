@@ -1,24 +1,24 @@
 -- mutual recursion
 module test023;
 
-open import Stdlib.Prelude;
-open import Stdlib.Data.Nat.Ord;
+import Stdlib.Prelude open;
+import Stdlib.Data.Nat.Ord open;
 
 terminating
-f : Nat → Nat;
+f : Nat → Nat
+  
+  | x := if (x < 1) 1 (2 * x + g (sub x 1));
+
 terminating
-g : Nat → Nat;
+g : Nat → Nat
+  | x := if (x < 1) 1 (x + h (sub x 1));
+
 terminating
-h : Nat → Nat;
+h : Nat → Nat
+  | x := if (x < 1) 1 (x * f (sub x 1));
 
-f x := if (x < 1) 1 (2 * x + g (sub x 1));
-g x := if (x < 1) 1 (x + h (sub x 1));
-h x := if (x < 1) 1 (x * f (sub x 1));
+main : IO :=
+  printNatLn (f 5)
+    >> printNatLn (f 10)
+    >> printNatLn (f 20);
 
-main : IO;
-main :=
-  printNatLn (f 5) >>
-  printNatLn (f 10) >>
-  printNatLn (f 20);
-
-end;

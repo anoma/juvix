@@ -5,5 +5,4 @@ type Unit := unit : Unit;
 
 axiom Boom : Unit;
 
-x : Unit;
-x := Boom;
+x : Unit := Boom;

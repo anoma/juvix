@@ -4,51 +4,49 @@ module test054;
 import Stdlib.Prelude open;
 
 syntax iterator myfor;
-myfor : {A B : Type} → (A → B → A) → A → List B → A;
-myfor := foldl {_} {_};
+myfor : {A B : Type} → (A → B → A) → A → List B → A :=
+  foldl {_} {_};
 
 syntax iterator mymap {init: 0};
-mymap : {A B : Type} → (A → B) → List A → List B;
-mymap f nil := nil;
-mymap f (x :: xs) := f x :: mymap f xs;
+mymap : {A B : Type} → (A → B) → List A → List B
+  | f nil := nil
+  | f (x :: xs) := f x :: mymap f xs;
 
-sum : List Nat → Nat;
-sum xs := myfor (acc := 0) (x in xs) {acc + x};
+sum : List Nat → Nat
+  | xs := myfor (acc := 0) (x in xs) {acc + x};
 
-sum' : List Nat → Nat;
-sum' xs := myfor λ {acc x := acc + x} 0 xs;
+sum' : List Nat → Nat
+  | xs := myfor λ {acc x := acc + x} 0 xs;
 
-lst : List Nat;
-lst := 1 :: 2 :: 3 :: 4 :: 5 :: nil;
+lst : List Nat := 1 :: 2 :: 3 :: 4 :: 5 :: nil;
 
 syntax iterator myfor2 {init: 1, range: 2};
-myfor2 :
-  {A B C : Type}
+myfor2
+  : {A B C : Type}
     → (A → B → C → A)
     → A
     → List B
     → List C
-    → A;
-myfor2 f acc xs ys :=
-  myfor (acc' := acc) (x in xs)
-    myfor (acc'' := acc') (y in ys)
-      f acc'' x y;
+    → A
+  | f acc xs ys :=
+    myfor (acc' := acc) (x in xs)
+      myfor (acc'' := acc') (y in ys)
+        f acc'' x y;
 
 syntax iterator myzip2 {init: 2, range: 2};
-myzip2 :
-  {A A' B C : Type}
+myzip2
+  : {A A' B C : Type}
     → (A → A' → B → C → A × A')
     → A
     → A'
     → List B
     → List C
-    → A × A';
-myzip2 f a b xs ys :=
-  myfor (acc, acc' := a, b) (x, y in zip xs ys)
-    f acc acc' x y;
+    → A × A'
+  | f a b xs ys :=
+    myfor (acc, acc' := a, b) (x, y in zip xs ys)
+      f acc acc' x y;
 
-main : Nat;
-main :=
+main : Nat :=
   sum lst
     + sum' lst
     + fst (myfor (a, b := 0, 0) (x in lst) b + x, a)
