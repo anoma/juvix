@@ -1,9 +1,11 @@
 module Alias;
 
+-- aliases are allowed to forward reference
 syntax alias Boolean := Bool;
 syntax alias ⊥ := false;
 syntax alias ⊤ := true;
 
+--- Truth value
 type Bool :=
   | false
   | true;

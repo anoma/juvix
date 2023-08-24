@@ -1199,10 +1199,26 @@ data PostfixApplication = PostfixApplication
   }
   deriving stock (Show, Eq, Ord)
 
+data LetStatement (s :: Stage) =
+  LetFunctionDef (FunctionDef s)
+  | LetAlias (AliasDef s)
+
+deriving stock instance Show (LetStatement 'Parsed)
+
+deriving stock instance Show (LetStatement 'Scoped)
+
+deriving stock instance Eq (LetStatement 'Parsed)
+
+deriving stock instance Eq (LetStatement 'Scoped)
+
+deriving stock instance Ord (LetStatement 'Parsed)
+
+deriving stock instance Ord (LetStatement 'Scoped)
+
 data Let (s :: Stage) = Let
   { _letKw :: KeywordRef,
     _letInKw :: Irrelevant KeywordRef,
-    _letFunDefs :: NonEmpty (FunctionDef s),
+    _letFunDefs :: NonEmpty (LetStatement s),
     _letExpression :: ExpressionType s
   }
 
