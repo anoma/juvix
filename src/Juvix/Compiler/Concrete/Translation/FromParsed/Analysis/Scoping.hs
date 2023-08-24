@@ -285,12 +285,12 @@ reserveInductiveSymbol ::
   Sem r S.Symbol
 reserveInductiveSymbol d = reserveSymbolSignatureOf SKNameInductive d (d ^. inductiveName)
 
--- | The NameKind assigned to the alias is irrelevant.
+-- | The NameKind assigned to the alias is irrelevant. We assign it KNameFunction so it can have fixity.
 reserveAliasSymbol ::
   Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, Reader BindingStrategy, InfoTableBuilder, State ScoperState] r =>
   Symbol ->
   Sem r S.Symbol
-reserveAliasSymbol = reserveSymbolOf True SKNameLocal Nothing
+reserveAliasSymbol = reserveSymbolOf True SKNameFunction Nothing
 
 reserveProjectionSymbol ::
   Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, Reader BindingStrategy, InfoTableBuilder, State ScoperState] r =>
@@ -1701,7 +1701,7 @@ checkRecordPattern ::
   Sem r (RecordPattern 'Scoped)
 checkRecordPattern r = do
   c' <- getNameOfKind KNameConstructor (r ^. recordPatternConstructor)
-  fields <- fromMaybeM (return (RecordNameSignature mempty)) (gets (^. scoperConstructorFields . at (c' ^. scopedIden . S.nameId)))
+  fields <- fromMaybeM (return (RecordNameSignature mempty)) (gets (^. scoperConstructorFields . at (c' ^. scopedIdenName . S.nameId)))
   l' <-
     if
         | null (r ^. recordPatternItems) -> return []
@@ -2128,7 +2128,7 @@ checkIterator ::
   Sem r (Iterator 'Scoped)
 checkIterator iter = do
   _iteratorName <- checkScopedIden (iter ^. iteratorName)
-  case _iteratorName ^. scopedIden . S.nameIterator of
+  case _iteratorName ^. scopedIdenName . S.nameIterator of
     Just IteratorAttribs {..} -> do
       case _iteratorAttribsInitNum of
         Just n
@@ -2211,7 +2211,7 @@ checkParens e@(ExpressionAtoms as _) = case as of
   p :| [] -> case p of
     AtomIdentifier s -> do
       scopedId <- checkScopedIden s
-      let scopedIdenNoFix = over scopedIden (set S.nameFixity Nothing) scopedId
+      let scopedIdenNoFix = over scopedIdenName (set S.nameFixity Nothing) scopedId
       return (ExpressionParensIdentifier scopedIdenNoFix)
     AtomIterator i -> ExpressionIterator . set iteratorParens True <$> checkIterator i
     AtomCase c -> ExpressionCase . set caseParens True <$> checkCase c
@@ -2405,7 +2405,7 @@ makeExpressionTable (ExpressionAtoms atoms _) = [recordUpdate] : [appOpExplicit]
                       AssocNone -> P.InfixN
           | otherwise = Nothing
           where
-            S.Name' {..} = iden ^. scopedIden
+            S.Name' {..} = iden ^. scopedIdenName
 
         parseSymbolId :: S.NameId -> Parse ScopedIden
         parseSymbolId uid = P.token getIdentifierWithId mempty
@@ -2413,7 +2413,7 @@ makeExpressionTable (ExpressionAtoms atoms _) = [recordUpdate] : [appOpExplicit]
             getIdentifierWithId :: ExpressionAtom 'Scoped -> Maybe ScopedIden
             getIdentifierWithId s = case s of
               AtomIdentifier iden
-                | uid == iden ^. scopedIden . S.nameId -> Just iden
+                | uid == iden ^. scopedIdenName . S.nameId -> Just iden
               _ -> Nothing
 
     recordUpdate :: P.Operator Parse Expression
@@ -2600,7 +2600,7 @@ parseTerm =
         identifierNoFixity :: ExpressionAtom 'Scoped -> Maybe ScopedIden
         identifierNoFixity s = case s of
           AtomIdentifier iden
-            | not (S.hasFixity (iden ^. scopedIden)) -> Just iden
+            | not (S.hasFixity (iden ^. scopedIdenName)) -> Just iden
           _ -> Nothing
 
     parseBraces :: Parse Expression

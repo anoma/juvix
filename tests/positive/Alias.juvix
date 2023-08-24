@@ -40,3 +40,11 @@ syntax operator || logical;
 syntax alias or := ||;
 
 or3 (a b c : Binary) : Binary := or (or a b) c;
+
+type Pair :=
+  | mkPair Binary Binary;
+
+syntax operator , pair;
+syntax alias , := mkPair;
+
+myPair : Pair := one , ⊥;
