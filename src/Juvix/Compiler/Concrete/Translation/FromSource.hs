@@ -836,10 +836,15 @@ letFunDef = do
   optional_ stashPragmas
   functionDefinition Nothing
 
+letStatement :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (LetStatement 'Parsed)
+letStatement =
+  LetFunctionDef <$> functionDefinition Nothing
+    <|> LetAliasDef <$> (kw kwSyntax >>= aliasDef)
+
 letBlock :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (Let 'Parsed)
 letBlock = do
   _letKw <- kw kwLet
-  _letFunDefs <- P.sepEndBy1 letFunDef semicolon
+  _letFunDefs <- P.sepEndBy1 letStatement semicolon
   _letInKw <- Irrelevant <$> kw kwIn
   _letExpression <- parseExpressionAtoms
   return Let {..}

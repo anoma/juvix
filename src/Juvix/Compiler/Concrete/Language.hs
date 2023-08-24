@@ -1199,9 +1199,9 @@ data PostfixApplication = PostfixApplication
   }
   deriving stock (Show, Eq, Ord)
 
-data LetStatement (s :: Stage) =
-  LetFunctionDef (FunctionDef s)
-  | LetAlias (AliasDef s)
+data LetStatement (s :: Stage)
+  = LetFunctionDef (FunctionDef s)
+  | LetAliasDef (AliasDef s)
 
 deriving stock instance Show (LetStatement 'Parsed)
 

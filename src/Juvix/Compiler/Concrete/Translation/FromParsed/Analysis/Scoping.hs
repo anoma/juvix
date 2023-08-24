@@ -1257,8 +1257,13 @@ checkSections sec = do
                                 _ -> fail
                               _ -> fail
 
-mkLetSections :: [FunctionDef 'Parsed] -> StatementSections 'Parsed
-mkLetSections = mkSections . map StatementFunctionDef
+mkLetSections :: [LetStatement 'Parsed] -> StatementSections 'Parsed
+mkLetSections = mkSections . map toTopStatement
+  where
+    toTopStatement :: LetStatement 'Parsed -> Statement 'Parsed
+    toTopStatement = \case
+      LetFunctionDef f -> StatementFunctionDef f
+      LetAliasDef f -> StatementSyntax (SyntaxAlias f)
 
 mkSections :: [Statement 'Parsed] -> StatementSections 'Parsed
 mkSections = \case
@@ -1645,8 +1650,8 @@ checkFunction f = do
 -- | for now functions defined in let clauses cannot be infix operators
 checkLetFunDefs ::
   Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r =>
-  NonEmpty (FunctionDef 'Parsed) ->
-  Sem r (NonEmpty (FunctionDef 'Scoped))
+  NonEmpty (LetStatement 'Parsed) ->
+  Sem r (NonEmpty (LetStatement 'Scoped))
 checkLetFunDefs =
   localBindings
     . ignoreSyntax
@@ -1655,28 +1660,35 @@ checkLetFunDefs =
     . mkLetSections
     . toList
   where
-    fromSections :: StatementSections s -> NonEmpty (FunctionDef s)
+    fromSections :: StatementSections s -> NonEmpty (LetStatement s)
     fromSections = \case
       SectionsEmpty -> impossible
       SectionsDefinitions d -> fromDefs d
       SectionsNonDefinitions d -> fromNonDefs d
       where
-        fromDefs :: DefinitionsSection s -> NonEmpty (FunctionDef s)
+        fromDefs :: DefinitionsSection s -> NonEmpty (LetStatement s)
         fromDefs DefinitionsSection {..} =
           (fromDef <$> _definitionsSection) <>? (fromNonDefs <$> _definitionsNext)
           where
-            fromDef :: Definition s -> FunctionDef s
+            fromSyn :: SyntaxDef s -> LetStatement s
+            fromSyn = \case
+              SyntaxAlias a -> LetAliasDef a
+              SyntaxFixity {} -> impossible
+              SyntaxOperator {} -> impossible
+              SyntaxIterator {} -> impossible
+
+            fromDef :: Definition s -> LetStatement s
             fromDef = \case
-              DefinitionFunctionDef d -> d
+              DefinitionFunctionDef d -> LetFunctionDef d
+              DefinitionSyntax syn -> fromSyn syn
               DefinitionInductive {} -> impossible
               DefinitionProjectionDef {} -> impossible
               DefinitionAxiom {} -> impossible
-              DefinitionSyntax {} -> impossible
-        fromNonDefs :: NonDefinitionsSection s -> NonEmpty (FunctionDef s)
+        fromNonDefs :: NonDefinitionsSection s -> NonEmpty (LetStatement s)
         fromNonDefs NonDefinitionsSection {..} =
           (fromNonDef <$> _nonDefinitionsSection) <>? (fromDefs <$> _nonDefinitionsNext)
           where
-            fromNonDef :: NonDefinition s -> FunctionDef s
+            fromNonDef :: NonDefinition s -> LetStatement s
             fromNonDef = \case
               NonDefinitionImport {} -> impossible
               NonDefinitionModule {} -> impossible

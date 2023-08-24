@@ -404,12 +404,6 @@ goOpenModule ::
   Sem r (Maybe Internal.Import)
 goOpenModule o = goOpenModule' o
 
-goLetFunctionDef ::
-  Members '[Builtins, NameIdGen, Reader Pragmas, Error ScoperError] r =>
-  FunctionDef 'Scoped ->
-  Sem r Internal.FunctionDef
-goLetFunctionDef = goTopFunctionDef
-
 goProjectionDef ::
   forall r.
   Members '[NameIdGen, State ConstructorInfos] r =>
@@ -745,7 +739,7 @@ goExpression = \case
   ExpressionLiteral l -> return (Internal.ExpressionLiteral (goLiteral l))
   ExpressionLambda l -> Internal.ExpressionLambda <$> goLambda l
   ExpressionBraces b -> throw (ErrAppLeftImplicit (AppLeftImplicit b))
-  ExpressionLet l -> Internal.ExpressionLet <$> goLet l
+  ExpressionLet l -> goLet l
   ExpressionList l -> goList l
   ExpressionUniverse uni -> return (Internal.ExpressionUniverse (goUniverse uni))
   ExpressionFunction func -> Internal.ExpressionFunction <$> goFunction func
@@ -845,19 +839,26 @@ goExpression = \case
       where
         n' = goScopedIden x
 
-    goLet :: Let 'Scoped -> Sem r Internal.Let
+    goLet :: Let 'Scoped -> Sem r Internal.Expression
     goLet l = do
       _letExpression <- goExpression (l ^. letExpression)
-      _letClauses <- goLetFunDefs (l ^. letFunDefs)
-      return Internal.Let {..}
+      clauses <- goLetFunDefs (l ^. letFunDefs)
+      return $ case nonEmpty clauses of
+        Just _letClauses -> Internal.ExpressionLet Internal.Let {..}
+        Nothing -> _letExpression
       where
-        goLetFunDefs :: NonEmpty (FunctionDef 'Scoped) -> Sem r (NonEmpty Internal.LetClause)
+        goLetFunDefs :: NonEmpty (LetStatement 'Scoped) -> Sem r [Internal.LetClause]
         goLetFunDefs cl = fmap goSCC <$> preLetStatements cl
 
-        preLetStatements :: NonEmpty (FunctionDef 'Scoped) -> Sem r (NonEmpty (SCC Internal.PreLetStatement))
+        preLetStatements :: NonEmpty (LetStatement 'Scoped) -> Sem r [SCC Internal.PreLetStatement]
         preLetStatements cl = do
-          pre <- mapM (fmap Internal.PreLetFunctionDef . goLetFunctionDef) cl
-          return (buildLetMutualBlocks pre)
+          pre <- mapMaybeM preLetStatement (toList cl)
+          return $ maybe [] (toList . buildLetMutualBlocks) (nonEmpty pre)
+          where
+            preLetStatement :: LetStatement 'Scoped -> Sem r (Maybe Internal.PreLetStatement)
+            preLetStatement = \case
+              LetFunctionDef f -> Just . Internal.PreLetFunctionDef <$> goTopFunctionDef f
+              LetAliasDef {} -> return Nothing
 
         goSCC :: SCC Internal.PreLetStatement -> Internal.LetClause
         goSCC = \case

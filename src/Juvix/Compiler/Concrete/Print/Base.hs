@@ -451,6 +451,11 @@ instance SingI s => PrettyPrint (LambdaClause s) where
         lambdaPipe' = ppCode <$> _lambdaPipe ^. unIrrelevant
     lambdaPipe' <?+> lambdaParameters' <+> ppCode _lambdaAssignKw <> oneLineOrNext lambdaBody'
 
+instance SingI s => PrettyPrint (LetStatement s) where
+  ppCode = \case
+    LetFunctionDef f -> ppCode f
+    LetAliasDef f -> ppCode f
+
 instance SingI s => PrettyPrint (Let s) where
   ppCode Let {..} = do
     let letFunDefs' = blockIndent (ppBlock _letFunDefs)
