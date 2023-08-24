@@ -1753,7 +1753,7 @@ instance Pretty ScopedIden where
   pretty = pretty . (^. scopedIdenName)
 
 instance HasLoc ScopedIden where
-  getLoc = getLoc . (^. scopedIden)
+  getLoc = getLoc . (^. scopedIdenName)
 
 instance SingI s => HasLoc (InductiveParameters s) where
   getLoc i = getLocSymbolType (i ^. inductiveParametersNames . _head1) <>? (getLocExpressionType <$> (i ^? inductiveParametersRhs . _Just . inductiveParametersType))

@@ -563,7 +563,7 @@ entryToScopedIden name e = do
           { _scopedIdenAlias = Just (set S.nameKind (getNameKind e') scopedName),
             _scopedIden = helper (e' ^. symbolEntry)
           }
-  registerName (si ^. scopedIdenName)
+  registerScopedIden si
   return si
 
 -- | We gather all symbols which have been defined or marked to be public in the given scope.
