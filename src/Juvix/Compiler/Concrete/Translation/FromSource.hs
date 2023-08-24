@@ -838,7 +838,7 @@ letFunDef = do
 
 letStatement :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (LetStatement 'Parsed)
 letStatement =
-  LetFunctionDef <$> functionDefinition Nothing
+  LetFunctionDef <$> letFunDef
     <|> LetAliasDef <$> (kw kwSyntax >>= aliasDef)
 
 letBlock :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (Let 'Parsed)
