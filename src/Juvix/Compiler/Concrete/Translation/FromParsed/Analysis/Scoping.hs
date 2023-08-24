@@ -245,7 +245,7 @@ reserveSymbolOf k nameSig s = do
   modify (over scopeNameSpace (HashMap.alter (Just . addS entry) s))
   return s'
   where
-    isAlias  = case k of
+    isAlias = case k of
       SKNameAlias -> True
       _ -> False
     sns :: Sing ns = sing
