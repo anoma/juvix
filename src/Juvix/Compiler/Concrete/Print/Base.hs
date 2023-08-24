@@ -230,7 +230,7 @@ instance SingI s => PrettyPrint (Iterator s) where
       hang (n <+?> is' <+?> rngs' <> b')
 
 instance PrettyPrint S.AName where
-  ppCode (S.AName n) = annotated (AnnKind (S.getNameKind n)) (noLoc (pretty (n ^. S.nameVerbatim)))
+  ppCode n = annotated (AnnKind (S.getNameKind n)) (noLoc (pretty (n ^. S.anameVerbatim)))
 
 instance PrettyPrint FunctionInfo where
   ppCode = \case
@@ -406,9 +406,8 @@ instance SingI t => PrettyPrint (ModuleRef'' 'S.NotConcrete t) where
 instance PrettyPrint (ModuleRef'' 'S.Concrete t) where
   ppCode m = ppCode (m ^. moduleRefName)
 
--- FIXME this is wrong
 instance PrettyPrint ScopedIden where
-  ppCode = ppCode . (^. scopedIden)
+  ppCode = ppCode . (^. scopedIdenName)
 
 instance SingI s => PrettyPrint (Import s) where
   ppCode :: forall r. Members '[ExactPrint, Reader Options] r => Import s -> Sem r ()

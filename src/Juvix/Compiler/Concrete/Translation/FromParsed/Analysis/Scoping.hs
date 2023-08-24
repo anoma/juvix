@@ -218,7 +218,7 @@ reserveSymbolOf isAlias k nameSig s = do
   s' <- freshSymbol (fromSing k) s
   whenJust nameSig (modify' . set (scoperSignatures . at (s' ^. S.nameId)) . Just)
   modify (set (scopeNameSpaceLocal sns . at s) (Just s'))
-  registerName (S.unqualifiedSymbol s')
+  registerName s'
   let u = S.unConcrete s'
       entry :: NameSpaceEntryType (NameKindNameSpace nameKind)
       entry =
@@ -1341,7 +1341,7 @@ checkLocalModule Module {..} = do
       mref :: ModuleRef' 'S.NotConcrete
       mref = mkModuleRef' @'ModuleLocal ModuleRef'' {..}
   modify (over scoperModules (HashMap.insert moduleId mref))
-  registerName (S.unqualifiedSymbol _modulePath')
+  registerName _modulePath'
   return _moduleRefModule
   where
     inheritScope :: Sem r ()
@@ -1469,7 +1469,7 @@ checkOpenModuleNoImport importModuleHint OpenModule {..}
                         )
                 entry <- maybe err return mentry
                 let scopedSym = entryToSymbol entry s
-                registerName (S.unqualifiedSymbol scopedSym)
+                registerName scopedSym
                 return scopedSym
 
               checkHidingList :: HidingList 'Parsed -> Sem r (HidingList 'Scoped)
@@ -1515,7 +1515,7 @@ checkOpenModuleNoImport importModuleHint OpenModule {..}
                 let scopedAs = do
                       c <- i ^. usingAs
                       return (set S.nameConcrete c scopedSym)
-                mapM_ (registerName . S.unqualifiedSymbol) scopedAs
+                mapM_ registerName scopedAs
                 return
                   UsingItem
                     { _usingSymbol = scopedSym,
@@ -1844,26 +1844,6 @@ checkLambdaClause LambdaClause {..} = withLocalScope $ do
         _lambdaPipe,
         _lambdaAssignKw
       }
-
-scopedVar ::
-  Members '[InfoTableBuilder] r =>
-  S.Symbol ->
-  Symbol ->
-  Sem r S.Symbol
-scopedVar s n = do
-  let scoped = set S.nameConcrete n s
-  registerName (S.unqualifiedSymbol scoped)
-  return scoped
-
-scopedFunction ::
-  (Members '[InfoTableBuilder] r) =>
-  RefNameType 'S.NotConcrete ->
-  Symbol ->
-  Sem r S.Name
-scopedFunction fref n = do
-  let scoped :: S.Name = set S.nameConcrete (NameUnqualified n) fref
-  registerName scoped
-  return scoped
 
 checkUnqualifiedName ::
   (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder] r) =>

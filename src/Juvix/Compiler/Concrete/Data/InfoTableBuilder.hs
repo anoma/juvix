@@ -57,7 +57,7 @@ toState = reinterpret $ \case
      in do
           modify (set (infoFunctions . at ref) (Just info))
           registerDoc (f ^. signName . nameId) j
-  RegisterName n -> modify (over highlightNames (cons (S.AName n)))
+  RegisterName n -> modify (over highlightNames (cons (S.anameFromName n)))
   RegisterModule m -> do
     let j = m ^. moduleDoc
     modify (over infoModules (HashMap.insert (m ^. modulePath) m))
