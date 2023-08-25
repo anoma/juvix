@@ -18,9 +18,13 @@ import Juvix.Prelude
 newtype ModulesCache = ModulesCache
   {_cachedModules :: HashMap Concrete.ModuleIndex Internal.Module}
 
+newtype NonTerminating = NonTerminating {_nonTerminating :: HashSet FunctionName}
+  deriving newtype (Monoid, Semigroup)
+
 data InternalResult = InternalResult
   { _resultScoper :: Concrete.ScoperResult,
     _resultTable :: InfoTable,
+    _resultNonTerminating :: NonTerminating,
     _resultModules :: NonEmpty Module,
     _resultDepInfo :: NameDependencyInfo,
     _resultModulesCache :: ModulesCache
@@ -28,6 +32,7 @@ data InternalResult = InternalResult
 
 makeLenses ''InternalResult
 makeLenses ''ModulesCache
+makeLenses ''NonTerminating
 
 internalResultEntryPoint :: Lens' InternalResult E.EntryPoint
 internalResultEntryPoint = resultScoper . Concrete.resultParserResult . Concrete.resultEntry

@@ -5,9 +5,12 @@ module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Da
 where
 
 import Data.HashMap.Strict qualified as HashMap
+import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Concrete.Data.Highlight.Input
 import Juvix.Compiler.Internal.Extra
 import Juvix.Compiler.Internal.Pretty
+import Juvix.Compiler.Internal.Translation.FromConcrete (nonTerminating)
+import Juvix.Compiler.Internal.Translation.FromConcrete.Data.Context (NonTerminating)
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.FunctionsTable
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error
@@ -417,10 +420,16 @@ addIdens idens = do
   modify (HashMap.union idens)
   modify (over highlightTypes (HashMap.union idens))
 
--- | Assumes the given function has been type checked.
--- Does *not* register the function.
--- Throws an error if the return type is Type and returns Nothing.
-functionDefEval :: forall r'. (Members '[State FunctionsTable, Error TypeCheckerError] r') => FunctionDef -> Sem r' (Maybe Expression)
+-- | Assumes the given function has been type checked. Does *not* register the
+-- function.
+-- Conditons:
+-- 1. Only one clause.
+-- 2. No pattern matching.
+-- 3. Terminates.
+--
+-- Throws an error if the return type is Type and it does not satisfy the
+-- some condition.
+functionDefEval :: forall r'. (Members '[State FunctionsTable, Reader NonTerminating, Error TypeCheckerError] r') => FunctionDef -> Sem r' (Maybe Expression)
 functionDefEval f = do
   r <- runFail goTop
   retTy <- returnsType
@@ -439,12 +448,17 @@ functionDefEval f = do
     returnsType :: (Members '[State FunctionsTable] r) => Sem r Bool
     returnsType = isUniverse ret
 
-    goTop :: forall r. (Members '[Fail, State FunctionsTable, Error TypeCheckerError] r) => Sem r Expression
-    goTop =
+    goTop :: forall r. (Members '[Fail, State FunctionsTable, Error TypeCheckerError, Reader NonTerminating] r) => Sem r Expression
+    goTop = do
+      checkTerminating
       case f ^. funDefClauses of
         c :| [] -> goClause c
         _ -> fail
       where
+        checkTerminating :: Sem r ()
+        checkTerminating = do
+          nonTerm <- asks (^. nonTerminating)
+          when (HashSet.member (f ^. funDefName) nonTerm) fail
         goClause :: FunctionClause -> Sem r Expression
         goClause c = do
           let pats = c ^. clausePatterns
@@ -472,6 +486,6 @@ functionDefEval f = do
                 | Implicit <- p ^. patternArgIsImplicit -> fail
                 | otherwise -> go ps >>= goPattern (p ^. patternArgPattern, ty)
 
-registerFunctionDef :: (Members '[State FunctionsTable, Error TypeCheckerError] r) => FunctionDef -> Sem r ()
+registerFunctionDef :: (Members '[State FunctionsTable, Reader NonTerminating, Error TypeCheckerError] r) => FunctionDef -> Sem r ()
 registerFunctionDef f = whenJustM (functionDefEval f) $ \e ->
   modify (over functionsTable (HashMap.insert (f ^. funDefName) e))

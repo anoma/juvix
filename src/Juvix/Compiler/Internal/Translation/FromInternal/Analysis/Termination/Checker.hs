@@ -6,26 +6,27 @@ module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Che
 where
 
 import Data.HashMap.Internal.Strict qualified as HashMap
+import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Internal.Data.InfoTable as Internal
 import Juvix.Compiler.Internal.Language as Internal
+import Juvix.Compiler.Internal.Translation.FromConcrete.Data.Context (NonTerminating (..))
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.FunctionCall
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Data
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Error
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.LexOrder
 import Juvix.Prelude
-import Data.HashSet qualified as HashSet
 
 -- | Returns the set of non-terminating functions.
 checkTermination ::
   InfoTable ->
   Module ->
-  HashSet Name
+  NonTerminating
 checkTermination infotable topModule = do
   let callmap = buildCallMap infotable topModule
       completeGraph = completeCallGraph callmap
       rEdges = reflexiveEdges completeGraph
       recBehav = map recursiveBehaviour rEdges
-  HashSet.fromList . run . execOutputList $ forM_ recBehav $ \r -> do
+  NonTerminating . HashSet.fromList . run . execOutputList $ forM_ recBehav $ \r -> do
     let funName = r ^. recursiveBehaviourFun
         markedTerminating :: Bool = funInfo ^. (Internal.functionInfoDef . Internal.funDefTerminating)
         funInfo :: FunctionInfo

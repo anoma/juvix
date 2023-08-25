@@ -14,9 +14,11 @@ import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Builtins.Effect
 import Juvix.Compiler.Concrete.Data.Highlight.Input
 import Juvix.Compiler.Internal.Language
+import Juvix.Compiler.Internal.Translation.FromConcrete qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromConcrete.Data.Context
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking qualified as ArityChecking
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Reachability
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker (NoLexOrder (NoLexOrder), TerminationError (ErrNoLexOrder))
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking
 import Juvix.Compiler.Pipeline.Artifacts
 import Juvix.Compiler.Pipeline.EntryPoint
@@ -73,6 +75,7 @@ typeCheckExpressionType ::
   Sem r TypedExpression
 typeCheckExpressionType exp = do
   table <- extendedTableReplArtifacts exp
+  nonTermin <- gets (^. artifactNonTerminating)
   mapError (JuvixError @TypeCheckerError)
     . runTypesTableArtifacts
     . ignoreHighlightBuilder
@@ -83,6 +86,7 @@ typeCheckExpressionType exp = do
     . ignoreOutput @Example
     . withEmptyVars
     . runInferenceDef
+    . runReader nonTermin
     $ inferExpression' Nothing exp >>= traverseOf typedType strongNormalize
 
 typeCheckExpression ::
@@ -97,6 +101,7 @@ typeCheckImport ::
   Sem r Import
 typeCheckImport i = do
   artiTable <- gets (^. artifactInternalTypedTable)
+  nonTermin <- gets (^. artifactNonTerminating)
   let table = buildTable [i ^. importModule . moduleIxModule] <> artiTable
   modify (set artifactInternalTypedTable table)
   mapError (JuvixError @TypeCheckerError)
@@ -108,15 +113,17 @@ typeCheckImport i = do
     . ignoreOutput @Example
     . runReader table
     . withEmptyVars
+    . runReader nonTermin
     -- TODO Store cache in Artifacts and use it here
     . evalCacheEmpty checkModuleNoCache
     $ checkImport i
 
 typeChecking ::
+  forall r.
   (Members '[HighlightBuilder, Error JuvixError, Builtins, NameIdGen] r) =>
   ArityChecking.InternalArityResult ->
   Sem r InternalTypedResult
-typeChecking res@ArityChecking.InternalArityResult {..} =
+typeChecking res@ArityChecking.InternalArityResult {..} = do
   mapError (JuvixError @TypeCheckerError) $ do
     (normalized, (idens, (funs, r))) <-
       runOutputList
@@ -124,8 +131,10 @@ typeChecking res@ArityChecking.InternalArityResult {..} =
         . runState (mempty :: TypesTable)
         . runState (mempty :: FunctionsTable)
         . runReader table
+        . runReader nonTermin
         . evalCacheEmpty checkModuleNoCache
         $ mapM checkModule _resultModules
+    mapError (JuvixError @TerminationError) checkTerminating
     return
       InternalTypedResult
         { _resultInternalArityResult = res,
@@ -136,6 +145,14 @@ typeChecking res@ArityChecking.InternalArityResult {..} =
           _resultInfoTable = buildTable r
         }
   where
+    nonTermin :: NonTerminating
+    nonTermin = _resultInternalResult ^. Internal.resultNonTerminating
+
+    checkTerminating :: (Members '[Error TerminationError] s) => Sem s ()
+    checkTerminating = case nonTermin ^? nonTerminating . to toList . _head of
+      Nothing -> return ()
+      Just x -> throw (ErrNoLexOrder (NoLexOrder x))
+
     table :: InfoTable
     table = buildTable _resultModules
 

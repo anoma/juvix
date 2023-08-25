@@ -40,9 +40,10 @@ fromConcrete ::
   Sem r InternalResult
 fromConcrete _resultScoper =
   mapError (JuvixError @ScoperError) $ do
-    (modulesCache, _resultModules) <-
+    (_resultNonTerminating, (modulesCache, _resultModules)) <-
       runReader @Pragmas mempty
         . runReader @ExportsTable exportTbl
+        . runState (mempty :: NonTerminating)
         . evalState @ConstructorInfos mempty
         . runCacheEmpty goModuleNoCache
         $ mapM goTopModule ms
@@ -158,7 +159,7 @@ goTopModule ::
 goTopModule = cacheGet . ModuleIndex
 
 goModuleNoCache ::
-  (Members '[Reader EntryPoint, Reader ExportsTable, Error JuvixError, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, MCache, State ConstructorInfos] r) =>
+  (Members '[Reader EntryPoint, Reader ExportsTable, Error JuvixError, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, MCache, State ConstructorInfos, State NonTerminating] r) =>
   ModuleIndex ->
   Sem r Internal.Module
 goModuleNoCache (ModuleIndex m) = do
@@ -173,7 +174,7 @@ goModuleNoCache (ModuleIndex m) = do
     noTerminationOption
     ( mapError
         (JuvixError @TerminationError)
-        (checkTermination itbl r)
+        (modify' (mappend (checkTermination itbl r)))
     )
   return r
 

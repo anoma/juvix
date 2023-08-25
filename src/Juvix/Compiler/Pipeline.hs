@@ -253,20 +253,22 @@ corePipelineIOEither entry = do
           mainModuleScope_ :: Scope
           mainModuleScope_ = Scoped.mainModuleSope scopedResult
        in Right $
-            foldl'
-              (flip ($))
-              art
-              [ set artifactMainModuleScope (Just mainModuleScope_),
-                set artifactParsing (parserResult ^. P.resultBuilderState),
-                set artifactInternalModuleCache (internalResult ^. Internal.resultModulesCache),
-                set artifactInternalTypedTable typedTable,
-                set artifactCoreTable coreTable,
-                set artifactScopeTable resultScoperTable,
-                set artifactScopeExports (scopedResult ^. Scoped.resultExports),
-                set artifactTypes typesTable,
-                set artifactFunctions functionsTable,
-                set artifactScoperState (scopedResult ^. Scoped.resultScoperState)
-              ]
+            Artifacts
+              { _artifactMainModuleScope = Just mainModuleScope_,
+                _artifactParsing = parserResult ^. P.resultBuilderState,
+                _artifactInternalModuleCache = internalResult ^. Internal.resultModulesCache,
+                _artifactNonTerminating = internalResult ^. Internal.resultNonTerminating,
+                _artifactInternalTypedTable = typedTable,
+                _artifactCoreTable = coreTable,
+                _artifactScopeTable = resultScoperTable,
+                _artifactScopeExports = scopedResult ^. Scoped.resultExports,
+                _artifactTypes = typesTable,
+                _artifactFunctions = functionsTable,
+                _artifactScoperState = scopedResult ^. Scoped.resultScoperState,
+                _artifactResolver = art ^. artifactResolver,
+                _artifactBuiltins = art ^. artifactBuiltins,
+                _artifactNameIdState = art ^. artifactNameIdState
+              }
   where
     initialArtifacts :: Artifacts
     initialArtifacts =
@@ -275,6 +277,7 @@ corePipelineIOEither entry = do
           _artifactMainModuleScope = Nothing,
           _artifactInternalTypedTable = mempty,
           _artifactTypes = mempty,
+          _artifactNonTerminating = mempty,
           _artifactResolver = PathResolver.iniResolverState,
           _artifactNameIdState = allNameIds,
           _artifactFunctions = mempty,
