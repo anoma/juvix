@@ -59,7 +59,7 @@ tests:
       - typecheck
     args:
       - positive/Internal/Simple.juvix
-    stdin: 'module OtherModule; open import Stdlib.Prelude; main : Nat; main := 5;'
+    stdin: 'module OtherModule; import Stdlib.Prelude open; main : Nat := 5;'
     stderr:
       contains: 'positive/Internal/Simple.juvix'
     exit-status: 1
