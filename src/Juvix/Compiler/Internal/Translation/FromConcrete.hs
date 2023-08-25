@@ -182,10 +182,12 @@ goPragmas p = do
   p' <- ask
   return $ p' <> p ^. _Just . withLocParam . withSourceValue
 
-goName :: S.Name -> Internal.Name
-goName name =
+goScopedIden :: ScopedIden -> Internal.Name
+goScopedIden iden =
   set Internal.namePretty prettyStr (goSymbol (S.nameUnqualify name))
   where
+    name :: S.Name
+    name = iden ^. scopedIdenFinal
     prettyStr :: Text
     prettyStr = prettyText name
 
@@ -401,12 +403,6 @@ goOpenModule ::
   OpenModule 'Scoped ->
   Sem r (Maybe Internal.Import)
 goOpenModule o = goOpenModule' o
-
-goLetFunctionDef ::
-  Members '[Builtins, NameIdGen, Reader Pragmas, Error ScoperError] r =>
-  FunctionDef 'Scoped ->
-  Sem r Internal.FunctionDef
-goLetFunctionDef = goTopFunctionDef
 
 goProjectionDef ::
   forall r.
@@ -743,7 +739,7 @@ goExpression = \case
   ExpressionLiteral l -> return (Internal.ExpressionLiteral (goLiteral l))
   ExpressionLambda l -> Internal.ExpressionLambda <$> goLambda l
   ExpressionBraces b -> throw (ErrAppLeftImplicit (AppLeftImplicit b))
-  ExpressionLet l -> Internal.ExpressionLet <$> goLet l
+  ExpressionLet l -> goLet l
   ExpressionList l -> goList l
   ExpressionUniverse uni -> return (Internal.ExpressionUniverse (goUniverse uni))
   ExpressionFunction func -> Internal.ExpressionFunction <$> goFunction func
@@ -838,24 +834,32 @@ goExpression = \case
       KNameFunction -> Internal.IdenFunction n'
       KNameConstructor -> Internal.IdenConstructor n'
       KNameLocalModule -> impossible
+      KNameAlias -> impossible
       KNameTopModule -> impossible
       KNameFixity -> impossible
       where
-        n' = goName (x ^. scopedIden)
+        n' = goScopedIden x
 
-    goLet :: Let 'Scoped -> Sem r Internal.Let
+    goLet :: Let 'Scoped -> Sem r Internal.Expression
     goLet l = do
       _letExpression <- goExpression (l ^. letExpression)
-      _letClauses <- goLetFunDefs (l ^. letFunDefs)
-      return Internal.Let {..}
+      clauses <- goLetFunDefs (l ^. letFunDefs)
+      return $ case nonEmpty clauses of
+        Just _letClauses -> Internal.ExpressionLet Internal.Let {..}
+        Nothing -> _letExpression
       where
-        goLetFunDefs :: NonEmpty (FunctionDef 'Scoped) -> Sem r (NonEmpty Internal.LetClause)
+        goLetFunDefs :: NonEmpty (LetStatement 'Scoped) -> Sem r [Internal.LetClause]
         goLetFunDefs cl = fmap goSCC <$> preLetStatements cl
 
-        preLetStatements :: NonEmpty (FunctionDef 'Scoped) -> Sem r (NonEmpty (SCC Internal.PreLetStatement))
+        preLetStatements :: NonEmpty (LetStatement 'Scoped) -> Sem r [SCC Internal.PreLetStatement]
         preLetStatements cl = do
-          pre <- mapM (fmap Internal.PreLetFunctionDef . goLetFunctionDef) cl
-          return (buildLetMutualBlocks pre)
+          pre <- mapMaybeM preLetStatement (toList cl)
+          return $ maybe [] (toList . buildLetMutualBlocks) (nonEmpty pre)
+          where
+            preLetStatement :: LetStatement 'Scoped -> Sem r (Maybe Internal.PreLetStatement)
+            preLetStatement = \case
+              LetFunctionDef f -> Just . Internal.PreLetFunctionDef <$> goTopFunctionDef f
+              LetAliasDef {} -> return Nothing
 
         goSCC :: SCC Internal.PreLetStatement -> Internal.LetClause
         goSCC = \case
@@ -992,7 +996,7 @@ goPatternApplication a = uncurry mkConstructorApp <$> viewApp (PatternApplicatio
 
 goPatternConstructor ::
   Members '[Builtins, NameIdGen, Error ScoperError] r =>
-  S.Name ->
+  ScopedIden ->
   Sem r Internal.ConstructorApp
 goPatternConstructor a = uncurry mkConstructorApp <$> viewApp (PatternConstructor a)
 
@@ -1010,17 +1014,17 @@ goPostfixPatternApplication a = uncurry mkConstructorApp <$> viewApp (PatternPos
 
 viewApp :: forall r. Members '[Builtins, NameIdGen, Error ScoperError] r => Pattern -> Sem r (Internal.ConstrName, [Internal.PatternArg])
 viewApp p = case p of
-  PatternConstructor c -> return (goConstructorRef c, [])
+  PatternConstructor c -> return (goScopedIden c, [])
   PatternApplication app@(PatternApp _ r) -> do
     r' <- goPatternArg r
     second (`snoc` r') <$> viewAppLeft app
   PatternInfixApplication (PatternInfixApp l c r) -> do
     l' <- goPatternArg l
     r' <- goPatternArg r
-    return (goConstructorRef c, [l', r'])
+    return (goScopedIden c, [l', r'])
   PatternPostfixApplication (PatternPostfixApp l c) -> do
     l' <- goPatternArg l
-    return (goConstructorRef c, [l'])
+    return (goScopedIden c, [l'])
   PatternVariable {} -> err
   PatternRecord {} -> err
   PatternWildcard {} -> err
@@ -1032,9 +1036,6 @@ viewApp p = case p of
       | Implicit <- l ^. patternArgIsImplicit = throw (ErrImplicitPatternLeftApplication (ImplicitPatternLeftApplication app))
       | otherwise = viewApp (l ^. patternArgPattern)
     err = throw (ErrConstructorExpectedLeftApplication (ConstructorExpectedLeftApplication p))
-
-goConstructorRef :: S.Name -> Internal.Name
-goConstructorRef n = goName n
 
 goPatternArg :: Members '[Builtins, NameIdGen, Error ScoperError] r => PatternArg -> Sem r Internal.PatternArg
 goPatternArg p = do
@@ -1060,7 +1061,7 @@ goPattern p = case p of
 
 goRecordPattern :: forall r. Members '[NameIdGen, Error ScoperError, Builtins] r => RecordPattern 'Scoped -> Sem r Internal.Pattern
 goRecordPattern r = do
-  let constr = goName (r ^. recordPatternConstructor . scopedIden)
+  let constr = goScopedIden (r ^. recordPatternConstructor)
   params' <- mkPatterns
   return
     ( Internal.PatternConstructorApp

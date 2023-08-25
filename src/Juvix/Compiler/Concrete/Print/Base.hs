@@ -230,7 +230,7 @@ instance SingI s => PrettyPrint (Iterator s) where
       hang (n <+?> is' <+?> rngs' <> b')
 
 instance PrettyPrint S.AName where
-  ppCode (S.AName n) = annotated (AnnKind (S.getNameKind n)) (noLoc (pretty (n ^. S.nameVerbatim)))
+  ppCode n = annotated (AnnKind (S.getNameKind n)) (noLoc (pretty (n ^. S.anameVerbatim)))
 
 instance PrettyPrint FunctionInfo where
   ppCode = \case
@@ -407,7 +407,7 @@ instance PrettyPrint (ModuleRef'' 'S.Concrete t) where
   ppCode m = ppCode (m ^. moduleRefName)
 
 instance PrettyPrint ScopedIden where
-  ppCode = ppCode . (^. scopedIden)
+  ppCode = ppCode . (^. scopedIdenName)
 
 instance SingI s => PrettyPrint (Import s) where
   ppCode :: forall r. Members '[ExactPrint, Reader Options] r => Import s -> Sem r ()
@@ -421,11 +421,20 @@ instance SingI s => PrettyPrint (Import s) where
         Nothing -> Nothing
         Just as -> Just (ppCode Kw.kwAs <+> ppModulePathType as)
 
+instance SingI s => PrettyPrint (AliasDef s) where
+  ppCode AliasDef {..} =
+    ppCode _aliasDefSyntaxKw
+      <+> ppCode _aliasDefAliasKw
+      <+> ppSymbolType _aliasDefName
+      <+> ppCode Kw.kwAssign
+      <+> ppIdentifierType _aliasDefAsName
+
 instance SingI s => PrettyPrint (SyntaxDef s) where
   ppCode = \case
     SyntaxFixity f -> ppCode f
     SyntaxOperator op -> ppCode op
     SyntaxIterator it -> ppCode it
+    SyntaxAlias it -> ppCode it
 
 instance PrettyPrint Literal where
   ppCode = noLoc . ppLiteral
@@ -441,6 +450,11 @@ instance SingI s => PrettyPrint (LambdaClause s) where
         lambdaBody' = ppExpressionType _lambdaBody
         lambdaPipe' = ppCode <$> _lambdaPipe ^. unIrrelevant
     lambdaPipe' <?+> lambdaParameters' <+> ppCode _lambdaAssignKw <> oneLineOrNext lambdaBody'
+
+instance SingI s => PrettyPrint (LetStatement s) where
+  ppCode = \case
+    LetFunctionDef f -> ppCode f
+    LetAliasDef f -> ppCode f
 
 instance SingI s => PrettyPrint (Let s) where
   ppCode Let {..} = do
@@ -1049,6 +1063,22 @@ instance SingI s => PrettyPrint (Statement s) where
     StatementOpenModule o -> ppCode o
     StatementAxiom a -> ppCode a
     StatementProjectionDef a -> ppCode a
+
+instance PrettyPrint PreSymbolEntry where
+  ppCode = \case
+    PreSymbolAlias a -> ppCode a
+    PreSymbolFinal a -> ppCode a
+
+instance PrettyPrint Alias where
+  ppCode a =
+    noLoc
+      ( kindWord
+          P.<+> C.code ((pretty (a ^. aliasName . S.nameVerbatim)))
+          P.<+> "defined at"
+          P.<+> pretty (getLoc a)
+      )
+    where
+      kindWord :: Doc Ann = "Alias"
 
 instance PrettyPrint SymbolEntry where
   ppCode ent =

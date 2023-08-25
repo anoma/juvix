@@ -87,6 +87,7 @@ groupStatements = \case
       (StatementSyntax (SyntaxFixity _), _) -> False
       (StatementSyntax (SyntaxOperator o), s) -> definesSymbol (o ^. opSymbol) s
       (StatementSyntax (SyntaxIterator i), s) -> definesSymbol (i ^. iterSymbol) s
+      (StatementSyntax (SyntaxAlias {}), _) -> False
       (StatementImport _, StatementImport _) -> True
       (StatementImport i, StatementOpenModule o) -> case sing :: SStage s of
         SParsed -> True
@@ -140,12 +141,12 @@ recordNameSignatureByIndex = IntMap.fromList . (^.. recordNames . each . to swap
 
 getExpressionAtomIden :: ExpressionAtom 'Scoped -> Maybe S.Name
 getExpressionAtomIden = \case
-  AtomIdentifier nm -> Just (nm ^. scopedIden)
+  AtomIdentifier nm -> Just (nm ^. scopedIdenName)
   _ -> Nothing
 
 getPatternAtomIden :: PatternAtom 'Scoped -> Maybe S.Name
 getPatternAtomIden = \case
   PatternAtomIden i -> case i of
-    PatternScopedConstructor c -> Just c
+    PatternScopedConstructor c -> Just (c ^. scopedIdenName)
     _ -> Nothing
   _ -> Nothing

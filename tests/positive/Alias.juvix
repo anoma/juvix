@@ -1,0 +1,56 @@
+module Alias;
+
+import Stdlib.Data.Fixity open;
+
+-- aliases are allowed to forward reference
+syntax alias Boolean := Bool;
+syntax alias ⊥ := false;
+syntax alias ⊤ := true;
+
+--- Truth value
+type Bool :=
+  | false
+  | true;
+
+not : Boolean -> Boolean
+  | ⊥ := ⊤
+  | ⊤ := ⊥;
+
+not2 (b : Boolean) : Boolean :=
+  let
+    syntax alias yes := ⊤;
+    syntax alias no := ⊥;
+  in case b
+    | no := yes
+    | yes := no;
+
+module ExportAlias;
+  syntax alias Binary := Bool;
+  syntax alias one := ⊤;
+  syntax alias zero := ⊥;
+end;
+
+open ExportAlias;
+
+syntax operator || logical;
+|| : Binary -> Binary -> Binary
+  | zero b := b
+  | one _ := one;
+
+syntax alias or := ||;
+
+or3 (a b c : Binary) : Binary := or (or a b) c;
+
+type Pair :=
+  | mkPair Binary Binary;
+
+syntax operator , pair;
+syntax alias , := mkPair;
+
+myPair : Pair := one, ⊥;
+
+localAlias : Binary -> Binary
+  | b :=
+    let
+      syntax alias b' := b;
+    in b';

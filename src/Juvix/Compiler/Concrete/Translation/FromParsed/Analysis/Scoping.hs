@@ -39,6 +39,7 @@ iniScoperState =
       _scoperScope = mempty,
       _scoperSignatures = mempty,
       _scoperRecordFields = mempty,
+      _scoperAlias = mempty,
       _scoperConstructorFields = mempty
     }
 
@@ -216,14 +217,18 @@ reserveSymbolOf k nameSig s = do
   s' <- freshSymbol (fromSing k) s
   whenJust nameSig (modify' . set (scoperSignatures . at (s' ^. S.nameId)) . Just)
   modify (set (scopeNameSpaceLocal sns . at s) (Just s'))
-  registerName (S.unqualifiedSymbol s')
-  let entry :: NameSpaceEntryType (NameKindNameSpace nameKind)
+  registerName s'
+  let u = S.unConcrete s'
+      entry :: NameSpaceEntryType (NameKindNameSpace nameKind)
       entry =
-        let symE = SymbolEntry (S.unConcrete s')
-            modE = ModuleSymbolEntry (S.unConcrete s')
-            fixE = FixitySymbolEntry (S.unConcrete s')
+        let symE
+              | isAlias = PreSymbolAlias (Alias u)
+              | otherwise = PreSymbolFinal (SymbolEntry u)
+            modE = ModuleSymbolEntry u
+            fixE = FixitySymbolEntry u
          in case k of
               SKNameConstructor -> symE
+              SKNameAlias -> symE
               SKNameInductive -> symE
               SKNameFunction -> symE
               SKNameAxiom -> symE
@@ -240,6 +245,9 @@ reserveSymbolOf k nameSig s = do
   modify (over scopeNameSpace (HashMap.alter (Just . addS entry) s))
   return s'
   where
+    isAlias = case k of
+      SKNameAlias -> True
+      _ -> False
     sns :: Sing ns = sing
     checkNotBound :: Sem r ()
     checkNotBound = do
@@ -279,6 +287,12 @@ reserveInductiveSymbol ::
   InductiveDef 'Parsed ->
   Sem r S.Symbol
 reserveInductiveSymbol d = reserveSymbolSignatureOf SKNameInductive d (d ^. inductiveName)
+
+reserveAliasSymbol ::
+  Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, Reader BindingStrategy, InfoTableBuilder, State ScoperState] r =>
+  Symbol ->
+  Sem r S.Symbol
+reserveAliasSymbol = reserveSymbolOf SKNameAlias Nothing
 
 reserveProjectionSymbol ::
   Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, Reader BindingStrategy, InfoTableBuilder, State ScoperState] r =>
@@ -407,7 +421,7 @@ getModuleExportInfo m = fromMaybeM err (gets (^? scoperModules . at (m ^. module
 -- | Do not call directly. Looks for a symbol in (possibly) nested local modules
 lookupSymbolAux ::
   forall r.
-  Members '[State ScoperState, State Scope, Output ModuleSymbolEntry, Output SymbolEntry, Output FixitySymbolEntry] r =>
+  Members '[State ScoperState, State Scope, Output ModuleSymbolEntry, Output PreSymbolEntry, Output FixitySymbolEntry] r =>
   [Symbol] ->
   Symbol ->
   Sem r ()
@@ -445,7 +459,7 @@ mkModuleEntry (ModuleRef' (t :&: m)) = ModuleSymbolEntry $ case t of
 
 lookInExport ::
   forall r.
-  Members '[State ScoperState, Output SymbolEntry, Output ModuleSymbolEntry, Output FixitySymbolEntry] r =>
+  Members '[State ScoperState, Output PreSymbolEntry, Output ModuleSymbolEntry, Output FixitySymbolEntry] r =>
   Symbol ->
   [Symbol] ->
   ExportInfo ->
@@ -467,14 +481,14 @@ lookupQualifiedSymbol ::
   forall r.
   Members '[State Scope, State ScoperState] r =>
   ([Symbol], Symbol) ->
-  Sem r ([SymbolEntry], [ModuleSymbolEntry], [FixitySymbolEntry])
+  Sem r ([PreSymbolEntry], [ModuleSymbolEntry], [FixitySymbolEntry])
 lookupQualifiedSymbol sms = do
-  (es, (ms, fs)) <- runOutputList $ runOutputList $ execOutputList $ go sms
+  (es, (ms, fs)) <- runOutputList . runOutputList . execOutputList $ go sms
   return (es, ms, fs)
   where
     go ::
       forall r'.
-      Members '[State ScoperState, State Scope, Output SymbolEntry, Output ModuleSymbolEntry, Output FixitySymbolEntry] r' =>
+      Members '[State ScoperState, State Scope, Output PreSymbolEntry, Output ModuleSymbolEntry, Output FixitySymbolEntry] r' =>
       ([Symbol], Symbol) ->
       Sem r' ()
     go (path, sym) = do
@@ -507,26 +521,52 @@ lookupQualifiedSymbol sms = do
                     ref <- toList t
                 ]
 
-checkQualifiedExpr ::
+-- | This assumes that alias do not have cycles.
+normalizePreSymbolEntry :: Members '[State ScoperState] r => PreSymbolEntry -> Sem r SymbolEntry
+normalizePreSymbolEntry = \case
+  PreSymbolFinal a -> return a
+  PreSymbolAlias a -> gets (^?! scoperAlias . at (a ^. aliasName . S.nameId) . _Just) >>= normalizePreSymbolEntry
+
+checkQualifiedName ::
   (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder] r) =>
   QualifiedName ->
-  Sem r ScopedIden
-checkQualifiedExpr q@(QualifiedName (SymbolPath p) sym) = do
+  Sem r PreSymbolEntry
+checkQualifiedName q@(QualifiedName (SymbolPath p) sym) = do
   es <- fst3 <$> lookupQualifiedSymbol (toList p, sym)
   case es of
     [] -> notInScope
-    [e] -> entryToScopedIden q' e
+    [e] -> return e
     _ -> throw (ErrAmbiguousSym (AmbiguousSym q' es))
   where
     q' = NameQualified q
     notInScope = throw (ErrQualSymNotInScope (QualSymNotInScope q))
 
-entryToScopedIden :: Members '[InfoTableBuilder] r => Name -> SymbolEntry -> Sem r ScopedIden
+entryToScopedIden ::
+  Members '[InfoTableBuilder, State ScoperState] r =>
+  Name ->
+  PreSymbolEntry ->
+  Sem r ScopedIden
 entryToScopedIden name e = do
-  let scopedName :: S.Name
-      scopedName = set S.nameConcrete name (e ^. symbolEntry)
-  registerName scopedName
-  return (ScopedIden (set S.nameConcrete name (e ^. symbolEntry)))
+  let helper :: S.Name' x -> S.Name
+      helper = set S.nameConcrete name
+      scopedName :: S.Name
+      scopedName = helper (e ^. preSymbolName)
+  si <- case e of
+    PreSymbolFinal {} ->
+      return
+        ScopedIden
+          { _scopedIdenFinal = scopedName,
+            _scopedIdenAlias = Nothing
+          }
+    PreSymbolAlias {} -> do
+      e' <- normalizePreSymbolEntry e
+      return
+        ScopedIden
+          { _scopedIdenAlias = Just (set S.nameKind (getNameKind e') scopedName),
+            _scopedIdenFinal = helper (e' ^. symbolEntry)
+          }
+  registerScopedIden si
+  return si
 
 -- | We gather all symbols which have been defined or marked to be public in the given scope.
 exportScope ::
@@ -1100,6 +1140,7 @@ checkSections sec = do
         goDefinitions :: DefinitionsSection 'Parsed -> Sem r' (DefinitionsSection 'Scoped)
         goDefinitions DefinitionsSection {..} = do
           mapM_ reserveDefinition _definitionsSection
+          mapM_ scanAlias (_definitionsSection ^.. each . _DefinitionSyntax . _SyntaxAlias)
           sec' <- mapM goDefinition _definitionsSection
           next' <- mapM goNonDefinitions _definitionsNext
           return
@@ -1108,6 +1149,22 @@ checkSections sec = do
                 _definitionsSection = sec'
               }
           where
+            scanAlias :: AliasDef 'Parsed -> Sem r' ()
+            scanAlias a = do
+              aliasId <- gets (^?! scopeLocalSymbols . at (a ^. aliasDefName) . _Just . S.nameId)
+              asName <- checkName (a ^. aliasDefAsName)
+              modify' (set (scoperAlias . at aliasId) (Just asName))
+              checkLoop aliasId
+              where
+                checkLoop :: NameId -> Sem r' ()
+                checkLoop = evalState (mempty :: HashSet NameId) . go
+                  where
+                    go :: Members '[State (HashSet NameId), Error ScoperError, State ScoperState] s => NameId -> Sem s ()
+                    go i = do
+                      whenM (gets (HashSet.member i)) (throw (ErrAliasCycle (AliasCycle a)))
+                      modify' (HashSet.insert i)
+                      whenJustM (gets (^? scoperAlias . at i . _Just . preSymbolName . S.nameId)) go
+
             reserveDefinition :: Definition 'Parsed -> Sem r' ()
             reserveDefinition = \case
               DefinitionSyntax s -> resolveSyntaxDef s
@@ -1202,8 +1259,13 @@ checkSections sec = do
                                 _ -> fail
                               _ -> fail
 
-mkLetSections :: [FunctionDef 'Parsed] -> StatementSections 'Parsed
-mkLetSections = mkSections . map StatementFunctionDef
+mkLetSections :: [LetStatement 'Parsed] -> StatementSections 'Parsed
+mkLetSections = mkSections . map toTopStatement
+  where
+    toTopStatement :: LetStatement 'Parsed -> Statement 'Parsed
+    toTopStatement = \case
+      LetFunctionDef f -> StatementFunctionDef f
+      LetAliasDef f -> StatementSyntax (SyntaxAlias f)
 
 mkSections :: [Statement 'Parsed] -> StatementSections 'Parsed
 mkSections = \case
@@ -1286,7 +1348,7 @@ checkLocalModule Module {..} = do
       mref :: ModuleRef' 'S.NotConcrete
       mref = mkModuleRef' @'ModuleLocal ModuleRef'' {..}
   modify (over scoperModules (HashMap.insert moduleId mref))
-  registerName (S.unqualifiedSymbol _modulePath')
+  registerName _modulePath'
   return _moduleRefModule
   where
     inheritScope :: Sem r ()
@@ -1414,7 +1476,7 @@ checkOpenModuleNoImport importModuleHint OpenModule {..}
                         )
                 entry <- maybe err return mentry
                 let scopedSym = entryToSymbol entry s
-                registerName (S.unqualifiedSymbol scopedSym)
+                registerName scopedSym
                 return scopedSym
 
               checkHidingList :: HidingList 'Parsed -> Sem r (HidingList 'Scoped)
@@ -1460,7 +1522,7 @@ checkOpenModuleNoImport importModuleHint OpenModule {..}
                 let scopedAs = do
                       c <- i ^. usingAs
                       return (set S.nameConcrete c scopedSym)
-                mapM_ (registerName . S.unqualifiedSymbol) scopedAs
+                mapM_ registerName scopedAs
                 return
                   UsingItem
                     { _usingSymbol = scopedSym,
@@ -1590,8 +1652,8 @@ checkFunction f = do
 -- | for now functions defined in let clauses cannot be infix operators
 checkLetFunDefs ::
   Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r =>
-  NonEmpty (FunctionDef 'Parsed) ->
-  Sem r (NonEmpty (FunctionDef 'Scoped))
+  NonEmpty (LetStatement 'Parsed) ->
+  Sem r (NonEmpty (LetStatement 'Scoped))
 checkLetFunDefs =
   localBindings
     . ignoreSyntax
@@ -1600,28 +1662,35 @@ checkLetFunDefs =
     . mkLetSections
     . toList
   where
-    fromSections :: StatementSections s -> NonEmpty (FunctionDef s)
+    fromSections :: StatementSections s -> NonEmpty (LetStatement s)
     fromSections = \case
       SectionsEmpty -> impossible
       SectionsDefinitions d -> fromDefs d
       SectionsNonDefinitions d -> fromNonDefs d
       where
-        fromDefs :: DefinitionsSection s -> NonEmpty (FunctionDef s)
+        fromDefs :: DefinitionsSection s -> NonEmpty (LetStatement s)
         fromDefs DefinitionsSection {..} =
           (fromDef <$> _definitionsSection) <>? (fromNonDefs <$> _definitionsNext)
           where
-            fromDef :: Definition s -> FunctionDef s
+            fromSyn :: SyntaxDef s -> LetStatement s
+            fromSyn = \case
+              SyntaxAlias a -> LetAliasDef a
+              SyntaxFixity {} -> impossible
+              SyntaxOperator {} -> impossible
+              SyntaxIterator {} -> impossible
+
+            fromDef :: Definition s -> LetStatement s
             fromDef = \case
-              DefinitionFunctionDef d -> d
+              DefinitionFunctionDef d -> LetFunctionDef d
+              DefinitionSyntax syn -> fromSyn syn
               DefinitionInductive {} -> impossible
               DefinitionProjectionDef {} -> impossible
               DefinitionAxiom {} -> impossible
-              DefinitionSyntax {} -> impossible
-        fromNonDefs :: NonDefinitionsSection s -> NonEmpty (FunctionDef s)
+        fromNonDefs :: NonDefinitionsSection s -> NonEmpty (LetStatement s)
         fromNonDefs NonDefinitionsSection {..} =
           (fromNonDef <$> _nonDefinitionsSection) <>? (fromDefs <$> _nonDefinitionsNext)
           where
-            fromNonDef :: NonDefinition s -> FunctionDef s
+            fromNonDef :: NonDefinition s -> LetStatement s
             fromNonDef = \case
               NonDefinitionImport {} -> impossible
               NonDefinitionModule {} -> impossible
@@ -1634,17 +1703,16 @@ checkRecordPattern ::
   Sem r (RecordPattern 'Scoped)
 checkRecordPattern r = do
   c' <- getNameOfKind KNameConstructor (r ^. recordPatternConstructor)
-  let s = ScopedIden c'
-  fields <- fromMaybeM (return (RecordNameSignature mempty)) (gets (^. scoperConstructorFields . at (c' ^. S.nameId)))
+  fields <- fromMaybeM (return (RecordNameSignature mempty)) (gets (^. scoperConstructorFields . at (c' ^. scopedIdenName . S.nameId)))
   l' <-
     if
         | null (r ^. recordPatternItems) -> return []
         | otherwise -> do
-            when (null (fields ^. recordNames)) (throw (noFields s))
+            when (null (fields ^. recordNames)) (throw (noFields c'))
             runReader fields (mapM checkItem (r ^. recordPatternItems))
   return
     RecordPattern
-      { _recordPatternConstructor = s,
+      { _recordPatternConstructor = c',
         _recordPatternSignature = Irrelevant fields,
         _recordPatternItems = l'
       }
@@ -1791,37 +1859,17 @@ checkLambdaClause LambdaClause {..} = withLocalScope $ do
         _lambdaAssignKw
       }
 
-scopedVar ::
-  Members '[InfoTableBuilder] r =>
-  S.Symbol ->
-  Symbol ->
-  Sem r S.Symbol
-scopedVar s n = do
-  let scoped = set S.nameConcrete n s
-  registerName (S.unqualifiedSymbol scoped)
-  return scoped
-
-scopedFunction ::
-  (Members '[InfoTableBuilder] r) =>
-  RefNameType 'S.NotConcrete ->
-  Symbol ->
-  Sem r S.Name
-scopedFunction fref n = do
-  let scoped :: S.Name = set S.nameConcrete (NameUnqualified n) fref
-  registerName scoped
-  return scoped
-
-checkUnqualified ::
+checkUnqualifiedName ::
   (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder] r) =>
   Symbol ->
-  Sem r ScopedIden
-checkUnqualified s = do
+  Sem r PreSymbolEntry
+checkUnqualifiedName s = do
   scope <- get
   -- Lookup at the global scope
   entries <- fst3 <$> lookupQualifiedSymbol ([], s)
   case resolveShadowing entries of
     [] -> throw (ErrSymNotInScope (NotInScope s scope))
-    [x] -> entryToScopedIden n x
+    [x] -> return x
     es -> throw (ErrAmbiguousSym (AmbiguousSym n es))
   where
     n = NameUnqualified s
@@ -1837,7 +1885,7 @@ checkFixitySymbol s = do
   case resolveShadowing entries of
     [] -> throw (ErrSymNotInScope (NotInScope s scope))
     [x] -> return $ entryToSymbol x s
-    es -> throw (ErrAmbiguousSym (AmbiguousSym n (map (SymbolEntry . (^. fixityEntry)) es)))
+    es -> throw (ErrAmbiguousSym (AmbiguousSym n (map (PreSymbolFinal . SymbolEntry . (^. fixityEntry)) es)))
   where
     n = NameUnqualified s
 
@@ -1873,15 +1921,13 @@ checkPatternName ::
 checkPatternName n = do
   c <- getConstructorRef
   case c of
-    Just constr -> do
-      registerName constr
-      return (PatternScopedConstructor constr) -- the symbol is a constructor
+    Just constr -> return (PatternScopedConstructor constr) -- the symbol is a constructor
     Nothing -> case n of
       NameUnqualified {} -> PatternScopedVar <$> bindVariableSymbol sym -- the symbol is a variable
       NameQualified {} -> nameNotInScope n
   where
     sym = snd (splitName n)
-    getConstructorRef :: Sem r (Maybe S.Name)
+    getConstructorRef :: Sem r (Maybe ScopedIden)
     getConstructorRef = lookupNameOfKind KNameConstructor n
 
 nameNotInScope :: forall r a. Members '[Error ScoperError, State Scope] r => Name -> Sem r a
@@ -1894,30 +1940,32 @@ nameNotInScope n = err >>= throw
 
 getNameOfKind ::
   forall r.
-  Members '[Error ScoperError, State Scope, State ScoperState] r =>
+  Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder] r =>
   NameKind ->
   Name ->
-  Sem r S.Name
+  Sem r ScopedIden
 getNameOfKind nameKind n = fromMaybeM (nameNotInScope n) (lookupNameOfKind nameKind n)
 
 lookupNameOfKind ::
   forall r.
-  Members '[Error ScoperError, State Scope, State ScoperState] r =>
+  Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder] r =>
   NameKind ->
   Name ->
-  Sem r (Maybe S.Name)
+  Sem r (Maybe ScopedIden)
 lookupNameOfKind nameKind n = do
-  entries <- mapMaybe filterEntry . fst3 <$> lookupQualifiedSymbol (path, sym)
+  entries <- lookupQualifiedSymbol (path, sym) >>= mapMaybeM filterEntry . fst3
   case entries of
     [] -> return Nothing
-    [e] -> return (Just (set S.nameConcrete n e)) -- There is one constructor with such a name
-    es -> throw (ErrAmbiguousSym (AmbiguousSym n (map SymbolEntry es)))
+    [(_, s)] -> return (Just s) -- There is one constructor with such a name
+    es -> throw (ErrAmbiguousSym (AmbiguousSym n (map fst es)))
   where
     (path, sym) = splitName n
-    filterEntry :: SymbolEntry -> Maybe (S.Name' ())
-    filterEntry e
-      | nameKind == getNameKind e = Just (e ^. symbolEntry)
-      | otherwise = Nothing
+    filterEntry :: PreSymbolEntry -> Sem r (Maybe (PreSymbolEntry, ScopedIden))
+    filterEntry e = do
+      e' <- entryToScopedIden n e
+      return $ do
+        guard (nameKind == getNameKind e')
+        return (e, e')
 
 checkPatternBinding ::
   Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r =>
@@ -1959,17 +2007,23 @@ checkPatternAtom = \case
 checkName ::
   (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder] r) =>
   Name ->
-  Sem r ScopedIden
+  Sem r PreSymbolEntry
 checkName n = case n of
-  NameQualified q -> checkQualifiedExpr q
-  NameUnqualified s -> checkUnqualified s
+  NameQualified q -> checkQualifiedName q
+  NameUnqualified s -> checkUnqualifiedName s
+
+checkScopedIden ::
+  (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder] r) =>
+  Name ->
+  Sem r ScopedIden
+checkScopedIden n = checkName n >>= entryToScopedIden n
 
 checkExpressionAtom ::
   Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r =>
   ExpressionAtom 'Parsed ->
   Sem r (NonEmpty (ExpressionAtom 'Scoped))
 checkExpressionAtom e = case e of
-  AtomIdentifier n -> pure . AtomIdentifier <$> checkName n
+  AtomIdentifier n -> pure . AtomIdentifier <$> checkScopedIden n
   AtomLambda lam -> pure . AtomLambda <$> checkLambda lam
   AtomCase c -> pure . AtomCase <$> checkCase c
   AtomLet letBlock -> pure . AtomLet <$> checkLet letBlock
@@ -1988,8 +2042,7 @@ checkExpressionAtom e = case e of
 checkRecordUpdate :: forall r. Members '[Error ScoperError, State Scope, State ScoperState, Reader ScopeParameters, InfoTableBuilder, NameIdGen] r => RecordUpdate 'Parsed -> Sem r (RecordUpdate 'Scoped)
 checkRecordUpdate RecordUpdate {..} = do
   tyName' <- getNameOfKind KNameInductive _recordUpdateTypeName
-  registerName tyName'
-  info <- getRecordInfo (ScopedIden tyName')
+  info <- getRecordInfo tyName'
   let sig = info ^. recordInfoSignature
   (vars', fields') <- withLocalScope $ do
     vs <- mapM bindVariableSymbol (toList (recordNameSignatureByIndex sig))
@@ -2003,7 +2056,7 @@ checkRecordUpdate RecordUpdate {..} = do
           }
   return
     RecordUpdate
-      { _recordUpdateTypeName = ScopedIden tyName',
+      { _recordUpdateTypeName = tyName',
         _recordUpdateFields = fields',
         _recordUpdateExtra = Irrelevant extra',
         _recordUpdateAtKw,
@@ -2031,7 +2084,7 @@ checkNamedApplication ::
   NamedApplication 'Parsed ->
   Sem r (NamedApplication 'Scoped)
 checkNamedApplication napp = do
-  _namedAppName <- checkName (napp ^. namedAppName)
+  _namedAppName <- checkScopedIden (napp ^. namedAppName)
   _namedAppSignature <- Irrelevant <$> getNameSignature _namedAppName
   _namedAppArgs <- mapM checkArgumentBlock (napp ^. namedAppArgs)
   return NamedApplication {..}
@@ -2055,14 +2108,14 @@ getRecordInfo ::
   ScopedIden ->
   Sem r RecordInfo
 getRecordInfo indTy =
-  fromMaybeM err (gets (^. scoperRecordFields . at (indTy ^. scopedIden . S.nameId)))
+  fromMaybeM err (gets (^. scoperRecordFields . at (indTy ^. scopedIdenFinal . S.nameId)))
   where
     err :: Sem r a
     err = throw (ErrNotARecord (NotARecord indTy))
 
 getNameSignature :: Members '[State ScoperState, Error ScoperError] r => ScopedIden -> Sem r NameSignature
 getNameSignature s = do
-  sig <- maybeM (throw err) return (lookupNameSignature (s ^. scopedIden . S.nameId))
+  sig <- maybeM (throw err) return (lookupNameSignature (s ^. scopedIdenFinal . S.nameId))
   when (null (sig ^. nameSignatureArgs)) (throw err)
   return sig
   where
@@ -2076,8 +2129,8 @@ checkIterator ::
   Iterator 'Parsed ->
   Sem r (Iterator 'Scoped)
 checkIterator iter = do
-  _iteratorName <- checkName (iter ^. iteratorName)
-  case identifierName _iteratorName ^. S.nameIterator of
+  _iteratorName <- checkScopedIden (iter ^. iteratorName)
+  case _iteratorName ^. scopedIdenName . S.nameIterator of
     Just IteratorAttribs {..} -> do
       case _iteratorAttribsInitNum of
         Just n
@@ -2159,8 +2212,8 @@ checkParens ::
 checkParens e@(ExpressionAtoms as _) = case as of
   p :| [] -> case p of
     AtomIdentifier s -> do
-      scopedId <- checkName s
-      let scopedIdenNoFix = over scopedIden (set S.nameFixity Nothing) scopedId
+      scopedId <- checkScopedIden s
+      let scopedIdenNoFix = over scopedIdenName (set S.nameFixity Nothing) scopedId
       return (ExpressionParensIdentifier scopedIdenNoFix)
     AtomIterator i -> ExpressionIterator . set iteratorParens True <$> checkIterator i
     AtomCase c -> ExpressionCase . set caseParens True <$> checkCase c
@@ -2236,17 +2289,39 @@ checkSyntaxDef ::
   Sem r (SyntaxDef 'Scoped)
 checkSyntaxDef = \case
   SyntaxFixity fixDef -> SyntaxFixity <$> checkFixitySyntaxDef fixDef
+  SyntaxAlias a -> SyntaxAlias <$> checkAliasDef a
   SyntaxOperator opDef -> return $ SyntaxOperator opDef
   SyntaxIterator iterDef -> return $ SyntaxIterator iterDef
 
-resolveSyntaxDef ::
+checkAliasDef ::
   (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, State ScoperSyntax] r) =>
+  AliasDef 'Parsed ->
+  Sem r (AliasDef 'Scoped)
+checkAliasDef AliasDef {..} = do
+  aliasName' :: S.Symbol <- gets (^?! scopeLocalSymbols . at _aliasDefName . _Just)
+  asName' <- checkScopedIden _aliasDefAsName
+  return
+    AliasDef
+      { _aliasDefName = aliasName',
+        _aliasDefAsName = asName',
+        ..
+      }
+
+reserveAliasDef ::
+  (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, State ScoperSyntax, Reader BindingStrategy] r) =>
+  AliasDef 'Parsed ->
+  Sem r ()
+reserveAliasDef = void . reserveAliasSymbol . (^. aliasDefName)
+
+resolveSyntaxDef ::
+  (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, State ScoperSyntax, Reader BindingStrategy] r) =>
   SyntaxDef 'Parsed ->
   Sem r ()
 resolveSyntaxDef = \case
   SyntaxFixity fixDef -> resolveFixitySyntaxDef fixDef
   SyntaxOperator opDef -> resolveOperatorSyntaxDef opDef
   SyntaxIterator iterDef -> resolveIteratorSyntaxDef iterDef
+  SyntaxAlias a -> reserveAliasDef a
 
 -------------------------------------------------------------------------------
 -- Check precedences are comparable
@@ -2332,7 +2407,7 @@ makeExpressionTable (ExpressionAtoms atoms _) = [recordUpdate] : [appOpExplicit]
                       AssocNone -> P.InfixN
           | otherwise = Nothing
           where
-            S.Name' {..} = identifierName iden
+            S.Name' {..} = iden ^. scopedIdenName
 
         parseSymbolId :: S.NameId -> Parse ScopedIden
         parseSymbolId uid = P.token getIdentifierWithId mempty
@@ -2340,7 +2415,7 @@ makeExpressionTable (ExpressionAtoms atoms _) = [recordUpdate] : [appOpExplicit]
             getIdentifierWithId :: ExpressionAtom 'Scoped -> Maybe ScopedIden
             getIdentifierWithId s = case s of
               AtomIdentifier iden
-                | uid == identifierName iden ^. S.nameId -> Just iden
+                | uid == iden ^. scopedIdenName . S.nameId -> Just iden
               _ -> Nothing
 
     recordUpdate :: P.Operator Parse Expression
@@ -2527,7 +2602,7 @@ parseTerm =
         identifierNoFixity :: ExpressionAtom 'Scoped -> Maybe ScopedIden
         identifierNoFixity s = case s of
           AtomIdentifier iden
-            | not (S.hasFixity (identifierName iden)) -> Just iden
+            | not (S.hasFixity (iden ^. scopedIdenName)) -> Just iden
           _ -> Nothing
 
     parseBraces :: Parse Expression
@@ -2556,43 +2631,42 @@ makePatternTable ::
   PatternAtoms 'Scoped -> [[P.Operator ParsePat PatternArg]]
 makePatternTable (PatternAtoms latoms _) = [appOp] : operators
   where
-    getConstructorRef :: PatternAtom 'Scoped -> Maybe S.Name
+    getConstructorRef :: PatternAtom 'Scoped -> Maybe ScopedIden
     getConstructorRef = \case
       PatternAtomIden i -> case i of
         PatternScopedConstructor c -> Just c
         _ -> Nothing
       _ -> Nothing
     operators = mkSymbolTable (mapMaybe getConstructorRef (toList latoms))
-    mkSymbolTable :: [S.Name] -> [[P.Operator ParsePat PatternArg]]
+    mkSymbolTable :: [ScopedIden] -> [[P.Operator ParsePat PatternArg]]
     mkSymbolTable = reverse . map (map snd) . groupSortOn' fst . mapMaybe unqualifiedSymbolOp
       where
-        unqualifiedSymbolOp :: S.Name -> Maybe (Precedence, P.Operator ParsePat PatternArg)
-        unqualifiedSymbolOp S.Name' {..}
-          | Just Fixity {..} <- _nameFixity,
-            _nameKind == KNameConstructor = Just $
-              case _fixityArity of
-                Unary u -> (_fixityPrecedence, P.Postfix (unaryApp <$> parseSymbolId _nameId))
-                  where
-                    unaryApp :: S.Name -> PatternArg -> PatternArg
-                    unaryApp constrName = case u of
-                      AssocPostfix -> explicitP . PatternPostfixApplication . (`PatternPostfixApp` constrName)
-                Binary b -> (_fixityPrecedence, infixLRN (binaryInfixApp <$> parseSymbolId _nameId))
-                  where
-                    binaryInfixApp :: S.Name -> PatternArg -> PatternArg -> PatternArg
-                    binaryInfixApp name argLeft = explicitP . PatternInfixApplication . PatternInfixApp argLeft name
-                    infixLRN :: ParsePat (PatternArg -> PatternArg -> PatternArg) -> P.Operator ParsePat PatternArg
-                    infixLRN = case b of
-                      AssocLeft -> P.InfixL
-                      AssocRight -> P.InfixR
-                      AssocNone -> P.InfixN
-          | otherwise = Nothing
-        parseSymbolId :: S.NameId -> ParsePat S.Name
+        unqualifiedSymbolOp :: ScopedIden -> Maybe (Precedence, P.Operator ParsePat PatternArg)
+        unqualifiedSymbolOp constr = run . runFail $ do
+          Fixity {..} <- failMaybe (constr ^. scopedIdenName . S.nameFixity)
+          let _nameId = constr ^. scopedIdenName . S.nameId
+          return $ case _fixityArity of
+            Unary u -> (_fixityPrecedence, P.Postfix (unaryApp <$> parseSymbolId _nameId))
+              where
+                unaryApp :: ScopedIden -> PatternArg -> PatternArg
+                unaryApp constrName = case u of
+                  AssocPostfix -> explicitP . PatternPostfixApplication . (`PatternPostfixApp` constrName)
+            Binary b -> (_fixityPrecedence, infixLRN (binaryInfixApp <$> parseSymbolId _nameId))
+              where
+                binaryInfixApp :: ScopedIden -> PatternArg -> PatternArg -> PatternArg
+                binaryInfixApp name argLeft = explicitP . PatternInfixApplication . PatternInfixApp argLeft name
+                infixLRN :: ParsePat (PatternArg -> PatternArg -> PatternArg) -> P.Operator ParsePat PatternArg
+                infixLRN = case b of
+                  AssocLeft -> P.InfixL
+                  AssocRight -> P.InfixR
+                  AssocNone -> P.InfixN
+        parseSymbolId :: S.NameId -> ParsePat ScopedIden
         parseSymbolId uid = P.token getConstructorRefWithId mempty
           where
-            getConstructorRefWithId :: PatternAtom 'Scoped -> Maybe S.Name
+            getConstructorRefWithId :: PatternAtom 'Scoped -> Maybe ScopedIden
             getConstructorRefWithId s = do
               ref <- getConstructorRef s
-              guard (ref ^. S.nameId == uid)
+              guard (ref ^. scopedIdenName . S.nameId == uid)
               return ref
 
     -- Application by juxtaposition.
@@ -2639,10 +2713,10 @@ parsePatternTerm = do
       explicitP . PatternConstructor
         <$> P.token constructorNoFixity mempty
       where
-        constructorNoFixity :: PatternAtom 'Scoped -> Maybe S.Name
+        constructorNoFixity :: PatternAtom 'Scoped -> Maybe ScopedIden
         constructorNoFixity s = case s of
           PatternAtomIden (PatternScopedConstructor ref)
-            | not (S.hasFixity n) -> Just ref
+            | not (S.hasFixity (n ^. scopedIdenName)) -> Just ref
             where
               n = ref
           _ -> Nothing

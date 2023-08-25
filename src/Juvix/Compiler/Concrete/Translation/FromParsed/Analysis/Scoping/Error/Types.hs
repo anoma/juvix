@@ -209,7 +209,7 @@ instance ToGenericError DuplicateIterator where
               locs = vsep $ map (pretty . getLoc) [_dupIteratorFirst, _dupIteratorFirst]
 
 data ExportEntries
-  = ExportEntriesSymbols (NonEmpty SymbolEntry)
+  = ExportEntriesSymbols (NonEmpty PreSymbolEntry)
   | ExportEntriesModules (NonEmpty ModuleSymbolEntry)
   | ExportEntriesFixities (NonEmpty FixitySymbolEntry)
   deriving stock (Show)
@@ -382,7 +382,7 @@ instance ToGenericError UnusedIteratorDef where
 
 data AmbiguousSym = AmbiguousSym
   { _ambiguousSymName :: Name,
-    _ambiguousSymEntires :: [SymbolEntry]
+    _ambiguousSymEntires :: [PreSymbolEntry]
   }
   deriving stock (Show)
 
@@ -829,3 +829,25 @@ instance ToGenericError IncomaprablePrecedences where
     where
       i :: Interval
       i = getLoc _incomparablePrecedencesName1
+
+newtype AliasCycle = AliasCycle
+  { _aliasCycleDef :: (AliasDef 'Parsed)
+  }
+  deriving stock (Show)
+
+instance ToGenericError AliasCycle where
+  genericError AliasCycle {..} = do
+    opts <- fromGenericOptions <$> ask
+    let msg =
+          "The definition of"
+            <+> ppCode opts (_aliasCycleDef ^. aliasDefName)
+            <+> "creates an alias cycle."
+    return
+      GenericError
+        { _genericErrorLoc = i,
+          _genericErrorMessage = mkAnsiText msg,
+          _genericErrorIntervals = [i]
+        }
+    where
+      i :: Interval
+      i = getLoc _aliasCycleDef

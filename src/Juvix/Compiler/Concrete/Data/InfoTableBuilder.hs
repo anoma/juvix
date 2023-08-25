@@ -16,6 +16,7 @@ data InfoTableBuilder m a where
   RegisterInductive :: InductiveDef 'Scoped -> InfoTableBuilder m ()
   RegisterFunctionDef :: FunctionDef 'Scoped -> InfoTableBuilder m ()
   RegisterName :: HasLoc c => S.Name' c -> InfoTableBuilder m ()
+  RegisterScopedIden :: ScopedIden -> InfoTableBuilder m ()
   RegisterModule :: Module 'Scoped 'ModuleTop -> InfoTableBuilder m ()
   RegisterFixity :: FixityDef -> InfoTableBuilder m ()
   RegisterPrecedence :: S.NameId -> S.NameId -> InfoTableBuilder m ()
@@ -57,7 +58,8 @@ toState = reinterpret $ \case
      in do
           modify (set (infoFunctions . at ref) (Just info))
           registerDoc (f ^. signName . nameId) j
-  RegisterName n -> modify (over highlightNames (cons (S.AName n)))
+  RegisterName n -> modify (over highlightNames (cons (S.anameFromName n)))
+  RegisterScopedIden n -> modify (over highlightNames (cons (anameFromScopedIden n)))
   RegisterModule m -> do
     let j = m ^. moduleDoc
     modify (over infoModules (HashMap.insert (m ^. modulePath) m))
@@ -84,3 +86,13 @@ runInfoTableBuilder tab = runState tab . toState
 
 ignoreInfoTableBuilder :: Members '[HighlightBuilder] r => Sem (InfoTableBuilder ': r) a -> Sem r a
 ignoreInfoTableBuilder = evalState emptyInfoTable . toState
+
+anameFromScopedIden :: ScopedIden -> AName
+anameFromScopedIden s =
+  AName
+    { _anameLoc = getLoc s,
+      _anameKind = getNameKind s,
+      _anameDocId = s ^. scopedIdenFinal . nameId,
+      _anameDefinedLoc = s ^. scopedIdenName . nameDefined,
+      _anameVerbatim = s ^. scopedIdenName . nameVerbatim
+    }

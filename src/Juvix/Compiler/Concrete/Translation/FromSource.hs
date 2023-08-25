@@ -500,9 +500,19 @@ builtinStatement = do
 syntaxDef :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (SyntaxDef 'Parsed)
 syntaxDef = do
   syn <- kw kwSyntax
-  (SyntaxFixity <$> fixitySyntaxDef syn)
-    <|> (SyntaxOperator <$> operatorSyntaxDef syn)
-    <|> (SyntaxIterator <$> iteratorSyntaxDef syn)
+  SyntaxFixity <$> fixitySyntaxDef syn
+    <|> SyntaxOperator <$> operatorSyntaxDef syn
+    <|> SyntaxIterator <$> iteratorSyntaxDef syn
+    <|> SyntaxAlias <$> aliasDef syn
+
+aliasDef :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => KeywordRef -> ParsecS r (AliasDef 'Parsed)
+aliasDef synKw = do
+  let _aliasDefSyntaxKw = Irrelevant synKw
+  _aliasDefAliasKw <- Irrelevant <$> kw kwAlias
+  _aliasDefName <- symbol
+  kw kwAssign
+  _aliasDefAsName <- name
+  return AliasDef {..}
 
 --------------------------------------------------------------------------------
 -- Operator syntax declaration
@@ -826,10 +836,15 @@ letFunDef = do
   optional_ stashPragmas
   functionDefinition Nothing
 
+letStatement :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (LetStatement 'Parsed)
+letStatement =
+  LetFunctionDef <$> letFunDef
+    <|> LetAliasDef <$> (kw kwSyntax >>= aliasDef)
+
 letBlock :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (Let 'Parsed)
 letBlock = do
   _letKw <- kw kwLet
-  _letFunDefs <- P.sepEndBy1 letFunDef semicolon
+  _letFunDefs <- P.sepEndBy1 letStatement semicolon
   _letInKw <- Irrelevant <$> kw kwIn
   _letExpression <- parseExpressionAtoms
   return Let {..}
