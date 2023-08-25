@@ -4,7 +4,7 @@ import Juvix.Compiler.Core.Error
 import Juvix.Compiler.Core.Transformation.Base
 import Juvix.Compiler.Core.Transformation.Check.Base
 
-checkGeb :: forall r. Member (Error CoreError) r => InfoTable -> Sem r InfoTable
+checkGeb :: forall r. (Member (Error CoreError) r) => InfoTable -> Sem r InfoTable
 checkGeb tab =
   checkMainExists tab
     >> checkNoRecursiveTypes tab

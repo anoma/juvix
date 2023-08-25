@@ -30,7 +30,7 @@ fromGenericOptions :: GenericOptions -> Options
 fromGenericOptions GenericOptions {..} =
   set optShowNameIds _showNameIds defaultOptions
 
-inJudocBlock :: Members '[Reader Options] r => Sem r a -> Sem r a
+inJudocBlock :: (Members '[Reader Options] r) => Sem r a -> Sem r a
 inJudocBlock = local (set optInJudocBlock True)
 
 instance CanonicalProjection GenericOptions Options where

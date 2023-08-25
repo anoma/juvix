@@ -18,7 +18,7 @@ data PipelineArg = PipelineArg
     _pipelineArgInfoTable :: Core.InfoTable
   }
 
-getEntry :: Members '[Embed IO, App] r => PipelineArg -> Sem r EntryPoint
+getEntry :: (Members '[Embed IO, App] r) => PipelineArg -> Sem r EntryPoint
 getEntry PipelineArg {..} = do
   ep <- getEntryPoint (AppPath (preFileFromAbs _pipelineArgFile) True)
   return $

@@ -372,7 +372,7 @@ instance PrettyCode ConstructorInfo where
     ty <- ppCode _constructorType
     return $ annotate (AnnKind KNameConstructor) (pretty (quoteAsmName _constructorName)) <+> colon <+> ty
 
-ppInductive :: Member (Reader Options) r => InfoTable -> InductiveInfo -> Sem r (Doc Ann)
+ppInductive :: (Member (Reader Options) r) => InfoTable -> InductiveInfo -> Sem r (Doc Ann)
 ppInductive tab InductiveInfo {..} = do
   ctrs <- mapM (ppCode . lookupConstrInfo tab) _inductiveConstructors
   return $ kwInductive <+> annotate (AnnKind KNameInductive) (pretty (quoteAsmName _inductiveName)) <+> braces' (vcat (map (<> semi) ctrs))

@@ -19,7 +19,7 @@ makeSem ''Cache
 
 -- | Run a 'Cache' effect purely.
 runCache ::
-  Hashable k =>
+  (Hashable k) =>
   (k -> Sem (Cache k v ': r) v) ->
   HashMap k v ->
   Sem (Cache k v ': r) a ->
@@ -28,7 +28,7 @@ runCache f c = runState c . re f
 {-# INLINE runCache #-}
 
 evalCache ::
-  Hashable k =>
+  (Hashable k) =>
   (k -> Sem (Cache k v ': r) v) ->
   HashMap k v ->
   Sem (Cache k v ': r) a ->
@@ -37,7 +37,7 @@ evalCache f c = fmap snd . runCache f c
 {-# INLINE evalCache #-}
 
 evalCacheEmpty ::
-  Hashable k =>
+  (Hashable k) =>
   (k -> Sem (Cache k v ': r) v) ->
   Sem (Cache k v ': r) a ->
   Sem r a
@@ -45,7 +45,7 @@ evalCacheEmpty f = evalCache f mempty
 {-# INLINE evalCacheEmpty #-}
 
 runCacheEmpty ::
-  Hashable k =>
+  (Hashable k) =>
   (k -> Sem (Cache k v ': r) v) ->
   Sem (Cache k v ': r) a ->
   Sem r (HashMap k v, a)
@@ -54,7 +54,7 @@ runCacheEmpty f = runCache f mempty
 
 re ::
   forall k v r a.
-  Hashable k =>
+  (Hashable k) =>
   (k -> Sem (Cache k v ': r) v) ->
   Sem (Cache k v ': r) a ->
   Sem (State (HashMap k v) ': r) a

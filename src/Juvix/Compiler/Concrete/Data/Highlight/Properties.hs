@@ -165,10 +165,10 @@ addGenericProperties (WithRange i props) =
         mkItem :: GenericProperty -> (SExp, SExp)
         mkItem GenericProperty {..} = (Symbol _gpropProperty, _gpropValue)
 
-putProperty :: IsProperty a => WithRange a -> SExp
+putProperty :: (IsProperty a) => WithRange a -> SExp
 putProperty = addGenericProperties . fmap toProperties
 
-putPropertyLoc :: IsProperty a => WithLoc a -> SExp
+putPropertyLoc :: (IsProperty a) => WithLoc a -> SExp
 putPropertyLoc (WithLoc i a) = putProperty (WithRange i' a)
   where
     i' :: PointInterval

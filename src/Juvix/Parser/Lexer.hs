@@ -39,7 +39,7 @@ spaceMsg :: String
 spaceMsg = "white space (only spaces and newlines allowed)"
 
 -- | `special` is set when judoc comments or pragmas are supported
-space' :: forall e m. MonadParsec e Text m => Bool -> m (Maybe SpaceSpan)
+space' :: forall e m. (MonadParsec e Text m) => Bool -> m (Maybe SpaceSpan)
 space' special =
   hidden $
     fmap SpaceSpan . nonEmpty <$> spaceSections
@@ -199,7 +199,7 @@ isDelimiter = (`elem` delimiterSymbols)
 validFirstChar :: Char -> Bool
 validFirstChar c = not (isNumber c || isSpace c || (c `elem` reservedSymbols))
 
-curLoc :: MonadParsec e Text m => m Loc
+curLoc :: (MonadParsec e Text m) => m Loc
 curLoc = do
   sp <- getSourcePos
   offset <- getOffset
@@ -208,7 +208,7 @@ curLoc = do
 onlyInterval :: ParsecS r a -> ParsecS r Interval
 onlyInterval = fmap snd . interval
 
-interval :: MonadParsec e Text m => m a -> m (a, Interval)
+interval :: (MonadParsec e Text m) => m a -> m (a, Interval)
 interval ma = do
   start <- curLoc
   res <- ma

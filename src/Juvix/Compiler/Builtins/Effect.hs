@@ -82,7 +82,7 @@ data FunInfo = FunInfo
 makeLenses ''FunInfo
 
 registerFun ::
-  Members '[Builtins, NameIdGen] r =>
+  (Members '[Builtins, NameIdGen] r) =>
   FunInfo ->
   Sem r ()
 registerFun fi = do

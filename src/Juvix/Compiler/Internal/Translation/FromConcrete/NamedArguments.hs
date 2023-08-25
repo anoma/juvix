@@ -19,7 +19,7 @@ makeLenses ''BuilderState
 
 runNamedArguments ::
   forall r.
-  Members '[NameIdGen, Error ScoperError] r =>
+  (Members '[NameIdGen, Error ScoperError] r) =>
   NamedApplication 'Scoped ->
   Sem r Expression
 runNamedArguments napp = do
@@ -42,7 +42,7 @@ runNamedArguments napp = do
 
 helper ::
   forall r.
-  Members '[State BuilderState, Output Expression, NameIdGen, Error NamedArgumentsError] r =>
+  (Members '[State BuilderState, Output Expression, NameIdGen, Error NamedArgumentsError] r) =>
   Interval ->
   Sem r ()
 helper loc = do
@@ -132,7 +132,7 @@ helper loc = do
             go (n' + 1) rest
           where
             fillUntil n' = replicateM_ (n' - n) (mkWildcard >>= output)
-            mkWildcard :: Members '[NameIdGen] r' => Sem r' Expression
+            mkWildcard :: (Members '[NameIdGen] r') => Sem r' Expression
             mkWildcard = ExpressionBraces . WithLoc loc . ExpressionHole . mkHole loc <$> freshNameId
         maxIx :: Maybe Int
         maxIx = fmap maximum1 . nonEmpty . toList $ omittedArgs
@@ -145,7 +145,7 @@ helper loc = do
     scanGroup impl names = runOutputList . runState names . execState mempty . mapM_ go
       where
         go ::
-          Members '[State (IntMap Expression), State (HashMap Symbol Int), State BuilderState, Output (NamedArgument 'Scoped), Error NamedArgumentsError] r' =>
+          (Members '[State (IntMap Expression), State (HashMap Symbol Int), State BuilderState, Output (NamedArgument 'Scoped), Error NamedArgumentsError] r') =>
           NamedArgument 'Scoped ->
           Sem r' ()
         go arg = do

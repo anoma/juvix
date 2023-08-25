@@ -7,7 +7,7 @@ import Juvix.Compiler.Core.Transformation.Optimize.LetFolding
 import Juvix.Compiler.Core.Transformation.Optimize.Phase.Main qualified as Main
 import Juvix.Compiler.Core.Transformation.TopEtaExpand
 
-optimize :: Member (Reader CoreOptions) r => InfoTable -> Sem r InfoTable
+optimize :: (Member (Reader CoreOptions) r) => InfoTable -> Sem r InfoTable
 optimize tab = do
   opts <- ask
   withOptimizationLevel' tab 1 $

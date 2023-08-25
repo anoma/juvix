@@ -47,7 +47,7 @@ instance Foldable BinderList where
   toList :: BinderList a -> [a]
   toList = (^. blMap)
 
-instance Show a => Show (BinderList a) where
+instance (Show a) => Show (BinderList a) where
   show = S.show . toList
 
 -- | same as `lookupsSortedRev` but the result is in the same order as the input list.

@@ -55,7 +55,7 @@ instance Show EvalError where
             <> "\n"
 
 evalError ::
-  Member (Error JuvixError) r =>
+  (Member (Error JuvixError) r) =>
   Text ->
   Maybe GebValue ->
   Maybe Morphism ->

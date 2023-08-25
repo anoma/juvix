@@ -5,7 +5,7 @@ import Juvix.Formatter
 import Scope.Positive qualified
 import Scope.Positive qualified as Scope
 
-runScopeEffIO :: Member (Embed IO) r => Sem (ScopeEff ': r) a -> Sem r a
+runScopeEffIO :: (Member (Embed IO) r) => Sem (ScopeEff ': r) a -> Sem r a
 runScopeEffIO = interpret $ \case
   ScopeFile p -> do
     entry <- embed (defaultEntryPointCwdIO p)

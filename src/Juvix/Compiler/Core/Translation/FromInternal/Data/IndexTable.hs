@@ -14,7 +14,7 @@ makeLenses ''IndexTable
 initIndexTable :: IndexTable
 initIndexTable = IndexTable 0 mempty
 
-localAddName :: Member (Reader IndexTable) r => Name -> Sem r a -> Sem r a
+localAddName :: (Member (Reader IndexTable) r) => Name -> Sem r a -> Sem r a
 localAddName n = localAddNames [n]
 
 localAddNames :: forall r a. (Member (Reader IndexTable) r) => [Name] -> Sem r a -> Sem r a
@@ -34,5 +34,5 @@ localAddNames names s = do
             . over indexTableVarsNum (+ len)
         )
 
-underBinders :: Members '[Reader IndexTable] r => Int -> Sem r a -> Sem r a
+underBinders :: (Members '[Reader IndexTable] r) => Int -> Sem r a -> Sem r a
 underBinders nBinders = local (over indexTableVarsNum (+ nBinders))

@@ -581,7 +581,7 @@ newtype CaseBranchImplicitPattern = CaseBranchImplicitPattern
   deriving stock (Show)
 
 instance ToGenericError CaseBranchImplicitPattern where
-  genericError :: Member (Reader GenericOptions) r => CaseBranchImplicitPattern -> Sem r GenericError
+  genericError :: (Member (Reader GenericOptions) r) => CaseBranchImplicitPattern -> Sem r GenericError
   genericError CaseBranchImplicitPattern {..} = do
     opts <- fromGenericOptions <$> ask
     let msg = "The pattern" <+> ppCode opts _caseBranchImplicitPattern <+> "is not valid because implicit patterns are not allowed in case branches"
@@ -602,7 +602,7 @@ data ModuleDoesNotExportSymbol = ModuleDoesNotExportSymbol
   deriving stock (Show)
 
 instance ToGenericError ModuleDoesNotExportSymbol where
-  genericError :: Member (Reader GenericOptions) r => ModuleDoesNotExportSymbol -> Sem r GenericError
+  genericError :: (Member (Reader GenericOptions) r) => ModuleDoesNotExportSymbol -> Sem r GenericError
   genericError ModuleDoesNotExportSymbol {..} = do
     opts <- fromGenericOptions <$> ask
     let msg =

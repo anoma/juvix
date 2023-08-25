@@ -104,7 +104,7 @@ ppMutual = \case
     return (kwMutual <+> braces (line <> indent' b' <> line))
 
 instance PrettyCode LetClause where
-  ppCode :: forall r. Member (Reader Options) r => LetClause -> Sem r (Doc Ann)
+  ppCode :: forall r. (Member (Reader Options) r) => LetClause -> Sem r (Doc Ann)
   ppCode = \case
     LetFunDef f -> ppCode f
     LetMutualBlock b -> ppMutual (b ^. mutualLet)
@@ -155,7 +155,7 @@ instance PrettyCode Lambda where
     lambdaType' <- mapM ppCode _lambdaType
     return $ kwLambda <+> (fmap (kwColon <+>) lambdaType') <?+> braces lambdaClauses'
 
-instance PrettyCode a => PrettyCode (WithLoc a) where
+instance (PrettyCode a) => PrettyCode (WithLoc a) where
   ppCode = ppCode . (^. withLocParam)
 
 instance PrettyCode FunctionParameter where
@@ -290,7 +290,7 @@ instance PrettyCode ModuleBody where
     return (vsep includes <> line <> line <> vsep2 everything)
 
 instance PrettyCode Module where
-  ppCode :: Member (Reader Options) r => Module -> Sem r (Doc Ann)
+  ppCode :: (Member (Reader Options) r) => Module -> Sem r (Doc Ann)
   ppCode m = do
     name' <- ppCode (m ^. moduleName)
     body' <- ppCode (m ^. moduleBody)
@@ -355,7 +355,7 @@ ppCodeAtom c = do
   p' <- ppCode c
   return $ if isAtomic c then p' else parens p'
 
-instance PrettyCode a => PrettyCode (Maybe a) where
+instance (PrettyCode a) => PrettyCode (Maybe a) where
   ppCode = \case
     Nothing -> return "Nothing"
     Just p -> ("Just" <+>) <$> ppCode p
@@ -369,10 +369,10 @@ instance (PrettyCode a, PrettyCode b) => PrettyCode (a, b) where
     y' <- ppCode y
     return $ tuple [x', y']
 
-instance PrettyCode a => PrettyCode [a] where
+instance (PrettyCode a) => PrettyCode [a] where
   ppCode x = do
     cs <- mapM ppCode (toList x)
     return $ encloseSep "[" "]" ", " cs
 
-instance PrettyCode a => PrettyCode (NonEmpty a) where
+instance (PrettyCode a) => PrettyCode (NonEmpty a) where
   ppCode x = ppCode (toList x)

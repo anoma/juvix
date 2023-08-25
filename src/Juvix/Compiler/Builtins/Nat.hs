@@ -156,7 +156,7 @@ registerNatUDiv f = do
         _funInfoFreeTypeVars = []
       }
 
-registerNatDiv :: Members '[Builtins, NameIdGen] r => FunctionDef -> Sem r ()
+registerNatDiv :: (Members '[Builtins, NameIdGen] r) => FunctionDef -> Sem r ()
 registerNatDiv f = do
   nat <- getBuiltinName (getLoc f) BuiltinNat
   suc <- toExpression <$> getBuiltinName (getLoc f) BuiltinNatSuc

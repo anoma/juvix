@@ -50,16 +50,16 @@ makeLenses ''CompiledPattern
 makeLenses ''CompileState
 makeLenses ''CompileStateNode
 
-addBindersAbove :: Member (Reader CompileState) r => Int -> Sem r CompiledPattern -> Sem r CompiledPattern
+addBindersAbove :: (Member (Reader CompileState) r) => Int -> Sem r CompiledPattern -> Sem r CompiledPattern
 addBindersAbove bindersNum = local (over compileStateBindersAbove (+ bindersNum))
 
-incBindersAbove :: Member (Reader CompileState) r => Sem r CompiledPattern -> Sem r CompiledPattern
+incBindersAbove :: (Member (Reader CompileState) r) => Sem r CompiledPattern -> Sem r CompiledPattern
 incBindersAbove = addBindersAbove 1
 
-resetCompiledPattern :: Member (Reader CompileState) r => Sem r CompiledPattern -> Sem r CompiledPattern
+resetCompiledPattern :: (Member (Reader CompileState) r) => Sem r CompiledPattern -> Sem r CompiledPattern
 resetCompiledPattern = local (set compileStateCompiledPattern mempty)
 
-resetCurrentNode :: Member (Reader CompileStateNode) r => Sem r CompiledPattern -> Sem r CompiledPattern
+resetCurrentNode :: (Member (Reader CompileStateNode) r) => Sem r CompiledPattern -> Sem r CompiledPattern
 resetCurrentNode = local (set compileStateNodeCurrent (mkVar' 0))
 
 instance Semigroup CompiledPattern where

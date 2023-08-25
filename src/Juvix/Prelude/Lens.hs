@@ -21,7 +21,7 @@ _unsnoc1 afb la = uncurryF (|:) (afb (maybe [] toList minit, lasta))
 _last1 :: Lens' (NonEmpty a) a
 _last1 = _unsnoc1 . _2
 
-overM :: Applicative m => Lens' a b -> (b -> m b) -> a -> m a
+overM :: (Applicative m) => Lens' a b -> (b -> m b) -> a -> m a
 overM l f a = do
   a' <- f (a ^. l)
   return $ set l a' a

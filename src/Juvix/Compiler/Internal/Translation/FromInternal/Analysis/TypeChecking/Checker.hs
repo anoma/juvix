@@ -20,30 +20,30 @@ import Juvix.Prelude hiding (fromEither)
 
 type MCache = Cache ModuleIndex Module
 
-registerConstructor :: Members '[HighlightBuilder, State TypesTable, Reader InfoTable] r => ConstructorDef -> Sem r ()
+registerConstructor :: (Members '[HighlightBuilder, State TypesTable, Reader InfoTable] r) => ConstructorDef -> Sem r ()
 registerConstructor ctr = do
   ty <- lookupConstructorType (ctr ^. inductiveConstructorName)
   registerNameIdType (ctr ^. inductiveConstructorName . nameId) ty
 
-registerNameIdType :: Members '[HighlightBuilder, State TypesTable, Reader InfoTable] r => NameId -> Expression -> Sem r ()
+registerNameIdType :: (Members '[HighlightBuilder, State TypesTable, Reader InfoTable] r) => NameId -> Expression -> Sem r ()
 registerNameIdType uid ty = do
   modify (HashMap.insert uid ty)
   modify (set (highlightTypes . at uid) (Just ty))
 
 checkModule ::
-  Members '[HighlightBuilder, Reader EntryPoint, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example, Builtins, MCache] r =>
+  (Members '[HighlightBuilder, Reader EntryPoint, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example, Builtins, MCache] r) =>
   Module ->
   Sem r Module
 checkModule = cacheGet . ModuleIndex
 
 checkModuleIndex ::
-  Members '[HighlightBuilder, Reader EntryPoint, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example, Builtins, MCache] r =>
+  (Members '[HighlightBuilder, Reader EntryPoint, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example, Builtins, MCache] r) =>
   ModuleIndex ->
   Sem r ModuleIndex
 checkModuleIndex = fmap ModuleIndex . cacheGet
 
 checkModuleNoCache ::
-  Members '[HighlightBuilder, Reader EntryPoint, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example, Builtins, MCache] r =>
+  (Members '[HighlightBuilder, Reader EntryPoint, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example, Builtins, MCache] r) =>
   ModuleIndex ->
   Sem r Module
 checkModuleNoCache (ModuleIndex Module {..}) = do
@@ -61,7 +61,7 @@ checkModuleNoCache (ModuleIndex Module {..}) = do
       }
 
 checkModuleBody ::
-  Members '[HighlightBuilder, Reader EntryPoint, State NegativeTypeParameters, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example, Builtins, MCache] r =>
+  (Members '[HighlightBuilder, Reader EntryPoint, State NegativeTypeParameters, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example, Builtins, MCache] r) =>
   ModuleBody ->
   Sem r ModuleBody
 checkModuleBody ModuleBody {..} = do
@@ -74,7 +74,7 @@ checkModuleBody ModuleBody {..} = do
       }
 
 checkImport ::
-  Members '[HighlightBuilder, Reader EntryPoint, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example, Builtins, MCache] r =>
+  (Members '[HighlightBuilder, Reader EntryPoint, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example, Builtins, MCache] r) =>
   Import ->
   Sem r Import
 checkImport = traverseOf importModule checkModuleIndex

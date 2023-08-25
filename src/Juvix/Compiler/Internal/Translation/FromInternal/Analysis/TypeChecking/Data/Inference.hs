@@ -412,7 +412,7 @@ runInferenceDef ::
   Sem r funDef
 runInferenceDef = fmap head . runInferenceDefs . fmap pure
 
-addIdens :: Members '[HighlightBuilder, State TypesTable] r => TypesTable -> Sem r ()
+addIdens :: (Members '[HighlightBuilder, State TypesTable] r) => TypesTable -> Sem r ()
 addIdens idens = do
   modify (HashMap.union idens)
   modify (over highlightTypes (HashMap.union idens))
@@ -420,14 +420,14 @@ addIdens idens = do
 -- | Assumes the given function has been type checked.
 -- Does *not* register the function.
 -- Throws an error if the return type is Type and returns Nothing.
-functionDefEval :: forall r'. Members '[State FunctionsTable, Error TypeCheckerError] r' => FunctionDef -> Sem r' (Maybe Expression)
+functionDefEval :: forall r'. (Members '[State FunctionsTable, Error TypeCheckerError] r') => FunctionDef -> Sem r' (Maybe Expression)
 functionDefEval f = do
   r <- runFail goTop
   retTy <- returnsType
   when (isNothing r && retTy) (throw (ErrUnsupportedTypeFunction (UnsupportedTypeFunction f)))
   return r
   where
-    isUniverse :: Members '[State FunctionsTable] r => Expression -> Sem r Bool
+    isUniverse :: (Members '[State FunctionsTable] r) => Expression -> Sem r Bool
     isUniverse e = do
       e' <- evalState iniState (weakNormalize' e)
       case e' of
@@ -436,10 +436,10 @@ functionDefEval f = do
 
     (params, ret) = unfoldFunType (f ^. funDefType)
 
-    returnsType :: Members '[State FunctionsTable] r => Sem r Bool
+    returnsType :: (Members '[State FunctionsTable] r) => Sem r Bool
     returnsType = isUniverse ret
 
-    goTop :: forall r. Members '[Fail, State FunctionsTable, Error TypeCheckerError] r => Sem r Expression
+    goTop :: forall r. (Members '[Fail, State FunctionsTable, Error TypeCheckerError] r) => Sem r Expression
     goTop =
       case f ^. funDefClauses of
         c :| [] -> goClause c
@@ -472,6 +472,6 @@ functionDefEval f = do
                 | Implicit <- p ^. patternArgIsImplicit -> fail
                 | otherwise -> go ps >>= goPattern (p ^. patternArgPattern, ty)
 
-registerFunctionDef :: Members '[State FunctionsTable, Error TypeCheckerError] r => FunctionDef -> Sem r ()
+registerFunctionDef :: (Members '[State FunctionsTable, Error TypeCheckerError] r) => FunctionDef -> Sem r ()
 registerFunctionDef f = whenJustM (functionDefEval f) $ \e ->
   modify (over functionsTable (HashMap.insert (f ^. funDefName) e))

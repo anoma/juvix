@@ -91,7 +91,7 @@ data AName = AName
 makeLenses ''Name'
 makeLenses ''AName
 
-anameFromName :: HasLoc c => Name' c -> AName
+anameFromName :: (HasLoc c) => Name' c -> AName
 anameFromName n =
   AName
     { _anameLoc = getLoc n,

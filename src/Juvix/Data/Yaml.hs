@@ -25,7 +25,7 @@ checkYamlKeys keys = do
     )
   return ()
 
-decodeEither :: FromJSON a => ByteString -> Either ParseException a
+decodeEither :: (FromJSON a) => ByteString -> Either ParseException a
 decodeEither =
   either Left splitEither
     . unsafePerformIO

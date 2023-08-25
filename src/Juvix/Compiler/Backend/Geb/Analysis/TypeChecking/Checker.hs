@@ -10,18 +10,18 @@ import Juvix.Compiler.Backend.Geb.Language
 
 type CheckingEnv = Context Object
 
-check' :: Member (Error CheckingError) r => TypedMorphism -> Sem r TypedMorphism
+check' :: (Member (Error CheckingError) r) => TypedMorphism -> Sem r TypedMorphism
 check' tyMorph = do
   runReader (mempty @CheckingEnv) $ check (tyMorph ^. typedMorphism) (tyMorph ^. typedMorphismObject)
   return tyMorph
 
-check :: Members '[Reader CheckingEnv, Error CheckingError] r => Morphism -> Object -> Sem r ()
+check :: (Members '[Reader CheckingEnv, Error CheckingError] r) => Morphism -> Object -> Sem r ()
 check morph obj' = do
   ctx <- ask @CheckingEnv
   obj <- runReader ctx (inferObject morph)
   checkTypesEqual obj obj'
 
-checkTypesEqual :: Members '[Reader CheckingEnv, Error CheckingError] r => Object -> Object -> Sem r ()
+checkTypesEqual :: (Members '[Reader CheckingEnv, Error CheckingError] r) => Object -> Object -> Sem r ()
 checkTypesEqual obj obj' =
   unless
     (obj == obj')
@@ -33,14 +33,14 @@ checkTypesEqual obj obj' =
             }
     )
 
-checkSameType :: InferEffects r => [Morphism] -> Sem r ()
+checkSameType :: (InferEffects r) => [Morphism] -> Sem r ()
 checkSameType = \case
   [] -> return ()
   (x : xs) -> do
     obj <- inferObject x
     checkListSameType xs obj
 
-checkListSameType :: InferEffects r => [Morphism] -> Object -> Sem r ()
+checkListSameType :: (InferEffects r) => [Morphism] -> Object -> Sem r ()
 checkListSameType morphs obj = mapM_ (`check` obj) morphs
 
 inferObject' :: Morphism -> Either CheckingError Object
@@ -48,7 +48,7 @@ inferObject' = run . runError . runReader mempty . inferObject @'[Reader Checkin
 
 type InferEffects r = Members '[Reader CheckingEnv, Error CheckingError] r
 
-inferObject :: InferEffects r => Morphism -> Sem r Object
+inferObject :: (InferEffects r) => Morphism -> Sem r Object
 inferObject = \case
   MorphismUnit -> return ObjectTerminal
   MorphismInteger {} -> return ObjectInteger
@@ -65,12 +65,12 @@ inferObject = \case
   MorphismRight b -> inferObjectRight b
   MorphismFail x -> return $ x ^. failureType
 
-inferObjectAbsurd :: InferEffects r => Absurd -> Sem r Object
+inferObjectAbsurd :: (InferEffects r) => Absurd -> Sem r Object
 inferObjectAbsurd x = do
   check (x ^. absurdValue) (x ^. absurdType)
   return ObjectInitial
 
-inferObjectApplication :: InferEffects r => Application -> Sem r Object
+inferObjectApplication :: (InferEffects r) => Application -> Sem r Object
 inferObjectApplication app = do
   homTy <- inferObject (app ^. applicationLeft)
   lType <- inferObject (app ^. applicationRight)
@@ -86,7 +86,7 @@ inferObjectApplication app = do
               _expectedTypeKind = "hom object"
             }
 
-inferObjectLambda :: InferEffects r => Lambda -> Sem r Object
+inferObjectLambda :: (InferEffects r) => Lambda -> Sem r Object
 inferObjectLambda l = do
   let aType = l ^. lambdaVarType
   ctx <- ask @CheckingEnv
@@ -101,7 +101,7 @@ inferObjectLambda l = do
           _homCodomain = bType
         }
 
-inferObjectPair :: InferEffects r => Pair -> Sem r Object
+inferObjectPair :: (InferEffects r) => Pair -> Sem r Object
 inferObjectPair pair = do
   lType <- inferObject (pair ^. pairLeft)
   rType <- inferObject (pair ^. pairRight)
@@ -112,7 +112,7 @@ inferObjectPair pair = do
           _productRight = rType
         }
 
-inferObjectCase :: InferEffects r => Case -> Sem r Object
+inferObjectCase :: (InferEffects r) => Case -> Sem r Object
 inferObjectCase c = do
   vType <- inferObject (c ^. caseOn)
   case vType of
@@ -136,7 +136,7 @@ inferObjectCase c = do
               _expectedTypeKind = "coproduct"
             }
 
-inferObjectFirst :: InferEffects r => First -> Sem r Object
+inferObjectFirst :: (InferEffects r) => First -> Sem r Object
 inferObjectFirst p = do
   pairType <- inferObject (p ^. firstValue)
   case pairType of
@@ -150,7 +150,7 @@ inferObjectFirst p = do
               _expectedTypeKind = "product"
             }
 
-inferObjectSecond :: InferEffects r => Second -> Sem r Object
+inferObjectSecond :: (InferEffects r) => Second -> Sem r Object
 inferObjectSecond p = do
   pairType <- inferObject (p ^. secondValue)
   case pairType of
@@ -164,12 +164,12 @@ inferObjectSecond p = do
               _expectedTypeKind = "product"
             }
 
-inferObjectVar :: InferEffects r => Var -> Sem r Object
+inferObjectVar :: (InferEffects r) => Var -> Sem r Object
 inferObjectVar v = do
   ctx <- ask @CheckingEnv
   return $ Context.lookup (v ^. varIndex) ctx
 
-inferObjectBinop :: InferEffects r => Binop -> Sem r Object
+inferObjectBinop :: (InferEffects r) => Binop -> Sem r Object
 inferObjectBinop opApp = do
   let outTy = objectBinop opApp
       leftArg = opApp ^. binopLeft
@@ -199,7 +199,7 @@ inferObjectBinop opApp = do
       checkSameType args
       return outTy
 
-inferObjectLeft :: InferEffects r => LeftInj -> Sem r Object
+inferObjectLeft :: (InferEffects r) => LeftInj -> Sem r Object
 inferObjectLeft LeftInj {..} = do
   lType <- inferObject _leftInjValue
   return $
@@ -209,7 +209,7 @@ inferObjectLeft LeftInj {..} = do
           _coproductRight = _leftInjRightType
         }
 
-inferObjectRight :: InferEffects r => RightInj -> Sem r Object
+inferObjectRight :: (InferEffects r) => RightInj -> Sem r Object
 inferObjectRight RightInj {..} = do
   rType <- inferObject _rightInjValue
   return $

@@ -23,12 +23,12 @@ stdlibFiles = mapMaybe helper $(stdlibDir)
     isYamlFile :: Path Rel File -> Bool
     isYamlFile = (== juvixYamlFile)
 
-ensureStdlib :: Members '[Files] r => Path Abs Dir -> Path Abs Dir -> [Dependency] -> Sem r ()
+ensureStdlib :: (Members '[Files] r) => Path Abs Dir -> Path Abs Dir -> [Dependency] -> Sem r ()
 ensureStdlib rootDir buildDir deps =
   whenJustM (packageStdlib rootDir buildDir deps) $ \stdlibRoot ->
     runReader stdlibRoot updateStdlib
 
-packageStdlib :: forall r. Members '[Files] r => Path Abs Dir -> Path Abs Dir -> [Dependency] -> Sem r (Maybe (Path Abs Dir))
+packageStdlib :: forall r. (Members '[Files] r) => Path Abs Dir -> Path Abs Dir -> [Dependency] -> Sem r (Maybe (Path Abs Dir))
 packageStdlib rootDir buildDir = firstJustM isStdLib
   where
     isStdLib :: Dependency -> Sem r (Maybe (Path Abs Dir))

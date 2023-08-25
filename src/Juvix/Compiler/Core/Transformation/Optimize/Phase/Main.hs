@@ -26,7 +26,7 @@ optimize' CoreOptions {..} tab =
     . letFolding
     $ tab
 
-optimize :: Member (Reader CoreOptions) r => InfoTable -> Sem r InfoTable
+optimize :: (Member (Reader CoreOptions) r) => InfoTable -> Sem r InfoTable
 optimize tab = do
   opts <- ask
   return $ optimize' opts tab

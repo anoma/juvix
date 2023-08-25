@@ -67,7 +67,7 @@ unfoldApplication (Application l r) = go [r] l
       ExpressionApplication (Application l' r') -> go (r' : ac) l'
       e -> (e, ac)
 
-groupStatements :: forall s. SingI s => [Statement s] -> [NonEmpty (Statement s)]
+groupStatements :: forall s. (SingI s) => [Statement s] -> [NonEmpty (Statement s)]
 groupStatements = \case
   [] -> []
   s : ss -> reverse . map NonEmpty.reverse . uncurry cons . foldl' aux (pure s, []) $ ss

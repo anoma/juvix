@@ -63,7 +63,7 @@ iniResolverState =
       _resolverFiles = mempty
     }
 
-withEnvRoot :: Members '[Reader ResolverEnv] r => Path Abs Dir -> Sem r a -> Sem r a
+withEnvRoot :: (Members '[Reader ResolverEnv] r) => Path Abs Dir -> Sem r a -> Sem r a
 withEnvRoot root' = local (set envRoot root')
 
 mkPackageInfo ::
@@ -103,7 +103,7 @@ dependencyCached d = do
 withPathFile :: (Members '[PathResolver] r) => TopModulePath -> (Either PathResolverError (Path Abs File) -> Sem r a) -> Sem r a
 withPathFile m f = withPath m (f . mapRight (uncurry (<//>)))
 
-getDependencyPath :: Members '[Reader ResolverEnv, Files] r => Dependency -> Sem r (Path Abs Dir)
+getDependencyPath :: (Members '[Reader ResolverEnv, Files] r) => Dependency -> Sem r (Path Abs Dir)
 getDependencyPath (Dependency p) = do
   r <- asks (^. envRoot)
   canonicalDir r p
@@ -176,7 +176,7 @@ resolvePath' mp = do
               }
         )
 
-expectedPath' :: Members '[Reader ResolverEnv] r => Path Abs File -> TopModulePath -> Sem r (Maybe (Path Abs File))
+expectedPath' :: (Members '[Reader ResolverEnv] r) => Path Abs File -> TopModulePath -> Sem r (Maybe (Path Abs File))
 expectedPath' actualPath m = do
   root <- asks (^. envRoot)
   msingle <- asks (^. envSingleFile)

@@ -81,31 +81,31 @@ re = reinterpretH h
 evalExactPrint' :: Builder -> Sem (ExactPrint ': r) a -> Sem r (Builder, a)
 evalExactPrint' b = runState b . re
 
-enqueue' :: forall r. Members '[State Builder] r => Doc Ann -> Sem r ()
+enqueue' :: forall r. (Members '[State Builder] r) => Doc Ann -> Sem r ()
 enqueue' d = modify (over builderQueue (d :))
 
-noLoc' :: forall r. Members '[State Builder] r => Doc Ann -> Sem r ()
+noLoc' :: forall r. (Members '[State Builder] r) => Doc Ann -> Sem r ()
 noLoc' d = do
   popQueue
   append' d
 
-append' :: forall r. Members '[State Builder] r => Doc Ann -> Sem r ()
+append' :: forall r. (Members '[State Builder] r) => Doc Ann -> Sem r ()
 append' d = modify (over builderDoc (<> d))
 
-hardline' :: forall r. Members '[State Builder] r => Sem r ()
+hardline' :: forall r. (Members '[State Builder] r) => Sem r ()
 hardline' = append' P.hardline
 
-line' :: forall r. Members '[State Builder] r => Sem r ()
+line' :: forall r. (Members '[State Builder] r) => Sem r ()
 line' = append' P.line
 
 -- | It prints all remaining comments
-end' :: forall r. Members '[State Builder] r => Sem r ()
+end' :: forall r. (Members '[State Builder] r) => Sem r ()
 end' = do
   cs <- gets (^. builderComments)
   forM_ cs printSpaceSpan
   modify' (set builderComments [])
 
-printSpaceSpan :: forall r. Members '[State Builder] r => SpaceSpan -> Sem r ()
+printSpaceSpan :: forall r. (Members '[State Builder] r) => SpaceSpan -> Sem r ()
 printSpaceSpan = mapM_ printSpaceSection . (^. spaceSpan)
   where
     printSpaceSection :: SpaceSection -> Sem r ()
@@ -113,18 +113,18 @@ printSpaceSpan = mapM_ printSpaceSection . (^. spaceSpan)
       SpaceComment c -> printComment c
       SpaceLines {} -> line'
 
-printComment :: Members '[State Builder] r => Comment -> Sem r ()
+printComment :: (Members '[State Builder] r) => Comment -> Sem r ()
 printComment c = do
   append' (annotate AnnComment (P.pretty c))
   hardline'
 
-popQueue :: Members '[State Builder] r => Sem r ()
+popQueue :: (Members '[State Builder] r) => Sem r ()
 popQueue = do
   q <- gets (^. builderQueue)
   modify' (set builderQueue mempty)
   append' (mconcat (reverse q))
 
-printCommentsUntil' :: forall r. Members '[State Builder] r => Interval -> Sem r (Maybe SpaceSpan)
+printCommentsUntil' :: forall r. (Members '[State Builder] r) => Interval -> Sem r (Maybe SpaceSpan)
 printCommentsUntil' loc = do
   forceLine <- popEnsureLine
   g :: Maybe SpaceSpan <- fmap sconcat . nonEmpty <$> whileJustM popSpaceSpan

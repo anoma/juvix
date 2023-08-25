@@ -48,7 +48,7 @@ runHighlightBuilder = runState emptyHighlightInput
 ignoreHighlightBuilder :: Sem (HighlightBuilder ': r) a -> Sem r a
 ignoreHighlightBuilder = evalState emptyHighlightInput
 
-runJuvixError :: Members '[HighlightBuilder] r => Sem (Error JuvixError ': r) a -> Sem r (Either JuvixError a)
+runJuvixError :: (Members '[HighlightBuilder] r) => Sem (Error JuvixError ': r) a -> Sem r (Either JuvixError a)
 runJuvixError m = do
   x <- runError m
   case x of

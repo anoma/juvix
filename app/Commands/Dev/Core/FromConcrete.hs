@@ -10,7 +10,7 @@ import Juvix.Compiler.Core.Transformation qualified as Core
 import Juvix.Compiler.Core.Transformation.DisambiguateNames (disambiguateNames)
 import Juvix.Compiler.Core.Translation
 
-runCommand :: forall r. Members '[Embed IO, App] r => CoreFromConcreteOptions -> Sem r ()
+runCommand :: forall r. (Members '[Embed IO, App] r) => CoreFromConcreteOptions -> Sem r ()
 runCommand localOpts = do
   gopts <- askGlobalOptions
   tab <- (^. coreResultTable) <$> runPipeline (localOpts ^. coreFromConcreteInputFile) upToCore
