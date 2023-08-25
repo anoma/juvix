@@ -25,7 +25,7 @@ makeLenses ''PosTest
 root :: Path Abs Dir
 root = relToProject $(mkRelDir "tests/positive")
 
-renderCodeNew :: P.PrettyPrint c => c -> Text
+renderCodeNew :: (P.PrettyPrint c) => c -> Text
 renderCodeNew = toPlainText . P.ppOutNoComments P.defaultOptions
 
 testDescr :: PosTest -> TestDescr

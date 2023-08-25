@@ -19,7 +19,7 @@ makeSem ''Visit
 
 -- | Run a 'Visit' effect purely.
 runVisit ::
-  Hashable k =>
+  (Hashable k) =>
   (k -> Sem (Visit k ': r) ()) ->
   HashSet k ->
   Sem (Visit k ': r) a ->
@@ -28,7 +28,7 @@ runVisit f c = runState c . re f
 {-# INLINE runVisit #-}
 
 runVisitEmpty ::
-  Hashable k =>
+  (Hashable k) =>
   (k -> Sem (Visit k ': r) ()) ->
   Sem (Visit k ': r) a ->
   Sem r (HashSet k, a)
@@ -36,7 +36,7 @@ runVisitEmpty f = runVisit f mempty
 {-# INLINE runVisitEmpty #-}
 
 evalVisitEmpty ::
-  Hashable k =>
+  (Hashable k) =>
   (k -> Sem (Visit k ': r) ()) ->
   Sem (Visit k ': r) a ->
   Sem r a
@@ -44,7 +44,7 @@ evalVisitEmpty f = fmap snd . runVisitEmpty f
 {-# INLINE evalVisitEmpty #-}
 
 evalVisit ::
-  Hashable k =>
+  (Hashable k) =>
   (k -> Sem (Visit k ': r) ()) ->
   HashSet k ->
   Sem (Visit k ': r) a ->
@@ -54,7 +54,7 @@ evalVisit f c = fmap snd . runVisit f c
 
 re ::
   forall k r a.
-  Hashable k =>
+  (Hashable k) =>
   (k -> Sem (Visit k ': r) ()) ->
   Sem (Visit k ': r) a ->
   Sem (State (HashSet k) ': r) a

@@ -13,15 +13,15 @@ import Juvix.Compiler.Core.Pretty
 import Juvix.Compiler.Core.Transformation.Base
 import Juvix.Compiler.Core.Transformation.ComputeTypeInfo (computeNodeType)
 
-lambdaLiftBinder :: Members '[Reader OnlyLetRec, InfoTableBuilder] r => BinderList Binder -> Binder -> Sem r Binder
+lambdaLiftBinder :: (Members '[Reader OnlyLetRec, InfoTableBuilder] r) => BinderList Binder -> Binder -> Sem r Binder
 lambdaLiftBinder bl = traverseOf binderType (lambdaLiftNode bl)
 
 type OnlyLetRec = Bool
 
-lambdaLiftNode' :: forall r. Member InfoTableBuilder r => Bool -> BinderList Binder -> Node -> Sem r Node
+lambdaLiftNode' :: forall r. (Member InfoTableBuilder r) => Bool -> BinderList Binder -> Node -> Sem r Node
 lambdaLiftNode' onlyLetRec bl top = runReader onlyLetRec $ lambdaLiftNode bl top
 
-lambdaLiftNode :: forall r. Members '[Reader OnlyLetRec, InfoTableBuilder] r => BinderList Binder -> Node -> Sem r Node
+lambdaLiftNode :: forall r. (Members '[Reader OnlyLetRec, InfoTableBuilder] r) => BinderList Binder -> Node -> Sem r Node
 lambdaLiftNode aboveBl top =
   let topArgs :: [LambdaLhs]
       (topArgs, body) = unfoldLambdas top

@@ -53,7 +53,7 @@ mkTest TestDescr {..} = case _testAssertion of
 assertEqDiffText :: String -> Text -> Text -> Assertion
 assertEqDiffText = assertEqDiff unpack
 
-assertEqDiff :: Eq a => (a -> String) -> String -> a -> a -> Assertion
+assertEqDiff :: (Eq a) => (a -> String) -> String -> a -> a -> Assertion
 assertEqDiff show_ msg a b
   | a == b = return ()
   | otherwise = do

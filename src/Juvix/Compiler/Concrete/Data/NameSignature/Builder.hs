@@ -33,10 +33,10 @@ makeLenses ''BuilderState
 makeSem ''NameSignatureBuilder
 
 class HasNameSignature d where
-  addArgs :: Members '[NameSignatureBuilder] r => d -> Sem r ()
+  addArgs :: (Members '[NameSignatureBuilder] r) => d -> Sem r ()
 
 instance HasNameSignature (AxiomDef 'Parsed) where
-  addArgs :: Members '[NameSignatureBuilder] r => AxiomDef 'Parsed -> Sem r ()
+  addArgs :: (Members '[NameSignatureBuilder] r) => AxiomDef 'Parsed -> Sem r ()
   addArgs a = addAtoms (a ^. axiomType)
 
 instance HasNameSignature (FunctionDef 'Parsed) where
@@ -47,7 +47,7 @@ instance HasNameSignature (FunctionDef 'Parsed) where
 instance HasNameSignature (InductiveDef 'Parsed, ConstructorDef 'Parsed) where
   addArgs ::
     forall r.
-    Members '[NameSignatureBuilder] r =>
+    (Members '[NameSignatureBuilder] r) =>
     (InductiveDef 'Parsed, ConstructorDef 'Parsed) ->
     Sem r ()
   addArgs (i, c) = do
@@ -106,7 +106,7 @@ fromBuilderState b =
       | Just i <- b ^. stateCurrentImplicit = (NameBlock (b ^. stateCurrentBlock) i :)
       | otherwise = id
 
-addAtoms :: forall r. Members '[NameSignatureBuilder] r => ExpressionAtoms 'Parsed -> Sem r ()
+addAtoms :: forall r. (Members '[NameSignatureBuilder] r) => ExpressionAtoms 'Parsed -> Sem r ()
 addAtoms atoms = addAtom . (^. expressionAtoms . _head1) $ atoms
   where
     addAtom :: ExpressionAtom 'Parsed -> Sem r ()
@@ -124,16 +124,16 @@ addAtoms atoms = addAtom . (^. expressionAtoms . _head1) $ atoms
           FunctionParameterName s -> addSymbol _paramImplicit s
           FunctionParameterWildcard {} -> endBuild
 
-addInductiveParams' :: Members '[NameSignatureBuilder] r => IsImplicit -> InductiveParameters 'Parsed -> Sem r ()
+addInductiveParams' :: (Members '[NameSignatureBuilder] r) => IsImplicit -> InductiveParameters 'Parsed -> Sem r ()
 addInductiveParams' i a = forM_ (a ^. inductiveParametersNames) (addSymbol i)
 
-addInductiveParams :: Members '[NameSignatureBuilder] r => InductiveParameters 'Parsed -> Sem r ()
+addInductiveParams :: (Members '[NameSignatureBuilder] r) => InductiveParameters 'Parsed -> Sem r ()
 addInductiveParams = addInductiveParams' Explicit
 
-addConstructorParams :: Members '[NameSignatureBuilder] r => InductiveParameters 'Parsed -> Sem r ()
+addConstructorParams :: (Members '[NameSignatureBuilder] r) => InductiveParameters 'Parsed -> Sem r ()
 addConstructorParams = addInductiveParams' Implicit
 
-addSigArg :: Members '[NameSignatureBuilder] r => SigArg 'Parsed -> Sem r ()
+addSigArg :: (Members '[NameSignatureBuilder] r) => SigArg 'Parsed -> Sem r ()
 addSigArg a = forM_ (a ^. sigArgNames) $ \case
   ArgumentSymbol s -> addSymbol (a ^. sigArgImplicit) s
   ArgumentWildcard {} -> return ()

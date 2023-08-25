@@ -26,10 +26,10 @@ import Juvix.Prelude
 
 type MCache = Cache ModuleIndex InfoTable
 
-buildTable :: Foldable f => f Module -> InfoTable
+buildTable :: (Foldable f) => f Module -> InfoTable
 buildTable = run . evalCache (computeTable True) mempty . getMany
 
-buildTable' :: Foldable f => Bool -> f Module -> InfoTable
+buildTable' :: (Foldable f) => Bool -> f Module -> InfoTable
 buildTable' recurIntoImports = run . evalCache (computeTable recurIntoImports) mempty . getMany
 
 buildTableShallow :: Module -> InfoTable
@@ -50,7 +50,7 @@ extendWithReplExpression e =
         )
     )
 
-letFunctionDefs :: Data from => from -> [FunctionDef]
+letFunctionDefs :: (Data from) => from -> [FunctionDef]
 letFunctionDefs e =
   concat
     [ concatMap (toList . flattenClause) _letClauses
@@ -62,7 +62,7 @@ letFunctionDefs e =
       LetFunDef f -> pure f
       LetMutualBlock (MutualBlockLet fs) -> fs
 
-computeTable :: forall r. Members '[MCache] r => Bool -> ModuleIndex -> Sem r InfoTable
+computeTable :: forall r. (Members '[MCache] r) => Bool -> ModuleIndex -> Sem r InfoTable
 computeTable recurIntoImports (ModuleIndex m) = compute
   where
     compute :: Sem r InfoTable
@@ -124,7 +124,7 @@ computeTable recurIntoImports (ModuleIndex m) = compute
     ss :: [Statement]
     ss = m ^. moduleBody . moduleStatements
 
-lookupConstructor :: forall r. Member (Reader InfoTable) r => Name -> Sem r ConstructorInfo
+lookupConstructor :: forall r. (Member (Reader InfoTable) r) => Name -> Sem r ConstructorInfo
 lookupConstructor f = do
   err <- impossibleErr
   HashMap.lookupDefault err f <$> asks (^. infoConstructors)
@@ -143,7 +143,7 @@ lookupConstructor f = do
 lookupConstructorArgTypes :: (Member (Reader InfoTable) r) => Name -> Sem r ([VarName], [Expression])
 lookupConstructorArgTypes = fmap constructorArgTypes . lookupConstructor
 
-lookupInductive :: forall r. Member (Reader InfoTable) r => InductiveName -> Sem r InductiveInfo
+lookupInductive :: forall r. (Member (Reader InfoTable) r) => InductiveName -> Sem r InductiveInfo
 lookupInductive f = do
   err <- impossibleErr
   HashMap.lookupDefault err f <$> asks (^. infoInductives)
@@ -159,7 +159,7 @@ lookupInductive f = do
           <> "The registered inductives are: "
           <> ppTrace (HashMap.keys tbl)
 
-lookupFunction :: forall r. Member (Reader InfoTable) r => Name -> Sem r FunctionInfo
+lookupFunction :: forall r. (Member (Reader InfoTable) r) => Name -> Sem r FunctionInfo
 lookupFunction f = do
   err <- impossibleErr
   HashMap.lookupDefault err f <$> asks (^. infoFunctions)
@@ -178,7 +178,7 @@ lookupFunction f = do
 lookupAxiom :: (Member (Reader InfoTable) r) => Name -> Sem r AxiomInfo
 lookupAxiom f = HashMap.lookupDefault impossible f <$> asks (^. infoAxioms)
 
-lookupInductiveType :: Member (Reader InfoTable) r => Name -> Sem r Expression
+lookupInductiveType :: (Member (Reader InfoTable) r) => Name -> Sem r Expression
 lookupInductiveType v = do
   info <- lookupInductive v
   let ps = info ^. inductiveInfoDef . inductiveParameters
@@ -190,20 +190,20 @@ lookupInductiveType v = do
   where
     uni = smallUniverseE (getLoc v)
 
-lookupConstructorType :: Member (Reader InfoTable) r => ConstrName -> Sem r Expression
+lookupConstructorType :: (Member (Reader InfoTable) r) => ConstrName -> Sem r Expression
 lookupConstructorType = fmap constructorType . lookupConstructor
 
-lookupConstructorReturnType :: Member (Reader InfoTable) r => ConstrName -> Sem r Expression
+lookupConstructorReturnType :: (Member (Reader InfoTable) r) => ConstrName -> Sem r Expression
 lookupConstructorReturnType = fmap constructorReturnType . lookupConstructor
 
-getAxiomBuiltinInfo :: Member (Reader InfoTable) r => Name -> Sem r (Maybe BuiltinAxiom)
+getAxiomBuiltinInfo :: (Member (Reader InfoTable) r) => Name -> Sem r (Maybe BuiltinAxiom)
 getAxiomBuiltinInfo n = do
   maybeAxiomInfo <- HashMap.lookup n <$> asks (^. infoAxioms)
   return $ case maybeAxiomInfo of
     Just axiomInfo -> axiomInfo ^. axiomInfoDef . axiomBuiltin
     Nothing -> Nothing
 
-getFunctionBuiltinInfo :: Member (Reader InfoTable) r => Name -> Sem r (Maybe BuiltinFunction)
+getFunctionBuiltinInfo :: (Member (Reader InfoTable) r) => Name -> Sem r (Maybe BuiltinFunction)
 getFunctionBuiltinInfo n = do
   maybeFunInfo <- HashMap.lookup n <$> asks (^. infoFunctions)
   return $ case maybeFunInfo of

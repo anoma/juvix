@@ -107,7 +107,7 @@ atomParens associates argAtom opInf = case argAtom of
       opPrec :: Precedence
       opPrec = opInf ^. fixityPrecedence
 
-isAtomic :: HasAtomicity a => a -> Bool
+isAtomic :: (HasAtomicity a) => a -> Bool
 isAtomic x = case atomicity x of
   Atom -> True
   _ -> False

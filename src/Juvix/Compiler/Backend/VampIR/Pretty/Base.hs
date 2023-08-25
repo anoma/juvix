@@ -9,9 +9,9 @@ import Juvix.Data.CodeAnn
 import Juvix.Data.NameKind
 
 class PrettyCode c where
-  ppCode :: Member (Reader Options) r => c -> Sem r (Doc Ann)
+  ppCode :: (Member (Reader Options) r) => c -> Sem r (Doc Ann)
 
-doc :: PrettyCode c => Options -> c -> Doc Ann
+doc :: (PrettyCode c) => Options -> c -> Doc Ann
 doc opts x =
   run $
     runReader opts $

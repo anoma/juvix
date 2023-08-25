@@ -56,7 +56,7 @@ juvixConfigDirIO = (<//> versionDir) . absDir <$> getUserConfigDir "juvix"
 
 runTempFileIO ::
   forall r a.
-  Members '[Embed IO] r =>
+  (Members '[Embed IO] r) =>
   Sem (TempFile ': r) a ->
   Sem r a
 runTempFileIO = interpret $ \case

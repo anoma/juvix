@@ -74,29 +74,29 @@ checkStartNode n = do
     (HashSet.member (n ^. nameId) tab)
     (addStartNode n)
 
-goModuleNoVisited :: forall r. Members '[Reader ExportsTable, State DependencyGraph, State StartNodes, Visit ModuleIndex] r => ModuleIndex -> Sem r ()
+goModuleNoVisited :: forall r. (Members '[Reader ExportsTable, State DependencyGraph, State StartNodes, Visit ModuleIndex] r) => ModuleIndex -> Sem r ()
 goModuleNoVisited (ModuleIndex m) = do
   checkStartNode (m ^. moduleName)
   let b = m ^. moduleBody
   mapM_ (goStatement (m ^. moduleName)) (b ^. moduleStatements)
   mapM_ goImport (b ^. moduleImports)
 
-goImport :: Members '[Reader ExportsTable, State DependencyGraph, State StartNodes, Visit ModuleIndex] r => Import -> Sem r ()
+goImport :: (Members '[Reader ExportsTable, State DependencyGraph, State StartNodes, Visit ModuleIndex] r) => Import -> Sem r ()
 goImport (Import m) = visit m
 
 -- | Ignores includes
-goPreModule :: Members '[Reader ExportsTable, State DependencyGraph, State StartNodes] r => PreModule -> Sem r ()
+goPreModule :: (Members '[Reader ExportsTable, State DependencyGraph, State StartNodes] r) => PreModule -> Sem r ()
 goPreModule m = do
   checkStartNode (m ^. moduleName)
   let b = m ^. moduleBody
   mapM_ (goPreStatement (m ^. moduleName)) (b ^. moduleStatements)
 
-goStatement :: forall r. Members '[Reader ExportsTable, State DependencyGraph, State StartNodes] r => Name -> Statement -> Sem r ()
+goStatement :: forall r. (Members '[Reader ExportsTable, State DependencyGraph, State StartNodes] r) => Name -> Statement -> Sem r ()
 goStatement parentModule = \case
   StatementAxiom ax -> goAxiom parentModule ax
   StatementMutual f -> goMutual parentModule f
 
-goMutual :: forall r. Members '[Reader ExportsTable, State DependencyGraph, State StartNodes] r => Name -> MutualBlock -> Sem r ()
+goMutual :: forall r. (Members '[Reader ExportsTable, State DependencyGraph, State StartNodes] r) => Name -> MutualBlock -> Sem r ()
 goMutual parentModule (MutualBlock s) = mapM_ go s
   where
     go :: MutualStatement -> Sem r ()
@@ -106,7 +106,7 @@ goMutual parentModule (MutualBlock s) = mapM_ go s
 
 goPreLetStatement ::
   forall r.
-  Members '[Reader ExportsTable, State DependencyGraph, State StartNodes] r =>
+  (Members '[Reader ExportsTable, State DependencyGraph, State StartNodes] r) =>
   PreLetStatement ->
   Sem r ()
 goPreLetStatement = \case
@@ -114,19 +114,19 @@ goPreLetStatement = \case
 
 -- | Declarations in a module depend on the module, not the other way round (a
 -- module is reachable if at least one of the declarations in it is reachable)
-goPreStatement :: forall r. Members '[Reader ExportsTable, State DependencyGraph, State StartNodes] r => Name -> PreStatement -> Sem r ()
+goPreStatement :: forall r. (Members '[Reader ExportsTable, State DependencyGraph, State StartNodes] r) => Name -> PreStatement -> Sem r ()
 goPreStatement parentModule = \case
   PreAxiomDef ax -> goAxiom parentModule ax
   PreFunctionDef f -> goTopFunctionDef parentModule f
   PreInductiveDef i -> goInductive parentModule i
 
-goAxiom :: forall r. Members '[Reader ExportsTable, State DependencyGraph, State StartNodes] r => Name -> AxiomDef -> Sem r ()
+goAxiom :: forall r. (Members '[Reader ExportsTable, State DependencyGraph, State StartNodes] r) => Name -> AxiomDef -> Sem r ()
 goAxiom parentModule ax = do
   checkStartNode (ax ^. axiomName)
   addEdge (ax ^. axiomName) parentModule
   goExpression (Just (ax ^. axiomName)) (ax ^. axiomType)
 
-goInductive :: forall r. Members '[Reader ExportsTable, State DependencyGraph, State StartNodes] r => Name -> InductiveDef -> Sem r ()
+goInductive :: forall r. (Members '[Reader ExportsTable, State DependencyGraph, State StartNodes] r) => Name -> InductiveDef -> Sem r ()
 goInductive parentModule i = do
   checkStartNode (i ^. inductiveName)
   checkBuiltinInductiveStartNode i
@@ -137,7 +137,7 @@ goInductive parentModule i = do
 
 -- BuiltinBool and BuiltinNat are required by the Internal to Core translation
 -- when translating literal integers to Nats.
-checkBuiltinInductiveStartNode :: forall r. Member (State StartNodes) r => InductiveDef -> Sem r ()
+checkBuiltinInductiveStartNode :: forall r. (Member (State StartNodes) r) => InductiveDef -> Sem r ()
 checkBuiltinInductiveStartNode i = whenJust (i ^. inductiveBuiltin) go
   where
     go :: BuiltinInductive -> Sem r ()

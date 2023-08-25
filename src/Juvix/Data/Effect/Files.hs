@@ -70,7 +70,7 @@ walkDirRel handler topdir = do
   evalState mempty (walkAvoidLoop $(mkRelDir "."))
 
 -- | Restore the original contents of a file if an error occurs in an action.
-restoreFileOnError :: forall r a. Members '[Resource, Files, TempFile] r => Path Abs File -> Sem r a -> Sem r a
+restoreFileOnError :: forall r a. (Members '[Resource, Files, TempFile] r) => Path Abs File -> Sem r a -> Sem r a
 restoreFileOnError p action = do
   t <- tempFilePath
   finally (restoreOnErrorAction t) (removeTempFile t)
@@ -80,8 +80,8 @@ restoreFileOnError p action = do
       copyFile' p tmpFile
       onException action (renameFile' tmpFile p)
 
-globalYaml :: Members '[Files] r => Sem r (Path Abs File)
+globalYaml :: (Members '[Files] r) => Sem r (Path Abs File)
 globalYaml = (<//> juvixYamlFile) <$> globalRoot
 
-globalRoot :: Members '[Files] r => Sem r (Path Abs Dir)
+globalRoot :: (Members '[Files] r) => Sem r (Path Abs Dir)
 globalRoot = (<//> $(mkRelDir "global-project")) <$> juvixConfigDir

@@ -72,13 +72,13 @@ data WithRange a = WithRange
 makeLenses ''PointInterval
 makeLenses ''WithRange
 
-instance Hashable a => Hashable (WithRange a) where
+instance (Hashable a) => Hashable (WithRange a) where
   hashWithSalt a (WithRange _ p) = hashWithSalt a p
 
-instance Eq a => Eq (WithRange a) where
+instance (Eq a) => Eq (WithRange a) where
   (==) = (==) `on` (^. withRangeParam)
 
-instance Ord a => Ord (WithRange a) where
+instance (Ord a) => Ord (WithRange a) where
   compare = compare `on` (^. withRangeParam)
 
 instance Functor WithRange where
@@ -91,5 +91,5 @@ instance Foldable WithRange where
 instance Traversable WithRange where
   traverse f (WithRange i a) = WithRange i <$> f a
 
-instance Pretty a => Pretty (WithRange a) where
+instance (Pretty a) => Pretty (WithRange a) where
   pretty (WithRange _ a) = pretty a

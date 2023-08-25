@@ -70,7 +70,7 @@ instance PrettyCode Primitive where
 ppName :: NameKind -> Text -> Sem r (Doc Ann)
 ppName kind name = return $ annotate (AnnKind kind) (pretty name)
 
-ppIdentName :: Member (Reader Options) r => Text -> Symbol -> Sem r (Doc Ann)
+ppIdentName :: (Member (Reader Options) r) => Text -> Symbol -> Sem r (Doc Ann)
 ppIdentName name sym = do
   showIds <- asks (^. optShowIdentIds)
   let name' = if showIds then name <> "!" <> prettyText sym else name
@@ -157,7 +157,7 @@ instance (PrettyCode a) => PrettyCode (Binder' a) where
     ty' <- ppCode ty
     return (parens (pretty name' <+> kwColon <+> ty'))
 
-ppWithType :: Member (Reader Options) r => Doc Ann -> Type -> Sem r (Doc Ann)
+ppWithType :: (Member (Reader Options) r) => Doc Ann -> Type -> Sem r (Doc Ann)
 ppWithType d = \case
   NDyn {} ->
     return d
@@ -172,12 +172,12 @@ ppNameTyped kn name mty = do
     Nothing -> return n
     Just ty -> return $ parens (n <+> kwColon <+> ty)
 
-ppType :: Member (Reader Options) r => Type -> Sem r (Maybe (Doc Ann))
+ppType :: (Member (Reader Options) r) => Type -> Sem r (Maybe (Doc Ann))
 ppType = \case
   NDyn {} -> return Nothing
   ty -> Just <$> ppCode ty
 
-ppTypeAnnot :: Member (Reader Options) r => Type -> Sem r (Doc Ann)
+ppTypeAnnot :: (Member (Reader Options) r) => Type -> Sem r (Doc Ann)
 ppTypeAnnot = \case
   NDyn {} ->
     return mempty
@@ -225,7 +225,7 @@ ppCodeCase' branchBinderNames branchBinderTypes branchTagNames Case {..} =
       let bss = bracesIndent $ align $ concatWith (\a b -> a <> kwSemicolon <> line <> b) bs''
       return $ kwCase <+> v <+> kwOf <+> bss
 
-instance PrettyCode a => PrettyCode (If' i a) where
+instance (PrettyCode a) => PrettyCode (If' i a) where
   ppCode If {..} = do
     v <- ppCode _ifValue
     l <- ppCode _ifTrue
@@ -310,7 +310,7 @@ instance PrettyCode Lambda where
     return (lam <> oneLineOrNext b)
 
 instance PrettyCode Bottom where
-  ppCode :: Member (Reader Options) r => Bottom -> Sem r (Doc Ann)
+  ppCode :: (Member (Reader Options) r) => Bottom -> Sem r (Doc Ann)
   ppCode Bottom {..} = do
     ty' <- ppCode _bottomType
     return (parens (kwBottom <+> kwColon <+> ty'))
@@ -400,7 +400,7 @@ instance PrettyCode Stripped.Type where
     Stripped.TyApp x -> ppCode x
     Stripped.TyFun x -> ppCode x
 
-ppTypeStripped :: Member (Reader Options) r => Stripped.Type -> Sem r (Maybe (Doc Ann))
+ppTypeStripped :: (Member (Reader Options) r) => Stripped.Type -> Sem r (Maybe (Doc Ann))
 ppTypeStripped = \case
   Stripped.TyDynamic -> return Nothing
   ty -> Just <$> ppCode ty
@@ -579,7 +579,7 @@ instance (PrettyCode a) => PrettyCode [a] where
 -- printing values
 --------------------------------------------------------------------------------
 
-goBinary :: Member (Reader Options) r => Bool -> Fixity -> Doc Ann -> [Value] -> Sem r (Doc Ann)
+goBinary :: (Member (Reader Options) r) => Bool -> Fixity -> Doc Ann -> [Value] -> Sem r (Doc Ann)
 goBinary isComma fixity name = \case
   [] -> return (parens name)
   [arg] -> do
@@ -596,7 +596,7 @@ goBinary isComma fixity name = \case
   _ ->
     impossible
 
-goUnary :: Member (Reader Options) r => Fixity -> Doc Ann -> [Value] -> Sem r (Doc Ann)
+goUnary :: (Member (Reader Options) r) => Fixity -> Doc Ann -> [Value] -> Sem r (Doc Ann)
 goUnary fixity name = \case
   [] -> return (parens name)
   [arg] -> do
@@ -627,7 +627,7 @@ instance PrettyCode Value where
     ValueFun -> return "<function>"
     ValueType -> return "<type>"
 
-ppValueSequence :: Member (Reader Options) r => [Value] -> Sem r (Doc Ann)
+ppValueSequence :: (Member (Reader Options) r) => [Value] -> Sem r (Doc Ann)
 ppValueSequence vs = hsep <$> mapM (ppRightExpression appFixity) vs
 
 docValueSequence :: [Value] -> Doc Ann

@@ -38,5 +38,5 @@ instance Foldable WithLoc where
 instance Traversable WithLoc where
   traverse f (WithLoc i a) = WithLoc i <$> f a
 
-instance Pretty a => Pretty (WithLoc a) where
+instance (Pretty a) => Pretty (WithLoc a) where
   pretty (WithLoc _ a) = pretty a

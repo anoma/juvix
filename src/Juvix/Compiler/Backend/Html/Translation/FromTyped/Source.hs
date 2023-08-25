@@ -194,14 +194,14 @@ ppCodeHtml ::
 ppCodeHtml opts = ppCodeHtmlHelper opts Nothing
 
 ppModuleSrcHtml ::
-  Members '[Reader HtmlOptions] r =>
+  (Members '[Reader HtmlOptions] r) =>
   Options ->
   Comments ->
   Module 'Scoped 'ModuleTop ->
   Sem r Html
 ppModuleSrcHtml = ppCodeHtmlComments
 
-docToHtml :: Members '[Reader HtmlOptions] r => Doc Ann -> Sem r Html
+docToHtml :: (Members '[Reader HtmlOptions] r) => Doc Ann -> Sem r Html
 docToHtml d = ppCodeHtml' <$> ask
   where
     ppCodeHtml' :: HtmlOptions -> Html
