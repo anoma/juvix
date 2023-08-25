@@ -13,18 +13,19 @@ import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Dat
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Error
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.LexOrder
 import Juvix.Prelude
+import Data.HashSet qualified as HashSet
 
+-- | Returns the set of non-terminating functions.
 checkTermination ::
-  (Members '[Error TerminationError] r) =>
   InfoTable ->
   Module ->
-  Sem r ()
+  HashSet Name
 checkTermination infotable topModule = do
   let callmap = buildCallMap infotable topModule
       completeGraph = completeCallGraph callmap
       rEdges = reflexiveEdges completeGraph
       recBehav = map recursiveBehaviour rEdges
-  forM_ recBehav $ \r -> do
+  HashSet.fromList . run . execOutputList $ forM_ recBehav $ \r -> do
     let funName = r ^. recursiveBehaviourFun
         markedTerminating :: Bool = funInfo ^. (Internal.functionInfoDef . Internal.funDefTerminating)
         funInfo :: FunctionInfo
@@ -35,7 +36,7 @@ checkTermination infotable topModule = do
         | markedTerminating -> return ()
         | otherwise ->
             case findOrder r of
-              Nothing -> throw (ErrNoLexOrder (NoLexOrder funName))
+              Nothing -> output funName
               Just _ -> return ()
 
 buildCallMap :: InfoTable -> Module -> CallMap
