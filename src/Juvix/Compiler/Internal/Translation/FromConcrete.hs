@@ -1,6 +1,12 @@
 module Juvix.Compiler.Internal.Translation.FromConcrete
-  ( module Juvix.Compiler.Internal.Translation.FromConcrete,
-    module Juvix.Compiler.Internal.Translation.FromConcrete.Data.Context,
+  ( module Juvix.Compiler.Internal.Translation.FromConcrete.Data.Context,
+    fromConcrete,
+    MCache,
+    ConstructorInfos,
+    goModuleNoCache,
+    fromConcreteExpression,
+    fromConcreteImport,
+    fromConcreteOpenImport,
   )
 where
 
@@ -35,15 +41,14 @@ unsupported :: Text -> a
 unsupported msg = error $ msg <> "Scoped to Internal: not yet supported"
 
 fromConcrete ::
-  (Members '[Reader EntryPoint, Error JuvixError, Builtins, NameIdGen] r) =>
+  (Members '[Reader EntryPoint, Error JuvixError, Builtins, NameIdGen, Termination] r) =>
   Scoper.ScoperResult ->
   Sem r InternalResult
 fromConcrete _resultScoper =
   mapError (JuvixError @ScoperError) $ do
-    (_resultNonTerminating, (modulesCache, _resultModules)) <-
+    (modulesCache, _resultModules) <-
       runReader @Pragmas mempty
         . runReader @ExportsTable exportTbl
-        . runState (mempty :: NonTerminating)
         . evalState @ConstructorInfos mempty
         . runCacheEmpty goModuleNoCache
         $ mapM goTopModule ms
@@ -128,23 +133,41 @@ buildLetMutualBlocks ss = nonEmpty' . mapMaybe nameToPreStatement $ scomponents
           AcyclicSCC a -> AcyclicSCC <$> a
           CyclicSCC p -> CyclicSCC . toList <$> nonEmpty (catMaybes p)
 
-fromConcreteExpression :: (Members '[Builtins, Error JuvixError, NameIdGen] r) => Scoper.Expression -> Sem r Internal.Expression
-fromConcreteExpression = mapError (JuvixError @ScoperError) . runReader @Pragmas mempty . goExpression
+fromConcreteExpression :: (Members '[Builtins, Error JuvixError, NameIdGen, Termination] r) => Scoper.Expression -> Sem r Internal.Expression
+fromConcreteExpression e = do
+  e' <-
+    mapError (JuvixError @ScoperError)
+      . runReader @Pragmas mempty
+      . goExpression
+      $ e
+  checkTerminationShallow e'
+  return e'
 
 fromConcreteImport ::
-  (Members '[Reader ExportsTable, Error JuvixError, NameIdGen, Builtins, MCache] r) =>
+  (Members '[Reader ExportsTable, Error JuvixError, NameIdGen, Builtins, MCache, Termination] r) =>
   Scoper.Import 'Scoped ->
   Sem r Internal.Import
-fromConcreteImport =
-  mapError (JuvixError @ScoperError)
-    . runReader @Pragmas mempty
-    . goImport
+fromConcreteImport i = do
+  i' <-
+    mapError (JuvixError @ScoperError)
+      . runReader @Pragmas mempty
+      . goImport
+      $ i
+  checkTerminationShallow i'
+  return i'
 
 fromConcreteOpenImport ::
-  (Members '[Reader ExportsTable, Error JuvixError, NameIdGen, Builtins, MCache] r) =>
+  (Members '[Reader ExportsTable, Error JuvixError, NameIdGen, Builtins, MCache, Termination] r) =>
   Scoper.OpenModule 'Scoped ->
   Sem r (Maybe Internal.Import)
-fromConcreteOpenImport = mapError (JuvixError @ScoperError) . runReader @Pragmas mempty . goOpenModule'
+fromConcreteOpenImport i = do
+  i' <-
+    mapError (JuvixError @ScoperError)
+      . runReader @Pragmas mempty
+      . goOpenModule
+      $ i
+  whenJust i' checkTerminationShallow
+  return i'
 
 goLocalModule ::
   (Members '[Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ConstructorInfos] r) =>
@@ -159,7 +182,7 @@ goTopModule ::
 goTopModule = cacheGet . ModuleIndex
 
 goModuleNoCache ::
-  (Members '[Reader EntryPoint, Reader ExportsTable, Error JuvixError, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, MCache, State ConstructorInfos, State NonTerminating] r) =>
+  (Members '[Reader EntryPoint, Reader ExportsTable, Error JuvixError, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, MCache, State ConstructorInfos, Termination] r) =>
   ModuleIndex ->
   Sem r Internal.Module
 goModuleNoCache (ModuleIndex m) = do
@@ -168,14 +191,7 @@ goModuleNoCache (ModuleIndex m) = do
   let depInfo = buildDependencyInfoPreModule p tbl
   r <- runReader depInfo (fromPreModule p)
   noTerminationOption <- asks (^. entryPointNoTermination)
-  -- TODO we should reuse this table
-  let itbl = buildTableShallow r
-  unless
-    noTerminationOption
-    ( mapError
-        (JuvixError @TerminationError)
-        (modify' (mappend (checkTermination itbl r)))
-    )
+  unless noTerminationOption (checkTerminationShallow r)
   return r
 
 goPragmas :: (Member (Reader Pragmas) r) => Maybe ParsedPragmas -> Sem r Pragmas
@@ -357,11 +373,6 @@ goImport Import {..} = do
         }
     )
 
-guardNotCached :: (Bool, Internal.Module) -> Maybe Internal.Module
-guardNotCached (hit, m) = do
-  guard (not hit)
-  return m
-
 -- | Ignores functions
 goAxiomInductive ::
   forall r.
@@ -378,32 +389,24 @@ goAxiomInductive = \case
   StatementOpenModule {} -> return []
   StatementProjectionDef {} -> return []
 
-goOpenModule' ::
-  forall r.
-  (Members '[Reader ExportsTable, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, MCache] r) =>
-  OpenModule 'Scoped ->
-  Sem r (Maybe Internal.Import)
-goOpenModule' o =
-  case o ^. openModuleImportKw of
-    Just kw ->
-      case o ^. openModuleName of
-        ModuleRef' (SModuleTop :&: m) ->
-          Just
-            <$> goImport
-              Import
-                { _importKw = kw,
-                  _importModule = m,
-                  _importAsName = o ^. openImportAsName
-                }
-        _ -> impossible
-    Nothing -> return Nothing
-
 goOpenModule ::
   forall r.
   (Members '[Reader ExportsTable, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, MCache] r) =>
   OpenModule 'Scoped ->
   Sem r (Maybe Internal.Import)
-goOpenModule o = goOpenModule' o
+goOpenModule o = runFail $ do
+  case o ^. openModuleImportKw of
+    Nothing -> fail
+    Just kw ->
+      case o ^. openModuleName of
+        ModuleRef' (SModuleTop :&: m) ->
+          goImport
+            Import
+              { _importKw = kw,
+                _importModule = m,
+                _importAsName = o ^. openImportAsName
+              }
+        _ -> impossible
 
 goProjectionDef ::
   forall r.
@@ -978,8 +981,12 @@ goFunctionParameters FunctionParameters {..} = do
             Internal._paramImplicit = _paramImplicit,
             Internal._paramName = goSymbol <$> param
           }
-  return . fromMaybe (pure (mkParam Nothing)) . nonEmpty $
-    mkParam . goFunctionParameter <$> _paramNames
+  return
+    . fromMaybe (pure (mkParam Nothing))
+    . nonEmpty
+    $ mkParam
+      . goFunctionParameter
+      <$> _paramNames
   where
     goFunctionParameter :: FunctionParameter 'Scoped -> Maybe (SymbolType 'Scoped)
     goFunctionParameter = \case

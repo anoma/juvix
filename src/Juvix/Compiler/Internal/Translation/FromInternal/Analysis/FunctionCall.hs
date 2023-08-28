@@ -70,6 +70,12 @@ addCall fun c = over callMap (HashMap.alter (Just . insertCall c) fun)
       HashMap FunctionRef [FunCall]
     addFunCall fc = HashMap.insertWith (flip (<>)) (fc ^. callRef) [fc]
 
+registerFunctionDef ::
+  (Members '[State CallMap] r) =>
+  FunctionDef ->
+  Sem r ()
+registerFunctionDef f = modify' (set ((callMapScanned . at (f ^. funDefName))) (Just f))
+
 registerCall ::
   (Members '[State CallMap, Reader FunctionRef] r) =>
   FunCall ->

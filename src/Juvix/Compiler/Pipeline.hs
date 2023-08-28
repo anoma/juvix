@@ -29,6 +29,7 @@ import Juvix.Compiler.Core qualified as Core
 import Juvix.Compiler.Core.Translation.Stripped.FromCore qualified as Stripped
 import Juvix.Compiler.Internal qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Data.Context qualified as Arity
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context qualified as Typed
 import Juvix.Compiler.Pipeline.Artifacts
 import Juvix.Compiler.Pipeline.EntryPoint
@@ -57,19 +58,19 @@ upToScoping ::
 upToScoping = upToParsing >>= Scoper.fromParsed
 
 upToInternal ::
-  (Members '[HighlightBuilder, Reader EntryPoint, Files, NameIdGen, Builtins, Error JuvixError, PathResolver] r) =>
+  (Members '[HighlightBuilder, Reader EntryPoint, Files, NameIdGen, Builtins, Error JuvixError, PathResolver, Termination] r) =>
   Sem r Internal.InternalResult
 upToInternal = upToScoping >>= Internal.fromConcrete
 
 upToInternalArity ::
-  (Members '[HighlightBuilder, Reader EntryPoint, Files, NameIdGen, Builtins, Error JuvixError, PathResolver] r) =>
+  (Members '[HighlightBuilder, Reader EntryPoint, Files, NameIdGen, Builtins, Error JuvixError, PathResolver, Termination] r) =>
   Sem r Internal.InternalArityResult
 upToInternalArity = upToInternal >>= Internal.arityChecking
 
 upToInternalTyped ::
   (Members '[HighlightBuilder, Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, PathResolver] r) =>
   Sem r Internal.InternalTypedResult
-upToInternalTyped = upToInternalArity >>= Internal.typeChecking
+upToInternalTyped = Internal.typeChecking upToInternalArity
 
 upToInternalReachability ::
   (Members '[HighlightBuilder, Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, PathResolver] r) =>
@@ -257,7 +258,6 @@ corePipelineIOEither entry = do
               { _artifactMainModuleScope = Just mainModuleScope_,
                 _artifactParsing = parserResult ^. P.resultBuilderState,
                 _artifactInternalModuleCache = internalResult ^. Internal.resultModulesCache,
-                _artifactNonTerminating = internalResult ^. Internal.resultNonTerminating,
                 _artifactInternalTypedTable = typedTable,
                 _artifactCoreTable = coreTable,
                 _artifactScopeTable = resultScoperTable,
@@ -277,7 +277,7 @@ corePipelineIOEither entry = do
           _artifactMainModuleScope = Nothing,
           _artifactInternalTypedTable = mempty,
           _artifactTypes = mempty,
-          _artifactNonTerminating = mempty,
+          _artifactTerminationState = iniTerminationState,
           _artifactResolver = PathResolver.iniResolverState,
           _artifactNameIdState = allNameIds,
           _artifactFunctions = mempty,

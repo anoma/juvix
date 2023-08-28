@@ -19,7 +19,7 @@ import Juvix.Compiler.Core.Data.InfoTableBuilder qualified as Core
 import Juvix.Compiler.Internal.Extra.DependencyBuilder (ExportsTable)
 import Juvix.Compiler.Internal.Language qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromConcrete qualified as Internal
-import Juvix.Compiler.Internal.Translation.FromConcrete.Data.Context (NonTerminating)
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Prelude
@@ -38,7 +38,7 @@ data Artifacts = Artifacts
     _artifactScoperState :: Scoped.ScoperState,
     -- Concrete -> Internal
     _artifactInternalModuleCache :: Internal.ModulesCache,
-    _artifactNonTerminating :: NonTerminating,
+    _artifactTerminationState :: TerminationState,
     -- Typechecking
     _artifactTypes :: TypesTable,
     _artifactFunctions :: FunctionsTable,
@@ -95,8 +95,8 @@ runFunctionsTableArtifacts = runStateArtifacts artifactFunctions
 readerTypesTableArtifacts :: (Members '[State Artifacts] r) => Sem (Reader TypesTable ': r) a -> Sem r a
 readerTypesTableArtifacts = runReaderArtifacts artifactTypes
 
-runNonTerminatingArtifacts :: (Members '[State Artifacts] r) => Sem (State NonTerminating ': r) a -> Sem r a
-runNonTerminatingArtifacts = runStateArtifacts artifactNonTerminating
+runTerminationArtifacts :: (Members '[Error JuvixError, State Artifacts] r) => Sem (Termination ': r) a -> Sem r a
+runTerminationArtifacts = runStateLikeArtifacts runTermination artifactTerminationState
 
 runTypesTableArtifacts :: (Members '[State Artifacts] r) => Sem (State TypesTable ': r) a -> Sem r a
 runTypesTableArtifacts = runStateArtifacts artifactTypes
@@ -139,5 +139,5 @@ runFromConcreteCache =
     $ mapError (JuvixError @ScoperError)
       . runReader (mempty :: Pragmas)
       . evalState (mempty :: Internal.ConstructorInfos)
-      . runNonTerminatingArtifacts
+      . runTerminationArtifacts
       . Internal.goModuleNoCache

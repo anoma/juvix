@@ -10,6 +10,7 @@ import Juvix.Compiler.Internal.Data.InfoTable
 import Juvix.Compiler.Internal.Language
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Data.Context (InternalArityResult)
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Data.Context qualified as Arity
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker (TerminationState)
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.FunctionsTable
 import Juvix.Compiler.Pipeline.EntryPoint qualified as E
 import Juvix.Prelude
@@ -21,6 +22,7 @@ type NormalizedTable = HashMap NameId Expression
 data InternalTypedResult = InternalTypedResult
   { _resultInternalArityResult :: InternalArityResult,
     _resultModules :: NonEmpty Module,
+    _resultTermination :: TerminationState,
     _resultNormalized :: NormalizedTable,
     _resultIdenTypes :: TypesTable,
     _resultFunctions :: FunctionsTable,

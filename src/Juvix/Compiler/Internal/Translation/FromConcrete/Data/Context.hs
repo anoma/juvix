@@ -11,6 +11,7 @@ import Juvix.Compiler.Internal.Data.InfoTable
 import Juvix.Compiler.Internal.Data.NameDependencyInfo
 import Juvix.Compiler.Internal.Language
 import Juvix.Compiler.Internal.Language qualified as Internal
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker
 import Juvix.Compiler.Pipeline.EntryPoint qualified as E
 import Juvix.Prelude
 
@@ -18,13 +19,9 @@ import Juvix.Prelude
 newtype ModulesCache = ModulesCache
   {_cachedModules :: HashMap Concrete.ModuleIndex Internal.Module}
 
-newtype NonTerminating = NonTerminating {_nonTerminating :: HashSet FunctionName}
-  deriving newtype (Monoid, Semigroup)
-
 data InternalResult = InternalResult
   { _resultScoper :: Concrete.ScoperResult,
     _resultTable :: InfoTable,
-    _resultNonTerminating :: NonTerminating,
     _resultModules :: NonEmpty Module,
     _resultDepInfo :: NameDependencyInfo,
     _resultModulesCache :: ModulesCache

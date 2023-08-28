@@ -9,10 +9,10 @@ import Juvix.Prelude
 
 type FunctionRef = FunctionName
 
-newtype CallMap = CallMap
-  { _callMap :: HashMap FunctionRef (HashMap FunctionRef [FunCall])
+data CallMap = CallMap
+  { _callMap :: HashMap FunctionRef (HashMap FunctionRef [FunCall]),
+    _callMapScanned :: HashMap FunctionRef FunctionDef
   }
-  deriving newtype (Semigroup, Monoid)
 
 data FunCall = FunCall
   { _callRef :: FunctionRef,
@@ -91,7 +91,7 @@ instance PrettyCode CallMap where
     (Members '[Reader Options] r) =>
     CallMap ->
     Sem r (Doc Ann)
-  ppCode (CallMap m) = vsep <$> mapM ppEntry (HashMap.toList m)
+  ppCode (CallMap m _) = vsep <$> mapM ppEntry (HashMap.toList m)
     where
       ppEntry :: (FunctionRef, HashMap FunctionRef [FunCall]) -> Sem r (Doc Ann)
       ppEntry (fun, mcalls) = do
@@ -115,3 +115,10 @@ kwQuestion = keyword Str.questionMark
 
 kwWaveArrow :: Doc Ann
 kwWaveArrow = keyword Str.waveArrow
+
+emptyCallMap :: CallMap
+emptyCallMap =
+  CallMap
+    { _callMap = mempty,
+      _callMapScanned = mempty
+    }
