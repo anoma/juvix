@@ -11,7 +11,7 @@ newtype Irrelevant a = Irrelevant
   }
   deriving stock (Show)
 
-instance HasLoc a => HasLoc (Irrelevant a) where
+instance (HasLoc a) => HasLoc (Irrelevant a) where
   getLoc (Irrelevant a) = getLoc a
 
 instance Eq (Irrelevant a) where

@@ -48,7 +48,7 @@ expandPrepath (Prepath p) =
         Left er -> error er
         Right r -> expandParts r
   where
-    prepathParts :: forall e m. MonadParsec e String m => m PrepathParts
+    prepathParts :: forall e m. (MonadParsec e String m) => m PrepathParts
     prepathParts = P.takeWhileP Nothing isSpace >> some1 prepathPart
       where
         prepathPart :: m PrepathPart

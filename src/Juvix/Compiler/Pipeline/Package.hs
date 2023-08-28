@@ -213,13 +213,13 @@ readGlobalPackageIO = do
     Left err -> putStrLn err >> exitFailure
     Right r -> return r
 
-readGlobalPackage :: Members '[Error Text, Files] r => Sem r Package
+readGlobalPackage :: (Members '[Error Text, Files] r) => Sem r Package
 readGlobalPackage = do
   yamlPath <- globalYaml
   unlessM (fileExists' yamlPath) writeGlobalPackage
   readPackage (parent yamlPath) DefaultBuildDir
 
-writeGlobalPackage :: Members '[Files] r => Sem r ()
+writeGlobalPackage :: (Members '[Files] r) => Sem r ()
 writeGlobalPackage = do
   yamlPath <- globalYaml
   ensureDir' (parent yamlPath)

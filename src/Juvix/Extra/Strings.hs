@@ -26,22 +26,22 @@ pragmasStart = "{-#"
 pragmasEnd :: (IsString s) => s
 pragmasEnd = "#-}"
 
-bracketL :: IsString s => s
+bracketL :: (IsString s) => s
 bracketL = "["
 
-bracketR :: IsString s => s
+bracketR :: (IsString s) => s
 bracketR = "]"
 
-braceL :: IsString s => s
+braceL :: (IsString s) => s
 braceL = "{"
 
-braceR :: IsString s => s
+braceR :: (IsString s) => s
 braceR = "}"
 
-parenL :: IsString s => s
+parenL :: (IsString s) => s
 parenL = "("
 
-parenR :: IsString s => s
+parenR :: (IsString s) => s
 parenR = ")"
 
 end :: (IsString s) => s
@@ -68,7 +68,7 @@ inductive = "type"
 function :: (IsString s) => s
 function = "function"
 
-variable :: IsString s => s
+variable :: (IsString s) => s
 variable = "variable"
 
 constructor :: (IsString s) => s
@@ -209,10 +209,10 @@ natGe = "nat-ge"
 boolIf :: (IsString s) => s
 boolIf = "bool-if"
 
-boolOr :: IsString s => s
+boolOr :: (IsString s) => s
 boolOr = "bool-or"
 
-boolAnd :: IsString s => s
+boolAnd :: (IsString s) => s
 boolAnd = "bool-and"
 
 intToString :: (IsString s) => s
@@ -248,22 +248,22 @@ intSub = "int-sub"
 intNonNeg :: (IsString s) => s
 intNonNeg = "int-nonneg"
 
-intLe :: IsString s => s
+intLe :: (IsString s) => s
 intLe = "int-le"
 
-intLt :: IsString s => s
+intLt :: (IsString s) => s
 intLt = "int-lt"
 
 intPrint :: (IsString s) => s
 intPrint = "int-print"
 
-builtinSeq :: IsString s => s
+builtinSeq :: (IsString s) => s
 builtinSeq = "seq"
 
-as :: IsString s => s
+as :: (IsString s) => s
 as = "as"
 
-builtin :: IsString s => s
+builtin :: (IsString s) => s
 builtin = "builtin"
 
 type_ :: (IsString s) => s
@@ -566,152 +566,152 @@ instrReturn = "ret"
 instrBr :: (IsString s) => s
 instrBr = "br"
 
-gebAbsurd :: IsString s => s
+gebAbsurd :: (IsString s) => s
 gebAbsurd = "absurd"
 
-gebUnit :: IsString s => s
+gebUnit :: (IsString s) => s
 gebUnit = "unit"
 
-gebLeft :: IsString s => s
+gebLeft :: (IsString s) => s
 gebLeft = "left"
 
-gebRight :: IsString s => s
+gebRight :: (IsString s) => s
 gebRight = "right"
 
-gebCase :: IsString s => s
+gebCase :: (IsString s) => s
 gebCase = "case-on"
 
-gebPair :: IsString s => s
+gebPair :: (IsString s) => s
 gebPair = "pair"
 
-gebFst :: IsString s => s
+gebFst :: (IsString s) => s
 gebFst = "fst"
 
-gebSnd :: IsString s => s
+gebSnd :: (IsString s) => s
 gebSnd = "snd"
 
-gebLamb :: IsString s => s
+gebLamb :: (IsString s) => s
 gebLamb = "lamb"
 
-gebList :: IsString s => s
+gebList :: (IsString s) => s
 gebList = "list"
 
-gebValueClosure :: IsString s => s
+gebValueClosure :: (IsString s) => s
 gebValueClosure = "cls"
 
-gebValueClosureEnv :: IsString s => s
+gebValueClosureEnv :: (IsString s) => s
 gebValueClosureEnv = "env"
 
-lispNil :: IsString s => s
+lispNil :: (IsString s) => s
 lispNil = "nil"
 
-gebApp :: IsString s => s
+gebApp :: (IsString s) => s
 gebApp = "app"
 
-gebVar :: IsString s => s
+gebVar :: (IsString s) => s
 gebVar = "index"
 
-gebAdd :: IsString s => s
+gebAdd :: (IsString s) => s
 gebAdd = "add"
 
-gebSub :: IsString s => s
+gebSub :: (IsString s) => s
 gebSub = "sub"
 
-gebMul :: IsString s => s
+gebMul :: (IsString s) => s
 gebMul = "mul"
 
-gebDiv :: IsString s => s
+gebDiv :: (IsString s) => s
 gebDiv = "div"
 
-gebMod :: IsString s => s
+gebMod :: (IsString s) => s
 gebMod = "mod"
 
-gebFail :: IsString s => s
+gebFail :: (IsString s) => s
 gebFail = "err"
 
-gebEq :: IsString s => s
+gebEq :: (IsString s) => s
 gebEq = "eq"
 
-gebLt :: IsString s => s
+gebLt :: (IsString s) => s
 gebLt = "lt"
 
-gebInitial :: IsString s => s
+gebInitial :: (IsString s) => s
 gebInitial = "so0"
 
-gebTerminal :: IsString s => s
+gebTerminal :: (IsString s) => s
 gebTerminal = "so1"
 
-gebProd :: IsString s => s
+gebProd :: (IsString s) => s
 gebProd = "prod"
 
-gebCoprod :: IsString s => s
+gebCoprod :: (IsString s) => s
 gebCoprod = "coprod"
 
-gebHom :: IsString s => s
+gebHom :: (IsString s) => s
 gebHom = "so-hom-obj"
 
-gebInteger :: IsString s => s
+gebInteger :: (IsString s) => s
 gebInteger = "int"
 
-gebTyped :: IsString s => s
+gebTyped :: (IsString s) => s
 gebTyped = "typed"
 
 juvixDotOrg :: (IsString s) => s
 juvixDotOrg = "https://juvix.org"
 
-vampirDef :: IsString s => s
+vampirDef :: (IsString s) => s
 vampirDef = "def"
 
-vampirEq :: IsString s => s
+vampirEq :: (IsString s) => s
 vampirEq = "="
 
-vampirAdd :: IsString s => s
+vampirAdd :: (IsString s) => s
 vampirAdd = "add"
 
-vampirSub :: IsString s => s
+vampirSub :: (IsString s) => s
 vampirSub = "sub"
 
-vampirMul :: IsString s => s
+vampirMul :: (IsString s) => s
 vampirMul = "mul"
 
-vampirDiv :: IsString s => s
+vampirDiv :: (IsString s) => s
 vampirDiv = "div"
 
-vampirMod :: IsString s => s
+vampirMod :: (IsString s) => s
 vampirMod = "rem"
 
-vampirEqual :: IsString s => s
+vampirEqual :: (IsString s) => s
 vampirEqual = "equal"
 
-vampirLessThan :: IsString s => s
+vampirLessThan :: (IsString s) => s
 vampirLessThan = "lessThan"
 
-vampirLessOrEqual :: IsString s => s
+vampirLessOrEqual :: (IsString s) => s
 vampirLessOrEqual = "lessOrEqual"
 
-vampirIf :: IsString s => s
+vampirIf :: (IsString s) => s
 vampirIf = "if"
 
-zero :: IsString s => s
+zero :: (IsString s) => s
 zero = "zero"
 
-suc :: IsString s => s
+suc :: (IsString s) => s
 suc = "suc"
 
-true :: IsString s => s
+true :: (IsString s) => s
 true = "true"
 
-false :: IsString s => s
+false :: (IsString s) => s
 false = "false"
 
-ofNat :: IsString s => s
+ofNat :: (IsString s) => s
 ofNat = "ofNat"
 
-negSuc :: IsString s => s
+negSuc :: (IsString s) => s
 negSuc = "negSuc"
 
-nil :: IsString s => s
+nil :: (IsString s) => s
 nil = "nil"
 
-cons :: IsString s => s
+cons :: (IsString s) => s
 cons = "cons"

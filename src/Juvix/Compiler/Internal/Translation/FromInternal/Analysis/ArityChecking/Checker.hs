@@ -16,13 +16,13 @@ import Juvix.Prelude hiding (fromEither)
 type MCache = Cache ModuleIndex Module
 
 checkModule ::
-  Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError, MCache] r =>
+  (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError, MCache] r) =>
   Module ->
   Sem r Module
 checkModule = cacheGet . ModuleIndex
 
 checkModuleIndexNoCache ::
-  Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError, MCache] r =>
+  (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError, MCache] r) =>
   ModuleIndex ->
   Sem r Module
 checkModuleIndexNoCache (ModuleIndex Module {..}) = do
@@ -34,7 +34,7 @@ checkModuleIndexNoCache (ModuleIndex Module {..}) = do
       }
 
 checkModuleBody ::
-  Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError, MCache] r =>
+  (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError, MCache] r) =>
   ModuleBody ->
   Sem r ModuleBody
 checkModuleBody ModuleBody {..} = do
@@ -47,13 +47,13 @@ checkModuleBody ModuleBody {..} = do
       }
 
 checkModuleIndex ::
-  Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError, MCache] r =>
+  (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError, MCache] r) =>
   ModuleIndex ->
   Sem r ModuleIndex
 checkModuleIndex (ModuleIndex m) = ModuleIndex <$> checkModule m
 
 checkImport ::
-  Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError, MCache] r =>
+  (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError, MCache] r) =>
   Import ->
   Sem r Import
 checkImport = traverseOf importModule checkModuleIndex
@@ -166,7 +166,7 @@ checkFunctionClause ari cl = do
 simplelambda :: a
 simplelambda = error "simple lambda expressions are not supported by the arity checker"
 
-withLocalVar :: Members '[Reader LocalVars] r => Arity -> VarName -> Sem r a -> Sem r a
+withLocalVar :: (Members '[Reader LocalVars] r) => Arity -> VarName -> Sem r a -> Sem r a
 withLocalVar ari v = local (withArity v ari)
 
 withEmptyLocalVars :: Sem (Reader LocalVars ': r) a -> Sem r a
@@ -175,7 +175,7 @@ withEmptyLocalVars = runReader emptyLocalVars
 arityLet :: (Members '[Reader InfoTable] r) => Let -> Sem r Arity
 arityLet l = guessArity (l ^. letExpression)
 
-inferReplExpression :: Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r => Expression -> Sem r Expression
+inferReplExpression :: (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r) => Expression -> Sem r Expression
 inferReplExpression e = do
   ari <- guessArity e
   withEmptyLocalVars (checkExpression ari e)
@@ -233,7 +233,7 @@ arityUniverse = ArityUnit
 -- | All branches should have the same arity. If they are all the same, we
 -- return that, otherwise we return ArityUnknown. Probably something better can
 -- be done.
-arityCase :: Members '[Reader InfoTable] r => Case -> Sem r Arity
+arityCase :: (Members '[Reader InfoTable] r) => Case -> Sem r Arity
 arityCase c = do
   aris <- mapM (guessArity . (^. caseBranchExpression)) (c ^. caseBranches)
   return
@@ -387,7 +387,7 @@ checkConstructorApp ca = do
 
 checkCase ::
   forall r.
-  Members '[Error ArityCheckerError, Reader LocalVars, Reader InfoTable, NameIdGen] r =>
+  (Members '[Error ArityCheckerError, Reader LocalVars, Reader InfoTable, NameIdGen] r) =>
   Arity ->
   Case ->
   Sem r Case

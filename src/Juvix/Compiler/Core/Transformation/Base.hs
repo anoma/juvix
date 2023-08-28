@@ -11,22 +11,22 @@ import Juvix.Compiler.Core.Data.InfoTableBuilder
 import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Core.Options
 
-mapIdentsM :: Monad m => (IdentifierInfo -> m IdentifierInfo) -> InfoTable -> m InfoTable
+mapIdentsM :: (Monad m) => (IdentifierInfo -> m IdentifierInfo) -> InfoTable -> m InfoTable
 mapIdentsM = overM infoIdentifiers . mapM
 
-mapInductivesM :: Monad m => (InductiveInfo -> m InductiveInfo) -> InfoTable -> m InfoTable
+mapInductivesM :: (Monad m) => (InductiveInfo -> m InductiveInfo) -> InfoTable -> m InfoTable
 mapInductivesM = overM infoInductives . mapM
 
-mapConstructorsM :: Monad m => (ConstructorInfo -> m ConstructorInfo) -> InfoTable -> m InfoTable
+mapConstructorsM :: (Monad m) => (ConstructorInfo -> m ConstructorInfo) -> InfoTable -> m InfoTable
 mapConstructorsM = overM infoConstructors . mapM
 
-mapAxiomsM :: Monad m => (AxiomInfo -> m AxiomInfo) -> InfoTable -> m InfoTable
+mapAxiomsM :: (Monad m) => (AxiomInfo -> m AxiomInfo) -> InfoTable -> m InfoTable
 mapAxiomsM = overM infoAxioms . mapM
 
-mapNodesM :: Monad m => (Node -> m Node) -> InfoTable -> m InfoTable
+mapNodesM :: (Monad m) => (Node -> m Node) -> InfoTable -> m InfoTable
 mapNodesM = overM identContext . mapM
 
-mapAllNodesM :: Monad m => (Node -> m Node) -> InfoTable -> m InfoTable
+mapAllNodesM :: (Monad m) => (Node -> m Node) -> InfoTable -> m InfoTable
 mapAllNodesM f tab =
   mapNodesM f tab
     >>= mapAxiomsM (overM axiomType f)
@@ -87,12 +87,12 @@ mapAllNodes f tab =
     convertAxiom :: AxiomInfo -> AxiomInfo
     convertAxiom = over axiomType f
 
-withOptimizationLevel :: Member (Reader CoreOptions) r => Int -> (InfoTable -> Sem r InfoTable) -> InfoTable -> Sem r InfoTable
+withOptimizationLevel :: (Member (Reader CoreOptions) r) => Int -> (InfoTable -> Sem r InfoTable) -> InfoTable -> Sem r InfoTable
 withOptimizationLevel n f tab = do
   l <- asks (^. optOptimizationLevel)
   if
       | l >= n -> f tab
       | otherwise -> return tab
 
-withOptimizationLevel' :: Member (Reader CoreOptions) r => InfoTable -> Int -> (InfoTable -> Sem r InfoTable) -> Sem r InfoTable
+withOptimizationLevel' :: (Member (Reader CoreOptions) r) => InfoTable -> Int -> (InfoTable -> Sem r InfoTable) -> Sem r InfoTable
 withOptimizationLevel' tab n f = withOptimizationLevel n f tab

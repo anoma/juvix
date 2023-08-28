@@ -120,16 +120,16 @@ toAnsiText useColors
   | useColors = Ansi.renderStrict . toAnsiStream
   | otherwise = Text.renderStrict . toTextStream
 
-toPlainText :: HasTextBackend a => a -> Text
+toPlainText :: (HasTextBackend a) => a -> Text
 toPlainText = Text.renderStrict . toTextStream
 
-prettyText :: Pretty a => a -> Text
+prettyText :: (Pretty a) => a -> Text
 prettyText = Text.renderStrict . layoutPretty defaultLayoutOptions . pretty
 
-hsepSoft' :: Foldable f => f (Doc a) -> Doc a
+hsepSoft' :: (Foldable f) => f (Doc a) -> Doc a
 hsepSoft' = concatWith (\a b -> a <> softline' <> b)
 
-vsepHard :: Foldable f => f (Doc a) -> Doc a
+vsepHard :: (Foldable f) => f (Doc a) -> Doc a
 vsepHard = concatWith (\a b -> a <> hardline <> b)
 
 vsep :: (Foldable f) => f (Doc a) -> Doc a

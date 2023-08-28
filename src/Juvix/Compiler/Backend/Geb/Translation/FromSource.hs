@@ -20,7 +20,7 @@ data LispDefParameter = LispDefParameter
 makeLenses ''LispDefParameter
 
 fromSource ::
-  Member (Error JuvixError) r =>
+  (Member (Error JuvixError) r) =>
   Path Abs File ->
   Text ->
   Sem r Geb.Expression

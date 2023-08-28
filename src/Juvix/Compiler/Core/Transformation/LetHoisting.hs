@@ -37,7 +37,7 @@ mkLetsTable l = HashMap.fromList [(i ^. indexedThing . itemSymbol, i) | i <- l]
 letHoisting :: InfoTable -> InfoTable
 letHoisting = run . mapT' (const letHoist)
 
-letHoist :: forall r. Members '[InfoTableBuilder] r => Node -> Sem r Node
+letHoist :: forall r. (Members '[InfoTableBuilder] r) => Node -> Sem r Node
 letHoist n = do
   let (topLambdas, body) = unfoldLambdas n
   (l, body') <- runReader @[Symbol] [] (runOutputList @LItem (removeLets body))
@@ -51,7 +51,7 @@ letHoist n = do
   return (reLambdas topLambdas body'')
 
 -- | Removes every Let node and replaces references to it with a unique symbol.
-removeLets :: forall r. Members '[InfoTableBuilder, Output LItem, Reader [Symbol]] r => Node -> Sem r Node
+removeLets :: forall r. (Members '[InfoTableBuilder, Output LItem, Reader [Symbol]] r) => Node -> Sem r Node
 removeLets = go mempty
   where
     go :: BinderList Binder -> Node -> Sem r Node
@@ -106,13 +106,13 @@ isLetHoisted =
     checkBody n = isJust . run . runFail $ do
       k <- peelLets n
       noLets k
-    peelLets :: Members '[Fail] r => Node -> Sem r Node
+    peelLets :: (Members '[Fail] r) => Node -> Sem r Node
     peelLets = \case
       NLet Let {..} -> do
         noLets (_letItem ^. letItemValue)
         peelLets _letBody
       n -> return n
-    noLets :: forall r. Members '[Fail] r => Node -> Sem r ()
+    noLets :: forall r. (Members '[Fail] r) => Node -> Sem r ()
     noLets = walk go
       where
         go :: Node -> Sem r ()

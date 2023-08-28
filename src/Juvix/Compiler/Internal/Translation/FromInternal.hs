@@ -54,7 +54,7 @@ arityCheckExpression exp = do
     $ ArityChecking.inferReplExpression exp
 
 arityCheckImport ::
-  Members '[Error JuvixError, State Artifacts] r =>
+  (Members '[Error JuvixError, State Artifacts] r) =>
   Import ->
   Sem r Import
 arityCheckImport i = do
@@ -92,7 +92,7 @@ typeCheckExpression ::
 typeCheckExpression exp = (^. typedExpression) <$> typeCheckExpressionType exp
 
 typeCheckImport ::
-  Members '[Reader EntryPoint, Error JuvixError, State Artifacts] r =>
+  (Members '[Reader EntryPoint, Error JuvixError, State Artifacts] r) =>
   Import ->
   Sem r Import
 typeCheckImport i = do
@@ -113,7 +113,7 @@ typeCheckImport i = do
     $ checkImport i
 
 typeChecking ::
-  Members '[HighlightBuilder, Error JuvixError, Builtins, NameIdGen] r =>
+  (Members '[HighlightBuilder, Error JuvixError, Builtins, NameIdGen] r) =>
   ArityChecking.InternalArityResult ->
   Sem r InternalTypedResult
 typeChecking res@ArityChecking.InternalArityResult {..} =

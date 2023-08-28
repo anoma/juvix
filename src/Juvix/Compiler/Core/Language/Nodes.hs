@@ -338,7 +338,7 @@ makeLenses ''TypeConstr'
 makeLenses ''Dynamic'
 makeLenses ''LetItem'
 
-instance Eq ty => Eq (Binder' ty) where
+instance (Eq ty) => Eq (Binder' ty) where
   (==) = eqOn (^. binderType)
 
 instance Eq (Var' i) where

@@ -2,7 +2,6 @@ module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver
   ( module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Base,
     module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Error,
     module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.PackageInfo,
-    module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Git,
     PathResolver,
     registerDependencies,
     withPath,
@@ -21,15 +20,17 @@ where
 
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
+import Data.Text qualified as T
 import Juvix.Compiler.Concrete.Data.Name
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Base
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Error
-import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Git
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.PackageInfo
 import Juvix.Compiler.Pipeline.EntryPoint
+import Juvix.Data.Effect.Git
 import Juvix.Extra.Paths
 import Juvix.Extra.Stdlib (ensureStdlib)
 import Juvix.Prelude
+import Polysemy.Scoped
 
 data PathResolver m a where
   RegisterDependencies :: PathResolver m ()
@@ -65,12 +66,12 @@ iniResolverState =
       _resolverFiles = mempty
     }
 
-withEnvRoot :: Members '[Reader ResolverEnv] r => Path Abs Dir -> Sem r a -> Sem r a
+withEnvRoot :: (Members '[Reader ResolverEnv] r) => Path Abs Dir -> Sem r a -> Sem r a
 withEnvRoot root' = local (set envRoot root')
 
 mkPackage ::
   forall r.
-  (Members '[Files, Error Text, Reader ResolverEnv, Git] r) =>
+  (Members '[Files, Error Text, Reader ResolverEnv, GitClone] r) =>
   Maybe EntryPoint ->
   Path Abs Dir ->
   Sem r Package
@@ -83,7 +84,7 @@ mkPackage mpackageEntry _packageRoot = do
 
 mkPackageInfo ::
   forall r.
-  (Members '[Files, Error Text, Reader ResolverEnv, Git] r) =>
+  (Members '[Files, Error Text, Reader ResolverEnv, GitClone] r) =>
   Maybe EntryPoint ->
   Path Abs Dir ->
   Sem r PackageInfo
@@ -106,29 +107,28 @@ mkPackageInfo mpackageEntry _packageRoot = do
         newJuvixFiles :: [Path Abs File]
         newJuvixFiles = [cd <//> f | f <- files, isJuvixFile f]
 
-dependencyCached :: (Members '[State ResolverState, Reader ResolverEnv, Files, Git] r) => Path Abs Dir -> Sem r Bool
+dependencyCached :: (Members '[State ResolverState, Reader ResolverEnv, Files, GitClone] r) => Path Abs Dir -> Sem r Bool
 dependencyCached p = HashMap.member p <$> gets (^. resolverPackages)
 
 withPathFile :: (Members '[PathResolver] r) => TopModulePath -> (Either PathResolverError (Path Abs File) -> Sem r a) -> Sem r a
 withPathFile m f = withPath m (f . mapRight (uncurry (<//>)))
 
-getDependencyPath :: (Members '[Reader ResolverEnv, Files, Git] r) => PackageDependencyInfo -> Sem r (Path Abs Dir)
+getDependencyPath :: forall r. (Members '[Reader ResolverEnv, Files, GitClone] r) => PackageDependencyInfo -> Sem r (Path Abs Dir)
 getDependencyPath i = case i ^. packageDepdendencyInfoDependency of
   DependencyPath p -> do
     r <- asks (^. envRoot)
     canonicalDir r (p ^. pathDependencyPath)
   DependencyGit g -> do
     r <- rootBuildDir <$> asks (^. envRoot)
-    clone
-      r
-      ( GitDepInfo
-          { _gitDepInfoPackageFile = i ^. packageDependencyInfoPackageFile,
-            _gitDepInfoDependency = g
-          }
-      )
+    let cloneDir = r <//> relDependenciesDir <//> relDir (T.unpack (g ^. gitDependencyName))
+    let cloneArgs = CloneArgs {_cloneArgsCloneDir = cloneDir, _cloneArgsRepoUrl = g ^. gitDependencyUrl}
+    scoped @CloneArgs @Git cloneArgs $ do
+      eitherM (const (error "fetch error")) return fetch
+      eitherM (const (error "checkout error")) return (checkout (g ^. gitDependencyRef))
+      return cloneDir
 
 registerDependencies' ::
-  (Members '[Reader EntryPoint, State ResolverState, Reader ResolverEnv, Files, Error Text, Git] r) =>
+  (Members '[Reader EntryPoint, State ResolverState, Reader ResolverEnv, Files, Error Text, GitClone] r) =>
   Sem r ()
 registerDependencies' = do
   e <- ask @EntryPoint
@@ -144,14 +144,14 @@ registerDependencies' = do
           addDependency' (Just e) (mkPackageDependencyInfo f (mkPathDependency (toFilePath (e ^. entryPointRoot))))
 
 addDependency' ::
-  (Members '[State ResolverState, Reader ResolverEnv, Files, Error Text, Git] r) =>
+  (Members '[State ResolverState, Reader ResolverEnv, Files, Error Text, GitClone] r) =>
   Maybe EntryPoint ->
   PackageDependencyInfo ->
   Sem r ()
 addDependency' me = addDependencyHelper me
 
 addDependencyHelper ::
-  (Members '[State ResolverState, Reader ResolverEnv, Files, Error Text, Git] r) =>
+  (Members '[State ResolverState, Reader ResolverEnv, Files, Error Text, GitClone] r) =>
   Maybe EntryPoint ->
   PackageDependencyInfo ->
   Sem r ()
@@ -209,7 +209,7 @@ expectedPath' actualPath m = do
 
 re ::
   forall r a.
-  (Members '[Reader EntryPoint, Files, Error Text, Git] r) =>
+  (Members '[Reader EntryPoint, Files, Error Text, GitClone] r) =>
   Sem (PathResolver ': r) a ->
   Sem (Reader ResolverEnv ': State ResolverState ': r) a
 re = reinterpret2H helper
@@ -232,13 +232,13 @@ re = reinterpret2H helper
               Right (r, _) -> r
         raise (evalPathResolver' st' root' (a' x'))
 
-evalPathResolver' :: (Members '[Reader EntryPoint, Files, Error Text, Git] r) => ResolverState -> Path Abs Dir -> Sem (PathResolver ': r) a -> Sem r a
+evalPathResolver' :: (Members '[Reader EntryPoint, Files, Error Text, GitClone] r) => ResolverState -> Path Abs Dir -> Sem (PathResolver ': r) a -> Sem r a
 evalPathResolver' st root = fmap snd . runPathResolver' st root
 
-runPathResolver :: (Members '[Reader EntryPoint, Files, Error Text, Git] r) => Path Abs Dir -> Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
+runPathResolver :: (Members '[Reader EntryPoint, Files, Error Text, GitClone] r) => Path Abs Dir -> Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
 runPathResolver = runPathResolver' iniResolverState
 
-runPathResolver' :: (Members '[Reader EntryPoint, Files, Error Text, Git] r) => ResolverState -> Path Abs Dir -> Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
+runPathResolver' :: (Members '[Reader EntryPoint, Files, Error Text, GitClone] r) => ResolverState -> Path Abs Dir -> Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
 runPathResolver' st root x = do
   e <- ask
   let _envSingleFile :: Maybe (Path Abs File)
@@ -253,15 +253,15 @@ runPathResolver' st root x = do
           }
   runState st (runReader env (re x))
 
-runPathResolverPipe' :: (Members '[Files, Reader EntryPoint, Git] r) => ResolverState -> Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
+runPathResolverPipe' :: (Members '[Files, Reader EntryPoint, GitClone] r) => ResolverState -> Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
 runPathResolverPipe' iniState a = do
   r <- asks (^. entryPointResolverRoot)
   runError (runPathResolver' iniState r (raiseUnder a)) >>= either error return
 
-runPathResolverPipe :: (Members '[Files, Reader EntryPoint, Git] r) => Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
+runPathResolverPipe :: (Members '[Files, Reader EntryPoint, GitClone] r) => Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
 runPathResolverPipe a = do
   r <- asks (^. entryPointResolverRoot)
   runError (runPathResolver r (raiseUnder a)) >>= either error return
 
-evalPathResolverPipe :: (Members '[Files, Reader EntryPoint, Git] r) => Sem (PathResolver ': r) a -> Sem r a
+evalPathResolverPipe :: (Members '[Files, Reader EntryPoint, GitClone] r) => Sem (PathResolver ': r) a -> Sem r a
 evalPathResolverPipe = fmap snd . runPathResolverPipe

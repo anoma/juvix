@@ -8,7 +8,7 @@ import Juvix.Compiler.Core.Info.TypeInfo (setNodeType)
 import Juvix.Compiler.Core.Options
 import Juvix.Compiler.Core.Transformation.Base
 
-unrollRecursion :: Member (Reader CoreOptions) r => InfoTable -> Sem r InfoTable
+unrollRecursion :: (Member (Reader CoreOptions) r) => InfoTable -> Sem r InfoTable
 unrollRecursion tab = do
   (mp, tab') <-
     runState @(HashMap Symbol Symbol) mempty $
@@ -30,19 +30,19 @@ unrollRecursion tab = do
         adjustMain :: Maybe Symbol -> Maybe Symbol
         adjustMain = fmap $ \sym -> fromMaybe sym (HashMap.lookup sym mp)
 
-    goSCC :: Members '[InfoTableBuilder, State (HashMap Symbol Symbol), Reader CoreOptions] r => SCC Symbol -> Sem r ()
+    goSCC :: (Members '[InfoTableBuilder, State (HashMap Symbol Symbol), Reader CoreOptions] r) => SCC Symbol -> Sem r ()
     goSCC = \case
       CyclicSCC syms -> unrollSCC syms
       AcyclicSCC _ -> return ()
 
-    unrollSCC :: Members '[InfoTableBuilder, State (HashMap Symbol Symbol), Reader CoreOptions] r => [Symbol] -> Sem r ()
+    unrollSCC :: (Members '[InfoTableBuilder, State (HashMap Symbol Symbol), Reader CoreOptions] r) => [Symbol] -> Sem r ()
     unrollSCC syms = do
       unrollLimit <- computeUnrollLimit
       freshSyms <- genSyms unrollLimit syms
       forM_ syms (unroll unrollLimit freshSyms)
       modify (\mp -> foldr (mapSymbol unrollLimit freshSyms) mp syms)
       where
-        computeUnrollLimit :: Member (Reader CoreOptions) r => Sem r Int
+        computeUnrollLimit :: (Member (Reader CoreOptions) r) => Sem r Int
         computeUnrollLimit = do
           defaultUnrollLimit <- asks (^. optUnrollLimit)
           let lims = nonEmpty (mapMaybe go syms)
@@ -56,7 +56,7 @@ unrollRecursion tab = do
         mapSymbol :: Int -> HashMap (Indexed Symbol) Symbol -> Symbol -> HashMap Symbol Symbol -> HashMap Symbol Symbol
         mapSymbol unrollLimit freshSyms sym = HashMap.insert sym (fromJust $ HashMap.lookup (Indexed unrollLimit sym) freshSyms)
 
-        genSyms :: forall r. Member InfoTableBuilder r => Int -> [Symbol] -> Sem r (HashMap (Indexed Symbol) Symbol)
+        genSyms :: forall r. (Member InfoTableBuilder r) => Int -> [Symbol] -> Sem r (HashMap (Indexed Symbol) Symbol)
         genSyms unrollLimit = foldr go (return mempty)
           where
             go :: Symbol -> Sem r (HashMap (Indexed Symbol) Symbol) -> Sem r (HashMap (Indexed Symbol) Symbol)
@@ -68,7 +68,7 @@ unrollRecursion tab = do
               sym' <- freshSymbol
               return $ HashMap.insert (Indexed limit sym) sym' mp
 
-        unroll :: forall r. Member InfoTableBuilder r => Int -> HashMap (Indexed Symbol) Symbol -> Symbol -> Sem r ()
+        unroll :: forall r. (Member InfoTableBuilder r) => Int -> HashMap (Indexed Symbol) Symbol -> Symbol -> Sem r ()
         unroll unrollLimit freshSyms sym = do
           forM_ [0 .. unrollLimit] goUnroll
           removeSymbol sym

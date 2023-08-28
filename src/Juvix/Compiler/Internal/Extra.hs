@@ -270,7 +270,7 @@ patternVariables f p = case p of
     goApp :: Traversal' ConstructorApp VarName
     goApp g = traverseOf constrAppParameters (traverse (patternArgVariables g))
 
-inductiveTypeVarsAssoc :: Foldable f => InductiveDef -> f a -> HashMap VarName a
+inductiveTypeVarsAssoc :: (Foldable f) => InductiveDef -> f a -> HashMap VarName a
 inductiveTypeVarsAssoc def l
   | length vars < n = impossible
   | otherwise = HashMap.fromList (zip vars (toList l))
@@ -531,7 +531,7 @@ infixl 9 @@
 (@@) :: (IsExpression a, IsExpression b) => a -> b -> Expression
 a @@ b = toExpression (Application (toExpression a) (toExpression b) Explicit)
 
-freshVar :: Member NameIdGen r => Interval -> Text -> Sem r VarName
+freshVar :: (Member NameIdGen r) => Interval -> Text -> Sem r VarName
 freshVar _nameLoc n = do
   uid <- freshNameId
   return
@@ -544,10 +544,10 @@ freshVar _nameLoc n = do
         _nameLoc
       }
 
-freshHole :: Members '[NameIdGen] r => Interval -> Sem r Hole
+freshHole :: (Members '[NameIdGen] r) => Interval -> Sem r Hole
 freshHole l = mkHole l <$> freshNameId
 
-mkFreshHole :: Members '[NameIdGen] r => Interval -> Sem r Expression
+mkFreshHole :: (Members '[NameIdGen] r) => Interval -> Sem r Expression
 mkFreshHole l = ExpressionHole <$> freshHole l
 
 matchExpressions ::
@@ -663,7 +663,7 @@ isSmallUniverse' = \case
   ExpressionUniverse {} -> True
   _ -> False
 
-allTypeSignatures :: Data a => a -> [Expression]
+allTypeSignatures :: (Data a) => a -> [Expression]
 allTypeSignatures a =
   [f ^. funDefType | f@FunctionDef {} <- universeBi a]
     <> [f ^. axiomType | f@AxiomDef {} <- universeBi a]
@@ -708,11 +708,11 @@ patternArgFromVar i v =
     }
 
 -- | Given `mkPair`, returns (mkPair a b, [a, b])
-genConstructorPattern :: Members '[NameIdGen] r => Interval -> ConstructorInfo -> Sem r (PatternArg, [VarName])
+genConstructorPattern :: (Members '[NameIdGen] r) => Interval -> ConstructorInfo -> Sem r (PatternArg, [VarName])
 genConstructorPattern loc info = genConstructorPattern' loc (info ^. constructorInfoName) (length (snd (constructorArgTypes info)))
 
 -- | Given `mkPair`, returns (mkPair a b, [a, b])
-genConstructorPattern' :: Members '[NameIdGen] r => Interval -> Name -> Int -> Sem r (PatternArg, [VarName])
+genConstructorPattern' :: (Members '[NameIdGen] r) => Interval -> Name -> Int -> Sem r (PatternArg, [VarName])
 genConstructorPattern' loc cname cargs = do
   vars <- mapM (freshVar loc) (Stream.take cargs allWords)
   return (mkConstructorVarPattern cname vars, vars)
@@ -735,7 +735,7 @@ mkConstructorVarPattern c vars =
 -- allowed at the moment).
 genFieldProjection ::
   forall r.
-  Members '[NameIdGen] r =>
+  (Members '[NameIdGen] r) =>
   FunctionName ->
   ConstructorInfo ->
   Int ->

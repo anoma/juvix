@@ -30,7 +30,7 @@ type CheckPositivityEffects r =
 
 checkPositivity ::
   forall r.
-  CheckPositivityEffects r =>
+  (CheckPositivityEffects r) =>
   InductiveDef ->
   Sem r ()
 checkPositivity ty = do
@@ -47,7 +47,7 @@ checkPositivity ty = do
 
 checkStrictlyPositiveOccurrences ::
   forall r.
-  CheckPositivityEffects r =>
+  (CheckPositivityEffects r) =>
   InductiveDef ->
   ConstrName ->
   Name ->

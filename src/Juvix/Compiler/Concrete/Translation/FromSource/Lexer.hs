@@ -20,16 +20,16 @@ import Text.Megaparsec.Char.Lexer qualified as L
 
 type OperatorSym = Text
 
-judocText :: Members '[InfoTableBuilder] r => ParsecS r a -> ParsecS r a
+judocText :: (Members '[InfoTableBuilder] r) => ParsecS r a -> ParsecS r a
 judocText c = do
   (a, i) <- interval c
   P.lift (registerJudocText i)
   return a
 
-judocText_ :: Members '[InfoTableBuilder] r => ParsecS r a -> ParsecS r ()
+judocText_ :: (Members '[InfoTableBuilder] r) => ParsecS r a -> ParsecS r ()
 judocText_ = void . judocText
 
-space :: forall r. Members '[InfoTableBuilder] r => ParsecS r ()
+space :: forall r. (Members '[InfoTableBuilder] r) => ParsecS r ()
 space = space' True >>= mapM_ (P.lift . registerSpaceSpan)
 
 lexeme :: (Members '[InfoTableBuilder] r) => ParsecS r a -> ParsecS r a
@@ -68,26 +68,26 @@ bracedString =
       void (char '\\')
       char '}'
 
-string :: Members '[InfoTableBuilder] r => ParsecS r (Text, Interval)
+string :: (Members '[InfoTableBuilder] r) => ParsecS r (Text, Interval)
 string = lexemeInterval string'
 
 judocExampleStart :: ParsecS r ()
 judocExampleStart = P.chunk Str.judocExample >> hspace_
 
-judocBlockEnd :: Members '[InfoTableBuilder] r => ParsecS r KeywordRef
+judocBlockEnd :: (Members '[InfoTableBuilder] r) => ParsecS r KeywordRef
 judocBlockEnd = kw delimJudocBlockEnd
 
-judocBlockStart :: Members '[InfoTableBuilder] r => ParsecS r KeywordRef
+judocBlockStart :: (Members '[InfoTableBuilder] r) => ParsecS r KeywordRef
 judocBlockStart = kwBare delimJudocBlockStart
 
-judocStart :: Members '[InfoTableBuilder] r => ParsecS r KeywordRef
+judocStart :: (Members '[InfoTableBuilder] r) => ParsecS r KeywordRef
 judocStart = kwBare delimJudocStart <* hspace_
 
 -- | Does not consume space after it
-kwBare :: Member InfoTableBuilder r => Keyword -> ParsecS r KeywordRef
+kwBare :: (Member InfoTableBuilder r) => Keyword -> ParsecS r KeywordRef
 kwBare k = kw' k >>= P.lift . registerKeyword
 
-kw :: Member InfoTableBuilder r => Keyword -> ParsecS r KeywordRef
+kw :: (Member InfoTableBuilder r) => Keyword -> ParsecS r KeywordRef
 kw = lexeme . kwBare
 
 -- | Same as @identifier@ but does not consume space after it.

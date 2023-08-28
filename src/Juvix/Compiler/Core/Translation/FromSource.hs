@@ -617,7 +617,7 @@ exprUniverse = do
 exprDynamic :: ParsecS r Type
 exprDynamic = kw kwAny $> mkDynamic'
 
-exprBottom :: Members '[InfoTableBuilder] r => ParsecS r Node
+exprBottom :: (Members '[InfoTableBuilder] r) => ParsecS r Node
 exprBottom = do
   (ty, loc) <- interval $ do
     kw kwBottom

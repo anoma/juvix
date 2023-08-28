@@ -20,7 +20,7 @@ dynamicTypeError node loc =
       _coreErrorLoc = fromMaybe defaultLoc loc
     }
 
-axiomError :: Members '[Error CoreError, InfoTableBuilder] r => Symbol -> Maybe Location -> Sem r a
+axiomError :: (Members '[Error CoreError, InfoTableBuilder] r) => Symbol -> Maybe Location -> Sem r a
 axiomError sym loc = do
   tbl <- getInfoTable
   let nameTxt = identName tbl sym
@@ -45,7 +45,7 @@ defaultLoc = singletonInterval (mkInitialLoc mockFile)
     mockFile :: Path Abs File
     mockFile = $(mkAbsFile "/core-check")
 
-checkBuiltins :: forall r. Member (Error CoreError) r => Bool -> Node -> Sem r Node
+checkBuiltins :: forall r. (Member (Error CoreError) r) => Bool -> Node -> Sem r Node
 checkBuiltins allowUntypedFail = dmapRM go
   where
     go :: Node -> Sem r Recur
@@ -73,7 +73,7 @@ checkBuiltins allowUntypedFail = dmapRM go
 -- | Checks that the root of the node is not `Bottom`. Currently the only way we
 -- create `Bottom` is when translating axioms that are not builtin. Hence it is
 -- enough to check the root only.
-checkNoAxioms :: forall r. Member (Error CoreError) r => InfoTable -> Sem r ()
+checkNoAxioms :: forall r. (Member (Error CoreError) r) => InfoTable -> Sem r ()
 checkNoAxioms = void . mapT' checkNodeNoAxiom
   where
     checkNodeNoAxiom :: Symbol -> Node -> Sem (InfoTableBuilder ': r) Node
@@ -81,7 +81,7 @@ checkNoAxioms = void . mapT' checkNodeNoAxiom
       NBot {} -> axiomError sym (getNodeLocation n)
       _ -> return n
 
-checkNoIO :: forall r. Member (Error CoreError) r => Node -> Sem r Node
+checkNoIO :: forall r. (Member (Error CoreError) r) => Node -> Sem r Node
 checkNoIO = dmapM go
   where
     go :: Node -> Sem r Node
@@ -95,7 +95,7 @@ checkNoIO = dmapM go
           _ -> return node
       _ -> return node
 
-checkTypes :: forall r. Member (Error CoreError) r => Bool -> InfoTable -> Node -> Sem r Node
+checkTypes :: forall r. (Member (Error CoreError) r) => Bool -> InfoTable -> Node -> Sem r Node
 checkTypes allowPolymorphism tab = dmapM go
   where
     go :: Node -> Sem r Node
@@ -122,7 +122,7 @@ checkTypes allowPolymorphism tab = dmapM go
                 }
       _ -> return node
 
-checkNoRecursiveTypes :: forall r. Member (Error CoreError) r => InfoTable -> Sem r ()
+checkNoRecursiveTypes :: forall r. (Member (Error CoreError) r) => InfoTable -> Sem r ()
 checkNoRecursiveTypes tab =
   when (isCyclic (createTypeDependencyInfo tab)) $
     throw
@@ -132,7 +132,7 @@ checkNoRecursiveTypes tab =
           _coreErrorLoc = defaultLoc
         }
 
-checkMainExists :: forall r. Member (Error CoreError) r => InfoTable -> Sem r ()
+checkMainExists :: forall r. (Member (Error CoreError) r) => InfoTable -> Sem r ()
 checkMainExists tab =
   when (isNothing (tab ^. infoMain)) $
     throw

@@ -13,16 +13,16 @@ import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Language
 import Juvix.Prelude
 
-nsEntry :: forall ns. SingI ns => Lens' (NameSpaceEntryType ns) (S.Name' ())
+nsEntry :: forall ns. (SingI ns) => Lens' (NameSpaceEntryType ns) (S.Name' ())
 nsEntry = case sing :: SNameSpace ns of
   SNameSpaceModules -> moduleEntry
   SNameSpaceSymbols -> symbolEntry
   SNameSpaceFixities -> fixityEntry
 
-mkModuleRef' :: SingI t => ModuleRef'' 'S.NotConcrete t -> ModuleRef' 'S.NotConcrete
+mkModuleRef' :: (SingI t) => ModuleRef'' 'S.NotConcrete t -> ModuleRef' 'S.NotConcrete
 mkModuleRef' m = ModuleRef' (sing :&: m)
 
-scopeNameSpace :: forall (ns :: NameSpace). SingI ns => Lens' Scope (HashMap Symbol (SymbolInfo ns))
+scopeNameSpace :: forall (ns :: NameSpace). (SingI ns) => Lens' Scope (HashMap Symbol (SymbolInfo ns))
 scopeNameSpace = case sing :: SNameSpace ns of
   SNameSpaceSymbols -> scopeSymbols
   SNameSpaceModules -> scopeModuleSymbols

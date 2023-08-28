@@ -38,7 +38,7 @@ varFromHole h =
   where
     pp = "_ω" <> prettyText (h ^. holeId)
 
-varFromWildcard :: Members '[NameIdGen] r => Wildcard -> Sem r VarName
+varFromWildcard :: (Members '[NameIdGen] r) => Wildcard -> Sem r VarName
 varFromWildcard w = do
   _nameId <- freshNameId
   let _nameText :: Text = "_ω" <> prettyText _nameId

@@ -21,15 +21,15 @@ ignoreFail ::
 ignoreFail = void . runFail
 {-# INLINE ignoreFail #-}
 
-failWhen :: Member Fail r => Bool -> Sem r ()
+failWhen :: (Member Fail r) => Bool -> Sem r ()
 failWhen c = when c fail
 {-# INLINE failWhen #-}
 
-failUnless :: Member Fail r => Bool -> Sem r ()
+failUnless :: (Member Fail r) => Bool -> Sem r ()
 failUnless c = unless c fail
 {-# INLINE failUnless #-}
 
-failMaybe :: Member Fail r => Maybe a -> Sem r a
+failMaybe :: (Member Fail r) => Maybe a -> Sem r a
 failMaybe = \case
   Nothing -> fail
   Just x -> return x

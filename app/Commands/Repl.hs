@@ -21,7 +21,6 @@ import Juvix.Compiler.Concrete.Data.ScopedName qualified as Scoped
 import Juvix.Compiler.Concrete.Language qualified as Concrete
 import Juvix.Compiler.Concrete.Pretty qualified as Concrete
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver (runPathResolver)
-import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Git
 import Juvix.Compiler.Core qualified as Core
 import Juvix.Compiler.Core.Extra.Value
 import Juvix.Compiler.Core.Info qualified as Info
@@ -33,6 +32,7 @@ import Juvix.Compiler.Internal.Language qualified as Internal
 import Juvix.Compiler.Internal.Pretty qualified as Internal
 import Juvix.Compiler.Pipeline.Repl
 import Juvix.Compiler.Pipeline.Setup (entrySetup)
+import Juvix.Data.Effect.Git
 import Juvix.Data.Effect.Process
 import Juvix.Data.Error.GenericError qualified as Error
 import Juvix.Data.NameKind
@@ -102,7 +102,7 @@ replError msg =
 noFileLoadedErr :: Repl a
 noFileLoadedErr = replError (mkAnsiText @Text "No file loaded. Load a file using the `:load FILE` command.")
 
-welcomeMsg :: MonadIO m => m ()
+welcomeMsg :: (MonadIO m) => m ()
 welcomeMsg = liftIO (putStrLn [i|Juvix REPL version #{versionTag}: https://juvix.org. Run :help for help|])
 
 multilineCmd :: String
@@ -147,8 +147,8 @@ loadDefaultPrelude = whenJustM defaultPreludeEntryPoint $ \e -> do
     . runReader e
     . runLogIO
     . runProcessIO
-    . runError @GitError
-    . runGit
+    . runError @GitProcessError
+    . runGitProcess
     . runPathResolver root
     $ entrySetup
   loadEntryPoint e
@@ -239,16 +239,16 @@ dev input = do
     scoperStateCmd :: String
     scoperStateCmd = "scoperState"
 
-ppConcrete :: Concrete.PrettyPrint a => a -> Repl AnsiText
+ppConcrete :: (Concrete.PrettyPrint a) => a -> Repl AnsiText
 ppConcrete a = do
   gopts <- State.gets (^. replStateGlobalOptions)
   let popts :: GenericOptions = project' gopts
   return (Concrete.ppOut popts a)
 
-printConcrete :: Concrete.PrettyPrint a => a -> Repl ()
+printConcrete :: (Concrete.PrettyPrint a) => a -> Repl ()
 printConcrete = ppConcrete >=> renderOut
 
-printConcreteLn :: Concrete.PrettyPrint a => a -> Repl ()
+printConcreteLn :: (Concrete.PrettyPrint a) => a -> Repl ()
 printConcreteLn = ppConcrete >=> renderOutLn
 
 replParseIdentifiers :: String -> Repl (NonEmpty Concrete.ScopedIden)
@@ -351,7 +351,7 @@ printDefinition = replParseIdentifiers >=> printIdentifiers
                 KNameTopModule -> impossible
                 KNameFixity -> impossible
           where
-            printLocation :: HasLoc s => s -> Repl ()
+            printLocation :: (HasLoc s) => s -> Repl ()
             printLocation def = do
               s' <- ppConcrete s
               let txt :: Text = " is " <> prettyText (nameKindWithArticle (getNameKind s)) <> " defined at " <> prettyText (getLoc def)
@@ -479,7 +479,7 @@ printRoot _ = do
   r <- State.gets (^. replStateRoots . rootsRootDir)
   liftIO $ putStrLn (pack (toFilePath r))
 
-runCommand :: Members '[Embed IO, App] r => ReplOptions -> Sem r ()
+runCommand :: (Members '[Embed IO, App] r) => ReplOptions -> Sem r ()
 runCommand opts = do
   roots <- askRoots
   let replAction :: ReplS ()
@@ -600,7 +600,7 @@ printErrorS e = do
 
 runTransformations ::
   forall r.
-  Members '[State Artifacts, Error JuvixError, Reader EntryPoint] r =>
+  (Members '[State Artifacts, Error JuvixError, Reader EntryPoint] r) =>
   Bool ->
   [Core.TransformationId] ->
   Core.Node ->

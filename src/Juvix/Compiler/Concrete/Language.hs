@@ -1010,16 +1010,16 @@ newtype ModuleRef' (c :: S.IsConcrete) = ModuleRef'
   { _unModuleRef' :: Σ ModuleIsTop (TyCon1 (ModuleRef'' c))
   }
 
-instance SingI c => Show (ModuleRef' c) where
+instance (SingI c) => Show (ModuleRef' c) where
   show = show . getModuleRefNameId
 
-instance SingI c => Eq (ModuleRef' c) where
+instance (SingI c) => Eq (ModuleRef' c) where
   (==) = (==) `on` getModuleRefNameId
 
-instance SingI c => Ord (ModuleRef' c) where
+instance (SingI c) => Ord (ModuleRef' c) where
   compare = compare `on` getModuleRefNameId
 
-getNameRefId :: forall c. SingI c => RefNameType c -> S.NameId
+getNameRefId :: forall c. (SingI c) => RefNameType c -> S.NameId
 getNameRefId = case sing :: S.SIsConcrete c of
   S.SConcrete -> (^. S.nameId)
   S.SNotConcrete -> (^. S.nameId)
@@ -1030,7 +1030,7 @@ getModuleRefExportInfo (ModuleRef' (_ :&: ModuleRef'' {..})) = _moduleExportInfo
 getModuleRefNameType :: ModuleRef' c -> RefNameType c
 getModuleRefNameType (ModuleRef' (_ :&: ModuleRef'' {..})) = _moduleRefName
 
-getModuleRefNameId :: forall c. SingI c => ModuleRef' c -> S.NameId
+getModuleRefNameId :: forall c. (SingI c) => ModuleRef' c -> S.NameId
 getModuleRefNameId (ModuleRef' (t :&: ModuleRef'' {..})) =
   case sing :: S.SIsConcrete c of
     S.SConcrete -> case t of
@@ -1044,7 +1044,7 @@ data ModuleRef'' (c :: S.IsConcrete) (t :: ModuleIsTop) = ModuleRef''
     _moduleRefModule :: Module 'Scoped t
   }
 
-instance Show (RefNameType s) => Show (ModuleRef'' s t) where
+instance (Show (RefNameType s)) => Show (ModuleRef'' s t) where
   show ModuleRef'' {..} = show _moduleRefName
 
 instance Eq (ModuleRef'' 'S.Concrete t) where
@@ -1068,7 +1068,7 @@ newtype FixitySymbolEntry = FixitySymbolEntry
   }
   deriving stock (Show)
 
-instance SingI t => CanonicalProjection (ModuleRef'' c t) (ModuleRef' c) where
+instance (SingI t) => CanonicalProjection (ModuleRef'' c t) (ModuleRef' c) where
   project r = ModuleRef' (sing :&: r)
 
 -- | Symbols that a module exports
@@ -1755,10 +1755,10 @@ instance Eq ModuleIndex where
 instance Hashable ModuleIndex where
   hashWithSalt s = hashWithSalt s . (^. moduleIxModule . modulePath)
 
-instance SingI s => HasLoc (NamedArgument s) where
+instance (SingI s) => HasLoc (NamedArgument s) where
   getLoc NamedArgument {..} = getLocSymbolType _namedArgName <> getLocExpressionType _namedArgValue
 
-instance SingI s => HasLoc (ArgumentBlock s) where
+instance (SingI s) => HasLoc (ArgumentBlock s) where
   getLoc ArgumentBlock {..} = case d of
     Just (l, r) -> getLoc l <> getLoc r
     Nothing -> getLocSpan _argBlockArgs
@@ -1792,7 +1792,7 @@ instance HasAtomicity Expression where
     ExpressionRecordUpdate {} -> Aggregate updateFixity
     ExpressionParensRecordUpdate {} -> Atom
 
-expressionAtomicity :: forall s. SingI s => ExpressionType s -> Atomicity
+expressionAtomicity :: forall s. (SingI s) => ExpressionType s -> Atomicity
 expressionAtomicity e = case sing :: SStage s of
   SParsed -> atomicity e
   SScoped -> atomicity e
@@ -1809,7 +1809,7 @@ instance HasAtomicity (Let 'Scoped) where
 instance HasAtomicity (PatternAtom 'Parsed) where
   atomicity = const Atom
 
-instance SingI s => HasAtomicity (FunctionParameters s) where
+instance (SingI s) => HasAtomicity (FunctionParameters s) where
   atomicity p
     | not (null (p ^. paramNames)) || p ^. paramImplicit == Implicit = Atom
     | otherwise = case sing :: SStage s of
@@ -1819,19 +1819,19 @@ instance SingI s => HasAtomicity (FunctionParameters s) where
 instance HasLoc ScopedIden where
   getLoc = getLoc . (^. scopedIden)
 
-instance SingI s => HasLoc (InductiveParameters s) where
+instance (SingI s) => HasLoc (InductiveParameters s) where
   getLoc i = getLocSymbolType (i ^. inductiveParametersNames . _head1) <>? (getLocExpressionType <$> (i ^? inductiveParametersRhs . _Just . inductiveParametersType))
 
 instance HasLoc (InductiveDef s) where
   getLoc i = (getLoc <$> i ^. inductivePositive) ?<> getLoc (i ^. inductiveKw)
 
-instance SingI s => HasLoc (FunctionClause s) where
+instance (SingI s) => HasLoc (FunctionClause s) where
   getLoc c = getLocSymbolType (c ^. clauseOwnerFunction) <> getLocExpressionType (c ^. clauseBody)
 
 instance HasLoc ModuleRef where
   getLoc (ModuleRef' (_ :&: r)) = getLoc r
 
-instance SingI s => HasLoc (AxiomDef s) where
+instance (SingI s) => HasLoc (AxiomDef s) where
   getLoc m = getLoc (m ^. axiomKw) <> getLocExpressionType (m ^. axiomType)
 
 instance HasLoc (OpenModule 'Scoped) where
@@ -1891,22 +1891,22 @@ instance HasLoc (Function 'Scoped) where
 instance HasLoc (Let 'Scoped) where
   getLoc l = getLoc (l ^. letKw) <> getLoc (l ^. letExpression)
 
-instance SingI s => HasLoc (CaseBranch s) where
+instance (SingI s) => HasLoc (CaseBranch s) where
   getLoc c = getLoc (c ^. caseBranchPipe) <> getLocExpressionType (c ^. caseBranchExpression)
 
-instance SingI s => HasLoc (Case s) where
+instance (SingI s) => HasLoc (Case s) where
   getLoc c = getLoc (c ^. caseKw) <> getLoc (c ^. caseBranches . to last)
 
 instance HasLoc (List s) where
   getLoc List {..} = getLoc _listBracketL <> getLoc _listBracketR
 
-instance SingI s => HasLoc (NamedApplication s) where
+instance (SingI s) => HasLoc (NamedApplication s) where
   getLoc NamedApplication {..} = getLocIdentifierType _namedAppName <> getLoc (last _namedAppArgs)
 
-instance SingI s => HasLoc (RecordUpdateField s) where
+instance (SingI s) => HasLoc (RecordUpdateField s) where
   getLoc f = getLocSymbolType (f ^. fieldUpdateName) <> getLocExpressionType (f ^. fieldUpdateValue)
 
-instance SingI s => HasLoc (RecordUpdate s) where
+instance (SingI s) => HasLoc (RecordUpdate s) where
   getLoc r = getLoc (r ^. recordUpdateAtKw) <> getLocSpan (r ^. recordUpdateFields)
 
 instance HasLoc RecordUpdateApp where
@@ -1936,15 +1936,15 @@ instance HasLoc Expression where
     ExpressionRecordUpdate i -> getLoc i
     ExpressionParensRecordUpdate i -> getLoc i
 
-getLocIdentifierType :: forall s. SingI s => IdentifierType s -> Interval
+getLocIdentifierType :: forall s. (SingI s) => IdentifierType s -> Interval
 getLocIdentifierType e = case sing :: SStage s of
   SParsed -> getLoc e
   SScoped -> getLoc e
 
-instance SingI s => HasLoc (Iterator s) where
+instance (SingI s) => HasLoc (Iterator s) where
   getLoc Iterator {..} = getLocIdentifierType _iteratorName <> getLocExpressionType _iteratorBody
 
-instance SingI s => HasLoc (Import s) where
+instance (SingI s) => HasLoc (Import s) where
   getLoc Import {..} = case sing :: SStage s of
     SParsed -> getLoc _importModule
     SScoped -> getLoc _importModule
@@ -1961,12 +1961,12 @@ instance (SingI s, SingI t) => HasLoc (Module s t) where
       SModuleLocal -> getLoc (m ^. modulePath)
       SModuleTop -> getLoc (m ^. modulePath)
 
-getLocSymbolType :: forall s. SingI s => SymbolType s -> Interval
+getLocSymbolType :: forall s. (SingI s) => SymbolType s -> Interval
 getLocSymbolType = case sing :: SStage s of
   SParsed -> getLoc
   SScoped -> getLoc
 
-getLocExpressionType :: forall s. SingI s => ExpressionType s -> Interval
+getLocExpressionType :: forall s. (SingI s) => ExpressionType s -> Interval
 getLocExpressionType = case sing :: SStage s of
   SParsed -> getLoc
   SScoped -> getLoc
@@ -1976,17 +1976,17 @@ instance HasLoc (SigArg s) where
     where
       Irrelevant (l, r) = _sigArgDelims
 
-instance SingI s => HasLoc (NewFunctionClause s) where
+instance (SingI s) => HasLoc (NewFunctionClause s) where
   getLoc NewFunctionClause {..} =
     getLoc _clausenPipeKw
       <> getLocExpressionType _clausenBody
 
-instance SingI s => HasLoc (FunctionDefBody s) where
+instance (SingI s) => HasLoc (FunctionDefBody s) where
   getLoc = \case
     SigBodyExpression e -> getLocExpressionType e
     SigBodyClauses cl -> getLocSpan cl
 
-instance SingI s => HasLoc (FunctionDef s) where
+instance (SingI s) => HasLoc (FunctionDef s) where
   getLoc FunctionDef {..} =
     (getLoc <$> _signDoc)
       ?<> (getLoc <$> _signPragmas)
@@ -1995,7 +1995,7 @@ instance SingI s => HasLoc (FunctionDef s) where
       ?<> getLocSymbolType _signName
       <> getLoc _signBody
 
-instance SingI s => HasLoc (TypeSignature s) where
+instance (SingI s) => HasLoc (TypeSignature s) where
   getLoc TypeSignature {..} =
     (getLoc <$> _sigDoc)
       ?<> (getLoc <$> _sigPragmas)
@@ -2035,28 +2035,28 @@ instance HasLoc PatternBinding where
 instance HasLoc (ListPattern s) where
   getLoc l = getLoc (l ^. listpBracketL) <> getLoc (l ^. listpBracketR)
 
-getLocPatternParensType :: forall s. SingI s => PatternParensType s -> Interval
+getLocPatternParensType :: forall s. (SingI s) => PatternParensType s -> Interval
 getLocPatternParensType = case sing :: SStage s of
   SScoped -> getLoc
   SParsed -> getLoc
 
-instance SingI s => HasLoc (RecordPatternAssign s) where
+instance (SingI s) => HasLoc (RecordPatternAssign s) where
   getLoc a =
     getLoc (a ^. recordPatternAssignField)
       <> getLocPatternParensType (a ^. recordPatternAssignPattern)
 
-instance SingI s => HasLoc (FieldPun s) where
+instance (SingI s) => HasLoc (FieldPun s) where
   getLoc f = getLocSymbolType (f ^. fieldPunField)
 
-instance SingI s => HasLoc (RecordPatternItem s) where
+instance (SingI s) => HasLoc (RecordPatternItem s) where
   getLoc = \case
     RecordPatternItemAssign a -> getLoc a
     RecordPatternItemFieldPun a -> getLoc a
 
-instance SingI s => HasLoc (RecordPattern s) where
+instance (SingI s) => HasLoc (RecordPattern s) where
   getLoc r = getLocIdentifierType (r ^. recordPatternConstructor) <>? (getLocSpan <$> nonEmpty (r ^. recordPatternItems))
 
-instance SingI s => HasLoc (PatternAtom s) where
+instance (SingI s) => HasLoc (PatternAtom s) where
   getLoc = \case
     PatternAtomIden i -> getLocIden i
     PatternAtomWildcard w -> getLoc w
@@ -2196,7 +2196,7 @@ instance IsApe ScopedIden ApeLeaf where
           }
       )
 
-instance SingI s => IsApe (ArgumentBlock s) ApeLeaf where
+instance (SingI s) => IsApe (ArgumentBlock s) ApeLeaf where
   toApe b =
     ApeLeaf
       ( Leaf
@@ -2205,7 +2205,7 @@ instance SingI s => IsApe (ArgumentBlock s) ApeLeaf where
           }
       )
 
-toApeIdentifierType :: forall s. SingI s => IdentifierType s -> Ape ApeLeaf
+toApeIdentifierType :: forall s. (SingI s) => IdentifierType s -> Ape ApeLeaf
 toApeIdentifierType = case sing :: SStage s of
   SParsed -> toApe
   SScoped -> toApe
@@ -2219,7 +2219,7 @@ instance IsApe Name ApeLeaf where
           }
       )
 
-instance SingI s => IsApe (NamedApplication s) ApeLeaf where
+instance (SingI s) => IsApe (NamedApplication s) ApeLeaf where
   toApe NamedApplication {..} = mkApps f (toApe <$> _namedAppArgs)
     where
       f = toApeIdentifierType _namedAppName
@@ -2362,7 +2362,7 @@ exportAllNames =
     <> exportModuleSymbols . each . moduleEntry
     <> exportFixitySymbols . each . fixityEntry
 
-exportNameSpace :: forall ns. SingI ns => Lens' ExportInfo (HashMap Symbol (NameSpaceEntryType ns))
+exportNameSpace :: forall ns. (SingI ns) => Lens' ExportInfo (HashMap Symbol (NameSpaceEntryType ns))
 exportNameSpace = case sing :: SNameSpace ns of
   SNameSpaceSymbols -> exportSymbols
   SNameSpaceModules -> exportModuleSymbols

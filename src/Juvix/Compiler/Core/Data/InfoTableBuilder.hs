@@ -34,7 +34,7 @@ getConstructorInfo tag = flip lookupConstructorInfo tag <$> getInfoTable
 getInductiveInfo :: (Member InfoTableBuilder r) => Symbol -> Sem r InductiveInfo
 getInductiveInfo sym = flip lookupInductiveInfo sym <$> getInfoTable
 
-getBuiltinInductiveInfo :: Member InfoTableBuilder r => BuiltinInductive -> Sem r InductiveInfo
+getBuiltinInductiveInfo :: (Member InfoTableBuilder r) => BuiltinInductive -> Sem r InductiveInfo
 getBuiltinInductiveInfo b = do
   tab <- getInfoTable
   return $ fromJust (lookupBuiltinInductive tab b)
@@ -228,18 +228,18 @@ declareNatBuiltins = do
       (tagSuc, "suc", \x -> mkPi' x x, Just BuiltinNatSuc)
     ]
 
-reserveLiteralIntToNatSymbol :: Member InfoTableBuilder r => Sem r ()
+reserveLiteralIntToNatSymbol :: (Member InfoTableBuilder r) => Sem r ()
 reserveLiteralIntToNatSymbol = do
   sym <- freshSymbol
   registerLiteralIntToNat sym
 
-reserveLiteralIntToIntSymbol :: Member InfoTableBuilder r => Sem r ()
+reserveLiteralIntToIntSymbol :: (Member InfoTableBuilder r) => Sem r ()
 reserveLiteralIntToIntSymbol = do
   sym <- freshSymbol
   registerLiteralIntToInt sym
 
 -- | Register a function Int -> Nat used to transform literal integers to builtin Nat
-setupLiteralIntToNat :: forall r. Member InfoTableBuilder r => (Symbol -> Sem r Node) -> Sem r ()
+setupLiteralIntToNat :: forall r. (Member InfoTableBuilder r) => (Symbol -> Sem r Node) -> Sem r ()
 setupLiteralIntToNat mkNode = do
   tab <- getInfoTable
   whenJust (tab ^. infoLiteralIntToNat) go
@@ -275,7 +275,7 @@ setupLiteralIntToNat mkNode = do
           return (maybe mkTypeInteger' (\s -> mkTypeConstr (setInfoName "Nat" mempty) s []) natSymM)
 
 -- | Register a function Int -> Int used to transform literal integers to builtin Int
-setupLiteralIntToInt :: forall r. Member InfoTableBuilder r => Sem r Node -> Sem r ()
+setupLiteralIntToInt :: forall r. (Member InfoTableBuilder r) => Sem r Node -> Sem r ()
 setupLiteralIntToInt node = do
   tab <- getInfoTable
   whenJust (tab ^. infoLiteralIntToInt) go

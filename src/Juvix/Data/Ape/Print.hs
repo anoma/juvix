@@ -11,7 +11,7 @@ import Juvix.Data.Effect.ExactPrint
 import Juvix.Prelude hiding ((<+>), (<+?>), (<?+>), (?<>))
 
 newtype ApeParams a = ApeParams
-  { _apePP :: forall r. Members '[ExactPrint] r => a -> Sem r ()
+  { _apePP :: forall r. (Members '[ExactPrint] r) => a -> Sem r ()
   }
 
 makeLenses ''ApeParams
@@ -19,12 +19,12 @@ makeLenses ''ApeParams
 runApe :: forall a e r. (IsApe a e, Members '[ExactPrint] r) => ApeParams e -> a -> Sem r ()
 runApe p = runReader p . ppApe . toApe @a @e
 
-ppLeaf :: Members '[Reader (ApeParams a), ExactPrint] r => Leaf a -> Sem r ()
+ppLeaf :: (Members '[Reader (ApeParams a), ExactPrint] r) => Leaf a -> Sem r ()
 ppLeaf l = do
   pp <- asks (^. apePP)
   pp (l ^. leafExpr)
 
-ppApe :: Members '[Reader (ApeParams a), ExactPrint] r => Ape a -> Sem r ()
+ppApe :: (Members '[Reader (ApeParams a), ExactPrint] r) => Ape a -> Sem r ()
 ppApe = ppCape . toCape
 
 ppCape :: (Members '[Reader (ApeParams a), ExactPrint] r) => Cape a -> Sem r ()
@@ -34,7 +34,7 @@ ppCape = \case
   CapeAppChain c -> ppAppChain c
   CapeUChain c -> ppUChain c
 
-chain :: Members '[ExactPrint] r => Sem r () -> Sem r ()
+chain :: (Members '[ExactPrint] r) => Sem r () -> Sem r ()
 chain = grouped . nest
 
 ppAppChain :: forall a r. (Members '[Reader (ApeParams a), ExactPrint] r) => AppChain a -> Sem r ()

@@ -57,7 +57,7 @@ renderEmacs s =
           _stateText = mempty,
           _stateProperties = []
         }
-    go :: Members '[State RenderState] r => SimpleDocStream EmacsProperty -> Sem r ()
+    go :: (Members '[State RenderState] r) => SimpleDocStream EmacsProperty -> Sem r ()
     go = \case
       SFail -> error "when is this supposed to happen?"
       SEmpty -> do

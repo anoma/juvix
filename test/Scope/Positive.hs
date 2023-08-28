@@ -11,6 +11,7 @@ import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
 import Juvix.Compiler.Pipeline.Setup
+import Juvix.Data.Effect.Git
 import Juvix.Data.Effect.Process
 import Juvix.Prelude.Aeson
 import Juvix.Prelude.Pretty
@@ -26,7 +27,7 @@ makeLenses ''PosTest
 root :: Path Abs Dir
 root = relToProject $(mkRelDir "tests/positive")
 
-renderCodeNew :: P.PrettyPrint c => c -> Text
+renderCodeNew :: (P.PrettyPrint c) => c -> Text
 renderCodeNew = toPlainText . P.ppOutNoComments P.defaultOptions
 
 testDescr :: PosTest -> TestDescr
@@ -52,8 +53,8 @@ testDescr PosTest {..} = helper renderCodeNew
                         . runReader entryPoint
                         . ignoreLog
                         . runProcessIO
-                        . mapError (JuvixError @GitError)
-                        . runGit
+                        . mapError (JuvixError @GitProcessError)
+                        . runGitProcess
                         . runPathResolverPipe
                     evalHelper :: HashMap (Path Abs File) Text -> Sem PipelineEff a -> IO a
                     evalHelper files = fmap snd . runHelper files

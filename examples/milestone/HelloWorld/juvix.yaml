@@ -1,3 +1,9 @@
 name: HelloWorld
 main: HelloWorld.juvix
+dependencies:
+  - .juvix-build/stdlib
+  - git:
+      url: /tmp/dep1
+      name: dep1
+      ref: main
 version: 0.1.0
