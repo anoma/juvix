@@ -200,10 +200,10 @@ instance (SingI s) => PrettyPrint (PatternAtom s) where
 instance (SingI s) => PrettyPrint (PatternAtoms s) where
   ppCode (PatternAtoms ps _) = hsep (ppCode <$> ps)
 
-instance SingI s => PrettyPrint (ExpressionAtoms s) where
+instance (SingI s) => PrettyPrint (ExpressionAtoms s) where
   ppCode ::
     forall r.
-    Members '[ExactPrint, Reader Options] r =>
+    (Members '[ExactPrint, Reader Options] r) =>
     ExpressionAtoms s ->
     Sem r ()
   ppCode as = go (toList $ as ^. expressionAtoms)
