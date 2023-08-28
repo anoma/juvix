@@ -173,6 +173,7 @@ instance PrettyPrint NameBlock where
   ppCode NameBlock {..} = do
     let delims = case _nameImplicit of
           Implicit -> braces
+          ImplicitInstance -> doubleBraces
           Explicit -> parens
         ppElem :: (Symbol, Int) -> Sem r ()
         ppElem (sym, idx) = ppCode sym <> ppCode Kw.kwExclamation <> noLoc (pretty idx)
@@ -648,8 +649,10 @@ instance PrettyPrint Expression where
   ppCode = \case
     ExpressionIdentifier n -> ppCode n
     ExpressionHole w -> ppCode w
+    ExpressionInstanceHole w -> ppCode w
     ExpressionParensIdentifier n -> parens (ppCode n)
     ExpressionBraces b -> braces (ppCode b)
+    ExpressionDoubleBraces b -> doubleBraces (ppCode b)
     ExpressionApplication a -> ppCode a
     ExpressionList a -> ppCode a
     ExpressionInfixApplication a -> ppCode a

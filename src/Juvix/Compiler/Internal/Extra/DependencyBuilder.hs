@@ -204,6 +204,7 @@ goExpression p e = case e of
   ExpressionLiteral {} -> return ()
   ExpressionCase c -> goCase c
   ExpressionHole {} -> return ()
+  ExpressionInstanceHole {} -> return ()
   ExpressionLambda l -> goLambda l
   ExpressionLet l -> goLet l
   ExpressionSimpleLambda l -> goSimpleLambda l

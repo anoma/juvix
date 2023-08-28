@@ -10,6 +10,8 @@ import Juvix.Data.Keyword.All
   ( -- delimiters
     delimBraceL,
     delimBraceR,
+    delimDoubleBraceL,
+    delimDoubleBraceR,
     delimJudocBlockEnd,
     delimJudocBlockStart,
     delimJudocExample,

@@ -61,6 +61,9 @@ parensIf b
 braces :: (Members '[ExactPrint] r) => Sem r () -> Sem r ()
 braces = enclose (enqueue C.kwBraceL) (noLoc C.kwBraceR)
 
+doubleBraces :: (Members '[ExactPrint] r) => Sem r () -> Sem r ()
+doubleBraces = enclose (enqueue C.kwDoubleBraceL) (noLoc C.kwDoubleBraceR)
+
 lineOrEmpty :: (Members '[ExactPrint] r) => Sem r ()
 lineOrEmpty = noLoc P.line'
 
@@ -166,6 +169,7 @@ delimIf' d impl delim
 
 delimIf :: (Members '[ExactPrint] r) => IsImplicit -> Bool -> Sem r () -> Sem r ()
 delimIf Implicit _ = braces
+delimIf ImplicitInstance _ = doubleBraces
 delimIf Explicit True = parens
 delimIf Explicit False = id
 

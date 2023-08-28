@@ -54,6 +54,7 @@ instance PrettyCode Application where
     r' <- case a ^. appImplicit of
       Explicit -> ppRightExpression appFixity (a ^. appRight)
       Implicit -> braces <$> ppCode (a ^. appRight)
+      ImplicitInstance -> doubleBraces <$> ppCode (a ^. appRight)
     return $ l' <+> r'
 
 instance PrettyCode TypedExpression where
@@ -69,6 +70,7 @@ instance PrettyCode Expression where
   ppCode = \case
     ExpressionIden i -> ppCode i
     ExpressionHole h -> ppCode h
+    ExpressionInstanceHole h -> ppCode h
     ExpressionApplication a -> ppCode a
     ExpressionFunction f -> ppCode f
     ExpressionUniverse u -> ppCode u

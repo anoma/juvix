@@ -27,6 +27,7 @@ ppApp opts (fun, args) =
 
 ppArg :: Micro.Options -> ApplicationArg -> Doc Ann
 ppArg opts arg = case arg ^. appArgIsImplicit of
+  ImplicitInstance -> doubleBraces (ppCode opts e)
   Implicit -> braces (ppCode opts e)
   Explicit -> ppAtom opts e
   where

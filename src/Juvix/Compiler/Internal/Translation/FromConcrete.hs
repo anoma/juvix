@@ -743,11 +743,13 @@ goExpression = \case
   ExpressionLiteral l -> return (Internal.ExpressionLiteral (goLiteral l))
   ExpressionLambda l -> Internal.ExpressionLambda <$> goLambda l
   ExpressionBraces b -> throw (ErrAppLeftImplicit (AppLeftImplicit b))
+  ExpressionDoubleBraces b -> throw (ErrAppLeftImplicit (AppLeftImplicit b))
   ExpressionLet l -> goLet l
   ExpressionList l -> goList l
   ExpressionUniverse uni -> return (Internal.ExpressionUniverse (goUniverse uni))
   ExpressionFunction func -> Internal.ExpressionFunction <$> goFunction func
   ExpressionHole h -> return (Internal.ExpressionHole h)
+  ExpressionInstanceHole h -> return (Internal.ExpressionInstanceHole h)
   ExpressionIterator i -> goIterator i
   ExpressionNamedApplication i -> goNamedApplication i
   ExpressionRecordUpdate i -> goRecordUpdateApp i

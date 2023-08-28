@@ -253,6 +253,12 @@ delimBraceL = mkDelim Str.braceL
 delimBraceR :: Keyword
 delimBraceR = mkDelim Str.braceR
 
+delimDoubleBraceL :: Keyword
+delimDoubleBraceL = mkDelim Str.doubleBraceL
+
+delimDoubleBraceR :: Keyword
+delimDoubleBraceR = mkDelim Str.doubleBraceR
+
 delimParenL :: Keyword
 delimParenL = mkDelim Str.parenL
 

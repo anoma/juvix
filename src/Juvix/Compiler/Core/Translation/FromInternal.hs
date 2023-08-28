@@ -924,6 +924,7 @@ goExpression = \case
   Internal.ExpressionCase l -> goCase l
   e@Internal.ExpressionFunction {} -> goFunction (Internal.unfoldFunType e)
   Internal.ExpressionHole h -> error ("internal to core: goExpression hole: " <> show (Loc.getLoc h))
+  Internal.ExpressionInstanceHole h -> error ("internal to core: goExpression instance hole: " <> show (Loc.getLoc h))
   Internal.ExpressionUniverse {} -> return mkSmallUniv
 
 goFunction ::

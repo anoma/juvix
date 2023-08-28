@@ -72,10 +72,21 @@ helper loc = do
           case (impl, implNames) of
             (Explicit, Explicit) -> return r
             (Implicit, Implicit) -> return r
+            (ImplicitInstance, ImplicitInstance) -> return r
             (Explicit, Implicit) -> do
               emitImplicit False r mempty
               nextNameGroup impl
+            (Explicit, ImplicitInstance) -> do
+              emitImplicitInstance False r mempty
+              nextNameGroup impl
+            (Implicit, ImplicitInstance) -> do
+              emitImplicitInstance False r mempty
+              nextNameGroup impl
+            (ImplicitInstance, Implicit) -> do
+              emitImplicit False r mempty
+              nextNameGroup impl
             (Implicit, Explicit) -> return mempty
+            (ImplicitInstance, Explicit) -> return mempty
 
     nextArgumentGroup :: Sem r (Maybe (IsImplicit, [NamedArgument 'Scoped], Bool))
     nextArgumentGroup = do
@@ -97,6 +108,7 @@ helper loc = do
     emitArgs = \case
       Implicit -> emitImplicit
       Explicit -> emitExplicit
+      ImplicitInstance -> emitImplicitInstance
 
     -- omitting arguments is only allowed at the end
     emitExplicit :: Bool -> HashMap Symbol Int -> IntMap Expression -> Sem r ()
@@ -118,8 +130,14 @@ helper loc = do
         missingErr :: NonEmpty Symbol -> Sem r ()
         missingErr = throw . ErrMissingArguments . MissingArguments loc
 
-    emitImplicit :: Bool -> HashMap Symbol Int -> IntMap Expression -> Sem r ()
-    emitImplicit lastBlock omittedArgs args = go 0 (IntMap.toAscList args)
+    emitImplicit' ::
+      (WithLoc Expression -> Expression) ->
+      (HoleType 'Scoped -> Expression) ->
+      Bool ->
+      HashMap Symbol Int ->
+      IntMap Expression ->
+      Sem r ()
+    emitImplicit' exprBraces exprHole lastBlock omittedArgs args = go 0 (IntMap.toAscList args)
       where
         go :: Int -> [(Int, Expression)] -> Sem r ()
         go n = \case
@@ -128,14 +146,20 @@ helper loc = do
             | otherwise -> whenJust maxIx (fillUntil . succ)
           (n', e) : rest -> do
             fillUntil n'
-            output (ExpressionBraces (WithLoc (getLoc e) e))
+            output (exprBraces (WithLoc (getLoc e) e))
             go (n' + 1) rest
           where
             fillUntil n' = replicateM_ (n' - n) (mkWildcard >>= output)
             mkWildcard :: (Members '[NameIdGen] r') => Sem r' Expression
-            mkWildcard = ExpressionBraces . WithLoc loc . ExpressionHole . mkHole loc <$> freshNameId
+            mkWildcard = exprBraces . WithLoc loc . exprHole . mkHole loc <$> freshNameId
         maxIx :: Maybe Int
         maxIx = fmap maximum1 . nonEmpty . toList $ omittedArgs
+
+    emitImplicit :: Bool -> HashMap Symbol Int -> IntMap Expression -> Sem r ()
+    emitImplicit = emitImplicit' ExpressionBraces ExpressionHole
+
+    emitImplicitInstance :: Bool -> HashMap Symbol Int -> IntMap Expression -> Sem r ()
+    emitImplicitInstance = emitImplicit' ExpressionDoubleBraces ExpressionInstanceHole
 
     scanGroup ::
       IsImplicit ->
@@ -160,6 +184,12 @@ helper loc = do
                 -- the arg may belong to the next explicit group
                 output arg
               Implicit ->
+                throw $
+                  ErrUnexpectedArguments $
+                    UnexpectedArguments
+                      { _unexpectedArguments = pure arg
+                      }
+              ImplicitInstance ->
                 throw $
                   ErrUnexpectedArguments $
                     UnexpectedArguments

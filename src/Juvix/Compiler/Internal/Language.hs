@@ -159,6 +159,7 @@ data Expression
   | ExpressionFunction Function
   | ExpressionLiteral LiteralLoc
   | ExpressionHole Hole
+  | ExpressionInstanceHole Hole
   | ExpressionLet Let
   | ExpressionUniverse SmallUniverse
   | ExpressionSimpleLambda SimpleLambda
@@ -377,6 +378,7 @@ instance HasAtomicity Expression where
     ExpressionLiteral l -> atomicity l
     ExpressionLet l -> atomicity l
     ExpressionHole {} -> Atom
+    ExpressionInstanceHole {} -> Atom
     ExpressionUniverse u -> atomicity u
     ExpressionFunction f -> atomicity f
     ExpressionSimpleLambda l -> atomicity l
@@ -463,6 +465,7 @@ instance HasLoc Expression where
     ExpressionApplication a -> getLoc a
     ExpressionLiteral l -> getLoc l
     ExpressionHole h -> getLoc h
+    ExpressionInstanceHole h -> getLoc h
     ExpressionLet l -> getLoc l
     ExpressionUniverse u -> getLoc u
     ExpressionFunction u -> getLoc u

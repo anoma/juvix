@@ -1078,9 +1078,11 @@ data Expression
   | ExpressionLiteral LiteralLoc
   | ExpressionFunction (Function 'Scoped)
   | ExpressionHole (HoleType 'Scoped)
+  | ExpressionInstanceHole (HoleType 'Scoped)
   | ExpressionRecordUpdate RecordUpdateApp
   | ExpressionParensRecordUpdate ParensRecordUpdate
   | ExpressionBraces (WithLoc Expression)
+  | ExpressionDoubleBraces (WithLoc Expression)
   | ExpressionIterator (Iterator 'Scoped)
   | ExpressionNamedApplication (NamedApplication 'Scoped)
   deriving stock (Show, Eq, Ord)
@@ -1724,6 +1726,7 @@ instance HasAtomicity Expression where
   atomicity e = case e of
     ExpressionIdentifier {} -> Atom
     ExpressionHole {} -> Atom
+    ExpressionInstanceHole {} -> Atom
     ExpressionParensIdentifier {} -> Atom
     ExpressionApplication {} -> Aggregate appFixity
     ExpressionInfixApplication a -> Aggregate (getFixity a)
@@ -1732,6 +1735,7 @@ instance HasAtomicity Expression where
     ExpressionLiteral l -> atomicity l
     ExpressionLet l -> atomicity l
     ExpressionBraces {} -> Atom
+    ExpressionDoubleBraces {} -> Atom
     ExpressionList {} -> Atom
     ExpressionUniverse {} -> Atom
     ExpressionFunction {} -> Aggregate funFixity
@@ -1877,7 +1881,9 @@ instance HasLoc Expression where
     ExpressionLiteral i -> getLoc i
     ExpressionFunction i -> getLoc i
     ExpressionHole i -> getLoc i
+    ExpressionInstanceHole i -> getLoc i
     ExpressionBraces i -> getLoc i
+    ExpressionDoubleBraces i -> getLoc i
     ExpressionIterator i -> getLoc i
     ExpressionNamedApplication i -> getLoc i
     ExpressionRecordUpdate i -> getLoc i
@@ -2227,8 +2233,10 @@ instance IsApe Expression ApeLeaf where
     ExpressionLet {} -> leaf
     ExpressionUniverse {} -> leaf
     ExpressionHole {} -> leaf
+    ExpressionInstanceHole {} -> leaf
     ExpressionLiteral {} -> leaf
     ExpressionBraces {} -> leaf
+    ExpressionDoubleBraces {} -> leaf
     ExpressionIterator {} -> leaf
     where
       leaf =

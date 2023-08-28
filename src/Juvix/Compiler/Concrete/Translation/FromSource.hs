@@ -918,10 +918,13 @@ functionDefinition _signBuiltin = P.label "<function definition>" $ do
         let parseArgumentName :: ParsecS r (Argument 'Parsed) =
               ArgumentSymbol <$> symbol
                 <|> ArgumentWildcard <$> wildcard
-        n <- some1 parseArgumentName
+        n <- case impl of
+          ImplicitInstance -> return $ NonEmpty.singleton $ ArgumentWildcard $ Wildcard (getLoc opn)
+          _ -> some1 parseArgumentName
         c <- case impl of
           Implicit -> optional (Irrelevant <$> kw kwColon)
           Explicit -> Just . Irrelevant <$> kw kwColon
+          ImplicitInstance -> return Nothing
         return (opn, n, impl, c)
       _sigArgRhs <- mapM parseRhs colonMay
       closeDelim <- implicitClose _sigArgImplicit
@@ -971,13 +974,15 @@ axiomDef _axiomBuiltin = do
 
 implicitOpen :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (KeywordRef, IsImplicit)
 implicitOpen =
-  (,Implicit) <$> kw delimBraceL
+  (,ImplicitInstance) <$> kw delimDoubleBraceL
+    <|> (,Implicit) <$> kw delimBraceL
     <|> (,Explicit) <$> kw delimParenL
 
 implicitClose :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => IsImplicit -> ParsecS r KeywordRef
 implicitClose = \case
   Implicit -> kw delimBraceR
   Explicit -> kw delimParenR
+  ImplicitInstance -> kw delimDoubleBraceR
 
 functionParams :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (FunctionParameters 'Parsed)
 functionParams = do

@@ -519,6 +519,7 @@ inferExpression' hint e = case e of
   ExpressionLiteral l -> goLiteral l
   ExpressionFunction f -> goFunction f
   ExpressionHole h -> goHole h
+  ExpressionInstanceHole h -> goInstanceHole h
   ExpressionUniverse u -> goUniverse u
   ExpressionSimpleLambda l -> goSimpleLambda l
   ExpressionLambda l -> goLambda l
@@ -555,6 +556,15 @@ inferExpression' hint e = case e of
         TypedExpression
           { _typedExpression = ExpressionHole h,
             _typedType = ExpressionUniverse (SmallUniverse (getLoc h))
+          }
+
+    goInstanceHole :: Hole -> Sem r TypedExpression
+    goInstanceHole h = do
+      void (queryMetavar h)
+      return
+        TypedExpression
+          { _typedExpression = ExpressionInstanceHole h,
+            _typedType = fromMaybe impossible hint
           }
 
     goSimpleLambda :: SimpleLambda -> Sem r TypedExpression

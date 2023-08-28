@@ -109,6 +109,7 @@ strongNormalize' = go
       ExpressionApplication app -> goApp app
       ExpressionLiteral {} -> return e
       ExpressionHole h -> goHole h
+      ExpressionInstanceHole h -> goInstanceHole h
       ExpressionUniverse {} -> return e
       ExpressionFunction f -> ExpressionFunction <$> goFunction f
       ExpressionSimpleLambda l -> ExpressionSimpleLambda <$> goSimpleLambda l
@@ -154,6 +155,13 @@ strongNormalize' = go
         Fresh -> return (ExpressionHole h)
         Refined r -> go r
 
+    goInstanceHole :: Hole -> Sem r Expression
+    goInstanceHole h = do
+      s <- getMetavar h
+      case s of
+        Fresh -> return (ExpressionInstanceHole h)
+        Refined r -> go r
+
     goApp :: Application -> Sem r Expression
     goApp (Application l r i) = do
       l' <- go l
@@ -182,6 +190,7 @@ weakNormalize' = go
     go e = case e of
       ExpressionIden i -> goIden i
       ExpressionHole h -> goHole h
+      ExpressionInstanceHole h -> goInstanceHole h
       ExpressionApplication a -> goApp a
       ExpressionLiteral {} -> return e
       ExpressionUniverse {} -> return e
@@ -212,6 +221,12 @@ weakNormalize' = go
       s <- getMetavar h
       case s of
         Fresh -> return (ExpressionHole h)
+        Refined r -> go r
+    goInstanceHole :: Hole -> Sem r Expression
+    goInstanceHole h = do
+      s <- getMetavar h
+      case s of
+        Fresh -> return (ExpressionInstanceHole h)
         Refined r -> go r
 
 queryMetavar' :: (Members '[State InferenceState] r) => Hole -> Sem r (Maybe Expression)
@@ -266,6 +281,8 @@ re = reinterpret $ \case
                 (ExpressionLambda a, ExpressionLambda b) -> goLambda a b
                 (ExpressionHole h, a) -> goHole h a
                 (a, ExpressionHole h) -> goHole h a
+                (ExpressionInstanceHole {}, _) -> err
+                (_, ExpressionInstanceHole {}) -> err
                 (ExpressionSimpleLambda {}, _) -> err
                 (_, ExpressionSimpleLambda {}) -> err
                 (ExpressionIden {}, _) -> err

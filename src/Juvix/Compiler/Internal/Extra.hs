@@ -58,6 +58,7 @@ instance HasExpressions Expression where
     ExpressionLiteral {} -> f e
     ExpressionUniverse {} -> f e
     ExpressionHole {} -> f e
+    ExpressionInstanceHole {} -> f e
 
 instance HasExpressions ConstructorApp where
   leafExpressions f a = do
@@ -604,6 +605,9 @@ matchExpressions = go
       (_, ExpressionLet {}) -> err
       (ExpressionLet {}, _) -> err
       (ExpressionHole _, ExpressionHole _) -> return ()
+      (ExpressionInstanceHole _, ExpressionInstanceHole _) -> return ()
+      (_, ExpressionInstanceHole {}) -> err
+      (ExpressionInstanceHole {}, _) -> err
 
     err :: Sem r a
     err = throw @Text "Expression missmatch"
