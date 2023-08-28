@@ -72,10 +72,15 @@ ppUChain (UChain opFix f links) = do
   pp <- asks (^. apePP)
   let f' = ppLinkExpr fx f
       args = hsep (fmap pp links)
-  f' <+> args
+  f' <> sp <> args
   where
     fx :: Precedence
     fx = opFix ^. fixityPrecedence
+
+    sp :: Sem r ()
+    sp = case fx of
+      PrecUpdate -> return ()
+      _ -> space
 
 ppLinkExpr ::
   (Members '[Reader (ApeParams a), ExactPrint] r) => Precedence -> Cape a -> Sem r ()
