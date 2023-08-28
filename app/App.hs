@@ -132,7 +132,7 @@ someBaseToAbs' f = do
   r <- askInvokeDir
   return (someBaseToAbs r f)
 
-filePathToAbs :: Members '[Embed IO, App] r => Prepath FileOrDir -> Sem r (Either (Path Abs File) (Path Abs Dir))
+filePathToAbs :: (Members '[Embed IO, App] r) => Prepath FileOrDir -> Sem r (Either (Path Abs File) (Path Abs Dir))
 filePathToAbs fp = do
   invokeDir <- askInvokeDir
   embed (fromPreFileOrDir invokeDir fp)

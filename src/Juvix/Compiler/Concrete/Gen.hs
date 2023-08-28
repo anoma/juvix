@@ -8,7 +8,7 @@ import Juvix.Compiler.Concrete.Keywords
 import Juvix.Compiler.Concrete.Language
 import Juvix.Prelude
 
-kw :: Members '[Reader Interval] r => Keyword -> Sem r KeywordRef
+kw :: (Members '[Reader Interval] r) => Keyword -> Sem r KeywordRef
 kw k = do
   loc <- ask
   return

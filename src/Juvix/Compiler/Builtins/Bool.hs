@@ -57,7 +57,7 @@ registerIf f = do
         _funInfoFreeTypeVars = [vart]
       }
 
-registerOr :: Members '[Builtins, NameIdGen] r => FunctionDef -> Sem r ()
+registerOr :: (Members '[Builtins, NameIdGen] r) => FunctionDef -> Sem r ()
 registerOr f = do
   bool_ <- getBuiltinName (getLoc f) BuiltinBool
   true_ <- toExpression <$> getBuiltinName (getLoc f) BuiltinBoolTrue
@@ -82,7 +82,7 @@ registerOr f = do
         _funInfoFreeTypeVars = []
       }
 
-registerAnd :: Members '[Builtins, NameIdGen] r => FunctionDef -> Sem r ()
+registerAnd :: (Members '[Builtins, NameIdGen] r) => FunctionDef -> Sem r ()
 registerAnd f = do
   bool_ <- getBuiltinName (getLoc f) BuiltinBool
   true_ <- toExpression <$> getBuiltinName (getLoc f) BuiltinBoolTrue

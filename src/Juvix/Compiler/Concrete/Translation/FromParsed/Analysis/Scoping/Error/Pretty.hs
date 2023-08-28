@@ -10,10 +10,10 @@ import Juvix.Data.PPOutput
 import Juvix.Prelude
 import Text.EditDistance
 
-ppCode :: Scoped.PrettyPrint c => Scoped.Options -> c -> Doc Ann
+ppCode :: (Scoped.PrettyPrint c) => Scoped.Options -> c -> Doc Ann
 ppCode opts = code . ppMessage opts
 
-ppMessage :: Scoped.PrettyPrint c => Scoped.Options -> c -> Doc Ann
+ppMessage :: (Scoped.PrettyPrint c) => Scoped.Options -> c -> Doc Ann
 ppMessage = Scoped.docNoComments
 
 prettyError :: Doc Ann -> AnsiText

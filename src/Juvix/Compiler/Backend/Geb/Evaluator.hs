@@ -56,7 +56,7 @@ evalAndOutputMorphism' :: Env -> Morphism -> Either JuvixError Morphism
 evalAndOutputMorphism' env m = run . runError $ runReader env (evalAndOutputMorphism m)
 
 evalAndOutputMorphism ::
-  Members '[Reader Env, Error JuvixError] r =>
+  (Members '[Reader Env, Error JuvixError] r) =>
   Morphism ->
   Sem r Morphism
 evalAndOutputMorphism m = do
@@ -65,7 +65,7 @@ evalAndOutputMorphism m = do
 
 type EvalEffects r = Members '[Reader Env, Error EvalError] r
 
-eval :: EvalEffects r => Morphism -> Sem r GebValue
+eval :: (EvalEffects r) => Morphism -> Sem r GebValue
 eval morph =
   case morph of
     MorphismAbsurd x -> evalAbsurd x
@@ -83,13 +83,13 @@ eval morph =
     MorphismVar x -> evalVar x
     MorphismFail x -> evalFail x
 
-evalVar :: EvalEffects r => Var -> Sem r GebValue
+evalVar :: (EvalEffects r) => Var -> Sem r GebValue
 evalVar var = do
   ctx <- asks (^. envContext)
   let val = Context.lookup (var ^. varIndex) ctx
   return val
 
-evalAbsurd :: EvalEffects r => Absurd -> Sem r GebValue
+evalAbsurd :: (EvalEffects r) => Absurd -> Sem r GebValue
 evalAbsurd morph =
   throw
     EvalError
@@ -98,7 +98,7 @@ evalAbsurd morph =
         _evalErrorGebExpression = Just $ MorphismAbsurd morph
       }
 
-evalPair :: EvalEffects r => Pair -> Sem r GebValue
+evalPair :: (EvalEffects r) => Pair -> Sem r GebValue
 evalPair pair = do
   left <- eval $ pair ^. pairLeft
   right <- eval $ pair ^. pairRight
@@ -109,7 +109,7 @@ evalPair pair = do
           _pairRight = right
         }
 
-evalFirst :: EvalEffects r => First -> Sem r GebValue
+evalFirst :: (EvalEffects r) => First -> Sem r GebValue
 evalFirst f = do
   res <- eval $ f ^. firstValue
   case res of
@@ -122,7 +122,7 @@ evalFirst f = do
             _evalErrorGebExpression = Just (MorphismFirst f)
           }
 
-evalSecond :: EvalEffects r => Second -> Sem r GebValue
+evalSecond :: (EvalEffects r) => Second -> Sem r GebValue
 evalSecond s = do
   res <- eval $ s ^. secondValue
   case res of
@@ -135,7 +135,7 @@ evalSecond s = do
             _evalErrorGebExpression = Just (MorphismSecond s)
           }
 
-evalLeftInj :: EvalEffects r => LeftInj -> Sem r GebValue
+evalLeftInj :: (EvalEffects r) => LeftInj -> Sem r GebValue
 evalLeftInj s = do
   res <- eval $ s ^. leftInjValue
   return $
@@ -145,7 +145,7 @@ evalLeftInj s = do
           _leftInjRightType = s ^. leftInjRightType
         }
 
-evalRightInj :: EvalEffects r => RightInj -> Sem r GebValue
+evalRightInj :: (EvalEffects r) => RightInj -> Sem r GebValue
 evalRightInj s = do
   res <- eval $ s ^. rightInjValue
   return $
@@ -155,13 +155,13 @@ evalRightInj s = do
           _rightInjLeftType = s ^. rightInjLeftType
         }
 
-evalApp :: EvalEffects r => Application -> Sem r GebValue
+evalApp :: (EvalEffects r) => Application -> Sem r GebValue
 evalApp app = do
   arg <- eval (app ^. applicationRight)
   apply (app ^. applicationLeft) arg
 
 apply ::
-  EvalEffects r =>
+  (EvalEffects r) =>
   Morphism ->
   GebValue ->
   Sem r GebValue
@@ -182,13 +182,13 @@ apply fun' arg = do
             _evalErrorGebExpression = Nothing
           }
 
-evalExtendContext :: EvalEffects r => GebValue -> Morphism -> Sem r GebValue
+evalExtendContext :: (EvalEffects r) => GebValue -> Morphism -> Sem r GebValue
 evalExtendContext v m = do
   ctx <- asks (^. envContext)
   local (set envContext (Context.cons v ctx)) $
     eval m
 
-evalLambda :: EvalEffects r => Lambda -> Sem r GebValue
+evalLambda :: (EvalEffects r) => Lambda -> Sem r GebValue
 evalLambda lambda = do
   ctx <- asks (^. envContext)
   return $
@@ -198,7 +198,7 @@ evalLambda lambda = do
           _valueClosureEnv = ctx
         }
 
-evalCase :: EvalEffects r => Case -> Sem r GebValue
+evalCase :: (EvalEffects r) => Case -> Sem r GebValue
 evalCase c = do
   vCaseOn <- eval $ c ^. caseOn
   case vCaseOn of
@@ -213,7 +213,7 @@ evalCase c = do
           }
 
 evalBinop ::
-  EvalEffects r =>
+  (EvalEffects r) =>
   Binop ->
   Sem r GebValue
 evalBinop binop = do
@@ -265,7 +265,7 @@ evalBinop binop = do
               _evalErrorGebExpression = Just (MorphismBinop binop)
             }
 
-evalFail :: EvalEffects r => Failure -> Sem r GebValue
+evalFail :: (EvalEffects r) => Failure -> Sem r GebValue
 evalFail Failure {..} =
   throw
     EvalError

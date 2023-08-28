@@ -78,7 +78,7 @@ upToInternalReachability =
   upToInternalTyped >>= Internal.filterUnreachable
 
 upToCore ::
-  Members '[HighlightBuilder, Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, PathResolver] r =>
+  (Members '[HighlightBuilder, Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, PathResolver] r) =>
   Sem r Core.CoreResult
 upToCore = upToInternalReachability >>= Core.fromInternal
 
@@ -122,35 +122,35 @@ upToEval =
 -- Internal workflows
 --------------------------------------------------------------------------------
 
-coreToAsm :: Members '[Error JuvixError, Reader EntryPoint] r => Core.InfoTable -> Sem r Asm.InfoTable
+coreToAsm :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.InfoTable -> Sem r Asm.InfoTable
 coreToAsm = Core.toStripped >=> return . Asm.fromCore . Stripped.fromCore
 
-coreToMiniC :: Members '[Error JuvixError, Reader EntryPoint] r => Core.InfoTable -> Sem r C.MiniCResult
+coreToMiniC :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.InfoTable -> Sem r C.MiniCResult
 coreToMiniC = coreToAsm >=> asmToMiniC
 
-asmToMiniC :: Members '[Error JuvixError, Reader EntryPoint] r => Asm.InfoTable -> Sem r C.MiniCResult
+asmToMiniC :: (Members '[Error JuvixError, Reader EntryPoint] r) => Asm.InfoTable -> Sem r C.MiniCResult
 asmToMiniC = Asm.toReg >=> regToMiniC . Reg.fromAsm
 
-regToMiniC :: Member (Reader EntryPoint) r => Reg.InfoTable -> Sem r C.MiniCResult
+regToMiniC :: (Member (Reader EntryPoint) r) => Reg.InfoTable -> Sem r C.MiniCResult
 regToMiniC tab = do
   e <- ask
   return $ C.fromReg (Backend.getLimits (e ^. entryPointTarget) (e ^. entryPointDebug)) tab
 
-coreToGeb :: Members '[Error JuvixError, Reader EntryPoint] r => Geb.ResultSpec -> Core.InfoTable -> Sem r Geb.Result
+coreToGeb :: (Members '[Error JuvixError, Reader EntryPoint] r) => Geb.ResultSpec -> Core.InfoTable -> Sem r Geb.Result
 coreToGeb spec = Core.toGeb >=> return . uncurry (Geb.toResult spec) . Geb.fromCore
 
-coreToVampIR :: Members '[Error JuvixError, Reader EntryPoint] r => Core.InfoTable -> Sem r VampIR.Result
+coreToVampIR :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.InfoTable -> Sem r VampIR.Result
 coreToVampIR = Core.toVampIR >=> return . VampIR.toResult . VampIR.fromCore
 
-asmToMiniC' :: Members '[Error JuvixError, Reader Asm.Options] r => Asm.InfoTable -> Sem r C.MiniCResult
+asmToMiniC' :: (Members '[Error JuvixError, Reader Asm.Options] r) => Asm.InfoTable -> Sem r C.MiniCResult
 asmToMiniC' = mapError (JuvixError @Asm.AsmError) . Asm.toReg' >=> regToMiniC' . Reg.fromAsm
 
-regToMiniC' :: Member (Reader Asm.Options) r => Reg.InfoTable -> Sem r C.MiniCResult
+regToMiniC' :: (Member (Reader Asm.Options) r) => Reg.InfoTable -> Sem r C.MiniCResult
 regToMiniC' tab = do
   e <- ask
   return $ C.fromReg (e ^. Asm.optLimits) tab
 
-coreToVampIR' :: Members '[Error JuvixError, Reader Core.CoreOptions] r => Core.InfoTable -> Sem r VampIR.Result
+coreToVampIR' :: (Members '[Error JuvixError, Reader Core.CoreOptions] r) => Core.InfoTable -> Sem r VampIR.Result
 coreToVampIR' = Core.toVampIR' >=> return . VampIR.toResult . VampIR.fromCore
 
 --------------------------------------------------------------------------------

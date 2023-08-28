@@ -15,7 +15,7 @@ import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Lex
 import Juvix.Prelude
 
 checkTermination ::
-  Members '[Error TerminationError] r =>
+  (Members '[Error TerminationError] r) =>
   InfoTable ->
   Module ->
   Sem r ()
@@ -42,7 +42,7 @@ buildCallMap :: InfoTable -> Module -> CallMap
 buildCallMap infotable = run . execState mempty . runReader infotable . scanModule
 
 scanModule ::
-  Members '[State CallMap] r =>
+  (Members '[State CallMap] r) =>
   Module ->
   Sem r ()
 scanModule m = scanModuleBody (m ^. moduleBody)
@@ -108,12 +108,12 @@ scanLet l = do
   scanExpression (l ^. letExpression)
 
 -- NOTE that we forget about the arguments of the hosting function
-scanLetClause :: Members '[State CallMap] r => LetClause -> Sem r ()
+scanLetClause :: (Members '[State CallMap] r) => LetClause -> Sem r ()
 scanLetClause = \case
   LetFunDef d -> scanFunctionDef d
   LetMutualBlock m -> scanMutualBlockLet m
 
-scanMutualBlockLet :: Members '[State CallMap] r => MutualBlockLet -> Sem r ()
+scanMutualBlockLet :: (Members '[State CallMap] r) => MutualBlockLet -> Sem r ()
 scanMutualBlockLet MutualBlockLet {..} = mapM_ scanFunctionDef _mutualLet
 
 scanExpression ::

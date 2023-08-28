@@ -87,7 +87,7 @@ topModulePathToName (TopModulePath ms m) = case nonEmpty ms of
   Nothing -> NameUnqualified m
   Just ms' -> NameQualified (QualifiedName (SymbolPath ms') m)
 
-topModulePathToDottedPath :: IsString s => TopModulePath -> s
+topModulePathToDottedPath :: (IsString s) => TopModulePath -> s
 topModulePathToDottedPath (TopModulePath l r) =
   fromText . mconcat . intersperse "." . map (^. symbolText) $ l ++ [r]
 

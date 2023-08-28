@@ -16,7 +16,7 @@ mkShiftedPis' lhs rhs = foldl' go (shift (length lhs) rhs) (reverse (indexFrom 0
     go :: Type -> Indexed Type -> Type
     go t (Indexed i a) = mkPi' (shift i a) t
 
-matchToCaseNode :: forall r. Member InfoTableBuilder r => Node -> Sem r Node
+matchToCaseNode :: forall r. (Member InfoTableBuilder r) => Node -> Sem r Node
 matchToCaseNode n = case n of
   NMatch m -> do
     let branches = m ^. matchBranches
@@ -114,7 +114,7 @@ shiftEmbedded wrappingLevel m = umapN go
 -- This is because we have added 3 binders around the body, 6 auxillary binders,
 -- 1 binder for the lambda surrounding the case and 1 binder for the fail
 -- branch.
-compileMatchBranch :: forall r. Members '[InfoTableBuilder] r => Indexed MatchBranch -> Sem r Node
+compileMatchBranch :: forall r. (Members '[InfoTableBuilder] r) => Indexed MatchBranch -> Sem r Node
 compileMatchBranch (Indexed branchNum br) = do
   compiledBranch <- runReader initState (combineCompiledPatterns (map (compilePattern 0 branchNum patternsNum) patterns))
   return (mkShiftedLambdas branchNum shiftedPatternTypes ((compiledBranch ^. compiledPatMkNode) (wrapBody (compiledBranch ^. compiledPatBinders))))
@@ -195,7 +195,7 @@ extractOriginalBinders vs = updateBinders $ fmap getBinder <$> reverse (filterIn
 -- refers to its argument by index (n - 2) and so on. This is the purpose of the indexedPatterns and setting the CompileStateNode.
 --
 -- The patterns are then evaluated and combined from left to right in the list .
-combineCompiledPatterns :: forall r. Member (Reader CompileState) r => [Sem ((Reader CompileStateNode) ': r) CompiledPattern] -> Sem r CompiledPattern
+combineCompiledPatterns :: forall r. (Member (Reader CompileState) r) => [Sem ((Reader CompileStateNode) ': r) CompiledPattern] -> Sem r CompiledPattern
 combineCompiledPatterns ps = go indexedPatterns
   where
     indexedPatterns :: [Indexed (Sem ((Reader CompileStateNode) ': r) CompiledPattern)]
@@ -223,7 +223,7 @@ combineCompiledPatterns ps = go indexedPatterns
 -- (wildcard, binder or constructor) introduces an auxiliary binder.
 -- The arguments are then compiled recursively using a new CompileState context.
 -- The default case points to the next branch pattern.
-compilePattern :: forall r. Members '[Reader CompileState, Reader CompileStateNode, InfoTableBuilder] r => Int -> Int -> Int -> Pattern -> Sem r CompiledPattern
+compilePattern :: forall r. (Members '[Reader CompileState, Reader CompileStateNode, InfoTableBuilder] r) => Int -> Int -> Int -> Pattern -> Sem r CompiledPattern
 compilePattern baseShift branchNum numPatterns = \case
   PatWildcard w -> do
     auxPatternsNum <- length . filter isAuxiliaryBinder <$> asks (^. compileStateCompiledPattern . compiledPatBinders)
@@ -302,10 +302,10 @@ compilePattern baseShift branchNum numPatterns = \case
 failNode :: [Type] -> Node
 failNode tys = mkShiftedLambdas 0 tys (mkBuiltinApp' OpFail [mkConstant' (ConstString "Non-exhaustive patterns")])
 
-mkUniqueBinder' :: Member InfoTableBuilder r => Text -> Node -> Sem r Binder
+mkUniqueBinder' :: (Member InfoTableBuilder r) => Text -> Node -> Sem r Binder
 mkUniqueBinder' name ty = mkUniqueBinder name Nothing ty
 
-mkUniqueBinder :: Member InfoTableBuilder r => Text -> Maybe Location -> Node -> Sem r Binder
+mkUniqueBinder :: (Member InfoTableBuilder r) => Text -> Maybe Location -> Node -> Sem r Binder
 mkUniqueBinder name loc ty = do
   sym <- freshSymbol
   return
@@ -317,7 +317,7 @@ mkUniqueBinder name loc ty = do
 
 -- | The default node in a case expression.
 -- It points to the next branch above.
-defaultNode' :: Member (Reader CompileState) r => Int -> Sem r Node
+defaultNode' :: (Member (Reader CompileState) r) => Int -> Sem r Node
 defaultNode' numMatchValues = do
   numBindersAbove <- asks (^. compileStateBindersAbove)
   return

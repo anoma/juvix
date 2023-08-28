@@ -18,7 +18,7 @@ defaultOptions = Options
 ppDocDefault :: Scoped.AName -> Maybe Internal.Expression -> Maybe (Judoc 'Scoped) -> Maybe (Doc CodeAnn)
 ppDocDefault n ty = run . runReader defaultOptions . ppDoc n ty
 
-ppInternal :: Members '[Reader Options] r => Internal.PrettyCode c => c -> Sem r (Doc CodeAnn)
+ppInternal :: (Members '[Reader Options] r) => (Internal.PrettyCode c) => c -> Sem r (Doc CodeAnn)
 ppInternal c = do
   iopts <- mkOpts <$> ask
   return (Internal.runPrettyCode iopts c)
@@ -26,7 +26,7 @@ ppInternal c = do
     mkOpts :: Options -> Internal.Options
     mkOpts = const (Internal.defaultOptions)
 
-ppScoped :: Members '[Reader Options] r => Scoped.PrettyPrint c => c -> Sem r (Doc CodeAnn)
+ppScoped :: (Members '[Reader Options] r) => (Scoped.PrettyPrint c) => c -> Sem r (Doc CodeAnn)
 ppScoped c = do
   iopts <- mkOpts <$> ask
   return (Scoped.docNoComments iopts c)
@@ -34,7 +34,7 @@ ppScoped c = do
     mkOpts :: Options -> Scoped.Options
     mkOpts = const (Scoped.defaultOptions)
 
-ppDoc :: Members '[Reader Options] r => Scoped.AName -> Maybe Internal.Expression -> Maybe (Judoc 'Scoped) -> Sem r (Maybe (Doc CodeAnn))
+ppDoc :: (Members '[Reader Options] r) => Scoped.AName -> Maybe Internal.Expression -> Maybe (Judoc 'Scoped) -> Sem r (Maybe (Doc CodeAnn))
 ppDoc n ty j = do
   n' <- ppScoped n
   ty' <- fmap ((n' <+> kwColon) <+>) <$> mapM ppInternal ty
@@ -44,7 +44,7 @@ ppDoc n ty j = do
       (Just jty', Just jj') -> return (jty' <+> line <> line <> jj')
       _ -> ty' <|> j'
 
-ppJudoc :: forall r. Members '[Reader Options] r => Judoc 'Scoped -> Sem r (Doc CodeAnn)
+ppJudoc :: forall r. (Members '[Reader Options] r) => Judoc 'Scoped -> Sem r (Doc CodeAnn)
 ppJudoc (Judoc bs) = do
   void (ask @Options) -- to suppress redundant constraint warning
   ppGroups bs
@@ -52,7 +52,7 @@ ppJudoc (Judoc bs) = do
     ppGroups :: NonEmpty (JudocGroup 'Scoped) -> Sem r (Doc CodeAnn)
     ppGroups = fmap vsep . mapM ppGroup
 
-    ppBlocks :: Traversable l => l (JudocBlock 'Scoped) -> Sem r (Doc CodeAnn)
+    ppBlocks :: (Traversable l) => l (JudocBlock 'Scoped) -> Sem r (Doc CodeAnn)
     ppBlocks = fmap vsep2 . mapM ppBlock
 
     ppParagraphBlock :: JudocBlockParagraph 'Scoped -> Sem r (Doc CodeAnn)

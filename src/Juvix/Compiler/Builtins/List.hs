@@ -5,7 +5,7 @@ import Juvix.Compiler.Internal.Extra
 import Juvix.Compiler.Internal.Pretty
 import Juvix.Prelude
 
-registerListDef :: Member Builtins r => InductiveDef -> Sem r ()
+registerListDef :: (Member Builtins r) => InductiveDef -> Sem r ()
 registerListDef d = do
   unless (isSmallUniverse' (d ^. inductiveType)) (error "Lists should be in the small universe")
   registerBuiltin BuiltinList (d ^. inductiveName)
@@ -18,7 +18,7 @@ registerListDef d = do
       [v] -> v ^. inductiveParamName
       _ -> error "List should have exactly one type parameter"
 
-registerNil :: Member Builtins r => VarName -> ConstructorDef -> Sem r ()
+registerNil :: (Member Builtins r) => VarName -> ConstructorDef -> Sem r ()
 registerNil a d@ConstructorDef {..} = do
   let nil = _inductiveConstructorName
       ty = _inductiveConstructorType
@@ -27,7 +27,7 @@ registerNil a d@ConstructorDef {..} = do
   unless (ty === nilty) (error $ "nil has the wrong type " <> ppTrace ty <> " | " <> ppTrace nilty)
   registerBuiltin BuiltinListNil nil
 
-registerCons :: Member Builtins r => VarName -> ConstructorDef -> Sem r ()
+registerCons :: (Member Builtins r) => VarName -> ConstructorDef -> Sem r ()
 registerCons a d@ConstructorDef {..} = do
   let cons_ = _inductiveConstructorName
       ty = _inductiveConstructorType

@@ -22,7 +22,7 @@ data InfoTableBuilder m a where
 
 makeSem ''InfoTableBuilder
 
-registerKeyword :: Member InfoTableBuilder r => KeywordRef -> Sem r KeywordRef
+registerKeyword :: (Member InfoTableBuilder r) => KeywordRef -> Sem r KeywordRef
 registerKeyword r =
   r
     <$ registerItem
@@ -36,7 +36,7 @@ registerKeyword r =
       KeywordTypeJudoc -> ParsedTagJudoc
       KeywordTypeDelimiter -> ParsedTagDelimiter
 
-registerDelimiter :: Member InfoTableBuilder r => Interval -> Sem r ()
+registerDelimiter :: (Member InfoTableBuilder r) => Interval -> Sem r ()
 registerDelimiter i =
   registerItem
     ParsedItem
@@ -44,7 +44,7 @@ registerDelimiter i =
         _parsedTag = ParsedTagDelimiter
       }
 
-registerJudocText :: Member InfoTableBuilder r => Interval -> Sem r ()
+registerJudocText :: (Member InfoTableBuilder r) => Interval -> Sem r ()
 registerJudocText i =
   registerItem
     ParsedItem
@@ -52,7 +52,7 @@ registerJudocText i =
         _parsedTag = ParsedTagJudoc
       }
 
-registerPragmas :: Member InfoTableBuilder r => Interval -> Sem r ()
+registerPragmas :: (Member InfoTableBuilder r) => Interval -> Sem r ()
 registerPragmas i =
   registerItem
     ParsedItem
@@ -60,7 +60,7 @@ registerPragmas i =
         _parsedTag = ParsedTagComment
       }
 
-registerLiteral :: Member InfoTableBuilder r => LiteralLoc -> Sem r LiteralLoc
+registerLiteral :: (Member InfoTableBuilder r) => LiteralLoc -> Sem r LiteralLoc
 registerLiteral l =
   l
     <$ registerItem
@@ -81,13 +81,13 @@ build st =
       _infoParsedModules = st ^. stateModules
     }
 
-registerItem' :: Members '[HighlightBuilder] r => ParsedItem -> Sem r ()
+registerItem' :: (Members '[HighlightBuilder] r) => ParsedItem -> Sem r ()
 registerItem' i = modify' (over highlightParsed (i :))
 
 runParserInfoTableBuilderRepl :: BuilderState -> Sem (InfoTableBuilder ': r) a -> Sem r (BuilderState, a)
 runParserInfoTableBuilderRepl st = ignoreHighlightBuilder . runParserInfoTableBuilder' st . raiseUnder
 
-runParserInfoTableBuilder' :: Members '[HighlightBuilder] r => BuilderState -> Sem (InfoTableBuilder ': r) a -> Sem r (BuilderState, a)
+runParserInfoTableBuilder' :: (Members '[HighlightBuilder] r) => BuilderState -> Sem (InfoTableBuilder ': r) a -> Sem r (BuilderState, a)
 runParserInfoTableBuilder' s =
   runState s
     . reinterpret
@@ -107,7 +107,7 @@ runParserInfoTableBuilder' s =
                   }
       )
 
-runParserInfoTableBuilder :: Members '[HighlightBuilder] r => Sem (InfoTableBuilder ': r) a -> Sem r (BuilderState, InfoTable, a)
+runParserInfoTableBuilder :: (Members '[HighlightBuilder] r) => Sem (InfoTableBuilder ': r) a -> Sem r (BuilderState, InfoTable, a)
 runParserInfoTableBuilder m = do
   (builderState, x) <- runParserInfoTableBuilder' iniState m
   return (builderState, build builderState, x)

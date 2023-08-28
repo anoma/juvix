@@ -7,7 +7,7 @@ import Juvix.Compiler.Core.Language
 
 -- | Returns the node representing a function Int -> Int that transforms literal
 -- integers to builtin Int.
-literalIntToIntNode :: Member InfoTableBuilder r => Sem r Node
+literalIntToIntNode :: (Member InfoTableBuilder r) => Sem r Node
 literalIntToIntNode = do
   tab <- getInfoTable
   let intToNatSymM = tab ^. infoLiteralIntToNat

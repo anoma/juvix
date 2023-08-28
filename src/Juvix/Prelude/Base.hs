@@ -203,7 +203,7 @@ traverseM ::
   f (m a2)
 traverseM f = fmap join . traverse f
 
-composeM :: Monad m => Int -> (a -> m a) -> a -> m a
+composeM :: (Monad m) => Int -> (a -> m a) -> a -> m a
 composeM 0 _ a = return a
 composeM n f a = composeM (n - 1) f a >>= f
 
@@ -213,7 +213,7 @@ compose n f a = f (compose (n - 1) f a)
 
 --------------------------------------------------------------------------------
 
-mapReader :: Member (Reader e1) r => (e1 -> e2) -> Sem (Reader e2 ': r) a -> Sem r a
+mapReader :: (Member (Reader e1) r) => (e1 -> e2) -> Sem (Reader e2 ': r) a -> Sem r a
 mapReader f s = do
   e <- ask
   runReader (f e) s
@@ -258,7 +258,7 @@ isFirstLetter = \case
 --------------------------------------------------------------------------------
 
 -- | Returns the repeated elements
-findRepeated :: forall a. Ord a => [a] -> [a]
+findRepeated :: forall a. (Ord a) => [a] -> [a]
 findRepeated = mapMaybe rep . groupSortOn' id
   where
     rep :: [a] -> Maybe a
@@ -266,7 +266,7 @@ findRepeated = mapMaybe rep . groupSortOn' id
       a : _ : _ -> Just a
       _ -> Nothing
 
-allDifferent :: forall a. Ord a => [a] -> Bool
+allDifferent :: forall a. (Ord a) => [a] -> Bool
 allDifferent = null . findRepeated
 
 allSame :: forall t a. (Eq a, Foldable t) => t a -> Bool
@@ -277,7 +277,7 @@ allSame t
     h :: a
     h = foldr1 const t
 
-sconcatMap :: Semigroup c => (a -> c) -> NonEmpty a -> c
+sconcatMap :: (Semigroup c) => (a -> c) -> NonEmpty a -> c
 sconcatMap f = sconcat . fmap f
 
 mconcatMap :: (Monoid c, Foldable t) => (a -> c) -> t a -> c
@@ -357,16 +357,16 @@ zip4Exact _ _ _ _ = error "zip4Exact"
 nonEmptyUnsnoc :: NonEmpty a -> (Maybe (NonEmpty a), a)
 nonEmptyUnsnoc e = (NonEmpty.nonEmpty (NonEmpty.init e), NonEmpty.last e)
 
-nonEmpty' :: HasCallStack => [a] -> NonEmpty a
+nonEmpty' :: (HasCallStack) => [a] -> NonEmpty a
 nonEmpty' = fromJust . nonEmpty
 
 _nonEmpty :: Lens' [a] (Maybe (NonEmpty a))
 _nonEmpty f x = maybe [] toList <$> f (nonEmpty x)
 
-groupSortOn :: Ord b => (a -> b) -> [a] -> [NonEmpty a]
+groupSortOn :: (Ord b) => (a -> b) -> [a] -> [NonEmpty a]
 groupSortOn f = map nonEmpty' . List.groupSortOn f
 
-groupSortOn' :: Ord b => (a -> b) -> [a] -> [[a]]
+groupSortOn' :: (Ord b) => (a -> b) -> [a] -> [[a]]
 groupSortOn' = List.groupSortOn
 
 --------------------------------------------------------------------------------
@@ -420,7 +420,7 @@ data Indexed a = Indexed
 instance Functor Indexed where
   fmap f (Indexed i a) = Indexed i (f a)
 
-instance Hashable a => Hashable (Indexed a)
+instance (Hashable a) => Hashable (Indexed a)
 
 indexFrom :: Int -> [a] -> [Indexed a]
 indexFrom i = zipWith Indexed [i ..]
@@ -445,7 +445,7 @@ fromRightIO' pp = do
 fromRightIO :: (e -> Text) -> IO (Either e r) -> IO r
 fromRightIO pp = fromRightIO' (putStrLn . pp)
 
-optional_ :: Alternative m => m a -> m ()
+optional_ :: (Alternative m) => m a -> m ()
 optional_ = void . optional
 
 --------------------------------------------------------------------------------
@@ -511,7 +511,7 @@ flattenSCC = \case
 execOutputList :: Sem (Output o ': r) a -> Sem r [o]
 execOutputList = fmap fst . runOutputList
 
-whileJustM :: forall m a. Monad m => m (Maybe a) -> m [a]
+whileJustM :: forall m a. (Monad m) => m (Maybe a) -> m [a]
 whileJustM m = go []
   where
     go :: [a] -> m [a]
@@ -541,5 +541,5 @@ popFirstJust f = \case
     Nothing -> (h :) <$> popFirstJust f hs
     Just x -> (Just x, hs)
 
-uncurryF :: Functor f => (a -> b -> c) -> f (a, b) -> f c
+uncurryF :: (Functor f) => (a -> b -> c) -> f (a, b) -> f c
 uncurryF g input = uncurry g <$> input

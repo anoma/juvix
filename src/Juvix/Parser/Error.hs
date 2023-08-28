@@ -123,7 +123,7 @@ newtype DanglingJudoc = DanglingJudoc
   deriving stock (Show)
 
 instance ToGenericError DanglingJudoc where
-  genericError :: Member (Reader GenericOptions) r => DanglingJudoc -> Sem r GenericError
+  genericError :: (Member (Reader GenericOptions) r) => DanglingJudoc -> Sem r GenericError
   genericError DanglingJudoc {..} = do
     opts <- fromGenericOptions <$> ask
     let msg = "Dangling judoc comment:\n" <+> ppCode opts _danglingJudoc

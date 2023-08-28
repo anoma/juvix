@@ -62,7 +62,7 @@ fromInternal i = do
         _coreResultInternalTypedResult = i
       }
   where
-    f :: Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, State InternalTyped.FunctionsTable] r => Sem r ()
+    f :: (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, State InternalTyped.FunctionsTable] r) => Sem r ()
     f = do
       reserveLiteralIntToNatSymbol
       reserveLiteralIntToIntSymbol
@@ -89,14 +89,14 @@ fromInternalExpression res exp = do
 
 goModule ::
   forall r.
-  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable, MVisit] r =>
+  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable, MVisit] r) =>
   Internal.Module ->
   Sem r ()
 goModule = visit . Internal.ModuleIndex
 
 goModuleNoVisit ::
   forall r.
-  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable, MVisit] r =>
+  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable, MVisit] r) =>
   Internal.ModuleIndex ->
   Sem r ()
 goModuleNoVisit (Internal.ModuleIndex m) = do
@@ -834,7 +834,7 @@ addPatternVariableNames p lvl vars =
 
 goIden ::
   forall r.
-  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable] r =>
+  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable] r) =>
   Internal.Iden ->
   Sem r Node
 goIden i = do

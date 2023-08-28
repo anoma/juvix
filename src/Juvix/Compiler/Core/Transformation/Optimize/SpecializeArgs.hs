@@ -27,7 +27,7 @@ isArgSpecializable tab sym argNum = run $ execState True $ dmapNRM go body
     (lams, body) = unfoldLambdas nodeSym
     n = length lams
 
-    go :: Member (State Bool) r => Level -> Node -> Sem r Recur
+    go :: (Member (State Bool) r) => Level -> Node -> Sem r Recur
     go lvl node = case node of
       NApp {} ->
         let (h, args) = unfoldApps' node
@@ -50,7 +50,7 @@ isArgSpecializable tab sym argNum = run $ execState True $ dmapNRM go body
             return $ End node
       _ -> return $ Recur node
 
-convertNode :: forall r. Member InfoTableBuilder r => InfoTable -> Node -> Sem r Node
+convertNode :: forall r. (Member InfoTableBuilder r) => InfoTable -> Node -> Sem r Node
 convertNode tab = dmapLRM go
   where
     go :: BinderList Binder -> Node -> Sem r Recur

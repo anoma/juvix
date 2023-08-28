@@ -43,7 +43,7 @@ comma = symbol ","
 symbol :: (MonadParsec e Text m) => Text -> m ()
 symbol = void . lexeme . P.chunk
 
-transformationLike :: MonadParsec e Text m => m TransformationLikeId
+transformationLike :: (MonadParsec e Text m) => m TransformationLikeId
 transformationLike =
   TransformationId <$> transformation
     <|> PipelineId <$> parsePipeline
@@ -97,10 +97,10 @@ transformationText = \case
   OptPhaseVampIR -> strOptPhaseVampIR
   OptPhaseMain -> strOptPhaseMain
 
-parsePipeline :: MonadParsec e Text m => m PipelineId
+parsePipeline :: (MonadParsec e Text m) => m PipelineId
 parsePipeline = P.choice [symbol (pipelineText t) $> t | t <- allElements]
 
-transformation :: MonadParsec e Text m => m TransformationId
+transformation :: (MonadParsec e Text m) => m TransformationId
 transformation = P.choice [symbol (transformationText t) $> t | t <- allElements]
 
 allStrings :: [Text]

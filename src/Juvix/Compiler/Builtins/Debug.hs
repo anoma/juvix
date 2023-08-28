@@ -5,7 +5,7 @@ import Juvix.Compiler.Builtins.Effect
 import Juvix.Compiler.Internal.Extra
 import Juvix.Prelude
 
-registerTrace :: Members '[Builtins, NameIdGen] r => AxiomDef -> Sem r ()
+registerTrace :: (Members '[Builtins, NameIdGen] r) => AxiomDef -> Sem r ()
 registerTrace f = do
   let ftype = f ^. axiomType
       u = ExpressionUniverse smallUniverseNoLoc
@@ -17,7 +17,7 @@ registerTrace f = do
     (error "trace must be of type {A : Type} -> A -> A")
   registerBuiltin BuiltinTrace (f ^. axiomName)
 
-registerFail :: Members '[Builtins, NameIdGen] r => AxiomDef -> Sem r ()
+registerFail :: (Members '[Builtins, NameIdGen] r) => AxiomDef -> Sem r ()
 registerFail f = do
   let ftype = f ^. axiomType
       u = ExpressionUniverse smallUniverseNoLoc

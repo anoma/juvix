@@ -17,7 +17,7 @@ data DependencyInfo n = DependencyInfo
 
 makeLenses ''DependencyInfo
 
-instance Pretty n => Pretty (DependencyInfo n) where
+instance (Pretty n) => Pretty (DependencyInfo n) where
   pretty n = pretty (map helper (n ^. depInfoEdgeList))
     where
       helper :: (n, n, [n]) -> (n, [n])
@@ -62,10 +62,10 @@ isPath depInfo n n' = Graph.path (depInfo ^. depInfoGraph) v v'
     v = fromJust $ (depInfo ^. depInfoVertexFromName) n
     v' = fromJust $ (depInfo ^. depInfoVertexFromName) n'
 
-buildSCCs :: Ord n => DependencyInfo n -> [SCC n]
+buildSCCs :: (Ord n) => DependencyInfo n -> [SCC n]
 buildSCCs = Graph.stronglyConnComp . (^. depInfoEdgeList)
 
-isCyclic :: Ord n => DependencyInfo n -> Bool
+isCyclic :: (Ord n) => DependencyInfo n -> Bool
 isCyclic = any (\case CyclicSCC _ -> True; _ -> False) . buildSCCs
 
 nodesOnCycles :: forall n. (Hashable n, Ord n) => DependencyInfo n -> HashSet n

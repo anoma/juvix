@@ -62,7 +62,7 @@ formattedFileInfoContentsText = to infoToPlainText
 -- contents of the file.
 format ::
   forall r.
-  Members '[ScopeEff, Files, Output FormattedFileInfo] r =>
+  (Members '[ScopeEff, Files, Output FormattedFileInfo] r) =>
   Path Abs File ->
   Sem r FormatResult
 format p = do
@@ -88,7 +88,7 @@ format p = do
 -- subdirectories that contain a juvix.yaml file.
 formatProject ::
   forall r.
-  Members '[ScopeEff, Files, Output FormattedFileInfo] r =>
+  (Members '[ScopeEff, Files, Output FormattedFileInfo] r) =>
   Path Abs Dir ->
   Sem r FormatResult
 formatProject p = do
@@ -105,14 +105,14 @@ formatProject p = do
       subRes <- combineResults <$> mapM format juvixFiles
       return (res <> subRes, RecurseFilter (\hasJuvixYaml d -> not hasJuvixYaml && not (isHiddenDirectory d)))
 
-formatPath :: Members '[Reader Text, ScopeEff] r => Path Abs File -> Sem r (NonEmpty AnsiText)
+formatPath :: (Members '[Reader Text, ScopeEff] r) => Path Abs File -> Sem r (NonEmpty AnsiText)
 formatPath p = do
   res <- scopeFile p
   formatScoperResult res
 
 formatStdin ::
   forall r.
-  Members '[ScopeEff, Files, Output FormattedFileInfo] r =>
+  (Members '[ScopeEff, Files, Output FormattedFileInfo] r) =>
   Sem r FormatResult
 formatStdin = do
   res <- scopeStdin
@@ -123,7 +123,7 @@ formatStdin = do
 
 formatResultFromContents ::
   forall r.
-  Members '[Reader Text, Output FormattedFileInfo] r =>
+  (Members '[Reader Text, Output FormattedFileInfo] r) =>
   NonEmpty AnsiText ->
   Path Abs File ->
   Sem r FormatResult
@@ -144,7 +144,7 @@ formatResultFromContents formattedContents filepath = do
         )
       return res
 
-formatScoperResult :: Members '[Reader Text] r => Scoper.ScoperResult -> Sem r (NonEmpty AnsiText)
+formatScoperResult :: (Members '[Reader Text] r) => Scoper.ScoperResult -> Sem r (NonEmpty AnsiText)
 formatScoperResult res = do
   let cs = res ^. Scoper.comments
   formattedModules <-
@@ -162,7 +162,7 @@ formatScoperResult res = do
     Nothing ->
       return formattedModules
   where
-    formatTopModule :: Members '[Reader Comments] r => Module 'Scoped 'ModuleTop -> Sem r AnsiText
+    formatTopModule :: (Members '[Reader Comments] r) => Module 'Scoped 'ModuleTop -> Sem r AnsiText
     formatTopModule m = do
       cs <- ask
       return (ppOutDefault cs m)
