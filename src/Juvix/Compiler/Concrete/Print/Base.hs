@@ -201,7 +201,19 @@ instance (SingI s) => PrettyPrint (PatternAtoms s) where
   ppCode (PatternAtoms ps _) = hsep (ppCode <$> ps)
 
 instance (SingI s) => PrettyPrint (ExpressionAtoms s) where
-  ppCode as = hsep (ppCode <$> as ^. expressionAtoms)
+  ppCode ::
+    forall r.
+    (Members '[ExactPrint, Reader Options] r) =>
+    ExpressionAtoms s ->
+    Sem r ()
+  ppCode as = go (toList $ as ^. expressionAtoms)
+    where
+      go :: [ExpressionAtom s] -> Sem r ()
+      go = \case
+        [] -> return ()
+        [x] -> ppCode x
+        (x : xs@(AtomRecordUpdate {} : _)) -> ppCode x >> go xs
+        (x : xs) -> ppCode x >> space >> go xs
 
 instance (SingI s) => PrettyPrint (Initializer s) where
   ppCode Initializer {..} = do
