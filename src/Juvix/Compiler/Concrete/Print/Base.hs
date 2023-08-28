@@ -833,7 +833,7 @@ instance (SingI s) => PrettyPrint (RecordPattern s) where
   ppCode r = do
     let c = ppIdentifierType (r ^. recordPatternConstructor)
         items = sepSemicolon (map ppCode (r ^. recordPatternItems))
-    c <> noLoc C.kwAt <> braces items
+    c <> noLoc C.kwAt <> align (braces items)
 
 instance PrettyPrint Pattern where
   ppCode = \case
