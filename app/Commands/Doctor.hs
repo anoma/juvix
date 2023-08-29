@@ -129,10 +129,10 @@ documentedCheck ::
   ([Text] -> Sem r ()) -> DocumentedWarning -> Sem r ()
 documentedCheck check w = check (renderDocumentedWarning w)
 
-findClangPath :: Members DoctorEff r => Sem r (Maybe ClangPath)
+findClangPath :: (Members DoctorEff r) => Sem r (Maybe ClangPath)
 findClangPath = findClang
 
-checkClang :: forall r. Members DoctorEff r => Bool -> Sem r ()
+checkClang :: forall r. (Members DoctorEff r) => Bool -> Sem r ()
 checkClang printVerbose = do
   heading "Checking for clang..."
   clangPath <- findClangPath

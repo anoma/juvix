@@ -152,14 +152,14 @@ registerDependencies' = do
   e <- ask @EntryPoint
   isGlobal <- asks (^. entryPointPackageGlobal)
   if
-    | isGlobal -> do
-        glob <- globalRoot
-        let globDep = mkPathDependency (toFilePath glob)
-            globalPackageFile = mkPackageFilePath glob
-        addDependency' (Just e) (mkPackageDependencyInfo globalPackageFile globDep)
-    | otherwise -> do
-        let f = mkPackageFilePath (e ^. entryPointRoot)
-        addDependency' (Just e) (mkPackageDependencyInfo f (mkPathDependency (toFilePath (e ^. entryPointRoot))))
+      | isGlobal -> do
+          glob <- globalRoot
+          let globDep = mkPathDependency (toFilePath glob)
+              globalPackageFile = mkPackageFilePath glob
+          addDependency' (Just e) (mkPackageDependencyInfo globalPackageFile globDep)
+      | otherwise -> do
+          let f = mkPackageFilePath (e ^. entryPointRoot)
+          addDependency' (Just e) (mkPackageDependencyInfo f (mkPathDependency (toFilePath (e ^. entryPointRoot))))
 
 addDependency' ::
   (Members '[State ResolverState, Reader ResolverEnv, Files, Error Text, Error DependencyError, GitClone] r) =>
@@ -222,8 +222,8 @@ expectedPath' actualPath m = do
   root <- asks (^. envRoot)
   msingle <- asks (^. envSingleFile)
   if
-    | msingle == Just actualPath -> return Nothing
-    | otherwise -> return (Just (root <//> topModulePathToRelativePath' m))
+      | msingle == Just actualPath -> return Nothing
+      | otherwise -> return (Just (root <//> topModulePathToRelativePath' m))
 
 re ::
   forall r a.

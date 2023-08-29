@@ -50,10 +50,9 @@ instance PrettyCodeAnn DependencyErrorGit where
         <> "The directory"
         <+> code (pretty (d ^. dependencyErrorGitCloneDir))
         <+> "is not a valid git clone."
-        <> line
-        <> "Try running"
+          <> line
+          <> "Try running"
         <+> code "juvix clean"
-
     NoSuchRef ref ->
       prefix
         <> "The git ref:"
@@ -105,14 +104,14 @@ instance PrettyCodeAnn MissingModule where
     "The module"
       <+> pcode _missingModule
       <+> "does not exist."
-      <> line
-      <> suggestion
+        <> line
+        <> suggestion
     where
       suggestion :: Doc Ann
       suggestion =
         "It should be in"
           <+> pcode (_missingInfo ^. packageRoot <//> topModulePathToRelativePath' _missingModule)
-          <> dependenciesSuggestion
+            <> dependenciesSuggestion
 
       dependenciesSuggestion :: Doc Ann
       dependenciesSuggestion

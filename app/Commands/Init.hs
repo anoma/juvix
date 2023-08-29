@@ -39,7 +39,7 @@ checkNotInProject =
       say "You are already in a Juvix project"
       embed exitFailure
 
-getPackage :: forall r. Members '[Embed IO] r => Sem r Package
+getPackage :: forall r. (Members '[Embed IO] r) => Sem r Package
 getPackage = do
   tproj <- getProjName
   say "Write the version of your project [leave empty for 0.0.0]"

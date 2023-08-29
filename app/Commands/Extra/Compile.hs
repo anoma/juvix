@@ -75,7 +75,7 @@ prepareRuntime buildDir o = do
       ensureDir (includeDir <//> parent filePath)
       BS.writeFile (toFilePath (includeDir <//> filePath)) contents
 
-outputFile :: forall r. Member App r => CompileOptions -> Path Abs File -> Sem r (Path Abs File)
+outputFile :: forall r. (Member App r) => CompileOptions -> Path Abs File -> Sem r (Path Abs File)
 outputFile opts inputFile =
   maybe defaultOutputFile fromAppPathFile (opts ^? compileOutputFile . _Just)
   where
@@ -208,10 +208,10 @@ wasiArgs buildDir o outfile inputFile sysrootPath =
              | otherwise -> []
        )
 
-findClangOnPath :: Member (Embed IO) r => Sem r (Maybe (Path Abs File))
+findClangOnPath :: (Member (Embed IO) r) => Sem r (Maybe (Path Abs File))
 findClangOnPath = findExecutable $(mkRelFile "clang")
 
-findClangUsingEnvVar :: forall r. Member (Embed IO) r => Sem r (Maybe (Path Abs File))
+findClangUsingEnvVar :: forall r. (Member (Embed IO) r) => Sem r (Maybe (Path Abs File))
 findClangUsingEnvVar = do
   p <- clangBinPath
   join <$> mapM checkExecutable p
@@ -237,7 +237,7 @@ extractClangPath = \case
   ClangEnvVarPath p -> p
 
 --- Try searching clang JUVIX_LLVM_DIST_PATH. Otherwise use the PATH
-findClang :: Member (Embed IO) r => Sem r (Maybe ClangPath)
+findClang :: (Member (Embed IO) r) => Sem r (Maybe ClangPath)
 findClang = do
   envVarPath <- findClangUsingEnvVar
   case envVarPath of
