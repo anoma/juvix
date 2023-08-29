@@ -74,13 +74,13 @@ re = reinterpret $ \case
   CheckTerminationShallow m -> checkTerminationShallow' m
   FunctionTermination m -> functionTermination' m
 
--- TODO if the function is missing, can we assume that it is not recursive?
+-- | If the function is missing, can we assume that it is not recursive
 functionTermination' ::
   forall r.
   (Members '[State TerminationState] r) =>
   FunctionName ->
   Sem r IsTerminating
-functionTermination' f = gets (^?! terminationTable . at f . _Just)
+functionTermination' f = fromMaybe TerminatingChecked <$> gets (^. terminationTable . at f)
 
 -- | Returns the set of non-terminating functions. Does not go into imports.
 checkTerminationShallow' ::
