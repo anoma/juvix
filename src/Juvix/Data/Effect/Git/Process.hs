@@ -27,7 +27,7 @@ runGitCmd args = do
                     }
                 )
             )
-        ExitSuccess -> return ""
+        ExitSuccess -> return (res ^. processResultStdout)
 
 -- | Run a git command within a directory, throws an error if the directory is not a valid clone
 runGitCmdInDir :: (Members '[Process, Error GitProcessError, Reader CloneDir] r) => [Text] -> Sem r Text
