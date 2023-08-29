@@ -40,9 +40,9 @@ import Juvix.Data.Effect.Git
 import Juvix.Data.Effect.Process
 import Juvix.Prelude
 
-type PipelineEff = '[PathResolver, GitClone, Error GitProcessError, Process, Log, Reader EntryPoint, Files, NameIdGen, Builtins, Error JuvixError, HighlightBuilder, Embed IO]
+type PipelineEff = '[PathResolver, Error DependencyError, GitClone, Error GitProcessError, Process, Log, Reader EntryPoint, Files, NameIdGen, Builtins, Error JuvixError, HighlightBuilder, Embed IO]
 
-type TopPipelineEff = '[PathResolver, GitClone, Error GitProcessError, Process, Log, Reader EntryPoint, Files, NameIdGen, Builtins, State Artifacts, Error JuvixError, HighlightBuilder, Embed IO]
+type TopPipelineEff = '[PathResolver, Error DependencyError, GitClone, Error GitProcessError, Process, Log, Reader EntryPoint, Files, NameIdGen, Builtins, State Artifacts, Error JuvixError, HighlightBuilder, Embed IO]
 
 --------------------------------------------------------------------------------
 -- Workflows
@@ -180,6 +180,7 @@ runIOEitherHelper entry =
     . runProcessIO
     . mapError (JuvixError @GitProcessError)
     . runGitProcess
+    . mapError (JuvixError @DependencyError)
     . runPathResolverPipe
 
 runIO :: GenericOptions -> EntryPoint -> Sem PipelineEff a -> IO (ResolverState, a)
@@ -221,6 +222,7 @@ corePipelineIOEither entry = do
       . mapError (JuvixError @GitProcessError)
       . runProcessIO
       . runGitProcess
+      . mapError (JuvixError @DependencyError)
       . runPathResolverArtifacts
       $ upToCore
   return $ case eith of

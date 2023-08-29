@@ -5,7 +5,37 @@ import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Base
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.PackageInfo
 import Juvix.Compiler.Pipeline.Package
 import Juvix.Data.CodeAnn
+import Juvix.Data.Effect.Git
+import Juvix.Data.PPOutput
 import Juvix.Prelude
+
+newtype DependencyErrorCause = GitDependencyError GitError
+
+data DependencyError = DependencyError
+  { _dependencyErrorPackageFile :: Path Abs File,
+    _dependencyErrorCause :: DependencyErrorCause
+  }
+
+makeLenses ''DependencyError
+
+instance ToGenericError DependencyError where
+  genericError e =
+    return
+      ( GenericError
+          { _genericErrorMessage = ppOutput (pretty (msg (e ^. dependencyErrorCause))),
+            _genericErrorLoc = i,
+            _genericErrorIntervals = [i]
+          }
+      )
+    where
+      i = getLoc e
+      msg :: DependencyErrorCause -> Text
+      msg (GitDependencyError g) = case g of
+        NotAClone -> "The clone directory is not a valid git clone"
+        NoSuchRef {} -> "The ref does not exist in the clone"
+
+instance HasLoc DependencyError where
+  getLoc e = singletonInterval (mkInitialLoc (e ^. dependencyErrorPackageFile))
 
 data PathResolverError
   = ErrDependencyConflict DependencyConflict

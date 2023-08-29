@@ -55,6 +55,7 @@ testDescr PosTest {..} = helper renderCodeNew
                         . runProcessIO
                         . mapError (JuvixError @GitProcessError)
                         . runGitProcess
+                        . mapError (JuvixError @DependencyError)
                         . runPathResolverPipe
                     evalHelper :: HashMap (Path Abs File) Text -> Sem PipelineEff a -> IO a
                     evalHelper files = fmap snd . runHelper files

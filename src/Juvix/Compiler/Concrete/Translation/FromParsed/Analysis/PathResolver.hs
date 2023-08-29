@@ -84,7 +84,7 @@ mkPackage mpackageEntry _packageRoot = do
 
 mkPackageInfo ::
   forall r.
-  (Members '[Files, Error Text, Reader ResolverEnv, GitClone] r) =>
+  (Members '[Files, Error Text, Reader ResolverEnv, Error DependencyError, GitClone] r) =>
   Maybe EntryPoint ->
   Path Abs Dir ->
   Sem r PackageInfo
@@ -113,7 +113,7 @@ dependencyCached p = HashMap.member p <$> gets (^. resolverPackages)
 withPathFile :: (Members '[PathResolver] r) => TopModulePath -> (Either PathResolverError (Path Abs File) -> Sem r a) -> Sem r a
 withPathFile m f = withPath m (f . mapRight (uncurry (<//>)))
 
-getDependencyPath :: forall r. (Members '[Reader ResolverEnv, Files, GitClone] r) => PackageDependencyInfo -> Sem r (Path Abs Dir)
+getDependencyPath :: forall r. (Members '[Reader ResolverEnv, Files, Error DependencyError, GitClone] r) => PackageDependencyInfo -> Sem r (Path Abs Dir)
 getDependencyPath i = case i ^. packageDepdendencyInfoDependency of
   DependencyPath p -> do
     r <- asks (^. envRoot)
@@ -123,12 +123,24 @@ getDependencyPath i = case i ^. packageDepdendencyInfoDependency of
     let cloneDir = r <//> relDependenciesDir <//> relDir (T.unpack (g ^. gitDependencyName))
     let cloneArgs = CloneArgs {_cloneArgsCloneDir = cloneDir, _cloneArgsRepoUrl = g ^. gitDependencyUrl}
     scoped @CloneArgs @Git cloneArgs $ do
-      eitherM (const (error "fetch error")) return fetch
-      eitherM (const (error "checkout error")) return (checkout (g ^. gitDependencyRef))
+      fetch >>= checkErr
+      checkout (g ^. gitDependencyRef) >>= checkErr
       return cloneDir
+    where
+      checkErr :: Either GitError a -> Sem (Git ': r) a
+      checkErr =
+        either
+          ( \c ->
+              throw
+                DependencyError
+                  { _dependencyErrorCause = GitDependencyError c,
+                    _dependencyErrorPackageFile = i ^. packageDependencyInfoPackageFile
+                  }
+          )
+          return
 
 registerDependencies' ::
-  (Members '[Reader EntryPoint, State ResolverState, Reader ResolverEnv, Files, Error Text, GitClone] r) =>
+  (Members '[Reader EntryPoint, State ResolverState, Reader ResolverEnv, Files, Error Text, Error DependencyError, GitClone] r) =>
   Sem r ()
 registerDependencies' = do
   e <- ask @EntryPoint
@@ -144,14 +156,14 @@ registerDependencies' = do
           addDependency' (Just e) (mkPackageDependencyInfo f (mkPathDependency (toFilePath (e ^. entryPointRoot))))
 
 addDependency' ::
-  (Members '[State ResolverState, Reader ResolverEnv, Files, Error Text, GitClone] r) =>
+  (Members '[State ResolverState, Reader ResolverEnv, Files, Error Text, Error DependencyError, GitClone] r) =>
   Maybe EntryPoint ->
   PackageDependencyInfo ->
   Sem r ()
 addDependency' me = addDependencyHelper me
 
 addDependencyHelper ::
-  (Members '[State ResolverState, Reader ResolverEnv, Files, Error Text, GitClone] r) =>
+  (Members '[State ResolverState, Reader ResolverEnv, Files, Error Text, Error DependencyError, GitClone] r) =>
   Maybe EntryPoint ->
   PackageDependencyInfo ->
   Sem r ()
@@ -209,7 +221,7 @@ expectedPath' actualPath m = do
 
 re ::
   forall r a.
-  (Members '[Reader EntryPoint, Files, Error Text, GitClone] r) =>
+  (Members '[Reader EntryPoint, Files, Error Text, Error DependencyError, GitClone] r) =>
   Sem (PathResolver ': r) a ->
   Sem (Reader ResolverEnv ': State ResolverState ': r) a
 re = reinterpret2H helper
@@ -232,13 +244,13 @@ re = reinterpret2H helper
               Right (r, _) -> r
         raise (evalPathResolver' st' root' (a' x'))
 
-evalPathResolver' :: (Members '[Reader EntryPoint, Files, Error Text, GitClone] r) => ResolverState -> Path Abs Dir -> Sem (PathResolver ': r) a -> Sem r a
+evalPathResolver' :: (Members '[Reader EntryPoint, Files, Error Text, Error DependencyError, GitClone] r) => ResolverState -> Path Abs Dir -> Sem (PathResolver ': r) a -> Sem r a
 evalPathResolver' st root = fmap snd . runPathResolver' st root
 
-runPathResolver :: (Members '[Reader EntryPoint, Files, Error Text, GitClone] r) => Path Abs Dir -> Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
+runPathResolver :: (Members '[Reader EntryPoint, Files, Error Text, Error DependencyError, GitClone] r) => Path Abs Dir -> Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
 runPathResolver = runPathResolver' iniResolverState
 
-runPathResolver' :: (Members '[Reader EntryPoint, Files, Error Text, GitClone] r) => ResolverState -> Path Abs Dir -> Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
+runPathResolver' :: (Members '[Reader EntryPoint, Files, Error Text, Error DependencyError, GitClone] r) => ResolverState -> Path Abs Dir -> Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
 runPathResolver' st root x = do
   e <- ask
   let _envSingleFile :: Maybe (Path Abs File)
@@ -253,15 +265,15 @@ runPathResolver' st root x = do
           }
   runState st (runReader env (re x))
 
-runPathResolverPipe' :: (Members '[Files, Reader EntryPoint, GitClone] r) => ResolverState -> Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
+runPathResolverPipe' :: (Members '[Files, Reader EntryPoint, Error DependencyError, GitClone] r) => ResolverState -> Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
 runPathResolverPipe' iniState a = do
   r <- asks (^. entryPointResolverRoot)
   runError (runPathResolver' iniState r (raiseUnder a)) >>= either error return
 
-runPathResolverPipe :: (Members '[Files, Reader EntryPoint, GitClone] r) => Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
+runPathResolverPipe :: (Members '[Files, Reader EntryPoint, Error DependencyError, GitClone] r) => Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
 runPathResolverPipe a = do
   r <- asks (^. entryPointResolverRoot)
   runError (runPathResolver r (raiseUnder a)) >>= either error return
 
-evalPathResolverPipe :: (Members '[Files, Reader EntryPoint, GitClone] r) => Sem (PathResolver ': r) a -> Sem r a
+evalPathResolverPipe :: (Members '[Files, Reader EntryPoint, Error DependencyError, GitClone] r) => Sem (PathResolver ': r) a -> Sem r a
 evalPathResolverPipe = fmap snd . runPathResolverPipe

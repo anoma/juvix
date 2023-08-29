@@ -202,6 +202,7 @@ compileReplInputIO fp txt =
     . mapError (JuvixError @GitProcessError)
     . runProcessIO
     . runGitProcess
+    . mapError (JuvixError @DependencyError)
     . runPathResolverArtifacts
     $ do
       p <- parseReplInput fp txt
