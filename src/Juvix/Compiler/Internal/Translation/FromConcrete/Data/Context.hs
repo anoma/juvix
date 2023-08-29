@@ -11,7 +11,6 @@ import Juvix.Compiler.Internal.Data.InfoTable
 import Juvix.Compiler.Internal.Data.NameDependencyInfo
 import Juvix.Compiler.Internal.Language
 import Juvix.Compiler.Internal.Language qualified as Internal
-import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker
 import Juvix.Compiler.Pipeline.EntryPoint qualified as E
 import Juvix.Prelude
 
@@ -29,7 +28,6 @@ data InternalResult = InternalResult
 
 makeLenses ''InternalResult
 makeLenses ''ModulesCache
-makeLenses ''NonTerminating
 
 internalResultEntryPoint :: Lens' InternalResult E.EntryPoint
 internalResultEntryPoint = resultScoper . Concrete.resultParserResult . Concrete.resultEntry

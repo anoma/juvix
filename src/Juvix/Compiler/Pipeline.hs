@@ -259,6 +259,7 @@ corePipelineIOEither entry = do
                 _artifactParsing = parserResult ^. P.resultBuilderState,
                 _artifactInternalModuleCache = internalResult ^. Internal.resultModulesCache,
                 _artifactInternalTypedTable = typedTable,
+                _artifactTerminationState = typedResult ^. Typed.resultTermination,
                 _artifactCoreTable = coreTable,
                 _artifactScopeTable = resultScoperTable,
                 _artifactScopeExports = scopedResult ^. Scoped.resultExports,

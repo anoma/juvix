@@ -1,52 +1,32 @@
 module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker
   ( Termination,
-    NonTerminating,
     buildCallMap,
     checkTerminationShallow,
     runTermination,
     evalTermination,
     execTermination,
-    iniTerminationState,
     functionIsTerminating,
-    TerminationState,
+    module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Data.TerminationState,
   )
 where
 
 import Data.HashMap.Internal.Strict qualified as HashMap
-import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Internal.Language as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.FunctionCall
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Data
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Data.TerminationState
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Error
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.LexOrder
 import Juvix.Prelude
 
-newtype NonTerminating = NonTerminating {_nonTerminating :: HashSet FunctionName}
-  deriving newtype (Monoid, Semigroup)
-
-makeLenses ''NonTerminating
-
 class Scannable a where
   buildCallMap :: a -> CallMap
-
-data IsTerminating
-  = -- | Has been checked for termination.
-    TerminatingChecked
-  | -- | Has been checked for termination but failed.
-    TerminatingFailed
-  | -- | Has been marked as terminating in the source code.
-    TerminatingMarked
-
-data TerminationState = TerminationState
-  {
-  }
 
 data Termination m a where
   CheckTerminationShallow :: (Scannable a) => a -> Termination m ()
   FunctionTermination :: FunctionRef -> Termination m IsTerminating
 
 makeSem ''Termination
-makeLenses ''TerminationState
 
 functionIsTerminating :: (Members '[Termination] r) => FunctionRef -> Sem r Bool
 functionIsTerminating = fmap terminates . functionTermination
@@ -57,14 +37,16 @@ functionIsTerminating = fmap terminates . functionTermination
       TerminatingChecked -> True
       TerminatingFailed -> False
 
-iniTerminationState :: TerminationState
-iniTerminationState =
-  TerminationState
-    {
-    }
-
-runTermination :: (Members '[Error JuvixError] r) => TerminationState -> Sem (Termination ': r) a -> Sem r (TerminationState, a)
-runTermination = undefined
+runTermination :: forall r a. (Members '[Error JuvixError] r) => TerminationState -> Sem (Termination ': r) a -> Sem r (TerminationState, a)
+runTermination ini m = do
+  res <- runState ini (re m)
+  checkNonTerminating (fst res)
+  return res
+  where
+    checkNonTerminating :: TerminationState -> Sem r ()
+    checkNonTerminating i =
+      whenJust (i ^. terminationFailedSet . to (nonEmpty . toList)) $
+        throw . JuvixError . ErrNoLexOrder . NoLexOrder
 
 evalTermination :: (Members '[Error JuvixError] r) => TerminationState -> Sem (Termination ': r) a -> Sem r a
 evalTermination s = fmap snd . runTermination s
@@ -87,29 +69,43 @@ instance Scannable Expression where
       . execState emptyCallMap
       . scanTopExpression
 
+re :: Sem (Termination ': r) a -> Sem (State TerminationState ': r) a
+re = reinterpret $ \case
+  CheckTerminationShallow m -> checkTerminationShallow' m
+  FunctionTermination m -> functionTermination' m
+
+-- TODO if the function is missing, can we assume that it is not recursive?
+functionTermination' ::
+  forall r.
+  (Members '[State TerminationState] r) =>
+  FunctionName ->
+  Sem r IsTerminating
+functionTermination' f = gets (^?! terminationTable . at f . _Just)
+
 -- | Returns the set of non-terminating functions. Does not go into imports.
-helper ::
-  (Scannable m) =>
+checkTerminationShallow' ::
+  forall r m.
+  (Members '[State TerminationState] r, Scannable m) =>
   m ->
-  NonTerminating
-helper topModule = do
+  Sem r ()
+checkTerminationShallow' topModule = do
   let callmap = buildCallMap topModule
       completeGraph = completeCallGraph callmap
       rEdges = reflexiveEdges completeGraph
       recBehav = map recursiveBehaviour rEdges
-  NonTerminating . HashSet.fromList . run . execOutputList . forM_ recBehav $ \r -> do
-    let funName = r ^. recursiveBehaviourFun
+  forM_ recBehav $ \rb -> do
+    let funName = rb ^. recursiveBehaviourFun
         markedTerminating :: Bool = funInfo ^. Internal.funDefTerminating
         funInfo :: FunctionDef
         funInfo = HashMap.lookupDefault err funName (callmap ^. callMapScanned)
           where
             err = error ("Impossible: function not found: " <> funName ^. nameText)
-    if
-        | markedTerminating -> return ()
-        | otherwise ->
-            case findOrder r of
-              Nothing -> output funName
-              Just _ -> return ()
+        order = findOrder rb
+    addTerminating funName $
+      if
+          | markedTerminating -> TerminatingMarked
+          | Nothing <- order -> TerminatingFailed
+          | Just {} <- order -> TerminatingChecked
 
 scanModule ::
   (Members '[State CallMap] r) =>
