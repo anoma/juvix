@@ -122,18 +122,24 @@ getDependencyPath i = case i ^. packageDepdendencyInfoDependency of
     r <- rootBuildDir <$> asks (^. envRoot)
     let cloneDir = r <//> relDependenciesDir <//> relDir (T.unpack (g ^. gitDependencyName))
     let cloneArgs = CloneArgs {_cloneArgsCloneDir = cloneDir, _cloneArgsRepoUrl = g ^. gitDependencyUrl}
+    let checkErr' = checkErr cloneDir
     scoped @CloneArgs @Git cloneArgs $ do
-      fetch >>= checkErr
-      checkout (g ^. gitDependencyRef) >>= checkErr
+      fetch >>= checkErr'
+      checkout (g ^. gitDependencyRef) >>= checkErr'
       return cloneDir
     where
-      checkErr :: Either GitError a -> Sem (Git ': r) a
-      checkErr =
+      checkErr :: Path Abs Dir -> Either GitError a -> Sem (Git ': r) a
+      checkErr p =
         either
           ( \c ->
               throw
                 DependencyError
-                  { _dependencyErrorCause = GitDependencyError c,
+                  { _dependencyErrorCause =
+                      GitDependencyError
+                        DependencyErrorGit
+                          { _dependencyErrorGitCloneDir = p,
+                            _dependencyErrorGitError = c
+                          },
                     _dependencyErrorPackageFile = i ^. packageDependencyInfoPackageFile
                   }
           )
@@ -146,14 +152,14 @@ registerDependencies' = do
   e <- ask @EntryPoint
   isGlobal <- asks (^. entryPointPackageGlobal)
   if
-      | isGlobal -> do
-          glob <- globalRoot
-          let globDep = mkPathDependency (toFilePath glob)
-              globalPackageFile = mkPackageFilePath glob
-          addDependency' (Just e) (mkPackageDependencyInfo globalPackageFile globDep)
-      | otherwise -> do
-          let f = mkPackageFilePath (e ^. entryPointRoot)
-          addDependency' (Just e) (mkPackageDependencyInfo f (mkPathDependency (toFilePath (e ^. entryPointRoot))))
+    | isGlobal -> do
+        glob <- globalRoot
+        let globDep = mkPathDependency (toFilePath glob)
+            globalPackageFile = mkPackageFilePath glob
+        addDependency' (Just e) (mkPackageDependencyInfo globalPackageFile globDep)
+    | otherwise -> do
+        let f = mkPackageFilePath (e ^. entryPointRoot)
+        addDependency' (Just e) (mkPackageDependencyInfo f (mkPathDependency (toFilePath (e ^. entryPointRoot))))
 
 addDependency' ::
   (Members '[State ResolverState, Reader ResolverEnv, Files, Error Text, Error DependencyError, GitClone] r) =>
@@ -216,8 +222,8 @@ expectedPath' actualPath m = do
   root <- asks (^. envRoot)
   msingle <- asks (^. envSingleFile)
   if
-      | msingle == Just actualPath -> return Nothing
-      | otherwise -> return (Just (root <//> topModulePathToRelativePath' m))
+    | msingle == Just actualPath -> return Nothing
+    | otherwise -> return (Just (root <//> topModulePathToRelativePath' m))
 
 re ::
   forall r a.

@@ -75,6 +75,12 @@ catchNotACloneError x = catch (Right <$> x) $ \case
   GitCmdError GitCmdErrorDetails {_gitCmdErrorDetailsExitCode = ExitFailure 128} -> return (Left NotAClone)
   e -> throw e
 
+catchCheckoutError :: (Member (Error GitProcessError) r) => GitRef -> Sem r a -> Sem r (Either GitError a)
+catchCheckoutError ref x = catch (Right <$> x) $ \case
+  GitCmdError GitCmdErrorDetails {_gitCmdErrorDetailsExitCode = ExitFailure 128} -> return (Left NotAClone)
+  GitCmdError GitCmdErrorDetails {_gitCmdErrorDetailsExitCode = ExitFailure 1} -> return (Left (NoSuchRef ref))
+  e -> throw e
+
 runGitProcess :: forall r a. (Members '[Log, Files, Process, Error GitProcessError] r) => Sem (Scoped CloneArgs Git ': r) a -> Sem r a
 runGitProcess = interpretScopedAs allocator handler
   where
@@ -85,4 +91,4 @@ runGitProcess = interpretScopedAs allocator handler
     handler p eff = runReader p $ case eff of
       HeadRef -> catchNotACloneError gitHeadRef
       Fetch -> catchNotACloneError gitFetch
-      Checkout ref -> catchNotACloneError (gitCheckout ref)
+      Checkout ref -> (catchCheckoutError ref) (gitCheckout ref)

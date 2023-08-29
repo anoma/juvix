@@ -6,10 +6,14 @@ import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Pack
 import Juvix.Compiler.Pipeline.Package
 import Juvix.Data.CodeAnn
 import Juvix.Data.Effect.Git
-import Juvix.Data.PPOutput
 import Juvix.Prelude
 
-newtype DependencyErrorCause = GitDependencyError GitError
+data DependencyErrorGit = DependencyErrorGit
+  { _dependencyErrorGitError :: GitError,
+    _dependencyErrorGitCloneDir :: Path Abs Dir
+  }
+
+newtype DependencyErrorCause = GitDependencyError DependencyErrorGit
 
 data DependencyError = DependencyError
   { _dependencyErrorPackageFile :: Path Abs File,
@@ -17,25 +21,39 @@ data DependencyError = DependencyError
   }
 
 makeLenses ''DependencyError
+makeLenses ''DependencyErrorGit
 
 instance ToGenericError DependencyError where
-  genericError e =
+  genericError e = do
+    let msg = ppCodeAnn (e ^. dependencyErrorCause)
     return
       ( GenericError
-          { _genericErrorMessage = ppOutput (pretty (msg (e ^. dependencyErrorCause))),
+          { _genericErrorMessage = mkAnsiText msg,
             _genericErrorLoc = i,
             _genericErrorIntervals = [i]
           }
       )
     where
       i = getLoc e
-      msg :: DependencyErrorCause -> Text
-      msg (GitDependencyError g) = case g of
-        NotAClone -> "The clone directory is not a valid git clone"
-        NoSuchRef {} -> "The ref does not exist in the clone"
 
 instance HasLoc DependencyError where
   getLoc e = singletonInterval (mkInitialLoc (e ^. dependencyErrorPackageFile))
+
+instance PrettyCodeAnn DependencyErrorCause where
+  ppCodeAnn = \case
+    GitDependencyError e -> ppCodeAnn e
+
+instance PrettyCodeAnn DependencyErrorGit where
+  ppCodeAnn d = case d ^. dependencyErrorGitError of
+    NotAClone ->
+      "The directory"
+        <+> code (pretty (d ^. dependencyErrorGitCloneDir))
+        <+> "is not a valid git clone"
+    NoSuchRef ref ->
+      "The git ref:"
+        <+> code (pretty ref)
+        <+> "does not exist in the clone:"
+        <+> code (pretty (d ^. dependencyErrorGitCloneDir))
 
 data PathResolverError
   = ErrDependencyConflict DependencyConflict
@@ -78,14 +96,14 @@ instance PrettyCodeAnn MissingModule where
     "The module"
       <+> pcode _missingModule
       <+> "does not exist."
-        <> line
-        <> suggestion
+      <> line
+      <> suggestion
     where
       suggestion :: Doc Ann
       suggestion =
         "It should be in"
           <+> pcode (_missingInfo ^. packageRoot <//> topModulePathToRelativePath' _missingModule)
-            <> dependenciesSuggestion
+          <> dependenciesSuggestion
 
       dependenciesSuggestion :: Doc Ann
       dependenciesSuggestion
