@@ -97,5 +97,12 @@ tests =
       $(mkRelFile "LazyBuiltin.juvix")
       $ \case
         ErrBuiltinNotFullyApplied {} -> Nothing
+        _ -> wrongError,
+     NegTest
+      "issue 2293: Non-terminating function with arity error"
+      $(mkRelDir "Internal")
+      $(mkRelFile "issue2293.juvix")
+      $ \case
+        ErrWrongConstructorAppLength {} -> Nothing
         _ -> wrongError
   ]
