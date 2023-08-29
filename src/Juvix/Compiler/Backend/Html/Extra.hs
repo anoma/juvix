@@ -64,7 +64,7 @@ nordCss :: (Members '[Reader HtmlOptions] r) => Sem r Html
 nordCss = cssLink "source-nord.css"
 
 macchiatoCss :: (Members '[Reader HtmlOptions] r) => Sem r Html
-macchiatoCss = cssLink "macchiato-nord.css"
+macchiatoCss = cssLink "source-macchiato.css"
 
 themeCss :: (Members '[Reader HtmlOptions] r) => Sem r Html
 themeCss = do
