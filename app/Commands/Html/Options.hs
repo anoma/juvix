@@ -37,7 +37,7 @@ parseHtml = do
           <> metavar "THEME"
           <> value Ayu
           <> showDefault
-          <> help "Theme for syntax highlighting. Options: ayu (light) and nord (dark)"
+          <> help ("Theme for syntax highlighting. " <> availableStr)
           <> completeWith (map show allThemes)
       )
   _htmlOutputDir <-
@@ -77,8 +77,22 @@ parseHtml = do
     allThemes :: [Theme]
     allThemes = allElements
 
+    availableStr :: String
+    availableStr =
+      dotSep
+        [ showCategory (light, filter ((== light) . themeLight) allThemes)
+          | light <- allElements
+        ]
+      where
+        showCategory :: (ThemeLight, [Theme]) -> String
+        showCategory (light, ts) = show light <> " themes: " <> commaSep (map show ts)
+        commaSep = intercalate ", "
+        dotSep = intercalate ". "
+
     parseTheme :: String -> Either String Theme
-    parseTheme s = case map toLower s of
-      "nord" -> Right Nord
-      "ayu" -> Right Ayu
-      _ -> Left $ "unrecognised theme: " <> s
+    parseTheme s = case lookup (map toLower s) themes of
+      Just t -> return t
+      Nothing -> Left $ "unrecognised theme: " <> s
+      where
+        themes :: [(String, Theme)]
+        themes = [(show theme, theme) | theme <- allThemes]
