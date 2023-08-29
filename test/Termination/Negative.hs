@@ -74,5 +74,11 @@ tests =
       $(mkRelDir ".")
       $(mkRelFile "Data/QuickSort.juvix")
       $ \case
+        ErrNoLexOrder {} -> Nothing,
+    NegTest
+      "Loop in axiom type"
+      $(mkRelDir ".")
+      $(mkRelFile "Axiom.juvix")
+      $ \case
         ErrNoLexOrder {} -> Nothing
   ]
