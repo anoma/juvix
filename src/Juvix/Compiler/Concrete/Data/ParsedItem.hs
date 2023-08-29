@@ -13,6 +13,7 @@ data ParsedItemTag
   | ParsedTagLiteralInt
   | ParsedTagLiteralString
   | ParsedTagComment
+  | ParsedTagPragma
   | ParsedTagJudoc
   | ParsedTagDelimiter
   deriving stock (Eq, Show, Generic)
