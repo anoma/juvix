@@ -13,7 +13,6 @@ data GitCmdErrorDetails = GitCmdErrorDetails
 data GitProcessError
   = GitCmdError GitCmdErrorDetails
   | GitCmdNotFound
-  | NotAnEmptyDir (Path Abs Dir)
 
 makeLenses ''GitCmdErrorDetails
 makeLenses ''GitProcessError
@@ -28,7 +27,6 @@ instance Pretty GitProcessError where
   pretty = \case
     GitCmdError ce -> pretty ce
     GitCmdNotFound {} -> "git command not found"
-    NotAnEmptyDir p -> "path " <> show p <> " is not an empty directory"
 
 instance ToGenericError GitProcessError where
   genericError e =

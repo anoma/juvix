@@ -46,14 +46,23 @@ instance PrettyCodeAnn DependencyErrorCause where
 instance PrettyCodeAnn DependencyErrorGit where
   ppCodeAnn d = case d ^. dependencyErrorGitError of
     NotAClone ->
-      "The directory"
+      prefix
+        <> "The directory"
         <+> code (pretty (d ^. dependencyErrorGitCloneDir))
-        <+> "is not a valid git clone"
+        <+> "is not a valid git clone."
+        <> line
+        <> "Try running"
+        <+> code "juvix clean"
+
     NoSuchRef ref ->
-      "The git ref:"
+      prefix
+        <> "The git ref:"
         <+> code (pretty ref)
         <+> "does not exist in the clone:"
         <+> code (pretty (d ^. dependencyErrorGitCloneDir))
+    where
+      prefix :: Doc CodeAnn
+      prefix = pretty @Text "Failed to obtain remote dependencies" <> line
 
 data PathResolverError
   = ErrDependencyConflict DependencyConflict

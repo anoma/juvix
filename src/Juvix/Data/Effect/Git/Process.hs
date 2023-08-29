@@ -62,13 +62,14 @@ gitFetch = void (runGitCmdInDir ["fetch"])
 
 cloneGitRepo :: (Members '[Log, Files, Process, Error GitProcessError, Reader CloneDir] r) => Text -> Sem r ()
 cloneGitRepo url = do
-  p <- ask
-  whenM (directoryExists' p) (throw (NotAnEmptyDir p))
+  p :: Path Abs Dir <- ask
   log ("cloning " <> url <> " to " <> pack (toFilePath p))
   void (runGitCmd ["clone", url, T.pack (toFilePath p)])
 
 initGitRepo :: (Members '[Log, Files, Process, Error GitProcessError, Reader CloneDir] r) => Text -> Sem r ()
-initGitRepo url = unlessM isValidGitClone (cloneGitRepo url)
+initGitRepo url = do
+  p <- ask
+  unlessM (directoryExists' p) (cloneGitRepo url)
 
 catchNotACloneError :: (Member (Error GitProcessError) r) => Sem r a -> Sem r (Either GitError a)
 catchNotACloneError x = catch (Right <$> x) $ \case
