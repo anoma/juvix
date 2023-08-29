@@ -40,4 +40,4 @@ instance ToGenericError GitProcessError where
           }
       )
     where
-      i = singletonInterval (mkInitialLoc $(mkAbsFile "/<process>"))
+      i = singletonInterval (mkInitialLoc $(mkAbsFile "/<git>"))
