@@ -11,6 +11,7 @@ import Juvix.Prelude.Pretty hiding
   ( Doc,
   )
 import System.Console.ANSI qualified as Ansi
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker
 
 data App m a where
   ExitMsg :: ExitCode -> Text -> App m a
@@ -145,6 +146,13 @@ getEntryPoint inputFile = do
   _runAppIOArgsGlobalOptions <- askGlobalOptions
   _runAppIOArgsRoots <- askRoots
   embed (getEntryPoint' (RunAppIOArgs {..}) inputFile)
+
+runPipelineTermination :: (Member App r) => AppPath File -> Sem (Termination ': PipelineEff) a -> Sem r a
+runPipelineTermination input p = do
+  r <- runPipelineEither input (evalTermination iniTerminationState p)
+  case r of
+    Left err -> exitJuvixError err
+    Right res -> return (snd res)
 
 runPipeline :: (Member App r) => AppPath File -> Sem PipelineEff a -> Sem r a
 runPipeline input p = do

@@ -12,10 +12,7 @@ import Juvix.Prelude.Pretty
 runCommand :: (Members '[Embed IO, App] r) => CallGraphOptions -> Sem r ()
 runCommand CallGraphOptions {..} = do
   globalOpts <- askGlobalOptions
-  results <-
-    runPipeline _graphInputFile
-      . Termination.evalTermination Termination.iniTerminationState
-      $ upToInternal
+  results <- runPipelineTermination _graphInputFile upToInternal
   let topModules = results ^. Internal.resultModules
       mainModule = head topModules
       toAnsiText' :: forall a. (HasAnsiBackend a, HasTextBackend a) => a -> Text

@@ -4,15 +4,9 @@ import Commands.Base
 import Commands.Dev.Internal.Arity.Options
 import Juvix.Compiler.Internal.Pretty qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Data.Context qualified as InternalArity
-import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker
 
 runCommand :: (Members '[Embed IO, App] r) => InternalArityOptions -> Sem r ()
 runCommand opts = do
   globalOpts <- askGlobalOptions
-  micro <-
-    head . (^. InternalArity.resultModules)
-      <$> ( runPipeline (opts ^. internalArityInputFile)
-              . evalTermination iniTerminationState
-              $ upToInternalArity
-          )
+  micro <- head . (^. InternalArity.resultModules) <$> runPipelineTermination (opts ^. internalArityInputFile) upToInternalArity
   renderStdOut (Internal.ppOut globalOpts micro)

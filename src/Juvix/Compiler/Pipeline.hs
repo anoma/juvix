@@ -163,6 +163,9 @@ coreToVampIR' = Core.toVampIR' >=> return . VampIR.toResult . VampIR.fromCore
 runIOEither :: forall a. EntryPoint -> Sem PipelineEff a -> IO (Either JuvixError (ResolverState, a))
 runIOEither entry = fmap snd . runIOEitherHelper entry
 
+runIOEitherTermination :: forall a. EntryPoint -> Sem (Termination ': PipelineEff) a -> IO (Either JuvixError (ResolverState, a))
+runIOEitherTermination entry = fmap snd . runIOEitherHelper entry . evalTermination iniTerminationState
+
 runPipelineHighlight :: forall a. EntryPoint -> Sem PipelineEff a -> IO HighlightInput
 runPipelineHighlight entry = fmap fst . runIOEitherHelper entry
 

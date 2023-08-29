@@ -21,7 +21,7 @@ testDescr NegTest {..} =
           _testRoot = tRoot,
           _testAssertion = Single $ do
             entryPoint <- defaultEntryPointCwdIO file'
-            result <- runIOEither entryPoint upToInternalArity
+            result <- runIOEitherTermination entryPoint upToInternalArity
             case mapLeft fromJuvixError result of
               Left (Just tyError) -> whenJust (_checkErr tyError) assertFailure
               Left Nothing -> assertFailure "The arity checker did not find an error."
