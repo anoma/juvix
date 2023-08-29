@@ -39,7 +39,7 @@ runGitCmdInDir args = do
 runGitCmdInDir' :: (Members '[Process, Error GitProcessError, Reader CloneDir] r) => [Text] -> Sem r Text
 runGitCmdInDir' args = do
   p :: Path Abs Dir <- ask
-  runGitCmd (["-C", T.pack (toFilePath p)] <> args)
+  runGitCmd (["--git-dir", ".git", "-C", T.pack (toFilePath p)] <> args)
 
 -- | Throws an error if the directory is not a valid git clone
 checkValidGitClone :: (Members '[Process, Error GitProcessError, Reader CloneDir] r) => Sem r ()
