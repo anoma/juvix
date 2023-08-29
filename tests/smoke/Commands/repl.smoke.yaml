@@ -1,6 +1,20 @@
 working-directory: ./../../../tests/
 
 tests:
+  - name: repl-non-terminating
+    command:
+      - juvix
+      - repl
+    stdin: "let x : Bool := x in x"
+    stdout:
+      matches: |
+        .*
+    stderr:
+      contains: |
+        The following function fails the termination checker:
+        • x
+    exit-status: 0
+
   - name: repl-doc
     command:
       - juvix
