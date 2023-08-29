@@ -4,6 +4,7 @@ import CommonOptions
 import Data.ByteString qualified as ByteString
 import GlobalOptions
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker
 import Juvix.Compiler.Pipeline
 import Juvix.Data.Error qualified as Error
 import Juvix.Extra.Paths.Base
@@ -11,7 +12,6 @@ import Juvix.Prelude.Pretty hiding
   ( Doc,
   )
 import System.Console.ANSI qualified as Ansi
-import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker
 
 data App m a where
   ExitMsg :: ExitCode -> Text -> App m a
