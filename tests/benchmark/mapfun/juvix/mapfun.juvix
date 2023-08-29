@@ -1,36 +1,35 @@
 -- successively map K functions to a list of N integers
 module mapfun;
-  open import Stdlib.Prelude;
-  open import Stdlib.Data.Nat.Ord;
 
-  mapfun : {A : Type} → List (A → A) → List A → List A;
-  mapfun nil xs := xs;
-  mapfun (f :: fs) xs := mapfun fs (map f xs);
+import Stdlib.Prelude open;
+import Stdlib.Data.Nat.Ord open;
 
-  genfs : Nat → List (Nat → Nat);
-  genfs zero := nil;
-  genfs (suc n) := sub (suc n) :: genfs n;
+mapfun : {A : Type} → List (A → A) → List A → List A
+  | nil xs := xs
+  | (f :: fs) xs := mapfun fs (map f xs);
 
-  step : Nat → (Nat → Nat) → Nat → Nat;
-  step n f x := f (x + n);
+genfs : Nat → List (Nat → Nat)
+  | zero := nil
+  | (suc n) := sub (suc n) :: genfs n;
 
-  genffs : Nat → List ((Nat → Nat) → Nat → Nat);
-  genffs zero := nil;
-  genffs (suc n) := step (suc n) :: genffs n;
+step : Nat → (Nat → Nat) → Nat → Nat
+  | n f x := f (x + n);
 
-  sum_go : Nat → List Nat → Nat;
-  sum_go acc nil := acc;
-  sum_go acc (h :: t) := sum_go (acc + h) t;
+genffs : Nat → List ((Nat → Nat) → Nat → Nat)
+  | zero := nil
+  | (suc n) := step (suc n) :: genffs n;
 
-  sum : List Nat → Nat;
-  sum := sum_go 0;
+sum_go : Nat → List Nat → Nat
+  | acc nil := acc
+  | acc (h :: t) := sum_go (acc + h) t;
 
-  terminating
-  gen : Nat → Nat → List Nat;
-  gen k n := if (k == n) (k :: nil) (k :: gen (suc k) n);
+sum : List Nat → Nat := sum_go 0;
 
-  main : IO;
-  main := printNatLn
+terminating
+gen : Nat → Nat → List Nat
+  | k n := if (k == n) (k :: nil) (k :: gen (suc k) n);
+
+main : IO :=
+  printNatLn
     (sum
       (mapfun (mapfun (genffs 100) (genfs 100)) (gen 1 10000)));
-end;

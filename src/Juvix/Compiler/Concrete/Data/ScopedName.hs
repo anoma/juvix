@@ -79,7 +79,27 @@ data Name' n = Name'
   }
   deriving stock (Show)
 
+-- | For highlighting
+data AName = AName
+  { _anameLoc :: Interval,
+    _anameDefinedLoc :: Interval,
+    _anameKind :: NameKind,
+    _anameDocId :: NameId,
+    _anameVerbatim :: Text
+  }
+
 makeLenses ''Name'
+makeLenses ''AName
+
+anameFromName :: (HasLoc c) => Name' c -> AName
+anameFromName n =
+  AName
+    { _anameLoc = getLoc n,
+      _anameDefinedLoc = n ^. nameDefined,
+      _anameKind = getNameKind n,
+      _anameDocId = n ^. nameId,
+      _anameVerbatim = n ^. nameVerbatim
+    }
 
 instance HasNameKind (Name' n) where
   getNameKind = (^. nameKind)
@@ -90,16 +110,11 @@ instance (HasLoc n) => HasLoc (Name' n) where
 instance (Pretty a) => Pretty (Name' a) where
   pretty = pretty . (^. nameConcrete)
 
-data AName = forall c.
-  (HasLoc c) =>
-  AName
-  {_aName :: Name' c}
-
 instance HasLoc AName where
-  getLoc (AName c) = getLoc c
+  getLoc = (^. anameLoc)
 
 instance HasNameKind AName where
-  getNameKind (AName c) = getNameKind c
+  getNameKind = (^. anameKind)
 
 hasFixity :: Name' s -> Bool
 hasFixity n = isJust (n ^. nameFixity)

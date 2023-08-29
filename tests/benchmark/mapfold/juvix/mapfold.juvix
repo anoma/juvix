@@ -1,19 +1,16 @@
 -- map and fold a list of N integers K times
 module mapfold;
-  open import Stdlib.Prelude;
-  open import Stdlib.Data.Nat.Ord;
 
-  run : Nat → Nat → List Nat → Nat;
-  run zero acc lst := acc;
-  run (suc n) acc lst := run
-    n
-    (sub (foldl (+) 0 lst) acc)
-    (map suc lst);
+import Stdlib.Prelude open;
+import Stdlib.Data.Nat.Ord open;
 
-  terminating
-  gen : Nat → Nat → List Nat;
-  gen k n := if (k == n) (k :: nil) (k :: gen (suc k) n);
+run : Nat → Nat → List Nat → Nat
+  | zero acc lst := acc
+  | (suc n) acc lst :=
+    run n (sub (foldl (+) 0 lst) acc) (map suc lst);
 
-  main : IO;
-  main := printNatLn (run 10000 0 (gen 1 10000));
-end;
+terminating
+gen : Nat → Nat → List Nat
+  | k n := if (k == n) (k :: nil) (k :: gen (suc k) n);
+
+main : IO := printNatLn (run 10000 0 (gen 1 10000));

@@ -5,7 +5,6 @@ import CommonOptions
 data FormatOptions = FormatOptions
   { _formatInput :: Maybe (Prepath FileOrDir),
     _formatCheck :: Bool,
-    _formatNewSyntax :: Bool,
     _formatInPlace :: Bool
   }
   deriving stock (Data)
@@ -28,11 +27,6 @@ parseFormat = do
     switch
       ( long "check"
           <> help "Do not print reformatted sources or unformatted file paths to standard output."
-      )
-  _formatNewSyntax <-
-    switch
-      ( long "new-function-syntax"
-          <> help "Format the file using the new function syntax."
       )
   _formatInPlace <-
     switch

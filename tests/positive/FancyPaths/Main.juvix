@@ -1,8 +1,8 @@
 module Main;
 
-open import Dep;
-open import Other;
-open import Home;
+import Dep open;
+import Other open;
+import Home open;
 
 axiom x : dep;
 axiom y : other;

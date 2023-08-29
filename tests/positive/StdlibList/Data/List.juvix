@@ -44,9 +44,9 @@ length : (a : Type) → List a → ℕ
 reverse : (a : Type) → List a → List a
   | a l :=
     let
-      rev : List a → List a → List a;
-      rev nil a := a;
-      rev (:: x xs) a := rev xs (:: x a);
+      rev : List a → List a → List a
+        | nil a := a
+        | (:: x xs) a := rev xs (:: x a);
     in rev l nil;
 
 replicate : (a : Type) → ℕ → a → List a
@@ -100,16 +100,14 @@ quickSort
   | a _ (:: x nil) := :: x nil
   | a cmp (:: x ys) :=
     let
-      ltx : a → Bool;
-      ltx y :=
+      ltx (y : a) : Bool :=
         match
           (cmp y x)
           λ {
             | LT := true
             | _ := false
           };
-      gex : a → Bool;
-      gex y := not (ltx y);
+      gex (y : a) : Bool := not (ltx y);
     in ++
       a
       (quickSort a cmp (filter a ltx ys))

@@ -1,28 +1,38 @@
 -- arithmetic
 module test004;
 
-open import Stdlib.Prelude;
+import Stdlib.Prelude open;
 
-f : Nat -> Nat -> Nat;
-f x y := x + y;
+f : Nat -> Nat -> Nat
+  | x y := x + y;
 
-g : Nat -> Nat -> Nat;
-g x y := sub (3 * x) y;
+g : Nat -> Nat -> Nat
+  | x y := sub (3 * x) y;
 
-h : (Nat -> Nat -> Nat) -> Nat -> Nat -> Nat;
-h f y z := f y y * z;
+h : (Nat -> Nat -> Nat) -> Nat -> Nat -> Nat
+  | f y z := f y y * z;
 
-func : Nat -> Nat := λ{x := x + 4};
+func : Nat -> Nat := λ {x := x + 4};
 
 vx : Nat := 30;
+
 vy : Nat := 7;
 
-main : Nat -> Nat -> Nat -> Nat -> Nat;
-main x y z u :=
-  sub
-    (func (div y x) + -- 17 div 5 + 4 = 7
-      (z * x + y) + -- 17
-      (vx + vy * (z + 1)) + -- 37
-      f (h g u 3) 4) -- 16
-    45;
+main : Nat -> Nat -> Nat -> Nat -> Nat
+  | x y z u :=
+    sub
+      (func (div y x)
+        + -- 17 div 5 + 4 = 7
+            (z
+            * x
+          + y)
+        + -- 17
+          (vx
+          + vy * (z + 1))
+        + -- 37
+          f
+          (h g u 3)
+          4)
+      -- 16
+      45;
 -- result: 32

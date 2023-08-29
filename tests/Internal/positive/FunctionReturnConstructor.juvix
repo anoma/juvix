@@ -1,9 +1,7 @@
 module FunctionReturnConstructor;
 
 type Foo :=
-  foo : Foo;
+  | foo : Foo;
 
-main : Foo;
-main := foo;
+main : Foo := foo;
 
-end;

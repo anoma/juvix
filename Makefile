@@ -116,7 +116,7 @@ JUVIXFILESTOFORMAT=$(shell find  \
 	-type d \( -name ".juvix-build" -o -name "FancyPaths" \) -prune -o \
 	-type f -name "*.juvix" -print)
 
-JUVIXFORMATFLAGS?=--in-place --new-function-syntax
+JUVIXFORMATFLAGS?=--in-place
 JUVIXTYPECHECKFLAGS?=--only-errors
 
 .PHONY: format-juvix-files

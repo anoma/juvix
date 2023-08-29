@@ -1,8 +1,8 @@
 -- not function
 module test001;
 
-open import Stdlib.Prelude;
-open import Stdlib.Data.Nat.Ord;
+import Stdlib.Prelude open;
+import Stdlib.Data.Nat.Ord open;
 
-main : Nat -> Nat;
-main x := if (x == 0) 1 0;
+main : Nat -> Nat
+  | x := if (x == 0) 1 0;

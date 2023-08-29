@@ -1,18 +1,14 @@
 -- polymorphic type arguments
 module test046;
 
-open import Stdlib.Prelude;
+import Stdlib.Prelude open;
 
-Ty : Type;
-Ty := {B : Type} -> B -> B;
+Ty : Type := {B : Type} -> B -> B;
 
-id' : Ty;
-id' {_} x := x;
+id' : Ty
+  | {_} x := x;
 
-fun : {A : Type} → A → Ty;
-fun := id (λ{_ := id'});
+fun : {A : Type} → A → Ty := id λ {_ := id'};
 
-main : Nat;
-main := fun 5 {Nat} 7;
+main : Nat := fun 5 {Nat} 7;
 
-end;

@@ -37,14 +37,14 @@ import Juvix.Data.Keyword
 import Juvix.Data.NameKind
 import Juvix.Parser.Lexer (isDelimiterStr)
 import Juvix.Prelude hiding (show)
-import Juvix.Prelude.Pretty (prettyText)
+import Juvix.Prelude.Pretty (Pretty, pretty, prettyText)
 import Prelude (show)
 
 type Delims = Irrelevant (Maybe (KeywordRef, KeywordRef))
 
 type NameSpaceEntryType :: NameSpace -> GHC.Type
 type family NameSpaceEntryType s = res | res -> s where
-  NameSpaceEntryType 'NameSpaceSymbols = SymbolEntry
+  NameSpaceEntryType 'NameSpaceSymbols = PreSymbolEntry
   NameSpaceEntryType 'NameSpaceModules = ModuleSymbolEntry
   NameSpaceEntryType 'NameSpaceFixities = FixitySymbolEntry
 
@@ -185,24 +185,20 @@ data Definition (s :: Stage)
   | DefinitionFunctionDef (FunctionDef s)
   | DefinitionInductive (InductiveDef s)
   | DefinitionAxiom (AxiomDef s)
-  | DefinitionTypeSignature (TypeSignature s)
   | DefinitionProjectionDef (ProjectionDef s)
 
 data NonDefinition (s :: Stage)
   = NonDefinitionImport (Import s)
   | NonDefinitionModule (Module s 'ModuleLocal)
-  | NonDefinitionFunctionClause (FunctionClause s)
   | NonDefinitionOpenModule (OpenModule s)
 
 data Statement (s :: Stage)
   = StatementSyntax (SyntaxDef s)
-  | StatementTypeSignature (TypeSignature s)
   | StatementFunctionDef (FunctionDef s)
   | StatementImport (Import s)
   | StatementInductive (InductiveDef s)
   | StatementModule (Module s 'ModuleLocal)
   | StatementOpenModule (OpenModule s)
-  | StatementFunctionClause (FunctionClause s)
   | StatementAxiom (AxiomDef s)
   | StatementProjectionDef (ProjectionDef s)
 
@@ -254,10 +250,30 @@ deriving stock instance Ord (Import 'Parsed)
 
 deriving stock instance Ord (Import 'Scoped)
 
+data AliasDef (s :: Stage) = AliasDef
+  { _aliasDefSyntaxKw :: Irrelevant KeywordRef,
+    _aliasDefAliasKw :: Irrelevant KeywordRef,
+    _aliasDefName :: SymbolType s,
+    _aliasDefAsName :: IdentifierType s
+  }
+
+deriving stock instance (Show (AliasDef 'Parsed))
+
+deriving stock instance (Show (AliasDef 'Scoped))
+
+deriving stock instance (Eq (AliasDef 'Parsed))
+
+deriving stock instance (Eq (AliasDef 'Scoped))
+
+deriving stock instance (Ord (AliasDef 'Parsed))
+
+deriving stock instance (Ord (AliasDef 'Scoped))
+
 data SyntaxDef (s :: Stage)
   = SyntaxFixity (FixitySyntaxDef s)
   | SyntaxOperator OperatorSyntaxDef
   | SyntaxIterator IteratorSyntaxDef
+  | SyntaxAlias (AliasDef s)
 
 deriving stock instance (Show (SyntaxDef 'Parsed))
 
@@ -270,12 +286,6 @@ deriving stock instance (Eq (SyntaxDef 'Scoped))
 deriving stock instance (Ord (SyntaxDef 'Parsed))
 
 deriving stock instance (Ord (SyntaxDef 'Scoped))
-
-instance HasLoc (SyntaxDef s) where
-  getLoc = \case
-    SyntaxFixity t -> getLoc t
-    SyntaxOperator t -> getLoc t
-    SyntaxIterator t -> getLoc t
 
 data FixitySyntaxDef (s :: Stage) = FixitySyntaxDef
   { _fixitySymbol :: SymbolType s,
@@ -425,30 +435,6 @@ deriving stock instance Eq (FunctionDef 'Scoped)
 deriving stock instance Ord (FunctionDef 'Parsed)
 
 deriving stock instance Ord (FunctionDef 'Scoped)
-
-data TypeSignature (s :: Stage) = TypeSignature
-  { _sigName :: FunctionName s,
-    _sigColonKw :: Irrelevant KeywordRef,
-    _sigType :: ExpressionType s,
-    _sigDoc :: Maybe (Judoc s),
-    _sigAssignKw :: Irrelevant (Maybe KeywordRef),
-    _sigPragmas :: Maybe ParsedPragmas,
-    _sigBuiltin :: Maybe (WithLoc BuiltinFunction),
-    _sigBody :: Maybe (ExpressionType s),
-    _sigTerminating :: Maybe KeywordRef
-  }
-
-deriving stock instance Show (TypeSignature 'Parsed)
-
-deriving stock instance Show (TypeSignature 'Scoped)
-
-deriving stock instance Eq (TypeSignature 'Parsed)
-
-deriving stock instance Eq (TypeSignature 'Scoped)
-
-deriving stock instance Ord (TypeSignature 'Parsed)
-
-deriving stock instance Ord (TypeSignature 'Scoped)
 
 data AxiomDef (s :: Stage) = AxiomDef
   { _axiomKw :: Irrelevant KeywordRef,
@@ -667,22 +653,16 @@ data PatternApp = PatternApp
 
 data PatternInfixApp = PatternInfixApp
   { _patInfixLeft :: PatternArg,
-    _patInfixConstructor :: S.Name,
+    _patInfixConstructor :: ScopedIden,
     _patInfixRight :: PatternArg
   }
   deriving stock (Show, Eq, Ord)
 
-instance HasFixity PatternInfixApp where
-  getFixity (PatternInfixApp _ op _) = fromMaybe impossible (op ^. S.nameFixity)
-
 data PatternPostfixApp = PatternPostfixApp
   { _patPostfixParameter :: PatternArg,
-    _patPostfixConstructor :: S.Name
+    _patPostfixConstructor :: ScopedIden
   }
   deriving stock (Show, Eq, Ord)
-
-instance HasFixity PatternPostfixApp where
-  getFixity (PatternPostfixApp _ op) = fromMaybe impossible (op ^. S.nameFixity)
 
 data PatternArg = PatternArg
   { _patternArgIsImplicit :: IsImplicit,
@@ -693,7 +673,7 @@ data PatternArg = PatternArg
 
 data Pattern
   = PatternVariable (SymbolType 'Scoped)
-  | PatternConstructor S.Name
+  | PatternConstructor ScopedIden
   | PatternApplication PatternApp
   | PatternList (ListPattern 'Scoped)
   | PatternInfixApplication PatternInfixApp
@@ -703,27 +683,9 @@ data Pattern
   | PatternRecord (RecordPattern 'Scoped)
   deriving stock (Show, Eq, Ord)
 
-instance HasAtomicity (ListPattern s) where
-  atomicity = const Atom
-
-instance HasAtomicity (RecordPattern s) where
-  atomicity = const Atom
-
-instance HasAtomicity Pattern where
-  atomicity e = case e of
-    PatternVariable {} -> Atom
-    PatternConstructor {} -> Atom
-    PatternApplication {} -> Aggregate appFixity
-    PatternInfixApplication a -> Aggregate (getFixity a)
-    PatternPostfixApplication p -> Aggregate (getFixity p)
-    PatternWildcard {} -> Atom
-    PatternList l -> atomicity l
-    PatternEmpty {} -> Atom
-    PatternRecord r -> atomicity r
-
 data PatternScopedIden
   = PatternScopedVar S.Symbol
-  | PatternScopedConstructor S.Name
+  | PatternScopedConstructor ScopedIden
   deriving stock (Show, Ord, Eq)
 
 data PatternBinding = PatternBinding
@@ -860,25 +822,6 @@ deriving stock instance Ord (PatternAtoms 'Parsed)
 deriving stock instance Ord (PatternAtoms 'Scoped)
 
 type FunctionName s = SymbolType s
-
-data FunctionClause (s :: Stage) = FunctionClause
-  { _clauseOwnerFunction :: FunctionName s,
-    _clauseAssignKw :: Irrelevant KeywordRef,
-    _clausePatterns :: [PatternAtomType s],
-    _clauseBody :: ExpressionType s
-  }
-
-deriving stock instance Show (FunctionClause 'Parsed)
-
-deriving stock instance Show (FunctionClause 'Scoped)
-
-deriving stock instance Eq (FunctionClause 'Parsed)
-
-deriving stock instance Eq (FunctionClause 'Scoped)
-
-deriving stock instance Ord (FunctionClause 'Parsed)
-
-deriving stock instance Ord (FunctionClause 'Scoped)
 
 type LocalModuleName s = SymbolType s
 
@@ -1053,10 +996,24 @@ instance Eq (ModuleRef'' 'S.Concrete t) where
 instance Ord (ModuleRef'' 'S.Concrete t) where
   compare (ModuleRef'' n _ _) (ModuleRef'' n' _ _) = compare n n'
 
+newtype Alias = Alias
+  { _aliasName :: S.Name' ()
+  }
+  deriving stock (Show)
+
+-- | Either an alias or a symbol entry.
+data PreSymbolEntry
+  = PreSymbolAlias Alias
+  | PreSymbolFinal SymbolEntry
+  deriving stock (Show)
+
+-- | A symbol which is not an alias.
 newtype SymbolEntry = SymbolEntry
   { _symbolEntry :: S.Name' ()
   }
-  deriving stock (Show)
+  deriving stock (Show, Eq, Ord, Generic)
+
+instance Hashable SymbolEntry
 
 newtype ModuleSymbolEntry = ModuleSymbolEntry
   { _moduleEntry :: S.Name' ()
@@ -1073,7 +1030,7 @@ instance (SingI t) => CanonicalProjection (ModuleRef'' c t) (ModuleRef' c) where
 
 -- | Symbols that a module exports
 data ExportInfo = ExportInfo
-  { _exportSymbols :: HashMap Symbol SymbolEntry,
+  { _exportSymbols :: HashMap Symbol PreSymbolEntry,
     _exportModuleSymbols :: HashMap Symbol ModuleSymbolEntry,
     _exportFixitySymbols :: HashMap Symbol FixitySymbolEntry
   }
@@ -1101,23 +1058,11 @@ deriving stock instance Ord (OpenModule 'Parsed)
 
 deriving stock instance Ord (OpenModule 'Scoped)
 
-type ScopedIden = ScopedIden' 'S.Concrete
-
-newtype ScopedIden' (n :: S.IsConcrete) = ScopedIden
-  { _scopedIden :: RefNameType n
+data ScopedIden = ScopedIden
+  { _scopedIdenFinal :: S.Name,
+    _scopedIdenAlias :: Maybe S.Name
   }
-
-deriving stock instance
-  (Eq (RefNameType s)) => Eq (ScopedIden' s)
-
-deriving stock instance
-  (Ord (RefNameType s)) => Ord (ScopedIden' s)
-
-deriving stock instance
-  (Show (RefNameType s)) => Show (ScopedIden' s)
-
-identifierName :: forall n. ScopedIden' n -> RefNameType n
-identifierName (ScopedIden n) = n
+  deriving stock (Show, Eq, Ord)
 
 data Expression
   = ExpressionIdentifier ScopedIden
@@ -1248,22 +1193,32 @@ data InfixApplication = InfixApplication
   }
   deriving stock (Show, Eq, Ord)
 
-instance HasFixity InfixApplication where
-  getFixity (InfixApplication _ op _) = fromMaybe impossible (identifierName op ^. S.nameFixity)
-
 data PostfixApplication = PostfixApplication
   { _postfixAppParameter :: Expression,
     _postfixAppOperator :: ScopedIden
   }
   deriving stock (Show, Eq, Ord)
 
-instance HasFixity PostfixApplication where
-  getFixity (PostfixApplication _ op) = fromMaybe impossible (identifierName op ^. S.nameFixity)
+data LetStatement (s :: Stage)
+  = LetFunctionDef (FunctionDef s)
+  | LetAliasDef (AliasDef s)
+
+deriving stock instance Show (LetStatement 'Parsed)
+
+deriving stock instance Show (LetStatement 'Scoped)
+
+deriving stock instance Eq (LetStatement 'Parsed)
+
+deriving stock instance Eq (LetStatement 'Scoped)
+
+deriving stock instance Ord (LetStatement 'Parsed)
+
+deriving stock instance Ord (LetStatement 'Scoped)
 
 data Let (s :: Stage) = Let
   { _letKw :: KeywordRef,
     _letInKw :: Irrelevant KeywordRef,
-    _letClauses :: NonEmpty (LetClause s),
+    _letFunDefs :: NonEmpty (LetStatement s),
     _letExpression :: ExpressionType s
   }
 
@@ -1278,22 +1233,6 @@ deriving stock instance Eq (Let 'Scoped)
 deriving stock instance Ord (Let 'Parsed)
 
 deriving stock instance Ord (Let 'Scoped)
-
-data LetClause (s :: Stage)
-  = LetTypeSig (TypeSignature s)
-  | LetFunClause (FunctionClause s)
-
-deriving stock instance Show (LetClause 'Parsed)
-
-deriving stock instance Show (LetClause 'Scoped)
-
-deriving stock instance Eq (LetClause 'Parsed)
-
-deriving stock instance Eq (LetClause 'Scoped)
-
-deriving stock instance Ord (LetClause 'Parsed)
-
-deriving stock instance Ord (LetClause 'Scoped)
 
 data CaseBranch (s :: Stage) = CaseBranch
   { _caseBranchPipe :: Irrelevant KeywordRef,
@@ -1676,6 +1615,7 @@ newtype ModuleIndex = ModuleIndex
   }
 
 makeLenses ''PatternArg
+makeLenses ''Alias
 makeLenses ''FieldPun
 makeLenses ''RecordPatternAssign
 makeLenses ''RecordPattern
@@ -1687,7 +1627,7 @@ makeLenses ''RecordUpdateField
 makeLenses ''NonDefinitionsSection
 makeLenses ''DefinitionsSection
 makeLenses ''ProjectionDef
-makeLenses ''ScopedIden'
+makeLenses ''ScopedIden
 makeLenses ''SymbolEntry
 makeLenses ''ModuleSymbolEntry
 makeLenses ''FixitySymbolEntry
@@ -1721,13 +1661,11 @@ makeLenses ''OperatorSyntaxDef
 makeLenses ''IteratorSyntaxDef
 makeLenses ''ConstructorDef
 makeLenses ''Module
-makeLenses ''TypeSignature
 makeLenses ''SigArg
 makeLenses ''SigArgRhs
 makeLenses ''FunctionDef
 makeLenses ''AxiomDef
 makeLenses ''ExportInfo
-makeLenses ''FunctionClause
 makeLenses ''InductiveParameters
 makeLenses ''InductiveParametersRhs
 makeLenses ''ModuleRef'
@@ -1748,6 +1686,17 @@ makeLenses ''ModuleIndex
 makeLenses ''ArgumentBlock
 makeLenses ''NamedArgument
 makeLenses ''NamedApplication
+makeLenses ''AliasDef
+
+instance (SingI s) => HasLoc (AliasDef s) where
+  getLoc AliasDef {..} = getLoc _aliasDefSyntaxKw <> getLocIdentifierType _aliasDefAsName
+
+instance (SingI s) => HasLoc (SyntaxDef s) where
+  getLoc = \case
+    SyntaxFixity t -> getLoc t
+    SyntaxOperator t -> getLoc t
+    SyntaxIterator t -> getLoc t
+    SyntaxAlias t -> getLoc t
 
 instance Eq ModuleIndex where
   (==) = (==) `on` (^. moduleIxModule . modulePath)
@@ -1816,17 +1765,17 @@ instance (SingI s) => HasAtomicity (FunctionParameters s) where
         SParsed -> atomicity (p ^. paramType)
         SScoped -> atomicity (p ^. paramType)
 
+instance Pretty ScopedIden where
+  pretty = pretty . (^. scopedIdenName)
+
 instance HasLoc ScopedIden where
-  getLoc = getLoc . (^. scopedIden)
+  getLoc = getLoc . (^. scopedIdenName)
 
 instance (SingI s) => HasLoc (InductiveParameters s) where
   getLoc i = getLocSymbolType (i ^. inductiveParametersNames . _head1) <>? (getLocExpressionType <$> (i ^? inductiveParametersRhs . _Just . inductiveParametersType))
 
 instance HasLoc (InductiveDef s) where
   getLoc i = (getLoc <$> i ^. inductivePositive) ?<> getLoc (i ^. inductiveKw)
-
-instance (SingI s) => HasLoc (FunctionClause s) where
-  getLoc c = getLocSymbolType (c ^. clauseOwnerFunction) <> getLocExpressionType (c ^. clauseBody)
 
 instance HasLoc ModuleRef where
   getLoc (ModuleRef' (_ :&: r)) = getLoc r
@@ -1847,13 +1796,11 @@ instance HasLoc (Statement 'Scoped) where
   getLoc :: Statement 'Scoped -> Interval
   getLoc = \case
     StatementSyntax t -> getLoc t
-    StatementTypeSignature t -> getLoc t
     StatementFunctionDef t -> getLoc t
     StatementImport t -> getLoc t
     StatementInductive t -> getLoc t
     StatementModule t -> getLoc t
     StatementOpenModule t -> getLoc t
-    StatementFunctionClause t -> getLoc t
     StatementAxiom t -> getLoc t
     StatementProjectionDef t -> getLoc t
 
@@ -1994,16 +1941,6 @@ instance (SingI s) => HasLoc (FunctionDef s) where
       ?<> (getLoc <$> _signTerminating)
       ?<> getLocSymbolType _signName
       <> getLoc _signBody
-
-instance (SingI s) => HasLoc (TypeSignature s) where
-  getLoc TypeSignature {..} =
-    (getLoc <$> _sigDoc)
-      ?<> (getLoc <$> _sigPragmas)
-      ?<> (getLoc <$> _sigBuiltin)
-      ?<> (getLoc <$> _sigTerminating)
-      ?<> getLocSymbolType _sigName
-      <> (getLocExpressionType <$> _sigBody)
-      ?<> getLocExpressionType _sigType
 
 instance HasLoc (Example s) where
   getLoc e = e ^. exampleLoc
@@ -2183,7 +2120,7 @@ instance IsApe PatternInfixApp ApeLeaf where
         { _infixFixity = getFixity i,
           _infixLeft = toApe l,
           _infixRight = toApe r,
-          _infixIsDelimiter = isDelimiterStr (prettyText (op ^. S.nameConcrete)),
+          _infixIsDelimiter = isDelimiterStr (prettyText (op ^. scopedIdenName . S.nameConcrete)),
           _infixOp = ApeLeafPattern (PatternConstructor op)
         }
 
@@ -2239,7 +2176,7 @@ instance IsApe InfixApplication ApeLeaf where
         { _infixFixity = getFixity i,
           _infixLeft = toApe l,
           _infixRight = toApe r,
-          _infixIsDelimiter = isDelimiterStr (prettyText (identifierName op ^. S.nameConcrete)),
+          _infixIsDelimiter = isDelimiterStr (prettyText (op ^. scopedIdenName . S.nameConcrete)),
           _infixOp = ApeLeafExpression (ExpressionIdentifier op)
         }
 
@@ -2335,6 +2272,14 @@ judocExamples (Judoc bs) = concatMap goGroup bs
       JudocExample e -> [e]
       _ -> mempty
 
+instance HasLoc Alias where
+  getLoc = (^. aliasName . S.nameDefined)
+
+instance HasLoc PreSymbolEntry where
+  getLoc = \case
+    PreSymbolAlias a -> getLoc a
+    PreSymbolFinal a -> getLoc a
+
 instance HasLoc SymbolEntry where
   getLoc = (^. symbolEntry . S.nameDefined)
 
@@ -2351,16 +2296,22 @@ symbolEntryNameId :: SymbolEntry -> NameId
 symbolEntryNameId = (^. symbolEntry . S.nameId)
 
 instance HasNameKind ScopedIden where
-  getNameKind = getNameKind . (^. scopedIden)
+  getNameKind = getNameKind . (^. scopedIdenFinal)
 
 instance HasNameKind SymbolEntry where
   getNameKind = getNameKind . (^. symbolEntry)
 
 exportAllNames :: SimpleFold ExportInfo (S.Name' ())
 exportAllNames =
-  exportSymbols . each . symbolEntry
-    <> exportModuleSymbols . each . moduleEntry
-    <> exportFixitySymbols . each . fixityEntry
+  exportSymbols
+    . each
+    . preSymbolName
+    <> exportModuleSymbols
+      . each
+      . moduleEntry
+    <> exportFixitySymbols
+      . each
+      . fixityEntry
 
 exportNameSpace :: forall ns. (SingI ns) => Lens' ExportInfo (HashMap Symbol (NameSpaceEntryType ns))
 exportNameSpace = case sing :: SNameSpace ns of
@@ -2372,3 +2323,55 @@ _ConstructorRhsRecord :: Traversal' (ConstructorRhs s) (RhsRecord s)
 _ConstructorRhsRecord f rhs = case rhs of
   ConstructorRhsRecord r -> ConstructorRhsRecord <$> f r
   _ -> pure rhs
+
+_DefinitionSyntax :: Traversal' (Definition s) (SyntaxDef s)
+_DefinitionSyntax f x = case x of
+  DefinitionSyntax r -> DefinitionSyntax <$> f r
+  _ -> pure x
+
+_SyntaxAlias :: Traversal' (SyntaxDef s) (AliasDef s)
+_SyntaxAlias f x = case x of
+  SyntaxAlias r -> SyntaxAlias <$> f r
+  _ -> pure x
+
+scopedIdenName :: Lens' ScopedIden S.Name
+scopedIdenName f n = case n ^. scopedIdenAlias of
+  Nothing -> scopedIdenFinal f n
+  Just a -> do
+    a' <- f a
+    pure (set scopedIdenAlias (Just a') n)
+
+instance HasFixity PostfixApplication where
+  getFixity (PostfixApplication _ op) = fromMaybe impossible (op ^. scopedIdenName . S.nameFixity)
+
+instance HasFixity InfixApplication where
+  getFixity (InfixApplication _ op _) = fromMaybe impossible (op ^. scopedIdenName . S.nameFixity)
+
+preSymbolName :: Lens' PreSymbolEntry (S.Name' ())
+preSymbolName f = \case
+  PreSymbolAlias a -> PreSymbolAlias <$> traverseOf aliasName f a
+  PreSymbolFinal a -> PreSymbolFinal <$> traverseOf symbolEntry f a
+
+instance HasFixity PatternInfixApp where
+  getFixity (PatternInfixApp _ op _) = fromMaybe impossible (op ^. scopedIdenName . S.nameFixity)
+
+instance HasFixity PatternPostfixApp where
+  getFixity (PatternPostfixApp _ op) = fromMaybe impossible (op ^. scopedIdenName . S.nameFixity)
+
+instance HasAtomicity (ListPattern s) where
+  atomicity = const Atom
+
+instance HasAtomicity (RecordPattern s) where
+  atomicity = const Atom
+
+instance HasAtomicity Pattern where
+  atomicity e = case e of
+    PatternVariable {} -> Atom
+    PatternConstructor {} -> Atom
+    PatternApplication {} -> Aggregate appFixity
+    PatternInfixApplication a -> Aggregate (getFixity a)
+    PatternPostfixApplication p -> Aggregate (getFixity p)
+    PatternWildcard {} -> Atom
+    PatternList l -> atomicity l
+    PatternEmpty {} -> Atom
+    PatternRecord r -> atomicity r

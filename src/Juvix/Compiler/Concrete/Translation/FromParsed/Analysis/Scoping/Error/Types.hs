@@ -8,7 +8,6 @@ where
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
 import Data.List.NonEmpty.Extra qualified as NonEmpty
-import Data.Text qualified as Text
 import Juvix.Compiler.Concrete.Data.Scope
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Language
@@ -95,82 +94,6 @@ instance ToGenericError InfixErrorP where
               <> indent' (ppCode opts' _infixErrorAtomsP)
               <> line
               <> "Perhaps you forgot parentheses around a pattern?"
-
--- | function clause without a type signature.
-newtype LacksTypeSig = LacksTypeSig
-  { _lacksTypeSigClause :: FunctionClause 'Parsed
-  }
-  deriving stock (Show)
-
-instance ToGenericError LacksTypeSig where
-  genericError LacksTypeSig {..} = ask >>= generr
-    where
-      generr opts =
-        return
-          GenericError
-            { _genericErrorLoc = i,
-              _genericErrorMessage = prettyError msg,
-              _genericErrorIntervals = [i]
-            }
-        where
-          opts' = fromGenericOptions opts
-          i = _lacksTypeSigClause ^. clauseOwnerFunction . symbolLoc
-          msg =
-            "The declaration is missing a type signature:"
-              <> line
-              <> indent' (ppCode opts' _lacksTypeSigClause)
-              <> checkColon _lacksTypeSigClause
-
-          checkColon :: FunctionClause 'Parsed -> Doc Ann
-          checkColon fc@FunctionClause {..} =
-            case Text.splitOn ":" (_clauseOwnerFunction ^. withLocParam) of
-              [x, ""] -> makeMessage x [":"]
-              [x, y] -> makeMessage x [":", y]
-              _ -> mempty
-            where
-              makeMessage :: Text -> [Text] -> Doc Ann
-              makeMessage x xs =
-                line
-                  <> "Perhaps you meant:"
-                  <> line
-                  <> indent'
-                    ( ppCode
-                        opts'
-                        (adjustPatterns x xs)
-                    )
-
-              adjustPatterns :: Text -> [Text] -> FunctionClause 'Parsed
-              adjustPatterns x xs =
-                ( over clauseOwnerFunction (set withLocParam x) $
-                    over clausePatterns (map mkpat xs ++) fc
-                )
-
-              mkpat :: Text -> PatternAtom 'Parsed
-              mkpat txt = PatternAtomIden (NameUnqualified (set withLocParam txt _clauseOwnerFunction))
-
--- | type signature without a function clause
-newtype LacksFunctionClause = LacksFunctionClause
-  { _lacksFunctionClause :: TypeSignature 'Scoped
-  }
-  deriving stock (Show)
-
-instance ToGenericError LacksFunctionClause where
-  genericError LacksFunctionClause {..} = ask >>= generr
-    where
-      generr opts =
-        return
-          GenericError
-            { _genericErrorLoc = i,
-              _genericErrorMessage = prettyError msg,
-              _genericErrorIntervals = [i]
-            }
-        where
-          opts' = fromGenericOptions opts
-          i = getLoc (_lacksFunctionClause ^. sigName)
-          msg =
-            "Type signature with no function clause:"
-              <> line
-              <> indent' (ppCode opts' _lacksFunctionClause)
 
 newtype ImportCycle = ImportCycle
   { -- | If we have [a, b, c] it means that a import b imports c imports a.
@@ -286,7 +209,7 @@ instance ToGenericError DuplicateIterator where
               locs = vsep $ map (pretty . getLoc) [_dupIteratorFirst, _dupIteratorFirst]
 
 data ExportEntries
-  = ExportEntriesSymbols (NonEmpty SymbolEntry)
+  = ExportEntriesSymbols (NonEmpty PreSymbolEntry)
   | ExportEntriesModules (NonEmpty ModuleSymbolEntry)
   | ExportEntriesFixities (NonEmpty FixitySymbolEntry)
   deriving stock (Show)
@@ -459,7 +382,7 @@ instance ToGenericError UnusedIteratorDef where
 
 data AmbiguousSym = AmbiguousSym
   { _ambiguousSymName :: Name,
-    _ambiguousSymEntires :: [SymbolEntry]
+    _ambiguousSymEntires :: [PreSymbolEntry]
   }
   deriving stock (Show)
 
@@ -906,3 +829,25 @@ instance ToGenericError IncomaprablePrecedences where
     where
       i :: Interval
       i = getLoc _incomparablePrecedencesName1
+
+newtype AliasCycle = AliasCycle
+  { _aliasCycleDef :: (AliasDef 'Parsed)
+  }
+  deriving stock (Show)
+
+instance ToGenericError AliasCycle where
+  genericError AliasCycle {..} = do
+    opts <- fromGenericOptions <$> ask
+    let msg =
+          "The definition of"
+            <+> ppCode opts (_aliasCycleDef ^. aliasDefName)
+            <+> "creates an alias cycle."
+    return
+      GenericError
+        { _genericErrorLoc = i,
+          _genericErrorMessage = mkAnsiText msg,
+          _genericErrorIntervals = [i]
+        }
+    where
+      i :: Interval
+      i = getLoc _aliasCycleDef

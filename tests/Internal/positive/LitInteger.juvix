@@ -1,14 +1,11 @@
 module LitInteger;
 
-open import Stdlib.Prelude public;
+import Stdlib.Prelude open public;
 
-main : Nat;
-main := 1 + 2;
+main : Nat := 1 + 2;
 
-nilNat : List Nat;
-nilNat := nil;
+nilNat : List Nat := nil;
 
-cons : Nat -> List Nat -> List Nat;
-cons a xs := a :: xs;
+cons : Nat -> List Nat -> List Nat
+  | a xs := a :: xs;
 
-end;

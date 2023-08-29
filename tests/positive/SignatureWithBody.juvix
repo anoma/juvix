@@ -10,10 +10,9 @@ isNull : {A : Type} → List A → Bool :=
 
 isNull' : {A : Type} → List A → Bool :=
   let
-    aux :
-      {A : Type} → List A → Bool :=
-        λ {
-          | nil := true
-          | _ := false
-        };
+    aux : {A : Type} → List A → Bool :=
+      λ {
+        | nil := true
+        | _ := false
+      };
   in aux;

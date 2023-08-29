@@ -56,6 +56,9 @@ hiding = "hiding"
 include :: (IsString s) => s
 include = "include"
 
+alias :: (IsString s) => s
+alias = "alias"
+
 import_ :: (IsString s) => s
 import_ = "import"
 

@@ -1,21 +1,23 @@
 -- applications with lets and cases in function position
 module test009;
 
-open import Stdlib.Prelude;
+import Stdlib.Prelude open;
 
-f : Nat -> ((Nat -> Nat) -> Nat -> Nat) × Nat → Nat;
-f a l := (case l
-      | (x, zero) := x
-      | _ := id)
-  (let
-      y : Nat → Nat;
-      y := id;
+f : Nat -> ((Nat -> Nat) -> Nat -> Nat) × Nat → Nat
+  | a l :=
+    (case l
+        | x, zero := x
+        | _ := id)
+      (let
+        y : Nat → Nat := id;
       in (let
-        z : (Nat → Nat) → Nat → Nat;
-        z := id;
-        in (case l | (_, zero) := id | _ := id) z)
-    y)
-  a;
+          z : (Nat → Nat) → Nat → Nat := id;
+        in (case l
+            | _, zero := id
+            | _ := id)
+          z)
+        y)
+      a;
 
-main : Nat -> Nat -> Nat -> Nat;
-main a b c := f a (λ{| x y := x y + b}, c);
+main : Nat -> Nat -> Nat -> Nat
+  | a b c := f a (λ {| x y := x y + b}, c);

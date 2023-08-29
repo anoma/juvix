@@ -28,7 +28,6 @@ makeFormatTest' Scope.PosTest {..} =
                 . runOutputList @FormattedFileInfo
                 . runScopeEffIO
                 . runFilesIO
-                . runReader (NewSyntax False)
                 $ format file'
             case d of
               Right (_, FormatResultOK) -> return ()

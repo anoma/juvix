@@ -1,8 +1,8 @@
 -- mid-square hashing (unrolled)
 module test010;
 
-open import Stdlib.Prelude;
-open import Stdlib.Data.Nat.Ord;
+import Stdlib.Prelude open;
+import Stdlib.Data.Nat.Ord open;
 
 pow0 : Nat := 1;
 
@@ -38,70 +38,69 @@ pow15 : Nat := 2 * pow14;
 
 pow16 : Nat := 2 * pow15;
 
-hash0 : Nat -> Nat;
-hash0 x := 0;
+hash0 : Nat -> Nat
+  | x := 0;
 
-hash1 : Nat -> Nat;
-hash1 x := x * x;
+hash1 : Nat -> Nat
+  | x := x * x;
 
-hash2 : Nat -> Nat;
-hash2 x := x * x;
+hash2 : Nat -> Nat
+  | x := x * x;
 
-hash3 : Nat -> Nat;
-hash3 x := x * x;
+hash3 : Nat -> Nat
+  | x := x * x;
 
-hash4 : Nat -> Nat;
-hash4 x :=
-  if (x < pow3) (hash3 x) (mod (div (x * x) pow1) pow6);
+hash4 : Nat -> Nat
+  | x :=
+    if (x < pow3) (hash3 x) (mod (div (x * x) pow1) pow6);
 
-hash5 : Nat -> Nat;
-hash5 x :=
-  if (x < pow4) (hash4 x) (mod (div (x * x) pow2) pow6);
+hash5 : Nat -> Nat
+  | x :=
+    if (x < pow4) (hash4 x) (mod (div (x * x) pow2) pow6);
 
-hash6 : Nat -> Nat;
-hash6 x :=
-  if (x < pow5) (hash5 x) (mod (div (x * x) pow3) pow6);
+hash6 : Nat -> Nat
+  | x :=
+    if (x < pow5) (hash5 x) (mod (div (x * x) pow3) pow6);
 
-hash7 : Nat -> Nat;
-hash7 x :=
-  if (x < pow6) (hash6 x) (mod (div (x * x) pow4) pow6);
+hash7 : Nat -> Nat
+  | x :=
+    if (x < pow6) (hash6 x) (mod (div (x * x) pow4) pow6);
 
-hash8 : Nat -> Nat;
-hash8 x :=
-  if (x < pow7) (hash7 x) (mod (div (x * x) pow5) pow6);
+hash8 : Nat -> Nat
+  | x :=
+    if (x < pow7) (hash7 x) (mod (div (x * x) pow5) pow6);
 
-hash9 : Nat -> Nat;
-hash9 x :=
-  if (x < pow8) (hash8 x) (mod (div (x * x) pow6) pow6);
+hash9 : Nat -> Nat
+  | x :=
+    if (x < pow8) (hash8 x) (mod (div (x * x) pow6) pow6);
 
-hash10 : Nat -> Nat;
-hash10 x :=
-  if (x < pow9) (hash9 x) (mod (div (x * x) pow7) pow6);
+hash10 : Nat -> Nat
+  | x :=
+    if (x < pow9) (hash9 x) (mod (div (x * x) pow7) pow6);
 
-hash11 : Nat -> Nat;
-hash11 x :=
-  if (x < pow10) (hash10 x) (mod (div (x * x) pow8) pow6);
+hash11 : Nat -> Nat
+  | x :=
+    if (x < pow10) (hash10 x) (mod (div (x * x) pow8) pow6);
 
-hash12 : Nat -> Nat;
-hash12 x :=
-  if (x < pow11) (hash11 x) (mod (div (x * x) pow9) pow6);
+hash12 : Nat -> Nat
+  | x :=
+    if (x < pow11) (hash11 x) (mod (div (x * x) pow9) pow6);
 
-hash13 : Nat -> Nat;
-hash13 x :=
-  if (x < pow12) (hash12 x) (mod (div (x * x) pow10) pow6);
+hash13 : Nat -> Nat
+  | x :=
+    if (x < pow12) (hash12 x) (mod (div (x * x) pow10) pow6);
 
-hash14 : Nat -> Nat;
-hash14 x :=
-  if (x < pow13) (hash13 x) (mod (div (x * x) pow11) pow6);
+hash14 : Nat -> Nat
+  | x :=
+    if (x < pow13) (hash13 x) (mod (div (x * x) pow11) pow6);
 
-hash15 : Nat -> Nat;
-hash15 x :=
-  if (x < pow14) (hash14 x) (mod (div (x * x) pow12) pow6);
+hash15 : Nat -> Nat
+  | x :=
+    if (x < pow14) (hash14 x) (mod (div (x * x) pow12) pow6);
 
-hash16 : Nat -> Nat;
-hash16 x :=
-  if (x < pow15) (hash15 x) (mod (div (x * x) pow13) pow6);
+hash16 : Nat -> Nat
+  | x :=
+    if (x < pow15) (hash15 x) (mod (div (x * x) pow13) pow6);
 
 {-# argnames: [val] #-}
-main : Nat -> Nat;
-main := hash16;
+main : Nat -> Nat := hash16;

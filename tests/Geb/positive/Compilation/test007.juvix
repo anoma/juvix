@@ -1,15 +1,15 @@
 -- single-constructor inductive types
 module test007;
 
-open import Stdlib.Prelude;
+import Stdlib.Prelude open;
 
 type Box2 :=
-    box2 : Nat -> Nat -> Box2;
+  | box2 : Nat -> Nat -> Box2;
 
 type Box :=
-    box : Box2 -> Box;
+  | box : Box2 -> Box;
 
-main : Nat;
-main := case box (box2 3 5)
-  | box (box2 x y) := x + y;
+main : Nat :=
+  case box (box2 3 5)
+    | box (box2 x y) := x + y;
 -- result: 8

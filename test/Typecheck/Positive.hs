@@ -276,7 +276,11 @@ tests =
     posTest
       "Issue 2296 (Pi types with lhs arity other than unit)"
       $(mkRelDir "issue2296")
-      $(mkRelFile "M.juvix")
+      $(mkRelFile "M.juvix"),
+    posTest
+      "Alias"
+      $(mkRelDir ".")
+      $(mkRelFile "Alias.juvix")
   ]
     <> [ compilationTest t | t <- Compilation.tests
        ]

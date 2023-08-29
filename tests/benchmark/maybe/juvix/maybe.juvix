@@ -1,58 +1,51 @@
 -- optionally sum N integers from a binary tree K times
 module maybe;
-  open import Stdlib.Prelude;
-  open import Stdlib.Data.Nat.Ord;
 
-  type Tree :=
-    | leaf : Tree
-    | node : Nat → Tree → Tree → Tree;
+import Stdlib.Prelude open;
+import Stdlib.Data.Nat.Ord open;
 
-  mknode : Nat → Tree → Tree;
-  mknode n t := node n t t;
+type Tree :=
+  | leaf : Tree
+  | node : Nat → Tree → Tree → Tree;
 
-  gen : Nat → Tree;
-  gen zero := leaf;
-  gen (suc n) := mknode (suc n) (gen n);
+mknode : Nat → Tree → Tree
+  | n t := node n t t;
 
-  terminating
-  sum : Nat → Tree → Maybe Nat;
+gen : Nat → Tree
+  | zero := leaf
+  | (suc n) := mknode (suc n) (gen n);
 
-  step2 : Nat → Maybe Nat → Maybe Nat;
+terminating
+sum : Nat → Tree → Maybe Nat
+  
+  | x leaf := just 0
+  | x (node y l r) :=
+    if (x == y) nothing (step1 x y (sum x l) r);
 
-  terminating
-  step1 : Nat → Nat → Maybe Nat → Tree → Maybe Nat;
-  step1 x y (just s1) t := step2 (y + s1) (sum x t);
-  step1 _ _ nothing _ := nothing;
+step2 : Nat → Maybe Nat → Maybe Nat
+  | x (just y) := just (x + y)
+  | _ nothing := nothing;
 
-  step2 x (just y) := just (x + y);
-  step2 _ nothing := nothing;
+terminating
+step1 : Nat → Nat → Maybe Nat → Tree → Maybe Nat
+  | x y (just s1) t := step2 (y + s1) (sum x t)
+  | _ _ nothing _ := nothing;
 
-  sum x leaf := just 0;
-  sum x (node y l r) := if
-    (x == y)
-    nothing
-    (step1 x y (sum x l) r);
+maybeStepRun : Nat → Nat → Maybe Nat
+  | x y := just (sub y x);
 
-  maybeStepRun : Nat → Nat → Maybe Nat;
-  maybeStepRun x y := just (sub y x);
+run : Nat → Tree → Maybe Nat
+  
+  | zero t := sum 0 t
+  | (suc n) t := stepRun (suc n) t (run n t);
 
-  run : Nat → Tree → Maybe Nat;
+stepRun : Nat → Tree → Maybe Nat → Maybe Nat
+  
+  | n t nothing := sum n t
+  | n t (just x) := maybe nothing (maybeStepRun x) (sum n t);
 
-  stepRun : Nat → Tree → Maybe Nat → Maybe Nat;
+printMaybeNat : Maybe Nat → IO
+  | (just x) := printNatLn x
+  | _ := printStringLn "nothing";
 
-  run zero t := sum 0 t;
-  run (suc n) t := stepRun (suc n) t (run n t);
-
-  stepRun n t nothing := sum n t;
-  stepRun n t (just x) := maybe
-    nothing
-    (maybeStepRun x)
-    (sum n t);
-
-  printMaybeNat : Maybe Nat → IO;
-  printMaybeNat (just x) := printNatLn x;
-  printMaybeNat _ := printStringLn "nothing";
-
-  main : IO;
-  main := printMaybeNat (run 101 (gen 20));
-end;
+main : IO := printMaybeNat (run 101 (gen 20));

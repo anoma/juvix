@@ -7,7 +7,7 @@ module InfixErrorP;
   type Pair :=
    , : Type → Type → Pair;
 
-  fst : Pair → Type;
-  fst (x , ) := x;
+  fst : Pair → Type
+    | (x , ) := x;
 
 end;

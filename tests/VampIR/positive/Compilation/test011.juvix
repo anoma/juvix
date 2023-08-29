@@ -1,12 +1,11 @@
 -- recursion
 module test011;
 
-open import Stdlib.Prelude;
+import Stdlib.Prelude open;
 
 {-# unroll: 11 #-}
-sum : Nat → Nat;
-sum zero := 0;
-sum (suc x) := suc x + sum x;
+sum : Nat → Nat
+  | zero := 0
+  | (suc x) := suc x + sum x;
 
-main : Nat -> Nat;
-main := sum;
+main : Nat -> Nat := sum;

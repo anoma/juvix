@@ -1,18 +1,20 @@
 module Case;
-  open import Stdlib.Prelude;
 
-  not' : Bool → Bool;
-  not' b := case b
+import Stdlib.Prelude open;
+
+not' : Bool → Bool
+  | b :=
+    case b
       | true := false
       | false := true;
 
-  terminating
-  andList : List Bool → Bool;
-  andList l := case l
+terminating
+andList : List Bool → Bool
+  | l :=
+    case l
       | nil := true
       | x :: xs := x && andList xs;
 
-  main : IO;
-  main := printBoolLn (not' false)
+main : IO :=
+  printBoolLn (not' false)
     >> printBoolLn (andList (true :: false :: nil));
-end;

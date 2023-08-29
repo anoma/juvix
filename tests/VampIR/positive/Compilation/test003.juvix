@@ -1,23 +1,26 @@
 -- inductive types
 module test003;
 
-open import Stdlib.Prelude;
-open import Stdlib.Data.Nat.Ord;
+import Stdlib.Prelude open;
+import Stdlib.Data.Nat.Ord open;
 
 type enum :=
-|  opt0 : enum
-|  opt1 : Bool -> enum
-|  opt2 : Bool -> Bool -> enum;
+  | opt0 : enum
+  | opt1 : Bool -> enum
+  | opt2 : Bool -> Bool -> enum;
 
-natToBool : Nat -> Bool;
-natToBool x := if (x == 0) false true;
+natToBool : Nat -> Bool
+  | x := if (x == 0) false true;
 
-boolToNat : Bool -> Nat;
-boolToNat x := if x 1 0;
+boolToNat : Bool -> Nat
+  | x := if x 1 0;
 
-main : Nat -> Nat -> Nat;
-main x y := boolToNat $ λ{
-|  opt0 := false
-|  (opt1 b) := b
-|  (opt2 b c) := if b b c
-} (opt2 (natToBool x) (natToBool y));
+main : Nat -> Nat -> Nat
+  | x y :=
+    boolToNat
+      $ λ {
+          | opt0 := false
+          | (opt1 b) := b
+          | (opt2 b c) := if b b c
+        }
+        (opt2 (natToBool x) (natToBool y));

@@ -6,7 +6,6 @@ fib : Nat → Nat → Nat → Nat
   | zero x1 _ := x1
   | (suc n) x1 x2 := fib n x2 (x1 + x2);
 
-fibonacci : Nat → Nat
-  | n := fib n 0 1;
+fibonacci (n : Nat) : Nat := fib n 0 1;
 
 main : IO := readLn (printNatLn ∘ fibonacci ∘ stringToNat);

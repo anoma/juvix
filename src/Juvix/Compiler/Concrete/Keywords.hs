@@ -18,6 +18,8 @@ import Juvix.Data.Keyword.All
     delimParenR,
     delimSemicolon,
     -- keywords
+
+    kwAlias,
     kwAs,
     kwAssign,
     kwAt,
@@ -94,5 +96,6 @@ nonKeywords =
     kwEq,
     kwFixity,
     kwOperator,
+    kwAlias,
     kwIterator
   ]

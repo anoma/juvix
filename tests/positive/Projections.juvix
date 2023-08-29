@@ -23,9 +23,9 @@ module M;
   p1 : RecA T (Maybe T) :=
     mkRecA
       (arg := just
-         (mkRecB
-           (arg := mkRecA (arg := nothing; arg2 := t); arg2 := t));
-       arg2 := t);
+        (mkRecB
+          (arg := mkRecA (arg := nothing; arg2 := t); arg2 := t));
+      arg2 := t);
 end;
 
 p3 : T := M.RecA.arg2 M.p1;

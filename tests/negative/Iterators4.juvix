@@ -2,13 +2,11 @@ module Iterators4;
 
 syntax iterator map;
 syntax iterator map {init: 0};
-map : {A B : Type} → (A → B) → A → B;
-map f x := f x;
+map {A B} (f : A → B) (x : A) : B := f x;
 
 builtin bool
 type Bool :=
   | true : Bool
   | false : Bool;
 
-main : Bool;
-main := map (y := false) (x in true) x;
+main : Bool := map (y := false) (x in true) x;

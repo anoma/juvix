@@ -1,0 +1,5 @@
+module AliasCycle;
+
+syntax alias x1 := x2;
+syntax alias x2 := x3;
+syntax alias x3 := x1;

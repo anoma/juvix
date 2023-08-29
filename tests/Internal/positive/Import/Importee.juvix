@@ -1,8 +1,7 @@
 module Importee;
 
-open import Stdlib.Prelude;
+import Stdlib.Prelude open;
 
-f : Nat;
-f := 1;
+f : Nat := 1;
 
 end;

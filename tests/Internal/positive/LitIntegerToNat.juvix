@@ -1,12 +1,10 @@
 module LitIntegerToNat;
 
-open import Stdlib.Prelude;
+import Stdlib.Prelude open;
 
-f : Nat -> Nat;
-f (suc x) := x;
-f zero := 0;
+f : Nat -> Nat
+  | (suc x) := x
+  | zero := 0;
 
-main : IO;
-main := printNatLn (f 3) >> printNatLn (f 0);
+main : IO := printNatLn (f 3) >> printNatLn (f 0);
 
-end;

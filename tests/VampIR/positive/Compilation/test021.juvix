@@ -4,13 +4,11 @@ module test021;
 import Stdlib.Prelude open;
 import Stdlib.Data.Nat.Ord open;
 
-power : Nat → Nat → Nat;
-power :=
+power : Nat → Nat → Nat :=
   let
     {-# unroll: 4 #-}
     terminating
-    power' : Nat → Nat → Nat → Nat;
-    power' acc a b :=
+    power' (acc a b : Nat) : Nat :=
       if
         (b == 0)
         acc
@@ -20,5 +18,4 @@ power :=
           (power' (acc * a) (a * a) (div b 2)));
   in power' 1;
 
-main : Nat -> Nat -> Nat;
-main := power;
+main : Nat -> Nat -> Nat := power;

@@ -4,6 +4,41 @@
 <img align="right" width="300" height="300" alt="Juvix Mascot" src="../assets/images/tara-smiling.svg" />
 </a>
 
+## [v0.4.3](https://github.com/anoma/juvix/tree/.v0.4.3)
+
+[Full Changelog](https://github.com/anoma/juvix/compare/v0.4.2....v0.4.3)
+
+**Implemented enhancements:**
+
+- Allow wildcard arguments in new function definition syntax [\#2295](https://github.com/anoma/juvix/pull/2295) ([lukaszcz](https://github.com/lukaszcz))
+- Allow omitting `: Type` in implicit function argument definitions and in type definitions [\#2291](https://github.com/anoma/juvix/pull/2291) ([lukaszcz](https://github.com/lukaszcz))
+- Record patterns [\#2271](https://github.com/anoma/juvix/pull/2271) ([janmasrovira](https://github.com/janmasrovira))
+- User-friendly operator declaration syntax [\#2270](https://github.com/anoma/juvix/pull/2270) ([lukaszcz](https://github.com/lukaszcz))
+- Record updates [\#2263](https://github.com/anoma/juvix/pull/2263) ([janmasrovira](https://github.com/janmasrovira))
+- Add field projections for records [\#2260](https://github.com/anoma/juvix/pull/2260) ([janmasrovira](https://github.com/janmasrovira))
+
+**Merged pull requests:**
+
+- Fix shell variables in linux static build stack install [\#2309](https://github.com/anoma/juvix/pull/2309) ([paulcadman](https://github.com/paulcadman))
+- Replace gitrev with githash for obtaining build-time git info [\#2308](https://github.com/anoma/juvix/pull/2308) ([paulcadman](https://github.com/paulcadman))
+- Check that type functions are supported [\#2306](https://github.com/anoma/juvix/pull/2306) ([janmasrovira](https://github.com/janmasrovira))
+- Minor comment updates [\#2303](https://github.com/anoma/juvix/pull/2303) ([lukaszcz](https://github.com/lukaszcz))
+- Update stdlib to use new ADT and record syntax [\#2302](https://github.com/anoma/juvix/pull/2302) ([paulcadman](https://github.com/paulcadman))
+- Fix bug in arity checker with pi types [\#2300](https://github.com/anoma/juvix/pull/2300) ([janmasrovira](https://github.com/janmasrovira))
+- Error on duplicate keys in YAML [\#2290](https://github.com/anoma/juvix/pull/2290) ([lukaszcz](https://github.com/lukaszcz))
+- Check for incomparable precedences [\#2289](https://github.com/anoma/juvix/pull/2289) ([lukaszcz](https://github.com/lukaszcz))
+- Prettyprint aggregate ADT constructor types with parentheses [\#2284](https://github.com/anoma/juvix/pull/2284) ([paulcadman](https://github.com/paulcadman))
+- Fixes behaviour of default stdlib when internal-build-flag is set [\#2283](https://github.com/anoma/juvix/pull/2283) ([paulcadman](https://github.com/paulcadman))
+- Enable builtin list syntax in the standard library [\#2282](https://github.com/anoma/juvix/pull/2282) ([lukaszcz](https://github.com/lukaszcz))
+- Improve iterator and named arguments parsing [\#2278](https://github.com/anoma/juvix/pull/2278) ([lukaszcz](https://github.com/lukaszcz))
+- Update stackage resolver to LTS 21.6 [\#2275](https://github.com/anoma/juvix/pull/2275) ([paulcadman](https://github.com/paulcadman))
+- Fix benchmark wasmer command [\#2268](https://github.com/anoma/juvix/pull/2268) ([paulcadman](https://github.com/paulcadman))
+- Disallow iterators with zero ranges [\#2267](https://github.com/anoma/juvix/pull/2267) ([lukaszcz](https://github.com/lukaszcz))
+- Don't print pragmas in documentation [\#2266](https://github.com/anoma/juvix/pull/2266) ([lukaszcz](https://github.com/lukaszcz))
+- Adt syntax [\#2262](https://github.com/anoma/juvix/pull/2262) ([janmasrovira](https://github.com/janmasrovira))
+- Minor refactor and script update [\#2261](https://github.com/anoma/juvix/pull/2261) ([lukaszcz](https://github.com/lukaszcz))
+- Separate modules namespace [\#2257](https://github.com/anoma/juvix/pull/2257) ([janmasrovira](https://github.com/janmasrovira))
+
 ## [v0.4.2](https://github.com/anoma/juvix/tree/v0.4.2) (2023-07-25)
 
 [Full Changelog](https://github.com/anoma/juvix/compare/v0.4.1...v0.4.2)

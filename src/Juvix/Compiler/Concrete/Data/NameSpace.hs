@@ -20,6 +20,7 @@ $(genSingletons [''NameSpace])
 type NameKindNameSpace :: NameKind -> NameSpace
 type family NameKindNameSpace s = res where
   NameKindNameSpace 'KNameLocal = 'NameSpaceSymbols
+  NameKindNameSpace 'KNameAlias = 'NameSpaceSymbols
   NameKindNameSpace 'KNameConstructor = 'NameSpaceSymbols
   NameKindNameSpace 'KNameInductive = 'NameSpaceSymbols
   NameKindNameSpace 'KNameFunction = 'NameSpaceSymbols

@@ -59,6 +59,7 @@ data ScoperState = ScoperState
     -- | Local and top modules
     _scoperModules :: HashMap S.ModuleNameId (ModuleRef' 'S.NotConcrete),
     _scoperScope :: HashMap TopModulePath Scope,
+    _scoperAlias :: HashMap S.NameId PreSymbolEntry,
     _scoperSignatures :: HashMap S.NameId NameSignature,
     -- | Indexed by the inductive type. This is used for record updates
     _scoperRecordFields :: HashMap S.NameId RecordInfo,

@@ -1,20 +1,20 @@
 -- fast exponentiation
 module test021;
 
-open import Stdlib.Prelude;
-open import Stdlib.Data.Nat.Ord;
+import Stdlib.Prelude open;
+import Stdlib.Data.Nat.Ord open;
 
 terminating
-power' : Nat → Nat → Nat → Nat;
-power' acc a b :=
-  if (b == 0)
-    acc
-    (if (mod b 2 == 0)
-      (power' acc (a * a) (div b 2))
-      (power' (acc * a) (a * a) (div b 2)));
+power' : Nat → Nat → Nat → Nat
+  | acc a b :=
+    if
+      (b == 0)
+      acc
+      (if
+        (mod b 2 == 0)
+        (power' acc (a * a) (div b 2))
+        (power' (acc * a) (a * a) (div b 2)));
 
-power : Nat → Nat → Nat;
-power := power' 1;
+power : Nat → Nat → Nat := power' 1;
 
-main : Nat;
-main := power 2 3 + power 3 7 + power 5 11;
+main : Nat := power 2 3 + power 3 7 + power 5 11;

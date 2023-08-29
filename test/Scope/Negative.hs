@@ -135,20 +135,6 @@ scoperErrorTests =
         ErrAmbiguousSym {} -> Nothing
         _ -> wrongError,
     NegTest
-      "Lacks function clause"
-      $(mkRelDir ".")
-      $(mkRelFile "LacksFunctionClause.juvix")
-      $ \case
-        ErrLacksFunctionClause {} -> Nothing
-        _ -> wrongError,
-    NegTest
-      "Lacks function clause inside let"
-      $(mkRelDir ".")
-      $(mkRelFile "LetMissingClause.juvix")
-      $ \case
-        ErrLacksFunctionClause {} -> Nothing
-        _ -> wrongError,
-    NegTest
       "Ambiguous export"
       $(mkRelDir ".")
       $(mkRelFile "AmbiguousExport.juvix")
@@ -224,20 +210,6 @@ scoperErrorTests =
       $(mkRelFile "DuplicateInductiveParameterName.juvix")
       $ \case
         ErrNameSignature (ErrDuplicateName DuplicateName {}) -> Nothing
-        _ -> wrongError,
-    NegTest
-      "A function lacks a type signature"
-      $(mkRelDir ".")
-      $(mkRelFile "LacksTypeSig.juvix")
-      $ \case
-        ErrLacksTypeSig {} -> Nothing
-        _ -> wrongError,
-    NegTest
-      "A function inside a let lacks a type signature that is at the top level"
-      $(mkRelDir ".")
-      $(mkRelFile "LacksTypeSig2.juvix")
-      $ \case
-        ErrLacksTypeSig {} -> Nothing
         _ -> wrongError,
     NegTest
       "Using symbol that is not exported"
@@ -350,5 +322,12 @@ scoperErrorTests =
       $(mkRelFile "IncomparablePrecedences.juvix")
       $ \case
         ErrIncomparablePrecedences {} -> Nothing
+        _ -> wrongError,
+    NegTest
+      "Alias cycle"
+      $(mkRelDir ".")
+      $(mkRelFile "AliasCycle.juvix")
+      $ \case
+        ErrAliasCycle {} -> Nothing
         _ -> wrongError
   ]

@@ -1,14 +1,13 @@
 {-# format: false #-}
 module FormatPragma;
 
-open import Stdlib.Prelude;
+import Stdlib.Prelude open;
 
 -- Bam, bam!
 
 -- unformatted module
 
-fun : {A B C D : Type} -> (A -> A) -> (B -> C -> D) -> (A -> B -> C) -> (D -> C -> C) -> A -> B -> C;
-fun f g h i a b :=
+fun {A B C D} (f : A -> A) (g : B -> C -> D) (h : A -> B -> C) (i : D -> C -> C) (a : A) (b : B) : C :=
   i
     (g b (h (f a) b))
     (h a b);

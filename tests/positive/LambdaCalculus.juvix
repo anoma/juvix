@@ -1,8 +1,8 @@
 module LambdaCalculus;
 
-LambdaTy : Type -> Type :=  Lambda;
+LambdaTy : Type -> Type := Lambda;
 
-AppTy : Type -> Type :=  App;
+AppTy : Type -> Type := App;
 
 type Expr (V : Type) :=
   | var : V -> Expr V

@@ -1,11 +1,9 @@
 module IdenFunctionArgs;
 
-open import Stdlib.Prelude;
+import Stdlib.Prelude open;
 
-f : Nat → Nat → Nat;
-f x y := x;
+f : Nat → Nat → Nat
+  | x y := x;
 
-main : Nat;
-main := f 100 200;
+main : Nat := f 100 200;
 
-end;

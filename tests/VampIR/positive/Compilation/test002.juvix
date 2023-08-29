@@ -8,19 +8,19 @@ type optbool :=
   | Just : Bool -> optbool
   | Nothing : optbool;
 
-natToBool : Nat -> Bool;
-natToBool x := if (x == 0) false true;
+natToBool : Nat -> Bool
+  | x := if (x == 0) false true;
 
-boolToNat : Bool -> Nat;
-boolToNat x := if x 1 0;
+boolToNat : Bool -> Nat
+  | x := if x 1 0;
 
 {-# public: [b] #-}
-main : Nat -> Nat -> Nat;
-main a b :=
-  boolToNat
-    $ λ {
-        | x (Just b) := if x false b
-        | _ Nothing := false
-      }
-      (natToBool a)
-      (Just (natToBool b));
+main : Nat -> Nat -> Nat
+  | a b :=
+    boolToNat
+      $ λ {
+          | x (Just b) := if x false b
+          | _ Nothing := false
+        }
+        (natToBool a)
+        (Just (natToBool b));

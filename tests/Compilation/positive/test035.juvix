@@ -1,59 +1,58 @@
 -- pattern matching
 module test035;
 
-open import Stdlib.Prelude;
+import Stdlib.Prelude open;
 
-lgen : Nat → List Nat;
-lgen zero := nil;
-lgen (suc n) := suc n :: lgen n;
+lgen : Nat → List Nat
+  | zero := nil
+  | (suc n) := suc n :: lgen n;
 
-sum2 : List Nat → List Nat;
-sum2 (x :: (y :: xs)) := x + y :: sum2 (y :: xs);
-sum2 xs := xs;
+sum2 : List Nat → List Nat
+  | (x :: y :: xs) := x + y :: sum2 (y :: xs)
+  | xs := xs;
 
 type Tree :=
-  leaf : Tree
-| node : Tree -> Tree -> Tree;
+  | leaf : Tree
+  | node : Tree -> Tree -> Tree;
 
-gen : Nat → Tree;
-gen zero := leaf;
-gen (suc zero) := node leaf leaf;
-gen (suc (suc n)) := node (gen n) (gen (suc n));
-
-g : Tree → Tree;
+gen : Nat → Tree
+  | zero := leaf
+  | (suc zero) := node leaf leaf
+  | (suc (suc n)) := node (gen n) (gen (suc n));
 
 terminating
-f : Tree → Nat;
-f leaf := 1;
-f (node l r) :=
-  case g l, g r
-    | (leaf, leaf) := 3
-    | (node l r, leaf) := mod ((f l + f r) * 2) 20000
-    | (node l1 r1, node l2 r2) := mod ((f l1 + f r1) * (f l2 + f r2)) 20000
-    | (_, node l r) := mod (f l + f r) 20000;
+f : Tree → Nat
+  | leaf := 1
+  | (node l r) :=
+    case g l, g r
+      | leaf, leaf := 3
+      | node l r, leaf := mod ((f l + f r) * 2) 20000
+      | node l1 r1, node l2 r2 :=
+        mod ((f l1 + f r1) * (f l2 + f r2)) 20000
+      | _, node l r := mod (f l + f r) 20000;
 
-g leaf := leaf;
-g (node (node _ _) r) := r;
-g (node l r) := node r l;
+g : Tree → Tree
+  | leaf := leaf
+  | (node (node _ _) r) := r
+  | (node l r) := node r l;
 
-h : Nat -> Nat;
-h (suc (suc (suc (suc n)))) := n;
-h _ := 0;
+h : Nat -> Nat
+  | (suc (suc (suc (suc n)))) := n
+  | _ := 0;
 
-printListNatLn : List Nat → IO;
-printListNatLn nil := printStringLn "nil";
-printListNatLn (x :: xs) := printNat x >> printString " :: " >> printListNatLn xs;
+printListNatLn : List Nat → IO
+  | nil := printStringLn "nil"
+  | (x :: xs) :=
+    printNat x >> printString " :: " >> printListNatLn xs;
 
-main : IO;
-main :=
-  printListNatLn (sum2 (lgen 5)) >>
-  printNatLn (f (gen 10)) >>
-  printNatLn (f (gen 15)) >>
-  printNatLn (f (gen 16)) >>
-  printNatLn (f (gen 17)) >>
-  printNatLn (f (gen 18)) >>
-  printNatLn (f (gen 20)) >>
-  printNatLn (h 5) >>
-  printNatLn (h 3);
+main : IO :=
+  printListNatLn (sum2 (lgen 5))
+    >> printNatLn (f (gen 10))
+    >> printNatLn (f (gen 15))
+    >> printNatLn (f (gen 16))
+    >> printNatLn (f (gen 17))
+    >> printNatLn (f (gen 18))
+    >> printNatLn (f (gen 20))
+    >> printNatLn (h 5)
+    >> printNatLn (h 3);
 
-end;

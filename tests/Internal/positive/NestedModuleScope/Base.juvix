@@ -1,5 +1,5 @@
 module Base;
 
 module NestedBase;
-  open import Base2 public;
+  import Base2 open public;
 end;

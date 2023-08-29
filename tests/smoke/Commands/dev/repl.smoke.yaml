@@ -15,7 +15,7 @@ tests:
       - juvix
       - dev
       - repl
-    stdin: ":type let even : _; odd : _; odd zero := false; odd (suc n) := not (even n); even zero := true; even (suc n) := not (odd n) in even 10"
+    stdin: ":type let odd : _ | zero := false | (suc n) := not (even n); even : _ | zero := true | (suc n) := not (odd n) in even 10"
     stdout:
       contains:
         "Bool"
@@ -26,7 +26,7 @@ tests:
       - juvix
       - dev
       - repl
-    stdin: "let even : Nat → Bool; odd : _; odd zero := false; odd (suc n) := not (even n); even zero := true; even (suc n) := not (odd n) in even 10"
+    stdin: "let odd : _ | zero := false | (suc n) := not (even n); even : Nat → Bool | zero := true | (suc n) := not (odd n) in even 10"
     stdout:
       contains:
         "true"
@@ -155,7 +155,7 @@ tests:
       - juvix
       - dev
       - repl
-    stdin: "let x : Nat; x := 2 + 1 in x"
+    stdin: "let x : Nat := 2 + 1 in x"
     stdout:
       contains:
         "3"

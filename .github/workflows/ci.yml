@@ -43,7 +43,7 @@ jobs:
       - uses: actions/checkout@v3
       - uses: mrkkrp/ormolu-action@v11
         with:
-          version: 0.5.2.0
+          version: 0.5.3.0
           extra-args: >-
             --ghc-opt -XDerivingStrategies --ghc-opt -XImportQualifiedPost
             --ghc-opt -XMultiParamTypeClasses --ghc-opt -XStandaloneDeriving
@@ -89,8 +89,12 @@ jobs:
         run: |
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
-      - name: Setup Wasmer
-        uses: wasmerio/setup-wasmer@v2
+      - name: Install the latest Wasmer version
+        uses: jaxxstorm/action-install-gh-release@v1.10.0
+        with:
+          repo: wasmerio/wasmer
+          binaries-location: bin
+          chmod: 0755
 
       - name: Install libs
         run: sudo apt install -y libncurses5
@@ -184,8 +188,12 @@ jobs:
         run: |
           echo "WASI_SYSROOT_PATH=$GITHUB_WORKSPACE/wasi-sysroot" >> $GITHUB_ENV
 
-      - name: Setup Wasmer
-        uses: wasmerio/setup-wasmer@v3
+      - name: Install the latest Wasmer version
+        uses: jaxxstorm/action-install-gh-release@v1.10.0
+        with:
+          repo: wasmerio/wasmer
+          binaries-location: bin
+          chmod: 0755
 
       # smoke dynamically links to icu4c, so a cached binary of smoke will break
       # when brew bumps the icu4c version. In the following steps we use the

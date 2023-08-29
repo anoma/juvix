@@ -1,30 +1,24 @@
 -- eta-expansion
 module test036;
 
-open import Stdlib.Prelude;
+import Stdlib.Prelude open;
 
-expand : {A : Type} → A → Nat → A;
-expand f x := f;
+expand : {A : Type} → A → Nat → A
+  | f x := f;
 
-f : Nat → Nat;
-f := suc;
+f : Nat → Nat := suc;
 
-g : Nat → Nat → Nat;
-g z := f ∘ (flip sub z);
+g : Nat → Nat → Nat
+  | z := f ∘ flip sub z;
 
-g' : Nat → Nat → Nat;
-g' z := f ∘ (λ{x := sub x z});
+g' : Nat → Nat → Nat
+  | z := f ∘ λ {x := sub x z};
 
-h : Nat → Nat;
-h := f ∘ g 3;
+h : Nat → Nat := f ∘ g 3;
 
-j : Nat → Nat → Nat;
-j := g';
+j : Nat → Nat → Nat := g';
 
-k : Nat → Nat → Nat → Nat;
-k := expand j;
+k : Nat → Nat → Nat → Nat := expand j;
 
-main : IO;
-main := printNatLn (h 13 + j 2 3 + k 9 4 7);
+main : IO := printNatLn (h 13 + j 2 3 + k 9 4 7);
 
-end;

@@ -201,7 +201,19 @@ instance (SingI s) => PrettyPrint (PatternAtoms s) where
   ppCode (PatternAtoms ps _) = hsep (ppCode <$> ps)
 
 instance (SingI s) => PrettyPrint (ExpressionAtoms s) where
-  ppCode as = hsep (ppCode <$> as ^. expressionAtoms)
+  ppCode ::
+    forall r.
+    (Members '[ExactPrint, Reader Options] r) =>
+    ExpressionAtoms s ->
+    Sem r ()
+  ppCode as = go (toList $ as ^. expressionAtoms)
+    where
+      go :: [ExpressionAtom s] -> Sem r ()
+      go = \case
+        [] -> return ()
+        [x] -> ppCode x
+        (x : xs@(AtomRecordUpdate {} : _)) -> ppCode x >> go xs
+        (x : xs) -> ppCode x >> space >> go xs
 
 instance (SingI s) => PrettyPrint (Initializer s) where
   ppCode Initializer {..} = do
@@ -230,15 +242,11 @@ instance (SingI s) => PrettyPrint (Iterator s) where
       hang (n <+?> is' <+?> rngs' <> b')
 
 instance PrettyPrint S.AName where
-  ppCode (S.AName n) = annotated (AnnKind (S.getNameKind n)) (noLoc (pretty (n ^. S.nameVerbatim)))
+  ppCode n = annotated (AnnKind (S.getNameKind n)) (noLoc (pretty (n ^. S.anameVerbatim)))
 
 instance PrettyPrint FunctionInfo where
   ppCode = \case
-    FunctionInfoOld f -> do
-      let ty = StatementTypeSignature (f ^. oldFunctionInfoType)
-          cs = map StatementFunctionClause (f ^. oldFunctionInfoClauses)
-      ppStatements (ty : cs)
-    FunctionInfoNew f -> ppCode f
+    FunctionInfo f -> ppCode f
 
 instance (SingI s) => PrettyPrint (List s) where
   ppCode List {..} = do
@@ -411,7 +419,7 @@ instance PrettyPrint (ModuleRef'' 'S.Concrete t) where
   ppCode m = ppCode (m ^. moduleRefName)
 
 instance PrettyPrint ScopedIden where
-  ppCode = ppCode . (^. scopedIden)
+  ppCode = ppCode . (^. scopedIdenName)
 
 instance (SingI s) => PrettyPrint (Import s) where
   ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => Import s -> Sem r ()
@@ -425,11 +433,20 @@ instance (SingI s) => PrettyPrint (Import s) where
         Nothing -> Nothing
         Just as -> Just (ppCode Kw.kwAs <+> ppModulePathType as)
 
+instance (SingI s) => PrettyPrint (AliasDef s) where
+  ppCode AliasDef {..} =
+    ppCode _aliasDefSyntaxKw
+      <+> ppCode _aliasDefAliasKw
+      <+> ppSymbolType _aliasDefName
+      <+> ppCode Kw.kwAssign
+      <+> ppIdentifierType _aliasDefAsName
+
 instance (SingI s) => PrettyPrint (SyntaxDef s) where
   ppCode = \case
     SyntaxFixity f -> ppCode f
     SyntaxOperator op -> ppCode op
     SyntaxIterator it -> ppCode it
+    SyntaxAlias it -> ppCode it
 
 instance PrettyPrint Literal where
   ppCode = noLoc . ppLiteral
@@ -446,11 +463,16 @@ instance (SingI s) => PrettyPrint (LambdaClause s) where
         lambdaPipe' = ppCode <$> _lambdaPipe ^. unIrrelevant
     lambdaPipe' <?+> lambdaParameters' <+> ppCode _lambdaAssignKw <> oneLineOrNext lambdaBody'
 
+instance (SingI s) => PrettyPrint (LetStatement s) where
+  ppCode = \case
+    LetFunctionDef f -> ppCode f
+    LetAliasDef f -> ppCode f
+
 instance (SingI s) => PrettyPrint (Let s) where
   ppCode Let {..} = do
-    let letClauses' = blockIndent (ppBlock _letClauses)
+    let letFunDefs' = blockIndent (ppBlock _letFunDefs)
         letExpression' = ppExpressionType _letExpression
-    ppCode _letKw <> letClauses' <> ppCode _letInKw <+> letExpression'
+    ppCode _letKw <> letFunDefs' <> ppCode _letInKw <+> letExpression'
 
 instance (SingI s) => PrettyPrint (Case s) where
   ppCode Case {..} = do
@@ -554,11 +576,6 @@ instance (SingI s) => PrettyPrint (CaseBranch s) where
     let pat' = ppPatternParensType _caseBranchPattern
         e' = ppExpressionType _caseBranchExpression
     ppCode _caseBranchPipe <+> pat' <+> ppCode _caseBranchAssignKw <> oneLineOrNext e'
-
-instance (SingI s) => PrettyPrint (LetClause s) where
-  ppCode c = case c of
-    LetTypeSig sig -> ppCode sig
-    LetFunClause cl -> ppCode cl
 
 ppBlock :: (PrettyPrint a, Members '[Reader Options, ExactPrint] r, Traversable t) => t a -> Sem r ()
 ppBlock items = vsep (sepEndSemicolon (fmap ppCode items))
@@ -795,30 +812,6 @@ instance (SingI s) => PrettyPrint (FunctionDef s) where
                 <> body'
           )
 
-instance (SingI s) => PrettyPrint (TypeSignature s) where
-  ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => TypeSignature s -> Sem r ()
-  ppCode TypeSignature {..} = do
-    let termin' :: Maybe (Sem r ()) = (<> line) . ppCode <$> _sigTerminating
-        doc' :: Maybe (Sem r ()) = ppCode <$> _sigDoc
-        pragmas' :: Maybe (Sem r ()) = ppCode <$> _sigPragmas
-        builtin' :: Maybe (Sem r ()) = (<> line) . ppCode <$> _sigBuiltin
-        type' = ppExpressionType _sigType
-        name' = annDef _sigName (ppSymbolType _sigName)
-        body' = case _sigBody of
-          Nothing -> Nothing
-          Just body -> Just (ppCode (fromJust <$> _sigAssignKw) <> oneLineOrNext (ppExpressionType body))
-    doc'
-      ?<> pragmas'
-      ?<> builtin'
-      ?<> termin'
-      ?<> ( name'
-              <+> ppCode _sigColonKw
-                <> oneLineOrNext
-                  ( type'
-                      <+?> body'
-                  )
-          )
-
 instance PrettyPrint Wildcard where
   ppCode w = morpheme (getLoc w) C.kwWildcard
 
@@ -840,7 +833,7 @@ instance (SingI s) => PrettyPrint (RecordPattern s) where
   ppCode r = do
     let c = ppIdentifierType (r ^. recordPatternConstructor)
         items = sepSemicolon (map ppCode (r ^. recordPatternItems))
-    c <> noLoc C.kwAt <> braces items
+    c <> noLoc C.kwAt <> align (braces items)
 
 instance PrettyPrint Pattern where
   ppCode = \case
@@ -939,21 +932,6 @@ instance (SingI s) => PrettyPrint (OpenModule s) where
           <+> openkw
           <+?> usingHiding'
           <+?> public'
-
-instance (SingI s) => PrettyPrint (FunctionClause s) where
-  ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => FunctionClause s -> Sem r ()
-  ppCode FunctionClause {..} = do
-    let clauseFun' = ppSymbolType _clauseOwnerFunction
-        clausePatterns' = case nonEmpty _clausePatterns of
-          Nothing -> Nothing
-          Just ne -> Just (hsep (ppPatternAtom <$> ne))
-        clauseBody' = ppExpressionType _clauseBody
-    nest
-      ( clauseFun'
-          <+?> clausePatterns'
-      )
-      <+> ppCode _clauseAssignKw
-        <> oneLineOrNext clauseBody'
 
 ppCodeAtom :: (HasAtomicity c, PrettyPrint c) => PrettyPrinting c
 ppCodeAtom c = do
@@ -1090,15 +1068,29 @@ instance (SingI s) => PrettyPrint (ProjectionDef s) where
 instance (SingI s) => PrettyPrint (Statement s) where
   ppCode = \case
     StatementSyntax s -> ppCode s
-    StatementTypeSignature s -> ppCode s
     StatementFunctionDef f -> ppCode f
     StatementImport i -> ppCode i
     StatementInductive i -> ppCode i
     StatementModule m -> ppCode m
     StatementOpenModule o -> ppCode o
-    StatementFunctionClause c -> ppCode c
     StatementAxiom a -> ppCode a
     StatementProjectionDef a -> ppCode a
+
+instance PrettyPrint PreSymbolEntry where
+  ppCode = \case
+    PreSymbolAlias a -> ppCode a
+    PreSymbolFinal a -> ppCode a
+
+instance PrettyPrint Alias where
+  ppCode a =
+    noLoc
+      ( kindWord
+          P.<+> C.code ((pretty (a ^. aliasName . S.nameVerbatim)))
+          P.<+> "defined at"
+          P.<+> pretty (getLoc a)
+      )
+    where
+      kindWord :: Doc Ann = "Alias"
 
 instance PrettyPrint SymbolEntry where
   ppCode ent =
