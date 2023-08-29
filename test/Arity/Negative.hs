@@ -98,7 +98,7 @@ tests =
       $ \case
         ErrBuiltinNotFullyApplied {} -> Nothing
         _ -> wrongError,
-     NegTest
+    NegTest
       "issue 2293: Non-terminating function with arity error"
       $(mkRelDir "Internal")
       $(mkRelFile "issue2293.juvix")
