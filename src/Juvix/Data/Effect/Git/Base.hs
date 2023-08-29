@@ -1,7 +1,6 @@
 module Juvix.Data.Effect.Git.Base where
 
 import Juvix.Prelude
-import Polysemy.Scoped
 
 type GitRef = Text
 

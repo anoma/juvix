@@ -29,7 +29,7 @@ import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Data.FixityInfo qualified as FI
 import Juvix.Data.IteratorAttribs
 import Juvix.Data.NameKind
-import Juvix.Prelude
+import Juvix.Prelude hiding (scoped)
 
 iniScoperState :: ScoperState
 iniScoperState =

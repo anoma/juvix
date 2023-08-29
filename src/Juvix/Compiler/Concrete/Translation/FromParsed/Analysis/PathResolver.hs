@@ -30,7 +30,6 @@ import Juvix.Data.Effect.Git
 import Juvix.Extra.Paths
 import Juvix.Extra.Stdlib (ensureStdlib)
 import Juvix.Prelude
-import Polysemy.Scoped
 
 data PathResolver m a where
   RegisterDependencies :: PathResolver m ()

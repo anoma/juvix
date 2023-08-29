@@ -60,6 +60,7 @@ module Juvix.Prelude.Base
     module Polysemy.Reader,
     module Polysemy.Tagged,
     module Polysemy.Resource,
+    module Polysemy.Scoped,
     module Polysemy.State,
     module Language.Haskell.TH.Syntax,
     module Prettyprinter,
@@ -165,6 +166,7 @@ import Polysemy.Fixpoint
 import Polysemy.Output
 import Polysemy.Reader
 import Polysemy.Resource
+import Polysemy.Scoped
 import Polysemy.State
 import Polysemy.Tagged hiding (tag)
 import Prettyprinter (Doc, (<+>))

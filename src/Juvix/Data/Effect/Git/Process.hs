@@ -5,7 +5,6 @@ import Juvix.Data.Effect.Git.Base
 import Juvix.Data.Effect.Git.Process.Error
 import Juvix.Data.Effect.Process
 import Juvix.Prelude
-import Polysemy.Scoped
 
 -- | Run a git command in the current working direcotory of the parent process.
 runGitCmd :: (Members '[Process, Error GitProcessError] r) => [Text] -> Sem r Text
