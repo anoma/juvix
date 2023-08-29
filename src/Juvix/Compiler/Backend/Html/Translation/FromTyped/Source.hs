@@ -22,8 +22,8 @@ import Text.Blaze.Html.Renderer.Text qualified as Html
 import Text.Blaze.Html5 as Html hiding (map)
 import Text.Blaze.Html5.Attributes qualified as Attr
 
-data CssColor =
-  JuInductive
+data CssColor
+  = JuInductive
   | JuConstructor
   | JuFunction
   | JuAxiom
@@ -265,20 +265,20 @@ go sdt = case sdt of
 juColor :: CssColor -> Attribute
 juColor = Attr.class_ . toStr
   where
-  toStr :: CssColor -> AttributeValue
-  toStr = \case
-    JuInductive -> "ju-inductive"
-    JuConstructor -> "ju-constructor"
-    JuFunction -> "ju-function"
-    JuComment -> "ju-comment"
-    JuJudoc -> "ju-judoc"
-    JuAxiom -> "ju-axiom"
-    JuString -> "ju-string"
-    JuKeyword -> "ju-keyword"
-    JuDelimiter -> "ju-delimiter"
-    JuFixity -> "ju-fixity"
-    JuVar -> "ju-var"
-    JuNumber -> "ju-number"
+    toStr :: CssColor -> AttributeValue
+    toStr = \case
+      JuInductive -> "ju-inductive"
+      JuConstructor -> "ju-constructor"
+      JuFunction -> "ju-function"
+      JuComment -> "ju-comment"
+      JuJudoc -> "ju-judoc"
+      JuAxiom -> "ju-axiom"
+      JuString -> "ju-string"
+      JuKeyword -> "ju-keyword"
+      JuDelimiter -> "ju-delimiter"
+      JuFixity -> "ju-fixity"
+      JuVar -> "ju-var"
+      JuNumber -> "ju-number"
 
 putTag :: forall r. (Members '[Reader HtmlOptions] r) => Ann -> Html -> Sem r Html
 putTag ann x = case ann of
