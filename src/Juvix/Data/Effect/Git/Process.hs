@@ -66,10 +66,11 @@ cloneGitRepo url = do
   log ("cloning " <> url <> " to " <> pack (toFilePath p))
   void (runGitCmd ["clone", url, T.pack (toFilePath p)])
 
-initGitRepo :: (Members '[Log, Files, Process, Error GitProcessError, Reader CloneDir] r) => Text -> Sem r ()
+initGitRepo :: (Members '[Log, Files, Process, Error GitProcessError, Reader CloneDir] r) => Text -> Sem r (Path Abs Dir)
 initGitRepo url = do
   p <- ask
   unlessM (directoryExists' p) (cloneGitRepo url)
+  return p
 
 catchNotACloneError :: (Member (Error GitProcessError) r) => Sem r a -> Sem r (Either GitError a)
 catchNotACloneError x = catch (Right <$> x) $ \case
@@ -86,7 +87,7 @@ runGitProcess :: forall r a. (Members '[Log, Files, Process, Error GitProcessErr
 runGitProcess = interpretScopedAs allocator handler
   where
     allocator :: CloneArgs -> Sem r (Path Abs Dir)
-    allocator a = runReader (a ^. cloneArgsCloneDir) (initGitRepo (a ^. cloneArgsRepoUrl)) >> return (a ^. cloneArgsCloneDir)
+    allocator a = runReader (a ^. cloneArgsCloneDir) (initGitRepo (a ^. cloneArgsRepoUrl))
 
     handler :: Path Abs Dir -> Git m x -> Sem r x
     handler p eff = runReader p $ case eff of
