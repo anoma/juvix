@@ -63,12 +63,16 @@ ayuCss = cssLink "source-ayu-light.css"
 nordCss :: (Members '[Reader HtmlOptions] r) => Sem r Html
 nordCss = cssLink "source-nord.css"
 
+macchiatoCss :: (Members '[Reader HtmlOptions] r) => Sem r Html
+macchiatoCss = cssLink "macchiato-nord.css"
+
 themeCss :: (Members '[Reader HtmlOptions] r) => Sem r Html
 themeCss = do
   theme <- asks (^. htmlOptionsTheme)
   case theme of
     Ayu -> ayuCss
     Nord -> nordCss
+    Macchiato -> macchiatoCss
 
 highlightJs :: (Members '[Reader HtmlOptions] r) => Sem r Html
 highlightJs = jsLink "highlight.js"
