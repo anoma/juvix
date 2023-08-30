@@ -24,6 +24,8 @@ tests:
         git add -A
         git commit -m "commit1"
 
+        dep1hash=$(git rev-parse HEAD)
+
         # create project that uses dependency
         mkdir $temp/base
         cd $temp/base
@@ -36,7 +38,7 @@ tests:
           - git:
               url: $temp/dep
               name: dep1
-              ref: main
+              ref: $dep1hash
         version: 0.1.0
         EOF
 
@@ -227,6 +229,8 @@ tests:
         git add -A
         git commit -m "commit1"
 
+        dep1hash=$(git rev-parse HEAD)
+
         # create project that uses dependency
         mkdir $temp/base
         cd $temp/base
@@ -239,7 +243,7 @@ tests:
           - git:
               url: $temp/dep
               name: dep1
-              ref: main
+              ref: $dep1hash
         version: 0.1.0
         EOF
 
