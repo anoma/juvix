@@ -598,7 +598,7 @@ instance PrettyPrint Precedence where
 
 ppFixityDefHeader :: (SingI s) => PrettyPrinting (FixitySyntaxDef s)
 ppFixityDefHeader FixitySyntaxDef {..} = do
-  let sym' = ppSymbolType _fixitySymbol
+  let sym' = annotated (AnnKind KNameFixity) (ppSymbolType _fixitySymbol)
   ppCode _fixitySyntaxKw <+> ppCode _fixityKw <+> sym'
 
 instance (SingI s) => PrettyPrint (FixitySyntaxDef s) where
