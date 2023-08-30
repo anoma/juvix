@@ -8,5 +8,5 @@ import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.D
 runCommand :: (Members '[Embed IO, App] r) => InternalArityOptions -> Sem r ()
 runCommand opts = do
   globalOpts <- askGlobalOptions
-  micro <- head . (^. InternalArity.resultModules) <$> runPipeline (opts ^. internalArityInputFile) upToInternalArity
+  micro <- head . (^. InternalArity.resultModules) <$> runPipelineTermination (opts ^. internalArityInputFile) upToInternalArity
   renderStdOut (Internal.ppOut globalOpts micro)

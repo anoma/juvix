@@ -47,7 +47,7 @@ testNoPositivityFlag N.NegTest {..} =
             entryPoint <-
               set entryPointNoPositivity True
                 <$> defaultEntryPointCwdIO file'
-            (void . runIO' entryPoint) upToInternal
+            (void . runIO' entryPoint) upToInternalTyped
         }
 
 negPositivityTests :: [N.NegTest]

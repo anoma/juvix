@@ -17,4 +17,3 @@ addord : Ord -> Ord -> Ord
 aux-addord : (ℕ -> Ord) -> Ord -> ℕ -> Ord
   
   | f y z := addord (f z) y;
-

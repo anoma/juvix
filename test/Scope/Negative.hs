@@ -24,7 +24,7 @@ testDescr NegTest {..} =
           _testRoot = tRoot,
           _testAssertion = Single $ do
             entryPoint <- defaultEntryPointCwdIO file'
-            res <- runIOEither entryPoint upToInternal
+            res <- runIOEitherTermination entryPoint upToInternal
             case mapLeft fromJuvixError res of
               Left (Just err) -> whenJust (_checkErr err) assertFailure
               Left Nothing -> assertFailure "An error ocurred but it was not in the scoper."

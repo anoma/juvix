@@ -21,7 +21,7 @@ testDescr NegTest {..} =
           _testRoot = tRoot,
           _testAssertion = Single $ do
             entryPoint <- defaultEntryPointCwdIO file'
-            result <- runIOEither entryPoint upToInternalArity
+            result <- runIOEitherTermination entryPoint upToInternalArity
             case mapLeft fromJuvixError result of
               Left (Just tyError) -> whenJust (_checkErr tyError) assertFailure
               Left Nothing -> assertFailure "The arity checker did not find an error."
@@ -97,5 +97,12 @@ tests =
       $(mkRelFile "LazyBuiltin.juvix")
       $ \case
         ErrBuiltinNotFullyApplied {} -> Nothing
+        _ -> wrongError,
+    NegTest
+      "issue 2293: Non-terminating function with arity error"
+      $(mkRelDir "Internal")
+      $(mkRelFile "issue2293.juvix")
+      $ \case
+        ErrWrongConstructorAppLength {} -> Nothing
         _ -> wrongError
   ]

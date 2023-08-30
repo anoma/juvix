@@ -58,6 +58,7 @@ goFaceParsedItem i = WithLoc (i ^. parsedLoc) (PropertyFace f)
       ParsedTagLiteralInt -> FaceNumber
       ParsedTagLiteralString -> FaceString
       ParsedTagComment -> FaceComment
+      ParsedTagPragma -> FacePragma
       ParsedTagJudoc -> FaceJudoc
       ParsedTagDelimiter -> FaceDelimiter
 

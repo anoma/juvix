@@ -18,9 +18,9 @@ syntax operator && logical;
   | false _ := false
   | true a := a;
 
-ite : (a : Type) → Bool → a → a → a
-  | _ true a _ := a
-  | _ false _ b := b;
+ite : {a : Type} → Bool → a → a → a
+  | true a _ := a
+  | false _ b := b;
 
 not : Bool → Bool
   | true := false

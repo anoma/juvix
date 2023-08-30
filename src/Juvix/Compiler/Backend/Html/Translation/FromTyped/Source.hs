@@ -22,6 +22,20 @@ import Text.Blaze.Html.Renderer.Text qualified as Html
 import Text.Blaze.Html5 as Html hiding (map)
 import Text.Blaze.Html5.Attributes qualified as Attr
 
+data CssColor
+  = JuInductive
+  | JuConstructor
+  | JuFunction
+  | JuAxiom
+  | JuString
+  | JuKeyword
+  | JuDelimiter
+  | JuVar
+  | JuFixity
+  | JuNumber
+  | JuComment
+  | JuJudoc
+
 kindSuffix :: HtmlKind -> String
 kindSuffix = \case
   HtmlDoc -> ""
@@ -248,16 +262,34 @@ go sdt = case sdt of
     textSpaces :: Int -> Text
     textSpaces n = Text.replicate n (Text.singleton ' ')
 
+juColor :: CssColor -> Attribute
+juColor = Attr.class_ . toStr
+  where
+    toStr :: CssColor -> AttributeValue
+    toStr = \case
+      JuInductive -> "ju-inductive"
+      JuConstructor -> "ju-constructor"
+      JuFunction -> "ju-function"
+      JuComment -> "ju-comment"
+      JuJudoc -> "ju-judoc"
+      JuAxiom -> "ju-axiom"
+      JuString -> "ju-string"
+      JuKeyword -> "ju-keyword"
+      JuDelimiter -> "ju-delimiter"
+      JuFixity -> "ju-fixity"
+      JuVar -> "ju-var"
+      JuNumber -> "ju-number"
+
 putTag :: forall r. (Members '[Reader HtmlOptions] r) => Ann -> Html -> Sem r Html
 putTag ann x = case ann of
   AnnKind k -> return (tagKind k x)
-  AnnLiteralInteger -> return (Html.span ! Attr.class_ "ju-number" $ x)
-  AnnLiteralString -> return (Html.span ! Attr.class_ "ju-string" $ x)
-  AnnKeyword -> return (Html.span ! Attr.class_ "ju-keyword" $ x)
-  AnnUnkindedSym -> return (Html.span ! Attr.class_ "ju-var" $ x)
-  AnnComment -> return (Html.span ! Attr.class_ "ju-var" $ x) -- TODO add comment class
-  AnnJudoc -> return (Html.span ! Attr.class_ "ju-var" $ x) -- TODO add judoc class
-  AnnDelimiter -> return (Html.span ! Attr.class_ "ju-delimiter" $ x)
+  AnnLiteralInteger -> return (Html.span ! juColor JuNumber $ x)
+  AnnLiteralString -> return (Html.span ! juColor JuString $ x)
+  AnnKeyword -> return (Html.span ! juColor JuKeyword $ x)
+  AnnUnkindedSym -> return (Html.span ! juColor JuVar $ x)
+  AnnComment -> return (Html.span ! juColor JuComment $ x)
+  AnnJudoc -> return (Html.span ! juColor JuJudoc $ x)
+  AnnDelimiter -> return (Html.span ! juColor JuDelimiter $ x)
   AnnDef tmp ni -> boldDefine <*> tagDef tmp ni
   AnnRef tmp ni -> tagRef tmp ni
   AnnCode -> return x
@@ -285,17 +317,17 @@ putTag ann x = case ann of
 
     tagKind k =
       Html.span
-        ! Attr.class_
+        ! juColor
           ( case k of
-              S.KNameConstructor -> "ju-constructor"
-              S.KNameInductive -> "ju-inductive"
-              S.KNameFunction -> "ju-function"
-              S.KNameLocal -> "ju-var"
-              S.KNameAxiom -> "ju-axiom"
-              S.KNameLocalModule -> "ju-var"
-              S.KNameAlias -> "ju-var"
-              S.KNameTopModule -> "ju-var"
-              S.KNameFixity -> "ju-fixity"
+              S.KNameConstructor -> JuConstructor
+              S.KNameInductive -> JuInductive
+              S.KNameFunction -> JuFunction
+              S.KNameLocal -> JuVar
+              S.KNameAxiom -> JuAxiom
+              S.KNameLocalModule -> JuVar
+              S.KNameAlias -> JuVar
+              S.KNameTopModule -> JuVar
+              S.KNameFixity -> JuFixity
           )
 
 nameIdAttr :: S.NameId -> AttributeValue

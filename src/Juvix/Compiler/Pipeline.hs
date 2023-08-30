@@ -29,6 +29,7 @@ import Juvix.Compiler.Core qualified as Core
 import Juvix.Compiler.Core.Translation.Stripped.FromCore qualified as Stripped
 import Juvix.Compiler.Internal qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Data.Context qualified as Arity
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context qualified as Typed
 import Juvix.Compiler.Pipeline.Artifacts
 import Juvix.Compiler.Pipeline.EntryPoint
@@ -59,19 +60,19 @@ upToScoping ::
 upToScoping = upToParsing >>= Scoper.fromParsed
 
 upToInternal ::
-  (Members '[HighlightBuilder, Reader EntryPoint, Files, NameIdGen, Builtins, Error JuvixError, GitClone, PathResolver] r) =>
+  (Members '[HighlightBuilder, Reader EntryPoint, Files, NameIdGen, Builtins, Error JuvixError, GitClone, PathResolver, Termination] r) =>
   Sem r Internal.InternalResult
 upToInternal = upToScoping >>= Internal.fromConcrete
 
 upToInternalArity ::
-  (Members '[HighlightBuilder, Reader EntryPoint, Files, NameIdGen, Builtins, Error JuvixError, GitClone, PathResolver] r) =>
+  (Members '[HighlightBuilder, Reader EntryPoint, Files, NameIdGen, Builtins, Error JuvixError, GitClone, PathResolver, Termination] r) =>
   Sem r Internal.InternalArityResult
 upToInternalArity = upToInternal >>= Internal.arityChecking
 
 upToInternalTyped ::
   (Members '[HighlightBuilder, Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, GitClone, PathResolver] r) =>
   Sem r Internal.InternalTypedResult
-upToInternalTyped = upToInternalArity >>= Internal.typeChecking
+upToInternalTyped = Internal.typeChecking upToInternalArity
 
 upToInternalReachability ::
   (Members '[HighlightBuilder, Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, GitClone, PathResolver] r) =>
@@ -163,6 +164,9 @@ coreToVampIR' = Core.toVampIR' >=> return . VampIR.toResult . VampIR.fromCore
 -- which we require for `Scope` tests.
 runIOEither :: forall a. EntryPoint -> Sem PipelineEff a -> IO (Either JuvixError (ResolverState, a))
 runIOEither entry = fmap snd . runIOEitherHelper entry
+
+runIOEitherTermination :: forall a. EntryPoint -> Sem (Termination ': PipelineEff) a -> IO (Either JuvixError (ResolverState, a))
+runIOEitherTermination entry = fmap snd . runIOEitherHelper entry . evalTermination iniTerminationState
 
 runPipelineHighlight :: forall a. EntryPoint -> Sem PipelineEff a -> IO HighlightInput
 runPipelineHighlight entry = fmap fst . runIOEitherHelper entry
@@ -265,20 +269,22 @@ corePipelineIOEither entry = do
           mainModuleScope_ :: Scope
           mainModuleScope_ = Scoped.mainModuleSope scopedResult
        in Right $
-            foldl'
-              (flip ($))
-              art
-              [ set artifactMainModuleScope (Just mainModuleScope_),
-                set artifactParsing (parserResult ^. P.resultBuilderState),
-                set artifactInternalModuleCache (internalResult ^. Internal.resultModulesCache),
-                set artifactInternalTypedTable typedTable,
-                set artifactCoreTable coreTable,
-                set artifactScopeTable resultScoperTable,
-                set artifactScopeExports (scopedResult ^. Scoped.resultExports),
-                set artifactTypes typesTable,
-                set artifactFunctions functionsTable,
-                set artifactScoperState (scopedResult ^. Scoped.resultScoperState)
-              ]
+            Artifacts
+              { _artifactMainModuleScope = Just mainModuleScope_,
+                _artifactParsing = parserResult ^. P.resultBuilderState,
+                _artifactInternalModuleCache = internalResult ^. Internal.resultModulesCache,
+                _artifactInternalTypedTable = typedTable,
+                _artifactTerminationState = typedResult ^. Typed.resultTermination,
+                _artifactCoreTable = coreTable,
+                _artifactScopeTable = resultScoperTable,
+                _artifactScopeExports = scopedResult ^. Scoped.resultExports,
+                _artifactTypes = typesTable,
+                _artifactFunctions = functionsTable,
+                _artifactScoperState = scopedResult ^. Scoped.resultScoperState,
+                _artifactResolver = art ^. artifactResolver,
+                _artifactBuiltins = art ^. artifactBuiltins,
+                _artifactNameIdState = art ^. artifactNameIdState
+              }
   where
     initialArtifacts :: Artifacts
     initialArtifacts =
@@ -287,6 +293,7 @@ corePipelineIOEither entry = do
           _artifactMainModuleScope = Nothing,
           _artifactInternalTypedTable = mempty,
           _artifactTypes = mempty,
+          _artifactTerminationState = iniTerminationState,
           _artifactResolver = PathResolver.iniResolverState,
           _artifactNameIdState = allNameIds,
           _artifactFunctions = mempty,
