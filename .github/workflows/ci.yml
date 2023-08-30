@@ -152,11 +152,12 @@ jobs:
           cache: enable
 
       # Smoke tests make git commits
-      - name: Setup git author
+      - name: Setup git
         shell: bash
         run: |
           git config --global user.email "tara-juvix@heliax.dev"
           git config --global user.name "Tara"
+          git config --global init.defaultBranch main
 
       - name: Smoke testing
         id: smoke-linux
@@ -295,11 +296,12 @@ jobs:
           make check-format-juvix-files && make typecheck-juvix-examples
 
       # Smoke tests make git commits
-      - name: Setup git author
+      - name: Setup git
         shell: bash
         run: |
           git config --global user.email "tara-juvix@heliax.dev"
           git config --global user.name "Tara"
+          git config --global init.defaultBranch main
 
       - name: Smoke testing (macOS)
         id: smoke-macos
