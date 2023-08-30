@@ -153,7 +153,10 @@ jobs:
 
       # Smoke tests make git commits
       - name: Setup git author
-        uses: fregante/setup-git-user@v2
+        shell: bash
+        run: |
+          git config --global user.email "tara-juvix@heliax.dev"
+          git config --global user.name "Tara"
 
       - name: Smoke testing
         id: smoke-linux
@@ -293,7 +296,10 @@ jobs:
 
       # Smoke tests make git commits
       - name: Setup git author
-        uses: fregante/setup-git-user@v2
+        shell: bash
+        run: |
+          git config --global user.email "tara-juvix@heliax.dev"
+          git config --global user.name "Tara"
 
       - name: Smoke testing (macOS)
         id: smoke-macos
