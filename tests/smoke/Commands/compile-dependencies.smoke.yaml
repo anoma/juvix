@@ -204,6 +204,69 @@ tests:
       contains: cloning
     exit-status: 1
 
+  - name: git-dependencies-corrupt-clone
+    command:
+      shell:
+        - bash
+      script: |
+        temp=$(mktemp -d)
+        trap 'rm -rf -- "$temp"' EXIT
+
+        # create dependency
+        mkdir $temp/dep
+        cd $temp/dep
+        git init
+
+        cat <<-EOF > HelloDep.juvix
+        module HelloDep;
+        import Stdlib.Prelude open;
+        main : IO := printStringLn "Hello from dep";
+        EOF
+        touch juvix.yaml
+
+        git add -A
+        git commit -m "commit1"
+
+        # create project that uses dependency
+        mkdir $temp/base
+        cd $temp/base
+
+        cat <<-EOF > juvix.yaml
+        name: HelloWorld
+        main: HelloWorld.juvix
+        dependencies:
+          - .juvix-build/stdlib
+          - git:
+              url: $temp/dep
+              name: dep1
+              ref: main
+        version: 0.1.0
+        EOF
+
+        cat <<-EOF > HelloWorld.juvix
+        -- HelloWorld.juvix
+        module HelloWorld;
+
+        import Stdlib.Prelude open;
+        import HelloDep;
+
+        main : IO := HelloDep.main;
+        EOF
+
+        # compile project
+        juvix compile HelloWorld.juvix
+
+        # corrupt the clone
+        rm -rf ./.juvix-build/deps/dep1/.git
+
+        # compile project
+        juvix compile HelloWorld.juvix
+    stderr:
+      contains: juvix clean
+    stdout:
+      contains: cloning
+    exit-status: 1
+
   - name: git-dependencies-duplicate-names
     command:
       shell:
