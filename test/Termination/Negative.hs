@@ -21,7 +21,7 @@ testDescr NegTest {..} =
           _testRoot = tRoot,
           _testAssertion = Single $ do
             entryPoint <- set entryPointNoStdlib True <$> defaultEntryPointCwdIO file'
-            result <- runIOEither entryPoint upToInternal
+            result <- runIOEither entryPoint upToInternalTyped
             case mapLeft fromJuvixError result of
               Left (Just lexError) -> whenJust (_checkErr lexError) assertFailure
               Left Nothing -> assertFailure "The termination checker did not find an error."
@@ -73,6 +73,12 @@ tests =
       "Quicksort is not terminating"
       $(mkRelDir ".")
       $(mkRelFile "Data/QuickSort.juvix")
+      $ \case
+        ErrNoLexOrder {} -> Nothing,
+    NegTest
+      "Loop in axiom type"
+      $(mkRelDir ".")
+      $(mkRelFile "Axiom.juvix")
       $ \case
         ErrNoLexOrder {} -> Nothing
   ]

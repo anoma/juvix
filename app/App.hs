@@ -4,6 +4,7 @@ import CommonOptions
 import Data.ByteString qualified as ByteString
 import GlobalOptions
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker
 import Juvix.Compiler.Pipeline
 import Juvix.Data.Error qualified as Error
 import Juvix.Extra.Paths.Base
@@ -145,6 +146,13 @@ getEntryPoint inputFile = do
   _runAppIOArgsGlobalOptions <- askGlobalOptions
   _runAppIOArgsRoots <- askRoots
   embed (getEntryPoint' (RunAppIOArgs {..}) inputFile)
+
+runPipelineTermination :: (Member App r) => AppPath File -> Sem (Termination ': PipelineEff) a -> Sem r a
+runPipelineTermination input p = do
+  r <- runPipelineEither input (evalTermination iniTerminationState p)
+  case r of
+    Left err -> exitJuvixError err
+    Right res -> return (snd res)
 
 runPipeline :: (Member App r) => AppPath File -> Sem PipelineEff a -> Sem r a
 runPipeline input p = do

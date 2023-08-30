@@ -1,0 +1,5 @@
+module Axiom;
+
+axiom A : let
+    x : Type := x;
+  in x;

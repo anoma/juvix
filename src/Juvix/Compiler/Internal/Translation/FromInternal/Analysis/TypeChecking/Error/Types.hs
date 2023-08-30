@@ -335,7 +335,7 @@ instance ToGenericError UnsupportedTypeFunction where
             <+> ppCode opts (_unsupportedTypeFunction ^. funDefName)
               <> "."
               <> line
-              <> "Only functions with a single clause and no pattern matching are supported."
+              <> "Only terminating functions with a single clause and no pattern matching are supported."
     return
       GenericError
         { _genericErrorLoc = i,

@@ -11,12 +11,13 @@ import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
 import Juvix.Compiler.Core qualified as Core
 import Juvix.Compiler.Internal qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromConcrete qualified as FromConcrete
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker
 import Juvix.Compiler.Pipeline.Artifacts
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Prelude
 
 arityCheckExpression ::
-  (Members '[Error JuvixError, State Artifacts] r) =>
+  (Members '[Error JuvixError, State Artifacts, Termination] r) =>
   ExpressionAtoms 'Parsed ->
   Sem r Internal.Expression
 arityCheckExpression p = do
@@ -93,7 +94,7 @@ runToInternal m = do
     $ m
 
 openImportToInternal ::
-  (Members '[Reader EntryPoint, Error JuvixError, State Artifacts] r) =>
+  (Members '[Reader EntryPoint, Error JuvixError, State Artifacts, Termination] r) =>
   OpenModule 'Parsed ->
   Sem r (Maybe Internal.Import)
 openImportToInternal o = runToInternal $ do
@@ -101,18 +102,18 @@ openImportToInternal o = runToInternal $ do
     >>= Internal.fromConcreteOpenImport
 
 importToInternal ::
-  (Members '[Reader EntryPoint, Error JuvixError, State Artifacts] r) =>
+  (Members '[Reader EntryPoint, Error JuvixError, State Artifacts, Termination] r) =>
   Import 'Parsed ->
   Sem r Internal.Import
 importToInternal i = runToInternal $ do
   Scoper.scopeCheckImport i
     >>= Internal.fromConcreteImport
 
-importToInternal' ::
-  (Members '[Reader EntryPoint, Error JuvixError, State Artifacts] r) =>
+importToInternalTyped ::
+  (Members '[Reader EntryPoint, Error JuvixError, State Artifacts, Termination] r) =>
   Internal.Import ->
   Sem r Internal.Import
-importToInternal' = Internal.arityCheckImport >=> Internal.typeCheckImport
+importToInternalTyped = Internal.arityCheckImport >=> Internal.typeCheckImport
 
 parseReplInput ::
   (Members '[PathResolver, Files, State Artifacts, Error JuvixError] r) =>
@@ -132,32 +133,40 @@ expressionUpToTyped ::
   Sem r Internal.TypedExpression
 expressionUpToTyped fp txt = do
   p <- expressionUpToAtomsParsed fp txt
-  arityCheckExpression p
-    >>= Internal.typeCheckExpressionType
+  runTerminationArtifacts
+    ( arityCheckExpression p
+        >>= Internal.typeCheckExpressionType
+    )
 
 compileExpression ::
   (Members '[Error JuvixError, State Artifacts] r) =>
   ExpressionAtoms 'Parsed ->
   Sem r Core.Node
 compileExpression p = do
-  arityCheckExpression p
-    >>= Internal.typeCheckExpression
+  runTerminationArtifacts
+    ( arityCheckExpression p
+        >>= Internal.typeCheckExpression
+    )
     >>= fromInternalExpression
 
 registerImport ::
   (Members '[Error JuvixError, State Artifacts, Reader EntryPoint] r) =>
   Import 'Parsed ->
   Sem r ()
-registerImport =
-  importToInternal >=> importToInternal' >=> fromInternalImport
+registerImport p =
+  runTerminationArtifacts
+    ( importToInternal p
+        >>= importToInternalTyped
+    )
+    >>= fromInternalImport
 
 registerOpenImport ::
   (Members '[Error JuvixError, State Artifacts, Reader EntryPoint] r) =>
   OpenModule 'Parsed ->
   Sem r ()
-registerOpenImport o = do
-  mImport <- openImportToInternal o
-  whenJust mImport (importToInternal' >=> fromInternalImport)
+registerOpenImport o = ignoreFail $ do
+  mImport <- runTerminationArtifacts (openImportToInternal o >>= failMaybe >>= importToInternalTyped)
+  fromInternalImport mImport
 
 fromInternalImport :: (Members '[State Artifacts] r) => Internal.Import -> Sem r ()
 fromInternalImport i = do

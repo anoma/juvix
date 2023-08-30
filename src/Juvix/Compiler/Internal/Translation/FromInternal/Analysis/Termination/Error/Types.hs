@@ -5,7 +5,7 @@ import Juvix.Data.PPOutput
 import Juvix.Prelude
 
 newtype NoLexOrder = NoLexOrder
-  { _noLexOrderFun :: Name
+  { _noLexOrderFun :: NonEmpty Name
   }
   deriving stock (Show)
 
@@ -20,11 +20,26 @@ instance ToGenericError NoLexOrder where
           _genericErrorIntervals = [i]
         }
     where
-      name = _noLexOrderFun
-      i = getLoc name
+      names = _noLexOrderFun
+      i = getLocSpan names
 
+      single = case names of
+        _ :| [] -> True
+        _ -> False
       msg :: Doc Ann
       msg = do
-        "The function"
-          <+> code (pretty name)
-          <+> "fails the termination checker."
+        "The following"
+          <+> function
+          <+> fails
+          <+> "the termination checker:"
+            <> line
+            <> itemize (fmap (code . pretty) names)
+        where
+          function :: Doc Ann
+          function
+            | single = "function"
+            | otherwise = "functions"
+          fails :: Doc Ann
+          fails
+            | single = "fails"
+            | otherwise = "fail"
