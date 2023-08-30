@@ -596,16 +596,21 @@ instance PrettyPrint Precedence where
     PrecApp -> noLoc (pretty ("ω" :: Text))
     PrecUpdate -> noLoc (pretty ("ω₁" :: Text))
 
+ppFixityDefHeader :: (SingI s) => PrettyPrinting (FixitySyntaxDef s)
+ppFixityDefHeader FixitySyntaxDef {..} = do
+  let sym' = ppSymbolType _fixitySymbol
+  ppCode _fixitySyntaxKw <+> ppCode _fixityKw <+> sym'
+
 instance (SingI s) => PrettyPrint (FixitySyntaxDef s) where
-  ppCode FixitySyntaxDef {..} = do
-    let sym' = ppSymbolType _fixitySymbol
-    let txt = pretty (_fixityInfo ^. withLocParam . withSourceText)
-    ppCode _fixitySyntaxKw <+> ppCode _fixityKw <+> sym' <+> braces (noLoc txt)
+  ppCode f@FixitySyntaxDef {..} = do
+    let header' = ppFixityDefHeader f
+        txt = pretty (_fixityInfo ^. withLocParam . withSourceText)
+    header' <+> braces (noLoc txt)
 
 instance PrettyPrint OperatorSyntaxDef where
   ppCode OperatorSyntaxDef {..} = do
     let opSymbol' = ppUnkindedSymbol _opSymbol
-    let p = ppUnkindedSymbol _opFixity
+        p = ppUnkindedSymbol _opFixity
     ppCode _opSyntaxKw <+> ppCode _opKw <+> opSymbol' <+> p
 
 instance PrettyPrint PatternApp where
