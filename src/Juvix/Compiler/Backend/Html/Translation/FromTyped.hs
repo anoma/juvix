@@ -395,16 +395,31 @@ goJudoc (Judoc bs) = mconcatMapM goGroup bs
       JudocExpression e -> ppCodeHtml defaultOptions e
       JudocText txt -> return (toHtml txt)
 
-goStatement :: (Members '[Reader HtmlOptions, Reader NormalizedTable] r) => Statement 'Scoped -> Sem r Html
+goStatement :: forall r. (Members '[Reader HtmlOptions, Reader NormalizedTable] r) => Statement 'Scoped -> Sem r Html
 goStatement = \case
   StatementAxiom t -> goAxiom t
   StatementInductive t -> goInductive t
   StatementOpenModule t -> goOpen t
   StatementFunctionDef t -> goFunctionDef t
-  StatementSyntax {} -> mempty -- TODO handle alias
+  StatementSyntax s -> goSyntax s
   StatementImport {} -> mempty
   StatementModule {} -> mempty -- TODO handle local modules
   StatementProjectionDef {} -> mempty
+  where
+  goSyntax :: SyntaxDef 'Scoped -> Sem r Html
+  goSyntax = \case
+    SyntaxFixity f -> goFixity f
+    SyntaxAlias d -> goAlias d
+    SyntaxOperator {} -> mempty
+    SyntaxIterator {} -> mempty
+
+goFixity :: forall r. (Members '[Reader HtmlOptions] r) => FixitySyntaxDef 'Scoped -> Sem r Html
+goFixity = undefined
+
+goAlias :: forall r. (Members '[Reader HtmlOptions, Reader NormalizedTable] r) => AliasDef 'Scoped -> Sem r Html
+goAlias def = do
+  sig' <- ppCodeHtml defaultOptions def
+  defHeader (def ^. aliasDefName) sig' Nothing
 
 goOpen :: forall r. (Members '[Reader HtmlOptions] r) => OpenModule 'Scoped -> Sem r Html
 goOpen op
@@ -414,38 +429,26 @@ goOpen op
 goAxiom :: forall r. (Members '[Reader HtmlOptions, Reader NormalizedTable] r) => AxiomDef 'Scoped -> Sem r Html
 goAxiom axiom = do
   header' <- axiomHeader
-  defHeader tmp uid header' (axiom ^. axiomDoc)
+  defHeader (axiom ^. axiomName) header' (axiom ^. axiomDoc)
   where
-    uid :: NameId
-    uid = axiom ^. axiomName . S.nameId
-    tmp :: TopModulePath
-    tmp = axiom ^. axiomName . S.nameDefinedIn . S.absTopModulePath
     axiomHeader :: Sem r Html
     axiomHeader = ppCodeHtml defaultOptions (set axiomDoc Nothing axiom)
 
 goFunctionDef :: forall r. (Members '[Reader HtmlOptions, Reader NormalizedTable] r) => FunctionDef 'Scoped -> Sem r Html
 goFunctionDef def = do
   sig' <- funSig
-  defHeader tmp uid sig' (def ^. signDoc)
+  defHeader (def ^. signName) sig' (def ^. signDoc)
   where
-    uid :: NameId
-    uid = def ^. signName . S.nameId
-    tmp :: TopModulePath
-    tmp = def ^. signName . S.nameDefinedIn . S.absTopModulePath
     funSig :: Sem r Html
     funSig = ppHelper (ppFunctionSignature def)
 
 goInductive :: forall r. (Members '[Reader HtmlOptions, Reader NormalizedTable] r) => InductiveDef 'Scoped -> Sem r Html
 goInductive def = do
   sig' <- inductiveHeader
-  header' <- defHeader tmp uid sig' (def ^. inductiveDoc)
+  header' <- defHeader (def ^. inductiveName) sig' (def ^. inductiveDoc)
   body' <- goConstructors (def ^. inductiveConstructors)
   return (header' <> body')
   where
-    uid :: NameId
-    uid = def ^. inductiveName . S.nameId
-    tmp :: TopModulePath
-    tmp = def ^. inductiveName . S.nameDefinedIn . S.absTopModulePath
     inductiveHeader :: Sem r Html
     inductiveHeader = ppHelper (ppInductiveSignature def)
 
@@ -481,8 +484,9 @@ goConstructors cc = do
 noDefHeader :: Html -> Html
 noDefHeader = p ! Attr.class_ "src"
 
-defHeader :: forall r. (Members '[Reader HtmlOptions, Reader NormalizedTable] r) => TopModulePath -> NameId -> Html -> Maybe (Judoc 'Scoped) -> Sem r Html
-defHeader tmp uid sig mjudoc = do
+defHeader :: forall r x. (Members '[Reader HtmlOptions, Reader NormalizedTable] r) =>
+    S.Name' x -> Html -> Maybe (Judoc 'Scoped) -> Sem r Html
+defHeader name sig mjudoc = do
   funHeader' <- functionHeader
   judoc' <- judoc
   return $
@@ -490,6 +494,12 @@ defHeader tmp uid sig mjudoc = do
       funHeader'
         <> judoc'
   where
+    uid :: NameId
+    uid = name ^. S.nameId
+
+    tmp :: TopModulePath
+    tmp = name ^. S.nameDefinedIn . S.absTopModulePath
+
     judoc :: Sem r Html
     judoc = do
       judoc' <- goJudocMay mjudoc
