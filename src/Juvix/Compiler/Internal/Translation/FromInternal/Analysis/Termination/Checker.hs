@@ -33,8 +33,7 @@ functionIsTerminating = fmap terminates . functionTermination
   where
     terminates :: IsTerminating -> Bool
     terminates = \case
-      TerminatingMarked -> True
-      TerminatingChecked -> True
+      TerminatingCheckedOrMarked -> True
       TerminatingFailed -> False
 
 runTermination :: forall r a. (Members '[Error JuvixError] r) => TerminationState -> Sem (Termination ': r) a -> Sem r (TerminationState, a)
@@ -80,7 +79,7 @@ functionTermination' ::
   (Members '[State TerminationState] r) =>
   FunctionName ->
   Sem r IsTerminating
-functionTermination' f = fromMaybe TerminatingChecked <$> gets (^. terminationTable . at f)
+functionTermination' f = fromMaybe TerminatingCheckedOrMarked <$> gets (^. terminationTable . at f)
 
 -- | Returns the set of non-terminating functions. Does not go into imports.
 checkTerminationShallow' ::
@@ -103,9 +102,9 @@ checkTerminationShallow' topModule = do
         order = findOrder rb
     addTerminating funName $
       if
-          | markedTerminating -> TerminatingMarked
+          | markedTerminating -> TerminatingCheckedOrMarked
           | Nothing <- order -> TerminatingFailed
-          | Just {} <- order -> TerminatingChecked
+          | Just {} <- order -> TerminatingCheckedOrMarked
 
 scanModule ::
   (Members '[State CallMap] r) =>

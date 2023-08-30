@@ -13,12 +13,10 @@ import Juvix.Compiler.Internal.Language
 import Juvix.Prelude
 
 data IsTerminating
-  = -- | Has been checked for termination.
-    TerminatingChecked
+  = -- | Has been checked or marked for termination.
+    TerminatingCheckedOrMarked
   | -- | Has been checked for termination but failed.
     TerminatingFailed
-  | -- | Has been marked as terminating in the source code.
-    TerminatingMarked
 
 data TerminationState = TerminationState
   { _iterminationTable :: HashMap FunctionName IsTerminating,
@@ -42,8 +40,7 @@ addTerminating f i = do
     isFailed :: Bool
     isFailed = case i of
       TerminatingFailed -> True
-      TerminatingChecked -> False
-      TerminatingMarked -> False
+      TerminatingCheckedOrMarked -> False
 
 terminationTable :: SimpleGetter TerminationState (HashMap FunctionName IsTerminating)
 terminationTable = iterminationTable
