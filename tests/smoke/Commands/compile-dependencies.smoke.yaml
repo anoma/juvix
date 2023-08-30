@@ -206,6 +206,48 @@ tests:
       contains: cloning
     exit-status: 1
 
+  - name: git-dependencies-invalid-url
+    command:
+      shell:
+        - bash
+      script: |
+        temp=$(mktemp -d)
+        trap 'rm -rf -- "$temp"' EXIT
+
+        # create project that uses dependency
+        mkdir $temp/base
+        cd $temp/base
+
+        cat <<-EOF > juvix.yaml
+        name: HelloWorld
+        main: HelloWorld.juvix
+        dependencies:
+          - .juvix-build/stdlib
+          - git:
+              url: $temp/dep
+              name: dep1
+              ref: main
+        version: 0.1.0
+        EOF
+
+        cat <<-EOF > HelloWorld.juvix
+        -- HelloWorld.juvix
+        module HelloWorld;
+
+        import Stdlib.Prelude open;
+        import HelloDep;
+
+        main : IO := HelloDep.main;
+        EOF
+
+        # compile project
+        juvix compile HelloWorld.juvix
+    stderr:
+      contains: error
+    stdout:
+      contains: cloning
+    exit-status: 1
+
   - name: git-dependencies-corrupt-clone
     command:
       shell:
