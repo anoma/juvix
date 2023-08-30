@@ -151,6 +151,10 @@ jobs:
           extension-matching: disable
           cache: enable
 
+      # Smoke tests make git commits
+      - name: Setup git author
+        uses: fregante/setup-git-user@v2
+
       - name: Smoke testing
         id: smoke-linux
         if: ${{ success() }}
@@ -286,6 +290,10 @@ jobs:
         run: |
           cd main
           make check-format-juvix-files && make typecheck-juvix-examples
+
+      # Smoke tests make git commits
+      - name: Setup git author
+        uses: fregante/setup-git-user@v2
 
       - name: Smoke testing (macOS)
         id: smoke-macos
