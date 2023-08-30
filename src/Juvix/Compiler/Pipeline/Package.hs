@@ -28,6 +28,7 @@ import Data.Aeson.BetterErrors
 import Data.Aeson.TH
 import Data.ByteString qualified as ByteString
 import Data.Kind qualified as GHC
+import Data.Set qualified as Set
 import Data.Versions
 import Data.Yaml
 import Juvix.Compiler.Pipeline.Package.Dependency
@@ -144,6 +145,7 @@ processPackage _packageFile buildDir pkg = do
       base :: SomeBase Dir = (resolveBuildDir buildDir) <///> relStdlibDir
       stdlib = mkPathDependency (fromSomeDir base)
       _packageDependencies = fromMaybe [stdlib] (pkg ^. packageDependencies)
+  checkNoDuplicateDepNames _packageDependencies
   _packageVersion <- getVersion
   return
     Package
@@ -158,6 +160,22 @@ processPackage _packageFile buildDir pkg = do
       Just ver -> case semver ver of
         Right v -> return v
         Left err -> throw (pack (errorBundlePretty err))
+
+    checkNoDuplicateDepNames :: [Dependency] -> Sem r ()
+    checkNoDuplicateDepNames deps = go Set.empty (deps ^.. traversed . _GitDependency . gitDependencyName)
+      where
+        go :: Set Text -> [Text] -> Sem r ()
+        go _ [] = return ()
+        go s (x : xs)
+          | x `Set.member` s = throw (errMsg x)
+          | otherwise = go (Set.insert x s) xs
+          where
+            errMsg :: Text -> Text
+            errMsg dupName =
+              "Juvix package file at: "
+                <> pack (toFilePath _packageFile)
+                <> " contains the duplicate dependency name: "
+                <> dupName
 
 defaultStdlibDep :: BuildDir -> Dependency
 defaultStdlibDep buildDir = mkPathDependency (fromSomeDir (resolveBuildDir buildDir <///> relStdlibDir))

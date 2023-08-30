@@ -43,6 +43,10 @@ makeLenses ''PathDependency
 mkPackageDependencyInfo :: Path Abs File -> Dependency -> PackageDependencyInfo
 mkPackageDependencyInfo = PackageDependencyInfo
 
+_GitDependency :: Traversal' Dependency GitDependency
+_GitDependency f (DependencyGit g) = DependencyGit <$> f g
+_GitDependency _ x@(DependencyPath _) = pure x
+
 instance Pretty PathDependency where
   pretty (PathDependency p) = pretty p
 
