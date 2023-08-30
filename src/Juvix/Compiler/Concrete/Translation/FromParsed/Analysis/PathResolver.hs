@@ -121,28 +121,24 @@ getDependencyPath i = case i ^. packageDepdendencyInfoDependency of
     r <- rootBuildDir <$> asks (^. envRoot)
     let cloneDir = r <//> relDependenciesDir <//> relDir (T.unpack (g ^. gitDependencyName))
     let cloneArgs = CloneArgs {_cloneArgsCloneDir = cloneDir, _cloneArgsRepoUrl = g ^. gitDependencyUrl}
-    let checkErr' = checkErr cloneDir
+    let errorHandler' = errorHandler cloneDir
     scoped @CloneArgs @Git cloneArgs $ do
-      fetch >>= checkErr'
-      checkout (g ^. gitDependencyRef) >>= checkErr'
+      fetch errorHandler'
+      checkout errorHandler' (g ^. gitDependencyRef)
       return cloneDir
     where
-      checkErr :: Path Abs Dir -> Either GitError a -> Sem (Git ': r) a
-      checkErr p =
-        either
-          ( \c ->
-              throw
-                DependencyError
-                  { _dependencyErrorCause =
-                      GitDependencyError
-                        DependencyErrorGit
-                          { _dependencyErrorGitCloneDir = p,
-                            _dependencyErrorGitError = c
-                          },
-                    _dependencyErrorPackageFile = i ^. packageDependencyInfoPackageFile
-                  }
-          )
-          return
+      errorHandler :: Path Abs Dir -> GitError -> Sem (Git ': r) a
+      errorHandler p c =
+        throw
+          DependencyError
+            { _dependencyErrorCause =
+                GitDependencyError
+                  DependencyErrorGit
+                    { _dependencyErrorGitCloneDir = p,
+                      _dependencyErrorGitError = c
+                    },
+              _dependencyErrorPackageFile = i ^. packageDependencyInfoPackageFile
+            }
 
 registerDependencies' ::
   (Members '[Reader EntryPoint, State ResolverState, Reader ResolverEnv, Files, Error Text, Error DependencyError, GitClone] r) =>

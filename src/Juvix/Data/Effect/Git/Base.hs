@@ -20,9 +20,9 @@ data GitError
   | NoSuchRef GitRef
 
 data Git m a where
-  Fetch :: Git m (Either GitError ())
-  Checkout :: GitRef -> Git m (Either GitError ())
-  HeadRef :: Git m (Either GitError GitRef)
+  Fetch :: (GitError -> m ()) -> Git m ()
+  Checkout :: (GitError -> m ()) -> GitRef -> Git m ()
+  HeadRef :: (GitError -> m GitRef) -> Git m GitRef
 
 makeSem ''Git
 

@@ -5,6 +5,7 @@ import Juvix.Data.Effect.Git.Base
 import Juvix.Data.Effect.Git.Process.Error
 import Juvix.Data.Effect.Process
 import Juvix.Prelude
+import Polysemy.Opaque
 
 -- | Run a git command in the current working direcotory of the parent process.
 runGitCmd :: (Members '[Process, Error GitProcessError] r) => [Text] -> Sem r Text
@@ -71,25 +72,31 @@ initGitRepo url = do
   unlessM (directoryExists' p) (cloneGitRepo url)
   return p
 
-catchNotACloneError :: (Member (Error GitProcessError) r) => Sem r a -> Sem r (Either GitError a)
-catchNotACloneError x = catch (Right <$> x) $ \case
-  GitCmdError GitCmdErrorDetails {_gitCmdErrorDetailsExitCode = ExitFailure 128} -> return (Left NotAClone)
+handleNotACloneError :: (Member (Error GitProcessError) r, Monad m) => (GitError -> m x) -> Tactical e m r x -> Tactical e m r x
+handleNotACloneError errorHandler eff = catch @GitProcessError eff $ \case
+  GitCmdError GitCmdErrorDetails {_gitCmdErrorDetailsExitCode = ExitFailure 128} -> runTSimple (return NotAClone) >>= bindTSimple errorHandler
   e -> throw e
 
-catchCheckoutError :: (Member (Error GitProcessError) r) => GitRef -> Sem r a -> Sem r (Either GitError a)
-catchCheckoutError ref x = catch (Right <$> x) $ \case
-  GitCmdError GitCmdErrorDetails {_gitCmdErrorDetailsExitCode = ExitFailure 128} -> return (Left NotAClone)
-  GitCmdError GitCmdErrorDetails {_gitCmdErrorDetailsExitCode = ExitFailure 1} -> return (Left (NoSuchRef ref))
+handleNoSuchRefError :: (Member (Error GitProcessError) r, Monad m) => (GitError -> m x) -> GitRef -> Tactical e m r x -> Tactical e m r x
+handleNoSuchRefError errorHandler ref eff = catch @GitProcessError eff $ \case
+  GitCmdError GitCmdErrorDetails {_gitCmdErrorDetailsExitCode = ExitFailure 1} -> runTSimple (return (NoSuchRef ref)) >>= bindTSimple errorHandler
   e -> throw e
 
-runGitProcess :: forall r a. (Members '[Log, Files, Process, Error GitProcessError] r) => Sem (Scoped CloneArgs Git ': r) a -> Sem r a
-runGitProcess = interpretScopedAs allocator handler
+handleCheckoutError :: (Member (Error GitProcessError) r, Monad m) => (GitError -> m x) -> GitRef -> Tactical e m r x -> Tactical e m r x
+handleCheckoutError errorHandler ref eff = handleNoSuchRefError errorHandler ref (handleNotACloneError errorHandler eff)
+
+runGitProcess ::
+  forall r a.
+  (Members '[Log, Files, Process, Error GitProcessError] r) =>
+  Sem (Scoped CloneArgs Git ': r) a ->
+  Sem r a
+runGitProcess = interpretScopedH allocator handler
   where
-    allocator :: CloneArgs -> Sem r (Path Abs Dir)
-    allocator a = runReader (a ^. cloneArgsCloneDir) (initGitRepo (a ^. cloneArgsRepoUrl))
+    allocator :: forall q x. CloneArgs -> (Path Abs Dir -> Sem (Opaque q ': r) x) -> Sem (Opaque q ': r) x
+    allocator a use' = use' =<< runReader (a ^. cloneArgsCloneDir) (initGitRepo (a ^. cloneArgsRepoUrl))
 
-    handler :: Path Abs Dir -> Git m x -> Sem r x
-    handler p eff = runReader p $ case eff of
-      HeadRef -> catchNotACloneError gitHeadRef
-      Fetch -> catchNotACloneError gitFetch
-      Checkout ref -> (catchCheckoutError ref) (gitCheckout ref)
+    handler :: forall q r0 x. Path Abs Dir -> Git (Sem r0) x -> Tactical Git (Sem r0) (Opaque q ': r) x
+    handler p eff = case eff of
+      HeadRef errorHandler -> handleNotACloneError errorHandler (runReader p gitHeadRef >>= pureT)
+      Fetch errorHandler -> handleNotACloneError errorHandler (runReader p gitFetch >>= pureT)
+      Checkout errorHandler ref -> handleCheckoutError errorHandler ref (runReader p (gitCheckout ref) >>= pureT)
