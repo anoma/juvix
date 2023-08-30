@@ -318,7 +318,7 @@ goTopModule cs m = do
         content :: Sem s Html
         content = do
           preface' <- docPreface
-          interface' <- interface
+          interface' <- moduleInterface
           return
             $ Html.div
               ! Attr.id "content"
@@ -368,8 +368,8 @@ goTopModule cs m = do
             ! Attr.id "module-header"
             $ (p ! Attr.class_ "caption" $ toHtml (prettyText tmp))
 
-        interface :: Sem s Html
-        interface = do
+        moduleInterface :: Sem s Html
+        moduleInterface = do
           sigs' <- mconcatMapM goStatement (m ^. moduleBody)
           return
             $ Html.div
@@ -491,12 +491,26 @@ goLocalModule :: forall r. (Members '[Reader HtmlOptions, Reader NormalizedTable
 goLocalModule def = fmap (fromMaybe mempty) . runFail $ do
   failWhen (def ^. moduleInductive)
   sig' <- ppHelper (ppModuleHeader def)
-  defHeader tmp uid sig' (def ^. moduleDoc)
+  header' <- defHeader tmp uid sig' (def ^. moduleDoc)
+  body' <-
+    ( Html.div
+        ! Attr.class_ "subs"
+      )
+      <$> mconcatMap goStatement (def ^. moduleBody)
+  return (header' <> body')
   where
-  uid :: NameId
-  uid = def ^. modulePath . S.nameId
-  tmp :: TopModulePath
-  tmp = def ^. modulePath . S.nameDefinedIn . S.absTopModulePath
+    uid :: NameId
+    uid = def ^. modulePath . S.nameId
+    tmp :: TopModulePath
+    tmp = def ^. modulePath . S.nameDefinedIn . S.absTopModulePath
+
+-- goConstructors :: forall r. (Members '[Reader HtmlOptions, Reader NormalizedTable] r) => NonEmpty (ConstructorDef 'Scoped) -> Sem r Html
+-- goConstructors cc = do
+--   tbl' <- table . tbody <$> mconcatMapM goConstructor cc
+--   return $
+--     Html.div ! Attr.class_ "subs constructors" $
+--       (p ! Attr.class_ "caption" $ "Constructors")
+--         <> tbl'
 
 goOpen :: forall r. (Members '[Reader HtmlOptions] r) => OpenModule 'Scoped -> Sem r Html
 goOpen op
