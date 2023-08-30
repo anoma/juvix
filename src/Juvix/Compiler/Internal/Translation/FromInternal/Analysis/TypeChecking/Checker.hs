@@ -12,6 +12,7 @@ import Juvix.Compiler.Internal.Extra
 import Juvix.Compiler.Internal.Pretty
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Positivity.Checker
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker (Termination)
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Traits.Resolver
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Inference
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error
@@ -559,13 +560,15 @@ inferExpression' hint e = case e of
           }
 
     goInstanceHole :: Hole -> Sem r TypedExpression
-    goInstanceHole h = do
-      void (queryMetavar h)
-      return
-        TypedExpression
-          { _typedExpression = ExpressionInstanceHole h,
-            _typedType = fromMaybe impossible hint
-          }
+    goInstanceHole _ = do
+      tab <- asks (^. infoInstances)
+      let ty = fromMaybe impossible hint
+      r <- runError $ resolveTraitInstance tab ty
+      case r of
+        Left err ->
+          throw (ErrTraitError err)
+        Right t ->
+          inferExpression' Nothing t
 
     goSimpleLambda :: SimpleLambda -> Sem r TypedExpression
     goSimpleLambda (SimpleLambda v ty b) = do

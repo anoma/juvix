@@ -3,10 +3,12 @@ module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Er
     module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error.Pretty,
     module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error.Types,
     module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Error,
+    module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Traits.Error,
   )
 where
 
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Error
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Traits.Error
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error.Pretty
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error.Types
 import Juvix.Prelude
@@ -15,6 +17,7 @@ data TypeCheckerError
   = ErrWrongConstructorType WrongConstructorType
   | ErrWrongReturnType WrongReturnType
   | ErrArity ArityCheckerError
+  | ErrTraitError TraitError
   | ErrWrongType WrongType
   | ErrUnsolvedMeta UnsolvedMeta
   | ErrExpectedFunctionType ExpectedFunctionType
@@ -30,6 +33,7 @@ instance ToGenericError TypeCheckerError where
     ErrWrongConstructorType e -> genericError e
     ErrWrongReturnType e -> genericError e
     ErrArity e -> genericError e
+    ErrTraitError e -> genericError e
     ErrWrongType e -> genericError e
     ErrUnsolvedMeta e -> genericError e
     ErrExpectedFunctionType e -> genericError e

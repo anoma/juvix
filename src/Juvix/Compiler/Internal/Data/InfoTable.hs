@@ -20,6 +20,7 @@ where
 import Data.Generics.Uniplate.Data
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Internal.Data.InfoTable.Base
+import Juvix.Compiler.Internal.Data.InstanceInfo
 import Juvix.Compiler.Internal.Extra
 import Juvix.Compiler.Internal.Pretty (ppTrace)
 import Juvix.Prelude
@@ -120,6 +121,9 @@ computeTable recurIntoImports (ModuleIndex m) = compute
         [ (d ^. axiomName, AxiomInfo d)
           | StatementAxiom d <- ss
         ]
+
+    _infoInstances :: InstanceTable
+    _infoInstances = mempty
 
     ss :: [Statement]
     ss = m ^. moduleBody . moduleStatements
