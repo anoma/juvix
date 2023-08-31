@@ -491,26 +491,13 @@ goLocalModule :: forall r. (Members '[Reader HtmlOptions, Reader NormalizedTable
 goLocalModule def = fmap (fromMaybe mempty) . runFail $ do
   failWhen (def ^. moduleInductive)
   sig' <- ppHelper (ppModuleHeader def)
-  header' <- defHeader tmp uid sig' (def ^. moduleDoc)
+  header' <- defHeader (def ^. modulePath) sig' (def ^. moduleDoc)
   body' <-
     ( Html.div
         ! Attr.class_ "subs"
       )
       <$> mconcatMap goStatement (def ^. moduleBody)
   return (header' <> body')
-  where
-    uid :: NameId
-    uid = def ^. modulePath . S.nameId
-    tmp :: TopModulePath
-    tmp = def ^. modulePath . S.nameDefinedIn . S.absTopModulePath
-
--- goConstructors :: forall r. (Members '[Reader HtmlOptions, Reader NormalizedTable] r) => NonEmpty (ConstructorDef 'Scoped) -> Sem r Html
--- goConstructors cc = do
---   tbl' <- table . tbody <$> mconcatMapM goConstructor cc
---   return $
---     Html.div ! Attr.class_ "subs constructors" $
---       (p ! Attr.class_ "caption" $ "Constructors")
---         <> tbl'
 
 goOpen :: forall r. (Members '[Reader HtmlOptions] r) => OpenModule 'Scoped -> Sem r Html
 goOpen op
