@@ -9,7 +9,7 @@ import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Traits.Extra
 import Juvix.Prelude
 
 resolveTraitInstance ::
-  Members '[Error TraitError, NameIdGen, Reader LocalVars] r =>
+  (Members '[Error TraitError, NameIdGen, Reader LocalVars] r) =>
   InstanceTable ->
   Expression ->
   Sem r Expression
@@ -36,7 +36,7 @@ varsToInstances LocalVars {..} =
         }
 
 expandArity ::
-  Members '[Error TraitError, NameIdGen] r =>
+  (Members '[Error TraitError, NameIdGen] r) =>
   SubsE ->
   [FunctionParameter] ->
   Expression ->

@@ -39,7 +39,7 @@ lookupInstance' tab name params = do
                   | b -> Just (ii, mp)
                   | otherwise -> Nothing
 
-    goMatch :: Member (State SubsI) r => InstanceParam -> InstanceParam -> Sem r Bool
+    goMatch :: (Member (State SubsI) r) => InstanceParam -> InstanceParam -> Sem r Bool
     goMatch pat t = case (pat, t) of
       (InstanceParamMeta (InstanceMeta v), _) -> do
         m <- gets (HashMap.lookup v)
@@ -63,7 +63,7 @@ lookupInstance' tab name params = do
 
 lookupInstance ::
   forall r.
-  Member (Error TraitError) r =>
+  (Member (Error TraitError) r) =>
   InstanceTable ->
   Expression ->
   Sem r [(InstanceInfo, SubsI)]
