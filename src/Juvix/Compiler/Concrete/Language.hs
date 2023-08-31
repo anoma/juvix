@@ -31,7 +31,7 @@ import Juvix.Compiler.Concrete.Data.VisibilityAnn
 import Juvix.Data
 import Juvix.Data.Ape.Base as Ape
 import Juvix.Data.Fixity
-import Juvix.Data.FixityInfo (FixityInfo)
+import Juvix.Data.FixityInfo (FixityInfo, Arity)
 import Juvix.Data.IteratorAttribs
 import Juvix.Data.Keyword
 import Juvix.Data.NameKind
@@ -271,6 +271,7 @@ deriving stock instance (Ord (AliasDef 'Scoped))
 
 data SyntaxDef (s :: Stage)
   = SyntaxFixity (FixitySyntaxDef s)
+  | SyntaxFixityNew (FixitySyntaxDefNew s)
   | SyntaxOperator OperatorSyntaxDef
   | SyntaxIterator IteratorSyntaxDef
   | SyntaxAlias (AliasDef s)
@@ -286,6 +287,49 @@ deriving stock instance (Eq (SyntaxDef 'Scoped))
 deriving stock instance (Ord (SyntaxDef 'Parsed))
 
 deriving stock instance (Ord (SyntaxDef 'Scoped))
+
+data ParsedFixityInfoNew  (s :: Stage) = ParsedFixityInfoNew
+  { _nfixityArity :: WithLoc Arity,
+    _nfixityAssoc :: Maybe BinaryAssoc,
+    _nfixityPrecSame :: Maybe (SymbolType s),
+    _nfixityPrecBelow :: Maybe [SymbolType s],
+    _nfixityPrecAbove :: Maybe [SymbolType s],
+    _nfixityBraces :: Irrelevant (KeywordRef, KeywordRef)
+  }
+
+deriving stock instance (Show (ParsedFixityInfoNew 'Parsed))
+
+deriving stock instance (Show (ParsedFixityInfoNew 'Scoped))
+
+deriving stock instance (Eq (ParsedFixityInfoNew 'Parsed))
+
+deriving stock instance (Eq (ParsedFixityInfoNew 'Scoped))
+
+deriving stock instance (Ord (ParsedFixityInfoNew 'Parsed))
+
+deriving stock instance (Ord (ParsedFixityInfoNew 'Scoped))
+
+
+data FixitySyntaxDefNew (s :: Stage) = FixitySyntaxDefNew
+  { _nfixitySymbol :: SymbolType s,
+    _nfixityDoc :: Maybe (Judoc s),
+    _nfixityInfo :: ParsedFixityInfoNew s,
+    _nfixityKw :: KeywordRef,
+    _nfixityAssignKw :: KeywordRef,
+    _nfixitySyntaxKw :: KeywordRef
+  }
+
+deriving stock instance (Show (FixitySyntaxDefNew 'Parsed))
+
+deriving stock instance (Show (FixitySyntaxDefNew 'Scoped))
+
+deriving stock instance (Eq (FixitySyntaxDefNew 'Parsed))
+
+deriving stock instance (Eq (FixitySyntaxDefNew 'Scoped))
+
+deriving stock instance (Ord (FixitySyntaxDefNew 'Parsed))
+
+deriving stock instance (Ord (FixitySyntaxDefNew 'Scoped))
 
 data FixitySyntaxDef (s :: Stage) = FixitySyntaxDef
   { _fixitySymbol :: SymbolType s,
@@ -1687,13 +1731,24 @@ makeLenses ''ArgumentBlock
 makeLenses ''NamedArgument
 makeLenses ''NamedApplication
 makeLenses ''AliasDef
+makeLenses ''FixitySyntaxDefNew
+makeLenses ''ParsedFixityInfoNew
 
 instance (SingI s) => HasLoc (AliasDef s) where
   getLoc AliasDef {..} = getLoc _aliasDefSyntaxKw <> getLocIdentifierType _aliasDefAsName
 
+instance HasLoc (ParsedFixityInfoNew s) where
+  getLoc def = getLoc l <> getLoc r
+    where
+    (l, r) = def ^. nfixityBraces . unIrrelevant
+
+instance HasLoc (FixitySyntaxDefNew s) where
+  getLoc def = getLoc (def ^. nfixitySyntaxKw) <> getLoc (def ^. nfixityInfo)
+
 instance (SingI s) => HasLoc (SyntaxDef s) where
   getLoc = \case
     SyntaxFixity t -> getLoc t
+    SyntaxFixityNew t -> getLoc t
     SyntaxOperator t -> getLoc t
     SyntaxIterator t -> getLoc t
     SyntaxAlias t -> getLoc t
