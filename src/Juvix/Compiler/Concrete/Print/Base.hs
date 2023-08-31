@@ -336,13 +336,19 @@ withNameIdSuffix nid a = do
 instance PrettyPrint S.NameId where
   ppCode (S.NameId k) = noLoc (pretty k)
 
+ppModuleHeader :: (SingI t, SingI s) => PrettyPrinting (Module s t)
+ppModuleHeader Module {..} = do
+  let modulePath' = ppModulePathType _modulePath
+  ppCode _moduleKw
+    <+> modulePath'
+
 instance (SingI t, SingI s) => PrettyPrint (Module s t) where
   ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => Module s t -> Sem r ()
-  ppCode Module {..} = do
+  ppCode m@Module {..} = do
     let moduleBody' = localIndent (ppStatements _moduleBody)
-        modulePath' = ppModulePathType _modulePath
         moduleDoc' = whenJust _moduleDoc ppCode
         modulePragmas' = whenJust _modulePragmas ppCode
+        header' = ppModuleHeader m
         body'
           | null _moduleBody = ensureEmptyLine
           | otherwise =
@@ -351,12 +357,11 @@ instance (SingI t, SingI s) => PrettyPrint (Module s t) where
                 <> line
     moduleDoc'
       <> modulePragmas'
-      <> ppCode _moduleKw
-      <+> modulePath'
-        <> ppCode Kw.delimSemicolon
-        <> line
-        <> body'
-        <> ending
+      <> header'
+      <> ppCode Kw.delimSemicolon
+      <> line
+      <> body'
+      <> ending
     where
       topSpace :: Sem r ()
       topSpace = case sing :: SModuleIsTop t of
