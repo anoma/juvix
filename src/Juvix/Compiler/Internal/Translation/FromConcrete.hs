@@ -426,6 +426,7 @@ goTopFunctionDef ::
 goTopFunctionDef FunctionDef {..} = do
   let _funDefName = goSymbol _signName
       _funDefTerminating = isJust _signTerminating
+      _funDefInstance = isJust _signInstance
       _funDefBuiltin = (^. withLocParam) <$> _signBuiltin
   _funDefType <- goDefType
   _funDefExamples <- goExamples _signDoc

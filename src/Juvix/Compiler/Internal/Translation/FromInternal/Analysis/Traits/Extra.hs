@@ -7,15 +7,6 @@ import Juvix.Compiler.Internal.Extra
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Traits.Error
 import Juvix.Prelude
 
-updateInstanceTable :: InstanceTable -> InstanceInfo -> InstanceTable
-updateInstanceTable tab ii@InstanceInfo {..} =
-  HashMap.alter go _instanceInfoInductive tab
-  where
-    go :: Maybe [InstanceInfo] -> Maybe [InstanceInfo]
-    go = \case
-      Just is -> Just (ii : is)
-      Nothing -> Just [ii]
-
 type SubsI = HashMap VarName InstanceParam
 
 lookupInstance' ::
@@ -64,64 +55,16 @@ lookupInstance' tab name params = do
 
 lookupInstance ::
   forall r.
-  (Members '[Error TraitError, Reader InfoTable] r) =>
+  (Member (Error TraitError) r) =>
   InstanceTable ->
   Expression ->
   Sem r [(InstanceInfo, SubsI)]
 lookupInstance tab ty = do
-  tbl <- ask
-  case traitFromExpression True ty of
-    Just (InstanceApp h args)
-      | fromJust (HashMap.lookup h (tbl ^. infoInductives)) ^. inductiveInfoDef . inductiveTrait ->
-          return $ lookupInstance' tab h args
+  case traitFromExpression mempty ty of
+    Just (InstanceApp h args) ->
+      return $ lookupInstance' tab h args
     _ ->
       throw (ErrNotATrait (NotATrait ty))
-
-paramFromExpression :: Bool -> Expression -> Maybe InstanceParam
-paramFromExpression bRigid = \case
-  ExpressionIden (IdenInductive n) ->
-    Just $ InstanceParamApp $ InstanceApp n []
-  ExpressionIden (IdenVar v)
-    | bRigid -> Just $ InstanceParamVar $ InstanceVar v
-    | otherwise -> Just $ InstanceParamMeta $ InstanceMeta v
-  ExpressionApplication app -> do
-    let (h, args) = unfoldApplication app
-    args' <- mapM (paramFromExpression bRigid) args
-    case h of
-      ExpressionIden (IdenInductive n) ->
-        return $ InstanceParamApp $ InstanceApp n (toList args')
-      _ ->
-        Nothing
-  _ ->
-    Nothing
-
-paramToExpression :: InstanceParam -> Expression
-paramToExpression = \case
-  InstanceParamVar (InstanceVar v) ->
-    ExpressionIden (IdenVar v)
-  InstanceParamApp (InstanceApp h args) ->
-    foldExplicitApplication (ExpressionIden (IdenInductive h)) (map paramToExpression args)
-  InstanceParamMeta {} ->
-    impossible
-
-traitFromExpression :: Bool -> Expression -> Maybe InstanceApp
-traitFromExpression bRigid e = case paramFromExpression bRigid e of
-  Just (InstanceParamApp app) -> Just app
-  _ -> Nothing
-
-instanceFromTypedExpression :: Bool -> TypedExpression -> Maybe InstanceInfo
-instanceFromTypedExpression bRigid TypedExpression {..} = case traitFromExpression bRigid e of
-  Just (InstanceApp h params) ->
-    Just $
-      InstanceInfo
-        { _instanceInfoInductive = h,
-          _instanceInfoParams = params,
-          _instanceInfoResult = _typedExpression,
-          _instanceInfoArgs = args
-        }
-  Nothing -> Nothing
-  where
-    (args, e) = unfoldFunType _typedType
 
 substParam :: SubsI -> InstanceParam -> InstanceParam
 substParam subs p = case p of
@@ -133,3 +76,6 @@ substParam subs p = case p of
 
 subsIToE :: SubsI -> SubsE
 subsIToE = fmap paramToExpression
+
+isTrait :: InfoTable -> InductiveName -> Bool
+isTrait tab name = fromJust (HashMap.lookup name (tab ^. infoInductives)) ^. inductiveInfoDef . inductiveTrait

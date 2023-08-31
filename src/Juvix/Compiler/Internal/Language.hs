@@ -88,6 +88,7 @@ data FunctionDef = FunctionDef
     _funDefExamples :: [Example],
     _funDefClauses :: NonEmpty FunctionClause,
     _funDefTerminating :: Bool,
+    _funDefInstance :: Bool,
     _funDefBuiltin :: Maybe BuiltinFunction,
     _funDefPragmas :: Pragmas
   }

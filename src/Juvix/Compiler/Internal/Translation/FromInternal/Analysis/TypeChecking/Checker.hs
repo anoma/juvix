@@ -7,11 +7,13 @@ where
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Builtins.Effect
 import Juvix.Compiler.Concrete.Data.Highlight.Input
+import Juvix.Compiler.Internal.Data.InstanceInfo (InstanceApp (InstanceApp), InstanceInfo (..), instanceFromTypedExpression, traitFromExpression)
 import Juvix.Compiler.Internal.Data.LocalVars
 import Juvix.Compiler.Internal.Extra
 import Juvix.Compiler.Internal.Pretty
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Positivity.Checker
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker (Termination)
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Traits.Extra
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Traits.Resolver
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Inference
@@ -187,6 +189,8 @@ checkFunctionDef FunctionDef {..} = do
           _funDefType = _funDefType',
           ..
         }
+  when _funDefInstance $
+    checkInstanceType funDef
   registerFunctionDef funDef
   traverseOf funDefExamples (mapM checkExample) funDef
 
@@ -205,6 +209,39 @@ checkDefType ::
 checkDefType ty = checkIsType loc ty
   where
     loc = getLoc ty
+
+checkInstanceType ::
+  forall r.
+  (Members '[Error TypeCheckerError, Reader InfoTable] r) =>
+  FunctionDef ->
+  Sem r ()
+checkInstanceType FunctionDef {..} = case mi of
+  Just InstanceInfo {..} -> do
+    tab <- ask
+    unless (isTrait tab _instanceInfoInductive) $
+      throw (ErrTargetNotATrait (TargetNotATrait _funDefType))
+    mapM_ (checkParam tab) _instanceInfoArgs
+  Nothing ->
+    throw (ErrTargetNotATrait (TargetNotATrait _funDefType))
+  where
+    mi =
+      instanceFromTypedExpression
+        ( TypedExpression
+            { _typedType = _funDefType,
+              _typedExpression = ExpressionIden (IdenFunction _funDefName)
+            }
+        )
+
+    checkParam :: InfoTable -> FunctionParameter -> Sem r ()
+    checkParam tab FunctionParameter {..} = case _paramImplicit of
+      Implicit -> return ()
+      Explicit -> throw (ErrTraitError (ErrExplicitInstanceArgument (ExplicitInstanceArgument _paramType)))
+      ImplicitInstance -> checkInstanceParam tab _paramType
+
+checkInstanceParam :: (Member (Error TypeCheckerError) r) => InfoTable -> Expression -> Sem r ()
+checkInstanceParam tab ty = case traitFromExpression mempty ty of
+  Just (InstanceApp h _) | isTrait tab h -> return ()
+  _ -> throw (ErrTraitError (ErrNotATrait (NotATrait ty)))
 
 checkExample ::
   (Members '[HighlightBuilder, Reader InfoTable, State FunctionsTable, Error TypeCheckerError, Builtins, NameIdGen, Output Example, State TypesTable, Termination] r) =>
@@ -246,6 +283,9 @@ checkFunctionParameter ::
   Sem r FunctionParameter
 checkFunctionParameter (FunctionParameter mv i e) = do
   e' <- checkIsType (getLoc e) e
+  when (i == ImplicitInstance) $ do
+    tab <- ask
+    checkInstanceParam tab e
   return (FunctionParameter mv i e')
 
 checkConstructorDef ::

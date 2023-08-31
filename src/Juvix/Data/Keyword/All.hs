@@ -112,6 +112,9 @@ kwPositive = asciiKw Str.positive
 kwTrait :: Keyword
 kwTrait = asciiKw Str.trait
 
+kwInstance :: Keyword
+kwInstance = asciiKw Str.instance_
+
 kwUsing :: Keyword
 kwUsing = asciiKw Str.using
 

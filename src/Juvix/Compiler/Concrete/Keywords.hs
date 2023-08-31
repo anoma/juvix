@@ -39,6 +39,7 @@ import Juvix.Data.Keyword.All
     kwImport,
     kwIn,
     kwInductive,
+    kwInstance,
     kwIterator,
     kwLambda,
     kwLet,

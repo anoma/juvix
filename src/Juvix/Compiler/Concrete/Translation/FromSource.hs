@@ -902,6 +902,7 @@ functionDefinition ::
   ParsecS r (FunctionDef 'Parsed)
 functionDefinition _signBuiltin = P.label "<function definition>" $ do
   _signTerminating <- optional (kw kwTerminating)
+  _signInstance <- optional (kw kwInstance)
   _signName <- symbol
   _signArgs <- many parseArg
   _signColonKw <- Irrelevant <$> kw kwColon

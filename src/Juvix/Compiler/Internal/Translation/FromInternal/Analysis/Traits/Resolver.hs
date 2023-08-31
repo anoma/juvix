@@ -26,7 +26,7 @@ resolveTraitInstance tab ty = do
 varsToInstances :: LocalVars -> [InstanceInfo]
 varsToInstances LocalVars {..} =
   mapMaybe
-    (instanceFromTypedExpression False . mkTyped)
+    (instanceFromTypedExpression . mkTyped)
     (HashMap.toList _localTypes)
   where
     mkTyped :: (VarName, Expression) -> TypedExpression

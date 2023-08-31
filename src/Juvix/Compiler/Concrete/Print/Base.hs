@@ -805,12 +805,14 @@ instance (SingI s) => PrettyPrint (SigArg s) where
 ppFunctionSignature :: (SingI s) => PrettyPrinting (FunctionDef s)
 ppFunctionSignature FunctionDef {..} = do
   let termin' = (<> line) . ppCode <$> _signTerminating
+      instance' = (<> line) . ppCode <$> _signInstance
       args' = hsep . fmap ppCode <$> nonEmpty _signArgs
       builtin' = (<> line) . ppCode <$> _signBuiltin
       type' = oneLineOrNext (ppCode _signColonKw <+> ppExpressionType _signRetType)
       name' = annDef _signName (ppSymbolType _signName)
    in builtin'
         ?<> termin'
+        ?<> instance'
         ?<> ( name'
                 <+?> args'
                   <> type'
@@ -1056,8 +1058,12 @@ ppInductiveSignature InductiveDef {..} = do
       positive'
         | Just k <- _inductivePositive = (<> line) <$> Just (ppCode k)
         | otherwise = Nothing
+      trait'
+        | Just k <- _inductiveTrait = (<> line) <$> Just (ppCode k)
+        | otherwise = Nothing
   builtin'
     ?<> positive'
+    ?<> trait'
     ?<> ppCode _inductiveKw
     <+> name'
     <+?> params'

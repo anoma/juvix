@@ -345,3 +345,23 @@ instance ToGenericError UnsupportedTypeFunction where
     where
       i :: Interval
       i = getLoc _unsupportedTypeFunction
+
+newtype TargetNotATrait = TargetNotATrait
+  { _targetNotATraitType :: Expression
+  }
+
+instance ToGenericError TargetNotATrait where
+  genericError TargetNotATrait {..} = do
+    opts <- fromGenericOptions <$> ask
+    let msg =
+          "Expected an instance type with a trait in the target: "
+            <+> ppCode opts _targetNotATraitType
+    return
+      GenericError
+        { _genericErrorLoc = i,
+          _genericErrorMessage = mkAnsiText msg,
+          _genericErrorIntervals = [i]
+        }
+    where
+      i :: Interval
+      i = getLoc _targetNotATraitType

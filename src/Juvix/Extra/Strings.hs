@@ -401,6 +401,9 @@ positive = "positive"
 trait :: (IsString s) => s
 trait = "trait"
 
+instance_ :: (IsString s) => s
+instance_ = "instance"
+
 waveArrow :: (IsString s) => s
 waveArrow = "↝"
 

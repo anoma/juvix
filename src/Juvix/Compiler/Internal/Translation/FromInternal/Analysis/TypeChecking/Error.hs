@@ -26,6 +26,7 @@ data TypeCheckerError
   | ErrImpracticalPatternMatching ImpracticalPatternMatching
   | ErrNoPositivity NoPositivity
   | ErrUnsupportedTypeFunction UnsupportedTypeFunction
+  | ErrTargetNotATrait TargetNotATrait
 
 instance ToGenericError TypeCheckerError where
   genericError :: (Member (Reader GenericOptions) r) => TypeCheckerError -> Sem r GenericError
@@ -42,3 +43,4 @@ instance ToGenericError TypeCheckerError where
     ErrImpracticalPatternMatching e -> genericError e
     ErrNoPositivity e -> genericError e
     ErrUnsupportedTypeFunction e -> genericError e
+    ErrTargetNotATrait e -> genericError e

@@ -122,9 +122,20 @@ computeTable recurIntoImports (ModuleIndex m) = compute
           | StatementAxiom d <- ss
         ]
 
-    -- TODO
     _infoInstances :: InstanceTable
-    _infoInstances = mempty
+    _infoInstances = foldr (flip updateInstanceTable) mempty $ mapMaybe mkInstance (HashMap.elems _infoFunctions)
+      where
+        mkInstance :: FunctionInfo -> Maybe InstanceInfo
+        mkInstance (FunctionInfo FunctionDef {..})
+          | _funDefInstance =
+              instanceFromTypedExpression
+                ( TypedExpression
+                    { _typedType = _funDefType,
+                      _typedExpression = ExpressionIden (IdenFunction _funDefName)
+                    }
+                )
+          | otherwise =
+              Nothing
 
     ss :: [Statement]
     ss = m ^. moduleBody . moduleStatements
