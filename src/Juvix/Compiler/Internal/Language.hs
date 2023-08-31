@@ -280,6 +280,7 @@ data InductiveDef = InductiveDef
     _inductiveParameters :: [InductiveParameter],
     _inductiveConstructors :: [ConstructorDef],
     _inductivePositive :: Bool,
+    _inductiveTrait :: Bool,
     _inductivePragmas :: Pragmas
   }
   deriving stock (Data)

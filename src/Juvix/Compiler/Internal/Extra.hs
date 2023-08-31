@@ -213,6 +213,7 @@ instance HasExpressions InductiveDef where
           _inductiveName,
           _inductiveBuiltin,
           _inductivePositive,
+          _inductiveTrait,
           _inductivePragmas
         }
 

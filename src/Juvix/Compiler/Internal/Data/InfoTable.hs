@@ -122,6 +122,7 @@ computeTable recurIntoImports (ModuleIndex m) = compute
           | StatementAxiom d <- ss
         ]
 
+    -- TODO
     _infoInstances :: InstanceTable
     _infoInstances = mempty
 

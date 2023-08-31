@@ -630,7 +630,8 @@ data InductiveDef (s :: Stage) = InductiveDef
     _inductiveParameters :: [InductiveParameters s],
     _inductiveType :: Maybe (ExpressionType s),
     _inductiveConstructors :: NonEmpty (ConstructorDef s),
-    _inductivePositive :: Maybe KeywordRef
+    _inductivePositive :: Maybe KeywordRef,
+    _inductiveTrait :: Maybe KeywordRef
   }
 
 deriving stock instance Show (InductiveDef 'Parsed)

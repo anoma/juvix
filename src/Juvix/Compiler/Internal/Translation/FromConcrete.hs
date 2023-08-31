@@ -617,7 +617,8 @@ goInductive ty@InductiveDef {..} = do
             _inductiveConstructors = toList _inductiveConstructors',
             _inductiveExamples = _inductiveExamples',
             _inductivePragmas = _inductivePragmas',
-            _inductivePositive = isJust (ty ^. inductivePositive)
+            _inductivePositive = isJust (ty ^. inductivePositive),
+            _inductiveTrait = isJust (ty ^. inductiveTrait)
           }
   whenJust ((^. withLocParam) <$> _inductiveBuiltin) (registerBuiltinInductive indDef)
   registerInductiveConstructors indDef

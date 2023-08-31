@@ -71,6 +71,7 @@ checkInductive d = do
   let _inductiveName = d ^. inductiveName
       _inductiveBuiltin = d ^. inductiveBuiltin
       _inductivePositive = d ^. inductivePositive
+      _inductiveTrait = d ^. inductiveTrait
       _inductivePragmas = d ^. inductivePragmas
   (localVars, _inductiveParameters) <- checkParameters (d ^. inductiveParameters)
   _inductiveExamples <- runReader localVars (mapM checkExample (d ^. inductiveExamples))

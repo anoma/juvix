@@ -109,6 +109,9 @@ kwTerminating = asciiKw Str.terminating
 kwPositive :: Keyword
 kwPositive = asciiKw Str.positive
 
+kwTrait :: Keyword
+kwTrait = asciiKw Str.trait
+
 kwUsing :: Keyword
 kwUsing = asciiKw Str.using
 

@@ -1,6 +1,7 @@
 module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Traits.Resolver where
 
 import Data.HashMap.Strict qualified as HashMap
+import Juvix.Compiler.Internal.Data.InfoTable
 import Juvix.Compiler.Internal.Data.InstanceInfo
 import Juvix.Compiler.Internal.Data.LocalVars
 import Juvix.Compiler.Internal.Extra
@@ -9,7 +10,7 @@ import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Traits.Extra
 import Juvix.Prelude
 
 resolveTraitInstance ::
-  (Members '[Error TraitError, NameIdGen, Reader LocalVars] r) =>
+  (Members '[Error TraitError, NameIdGen, Reader LocalVars, Reader InfoTable] r) =>
   InstanceTable ->
   Expression ->
   Sem r Expression
@@ -55,6 +56,6 @@ expandArity subs params e = case params of
         expandArity subs params' (ExpressionApplication (Application e (ExpressionInstanceHole h) ImplicitInstance))
     | otherwise ->
         throw (ErrExplicitInstanceArgument (ExplicitInstanceArgument e))
-
-newHole :: (Member NameIdGen r) => Interval -> Sem r Hole
-newHole loc = mkHole loc <$> freshNameId
+  where
+    newHole :: (Member NameIdGen r) => Interval -> Sem r Hole
+    newHole loc = mkHole loc <$> freshNameId

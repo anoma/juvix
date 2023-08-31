@@ -398,6 +398,9 @@ terminating = "terminating"
 positive :: (IsString s) => s
 positive = "positive"
 
+trait :: (IsString s) => s
+trait = "trait"
+
 waveArrow :: (IsString s) => s
 waveArrow = "↝"
 

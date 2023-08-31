@@ -865,6 +865,7 @@ checkInductiveDef InductiveDef {..} = do
         _inductiveConstructors = inductiveConstructors',
         _inductiveBuiltin,
         _inductivePositive,
+        _inductiveTrait,
         _inductiveAssignKw,
         _inductiveKw
       }

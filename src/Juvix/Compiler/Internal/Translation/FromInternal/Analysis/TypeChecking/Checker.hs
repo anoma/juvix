@@ -111,6 +111,7 @@ checkInductiveDef InductiveDef {..} = runInferenceDef $ do
             _inductiveBuiltin,
             _inductivePositive,
             _inductiveParameters,
+            _inductiveTrait,
             _inductivePragmas
           }
   checkPositivity d

@@ -1,6 +1,7 @@
 module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Traits.Extra where
 
 import Data.HashMap.Strict qualified as HashMap
+import Juvix.Compiler.Internal.Data.InfoTable
 import Juvix.Compiler.Internal.Data.InstanceInfo
 import Juvix.Compiler.Internal.Extra
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Traits.Error
@@ -63,13 +64,18 @@ lookupInstance' tab name params = do
 
 lookupInstance ::
   forall r.
-  (Member (Error TraitError) r) =>
+  (Members '[Error TraitError, Reader InfoTable] r) =>
   InstanceTable ->
   Expression ->
   Sem r [(InstanceInfo, SubsI)]
-lookupInstance tab ty = case traitFromExpression True ty of
-  Just (InstanceApp h args) -> return $ lookupInstance' tab h args
-  _ -> throw (ErrNotATrait (NotATrait ty))
+lookupInstance tab ty = do
+  tbl <- ask
+  case traitFromExpression True ty of
+    Just (InstanceApp h args)
+      | fromJust (HashMap.lookup h (tbl ^. infoInductives)) ^. inductiveInfoDef . inductiveTrait ->
+          return $ lookupInstance' tab h args
+    _ ->
+      throw (ErrNotATrait (NotATrait ty))
 
 paramFromExpression :: Bool -> Expression -> Maybe InstanceParam
 paramFromExpression bRigid = \case

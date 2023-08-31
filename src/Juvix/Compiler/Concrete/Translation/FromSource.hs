@@ -1035,6 +1035,7 @@ lambda = do
 inductiveDef :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => Maybe (WithLoc BuiltinInductive) -> ParsecS r (InductiveDef 'Parsed)
 inductiveDef _inductiveBuiltin = do
   _inductivePositive <- optional (kw kwPositive)
+  _inductiveTrait <- optional (kw kwTrait)
   _inductiveKw <- Irrelevant <$> kw kwInductive
   _inductiveDoc <- getJudoc
   _inductivePragmas <- getPragmas

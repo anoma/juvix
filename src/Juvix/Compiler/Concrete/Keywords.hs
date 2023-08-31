@@ -52,6 +52,7 @@ import Juvix.Data.Keyword.All
     kwRightArrow,
     kwSyntax,
     kwTerminating,
+    kwTrait,
     kwType,
     kwUsing,
     kwWhere,
