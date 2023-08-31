@@ -400,7 +400,11 @@ goStatement = \case
   StatementAxiom t -> goAxiom t
   StatementInductive t -> goInductive t
   StatementOpenModule t -> goOpen t
-  _ -> mempty
+  StatementFunctionDef t -> goFunctionDef t
+  StatementSyntax {} -> mempty -- TODO handle alias
+  StatementImport {} -> mempty
+  StatementModule {} -> mempty -- TODO handle local modules
+  StatementProjectionDef {} -> mempty
 
 goOpen :: forall r. (Members '[Reader HtmlOptions] r) => OpenModule 'Scoped -> Sem r Html
 goOpen op
@@ -419,6 +423,18 @@ goAxiom axiom = do
     axiomHeader :: Sem r Html
     axiomHeader = ppCodeHtml defaultOptions (set axiomDoc Nothing axiom)
 
+goFunctionDef :: forall r. (Members '[Reader HtmlOptions, Reader NormalizedTable] r) => FunctionDef 'Scoped -> Sem r Html
+goFunctionDef def = do
+  sig' <- funSig
+  defHeader tmp uid sig' (def ^. signDoc)
+  where
+    uid :: NameId
+    uid = def ^. signName . S.nameId
+    tmp :: TopModulePath
+    tmp = def ^. signName . S.nameDefinedIn . S.absTopModulePath
+    funSig :: Sem r Html
+    funSig = ppHelper (ppFunctionSignature def)
+
 goInductive :: forall r. (Members '[Reader HtmlOptions, Reader NormalizedTable] r) => InductiveDef 'Scoped -> Sem r Html
 goInductive def = do
   sig' <- inductiveHeader
@@ -431,8 +447,10 @@ goInductive def = do
     tmp :: TopModulePath
     tmp = def ^. inductiveName . S.nameDefinedIn . S.absTopModulePath
     inductiveHeader :: Sem r Html
-    inductiveHeader = do
-      docToHtml (run (runReader defaultOptions (execExactPrint Nothing (ppInductiveSignature def))))
+    inductiveHeader = ppHelper (ppInductiveSignature def)
+
+ppHelper :: (Members '[Reader HtmlOptions] r) => Sem '[ExactPrint, Reader Options] () -> Sem r Html
+ppHelper = docToHtml . run . runReader defaultOptions . execExactPrint Nothing
 
 goConstructors :: forall r. (Members '[Reader HtmlOptions, Reader NormalizedTable] r) => NonEmpty (ConstructorDef 'Scoped) -> Sem r Html
 goConstructors cc = do

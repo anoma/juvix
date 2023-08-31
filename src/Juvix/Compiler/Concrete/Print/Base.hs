@@ -789,28 +789,33 @@ instance (SingI s) => PrettyPrint (SigArg s) where
         rhs = ppCode <$> _sigArgRhs
     ppCode l <> names' <+?> rhs <> ppCode r
 
+ppFunctionSignature :: (SingI s) => PrettyPrinting (FunctionDef s)
+ppFunctionSignature FunctionDef {..} = do
+  let termin' = (<> line) . ppCode <$> _signTerminating
+      args' = hsep . fmap ppCode <$> nonEmpty _signArgs
+      builtin' = (<> line) . ppCode <$> _signBuiltin
+      type' = oneLineOrNext (ppCode _signColonKw <+> ppExpressionType _signRetType)
+      name' = annDef _signName (ppSymbolType _signName)
+   in builtin'
+        ?<> termin'
+        ?<> ( name'
+                <+?> args'
+                  <> type'
+            )
+
 instance (SingI s) => PrettyPrint (FunctionDef s) where
   ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => FunctionDef s -> Sem r ()
-  ppCode FunctionDef {..} = do
-    let termin' :: Maybe (Sem r ()) = (<> line) . ppCode <$> _signTerminating
-        doc' :: Maybe (Sem r ()) = ppCode <$> _signDoc
+  ppCode fun@FunctionDef {..} = do
+    let doc' :: Maybe (Sem r ()) = ppCode <$> _signDoc
         pragmas' :: Maybe (Sem r ()) = ppCode <$> _signPragmas
-        args' = hsep . fmap ppCode <$> nonEmpty _signArgs
-        builtin' :: Maybe (Sem r ()) = (<> line) . ppCode <$> _signBuiltin
-        type' = oneLineOrNext (ppCode _signColonKw <+> ppExpressionType _signRetType)
-        name' = annDef _signName (ppSymbolType _signName)
+        sig' = ppFunctionSignature fun
         body' = case _signBody of
           SigBodyExpression e -> space <> ppCode Kw.kwAssign <> oneLineOrNext (ppExpressionType e)
           SigBodyClauses k -> line <> indent (vsep (ppCode <$> k))
     doc'
       ?<> pragmas'
-      ?<> builtin'
-      ?<> termin'
-      ?<> ( name'
-              <+?> args'
-                <> type'
-                <> body'
-          )
+      ?<> sig'
+      <> body'
 
 instance PrettyPrint Wildcard where
   ppCode w = morpheme (getLoc w) C.kwWildcard
