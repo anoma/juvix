@@ -7,6 +7,7 @@ where
 
 import Data.ByteString.Builder qualified as Builder
 import Data.HashMap.Strict qualified as HashMap
+import Data.Text qualified as Text
 import Data.Time.Clock
 import Data.Versions (prettySemVer)
 import Juvix.Compiler.Backend.Html.Data
@@ -22,6 +23,7 @@ import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.D
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking qualified as InternalTyped
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context
 import Juvix.Compiler.Pipeline.EntryPoint
+import Juvix.Data.FixityInfo as FixityInfo
 import Juvix.Extra.Assets
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude
@@ -84,20 +86,22 @@ createIndexFile ps = do
     indexHtml :: Sem r Html
     indexHtml = do
       tree' <- root tree
-      return $
-        Html.div ! Attr.id "content" $
-          Html.div ! Attr.id "module-list" $
-            (p ! Attr.class_ "caption" $ "Modules")
-              <> ( button
-                     ! Attr.id "toggle-all-button"
-                     ! Attr.class_ "toggle-button opened"
-                     ! Attr.onclick "toggle()"
-                     $ Html.span
-                       ! Attr.id "toggle-button-text"
-                       ! Attr.class_ "toggle-icon"
-                     $ "▼ Hide all modules"
-                 )
-              <> tree'
+      return
+        $ Html.div
+          ! Attr.id "content"
+        $ Html.div
+          ! Attr.id "module-list"
+        $ (p ! Attr.class_ "caption" $ "Modules")
+          <> ( button
+                 ! Attr.id "toggle-all-button"
+                 ! Attr.class_ "toggle-button opened"
+                 ! Attr.onclick "toggle()"
+                 $ Html.span
+                   ! Attr.id "toggle-button-text"
+                   ! Attr.class_ "toggle-icon"
+                 $ "▼ Hide all modules"
+             )
+          <> tree'
 
     tree :: ModuleTree
     tree = indexTree ps
@@ -113,14 +117,16 @@ createIndexFile ps = do
         nodeRow :: Sem r Html
         nodeRow = case lbl of
           Nothing ->
-            return $
-              Html.span ! Attr.class_ attrBare $
-                toHtml (prettyText s)
+            return
+              $ Html.span
+                ! Attr.class_ attrBare
+              $ toHtml (prettyText s)
           Just lbl' -> do
             lnk <- nameIdAttrRef lbl' Nothing
-            return $
-              Html.span ! Attr.class_ attrBare $
-                (a ! Attr.href lnk $ toHtml (prettyText lbl'))
+            return
+              $ Html.span
+                ! Attr.class_ attrBare
+              $ (a ! Attr.href lnk $ toHtml (prettyText lbl'))
 
         attrBase :: Html.AttributeValue
         attrBase = "details-toggle-control details-toggle"
@@ -136,10 +142,11 @@ createIndexFile ps = do
               | null children = return row'
               | otherwise = do
                   c' <- mapM (uncurry goChild) (HashMap.toList children)
-                  return $
-                    details ! Attr.open "open" $
-                      summary row'
-                        <> ul (mconcatMap li c')
+                  return
+                    $ details
+                      ! Attr.open "open"
+                    $ summary row'
+                      <> ul (mconcatMap li c')
 
 writeHtml :: (Members '[Embed IO] r) => Path Abs File -> Html -> Sem r ()
 writeHtml f h = Prelude.embed $ do
@@ -235,22 +242,27 @@ template rightMenu' content' = do
       packageHeader = do
         pkgName' <- toHtml <$> asks (^. entryPointPackage . packageName)
         version' <- toHtml <$> asks (^. entryPointPackage . packageVersion . to prettySemVer)
-        return $
-          Html.div ! Attr.id "package-header" $
-            ( Html.span ! Attr.class_ "caption" $
-                pkgName' <> " - " <> version'
+        return
+          $ Html.div
+            ! Attr.id "package-header"
+          $ ( Html.span
+                ! Attr.class_ "caption"
+                $ pkgName'
+                  <> " - "
+                  <> version'
             )
-              <> rightMenu'
+            <> rightMenu'
 
       mbody :: Sem r Html
       mbody = do
         bodyHeader' <- packageHeader
         footer' <- htmlJuvixFooter
-        return $
-          body ! Attr.class_ "js-enabled" $
-            bodyHeader'
-              <> content'
-              <> footer'
+        return
+          $ body
+            ! Attr.class_ "js-enabled"
+          $ bodyHeader'
+            <> content'
+            <> footer'
 
   body' <- mbody
   return $ docTypeHtml (mhead <> body')
@@ -296,44 +308,53 @@ goTopModule cs m = do
         rightMenu :: Sem s Html
         rightMenu = do
           sourceRef' <- local (set htmlOptionsKind HtmlSrc) (nameIdAttrRef tmp Nothing)
-          return $
-            ul ! Attr.id "page-menu" ! Attr.class_ "links" $
-              li (a ! Attr.href sourceRef' $ "Source") -- TODO: review here
-                <> li (a ! Attr.href (fromString (toFilePath indexFileName)) $ "Index")
+          return
+            $ ul
+              ! Attr.id "page-menu"
+              ! Attr.class_ "links"
+            $ li (a ! Attr.href sourceRef' $ "Source") -- TODO: review here
+              <> li (a ! Attr.href (fromString (toFilePath indexFileName)) $ "Index")
 
         content :: Sem s Html
         content = do
           preface' <- docPreface
           interface' <- interface
-          return $
-            Html.div ! Attr.id "content" $
-              moduleHeader
-                <> toc
-                <> preface'
-                -- <> synopsis
-                <> interface'
+          return
+            $ Html.div
+              ! Attr.id "content"
+            $ moduleHeader
+              <> toc
+              <> preface'
+              -- <> synopsis
+              <> interface'
 
         docPreface :: Sem s Html
         docPreface = do
           pref <- goJudocMay (m ^. moduleDoc)
-          return $
-            Html.div ! Attr.id "description" $
-              Html.div ! Attr.class_ "doc" $
-                ( a ! Attr.id "sec:description" ! Attr.href "sec:description" $
-                    h1 "Description"
-                )
-                  <> pref
+          return
+            $ Html.div
+              ! Attr.id "description"
+            $ Html.div
+              ! Attr.class_ "doc"
+            $ ( a
+                  ! Attr.id "sec:description"
+                  ! Attr.href "sec:description"
+                  $ h1 "Description"
+              )
+              <> pref
 
         toc :: Html
         toc =
-          Html.div ! Attr.id "table-of-contents" $
-            Html.div ! Attr.id "contents-list" $
-              ( p
+          Html.div
+            ! Attr.id "table-of-contents"
+            $ Html.div
+              ! Attr.id "contents-list"
+            $ ( p
                   ! Attr.class_ "caption"
                   ! Attr.onclick "window.scrollTo(0,0)"
                   $ "Contents"
               )
-                <> tocEntries
+              <> tocEntries
           where
             tocEntries :: Html
             tocEntries =
@@ -343,18 +364,22 @@ goTopModule cs m = do
 
         moduleHeader :: Html
         moduleHeader =
-          Html.div ! Attr.id "module-header" $
-            (p ! Attr.class_ "caption" $ toHtml (prettyText tmp))
+          Html.div
+            ! Attr.id "module-header"
+            $ (p ! Attr.class_ "caption" $ toHtml (prettyText tmp))
 
         interface :: Sem s Html
         interface = do
           sigs' <- mconcatMapM goStatement (m ^. moduleBody)
-          return $
-            Html.div ! Attr.id "interface" $
-              ( a ! Attr.id "sec:interface" ! Attr.href "sec:interface" $
-                  h1 "Definitions"
+          return
+            $ Html.div
+              ! Attr.id "interface"
+            $ ( a
+                  ! Attr.id "sec:interface"
+                  ! Attr.href "sec:interface"
+                  $ h1 "Definitions"
               )
-                <> sigs'
+              <> sigs'
 
 goJudocMay :: (Members '[Reader HtmlOptions, Reader NormalizedTable] r) => Maybe (Judoc 'Scoped) -> Sem r Html
 goJudocMay = maybe (return mempty) goJudoc
@@ -382,29 +407,84 @@ goJudoc (Judoc bs) = mconcatMapM goGroup bs
     goExample ex = do
       e' <- ppCodeHtml defaultOptions (ex ^. exampleExpression)
       norm' <- asks @NormalizedTable (^?! at (ex ^. exampleId) . _Just) >>= ppCodeHtmlInternal
-      return $
-        Html.pre ! Attr.class_ "screen" $
-          (Html.code ! Attr.class_ "prompt" $ Str.judocExample)
-            <> " "
-            <> e'
-            <> "\n"
-            <> norm'
+      return
+        $ Html.pre
+          ! Attr.class_ "screen"
+        $ (Html.code ! Attr.class_ "prompt" $ Str.judocExample)
+          <> " "
+          <> e'
+          <> "\n"
+          <> norm'
 
     goAtom :: JudocAtom 'Scoped -> Sem r Html
     goAtom = \case
       JudocExpression e -> ppCodeHtml defaultOptions e
       JudocText txt -> return (toHtml txt)
 
-goStatement :: (Members '[Reader HtmlOptions, Reader NormalizedTable] r) => Statement 'Scoped -> Sem r Html
+goStatement :: forall r. (Members '[Reader HtmlOptions, Reader NormalizedTable] r) => Statement 'Scoped -> Sem r Html
 goStatement = \case
   StatementAxiom t -> goAxiom t
   StatementInductive t -> goInductive t
   StatementOpenModule t -> goOpen t
   StatementFunctionDef t -> goFunctionDef t
-  StatementSyntax {} -> mempty -- TODO handle alias
+  StatementSyntax s -> goSyntax s
   StatementImport {} -> mempty
   StatementModule {} -> mempty -- TODO handle local modules
   StatementProjectionDef {} -> mempty
+  where
+    goSyntax :: SyntaxDef 'Scoped -> Sem r Html
+    goSyntax = \case
+      SyntaxFixity f -> goFixity f
+      SyntaxAlias d -> goAlias d
+      SyntaxOperator {} -> mempty
+      SyntaxIterator {} -> mempty
+
+goFixity :: forall r. (Members '[Reader HtmlOptions, Reader NormalizedTable] r) => FixitySyntaxDef 'Scoped -> Sem r Html
+goFixity def = do
+  sig' <- ppHelper (ppFixityDefHeader def)
+  header' <- defHeader (def ^. fixitySymbol) sig' (def ^. fixityDoc)
+  let tbl' = table . tbody $ ari <> prec
+  return $
+    header'
+      <> ( Html.div
+             ! Attr.class_ "subs"
+             $ (p ! Attr.class_ "caption" $ "Fixity details")
+               <> tbl'
+         )
+  where
+    info :: FixityInfo
+    info = def ^. fixityInfo . withLocParam . withSourceValue
+
+    row :: Html -> Html
+    row x = tr $ td ! Attr.class_ "src" $ x
+
+    prec :: Html
+    prec = case info ^. fixityPrecSame of
+      Just txt -> row $ toHtml ("Same precedence as " <> txt)
+      Nothing ->
+        goPrec "Higher" (info ^. fixityPrecAbove)
+          <> goPrec "Lower" (info ^. fixityPrecBelow)
+        where
+          goPrec :: Html -> [Text] -> Html
+          goPrec above ls = case nonEmpty ls of
+            Nothing -> mempty
+            Just l -> row $ above <> " precedence than: " <> toHtml (Text.intercalate ", " (toList l))
+
+    ari :: Html
+    ari =
+      let arit = toHtml @String $ show (info ^. FixityInfo.fixityArity)
+          assoc = toHtml @String $ case fromMaybe AssocNone (info ^. fixityAssoc) of
+            AssocNone -> ""
+            AssocRight -> ", right-associative"
+            AssocLeft -> ", left-associative"
+       in row $
+            arit
+              <> assoc
+
+goAlias :: forall r. (Members '[Reader HtmlOptions, Reader NormalizedTable] r) => AliasDef 'Scoped -> Sem r Html
+goAlias def = do
+  sig' <- ppCodeHtml defaultOptions def
+  defHeader (def ^. aliasDefName) sig' Nothing
 
 goOpen :: forall r. (Members '[Reader HtmlOptions] r) => OpenModule 'Scoped -> Sem r Html
 goOpen op
@@ -414,38 +494,26 @@ goOpen op
 goAxiom :: forall r. (Members '[Reader HtmlOptions, Reader NormalizedTable] r) => AxiomDef 'Scoped -> Sem r Html
 goAxiom axiom = do
   header' <- axiomHeader
-  defHeader tmp uid header' (axiom ^. axiomDoc)
+  defHeader (axiom ^. axiomName) header' (axiom ^. axiomDoc)
   where
-    uid :: NameId
-    uid = axiom ^. axiomName . S.nameId
-    tmp :: TopModulePath
-    tmp = axiom ^. axiomName . S.nameDefinedIn . S.absTopModulePath
     axiomHeader :: Sem r Html
     axiomHeader = ppCodeHtml defaultOptions (set axiomDoc Nothing axiom)
 
 goFunctionDef :: forall r. (Members '[Reader HtmlOptions, Reader NormalizedTable] r) => FunctionDef 'Scoped -> Sem r Html
 goFunctionDef def = do
   sig' <- funSig
-  defHeader tmp uid sig' (def ^. signDoc)
+  defHeader (def ^. signName) sig' (def ^. signDoc)
   where
-    uid :: NameId
-    uid = def ^. signName . S.nameId
-    tmp :: TopModulePath
-    tmp = def ^. signName . S.nameDefinedIn . S.absTopModulePath
     funSig :: Sem r Html
     funSig = ppHelper (ppFunctionSignature def)
 
 goInductive :: forall r. (Members '[Reader HtmlOptions, Reader NormalizedTable] r) => InductiveDef 'Scoped -> Sem r Html
 goInductive def = do
   sig' <- inductiveHeader
-  header' <- defHeader tmp uid sig' (def ^. inductiveDoc)
+  header' <- defHeader (def ^. inductiveName) sig' (def ^. inductiveDoc)
   body' <- goConstructors (def ^. inductiveConstructors)
   return (header' <> body')
   where
-    uid :: NameId
-    uid = def ^. inductiveName . S.nameId
-    tmp :: TopModulePath
-    tmp = def ^. inductiveName . S.nameDefinedIn . S.absTopModulePath
     inductiveHeader :: Sem r Html
     inductiveHeader = ppHelper (ppInductiveSignature def)
 
@@ -455,10 +523,11 @@ ppHelper = docToHtml . run . runReader defaultOptions . execExactPrint Nothing
 goConstructors :: forall r. (Members '[Reader HtmlOptions, Reader NormalizedTable] r) => NonEmpty (ConstructorDef 'Scoped) -> Sem r Html
 goConstructors cc = do
   tbl' <- table . tbody <$> mconcatMapM goConstructor cc
-  return $
-    Html.div ! Attr.class_ "subs constructors" $
-      (p ! Attr.class_ "caption" $ "Constructors")
-        <> tbl'
+  return
+    $ Html.div
+      ! Attr.class_ "subs constructors"
+    $ (p ! Attr.class_ "caption" $ "Constructors")
+      <> tbl'
   where
     goConstructor :: ConstructorDef 'Scoped -> Sem r Html
     goConstructor c = do
@@ -468,28 +537,43 @@ goConstructors cc = do
       where
         docPart :: Sem r Html
         docPart = do
-          td ! Attr.class_ "doc"
+          td
+            ! Attr.class_ "doc"
             <$> goJudocMay (c ^. constructorDoc)
 
         srcPart :: Sem r Html
         srcPart = do
           sig' <- ppCodeHtml defaultOptions (set constructorDoc Nothing c)
-          return $
-            td ! Attr.class_ "src" $
-              sig'
+          return
+            $ td
+              ! Attr.class_ "src"
+            $ sig'
 
 noDefHeader :: Html -> Html
 noDefHeader = p ! Attr.class_ "src"
 
-defHeader :: forall r. (Members '[Reader HtmlOptions, Reader NormalizedTable] r) => TopModulePath -> NameId -> Html -> Maybe (Judoc 'Scoped) -> Sem r Html
-defHeader tmp uid sig mjudoc = do
+defHeader ::
+  forall r x.
+  (Members '[Reader HtmlOptions, Reader NormalizedTable] r) =>
+  S.Name' x ->
+  Html ->
+  Maybe (Judoc 'Scoped) ->
+  Sem r Html
+defHeader name sig mjudoc = do
   funHeader' <- functionHeader
   judoc' <- judoc
-  return $
-    Html.div ! Attr.class_ "top" $
-      funHeader'
-        <> judoc'
+  return
+    $ Html.div
+      ! Attr.class_ "top"
+    $ funHeader'
+      <> judoc'
   where
+    uid :: NameId
+    uid = name ^. S.nameId
+
+    tmp :: TopModulePath
+    tmp = name ^. S.nameDefinedIn . S.absTopModulePath
+
     judoc :: Sem r Html
     judoc = do
       judoc' <- goJudocMay mjudoc
