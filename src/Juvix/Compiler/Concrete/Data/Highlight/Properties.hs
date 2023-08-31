@@ -26,6 +26,7 @@ data Face
   | FaceInductive
   | FaceFunction
   | FaceModule
+  | FaceFixity
   | FaceAxiom
   | FaceDelimiter
   | FaceKeyword
@@ -51,6 +52,7 @@ faceSymbolStr = \case
   FaceJudoc -> Str.judoc
   FaceString -> Str.string
   FaceError -> Str.error
+  FaceFixity -> Str.fixity
 
 instance ToSExp Face where
   toSExp = faceSymbol . faceSymbolStr
