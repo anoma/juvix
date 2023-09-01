@@ -1,5 +1,3 @@
-{-# LANGUAGE QualifiedDo #-}
-
 module Juvix.Compiler.Concrete.Translation.FromSource
   ( module Juvix.Compiler.Concrete.Translation.FromSource,
     module Juvix.Compiler.Concrete.Translation.FromSource.Data.Context,
@@ -519,8 +517,8 @@ syntaxDef = do
   syn <- kw kwSyntax
   SyntaxFixity
     <$> fixitySyntaxDef syn
-    <|> SyntaxFixityNew
-      <$> fixitySyntaxDefNew syn
+      <?|> SyntaxFixityNew -- TODO replace <?|> after removing old syntax
+    <$> fixitySyntaxDefNew syn
     <|> SyntaxOperator
       <$> operatorSyntaxDef syn
     <|> SyntaxIterator
@@ -548,13 +546,12 @@ parsedFixityInfoNew :: forall r. (Members '[InfoTableBuilder, PragmasStash, Judo
 parsedFixityInfoNew = do
   _nfixityArity <- withLoc ari
   l <- kw delimBraceL
-  (_nfixityAssoc, _nfixityPrecBelow, _nfixityPrecAbove, _nfixityPrecSame) <- runPermutation $ do
+  (_nfixityAssoc, _nfixityPrecBelow, _nfixityPrecAbove, _nfixityPrecSame) <- intercalateEffect semicolon $ do
     as <- toPermutationWithDefault Nothing (Just <$> assoc)
     bel <- toPermutationWithDefault Nothing (Just <$> belowAbove kwBelow)
     abov <- toPermutationWithDefault Nothing (Just <$> belowAbove kwAbove)
     sam <- toPermutationWithDefault Nothing (Just <$> same)
     pure (as, bel, abov, sam)
-
   r <- kw delimBraceR
   let _nfixityBraces = Irrelevant (l, r)
   return ParsedFixityInfoNew {..}
@@ -569,9 +566,9 @@ parsedFixityInfoNew = do
     belowAbove aboveOrBelow = do
       kw aboveOrBelow
       kw kwAssign
-      kw delimBraceL
-      r <- P.sepEndBy symbol (kw delimSemicolon)
-      kw delimBraceR
+      kw kwBracketL
+      r <- P.sepEndBy symbol semicolon
+      kw kwBracketR
       return r
 
     assoc :: ParsecS r BinaryAssoc

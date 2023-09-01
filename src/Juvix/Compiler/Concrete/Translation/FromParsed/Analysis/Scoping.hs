@@ -788,7 +788,7 @@ resolveFixitySyntaxDef fdef@FixitySyntaxDef {..} = topBindings $ do
   where
     checkMaybeFixity ::
       forall r'.
-      (Members '[Error ScoperError, State Scope, State ScoperState] r') =>
+      (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder] r') =>
       Interval ->
       Maybe Text ->
       Sem r' (Maybe S.Symbol)
@@ -1973,7 +1973,7 @@ checkUnqualifiedName s = do
     n = NameUnqualified s
 
 checkFixitySymbol ::
-  (Members '[Error ScoperError, State Scope, State ScoperState] r) =>
+  (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder] r) =>
   Symbol ->
   Sem r S.Symbol
 checkFixitySymbol s = do
@@ -1982,7 +1982,10 @@ checkFixitySymbol s = do
   entries <- thd3 <$> lookupQualifiedSymbol ([], s)
   case resolveShadowing entries of
     [] -> throw (ErrSymNotInScope (NotInScope s scope))
-    [x] -> return $ entryToSymbol x s
+    [x] -> do
+      let res = entryToSymbol x s
+      registerName res
+      return res
     es -> throw (ErrAmbiguousSym (AmbiguousSym n (map (PreSymbolFinal . SymbolEntry . (^. fixityEntry)) es)))
   where
     n = NameUnqualified s

@@ -623,6 +623,12 @@ instance PrettyPrint BinaryAssoc where
     AssocLeft -> Str.left
     AssocRight -> Str.right
 
+ppSymbolList :: (SingI s) => PrettyPrinting [SymbolType s]
+ppSymbolList items = do
+  ppCode Kw.kwBracketL
+  hsepSemicolon (map ppSymbolType items)
+  ppCode Kw.kwBracketR
+
 instance (SingI s) => PrettyPrint (ParsedFixityInfoNew s) where
   ppCode ParsedFixityInfoNew {..} = do
     let (l, r) = _nfixityBraces ^. unIrrelevant
@@ -632,7 +638,13 @@ instance (SingI s) => PrettyPrint (ParsedFixityInfoNew s) where
         sameItem = do
           a <- _nfixityPrecSame
           return (ppCode Kw.kwSame <+> ppCode Kw.kwAssign <+> ppSymbolType a)
-        items = sepSemicolon (catMaybes [assocItem, sameItem])
+        aboveItem = do
+          a <- _nfixityPrecAbove
+          return (ppCode Kw.kwAbove <+> ppCode Kw.kwAssign <+> ppSymbolList a)
+        belowItem = do
+          a <- _nfixityPrecBelow
+          return (ppCode Kw.kwAbove <+> ppCode Kw.kwAssign <+> ppSymbolList a)
+        items = sepSemicolon (catMaybes [assocItem, sameItem, aboveItem, belowItem])
     ppCode _nfixityArity <+> ppCode l <> items <> ppCode r
 
 instance (SingI s) => PrettyPrint (FixitySyntaxDefNew s) where
