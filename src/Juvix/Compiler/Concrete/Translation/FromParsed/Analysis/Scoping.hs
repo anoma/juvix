@@ -623,6 +623,24 @@ readScopeModule import_ = do
     addImport :: ScopeParameters -> ScopeParameters
     addImport = over scopeTopParents (cons import_)
 
+checkFixityInfoNew ::
+  forall r.
+  (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, State ScoperSyntax, NameIdGen, InfoTableBuilder] r) =>
+  ParsedFixityInfoNew 'Parsed ->
+  Sem r (ParsedFixityInfoNew 'Scoped)
+checkFixityInfoNew ParsedFixityInfoNew {..} = do
+  same' <- mapM checkFixitySymbol _nfixityPrecSame
+  below' <- mapM (mapM checkFixitySymbol) _nfixityPrecBelow
+  above' <- mapM (mapM checkFixitySymbol) _nfixityPrecAbove
+  return ParsedFixityInfoNew {
+    _nfixityPrecSame = same',
+    _nfixityPrecAbove = above',
+    _nfixityPrecBelow = below',
+    _nfixityArity,
+    _nfixityAssoc,
+    _nfixityBraces
+                             }
+
 checkFixitySyntaxDefNew ::
   forall r.
   (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, State ScoperSyntax, NameIdGen, InfoTableBuilder] r) =>
@@ -631,12 +649,16 @@ checkFixitySyntaxDefNew ::
 checkFixitySyntaxDefNew FixitySyntaxDefNew {..} = topBindings $ do
   sym <- bindFixitySymbol _nfixitySymbol
   doc <- mapM checkJudoc _nfixityDoc
+  info' <- checkFixityInfoNew _nfixityInfo
   registerHighlightDoc (sym ^. S.nameId) doc
   return
     FixitySyntaxDefNew
       { _nfixitySymbol = sym,
         _nfixityDoc = doc,
-        ..
+        _nfixityInfo = info',
+        _nfixityAssignKw,
+        _nfixitySyntaxKw,
+        _nfixityKw
       }
 
 checkFixitySyntaxDef ::
@@ -674,9 +696,9 @@ resolveFixitySyntaxDefNew fdef@FixitySyntaxDefNew {..} = topBindings $ do
   forM_ below' $ mapM_ (registerPrecedence fid)
   let samePrec = getPrec tab <$> same
       belowPrec :: Integer
-      belowPrec = fromIntegral $ maximum (minInt + 1 : map (getPrec tab) above)
+      belowPrec = fromIntegral $ maximum (minInt + 1 : maybe [] (map (getPrec tab)) above)
       abovePrec :: Integer
-      abovePrec = fromIntegral $ minimum (maxInt - 1 : map (getPrec tab) below)
+      abovePrec = fromIntegral $ minimum (maxInt - 1 : maybe [] (map (getPrec tab)) below)
   when (belowPrec >= abovePrec + 1) $
     throw (ErrPrecedenceInconsistency (PrecedenceInconsistencyError fdef))
   when (isJust same && not (null below && null above)) $
@@ -688,9 +710,9 @@ resolveFixitySyntaxDefNew fdef@FixitySyntaxDefNew {..} = topBindings $ do
           { _fixityId = Just fid,
             _fixityPrecedence = PrecNat prec,
             _fixityArity =
-              case fi ^. FI.fixityArity of
+              case fi ^. nfixityArity . withLocParam of
                 FI.Unary -> Unary AssocPostfix
-                FI.Binary -> case fi ^. FI.fixityAssoc of
+                FI.Binary -> case fi ^. nfixityAssoc of
                   Nothing -> Binary AssocNone
                   Just FI.AssocLeft -> Binary AssocLeft
                   Just FI.AssocRight -> Binary AssocRight
