@@ -27,8 +27,8 @@ import Data.Aeson (genericToEncoding, genericToJSON)
 import Data.Aeson.BetterErrors
 import Data.Aeson.TH
 import Data.ByteString qualified as ByteString
+import Data.HashSet qualified as HashSet
 import Data.Kind qualified as GHC
-import Data.Set qualified as Set
 import Data.Versions
 import Data.Yaml
 import Juvix.Compiler.Pipeline.Package.Dependency
@@ -162,13 +162,13 @@ processPackage _packageFile buildDir pkg = do
         Left err -> throw (pack (errorBundlePretty err))
 
     checkNoDuplicateDepNames :: [Dependency] -> Sem r ()
-    checkNoDuplicateDepNames deps = go Set.empty (deps ^.. traversed . _GitDependency . gitDependencyName)
+    checkNoDuplicateDepNames deps = go HashSet.empty (deps ^.. traversed . _GitDependency . gitDependencyName)
       where
-        go :: Set Text -> [Text] -> Sem r ()
+        go :: HashSet Text -> [Text] -> Sem r ()
         go _ [] = return ()
         go s (x : xs)
-          | x `Set.member` s = throw (errMsg x)
-          | otherwise = go (Set.insert x s) xs
+          | x `HashSet.member` s = throw (errMsg x)
+          | otherwise = go (HashSet.insert x s) xs
           where
             errMsg :: Text -> Text
             errMsg dupName =
