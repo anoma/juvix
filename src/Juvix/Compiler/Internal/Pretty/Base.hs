@@ -163,7 +163,7 @@ instance (PrettyCode a) => PrettyCode (WithLoc a) where
 instance PrettyCode FunctionParameter where
   ppCode FunctionParameter {..} = do
     case _paramName of
-      Nothing -> ppLeftExpression funFixity _paramType
+      Nothing -> delimIf _paramImplicit False <$> ppLeftExpression funFixity _paramType
       Just n -> do
         paramName' <- ppCode n
         paramType' <- ppCode _paramType
