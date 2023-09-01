@@ -157,7 +157,8 @@ entryPointFromGlobalOptions roots mainFile opts = do
         _entryPointNoStdlib = opts ^. globalNoStdlib,
         _entryPointUnrollLimit = opts ^. globalUnrollLimit,
         _entryPointGenericOptions = project opts,
-        _entryPointBuildDir = maybe (def ^. entryPointBuildDir) Abs mabsBuildDir
+        _entryPointBuildDir = maybe (def ^. entryPointBuildDir) Abs mabsBuildDir,
+        _entryPointOffline = opts ^. globalOffline
       }
   where
     optBuildDir :: Maybe (Prepath Dir)
@@ -177,7 +178,8 @@ entryPointFromGlobalOptionsNoFile roots opts = do
         _entryPointNoStdlib = opts ^. globalNoStdlib,
         _entryPointUnrollLimit = opts ^. globalUnrollLimit,
         _entryPointGenericOptions = project opts,
-        _entryPointBuildDir = maybe (def ^. entryPointBuildDir) Abs mabsBuildDir
+        _entryPointBuildDir = maybe (def ^. entryPointBuildDir) Abs mabsBuildDir,
+        _entryPointOffline = opts ^. globalOffline
       }
   where
     optBuildDir :: Maybe (Prepath Dir)

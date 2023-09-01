@@ -59,6 +59,71 @@ tests:
       contains: Hello from dep
     exit-status: 0
 
+  - name: git-dependencies-success-then-offline
+    command:
+      shell:
+        - bash
+      script: |
+        temp=$(mktemp -d)
+        trap 'rm -rf -- "$temp"' EXIT
+
+        # create dependency
+        mkdir $temp/dep
+        cd $temp/dep
+        git init
+
+        cat <<-EOF > HelloDep.juvix
+        module HelloDep;
+        import Stdlib.Prelude open;
+        main : IO := printStringLn "Hello from dep";
+        EOF
+        touch juvix.yaml
+
+        git add -A
+        git commit -m "commit1"
+
+        dep1hash=$(git rev-parse HEAD)
+
+        # create project that uses dependency
+        mkdir $temp/base
+        cd $temp/base
+
+        cat <<-EOF > juvix.yaml
+        name: HelloWorld
+        main: HelloWorld.juvix
+        dependencies:
+          - .juvix-build/stdlib
+          - git:
+              url: $temp/dep
+              name: dep1
+              ref: $dep1hash
+        version: 0.1.0
+        EOF
+
+        cat <<-EOF > HelloWorld.juvix
+        -- HelloWorld.juvix
+        module HelloWorld;
+
+        import Stdlib.Prelude open;
+        import HelloDep;
+
+        main : IO := HelloDep.main;
+        EOF
+
+        # compile project
+        juvix compile HelloWorld.juvix
+
+        # Delete the dependency
+        rm -rf $temp/dep
+        rm HelloWorld
+
+        # Compile using the offline clone
+        juvix --offline compile HelloWorld.juvix
+        ./HelloWorld
+    stdout:
+      contains: Hello from dep
+    exit-status: 0
+
   - name: git-dependencies-fetch-new-commits
     command:
       shell:
@@ -246,6 +311,53 @@ tests:
       contains: error
     stdout:
       contains: cloning
+    exit-status: 1
+
+  - name: git-dependencies-offline
+    command:
+      shell:
+        - bash
+      script: |
+        temp=$(mktemp -d)
+        trap 'rm -rf -- "$temp"' EXIT
+
+        # create project that uses dependency
+        mkdir $temp/base
+        cd $temp/base
+
+        cat <<-EOF > juvix.yaml
+        name: HelloWorld
+        main: HelloWorld.juvix
+        dependencies:
+          - .juvix-build/stdlib
+          - git:
+              url: $temp/dep
+              name: dep1
+              ref: main
+        version: 0.1.0
+        EOF
+
+        cat <<-EOF > HelloWorld.juvix
+        -- HelloWorld.juvix
+        module HelloWorld;
+
+        import Stdlib.Prelude open;
+        import HelloDep;
+
+        main : IO := HelloDep.main;
+        EOF
+
+        # compile project
+        juvix --offline compile HelloWorld.juvix
+    stderr:
+      contains: dep1
+    stdout:
+      matches:
+        # compile should not attempt to clone the dependency
+        regex: |-
+          ^((?!cloning).)*$
+        options:
+          - dot-all
     exit-status: 1
 
   - name: git-dependencies-corrupt-clone
