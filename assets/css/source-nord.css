@@ -32,23 +32,23 @@ body {
 }
 
 .ju-var {
-    color: #d8dee9
+    color: #d8dee9;
 }
 
 .ju-fixity {
-    color: #a4b4d2
+    color: #d08770;
 }
 
 .ju-comment {
-    color: #83898d
+    color: #83898d;
 }
 
 .ju-judoc {
-    color: #8fbcbb
+    color: #8fbcbb;
 }
 
 .ju-number {
-    color: #d8dee9
+    color: #d8dee9;
 }
 
 .ju-define {

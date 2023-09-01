@@ -1,6 +1,19 @@
 working-directory: ./../../../examples/
 
 tests:
+  - name: html-help-theme
+    command:
+        - juvix
+        - html
+        - --help
+    stdout:
+      matches:
+        regex: |
+          .*Theme for syntax highlighting. Dark themes: .*Light themes.*
+        options:
+          - dot-all
+    exit-status: 0
+
   - name: html-stdout
     command:
       shell:

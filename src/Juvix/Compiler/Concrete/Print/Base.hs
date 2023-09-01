@@ -336,13 +336,19 @@ withNameIdSuffix nid a = do
 instance PrettyPrint S.NameId where
   ppCode (S.NameId k) = noLoc (pretty k)
 
+ppModuleHeader :: (SingI t, SingI s) => PrettyPrinting (Module s t)
+ppModuleHeader Module {..} = do
+  let modulePath' = ppModulePathType _modulePath
+  ppCode _moduleKw
+    <+> modulePath'
+
 instance (SingI t, SingI s) => PrettyPrint (Module s t) where
   ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => Module s t -> Sem r ()
-  ppCode Module {..} = do
+  ppCode m@Module {..} = do
     let moduleBody' = localIndent (ppStatements _moduleBody)
-        modulePath' = ppModulePathType _modulePath
         moduleDoc' = whenJust _moduleDoc ppCode
         modulePragmas' = whenJust _modulePragmas ppCode
+        header' = ppModuleHeader m
         body'
           | null _moduleBody = ensureEmptyLine
           | otherwise =
@@ -351,12 +357,11 @@ instance (SingI t, SingI s) => PrettyPrint (Module s t) where
                 <> line
     moduleDoc'
       <> modulePragmas'
-      <> ppCode _moduleKw
-      <+> modulePath'
-        <> ppCode Kw.delimSemicolon
-        <> line
-        <> body'
-        <> ending
+      <> header'
+      <> ppCode Kw.delimSemicolon
+      <> line
+      <> body'
+      <> ending
     where
       topSpace :: Sem r ()
       topSpace = case sing :: SModuleIsTop t of
@@ -596,16 +601,21 @@ instance PrettyPrint Precedence where
     PrecApp -> noLoc (pretty ("ω" :: Text))
     PrecUpdate -> noLoc (pretty ("ω₁" :: Text))
 
+ppFixityDefHeader :: (SingI s) => PrettyPrinting (FixitySyntaxDef s)
+ppFixityDefHeader FixitySyntaxDef {..} = do
+  let sym' = annotated (AnnKind KNameFixity) (ppSymbolType _fixitySymbol)
+  ppCode _fixitySyntaxKw <+> ppCode _fixityKw <+> sym'
+
 instance (SingI s) => PrettyPrint (FixitySyntaxDef s) where
-  ppCode FixitySyntaxDef {..} = do
-    let sym' = ppSymbolType _fixitySymbol
-    let txt = pretty (_fixityInfo ^. withLocParam . withSourceText)
-    ppCode _fixitySyntaxKw <+> ppCode _fixityKw <+> sym' <+> braces (noLoc txt)
+  ppCode f@FixitySyntaxDef {..} = do
+    let header' = ppFixityDefHeader f
+        txt = pretty (_fixityInfo ^. withLocParam . withSourceText)
+    header' <+> braces (noLoc txt)
 
 instance PrettyPrint OperatorSyntaxDef where
   ppCode OperatorSyntaxDef {..} = do
     let opSymbol' = ppUnkindedSymbol _opSymbol
-    let p = ppUnkindedSymbol _opFixity
+        p = ppUnkindedSymbol _opFixity
     ppCode _opSyntaxKw <+> ppCode _opKw <+> opSymbol' <+> p
 
 instance PrettyPrint PatternApp where
@@ -789,28 +799,33 @@ instance (SingI s) => PrettyPrint (SigArg s) where
         rhs = ppCode <$> _sigArgRhs
     ppCode l <> names' <+?> rhs <> ppCode r
 
+ppFunctionSignature :: (SingI s) => PrettyPrinting (FunctionDef s)
+ppFunctionSignature FunctionDef {..} = do
+  let termin' = (<> line) . ppCode <$> _signTerminating
+      args' = hsep . fmap ppCode <$> nonEmpty _signArgs
+      builtin' = (<> line) . ppCode <$> _signBuiltin
+      type' = oneLineOrNext (ppCode _signColonKw <+> ppExpressionType _signRetType)
+      name' = annDef _signName (ppSymbolType _signName)
+   in builtin'
+        ?<> termin'
+        ?<> ( name'
+                <+?> args'
+                  <> type'
+            )
+
 instance (SingI s) => PrettyPrint (FunctionDef s) where
   ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => FunctionDef s -> Sem r ()
-  ppCode FunctionDef {..} = do
-    let termin' :: Maybe (Sem r ()) = (<> line) . ppCode <$> _signTerminating
-        doc' :: Maybe (Sem r ()) = ppCode <$> _signDoc
+  ppCode fun@FunctionDef {..} = do
+    let doc' :: Maybe (Sem r ()) = ppCode <$> _signDoc
         pragmas' :: Maybe (Sem r ()) = ppCode <$> _signPragmas
-        args' = hsep . fmap ppCode <$> nonEmpty _signArgs
-        builtin' :: Maybe (Sem r ()) = (<> line) . ppCode <$> _signBuiltin
-        type' = oneLineOrNext (ppCode _signColonKw <+> ppExpressionType _signRetType)
-        name' = annDef _signName (ppSymbolType _signName)
+        sig' = ppFunctionSignature fun
         body' = case _signBody of
           SigBodyExpression e -> space <> ppCode Kw.kwAssign <> oneLineOrNext (ppExpressionType e)
           SigBodyClauses k -> line <> indent (vsep (ppCode <$> k))
     doc'
       ?<> pragmas'
-      ?<> builtin'
-      ?<> termin'
-      ?<> ( name'
-              <+?> args'
-                <> type'
-                <> body'
-          )
+      ?<> sig'
+      <> body'
 
 instance PrettyPrint Wildcard where
   ppCode w = morpheme (getLoc w) C.kwWildcard

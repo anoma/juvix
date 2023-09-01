@@ -1,17 +1,22 @@
-module Juvix.Data.FixityInfo where
+module Juvix.Data.FixityInfo
+  ( module Juvix.Data.FixityInfo,
+    module Juvix.Data.Fixity,
+  )
+where
 
+import Juvix.Data.Fixity (BinaryAssoc (..))
 import Juvix.Data.Yaml
 import Juvix.Prelude.Base
 
-data Arity = Unary | Binary
+data Arity
+  = Unary
+  | Binary
   deriving stock (Show, Eq, Ord, Generic)
 
-data Assoc = AssocLeft | AssocRight | AssocNone
-  deriving stock (Show, Eq, Ord, Generic)
-
+-- TODO consider using sum type for Same | Below && Above
 data FixityInfo = FixityInfo
   { _fixityArity :: Arity,
-    _fixityAssoc :: Maybe Assoc,
+    _fixityAssoc :: Maybe BinaryAssoc,
     _fixityPrecSame :: Maybe Text,
     _fixityPrecBelow :: [Text],
     _fixityPrecAbove :: [Text]
@@ -43,7 +48,7 @@ instance FromJSON FixityInfo where
           "binary" -> return Binary
           _ -> throwCustomError "unknown arity"
 
-      parseAssoc :: Parse YamlError Assoc
+      parseAssoc :: Parse YamlError BinaryAssoc
       parseAssoc = do
         txt <- asText
         case txt of
