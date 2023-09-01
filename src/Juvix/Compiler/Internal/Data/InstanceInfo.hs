@@ -7,19 +7,10 @@ import Juvix.Compiler.Internal.Language
 import Juvix.Prelude
 
 data InstanceParam
-  = InstanceParamVar InstanceVar
+  = InstanceParamVar VarName
   | InstanceParamApp InstanceApp
-  | InstanceParamMeta InstanceMeta
-  deriving stock (Eq)
-
-newtype InstanceVar = InstanceVar
-  { _instanceVarName :: VarName
-  }
-  deriving stock (Eq)
-
-newtype InstanceMeta = InstanceMeta
-  { _instanceMetaName :: VarName
-  }
+  | InstanceParamHole Hole
+  | InstanceParamMeta VarName
   deriving stock (Eq)
 
 data InstanceApp = InstanceApp
@@ -38,9 +29,7 @@ data InstanceInfo = InstanceInfo
 -- | Maps trait names to available instances
 type InstanceTable = HashMap InductiveName [InstanceInfo]
 
-makeLenses ''InstanceVar
 makeLenses ''InstanceApp
-makeLenses ''InstanceMeta
 makeLenses ''InstanceInfo
 
 updateInstanceTable :: InstanceTable -> InstanceInfo -> InstanceTable
@@ -54,10 +43,11 @@ updateInstanceTable tab ii@InstanceInfo {..} =
 
 paramToExpression :: InstanceParam -> Expression
 paramToExpression = \case
-  InstanceParamVar (InstanceVar v) ->
+  InstanceParamVar v ->
     ExpressionIden (IdenVar v)
   InstanceParamApp (InstanceApp h args) ->
     foldExplicitApplication (ExpressionIden (IdenInductive h)) (map paramToExpression args)
+  InstanceParamHole h -> ExpressionHole h
   InstanceParamMeta {} ->
     impossible
 
@@ -66,8 +56,9 @@ paramFromExpression metaVars = \case
   ExpressionIden (IdenInductive n) ->
     Just $ InstanceParamApp $ InstanceApp n []
   ExpressionIden (IdenVar v)
-    | HashSet.member v metaVars -> Just $ InstanceParamMeta $ InstanceMeta v
-    | otherwise -> Just $ InstanceParamVar $ InstanceVar v
+    | HashSet.member v metaVars -> Just $ InstanceParamMeta v
+    | otherwise -> Just $ InstanceParamVar v
+  ExpressionHole h -> Just $ InstanceParamHole h
   ExpressionApplication app -> do
     let (h, args) = unfoldApplication app
     args' <- mapM (paramFromExpression metaVars) args
@@ -98,3 +89,10 @@ instanceFromTypedExpression TypedExpression {..} = case traitFromExpression meta
   where
     (args, e) = unfoldFunType _typedType
     metaVars = HashSet.fromList $ mapMaybe (^. paramName) args
+
+checkNoMeta :: InstanceParam -> Bool
+checkNoMeta = \case
+  InstanceParamVar {} -> True
+  InstanceParamMeta {} -> False
+  InstanceParamHole {} -> True
+  InstanceParamApp (InstanceApp _ args) -> all checkNoMeta args

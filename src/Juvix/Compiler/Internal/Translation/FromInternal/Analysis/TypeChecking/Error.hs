@@ -3,12 +3,10 @@ module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Er
     module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error.Pretty,
     module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error.Types,
     module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Error,
-    module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Traits.Error,
   )
 where
 
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Error
-import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Traits.Error
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error.Pretty
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error.Types
 import Juvix.Prelude
@@ -17,7 +15,6 @@ data TypeCheckerError
   = ErrWrongConstructorType WrongConstructorType
   | ErrWrongReturnType WrongReturnType
   | ErrArity ArityCheckerError
-  | ErrTraitError TraitError
   | ErrWrongType WrongType
   | ErrUnsolvedMeta UnsolvedMeta
   | ErrExpectedFunctionType ExpectedFunctionType
@@ -27,6 +24,10 @@ data TypeCheckerError
   | ErrNoPositivity NoPositivity
   | ErrUnsupportedTypeFunction UnsupportedTypeFunction
   | ErrTargetNotATrait TargetNotATrait
+  | ErrNotATrait NotATrait
+  | ErrNoInstance NoInstance
+  | ErrAmbiguousInstances AmbiguousInstances
+  | ErrExplicitInstanceArgument ExplicitInstanceArgument
 
 instance ToGenericError TypeCheckerError where
   genericError :: (Member (Reader GenericOptions) r) => TypeCheckerError -> Sem r GenericError
@@ -34,7 +35,6 @@ instance ToGenericError TypeCheckerError where
     ErrWrongConstructorType e -> genericError e
     ErrWrongReturnType e -> genericError e
     ErrArity e -> genericError e
-    ErrTraitError e -> genericError e
     ErrWrongType e -> genericError e
     ErrUnsolvedMeta e -> genericError e
     ErrExpectedFunctionType e -> genericError e
@@ -44,3 +44,7 @@ instance ToGenericError TypeCheckerError where
     ErrNoPositivity e -> genericError e
     ErrUnsupportedTypeFunction e -> genericError e
     ErrTargetNotATrait e -> genericError e
+    ErrNotATrait e -> genericError e
+    ErrNoInstance e -> genericError e
+    ErrAmbiguousInstances e -> genericError e
+    ErrExplicitInstanceArgument e -> genericError e

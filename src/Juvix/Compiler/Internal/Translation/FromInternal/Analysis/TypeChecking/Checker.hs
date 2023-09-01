@@ -13,11 +13,10 @@ import Juvix.Compiler.Internal.Extra
 import Juvix.Compiler.Internal.Pretty
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Positivity.Checker
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker (Termination)
-import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Traits.Extra
-import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Traits.Resolver
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Inference
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Traits.Resolver
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Data.Effect.NameIdGen
 import Juvix.Prelude hiding (fromEither)
@@ -235,13 +234,13 @@ checkInstanceType FunctionDef {..} = case mi of
     checkParam :: InfoTable -> FunctionParameter -> Sem r ()
     checkParam tab FunctionParameter {..} = case _paramImplicit of
       Implicit -> return ()
-      Explicit -> throw (ErrTraitError (ErrExplicitInstanceArgument (ExplicitInstanceArgument _paramType)))
+      Explicit -> throw (ErrExplicitInstanceArgument (ExplicitInstanceArgument _paramType))
       ImplicitInstance -> checkInstanceParam tab _paramType
 
 checkInstanceParam :: (Member (Error TypeCheckerError) r) => InfoTable -> Expression -> Sem r ()
 checkInstanceParam tab ty = case traitFromExpression mempty ty of
   Just (InstanceApp h _) | isTrait tab h -> return ()
-  _ -> throw (ErrTraitError (ErrNotATrait (NotATrait ty)))
+  _ -> throw (ErrNotATrait (NotATrait ty))
 
 checkExample ::
   (Members '[HighlightBuilder, Reader InfoTable, State FunctionsTable, Error TypeCheckerError, Builtins, NameIdGen, Output Example, State TypesTable, Termination] r) =>
@@ -604,12 +603,8 @@ inferExpression' hint e = case e of
     goInstanceHole _ = do
       tab <- asks (^. infoInstances)
       let ty = fromMaybe impossible hint
-      r <- runError $ resolveTraitInstance tab ty
-      case r of
-        Left err ->
-          throw (ErrTraitError err)
-        Right t ->
-          inferExpression' Nothing t
+      t <- resolveTraitInstance tab ty
+      inferExpression' Nothing t
 
     goSimpleLambda :: SimpleLambda -> Sem r TypedExpression
     goSimpleLambda (SimpleLambda v ty b) = do

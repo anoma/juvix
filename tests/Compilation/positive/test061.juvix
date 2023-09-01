@@ -1,0 +1,18 @@
+--- Traits
+module test061;
+
+import Stdlib.Prelude open hiding {Show; mkShow; show};
+
+trait
+type Show A :=
+  mkShow {
+    show : A → String
+  };
+
+instance
+showString : Show Bool := mkShow (show := λ{x := if x "true" "false"});
+
+f {A} : {{Show A}} -> A -> String
+  | x := Show.show x;
+
+main : String := Show.show true ++str f false;
