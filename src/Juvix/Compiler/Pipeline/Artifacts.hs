@@ -22,6 +22,7 @@ import Juvix.Compiler.Internal.Translation.FromConcrete qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context
 import Juvix.Compiler.Pipeline.EntryPoint
+import Juvix.Data.Effect.Git
 import Juvix.Prelude
 
 -- | `Artifacts` contains enough information so that the pipeline can be
@@ -64,7 +65,7 @@ tmpCoreInfoTableBuilderArtifacts m = do
   modify' (set artifactCoreTable tbl)
   return a
 
-runPathResolverArtifacts :: (Members '[Files, Reader EntryPoint, State Artifacts] r) => Sem (PathResolver ': r) a -> Sem r a
+runPathResolverArtifacts :: (Members '[Files, Reader EntryPoint, State Artifacts, Error DependencyError, GitClone] r) => Sem (PathResolver ': r) a -> Sem r a
 runPathResolverArtifacts = runStateLikeArtifacts runPathResolverPipe' artifactResolver
 
 runBuiltinsArtifacts :: (Members '[Error JuvixError, State Artifacts] r) => Sem (Builtins ': r) a -> Sem r a

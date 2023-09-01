@@ -80,6 +80,7 @@ dependencies:
   - th-utilities == 0.2.*
   - time == 1.12.*
   - transformers == 0.5.*
+  - typed-process == 0.2.*
   - unicode-show == 0.1.*
   - uniplate == 1.6.*
   - unix-compat == 0.7.*

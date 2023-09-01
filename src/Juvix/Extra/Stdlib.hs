@@ -32,16 +32,18 @@ packageStdlib :: forall r. (Members '[Files] r) => Path Abs Dir -> Path Abs Dir 
 packageStdlib rootDir buildDir = firstJustM isStdLib
   where
     isStdLib :: Dependency -> Sem r (Maybe (Path Abs Dir))
-    isStdLib (Dependency dep) = do
-      adir <- canonicalDir rootDir dep
-      let mstdlib :: Maybe (Path Rel Dir) = stripProperPrefix buildDir adir
-      return $
-        if
-            | mstdlib == Just relStdlibDir -> Just stdLibBuildDir
-            | otherwise -> Nothing
-      where
-        stdLibBuildDir :: Path Abs Dir
-        stdLibBuildDir = juvixStdlibDir buildDir
+    isStdLib = \case
+      DependencyPath dep -> do
+        adir <- canonicalDir rootDir (dep ^. pathDependencyPath)
+        let mstdlib :: Maybe (Path Rel Dir) = stripProperPrefix buildDir adir
+        return $
+          if
+              | mstdlib == Just relStdlibDir -> Just stdLibBuildDir
+              | otherwise -> Nothing
+        where
+          stdLibBuildDir :: Path Abs Dir
+          stdLibBuildDir = juvixStdlibDir buildDir
+      DependencyGit {} -> return Nothing
 
 writeStdlib :: forall r. (Members '[Reader StdlibRoot, Files] r) => Sem r ()
 writeStdlib = do

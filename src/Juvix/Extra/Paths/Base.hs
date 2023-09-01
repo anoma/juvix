@@ -35,6 +35,9 @@ relBuildDir = $(mkRelDir ".juvix-build")
 relStdlibDir :: Path Rel Dir
 relStdlibDir = $(mkRelDir "stdlib")
 
+relDependenciesDir :: Path Rel Dir
+relDependenciesDir = $(mkRelDir "deps")
+
 rootBuildDir :: Path Abs Dir -> Path Abs Dir
 rootBuildDir root = root <//> relBuildDir
 

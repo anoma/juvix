@@ -44,13 +44,15 @@ getPackage = do
   tproj <- getProjName
   say "Write the version of your project [leave empty for 0.0.0]"
   tversion :: SemVer <- getVersion
+  cwd <- getCurrentDir
   return
     Package
       { _packageName = tproj,
         _packageVersion = tversion,
         _packageBuildDir = Nothing,
         _packageMain = Nothing,
-        _packageDependencies = [defaultStdlibDep DefaultBuildDir]
+        _packageDependencies = [defaultStdlibDep DefaultBuildDir],
+        _packageFile = cwd <//> juvixYamlFile
       }
 
 getProjName :: forall r. (Members '[Embed IO] r) => Sem r Text

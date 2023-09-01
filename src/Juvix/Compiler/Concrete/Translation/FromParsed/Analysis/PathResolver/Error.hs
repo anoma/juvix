@@ -5,7 +5,63 @@ import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Base
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.PackageInfo
 import Juvix.Compiler.Pipeline.Package
 import Juvix.Data.CodeAnn
+import Juvix.Data.Effect.Git
 import Juvix.Prelude
+
+data DependencyErrorGit = DependencyErrorGit
+  { _dependencyErrorGitError :: GitError,
+    _dependencyErrorGitCloneDir :: Path Abs Dir
+  }
+
+newtype DependencyErrorCause = GitDependencyError DependencyErrorGit
+
+data DependencyError = DependencyError
+  { _dependencyErrorPackageFile :: Path Abs File,
+    _dependencyErrorCause :: DependencyErrorCause
+  }
+
+makeLenses ''DependencyError
+makeLenses ''DependencyErrorGit
+
+instance ToGenericError DependencyError where
+  genericError e = do
+    let msg = ppCodeAnn (e ^. dependencyErrorCause)
+    return
+      ( GenericError
+          { _genericErrorMessage = mkAnsiText msg,
+            _genericErrorLoc = i,
+            _genericErrorIntervals = [i]
+          }
+      )
+    where
+      i = getLoc e
+
+instance HasLoc DependencyError where
+  getLoc e = singletonInterval (mkInitialLoc (e ^. dependencyErrorPackageFile))
+
+instance PrettyCodeAnn DependencyErrorCause where
+  ppCodeAnn = \case
+    GitDependencyError e -> ppCodeAnn e
+
+instance PrettyCodeAnn DependencyErrorGit where
+  ppCodeAnn d = case d ^. dependencyErrorGitError of
+    NotAClone ->
+      prefix
+        <> "The directory"
+        <+> code (pretty (d ^. dependencyErrorGitCloneDir))
+        <+> "is not a valid git clone."
+          <> line
+          <> "Try running"
+        <+> code "juvix clean"
+    NoSuchRef ref ->
+      prefix
+        <> "The git ref:"
+        <+> code (pretty ref)
+        <+> "does not exist in the clone:"
+        <+> code (pretty (d ^. dependencyErrorGitCloneDir))
+    where
+      prefix :: Doc CodeAnn
+      prefix = pretty @Text "Failed to obtain remote dependencies" <> line
 
 data PathResolverError
   = ErrDependencyConflict DependencyConflict

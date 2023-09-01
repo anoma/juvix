@@ -21,6 +21,7 @@ import Juvix.Compiler.Concrete.Data.ScopedName qualified as Scoped
 import Juvix.Compiler.Concrete.Language qualified as Concrete
 import Juvix.Compiler.Concrete.Pretty qualified as Concrete
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver (runPathResolver)
+import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Error
 import Juvix.Compiler.Core qualified as Core
 import Juvix.Compiler.Core.Extra.Value
 import Juvix.Compiler.Core.Info qualified as Info
@@ -32,6 +33,8 @@ import Juvix.Compiler.Internal.Language qualified as Internal
 import Juvix.Compiler.Internal.Pretty qualified as Internal
 import Juvix.Compiler.Pipeline.Repl
 import Juvix.Compiler.Pipeline.Setup (entrySetup)
+import Juvix.Data.Effect.Git
+import Juvix.Data.Effect.Process
 import Juvix.Data.Error.GenericError qualified as Error
 import Juvix.Data.NameKind
 import Juvix.Extra.Paths
@@ -143,6 +146,11 @@ loadDefaultPrelude = whenJustM defaultPreludeEntryPoint $ \e -> do
     . runFilesIO
     . runError @Text
     . runReader e
+    . runLogIO
+    . runProcessIO
+    . runError @GitProcessError
+    . runGitProcess
+    . runError @DependencyError
     . runPathResolver root
     $ entrySetup
   loadEntryPoint e

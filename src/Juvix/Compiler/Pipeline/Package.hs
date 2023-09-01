@@ -11,6 +11,7 @@ module Juvix.Compiler.Pipeline.Package
     packageVersion,
     packageDependencies,
     packageMain,
+    packageFile,
     rawPackage,
     readPackage,
     readPackageIO,
@@ -18,6 +19,7 @@ module Juvix.Compiler.Pipeline.Package
     globalPackage,
     emptyPackage,
     readGlobalPackage,
+    mkPackageFilePath,
   )
 where
 
@@ -25,6 +27,7 @@ import Data.Aeson (genericToEncoding, genericToJSON)
 import Data.Aeson.BetterErrors
 import Data.Aeson.TH
 import Data.ByteString qualified as ByteString
+import Data.HashSet qualified as HashSet
 import Data.Kind qualified as GHC
 import Data.Versions
 import Data.Yaml
@@ -48,12 +51,18 @@ type family DependenciesType s = res | res -> s where
   DependenciesType 'Raw = Maybe [Dependency]
   DependenciesType 'Processed = [Dependency]
 
+type PackageFileType :: IsProcessed -> GHC.Type
+type family PackageFileType s = res | res -> s where
+  PackageFileType 'Raw = ()
+  PackageFileType 'Processed = Path Abs File
+
 data Package' (s :: IsProcessed) = Package
   { _packageName :: NameType s,
     _packageVersion :: VersionType s,
     _packageDependencies :: DependenciesType s,
     _packageBuildDir :: Maybe (SomeBase Dir),
-    _packageMain :: Maybe (Prepath File)
+    _packageMain :: Maybe (Prepath File),
+    _packageFile :: PackageFileType s
   }
   deriving stock (Generic)
 
@@ -93,6 +102,7 @@ instance FromJSON RawPackage where
         _packageDependencies <- keyMay "dependencies" fromAesonParser
         _packageBuildDir <- keyMay "build-dir" fromAesonParser
         _packageMain <- keyMay "main" fromAesonParser
+        let _packageFile = ()
         return Package {..}
       err :: a
       err = error "Failed to parse juvix.yaml"
@@ -107,14 +117,15 @@ resolveBuildDir = \case
   CustomBuildDir d -> d
 
 -- | This is used when juvix.yaml exists but it is empty
-emptyPackage :: BuildDir -> Package
-emptyPackage buildDir =
+emptyPackage :: BuildDir -> Path Abs File -> Package
+emptyPackage buildDir yamlPath =
   Package
     { _packageName = defaultPackageName,
       _packageVersion = defaultVersion,
       _packageDependencies = [defaultStdlibDep buildDir],
       _packageMain = Nothing,
-      _packageBuildDir = Nothing
+      _packageBuildDir = Nothing,
+      _packageFile = yamlPath
     }
 
 rawPackage :: Package -> RawPackage
@@ -124,15 +135,17 @@ rawPackage pkg =
       _packageVersion = Just (prettySemVer (pkg ^. packageVersion)),
       _packageDependencies = Just (pkg ^. packageDependencies),
       _packageBuildDir = pkg ^. packageBuildDir,
-      _packageMain = pkg ^. packageMain
+      _packageMain = pkg ^. packageMain,
+      _packageFile = ()
     }
 
-processPackage :: forall r. (Members '[Error Text] r) => BuildDir -> RawPackage -> Sem r Package
-processPackage buildDir pkg = do
+processPackage :: forall r. (Members '[Error Text] r) => Path Abs File -> BuildDir -> RawPackage -> Sem r Package
+processPackage _packageFile buildDir pkg = do
   let _packageName = fromMaybe defaultPackageName (pkg ^. packageName)
       base :: SomeBase Dir = (resolveBuildDir buildDir) <///> relStdlibDir
-      stdlib = Dependency (mkPrepath (fromSomeDir base))
+      stdlib = mkPathDependency (fromSomeDir base)
       _packageDependencies = fromMaybe [stdlib] (pkg ^. packageDependencies)
+  checkNoDuplicateDepNames _packageDependencies
   _packageVersion <- getVersion
   return
     Package
@@ -148,8 +161,24 @@ processPackage buildDir pkg = do
         Right v -> return v
         Left err -> throw (pack (errorBundlePretty err))
 
+    checkNoDuplicateDepNames :: [Dependency] -> Sem r ()
+    checkNoDuplicateDepNames deps = go HashSet.empty (deps ^.. traversed . _GitDependency . gitDependencyName)
+      where
+        go :: HashSet Text -> [Text] -> Sem r ()
+        go _ [] = return ()
+        go s (x : xs)
+          | x `HashSet.member` s = throw (errMsg x)
+          | otherwise = go (HashSet.insert x s) xs
+          where
+            errMsg :: Text -> Text
+            errMsg dupName =
+              "Juvix package file at: "
+                <> pack (toFilePath _packageFile)
+                <> " contains the duplicate dependency name: "
+                <> dupName
+
 defaultStdlibDep :: BuildDir -> Dependency
-defaultStdlibDep buildDir = Dependency (mkPrepath (fromSomeDir (resolveBuildDir buildDir <///> relStdlibDir)))
+defaultStdlibDep buildDir = mkPathDependency (fromSomeDir (resolveBuildDir buildDir <///> relStdlibDir))
 
 defaultPackageName :: Text
 defaultPackageName = "my-project"
@@ -157,15 +186,19 @@ defaultPackageName = "my-project"
 defaultVersion :: SemVer
 defaultVersion = SemVer 0 0 0 Nothing Nothing
 
-globalPackage :: Package
+globalPackage :: RawPackage
 globalPackage =
   Package
-    { _packageDependencies = [defaultStdlibDep DefaultBuildDir],
-      _packageName = "global-juvix-package",
-      _packageVersion = defaultVersion,
+    { _packageDependencies = Just [defaultStdlibDep DefaultBuildDir],
+      _packageName = Just "global-juvix-package",
+      _packageVersion = Just (prettySemVer defaultVersion),
       _packageMain = Nothing,
-      _packageBuildDir = Nothing
+      _packageBuildDir = Nothing,
+      _packageFile = ()
     }
+
+mkPackageFilePath :: Path Abs Dir -> Path Abs File
+mkPackageFilePath = (<//> juvixYamlFile)
 
 -- | Given some directory d it tries to read the file d/juvix.yaml and parse its contents
 readPackage ::
@@ -177,10 +210,10 @@ readPackage ::
 readPackage root buildDir = do
   bs <- readFileBS' yamlPath
   if
-      | ByteString.null bs -> return (emptyPackage buildDir)
-      | otherwise -> either (throw . pack . prettyPrintParseException) (processPackage buildDir) (decodeEither' bs)
+      | ByteString.null bs -> return (emptyPackage buildDir yamlPath)
+      | otherwise -> either (throw . pack . prettyPrintParseException) (processPackage yamlPath buildDir) (decodeEither' bs)
   where
-    yamlPath = root <//> juvixYamlFile
+    yamlPath = mkPackageFilePath root
 
 readPackageIO :: Path Abs Dir -> BuildDir -> IO Package
 readPackageIO root buildDir = do
@@ -208,4 +241,4 @@ writeGlobalPackage :: (Members '[Files] r) => Sem r ()
 writeGlobalPackage = do
   yamlPath <- globalYaml
   ensureDir' (parent yamlPath)
-  writeFileBS yamlPath (encode (rawPackage globalPackage))
+  writeFileBS yamlPath (encode globalPackage)
