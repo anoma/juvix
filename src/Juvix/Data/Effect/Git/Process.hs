@@ -7,6 +7,18 @@ import Juvix.Data.Effect.Process
 import Juvix.Prelude
 import Polysemy.Opaque
 
+data GitProcessMode
+  = GitProcessOffline
+  | GitProcessOnline
+  deriving stock (Eq)
+
+data CloneEnv = CloneEnv
+  { _cloneEnvDir :: Path Abs Dir,
+    _cloneEnvProcessMode :: GitProcessMode
+  }
+
+makeLenses ''CloneEnv
+
 -- | Run a git command in the current working direcotory of the parent process.
 runGitCmd :: (Members '[Process, Error GitProcessError] r) => [Text] -> Sem r Text
 runGitCmd args = do
@@ -30,45 +42,46 @@ runGitCmd args = do
         ExitSuccess -> return (res ^. processResultStdout)
 
 -- | Run a git command within a directory, throws an error if the directory is not a valid clone
-runGitCmdInDir :: (Members '[Process, Error GitProcessError, Reader CloneDir] r) => [Text] -> Sem r Text
+runGitCmdInDir :: (Members '[Process, Error GitProcessError, Reader CloneEnv] r) => [Text] -> Sem r Text
 runGitCmdInDir args = do
   checkValidGitClone
   runGitCmdInDir' args
 
 -- | Run a git command within a directory
-runGitCmdInDir' :: (Members '[Process, Error GitProcessError, Reader CloneDir] r) => [Text] -> Sem r Text
+runGitCmdInDir' :: (Members '[Process, Error GitProcessError, Reader CloneEnv] r) => [Text] -> Sem r Text
 runGitCmdInDir' args = do
-  p :: Path Abs Dir <- ask
+  p <- asks (^. cloneEnvDir)
   runGitCmd (["--git-dir", ".git", "-C", T.pack (toFilePath p)] <> args)
 
 -- | Throws an error if the directory is not a valid git clone
-checkValidGitClone :: (Members '[Process, Error GitProcessError, Reader CloneDir] r) => Sem r ()
+checkValidGitClone :: (Members '[Process, Error GitProcessError, Reader CloneEnv] r) => Sem r ()
 checkValidGitClone = void gitHeadRef
 
-isValidGitClone :: (Members '[Process, Reader CloneDir] r) => Sem r Bool
+isValidGitClone :: (Members '[Process, Reader CloneEnv] r) => Sem r Bool
 isValidGitClone = isRight <$> runError @GitProcessError checkValidGitClone
 
 -- | Return the HEAD ref of the clone
-gitHeadRef :: (Members '[Process, Error GitProcessError, Reader CloneDir] r) => Sem r Text
+gitHeadRef :: (Members '[Process, Error GitProcessError, Reader CloneEnv] r) => Sem r Text
 gitHeadRef = T.strip <$> runGitCmdInDir' ["rev-parse", "HEAD"]
 
 -- | Checkout the clone at a particular ref
-gitCheckout :: (Members '[Process, Error GitProcessError, Reader CloneDir] r) => Text -> Sem r ()
+gitCheckout :: (Members '[Process, Error GitProcessError, Reader CloneEnv] r) => Text -> Sem r ()
 gitCheckout ref = void (runGitCmdInDir ["checkout", ref])
 
 -- | Fetch in the clone
-gitFetch :: (Members '[Process, Error GitProcessError, Reader CloneDir] r) => Sem r ()
-gitFetch = void (runGitCmdInDir ["fetch"])
+gitFetch :: (Members '[Process, Error GitProcessError, Reader CloneEnv] r) => Sem r ()
+gitFetch = unlessM ((== GitProcessOffline) <$> asks (^. cloneEnvProcessMode)) (void (runGitCmdInDir ["fetch"]))
 
-cloneGitRepo :: (Members '[Log, Files, Process, Error GitProcessError, Reader CloneDir] r) => Text -> Sem r ()
+cloneGitRepo :: (Members '[Log, Files, Process, Error GitProcessError, Reader CloneEnv] r) => Text -> Sem r ()
 cloneGitRepo url = do
-  p :: Path Abs Dir <- ask
-  log ("cloning " <> url <> " to " <> pack (toFilePath p))
-  void (runGitCmd ["clone", url, T.pack (toFilePath p)])
+  p <- asks (^. cloneEnvDir)
+  unlessM ((== GitProcessOffline) <$> asks (^. cloneEnvProcessMode)) $ do
+    log ("cloning " <> url <> " to " <> pack (toFilePath p))
+    void (runGitCmd ["clone", url, T.pack (toFilePath p)])
 
-initGitRepo :: (Members '[Log, Files, Process, Error GitProcessError, Reader CloneDir] r) => Text -> Sem r (Path Abs Dir)
+initGitRepo :: (Members '[Log, Files, Process, Error GitProcessError, Reader CloneEnv] r) => Text -> Sem r (Path Abs Dir)
 initGitRepo url = do
-  p <- ask
+  p <- asks (^. cloneEnvDir)
   unlessM (directoryExists' p) (cloneGitRepo url)
   return p
 
@@ -87,16 +100,22 @@ handleCheckoutError errorHandler ref eff = handleNoSuchRefError errorHandler ref
 
 runGitProcess ::
   forall r a.
+  GitProcessMode ->
   (Members '[Log, Files, Process, Error GitProcessError] r) =>
   Sem (Scoped CloneArgs Git ': r) a ->
   Sem r a
-runGitProcess = interpretScopedH allocator handler
+runGitProcess _cloneEnvProcessMode = interpretScopedH allocator handler
   where
     allocator :: forall q x. CloneArgs -> (Path Abs Dir -> Sem (Opaque q ': r) x) -> Sem (Opaque q ': r) x
-    allocator a use' = use' =<< runReader (a ^. cloneArgsCloneDir) (initGitRepo (a ^. cloneArgsRepoUrl))
+    allocator a use' = do
+      let env = CloneEnv {_cloneEnvDir = a ^. cloneArgsCloneDir, _cloneEnvProcessMode}
+      use' =<< runReader env (initGitRepo (a ^. cloneArgsRepoUrl))
 
     handler :: forall q r0 x. Path Abs Dir -> Git (Sem r0) x -> Tactical Git (Sem r0) (Opaque q ': r) x
     handler p eff = case eff of
-      HeadRef errorHandler -> handleNotACloneError errorHandler (runReader p gitHeadRef >>= pureT)
-      Fetch errorHandler -> handleNotACloneError errorHandler (runReader p gitFetch >>= pureT)
-      Checkout errorHandler ref -> handleCheckoutError errorHandler ref (runReader p (gitCheckout ref) >>= pureT)
+      HeadRef errorHandler -> handleNotACloneError errorHandler (runReader env gitHeadRef >>= pureT)
+      Fetch errorHandler -> handleNotACloneError errorHandler (runReader env gitFetch >>= pureT)
+      Checkout errorHandler ref -> handleCheckoutError errorHandler ref (runReader env (gitCheckout ref) >>= pureT)
+      where
+        env :: CloneEnv
+        env = CloneEnv {_cloneEnvDir = p, _cloneEnvProcessMode}

@@ -172,7 +172,10 @@ runPipelineHighlight :: forall a. EntryPoint -> Sem PipelineEff a -> IO Highligh
 runPipelineHighlight entry = fmap fst . runIOEitherHelper entry
 
 runIOEitherHelper :: forall a. EntryPoint -> Sem PipelineEff a -> IO (HighlightInput, (Either JuvixError (ResolverState, a)))
-runIOEitherHelper entry =
+runIOEitherHelper entry = do
+  let gitProcessMode
+        | entry ^. entryPointOffline = GitProcessOffline
+        | otherwise = GitProcessOnline
   runM
     . runHighlightBuilder
     . runJuvixError
@@ -183,7 +186,7 @@ runIOEitherHelper entry =
     . runLogIO
     . runProcessIO
     . mapError (JuvixError @GitProcessError)
-    . runGitProcess
+    . runGitProcess gitProcessMode
     . mapError (JuvixError @DependencyError)
     . runPathResolverPipe
 
@@ -213,6 +216,9 @@ corePipelineIOEither ::
   EntryPoint ->
   IO (Either JuvixError Artifacts)
 corePipelineIOEither entry = do
+  let gitProcessMode
+        | entry ^. entryPointOffline = GitProcessOffline
+        | otherwise = GitProcessOnline
   eith <-
     runM
       . ignoreHighlightBuilder
@@ -225,7 +231,7 @@ corePipelineIOEither entry = do
       . runLogIO
       . mapError (JuvixError @GitProcessError)
       . runProcessIO
-      . runGitProcess
+      . runGitProcess gitProcessMode
       . mapError (JuvixError @DependencyError)
       . runPathResolverArtifacts
       $ upToCore

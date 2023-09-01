@@ -138,6 +138,9 @@ loadFile f = do
 loadDefaultPrelude :: Repl ()
 loadDefaultPrelude = whenJustM defaultPreludeEntryPoint $ \e -> do
   root <- Reader.asks (^. replRoots . rootsRootDir)
+  let gitProcessMode
+        | e ^. entryPointOffline = GitProcessOffline
+        | otherwise = GitProcessOnline
   -- The following is needed to ensure that the default location of the
   -- standard library exists
   void
@@ -149,7 +152,7 @@ loadDefaultPrelude = whenJustM defaultPreludeEntryPoint $ \e -> do
     . runLogIO
     . runProcessIO
     . runError @GitProcessError
-    . runGitProcess
+    . runGitProcess gitProcessMode
     . runError @DependencyError
     . runPathResolver root
     $ entrySetup
@@ -531,7 +534,8 @@ defaultPreludeEntryPoint = do
   mstdlibPath <- liftIO (runM (runFilesIO (packageStdlib root buildDir (pkg ^. packageDependencies))))
   case mstdlibPath of
     Just stdlibPath ->
-      Just . set entryPointResolverRoot stdlibPath
+      Just
+        . set entryPointResolverRoot stdlibPath
         <$> getReplEntryPointFromPath (stdlibPath <//> preludePath)
     Nothing -> return Nothing
 

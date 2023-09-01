@@ -44,8 +44,7 @@ makeSem ''PathResolver
 data ResolverEnv = ResolverEnv
   { _envRoot :: Path Abs Dir,
     -- | The path of the input file *if* we are using the global project
-    _envSingleFile :: Maybe (Path Abs File),
-    _envOffline :: Bool
+    _envSingleFile :: Maybe (Path Abs File)
   }
 
 data ResolverState = ResolverState
@@ -121,16 +120,12 @@ getDependencyPath i = case i ^. packageDepdendencyInfoDependency of
   DependencyGit g -> do
     r <- rootBuildDir <$> asks (^. envRoot)
     let cloneDir = r <//> relDependenciesDir <//> relDir (T.unpack (g ^. gitDependencyName))
-    offline <- asks (^. envOffline)
-    if
-        | offline -> return cloneDir
-        | otherwise -> do
-            let cloneArgs = CloneArgs {_cloneArgsCloneDir = cloneDir, _cloneArgsRepoUrl = g ^. gitDependencyUrl}
-                errorHandler' = errorHandler cloneDir
-            scoped @CloneArgs @Git cloneArgs $ do
-              fetch errorHandler'
-              checkout errorHandler' (g ^. gitDependencyRef)
-              return cloneDir
+        cloneArgs = CloneArgs {_cloneArgsCloneDir = cloneDir, _cloneArgsRepoUrl = g ^. gitDependencyUrl}
+        errorHandler' = errorHandler cloneDir
+    scoped @CloneArgs @Git cloneArgs $ do
+      fetch errorHandler'
+      checkout errorHandler' (g ^. gitDependencyRef)
+      return cloneDir
     where
       errorHandler :: Path Abs Dir -> GitError -> Sem (Git ': r) a
       errorHandler p c =
@@ -267,8 +262,7 @@ runPathResolver' st root x = do
       env =
         ResolverEnv
           { _envRoot = root,
-            _envSingleFile,
-            _envOffline = e ^. entryPointOffline
+            _envSingleFile
           }
   runState st (runReader env (re x))
 
