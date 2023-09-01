@@ -449,6 +449,7 @@ instance (SingI s) => PrettyPrint (AliasDef s) where
 instance (SingI s) => PrettyPrint (SyntaxDef s) where
   ppCode = \case
     SyntaxFixity f -> ppCode f
+    SyntaxFixityNew f -> ppCode f
     SyntaxOperator op -> ppCode op
     SyntaxIterator it -> ppCode it
     SyntaxAlias it -> ppCode it
@@ -605,6 +606,40 @@ ppFixityDefHeader :: (SingI s) => PrettyPrinting (FixitySyntaxDef s)
 ppFixityDefHeader FixitySyntaxDef {..} = do
   let sym' = annotated (AnnKind KNameFixity) (ppSymbolType _fixitySymbol)
   ppCode _fixitySyntaxKw <+> ppCode _fixityKw <+> sym'
+
+ppFixityDefHeaderNew :: (SingI s) => PrettyPrinting (FixitySyntaxDefNew s)
+ppFixityDefHeaderNew FixitySyntaxDefNew {..} = do
+  let sym' = annotated (AnnKind KNameFixity) (ppSymbolType _nfixitySymbol)
+  ppCode _nfixitySyntaxKw <+> ppCode _nfixityKw <+> sym'
+
+instance PrettyPrint Arity where
+  ppCode = \case
+    Unary -> noLoc Str.unary
+    Binary -> noLoc Str.binary
+
+instance PrettyPrint BinaryAssoc where
+  ppCode a = noLoc $ case a of
+    AssocNone -> Str.none
+    AssocLeft -> Str.left
+    AssocRight -> Str.right
+
+instance (SingI s) => PrettyPrint (ParsedFixityInfoNew s) where
+  ppCode ParsedFixityInfoNew {..} = do
+    let (l, r) = _nfixityBraces ^. unIrrelevant
+        assocItem = do
+          a <- _nfixityAssoc
+          return (ppCode Kw.kwAssoc <+> ppCode Kw.kwAssign <+> ppCode a)
+        sameItem = do
+          a <- _nfixityPrecSame
+          return (ppCode Kw.kwSame <+> ppCode Kw.kwAssign <+> ppSymbolType a)
+        items = sepSemicolon (catMaybes [assocItem, sameItem])
+    ppCode _nfixityArity <+> ppCode l <> items <> ppCode r
+
+instance (SingI s) => PrettyPrint (FixitySyntaxDefNew s) where
+  ppCode f@FixitySyntaxDefNew {..} = do
+    let header' = ppFixityDefHeaderNew f
+        body' = ppCode _nfixityInfo
+    header' <+> ppCode _nfixityAssignKw <+> body'
 
 instance (SingI s) => PrettyPrint (FixitySyntaxDef s) where
   ppCode f@FixitySyntaxDef {..} = do

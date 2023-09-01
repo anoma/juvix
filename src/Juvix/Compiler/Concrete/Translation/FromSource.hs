@@ -1,3 +1,5 @@
+{-# LANGUAGE QualifiedDo #-}
+
 module Juvix.Compiler.Concrete.Translation.FromSource
   ( module Juvix.Compiler.Concrete.Translation.FromSource,
     module Juvix.Compiler.Concrete.Translation.FromSource.Data.Context,
@@ -6,6 +8,7 @@ module Juvix.Compiler.Concrete.Translation.FromSource
   )
 where
 
+import Control.Applicative.Permutations
 import Data.ByteString.UTF8 qualified as BS
 import Data.List.NonEmpty.Extra qualified as NonEmpty
 import Data.Singletons
@@ -204,8 +207,10 @@ topModuleDef = do
 replInput :: forall r. (Members '[Files, PathResolver, InfoTableBuilder, JudocStash, NameIdGen, Error ParserError, State (Maybe ParsedPragmas)] r) => ParsecS r ReplInput
 replInput =
   P.label "<repl input>" $
-    ReplExpression <$> parseExpressionAtoms
-      <|> either ReplImport ReplOpenImport <$> importOpenSyntax
+    ReplExpression
+      <$> parseExpressionAtoms
+      <|> either ReplImport ReplOpenImport
+        <$> importOpenSyntax
 
 --------------------------------------------------------------------------------
 -- Symbols and names
@@ -294,14 +299,21 @@ statement = P.label "<top level statement>" $ do
   optional_ stashPragmas
   ms <-
     optional
-      ( either StatementImport StatementOpenModule <$> importOpenSyntax
-          <|> StatementOpenModule <$> openModule
-          <|> StatementSyntax <$> syntaxDef
-          <|> StatementInductive <$> inductiveDef Nothing
-          <|> StatementModule <$> moduleDef
-          <|> StatementAxiom <$> axiomDef Nothing
+      ( either StatementImport StatementOpenModule
+          <$> importOpenSyntax
+          <|> StatementOpenModule
+            <$> openModule
+          <|> StatementSyntax
+            <$> syntaxDef
+          <|> StatementInductive
+            <$> inductiveDef Nothing
+          <|> StatementModule
+            <$> moduleDef
+          <|> StatementAxiom
+            <$> axiomDef Nothing
           <|> builtinStatement
-          <|> StatementFunctionDef <$> functionDefinition Nothing
+          <|> StatementFunctionDef
+            <$> functionDefinition Nothing
       )
   case ms of
     Just s -> return s
@@ -346,13 +358,16 @@ stashJudoc = do
 
     judocGroup :: ParsecS r (JudocGroup 'Parsed)
     judocGroup =
-      JudocGroupBlock <$> judocParagraphBlock
-        <|> JudocGroupLines <$> some1 (judocBlock False)
+      JudocGroupBlock
+        <$> judocParagraphBlock
+        <|> JudocGroupLines
+          <$> some1 (judocBlock False)
 
     judocEmptyLine :: Bool -> ParsecS r ()
     judocEmptyLine inBlock =
-      lexeme . void $
-        if
+      lexeme
+        . void
+        $ if
             | inBlock -> P.newline
             | otherwise -> P.try (judocStart >> P.newline)
 
@@ -416,8 +431,10 @@ judocAtom ::
   Bool ->
   ParsecS r (JudocAtom 'Parsed)
 judocAtom inBlock =
-  JudocText <$> judocAtomText
-    <|> JudocExpression <$> judocExpression
+  JudocText
+    <$> judocAtomText
+    <|> JudocExpression
+      <$> judocExpression
   where
     judocAtomText :: ParsecS r Text
     judocAtomText =
@@ -500,10 +517,16 @@ builtinStatement = do
 syntaxDef :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (SyntaxDef 'Parsed)
 syntaxDef = do
   syn <- kw kwSyntax
-  SyntaxFixity <$> fixitySyntaxDef syn
-    <|> SyntaxOperator <$> operatorSyntaxDef syn
-    <|> SyntaxIterator <$> iteratorSyntaxDef syn
-    <|> SyntaxAlias <$> aliasDef syn
+  SyntaxFixity
+    <$> fixitySyntaxDef syn
+    <|> SyntaxFixityNew
+      <$> fixitySyntaxDefNew syn
+    <|> SyntaxOperator
+      <$> operatorSyntaxDef syn
+    <|> SyntaxIterator
+      <$> iteratorSyntaxDef syn
+    <|> SyntaxAlias
+      <$> aliasDef syn
 
 aliasDef :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => KeywordRef -> ParsecS r (AliasDef 'Parsed)
 aliasDef synKw = do
@@ -520,6 +543,59 @@ aliasDef synKw = do
 
 precedence :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r Precedence
 precedence = PrecNat <$> (fst <$> decimal)
+
+parsedFixityInfoNew :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (ParsedFixityInfoNew 'Parsed)
+parsedFixityInfoNew = do
+  _nfixityArity <- withLoc ari
+  l <- kw delimBraceL
+  (_nfixityAssoc, _nfixityPrecBelow, _nfixityPrecAbove, _nfixityPrecSame) <- runPermutation $ do
+    as <- toPermutationWithDefault Nothing (Just <$> assoc)
+    bel <- toPermutationWithDefault Nothing (Just <$> belowAbove kwBelow)
+    abov <- toPermutationWithDefault Nothing (Just <$> belowAbove kwAbove)
+    sam <- toPermutationWithDefault Nothing (Just <$> same)
+    pure (as, bel, abov, sam)
+
+  r <- kw delimBraceR
+  let _nfixityBraces = Irrelevant (l, r)
+  return ParsedFixityInfoNew {..}
+  where
+    same :: ParsecS r Symbol
+    same = do
+      kw kwSame
+      kw kwAssign
+      symbol
+
+    belowAbove :: Keyword -> ParsecS r [Symbol]
+    belowAbove aboveOrBelow = do
+      kw aboveOrBelow
+      kw kwAssign
+      kw delimBraceL
+      r <- P.sepEndBy symbol (kw delimSemicolon)
+      kw delimBraceR
+      return r
+
+    assoc :: ParsecS r BinaryAssoc
+    assoc = do
+      void (kw kwAssoc >> kw kwAssign)
+      kw kwLeft $> AssocLeft
+        <|> kw kwRight $> AssocRight
+        <|> kw kwNone $> AssocNone
+
+    ari :: ParsecS r Arity
+    ari =
+      kw kwUnary
+        $> Unary
+        <|> kw kwBinary
+          $> Binary
+
+fixitySyntaxDefNew :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => KeywordRef -> ParsecS r (FixitySyntaxDefNew 'Parsed)
+fixitySyntaxDefNew _nfixitySyntaxKw = P.label "<fixity declaration>" $ do
+  _nfixityDoc <- getJudoc
+  _nfixityKw <- kw kwFixity
+  _nfixitySymbol <- symbol
+  _nfixityAssignKw <- kw kwAssign
+  _nfixityInfo <- parsedFixityInfoNew
+  return FixitySyntaxDefNew {..}
 
 fixitySyntaxDef :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => KeywordRef -> ParsecS r (FixitySyntaxDef 'Parsed)
 fixitySyntaxDef _fixitySyntaxKw = P.label "<fixity declaration>" $ do
@@ -604,21 +680,36 @@ recordUpdate = do
 expressionAtom :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (ExpressionAtom 'Parsed)
 expressionAtom =
   P.label "<expression>" $
-    AtomLiteral <$> P.try literal
-      <|> either AtomIterator AtomNamedApplication <$> iterator
-      <|> AtomNamedApplication <$> namedApplication
-      <|> AtomList <$> parseList
-      <|> AtomIdentifier <$> name
-      <|> AtomUniverse <$> universe
-      <|> AtomLambda <$> lambda
-      <|> AtomCase <$> case_
-      <|> AtomFunction <$> function
-      <|> AtomLet <$> letBlock
-      <|> AtomFunArrow <$> kw kwRightArrow
-      <|> AtomHole <$> hole
-      <|> AtomParens <$> parens parseExpressionAtoms
-      <|> AtomBraces <$> withLoc (braces parseExpressionAtoms)
-      <|> AtomRecordUpdate <$> recordUpdate
+    AtomLiteral
+      <$> P.try literal
+      <|> either AtomIterator AtomNamedApplication
+        <$> iterator
+      <|> AtomNamedApplication
+        <$> namedApplication
+      <|> AtomList
+        <$> parseList
+      <|> AtomIdentifier
+        <$> name
+      <|> AtomUniverse
+        <$> universe
+      <|> AtomLambda
+        <$> lambda
+      <|> AtomCase
+        <$> case_
+      <|> AtomFunction
+        <$> function
+      <|> AtomLet
+        <$> letBlock
+      <|> AtomFunArrow
+        <$> kw kwRightArrow
+      <|> AtomHole
+        <$> hole
+      <|> AtomParens
+        <$> parens parseExpressionAtoms
+      <|> AtomBraces
+        <$> withLoc (braces parseExpressionAtoms)
+      <|> AtomRecordUpdate
+        <$> recordUpdate
 
 parseExpressionAtoms ::
   (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
@@ -642,8 +733,10 @@ iterator = do
     lparen
     pat <- parsePatternAtoms
     (isInit, kwr) <-
-      (True,) <$> kw kwAssign
-        <|> (False,) <$> kw kwIn
+      (True,)
+        <$> kw kwAssign
+        <|> (False,)
+          <$> kw kwIn
     return (isInit, Irrelevant kwr, n, pat)
   val <- parseExpressionAtoms
   _iteratorInitializers <-
@@ -695,8 +788,10 @@ iterator = do
           return $ Right NamedApplication {..}
       | otherwise -> do
           (_iteratorBody, _iteratorBodyBraces) <-
-            (,True) <$> braces parseExpressionAtoms
-              <|> (,False) <$> parseExpressionAtoms
+            (,True)
+              <$> braces parseExpressionAtoms
+              <|> (,False)
+                <$> parseExpressionAtoms
           let _iteratorParens = False
           return $ Left Iterator {..}
   where
@@ -838,8 +933,10 @@ letFunDef = do
 
 letStatement :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (LetStatement 'Parsed)
 letStatement =
-  LetFunctionDef <$> letFunDef
-    <|> LetAliasDef <$> (kw kwSyntax >>= aliasDef)
+  LetFunctionDef
+    <$> letFunDef
+    <|> LetAliasDef
+      <$> (kw kwSyntax >>= aliasDef)
 
 letBlock :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (Let 'Parsed)
 letBlock = do
@@ -916,8 +1013,10 @@ functionDefinition _signBuiltin = P.label "<function definition>" $ do
       (openDelim, _sigArgNames, _sigArgImplicit, colonMay) <- P.try $ do
         (opn, impl) <- implicitOpen
         let parseArgumentName :: ParsecS r (Argument 'Parsed) =
-              ArgumentSymbol <$> symbol
-                <|> ArgumentWildcard <$> wildcard
+              ArgumentSymbol
+                <$> symbol
+                <|> ArgumentWildcard
+                  <$> wildcard
         n <- some1 parseArgumentName
         c <- case impl of
           Implicit -> optional (Irrelevant <$> kw kwColon)
@@ -935,7 +1034,8 @@ functionDefinition _signBuiltin = P.label "<function definition>" $ do
 
     parseBody :: ParsecS r (FunctionDefBody 'Parsed)
     parseBody =
-      SigBodyExpression <$> bodyExpr
+      SigBodyExpression
+        <$> bodyExpr
         <|> (SigBodyClauses <$> bodyClauses)
       where
         bodyClause :: ParsecS r (NewFunctionClause 'Parsed)
@@ -971,8 +1071,10 @@ axiomDef _axiomBuiltin = do
 
 implicitOpen :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (KeywordRef, IsImplicit)
 implicitOpen =
-  (,Implicit) <$> kw delimBraceL
-    <|> (,Explicit) <$> kw delimParenL
+  (,Implicit)
+    <$> kw delimBraceL
+    <|> (,Explicit)
+      <$> kw delimParenL
 
 implicitClose :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => IsImplicit -> ParsecS r KeywordRef
 implicitClose = \case
@@ -993,8 +1095,10 @@ functionParams = do
   where
     pName :: ParsecS r (FunctionParameter 'Parsed)
     pName =
-      FunctionParameterName <$> symbol
-        <|> FunctionParameterWildcard <$> kw kwWildcard
+      FunctionParameterName
+        <$> symbol
+        <|> FunctionParameterWildcard
+          <$> kw kwWildcard
 
 function :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (Function 'Parsed)
 function = do
@@ -1098,9 +1202,12 @@ rhsRecord = P.label "<constructor record>" $ do
 
 pconstructorRhs :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (ConstructorRhs 'Parsed)
 pconstructorRhs =
-  ConstructorRhsGadt <$> rhsGadt
-    <|> ConstructorRhsRecord <$> rhsRecord
-    <|> ConstructorRhsAdt <$> rhsAdt
+  ConstructorRhsGadt
+    <$> rhsGadt
+    <|> ConstructorRhsRecord
+      <$> rhsRecord
+    <|> ConstructorRhsAdt
+      <$> rhsAdt
 
 constructorDef :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => Irrelevant (Maybe KeywordRef) -> ParsecS r (ConstructorDef 'Parsed)
 constructorDef _constructorPipe = do
@@ -1119,10 +1226,14 @@ wildcard = Wildcard . snd <$> interval (kw kwWildcard)
 
 patternAtomAnon :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (PatternAtom 'Parsed)
 patternAtomAnon =
-  PatternAtomWildcard <$> wildcard
-    <|> PatternAtomParens <$> parens parsePatternAtomsNested
-    <|> PatternAtomBraces <$> braces parsePatternAtomsNested
-    <|> PatternAtomList <$> parseListPattern
+  PatternAtomWildcard
+    <$> wildcard
+    <|> PatternAtomParens
+      <$> parens parsePatternAtomsNested
+    <|> PatternAtomBraces
+      <$> braces parsePatternAtomsNested
+    <|> PatternAtomList
+      <$> parseListPattern
 
 patternAtomAt :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => Symbol -> ParsecS r PatternBinding
 patternAtomAt s = do
@@ -1132,7 +1243,8 @@ patternAtomAt s = do
 recordPatternItem :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (RecordPatternItem 'Parsed)
 recordPatternItem = do
   f <- symbol
-  RecordPatternItemAssign <$> recordPatternItemAssign f
+  RecordPatternItemAssign
+    <$> recordPatternItemAssign f
     <|> return (RecordPatternItemFieldPun (fieldPun f))
   where
     recordPatternItemAssign :: Symbol -> ParsecS r (RecordPatternAssign 'Parsed)
@@ -1172,12 +1284,15 @@ patternAtomNamed nested = do
   n <- name
   case n of
     NameQualified {} ->
-      PatternAtomRecord <$> patternAtomRecord n
+      PatternAtomRecord
+        <$> patternAtomRecord n
         <|> return (PatternAtomIden n)
     NameUnqualified s -> do
       checkWrongEq off s
-      PatternAtomRecord <$> patternAtomRecord n
-        <|> PatternAtomAt <$> patternAtomAt s
+      PatternAtomRecord
+        <$> patternAtomRecord n
+        <|> PatternAtomAt
+          <$> patternAtomAt s
         <|> return (PatternAtomIden n)
   where
     checkWrongEq :: Int -> WithLoc Text -> ParsecS r ()
@@ -1264,8 +1379,10 @@ openModule = do
 
 usingOrHiding :: (Members '[Error ParserError, InfoTableBuilder, JudocStash, NameIdGen, PragmasStash] r) => ParsecS r (UsingHiding 'Parsed)
 usingOrHiding =
-  Using <$> pusingList
-    <|> Hiding <$> phidingList
+  Using
+    <$> pusingList
+    <|> Hiding
+      <$> phidingList
 
 openSyntax :: forall r. (Members '[Error ParserError, PathResolver, Files, InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => Import 'Parsed -> ParsecS r (OpenModule 'Parsed)
 openSyntax im = do

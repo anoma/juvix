@@ -2,6 +2,7 @@
 
 module Juvix.Compiler.Concrete.Language
   ( module Juvix.Compiler.Concrete.Language,
+    module Juvix.Data.FixityInfo,
     module Juvix.Compiler.Concrete.Data.Name,
     module Juvix.Compiler.Concrete.Data.Stage,
     module Juvix.Compiler.Concrete.Data.NameRef,
@@ -31,7 +32,7 @@ import Juvix.Compiler.Concrete.Data.VisibilityAnn
 import Juvix.Data
 import Juvix.Data.Ape.Base as Ape
 import Juvix.Data.Fixity
-import Juvix.Data.FixityInfo (FixityInfo, Arity)
+import Juvix.Data.FixityInfo (Arity (..), FixityInfo)
 import Juvix.Data.IteratorAttribs
 import Juvix.Data.Keyword
 import Juvix.Data.NameKind
@@ -288,7 +289,7 @@ deriving stock instance (Ord (SyntaxDef 'Parsed))
 
 deriving stock instance (Ord (SyntaxDef 'Scoped))
 
-data ParsedFixityInfoNew  (s :: Stage) = ParsedFixityInfoNew
+data ParsedFixityInfoNew (s :: Stage) = ParsedFixityInfoNew
   { _nfixityArity :: WithLoc Arity,
     _nfixityAssoc :: Maybe BinaryAssoc,
     _nfixityPrecSame :: Maybe (SymbolType s),
@@ -308,7 +309,6 @@ deriving stock instance (Eq (ParsedFixityInfoNew 'Scoped))
 deriving stock instance (Ord (ParsedFixityInfoNew 'Parsed))
 
 deriving stock instance (Ord (ParsedFixityInfoNew 'Scoped))
-
 
 data FixitySyntaxDefNew (s :: Stage) = FixitySyntaxDefNew
   { _nfixitySymbol :: SymbolType s,
@@ -1740,7 +1740,7 @@ instance (SingI s) => HasLoc (AliasDef s) where
 instance HasLoc (ParsedFixityInfoNew s) where
   getLoc def = getLoc l <> getLoc r
     where
-    (l, r) = def ^. nfixityBraces . unIrrelevant
+      (l, r) = def ^. nfixityBraces . unIrrelevant
 
 instance HasLoc (FixitySyntaxDefNew s) where
   getLoc def = getLoc (def ^. nfixitySyntaxKw) <> getLoc (def ^. nfixityInfo)

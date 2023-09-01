@@ -632,14 +632,15 @@ checkFixityInfoNew ParsedFixityInfoNew {..} = do
   same' <- mapM checkFixitySymbol _nfixityPrecSame
   below' <- mapM (mapM checkFixitySymbol) _nfixityPrecBelow
   above' <- mapM (mapM checkFixitySymbol) _nfixityPrecAbove
-  return ParsedFixityInfoNew {
-    _nfixityPrecSame = same',
-    _nfixityPrecAbove = above',
-    _nfixityPrecBelow = below',
-    _nfixityArity,
-    _nfixityAssoc,
-    _nfixityBraces
-                             }
+  return
+    ParsedFixityInfoNew
+      { _nfixityPrecSame = same',
+        _nfixityPrecAbove = above',
+        _nfixityPrecBelow = below',
+        _nfixityArity,
+        _nfixityAssoc,
+        _nfixityBraces
+      }
 
 checkFixitySyntaxDefNew ::
   forall r.
@@ -700,9 +701,9 @@ resolveFixitySyntaxDefNew fdef@FixitySyntaxDefNew {..} = topBindings $ do
       abovePrec :: Integer
       abovePrec = fromIntegral $ minimum (maxInt - 1 : maybe [] (map (getPrec tab)) below)
   when (belowPrec >= abovePrec + 1) $
-    throw (ErrPrecedenceInconsistency (PrecedenceInconsistencyError fdef))
+    throw (ErrPrecedenceInconsistencyNew (PrecedenceInconsistencyErrorNew fdef))
   when (isJust same && not (null below && null above)) $
-    throw (ErrPrecedenceInconsistency (PrecedenceInconsistencyError fdef))
+    throw (ErrPrecedenceInconsistencyNew (PrecedenceInconsistencyErrorNew fdef))
   -- we need Integer to avoid overflow when computing prec
   let prec = fromMaybe (fromInteger $ (abovePrec + belowPrec) `div` 2) samePrec
       fx =
@@ -711,12 +712,12 @@ resolveFixitySyntaxDefNew fdef@FixitySyntaxDefNew {..} = topBindings $ do
             _fixityPrecedence = PrecNat prec,
             _fixityArity =
               case fi ^. nfixityArity . withLocParam of
-                FI.Unary -> Unary AssocPostfix
+                FI.Unary -> OpUnary AssocPostfix
                 FI.Binary -> case fi ^. nfixityAssoc of
-                  Nothing -> Binary AssocNone
-                  Just FI.AssocLeft -> Binary AssocLeft
-                  Just FI.AssocRight -> Binary AssocRight
-                  Just FI.AssocNone -> Binary AssocNone
+                  Nothing -> OpBinary AssocNone
+                  Just FI.AssocLeft -> OpBinary AssocLeft
+                  Just FI.AssocRight -> OpBinary AssocRight
+                  Just FI.AssocNone -> OpBinary AssocNone
           }
   registerFixity
     @$> FixityDef
@@ -770,12 +771,12 @@ resolveFixitySyntaxDef fdef@FixitySyntaxDef {..} = topBindings $ do
             _fixityPrecedence = PrecNat prec,
             _fixityArity =
               case fi ^. FI.fixityArity of
-                FI.Unary -> Unary AssocPostfix
+                FI.Unary -> OpUnary AssocPostfix
                 FI.Binary -> case fi ^. FI.fixityAssoc of
-                  Nothing -> Binary AssocNone
-                  Just FI.AssocLeft -> Binary AssocLeft
-                  Just FI.AssocRight -> Binary AssocRight
-                  Just FI.AssocNone -> Binary AssocNone
+                  Nothing -> OpBinary AssocNone
+                  Just FI.AssocLeft -> OpBinary AssocLeft
+                  Just FI.AssocRight -> OpBinary AssocRight
+                  Just FI.AssocNone -> OpBinary AssocNone
           }
   registerFixity
     @$> FixityDef
@@ -2489,12 +2490,12 @@ makeExpressionTable (ExpressionAtoms atoms _) = [recordUpdate] : [appOpExplicit]
         mkOperator iden
           | Just Fixity {..} <- _nameFixity = Just $
               case _fixityArity of
-                Unary u -> (_fixityPrecedence, P.Postfix (unaryApp <$> parseSymbolId _nameId))
+                OpUnary u -> (_fixityPrecedence, P.Postfix (unaryApp <$> parseSymbolId _nameId))
                   where
                     unaryApp :: ScopedIden -> Expression -> Expression
                     unaryApp funName arg = case u of
                       AssocPostfix -> ExpressionPostfixApplication (PostfixApplication arg funName)
-                Binary b -> (_fixityPrecedence, infixLRN (binaryApp <$> parseSymbolId _nameId))
+                OpBinary b -> (_fixityPrecedence, infixLRN (binaryApp <$> parseSymbolId _nameId))
                   where
                     binaryApp :: ScopedIden -> Expression -> Expression -> Expression
                     binaryApp _infixAppOperator _infixAppLeft _infixAppRight =
@@ -2745,12 +2746,12 @@ makePatternTable (PatternAtoms latoms _) = [appOp] : operators
           Fixity {..} <- failMaybe (constr ^. scopedIdenName . S.nameFixity)
           let _nameId = constr ^. scopedIdenName . S.nameId
           return $ case _fixityArity of
-            Unary u -> (_fixityPrecedence, P.Postfix (unaryApp <$> parseSymbolId _nameId))
+            OpUnary u -> (_fixityPrecedence, P.Postfix (unaryApp <$> parseSymbolId _nameId))
               where
                 unaryApp :: ScopedIden -> PatternArg -> PatternArg
                 unaryApp constrName = case u of
                   AssocPostfix -> explicitP . PatternPostfixApplication . (`PatternPostfixApp` constrName)
-            Binary b -> (_fixityPrecedence, infixLRN (binaryInfixApp <$> parseSymbolId _nameId))
+            OpBinary b -> (_fixityPrecedence, infixLRN (binaryInfixApp <$> parseSymbolId _nameId))
               where
                 binaryInfixApp :: ScopedIden -> PatternArg -> PatternArg -> PatternArg
                 binaryInfixApp name argLeft = explicitP . PatternInfixApplication . PatternInfixApp argLeft name

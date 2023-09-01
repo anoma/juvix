@@ -310,7 +310,7 @@ lambdaFixity :: Fixity
 lambdaFixity =
   Fixity
     { _fixityPrecedence = PrecNat 0,
-      _fixityArity = Unary AssocPostfix,
+      _fixityArity = OpUnary AssocPostfix,
       _fixityId = Nothing
     }
 
