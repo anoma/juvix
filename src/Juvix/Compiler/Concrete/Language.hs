@@ -1095,8 +1095,8 @@ instance HasAtomicity (Lambda s) where
 data FunctionParameter (s :: Stage)
   = FunctionParameterName (SymbolType s)
   | FunctionParameterWildcard KeywordRef
-  -- | Used for traits
-  | FunctionParameterUnnamed Interval
+  | -- | Used for traits
+    FunctionParameterUnnamed Interval
 
 deriving stock instance Show (FunctionParameter 'Parsed)
 
