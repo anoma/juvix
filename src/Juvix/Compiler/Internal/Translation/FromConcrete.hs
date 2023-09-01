@@ -811,7 +811,7 @@ goExpression = \case
           let extra = r ^. recordUpdateExtra . unIrrelevant
               constr = goSymbol (extra ^. recordUpdateExtraConstructor)
               vars = map goSymbol (extra ^. recordUpdateExtraVars)
-              patArg = Internal.mkConstructorVarPattern constr vars
+              patArg = Internal.mkConstructorVarPattern Explicit constr vars
           args <- mkArgs (indexFrom 0 vars)
           return
             Internal.LambdaClause
@@ -996,6 +996,7 @@ goFunctionParameters FunctionParameters {..} = do
     goFunctionParameter = \case
       FunctionParameterName n -> Just n
       FunctionParameterWildcard {} -> Nothing
+      FunctionParameterUnnamed {} -> Nothing
 
 mkConstructorApp :: Internal.ConstrName -> [Internal.PatternArg] -> Internal.ConstructorApp
 mkConstructorApp a b = Internal.ConstructorApp a b Nothing

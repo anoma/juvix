@@ -354,7 +354,7 @@ instance ToGenericError TargetNotATrait where
   genericError TargetNotATrait {..} = do
     opts <- fromGenericOptions <$> ask
     let msg =
-          "Expected an instance type with a trait in the target: "
+          "Expected an instance type with a trait in the target:"
             <+> ppCode opts _targetNotATraitType
     return
       GenericError

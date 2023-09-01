@@ -33,6 +33,10 @@ constructorType info =
       saturatedTy = constructorReturnType info
    in foldFunType args saturatedTy
 
+constructorImplicity :: ConstructorInfo -> IsImplicit
+constructorImplicity info =
+  if info ^. constructorInfoTrait then ImplicitInstance else Explicit
+
 patternArgFromVar :: IsImplicit -> VarName -> PatternArg
 patternArgFromVar i v =
   PatternArg
@@ -43,18 +47,20 @@ patternArgFromVar i v =
 
 -- | Given `mkPair`, returns (mkPair a b, [a, b])
 genConstructorPattern :: (Members '[NameIdGen] r) => Interval -> ConstructorInfo -> Sem r (PatternArg, [VarName])
-genConstructorPattern loc info = genConstructorPattern' loc (info ^. constructorInfoName) (length (snd (constructorArgTypes info)))
+genConstructorPattern loc info = genConstructorPattern' impl loc (info ^. constructorInfoName) (length (snd (constructorArgTypes info)))
+  where
+    impl = constructorImplicity info
 
 -- | Given `mkPair`, returns (mkPair a b, [a, b])
-genConstructorPattern' :: (Members '[NameIdGen] r) => Interval -> Name -> Int -> Sem r (PatternArg, [VarName])
-genConstructorPattern' loc cname cargs = do
+genConstructorPattern' :: (Members '[NameIdGen] r) => IsImplicit -> Interval -> Name -> Int -> Sem r (PatternArg, [VarName])
+genConstructorPattern' impl loc cname cargs = do
   vars <- mapM (freshVar loc) (Stream.take cargs allWords)
-  return (mkConstructorVarPattern cname vars, vars)
+  return (mkConstructorVarPattern impl cname vars, vars)
 
-mkConstructorVarPattern :: Name -> [VarName] -> PatternArg
-mkConstructorVarPattern c vars =
+mkConstructorVarPattern :: IsImplicit -> Name -> [VarName] -> PatternArg
+mkConstructorVarPattern impl c vars =
   PatternArg
-    { _patternArgIsImplicit = Explicit,
+    { _patternArgIsImplicit = impl,
       _patternArgName = Nothing,
       _patternArgPattern =
         PatternConstructorApp
@@ -77,7 +83,8 @@ genFieldProjection ::
 genFieldProjection _funDefName info fieldIx = do
   clause <- genClause
   let (inductiveParams, constrArgs) = constructorArgTypes info
-      saturatedTy = unnamedParameter (constructorReturnType info)
+      implicity = constructorImplicity info
+      saturatedTy = unnamedParameter' implicity (constructorReturnType info)
       inductiveArgs = map (typeAbstraction Implicit) inductiveParams
       retTy = constrArgs !! fieldIx
   return

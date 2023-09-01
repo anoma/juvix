@@ -164,7 +164,7 @@ keywordText = annotated C.AnnKeyword . noLoc . P.pretty
 -- If the second argument is True, then the delimiters *must* be given.
 delimIf' :: Maybe (Sem r (), Sem r ()) -> IsImplicit -> Bool -> Sem r () -> Sem r ()
 delimIf' d impl delim
-  | delim || impl == Implicit = uncurry enclose (fromJust d)
+  | delim || impl == Implicit || impl == ImplicitInstance = uncurry enclose (fromJust d)
   | otherwise = id
 
 delimIf :: (Members '[ExactPrint] r) => IsImplicit -> Bool -> Sem r () -> Sem r ()

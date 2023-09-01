@@ -534,6 +534,7 @@ instance (SingI s) => PrettyPrint (FunctionParameter s) where
   ppCode = \case
     FunctionParameterName n -> annDef n (ppSymbolType n)
     FunctionParameterWildcard w -> ppCode w
+    FunctionParameterUnnamed {} -> return ()
 
 instance (SingI s) => PrettyPrint (Function s) where
   ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => Function s -> Sem r ()

@@ -330,14 +330,9 @@ checkLhs loc guessedBody ariSignature pats = do
                         _wrongPatternIsImplicitActual = p
                       }
                 )
-            (ImplicitInstance, ParamImplicit {}) ->
-              throw
-                ( ErrWrongPatternIsImplicit
-                    WrongPatternIsImplicit
-                      { _wrongPatternIsImplicitExpected = ImplicitInstance,
-                        _wrongPatternIsImplicitActual = p
-                      }
-                )
+            (ImplicitInstance, ParamImplicit {}) -> do
+              wildcard <- genWildcard Implicit
+              first (wildcard :) <$> goLhs r lhs
             (Explicit, ParamImplicit) -> do
               wildcard <- genWildcard Implicit
               first (wildcard :) <$> goLhs r lhs

@@ -1642,6 +1642,7 @@ checkFunction f = do
     _paramNames <- forM (f ^. funParameters . paramNames) $ \case
       FunctionParameterWildcard w -> return (FunctionParameterWildcard w)
       FunctionParameterName p -> FunctionParameterName <$> bindVariableSymbol p
+      FunctionParameterUnnamed i -> return (FunctionParameterUnnamed i)
     _funReturn <- checkParseExpressionAtoms (f ^. funReturn)
     let _paramImplicit = f ^. funParameters . paramImplicit
         _paramColon = f ^. funParameters . paramColon

@@ -235,5 +235,6 @@ mkConstructorEntries d =
           builtins = maybe (replicate n Nothing) (map Just . builtinConstructors) (d ^. inductiveBuiltin),
       (_constructorInfoBuiltin, c) <- zipExact builtins (d ^. inductiveConstructors),
       let _constructorInfoType = c ^. inductiveConstructorType,
-      let _constructorInfoName = c ^. inductiveConstructorName
+      let _constructorInfoName = c ^. inductiveConstructorName,
+      let _constructorInfoTrait = d ^. inductiveTrait
   ]

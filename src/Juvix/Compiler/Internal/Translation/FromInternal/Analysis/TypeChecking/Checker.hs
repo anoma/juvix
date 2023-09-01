@@ -285,7 +285,7 @@ checkFunctionParameter (FunctionParameter mv i e) = do
   e' <- checkIsType (getLoc e) e
   when (i == ImplicitInstance) $ do
     tab <- ask
-    checkInstanceParam tab e
+    checkInstanceParam tab e'
   return (FunctionParameter mv i e')
 
 checkConstructorDef ::

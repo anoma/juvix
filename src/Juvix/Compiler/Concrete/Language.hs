@@ -1095,6 +1095,8 @@ instance HasAtomicity (Lambda s) where
 data FunctionParameter (s :: Stage)
   = FunctionParameterName (SymbolType s)
   | FunctionParameterWildcard KeywordRef
+  -- | Used for traits
+  | FunctionParameterUnnamed Interval
 
 deriving stock instance Show (FunctionParameter 'Parsed)
 
@@ -1832,6 +1834,7 @@ instance HasLoc (FunctionParameter 'Scoped) where
   getLoc = \case
     FunctionParameterName n -> getLoc n
     FunctionParameterWildcard w -> getLoc w
+    FunctionParameterUnnamed i -> i
 
 instance HasLoc (FunctionParameters 'Scoped) where
   getLoc p = case p ^. paramDelims . unIrrelevant of

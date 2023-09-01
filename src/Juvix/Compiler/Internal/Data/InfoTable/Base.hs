@@ -9,7 +9,8 @@ data ConstructorInfo = ConstructorInfo
     _constructorInfoType :: Expression,
     _constructorInfoInductive :: InductiveName,
     _constructorInfoName :: ConstructorName,
-    _constructorInfoBuiltin :: Maybe BuiltinConstructor
+    _constructorInfoBuiltin :: Maybe BuiltinConstructor,
+    _constructorInfoTrait :: Bool
   }
 
 newtype FunctionInfo = FunctionInfo

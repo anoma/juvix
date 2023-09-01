@@ -242,13 +242,16 @@ typeAbstraction i var = FunctionParameter (Just var) i (ExpressionUniverse (Smal
 mkFunction :: Expression -> Expression -> Function
 mkFunction a = Function (unnamedParameter a)
 
-unnamedParameter :: Expression -> FunctionParameter
-unnamedParameter ty =
+unnamedParameter' :: IsImplicit -> Expression -> FunctionParameter
+unnamedParameter' impl ty =
   FunctionParameter
     { _paramName = Nothing,
-      _paramImplicit = Explicit,
+      _paramImplicit = impl,
       _paramType = ty
     }
+
+unnamedParameter :: Expression -> FunctionParameter
+unnamedParameter = unnamedParameter' Explicit
 
 singletonRename :: VarName -> VarName -> Rename
 singletonRename = HashMap.singleton

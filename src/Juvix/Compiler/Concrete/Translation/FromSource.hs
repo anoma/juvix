@@ -989,9 +989,14 @@ functionParams :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStas
 functionParams = do
   (openDelim, _paramNames, _paramImplicit, _paramColon) <- P.try $ do
     (opn, impl) <- implicitOpen
-    n <- some pName
-    c <- Irrelevant . Just <$> kw kwColon
-    return (opn, n, impl, c)
+    case impl of
+      ImplicitInstance -> do
+        n <- optional pNameColon
+        return (opn, [fromMaybe (FunctionParameterUnnamed (getLoc opn)) n], impl, Irrelevant Nothing)
+      _ -> do
+        n <- some pName
+        c <- Irrelevant . Just <$> kw kwColon
+        return (opn, n, impl, c)
   _paramType <- parseExpressionAtoms
   closeDelim <- implicitClose _paramImplicit
   let _paramDelims = Irrelevant (Just (openDelim, closeDelim))
@@ -1001,6 +1006,12 @@ functionParams = do
     pName =
       FunctionParameterName <$> symbol
         <|> FunctionParameterWildcard <$> kw kwWildcard
+
+    pNameColon :: ParsecS r (FunctionParameter 'Parsed)
+    pNameColon = P.try $ do
+      n <- pName
+      kw kwColon
+      return n
 
 function :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (Function 'Parsed)
 function = do

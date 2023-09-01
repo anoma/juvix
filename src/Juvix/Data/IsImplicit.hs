@@ -14,5 +14,5 @@ instance Hashable IsImplicit
 instance Pretty IsImplicit where
   pretty = \case
     Implicit -> "implicit"
-    ImplicitInstance -> "implicitInstance"
+    ImplicitInstance -> "implicit instance"
     Explicit -> "explicit"
