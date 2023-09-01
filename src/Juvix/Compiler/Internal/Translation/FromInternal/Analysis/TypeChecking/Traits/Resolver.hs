@@ -24,17 +24,18 @@ resolveTraitInstance ::
   Sem r Expression
 resolveTraitInstance tab ty = do
   vars <- ask
-  let tab' = foldr (flip updateInstanceTable) tab (varsToInstances vars)
+  tbl <- ask
+  let tab' = foldr (flip updateInstanceTable) tab (varsToInstances tbl vars)
   is <- lookupInstance tab' ty
   case is of
     [(ii, subs)] -> expandArity (subsIToE subs) (ii ^. instanceInfoArgs) (ii ^. instanceInfoResult)
     [] -> throw (ErrNoInstance (NoInstance ty))
     _ -> throw (ErrAmbiguousInstances (AmbiguousInstances ty (map fst is)))
 
-varsToInstances :: LocalVars -> [InstanceInfo]
-varsToInstances LocalVars {..} =
+varsToInstances :: InfoTable -> LocalVars -> [InstanceInfo]
+varsToInstances tbl LocalVars {..} =
   mapMaybe
-    (instanceFromTypedExpression . mkTyped)
+    (instanceFromTypedExpression' tbl . mkTyped)
     (HashMap.toList _localTypes)
   where
     mkTyped :: (VarName, Expression) -> TypedExpression
@@ -137,3 +138,11 @@ lookupInstance tab ty = do
       lookupInstance' tab h args
     _ ->
       throw (ErrNotATrait (NotATrait ty))
+
+instanceFromTypedExpression' :: InfoTable -> TypedExpression -> Maybe InstanceInfo
+instanceFromTypedExpression' tbl e = case instanceFromTypedExpression e of
+  Just ii@InstanceInfo {..}
+    | isTrait tbl _instanceInfoInductive ->
+        Just ii
+  _ ->
+    Nothing
