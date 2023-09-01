@@ -19,7 +19,8 @@ data GlobalOptions = GlobalOptions
     _globalNoPositivity :: Bool,
     _globalNoCoverage :: Bool,
     _globalNoStdlib :: Bool,
-    _globalUnrollLimit :: Int
+    _globalUnrollLimit :: Int,
+    _globalOffline :: Bool
   }
   deriving stock (Eq, Show)
 
@@ -58,7 +59,8 @@ defaultGlobalOptions =
       _globalNoPositivity = False,
       _globalNoCoverage = False,
       _globalNoStdlib = False,
-      _globalUnrollLimit = defaultUnrollLimit
+      _globalUnrollLimit = defaultUnrollLimit,
+      _globalOffline = False
     }
 
 -- | Get a parser for global flags which can be hidden or not depending on
@@ -118,6 +120,11 @@ parseGlobalFlags = do
       ( long "unroll"
           <> value defaultUnrollLimit
           <> help ("Recursion unrolling limit (default: " <> show defaultUnrollLimit <> ")")
+      )
+  _globalOffline <-
+    switch
+      ( long "offline"
+          <> help "Disable access to network resources"
       )
   return GlobalOptions {..}
 

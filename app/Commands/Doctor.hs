@@ -1,11 +1,11 @@
 module Commands.Doctor where
 
+import Commands.Base hiding (info)
 import Commands.Doctor.Options
 import Commands.Extra.Compile
 import Data.Aeson
 import Data.Aeson.TH
 import Juvix.Extra.Version qualified as V
-import Juvix.Prelude
 import Network.HTTP.Simple
 import Safe (headMay)
 import System.Environment qualified as E
@@ -68,7 +68,7 @@ warning = log . ("  ! " <>)
 info :: (Member Log r) => Text -> Sem r ()
 info = log . ("  | " <>)
 
-type DoctorEff = '[Log, Embed IO]
+type DoctorEff = '[Log, Embed IO, App]
 
 checkCmdOnPath :: (Members DoctorEff r) => String -> [Text] -> Sem r ()
 checkCmdOnPath cmd errMsg =
@@ -173,4 +173,5 @@ runCommand :: (Members DoctorEff r) => DoctorOptions -> Sem r ()
 runCommand opts = do
   checkClang (opts ^. doctorVerbose)
   checkWasmer
-  unless (opts ^. doctorOffline) checkVersion
+  offlineMode <- (^. globalOffline) <$> askGlobalOptions
+  unless offlineMode checkVersion
