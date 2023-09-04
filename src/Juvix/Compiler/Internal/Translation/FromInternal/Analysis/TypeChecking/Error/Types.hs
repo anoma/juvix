@@ -411,7 +411,7 @@ instance ToGenericError NoInstance where
           opts' = fromGenericOptions opts
           i = e ^. noInstanceLoc
           msg =
-            "No trait instance found for: "
+            "No trait instance found for:"
               <+> ppCode opts' (e ^. noInstanceType)
 
 data AmbiguousInstances = AmbiguousInstances

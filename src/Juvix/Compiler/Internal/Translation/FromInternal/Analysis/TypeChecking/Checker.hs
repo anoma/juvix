@@ -293,9 +293,14 @@ resolveInstanceHoles ::
   Sem r a
 resolveInstanceHoles s = do
   (hs, e) <- runOutputList s
-  ts <- mapM resolveTraitInstance hs
+  ts <- mapM goResolve hs
   let subs = HashMap.fromList (zipExact (map (^. typedHoleHole) hs) ts)
   return $ subsHoles subs e
+  where
+    goResolve :: TypedHole -> Sem r Expression
+    goResolve h@TypedHole {..} = do
+      t <- resolveTraitInstance h
+      checkExpression _typedHoleType t
 
 checkFunctionParameter ::
   (Members '[HighlightBuilder, Reader InfoTable, State FunctionsTable, Error TypeCheckerError, NameIdGen, Reader LocalVars, Inference, Builtins, Output Example, State TypesTable, Termination] r) =>

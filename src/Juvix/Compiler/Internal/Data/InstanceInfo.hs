@@ -11,13 +11,13 @@ data InstanceParam
   | InstanceParamApp InstanceApp
   | InstanceParamHole Hole
   | InstanceParamMeta VarName
-  deriving stock (Eq)
+  deriving stock (Eq, Show)
 
 data InstanceApp = InstanceApp
   { _instanceAppHead :: InductiveName,
     _instanceAppArgs :: [InstanceParam]
   }
-  deriving stock (Eq)
+  deriving stock (Eq, Show)
 
 data InstanceInfo = InstanceInfo
   { _instanceInfoInductive :: InductiveName,

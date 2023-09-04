@@ -16,13 +16,13 @@ instance
 showNatI : Show Nat := mkShow (show := natToString);
 
 showList {A} : {{Show A}} → List A → String
-  | nil := ""
+  | nil := "nil"
   | (h :: t) := Show.show h ++str " :: " ++str showList t;
 
 g : {A : Type} → {{Show A}} → Nat := 5;
 
---instance
---showListI {A} : {{Show A}} → Show (List A) := mkShow (show := showList);
+instance
+showListI {A} : {{Show A}} → Show (List A) := mkShow (show := showList);
 
 f {A} : {{Show A}} → A → String
   | x := Show.show x;
@@ -31,4 +31,6 @@ main : IO :=
   printStringLn (Show.show true) >>
   printStringLn (f false) >>
   printStringLn (Show.show 3) >>
-  printStringLn (Show.show g);
+  printStringLn (Show.show g) >>
+  printStringLn (Show.show [true; false]) >>
+  printStringLn (Show.show [1; 2; 3]);

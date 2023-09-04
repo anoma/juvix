@@ -26,7 +26,7 @@ resolveTraitInstance TypedHole {..} = do
   vars <- ask
   tbl <- ask
   let tab = foldr (flip updateInstanceTable) (tbl ^. infoInstances) (varsToInstances tbl vars)
-  ty <- weakNormalize _typedHoleType
+  ty <- strongNormalize _typedHoleType
   is <- lookupInstance tab ty
   case is of
     [(ii, subs)] -> expandArity (subsIToE subs) (ii ^. instanceInfoArgs) (ii ^. instanceInfoResult)
