@@ -9,6 +9,7 @@ import Juvix.Compiler.Builtins.Effect
 import Juvix.Compiler.Concrete.Data.Highlight.Input
 import Juvix.Compiler.Internal.Data.InstanceInfo (InstanceApp (InstanceApp), InstanceInfo (..), instanceFromTypedExpression, traitFromExpression)
 import Juvix.Compiler.Internal.Data.LocalVars
+import Juvix.Compiler.Internal.Data.TypedHole
 import Juvix.Compiler.Internal.Extra
 import Juvix.Compiler.Internal.Pretty
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Positivity.Checker
@@ -247,7 +248,7 @@ checkExample ::
   Example ->
   Sem r Example
 checkExample e = do
-  e' <- withEmptyVars (runInferenceDef (traverseOf exampleExpression (inferExpression Nothing >=> strongNormalize) e))
+  e' <- withEmptyVars (runInferenceDef (traverseOf exampleExpression (fmap (^. typedExpression) . inferExpression Nothing >=> strongNormalize) e))
   output e'
   return e'
 
@@ -258,7 +259,7 @@ checkExpression ::
   Expression ->
   Sem r Expression
 checkExpression expectedTy e = do
-  e' <- inferExpression' (Just expectedTy) e
+  e' <- inferExpression (Just expectedTy) e
   let inferredType = e' ^. typedType
   whenJustM (matchTypes expectedTy inferredType) (const (err inferredType))
   return (e' ^. typedExpression)
@@ -275,6 +276,21 @@ checkExpression expectedTy e = do
                 _wrongTypeExpected = expected'
               }
           )
+
+resolveInstanceHoles ::
+  forall r.
+  (Members '[HighlightBuilder, Reader InfoTable, State FunctionsTable, Error TypeCheckerError, Builtins, NameIdGen, Reader LocalVars, Inference, Output Example, State TypesTable, Termination] r) =>
+  Sem (Output TypedHole ': r) TypedExpression ->
+  Sem r TypedExpression
+resolveInstanceHoles s = do
+  (hs, e) <- runOutputList s
+  ts <- mapM resolveTraitInstance hs
+  let subs = HashMap.fromList (zipExact (map (^. typedHoleHole) hs) ts)
+  return
+    TypedExpression
+      { _typedType = fillHoles subs (e ^. typedType),
+        _typedExpression = fillHoles subs (e ^. typedExpression)
+      }
 
 checkFunctionParameter ::
   (Members '[HighlightBuilder, Reader InfoTable, State FunctionsTable, Error TypeCheckerError, NameIdGen, Reader LocalVars, Inference, Builtins, Output Example, State TypesTable, Termination] r) =>
@@ -332,8 +348,8 @@ inferExpression ::
   (Members '[HighlightBuilder, Reader InfoTable, State FunctionsTable, Error TypeCheckerError, NameIdGen, Reader LocalVars, Inference, Builtins, Output Example, State TypesTable, Termination] r) =>
   Maybe Expression -> -- type hint
   Expression ->
-  Sem r Expression
-inferExpression hint = fmap (^. typedExpression) . inferExpression' hint
+  Sem r TypedExpression
+inferExpression hint = resolveInstanceHoles . inferExpression' hint
 
 lookupVar :: (Member (Reader LocalVars) r) => Name -> Sem r Expression
 lookupVar v = HashMap.lookupDefault err v <$> asks (^. localTypes)
@@ -550,7 +566,7 @@ checkPattern = go
 
 inferExpression' ::
   forall r.
-  (Members '[HighlightBuilder, Reader InfoTable, State FunctionsTable, State TypesTable, Reader LocalVars, Error TypeCheckerError, NameIdGen, Inference, Output Example, Builtins, Termination] r) =>
+  (Members '[HighlightBuilder, Reader InfoTable, State FunctionsTable, State TypesTable, Reader LocalVars, Error TypeCheckerError, NameIdGen, Inference, Output Example, Output TypedHole, Builtins, Termination] r) =>
   Maybe Expression ->
   Expression ->
   Sem r TypedExpression
@@ -600,11 +616,14 @@ inferExpression' hint e = case e of
           }
 
     goInstanceHole :: Hole -> Sem r TypedExpression
-    goInstanceHole _ = do
-      tab <- asks (^. infoInstances)
+    goInstanceHole h = do
       let ty = fromMaybe impossible hint
-      t <- resolveTraitInstance tab ty
-      inferExpression' Nothing t
+      output (TypedHole h ty)
+      return
+        TypedExpression
+          { _typedType = ty,
+            _typedExpression = ExpressionInstanceHole h
+          }
 
     goSimpleLambda :: SimpleLambda -> Sem r TypedExpression
     goSimpleLambda (SimpleLambda v ty b) = do

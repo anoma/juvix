@@ -84,7 +84,7 @@ typeCheckExpressionType exp = do
     . withEmptyVars
     . mapError (JuvixError @TypeCheckerError)
     . runInferenceDef
-    $ inferExpression' Nothing exp
+    $ inferExpression Nothing exp
       >>= traverseOf typedType strongNormalize
 
 typeCheckExpression ::

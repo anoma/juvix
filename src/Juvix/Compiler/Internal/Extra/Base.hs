@@ -155,6 +155,7 @@ subsHoles s = over leafExpressions helper
     helper :: Expression -> Expression
     helper e = case e of
       ExpressionHole h -> fromMaybe e (s ^. at h)
+      ExpressionInstanceHole h -> fromMaybe e (s ^. at h)
       _ -> e
 
 instance HasExpressions FunctionClause where
@@ -223,12 +224,6 @@ instance HasExpressions ConstructorDef where
           _inductiveConstructorName,
           _inductiveConstructorPragmas
         }
-
-fillHolesFunctionDef :: HashMap Hole Expression -> FunctionDef -> FunctionDef
-fillHolesFunctionDef = subsHoles
-
-fillHolesClause :: HashMap Hole Expression -> FunctionClause -> FunctionClause
-fillHolesClause = subsHoles
 
 fillHoles :: HashMap Hole Expression -> Expression -> Expression
 fillHoles = subsHoles

@@ -15,4 +15,4 @@ showString : Show Bool := mkShow (show := λ{x := if x "true" "false"});
 f {A} : {{Show A}} -> A -> String
   | x := Show.show x;
 
-main : String := Show.show true ++str f false;
+main : String := Show.show true ++str f false ++str Show.show false;

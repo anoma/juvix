@@ -4,6 +4,7 @@ import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Internal.Data.InfoTable
 import Juvix.Compiler.Internal.Data.InstanceInfo
 import Juvix.Compiler.Internal.Data.LocalVars
+import Juvix.Compiler.Internal.Data.TypedHole
 import Juvix.Compiler.Internal.Extra
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Inference
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error
@@ -19,18 +20,17 @@ isTrait tab name = fromJust (HashMap.lookup name (tab ^. infoInductives)) ^. ind
 
 resolveTraitInstance ::
   (Members '[Error TypeCheckerError, NameIdGen, Inference, Reader LocalVars, Reader InfoTable] r) =>
-  InstanceTable ->
-  Expression ->
+  TypedHole ->
   Sem r Expression
-resolveTraitInstance tab ty = do
+resolveTraitInstance TypedHole {..} = do
   vars <- ask
   tbl <- ask
-  let tab' = foldr (flip updateInstanceTable) tab (varsToInstances tbl vars)
-  is <- lookupInstance tab' ty
+  let tab = foldr (flip updateInstanceTable) (tbl ^. infoInstances) (varsToInstances tbl vars)
+  is <- lookupInstance tab _typedHoleType
   case is of
     [(ii, subs)] -> expandArity (subsIToE subs) (ii ^. instanceInfoArgs) (ii ^. instanceInfoResult)
-    [] -> throw (ErrNoInstance (NoInstance ty))
-    _ -> throw (ErrAmbiguousInstances (AmbiguousInstances ty (map fst is)))
+    [] -> throw (ErrNoInstance (NoInstance _typedHoleType))
+    _ -> throw (ErrAmbiguousInstances (AmbiguousInstances _typedHoleType (map fst is)))
 
 varsToInstances :: InfoTable -> LocalVars -> [InstanceInfo]
 varsToInstances tbl LocalVars {..} =
