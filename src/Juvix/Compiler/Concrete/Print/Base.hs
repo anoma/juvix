@@ -523,8 +523,11 @@ instance (SingI s) => PrettyPrint (FunctionParameters s) where
         let paramNames' = map ppCode _paramNames
             paramType' = ppExpressionType _paramType
             delims' = over both ppCode <$> _paramDelims ^. unIrrelevant
-            colon' = ppCode (fromJust (_paramColon ^. unIrrelevant))
-        delimIf' delims' _paramImplicit True (hsep paramNames' <+> colon' <+> paramType')
+            colon' = ppCode <$> _paramColon ^. unIrrelevant
+            pre = case colon' of
+              Just col -> hsep paramNames' <+> col <> space
+              Nothing -> mempty
+        delimIf' delims' _paramImplicit True (pre <> paramType')
     where
       ppLeftExpression' = case sing :: SStage s of
         SParsed -> ppLeftExpression

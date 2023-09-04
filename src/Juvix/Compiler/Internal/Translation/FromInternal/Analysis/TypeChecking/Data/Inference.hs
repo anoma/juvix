@@ -447,7 +447,7 @@ addIdens idens = do
 -- 3. Terminates.
 --
 -- Throws an error if the return type is Type and it does not satisfy the
--- some condition.
+-- above conditions.
 functionDefEval :: forall r'. (Members '[State FunctionsTable, Termination, Error TypeCheckerError] r') => FunctionDef -> Sem r' (Maybe Expression)
 functionDefEval f = do
   (params :: [FunctionParameter], ret :: Expression) <- unfoldFunType <$> strongNorm (f ^. funDefType)

@@ -155,12 +155,30 @@ goTopFunctionDef modName f = do
   addEdge (f ^. funDefName) modName
   goFunctionDefHelper f
 
+-- | An instance must be in the same component as the trait, because before type
+-- checking the instance holes are not filled which may result in missing
+-- dependencies. In other words, the trait needs to depend on all its instances.
+goInstance ::
+  (Members '[State DependencyGraph, State StartNodes, Reader ExportsTable] r) =>
+  FunctionDef ->
+  Sem r ()
+goInstance f = do
+  let (_, app) = unfoldFunType (f ^. funDefType)
+      (h, _) = unfoldExpressionApp app
+  case h of
+    ExpressionIden (IdenInductive i) ->
+      addEdge i (f ^. funDefName)
+    _ ->
+      return ()
+
 goFunctionDefHelper ::
   (Members '[State DependencyGraph, State StartNodes, Reader ExportsTable] r) =>
   FunctionDef ->
   Sem r ()
 goFunctionDefHelper f = do
   checkStartNode (f ^. funDefName)
+  when (f ^. funDefInstance) $
+    goInstance f
   goExpression (Just (f ^. funDefName)) (f ^. funDefType)
   mapM_ (goFunctionClause (f ^. funDefName)) (f ^. funDefClauses)
 

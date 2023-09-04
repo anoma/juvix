@@ -10,9 +10,19 @@ type Show A :=
   };
 
 instance
-showString : Show Bool := mkShow (show := λ{x := if x "true" "false"});
+showBoolI : Show Bool := mkShow (show := λ{x := if x "true" "false"});
 
-f {A} : {{Show A}} -> A -> String
+showNat : Nat → String
+  | zero := "zero"
+  | (suc n) := "suc (" ++str showNat n ++str ")";
+
+instance
+showNatI : Show Nat := mkShow (show := showNat);
+
+f {A} : {{Show A}} → A → String
   | x := Show.show x;
 
-main : String := Show.show true ++str f false ++str Show.show false;
+main : IO :=
+  printStringLn (Show.show true) >>
+  printStringLn (f false) >>
+  printStringLn (Show.show 3);

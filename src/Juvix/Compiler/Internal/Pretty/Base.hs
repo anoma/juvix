@@ -312,6 +312,7 @@ instance PrettyCode InfoTable where
   ppCode tbl = do
     inds <- ppCode (HashMap.keys (tbl ^. infoInductives))
     constrs <- ppCode (HashMap.keys (tbl ^. infoConstructors))
+    funs <- ppCode (HashMap.keys (tbl ^. infoFunctions))
     let header :: Text -> Doc Ann = annotate AnnImportant . pretty
     return $
       header "InfoTable"
@@ -320,6 +321,8 @@ instance PrettyCode InfoTable where
         <> inds
         <> header "\nConstructors: "
         <> constrs
+        <> header "\nFunctions: "
+        <> funs
 
 ppPostExpression ::
   (PrettyCode a, HasAtomicity a, Member (Reader Options) r) =>
