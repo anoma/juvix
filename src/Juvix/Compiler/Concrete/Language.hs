@@ -361,28 +361,28 @@ deriving stock instance Ord (SigArg 'Parsed)
 
 deriving stock instance Ord (SigArg 'Scoped)
 
-data NewFunctionClause (s :: Stage) = NewFunctionClause
+data FunctionClause (s :: Stage) = FunctionClause
   { _clausenPipeKw :: Irrelevant KeywordRef,
     _clausenPatterns :: NonEmpty (PatternAtomType s),
     _clausenAssignKw :: Irrelevant KeywordRef,
     _clausenBody :: ExpressionType s
   }
 
-deriving stock instance Show (NewFunctionClause 'Parsed)
+deriving stock instance Show (FunctionClause 'Parsed)
 
-deriving stock instance Show (NewFunctionClause 'Scoped)
+deriving stock instance Show (FunctionClause 'Scoped)
 
-deriving stock instance Eq (NewFunctionClause 'Parsed)
+deriving stock instance Eq (FunctionClause 'Parsed)
 
-deriving stock instance Eq (NewFunctionClause 'Scoped)
+deriving stock instance Eq (FunctionClause 'Scoped)
 
-deriving stock instance Ord (NewFunctionClause 'Parsed)
+deriving stock instance Ord (FunctionClause 'Parsed)
 
-deriving stock instance Ord (NewFunctionClause 'Scoped)
+deriving stock instance Ord (FunctionClause 'Scoped)
 
 data FunctionDefBody (s :: Stage)
   = SigBodyExpression (ExpressionType s)
-  | SigBodyClauses (NonEmpty (NewFunctionClause s))
+  | SigBodyClauses (NonEmpty (FunctionClause s))
 
 deriving stock instance Show (FunctionDefBody 'Parsed)
 
@@ -776,6 +776,7 @@ data PatternAtom (s :: Stage)
   | PatternAtomRecord (RecordPattern s)
   | PatternAtomParens (PatternParensType s)
   | PatternAtomBraces (PatternParensType s)
+  | PatternAtomDoubleBraces (PatternParensType s)
   | PatternAtomAt (PatternAtType s)
 
 deriving stock instance Show (PatternAtom 'Parsed)
@@ -1917,8 +1918,8 @@ instance HasLoc (SigArg s) where
     where
       Irrelevant (l, r) = _sigArgDelims
 
-instance (SingI s) => HasLoc (NewFunctionClause s) where
-  getLoc NewFunctionClause {..} =
+instance (SingI s) => HasLoc (FunctionClause s) where
+  getLoc FunctionClause {..} =
     getLoc _clausenPipeKw
       <> getLocExpressionType _clausenBody
 
@@ -1995,6 +1996,7 @@ instance (SingI s) => HasLoc (PatternAtom s) where
     PatternAtomList l -> getLoc l
     PatternAtomParens p -> getLocParens p
     PatternAtomBraces p -> getLocParens p
+    PatternAtomDoubleBraces p -> getLocParens p
     PatternAtomAt p -> getLocAt p
     PatternAtomRecord p -> getLoc p
     where
@@ -2249,6 +2251,7 @@ instance IsApe (FunctionParameters 'Scoped) ApeLeaf where
 instance HasAtomicity PatternArg where
   atomicity p
     | Implicit <- p ^. patternArgIsImplicit = Atom
+    | ImplicitInstance <- p ^. patternArgIsImplicit = Atom
     | isJust (p ^. patternArgName) = Atom
     | otherwise = atomicity (p ^. patternArgPattern)
 

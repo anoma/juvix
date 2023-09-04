@@ -797,14 +797,14 @@ checkFunctionDef FunctionDef {..} = do
     checkBody = case _signBody of
       SigBodyExpression e -> SigBodyExpression <$> checkParseExpressionAtoms e
       SigBodyClauses cls -> SigBodyClauses <$> mapM checkClause cls
-    checkClause :: NewFunctionClause 'Parsed -> Sem r (NewFunctionClause 'Scoped)
-    checkClause NewFunctionClause {..} = do
+    checkClause :: FunctionClause 'Parsed -> Sem r (FunctionClause 'Scoped)
+    checkClause FunctionClause {..} = do
       (patterns', body') <- withLocalScope $ do
         p <- mapM checkParsePatternAtom _clausenPatterns
         b <- checkParseExpressionAtoms _clausenBody
         return (p, b)
       return
-        NewFunctionClause
+        FunctionClause
           { _clausenBody = body',
             _clausenPatterns = patterns',
             _clausenPipeKw,
@@ -1995,6 +1995,7 @@ checkPatternAtom = \case
   PatternAtomEmpty i -> return (PatternAtomEmpty i)
   PatternAtomParens e -> PatternAtomParens <$> checkParsePatternAtoms e
   PatternAtomBraces e -> PatternAtomBraces <$> checkParsePatternAtoms e
+  PatternAtomDoubleBraces e -> PatternAtomDoubleBraces <$> checkParsePatternAtoms e
   PatternAtomAt p -> PatternAtomAt <$> checkPatternBinding p
   PatternAtomList l -> PatternAtomList <$> checkListPattern l
   PatternAtomRecord l -> PatternAtomRecord <$> checkRecordPattern l
@@ -2695,6 +2696,7 @@ parsePatternTerm = do
   embed @ParsePat $
     parseNoInfixConstructor
       <|> parseVariable
+      <|> parseDoubleBraces
       <|> parseParens
       <|> parseBraces
       <|> parseWildcard
@@ -2768,6 +2770,23 @@ parsePatternTerm = do
         var :: PatternAtom 'Scoped -> Maybe S.Symbol
         var s = case s of
           PatternAtomIden (PatternScopedVar sym) -> Just sym
+          _ -> Nothing
+
+    parseDoubleBraces :: ParsePat PatternArg
+    parseDoubleBraces = do
+      res <- P.token bracesPat mempty
+      case res of
+        Left er -> P.lift (throw er)
+        Right a -> return a
+      where
+        bracesPat :: PatternAtom 'Scoped -> Maybe (Either ScoperError PatternArg)
+        bracesPat = \case
+          PatternAtomDoubleBraces r
+            | Implicit <- r ^. patternArgIsImplicit ->
+                Just (Left (ErrDoubleBracesPattern (DoubleBracesPattern r)))
+            | ImplicitInstance <- r ^. patternArgIsImplicit ->
+                Just (Left (ErrDoubleBracesPattern (DoubleBracesPattern r)))
+            | otherwise -> Just (Right (set patternArgIsImplicit ImplicitInstance r))
           _ -> Nothing
 
     parseBraces :: ParsePat PatternArg

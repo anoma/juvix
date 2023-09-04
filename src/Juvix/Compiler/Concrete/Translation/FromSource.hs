@@ -942,14 +942,14 @@ functionDefinition _signBuiltin = P.label "<function definition>" $ do
       SigBodyExpression <$> bodyExpr
         <|> (SigBodyClauses <$> bodyClauses)
       where
-        bodyClause :: ParsecS r (NewFunctionClause 'Parsed)
+        bodyClause :: ParsecS r (FunctionClause 'Parsed)
         bodyClause = do
           _clausenPipeKw <- Irrelevant <$> kw kwPipe
           _clausenPatterns <- some1 patternAtom
           _clausenAssignKw <- Irrelevant <$> kw kwAssign
           _clausenBody <- parseExpressionAtoms
-          return NewFunctionClause {..}
-        bodyClauses :: ParsecS r (NonEmpty (NewFunctionClause 'Parsed))
+          return FunctionClause {..}
+        bodyClauses :: ParsecS r (NonEmpty (FunctionClause 'Parsed))
         bodyClauses = some1 bodyClause
         bodyExpr :: ParsecS r (ExpressionAtoms 'Parsed)
         bodyExpr = do
@@ -1138,6 +1138,7 @@ wildcard = Wildcard . snd <$> interval (kw kwWildcard)
 patternAtomAnon :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (PatternAtom 'Parsed)
 patternAtomAnon =
   PatternAtomWildcard <$> wildcard
+    <|> PatternAtomDoubleBraces <$> doubleBraces parsePatternAtomsNested
     <|> PatternAtomParens <$> parens parsePatternAtomsNested
     <|> PatternAtomBraces <$> braces parsePatternAtomsNested
     <|> PatternAtomList <$> parseListPattern

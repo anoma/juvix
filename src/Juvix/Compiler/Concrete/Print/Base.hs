@@ -195,6 +195,7 @@ instance (SingI s) => PrettyPrint (PatternAtom s) where
     PatternAtomEmpty {} -> parens (return ())
     PatternAtomParens p -> parens (ppPatternParensType p)
     PatternAtomBraces p -> braces (ppPatternParensType p)
+    PatternAtomDoubleBraces p -> doubleBraces (ppPatternParensType p)
     PatternAtomAt p -> ppPatternAtType p
     PatternAtomRecord p -> ppCode p
 
@@ -780,9 +781,9 @@ instance PrettyPrint BuiltinFunction where
 instance PrettyPrint BuiltinAxiom where
   ppCode i = ppCode Kw.kwBuiltin <+> keywordText (P.prettyText i)
 
-instance (SingI s) => PrettyPrint (NewFunctionClause s) where
-  ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => NewFunctionClause s -> Sem r ()
-  ppCode NewFunctionClause {..} = do
+instance (SingI s) => PrettyPrint (FunctionClause s) where
+  ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => FunctionClause s -> Sem r ()
+  ppCode FunctionClause {..} = do
     let pats' = hsep (ppPatternAtomType <$> _clausenPatterns)
         e' = ppExpressionType _clausenBody
     ppCode _clausenPipeKw <+> pats' <+> ppCode _clausenAssignKw <> oneLineOrNext e'

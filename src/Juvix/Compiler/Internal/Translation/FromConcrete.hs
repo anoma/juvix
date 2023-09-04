@@ -440,8 +440,8 @@ goTopFunctionDef FunctionDef {..} = do
     goBody = do
       commonPatterns <- concatMapM (fmap toList . argToPattern) _signArgs
       let _clauseName = goSymbol _signName
-          goClause :: NewFunctionClause 'Scoped -> Sem r Internal.FunctionClause
-          goClause NewFunctionClause {..} = do
+          goClause :: FunctionClause 'Scoped -> Sem r Internal.FunctionClause
+          goClause FunctionClause {..} = do
             let _clauseName = goSymbol _signName
             _clauseBody <- goExpression _clausenBody
             extraPatterns <- toList <$> (mapM goPatternArg _clausenPatterns)
