@@ -914,7 +914,7 @@ functionDefinition _signBuiltin = P.label "<function definition>" $ do
   where
     parseArg :: ParsecS r (SigArg 'Parsed)
     parseArg = do
-      (openDelim, _sigArgNames, _sigArgImplicit, colonMay) <- P.try $ do
+      (openDelim, _sigArgNames, _sigArgImplicit, _sigArgColon) <- P.try $ do
         (opn, impl) <- implicitOpen
         let parseArgumentName :: ParsecS r (Argument 'Parsed) =
               ArgumentSymbol <$> symbol
@@ -927,15 +927,15 @@ functionDefinition _signBuiltin = P.label "<function definition>" $ do
           Explicit -> Just . Irrelevant <$> kw kwColon
           ImplicitInstance -> return Nothing
         return (opn, n, impl, c)
-      _sigArgRhs <- mapM parseRhs colonMay
+      _sigArgType <- case _sigArgImplicit of
+        Implicit
+          | isNothing _sigArgColon ->
+              return Nothing
+        _ ->
+          Just <$> parseExpressionAtoms
       closeDelim <- implicitClose _sigArgImplicit
       let _sigArgDelims = Irrelevant (openDelim, closeDelim)
       return SigArg {..}
-      where
-        parseRhs :: Irrelevant KeywordRef -> ParsecS r (SigArgRhs 'Parsed)
-        parseRhs _sigArgColon = do
-          _sigArgType <- parseExpressionAtoms
-          return SigArgRhs {..}
 
     parseBody :: ParsecS r (FunctionDefBody 'Parsed)
     parseBody =

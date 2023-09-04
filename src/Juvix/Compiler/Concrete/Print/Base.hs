@@ -793,18 +793,17 @@ instance (SingI s) => PrettyPrint (Argument s) where
     ArgumentSymbol s -> ppSymbolType s
     ArgumentWildcard w -> ppCode w
 
-instance (SingI s) => PrettyPrint (SigArgRhs s) where
-  ppCode :: (Members '[ExactPrint, Reader Options] r) => SigArgRhs s -> Sem r ()
-  ppCode SigArgRhs {..} =
-    ppCode _sigArgColon <+> ppExpressionType _sigArgType
-
 instance (SingI s) => PrettyPrint (SigArg s) where
   ppCode :: (Members '[ExactPrint, Reader Options] r) => SigArg s -> Sem r ()
   ppCode SigArg {..} = do
     let Irrelevant (l, r) = _sigArgDelims
         names' = hsep (fmap ppCode _sigArgNames)
-        rhs = ppCode <$> _sigArgRhs
-    ppCode l <> names' <+?> rhs <> ppCode r
+        colon' = ppCode <$> _sigArgColon
+        ty = ppExpressionType <$> _sigArgType
+        arg = case _sigArgImplicit of
+          ImplicitInstance | isNothing colon' -> mempty <>? ty
+          _ -> names' <+?> colon' <+?> ty
+    ppCode l <> arg <> ppCode r
 
 ppFunctionSignature :: (SingI s) => PrettyPrinting (FunctionDef s)
 ppFunctionSignature FunctionDef {..} = do

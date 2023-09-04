@@ -784,22 +784,15 @@ checkFunctionDef FunctionDef {..} = do
       names' <- forM _sigArgNames $ \case
         ArgumentSymbol s -> ArgumentSymbol <$> bindVariableSymbol s
         ArgumentWildcard w -> return $ ArgumentWildcard w
-      rhs' <- mapM checkArgRhs _sigArgRhs
+      ty' <- case _sigArgType of
+        Just s -> Just <$> checkParseExpressionAtoms s
+        Nothing -> return Nothing
       return
         SigArg
           { _sigArgNames = names',
-            _sigArgRhs = rhs',
+            _sigArgType = ty',
             ..
           }
-      where
-        checkArgRhs :: SigArgRhs 'Parsed -> Sem r (SigArgRhs 'Scoped)
-        checkArgRhs SigArgRhs {..} = do
-          ty' <- checkParseExpressionAtoms _sigArgType
-          return
-            SigArgRhs
-              { _sigArgType = ty',
-                _sigArgColon
-              }
     checkBody :: Sem r (FunctionDefBody 'Scoped)
     checkBody = case _signBody of
       SigBodyExpression e -> SigBodyExpression <$> checkParseExpressionAtoms e

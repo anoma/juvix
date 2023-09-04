@@ -22,9 +22,9 @@ showList {A} : {{Show A}} → List A → String
 g : {A : Type} → {{Show A}} → Nat := 5;
 
 instance
-showListI {A} : {{Show A}} → Show (List A) := mkShow (show := showList);
+showListI {A} {{Show A}} : Show (List A) := mkShow (show := showList);
 
-f {A} : {{Show A}} → A → String
+f {A} {{Show A}} : A → String
   | x := Show.show x;
 
 main : IO :=

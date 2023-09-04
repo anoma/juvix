@@ -463,9 +463,9 @@ goTopFunctionDef FunctionDef {..} = do
         argToParam :: SigArg 'Scoped -> Sem r (NonEmpty Internal.FunctionParameter)
         argToParam a@SigArg {..} = do
           let _paramImplicit = _sigArgImplicit
-          _paramType <- case _sigArgRhs of
+          _paramType <- case _sigArgType of
             Nothing -> return (Internal.smallUniverseE (getLoc a))
-            Just rhs -> goExpression (rhs ^. sigArgType)
+            Just ty -> goExpression ty
           let _paramImpligoExpressioncit = _sigArgImplicit
               mk :: Concrete.Argument 'Scoped -> Sem r Internal.FunctionParameter
               mk = \case

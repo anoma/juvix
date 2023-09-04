@@ -339,30 +339,14 @@ data IteratorSyntaxDef = IteratorSyntaxDef
 instance HasLoc IteratorSyntaxDef where
   getLoc IteratorSyntaxDef {..} = getLoc _iterSyntaxKw <> getLoc _iterSymbol
 
-data SigArgRhs (s :: Stage) = SigArgRhs
-  { _sigArgColon :: Irrelevant KeywordRef,
-    _sigArgType :: ExpressionType s
-  }
-
-deriving stock instance Show (SigArgRhs 'Parsed)
-
-deriving stock instance Show (SigArgRhs 'Scoped)
-
-deriving stock instance Eq (SigArgRhs 'Parsed)
-
-deriving stock instance Eq (SigArgRhs 'Scoped)
-
-deriving stock instance Ord (SigArgRhs 'Parsed)
-
-deriving stock instance Ord (SigArgRhs 'Scoped)
-
 data SigArg (s :: Stage) = SigArg
   { _sigArgDelims :: Irrelevant (KeywordRef, KeywordRef),
     _sigArgImplicit :: IsImplicit,
     _sigArgNames :: NonEmpty (Argument s),
-    -- | The rhs is only optional for implicit arguments. Omitting the rhs is
+    _sigArgColon :: Maybe (Irrelevant KeywordRef),
+    -- | The type is only optional for implicit arguments. Omitting the rhs is
     -- equivalent to writing `: Type`.
-    _sigArgRhs :: Maybe (SigArgRhs s)
+    _sigArgType :: Maybe (ExpressionType s)
   }
 
 deriving stock instance Show (SigArg 'Parsed)
@@ -1668,7 +1652,6 @@ makeLenses ''IteratorSyntaxDef
 makeLenses ''ConstructorDef
 makeLenses ''Module
 makeLenses ''SigArg
-makeLenses ''SigArgRhs
 makeLenses ''FunctionDef
 makeLenses ''AxiomDef
 makeLenses ''ExportInfo
