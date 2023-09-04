@@ -448,7 +448,6 @@ instance (SingI s) => PrettyPrint (AliasDef s) where
 instance (SingI s) => PrettyPrint (SyntaxDef s) where
   ppCode = \case
     SyntaxFixity f -> ppCode f
-    SyntaxFixityNew f -> ppCode f
     SyntaxOperator op -> ppCode op
     SyntaxIterator it -> ppCode it
     SyntaxAlias it -> ppCode it
@@ -601,11 +600,6 @@ instance PrettyPrint Precedence where
     PrecApp -> noLoc (pretty ("ω" :: Text))
     PrecUpdate -> noLoc (pretty ("ω₁" :: Text))
 
-ppFixityDefHeader :: (SingI s) => PrettyPrinting (FixitySyntaxDef s)
-ppFixityDefHeader FixitySyntaxDef {..} = do
-  let sym' = annotated (AnnKind KNameFixity) (ppSymbolType _fixitySymbol)
-  ppCode _fixitySyntaxKw <+> ppCode _fixityKw <+> sym'
-
 ppFixityDefHeaderNew :: (SingI s) => PrettyPrinting (FixitySyntaxDefNew s)
 ppFixityDefHeaderNew FixitySyntaxDefNew {..} = do
   let sym' = annotated (AnnKind KNameFixity) (ppSymbolType _nfixitySymbol)
@@ -652,12 +646,6 @@ instance (SingI s) => PrettyPrint (FixitySyntaxDefNew s) where
         body' = ppCode _nfixityInfo
     header' <+> ppCode _nfixityAssignKw <+> body'
 
-instance (SingI s) => PrettyPrint (FixitySyntaxDef s) where
-  ppCode f@FixitySyntaxDef {..} = do
-    let header' = ppFixityDefHeader f
-        txt = pretty (_fixityInfo ^. withLocParam . withSourceText)
-    header' <+> braces (noLoc txt)
-
 instance PrettyPrint OperatorSyntaxDef where
   ppCode OperatorSyntaxDef {..} = do
     let opSymbol' = ppUnkindedSymbol _opSymbol
@@ -676,9 +664,9 @@ instance PrettyPrint InfixApplication where
 instance PrettyPrint PostfixApplication where
   ppCode = apeHelper
 
-instance PrettyPrint IteratorInfoNew where
-  ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => IteratorInfoNew -> Sem r ()
-  ppCode IteratorInfoNew {..} = do
+instance PrettyPrint ParsedInteratorInfo where
+  ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => ParsedInteratorInfo -> Sem r ()
+  ppCode ParsedInteratorInfo {..} = do
     let (l, r) = _piteratorInfoBraces ^. unIrrelevant
         ppInt :: WithLoc Int -> Sem r ()
         ppInt = morphemeWithLoc . fmap (annotate AnnLiteralInteger . pretty)

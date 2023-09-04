@@ -515,16 +515,10 @@ builtinStatement = do
 syntaxDef :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (SyntaxDef 'Parsed)
 syntaxDef = do
   syn <- kw kwSyntax
-  SyntaxFixity
-    <$> fixitySyntaxDef syn
-      <?|> SyntaxFixityNew -- TODO replace <?|> after removing old syntax
-    <$> fixitySyntaxDefNew syn
-    <|> SyntaxOperator
-      <$> operatorSyntaxDef syn
-    <|> SyntaxIterator
-      <$> iteratorSyntaxDef syn
-    <|> SyntaxAlias
-      <$> aliasDef syn
+  SyntaxFixity <$> fixitySyntaxDef syn
+    <|> SyntaxOperator <$> operatorSyntaxDef syn
+    <|> SyntaxIterator <$> iteratorSyntaxDef syn
+    <|> SyntaxAlias <$> aliasDef syn
 
 aliasDef :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => KeywordRef -> ParsecS r (AliasDef 'Parsed)
 aliasDef synKw = do
@@ -585,22 +579,14 @@ parsedFixityInfoNew = do
         <|> kw kwBinary
           $> Binary
 
-fixitySyntaxDefNew :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => KeywordRef -> ParsecS r (FixitySyntaxDefNew 'Parsed)
-fixitySyntaxDefNew _nfixitySyntaxKw = P.label "<fixity declaration>" $ do
+fixitySyntaxDef :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => KeywordRef -> ParsecS r (FixitySyntaxDefNew 'Parsed)
+fixitySyntaxDef _nfixitySyntaxKw = P.label "<fixity declaration>" $ do
   _nfixityDoc <- getJudoc
   _nfixityKw <- kw kwFixity
   _nfixitySymbol <- symbol
   _nfixityAssignKw <- kw kwAssign
   _nfixityInfo <- parsedFixityInfoNew
   return FixitySyntaxDefNew {..}
-
-fixitySyntaxDef :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => KeywordRef -> ParsecS r (FixitySyntaxDef 'Parsed)
-fixitySyntaxDef _fixitySyntaxKw = P.label "<fixity declaration>" $ do
-  _fixityKw <- kw kwFixity
-  _fixitySymbol <- symbol
-  _fixityInfo <- withLoc (parseYaml "{" "}")
-  _fixityDoc <- getJudoc
-  return FixitySyntaxDef {..}
 
 operatorSyntaxDef :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => KeywordRef -> ParsecS r OperatorSyntaxDef
 operatorSyntaxDef _opSyntaxKw = do
@@ -609,11 +595,11 @@ operatorSyntaxDef _opSyntaxKw = do
   _opFixity <- symbol
   return OperatorSyntaxDef {..}
 
-iteratorInfoNew ::
+parsedIteratorInfo ::
   forall r.
   (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
-  ParsecS r IteratorInfoNew
-iteratorInfoNew = do
+  ParsecS r ParsedInteratorInfo
+parsedIteratorInfo = do
   l <- kw delimBraceL
   (_piteratorInfoInitNum, _piteratorInfoRangeNum) <- intercalateEffect semicolon $ do
     ini <- toPermutationWithDefault Nothing (Just <$> pinit)
@@ -621,7 +607,7 @@ iteratorInfoNew = do
     pure (ini, ran)
   r <- kw delimBraceR
   let _piteratorInfoBraces = Irrelevant (l, r)
-  return IteratorInfoNew {..}
+  return ParsedInteratorInfo {..}
   where
     pinit :: ParsecS r (WithLoc Int)
     pinit = do
@@ -637,7 +623,7 @@ iteratorSyntaxDef :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocS
 iteratorSyntaxDef _iterSyntaxKw = do
   _iterIteratorKw <- kw kwIterator
   _iterSymbol <- symbol
-  _iterInfo <- optional iteratorInfoNew
+  _iterInfo <- optional parsedIteratorInfo
   return IteratorSyntaxDef {..}
 
 --------------------------------------------------------------------------------

@@ -144,8 +144,6 @@ type family ModuleEndType t = res | res -> t where
 -- choices on the user.
 type ParsedPragmas = WithLoc (WithSource Pragmas)
 
-type ParsedFixityInfo = WithLoc (WithSource FixityInfo)
-
 data Argument (s :: Stage)
   = ArgumentSymbol (SymbolType s)
   | ArgumentWildcard Wildcard
@@ -269,7 +267,7 @@ deriving stock instance (Ord (AliasDef 'Parsed))
 
 deriving stock instance (Ord (AliasDef 'Scoped))
 
-data IteratorInfoNew = IteratorInfoNew
+data ParsedInteratorInfo = ParsedInteratorInfo
   { _piteratorInfoInitNum :: Maybe (WithLoc Int),
     _piteratorInfoRangeNum :: Maybe (WithLoc Int),
     _piteratorInfoBraces :: Irrelevant (KeywordRef, KeywordRef)
@@ -277,8 +275,7 @@ data IteratorInfoNew = IteratorInfoNew
   deriving stock (Show, Eq, Ord, Generic)
 
 data SyntaxDef (s :: Stage)
-  = SyntaxFixity (FixitySyntaxDef s)
-  | SyntaxFixityNew (FixitySyntaxDefNew s)
+  = SyntaxFixity (FixitySyntaxDefNew s)
   | SyntaxOperator OperatorSyntaxDef
   | SyntaxIterator IteratorSyntaxDef
   | SyntaxAlias (AliasDef s)
@@ -337,35 +334,12 @@ deriving stock instance (Ord (FixitySyntaxDefNew 'Parsed))
 
 deriving stock instance (Ord (FixitySyntaxDefNew 'Scoped))
 
-data FixitySyntaxDef (s :: Stage) = FixitySyntaxDef
-  { _fixitySymbol :: SymbolType s,
-    _fixityDoc :: Maybe (Judoc s),
-    _fixityInfo :: ParsedFixityInfo,
-    _fixityKw :: KeywordRef,
-    _fixitySyntaxKw :: KeywordRef
-  }
-
-deriving stock instance (Show (FixitySyntaxDef 'Parsed))
-
-deriving stock instance (Show (FixitySyntaxDef 'Scoped))
-
-deriving stock instance (Eq (FixitySyntaxDef 'Parsed))
-
-deriving stock instance (Eq (FixitySyntaxDef 'Scoped))
-
-deriving stock instance (Ord (FixitySyntaxDef 'Parsed))
-
-deriving stock instance (Ord (FixitySyntaxDef 'Scoped))
-
 data FixityDef = FixityDef
   { _fixityDefSymbol :: S.Symbol,
     _fixityDefFixity :: Fixity,
     _fixityDefPrec :: Int
   }
   deriving stock (Show, Eq, Ord)
-
-instance HasLoc (FixitySyntaxDef s) where
-  getLoc FixitySyntaxDef {..} = getLoc _fixitySyntaxKw <> getLoc _fixityInfo
 
 data OperatorSyntaxDef = OperatorSyntaxDef
   { _opSymbol :: Symbol,
@@ -380,7 +354,7 @@ instance HasLoc OperatorSyntaxDef where
 
 data IteratorSyntaxDef = IteratorSyntaxDef
   { _iterSymbol :: Symbol,
-    _iterInfo :: Maybe IteratorInfoNew,
+    _iterInfo :: Maybe ParsedInteratorInfo,
     _iterSyntaxKw :: KeywordRef,
     _iterIteratorKw :: KeywordRef
   }
@@ -1706,7 +1680,6 @@ makeLenses ''Application
 makeLenses ''Let
 makeLenses ''FunctionParameters
 makeLenses ''Import
-makeLenses ''FixitySyntaxDef
 makeLenses ''OperatorSyntaxDef
 makeLenses ''IteratorSyntaxDef
 makeLenses ''ConstructorDef
@@ -1754,7 +1727,6 @@ instance HasLoc (FixitySyntaxDefNew s) where
 instance (SingI s) => HasLoc (SyntaxDef s) where
   getLoc = \case
     SyntaxFixity t -> getLoc t
-    SyntaxFixityNew t -> getLoc t
     SyntaxOperator t -> getLoc t
     SyntaxIterator t -> getLoc t
     SyntaxAlias t -> getLoc t
@@ -2402,8 +2374,8 @@ scopedIdenName f n = case n ^. scopedIdenAlias of
     a' <- f a
     pure (set scopedIdenAlias (Just a') n)
 
-fromParsedIteratorInfo :: IteratorInfoNew -> IteratorInfo
-fromParsedIteratorInfo IteratorInfoNew {..} =
+fromParsedIteratorInfo :: ParsedInteratorInfo -> IteratorInfo
+fromParsedIteratorInfo ParsedInteratorInfo {..} =
   IteratorInfo
     { _iteratorInfoInitNum = (^. withLocParam) <$> _piteratorInfoInitNum,
       _iteratorInfoRangeNum = (^. withLocParam) <$> _piteratorInfoRangeNum

@@ -637,12 +637,12 @@ checkFixityInfoNew ParsedFixityInfoNew {..} = do
         _nfixityBraces
       }
 
-checkFixitySyntaxDefNew ::
+checkFixitySyntaxDef ::
   forall r.
   (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, State ScoperSyntax, NameIdGen, InfoTableBuilder] r) =>
   FixitySyntaxDefNew 'Parsed ->
   Sem r (FixitySyntaxDefNew 'Scoped)
-checkFixitySyntaxDefNew FixitySyntaxDefNew {..} = topBindings $ do
+checkFixitySyntaxDef FixitySyntaxDefNew {..} = topBindings $ do
   sym <- bindFixitySymbol _nfixitySymbol
   doc <- mapM checkJudoc _nfixityDoc
   info' <- checkFixityInfoNew _nfixityInfo
@@ -657,28 +657,12 @@ checkFixitySyntaxDefNew FixitySyntaxDefNew {..} = topBindings $ do
         _nfixityKw
       }
 
-checkFixitySyntaxDef ::
-  forall r.
-  (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, State ScoperSyntax, NameIdGen, InfoTableBuilder] r) =>
-  FixitySyntaxDef 'Parsed ->
-  Sem r (FixitySyntaxDef 'Scoped)
-checkFixitySyntaxDef FixitySyntaxDef {..} = topBindings $ do
-  sym <- bindFixitySymbol _fixitySymbol
-  doc <- mapM checkJudoc _fixityDoc
-  registerHighlightDoc (sym ^. S.nameId) doc
-  return
-    FixitySyntaxDef
-      { _fixitySymbol = sym,
-        _fixityDoc = doc,
-        ..
-      }
-
-resolveFixitySyntaxDefNew ::
+resolveFixitySyntaxDef ::
   forall r.
   (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, State ScoperSyntax, NameIdGen, InfoTableBuilder] r) =>
   FixitySyntaxDefNew 'Parsed ->
   Sem r ()
-resolveFixitySyntaxDefNew fdef@FixitySyntaxDefNew {..} = topBindings $ do
+resolveFixitySyntaxDef fdef@FixitySyntaxDefNew {..} = topBindings $ do
   sym <- reserveSymbolOf SKNameFixity Nothing _nfixitySymbol
   let fi :: ParsedFixityInfoNew 'Parsed = _nfixityInfo
   same <- mapM checkFixitySymbol (fi ^. nfixityPrecSame)
@@ -696,9 +680,9 @@ resolveFixitySyntaxDefNew fdef@FixitySyntaxDefNew {..} = topBindings $ do
       abovePrec :: Integer
       abovePrec = fromIntegral $ minimum (maxInt - 1 : maybe [] (map (getPrec tab)) below)
   when (belowPrec >= abovePrec + 1) $
-    throw (ErrPrecedenceInconsistencyNew (PrecedenceInconsistencyErrorNew fdef))
+    throw (ErrPrecedenceInconsistency (PrecedenceInconsistencyError fdef))
   when (isJust same && not (null below && null above)) $
-    throw (ErrPrecedenceInconsistencyNew (PrecedenceInconsistencyErrorNew fdef))
+    throw (ErrPrecedenceInconsistency (PrecedenceInconsistencyError fdef))
   -- we need Integer to avoid overflow when computing prec
   let prec = fromMaybe (fromInteger $ (abovePrec + belowPrec) `div` 2) samePrec
       fx =
@@ -722,75 +706,6 @@ resolveFixitySyntaxDefNew fdef@FixitySyntaxDefNew {..} = topBindings $ do
       }
   return ()
   where
-    getFixityDef :: InfoTable -> S.Symbol -> FixityDef
-    getFixityDef tab = fromJust . flip HashMap.lookup (tab ^. infoFixities) . (^. S.nameId)
-
-    getPrec :: InfoTable -> S.Symbol -> Int
-    getPrec tab = (^. fixityDefPrec) . getFixityDef tab
-
-    getFixityId :: InfoTable -> S.Symbol -> S.NameId
-    getFixityId tab = fromJust . (^. fixityDefFixity . fixityId) . getFixityDef tab
-
-resolveFixitySyntaxDef ::
-  forall r.
-  (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, State ScoperSyntax, NameIdGen, InfoTableBuilder] r) =>
-  FixitySyntaxDef 'Parsed ->
-  Sem r ()
-resolveFixitySyntaxDef fdef@FixitySyntaxDef {..} = topBindings $ do
-  sym <- reserveSymbolOf SKNameFixity Nothing _fixitySymbol
-  let loc = getLoc _fixityInfo
-      fi = _fixityInfo ^. withLocParam . withSourceValue
-  same <- checkMaybeFixity loc $ fi ^. FI.fixityPrecSame
-  below <- mapM (checkFixitySymbol . WithLoc loc) $ fi ^. FI.fixityPrecBelow
-  above <- mapM (checkFixitySymbol . WithLoc loc) $ fi ^. FI.fixityPrecAbove
-  tab <- getInfoTable
-  fid <- maybe freshNameId (return . getFixityId tab) same
-  let below' = map (getFixityId tab) below
-      above' = map (getFixityId tab) above
-  forM_ above' (`registerPrecedence` fid)
-  forM_ below' (registerPrecedence fid)
-  let samePrec = getPrec tab <$> same
-      belowPrec :: Integer
-      belowPrec = fromIntegral $ maximum (minInt + 1 : map (getPrec tab) above)
-      abovePrec :: Integer
-      abovePrec = fromIntegral $ minimum (maxInt - 1 : map (getPrec tab) below)
-  when (belowPrec >= abovePrec + 1) $
-    throw (ErrPrecedenceInconsistency (PrecedenceInconsistencyError fdef))
-  when (isJust same && not (null below && null above)) $
-    throw (ErrPrecedenceInconsistency (PrecedenceInconsistencyError fdef))
-  -- we need Integer to avoid overflow when computing prec
-  let prec = fromMaybe (fromInteger $ (abovePrec + belowPrec) `div` 2) samePrec
-      fx =
-        Fixity
-          { _fixityId = Just fid,
-            _fixityPrecedence = PrecNat prec,
-            _fixityArity =
-              case fi ^. FI.fixityArity of
-                FI.Unary -> OpUnary AssocPostfix
-                FI.Binary -> case fi ^. FI.fixityAssoc of
-                  Nothing -> OpBinary AssocNone
-                  Just FI.AssocLeft -> OpBinary AssocLeft
-                  Just FI.AssocRight -> OpBinary AssocRight
-                  Just FI.AssocNone -> OpBinary AssocNone
-          }
-  registerFixity
-    @$> FixityDef
-      { _fixityDefSymbol = sym,
-        _fixityDefFixity = fx,
-        _fixityDefPrec = prec
-      }
-  return ()
-  where
-    checkMaybeFixity ::
-      forall r'.
-      (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder] r') =>
-      Interval ->
-      Maybe Text ->
-      Sem r' (Maybe S.Symbol)
-    checkMaybeFixity loc = \case
-      Just same -> Just <$> checkFixitySymbol (WithLoc loc same)
-      Nothing -> return Nothing
-
     getFixityDef :: InfoTable -> S.Symbol -> FixityDef
     getFixityDef tab = fromJust . flip HashMap.lookup (tab ^. infoFixities) . (^. S.nameId)
 
@@ -1775,7 +1690,6 @@ checkLetFunDefs =
             fromSyn = \case
               SyntaxAlias a -> LetAliasDef a
               SyntaxFixity {} -> impossible
-              SyntaxFixityNew {} -> impossible
               SyntaxOperator {} -> impossible
               SyntaxIterator {} -> impossible
 
@@ -2392,7 +2306,6 @@ checkSyntaxDef ::
   Sem r (SyntaxDef 'Scoped)
 checkSyntaxDef = \case
   SyntaxFixity fixDef -> SyntaxFixity <$> checkFixitySyntaxDef fixDef
-  SyntaxFixityNew def -> SyntaxFixityNew <$> checkFixitySyntaxDefNew def
   SyntaxAlias a -> SyntaxAlias <$> checkAliasDef a
   SyntaxOperator opDef -> return $ SyntaxOperator opDef
   SyntaxIterator iterDef -> return $ SyntaxIterator iterDef
@@ -2423,7 +2336,6 @@ resolveSyntaxDef ::
   Sem r ()
 resolveSyntaxDef = \case
   SyntaxFixity fixDef -> resolveFixitySyntaxDef fixDef
-  SyntaxFixityNew def -> resolveFixitySyntaxDefNew def
   SyntaxOperator opDef -> resolveOperatorSyntaxDef opDef
   SyntaxIterator iterDef -> resolveIteratorSyntaxDef iterDef
   SyntaxAlias a -> reserveAliasDef a
