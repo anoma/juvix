@@ -284,8 +284,9 @@ checkLhs loc guessedBody ariSignature pats = do
       [] -> case tailHelper a of
         Nothing -> return ([], a)
         Just tailUnderscores -> do
-          let a' = foldArity (over ufoldArityParams (drop tailUnderscores) (unfoldArity' a))
-          wildcards <- replicateM tailUnderscores (genWildcard Implicit)
+          let n = length tailUnderscores
+              a' = foldArity (over ufoldArityParams (drop n) (unfoldArity' a))
+          wildcards <- mapM genWildcard tailUnderscores
           return (wildcards, a')
       lhs@(p : ps) -> case a of
         ArityUnit ->
@@ -350,11 +351,13 @@ checkLhs loc guessedBody ariSignature pats = do
 
     -- This is an heuristic and it can have an undesired result.
     -- Sometimes the outcome may even be confusing.
-    tailHelper :: Arity -> Maybe Int
+    tailHelper :: Arity -> Maybe [IsImplicit]
     tailHelper a
-      | 0 < pref = Just pref
+      | 0 < pref = Just pref'
       | otherwise = Nothing
       where
+        pref' :: [IsImplicit]
+        pref' = map paramToImplicit (take pref (unfoldArity a))
         pref :: Int
         pref = aI - targetI
         preceedingImplicits :: Arity -> Int
@@ -364,11 +367,16 @@ checkLhs loc guessedBody ariSignature pats = do
             isParamImplicit = \case
               ParamExplicit {} -> False
               ParamImplicit -> True
-              ParamImplicitInstance -> False
+              ParamImplicitInstance -> True
         aI :: Int
         aI = preceedingImplicits a
         targetI :: Int
         targetI = preceedingImplicits guessedBody
+        paramToImplicit :: ArityParameter -> IsImplicit
+        paramToImplicit = \case
+          ParamExplicit {} -> impossible
+          ParamImplicit -> Implicit
+          ParamImplicitInstance -> ImplicitInstance
 
 checkPattern ::
   forall r.
