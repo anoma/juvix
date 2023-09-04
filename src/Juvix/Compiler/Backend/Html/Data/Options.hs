@@ -16,12 +16,14 @@ data HtmlOptions = HtmlOptions
 data Theme
   = Nord
   | Ayu
+  | Macchiato
   deriving stock (Enum, Eq, Ord, Bounded, Data)
 
 instance Show Theme where
   show = \case
     Nord -> "nord"
     Ayu -> "ayu"
+    Macchiato -> "macchiato"
 
 data ThemeLight
   = Dark
@@ -31,6 +33,7 @@ data ThemeLight
 themeLight :: Theme -> ThemeLight
 themeLight = \case
   Nord -> Dark
+  Macchiato -> Dark
   Ayu -> Light
 
 data HtmlKind
