@@ -437,10 +437,10 @@ goStatement = \case
       SyntaxOperator {} -> mempty
       SyntaxIterator {} -> mempty
 
-goFixity :: forall r. (Members '[Reader HtmlOptions, Reader NormalizedTable] r) => FixitySyntaxDefNew 'Scoped -> Sem r Html
+goFixity :: forall r. (Members '[Reader HtmlOptions, Reader NormalizedTable] r) => FixitySyntaxDef 'Scoped -> Sem r Html
 goFixity def = do
   sig' <- ppHelper (ppFixityDefHeaderNew def)
-  header' <- defHeader (def ^. nfixitySymbol) sig' (def ^. nfixityDoc)
+  header' <- defHeader (def ^. fixitySymbol) sig' (def ^. fixityDoc)
   prec' <- mkPrec
   let tbl' = table . tbody $ ari <> prec'
   return $
@@ -451,20 +451,20 @@ goFixity def = do
                <> tbl'
          )
   where
-    info :: ParsedFixityInfoNew 'Scoped
-    info = def ^. nfixityInfo
+    info :: ParsedFixityInfo 'Scoped
+    info = def ^. fixityInfo
 
     row :: Html -> Html
     row x = tr $ td ! Attr.class_ "src" $ x
 
     mkPrec :: Sem r Html
-    mkPrec = case info ^. nfixityPrecSame of
+    mkPrec = case info ^. fixityPrecSame of
       Just txt -> do
         s <- ppCodeHtml defaultOptions txt
         return (row $ toHtml ("Same precedence as " <> s))
       Nothing ->
-        goPrec "Higher" (info ^. nfixityPrecAbove)
-          <> goPrec "Lower" (info ^. nfixityPrecBelow)
+        goPrec "Higher" (info ^. fixityPrecAbove)
+          <> goPrec "Lower" (info ^. fixityPrecBelow)
         where
           goPrec :: Html -> Maybe [S.Symbol] -> Sem r Html
           goPrec above ls = case ls >>= nonEmpty of
@@ -475,8 +475,8 @@ goFixity def = do
 
     ari :: Html
     ari =
-      let arit = toHtml @String $ show (info ^. nfixityArity)
-          assoc = toHtml @String $ case fromMaybe AssocNone (info ^. nfixityAssoc) of
+      let arit = toHtml @String $ show (info ^. fixityParsedArity)
+          assoc = toHtml @String $ case fromMaybe AssocNone (info ^. fixityAssoc) of
             AssocNone -> ""
             AssocRight -> ", right-associative"
             AssocLeft -> ", left-associative"

@@ -536,19 +536,19 @@ aliasDef synKw = do
 precedence :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r Precedence
 precedence = PrecNat <$> (fst <$> decimal)
 
-parsedFixityInfoNew :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (ParsedFixityInfoNew 'Parsed)
-parsedFixityInfoNew = do
-  _nfixityArity <- withLoc ari
+parsedFixityInfo :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (ParsedFixityInfo 'Parsed)
+parsedFixityInfo = do
+  _fixityParsedArity <- withLoc ari
   l <- kw delimBraceL
-  (_nfixityAssoc, _nfixityPrecBelow, _nfixityPrecAbove, _nfixityPrecSame) <- intercalateEffect semicolon $ do
+  (_fixityAssoc, _fixityPrecBelow, _fixityPrecAbove, _fixityPrecSame) <- intercalateEffect semicolon $ do
     as <- toPermutationWithDefault Nothing (Just <$> assoc)
     bel <- toPermutationWithDefault Nothing (Just <$> belowAbove kwBelow)
     abov <- toPermutationWithDefault Nothing (Just <$> belowAbove kwAbove)
     sam <- toPermutationWithDefault Nothing (Just <$> same)
     pure (as, bel, abov, sam)
   r <- kw delimBraceR
-  let _nfixityBraces = Irrelevant (l, r)
-  return ParsedFixityInfoNew {..}
+  let _fixityBraces = Irrelevant (l, r)
+  return ParsedFixityInfo {..}
   where
     same :: ParsecS r Symbol
     same = do
@@ -579,14 +579,14 @@ parsedFixityInfoNew = do
         <|> kw kwBinary
           $> Binary
 
-fixitySyntaxDef :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => KeywordRef -> ParsecS r (FixitySyntaxDefNew 'Parsed)
-fixitySyntaxDef _nfixitySyntaxKw = P.label "<fixity declaration>" $ do
-  _nfixityDoc <- getJudoc
-  _nfixityKw <- kw kwFixity
-  _nfixitySymbol <- symbol
-  _nfixityAssignKw <- kw kwAssign
-  _nfixityInfo <- parsedFixityInfoNew
-  return FixitySyntaxDefNew {..}
+fixitySyntaxDef :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => KeywordRef -> ParsecS r (FixitySyntaxDef 'Parsed)
+fixitySyntaxDef _fixitySyntaxKw = P.label "<fixity declaration>" $ do
+  _fixityDoc <- getJudoc
+  _fixityKw <- kw kwFixity
+  _fixitySymbol <- symbol
+  _fixityAssignKw <- kw kwAssign
+  _fixityInfo <- parsedFixityInfo
+  return FixitySyntaxDef {..}
 
 operatorSyntaxDef :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => KeywordRef -> ParsecS r OperatorSyntaxDef
 operatorSyntaxDef _opSyntaxKw = do

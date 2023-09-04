@@ -275,7 +275,7 @@ data ParsedInteratorInfo = ParsedInteratorInfo
   deriving stock (Show, Eq, Ord, Generic)
 
 data SyntaxDef (s :: Stage)
-  = SyntaxFixity (FixitySyntaxDefNew s)
+  = SyntaxFixity (FixitySyntaxDef s)
   | SyntaxOperator OperatorSyntaxDef
   | SyntaxIterator IteratorSyntaxDef
   | SyntaxAlias (AliasDef s)
@@ -292,47 +292,47 @@ deriving stock instance (Ord (SyntaxDef 'Parsed))
 
 deriving stock instance (Ord (SyntaxDef 'Scoped))
 
-data ParsedFixityInfoNew (s :: Stage) = ParsedFixityInfoNew
-  { _nfixityArity :: WithLoc Arity,
-    _nfixityAssoc :: Maybe BinaryAssoc,
-    _nfixityPrecSame :: Maybe (SymbolType s),
-    _nfixityPrecBelow :: Maybe [SymbolType s],
-    _nfixityPrecAbove :: Maybe [SymbolType s],
-    _nfixityBraces :: Irrelevant (KeywordRef, KeywordRef)
+data ParsedFixityInfo (s :: Stage) = ParsedFixityInfo
+  { _fixityParsedArity :: WithLoc Arity,
+    _fixityAssoc :: Maybe BinaryAssoc,
+    _fixityPrecSame :: Maybe (SymbolType s),
+    _fixityPrecBelow :: Maybe [SymbolType s],
+    _fixityPrecAbove :: Maybe [SymbolType s],
+    _fixityBraces :: Irrelevant (KeywordRef, KeywordRef)
   }
 
-deriving stock instance (Show (ParsedFixityInfoNew 'Parsed))
+deriving stock instance (Show (ParsedFixityInfo 'Parsed))
 
-deriving stock instance (Show (ParsedFixityInfoNew 'Scoped))
+deriving stock instance (Show (ParsedFixityInfo 'Scoped))
 
-deriving stock instance (Eq (ParsedFixityInfoNew 'Parsed))
+deriving stock instance (Eq (ParsedFixityInfo 'Parsed))
 
-deriving stock instance (Eq (ParsedFixityInfoNew 'Scoped))
+deriving stock instance (Eq (ParsedFixityInfo 'Scoped))
 
-deriving stock instance (Ord (ParsedFixityInfoNew 'Parsed))
+deriving stock instance (Ord (ParsedFixityInfo 'Parsed))
 
-deriving stock instance (Ord (ParsedFixityInfoNew 'Scoped))
+deriving stock instance (Ord (ParsedFixityInfo 'Scoped))
 
-data FixitySyntaxDefNew (s :: Stage) = FixitySyntaxDefNew
-  { _nfixitySymbol :: SymbolType s,
-    _nfixityDoc :: Maybe (Judoc s),
-    _nfixityInfo :: ParsedFixityInfoNew s,
-    _nfixityKw :: KeywordRef,
-    _nfixityAssignKw :: KeywordRef,
-    _nfixitySyntaxKw :: KeywordRef
+data FixitySyntaxDef (s :: Stage) = FixitySyntaxDef
+  { _fixitySymbol :: SymbolType s,
+    _fixityDoc :: Maybe (Judoc s),
+    _fixityInfo :: ParsedFixityInfo s,
+    _fixityKw :: KeywordRef,
+    _fixityAssignKw :: KeywordRef,
+    _fixitySyntaxKw :: KeywordRef
   }
 
-deriving stock instance (Show (FixitySyntaxDefNew 'Parsed))
+deriving stock instance (Show (FixitySyntaxDef 'Parsed))
 
-deriving stock instance (Show (FixitySyntaxDefNew 'Scoped))
+deriving stock instance (Show (FixitySyntaxDef 'Scoped))
 
-deriving stock instance (Eq (FixitySyntaxDefNew 'Parsed))
+deriving stock instance (Eq (FixitySyntaxDef 'Parsed))
 
-deriving stock instance (Eq (FixitySyntaxDefNew 'Scoped))
+deriving stock instance (Eq (FixitySyntaxDef 'Scoped))
 
-deriving stock instance (Ord (FixitySyntaxDefNew 'Parsed))
+deriving stock instance (Ord (FixitySyntaxDef 'Parsed))
 
-deriving stock instance (Ord (FixitySyntaxDefNew 'Scoped))
+deriving stock instance (Ord (FixitySyntaxDef 'Scoped))
 
 data FixityDef = FixityDef
   { _fixityDefSymbol :: S.Symbol,
@@ -1710,19 +1710,19 @@ makeLenses ''ArgumentBlock
 makeLenses ''NamedArgument
 makeLenses ''NamedApplication
 makeLenses ''AliasDef
-makeLenses ''FixitySyntaxDefNew
-makeLenses ''ParsedFixityInfoNew
+makeLenses ''FixitySyntaxDef
+makeLenses ''ParsedFixityInfo
 
 instance (SingI s) => HasLoc (AliasDef s) where
   getLoc AliasDef {..} = getLoc _aliasDefSyntaxKw <> getLocIdentifierType _aliasDefAsName
 
-instance HasLoc (ParsedFixityInfoNew s) where
+instance HasLoc (ParsedFixityInfo s) where
   getLoc def = getLoc l <> getLoc r
     where
-      (l, r) = def ^. nfixityBraces . unIrrelevant
+      (l, r) = def ^. fixityBraces . unIrrelevant
 
-instance HasLoc (FixitySyntaxDefNew s) where
-  getLoc def = getLoc (def ^. nfixitySyntaxKw) <> getLoc (def ^. nfixityInfo)
+instance HasLoc (FixitySyntaxDef s) where
+  getLoc def = getLoc (def ^. fixitySyntaxKw) <> getLoc (def ^. fixityInfo)
 
 instance (SingI s) => HasLoc (SyntaxDef s) where
   getLoc = \case

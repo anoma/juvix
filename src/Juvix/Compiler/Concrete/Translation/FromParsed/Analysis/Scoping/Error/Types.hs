@@ -802,7 +802,7 @@ instance ToGenericError RepeatedField where
       i = getLoc _repeatedField
 
 newtype PrecedenceInconsistencyError = PrecedenceInconsistencyError
-  { _precedenceInconsistencyErrorFixityDef :: FixitySyntaxDefNew 'Parsed
+  { _precedenceInconsistencyErrorFixityDef :: FixitySyntaxDef 'Parsed
   }
   deriving stock (Show)
 
@@ -811,7 +811,7 @@ instance ToGenericError PrecedenceInconsistencyError where
     opts <- fromGenericOptions <$> ask
     let msg =
           "Cannot resolve precedence ordering for "
-            <+> ppCode opts (_precedenceInconsistencyErrorFixityDef ^. nfixitySymbol)
+            <+> ppCode opts (_precedenceInconsistencyErrorFixityDef ^. fixitySymbol)
     return
       GenericError
         { _genericErrorLoc = i,

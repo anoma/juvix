@@ -600,10 +600,10 @@ instance PrettyPrint Precedence where
     PrecApp -> noLoc (pretty ("ω" :: Text))
     PrecUpdate -> noLoc (pretty ("ω₁" :: Text))
 
-ppFixityDefHeaderNew :: (SingI s) => PrettyPrinting (FixitySyntaxDefNew s)
-ppFixityDefHeaderNew FixitySyntaxDefNew {..} = do
-  let sym' = annotated (AnnKind KNameFixity) (ppSymbolType _nfixitySymbol)
-  ppCode _nfixitySyntaxKw <+> ppCode _nfixityKw <+> sym'
+ppFixityDefHeaderNew :: (SingI s) => PrettyPrinting (FixitySyntaxDef s)
+ppFixityDefHeaderNew FixitySyntaxDef {..} = do
+  let sym' = annotated (AnnKind KNameFixity) (ppSymbolType _fixitySymbol)
+  ppCode _fixitySyntaxKw <+> ppCode _fixityKw <+> sym'
 
 instance PrettyPrint Arity where
   ppCode = \case
@@ -622,29 +622,29 @@ ppSymbolList items = do
   hsepSemicolon (map ppSymbolType items)
   ppCode Kw.kwBracketR
 
-instance (SingI s) => PrettyPrint (ParsedFixityInfoNew s) where
-  ppCode ParsedFixityInfoNew {..} = do
-    let (l, r) = _nfixityBraces ^. unIrrelevant
+instance (SingI s) => PrettyPrint (ParsedFixityInfo s) where
+  ppCode ParsedFixityInfo {..} = do
+    let (l, r) = _fixityBraces ^. unIrrelevant
         assocItem = do
-          a <- _nfixityAssoc
+          a <- _fixityAssoc
           return (ppCode Kw.kwAssoc <+> ppCode Kw.kwAssign <+> ppCode a)
         sameItem = do
-          a <- _nfixityPrecSame
+          a <- _fixityPrecSame
           return (ppCode Kw.kwSame <+> ppCode Kw.kwAssign <+> ppSymbolType a)
         aboveItem = do
-          a <- _nfixityPrecAbove
+          a <- _fixityPrecAbove
           return (ppCode Kw.kwAbove <+> ppCode Kw.kwAssign <+> ppSymbolList a)
         belowItem = do
-          a <- _nfixityPrecBelow
+          a <- _fixityPrecBelow
           return (ppCode Kw.kwAbove <+> ppCode Kw.kwAssign <+> ppSymbolList a)
         items = sepSemicolon (catMaybes [assocItem, sameItem, aboveItem, belowItem])
-    ppCode _nfixityArity <+> ppCode l <> items <> ppCode r
+    ppCode _fixityParsedArity <+> ppCode l <> items <> ppCode r
 
-instance (SingI s) => PrettyPrint (FixitySyntaxDefNew s) where
-  ppCode f@FixitySyntaxDefNew {..} = do
+instance (SingI s) => PrettyPrint (FixitySyntaxDef s) where
+  ppCode f@FixitySyntaxDef {..} = do
     let header' = ppFixityDefHeaderNew f
-        body' = ppCode _nfixityInfo
-    header' <+> ppCode _nfixityAssignKw <+> body'
+        body' = ppCode _fixityInfo
+    header' <+> ppCode _fixityAssignKw <+> body'
 
 instance PrettyPrint OperatorSyntaxDef where
   ppCode OperatorSyntaxDef {..} = do

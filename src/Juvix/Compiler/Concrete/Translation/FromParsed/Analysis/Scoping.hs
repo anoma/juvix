@@ -618,56 +618,56 @@ readScopeModule import_ = do
     addImport :: ScopeParameters -> ScopeParameters
     addImport = over scopeTopParents (cons import_)
 
-checkFixityInfoNew ::
+checkFixityInfo ::
   forall r.
   (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, State ScoperSyntax, NameIdGen, InfoTableBuilder] r) =>
-  ParsedFixityInfoNew 'Parsed ->
-  Sem r (ParsedFixityInfoNew 'Scoped)
-checkFixityInfoNew ParsedFixityInfoNew {..} = do
-  same' <- mapM checkFixitySymbol _nfixityPrecSame
-  below' <- mapM (mapM checkFixitySymbol) _nfixityPrecBelow
-  above' <- mapM (mapM checkFixitySymbol) _nfixityPrecAbove
+  ParsedFixityInfo 'Parsed ->
+  Sem r (ParsedFixityInfo 'Scoped)
+checkFixityInfo ParsedFixityInfo {..} = do
+  same' <- mapM checkFixitySymbol _fixityPrecSame
+  below' <- mapM (mapM checkFixitySymbol) _fixityPrecBelow
+  above' <- mapM (mapM checkFixitySymbol) _fixityPrecAbove
   return
-    ParsedFixityInfoNew
-      { _nfixityPrecSame = same',
-        _nfixityPrecAbove = above',
-        _nfixityPrecBelow = below',
-        _nfixityArity,
-        _nfixityAssoc,
-        _nfixityBraces
+    ParsedFixityInfo
+      { _fixityPrecSame = same',
+        _fixityPrecAbove = above',
+        _fixityPrecBelow = below',
+        _fixityParsedArity,
+        _fixityAssoc,
+        _fixityBraces
       }
 
 checkFixitySyntaxDef ::
   forall r.
   (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, State ScoperSyntax, NameIdGen, InfoTableBuilder] r) =>
-  FixitySyntaxDefNew 'Parsed ->
-  Sem r (FixitySyntaxDefNew 'Scoped)
-checkFixitySyntaxDef FixitySyntaxDefNew {..} = topBindings $ do
-  sym <- bindFixitySymbol _nfixitySymbol
-  doc <- mapM checkJudoc _nfixityDoc
-  info' <- checkFixityInfoNew _nfixityInfo
+  FixitySyntaxDef 'Parsed ->
+  Sem r (FixitySyntaxDef 'Scoped)
+checkFixitySyntaxDef FixitySyntaxDef {..} = topBindings $ do
+  sym <- bindFixitySymbol _fixitySymbol
+  doc <- mapM checkJudoc _fixityDoc
+  info' <- checkFixityInfo _fixityInfo
   registerHighlightDoc (sym ^. S.nameId) doc
   return
-    FixitySyntaxDefNew
-      { _nfixitySymbol = sym,
-        _nfixityDoc = doc,
-        _nfixityInfo = info',
-        _nfixityAssignKw,
-        _nfixitySyntaxKw,
-        _nfixityKw
+    FixitySyntaxDef
+      { _fixitySymbol = sym,
+        _fixityDoc = doc,
+        _fixityInfo = info',
+        _fixityAssignKw,
+        _fixitySyntaxKw,
+        _fixityKw
       }
 
 resolveFixitySyntaxDef ::
   forall r.
   (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, State ScoperSyntax, NameIdGen, InfoTableBuilder] r) =>
-  FixitySyntaxDefNew 'Parsed ->
+  FixitySyntaxDef 'Parsed ->
   Sem r ()
-resolveFixitySyntaxDef fdef@FixitySyntaxDefNew {..} = topBindings $ do
-  sym <- reserveSymbolOf SKNameFixity Nothing _nfixitySymbol
-  let fi :: ParsedFixityInfoNew 'Parsed = _nfixityInfo
-  same <- mapM checkFixitySymbol (fi ^. nfixityPrecSame)
-  below <- mapM (mapM checkFixitySymbol) (fi ^. nfixityPrecBelow)
-  above <- mapM (mapM checkFixitySymbol) (fi ^. nfixityPrecAbove)
+resolveFixitySyntaxDef fdef@FixitySyntaxDef {..} = topBindings $ do
+  sym <- reserveSymbolOf SKNameFixity Nothing _fixitySymbol
+  let fi :: ParsedFixityInfo 'Parsed = _fixityInfo
+  same <- mapM checkFixitySymbol (fi ^. fixityPrecSame)
+  below <- mapM (mapM checkFixitySymbol) (fi ^. fixityPrecBelow)
+  above <- mapM (mapM checkFixitySymbol) (fi ^. fixityPrecAbove)
   tab <- getInfoTable
   fid <- maybe freshNameId (return . getFixityId tab) same
   let below' = map (getFixityId tab) <$> below
@@ -690,9 +690,9 @@ resolveFixitySyntaxDef fdef@FixitySyntaxDefNew {..} = topBindings $ do
           { _fixityId = Just fid,
             _fixityPrecedence = PrecNat prec,
             _fixityArity =
-              case fi ^. nfixityArity . withLocParam of
+              case fi ^. fixityParsedArity . withLocParam of
                 FI.Unary -> OpUnary AssocPostfix
-                FI.Binary -> case fi ^. nfixityAssoc of
+                FI.Binary -> case fi ^. fixityAssoc of
                   Nothing -> OpBinary AssocNone
                   Just FI.AssocLeft -> OpBinary AssocLeft
                   Just FI.AssocRight -> OpBinary AssocRight
