@@ -30,8 +30,10 @@ resolveTraitInstance TypedHole {..} = do
   is <- lookupInstance tab ty
   case is of
     [(ii, subs)] -> expandArity (subsIToE subs) (ii ^. instanceInfoArgs) (ii ^. instanceInfoResult)
-    [] -> throw (ErrNoInstance (NoInstance _typedHoleType))
-    _ -> throw (ErrAmbiguousInstances (AmbiguousInstances _typedHoleType (map fst is)))
+    [] -> throw (ErrNoInstance (NoInstance _typedHoleType loc))
+    _ -> throw (ErrAmbiguousInstances (AmbiguousInstances _typedHoleType (map fst is) loc))
+  where
+    loc = getLoc _typedHoleHole
 
 varsToInstances :: InfoTable -> LocalVars -> [InstanceInfo]
 varsToInstances tbl LocalVars {..} =

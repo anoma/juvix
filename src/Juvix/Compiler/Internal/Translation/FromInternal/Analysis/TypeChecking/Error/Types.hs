@@ -390,8 +390,9 @@ instance ToGenericError NotATrait where
             "Expected a trait: "
               <+> ppCode opts' (e ^. notATraitExpression)
 
-newtype NoInstance = NoInstance
-  { _noInstanceType :: Expression
+data NoInstance = NoInstance
+  { _noInstanceType :: Expression,
+    _noInstanceLoc :: Interval
   }
 
 makeLenses ''NoInstance
@@ -408,14 +409,15 @@ instance ToGenericError NoInstance where
             }
         where
           opts' = fromGenericOptions opts
-          i = getLoc (e ^. noInstanceType)
+          i = e ^. noInstanceLoc
           msg =
             "No trait instance found for: "
               <+> ppCode opts' (e ^. noInstanceType)
 
 data AmbiguousInstances = AmbiguousInstances
   { _ambiguousInstancesType :: Expression,
-    _ambiguousInstancesInfos :: [InstanceInfo]
+    _ambiguousInstancesInfos :: [InstanceInfo],
+    _ambiguousInstancesLoc :: Interval
   }
 
 makeLenses ''AmbiguousInstances
@@ -432,10 +434,10 @@ instance ToGenericError AmbiguousInstances where
             }
         where
           opts' = fromGenericOptions opts
-          i = getLoc (e ^. ambiguousInstancesType)
+          i = e ^. ambiguousInstancesLoc
           locs = vsep $ map (pretty . getLoc . (^. instanceInfoResult)) (e ^. ambiguousInstancesInfos)
           msg =
-            "Multiple trait instances found for "
+            "Multiple trait instances found for"
               <+> ppCode opts' (e ^. ambiguousInstancesType)
                 <> line
                 <> "Matching instances found at: "

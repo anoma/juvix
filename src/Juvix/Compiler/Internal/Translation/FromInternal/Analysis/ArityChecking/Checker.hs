@@ -636,7 +636,7 @@ checkExpression hintArity expr = case expr of
     appHelper fun0 args = do
       (fun', args') :: (Expression, [ApplicationArg]) <- case fun0 of
         ExpressionHole {} -> (fun0,) <$> mapM (traverseOf appArg (checkExpression ArityUnknown)) args
-        ExpressionInstanceHole {} -> (fun0,) <$> mapM (traverseOf appArg (checkExpression ArityUnit)) args
+        ExpressionInstanceHole {} -> (fun0,) <$> mapM (traverseOf appArg (checkExpression ArityUnknown)) args
         ExpressionIden i -> (fun0,) <$> (idenArity i >>= helper (getLoc i))
         ExpressionLiteral l -> (fun0,) <$> helper (getLoc l) arityLiteral
         ExpressionUniverse l -> (fun0,) <$> helper (getLoc l) arityUniverse
