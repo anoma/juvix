@@ -22,7 +22,6 @@ import Juvix.Data.Ape.Print
 import Juvix.Data.CodeAnn (Ann, CodeAnn (..), ppStringLit)
 import Juvix.Data.CodeAnn qualified as C
 import Juvix.Data.Effect.ExactPrint
-import Juvix.Data.IteratorAttribs
 import Juvix.Data.Keyword.All qualified as Kw
 import Juvix.Data.NameKind
 import Juvix.Extra.Strings qualified as Str
@@ -677,13 +676,28 @@ instance PrettyPrint InfixApplication where
 instance PrettyPrint PostfixApplication where
   ppCode = apeHelper
 
+instance PrettyPrint IteratorInfoNew where
+  ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => IteratorInfoNew -> Sem r ()
+  ppCode IteratorInfoNew {..} = do
+    let (l, r) = _piteratorInfoBraces ^. unIrrelevant
+        ppInt :: WithLoc Int -> Sem r ()
+        ppInt = morphemeWithLoc . fmap (annotate AnnLiteralInteger . pretty)
+        iniItem = do
+          a <- _piteratorInfoInitNum
+          return (ppCode Kw.kwInit <+> ppCode Kw.kwAssign <+> ppInt a)
+        rangeItem = do
+          a <- _piteratorInfoRangeNum
+          return (ppCode Kw.kwRange <+> ppCode Kw.kwAssign <+> ppInt a)
+        items = sepSemicolon (catMaybes [iniItem, rangeItem])
+    ppCode l <> items <> ppCode r
+
 instance PrettyPrint IteratorSyntaxDef where
   ppCode IteratorSyntaxDef {..} = do
     let iterSymbol' = ppUnkindedSymbol _iterSymbol
     ppCode _iterSyntaxKw
       <+> ppCode _iterIteratorKw
       <+> iterSymbol'
-      <+?> fmap ppCode _iterAttribs
+      <+?> fmap ppCode _iterInfo
 
 instance PrettyPrint RecordUpdateApp where
   ppCode = apeHelper
@@ -718,9 +732,6 @@ instance PrettyPrint (WithSource Pragmas) where
     when b $
       let txt = pretty (Str.pragmasStart <> pragma ^. withSourceText <> Str.pragmasEnd)
        in annotated AnnComment (noLoc txt) <> line
-
-instance PrettyPrint (WithSource IteratorAttribs) where
-  ppCode = braces . noLoc . pretty . (^. withSourceText)
 
 ppJudocStart :: (Members '[ExactPrint, Reader Options] r) => Sem r (Maybe ())
 ppJudocStart = do

@@ -88,6 +88,12 @@ kwRightArrow = unicodeKw Str.toAscii Str.toUnicode
 kwSyntax :: Keyword
 kwSyntax = asciiKw Str.syntax
 
+kwInit :: Keyword
+kwInit = asciiKw Str.init
+
+kwRange :: Keyword
+kwRange = asciiKw Str.range
+
 kwAssoc :: Keyword
 kwAssoc = asciiKw Str.assoc
 

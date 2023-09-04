@@ -8,6 +8,7 @@ import Juvix.Data.CodeAnn qualified as C
 import Juvix.Data.Effect.ExactPrint.Base
 import Juvix.Data.IsImplicit
 import Juvix.Data.Keyword.All
+import Juvix.Data.WithLoc
 import Juvix.Prelude.Base hiding ((<+>))
 import Juvix.Prelude.Pretty qualified as P
 
@@ -165,6 +166,9 @@ delimIf :: (Members '[ExactPrint] r) => IsImplicit -> Bool -> Sem r () -> Sem r 
 delimIf Implicit _ = braces
 delimIf Explicit True = parens
 delimIf Explicit False = id
+
+morphemeWithLoc :: forall r. (Members '[ExactPrint] r) => WithLoc (Doc C.CodeAnn) -> Sem r ()
+morphemeWithLoc (WithLoc loc doc) = morpheme loc doc
 
 morpheme :: forall r. (Members '[ExactPrint] r) => Interval -> Doc C.CodeAnn -> Sem r ()
 morpheme loc doc = do

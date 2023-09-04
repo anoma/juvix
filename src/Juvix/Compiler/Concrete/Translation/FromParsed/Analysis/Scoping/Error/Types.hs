@@ -637,6 +637,23 @@ instance ToGenericError IteratorInitializer where
       i :: Interval
       i = getLoc _iteratorInitializerIterator
 
+newtype InvalidRangeNumber = InvalidRangeNumber
+  { _invalidRangeNumber :: IteratorSyntaxDef
+  }
+  deriving stock (Show)
+
+instance ToGenericError InvalidRangeNumber where
+  genericError InvalidRangeNumber {..} = do
+    return
+      GenericError
+        { _genericErrorLoc = i,
+          _genericErrorMessage = mkAnsiText ("Iterators must be defined with at least one range" :: Doc Ann),
+          _genericErrorIntervals = [i]
+        }
+    where
+      i :: Interval
+      i = getLoc _invalidRangeNumber
+
 newtype IteratorRange = IteratorRange
   { _iteratorRangeIterator :: Iterator 'Parsed
   }

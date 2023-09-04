@@ -48,6 +48,7 @@ data ScoperError
   | ErrPrecedenceInconsistencyNew PrecedenceInconsistencyErrorNew
   | ErrIncomparablePrecedences IncomaprablePrecedences
   | ErrAliasCycle AliasCycle
+  | ErrInvalidRangeNumber InvalidRangeNumber
 
 instance ToGenericError ScoperError where
   genericError = \case
@@ -87,3 +88,4 @@ instance ToGenericError ScoperError where
     ErrPrecedenceInconsistencyNew e -> genericError e
     ErrIncomparablePrecedences e -> genericError e
     ErrAliasCycle e -> genericError e
+    ErrInvalidRangeNumber e -> genericError e

@@ -3,6 +3,7 @@
 module Juvix.Compiler.Concrete.Language
   ( module Juvix.Compiler.Concrete.Language,
     module Juvix.Data.FixityInfo,
+    module Juvix.Data.IteratorInfo,
     module Juvix.Compiler.Concrete.Data.Name,
     module Juvix.Compiler.Concrete.Data.Stage,
     module Juvix.Compiler.Concrete.Data.NameRef,
@@ -33,7 +34,7 @@ import Juvix.Data
 import Juvix.Data.Ape.Base as Ape
 import Juvix.Data.Fixity
 import Juvix.Data.FixityInfo (Arity (..), FixityInfo)
-import Juvix.Data.IteratorAttribs
+import Juvix.Data.IteratorInfo
 import Juvix.Data.Keyword
 import Juvix.Data.NameKind
 import Juvix.Parser.Lexer (isDelimiterStr)
@@ -142,8 +143,6 @@ type family ModuleEndType t = res | res -> t where
 -- pretty-printing. Also, we probably don't want to impose pragma formatting
 -- choices on the user.
 type ParsedPragmas = WithLoc (WithSource Pragmas)
-
-type ParsedIteratorAttribs = WithLoc (WithSource IteratorAttribs)
 
 type ParsedFixityInfo = WithLoc (WithSource FixityInfo)
 
@@ -270,6 +269,13 @@ deriving stock instance (Ord (AliasDef 'Parsed))
 
 deriving stock instance (Ord (AliasDef 'Scoped))
 
+data IteratorInfoNew = IteratorInfoNew
+  { _piteratorInfoInitNum :: Maybe (WithLoc Int),
+    _piteratorInfoRangeNum :: Maybe (WithLoc Int),
+    _piteratorInfoBraces :: Irrelevant (KeywordRef, KeywordRef)
+  }
+  deriving stock (Show, Eq, Ord, Generic)
+
 data SyntaxDef (s :: Stage)
   = SyntaxFixity (FixitySyntaxDef s)
   | SyntaxFixityNew (FixitySyntaxDefNew s)
@@ -374,7 +380,7 @@ instance HasLoc OperatorSyntaxDef where
 
 data IteratorSyntaxDef = IteratorSyntaxDef
   { _iterSymbol :: Symbol,
-    _iterAttribs :: Maybe ParsedIteratorAttribs,
+    _iterInfo :: Maybe IteratorInfoNew,
     _iterSyntaxKw :: KeywordRef,
     _iterIteratorKw :: KeywordRef
   }
@@ -2395,6 +2401,13 @@ scopedIdenName f n = case n ^. scopedIdenAlias of
   Just a -> do
     a' <- f a
     pure (set scopedIdenAlias (Just a') n)
+
+fromParsedIteratorInfo :: IteratorInfoNew -> IteratorInfo
+fromParsedIteratorInfo IteratorInfoNew {..} =
+  IteratorInfo
+    { _iteratorInfoInitNum = (^. withLocParam) <$> _piteratorInfoInitNum,
+      _iteratorInfoRangeNum = (^. withLocParam) <$> _piteratorInfoRangeNum
+    }
 
 instance HasFixity PostfixApplication where
   getFixity (PostfixApplication _ op) = fromMaybe impossible (op ^. scopedIdenName . S.nameFixity)

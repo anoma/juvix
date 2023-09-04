@@ -27,7 +27,6 @@ import Juvix.Compiler.Concrete.Translation.FromSource.Data.Context (ParserResult
 import Juvix.Compiler.Concrete.Translation.FromSource.Data.Context qualified as Parsed
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Data.FixityInfo qualified as FI
-import Juvix.Data.IteratorAttribs
 import Juvix.Data.NameKind
 import Juvix.Prelude hiding (scoped)
 
@@ -173,17 +172,13 @@ freshSymbol _nameKind _nameConcrete = do
           return mf
       | otherwise = return Nothing
 
-    iter :: Sem r (Maybe IteratorAttribs)
+    iter :: Sem r (Maybe IteratorInfo)
     iter
       | S.canBeIterator _nameKind = do
-          mma <- gets (^? scoperSyntaxIterators . scoperIterators . at _nameConcrete . _Just . symbolIteratorDef . iterAttribs)
-          case mma of
-            Just ma -> do
-              let attrs = maybe emptyIteratorAttribs (^. withLocParam . withSourceValue) ma
-              modify (set (scoperSyntaxIterators . scoperIterators . at _nameConcrete . _Just . symbolIteratorUsed) True)
-              return $ Just attrs
-            Nothing ->
-              return Nothing
+          mma <- gets (^? scoperSyntaxIterators . scoperIterators . at _nameConcrete . _Just . symbolIteratorDef . iterInfo)
+          whenJust mma . const $
+            modify (set (scoperSyntaxIterators . scoperIterators . at _nameConcrete . _Just . symbolIteratorUsed) True)
+          return (fromParsedIteratorInfo <$> join mma)
       | otherwise = return Nothing
 
 reserveSymbolSignatureOf ::
@@ -836,6 +831,7 @@ resolveIteratorSyntaxDef ::
   Sem r ()
 resolveIteratorSyntaxDef s@IteratorSyntaxDef {..} = do
   checkNotDefined
+  checkAtLeastOneRange
   let sf =
         SymbolIterator
           { _symbolIteratorUsed = False,
@@ -843,6 +839,12 @@ resolveIteratorSyntaxDef s@IteratorSyntaxDef {..} = do
           }
   modify (set (scoperSyntaxIterators . scoperIterators . at _iterSymbol) (Just sf))
   where
+    checkAtLeastOneRange :: Sem r ()
+    checkAtLeastOneRange = unless (maybe True (> 0) num) (throw (ErrInvalidRangeNumber (InvalidRangeNumber s)))
+      where
+        num :: Maybe Int
+        num = s ^? iterInfo . _Just . to fromParsedIteratorInfo . iteratorInfoRangeNum . _Just
+
     checkNotDefined :: Sem r ()
     checkNotDefined =
       whenJustM
@@ -1079,7 +1081,7 @@ checkTopModule m@Module {..} = do
           _nameVisibilityAnn = VisPublic
           _nameWhyInScope = S.BecauseDefined
           _nameVerbatim = N.topModulePathToDottedPath _modulePath
-          _nameIterator :: Maybe IteratorAttribs
+          _nameIterator :: Maybe IteratorInfo
           _nameIterator = Nothing
           moduleName = S.Name' {..}
       registerName moduleName
@@ -2232,8 +2234,8 @@ checkIterator ::
 checkIterator iter = do
   _iteratorName <- checkScopedIden (iter ^. iteratorName)
   case _iteratorName ^. scopedIdenName . S.nameIterator of
-    Just IteratorAttribs {..} -> do
-      case _iteratorAttribsInitNum of
+    Just IteratorInfo {..} -> do
+      case _iteratorInfoInitNum of
         Just n
           | n /= length (iter ^. iteratorInitializers) ->
               throw
@@ -2241,7 +2243,7 @@ checkIterator iter = do
                     IteratorInitializer {_iteratorInitializerIterator = iter}
                 )
         _ -> return ()
-      case _iteratorAttribsRangeNum of
+      case _iteratorInfoRangeNum of
         Just n
           | n /= length (iter ^. iteratorRanges) ->
               throw

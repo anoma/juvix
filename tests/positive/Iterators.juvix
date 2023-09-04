@@ -1,11 +1,11 @@
 module Iterators;
 
-syntax iterator for {init: 1, range: 1};
+syntax iterator for {init := 1; range := 1};
 
 for {A B : Type} (f : A → B → A) (x : A) (y : B) : A :=
   f x y;
 
-syntax iterator itconst {init: 2, range: 2};
+syntax iterator itconst {init := 2; range := 2};
 
 itconst
   : {A B C : Type} → (A → A → B → C → A) → A → A → B → C → A

@@ -609,15 +609,35 @@ operatorSyntaxDef _opSyntaxKw = do
   _opFixity <- symbol
   return OperatorSyntaxDef {..}
 
---------------------------------------------------------------------------------
--- Iterator syntax declaration
---------------------------------------------------------------------------------
+iteratorInfoNew ::
+  forall r.
+  (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
+  ParsecS r IteratorInfoNew
+iteratorInfoNew = do
+  l <- kw delimBraceL
+  (_piteratorInfoInitNum, _piteratorInfoRangeNum) <- intercalateEffect semicolon $ do
+    ini <- toPermutationWithDefault Nothing (Just <$> pinit)
+    ran <- toPermutationWithDefault Nothing (Just <$> prangeNum)
+    pure (ini, ran)
+  r <- kw delimBraceR
+  let _piteratorInfoBraces = Irrelevant (l, r)
+  return IteratorInfoNew {..}
+  where
+    pinit :: ParsecS r (WithLoc Int)
+    pinit = do
+      void (kw kwInit >> kw kwAssign)
+      fmap fromIntegral <$> integer
+
+    prangeNum :: ParsecS r (WithLoc Int)
+    prangeNum = do
+      void (kw kwRange >> kw kwAssign)
+      fmap fromIntegral <$> integer
 
 iteratorSyntaxDef :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => KeywordRef -> ParsecS r IteratorSyntaxDef
 iteratorSyntaxDef _iterSyntaxKw = do
   _iterIteratorKw <- kw kwIterator
   _iterSymbol <- symbol
-  _iterAttribs <- optional (withLoc (parseYaml "{" "}"))
+  _iterInfo <- optional iteratorInfoNew
   return IteratorSyntaxDef {..}
 
 --------------------------------------------------------------------------------
@@ -904,9 +924,7 @@ parseList = do
 --------------------------------------------------------------------------------
 
 literalInteger :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r LiteralLoc
-literalInteger = do
-  (x, loc) <- integer
-  return (WithLoc loc (LitInteger x))
+literalInteger = fmap LitInteger <$> integer
 
 literalString :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r LiteralLoc
 literalString = do

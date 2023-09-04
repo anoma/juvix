@@ -748,3 +748,9 @@ same = "same"
 
 none :: (IsString s) => s
 none = "none"
+
+init :: (IsString s) => s
+init = "init"
+
+range :: (IsString s) => s
+range = "range"

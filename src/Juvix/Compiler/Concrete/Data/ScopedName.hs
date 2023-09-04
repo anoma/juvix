@@ -10,7 +10,7 @@ import Juvix.Compiler.Concrete.Data.IsConcrete
 import Juvix.Compiler.Concrete.Data.Name qualified as C
 import Juvix.Compiler.Concrete.Data.VisibilityAnn
 import Juvix.Data.Fixity qualified as C
-import Juvix.Data.IteratorAttribs (IteratorAttribs)
+import Juvix.Data.IteratorInfo
 import Juvix.Data.NameId
 import Juvix.Data.NameKind
 import Juvix.Prelude
@@ -71,7 +71,7 @@ data Name' n = Name'
     _nameKind :: NameKind,
     _nameDefinedIn :: AbsModulePath,
     _nameFixity :: Maybe C.Fixity,
-    _nameIterator :: Maybe IteratorAttribs,
+    _nameIterator :: Maybe IteratorInfo,
     _nameWhyInScope :: WhyInScope,
     _nameVisibilityAnn :: VisibilityAnn,
     -- | The textual representation of the name at the binding site
