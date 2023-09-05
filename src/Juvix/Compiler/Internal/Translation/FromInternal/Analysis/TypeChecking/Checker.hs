@@ -237,8 +237,8 @@ checkInstanceType FunctionDef {..} = case mi of
     checkArg tab params fp@FunctionParameter {..} = case _paramImplicit of
       Implicit -> return ()
       Explicit -> throw (ErrExplicitInstanceArgument (ExplicitInstanceArgument fp))
-      ImplicitInstance -> case traitFromExpression mempty _paramType of
-        Just InstanceApp {..}
+      ImplicitInstance -> case paramFromExpression mempty _paramType of
+        Just (InstanceParamApp InstanceApp {..})
           | isTrait tab _instanceAppHead ->
               mapM_ (checkTraitTermination params) _instanceAppArgs
         _ ->
