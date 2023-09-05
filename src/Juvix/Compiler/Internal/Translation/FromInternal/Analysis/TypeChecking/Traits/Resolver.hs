@@ -29,9 +29,9 @@ resolveTraitInstance TypedHole {..} = do
   ty <- strongNormalize _typedHoleType
   is <- lookupInstance tab ty
   case is of
-    [(ii, subs)] -> expandArity (subsIToE subs) (ii ^. instanceInfoArgs) (ii ^. instanceInfoResult)
-    [] -> throw (ErrNoInstance (NoInstance _typedHoleType loc))
-    _ -> throw (ErrAmbiguousInstances (AmbiguousInstances _typedHoleType (map fst is) loc))
+    [(ii, subs)] -> expandArity loc (subsIToE subs) (ii ^. instanceInfoArgs) (ii ^. instanceInfoResult)
+    [] -> throw (ErrNoInstance (NoInstance ty loc))
+    _ -> throw (ErrAmbiguousInstances (AmbiguousInstances ty (map fst is) loc))
   where
     loc = getLoc _typedHoleHole
 
@@ -50,27 +50,28 @@ varsToInstances tbl LocalVars {..} =
 
 expandArity ::
   (Members '[Error TypeCheckerError, NameIdGen] r) =>
+  Interval ->
   SubsE ->
   [FunctionParameter] ->
   Expression ->
   Sem r Expression
-expandArity subs params e = case params of
+expandArity loc subs params e = case params of
   [] ->
     return e
-  FunctionParameter {..} : params'
+  fp@FunctionParameter {..} : params'
     | Just (Just t) <- flip HashMap.lookup subs <$> _paramName ->
-        expandArity subs params' (ExpressionApplication (Application e t _paramImplicit))
+        expandArity loc subs params' (ExpressionApplication (Application e t _paramImplicit))
     | _paramImplicit == Implicit -> do
-        h <- newHole (getLoc e)
-        expandArity subs params' (ExpressionApplication (Application e (ExpressionHole h) Implicit))
+        h <- newHole
+        expandArity loc subs params' (ExpressionApplication (Application e (ExpressionHole h) Implicit))
     | _paramImplicit == ImplicitInstance -> do
-        h <- newHole (getLoc e)
-        expandArity subs params' (ExpressionApplication (Application e (ExpressionInstanceHole h) ImplicitInstance))
+        h <- newHole
+        expandArity loc subs params' (ExpressionApplication (Application e (ExpressionInstanceHole h) ImplicitInstance))
     | otherwise ->
-        throw (ErrExplicitInstanceArgument (ExplicitInstanceArgument e))
+        throw (ErrExplicitInstanceArgument (ExplicitInstanceArgument fp))
   where
-    newHole :: (Member NameIdGen r) => Interval -> Sem r Hole
-    newHole loc = mkHole loc <$> freshNameId
+    newHole :: (Member NameIdGen r) => Sem r Hole
+    newHole = mkHole loc <$> freshNameId
 
 lookupInstance' ::
   forall r.

@@ -145,6 +145,48 @@ tests =
       $(mkRelFile "UnsupportedTypeFunction.juvix")
       $ \case
         ErrUnsupportedTypeFunction {} -> Nothing
+        _ -> wrongError,
+    NegTest
+      "Instance target not a trait"
+      $(mkRelDir "Internal")
+      $(mkRelFile "TargetNotATrait.juvix")
+      $ \case
+        ErrTargetNotATrait {} -> Nothing
+        _ -> wrongError,
+    NegTest
+      "Not a trait"
+      $(mkRelDir "Internal")
+      $(mkRelFile "NotATrait.juvix")
+      $ \case
+        ErrNotATrait {} -> Nothing
+        _ -> wrongError,
+    NegTest
+      "No instance"
+      $(mkRelDir "Internal")
+      $(mkRelFile "NoInstance.juvix")
+      $ \case
+        ErrNoInstance {} -> Nothing
+        _ -> wrongError,
+    NegTest
+      "Ambiguous instances"
+      $(mkRelDir "Internal")
+      $(mkRelFile "AmbiguousInstances.juvix")
+      $ \case
+        ErrAmbiguousInstances {} -> Nothing
+        _ -> wrongError,
+    NegTest
+      "Explicit instance argument"
+      $(mkRelDir "Internal")
+      $(mkRelFile "ExplicitInstanceArgument.juvix")
+      $ \case
+        ErrExplicitInstanceArgument {} -> Nothing
+        _ -> wrongError,
+    NegTest
+      "Instance termination"
+      $(mkRelDir "Internal")
+      $(mkRelFile "InstanceTermination.juvix")
+      $ \case
+        ErrTraitNotTerminating {} -> Nothing
         _ -> wrongError
   ]
 

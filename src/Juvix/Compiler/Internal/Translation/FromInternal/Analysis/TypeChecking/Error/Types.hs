@@ -407,7 +407,7 @@ instance ToGenericError NotATrait where
           opts' = fromGenericOptions opts
           i = getLoc (e ^. notATraitExpression)
           msg =
-            "Expected a trait: "
+            "Expected a trait:"
               <+> ppCode opts' (e ^. notATraitExpression)
 
 data NoInstance = NoInstance
@@ -460,11 +460,11 @@ instance ToGenericError AmbiguousInstances where
             "Multiple trait instances found for"
               <+> ppCode opts' (e ^. ambiguousInstancesType)
                 <> line
-                <> "Matching instances found at: "
+                <> "Matching instances found at:"
                 <> indent' (align locs)
 
 newtype ExplicitInstanceArgument = ExplicitInstanceArgument
-  { _explicitInstanceArgumentExpression :: Expression
+  { _explicitInstanceArgumentParameter :: FunctionParameter
   }
 
 makeLenses ''ExplicitInstanceArgument
@@ -480,7 +480,7 @@ instance ToGenericError ExplicitInstanceArgument where
               _genericErrorIntervals = [i]
             }
         where
-          i = getLoc (e ^. explicitInstanceArgumentExpression)
+          i = getLoc (e ^. explicitInstanceArgumentParameter)
 
 newtype TraitNotTerminating = TraitNotTerminating
   { _traitNotTerminating :: Expression

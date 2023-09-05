@@ -234,9 +234,9 @@ checkInstanceType FunctionDef {..} = case mi of
         )
 
     checkArg :: InfoTable -> [InstanceParam] -> FunctionParameter -> Sem r ()
-    checkArg tab params FunctionParameter {..} = case _paramImplicit of
+    checkArg tab params fp@FunctionParameter {..} = case _paramImplicit of
       Implicit -> return ()
-      Explicit -> throw (ErrExplicitInstanceArgument (ExplicitInstanceArgument _paramType))
+      Explicit -> throw (ErrExplicitInstanceArgument (ExplicitInstanceArgument fp))
       ImplicitInstance -> case traitFromExpression mempty _paramType of
         Just InstanceApp {..}
           | isTrait tab _instanceAppHead ->

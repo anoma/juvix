@@ -1,0 +1,5 @@
+module NotATrait;
+
+type Maybe A := just A | nothing;
+
+f {A} {{Maybe A}} : Maybe A := nothing;
