@@ -1,6 +1,6 @@
 module Operators;
 
-syntax fixity add {arity: binary, assoc: left};
+syntax fixity add := binary {assoc := left};
 
 syntax operator + add;
 axiom + : Type → Type → Type;

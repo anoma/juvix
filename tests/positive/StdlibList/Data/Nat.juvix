@@ -1,7 +1,7 @@
 module Data.Nat;
 
-syntax fixity add {arity: binary, assoc: left};
-syntax fixity mul {arity: binary, assoc: left, above: [add]};
+syntax fixity add := binary {assoc := left};
+syntax fixity mul := binary {assoc := left; above := [add]};
 
 type ℕ :=
   | zero : ℕ

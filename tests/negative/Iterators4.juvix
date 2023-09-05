@@ -1,7 +1,7 @@
 module Iterators4;
 
 syntax iterator map;
-syntax iterator map {init: 0};
+syntax iterator map {init := 0};
 map {A B} (f : A → B) (x : A) : B := f x;
 
 builtin bool

@@ -13,7 +13,7 @@ x : alias := t;
 id : Type → Type
   | x := x;
 
-syntax fixity composition {arity: binary, assoc: right};
+syntax fixity composition := binary {assoc := right};
 
 syntax operator ⊙ composition;
 

@@ -13,9 +13,9 @@ type Nat :=
   | zero : Nat
   | suc : Nat → Nat;
 
-syntax fixity cmp {arity: binary};
-syntax fixity add {arity: binary, assoc: left, above: [cmp]};
-syntax fixity cons {arity: binary, assoc: right, above: [add]};
+syntax fixity cmp := binary {};
+syntax fixity add := binary {assoc := left; above := [cmp]};
+syntax fixity cons := binary {assoc := right; above := [add]};
 
 syntax operator == cmp;
 

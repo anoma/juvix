@@ -1,15 +1,15 @@
 module A;
 
-syntax fixity i3 {arity: binary};
+syntax fixity i3 := binary {};
 
 module M;
   module N;
     syntax operator t i3;
     type T :=
-      | t : T;
+      | t : T -> T -> T;
   end;
 
-  syntax fixity add {arity: binary, assoc: right, below: [i3]};
+  syntax fixity add := binary {assoc := right; above := [i3]};
 
   syntax operator + add;
   axiom + : Type → Type → Type;
@@ -17,5 +17,5 @@ end;
 
 import M;
 
-f : M.N.T
-  | (_ M.N.t _) := Type M.+ Type M.+ M.MType;
+f : M.N.T -> M.N.T
+  | (a M.N.t b) := a M.N.t b;

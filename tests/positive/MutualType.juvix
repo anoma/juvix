@@ -1,6 +1,6 @@
 module MutualType;
 
-syntax fixity cons {arity: binary, assoc: right};
+syntax fixity cons := binary {assoc := right};
 
 syntax operator :: cons;
 --- Inductive list.

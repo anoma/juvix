@@ -164,7 +164,7 @@ evalNat : Expr -> Either Error Nat
 Λ : Expr -> Expr
   | body := lam (mkLambda body);
 
-syntax fixity app {arity: binary, assoc: left, above: [composition]};
+syntax fixity app := binary {assoc := left; above := [composition]};
 
 syntax operator # app;
 --- Syntactical helper for creating an ;app;.

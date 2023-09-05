@@ -2,7 +2,7 @@ module Foo.Data.Bool;
 
 import Stdlib.Data.Bool;
 
-syntax fixity logical {arity: binary, assoc: right};
+syntax fixity logical := binary {assoc := right};
 
 type Bool :=
   | true : Bool

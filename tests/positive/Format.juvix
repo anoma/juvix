@@ -60,11 +60,11 @@ t3 : String :=
 -- escaping in String literals
 e1 : String := "\"\n";
 
-syntax fixity l1 {arity: binary, assoc: left, below: [pair]};
-syntax fixity r3 {arity: binary, assoc: right, above: [pair]};
-syntax fixity l6 {arity: binary, assoc: left, above: [r3]};
-syntax fixity r6 {arity: binary, assoc: right, same: l6};
-syntax fixity l7 {arity: binary, assoc: left, above: [l6]};
+syntax fixity l1 := binary {assoc := left; below := [pair]};
+syntax fixity r3 := binary {assoc := right; above := [pair]};
+syntax fixity l6 := binary {assoc := left; above := [r3]};
+syntax fixity r6 := binary {assoc := right; same := l6};
+syntax fixity l7 := binary {assoc := left; above := [l6]};
 
 syntax operator +l7 l7;
 axiom +l7 : String → String → String;

@@ -1,6 +1,6 @@
 module Data.Product;
 
-syntax fixity prod {arity: binary};
+syntax fixity prod := binary {};
 
 syntax operator × prod;
 type × (a : Type) (b : Type) :=

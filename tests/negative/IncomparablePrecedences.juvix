@@ -2,8 +2,8 @@ module IncomparablePrecedences;
 
 type Bool := true | false;
 
-syntax fixity log1 {arity: binary, assoc: left};
-syntax fixity log2 {arity: binary, assoc: right};
+syntax fixity log1 := binary {assoc := left};
+syntax fixity log2 := binary {assoc := right};
 
 syntax operator && log1;
 syntax operator || log2;

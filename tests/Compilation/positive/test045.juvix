@@ -8,7 +8,7 @@ type Nat :=
   | zero : Nat
   | suc : Nat → Nat;
 
-syntax fixity additive {arity: binary, assoc: left};
+syntax fixity additive := binary {assoc := left};
 
 syntax operator + additive;
 

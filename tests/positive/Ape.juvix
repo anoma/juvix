@@ -3,11 +3,11 @@ module Ape;
 builtin string
 axiom String : Type;
 
-syntax fixity seq {arity: binary, assoc: left};
-syntax fixity sub {arity: binary, assoc: right, above: [seq]};
-syntax fixity ladd {arity: binary, assoc: left, above: [sub]};
-syntax fixity radd {arity: binary, assoc: right, same: ladd};
-syntax fixity mul {arity: binary, assoc: left, above: [ladd]};
+syntax fixity seq := binary {assoc := left};
+syntax fixity sub := binary {assoc := right; above := [seq]};
+syntax fixity ladd := binary {assoc := left; above := [sub]};
+syntax fixity radd := binary {assoc := right; same := ladd};
+syntax fixity mul := binary {assoc := left; above := [ladd]};
 
 syntax operator * mul;
 axiom * : String → String → String;

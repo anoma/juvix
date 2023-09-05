@@ -1,4 +1,4 @@
 module UnusedOperatorDef;
-  syntax fixity add {arity: binary};
+  syntax fixity add := binary {};
   syntax operator + add;
 end ;

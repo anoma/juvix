@@ -1,6 +1,6 @@
 module InfixError;
 
-  syntax fixity add {arity: binary, assoc: none};
+  syntax fixity add := binary {assoc := none};
 
   syntax operator + add;
   axiom + : Type → Type → Type;
