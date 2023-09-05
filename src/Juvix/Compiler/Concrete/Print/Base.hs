@@ -637,7 +637,7 @@ instance (SingI s) => PrettyPrint (ParsedFixityInfo s) where
                 return (ppCode Kw.kwAbove <+> ppCode Kw.kwAssign <+> ppSymbolList a)
               belowItem = do
                 a <- _fixityFieldsPrecBelow
-                return (ppCode Kw.kwAbove <+> ppCode Kw.kwAssign <+> ppSymbolList a)
+                return (ppCode Kw.kwBelow <+> ppCode Kw.kwAssign <+> ppSymbolList a)
               items = hsepSemicolon (catMaybes [assocItem, sameItem, aboveItem, belowItem])
               (l, r) = _fixityFieldsBraces ^. unIrrelevant
           return (ppCode l <> items <> ppCode r)
