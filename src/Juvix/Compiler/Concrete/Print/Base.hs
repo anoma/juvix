@@ -638,7 +638,7 @@ instance (SingI s) => PrettyPrint (ParsedFixityInfo s) where
               belowItem = do
                 a <- _fixityFieldsPrecBelow
                 return (ppCode Kw.kwAbove <+> ppCode Kw.kwAssign <+> ppSymbolList a)
-              items = sepSemicolon (catMaybes [assocItem, sameItem, aboveItem, belowItem])
+              items = hsepSemicolon (catMaybes [assocItem, sameItem, aboveItem, belowItem])
               (l, r) = _fixityFieldsBraces ^. unIrrelevant
           return (ppCode l <> items <> ppCode r)
     ppCode _fixityParsedArity <+?> rhs
@@ -679,7 +679,7 @@ instance PrettyPrint ParsedIteratorInfo where
         rangeItem = do
           a <- _piteratorInfoRangeNum
           return (ppCode Kw.kwRange <+> ppCode Kw.kwAssign <+> ppInt a)
-        items = sepSemicolon (catMaybes [iniItem, rangeItem])
+        items = hsepSemicolon (catMaybes [iniItem, rangeItem])
     ppCode l <> items <> ppCode r
 
 instance PrettyPrint IteratorSyntaxDef where
