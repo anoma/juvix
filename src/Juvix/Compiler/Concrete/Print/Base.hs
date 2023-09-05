@@ -1011,30 +1011,29 @@ instance (SingI s) => PrettyPrint (ConstructorRhs s) where
     ConstructorRhsRecord r -> ppCode r
     ConstructorRhsAdt r -> ppCode r
 
-instance (SingI s) => PrettyPrint (ConstructorDef s) where
-  ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => ConstructorDef s -> Sem r ()
-  ppCode ConstructorDef {..} = do
-    let constructorName' = annDef _constructorName (ppSymbolType _constructorName)
-        constructorRhs' = constructorRhsHelper _constructorRhs
-        doc' = ppCode <$> _constructorDoc
-        pragmas' = ppCode <$> _constructorPragmas
-    pipeHelper <+> nest (doc' ?<> pragmas' ?<> constructorName' <> constructorRhs')
-    where
-      constructorRhsHelper :: ConstructorRhs s -> Sem r ()
-      constructorRhsHelper r = spaceMay <> ppCode r
-        where
-          spaceMay = case r of
-            ConstructorRhsGadt {} -> space
-            ConstructorRhsRecord {} -> space
-            ConstructorRhsAdt a
-              | null (a ^. rhsAdtArguments) -> mempty
-              | otherwise -> space
+ppConstructorDef :: forall s r. (SingI s, Members '[ExactPrint, Reader Options] r) => Bool -> ConstructorDef s -> Sem r ()
+ppConstructorDef skipPipe ConstructorDef {..} = do
+  let constructorName' = annDef _constructorName (ppSymbolType _constructorName)
+      constructorRhs' = constructorRhsHelper _constructorRhs
+      doc' = ppCode <$> _constructorDoc
+      pragmas' = ppCode <$> _constructorPragmas
+  pipeHelper <+> nest (doc' ?<> pragmas' ?<> constructorName' <> constructorRhs')
+  where
+    constructorRhsHelper :: ConstructorRhs s -> Sem r ()
+    constructorRhsHelper r = spaceMay <> ppCode r
+      where
+        spaceMay = case r of
+          ConstructorRhsGadt {} -> space
+          ConstructorRhsRecord {} -> space
+          ConstructorRhsAdt a
+            | null (a ^. rhsAdtArguments) -> mempty
+            | otherwise -> space
 
-      -- we use this helper so that comments appear before the first optional pipe if the pipe was omitted
-      pipeHelper :: Sem r ()
-      pipeHelper = case _constructorPipe ^. unIrrelevant of
-        Just p -> ppCode p
-        Nothing -> ppCode Kw.kwPipe
+    -- we use this helper so that comments appear before the first optional pipe if the pipe was omitted
+    pipeHelper :: Sem r ()
+    pipeHelper = unless skipPipe $ case _constructorPipe ^. unIrrelevant of
+      Just p -> ppCode p
+      Nothing -> ppCode Kw.kwPipe
 
 ppInductiveSignature :: (SingI s) => PrettyPrinting (InductiveDef s)
 ppInductiveSignature InductiveDef {..} = do
@@ -1069,7 +1068,9 @@ instance (SingI s) => PrettyPrint (InductiveDef s) where
         <> indent constrs'
     where
       ppConstructorBlock :: NonEmpty (ConstructorDef s) -> Sem r ()
-      ppConstructorBlock cs = vsep (ppCode <$> cs)
+      ppConstructorBlock = \case
+        c :| [] -> ppConstructorDef True c
+        cs -> vsep (ppConstructorDef False <$> cs)
 
 instance (SingI s) => PrettyPrint (ProjectionDef s) where
   ppCode ProjectionDef {..} =
