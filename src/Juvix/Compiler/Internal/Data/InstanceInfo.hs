@@ -11,13 +11,15 @@ data InstanceParam
   | InstanceParamApp InstanceApp
   | InstanceParamHole Hole
   | InstanceParamMeta VarName
-  deriving stock (Eq, Show)
+  deriving stock (Eq)
 
 data InstanceApp = InstanceApp
-  { _instanceAppHead :: InductiveName,
-    _instanceAppArgs :: [InstanceParam]
+  { _instanceAppHead :: Name,
+    _instanceAppArgs :: [InstanceParam],
+    -- | The original expression from which this InstanceApp was created
+    _instanceAppExpression :: Expression
   }
-  deriving stock (Eq, Show)
+  deriving stock (Eq)
 
 data InstanceInfo = InstanceInfo
   { _instanceInfoInductive :: InductiveName,
@@ -45,16 +47,30 @@ paramToExpression :: InstanceParam -> Expression
 paramToExpression = \case
   InstanceParamVar v ->
     ExpressionIden (IdenVar v)
-  InstanceParamApp (InstanceApp h args) ->
-    foldExplicitApplication (ExpressionIden (IdenInductive h)) (map paramToExpression args)
+  InstanceParamApp (InstanceApp {..}) ->
+    _instanceAppExpression
   InstanceParamHole h -> ExpressionHole h
   InstanceParamMeta {} ->
     impossible
 
 paramFromExpression :: HashSet VarName -> Expression -> Maybe InstanceParam
-paramFromExpression metaVars = \case
+paramFromExpression metaVars e = case e of
   ExpressionIden (IdenInductive n) ->
-    Just $ InstanceParamApp $ InstanceApp n []
+    Just $
+      InstanceParamApp $
+        InstanceApp
+          { _instanceAppHead = n,
+            _instanceAppArgs = [],
+            _instanceAppExpression = e
+          }
+  ExpressionIden (IdenAxiom n) ->
+    Just $
+      InstanceParamApp $
+        InstanceApp
+          { _instanceAppHead = n,
+            _instanceAppArgs = [],
+            _instanceAppExpression = e
+          }
   ExpressionIden (IdenVar v)
     | HashSet.member v metaVars -> Just $ InstanceParamMeta v
     | otherwise -> Just $ InstanceParamVar v
@@ -64,7 +80,21 @@ paramFromExpression metaVars = \case
     args' <- mapM (paramFromExpression metaVars) args
     case h of
       ExpressionIden (IdenInductive n) ->
-        return $ InstanceParamApp $ InstanceApp n (toList args')
+        return $
+          InstanceParamApp $
+            InstanceApp
+              { _instanceAppHead = n,
+                _instanceAppArgs = toList args',
+                _instanceAppExpression = e
+              }
+      ExpressionIden (IdenAxiom n) ->
+        return $
+          InstanceParamApp $
+            InstanceApp
+              { _instanceAppHead = n,
+                _instanceAppArgs = toList args',
+                _instanceAppExpression = e
+              }
       _ ->
         Nothing
   _ ->
@@ -77,11 +107,11 @@ traitFromExpression metaVars e = case paramFromExpression metaVars e of
 
 instanceFromTypedExpression :: TypedExpression -> Maybe InstanceInfo
 instanceFromTypedExpression TypedExpression {..} = case traitFromExpression metaVars e of
-  Just (InstanceApp h params) ->
+  Just (InstanceApp {..}) ->
     Just $
       InstanceInfo
-        { _instanceInfoInductive = h,
-          _instanceInfoParams = params,
+        { _instanceInfoInductive = _instanceAppHead,
+          _instanceInfoParams = _instanceAppArgs,
           _instanceInfoResult = _typedExpression,
           _instanceInfoArgs = args
         }

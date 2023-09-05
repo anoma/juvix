@@ -23,6 +23,7 @@ data TypeCheckerError
   | ErrImpracticalPatternMatching ImpracticalPatternMatching
   | ErrNoPositivity NoPositivity
   | ErrUnsupportedTypeFunction UnsupportedTypeFunction
+  | ErrInvalidInstanceType InvalidInstanceType
   | ErrTargetNotATrait TargetNotATrait
   | ErrNotATrait NotATrait
   | ErrNoInstance NoInstance
@@ -44,6 +45,7 @@ instance ToGenericError TypeCheckerError where
     ErrImpracticalPatternMatching e -> genericError e
     ErrNoPositivity e -> genericError e
     ErrUnsupportedTypeFunction e -> genericError e
+    ErrInvalidInstanceType e -> genericError e
     ErrTargetNotATrait e -> genericError e
     ErrNotATrait e -> genericError e
     ErrNoInstance e -> genericError e

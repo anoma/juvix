@@ -7,7 +7,7 @@ where
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Builtins.Effect
 import Juvix.Compiler.Concrete.Data.Highlight.Input
-import Juvix.Compiler.Internal.Data.InstanceInfo (InstanceApp (InstanceApp), InstanceInfo (..), InstanceParam, instanceFromTypedExpression, traitFromExpression)
+import Juvix.Compiler.Internal.Data.InstanceInfo
 import Juvix.Compiler.Internal.Data.LocalVars
 import Juvix.Compiler.Internal.Data.TypedHole
 import Juvix.Compiler.Internal.Extra
@@ -223,7 +223,7 @@ checkInstanceType FunctionDef {..} = case mi of
       throw (ErrTargetNotATrait (TargetNotATrait _funDefType))
     mapM_ (checkArg tab _instanceInfoParams) _instanceInfoArgs
   Nothing ->
-    throw (ErrTargetNotATrait (TargetNotATrait _funDefType))
+    throw (ErrInvalidInstanceType (InvalidInstanceType _funDefType))
   where
     mi =
       instanceFromTypedExpression
@@ -238,15 +238,15 @@ checkInstanceType FunctionDef {..} = case mi of
       Implicit -> return ()
       Explicit -> throw (ErrExplicitInstanceArgument (ExplicitInstanceArgument _paramType))
       ImplicitInstance -> case traitFromExpression mempty _paramType of
-        Just (InstanceApp h args)
-          | isTrait tab h ->
-              mapM_ (checkTraitTermination params _paramType) args
+        Just InstanceApp {..}
+          | isTrait tab _instanceAppHead ->
+              mapM_ (checkTraitTermination params) _instanceAppArgs
         _ ->
           throw (ErrNotATrait (NotATrait _paramType))
 
 checkInstanceParam :: (Member (Error TypeCheckerError) r) => InfoTable -> Expression -> Sem r ()
 checkInstanceParam tab ty = case traitFromExpression mempty ty of
-  Just (InstanceApp h _) | isTrait tab h -> return ()
+  Just InstanceApp {..} | isTrait tab _instanceAppHead -> return ()
   _ -> throw (ErrNotATrait (NotATrait ty))
 
 checkExample ::

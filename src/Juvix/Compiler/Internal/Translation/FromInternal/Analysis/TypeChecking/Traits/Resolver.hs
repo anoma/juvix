@@ -123,9 +123,9 @@ lookupInstance' tab name params = do
             case m of
               Just {} -> return False
               Nothing -> return True
-      (InstanceParamApp (InstanceApp h1 args1), InstanceParamApp (InstanceApp h2 args2))
-        | h1 == h2 -> do
-            and <$> sequence (zipWithExact goMatch args1 args2)
+      (InstanceParamApp app1, InstanceParamApp app2)
+        | app1 ^. instanceAppHead == app2 ^. instanceAppHead -> do
+            and <$> sequence (zipWithExact goMatch (app1 ^. instanceAppArgs) (app2 ^. instanceAppArgs))
       _ ->
         return False
 
@@ -137,8 +137,8 @@ lookupInstance ::
   Sem r [(InstanceInfo, SubsI)]
 lookupInstance tab ty = do
   case traitFromExpression mempty ty of
-    Just (InstanceApp h args) ->
-      lookupInstance' tab h args
+    Just (InstanceApp {..}) ->
+      lookupInstance' tab _instanceAppHead _instanceAppArgs
     _ ->
       throw (ErrNotATrait (NotATrait ty))
 

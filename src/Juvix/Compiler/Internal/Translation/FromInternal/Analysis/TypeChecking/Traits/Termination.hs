@@ -4,7 +4,6 @@ module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Tr
 where
 
 import Juvix.Compiler.Internal.Data.InstanceInfo
-import Juvix.Compiler.Internal.Language
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error
 import Juvix.Prelude
 
@@ -12,10 +11,9 @@ checkTraitTermination ::
   forall r.
   (Member (Error TypeCheckerError) r) =>
   [InstanceParam] ->
-  Expression ->
   InstanceParam ->
   Sem r ()
-checkTraitTermination params e arg =
+checkTraitTermination params arg =
   mapM_ check params
   where
     check :: InstanceParam -> Sem r ()
@@ -23,7 +21,7 @@ checkTraitTermination params e arg =
       | checkSubterm arg p =
           return ()
       | otherwise =
-          throw (ErrTraitNotTerminating (TraitNotTerminating e))
+          throw (ErrTraitNotTerminating (TraitNotTerminating (paramToExpression arg)))
 
 checkSubterm :: InstanceParam -> InstanceParam -> Bool
 checkSubterm p1 p2

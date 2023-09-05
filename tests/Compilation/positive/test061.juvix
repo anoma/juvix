@@ -10,6 +10,9 @@ type Show A :=
   };
 
 instance
+showStringI : Show String := mkShow (show := id);
+
+instance
 showBoolI : Show Bool := mkShow (show := λ{x := if x "true" "false"});
 
 instance
@@ -54,4 +57,6 @@ main : IO :=
   printStringLn (f' [1; 2]) >>
   printStringLn (f'' [true; false]) >>
   printStringLn (f'3 [just true; nothing; just false]) >>
-  printStringLn (f'4 [just [1]; nothing; just [2; 3]]);
+  printStringLn (f'4 [just [1]; nothing; just [2; 3]]) >>
+  printStringLn (f'3 "abba") >>
+  printStringLn (Show.show ["a"; "b"; "c"; "d"]);

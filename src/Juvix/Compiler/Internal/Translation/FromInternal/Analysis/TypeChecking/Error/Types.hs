@@ -347,6 +347,26 @@ instance ToGenericError UnsupportedTypeFunction where
       i :: Interval
       i = getLoc _unsupportedTypeFunction
 
+newtype InvalidInstanceType = InvalidInstanceType
+  { _invalidInstanceTypeExpression :: Expression
+  }
+
+instance ToGenericError InvalidInstanceType where
+  genericError InvalidInstanceType {..} = do
+    opts <- fromGenericOptions <$> ask
+    let msg =
+          "Invalid instance type:"
+            <+> ppCode opts _invalidInstanceTypeExpression
+    return
+      GenericError
+        { _genericErrorLoc = i,
+          _genericErrorMessage = mkAnsiText msg,
+          _genericErrorIntervals = [i]
+        }
+    where
+      i :: Interval
+      i = getLoc _invalidInstanceTypeExpression
+
 newtype TargetNotATrait = TargetNotATrait
   { _targetNotATraitType :: Expression
   }
@@ -485,4 +505,4 @@ instance ToGenericError TraitNotTerminating where
             "Non-decreasing trait argument:"
               <+> ppCode opts' (e ^. traitNotTerminating)
                 <> line
-                <> "The parameters of a trait in an instance argument must occur in the parameters of the trait in the target"
+                <> "Each parameter of a trait in an instance argument must be structurally smaller than some parameter of the trait in the instance target"
