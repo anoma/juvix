@@ -6,7 +6,7 @@ axiom b : Type;
 
 --- document type
 type T :=
-  | --- document constructor
+   --- document constructor
     t : T;
 
 --- blah ;id A; and ;A A id T A id; this is another ;id

@@ -9,7 +9,7 @@ open O;
 module N;
   module O;
     type T :=
-      | A : T;
+       A : T;
   end;
 end;
 

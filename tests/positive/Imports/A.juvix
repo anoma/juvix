@@ -6,7 +6,7 @@ module M;
   module N;
     syntax operator t i3;
     type T :=
-      | t : T;
+       t : T;
   end;
 
   syntax fixity add {arity: binary, assoc: right, below: [i3]};

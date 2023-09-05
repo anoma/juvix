@@ -4,4 +4,4 @@ syntax fixity prod {arity: binary};
 
 syntax operator × prod;
 type × (a : Type) (b : Type) :=
-  | , : a → b → a × b;
+   , : a → b → a × b;
