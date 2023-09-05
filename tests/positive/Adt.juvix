@@ -4,8 +4,7 @@ type Bool :=
   | true
   | false;
 
-type Pair (A B : Type) :=
-   mkPair A B;
+type Pair (A B : Type) := mkPair A B;
 
 type Nat :=
   | zero

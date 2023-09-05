@@ -238,8 +238,8 @@ instance (SingI s) => PrettyPrint (Iterator s) where
         b'
           | _iteratorBodyBraces = braces (oneLineOrNextNoIndent b)
           | otherwise = line <> b
-    parensIf _iteratorParens
-      $ hang (n <+?> is' <+?> rngs' <> b')
+    parensIf _iteratorParens $
+      hang (n <+?> is' <+?> rngs' <> b')
 
 instance PrettyPrint S.AName where
   ppCode n = annotated (AnnKind (S.getNameKind n)) (noLoc (pretty (n ^. S.anameVerbatim)))
@@ -668,9 +668,9 @@ instance PrettyPrint Expression where
 instance PrettyPrint (WithSource Pragmas) where
   ppCode pragma = do
     b <- asks (^. optPrintPragmas)
-    when b
-      $ let txt = pretty (Str.pragmasStart <> pragma ^. withSourceText <> Str.pragmasEnd)
-         in annotated AnnComment (noLoc txt) <> line
+    when b $
+      let txt = pretty (Str.pragmasStart <> pragma ^. withSourceText <> Str.pragmasEnd)
+       in annotated AnnComment (noLoc txt) <> line
 
 instance PrettyPrint (WithSource IteratorAttribs) where
   ppCode = braces . noLoc . pretty . (^. withSourceText)
@@ -679,15 +679,15 @@ ppJudocStart :: (Members '[ExactPrint, Reader Options] r) => Sem r (Maybe ())
 ppJudocStart = do
   inBlock <- asks (^. optInJudocBlock)
   if
-    | inBlock -> return Nothing
-    | otherwise -> ppCode Kw.delimJudocStart $> Just ()
+      | inBlock -> return Nothing
+      | otherwise -> ppCode Kw.delimJudocStart $> Just ()
 
 instance (SingI s) => PrettyPrint (Example s) where
   ppCode e =
     ppJudocStart
       <??+> ppCode Kw.delimJudocExample
       <+> ppExpressionType (e ^. exampleExpression)
-      <> semicolon
+        <> semicolon
 
 instance (PrettyPrint a) => PrettyPrint (WithLoc a) where
   ppCode a = morphemeM (getLoc a) (ppCode (a ^. withLocParam))
@@ -712,7 +712,7 @@ instance (SingI s) => PrettyPrint (JudocLine s) where
 
 instance (SingI s) => PrettyPrint (Judoc s) where
   ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => Judoc s -> Sem r ()
-  ppCode (Judoc groups) = ppGroups groups <> line
+  ppCode (Judoc groups) = ppGroups groups <> hardline
     where
       ppGroups :: NonEmpty (JudocGroup s) -> Sem r ()
       ppGroups = \case
@@ -810,7 +810,7 @@ ppFunctionSignature FunctionDef {..} = do
         ?<> termin'
         ?<> ( name'
                 <+?> args'
-                <> type'
+                  <> type'
             )
 
 instance (SingI s) => PrettyPrint (FunctionDef s) where
@@ -992,11 +992,12 @@ instance (SingI s) => PrettyPrint (RhsRecord s) where
         fields'
           | null (_rhsRecordFields ^. _tail1) = ppCode (_rhsRecordFields ^. _head1)
           | otherwise =
-                hardline
-                <> indent ( sequenceWith
-                       (semicolon >> line)
-                       (ppCode <$> _rhsRecordFields)
-                   )
+              hardline
+                <> indent
+                  ( sequenceWith
+                      (semicolon >> line)
+                      (ppCode <$> _rhsRecordFields)
+                  )
                 <> hardline
     ppCode l <> fields' <> ppCode r
 
@@ -1070,7 +1071,7 @@ instance (SingI s) => PrettyPrint (InductiveDef s) where
       ?<> pragmas'
       ?<> sig'
       <+> ppCode _inductiveAssignKw
-      <> constrs'
+        <> constrs'
     where
       ppConstructorBlock :: NonEmpty (ConstructorDef s) -> Sem r ()
       ppConstructorBlock = \case
