@@ -1,6 +1,6 @@
 module InfixErrorP;
 
-  syntax fixity pair := binary {};
+  syntax fixity pair := binary;
 
   syntax operator , pair;
 

@@ -1,6 +1,6 @@
 module DuplicateOperator;
 
-  syntax fixity add := binary {};
+  syntax fixity add := binary;
 
   syntax operator + add;
 

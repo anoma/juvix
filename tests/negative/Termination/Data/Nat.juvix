@@ -1,6 +1,6 @@
 module Data.Nat;
 
-syntax fixity add := binary {};
+syntax fixity add := binary;
 syntax fixity mul := binary {above := [add]};
 
 type ℕ :=

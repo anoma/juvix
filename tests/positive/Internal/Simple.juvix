@@ -13,7 +13,7 @@ type Nat :=
   | zero : Nat
   | suc : Nat → Nat;
 
-syntax fixity cmp := binary {};
+syntax fixity cmp := binary;
 syntax fixity add := binary {assoc := left; above := [cmp]};
 syntax fixity cons := binary {assoc := right; above := [add]};
 

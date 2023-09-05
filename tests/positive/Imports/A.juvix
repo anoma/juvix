@@ -1,6 +1,6 @@
 module A;
 
-syntax fixity i3 := binary {};
+syntax fixity i3 := binary;
 
 module M;
   module N;
