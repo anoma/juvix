@@ -992,14 +992,13 @@ instance (SingI s) => PrettyPrint (RhsRecord s) where
         fields'
           | null (_rhsRecordFields ^. _tail1) = ppCode (_rhsRecordFields ^. _head1)
           | otherwise =
-              grouped
-                $ lineOrEmpty
-                <> ( sequenceWith
+                hardline
+                <> indent ( sequenceWith
                        (semicolon >> line)
                        (ppCode <$> _rhsRecordFields)
                    )
-                <> lineOrEmpty
-    ppCode l <> nest fields' <> ppCode r
+                <> hardline
+    ppCode l <> fields' <> ppCode r
 
 instance (SingI s) => PrettyPrint (RhsAdt s) where
   ppCode = align . sep . fmap ppExpressionAtomType . (^. rhsAdtArguments)
@@ -1012,12 +1011,12 @@ instance (SingI s) => PrettyPrint (ConstructorRhs s) where
     ConstructorRhsAdt r -> ppCode r
 
 ppConstructorDef :: forall s r. (SingI s, Members '[ExactPrint, Reader Options] r) => Bool -> ConstructorDef s -> Sem r ()
-ppConstructorDef skipPipe ConstructorDef {..} = do
+ppConstructorDef singleConstructor ConstructorDef {..} = do
   let constructorName' = annDef _constructorName (ppSymbolType _constructorName)
       constructorRhs' = constructorRhsHelper _constructorRhs
       doc' = ppCode <$> _constructorDoc
       pragmas' = ppCode <$> _constructorPragmas
-  pipeHelper <?+> nest (doc' ?<> pragmas' ?<> constructorName' <> constructorRhs')
+  pipeHelper <?+> nestHelper (doc' ?<> pragmas' ?<> constructorName' <> constructorRhs')
   where
     constructorRhsHelper :: ConstructorRhs s -> Sem r ()
     constructorRhsHelper r = spaceMay <> ppCode r
@@ -1029,10 +1028,15 @@ ppConstructorDef skipPipe ConstructorDef {..} = do
             | null (a ^. rhsAdtArguments) -> mempty
             | otherwise -> space
 
+    nestHelper :: Sem r () -> Sem r ()
+    nestHelper
+      | singleConstructor = id
+      | otherwise = nest
+
     -- we use this helper so that comments appear before the first optional pipe if the pipe was omitted
     pipeHelper :: Maybe (Sem r ())
     pipeHelper
-      | skipPipe = Nothing
+      | singleConstructor = Nothing
       | otherwise = Just $ case _constructorPipe ^. unIrrelevant of
           Just p -> ppCode p
           Nothing -> ppCode Kw.kwPipe
