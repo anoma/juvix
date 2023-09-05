@@ -1,7 +1,6 @@
 module InductivePipes;
 
-type T :=
-   t : T;
+type T := t : T;
 
 type T2 :=
   | t1 : T2
