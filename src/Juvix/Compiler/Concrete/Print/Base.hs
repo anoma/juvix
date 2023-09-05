@@ -624,21 +624,24 @@ ppSymbolList items = do
 
 instance (SingI s) => PrettyPrint (ParsedFixityInfo s) where
   ppCode ParsedFixityInfo {..} = do
-    let (l, r) = _fixityBraces ^. unIrrelevant
-        assocItem = do
-          a <- _fixityAssoc
-          return (ppCode Kw.kwAssoc <+> ppCode Kw.kwAssign <+> ppCode a)
-        sameItem = do
-          a <- _fixityPrecSame
-          return (ppCode Kw.kwSame <+> ppCode Kw.kwAssign <+> ppSymbolType a)
-        aboveItem = do
-          a <- _fixityPrecAbove
-          return (ppCode Kw.kwAbove <+> ppCode Kw.kwAssign <+> ppSymbolList a)
-        belowItem = do
-          a <- _fixityPrecBelow
-          return (ppCode Kw.kwAbove <+> ppCode Kw.kwAssign <+> ppSymbolList a)
-        items = sepSemicolon (catMaybes [assocItem, sameItem, aboveItem, belowItem])
-    ppCode _fixityParsedArity <+> ppCode l <> items <> ppCode r
+    let rhs = do
+          ParsedFixityFields {..} <- _fixityFields
+          let assocItem = do
+                a <- _fixityFieldsAssoc
+                return (ppCode Kw.kwAssoc <+> ppCode Kw.kwAssign <+> ppCode a)
+              sameItem = do
+                a <- _fixityFieldsPrecSame
+                return (ppCode Kw.kwSame <+> ppCode Kw.kwAssign <+> ppSymbolType a)
+              aboveItem = do
+                a <- _fixityFieldsPrecAbove
+                return (ppCode Kw.kwAbove <+> ppCode Kw.kwAssign <+> ppSymbolList a)
+              belowItem = do
+                a <- _fixityFieldsPrecBelow
+                return (ppCode Kw.kwAbove <+> ppCode Kw.kwAssign <+> ppSymbolList a)
+              items = sepSemicolon (catMaybes [assocItem, sameItem, aboveItem, belowItem])
+              (l, r) = _fixityFieldsBraces ^. unIrrelevant
+          return (ppCode l <> items <> ppCode r)
+    ppCode _fixityParsedArity <+?> rhs
 
 instance (SingI s) => PrettyPrint (FixitySyntaxDef s) where
   ppCode f@FixitySyntaxDef {..} = do

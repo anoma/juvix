@@ -292,13 +292,29 @@ deriving stock instance (Ord (SyntaxDef 'Parsed))
 
 deriving stock instance (Ord (SyntaxDef 'Scoped))
 
+data ParsedFixityFields (s :: Stage) = ParsedFixityFields
+  { _fixityFieldsAssoc :: Maybe BinaryAssoc,
+    _fixityFieldsPrecSame :: Maybe (SymbolType s),
+    _fixityFieldsPrecBelow :: Maybe [SymbolType s],
+    _fixityFieldsPrecAbove :: Maybe [SymbolType s],
+    _fixityFieldsBraces :: Irrelevant (KeywordRef, KeywordRef)
+  }
+
+deriving stock instance (Show (ParsedFixityFields 'Parsed))
+
+deriving stock instance (Show (ParsedFixityFields 'Scoped))
+
+deriving stock instance (Eq (ParsedFixityFields 'Parsed))
+
+deriving stock instance (Eq (ParsedFixityFields 'Scoped))
+
+deriving stock instance (Ord (ParsedFixityFields 'Parsed))
+
+deriving stock instance (Ord (ParsedFixityFields 'Scoped))
+
 data ParsedFixityInfo (s :: Stage) = ParsedFixityInfo
   { _fixityParsedArity :: WithLoc Arity,
-    _fixityAssoc :: Maybe BinaryAssoc,
-    _fixityPrecSame :: Maybe (SymbolType s),
-    _fixityPrecBelow :: Maybe [SymbolType s],
-    _fixityPrecAbove :: Maybe [SymbolType s],
-    _fixityBraces :: Irrelevant (KeywordRef, KeywordRef)
+    _fixityFields :: Maybe (ParsedFixityFields s)
   }
 
 deriving stock instance (Show (ParsedFixityInfo 'Parsed))
@@ -1712,14 +1728,30 @@ makeLenses ''NamedApplication
 makeLenses ''AliasDef
 makeLenses ''FixitySyntaxDef
 makeLenses ''ParsedFixityInfo
+makeLenses ''ParsedFixityFields
+
+fixityAssoc :: SimpleGetter (ParsedFixityInfo s) (Maybe (BinaryAssoc))
+fixityAssoc = to (^? fixityFields . _Just . fixityFieldsAssoc . _Just)
+
+fixityPrecSame :: SimpleGetter (ParsedFixityInfo s) (Maybe (SymbolType s))
+fixityPrecSame = to (^? fixityFields . _Just . fixityFieldsPrecSame . _Just)
+
+fixityPrecAbove :: SimpleGetter (ParsedFixityInfo s) (Maybe [SymbolType s])
+fixityPrecAbove = to (^? fixityFields . _Just . fixityFieldsPrecAbove . _Just)
+
+fixityPrecBelow :: SimpleGetter (ParsedFixityInfo s) (Maybe [SymbolType s])
+fixityPrecBelow = to (^? fixityFields . _Just . fixityFieldsPrecBelow . _Just)
 
 instance (SingI s) => HasLoc (AliasDef s) where
   getLoc AliasDef {..} = getLoc _aliasDefSyntaxKw <> getLocIdentifierType _aliasDefAsName
 
-instance HasLoc (ParsedFixityInfo s) where
-  getLoc def = getLoc l <> getLoc r
+instance HasLoc (ParsedFixityFields s) where
+  getLoc d = getLoc l <> getLoc r
     where
-      (l, r) = def ^. fixityBraces . unIrrelevant
+      (l, r) = d ^. fixityFieldsBraces . unIrrelevant
+
+instance HasLoc (ParsedFixityInfo s) where
+  getLoc def = getLoc (def ^. fixityParsedArity) <>? (getLoc <$> def ^. fixityFields)
 
 instance HasLoc (FixitySyntaxDef s) where
   getLoc def = getLoc (def ^. fixitySyntaxKw) <> getLoc (def ^. fixityInfo)

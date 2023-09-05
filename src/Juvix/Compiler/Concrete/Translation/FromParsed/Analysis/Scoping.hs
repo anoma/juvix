@@ -625,18 +625,26 @@ checkFixityInfo ::
   ParsedFixityInfo 'Parsed ->
   Sem r (ParsedFixityInfo 'Scoped)
 checkFixityInfo ParsedFixityInfo {..} = do
-  same' <- mapM checkFixitySymbol _fixityPrecSame
-  below' <- mapM (mapM checkFixitySymbol) _fixityPrecBelow
-  above' <- mapM (mapM checkFixitySymbol) _fixityPrecAbove
+  fields' <- mapM checkFields _fixityFields
   return
     ParsedFixityInfo
-      { _fixityPrecSame = same',
-        _fixityPrecAbove = above',
-        _fixityPrecBelow = below',
-        _fixityParsedArity,
-        _fixityAssoc,
-        _fixityBraces
+      { _fixityFields = fields',
+        ..
       }
+  where
+    checkFields :: ParsedFixityFields 'Parsed -> Sem r (ParsedFixityFields 'Scoped)
+    checkFields ParsedFixityFields {..} = do
+      same' <- mapM checkFixitySymbol _fixityFieldsPrecSame
+      below' <- mapM (mapM checkFixitySymbol) _fixityFieldsPrecBelow
+      above' <- mapM (mapM checkFixitySymbol) _fixityFieldsPrecAbove
+      return
+        ParsedFixityFields
+          { _fixityFieldsPrecSame = same',
+            _fixityFieldsPrecAbove = above',
+            _fixityFieldsPrecBelow = below',
+            _fixityFieldsAssoc,
+            _fixityFieldsBraces
+          }
 
 checkFixitySyntaxDef ::
   forall r.
@@ -2728,7 +2736,8 @@ parsePatternTerm = do
   where
     parseNoInfixConstructor :: ParsePat PatternArg
     parseNoInfixConstructor =
-      explicitP . PatternConstructor
+      explicitP
+        . PatternConstructor
         <$> P.token constructorNoFixity mempty
       where
         constructorNoFixity :: PatternAtom 'Scoped -> Maybe ScopedIden

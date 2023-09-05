@@ -515,10 +515,14 @@ builtinStatement = do
 syntaxDef :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (SyntaxDef 'Parsed)
 syntaxDef = do
   syn <- kw kwSyntax
-  SyntaxFixity <$> fixitySyntaxDef syn
-    <|> SyntaxOperator <$> operatorSyntaxDef syn
-    <|> SyntaxIterator <$> iteratorSyntaxDef syn
-    <|> SyntaxAlias <$> aliasDef syn
+  SyntaxFixity
+    <$> fixitySyntaxDef syn
+    <|> SyntaxOperator
+      <$> operatorSyntaxDef syn
+    <|> SyntaxIterator
+      <$> iteratorSyntaxDef syn
+    <|> SyntaxAlias
+      <$> aliasDef syn
 
 aliasDef :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => KeywordRef -> ParsecS r (AliasDef 'Parsed)
 aliasDef synKw = do
@@ -529,26 +533,21 @@ aliasDef synKw = do
   _aliasDefAsName <- name
   return AliasDef {..}
 
---------------------------------------------------------------------------------
--- Operator syntax declaration
---------------------------------------------------------------------------------
-
-precedence :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r Precedence
-precedence = PrecNat <$> (fst <$> decimal)
-
-parsedFixityInfo :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (ParsedFixityInfo 'Parsed)
-parsedFixityInfo = do
-  _fixityParsedArity <- withLoc ari
+parsedFixityFields ::
+  forall r.
+  (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
+  ParsecS r (ParsedFixityFields 'Parsed)
+parsedFixityFields = do
   l <- kw delimBraceL
-  (_fixityAssoc, _fixityPrecBelow, _fixityPrecAbove, _fixityPrecSame) <- intercalateEffect semicolon $ do
+  (_fixityFieldsAssoc, _fixityFieldsPrecBelow, _fixityFieldsPrecAbove, _fixityFieldsPrecSame) <- intercalateEffect semicolon $ do
     as <- toPermutationWithDefault Nothing (Just <$> assoc)
     bel <- toPermutationWithDefault Nothing (Just <$> belowAbove kwBelow)
     abov <- toPermutationWithDefault Nothing (Just <$> belowAbove kwAbove)
     sam <- toPermutationWithDefault Nothing (Just <$> same)
     pure (as, bel, abov, sam)
   r <- kw delimBraceR
-  let _fixityBraces = Irrelevant (l, r)
-  return ParsedFixityInfo {..}
+  let _fixityFieldsBraces = Irrelevant (l, r)
+  return ParsedFixityFields {..}
   where
     same :: ParsecS r Symbol
     same = do
@@ -568,10 +567,19 @@ parsedFixityInfo = do
     assoc :: ParsecS r BinaryAssoc
     assoc = do
       void (kw kwAssoc >> kw kwAssign)
-      kw kwLeft $> AssocLeft
-        <|> kw kwRight $> AssocRight
-        <|> kw kwNone $> AssocNone
+      kw kwLeft
+        $> AssocLeft
+        <|> kw kwRight
+          $> AssocRight
+        <|> kw kwNone
+          $> AssocNone
 
+parsedFixityInfo :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (ParsedFixityInfo 'Parsed)
+parsedFixityInfo = do
+  _fixityParsedArity <- withLoc ari
+  _fixityFields <- optional parsedFixityFields
+  return ParsedFixityInfo {..}
+  where
     ari :: ParsecS r Arity
     ari =
       kw kwUnary
