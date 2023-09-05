@@ -280,7 +280,11 @@ tests =
     posTest
       "Alias"
       $(mkRelDir ".")
-      $(mkRelFile "Alias.juvix")
+      $(mkRelFile "Alias.juvix"),
+    posTest
+      "Traits"
+      $(mkRelDir ".")
+      $(mkRelFile "Traits.juvix")
   ]
     <> [ compilationTest t | t <- Compilation.tests
        ]

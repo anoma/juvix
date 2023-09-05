@@ -60,7 +60,7 @@ fromConcrete _resultScoper =
     ms = _resultScoper ^. Scoper.resultModules
     exportTbl = _resultScoper ^. Scoper.resultExports
 
--- | `StatementInclude`s are no included in the result
+-- | `StatementInclude`s are not included in the result
 buildMutualBlocks ::
   (Members '[Reader Internal.NameDependencyInfo] r) =>
   [Internal.PreStatement] ->

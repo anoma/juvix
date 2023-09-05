@@ -236,8 +236,18 @@ goMutualBlock ::
 goMutualBlock (Internal.MutualBlock m) = preMutual m >>= goMutual
   where
     preMutual :: NonEmpty Internal.MutualStatement -> Sem r PreMutual
-    preMutual = execState (PreMutual [] []) . mapM_ step
+    preMutual stmts = do
+      let inds = filter isInd (toList stmts)
+          funs = filter (not . isInd) (toList stmts)
+      -- inductives must be pre-registered first to avoid crashing on unknown
+      -- inductive types when pre-registering functions
+      execState (PreMutual [] []) $ mapM_ step (inds ++ funs)
       where
+        isInd :: Internal.MutualStatement -> Bool
+        isInd = \case
+          Internal.StatementInductive {} -> True
+          Internal.StatementFunction {} -> False
+
         step :: Internal.MutualStatement -> Sem (State PreMutual ': r) ()
         step = \case
           Internal.StatementFunction f -> do
