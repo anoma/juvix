@@ -95,4 +95,4 @@ checkNoMeta = \case
   InstanceParamVar {} -> True
   InstanceParamMeta {} -> False
   InstanceParamHole {} -> True
-  InstanceParamApp (InstanceApp _ args) -> all checkNoMeta args
+  InstanceParamApp InstanceApp {..} -> all checkNoMeta _instanceAppArgs

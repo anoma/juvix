@@ -461,3 +461,28 @@ instance ToGenericError ExplicitInstanceArgument where
             }
         where
           i = getLoc (e ^. explicitInstanceArgumentExpression)
+
+newtype TraitNotTerminating = TraitNotTerminating
+  { _traitNotTerminating :: Expression
+  }
+
+makeLenses ''TraitNotTerminating
+
+instance ToGenericError TraitNotTerminating where
+  genericError e = ask >>= generr
+    where
+      generr opts =
+        return
+          GenericError
+            { _genericErrorLoc = i,
+              _genericErrorMessage = ppOutput msg,
+              _genericErrorIntervals = [i]
+            }
+        where
+          opts' = fromGenericOptions opts
+          i = getLoc (e ^. traitNotTerminating)
+          msg =
+            "Non-decreasing trait argument:"
+              <+> ppCode opts' (e ^. traitNotTerminating)
+                <> line
+                <> "The parameters of a trait in an instance argument must occur in the parameters of the trait in the target"

@@ -28,6 +28,7 @@ data TypeCheckerError
   | ErrNoInstance NoInstance
   | ErrAmbiguousInstances AmbiguousInstances
   | ErrExplicitInstanceArgument ExplicitInstanceArgument
+  | ErrTraitNotTerminating TraitNotTerminating
 
 instance ToGenericError TypeCheckerError where
   genericError :: (Member (Reader GenericOptions) r) => TypeCheckerError -> Sem r GenericError
@@ -48,3 +49,4 @@ instance ToGenericError TypeCheckerError where
     ErrNoInstance e -> genericError e
     ErrAmbiguousInstances e -> genericError e
     ErrExplicitInstanceArgument e -> genericError e
+    ErrTraitNotTerminating e -> genericError e

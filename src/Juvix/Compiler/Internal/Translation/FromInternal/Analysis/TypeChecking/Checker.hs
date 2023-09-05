@@ -7,7 +7,7 @@ where
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Builtins.Effect
 import Juvix.Compiler.Concrete.Data.Highlight.Input
-import Juvix.Compiler.Internal.Data.InstanceInfo (InstanceApp (InstanceApp), InstanceInfo (..), instanceFromTypedExpression, traitFromExpression)
+import Juvix.Compiler.Internal.Data.InstanceInfo (InstanceApp (InstanceApp), InstanceInfo (..), InstanceParam, instanceFromTypedExpression, traitFromExpression)
 import Juvix.Compiler.Internal.Data.LocalVars
 import Juvix.Compiler.Internal.Data.TypedHole
 import Juvix.Compiler.Internal.Extra
@@ -18,6 +18,7 @@ import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Da
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Inference
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Traits.Resolver
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Traits.Termination
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Data.Effect.NameIdGen
 import Juvix.Prelude hiding (fromEither)
@@ -220,7 +221,7 @@ checkInstanceType FunctionDef {..} = case mi of
     tab <- ask
     unless (isTrait tab _instanceInfoInductive) $
       throw (ErrTargetNotATrait (TargetNotATrait _funDefType))
-    mapM_ (checkParam tab) _instanceInfoArgs
+    mapM_ (checkArg tab _instanceInfoParams) _instanceInfoArgs
   Nothing ->
     throw (ErrTargetNotATrait (TargetNotATrait _funDefType))
   where
@@ -232,11 +233,16 @@ checkInstanceType FunctionDef {..} = case mi of
             }
         )
 
-    checkParam :: InfoTable -> FunctionParameter -> Sem r ()
-    checkParam tab FunctionParameter {..} = case _paramImplicit of
+    checkArg :: InfoTable -> [InstanceParam] -> FunctionParameter -> Sem r ()
+    checkArg tab params FunctionParameter {..} = case _paramImplicit of
       Implicit -> return ()
       Explicit -> throw (ErrExplicitInstanceArgument (ExplicitInstanceArgument _paramType))
-      ImplicitInstance -> checkInstanceParam tab _paramType
+      ImplicitInstance -> case traitFromExpression mempty _paramType of
+        Just (InstanceApp h args)
+          | isTrait tab h ->
+              mapM_ (checkTraitTermination params _paramType) args
+        _ ->
+          throw (ErrNotATrait (NotATrait _paramType))
 
 checkInstanceParam :: (Member (Error TypeCheckerError) r) => InfoTable -> Expression -> Sem r ()
 checkInstanceParam tab ty = case traitFromExpression mempty ty of
