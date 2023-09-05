@@ -267,7 +267,7 @@ deriving stock instance (Ord (AliasDef 'Parsed))
 
 deriving stock instance (Ord (AliasDef 'Scoped))
 
-data ParsedInteratorInfo = ParsedInteratorInfo
+data ParsedIteratorInfo = ParsedIteratorInfo
   { _piteratorInfoInitNum :: Maybe (WithLoc Int),
     _piteratorInfoRangeNum :: Maybe (WithLoc Int),
     _piteratorInfoBraces :: Irrelevant (KeywordRef, KeywordRef)
@@ -354,7 +354,7 @@ instance HasLoc OperatorSyntaxDef where
 
 data IteratorSyntaxDef = IteratorSyntaxDef
   { _iterSymbol :: Symbol,
-    _iterInfo :: Maybe ParsedInteratorInfo,
+    _iterInfo :: Maybe ParsedIteratorInfo,
     _iterSyntaxKw :: KeywordRef,
     _iterIteratorKw :: KeywordRef
   }
@@ -2374,8 +2374,8 @@ scopedIdenName f n = case n ^. scopedIdenAlias of
     a' <- f a
     pure (set scopedIdenAlias (Just a') n)
 
-fromParsedIteratorInfo :: ParsedInteratorInfo -> IteratorInfo
-fromParsedIteratorInfo ParsedInteratorInfo {..} =
+fromParsedIteratorInfo :: ParsedIteratorInfo -> IteratorInfo
+fromParsedIteratorInfo ParsedIteratorInfo {..} =
   IteratorInfo
     { _iteratorInfoInitNum = (^. withLocParam) <$> _piteratorInfoInitNum,
       _iteratorInfoRangeNum = (^. withLocParam) <$> _piteratorInfoRangeNum

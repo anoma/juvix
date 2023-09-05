@@ -598,7 +598,7 @@ operatorSyntaxDef _opSyntaxKw = do
 parsedIteratorInfo ::
   forall r.
   (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
-  ParsecS r ParsedInteratorInfo
+  ParsecS r ParsedIteratorInfo
 parsedIteratorInfo = do
   l <- kw delimBraceL
   (_piteratorInfoInitNum, _piteratorInfoRangeNum) <- intercalateEffect semicolon $ do
@@ -607,7 +607,7 @@ parsedIteratorInfo = do
     pure (ini, ran)
   r <- kw delimBraceR
   let _piteratorInfoBraces = Irrelevant (l, r)
-  return ParsedInteratorInfo {..}
+  return ParsedIteratorInfo {..}
   where
     pinit :: ParsecS r (WithLoc Int)
     pinit = do

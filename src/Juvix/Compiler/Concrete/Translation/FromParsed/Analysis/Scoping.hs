@@ -175,10 +175,11 @@ freshSymbol _nameKind _nameConcrete = do
     iter :: Sem r (Maybe IteratorInfo)
     iter
       | S.canBeIterator _nameKind = do
-          mma <- gets (^? scoperSyntaxIterators . scoperIterators . at _nameConcrete . _Just . symbolIteratorDef . iterInfo)
-          whenJust mma . const $
+          mma :: Maybe (Maybe ParsedIteratorInfo) <- gets (^? scoperSyntaxIterators . scoperIterators . at _nameConcrete . _Just . symbolIteratorDef . iterInfo)
+          runFail $ do
+            ma <- failMaybe mma
             modify (set (scoperSyntaxIterators . scoperIterators . at _nameConcrete . _Just . symbolIteratorUsed) True)
-          return (fromParsedIteratorInfo <$> join mma)
+            return (maybe emptyIteratorInfo fromParsedIteratorInfo ma)
       | otherwise = return Nothing
 
 reserveSymbolSignatureOf ::

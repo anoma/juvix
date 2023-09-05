@@ -664,9 +664,9 @@ instance PrettyPrint InfixApplication where
 instance PrettyPrint PostfixApplication where
   ppCode = apeHelper
 
-instance PrettyPrint ParsedInteratorInfo where
-  ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => ParsedInteratorInfo -> Sem r ()
-  ppCode ParsedInteratorInfo {..} = do
+instance PrettyPrint ParsedIteratorInfo where
+  ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => ParsedIteratorInfo -> Sem r ()
+  ppCode ParsedIteratorInfo {..} = do
     let (l, r) = _piteratorInfoBraces ^. unIrrelevant
         ppInt :: WithLoc Int -> Sem r ()
         ppInt = morphemeWithLoc . fmap (annotate AnnLiteralInteger . pretty)

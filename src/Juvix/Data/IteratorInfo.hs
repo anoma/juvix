@@ -9,3 +9,10 @@ data IteratorInfo = IteratorInfo
   deriving stock (Show, Eq, Ord, Generic)
 
 makeLenses ''IteratorInfo
+
+emptyIteratorInfo :: IteratorInfo
+emptyIteratorInfo =
+  IteratorInfo
+    { _iteratorInfoInitNum = Nothing,
+      _iteratorInfoRangeNum = Nothing
+    }
