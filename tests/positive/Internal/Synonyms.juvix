@@ -4,6 +4,8 @@ import Stdlib.Prelude open;
 
 Ty1 : Type := Bool → Bool;
 
+idTy (A : Type) : Type := A;
+
 Ty2 : Type := Ty1;
 
 k : Ty2
@@ -15,5 +17,5 @@ Num : Type := {A : Type} → (A → A) → A → A;
 czero : Num
   | {_} f x := x;
 
-csuc : Num → Num
+csuc : Num → idTy Num
   | n {_} f := f ∘ n {_} f;
