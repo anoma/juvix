@@ -889,6 +889,7 @@ goExpression = \case
       where
         (r, i) = case arg of
           ExpressionBraces b -> (b ^. withLocParam, Implicit)
+          ExpressionDoubleBraces b -> (b ^. withLocParam, ImplicitInstance)
           _ -> (arg, Explicit)
 
     goPostfix :: PostfixApplication -> Sem r Internal.Application

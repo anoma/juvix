@@ -612,7 +612,7 @@ expressionAtom =
       <|> AtomUniverse <$> universe
       <|> AtomLambda <$> lambda
       <|> AtomCase <$> case_
-      <|> AtomFunction <$> function
+      <|> either AtomFunction AtomDoubleBraces <$> functionOrDoubleBraces
       <|> AtomLet <$> letBlock
       <|> AtomFunArrow <$> kw kwRightArrow
       <|> AtomHole <$> hole
@@ -919,14 +919,25 @@ functionDefinition _signBuiltin = P.label "<function definition>" $ do
         let parseArgumentName :: ParsecS r (Argument 'Parsed) =
               ArgumentSymbol <$> symbol
                 <|> ArgumentWildcard <$> wildcard
-        n <- case impl of
-          ImplicitInstance -> return $ NonEmpty.singleton $ ArgumentWildcard $ Wildcard (getLoc opn)
-          _ -> some1 parseArgumentName
-        c <- case impl of
-          Implicit -> optional (Irrelevant <$> kw kwColon)
-          Explicit -> Just . Irrelevant <$> kw kwColon
-          ImplicitInstance -> return Nothing
-        return (opn, n, impl, c)
+        let parseArgumentNameColon :: ParsecS r (Argument 'Parsed, Maybe (Irrelevant KeywordRef)) = P.try $ do
+              n <- parseArgumentName
+              c <- Just . Irrelevant <$> kw kwColon
+              return (n, c)
+        (ns, c) <- case impl of
+          ImplicitInstance ->
+            first NonEmpty.singleton
+              <$> ( parseArgumentNameColon
+                      <|> return (ArgumentWildcard (Wildcard (getLoc opn)), Nothing)
+                  )
+          Implicit -> do
+            ns <- some1 parseArgumentName
+            c <- optional (Irrelevant <$> kw kwColon)
+            return (ns, c)
+          Explicit -> do
+            ns <- some1 parseArgumentName
+            c <- Just . Irrelevant <$> kw kwColon
+            return (ns, c)
+        return (opn, ns, impl, c)
       _sigArgType <- case _sigArgImplicit of
         Implicit
           | isNothing _sigArgColon ->
@@ -1013,12 +1024,29 @@ functionParams = do
       kw kwColon
       return n
 
-function :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (Function 'Parsed)
-function = do
-  _funParameters <- functionParams
+functionOrDoubleBraces :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (Either (Function 'Parsed) (WithLoc (ExpressionAtoms 'Parsed)))
+functionOrDoubleBraces = do
+  params <- functionParams
+  (Left <$> function params) <|> (Right <$> atomDoubleBraces params)
+
+function ::
+  (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
+  FunctionParameters 'Parsed ->
+  ParsecS r (Function 'Parsed)
+function _funParameters = do
   _funKw <- kw kwRightArrow
   _funReturn <- parseExpressionAtoms
   return Function {..}
+
+atomDoubleBraces ::
+  FunctionParameters 'Parsed ->
+  ParsecS r (WithLoc (ExpressionAtoms 'Parsed))
+atomDoubleBraces FunctionParameters {..}
+  | _paramImplicit == ImplicitInstance && isNothing (_paramColon ^. unIrrelevant) = do
+      return $ WithLoc (getLoc _paramType) _paramType
+  | otherwise = do
+      off <- P.getOffset
+      parseFailure off "Expected: ->"
 
 --------------------------------------------------------------------------------
 -- Lambda expression

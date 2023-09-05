@@ -314,6 +314,7 @@ instance (SingI s) => PrettyPrint (ExpressionAtom s) where
     AtomLiteral lit -> ppCode lit
     AtomFunArrow a -> ppCode a
     AtomParens e -> parens (ppExpressionType e)
+    AtomDoubleBraces e -> doubleBraces (ppExpressionType (e ^. withLocParam))
     AtomBraces e -> braces (ppExpressionType (e ^. withLocParam))
     AtomHole w -> ppHoleType w
     AtomIterator i -> ppCode i

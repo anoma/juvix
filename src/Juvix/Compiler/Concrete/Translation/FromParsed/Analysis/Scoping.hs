@@ -2026,6 +2026,7 @@ checkExpressionAtom e = case e of
   AtomUniverse uni -> return (pure (AtomUniverse uni))
   AtomFunction fun -> pure . AtomFunction <$> checkFunction fun
   AtomParens par -> pure . AtomParens <$> checkParens par
+  AtomDoubleBraces br -> pure . AtomDoubleBraces <$> traverseOf withLocParam checkParseExpressionAtoms br
   AtomBraces br -> pure . AtomBraces <$> traverseOf withLocParam checkParseExpressionAtoms br
   AtomFunArrow a -> return (pure (AtomFunArrow a))
   AtomHole h -> pure . AtomHole <$> checkHole h
@@ -2509,6 +2510,7 @@ parseTerm =
       <|> parseLiteral
       <|> parseLet
       <|> parseIterator
+      <|> parseDoubleBraces
       <|> parseBraces
       <|> parseNamedApplication
   where
@@ -2599,6 +2601,14 @@ parseTerm =
         identifierNoFixity s = case s of
           AtomIdentifier iden
             | not (S.hasFixity (iden ^. scopedIdenName)) -> Just iden
+          _ -> Nothing
+
+    parseDoubleBraces :: Parse Expression
+    parseDoubleBraces = ExpressionDoubleBraces <$> P.token bracedExpr mempty
+      where
+        bracedExpr :: ExpressionAtom 'Scoped -> Maybe (WithLoc Expression)
+        bracedExpr = \case
+          AtomDoubleBraces l -> Just l
           _ -> Nothing
 
     parseBraces :: Parse Expression
