@@ -54,7 +54,7 @@ testDescr PosTest {..} = helper renderCodeNew
                         . ignoreLog
                         . runProcessIO
                         . mapError (JuvixError @GitProcessError)
-                        . runGitProcess
+                        . runGitProcess GitProcessOffline
                         . mapError (JuvixError @DependencyError)
                         . runPathResolverPipe
                     evalHelper :: HashMap (Path Abs File) Text -> Sem PipelineEff a -> IO a

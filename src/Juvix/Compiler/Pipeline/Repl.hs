@@ -204,13 +204,17 @@ compileReplInputIO ::
   Path Abs File ->
   Text ->
   Sem r (Either JuvixError ReplPipelineResult)
-compileReplInputIO fp txt =
+compileReplInputIO fp txt = do
+  offline <- asks (^. entryPointOffline)
+  let gitProcessMode
+        | offline = GitProcessOffline
+        | otherwise = GitProcessOnline
   runError
     . runLogIO
     . runFilesIO
     . mapError (JuvixError @GitProcessError)
     . runProcessIO
-    . runGitProcess
+    . runGitProcess gitProcessMode
     . mapError (JuvixError @DependencyError)
     . runPathResolverArtifacts
     $ do

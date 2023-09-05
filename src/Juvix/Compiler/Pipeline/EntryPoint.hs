@@ -37,7 +37,8 @@ data EntryPoint = EntryPoint
     _entryPointInliningDepth :: Int,
     _entryPointGenericOptions :: GenericOptions,
     _entryPointModulePaths :: [Path Abs File],
-    _entryPointSymbolPruningMode :: SymbolPruningMode
+    _entryPointSymbolPruningMode :: SymbolPruningMode,
+    _entryPointOffline :: Bool
   }
   deriving stock (Eq, Show)
 
@@ -81,7 +82,8 @@ defaultEntryPointNoFile roots =
       _entryPointOptimizationLevel = defaultOptimizationLevel,
       _entryPointInliningDepth = defaultInliningDepth,
       _entryPointModulePaths = [],
-      _entryPointSymbolPruningMode = FilterUnreachable
+      _entryPointSymbolPruningMode = FilterUnreachable,
+      _entryPointOffline = False
     }
 
 defaultUnrollLimit :: Int

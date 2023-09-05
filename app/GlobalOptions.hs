@@ -19,7 +19,8 @@ data GlobalOptions = GlobalOptions
     _globalNoPositivity :: Bool,
     _globalNoCoverage :: Bool,
     _globalNoStdlib :: Bool,
-    _globalUnrollLimit :: Int
+    _globalUnrollLimit :: Int,
+    _globalOffline :: Bool
   }
   deriving stock (Eq, Show)
 
@@ -58,7 +59,8 @@ defaultGlobalOptions =
       _globalNoPositivity = False,
       _globalNoCoverage = False,
       _globalNoStdlib = False,
-      _globalUnrollLimit = defaultUnrollLimit
+      _globalUnrollLimit = defaultUnrollLimit,
+      _globalOffline = False
     }
 
 -- | Get a parser for global flags which can be hidden or not depending on
@@ -119,6 +121,11 @@ parseGlobalFlags = do
           <> value defaultUnrollLimit
           <> help ("Recursion unrolling limit (default: " <> show defaultUnrollLimit <> ")")
       )
+  _globalOffline <-
+    switch
+      ( long "offline"
+          <> help "Disable access to network resources"
+      )
   return GlobalOptions {..}
 
 parseBuildDir :: Mod OptionFields (Prepath Dir) -> Parser (AppPath Dir)
@@ -150,7 +157,8 @@ entryPointFromGlobalOptions roots mainFile opts = do
         _entryPointNoStdlib = opts ^. globalNoStdlib,
         _entryPointUnrollLimit = opts ^. globalUnrollLimit,
         _entryPointGenericOptions = project opts,
-        _entryPointBuildDir = maybe (def ^. entryPointBuildDir) Abs mabsBuildDir
+        _entryPointBuildDir = maybe (def ^. entryPointBuildDir) Abs mabsBuildDir,
+        _entryPointOffline = opts ^. globalOffline
       }
   where
     optBuildDir :: Maybe (Prepath Dir)
@@ -170,7 +178,8 @@ entryPointFromGlobalOptionsNoFile roots opts = do
         _entryPointNoStdlib = opts ^. globalNoStdlib,
         _entryPointUnrollLimit = opts ^. globalUnrollLimit,
         _entryPointGenericOptions = project opts,
-        _entryPointBuildDir = maybe (def ^. entryPointBuildDir) Abs mabsBuildDir
+        _entryPointBuildDir = maybe (def ^. entryPointBuildDir) Abs mabsBuildDir,
+        _entryPointOffline = opts ^. globalOffline
       }
   where
     optBuildDir :: Maybe (Prepath Dir)
