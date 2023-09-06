@@ -312,6 +312,33 @@ instance ToGenericError AppLeftImplicit where
                 <> line
                 <> "It needs to be the argument of a function expecting an implicit argument."
 
+newtype AppLeftImplicitInstance = AppLeftImplicitInstance
+  { _appLeftImplicitInstance :: WithLoc Expression
+  }
+  deriving stock (Show)
+
+makeLenses ''AppLeftImplicitInstance
+
+instance ToGenericError AppLeftImplicitInstance where
+  genericError e = ask >>= generr
+    where
+      generr opts =
+        return
+          GenericError
+            { _genericErrorLoc = i,
+              _genericErrorMessage = prettyError msg,
+              _genericErrorIntervals = [i]
+            }
+        where
+          opts' = fromGenericOptions opts
+          i = getLoc (e ^. appLeftImplicitInstance)
+          msg =
+            "The expression"
+              <+> ppCode opts' (e ^. appLeftImplicitInstance)
+              <+> "cannot appear by itself."
+                <> line
+                <> "It needs to be on the left of a function arrow."
+
 newtype ModuleNotInScope = ModuleNotInScope
   { _moduleNotInScopeName :: Name
   }

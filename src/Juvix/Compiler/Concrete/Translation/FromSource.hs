@@ -612,11 +612,12 @@ expressionAtom =
       <|> AtomUniverse <$> universe
       <|> AtomLambda <$> lambda
       <|> AtomCase <$> case_
-      <|> either AtomFunction AtomDoubleBraces <$> functionOrDoubleBraces
+      <|> AtomFunction <$> function
       <|> AtomLet <$> letBlock
       <|> AtomFunArrow <$> kw kwRightArrow
       <|> AtomHole <$> hole
       <|> AtomParens <$> parens parseExpressionAtoms
+      <|> AtomDoubleBraces <$> withLoc (doubleBraces parseExpressionAtoms)
       <|> AtomBraces <$> withLoc (braces parseExpressionAtoms)
       <|> AtomRecordUpdate <$> recordUpdate
 
@@ -1018,16 +1019,9 @@ functionParams = do
       FunctionParameterName <$> symbol
         <|> FunctionParameterWildcard <$> kw kwWildcard
 
-functionOrDoubleBraces :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (Either (Function 'Parsed) (WithLoc (ExpressionAtoms 'Parsed)))
-functionOrDoubleBraces = do
-  params <- functionParams
-  (Left <$> function params) <|> (Right <$> atomDoubleBraces params)
-
-function ::
-  (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
-  FunctionParameters 'Parsed ->
-  ParsecS r (Function 'Parsed)
-function _funParameters = do
+function :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (Function 'Parsed)
+function = do
+  _funParameters <- functionParams
   _funKw <- kw kwRightArrow
   _funReturn <- parseExpressionAtoms
   return Function {..}

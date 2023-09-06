@@ -744,7 +744,7 @@ goExpression = \case
   ExpressionLiteral l -> return (Internal.ExpressionLiteral (goLiteral l))
   ExpressionLambda l -> Internal.ExpressionLambda <$> goLambda l
   ExpressionBraces b -> throw (ErrAppLeftImplicit (AppLeftImplicit b))
-  ExpressionDoubleBraces b -> throw (ErrAppLeftImplicit (AppLeftImplicit b))
+  ExpressionDoubleBraces b -> throw (ErrAppLeftImplicitInstance (AppLeftImplicitInstance b))
   ExpressionLet l -> goLet l
   ExpressionList l -> goList l
   ExpressionUniverse uni -> return (Internal.ExpressionUniverse (goUniverse uni))
