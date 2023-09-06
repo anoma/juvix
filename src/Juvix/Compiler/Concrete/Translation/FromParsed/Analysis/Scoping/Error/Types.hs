@@ -331,10 +331,11 @@ instance ToGenericError DanglingDoubleBrace where
             }
         where
           opts' = fromGenericOptions opts
-          i = getLoc (e ^. danglingDoubleBrace)
+          expr = ExpressionDoubleBraces (e ^. danglingDoubleBrace)
+          i = getLoc expr
           msg =
             "The expression"
-              <+> ppCode opts' (e ^. danglingDoubleBrace)
+              <+> ppCode opts' expr
               <+> "cannot appear by itself."
                 <> line
                 <> "It needs to be on the left of a function arrow."
