@@ -51,10 +51,10 @@ instance PrettyCode IfThenElse where
 instance PrettyCode Expression where
   ppCode = \case
     ExpressionVar x -> ppCode x
-    ExpressionConstant i -> return $ annotate AnnLiteralInteger (pretty i)
+    ExpressionConstant i -> return $ kwNumber <+> annotate AnnLiteralInteger (pretty i)
     ExpressionBinop x -> ppCode x
     ExpressionIfThenElse x -> ppCode x
-    ExpressionFail -> return $ annotate AnnLiteralInteger "0"
+    ExpressionFail -> return kwFail
 
 instance PrettyCode LocalDef where
   ppCode LocalDef {..} = do
@@ -72,10 +72,10 @@ instance PrettyCode Function where
 
 ppEquation :: Function -> Sem r (Doc Ann)
 ppEquation Function {..} = do
-  let args = map (\arg -> "(" <> pretty arg <> " + 0)") _functionInputs
+  let args = map (\arg -> parens (kwNumber <+> pretty arg)) _functionInputs
       out = pretty _functionOutput
   fn <- ppName KNameFunction _functionName
-  return $ fn <+> hsep args <+> kwEq <+> "(" <> out <> " + 0)" <> semi
+  return $ fn <+> hsep args <+> kwEq <+> parens (kwNumber <+> out) <> semi
 
 ppPub :: Text -> Sem r (Doc Ann)
 ppPub p = return $ "pub " <> pretty p <> semi
@@ -97,7 +97,7 @@ vampIRDefs bits =
   "def integerBits = "
     <> show bits
     <> ";\n"
-    <> UTF8.toString $(FE.makeRelativeToProject "runtime/src/vampir/stdlib.pir" >>= FE.embedFile)
+    <> UTF8.toString $(FE.makeRelativeToProject "runtime/src/vampir/stdlib_unsafe.pir" >>= FE.embedFile)
 
 --------------------------------------------------------------------------------
 -- helper functions

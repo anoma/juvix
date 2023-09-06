@@ -1,3 +1,8 @@
+// VampIR runtime for Juvix (safe version)
+
+def fst (x, y) = x;
+def snd (x, y) = y;
+
 def isBool x = (x * (x - 1) = 0);
 
 def msb_rec x = {
@@ -13,35 +18,48 @@ def msb n x = {
     b
 };
 
+def range n x = msb n x;
+
 def isNegative x = 1 - msb integerBits (x + 2^(integerBits - 1));
 def isNegativeD x = 1 - msb (2*integerBits) (x + 2^(2*integerBits - 1));
 
-def add x y = x + y;
-def sub x y = x - y;
-def mul x y = x * y;
-
 def isZero x = {
     def xi = fresh (1 | x);
-    x * (1 - xi * x) = 0;
-    1 - xi * x
+    def y = 1 - xi * x;
+    x * y = 0;
+    y
 };
-def equal x y = isZero (x - y);
-
-def if b x y = b * x + (1 - b) * y;
-
-def lessThan x y = isNegativeD (x - y);
-def lessOrEqual x y = lessThan x (y + 1);
 
 def divRem a b = {
     def q = fresh (a\b);
     def r = fresh (a%b);
     isNegative r = 0;
-    lessThan r b = 1;
+    isNegativeD (r - b) = 1;
     a = b * q + r; (q, r)
 };
 
-def fst (x, y) = x;
-def snd (x, y) = y;
+def number x = (x + 0, 1);
+def fail = (0, 0);
 
-def div x y = fst (divRem x y);
-def rem x y = snd (divRem x y);
+def add (x, e1) (y, e2) = {
+    range integerBits (x + y);
+    (x + y, e1 * e2)
+};
+def sub (x, e1) (y, e2) = {
+    range integerBits (x - y);
+    (x - y, e1 * e2)
+};
+def mul (x, e1) (y, e2) = {
+    range integerBits (x * y);
+    (x * y, e1 * e2)
+};
+
+def equal (x, e1) (y, e2) = (isZero (x - y), e1 * e2);
+
+def if (b, e) (x, e1) (y, e2) = (b * x + (1 - b) * y, e * e1 * e2);
+
+def lessThan (x, e1) (y, e2) = (isNegativeD (x - y), e1 * e2);
+def lessOrEqual (x, e1) (y, e2) = (isNegativeD (x - y - 1), e1 * e2);
+
+def div (x, e1) (y, e2) = (fst (divRem x y), e1 * e2);
+def rem (x, e1) (y, e2) = (snd (divRem x y), e1 * e2);
