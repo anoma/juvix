@@ -43,7 +43,11 @@ data InferenceState = InferenceState
 makeLenses ''InferenceState
 
 iniState :: InferenceState
-iniState = InferenceState mempty mempty
+iniState =
+  InferenceState
+    { _inferenceMap = mempty,
+      _inferenceIdens = mempty
+    }
 
 closeState ::
   (Member (Error TypeCheckerError) r) =>
@@ -429,25 +433,27 @@ addIdens idens = do
 -- some condition.
 functionDefEval :: forall r'. (Members '[State FunctionsTable, Termination, Error TypeCheckerError] r') => FunctionDef -> Sem r' (Maybe Expression)
 functionDefEval f = do
-  r <- runFail goTop
-  retTy <- returnsType
+  (params :: [FunctionParameter], ret :: Expression) <- unfoldFunType <$> strongNorm (f ^. funDefType)
+  let retTy = isUniverse ret
+  r <- runFail (goTop params retTy)
   when (isNothing r && retTy) (throw (ErrUnsupportedTypeFunction (UnsupportedTypeFunction f)))
   return r
   where
-    isUniverse :: (Members '[State FunctionsTable] r) => Expression -> Sem r Bool
-    isUniverse e = do
-      e' <- evalState iniState (weakNormalize' e)
-      case e' of
-        ExpressionUniverse {} -> return True
-        _ -> return False
+    strongNorm :: (Members '[State FunctionsTable] r) => Expression -> Sem r Expression
+    strongNorm = evalState iniState . strongNormalize'
 
-    (params, ret) = unfoldFunType (f ^. funDefType)
+    isUniverse :: Expression -> Bool
+    isUniverse = \case
+      ExpressionUniverse {} -> True
+      _ -> False
 
-    returnsType :: (Members '[State FunctionsTable] r) => Sem r Bool
-    returnsType = isUniverse ret
-
-    goTop :: forall r. (Members '[Fail, State FunctionsTable, Error TypeCheckerError, Termination] r) => Sem r Expression
-    goTop = do
+    goTop ::
+      forall r.
+      (Members '[Fail, State FunctionsTable, Error TypeCheckerError, Termination] r) =>
+      [FunctionParameter] ->
+      Bool ->
+      Sem r Expression
+    goTop params returnsType = do
       checkTerminating
       case f ^. funDefClauses of
         c :| [] -> goClause c
@@ -465,12 +471,12 @@ functionDefEval f = do
             splitExplicitParams :: Sem r [Expression]
             splitExplicitParams = do
               let n = length (c ^. clausePatterns)
-              unlessM returnsType fail
+              unless returnsType fail
               nfirst <- failMaybe (takeExactMay n params)
               mapM simpleExplicitParam nfirst
             simpleExplicitParam :: FunctionParameter -> Sem r Expression
             simpleExplicitParam = \case
-              FunctionParameter Nothing Explicit ty -> return ty
+              FunctionParameter _ Explicit ty -> return ty
               _ -> fail
             goPattern :: (Pattern, Expression) -> Expression -> Sem r Expression
             goPattern (p, ty) = case p of
