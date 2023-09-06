@@ -5,6 +5,7 @@ module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Ch
 where
 
 import Data.HashMap.Strict qualified as HashMap
+import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Builtins.Effect
 import Juvix.Compiler.Concrete.Data.Highlight.Input
 import Juvix.Compiler.Internal.Data.InstanceInfo
@@ -217,11 +218,12 @@ checkInstanceType ::
   FunctionDef ->
   Sem r ()
 checkInstanceType FunctionDef {..} = case mi of
-  Just InstanceInfo {..} -> do
+  Just ii@InstanceInfo {..} -> do
     tab <- ask
     unless (isTrait tab _instanceInfoInductive) $
       throw (ErrTargetNotATrait (TargetNotATrait _funDefType))
-    mapM_ (checkArg tab _instanceInfoParams) _instanceInfoArgs
+    let metaVars = HashSet.fromList $ mapMaybe (^. paramName) _instanceInfoArgs
+    mapM_ (checkArg tab metaVars ii) _instanceInfoArgs
   Nothing ->
     throw (ErrInvalidInstanceType (InvalidInstanceType _funDefType))
   where
@@ -233,14 +235,14 @@ checkInstanceType FunctionDef {..} = case mi of
             }
         )
 
-    checkArg :: InfoTable -> [InstanceParam] -> FunctionParameter -> Sem r ()
-    checkArg tab params fp@FunctionParameter {..} = case _paramImplicit of
+    checkArg :: InfoTable -> HashSet VarName -> InstanceInfo -> FunctionParameter -> Sem r ()
+    checkArg tab metaVars ii fp@FunctionParameter {..} = case _paramImplicit of
       Implicit -> return ()
       Explicit -> throw (ErrExplicitInstanceArgument (ExplicitInstanceArgument fp))
-      ImplicitInstance -> case traitFromExpression mempty _paramType of
-        Just InstanceApp {..}
+      ImplicitInstance -> case traitFromExpression metaVars _paramType of
+        Just app@InstanceApp {..}
           | isTrait tab _instanceAppHead ->
-              mapM_ (checkTraitTermination params) _instanceAppArgs
+              checkTraitTermination app ii
         _ ->
           throw (ErrNotATrait (NotATrait _paramType))
 
