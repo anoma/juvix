@@ -123,7 +123,6 @@ addAtoms atoms = addAtom . (^. expressionAtoms . _head1) $ atoms
         addParameter = \case
           FunctionParameterName s -> addSymbol _paramImplicit s
           FunctionParameterWildcard {} -> endBuild
-          FunctionParameterUnnamed {} -> endBuild
 
 addInductiveParams' :: (Members '[NameSignatureBuilder] r) => IsImplicit -> InductiveParameters 'Parsed -> Sem r ()
 addInductiveParams' i a = forM_ (a ^. inductiveParametersNames) (addSymbol i)

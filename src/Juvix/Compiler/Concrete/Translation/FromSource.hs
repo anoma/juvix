@@ -1002,8 +1002,8 @@ functionParams = do
     (opn, impl) <- implicitOpen
     case impl of
       ImplicitInstance -> do
-        n <- optional pNameColon
-        return (opn, [fromMaybe (FunctionParameterUnnamed (getLoc opn)) n], impl, Irrelevant Nothing)
+        n <- pName <* kw kwColon
+        return (opn, [n], impl, Irrelevant Nothing)
       _ -> do
         n <- some pName
         c <- Irrelevant . Just <$> kw kwColon
@@ -1017,12 +1017,6 @@ functionParams = do
     pName =
       FunctionParameterName <$> symbol
         <|> FunctionParameterWildcard <$> kw kwWildcard
-
-    pNameColon :: ParsecS r (FunctionParameter 'Parsed)
-    pNameColon = P.try $ do
-      n <- pName
-      kw kwColon
-      return n
 
 functionOrDoubleBraces :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (Either (Function 'Parsed) (WithLoc (ExpressionAtoms 'Parsed)))
 functionOrDoubleBraces = do

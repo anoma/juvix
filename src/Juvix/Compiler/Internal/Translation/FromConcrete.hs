@@ -12,7 +12,6 @@ where
 
 import Data.HashMap.Strict qualified as HashMap
 import Data.IntMap.Strict qualified as IntMap
-import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Compiler.Builtins
 import Juvix.Compiler.Concrete.Data.NameSignature.Base
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
@@ -605,8 +604,8 @@ goInductive ty@InductiveDef {..} = do
   let inductiveName' = goSymbol _inductiveName
       constrRetType = Internal.foldExplicitApplication (Internal.toExpression inductiveName') (map (Internal.ExpressionIden . Internal.IdenVar . (^. Internal.inductiveParamName)) _inductiveParameters')
   _inductiveConstructors' <-
-    local (const _inductivePragmas') $
-      mapM (goConstructorDef constrRetType) _inductiveConstructors
+    local (const _inductivePragmas')
+      $ mapM (goConstructorDef constrRetType) _inductiveConstructors
   _inductiveExamples' <- goExamples _inductiveDoc
   let loc = getLoc _inductiveName
       indDef =
@@ -785,8 +784,8 @@ goExpression = \case
         mkArgs :: [Indexed Internal.VarName] -> Sem r [Internal.Expression]
         mkArgs vs = do
           fieldMap <- mkFieldmap
-          execOutputList $
-            go (uncurry Indexed <$> IntMap.toAscList fieldMap) vs
+          execOutputList
+            $ go (uncurry Indexed <$> IntMap.toAscList fieldMap) vs
           where
             go :: [Indexed (RecordUpdateField 'Scoped)] -> [Indexed Internal.VarName] -> Sem (Output Internal.Expression ': r) ()
             go fields = \case
@@ -912,8 +911,8 @@ goExpression = \case
       rngpats' <- mapM goPatternArg rngpats
       expr <- goExpression _iteratorBody
       let lam =
-            Internal.ExpressionLambda $
-              Internal.Lambda
+            Internal.ExpressionLambda
+              $ Internal.Lambda
                 { _lambdaClauses = Internal.LambdaClause (nonEmpty' (inipats' ++ rngpats')) expr :| [],
                   _lambdaType = Nothing
                 }
@@ -968,11 +967,13 @@ goUniverse u
 
 goFunction :: (Members '[Builtins, NameIdGen, Error ScoperError, Reader Pragmas] r) => Function 'Scoped -> Sem r Internal.Function
 goFunction f = do
-  params <- goFunctionParameters (f ^. funParameters)
+  headParam :| tailParams <- goFunctionParameters (f ^. funParameters)
   ret <- goExpression (f ^. funReturn)
-  return $
-    Internal.Function (head params) $
-      foldr (\param acc -> Internal.ExpressionFunction $ Internal.Function param acc) ret (NonEmpty.tail params)
+  return
+    $ Internal.Function
+      { _functionLeft = headParam,
+        _functionRight = foldr (\param acc -> Internal.ExpressionFunction $ Internal.Function param acc) ret tailParams
+      }
 
 goFunctionParameters ::
   (Members '[Builtins, NameIdGen, Error ScoperError, Reader Pragmas] r) =>
@@ -990,14 +991,13 @@ goFunctionParameters FunctionParameters {..} = do
     . fromMaybe (pure (mkParam Nothing))
     . nonEmpty
     $ mkParam
-      . goFunctionParameter
-      <$> _paramNames
+    . goFunctionParameter
+    <$> _paramNames
   where
     goFunctionParameter :: FunctionParameter 'Scoped -> Maybe (SymbolType 'Scoped)
     goFunctionParameter = \case
       FunctionParameterName n -> Just n
       FunctionParameterWildcard {} -> Nothing
-      FunctionParameterUnnamed {} -> Nothing
 
 mkConstructorApp :: Internal.ConstrName -> [Internal.PatternArg] -> Internal.ConstructorApp
 mkConstructorApp a b = Internal.ConstructorApp a b Nothing

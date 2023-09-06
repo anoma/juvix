@@ -662,10 +662,10 @@ resolveFixitySyntaxDef fdef@FixitySyntaxDef {..} = topBindings $ do
       belowPrec = fromIntegral $ maximum (minInt + 1 : map (getPrec tab) above)
       abovePrec :: Integer
       abovePrec = fromIntegral $ minimum (maxInt - 1 : map (getPrec tab) below)
-  when (belowPrec >= abovePrec + 1) $
-    throw (ErrPrecedenceInconsistency (PrecedenceInconsistencyError fdef))
-  when (isJust same && not (null below && null above)) $
-    throw (ErrPrecedenceInconsistency (PrecedenceInconsistencyError fdef))
+  when (belowPrec >= abovePrec + 1)
+    $ throw (ErrPrecedenceInconsistency (PrecedenceInconsistencyError fdef))
+  when (isJust same && not (null below && null above))
+    $ throw (ErrPrecedenceInconsistency (PrecedenceInconsistencyError fdef))
   -- we need Integer to avoid overflow when computing prec
   let prec = fromMaybe (fromInteger $ (abovePrec + belowPrec) `div` 2) samePrec
       fx =
@@ -1187,11 +1187,11 @@ checkSections sec = do
                           | not (null cs) -> fail
                           | otherwise -> do
                               fs <-
-                                failMaybe $
-                                  mkRec
-                                    ^? constructorRhs
-                                    . _ConstructorRhsRecord
-                                    . to mkRecordNameSignature
+                                failMaybe
+                                  $ mkRec
+                                  ^? constructorRhs
+                                  . _ConstructorRhsRecord
+                                  . to mkRecordNameSignature
                               let info =
                                     RecordInfo
                                       { _recordInfoSignature = fs,
@@ -1496,8 +1496,8 @@ checkOpenModuleNoImport importModuleHint OpenModule {..}
                 let s = h ^. hidingSymbol
                 scopedSym <-
                   if
-                      | isJust (h ^. hidingModuleKw) -> scopeSymbol SNameSpaceModules s
-                      | otherwise -> scopeSymbol SNameSpaceSymbols s
+                    | isJust (h ^. hidingModuleKw) -> scopeSymbol SNameSpaceModules s
+                    | otherwise -> scopeSymbol SNameSpaceSymbols s
                 return
                   HidingItem
                     { _hidingSymbol = scopedSym,
@@ -1509,8 +1509,8 @@ checkOpenModuleNoImport importModuleHint OpenModule {..}
                 let s = i ^. usingSymbol
                 scopedSym <-
                   if
-                      | isJust (i ^. usingModuleKw) -> scopeSymbol SNameSpaceModules s
-                      | otherwise -> scopeSymbol SNameSpaceSymbols s
+                    | isJust (i ^. usingModuleKw) -> scopeSymbol SNameSpaceModules s
+                    | otherwise -> scopeSymbol SNameSpaceSymbols s
                 let scopedAs = do
                       c <- i ^. usingAs
                       return (set S.nameConcrete c scopedSym)
@@ -1633,7 +1633,6 @@ checkFunction f = do
     _paramNames <- forM (f ^. funParameters . paramNames) $ \case
       FunctionParameterWildcard w -> return (FunctionParameterWildcard w)
       FunctionParameterName p -> FunctionParameterName <$> bindVariableSymbol p
-      FunctionParameterUnnamed i -> return (FunctionParameterUnnamed i)
     _funReturn <- checkParseExpressionAtoms (f ^. funReturn)
     let _paramImplicit = f ^. funParameters . paramImplicit
         _paramColon = f ^. funParameters . paramColon
@@ -1699,10 +1698,10 @@ checkRecordPattern r = do
   fields <- fromMaybeM (return (RecordNameSignature mempty)) (gets (^. scoperConstructorFields . at (c' ^. scopedIdenName . S.nameId)))
   l' <-
     if
-        | null (r ^. recordPatternItems) -> return []
-        | otherwise -> do
-            when (null (fields ^. recordNames)) (throw (noFields c'))
-            runReader fields (mapM checkItem (r ^. recordPatternItems))
+      | null (r ^. recordPatternItems) -> return []
+      | otherwise -> do
+          when (null (fields ^. recordNames)) (throw (noFields c'))
+          runReader fields (mapM checkItem (r ^. recordPatternItems))
   return
     RecordPattern
       { _recordPatternConstructor = c',
@@ -1796,8 +1795,8 @@ checkCaseBranch CaseBranch {..} = withLocalScope $ do
   pattern' <- checkParsePatternAtoms _caseBranchPattern
   checkNotImplicit pattern'
   expression' <- (checkParseExpressionAtoms _caseBranchExpression)
-  return $
-    CaseBranch
+  return
+    $ CaseBranch
       { _caseBranchPattern = pattern',
         _caseBranchExpression = expression',
         ..
@@ -1816,8 +1815,8 @@ checkCase ::
 checkCase Case {..} = do
   caseBranches' <- mapM checkCaseBranch _caseBranches
   caseExpression' <- checkParseExpressionAtoms _caseExpression
-  return $
-    Case
+  return
+    $ Case
       { _caseExpression = caseExpression',
         _caseBranches = caseBranches',
         _caseKw,
@@ -1968,8 +1967,8 @@ checkPatternBinding (PatternBinding n p) = do
   p' <- checkParsePatternAtom p
   n' <- bindVariableSymbol n
   if
-      | isJust (p' ^. patternArgName) -> throw (ErrDoubleBinderPattern (DoubleBinderPattern n' p'))
-      | otherwise -> return (set patternArgName (Just n') p')
+    | isJust (p' ^. patternArgName) -> throw (ErrDoubleBinderPattern (DoubleBinderPattern n' p'))
+    | otherwise -> return (set patternArgName (Just n') p')
 
 checkPatternAtoms ::
   (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
@@ -2331,18 +2330,18 @@ checkPrecedences opers = do
   tab <- getInfoTable
   let fids = mapMaybe (^. fixityId) $ mapMaybe (^. S.nameFixity) opers
       deps = createDependencyInfo (tab ^. infoPrecedenceGraph) mempty
-  mapM_ (uncurry (checkPath deps)) $
-    [(fid1, fid2) | fid1 <- fids, fid2 <- fids, fid1 /= fid2]
+  mapM_ (uncurry (checkPath deps))
+    $ [(fid1, fid2) | fid1 <- fids, fid2 <- fids, fid1 /= fid2]
   where
     checkPath :: DependencyInfo S.NameId -> S.NameId -> S.NameId -> Sem r ()
     checkPath deps fid1 fid2 =
-      unless (isPath deps fid1 fid2 || isPath deps fid2 fid1) $
-        throw (ErrIncomparablePrecedences (IncomaprablePrecedences (findOper fid1) (findOper fid2)))
+      unless (isPath deps fid1 fid2 || isPath deps fid2 fid1)
+        $ throw (ErrIncomparablePrecedences (IncomaprablePrecedences (findOper fid1) (findOper fid2)))
 
     findOper :: S.NameId -> S.Name
     findOper fid =
-      fromJust $
-        find
+      fromJust
+        $ find
           (maybe False (\fx -> Just fid == (fx ^. fixityId)) . (^. S.nameFixity))
           opers
 
@@ -2383,8 +2382,8 @@ makeExpressionTable (ExpressionAtoms atoms _) = [recordUpdate] : [appOpExplicit]
       where
         mkOperator :: ScopedIden -> Maybe (Precedence, P.Operator Parse Expression)
         mkOperator iden
-          | Just Fixity {..} <- _nameFixity = Just $
-              case _fixityArity of
+          | Just Fixity {..} <- _nameFixity = Just
+              $ case _fixityArity of
                 Unary u -> (_fixityPrecedence, P.Postfix (unaryApp <$> parseSymbolId _nameId))
                   where
                     unaryApp :: ScopedIden -> Expression -> Expression
@@ -2429,8 +2428,8 @@ makeExpressionTable (ExpressionAtoms atoms _) = [recordUpdate] : [appOpExplicit]
       where
         app :: Expression -> Expression -> Expression
         app f x =
-          ExpressionApplication $
-            Application
+          ExpressionApplication
+            $ Application
               { _applicationFunction = f,
                 _applicationParameter = x
               }
@@ -2443,23 +2442,27 @@ makeExpressionTable (ExpressionAtoms atoms _) = [recordUpdate] : [appOpExplicit]
         getArrow = \case
           AtomFunArrow r -> return r
           _ -> Nothing
+
         nonDepFun :: KeywordRef -> Expression -> Expression -> Expression
-        nonDepFun _funKw a b =
+        nonDepFun _funKw l r =
           ExpressionFunction
             Function
               { _funParameters = param,
-                _funReturn = b,
+                _funReturn = r,
                 _funKw
               }
           where
             param =
-              FunctionParameters
-                { _paramNames = [],
-                  _paramDelims = Irrelevant Nothing,
-                  _paramColon = Irrelevant Nothing,
-                  _paramImplicit = Explicit,
-                  _paramType = a
-                }
+              let (l', explicitOrInstance) = case l of
+                    ExpressionDoubleBraces i -> (i ^. withLocParam, ImplicitInstance)
+                    _ -> (l, Explicit)
+               in FunctionParameters
+                    { _paramNames = [],
+                      _paramDelims = Irrelevant Nothing,
+                      _paramColon = Irrelevant Nothing,
+                      _paramImplicit = explicitOrInstance,
+                      _paramType = l'
+                    }
 
 parseExpressionAtoms ::
   forall r.
@@ -2496,21 +2499,21 @@ mkExpressionParser table = embed @Parse pExpression
 
 parseTerm :: (Members '[Embed Parse] r) => Sem r Expression
 parseTerm =
-  embed @Parse $
-    parseUniverse
-      <|> parseNoInfixIdentifier
-      <|> parseParens
-      <|> parseHole
-      <|> parseFunction
-      <|> parseLambda
-      <|> parseCase
-      <|> parseList
-      <|> parseLiteral
-      <|> parseLet
-      <|> parseIterator
-      <|> parseDoubleBraces
-      <|> parseBraces
-      <|> parseNamedApplication
+  embed @Parse
+    $ parseUniverse
+    <|> parseNoInfixIdentifier
+    <|> parseParens
+    <|> parseHole
+    <|> parseFunction
+    <|> parseLambda
+    <|> parseCase
+    <|> parseList
+    <|> parseLiteral
+    <|> parseLet
+    <|> parseIterator
+    <|> parseDoubleBraces
+    <|> parseBraces
+    <|> parseNamedApplication
   where
     parseHole :: Parse Expression
     parseHole = ExpressionHole <$> P.token lit mempty
@@ -2701,21 +2704,22 @@ parsePatternTerm ::
   (Members '[Embed ParsePat] r) =>
   Sem r PatternArg
 parsePatternTerm = do
-  embed @ParsePat $
-    parseNoInfixConstructor
-      <|> parseVariable
-      <|> parseDoubleBraces
-      <|> parseParens
-      <|> parseBraces
-      <|> parseWildcard
-      <|> parseEmpty
-      <|> parseAt
-      <|> parseList
-      <|> parseRecord
+  embed @ParsePat
+    $ parseNoInfixConstructor
+    <|> parseVariable
+    <|> parseDoubleBraces
+    <|> parseParens
+    <|> parseBraces
+    <|> parseWildcard
+    <|> parseEmpty
+    <|> parseAt
+    <|> parseList
+    <|> parseRecord
   where
     parseNoInfixConstructor :: ParsePat PatternArg
     parseNoInfixConstructor =
-      explicitP . PatternConstructor
+      explicitP
+        . PatternConstructor
         <$> P.token constructorNoFixity mempty
       where
         constructorNoFixity :: PatternAtom 'Scoped -> Maybe ScopedIden
