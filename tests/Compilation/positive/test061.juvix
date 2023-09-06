@@ -59,4 +59,5 @@ main : IO :=
   printStringLn (f'3 [just true; nothing; just false]) >>
   printStringLn (f'4 [just [1]; nothing; just [2; 3]]) >>
   printStringLn (f'3 "abba") >>
+  printStringLn (f'3 {{M := mkShow id}} "abba") >>
   printStringLn (Show.show ["a"; "b"; "c"; "d"]);

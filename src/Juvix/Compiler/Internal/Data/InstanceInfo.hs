@@ -106,16 +106,15 @@ traitFromExpression metaVars e = case paramFromExpression metaVars e of
   _ -> Nothing
 
 instanceFromTypedExpression :: TypedExpression -> Maybe InstanceInfo
-instanceFromTypedExpression TypedExpression {..} = case traitFromExpression metaVars e of
-  Just (InstanceApp {..}) ->
-    Just $
-      InstanceInfo
-        { _instanceInfoInductive = _instanceAppHead,
-          _instanceInfoParams = _instanceAppArgs,
-          _instanceInfoResult = _typedExpression,
-          _instanceInfoArgs = args
-        }
-  Nothing -> Nothing
+instanceFromTypedExpression TypedExpression {..} = do
+  InstanceApp {..} <- traitFromExpression metaVars e
+  return $
+    InstanceInfo
+      { _instanceInfoInductive = _instanceAppHead,
+        _instanceInfoParams = _instanceAppArgs,
+        _instanceInfoResult = _typedExpression,
+        _instanceInfoArgs = args
+      }
   where
     (args, e) = unfoldFunType _typedType
     metaVars = HashSet.fromList $ mapMaybe (^. paramName) args
