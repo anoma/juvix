@@ -1,0 +1,3 @@
+module DanglingDoubleBrace;
+
+id {A} : A -> {{A}} := A;

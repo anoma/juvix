@@ -329,5 +329,12 @@ scoperErrorTests =
       $(mkRelFile "AliasCycle.juvix")
       $ \case
         ErrAliasCycle {} -> Nothing
+        _ -> wrongError,
+    NegTest
+      "Dangling double brace"
+      $(mkRelDir "Internal")
+      $(mkRelFile "DanglingDoubleBrace.juvix")
+      $ \case
+        ErrAppLeftImplicitInstance {} -> Nothing
         _ -> wrongError
   ]
