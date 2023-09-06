@@ -312,14 +312,14 @@ instance ToGenericError AppLeftImplicit where
                 <> line
                 <> "It needs to be the argument of a function expecting an implicit argument."
 
-newtype AppLeftImplicitInstance = AppLeftImplicitInstance
-  { _appLeftImplicitInstance :: WithLoc Expression
+newtype DanglingDoubleBrace = DanglingDoubleBrace
+  { _danglingDoubleBrace :: WithLoc Expression
   }
   deriving stock (Show)
 
-makeLenses ''AppLeftImplicitInstance
+makeLenses ''DanglingDoubleBrace
 
-instance ToGenericError AppLeftImplicitInstance where
+instance ToGenericError DanglingDoubleBrace where
   genericError e = ask >>= generr
     where
       generr opts =
@@ -331,10 +331,10 @@ instance ToGenericError AppLeftImplicitInstance where
             }
         where
           opts' = fromGenericOptions opts
-          i = getLoc (e ^. appLeftImplicitInstance)
+          i = getLoc (e ^. danglingDoubleBrace)
           msg =
             "The expression"
-              <+> ppCode opts' (e ^. appLeftImplicitInstance)
+              <+> ppCode opts' (e ^. danglingDoubleBrace)
               <+> "cannot appear by itself."
                 <> line
                 <> "It needs to be on the left of a function arrow."

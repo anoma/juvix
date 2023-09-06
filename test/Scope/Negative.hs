@@ -335,6 +335,6 @@ scoperErrorTests =
       $(mkRelDir "Internal")
       $(mkRelFile "DanglingDoubleBrace.juvix")
       $ \case
-        ErrAppLeftImplicitInstance {} -> Nothing
+        ErrDanglingDoubleBrace {} -> Nothing
         _ -> wrongError
   ]
