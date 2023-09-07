@@ -784,7 +784,7 @@ checkFunctionDef FunctionDef {..} = do
       names' <- forM _sigArgNames $ \case
         ArgumentSymbol s -> ArgumentSymbol <$> bindVariableSymbol s
         ArgumentWildcard w -> return $ ArgumentWildcard w
-      ty' <- mapM checkParseExpressionAtoms  _sigArgType
+      ty' <- mapM checkParseExpressionAtoms _sigArgType
       return
         SigArg
           { _sigArgNames = names',
@@ -2783,7 +2783,7 @@ parsePatternTerm = do
     parseDoubleBraces :: ParsePat PatternArg
     parseDoubleBraces = do
       res <- P.token bracesPat mempty
-      fromRight (P.lift (throw er)) res
+      either (P.lift . throw) return res
       where
         bracesPat :: PatternAtom 'Scoped -> Maybe (Either ScoperError PatternArg)
         bracesPat = \case
