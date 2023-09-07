@@ -138,7 +138,7 @@ lookupInstance ::
   Sem r [(InstanceInfo, SubsI)]
 lookupInstance tab ty = do
   case traitFromExpression mempty ty of
-    Just (InstanceApp {..}) ->
+    Just InstanceApp {..} ->
       lookupInstance' tab _instanceAppHead _instanceAppArgs
     _ ->
       throw (ErrNotATrait (NotATrait ty))
