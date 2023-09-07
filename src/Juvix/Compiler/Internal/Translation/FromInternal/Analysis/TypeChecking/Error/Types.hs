@@ -476,7 +476,7 @@ instance ToGenericError ExplicitInstanceArgument where
         return
           GenericError
             { _genericErrorLoc = i,
-              _genericErrorMessage = ppOutput "Explicit instance arguments not supported",
+              _genericErrorMessage = ppOutput "Explicit instance arguments not allowed",
               _genericErrorIntervals = [i]
             }
         where
