@@ -163,8 +163,8 @@ goInstance ::
   FunctionDef ->
   Sem r ()
 goInstance f = do
-  let (_, app) = unfoldFunType (f ^. funDefType)
-      (h, _) = unfoldExpressionApp app
+  let app = snd (unfoldFunType (f ^. funDefType))
+      h = fst (unfoldExpressionApp app)
   case h of
     ExpressionIden (IdenInductive i) ->
       addEdge i (f ^. funDefName)
