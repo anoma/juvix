@@ -2783,9 +2783,7 @@ parsePatternTerm = do
     parseDoubleBraces :: ParsePat PatternArg
     parseDoubleBraces = do
       res <- P.token bracesPat mempty
-      case res of
-        Left er -> P.lift (throw er)
-        Right a -> return a
+      fromRight (P.lift (throw er)) res
       where
         bracesPat :: PatternAtom 'Scoped -> Maybe (Either ScoperError PatternArg)
         bracesPat = \case
