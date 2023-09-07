@@ -22,8 +22,8 @@ axiom eqField : Field -> Field -> Bool;
 
 module Token;
   type Token :=
-    | --- Arguments are: owner, gates, amount.
-      mkToken : Address -> Nat -> Nat -> Token;
+    --- Arguments are: owner, gates, amount.
+    mkToken : Address -> Nat -> Nat -> Token;
 
   --- Retrieves the owner from a ;Token;
   getOwner : Token -> Address

@@ -2,8 +2,7 @@ module Main;
 
 import Nat open;
 
-type Unit :=
-  | unit : Unit;
+type Unit := unit : Unit;
 
 f : Nat :=
   case unit

@@ -13,7 +13,7 @@ type Error :=
     terminate : String → Error;
 
 type GameState :=
-  | state : Board → Symbol → Error → GameState;
+  state : Board → Symbol → Error → GameState;
 
 --- Textual representation of a ;GameState;
 showGameState : GameState → String

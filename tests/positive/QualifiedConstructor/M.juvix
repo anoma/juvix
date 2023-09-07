@@ -8,8 +8,7 @@ open O;
 
 module N;
   module O;
-    type T :=
-      | A : T;
+    type T := A : T;
   end;
 end;
 
