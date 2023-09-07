@@ -617,7 +617,7 @@ expressionAtom =
       <|> AtomFunArrow <$> kw kwRightArrow
       <|> AtomHole <$> hole
       <|> AtomParens <$> parens parseExpressionAtoms
-      <|> AtomDoubleBraces <$> withLoc (doubleBraces parseExpressionAtoms)
+      <|> AtomDoubleBraces <$> pdoubleBracesExpression
       <|> AtomBraces <$> withLoc (braces parseExpressionAtoms)
       <|> AtomRecordUpdate <$> recordUpdate
 
@@ -627,6 +627,19 @@ parseExpressionAtoms ::
 parseExpressionAtoms = do
   (_expressionAtoms, _expressionAtomsLoc) <- second Irrelevant <$> interval (P.some expressionAtom)
   return ExpressionAtoms {..}
+
+pdoubleBracesExpression ::
+  (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
+  ParsecS r (DoubleBracesExpression 'Parsed)
+pdoubleBracesExpression = do
+  l <- kw delimDoubleBraceL
+  _doubleBracesExpression <- parseExpressionAtoms
+  r <- kw delimDoubleBraceR
+  return
+    DoubleBracesExpression
+      { _doubleBracesDelims = Irrelevant (l, r),
+        ..
+      }
 
 --------------------------------------------------------------------------------
 -- Iterators
@@ -1026,16 +1039,6 @@ function = do
   _funKw <- kw kwRightArrow
   _funReturn <- parseExpressionAtoms
   return Function {..}
-
-atomDoubleBraces ::
-  FunctionParameters 'Parsed ->
-  ParsecS r (WithLoc (ExpressionAtoms 'Parsed))
-atomDoubleBraces FunctionParameters {..}
-  | _paramImplicit == ImplicitInstance && isNothing (_paramColon ^. unIrrelevant) = do
-      return $ WithLoc (getLoc _paramType) _paramType
-  | otherwise = do
-      off <- P.getOffset
-      parseFailure off "Expected: ->"
 
 --------------------------------------------------------------------------------
 -- Lambda expression

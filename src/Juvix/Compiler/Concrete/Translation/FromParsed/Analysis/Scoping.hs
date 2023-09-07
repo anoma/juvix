@@ -2023,7 +2023,7 @@ checkExpressionAtom e = case e of
   AtomUniverse uni -> return (pure (AtomUniverse uni))
   AtomFunction fun -> pure . AtomFunction <$> checkFunction fun
   AtomParens par -> pure . AtomParens <$> checkParens par
-  AtomDoubleBraces br -> pure . AtomDoubleBraces <$> traverseOf withLocParam checkParseExpressionAtoms br
+  AtomDoubleBraces br -> pure . AtomDoubleBraces <$> traverseOf doubleBracesExpression checkParseExpressionAtoms br
   AtomBraces br -> pure . AtomBraces <$> traverseOf withLocParam checkParseExpressionAtoms br
   AtomFunArrow a -> return (pure (AtomFunArrow a))
   AtomHole h -> pure . AtomHole <$> checkHole h
@@ -2447,18 +2447,22 @@ makeExpressionTable (ExpressionAtoms atoms _) = [recordUpdate] : [appOpExplicit]
         nonDepFun _funKw l r =
           ExpressionFunction
             Function
-              { _funParameters = param,
+              { _funParameters = params,
                 _funReturn = r,
                 _funKw
               }
           where
-            param =
-              let (l', explicitOrInstance) = case l of
-                    ExpressionDoubleBraces i -> (i ^. withLocParam, ImplicitInstance)
-                    _ -> (l, Explicit)
+            params =
+              let (l', explicitOrInstance, delims') = case l of
+                    ExpressionDoubleBraces i ->
+                      ( i ^. doubleBracesExpression,
+                        ImplicitInstance,
+                        Just (i ^. doubleBracesDelims . unIrrelevant)
+                      )
+                    _ -> (l, Explicit, Nothing)
                in FunctionParameters
                     { _paramNames = [],
-                      _paramDelims = Irrelevant Nothing,
+                      _paramDelims = Irrelevant delims',
                       _paramColon = Irrelevant Nothing,
                       _paramImplicit = explicitOrInstance,
                       _paramType = l'
@@ -2607,7 +2611,7 @@ parseTerm =
     parseDoubleBraces :: Parse Expression
     parseDoubleBraces = ExpressionDoubleBraces <$> P.token bracedExpr mempty
       where
-        bracedExpr :: ExpressionAtom 'Scoped -> Maybe (WithLoc Expression)
+        bracedExpr :: ExpressionAtom 'Scoped -> Maybe (DoubleBracesExpression 'Scoped)
         bracedExpr = \case
           AtomDoubleBraces l -> Just l
           _ -> Nothing

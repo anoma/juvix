@@ -171,7 +171,6 @@ module Patterns;
     | (a, b, c, d) := a;
 end;
 
-
 module UnicodeStrings;
   a : String := "λ";
 end;
@@ -238,52 +237,52 @@ end;
 
 --- Traits
 module Traits;
+  import Stdlib.Prelude open hiding {Show; mkShow; show};
 
-import Stdlib.Prelude open hiding {Show; mkShow; show};
+  trait
+  type Show A :=
+    | mkShow {show : A → String};
 
-trait
-type Show A :=
-  mkShow {
-    show : A → String
-  };
+  instance
+  showStringI : Show String := mkShow (show := id);
 
-instance
-showStringI : Show String := mkShow (show := id);
+  instance
+  showBoolI : Show Bool :=
+    mkShow (show := λ {x := if x "true" "false"});
 
-instance
-showBoolI : Show Bool := mkShow (show := λ{x := if x "true" "false"});
+  instance
+  showNatI : Show Nat := mkShow (show := natToString);
 
-instance
-showNatI : Show Nat := mkShow (show := natToString);
+  showList {A} : {{Show A}} → List A → String
+    | nil := "nil"
+    | (h :: t) := Show.show h ++str " :: " ++str showList t;
 
-showList {A} : {{Show A}} → List A → String
-  | nil := "nil"
-  | (h :: t) := Show.show h ++str " :: " ++str showList t;
+  g : {A : Type} → {{Show A}} → Nat := 5;
 
-g : {A : Type} → {{Show A}} → Nat := 5;
+  instance
+  showListI {A} {{Show A}} : Show (List A) :=
+    mkShow (show := showList);
 
-instance
-showListI {A} {{Show A}} : Show (List A) := mkShow (show := showList);
+  showMaybe {A} {{Show A}} : Maybe A → String
+    | (just x) := "just (" ++str Show.show x ++str ")"
+    | nothing := "nothing";
 
-showMaybe {A} {{Show A}} : Maybe A → String
-  | (just x) := "just (" ++str Show.show x ++str ")"
-  | nothing := "nothing";
+  instance
+  showMaybeI {A} {{Show A}} : Show (Maybe A) :=
+    mkShow (show := showMaybe);
 
-instance
-showMaybeI {A} {{Show A}} : Show (Maybe A) := mkShow (show := showMaybe);
+  f {A} {{Show A}} : A → String
+    | x := Show.show x;
 
-f {A} {{Show A}} : A → String
-  | x := Show.show x;
+  f' {A} : {{Show A}} → A → String
+    | {{mkShow s}} x := s x;
 
-f' {A} : {{Show A}} → A → String
-  | {{mkShow s}} x := s x;
+  f'' {A} : {{Show A}} → A → String
+    | {{M}} x := Show.show {{M}} x;
 
-f'' {A} : {{Show A}} → A → String
-  | {{M}} x := Show.show {{M}} x;
+  f'3 {A} {{M : Show A}} : A → String := Show.show {{M}};
 
-f'3 {A} {{M : Show A}} : A → String := Show.show {{M}};
-
-f'4 {A} {{_ : Show A}} : A → String := Show.show;
+  f'4 {A} {{_ : Show A}} : A → String := Show.show;
 
 end;
 

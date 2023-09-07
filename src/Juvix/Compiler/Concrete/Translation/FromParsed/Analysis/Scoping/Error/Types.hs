@@ -313,7 +313,7 @@ instance ToGenericError AppLeftImplicit where
                 <> "It needs to be the argument of a function expecting an implicit argument."
 
 newtype DanglingDoubleBrace = DanglingDoubleBrace
-  { _danglingDoubleBrace :: WithLoc Expression
+  { _danglingDoubleBrace :: DoubleBracesExpression 'Scoped
   }
   deriving stock (Show)
 
@@ -331,7 +331,7 @@ instance ToGenericError DanglingDoubleBrace where
             }
         where
           opts' = fromGenericOptions opts
-          expr = ExpressionDoubleBraces (e ^. danglingDoubleBrace)
+          expr = e ^. danglingDoubleBrace
           i = getLoc expr
           msg =
             "The expression"
