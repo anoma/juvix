@@ -926,6 +926,7 @@ functionDefinition _signBuiltin = P.label "<function definition>" $ do
               return (n, c)
         (ns, c) <- case impl of
           ImplicitInstance ->
+            -- FIXME this wildcard is wrong!
             first NonEmpty.singleton
               <$> ( parseArgumentNameColon
                       <|> return (ArgumentWildcard (Wildcard (getLoc opn)), Nothing)

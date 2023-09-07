@@ -520,7 +520,8 @@ instance (SingI s) => PrettyPrint (FunctionParameters s) where
   ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => FunctionParameters s -> Sem r ()
   ppCode FunctionParameters {..} = do
     case _paramNames of
-      [] -> ppLeftExpression' funFixity _paramType
+      []
+        | _paramImplicit == Explicit -> ppLeftExpression' funFixity _paramType
       _ -> do
         let paramNames' = map ppCode _paramNames
             paramType' = ppExpressionType _paramType
