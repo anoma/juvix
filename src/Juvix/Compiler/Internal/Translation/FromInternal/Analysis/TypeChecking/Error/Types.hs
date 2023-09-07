@@ -455,13 +455,14 @@ instance ToGenericError AmbiguousInstances where
         where
           opts' = fromGenericOptions opts
           i = e ^. ambiguousInstancesLoc
-          locs = vsep $ map (pretty . getLoc . (^. instanceInfoResult)) (e ^. ambiguousInstancesInfos)
+          locs = itemize $ map (pretty . getLoc . (^. instanceInfoResult)) (e ^. ambiguousInstancesInfos)
           msg =
             "Multiple trait instances found for"
               <+> ppCode opts' (e ^. ambiguousInstancesType)
                 <> line
                 <> "Matching instances found at:"
-                <> indent' (align locs)
+                <> line
+                <> indent' locs
 
 newtype ExplicitInstanceArgument = ExplicitInstanceArgument
   { _explicitInstanceArgumentParameter :: FunctionParameter
