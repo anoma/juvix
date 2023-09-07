@@ -96,8 +96,8 @@ vampIRDefs :: Int -> String
 vampIRDefs bits =
   "def integerBits = "
     <> show bits
-    <> ";\n"
-    <> UTF8.toString $(FE.makeRelativeToProject "runtime/src/vampir/stdlib_unsafe.pir" >>= FE.embedFile)
+    <> ";\n\n"
+    <> UTF8.toString $(FE.makeRelativeToProject "runtime/src/vampir/stdlib.pir" >>= FE.embedFile)
 
 --------------------------------------------------------------------------------
 -- helper functions

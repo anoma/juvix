@@ -1,4 +1,6 @@
+////////////////////////////////////////////////
 // VampIR runtime for Juvix (unsafe version)
+////////////////////////////////////////////////
 
 def fst (x, y) = x;
 def snd (x, y) = y;
@@ -14,7 +16,6 @@ def msb_rec x = {
 
 def msb n x = {
     def b = iter (n - 1) msb_rec x;
-    isBool b;
     b
 };
 
@@ -52,3 +53,5 @@ def lessOrEqual x y = lessThan x (y + 1);
 
 def div x y = fst (divRem x y);
 def rem x y = snd (divRem x y);
+
+////////////////////////////////////////////////
