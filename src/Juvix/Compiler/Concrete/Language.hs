@@ -342,7 +342,8 @@ instance HasLoc IteratorSyntaxDef where
 data SigArg (s :: Stage) = SigArg
   { _sigArgDelims :: Irrelevant (KeywordRef, KeywordRef),
     _sigArgImplicit :: IsImplicit,
-    _sigArgNames :: NonEmpty (Argument s),
+    -- | Allowed to be empty only for Instance arguments
+    _sigArgNames :: [Argument s],
     _sigArgColon :: Maybe (Irrelevant KeywordRef),
     -- | The type is only optional for implicit arguments. Omitting the rhs is
     -- equivalent to writing `: Type`.

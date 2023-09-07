@@ -933,23 +933,22 @@ functionDefinition _signBuiltin = P.label "<function definition>" $ do
         let parseArgumentName :: ParsecS r (Argument 'Parsed) =
               ArgumentSymbol <$> symbol
                 <|> ArgumentWildcard <$> wildcard
-        let parseArgumentNameColon :: ParsecS r (Argument 'Parsed, Maybe (Irrelevant KeywordRef)) = P.try $ do
+        let parseArgumentNameColon :: ParsecS r (Argument 'Parsed, Irrelevant KeywordRef) = P.try $ do
               n <- parseArgumentName
-              c <- Just . Irrelevant <$> kw kwColon
+              c <- Irrelevant <$> kw kwColon
               return (n, c)
         (ns, c) <- case impl of
-          ImplicitInstance ->
-            -- FIXME this wildcard is wrong!
-            first NonEmpty.singleton
-              <$> ( parseArgumentNameColon
-                      <|> return (ArgumentWildcard (Wildcard (getLoc opn)), Nothing)
-                  )
+          ImplicitInstance -> do
+            ma <- optional parseArgumentNameColon
+            return $ case ma of
+              Just (ns', c') -> ([ns'], Just c')
+              Nothing -> ([], Nothing)
           Implicit -> do
-            ns <- some1 parseArgumentName
+            ns <- some parseArgumentName
             c <- optional (Irrelevant <$> kw kwColon)
             return (ns, c)
           Explicit -> do
-            ns <- some1 parseArgumentName
+            ns <- some parseArgumentName
             c <- Just . Irrelevant <$> kw kwColon
             return (ns, c)
         return (opn, ns, impl, c)

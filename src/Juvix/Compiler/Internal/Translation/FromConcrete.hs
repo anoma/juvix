@@ -465,29 +465,34 @@ goTopFunctionDef FunctionDef {..} = do
           _paramType <- case _sigArgType of
             Nothing -> return (Internal.smallUniverseE (getLoc a))
             Just ty -> goExpression ty
+
           let _paramImpligoExpressioncit = _sigArgImplicit
-              mk :: Concrete.Argument 'Scoped -> Sem r Internal.FunctionParameter
-              mk = \case
-                Concrete.ArgumentSymbol s ->
-                  let _paramName = Just (goSymbol s)
-                   in return Internal.FunctionParameter {..}
-                Concrete.ArgumentWildcard {} ->
-                  return Internal.FunctionParameter {_paramName = Nothing, ..}
-          mapM mk _sigArgNames
+              noName = Internal.FunctionParameter {_paramName = Nothing, ..}
+              mk :: Concrete.Argument 'Scoped -> Internal.FunctionParameter
+              mk ma =
+                let _paramName =
+                      case ma of
+                        Concrete.ArgumentSymbol s -> Just (goSymbol s)
+                        Concrete.ArgumentWildcard {} -> Nothing
+                 in Internal.FunctionParameter {..}
+
+          return . fromMaybe (pure noName) $ nonEmpty (mk <$> _sigArgNames)
 
     argToPattern :: SigArg 'Scoped -> Sem r (NonEmpty Internal.PatternArg)
-    argToPattern SigArg {..} = do
+    argToPattern arg@SigArg {..} = do
       let _patternArgIsImplicit = _sigArgImplicit
           _patternArgName :: Maybe Internal.Name = Nothing
+          noName = goWidlcard (Wildcard (getLoc arg))
+          goWidlcard w = do
+            _patternArgPattern <- Internal.PatternVariable <$> varFromWildcard w
+            return Internal.PatternArg {..}
           mk :: Concrete.Argument 'Scoped -> Sem r Internal.PatternArg
           mk = \case
             Concrete.ArgumentSymbol s ->
               let _patternArgPattern = Internal.PatternVariable (goSymbol s)
                in return Internal.PatternArg {..}
-            Concrete.ArgumentWildcard w -> do
-              _patternArgPattern <- Internal.PatternVariable <$> varFromWildcard w
-              return Internal.PatternArg {..}
-      mapM mk _sigArgNames
+            Concrete.ArgumentWildcard w -> goWidlcard w
+      maybe (pure <$> noName) (mapM mk) (nonEmpty _sigArgNames)
 
 goExamples ::
   forall r.
