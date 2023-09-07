@@ -1730,17 +1730,20 @@ makeLenses ''FixitySyntaxDef
 makeLenses ''ParsedFixityInfo
 makeLenses ''ParsedFixityFields
 
+fixityFieldHelper :: SimpleGetter (ParsedFixityFields s) (Maybe a) -> SimpleGetter (ParsedFixityInfo s) (Maybe a)
+fixityFieldHelper l = to (^? fixityFields . _Just . l . _Just)
+
 fixityAssoc :: SimpleGetter (ParsedFixityInfo s) (Maybe (BinaryAssoc))
-fixityAssoc = to (^? fixityFields . _Just . fixityFieldsAssoc . _Just)
+fixityAssoc = fixityFieldHelper fixityFieldsAssoc
 
 fixityPrecSame :: SimpleGetter (ParsedFixityInfo s) (Maybe (SymbolType s))
-fixityPrecSame = to (^? fixityFields . _Just . fixityFieldsPrecSame . _Just)
+fixityPrecSame = fixityFieldHelper fixityFieldsPrecSame
 
 fixityPrecAbove :: SimpleGetter (ParsedFixityInfo s) (Maybe [SymbolType s])
-fixityPrecAbove = to (^? fixityFields . _Just . fixityFieldsPrecAbove . _Just)
+fixityPrecAbove = fixityFieldHelper fixityFieldsPrecAbove
 
 fixityPrecBelow :: SimpleGetter (ParsedFixityInfo s) (Maybe [SymbolType s])
-fixityPrecBelow = to (^? fixityFields . _Just . fixityFieldsPrecBelow . _Just)
+fixityPrecBelow = fixityFieldHelper fixityFieldsPrecBelow
 
 instance (SingI s) => HasLoc (AliasDef s) where
   getLoc AliasDef {..} = getLoc _aliasDefSyntaxKw <> getLocIdentifierType _aliasDefAsName
