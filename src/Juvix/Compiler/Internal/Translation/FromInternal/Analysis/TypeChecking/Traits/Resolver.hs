@@ -127,8 +127,8 @@ lookupInstance' tab name params = do
       (InstanceParamApp app1, InstanceParamApp app2)
         | app1 ^. instanceAppHead == app2 ^. instanceAppHead -> do
             and <$> sequence (zipWithExact goMatch (app1 ^. instanceAppArgs) (app2 ^. instanceAppArgs))
-      _ ->
-        return False
+      (InstanceParamVar {}, _) -> return False
+      (InstanceParamApp {}, _) -> return False
 
 lookupInstance ::
   forall r.
