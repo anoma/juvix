@@ -1063,9 +1063,7 @@ ppInductiveSignature InductiveDef {..} = do
       positive'
         | Just k <- _inductivePositive = (<> line) <$> Just (ppCode k)
         | otherwise = Nothing
-      trait'
-        | Just k <- _inductiveTrait = (<> line) <$> Just (ppCode k)
-        | otherwise = Nothing
+      trait' = (<> line) . ppCode <$> _inductiveTrait
   builtin'
     ?<> positive'
     ?<> trait'
