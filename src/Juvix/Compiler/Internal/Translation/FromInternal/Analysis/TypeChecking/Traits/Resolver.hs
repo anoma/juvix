@@ -85,19 +85,14 @@ lookupInstance' tab name params = do
   mapMaybeM matchInstance is
   where
     matchInstance :: InstanceInfo -> Sem r (Maybe (InstanceInfo, SubsI))
-    matchInstance ii@InstanceInfo {..}
-      | length params /= length _instanceInfoParams =
-          return Nothing
-      | otherwise = do
-          (si, b) <-
-            runState mempty $
+    matchInstance ii@InstanceInfo {..} = runFail $ do
+      failUnless (length params == length _instanceInfoParams)
+      (si, b) <- runState mempty $
               and <$> sequence (zipWithExact goMatch _instanceInfoParams params)
-          if
-              | b -> do
-                  return $ Just (ii, si)
-              | otherwise -> return Nothing
+      failUnless b
+      return (ii, si)
 
-    goMatch :: InstanceParam -> InstanceParam -> Sem (State SubsI ': r) Bool
+    goMatch :: InstanceParam -> InstanceParam -> Sem (State SubsI ': Fail ': r) Bool
     goMatch pat t = case (pat, t) of
       (InstanceParamMeta v, _) -> do
         m <- gets (HashMap.lookup v)
