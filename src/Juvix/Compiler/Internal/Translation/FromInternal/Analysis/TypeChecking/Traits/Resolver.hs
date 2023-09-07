@@ -58,17 +58,19 @@ expandArity ::
 expandArity loc subs params e = case params of
   [] ->
     return e
-  fp@FunctionParameter {..} : params'
-    | Just (Just t) <- flip HashMap.lookup subs <$> _paramName ->
-        expandArity loc subs params' (ExpressionApplication (Application e t _paramImplicit))
-    | _paramImplicit == Implicit -> do
-        h <- newHole
-        expandArity loc subs params' (ExpressionApplication (Application e (ExpressionHole h) Implicit))
-    | _paramImplicit == ImplicitInstance -> do
-        h <- newHole
-        expandArity loc subs params' (ExpressionApplication (Application e (ExpressionInstanceHole h) ImplicitInstance))
-    | otherwise ->
-        throw (ErrExplicitInstanceArgument (ExplicitInstanceArgument fp))
+  fp@FunctionParameter {..} : params' -> do
+    (appr, appi) <-
+      if
+          | Just (Just t) <- flip HashMap.lookup subs <$> _paramName -> return (t, _paramImplicit)
+          | _paramImplicit == Implicit -> do
+              h <- newHole
+              return (ExpressionHole h, Implicit)
+          | _paramImplicit == ImplicitInstance -> do
+              h <- newHole
+              return (ExpressionInstanceHole h, ImplicitInstance)
+          | otherwise ->
+              throw (ErrExplicitInstanceArgument (ExplicitInstanceArgument fp))
+    expandArity loc subs params' (ExpressionApplication (Application e appr appi))
   where
     newHole :: (Member NameIdGen r) => Sem r Hole
     newHole = mkHole loc <$> freshNameId
@@ -87,8 +89,9 @@ lookupInstance' tab name params = do
     matchInstance :: InstanceInfo -> Sem r (Maybe (InstanceInfo, SubsI))
     matchInstance ii@InstanceInfo {..} = runFail $ do
       failUnless (length params == length _instanceInfoParams)
-      (si, b) <- runState mempty $
-              and <$> sequence (zipWithExact goMatch _instanceInfoParams params)
+      (si, b) <-
+        runState mempty $
+          and <$> sequence (zipWithExact goMatch _instanceInfoParams params)
       failUnless b
       return (ii, si)
 
@@ -139,9 +142,7 @@ lookupInstance tab ty = do
       throw (ErrNotATrait (NotATrait ty))
 
 instanceFromTypedExpression' :: InfoTable -> TypedExpression -> Maybe InstanceInfo
-instanceFromTypedExpression' tbl e = case instanceFromTypedExpression e of
-  Just ii@InstanceInfo {..}
-    | isTrait tbl _instanceInfoInductive ->
-        Just ii
-  _ ->
-    Nothing
+instanceFromTypedExpression' tbl e = do
+  ii@InstanceInfo {..} <- instanceFromTypedExpression e
+  guard (isTrait tbl _instanceInfoInductive)
+  return ii
