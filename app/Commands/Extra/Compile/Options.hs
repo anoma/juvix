@@ -28,6 +28,7 @@ data CompileOptions = CompileOptions
     _compilePreprocess :: Bool,
     _compileAssembly :: Bool,
     _compileTerm :: Bool,
+    _compileUnsafe :: Bool,
     _compileOutputFile :: Maybe (AppPath File),
     _compileTarget :: CompileTarget,
     _compileInputFile :: Maybe (AppPath File),
@@ -79,6 +80,15 @@ parseCompileOptions supportedTargets parseInputFile = do
               ( short 'G'
                   <> long "only-term"
                   <> help "Produce term output only (for targets: geb)"
+              )
+        | otherwise ->
+            pure False
+  _compileUnsafe <-
+    if
+        | elem TargetVampIR supportedTargets ->
+            switch
+              ( long "unsafe"
+                  <> help "Disable range and error checking (for targets: vampir)"
               )
         | otherwise ->
             pure False

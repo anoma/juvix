@@ -14,10 +14,7 @@ def msb_rec x = {
     x1
 };
 
-def msb n x = {
-    def b = iter (n - 1) msb_rec x;
-    b
-};
+def msb n x = iter (n - 1) msb_rec x;
 
 def isNegative x = 1 - msb integerBits (x + 2^(integerBits - 1));
 def isNegativeD x = 1 - msb (2*integerBits) (x + 2^(2*integerBits - 1));

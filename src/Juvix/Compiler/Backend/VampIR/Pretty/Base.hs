@@ -86,18 +86,23 @@ instance PrettyCode Program where
     fns <- mapM ppCode _programFunctions
     eqns <- mapM ppEquation _programFunctions
     bits <- asks (^. optIntegerBits)
-    return $ vsep pubs <> line <> line <> pretty (vampIRDefs bits) <> line <> line <> vsep fns <> line <> line <> vsep eqns
+    unsafe <- asks (^. optUnsafe)
+    return $ vsep pubs <> line <> line <> pretty (vampIRDefs bits unsafe) <> line <> line <> vsep fns <> line <> line <> vsep eqns
 
 --------------------------------------------------------------------------------
 -- VampIR definitions
 --------------------------------------------------------------------------------
 
-vampIRDefs :: Int -> String
-vampIRDefs bits =
+vampIRDefs :: Int -> Bool -> String
+vampIRDefs bits unsafe =
   "def integerBits = "
     <> show bits
     <> ";\n\n"
-    <> UTF8.toString $(FE.makeRelativeToProject "runtime/src/vampir/stdlib.pir" >>= FE.embedFile)
+    <> if
+        | unsafe ->
+            UTF8.toString $(FE.makeRelativeToProject "runtime/src/vampir/stdlib_unsafe.pir" >>= FE.embedFile)
+        | otherwise ->
+            UTF8.toString $(FE.makeRelativeToProject "runtime/src/vampir/stdlib.pir" >>= FE.embedFile)
 
 --------------------------------------------------------------------------------
 -- helper functions

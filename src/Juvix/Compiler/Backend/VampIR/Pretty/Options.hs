@@ -2,8 +2,9 @@ module Juvix.Compiler.Backend.VampIR.Pretty.Options where
 
 import Juvix.Prelude
 
-newtype Options = Options
-  { _optIntegerBits :: Int
+data Options = Options
+  { _optIntegerBits :: Int,
+    _optUnsafe :: Bool
   }
 
 makeLenses ''Options
@@ -11,7 +12,8 @@ makeLenses ''Options
 defaultOptions :: Options
 defaultOptions =
   Options
-    { _optIntegerBits = 24
+    { _optIntegerBits = 24,
+      _optUnsafe = False
     }
 
 traceOptions :: Options
