@@ -609,12 +609,12 @@ parsedIteratorInfo ::
   ParsecS r ParsedIteratorInfo
 parsedIteratorInfo = do
   l <- kw delimBraceL
-  (_piteratorInfoInitNum, _piteratorInfoRangeNum) <- intercalateEffect semicolon $ do
+  (_parsedIteratorInfoInitNum, _parsedIteratorInfoRangeNum) <- intercalateEffect semicolon $ do
     ini <- toPermutationWithDefault Nothing (Just <$> pinit)
     ran <- toPermutationWithDefault Nothing (Just <$> prangeNum)
     pure (ini, ran)
   r <- kw delimBraceR
-  let _piteratorInfoBraces = Irrelevant (l, r)
+  let _parsedIteratorInfoBraces = Irrelevant (l, r)
   return ParsedIteratorInfo {..}
   where
     pinit :: ParsecS r (WithLoc Int)

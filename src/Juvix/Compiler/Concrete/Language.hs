@@ -268,9 +268,9 @@ deriving stock instance (Ord (AliasDef 'Parsed))
 deriving stock instance (Ord (AliasDef 'Scoped))
 
 data ParsedIteratorInfo = ParsedIteratorInfo
-  { _piteratorInfoInitNum :: Maybe (WithLoc Int),
-    _piteratorInfoRangeNum :: Maybe (WithLoc Int),
-    _piteratorInfoBraces :: Irrelevant (KeywordRef, KeywordRef)
+  { _parsedIteratorInfoInitNum :: Maybe (WithLoc Int),
+    _parsedIteratorInfoRangeNum :: Maybe (WithLoc Int),
+    _parsedIteratorInfoBraces :: Irrelevant (KeywordRef, KeywordRef)
   }
   deriving stock (Show, Eq, Ord, Generic)
 
@@ -2409,8 +2409,8 @@ scopedIdenName f n = case n ^. scopedIdenAlias of
 fromParsedIteratorInfo :: ParsedIteratorInfo -> IteratorInfo
 fromParsedIteratorInfo ParsedIteratorInfo {..} =
   IteratorInfo
-    { _iteratorInfoInitNum = (^. withLocParam) <$> _piteratorInfoInitNum,
-      _iteratorInfoRangeNum = (^. withLocParam) <$> _piteratorInfoRangeNum
+    { _iteratorInfoInitNum = (^. withLocParam) <$> _parsedIteratorInfoInitNum,
+      _iteratorInfoRangeNum = (^. withLocParam) <$> _parsedIteratorInfoRangeNum
     }
 
 instance HasFixity PostfixApplication where

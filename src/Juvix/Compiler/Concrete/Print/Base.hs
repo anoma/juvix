@@ -670,14 +670,14 @@ instance PrettyPrint PostfixApplication where
 instance PrettyPrint ParsedIteratorInfo where
   ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => ParsedIteratorInfo -> Sem r ()
   ppCode ParsedIteratorInfo {..} = do
-    let (l, r) = _piteratorInfoBraces ^. unIrrelevant
+    let (l, r) = _parsedIteratorInfoBraces ^. unIrrelevant
         ppInt :: WithLoc Int -> Sem r ()
         ppInt = morphemeWithLoc . fmap (annotate AnnLiteralInteger . pretty)
         iniItem = do
-          a <- _piteratorInfoInitNum
+          a <- _parsedIteratorInfoInitNum
           return (ppCode Kw.kwInit <+> ppCode Kw.kwAssign <+> ppInt a)
         rangeItem = do
-          a <- _piteratorInfoRangeNum
+          a <- _parsedIteratorInfoRangeNum
           return (ppCode Kw.kwRange <+> ppCode Kw.kwAssign <+> ppInt a)
         items = hsepSemicolon (catMaybes [iniItem, rangeItem])
     ppCode l <> items <> ppCode r
