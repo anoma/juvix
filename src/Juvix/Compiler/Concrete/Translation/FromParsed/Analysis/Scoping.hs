@@ -784,9 +784,7 @@ checkFunctionDef FunctionDef {..} = do
       names' <- forM _sigArgNames $ \case
         ArgumentSymbol s -> ArgumentSymbol <$> bindVariableSymbol s
         ArgumentWildcard w -> return $ ArgumentWildcard w
-      ty' <- case _sigArgType of
-        Just s -> Just <$> checkParseExpressionAtoms s
-        Nothing -> return Nothing
+      ty' <- mapM checkParseExpressionAtoms  _sigArgType
       return
         SigArg
           { _sigArgNames = names',
