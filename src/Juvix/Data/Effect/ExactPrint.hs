@@ -80,6 +80,9 @@ align = region P.align
 indent :: (Members '[ExactPrint] r) => Sem r () -> Sem r ()
 indent = region (P.indent 2)
 
+softline :: (Members '[ExactPrint] r) => Sem r ()
+softline = noLoc P.softline
+
 line :: (Members '[ExactPrint] r) => Sem r ()
 line = noLoc P.line
 

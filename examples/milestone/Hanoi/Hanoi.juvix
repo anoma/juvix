@@ -44,8 +44,7 @@ showPeg : Peg → String
   | right := "right";
 
 --- A Move represents a move between pegs
-type Move :=
-  | move : Peg → Peg → Move;
+type Move := move : Peg → Peg → Move;
 
 showMove : Move → String
   | (move from to) :=

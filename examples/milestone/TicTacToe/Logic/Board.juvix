@@ -7,8 +7,7 @@ import Logic.Symbol open public;
 import Logic.Extra open;
 
 --- A 3x3 grid of ;Square;s
-type Board :=
-  | board : List (List Square) → Board;
+type Board := board : List (List Square) → Board;
 
 --- Returns the list of numbers corresponding to the empty ;Square;s
 possibleMoves : List Square → List Nat

@@ -5,8 +5,7 @@ syntax fixity i3 := binary;
 module M;
   module N;
     syntax operator t i3;
-    type T :=
-      | t : T -> T -> T;
+    type T := t : T -> T -> T;
   end;
 
   syntax fixity add := binary {assoc := right; above := [i3]};

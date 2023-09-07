@@ -761,7 +761,7 @@ instance (SingI s) => PrettyPrint (JudocLine s) where
 
 instance (SingI s) => PrettyPrint (Judoc s) where
   ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => Judoc s -> Sem r ()
-  ppCode (Judoc groups) = ppGroups groups <> line
+  ppCode (Judoc groups) = ppGroups groups <> hardline
     where
       ppGroups :: NonEmpty (JudocGroup s) -> Sem r ()
       ppGroups = \case
@@ -1041,13 +1041,13 @@ instance (SingI s) => PrettyPrint (RhsRecord s) where
         fields'
           | null (_rhsRecordFields ^. _tail1) = ppCode (_rhsRecordFields ^. _head1)
           | otherwise =
-              line
+              hardline
                 <> indent
                   ( sequenceWith
                       (semicolon >> line)
                       (ppCode <$> _rhsRecordFields)
                   )
-                <> line
+                <> hardline
     ppCode l <> fields' <> ppCode r
 
 instance (SingI s) => PrettyPrint (RhsAdt s) where
@@ -1060,30 +1060,36 @@ instance (SingI s) => PrettyPrint (ConstructorRhs s) where
     ConstructorRhsRecord r -> ppCode r
     ConstructorRhsAdt r -> ppCode r
 
-instance (SingI s) => PrettyPrint (ConstructorDef s) where
-  ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => ConstructorDef s -> Sem r ()
-  ppCode ConstructorDef {..} = do
-    let constructorName' = annDef _constructorName (ppSymbolType _constructorName)
-        constructorRhs' = constructorRhsHelper _constructorRhs
-        doc' = ppCode <$> _constructorDoc
-        pragmas' = ppCode <$> _constructorPragmas
-    pipeHelper <+> nest (doc' ?<> pragmas' ?<> constructorName' <> constructorRhs')
-    where
-      constructorRhsHelper :: ConstructorRhs s -> Sem r ()
-      constructorRhsHelper r = spaceMay <> ppCode r
-        where
-          spaceMay = case r of
-            ConstructorRhsGadt {} -> space
-            ConstructorRhsRecord {} -> space
-            ConstructorRhsAdt a
-              | null (a ^. rhsAdtArguments) -> mempty
-              | otherwise -> space
+ppConstructorDef :: forall s r. (SingI s, Members '[ExactPrint, Reader Options] r) => Bool -> ConstructorDef s -> Sem r ()
+ppConstructorDef singleConstructor ConstructorDef {..} = do
+  let constructorName' = annDef _constructorName (ppSymbolType _constructorName)
+      constructorRhs' = constructorRhsHelper _constructorRhs
+      doc' = ppCode <$> _constructorDoc
+      pragmas' = ppCode <$> _constructorPragmas
+  pipeHelper <?+> nestHelper (doc' ?<> pragmas' ?<> constructorName' <> constructorRhs')
+  where
+    constructorRhsHelper :: ConstructorRhs s -> Sem r ()
+    constructorRhsHelper r = spaceMay <> ppCode r
+      where
+        spaceMay = case r of
+          ConstructorRhsGadt {} -> space
+          ConstructorRhsRecord {} -> space
+          ConstructorRhsAdt a
+            | null (a ^. rhsAdtArguments) -> mempty
+            | otherwise -> space
 
-      -- we use this helper so that comments appear before the first optional pipe if the pipe was omitted
-      pipeHelper :: Sem r ()
-      pipeHelper = case _constructorPipe ^. unIrrelevant of
-        Just p -> ppCode p
-        Nothing -> ppCode Kw.kwPipe
+    nestHelper :: Sem r () -> Sem r ()
+    nestHelper
+      | singleConstructor = id
+      | otherwise = nest
+
+    -- we use this helper so that comments appear before the first optional pipe if the pipe was omitted
+    pipeHelper :: Maybe (Sem r ())
+    pipeHelper
+      | singleConstructor = Nothing
+      | otherwise = Just $ case _constructorPipe ^. unIrrelevant of
+          Just p -> ppCode p
+          Nothing -> ppCode Kw.kwPipe
 
 ppInductiveSignature :: (SingI s) => PrettyPrinting (InductiveDef s)
 ppInductiveSignature InductiveDef {..} = do
@@ -1114,11 +1120,12 @@ instance (SingI s) => PrettyPrint (InductiveDef s) where
       ?<> pragmas'
       ?<> sig'
       <+> ppCode _inductiveAssignKw
-        <> line
-        <> indent constrs'
+        <> constrs'
     where
       ppConstructorBlock :: NonEmpty (ConstructorDef s) -> Sem r ()
-      ppConstructorBlock cs = vsep (ppCode <$> cs)
+      ppConstructorBlock = \case
+        c :| [] -> oneLineOrNext (ppConstructorDef True c)
+        cs -> line <> indent (vsep (ppConstructorDef False <$> cs))
 
 instance (SingI s) => PrettyPrint (ProjectionDef s) where
   ppCode ProjectionDef {..} =

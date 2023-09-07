@@ -69,5 +69,9 @@ tests =
   [ posTest
       "Format"
       $(mkRelDir ".")
+      $(mkRelFile "Format.juvix"),
+    posTest
+      "Records"
+      $(mkRelDir ".")
       $(mkRelFile "Format.juvix")
   ]
