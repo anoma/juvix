@@ -237,8 +237,7 @@ goMutualBlock (Internal.MutualBlock m) = preMutual m >>= goMutual
   where
     preMutual :: NonEmpty Internal.MutualStatement -> Sem r PreMutual
     preMutual stmts = do
-      let inds = filter isInd (toList stmts)
-          funs = filter (not . isInd) (toList stmts)
+      let (inds, funs) = partition isInd (toList stmts)
       -- inductives must be pre-registered first to avoid crashing on unknown
       -- inductive types when pre-registering functions
       execState (PreMutual [] []) $ mapM_ step (inds ++ funs)
