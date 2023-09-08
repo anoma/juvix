@@ -201,7 +201,7 @@ checkIsType ::
   Interval ->
   Expression ->
   Sem r Expression
-checkIsType l e = trace ("checkIsType" <> ppTrace e). checkExpression e $ smallUniverseE l
+checkIsType = checkExpression . smallUniverseE
 
 checkDefType ::
   forall r.
