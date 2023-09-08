@@ -28,15 +28,21 @@ data UnfoldedArity = UnfoldedArity
 
 data ArityParameter
   = ParamExplicit Arity
-  | ParamImplicit
+  | ParamImplicit Arity
   | ParamImplicitInstance
   deriving stock (Eq)
 
 makeLenses ''UnfoldedArity
+makeLenses ''FunctionArity
+
+isParamImplicit :: ArityParameter -> Bool
+isParamImplicit = \case
+  ParamImplicit {} -> True
+  _ -> False
 
 arityParameter :: ArityParameter -> Arity
 arityParameter = \case
-  ParamImplicit -> ArityUnit
+  ParamImplicit a -> a
   ParamImplicitInstance -> ArityUnit
   ParamExplicit a -> a
 
@@ -72,12 +78,7 @@ foldArity UnfoldedArity {..} = go _ufoldArityParams
       [] -> case _ufoldArityRest of
         ArityRestUnit -> ArityUnit
         ArityRestUnknown -> ArityUnknown
-      (a : as) -> ArityFunction (FunctionArity l (go as))
-        where
-          l = case a of
-            ParamExplicit e -> ParamExplicit e
-            ParamImplicit -> ParamImplicit
-            ParamImplicitInstance -> ParamImplicitInstance
+      a : as -> ArityFunction (FunctionArity a (go as))
 
 instance HasAtomicity FunctionArity where
   atomicity = const (Aggregate funFixity)
@@ -90,16 +91,24 @@ instance HasAtomicity Arity where
 
 instance Pretty ArityParameter where
   pretty = \case
-    ParamImplicit -> "{𝟙}"
+    ParamImplicit i -> "{" <> pretty i <> "}"
     ParamImplicitInstance -> "{{𝟙}}"
     ParamExplicit f -> pretty f
 
+instance HasAtomicity ArityParameter where
+  atomicity = \case
+    ParamExplicit a -> atomicity a
+    ParamImplicit {} -> Atom
+    ParamImplicitInstance -> Atom
+
 instance Pretty FunctionArity where
-  pretty f@(FunctionArity l r) =
-    parensCond (atomParens (const True) (atomicity f) funFixity) (pretty l)
+  pretty (FunctionArity l r) =
+    ppSide False l
       <> " → "
-      <> pretty r
+      <> ppSide True r
     where
+      ppSide :: (HasAtomicity a, Pretty a) => Bool -> a -> Doc ann
+      ppSide isright lr = parensCond (atomParens (const isright) (atomicity lr) funFixity) (pretty lr)
       parensCond :: Bool -> Doc a -> Doc a
       parensCond t d = if t then parens d else d
 
@@ -108,3 +117,33 @@ instance Pretty Arity where
     ArityUnit -> "𝟙"
     ArityUnknown -> "?"
     ArityFunction f -> pretty f
+
+-- | If we give identifiers to unknown arities we could do unification and the
+-- matching would be more accurate
+matchArity :: Arity -> Arity -> Bool
+matchArity a1 a2 = isJust . run . runFail $ do
+  go a1 a2
+  where
+    go :: Arity -> Arity -> Sem '[Fail] ()
+    go a b = case (a, b) of
+      (ArityUnknown {}, _) -> return ()
+      (_, ArityUnknown {}) -> return ()
+      (ArityUnit, ArityUnit) -> return ()
+      (ArityUnit, ArityFunction {}) -> fail
+      (ArityFunction {}, ArityUnit) -> fail
+      (ArityFunction f1, ArityFunction f2) -> goFunction f1 f2
+
+    goParam :: ArityParameter -> ArityParameter -> Sem '[Fail] ()
+    goParam p1 p2 = case (p1, p2) of
+      (ParamExplicit a, ParamExplicit b) -> go a b
+      (ParamExplicit {}, _) -> fail
+      (_, ParamExplicit {}) -> fail
+      (ParamImplicit a, ParamImplicit b) -> go a b
+      (ParamImplicit {}, _) -> fail
+      (_, ParamImplicit {}) -> fail
+      (ParamImplicitInstance, ParamImplicitInstance) -> return ()
+
+    goFunction :: FunctionArity -> FunctionArity -> Sem '[Fail] ()
+    goFunction f1 f2 = do
+      goParam (f1 ^. functionArityLeft) (f2 ^. functionArityLeft)
+      go (f1 ^. functionArityRight) (f2 ^. functionArityRight)

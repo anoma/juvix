@@ -310,6 +310,10 @@ instance PrettyCode Module where
 instance PrettyCode Interval where
   ppCode = return . annotate AnnCode . pretty
 
+instance PrettyCode ApplicationArg where
+  ppCode ApplicationArg {..} =
+    delimIf _appArgIsImplicit False <$> ppCode _appArg
+
 instance PrettyCode Arity where
   ppCode = return . pretty
 
@@ -403,3 +407,6 @@ instance (PrettyCode a) => PrettyCode [a] where
 
 instance (PrettyCode a) => PrettyCode (NonEmpty a) where
   ppCode x = ppCode (toList x)
+
+instance PrettyCode IsImplicit where
+  ppCode = return . pretty
