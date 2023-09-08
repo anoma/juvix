@@ -2789,9 +2789,9 @@ parsePatternTerm = do
         bracesPat = \case
           PatternAtomDoubleBraces r
             | Implicit <- r ^. patternArgIsImplicit ->
-                Just (Left (ErrDoubleBracesPattern (DoubleBracesPattern r)))
+                Just (Left (ErrDoubleBracesPattern (DoubleBracesPattern r True)))
             | ImplicitInstance <- r ^. patternArgIsImplicit ->
-                Just (Left (ErrDoubleBracesPattern (DoubleBracesPattern r)))
+                Just (Left (ErrDoubleBracesPattern (DoubleBracesPattern r True)))
             | otherwise -> Just (Right (set patternArgIsImplicit ImplicitInstance r))
           _ -> Nothing
 
@@ -2806,7 +2806,9 @@ parsePatternTerm = do
         bracesPat = \case
           PatternAtomBraces r
             | Implicit <- r ^. patternArgIsImplicit ->
-                Just (Left (ErrDoubleBracesPattern (DoubleBracesPattern r)))
+                Just (Left (ErrDoubleBracesPattern (DoubleBracesPattern r False)))
+            | ImplicitInstance <- r ^. patternArgIsImplicit ->
+                Just (Left (ErrDoubleBracesPattern (DoubleBracesPattern r False)))
             | otherwise -> Just (Right (set patternArgIsImplicit Implicit r))
           _ -> Nothing
 
