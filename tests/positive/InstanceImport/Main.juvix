@@ -1,6 +1,7 @@
 module Main;
 
 import M open;
+import M open;
 
 type Bool := true | false;
 

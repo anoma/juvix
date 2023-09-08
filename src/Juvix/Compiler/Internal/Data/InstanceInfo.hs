@@ -27,6 +27,10 @@ data InstanceInfo = InstanceInfo
     _instanceInfoResult :: Expression,
     _instanceInfoArgs :: [FunctionParameter]
   }
+  deriving stock (Eq)
+
+instance Hashable InstanceInfo where
+  hashWithSalt salt InstanceInfo {..} = hashWithSalt salt _instanceInfoResult
 
 -- | Maps trait names to available instances
 newtype InstanceTable = InstanceTable
@@ -40,7 +44,10 @@ makeLenses ''InstanceTable
 instance Semigroup InstanceTable where
   t1 <> t2 =
     InstanceTable $
-      HashMap.unionWith (++) (t1 ^. instanceTableMap) (t2 ^. instanceTableMap)
+      HashMap.unionWith combine (t1 ^. instanceTableMap) (t2 ^. instanceTableMap)
+    where
+      combine :: [InstanceInfo] -> [InstanceInfo] -> [InstanceInfo]
+      combine ii1 ii2 = nubHashable (ii1 ++ ii2)
 
 instance Monoid InstanceTable where
   mempty = InstanceTable mempty
