@@ -29,19 +29,33 @@ data InstanceInfo = InstanceInfo
   }
 
 -- | Maps trait names to available instances
-type InstanceTable = HashMap InductiveName [InstanceInfo]
+newtype InstanceTable = InstanceTable
+  { _instanceTableMap :: HashMap InductiveName [InstanceInfo]
+  }
 
 makeLenses ''InstanceApp
 makeLenses ''InstanceInfo
+makeLenses ''InstanceTable
+
+instance Semigroup InstanceTable where
+  t1 <> t2 =
+    InstanceTable $
+      HashMap.unionWith (++) (t1 ^. instanceTableMap) (t2 ^. instanceTableMap)
+
+instance Monoid InstanceTable where
+  mempty = InstanceTable mempty
 
 updateInstanceTable :: InstanceTable -> InstanceInfo -> InstanceTable
 updateInstanceTable tab ii@InstanceInfo {..} =
-  HashMap.alter go _instanceInfoInductive tab
+  over instanceTableMap (HashMap.alter go _instanceInfoInductive) tab
   where
     go :: Maybe [InstanceInfo] -> Maybe [InstanceInfo]
     go = \case
       Just is -> Just (ii : is)
       Nothing -> Just [ii]
+
+lookupInstanceTable :: InstanceTable -> Name -> Maybe [InstanceInfo]
+lookupInstanceTable tab name = HashMap.lookup name (tab ^. instanceTableMap)
 
 paramToExpression :: InstanceParam -> Expression
 paramToExpression = \case
