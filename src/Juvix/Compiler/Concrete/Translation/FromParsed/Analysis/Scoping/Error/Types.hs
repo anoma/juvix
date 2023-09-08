@@ -312,6 +312,34 @@ instance ToGenericError AppLeftImplicit where
                 <> line
                 <> "It needs to be the argument of a function expecting an implicit argument."
 
+newtype DanglingDoubleBrace = DanglingDoubleBrace
+  { _danglingDoubleBrace :: DoubleBracesExpression 'Scoped
+  }
+  deriving stock (Show)
+
+makeLenses ''DanglingDoubleBrace
+
+instance ToGenericError DanglingDoubleBrace where
+  genericError e = ask >>= generr
+    where
+      generr opts =
+        return
+          GenericError
+            { _genericErrorLoc = i,
+              _genericErrorMessage = prettyError msg,
+              _genericErrorIntervals = [i]
+            }
+        where
+          opts' = fromGenericOptions opts
+          expr = e ^. danglingDoubleBrace
+          i = getLoc expr
+          msg =
+            "The expression"
+              <+> ppCode opts' expr
+              <+> "cannot appear by itself."
+                <> line
+                <> "It needs to be on the left of a function arrow."
+
 newtype ModuleNotInScope = ModuleNotInScope
   { _moduleNotInScopeName :: Name
   }

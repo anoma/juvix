@@ -301,6 +301,11 @@ instance (SingI s) => PrettyPrint (RecordUpdate s) where
       <> fields'
       <> ppCode r
 
+instance (SingI s) => PrettyPrint (DoubleBracesExpression s) where
+  ppCode DoubleBracesExpression {..} = do
+    let (l, r) = _doubleBracesDelims ^. unIrrelevant
+    ppCode l <> ppExpressionType _doubleBracesExpression <> ppCode r
+
 instance (SingI s) => PrettyPrint (ExpressionAtom s) where
   ppCode = \case
     AtomIdentifier n -> ppIdentifierType n
@@ -314,7 +319,7 @@ instance (SingI s) => PrettyPrint (ExpressionAtom s) where
     AtomLiteral lit -> ppCode lit
     AtomFunArrow a -> ppCode a
     AtomParens e -> parens (ppExpressionType e)
-    AtomDoubleBraces e -> doubleBraces (ppExpressionType (e ^. withLocParam))
+    AtomDoubleBraces e -> ppCode e
     AtomBraces e -> braces (ppExpressionType (e ^. withLocParam))
     AtomHole w -> ppHoleType w
     AtomIterator i -> ppCode i
@@ -520,7 +525,8 @@ instance (SingI s) => PrettyPrint (FunctionParameters s) where
   ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => FunctionParameters s -> Sem r ()
   ppCode FunctionParameters {..} = do
     case _paramNames of
-      [] -> ppLeftExpression' funFixity _paramType
+      []
+        | _paramImplicit == Explicit -> ppLeftExpression' funFixity _paramType
       _ -> do
         let paramNames' = map ppCode _paramNames
             paramType' = ppExpressionType _paramType
@@ -539,7 +545,6 @@ instance (SingI s) => PrettyPrint (FunctionParameter s) where
   ppCode = \case
     FunctionParameterName n -> annDef n (ppSymbolType n)
     FunctionParameterWildcard w -> ppCode w
-    FunctionParameterUnnamed {} -> return ()
 
 instance (SingI s) => PrettyPrint (Function s) where
   ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => Function s -> Sem r ()
@@ -658,7 +663,7 @@ instance PrettyPrint Expression where
     ExpressionInstanceHole w -> ppCode w
     ExpressionParensIdentifier n -> parens (ppCode n)
     ExpressionBraces b -> braces (ppCode b)
-    ExpressionDoubleBraces b -> doubleBraces (ppCode b)
+    ExpressionDoubleBraces b -> ppCode b
     ExpressionApplication a -> ppCode a
     ExpressionList a -> ppCode a
     ExpressionInfixApplication a -> ppCode a

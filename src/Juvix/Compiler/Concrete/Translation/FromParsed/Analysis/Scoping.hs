@@ -1633,7 +1633,6 @@ checkFunction f = do
     _paramNames <- forM (f ^. funParameters . paramNames) $ \case
       FunctionParameterWildcard w -> return (FunctionParameterWildcard w)
       FunctionParameterName p -> FunctionParameterName <$> bindVariableSymbol p
-      FunctionParameterUnnamed i -> return (FunctionParameterUnnamed i)
     _funReturn <- checkParseExpressionAtoms (f ^. funReturn)
     let _paramImplicit = f ^. funParameters . paramImplicit
         _paramColon = f ^. funParameters . paramColon
@@ -2024,7 +2023,7 @@ checkExpressionAtom e = case e of
   AtomUniverse uni -> return (pure (AtomUniverse uni))
   AtomFunction fun -> pure . AtomFunction <$> checkFunction fun
   AtomParens par -> pure . AtomParens <$> checkParens par
-  AtomDoubleBraces br -> pure . AtomDoubleBraces <$> traverseOf withLocParam checkParseExpressionAtoms br
+  AtomDoubleBraces br -> pure . AtomDoubleBraces <$> traverseOf doubleBracesExpression checkParseExpressionAtoms br
   AtomBraces br -> pure . AtomBraces <$> traverseOf withLocParam checkParseExpressionAtoms br
   AtomFunArrow a -> return (pure (AtomFunArrow a))
   AtomHole h -> pure . AtomHole <$> checkHole h
@@ -2443,23 +2442,31 @@ makeExpressionTable (ExpressionAtoms atoms _) = [recordUpdate] : [appOpExplicit]
         getArrow = \case
           AtomFunArrow r -> return r
           _ -> Nothing
+
         nonDepFun :: KeywordRef -> Expression -> Expression -> Expression
-        nonDepFun _funKw a b =
+        nonDepFun _funKw l r =
           ExpressionFunction
             Function
-              { _funParameters = param,
-                _funReturn = b,
+              { _funParameters = params,
+                _funReturn = r,
                 _funKw
               }
           where
-            param =
-              FunctionParameters
-                { _paramNames = [],
-                  _paramDelims = Irrelevant Nothing,
-                  _paramColon = Irrelevant Nothing,
-                  _paramImplicit = Explicit,
-                  _paramType = a
-                }
+            params =
+              let (l', explicitOrInstance, delims') = case l of
+                    ExpressionDoubleBraces i ->
+                      ( i ^. doubleBracesExpression,
+                        ImplicitInstance,
+                        Just (i ^. doubleBracesDelims . unIrrelevant)
+                      )
+                    _ -> (l, Explicit, Nothing)
+               in FunctionParameters
+                    { _paramNames = [],
+                      _paramDelims = Irrelevant delims',
+                      _paramColon = Irrelevant Nothing,
+                      _paramImplicit = explicitOrInstance,
+                      _paramType = l'
+                    }
 
 parseExpressionAtoms ::
   forall r.
@@ -2604,7 +2611,7 @@ parseTerm =
     parseDoubleBraces :: Parse Expression
     parseDoubleBraces = ExpressionDoubleBraces <$> P.token bracedExpr mempty
       where
-        bracedExpr :: ExpressionAtom 'Scoped -> Maybe (WithLoc Expression)
+        bracedExpr :: ExpressionAtom 'Scoped -> Maybe (DoubleBracesExpression 'Scoped)
         bracedExpr = \case
           AtomDoubleBraces l -> Just l
           _ -> Nothing

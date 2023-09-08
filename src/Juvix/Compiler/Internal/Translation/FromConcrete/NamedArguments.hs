@@ -6,6 +6,8 @@ where
 import Data.HashMap.Strict qualified as HashMap
 import Data.IntMap.Strict qualified as IntMap
 import Juvix.Compiler.Concrete.Data.NameSignature.Base
+import Juvix.Compiler.Concrete.Gen qualified as Gen
+import Juvix.Compiler.Concrete.Keywords
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
 import Juvix.Prelude
@@ -130,14 +132,14 @@ helper loc = do
         missingErr :: NonEmpty Symbol -> Sem r ()
         missingErr = throw . ErrMissingArguments . MissingArguments loc
 
-    emitImplicit' ::
+    emitImplicitHelper ::
       (WithLoc Expression -> Expression) ->
       (HoleType 'Scoped -> Expression) ->
       Bool ->
       HashMap Symbol Int ->
       IntMap Expression ->
       Sem r ()
-    emitImplicit' exprBraces exprHole lastBlock omittedArgs args = go 0 (IntMap.toAscList args)
+    emitImplicitHelper exprBraces exprHole lastBlock omittedArgs args = go 0 (IntMap.toAscList args)
       where
         go :: Int -> [(Int, Expression)] -> Sem r ()
         go n = \case
@@ -156,10 +158,21 @@ helper loc = do
         maxIx = fmap maximum1 . nonEmpty . toList $ omittedArgs
 
     emitImplicit :: Bool -> HashMap Symbol Int -> IntMap Expression -> Sem r ()
-    emitImplicit = emitImplicit' ExpressionBraces ExpressionHole
+    emitImplicit = emitImplicitHelper ExpressionBraces ExpressionHole
 
     emitImplicitInstance :: Bool -> HashMap Symbol Int -> IntMap Expression -> Sem r ()
-    emitImplicitInstance = emitImplicit' ExpressionDoubleBraces ExpressionInstanceHole
+    emitImplicitInstance = emitImplicitHelper mkDoubleBraces ExpressionInstanceHole
+      where
+        mkDoubleBraces :: WithLoc Expression -> Expression
+        mkDoubleBraces (WithLoc eloc e) = run . runReader eloc $ do
+          l <- Gen.kw delimDoubleBraceL
+          r <- Gen.kw delimDoubleBraceR
+          return $
+            ExpressionDoubleBraces
+              DoubleBracesExpression
+                { _doubleBracesExpression = e,
+                  _doubleBracesDelims = Irrelevant (l, r)
+                }
 
     scanGroup ::
       IsImplicit ->
