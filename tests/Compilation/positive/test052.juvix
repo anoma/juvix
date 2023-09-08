@@ -3,11 +3,6 @@ module test052;
 
 import Stdlib.Prelude open;
 
-import Stdlib.Trait.Show as Show;
-
-fromShow : {a : Type} -> Show a -> a -> String
-  | (mkShow s) a := s a;
-
 LambdaTy : Type -> Type := Lambda';
 
 AppTy : Type -> Type := App';
@@ -22,12 +17,11 @@ type Expr' (v : Type) :=
   | num : Nat -> Expr' v;
 
 --- A ;Lambda'; is a lambda function.
-type Lambda' (v : Type) :=
-  | mkLambda : Expr' v -> Lambda' v;
+type Lambda' (v : Type) := mkLambda : Expr' v -> Lambda' v;
 
 --- An ;App'; is an application of two ;Expr';.
 type App' (v : Type) :=
-  | mkApp : Expr' v -> Expr' v -> App' v;
+  mkApp : Expr' v -> Expr' v -> App' v;
 
 Expr : Type := Expr' Nat;
 
@@ -39,7 +33,7 @@ ValTy : Type -> Type := Val';
 
 --- A ;Closure'; is a context (;List; of ;ValTy;) and an ;Expr'; in that context.
 type Closure' (v : Type) :=
-  | mkClosure : List (ValTy v) -> Expr' v -> Closure' v;
+  mkClosure : List (ValTy v) -> Expr' v -> Closure' v;
 
 --- A ;Val'; is either a ;Closure'; or a ;Nat;.
 type Val' (v : Type) :=
@@ -55,41 +49,39 @@ type Either (a : Type) (b : Type) :=
   | left : a -> Either a b
   | right : b -> Either a b;
 
-module ExprTraits;
-  toString : Expr -> String
-    | (! v) := "[" ++str natToString v ++str "]"
-    | (lam (mkLambda b)) := "λ {" ++str toString b ++str "}"
-    | (app (mkApp l r)) :=
-      "("
-        ++str toString l
-        ++str " # "
-        ++str toString r
-        ++str ")"
-    | (l :+: r) :=
-      "("
-        ++str toString l
-        ++str " + "
-        ++str toString r
-        ++str ")"
-    | (num n) := natToString n;
+exprToString : Expr -> String
+  | (! v) := "[" ++str natToString v ++str "]"
+  | (lam (mkLambda b)) := "λ {" ++str exprToString b ++str "}"
+  | (app (mkApp l r)) :=
+    "("
+      ++str exprToString l
+      ++str " # "
+      ++str exprToString r
+      ++str ")"
+  | (l :+: r) :=
+    "("
+      ++str exprToString l
+      ++str " + "
+      ++str exprToString r
+      ++str ")"
+  | (num n) := natToString n;
 
-  --- ;Show; instance for ;Expr;.
-  Show : Show.Show Expr := mkShow toString;
-end;
+--- ;Show; instance for ;Expr;.
+instance
+showExprI : Show Expr := mkShow exprToString;
 
-module ValTraits;
-  terminating
-  valToString : Val -> String
-    | (vnum n) := natToString n
-    | (closure (mkClosure ctx n)) :=
-      fromShow (ListTraits.Show Show) ctx
-        ++str " ⊢ "
-        ++str ExprTraits.toString n;
+terminating
+valToString : Val -> String
+  | (vnum n) := natToString n
+  | (closure (mkClosure ctx n)) :=
+    Show.show {{showListI {{showValI}}}} ctx
+      ++str " ⊢ "
+      ++str Show.show n;
 
-  --- ;Show; instance for ;Val;.
-  terminating
-  Show : Show.Show Val := mkShow valToString;
-end;
+--- ;Show; instance for ;Val;.
+terminating
+instance
+showValI : Show (Val' Nat) := mkShow valToString;
 
 syntax operator >>= seq;
 --- Monadic binding for ;Either;.
@@ -193,11 +185,11 @@ main : IO :=
         ("ScopeError: "
           ++str natToString n
           ++str ", ctx = "
-          ++str fromShow (ListTraits.Show ValTraits.Show) ctx
+          ++str Show.show [1;2]
+          ++str Show.show ctx
           ++str "\n")
     | left (ExpectedNat e) :=
       printStringLn
-        ("Expected a natural but got "
-          ++str ValTraits.valToString e)
+        ("Expected a natural but got " ++str Show.show e)
     | left ExpectedLambda := printStringLn "ExpectedLambda"
-    | right r := printStringLn (ValTraits.valToString r);
+    | right r := printStringLn (Show.show r);
