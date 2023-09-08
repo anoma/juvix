@@ -1,31 +1,31 @@
 module Functor;
 
-module Explicit;
-  type functor (f : Type -> Type) :=
-    mkFunctor {_fmap : (A B : Type) -> (A -> B) -> f A -> f B};
+-- module Explicit;
+--   type functor (f : Type -> Type) :=
+--     mkFunctor {_fmap : (A B : Type) -> (A -> B) -> f A -> f B};
 
-  type maybe (a : Type) :=
-    | nothing
-    | just a;
+--   type maybe (a : Type) :=
+--     | nothing
+--     | just a;
 
-  maybe-fmap (a b : Type) (f : a -> b) : maybe a -> maybe b
-    | nothing := nothing
-    | (just x) := just (f x);
+--   maybe-fmap (a b : Type) (f : a -> b) : maybe a -> maybe b
+--     | nothing := nothing
+--     | (just x) := just (f x);
 
-  maybe-functor : functor maybe :=
-    mkFunctor {maybe} maybe-fmap;
-end;
+--   maybe-functor : functor maybe :=
+--     mkFunctor {maybe} maybe-fmap;
+-- end;
 
 type functor (f : Type -> Type) :=
-  mkFunctor {fmap : {A B : Type} -> (A -> B) -> f A -> f B};
+  mkFunctor {fmap : {A : Type} -> (A -> A) -> f A -> f A};
 
 type maybe (a : Type) :=
   | nothing
   | just a;
 
-maybe-fmap {a b : Type} (f : a -> b) : maybe a -> maybe b
+maybe-fmap {a : Type} (f : a -> a) : maybe a -> maybe a
   | nothing := nothing
-  | (just a) := just (f a);
+  | (just x) := just (f x);
 
--- maybe-functor : functor maybe :=
---   mkFunctor {maybe} maybe-fmap;
+maybe-functor : functor maybe :=
+  mkFunctor {maybe} maybe-fmap;
