@@ -10,6 +10,8 @@ import Juvix.Compiler.Internal.Data.InfoTable.Base
 import Juvix.Compiler.Internal.Data.NameDependencyInfo
 import Juvix.Compiler.Internal.Extra
 import Juvix.Compiler.Internal.Pretty.Options
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Data.LocalVars
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Data.Types
 import Juvix.Data.CodeAnn
 import Juvix.Prelude
 
@@ -130,7 +132,6 @@ instance (PrettyCode a, PrettyCode b, PrettyCode c) => PrettyCode (a, b, c) wher
 
 instance PrettyCode NameDependencyInfo where
   ppCode DependencyInfo {..} = do
-    let header x = annotate AnnImportant x <> line
     edges' <- vsep <$> mapM ppCode _depInfoEdgeList
     reachable' <- ppCode (toList _depInfoReachable)
     topsort' <- ppCode _depInfoTopSort
@@ -193,9 +194,10 @@ ppBlock ::
 ppBlock items = vsep . toList <$> mapM ppCode items
 
 instance PrettyCode InductiveParameter where
-  ppCode (InductiveParameter v) = do
-    v' <- ppCode v
-    return $ parens (v' <+> kwColon <+> kwType)
+  ppCode InductiveParameter {..} = do
+    v' <- ppCode _inductiveParamName2
+    ty' <- ppCode _inductiveParamType
+    return $ parens (v' <+> kwColon <+> ty')
 
 instance PrettyCode BuiltinInductive where
   ppCode = return . annotate AnnKeyword . pretty
@@ -308,12 +310,32 @@ instance PrettyCode Module where
 instance PrettyCode Interval where
   ppCode = return . annotate AnnCode . pretty
 
+instance PrettyCode Arity where
+  ppCode = return . pretty
+
+instance PrettyCode LocalVars where
+  ppCode :: forall r. (Member (Reader Options) r) => LocalVars -> Sem r (Doc Ann)
+  ppCode LocalVars {..} = do
+    assocs' <- vsep <$> mapM (uncurry ppAssoc) (HashMap.toList _localArities)
+
+    return $
+      header "Arities of Local Variables"
+        <> assocs'
+    where
+      ppAssoc :: VarName -> Arity -> Sem r (Doc Ann)
+      ppAssoc v ari = do
+        ari' <- ppCode ari
+        v' <- ppCode v
+        return (v' <+> "↦" <+> ari')
+
+header :: Doc Ann -> Doc Ann
+header x = annotate AnnImportant x <> line
+
 instance PrettyCode InfoTable where
   ppCode tbl = do
     inds <- ppCode (HashMap.keys (tbl ^. infoInductives))
     constrs <- ppCode (HashMap.keys (tbl ^. infoConstructors))
     funs <- ppCode (HashMap.keys (tbl ^. infoFunctions))
-    let header :: Text -> Doc Ann = annotate AnnImportant . pretty
     return $
       header "InfoTable"
         <> "\n========="

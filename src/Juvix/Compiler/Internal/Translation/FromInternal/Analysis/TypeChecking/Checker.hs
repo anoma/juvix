@@ -124,7 +124,7 @@ checkInductiveDef InductiveDef {..} = runInferenceDef $ do
     paramLocals :: LocalVars
     paramLocals =
       LocalVars
-        { _localTypes = HashMap.fromList [(p ^. inductiveParamName, smallUniverseE (getLoc p)) | p <- _inductiveParameters],
+        { _localTypes = HashMap.fromList [(p ^. inductiveParamName2, p ^. inductiveParamType) | p <- _inductiveParameters],
           _localTyMap = mempty
         }
     goConstructor :: ConstructorDef -> Sem (Inference ': r) ConstructorDef
@@ -315,6 +315,7 @@ checkFunctionParameter ::
   FunctionParameter ->
   Sem r FunctionParameter
 checkFunctionParameter (FunctionParameter mv i e) = do
+  -- FIXME we need to relax this
   e' <- checkIsType (getLoc e) e
   when (i == ImplicitInstance) $ do
     tab <- ask
@@ -343,7 +344,7 @@ checkConstructorReturnType ::
 checkConstructorReturnType indType ctor = do
   let ctorName = ctor ^. inductiveConstructorName
       tyName = indType ^. inductiveName
-      indParams = map (^. inductiveParamName) (indType ^. inductiveParameters)
+      indParams = map (^. inductiveParamName2) (indType ^. inductiveParameters)
       ctorReturnType = snd (viewConstructorType (ctor ^. inductiveConstructorType))
       expectedReturnType =
         foldExplicitApplication

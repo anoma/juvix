@@ -264,8 +264,9 @@ goInductiveParameter ::
   Maybe Name ->
   InductiveParameter ->
   Sem r ()
-goInductiveParameter p param =
-  addEdgeMay p (param ^. inductiveParamName)
+goInductiveParameter p param = do
+  addEdgeMay p (param ^. inductiveParamName2)
+  goExpression p (param ^. inductiveParamType)
 
 goFunctionParameter ::
   (Members '[State DependencyGraph, State StartNodes, Reader ExportsTable] r) =>

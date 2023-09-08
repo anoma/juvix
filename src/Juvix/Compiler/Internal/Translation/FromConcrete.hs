@@ -36,9 +36,6 @@ type MCache = Cache Concrete.ModuleIndex Internal.Module
 -- | Needed to generate field projections.
 type ConstructorInfos = HashMap Internal.ConstructorName ConstructorInfo
 
-unsupported :: Text -> a
-unsupported msg = error $ msg <> "Scoped to Internal: not yet supported"
-
 fromConcrete ::
   (Members '[Reader EntryPoint, Error JuvixError, Builtins, NameIdGen, Termination] r) =>
   Scoper.ScoperResult ->
@@ -517,14 +514,12 @@ goInductiveParameters ::
   Sem r [Internal.InductiveParameter]
 goInductiveParameters params@InductiveParameters {..} = do
   paramType' <- goRhs _inductiveParametersRhs
-  case paramType' of
-    Internal.ExpressionUniverse {} -> return ()
-    _ -> unsupported "only type variables of small types are allowed"
 
   let goInductiveParameter :: S.Symbol -> Internal.InductiveParameter
       goInductiveParameter var =
         Internal.InductiveParameter
-          { _inductiveParamName = goSymbol var
+          { _inductiveParamName2 = goSymbol var,
+            _inductiveParamType = paramType'
           }
   return (map goInductiveParameter (toList _inductiveParametersNames))
   where
@@ -607,7 +602,7 @@ goInductive ty@InductiveDef {..} = do
   _inductiveType' <- mapM goExpression _inductiveType
   _inductivePragmas' <- goPragmas _inductivePragmas
   let inductiveName' = goSymbol _inductiveName
-      constrRetType = Internal.foldExplicitApplication (Internal.toExpression inductiveName') (map (Internal.ExpressionIden . Internal.IdenVar . (^. Internal.inductiveParamName)) _inductiveParameters')
+      constrRetType = Internal.foldExplicitApplication (Internal.toExpression inductiveName') (map (Internal.ExpressionIden . Internal.IdenVar . (^. Internal.inductiveParamName2)) _inductiveParameters')
   _inductiveConstructors' <-
     local (const _inductivePragmas') $
       mapM (goConstructorDef constrRetType) _inductiveConstructors

@@ -229,7 +229,7 @@ fillHoles :: HashMap Hole Expression -> Expression -> Expression
 fillHoles = subsHoles
 
 substituteIndParams :: [(InductiveParameter, Expression)] -> Expression -> Expression
-substituteIndParams = substitutionE . HashMap.fromList . map (first (^. inductiveParamName))
+substituteIndParams = substitutionE . HashMap.fromList . map (first (^. inductiveParamName2))
 
 typeAbstraction :: IsImplicit -> Name -> FunctionParameter
 typeAbstraction i var = FunctionParameter (Just var) i (ExpressionUniverse (SmallUniverse (getLoc var)))
@@ -272,7 +272,7 @@ inductiveTypeVarsAssoc def l
   where
     n = length l
     vars :: [VarName]
-    vars = def ^.. inductiveParameters . each . inductiveParamName
+    vars = def ^.. inductiveParameters . each . inductiveParamName2
 
 substitutionApp :: (Maybe Name, Expression) -> Expression -> Expression
 substitutionApp (mv, ty) = case mv of

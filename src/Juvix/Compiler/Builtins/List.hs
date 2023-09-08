@@ -15,7 +15,7 @@ registerListDef d = do
   where
     param :: VarName
     param = case d ^. inductiveParameters of
-      [v] -> v ^. inductiveParamName
+      [v] -> v ^. inductiveParamName2
       _ -> error "List should have exactly one type parameter"
 
 registerNil :: (Member Builtins r) => VarName -> ConstructorDef -> Sem r ()

@@ -11,27 +11,36 @@ import Juvix.Compiler.Internal.Extra.Base
 import Juvix.Compiler.Internal.Language
 import Juvix.Prelude
 
-constructorArgTypes :: ConstructorInfo -> ([VarName], [Expression])
+constructorArgTypes :: ConstructorInfo -> ([InductiveParameter], [Expression])
 constructorArgTypes i =
-  ( map (^. inductiveParamName) (i ^. constructorInfoInductiveParameters),
+  ( i ^. constructorInfoInductiveParameters,
     constructorArgs (i ^. constructorInfoType)
   )
 
 constructorReturnType :: ConstructorInfo -> Expression
 constructorReturnType info =
   let inductiveParams = fst (constructorArgTypes info)
+      paramNames = inductiveParams ^.. each . inductiveParamName2
       ind = ExpressionIden (IdenInductive (info ^. constructorInfoInductive))
-      saturatedTy = foldExplicitApplication ind (map (ExpressionIden . IdenVar) inductiveParams)
+      saturatedTy = foldExplicitApplication ind (map (ExpressionIden . IdenVar) paramNames)
    in saturatedTy
 
 constructorType :: ConstructorInfo -> Expression
 constructorType info =
   let (inductiveParams, constrArgs) = constructorArgTypes info
       args =
-        map (typeAbstraction Implicit) inductiveParams
+        map inductiveToFunctionParam inductiveParams
           ++ map unnamedParameter constrArgs
       saturatedTy = constructorReturnType info
    in foldFunType args saturatedTy
+
+inductiveToFunctionParam :: InductiveParameter -> FunctionParameter
+inductiveToFunctionParam InductiveParameter {..} =
+  FunctionParameter
+    { _paramName = Just _inductiveParamName2,
+      _paramImplicit = Implicit,
+      _paramType = _inductiveParamType
+    }
 
 constructorImplicity :: ConstructorInfo -> IsImplicit
 constructorImplicity info =
@@ -85,7 +94,7 @@ genFieldProjection _funDefName info fieldIx = do
   let (inductiveParams, constrArgs) = constructorArgTypes info
       implicity = constructorImplicity info
       saturatedTy = unnamedParameter' implicity (constructorReturnType info)
-      inductiveArgs = map (typeAbstraction Implicit) inductiveParams
+      inductiveArgs = map inductiveToFunctionParam inductiveParams
       retTy = constrArgs !! fieldIx
   return
     FunctionDef

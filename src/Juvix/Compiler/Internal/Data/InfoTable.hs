@@ -156,7 +156,7 @@ lookupConstructor f = do
           <> "The registered constructors are: "
           <> ppTrace (HashMap.keys tbl)
 
-lookupConstructorArgTypes :: (Member (Reader InfoTable) r) => Name -> Sem r ([VarName], [Expression])
+lookupConstructorArgTypes :: (Member (Reader InfoTable) r) => Name -> Sem r ([InductiveParameter], [Expression])
 lookupConstructorArgTypes = fmap constructorArgTypes . lookupConstructor
 
 lookupInductive :: forall r. (Member (Reader InfoTable) r) => InductiveName -> Sem r InductiveInfo

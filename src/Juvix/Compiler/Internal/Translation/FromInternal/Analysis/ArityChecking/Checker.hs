@@ -83,10 +83,19 @@ checkInductive d = do
     checkParameters = runState emptyLocalVars . mapM checkParam
       where
         checkParam :: InductiveParameter -> Sem (State LocalVars ': r) InductiveParameter
-        checkParam = return
+        checkParam param = do
+          lv1 <- get @LocalVars
+          ty' <- runReader lv1 (checkType (param ^. inductiveParamType))
+          addArity (param ^. inductiveParamName2) (typeArity ty')
+          return
+            InductiveParameter
+              { _inductiveParamName2 = param ^. inductiveParamName2,
+                _inductiveParamType = ty'
+              }
 
 checkConstructor :: (Members '[Reader LocalVars, Reader InfoTable, NameIdGen, Error ArityCheckerError] r) => ConstructorDef -> Sem r ConstructorDef
 checkConstructor c = do
+  lv <- ask @LocalVars
   let _inductiveConstructorName = c ^. inductiveConstructorName
       _inductiveConstructorPragmas = c ^. inductiveConstructorPragmas
   _inductiveConstructorType <- checkType (c ^. inductiveConstructorType)
@@ -543,7 +552,7 @@ typeArity = go
     goIden :: Iden -> Arity
     goIden = \case
       IdenVar {} -> ArityUnknown
-      IdenInductive {} -> ArityUnit
+      IdenInductive {} -> ArityUnit -- TODO is this true?
       IdenFunction {} -> ArityUnknown -- we need normalization to determine the arity
       IdenConstructor {} -> ArityUnknown -- will be a type error
       IdenAxiom {} -> ArityUnknown
