@@ -95,7 +95,6 @@ checkInductive d = do
 
 checkConstructor :: (Members '[Reader LocalVars, Reader InfoTable, NameIdGen, Error ArityCheckerError] r) => ConstructorDef -> Sem r ConstructorDef
 checkConstructor c = do
-  lv <- ask @LocalVars
   let _inductiveConstructorName = c ^. inductiveConstructorName
       _inductiveConstructorPragmas = c ^. inductiveConstructorPragmas
   _inductiveConstructorType <- checkType (c ^. inductiveConstructorType)

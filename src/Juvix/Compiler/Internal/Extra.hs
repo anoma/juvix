@@ -25,6 +25,14 @@ constructorReturnType info =
       saturatedTy = foldExplicitApplication ind (map (ExpressionIden . IdenVar) paramNames)
    in saturatedTy
 
+fullInductiveType :: InductiveInfo -> Expression
+fullInductiveType info =
+  let ps = info ^. inductiveInfoDef . inductiveParameters
+   in foldr
+        (\p k -> p ^. inductiveParamType --> k)
+        (info ^. inductiveInfoDef . inductiveType)
+        ps
+
 constructorType :: ConstructorInfo -> Expression
 constructorType info =
   let (inductiveParams, constrArgs) = constructorArgTypes info
