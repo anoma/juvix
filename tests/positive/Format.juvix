@@ -240,8 +240,7 @@ module Traits;
   import Stdlib.Prelude open hiding {Show; mkShow; show};
 
   trait
-  type Show A :=
-    | mkShow {show : A → String};
+  type Show A := mkShow {show : A → String};
 
   instance
   showStringI : Show String := mkShow (show := id);
