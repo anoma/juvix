@@ -83,7 +83,7 @@ lookupInstance' ::
   [InstanceParam] ->
   Sem r [(InstanceInfo, SubsI)]
 lookupInstance' tab name params = do
-  let is = fromMaybe [] $ HashMap.lookup name tab
+  let is = fromMaybe [] $ lookupInstanceTable tab name
   mapMaybeM matchInstance is
   where
     matchInstance :: InstanceInfo -> Sem r (Maybe (InstanceInfo, SubsI))
