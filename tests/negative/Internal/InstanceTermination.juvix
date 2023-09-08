@@ -1,0 +1,13 @@
+module InstanceTermination;
+
+type Unit := unit;
+
+type Box A := box A;
+
+trait
+type T A := mkT { pp : A → A };
+
+instance
+boxT {A} : {{T (Box A)}} → T (Box A) := mkT (λ{x := x});
+
+main : Box Unit := T.pp (box unit);

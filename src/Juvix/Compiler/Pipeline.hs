@@ -41,7 +41,7 @@ import Juvix.Data.Effect.Git
 import Juvix.Data.Effect.Process
 import Juvix.Prelude
 
-type PipelineEff = '[PathResolver, Error DependencyError, GitClone, Error GitProcessError, Process, Log, Reader EntryPoint, Files, NameIdGen, Builtins, Error JuvixError, HighlightBuilder, Embed IO]
+type PipelineEff = '[PathResolver, Error DependencyError, GitClone, Error GitProcessError, Process, Log, Reader EntryPoint, Files, NameIdGen, Builtins, Error JuvixError, HighlightBuilder, Internet, Embed IO]
 
 type TopPipelineEff = '[PathResolver, Error DependencyError, GitClone, Error GitProcessError, Process, Log, Reader EntryPoint, Files, NameIdGen, Builtins, State Artifacts, Error JuvixError, HighlightBuilder, Embed IO]
 
@@ -173,10 +173,9 @@ runPipelineHighlight entry = fmap fst . runIOEitherHelper entry
 
 runIOEitherHelper :: forall a. EntryPoint -> Sem PipelineEff a -> IO (HighlightInput, (Either JuvixError (ResolverState, a)))
 runIOEitherHelper entry = do
-  let gitProcessMode
-        | entry ^. entryPointOffline = GitProcessOffline
-        | otherwise = GitProcessOnline
+  let hasInternet = not (entry ^. entryPointOffline)
   runM
+    . evalInternet hasInternet
     . runHighlightBuilder
     . runJuvixError
     . evalTopBuiltins
@@ -186,7 +185,7 @@ runIOEitherHelper entry = do
     . runLogIO
     . runProcessIO
     . mapError (JuvixError @GitProcessError)
-    . runGitProcess gitProcessMode
+    . runGitProcess
     . mapError (JuvixError @DependencyError)
     . runPathResolverPipe
 
@@ -216,11 +215,10 @@ corePipelineIOEither ::
   EntryPoint ->
   IO (Either JuvixError Artifacts)
 corePipelineIOEither entry = do
-  let gitProcessMode
-        | entry ^. entryPointOffline = GitProcessOffline
-        | otherwise = GitProcessOnline
+  let hasInternet = not (entry ^. entryPointOffline)
   eith <-
     runM
+      . evalInternet hasInternet
       . ignoreHighlightBuilder
       . runError
       . runState initialArtifacts
@@ -231,7 +229,7 @@ corePipelineIOEither entry = do
       . runLogIO
       . mapError (JuvixError @GitProcessError)
       . runProcessIO
-      . runGitProcess gitProcessMode
+      . runGitProcess
       . mapError (JuvixError @DependencyError)
       . runPathResolverArtifacts
       $ upToCore

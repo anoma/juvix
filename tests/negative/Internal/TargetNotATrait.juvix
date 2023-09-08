@@ -1,0 +1,6 @@
+module TargetNotATrait;
+
+type Maybe A := just A | nothing;
+
+instance
+inst {A} : Maybe A := nothing;

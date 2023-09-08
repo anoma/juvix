@@ -138,21 +138,20 @@ loadFile f = do
 loadDefaultPrelude :: Repl ()
 loadDefaultPrelude = whenJustM defaultPreludeEntryPoint $ \e -> do
   root <- Reader.asks (^. replRoots . rootsRootDir)
-  let gitProcessMode
-        | e ^. entryPointOffline = GitProcessOffline
-        | otherwise = GitProcessOnline
+  let hasInternet = not (e ^. entryPointOffline)
   -- The following is needed to ensure that the default location of the
   -- standard library exists
   void
     . liftIO
     . runM
+    . evalInternet hasInternet
     . runFilesIO
     . runError @Text
     . runReader e
     . runLogIO
     . runProcessIO
     . runError @GitProcessError
-    . runGitProcess gitProcessMode
+    . runGitProcess
     . runError @DependencyError
     . runPathResolver root
     $ entrySetup

@@ -111,6 +111,12 @@ lbrace = delim "{"
 rbrace :: (Members '[InfoTableBuilder] r) => ParsecS r ()
 rbrace = delim "}"
 
+ldoubleBrace :: (Members '[InfoTableBuilder] r) => ParsecS r ()
+ldoubleBrace = delim "{{"
+
+rdoubleBrace :: (Members '[InfoTableBuilder] r) => ParsecS r ()
+rdoubleBrace = delim "}}"
+
 lparen :: (Members '[InfoTableBuilder] r) => ParsecS r ()
 lparen = delim "("
 
@@ -128,3 +134,6 @@ parens = between lparen rparen
 
 braces :: (Members '[InfoTableBuilder] r) => ParsecS r a -> ParsecS r a
 braces = between lbrace rbrace
+
+doubleBraces :: (Members '[InfoTableBuilder] r) => ParsecS r a -> ParsecS r a
+doubleBraces = between ldoubleBrace rdoubleBrace

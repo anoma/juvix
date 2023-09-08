@@ -1,0 +1,22 @@
+module AmbiguousInstances;
+
+type Unit := unit;
+
+type Box A := box A;
+
+trait
+type T A := mkT { pp : A → A };
+
+instance
+unitT : T Unit := mkT (pp := λ{_ := unit});
+
+ppBox {A} {{T A}} : Box A → Box A
+  | (box x) := box (T.pp x);
+
+instance
+boxT {A} {{T A}} : T (Box A) := mkT (pp := ppBox);
+
+instance
+boxTUnit : T (Box Unit) := mkT (pp := λ{x := x});
+
+main : Box Unit := T.pp (box unit);

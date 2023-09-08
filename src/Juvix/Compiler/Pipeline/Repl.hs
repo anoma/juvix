@@ -205,16 +205,14 @@ compileReplInputIO ::
   Text ->
   Sem r (Either JuvixError ReplPipelineResult)
 compileReplInputIO fp txt = do
-  offline <- asks (^. entryPointOffline)
-  let gitProcessMode
-        | offline = GitProcessOffline
-        | otherwise = GitProcessOnline
+  hasInternet <- not <$> asks (^. entryPointOffline)
   runError
+    . evalInternet hasInternet
     . runLogIO
     . runFilesIO
     . mapError (JuvixError @GitProcessError)
     . runProcessIO
-    . runGitProcess gitProcessMode
+    . runGitProcess
     . mapError (JuvixError @DependencyError)
     . runPathResolverArtifacts
     $ do

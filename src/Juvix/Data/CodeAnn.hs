@@ -192,6 +192,12 @@ kwBraceL = delimiter "{"
 kwBraceR :: Doc Ann
 kwBraceR = delimiter "}"
 
+kwDoubleBraceL :: Doc Ann
+kwDoubleBraceL = delimiter "{{"
+
+kwDoubleBraceR :: Doc Ann
+kwDoubleBraceR = delimiter "}}"
+
 kwBracketL :: Doc Ann
 kwBracketL = delimiter "["
 
@@ -219,6 +225,9 @@ code = annotate AnnCode
 braces :: Doc Ann -> Doc Ann
 braces = enclose kwBraceL kwBraceR
 
+doubleBraces :: Doc Ann -> Doc Ann
+doubleBraces = enclose kwDoubleBraceL kwDoubleBraceR
+
 parens :: Doc Ann -> Doc Ann
 parens = enclose kwParenL kwParenR
 
@@ -232,9 +241,11 @@ implicitDelim :: IsImplicit -> Doc Ann -> Doc Ann
 implicitDelim = \case
   Implicit -> braces
   Explicit -> parens
+  ImplicitInstance -> doubleBraces
 
 delimIf :: IsImplicit -> Bool -> Doc Ann -> Doc Ann
 delimIf Implicit _ = braces
+delimIf ImplicitInstance _ = doubleBraces
 delimIf Explicit True = parens
 delimIf Explicit False = id
 

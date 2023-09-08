@@ -445,8 +445,9 @@ ambiguousMessage opts' n es =
       <> line
       <> itemize es
 
-newtype DoubleBracesPattern = DoubleBracesPattern
-  { _doubleBracesPatternArg :: PatternArg
+data DoubleBracesPattern = DoubleBracesPattern
+  { _doubleBracesPatternArg :: PatternArg,
+    _doubleBracesPatternInstance :: Bool
   }
   deriving stock (Show)
 
@@ -468,8 +469,13 @@ instance ToGenericError DoubleBracesPattern where
           pat = e ^. doubleBracesPatternArg
           i = getLoc pat
           msg =
-            "Double braces are not valid:"
-              <+> code (braces (ppCode opts' pat))
+            "Nested braces are not valid in this pattern:"
+              <+> code (encloseBraces (ppCode opts' pat))
+
+          encloseBraces :: Doc Ann -> Doc Ann
+          encloseBraces p
+            | e ^. doubleBracesPatternInstance = "{{" <+> p <+> "}}"
+            | otherwise = lbrace <+> p <+> rbrace
 
 data DoubleBinderPattern = DoubleBinderPattern
   { _doubleBinderPatternName :: S.Symbol,

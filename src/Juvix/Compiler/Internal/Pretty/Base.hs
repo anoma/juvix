@@ -54,6 +54,7 @@ instance PrettyCode Application where
     r' <- case a ^. appImplicit of
       Explicit -> ppRightExpression appFixity (a ^. appRight)
       Implicit -> braces <$> ppCode (a ^. appRight)
+      ImplicitInstance -> doubleBraces <$> ppCode (a ^. appRight)
     return $ l' <+> r'
 
 instance PrettyCode TypedExpression where
@@ -69,6 +70,7 @@ instance PrettyCode Expression where
   ppCode = \case
     ExpressionIden i -> ppCode i
     ExpressionHole h -> ppCode h
+    ExpressionInstanceHole h -> ppCode h
     ExpressionApplication a -> ppCode a
     ExpressionFunction f -> ppCode f
     ExpressionUniverse u -> ppCode u
@@ -161,7 +163,7 @@ instance (PrettyCode a) => PrettyCode (WithLoc a) where
 instance PrettyCode FunctionParameter where
   ppCode FunctionParameter {..} = do
     case _paramName of
-      Nothing -> ppLeftExpression funFixity _paramType
+      Nothing -> delimIf _paramImplicit False <$> ppLeftExpression funFixity _paramType
       Just n -> do
         paramName' <- ppCode n
         paramType' <- ppCode _paramType
@@ -310,6 +312,7 @@ instance PrettyCode InfoTable where
   ppCode tbl = do
     inds <- ppCode (HashMap.keys (tbl ^. infoInductives))
     constrs <- ppCode (HashMap.keys (tbl ^. infoConstructors))
+    funs <- ppCode (HashMap.keys (tbl ^. infoFunctions))
     let header :: Text -> Doc Ann = annotate AnnImportant . pretty
     return $
       header "InfoTable"
@@ -318,6 +321,8 @@ instance PrettyCode InfoTable where
         <> inds
         <> header "\nConstructors: "
         <> constrs
+        <> header "\nFunctions: "
+        <> funs
 
 ppPostExpression ::
   (PrettyCode a, HasAtomicity a, Member (Reader Options) r) =>

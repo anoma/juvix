@@ -1,5 +1,6 @@
 module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error.Types where
 
+import Juvix.Compiler.Internal.Data.InstanceInfo
 import Juvix.Compiler.Internal.Language
 import Juvix.Compiler.Internal.Pretty (fromGenericOptions)
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error.Pretty
@@ -345,3 +346,164 @@ instance ToGenericError UnsupportedTypeFunction where
     where
       i :: Interval
       i = getLoc _unsupportedTypeFunction
+
+newtype InvalidInstanceType = InvalidInstanceType
+  { _invalidInstanceTypeExpression :: Expression
+  }
+
+instance ToGenericError InvalidInstanceType where
+  genericError InvalidInstanceType {..} = do
+    opts <- fromGenericOptions <$> ask
+    let msg =
+          "Invalid instance type:"
+            <+> ppCode opts _invalidInstanceTypeExpression
+    return
+      GenericError
+        { _genericErrorLoc = i,
+          _genericErrorMessage = mkAnsiText msg,
+          _genericErrorIntervals = [i]
+        }
+    where
+      i :: Interval
+      i = getLoc _invalidInstanceTypeExpression
+
+newtype TargetNotATrait = TargetNotATrait
+  { _targetNotATraitType :: Expression
+  }
+
+instance ToGenericError TargetNotATrait where
+  genericError TargetNotATrait {..} = do
+    opts <- fromGenericOptions <$> ask
+    let msg =
+          "Expected an instance type with a trait in the target:"
+            <+> ppCode opts _targetNotATraitType
+    return
+      GenericError
+        { _genericErrorLoc = i,
+          _genericErrorMessage = mkAnsiText msg,
+          _genericErrorIntervals = [i]
+        }
+    where
+      i :: Interval
+      i = getLoc _targetNotATraitType
+
+newtype NotATrait = NotATrait
+  { _notATraitExpression :: Expression
+  }
+
+makeLenses ''NotATrait
+
+instance ToGenericError NotATrait where
+  genericError e = ask >>= generr
+    where
+      generr opts =
+        return
+          GenericError
+            { _genericErrorLoc = i,
+              _genericErrorMessage = ppOutput msg,
+              _genericErrorIntervals = [i]
+            }
+        where
+          opts' = fromGenericOptions opts
+          i = getLoc (e ^. notATraitExpression)
+          msg =
+            "Expected a trait:"
+              <+> ppCode opts' (e ^. notATraitExpression)
+
+data NoInstance = NoInstance
+  { _noInstanceType :: Expression,
+    _noInstanceLoc :: Interval
+  }
+
+makeLenses ''NoInstance
+
+instance ToGenericError NoInstance where
+  genericError e = ask >>= generr
+    where
+      generr opts =
+        return
+          GenericError
+            { _genericErrorLoc = i,
+              _genericErrorMessage = ppOutput msg,
+              _genericErrorIntervals = [i]
+            }
+        where
+          opts' = fromGenericOptions opts
+          i = e ^. noInstanceLoc
+          msg =
+            "No trait instance found for:"
+              <+> ppCode opts' (e ^. noInstanceType)
+
+data AmbiguousInstances = AmbiguousInstances
+  { _ambiguousInstancesType :: Expression,
+    _ambiguousInstancesInfos :: [InstanceInfo],
+    _ambiguousInstancesLoc :: Interval
+  }
+
+makeLenses ''AmbiguousInstances
+
+instance ToGenericError AmbiguousInstances where
+  genericError e = ask >>= generr
+    where
+      generr opts =
+        return
+          GenericError
+            { _genericErrorLoc = i,
+              _genericErrorMessage = ppOutput msg,
+              _genericErrorIntervals = [i]
+            }
+        where
+          opts' = fromGenericOptions opts
+          i = e ^. ambiguousInstancesLoc
+          locs = itemize $ map (pretty . getLoc . (^. instanceInfoResult)) (e ^. ambiguousInstancesInfos)
+          msg =
+            "Multiple trait instances found for"
+              <+> ppCode opts' (e ^. ambiguousInstancesType)
+                <> line
+                <> "Matching instances found at:"
+                <> line
+                <> indent' locs
+
+newtype ExplicitInstanceArgument = ExplicitInstanceArgument
+  { _explicitInstanceArgumentParameter :: FunctionParameter
+  }
+
+makeLenses ''ExplicitInstanceArgument
+
+instance ToGenericError ExplicitInstanceArgument where
+  genericError e = generr
+    where
+      generr =
+        return
+          GenericError
+            { _genericErrorLoc = i,
+              _genericErrorMessage = ppOutput "Explicit instance arguments not allowed",
+              _genericErrorIntervals = [i]
+            }
+        where
+          i = getLoc (e ^. explicitInstanceArgumentParameter)
+
+newtype TraitNotTerminating = TraitNotTerminating
+  { _traitNotTerminating :: Expression
+  }
+
+makeLenses ''TraitNotTerminating
+
+instance ToGenericError TraitNotTerminating where
+  genericError e = ask >>= generr
+    where
+      generr opts =
+        return
+          GenericError
+            { _genericErrorLoc = i,
+              _genericErrorMessage = ppOutput msg,
+              _genericErrorIntervals = [i]
+            }
+        where
+          opts' = fromGenericOptions opts
+          i = getLoc (e ^. traitNotTerminating)
+          msg =
+            "Non-decreasing trait argument:"
+              <+> ppCode opts' (e ^. traitNotTerminating)
+                <> line
+                <> "Each parameter of a trait in an instance argument must be structurally smaller than some parameter of the trait in the instance target"

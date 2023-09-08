@@ -142,6 +142,12 @@ kwTerminating = asciiKw Str.terminating
 kwPositive :: Keyword
 kwPositive = asciiKw Str.positive
 
+kwTrait :: Keyword
+kwTrait = asciiKw Str.trait
+
+kwInstance :: Keyword
+kwInstance = asciiKw Str.instance_
+
 kwUsing :: Keyword
 kwUsing = asciiKw Str.using
 
@@ -285,6 +291,12 @@ delimBraceL = mkDelim Str.braceL
 
 delimBraceR :: Keyword
 delimBraceR = mkDelim Str.braceR
+
+delimDoubleBraceL :: Keyword
+delimDoubleBraceL = mkDelim Str.doubleBraceL
+
+delimDoubleBraceR :: Keyword
+delimDoubleBraceR = mkDelim Str.doubleBraceR
 
 delimParenL :: Keyword
 delimParenL = mkDelim Str.parenL

@@ -72,6 +72,7 @@ checkStrictlyPositiveOccurrences ty ctorName name recLimit ref =
       ExpressionCase l -> helperCase l
       ExpressionFunction (Function l r) -> helper True (l ^. paramType) >> helper inside r
       ExpressionHole {} -> return ()
+      ExpressionInstanceHole {} -> return ()
       ExpressionIden i -> helperIden i
       ExpressionLambda l -> helperLambda l
       ExpressionLet l -> helperLet l

@@ -504,10 +504,10 @@ ensureFile f =
     (Path.doesFileExist f)
     (throwM (mkIOError doesNotExistErrorType "" Nothing (Just (toFilePath f))))
 
--- Ideally `CyclicSCC`'s argument' would have type `NonEmpty a` instead of `[a]`
 flattenSCC :: SCC a -> NonEmpty a
 flattenSCC = \case
   AcyclicSCC a -> pure a
+  -- Ideally `CyclicSCC`'s argument would have type `NonEmpty a` instead of `[a]`
   CyclicSCC as -> nonEmpty' as
 
 execOutputList :: Sem (Output o ': r) a -> Sem r [o]

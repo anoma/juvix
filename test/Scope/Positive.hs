@@ -45,6 +45,7 @@ testDescr PosTest {..} = helper renderCodeNew
                 let runHelper :: HashMap (Path Abs File) Text -> Sem PipelineEff a -> IO (ResolverState, a)
                     runHelper files =
                       runM
+                        . evalInternetOffline
                         . ignoreHighlightBuilder
                         . runErrorIO' @JuvixError
                         . evalTopBuiltins
@@ -54,7 +55,7 @@ testDescr PosTest {..} = helper renderCodeNew
                         . ignoreLog
                         . runProcessIO
                         . mapError (JuvixError @GitProcessError)
-                        . runGitProcess GitProcessOffline
+                        . runGitProcess
                         . mapError (JuvixError @DependencyError)
                         . runPathResolverPipe
                     evalHelper :: HashMap (Path Abs File) Text -> Sem PipelineEff a -> IO a

@@ -20,6 +20,7 @@ where
 import Data.Generics.Uniplate.Data
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Internal.Data.InfoTable.Base
+import Juvix.Compiler.Internal.Data.InstanceInfo
 import Juvix.Compiler.Internal.Extra
 import Juvix.Compiler.Internal.Pretty (ppTrace)
 import Juvix.Prelude
@@ -121,6 +122,21 @@ computeTable recurIntoImports (ModuleIndex m) = compute
           | StatementAxiom d <- ss
         ]
 
+    _infoInstances :: InstanceTable
+    _infoInstances = foldr (flip updateInstanceTable) mempty $ mapMaybe mkInstance (HashMap.elems _infoFunctions)
+      where
+        mkInstance :: FunctionInfo -> Maybe InstanceInfo
+        mkInstance (FunctionInfo FunctionDef {..})
+          | _funDefInstance =
+              instanceFromTypedExpression
+                ( TypedExpression
+                    { _typedType = _funDefType,
+                      _typedExpression = ExpressionIden (IdenFunction _funDefName)
+                    }
+                )
+          | otherwise =
+              Nothing
+
     ss :: [Statement]
     ss = m ^. moduleBody . moduleStatements
 
@@ -219,5 +235,6 @@ mkConstructorEntries d =
           builtins = maybe (replicate n Nothing) (map Just . builtinConstructors) (d ^. inductiveBuiltin),
       (_constructorInfoBuiltin, c) <- zipExact builtins (d ^. inductiveConstructors),
       let _constructorInfoType = c ^. inductiveConstructorType,
-      let _constructorInfoName = c ^. inductiveConstructorName
+      let _constructorInfoName = c ^. inductiveConstructorName,
+      let _constructorInfoTrait = d ^. inductiveTrait
   ]
