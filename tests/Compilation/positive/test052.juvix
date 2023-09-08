@@ -68,7 +68,7 @@ exprToString : Expr -> String
 
 --- ;Show; instance for ;Expr;.
 instance
-showExprI : Show Expr := mkShow exprToString;
+showExprI : Show (Expr' Nat) := mkShow exprToString;
 
 terminating
 valToString : Val -> String
@@ -185,7 +185,6 @@ main : IO :=
         ("ScopeError: "
           ++str natToString n
           ++str ", ctx = "
-          ++str Show.show [1;2]
           ++str Show.show ctx
           ++str "\n")
     | left (ExpectedNat e) :=
