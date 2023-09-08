@@ -29,6 +29,7 @@ data UnfoldedArity = UnfoldedArity
 data ArityParameter
   = ParamExplicit Arity
   | ParamImplicit
+  | ParamImplicitInstance
   deriving stock (Eq)
 
 makeLenses ''UnfoldedArity
@@ -36,6 +37,7 @@ makeLenses ''UnfoldedArity
 arityParameter :: ArityParameter -> Arity
 arityParameter = \case
   ParamImplicit -> ArityUnit
+  ParamImplicitInstance -> ArityUnit
   ParamExplicit a -> a
 
 arityCommonPrefix :: Arity -> Arity -> [ArityParameter]
@@ -75,6 +77,7 @@ foldArity UnfoldedArity {..} = go _ufoldArityParams
           l = case a of
             ParamExplicit e -> ParamExplicit e
             ParamImplicit -> ParamImplicit
+            ParamImplicitInstance -> ParamImplicitInstance
 
 instance HasAtomicity FunctionArity where
   atomicity = const (Aggregate funFixity)
@@ -88,6 +91,7 @@ instance HasAtomicity Arity where
 instance Pretty ArityParameter where
   pretty = \case
     ParamImplicit -> "{𝟙}"
+    ParamImplicitInstance -> "{{𝟙}}"
     ParamExplicit f -> pretty f
 
 instance Pretty FunctionArity where

@@ -784,34 +784,25 @@ checkFunctionDef FunctionDef {..} = do
       names' <- forM _sigArgNames $ \case
         ArgumentSymbol s -> ArgumentSymbol <$> bindVariableSymbol s
         ArgumentWildcard w -> return $ ArgumentWildcard w
-      rhs' <- mapM checkArgRhs _sigArgRhs
+      ty' <- mapM checkParseExpressionAtoms _sigArgType
       return
         SigArg
           { _sigArgNames = names',
-            _sigArgRhs = rhs',
+            _sigArgType = ty',
             ..
           }
-      where
-        checkArgRhs :: SigArgRhs 'Parsed -> Sem r (SigArgRhs 'Scoped)
-        checkArgRhs SigArgRhs {..} = do
-          ty' <- checkParseExpressionAtoms _sigArgType
-          return
-            SigArgRhs
-              { _sigArgType = ty',
-                _sigArgColon
-              }
     checkBody :: Sem r (FunctionDefBody 'Scoped)
     checkBody = case _signBody of
       SigBodyExpression e -> SigBodyExpression <$> checkParseExpressionAtoms e
       SigBodyClauses cls -> SigBodyClauses <$> mapM checkClause cls
-    checkClause :: NewFunctionClause 'Parsed -> Sem r (NewFunctionClause 'Scoped)
-    checkClause NewFunctionClause {..} = do
+    checkClause :: FunctionClause 'Parsed -> Sem r (FunctionClause 'Scoped)
+    checkClause FunctionClause {..} = do
       (patterns', body') <- withLocalScope $ do
         p <- mapM checkParsePatternAtom _clausenPatterns
         b <- checkParseExpressionAtoms _clausenBody
         return (p, b)
       return
-        NewFunctionClause
+        FunctionClause
           { _clausenBody = body',
             _clausenPatterns = patterns',
             _clausenPipeKw,
@@ -865,6 +856,7 @@ checkInductiveDef InductiveDef {..} = do
         _inductiveConstructors = inductiveConstructors',
         _inductiveBuiltin,
         _inductivePositive,
+        _inductiveTrait,
         _inductiveAssignKw,
         _inductiveKw
       }
@@ -1641,6 +1633,7 @@ checkFunction f = do
     _paramNames <- forM (f ^. funParameters . paramNames) $ \case
       FunctionParameterWildcard w -> return (FunctionParameterWildcard w)
       FunctionParameterName p -> FunctionParameterName <$> bindVariableSymbol p
+      FunctionParameterUnnamed i -> return (FunctionParameterUnnamed i)
     _funReturn <- checkParseExpressionAtoms (f ^. funReturn)
     let _paramImplicit = f ^. funParameters . paramImplicit
         _paramColon = f ^. funParameters . paramColon
@@ -2000,6 +1993,7 @@ checkPatternAtom = \case
   PatternAtomEmpty i -> return (PatternAtomEmpty i)
   PatternAtomParens e -> PatternAtomParens <$> checkParsePatternAtoms e
   PatternAtomBraces e -> PatternAtomBraces <$> checkParsePatternAtoms e
+  PatternAtomDoubleBraces e -> PatternAtomDoubleBraces <$> checkParsePatternAtoms e
   PatternAtomAt p -> PatternAtomAt <$> checkPatternBinding p
   PatternAtomList l -> PatternAtomList <$> checkListPattern l
   PatternAtomRecord l -> PatternAtomRecord <$> checkRecordPattern l
@@ -2030,6 +2024,7 @@ checkExpressionAtom e = case e of
   AtomUniverse uni -> return (pure (AtomUniverse uni))
   AtomFunction fun -> pure . AtomFunction <$> checkFunction fun
   AtomParens par -> pure . AtomParens <$> checkParens par
+  AtomDoubleBraces br -> pure . AtomDoubleBraces <$> traverseOf withLocParam checkParseExpressionAtoms br
   AtomBraces br -> pure . AtomBraces <$> traverseOf withLocParam checkParseExpressionAtoms br
   AtomFunArrow a -> return (pure (AtomFunArrow a))
   AtomHole h -> pure . AtomHole <$> checkHole h
@@ -2513,6 +2508,7 @@ parseTerm =
       <|> parseLiteral
       <|> parseLet
       <|> parseIterator
+      <|> parseDoubleBraces
       <|> parseBraces
       <|> parseNamedApplication
   where
@@ -2603,6 +2599,14 @@ parseTerm =
         identifierNoFixity s = case s of
           AtomIdentifier iden
             | not (S.hasFixity (iden ^. scopedIdenName)) -> Just iden
+          _ -> Nothing
+
+    parseDoubleBraces :: Parse Expression
+    parseDoubleBraces = ExpressionDoubleBraces <$> P.token bracedExpr mempty
+      where
+        bracedExpr :: ExpressionAtom 'Scoped -> Maybe (WithLoc Expression)
+        bracedExpr = \case
+          AtomDoubleBraces l -> Just l
           _ -> Nothing
 
     parseBraces :: Parse Expression
@@ -2700,6 +2704,7 @@ parsePatternTerm = do
   embed @ParsePat $
     parseNoInfixConstructor
       <|> parseVariable
+      <|> parseDoubleBraces
       <|> parseParens
       <|> parseBraces
       <|> parseWildcard
@@ -2775,6 +2780,21 @@ parsePatternTerm = do
           PatternAtomIden (PatternScopedVar sym) -> Just sym
           _ -> Nothing
 
+    parseDoubleBraces :: ParsePat PatternArg
+    parseDoubleBraces = do
+      res <- P.token bracesPat mempty
+      either (P.lift . throw) return res
+      where
+        bracesPat :: PatternAtom 'Scoped -> Maybe (Either ScoperError PatternArg)
+        bracesPat = \case
+          PatternAtomDoubleBraces r
+            | Implicit <- r ^. patternArgIsImplicit ->
+                Just (Left (ErrDoubleBracesPattern (DoubleBracesPattern r True)))
+            | ImplicitInstance <- r ^. patternArgIsImplicit ->
+                Just (Left (ErrDoubleBracesPattern (DoubleBracesPattern r True)))
+            | otherwise -> Just (Right (set patternArgIsImplicit ImplicitInstance r))
+          _ -> Nothing
+
     parseBraces :: ParsePat PatternArg
     parseBraces = do
       res <- P.token bracesPat mempty
@@ -2786,7 +2806,9 @@ parsePatternTerm = do
         bracesPat = \case
           PatternAtomBraces r
             | Implicit <- r ^. patternArgIsImplicit ->
-                Just (Left (ErrDoubleBracesPattern (DoubleBracesPattern r)))
+                Just (Left (ErrDoubleBracesPattern (DoubleBracesPattern r False)))
+            | ImplicitInstance <- r ^. patternArgIsImplicit ->
+                Just (Left (ErrDoubleBracesPattern (DoubleBracesPattern r False)))
             | otherwise -> Just (Right (set patternArgIsImplicit Implicit r))
           _ -> Nothing
 

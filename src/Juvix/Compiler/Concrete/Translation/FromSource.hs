@@ -612,7 +612,7 @@ expressionAtom =
       <|> AtomUniverse <$> universe
       <|> AtomLambda <$> lambda
       <|> AtomCase <$> case_
-      <|> AtomFunction <$> function
+      <|> either AtomFunction AtomDoubleBraces <$> functionOrDoubleBraces
       <|> AtomLet <$> letBlock
       <|> AtomFunArrow <$> kw kwRightArrow
       <|> AtomHole <$> hole
@@ -902,6 +902,7 @@ functionDefinition ::
   ParsecS r (FunctionDef 'Parsed)
 functionDefinition _signBuiltin = P.label "<function definition>" $ do
   _signTerminating <- optional (kw kwTerminating)
+  _signInstance <- optional (kw kwInstance)
   _signName <- symbol
   _signArgs <- many parseArg
   _signColonKw <- Irrelevant <$> kw kwColon
@@ -913,39 +914,53 @@ functionDefinition _signBuiltin = P.label "<function definition>" $ do
   where
     parseArg :: ParsecS r (SigArg 'Parsed)
     parseArg = do
-      (openDelim, _sigArgNames, _sigArgImplicit, colonMay) <- P.try $ do
+      (openDelim, _sigArgNames, _sigArgImplicit, _sigArgColon) <- P.try $ do
         (opn, impl) <- implicitOpen
         let parseArgumentName :: ParsecS r (Argument 'Parsed) =
               ArgumentSymbol <$> symbol
                 <|> ArgumentWildcard <$> wildcard
-        n <- some1 parseArgumentName
-        c <- case impl of
-          Implicit -> optional (Irrelevant <$> kw kwColon)
-          Explicit -> Just . Irrelevant <$> kw kwColon
-        return (opn, n, impl, c)
-      _sigArgRhs <- mapM parseRhs colonMay
+        let parseArgumentNameColon :: ParsecS r (Argument 'Parsed, Maybe (Irrelevant KeywordRef)) = P.try $ do
+              n <- parseArgumentName
+              c <- Just . Irrelevant <$> kw kwColon
+              return (n, c)
+        (ns, c) <- case impl of
+          ImplicitInstance ->
+            first NonEmpty.singleton
+              <$> ( parseArgumentNameColon
+                      <|> return (ArgumentWildcard (Wildcard (getLoc opn)), Nothing)
+                  )
+          Implicit -> do
+            ns <- some1 parseArgumentName
+            c <- optional (Irrelevant <$> kw kwColon)
+            return (ns, c)
+          Explicit -> do
+            ns <- some1 parseArgumentName
+            c <- Just . Irrelevant <$> kw kwColon
+            return (ns, c)
+        return (opn, ns, impl, c)
+      _sigArgType <- case _sigArgImplicit of
+        Implicit
+          | isNothing _sigArgColon ->
+              return Nothing
+        _ ->
+          Just <$> parseExpressionAtoms
       closeDelim <- implicitClose _sigArgImplicit
       let _sigArgDelims = Irrelevant (openDelim, closeDelim)
       return SigArg {..}
-      where
-        parseRhs :: Irrelevant KeywordRef -> ParsecS r (SigArgRhs 'Parsed)
-        parseRhs _sigArgColon = do
-          _sigArgType <- parseExpressionAtoms
-          return SigArgRhs {..}
 
     parseBody :: ParsecS r (FunctionDefBody 'Parsed)
     parseBody =
       SigBodyExpression <$> bodyExpr
         <|> (SigBodyClauses <$> bodyClauses)
       where
-        bodyClause :: ParsecS r (NewFunctionClause 'Parsed)
+        bodyClause :: ParsecS r (FunctionClause 'Parsed)
         bodyClause = do
           _clausenPipeKw <- Irrelevant <$> kw kwPipe
           _clausenPatterns <- some1 patternAtom
           _clausenAssignKw <- Irrelevant <$> kw kwAssign
           _clausenBody <- parseExpressionAtoms
-          return NewFunctionClause {..}
-        bodyClauses :: ParsecS r (NonEmpty (NewFunctionClause 'Parsed))
+          return FunctionClause {..}
+        bodyClauses :: ParsecS r (NonEmpty (FunctionClause 'Parsed))
         bodyClauses = some1 bodyClause
         bodyExpr :: ParsecS r (ExpressionAtoms 'Parsed)
         bodyExpr = do
@@ -971,21 +986,28 @@ axiomDef _axiomBuiltin = do
 
 implicitOpen :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (KeywordRef, IsImplicit)
 implicitOpen =
-  (,Implicit) <$> kw delimBraceL
+  (,ImplicitInstance) <$> kw delimDoubleBraceL
+    <|> (,Implicit) <$> kw delimBraceL
     <|> (,Explicit) <$> kw delimParenL
 
 implicitClose :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => IsImplicit -> ParsecS r KeywordRef
 implicitClose = \case
   Implicit -> kw delimBraceR
   Explicit -> kw delimParenR
+  ImplicitInstance -> kw delimDoubleBraceR
 
 functionParams :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (FunctionParameters 'Parsed)
 functionParams = do
   (openDelim, _paramNames, _paramImplicit, _paramColon) <- P.try $ do
     (opn, impl) <- implicitOpen
-    n <- some pName
-    c <- Irrelevant . Just <$> kw kwColon
-    return (opn, n, impl, c)
+    case impl of
+      ImplicitInstance -> do
+        n <- optional pNameColon
+        return (opn, [fromMaybe (FunctionParameterUnnamed (getLoc opn)) n], impl, Irrelevant Nothing)
+      _ -> do
+        n <- some pName
+        c <- Irrelevant . Just <$> kw kwColon
+        return (opn, n, impl, c)
   _paramType <- parseExpressionAtoms
   closeDelim <- implicitClose _paramImplicit
   let _paramDelims = Irrelevant (Just (openDelim, closeDelim))
@@ -996,12 +1018,35 @@ functionParams = do
       FunctionParameterName <$> symbol
         <|> FunctionParameterWildcard <$> kw kwWildcard
 
-function :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (Function 'Parsed)
-function = do
-  _funParameters <- functionParams
+    pNameColon :: ParsecS r (FunctionParameter 'Parsed)
+    pNameColon = P.try $ do
+      n <- pName
+      kw kwColon
+      return n
+
+functionOrDoubleBraces :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (Either (Function 'Parsed) (WithLoc (ExpressionAtoms 'Parsed)))
+functionOrDoubleBraces = do
+  params <- functionParams
+  (Left <$> function params) <|> (Right <$> atomDoubleBraces params)
+
+function ::
+  (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
+  FunctionParameters 'Parsed ->
+  ParsecS r (Function 'Parsed)
+function _funParameters = do
   _funKw <- kw kwRightArrow
   _funReturn <- parseExpressionAtoms
   return Function {..}
+
+atomDoubleBraces ::
+  FunctionParameters 'Parsed ->
+  ParsecS r (WithLoc (ExpressionAtoms 'Parsed))
+atomDoubleBraces FunctionParameters {..}
+  | _paramImplicit == ImplicitInstance && isNothing (_paramColon ^. unIrrelevant) = do
+      return $ WithLoc (getLoc _paramType) _paramType
+  | otherwise = do
+      off <- P.getOffset
+      parseFailure off "Expected: ->"
 
 --------------------------------------------------------------------------------
 -- Lambda expression
@@ -1030,6 +1075,7 @@ lambda = do
 inductiveDef :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => Maybe (WithLoc BuiltinInductive) -> ParsecS r (InductiveDef 'Parsed)
 inductiveDef _inductiveBuiltin = do
   _inductivePositive <- optional (kw kwPositive)
+  _inductiveTrait <- optional (kw kwTrait)
   _inductiveKw <- Irrelevant <$> kw kwInductive
   _inductiveDoc <- getJudoc
   _inductivePragmas <- getPragmas
@@ -1120,6 +1166,7 @@ wildcard = Wildcard . snd <$> interval (kw kwWildcard)
 patternAtomAnon :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (PatternAtom 'Parsed)
 patternAtomAnon =
   PatternAtomWildcard <$> wildcard
+    <|> PatternAtomDoubleBraces <$> doubleBraces parsePatternAtomsNested
     <|> PatternAtomParens <$> parens parsePatternAtomsNested
     <|> PatternAtomBraces <$> braces parsePatternAtomsNested
     <|> PatternAtomList <$> parseListPattern

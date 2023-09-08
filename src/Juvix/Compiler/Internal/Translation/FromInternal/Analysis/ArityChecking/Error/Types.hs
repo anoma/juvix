@@ -33,6 +33,8 @@ instance ToGenericError WrongConstructorAppLength where
               <+> arguments (e ^. wrongConstructorAppLengthExpected)
                 <> ", but has been given"
               <+> pretty actual
+                <> line
+                <> "Perhaps you forgot parentheses around a pattern?"
 
           actual :: Int
           actual = length (e ^. wrongConstructorAppLength . constrAppParameters)

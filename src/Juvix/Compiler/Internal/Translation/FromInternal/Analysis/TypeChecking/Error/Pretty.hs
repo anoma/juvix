@@ -5,28 +5,29 @@ module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Er
 where
 
 import Juvix.Compiler.Internal.Extra
-import Juvix.Compiler.Internal.Pretty.Base qualified as Micro
+import Juvix.Compiler.Internal.Pretty.Base qualified as Internal
 import Juvix.Data.CodeAnn
 import Juvix.Prelude
 
-ppCode :: (Micro.PrettyCode c) => Micro.Options -> c -> Doc Ann
-ppCode opts = runPP opts . Micro.ppCode
+ppCode :: (Internal.PrettyCode c) => Internal.Options -> c -> Doc Ann
+ppCode opts = runPP opts . Internal.ppCode
 
-ppAtom :: (Micro.PrettyCode c, HasAtomicity c) => Micro.Options -> c -> Doc Ann
-ppAtom opts = runPP opts . Micro.ppCodeAtom
+ppAtom :: (Internal.PrettyCode c, HasAtomicity c) => Internal.Options -> c -> Doc Ann
+ppAtom opts = runPP opts . Internal.ppCodeAtom
 
-runPP :: Micro.Options -> Sem '[Reader Micro.Options] (Doc Micro.Ann) -> Doc Ann
+runPP :: Internal.Options -> Sem '[Reader Internal.Options] (Doc Internal.Ann) -> Doc Ann
 runPP opts = highlight_ . run . runReader opts
 
 highlight_ :: Doc Ann -> Doc Ann
 highlight_ = annotate AnnCode
 
-ppApp :: Micro.Options -> (Expression, [ApplicationArg]) -> Doc Ann
+ppApp :: Internal.Options -> (Expression, [ApplicationArg]) -> Doc Ann
 ppApp opts (fun, args) =
   hsep (ppAtom opts fun : map (ppArg opts) args)
 
-ppArg :: Micro.Options -> ApplicationArg -> Doc Ann
+ppArg :: Internal.Options -> ApplicationArg -> Doc Ann
 ppArg opts arg = case arg ^. appArgIsImplicit of
+  ImplicitInstance -> doubleBraces (ppCode opts e)
   Implicit -> braces (ppCode opts e)
   Explicit -> ppAtom opts e
   where

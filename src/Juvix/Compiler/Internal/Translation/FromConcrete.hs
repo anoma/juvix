@@ -60,7 +60,7 @@ fromConcrete _resultScoper =
     ms = _resultScoper ^. Scoper.resultModules
     exportTbl = _resultScoper ^. Scoper.resultExports
 
--- | `StatementInclude`s are no included in the result
+-- | `StatementInclude`s are not included in the result
 buildMutualBlocks ::
   (Members '[Reader Internal.NameDependencyInfo] r) =>
   [Internal.PreStatement] ->
@@ -426,6 +426,7 @@ goTopFunctionDef ::
 goTopFunctionDef FunctionDef {..} = do
   let _funDefName = goSymbol _signName
       _funDefTerminating = isJust _signTerminating
+      _funDefInstance = isJust _signInstance
       _funDefBuiltin = (^. withLocParam) <$> _signBuiltin
   _funDefType <- goDefType
   _funDefExamples <- goExamples _signDoc
@@ -439,8 +440,8 @@ goTopFunctionDef FunctionDef {..} = do
     goBody = do
       commonPatterns <- concatMapM (fmap toList . argToPattern) _signArgs
       let _clauseName = goSymbol _signName
-          goClause :: NewFunctionClause 'Scoped -> Sem r Internal.FunctionClause
-          goClause NewFunctionClause {..} = do
+          goClause :: FunctionClause 'Scoped -> Sem r Internal.FunctionClause
+          goClause FunctionClause {..} = do
             let _clauseName = goSymbol _signName
             _clauseBody <- goExpression _clausenBody
             extraPatterns <- toList <$> (mapM goPatternArg _clausenPatterns)
@@ -462,9 +463,9 @@ goTopFunctionDef FunctionDef {..} = do
         argToParam :: SigArg 'Scoped -> Sem r (NonEmpty Internal.FunctionParameter)
         argToParam a@SigArg {..} = do
           let _paramImplicit = _sigArgImplicit
-          _paramType <- case _sigArgRhs of
+          _paramType <- case _sigArgType of
             Nothing -> return (Internal.smallUniverseE (getLoc a))
-            Just rhs -> goExpression (rhs ^. sigArgType)
+            Just ty -> goExpression ty
           let _paramImpligoExpressioncit = _sigArgImplicit
               mk :: Concrete.Argument 'Scoped -> Sem r Internal.FunctionParameter
               mk = \case
@@ -617,7 +618,8 @@ goInductive ty@InductiveDef {..} = do
             _inductiveConstructors = toList _inductiveConstructors',
             _inductiveExamples = _inductiveExamples',
             _inductivePragmas = _inductivePragmas',
-            _inductivePositive = isJust (ty ^. inductivePositive)
+            _inductivePositive = isJust (ty ^. inductivePositive),
+            _inductiveTrait = isJust (ty ^. inductiveTrait)
           }
   whenJust ((^. withLocParam) <$> _inductiveBuiltin) (registerBuiltinInductive indDef)
   registerInductiveConstructors indDef
@@ -743,11 +745,13 @@ goExpression = \case
   ExpressionLiteral l -> return (Internal.ExpressionLiteral (goLiteral l))
   ExpressionLambda l -> Internal.ExpressionLambda <$> goLambda l
   ExpressionBraces b -> throw (ErrAppLeftImplicit (AppLeftImplicit b))
+  ExpressionDoubleBraces b -> throw (ErrAppLeftImplicit (AppLeftImplicit b))
   ExpressionLet l -> goLet l
   ExpressionList l -> goList l
   ExpressionUniverse uni -> return (Internal.ExpressionUniverse (goUniverse uni))
   ExpressionFunction func -> Internal.ExpressionFunction <$> goFunction func
   ExpressionHole h -> return (Internal.ExpressionHole h)
+  ExpressionInstanceHole h -> return (Internal.ExpressionInstanceHole h)
   ExpressionIterator i -> goIterator i
   ExpressionNamedApplication i -> goNamedApplication i
   ExpressionRecordUpdate i -> goRecordUpdateApp i
@@ -807,7 +811,7 @@ goExpression = \case
           let extra = r ^. recordUpdateExtra . unIrrelevant
               constr = goSymbol (extra ^. recordUpdateExtraConstructor)
               vars = map goSymbol (extra ^. recordUpdateExtraVars)
-              patArg = Internal.mkConstructorVarPattern constr vars
+              patArg = Internal.mkConstructorVarPattern Explicit constr vars
           args <- mkArgs (indexFrom 0 vars)
           return
             Internal.LambdaClause
@@ -885,6 +889,7 @@ goExpression = \case
       where
         (r, i) = case arg of
           ExpressionBraces b -> (b ^. withLocParam, Implicit)
+          ExpressionDoubleBraces b -> (b ^. withLocParam, ImplicitInstance)
           _ -> (arg, Explicit)
 
     goPostfix :: PostfixApplication -> Sem r Internal.Application
@@ -992,6 +997,7 @@ goFunctionParameters FunctionParameters {..} = do
     goFunctionParameter = \case
       FunctionParameterName n -> Just n
       FunctionParameterWildcard {} -> Nothing
+      FunctionParameterUnnamed {} -> Nothing
 
 mkConstructorApp :: Internal.ConstrName -> [Internal.PatternArg] -> Internal.ConstructorApp
 mkConstructorApp a b = Internal.ConstructorApp a b Nothing

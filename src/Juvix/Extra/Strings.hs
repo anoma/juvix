@@ -38,6 +38,12 @@ braceL = "{"
 braceR :: (IsString s) => s
 braceR = "}"
 
+doubleBraceL :: (IsString s) => s
+doubleBraceL = "{{"
+
+doubleBraceR :: (IsString s) => s
+doubleBraceR = "}}"
+
 parenL :: (IsString s) => s
 parenL = "("
 
@@ -391,6 +397,12 @@ terminating = "terminating"
 
 positive :: (IsString s) => s
 positive = "positive"
+
+trait :: (IsString s) => s
+trait = "trait"
+
+instance_ :: (IsString s) => s
+instance_ = "instance"
 
 waveArrow :: (IsString s) => s
 waveArrow = "↝"

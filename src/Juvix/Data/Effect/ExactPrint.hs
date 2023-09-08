@@ -61,6 +61,9 @@ parensIf b
 braces :: (Members '[ExactPrint] r) => Sem r () -> Sem r ()
 braces = enclose (enqueue C.kwBraceL) (noLoc C.kwBraceR)
 
+doubleBraces :: (Members '[ExactPrint] r) => Sem r () -> Sem r ()
+doubleBraces = enclose (enqueue C.kwDoubleBraceL) (noLoc C.kwDoubleBraceR)
+
 lineOrEmpty :: (Members '[ExactPrint] r) => Sem r ()
 lineOrEmpty = noLoc P.line'
 
@@ -161,11 +164,12 @@ keywordText = annotated C.AnnKeyword . noLoc . P.pretty
 -- If the second argument is True, then the delimiters *must* be given.
 delimIf' :: Maybe (Sem r (), Sem r ()) -> IsImplicit -> Bool -> Sem r () -> Sem r ()
 delimIf' d impl delim
-  | delim || impl == Implicit = uncurry enclose (fromJust d)
+  | delim || impl == Implicit || impl == ImplicitInstance = uncurry enclose (fromJust d)
   | otherwise = id
 
 delimIf :: (Members '[ExactPrint] r) => IsImplicit -> Bool -> Sem r () -> Sem r ()
 delimIf Implicit _ = braces
+delimIf ImplicitInstance _ = doubleBraces
 delimIf Explicit True = parens
 delimIf Explicit False = id
 

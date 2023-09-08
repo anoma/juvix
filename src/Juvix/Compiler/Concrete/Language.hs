@@ -339,30 +339,14 @@ data IteratorSyntaxDef = IteratorSyntaxDef
 instance HasLoc IteratorSyntaxDef where
   getLoc IteratorSyntaxDef {..} = getLoc _iterSyntaxKw <> getLoc _iterSymbol
 
-data SigArgRhs (s :: Stage) = SigArgRhs
-  { _sigArgColon :: Irrelevant KeywordRef,
-    _sigArgType :: ExpressionType s
-  }
-
-deriving stock instance Show (SigArgRhs 'Parsed)
-
-deriving stock instance Show (SigArgRhs 'Scoped)
-
-deriving stock instance Eq (SigArgRhs 'Parsed)
-
-deriving stock instance Eq (SigArgRhs 'Scoped)
-
-deriving stock instance Ord (SigArgRhs 'Parsed)
-
-deriving stock instance Ord (SigArgRhs 'Scoped)
-
 data SigArg (s :: Stage) = SigArg
   { _sigArgDelims :: Irrelevant (KeywordRef, KeywordRef),
     _sigArgImplicit :: IsImplicit,
     _sigArgNames :: NonEmpty (Argument s),
-    -- | The rhs is only optional for implicit arguments. Omitting the rhs is
+    _sigArgColon :: Maybe (Irrelevant KeywordRef),
+    -- | The type is only optional for implicit arguments. Omitting the rhs is
     -- equivalent to writing `: Type`.
-    _sigArgRhs :: Maybe (SigArgRhs s)
+    _sigArgType :: Maybe (ExpressionType s)
   }
 
 deriving stock instance Show (SigArg 'Parsed)
@@ -377,28 +361,28 @@ deriving stock instance Ord (SigArg 'Parsed)
 
 deriving stock instance Ord (SigArg 'Scoped)
 
-data NewFunctionClause (s :: Stage) = NewFunctionClause
+data FunctionClause (s :: Stage) = FunctionClause
   { _clausenPipeKw :: Irrelevant KeywordRef,
     _clausenPatterns :: NonEmpty (PatternAtomType s),
     _clausenAssignKw :: Irrelevant KeywordRef,
     _clausenBody :: ExpressionType s
   }
 
-deriving stock instance Show (NewFunctionClause 'Parsed)
+deriving stock instance Show (FunctionClause 'Parsed)
 
-deriving stock instance Show (NewFunctionClause 'Scoped)
+deriving stock instance Show (FunctionClause 'Scoped)
 
-deriving stock instance Eq (NewFunctionClause 'Parsed)
+deriving stock instance Eq (FunctionClause 'Parsed)
 
-deriving stock instance Eq (NewFunctionClause 'Scoped)
+deriving stock instance Eq (FunctionClause 'Scoped)
 
-deriving stock instance Ord (NewFunctionClause 'Parsed)
+deriving stock instance Ord (FunctionClause 'Parsed)
 
-deriving stock instance Ord (NewFunctionClause 'Scoped)
+deriving stock instance Ord (FunctionClause 'Scoped)
 
 data FunctionDefBody (s :: Stage)
   = SigBodyExpression (ExpressionType s)
-  | SigBodyClauses (NonEmpty (NewFunctionClause s))
+  | SigBodyClauses (NonEmpty (FunctionClause s))
 
 deriving stock instance Show (FunctionDefBody 'Parsed)
 
@@ -421,7 +405,8 @@ data FunctionDef (s :: Stage) = FunctionDef
     _signPragmas :: Maybe ParsedPragmas,
     _signBuiltin :: Maybe (WithLoc BuiltinFunction),
     _signBody :: FunctionDefBody s,
-    _signTerminating :: Maybe KeywordRef
+    _signTerminating :: Maybe KeywordRef,
+    _signInstance :: Maybe KeywordRef
   }
 
 deriving stock instance Show (FunctionDef 'Parsed)
@@ -630,7 +615,8 @@ data InductiveDef (s :: Stage) = InductiveDef
     _inductiveParameters :: [InductiveParameters s],
     _inductiveType :: Maybe (ExpressionType s),
     _inductiveConstructors :: NonEmpty (ConstructorDef s),
-    _inductivePositive :: Maybe KeywordRef
+    _inductivePositive :: Maybe KeywordRef,
+    _inductiveTrait :: Maybe KeywordRef
   }
 
 deriving stock instance Show (InductiveDef 'Parsed)
@@ -790,6 +776,7 @@ data PatternAtom (s :: Stage)
   | PatternAtomRecord (RecordPattern s)
   | PatternAtomParens (PatternParensType s)
   | PatternAtomBraces (PatternParensType s)
+  | PatternAtomDoubleBraces (PatternParensType s)
   | PatternAtomAt (PatternAtType s)
 
 deriving stock instance Show (PatternAtom 'Parsed)
@@ -1078,9 +1065,11 @@ data Expression
   | ExpressionLiteral LiteralLoc
   | ExpressionFunction (Function 'Scoped)
   | ExpressionHole (HoleType 'Scoped)
+  | ExpressionInstanceHole (HoleType 'Scoped)
   | ExpressionRecordUpdate RecordUpdateApp
   | ExpressionParensRecordUpdate ParensRecordUpdate
   | ExpressionBraces (WithLoc Expression)
+  | ExpressionDoubleBraces (WithLoc Expression)
   | ExpressionIterator (Iterator 'Scoped)
   | ExpressionNamedApplication (NamedApplication 'Scoped)
   deriving stock (Show, Eq, Ord)
@@ -1091,6 +1080,8 @@ instance HasAtomicity (Lambda s) where
 data FunctionParameter (s :: Stage)
   = FunctionParameterName (SymbolType s)
   | FunctionParameterWildcard KeywordRef
+  | -- | Used for traits
+    FunctionParameterUnnamed Interval
 
 deriving stock instance Show (FunctionParameter 'Parsed)
 
@@ -1452,6 +1443,7 @@ data ExpressionAtom (s :: Stage)
   | AtomList (List s)
   | AtomCase (Case s)
   | AtomHole (HoleType s)
+  | AtomDoubleBraces (WithLoc (ExpressionType s))
   | AtomBraces (WithLoc (ExpressionType s))
   | AtomLet (Let s)
   | AtomRecordUpdate (RecordUpdate s)
@@ -1662,7 +1654,6 @@ makeLenses ''IteratorSyntaxDef
 makeLenses ''ConstructorDef
 makeLenses ''Module
 makeLenses ''SigArg
-makeLenses ''SigArgRhs
 makeLenses ''FunctionDef
 makeLenses ''AxiomDef
 makeLenses ''ExportInfo
@@ -1724,6 +1715,7 @@ instance HasAtomicity Expression where
   atomicity e = case e of
     ExpressionIdentifier {} -> Atom
     ExpressionHole {} -> Atom
+    ExpressionInstanceHole {} -> Atom
     ExpressionParensIdentifier {} -> Atom
     ExpressionApplication {} -> Aggregate appFixity
     ExpressionInfixApplication a -> Aggregate (getFixity a)
@@ -1732,6 +1724,7 @@ instance HasAtomicity Expression where
     ExpressionLiteral l -> atomicity l
     ExpressionLet l -> atomicity l
     ExpressionBraces {} -> Atom
+    ExpressionDoubleBraces {} -> Atom
     ExpressionList {} -> Atom
     ExpressionUniverse {} -> Atom
     ExpressionFunction {} -> Aggregate funFixity
@@ -1826,6 +1819,7 @@ instance HasLoc (FunctionParameter 'Scoped) where
   getLoc = \case
     FunctionParameterName n -> getLoc n
     FunctionParameterWildcard w -> getLoc w
+    FunctionParameterUnnamed i -> i
 
 instance HasLoc (FunctionParameters 'Scoped) where
   getLoc p = case p ^. paramDelims . unIrrelevant of
@@ -1877,7 +1871,9 @@ instance HasLoc Expression where
     ExpressionLiteral i -> getLoc i
     ExpressionFunction i -> getLoc i
     ExpressionHole i -> getLoc i
+    ExpressionInstanceHole i -> getLoc i
     ExpressionBraces i -> getLoc i
+    ExpressionDoubleBraces i -> getLoc i
     ExpressionIterator i -> getLoc i
     ExpressionNamedApplication i -> getLoc i
     ExpressionRecordUpdate i -> getLoc i
@@ -1923,8 +1919,8 @@ instance HasLoc (SigArg s) where
     where
       Irrelevant (l, r) = _sigArgDelims
 
-instance (SingI s) => HasLoc (NewFunctionClause s) where
-  getLoc NewFunctionClause {..} =
+instance (SingI s) => HasLoc (FunctionClause s) where
+  getLoc FunctionClause {..} =
     getLoc _clausenPipeKw
       <> getLocExpressionType _clausenBody
 
@@ -2001,6 +1997,7 @@ instance (SingI s) => HasLoc (PatternAtom s) where
     PatternAtomList l -> getLoc l
     PatternAtomParens p -> getLocParens p
     PatternAtomBraces p -> getLocParens p
+    PatternAtomDoubleBraces p -> getLocParens p
     PatternAtomAt p -> getLocAt p
     PatternAtomRecord p -> getLoc p
     where
@@ -2227,8 +2224,10 @@ instance IsApe Expression ApeLeaf where
     ExpressionLet {} -> leaf
     ExpressionUniverse {} -> leaf
     ExpressionHole {} -> leaf
+    ExpressionInstanceHole {} -> leaf
     ExpressionLiteral {} -> leaf
     ExpressionBraces {} -> leaf
+    ExpressionDoubleBraces {} -> leaf
     ExpressionIterator {} -> leaf
     where
       leaf =
@@ -2253,6 +2252,7 @@ instance IsApe (FunctionParameters 'Scoped) ApeLeaf where
 instance HasAtomicity PatternArg where
   atomicity p
     | Implicit <- p ^. patternArgIsImplicit = Atom
+    | ImplicitInstance <- p ^. patternArgIsImplicit = Atom
     | isJust (p ^. patternArgName) = Atom
     | otherwise = atomicity (p ^. patternArgPattern)
 

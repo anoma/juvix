@@ -88,6 +88,7 @@ data FunctionDef = FunctionDef
     _funDefExamples :: [Example],
     _funDefClauses :: NonEmpty FunctionClause,
     _funDefTerminating :: Bool,
+    _funDefInstance :: Bool,
     _funDefBuiltin :: Maybe BuiltinFunction,
     _funDefPragmas :: Pragmas
   }
@@ -159,6 +160,7 @@ data Expression
   | ExpressionFunction Function
   | ExpressionLiteral LiteralLoc
   | ExpressionHole Hole
+  | ExpressionInstanceHole Hole
   | ExpressionLet Let
   | ExpressionUniverse SmallUniverse
   | ExpressionSimpleLambda SimpleLambda
@@ -279,6 +281,7 @@ data InductiveDef = InductiveDef
     _inductiveParameters :: [InductiveParameter],
     _inductiveConstructors :: [ConstructorDef],
     _inductivePositive :: Bool,
+    _inductiveTrait :: Bool,
     _inductivePragmas :: Pragmas
   }
   deriving stock (Data)
@@ -377,6 +380,7 @@ instance HasAtomicity Expression where
     ExpressionLiteral l -> atomicity l
     ExpressionLet l -> atomicity l
     ExpressionHole {} -> Atom
+    ExpressionInstanceHole {} -> Atom
     ExpressionUniverse u -> atomicity u
     ExpressionFunction f -> atomicity f
     ExpressionSimpleLambda l -> atomicity l
@@ -463,6 +467,7 @@ instance HasLoc Expression where
     ExpressionApplication a -> getLoc a
     ExpressionLiteral l -> getLoc l
     ExpressionHole h -> getLoc h
+    ExpressionInstanceHole h -> getLoc h
     ExpressionLet l -> getLoc l
     ExpressionUniverse u -> getLoc u
     ExpressionFunction u -> getLoc u

@@ -1,5 +1,6 @@
 module Juvix.Compiler.Internal.Data.InfoTable.Base where
 
+import Juvix.Compiler.Internal.Data.InstanceInfo
 import Juvix.Compiler.Internal.Language
 import Juvix.Prelude
 
@@ -8,7 +9,8 @@ data ConstructorInfo = ConstructorInfo
     _constructorInfoType :: Expression,
     _constructorInfoInductive :: InductiveName,
     _constructorInfoName :: ConstructorName,
-    _constructorInfoBuiltin :: Maybe BuiltinConstructor
+    _constructorInfoBuiltin :: Maybe BuiltinConstructor,
+    _constructorInfoTrait :: Bool
   }
 
 newtype FunctionInfo = FunctionInfo
@@ -27,7 +29,8 @@ data InfoTable = InfoTable
   { _infoConstructors :: HashMap Name ConstructorInfo,
     _infoAxioms :: HashMap Name AxiomInfo,
     _infoFunctions :: HashMap Name FunctionInfo,
-    _infoInductives :: HashMap Name InductiveInfo
+    _infoInductives :: HashMap Name InductiveInfo,
+    _infoInstances :: InstanceTable
   }
 
 makeLenses ''InfoTable
@@ -42,7 +45,8 @@ instance Semigroup InfoTable where
       { _infoConstructors = a ^. infoConstructors <> b ^. infoConstructors,
         _infoAxioms = a ^. infoAxioms <> b ^. infoAxioms,
         _infoFunctions = a ^. infoFunctions <> b ^. infoFunctions,
-        _infoInductives = a ^. infoInductives <> b ^. infoInductives
+        _infoInductives = a ^. infoInductives <> b ^. infoInductives,
+        _infoInstances = a ^. infoInstances <> b ^. infoInstances
       }
 
 instance Monoid InfoTable where
@@ -51,5 +55,6 @@ instance Monoid InfoTable where
       { _infoConstructors = mempty,
         _infoAxioms = mempty,
         _infoFunctions = mempty,
-        _infoInductives = mempty
+        _infoInductives = mempty,
+        _infoInstances = mempty
       }

@@ -14,6 +14,7 @@ import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Builtins.Effect
 import Juvix.Compiler.Concrete.Data.Highlight.Input
 import Juvix.Compiler.Internal.Language
+import Juvix.Compiler.Internal.Pretty
 import Juvix.Compiler.Internal.Translation.FromConcrete.Data.Context
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking qualified as ArityChecking
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Reachability
@@ -84,7 +85,7 @@ typeCheckExpressionType exp = do
     . withEmptyVars
     . mapError (JuvixError @TypeCheckerError)
     . runInferenceDef
-    $ inferExpression' Nothing exp
+    $ inferExpression Nothing exp
       >>= traverseOf typedType strongNormalize
 
 typeCheckExpression ::

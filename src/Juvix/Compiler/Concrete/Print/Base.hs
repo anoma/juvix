@@ -173,6 +173,7 @@ instance PrettyPrint NameBlock where
   ppCode NameBlock {..} = do
     let delims = case _nameImplicit of
           Implicit -> braces
+          ImplicitInstance -> doubleBraces
           Explicit -> parens
         ppElem :: (Symbol, Int) -> Sem r ()
         ppElem (sym, idx) = ppCode sym <> ppCode Kw.kwExclamation <> noLoc (pretty idx)
@@ -194,6 +195,7 @@ instance (SingI s) => PrettyPrint (PatternAtom s) where
     PatternAtomEmpty {} -> parens (return ())
     PatternAtomParens p -> parens (ppPatternParensType p)
     PatternAtomBraces p -> braces (ppPatternParensType p)
+    PatternAtomDoubleBraces p -> doubleBraces (ppPatternParensType p)
     PatternAtomAt p -> ppPatternAtType p
     PatternAtomRecord p -> ppCode p
 
@@ -312,6 +314,7 @@ instance (SingI s) => PrettyPrint (ExpressionAtom s) where
     AtomLiteral lit -> ppCode lit
     AtomFunArrow a -> ppCode a
     AtomParens e -> parens (ppExpressionType e)
+    AtomDoubleBraces e -> doubleBraces (ppExpressionType (e ^. withLocParam))
     AtomBraces e -> braces (ppExpressionType (e ^. withLocParam))
     AtomHole w -> ppHoleType w
     AtomIterator i -> ppCode i
@@ -522,8 +525,11 @@ instance (SingI s) => PrettyPrint (FunctionParameters s) where
         let paramNames' = map ppCode _paramNames
             paramType' = ppExpressionType _paramType
             delims' = over both ppCode <$> _paramDelims ^. unIrrelevant
-            colon' = ppCode (fromJust (_paramColon ^. unIrrelevant))
-        delimIf' delims' _paramImplicit True (hsep paramNames' <+> colon' <+> paramType')
+            colon' = ppCode <$> _paramColon ^. unIrrelevant
+            pre = case colon' of
+              Just col -> hsep paramNames' <+> col <> space
+              Nothing -> mempty
+        delimIf' delims' _paramImplicit True (pre <> paramType')
     where
       ppLeftExpression' = case sing :: SStage s of
         SParsed -> ppLeftExpression
@@ -533,6 +539,7 @@ instance (SingI s) => PrettyPrint (FunctionParameter s) where
   ppCode = \case
     FunctionParameterName n -> annDef n (ppSymbolType n)
     FunctionParameterWildcard w -> ppCode w
+    FunctionParameterUnnamed {} -> return ()
 
 instance (SingI s) => PrettyPrint (Function s) where
   ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => Function s -> Sem r ()
@@ -648,8 +655,10 @@ instance PrettyPrint Expression where
   ppCode = \case
     ExpressionIdentifier n -> ppCode n
     ExpressionHole w -> ppCode w
+    ExpressionInstanceHole w -> ppCode w
     ExpressionParensIdentifier n -> parens (ppCode n)
     ExpressionBraces b -> braces (ppCode b)
+    ExpressionDoubleBraces b -> doubleBraces (ppCode b)
     ExpressionApplication a -> ppCode a
     ExpressionList a -> ppCode a
     ExpressionInfixApplication a -> ppCode a
@@ -773,9 +782,9 @@ instance PrettyPrint BuiltinFunction where
 instance PrettyPrint BuiltinAxiom where
   ppCode i = ppCode Kw.kwBuiltin <+> keywordText (P.prettyText i)
 
-instance (SingI s) => PrettyPrint (NewFunctionClause s) where
-  ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => NewFunctionClause s -> Sem r ()
-  ppCode NewFunctionClause {..} = do
+instance (SingI s) => PrettyPrint (FunctionClause s) where
+  ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => FunctionClause s -> Sem r ()
+  ppCode FunctionClause {..} = do
     let pats' = hsep (ppPatternAtomType <$> _clausenPatterns)
         e' = ppExpressionType _clausenBody
     ppCode _clausenPipeKw <+> pats' <+> ppCode _clausenAssignKw <> oneLineOrNext e'
@@ -786,28 +795,29 @@ instance (SingI s) => PrettyPrint (Argument s) where
     ArgumentSymbol s -> ppSymbolType s
     ArgumentWildcard w -> ppCode w
 
-instance (SingI s) => PrettyPrint (SigArgRhs s) where
-  ppCode :: (Members '[ExactPrint, Reader Options] r) => SigArgRhs s -> Sem r ()
-  ppCode SigArgRhs {..} =
-    ppCode _sigArgColon <+> ppExpressionType _sigArgType
-
 instance (SingI s) => PrettyPrint (SigArg s) where
   ppCode :: (Members '[ExactPrint, Reader Options] r) => SigArg s -> Sem r ()
   ppCode SigArg {..} = do
     let Irrelevant (l, r) = _sigArgDelims
         names' = hsep (fmap ppCode _sigArgNames)
-        rhs = ppCode <$> _sigArgRhs
-    ppCode l <> names' <+?> rhs <> ppCode r
+        colon' = ppCode <$> _sigArgColon
+        ty = ppExpressionType <$> _sigArgType
+        arg = case _sigArgImplicit of
+          ImplicitInstance | isNothing colon' -> mempty <>? ty
+          _ -> names' <+?> colon' <+?> ty
+    ppCode l <> arg <> ppCode r
 
 ppFunctionSignature :: (SingI s) => PrettyPrinting (FunctionDef s)
 ppFunctionSignature FunctionDef {..} = do
   let termin' = (<> line) . ppCode <$> _signTerminating
+      instance' = (<> line) . ppCode <$> _signInstance
       args' = hsep . fmap ppCode <$> nonEmpty _signArgs
       builtin' = (<> line) . ppCode <$> _signBuiltin
       type' = oneLineOrNext (ppCode _signColonKw <+> ppExpressionType _signRetType)
       name' = annDef _signName (ppSymbolType _signName)
    in builtin'
         ?<> termin'
+        ?<> instance'
         ?<> ( name'
                 <+?> args'
                   <> type'
@@ -1053,8 +1063,10 @@ ppInductiveSignature InductiveDef {..} = do
       positive'
         | Just k <- _inductivePositive = (<> line) <$> Just (ppCode k)
         | otherwise = Nothing
+      trait' = (<> line) . ppCode <$> _inductiveTrait
   builtin'
     ?<> positive'
+    ?<> trait'
     ?<> ppCode _inductiveKw
     <+> name'
     <+?> params'

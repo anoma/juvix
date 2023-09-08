@@ -225,6 +225,7 @@ scanExpression e =
       ExpressionSimpleLambda l -> scanSimpleLambda l
       ExpressionIden {} -> return ()
       ExpressionHole {} -> return ()
+      ExpressionInstanceHole {} -> return ()
       ExpressionUniverse {} -> return ()
       ExpressionLiteral {} -> return ()
 
