@@ -2722,8 +2722,7 @@ parsePatternTerm = do
   where
     parseNoInfixConstructor :: ParsePat PatternArg
     parseNoInfixConstructor =
-      explicitP
-        . PatternConstructor
+      explicitP . PatternConstructor
         <$> P.token constructorNoFixity mempty
       where
         constructorNoFixity :: PatternAtom 'Scoped -> Maybe ScopedIden
