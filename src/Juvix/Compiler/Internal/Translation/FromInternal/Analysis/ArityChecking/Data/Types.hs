@@ -40,6 +40,15 @@ isParamImplicit = \case
   ParamImplicit {} -> True
   _ -> False
 
+hasImplicitness :: IsImplicit -> ArityParameter -> Bool
+hasImplicitness i a = case (i, a) of
+  (Explicit, ParamExplicit {}) -> True
+  (Explicit, _) -> False
+  (Implicit, ParamImplicit {}) -> True
+  (Implicit, _) -> False
+  (ImplicitInstance, ParamImplicitInstance) -> True
+  (ImplicitInstance, _) -> False
+
 arityParameter :: ArityParameter -> Arity
 arityParameter = \case
   ParamImplicit a -> a
@@ -117,6 +126,14 @@ instance Pretty Arity where
     ArityUnit -> "𝟙"
     ArityUnknown -> "?"
     ArityFunction f -> pretty f
+
+applyArgument :: IsImplicit -> Arity -> Maybe Arity
+applyArgument i = \case
+  ArityUnknown -> Just ArityUnknown
+  ArityUnit -> Nothing
+  ArityFunction f
+    | hasImplicitness i (f ^. functionArityLeft) -> Just (f ^. functionArityRight)
+    | otherwise -> Nothing
 
 -- | If we give identifiers to unknown arities we could do unification and the
 -- matching would be more accurate

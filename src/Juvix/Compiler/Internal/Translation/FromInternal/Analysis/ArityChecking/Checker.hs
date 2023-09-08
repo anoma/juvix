@@ -706,10 +706,14 @@ checkExpression hintArity expr = do
           [ApplicationArg] ->
           Sem r [ApplicationArg]
         addHoles loc hint topari topargs = do
-          -- traceM ("addHoles\nhint = " <> ppTrace hint
-          --         <> "\nari = " <> ppTrace topari
-          --         <> "\nargs = " <> ppTrace topargs
-          --        )
+          traceM
+            ( "addHoles\nhint = "
+                <> ppTrace hint
+                <> "\nari = "
+                <> ppTrace topari
+                <> "\nargs = "
+                <> ppTrace topargs
+            )
           go 0 topari topargs
           where
             go ::
@@ -728,9 +732,12 @@ checkExpression hintArity expr = do
                 -- When there are no remaining arguments and the expected arity of the
                 -- expression matches the current arity we should *not* insert a hole.
                 | (isParamImplicit impl || impl == ParamImplicitInstance)
-                    && matchArity ari hint ->
+                    && ari == hint ->
                     return []
+                -- if inserting a hole causes the arities to not match we do not insert it.
+                | Just ari' <- applyArgument Implicit ari, not (matchArity ari' hint) -> return []
               (ArityFunction (FunctionArity (ParamImplicit {}) r), _) -> do
+                -- TODO add the hole only if hint arity still matches after the insertion
                 h <- newHole loc
                 ((ApplicationArg Implicit (ExpressionHole h)) :) <$> go (succ idx) r goargs
               (ArityFunction (FunctionArity ParamImplicitInstance r), _) -> do
