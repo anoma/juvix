@@ -315,7 +315,6 @@ checkFunctionParameter ::
   FunctionParameter ->
   Sem r FunctionParameter
 checkFunctionParameter (FunctionParameter mv i e) = do
-  -- FIXME we need to relax this
   e' <- checkIsType (getLoc e) e
   when (i == ImplicitInstance) $ do
     tab <- ask
@@ -628,10 +627,11 @@ inferExpression' hint e = case e of
     goHole :: Hole -> Sem r TypedExpression
     goHole h = do
       void (queryMetavar h)
+      ty <- ExpressionHole <$> freshHole (getLoc h)
       return
         TypedExpression
           { _typedExpression = ExpressionHole h,
-            _typedType = ExpressionUniverse (SmallUniverse (getLoc h))
+            _typedType = ty
           }
 
     goInstanceHole :: Hole -> Sem r TypedExpression

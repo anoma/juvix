@@ -119,7 +119,7 @@ preInductiveDef ::
 preInductiveDef i = do
   sym <- freshSymbol
   let _inductiveName = i ^. Internal.inductiveName . nameText
-  -- TODO reive `fromTopIndex`
+  -- TODO revise `fromTopIndex`
   params' <- fromTopIndex $ forM (i ^. Internal.inductiveParameters) $ \p -> do
     ty' <- (goExpression (p ^. Internal.inductiveParamType))
     return

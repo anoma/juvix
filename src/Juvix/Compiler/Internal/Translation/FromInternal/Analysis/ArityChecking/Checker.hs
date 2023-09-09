@@ -161,6 +161,7 @@ checkFunctionClause ::
   Sem r FunctionClause
 checkFunctionClause ari cl = do
   hint <- guessArity (cl ^. clauseBody)
+  -- traceM ("hint for " <> ppTrace cl <> "\n" <> ppTrace hint)
   (patterns', locals, bodyAri) <- checkLhs loc hint ari (cl ^. clausePatterns)
   body' <- runReader locals (checkExpression bodyAri (cl ^. clauseBody))
   return
@@ -363,13 +364,16 @@ checkLhs loc guessedBody ariSignature pats = do
     -- Sometimes the outcome may even be confusing.
     tailHelper :: Arity -> Maybe [IsImplicit]
     tailHelper a
+      | guessedBody == ArityUnknown = Nothing
       | 0 < pref = Just pref'
       | otherwise = Nothing
       where
         pref' :: [IsImplicit]
         pref' = map paramToImplicit (take pref (unfoldArity a))
+
         pref :: Int
         pref = aI - targetI
+
         preceedingImplicits :: Arity -> Int
         preceedingImplicits = length . takeWhile isParamImplicitOrInstance . unfoldArity
           where
@@ -378,10 +382,13 @@ checkLhs loc guessedBody ariSignature pats = do
               ParamExplicit {} -> False
               ParamImplicit {} -> True
               ParamImplicitInstance -> True
+
         aI :: Int
         aI = preceedingImplicits a
+
         targetI :: Int
         targetI = preceedingImplicits guessedBody
+
         paramToImplicit :: ArityParameter -> IsImplicit
         paramToImplicit = \case
           ParamExplicit {} -> impossible
@@ -706,14 +713,14 @@ checkExpression hintArity expr = do
           [ApplicationArg] ->
           Sem r [ApplicationArg]
         addHoles loc hint topari topargs = do
-          traceM
-            ( "addHoles\nhint = "
-                <> ppTrace hint
-                <> "\nari = "
-                <> ppTrace topari
-                <> "\nargs = "
-                <> ppTrace topargs
-            )
+          -- traceM
+          --   ( "addHoles\nhint = "
+          --       <> ppTrace hint
+          --       <> "\nari = "
+          --       <> ppTrace topari
+          --       <> "\nargs = "
+          --       <> ppTrace topargs
+          --   )
           go 0 topari topargs
           where
             go ::

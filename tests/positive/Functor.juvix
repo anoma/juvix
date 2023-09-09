@@ -1,22 +1,43 @@
 module Functor;
 
 trait
-type functor (f : Type -> Type) :=
-  mkFunctor {fmap : {A : Type} -> (A -> A) -> f A -> f A};
+type Functor (f : Type -> Type) :=
+  mkFunctor {fmap : {A B : Type} -> (A -> B) -> f A -> f B};
 
-type maybe (a : Type) :=
+type Maybe (a : Type) :=
   | nothing
   | just a;
 
-maybe-fmap {a : Type} (f : a -> a) : maybe a -> maybe a
+Maybe-fmap {A B : Type} (f : A -> B) : Maybe A -> Maybe B
   | nothing := nothing
   | (just x) := just (f x);
 
-maybe-functor : functor maybe :=
-  mkFunctor {maybe} maybe-fmap;
+instance
+Maybe-Functor : Functor Maybe := mkFunctor Maybe-fmap;
 
--- import Stdlib.Data.Bool open;
+syntax fixity bind {arity: binary, assoc: left};
 
--- open functor;
+trait
+type Monad (f : Type -> Type) :=
+  mkMonad {
+    return : {A : Type} -> A -> f A;
+    bind : {A B : Type} -> f A -> (A -> f B) -> f B
+  };
 
--- nn : maybe Bool -> maybe Bool := fmap not;
+syntax operator >>= bind;
+>>= : {M : Type -> Type} -> {{Monad M}} -> {A B : Type} -> M A -> (A -> M B) -> M B := Monad.bind;
+
+Maybe-bind {A B : Type}
+  : Maybe A -> (A -> Maybe B) -> Maybe B
+  | nothing _ := nothing
+  | (just a) f := f a;
+
+instance
+Maybe-Monad : Monad Maybe :=
+  mkMonad (return := just; bind := Maybe-bind);
+
+import Stdlib.Data.Bool open;
+import Stdlib.Function open;
+
+b : Maybe Bool :=
+  just true >>= (just ∘ not) >>= (just ∘ not) >>= const nothing;
