@@ -265,7 +265,7 @@ goInductiveParameter ::
   InductiveParameter ->
   Sem r ()
 goInductiveParameter p param = do
-  addEdgeMay p (param ^. inductiveParamName2)
+  addEdgeMay p (param ^. inductiveParamName)
   goExpression p (param ^. inductiveParamType)
 
 goFunctionParameter ::

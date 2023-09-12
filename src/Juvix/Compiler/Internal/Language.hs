@@ -269,7 +269,7 @@ data Pattern
 instance Hashable Pattern
 
 data InductiveParameter = InductiveParameter
-  { _inductiveParamName2 :: VarName,
+  { _inductiveParamName :: VarName,
     _inductiveParamType :: Expression
   }
   deriving stock (Eq, Data)
@@ -415,7 +415,7 @@ instance HasLoc ConstructorDef where
     getLoc _inductiveConstructorName <> getLoc _inductiveConstructorType
 
 instance HasLoc InductiveParameter where
-  getLoc InductiveParameter {..} = getLoc _inductiveParamName2 <> getLoc _inductiveParamType
+  getLoc InductiveParameter {..} = getLoc _inductiveParamName <> getLoc _inductiveParamType
 
 instance HasLoc FunctionParameter where
   getLoc f = v (getLoc (f ^. paramType))

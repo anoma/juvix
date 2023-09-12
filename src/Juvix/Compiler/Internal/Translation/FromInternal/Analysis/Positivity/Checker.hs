@@ -127,7 +127,7 @@ checkStrictlyPositiveOccurrences ty ctorName name recLimit ref =
           IdenVar name'
             | not inside -> return ()
             | name == name' -> strictlyPositivityError expr
-            | name' `elem` ty ^.. inductiveParameters . each . inductiveParamName2 -> modify (HashSet.insert name')
+            | name' `elem` ty ^.. inductiveParameters . each . inductiveParamName -> modify (HashSet.insert name')
           _ -> return ()
 
         helperApp :: Application -> Sem r ()

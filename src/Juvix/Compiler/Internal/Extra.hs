@@ -20,7 +20,7 @@ constructorArgTypes i =
 constructorReturnType :: ConstructorInfo -> Expression
 constructorReturnType info =
   let inductiveParams = fst (constructorArgTypes info)
-      paramNames = inductiveParams ^.. each . inductiveParamName2
+      paramNames = inductiveParams ^.. each . inductiveParamName
       ind = ExpressionIden (IdenInductive (info ^. constructorInfoInductive))
       saturatedTy = foldExplicitApplication ind (map (ExpressionIden . IdenVar) paramNames)
    in saturatedTy
@@ -45,7 +45,7 @@ constructorType info =
 inductiveToFunctionParam :: InductiveParameter -> FunctionParameter
 inductiveToFunctionParam InductiveParameter {..} =
   FunctionParameter
-    { _paramName = Just _inductiveParamName2,
+    { _paramName = Just _inductiveParamName,
       _paramImplicit = Implicit,
       _paramType = _inductiveParamType
     }

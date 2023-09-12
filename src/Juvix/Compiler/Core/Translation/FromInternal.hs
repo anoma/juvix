@@ -123,7 +123,7 @@ preInductiveDef i = do
     ty' <- goExpression (p ^. Internal.inductiveParamType)
     return
       ParameterInfo
-        { _paramName = p ^. Internal.inductiveParamName2 . nameText,
+        { _paramName = p ^. Internal.inductiveParamName . nameText,
           _paramLocation = Just $ getLoc p,
           _paramIsImplicit = False,
           _paramKind = ty'

@@ -86,10 +86,10 @@ checkInductive d = do
         checkParam param = do
           lv1 <- get @LocalVars
           ty' <- runReader lv1 (checkType (param ^. inductiveParamType))
-          addArity (param ^. inductiveParamName2) (typeArity ty')
+          addArity (param ^. inductiveParamName) (typeArity ty')
           return
             InductiveParameter
-              { _inductiveParamName2 = param ^. inductiveParamName2,
+              { _inductiveParamName = param ^. inductiveParamName,
                 _inductiveParamType = ty'
               }
 

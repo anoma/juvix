@@ -124,7 +124,7 @@ checkInductiveDef InductiveDef {..} = runInferenceDef $ do
     paramLocals :: LocalVars
     paramLocals =
       LocalVars
-        { _localTypes = HashMap.fromList [(p ^. inductiveParamName2, p ^. inductiveParamType) | p <- _inductiveParameters],
+        { _localTypes = HashMap.fromList [(p ^. inductiveParamName, p ^. inductiveParamType) | p <- _inductiveParameters],
           _localTyMap = mempty
         }
     goConstructor :: ConstructorDef -> Sem (Inference ': r) ConstructorDef
@@ -343,7 +343,7 @@ checkConstructorReturnType ::
 checkConstructorReturnType indType ctor = do
   let ctorName = ctor ^. inductiveConstructorName
       tyName = indType ^. inductiveName
-      indParams = map (^. inductiveParamName2) (indType ^. inductiveParameters)
+      indParams = map (^. inductiveParamName) (indType ^. inductiveParameters)
       ctorReturnType = snd (viewConstructorType (ctor ^. inductiveConstructorType))
       expectedReturnType =
         foldExplicitApplication

@@ -518,7 +518,7 @@ goInductiveParameters params@InductiveParameters {..} = do
   let goInductiveParameter :: S.Symbol -> Internal.InductiveParameter
       goInductiveParameter var =
         Internal.InductiveParameter
-          { _inductiveParamName2 = goSymbol var,
+          { _inductiveParamName = goSymbol var,
             _inductiveParamType = paramType'
           }
   return (map goInductiveParameter (toList _inductiveParametersNames))
@@ -602,7 +602,7 @@ goInductive ty@InductiveDef {..} = do
   _inductiveType' <- mapM goExpression _inductiveType
   _inductivePragmas' <- goPragmas _inductivePragmas
   let inductiveName' = goSymbol _inductiveName
-      constrRetType = Internal.foldExplicitApplication (Internal.toExpression inductiveName') (map (Internal.ExpressionIden . Internal.IdenVar . (^. Internal.inductiveParamName2)) _inductiveParameters')
+      constrRetType = Internal.foldExplicitApplication (Internal.toExpression inductiveName') (map (Internal.ExpressionIden . Internal.IdenVar . (^. Internal.inductiveParamName)) _inductiveParameters')
   _inductiveConstructors' <-
     local (const _inductivePragmas') $
       mapM (goConstructorDef constrRetType) _inductiveConstructors
