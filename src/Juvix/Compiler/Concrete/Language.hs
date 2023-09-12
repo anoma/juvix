@@ -1242,7 +1242,7 @@ deriving stock instance Ord (Let 'Parsed)
 deriving stock instance Ord (Let 'Scoped)
 
 data CaseBranch (s :: Stage) = CaseBranch
-  { _caseBranchPipe :: Irrelevant KeywordRef,
+  { _caseBranchPipe :: Irrelevant (Maybe KeywordRef),
     _caseBranchAssignKw :: Irrelevant KeywordRef,
     _caseBranchPattern :: PatternParensType s,
     _caseBranchExpression :: ExpressionType s
@@ -1771,8 +1771,12 @@ instance HasAtomicity (PatternAtom 'Parsed) where
 instance (SingI s) => HasAtomicity (FunctionParameters s) where
   atomicity p
     | not (null (p ^. paramNames))
-        || p ^. paramImplicit == Implicit
-        || p ^. paramImplicit == ImplicitInstance =
+        || p
+          ^. paramImplicit
+          == Implicit
+        || p
+          ^. paramImplicit
+          == ImplicitInstance =
         Atom
     | otherwise = case sing :: SStage s of
         SParsed -> atomicity (p ^. paramType)
@@ -1852,7 +1856,12 @@ instance HasLoc (Let 'Scoped) where
   getLoc l = getLoc (l ^. letKw) <> getLoc (l ^. letExpression)
 
 instance (SingI s) => HasLoc (CaseBranch s) where
-  getLoc c = getLoc (c ^. caseBranchPipe) <> getLocExpressionType (c ^. caseBranchExpression)
+  getLoc c = case c ^. caseBranchPipe . unIrrelevant of
+    Nothing -> branchLoc
+    Just p -> getLoc p <> branchLoc
+    where
+      branchLoc :: Interval
+      branchLoc = getLocExpressionType (c ^. caseBranchExpression)
 
 instance (SingI s) => HasLoc (Case s) where
   getLoc c = getLoc (c ^. caseKw) <> getLoc (c ^. caseBranches . to last)

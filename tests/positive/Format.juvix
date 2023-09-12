@@ -31,6 +31,30 @@ M;
   axiom , : String → String → String;
 end;
 
+-- case with single branch
+case1 (n : Nat) : Nat := case (n) {_ := zero};
+
+-- case with multiple branches
+case2 (n : Nat) : Nat :=
+  case (n) {
+    | zero := zero
+    | _ := zero
+  };
+
+-- case on nested case
+case3 (n : Nat) : Nat :=
+  case (case (n) {_ := zero}) {
+    | zero := zero
+    | _ := zero
+  };
+
+-- case on nested case expression
+case4 (n : Nat) : Nat :=
+  case (n) {
+    | zero := case (n) {_ := zero}
+    | _ := zero
+  };
+
 -- qualified commas
 t4 : String := "a" M., "b" M., "c" M., "d";
 
