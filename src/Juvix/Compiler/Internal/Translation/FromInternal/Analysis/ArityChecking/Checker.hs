@@ -161,7 +161,6 @@ checkFunctionClause ::
   Sem r FunctionClause
 checkFunctionClause ari cl = do
   hint <- guessArity (cl ^. clauseBody)
-  -- traceM ("hint for " <> ppTrace cl <> "\n" <> ppTrace hint)
   (patterns', locals, bodyAri) <- checkLhs loc hint ari (cl ^. clausePatterns)
   body' <- runReader locals (checkExpression bodyAri (cl ^. clauseBody))
   return
@@ -218,7 +217,6 @@ guessArity = \case
     appHelper a = do
       f' <- arif
       let u = unfoldArity' f'
-      -- traceM ("Apphelper f = " <> ppTrace f <> "; args = " <> ppTrace args)
       return $ case refine args (u ^. ufoldArityParams) of
         Nothing -> ArityUnknown
         Just a' -> foldArity (set ufoldArityParams a' u)
@@ -593,8 +591,7 @@ checkExpression ::
   Arity ->
   Expression ->
   Sem r Expression
-checkExpression hintArity expr = do
-  -- traceM ("CheckExpression e = " <> ppTrace expr <> "; hintArity = " <> ppTrace hintArity)
+checkExpression hintArity expr =
   case expr of
     ExpressionIden {} -> goApp expr []
     ExpressionApplication a -> uncurry goApp $ second toList (unfoldApplication' a)
@@ -664,12 +661,7 @@ checkExpression hintArity expr = do
       (fun', args') :: (Expression, [ApplicationArg]) <- case fun0 of
         ExpressionHole {} -> (fun0,) <$> mapM (traverseOf appArg (checkExpression ArityUnknown)) args
         ExpressionInstanceHole {} -> (fun0,) <$> mapM (traverseOf appArg (checkExpression ArityUnknown)) args
-        ExpressionIden i ->
-          (fun0,)
-            <$> ( idenArity i >>= \a -> do
-                    -- traceM ("arity of iden " <> ppTrace i <> " = " <> ppTrace a)
-                    helper (getLoc i) a
-                )
+        ExpressionIden i -> (fun0,) <$> (idenArity i >>= helper (getLoc i))
         ExpressionLiteral l -> (fun0,) <$> helper (getLoc l) arityLiteral
         ExpressionUniverse l -> (fun0,) <$> helper (getLoc l) arityUniverse
         ExpressionLambda l -> do
@@ -695,15 +687,11 @@ checkExpression hintArity expr = do
       where
         helper :: Interval -> Arity -> Sem r [ApplicationArg]
         helper i ari = do
-          -- traceM ("helper " <> ppTrace ari)
           let argsAris :: [Arity]
               argsAris = map arityParameter (unfoldArity ari)
-          -- traceM ("args aris " <> ppTrace argsAris)
           argsWithHoles :: [ApplicationArg] <- addHoles i hintArity ari args
-          -- traceM ("args with holes " <> ppTrace argsWithHoles)
           let argsWithAris :: [(IsImplicit, (Arity, Expression))]
               argsWithAris = [(i', (a, e')) | (a, (ApplicationArg i' e')) <- zip (argsAris ++ repeat ArityUnknown) argsWithHoles]
-          -- traceM ("args with aris " <> ppTrace argsWithAris)
           mapM (fmap (uncurry ApplicationArg) . secondM (uncurry checkExpression)) argsWithAris
 
         addHoles ::
@@ -712,16 +700,7 @@ checkExpression hintArity expr = do
           Arity ->
           [ApplicationArg] ->
           Sem r [ApplicationArg]
-        addHoles loc hint topari topargs = do
-          -- traceM
-          --   ( "addHoles\nhint = "
-          --       <> ppTrace hint
-          --       <> "\nari = "
-          --       <> ppTrace topari
-          --       <> "\nargs = "
-          --       <> ppTrace topargs
-          --   )
-          go 0 topari topargs
+        addHoles loc hint topari topargs = go 0 topari topargs
           where
             go ::
               Int ->
