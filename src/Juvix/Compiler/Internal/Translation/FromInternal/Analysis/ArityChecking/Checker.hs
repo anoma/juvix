@@ -343,7 +343,6 @@ checkLhs loc guessedBody ariSignature pats = do
               wildcard <- genWildcard Implicit
               first (wildcard :) <$> goLhs r lhs
             (Explicit, ParamImplicit {}) -> do
-              -- TODO should we use arity information ?
               wildcard <- genWildcard Implicit
               first (wildcard :) <$> goLhs r lhs
             (Explicit, ParamImplicitInstance) -> do
@@ -558,7 +557,7 @@ typeArity = go
     goIden :: Iden -> Arity
     goIden = \case
       IdenVar {} -> ArityUnknown
-      IdenInductive {} -> ArityUnit -- TODO is this true?
+      IdenInductive {} -> ArityUnit
       IdenFunction {} -> ArityUnknown -- we need normalization to determine the arity
       IdenConstructor {} -> ArityUnknown -- will be a type error
       IdenAxiom {} -> ArityUnknown
@@ -591,19 +590,18 @@ checkExpression ::
   Arity ->
   Expression ->
   Sem r Expression
-checkExpression hintArity expr =
-  case expr of
-    ExpressionIden {} -> goApp expr []
-    ExpressionApplication a -> uncurry goApp $ second toList (unfoldApplication' a)
-    ExpressionLiteral {} -> appHelper expr []
-    ExpressionFunction f -> ExpressionFunction <$> goFunction f
-    ExpressionUniverse {} -> return expr
-    ExpressionHole {} -> return expr
-    ExpressionInstanceHole {} -> return expr
-    ExpressionSimpleLambda {} -> simplelambda
-    ExpressionLambda l -> ExpressionLambda <$> checkLambda hintArity l
-    ExpressionLet l -> ExpressionLet <$> checkLet hintArity l
-    ExpressionCase l -> ExpressionCase <$> checkCase hintArity l
+checkExpression hintArity expr = case expr of
+  ExpressionIden {} -> goApp expr []
+  ExpressionApplication a -> uncurry goApp $ second toList (unfoldApplication' a)
+  ExpressionLiteral {} -> appHelper expr []
+  ExpressionFunction f -> ExpressionFunction <$> goFunction f
+  ExpressionUniverse {} -> return expr
+  ExpressionHole {} -> return expr
+  ExpressionInstanceHole {} -> return expr
+  ExpressionSimpleLambda {} -> simplelambda
+  ExpressionLambda l -> ExpressionLambda <$> checkLambda hintArity l
+  ExpressionLet l -> ExpressionLet <$> checkLet hintArity l
+  ExpressionCase l -> ExpressionCase <$> checkCase hintArity l
   where
     goFunction :: Function -> Sem r Function
     goFunction (Function l r) = do
@@ -723,7 +721,6 @@ checkExpression hintArity expr =
                 -- if inserting a hole causes the arities to not match we do not insert it.
                 | Just ari' <- applyArgument Implicit ari, not (matchArity ari' hint) -> return []
               (ArityFunction (FunctionArity (ParamImplicit {}) r), _) -> do
-                -- TODO add the hole only if hint arity still matches after the insertion
                 h <- newHole loc
                 ((ApplicationArg Implicit (ExpressionHole h)) :) <$> go (succ idx) r goargs
               (ArityFunction (FunctionArity ParamImplicitInstance r), _) -> do
