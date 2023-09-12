@@ -683,6 +683,12 @@ vampirDef = "def"
 vampirEq :: (IsString s) => s
 vampirEq = "="
 
+vampirNumber :: (IsString s) => s
+vampirNumber = "number"
+
+vampirFail :: (IsString s) => s
+vampirFail = "fail"
+
 vampirAdd :: (IsString s) => s
 vampirAdd = "add"
 

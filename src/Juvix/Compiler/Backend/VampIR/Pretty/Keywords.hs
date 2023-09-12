@@ -10,6 +10,12 @@ kwDef = keyword Str.vampirDef
 kwEq :: Doc Ann
 kwEq = keyword Str.vampirEq
 
+kwNumber :: Doc Ann
+kwNumber = keyword Str.vampirNumber
+
+kwFail :: Doc Ann
+kwFail = keyword Str.vampirFail
+
 kwAdd :: Doc Ann
 kwAdd = keyword Str.vampirAdd
 
