@@ -611,7 +611,7 @@ expressionAtom =
       <|> AtomIdentifier <$> name
       <|> AtomUniverse <$> universe
       <|> AtomLambda <$> lambda
-      <|> P.try (AtomCase <$> newCase)
+      <|> P.try (AtomNewCase <$> newCase)
       <|> AtomCase <$> case_
       <|> AtomFunction <$> function
       <|> AtomLet <$> letBlock
@@ -866,7 +866,7 @@ letBlock = do
 
 caseBranch :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (CaseBranch 'Parsed)
 caseBranch = do
-  _caseBranchPipe <- Irrelevant . Just <$> kw kwPipe
+  _caseBranchPipe <- Irrelevant <$> kw kwPipe
   _caseBranchPattern <- parsePatternAtoms
   _caseBranchAssignKw <- Irrelevant <$> kw kwAssign
   _caseBranchExpression <- parseExpressionAtoms
@@ -880,20 +880,20 @@ case_ = do
   let _caseParens = False
   return Case {..}
 
-newCaseBranch :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => Irrelevant (Maybe KeywordRef) -> ParsecS r (CaseBranch 'Parsed)
-newCaseBranch _caseBranchPipe = do
-  _caseBranchPattern <- parsePatternAtoms
-  _caseBranchAssignKw <- Irrelevant <$> kw kwAssign
-  _caseBranchExpression <- parseExpressionAtoms
-  return CaseBranch {..}
+newCaseBranch :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => Irrelevant (Maybe KeywordRef) -> ParsecS r (NewCaseBranch 'Parsed)
+newCaseBranch _newCaseBranchPipe = do
+  _newCaseBranchPattern <- parsePatternAtoms
+  _newCaseBranchAssignKw <- Irrelevant <$> kw kwAssign
+  _newCaseBranchExpression <- parseExpressionAtoms
+  return NewCaseBranch {..}
 
-newCase :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (Case 'Parsed)
+newCase :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (NewCase 'Parsed)
 newCase = P.label "new case" $ do
-  _caseKw <- kw kwCase
-  _caseExpression <- parens parseExpressionAtoms
-  _caseBranches <- braces (pipeSep1 newCaseBranch)
-  let _caseParens = False
-  return Case {..}
+  _newCaseKw <- kw kwCase
+  _newCaseExpression <- parseExpressionAtoms
+  _newCaseOfKw <- kw kwOf
+  _newCaseBranches <- braces (pipeSep1 newCaseBranch)
+  return NewCase {..}
 
 --------------------------------------------------------------------------------
 -- Universe expression

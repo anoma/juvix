@@ -312,6 +312,7 @@ instance (SingI s) => PrettyPrint (ExpressionAtom s) where
     AtomLambda l -> ppCode l
     AtomLet lb -> ppCode lb
     AtomCase c -> ppCode c
+    AtomNewCase c -> ppCode c
     AtomList l -> ppCode l
     AtomUniverse uni -> ppCode uni
     AtomRecordUpdate u -> ppCode u
@@ -487,11 +488,32 @@ instance (SingI s) => PrettyPrint (Let s) where
         letExpression' = ppExpressionType _letExpression
     ppCode _letKw <> letFunDefs' <> ppCode _letInKw <+> letExpression'
 
+instance (SingI s) => PrettyPrint (NewCase s) where
+  ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => NewCase s -> Sem r ()
+  ppCode NewCase {..} = do
+    let exp' = ppExpressionType _newCaseExpression
+    ppCode _newCaseKw <+> exp' <+> ppCode _newCaseOfKw <+> ppBranches _newCaseBranches
+    where
+      ppBranches :: NonEmpty (NewCaseBranch s) -> Sem r ()
+      ppBranches = \case
+        b :| [] -> braces (ppCaseBranch True b)
+        _ -> braces (blockIndent (vsepHard (ppCaseBranch False <$> _newCaseBranches)))
+
+      ppCaseBranch :: Bool -> NewCaseBranch s -> Sem r ()
+      ppCaseBranch singleBranch b = pipeHelper <?+> ppCode b
+        where
+          pipeHelper :: Maybe (Sem r ())
+          pipeHelper
+            | singleBranch = Nothing
+            | otherwise = Just $ case b ^. newCaseBranchPipe . unIrrelevant of
+                Just p -> ppCode p
+                Nothing -> ppCode Kw.kwPipe
+
 instance (SingI s) => PrettyPrint (Case s) where
   ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => Case s -> Sem r ()
   ppCode Case {..} = do
     let exp' = ppExpressionType _caseExpression
-    parensIf _caseParens (ppCode _caseKw <+> parens exp' <+> ppBranches _caseBranches)
+    ppCode _caseKw <+> exp' <+> ppCode Kw.kwOf <+> ppBranches _caseBranches
     where
       ppBranches :: NonEmpty (CaseBranch s) -> Sem r ()
       ppBranches = \case
@@ -504,7 +526,7 @@ instance (SingI s) => PrettyPrint (Case s) where
           pipeHelper :: Maybe (Sem r ())
           pipeHelper
             | singleBranch = Nothing
-            | otherwise = ppCode <$> b ^. caseBranchPipe . unIrrelevant
+            | otherwise = Just (ppCode (b ^. caseBranchPipe . unIrrelevant))
 
 instance PrettyPrint Universe where
   ppCode Universe {..} = ppCode _universeKw <+?> (noLoc <$> (pretty <$> _universeLevel))
@@ -607,6 +629,12 @@ instance (SingI s) => PrettyPrint (CaseBranch s) where
         e' = ppExpressionType _caseBranchExpression
     pat' <+> ppCode _caseBranchAssignKw <> oneLineOrNext e'
 
+instance (SingI s) => PrettyPrint (NewCaseBranch s) where
+  ppCode NewCaseBranch {..} = do
+    let pat' = ppPatternParensType _newCaseBranchPattern
+        e' = ppExpressionType _newCaseBranchExpression
+    pat' <+> ppCode _newCaseBranchAssignKw <> oneLineOrNext e'
+
 ppBlock :: (PrettyPrint a, Members '[Reader Options, ExactPrint] r, Traversable t) => t a -> Sem r ()
 ppBlock items = vsep (sepEndSemicolon (fmap ppCode items))
 
@@ -687,6 +715,7 @@ instance PrettyPrint Expression where
     ExpressionLiteral l -> ppCode l
     ExpressionFunction f -> ppCode f
     ExpressionCase c -> ppCode c
+    ExpressionNewCase c -> ppCode c
     ExpressionIterator i -> ppCode i
     ExpressionNamedApplication i -> ppCode i
     ExpressionRecordUpdate i -> ppCode i
