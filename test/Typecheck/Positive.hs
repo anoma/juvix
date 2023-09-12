@@ -284,7 +284,11 @@ tests =
     posTest
       "Traits"
       $(mkRelDir ".")
-      $(mkRelFile "Traits.juvix")
+      $(mkRelFile "Traits.juvix"),
+    posTest
+      "Traits2 (Functor, Monad)"
+      $(mkRelDir ".")
+      $(mkRelFile "Traits2.juvix")
   ]
     <> [ compilationTest t | t <- Compilation.tests
        ]
