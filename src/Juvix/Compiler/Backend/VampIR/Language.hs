@@ -78,7 +78,7 @@ instance HasAtomicity IfThenElse where
 instance HasAtomicity Expression where
   atomicity = \case
     ExpressionVar x -> atomicity x
-    ExpressionConstant {} -> Atom
+    ExpressionConstant {} -> Aggregate appFixity
     ExpressionBinop x -> atomicity x
     ExpressionIfThenElse x -> atomicity x
     ExpressionFail -> Atom

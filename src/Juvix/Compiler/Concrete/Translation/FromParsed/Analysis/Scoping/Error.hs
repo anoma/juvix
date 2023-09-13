@@ -14,6 +14,7 @@ import Juvix.Compiler.Internal.Translation.FromConcrete.NamedArguments.Error
 data ScoperError
   = ErrInfixParser InfixError
   | ErrAppLeftImplicit AppLeftImplicit
+  | ErrDanglingDoubleBrace DanglingDoubleBrace
   | ErrInfixPattern InfixErrorP
   | ErrMultipleDeclarations MultipleDeclarations
   | ErrImportCycle ImportCycle
@@ -54,6 +55,7 @@ instance ToGenericError ScoperError where
     ErrCaseBranchImplicitPattern e -> genericError e
     ErrInfixParser e -> genericError e
     ErrAppLeftImplicit e -> genericError e
+    ErrDanglingDoubleBrace e -> genericError e
     ErrInfixPattern e -> genericError e
     ErrMultipleDeclarations e -> genericError e
     ErrImportCycle e -> genericError e

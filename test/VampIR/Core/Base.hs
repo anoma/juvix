@@ -52,7 +52,7 @@ vampirSetupArgs VampirPlonk dirPath step = do
         "plonk",
         "setup",
         "-m",
-        "8",
+        "9",
         "-o",
         toFilePath (dirPath <//> $(mkRelFile "params.pp"))
       ]

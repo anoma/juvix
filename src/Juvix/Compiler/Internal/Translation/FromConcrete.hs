@@ -12,7 +12,6 @@ where
 
 import Data.HashMap.Strict qualified as HashMap
 import Data.IntMap.Strict qualified as IntMap
-import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Compiler.Builtins
 import Juvix.Compiler.Concrete.Data.NameSignature.Base
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
@@ -466,29 +465,34 @@ goTopFunctionDef FunctionDef {..} = do
           _paramType <- case _sigArgType of
             Nothing -> return (Internal.smallUniverseE (getLoc a))
             Just ty -> goExpression ty
+
           let _paramImpligoExpressioncit = _sigArgImplicit
-              mk :: Concrete.Argument 'Scoped -> Sem r Internal.FunctionParameter
-              mk = \case
-                Concrete.ArgumentSymbol s ->
-                  let _paramName = Just (goSymbol s)
-                   in return Internal.FunctionParameter {..}
-                Concrete.ArgumentWildcard {} ->
-                  return Internal.FunctionParameter {_paramName = Nothing, ..}
-          mapM mk _sigArgNames
+              noName = Internal.FunctionParameter {_paramName = Nothing, ..}
+              mk :: Concrete.Argument 'Scoped -> Internal.FunctionParameter
+              mk ma =
+                let _paramName =
+                      case ma of
+                        Concrete.ArgumentSymbol s -> Just (goSymbol s)
+                        Concrete.ArgumentWildcard {} -> Nothing
+                 in Internal.FunctionParameter {..}
+
+          return . fromMaybe (pure noName) $ nonEmpty (mk <$> _sigArgNames)
 
     argToPattern :: SigArg 'Scoped -> Sem r (NonEmpty Internal.PatternArg)
-    argToPattern SigArg {..} = do
+    argToPattern arg@SigArg {..} = do
       let _patternArgIsImplicit = _sigArgImplicit
           _patternArgName :: Maybe Internal.Name = Nothing
+          noName = goWidlcard (Wildcard (getLoc arg))
+          goWidlcard w = do
+            _patternArgPattern <- Internal.PatternVariable <$> varFromWildcard w
+            return Internal.PatternArg {..}
           mk :: Concrete.Argument 'Scoped -> Sem r Internal.PatternArg
           mk = \case
             Concrete.ArgumentSymbol s ->
               let _patternArgPattern = Internal.PatternVariable (goSymbol s)
                in return Internal.PatternArg {..}
-            Concrete.ArgumentWildcard w -> do
-              _patternArgPattern <- Internal.PatternVariable <$> varFromWildcard w
-              return Internal.PatternArg {..}
-      mapM mk _sigArgNames
+            Concrete.ArgumentWildcard w -> goWidlcard w
+      maybe (pure <$> noName) (mapM mk) (nonEmpty _sigArgNames)
 
 goExamples ::
   forall r.
@@ -745,7 +749,7 @@ goExpression = \case
   ExpressionLiteral l -> return (Internal.ExpressionLiteral (goLiteral l))
   ExpressionLambda l -> Internal.ExpressionLambda <$> goLambda l
   ExpressionBraces b -> throw (ErrAppLeftImplicit (AppLeftImplicit b))
-  ExpressionDoubleBraces b -> throw (ErrAppLeftImplicit (AppLeftImplicit b))
+  ExpressionDoubleBraces b -> throw (ErrDanglingDoubleBrace (DanglingDoubleBrace b))
   ExpressionLet l -> goLet l
   ExpressionList l -> goList l
   ExpressionUniverse uni -> return (Internal.ExpressionUniverse (goUniverse uni))
@@ -889,7 +893,7 @@ goExpression = \case
       where
         (r, i) = case arg of
           ExpressionBraces b -> (b ^. withLocParam, Implicit)
-          ExpressionDoubleBraces b -> (b ^. withLocParam, ImplicitInstance)
+          ExpressionDoubleBraces b -> (b ^. doubleBracesExpression, ImplicitInstance)
           _ -> (arg, Explicit)
 
     goPostfix :: PostfixApplication -> Sem r Internal.Application
@@ -968,11 +972,13 @@ goUniverse u
 
 goFunction :: (Members '[Builtins, NameIdGen, Error ScoperError, Reader Pragmas] r) => Function 'Scoped -> Sem r Internal.Function
 goFunction f = do
-  params <- goFunctionParameters (f ^. funParameters)
+  headParam :| tailParams <- goFunctionParameters (f ^. funParameters)
   ret <- goExpression (f ^. funReturn)
   return $
-    Internal.Function (head params) $
-      foldr (\param acc -> Internal.ExpressionFunction $ Internal.Function param acc) ret (NonEmpty.tail params)
+    Internal.Function
+      { _functionLeft = headParam,
+        _functionRight = foldr (\param acc -> Internal.ExpressionFunction $ Internal.Function param acc) ret tailParams
+      }
 
 goFunctionParameters ::
   (Members '[Builtins, NameIdGen, Error ScoperError, Reader Pragmas] r) =>
@@ -997,7 +1003,6 @@ goFunctionParameters FunctionParameters {..} = do
     goFunctionParameter = \case
       FunctionParameterName n -> Just n
       FunctionParameterWildcard {} -> Nothing
-      FunctionParameterUnnamed {} -> Nothing
 
 mkConstructorApp :: Internal.ConstrName -> [Internal.PatternArg] -> Internal.ConstructorApp
 mkConstructorApp a b = Internal.ConstructorApp a b Nothing

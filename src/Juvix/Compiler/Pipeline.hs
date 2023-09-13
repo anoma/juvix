@@ -143,7 +143,7 @@ coreToGeb :: (Members '[Error JuvixError, Reader EntryPoint] r) => Geb.ResultSpe
 coreToGeb spec = Core.toGeb >=> return . uncurry (Geb.toResult spec) . Geb.fromCore
 
 coreToVampIR :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.InfoTable -> Sem r VampIR.Result
-coreToVampIR = Core.toVampIR >=> return . VampIR.toResult . VampIR.fromCore
+coreToVampIR = Core.toVampIR >=> VampIR.fromCore
 
 asmToMiniC' :: (Members '[Error JuvixError, Reader Asm.Options] r) => Asm.InfoTable -> Sem r C.MiniCResult
 asmToMiniC' = mapError (JuvixError @Asm.AsmError) . Asm.toReg' >=> regToMiniC' . Reg.fromAsm
@@ -154,7 +154,7 @@ regToMiniC' tab = do
   return $ C.fromReg (e ^. Asm.optLimits) tab
 
 coreToVampIR' :: (Members '[Error JuvixError, Reader Core.CoreOptions] r) => Core.InfoTable -> Sem r VampIR.Result
-coreToVampIR' = Core.toVampIR' >=> return . VampIR.toResult . VampIR.fromCore
+coreToVampIR' = Core.toVampIR' >=> return . VampIR.fromCore' False
 
 --------------------------------------------------------------------------------
 -- Run pipeline

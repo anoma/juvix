@@ -336,5 +336,12 @@ scoperErrorTests =
       $(mkRelFile "InvalidRangeNumber.juvix")
       $ \case
         ErrInvalidRangeNumber {} -> Nothing
+        _ -> wrongError,
+    NegTest
+      "Dangling double brace"
+      $(mkRelDir "Internal")
+      $(mkRelFile "DanglingDoubleBrace.juvix")
+      $ \case
+        ErrDanglingDoubleBrace {} -> Nothing
         _ -> wrongError
   ]

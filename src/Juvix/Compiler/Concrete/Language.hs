@@ -382,7 +382,8 @@ instance HasLoc IteratorSyntaxDef where
 data SigArg (s :: Stage) = SigArg
   { _sigArgDelims :: Irrelevant (KeywordRef, KeywordRef),
     _sigArgImplicit :: IsImplicit,
-    _sigArgNames :: NonEmpty (Argument s),
+    -- | Allowed to be empty only for Instance arguments
+    _sigArgNames :: [Argument s],
     _sigArgColon :: Maybe (Irrelevant KeywordRef),
     -- | The type is only optional for implicit arguments. Omitting the rhs is
     -- equivalent to writing `: Type`.
@@ -1109,10 +1110,27 @@ data Expression
   | ExpressionRecordUpdate RecordUpdateApp
   | ExpressionParensRecordUpdate ParensRecordUpdate
   | ExpressionBraces (WithLoc Expression)
-  | ExpressionDoubleBraces (WithLoc Expression)
+  | ExpressionDoubleBraces (DoubleBracesExpression 'Scoped)
   | ExpressionIterator (Iterator 'Scoped)
   | ExpressionNamedApplication (NamedApplication 'Scoped)
   deriving stock (Show, Eq, Ord)
+
+data DoubleBracesExpression (s :: Stage) = DoubleBracesExpression
+  { _doubleBracesExpression :: ExpressionType s,
+    _doubleBracesDelims :: Irrelevant (KeywordRef, KeywordRef)
+  }
+
+deriving stock instance Show (DoubleBracesExpression 'Parsed)
+
+deriving stock instance Show (DoubleBracesExpression 'Scoped)
+
+deriving stock instance Eq (DoubleBracesExpression 'Parsed)
+
+deriving stock instance Eq (DoubleBracesExpression 'Scoped)
+
+deriving stock instance Ord (DoubleBracesExpression 'Parsed)
+
+deriving stock instance Ord (DoubleBracesExpression 'Scoped)
 
 instance HasAtomicity (Lambda s) where
   atomicity = const Atom
@@ -1120,8 +1138,6 @@ instance HasAtomicity (Lambda s) where
 data FunctionParameter (s :: Stage)
   = FunctionParameterName (SymbolType s)
   | FunctionParameterWildcard KeywordRef
-  | -- | Used for traits
-    FunctionParameterUnnamed Interval
 
 deriving stock instance Show (FunctionParameter 'Parsed)
 
@@ -1483,7 +1499,7 @@ data ExpressionAtom (s :: Stage)
   | AtomList (List s)
   | AtomCase (Case s)
   | AtomHole (HoleType s)
-  | AtomDoubleBraces (WithLoc (ExpressionType s))
+  | AtomDoubleBraces (DoubleBracesExpression s)
   | AtomBraces (WithLoc (ExpressionType s))
   | AtomLet (Let s)
   | AtomRecordUpdate (RecordUpdate s)
@@ -1647,6 +1663,7 @@ newtype ModuleIndex = ModuleIndex
   }
 
 makeLenses ''PatternArg
+makeLenses ''DoubleBracesExpression
 makeLenses ''Alias
 makeLenses ''FieldPun
 makeLenses ''RecordPatternAssign
@@ -1821,7 +1838,10 @@ instance HasAtomicity (PatternAtom 'Parsed) where
 
 instance (SingI s) => HasAtomicity (FunctionParameters s) where
   atomicity p
-    | not (null (p ^. paramNames)) || p ^. paramImplicit == Implicit = Atom
+    | not (null (p ^. paramNames))
+        || p ^. paramImplicit == Implicit
+        || p ^. paramImplicit == ImplicitInstance =
+        Atom
     | otherwise = case sing :: SStage s of
         SParsed -> atomicity (p ^. paramType)
         SScoped -> atomicity (p ^. paramType)
@@ -1887,7 +1907,6 @@ instance HasLoc (FunctionParameter 'Scoped) where
   getLoc = \case
     FunctionParameterName n -> getLoc n
     FunctionParameterWildcard w -> getLoc w
-    FunctionParameterUnnamed i -> i
 
 instance HasLoc (FunctionParameters 'Scoped) where
   getLoc p = case p ^. paramDelims . unIrrelevant of
@@ -1923,6 +1942,14 @@ instance HasLoc RecordUpdateApp where
 
 instance HasLoc ParensRecordUpdate where
   getLoc = getLoc . (^. parensRecordUpdate)
+
+instance HasLoc (DoubleBracesExpression s) where
+  getLoc DoubleBracesExpression {..} =
+    let (l, r) = _doubleBracesDelims ^. unIrrelevant
+     in getLoc l <> getLoc r
+
+instance HasAtomicity (DoubleBracesExpression s) where
+  atomicity = const Atom
 
 instance HasLoc Expression where
   getLoc = \case
