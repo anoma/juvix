@@ -5,7 +5,7 @@
 #include <juvix/mem/mem.h>
 #include <juvix/object/object.h>
 
-#ifdef API_LIBC
+#if defined(API_LIBC) || defined(API_ZKLLVM)
 #include <string.h>
 #else
 size_t strlen(const char *str);

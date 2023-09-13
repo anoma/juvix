@@ -1,7 +1,7 @@
 
 #include <juvix/object/cstring.h>
 
-#ifndef API_LIBC
+#if !(defined(API_LIBC) || defined(API_ZKLLVM))
 
 size_t strlen(const char *str) {
     const char *str0 = str;
@@ -26,7 +26,7 @@ char *strcat(char *restrict dest, const char *restrict src) {
     return dest;
 }
 
-#endif  // ndef API_LIBC
+#endif  // ndef API_LIBC || API_ZKLLVM
 
 word_t alloc_cstring(const char *str) {
     size_t n = (strlen(str) + sizeof(word_t)) / sizeof(word_t);

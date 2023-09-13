@@ -1,7 +1,7 @@
 
 #include <juvix/mem/mem.h>
 
-#ifndef API_LIBC
+#if !(defined(API_LIBC) || defined(API_ZKLLVM))
 void memcopy(word_t *restrict dest, const word_t *restrict src, size_t n) {
     MEMCOPY(dest, src, n);
 }
@@ -9,7 +9,7 @@ void memcopy(word_t *restrict dest, const word_t *restrict src, size_t n) {
 
 void memfill(word_t *dest, word_t val, size_t n) { MEMFILL(dest, val, n); }
 
-#ifndef API_LIBC
+#if !(defined(API_LIBC) || defined(API_ZKLLVM))
 
 #define BULK_MEMORY_THRESHOLD 32
 

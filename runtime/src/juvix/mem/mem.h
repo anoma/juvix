@@ -3,7 +3,7 @@
 
 #include <juvix/defs.h>
 
-#ifdef API_LIBC
+#if defined(API_LIBC) || defined(API_ZKLLVM)
 #include <string.h>
 #endif
 
@@ -21,7 +21,7 @@
             (dest)[juvix_idx] = (val);                          \
     } while (0)
 
-#ifdef API_LIBC
+#if defined(API_LIBC) || defined(API_ZKLLVM)
 // Copy `n` words from `src` to `dest`.
 static inline void memcopy(word_t *restrict dest, const word_t *restrict src,
                            size_t n) {
@@ -35,7 +35,7 @@ void memcopy(word_t *restrict dest, const word_t *restrict src, size_t n);
 // Fill `n` words at `dest` with `val`
 void memfill(word_t *dest, word_t val, size_t n);
 
-#ifndef API_LIBC
+#if !(defined(API_LIBC) || defined(API_ZKLLVM))
 void *memset(void *dest, int c, size_t n);
 void *memcpy(void *restrict dest, const void *restrict src, size_t n);
 void *memmove(void *dest, const void *src, size_t n);
