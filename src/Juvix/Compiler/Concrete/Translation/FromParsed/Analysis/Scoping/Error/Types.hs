@@ -609,26 +609,6 @@ instance ToGenericError ConstructorExpectedLeftApplication where
             "Constructor expected on the left of a pattern application:"
               <+> ppCode opts' pat
 
-newtype CaseBranchImplicitPattern = CaseBranchImplicitPattern
-  { _caseBranchImplicitPattern :: PatternArg
-  }
-  deriving stock (Show)
-
-instance ToGenericError CaseBranchImplicitPattern where
-  genericError :: (Member (Reader GenericOptions) r) => CaseBranchImplicitPattern -> Sem r GenericError
-  genericError CaseBranchImplicitPattern {..} = do
-    opts <- fromGenericOptions <$> ask
-    let msg = "The pattern" <+> ppCode opts _caseBranchImplicitPattern <+> "is not valid because implicit patterns are not allowed in case branches"
-    return
-      GenericError
-        { _genericErrorLoc = i,
-          _genericErrorMessage = mkAnsiText msg,
-          _genericErrorIntervals = [i]
-        }
-    where
-      i :: Interval
-      i = getLoc _caseBranchImplicitPattern
-
 data ModuleDoesNotExportSymbol = ModuleDoesNotExportSymbol
   { _moduleDoesNotExportSymbol :: Symbol,
     _moduleDoesNotExportModule :: ModuleRef
