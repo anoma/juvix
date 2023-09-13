@@ -278,10 +278,10 @@ zkllvmArgs buildDir o outfile inputFile =
 
     o' = o {_compileDebug = False, _compileAssembly = False}
 
-findClangOnPath :: (Member (Embed IO)) r => Path Rel File -> Sem r (Maybe (Path Abs File))
+findClangOnPath :: (Member (Embed IO) r) => Path Rel File -> Sem r (Maybe (Path Abs File))
 findClangOnPath = findExecutable
 
-findClangUsingEnvVar :: forall r. (Member (Embed IO)) r => Path Rel File -> Sem r (Maybe (Path Abs File))
+findClangUsingEnvVar :: forall r. (Member (Embed IO) r) => Path Rel File -> Sem r (Maybe (Path Abs File))
 findClangUsingEnvVar binary = do
   p <- clangBinPath
   join <$> mapM checkExecutable p
