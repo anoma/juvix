@@ -1808,7 +1808,6 @@ checkNewCaseBranch ::
   Sem r (NewCaseBranch 'Scoped)
 checkNewCaseBranch NewCaseBranch {..} = withLocalScope $ do
   pattern' <- checkParsePatternAtoms _newCaseBranchPattern
-  checkNotImplicit pattern'
   expression' <- (checkParseExpressionAtoms _newCaseBranchExpression)
   return $
     NewCaseBranch
@@ -1816,12 +1815,6 @@ checkNewCaseBranch NewCaseBranch {..} = withLocalScope $ do
         _newCaseBranchExpression = expression',
         ..
       }
-  where
-    checkNotImplicit :: PatternArg -> Sem r ()
-    checkNotImplicit p =
-      when
-        (p ^. patternArgIsImplicit == Implicit)
-        (throw (ErrCaseBranchImplicitPattern (CaseBranchImplicitPattern p)))
 
 checkCase ::
   (Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
