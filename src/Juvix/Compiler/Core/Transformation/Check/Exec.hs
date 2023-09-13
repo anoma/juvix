@@ -9,7 +9,7 @@ import Juvix.Compiler.Core.Transformation.Check.Base
 import Juvix.Compiler.Core.Transformation.Check.VampIR (checkVampIR)
 import Juvix.Data.PPOutput
 
-checkExec :: forall r. Members '[Error CoreError, Reader CoreOptions] r => InfoTable -> Sem r InfoTable
+checkExec :: forall r. (Members '[Error CoreError, Reader CoreOptions] r) => InfoTable -> Sem r InfoTable
 checkExec tab = do
   opts <- ask
   case opts ^. optTarget of

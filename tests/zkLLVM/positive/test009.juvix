@@ -4,23 +4,23 @@ module test009;
 import Stdlib.Prelude open;
 import Stdlib.Data.Nat.Ord open;
 
-f : Nat -> ((Nat -> Nat) -> Nat -> Nat) × Nat → Nat;
-f a l :=
-  (case l
+f (a : Nat) (l : ((Nat -> Nat) -> Nat -> Nat) × Nat)
+  : Nat :=
+  case l of {
       | x, zero := x
-      | _ := id)
+      | _ := id
+    }
     (let
-      y : Nat → Nat;
-      y := id;
+      y : Nat → Nat := id;
     in (let
-        z : (Nat → Nat) → Nat → Nat;
-        z := id;
-      in (case l
+        z : (Nat → Nat) → Nat → Nat := id;
+      in case l of {
           | _, zero := id
-          | _ := id)
+          | _ := id
+        }
         z)
       y)
     a;
 
-main : Nat -> Nat -> Nat -> Bool;
-main a b c := f a (λ {| x y := x y + b}, c) == 9;
+main (a b c : Nat) : Bool :=
+  f a (λ {| x y := x y + b}, c) == 9;

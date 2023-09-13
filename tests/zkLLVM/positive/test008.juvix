@@ -4,8 +4,7 @@ module test008;
 import Stdlib.Prelude open;
 import Stdlib.Data.Nat.Ord open;
 
-f : Nat → Nat → Nat;
-f x :=
+f (x : Nat) : Nat → Nat :=
   if
     (x == 6)
     λ {_ := 0}
@@ -14,6 +13,5 @@ f x :=
       λ {_ := 1}
       (if (x == 10) λ {_ := λ {x := x} 2} λ {x := x}));
 
-main : Nat -> Nat -> Bool;
-main x y :=
+main (x y : Nat) : Bool :=
   f x (x + 1) + f (x + 1) x + f y x + f (y + 1) x == 8;

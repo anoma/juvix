@@ -4,14 +4,11 @@ module test004;
 import Stdlib.Prelude open;
 import Stdlib.Data.Nat.Ord open;
 
-f : Nat -> Nat -> Nat;
-f x y := x + y;
+f (x y : Nat) : Nat := x + y;
 
-g : Nat -> Nat -> Nat;
-g x y := sub (3 * x) y;
+g (x y : Nat) : Nat := sub (3 * x) y;
 
-h : (Nat -> Nat -> Nat) -> Nat -> Nat -> Nat;
-h f y z := f y y * z;
+h (f : Nat -> Nat -> Nat) (y z : Nat) : Nat := f y y * z;
 
 func : Nat -> Nat := λ {x := x + 4};
 
@@ -19,8 +16,7 @@ vx : Nat := 30;
 
 vy : Nat := 7;
 
-main : Nat -> Nat -> Nat -> Nat -> Bool;
-main x y z u :=
+main (x y z u : Nat) : Bool :=
   sub
       (func (div y x)
         + -- 17 div 5 + 4 = 7

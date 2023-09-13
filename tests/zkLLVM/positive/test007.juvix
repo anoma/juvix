@@ -4,17 +4,15 @@ module test007;
 import Stdlib.Prelude open;
 import Stdlib.Data.Nat.Ord open;
 
-main : Nat -> Nat -> Bool;
-main a b :=
+main (a b : Nat) : Bool :=
   let
     x : Nat := a;
   in let
-    x1 :
-      Nat :=
-        x
-          + let
-            x2 : Nat := 2;
-          in x2;
+    x1 : Nat :=
+      x
+        + let
+          x2 : Nat := 2;
+        in x2;
   in let
     x3 : Nat := x1 * x1;
   in let

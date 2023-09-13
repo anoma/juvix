@@ -4,14 +4,9 @@ module test005;
 import Stdlib.Prelude open;
 import Stdlib.Data.Nat.Ord open;
 
-type Box2 :=
-  | box2 : Nat -> Nat -> Box2;
+type Box2 := box2 : Nat -> Nat -> Box2;
 
-type Box :=
-  | box : Box2 -> Box;
+type Box := box : Box2 -> Box;
 
-main : Nat -> Nat -> Bool;
-main x y :=
-  8
-    == case box (box2 x y)
-      | box (box2 x y) := x + y;
+main (x y : Nat) : Bool :=
+  8 == case box (box2 x y) of {box (box2 x y) := x + y};
