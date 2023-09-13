@@ -84,12 +84,15 @@ goModuleNoVisited (ModuleIndex m) = do
 goImport :: (Members '[Reader ExportsTable, State DependencyGraph, State StartNodes, Visit ModuleIndex] r) => Import -> Sem r ()
 goImport (Import m) = visit m
 
--- | Ignores includes
-goPreModule :: (Members '[Reader ExportsTable, State DependencyGraph, State StartNodes] r) => PreModule -> Sem r ()
+goPreModule :: (Members '[Reader ExportsTable, State DependencyGraph, State StartNodes, Visit ModuleIndex] r) => PreModule -> Sem r ()
 goPreModule m = do
   checkStartNode (m ^. moduleName)
   let b = m ^. moduleBody
   mapM_ (goPreStatement (m ^. moduleName)) (b ^. moduleStatements)
+  -- We cannot ignore imports with instances, because a trait in a module M may
+  -- depend on an instance in a module N which imports M  (i.e. new edges may be
+  -- added from definitions in M to definitions in N)
+  mapM_ goImport (b ^. moduleImports)
 
 goStatement :: forall r. (Members '[Reader ExportsTable, State DependencyGraph, State StartNodes] r) => Name -> Statement -> Sem r ()
 goStatement parentModule = \case
