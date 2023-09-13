@@ -1,0 +1,12 @@
+module Main;
+
+import M open;
+import M open;
+
+type Bool := true | false;
+
+instance
+boolI : T Bool := mkT λ {x := x};
+
+main : Bool := case T.pp unit
+  | unit := T.pp true;

@@ -4,14 +4,13 @@ import Nat open;
 
 type Unit := unit : Unit;
 
-f : Nat :=
-  case unit
-    | is-zero := zero;
+f : Nat := case unit of {is-zero := zero};
 
 f2 : Nat :=
-  case suc zero
+  case suc zero of {
     | suc is-zero := zero
-    | _ := zero;
+    | _ := zero
+  };
 
 f3 : Nat → Nat
   | (suc is-zero) := is-zero

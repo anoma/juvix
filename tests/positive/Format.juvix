@@ -10,7 +10,7 @@ hiding -- Hide some names
 {-- like this
 ,; -- don't want , here
 -- Bool either
-Bool; true; false; mkShow};
+Bool; true; false; mkShow; module Show};
 
 import Stdlib.Data.Nat.Ord open;
 
@@ -30,6 +30,33 @@ M;
   operator , pair;
   axiom , : String → String → String;
 end;
+
+-- case with single branch
+case1 (n : Nat) : Nat := case n of {x := zero};
+
+-- case with multiple branches
+case2 (n : Nat) : Nat :=
+  case n of {
+    | zero := zero
+    | _ := zero
+  };
+
+-- case on nested case
+case3 (n : Nat) : Nat :=
+  case case n of {_ := zero} of {
+    | zero := zero
+    | _ := zero
+  };
+
+-- case on nested case expression
+case4 (n : Nat) : Nat :=
+  case n of {
+    | zero := case n of {x := zero}
+    | _ := zero
+  };
+
+-- -- case with application subject
+case5 (n : Nat) : Nat := case id n of {x := zero};
 
 -- qualified commas
 t4 : String := "a" M., "b" M., "c" M., "d";
@@ -237,7 +264,7 @@ end;
 
 --- Traits
 module Traits;
-  import Stdlib.Prelude open hiding {Show; mkShow; show};
+  import Stdlib.Prelude open hiding {Show; mkShow; module Show};
 
   trait
   type Show A := mkShow {show : A → String};

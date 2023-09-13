@@ -1,0 +1,9 @@
+module M;
+
+trait
+type T A := mkT {pp : A → A};
+
+type Unit := unit;
+
+instance
+unitI : T Unit := mkT λ {x := x};

@@ -739,6 +739,7 @@ goExpression = \case
   ExpressionParensIdentifier nt -> return (goIden nt)
   ExpressionApplication a -> Internal.ExpressionApplication <$> goApplication a
   ExpressionCase a -> Internal.ExpressionCase <$> goCase a
+  ExpressionNewCase a -> Internal.ExpressionCase <$> goNewCase a
   ExpressionInfixApplication ia -> Internal.ExpressionApplication <$> goInfix ia
   ExpressionPostfixApplication pa -> Internal.ExpressionApplication <$> goPostfix pa
   ExpressionLiteral l -> return (Internal.ExpressionLiteral (goLiteral l))
@@ -943,6 +944,21 @@ goCase c = do
     goBranch b = do
       _caseBranchPattern <- goPatternArg (b ^. caseBranchPattern)
       _caseBranchExpression <- goExpression (b ^. caseBranchExpression)
+      return Internal.CaseBranch {..}
+
+goNewCase :: forall r. (Members '[Builtins, NameIdGen, Error ScoperError, Reader Pragmas] r) => NewCase 'Scoped -> Sem r Internal.Case
+goNewCase c = do
+  _caseExpression <- goExpression (c ^. newCaseExpression)
+  _caseBranches <- mapM goBranch (c ^. newCaseBranches)
+  let _caseParens = False
+      _caseExpressionType :: Maybe Internal.Expression = Nothing
+      _caseExpressionWholeType :: Maybe Internal.Expression = Nothing
+  return Internal.Case {..}
+  where
+    goBranch :: NewCaseBranch 'Scoped -> Sem r Internal.CaseBranch
+    goBranch b = do
+      _caseBranchPattern <- goPatternArg (b ^. newCaseBranchPattern)
+      _caseBranchExpression <- goExpression (b ^. newCaseBranchExpression)
       return Internal.CaseBranch {..}
 
 goLambda :: forall r. (Members '[Builtins, NameIdGen, Error ScoperError, Reader Pragmas] r) => Lambda 'Scoped -> Sem r Internal.Lambda

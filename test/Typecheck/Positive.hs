@@ -288,7 +288,11 @@ tests =
     posTest
       "Traits2 (Functor, Monad)"
       $(mkRelDir ".")
-      $(mkRelFile "Traits2.juvix")
+      $(mkRelFile "Traits2.juvix"),
+    posTest
+      "Instance import"
+      $(mkRelDir "InstanceImport")
+      $(mkRelFile "Main.juvix")
   ]
     <> [ compilationTest t | t <- Compilation.tests
        ]
