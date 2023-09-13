@@ -1,3 +1,4 @@
+-- TODO remove comments after https://github.com/anoma/juvix/issues/2362 has been addressed
 module Traits2;
 
 trait
@@ -38,8 +39,8 @@ Maybe-fmap {A B : Type} (f : A -> B) : Maybe A -> Maybe B
   | nothing := nothing
   | (just x) := just (f x);
 
-instance
-Maybe-Functor : Functor Maybe := mkFunctor Maybe-fmap;
+-- instance
+-- Maybe-Functor : Functor Maybe := mkFunctor Maybe-fmap;
 
 syntax fixity bind {arity: binary, assoc: left};
 
@@ -51,32 +52,25 @@ Maybe-bind {A B : Type}
   | nothing _ := nothing
   | (just a) f := f a;
 
-instance
-Maybe-Monad : Monad Maybe :=
-  mkMonad (return := just; bind := Maybe-bind; functor := Maybe-Functor);
+-- instance
+-- Maybe-Monad : Monad Maybe :=
+--   mkMonad (return := just; bind := Maybe-bind; functor := Maybe-Functor);
 
 import Stdlib.Data.Bool open;
 import Stdlib.Function open;
-
-test1 : Maybe Bool :=
-  just true >>=
-  (just ∘ not) >>=
-  (just ∘ not) >>=
-  const nothing;
-
 import Stdlib.Data.Product open;
 
 ×-fmap {A B C : Type} (f : B -> C) : A × B -> A × C
   | (a, b) := a , f b;
 
-×-Functor : {A : Type} -> Functor ((×) A)
- := mkFunctor ×-fmap;
+-- ×-Functor : {A : Type} -> Functor ((×) A)
+--  := mkFunctor ×-fmap;
 
 ×-bind {A : Type} {{Semigroup A}} {B C : Type}
   : A × B -> (B -> A × C) -> A × C
    | (a, b) f := case f b
       | (a', b') := (a <> a', b');
 
-instance
-×-Monad {X : Type} {{Semigroup X}} {{Monoid X}} : Monad ((×) X) :=
- mkMonad (bind := ×-bind {X}; return := λ {{_} b := Monoid.mempty, b}; functor := ×-Functor);
+-- instance
+-- ×-Monad {X : Type} {{Semigroup X}} {{Monoid X}} : Monad ((×) X) :=
+--  mkMonad (bind := ×-bind {X}; return := λ {{_} b := Monoid.mempty, b}; functor := ×-Functor);
