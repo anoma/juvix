@@ -1060,6 +1060,7 @@ data Expression
   | ExpressionPostfixApplication PostfixApplication
   | ExpressionList (List 'Scoped)
   | ExpressionCase (Case 'Scoped)
+  | ExpressionNewCase (NewCase 'Scoped)
   | ExpressionLambda (Lambda 'Scoped)
   | ExpressionLet (Let 'Scoped)
   | ExpressionUniverse Universe
@@ -1281,6 +1282,44 @@ deriving stock instance Ord (Case 'Parsed)
 
 deriving stock instance Ord (Case 'Scoped)
 
+data NewCaseBranch (s :: Stage) = NewCaseBranch
+  { _newCaseBranchPipe :: Irrelevant (Maybe KeywordRef),
+    _newCaseBranchAssignKw :: Irrelevant KeywordRef,
+    _newCaseBranchPattern :: PatternParensType s,
+    _newCaseBranchExpression :: ExpressionType s
+  }
+
+deriving stock instance Show (NewCaseBranch 'Parsed)
+
+deriving stock instance Show (NewCaseBranch 'Scoped)
+
+deriving stock instance Eq (NewCaseBranch 'Parsed)
+
+deriving stock instance Eq (NewCaseBranch 'Scoped)
+
+deriving stock instance Ord (NewCaseBranch 'Parsed)
+
+deriving stock instance Ord (NewCaseBranch 'Scoped)
+
+data NewCase (s :: Stage) = NewCase
+  { _newCaseKw :: KeywordRef,
+    _newCaseOfKw :: KeywordRef,
+    _newCaseExpression :: ExpressionType s,
+    _newCaseBranches :: NonEmpty (NewCaseBranch s)
+  }
+
+deriving stock instance Show (NewCase 'Parsed)
+
+deriving stock instance Show (NewCase 'Scoped)
+
+deriving stock instance Eq (NewCase 'Parsed)
+
+deriving stock instance Eq (NewCase 'Scoped)
+
+deriving stock instance Ord (NewCase 'Parsed)
+
+deriving stock instance Ord (NewCase 'Scoped)
+
 data Initializer (s :: Stage) = Initializer
   { _initializerPattern :: PatternParensType s,
     _initializerAssignKw :: Irrelevant KeywordRef,
@@ -1458,6 +1497,7 @@ data ExpressionAtom (s :: Stage)
   | AtomLambda (Lambda s)
   | AtomList (List s)
   | AtomCase (Case s)
+  | AtomNewCase (NewCase s)
   | AtomHole (HoleType s)
   | AtomDoubleBraces (DoubleBracesExpression s)
   | AtomBraces (WithLoc (ExpressionType s))
@@ -1684,6 +1724,8 @@ makeLenses ''PatternInfixApp
 makeLenses ''PatternPostfixApp
 makeLenses ''Case
 makeLenses ''CaseBranch
+makeLenses ''NewCase
+makeLenses ''NewCaseBranch
 makeLenses ''PatternBinding
 makeLenses ''PatternAtoms
 makeLenses ''ExpressionAtoms
@@ -1746,6 +1788,7 @@ instance HasAtomicity Expression where
     ExpressionUniverse {} -> Atom
     ExpressionFunction {} -> Aggregate funFixity
     ExpressionCase c -> atomicity c
+    ExpressionNewCase c -> atomicity c
     ExpressionIterator i -> atomicity i
     ExpressionNamedApplication i -> atomicity i
     ExpressionRecordUpdate {} -> Aggregate updateFixity
@@ -1760,6 +1803,9 @@ instance HasAtomicity (Iterator s) where
   atomicity = const Atom
 
 instance HasAtomicity (Case s) where
+  atomicity = const Atom
+
+instance HasAtomicity (NewCase s) where
   atomicity = const Atom
 
 instance HasAtomicity (Let 'Scoped) where
@@ -1854,8 +1900,19 @@ instance HasLoc (Let 'Scoped) where
 instance (SingI s) => HasLoc (CaseBranch s) where
   getLoc c = getLoc (c ^. caseBranchPipe) <> getLocExpressionType (c ^. caseBranchExpression)
 
+instance (SingI s) => HasLoc (NewCaseBranch s) where
+  getLoc c = case c ^. newCaseBranchPipe . unIrrelevant of
+    Nothing -> branchLoc
+    Just p -> getLoc p <> branchLoc
+    where
+      branchLoc :: Interval
+      branchLoc = getLocExpressionType (c ^. newCaseBranchExpression)
+
 instance (SingI s) => HasLoc (Case s) where
   getLoc c = getLoc (c ^. caseKw) <> getLoc (c ^. caseBranches . to last)
+
+instance (SingI s) => HasLoc (NewCase s) where
+  getLoc c = getLoc (c ^. newCaseKw) <> getLoc (c ^. newCaseBranches . to last)
 
 instance HasLoc (List s) where
   getLoc List {..} = getLoc _listBracketL <> getLoc _listBracketR
@@ -1893,6 +1950,7 @@ instance HasLoc Expression where
     ExpressionLambda i -> getLoc i
     ExpressionList l -> getLoc l
     ExpressionCase i -> getLoc i
+    ExpressionNewCase i -> getLoc i
     ExpressionLet i -> getLoc i
     ExpressionUniverse i -> getLoc i
     ExpressionLiteral i -> getLoc i
@@ -2247,6 +2305,7 @@ instance IsApe Expression ApeLeaf where
     ExpressionIdentifier {} -> leaf
     ExpressionList {} -> leaf
     ExpressionCase {} -> leaf
+    ExpressionNewCase {} -> leaf
     ExpressionLambda {} -> leaf
     ExpressionLet {} -> leaf
     ExpressionUniverse {} -> leaf

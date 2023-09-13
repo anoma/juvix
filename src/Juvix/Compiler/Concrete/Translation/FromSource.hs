@@ -611,6 +611,7 @@ expressionAtom =
       <|> AtomIdentifier <$> name
       <|> AtomUniverse <$> universe
       <|> AtomLambda <$> lambda
+      <|> P.try (AtomNewCase <$> newCase)
       <|> AtomCase <$> case_
       <|> AtomFunction <$> function
       <|> AtomLet <$> letBlock
@@ -878,6 +879,21 @@ case_ = do
   _caseBranches <- some1 caseBranch
   let _caseParens = False
   return Case {..}
+
+newCaseBranch :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => Irrelevant (Maybe KeywordRef) -> ParsecS r (NewCaseBranch 'Parsed)
+newCaseBranch _newCaseBranchPipe = do
+  _newCaseBranchPattern <- parsePatternAtoms
+  _newCaseBranchAssignKw <- Irrelevant <$> kw kwAssign
+  _newCaseBranchExpression <- parseExpressionAtoms
+  return NewCaseBranch {..}
+
+newCase :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (NewCase 'Parsed)
+newCase = P.label "new case" $ do
+  _newCaseKw <- kw kwCase
+  _newCaseExpression <- parseExpressionAtoms
+  _newCaseOfKw <- kw kwOf
+  _newCaseBranches <- braces (pipeSep1 newCaseBranch)
+  return NewCase {..}
 
 --------------------------------------------------------------------------------
 -- Universe expression
