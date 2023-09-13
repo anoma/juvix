@@ -1793,7 +1793,6 @@ checkCaseBranch ::
   Sem r (CaseBranch 'Scoped)
 checkCaseBranch CaseBranch {..} = withLocalScope $ do
   pattern' <- checkParsePatternAtoms _caseBranchPattern
-  checkNotImplicit pattern'
   expression' <- (checkParseExpressionAtoms _caseBranchExpression)
   return $
     CaseBranch
@@ -1801,12 +1800,21 @@ checkCaseBranch CaseBranch {..} = withLocalScope $ do
         _caseBranchExpression = expression',
         ..
       }
-  where
-    checkNotImplicit :: PatternArg -> Sem r ()
-    checkNotImplicit p =
-      when
-        (p ^. patternArgIsImplicit == Implicit)
-        (throw (ErrCaseBranchImplicitPattern (CaseBranchImplicitPattern p)))
+
+checkNewCaseBranch ::
+  forall r.
+  (Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
+  NewCaseBranch 'Parsed ->
+  Sem r (NewCaseBranch 'Scoped)
+checkNewCaseBranch NewCaseBranch {..} = withLocalScope $ do
+  pattern' <- checkParsePatternAtoms _newCaseBranchPattern
+  expression' <- (checkParseExpressionAtoms _newCaseBranchExpression)
+  return $
+    NewCaseBranch
+      { _newCaseBranchPattern = pattern',
+        _newCaseBranchExpression = expression',
+        ..
+      }
 
 checkCase ::
   (Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
@@ -1821,6 +1829,21 @@ checkCase Case {..} = do
         _caseBranches = caseBranches',
         _caseKw,
         _caseParens
+      }
+
+checkNewCase ::
+  (Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
+  NewCase 'Parsed ->
+  Sem r (NewCase 'Scoped)
+checkNewCase NewCase {..} = do
+  caseBranches' <- mapM checkNewCaseBranch _newCaseBranches
+  caseExpression' <- checkParseExpressionAtoms _newCaseExpression
+  return $
+    NewCase
+      { _newCaseExpression = caseExpression',
+        _newCaseBranches = caseBranches',
+        _newCaseKw,
+        _newCaseOfKw
       }
 
 checkLambda ::
@@ -2019,6 +2042,7 @@ checkExpressionAtom e = case e of
   AtomIdentifier n -> pure . AtomIdentifier <$> checkScopedIden n
   AtomLambda lam -> pure . AtomLambda <$> checkLambda lam
   AtomCase c -> pure . AtomCase <$> checkCase c
+  AtomNewCase c -> pure . AtomNewCase <$> checkNewCase c
   AtomLet letBlock -> pure . AtomLet <$> checkLet letBlock
   AtomUniverse uni -> return (pure (AtomUniverse uni))
   AtomFunction fun -> pure . AtomFunction <$> checkFunction fun
@@ -2511,6 +2535,7 @@ parseTerm =
       <|> parseFunction
       <|> parseLambda
       <|> parseCase
+      <|> parseNewCase
       <|> parseList
       <|> parseLiteral
       <|> parseLet
@@ -2549,6 +2574,14 @@ parseTerm =
         case_ :: ExpressionAtom 'Scoped -> Maybe (Case 'Scoped)
         case_ s = case s of
           AtomCase l -> Just l
+          _ -> Nothing
+
+    parseNewCase :: Parse Expression
+    parseNewCase = ExpressionNewCase <$> P.token case_ mempty
+      where
+        case_ :: ExpressionAtom 'Scoped -> Maybe (NewCase 'Scoped)
+        case_ s = case s of
+          AtomNewCase l -> Just l
           _ -> Nothing
 
     parseList :: Parse Expression
