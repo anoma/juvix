@@ -10,7 +10,7 @@ hiding -- Hide some names
 {-- like this
 ,; -- don't want , here
 -- Bool either
-Bool; true; false; mkShow};
+Bool; true; false; mkShow; module Show};
 
 import Stdlib.Data.Nat.Ord open;
 
@@ -264,7 +264,7 @@ end;
 
 --- Traits
 module Traits;
-  import Stdlib.Prelude open hiding {Show; mkShow; show};
+  import Stdlib.Prelude open hiding {Show; mkShow; module Show};
 
   trait
   type Show A := mkShow {show : A → String};
