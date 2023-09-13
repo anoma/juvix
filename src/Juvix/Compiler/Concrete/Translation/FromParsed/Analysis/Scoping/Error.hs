@@ -33,7 +33,6 @@ data ScoperError
   | ErrAliasBinderPattern AliasBinderPattern
   | ErrImplicitPatternLeftApplication ImplicitPatternLeftApplication
   | ErrConstructorExpectedLeftApplication ConstructorExpectedLeftApplication
-  | ErrCaseBranchImplicitPattern CaseBranchImplicitPattern
   | ErrModuleDoesNotExportSymbol ModuleDoesNotExportSymbol
   | ErrIteratorInitializer IteratorInitializer
   | ErrIteratorRange IteratorRange
@@ -52,7 +51,6 @@ data ScoperError
 
 instance ToGenericError ScoperError where
   genericError = \case
-    ErrCaseBranchImplicitPattern e -> genericError e
     ErrInfixParser e -> genericError e
     ErrAppLeftImplicit e -> genericError e
     ErrDanglingDoubleBrace e -> genericError e
