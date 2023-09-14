@@ -627,11 +627,10 @@ inferExpression' hint e = case e of
     goHole :: Hole -> Sem r TypedExpression
     goHole h = do
       void (queryMetavar h)
-      ty <- ExpressionHole <$> freshHole (getLoc h)
       return
         TypedExpression
           { _typedExpression = ExpressionHole h,
-            _typedType = ty
+            _typedType = ExpressionUniverse (SmallUniverse (getLoc h))
           }
 
     goInstanceHole :: Hole -> Sem r TypedExpression
