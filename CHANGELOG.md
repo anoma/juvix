@@ -4,6 +4,46 @@
 <img align="right" width="300" height="300" alt="Juvix Mascot" src="../assets/images/tara-smiling.svg" />
 </a>
 
+## [v0.5.0](https://github.com/anoma/juvix/tree/v0.5.0)
+
+[Full Changelog](https://github.com/anoma/juvix/compare/v0.4.3...v0.5.0)
+
+**Implemented enhancements:**
+
+- Add new case syntax [\#2353](https://github.com/anoma/juvix/pull/2353) ([paulcadman](https://github.com/paulcadman))
+- VampIR range checks and error handling [\#2344](https://github.com/anoma/juvix/pull/2344) ([lukaszcz](https://github.com/lukaszcz))
+- Traits [\#2320](https://github.com/anoma/juvix/pull/2320) ([lukaszcz](https://github.com/lukaszcz))
+- Aliasing [\#2301](https://github.com/anoma/juvix/pull/2301) ([janmasrovira](https://github.com/janmasrovira))
+- External package dependencies [\#2272](https://github.com/anoma/juvix/pull/2272) ([paulcadman](https://github.com/paulcadman))
+
+**Merged pull requests:**
+
+- Update stdlib submodule to current stdlib main [\#2364](https://github.com/anoma/juvix/pull/2364) ([paulcadman](https://github.com/paulcadman))
+- Add newlines at end of JSON files [\#2360](https://github.com/anoma/juvix/pull/2360) ([lukaszcz](https://github.com/lukaszcz))
+- Update the standard library to use the trait framework [\#2359](https://github.com/anoma/juvix/pull/2359) ([lukaszcz](https://github.com/lukaszcz))
+- Remove duplicated implicit pattern check from scoper [\#2357](https://github.com/anoma/juvix/pull/2357) ([paulcadman](https://github.com/paulcadman))
+- Fix instance import [\#2350](https://github.com/anoma/juvix/pull/2350) ([lukaszcz](https://github.com/lukaszcz))
+- Small refactor for traits [\#2345](https://github.com/anoma/juvix/pull/2345) ([janmasrovira](https://github.com/janmasrovira))
+- Allow named arguments in type synonyms [\#2343](https://github.com/anoma/juvix/pull/2343) ([janmasrovira](https://github.com/janmasrovira))
+- Improve formatting of single-constructor types and records [\#2342](https://github.com/anoma/juvix/pull/2342) ([janmasrovira](https://github.com/janmasrovira))
+- Add Internet effect [\#2337](https://github.com/anoma/juvix/pull/2337) ([janmasrovira](https://github.com/janmasrovira))
+- Global offline flag [\#2335](https://github.com/anoma/juvix/pull/2335) ([paulcadman](https://github.com/paulcadman))
+- New fixity/iterator syntax [\#2332](https://github.com/anoma/juvix/pull/2332) ([janmasrovira](https://github.com/janmasrovira))
+- Add fixity face [\#2328](https://github.com/anoma/juvix/pull/2328) ([janmasrovira](https://github.com/janmasrovira))
+- Generate html documentation for alias and fixity definitions [\#2327](https://github.com/anoma/juvix/pull/2327) ([janmasrovira](https://github.com/janmasrovira))
+- Generate documentation for local modules in the html backend [\#2326](https://github.com/anoma/juvix/pull/2326) ([janmasrovira](https://github.com/janmasrovira))
+- Generate function signatures in the html backend [\#2325](https://github.com/anoma/juvix/pull/2325) ([janmasrovira](https://github.com/janmasrovira))
+- Add macchiato html theme [\#2323](https://github.com/anoma/juvix/pull/2323) ([janmasrovira](https://github.com/janmasrovira))
+- Show all available html themes in the CLI automatically [\#2322](https://github.com/anoma/juvix/pull/2322) ([janmasrovira](https://github.com/janmasrovira))
+- Add css colors `ju-comment` and `ju-judoc` [\#2321](https://github.com/anoma/juvix/pull/2321) ([janmasrovira](https://github.com/janmasrovira))
+- Report termination errors after typechecking [\#2318](https://github.com/anoma/juvix/pull/2318) ([janmasrovira](https://github.com/janmasrovira))
+- Install wasmer binary from Github releases [\#2317](https://github.com/anoma/juvix/pull/2317) ([paulcadman](https://github.com/paulcadman))
+- Fix record update formatting [\#2315](https://github.com/anoma/juvix/pull/2315) ([lukaszcz](https://github.com/lukaszcz))
+- Fix record pattern formatting [\#2314](https://github.com/anoma/juvix/pull/2314) ([lukaszcz](https://github.com/lukaszcz))
+- Update ci to use ormolu 0.5.3.0 and reformat project [\#2313](https://github.com/anoma/juvix/pull/2313) ([janmasrovira](https://github.com/janmasrovira))
+- Add pragma face [\#2312](https://github.com/anoma/juvix/pull/2312) ([janmasrovira](https://github.com/janmasrovira))
+- Remove `open import` syntax [\#2307](https://github.com/anoma/juvix/pull/2307) ([lukaszcz](https://github.com/lukaszcz))
+
 ## [v0.4.3](https://github.com/anoma/juvix/tree/.v0.4.3)
 
 [Full Changelog](https://github.com/anoma/juvix/compare/v0.4.2....v0.4.3)
