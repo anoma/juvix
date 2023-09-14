@@ -1,6 +1,6 @@
 module Iterators1;
 
-syntax iterator map {init: 0};
+syntax iterator map {init := 0};
 map : {A B : Type} → (A → B) → A → B
 | f x := f x;
 

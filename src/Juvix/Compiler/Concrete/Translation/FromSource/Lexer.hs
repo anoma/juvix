@@ -50,8 +50,10 @@ identifier = fmap fst identifierL
 identifierL :: (Members '[InfoTableBuilder] r) => ParsecS r (Text, Interval)
 identifierL = lexeme bareIdentifier
 
-integer :: (Members '[InfoTableBuilder] r) => ParsecS r (Integer, Interval)
-integer = integer' decimal
+integer :: (Members '[InfoTableBuilder] r) => ParsecS r (WithLoc Integer)
+integer = do
+  (num, i) <- integer' decimal
+  return (WithLoc i num)
 
 bracedString :: forall e m. (MonadParsec e Text m) => m Text
 bracedString =

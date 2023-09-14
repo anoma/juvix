@@ -4,17 +4,17 @@ module test060;
 import Stdlib.Prelude open hiding {fst};
 
 type Triple (A B C : Type) :=
-  | mkTriple {
-      fst : A;
-      snd : B;
-      thd : C
-    };
+  mkTriple {
+    fst : A;
+    snd : B;
+    thd : C
+  };
 
 type Pair (A B : Type) :=
-  | mkPair {
-      fst : A;
-      snd : B
-    };
+  mkPair {
+    fst : A;
+    snd : B
+  };
 
 mf : Pair (Pair Bool (List Nat)) (List Nat) → Bool
   | mkPair@{fst := mkPair@{fst; snd := nil};

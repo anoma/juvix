@@ -7,7 +7,6 @@ where
 
 import Data.ByteString.Builder qualified as Builder
 import Data.HashMap.Strict qualified as HashMap
-import Data.Text qualified as Text
 import Data.Time.Clock
 import Data.Versions (prettySemVer)
 import Juvix.Compiler.Backend.Html.Data
@@ -23,7 +22,6 @@ import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.D
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking qualified as InternalTyped
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context
 import Juvix.Compiler.Pipeline.EntryPoint
-import Juvix.Data.FixityInfo as FixityInfo
 import Juvix.Extra.Assets
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude
@@ -441,9 +439,10 @@ goStatement = \case
 
 goFixity :: forall r. (Members '[Reader HtmlOptions, Reader NormalizedTable] r) => FixitySyntaxDef 'Scoped -> Sem r Html
 goFixity def = do
-  sig' <- ppHelper (ppFixityDefHeader def)
+  sig' <- ppHelper (ppFixityDefHeaderNew def)
   header' <- defHeader (def ^. fixitySymbol) sig' (def ^. fixityDoc)
-  let tbl' = table . tbody $ ari <> prec
+  prec' <- mkPrec
+  let tbl' = table . tbody $ ari <> prec'
   return $
     header'
       <> ( Html.div
@@ -452,27 +451,31 @@ goFixity def = do
                <> tbl'
          )
   where
-    info :: FixityInfo
-    info = def ^. fixityInfo . withLocParam . withSourceValue
+    info :: ParsedFixityInfo 'Scoped
+    info = def ^. fixityInfo
 
     row :: Html -> Html
     row x = tr $ td ! Attr.class_ "src" $ x
 
-    prec :: Html
-    prec = case info ^. fixityPrecSame of
-      Just txt -> row $ toHtml ("Same precedence as " <> txt)
+    mkPrec :: Sem r Html
+    mkPrec = case info ^. fixityPrecSame of
+      Just txt -> do
+        s <- ppCodeHtml defaultOptions txt
+        return (row $ toHtml ("Same precedence as " <> s))
       Nothing ->
         goPrec "Higher" (info ^. fixityPrecAbove)
           <> goPrec "Lower" (info ^. fixityPrecBelow)
         where
-          goPrec :: Html -> [Text] -> Html
-          goPrec above ls = case nonEmpty ls of
+          goPrec :: Html -> Maybe [S.Symbol] -> Sem r Html
+          goPrec above ls = case ls >>= nonEmpty of
             Nothing -> mempty
-            Just l -> row $ above <> " precedence than: " <> toHtml (Text.intercalate ", " (toList l))
+            Just l -> do
+              l' <- foldr (\x acc -> x <> ", " <> acc) mempty <$> mapM (ppCodeHtml defaultOptions) l
+              return (row $ above <> " precedence than: " <> l')
 
     ari :: Html
     ari =
-      let arit = toHtml @String $ show (info ^. FixityInfo.fixityArity)
+      let arit = toHtml @String $ show (info ^. fixityParsedArity)
           assoc = toHtml @String $ case fromMaybe AssocNone (info ^. fixityAssoc) of
             AssocNone -> ""
             AssocRight -> ", right-associative"

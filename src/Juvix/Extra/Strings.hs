@@ -110,6 +110,15 @@ open = "open"
 syntax :: (IsString s) => s
 syntax = "syntax"
 
+below :: (IsString s) => s
+below = "below"
+
+above :: (IsString s) => s
+above = "above"
+
+assoc :: (IsString s) => s
+assoc = "assoc"
+
 fixity :: (IsString s) => s
 fixity = "fixity"
 
@@ -739,3 +748,27 @@ nil = "nil"
 
 cons :: (IsString s) => s
 cons = "cons"
+
+unary :: (IsString s) => s
+unary = "unary"
+
+binary :: (IsString s) => s
+binary = "binary"
+
+left :: (IsString s) => s
+left = "left"
+
+right :: (IsString s) => s
+right = "right"
+
+same :: (IsString s) => s
+same = "same"
+
+none :: (IsString s) => s
+none = "none"
+
+init :: (IsString s) => s
+init = "init"
+
+range :: (IsString s) => s
+range = "range"

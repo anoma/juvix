@@ -6,6 +6,7 @@ module Juvix.Compiler.Concrete.Translation.FromSource
   )
 where
 
+import Control.Applicative.Permutations
 import Data.ByteString.UTF8 qualified as BS
 import Data.List.NonEmpty.Extra qualified as NonEmpty
 import Data.Singletons
@@ -514,19 +515,67 @@ aliasDef synKw = do
   _aliasDefAsName <- name
   return AliasDef {..}
 
---------------------------------------------------------------------------------
--- Operator syntax declaration
---------------------------------------------------------------------------------
+parsedFixityFields ::
+  forall r.
+  (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
+  ParsecS r (ParsedFixityFields 'Parsed)
+parsedFixityFields = do
+  l <- kw delimBraceL
+  (_fixityFieldsAssoc, _fixityFieldsPrecBelow, _fixityFieldsPrecAbove, _fixityFieldsPrecSame) <- intercalateEffect semicolon $ do
+    as <- toPermutationWithDefault Nothing (Just <$> assoc)
+    bel <- toPermutationWithDefault Nothing (Just <$> belowAbove kwBelow)
+    abov <- toPermutationWithDefault Nothing (Just <$> belowAbove kwAbove)
+    sam <- toPermutationWithDefault Nothing (Just <$> same)
+    pure (as, bel, abov, sam)
+  r <- kw delimBraceR
+  let _fixityFieldsBraces = Irrelevant (l, r)
+  return ParsedFixityFields {..}
+  where
+    same :: ParsecS r Symbol
+    same = do
+      kw kwSame
+      kw kwAssign
+      symbol
 
-precedence :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r Precedence
-precedence = PrecNat <$> (fst <$> decimal)
+    belowAbove :: Keyword -> ParsecS r [Symbol]
+    belowAbove aboveOrBelow = do
+      kw aboveOrBelow
+      kw kwAssign
+      kw kwBracketL
+      r <- P.sepEndBy symbol semicolon
+      kw kwBracketR
+      return r
+
+    assoc :: ParsecS r BinaryAssoc
+    assoc = do
+      void (kw kwAssoc >> kw kwAssign)
+      kw kwLeft
+        $> AssocLeft
+        <|> kw kwRight
+          $> AssocRight
+        <|> kw kwNone
+          $> AssocNone
+
+parsedFixityInfo :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (ParsedFixityInfo 'Parsed)
+parsedFixityInfo = do
+  _fixityParsedArity <- withLoc ari
+  _fixityFields <- optional parsedFixityFields
+  return ParsedFixityInfo {..}
+  where
+    ari :: ParsecS r Arity
+    ari =
+      kw kwUnary
+        $> Unary
+        <|> kw kwBinary
+          $> Binary
 
 fixitySyntaxDef :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => KeywordRef -> ParsecS r (FixitySyntaxDef 'Parsed)
 fixitySyntaxDef _fixitySyntaxKw = P.label "<fixity declaration>" $ do
+  _fixityDoc <- getJudoc
   _fixityKw <- kw kwFixity
   _fixitySymbol <- symbol
-  _fixityInfo <- withLoc (parseYaml "{" "}")
-  _fixityDoc <- getJudoc
+  _fixityAssignKw <- kw kwAssign
+  _fixityInfo <- parsedFixityInfo
   return FixitySyntaxDef {..}
 
 operatorSyntaxDef :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => KeywordRef -> ParsecS r OperatorSyntaxDef
@@ -536,15 +585,35 @@ operatorSyntaxDef _opSyntaxKw = do
   _opFixity <- symbol
   return OperatorSyntaxDef {..}
 
---------------------------------------------------------------------------------
--- Iterator syntax declaration
---------------------------------------------------------------------------------
+parsedIteratorInfo ::
+  forall r.
+  (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
+  ParsecS r ParsedIteratorInfo
+parsedIteratorInfo = do
+  l <- kw delimBraceL
+  (_parsedIteratorInfoInitNum, _parsedIteratorInfoRangeNum) <- intercalateEffect semicolon $ do
+    ini <- toPermutationWithDefault Nothing (Just <$> pinit)
+    ran <- toPermutationWithDefault Nothing (Just <$> prangeNum)
+    pure (ini, ran)
+  r <- kw delimBraceR
+  let _parsedIteratorInfoBraces = Irrelevant (l, r)
+  return ParsedIteratorInfo {..}
+  where
+    pinit :: ParsecS r (WithLoc Int)
+    pinit = do
+      void (kw kwInit >> kw kwAssign)
+      fmap fromIntegral <$> integer
+
+    prangeNum :: ParsecS r (WithLoc Int)
+    prangeNum = do
+      void (kw kwRange >> kw kwAssign)
+      fmap fromIntegral <$> integer
 
 iteratorSyntaxDef :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => KeywordRef -> ParsecS r IteratorSyntaxDef
 iteratorSyntaxDef _iterSyntaxKw = do
   _iterIteratorKw <- kw kwIterator
   _iterSymbol <- symbol
-  _iterAttribs <- optional (withLoc (parseYaml "{" "}"))
+  _iterInfo <- optional parsedIteratorInfo
   return IteratorSyntaxDef {..}
 
 --------------------------------------------------------------------------------
@@ -827,9 +896,7 @@ parseList = do
 --------------------------------------------------------------------------------
 
 literalInteger :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r LiteralLoc
-literalInteger = do
-  (x, loc) <- integer
-  return (WithLoc loc (LitInteger x))
+literalInteger = fmap LitInteger <$> integer
 
 literalString :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r LiteralLoc
 literalString = do

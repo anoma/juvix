@@ -2,6 +2,8 @@
 
 module Juvix.Compiler.Concrete.Language
   ( module Juvix.Compiler.Concrete.Language,
+    module Juvix.Data.FixityInfo,
+    module Juvix.Data.IteratorInfo,
     module Juvix.Compiler.Concrete.Data.Name,
     module Juvix.Compiler.Concrete.Data.Stage,
     module Juvix.Compiler.Concrete.Data.NameRef,
@@ -31,8 +33,8 @@ import Juvix.Compiler.Concrete.Data.VisibilityAnn
 import Juvix.Data
 import Juvix.Data.Ape.Base as Ape
 import Juvix.Data.Fixity
-import Juvix.Data.FixityInfo (FixityInfo)
-import Juvix.Data.IteratorAttribs
+import Juvix.Data.FixityInfo (Arity (..), FixityInfo)
+import Juvix.Data.IteratorInfo
 import Juvix.Data.Keyword
 import Juvix.Data.NameKind
 import Juvix.Parser.Lexer (isDelimiterStr)
@@ -141,10 +143,6 @@ type family ModuleEndType t = res | res -> t where
 -- pretty-printing. Also, we probably don't want to impose pragma formatting
 -- choices on the user.
 type ParsedPragmas = WithLoc (WithSource Pragmas)
-
-type ParsedIteratorAttribs = WithLoc (WithSource IteratorAttribs)
-
-type ParsedFixityInfo = WithLoc (WithSource FixityInfo)
 
 data Argument (s :: Stage)
   = ArgumentSymbol (SymbolType s)
@@ -269,6 +267,13 @@ deriving stock instance (Ord (AliasDef 'Parsed))
 
 deriving stock instance (Ord (AliasDef 'Scoped))
 
+data ParsedIteratorInfo = ParsedIteratorInfo
+  { _parsedIteratorInfoInitNum :: Maybe (WithLoc Int),
+    _parsedIteratorInfoRangeNum :: Maybe (WithLoc Int),
+    _parsedIteratorInfoBraces :: Irrelevant (KeywordRef, KeywordRef)
+  }
+  deriving stock (Show, Eq, Ord, Generic)
+
 data SyntaxDef (s :: Stage)
   = SyntaxFixity (FixitySyntaxDef s)
   | SyntaxOperator OperatorSyntaxDef
@@ -287,11 +292,49 @@ deriving stock instance (Ord (SyntaxDef 'Parsed))
 
 deriving stock instance (Ord (SyntaxDef 'Scoped))
 
+data ParsedFixityFields (s :: Stage) = ParsedFixityFields
+  { _fixityFieldsAssoc :: Maybe BinaryAssoc,
+    _fixityFieldsPrecSame :: Maybe (SymbolType s),
+    _fixityFieldsPrecBelow :: Maybe [SymbolType s],
+    _fixityFieldsPrecAbove :: Maybe [SymbolType s],
+    _fixityFieldsBraces :: Irrelevant (KeywordRef, KeywordRef)
+  }
+
+deriving stock instance (Show (ParsedFixityFields 'Parsed))
+
+deriving stock instance (Show (ParsedFixityFields 'Scoped))
+
+deriving stock instance (Eq (ParsedFixityFields 'Parsed))
+
+deriving stock instance (Eq (ParsedFixityFields 'Scoped))
+
+deriving stock instance (Ord (ParsedFixityFields 'Parsed))
+
+deriving stock instance (Ord (ParsedFixityFields 'Scoped))
+
+data ParsedFixityInfo (s :: Stage) = ParsedFixityInfo
+  { _fixityParsedArity :: WithLoc Arity,
+    _fixityFields :: Maybe (ParsedFixityFields s)
+  }
+
+deriving stock instance (Show (ParsedFixityInfo 'Parsed))
+
+deriving stock instance (Show (ParsedFixityInfo 'Scoped))
+
+deriving stock instance (Eq (ParsedFixityInfo 'Parsed))
+
+deriving stock instance (Eq (ParsedFixityInfo 'Scoped))
+
+deriving stock instance (Ord (ParsedFixityInfo 'Parsed))
+
+deriving stock instance (Ord (ParsedFixityInfo 'Scoped))
+
 data FixitySyntaxDef (s :: Stage) = FixitySyntaxDef
   { _fixitySymbol :: SymbolType s,
     _fixityDoc :: Maybe (Judoc s),
-    _fixityInfo :: ParsedFixityInfo,
+    _fixityInfo :: ParsedFixityInfo s,
     _fixityKw :: KeywordRef,
+    _fixityAssignKw :: KeywordRef,
     _fixitySyntaxKw :: KeywordRef
   }
 
@@ -314,9 +357,6 @@ data FixityDef = FixityDef
   }
   deriving stock (Show, Eq, Ord)
 
-instance HasLoc (FixitySyntaxDef s) where
-  getLoc FixitySyntaxDef {..} = getLoc _fixitySyntaxKw <> getLoc _fixityInfo
-
 data OperatorSyntaxDef = OperatorSyntaxDef
   { _opSymbol :: Symbol,
     _opFixity :: Symbol,
@@ -330,7 +370,7 @@ instance HasLoc OperatorSyntaxDef where
 
 data IteratorSyntaxDef = IteratorSyntaxDef
   { _iterSymbol :: Symbol,
-    _iterAttribs :: Maybe ParsedIteratorAttribs,
+    _iterInfo :: Maybe ParsedIteratorInfo,
     _iterSyntaxKw :: KeywordRef,
     _iterIteratorKw :: KeywordRef
   }
@@ -1705,7 +1745,6 @@ makeLenses ''Application
 makeLenses ''Let
 makeLenses ''FunctionParameters
 makeLenses ''Import
-makeLenses ''FixitySyntaxDef
 makeLenses ''OperatorSyntaxDef
 makeLenses ''IteratorSyntaxDef
 makeLenses ''ConstructorDef
@@ -1737,9 +1776,38 @@ makeLenses ''ArgumentBlock
 makeLenses ''NamedArgument
 makeLenses ''NamedApplication
 makeLenses ''AliasDef
+makeLenses ''FixitySyntaxDef
+makeLenses ''ParsedFixityInfo
+makeLenses ''ParsedFixityFields
+
+fixityFieldHelper :: SimpleGetter (ParsedFixityFields s) (Maybe a) -> SimpleGetter (ParsedFixityInfo s) (Maybe a)
+fixityFieldHelper l = to (^? fixityFields . _Just . l . _Just)
+
+fixityAssoc :: SimpleGetter (ParsedFixityInfo s) (Maybe (BinaryAssoc))
+fixityAssoc = fixityFieldHelper fixityFieldsAssoc
+
+fixityPrecSame :: SimpleGetter (ParsedFixityInfo s) (Maybe (SymbolType s))
+fixityPrecSame = fixityFieldHelper fixityFieldsPrecSame
+
+fixityPrecAbove :: SimpleGetter (ParsedFixityInfo s) (Maybe [SymbolType s])
+fixityPrecAbove = fixityFieldHelper fixityFieldsPrecAbove
+
+fixityPrecBelow :: SimpleGetter (ParsedFixityInfo s) (Maybe [SymbolType s])
+fixityPrecBelow = fixityFieldHelper fixityFieldsPrecBelow
 
 instance (SingI s) => HasLoc (AliasDef s) where
   getLoc AliasDef {..} = getLoc _aliasDefSyntaxKw <> getLocIdentifierType _aliasDefAsName
+
+instance HasLoc (ParsedFixityFields s) where
+  getLoc d = getLoc l <> getLoc r
+    where
+      (l, r) = d ^. fixityFieldsBraces . unIrrelevant
+
+instance HasLoc (ParsedFixityInfo s) where
+  getLoc def = getLoc (def ^. fixityParsedArity) <>? (getLoc <$> def ^. fixityFields)
+
+instance HasLoc (FixitySyntaxDef s) where
+  getLoc def = getLoc (def ^. fixitySyntaxKw) <> getLoc (def ^. fixityInfo)
 
 instance (SingI s) => HasLoc (SyntaxDef s) where
   getLoc = \case
@@ -2426,6 +2494,13 @@ scopedIdenName f n = case n ^. scopedIdenAlias of
   Just a -> do
     a' <- f a
     pure (set scopedIdenAlias (Just a') n)
+
+fromParsedIteratorInfo :: ParsedIteratorInfo -> IteratorInfo
+fromParsedIteratorInfo ParsedIteratorInfo {..} =
+  IteratorInfo
+    { _iteratorInfoInitNum = (^. withLocParam) <$> _parsedIteratorInfoInitNum,
+      _iteratorInfoRangeNum = (^. withLocParam) <$> _parsedIteratorInfoRangeNum
+    }
 
 instance HasFixity PostfixApplication where
   getFixity (PostfixApplication _ op) = fromMaybe impossible (op ^. scopedIdenName . S.nameFixity)
