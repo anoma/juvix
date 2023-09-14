@@ -47,6 +47,8 @@ f'3 {A} {{M : Show A}} : A → String := Show.show {{M}};
 
 f'4 {A} {{_ : Show A}} : A → String := Show.show;
 
+f5 {A} {{Show A}} (n : String) (a : A) : String := n ++str Show.show a;
+
 main : IO :=
   printStringLn (Show.show true) >>
   printStringLn (f false) >>
@@ -60,4 +62,5 @@ main : IO :=
   printStringLn (f'4 [just [1]; nothing; just [2; 3]]) >>
   printStringLn (f'3 "abba") >>
   printStringLn (f'3 {{M := mkShow (λ{x := x ++str "!"})}} "abba") >>
+  printStringLn (f5 "abba" 3) >>
   printStringLn (Show.show ["a"; "b"; "c"; "d"]);
