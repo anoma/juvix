@@ -15,8 +15,8 @@ type SubsI = HashMap VarName InstanceParam
 subsIToE :: SubsI -> SubsE
 subsIToE = fmap paramToExpression
 
-isTrait :: InfoTable -> InductiveName -> Bool
-isTrait tab name = fromJust (HashMap.lookup name (tab ^. infoInductives)) ^. inductiveInfoDef . inductiveTrait
+isTrait :: InfoTable -> Name -> Bool
+isTrait tab name = maybe False (^. inductiveInfoDef . inductiveTrait) (HashMap.lookup name (tab ^. infoInductives))
 
 resolveTraitInstance ::
   (Members '[Error TypeCheckerError, NameIdGen, Inference, Reader LocalVars, Reader InfoTable] r) =>
