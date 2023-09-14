@@ -759,11 +759,28 @@ goExpression = \case
   ExpressionInstanceHole h -> return (Internal.ExpressionInstanceHole h)
   ExpressionIterator i -> goIterator i
   ExpressionNamedApplication i -> goNamedApplication i
+  ExpressionRecordCreation i -> goRecordCreation i
   ExpressionRecordUpdate i -> goRecordUpdateApp i
   ExpressionParensRecordUpdate i -> Internal.ExpressionLambda <$> goRecordUpdate (i ^. parensRecordUpdate)
   where
     goNamedApplication :: Concrete.NamedApplication 'Scoped -> Sem r Internal.Expression
     goNamedApplication = runNamedArguments >=> goExpression
+
+    goRecordCreation :: Concrete.RecordCreation 'Scoped -> Sem r Internal.Expression
+    goRecordCreation = goRecordCreation' >=> goNamedApplication
+
+    goRecordCreation' :: Concrete.RecordCreation 'Scoped -> Sem r (Concrete.NamedApplication 'Scoped)
+    goRecordCreation' Concrete.RecordCreation {..} = do
+      args <- mapM goRecordDefineField _recordCreationFields
+      return $
+        Concrete.NamedApplication
+          { _namedAppName = _recordCreationConstructor,
+            _namedAppArgs = args,
+            _namedAppSignature = _recordCreationSignature
+          }
+
+    goRecordDefineField :: Concrete.RecordDefineField 'Scoped -> Sem r (Concrete.ArgumentBlock 'Scoped)
+    goRecordDefineField = \case {}
 
     goRecordUpdate :: Concrete.RecordUpdate 'Scoped -> Sem r Internal.Lambda
     goRecordUpdate r = do

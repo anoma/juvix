@@ -277,9 +277,31 @@ instance (SingI s) => PrettyPrint (NamedApplication s) where
   -- ppCode :: Members '[ExactPrint, Reader Options] r => NamedApplication s -> Sem r ()
   ppCode = apeHelper
 
+instance (SingI s) => PrettyPrint (RecordCreation s) where
+  ppCode RecordCreation {..} = do
+    let Irrelevant (l, r) = _recordCreationDelims
+        fields' =
+          line
+            <> indent
+              ( sequenceWith
+                  (semicolon >> line)
+                  (ppCode <$> _recordCreationFields)
+              )
+            <> line
+    ppIdentifierType _recordCreationConstructor
+      <> ppCode _recordCreationAtKw
+      <> ppCode l
+      <> fields'
+      <> ppCode r
+
 instance (SingI s) => PrettyPrint (RecordAssignField s) where
   ppCode RecordAssignField {..} =
     ppSymbolType _fieldAssignName <+> ppCode _fieldAssignKw <+> ppExpressionType _fieldAssignValue
+
+instance (SingI s) => PrettyPrint (RecordDefineField s) where
+  ppCode = \case
+    RecordDefineFieldAssign a -> ppCode a
+    RecordDefineFieldFunDef RecordFunDef {..} -> ppCode _fieldDefFunDef
 
 instance (SingI s) => PrettyPrint (RecordUpdate s) where
   ppCode RecordUpdate {..} = do
@@ -324,6 +346,7 @@ instance (SingI s) => PrettyPrint (ExpressionAtom s) where
     AtomHole w -> ppHoleType w
     AtomIterator i -> ppCode i
     AtomNamedApplication i -> ppCode i
+    AtomRecordCreation i -> ppCode i
 
 instance PrettyPrint PatternScopedIden where
   ppCode = \case
@@ -770,6 +793,7 @@ instance PrettyPrint Expression where
     ExpressionNewCase c -> ppCode c
     ExpressionIterator i -> ppCode i
     ExpressionNamedApplication i -> ppCode i
+    ExpressionRecordCreation i -> ppCode i
     ExpressionRecordUpdate i -> ppCode i
     ExpressionParensRecordUpdate i -> ppCode i
 

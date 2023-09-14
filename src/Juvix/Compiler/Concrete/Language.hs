@@ -1147,6 +1147,7 @@ data Expression
   | ExpressionDoubleBraces (DoubleBracesExpression 'Scoped)
   | ExpressionIterator (Iterator 'Scoped)
   | ExpressionNamedApplication (NamedApplication 'Scoped)
+  | ExpressionRecordCreation (RecordCreation 'Scoped)
   deriving stock (Show, Eq, Ord)
 
 data DoubleBracesExpression (s :: Stage) = DoubleBracesExpression
@@ -1568,7 +1569,8 @@ data RecordCreation (s :: Stage) = RecordCreation
   { _recordCreationConstructor :: IdentifierType s,
     _recordCreationAtKw :: Irrelevant KeywordRef,
     _recordCreationDelims :: Irrelevant (KeywordRef, KeywordRef),
-    _recordCreationFields :: NonEmpty (RecordDefineField s)
+    _recordCreationFields :: NonEmpty (RecordDefineField s),
+    _recordCreationSignature :: Irrelevant (NameSignatureType s)
   }
 
 deriving stock instance Show (RecordCreation 'Parsed)
@@ -1602,6 +1604,7 @@ data ExpressionAtom (s :: Stage)
   | AtomParens (ExpressionType s)
   | AtomIterator (Iterator s)
   | AtomNamedApplication (NamedApplication s)
+  | AtomRecordCreation (RecordCreation s)
 
 deriving stock instance Show (ExpressionAtom 'Parsed)
 
@@ -1891,6 +1894,9 @@ instance HasAtomicity (ArgumentBlock s) where
 instance HasAtomicity (NamedApplication s) where
   atomicity = const (Aggregate appFixity)
 
+instance HasAtomicity (RecordCreation s) where
+  atomicity = const (Aggregate updateFixity)
+
 instance HasAtomicity Expression where
   atomicity e = case e of
     ExpressionIdentifier {} -> Atom
@@ -1912,6 +1918,7 @@ instance HasAtomicity Expression where
     ExpressionNewCase c -> atomicity c
     ExpressionIterator i -> atomicity i
     ExpressionNamedApplication i -> atomicity i
+    ExpressionRecordCreation i -> atomicity i
     ExpressionRecordUpdate {} -> Aggregate updateFixity
     ExpressionParensRecordUpdate {} -> Atom
 
@@ -2044,8 +2051,19 @@ instance (SingI s) => HasLoc (NamedApplication s) where
 instance (SingI s) => HasLoc (RecordAssignField s) where
   getLoc f = getLocSymbolType (f ^. fieldAssignName) <> getLocExpressionType (f ^. fieldAssignValue)
 
+instance (SingI s) => HasLoc (RecordFunDef s) where
+  getLoc f = getLoc (f ^. fieldDefFunDef)
+
+instance (SingI s) => HasLoc (RecordDefineField s) where
+  getLoc = \case
+    RecordDefineFieldAssign i -> getLoc i
+    RecordDefineFieldFunDef i -> getLoc i
+
 instance (SingI s) => HasLoc (RecordUpdate s) where
   getLoc r = getLoc (r ^. recordUpdateAtKw) <> getLocSpan (r ^. recordUpdateFields)
+
+instance (SingI s) => HasLoc (RecordCreation s) where
+  getLoc RecordCreation {..} = getLocIdentifierType _recordCreationConstructor <> getLocSpan _recordCreationFields
 
 instance HasLoc RecordUpdateApp where
   getLoc r = getLoc (r ^. recordAppExpression) <> getLoc (r ^. recordAppUpdate)
@@ -2082,6 +2100,7 @@ instance HasLoc Expression where
     ExpressionDoubleBraces i -> getLoc i
     ExpressionIterator i -> getLoc i
     ExpressionNamedApplication i -> getLoc i
+    ExpressionRecordCreation i -> getLoc i
     ExpressionRecordUpdate i -> getLoc i
     ExpressionParensRecordUpdate i -> getLoc i
 
@@ -2364,6 +2383,15 @@ instance (SingI s) => IsApe (NamedApplication s) ApeLeaf where
     where
       f = toApeIdentifierType _namedAppName
 
+instance (SingI s) => IsApe (RecordCreation s) ApeLeaf where
+  toApe :: RecordCreation s -> Ape ApeLeaf
+  toApe a =
+    ApeLeaf $
+      Leaf
+        { _leafAtomicity = atomicity a,
+          _leafExpr = ApeLeafAtom (sing :&: AtomRecordCreation a)
+        }
+
 instance IsApe Application ApeLeaf where
   toApe (Application l r) =
     ApeApp
@@ -2420,6 +2448,7 @@ instance IsApe Expression ApeLeaf where
     ExpressionPostfixApplication a -> toApe a
     ExpressionFunction a -> toApe a
     ExpressionNamedApplication a -> toApe a
+    ExpressionRecordCreation a -> toApe a
     ExpressionRecordUpdate a -> toApe a
     ExpressionParensRecordUpdate {} -> leaf
     ExpressionParensIdentifier {} -> leaf
