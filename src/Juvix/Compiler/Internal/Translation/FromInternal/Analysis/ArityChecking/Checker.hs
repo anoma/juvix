@@ -370,12 +370,6 @@ checkLhs loc guessedBody ariSignature pats = do
         pref = aI - targetI
         preceedingImplicits :: Arity -> Int
         preceedingImplicits = length . takeWhile isParamImplicitOrInstance . unfoldArity
-          where
-            isParamImplicitOrInstance :: ArityParameter -> Bool
-            isParamImplicitOrInstance = \case
-              ParamExplicit {} -> False
-              ParamImplicit {} -> True
-              ParamImplicitInstance -> True
         aI :: Int
         aI = preceedingImplicits a
         targetI :: Int
@@ -708,7 +702,7 @@ checkExpression hintArity expr = case expr of
               (ArityFunction (FunctionArity impl _), [])
                 -- When there are no remaining arguments and the expected arity of the
                 -- expression matches the current arity we should *not* insert a hole.
-                | (isParamImplicit impl || impl == ParamImplicitInstance)
+                | isParamImplicitOrInstance impl
                     && ari == hint ->
                     return []
               (ArityFunction (FunctionArity ParamImplicit {} r), _) -> do

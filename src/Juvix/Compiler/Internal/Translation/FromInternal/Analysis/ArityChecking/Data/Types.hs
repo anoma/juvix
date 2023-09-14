@@ -35,10 +35,11 @@ data ArityParameter
 makeLenses ''UnfoldedArity
 makeLenses ''FunctionArity
 
-isParamImplicit :: ArityParameter -> Bool
-isParamImplicit = \case
+isParamImplicitOrInstance :: ArityParameter -> Bool
+isParamImplicitOrInstance = \case
   ParamImplicit {} -> True
-  _ -> False
+  ParamImplicitInstance {} -> True
+  ParamExplicit {} -> False
 
 arityParameter :: ArityParameter -> Arity
 arityParameter = \case
