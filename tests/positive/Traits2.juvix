@@ -42,7 +42,7 @@ Maybe-fmap {A B : Type} (f : A -> B) : Maybe A -> Maybe B
 -- instance
 -- Maybe-Functor : Functor Maybe := mkFunctor Maybe-fmap;
 
-syntax fixity bind {arity: binary, assoc: left};
+syntax fixity bind := binary {assoc := left};
 
 syntax operator >>= bind;
 >>= : {M : Type -> Type} -> {{Monad M}} -> {A B : Type} -> M A -> (A -> M B) -> M B := Monad.bind;
