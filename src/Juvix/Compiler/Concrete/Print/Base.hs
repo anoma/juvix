@@ -277,9 +277,9 @@ instance (SingI s) => PrettyPrint (NamedApplication s) where
   -- ppCode :: Members '[ExactPrint, Reader Options] r => NamedApplication s -> Sem r ()
   ppCode = apeHelper
 
-instance (SingI s) => PrettyPrint (RecordUpdateField s) where
-  ppCode RecordUpdateField {..} =
-    ppSymbolType _fieldUpdateName <+> ppCode _fieldUpdateAssignKw <+> ppExpressionType _fieldUpdateValue
+instance (SingI s) => PrettyPrint (RecordAssignField s) where
+  ppCode RecordAssignField {..} =
+    ppSymbolType _fieldAssignName <+> ppCode _fieldAssignKw <+> ppExpressionType _fieldAssignValue
 
 instance (SingI s) => PrettyPrint (RecordUpdate s) where
   ppCode RecordUpdate {..} = do

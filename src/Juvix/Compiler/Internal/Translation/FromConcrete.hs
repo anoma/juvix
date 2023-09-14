@@ -775,17 +775,17 @@ goExpression = \case
           }
       where
         -- fields indexed by field index.
-        mkFieldmap :: Sem r (IntMap (RecordUpdateField 'Scoped))
+        mkFieldmap :: Sem r (IntMap (RecordAssignField 'Scoped))
         mkFieldmap = execState mempty $ mapM go (r ^. recordUpdateFields)
           where
-            go :: RecordUpdateField 'Scoped -> Sem (State (IntMap (RecordUpdateField 'Scoped)) ': r) ()
+            go :: RecordAssignField 'Scoped -> Sem (State (IntMap (RecordAssignField 'Scoped)) ': r) ()
             go f = do
-              let idx = f ^. fieldUpdateArgIx
-              whenM (gets @(IntMap (RecordUpdateField 'Scoped)) (IntMap.member idx)) (throw repeated)
+              let idx = f ^. fieldAssignArgIx
+              whenM (gets @(IntMap (RecordAssignField 'Scoped)) (IntMap.member idx)) (throw repeated)
               modify' (IntMap.insert idx f)
               where
                 repeated :: ScoperError
-                repeated = ErrRepeatedField (RepeatedField (f ^. fieldUpdateName))
+                repeated = ErrRepeatedField (RepeatedField (f ^. fieldAssignName))
 
         mkArgs :: [Indexed Internal.VarName] -> Sem r [Internal.Expression]
         mkArgs vs = do
@@ -793,7 +793,7 @@ goExpression = \case
           execOutputList $
             go (uncurry Indexed <$> IntMap.toAscList fieldMap) vs
           where
-            go :: [Indexed (RecordUpdateField 'Scoped)] -> [Indexed Internal.VarName] -> Sem (Output Internal.Expression ': r) ()
+            go :: [Indexed (RecordAssignField 'Scoped)] -> [Indexed Internal.VarName] -> Sem (Output Internal.Expression ': r) ()
             go fields = \case
               [] -> return ()
               Indexed idx var : vars' -> case getArg idx of
@@ -801,11 +801,11 @@ goExpression = \case
                   output (Internal.toExpression var)
                   go fields vars'
                 Just (arg, fields') -> do
-                  val' <- goExpression (arg ^. fieldUpdateValue)
+                  val' <- goExpression (arg ^. fieldAssignValue)
                   output val'
                   go fields' vars'
               where
-                getArg :: Int -> Maybe (RecordUpdateField 'Scoped, [Indexed (RecordUpdateField 'Scoped)])
+                getArg :: Int -> Maybe (RecordAssignField 'Scoped, [Indexed (RecordAssignField 'Scoped)])
                 getArg idx = do
                   Indexed fidx arg :| fs <- nonEmpty fields
                   guard (idx == fidx)

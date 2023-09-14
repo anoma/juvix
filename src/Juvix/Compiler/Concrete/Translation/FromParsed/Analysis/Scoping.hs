@@ -2107,20 +2107,20 @@ checkRecordUpdate RecordUpdate {..} = do
         _recordUpdateDelims
       }
   where
-    checkField :: RecordNameSignature -> RecordUpdateField 'Parsed -> Sem r (RecordUpdateField 'Scoped)
+    checkField :: RecordNameSignature -> RecordAssignField 'Parsed -> Sem r (RecordAssignField 'Scoped)
     checkField sig f = do
-      value' <- checkParseExpressionAtoms (f ^. fieldUpdateValue)
-      idx' <- maybe (throw unexpectedField) return (sig ^? recordNames . at (f ^. fieldUpdateName) . _Just . _2)
+      value' <- checkParseExpressionAtoms (f ^. fieldAssignValue)
+      idx' <- maybe (throw unexpectedField) return (sig ^? recordNames . at (f ^. fieldAssignName) . _Just . _2)
       return
-        RecordUpdateField
-          { _fieldUpdateName = f ^. fieldUpdateName,
-            _fieldUpdateArgIx = idx',
-            _fieldUpdateAssignKw = f ^. fieldUpdateAssignKw,
-            _fieldUpdateValue = value'
+        RecordAssignField
+          { _fieldAssignName = f ^. fieldAssignName,
+            _fieldAssignArgIx = idx',
+            _fieldAssignKw = f ^. fieldAssignKw,
+            _fieldAssignValue = value'
           }
       where
         unexpectedField :: ScoperError
-        unexpectedField = ErrUnexpectedField (UnexpectedField (f ^. fieldUpdateName))
+        unexpectedField = ErrUnexpectedField (UnexpectedField (f ^. fieldAssignName))
 
 checkNamedApplication ::
   forall r.

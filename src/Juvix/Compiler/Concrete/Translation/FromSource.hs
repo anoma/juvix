@@ -651,13 +651,13 @@ importedModule t = unlessM (moduleVisited t) go
       txt <- readFile' path
       eitherM throw (const (return ())) (runModuleParser path txt)
 
-recordUpdateField :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (RecordUpdateField 'Parsed)
+recordUpdateField :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (RecordAssignField 'Parsed)
 recordUpdateField = do
-  _fieldUpdateName <- symbol
-  _fieldUpdateAssignKw <- Irrelevant <$> kw kwAssign
-  _fieldUpdateValue <- parseExpressionAtoms
-  let _fieldUpdateArgIx = ()
-  return RecordUpdateField {..}
+  _fieldAssignName <- symbol
+  _fieldAssignKw <- Irrelevant <$> kw kwAssign
+  _fieldAssignValue <- parseExpressionAtoms
+  let _fieldAssignArgIx = ()
+  return RecordAssignField {..}
 
 recordUpdate :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (RecordUpdate 'Parsed)
 recordUpdate = do
