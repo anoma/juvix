@@ -10,8 +10,10 @@ module Juvix.Compiler.Internal.Translation.FromConcrete
   )
 where
 
+import Control.Monad.Extra (mapAndUnzipM)
 import Data.HashMap.Strict qualified as HashMap
 import Data.IntMap.Strict qualified as IntMap
+import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Compiler.Builtins
 import Juvix.Compiler.Concrete.Data.NameSignature.Base
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
@@ -767,20 +769,39 @@ goExpression = \case
     goNamedApplication = runNamedArguments >=> goExpression
 
     goRecordCreation :: Concrete.RecordCreation 'Scoped -> Sem r Internal.Expression
-    goRecordCreation = goRecordCreation' >=> goNamedApplication
-
-    goRecordCreation' :: Concrete.RecordCreation 'Scoped -> Sem r (Concrete.NamedApplication 'Scoped)
-    goRecordCreation' Concrete.RecordCreation {..} = do
-      args <- mapM goRecordDefineField _recordCreationFields
+    goRecordCreation Concrete.RecordCreation {..} = do
+      (args, defs) <- mapAndUnzipM goRecordDefineField (toList _recordCreationFields)
+      let app =
+            Concrete.NamedApplication
+              { _namedAppName = _recordCreationConstructor,
+                _namedAppArgs =
+                  NonEmpty.singleton $
+                    Concrete.ArgumentBlock
+                      { _argBlockDelims = Irrelevant Nothing,
+                        _argBlockImplicit = Explicit,
+                        _argBlockArgs = nonEmpty' args
+                      },
+                _namedAppSignature = _recordCreationSignature
+              }
+      cls <- goLetFunDefs (nonEmpty' $ map Concrete.LetFunctionDef defs)
+      e <- runNamedArguments app >>= goExpression
       return $
-        Concrete.NamedApplication
-          { _namedAppName = _recordCreationConstructor,
-            _namedAppArgs = args,
-            _namedAppSignature = _recordCreationSignature
-          }
+        Internal.ExpressionLet $
+          Internal.Let
+            { _letClauses = nonEmpty' cls,
+              _letExpression = e
+            }
 
-    goRecordDefineField :: Concrete.RecordDefineField 'Scoped -> Sem r (Concrete.ArgumentBlock 'Scoped)
-    goRecordDefineField = \case {}
+    goRecordDefineField :: Concrete.RecordDefineField 'Scoped -> Sem r (Concrete.NamedArgument 'Scoped, Concrete.FunctionDef 'Scoped)
+    goRecordDefineField = \case
+      RecordDefineFieldAssign a -> goRecordAssignField a
+      RecordDefineFieldFunDef a -> goRecordFunDef a
+
+    goRecordAssignField :: Concrete.RecordAssignField 'Scoped -> Sem r (Concrete.NamedArgument 'Scoped, Concrete.FunctionDef 'Scoped)
+    goRecordAssignField = undefined
+
+    goRecordFunDef :: Concrete.FunctionDef 'Scoped -> Sem r (Concrete.NamedArgument 'Scoped, Concrete.FunctionDef 'Scoped)
+    goRecordFunDef = undefined
 
     goRecordUpdate :: Concrete.RecordUpdate 'Scoped -> Sem r Internal.Lambda
     goRecordUpdate r = do
@@ -877,10 +898,10 @@ goExpression = \case
       return $ case nonEmpty clauses of
         Just _letClauses -> Internal.ExpressionLet Internal.Let {..}
         Nothing -> _letExpression
-      where
-        goLetFunDefs :: NonEmpty (LetStatement 'Scoped) -> Sem r [Internal.LetClause]
-        goLetFunDefs cl = fmap goSCC <$> preLetStatements cl
 
+    goLetFunDefs :: NonEmpty (LetStatement 'Scoped) -> Sem r [Internal.LetClause]
+    goLetFunDefs clauses = fmap goSCC <$> preLetStatements clauses
+      where
         preLetStatements :: NonEmpty (LetStatement 'Scoped) -> Sem r [SCC Internal.PreLetStatement]
         preLetStatements cl = do
           pre <- mapMaybeM preLetStatement (toList cl)

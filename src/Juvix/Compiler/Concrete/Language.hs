@@ -527,26 +527,9 @@ deriving stock instance Ord (RecordAssignField 'Parsed)
 
 deriving stock instance Ord (RecordAssignField 'Scoped)
 
-data RecordFunDef (s :: Stage) = RecordFunDef
-  { _fieldDefArgIx :: FieldArgIxType s,
-    _fieldDefFunDef :: FunctionDef s
-  }
-
-deriving stock instance Show (RecordFunDef 'Parsed)
-
-deriving stock instance Show (RecordFunDef 'Scoped)
-
-deriving stock instance Eq (RecordFunDef 'Parsed)
-
-deriving stock instance Eq (RecordFunDef 'Scoped)
-
-deriving stock instance Ord (RecordFunDef 'Parsed)
-
-deriving stock instance Ord (RecordFunDef 'Scoped)
-
 data RecordDefineField (s :: Stage)
   = RecordDefineFieldAssign (RecordAssignField s)
-  | RecordDefineFieldFunDef (RecordFunDef s)
+  | RecordDefineFieldFunDef (FunctionDef s)
 
 deriving stock instance Show (RecordDefineField 'Parsed)
 
@@ -1768,7 +1751,6 @@ makeLenses ''RecordUpdateExtra
 makeLenses ''RecordUpdate
 makeLenses ''RecordUpdateApp
 makeLenses ''RecordAssignField
-makeLenses ''RecordFunDef
 makeLenses ''NonDefinitionsSection
 makeLenses ''DefinitionsSection
 makeLenses ''ProjectionDef
@@ -2050,9 +2032,6 @@ instance (SingI s) => HasLoc (NamedApplication s) where
 
 instance (SingI s) => HasLoc (RecordAssignField s) where
   getLoc f = getLocSymbolType (f ^. fieldAssignName) <> getLocExpressionType (f ^. fieldAssignValue)
-
-instance (SingI s) => HasLoc (RecordFunDef s) where
-  getLoc f = getLoc (f ^. fieldDefFunDef)
 
 instance (SingI s) => HasLoc (RecordDefineField s) where
   getLoc = \case

@@ -301,7 +301,7 @@ instance (SingI s) => PrettyPrint (RecordAssignField s) where
 instance (SingI s) => PrettyPrint (RecordDefineField s) where
   ppCode = \case
     RecordDefineFieldAssign a -> ppCode a
-    RecordDefineFieldFunDef RecordFunDef {..} -> ppCode _fieldDefFunDef
+    RecordDefineFieldFunDef a -> ppCode a
 
 instance (SingI s) => PrettyPrint (RecordUpdate s) where
   ppCode RecordUpdate {..} = do
