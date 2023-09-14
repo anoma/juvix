@@ -40,15 +40,6 @@ isParamImplicit = \case
   ParamImplicit {} -> True
   _ -> False
 
-hasImplicitness :: IsImplicit -> ArityParameter -> Bool
-hasImplicitness i a = case (i, a) of
-  (Explicit, ParamExplicit {}) -> True
-  (Explicit, _) -> False
-  (Implicit, ParamImplicit {}) -> True
-  (Implicit, _) -> False
-  (ImplicitInstance, ParamImplicitInstance) -> True
-  (ImplicitInstance, _) -> False
-
 arityParameter :: ArityParameter -> Arity
 arityParameter = \case
   ParamImplicit a -> a
@@ -126,41 +117,3 @@ instance Pretty Arity where
     ArityUnit -> "𝟙"
     ArityUnknown -> "?"
     ArityFunction f -> pretty f
-
-applyArgument :: IsImplicit -> Arity -> Maybe Arity
-applyArgument i = \case
-  ArityUnknown -> Just ArityUnknown
-  ArityUnit -> Nothing
-  ArityFunction f
-    | hasImplicitness i (f ^. functionArityLeft) -> Just (f ^. functionArityRight)
-    | otherwise -> Nothing
-
--- | If we give identifiers to unknown arities we could do unification and the
--- matching would be more accurate
-matchArity :: Arity -> Arity -> Bool
-matchArity a1 a2 = isJust . run . runFail $ do
-  go a1 a2
-  where
-    go :: Arity -> Arity -> Sem '[Fail] ()
-    go a b = case (a, b) of
-      (ArityUnknown {}, _) -> return ()
-      (_, ArityUnknown {}) -> return ()
-      (ArityUnit, ArityUnit) -> return ()
-      (ArityUnit, ArityFunction {}) -> fail
-      (ArityFunction {}, ArityUnit) -> fail
-      (ArityFunction f1, ArityFunction f2) -> goFunction f1 f2
-
-    goParam :: ArityParameter -> ArityParameter -> Sem '[Fail] ()
-    goParam p1 p2 = case (p1, p2) of
-      (ParamExplicit a, ParamExplicit b) -> go a b
-      (ParamExplicit {}, _) -> fail
-      (_, ParamExplicit {}) -> fail
-      (ParamImplicit a, ParamImplicit b) -> go a b
-      (ParamImplicit {}, _) -> fail
-      (_, ParamImplicit {}) -> fail
-      (ParamImplicitInstance, ParamImplicitInstance) -> return ()
-
-    goFunction :: FunctionArity -> FunctionArity -> Sem '[Fail] ()
-    goFunction f1 f2 = do
-      goParam (f1 ^. functionArityLeft) (f2 ^. functionArityLeft)
-      go (f1 ^. functionArityRight) (f2 ^. functionArityRight)
