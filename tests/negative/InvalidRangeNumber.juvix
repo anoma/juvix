@@ -1,0 +1,5 @@
+module InvalidRangeNumber;
+
+syntax iterator wrong {range := 0};
+
+wrong : Type := Type;

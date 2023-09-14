@@ -22,8 +22,8 @@ data BinaryAssoc
   deriving stock (Show, Eq, Ord, Data)
 
 data OperatorArity
-  = Unary UnaryAssoc
-  | Binary BinaryAssoc
+  = OpUnary UnaryAssoc
+  | OpBinary BinaryAssoc
   deriving stock (Show, Eq, Ord, Data)
 
 data Fixity = Fixity
@@ -48,23 +48,23 @@ class HasFixity a where
 
 isLeftAssoc :: Fixity -> Bool
 isLeftAssoc opInf = case opInf ^. fixityArity of
-  Binary AssocLeft -> True
+  OpBinary AssocLeft -> True
   _ -> False
 
 isRightAssoc :: Fixity -> Bool
 isRightAssoc opInf = case opInf ^. fixityArity of
-  Binary AssocRight -> True
+  OpBinary AssocRight -> True
   _ -> False
 
 isPostfixAssoc :: Fixity -> Bool
 isPostfixAssoc opInf = case opInf ^. fixityArity of
-  Unary AssocPostfix -> True
+  OpUnary AssocPostfix -> True
   _ -> False
 
 isBinary :: Fixity -> Bool
 isBinary f = case f ^. fixityArity of
-  Binary {} -> True
-  Unary {} -> False
+  OpBinary {} -> True
+  OpUnary {} -> False
 
 isUnary :: Fixity -> Bool
 isUnary = not . isBinary
@@ -73,7 +73,7 @@ appFixity :: Fixity
 appFixity =
   Fixity
     { _fixityPrecedence = PrecApp,
-      _fixityArity = (Binary AssocLeft),
+      _fixityArity = (OpBinary AssocLeft),
       _fixityId = Nothing
     }
 
@@ -81,7 +81,7 @@ funFixity :: Fixity
 funFixity =
   Fixity
     { _fixityPrecedence = PrecArrow,
-      _fixityArity = (Binary AssocRight),
+      _fixityArity = (OpBinary AssocRight),
       _fixityId = Nothing
     }
 
@@ -89,7 +89,7 @@ updateFixity :: Fixity
 updateFixity =
   Fixity
     { _fixityPrecedence = PrecUpdate,
-      _fixityArity = (Unary AssocPostfix),
+      _fixityArity = (OpUnary AssocPostfix),
       _fixityId = Nothing
     }
 

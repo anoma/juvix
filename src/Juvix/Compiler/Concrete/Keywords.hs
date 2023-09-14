@@ -21,11 +21,15 @@ import Juvix.Data.Keyword.All
     delimSemicolon,
     -- keywords
 
+    kwAbove,
     kwAlias,
     kwAs,
     kwAssign,
+    kwAssoc,
     kwAt,
     kwAxiom,
+    kwBelow,
+    kwBinary,
     kwBracketL,
     kwBracketR,
     kwBuiltin,
@@ -39,23 +43,30 @@ import Juvix.Data.Keyword.All
     kwImport,
     kwIn,
     kwInductive,
+    kwInit,
     kwInstance,
     kwIterator,
     kwLambda,
+    kwLeft,
     kwLet,
     kwMapsTo,
     kwModule,
+    kwNone,
     kwOf,
     kwOpen,
     kwOperator,
     kwPipe,
     kwPositive,
     kwPublic,
+    kwRange,
+    kwRight,
     kwRightArrow,
+    kwSame,
     kwSyntax,
     kwTerminating,
     kwTrait,
     kwType,
+    kwUnary,
     kwUsing,
     kwWhere,
     kwWildcard,
@@ -63,10 +74,10 @@ import Juvix.Data.Keyword.All
 import Juvix.Prelude
 
 allKeywordStrings :: HashSet Text
-allKeywordStrings = keywordsStrings allKeywords
+allKeywordStrings = keywordsStrings reservedKeywords
 
-allKeywords :: [Keyword]
-allKeywords =
+reservedKeywords :: [Keyword]
+reservedKeywords =
   [ delimSemicolon,
     kwAssign,
     kwAt,
@@ -92,16 +103,4 @@ allKeywords =
     kwUsing,
     kwWhere,
     kwWildcard
-  ]
-
--- | Keywords that do not need to be reserved. Currently only for documentation
--- purposes
-nonKeywords :: [Keyword]
-nonKeywords =
-  [ kwAs,
-    kwEq,
-    kwFixity,
-    kwOperator,
-    kwAlias,
-    kwIterator
   ]

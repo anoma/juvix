@@ -331,6 +331,13 @@ scoperErrorTests =
         ErrAliasCycle {} -> Nothing
         _ -> wrongError,
     NegTest
+      "Invalid range number in iterator definition"
+      $(mkRelDir ".")
+      $(mkRelFile "InvalidRangeNumber.juvix")
+      $ \case
+        ErrInvalidRangeNumber {} -> Nothing
+        _ -> wrongError,
+    NegTest
       "Dangling double brace"
       $(mkRelDir "Internal")
       $(mkRelFile "DanglingDoubleBrace.juvix")

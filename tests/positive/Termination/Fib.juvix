@@ -1,6 +1,6 @@
 module Fib;
 
-syntax fixity add {arity: binary, assoc: left};
+syntax fixity add := binary {assoc := left};
 
 type Nat :=
   | zero : Nat

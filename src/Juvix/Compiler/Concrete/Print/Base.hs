@@ -22,7 +22,6 @@ import Juvix.Data.Ape.Print
 import Juvix.Data.CodeAnn (Ann, CodeAnn (..), ppStringLit)
 import Juvix.Data.CodeAnn qualified as C
 import Juvix.Data.Effect.ExactPrint
-import Juvix.Data.IteratorAttribs
 import Juvix.Data.Keyword.All qualified as Kw
 import Juvix.Data.NameKind
 import Juvix.Extra.Strings qualified as Str
@@ -654,16 +653,54 @@ instance PrettyPrint Precedence where
     PrecApp -> noLoc (pretty ("ω" :: Text))
     PrecUpdate -> noLoc (pretty ("ω₁" :: Text))
 
-ppFixityDefHeader :: (SingI s) => PrettyPrinting (FixitySyntaxDef s)
-ppFixityDefHeader FixitySyntaxDef {..} = do
+ppFixityDefHeaderNew :: (SingI s) => PrettyPrinting (FixitySyntaxDef s)
+ppFixityDefHeaderNew FixitySyntaxDef {..} = do
   let sym' = annotated (AnnKind KNameFixity) (ppSymbolType _fixitySymbol)
   ppCode _fixitySyntaxKw <+> ppCode _fixityKw <+> sym'
 
+instance PrettyPrint Arity where
+  ppCode = \case
+    Unary -> noLoc Str.unary
+    Binary -> noLoc Str.binary
+
+instance PrettyPrint BinaryAssoc where
+  ppCode a = noLoc $ case a of
+    AssocNone -> Str.none
+    AssocLeft -> Str.left
+    AssocRight -> Str.right
+
+ppSymbolList :: (SingI s) => PrettyPrinting [SymbolType s]
+ppSymbolList items = do
+  ppCode Kw.kwBracketL
+  hsepSemicolon (map ppSymbolType items)
+  ppCode Kw.kwBracketR
+
+instance (SingI s) => PrettyPrint (ParsedFixityInfo s) where
+  ppCode ParsedFixityInfo {..} = do
+    let rhs = do
+          ParsedFixityFields {..} <- _fixityFields
+          let assocItem = do
+                a <- _fixityFieldsAssoc
+                return (ppCode Kw.kwAssoc <+> ppCode Kw.kwAssign <+> ppCode a)
+              sameItem = do
+                a <- _fixityFieldsPrecSame
+                return (ppCode Kw.kwSame <+> ppCode Kw.kwAssign <+> ppSymbolType a)
+              aboveItem = do
+                a <- _fixityFieldsPrecAbove
+                return (ppCode Kw.kwAbove <+> ppCode Kw.kwAssign <+> ppSymbolList a)
+              belowItem = do
+                a <- _fixityFieldsPrecBelow
+                return (ppCode Kw.kwBelow <+> ppCode Kw.kwAssign <+> ppSymbolList a)
+              items = hsepSemicolon (catMaybes [assocItem, sameItem, aboveItem, belowItem])
+              (l, r) = _fixityFieldsBraces ^. unIrrelevant
+          return (ppCode l <> items <> ppCode r)
+    ppCode _fixityParsedArity <+?> rhs
+
 instance (SingI s) => PrettyPrint (FixitySyntaxDef s) where
   ppCode f@FixitySyntaxDef {..} = do
-    let header' = ppFixityDefHeader f
-        txt = pretty (_fixityInfo ^. withLocParam . withSourceText)
-    header' <+> braces (noLoc txt)
+    let header' = ppFixityDefHeaderNew f
+        body' = ppCode _fixityInfo
+    header' <+> ppCode _fixityAssignKw <+> body'
 
 instance PrettyPrint OperatorSyntaxDef where
   ppCode OperatorSyntaxDef {..} = do
@@ -683,13 +720,28 @@ instance PrettyPrint InfixApplication where
 instance PrettyPrint PostfixApplication where
   ppCode = apeHelper
 
+instance PrettyPrint ParsedIteratorInfo where
+  ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => ParsedIteratorInfo -> Sem r ()
+  ppCode ParsedIteratorInfo {..} = do
+    let (l, r) = _parsedIteratorInfoBraces ^. unIrrelevant
+        ppInt :: WithLoc Int -> Sem r ()
+        ppInt = morphemeWithLoc . fmap (annotate AnnLiteralInteger . pretty)
+        iniItem = do
+          a <- _parsedIteratorInfoInitNum
+          return (ppCode Kw.kwInit <+> ppCode Kw.kwAssign <+> ppInt a)
+        rangeItem = do
+          a <- _parsedIteratorInfoRangeNum
+          return (ppCode Kw.kwRange <+> ppCode Kw.kwAssign <+> ppInt a)
+        items = hsepSemicolon (catMaybes [iniItem, rangeItem])
+    ppCode l <> items <> ppCode r
+
 instance PrettyPrint IteratorSyntaxDef where
   ppCode IteratorSyntaxDef {..} = do
     let iterSymbol' = ppUnkindedSymbol _iterSymbol
     ppCode _iterSyntaxKw
       <+> ppCode _iterIteratorKw
       <+> iterSymbol'
-      <+?> fmap ppCode _iterAttribs
+      <+?> fmap ppCode _iterInfo
 
 instance PrettyPrint RecordUpdateApp where
   ppCode = apeHelper
@@ -727,9 +779,6 @@ instance PrettyPrint (WithSource Pragmas) where
     when b $
       let txt = pretty (Str.pragmasStart <> pragma ^. withSourceText <> Str.pragmasEnd)
        in annotated AnnComment (noLoc txt) <> line
-
-instance PrettyPrint (WithSource IteratorAttribs) where
-  ppCode = braces . noLoc . pretty . (^. withSourceText)
 
 ppJudocStart :: (Members '[ExactPrint, Reader Options] r) => Sem r (Maybe ())
 ppJudocStart = do

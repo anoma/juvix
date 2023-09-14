@@ -73,10 +73,10 @@ fromReg lims tab =
 
         getAssoc :: OperatorArity -> Text
         getAssoc = \case
-          Fixity.Unary _ -> "assoc_none"
-          Fixity.Binary AssocNone -> "assoc_none"
-          Fixity.Binary AssocLeft -> "assoc_left"
-          Fixity.Binary AssocRight -> "assoc_right"
+          Fixity.OpUnary _ -> "assoc_none"
+          Fixity.OpBinary AssocNone -> "assoc_none"
+          Fixity.OpBinary AssocLeft -> "assoc_left"
+          Fixity.OpBinary AssocRight -> "assoc_right"
 
     functionInfo :: CCode
     functionInfo =

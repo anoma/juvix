@@ -88,6 +88,39 @@ kwRightArrow = unicodeKw Str.toAscii Str.toUnicode
 kwSyntax :: Keyword
 kwSyntax = asciiKw Str.syntax
 
+kwInit :: Keyword
+kwInit = asciiKw Str.init
+
+kwRange :: Keyword
+kwRange = asciiKw Str.range
+
+kwAssoc :: Keyword
+kwAssoc = asciiKw Str.assoc
+
+kwNone :: Keyword
+kwNone = asciiKw Str.none
+
+kwRight :: Keyword
+kwRight = asciiKw Str.right
+
+kwLeft :: Keyword
+kwLeft = asciiKw Str.left
+
+kwUnary :: Keyword
+kwUnary = asciiKw Str.unary
+
+kwBinary :: Keyword
+kwBinary = asciiKw Str.binary
+
+kwSame :: Keyword
+kwSame = asciiKw Str.same
+
+kwBelow :: Keyword
+kwBelow = asciiKw Str.below
+
+kwAbove :: Keyword
+kwAbove = asciiKw Str.above
+
 kwAlias :: Keyword
 kwAlias = asciiKw Str.alias
 

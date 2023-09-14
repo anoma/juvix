@@ -7,7 +7,7 @@ syntax iterator myfor;
 myfor : {A B : Type} → (A → B → A) → A → List B → A :=
   foldl {_} {_};
 
-syntax iterator mymap {init: 0};
+syntax iterator mymap {init := 0};
 mymap : {A B : Type} → (A → B) → List A → List B
   | f nil := nil
   | f (x :: xs) := f x :: mymap f xs;
@@ -20,7 +20,7 @@ sum' : List Nat → Nat
 
 lst : List Nat := 1 :: 2 :: 3 :: 4 :: 5 :: nil;
 
-syntax iterator myfor2 {init: 1, range: 2};
+syntax iterator myfor2 {init := 1; range := 2};
 myfor2
   : {A B C : Type}
     → (A → B → C → A)
@@ -33,7 +33,7 @@ myfor2
       myfor (acc'' := acc') (y in ys)
         f acc'' x y;
 
-syntax iterator myzip2 {init: 2, range: 2};
+syntax iterator myzip2 {init := 2; range := 2};
 myzip2
   : {A A' B C : Type}
     → (A → A' → B → C → A × A')

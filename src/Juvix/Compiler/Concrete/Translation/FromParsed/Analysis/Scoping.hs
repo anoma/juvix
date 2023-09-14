@@ -27,7 +27,6 @@ import Juvix.Compiler.Concrete.Translation.FromSource.Data.Context (ParserResult
 import Juvix.Compiler.Concrete.Translation.FromSource.Data.Context qualified as Parsed
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Data.FixityInfo qualified as FI
-import Juvix.Data.IteratorAttribs
 import Juvix.Data.NameKind
 import Juvix.Prelude hiding (scoped)
 
@@ -173,17 +172,14 @@ freshSymbol _nameKind _nameConcrete = do
           return mf
       | otherwise = return Nothing
 
-    iter :: Sem r (Maybe IteratorAttribs)
+    iter :: Sem r (Maybe IteratorInfo)
     iter
       | S.canBeIterator _nameKind = do
-          mma <- gets (^? scoperSyntaxIterators . scoperIterators . at _nameConcrete . _Just . symbolIteratorDef . iterAttribs)
-          case mma of
-            Just ma -> do
-              let attrs = maybe emptyIteratorAttribs (^. withLocParam . withSourceValue) ma
-              modify (set (scoperSyntaxIterators . scoperIterators . at _nameConcrete . _Just . symbolIteratorUsed) True)
-              return $ Just attrs
-            Nothing ->
-              return Nothing
+          mma :: Maybe (Maybe ParsedIteratorInfo) <- gets (^? scoperSyntaxIterators . scoperIterators . at _nameConcrete . _Just . symbolIteratorDef . iterInfo)
+          runFail $ do
+            ma <- failMaybe mma
+            modify (set (scoperSyntaxIterators . scoperIterators . at _nameConcrete . _Just . symbolIteratorUsed) True)
+            return (maybe emptyIteratorInfo fromParsedIteratorInfo ma)
       | otherwise = return Nothing
 
 reserveSymbolSignatureOf ::
@@ -623,6 +619,33 @@ readScopeModule import_ = do
     addImport :: ScopeParameters -> ScopeParameters
     addImport = over scopeTopParents (cons import_)
 
+checkFixityInfo ::
+  forall r.
+  (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, State ScoperSyntax, NameIdGen, InfoTableBuilder] r) =>
+  ParsedFixityInfo 'Parsed ->
+  Sem r (ParsedFixityInfo 'Scoped)
+checkFixityInfo ParsedFixityInfo {..} = do
+  fields' <- mapM checkFields _fixityFields
+  return
+    ParsedFixityInfo
+      { _fixityFields = fields',
+        ..
+      }
+  where
+    checkFields :: ParsedFixityFields 'Parsed -> Sem r (ParsedFixityFields 'Scoped)
+    checkFields ParsedFixityFields {..} = do
+      same' <- mapM checkFixitySymbol _fixityFieldsPrecSame
+      below' <- mapM (mapM checkFixitySymbol) _fixityFieldsPrecBelow
+      above' <- mapM (mapM checkFixitySymbol) _fixityFieldsPrecAbove
+      return
+        ParsedFixityFields
+          { _fixityFieldsPrecSame = same',
+            _fixityFieldsPrecAbove = above',
+            _fixityFieldsPrecBelow = below',
+            _fixityFieldsAssoc,
+            _fixityFieldsBraces
+          }
+
 checkFixitySyntaxDef ::
   forall r.
   (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, State ScoperSyntax, NameIdGen, InfoTableBuilder] r) =>
@@ -631,12 +654,16 @@ checkFixitySyntaxDef ::
 checkFixitySyntaxDef FixitySyntaxDef {..} = topBindings $ do
   sym <- bindFixitySymbol _fixitySymbol
   doc <- mapM checkJudoc _fixityDoc
+  info' <- checkFixityInfo _fixityInfo
   registerHighlightDoc (sym ^. S.nameId) doc
   return
     FixitySyntaxDef
       { _fixitySymbol = sym,
         _fixityDoc = doc,
-        ..
+        _fixityInfo = info',
+        _fixityAssignKw,
+        _fixitySyntaxKw,
+        _fixityKw
       }
 
 resolveFixitySyntaxDef ::
@@ -646,22 +673,21 @@ resolveFixitySyntaxDef ::
   Sem r ()
 resolveFixitySyntaxDef fdef@FixitySyntaxDef {..} = topBindings $ do
   sym <- reserveSymbolOf SKNameFixity Nothing _fixitySymbol
-  let loc = getLoc _fixityInfo
-      fi = _fixityInfo ^. withLocParam . withSourceValue
-  same <- checkMaybeFixity loc $ fi ^. FI.fixityPrecSame
-  below <- mapM (checkFixitySymbol . WithLoc loc) $ fi ^. FI.fixityPrecBelow
-  above <- mapM (checkFixitySymbol . WithLoc loc) $ fi ^. FI.fixityPrecAbove
+  let fi :: ParsedFixityInfo 'Parsed = _fixityInfo
+  same <- mapM checkFixitySymbol (fi ^. fixityPrecSame)
+  below <- mapM (mapM checkFixitySymbol) (fi ^. fixityPrecBelow)
+  above <- mapM (mapM checkFixitySymbol) (fi ^. fixityPrecAbove)
   tab <- getInfoTable
   fid <- maybe freshNameId (return . getFixityId tab) same
-  let below' = map (getFixityId tab) below
-      above' = map (getFixityId tab) above
-  forM_ above' (`registerPrecedence` fid)
-  forM_ below' (registerPrecedence fid)
+  let below' = map (getFixityId tab) <$> below
+      above' = map (getFixityId tab) <$> above
+  forM_ above' $ mapM_ (`registerPrecedence` fid)
+  forM_ below' $ mapM_ (registerPrecedence fid)
   let samePrec = getPrec tab <$> same
       belowPrec :: Integer
-      belowPrec = fromIntegral $ maximum (minInt + 1 : map (getPrec tab) above)
+      belowPrec = fromIntegral $ maximum (minInt + 1 : maybe [] (map (getPrec tab)) above)
       abovePrec :: Integer
-      abovePrec = fromIntegral $ minimum (maxInt - 1 : map (getPrec tab) below)
+      abovePrec = fromIntegral $ minimum (maxInt - 1 : maybe [] (map (getPrec tab)) below)
   when (belowPrec >= abovePrec + 1) $
     throw (ErrPrecedenceInconsistency (PrecedenceInconsistencyError fdef))
   when (isJust same && not (null below && null above)) $
@@ -673,13 +699,13 @@ resolveFixitySyntaxDef fdef@FixitySyntaxDef {..} = topBindings $ do
           { _fixityId = Just fid,
             _fixityPrecedence = PrecNat prec,
             _fixityArity =
-              case fi ^. FI.fixityArity of
-                FI.Unary -> Unary AssocPostfix
-                FI.Binary -> case fi ^. FI.fixityAssoc of
-                  Nothing -> Binary AssocNone
-                  Just FI.AssocLeft -> Binary AssocLeft
-                  Just FI.AssocRight -> Binary AssocRight
-                  Just FI.AssocNone -> Binary AssocNone
+              case fi ^. fixityParsedArity . withLocParam of
+                FI.Unary -> OpUnary AssocPostfix
+                FI.Binary -> case fi ^. fixityAssoc of
+                  Nothing -> OpBinary AssocNone
+                  Just FI.AssocLeft -> OpBinary AssocLeft
+                  Just FI.AssocRight -> OpBinary AssocRight
+                  Just FI.AssocNone -> OpBinary AssocNone
           }
   registerFixity
     @$> FixityDef
@@ -689,16 +715,6 @@ resolveFixitySyntaxDef fdef@FixitySyntaxDef {..} = topBindings $ do
       }
   return ()
   where
-    checkMaybeFixity ::
-      forall r'.
-      (Members '[Error ScoperError, State Scope, State ScoperState] r') =>
-      Interval ->
-      Maybe Text ->
-      Sem r' (Maybe S.Symbol)
-    checkMaybeFixity loc = \case
-      Just same -> Just <$> checkFixitySymbol (WithLoc loc same)
-      Nothing -> return Nothing
-
     getFixityDef :: InfoTable -> S.Symbol -> FixityDef
     getFixityDef tab = fromJust . flip HashMap.lookup (tab ^. infoFixities) . (^. S.nameId)
 
@@ -739,6 +755,7 @@ resolveIteratorSyntaxDef ::
   Sem r ()
 resolveIteratorSyntaxDef s@IteratorSyntaxDef {..} = do
   checkNotDefined
+  checkAtLeastOneRange
   let sf =
         SymbolIterator
           { _symbolIteratorUsed = False,
@@ -746,6 +763,12 @@ resolveIteratorSyntaxDef s@IteratorSyntaxDef {..} = do
           }
   modify (set (scoperSyntaxIterators . scoperIterators . at _iterSymbol) (Just sf))
   where
+    checkAtLeastOneRange :: Sem r ()
+    checkAtLeastOneRange = unless (maybe True (> 0) num) (throw (ErrInvalidRangeNumber (InvalidRangeNumber s)))
+      where
+        num :: Maybe Int
+        num = s ^? iterInfo . _Just . to fromParsedIteratorInfo . iteratorInfoRangeNum . _Just
+
     checkNotDefined :: Sem r ()
     checkNotDefined =
       whenJustM
@@ -974,7 +997,7 @@ checkTopModule m@Module {..} = do
           _nameVisibilityAnn = VisPublic
           _nameWhyInScope = S.BecauseDefined
           _nameVerbatim = N.topModulePathToDottedPath _modulePath
-          _nameIterator :: Maybe IteratorAttribs
+          _nameIterator :: Maybe IteratorInfo
           _nameIterator = Nothing
           moduleName = S.Name' {..}
       registerName moduleName
@@ -1890,7 +1913,7 @@ checkUnqualifiedName s = do
     n = NameUnqualified s
 
 checkFixitySymbol ::
-  (Members '[Error ScoperError, State Scope, State ScoperState] r) =>
+  (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder] r) =>
   Symbol ->
   Sem r S.Symbol
 checkFixitySymbol s = do
@@ -1899,7 +1922,10 @@ checkFixitySymbol s = do
   entries <- thd3 <$> lookupQualifiedSymbol ([], s)
   case resolveShadowing entries of
     [] -> throw (ErrSymNotInScope (NotInScope s scope))
-    [x] -> return $ entryToSymbol x s
+    [x] -> do
+      let res = entryToSymbol x s
+      registerName res
+      return res
     es -> throw (ErrAmbiguousSym (AmbiguousSym n (map (PreSymbolFinal . SymbolEntry . (^. fixityEntry)) es)))
   where
     n = NameUnqualified s
@@ -2149,8 +2175,8 @@ checkIterator ::
 checkIterator iter = do
   _iteratorName <- checkScopedIden (iter ^. iteratorName)
   case _iteratorName ^. scopedIdenName . S.nameIterator of
-    Just IteratorAttribs {..} -> do
-      case _iteratorAttribsInitNum of
+    Just IteratorInfo {..} -> do
+      case _iteratorInfoInitNum of
         Just n
           | n /= length (iter ^. iteratorInitializers) ->
               throw
@@ -2158,7 +2184,7 @@ checkIterator iter = do
                     IteratorInitializer {_iteratorInitializerIterator = iter}
                 )
         _ -> return ()
-      case _iteratorAttribsRangeNum of
+      case _iteratorInfoRangeNum of
         Just n
           | n /= length (iter ^. iteratorRanges) ->
               throw
@@ -2408,12 +2434,12 @@ makeExpressionTable (ExpressionAtoms atoms _) = [recordUpdate] : [appOpExplicit]
         mkOperator iden
           | Just Fixity {..} <- _nameFixity = Just $
               case _fixityArity of
-                Unary u -> (_fixityPrecedence, P.Postfix (unaryApp <$> parseSymbolId _nameId))
+                OpUnary u -> (_fixityPrecedence, P.Postfix (unaryApp <$> parseSymbolId _nameId))
                   where
                     unaryApp :: ScopedIden -> Expression -> Expression
                     unaryApp funName arg = case u of
                       AssocPostfix -> ExpressionPostfixApplication (PostfixApplication arg funName)
-                Binary b -> (_fixityPrecedence, infixLRN (binaryApp <$> parseSymbolId _nameId))
+                OpBinary b -> (_fixityPrecedence, infixLRN (binaryApp <$> parseSymbolId _nameId))
                   where
                     binaryApp :: ScopedIden -> Expression -> Expression -> Expression
                     binaryApp _infixAppOperator _infixAppLeft _infixAppRight =
@@ -2690,12 +2716,12 @@ makePatternTable (PatternAtoms latoms _) = [appOp] : operators
           Fixity {..} <- failMaybe (constr ^. scopedIdenName . S.nameFixity)
           let _nameId = constr ^. scopedIdenName . S.nameId
           return $ case _fixityArity of
-            Unary u -> (_fixityPrecedence, P.Postfix (unaryApp <$> parseSymbolId _nameId))
+            OpUnary u -> (_fixityPrecedence, P.Postfix (unaryApp <$> parseSymbolId _nameId))
               where
                 unaryApp :: ScopedIden -> PatternArg -> PatternArg
                 unaryApp constrName = case u of
                   AssocPostfix -> explicitP . PatternPostfixApplication . (`PatternPostfixApp` constrName)
-            Binary b -> (_fixityPrecedence, infixLRN (binaryInfixApp <$> parseSymbolId _nameId))
+            OpBinary b -> (_fixityPrecedence, infixLRN (binaryInfixApp <$> parseSymbolId _nameId))
               where
                 binaryInfixApp :: ScopedIden -> PatternArg -> PatternArg -> PatternArg
                 binaryInfixApp name argLeft = explicitP . PatternInfixApplication . PatternInfixApp argLeft name
@@ -2755,7 +2781,8 @@ parsePatternTerm = do
   where
     parseNoInfixConstructor :: ParsePat PatternArg
     parseNoInfixConstructor =
-      explicitP . PatternConstructor
+      explicitP
+        . PatternConstructor
         <$> P.token constructorNoFixity mempty
       where
         constructorNoFixity :: PatternAtom 'Scoped -> Maybe ScopedIden
