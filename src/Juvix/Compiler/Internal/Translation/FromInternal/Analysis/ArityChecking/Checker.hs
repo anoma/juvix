@@ -361,7 +361,6 @@ checkLhs loc guessedBody ariSignature pats = do
     -- Sometimes the outcome may even be confusing.
     tailHelper :: Arity -> Maybe [IsImplicit]
     tailHelper a
-      | guessedBody == ArityUnknown = Nothing
       | 0 < pref = Just pref'
       | otherwise = Nothing
       where
