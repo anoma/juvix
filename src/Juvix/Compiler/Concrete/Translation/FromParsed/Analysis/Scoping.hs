@@ -790,7 +790,7 @@ checkFunctionDef FunctionDef {..} = do
   sigDoc' <- mapM checkJudoc _signDoc
   (args', sigType', sigBody') <- withLocalScope $ do
     a' <- mapM checkArg _signArgs
-    t' <- checkParseExpressionAtoms _signRetType
+    t' <- maybe (return Nothing) (fmap Just . checkParseExpressionAtoms) _signRetType
     b' <- checkBody
     return (a', t', b')
   registerFunctionDef
@@ -2100,7 +2100,7 @@ checkRecordCreation RecordCreation {..} = do
       let sig = info ^. recordInfoSignature
       (vars', fields') <- withLocalScope $ do
         vs <- mapM bindVariableSymbol (toList (recordNameSignatureByIndex sig))
-        fs <- mapM (checkDefineField sig) _recordCreationFields
+        fs <- mapM checkDefineField _recordCreationFields
         return (vs, fs)
       let extra' =
             RecordCreationExtra
@@ -2125,7 +2125,7 @@ checkRecordUpdate RecordUpdate {..} = do
   let sig = info ^. recordInfoSignature
   (vars', fields') <- withLocalScope $ do
     vs <- mapM bindVariableSymbol (toList (recordNameSignatureByIndex sig))
-    fs <- mapM (checkAssignField sig) _recordUpdateFields
+    fs <- mapM (checkUpdateField sig) _recordUpdateFields
     return (vs, fs)
   let extra' =
         RecordUpdateExtra
@@ -2144,31 +2144,35 @@ checkRecordUpdate RecordUpdate {..} = do
 
 checkDefineField ::
   (Members '[Error ScoperError, State Scope, State ScoperState, Reader ScopeParameters, InfoTableBuilder, NameIdGen] r) =>
-  RecordNameSignature ->
   RecordDefineField 'Parsed ->
   Sem r (RecordDefineField 'Scoped)
-checkDefineField sig = \case
-  RecordDefineFieldAssign i -> RecordDefineFieldAssign <$> checkAssignField sig i
-  RecordDefineFieldFunDef i -> RecordDefineFieldFunDef <$> localBindings (ignoreSyntax (checkFunctionDef i))
+checkDefineField RecordDefineField {..} = do
+  def <- localBindings $ ignoreSyntax $ checkFunctionDef _fieldDefineFunDef
+  iden <- checkScopedIden _fieldDefineIden
+  return
+    RecordDefineField
+      { _fieldDefineFunDef = def,
+        _fieldDefineIden = iden
+      }
 
-checkAssignField ::
+checkUpdateField ::
   (Members '[Error ScoperError, State Scope, State ScoperState, Reader ScopeParameters, InfoTableBuilder, NameIdGen] r) =>
   RecordNameSignature ->
-  RecordAssignField 'Parsed ->
-  Sem r (RecordAssignField 'Scoped)
-checkAssignField sig f = do
-  value' <- checkParseExpressionAtoms (f ^. fieldAssignValue)
-  idx' <- maybe (throw unexpectedField) return (sig ^? recordNames . at (f ^. fieldAssignName) . _Just . _2)
+  RecordUpdateField 'Parsed ->
+  Sem r (RecordUpdateField 'Scoped)
+checkUpdateField sig f = do
+  value' <- checkParseExpressionAtoms (f ^. fieldUpdateValue)
+  idx' <- maybe (throw unexpectedField) return (sig ^? recordNames . at (f ^. fieldUpdateName) . _Just . _2)
   return
-    RecordAssignField
-      { _fieldAssignName = f ^. fieldAssignName,
-        _fieldAssignArgIx = idx',
-        _fieldAssignKw = f ^. fieldAssignKw,
-        _fieldAssignValue = value'
+    RecordUpdateField
+      { _fieldUpdateName = f ^. fieldUpdateName,
+        _fieldUpdateArgIx = idx',
+        _fieldUpdateAssignKw = f ^. fieldUpdateAssignKw,
+        _fieldUpdateValue = value'
       }
   where
     unexpectedField :: ScoperError
-    unexpectedField = ErrUnexpectedField (UnexpectedField (f ^. fieldAssignName))
+    unexpectedField = ErrUnexpectedField (UnexpectedField (f ^. fieldUpdateName))
 
 checkNamedApplication ::
   forall r.

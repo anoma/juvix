@@ -445,8 +445,8 @@ deriving stock instance Ord (FunctionDefBody 'Scoped)
 data FunctionDef (s :: Stage) = FunctionDef
   { _signName :: FunctionName s,
     _signArgs :: [SigArg s],
-    _signColonKw :: Irrelevant KeywordRef,
-    _signRetType :: ExpressionType s,
+    _signColonKw :: Irrelevant (Maybe KeywordRef),
+    _signRetType :: Maybe (ExpressionType s),
     _signDoc :: Maybe (Judoc s),
     _signPragmas :: Maybe ParsedPragmas,
     _signBuiltin :: Maybe (WithLoc BuiltinFunction),
@@ -513,28 +513,29 @@ deriving stock instance Ord (ConstructorDef 'Parsed)
 
 deriving stock instance Ord (ConstructorDef 'Scoped)
 
-data RecordAssignField (s :: Stage) = RecordAssignField
-  { _fieldAssignName :: Symbol,
-    _fieldAssignArgIx :: FieldArgIxType s,
-    _fieldAssignKw :: Irrelevant (KeywordRef),
-    _fieldAssignValue :: ExpressionType s
+data RecordUpdateField (s :: Stage) = RecordUpdateField
+  { _fieldUpdateName :: Symbol,
+    _fieldUpdateArgIx :: FieldArgIxType s,
+    _fieldUpdateAssignKw :: Irrelevant (KeywordRef),
+    _fieldUpdateValue :: ExpressionType s
   }
 
-deriving stock instance Show (RecordAssignField 'Parsed)
+deriving stock instance Show (RecordUpdateField 'Parsed)
 
-deriving stock instance Show (RecordAssignField 'Scoped)
+deriving stock instance Show (RecordUpdateField 'Scoped)
 
-deriving stock instance Eq (RecordAssignField 'Parsed)
+deriving stock instance Eq (RecordUpdateField 'Parsed)
 
-deriving stock instance Eq (RecordAssignField 'Scoped)
+deriving stock instance Eq (RecordUpdateField 'Scoped)
 
-deriving stock instance Ord (RecordAssignField 'Parsed)
+deriving stock instance Ord (RecordUpdateField 'Parsed)
 
-deriving stock instance Ord (RecordAssignField 'Scoped)
+deriving stock instance Ord (RecordUpdateField 'Scoped)
 
-data RecordDefineField (s :: Stage)
-  = RecordDefineFieldAssign (RecordAssignField s)
-  | RecordDefineFieldFunDef (FunctionDef s)
+data RecordDefineField (s :: Stage) = RecordDefineField
+  { _fieldDefineFunDef :: FunctionDef s,
+    _fieldDefineIden :: IdentifierType s
+  }
 
 deriving stock instance Show (RecordDefineField 'Parsed)
 
@@ -1521,7 +1522,7 @@ data RecordUpdate (s :: Stage) = RecordUpdate
     _recordUpdateDelims :: Irrelevant (KeywordRef, KeywordRef),
     _recordUpdateTypeName :: IdentifierType s,
     _recordUpdateExtra :: Irrelevant (RecordUpdateExtraType s),
-    _recordUpdateFields :: NonEmpty (RecordAssignField s)
+    _recordUpdateFields :: NonEmpty (RecordUpdateField s)
   }
 
 deriving stock instance Show (RecordUpdate 'Parsed)
@@ -1763,7 +1764,8 @@ makeLenses ''RecordUpdateExtra
 makeLenses ''RecordCreationExtra
 makeLenses ''RecordUpdate
 makeLenses ''RecordUpdateApp
-makeLenses ''RecordAssignField
+makeLenses ''RecordUpdateField
+makeLenses ''RecordDefineField
 makeLenses ''NonDefinitionsSection
 makeLenses ''DefinitionsSection
 makeLenses ''ProjectionDef
@@ -2043,13 +2045,11 @@ instance HasLoc (List s) where
 instance (SingI s) => HasLoc (NamedApplication s) where
   getLoc NamedApplication {..} = getLocIdentifierType _namedAppName <> getLoc (last _namedAppArgs)
 
-instance (SingI s) => HasLoc (RecordAssignField s) where
-  getLoc f = getLocSymbolType (f ^. fieldAssignName) <> getLocExpressionType (f ^. fieldAssignValue)
+instance (SingI s) => HasLoc (RecordUpdateField s) where
+  getLoc f = getLocSymbolType (f ^. fieldUpdateName) <> getLocExpressionType (f ^. fieldUpdateValue)
 
 instance (SingI s) => HasLoc (RecordDefineField s) where
-  getLoc = \case
-    RecordDefineFieldAssign i -> getLoc i
-    RecordDefineFieldFunDef i -> getLoc i
+  getLoc f = getLoc (f ^. fieldDefineFunDef)
 
 instance (SingI s) => HasLoc (RecordUpdate s) where
   getLoc r = getLoc (r ^. recordUpdateAtKw) <> getLocSpan (r ^. recordUpdateFields)

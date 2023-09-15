@@ -294,14 +294,12 @@ instance (SingI s) => PrettyPrint (RecordCreation s) where
       <> fields'
       <> ppCode r
 
-instance (SingI s) => PrettyPrint (RecordAssignField s) where
-  ppCode RecordAssignField {..} =
-    ppSymbolType _fieldAssignName <+> ppCode _fieldAssignKw <+> ppExpressionType _fieldAssignValue
+instance (SingI s) => PrettyPrint (RecordUpdateField s) where
+  ppCode RecordUpdateField {..} =
+    ppSymbolType _fieldUpdateName <+> ppCode _fieldUpdateAssignKw <+> ppExpressionType _fieldUpdateValue
 
 instance (SingI s) => PrettyPrint (RecordDefineField s) where
-  ppCode = \case
-    RecordDefineFieldAssign a -> ppCode a
-    RecordDefineFieldFunDef a -> ppCode a
+  ppCode RecordDefineField {..} = ppCode _fieldDefineFunDef
 
 instance (SingI s) => PrettyPrint (RecordUpdate s) where
   ppCode RecordUpdate {..} = do
@@ -933,7 +931,8 @@ ppFunctionSignature FunctionDef {..} = do
       instance' = (<> line) . ppCode <$> _signInstance
       args' = hsep . fmap ppCode <$> nonEmpty _signArgs
       builtin' = (<> line) . ppCode <$> _signBuiltin
-      type' = oneLineOrNext (ppCode _signColonKw <+> ppExpressionType _signRetType)
+      col' = maybe mempty ppCode (_signColonKw ^. unIrrelevant)
+      type' = oneLineOrNext (col' <> maybe mempty ppExpressionType _signRetType)
       name' = annDef _signName (ppSymbolType _signName)
    in builtin'
         ?<> termin'

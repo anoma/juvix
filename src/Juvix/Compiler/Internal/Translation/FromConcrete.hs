@@ -31,6 +31,7 @@ import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Che
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Data.NameKind
 import Juvix.Prelude
+import Safe (lastMay)
 
 type MCache = Cache Concrete.ModuleIndex Internal.Module
 
@@ -457,9 +458,16 @@ goTopFunctionDef FunctionDef {..} = do
     goDefType :: Sem r Internal.Expression
     goDefType = do
       args <- concatMapM (fmap toList . argToParam) _signArgs
-      ret <- goExpression _signRetType
+      ret <- maybe freshHole goExpression _signRetType
       return (Internal.foldFunType args ret)
       where
+        freshHole :: Sem r Internal.Expression
+        freshHole = do
+          i <- freshNameId
+          let loc = maybe (getLoc _signName) getLoc (lastMay _signArgs)
+              h = mkHole loc i
+          return $ Internal.ExpressionHole h
+
         argToParam :: SigArg 'Scoped -> Sem r (NonEmpty Internal.FunctionParameter)
         argToParam a@SigArg {..} = do
           let _paramImplicit = _sigArgImplicit
@@ -769,8 +777,9 @@ goExpression = \case
 
     goRecordCreation :: Concrete.RecordCreation 'Scoped -> Sem r Internal.Expression
     goRecordCreation Concrete.RecordCreation {..} = do
-      (args, defs) <- mapAndUnzipM goRecordDefineField (toList _recordCreationFields)
-      let app =
+      args <- mapM goRecordDefineField _recordCreationFields
+      let defs = fmap (^. fieldDefineFunDef) _recordCreationFields
+          app =
             Concrete.NamedApplication
               { _namedAppName = _recordCreationConstructor,
                 _namedAppArgs =
@@ -778,12 +787,12 @@ goExpression = \case
                     Concrete.ArgumentBlock
                       { _argBlockDelims = Irrelevant Nothing,
                         _argBlockImplicit = Explicit,
-                        _argBlockArgs = nonEmpty' args
+                        _argBlockArgs = args
                       },
                 _namedAppSignature =
                   Irrelevant (NameSignature [NameBlock (_recordCreationExtra ^. unIrrelevant . recordCreationExtraSignature . recordNames) Explicit])
               }
-      cls <- goLetFunDefs (nonEmpty' $ map Concrete.LetFunctionDef defs)
+      cls <- goLetFunDefs (fmap Concrete.LetFunctionDef defs)
       e <- runNamedArguments app >>= goExpression
       return $
         Internal.ExpressionLet $
@@ -792,32 +801,22 @@ goExpression = \case
               _letExpression = e
             }
 
-    goRecordDefineField :: Concrete.RecordDefineField 'Scoped -> Sem r (Concrete.NamedArgument 'Scoped, Concrete.FunctionDef 'Scoped)
-    goRecordDefineField = \case
-      RecordDefineFieldAssign a -> goRecordAssignField a
-      RecordDefineFieldFunDef a -> goRecordFunDef a
-
-    goRecordAssignField :: Concrete.RecordAssignField 'Scoped -> Sem r (Concrete.NamedArgument 'Scoped, Concrete.FunctionDef 'Scoped)
-    goRecordAssignField Concrete.RecordAssignField {..} = do
-      let na =
-            Concrete.NamedArgument
-              { _namedArgName = _fieldAssignName,
-                _namedArgAssignKw = _fieldAssignKw,
-                _namedArgValue = undefined
-              }
-          def = undefined
-      return (na, def)
-
-    goRecordFunDef :: Concrete.FunctionDef 'Scoped -> Sem r (Concrete.NamedArgument 'Scoped, Concrete.FunctionDef 'Scoped)
-    goRecordFunDef def@Concrete.FunctionDef {..} = do
-      let iden = (ScopedIden undefined Nothing)
-          na =
-            Concrete.NamedArgument
-              { _namedArgName = _signName ^. S.nameConcrete,
-                _namedArgAssignKw = _signColonKw,
-                _namedArgValue = Concrete.ExpressionIdentifier iden
-              }
-      return (na, def)
+    goRecordDefineField :: Concrete.RecordDefineField 'Scoped -> Sem r (Concrete.NamedArgument 'Scoped)
+    goRecordDefineField Concrete.RecordDefineField {..} =
+      return
+        Concrete.NamedArgument
+          { _namedArgName = _fieldDefineFunDef ^. signName . S.nameConcrete,
+            _namedArgAssignKw = Irrelevant dummyKw,
+            _namedArgValue = Concrete.ExpressionIdentifier _fieldDefineIden
+          }
+      where
+        dummyKw :: KeywordRef
+        dummyKw =
+          KeywordRef
+            { _keywordRefKeyword = asciiKw ":=",
+              _keywordRefInterval = getLoc _fieldDefineFunDef,
+              _keywordRefUnicode = Ascii
+            }
 
     goRecordUpdate :: Concrete.RecordUpdate 'Scoped -> Sem r Internal.Lambda
     goRecordUpdate r = do
@@ -829,17 +828,17 @@ goExpression = \case
           }
       where
         -- fields indexed by field index.
-        mkFieldmap :: Sem r (IntMap (RecordAssignField 'Scoped))
+        mkFieldmap :: Sem r (IntMap (RecordUpdateField 'Scoped))
         mkFieldmap = execState mempty $ mapM go (r ^. recordUpdateFields)
           where
-            go :: RecordAssignField 'Scoped -> Sem (State (IntMap (RecordAssignField 'Scoped)) ': r) ()
+            go :: RecordUpdateField 'Scoped -> Sem (State (IntMap (RecordUpdateField 'Scoped)) ': r) ()
             go f = do
-              let idx = f ^. fieldAssignArgIx
-              whenM (gets @(IntMap (RecordAssignField 'Scoped)) (IntMap.member idx)) (throw repeated)
+              let idx = f ^. fieldUpdateArgIx
+              whenM (gets @(IntMap (RecordUpdateField 'Scoped)) (IntMap.member idx)) (throw repeated)
               modify' (IntMap.insert idx f)
               where
                 repeated :: ScoperError
-                repeated = ErrRepeatedField (RepeatedField (f ^. fieldAssignName))
+                repeated = ErrRepeatedField (RepeatedField (f ^. fieldUpdateName))
 
         mkArgs :: [Indexed Internal.VarName] -> Sem r [Internal.Expression]
         mkArgs vs = do
@@ -847,7 +846,7 @@ goExpression = \case
           execOutputList $
             go (uncurry Indexed <$> IntMap.toAscList fieldMap) vs
           where
-            go :: [Indexed (RecordAssignField 'Scoped)] -> [Indexed Internal.VarName] -> Sem (Output Internal.Expression ': r) ()
+            go :: [Indexed (RecordUpdateField 'Scoped)] -> [Indexed Internal.VarName] -> Sem (Output Internal.Expression ': r) ()
             go fields = \case
               [] -> return ()
               Indexed idx var : vars' -> case getArg idx of
@@ -855,11 +854,11 @@ goExpression = \case
                   output (Internal.toExpression var)
                   go fields vars'
                 Just (arg, fields') -> do
-                  val' <- goExpression (arg ^. fieldAssignValue)
+                  val' <- goExpression (arg ^. fieldUpdateValue)
                   output val'
                   go fields' vars'
               where
-                getArg :: Int -> Maybe (RecordAssignField 'Scoped, [Indexed (RecordAssignField 'Scoped)])
+                getArg :: Int -> Maybe (RecordUpdateField 'Scoped, [Indexed (RecordUpdateField 'Scoped)])
                 getArg idx = do
                   Indexed fidx arg :| fs <- nonEmpty fields
                   guard (idx == fidx)

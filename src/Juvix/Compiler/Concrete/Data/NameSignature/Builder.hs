@@ -42,7 +42,7 @@ instance HasNameSignature (AxiomDef 'Parsed) where
 instance HasNameSignature (FunctionDef 'Parsed) where
   addArgs a = do
     mapM_ addSigArg (a ^. signArgs)
-    addAtoms (a ^. signRetType)
+    whenJust (a ^. signRetType) addAtoms
 
 instance HasNameSignature (InductiveDef 'Parsed, ConstructorDef 'Parsed) where
   addArgs ::

@@ -651,13 +651,13 @@ importedModule t = unlessM (moduleVisited t) go
       txt <- readFile' path
       eitherM throw (const (return ())) (runModuleParser path txt)
 
-recordUpdateField :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (RecordAssignField 'Parsed)
+recordUpdateField :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (RecordUpdateField 'Parsed)
 recordUpdateField = do
-  _fieldAssignName <- symbol
-  _fieldAssignKw <- Irrelevant <$> kw kwAssign
-  _fieldAssignValue <- parseExpressionAtoms
-  let _fieldAssignArgIx = ()
-  return RecordAssignField {..}
+  _fieldUpdateName <- symbol
+  _fieldUpdateAssignKw <- Irrelevant <$> kw kwAssign
+  _fieldUpdateValue <- parseExpressionAtoms
+  let _fieldUpdateArgIx = ()
+  return RecordUpdateField {..}
 
 recordUpdate :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (RecordUpdate 'Parsed)
 recordUpdate = do
@@ -1006,8 +1006,8 @@ functionDefinition allowInstance _signBuiltin = P.label "<function definition>" 
     parseFailure off "instance not allowed here"
   _signName <- symbol
   _signArgs <- many parseArg
-  _signColonKw <- Irrelevant <$> kw kwColon
-  _signRetType <- parseExpressionAtoms
+  _signColonKw <- Irrelevant . Just <$> kw kwColon
+  _signRetType <- Just <$> parseExpressionAtoms
   _signDoc <- getJudoc
   _signPragmas <- getPragmas
   _signBody <- parseBody
