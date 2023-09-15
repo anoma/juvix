@@ -752,7 +752,7 @@ instance ToGenericError ConstructorNotARecord where
       i = getLoc _constructorNotARecord
 
 newtype NotARecord = NotARecord
-  { _notARecord :: ScopedIden
+  { _notARecord :: Name
   }
   deriving stock (Show)
 
@@ -814,6 +814,28 @@ instance ToGenericError RepeatedField where
     where
       i :: Interval
       i = getLoc _repeatedField
+
+newtype NotAConstructor = NotAConstructor
+  { _notAConstructor :: Name
+  }
+  deriving stock (Show)
+
+instance ToGenericError NotAConstructor where
+  genericError NotAConstructor {..} = do
+    opts <- fromGenericOptions <$> ask
+    let msg =
+          "The identifier"
+            <+> ppCode opts _notAConstructor
+            <+> "is not a constructor"
+    return
+      GenericError
+        { _genericErrorLoc = i,
+          _genericErrorMessage = mkAnsiText msg,
+          _genericErrorIntervals = [i]
+        }
+    where
+      i :: Interval
+      i = getLoc _notAConstructor
 
 newtype PrecedenceInconsistencyError = PrecedenceInconsistencyError
   { _precedenceInconsistencyErrorFixityDef :: FixitySyntaxDef 'Parsed

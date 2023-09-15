@@ -55,6 +55,11 @@ type family RecordUpdateExtraType s = res | res -> s where
   RecordUpdateExtraType 'Parsed = ()
   RecordUpdateExtraType 'Scoped = RecordUpdateExtra
 
+type RecordCreationExtraType :: Stage -> GHC.Type
+type family RecordCreationExtraType s = res | res -> s where
+  RecordCreationExtraType 'Parsed = ()
+  RecordCreationExtraType 'Scoped = RecordCreationExtra
+
 type FieldArgIxType :: Stage -> GHC.Type
 type family FieldArgIxType s = res | res -> s where
   FieldArgIxType 'Parsed = ()
@@ -1499,6 +1504,13 @@ data RecordUpdateExtra = RecordUpdateExtra
   }
   deriving stock (Show)
 
+data RecordCreationExtra = RecordCreationExtra
+  { -- | Implicitly bound fields sorted by index
+    _recordCreationExtraVars :: [S.Symbol],
+    _recordCreationExtraSignature :: RecordNameSignature
+  }
+  deriving stock (Show)
+
 newtype ParensRecordUpdate = ParensRecordUpdate
   { _parensRecordUpdate :: RecordUpdate 'Scoped
   }
@@ -1553,7 +1565,7 @@ data RecordCreation (s :: Stage) = RecordCreation
     _recordCreationAtKw :: Irrelevant KeywordRef,
     _recordCreationDelims :: Irrelevant (KeywordRef, KeywordRef),
     _recordCreationFields :: NonEmpty (RecordDefineField s),
-    _recordCreationSignature :: Irrelevant (NameSignatureType s)
+    _recordCreationExtra :: Irrelevant (RecordCreationExtraType s)
   }
 
 deriving stock instance Show (RecordCreation 'Parsed)
@@ -1748,6 +1760,7 @@ makeLenses ''RecordPatternAssign
 makeLenses ''RecordPattern
 makeLenses ''ParensRecordUpdate
 makeLenses ''RecordUpdateExtra
+makeLenses ''RecordCreationExtra
 makeLenses ''RecordUpdate
 makeLenses ''RecordUpdateApp
 makeLenses ''RecordAssignField

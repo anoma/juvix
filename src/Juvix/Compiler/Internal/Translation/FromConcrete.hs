@@ -10,7 +10,6 @@ module Juvix.Compiler.Internal.Translation.FromConcrete
   )
 where
 
-import Control.Monad.Extra (mapAndUnzipM)
 import Data.HashMap.Strict qualified as HashMap
 import Data.IntMap.Strict qualified as IntMap
 import Data.List.NonEmpty qualified as NonEmpty
@@ -781,7 +780,8 @@ goExpression = \case
                         _argBlockImplicit = Explicit,
                         _argBlockArgs = nonEmpty' args
                       },
-                _namedAppSignature = _recordCreationSignature
+                _namedAppSignature =
+                  Irrelevant (NameSignature [NameBlock (_recordCreationExtra ^. unIrrelevant . recordCreationExtraSignature . recordNames) Explicit])
               }
       cls <- goLetFunDefs (nonEmpty' $ map Concrete.LetFunctionDef defs)
       e <- runNamedArguments app >>= goExpression
@@ -798,10 +798,26 @@ goExpression = \case
       RecordDefineFieldFunDef a -> goRecordFunDef a
 
     goRecordAssignField :: Concrete.RecordAssignField 'Scoped -> Sem r (Concrete.NamedArgument 'Scoped, Concrete.FunctionDef 'Scoped)
-    goRecordAssignField = undefined
+    goRecordAssignField Concrete.RecordAssignField {..} = do
+      let na =
+            Concrete.NamedArgument
+              { _namedArgName = _fieldAssignName,
+                _namedArgAssignKw = _fieldAssignKw,
+                _namedArgValue = undefined
+              }
+          def = undefined
+      return (na, def)
 
     goRecordFunDef :: Concrete.FunctionDef 'Scoped -> Sem r (Concrete.NamedArgument 'Scoped, Concrete.FunctionDef 'Scoped)
-    goRecordFunDef = undefined
+    goRecordFunDef def@Concrete.FunctionDef {..} = do
+      let iden = (ScopedIden undefined Nothing)
+          na =
+            Concrete.NamedArgument
+              { _namedArgName = _signName ^. S.nameConcrete,
+                _namedArgAssignKw = _signColonKw,
+                _namedArgValue = Concrete.ExpressionIdentifier iden
+              }
+      return (na, def)
 
     goRecordUpdate :: Concrete.RecordUpdate 'Scoped -> Sem r Internal.Lambda
     goRecordUpdate r = do

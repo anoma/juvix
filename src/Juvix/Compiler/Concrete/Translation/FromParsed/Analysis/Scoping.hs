@@ -15,6 +15,7 @@ import Juvix.Compiler.Concrete.Data.InfoTableBuilder
 import Juvix.Compiler.Concrete.Data.Name qualified as N
 import Juvix.Compiler.Concrete.Data.NameSignature
 import Juvix.Compiler.Concrete.Data.Scope
+import Juvix.Compiler.Concrete.Data.ScopedName (nameConcrete)
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Extra (recordNameSignatureByIndex)
 import Juvix.Compiler.Concrete.Extra qualified as P
@@ -1701,6 +1702,7 @@ checkLetFunDefs =
               DefinitionInductive {} -> impossible
               DefinitionProjectionDef {} -> impossible
               DefinitionAxiom {} -> impossible
+
         fromNonDefs :: NonDefinitionsSection s -> NonEmpty (LetStatement s)
         fromNonDefs NonDefinitionsSection {..} =
           (fromNonDef <$> _nonDefinitionsSection) <>? (fromDefs <$> _nonDefinitionsNext)
@@ -2081,7 +2083,40 @@ checkExpressionAtom e = case e of
   AtomList l -> pure . AtomList <$> checkList l
   AtomIterator i -> pure . AtomIterator <$> checkIterator i
   AtomNamedApplication i -> pure . AtomNamedApplication <$> checkNamedApplication i
+  AtomRecordCreation i -> pure . AtomRecordCreation <$> checkRecordCreation i
   AtomRecordUpdate i -> pure . AtomRecordUpdate <$> checkRecordUpdate i
+
+checkRecordCreation :: forall r. (Members '[Error ScoperError, State Scope, State ScoperState, Reader ScopeParameters, InfoTableBuilder, NameIdGen] r) => RecordCreation 'Parsed -> Sem r (RecordCreation 'Scoped)
+checkRecordCreation RecordCreation {..} = do
+  constrIden <- getNameOfKind KNameConstructor _recordCreationConstructor
+  let cname = constrIden ^. scopedIdenFinal
+  tab <- getInfoTable
+  let mci = HashMap.lookup (cname ^. S.nameId) (tab ^. infoConstructors)
+  case mci of
+    Just ci -> do
+      let name = NameUnqualified (ci ^. constructorInfoTypeName . nameConcrete)
+          nameId = ci ^. constructorInfoTypeName . S.nameId
+      info <- getRecordInfo' name nameId
+      let sig = info ^. recordInfoSignature
+      (vars', fields') <- withLocalScope $ do
+        vs <- mapM bindVariableSymbol (toList (recordNameSignatureByIndex sig))
+        fs <- mapM (checkDefineField sig) _recordCreationFields
+        return (vs, fs)
+      let extra' =
+            RecordCreationExtra
+              { _recordCreationExtraSignature = sig,
+                _recordCreationExtraVars = vars'
+              }
+      return
+        RecordCreation
+          { _recordCreationConstructor = constrIden,
+            _recordCreationFields = fields',
+            _recordCreationExtra = Irrelevant extra',
+            _recordCreationDelims,
+            _recordCreationAtKw
+          }
+    Nothing ->
+      throw (ErrNotAConstructor (NotAConstructor (cname ^. nameConcrete)))
 
 checkRecordUpdate :: forall r. (Members '[Error ScoperError, State Scope, State ScoperState, Reader ScopeParameters, InfoTableBuilder, NameIdGen] r) => RecordUpdate 'Parsed -> Sem r (RecordUpdate 'Scoped)
 checkRecordUpdate RecordUpdate {..} = do
@@ -2090,7 +2125,7 @@ checkRecordUpdate RecordUpdate {..} = do
   let sig = info ^. recordInfoSignature
   (vars', fields') <- withLocalScope $ do
     vs <- mapM bindVariableSymbol (toList (recordNameSignatureByIndex sig))
-    fs <- mapM (checkField sig) _recordUpdateFields
+    fs <- mapM (checkAssignField sig) _recordUpdateFields
     return (vs, fs)
   let extra' =
         RecordUpdateExtra
@@ -2106,21 +2141,34 @@ checkRecordUpdate RecordUpdate {..} = do
         _recordUpdateAtKw,
         _recordUpdateDelims
       }
+
+checkDefineField ::
+  (Members '[Error ScoperError, State Scope, State ScoperState, Reader ScopeParameters, InfoTableBuilder, NameIdGen] r) =>
+  RecordNameSignature ->
+  RecordDefineField 'Parsed ->
+  Sem r (RecordDefineField 'Scoped)
+checkDefineField sig = \case
+  RecordDefineFieldAssign i -> RecordDefineFieldAssign <$> checkAssignField sig i
+  RecordDefineFieldFunDef i -> RecordDefineFieldFunDef <$> localBindings (ignoreSyntax (checkFunctionDef i))
+
+checkAssignField ::
+  (Members '[Error ScoperError, State Scope, State ScoperState, Reader ScopeParameters, InfoTableBuilder, NameIdGen] r) =>
+  RecordNameSignature ->
+  RecordAssignField 'Parsed ->
+  Sem r (RecordAssignField 'Scoped)
+checkAssignField sig f = do
+  value' <- checkParseExpressionAtoms (f ^. fieldAssignValue)
+  idx' <- maybe (throw unexpectedField) return (sig ^? recordNames . at (f ^. fieldAssignName) . _Just . _2)
+  return
+    RecordAssignField
+      { _fieldAssignName = f ^. fieldAssignName,
+        _fieldAssignArgIx = idx',
+        _fieldAssignKw = f ^. fieldAssignKw,
+        _fieldAssignValue = value'
+      }
   where
-    checkField :: RecordNameSignature -> RecordAssignField 'Parsed -> Sem r (RecordAssignField 'Scoped)
-    checkField sig f = do
-      value' <- checkParseExpressionAtoms (f ^. fieldAssignValue)
-      idx' <- maybe (throw unexpectedField) return (sig ^? recordNames . at (f ^. fieldAssignName) . _Just . _2)
-      return
-        RecordAssignField
-          { _fieldAssignName = f ^. fieldAssignName,
-            _fieldAssignArgIx = idx',
-            _fieldAssignKw = f ^. fieldAssignKw,
-            _fieldAssignValue = value'
-          }
-      where
-        unexpectedField :: ScoperError
-        unexpectedField = ErrUnexpectedField (UnexpectedField (f ^. fieldAssignName))
+    unexpectedField :: ScoperError
+    unexpectedField = ErrUnexpectedField (UnexpectedField (f ^. fieldAssignName))
 
 checkNamedApplication ::
   forall r.
@@ -2151,11 +2199,19 @@ getRecordInfo ::
   (Members '[State ScoperState, Error ScoperError] r) =>
   ScopedIden ->
   Sem r RecordInfo
-getRecordInfo indTy =
-  fromMaybeM err (gets (^. scoperRecordFields . at (indTy ^. scopedIdenFinal . S.nameId)))
+getRecordInfo indTy = getRecordInfo' (indTy ^. scopedIdenFinal . nameConcrete) (indTy ^. scopedIdenFinal . S.nameId)
+
+getRecordInfo' ::
+  forall r.
+  (Members '[State ScoperState, Error ScoperError] r) =>
+  Name ->
+  NameId ->
+  Sem r RecordInfo
+getRecordInfo' name nameId =
+  fromMaybeM err (gets (^. scoperRecordFields . at nameId))
   where
     err :: Sem r a
-    err = throw (ErrNotARecord (NotARecord indTy))
+    err = throw (ErrNotARecord (NotARecord name))
 
 getNameSignature :: (Members '[State ScoperState, Error ScoperError] r) => ScopedIden -> Sem r NameSignature
 getNameSignature s = do
