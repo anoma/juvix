@@ -4,6 +4,14 @@
 <img align="right" width="300" height="300" alt="Juvix Mascot" src="../assets/images/tara-smiling.svg" />
 </a>
 
+## [0.5.1](https://github.com/anoma/juvix/tree/v0.5.1)
+
+[Full Changelog](https://github.com/anoma/juvix/compare/v0.5.0...v0.5.1)
+
+**Merged pull requests:**
+
+- Fix bug in isTrait [\#2368](https://github.com/anoma/juvix/pull/2368) ([lukaszcz](https://github.com/lukaszcz))
+
 ## [v0.5.0](https://github.com/anoma/juvix/tree/v0.5.0)
 
 [Full Changelog](https://github.com/anoma/juvix/compare/v0.4.3...v0.5.0)
