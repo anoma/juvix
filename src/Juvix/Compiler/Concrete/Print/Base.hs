@@ -279,8 +279,7 @@ instance (SingI s) => PrettyPrint (NamedApplication s) where
 
 instance (SingI s) => PrettyPrint (RecordCreation s) where
   ppCode RecordCreation {..} = do
-    let Irrelevant (l, r) = _recordCreationDelims
-        fields' =
+    let fields' =
           line
             <> indent
               ( sequenceWith
@@ -290,9 +289,7 @@ instance (SingI s) => PrettyPrint (RecordCreation s) where
             <> line
     ppIdentifierType _recordCreationConstructor
       <> ppCode _recordCreationAtKw
-      <> ppCode l
-      <> fields'
-      <> ppCode r
+      <> braces fields'
 
 instance (SingI s) => PrettyPrint (RecordUpdateField s) where
   ppCode RecordUpdateField {..} =
@@ -931,7 +928,7 @@ ppFunctionSignature FunctionDef {..} = do
       instance' = (<> line) . ppCode <$> _signInstance
       args' = hsep . fmap ppCode <$> nonEmpty _signArgs
       builtin' = (<> line) . ppCode <$> _signBuiltin
-      col' = maybe mempty ppCode (_signColonKw ^. unIrrelevant)
+      col' = maybe mempty ((<> space) . ppCode) (_signColonKw ^. unIrrelevant)
       type' = oneLineOrNext (col' <> maybe mempty ppExpressionType _signRetType)
       name' = annDef _signName (ppSymbolType _signName)
    in builtin'

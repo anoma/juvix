@@ -1564,7 +1564,6 @@ deriving stock instance Ord (NamedApplication 'Scoped)
 data RecordCreation (s :: Stage) = RecordCreation
   { _recordCreationConstructor :: IdentifierType s,
     _recordCreationAtKw :: Irrelevant KeywordRef,
-    _recordCreationDelims :: Irrelevant (KeywordRef, KeywordRef),
     _recordCreationFields :: NonEmpty (RecordDefineField s),
     _recordCreationExtra :: Irrelevant (RecordCreationExtraType s)
   }

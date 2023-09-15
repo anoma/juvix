@@ -2112,7 +2112,6 @@ checkRecordCreation RecordCreation {..} = do
           { _recordCreationConstructor = constrIden,
             _recordCreationFields = fields',
             _recordCreationExtra = Irrelevant extra',
-            _recordCreationDelims,
             _recordCreationAtKw
           }
     Nothing ->
