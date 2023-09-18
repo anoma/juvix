@@ -2098,8 +2098,8 @@ checkRecordCreation RecordCreation {..} = do
           nameId = ci ^. constructorInfoTypeName . S.nameId
       info <- getRecordInfo' name nameId
       let sig = info ^. recordInfoSignature
-      (vars', fields') <- withLocalScope $ do
-        vs <- mapM bindVariableSymbol (toList (recordNameSignatureByIndex sig))
+      (vars', fields') <- withLocalScope $ localBindings $ ignoreSyntax $ do
+        vs <- mapM (reserveFunctionSymbol . (^. fieldDefineFunDef)) _recordCreationFields
         fs <- mapM (checkDefineField sig) _recordCreationFields
         return (vs, fs)
       let extra' =
@@ -2116,6 +2116,23 @@ checkRecordCreation RecordCreation {..} = do
           }
     Nothing ->
       throw (ErrNotAConstructor (NotAConstructor (cname ^. nameConcrete)))
+
+checkDefineField ::
+  (Members '[Error ScoperError, State Scope, State ScoperState, Reader ScopeParameters, InfoTableBuilder, NameIdGen] r) =>
+  RecordNameSignature ->
+  RecordDefineField 'Parsed ->
+  Sem r (RecordDefineField 'Scoped)
+checkDefineField sig RecordDefineField {..} = do
+  def <- localBindings $ ignoreSyntax $ checkFunctionDef _fieldDefineFunDef
+  iden <- checkScopedIden _fieldDefineIden
+  let fname = def ^. signName . nameConcrete
+  unless (HashMap.member fname (sig ^. recordNames)) $
+    throw (ErrUnexpectedField (UnexpectedField fname))
+  return
+    RecordDefineField
+      { _fieldDefineFunDef = def,
+        _fieldDefineIden = iden
+      }
 
 checkRecordUpdate :: forall r. (Members '[Error ScoperError, State Scope, State ScoperState, Reader ScopeParameters, InfoTableBuilder, NameIdGen] r) => RecordUpdate 'Parsed -> Sem r (RecordUpdate 'Scoped)
 checkRecordUpdate RecordUpdate {..} = do
@@ -2139,23 +2156,6 @@ checkRecordUpdate RecordUpdate {..} = do
         _recordUpdateExtra = Irrelevant extra',
         _recordUpdateAtKw,
         _recordUpdateDelims
-      }
-
-checkDefineField ::
-  (Members '[Error ScoperError, State Scope, State ScoperState, Reader ScopeParameters, InfoTableBuilder, NameIdGen] r) =>
-  RecordNameSignature ->
-  RecordDefineField 'Parsed ->
-  Sem r (RecordDefineField 'Scoped)
-checkDefineField sig RecordDefineField {..} = do
-  def <- localBindings $ ignoreSyntax $ checkFunctionDef _fieldDefineFunDef
-  iden <- checkScopedIden _fieldDefineIden
-  let fname = def ^. signName . nameConcrete
-  unless (HashMap.member fname (sig ^. recordNames)) $
-    throw (ErrUnexpectedField (UnexpectedField fname))
-  return
-    RecordDefineField
-      { _fieldDefineFunDef = def,
-        _fieldDefineIden = iden
       }
 
 checkUpdateField ::

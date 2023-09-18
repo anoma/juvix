@@ -1507,7 +1507,7 @@ data RecordUpdateExtra = RecordUpdateExtra
 
 data RecordCreationExtra = RecordCreationExtra
   { -- | Implicitly bound fields sorted by index
-    _recordCreationExtraVars :: [S.Symbol],
+    _recordCreationExtraVars :: NonEmpty S.Symbol,
     _recordCreationExtraSignature :: RecordNameSignature
   }
   deriving stock (Show)
