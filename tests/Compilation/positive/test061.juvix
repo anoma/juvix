@@ -4,35 +4,37 @@ module test061;
 import Stdlib.Prelude open hiding {Show; mkShow; module Show};
 
 trait
-type Show A :=
-  mkShow {
-    show : A → String
-  };
+type Show A := mkShow {show : A → String};
 
 instance
 showStringI : Show String := mkShow (show := id);
 
 instance
-showBoolI : Show Bool := mkShow (show := λ{x := if x "true" "false"});
+showBoolI : Show Bool :=
+  mkShow@{
+    show (x : Bool) : String := if x "true" "false"
+  };
 
 instance
 showNatI : Show Nat := mkShow (show := natToString);
 
-showList {A} : {{Show A}} → List A → String
-  | nil := "nil"
-  | (h :: t) := Show.show h ++str " :: " ++str showList t;
-
 g : {A : Type} → {{Show A}} → Nat := 5;
 
 instance
-showListI {A} {{Show A}} : Show (List A) := mkShow (show := showList);
-
-showMaybe {A} {{Show A}} : Maybe A → String
-  | (just x) := "just (" ++str Show.show x ++str ")"
-  | nothing := "nothing";
+showListI {A} {{Show A}} : Show (List A) :=
+  mkShow@{
+    show {A} : {{Show A}} → List A → String
+      | nil := "nil"
+      | (h :: t) := Show.show h ++str " :: " ++str show t
+  };
 
 instance
-showMaybeI {A} {{Show A}} : Show (Maybe A) := mkShow (show := showMaybe);
+showMaybeI {A} {{Show A}} : Show (Maybe A) :=
+  mkShow@{
+    show {A} {{Show A}} : Maybe A → String
+      | (just x) := "just (" ++str Show.show x ++str ")"
+      | nothing := "nothing";
+  };
 
 f {A} {{Show A}} : A → String
   | x := Show.show x;
@@ -47,20 +49,22 @@ f'3 {A} {{M : Show A}} : A → String := Show.show {{M}};
 
 f'4 {A} {{_ : Show A}} : A → String := Show.show;
 
-f5 {A} {{Show A}} (n : String) (a : A) : String := n ++str Show.show a;
+f5 {A} {{Show A}} (n : String) (a : A) : String :=
+  n ++str Show.show a;
 
 main : IO :=
-  printStringLn (Show.show true) >>
-  printStringLn (f false) >>
-  printStringLn (Show.show 3) >>
-  printStringLn (Show.show g) >>
-  printStringLn (Show.show [true; false]) >>
-  printStringLn (Show.show [1; 2; 3]) >>
-  printStringLn (f' [1; 2]) >>
-  printStringLn (f'' [true; false]) >>
-  printStringLn (f'3 [just true; nothing; just false]) >>
-  printStringLn (f'4 [just [1]; nothing; just [2; 3]]) >>
-  printStringLn (f'3 "abba") >>
-  printStringLn (f'3 {{M := mkShow (λ{x := x ++str "!"})}} "abba") >>
-  printStringLn (f5 "abba" 3) >>
-  printStringLn (Show.show ["a"; "b"; "c"; "d"]);
+  printStringLn (Show.show true)
+    >> printStringLn (f false)
+    >> printStringLn (Show.show 3)
+    >> printStringLn (Show.show g)
+    >> printStringLn (Show.show [true; false])
+    >> printStringLn (Show.show [1; 2; 3])
+    >> printStringLn (f' [1; 2])
+    >> printStringLn (f'' [true; false])
+    >> printStringLn (f'3 [just true; nothing; just false])
+    >> printStringLn (f'4 [just [1]; nothing; just [2; 3]])
+    >> printStringLn (f'3 "abba")
+    >> printStringLn
+      (f'3 {{M := mkShow λ {x := x ++str "!"}}} "abba")
+    >> printStringLn (f5 "abba" 3)
+    >> printStringLn (Show.show ["a"; "b"; "c"; "d"]);

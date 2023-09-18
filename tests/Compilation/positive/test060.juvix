@@ -34,8 +34,8 @@ main : Triple Nat Nat Nat :=
   in if
     (mf
       mkPair@{
-        fst : Pair Bool (List Nat) := mkPair true nil;
-        snd : List Nat := 0 :: nil
+        fst := mkPair true nil;
+        snd := 0 :: nil
       })
     (f p')
     mkTriple@{
