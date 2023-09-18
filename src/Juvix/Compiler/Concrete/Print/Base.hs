@@ -280,13 +280,11 @@ instance (SingI s) => PrettyPrint (NamedApplication s) where
 instance (SingI s) => PrettyPrint (RecordCreation s) where
   ppCode RecordCreation {..} = do
     let fields' =
-          line
-            <> indent
-              ( sequenceWith
-                  (semicolon >> line)
-                  (ppCode <$> _recordCreationFields)
-              )
-            <> line
+          blockIndent
+            ( sequenceWith
+                (semicolon >> line)
+                (ppCode <$> _recordCreationFields)
+            )
     ppIdentifierType _recordCreationConstructor
       <> ppCode _recordCreationAtKw
       <> braces fields'
@@ -928,8 +926,9 @@ ppFunctionSignature FunctionDef {..} = do
       instance' = (<> line) . ppCode <$> _signInstance
       args' = hsep . fmap ppCode <$> nonEmpty _signArgs
       builtin' = (<> line) . ppCode <$> _signBuiltin
-      col' = maybe mempty ((<> space) . ppCode) (_signColonKw ^. unIrrelevant)
-      type' = oneLineOrNext (col' <> maybe mempty ppExpressionType _signRetType)
+      type' = case _signColonKw ^. unIrrelevant of
+        Just col -> oneLineOrNext (ppCode col <+> ppExpressionType (fromJust _signRetType))
+        Nothing -> mempty
       name' = annDef _signName (ppSymbolType _signName)
    in builtin'
         ?<> termin'
