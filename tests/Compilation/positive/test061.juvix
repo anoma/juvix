@@ -33,7 +33,7 @@ showMaybeI {A} {{Show A}} : Show (Maybe A) :=
   mkShow@{
     show {A} {{Show A}} : Maybe A → String
       | (just x) := "just (" ++str Show.show x ++str ")"
-      | nothing := "nothing";
+      | nothing := "nothing"
   };
 
 f {A} {{Show A}} : A → String
