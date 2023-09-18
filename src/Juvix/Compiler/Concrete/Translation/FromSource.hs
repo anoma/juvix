@@ -1030,8 +1030,11 @@ functionDefinition allowInstance _signBuiltin = P.label "<function definition>" 
     parseFailure off "instance not allowed here"
   _signName <- symbol
   _signArgs <- many parseArg
-  _signColonKw <- Irrelevant . Just <$> kw kwColon
-  _signRetType <- Just <$> parseExpressionAtoms
+  _signColonKw <- Irrelevant <$> optional (kw kwColon)
+  _signRetType <-
+    case _signColonKw ^. unIrrelevant of
+      Just {} -> Just <$> parseExpressionAtoms
+      Nothing -> return Nothing
   _signDoc <- getJudoc
   _signPragmas <- getPragmas
   _signBody <- parseBody
