@@ -2629,6 +2629,7 @@ parseTerm =
       <|> parseLiteral
       <|> parseLet
       <|> parseIterator
+      <|> parseRecordCreation
       <|> parseDoubleBraces
       <|> parseBraces
       <|> parseNamedApplication
@@ -2719,6 +2720,14 @@ parseTerm =
         iterator :: ExpressionAtom 'Scoped -> Maybe (Iterator 'Scoped)
         iterator s = case s of
           AtomIterator u -> Just u
+          _ -> Nothing
+
+    parseRecordCreation :: Parse Expression
+    parseRecordCreation = ExpressionRecordCreation <$> P.token record mempty
+      where
+        record :: ExpressionAtom 'Scoped -> Maybe (RecordCreation 'Scoped)
+        record s = case s of
+          AtomRecordCreation u -> Just u
           _ -> Nothing
 
     parseNoInfixIdentifier :: Parse Expression

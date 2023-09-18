@@ -830,6 +830,7 @@ recordCreation = P.label "<record creation>" $ do
     lbrace
     return (n, a)
   defs <- P.sepEndBy1 (functionDefinition Nothing) semicolon
+  rbrace
   let _recordCreationFields = fmap mkField defs
       _recordCreationExtra = Irrelevant ()
   return RecordCreation {..}

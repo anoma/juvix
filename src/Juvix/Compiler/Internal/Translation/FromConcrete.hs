@@ -806,12 +806,12 @@ goExpression = \case
       return
         Concrete.NamedArgument
           { _namedArgName = _fieldDefineFunDef ^. signName . S.nameConcrete,
-            _namedArgAssignKw = Irrelevant dummyKw,
+            _namedArgAssignKw = Irrelevant dummyAssignKw,
             _namedArgValue = Concrete.ExpressionIdentifier _fieldDefineIden
           }
       where
-        dummyKw :: KeywordRef
-        dummyKw =
+        dummyAssignKw :: KeywordRef
+        dummyAssignKw =
           KeywordRef
             { _keywordRefKeyword = asciiKw ":=",
               _keywordRefInterval = getLoc _fieldDefineFunDef,
