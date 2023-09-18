@@ -2100,7 +2100,7 @@ checkRecordCreation RecordCreation {..} = do
       let sig = info ^. recordInfoSignature
       (vars', fields') <- withLocalScope $ do
         vs <- mapM bindVariableSymbol (toList (recordNameSignatureByIndex sig))
-        fs <- mapM checkDefineField _recordCreationFields
+        fs <- mapM (checkDefineField sig) _recordCreationFields
         return (vs, fs)
       let extra' =
             RecordCreationExtra
@@ -2143,11 +2143,15 @@ checkRecordUpdate RecordUpdate {..} = do
 
 checkDefineField ::
   (Members '[Error ScoperError, State Scope, State ScoperState, Reader ScopeParameters, InfoTableBuilder, NameIdGen] r) =>
+  RecordNameSignature ->
   RecordDefineField 'Parsed ->
   Sem r (RecordDefineField 'Scoped)
-checkDefineField RecordDefineField {..} = do
+checkDefineField sig RecordDefineField {..} = do
   def <- localBindings $ ignoreSyntax $ checkFunctionDef _fieldDefineFunDef
   iden <- checkScopedIden _fieldDefineIden
+  let fname = def ^. signName . nameConcrete
+  unless (HashMap.member fname (sig ^. recordNames)) $
+    throw (ErrUnexpectedField (UnexpectedField fname))
   return
     RecordDefineField
       { _fieldDefineFunDef = def,
