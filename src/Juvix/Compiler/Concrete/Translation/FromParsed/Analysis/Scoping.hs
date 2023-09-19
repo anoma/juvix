@@ -2107,6 +2107,11 @@ checkRecordCreation RecordCreation {..} = do
               { _recordCreationExtraSignature = sig,
                 _recordCreationExtraVars = vars'
               }
+          snames = HashSet.fromList (HashMap.keys (sig ^. recordNames))
+          sfields = HashSet.fromList (map (^. fieldDefineFunDef . signName . nameConcrete) (toList fields'))
+          missingFields = HashSet.difference snames sfields
+      unless (null missingFields) $
+        throw (ErrMissingFields (MissingFields (cname ^. nameConcrete) missingFields))
       return
         RecordCreation
           { _recordCreationConstructor = constrIden,

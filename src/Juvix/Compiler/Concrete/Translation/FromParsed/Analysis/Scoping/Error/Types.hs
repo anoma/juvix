@@ -837,6 +837,31 @@ instance ToGenericError NotAConstructor where
       i :: Interval
       i = getLoc _notAConstructor
 
+data MissingFields = MissingFields
+  { _missingFieldsConstructor :: Name,
+    _missingFields :: HashSet Symbol
+  }
+  deriving stock (Show)
+
+instance ToGenericError MissingFields where
+  genericError MissingFields {..} = do
+    opts <- fromGenericOptions <$> ask
+    let msg =
+          "Missing fields for the record constructor"
+            <+> ppCode opts _missingFieldsConstructor
+              <> ":"
+              <> line
+              <> itemize (map (ppCode opts) (toList _missingFields))
+    return
+      GenericError
+        { _genericErrorLoc = i,
+          _genericErrorMessage = mkAnsiText msg,
+          _genericErrorIntervals = [i]
+        }
+    where
+      i :: Interval
+      i = getLoc _missingFieldsConstructor
+
 newtype PrecedenceInconsistencyError = PrecedenceInconsistencyError
   { _precedenceInconsistencyErrorFixityDef :: FixitySyntaxDef 'Parsed
   }

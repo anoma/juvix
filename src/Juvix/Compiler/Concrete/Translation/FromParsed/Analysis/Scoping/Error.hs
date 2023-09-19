@@ -45,6 +45,7 @@ data ScoperError
   | ErrRepeatedField RepeatedField
   | ErrConstructorNotARecord ConstructorNotARecord
   | ErrNotAConstructor NotAConstructor
+  | ErrMissingFields MissingFields
   | ErrPrecedenceInconsistency PrecedenceInconsistencyError
   | ErrIncomparablePrecedences IncomaprablePrecedences
   | ErrAliasCycle AliasCycle
@@ -85,6 +86,7 @@ instance ToGenericError ScoperError where
     ErrRepeatedField e -> genericError e
     ErrConstructorNotARecord e -> genericError e
     ErrNotAConstructor e -> genericError e
+    ErrMissingFields e -> genericError e
     ErrPrecedenceInconsistency e -> genericError e
     ErrIncomparablePrecedences e -> genericError e
     ErrAliasCycle e -> genericError e
