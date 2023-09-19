@@ -464,6 +464,35 @@ instance ToGenericError AmbiguousInstances where
                 <> line
                 <> indent' locs
 
+data SubsumedInstance = SubsumedInstance
+  { _subsumedInstance :: InstanceInfo,
+    _subsumedInstanceParents :: [InstanceInfo],
+    _subsumedInstanceLoc :: Interval
+  }
+
+makeLenses ''SubsumedInstance
+
+instance ToGenericError SubsumedInstance where
+  genericError e = ask >>= generr
+    where
+      generr opts =
+        return
+          GenericError
+            { _genericErrorLoc = i,
+              _genericErrorMessage = ppOutput msg,
+              _genericErrorIntervals = [i]
+            }
+        where
+          opts' = fromGenericOptions opts
+          i = e ^. subsumedInstanceLoc
+          locs = itemize $ map (pretty . getLoc . (^. instanceInfoResult)) (e ^. subsumedInstanceParents)
+          msg =
+            "The instance"
+              <+> ppCode opts' (e ^. subsumedInstance . instanceInfoResult)
+              <+> "is subsumed by instances at:"
+                <> line
+                <> indent' locs
+
 newtype ExplicitInstanceArgument = ExplicitInstanceArgument
   { _explicitInstanceArgumentParameter :: FunctionParameter
   }

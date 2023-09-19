@@ -78,11 +78,12 @@ expandArity loc subs params e = case params of
 lookupInstance' ::
   forall r.
   (Member Inference r) =>
+  Bool ->
   InstanceTable ->
   Name ->
   [InstanceParam] ->
   Sem r [(InstanceInfo, SubsI)]
-lookupInstance' tab name params = do
+lookupInstance' canFillHoles tab name params = do
   let is = fromMaybe [] $ lookupInstanceTable tab name
   mapMaybeM matchInstance is
   where
@@ -111,13 +112,16 @@ lookupInstance' tab name params = do
       (InstanceParamVar v1, InstanceParamVar v2)
         | v1 == v2 ->
             return True
-      (InstanceParamHole h, _) -> do
-        m <- matchTypes (ExpressionHole h) (paramToExpression t)
-        case m of
-          Just {} -> return False
-          Nothing -> return True
+      (InstanceParamHole h, _)
+        | canFillHoles -> do
+            m <- matchTypes (ExpressionHole h) (paramToExpression t)
+            case m of
+              Just {} -> return False
+              Nothing -> return True
+        | otherwise ->
+            return False
       (_, InstanceParamHole h)
-        | checkNoMeta pat -> do
+        | canFillHoles && checkNoMeta pat -> do
             m <- matchTypes (paramToExpression pat) (ExpressionHole h)
             case m of
               Just {} -> return False
@@ -137,9 +141,20 @@ lookupInstance ::
 lookupInstance tab ty = do
   case traitFromExpression mempty ty of
     Just InstanceApp {..} ->
-      lookupInstance' tab _instanceAppHead _instanceAppArgs
+      lookupInstance' True tab _instanceAppHead _instanceAppArgs
     _ ->
       throw (ErrNotATrait (NotATrait ty))
+
+subsumingInstances ::
+  forall r.
+  (Members '[Error TypeCheckerError, Inference] r) =>
+  InstanceTable ->
+  InstanceInfo ->
+  Sem r [(InstanceInfo, SubsI)]
+subsumingInstances tab InstanceInfo {..} = do
+  is <- lookupInstance' False tab _instanceInfoInductive _instanceInfoParams
+  return $
+    filter (\(x, _) -> x ^. instanceInfoResult /= _instanceInfoResult) is
 
 instanceFromTypedExpression' :: InfoTable -> TypedExpression -> Maybe InstanceInfo
 instanceFromTypedExpression' tbl e = do
