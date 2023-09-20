@@ -302,7 +302,7 @@ statement = P.label "<top level statement>" $ do
           <|> StatementModule <$> moduleDef
           <|> StatementAxiom <$> axiomDef Nothing
           <|> builtinStatement
-          <|> StatementFunctionDef <$> functionDefinition Nothing
+          <|> StatementFunctionDef <$> functionDefinition True Nothing
       )
   case ms of
     Just s -> return s
@@ -485,7 +485,7 @@ builtinFunctionDef ::
   (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
   WithLoc BuiltinFunction ->
   ParsecS r (FunctionDef 'Parsed)
-builtinFunctionDef = functionDefinition . Just
+builtinFunctionDef = functionDefinition True . Just
 
 builtinStatement :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (Statement 'Parsed)
 builtinStatement = do
@@ -916,7 +916,7 @@ letFunDef ::
   ParsecS r (FunctionDef 'Parsed)
 letFunDef = do
   optional_ stashPragmas
-  functionDefinition Nothing
+  functionDefinition False Nothing
 
 letStatement :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (LetStatement 'Parsed)
 letStatement =
@@ -995,11 +995,15 @@ getPragmas = P.lift $ do
 functionDefinition ::
   forall r.
   (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
+  Bool ->
   Maybe (WithLoc BuiltinFunction) ->
   ParsecS r (FunctionDef 'Parsed)
-functionDefinition _signBuiltin = P.label "<function definition>" $ do
+functionDefinition allowInstance _signBuiltin = P.label "<function definition>" $ do
   _signTerminating <- optional (kw kwTerminating)
+  off <- P.getOffset
   _signInstance <- optional (kw kwInstance)
+  unless (allowInstance || isNothing _signInstance) $
+    parseFailure off "instance not allowed here"
   _signName <- symbol
   _signArgs <- many parseArg
   _signColonKw <- Irrelevant <$> kw kwColon
