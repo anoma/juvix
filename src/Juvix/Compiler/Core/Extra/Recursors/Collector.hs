@@ -22,7 +22,7 @@ binderInfoCollector' ini = Collector ini collect
     collect :: (Int, [Binder]) -> BinderList Binder -> BinderList Binder
     collect (k, bi) c
       | k == 0 = c
-      | otherwise = BL.prepend (reverse bi) c
+      | otherwise = BL.prependRev bi c
 
 binderInfoCollector :: Collector (Int, [Binder]) (BinderList Binder)
 binderInfoCollector = binderInfoCollector' mempty

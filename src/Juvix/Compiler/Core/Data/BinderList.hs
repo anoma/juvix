@@ -70,11 +70,14 @@ lookupsSortedRev bl = go [] 0 bl
     head' :: BinderList a -> a
     head' = lookup 0
 
+lookupMay :: Index -> BinderList a -> Maybe a
+lookupMay idx bl
+  | idx < bl ^. blLength = Just $ (bl ^. blMap) !! idx
+  | otherwise = Nothing
+
 -- | lookup de Bruijn Index
 lookup :: Index -> BinderList a -> a
-lookup idx bl
-  | idx < bl ^. blLength = (bl ^. blMap) !! idx
-  | otherwise = err
+lookup idx bl = fromMaybe err (lookupMay idx bl)
   where
     err :: a
     err =
