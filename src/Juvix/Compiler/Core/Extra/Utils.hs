@@ -360,6 +360,11 @@ checkDepth d node = case node of
     -- count them
     checkDepth (d - 1) _caseValue
       && all (checkDepth (d - 1) . (^. caseBranchBody)) _caseBranches
+  NLam Lambda {..} ->
+    checkDepth (d - 1) _lambdaBody
+  NLet Let {..} ->
+    checkDepth (d - 1) (_letItem ^. letItemValue)
+      && checkDepth (d - 1) _letBody
   _ ->
     all (checkDepth (d - 1)) (childrenNodes node)
 
