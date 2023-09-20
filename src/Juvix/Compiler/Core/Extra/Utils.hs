@@ -355,6 +355,11 @@ checkDepth 0 _ = False
 checkDepth d node = case node of
   NApp App {..} ->
     checkDepth d _appLeft && checkDepth (d - 1) _appRight
+  NCase Case {..} ->
+    -- the types of bound variables are also children, but we don't want to
+    -- count them
+    checkDepth (d - 1) _caseValue
+      && all (checkDepth (d - 1) . (^. caseBranchBody)) _caseBranches
   _ ->
     all (checkDepth (d - 1)) (childrenNodes node)
 
