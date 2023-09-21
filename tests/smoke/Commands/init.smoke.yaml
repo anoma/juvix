@@ -6,14 +6,29 @@ tests:
       shell:
         - bash
       script: |
-        mkdir tmp
-        cd tmp
-        juvix init
+        temp=$(mktemp -d)
+        trap 'rm -rf -- "$temp"' EXIT
+        cd $temp
+        echo -e 'abc\n\n\n' | juvix init
         cat juvix.yaml
-        cd ..
-        rm -rf tmp
     stdout:
       contains:
-        "name: tmp"
-    stdin: "\n\n"
+        "name: abc"
+    exit-status: 0
+  - name: init-does-not-contain-file-field
+    command:
+      shell:
+        - bash
+      script: |
+        temp=$(mktemp -d)
+        trap 'rm -rf -- "$temp"' EXIT
+        cd $temp
+        echo -e 'abc\n\n\n' | juvix init
+        cat juvix.yaml
+    stdout:
+      matches:
+        regex: |-
+          ^((?!file:).)*$
+        options:
+          - dot-all
     exit-status: 0
