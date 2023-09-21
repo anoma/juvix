@@ -28,6 +28,7 @@ data TypeCheckerError
   | ErrNotATrait NotATrait
   | ErrNoInstance NoInstance
   | ErrAmbiguousInstances AmbiguousInstances
+  | ErrSubsumedInstance SubsumedInstance
   | ErrExplicitInstanceArgument ExplicitInstanceArgument
   | ErrTraitNotTerminating TraitNotTerminating
 
@@ -50,5 +51,6 @@ instance ToGenericError TypeCheckerError where
     ErrNotATrait e -> genericError e
     ErrNoInstance e -> genericError e
     ErrAmbiguousInstances e -> genericError e
+    ErrSubsumedInstance e -> genericError e
     ErrExplicitInstanceArgument e -> genericError e
     ErrTraitNotTerminating e -> genericError e

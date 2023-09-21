@@ -2,7 +2,7 @@ module AmbiguousInstances;
 
 type Unit := unit;
 
-type Box A := box A;
+type Box A B := box A B;
 
 trait
 type T A := mkT { pp : A → A };
@@ -10,13 +10,13 @@ type T A := mkT { pp : A → A };
 instance
 unitT : T Unit := mkT (pp := λ{_ := unit});
 
-ppBox {A} {{T A}} : Box A → Box A
-  | (box x) := box (T.pp x);
+ppBox {A B} {{T A}} : Box A B → Box A B
+  | (box x y) := box (T.pp x) y;
 
 instance
-boxT {A} {{T A}} : T (Box A) := mkT (pp := ppBox);
+boxT {A} {{T A}} : T (Box A Unit) := mkT (pp := ppBox);
 
 instance
-boxTUnit : T (Box Unit) := mkT (pp := λ{x := x});
+boxTUnit {B} : T (Box Unit B) := mkT (pp := λ{x := x});
 
-main : Box Unit := T.pp (box unit);
+main : Box Unit Unit := T.pp (box unit unit);

@@ -182,6 +182,13 @@ tests =
         ErrAmbiguousInstances {} -> Nothing
         _ -> wrongError,
     NegTest
+      "Subsumed instance"
+      $(mkRelDir "Internal")
+      $(mkRelFile "SubsumedInstance.juvix")
+      $ \case
+        ErrSubsumedInstance {} -> Nothing
+        _ -> wrongError,
+    NegTest
       "Explicit instance argument"
       $(mkRelDir "Internal")
       $(mkRelFile "ExplicitInstanceArgument.juvix")
