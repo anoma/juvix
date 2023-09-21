@@ -829,7 +829,7 @@ recordCreation = P.label "<record creation>" $ do
     a <- Irrelevant <$> kw kwAt
     lbrace
     return (n, a)
-  defs <- P.sepEndBy1 (functionDefinition Nothing) semicolon
+  defs <- P.sepEndBy1 (functionDefinition False Nothing) semicolon
   rbrace
   let _recordCreationFields = fmap mkField defs
       _recordCreationExtra = Irrelevant ()
