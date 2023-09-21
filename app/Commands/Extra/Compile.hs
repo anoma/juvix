@@ -170,13 +170,22 @@ commonArgs buildDir o outfile =
              | otherwise -> []
        )
 
+optimizationOption :: CompileOptions -> String
+optimizationOption o =
+  "-O" <> show (maybe defaultOptLevel (max 1) (o ^. compileOptimizationLevel))
+  where
+    defaultOptLevel :: Int
+    defaultOptLevel
+      | o ^. compileDebug = debugClangOptimizationLevel
+      | otherwise = defaultClangOptimizationLevel
+
 native64Args :: Path Abs Dir -> CompileOptions -> Path Abs File -> Path Abs File -> [String]
 native64Args buildDir o outfile inputFile =
   commonArgs buildDir o outfile
     <> [ "-DARCH_NATIVE64",
          "-DAPI_LIBC",
          "-m64",
-         "-O" <> show (maybe defaultOptLevel (max 1) (o ^. compileOptimizationLevel)),
+         optimizationOption o,
          toFilePath inputFile
        ]
     <> ( if
@@ -184,18 +193,13 @@ native64Args buildDir o outfile inputFile =
                  ["-ljuvix"]
              | otherwise -> []
        )
-  where
-    defaultOptLevel :: Int
-    defaultOptLevel
-      | o ^. compileDebug = debugClangOptimizationLevel
-      | otherwise = defaultClangOptimizationLevel
 
 wasiArgs :: Path Abs Dir -> CompileOptions -> Path Abs File -> Path Abs File -> Path Abs Dir -> [String]
 wasiArgs buildDir o outfile inputFile sysrootPath =
   commonArgs buildDir o outfile
     <> [ "-DARCH_WASM32",
          "-DAPI_WASI",
-         "-Os",
+         optimizationOption o,
          "-nodefaultlibs",
          "--target=wasm32-wasi",
          "--sysroot",
