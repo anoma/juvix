@@ -80,6 +80,13 @@ parserErrorTests =
       $(mkRelFile "PragmasDuplicateKeys.juvix")
       $ \case
         ErrMegaparsec {} -> Nothing
+        _ -> wrongError,
+    negTest
+      "Error on local instances"
+      $(mkRelDir ".")
+      $(mkRelFile "ErrorOnLocalInstances.juvix")
+      $ \case
+        ErrMegaparsec {} -> Nothing
         _ -> wrongError
   ]
 

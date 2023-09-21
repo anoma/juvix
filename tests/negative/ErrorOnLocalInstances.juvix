@@ -1,0 +1,12 @@
+module ErrorOnLocalInstances;
+
+type Unit := unit;
+
+trait
+type T A := mkT {pp : A -> A};
+
+main : Unit :=
+  let
+    instance
+    unitI : T Unit := mkT λ{x := x};
+  in T.pp {{unitI}} unit;
