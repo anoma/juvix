@@ -53,9 +53,13 @@ checkValidGitClone = void gitHeadRef
 isValidGitClone :: (Members '[Process, Reader CloneEnv] r) => Sem r Bool
 isValidGitClone = isRight <$> runError @GitProcessError checkValidGitClone
 
+-- | Return the normal form of the passed git reference
+gitNormalizeRef :: forall r. (Members '[Process, Error GitProcessError, Reader CloneEnv] r) => Text -> Sem r Text
+gitNormalizeRef ref = T.strip <$> runGitCmdInDir' ["rev-parse", "--verify", ref <> "^{commit}"]
+
 -- | Return the HEAD ref of the clone
 gitHeadRef :: (Members '[Process, Error GitProcessError, Reader CloneEnv] r) => Sem r Text
-gitHeadRef = T.strip <$> runGitCmdInDir' ["rev-parse", "HEAD"]
+gitHeadRef = gitNormalizeRef "HEAD"
 
 -- | Checkout the clone at a particular ref
 gitCheckout :: (Members '[Process, Error GitProcessError, Reader CloneEnv] r) => Text -> Sem r ()
@@ -88,13 +92,10 @@ handleNotACloneError errorHandler eff = catch @GitProcessError eff $ \case
   GitCmdError GitCmdErrorDetails {_gitCmdErrorDetailsExitCode = ExitFailure 128} -> runTSimple (return NotAClone) >>= bindTSimple errorHandler
   e -> throw e
 
-handleNoSuchRefError :: (Member (Error GitProcessError) r, Monad m) => (GitError -> m x) -> GitRef -> Tactical e m r x -> Tactical e m r x
-handleNoSuchRefError errorHandler ref eff = catch @GitProcessError eff $ \case
-  GitCmdError GitCmdErrorDetails {_gitCmdErrorDetailsExitCode = ExitFailure 1} -> runTSimple (return (NoSuchRef ref)) >>= bindTSimple errorHandler
+handleNormalizeRefError :: (Member (Error GitProcessError) r, Monad m) => (GitError -> m x) -> GitRef -> Tactical e m r x -> Tactical e m r x
+handleNormalizeRefError errorHandler ref eff = catch @GitProcessError eff $ \case
+  GitCmdError GitCmdErrorDetails {_gitCmdErrorDetailsExitCode = ExitFailure 128} -> runTSimple (return (NoSuchRef ref)) >>= bindTSimple errorHandler
   e -> throw e
-
-handleCheckoutError :: (Member (Error GitProcessError) r, Monad m) => (GitError -> m x) -> GitRef -> Tactical e m r x -> Tactical e m r x
-handleCheckoutError errorHandler ref eff = handleNoSuchRefError errorHandler ref (handleNotACloneError errorHandler eff)
 
 runGitProcess ::
   forall r a.
@@ -110,9 +111,11 @@ runGitProcess = interpretScopedH allocator handler
 
     handler :: forall q r0 x. Path Abs Dir -> Git (Sem r0) x -> Tactical Git (Sem r0) (Opaque q ': r) x
     handler p eff = case eff of
-      HeadRef errorHandler -> handleNotACloneError errorHandler (runReader env gitHeadRef >>= pureT)
       Fetch errorHandler -> handleNotACloneError errorHandler (runReader env gitFetch >>= pureT)
-      Checkout errorHandler ref -> handleCheckoutError errorHandler ref (runReader env (gitCheckout ref) >>= pureT)
+      Checkout errorHandler ref -> do
+        void (handleNormalizeRefError errorHandler ref (runReader env (void (gitNormalizeRef ref)) >>= pureT))
+        handleNotACloneError errorHandler (runReader env (gitCheckout ref) >>= pureT)
+      NormalizeRef errorHandler ref -> handleNormalizeRefError errorHandler ref (runReader env (gitNormalizeRef ref) >>= pureT)
       where
         env :: CloneEnv
         env = CloneEnv {_cloneEnvDir = p}
