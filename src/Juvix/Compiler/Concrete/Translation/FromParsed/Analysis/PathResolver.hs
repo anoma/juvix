@@ -121,11 +121,8 @@ getDependencyPath i = case i ^. packageDepdendencyInfoDependency of
     r <- rootBuildDir <$> asks (^. envRoot)
     let cloneDir = r <//> relDependenciesDir <//> relDir (T.unpack (g ^. gitDependencyName))
         cloneArgs = CloneArgs {_cloneArgsCloneDir = cloneDir, _cloneArgsRepoUrl = g ^. gitDependencyUrl}
-        errorHandler' = errorHandler cloneDir
-    scoped @CloneArgs @Git cloneArgs $ do
-      fetch errorHandler'
-      checkout errorHandler' (g ^. gitDependencyRef)
-      return cloneDir
+    scoped @CloneArgs @Git cloneArgs $
+      fetchOnNoSuchRefAndRetry (errorHandler cloneDir) (`checkout` (g ^. gitDependencyRef)) >> return cloneDir
     where
       errorHandler :: Path Abs Dir -> GitError -> Sem (Git ': r) a
       errorHandler p c =
