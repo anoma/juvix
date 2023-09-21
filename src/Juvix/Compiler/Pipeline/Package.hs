@@ -53,7 +53,7 @@ type family DependenciesType s = res | res -> s where
 
 type PackageFileType :: IsProcessed -> GHC.Type
 type family PackageFileType s = res | res -> s where
-  PackageFileType 'Raw = ()
+  PackageFileType 'Raw = Maybe ()
   PackageFileType 'Processed = Path Abs File
 
 data Package' (s :: IsProcessed) = Package
@@ -102,8 +102,7 @@ instance FromJSON RawPackage where
         _packageDependencies <- keyMay "dependencies" fromAesonParser
         _packageBuildDir <- keyMay "build-dir" fromAesonParser
         _packageMain <- keyMay "main" fromAesonParser
-        let _packageFile = ()
-        return Package {..}
+        return Package {_packageFile = Nothing, ..}
       err :: a
       err = error "Failed to parse juvix.yaml"
 
@@ -136,7 +135,7 @@ rawPackage pkg =
       _packageDependencies = Just (pkg ^. packageDependencies),
       _packageBuildDir = pkg ^. packageBuildDir,
       _packageMain = pkg ^. packageMain,
-      _packageFile = ()
+      _packageFile = Nothing
     }
 
 processPackage :: forall r. (Members '[Error Text] r) => Path Abs File -> BuildDir -> RawPackage -> Sem r Package
@@ -194,7 +193,7 @@ globalPackage =
       _packageVersion = Just (prettySemVer defaultVersion),
       _packageMain = Nothing,
       _packageBuildDir = Nothing,
-      _packageFile = ()
+      _packageFile = Nothing
     }
 
 mkPackageFilePath :: Path Abs Dir -> Path Abs File
