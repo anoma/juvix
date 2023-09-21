@@ -95,7 +95,7 @@ defaultOptimizationLevel :: Int
 defaultOptimizationLevel = 1
 
 defaultInliningDepth :: Int
-defaultInliningDepth = 2
+defaultInliningDepth = 3
 
 mainModulePath :: Traversal' EntryPoint (Path Abs File)
 mainModulePath = entryPointModulePaths . _head

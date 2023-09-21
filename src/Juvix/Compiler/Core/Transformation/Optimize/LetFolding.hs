@@ -12,26 +12,28 @@
 -- ```
 module Juvix.Compiler.Core.Transformation.Optimize.LetFolding (letFolding, letFolding') where
 
+import Juvix.Compiler.Core.Data.BinderList qualified as BL
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Info.FreeVarsInfo as Info
 import Juvix.Compiler.Core.Transformation.Base
 
-convertNode :: (Node -> Bool) -> InfoTable -> Node -> Node
-convertNode isFoldable tab = rmap go
+convertNode :: (InfoTable -> BinderList Binder -> Node -> Bool) -> InfoTable -> Node -> Node
+convertNode isFoldable tab = rmapL go
   where
-    go :: ([BinderChange] -> Node -> Node) -> Node -> Node
-    go recur = \case
+    go :: ([BinderChange] -> Node -> Node) -> BinderList Binder -> Node -> Node
+    go recur bl = \case
       NLet Let {..}
         | isImmediate tab (_letItem ^. letItemValue)
             || Info.freeVarOccurrences 0 _letBody <= 1
-            || isFoldable (_letItem ^. letItemValue) ->
-            go (recur . (mkBCRemove (_letItem ^. letItemBinder) val' :)) _letBody
+            || isFoldable tab bl (_letItem ^. letItemValue) ->
+            go (recur . (mkBCRemove b val' :)) (BL.cons b bl) _letBody
         where
-          val' = go recur (_letItem ^. letItemValue)
+          val' = go recur bl (_letItem ^. letItemValue)
+          b = _letItem ^. letItemBinder
       node ->
         recur [] node
 
-letFolding' :: (Node -> Bool) -> InfoTable -> InfoTable
+letFolding' :: (InfoTable -> BinderList Binder -> Node -> Bool) -> InfoTable -> InfoTable
 letFolding' isFoldable tab =
   mapAllNodes
     ( removeInfo kFreeVarsInfo
@@ -41,4 +43,4 @@ letFolding' isFoldable tab =
     tab
 
 letFolding :: InfoTable -> InfoTable
-letFolding = letFolding' (const False)
+letFolding = letFolding' (\_ _ _ -> False)

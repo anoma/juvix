@@ -204,7 +204,7 @@ translateNode node = case node of
           (map translateCaseBranch _caseBranches)
           (fmap translateNode _caseDefault)
   _
-    | isType node ->
+    | isType' node ->
         Stripped.mkConstr (Stripped.ConstrInfo "()" Nothing Stripped.TyDynamic) (BuiltinTag TagTrue) []
   _ ->
     unsupported

@@ -62,8 +62,8 @@ filterOutTypeSynonyms tab = pruneInfoTable tab'
     tab' = tab {_infoIdentifiers = idents'}
     idents' = HashMap.filter (\ii -> not (isTypeConstr tab (ii ^. identifierType))) (tab ^. infoIdentifiers)
 
-isType :: Node -> Bool
-isType = \case
+isType' :: Node -> Bool
+isType' = \case
   NPi {} -> True
   NUniv {} -> True
   NPrim {} -> True
@@ -83,6 +83,16 @@ isType = \case
   NMatch {} -> False
   Closure {} -> False
 
+isType :: InfoTable -> BinderList Binder -> Node -> Bool
+isType tab bl node = case node of
+  NVar Var {..}
+    | Just Binder {..} <- BL.lookupMay _varIndex bl ->
+        isTypeConstr tab _binderType
+  NIdt Ident {..}
+    | Just ii <- lookupIdentifierInfo' tab _identSymbol ->
+        isTypeConstr tab (ii ^. identifierType)
+  _ -> isType' node
+
 -- | True for nodes whose evaluation immediately returns a value, i.e.,
 -- no reduction or memory allocation in the runtime is required.
 isImmediate :: InfoTable -> Node -> Bool
@@ -97,8 +107,8 @@ isImmediate tab = \case
             | Just ii <- lookupIdentifierInfo' tab _identSymbol ->
                 let paramsNum = length (takeWhile (isTypeConstr tab) (typeArgs (ii ^. identifierType)))
                  in length args <= paramsNum
-          _ -> all isType args
-  node -> isType node
+          _ -> all (isType tab mempty) args
+  node -> isType tab mempty node
 
 isImmediate' :: Node -> Bool
 isImmediate' = isImmediate emptyInfoTable
@@ -350,13 +360,17 @@ translateCase translateIf dflt Case {..} = case _caseBranches of
     branchFailure :: Node
     branchFailure = mkBuiltinApp' OpFail [mkConstant' (ConstString "illegal `if` branch")]
 
-checkDepth :: Int -> Node -> Bool
-checkDepth 0 _ = False
-checkDepth d node = case node of
+checkDepth :: InfoTable -> BinderList Binder -> Int -> Node -> Bool
+checkDepth tab bl 0 node = isType tab bl node
+checkDepth tab bl d node = case node of
   NApp App {..} ->
-    checkDepth d _appLeft && checkDepth (d - 1) _appRight
+    checkDepth tab bl d _appLeft && checkDepth tab bl (d - 1) _appRight
   _ ->
-    all (checkDepth (d - 1)) (childrenNodes node)
+    all go (children node)
+    where
+      go :: NodeChild -> Bool
+      go NodeChild {..} =
+        checkDepth tab (BL.prependRev _childBinders bl) (d - 1) _childNode
 
 isCaseBoolean :: [CaseBranch] -> Bool
 isCaseBoolean = \case

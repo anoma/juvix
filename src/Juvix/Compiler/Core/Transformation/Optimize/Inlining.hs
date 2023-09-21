@@ -1,23 +1,26 @@
 module Juvix.Compiler.Core.Transformation.Optimize.Inlining where
 
 import Data.HashSet qualified as HashSet
+import Juvix.Compiler.Core.Data.BinderList qualified as BL
 import Juvix.Compiler.Core.Data.IdentDependencyInfo
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Options
 import Juvix.Compiler.Core.Transformation.Base
 
-isInlineableLambda :: Int -> Node -> Bool
-isInlineableLambda inlineDepth node = case node of
+isInlineableLambda :: Int -> InfoTable -> BinderList Binder -> Node -> Bool
+isInlineableLambda inlineDepth tab bl node = case node of
   NLam {} ->
-    checkDepth inlineDepth (snd (unfoldLambdas node))
+    let (lams, body) = unfoldLambdas node
+        binders = map (^. lambdaLhsBinder) lams
+     in checkDepth tab (BL.prependRev binders bl) inlineDepth body
   _ ->
     False
 
 convertNode :: Int -> HashSet Symbol -> InfoTable -> Node -> Node
-convertNode inlineDepth recSyms tab = dmap go
+convertNode inlineDepth recSyms tab = dmapL go
   where
-    go :: Node -> Node
-    go node = case node of
+    go :: BinderList Binder -> Node -> Node
+    go bl node = case node of
       NApp {} ->
         let (h, args) = unfoldApps node
          in case h of
@@ -33,7 +36,7 @@ convertNode inlineDepth recSyms tab = dmap go
                     node
                   _
                     | not (HashSet.member _identSymbol recSyms)
-                        && isInlineableLambda inlineDepth def
+                        && isInlineableLambda inlineDepth tab bl def
                         && length args >= argsNum ->
                         mkApps def args
                   _ ->

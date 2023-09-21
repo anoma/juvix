@@ -116,7 +116,7 @@ wasiArgs sysrootPath outputFile inputFile =
   commonArgs outputFile
     <> [ "-DARCH_WASM32",
          "-DAPI_WASI",
-         "-Os",
+         "-O3",
          "-nodefaultlibs",
          "--target=wasm32-wasi",
          "--sysroot",
