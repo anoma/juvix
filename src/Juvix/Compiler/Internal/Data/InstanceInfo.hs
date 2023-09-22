@@ -9,6 +9,7 @@ import Juvix.Prelude
 data InstanceParam
   = InstanceParamVar VarName
   | InstanceParamApp InstanceApp
+  | InstanceParamFun InstanceFun
   | InstanceParamHole Hole
   | InstanceParamMeta VarName
   deriving stock (Eq)
@@ -18,6 +19,14 @@ data InstanceApp = InstanceApp
     _instanceAppArgs :: [InstanceParam],
     -- | The original expression from which this InstanceApp was created
     _instanceAppExpression :: Expression
+  }
+  deriving stock (Eq)
+
+data InstanceFun = InstanceFun
+  { _instanceFunLeft :: InstanceParam,
+    _instanceFunRight :: InstanceParam,
+    -- | The original expression from which this InstanceFun was created
+    _instanceFunExpression :: Expression
   }
   deriving stock (Eq)
 
@@ -38,6 +47,7 @@ newtype InstanceTable = InstanceTable
   }
 
 makeLenses ''InstanceApp
+makeLenses ''InstanceFun
 makeLenses ''InstanceInfo
 makeLenses ''InstanceTable
 
@@ -68,8 +78,10 @@ paramToExpression :: InstanceParam -> Expression
 paramToExpression = \case
   InstanceParamVar v ->
     ExpressionIden (IdenVar v)
-  InstanceParamApp (InstanceApp {..}) ->
+  InstanceParamApp InstanceApp {..} ->
     _instanceAppExpression
+  InstanceParamFun InstanceFun {..} ->
+    _instanceFunExpression
   InstanceParamHole h -> ExpressionHole h
   InstanceParamMeta {} ->
     impossible
@@ -118,6 +130,17 @@ paramFromExpression metaVars e = case e of
               }
       _ ->
         Nothing
+  ExpressionFunction Function {..}
+    | _functionLeft ^. paramImplicit == Explicit -> do
+        l <- paramFromExpression metaVars (_functionLeft ^. paramType)
+        r <- paramFromExpression metaVars _functionRight
+        return $
+          InstanceParamFun
+            InstanceFun
+              { _instanceFunLeft = l,
+                _instanceFunRight = r,
+                _instanceFunExpression = e
+              }
   _ ->
     Nothing
 
@@ -146,3 +169,5 @@ checkNoMeta = \case
   InstanceParamMeta {} -> False
   InstanceParamHole {} -> True
   InstanceParamApp InstanceApp {..} -> all checkNoMeta _instanceAppArgs
+  InstanceParamFun InstanceFun {..} ->
+    checkNoMeta _instanceFunLeft && checkNoMeta _instanceFunRight
