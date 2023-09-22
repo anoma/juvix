@@ -322,6 +322,7 @@ instance (SingI s) => PrettyPrint (ExpressionAtom s) where
     AtomDoubleBraces e -> ppCode e
     AtomBraces e -> braces (ppExpressionType (e ^. withLocParam))
     AtomHole w -> ppHoleType w
+    AtomInstanceHole w -> ppHoleType w
     AtomIterator i -> ppCode i
     AtomNamedApplication i -> ppCode i
 
