@@ -11,6 +11,7 @@ import Juvix.Prelude.Base
 data Arity
   = Unary
   | Binary
+  | None
   deriving stock (Show, Eq, Ord, Generic)
 
 -- TODO consider using sum type for Same | Below && Above
