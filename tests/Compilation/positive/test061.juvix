@@ -52,19 +52,29 @@ f'4 {A} {{_ : Show A}} : A → String := Show.show;
 f5 {A} {{Show A}} (n : String) (a : A) : String :=
   n ++str Show.show a;
 
+showBoolFun (f : Bool → Bool) : String :=
+  let
+    b1 : Bool := f true;
+    b2 : Bool := f false;
+  in
+  "\\{ true := " ++str Show.show b1 ++str " | false := " ++str Show.show b2 ++str " }";
+
+instance
+showBoolFunI : Show (Bool → Bool) := mkShow (show := showBoolFun);
+
 main : IO :=
-  printStringLn (Show.show true)
-    >> printStringLn (f false)
-    >> printStringLn (Show.show 3)
-    >> printStringLn (Show.show g)
-    >> printStringLn (Show.show [true; false])
-    >> printStringLn (Show.show [1; 2; 3])
-    >> printStringLn (f' [1; 2])
-    >> printStringLn (f'' [true; false])
-    >> printStringLn (f'3 [just true; nothing; just false])
-    >> printStringLn (f'4 [just [1]; nothing; just [2; 3]])
-    >> printStringLn (f'3 "abba")
-    >> printStringLn
-      (f'3 {{M := mkShow λ {x := x ++str "!"}}} "abba")
-    >> printStringLn (f5 "abba" 3)
-    >> printStringLn (Show.show ["a"; "b"; "c"; "d"]);
+  printStringLn (Show.show true) >>
+  printStringLn (f false) >>
+  printStringLn (Show.show 3) >>
+  printStringLn (Show.show g) >>
+  printStringLn (Show.show [true; false]) >>
+  printStringLn (Show.show [1; 2; 3]) >>
+  printStringLn (f' [1; 2]) >>
+  printStringLn (f'' [true; false]) >>
+  printStringLn (f'3 [just true; nothing; just false]) >>
+  printStringLn (f'4 [just [1]; nothing; just [2; 3]]) >>
+  printStringLn (f'3 "abba") >>
+  printStringLn (f'3 {{M := mkShow (λ{x := x ++str "!"})}} "abba") >>
+  printStringLn (f5 "abba" 3) >>
+  printStringLn (Show.show ["a"; "b"; "c"; "d"]) >>
+  printStringLn (Show.show (λ{x := not x}));
