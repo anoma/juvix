@@ -5,6 +5,7 @@ import Stdlib.Prelude open;
 
 main : Nat -> Nat -> Nat
   | x y :=
-    case tail (id (x :: y :: nil))
+    case tail (id (x :: y :: nil)) of {
       | nil := 0
-      | h :: _ := h;
+      | h :: _ := h
+    };

@@ -6,5 +6,6 @@ import Stdlib.Data.Nat.Ord open;
 
 main : Nat → Nat → Nat
   | x y :=
-    case λ {z := if (x == z) (x, 0) (x, z)} (y + x)
-      | a, b := a + b;
+    case λ {z := if (x == z) (x, 0) (x, z)} (y + x) of {
+      a, b := a + b
+    };

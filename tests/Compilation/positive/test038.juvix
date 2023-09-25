@@ -5,8 +5,8 @@ import Stdlib.Prelude open;
 
 main : IO :=
   printNatLn
-    (case 1, 2
+    case 1, 2 of {
       | suc _, zero := 0
       | suc _, suc x := x
-      | _ := 19);
-
+      | _ := 19
+    };
