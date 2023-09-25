@@ -772,3 +772,6 @@ init = "init"
 
 range :: (IsString s) => s
 range = "range"
+
+git :: (IsString s) => s
+git = "git"
