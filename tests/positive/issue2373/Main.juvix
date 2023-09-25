@@ -1,8 +1,10 @@
 module Main;
 
 import Stdlib.Data.Nat open;
+import Stdlib.Data.Bool open;
 
 main : Nat :=
   let
+    y : Nat := 0;
     x : _ := 0;
   in x;
