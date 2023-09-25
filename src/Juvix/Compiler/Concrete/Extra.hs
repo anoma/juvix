@@ -9,6 +9,7 @@ module Juvix.Compiler.Concrete.Extra
     recordNameSignatureByIndex,
     getExpressionAtomIden,
     getPatternAtomIden,
+    isBodyExpression,
   )
 where
 
@@ -150,3 +151,8 @@ getPatternAtomIden = \case
     PatternScopedConstructor c -> Just (c ^. scopedIdenName)
     _ -> Nothing
   _ -> Nothing
+
+isBodyExpression :: FunctionDefBody a -> Bool
+isBodyExpression = \case
+  SigBodyExpression {} -> True
+  SigBodyClauses {} -> False
