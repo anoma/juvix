@@ -37,9 +37,15 @@ syntax operator || logical;
   | zero b := b
   | one _ := one;
 
+syntax fixity none := none;
+syntax operator or none;
 syntax alias or := ||;
 
+syntax alias ||| := ||;
+
 or3 (a b c : Binary) : Binary := or (or a b) c;
+
+or3' (a b c : Binary) : Binary := (a ||| b) ||| c;
 
 type Pair :=
   | mkPair Binary Binary;

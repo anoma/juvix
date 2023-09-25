@@ -556,9 +556,12 @@ entryToScopedIden name e = do
           }
     PreSymbolAlias {} -> do
       e' <- normalizePreSymbolEntry e
+      let scopedName' =
+            over S.nameFixity (maybe (e' ^. symbolEntry . S.nameFixity) Just) $
+              set S.nameKind (getNameKind e') scopedName
       return
         ScopedIden
-          { _scopedIdenAlias = Just (set S.nameKind (getNameKind e') scopedName),
+          { _scopedIdenAlias = Just scopedName',
             _scopedIdenFinal = helper (e' ^. symbolEntry)
           }
   registerScopedIden si
