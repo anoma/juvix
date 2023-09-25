@@ -29,6 +29,9 @@ stdlibDir = FE.makeRelativeToProject "juvix-stdlib" >>= FE.embedDir
 juvixYamlFile :: Path Rel File
 juvixYamlFile = $(mkRelFile "juvix.yaml")
 
+juvixLockfile :: Path Rel File
+juvixLockfile = $(mkRelFile "juvix.lock.json")
+
 relBuildDir :: Path Rel Dir
 relBuildDir = $(mkRelDir ".juvix-build")
 
