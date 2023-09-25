@@ -1,0 +1,8 @@
+module Main;
+
+import Stdlib.Data.Nat open;
+
+main : Nat :=
+  let
+    x : _ := 0;
+  in x;
