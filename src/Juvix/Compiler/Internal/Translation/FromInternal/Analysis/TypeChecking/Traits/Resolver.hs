@@ -129,8 +129,13 @@ lookupInstance' canFillHoles tab name params = do
       (InstanceParamApp app1, InstanceParamApp app2)
         | app1 ^. instanceAppHead == app2 ^. instanceAppHead -> do
             and <$> sequence (zipWithExact goMatch (app1 ^. instanceAppArgs) (app2 ^. instanceAppArgs))
+      (InstanceParamFun fun1, InstanceParamFun fun2) -> do
+        l <- goMatch (fun1 ^. instanceFunLeft) (fun2 ^. instanceFunLeft)
+        r <- goMatch (fun1 ^. instanceFunRight) (fun2 ^. instanceFunRight)
+        return $ l && r
       (InstanceParamVar {}, _) -> return False
       (InstanceParamApp {}, _) -> return False
+      (InstanceParamFun {}, _) -> return False
 
 lookupInstance ::
   forall r.
