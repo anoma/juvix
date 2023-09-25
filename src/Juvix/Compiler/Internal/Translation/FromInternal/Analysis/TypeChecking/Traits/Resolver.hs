@@ -143,7 +143,7 @@ lookupInstance tab ty = do
     Just InstanceApp {..} ->
       lookupInstance' True tab _instanceAppHead _instanceAppArgs
     _ ->
-      throw (ErrNotATrait (NotATrait ty))
+      return []
 
 subsumingInstances ::
   forall r.
