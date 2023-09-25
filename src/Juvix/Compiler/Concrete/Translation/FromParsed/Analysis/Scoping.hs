@@ -2077,6 +2077,7 @@ checkExpressionAtom e = case e of
   AtomBraces br -> pure . AtomBraces <$> traverseOf withLocParam checkParseExpressionAtoms br
   AtomFunArrow a -> return (pure (AtomFunArrow a))
   AtomHole h -> pure . AtomHole <$> checkHole h
+  AtomInstanceHole h -> pure . AtomInstanceHole <$> checkHole h
   AtomLiteral l -> return (pure (AtomLiteral l))
   AtomList l -> pure . AtomList <$> checkList l
   AtomIterator i -> pure . AtomIterator <$> checkIterator i
@@ -2558,6 +2559,7 @@ parseTerm =
       <|> parseNoInfixIdentifier
       <|> parseParens
       <|> parseHole
+      <|> parseInstanceHole
       <|> parseFunction
       <|> parseLambda
       <|> parseCase
@@ -2576,6 +2578,14 @@ parseTerm =
         lit :: ExpressionAtom 'Scoped -> Maybe Hole
         lit s = case s of
           AtomHole l -> Just l
+          _ -> Nothing
+
+    parseInstanceHole :: Parse Expression
+    parseInstanceHole = ExpressionInstanceHole <$> P.token lit mempty
+      where
+        lit :: ExpressionAtom 'Scoped -> Maybe Hole
+        lit s = case s of
+          AtomInstanceHole l -> Just l
           _ -> Nothing
 
     parseLiteral :: Parse Expression
