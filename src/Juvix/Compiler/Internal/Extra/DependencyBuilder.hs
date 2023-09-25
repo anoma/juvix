@@ -195,7 +195,7 @@ goFunctionDefHelper f = do
   when (f ^. funDefInstance) $
     goInstance f
   goExpression (Just (f ^. funDefName)) (f ^. funDefType)
-  mapM_ (goFunctionClause (f ^. funDefName)) (f ^. funDefClauses)
+  goExpression (Just (f ^. funDefName)) (f ^. funDefBody)
 
 -- constructors of an inductive type depend on the inductive type, not the other
 -- way round; an inductive type depends on the types of its constructors

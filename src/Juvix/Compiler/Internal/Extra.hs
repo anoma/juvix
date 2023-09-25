@@ -81,7 +81,7 @@ genFieldProjection ::
   Int ->
   Sem r FunctionDef
 genFieldProjection _funDefName info fieldIx = do
-  clause <- genClause
+  body' <- genBody
   let (inductiveParams, constrArgs) = constructorArgTypes info
       implicity = constructorImplicity info
       saturatedTy = unnamedParameter' implicity (constructorReturnType info)
@@ -94,18 +94,20 @@ genFieldProjection _funDefName info fieldIx = do
         _funDefInstance = False,
         _funDefBuiltin = Nothing,
         _funDefPragmas = mempty,
-        _funDefClauses = pure clause,
+        _funDefBody = body',
         _funDefType = foldFunType (inductiveArgs ++ [saturatedTy]) retTy,
         ..
       }
   where
-    genClause :: Sem r FunctionClause
-    genClause = do
+    genBody :: Sem r Expression
+    genBody = do
       (pat, vars) <- genConstructorPattern (getLoc _funDefName) info
       let body = toExpression (vars !! fieldIx)
-      return
-        FunctionClause
-          { _clauseName = _funDefName,
-            _clausePatterns = [pat],
-            _clauseBody = body
+          cl = LambdaClause {
+            _lambdaPatterns = pure pat,
+            _lambdaBody = body
+                            }
+      return . ExpressionLambda $ Lambda
+          { _lambdaType = Nothing,
+            _lambdaClauses = pure cl
           }

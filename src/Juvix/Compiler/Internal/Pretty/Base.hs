@@ -238,14 +238,13 @@ instance PrettyCode FunctionDef where
     builtin' <- fmap (kwBuiltin <+>) <$> mapM ppCode (f ^. funDefBuiltin)
     funDefName' <- ppCode (f ^. funDefName)
     funDefType' <- ppCode (f ^. funDefType)
-    clauses' <- mapM ppCode (f ^. funDefClauses)
+    body' <- ppCode (f ^. funDefBody)
     return $
       builtin'
         <?+> funDefName'
           <+> kwColon
           <+> funDefType'
-            <> hardline
-            <> vsep (toList clauses')
+            <> oneLineOrNext (kwAssign <+> body')
 
 instance PrettyCode PreLetStatement where
   ppCode = \case

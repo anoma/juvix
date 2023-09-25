@@ -86,7 +86,7 @@ data FunctionDef = FunctionDef
   { _funDefName :: FunctionName,
     _funDefType :: Expression,
     _funDefExamples :: [Example],
-    _funDefClauses :: NonEmpty FunctionClause,
+    _funDefBody :: Expression,
     _funDefTerminating :: Bool,
     _funDefInstance :: Bool,
     _funDefBuiltin :: Maybe BuiltinFunction,
@@ -214,7 +214,7 @@ data Lambda = Lambda
   deriving stock (Eq, Generic, Data)
 
 data LambdaClause = LambdaClause
-  { _lambdaPatterns :: NonEmpty PatternArg, -- only explicit patterns are allowed
+  { _lambdaPatterns :: NonEmpty PatternArg, -- TODO should lambdas have only one pattern?
     _lambdaBody :: Expression
   }
   deriving stock (Eq, Generic, Data)
@@ -442,7 +442,7 @@ instance HasLoc FunctionClause where
   getLoc f = getLoc (f ^. clauseName) <> getLoc (f ^. clauseBody)
 
 instance HasLoc FunctionDef where
-  getLoc f = getLoc (f ^. funDefName) <> getLocSpan (f ^. funDefClauses)
+  getLoc f = getLoc (f ^. funDefName) <> getLoc (f ^. funDefBody)
 
 instance HasLoc MutualBlockLet where
   getLoc (MutualBlockLet defs) = getLocSpan defs

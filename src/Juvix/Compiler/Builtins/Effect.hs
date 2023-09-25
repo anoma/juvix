@@ -95,8 +95,9 @@ registerFun fi = do
       a =% b = (a ==% b) freeVars
       clauses :: [(Expression, Expression)]
       clauses =
-        [ (clauseLhsAsExpression c, c ^. clauseBody)
-          | c <- toList (fi ^. funInfoDef . funDefClauses)
+        [ (clauseLhsAsExpression op (toList pats), body)
+          | Just cls <- [unfoldLambdaClauses (fi ^. funInfoDef . funDefBody)],
+            (pats, body) <- toList cls
         ]
   case zipExactMay (fi ^. funInfoClauses) clauses of
     Nothing -> error "builtin has the wrong number of clauses"

@@ -433,30 +433,37 @@ goTopFunctionDef FunctionDef {..} = do
       _funDefInstance = isJust _signInstance
       _funDefBuiltin = (^. withLocParam) <$> _signBuiltin
   _funDefType <- goDefType
+  _funDefClauses <- error "TODO REMOVE"
   _funDefExamples <- goExamples _signDoc
   _funDefPragmas <- goPragmas _signPragmas
-  _funDefClauses <- goBody
+  _funDefBody <- goBody
   let fun = Internal.FunctionDef {..}
   whenJust _signBuiltin (registerBuiltinFunction fun . (^. withLocParam))
   return fun
   where
-    goBody :: Sem r (NonEmpty Internal.FunctionClause)
+    goBody :: Sem r Internal.Expression
     goBody = do
       commonPatterns <- concatMapM (fmap toList . argToPattern) _signArgs
-      let _clauseName = goSymbol _signName
-          goClause :: FunctionClause 'Scoped -> Sem r Internal.FunctionClause
+      let goClause :: FunctionClause 'Scoped -> Sem r Internal.LambdaClause
           goClause FunctionClause {..} = do
-            let _clauseName = goSymbol _signName
-            _clauseBody <- goExpression _clausenBody
-            extraPatterns <- toList <$> (mapM goPatternArg _clausenPatterns)
-            let _clausePatterns = commonPatterns <> extraPatterns
-            return Internal.FunctionClause {..}
+            _lambdaBody <- goExpression _clausenBody
+            extraPatterns <- mapM goPatternArg _clausenPatterns
+            let _lambdaPatterns = prependList commonPatterns extraPatterns
+            return Internal.LambdaClause {..}
       case _signBody of
         SigBodyExpression body -> do
-          _clauseBody <- goExpression body
-          let _clausePatterns = commonPatterns
-          return (pure Internal.FunctionClause {..})
-        SigBodyClauses cls -> mapM goClause cls
+          body' <- goExpression body
+          return $ case nonEmpty commonPatterns of
+            Nothing -> body'
+            Just _lambdaPatterns -> do
+              let _lambdaBody = body'
+                  _lambdaType :: Maybe Internal.Expression = Nothing
+                  _lambdaClauses = pure Internal.LambdaClause {..}
+              Internal.ExpressionLambda Internal.Lambda {..}
+        SigBodyClauses cls -> do
+          _lambdaClauses <- mapM goClause cls
+          let _lambdaType :: Maybe Internal.Expression = Nothing
+          return (Internal.ExpressionLambda Internal.Lambda {..})
 
     goDefType :: Sem r Internal.Expression
     goDefType = do

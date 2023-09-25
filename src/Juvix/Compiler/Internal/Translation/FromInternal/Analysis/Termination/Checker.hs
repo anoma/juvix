@@ -147,7 +147,7 @@ scanFunctionDef f@FunctionDef {..} = do
   registerFunctionDef f
   runReader (Just _funDefName) $ do
     scanTypeSignature _funDefType
-    mapM_ scanFunctionClause _funDefClauses
+    scanFunctionBody _funDefBody
 
 scanTypeSignature ::
   (Members '[State CallMap, Reader (Maybe FunctionRef)] r) =>
@@ -155,12 +155,12 @@ scanTypeSignature ::
   Sem r ()
 scanTypeSignature = runReader emptySizeInfo . scanExpression
 
-scanFunctionClause ::
+scanFunctionBody ::
   forall r.
   (Members '[State CallMap, Reader (Maybe FunctionRef)] r) =>
-  FunctionClause ->
+  Expression ->
   Sem r ()
-scanFunctionClause FunctionClause {..} = go (reverse _clausePatterns) _clauseBody
+scanFunctionBody topbody = go [] topbody
   where
     go :: [PatternArg] -> Expression -> Sem r ()
     go revArgs body = case body of

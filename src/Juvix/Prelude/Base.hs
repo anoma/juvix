@@ -124,6 +124,8 @@ import Data.List.NonEmpty.Extra
     minimum1,
     minimumOn1,
     nonEmpty,
+    prependList,
+    appendList,
     some1,
     (|:),
   )
