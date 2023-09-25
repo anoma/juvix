@@ -37,7 +37,6 @@ syntax operator || logical;
   | zero b := b
   | one _ := one;
 
-syntax fixity none := none;
 syntax operator or none;
 syntax alias or := ||;
 
