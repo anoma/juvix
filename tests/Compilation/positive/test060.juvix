@@ -39,7 +39,7 @@ main : Triple Nat Nat Nat :=
       })
     (f p')
     mkTriple@{
-      fst : Nat := 0;
-      thd : Nat := 0;
-      snd : Nat := 0
+      fst := 0;
+      thd := 0;
+      snd := 0
     };

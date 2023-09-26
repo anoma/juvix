@@ -52,15 +52,15 @@ f'4 {A} {{_ : Show A}} : A → String := Show.show;
 f5 {A} {{Show A}} (n : String) (a : A) : String :=
   n ++str Show.show a;
 
-showBoolFun (f : Bool → Bool) : String :=
-  let
-    b1 : Bool := f true;
-    b2 : Bool := f false;
-  in
-  "\\{ true := " ++str Show.show b1 ++str " | false := " ++str Show.show b2 ++str " }";
-
 instance
-showBoolFunI : Show (Bool → Bool) := mkShow (show := showBoolFun);
+showBoolFunI : Show (Bool → Bool) := mkShow@{
+  show (f : Bool → Bool) : String :=
+    let
+      b1 : Bool := f true;
+      b2 : Bool := f false;
+    in
+    "\\{ true := " ++str Show.show b1 ++str " | false := " ++str Show.show b2 ++str " }";
+};
 
 main : IO :=
   printStringLn (Show.show true) >>
