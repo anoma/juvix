@@ -568,6 +568,8 @@ parsedFixityInfo = do
         $> Unary
         <|> kw kwBinary
           $> Binary
+        <|> kw kwNone
+          $> None
 
 fixitySyntaxDef :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => KeywordRef -> ParsecS r (FixitySyntaxDef 'Parsed)
 fixitySyntaxDef _fixitySyntaxKw = P.label "<fixity declaration>" $ do
@@ -700,17 +702,27 @@ parseExpressionAtoms = do
   return ExpressionAtoms {..}
 
 pdoubleBracesExpression ::
+  forall r.
   (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
   ParsecS r (DoubleBracesExpression 'Parsed)
 pdoubleBracesExpression = do
   l <- kw delimDoubleBraceL
-  _doubleBracesExpression <- parseExpressionAtoms
+  _doubleBracesExpression <- instanceHole <|> parseExpressionAtoms
   r <- kw delimDoubleBraceR
   return
     DoubleBracesExpression
       { _doubleBracesDelims = Irrelevant (l, r),
         ..
       }
+  where
+    instanceHole :: ParsecS r (ExpressionAtoms 'Parsed)
+    instanceHole = do
+      (h, i) <- interval (kw kwHole)
+      return $
+        ExpressionAtoms
+          { _expressionAtoms = NonEmpty.singleton (AtomInstanceHole h),
+            _expressionAtomsLoc = Irrelevant i
+          }
 
 --------------------------------------------------------------------------------
 -- Iterators

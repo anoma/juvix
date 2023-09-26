@@ -7,25 +7,27 @@ import Stdlib.Data.Nat.Ord open;
 {-# unroll: 11 #-}
 terminating
 f : Nat → Nat
-  
   | x :=
-    case x
+    case x of {
       | zero := 1
-      | suc y := 2 * x + g y;
+      | suc y := 2 * x + g y
+    };
 
 terminating
 g : Nat → Nat
   | x :=
-    case x
+    case x of {
       | zero := 1
-      | suc y := x + h y;
+      | suc y := x + h y
+    };
 
 terminating
 h : Nat → Nat
   | x :=
-    case x
+    case x of {
       | zero := 1
-      | suc y := x * f y;
+      | suc y := x * f y
+    };
 
 main : Nat → Nat
   | x := f x + f (2 * x);

@@ -19,11 +19,11 @@ boolToNat : Bool -> Nat
 main : Nat -> Nat -> Nat
   | x y :=
     boolToNat
-      $ case opt3
-        (natToBool x)
-        λ {x y := if y false x}
-        (natToBool y)
-        | opt0 := false
-        | opt1 b := b
-        | opt2 b f := f b
-        | opt3 b1 f b2 := f b1 b2;
+      $ case
+          opt3 (natToBool x) λ {x y := if y false x} (natToBool y)
+        of {
+          | opt0 := false
+          | opt1 b := b
+          | opt2 b f := f b
+          | opt3 b1 f b2 := f b1 b2
+        };

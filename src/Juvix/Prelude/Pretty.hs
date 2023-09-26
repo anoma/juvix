@@ -172,6 +172,12 @@ oneLineOrNext x = PP.group (flatAlt (line <> indent' x) (space <> x))
 oneLineOrNextNoIndent :: Doc ann -> Doc ann
 oneLineOrNextNoIndent x = PP.group (flatAlt (line <> x) (space <> x))
 
+oneLineOrNextBlock :: Doc ann -> Doc ann
+oneLineOrNextBlock x = PP.group (flatAlt (line <> indent' x <> line) (space <> x <> space))
+
+oneLineOrNextBraces :: Doc ann -> Doc ann
+oneLineOrNextBraces x = PP.group (flatAlt (lbrace <> line <> indent' x <> line <> rbrace) (lbrace <> x <> rbrace))
+
 nextLine :: Doc ann -> Doc ann
 nextLine x = PP.group (line <> x)
 

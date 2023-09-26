@@ -19,7 +19,7 @@ type Pair (A B : Type) :=
 mf : Pair (Pair Bool (List Nat)) (List Nat) → Bool
   | mkPair@{fst := mkPair@{fst; snd := nil};
            snd := zero :: _} := fst
-  | _ := false;
+  | x := case x of {_ := false};
 
 main : Triple Nat Nat Nat :=
   let

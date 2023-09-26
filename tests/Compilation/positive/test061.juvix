@@ -76,5 +76,5 @@ main : IO :=
   printStringLn (f'3 "abba") >>
   printStringLn (f'3 {{M := mkShow (λ{x := x ++str "!"})}} "abba") >>
   printStringLn (f5 "abba" 3) >>
-  printStringLn (Show.show ["a"; "b"; "c"; "d"]) >>
+  printStringLn (Show.show {{_}} ["a"; "b"; "c"; "d"]) >>
   printStringLn (Show.show (λ{x := not x}));

@@ -337,6 +337,7 @@ instance (SingI s) => PrettyPrint (ExpressionAtom s) where
     AtomDoubleBraces e -> ppCode e
     AtomBraces e -> braces (ppExpressionType (e ^. withLocParam))
     AtomHole w -> ppHoleType w
+    AtomInstanceHole w -> ppHoleType w
     AtomIterator i -> ppCode i
     AtomNamedApplication i -> ppCode i
     AtomRecordCreation i -> ppCode i
@@ -501,17 +502,17 @@ instance (SingI s) => PrettyPrint (Let s) where
   ppCode Let {..} = do
     let letFunDefs' = blockIndent (ppBlock _letFunDefs)
         letExpression' = ppExpressionType _letExpression
-    ppCode _letKw <> letFunDefs' <> ppCode _letInKw <+> letExpression'
+    align $ ppCode _letKw <> letFunDefs' <> ppCode _letInKw <+> letExpression'
 
 instance (SingI s) => PrettyPrint (NewCase s) where
   ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => NewCase s -> Sem r ()
   ppCode NewCase {..} = do
     let exp' = ppExpressionType _newCaseExpression
-    ppCode _newCaseKw <+> exp' <+> ppCode _newCaseOfKw <+> ppBranches _newCaseBranches
+    align $ ppCode _newCaseKw <> oneLineOrNextBlock exp' <> ppCode _newCaseOfKw <+> ppBranches _newCaseBranches
     where
       ppBranches :: NonEmpty (NewCaseBranch s) -> Sem r ()
       ppBranches = \case
-        b :| [] -> braces (ppCaseBranch True b)
+        b :| [] -> oneLineOrNextBraces (ppCaseBranch True b)
         _ -> braces (blockIndent (vsepHard (ppCaseBranch False <$> _newCaseBranches)))
 
       ppCaseBranch :: Bool -> NewCaseBranch s -> Sem r ()
@@ -678,6 +679,7 @@ instance PrettyPrint Arity where
   ppCode = \case
     Unary -> noLoc Str.unary
     Binary -> noLoc Str.binary
+    None -> noLoc Str.none
 
 instance PrettyPrint BinaryAssoc where
   ppCode a = noLoc $ case a of
