@@ -5,7 +5,6 @@ module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.C
 where
 
 import Juvix.Compiler.Internal.Extra
-import Juvix.Compiler.Internal.Pretty
 import Juvix.Compiler.Internal.Translation.FromConcrete.Data.Context
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Data.LocalVars
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Data.Types
@@ -147,26 +146,32 @@ checkFunctionDef FunctionDef {..} = do
         _funDefPragmas
       }
 
--- TODO do we really need to do something special???
 checkFunctionBody ::
   (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r) =>
   Arity ->
   Expression ->
   Sem r Expression
-checkFunctionBody ari cl = do
-  withEmptyLocalVars $ checkExpression ari cl
-
--- hint <- guessArity (cl ^. clauseBody)
--- (patterns', locals, bodyAri) <- checkLhs loc hint ari (cl ^. clausePatterns)
--- body' <- runReader locals (checkExpression bodyAri (cl ^. clauseBody))
--- return
---   FunctionClause
---     { _clauseName = cl ^. clauseName,
---       _clausePatterns = patterns',
---       _clauseBody = body'
---     }
--- where
---   loc = getLoc cl
+checkFunctionBody ari body = do
+  case body of
+    ExpressionLambda {} ->
+      withEmptyLocalVars (checkExpression ari body)
+    _ -> do
+      hint <- guessArity body
+      (patterns', locals, bodyAri) <- checkLhs (getLoc body) hint ari []
+      body' <- runReader locals (checkExpression bodyAri body)
+      return $ case nonEmpty patterns' of
+        Nothing -> body'
+        Just lambdaPatterns' ->
+          ExpressionLambda
+            Lambda
+              { _lambdaType = Nothing,
+                _lambdaClauses =
+                  pure
+                    LambdaClause
+                      { _lambdaPatterns = lambdaPatterns',
+                        _lambdaBody = body'
+                      }
+              }
 
 checkFunctionClause ::
   (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r) =>
@@ -490,39 +495,23 @@ checkLambda ::
   Sem r Lambda
 checkLambda ari l = do
   let _lambdaType = l ^. lambdaType
-  _lambdaClauses <- mapM goClause (l ^. lambdaClauses)
+  _lambdaClauses <- mapM checkLambdaClause (l ^. lambdaClauses)
   return Lambda {..}
   where
-    goClause :: LambdaClause -> Sem r LambdaClause
-    goClause (LambdaClause ps b) = do
-      locals <- ask
-      let uari@UnfoldedArity {..} = unfoldArity' ari
-      (locals', (ps', rest)) <- runState locals (helper _ufoldArityRest (toList ps) _ufoldArityParams)
-      let ariBody = foldArity (set ufoldArityParams rest uari)
-      b' <- local (const locals') (checkExpression ariBody b)
-      return (LambdaClause (fromJust (nonEmpty ps')) b')
+    checkLambdaClause ::
+      LambdaClause ->
+      Sem r LambdaClause
+    checkLambdaClause cl = do
+      hint <- guessArity (cl ^. lambdaBody)
+      (patterns', locals, bodyAri) <- checkLhs loc hint ari (toList (cl ^. lambdaPatterns))
+      body' <- runReader locals (checkExpression bodyAri (cl ^. lambdaBody))
+      return
+        LambdaClause
+          { _lambdaPatterns = nonEmpty' patterns',
+            _lambdaBody = body'
+          }
       where
-        -- returns the adjusted patterns and the not consumed arity
-        helper :: ArityRest -> [PatternArg] -> [ArityParameter] -> Sem (State LocalVars ': r) ([PatternArg], [ArityParameter])
-        helper rest = go
-          where
-            go :: [PatternArg] -> [ArityParameter] -> Sem (State LocalVars ': r) ([PatternArg], [ArityParameter])
-            go pats as =
-              case (pats, as) of
-                ([], _) -> return ([], as)
-                (p : ps', ParamExplicit paramAri : as') -> do
-                  p' <- checkPattern paramAri p
-                  first (p' :) <$> go ps' as'
-                (_ : _, ParamImplicit {} : _) ->
-                  -- The lambda is expected to have an implicit argument but it cannot have one.
-                  -- TODO. think what to do in this case
-                  return (pats, as)
-                (_ : _, ParamImplicitInstance {} : _) ->
-                  -- TODO. think what to do in this case
-                  return (pats, as)
-                (_ : _, []) -> case rest of
-                  ArityRestUnit -> error ("too many patterns in lambda: " <> ppTrace l <> "\n" <> prettyText ari)
-                  ArityRestUnknown -> return (pats, [])
+        loc = getLoc cl
 
 idenArity :: (Members '[Reader LocalVars, Reader InfoTable] r) => Iden -> Sem r Arity
 idenArity = \case

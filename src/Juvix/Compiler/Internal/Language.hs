@@ -214,7 +214,7 @@ data Lambda = Lambda
   deriving stock (Eq, Generic, Data)
 
 data LambdaClause = LambdaClause
-  { _lambdaPatterns :: NonEmpty PatternArg, -- TODO should lambdas have only one pattern?
+  { _lambdaPatterns :: NonEmpty PatternArg,
     _lambdaBody :: Expression
   }
   deriving stock (Eq, Generic, Data)
