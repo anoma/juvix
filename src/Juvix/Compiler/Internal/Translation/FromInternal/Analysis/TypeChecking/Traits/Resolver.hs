@@ -19,13 +19,12 @@ isTrait :: InfoTable -> Name -> Bool
 isTrait tab name = maybe False (^. inductiveInfoDef . inductiveTrait) (HashMap.lookup name (tab ^. infoInductives))
 
 resolveTraitInstance ::
-  (Members '[Error TypeCheckerError, NameIdGen, Inference, Reader LocalVars, Reader InfoTable] r) =>
+  (Members '[Error TypeCheckerError, NameIdGen, Inference, Reader InfoTable] r) =>
   TypedHole ->
   Sem r Expression
 resolveTraitInstance TypedHole {..} = do
-  vars <- ask
   tbl <- ask
-  let tab = foldr (flip updateInstanceTable) (tbl ^. infoInstances) (varsToInstances tbl vars)
+  let tab = foldr (flip updateInstanceTable) (tbl ^. infoInstances) (varsToInstances tbl _typedHoleLocalVars)
   ty <- strongNormalize _typedHoleType
   is <- lookupInstance tab ty
   case is of

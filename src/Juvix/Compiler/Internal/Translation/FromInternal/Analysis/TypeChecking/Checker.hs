@@ -97,7 +97,7 @@ checkStatement s = case s of
 
 checkInductiveDef ::
   forall r.
-  (Members '[HighlightBuilder, Reader EntryPoint, Reader InfoTable, State FunctionsTable, Error TypeCheckerError, NameIdGen, State TypesTable, State NegativeTypeParameters, Output Example, Builtins, Termination] r) =>
+  (Members '[HighlightBuilder, Reader EntryPoint, Reader InfoTable, State FunctionsTable, Error TypeCheckerError, NameIdGen, State TypesTable, State NegativeTypeParameters, Output Example, Builtins, Termination, Output TypedHole] r) =>
   InductiveDef ->
   Sem r InductiveDef
 checkInductiveDef InductiveDef {..} = runInferenceDef $ do
@@ -173,11 +173,11 @@ checkMutualStatement ::
   MutualStatement ->
   Sem r MutualStatement
 checkMutualStatement = \case
-  StatementFunction f -> StatementFunction <$> checkFunctionDef f
-  StatementInductive f -> StatementInductive <$> checkInductiveDef f
+  StatementFunction f -> StatementFunction <$> resolveInstanceHoles (checkFunctionDef f)
+  StatementInductive f -> StatementInductive <$> resolveInstanceHoles (checkInductiveDef f)
 
 checkFunctionDef ::
-  (Members '[HighlightBuilder, Reader LocalVars, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example, Builtins, Inference, Termination] r) =>
+  (Members '[HighlightBuilder, Reader LocalVars, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example, Builtins, Inference, Termination, Output TypedHole] r) =>
   FunctionDef ->
   Sem r FunctionDef
 checkFunctionDef FunctionDef {..} = do
@@ -197,7 +197,7 @@ checkFunctionDef FunctionDef {..} = do
   traverseOf funDefExamples (mapM checkExample) funDef
 
 checkIsType ::
-  (Members '[HighlightBuilder, Reader InfoTable, State FunctionsTable, Error TypeCheckerError, NameIdGen, Reader LocalVars, Inference, Builtins, Output Example, State TypesTable, Termination] r) =>
+  (Members '[HighlightBuilder, Reader InfoTable, State FunctionsTable, Error TypeCheckerError, NameIdGen, Reader LocalVars, Inference, Builtins, Output Example, State TypesTable, Termination, Output TypedHole] r) =>
   Interval ->
   Expression ->
   Sem r Expression
@@ -205,7 +205,7 @@ checkIsType = checkExpression . smallUniverseE
 
 checkDefType ::
   forall r.
-  (Members '[HighlightBuilder, Reader InfoTable, State FunctionsTable, Error TypeCheckerError, NameIdGen, Reader LocalVars, Inference, Builtins, Output Example, State TypesTable, Termination] r) =>
+  (Members '[HighlightBuilder, Reader InfoTable, State FunctionsTable, Error TypeCheckerError, NameIdGen, Reader LocalVars, Inference, Builtins, Output Example, State TypesTable, Termination, Output TypedHole] r) =>
   Expression ->
   Sem r Expression
 checkDefType ty = checkIsType loc ty
@@ -263,13 +263,13 @@ checkExample e = do
   output e'
   return e'
 
-checkExpression' ::
+checkExpression ::
   forall r.
   (Members '[HighlightBuilder, Reader InfoTable, State FunctionsTable, Error TypeCheckerError, Builtins, NameIdGen, Reader LocalVars, Inference, Output Example, Output TypedHole, State TypesTable, Termination] r) =>
   Expression ->
   Expression ->
   Sem r Expression
-checkExpression' expectedTy e = do
+checkExpression expectedTy e = do
   e' <- inferExpression' (Just expectedTy) e
   let inferredType = e' ^. typedType
   whenJustM (matchTypes expectedTy inferredType) (const (err inferredType))
@@ -288,18 +288,10 @@ checkExpression' expectedTy e = do
               }
           )
 
-checkExpression ::
-  forall r.
-  (Members '[HighlightBuilder, Reader InfoTable, State FunctionsTable, Error TypeCheckerError, Builtins, NameIdGen, Reader LocalVars, Inference, Output Example, State TypesTable, Termination] r) =>
-  Expression ->
-  Expression ->
-  Sem r Expression
-checkExpression expectedTy e = resolveInstanceHoles $ checkExpression' expectedTy e
-
 resolveInstanceHoles ::
   forall a r.
   (HasExpressions a) =>
-  (Members '[HighlightBuilder, Reader InfoTable, State FunctionsTable, Error TypeCheckerError, Builtins, NameIdGen, Reader LocalVars, Inference, Output Example, State TypesTable, Termination] r) =>
+  (Members '[HighlightBuilder, Reader InfoTable, State FunctionsTable, Error TypeCheckerError, Builtins, NameIdGen, Inference, Output Example, State TypesTable, Termination] r) =>
   Sem (Output TypedHole ': r) a ->
   Sem r a
 resolveInstanceHoles s = do
@@ -311,10 +303,10 @@ resolveInstanceHoles s = do
     goResolve :: TypedHole -> Sem r Expression
     goResolve h@TypedHole {..} = do
       t <- resolveTraitInstance h
-      checkExpression _typedHoleType t
+      resolveInstanceHoles $ runReader _typedHoleLocalVars $ checkExpression _typedHoleType t
 
 checkFunctionParameter ::
-  (Members '[HighlightBuilder, Reader InfoTable, State FunctionsTable, Error TypeCheckerError, NameIdGen, Reader LocalVars, Inference, Builtins, Output Example, State TypesTable, Termination] r) =>
+  (Members '[HighlightBuilder, Reader InfoTable, State FunctionsTable, Error TypeCheckerError, NameIdGen, Reader LocalVars, Inference, Builtins, Output Example, State TypesTable, Termination, Output TypedHole] r) =>
   FunctionParameter ->
   Sem r FunctionParameter
 checkFunctionParameter (FunctionParameter mv i e) = do
@@ -379,7 +371,7 @@ lookupVar v = HashMap.lookupDefault err v <$> asks (^. localTypes)
 
 checkFunctionClause ::
   forall r.
-  (Members '[HighlightBuilder, Reader InfoTable, State FunctionsTable, Error TypeCheckerError, NameIdGen, Inference, Builtins, State TypesTable, Output Example, Reader LocalVars, Termination] r) =>
+  (Members '[HighlightBuilder, Reader InfoTable, State FunctionsTable, Error TypeCheckerError, NameIdGen, Inference, Builtins, State TypesTable, Output Example, Reader LocalVars, Termination, Output TypedHole] r) =>
   Expression ->
   FunctionClause ->
   Sem r FunctionClause
@@ -395,7 +387,7 @@ checkFunctionClause clauseType FunctionClause {..} = do
 -- | helper function for function clauses and lambda functions
 checkClause ::
   forall r.
-  (Members '[HighlightBuilder, Reader InfoTable, State FunctionsTable, Reader LocalVars, Error TypeCheckerError, NameIdGen, Inference, Builtins, Output Example, State TypesTable, Termination] r) =>
+  (Members '[HighlightBuilder, Reader InfoTable, State FunctionsTable, Reader LocalVars, Error TypeCheckerError, NameIdGen, Inference, Builtins, Output Example, State TypesTable, Termination, Output TypedHole] r) =>
   -- | Type
   Expression ->
   -- | Arguments
@@ -639,7 +631,8 @@ inferExpression' hint e = case e of
     goInstanceHole :: Hole -> Sem r TypedExpression
     goInstanceHole h = do
       let ty = fromMaybe impossible hint
-      output (TypedHole h ty)
+      locals <- ask
+      output (TypedHole h ty locals)
       return
         TypedExpression
           { _typedType = ty,
@@ -720,7 +713,7 @@ inferExpression' hint e = case e of
           bodyEnv = case l ^. paramName of
             Nothing -> id
             Just v -> local (over localTypes (HashMap.insert v (l ^. paramType)))
-      r' <- bodyEnv (checkExpression' uni r)
+      r' <- bodyEnv (checkExpression uni r)
       return (TypedExpression uni (ExpressionFunction (Function l' r')))
 
     goLiteral :: LiteralLoc -> Sem r TypedExpression
@@ -818,7 +811,7 @@ inferExpression' hint e = case e of
           l'ty <- weakNormalize (l' ^. typedType)
           case l'ty of
             ExpressionFunction (Function (FunctionParameter paraName ifun funL) funR) -> do
-              r' <- checkExpression' funL r
+              r' <- checkExpression funL r
               unless
                 (iapp == ifun)
                 ( error
