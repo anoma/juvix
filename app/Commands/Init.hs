@@ -52,7 +52,8 @@ getPackage = do
         _packageBuildDir = Nothing,
         _packageMain = Nothing,
         _packageDependencies = [defaultStdlibDep DefaultBuildDir],
-        _packageFile = cwd <//> juvixYamlFile
+        _packageFile = cwd <//> juvixYamlFile,
+        _packageLockfile = Nothing
       }
 
 getProjName :: forall r. (Members '[Embed IO] r) => Sem r Text

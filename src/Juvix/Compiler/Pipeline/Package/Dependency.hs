@@ -50,6 +50,11 @@ _GitDependency f = \case
   DependencyGit g -> DependencyGit <$> f g
   x@DependencyPath {} -> pure x
 
+_PathDependency :: Traversal' Dependency PathDependency
+_PathDependency f = \case
+  DependencyPath p -> DependencyPath <$> f p
+  x@DependencyGit {} -> pure x
+
 instance Pretty PathDependency where
   pretty (PathDependency p) = pretty p
 

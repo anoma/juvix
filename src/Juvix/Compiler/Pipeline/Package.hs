@@ -20,6 +20,7 @@ module Juvix.Compiler.Pipeline.Package
     emptyPackage,
     readGlobalPackage,
     mkPackageFilePath,
+    packageLockfile,
   )
 where
 

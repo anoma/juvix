@@ -26,6 +26,7 @@ import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Base
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Error
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.PackageInfo
 import Juvix.Compiler.Pipeline.EntryPoint
+import Juvix.Compiler.Pipeline.Lockfile
 import Juvix.Data.Effect.Git
 import Juvix.Extra.Paths
 import Juvix.Extra.Stdlib (ensureStdlib)
@@ -44,7 +45,8 @@ makeSem ''PathResolver
 data ResolverEnv = ResolverEnv
   { _envRoot :: Path Abs Dir,
     -- | The path of the input file *if* we are using the global project
-    _envSingleFile :: Maybe (Path Abs File)
+    _envSingleFile :: Maybe (Path Abs File),
+    _envLockfile :: Maybe Lockfile
   }
 
 data ResolverState = ResolverState
@@ -68,6 +70,9 @@ iniResolverState =
 withEnvRoot :: (Members '[Reader ResolverEnv] r) => Path Abs Dir -> Sem r a -> Sem r a
 withEnvRoot root' = local (set envRoot root')
 
+withLockfile :: (Members '[Reader ResolverEnv] r) => Lockfile -> Sem r a -> Sem r a
+withLockfile f = local (set envLockfile (Just f))
+
 mkPackage ::
   forall r.
   (Members '[Files, Error Text, Reader ResolverEnv, GitClone] r) =>
@@ -86,11 +91,12 @@ mkPackageInfo ::
   (Members '[Files, Error Text, Reader ResolverEnv, Error DependencyError, GitClone] r) =>
   Maybe EntryPoint ->
   Path Abs Dir ->
+  Package ->
   Sem r PackageInfo
-mkPackageInfo mpackageEntry _packageRoot = do
+mkPackageInfo mpackageEntry _packageRoot _packagePackage = do
   let buildDir :: Path Abs Dir = maybe (rootBuildDir _packageRoot) (someBaseToAbs _packageRoot . (^. entryPointBuildDir)) mpackageEntry
-  _packagePackage <- mkPackage mpackageEntry _packageRoot
   let deps :: [Dependency] = _packagePackage ^. packageDependencies
+  let _packagePackage = set packageDependencies deps _packagePackage
   depsPaths <- mapM (getDependencyPath . mkPackageDependencyInfo (_packagePackage ^. packageFile)) deps
   ensureStdlib _packageRoot buildDir deps
   files :: [Path Rel File] <-
@@ -98,7 +104,7 @@ mkPackageInfo mpackageEntry _packageRoot = do
   let _packageRelativeFiles = HashSet.fromList files
       _packageAvailableRoots =
         HashSet.fromList (_packageRoot : depsPaths)
-  return PackageInfo {..}
+  return PackageInfo {_packageResolvedDependencies = deps, ..}
   where
     juvixAccum :: Path Abs Dir -> [Path Rel Dir] -> [Path Rel File] -> [Path Abs File] -> Sem r ([Path Abs File], Recurse Rel)
     juvixAccum cd _ files acc = return (newJuvixFiles <> acc, RecurseFilter (\hasJuvixYaml d -> not hasJuvixYaml && not (isHiddenDirectory d)))
@@ -161,6 +167,7 @@ addDependency' ::
 addDependency' me = addDependencyHelper me
 
 addDependencyHelper ::
+  forall r.
   (Members '[State ResolverState, Reader ResolverEnv, Files, Error Text, Error DependencyError, GitClone] r) =>
   Maybe EntryPoint ->
   PackageDependencyInfo ->
@@ -168,12 +175,44 @@ addDependencyHelper ::
 addDependencyHelper me d = do
   p <- getDependencyPath d
   unlessM (dependencyCached p) $ withEnvRoot p $ do
-    pkgInfo <- mkPackageInfo me p
-    modify' (set (resolverPackages . at p) (Just pkgInfo))
-    forM_ (pkgInfo ^. packageRelativeFiles) $ \f -> do
-      modify' (over resolverFiles (HashMap.insertWith (<>) f (pure pkgInfo)))
-    let packagePath = pkgInfo ^. packagePackage . packageFile
-    forM_ (pkgInfo ^. packagePackage . packageDependencies) (addDependency' Nothing . mkPackageDependencyInfo packagePath)
+    pkg <- mkPackage me p
+    selectPackageLockfile pkg $ do
+      pkgInfo <- mkPackageInfo me p pkg
+      modify' (set (resolverPackages . at p) (Just pkgInfo))
+      forM_ (pkgInfo ^. packageRelativeFiles) $ \f -> do
+        modify' (over resolverFiles (HashMap.insertWith (<>) f (pure pkgInfo)))
+      let packagePath = pkgInfo ^. packagePackage . packageFile
+      forM_ (pkgInfo ^. packagePackage . packageDependencies) (\dep -> selectDependencyLockfile dep (addDependency' Nothing (mkPackageDependencyInfo packagePath dep)))
+  where
+    selectPackageLockfile :: Package -> Sem r a -> Sem r a
+    selectPackageLockfile pkg action = do
+      currentLockfile <- asks (^. envLockfile)
+      case currentLockfile of
+        Just _ -> action
+        Nothing -> case (pkg ^. packageLockfile) of
+          Just lf -> withLockfile lf action
+          Nothing -> action
+
+    selectDependencyLockfile :: Dependency -> Sem r a -> Sem r a
+    selectDependencyLockfile dep action = do
+      currentLockfile <- asks (^. envLockfile)
+      case currentLockfile of
+        Nothing -> action
+        Just lf -> case findDependency of
+          Just dlf -> withLockfile (Lockfile (dlf ^. lockfileDependencyDependencies)) action
+          Nothing -> throw errMsg
+          where
+            findDependency :: Maybe LockfileDependency
+            findDependency = find go (lf ^. lockfileDependencies)
+              where
+                go :: LockfileDependency -> Bool
+                go ld = case (dep, ld ^. lockfileDependencyDependency) of
+                  (DependencyGit dg, DependencyGit ldg) -> dg ^. gitDependencyUrl == ldg ^. gitDependencyUrl
+                  (DependencyPath dp, DependencyPath ldp) -> dp ^. pathDependencyPath == ldp ^. pathDependencyPath
+                  _ -> False
+
+            errMsg :: Text
+            errMsg = "Could not find dependency: " <> show dep <> " in lockfile"
 
 currentPackage :: (Members '[State ResolverState, Reader ResolverEnv] r) => Sem r PackageInfo
 currentPackage = do
@@ -259,6 +298,7 @@ runPathResolver' st root x = do
       env =
         ResolverEnv
           { _envRoot = root,
+            _envLockfile = Nothing,
             _envSingleFile
           }
   runState st (runReader env (re x))
