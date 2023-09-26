@@ -117,7 +117,9 @@ instance HasNameKind AName where
   getNameKind = (^. anameKind)
 
 hasFixity :: Name' s -> Bool
-hasFixity n = isJust (n ^. nameFixity)
+hasFixity n = case n ^. nameFixity of
+  Just Fixity {..} -> _fixityArity /= OpNone
+  Nothing -> False
 
 isConstructor :: Name' s -> Bool
 isConstructor n = case n ^. nameKind of

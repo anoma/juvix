@@ -663,6 +663,7 @@ instance PrettyPrint Arity where
   ppCode = \case
     Unary -> noLoc Str.unary
     Binary -> noLoc Str.binary
+    None -> noLoc Str.none
 
 instance PrettyPrint BinaryAssoc where
   ppCode a = noLoc $ case a of

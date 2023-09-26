@@ -568,6 +568,8 @@ parsedFixityInfo = do
         $> Unary
         <|> kw kwBinary
           $> Binary
+        <|> kw kwNone
+          $> None
 
 fixitySyntaxDef :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => KeywordRef -> ParsecS r (FixitySyntaxDef 'Parsed)
 fixitySyntaxDef _fixitySyntaxKw = P.label "<fixity declaration>" $ do

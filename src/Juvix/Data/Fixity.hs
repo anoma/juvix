@@ -24,6 +24,7 @@ data BinaryAssoc
 data OperatorArity
   = OpUnary UnaryAssoc
   | OpBinary BinaryAssoc
+  | OpNone
   deriving stock (Show, Eq, Ord, Data)
 
 data Fixity = Fixity
@@ -65,6 +66,7 @@ isBinary :: Fixity -> Bool
 isBinary f = case f ^. fixityArity of
   OpBinary {} -> True
   OpUnary {} -> False
+  OpNone -> False
 
 isUnary :: Fixity -> Bool
 isUnary = not . isBinary

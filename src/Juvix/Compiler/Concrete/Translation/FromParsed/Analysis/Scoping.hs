@@ -556,9 +556,12 @@ entryToScopedIden name e = do
           }
     PreSymbolAlias {} -> do
       e' <- normalizePreSymbolEntry e
+      let scopedName' =
+            over S.nameFixity (maybe (e' ^. symbolEntry . S.nameFixity) Just) $
+              set S.nameKind (getNameKind e') scopedName
       return
         ScopedIden
-          { _scopedIdenAlias = Just (set S.nameKind (getNameKind e') scopedName),
+          { _scopedIdenAlias = Just scopedName',
             _scopedIdenFinal = helper (e' ^. symbolEntry)
           }
   registerScopedIden si
@@ -706,6 +709,7 @@ resolveFixitySyntaxDef fdef@FixitySyntaxDef {..} = topBindings $ do
                   Just FI.AssocLeft -> OpBinary AssocLeft
                   Just FI.AssocRight -> OpBinary AssocRight
                   Just FI.AssocNone -> OpBinary AssocNone
+                FI.None -> OpNone
           }
   registerFixity
     @$> FixityDef
@@ -2433,14 +2437,14 @@ makeExpressionTable (ExpressionAtoms atoms _) = [recordUpdate] : [appOpExplicit]
       where
         mkOperator :: ScopedIden -> Maybe (Precedence, P.Operator Parse Expression)
         mkOperator iden
-          | Just Fixity {..} <- _nameFixity = Just $
+          | Just Fixity {..} <- _nameFixity =
               case _fixityArity of
-                OpUnary u -> (_fixityPrecedence, P.Postfix (unaryApp <$> parseSymbolId _nameId))
+                OpUnary u -> Just (_fixityPrecedence, P.Postfix (unaryApp <$> parseSymbolId _nameId))
                   where
                     unaryApp :: ScopedIden -> Expression -> Expression
                     unaryApp funName arg = case u of
                       AssocPostfix -> ExpressionPostfixApplication (PostfixApplication arg funName)
-                OpBinary b -> (_fixityPrecedence, infixLRN (binaryApp <$> parseSymbolId _nameId))
+                OpBinary b -> Just (_fixityPrecedence, infixLRN (binaryApp <$> parseSymbolId _nameId))
                   where
                     binaryApp :: ScopedIden -> Expression -> Expression -> Expression
                     binaryApp _infixAppOperator _infixAppLeft _infixAppRight =
@@ -2450,6 +2454,7 @@ makeExpressionTable (ExpressionAtoms atoms _) = [recordUpdate] : [appOpExplicit]
                       AssocLeft -> P.InfixL
                       AssocRight -> P.InfixR
                       AssocNone -> P.InfixN
+                OpNone -> Nothing
           | otherwise = Nothing
           where
             S.Name' {..} = iden ^. scopedIdenName
@@ -2725,13 +2730,13 @@ makePatternTable (PatternAtoms latoms _) = [appOp] : operators
         unqualifiedSymbolOp constr = run . runFail $ do
           Fixity {..} <- failMaybe (constr ^. scopedIdenName . S.nameFixity)
           let _nameId = constr ^. scopedIdenName . S.nameId
-          return $ case _fixityArity of
-            OpUnary u -> (_fixityPrecedence, P.Postfix (unaryApp <$> parseSymbolId _nameId))
+          case _fixityArity of
+            OpUnary u -> return (_fixityPrecedence, P.Postfix (unaryApp <$> parseSymbolId _nameId))
               where
                 unaryApp :: ScopedIden -> PatternArg -> PatternArg
                 unaryApp constrName = case u of
                   AssocPostfix -> explicitP . PatternPostfixApplication . (`PatternPostfixApp` constrName)
-            OpBinary b -> (_fixityPrecedence, infixLRN (binaryInfixApp <$> parseSymbolId _nameId))
+            OpBinary b -> return (_fixityPrecedence, infixLRN (binaryInfixApp <$> parseSymbolId _nameId))
               where
                 binaryInfixApp :: ScopedIden -> PatternArg -> PatternArg -> PatternArg
                 binaryInfixApp name argLeft = explicitP . PatternInfixApplication . PatternInfixApp argLeft name
@@ -2740,6 +2745,7 @@ makePatternTable (PatternAtoms latoms _) = [appOp] : operators
                   AssocLeft -> P.InfixL
                   AssocRight -> P.InfixR
                   AssocNone -> P.InfixN
+            OpNone -> fail
         parseSymbolId :: S.NameId -> ParsePat ScopedIden
         parseSymbolId uid = P.token getConstructorRefWithId mempty
           where

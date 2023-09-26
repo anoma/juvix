@@ -77,6 +77,7 @@ fromReg lims tab =
           Fixity.OpBinary AssocNone -> "assoc_none"
           Fixity.OpBinary AssocLeft -> "assoc_left"
           Fixity.OpBinary AssocRight -> "assoc_right"
+          Fixity.OpNone -> "assoc_none"
 
     functionInfo :: CCode
     functionInfo =
