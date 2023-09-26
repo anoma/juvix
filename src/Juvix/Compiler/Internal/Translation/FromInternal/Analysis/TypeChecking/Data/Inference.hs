@@ -479,10 +479,14 @@ functionDefEval f = do
 
         goBody :: Expression -> Sem r Expression
         goBody body = do
+          checkOneClause
           patsTys <- splitExplicitParams
           go (zipExact pats patsTys)
           where
             (pats, body') = unfoldLambda body
+            checkOneClause = case body of
+              ExpressionLambda Lambda {_lambdaClauses = _ :| _ : _} -> fail
+              _ -> return ()
             splitExplicitParams :: Sem r [Expression]
             splitExplicitParams = do
               let n = length pats
