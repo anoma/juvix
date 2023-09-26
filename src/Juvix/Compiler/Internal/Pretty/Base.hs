@@ -244,8 +244,12 @@ instance PrettyCode FunctionDef where
         <?+> funDefName'
           <+> kwColon
           <+> funDefType'
-            <> line
+            <> hardline
             <> vsep (toList clauses')
+
+instance PrettyCode PreLetStatement where
+  ppCode = \case
+    PreLetFunctionDef f -> ppCode f
 
 instance PrettyCode FunctionClause where
   ppCode c = do

@@ -56,6 +56,17 @@ addStartNode n = modify (HashSet.insert n)
 addEdgeMay :: (Member (State DependencyGraph) r) => Maybe Name -> Name -> Sem r ()
 addEdgeMay mn1 n2 = whenJust mn1 $ \n1 -> addEdge n1 n2
 
+addNode :: (Member (State DependencyGraph) r) => Name -> Sem r ()
+addNode n =
+  modify
+    ( HashMap.alter
+        ( \case
+            Just x -> Just x
+            Nothing -> Just (mempty :: HashSet Name)
+        )
+        n
+    )
+
 addEdge :: (Member (State DependencyGraph) r) => Name -> Name -> Sem r ()
 addEdge n1 n2 =
   modify
@@ -179,6 +190,7 @@ goFunctionDefHelper ::
   FunctionDef ->
   Sem r ()
 goFunctionDefHelper f = do
+  addNode (f ^. funDefName)
   checkStartNode (f ^. funDefName)
   when (f ^. funDefInstance) $
     goInstance f

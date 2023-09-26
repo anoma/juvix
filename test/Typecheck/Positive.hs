@@ -288,6 +288,10 @@ tests =
     posTest
       "Instance import"
       $(mkRelDir "InstanceImport")
+      $(mkRelFile "Main.juvix"),
+    posTest
+      "Hole as numeric type"
+      $(mkRelDir "issue2373")
       $(mkRelFile "Main.juvix")
   ]
     <> [ compilationTest t | t <- Compilation.tests

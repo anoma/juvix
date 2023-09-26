@@ -115,7 +115,9 @@ buildLetMutualBlocks ss = nonEmpty' . mapMaybe nameToPreStatement $ scomponents
   where
     -- TODO buildDependencyInfoLet is repeating too much work when there are big nested lets
     depInfo = buildDependencyInfoLet ss
+
     scomponents :: [SCC Internal.Name] = buildSCCs depInfo
+
     statementsByName :: HashMap Internal.Name Internal.PreLetStatement
     statementsByName = HashMap.fromList (map mkAssoc (toList ss))
       where
