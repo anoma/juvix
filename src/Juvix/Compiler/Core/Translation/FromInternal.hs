@@ -381,10 +381,8 @@ mkFunBody ty f =
   mkBody
     ty
     (f ^. Internal.funDefName . nameLoc)
-    --  TODO refactor mkBody
     (pure (Internal.unfoldLambda (f ^. Internal.funDefBody)))
 
--- TODO: single clause always
 mkBody ::
   forall r.
   (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable] r) =>
