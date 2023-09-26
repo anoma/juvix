@@ -96,15 +96,6 @@ data FunctionDef = FunctionDef
 
 instance Hashable FunctionDef
 
-data FunctionClause = FunctionClause
-  { _clauseName :: FunctionName,
-    _clausePatterns :: [PatternArg],
-    _clauseBody :: Expression
-  }
-  deriving stock (Eq, Generic, Data)
-
-instance Hashable FunctionClause
-
 data Iden
   = IdenFunction Name
   | IdenConstructor Name
@@ -327,7 +318,6 @@ makeLenses ''Example
 makeLenses ''PatternArg
 makeLenses ''Import
 makeLenses ''FunctionDef
-makeLenses ''FunctionClause
 makeLenses ''InductiveDef
 makeLenses ''AxiomDef
 makeLenses ''ModuleBody'
@@ -437,9 +427,6 @@ instance HasLoc LambdaClause where
 
 instance HasLoc Lambda where
   getLoc l = getLocSpan (l ^. lambdaClauses)
-
-instance HasLoc FunctionClause where
-  getLoc f = getLoc (f ^. clauseName) <> getLoc (f ^. clauseBody)
 
 instance HasLoc FunctionDef where
   getLoc f = getLoc (f ^. funDefName) <> getLoc (f ^. funDefBody)

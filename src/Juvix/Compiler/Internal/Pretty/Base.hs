@@ -250,13 +250,6 @@ instance PrettyCode PreLetStatement where
   ppCode = \case
     PreLetFunctionDef f -> ppCode f
 
-instance PrettyCode FunctionClause where
-  ppCode c = do
-    funName <- ppCode (c ^. clauseName)
-    clausePatterns' <- hsepMaybe <$> mapM ppCodeAtom (c ^. clausePatterns)
-    clauseBody' <- ppCode (c ^. clauseBody)
-    return $ nest 2 (funName <+?> clausePatterns' <+> kwAssign <+> clauseBody')
-
 instance PrettyCode Import where
   ppCode i = do
     name' <- ppCode (i ^. importModule . moduleIxModule . moduleName)

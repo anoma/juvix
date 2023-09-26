@@ -173,25 +173,6 @@ checkFunctionBody ari body = do
                       }
               }
 
-checkFunctionClause ::
-  (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r) =>
-  Arity ->
-  FunctionClause ->
-  Sem r FunctionClause
-checkFunctionClause ari cl = do
-  hint <- guessArity (cl ^. clauseBody)
-  (patterns', locals, bodyAri) <- checkLhs loc hint ari (cl ^. clausePatterns)
-  body' <- runReader locals (checkExpression bodyAri (cl ^. clauseBody))
-  return
-    FunctionClause
-      { _clauseName = cl ^. clauseName,
-        _clausePatterns = patterns',
-        _clauseBody = body'
-      }
-  where
-    name = cl ^. clauseName
-    loc = getLoc name
-
 simplelambda :: a
 simplelambda = error "simple lambda expressions are not supported by the arity checker"
 

@@ -377,21 +377,6 @@ lookupVar v = HashMap.lookupDefault err v <$> asks (^. localTypes)
   where
     err = error $ "internal error: could not find var " <> ppTrace v
 
-checkFunctionClause ::
-  forall r.
-  (Members '[HighlightBuilder, Reader InfoTable, State FunctionsTable, Error TypeCheckerError, NameIdGen, Inference, Builtins, State TypesTable, Output Example, Reader LocalVars, Termination] r) =>
-  Expression ->
-  FunctionClause ->
-  Sem r FunctionClause
-checkFunctionClause clauseType FunctionClause {..} = do
-  (patterns', body') <- checkClause clauseType _clausePatterns _clauseBody
-  return
-    FunctionClause
-      { _clauseBody = body',
-        _clausePatterns = patterns',
-        ..
-      }
-
 -- | helper function for function clauses and lambda functions
 checkClause ::
   forall r.

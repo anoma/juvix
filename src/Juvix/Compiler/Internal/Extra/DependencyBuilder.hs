@@ -204,11 +204,6 @@ goConstructorDef indName c = do
   addEdge (c ^. inductiveConstructorName) indName
   goExpression (Just indName) (c ^. inductiveConstructorType)
 
-goFunctionClause :: (Members '[State DependencyGraph, State StartNodes, Reader ExportsTable] r) => Name -> FunctionClause -> Sem r ()
-goFunctionClause p c = do
-  mapM_ (goPattern (Just p)) (c ^. clausePatterns)
-  goExpression (Just p) (c ^. clauseBody)
-
 goPattern :: forall r. (Member (State DependencyGraph) r) => Maybe Name -> PatternArg -> Sem r ()
 goPattern n p = case p ^. patternArgPattern of
   PatternVariable {} -> return ()

@@ -158,12 +158,6 @@ subsHoles s = over leafExpressions helper
       ExpressionInstanceHole h -> fromMaybe e (s ^. at h)
       _ -> e
 
-instance HasExpressions FunctionClause where
-  leafExpressions f c = do
-    _clauseBody <- leafExpressions f (c ^. clauseBody)
-    _clausePatterns <- traverse (leafExpressions f) (c ^. clausePatterns)
-    pure FunctionClause {_clauseName = c ^. clauseName, ..}
-
 instance HasExpressions Example where
   leafExpressions f = traverseOf exampleExpression (leafExpressions f)
 
@@ -531,10 +525,6 @@ leftEq a b free =
 clauseLhsAsExpression :: Name -> [PatternArg] -> Expression
 clauseLhsAsExpression clName pats =
   foldApplication (toExpression clName) (map toApplicationArg pats)
-
-clauseLhsAsExpressionREMOVE :: FunctionClause -> Expression
-clauseLhsAsExpressionREMOVE cl =
-  foldApplication (toExpression (cl ^. clauseName)) (map toApplicationArg (cl ^. clausePatterns))
 
 infix 4 ==%
 
