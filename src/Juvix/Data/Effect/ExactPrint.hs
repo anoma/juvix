@@ -149,6 +149,12 @@ oneLineOrNextNoIndent = region P.oneLineOrNextNoIndent
 oneLineOrNext :: (Members '[ExactPrint] r) => Sem r () -> Sem r ()
 oneLineOrNext = region P.oneLineOrNext
 
+oneLineOrNextBlock :: (Members '[ExactPrint] r) => Sem r () -> Sem r ()
+oneLineOrNextBlock = region P.oneLineOrNextBlock
+
+oneLineOrNextBraces :: (Members '[ExactPrint] r) => Sem r () -> Sem r ()
+oneLineOrNextBraces = region P.oneLineOrNextBraces
+
 nextLine :: (Members '[ExactPrint] r) => Sem r () -> Sem r ()
 nextLine = region P.nextLine
 
