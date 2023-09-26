@@ -184,10 +184,10 @@ checkFunctionDef FunctionDef {..} = do
   funDef <- do
     _funDefType' <- checkDefType _funDefType
     registerIdenType _funDefName _funDefType'
-    _funDefClauses' <- mapM (checkFunctionClause _funDefType') _funDefClauses
+    _funDefBody' <- checkExpression _funDefType' _funDefBody
     return
       FunctionDef
-        { _funDefClauses = _funDefClauses',
+        { _funDefBody = _funDefBody',
           _funDefType = _funDefType',
           ..
         }

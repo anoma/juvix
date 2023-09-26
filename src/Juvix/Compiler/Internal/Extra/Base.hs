@@ -316,7 +316,6 @@ viewConstructorType = first (map (^. paramType)) . unfoldFunType
 constructorArgs :: Expression -> [Expression]
 constructorArgs = fst . viewConstructorType
 
--- Unfolds *single* clause lambdas
 unfoldLambdaClauses :: Expression -> Maybe (NonEmpty (NonEmpty PatternArg, Expression))
 unfoldLambdaClauses t = do
   ExpressionLambda Lambda {..} <- return t
@@ -328,8 +327,8 @@ unfoldLambdaClauses t = do
 unfoldLambda :: Expression -> ([PatternArg], Expression)
 unfoldLambda t = case t of
   ExpressionLambda Lambda {..}
-     | LambdaClause {..} :| [] <- _lambdaClauses ->
-         first (toList _lambdaPatterns <>) (unfoldLambda _lambdaBody)
+    | LambdaClause {..} :| [] <- _lambdaClauses ->
+        first (toList _lambdaPatterns <>) (unfoldLambda _lambdaBody)
   _ -> ([], t)
 
 -- | a -> (b -> c)  ==> ([a, b], c)

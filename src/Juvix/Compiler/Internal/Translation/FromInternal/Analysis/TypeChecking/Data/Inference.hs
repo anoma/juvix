@@ -472,22 +472,20 @@ functionDefEval f = do
       Sem r Expression
     goTop params returnsType = do
       checkTerminating
-      case f ^. funDefClauses of
-        c :| [] -> goClause c
-        _ -> fail
+      goBody (f ^. funDefBody)
       where
         checkTerminating :: Sem r ()
         checkTerminating = unlessM (functionIsTerminating (f ^. funDefName)) fail
 
-        goClause :: FunctionClause -> Sem r Expression
-        goClause c = do
-          let pats = c ^. clausePatterns
+        goBody :: Expression -> Sem r Expression
+        goBody body = do
           patsTys <- splitExplicitParams
           go (zipExact pats patsTys)
           where
+            (pats, body') = unfoldLambda body
             splitExplicitParams :: Sem r [Expression]
             splitExplicitParams = do
-              let n = length (c ^. clausePatterns)
+              let n = length pats
               unless returnsType fail
               nfirst <- failMaybe (takeExactMay n params)
               mapM simpleExplicitParam nfirst
@@ -501,7 +499,7 @@ functionDefEval f = do
               _ -> const fail
             go :: [(PatternArg, Expression)] -> Sem r Expression
             go = \case
-              [] -> return (c ^. clauseBody)
+              [] -> return body'
               (p, ty) : ps
                 | Implicit <- p ^. patternArgIsImplicit -> fail
                 | otherwise -> go ps >>= goPattern (p ^. patternArgPattern, ty)

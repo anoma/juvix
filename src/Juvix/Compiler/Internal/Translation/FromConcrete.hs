@@ -433,7 +433,6 @@ goTopFunctionDef FunctionDef {..} = do
       _funDefInstance = isJust _signInstance
       _funDefBuiltin = (^. withLocParam) <$> _signBuiltin
   _funDefType <- goDefType
-  _funDefClauses <- error "TODO REMOVE"
   _funDefExamples <- goExamples _signDoc
   _funDefPragmas <- goPragmas _signPragmas
   _funDefBody <- goBody

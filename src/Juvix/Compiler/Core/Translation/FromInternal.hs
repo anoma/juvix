@@ -312,7 +312,7 @@ preFunctionDef f = do
       Nothing ->
         map
           getPatternName
-          (head (f ^. Internal.funDefClauses) ^. Internal.clausePatterns)
+          (fst (Internal.unfoldLambda (f ^. Internal.funDefBody)))
 
     normalizeBuiltinName :: Maybe BuiltinFunction -> Text -> Text
     normalizeBuiltinName blt name = case blt of
@@ -378,8 +378,13 @@ mkFunBody ::
   Internal.FunctionDef ->
   Sem r Node
 mkFunBody ty f =
-  mkBody ty (f ^. Internal.funDefName . nameLoc) (fmap (\c -> (c ^. Internal.clausePatterns, c ^. Internal.clauseBody)) (f ^. Internal.funDefClauses))
+  mkBody
+    ty
+    (f ^. Internal.funDefName . nameLoc)
+    --  TODO refactor mkBody
+    (pure (Internal.unfoldLambda (f ^. Internal.funDefBody)))
 
+-- TODO: single clause always
 mkBody ::
   forall r.
   (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable] r) =>

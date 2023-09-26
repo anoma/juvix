@@ -132,11 +132,12 @@ checkFunctionDef ::
 checkFunctionDef FunctionDef {..} = do
   let arity = typeArity _funDefType
   _funDefType' <- withEmptyLocalVars (checkType _funDefType)
-  _funDefClauses' <- mapM (checkFunctionClause arity) _funDefClauses
+  -- _funDefClauses' <- mapM (checkFunctionClause arity) _funDefClauses
+  _funDefBody' <- checkFunctionBody arity _funDefBody
   _funDefExamples' <- withEmptyLocalVars (mapM checkExample _funDefExamples)
   return
     FunctionDef
-      { _funDefClauses = _funDefClauses',
+      { _funDefBody = _funDefBody',
         _funDefExamples = _funDefExamples',
         _funDefType = _funDefType',
         _funDefName,
@@ -145,6 +146,27 @@ checkFunctionDef FunctionDef {..} = do
         _funDefBuiltin,
         _funDefPragmas
       }
+
+-- TODO do we really need to do something special???
+checkFunctionBody ::
+  (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r) =>
+  Arity ->
+  Expression ->
+  Sem r Expression
+checkFunctionBody ari cl = do
+  withEmptyLocalVars $ checkExpression ari cl
+
+-- hint <- guessArity (cl ^. clauseBody)
+-- (patterns', locals, bodyAri) <- checkLhs loc hint ari (cl ^. clausePatterns)
+-- body' <- runReader locals (checkExpression bodyAri (cl ^. clauseBody))
+-- return
+--   FunctionClause
+--     { _clauseName = cl ^. clauseName,
+--       _clausePatterns = patterns',
+--       _clauseBody = body'
+--     }
+-- where
+--   loc = getLoc cl
 
 checkFunctionClause ::
   (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r) =>

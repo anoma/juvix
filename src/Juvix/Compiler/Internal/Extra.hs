@@ -103,11 +103,13 @@ genFieldProjection _funDefName info fieldIx = do
     genBody = do
       (pat, vars) <- genConstructorPattern (getLoc _funDefName) info
       let body = toExpression (vars !! fieldIx)
-          cl = LambdaClause {
-            _lambdaPatterns = pure pat,
-            _lambdaBody = body
-                            }
-      return . ExpressionLambda $ Lambda
+          cl =
+            LambdaClause
+              { _lambdaPatterns = pure pat,
+                _lambdaBody = body
+              }
+      return . ExpressionLambda $
+        Lambda
           { _lambdaType = Nothing,
             _lambdaClauses = pure cl
           }
