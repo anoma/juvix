@@ -46,7 +46,7 @@ data ResolverEnv = ResolverEnv
   { _envRoot :: Path Abs Dir,
     -- | The path of the input file *if* we are using the global project
     _envSingleFile :: Maybe (Path Abs File),
-    _envLockfile :: Maybe Lockfile
+    _envLockfile :: Maybe LockfileInfo
   }
 
 data ResolverState = ResolverState
@@ -70,7 +70,7 @@ iniResolverState =
 withEnvRoot :: (Members '[Reader ResolverEnv] r) => Path Abs Dir -> Sem r a -> Sem r a
 withEnvRoot root' = local (set envRoot root')
 
-withLockfile :: (Members '[Reader ResolverEnv] r) => Lockfile -> Sem r a -> Sem r a
+withLockfile :: (Members '[Reader ResolverEnv] r) => LockfileInfo -> Sem r a -> Sem r a
 withLockfile f = local (set envLockfile (Just f))
 
 mkPackage ::
@@ -117,7 +117,7 @@ mkPackageInfo mpackageEntry _packageRoot pkg = do
       mlockfile <- asks (^. envLockfile)
       return $ case mlockfile of
         Nothing -> pkg ^. packageDependencies
-        Just lf -> (^. lockfileDependencyDependency) <$> lf ^. lockfileDependencies
+        Just lf -> (^. lockfileDependencyDependency) <$> lf ^. lockfileInfoLockfile . lockfileDependencies
 
 dependencyCached :: (Members '[State ResolverState, Reader ResolverEnv, Files, GitClone] r) => Path Abs Dir -> Sem r Bool
 dependencyCached p = HashMap.member p <$> gets (^. resolverPackages)

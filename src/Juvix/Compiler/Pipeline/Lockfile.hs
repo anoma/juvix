@@ -64,17 +64,3 @@ instance ToJSON Lockfile where
 
 instance FromJSON Lockfile where
   parseJSON = toAesonParser' (Lockfile <$> (key Str.dependencies fromAesonParser))
-
--- | Extract a lockfile associated with an immediate dependency. Returns Nothing
--- if the dependency is not specified at the root of the lockfile.
-extractLockfile :: Lockfile -> Dependency -> Maybe Lockfile
-extractLockfile lf d = Lockfile . (^. lockfileDependencyDependencies) <$> foundDep
-  where
-    foundDep :: Maybe LockfileDependency
-    foundDep = find go (lf ^. lockfileDependencies)
-
-    go :: LockfileDependency -> Bool
-    go ld = case (d, ld ^. lockfileDependencyDependency) of
-      (DependencyGit dg, DependencyGit ldg) -> dg ^. gitDependencyUrl == ldg ^. gitDependencyUrl
-      (DependencyPath dp, DependencyPath ldp) -> dp ^. pathDependencyPath == ldp ^. pathDependencyPath
-      _ -> False
