@@ -928,6 +928,7 @@ goExpression = \case
             preLetStatement = \case
               LetFunctionDef f -> Just . Internal.PreLetFunctionDef <$> goTopFunctionDef f
               LetAliasDef {} -> return Nothing
+              LetOpen {} -> return Nothing
 
         goSCC :: SCC Internal.PreLetStatement -> Internal.LetClause
         goSCC = \case

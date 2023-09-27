@@ -497,6 +497,7 @@ instance (SingI s) => PrettyPrint (LetStatement s) where
   ppCode = \case
     LetFunctionDef f -> ppCode f
     LetAliasDef f -> ppCode f
+    LetOpen f -> ppCode f
 
 instance (SingI s) => PrettyPrint (Let s) where
   ppCode Let {..} = do

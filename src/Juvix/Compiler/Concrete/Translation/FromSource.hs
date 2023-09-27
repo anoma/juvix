@@ -958,6 +958,7 @@ letStatement :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen
 letStatement =
   LetFunctionDef <$> letFunDef
     <|> LetAliasDef <$> (kw kwSyntax >>= aliasDef)
+    <|> LetOpen <$> openModule
 
 letBlock :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (Let 'Parsed)
 letBlock = do

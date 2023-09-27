@@ -1274,6 +1274,7 @@ data PostfixApplication = PostfixApplication
 data LetStatement (s :: Stage)
   = LetFunctionDef (FunctionDef s)
   | LetAliasDef (AliasDef s)
+  | LetOpen (OpenModule s)
 
 deriving stock instance Show (LetStatement 'Parsed)
 
