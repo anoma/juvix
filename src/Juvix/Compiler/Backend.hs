@@ -23,7 +23,8 @@ data Limits = Limits
     _limitsMaxStackDelta :: Int,
     _limitsMaxFunctionAlloc :: Int,
     _limitsDispatchStackSize :: Int,
-    _limitsBuiltinUIDsNum :: Int
+    _limitsBuiltinUIDsNum :: Int,
+    _limitsSpecialisedApply :: Int
   }
   deriving stock (Eq, Show)
 
@@ -45,7 +46,8 @@ getLimits tgt debug = case tgt of
         _limitsMaxStackDelta = 16368,
         _limitsMaxFunctionAlloc = 16368,
         _limitsDispatchStackSize = 4,
-        _limitsBuiltinUIDsNum = 8
+        _limitsBuiltinUIDsNum = 8,
+        _limitsSpecialisedApply = 3
       }
   TargetCNative64 ->
     Limits
@@ -59,7 +61,8 @@ getLimits tgt debug = case tgt of
         _limitsMaxStackDelta = 8184,
         _limitsMaxFunctionAlloc = 8184,
         _limitsDispatchStackSize = 4,
-        _limitsBuiltinUIDsNum = 8
+        _limitsBuiltinUIDsNum = 8,
+        _limitsSpecialisedApply = 3
       }
   TargetGeb ->
     defaultLimits
@@ -83,5 +86,6 @@ defaultLimits =
       _limitsMaxStackDelta = maxInt,
       _limitsMaxFunctionAlloc = maxInt,
       _limitsDispatchStackSize = maxInt,
-      _limitsBuiltinUIDsNum = maxInt
+      _limitsBuiltinUIDsNum = maxInt,
+      _limitsSpecialisedApply = 0
     }

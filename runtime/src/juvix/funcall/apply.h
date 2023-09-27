@@ -24,6 +24,17 @@
             GOTO_CLOSURE;                                           \
         } else {                                                    \
             ASSERT(juvix_apply_largs > 1);                          \
+            size_t n = get_closure_nargs(juvix_apply_closure);      \
+            PREALLOC(                                               \
+                n + CLOSURE_SKIP + 1 + 1,                           \
+                {                                                   \
+                    STACK_PUSH(juvix_apply_closure);                \
+                    STACK_PUSH(CARG(n));                            \
+                },                                                  \
+                {                                                   \
+                    STACK_POP(CARG(n));                             \
+                    STACK_POP(juvix_apply_closure);                 \
+                });                                                 \
             EXTEND_CLOSURE(juvix_result, juvix_apply_closure, 1, {  \
                 CLOSURE_ARG(juvix_result, juvix_closure_nargs) =    \
                     CARG(juvix_closure_nargs);                      \
@@ -49,6 +60,19 @@
             GOTO_CLOSURE;                                            \
         } else {                                                     \
             ASSERT(juvix_apply_largs > 2);                           \
+            size_t n = get_closure_nargs(juvix_apply_closure);       \
+            PREALLOC(                                                \
+                n + CLOSURE_SKIP + 1 + 2,                            \
+                {                                                    \
+                    STACK_PUSH(juvix_apply_closure);                 \
+                    STACK_PUSH(CARG(n));                             \
+                    STACK_PUSH(CARG(n + 1));                         \
+                },                                                   \
+                {                                                    \
+                    STACK_POP(CARG(n + 1));                          \
+                    STACK_POP(CARG(n));                              \
+                    STACK_POP(juvix_apply_closure);                  \
+                });                                                  \
             EXTEND_CLOSURE(juvix_result, juvix_apply_closure, 2, {   \
                 CLOSURE_ARG(juvix_result, juvix_closure_nargs) =     \
                     CARG(juvix_closure_nargs);                       \
@@ -86,7 +110,22 @@
             }                                                            \
             case 3:                                                      \
                 GOTO_CLOSURE;                                            \
-            default:                                                     \
+            default: {                                                   \
+                size_t n = get_closure_nargs(juvix_apply_closure);       \
+                PREALLOC(                                                \
+                    n + CLOSURE_SKIP + 1 + 3,                            \
+                    {                                                    \
+                        STACK_PUSH(juvix_apply_closure);                 \
+                        STACK_PUSH(CARG(n));                             \
+                        STACK_PUSH(CARG(n + 1));                         \
+                        STACK_PUSH(CARG(n + 2));                         \
+                    },                                                   \
+                    {                                                    \
+                        STACK_POP(CARG(n + 2));                          \
+                        STACK_POP(CARG(n + 1));                          \
+                        STACK_POP(CARG(n));                              \
+                        STACK_POP(juvix_apply_closure);                  \
+                    });                                                  \
                 EXTEND_CLOSURE(juvix_result, juvix_apply_closure, 3, {   \
                     CLOSURE_ARG(juvix_result, juvix_closure_nargs) =     \
                         CARG(juvix_closure_nargs);                       \
@@ -96,6 +135,7 @@
                         CARG(juvix_closure_nargs + 2);                   \
                 });                                                      \
                 RETURN;                                                  \
+            }                                                            \
         }                                                                \
     } while (0)
 
