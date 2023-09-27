@@ -95,8 +95,7 @@ mkPackageInfo ::
   Sem r PackageInfo
 mkPackageInfo mpackageEntry _packageRoot _packagePackage = do
   let buildDir :: Path Abs Dir = maybe (rootBuildDir _packageRoot) (someBaseToAbs _packageRoot . (^. entryPointBuildDir)) mpackageEntry
-  let deps :: [Dependency] = _packagePackage ^. packageDependencies
-  let _packagePackage = set packageDependencies deps _packagePackage
+  deps <- resolveDependencies
   depsPaths <- mapM (getDependencyPath . mkPackageDependencyInfo (_packagePackage ^. packageFile)) deps
   ensureStdlib _packageRoot buildDir deps
   files :: [Path Rel File] <-
@@ -111,6 +110,13 @@ mkPackageInfo mpackageEntry _packageRoot _packagePackage = do
       where
         newJuvixFiles :: [Path Abs File]
         newJuvixFiles = [cd <//> f | f <- files, isJuvixFile f]
+
+    resolveDependencies :: Sem r [Dependency]
+    resolveDependencies = do
+      mlockfile <- asks (^. envLockfile)
+      return $ case mlockfile of
+        Nothing -> _packagePackage ^. packageDependencies
+        Just lf -> (^. lockfileDependencyDependency) <$> lf ^. lockfileDependencies
 
 dependencyCached :: (Members '[State ResolverState, Reader ResolverEnv, Files, GitClone] r) => Path Abs Dir -> Sem r Bool
 dependencyCached p = HashMap.member p <$> gets (^. resolverPackages)
@@ -198,21 +204,12 @@ addDependencyHelper me d = do
       currentLockfile <- asks (^. envLockfile)
       case currentLockfile of
         Nothing -> action
-        Just lf -> case findDependency of
-          Just dlf -> withLockfile (Lockfile (dlf ^. lockfileDependencyDependencies)) action
+        Just lf -> case extractLockfile lf dep of
+          Just dlf -> withLockfile dlf action
           Nothing -> throw errMsg
-          where
-            findDependency :: Maybe LockfileDependency
-            findDependency = find go (lf ^. lockfileDependencies)
-              where
-                go :: LockfileDependency -> Bool
-                go ld = case (dep, ld ^. lockfileDependencyDependency) of
-                  (DependencyGit dg, DependencyGit ldg) -> dg ^. gitDependencyUrl == ldg ^. gitDependencyUrl
-                  (DependencyPath dp, DependencyPath ldp) -> dp ^. pathDependencyPath == ldp ^. pathDependencyPath
-                  _ -> False
-
-            errMsg :: Text
-            errMsg = "Could not find dependency: " <> show dep <> " in lockfile"
+      where
+        errMsg :: Text
+        errMsg = "Could not find dependency: " <> show dep <> " in lockfile"
 
 currentPackage :: (Members '[State ResolverState, Reader ResolverEnv] r) => Sem r PackageInfo
 currentPackage = do
