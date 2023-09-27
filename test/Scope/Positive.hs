@@ -258,5 +258,9 @@ tests =
     PosTest
       "Adt"
       $(mkRelDir ".")
-      $(mkRelFile "Adt.juvix")
+      $(mkRelFile "Adt.juvix"),
+    PosTest
+      "Let open"
+      $(mkRelDir ".")
+      $(mkRelFile "LetOpen.juvix")
   ]

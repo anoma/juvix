@@ -1293,7 +1293,7 @@ mkLetSections = mkSections . map toTopStatement
     toTopStatement = \case
       LetFunctionDef f -> StatementFunctionDef f
       LetAliasDef f -> StatementSyntax (SyntaxAlias f)
-      LetOpen {} -> undefined
+      LetOpen o -> StatementOpenModule o
 
 mkSections :: [Statement 'Parsed] -> StatementSections 'Parsed
 mkSections = \case
@@ -1732,7 +1732,7 @@ checkLetFunDefs =
             fromNonDef = \case
               NonDefinitionImport {} -> impossible
               NonDefinitionModule {} -> impossible
-              NonDefinitionOpenModule {} -> impossible
+              NonDefinitionOpenModule o -> LetOpen o
 
 checkRecordPattern ::
   forall r.
