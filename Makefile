@@ -42,7 +42,6 @@ all: build
 clean: clean-runtime
 	@${STACK} clean --full
 	@rm -rf .hie
-	@rm -rf book
 
 .PHONY: clean-hard
 clean-hard: clean
@@ -157,16 +156,6 @@ typecheck-juvix-examples:
 check-ormolu: export ORMOLUMODE = check
 check-ormolu:
 	@${MAKE} ormolu
-
-HLINT?=stack exec -- hlint
-HLINTFLAGS?=
-HLINTQUIET :=
-
-.PHONY : hlint
-hlint :
-	${HLINT} ${HLINTFLAGS} app ${HLINTQUIET}
-	${HLINT} ${HLINTFLAGS} src ${HLINTQUIET}
-	${HLINT} ${HLINTFLAGS} test ${HLINTQUIET}
 
 PRECOMMIT := $(shell command -v pre-commit 2> /dev/null)
 
