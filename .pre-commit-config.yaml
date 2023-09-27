@@ -28,14 +28,20 @@ repos:
         exclude: assets/
 
   - repo: https://github.com/pre-commit/mirrors-prettier
-    rev: v3.0.0-alpha.6
+    rev: v3.0.3
     hooks:
       - id: prettier
-        types_or: [css, javascript, markdown, yaml, toml]
+        types_or: [css, javascript, markdown, yaml]
         exclude: examples/|tests/|assets/
 
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v3.0.3
+    hooks:
+      - id: prettier
+        types_or: [json]
+
   - repo: https://github.com/pre-commit/mirrors-clang-format
-    rev: v15.0.7
+    rev: v16.0.6
     hooks:
       - id: clang-format
         files: runtime/.+\.(c|h)$

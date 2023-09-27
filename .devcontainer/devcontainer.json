@@ -7,9 +7,7 @@
       "VARIANT": "ubuntu-22.04"
     }
   },
-  "runArgs": [
-    "--privileged"
-  ],
+  "runArgs": ["--privileged"],
   "hostRequirements": {
     "cpus": 4,
     "memory": "8gb",
@@ -61,11 +59,7 @@
       "internalBuildDir": "/home/vscode/.local/juvix"
     },
     "juvix-mode.bin.path": "/home/vscode/.local/bin/juvix",
-    "juvix-mode.input.languages": [
-      "Juvix",
-      "JuvixCore",
-      "Haskell"
-    ],
+    "juvix-mode.input.languages": ["Juvix", "JuvixCore", "Haskell"],
     "juvix-mode.reloadReplOnSave": true
   },
   "extensions": [
