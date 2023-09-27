@@ -504,7 +504,7 @@ goLocalModule def = fmap (fromMaybe mempty) . runFail $ do
 
 goOpen :: forall r. (Members '[Reader HtmlOptions] r) => OpenModule 'Scoped -> Sem r Html
 goOpen op
-  | Public <- op ^. openPublic = noDefHeader <$> ppCodeHtml defaultOptions op
+  | Public <- op ^. openModuleParams . openPublic = noDefHeader <$> ppCodeHtml defaultOptions op
   | otherwise = mempty
 
 goAxiom :: forall r. (Members '[Reader HtmlOptions, Reader NormalizedTable] r) => AxiomDef 'Scoped -> Sem r Html

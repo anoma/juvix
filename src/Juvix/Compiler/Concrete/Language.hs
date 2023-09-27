@@ -238,7 +238,8 @@ deriving stock instance Ord (ProjectionDef 'Scoped)
 data Import (s :: Stage) = Import
   { _importKw :: KeywordRef,
     _importModule :: ImportType s,
-    _importAsName :: Maybe (ModulePathType s 'ModuleTop)
+    _importAsName :: Maybe (ModulePathType s 'ModuleTop),
+    _importOpen :: Maybe (OpenModuleParams s)
   }
 
 deriving stock instance Show (Import 'Parsed)
@@ -1088,13 +1089,8 @@ data ExportInfo = ExportInfo
   deriving stock (Show)
 
 data OpenModule (s :: Stage) = OpenModule
-  { _openModuleKw :: KeywordRef,
-    _openModuleName :: ModuleRefType s,
-    _openModuleImportKw :: Maybe KeywordRef,
-    _openImportAsName :: Maybe (ModulePathType s 'ModuleTop),
-    _openUsingHiding :: Maybe (UsingHiding s),
-    _openPublicKw :: Irrelevant (Maybe KeywordRef),
-    _openPublic :: PublicAnn
+  { _openModuleName :: ModuleRefType s,
+    _openModuleParams :: OpenModuleParams s
   }
 
 deriving stock instance Show (OpenModule 'Parsed)
@@ -1108,6 +1104,27 @@ deriving stock instance Eq (OpenModule 'Scoped)
 deriving stock instance Ord (OpenModule 'Parsed)
 
 deriving stock instance Ord (OpenModule 'Scoped)
+
+data OpenModuleParams (s :: Stage) = OpenModuleParams
+  { _openModuleKw :: KeywordRef,
+    -- _openModuleImportKw :: Maybe KeywordRef,
+    -- _openImportAsName :: Maybe (ModulePathType s 'ModuleTop),
+    _openUsingHiding :: Maybe (UsingHiding s),
+    _openPublicKw :: Irrelevant (Maybe KeywordRef),
+    _openPublic :: PublicAnn
+  }
+
+deriving stock instance Show (OpenModuleParams 'Parsed)
+
+deriving stock instance Show (OpenModuleParams 'Scoped)
+
+deriving stock instance Eq (OpenModuleParams 'Parsed)
+
+deriving stock instance Eq (OpenModuleParams 'Scoped)
+
+deriving stock instance Ord (OpenModuleParams 'Parsed)
+
+deriving stock instance Ord (OpenModuleParams 'Scoped)
 
 data ScopedIden = ScopedIden
   { _scopedIdenFinal :: S.Name,
@@ -1813,6 +1830,7 @@ makeLenses ''InductiveParametersRhs
 makeLenses ''ModuleRef'
 makeLenses ''ModuleRef''
 makeLenses ''OpenModule
+makeLenses ''OpenModuleParams
 makeLenses ''PatternApp
 makeLenses ''PatternInfixApp
 makeLenses ''PatternPostfixApp
@@ -1971,9 +1989,9 @@ instance (SingI s) => HasLoc (AxiomDef s) where
 
 instance HasLoc (OpenModule 'Scoped) where
   getLoc m =
-    getLoc (m ^. openModuleKw)
+    getLoc (m ^. openModuleParams . openModuleKw)
       <> getLoc (m ^. openModuleName)
-      <>? fmap getLoc (m ^. openPublicKw . unIrrelevant)
+      <>? fmap getLoc (m ^. openModuleParams . openPublicKw . unIrrelevant)
 
 instance HasLoc (ProjectionDef s) where
   getLoc = getLoc . (^. projectionConstructor)
@@ -2108,8 +2126,8 @@ instance (SingI s) => HasLoc (Iterator s) where
 
 instance (SingI s) => HasLoc (Import s) where
   getLoc Import {..} = case sing :: SStage s of
-    SParsed -> getLoc _importModule
-    SScoped -> getLoc _importModule
+    SParsed -> getLoc _importKw
+    SScoped -> getLoc _importKw
 
 instance HasLoc (ModuleRef'' 'S.Concrete t) where
   getLoc ref = getLoc (ref ^. moduleRefName)

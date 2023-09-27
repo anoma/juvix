@@ -582,7 +582,7 @@ compileReplInputIO' ctx txt =
     extractNode = \case
       ReplPipelineResultNode n -> Just n
       ReplPipelineResultImport {} -> Nothing
-      ReplPipelineResultOpenImport {} -> Nothing
+      ReplPipelineResultOpen {} -> Nothing
 
 render' :: (P.HasAnsiBackend a, P.HasTextBackend a) => a -> Repl ()
 render' t = do

@@ -6,7 +6,6 @@ module Juvix.Compiler.Internal.Translation.FromConcrete
     goModuleNoCache,
     fromConcreteExpression,
     fromConcreteImport,
-    fromConcreteOpenImport,
   )
 where
 
@@ -158,19 +157,6 @@ fromConcreteImport i = do
       . goImport
       $ i
   checkTerminationShallow i'
-  return i'
-
-fromConcreteOpenImport ::
-  (Members '[Reader ExportsTable, Error JuvixError, NameIdGen, Builtins, MCache, Termination] r) =>
-  Scoper.OpenModule 'Scoped ->
-  Sem r (Maybe Internal.Import)
-fromConcreteOpenImport i = do
-  i' <-
-    mapError (JuvixError @ScoperError)
-      . runReader @Pragmas mempty
-      . goOpenModule
-      $ i
-  whenJust i' checkTerminationShallow
   return i'
 
 goLocalModule ::
@@ -343,25 +329,12 @@ scanImports stmts = mconcatMap go stmts
     go = \case
       StatementImport t -> [t]
       StatementModule m -> concatMap go (m ^. moduleBody)
-      StatementOpenModule o -> maybeToList (openImport o)
+      StatementOpenModule {} -> []
       StatementInductive {} -> []
       StatementAxiom {} -> []
       StatementSyntax {} -> []
       StatementFunctionDef {} -> []
       StatementProjectionDef {} -> []
-      where
-        openImport :: OpenModule 'Scoped -> Maybe (Import 'Scoped)
-        openImport o = case o ^. openModuleImportKw of
-          Nothing -> Nothing
-          Just _importKw ->
-            Just
-              Import
-                { _importModule = case o ^. openModuleName . unModuleRef' of
-                    SModuleTop :&: r -> r
-                    SModuleLocal :&: _ -> impossible,
-                  _importAsName = o ^. openImportAsName,
-                  _importKw
-                }
 
 goImport ::
   forall r.
@@ -392,25 +365,6 @@ goAxiomInductive = \case
   StatementSyntax {} -> return []
   StatementOpenModule {} -> return []
   StatementProjectionDef {} -> return []
-
-goOpenModule ::
-  forall r.
-  (Members '[Reader ExportsTable, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, MCache] r) =>
-  OpenModule 'Scoped ->
-  Sem r (Maybe Internal.Import)
-goOpenModule o = runFail $ do
-  case o ^. openModuleImportKw of
-    Nothing -> fail
-    Just kw ->
-      case o ^. openModuleName of
-        ModuleRef' (SModuleTop :&: m) ->
-          goImport
-            Import
-              { _importKw = kw,
-                _importModule = m,
-                _importAsName = o ^. openImportAsName
-              }
-        _ -> impossible
 
 goProjectionDef ::
   forall r.

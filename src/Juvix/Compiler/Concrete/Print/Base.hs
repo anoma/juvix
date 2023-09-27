@@ -451,18 +451,6 @@ instance PrettyPrint (ModuleRef'' 'S.Concrete t) where
 instance PrettyPrint ScopedIden where
   ppCode = ppCode . (^. scopedIdenName)
 
-instance (SingI s) => PrettyPrint (Import s) where
-  ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => Import s -> Sem r ()
-  ppCode i = do
-    ppCode (i ^. importKw)
-      <+> ppImportType (i ^. importModule)
-      <+?> ppQual
-    where
-      ppQual :: Maybe (Sem r ())
-      ppQual = case i ^. importAsName of
-        Nothing -> Nothing
-        Just as -> Just (ppCode Kw.kwAs <+> ppModulePathType as)
-
 instance (SingI s) => PrettyPrint (AliasDef s) where
   ppCode AliasDef {..} =
     ppCode _aliasDefSyntaxKw
@@ -1053,28 +1041,34 @@ instance PrettyPrint (ModuleRef' 'S.NotConcrete) where
 instance PrettyPrint ModuleRef where
   ppCode (ModuleRef' (_ :&: ModuleRef'' {..})) = ppCode _moduleRefName
 
+instance (SingI s) => PrettyPrint (Import s) where
+  ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => Import s -> Sem r ()
+  ppCode i = do
+    let open' = ppOpenModuleHelper Nothing <$> (i ^. importOpen)
+    ppCode (i ^. importKw)
+      <+> ppImportType (i ^. importModule)
+      <+?> ppAlias
+      <+?> open'
+    where
+      ppAlias :: Maybe (Sem r ())
+      ppAlias = case i ^. importAsName of
+        Nothing -> Nothing
+        Just as -> Just (ppCode Kw.kwAs <+> ppModulePathType as)
+
+ppOpenModuleHelper :: (SingI s) => Maybe (ModuleRefType s) -> PrettyPrinting (OpenModuleParams s)
+ppOpenModuleHelper modName OpenModuleParams {..} = do
+  let name' = ppModuleRefType <$> modName
+      usingHiding' = ppCode <$> _openUsingHiding
+      openkw = ppCode _openModuleKw
+      public' = ppCode <$> _openPublicKw ^. unIrrelevant
+  openkw
+    <+?> name'
+    <+?> usingHiding'
+    <+?> public'
+
 instance (SingI s) => PrettyPrint (OpenModule s) where
   ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => OpenModule s -> Sem r ()
-  ppCode OpenModule {..} = do
-    let name' = ppModuleRefType _openModuleName
-        usingHiding' = ppCode <$> _openUsingHiding
-        importkw' = ppCode <$> _openModuleImportKw
-        openkw = ppCode _openModuleKw
-        alias' = (ppCode Kw.kwAs <+>) . ppModulePathType <$> _openImportAsName
-        public' = ppCode <$> _openPublicKw ^. unIrrelevant
-    case importkw' of
-      Nothing -> do
-        openkw
-          <+> name'
-          <+?> usingHiding'
-          <+?> public'
-      Just importkw ->
-        importkw
-          <+> name'
-          <+?> alias'
-          <+> openkw
-          <+?> usingHiding'
-          <+?> public'
+  ppCode OpenModule {..} = ppOpenModuleHelper (Just _openModuleName) _openModuleParams
 
 ppCodeAtom :: (HasAtomicity c, PrettyPrint c) => PrettyPrinting c
 ppCodeAtom c = do
