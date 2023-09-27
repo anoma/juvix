@@ -20,6 +20,12 @@
     STACK_PUSH_ADDR(LABEL_ADDR(juvix_program_end)); \
     goto juvix_program_start;                       \
     DECL_CALL_CLOSURES;                             \
+    DECL_APPLY_1;                                   \
+    DECL_TAIL_APPLY_1;                              \
+    DECL_APPLY_2;                                   \
+    DECL_TAIL_APPLY_2;                              \
+    DECL_APPLY_3;                                   \
+    DECL_TAIL_APPLY_3;                              \
     juvix_program_start:
 
 #define JUVIX_EPILOGUE \
