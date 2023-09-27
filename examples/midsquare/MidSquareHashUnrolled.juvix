@@ -111,5 +111,5 @@ hash16 : Nat -> Nat
 
 hash : Nat -> Nat := hash16;
 
-main : Nat := hash 1367;
+main : Nat -> Nat := hash;
 -- result: 3
