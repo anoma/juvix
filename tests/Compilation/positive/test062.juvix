@@ -1,4 +1,4 @@
--- Dynamic closure extension
+-- Overapplication
 module test062;
 
 import Stdlib.Data.Nat open;

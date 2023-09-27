@@ -157,7 +157,7 @@ computeExtraInfo lims tab =
           (computeMaxStackHeight lims . (^. functionCode))
           (tab ^. infoFunctions),
       _extraInfoMaxArgsNum =
-        maximum (map (^. functionArgsNum) (HashMap.elems (tab ^. infoFunctions))),
+        maximum (3 : map (^. functionArgsNum) (HashMap.elems (tab ^. infoFunctions))),
       _extraInfoConstrsNum =
         length (userConstrs tab) + lims ^. limitsBuiltinUIDsNum,
       _extraInfoFunctionsNum =
