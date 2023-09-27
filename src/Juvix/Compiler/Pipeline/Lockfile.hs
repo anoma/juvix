@@ -63,7 +63,7 @@ instance ToJSON Lockfile where
   toEncoding = genericToEncoding lockfileOptions
 
 instance FromJSON Lockfile where
-  parseJSON = toAesonParser' (Lockfile <$> fromAesonParser)
+  parseJSON = toAesonParser' (Lockfile <$> (key Str.dependencies fromAesonParser))
 
 -- | Extract a lockfile associated with an immediate dependency. Returns Nothing
 -- if the dependency is not specified at the root of the lockfile.

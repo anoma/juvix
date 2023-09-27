@@ -214,6 +214,104 @@ tests:
       contains: This is from the second commit
     exit-status: 0
 
+  - name: git-dependencies-lockfile
+    command:
+      shell:
+        - bash
+      script: |
+        temp=$(mktemp -d)
+        trap 'rm -rf -- "$temp"' EXIT
+
+        # create dependency
+        mkdir $temp/dep1
+        cd $temp/dep1
+        git init
+
+        cat <<-EOF > HelloDep.juvix
+        module HelloDep;
+        import Stdlib.Prelude open;
+        main : IO := printStringLn "Hello from dep";
+        EOF
+        touch juvix.yaml
+
+        git add -A
+        git commit -m "commit1"
+
+        dep1hash=$(git rev-parse HEAD)
+
+        # create project that uses dependency
+        mkdir $temp/base
+        cd $temp/base
+
+        cat <<-EOF > juvix.yaml
+        name: HelloWorld
+        main: HelloWorld.juvix
+        dependencies:
+          - .juvix-build/stdlib
+          - git:
+              url: $temp/dep1
+              name: dep1
+              ref: main
+        version: 0.1.0
+        EOF
+
+        cat <<-EOF > juvix.lock.json
+        {"dependencies": [
+          {
+            "path": ".juvix-build/stdlib",
+            "dependencies": []
+          },
+          {
+            "git": {
+            "url": "$temp/dep1",
+            "ref": "$dep1hash",
+              "name": "dep1"
+            },
+            "dependencies": [
+              {
+                "path": ".juvix-build/stdlib/",
+                "dependencies": []
+              }
+            ]
+          }
+        ]}
+        EOF
+
+        cat <<-EOF > HelloWorld.juvix
+        -- HelloWorld.juvix
+        module HelloWorld;
+
+        import Stdlib.Prelude open;
+        import HelloDep;
+
+        main : IO := HelloDep.main;
+        EOF
+
+        # compile project the first time
+        juvix compile HelloWorld.juvix
+
+        # update the dependency
+        cd $temp/dep1
+
+        cat <<-EOF > HelloDep.juvix
+        module HelloDep;
+        import Stdlib.Prelude open;
+        main : IO := printStringLn "This is from the second commit";
+        EOF
+
+        git add -A
+        git commit -m "commit2"
+
+        # rebuild the project (should use the first commit
+        cd $temp/base
+
+        # compile with the new hash
+        juvix compile HelloWorld.juvix
+        ./HelloWorld
+    stdout:
+      contains: Hello from dep
+    exit-status: 0
+
   - name: git-dependencies-update-ref-offline
     command:
       shell:
