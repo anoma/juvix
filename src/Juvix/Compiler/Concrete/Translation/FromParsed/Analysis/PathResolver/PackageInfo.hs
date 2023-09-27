@@ -8,8 +8,7 @@ data PackageInfo = PackageInfo
     -- | files relative to the root of the package
     _packageRelativeFiles :: HashSet (Path Rel File),
     _packageAvailableRoots :: HashSet (Path Abs Dir),
-    _packagePackage :: Package,
-    _packageResolvedDependencies :: [Dependency]
+    _packagePackage :: Package
   }
   deriving stock (Show)
 

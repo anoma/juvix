@@ -93,9 +93,10 @@ mkPackageInfo ::
   Path Abs Dir ->
   Package ->
   Sem r PackageInfo
-mkPackageInfo mpackageEntry _packageRoot _packagePackage = do
+mkPackageInfo mpackageEntry _packageRoot pkg = do
   let buildDir :: Path Abs Dir = maybe (rootBuildDir _packageRoot) (someBaseToAbs _packageRoot . (^. entryPointBuildDir)) mpackageEntry
   deps <- resolveDependencies
+  let _packagePackage = set packageDependencies deps pkg
   depsPaths <- mapM (getDependencyPath . mkPackageDependencyInfo (_packagePackage ^. packageFile)) deps
   ensureStdlib _packageRoot buildDir deps
   files :: [Path Rel File] <-
@@ -103,7 +104,7 @@ mkPackageInfo mpackageEntry _packageRoot _packagePackage = do
   let _packageRelativeFiles = HashSet.fromList files
       _packageAvailableRoots =
         HashSet.fromList (_packageRoot : depsPaths)
-  return PackageInfo {_packageResolvedDependencies = deps, ..}
+  return PackageInfo {..}
   where
     juvixAccum :: Path Abs Dir -> [Path Rel Dir] -> [Path Rel File] -> [Path Abs File] -> Sem r ([Path Abs File], Recurse Rel)
     juvixAccum cd _ files acc = return (newJuvixFiles <> acc, RecurseFilter (\hasJuvixYaml d -> not hasJuvixYaml && not (isHiddenDirectory d)))
@@ -115,7 +116,7 @@ mkPackageInfo mpackageEntry _packageRoot _packagePackage = do
     resolveDependencies = do
       mlockfile <- asks (^. envLockfile)
       return $ case mlockfile of
-        Nothing -> _packagePackage ^. packageDependencies
+        Nothing -> pkg ^. packageDependencies
         Just lf -> (^. lockfileDependencyDependency) <$> lf ^. lockfileDependencies
 
 dependencyCached :: (Members '[State ResolverState, Reader ResolverEnv, Files, GitClone] r) => Path Abs Dir -> Sem r Bool
