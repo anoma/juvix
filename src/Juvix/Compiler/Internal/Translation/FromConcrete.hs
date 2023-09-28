@@ -534,6 +534,7 @@ goInductiveParameters params@InductiveParameters {..} = do
   paramType' <- goRhs _inductiveParametersRhs
   case paramType' of
     Internal.ExpressionUniverse {} -> return ()
+    Internal.ExpressionHole {} -> return ()
     _ ->
       throw $
         ErrUnsupported
