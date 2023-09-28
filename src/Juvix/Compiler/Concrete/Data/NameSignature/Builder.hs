@@ -26,7 +26,7 @@ data BuilderState = BuilderState
     -- | maps to itself
     _stateSymbols :: HashMap Symbol Symbol,
     _stateReverseClosedBlocks :: [NameBlock],
-    _stateCurrentBlock :: HashMap Symbol (Symbol, Int)
+    _stateCurrentBlock :: HashMap Symbol NameItem
   }
 
 makeLenses ''BuilderState
@@ -168,11 +168,12 @@ addSymbol' impl sym = do
 
     addToCurrentBlock :: Sem (Re r) ()
     addToCurrentBlock = do
-      idx <- (sym,) <$> gets (^. stateNextIx)
+      idx <- gets (^. stateNextIx)
+      let itm = NameItem sym idx
       modify' (over stateNextIx succ)
       whenJustM (gets (^. stateSymbols . at sym)) errDuplicateName
       modify' (set (stateSymbols . at sym) (Just sym))
-      modify' (set (stateCurrentBlock . at sym) (Just idx))
+      modify' (set (stateCurrentBlock . at sym) (Just itm))
 
     startNewBlock :: Sem (Re r) ()
     startNewBlock = do
@@ -191,6 +192,6 @@ mkRecordNameSignature :: RhsRecord 'Parsed -> RecordNameSignature
 mkRecordNameSignature rhs =
   RecordNameSignature
     ( HashMap.fromList
-        [ (s, (s, idx)) | (Indexed idx field) <- indexFrom 0 (toList (rhs ^. rhsRecordFields)), let s = field ^. fieldName
+        [ (s, NameItem s idx) | (Indexed idx field) <- indexFrom 0 (toList (rhs ^. rhsRecordFields)), let s = field ^. fieldName
         ]
     )

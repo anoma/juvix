@@ -1761,7 +1761,7 @@ checkRecordPattern r = do
       RecordPatternItemFieldPun a -> RecordPatternItemFieldPun <$> checkPun a
       where
         findField :: Symbol -> Sem r' Int
-        findField f = fromMaybeM (throw err) (asks (^? recordNames . at f . _Just . _2))
+        findField f = fromMaybeM (throw err) (asks (^? recordNames . at f . _Just . nameItemIndex))
           where
             err :: ScoperError
             err = ErrUnexpectedField (UnexpectedField f)
@@ -2186,7 +2186,7 @@ checkUpdateField ::
   Sem r (RecordUpdateField 'Scoped)
 checkUpdateField sig f = do
   value' <- checkParseExpressionAtoms (f ^. fieldUpdateValue)
-  idx' <- maybe (throw unexpectedField) return (sig ^? recordNames . at (f ^. fieldUpdateName) . _Just . _2)
+  idx' <- maybe (throw unexpectedField) return (sig ^? recordNames . at (f ^. fieldUpdateName) . _Just . nameItemIndex)
   return
     RecordUpdateField
       { _fieldUpdateName = f ^. fieldUpdateName,

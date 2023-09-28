@@ -24,7 +24,7 @@ newtype NameSignature = NameSignature
   deriving stock (Show)
 
 newtype RecordNameSignature = RecordNameSignature
-  { _recordNames :: HashMap Symbol (Symbol, Int)
+  { _recordNames :: HashMap Symbol NameItem
   }
   deriving stock (Show)
 
