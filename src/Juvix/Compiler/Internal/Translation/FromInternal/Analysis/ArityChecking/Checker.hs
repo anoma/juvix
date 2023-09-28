@@ -131,7 +131,6 @@ checkFunctionDef ::
 checkFunctionDef FunctionDef {..} = do
   let arity = typeArity _funDefType
   _funDefType' <- withEmptyLocalVars (checkType _funDefType)
-  -- _funDefClauses' <- mapM (checkFunctionClause arity) _funDefClauses
   _funDefBody' <- checkFunctionBody arity _funDefBody
   _funDefExamples' <- withEmptyLocalVars (mapM checkExample _funDefExamples)
   return

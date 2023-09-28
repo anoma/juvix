@@ -162,7 +162,6 @@ instance HasExpressions Example where
   leafExpressions f = traverseOf exampleExpression (leafExpressions f)
 
 instance HasExpressions FunctionDef where
-  -- leafExpressions f (FunctionDef name ty clauses bi) = do
   leafExpressions f FunctionDef {..} = do
     body' <- leafExpressions f _funDefBody
     ty' <- leafExpressions f _funDefType
