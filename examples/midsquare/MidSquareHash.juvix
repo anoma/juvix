@@ -25,4 +25,4 @@ hash' : Nat -> Nat -> Nat
 hash : Nat -> Nat := hash' 16;
 
 main : Nat -> Nat := hash;
--- result: 3
+-- result: 3 for 1367
