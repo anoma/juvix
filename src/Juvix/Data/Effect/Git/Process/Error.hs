@@ -21,12 +21,12 @@ instance Pretty GitCmdErrorDetails where
   pretty d = pretty msg
     where
       msg :: Text
-      msg = "error when executing the git command with arguments: " <> show (d ^. gitCmdErrorDetailsArgs)
+      msg = "Error ocurred when executing the git command with arguments: " <> show (d ^. gitCmdErrorDetailsArgs)
 
 instance Pretty GitProcessError where
   pretty = \case
     GitCmdError ce -> pretty ce
-    GitCmdNotFound {} -> "git command not found"
+    GitCmdNotFound {} -> "Error occurred when attempting to execute the git command: 'not found'."
 
 instance ToGenericError GitProcessError where
   genericError e =
