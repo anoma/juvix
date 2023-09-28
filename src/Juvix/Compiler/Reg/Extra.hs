@@ -59,6 +59,41 @@ computeMaxStackHeight lims = maximum . map go
           )
           (maybe 0 (computeMaxStackHeight lims) _instrCaseDefault)
 
+computeMaxCallClosuresArgsNum :: Code -> Int
+computeMaxCallClosuresArgsNum = maximum . map go
+  where
+    go :: Instruction -> Int
+    go = \case
+      Nop -> 0
+      Binop {} -> 0
+      Show {} -> 0
+      StrToInt {} -> 0
+      Assign {} -> 0
+      Trace {} -> 0
+      Dump -> 0
+      Failure {} -> 0
+      Prealloc InstrPrealloc {} -> 0
+      Alloc {} -> 0
+      AllocClosure {} -> 0
+      ExtendClosure {} -> 0
+      Call InstrCall {} -> 0
+      CallClosures InstrCallClosures {..} ->
+        length _instrCallClosuresArgs
+      Return {} -> 0
+      Branch InstrBranch {..} ->
+        max
+          (computeMaxCallClosuresArgsNum _instrBranchTrue)
+          (computeMaxCallClosuresArgsNum _instrBranchFalse)
+      Case InstrCase {..} ->
+        max
+          ( maximum
+              ( map
+                  (computeMaxCallClosuresArgsNum . (^. caseBranchCode))
+                  _instrCaseBranches
+              )
+          )
+          (maybe 0 computeMaxCallClosuresArgsNum _instrCaseDefault)
+
 computeStringMap :: HashMap Text Int -> Code -> HashMap Text Int
 computeStringMap strs = snd . run . execState (HashMap.size strs, strs) . mapM go
   where
@@ -119,6 +154,7 @@ data ExtraInfo = ExtraInfo
     _extraInfoStringMap :: HashMap Text Int,
     _extraInfoMaxStackHeight :: HashMap Symbol Int,
     _extraInfoMaxArgsNum :: Int,
+    _extraInfoMaxCallClosuresArgsNum :: Int,
     _extraInfoConstrsNum :: Int,
     _extraInfoFunctionsNum :: Int
   }
@@ -157,7 +193,12 @@ computeExtraInfo lims tab =
           (computeMaxStackHeight lims . (^. functionCode))
           (tab ^. infoFunctions),
       _extraInfoMaxArgsNum =
-        maximum (lims ^. limitsSpecialisedApply : map (^. functionArgsNum) (HashMap.elems (tab ^. infoFunctions))),
+        maximum (map (^. functionArgsNum) (HashMap.elems (tab ^. infoFunctions))),
+      _extraInfoMaxCallClosuresArgsNum =
+        maximum
+          ( lims ^. limitsSpecialisedApply
+              : map (computeMaxCallClosuresArgsNum . (^. functionCode)) (HashMap.elems (tab ^. infoFunctions))
+          ),
       _extraInfoConstrsNum =
         length (userConstrs tab) + lims ^. limitsBuiltinUIDsNum,
       _extraInfoFunctionsNum =

@@ -9,4 +9,4 @@ I {A} (x : A) : A := x;
 {-# inline: false #-}
 I' {A} (x : A) : A := x;
 
-main : Nat := I' (I I 1);
+main : Nat := I' (I I I I 1);

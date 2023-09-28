@@ -2,12 +2,7 @@
 
 #include <juvix/api.h>
 
-#define JUVIX_DECL_ARGS UNUSED DECL_ARG(0)
-
 int main() {
-    DECL_ARG(0);
-    DECL_ARG(1);
-    DECL_ARG(2);
     JUVIX_PROLOGUE(3);
     DECL_TMP(0);
     DECL_TMP(1);

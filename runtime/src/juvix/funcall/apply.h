@@ -97,7 +97,7 @@
                     STACK_POP(CARG(juvix_closure_nargs));                \
                     STACK_POP(CARG(juvix_closure_nargs + 1));            \
                 });                                                      \
-                goto juvix_apply_1;                                      \
+                goto juvix_apply_2;                                      \
             }                                                            \
             case 2: {                                                    \
                 size_t n = get_closure_nargs(juvix_apply_closure);       \
@@ -106,7 +106,7 @@
                 juvix_apply_closure = juvix_result;                      \
                 ASSIGN_CARGS(juvix_apply_closure,                        \
                              { STACK_POP(CARG(juvix_closure_nargs)); }); \
-                goto juvix_apply_2;                                      \
+                goto juvix_apply_1;                                      \
             }                                                            \
             case 3:                                                      \
                 GOTO_CLOSURE;                                            \

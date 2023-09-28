@@ -8,7 +8,6 @@ static constr_info_t juvix_constr_info_array[BUILTIN_UIDS_NUM] = {
 int main() {
     DECL_ARG(0);
     DECL_ARG(1);
-    DECL_ARG(2);
     JUVIX_PROLOGUE(3);
 
     juvix_constrs_num = BUILTIN_UIDS_NUM;

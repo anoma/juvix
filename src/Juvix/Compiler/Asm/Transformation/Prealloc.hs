@@ -4,8 +4,8 @@ import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Asm.Options
 import Juvix.Compiler.Asm.Transformation.Base
 
-computeMaxArgsNum :: Limits -> InfoTable -> Int
-computeMaxArgsNum lims tab = maximum (lims ^. limitsSpecialisedApply : map (^. functionArgsNum) (HashMap.elems (tab ^. infoFunctions)))
+computeMaxArgsNum :: InfoTable -> Int
+computeMaxArgsNum tab = maximum (map (^. functionArgsNum) (HashMap.elems (tab ^. infoFunctions)))
 
 computeCodePrealloc :: forall r. (Members '[Error AsmError, Reader Options] r) => Int -> InfoTable -> Code -> Sem r Code
 computeCodePrealloc maxArgsNum tab code = prealloc <$> foldS sig code (0, [])
@@ -85,9 +85,8 @@ computeFunctionPrealloc :: (Members '[Error AsmError, Reader Options] r) => Int 
 computeFunctionPrealloc maxArgsNum tab = liftCodeTransformation (computeCodePrealloc maxArgsNum tab)
 
 computePrealloc :: (Members '[Error AsmError, Reader Options] r) => InfoTable -> Sem r InfoTable
-computePrealloc tab = do
-  lims <- asks (^. optLimits)
-  liftFunctionTransformation (computeFunctionPrealloc (computeMaxArgsNum lims tab) tab) tab
+computePrealloc tab =
+  liftFunctionTransformation (computeFunctionPrealloc (computeMaxArgsNum tab) tab) tab
 
 checkCodePrealloc :: forall r. (Members '[Error AsmError, Reader Options] r) => Int -> InfoTable -> Code -> Sem r Bool
 checkCodePrealloc maxArgsNum tab code = do
@@ -153,4 +152,4 @@ checkPrealloc opts tab =
     Right b -> b
   where
     sb :: Sem '[Reader Options, Error AsmError] Bool
-    sb = allM (checkCodePrealloc (computeMaxArgsNum (opts ^. optLimits) tab) tab . (^. functionCode)) (HashMap.elems (tab ^. infoFunctions))
+    sb = allM (checkCodePrealloc (computeMaxArgsNum tab) tab . (^. functionCode)) (HashMap.elems (tab ^. infoFunctions))

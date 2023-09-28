@@ -11,7 +11,10 @@
     MEM_INIT;      \
     funcall_init()
 
-// MAX_ARGS is the maximum number of function arguments, at least 1.
+// MAX_ARGS is the maximum number of function arguments plus the maximum number
+// of supplied arguments, at least 3. For example, if the program contains `I I
+// I I 1` where `I` is a one-argument identity function, then MAX_ARGS is
+// 5.
 #define JUVIX_PROLOGUE(MAX_ARGS)                    \
     STATIC_ASSERT(MAX_ARGS >= 3);                   \
     MEM_DECLS;                                      \
