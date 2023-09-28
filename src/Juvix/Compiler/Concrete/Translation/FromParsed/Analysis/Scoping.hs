@@ -794,7 +794,7 @@ checkFunctionDef FunctionDef {..} = do
   sigDoc' <- mapM checkJudoc _signDoc
   (args', sigType', sigBody') <- withLocalScope $ do
     a' <- mapM checkArg _signArgs
-    t' <- maybe (return Nothing) (fmap Just . checkParseExpressionAtoms) _signRetType
+    t' <- mapM checkParseExpressionAtoms _signRetType
     b' <- checkBody
     return (a', t', b')
   registerFunctionDef
@@ -2098,6 +2098,8 @@ checkRecordCreation RecordCreation {..} = do
   tab <- getInfoTable
   let mci = HashMap.lookup (cname ^. S.nameId) (tab ^. infoConstructors)
   case mci of
+    Nothing ->
+      throw (ErrNotAConstructor (NotAConstructor (cname ^. nameConcrete)))
     Just ci -> do
       let name = NameUnqualified (ci ^. constructorInfoTypeName . nameConcrete)
           nameId = ci ^. constructorInfoTypeName . S.nameId
@@ -2124,8 +2126,6 @@ checkRecordCreation RecordCreation {..} = do
             _recordCreationExtra = Irrelevant extra',
             _recordCreationAtKw
           }
-    Nothing ->
-      throw (ErrNotAConstructor (NotAConstructor (cname ^. nameConcrete)))
 
 checkDefineField ::
   (Members '[Error ScoperError, State Scope, State ScoperState, Reader ScopeParameters, InfoTableBuilder, NameIdGen] r) =>

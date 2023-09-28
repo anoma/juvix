@@ -17,6 +17,7 @@ import Juvix.Compiler.Builtins
 import Juvix.Compiler.Concrete.Data.NameSignature.Base
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Extra qualified as Concrete
+import Juvix.Compiler.Concrete.Gen qualified as Gen
 import Juvix.Compiler.Concrete.Language qualified as Concrete
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
@@ -804,21 +805,14 @@ goExpression = \case
             }
 
     goRecordDefineField :: Concrete.RecordDefineField 'Scoped -> Sem r (Concrete.NamedArgument 'Scoped)
-    goRecordDefineField Concrete.RecordDefineField {..} =
+    goRecordDefineField Concrete.RecordDefineField {..} = do
+      dummyAssignKw <- runReader (getLoc _fieldDefineFunDef) (Gen.kw Gen.kwAssign)
       return
         Concrete.NamedArgument
           { _namedArgName = _fieldDefineFunDef ^. signName . S.nameConcrete,
             _namedArgAssignKw = Irrelevant dummyAssignKw,
             _namedArgValue = Concrete.ExpressionIdentifier _fieldDefineIden
           }
-      where
-        dummyAssignKw :: KeywordRef
-        dummyAssignKw =
-          KeywordRef
-            { _keywordRefKeyword = asciiKw ":=",
-              _keywordRefInterval = getLoc _fieldDefineFunDef,
-              _keywordRefUnicode = Ascii
-            }
 
     goRecordUpdate :: Concrete.RecordUpdate 'Scoped -> Sem r Internal.Lambda
     goRecordUpdate r = do
