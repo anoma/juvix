@@ -3,10 +3,16 @@ module Juvix.Compiler.Concrete.Data.NameSignature.Base where
 import Juvix.Compiler.Concrete.Data.Name
 import Juvix.Prelude hiding (show)
 
+data NameItem = NameItem {
+  _nameItemSymbol :: Symbol,
+  _nameItemIndex :: Int
+  }
+  deriving stock (Show)
+
 data NameBlock = NameBlock
   { -- | Symbols map to themselves so we can retrive the location
     -- | NOTE the index is wrt to the block, not the whole signature.
-    _nameBlock :: HashMap Symbol (Symbol, Int),
+    _nameBlock :: HashMap Symbol NameItem,
     _nameImplicit :: IsImplicit
   }
   deriving stock (Show)
@@ -25,3 +31,4 @@ newtype RecordNameSignature = RecordNameSignature
 makeLenses ''NameSignature
 makeLenses ''RecordNameSignature
 makeLenses ''NameBlock
+makeLenses ''NameItem

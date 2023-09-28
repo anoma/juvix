@@ -56,15 +56,14 @@ docNoComments :: (PrettyPrint c) => Options -> c -> Doc Ann
 docNoComments = docHelper Nothing
 
 docHelper :: (PrettyPrint c) => Maybe FileComments -> Options -> c -> Doc Ann
-docHelper cs opts x =
+docHelper cs opts =
   run
     . execExactPrint cs
     . runReader opts
     . ppCode
-    $ x
 
 docNoLoc :: (PrettyPrint c) => Options -> c -> Doc Ann
-docNoLoc opts x = docHelper Nothing opts x
+docNoLoc = docHelper Nothing
 
 doc :: (PrettyPrint c, HasLoc c) => Options -> Comments -> c -> Doc Ann
 doc opts cs x = docHelper (Just (fileComments file cs)) opts x
@@ -174,8 +173,8 @@ instance PrettyPrint NameBlock where
           Implicit -> braces
           ImplicitInstance -> doubleBraces
           Explicit -> parens
-        ppElem :: (Symbol, Int) -> Sem r ()
-        ppElem (sym, idx) = ppCode sym <> ppCode Kw.kwExclamation <> noLoc (pretty idx)
+        ppElem :: NameItem -> Sem r ()
+        ppElem NameItem {..} = ppCode _nameItemSymbol <> ppCode Kw.kwExclamation <> noLoc (pretty _nameItemIndex)
     delims (hsepSemicolon (map ppElem (toList _nameBlock)))
 
 instance (PrettyPrint a, PrettyPrint b) => PrettyPrint (a, b) where

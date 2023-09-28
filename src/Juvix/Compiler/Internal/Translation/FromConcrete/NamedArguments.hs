@@ -70,7 +70,7 @@ helper loc = do
         b : bs -> do
           let implNames = b ^. nameImplicit
           modify' (set stateRemainingNames bs)
-          let r = snd <$> b ^. nameBlock
+          let r = (^. nameItemIndex) <$> b ^. nameBlock
           case (impl, implNames) of
             (Explicit, Explicit) -> return r
             (Implicit, Implicit) -> return r
