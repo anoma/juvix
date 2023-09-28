@@ -4,6 +4,7 @@ import Data.Aeson.BetterErrors
 import Data.Aeson.BetterErrors qualified as Aeson
 import Data.Aeson.Encoding (pair)
 import Data.Aeson.TH
+import Data.ByteString (toStrict)
 import Juvix.Compiler.Pipeline.Package.Dependency
 import Juvix.Extra.Paths
 import Juvix.Extra.Strings qualified as Str
@@ -92,6 +93,14 @@ mayReadLockfile root = do
   where
     mkLockfileInfo :: Path Abs File -> Lockfile -> LockfileInfo
     mkLockfileInfo _lockfileInfoPath _lockfileInfoLockfile = LockfileInfo {..}
+
+writeLockfile :: (Members '[Files] r) => Path Abs Dir -> Lockfile -> Sem r ()
+writeLockfile root lf = do
+  ensureDir' (parent lockfilePath)
+  writeFileBS lockfilePath (toStrict (encode lf))
+  where
+    lockfilePath :: Path Abs File
+    lockfilePath = mkPackageLockfilePath root
 
 -- | Extract a lockfileInfo associated with an immediate dependency. Returns Nothing
 -- if the dependency is not specified at the root of the lockfile.
