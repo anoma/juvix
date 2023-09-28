@@ -112,4 +112,4 @@ hash16 : Nat -> Nat
 hash : Nat -> Nat := hash16;
 
 main : Nat -> Nat := hash;
--- result: 3
+-- result: 3 for 1367
