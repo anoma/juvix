@@ -4,7 +4,6 @@ module Juvix.Compiler.Pipeline.Package
     RawPackage,
     Package,
     Package' (..),
-    LockfileInfo (..),
     defaultVersion,
     defaultStdlibDep,
     packageName,
@@ -22,9 +21,6 @@ module Juvix.Compiler.Pipeline.Package
     readGlobalPackage,
     mkPackageFilePath,
     packageLockfile,
-    lockfileInfoPath,
-    lockfileInfoLockfile,
-    extractLockfile,
   )
 where
 
@@ -41,12 +37,6 @@ import Juvix.Compiler.Pipeline.Package.Dependency
 import Juvix.Extra.Paths
 import Juvix.Prelude
 import Lens.Micro.Platform qualified as Lens
-
-data LockfileInfo = LockfileInfo
-  { _lockfileInfoPath :: Path Abs File,
-    _lockfileInfoLockfile :: Lockfile
-  }
-  deriving stock (Eq, Show)
 
 type NameType :: IsProcessed -> GHC.Type
 type family NameType s = res | res -> s where
@@ -85,7 +75,6 @@ data Package' (s :: IsProcessed) = Package
   deriving stock (Generic)
 
 makeLenses ''Package'
-makeLenses ''LockfileInfo
 
 type Package = Package' 'Processed
 
@@ -289,20 +278,3 @@ writeGlobalPackage = do
   yamlPath <- globalYaml
   ensureDir' (parent yamlPath)
   writeFileBS yamlPath (encode globalPackage)
-
--- | Extract a lockfile associated with an immediate dependency. Returns Nothing
--- if the dependency is not specified at the root of the lockfile.
-extractLockfile :: LockfileInfo -> Dependency -> Maybe LockfileInfo
-extractLockfile lf d = mkLockfileInfo . (^. lockfileDependencyDependencies) <$> foundDep
-  where
-    foundDep :: Maybe LockfileDependency
-    foundDep = find go (lf ^. lockfileInfoLockfile . lockfileDependencies)
-
-    go :: LockfileDependency -> Bool
-    go ld = case (d, ld ^. lockfileDependencyDependency) of
-      (DependencyGit dg, DependencyGit ldg) -> dg ^. gitDependencyUrl == ldg ^. gitDependencyUrl
-      (DependencyPath dp, DependencyPath ldp) -> dp ^. pathDependencyPath == ldp ^. pathDependencyPath
-      _ -> False
-
-    mkLockfileInfo :: [LockfileDependency] -> LockfileInfo
-    mkLockfileInfo _lockfileDependencies = lf {_lockfileInfoLockfile = Lockfile {..}}

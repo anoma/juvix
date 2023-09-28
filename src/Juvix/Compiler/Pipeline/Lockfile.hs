@@ -21,8 +21,15 @@ newtype Lockfile = Lockfile
   }
   deriving stock (Generic, Show, Eq)
 
+data LockfileInfo = LockfileInfo
+  { _lockfileInfoPath :: Path Abs File,
+    _lockfileInfoLockfile :: Lockfile
+  }
+  deriving stock (Eq, Show)
+
 makeLenses ''LockfileDependency
 makeLenses ''Lockfile
+makeLenses ''LockfileInfo
 
 instance ToJSON LockfileDependency where
   toJSON i = object [dep, Str.dependencies .= toJSON (i ^. lockfileDependencyDependencies)]
@@ -64,3 +71,20 @@ instance ToJSON Lockfile where
 
 instance FromJSON Lockfile where
   parseJSON = toAesonParser' (Lockfile <$> (key Str.dependencies fromAesonParser))
+
+-- | Extract a lockfileInfo associated with an immediate dependency. Returns Nothing
+-- if the dependency is not specified at the root of the lockfile.
+extractLockfileInfo :: LockfileInfo -> Dependency -> Maybe LockfileInfo
+extractLockfileInfo lf d = mkLockfileInfo . (^. lockfileDependencyDependencies) <$> foundDep
+  where
+    foundDep :: Maybe LockfileDependency
+    foundDep = find go (lf ^. lockfileInfoLockfile . lockfileDependencies)
+
+    go :: LockfileDependency -> Bool
+    go ld = case (d, ld ^. lockfileDependencyDependency) of
+      (DependencyGit dg, DependencyGit ldg) -> dg ^. gitDependencyUrl == ldg ^. gitDependencyUrl
+      (DependencyPath dp, DependencyPath ldp) -> dp ^. pathDependencyPath == ldp ^. pathDependencyPath
+      _ -> False
+
+    mkLockfileInfo :: [LockfileDependency] -> LockfileInfo
+    mkLockfileInfo _lockfileDependencies = lf {_lockfileInfoLockfile = Lockfile {..}}

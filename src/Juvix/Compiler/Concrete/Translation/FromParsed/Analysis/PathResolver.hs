@@ -46,7 +46,7 @@ data ResolverEnv = ResolverEnv
   { _envRoot :: Path Abs Dir,
     -- | The path of the input file *if* we are using the global project
     _envSingleFile :: Maybe (Path Abs File),
-    _envLockfile :: Maybe LockfileInfo
+    _envLockfileInfo :: Maybe LockfileInfo
   }
 
 data ResolverState = ResolverState
@@ -71,7 +71,7 @@ withEnvRoot :: (Members '[Reader ResolverEnv] r) => Path Abs Dir -> Sem r a -> S
 withEnvRoot root' = local (set envRoot root')
 
 withLockfile :: (Members '[Reader ResolverEnv] r) => LockfileInfo -> Sem r a -> Sem r a
-withLockfile f = local (set envLockfile (Just f))
+withLockfile f = local (set envLockfileInfo (Just f))
 
 mkPackage ::
   forall r.
@@ -117,7 +117,7 @@ mkPackageInfo mpackageEntry _packageRoot pkg = do
 
     resolveDependencies :: Sem r [Dependency]
     resolveDependencies = do
-      mlockfile <- asks (^. envLockfile)
+      mlockfile <- asks (^. envLockfileInfo)
       case mlockfile of
         Nothing -> return pkgDeps
         Just lf -> checkDeps lf
@@ -231,7 +231,7 @@ addDependencyHelper me d = do
   where
     selectPackageLockfile :: Package -> Sem r a -> Sem r a
     selectPackageLockfile pkg action = do
-      currentLockfile <- asks (^. envLockfile)
+      currentLockfile <- asks (^. envLockfileInfo)
       case currentLockfile of
         Just _ -> action
         Nothing -> case (pkg ^. packageLockfile) of
@@ -240,10 +240,10 @@ addDependencyHelper me d = do
 
     selectDependencyLockfile :: Dependency -> Sem r a -> Sem r a
     selectDependencyLockfile dep action = do
-      currentLockfile <- asks (^. envLockfile)
+      currentLockfile <- asks (^. envLockfileInfo)
       case currentLockfile of
         Nothing -> action
-        Just lf -> case extractLockfile lf dep of
+        Just lf -> case extractLockfileInfo lf dep of
           Just dlf -> withLockfile dlf action
           Nothing -> action
 
@@ -331,7 +331,7 @@ runPathResolver' st root x = do
       env =
         ResolverEnv
           { _envRoot = root,
-            _envLockfile = Nothing,
+            _envLockfileInfo = Nothing,
             _envSingleFile
           }
   runState st (runReader env (re x))
