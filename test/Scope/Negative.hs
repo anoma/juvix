@@ -350,5 +350,12 @@ scoperErrorTests =
       $(mkRelFile "DanglingDoubleBrace.juvix")
       $ \case
         ErrDanglingDoubleBrace {} -> Nothing
+        _ -> wrongError,
+    NegTest
+      "Nested let open shadowing"
+      $(mkRelDir ".")
+      $(mkRelFile "LetOpen.juvix")
+      $ \case
+        ErrAmbiguousSym {} -> Nothing
         _ -> wrongError
   ]

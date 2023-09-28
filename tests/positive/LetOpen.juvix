@@ -2,29 +2,22 @@ module LetOpen;
 
 module M;
   axiom A : Type;
-
-  module M1;
-    axiom A : Type;
-  end;
 end;
 
--- axiom B : let
---             open M;
---           in A;
+axiom B : let
+            open M;
+          in A;
 
--- checks shadowing
-axiom X :
-  let
-    open M
-  in let
-       open M1
-     in A;
-
-module N;
+module Separator;
 
 end;
 
 axiom A : Type;
 
--- checks that there `A` didn't leak from the local open statement.
-axiom C : A;
+axiom C : let
+            open M hiding {A};
+          in A;
+
+axiom D : let
+            open M using {A as A'};
+          in A';
