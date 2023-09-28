@@ -302,7 +302,7 @@ statement = P.label "<top level statement>" $ do
           <|> StatementModule <$> moduleDef
           <|> StatementAxiom <$> axiomDef Nothing
           <|> builtinStatement
-          <|> StatementFunctionDef <$> functionDefinition True Nothing
+          <|> StatementFunctionDef <$> functionDefinition False True Nothing
       )
   case ms of
     Just s -> return s
@@ -485,7 +485,7 @@ builtinFunctionDef ::
   (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
   WithLoc BuiltinFunction ->
   ParsecS r (FunctionDef 'Parsed)
-builtinFunctionDef = functionDefinition True . Just
+builtinFunctionDef = functionDefinition False True . Just
 
 builtinStatement :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (Statement 'Parsed)
 builtinStatement = do
@@ -677,6 +677,7 @@ expressionAtom =
   P.label "<expression>" $
     AtomLiteral <$> P.try literal
       <|> either AtomIterator AtomNamedApplication <$> iterator
+      <|> AtomRecordCreation <$> recordCreation
       <|> AtomNamedApplication <$> namedApplication
       <|> AtomList <$> parseList
       <|> AtomIdentifier <$> name
@@ -830,6 +831,29 @@ iterator = do
         _ -> parseFailure off "an iterator must have at least one range"
       return NamedArgument {..}
 
+recordCreation ::
+  forall r.
+  (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
+  ParsecS r (RecordCreation 'Parsed)
+recordCreation = P.label "<record creation>" $ do
+  (_recordCreationConstructor, _recordCreationAtKw) <- P.try $ do
+    n <- name
+    a <- Irrelevant <$> kw kwAt
+    lbrace
+    return (n, a)
+  defs <- P.sepEndBy1 (functionDefinition True False Nothing) semicolon
+  rbrace
+  let _recordCreationFields = fmap mkField defs
+      _recordCreationExtra = Irrelevant ()
+  return RecordCreation {..}
+  where
+    mkField :: FunctionDef 'Parsed -> RecordDefineField 'Parsed
+    mkField f =
+      RecordDefineField
+        { _fieldDefineFunDef = f,
+          _fieldDefineIden = NameUnqualified $ f ^. signName
+        }
+
 namedApplication ::
   forall r.
   (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
@@ -928,7 +952,7 @@ letFunDef ::
   ParsecS r (FunctionDef 'Parsed)
 letFunDef = do
   optional_ stashPragmas
-  functionDefinition False Nothing
+  functionDefinition True False Nothing
 
 letStatement :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (LetStatement 'Parsed)
 letStatement =
@@ -1008,9 +1032,10 @@ functionDefinition ::
   forall r.
   (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
   Bool ->
+  Bool ->
   Maybe (WithLoc BuiltinFunction) ->
   ParsecS r (FunctionDef 'Parsed)
-functionDefinition allowInstance _signBuiltin = P.label "<function definition>" $ do
+functionDefinition allowOmitType allowInstance _signBuiltin = P.label "<function definition>" $ do
   _signTerminating <- optional (kw kwTerminating)
   off <- P.getOffset
   _signInstance <- optional (kw kwInstance)
@@ -1018,11 +1043,24 @@ functionDefinition allowInstance _signBuiltin = P.label "<function definition>" 
     parseFailure off "instance not allowed here"
   _signName <- symbol
   _signArgs <- many parseArg
-  _signColonKw <- Irrelevant <$> kw kwColon
-  _signRetType <- parseExpressionAtoms
+  off' <- P.getOffset
+  _signColonKw <-
+    Irrelevant
+      <$> if
+          | allowOmitType -> optional (kw kwColon)
+          | otherwise -> Just <$> kw kwColon
+  _signRetType <-
+    case _signColonKw ^. unIrrelevant of
+      Just {} -> Just <$> parseExpressionAtoms
+      Nothing -> return Nothing
   _signDoc <- getJudoc
   _signPragmas <- getPragmas
   _signBody <- parseBody
+  unless
+    ( isJust (_signColonKw ^. unIrrelevant)
+        || (P.isBodyExpression _signBody && null _signArgs)
+    )
+    $ parseFailure off' "expected result type"
   return FunctionDef {..}
   where
     parseArg :: ParsecS r (SigArg 'Parsed)

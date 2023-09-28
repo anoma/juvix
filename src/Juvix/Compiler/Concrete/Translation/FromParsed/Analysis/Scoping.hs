@@ -15,6 +15,7 @@ import Juvix.Compiler.Concrete.Data.InfoTableBuilder
 import Juvix.Compiler.Concrete.Data.Name qualified as N
 import Juvix.Compiler.Concrete.Data.NameSignature
 import Juvix.Compiler.Concrete.Data.Scope
+import Juvix.Compiler.Concrete.Data.ScopedName (nameConcrete)
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Extra (recordNameSignatureByIndex)
 import Juvix.Compiler.Concrete.Extra qualified as P
@@ -793,7 +794,7 @@ checkFunctionDef FunctionDef {..} = do
   sigDoc' <- mapM checkJudoc _signDoc
   (args', sigType', sigBody') <- withLocalScope $ do
     a' <- mapM checkArg _signArgs
-    t' <- checkParseExpressionAtoms _signRetType
+    t' <- mapM checkParseExpressionAtoms _signRetType
     b' <- checkBody
     return (a', t', b')
   registerFunctionDef
@@ -1705,6 +1706,7 @@ checkLetFunDefs =
               DefinitionInductive {} -> impossible
               DefinitionProjectionDef {} -> impossible
               DefinitionAxiom {} -> impossible
+
         fromNonDefs :: NonDefinitionsSection s -> NonEmpty (LetStatement s)
         fromNonDefs NonDefinitionsSection {..} =
           (fromNonDef <$> _nonDefinitionsSection) <>? (fromDefs <$> _nonDefinitionsNext)
@@ -2086,7 +2088,61 @@ checkExpressionAtom e = case e of
   AtomList l -> pure . AtomList <$> checkList l
   AtomIterator i -> pure . AtomIterator <$> checkIterator i
   AtomNamedApplication i -> pure . AtomNamedApplication <$> checkNamedApplication i
+  AtomRecordCreation i -> pure . AtomRecordCreation <$> checkRecordCreation i
   AtomRecordUpdate i -> pure . AtomRecordUpdate <$> checkRecordUpdate i
+
+checkRecordCreation :: forall r. (Members '[Error ScoperError, State Scope, State ScoperState, Reader ScopeParameters, InfoTableBuilder, NameIdGen] r) => RecordCreation 'Parsed -> Sem r (RecordCreation 'Scoped)
+checkRecordCreation RecordCreation {..} = do
+  constrIden <- getNameOfKind KNameConstructor _recordCreationConstructor
+  let cname = constrIden ^. scopedIdenFinal
+  tab <- getInfoTable
+  let mci = HashMap.lookup (cname ^. S.nameId) (tab ^. infoConstructors)
+  case mci of
+    Nothing ->
+      throw (ErrNotAConstructor (NotAConstructor (cname ^. nameConcrete)))
+    Just ci -> do
+      let name = NameUnqualified (ci ^. constructorInfoTypeName . nameConcrete)
+          nameId = ci ^. constructorInfoTypeName . S.nameId
+      info <- getRecordInfo' name nameId
+      let sig = info ^. recordInfoSignature
+      (vars', fields') <- withLocalScope $ localBindings $ ignoreSyntax $ do
+        vs <- mapM (reserveFunctionSymbol . (^. fieldDefineFunDef)) _recordCreationFields
+        fs <- mapM (checkDefineField sig) _recordCreationFields
+        return (vs, fs)
+      let extra' =
+            RecordCreationExtra
+              { _recordCreationExtraSignature = sig,
+                _recordCreationExtraVars = vars'
+              }
+          snames = HashSet.fromList (HashMap.keys (sig ^. recordNames))
+          sfields = HashSet.fromList (map (^. fieldDefineFunDef . signName . nameConcrete) (toList fields'))
+          missingFields = HashSet.difference snames sfields
+      unless (null missingFields) $
+        throw (ErrMissingFields (MissingFields (cname ^. nameConcrete) missingFields))
+      return
+        RecordCreation
+          { _recordCreationConstructor = constrIden,
+            _recordCreationFields = fields',
+            _recordCreationExtra = Irrelevant extra',
+            _recordCreationAtKw
+          }
+
+checkDefineField ::
+  (Members '[Error ScoperError, State Scope, State ScoperState, Reader ScopeParameters, InfoTableBuilder, NameIdGen] r) =>
+  RecordNameSignature ->
+  RecordDefineField 'Parsed ->
+  Sem r (RecordDefineField 'Scoped)
+checkDefineField sig RecordDefineField {..} = do
+  def <- localBindings $ ignoreSyntax $ checkFunctionDef _fieldDefineFunDef
+  iden <- checkScopedIden _fieldDefineIden
+  let fname = def ^. signName . nameConcrete
+  unless (HashMap.member fname (sig ^. recordNames)) $
+    throw (ErrUnexpectedField (UnexpectedField fname))
+  return
+    RecordDefineField
+      { _fieldDefineFunDef = def,
+        _fieldDefineIden = iden
+      }
 
 checkRecordUpdate :: forall r. (Members '[Error ScoperError, State Scope, State ScoperState, Reader ScopeParameters, InfoTableBuilder, NameIdGen] r) => RecordUpdate 'Parsed -> Sem r (RecordUpdate 'Scoped)
 checkRecordUpdate RecordUpdate {..} = do
@@ -2095,7 +2151,7 @@ checkRecordUpdate RecordUpdate {..} = do
   let sig = info ^. recordInfoSignature
   (vars', fields') <- withLocalScope $ do
     vs <- mapM bindVariableSymbol (toList (recordNameSignatureByIndex sig))
-    fs <- mapM (checkField sig) _recordUpdateFields
+    fs <- mapM (checkUpdateField sig) _recordUpdateFields
     return (vs, fs)
   let extra' =
         RecordUpdateExtra
@@ -2111,21 +2167,25 @@ checkRecordUpdate RecordUpdate {..} = do
         _recordUpdateAtKw,
         _recordUpdateDelims
       }
+
+checkUpdateField ::
+  (Members '[Error ScoperError, State Scope, State ScoperState, Reader ScopeParameters, InfoTableBuilder, NameIdGen] r) =>
+  RecordNameSignature ->
+  RecordUpdateField 'Parsed ->
+  Sem r (RecordUpdateField 'Scoped)
+checkUpdateField sig f = do
+  value' <- checkParseExpressionAtoms (f ^. fieldUpdateValue)
+  idx' <- maybe (throw unexpectedField) return (sig ^? recordNames . at (f ^. fieldUpdateName) . _Just . _2)
+  return
+    RecordUpdateField
+      { _fieldUpdateName = f ^. fieldUpdateName,
+        _fieldUpdateArgIx = idx',
+        _fieldUpdateAssignKw = f ^. fieldUpdateAssignKw,
+        _fieldUpdateValue = value'
+      }
   where
-    checkField :: RecordNameSignature -> RecordUpdateField 'Parsed -> Sem r (RecordUpdateField 'Scoped)
-    checkField sig f = do
-      value' <- checkParseExpressionAtoms (f ^. fieldUpdateValue)
-      idx' <- maybe (throw unexpectedField) return (sig ^? recordNames . at (f ^. fieldUpdateName) . _Just . _2)
-      return
-        RecordUpdateField
-          { _fieldUpdateName = f ^. fieldUpdateName,
-            _fieldUpdateArgIx = idx',
-            _fieldUpdateAssignKw = f ^. fieldUpdateAssignKw,
-            _fieldUpdateValue = value'
-          }
-      where
-        unexpectedField :: ScoperError
-        unexpectedField = ErrUnexpectedField (UnexpectedField (f ^. fieldUpdateName))
+    unexpectedField :: ScoperError
+    unexpectedField = ErrUnexpectedField (UnexpectedField (f ^. fieldUpdateName))
 
 checkNamedApplication ::
   forall r.
@@ -2156,11 +2216,19 @@ getRecordInfo ::
   (Members '[State ScoperState, Error ScoperError] r) =>
   ScopedIden ->
   Sem r RecordInfo
-getRecordInfo indTy =
-  fromMaybeM err (gets (^. scoperRecordFields . at (indTy ^. scopedIdenFinal . S.nameId)))
+getRecordInfo indTy = getRecordInfo' (indTy ^. scopedIdenFinal . nameConcrete) (indTy ^. scopedIdenFinal . S.nameId)
+
+getRecordInfo' ::
+  forall r.
+  (Members '[State ScoperState, Error ScoperError] r) =>
+  Name ->
+  NameId ->
+  Sem r RecordInfo
+getRecordInfo' name nameId =
+  fromMaybeM err (gets (^. scoperRecordFields . at nameId))
   where
     err :: Sem r a
-    err = throw (ErrNotARecord (NotARecord indTy))
+    err = throw (ErrNotARecord (NotARecord name))
 
 getNameSignature :: (Members '[State ScoperState, Error ScoperError] r) => ScopedIden -> Sem r NameSignature
 getNameSignature s = do
@@ -2573,6 +2641,7 @@ parseTerm =
       <|> parseLiteral
       <|> parseLet
       <|> parseIterator
+      <|> parseRecordCreation
       <|> parseDoubleBraces
       <|> parseBraces
       <|> parseNamedApplication
@@ -2671,6 +2740,14 @@ parseTerm =
         iterator :: ExpressionAtom 'Scoped -> Maybe (Iterator 'Scoped)
         iterator s = case s of
           AtomIterator u -> Just u
+          _ -> Nothing
+
+    parseRecordCreation :: Parse Expression
+    parseRecordCreation = ExpressionRecordCreation <$> P.token record mempty
+      where
+        record :: ExpressionAtom 'Scoped -> Maybe (RecordCreation 'Scoped)
+        record s = case s of
+          AtomRecordCreation u -> Just u
           _ -> Nothing
 
     parseNoInfixIdentifier :: Parse Expression

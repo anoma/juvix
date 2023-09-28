@@ -12,10 +12,12 @@ where
 
 import Data.HashMap.Strict qualified as HashMap
 import Data.IntMap.Strict qualified as IntMap
+import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Compiler.Builtins
 import Juvix.Compiler.Concrete.Data.NameSignature.Base
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Extra qualified as Concrete
+import Juvix.Compiler.Concrete.Gen qualified as Gen
 import Juvix.Compiler.Concrete.Language qualified as Concrete
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
@@ -30,6 +32,7 @@ import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Che
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Data.NameKind
 import Juvix.Prelude
+import Safe (lastMay)
 
 type MCache = Cache Concrete.ModuleIndex Internal.Module
 
@@ -458,9 +461,16 @@ goTopFunctionDef FunctionDef {..} = do
     goDefType :: Sem r Internal.Expression
     goDefType = do
       args <- concatMapM (fmap toList . argToParam) _signArgs
-      ret <- goExpression _signRetType
+      ret <- maybe freshHole goExpression _signRetType
       return (Internal.foldFunType args ret)
       where
+        freshHole :: Sem r Internal.Expression
+        freshHole = do
+          i <- freshNameId
+          let loc = maybe (getLoc _signName) getLoc (lastMay _signArgs)
+              h = mkHole loc i
+          return $ Internal.ExpressionHole h
+
         argToParam :: SigArg 'Scoped -> Sem r (NonEmpty Internal.FunctionParameter)
         argToParam a@SigArg {..} = do
           let _paramImplicit = _sigArgImplicit
@@ -761,11 +771,48 @@ goExpression = \case
   ExpressionInstanceHole h -> return (Internal.ExpressionInstanceHole h)
   ExpressionIterator i -> goIterator i
   ExpressionNamedApplication i -> goNamedApplication i
+  ExpressionRecordCreation i -> goRecordCreation i
   ExpressionRecordUpdate i -> goRecordUpdateApp i
   ExpressionParensRecordUpdate i -> Internal.ExpressionLambda <$> goRecordUpdate (i ^. parensRecordUpdate)
   where
     goNamedApplication :: Concrete.NamedApplication 'Scoped -> Sem r Internal.Expression
     goNamedApplication = runNamedArguments >=> goExpression
+
+    goRecordCreation :: Concrete.RecordCreation 'Scoped -> Sem r Internal.Expression
+    goRecordCreation Concrete.RecordCreation {..} = do
+      args <- mapM goRecordDefineField _recordCreationFields
+      let defs = fmap (^. fieldDefineFunDef) _recordCreationFields
+          app =
+            Concrete.NamedApplication
+              { _namedAppName = _recordCreationConstructor,
+                _namedAppArgs =
+                  NonEmpty.singleton $
+                    Concrete.ArgumentBlock
+                      { _argBlockDelims = Irrelevant Nothing,
+                        _argBlockImplicit = Explicit,
+                        _argBlockArgs = args
+                      },
+                _namedAppSignature =
+                  Irrelevant (NameSignature [NameBlock (_recordCreationExtra ^. unIrrelevant . recordCreationExtraSignature . recordNames) Explicit])
+              }
+      cls <- goLetFunDefs (fmap Concrete.LetFunctionDef defs)
+      e <- runNamedArguments app >>= goExpression
+      return $
+        Internal.ExpressionLet $
+          Internal.Let
+            { _letClauses = nonEmpty' cls,
+              _letExpression = e
+            }
+
+    goRecordDefineField :: Concrete.RecordDefineField 'Scoped -> Sem r (Concrete.NamedArgument 'Scoped)
+    goRecordDefineField Concrete.RecordDefineField {..} = do
+      dummyAssignKw <- runReader (getLoc _fieldDefineFunDef) (Gen.kw Gen.kwAssign)
+      return
+        Concrete.NamedArgument
+          { _namedArgName = _fieldDefineFunDef ^. signName . S.nameConcrete,
+            _namedArgAssignKw = Irrelevant dummyAssignKw,
+            _namedArgValue = Concrete.ExpressionIdentifier _fieldDefineIden
+          }
 
     goRecordUpdate :: Concrete.RecordUpdate 'Scoped -> Sem r Internal.Lambda
     goRecordUpdate r = do
@@ -862,10 +909,10 @@ goExpression = \case
       return $ case nonEmpty clauses of
         Just _letClauses -> Internal.ExpressionLet Internal.Let {..}
         Nothing -> _letExpression
-      where
-        goLetFunDefs :: NonEmpty (LetStatement 'Scoped) -> Sem r [Internal.LetClause]
-        goLetFunDefs cl = fmap goSCC <$> preLetStatements cl
 
+    goLetFunDefs :: NonEmpty (LetStatement 'Scoped) -> Sem r [Internal.LetClause]
+    goLetFunDefs clauses = fmap goSCC <$> preLetStatements clauses
+      where
         preLetStatements :: NonEmpty (LetStatement 'Scoped) -> Sem r [SCC Internal.PreLetStatement]
         preLetStatements cl = do
           pre <- mapMaybeM preLetStatement (toList cl)

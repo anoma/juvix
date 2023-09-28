@@ -317,6 +317,13 @@ scoperErrorTests =
         ErrRepeatedField RepeatedField {} -> Nothing
         _ -> wrongError,
     NegTest
+      "Missing fields in record creation"
+      $(mkRelDir ".")
+      $(mkRelFile "MissingFields.juvix")
+      $ \case
+        ErrMissingFields {} -> Nothing
+        _ -> wrongError,
+    NegTest
       "Incomparable precedences"
       $(mkRelDir ".")
       $(mkRelFile "IncomparablePrecedences.juvix")

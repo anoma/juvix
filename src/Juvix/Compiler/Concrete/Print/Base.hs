@@ -277,9 +277,24 @@ instance (SingI s) => PrettyPrint (NamedApplication s) where
   -- ppCode :: Members '[ExactPrint, Reader Options] r => NamedApplication s -> Sem r ()
   ppCode = apeHelper
 
+instance (SingI s) => PrettyPrint (RecordCreation s) where
+  ppCode RecordCreation {..} = do
+    let fields' =
+          blockIndent
+            ( sequenceWith
+                (semicolon >> line)
+                (ppCode <$> _recordCreationFields)
+            )
+    ppIdentifierType _recordCreationConstructor
+      <> ppCode _recordCreationAtKw
+      <> braces fields'
+
 instance (SingI s) => PrettyPrint (RecordUpdateField s) where
   ppCode RecordUpdateField {..} =
     ppSymbolType _fieldUpdateName <+> ppCode _fieldUpdateAssignKw <+> ppExpressionType _fieldUpdateValue
+
+instance (SingI s) => PrettyPrint (RecordDefineField s) where
+  ppCode RecordDefineField {..} = ppCode _fieldDefineFunDef
 
 instance (SingI s) => PrettyPrint (RecordUpdate s) where
   ppCode RecordUpdate {..} = do
@@ -325,6 +340,7 @@ instance (SingI s) => PrettyPrint (ExpressionAtom s) where
     AtomInstanceHole w -> ppHoleType w
     AtomIterator i -> ppCode i
     AtomNamedApplication i -> ppCode i
+    AtomRecordCreation i -> ppCode i
 
 instance PrettyPrint PatternScopedIden where
   ppCode = \case
@@ -772,6 +788,7 @@ instance PrettyPrint Expression where
     ExpressionNewCase c -> ppCode c
     ExpressionIterator i -> ppCode i
     ExpressionNamedApplication i -> ppCode i
+    ExpressionRecordCreation i -> ppCode i
     ExpressionRecordUpdate i -> ppCode i
     ExpressionParensRecordUpdate i -> ppCode i
 
@@ -911,7 +928,9 @@ ppFunctionSignature FunctionDef {..} = do
       instance' = (<> line) . ppCode <$> _signInstance
       args' = hsep . fmap ppCode <$> nonEmpty _signArgs
       builtin' = (<> line) . ppCode <$> _signBuiltin
-      type' = oneLineOrNext (ppCode _signColonKw <+> ppExpressionType _signRetType)
+      type' = case _signColonKw ^. unIrrelevant of
+        Just col -> oneLineOrNext (ppCode col <+> ppExpressionType (fromJust _signRetType))
+        Nothing -> mempty
       name' = annDef _signName (ppSymbolType _signName)
    in builtin'
         ?<> termin'
