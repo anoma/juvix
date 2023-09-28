@@ -97,7 +97,7 @@ mkPackageInfo mpackageEntry _packageRoot pkg = do
   let buildDir :: Path Abs Dir = maybe (rootBuildDir _packageRoot) (someBaseToAbs _packageRoot . (^. entryPointBuildDir)) mpackageEntry
   deps <- resolveDependencies
   let _packagePackage = set packageDependencies deps pkg
-  depsPaths <- mapM (getDependencyPath . mkPackageDependencyInfo (_packagePackage ^. packageFile)) deps
+  depsPaths <- mapM (getDependencyPath . mkPackageDependencyInfo pkgFile) deps
   ensureStdlib _packageRoot buildDir deps
   files :: [Path Rel File] <-
     map (fromJust . stripProperPrefix _packageRoot) <$> walkDirRelAccum juvixAccum _packageRoot []
@@ -112,12 +112,48 @@ mkPackageInfo mpackageEntry _packageRoot pkg = do
         newJuvixFiles :: [Path Abs File]
         newJuvixFiles = [cd <//> f | f <- files, isJuvixFile f]
 
+    pkgFile :: Path Abs File
+    pkgFile = pkg ^. packageFile
+
     resolveDependencies :: Sem r [Dependency]
     resolveDependencies = do
       mlockfile <- asks (^. envLockfile)
-      return $ case mlockfile of
-        Nothing -> pkg ^. packageDependencies
-        Just lf -> (^. lockfileDependencyDependency) <$> lf ^. lockfileInfoLockfile . lockfileDependencies
+      case mlockfile of
+        Nothing -> return pkgDeps
+        Just lf -> checkDeps lf
+      where
+        pkgDeps :: [Dependency]
+        pkgDeps = pkg ^. packageDependencies
+
+        checkDeps :: LockfileInfo -> Sem r [Dependency]
+        checkDeps lf = mapM_ checkDep pkgDeps >> return lockfileDeps
+          where
+            lockfileDeps :: [Dependency]
+            lockfileDeps = (^. lockfileDependencyDependency) <$> lf ^. lockfileInfoLockfile . lockfileDependencies
+
+            lockfileDepNames :: HashSet Text
+            lockfileDepNames = HashSet.fromList (mkName <$> lockfileDeps)
+
+            mkName :: Dependency -> Text
+            mkName = \case
+              DependencyPath p -> pack (p ^. pathDependencyPath . prepath)
+              DependencyGit g -> g ^. gitDependencyUrl
+
+            checkDep :: Dependency -> Sem r ()
+            checkDep d =
+              unless
+                (mkName d `HashSet.member` lockfileDepNames)
+                ( throw
+                    DependencyError
+                      { _dependencyErrorPackageFile = pkgFile,
+                        _dependencyErrorCause =
+                          MissingLockfileDependencyError
+                            MissingLockfileDependency
+                              { _missingLockfileDependencyDependency = d,
+                                _missingLockfileDependencyPath = lf ^. lockfileInfoPath
+                              }
+                      }
+                )
 
 dependencyCached :: (Members '[State ResolverState, Reader ResolverEnv, Files, GitClone] r) => Path Abs Dir -> Sem r Bool
 dependencyCached p = HashMap.member p <$> gets (^. resolverPackages)
@@ -189,7 +225,9 @@ addDependencyHelper me d = do
       forM_ (pkgInfo ^. packageRelativeFiles) $ \f -> do
         modify' (over resolverFiles (HashMap.insertWith (<>) f (pure pkgInfo)))
       let packagePath = pkgInfo ^. packagePackage . packageFile
-      forM_ (pkgInfo ^. packagePackage . packageDependencies) (\dep -> selectDependencyLockfile dep (addDependency' Nothing (mkPackageDependencyInfo packagePath dep)))
+      forM_
+        (pkgInfo ^. packagePackage . packageDependencies)
+        (\dep -> selectDependencyLockfile dep (addDependency' Nothing (mkPackageDependencyInfo packagePath dep)))
   where
     selectPackageLockfile :: Package -> Sem r a -> Sem r a
     selectPackageLockfile pkg action = do
@@ -207,10 +245,7 @@ addDependencyHelper me d = do
         Nothing -> action
         Just lf -> case extractLockfile lf dep of
           Just dlf -> withLockfile dlf action
-          Nothing -> throw errMsg
-      where
-        errMsg :: Text
-        errMsg = "Could not find dependency: " <> show dep <> " in lockfile"
+          Nothing -> action
 
 currentPackage :: (Members '[State ResolverState, Reader ResolverEnv] r) => Sem r PackageInfo
 currentPackage = do
