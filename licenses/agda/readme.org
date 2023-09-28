@@ -1,3 +1,0 @@
-#+title: Readme
-
-We have copied [[https://github.com/agda/agda][Agda]]'s input method and adapted it to Juvix.
