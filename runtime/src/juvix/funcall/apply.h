@@ -199,28 +199,30 @@
     juvix_apply_closure = cl; \
     goto juvix_tail_apply_3;
 
-#define APPLY(cl, N, label)                                            \
-    do {                                                               \
-        if (get_closure_largs(cl) == N) {                              \
-            CALL_CLOSURE(cl, label##_apply_return_1);                  \
-        } else {                                                       \
-            for (int juvix_idx = N - 1; juvix_idx >= 0; --juvix_idx) { \
-                STACK_PUSH(CARG(juvix_idx));                           \
-            }                                                          \
-            CALL_CLOSURES(cl, N, label##_apply_return_2);              \
-        }                                                              \
+#define APPLY(cl, N, label)                                                \
+    do {                                                                   \
+        if (get_closure_largs(cl) == N) {                                  \
+            CALL_CLOSURE(cl, label##_apply_return_1);                      \
+        } else {                                                           \
+            int n = (int)get_closure_nargs(cl);                            \
+            for (int juvix_idx = n + N - 1; juvix_idx >= n; --juvix_idx) { \
+                STACK_PUSH(CARG(juvix_idx));                               \
+            }                                                              \
+            CALL_CLOSURES(cl, N, label##_apply_return_2);                  \
+        }                                                                  \
     } while (0)
 
-#define TAIL_APPLY(cl, N)                                              \
-    do {                                                               \
-        if (get_closure_largs(cl) == N) {                              \
-            TAIL_CALL_CLOSURE(cl);                                     \
-        } else {                                                       \
-            for (int juvix_idx = N - 1; juvix_idx >= 0; --juvix_idx) { \
-                STACK_PUSH(CARG(juvix_idx));                           \
-            }                                                          \
-            TAIL_CALL_CLOSURES(cl, N);                                 \
-        }                                                              \
+#define TAIL_APPLY(cl, N)                                                  \
+    do {                                                                   \
+        if (get_closure_largs(cl) == N) {                                  \
+            TAIL_CALL_CLOSURE(cl);                                         \
+        } else {                                                           \
+            int n = (int)get_closure_nargs(cl);                            \
+            for (int juvix_idx = n + N - 1; juvix_idx >= n; --juvix_idx) { \
+                STACK_PUSH(CARG(juvix_idx));                               \
+            }                                                              \
+            TAIL_CALL_CLOSURES(cl, N);                                     \
+        }                                                                  \
     } while (0)
 
 #endif  // JUVIX_FUNCALL_APPLY_H
