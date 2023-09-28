@@ -1692,7 +1692,7 @@ checkLetStatements ::
   NonEmpty (LetStatement 'Parsed) ->
   Sem r (NonEmpty (LetStatement 'Scoped))
 checkLetStatements =
-    ignoreSyntax
+  ignoreSyntax
     . fmap fromSections
     . checkSections
     . mkLetSections
