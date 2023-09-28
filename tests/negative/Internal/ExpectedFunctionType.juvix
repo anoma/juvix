@@ -1,10 +1,8 @@
 module ExpectedFunctionType;
 
-type Pair (A : Type) :=
-  | mkPair : A → A → Pair A;
+type Pair (A : Type) := mkPair : A → A → Pair A;
 
-type B :=
-  | b : B;
+type B := b : B;
 
 f : Pair B → Pair B
   | (mkPair a b) := a b;

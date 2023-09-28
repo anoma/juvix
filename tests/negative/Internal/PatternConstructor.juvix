@@ -1,10 +1,8 @@
 module PatternConstructor;
 
-type A :=
-  | a : A;
+type A := a : A;
 
-type B :=
-  | b : B;
+type B := b : B;
 
 f : A → B
   | b := b;

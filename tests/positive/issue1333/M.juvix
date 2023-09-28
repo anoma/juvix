@@ -1,4 +1,3 @@
 module M;
 
-type T (A : Type) :=
-  | c : T _;
+type T (A : Type) := c : T _;

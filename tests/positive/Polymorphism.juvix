@@ -1,7 +1,7 @@
 module Polymorphism;
 
 type Pair (A : Type) (B : Type) :=
-  | mkPair : A → B → Pair A B;
+  mkPair : A → B → Pair A B;
 
 type Nat :=
   | zero : Nat

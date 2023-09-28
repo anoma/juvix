@@ -1,4 +1,3 @@
 module A;
 
-type Foo :=
-  | bar : Foo;
+type Foo := bar : Foo;

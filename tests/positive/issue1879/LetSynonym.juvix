@@ -1,7 +1,6 @@
 module LetSynonym;
 
-type T :=
-  | t : T;
+type T := t : T;
 
 main : T :=
   let

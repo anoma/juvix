@@ -1,10 +1,8 @@
 module MultiWrongType;
 
-type A :=
-  | a : A;
+type A := a : A;
 
-type B :=
-  | b : B;
+type B := b : B;
 
 f : A := b;
 

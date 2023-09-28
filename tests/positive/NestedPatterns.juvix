@@ -2,14 +2,14 @@ module NestedPatterns;
 
 import Stdlib.Prelude open;
 
-type MyList (A : Type) :=
-  | myList : List A -> MyList A;
+type MyList (A : Type) := myList : List A -> MyList A;
 
 toList : {A : Type} -> MyList A -> List A
   | (myList xs) := xs;
 
 f : MyList Nat -> Nat
   | xs :=
-    case toList xs
+    case toList xs of {
       | suc n :: nil := n
-      | _ := zero;
+      | _ := zero
+    };
