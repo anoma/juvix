@@ -5,6 +5,7 @@ import Data.Aeson.BetterErrors qualified as Aeson
 import Data.Aeson.Encoding (pair)
 import Data.Aeson.TH
 import Juvix.Compiler.Pipeline.Package.Dependency
+import Juvix.Extra.Paths
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude hiding ((.=))
 import Juvix.Prelude.Aeson
@@ -71,6 +72,26 @@ instance ToJSON Lockfile where
 
 instance FromJSON Lockfile where
   parseJSON = toAesonParser' (Lockfile <$> (key Str.dependencies fromAesonParser))
+
+mkPackageLockfilePath :: Path Abs Dir -> Path Abs File
+mkPackageLockfilePath = (<//> juvixLockfile)
+
+mayReadLockfile ::
+  forall r.
+  (Members '[Files, Error Text] r) =>
+  Path Abs Dir ->
+  Sem r (Maybe LockfileInfo)
+mayReadLockfile root = do
+  let lockfilePath = mkPackageLockfilePath root
+  lockfileExists <- fileExists' lockfilePath
+  if
+      | lockfileExists -> do
+          bs <- readFileBS' lockfilePath
+          either (throw . pack) ((return . Just) . mkLockfileInfo lockfilePath) (eitherDecodeStrict @Lockfile bs)
+      | otherwise -> return Nothing
+  where
+    mkLockfileInfo :: Path Abs File -> Lockfile -> LockfileInfo
+    mkLockfileInfo _lockfileInfoPath _lockfileInfoLockfile = LockfileInfo {..}
 
 -- | Extract a lockfileInfo associated with an immediate dependency. Returns Nothing
 -- if the dependency is not specified at the root of the lockfile.

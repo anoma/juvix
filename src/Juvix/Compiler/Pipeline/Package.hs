@@ -24,7 +24,7 @@ module Juvix.Compiler.Pipeline.Package
   )
 where
 
-import Data.Aeson (eitherDecodeStrict, genericToEncoding, genericToJSON)
+import Data.Aeson (genericToEncoding, genericToJSON)
 import Data.Aeson.BetterErrors
 import Data.Aeson.TH
 import Data.ByteString qualified as ByteString
@@ -214,26 +214,6 @@ globalPackage =
 
 mkPackageFilePath :: Path Abs Dir -> Path Abs File
 mkPackageFilePath = (<//> juvixYamlFile)
-
-mkPackageLockfilePath :: Path Abs Dir -> Path Abs File
-mkPackageLockfilePath = (<//> juvixLockfile)
-
-mayReadLockfile ::
-  forall r.
-  (Members '[Files, Error Text] r) =>
-  Path Abs Dir ->
-  Sem r (Maybe LockfileInfo)
-mayReadLockfile root = do
-  let lockfilePath = mkPackageLockfilePath root
-  lockfileExists <- fileExists' lockfilePath
-  if
-      | lockfileExists -> do
-          bs <- readFileBS' lockfilePath
-          either (throw . pack) ((return . Just) . mkLockfileInfo lockfilePath) (eitherDecodeStrict @Lockfile bs)
-      | otherwise -> return Nothing
-  where
-    mkLockfileInfo :: Path Abs File -> Lockfile -> LockfileInfo
-    mkLockfileInfo _lockfileInfoPath _lockfileInfoLockfile = LockfileInfo {..}
 
 -- | Given some directory d it tries to read the file d/juvix.yaml and parse its contents
 readPackage ::
