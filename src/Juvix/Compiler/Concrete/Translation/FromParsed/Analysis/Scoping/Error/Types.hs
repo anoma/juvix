@@ -909,7 +909,7 @@ instance ToGenericError IncomaprablePrecedences where
       i = getLoc _incomparablePrecedencesName1
 
 newtype AliasCycle = AliasCycle
-  { _aliasCycleDef :: (AliasDef 'Parsed)
+  { _aliasCycleDef :: AliasDef 'Parsed
   }
   deriving stock (Show)
 
@@ -929,3 +929,25 @@ instance ToGenericError AliasCycle where
     where
       i :: Interval
       i = getLoc _aliasCycleDef
+
+newtype WrongDefaultValue = WrongDefaultValue
+  { _wrongDefaultValue :: SigArg 'Parsed
+  }
+  deriving stock (Show)
+
+instance ToGenericError WrongDefaultValue where
+  genericError WrongDefaultValue {..} = do
+    opts <- fromGenericOptions <$> ask
+    let msg =
+          "Invalid argument "
+            <+> ppCode opts _wrongDefaultValue
+            <+> ".\nOnly implicit arguments can have default values."
+    return
+      GenericError
+        { _genericErrorLoc = i,
+          _genericErrorMessage = mkAnsiText msg,
+          _genericErrorIntervals = [i]
+        }
+    where
+      i :: Interval
+      i = getLoc _wrongDefaultValue

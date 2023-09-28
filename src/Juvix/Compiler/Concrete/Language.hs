@@ -385,6 +385,23 @@ data IteratorSyntaxDef = IteratorSyntaxDef
 instance HasLoc IteratorSyntaxDef where
   getLoc IteratorSyntaxDef {..} = getLoc _iterSyntaxKw <> getLoc _iterSymbol
 
+data ArgDefault (s :: Stage) = ArgDefault
+  { _argDefaultAssign :: Irrelevant KeywordRef,
+    _argDefaultValue :: ExpressionType s
+  }
+
+deriving stock instance Show (ArgDefault 'Parsed)
+
+deriving stock instance Show (ArgDefault 'Scoped)
+
+deriving stock instance Eq (ArgDefault 'Parsed)
+
+deriving stock instance Eq (ArgDefault 'Scoped)
+
+deriving stock instance Ord (ArgDefault 'Parsed)
+
+deriving stock instance Ord (ArgDefault 'Scoped)
+
 data SigArg (s :: Stage) = SigArg
   { _sigArgDelims :: Irrelevant (KeywordRef, KeywordRef),
     _sigArgImplicit :: IsImplicit,
@@ -393,7 +410,8 @@ data SigArg (s :: Stage) = SigArg
     _sigArgColon :: Maybe (Irrelevant KeywordRef),
     -- | The type is only optional for implicit arguments. Omitting the rhs is
     -- equivalent to writing `: Type`.
-    _sigArgType :: Maybe (ExpressionType s)
+    _sigArgType :: Maybe (ExpressionType s),
+    _sigArgDefault :: Maybe (ArgDefault s)
   }
 
 deriving stock instance Show (SigArg 'Parsed)
@@ -1804,6 +1822,7 @@ makeLenses ''IteratorSyntaxDef
 makeLenses ''ConstructorDef
 makeLenses ''Module
 makeLenses ''SigArg
+makeLenses ''ArgDefault
 makeLenses ''FunctionDef
 makeLenses ''AxiomDef
 makeLenses ''ExportInfo
@@ -2131,6 +2150,9 @@ getLocExpressionType :: forall s. (SingI s) => ExpressionType s -> Interval
 getLocExpressionType = case sing :: SStage s of
   SParsed -> getLoc
   SScoped -> getLoc
+
+instance (SingI s) => HasLoc (ArgDefault s) where
+  getLoc ArgDefault {..} = getLoc _argDefaultAssign <> getLocExpressionType _argDefaultValue
 
 instance HasLoc (SigArg s) where
   getLoc SigArg {..} = getLoc l <> getLoc r

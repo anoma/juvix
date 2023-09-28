@@ -326,10 +326,9 @@ parseYaml l r = do
   void (P.chunk l)
   off <- P.getOffset
   str <- P.manyTill P.anySingle (P.chunk r)
-  let str' =
-        if
-            | elem '\n' str -> str
-            | otherwise -> '{' : str ++ "}"
+  let str'
+        | elem '\n' str = str
+        | otherwise = '{' : str ++ "}"
   space
   let bs = BS.fromString str'
   case decodeEither bs of
@@ -1095,6 +1094,15 @@ functionDefinition allowOmitType allowInstance _signBuiltin = P.label "<function
               return Nothing
         _ ->
           Just <$> parseExpressionAtoms
+      _sigArgDefault <- optional $ do
+        _argDefaultAssign <- Irrelevant <$> kw kwAssign
+        _argDefaultValue <- parseExpressionAtoms
+        -- case _sigArgImplicit of
+        --     Implicit -> return ()
+        --     _ -> do
+        --       off <- P.getOffset
+        --       parseFailure off "Only allowed implicit arguments can have default values."
+        return ArgDefault {..}
       closeDelim <- implicitClose _sigArgImplicit
       let _sigArgDelims = Irrelevant (openDelim, closeDelim)
       return SigArg {..}

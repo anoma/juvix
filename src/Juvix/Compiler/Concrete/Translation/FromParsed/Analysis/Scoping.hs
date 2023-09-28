@@ -808,15 +808,26 @@ checkFunctionDef FunctionDef {..} = do
       }
   where
     checkArg :: SigArg 'Parsed -> Sem r (SigArg 'Scoped)
-    checkArg SigArg {..} = do
+    checkArg arg@SigArg {..} = do
       names' <- forM _sigArgNames $ \case
         ArgumentSymbol s -> ArgumentSymbol <$> bindVariableSymbol s
         ArgumentWildcard w -> return $ ArgumentWildcard w
       ty' <- mapM checkParseExpressionAtoms _sigArgType
+      default' <- case _sigArgDefault of
+        Nothing -> return Nothing
+        Just ArgDefault {..} ->
+          let err = throw (ErrWrongDefaultValue WrongDefaultValue {_wrongDefaultValue = arg})
+           in case _sigArgImplicit of
+                Explicit -> err
+                ImplicitInstance -> err
+                Implicit -> do
+                  val' <- checkParseExpressionAtoms _argDefaultValue
+                  return (Just ArgDefault {_argDefaultValue = val', ..})
       return
         SigArg
           { _sigArgNames = names',
             _sigArgType = ty',
+            _sigArgDefault = default',
             ..
           }
     checkBody :: Sem r (FunctionDefBody 'Scoped)
