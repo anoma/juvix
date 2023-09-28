@@ -2,16 +2,16 @@
 
 #include <juvix/api.h>
 
-#define JUVIX_DECL_ARGS UNUSED DECL_ARG(0)
-
 #define CONSTRS_NUM (BUILTIN_UIDS_NUM + 1)
 
 static constr_info_t juvix_constr_info_array[CONSTRS_NUM] = {
     BUILTIN_UIDS_INFO, {"box", 0, APP_FIXITY}};
 
 int main() {
-    JUVIX_DECL_ARGS;
-    JUVIX_PROLOGUE(1);
+    DECL_ARG(0);
+    DECL_ARG(1);
+    DECL_ARG(2);
+    JUVIX_PROLOGUE(3);
 
     juvix_constrs_num = CONSTRS_NUM;
     juvix_constr_info = juvix_constr_info_array;

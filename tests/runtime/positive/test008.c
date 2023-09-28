@@ -5,8 +5,10 @@
 #define JUVIX_DECL_ARGS UNUSED DECL_ARG(0)
 
 int main() {
-    JUVIX_DECL_ARGS;
-    JUVIX_PROLOGUE(1);
+    DECL_ARG(0);
+    DECL_ARG(1);
+    DECL_ARG(2);
+    JUVIX_PROLOGUE(3);
     DECL_TMP(0);
     DECL_TMP(1);
     DECL_TMP(2);
