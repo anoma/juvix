@@ -15,7 +15,13 @@
     STACK_LEAVE;                                               \
     STORED_GOTO(get_closure_addr(juvix_apply_closure))
 
-#define GEN_APPLY_1(GOTO_CLOSURE, label)                            \
+#define RETURN_APPLY    \
+    STACKTRACE_PUSH(0); \
+    RETURN_NS;
+
+#define RETURN_TAIL_APPLY RETURN
+
+#define GEN_APPLY_1(GOTO_CLOSURE, RETURN_CLOSURE, label)            \
     do {                                                            \
         size_t juvix_apply_largs;                                   \
     label:                                                          \
@@ -39,11 +45,11 @@
                 CLOSURE_ARG(juvix_result, juvix_closure_nargs) =    \
                     CARG(juvix_closure_nargs);                      \
             });                                                     \
-            RETURN;                                                 \
+            RETURN_CLOSURE;                                         \
         }                                                           \
     } while (0)
 
-#define GEN_APPLY_2(GOTO_CLOSURE, label)                             \
+#define GEN_APPLY_2(GOTO_CLOSURE, RETURN_CLOSURE, label)             \
     do {                                                             \
         size_t juvix_apply_largs;                                    \
     label:                                                           \
@@ -79,11 +85,11 @@
                 CLOSURE_ARG(juvix_result, juvix_closure_nargs + 1) = \
                     CARG(juvix_closure_nargs + 1);                   \
             });                                                      \
-            RETURN;                                                  \
+            RETURN_CLOSURE;                                          \
         }                                                            \
     } while (0)
 
-#define GEN_APPLY_3(GOTO_CLOSURE, label)                                 \
+#define GEN_APPLY_3(GOTO_CLOSURE, RETURN_CLOSURE, label)                 \
     do {                                                                 \
     label:                                                               \
         switch (get_closure_largs(juvix_apply_closure)) {                \
@@ -134,25 +140,28 @@
                     CLOSURE_ARG(juvix_result, juvix_closure_nargs + 2) = \
                         CARG(juvix_closure_nargs + 2);                   \
                 });                                                      \
-                RETURN;                                                  \
+                RETURN_CLOSURE;                                          \
             }                                                            \
         }                                                                \
     } while (0)
 
-#define DECL_APPLY_1 GEN_APPLY_1(GOTO_APPLY_CLOSURE, juvix_apply_1)
+#define DECL_APPLY_1 \
+    GEN_APPLY_1(GOTO_APPLY_CLOSURE, RETURN_APPLY, juvix_apply_1)
 
 #define DECL_TAIL_APPLY_1 \
-    GEN_APPLY_1(TAIL_GOTO_APPLY_CLOSURE, juvix_tail_apply_1)
+    GEN_APPLY_1(TAIL_GOTO_APPLY_CLOSURE, RETURN_TAIL_APPLY, juvix_tail_apply_1)
 
-#define DECL_APPLY_2 GEN_APPLY_2(GOTO_APPLY_CLOSURE, juvix_apply_2)
+#define DECL_APPLY_2 \
+    GEN_APPLY_2(GOTO_APPLY_CLOSURE, RETURN_APPLY, juvix_apply_2)
 
 #define DECL_TAIL_APPLY_2 \
-    GEN_APPLY_2(TAIL_GOTO_APPLY_CLOSURE, juvix_tail_apply_2)
+    GEN_APPLY_2(TAIL_GOTO_APPLY_CLOSURE, RETURN_TAIL_APPLY, juvix_tail_apply_2)
 
-#define DECL_APPLY_3 GEN_APPLY_3(GOTO_APPLY_CLOSURE, juvix_apply_3)
+#define DECL_APPLY_3 \
+    GEN_APPLY_3(GOTO_APPLY_CLOSURE, RETURN_APPLY, juvix_apply_3)
 
 #define DECL_TAIL_APPLY_3 \
-    GEN_APPLY_3(TAIL_GOTO_APPLY_CLOSURE, juvix_tail_apply_3)
+    GEN_APPLY_3(TAIL_GOTO_APPLY_CLOSURE, RETURN_TAIL_APPLY, juvix_tail_apply_3)
 
 #define APPLY_1(cl, label)              \
     juvix_apply_closure = cl;           \
