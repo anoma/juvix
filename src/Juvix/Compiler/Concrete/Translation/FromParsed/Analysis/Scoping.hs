@@ -1687,13 +1687,12 @@ checkFunction f = do
     return Function {..}
 
 -- | for now functions defined in let clauses cannot be infix operators
-checkLetFunDefs ::
+checkLetStatements ::
   (Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
   NonEmpty (LetStatement 'Parsed) ->
   Sem r (NonEmpty (LetStatement 'Scoped))
-checkLetFunDefs =
-  localBindings
-    . ignoreSyntax
+checkLetStatements =
+    ignoreSyntax
     . fmap fromSections
     . checkSections
     . mkLetSections
@@ -1822,7 +1821,7 @@ checkLet ::
   Sem r (Let 'Scoped)
 checkLet Let {..} =
   withLocalScope $ do
-    letFunDefs' <- checkLetFunDefs _letFunDefs
+    letFunDefs' <- checkLetStatements _letFunDefs
     letExpression' <- checkParseExpressionAtoms _letExpression
     return
       Let
