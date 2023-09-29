@@ -1,0 +1,20 @@
+module DefaultValues;
+
+import Stdlib.Data.Product open;
+
+axiom A : Type;
+
+axiom B : Type;
+
+axiom C : Type;
+
+axiom a : Type;
+
+axiom b : Type;
+
+axiom c : Type;
+
+mk {f1 : A := a} {f2 : B} {f3 : C := c} (x : A) : A × B × C :=
+  f1, f2, f3;
+
+x : A × B × C := mk (x := a);

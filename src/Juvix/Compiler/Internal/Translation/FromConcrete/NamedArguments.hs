@@ -10,6 +10,7 @@ import Juvix.Compiler.Concrete.Keywords
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
 import Juvix.Prelude
+import Juvix.Compiler.Concrete.Pretty
 
 data BuilderState = BuilderState
   { _stateRemainingArgs :: [ArgumentBlock 'Scoped],
@@ -67,6 +68,7 @@ helper loc = do
       case remb of
         [] -> return (Nothing, mempty)
         b : bs -> do
+          traceM (ppTrace b)
           let implNames = b ^. nameImplicit
               defVal = b ^. nameDefault
 
