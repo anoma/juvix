@@ -1,0 +1,12 @@
+-- Overapplication
+module test062;
+
+import Stdlib.Data.Nat open;
+
+{-# inline: false #-}
+I {A} (x : A) : A := x;
+
+{-# inline: false #-}
+I' {A} (x : A) : A := x;
+
+main : Nat := I' (I I I I 1);

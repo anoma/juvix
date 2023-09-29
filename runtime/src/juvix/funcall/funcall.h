@@ -115,7 +115,7 @@
 
 #define TAIL_CALL_CLOSURE_NS(cl)              \
     STACKTRACE_REPLACE(get_closure_fuid(cl)); \
-    goto *get_closure_addr(cl)
+    STORED_GOTO(get_closure_addr(cl))
 
 #define TAIL_CALL_CLOSURE(cl) \
     STACK_LEAVE;              \

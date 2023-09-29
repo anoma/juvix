@@ -4,8 +4,11 @@ import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Asm.Options
 import Juvix.Compiler.Asm.Transformation.Base
 
-computeCodePrealloc :: forall r. (Members '[Error AsmError, Reader Options] r) => InfoTable -> Code -> Sem r Code
-computeCodePrealloc tab code = prealloc <$> foldS sig code (0, [])
+computeMaxArgsNum :: InfoTable -> Int
+computeMaxArgsNum tab = maximum (map (^. functionArgsNum) (HashMap.elems (tab ^. infoFunctions)))
+
+computeCodePrealloc :: forall r. (Members '[Error AsmError, Reader Options] r) => Int -> InfoTable -> Code -> Sem r Code
+computeCodePrealloc maxArgsNum tab code = prealloc <$> foldS sig code (0, [])
   where
     -- returns the maximum memory use and the mapping result (Code with the
     -- Prealloc instructions inserted)
@@ -32,7 +35,7 @@ computeCodePrealloc tab code = prealloc <$> foldS sig code (0, [])
         return (k + size, cmd : c)
       ExtendClosure {} -> do
         opts <- ask
-        let size = opts ^. optLimits . limitsMaxClosureSize
+        let size = opts ^. optLimits . limitsClosureHeadSize + maxArgsNum
         return (k + size, cmd : c)
       Call {} -> return (0, cmd : prealloc acc)
       TailCall {} -> return (0, cmd : prealloc acc)
@@ -78,14 +81,15 @@ computeCodePrealloc tab code = prealloc <$> foldS sig code (0, [])
     prealloc (0, c) = c
     prealloc (n, c) = mkInstr (Prealloc (InstrPrealloc n)) : c
 
-computeFunctionPrealloc :: (Members '[Error AsmError, Reader Options] r) => InfoTable -> FunctionInfo -> Sem r FunctionInfo
-computeFunctionPrealloc tab = liftCodeTransformation (computeCodePrealloc tab)
+computeFunctionPrealloc :: (Members '[Error AsmError, Reader Options] r) => Int -> InfoTable -> FunctionInfo -> Sem r FunctionInfo
+computeFunctionPrealloc maxArgsNum tab = liftCodeTransformation (computeCodePrealloc maxArgsNum tab)
 
 computePrealloc :: (Members '[Error AsmError, Reader Options] r) => InfoTable -> Sem r InfoTable
-computePrealloc tab = liftFunctionTransformation (computeFunctionPrealloc tab) tab
+computePrealloc tab =
+  liftFunctionTransformation (computeFunctionPrealloc (computeMaxArgsNum tab) tab) tab
 
-checkCodePrealloc :: forall r. (Members '[Error AsmError, Reader Options] r) => InfoTable -> Code -> Sem r Bool
-checkCodePrealloc tab code = do
+checkCodePrealloc :: forall r. (Members '[Error AsmError, Reader Options] r) => Int -> InfoTable -> Code -> Sem r Bool
+checkCodePrealloc maxArgsNum tab code = do
   f <- foldS sig code id
   return $ f 0 >= 0
   where
@@ -114,7 +118,7 @@ checkCodePrealloc tab code = do
         return $ \k -> cont (k - size)
       ExtendClosure {} -> do
         opts <- ask
-        let size = opts ^. optLimits . limitsMaxClosureSize
+        let size = opts ^. optLimits . limitsClosureHeadSize + maxArgsNum
         return $ \k -> cont (k - size)
       Binop StrConcat -> do
         opts <- ask
@@ -148,4 +152,4 @@ checkPrealloc opts tab =
     Right b -> b
   where
     sb :: Sem '[Reader Options, Error AsmError] Bool
-    sb = allM (checkCodePrealloc tab . (^. functionCode)) (HashMap.elems (tab ^. infoFunctions))
+    sb = allM (checkCodePrealloc (computeMaxArgsNum tab) tab . (^. functionCode)) (HashMap.elems (tab ^. infoFunctions))

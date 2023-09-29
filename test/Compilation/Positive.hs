@@ -364,5 +364,10 @@ tests =
       "Test061: Traits"
       $(mkRelDir ".")
       $(mkRelFile "test061.juvix")
-      $(mkRelFile "out/test061.out")
+      $(mkRelFile "out/test061.out"),
+    posTest
+      "Test062: Overapplication"
+      $(mkRelDir ".")
+      $(mkRelFile "test062.juvix")
+      $(mkRelFile "out/test062.out")
   ]

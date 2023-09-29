@@ -118,7 +118,11 @@ fromReg lims tab =
     mainBody :: [Statement]
     mainBody =
       argDecls
-        ++ [StatementExpr $ macroCall "JUVIX_PROLOGUE" [integer (info ^. Reg.extraInfoMaxArgsNum)]]
+        ++ [ StatementExpr $
+               macroCall
+                 "JUVIX_PROLOGUE"
+                 [integer (info ^. Reg.extraInfoMaxArgsNum + info ^. Reg.extraInfoMaxCallClosuresArgsNum)]
+           ]
         ++ makeCStrings
         ++ [ stmtAssign (ExpressionVar "juvix_constrs_num") (integer (info ^. Reg.extraInfoConstrsNum)),
              stmtAssign (ExpressionVar "juvix_constr_info") (ExpressionVar "juvix_constr_info_array"),
@@ -422,32 +426,55 @@ fromRegInstr bNoStack info = \case
               ++ stmtsPopVars _instrCallLiveVars
 
     fromTailCallClosures :: Reg.InstrCallClosures -> [Statement]
-    fromTailCallClosures Reg.InstrCallClosures {..} =
-      stmtsPush (reverse (map fromValue _instrCallClosuresArgs))
-        ++ [ StatementExpr $
-               macroCall
-                 "TAIL_CALL_CLOSURES"
-                 [ fromVarRef _instrCallClosuresValue,
-                   integer (length _instrCallClosuresArgs)
-                 ]
-           ]
+    fromTailCallClosures Reg.InstrCallClosures {..}
+      | argsNum <= 3 =
+          stmtsAssignCArgs _instrCallClosuresValue _instrCallClosuresArgs
+            ++ [ StatementExpr $
+                   macroCall
+                     ("TAIL_APPLY_" <> show argsNum)
+                     [fromVarRef _instrCallClosuresValue]
+               ]
+      | otherwise =
+          stmtsAssignCArgs _instrCallClosuresValue _instrCallClosuresArgs
+            ++ [ StatementExpr $
+                   macroCall
+                     "TAIL_APPLY"
+                     [ fromVarRef _instrCallClosuresValue,
+                       integer argsNum
+                     ]
+               ]
+      where
+        argsNum = length _instrCallClosuresArgs
 
     fromCallClosures :: Reg.InstrCallClosures -> Sem r [Statement]
     fromCallClosures Reg.InstrCallClosures {..} = do
       lab <- freshLabel
       return $
         stmtsPushVars _instrCallClosuresLiveVars
-          ++ stmtsPush (reverse (map fromValue _instrCallClosuresArgs))
-          ++ [ StatementExpr $
-                 macroCall
-                   "CALL_CLOSURES"
-                   [ fromVarRef _instrCallClosuresValue,
-                     integer (length _instrCallClosuresArgs),
-                     ExpressionVar lab
-                   ],
+          ++ stmtsAssignCArgs _instrCallClosuresValue _instrCallClosuresArgs
+          ++ [ call lab,
                stmtAssign (fromVarRef _instrCallClosuresResult) (ExpressionVar "juvix_result")
              ]
           ++ stmtsPopVars _instrCallClosuresLiveVars
+      where
+        argsNum = length _instrCallClosuresArgs
+        call lab =
+          if
+              | argsNum <= 3 ->
+                  StatementExpr $
+                    macroCall
+                      ("APPLY_" <> show argsNum)
+                      [ fromVarRef _instrCallClosuresValue,
+                        ExpressionVar lab
+                      ]
+              | otherwise ->
+                  StatementExpr $
+                    macroCall
+                      "APPLY"
+                      [ fromVarRef _instrCallClosuresValue,
+                        integer argsNum,
+                        ExpressionVar lab
+                      ]
 
     fromBranch :: Reg.InstrBranch -> Sem r [Statement]
     fromBranch Reg.InstrBranch {..} = do
