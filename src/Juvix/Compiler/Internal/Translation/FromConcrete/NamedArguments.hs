@@ -49,33 +49,37 @@ helper ::
 helper loc = do
   whenJustM nextArgumentGroup $ \(impl, args, isLastBlock) -> do
     checkRepeated args
-    names <- nextNameGroup impl
+    (mdefault1, names) <- nextNameGroup impl
     (pendingArgs, (omittedNames, argmap)) <- scanGroup impl names args
-    emitArgs impl isLastBlock omittedNames argmap
+    emitArgs mdefault1 impl isLastBlock omittedNames argmap
     whenJust (nonEmpty pendingArgs) $ \pendingArgs' -> do
-      sig <- nextNameGroup Implicit
-      emitImplicit False sig mempty
+      (mdefault, sig) <- nextNameGroup Implicit
+      emitImplicit mdefault False sig mempty
       moreNames <- not . null <$> gets (^. stateRemainingNames)
       if
           | moreNames -> modify' (over stateRemainingArgs (ArgumentBlock (Irrelevant Nothing) Explicit (nonEmpty' pendingArgs) :))
           | otherwise -> throw . ErrUnexpectedArguments $ UnexpectedArguments pendingArgs'
     helper loc
   where
-    nextNameGroup :: IsImplicit -> Sem r (HashMap Symbol Int)
+    nextNameGroup :: IsImplicit -> Sem r (Maybe Expression, (HashMap Symbol Int))
     nextNameGroup impl = do
       remb <- gets (^. stateRemainingNames)
       case remb of
-        [] -> return mempty
+        [] -> return (Nothing, mempty)
         b : bs -> do
           let implNames = b ^. nameImplicit
+              defVal = b ^. nameDefault
+
           modify' (set stateRemainingNames bs)
           let r = (^. nameItemIndex) <$> b ^. nameBlock
+              matches = return (defVal, r)
+              fails :: Sem r (Maybe Expression, (HashMap Symbol Int)) = return (Nothing, mempty)
           case (impl, implNames) of
-            (Explicit, Explicit) -> return r
-            (Implicit, Implicit) -> return r
-            (ImplicitInstance, ImplicitInstance) -> return r
+            (Explicit, Explicit) -> matches
+            (Implicit, Implicit) -> matches
+            (ImplicitInstance, ImplicitInstance) -> matches
             (Explicit, Implicit) -> do
-              emitImplicit False r mempty
+              emitImplicit defVal False r mempty
               nextNameGroup impl
             (Explicit, ImplicitInstance) -> do
               emitImplicitInstance False r mempty
@@ -84,10 +88,10 @@ helper loc = do
               emitImplicitInstance False r mempty
               nextNameGroup impl
             (ImplicitInstance, Implicit) -> do
-              emitImplicit False r mempty
+              emitImplicit defVal False r mempty
               nextNameGroup impl
-            (Implicit, Explicit) -> return mempty
-            (ImplicitInstance, Explicit) -> return mempty
+            (Implicit, Explicit) -> fails
+            (ImplicitInstance, Explicit) -> fails
 
     nextArgumentGroup :: Sem r (Maybe (IsImplicit, [NamedArgument 'Scoped], Bool))
     nextArgumentGroup = do
@@ -105,9 +109,9 @@ helper loc = do
     checkRepeated args = whenJust (nonEmpty (findRepeated (map (^. namedArgName) args))) $ \reps ->
       throw . ErrDuplicateArgument $ DuplicateArgument reps
 
-    emitArgs :: IsImplicit -> Bool -> HashMap Symbol Int -> IntMap Expression -> Sem r ()
-    emitArgs = \case
-      Implicit -> emitImplicit
+    emitArgs :: Maybe Expression -> IsImplicit -> Bool -> HashMap Symbol Int -> IntMap Expression -> Sem r ()
+    emitArgs mdefault = \case
+      Implicit -> emitImplicit mdefault
       Explicit -> emitExplicit
       ImplicitInstance -> emitImplicitInstance
 
@@ -132,13 +136,14 @@ helper loc = do
         missingErr = throw . ErrMissingArguments . MissingArguments loc
 
     emitImplicitHelper ::
+      Maybe Expression ->
       (WithLoc Expression -> Expression) ->
       (HoleType 'Scoped -> Expression) ->
       Bool ->
       HashMap Symbol Int ->
       IntMap Expression ->
       Sem r ()
-    emitImplicitHelper exprBraces exprHole lastBlock omittedArgs args = go 0 (IntMap.toAscList args)
+    emitImplicitHelper mdefault exprBraces exprHole lastBlock omittedArgs args = go 0 (IntMap.toAscList args)
       where
         go :: Int -> [(Int, Expression)] -> Sem r ()
         go n = \case
@@ -152,15 +157,18 @@ helper loc = do
           where
             fillUntil n' = replicateM_ (n' - n) (mkWildcard >>= output)
             mkWildcard :: (Members '[NameIdGen] r') => Sem r' Expression
-            mkWildcard = exprBraces . WithLoc loc . exprHole . mkHole loc <$> freshNameId
+            mkWildcard = fmap (exprBraces . WithLoc loc) $ case mdefault of
+              Nothing -> exprHole . mkHole loc <$> freshNameId
+              -- TODO shift binders in defaultVal
+              Just defaultVal -> return defaultVal
         maxIx :: Maybe Int
         maxIx = fmap maximum1 . nonEmpty . toList $ omittedArgs
 
-    emitImplicit :: Bool -> HashMap Symbol Int -> IntMap Expression -> Sem r ()
-    emitImplicit = emitImplicitHelper ExpressionBraces ExpressionHole
+    emitImplicit :: Maybe Expression -> Bool -> HashMap Symbol Int -> IntMap Expression -> Sem r ()
+    emitImplicit def = emitImplicitHelper def ExpressionBraces ExpressionHole
 
     emitImplicitInstance :: Bool -> HashMap Symbol Int -> IntMap Expression -> Sem r ()
-    emitImplicitInstance = emitImplicitHelper mkDoubleBraces ExpressionInstanceHole
+    emitImplicitInstance = emitImplicitHelper Nothing mkDoubleBraces ExpressionInstanceHole
       where
         mkDoubleBraces :: WithLoc Expression -> Expression
         mkDoubleBraces (WithLoc eloc e) = run . runReader eloc $ do

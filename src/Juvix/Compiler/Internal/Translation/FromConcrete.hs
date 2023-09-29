@@ -798,7 +798,7 @@ goExpression = \case
                         _argBlockArgs = args
                       },
                 _namedAppSignature =
-                  Irrelevant (NameSignature [NameBlock (_recordCreationExtra ^. unIrrelevant . recordCreationExtraSignature . recordNames) Explicit])
+                  Irrelevant (NameSignature [NameBlock (_recordCreationExtra ^. unIrrelevant . recordCreationExtraSignature . recordNames) Explicit Nothing])
               }
       cls <- goLetFunDefs (fmap Concrete.LetFunctionDef defs)
       e <- runNamedArguments app >>= goExpression
