@@ -361,7 +361,7 @@ tests:
     stderr:
       contains: invalid-ref
     stdout:
-      contains: cloning
+      contains: Cloning
     exit-status: 1
 
   - name: git-dependencies-invalid-url
@@ -401,9 +401,9 @@ tests:
         # compile project
         juvix compile HelloWorld.juvix
     stderr:
-      contains: error
+      contains: Error
     stdout:
-      contains: cloning
+      contains: Cloning
     exit-status: 1
 
   - name: git-dependencies-offline
@@ -448,7 +448,7 @@ tests:
       matches:
         # compile should not attempt to clone the dependency
         regex: |-
-          ^((?!cloning).)*$
+          ^((?!Cloning).)*$
         options:
           - dot-all
     exit-status: 1
@@ -515,7 +515,7 @@ tests:
     stderr:
       contains: juvix clean
     stdout:
-      contains: cloning
+      contains: Cloning
     exit-status: 1
 
   - name: git-dependencies-duplicate-names
@@ -623,5 +623,5 @@ tests:
         juvix compile HelloWorld.juvix
     stderr: ""
     stdout:
-      contains: cloning
+      contains: Cloning
     exit-status: 0
