@@ -17,7 +17,6 @@ gen : Nat → Tree
 
 terminating
 sum : Nat → Tree → Maybe Nat
-  
   | x leaf := just 0
   | x (node y l r) :=
     if (x == y) nothing (step1 x y (sum x l) r);
@@ -35,12 +34,11 @@ maybeStepRun : Nat → Nat → Maybe Nat
   | x y := just (sub y x);
 
 run : Nat → Tree → Maybe Nat
-  
   | zero t := sum 0 t
   | (suc n) t := stepRun (suc n) t (run n t);
 
 stepRun : Nat → Tree → Maybe Nat → Maybe Nat
-  
+
   | n t nothing := sum n t
   | n t (just x) := maybe nothing (maybeStepRun x) (sum n t);
 

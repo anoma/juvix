@@ -1,35 +1,36 @@
 -- successively map K functions to a list of N integers
 module mapfun;
 
-import Stdlib.Prelude open;
-import Stdlib.Data.Nat.Ord open;
+import Stdlib.Prelude open hiding {+};
+import Stdlib.Data.Int open;
+import Stdlib.Data.Int.Ord open;
 
 mapfun : {A : Type} → List (A → A) → List A → List A
   | nil xs := xs
   | (f :: fs) xs := mapfun fs (map f xs);
 
-genfs : Nat → List (Nat → Nat)
+genfs : Nat → List (Int → Int)
   | zero := nil
-  | (suc n) := sub (suc n) :: genfs n;
+  | n@(suc n') := (-) (ofNat n) :: genfs n';
 
-step : Nat → (Nat → Nat) → Nat → Nat
-  | n f x := f (x + n);
+step : Nat → (Int → Int) → Int → Int
+  | n f x := f (x + ofNat n);
 
-genffs : Nat → List ((Nat → Nat) → Nat → Nat)
+genffs : Nat → List ((Int → Int) → Int → Int)
   | zero := nil
   | (suc n) := step (suc n) :: genffs n;
 
-sum_go : Nat → List Nat → Nat
+sum_go : Int → List Int → Int
   | acc nil := acc
   | acc (h :: t) := sum_go (acc + h) t;
 
-sum : List Nat → Nat := sum_go 0;
+sum : List Int → Int := sum_go 0;
 
 terminating
-gen : Nat → Nat → List Nat
-  | k n := if (k == n) (k :: nil) (k :: gen (suc k) n);
+gen : Int → Int → List Int
+  | k n := if (k == n) (k :: nil) (k :: gen (k + 1) n);
 
 main : IO :=
-  printNatLn
+  printIntLn
     (sum
       (mapfun (mapfun (genffs 100) (genfs 100)) (gen 1 10000)));

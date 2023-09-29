@@ -27,7 +27,6 @@ merget : List Nat → List Nat → List Nat → List Nat
 
 terminating
 sort' : List Nat × List Nat → List Nat
-  
   | (l1, l2) := merget (sort l1) (sort l2) nil;
 
 terminating
