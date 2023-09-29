@@ -54,6 +54,9 @@ tests:
 
         # compile project
         juvix compile HelloWorld.juvix
+        if [ ! -f "juvix.lock.json" ]; then
+          exit 1
+        fi
         ./HelloWorld
     stdout:
       contains: Hello from dep
@@ -364,6 +367,95 @@ tests:
         ./HelloWorld
     stdout:
       contains: "Hello from dep1\nHello from dep2"
+    exit-status: 0
+
+  - name: git-dependencies-uses-generated-lockfile
+    command:
+      shell:
+        - bash
+      script: |
+        temp=$(mktemp -d)
+        echo $temp
+        # trap 'rm -rf -- "$temp"' EXIT
+
+        # create dependency
+        mkdir $temp/dep
+        cd $temp/dep
+        git init
+
+        cat <<-EOF > HelloDep.juvix
+        module HelloDep;
+        import Stdlib.Prelude open;
+        main : IO := printStringLn "Hello from dep";
+        EOF
+        touch juvix.yaml
+
+        git add -A
+        git commit -m "commit1"
+
+        dep1hash=$(git rev-parse HEAD)
+
+        # create project that uses dependency
+        mkdir $temp/base
+        cd $temp/base
+
+        cat <<-EOF > juvix.yaml
+        name: HelloWorld
+        main: HelloWorld.juvix
+        dependencies:
+          - .juvix-build/stdlib
+          - git:
+              url: $temp/dep
+              name: dep1
+              ref: $dep1hash
+        version: 0.1.0
+        EOF
+
+        cat <<-EOF > HelloWorld.juvix
+        -- HelloWorld.juvix
+        module HelloWorld;
+
+        import Stdlib.Prelude open;
+        import HelloDep;
+
+        main : IO := HelloDep.main;
+        EOF
+
+        # compile project
+        juvix compile HelloWorld.juvix
+
+        # update dependency
+        cd $temp/dep
+        cat <<-EOF > HelloDep.juvix
+        module HelloDep;
+        import Stdlib.Prelude open;
+        main : IO := printStringLn "Hello from commit 2";
+        EOF
+
+        git add -A
+        git commit -m "commit2"
+
+        dep1hash=$(git rev-parse HEAD)
+
+        # compile project with new ref - should use lockfile ref
+        cd $temp/base
+
+        cat <<-EOF > juvix.yaml
+        name: HelloWorld
+        main: HelloWorld.juvix
+        dependencies:
+          - .juvix-build/stdlib
+          - git:
+              url: $temp/dep
+              name: dep1
+              ref: $dep1hash
+        version: 0.1.0
+        EOF
+
+        juvix compile HelloWorld.juvix
+        ./HelloWorld
+    stdout:
+      contains: Hello from dep
     exit-status: 0
 
   - name: git-dependencies-nested-lockfile
