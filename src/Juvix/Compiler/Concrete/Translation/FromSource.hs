@@ -1449,19 +1449,3 @@ usingOrHiding :: (Members '[InfoTableBuilder, JudocStash, NameIdGen, PragmasStas
 usingOrHiding =
   Using <$> pusingList
     <|> Hiding <$> phidingList
-
--- openSyntax :: forall r. (Members '[Error ParserError, PathResolver, Files, InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => Import 'Parsed -> ParsecS r (OpenModule 'Parsed)
--- openSyntax im = do
---   _openModuleKw <- kw kwOpen
---   _openUsingHiding <- optional usingOrHiding
---   _openPublicKw <- Irrelevant <$> optional (kw kwPublic)
---   let _openModuleName = topModulePathToName (im ^. importModule)
---       _openModuleImportKw = Just (im ^. importKw)
---       _openImportAsName = im ^. importAsName
---       _openPublic = maybe NoPublic (const Public) (_openPublicKw ^. unIrrelevant)
---   return OpenModule {..}
-
--- importOpenSyntax :: forall r. (Members '[Error ParserError, PathResolver, Files, InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (Either (Import 'Parsed) (OpenModule 'Parsed))
--- importOpenSyntax = do
---   im <- import_
---   (Right <$> openSyntax im) <|> return (Left im)

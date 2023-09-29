@@ -1107,8 +1107,6 @@ deriving stock instance Ord (OpenModule 'Scoped)
 
 data OpenModuleParams (s :: Stage) = OpenModuleParams
   { _openModuleKw :: KeywordRef,
-    -- _openModuleImportKw :: Maybe KeywordRef,
-    -- _openImportAsName :: Maybe (ModulePathType s 'ModuleTop),
     _openUsingHiding :: Maybe (UsingHiding s),
     _openPublicKw :: Irrelevant (Maybe KeywordRef),
     _openPublic :: PublicAnn

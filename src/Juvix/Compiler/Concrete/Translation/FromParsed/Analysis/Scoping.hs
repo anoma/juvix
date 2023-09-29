@@ -1438,37 +1438,6 @@ lookupModuleSymbol n = do
       NameUnqualified s -> ([], s)
       NameQualified (QualifiedName (SymbolPath p) s) -> (toList p, s)
 
--- checkOpenImportModule ::
---   (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
---   OpenModule 'Parsed ->
---   Sem r (OpenModule 'Scoped)
--- checkOpenImportModule op
---   | Just k <- op ^. openModuleImportKw =
---       let import_ :: Import 'Parsed
---           import_ =
---             Import
---               { _importKw = k,
---                 _importModule = moduleNameToTopModulePath (op ^. openModuleName),
---                 _importAsName = op ^. openImportAsName
---               }
---        in do
---             import' <- checkImport import_
---             let topName :: S.TopModulePath = over S.nameConcrete moduleNameToTopModulePath (import' ^. importModule . moduleRefName)
---                 op' =
---                   op
---                     { _openModuleImportKw = Nothing,
---                       _openImportAsName = Nothing,
---                       _openModuleName = maybe (op ^. openModuleName) topModulePathToName (op ^. openImportAsName)
---                     }
---             scopedOpen <- checkOpenModuleNoImport (Just (import' ^. importModule)) op'
---             return
---               scopedOpen
---                 { _openModuleImportKw = Just k,
---                   _openModuleName = project (import' ^. importModule),
---                   _openImportAsName = (\asTxt -> set S.nameConcrete asTxt topName) <$> op ^. openImportAsName
---                 }
---   | otherwise = impossible
-
 checkImportOpenParams ::
   forall r.
   (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
