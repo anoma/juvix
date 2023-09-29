@@ -2,6 +2,7 @@ module Juvix.Compiler.Pipeline.Lockfile where
 
 import Data.Aeson.BetterErrors
 import Data.Aeson.BetterErrors qualified as Aeson
+import Data.Aeson.Encode.Pretty
 import Data.Aeson.Encoding (pair)
 import Data.Aeson.TH
 import Data.ByteString (toStrict)
@@ -94,10 +95,18 @@ mayReadLockfile root = do
     mkLockfileInfo :: Path Abs File -> Lockfile -> LockfileInfo
     mkLockfileInfo _lockfileInfoPath _lockfileInfoLockfile = LockfileInfo {..}
 
+lockfileEncodeConfig :: Config
+lockfileEncodeConfig =
+  defConfig
+    { -- This ensures that the dependencies field is serialized after the git and path fields.
+      confCompare = keyOrder [Str.git, Str.path_] `mappend` compare,
+      confTrailingNewline = True
+    }
+
 writeLockfile :: (Members '[Files] r) => Path Abs Dir -> Lockfile -> Sem r ()
 writeLockfile root lf = do
   ensureDir' (parent lockfilePath)
-  writeFileBS lockfilePath (toStrict (encode lf))
+  writeFileBS lockfilePath (toStrict (encodePretty' lockfileEncodeConfig lf))
   where
     lockfilePath :: Path Abs File
     lockfilePath = mkPackageLockfilePath root
