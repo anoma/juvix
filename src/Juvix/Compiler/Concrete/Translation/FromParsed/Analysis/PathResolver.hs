@@ -11,6 +11,8 @@ module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver
     runPathResolverPipe,
     runPathResolverPipe',
     evalPathResolverPipe,
+    resolverCache,
+    resolverCacheItemPackage,
     ResolverState,
     resolverFiles,
     iniResolverState,
