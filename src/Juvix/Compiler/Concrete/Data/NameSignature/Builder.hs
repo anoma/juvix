@@ -2,30 +2,29 @@ module Juvix.Compiler.Concrete.Data.NameSignature.Builder
   ( mkNameSignature,
     mkRecordNameSignature,
     HasNameSignature,
-    module Juvix.Compiler.Concrete.Data.NameSignature.Base,
     -- to supress unused warning
     getBuilder,
   )
 where
 
 import Data.HashMap.Strict qualified as HashMap
-import Juvix.Compiler.Concrete.Data.NameSignature.Base
 import Juvix.Compiler.Concrete.Data.NameSignature.Error
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
 import Juvix.Prelude
 
 data NameSignatureBuilder m a where
-  AddSymbol :: IsImplicit -> Symbol -> NameSignatureBuilder m ()
+  AddSymbol :: IsImplicit -> Maybe (ArgDefault 'Parsed) -> Symbol -> NameSignatureBuilder m ()
   EndBuild :: NameSignatureBuilder m a
   -- | for debugging
   GetBuilder :: NameSignatureBuilder m BuilderState
 
 data BuilderState = BuilderState
   { _stateCurrentImplicit :: Maybe IsImplicit,
+    _stateCurrentDefault :: Maybe (ArgDefault 'Parsed),
     _stateNextIx :: Int,
     -- | maps to itself
     _stateSymbols :: HashMap Symbol Symbol,
-    _stateReverseClosedBlocks :: [NameBlock],
+    _stateReverseClosedBlocks :: [NameBlock 'Parsed],
     _stateCurrentBlock :: HashMap Symbol NameItem
   }
 
@@ -58,7 +57,7 @@ instance HasNameSignature (InductiveDef 'Parsed, ConstructorDef 'Parsed) where
       addRecord RhsRecord {..} = mapM_ addField _rhsRecordFields
         where
           addField :: RecordField 'Parsed -> Sem r ()
-          addField RecordField {..} = addSymbol Explicit _fieldName
+          addField RecordField {..} = addSymbol Explicit Nothing _fieldName
       addRhs :: ConstructorRhs 'Parsed -> Sem r ()
       addRhs = \case
         ConstructorRhsGadt g -> addAtoms (g ^. rhsGadtType)
@@ -73,7 +72,7 @@ instance HasNameSignature (InductiveDef 'Parsed) where
 mkNameSignature ::
   (Members '[Error ScoperError] r, HasNameSignature d) =>
   d ->
-  Sem r NameSignature
+  Sem r (NameSignature 'Parsed)
 mkNameSignature d = do
   fmap (fromBuilderState . fromLeft impossible)
     . mapError ErrNameSignature
@@ -88,22 +87,24 @@ iniBuilderState :: BuilderState
 iniBuilderState =
   BuilderState
     { _stateCurrentImplicit = Nothing,
+      _stateCurrentDefault = Nothing,
       _stateNextIx = 0,
       _stateSymbols = mempty,
       _stateReverseClosedBlocks = [],
       _stateCurrentBlock = mempty
     }
 
-fromBuilderState :: BuilderState -> NameSignature
+fromBuilderState :: BuilderState -> NameSignature 'Parsed
 fromBuilderState b =
   NameSignature
     { _nameSignatureArgs = reverse (addCurrent (b ^. stateReverseClosedBlocks))
     }
   where
-    addCurrent :: [NameBlock] -> [NameBlock]
+    addCurrent :: [NameBlock 'Parsed] -> [NameBlock 'Parsed]
     addCurrent
       | null (b ^. stateCurrentBlock) = id
-      | Just i <- b ^. stateCurrentImplicit = (NameBlock (b ^. stateCurrentBlock) i :)
+      | Just i <- b ^. stateCurrentImplicit =
+          (NameBlock (b ^. stateCurrentBlock) i (b ^? stateCurrentDefault . _Just . argDefaultValue) :)
       | otherwise = id
 
 addAtoms :: forall r. (Members '[NameSignatureBuilder] r) => ExpressionAtoms 'Parsed -> Sem r ()
@@ -121,11 +122,12 @@ addAtoms atoms = addAtom . (^. expressionAtoms . _head1) $ atoms
       where
         addParameter :: FunctionParameter 'Parsed -> Sem r ()
         addParameter = \case
-          FunctionParameterName s -> addSymbol _paramImplicit s
+          -- TODO add default values to Pi types?
+          FunctionParameterName s -> addSymbol _paramImplicit Nothing s
           FunctionParameterWildcard {} -> endBuild
 
 addInductiveParams' :: (Members '[NameSignatureBuilder] r) => IsImplicit -> InductiveParameters 'Parsed -> Sem r ()
-addInductiveParams' i a = forM_ (a ^. inductiveParametersNames) (addSymbol i)
+addInductiveParams' i a = forM_ (a ^. inductiveParametersNames) (addSymbol i Nothing)
 
 addInductiveParams :: (Members '[NameSignatureBuilder] r) => InductiveParameters 'Parsed -> Sem r ()
 addInductiveParams = addInductiveParams' Explicit
@@ -135,7 +137,7 @@ addConstructorParams = addInductiveParams' Implicit
 
 addSigArg :: (Members '[NameSignatureBuilder] r) => SigArg 'Parsed -> Sem r ()
 addSigArg a = forM_ (a ^. sigArgNames) $ \case
-  ArgumentSymbol s -> addSymbol (a ^. sigArgImplicit) s
+  ArgumentSymbol s -> addSymbol (a ^. sigArgImplicit) (a ^. sigArgDefault) s
   ArgumentWildcard {} -> return ()
 
 type Re r = State BuilderState ': Error BuilderState ': Error NameSignatureError ': r
@@ -145,13 +147,13 @@ re ::
   Sem (NameSignatureBuilder ': r) a ->
   Sem (Re r) a
 re = reinterpret3 $ \case
-  AddSymbol impl k -> addSymbol' impl k
+  AddSymbol impl mdef k -> addSymbol' impl mdef k
   EndBuild -> endBuild'
   GetBuilder -> get
 {-# INLINE re #-}
 
-addSymbol' :: forall r. IsImplicit -> Symbol -> Sem (Re r) ()
-addSymbol' impl sym = do
+addSymbol' :: forall r. IsImplicit -> Maybe (ArgDefault 'Parsed) -> Symbol -> Sem (Re r) ()
+addSymbol' impl mdef sym = do
   curImpl <- gets (^. stateCurrentImplicit)
   if
       | Just impl == curImpl -> addToCurrentBlock
@@ -179,11 +181,14 @@ addSymbol' impl sym = do
     startNewBlock = do
       curBlock <- gets (^. stateCurrentBlock)
       mcurImpl <- gets (^. stateCurrentImplicit)
+      mcurDef <- fmap (^. argDefaultValue) <$> gets (^. stateCurrentDefault)
       modify' (set stateCurrentImplicit (Just impl))
+      modify' (set stateCurrentDefault mdef)
       modify' (set stateCurrentBlock mempty)
       modify' (set stateNextIx 0)
-      whenJust mcurImpl $ \curImpl -> modify' (over stateReverseClosedBlocks (NameBlock curBlock curImpl :))
-      addSymbol' impl sym
+      whenJust mcurImpl $ \curImpl ->
+        modify' (over stateReverseClosedBlocks (NameBlock curBlock curImpl mcurDef :))
+      addSymbol' impl mdef sym
 
 endBuild' :: Sem (Re r) a
 endBuild' = get @BuilderState >>= throw

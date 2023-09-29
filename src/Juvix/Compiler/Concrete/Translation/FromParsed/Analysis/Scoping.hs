@@ -204,7 +204,7 @@ reserveSymbolOf ::
     SingI ns
   ) =>
   Sing nameKind ->
-  Maybe NameSignature ->
+  Maybe (NameSignature 'Parsed) ->
   Symbol ->
   Sem r S.Symbol
 reserveSymbolOf k nameSig s = do
@@ -2205,16 +2205,23 @@ checkNamedApplication ::
   Sem r (NamedApplication 'Scoped)
 checkNamedApplication napp = do
   _namedAppName <- checkScopedIden (napp ^. namedAppName)
-  _namedAppSignature <- Irrelevant <$> getNameSignature _namedAppName
+  _namedAppSignature <- Irrelevant <$> (getNameSignature _namedAppName >>= checkNameSignature)
   _namedAppArgs <- mapM checkArgumentBlock (napp ^. namedAppArgs)
   return NamedApplication {..}
   where
+    checkNameSignature :: NameSignature 'Parsed -> Sem r (NameSignature 'Scoped)
+    checkNameSignature = traverseOf nameSignatureArgs (mapM checkNameBlock)
+      where
+        checkNameBlock :: NameBlock 'Parsed -> Sem r (NameBlock 'Scoped)
+        checkNameBlock = traverseOf nameDefault (mapM checkParseExpressionAtoms)
+
     checkNamedArg :: NamedArgument 'Parsed -> Sem r (NamedArgument 'Scoped)
     checkNamedArg n = do
       let _namedArgName = n ^. namedArgName
           _namedArgAssignKw = n ^. namedArgAssignKw
       _namedArgValue <- checkParseExpressionAtoms (n ^. namedArgValue)
       return NamedArgument {..}
+
     checkArgumentBlock :: ArgumentBlock 'Parsed -> Sem r (ArgumentBlock 'Scoped)
     checkArgumentBlock b = do
       let _argBlockDelims = b ^. argBlockDelims
@@ -2241,7 +2248,7 @@ getRecordInfo' name nameId =
     err :: Sem r a
     err = throw (ErrNotARecord (NotARecord name))
 
-getNameSignature :: (Members '[State ScoperState, Error ScoperError] r) => ScopedIden -> Sem r NameSignature
+getNameSignature :: (Members '[State ScoperState, Error ScoperError] r) => ScopedIden -> Sem r (NameSignature 'Parsed)
 getNameSignature s = do
   sig <- maybeM (throw err) return (lookupNameSignature (s ^. scopedIdenFinal . S.nameId))
   when (null (sig ^. nameSignatureArgs)) (throw err)
@@ -2249,7 +2256,7 @@ getNameSignature s = do
   where
     err = ErrNoNameSignature (NoNameSignature s)
 
-lookupNameSignature :: (Members '[State ScoperState] r) => S.NameId -> Sem r (Maybe NameSignature)
+lookupNameSignature :: (Members '[State ScoperState] r) => S.NameId -> Sem r (Maybe (NameSignature 'Parsed))
 lookupNameSignature s = gets (^. scoperSignatures . at s)
 
 checkIterator ::

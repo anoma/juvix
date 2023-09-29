@@ -10,7 +10,6 @@ where
 import Data.HashMap.Strict qualified as HashMap
 import Data.List.NonEmpty.Extra qualified as NonEmpty
 import Juvix.Compiler.Concrete.Data.InfoTable
-import Juvix.Compiler.Concrete.Data.NameSignature.Base
 import Juvix.Compiler.Concrete.Data.Scope.Base
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Extra qualified as Concrete
@@ -166,8 +165,8 @@ instance (SingI s) => PrettyPrint (ListPattern s) where
 instance PrettyPrint Void where
   ppCode = absurd
 
-instance PrettyPrint NameBlock where
-  ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => NameBlock -> Sem r ()
+instance (SingI s) => PrettyPrint (NameBlock s) where
+  ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => NameBlock s -> Sem r ()
   ppCode NameBlock {..} = do
     let delims = case _nameImplicit of
           Implicit -> braces
@@ -175,12 +174,15 @@ instance PrettyPrint NameBlock where
           Explicit -> parens
         ppElem :: NameItem -> Sem r ()
         ppElem NameItem {..} = ppCode _nameItemSymbol <> ppCode Kw.kwExclamation <> noLoc (pretty _nameItemIndex)
-    delims (hsepSemicolon (map ppElem (toList _nameBlock)))
+        defaultVal = do
+          d <- _nameDefault
+          return (noLoc C.kwAssign <+> ppExpressionType d)
+    delims (hsepSemicolon (map ppElem (toList _nameBlock)) <+?> defaultVal)
 
 instance (PrettyPrint a, PrettyPrint b) => PrettyPrint (a, b) where
   ppCode (a, b) = tuple [ppCode a, ppCode b]
 
-instance PrettyPrint NameSignature where
+instance (SingI s) => PrettyPrint (NameSignature s) where
   ppCode NameSignature {..}
     | null _nameSignatureArgs = noLoc (pretty @Text "<empty name signature>")
     | otherwise = hsep . map ppCode $ _nameSignatureArgs

@@ -24,7 +24,6 @@ import Juvix.Compiler.Concrete.Data.Literal
 import Juvix.Compiler.Concrete.Data.ModuleIsTop
 import Juvix.Compiler.Concrete.Data.Name
 import Juvix.Compiler.Concrete.Data.NameRef
-import Juvix.Compiler.Concrete.Data.NameSignature.Base
 import Juvix.Compiler.Concrete.Data.NameSpace
 import Juvix.Compiler.Concrete.Data.PublicAnn
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
@@ -123,7 +122,7 @@ type family RecordNameSignatureType s = res | res -> s where
 type NameSignatureType :: Stage -> GHC.Type
 type family NameSignatureType s = res | res -> s where
   NameSignatureType 'Parsed = ()
-  NameSignatureType 'Scoped = NameSignature
+  NameSignatureType 'Scoped = NameSignature 'Scoped
 
 type ModulePathType :: Stage -> ModuleIsTop -> GHC.Type
 type family ModulePathType s t = res | res -> t s where
@@ -148,6 +147,29 @@ type family ModuleEndType t = res | res -> t where
 -- pretty-printing. Also, we probably don't want to impose pragma formatting
 -- choices on the user.
 type ParsedPragmas = WithLoc (WithSource Pragmas)
+
+data NameItem = NameItem
+  { _nameItemSymbol :: Symbol,
+    _nameItemIndex :: Int
+  }
+  deriving stock (Show)
+
+data NameBlock s = NameBlock
+  { -- | Symbols map to themselves so we can retrive the location
+    -- | NOTE the index is wrt to the block, not the whole signature.
+    _nameBlock :: HashMap Symbol NameItem,
+    _nameImplicit :: IsImplicit,
+    _nameDefault :: Maybe (ExpressionType s)
+  }
+
+-- | Two consecutive blocks should have different implicitness
+newtype NameSignature (s :: Stage) = NameSignature
+  { _nameSignatureArgs :: [NameBlock s]
+  }
+
+newtype RecordNameSignature = RecordNameSignature
+  { _recordNames :: HashMap Symbol NameItem
+  }
 
 data Argument (s :: Stage)
   = ArgumentSymbol (SymbolType s)
@@ -1522,14 +1544,12 @@ data RecordUpdateExtra = RecordUpdateExtra
     _recordUpdateExtraVars :: [S.Symbol],
     _recordUpdateExtraSignature :: RecordNameSignature
   }
-  deriving stock (Show)
 
 data RecordCreationExtra = RecordCreationExtra
   { -- | Implicitly bound fields sorted by index
     _recordCreationExtraVars :: NonEmpty S.Symbol,
     _recordCreationExtraSignature :: RecordNameSignature
   }
-  deriving stock (Show)
 
 newtype ParensRecordUpdate = ParensRecordUpdate
   { _parensRecordUpdate :: RecordUpdate 'Scoped
@@ -1852,6 +1872,10 @@ makeLenses ''AliasDef
 makeLenses ''FixitySyntaxDef
 makeLenses ''ParsedFixityInfo
 makeLenses ''ParsedFixityFields
+makeLenses ''NameSignature
+makeLenses ''RecordNameSignature
+makeLenses ''NameBlock
+makeLenses ''NameItem
 
 fixityFieldHelper :: SimpleGetter (ParsedFixityFields s) (Maybe a) -> SimpleGetter (ParsedFixityInfo s) (Maybe a)
 fixityFieldHelper l = to (^? fixityFields . _Just . l . _Just)

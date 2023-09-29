@@ -5,7 +5,6 @@ where
 
 import Data.HashMap.Strict qualified as HashMap
 import Data.IntMap.Strict qualified as IntMap
-import Juvix.Compiler.Concrete.Data.NameSignature.Base
 import Juvix.Compiler.Concrete.Gen qualified as Gen
 import Juvix.Compiler.Concrete.Keywords
 import Juvix.Compiler.Concrete.Language
@@ -14,7 +13,7 @@ import Juvix.Prelude
 
 data BuilderState = BuilderState
   { _stateRemainingArgs :: [ArgumentBlock 'Scoped],
-    _stateRemainingNames :: [NameBlock]
+    _stateRemainingNames :: [NameBlock 'Scoped]
   }
 
 makeLenses ''BuilderState
@@ -32,7 +31,7 @@ runNamedArguments napp = do
       $ helper (getLoc napp)
   return (foldl' mkApp (ExpressionIdentifier (napp ^. namedAppName)) args)
   where
-    sig :: NameSignature = napp ^. namedAppSignature . unIrrelevant
+    sig :: NameSignature 'Scoped = napp ^. namedAppSignature . unIrrelevant
     mkApp :: Expression -> Expression -> Expression
     mkApp a = ExpressionApplication . Application a
     iniBuilderState :: BuilderState

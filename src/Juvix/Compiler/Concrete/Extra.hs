@@ -16,7 +16,6 @@ where
 import Data.HashMap.Strict qualified as HashMap
 import Data.IntMap.Strict qualified as IntMap
 import Data.List.NonEmpty qualified as NonEmpty
-import Juvix.Compiler.Concrete.Data.NameSignature.Base
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Language
 import Juvix.Prelude hiding (some)
@@ -140,8 +139,8 @@ flattenStatement = \case
 recordNameSignatureByIndex :: RecordNameSignature -> IntMap Symbol
 recordNameSignatureByIndex = IntMap.fromList . (^.. recordNames . each . to mkAssoc)
   where
-  mkAssoc :: NameItem -> (Int, Symbol)
-  mkAssoc NameItem {..} = (_nameItemIndex, _nameItemSymbol)
+    mkAssoc :: NameItem -> (Int, Symbol)
+    mkAssoc NameItem {..} = (_nameItemIndex, _nameItemSymbol)
 
 getExpressionAtomIden :: ExpressionAtom 'Scoped -> Maybe S.Name
 getExpressionAtomIden = \case
