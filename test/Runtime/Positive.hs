@@ -133,5 +133,15 @@ tests =
       "Test020: Higher-order function composition"
       $(mkRelDir ".")
       $(mkRelFile "test020.c")
-      $(mkRelFile "out/test020.out")
+      $(mkRelFile "out/test020.out"),
+    PosTest
+      "Test021: Higher-order functions with apply"
+      $(mkRelDir ".")
+      $(mkRelFile "test021.c")
+      $(mkRelFile "out/test021.out"),
+    PosTest
+      "Test022: Dynamic closure extension with apply"
+      $(mkRelDir ".")
+      $(mkRelFile "test022.c")
+      $(mkRelFile "out/test022.out")
   ]

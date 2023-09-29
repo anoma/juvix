@@ -2,16 +2,13 @@
 
 #include <juvix/api.h>
 
-#define JUVIX_DECL_ARGS \
-    DECL_ARG(0);        \
-    DECL_ARG(1)
-
 static constr_info_t juvix_constr_info_array[BUILTIN_UIDS_NUM] = {
     BUILTIN_UIDS_INFO};
 
 int main() {
-    JUVIX_DECL_ARGS;
-    JUVIX_PROLOGUE(2);
+    DECL_ARG(0);
+    DECL_ARG(1);
+    JUVIX_PROLOGUE(3);
 
     juvix_constrs_num = BUILTIN_UIDS_NUM;
     juvix_constr_info = juvix_constr_info_array;
