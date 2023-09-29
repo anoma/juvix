@@ -293,8 +293,8 @@ tests =
       "Hole as numeric type"
       $(mkRelDir "issue2373")
       $(mkRelFile "Main.juvix"),
-    posTest,
-    "Hole in type parameter"
+    posTest
+      "Hole in type parameter"
       $(mkRelDir ".")
       $(mkRelFile "HoleTypeParameter.juvix")
   ]
