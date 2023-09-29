@@ -312,7 +312,7 @@ preFunctionDef f = do
       Nothing ->
         map
           getPatternName
-          (head (f ^. Internal.funDefClauses) ^. Internal.clausePatterns)
+          (fst (Internal.unfoldLambda (f ^. Internal.funDefBody)))
 
     normalizeBuiltinName :: Maybe BuiltinFunction -> Text -> Text
     normalizeBuiltinName blt name = case blt of
@@ -378,7 +378,10 @@ mkFunBody ::
   Internal.FunctionDef ->
   Sem r Node
 mkFunBody ty f =
-  mkBody ty (f ^. Internal.funDefName . nameLoc) (fmap (\c -> (c ^. Internal.clausePatterns, c ^. Internal.clauseBody)) (f ^. Internal.funDefClauses))
+  mkBody
+    ty
+    (f ^. Internal.funDefName . nameLoc)
+    (pure (Internal.unfoldLambda (f ^. Internal.funDefBody)))
 
 mkBody ::
   forall r.

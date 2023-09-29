@@ -158,24 +158,17 @@ subsHoles s = over leafExpressions helper
       ExpressionInstanceHole h -> fromMaybe e (s ^. at h)
       _ -> e
 
-instance HasExpressions FunctionClause where
-  leafExpressions f c = do
-    _clauseBody <- leafExpressions f (c ^. clauseBody)
-    _clausePatterns <- traverse (leafExpressions f) (c ^. clausePatterns)
-    pure FunctionClause {_clauseName = c ^. clauseName, ..}
-
 instance HasExpressions Example where
   leafExpressions f = traverseOf exampleExpression (leafExpressions f)
 
 instance HasExpressions FunctionDef where
-  -- leafExpressions f (FunctionDef name ty clauses bi) = do
   leafExpressions f FunctionDef {..} = do
-    clauses' <- traverse (leafExpressions f) _funDefClauses
+    body' <- leafExpressions f _funDefBody
     ty' <- leafExpressions f _funDefType
     examples' <- traverse (leafExpressions f) _funDefExamples
     pure
       FunctionDef
-        { _funDefClauses = clauses',
+        { _funDefBody = body',
           _funDefType = ty',
           _funDefExamples = examples',
           _funDefTerminating,
@@ -315,6 +308,21 @@ viewConstructorType = first (map (^. paramType)) . unfoldFunType
 
 constructorArgs :: Expression -> [Expression]
 constructorArgs = fst . viewConstructorType
+
+unfoldLambdaClauses :: Expression -> Maybe (NonEmpty (NonEmpty PatternArg, Expression))
+unfoldLambdaClauses t = do
+  ExpressionLambda Lambda {..} <- return t
+  let mkClause :: LambdaClause -> (NonEmpty PatternArg, Expression)
+      mkClause LambdaClause {..} = first (appendList _lambdaPatterns) (unfoldLambda _lambdaBody)
+  return (mkClause <$> _lambdaClauses)
+
+-- Unfolds *single* clause lambdas
+unfoldLambda :: Expression -> ([PatternArg], Expression)
+unfoldLambda t = case t of
+  ExpressionLambda Lambda {..}
+    | LambdaClause {..} :| [] <- _lambdaClauses ->
+        first (toList _lambdaPatterns <>) (unfoldLambda _lambdaBody)
+  _ -> ([], t)
 
 -- | a -> (b -> c)  ==> ([a, b], c)
 unfoldFunType :: Expression -> ([FunctionParameter], Expression)
@@ -513,9 +521,9 @@ leftEq a b free =
     . evalState (mempty @(HashMap Name Name))
     $ matchExpressions (toExpression a) (toExpression b)
 
-clauseLhsAsExpression :: FunctionClause -> Expression
-clauseLhsAsExpression cl =
-  foldApplication (toExpression (cl ^. clauseName)) (map toApplicationArg (cl ^. clausePatterns))
+clauseLhsAsExpression :: Name -> [PatternArg] -> Expression
+clauseLhsAsExpression clName pats =
+  foldApplication (toExpression clName) (map toApplicationArg pats)
 
 infix 4 ==%
 

@@ -358,6 +358,7 @@ deriving stock instance (Ord (FixitySyntaxDef 'Scoped))
 data FixityDef = FixityDef
   { _fixityDefSymbol :: S.Symbol,
     _fixityDefFixity :: Fixity,
+    -- | Used internally for printing parentheses.
     _fixityDefPrec :: Int
   }
   deriving stock (Show, Eq, Ord)

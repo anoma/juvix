@@ -238,25 +238,17 @@ instance PrettyCode FunctionDef where
     builtin' <- fmap (kwBuiltin <+>) <$> mapM ppCode (f ^. funDefBuiltin)
     funDefName' <- ppCode (f ^. funDefName)
     funDefType' <- ppCode (f ^. funDefType)
-    clauses' <- mapM ppCode (f ^. funDefClauses)
+    body' <- ppCode (f ^. funDefBody)
     return $
       builtin'
         <?+> funDefName'
           <+> kwColon
           <+> funDefType'
-            <> hardline
-            <> vsep (toList clauses')
+            <> oneLineOrNext (kwAssign <+> body')
 
 instance PrettyCode PreLetStatement where
   ppCode = \case
     PreLetFunctionDef f -> ppCode f
-
-instance PrettyCode FunctionClause where
-  ppCode c = do
-    funName <- ppCode (c ^. clauseName)
-    clausePatterns' <- hsepMaybe <$> mapM ppCodeAtom (c ^. clausePatterns)
-    clauseBody' <- ppCode (c ^. clauseBody)
-    return $ nest 2 (funName <+?> clausePatterns' <+> kwAssign <+> clauseBody')
 
 instance PrettyCode Import where
   ppCode i = do

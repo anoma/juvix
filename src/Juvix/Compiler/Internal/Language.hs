@@ -86,7 +86,7 @@ data FunctionDef = FunctionDef
   { _funDefName :: FunctionName,
     _funDefType :: Expression,
     _funDefExamples :: [Example],
-    _funDefClauses :: NonEmpty FunctionClause,
+    _funDefBody :: Expression,
     _funDefTerminating :: Bool,
     _funDefInstance :: Bool,
     _funDefBuiltin :: Maybe BuiltinFunction,
@@ -95,15 +95,6 @@ data FunctionDef = FunctionDef
   deriving stock (Eq, Generic, Data)
 
 instance Hashable FunctionDef
-
-data FunctionClause = FunctionClause
-  { _clauseName :: FunctionName,
-    _clausePatterns :: [PatternArg],
-    _clauseBody :: Expression
-  }
-  deriving stock (Eq, Generic, Data)
-
-instance Hashable FunctionClause
 
 data Iden
   = IdenFunction Name
@@ -214,7 +205,7 @@ data Lambda = Lambda
   deriving stock (Eq, Generic, Data)
 
 data LambdaClause = LambdaClause
-  { _lambdaPatterns :: NonEmpty PatternArg, -- only explicit patterns are allowed
+  { _lambdaPatterns :: NonEmpty PatternArg,
     _lambdaBody :: Expression
   }
   deriving stock (Eq, Generic, Data)
@@ -327,7 +318,6 @@ makeLenses ''Example
 makeLenses ''PatternArg
 makeLenses ''Import
 makeLenses ''FunctionDef
-makeLenses ''FunctionClause
 makeLenses ''InductiveDef
 makeLenses ''AxiomDef
 makeLenses ''ModuleBody'
@@ -438,11 +428,8 @@ instance HasLoc LambdaClause where
 instance HasLoc Lambda where
   getLoc l = getLocSpan (l ^. lambdaClauses)
 
-instance HasLoc FunctionClause where
-  getLoc f = getLoc (f ^. clauseName) <> getLoc (f ^. clauseBody)
-
 instance HasLoc FunctionDef where
-  getLoc f = getLoc (f ^. funDefName) <> getLocSpan (f ^. funDefClauses)
+  getLoc f = getLoc (f ^. funDefName) <> getLoc (f ^. funDefBody)
 
 instance HasLoc MutualBlockLet where
   getLoc (MutualBlockLet defs) = getLocSpan defs

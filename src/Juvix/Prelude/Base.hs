@@ -117,6 +117,7 @@ import Data.List.Extra qualified as List
 import Data.List.NonEmpty qualified as NonEmpty
 import Data.List.NonEmpty.Extra
   ( NonEmpty (..),
+    appendList,
     head,
     last,
     maximum1,
@@ -124,6 +125,7 @@ import Data.List.NonEmpty.Extra
     minimum1,
     minimumOn1,
     nonEmpty,
+    prependList,
     some1,
     (|:),
   )

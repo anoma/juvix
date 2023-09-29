@@ -104,10 +104,7 @@ checkStrictlyPositiveOccurrences ty ctorName name recLimit ref =
         helperFunctionDef :: FunctionDef -> Sem r ()
         helperFunctionDef d = do
           helper inside (d ^. funDefType)
-          mapM_ helperFunctionClause (d ^. funDefClauses)
-
-        helperFunctionClause :: FunctionClause -> Sem r ()
-        helperFunctionClause c = helper inside (c ^. clauseBody)
+          helper inside (d ^. funDefBody)
 
         helperSimpleLambda :: SimpleLambda -> Sem r ()
         helperSimpleLambda (SimpleLambda _ lamVarTy lamBody) = do

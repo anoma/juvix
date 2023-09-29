@@ -195,7 +195,7 @@ goFunctionDefHelper f = do
   when (f ^. funDefInstance) $
     goInstance f
   goExpression (Just (f ^. funDefName)) (f ^. funDefType)
-  mapM_ (goFunctionClause (f ^. funDefName)) (f ^. funDefClauses)
+  goExpression (Just (f ^. funDefName)) (f ^. funDefBody)
 
 -- constructors of an inductive type depend on the inductive type, not the other
 -- way round; an inductive type depends on the types of its constructors
@@ -203,11 +203,6 @@ goConstructorDef :: (Members '[State DependencyGraph, State StartNodes, Reader E
 goConstructorDef indName c = do
   addEdge (c ^. inductiveConstructorName) indName
   goExpression (Just indName) (c ^. inductiveConstructorType)
-
-goFunctionClause :: (Members '[State DependencyGraph, State StartNodes, Reader ExportsTable] r) => Name -> FunctionClause -> Sem r ()
-goFunctionClause p c = do
-  mapM_ (goPattern (Just p)) (c ^. clausePatterns)
-  goExpression (Just p) (c ^. clauseBody)
 
 goPattern :: forall r. (Member (State DependencyGraph) r) => Maybe Name -> PatternArg -> Sem r ()
 goPattern n p = case p ^. patternArgPattern of
