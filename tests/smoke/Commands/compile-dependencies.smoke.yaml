@@ -208,6 +208,7 @@ tests:
         EOF
 
         # compile with the new hash
+        rm juvix.lock.json
         juvix compile HelloWorld.juvix
         ./HelloWorld
     stdout:
@@ -642,6 +643,7 @@ tests:
         version: 0.1.0
         EOF
 
+        rm juvix.lock.json
         juvix --offline compile HelloWorld.juvix
         ./HelloWorld
     stdout:
