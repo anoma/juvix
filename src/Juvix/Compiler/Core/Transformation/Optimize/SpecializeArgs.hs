@@ -1,3 +1,6 @@
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+
+{-# HLINT ignore "Redundant multi-way if" #-}
 module Juvix.Compiler.Core.Transformation.Optimize.SpecializeArgs where
 
 import Data.List.NonEmpty qualified as NonEmpty
@@ -8,7 +11,7 @@ import Juvix.Compiler.Core.Transformation.LambdaLetRecLifting (lambdaLiftNode')
 
 isSpecializable :: InfoTable -> Node -> Bool
 isSpecializable tab node =
-  isTypeConstr tab node
+  isType tab mempty node
     || case node of
       NIdt {} -> True
       NLam {} -> True
@@ -69,7 +72,7 @@ convertNode tab = dmapLRM go
     goIdentApp bl idt@Ident {..} args
       | (isJust pspec || isJust pspecby) && length args == argsNum = do
           args' <- mapM (dmapLRM' (bl, go)) args
-          let psargs1 = maybe [] (^. pragmaSpecialiseArgs) pspec
+          let psargs1 = mapMaybe getArgIndex $ maybe [] (^. pragmaSpecialiseArgs) pspec
               psargs2 = maybe [] (map (+ 1) . mapMaybe (`elemIndex` argnames) . (^. pragmaSpecialiseBy)) pspecby
               psargs = nubSort (psargs1 ++ psargs2)
           -- assumption: all type variables are at the front
@@ -130,13 +133,20 @@ convertNode tab = dmapLRM go
           return $ Recur $ mkApps' (NIdt idt) args
       where
         ii = lookupIdentifierInfo tab _identSymbol
-        pspec = ii ^. identifierPragmas . pragmasSpecialiseArgs
+        pspec =
+          (ii ^. identifierPragmas . pragmasSpecialise)
+            >>= (\case SpecialiseBool {} -> Nothing; SpecialiseArgs a -> Just a)
         pspecby = ii ^. identifierPragmas . pragmasSpecialiseBy
         argsNum = ii ^. identifierArgsNum
         (tyargs, tgt) = unfoldPi' (ii ^. identifierType)
         def = lookupIdentifierNode tab _identSymbol
         (lams, body) = unfoldLambdas def
         argnames = map (^. lambdaLhsBinder . binderName) lams
+
+        getArgIndex :: PragmaSpecialiseArg -> Maybe Int
+        getArgIndex = \case
+          SpecialiseArgNum i -> Just i
+          SpecialiseArgNamed x -> fmap (+ 1) $ x `elemIndex` argnames
 
     -- assumption: all type arguments are substituted, so no binders in the type
     -- list refer to other elements in the list

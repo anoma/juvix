@@ -1,3 +1,6 @@
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+
+{-# HLINT ignore "Redundant multi-way if" #-}
 module Juvix.Compiler.Core.Transformation.LambdaLetRecLifting
   ( module Juvix.Compiler.Core.Transformation.LambdaLetRecLifting,
     module Juvix.Compiler.Core.Transformation.Base,
@@ -181,17 +184,6 @@ lambdaLiftNode aboveBl top =
           let res :: Node
               res = shiftHelper body' (nonEmpty' (zipExact letItems letRecBinders'))
           return (Recur res)
-
-        adjustPragmas :: Int -> Pragmas -> Pragmas
-        adjustPragmas fvnum pragmas =
-          over pragmasInline (fmap adjustInline) $
-            over pragmasSpecialiseArgs (fmap (over pragmaSpecialiseArgs (map (fvnum +)))) pragmas
-          where
-            adjustInline :: PragmaInline -> PragmaInline
-            adjustInline = \case
-              InlineNever -> InlineNever
-              InlineFullyApplied -> InlineFullyApplied
-              InlinePartiallyApplied n -> InlinePartiallyApplied (n + fvnum)
 
 lifting :: Bool -> InfoTable -> InfoTable
 lifting onlyLetRec = run . runReader onlyLetRec . mapT' (const (lambdaLiftNode mempty))
