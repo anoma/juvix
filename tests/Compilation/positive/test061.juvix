@@ -62,6 +62,10 @@ showBoolFunI : Show (Bool → Bool) := mkShow@{
     "\\{ true := " ++str Show.show b1 ++str " | false := " ++str Show.show b2 ++str " }";
 };
 
+instance
+showPairI {A B} {{Show A}} {{Show B}} : Show (A × B) :=
+  mkShow λ {(x, y) := Show.show x ++str ", " ++str Show.show y};
+
 main : IO :=
   printStringLn (Show.show true) >>
   printStringLn (f false) >>
@@ -77,4 +81,5 @@ main : IO :=
   printStringLn (f'3 {{M := mkShow (λ{x := x ++str "!"})}} "abba") >>
   printStringLn (f5 "abba" 3) >>
   printStringLn (Show.show {{_}} ["a"; "b"; "c"; "d"]) >>
-  printStringLn (Show.show (λ{x := not x}));
+  printStringLn (Show.show (λ{x := not x})) >>
+  printStringLn (Show.show (3, [1; 2]));
