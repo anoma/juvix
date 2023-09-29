@@ -75,7 +75,7 @@ gitFetchOnline = void (runGitCmdInDir ["fetch"])
 gitCloneOnline :: (Members '[Log, Error GitProcessError, Process, Online, Reader CloneEnv] r) => Text -> Sem r ()
 gitCloneOnline url = do
   p <- asks (^. cloneEnvDir)
-  log ("cloning " <> url <> " to " <> pack (toFilePath p))
+  log ("Cloning " <> url <> " to " <> pack (toFilePath p))
   void (runGitCmd ["clone", url, T.pack (toFilePath p)])
 
 cloneGitRepo :: (Members '[Log, Files, Process, Error GitProcessError, Reader CloneEnv, Internet] r) => Text -> Sem r ()
