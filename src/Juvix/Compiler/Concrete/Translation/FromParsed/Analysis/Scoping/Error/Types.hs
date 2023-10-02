@@ -929,3 +929,21 @@ instance ToGenericError AliasCycle where
     where
       i :: Interval
       i = getLoc _aliasCycleDef
+
+data Unsupported = Unsupported
+  { _unsupportedMsg :: Text,
+    _unsupportedLoc :: Interval
+  }
+  deriving stock (Show)
+
+instance ToGenericError Unsupported where
+  genericError Unsupported {..} = do
+    return
+      GenericError
+        { _genericErrorLoc = i,
+          _genericErrorMessage = mkAnsiText _unsupportedMsg,
+          _genericErrorIntervals = [i]
+        }
+    where
+      i :: Interval
+      i = _unsupportedLoc

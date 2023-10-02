@@ -292,7 +292,11 @@ tests =
     posTest
       "Hole as numeric type"
       $(mkRelDir "issue2373")
-      $(mkRelFile "Main.juvix")
+      $(mkRelFile "Main.juvix"),
+    posTest
+      "Hole in type parameter"
+      $(mkRelDir ".")
+      $(mkRelFile "HoleTypeParameter.juvix")
   ]
     <> [ compilationTest t | t <- Compilation.tests
        ]

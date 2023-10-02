@@ -39,9 +39,6 @@ type MCache = Cache Concrete.ModuleIndex Internal.Module
 -- | Needed to generate field projections.
 type ConstructorInfos = HashMap Internal.ConstructorName ConstructorInfo
 
-unsupported :: Text -> a
-unsupported msg = error $ msg <> "Scoped to Internal: not yet supported"
-
 fromConcrete ::
   (Members '[Reader EntryPoint, Error JuvixError, Builtins, NameIdGen, Termination] r) =>
   Scoper.ScoperResult ->
@@ -537,7 +534,14 @@ goInductiveParameters params@InductiveParameters {..} = do
   paramType' <- goRhs _inductiveParametersRhs
   case paramType' of
     Internal.ExpressionUniverse {} -> return ()
-    _ -> unsupported "only type variables of small types are allowed"
+    Internal.ExpressionHole {} -> return ()
+    _ ->
+      throw $
+        ErrUnsupported
+          Unsupported
+            { _unsupportedMsg = "only type variables of small types are allowed",
+              _unsupportedLoc = getLoc params
+            }
 
   let goInductiveParameter :: S.Symbol -> Internal.InductiveParameter
       goInductiveParameter var =
