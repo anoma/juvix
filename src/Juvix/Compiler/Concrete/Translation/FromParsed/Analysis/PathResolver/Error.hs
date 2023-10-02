@@ -79,9 +79,8 @@ instance PrettyCodeAnn MissingLockfileDependency where
       <+> "is declared in the package's juvix.yaml but is not declared in the lockfile:"
       <+> lockfilePath
         <> line
-        <> "Try removing"
-      <+> lockfilePath
-      <+> "and then run Juvix again."
+        <> "Try running"
+        <+> code "juvix dependencies update"
     where
       lockfilePath :: Doc CodeAnn
       lockfilePath = pretty (e ^. missingLockfileDependencyPath)
