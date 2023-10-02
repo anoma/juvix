@@ -102,7 +102,7 @@ lockfileEncodeConfig = setConfCompare keyCompare defConfig
     keyCompare :: Text -> Text -> Ordering
     keyCompare x y =
       if
-          | y == Str.dependencies, x == Str.dependencies -> GT
+          | y == Str.dependencies || x == Str.dependencies -> GT
           | otherwise -> compare x y
 
 writeLockfile :: (Members '[Files] r) => Path Abs Dir -> Lockfile -> Sem r ()
