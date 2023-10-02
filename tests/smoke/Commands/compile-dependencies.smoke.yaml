@@ -54,7 +54,7 @@ tests:
 
         # compile project
         juvix compile HelloWorld.juvix
-        if [ ! -f "juvix.lock.json" ]; then
+        if [ ! -f "juvix.lock.yaml" ]; then
           exit 1
         fi
         ./HelloWorld
@@ -211,7 +211,7 @@ tests:
         EOF
 
         # compile with the new hash
-        rm juvix.lock.json
+        rm juvix.lock.yaml
         juvix compile HelloWorld.juvix
         ./HelloWorld
     stdout:
@@ -287,41 +287,24 @@ tests:
         version: 0.1.0
         EOF
 
-        cat <<-EOF > juvix.lock.json
-        {
-          "dependencies": [
-            {
-              "path": ".juvix-build/stdlib/",
-              "dependencies": []
-            },
-            {
-              "git": {
-                "url": "$temp/dep1",
-                "ref": "$dep1hash",
-                "name": "dep1"
-               },
-               "dependencies": [
-                {
-                  "path": ".juvix-build/stdlib/",
-                  "dependencies": []
-                },
-                {
-                  "git": {
-                    "url": "$temp/dep2",
-                    "ref": "$dep2hash",
-                    "name": "dep2"
-                  },
-                  "dependencies": [
-                    {
-                      "path": ".juvix-build/stdlib/",
-                      "dependencies": []
-                    }
-                  ]
-                }
-              ]
-            }
-          ]
-        }
+        cat <<-EOF > juvix.lock.yaml
+        dependencies:
+          - path: .juvix-build/stdlib/
+            dependencies: []
+          - git:
+              url: $temp/dep1
+              ref: $dep1hash
+              name: dep1
+            dependencies:
+              - path: .juvix-build/stdlib/
+                dependencies: []
+              - git:
+                  url: $temp/dep2
+                  ref: $dep2hash
+                  name: dep2
+                dependencies:
+                  - path: .juvix-build/stdlib/
+                    dependencies: []
         EOF
 
         cat <<-EOF > HelloWorld.juvix
@@ -517,28 +500,17 @@ tests:
         version: 0.1.0
         EOF
 
-        cat <<-EOF > juvix.lock.json
-        {
-          "dependencies": [
-            {
-              "path": ".juvix-build/stdlib/",
-              "dependencies": []
-            },
-            {
-              "git": {
-                "url": "$temp/dep2",
-                "ref": "$dep2hash",
-                "name": "dep2"
-              },
-              "dependencies": [
-                {
-                  "path": ".juvix-build/stdlib/",
-                  "dependencies": []
-                }
-              ]
-            }
-          ]
-        }
+        cat <<-EOF > juvix.lock.yaml
+        dependencies:
+          - path: .juvix-build/stdlib/
+            dependencies: []
+          - git:
+              url: $temp/dep2
+              ref: $dep2hash
+              name: dep2
+            dependencies:
+              - path: .juvix-build/stdlib/
+                dependencies: []
         EOF
 
         git add -A
@@ -621,12 +593,10 @@ tests:
         version: 0.1.0
         EOF
 
-        cat <<-EOF > juvix.lock.json
-        {"dependencies": [
-          {
-            "path": ".juvix-build/stdlib/",
-            "dependencies": []
-          }]}
+        cat <<-EOF > juvix.lock.yaml
+        dependencies:
+          - path: .juvix-build/stdlib/
+            dependencies: []
         EOF
 
         cat <<-EOF > HelloWorld.juvix
@@ -735,7 +705,7 @@ tests:
         version: 0.1.0
         EOF
 
-        rm juvix.lock.json
+        rm juvix.lock.yaml
         juvix --offline compile HelloWorld.juvix
         ./HelloWorld
     stdout:

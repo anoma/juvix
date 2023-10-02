@@ -30,7 +30,7 @@ juvixYamlFile :: Path Rel File
 juvixYamlFile = $(mkRelFile "juvix.yaml")
 
 juvixLockfile :: Path Rel File
-juvixLockfile = $(mkRelFile "juvix.lock.json")
+juvixLockfile = $(mkRelFile "juvix.lock.yaml")
 
 relBuildDir :: Path Rel Dir
 relBuildDir = $(mkRelDir ".juvix-build")

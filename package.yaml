@@ -42,7 +42,6 @@ extra-source-files:
 dependencies:
   - aeson-better-errors == 0.9.*
   - aeson == 2.1.*
-  - aeson-pretty == 0.8.*
   - ansi-terminal == 0.11.*
   - base == 4.17.*
   - blaze-html == 0.9.*
