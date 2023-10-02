@@ -1,0 +1,16 @@
+module LetOpen;
+
+module M;
+  axiom A : Type;
+
+  module M1;
+    axiom A : Type;
+
+  end;
+end;
+
+axiom B : let
+            open M;
+          in let
+               open M1;
+             in A;
