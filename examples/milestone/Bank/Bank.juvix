@@ -88,7 +88,7 @@ calculateInterest : Nat -> Nat -> Nat -> Nat
 
 --- Asserts some ;Bool; condition.
 assert : {A : Type} -> Bool -> A -> A
-  | c a := if c a (fail "assertion failed");
+  | c a := if c a (failwith "assertion failed");
 
 --- Returns a new ;Token;. Arguments are:
 ---
