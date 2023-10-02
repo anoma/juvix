@@ -77,8 +77,14 @@ instance PrettyCodeAnn MissingLockfileDependency where
     "The dependency"
       <+> code dependencyId
       <+> "is declared in the package's juvix.yaml but is not declared in the lockfile:"
-      <+> pretty (e ^. missingLockfileDependencyPath)
+      <+> lockfilePath
+        <> line
+        <> "Try removing"
+      <+> lockfilePath
+      <+> "and then run Juvix again."
     where
+      lockfilePath :: Doc CodeAnn
+      lockfilePath = pretty (e ^. missingLockfileDependencyPath)
       dependencyId :: Doc CodeAnn
       dependencyId = case e ^. missingLockfileDependencyDependency of
         DependencyGit g -> pretty @Text (g ^. gitDependencyName)
