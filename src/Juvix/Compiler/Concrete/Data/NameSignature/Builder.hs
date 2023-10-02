@@ -20,12 +20,11 @@ data NameSignatureBuilder m a where
 
 data BuilderState = BuilderState
   { _stateCurrentImplicit :: Maybe IsImplicit,
-    _stateCurrentDefault :: Maybe (ArgDefault 'Parsed),
     _stateNextIx :: Int,
     -- | maps to itself
     _stateSymbols :: HashMap Symbol Symbol,
     _stateReverseClosedBlocks :: [NameBlock 'Parsed],
-    _stateCurrentBlock :: HashMap Symbol NameItem
+    _stateCurrentBlock :: HashMap Symbol (NameItem 'Parsed)
   }
 
 makeLenses ''BuilderState
@@ -87,7 +86,6 @@ iniBuilderState :: BuilderState
 iniBuilderState =
   BuilderState
     { _stateCurrentImplicit = Nothing,
-      _stateCurrentDefault = Nothing,
       _stateNextIx = 0,
       _stateSymbols = mempty,
       _stateReverseClosedBlocks = [],
@@ -104,7 +102,7 @@ fromBuilderState b =
     addCurrent
       | null (b ^. stateCurrentBlock) = id
       | Just i <- b ^. stateCurrentImplicit =
-          (NameBlock (b ^. stateCurrentBlock) i (b ^? stateCurrentDefault . _Just . argDefaultValue) :)
+          (NameBlock (b ^. stateCurrentBlock) i :)
       | otherwise = id
 
 addAtoms :: forall r. (Members '[NameSignatureBuilder] r) => ExpressionAtoms 'Parsed -> Sem r ()
@@ -171,7 +169,7 @@ addSymbol' impl mdef sym = do
     addToCurrentBlock :: Sem (Re r) ()
     addToCurrentBlock = do
       idx <- gets (^. stateNextIx)
-      let itm = NameItem sym idx
+      let itm = NameItem sym idx undefined
       modify' (over stateNextIx succ)
       whenJustM (gets (^. stateSymbols . at sym)) errDuplicateName
       modify' (set (stateSymbols . at sym) (Just sym))
@@ -181,13 +179,11 @@ addSymbol' impl mdef sym = do
     startNewBlock = do
       curBlock <- gets (^. stateCurrentBlock)
       mcurImpl <- gets (^. stateCurrentImplicit)
-      mcurDef <- fmap (^. argDefaultValue) <$> gets (^. stateCurrentDefault)
       modify' (set stateCurrentImplicit (Just impl))
-      modify' (set stateCurrentDefault mdef)
       modify' (set stateCurrentBlock mempty)
       modify' (set stateNextIx 0)
       whenJust mcurImpl $ \curImpl ->
-        modify' (over stateReverseClosedBlocks (NameBlock curBlock curImpl mcurDef :))
+        modify' (over stateReverseClosedBlocks (NameBlock curBlock curImpl :))
       addSymbol' impl mdef sym
 
 endBuild' :: Sem (Re r) a
@@ -197,6 +193,6 @@ mkRecordNameSignature :: RhsRecord 'Parsed -> RecordNameSignature
 mkRecordNameSignature rhs =
   RecordNameSignature
     ( HashMap.fromList
-        [ (s, NameItem s idx) | (Indexed idx field) <- indexFrom 0 (toList (rhs ^. rhsRecordFields)), let s = field ^. fieldName
+        [ (s, NameItem s idx Nothing) | (Indexed idx field) <- indexFrom 0 (toList (rhs ^. rhsRecordFields)), let s = field ^. fieldName
         ]
     )

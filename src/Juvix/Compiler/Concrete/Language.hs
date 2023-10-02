@@ -148,18 +148,17 @@ type family ModuleEndType t = res | res -> t where
 -- choices on the user.
 type ParsedPragmas = WithLoc (WithSource Pragmas)
 
-data NameItem = NameItem
+data NameItem (s :: Stage) = NameItem
   { _nameItemSymbol :: Symbol,
-    _nameItemIndex :: Int
+    _nameItemIndex :: Int,
+    _nameItemDefault :: Maybe (ArgDefault s)
   }
-  deriving stock (Show)
 
-data NameBlock s = NameBlock
+data NameBlock (s :: Stage) = NameBlock
   { -- | Symbols map to themselves so we can retrive the location
     -- | NOTE the index is wrt to the block, not the whole signature.
-    _nameBlock :: HashMap Symbol NameItem,
-    _nameImplicit :: IsImplicit,
-    _nameDefault :: Maybe (ExpressionType s)
+    _nameBlock :: HashMap Symbol (NameItem s),
+    _nameImplicit :: IsImplicit
   }
 
 -- | Two consecutive blocks should have different implicitness
@@ -168,7 +167,7 @@ newtype NameSignature (s :: Stage) = NameSignature
   }
 
 newtype RecordNameSignature = RecordNameSignature
-  { _recordNames :: HashMap Symbol NameItem
+  { _recordNames :: HashMap Symbol (NameItem 'Parsed)
   }
 
 data Argument (s :: Stage)

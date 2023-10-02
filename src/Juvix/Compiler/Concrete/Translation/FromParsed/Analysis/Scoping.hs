@@ -204,7 +204,7 @@ reserveSymbolOf ::
     SingI ns
   ) =>
   Sing nameKind ->
-  Maybe (NameSignature 'Parsed) ->
+  Maybe (NameSignature 'Scoped) ->
   Symbol ->
   Sem r S.Symbol
 reserveSymbolOf k nameSig s = do
@@ -1172,6 +1172,7 @@ checkSections sec = do
         goDefinitions DefinitionsSection {..} = do
           mapM_ reserveDefinition _definitionsSection
           mapM_ scanAlias (_definitionsSection ^.. each . _DefinitionSyntax . _SyntaxAlias)
+          scanNameSignature _definitionsSection
           sec' <- mapM goDefinition _definitionsSection
           next' <- mapM goNonDefinitions _definitionsNext
           return
@@ -1195,6 +1196,10 @@ checkSections sec = do
                       whenM (gets (HashSet.member i)) (throw (ErrAliasCycle (AliasCycle a)))
                       modify' (HashSet.insert i)
                       whenJustM (gets (^? scoperAlias . at i . _Just . preSymbolName . S.nameId)) go
+
+            -- Scope checks type signatures. Needed for default arguments.
+            scanNameSignature :: NonEmpty (Definition 'Parsed) -> Sem r' ()
+            scanNameSignature = undefined
 
             reserveDefinition :: Definition 'Parsed -> Sem r' ()
             reserveDefinition = \case
@@ -2213,7 +2218,13 @@ checkNamedApplication napp = do
     checkNameSignature = traverseOf nameSignatureArgs (mapM checkNameBlock)
       where
         checkNameBlock :: NameBlock 'Parsed -> Sem r (NameBlock 'Scoped)
-        checkNameBlock = traverseOf nameDefault (mapM checkParseExpressionAtoms)
+        checkNameBlock = traverseOf nameBlock (mapM checkNameItem)
+
+        checkNameItem :: NameItem 'Parsed -> Sem r (NameItem 'Scoped)
+        checkNameItem = traverseOf nameItemDefault (mapM checkArgDefault)
+
+        checkArgDefault :: ArgDefault 'Parsed -> Sem r (ArgDefault 'Scoped)
+        checkArgDefault = error "FIXME we should not scope the default value here"
 
     checkNamedArg :: NamedArgument 'Parsed -> Sem r (NamedArgument 'Scoped)
     checkNamedArg n = do
@@ -2248,7 +2259,7 @@ getRecordInfo' name nameId =
     err :: Sem r a
     err = throw (ErrNotARecord (NotARecord name))
 
-getNameSignature :: (Members '[State ScoperState, Error ScoperError] r) => ScopedIden -> Sem r (NameSignature 'Parsed)
+getNameSignature :: (Members '[State ScoperState, Error ScoperError] r) => ScopedIden -> Sem r (NameSignature 'Scoped)
 getNameSignature s = do
   sig <- maybeM (throw err) return (lookupNameSignature (s ^. scopedIdenFinal . S.nameId))
   when (null (sig ^. nameSignatureArgs)) (throw err)
@@ -2256,7 +2267,7 @@ getNameSignature s = do
   where
     err = ErrNoNameSignature (NoNameSignature s)
 
-lookupNameSignature :: (Members '[State ScoperState] r) => S.NameId -> Sem r (Maybe (NameSignature 'Parsed))
+lookupNameSignature :: (Members '[State ScoperState] r) => S.NameId -> Sem r (Maybe (NameSignature 'Scoped))
 lookupNameSignature s = gets (^. scoperSignatures . at s)
 
 checkIterator ::

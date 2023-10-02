@@ -8,9 +8,9 @@ import Data.IntMap.Strict qualified as IntMap
 import Juvix.Compiler.Concrete.Gen qualified as Gen
 import Juvix.Compiler.Concrete.Keywords
 import Juvix.Compiler.Concrete.Language
+import Juvix.Compiler.Concrete.Pretty
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
 import Juvix.Prelude
-import Juvix.Compiler.Concrete.Pretty
 
 data BuilderState = BuilderState
   { _stateRemainingArgs :: [ArgumentBlock 'Scoped],
@@ -50,38 +50,36 @@ helper ::
 helper loc = do
   whenJustM nextArgumentGroup $ \(impl, args, isLastBlock) -> do
     checkRepeated args
-    (mdefault1, names) <- nextNameGroup impl
+    names <- nextNameGroup impl
     (pendingArgs, (omittedNames, argmap)) <- scanGroup impl names args
-    emitArgs mdefault1 impl isLastBlock omittedNames argmap
+    emitArgs impl isLastBlock omittedNames argmap
     whenJust (nonEmpty pendingArgs) $ \pendingArgs' -> do
-      (mdefault, sig) <- nextNameGroup Implicit
-      emitImplicit mdefault False sig mempty
+      sig <- nextNameGroup Implicit
+      emitImplicit False sig mempty
       moreNames <- not . null <$> gets (^. stateRemainingNames)
       if
           | moreNames -> modify' (over stateRemainingArgs (ArgumentBlock (Irrelevant Nothing) Explicit (nonEmpty' pendingArgs) :))
           | otherwise -> throw . ErrUnexpectedArguments $ UnexpectedArguments pendingArgs'
     helper loc
   where
-    nextNameGroup :: IsImplicit -> Sem r (Maybe Expression, (HashMap Symbol Int))
+    nextNameGroup :: IsImplicit -> Sem r (HashMap Symbol (NameItem 'Scoped))
     nextNameGroup impl = do
       remb <- gets (^. stateRemainingNames)
       case remb of
-        [] -> return (Nothing, mempty)
+        [] -> return mempty
         b : bs -> do
           traceM (ppTrace b)
           let implNames = b ^. nameImplicit
-              defVal = b ^. nameDefault
 
           modify' (set stateRemainingNames bs)
-          let r = (^. nameItemIndex) <$> b ^. nameBlock
-              matches = return (defVal, r)
-              fails :: Sem r (Maybe Expression, (HashMap Symbol Int)) = return (Nothing, mempty)
+          let r = b ^. nameBlock
+              matches = return r
           case (impl, implNames) of
             (Explicit, Explicit) -> matches
             (Implicit, Implicit) -> matches
             (ImplicitInstance, ImplicitInstance) -> matches
             (Explicit, Implicit) -> do
-              emitImplicit defVal False r mempty
+              emitImplicit False r mempty
               nextNameGroup impl
             (Explicit, ImplicitInstance) -> do
               emitImplicitInstance False r mempty
@@ -90,10 +88,10 @@ helper loc = do
               emitImplicitInstance False r mempty
               nextNameGroup impl
             (ImplicitInstance, Implicit) -> do
-              emitImplicit defVal False r mempty
+              emitImplicit False r mempty
               nextNameGroup impl
-            (Implicit, Explicit) -> fails
-            (ImplicitInstance, Explicit) -> fails
+            (Implicit, Explicit) -> return mempty
+            (ImplicitInstance, Explicit) -> return mempty
 
     nextArgumentGroup :: Sem r (Maybe (IsImplicit, [NamedArgument 'Scoped], Bool))
     nextArgumentGroup = do
@@ -111,14 +109,14 @@ helper loc = do
     checkRepeated args = whenJust (nonEmpty (findRepeated (map (^. namedArgName) args))) $ \reps ->
       throw . ErrDuplicateArgument $ DuplicateArgument reps
 
-    emitArgs :: Maybe Expression -> IsImplicit -> Bool -> HashMap Symbol Int -> IntMap Expression -> Sem r ()
-    emitArgs mdefault = \case
-      Implicit -> emitImplicit mdefault
+    emitArgs :: IsImplicit -> Bool -> HashMap Symbol (NameItem 'Scoped) -> IntMap Expression -> Sem r ()
+    emitArgs = \case
+      Implicit -> emitImplicit
       Explicit -> emitExplicit
       ImplicitInstance -> emitImplicitInstance
 
     -- omitting arguments is only allowed at the end
-    emitExplicit :: Bool -> HashMap Symbol Int -> IntMap Expression -> Sem r ()
+    emitExplicit :: Bool -> HashMap Symbol (NameItem 'Scoped) -> IntMap Expression -> Sem r ()
     emitExplicit lastBlock omittedArgs args = do
       if
           | lastBlock ->
@@ -128,24 +126,23 @@ helper loc = do
           | otherwise -> whenJust (nonEmpty (HashMap.keys omittedArgs)) missingErr
       forM_ args output
       where
-        filterMissing :: [(Symbol, Int)] -> [(Symbol, Int)]
+        filterMissing :: [(Symbol, NameItem 'Scoped)] -> [(Symbol, NameItem 'Scoped)]
         filterMissing = case maximumGiven of
           Nothing -> id
-          Just m -> filter ((< m) . snd)
+          Just m -> filter ((< m) . (^. nameItemIndex) . snd)
         maximumGiven :: Maybe Int
         maximumGiven = fst <$> IntMap.lookupMax args
         missingErr :: NonEmpty Symbol -> Sem r ()
         missingErr = throw . ErrMissingArguments . MissingArguments loc
 
     emitImplicitHelper ::
-      Maybe Expression ->
       (WithLoc Expression -> Expression) ->
       (HoleType 'Scoped -> Expression) ->
       Bool ->
-      HashMap Symbol Int ->
+      HashMap Symbol (NameItem 'Scoped) ->
       IntMap Expression ->
       Sem r ()
-    emitImplicitHelper mdefault exprBraces exprHole lastBlock omittedArgs args = go 0 (IntMap.toAscList args)
+    emitImplicitHelper exprBraces exprHole lastBlock omittedArgs args = go 0 (IntMap.toAscList args)
       where
         go :: Int -> [(Int, Expression)] -> Sem r ()
         go n = \case
@@ -159,18 +156,19 @@ helper loc = do
           where
             fillUntil n' = replicateM_ (n' - n) (mkWildcard >>= output)
             mkWildcard :: (Members '[NameIdGen] r') => Sem r' Expression
-            mkWildcard = fmap (exprBraces . WithLoc loc) $ case mdefault of
-              Nothing -> exprHole . mkHole loc <$> freshNameId
-              -- TODO shift binders in defaultVal
-              Just defaultVal -> return defaultVal
+            mkWildcard = exprBraces . WithLoc loc . exprHole . mkHole loc <$> freshNameId
+        -- fmap (exprBraces . WithLoc loc) $ case mdefault of
+        -- Nothing -> exprHole . mkHole loc <$> freshNameId
+        -- -- TODO shift binders in defaultVal
+        -- Just defaultVal -> return defaultVal
         maxIx :: Maybe Int
-        maxIx = fmap maximum1 . nonEmpty . toList $ omittedArgs
+        maxIx = fmap maximum1 . nonEmpty . map (^. nameItemIndex) . toList $ omittedArgs
 
-    emitImplicit :: Maybe Expression -> Bool -> HashMap Symbol Int -> IntMap Expression -> Sem r ()
-    emitImplicit def = emitImplicitHelper def ExpressionBraces ExpressionHole
+    emitImplicit :: Bool -> HashMap Symbol (NameItem 'Scoped) -> IntMap Expression -> Sem r ()
+    emitImplicit = emitImplicitHelper ExpressionBraces ExpressionHole
 
-    emitImplicitInstance :: Bool -> HashMap Symbol Int -> IntMap Expression -> Sem r ()
-    emitImplicitInstance = emitImplicitHelper Nothing mkDoubleBraces ExpressionInstanceHole
+    emitImplicitInstance :: Bool -> HashMap Symbol (NameItem 'Scoped) -> IntMap Expression -> Sem r ()
+    emitImplicitInstance = emitImplicitHelper mkDoubleBraces ExpressionInstanceHole
       where
         mkDoubleBraces :: WithLoc Expression -> Expression
         mkDoubleBraces (WithLoc eloc e) = run . runReader eloc $ do
@@ -185,22 +183,22 @@ helper loc = do
 
     scanGroup ::
       IsImplicit ->
-      HashMap Symbol Int ->
+      HashMap Symbol (NameItem 'Scoped) ->
       [NamedArgument 'Scoped] ->
-      Sem r ([NamedArgument 'Scoped], (HashMap Symbol Int, IntMap Expression))
+      Sem r ([NamedArgument 'Scoped], (HashMap Symbol (NameItem 'Scoped), IntMap Expression))
     scanGroup impl names = runOutputList . runState names . execState mempty . mapM_ go
       where
         go ::
-          (Members '[State (IntMap Expression), State (HashMap Symbol Int), State BuilderState, Output (NamedArgument 'Scoped), Error NamedArgumentsError] r') =>
+          (Members '[State (IntMap Expression), State (HashMap Symbol (NameItem 'Scoped)), State BuilderState, Output (NamedArgument 'Scoped), Error NamedArgumentsError] r') =>
           NamedArgument 'Scoped ->
           Sem r' ()
         go arg = do
           let sym = arg ^. namedArgName
-          midx :: Maybe Int <- gets @(HashMap Symbol Int) (^. at sym)
+          midx :: Maybe (NameItem 'Scoped) <- gets @(HashMap Symbol (NameItem 'Scoped)) (^. at sym)
           case midx of
             Just idx -> do
-              modify' (IntMap.insert idx (arg ^. namedArgValue))
-              modify' @(HashMap Symbol Int) (HashMap.delete sym)
+              modify' (IntMap.insert (idx ^. nameItemIndex) (arg ^. namedArgValue))
+              modify' @(HashMap Symbol (NameItem 'Scoped)) (HashMap.delete sym)
             Nothing -> case impl of
               Explicit -> do
                 -- the arg may belong to the next explicit group

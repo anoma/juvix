@@ -336,7 +336,7 @@ goModuleBody stmts = do
         ]
 
 scanImports :: [Statement 'Scoped] -> [Import 'Scoped]
-scanImports stmts = mconcatMap go stmts
+scanImports = mconcatMap go
   where
     go :: Statement 'Scoped -> [Import 'Scoped]
     go = \case
@@ -798,7 +798,9 @@ goExpression = \case
                         _argBlockArgs = args
                       },
                 _namedAppSignature =
-                  Irrelevant (NameSignature [NameBlock (_recordCreationExtra ^. unIrrelevant . recordCreationExtraSignature . recordNames) Explicit Nothing])
+                  Irrelevant
+                    ( fromRecordSignature (_recordCreationExtra ^. unIrrelevant . recordCreationExtraSignature)
+                    )
               }
       cls <- goLetFunDefs (fmap Concrete.LetFunctionDef defs)
       e <- runNamedArguments app >>= goExpression
@@ -808,6 +810,25 @@ goExpression = \case
             { _letClauses = nonEmpty' cls,
               _letExpression = e
             }
+
+    fromRecordSignature :: RecordNameSignature -> NameSignature 'Scoped
+    fromRecordSignature recNameSig =
+      NameSignature
+        [ NameBlock
+            { _nameBlock = fromRecordName <$> recNameSig ^. recordNames,
+              _nameImplicit = Explicit
+            }
+        ]
+      where
+        -- Record fields cannot have default values as of now.
+        fromRecordName :: NameItem 'Parsed -> NameItem 'Scoped
+        fromRecordName n = case n ^. nameItemDefault of
+          Just {} -> impossible
+          Nothing -> NameItem {
+            _nameItemDefault = Nothing,
+            _nameItemIndex = n ^. nameItemIndex,
+            _nameItemSymbol = n ^. nameItemSymbol
+                              }
 
     goRecordDefineField :: Concrete.RecordDefineField 'Scoped -> Sem r (Concrete.NamedArgument 'Scoped)
     goRecordDefineField Concrete.RecordDefineField {..} = do

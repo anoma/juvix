@@ -165,6 +165,14 @@ instance (SingI s) => PrettyPrint (ListPattern s) where
 instance PrettyPrint Void where
   ppCode = absurd
 
+instance (SingI s) => PrettyPrint (NameItem s) where
+  ppCode NameItem {..} = do
+    let defaultVal = do
+          d <- _nameItemDefault
+          return (noLoc C.kwAssign <+> ppExpressionType (d ^. argDefaultValue))
+    ppCode _nameItemSymbol <> ppCode Kw.kwExclamation <> noLoc (pretty _nameItemIndex)
+      <+?> defaultVal
+
 instance (SingI s) => PrettyPrint (NameBlock s) where
   ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => NameBlock s -> Sem r ()
   ppCode NameBlock {..} = do
@@ -172,12 +180,7 @@ instance (SingI s) => PrettyPrint (NameBlock s) where
           Implicit -> braces
           ImplicitInstance -> doubleBraces
           Explicit -> parens
-        ppElem :: NameItem -> Sem r ()
-        ppElem NameItem {..} = ppCode _nameItemSymbol <> ppCode Kw.kwExclamation <> noLoc (pretty _nameItemIndex)
-        defaultVal = do
-          d <- _nameDefault
-          return (noLoc C.kwAssign <+> ppExpressionType d)
-    delims (hsepSemicolon (map ppElem (toList _nameBlock)) <+?> defaultVal)
+    delims (hsepSemicolon (map ppCode (toList _nameBlock)))
 
 instance (PrettyPrint a, PrettyPrint b) => PrettyPrint (a, b) where
   ppCode (a, b) = tuple [ppCode a, ppCode b]
