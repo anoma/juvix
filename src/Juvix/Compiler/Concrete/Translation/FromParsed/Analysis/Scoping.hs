@@ -1199,7 +1199,21 @@ checkSections sec = do
 
             -- Scope checks type signatures. Needed for default arguments.
             scanNameSignature :: NonEmpty (Definition 'Parsed) -> Sem r' ()
-            scanNameSignature = undefined
+            scanNameSignature = mapM_ scanDef
+              where
+              scanDef :: Definition 'Parsed -> Sem r' ()
+              scanDef =  \case
+                DefinitionFunctionDef d -> scanFunctionDef d
+                DefinitionAxiom a -> scanAxiom a
+                DefinitionSyntax {} -> return ()
+                DefinitionProjectionDef {} -> return ()
+                DefinitionInductive {} -> return ()
+
+              scanAxiom :: AxiomDef 'Parsed -> Sem r' ()
+              scanAxiom = undefined
+
+              scanFunctionDef :: FunctionDef 'Parsed -> Sem r' ()
+              scanFunctionDef = undefined
 
             reserveDefinition :: Definition 'Parsed -> Sem r' ()
             reserveDefinition = \case
@@ -2210,21 +2224,21 @@ checkNamedApplication ::
   Sem r (NamedApplication 'Scoped)
 checkNamedApplication napp = do
   _namedAppName <- checkScopedIden (napp ^. namedAppName)
-  _namedAppSignature <- Irrelevant <$> (getNameSignature _namedAppName >>= checkNameSignature)
+  _namedAppSignature <- Irrelevant <$> getNameSignature _namedAppName
   _namedAppArgs <- mapM checkArgumentBlock (napp ^. namedAppArgs)
   return NamedApplication {..}
   where
-    checkNameSignature :: NameSignature 'Parsed -> Sem r (NameSignature 'Scoped)
-    checkNameSignature = traverseOf nameSignatureArgs (mapM checkNameBlock)
-      where
-        checkNameBlock :: NameBlock 'Parsed -> Sem r (NameBlock 'Scoped)
-        checkNameBlock = traverseOf nameBlock (mapM checkNameItem)
+  --   checkNameSignature :: NameSignature 'Parsed -> Sem r (NameSignature 'Scoped)
+  --   checkNameSignature = traverseOf nameSignatureArgs (mapM checkNameBlock)
+  --     where
+  --       checkNameBlock :: NameBlock 'Parsed -> Sem r (NameBlock 'Scoped)
+  --       checkNameBlock = traverseOf nameBlock (mapM checkNameItem)
 
-        checkNameItem :: NameItem 'Parsed -> Sem r (NameItem 'Scoped)
-        checkNameItem = traverseOf nameItemDefault (mapM checkArgDefault)
+  --       checkNameItem :: NameItem 'Parsed -> Sem r (NameItem 'Scoped)
+  --       checkNameItem = traverseOf nameItemDefault (mapM checkArgDefault)
 
-        checkArgDefault :: ArgDefault 'Parsed -> Sem r (ArgDefault 'Scoped)
-        checkArgDefault = error "FIXME we should not scope the default value here"
+  --       checkArgDefault :: ArgDefault 'Parsed -> Sem r (ArgDefault 'Scoped)
+  --       checkArgDefault = error "FIXME we should not scope the default value here"
 
     checkNamedArg :: NamedArgument 'Parsed -> Sem r (NamedArgument 'Scoped)
     checkNamedArg n = do
