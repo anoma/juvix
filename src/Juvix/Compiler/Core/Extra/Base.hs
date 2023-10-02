@@ -267,10 +267,10 @@ expandType argtys ty =
 {- functions on Node -}
 
 mkApps :: Node -> [(Info, Node)] -> Node
-mkApps m = foldl' (\acc (i, n) -> mkApp i acc n) m
+mkApps = foldl' (\acc (i, n) -> mkApp i acc n)
 
 mkApps' :: Node -> [Node] -> Node
-mkApps' n = foldl' mkApp' n
+mkApps' = foldl' mkApp'
 
 unfoldApps :: Node -> (Node, [(Info, Node)])
 unfoldApps = go []
@@ -316,6 +316,11 @@ unfoldLambdas' = first length . unfoldLambdas
 
 lambdaTypes :: Node -> [Type]
 lambdaTypes = map (\LambdaLhs {..} -> _lambdaLhsBinder ^. binderType) . fst . unfoldLambdas
+
+isConstructorApp :: Node -> Bool
+isConstructorApp node = case node of
+  NCtr {} -> True
+  _ -> False
 
 {------------------------------------------------------------------------}
 {- functions on Pattern -}
