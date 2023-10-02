@@ -76,7 +76,7 @@ testDescr PosTest {..} = helper renderCodeNew
                 let yamlFiles :: [(Path Abs File, Text)]
                     yamlFiles =
                       [ (pkgi ^. packageRoot <//> juvixYamlFile, encodeToText (rawPackage (pkgi ^. packagePackage)))
-                        | pkgi <- toList (resolverState ^. resolverPackages)
+                        | pkgi <- (^. resolverCacheItemPackage) <$> toList (resolverState ^. resolverCache)
                       ]
                     fsScoped :: HashMap (Path Abs File) Text
                     fsScoped =
