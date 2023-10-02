@@ -230,6 +230,7 @@ resolveDependency i = case i ^. packageDepdendencyInfoDependency of
             }
 
 registerDependencies' ::
+  forall r.
   (Members '[Reader EntryPoint, State ResolverState, Reader ResolverEnv, Files, Error Text, Error DependencyError, GitClone] r) =>
   Sem r ()
 registerDependencies' = do
@@ -242,10 +243,17 @@ registerDependencies' = do
               globalPackageFile = mkPackageFilePath glob
           void (addDependency' (Just e) (mkPackageDependencyInfo globalPackageFile globDep))
       | otherwise -> do
-          let f = mkPackageFilePath (e ^. entryPointRoot)
-          rootDep <- addDependency' (Just e) (mkPackageDependencyInfo f (mkPathDependency (toFilePath (e ^. entryPointRoot))))
+          let pf = mkPackageFilePath (e ^. entryPointRoot)
+          rootDep <- addDependency' (Just e) (mkPackageDependencyInfo pf (mkPathDependency (toFilePath (e ^. entryPointRoot))))
           root <- asks (^. envRoot)
-          whenM (gets (^. resolverShouldWriteLockfile)) (writeLockfile root (Lockfile (rootDep ^. lockfileDependencyDependencies)))
+          whenM shouldWriteLockfile (writeLockfile root (Lockfile (rootDep ^. lockfileDependencyDependencies)))
+  where
+    shouldWriteLockfile :: Sem r Bool
+    shouldWriteLockfile = do
+      root <- asks (^. envRoot)
+      lockfileExists <- fileExists' (mkPackageLockfilePath root)
+      depsShouldWriteLockfile <- gets (^. resolverShouldWriteLockfile)
+      return (not lockfileExists && depsShouldWriteLockfile)
 
 addDependency' ::
   (Members '[State ResolverState, Reader ResolverEnv, Files, Error Text, Error DependencyError, GitClone] r) =>
