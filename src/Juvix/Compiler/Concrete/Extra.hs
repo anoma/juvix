@@ -10,6 +10,7 @@ module Juvix.Compiler.Concrete.Extra
     getExpressionAtomIden,
     getPatternAtomIden,
     isBodyExpression,
+    symbolParsed,
   )
 where
 
@@ -116,11 +117,6 @@ groupStatements = \case
       StatementFunctionDef d -> n == symbolParsed (d ^. signName)
       _ -> False
       where
-        symbolParsed :: SymbolType s -> Symbol
-        symbolParsed sym = case sing :: SStage s of
-          SParsed -> sym
-          SScoped -> sym ^. S.nameConcrete
-
         syms :: InductiveDef s -> [Symbol]
         syms InductiveDef {..} =
           let constructors = toList _inductiveConstructors
@@ -130,6 +126,11 @@ groupStatements = \case
                   _inductiveName
                     ^. S.nameConcrete
                     : map (^. constructorName . S.nameConcrete) constructors
+
+symbolParsed :: forall s. SingI s => SymbolType s -> Symbol
+symbolParsed sym = case sing :: SStage s of
+  SParsed -> sym
+  SScoped -> sym ^. S.nameConcrete
 
 flattenStatement :: Statement s -> [Statement s]
 flattenStatement = \case
