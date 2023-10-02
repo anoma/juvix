@@ -7,5 +7,6 @@ import Juvix.Prelude
 
 entrySetup ::
   (Members '[Reader EntryPoint, Files, GitClone, PathResolver] r) =>
+  DependenciesConfig ->
   Sem r ()
 entrySetup = registerDependencies

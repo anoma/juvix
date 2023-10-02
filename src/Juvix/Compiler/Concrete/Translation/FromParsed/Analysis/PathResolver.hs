@@ -2,6 +2,7 @@ module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver
   ( module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Base,
     module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Error,
     module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.PackageInfo,
+    module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.DependenciesConfig,
     PathResolver,
     registerDependencies,
     withPath,
@@ -24,6 +25,7 @@ import Data.HashSet qualified as HashSet
 import Data.Text qualified as T
 import Juvix.Compiler.Concrete.Data.Name
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Base
+import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.DependenciesConfig
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Error
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.PackageInfo
 import Juvix.Compiler.Pipeline.EntryPoint
@@ -34,7 +36,7 @@ import Juvix.Extra.Stdlib (ensureStdlib)
 import Juvix.Prelude
 
 data PathResolver m a where
-  RegisterDependencies :: PathResolver m ()
+  RegisterDependencies :: DependenciesConfig -> PathResolver m ()
   ExpectedModulePath :: Path Abs File -> TopModulePath -> PathResolver m (Maybe (Path Abs File))
   WithPath ::
     TopModulePath ->
@@ -232,8 +234,9 @@ resolveDependency i = case i ^. packageDepdendencyInfoDependency of
 registerDependencies' ::
   forall r.
   (Members '[Reader EntryPoint, State ResolverState, Reader ResolverEnv, Files, Error Text, Error DependencyError, GitClone] r) =>
+  DependenciesConfig ->
   Sem r ()
-registerDependencies' = do
+registerDependencies' conf = do
   e <- ask @EntryPoint
   isGlobal <- asks (^. entryPointPackageGlobal)
   if
@@ -253,7 +256,7 @@ registerDependencies' = do
       root <- asks (^. envRoot)
       lockfileExists <- fileExists' (mkPackageLockfilePath root)
       depsShouldWriteLockfile <- gets (^. resolverShouldWriteLockfile)
-      return (not lockfileExists && depsShouldWriteLockfile)
+      return (conf ^. dependenciesConfigForceUpdateLockfile || not lockfileExists && depsShouldWriteLockfile)
 
 addDependency' ::
   (Members '[State ResolverState, Reader ResolverEnv, Files, Error Text, Error DependencyError, GitClone] r) =>
@@ -376,7 +379,7 @@ re = reinterpret2H helper
       PathResolver (Sem rInitial) x ->
       Tactical PathResolver (Sem rInitial) (Reader ResolverEnv ': (State ResolverState ': r)) x
     helper = \case
-      RegisterDependencies -> registerDependencies' >>= pureT
+      RegisterDependencies forceUpdateLockfile -> registerDependencies' forceUpdateLockfile >>= pureT
       ExpectedModulePath a m -> expectedPath' a m >>= pureT
       WithPath m a -> do
         x :: Either PathResolverError (Path Abs Dir, Path Rel File) <- resolvePath' m
