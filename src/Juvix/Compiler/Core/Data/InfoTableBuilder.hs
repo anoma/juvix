@@ -16,6 +16,7 @@ data InfoTableBuilder m a where
   RegisterIdent :: Text -> IdentifierInfo -> InfoTableBuilder m ()
   RegisterConstructor :: Text -> ConstructorInfo -> InfoTableBuilder m ()
   RegisterInductive :: Text -> InductiveInfo -> InfoTableBuilder m ()
+  RegisterSpecialisation :: Symbol -> SpecialisationInfo -> InfoTableBuilder m ()
   RegisterIdentNode :: Symbol -> Node -> InfoTableBuilder m ()
   RegisterMain :: Symbol -> InfoTableBuilder m ()
   RegisterLiteralIntToNat :: Symbol -> InfoTableBuilder m ()
@@ -105,6 +106,12 @@ runInfoTableBuilder tab =
           (\b -> modify' (over infoBuiltins (HashMap.insert (builtinTypeToPrim b) identKind)))
         modify' (over infoInductives (HashMap.insert sym ii))
         modify' (over identMap (HashMap.insert idt identKind))
+      RegisterSpecialisation sym spec -> do
+        modify'
+          ( over
+              infoSpecialisations
+              (HashMap.alter (Just . maybe [spec] (spec :)) sym)
+          )
       RegisterIdentNode sym node ->
         modify' (over identContext (HashMap.insert sym node))
       RegisterMain sym -> do

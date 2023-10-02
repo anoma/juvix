@@ -3,10 +3,10 @@ module test056;
 
 import Stdlib.Prelude open;
 
-{-# specialize: [1] #-}
-mymap : {A B : Type} -> (A -> B) -> List A -> List B
-  | f nil := nil
-  | f (x :: xs) := f x :: mymap f xs;
+{-# specialize: [f] #-}
+mymap {A B} (f : A -> B) : List A -> List B
+  | nil := nil
+  | (x :: xs) := f x :: mymap f xs;
 
 {-# specialize: [2, 5] #-}
 myf
