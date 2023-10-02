@@ -6,6 +6,7 @@ module Juvix.Compiler.Core.Transformation.Optimize.SpecializeArgs where
 import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Compiler.Core.Data.InfoTableBuilder
 import Juvix.Compiler.Core.Extra
+import Juvix.Compiler.Core.Info.PragmaInfo (setInfoPragmas)
 import Juvix.Compiler.Core.Transformation.Base
 import Juvix.Compiler.Core.Transformation.LambdaLetRecLifting (lambdaLiftNode')
 
@@ -122,9 +123,19 @@ convertNode tab = dmapLRM go
                           -- the type is not in the scope of the binder
                           (shift (-1) ty')
                           (reLambdas lams' body')
+                      remainingSpecargs =
+                        shiftSpecargs specargs $ filter (not . (`elem` specargs0)) psargs
+                      pragmas =
+                        (ii ^. identifierPragmas)
+                          { _pragmasSpecialise =
+                              Just $
+                                SpecialiseArgs $
+                                  PragmaSpecialiseArgs $
+                                    map SpecialiseArgNum remainingSpecargs
+                          }
                       node' =
                         mkLetRec
-                          mempty
+                          (setInfoPragmas [pragmas] mempty)
                           (NonEmpty.singleton letitem)
                           (mkApps' (mkVar' 0) args'')
                   node'' <- lambdaLiftNode' True bl node'
@@ -170,6 +181,10 @@ convertNode tab = dmapLRM go
         filter
           (not . (`elem` specargs) . snd)
           (zip args [1 ..])
+
+    shiftSpecargs :: [Int] -> [Int] -> [Int]
+    shiftSpecargs specargs =
+      map (\argNum -> argNum - length (filter (argNum <) specargs))
 
     -- Replace the calls to the function being specialised with the specialised
     -- version (omitting the specialised arguments). We need to first replace
