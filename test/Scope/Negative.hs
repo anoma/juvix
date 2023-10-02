@@ -357,5 +357,12 @@ scoperErrorTests =
       $(mkRelFile "LetOpen.juvix")
       $ \case
         ErrAmbiguousSym {} -> Nothing
+        _ -> wrongError,
+    NegTest
+      "Unsupported type"
+      $(mkRelDir ".")
+      $(mkRelFile "UnsupportedType.juvix")
+      $ \case
+        ErrUnsupported {} -> Nothing
         _ -> wrongError
   ]
