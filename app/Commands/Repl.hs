@@ -154,7 +154,7 @@ loadDefaultPrelude = whenJustM defaultPreludeEntryPoint $ \e -> do
     . runGitProcess
     . runError @DependencyError
     . runPathResolver root
-    $ entrySetup
+    $ entrySetup defaultDependenciesConfig
   loadEntryPoint e
 
 getReplEntryPoint :: (Roots -> a -> GlobalOptions -> IO EntryPoint) -> a -> Repl EntryPoint

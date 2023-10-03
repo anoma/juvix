@@ -3,6 +3,7 @@ module TopCommand where
 import Commands.Base hiding (Format)
 import Commands.Clean qualified as Clean
 import Commands.Compile qualified as Compile
+import Commands.Dependencies qualified as Dependencies
 import Commands.Dev qualified as Dev
 import Commands.Doctor qualified as Doctor
 import Commands.Eval qualified as Eval
@@ -38,3 +39,4 @@ runTopCommand = \case
   Html opts -> Html.runCommand opts
   JuvixRepl opts -> Repl.runCommand opts
   JuvixFormat opts -> runFilesIO (Format.runCommand opts)
+  Dependencies opts -> Dependencies.runCommand opts
