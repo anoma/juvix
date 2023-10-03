@@ -1,21 +1,15 @@
-(typed
-  (app
+(app
+  (lamb
+    (list
+      (fun-type
+        so1
+        so1))
     (lamb
       (list
-        (so-hom-obj
-          so1
-          so1))
-      (lamb
-        (list
-          int)
-        (index 1)))
-    (list
-      (lamb
-        (list
-          so1)
-        (index 0))))
-  (so-hom-obj
-    int
-    (so-hom-obj
-      so1
-      so1)))
+        int)
+      (index 1)))
+  (list
+    (lamb
+      (list
+        so1)
+      (index 0))))

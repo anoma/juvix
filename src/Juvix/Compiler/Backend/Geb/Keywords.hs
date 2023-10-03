@@ -33,6 +33,7 @@ allKeywords =
     kwGebBinopMod,
     kwGebBinopEq,
     kwGebBinopLt,
+    kwGebBitChoice,
     kwGebObjectInitial,
     kwGebObjectTerminal,
     kwGebObjectProduct,
@@ -97,6 +98,9 @@ kwGebObjectInteger = asciiKw Str.gebInteger
 
 kwGebVar :: Keyword
 kwGebVar = asciiKw Str.gebVar
+
+kwGebBitChoice :: Keyword
+kwGebBitChoice = asciiKw Str.gebBitChoice
 
 kwGebObjectInitial :: Keyword
 kwGebObjectInitial = asciiKw Str.gebInitial

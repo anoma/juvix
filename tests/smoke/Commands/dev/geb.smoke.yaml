@@ -55,7 +55,7 @@ tests:
       - dev
       - geb
       - repl
-    stdin: ':t (mul 2 3)'
+    stdin: ':t (times (bit-choice 2) (bit-choice 3))'
     stdout:
       contains: 'int'
     exit-status: 0
@@ -78,10 +78,10 @@ tests:
       - dev
       - geb
       - repl
-    stdin: '(add 2 (mul 3 4))'
+    stdin: '(plus (bit-choice 2) (times (bit-choice 3) (bit-choice 4)))'
     stdout:
       contains: |
-        14
+        (bit-choice 14)
     exit-status: 0
 
   - name: geb-eval-with-spaces
@@ -104,7 +104,7 @@ tests:
     stdin: ':load    basic-app.geb'
     stdout:
       contains: |
-        3000
+        (bit-choice 3000)
     exit-status: 0
 
   - name: geb-root
@@ -133,25 +133,19 @@ tests:
     args:
       - Geb/positive/app-lambda.geb
     stdout: |
-      (typed
-        (app
+      (app
+        (lamb
+          (list
+            (fun-type
+              so1
+              so1))
           (lamb
             (list
-              (so-hom-obj
-                so1
-                so1))
-            (lamb
-              (list
-                int)
-              (index 1)))
-          (list
-            (lamb
-              (list
-                so1)
-              (index 0))))
-        (so-hom-obj
-          int
-          (so-hom-obj
-            so1
-            so1)))
+              int)
+            (index 1)))
+        (list
+          (lamb
+            (list
+              so1)
+            (index 0))))
     exit-status: 0

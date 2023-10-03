@@ -146,9 +146,14 @@ instance PrettyCode Morphism where
     MorphismLambda x -> ppCode x
     MorphismApplication x -> ppCode x
     MorphismVar idx -> ppCode idx
-    MorphismInteger n -> return $ annotate AnnLiteralInteger (pretty n)
+    MorphismInteger n -> ppCode n
     MorphismBinop x -> ppCode x
     MorphismFail x -> ppCode x
+
+instance PrettyCode BitChoice where
+  ppCode BitChoice {..} = do
+    let pnumb = (annotate AnnLiteralInteger (pretty _bitChoice))
+    return $ kwBitChoice <+> pnumb
 
 instance PrettyCode Product where
   ppCode Product {..} = do

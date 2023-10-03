@@ -103,6 +103,11 @@ data Failure = Failure
   }
   deriving stock (Show, Eq, Generic)
 
+newtype BitChoice = BitChoice
+  { _bitChoice :: Integer
+  }
+  deriving stock (Show, Eq, Generic)
+
 -- | Corresponds to the GEB type for terms (morphisms of the category): `stlc`
 -- (https://github.com/anoma/geb/blob/main/src/specs/lambda.lisp).
 data Morphism
@@ -117,7 +122,7 @@ data Morphism
   | MorphismLambda Lambda
   | MorphismApplication Application
   | MorphismVar Var
-  | MorphismInteger Integer
+  | MorphismInteger BitChoice
   | MorphismBinop Binop
   | MorphismFail Failure
   deriving stock (Show, Eq, Generic)
@@ -189,7 +194,7 @@ instance HasAtomicity Morphism where
     MorphismLambda {} -> Aggregate appFixity
     MorphismApplication {} -> Aggregate appFixity
     MorphismVar {} -> Aggregate appFixity
-    MorphismInteger {} -> Atom
+    MorphismInteger {} -> Aggregate appFixity
     MorphismBinop {} -> Aggregate appFixity
     MorphismFail {} -> Aggregate appFixity
 
@@ -231,3 +236,4 @@ makeLenses ''RightInj'
 makeLenses ''Second
 makeLenses ''TypedMorphism
 makeLenses ''Var
+makeLenses ''BitChoice

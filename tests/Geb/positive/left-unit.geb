@@ -1,12 +1,6 @@
-(typed
-  (lamb
-    (list
-      so1)
-    (left
-      so1
-      (unit)))
-  (so-hom-obj
+(lamb
+  (list
+    so1)
+  (left
     so1
-    (coprod
-      so1
-      so1)))
+    (unit)))

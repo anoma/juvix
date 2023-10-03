@@ -115,7 +115,6 @@ morphism :: ParsecS r Geb.Morphism
 morphism =
   P.label "<geb morphism>" $ do
     morphismUnit
-      <|> Geb.MorphismInteger <$> morphismInteger
       <|> parens
         ( morphismUnit
             <|> Geb.MorphismAbsurd <$> morphismAbsurd
@@ -130,6 +129,7 @@ morphism =
             <|> Geb.MorphismVar <$> morphismVar
             <|> Geb.MorphismBinop <$> morphismBinop
             <|> Geb.MorphismFail <$> morphismFail
+            <|> Geb.MorphismInteger <$> morphismBitChoice
         )
 
 morphismList :: ParsecS r Geb.Morphism
@@ -140,8 +140,12 @@ morphismList = parens $ do
 parseNatural :: ParsecS r Integer
 parseNatural = lexeme P.decimal
 
-morphismInteger :: ParsecS r Integer
-morphismInteger = parseNatural
+morphismBitChoice :: ParsecS r Geb.BitChoice
+morphismBitChoice = do 
+  P.label "<geb MorphismBitChoice>" $ do
+    kw kwGebBitChoice <* space
+    _bitChoice <- parseNatural
+    return Geb.BitChoice {..}
 
 opcode :: ParsecS r Geb.Opcode
 opcode =
