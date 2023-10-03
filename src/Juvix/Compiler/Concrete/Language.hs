@@ -1583,8 +1583,7 @@ data RecordUpdateApp = RecordUpdateApp
 
 data NamedApplication (s :: Stage) = NamedApplication
   { _namedAppName :: IdentifierType s,
-    _namedAppArgs :: NonEmpty (ArgumentBlock s),
-    _namedAppSignature :: Irrelevant (NameSignatureType s)
+    _namedAppArgs :: NonEmpty (ArgumentBlock s)
   }
 
 deriving stock instance Show (NamedApplication 'Parsed)

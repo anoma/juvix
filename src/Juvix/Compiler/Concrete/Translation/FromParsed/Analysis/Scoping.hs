@@ -38,6 +38,7 @@ iniScoperState =
       _scoperModules = mempty,
       _scoperScope = mempty,
       _scoperSignatures = mempty,
+      _scoperScopedSignatures = mempty,
       _scoperRecordFields = mempty,
       _scoperAlias = mempty,
       _scoperConstructorFields = mempty
@@ -186,7 +187,7 @@ freshSymbol _nameKind _nameConcrete = do
 reserveSymbolSignatureOf ::
   forall (k :: NameKind) r d.
   ( Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder] r,
-    HasNameSignature d,
+    HasNameSignature 'Parsed d,
     SingI (NameKindNameSpace k)
   ) =>
   Sing k ->
@@ -204,7 +205,7 @@ reserveSymbolOf ::
     SingI ns
   ) =>
   Sing nameKind ->
-  Maybe (NameSignature 'Scoped) ->
+  Maybe (NameSignature 'Parsed) ->
   Symbol ->
   Sem r S.Symbol
 reserveSymbolOf k nameSig s = do
@@ -1172,7 +1173,6 @@ checkSections sec = do
         goDefinitions DefinitionsSection {..} = do
           mapM_ reserveDefinition _definitionsSection
           mapM_ scanAlias (_definitionsSection ^.. each . _DefinitionSyntax . _SyntaxAlias)
-          scanNameSignature _definitionsSection
           sec' <- mapM goDefinition _definitionsSection
           next' <- mapM goNonDefinitions _definitionsNext
           return
@@ -1197,23 +1197,24 @@ checkSections sec = do
                       modify' (HashSet.insert i)
                       whenJustM (gets (^? scoperAlias . at i . _Just . preSymbolName . S.nameId)) go
 
+            -- TODO remove
             -- Scope checks type signatures. Needed for default arguments.
-            scanNameSignature :: NonEmpty (Definition 'Parsed) -> Sem r' ()
-            scanNameSignature = mapM_ scanDef
-              where
-              scanDef :: Definition 'Parsed -> Sem r' ()
-              scanDef =  \case
-                DefinitionFunctionDef d -> scanFunctionDef d
-                DefinitionAxiom a -> scanAxiom a
-                DefinitionSyntax {} -> return ()
-                DefinitionProjectionDef {} -> return ()
-                DefinitionInductive {} -> return ()
+            -- scanNameSignature :: NonEmpty (Definition 'Parsed) -> Sem r' ()
+            -- scanNameSignature = mapM_ scanDef
+            --   where
+            --   scanDef :: Definition 'Parsed -> Sem r' ()
+            --   scanDef =  \case
+            --     DefinitionFunctionDef d -> scanFunctionDef d
+            --     DefinitionAxiom a -> scanAxiom a
+            --     DefinitionSyntax {} -> return ()
+            --     DefinitionProjectionDef {} -> return ()
+            --     DefinitionInductive {} -> return ()
 
-              scanAxiom :: AxiomDef 'Parsed -> Sem r' ()
-              scanAxiom = undefined
+            --   scanAxiom :: AxiomDef 'Parsed -> Sem r' ()
+            --   scanAxiom = undefined
 
-              scanFunctionDef :: FunctionDef 'Parsed -> Sem r' ()
-              scanFunctionDef = undefined
+            --   scanFunctionDef :: FunctionDef 'Parsed -> Sem r' ()
+            --   scanFunctionDef = undefined
 
             reserveDefinition :: Definition 'Parsed -> Sem r' ()
             reserveDefinition = \case
@@ -2273,7 +2274,7 @@ getRecordInfo' name nameId =
     err :: Sem r a
     err = throw (ErrNotARecord (NotARecord name))
 
-getNameSignature :: (Members '[State ScoperState, Error ScoperError] r) => ScopedIden -> Sem r (NameSignature 'Scoped)
+getNameSignature :: (Members '[State ScoperState, Error ScoperError] r) => ScopedIden -> Sem r (NameSignature 'Parsed)
 getNameSignature s = do
   sig <- maybeM (throw err) return (lookupNameSignature (s ^. scopedIdenFinal . S.nameId))
   when (null (sig ^. nameSignatureArgs)) (throw err)
@@ -2281,7 +2282,7 @@ getNameSignature s = do
   where
     err = ErrNoNameSignature (NoNameSignature s)
 
-lookupNameSignature :: (Members '[State ScoperState] r) => S.NameId -> Sem r (Maybe (NameSignature 'Scoped))
+lookupNameSignature :: (Members '[State ScoperState] r) => S.NameId -> Sem r (Maybe (NameSignature 'Parsed))
 lookupNameSignature s = gets (^. scoperSignatures . at s)
 
 checkIterator ::

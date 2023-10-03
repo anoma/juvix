@@ -1,5 +1,6 @@
 module Juvix.Compiler.Internal.Translation.FromConcrete.NamedArguments
   ( runNamedArguments,
+NameSignatures,
   )
 where
 
@@ -11,6 +12,10 @@ import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Pretty
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
 import Juvix.Prelude
+import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
+
+
+type NameSignatures = HashMap NameId (NameSignature 'Scoped)
 
 data BuilderState = BuilderState
   { _stateRemainingArgs :: [ArgumentBlock 'Scoped],
@@ -21,23 +26,26 @@ makeLenses ''BuilderState
 
 runNamedArguments ::
   forall r.
-  (Members '[NameIdGen, Error ScoperError] r) =>
+  (Members '[NameIdGen, Error ScoperError, Reader NameSignatures] r) =>
   NamedApplication 'Scoped ->
   Sem r Expression
 runNamedArguments napp = do
+  iniSt <- mkIniBuilderState
   args <-
     execOutputList
       . mapError ErrNamedArgumentsError
-      . execState iniBuilderState
+      . execState iniSt
       $ helper (getLoc napp)
   return (foldl' mkApp (ExpressionIdentifier (napp ^. namedAppName)) args)
   where
-    sig :: NameSignature 'Scoped = napp ^. namedAppSignature . unIrrelevant
+    -- sig :: NameSignature 'Scoped = napp ^. namedAppSignature . unIrrelevant
     mkApp :: Expression -> Expression -> Expression
     mkApp a = ExpressionApplication . Application a
-    iniBuilderState :: BuilderState
-    iniBuilderState =
-      BuilderState
+
+    mkIniBuilderState :: Sem r BuilderState
+    mkIniBuilderState = do
+      sig <- asks @NameSignatures (^?! at (napp ^. namedAppName . scopedIdenName . S.nameId) . _Just)
+      return BuilderState
         { _stateRemainingArgs = toList (napp ^. namedAppArgs),
           _stateRemainingNames = sig ^. nameSignatureArgs
         }
