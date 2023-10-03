@@ -7,6 +7,6 @@ newtype DependenciesConfig = DependenciesConfig
   }
 
 defaultDependenciesConfig :: DependenciesConfig
-defaultDependenciesConfig = DependenciesConfig {_dependenciesConfigForceUpdateLockfile = True}
+defaultDependenciesConfig = DependenciesConfig {_dependenciesConfigForceUpdateLockfile = False}
 
 makeLenses ''DependenciesConfig
