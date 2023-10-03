@@ -8,13 +8,22 @@ axiom B : Type;
 
 axiom C : Type;
 
-axiom a : Type;
+axiom D : Type;
 
-axiom b : Type;
+axiom a : A;
 
-axiom c : Type;
+axiom b : B;
 
-mk {f1 : A := a} {f2 : B} {f3 : C := c} (x : A) : A × B × C :=
-  f1, f2, f3;
+axiom c : C;
 
-x : A × B × C := mk (x := a);
+axiom d : D;
+
+mk {f1 : A := a} {f2 : Type} {f3 : C := c} (x : f2) : A × f2 × C :=
+  f1, x, f3;
+
+x1 : A × B × C := mk (x := b);
+
+mk2 {f1 : A := a} {f2 : Type} {f3 : C := c} (x : f2) {f4 : D := d} (y : f2) : A × f2 × C :=
+  f1, x, f3;
+
+x2 : A × B × C := mk2 (x := b) (y := b);

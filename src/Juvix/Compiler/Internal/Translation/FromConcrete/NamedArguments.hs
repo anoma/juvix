@@ -12,6 +12,7 @@ import Juvix.Compiler.Concrete.Keywords
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
 import Juvix.Prelude
+import Juvix.Compiler.Concrete.Pretty (ppTrace)
 
 type NameSignatures = HashMap NameId (NameSignature 'Scoped)
 
@@ -52,8 +53,10 @@ runNamedArguments napp = do
 type Defaults = IntMap (ArgDefault 'Scoped)
 
 mkDefaults :: [NameItem 'Scoped] -> IntMap (ArgDefault 'Scoped)
-mkDefaults l =  IntMap.fromList [(i ^. nameItemIndex, def) | i <- l,
-                                 Just def <- [i ^. nameItemDefault]]
+mkDefaults l =
+  IntMap.fromList
+    [ (i ^. nameItemIndex, def) | i <- l, Just def <- [i ^. nameItemDefault]
+    ]
 
 helper ::
   forall r.
@@ -64,13 +67,12 @@ helper loc = do
   whenJustM nextArgumentGroup $ \(impl, args, isLastBlock) -> do
     checkRepeated args
     names :: [NameItem 'Scoped] <- nextNameGroup impl
-    let defaults :: IntMap (ArgDefault 'Scoped)
-        defaults = mkDefaults names
+
     (pendingArgs, (omittedNames, argmap)) <- scanGroup impl names args
-    emitArgs impl isLastBlock defaults omittedNames argmap
+    emitArgs impl isLastBlock (mkDefaults names) omittedNames argmap
     whenJust (nonEmpty pendingArgs) $ \pendingArgs' -> do
       sig <- nextNameGroup Implicit
-      emitImplicit False defaults sig mempty
+      emitImplicit False (mkDefaults sig) sig mempty
       moreNames <- not . null <$> gets (^. stateRemainingNames)
       if
           | moreNames -> modify' (over stateRemainingArgs (ArgumentBlock (Irrelevant Nothing) Explicit (nonEmpty' pendingArgs) :))
@@ -78,32 +80,32 @@ helper loc = do
     helper loc
   where
     nextNameGroup :: IsImplicit -> Sem r [NameItem 'Scoped]
-    nextNameGroup impl = do
+    nextNameGroup implArgs = do
       remb <- gets (^. stateRemainingNames)
       case remb of
         [] -> return mempty
         (b :: NameBlock 'Scoped) : bs -> do
-          let implNames = b ^. nameImplicit
+          let implSig = b ^. nameImplicit
               defaults = mkDefaults (toList (b ^. nameBlock))
           modify' (set stateRemainingNames bs)
           let r = toList (b ^. nameBlock)
               matches = return r
-          case (impl, implNames) of
+          case (implArgs, implSig) of
             (Explicit, Explicit) -> matches
             (Implicit, Implicit) -> matches
             (ImplicitInstance, ImplicitInstance) -> matches
             (Explicit, Implicit) -> do
               emitImplicit False defaults r mempty
-              nextNameGroup impl
+              nextNameGroup implArgs
             (Explicit, ImplicitInstance) -> do
               emitImplicitInstance False defaults r mempty
-              nextNameGroup impl
+              nextNameGroup implArgs
             (Implicit, ImplicitInstance) -> do
               emitImplicitInstance False defaults r mempty
-              nextNameGroup impl
+              nextNameGroup implArgs
             (ImplicitInstance, Implicit) -> do
               emitImplicit False defaults r mempty
-              nextNameGroup impl
+              nextNameGroup implArgs
             (Implicit, Explicit) -> return mempty
             (ImplicitInstance, Explicit) -> return mempty
 
@@ -129,27 +131,27 @@ helper loc = do
       Explicit -> emitExplicit
       ImplicitInstance -> emitImplicitInstance
       where
-      -- omitting arguments is only allowed at the end
-      emitExplicit :: Bool -> Defaults -> [NameItem 'Scoped] -> IntMap Expression -> Sem r ()
-      emitExplicit lastBlock _ omittedArgs args = do
-        if
-            | lastBlock ->
-                unless
-                  (IntMap.keys args == [0 .. IntMap.size args - 1])
-                  (missingErr (nonEmpty' (map (^. nameItemSymbol) (filterMissing omittedArgs))))
-            | otherwise -> whenJust (nonEmpty (map (^. nameItemSymbol) omittedArgs)) missingErr
-        forM_ args output
-        where
-          filterMissing :: [NameItem 'Scoped] -> [NameItem 'Scoped]
-          filterMissing = case maximumGiven of
-            Nothing -> id
-            Just m -> filter ((< m) . (^. nameItemIndex))
+        -- omitting arguments is only allowed at the end
+        emitExplicit :: Bool -> Defaults -> [NameItem 'Scoped] -> IntMap Expression -> Sem r ()
+        emitExplicit lastBlock _ omittedArgs args = do
+          if
+              | lastBlock ->
+                  unless
+                    (IntMap.keys args == [0 .. IntMap.size args - 1])
+                    (missingErr (nonEmpty' (map (^. nameItemSymbol) (filterMissing omittedArgs))))
+              | otherwise -> whenJust (nonEmpty (map (^. nameItemSymbol) omittedArgs)) missingErr
+          forM_ args output
+          where
+            filterMissing :: [NameItem 'Scoped] -> [NameItem 'Scoped]
+            filterMissing = case maximumGiven of
+              Nothing -> id
+              Just m -> filter ((< m) . (^. nameItemIndex))
 
-          maximumGiven :: Maybe Int
-          maximumGiven = fst <$> IntMap.lookupMax args
+            maximumGiven :: Maybe Int
+            maximumGiven = fst <$> IntMap.lookupMax args
 
-          missingErr :: NonEmpty Symbol -> Sem r ()
-          missingErr = throw . ErrMissingArguments . MissingArguments loc
+            missingErr :: NonEmpty Symbol -> Sem r ()
+            missingErr = throw . ErrMissingArguments . MissingArguments loc
 
     emitImplicitHelper ::
       (WithLoc Expression -> Expression) ->
@@ -171,14 +173,18 @@ helper loc = do
             output (exprBraces (WithLoc (getLoc e) e))
             go (n' + 1) rest
           where
-            fillUntil n' = forM_ [n.. n' - 1] (fillPosition >=> output)
+            fillUntil n' = forM_ [n .. n' - 1] (fillPosition >=> output)
 
             fillPosition :: (Members '[NameIdGen] r') => Int -> Sem r' Expression
-            fillPosition idx = exprBraces . WithLoc loc <$>
-              case defaults ^. at idx of
-                Nothing -> exprHole . mkHole loc <$> freshNameId
-                -- TODO generate fresh binders
-                Just d -> return (d ^. argDefaultValue)
+            fillPosition idx = do
+              e' <- exprBraces . WithLoc loc
+                <$> case defaults ^. at idx of
+                  Nothing -> exprHole . mkHole loc <$> freshNameId
+                  -- TODO generate fresh binders
+                  -- TODO update location
+                  Just d -> return (d ^. argDefaultValue)
+              traceM ("fill position " <> show idx <> " : " <> ppTrace e')
+              return e'
         maxIx :: Maybe Int
         maxIx = fmap maximum1 . nonEmpty . map (^. nameItemIndex) $ omittedArgs
 
@@ -204,7 +210,12 @@ helper loc = do
       [NameItem 'Scoped] ->
       [NamedArgument 'Scoped] ->
       Sem r ([NamedArgument 'Scoped], ([NameItem 'Scoped], IntMap Expression))
-    scanGroup impl names = fmap (second (first toList)) . runOutputList . runState namesBySymbol . execState mempty . mapM_ go
+    scanGroup impl names =
+      fmap (second (first toList))
+        . runOutputList
+        . runState namesBySymbol
+        . execState mempty
+        . mapM_ go
       where
         namesBySymbol :: HashMap Symbol (NameItem 'Scoped)
         namesBySymbol = HashMap.fromList [(i ^. nameItemSymbol, i) | i <- names]
