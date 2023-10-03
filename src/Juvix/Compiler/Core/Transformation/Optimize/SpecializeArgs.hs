@@ -98,7 +98,6 @@ convertNode = dmapLRM go
                     filter
                       ( \argNum ->
                           argNum <= argsNum
-                            && argNum <= length args'
                             && isSpecializable tab (args' !! (argNum - 1))
                             && isArgSpecializable tab _identSymbol argNum
                       )
@@ -145,9 +144,13 @@ convertNode = dmapLRM go
                       eassert (length lams == argsNum)
                       eassert (length args' == argsNum)
                       eassert (argsNum <= length tyargs)
-                      let specSig = selectSpecargs specargs args'
+                      -- assumption: all type variables are at the front
+                      eassert (not $ any (isTypeConstr tab) (drop tyargsNum tyargs))
+                      -- the specialisation signature: the values we specialise the arguments by
+                      let specSigArgs = selectSpecargs specargs args'
+                          specSig = (specSigArgs, specargs)
                       if
-                          | all isClosed specSig ->
+                          | all isClosed specSigArgs ->
                               case find ((== specSig) . (^. specSignature)) (lookupSpecialisationInfo tab _identSymbol) of
                                 Just SpecialisationInfo {..} ->
                                   return $

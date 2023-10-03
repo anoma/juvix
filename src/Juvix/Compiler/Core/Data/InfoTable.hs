@@ -109,7 +109,7 @@ data AxiomInfo = AxiomInfo
   }
 
 data SpecialisationInfo = SpecialisationInfo
-  { _specSignature :: [Node],
+  { _specSignature :: ([Node], [Int]),
     _specSymbol :: Symbol
   }
 
