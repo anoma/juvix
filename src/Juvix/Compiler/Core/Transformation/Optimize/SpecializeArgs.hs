@@ -1,6 +1,3 @@
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
-
-{-# HLINT ignore "Redundant multi-way if" #-}
 module Juvix.Compiler.Core.Transformation.Optimize.SpecializeArgs where
 
 import Data.List.NonEmpty qualified as NonEmpty
