@@ -80,7 +80,7 @@ instance PrettyCodeAnn MissingLockfileDependency where
       <+> lockfilePath
         <> line
         <> "Try running"
-        <+> code "juvix dependencies update"
+      <+> code "juvix dependencies update"
     where
       lockfilePath :: Doc CodeAnn
       lockfilePath = pretty (e ^. missingLockfileDependencyPath)
