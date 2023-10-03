@@ -8,7 +8,7 @@ mymap {A B} (f : A -> B) : List A -> List B
   | nil := nil
   | (x :: xs) := f x :: mymap f xs;
 
-{-# specialize: [2, 5] #-}
+{-# specialize: [2, 5], inline: false #-}
 myf
   : {A B : Type}
     -> A
@@ -20,6 +20,7 @@ myf
   | a0 f a b true := f a0 a
   | a0 f a b false := b;
 
+{-# inline: false #-}
 myf'
   : {A B : Type} -> A -> (A -> A -> A -> B) -> A -> B -> B
   | a0 f a b := myf a0 (f a0) a b true;

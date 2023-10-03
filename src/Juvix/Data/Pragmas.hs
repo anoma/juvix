@@ -40,9 +40,9 @@ newtype PragmaSpecialiseArgs = PragmaSpecialiseArgs
   }
   deriving stock (Show, Eq, Ord, Data, Generic)
 
-data PragmaSpecialise
-  = SpecialiseBool Bool
-  | SpecialiseArgs PragmaSpecialiseArgs
+newtype PragmaSpecialise = PragmaSpecialise
+  { _pragmaSpecialise :: Bool
+  }
   deriving stock (Show, Eq, Ord, Data, Generic)
 
 newtype PragmaSpecialiseBy = PragmaSpecialiseBy
@@ -57,6 +57,7 @@ data Pragmas = Pragmas
     _pragmasPublic :: Maybe PragmaPublic,
     _pragmasFormat :: Maybe PragmaFormat,
     _pragmasSpecialise :: Maybe PragmaSpecialise,
+    _pragmasSpecialiseArgs :: Maybe PragmaSpecialiseArgs,
     _pragmasSpecialiseBy :: Maybe PragmaSpecialiseBy
   }
   deriving stock (Show, Eq, Ord, Data, Generic)
@@ -99,9 +100,16 @@ instance FromJSON Pragmas where
         _pragmasArgNames <- keyMay "argnames" parseArgNames
         _pragmasPublic <- keyMay "public" parsePublicArgs
         _pragmasFormat <- keyMay "format" parseFormat
-        specargs <- keyMay "specialise" parseSpecialise
-        specargs' <- keyMay "specialize" parseSpecialise
-        let _pragmasSpecialise = specargs <|> specargs'
+        spec <- keyMay "specialise" parseSpecialise
+        spec' <- keyMay "specialize" parseSpecialise
+        let bspec = spec >>= either Just (const Nothing)
+            bspec' = spec' >>= either Just (const Nothing)
+            _pragmasSpecialise = bspec <|> bspec'
+        let specargs0 = spec >>= either (const Nothing) Just
+            specargs0' = spec' >>= either (const Nothing) Just
+        specargs <- keyMay "specialise-args" parseSpecialiseArgs
+        specargs' <- keyMay "specialize-args" parseSpecialiseArgs
+        let _pragmasSpecialiseArgs = specargs0 <|> specargs0' <|> specargs <|> specargs'
         specby <- keyMay "specialise-by" parseSpecialiseBy
         specby' <- keyMay "specialize-by" parseSpecialiseBy
         let _pragmasSpecialiseBy = specby <|> specby'
@@ -152,10 +160,10 @@ instance FromJSON Pragmas where
         _pragmaSpecialiseArgs <- eachInArray parseSpecialiseArg
         return PragmaSpecialiseArgs {..}
 
-      parseSpecialise :: Parse YamlError PragmaSpecialise
+      parseSpecialise :: Parse YamlError (Either PragmaSpecialise PragmaSpecialiseArgs)
       parseSpecialise =
-        (SpecialiseBool <$> asBool)
-          Aeson.<|> (SpecialiseArgs <$> parseSpecialiseArgs)
+        (Left . PragmaSpecialise <$> asBool)
+          Aeson.<|> (Right <$> parseSpecialiseArgs)
 
       parseSpecialiseBy :: Parse YamlError PragmaSpecialiseBy
       parseSpecialiseBy = do
@@ -181,6 +189,7 @@ instance Semigroup Pragmas where
         _pragmasPublic = p2 ^. pragmasPublic,
         _pragmasFormat = p2 ^. pragmasFormat <|> p1 ^. pragmasFormat,
         _pragmasSpecialise = p2 ^. pragmasSpecialise <|> p1 ^. pragmasSpecialise,
+        _pragmasSpecialiseArgs = p2 ^. pragmasSpecialiseArgs <|> p1 ^. pragmasSpecialiseArgs,
         _pragmasSpecialiseBy = p2 ^. pragmasSpecialiseBy <|> p1 ^. pragmasSpecialiseBy
       }
 
@@ -193,6 +202,7 @@ instance Monoid Pragmas where
         _pragmasPublic = Nothing,
         _pragmasFormat = Nothing,
         _pragmasSpecialise = Nothing,
+        _pragmasSpecialiseArgs = Nothing,
         _pragmasSpecialiseBy = Nothing
       }
 
@@ -202,13 +212,6 @@ adjustPragmaInline n = \case
   InlineNever -> InlineNever
   InlineFullyApplied -> InlineFullyApplied
 
-adjustPragmaSpecialise :: Int -> PragmaSpecialise -> PragmaSpecialise
-adjustPragmaSpecialise n = \case
-  SpecialiseBool b -> SpecialiseBool b
-  SpecialiseArgs a ->
-    SpecialiseArgs $
-      over pragmaSpecialiseArgs (map (adjustPragmaSpecialiseArg n)) a
-
 adjustPragmaSpecialiseArg :: Int -> PragmaSpecialiseArg -> PragmaSpecialiseArg
 adjustPragmaSpecialiseArg n = \case
   SpecialiseArgNum i -> SpecialiseArgNum (n + i)
@@ -217,4 +220,7 @@ adjustPragmaSpecialiseArg n = \case
 adjustPragmas :: Int -> Pragmas -> Pragmas
 adjustPragmas fvnum pragmas =
   over pragmasInline (fmap (adjustPragmaInline fvnum)) $
-    over pragmasSpecialise (fmap (adjustPragmaSpecialise fvnum)) pragmas
+    over
+      pragmasSpecialiseArgs
+      (fmap (over pragmaSpecialiseArgs (map (adjustPragmaSpecialiseArg fvnum))))
+      pragmas

@@ -3,15 +3,20 @@ module Juvix.Compiler.Core.Transformation.Optimize.SpecializeArgs where
 import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Compiler.Core.Data.InfoTableBuilder
 import Juvix.Compiler.Core.Extra
-import Juvix.Compiler.Core.Info.PragmaInfo (setInfoPragmas)
+import Juvix.Compiler.Core.Info.PragmaInfo
 import Juvix.Compiler.Core.Transformation.Base
 import Juvix.Compiler.Core.Transformation.LambdaLetRecLifting (lambdaLiftNode')
 
+-- | Check if an argument value is suitable for specialisation (e.g. not a
+-- variable)
 isSpecializable :: InfoTable -> Node -> Bool
 isSpecializable tab node =
   isType tab mempty node
     || case node of
-      NIdt {} -> True
+      NIdt Ident {..} ->
+        case lookupIdentifierInfo tab _identSymbol ^. identifierPragmas . pragmasSpecialise of
+          Just (PragmaSpecialise False) -> False
+          _ -> True
       NLam {} -> True
       NCst {} -> True
       NCtr Constr {..} -> all (isSpecializable tab) _constrArgs
@@ -19,6 +24,20 @@ isSpecializable tab node =
         let (h, _) = unfoldApps' node
          in isSpecializable tab h
       _ -> False
+
+-- | Check for `h a1 .. an` where `h` is an identifier explicitly marked for
+-- specialisation with `specialize: true`.
+isMarkedSpecializable :: InfoTable -> Node -> Bool
+isMarkedSpecializable tab node =
+  let (h, _) = unfoldApps' node
+   in case h of
+        NIdt Ident {..}
+          | Just (PragmaSpecialise True) <-
+              lookupIdentifierInfo tab _identSymbol
+                ^. identifierPragmas . pragmasSpecialise ->
+              True
+        _ ->
+          False
 
 -- | Checks if an argument is passed without modification to recursive calls.
 isArgSpecializable :: InfoTable -> Symbol -> Int -> Bool
@@ -70,9 +89,7 @@ convertNode = dmapLRM go
     goIdentApp bl idt@Ident {..} args = do
       tab <- getInfoTable
       let ii = lookupIdentifierInfo tab _identSymbol
-          pspec =
-            (ii ^. identifierPragmas . pragmasSpecialise)
-              >>= (\case SpecialiseBool {} -> Nothing; SpecialiseArgs a -> Just a)
+          pspec = ii ^. identifierPragmas . pragmasSpecialiseArgs
           pspecby = ii ^. identifierPragmas . pragmasSpecialiseBy
           argsNum = ii ^. identifierArgsNum
           (tyargs, tgt) = unfoldPi' (ii ^. identifierType)
@@ -112,11 +129,10 @@ convertNode = dmapLRM go
                     shiftSpecargs specargs $ filter (not . (`elem` specargs0)) psargs
                   pragmas =
                     (ii ^. identifierPragmas)
-                      { _pragmasSpecialise =
+                      { _pragmasSpecialiseArgs =
                           Just $
-                            SpecialiseArgs $
-                              PragmaSpecialiseArgs $
-                                map SpecialiseArgNum remainingSpecargs
+                            PragmaSpecialiseArgs $
+                              map SpecialiseArgNum remainingSpecargs
                       }
 
                   createFun :: Int -> Symbol -> [Node] -> (Type, [LambdaLhs], Node)
