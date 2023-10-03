@@ -364,33 +364,40 @@ checkImport ::
   (Members '[Error ScoperError, State Scope, Reader ScopeParameters, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
   Import 'Parsed ->
   Sem r (Import 'Scoped)
-checkImport import_@(Import kw path qual) = do
+checkImport import_@Import {..} = do
   checkCycle
   cache <- gets (^. scoperModulesCache . cachedModules)
-  moduleRef <- maybe (readScopeModule import_) return (cache ^. at path)
+  moduleRef <- maybe (readScopeModule import_) return (cache ^. at _importModule)
   let checked :: Module 'Scoped 'ModuleTop = moduleRef ^. moduleRefModule
       sname :: S.TopModulePath = checked ^. modulePath
-      sname' :: S.Name = set S.nameConcrete (topModulePathToName path) sname
+      sname' :: S.Name = set S.nameConcrete (topModulePathToName _importModule) sname
       moduleId = sname ^. S.nameId
       cmoduleRef :: ModuleRef'' 'S.Concrete 'ModuleTop = set moduleRefName sname' moduleRef
-      importName :: S.TopModulePath = set S.nameConcrete path sname
+      importName :: S.TopModulePath = set S.nameConcrete _importModule sname
       synonymName :: Maybe S.TopModulePath = do
-        synonym <- qual
+        synonym <- _importAsName
         return (set S.nameConcrete synonym sname)
       qual' :: Maybe S.TopModulePath
       qual' = do
-        asName <- qual
+        asName <- _importAsName
         return (set S.nameConcrete asName sname')
   addModuleToScope moduleRef
   registerName importName
   whenJust synonymName registerName
   let moduleRef' = mkModuleRef' moduleRef
   modify (over scoperModules (HashMap.insert moduleId moduleRef'))
-  return (Import kw cmoduleRef qual')
+  importOpen' <- mapM (checkImportOpenParams cmoduleRef) _importOpen
+  return
+    Import
+      { _importModule = cmoduleRef,
+        _importAsName = qual',
+        _importOpen = importOpen',
+        ..
+      }
   where
     addModuleToScope :: ModuleRef'' 'S.NotConcrete 'ModuleTop -> Sem r ()
     addModuleToScope moduleRef = do
-      let mpath :: TopModulePath = fromMaybe path qual
+      let mpath :: TopModulePath = fromMaybe _importModule _importAsName
           uid :: S.NameId = moduleRef ^. moduleRefName . S.nameId
           singTbl = HashMap.singleton uid moduleRef
       modify (over (scopeTopModules . at mpath) (Just . maybe singTbl (HashMap.insert uid moduleRef)))
@@ -1329,6 +1336,7 @@ mkLetSections = mkSections . map toTopStatement
     toTopStatement = \case
       LetFunctionDef f -> StatementFunctionDef f
       LetAliasDef f -> StatementSyntax (SyntaxAlias f)
+      LetOpen o -> StatementOpenModule o
 
 mkSections :: [Statement 'Parsed] -> StatementSections 'Parsed
 mkSections = \case
@@ -1473,136 +1481,123 @@ lookupModuleSymbol n = do
       NameUnqualified s -> ([], s)
       NameQualified (QualifiedName (SymbolPath p) s) -> (toList p, s)
 
-checkOpenImportModule ::
-  (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
+checkImportOpenParams ::
+  forall r.
+  (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
+  ModuleRef'' 'S.Concrete 'ModuleTop ->
+  OpenModuleParams 'Parsed ->
+  Sem r (OpenModuleParams 'Scoped)
+checkImportOpenParams m p =
+  (^. openModuleParams)
+    <$> checkOpenModuleHelper
+      (Just m)
+      OpenModule
+        { _openModuleParams = p,
+          _openModuleName = m ^. moduleRefName . S.nameConcrete
+        }
+
+checkOpenModule ::
+  forall r.
+  (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
   OpenModule 'Parsed ->
   Sem r (OpenModule 'Scoped)
-checkOpenImportModule op
-  | Just k <- op ^. openModuleImportKw =
-      let import_ :: Import 'Parsed
-          import_ =
-            Import
-              { _importKw = k,
-                _importModule = moduleNameToTopModulePath (op ^. openModuleName),
-                _importAsName = op ^. openImportAsName
-              }
-       in do
-            import' <- checkImport import_
-            let topName :: S.TopModulePath = over S.nameConcrete moduleNameToTopModulePath (import' ^. importModule . moduleRefName)
-                op' =
-                  op
-                    { _openModuleImportKw = Nothing,
-                      _openImportAsName = Nothing,
-                      _openModuleName = maybe (op ^. openModuleName) topModulePathToName (op ^. openImportAsName)
-                    }
-            scopedOpen <- checkOpenModuleNoImport (Just (import' ^. importModule)) op'
-            return
-              scopedOpen
-                { _openModuleImportKw = Just k,
-                  _openModuleName = project (import' ^. importModule),
-                  _openImportAsName = (\asTxt -> set S.nameConcrete asTxt topName) <$> op ^. openImportAsName
-                }
-  | otherwise = impossible
+checkOpenModule = checkOpenModuleHelper Nothing
 
-checkOpenModuleNoImport ::
+checkOpenModuleHelper ::
   forall r.
   (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
   Maybe (ModuleRef'' 'S.Concrete 'ModuleTop) ->
   OpenModule 'Parsed ->
   Sem r (OpenModule 'Scoped)
-checkOpenModuleNoImport importModuleHint OpenModule {..}
-  | isJust _openModuleImportKw = impossible
-  | otherwise = do
-      openModuleName'@(ModuleRef' (_ :&: moduleRef'')) <- case importModuleHint of
-        Nothing -> lookupModuleSymbol _openModuleName
-        Just m -> return (project m)
-      let exportInfo = moduleRef'' ^. moduleExportInfo
-      registerName (moduleRef'' ^. moduleRefName)
+checkOpenModuleHelper importModuleHint OpenModule {..} = do
+  openModuleName'@(ModuleRef' (_ :&: moduleRef'')) <- case importModuleHint of
+    Nothing -> lookupModuleSymbol _openModuleName
+    Just m -> return (project m)
+  let exportInfo = moduleRef'' ^. moduleExportInfo
+  registerName (moduleRef'' ^. moduleRefName)
 
-      let checkUsingHiding :: UsingHiding 'Parsed -> Sem r (UsingHiding 'Scoped)
-          checkUsingHiding = \case
-            Hiding h -> Hiding <$> checkHidingList h
-            Using uh -> Using <$> checkUsingList uh
-            where
-              scopeSymbol :: forall (ns :: NameSpace). (SingI ns) => Sing ns -> Symbol -> Sem r S.Symbol
-              scopeSymbol _ s = do
-                let mentry :: Maybe (NameSpaceEntryType ns)
-                    mentry = exportInfo ^. exportNameSpace . at s
-                    err =
-                      throw
-                        ( ErrModuleDoesNotExportSymbol
-                            ( ModuleDoesNotExportSymbol
-                                { _moduleDoesNotExportSymbol = s,
-                                  _moduleDoesNotExportModule = openModuleName'
-                                }
-                            )
+  let checkUsingHiding :: UsingHiding 'Parsed -> Sem r (UsingHiding 'Scoped)
+      checkUsingHiding = \case
+        Hiding h -> Hiding <$> checkHidingList h
+        Using uh -> Using <$> checkUsingList uh
+        where
+          scopeSymbol :: forall (ns :: NameSpace). (SingI ns) => Sing ns -> Symbol -> Sem r S.Symbol
+          scopeSymbol _ s = do
+            let mentry :: Maybe (NameSpaceEntryType ns)
+                mentry = exportInfo ^. exportNameSpace . at s
+                err =
+                  throw
+                    ( ErrModuleDoesNotExportSymbol
+                        ( ModuleDoesNotExportSymbol
+                            { _moduleDoesNotExportSymbol = s,
+                              _moduleDoesNotExportModule = openModuleName'
+                            }
                         )
-                entry <- maybe err return mentry
-                let scopedSym = entryToSymbol entry s
-                registerName scopedSym
-                return scopedSym
+                    )
+            entry <- maybe err return mentry
+            let scopedSym = entryToSymbol entry s
+            registerName scopedSym
+            return scopedSym
 
-              checkHidingList :: HidingList 'Parsed -> Sem r (HidingList 'Scoped)
-              checkHidingList l = do
-                items' <- mapM checkHidingItem (l ^. hidingList)
-                return
-                  HidingList
-                    { _hidingKw = l ^. hidingKw,
-                      _hidingBraces = l ^. hidingBraces,
-                      _hidingList = items'
-                    }
+          checkHidingList :: HidingList 'Parsed -> Sem r (HidingList 'Scoped)
+          checkHidingList l = do
+            items' <- mapM checkHidingItem (l ^. hidingList)
+            return
+              HidingList
+                { _hidingKw = l ^. hidingKw,
+                  _hidingBraces = l ^. hidingBraces,
+                  _hidingList = items'
+                }
 
-              checkUsingList :: UsingList 'Parsed -> Sem r (UsingList 'Scoped)
-              checkUsingList l = do
-                items' <- mapM checkUsingItem (l ^. usingList)
-                return
-                  UsingList
-                    { _usingKw = l ^. usingKw,
-                      _usingBraces = l ^. usingBraces,
-                      _usingList = items'
-                    }
+          checkUsingList :: UsingList 'Parsed -> Sem r (UsingList 'Scoped)
+          checkUsingList l = do
+            items' <- mapM checkUsingItem (l ^. usingList)
+            return
+              UsingList
+                { _usingKw = l ^. usingKw,
+                  _usingBraces = l ^. usingBraces,
+                  _usingList = items'
+                }
 
-              checkHidingItem :: HidingItem 'Parsed -> Sem r (HidingItem 'Scoped)
-              checkHidingItem h = do
-                let s = h ^. hidingSymbol
-                scopedSym <-
-                  if
-                      | isJust (h ^. hidingModuleKw) -> scopeSymbol SNameSpaceModules s
-                      | otherwise -> scopeSymbol SNameSpaceSymbols s
-                return
-                  HidingItem
-                    { _hidingSymbol = scopedSym,
-                      _hidingModuleKw = h ^. hidingModuleKw
-                    }
+          checkHidingItem :: HidingItem 'Parsed -> Sem r (HidingItem 'Scoped)
+          checkHidingItem h = do
+            let s = h ^. hidingSymbol
+            scopedSym <-
+              if
+                  | isJust (h ^. hidingModuleKw) -> scopeSymbol SNameSpaceModules s
+                  | otherwise -> scopeSymbol SNameSpaceSymbols s
+            return
+              HidingItem
+                { _hidingSymbol = scopedSym,
+                  _hidingModuleKw = h ^. hidingModuleKw
+                }
 
-              checkUsingItem :: UsingItem 'Parsed -> Sem r (UsingItem 'Scoped)
-              checkUsingItem i = do
-                let s = i ^. usingSymbol
-                scopedSym <-
-                  if
-                      | isJust (i ^. usingModuleKw) -> scopeSymbol SNameSpaceModules s
-                      | otherwise -> scopeSymbol SNameSpaceSymbols s
-                let scopedAs = do
-                      c <- i ^. usingAs
-                      return (set S.nameConcrete c scopedSym)
-                mapM_ registerName scopedAs
-                return
-                  UsingItem
-                    { _usingSymbol = scopedSym,
-                      _usingAs = scopedAs,
-                      _usingAsKw = i ^. usingAsKw,
-                      _usingModuleKw = i ^. usingModuleKw
-                    }
-
-      usingHiding' <- mapM checkUsingHiding _openUsingHiding
-      mergeScope (alterScope usingHiding' exportInfo)
-      return
-        OpenModule
-          { _openModuleName = openModuleName',
-            _openImportAsName = Nothing,
-            _openUsingHiding = usingHiding',
-            ..
-          }
+          checkUsingItem :: UsingItem 'Parsed -> Sem r (UsingItem 'Scoped)
+          checkUsingItem i = do
+            let s = i ^. usingSymbol
+            scopedSym <-
+              if
+                  | isJust (i ^. usingModuleKw) -> scopeSymbol SNameSpaceModules s
+                  | otherwise -> scopeSymbol SNameSpaceSymbols s
+            let scopedAs = do
+                  c <- i ^. usingAs
+                  return (set S.nameConcrete c scopedSym)
+            mapM_ registerName scopedAs
+            return
+              UsingItem
+                { _usingSymbol = scopedSym,
+                  _usingAs = scopedAs,
+                  _usingAsKw = i ^. usingAsKw,
+                  _usingModuleKw = i ^. usingModuleKw
+                }
+  openParams' <- traverseOf openUsingHiding (mapM checkUsingHiding) _openModuleParams
+  mergeScope (alterScope (openParams' ^. openUsingHiding) exportInfo)
+  return
+    OpenModule
+      { _openModuleName = openModuleName',
+        _openModuleParams = openParams',
+        ..
+      }
   where
     mergeScope :: ExportInfo -> Sem r ()
     mergeScope ei = do
@@ -1631,7 +1626,7 @@ checkOpenModuleNoImport importModuleHint OpenModule {..}
           over
             nsEntry
             ( set S.nameWhyInScope S.BecauseImportedOpened
-                . set S.nameVisibilityAnn (publicAnnToVis _openPublic)
+                . set S.nameVisibilityAnn (publicAnnToVis (_openModuleParams ^. openPublic))
             )
 
         publicAnnToVis :: PublicAnn -> VisibilityAnn
@@ -1671,15 +1666,6 @@ checkOpenModuleNoImport importModuleHint OpenModule {..}
               u = HashSet.fromList (map (^. hidingSymbol . S.nameId) (toList (l ^. hidingList)))
           Nothing -> id
 
-checkOpenModule ::
-  forall r.
-  (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
-  OpenModule 'Parsed ->
-  Sem r (OpenModule 'Scoped)
-checkOpenModule op
-  | isJust (op ^. openModuleImportKw) = checkOpenImportModule op
-  | otherwise = checkOpenModuleNoImport Nothing op
-
 checkAxiomDef ::
   (Members '[Reader ScopeParameters, InfoTableBuilder, Error ScoperError, State Scope, State ScoperState, NameIdGen, State ScoperSyntax, Reader BindingStrategy] r) =>
   AxiomDef 'Parsed ->
@@ -1715,13 +1701,12 @@ checkFunction f = do
     return Function {..}
 
 -- | for now functions defined in let clauses cannot be infix operators
-checkLetFunDefs ::
+checkLetStatements ::
   (Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
   NonEmpty (LetStatement 'Parsed) ->
   Sem r (NonEmpty (LetStatement 'Scoped))
-checkLetFunDefs =
-  localBindings
-    . ignoreSyntax
+checkLetStatements =
+  ignoreSyntax
     . fmap fromSections
     . checkSections
     . mkLetSections
@@ -1760,7 +1745,7 @@ checkLetFunDefs =
             fromNonDef = \case
               NonDefinitionImport {} -> impossible
               NonDefinitionModule {} -> impossible
-              NonDefinitionOpenModule {} -> impossible
+              NonDefinitionOpenModule o -> LetOpen o
 
 checkRecordPattern ::
   forall r.
@@ -1850,7 +1835,7 @@ checkLet ::
   Sem r (Let 'Scoped)
 checkLet Let {..} =
   withLocalScope $ do
-    letFunDefs' <- checkLetFunDefs _letFunDefs
+    letFunDefs' <- checkLetStatements _letFunDefs
     letExpression' <- checkParseExpressionAtoms _letExpression
     return
       Let

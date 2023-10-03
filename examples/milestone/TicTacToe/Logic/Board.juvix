@@ -18,7 +18,7 @@ possibleMoves : List Square → List Nat
 --- ;true; if all the ;Square;s in the list are equal
 full : List Square → Bool
   | (a :: b :: c :: nil) := ==Square a b && ==Square b c
-  | _ := fail "full";
+  | _ := failwith "full";
 
 diagonals : List (List Square) → List (List Square)
   | ((a1 :: _ :: b1 :: nil)
@@ -26,7 +26,7 @@ diagonals : List (List Square) → List (List Square)
     :: (b2 :: _ :: a2 :: nil)
     :: nil) :=
     (a1 :: c :: a2 :: nil) :: (b1 :: c :: b2 :: nil) :: nil
-  | _ := fail "diagonals";
+  | _ := failwith "diagonals";
 
 columns : List (List Square) → List (List Square) :=
   transpose;

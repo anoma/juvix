@@ -6,7 +6,6 @@ module Juvix.Compiler.Internal.Translation.FromConcrete
     goModuleNoCache,
     fromConcreteExpression,
     fromConcreteImport,
-    fromConcreteOpenImport,
   )
 where
 
@@ -38,9 +37,6 @@ type MCache = Cache Concrete.ModuleIndex Internal.Module
 
 -- | Needed to generate field projections.
 type ConstructorInfos = HashMap Internal.ConstructorName ConstructorInfo
-
-unsupported :: Text -> a
-unsupported msg = error $ msg <> "Scoped to Internal: not yet supported"
 
 fromConcrete ::
   (Members '[Reader EntryPoint, Error JuvixError, Builtins, NameIdGen, Termination] r) =>
@@ -162,19 +158,6 @@ fromConcreteImport i = do
       . goImport
       $ i
   checkTerminationShallow i'
-  return i'
-
-fromConcreteOpenImport ::
-  (Members '[Reader ExportsTable, Error JuvixError, NameIdGen, Builtins, MCache, Termination] r) =>
-  Scoper.OpenModule 'Scoped ->
-  Sem r (Maybe Internal.Import)
-fromConcreteOpenImport i = do
-  i' <-
-    mapError (JuvixError @ScoperError)
-      . runReader @Pragmas mempty
-      . goOpenModule
-      $ i
-  whenJust i' checkTerminationShallow
   return i'
 
 goLocalModule ::
@@ -347,25 +330,12 @@ scanImports = mconcatMap go
     go = \case
       StatementImport t -> [t]
       StatementModule m -> concatMap go (m ^. moduleBody)
-      StatementOpenModule o -> maybeToList (openImport o)
+      StatementOpenModule {} -> []
       StatementInductive {} -> []
       StatementAxiom {} -> []
       StatementSyntax {} -> []
       StatementFunctionDef {} -> []
       StatementProjectionDef {} -> []
-      where
-        openImport :: OpenModule 'Scoped -> Maybe (Import 'Scoped)
-        openImport o = case o ^. openModuleImportKw of
-          Nothing -> Nothing
-          Just _importKw ->
-            Just
-              Import
-                { _importModule = case o ^. openModuleName . unModuleRef' of
-                    SModuleTop :&: r -> r
-                    SModuleLocal :&: _ -> impossible,
-                  _importAsName = o ^. openImportAsName,
-                  _importKw
-                }
 
 goImport ::
   forall r.
@@ -396,25 +366,6 @@ goAxiomInductive = \case
   StatementSyntax {} -> return []
   StatementOpenModule {} -> return []
   StatementProjectionDef {} -> return []
-
-goOpenModule ::
-  forall r.
-  (Members '[Reader ExportsTable, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, MCache] r) =>
-  OpenModule 'Scoped ->
-  Sem r (Maybe Internal.Import)
-goOpenModule o = runFail $ do
-  case o ^. openModuleImportKw of
-    Nothing -> fail
-    Just kw ->
-      case o ^. openModuleName of
-        ModuleRef' (SModuleTop :&: m) ->
-          goImport
-            Import
-              { _importKw = kw,
-                _importModule = m,
-                _importAsName = o ^. openImportAsName
-              }
-        _ -> impossible
 
 goProjectionDef ::
   forall r.
@@ -541,7 +492,14 @@ goInductiveParameters params@InductiveParameters {..} = do
   paramType' <- goRhs _inductiveParametersRhs
   case paramType' of
     Internal.ExpressionUniverse {} -> return ()
-    _ -> unsupported "only type variables of small types are allowed"
+    Internal.ExpressionHole {} -> return ()
+    _ ->
+      throw $
+        ErrUnsupported
+          Unsupported
+            { _unsupportedMsg = "only type variables of small types are allowed",
+              _unsupportedLoc = getLoc params
+            }
 
   let goInductiveParameter :: S.Symbol -> Internal.InductiveParameter
       goInductiveParameter var =
@@ -930,6 +888,7 @@ goExpression = \case
             preLetStatement = \case
               LetFunctionDef f -> Just . Internal.PreLetFunctionDef <$> goTopFunctionDef f
               LetAliasDef {} -> return Nothing
+              LetOpen {} -> return Nothing
 
         goSCC :: SCC Internal.PreLetStatement -> Internal.LetClause
         goSCC = \case

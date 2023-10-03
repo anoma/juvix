@@ -1,12 +1,14 @@
 module Juvix.Compiler.Pipeline.Package.Dependency where
 
-import Data.Aeson (genericToEncoding, genericToJSON)
+import Data.Aeson (genericToEncoding, genericToJSON, (.=))
 import Data.Aeson.BetterErrors
 import Data.Aeson.BetterErrors qualified as Aeson
+import Data.Aeson.Encoding
 import Data.Aeson.TH
 import Data.Text.Encoding.Error (lenientDecode)
-import Data.Yaml
-import Juvix.Prelude
+import Data.Yaml hiding ((.=))
+import Juvix.Extra.Strings qualified as Str
+import Juvix.Prelude hiding ((.=))
 import Juvix.Prelude.Pretty
 import Lens.Micro.Platform qualified as Lens
 
@@ -48,6 +50,11 @@ _GitDependency f = \case
   DependencyGit g -> DependencyGit <$> f g
   x@DependencyPath {} -> pure x
 
+_PathDependency :: Traversal' Dependency PathDependency
+_PathDependency f = \case
+  DependencyPath p -> DependencyPath <$> f p
+  x@DependencyGit {} -> pure x
+
 instance Pretty PathDependency where
   pretty (PathDependency p) = pretty p
 
@@ -62,16 +69,16 @@ instance Pretty Dependency where
 instance ToJSON Dependency where
   toJSON = \case
     DependencyPath p -> toJSON p
-    DependencyGit g -> toJSON g
+    DependencyGit g -> object [Str.git .= toJSON g]
   toEncoding = \case
     DependencyPath p -> toEncoding p
-    DependencyGit g -> toEncoding g
+    DependencyGit g -> pairs (pair Str.git (toEncoding g))
 
 instance FromJSON Dependency where
   parseJSON = toAesonParser' p
     where
       p :: Parse' Dependency
-      p = (DependencyPath <$> fromAesonParser) Aeson.<|> (DependencyGit <$> fromAesonParser)
+      p = DependencyPath <$> fromAesonParser Aeson.<|> DependencyGit <$> (key Str.git fromAesonParser)
 
 instance ToJSON PathDependency where
   toJSON (PathDependency p) = toJSON p
@@ -93,7 +100,7 @@ instance ToJSON GitDependency where
   toEncoding = genericToEncoding gitDependencyOptions
 
 instance FromJSON GitDependency where
-  parseJSON = toAesonParser' (key "git" p)
+  parseJSON = toAesonParser' p
     where
       p :: Parse' GitDependency
       p = do

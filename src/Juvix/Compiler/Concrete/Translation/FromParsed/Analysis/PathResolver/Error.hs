@@ -13,7 +13,14 @@ data DependencyErrorGit = DependencyErrorGit
     _dependencyErrorGitCloneDir :: Path Abs Dir
   }
 
-newtype DependencyErrorCause = GitDependencyError DependencyErrorGit
+data MissingLockfileDependency = MissingLockfileDependency
+  { _missingLockfileDependencyPath :: Path Abs File,
+    _missingLockfileDependencyDependency :: Dependency
+  }
+
+data DependencyErrorCause
+  = GitDependencyError DependencyErrorGit
+  | MissingLockfileDependencyError MissingLockfileDependency
 
 data DependencyError = DependencyError
   { _dependencyErrorPackageFile :: Path Abs File,
@@ -22,6 +29,7 @@ data DependencyError = DependencyError
 
 makeLenses ''DependencyError
 makeLenses ''DependencyErrorGit
+makeLenses ''MissingLockfileDependency
 
 instance ToGenericError DependencyError where
   genericError e = do
@@ -42,6 +50,7 @@ instance HasLoc DependencyError where
 instance PrettyCodeAnn DependencyErrorCause where
   ppCodeAnn = \case
     GitDependencyError e -> ppCodeAnn e
+    MissingLockfileDependencyError e -> ppCodeAnn e
 
 instance PrettyCodeAnn DependencyErrorGit where
   ppCodeAnn d = case d ^. dependencyErrorGitError of
@@ -62,6 +71,24 @@ instance PrettyCodeAnn DependencyErrorGit where
     where
       prefix :: Doc CodeAnn
       prefix = pretty @Text "Failed to obtain remote dependencies" <> line
+
+instance PrettyCodeAnn MissingLockfileDependency where
+  ppCodeAnn e =
+    "The dependency"
+      <+> code dependencyId
+      <+> "is declared in the package's juvix.yaml but is not declared in the lockfile:"
+      <+> lockfilePath
+        <> line
+        <> "Try removing"
+      <+> lockfilePath
+      <+> "and then run Juvix again."
+    where
+      lockfilePath :: Doc CodeAnn
+      lockfilePath = pretty (e ^. missingLockfileDependencyPath)
+      dependencyId :: Doc CodeAnn
+      dependencyId = case e ^. missingLockfileDependencyDependency of
+        DependencyGit g -> pretty @Text (g ^. gitDependencyName)
+        DependencyPath p -> pretty @Text (show (p ^. pathDependencyPath))
 
 data PathResolverError
   = ErrDependencyConflict DependencyConflict

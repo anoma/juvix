@@ -206,7 +206,8 @@ replInput :: forall r. (Members '[Files, PathResolver, InfoTableBuilder, JudocSt
 replInput =
   P.label "<repl input>" $
     ReplExpression <$> parseExpressionAtoms
-      <|> either ReplImport ReplOpenImport <$> importOpenSyntax
+      <|> ReplOpenImport <$> openModule
+      <|> ReplImport <$> import_
 
 --------------------------------------------------------------------------------
 -- Symbols and names
@@ -295,7 +296,7 @@ statement = P.label "<top level statement>" $ do
   optional_ stashPragmas
   ms <-
     optional
-      ( either StatementImport StatementOpenModule <$> importOpenSyntax
+      ( StatementImport <$> import_
           <|> StatementOpenModule <$> openModule
           <|> StatementSyntax <$> syntaxDef
           <|> StatementInductive <$> inductiveDef Nothing
@@ -627,6 +628,7 @@ import_ = do
   _importModule <- topModulePath
   P.lift (importedModule _importModule)
   _importAsName <- optional pasName
+  _importOpen <- optional popenModuleParams
   return Import {..}
   where
     pasName :: ParsecS r TopModulePath
@@ -957,6 +959,7 @@ letStatement :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen
 letStatement =
   LetFunctionDef <$> letFunDef
     <|> LetAliasDef <$> (kw kwSyntax >>= aliasDef)
+    <|> LetOpen <$> openModule
 
 letBlock :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (Let 'Parsed)
 letBlock = do
@@ -1430,38 +1433,27 @@ atomicExpression = do
     _ -> return ()
   return $ ExpressionAtoms (NonEmpty.singleton atom) (Irrelevant loc)
 
-openModule :: forall r. (Members '[Error ParserError, PathResolver, Files, InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (OpenModule 'Parsed)
+openModule :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (OpenModule 'Parsed)
 openModule = do
   _openModuleKw <- kw kwOpen
   _openModuleName <- name
   _openUsingHiding <- optional usingOrHiding
   _openPublicKw <- Irrelevant <$> optional (kw kwPublic)
   let _openPublic = maybe NoPublic (const Public) (_openPublicKw ^. unIrrelevant)
-      _openModuleImportKw :: Maybe KeywordRef
-      _openModuleImportKw = Nothing
-  return
-    OpenModule
-      { _openImportAsName = Nothing,
-        ..
-      }
+      _openModuleParams = OpenModuleParams {..}
+  return OpenModule {..}
 
-usingOrHiding :: (Members '[Error ParserError, InfoTableBuilder, JudocStash, NameIdGen, PragmasStash] r) => ParsecS r (UsingHiding 'Parsed)
-usingOrHiding =
-  Using <$> pusingList
-    <|> Hiding <$> phidingList
-
-openSyntax :: forall r. (Members '[Error ParserError, PathResolver, Files, InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => Import 'Parsed -> ParsecS r (OpenModule 'Parsed)
-openSyntax im = do
+-- TODO is there way to merge this with `openModule`?
+popenModuleParams :: forall r. (Members '[Error ParserError, PathResolver, Files, InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (OpenModuleParams 'Parsed)
+popenModuleParams = do
   _openModuleKw <- kw kwOpen
   _openUsingHiding <- optional usingOrHiding
   _openPublicKw <- Irrelevant <$> optional (kw kwPublic)
-  let _openModuleName = topModulePathToName (im ^. importModule)
-      _openModuleImportKw = Just (im ^. importKw)
-      _openImportAsName = im ^. importAsName
-      _openPublic = maybe NoPublic (const Public) (_openPublicKw ^. unIrrelevant)
-  return OpenModule {..}
+  let _openPublic = maybe NoPublic (const Public) (_openPublicKw ^. unIrrelevant)
+      _openModuleParams = OpenModuleParams {..}
+  return OpenModuleParams {..}
 
-importOpenSyntax :: forall r. (Members '[Error ParserError, PathResolver, Files, InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (Either (Import 'Parsed) (OpenModule 'Parsed))
-importOpenSyntax = do
-  im <- import_
-  (Right <$> openSyntax im) <|> return (Left im)
+usingOrHiding :: (Members '[InfoTableBuilder, JudocStash, NameIdGen, PragmasStash] r) => ParsecS r (UsingHiding 'Parsed)
+usingOrHiding =
+  Using <$> pusingList
+    <|> Hiding <$> phidingList

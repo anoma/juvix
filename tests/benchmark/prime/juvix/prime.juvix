@@ -9,17 +9,15 @@ checkDivisible : Nat → List Nat → Bool
   | p (h :: t) := if (mod p h == 0) true (checkDivisible p t);
 
 terminating
-go : Nat → Nat → List Nat → Nat
-  | n p lst :=
+go (n p : Nat) (lst : List Nat) : Nat :=
     if
       (n == 0)
-      (head lst)
+      (head 0 lst)
       (if
         (checkDivisible p lst)
         (go n (p + 1) lst)
         (go (sub n 1) (p + 1) (p :: lst)));
 
-prime : Nat → Nat
-  | n := go n 2 nil;
+prime (n : Nat) : Nat := go n 2 nil;
 
 main : IO := printNatLn (prime 16384);

@@ -1,0 +1,23 @@
+module LetOpen;
+
+module M;
+  axiom A : Type;
+end;
+
+axiom B : let
+            open M;
+          in A;
+
+module Separator;
+
+end;
+
+axiom A : Type;
+
+axiom C : let
+            open M hiding {A};
+          in A;
+
+axiom D : let
+            open M using {A as A'};
+          in A';

@@ -96,14 +96,6 @@ runToInternal m = do
     . runStateArtifacts artifactScoperState
     $ m
 
-openImportToInternal ::
-  (Members '[Reader EntryPoint, Error JuvixError, State Artifacts, Termination] r) =>
-  OpenModule 'Parsed ->
-  Sem r (Maybe Internal.Import)
-openImportToInternal o = runToInternal $ do
-  Scoper.scopeCheckOpenModule o
-    >>= Internal.fromConcreteOpenImport
-
 importToInternal ::
   (Members '[Reader EntryPoint, Error JuvixError, State Artifacts, Termination] r) =>
   Import 'Parsed ->
@@ -163,14 +155,6 @@ registerImport p =
     )
     >>= fromInternalImport
 
-registerOpenImport ::
-  (Members '[Error JuvixError, State Artifacts, Reader EntryPoint] r) =>
-  OpenModule 'Parsed ->
-  Sem r ()
-registerOpenImport o = ignoreFail $ do
-  mImport <- runTerminationArtifacts (openImportToInternal o >>= failMaybe >>= importToInternalTyped)
-  fromInternalImport mImport
-
 fromInternalImport :: (Members '[State Artifacts] r) => Internal.Import -> Sem r ()
 fromInternalImport i = do
   artiTable <- gets (^. artifactInternalTypedTable)
@@ -197,7 +181,7 @@ fromInternalExpression exp = do
 data ReplPipelineResult
   = ReplPipelineResultNode Core.Node
   | ReplPipelineResultImport TopModulePath
-  | ReplPipelineResultOpenImport Name
+  | ReplPipelineResultOpen Name
 
 compileReplInputIO ::
   (Members '[Reader EntryPoint, State Artifacts, Embed IO] r) =>
@@ -220,7 +204,7 @@ compileReplInputIO fp txt = do
       case p of
         Parser.ReplExpression e -> ReplPipelineResultNode <$> compileExpression e
         Parser.ReplImport i -> registerImport i $> ReplPipelineResultImport (i ^. importModule)
-        Parser.ReplOpenImport i -> registerOpenImport i $> ReplPipelineResultOpenImport (i ^. openModuleName)
+        Parser.ReplOpenImport i -> return (ReplPipelineResultOpen (i ^. openModuleName))
 
 expressionUpToTypedIO ::
   (Members '[State Artifacts, Embed IO] r) =>

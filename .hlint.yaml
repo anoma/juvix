@@ -12,8 +12,8 @@
         - ApplicativeDo
         - DataKinds
         - DerivingStrategies
-        - FunctionalDependencies
         - GADTs
+        - FunctionalDependencies
         - ImportQualifiedPost
         - LambdaCase
         - NoImplicitPrelude

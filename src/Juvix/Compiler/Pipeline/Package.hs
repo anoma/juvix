@@ -20,6 +20,7 @@ module Juvix.Compiler.Pipeline.Package
     emptyPackage,
     readGlobalPackage,
     mkPackageFilePath,
+    packageLockfile,
   )
 where
 
@@ -31,6 +32,7 @@ import Data.HashSet qualified as HashSet
 import Data.Kind qualified as GHC
 import Data.Versions
 import Data.Yaml
+import Juvix.Compiler.Pipeline.Lockfile
 import Juvix.Compiler.Pipeline.Package.Dependency
 import Juvix.Extra.Paths
 import Juvix.Prelude
@@ -56,13 +58,19 @@ type family PackageFileType s = res | res -> s where
   PackageFileType 'Raw = Maybe ()
   PackageFileType 'Processed = Path Abs File
 
+type PackageLockfileType :: IsProcessed -> GHC.Type
+type family PackageLockfileType s = res | res -> s where
+  PackageLockfileType 'Raw = Maybe ()
+  PackageLockfileType 'Processed = Maybe LockfileInfo
+
 data Package' (s :: IsProcessed) = Package
   { _packageName :: NameType s,
     _packageVersion :: VersionType s,
     _packageDependencies :: DependenciesType s,
     _packageBuildDir :: Maybe (SomeBase Dir),
     _packageMain :: Maybe (Prepath File),
-    _packageFile :: PackageFileType s
+    _packageFile :: PackageFileType s,
+    _packageLockfile :: PackageLockfileType s
   }
   deriving stock (Generic)
 
@@ -102,7 +110,7 @@ instance FromJSON RawPackage where
         _packageDependencies <- keyMay "dependencies" fromAesonParser
         _packageBuildDir <- keyMay "build-dir" fromAesonParser
         _packageMain <- keyMay "main" fromAesonParser
-        return Package {_packageFile = Nothing, ..}
+        return Package {_packageFile = Nothing, _packageLockfile = Nothing, ..}
       err :: a
       err = error "Failed to parse juvix.yaml"
 
@@ -124,7 +132,8 @@ emptyPackage buildDir yamlPath =
       _packageDependencies = [defaultStdlibDep buildDir],
       _packageMain = Nothing,
       _packageBuildDir = Nothing,
-      _packageFile = yamlPath
+      _packageFile = yamlPath,
+      _packageLockfile = Nothing
     }
 
 rawPackage :: Package -> RawPackage
@@ -135,21 +144,21 @@ rawPackage pkg =
       _packageDependencies = Just (pkg ^. packageDependencies),
       _packageBuildDir = pkg ^. packageBuildDir,
       _packageMain = pkg ^. packageMain,
-      _packageFile = Nothing
+      _packageFile = Nothing,
+      _packageLockfile = Nothing
     }
 
-processPackage :: forall r. (Members '[Error Text] r) => Path Abs File -> BuildDir -> RawPackage -> Sem r Package
-processPackage _packageFile buildDir pkg = do
+processPackage :: forall r. (Members '[Error Text] r) => Path Abs File -> BuildDir -> Maybe LockfileInfo -> RawPackage -> Sem r Package
+processPackage _packageFile buildDir lockfile pkg = do
   let _packageName = fromMaybe defaultPackageName (pkg ^. packageName)
-      base :: SomeBase Dir = (resolveBuildDir buildDir) <///> relStdlibDir
-      stdlib = mkPathDependency (fromSomeDir base)
-      _packageDependencies = fromMaybe [stdlib] (pkg ^. packageDependencies)
+      _packageDependencies = resolveDependencies
   checkNoDuplicateDepNames _packageDependencies
   _packageVersion <- getVersion
   return
     Package
       { _packageBuildDir = pkg ^. packageBuildDir,
         _packageMain = pkg ^. packageMain,
+        _packageLockfile = lockfile,
         ..
       }
   where
@@ -176,6 +185,12 @@ processPackage _packageFile buildDir pkg = do
                 <> " contains the duplicate dependency name: "
                 <> dupName
 
+    resolveDependencies :: [Dependency]
+    resolveDependencies = fromMaybe [stdlib] (pkg ^. packageDependencies)
+      where
+        base :: SomeBase Dir = resolveBuildDir buildDir <///> relStdlibDir
+        stdlib = mkPathDependency (fromSomeDir base)
+
 defaultStdlibDep :: BuildDir -> Dependency
 defaultStdlibDep buildDir = mkPathDependency (fromSomeDir (resolveBuildDir buildDir <///> relStdlibDir))
 
@@ -193,7 +208,8 @@ globalPackage =
       _packageVersion = Just (prettySemVer defaultVersion),
       _packageMain = Nothing,
       _packageBuildDir = Nothing,
-      _packageFile = Nothing
+      _packageFile = Nothing,
+      _packageLockfile = Nothing
     }
 
 mkPackageFilePath :: Path Abs Dir -> Path Abs File
@@ -208,9 +224,10 @@ readPackage ::
   Sem r Package
 readPackage root buildDir = do
   bs <- readFileBS' yamlPath
+  mLockfile <- mayReadLockfile root
   if
       | ByteString.null bs -> return (emptyPackage buildDir yamlPath)
-      | otherwise -> either (throw . pack . prettyPrintParseException) (processPackage yamlPath buildDir) (decodeEither' bs)
+      | otherwise -> either (throw . pack . prettyPrintParseException) (processPackage yamlPath buildDir mLockfile) (decodeEither' bs)
   where
     yamlPath = mkPackageFilePath root
 
