@@ -1216,25 +1216,6 @@ checkSections sec = do
                       modify' (HashSet.insert i)
                       whenJustM (gets (^? scoperAlias . at i . _Just . preSymbolName . S.nameId)) go
 
-            -- TODO remove
-            -- Scope checks type signatures. Needed for default arguments.
-            -- scanNameSignature :: NonEmpty (Definition 'Parsed) -> Sem r' ()
-            -- scanNameSignature = mapM_ scanDef
-            --   where
-            --   scanDef :: Definition 'Parsed -> Sem r' ()
-            --   scanDef =  \case
-            --     DefinitionFunctionDef d -> scanFunctionDef d
-            --     DefinitionAxiom a -> scanAxiom a
-            --     DefinitionSyntax {} -> return ()
-            --     DefinitionProjectionDef {} -> return ()
-            --     DefinitionInductive {} -> return ()
-
-            --   scanAxiom :: AxiomDef 'Parsed -> Sem r' ()
-            --   scanAxiom = undefined
-
-            --   scanFunctionDef :: FunctionDef 'Parsed -> Sem r' ()
-            --   scanFunctionDef = undefined
-
             reserveDefinition :: Definition 'Parsed -> Sem r' ()
             reserveDefinition = \case
               DefinitionSyntax s -> resolveSyntaxDef s
@@ -2228,18 +2209,6 @@ checkNamedApplication napp = do
   _namedAppArgs <- mapM checkArgumentBlock (napp ^. namedAppArgs)
   return NamedApplication {..}
   where
-    --   checkNameSignature :: NameSignature 'Parsed -> Sem r (NameSignature 'Scoped)
-    --   checkNameSignature = traverseOf nameSignatureArgs (mapM checkNameBlock)
-    --     where
-    --       checkNameBlock :: NameBlock 'Parsed -> Sem r (NameBlock 'Scoped)
-    --       checkNameBlock = traverseOf nameBlock (mapM checkNameItem)
-
-    --       checkNameItem :: NameItem 'Parsed -> Sem r (NameItem 'Scoped)
-    --       checkNameItem = traverseOf nameItemDefault (mapM checkArgDefault)
-
-    --       checkArgDefault :: ArgDefault 'Parsed -> Sem r (ArgDefault 'Scoped)
-    --       checkArgDefault = error "FIXME we should not scope the default value here"
-
     checkNamedArg :: NamedArgument 'Parsed -> Sem r (NamedArgument 'Scoped)
     checkNamedArg n = do
       let _namedArgName = n ^. namedArgName
