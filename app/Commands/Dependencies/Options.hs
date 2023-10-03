@@ -14,4 +14,4 @@ commandUpdate =
   command "update" $
     info
       (pure Update)
-      (progDesc "Fetch package dependencies and update the lockfile")
+      (progDesc "Fetch package dependencies and update the lock file")
