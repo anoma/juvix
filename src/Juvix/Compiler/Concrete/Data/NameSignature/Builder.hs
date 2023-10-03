@@ -1,7 +1,7 @@
 {-# LANGUAGE FunctionalDependencies #-}
+
 module Juvix.Compiler.Concrete.Data.NameSignature.Builder
-  (
-    mkNameSignature,
+  ( mkNameSignature,
     mkRecordNameSignature,
     HasNameSignature,
     -- to supress unused warning
@@ -36,17 +36,18 @@ makeSem ''NameSignatureBuilder
 class HasNameSignature (s :: Stage) d | d -> s where
   addArgs :: (Members '[NameSignatureBuilder s] r) => d -> Sem r ()
 
-instance SingI s => HasNameSignature s (AxiomDef s) where
+instance (SingI s) => HasNameSignature s (AxiomDef s) where
   addArgs :: (Members '[NameSignatureBuilder s] r) => AxiomDef s -> Sem r ()
   addArgs a = addExpressionType (a ^. axiomType)
 
-instance SingI s => HasNameSignature s (FunctionDef s) where
+instance (SingI s) => HasNameSignature s (FunctionDef s) where
   addArgs a = do
     mapM_ addSigArg (a ^. signArgs)
     whenJust (a ^. signRetType) addExpressionType
 
-instance SingI s => HasNameSignature s (InductiveDef s, ConstructorDef s) where
-  addArgs :: forall r.
+instance (SingI s) => HasNameSignature s (InductiveDef s, ConstructorDef s) where
+  addArgs ::
+    forall r.
     (Members '[NameSignatureBuilder s] r) =>
     (InductiveDef s, ConstructorDef s) ->
     Sem r ()
@@ -65,12 +66,13 @@ instance SingI s => HasNameSignature s (InductiveDef s, ConstructorDef s) where
         ConstructorRhsRecord g -> addRecord g
         ConstructorRhsAdt {} -> return ()
 
-instance SingI s => HasNameSignature s (InductiveDef s) where
+instance (SingI s) => HasNameSignature s (InductiveDef s) where
   addArgs a = do
     mapM_ addInductiveParams (a ^. inductiveParameters)
     whenJust (a ^. inductiveType) addExpressionType
 
-mkNameSignature :: forall s d r.
+mkNameSignature ::
+  forall s d r.
   (SingI s, Members '[Error ScoperError] r, HasNameSignature s d) =>
   d ->
   Sem r (NameSignature s)
@@ -109,9 +111,9 @@ fromBuilderState b =
 
 addExpression :: forall r. (Members '[NameSignatureBuilder 'Scoped] r) => Expression -> Sem r ()
 addExpression = \case
-    ExpressionFunction f -> addFunction f
-    _ -> endBuild (Proxy @'Scoped)
-    where
+  ExpressionFunction f -> addFunction f
+  _ -> endBuild (Proxy @'Scoped)
+  where
     addFunction :: Function 'Scoped -> Sem r ()
     addFunction f = do
       addFunctionParameters (f ^. funParameters)
@@ -141,7 +143,7 @@ addAtoms atoms = addAtom . (^. expressionAtoms . _head1) $ atoms
         addAtoms (f ^. funReturn)
       _ -> endBuild (Proxy @'Parsed)
 
-addInductiveParams' :: forall s r. SingI s => (Members '[NameSignatureBuilder s] r) => IsImplicit -> InductiveParameters s -> Sem r ()
+addInductiveParams' :: forall s r. (SingI s) => (Members '[NameSignatureBuilder s] r) => IsImplicit -> InductiveParameters s -> Sem r ()
 addInductiveParams' i a = forM_ (a ^. inductiveParametersNames) (addSymbol @s i Nothing . symbolParsed)
 
 addInductiveParams :: (SingI s, Members '[NameSignatureBuilder s] r) => InductiveParameters s -> Sem r ()
@@ -159,7 +161,7 @@ type Re s r = State (BuilderState s) ': Error (BuilderState s) ': Error NameSign
 
 re ::
   forall s r a.
-  SingI s =>
+  (SingI s) =>
   Sem (NameSignatureBuilder s ': r) a ->
   Sem (Re s r) a
 re = reinterpret3 $ \case
@@ -168,7 +170,7 @@ re = reinterpret3 $ \case
   GetBuilder -> get
 {-# INLINE re #-}
 
-addSymbol' :: forall s r. SingI s => IsImplicit -> Maybe (ArgDefault s) -> Symbol -> Sem (Re s r) ()
+addSymbol' :: forall s r. (SingI s) => IsImplicit -> Maybe (ArgDefault s) -> Symbol -> Sem (Re s r) ()
 addSymbol' impl mdef sym = do
   curImpl <- gets @(BuilderState s) (^. stateCurrentImplicit)
   if

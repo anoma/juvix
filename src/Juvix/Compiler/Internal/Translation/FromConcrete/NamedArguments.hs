@@ -1,19 +1,18 @@
 module Juvix.Compiler.Internal.Translation.FromConcrete.NamedArguments
   ( runNamedArguments,
-NameSignatures,
+    NameSignatures,
   )
 where
 
 import Data.HashMap.Strict qualified as HashMap
 import Data.IntMap.Strict qualified as IntMap
+import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Gen qualified as Gen
 import Juvix.Compiler.Concrete.Keywords
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Pretty
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
 import Juvix.Prelude
-import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
-
 
 type NameSignatures = HashMap NameId (NameSignature 'Scoped)
 
@@ -45,10 +44,11 @@ runNamedArguments napp = do
     mkIniBuilderState :: Sem r BuilderState
     mkIniBuilderState = do
       sig <- asks @NameSignatures (^?! at (napp ^. namedAppName . scopedIdenName . S.nameId) . _Just)
-      return BuilderState
-        { _stateRemainingArgs = toList (napp ^. namedAppArgs),
-          _stateRemainingNames = sig ^. nameSignatureArgs
-        }
+      return
+        BuilderState
+          { _stateRemainingArgs = toList (napp ^. namedAppArgs),
+            _stateRemainingNames = sig ^. nameSignatureArgs
+          }
 
 helper ::
   forall r.

@@ -14,6 +14,7 @@ import Data.HashMap.Strict qualified as HashMap
 import Data.IntMap.Strict qualified as IntMap
 import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Compiler.Builtins
+import Juvix.Compiler.Concrete.Data.Scope.Base (ScoperState, scoperScopedSignatures)
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Extra qualified as Concrete
 import Juvix.Compiler.Concrete.Gen qualified as Gen
@@ -32,7 +33,6 @@ import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Data.NameKind
 import Juvix.Prelude
 import Safe (lastMay)
-import Juvix.Compiler.Concrete.Data.Scope.Base (ScoperState, scoperScopedSignatures)
 
 type MCache = Cache Concrete.ModuleIndex Internal.Module
 

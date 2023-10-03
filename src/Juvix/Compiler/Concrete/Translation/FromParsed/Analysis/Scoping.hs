@@ -198,6 +198,13 @@ reserveSymbolSignatureOf k d s = do
   sig <- mkNameSignature d
   reserveSymbolOf k (Just sig) s
 
+registerDefaultArgs ::
+  (Members '[State ScoperState, Error ScoperError] r, HasNameSignature 'Scoped d) =>
+  S.NameId ->
+  d ->
+  Sem r ()
+registerDefaultArgs uid = mkNameSignature >=> modify . (set (scoperScopedSignatures . at uid)) . Just
+
 reserveSymbolOf ::
   forall (nameKind :: NameKind) (ns :: NameSpace) r.
   ( Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder] r,
@@ -798,15 +805,17 @@ checkFunctionDef FunctionDef {..} = do
     t' <- mapM checkParseExpressionAtoms _signRetType
     b' <- checkBody
     return (a', t', b')
-  registerFunctionDef
-    @$> FunctionDef
-      { _signName = sigName',
-        _signRetType = sigType',
-        _signDoc = sigDoc',
-        _signBody = sigBody',
-        _signArgs = args',
-        ..
-      }
+  let def =
+        FunctionDef
+          { _signName = sigName',
+            _signRetType = sigType',
+            _signDoc = sigDoc',
+            _signBody = sigBody',
+            _signArgs = args',
+            ..
+          }
+  registerDefaultArgs (sigName' ^. S.nameId) def
+  registerFunctionDef @$> def
   where
     checkArg :: SigArg 'Parsed -> Sem r (SigArg 'Scoped)
     checkArg arg@SigArg {..} = do
@@ -886,20 +895,23 @@ checkInductiveDef InductiveDef {..} = do
             | (cname, cdef) <- zipExact (toList constructorNames') (toList _inductiveConstructors)
           ]
     return (inductiveParameters', inductiveType', inductiveDoc', inductiveConstructors')
-  registerInductive
-    @$> InductiveDef
-      { _inductiveName = inductiveName',
-        _inductiveDoc = inductiveDoc',
-        _inductivePragmas = _inductivePragmas,
-        _inductiveParameters = inductiveParameters',
-        _inductiveType = inductiveType',
-        _inductiveConstructors = inductiveConstructors',
-        _inductiveBuiltin,
-        _inductivePositive,
-        _inductiveTrait,
-        _inductiveAssignKw,
-        _inductiveKw
-      }
+  let indDef =
+        InductiveDef
+          { _inductiveName = inductiveName',
+            _inductiveDoc = inductiveDoc',
+            _inductivePragmas = _inductivePragmas,
+            _inductiveParameters = inductiveParameters',
+            _inductiveType = inductiveType',
+            _inductiveConstructors = inductiveConstructors',
+            _inductiveBuiltin,
+            _inductivePositive,
+            _inductiveTrait,
+            _inductiveAssignKw,
+            _inductiveKw
+          }
+  forM_ inductiveConstructors' $ \c ->
+    registerDefaultArgs (c ^. constructorName . S.nameId) (indDef, c)
+  registerInductive @$> indDef
   where
     -- note that the constructor name is not bound here
     checkConstructorDef :: S.Symbol -> S.Symbol -> ConstructorDef 'Parsed -> Sem r (ConstructorDef 'Scoped)
@@ -1676,7 +1688,9 @@ checkAxiomDef AxiomDef {..} = do
   axiomType' <- withLocalScope (checkParseExpressionAtoms _axiomType)
   axiomName' <- bindAxiomSymbol _axiomName
   axiomDoc' <- withLocalScope (mapM checkJudoc _axiomDoc)
-  registerAxiom @$> AxiomDef {_axiomName = axiomName', _axiomType = axiomType', _axiomDoc = axiomDoc', ..}
+  let a = AxiomDef {_axiomName = axiomName', _axiomType = axiomType', _axiomDoc = axiomDoc', ..}
+  registerDefaultArgs (a ^. axiomName . S.nameId) a
+  registerAxiom @$> a
 
 entryToSymbol :: forall (ns :: NameSpace). (SingI ns) => NameSpaceEntryType ns -> Symbol -> S.Symbol
 entryToSymbol sentry csym = set S.nameConcrete csym (sentry ^. nsEntry)
@@ -2229,17 +2243,17 @@ checkNamedApplication napp = do
   _namedAppArgs <- mapM checkArgumentBlock (napp ^. namedAppArgs)
   return NamedApplication {..}
   where
-  --   checkNameSignature :: NameSignature 'Parsed -> Sem r (NameSignature 'Scoped)
-  --   checkNameSignature = traverseOf nameSignatureArgs (mapM checkNameBlock)
-  --     where
-  --       checkNameBlock :: NameBlock 'Parsed -> Sem r (NameBlock 'Scoped)
-  --       checkNameBlock = traverseOf nameBlock (mapM checkNameItem)
+    --   checkNameSignature :: NameSignature 'Parsed -> Sem r (NameSignature 'Scoped)
+    --   checkNameSignature = traverseOf nameSignatureArgs (mapM checkNameBlock)
+    --     where
+    --       checkNameBlock :: NameBlock 'Parsed -> Sem r (NameBlock 'Scoped)
+    --       checkNameBlock = traverseOf nameBlock (mapM checkNameItem)
 
-  --       checkNameItem :: NameItem 'Parsed -> Sem r (NameItem 'Scoped)
-  --       checkNameItem = traverseOf nameItemDefault (mapM checkArgDefault)
+    --       checkNameItem :: NameItem 'Parsed -> Sem r (NameItem 'Scoped)
+    --       checkNameItem = traverseOf nameItemDefault (mapM checkArgDefault)
 
-  --       checkArgDefault :: ArgDefault 'Parsed -> Sem r (ArgDefault 'Scoped)
-  --       checkArgDefault = error "FIXME we should not scope the default value here"
+    --       checkArgDefault :: ArgDefault 'Parsed -> Sem r (ArgDefault 'Scoped)
+    --       checkArgDefault = error "FIXME we should not scope the default value here"
 
     checkNamedArg :: NamedArgument 'Parsed -> Sem r (NamedArgument 'Scoped)
     checkNamedArg n = do

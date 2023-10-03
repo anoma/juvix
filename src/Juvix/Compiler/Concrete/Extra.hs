@@ -127,7 +127,7 @@ groupStatements = \case
                     ^. S.nameConcrete
                     : map (^. constructorName . S.nameConcrete) constructors
 
-symbolParsed :: forall s. SingI s => SymbolType s -> Symbol
+symbolParsed :: forall s. (SingI s) => SymbolType s -> Symbol
 symbolParsed sym = case sing :: SStage s of
   SParsed -> sym
   SScoped -> sym ^. S.nameConcrete
