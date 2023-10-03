@@ -88,7 +88,7 @@ instance PrettyCodeAnn MissingLockfileDependency where
       dependencyId :: Doc CodeAnn
       dependencyId = case e ^. missingLockfileDependencyDependency of
         DependencyGit g -> pretty @Text (g ^. gitDependencyName)
-        DependencyPath p -> pretty @Text (show (p ^. pathDependencyPath))
+        DependencyPath p -> pretty @Text (pack (p ^. pathDependencyPath . prepath))
 
 data PathResolverError
   = ErrDependencyConflict DependencyConflict
