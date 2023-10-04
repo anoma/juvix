@@ -21,128 +21,128 @@
 
 #define RETURN_TAIL_APPLY RETURN
 
-#define GEN_APPLY_1(GOTO_CLOSURE, RETURN_CLOSURE, label)            \
-    do {                                                            \
-        size_t juvix_apply_largs;                                   \
-    label:                                                          \
-        juvix_apply_largs = get_closure_largs(juvix_apply_closure); \
-        if (juvix_apply_largs == 1) {                               \
-            GOTO_CLOSURE;                                           \
-        } else {                                                    \
-            ASSERT(juvix_apply_largs > 1);                          \
-            size_t n = get_closure_nargs(juvix_apply_closure);      \
-            PREALLOC(                                               \
-                n + CLOSURE_SKIP + 1 + 1,                           \
-                {                                                   \
-                    STACK_PUSH(juvix_apply_closure);                \
-                    STACK_PUSH(CARG(n));                            \
-                },                                                  \
-                {                                                   \
-                    STACK_POP(CARG(n));                             \
-                    STACK_POP(juvix_apply_closure);                 \
-                });                                                 \
-            EXTEND_CLOSURE(juvix_result, juvix_apply_closure, 1, {  \
-                CLOSURE_ARG(juvix_result, juvix_closure_nargs) =    \
-                    CARG(juvix_closure_nargs);                      \
-            });                                                     \
-            RETURN_CLOSURE;                                         \
-        }                                                           \
+#define GEN_APPLY_1(GOTO_CLOSURE, RETURN_CLOSURE, label)              \
+    do {                                                              \
+        size_t juvix_apply_largs;                                     \
+    label:                                                            \
+        juvix_apply_largs = get_closure_largs(juvix_apply_closure);   \
+        if (juvix_apply_largs == 1) {                                 \
+            GOTO_CLOSURE;                                             \
+        } else {                                                      \
+            ASSERT(juvix_apply_largs > 1);                            \
+            UNUSED size_t n = get_closure_nargs(juvix_apply_closure); \
+            PREALLOC(                                                 \
+                n + CLOSURE_SKIP + 1 + 1,                             \
+                {                                                     \
+                    STACK_PUSH(juvix_apply_closure);                  \
+                    STACK_PUSH(CARG(n));                              \
+                },                                                    \
+                {                                                     \
+                    STACK_POP(CARG(n));                               \
+                    STACK_POP(juvix_apply_closure);                   \
+                });                                                   \
+            EXTEND_CLOSURE(juvix_result, juvix_apply_closure, 1, {    \
+                CLOSURE_ARG(juvix_result, juvix_closure_nargs) =      \
+                    CARG(juvix_closure_nargs);                        \
+            });                                                       \
+            RETURN_CLOSURE;                                           \
+        }                                                             \
     } while (0)
 
-#define GEN_APPLY_2(GOTO_CLOSURE, RETURN_CLOSURE, label)             \
-    do {                                                             \
-        size_t juvix_apply_largs;                                    \
-    label:                                                           \
-        juvix_apply_largs = get_closure_largs(juvix_apply_closure);  \
-        if (juvix_apply_largs == 1) {                                \
-            size_t n = get_closure_nargs(juvix_apply_closure);       \
-            STACK_PUSH(CARG(n + 1));                                 \
-            CALL_CLOSURE(juvix_apply_closure, label##_return_1);     \
-            juvix_apply_closure = juvix_result;                      \
-            ASSIGN_CARGS(juvix_apply_closure,                        \
-                         { STACK_POP(CARG(juvix_closure_nargs)); }); \
-            goto juvix_apply_1;                                      \
-        } else if (juvix_apply_largs == 2) {                         \
-            GOTO_CLOSURE;                                            \
-        } else {                                                     \
-            ASSERT(juvix_apply_largs > 2);                           \
-            size_t n = get_closure_nargs(juvix_apply_closure);       \
-            PREALLOC(                                                \
-                n + CLOSURE_SKIP + 1 + 2,                            \
-                {                                                    \
-                    STACK_PUSH(juvix_apply_closure);                 \
-                    STACK_PUSH(CARG(n));                             \
-                    STACK_PUSH(CARG(n + 1));                         \
-                },                                                   \
-                {                                                    \
-                    STACK_POP(CARG(n + 1));                          \
-                    STACK_POP(CARG(n));                              \
-                    STACK_POP(juvix_apply_closure);                  \
-                });                                                  \
-            EXTEND_CLOSURE(juvix_result, juvix_apply_closure, 2, {   \
-                CLOSURE_ARG(juvix_result, juvix_closure_nargs) =     \
-                    CARG(juvix_closure_nargs);                       \
-                CLOSURE_ARG(juvix_result, juvix_closure_nargs + 1) = \
-                    CARG(juvix_closure_nargs + 1);                   \
-            });                                                      \
-            RETURN_CLOSURE;                                          \
-        }                                                            \
+#define GEN_APPLY_2(GOTO_CLOSURE, RETURN_CLOSURE, label)              \
+    do {                                                              \
+        size_t juvix_apply_largs;                                     \
+    label:                                                            \
+        juvix_apply_largs = get_closure_largs(juvix_apply_closure);   \
+        if (juvix_apply_largs == 1) {                                 \
+            size_t n = get_closure_nargs(juvix_apply_closure);        \
+            STACK_PUSH(CARG(n + 1));                                  \
+            CALL_CLOSURE(juvix_apply_closure, label##_return_1);      \
+            juvix_apply_closure = juvix_result;                       \
+            ASSIGN_CARGS(juvix_apply_closure,                         \
+                         { STACK_POP(CARG(juvix_closure_nargs)); });  \
+            goto juvix_apply_1;                                       \
+        } else if (juvix_apply_largs == 2) {                          \
+            GOTO_CLOSURE;                                             \
+        } else {                                                      \
+            ASSERT(juvix_apply_largs > 2);                            \
+            UNUSED size_t n = get_closure_nargs(juvix_apply_closure); \
+            PREALLOC(                                                 \
+                n + CLOSURE_SKIP + 1 + 2,                             \
+                {                                                     \
+                    STACK_PUSH(juvix_apply_closure);                  \
+                    STACK_PUSH(CARG(n));                              \
+                    STACK_PUSH(CARG(n + 1));                          \
+                },                                                    \
+                {                                                     \
+                    STACK_POP(CARG(n + 1));                           \
+                    STACK_POP(CARG(n));                               \
+                    STACK_POP(juvix_apply_closure);                   \
+                });                                                   \
+            EXTEND_CLOSURE(juvix_result, juvix_apply_closure, 2, {    \
+                CLOSURE_ARG(juvix_result, juvix_closure_nargs) =      \
+                    CARG(juvix_closure_nargs);                        \
+                CLOSURE_ARG(juvix_result, juvix_closure_nargs + 1) =  \
+                    CARG(juvix_closure_nargs + 1);                    \
+            });                                                       \
+            RETURN_CLOSURE;                                           \
+        }                                                             \
     } while (0)
 
-#define GEN_APPLY_3(GOTO_CLOSURE, RETURN_CLOSURE, label)                 \
-    do {                                                                 \
-    label:                                                               \
-        switch (get_closure_largs(juvix_apply_closure)) {                \
-            case 1: {                                                    \
-                size_t n = get_closure_nargs(juvix_apply_closure);       \
-                STACK_PUSH(CARG(n + 2));                                 \
-                STACK_PUSH(CARG(n + 1));                                 \
-                CALL_CLOSURE(juvix_apply_closure, label##_return_1);     \
-                juvix_apply_closure = juvix_result;                      \
-                ASSIGN_CARGS(juvix_apply_closure, {                      \
-                    STACK_POP(CARG(juvix_closure_nargs));                \
-                    STACK_POP(CARG(juvix_closure_nargs + 1));            \
-                });                                                      \
-                goto juvix_apply_2;                                      \
-            }                                                            \
-            case 2: {                                                    \
-                size_t n = get_closure_nargs(juvix_apply_closure);       \
-                STACK_PUSH(CARG(n + 2));                                 \
-                CALL_CLOSURE(juvix_apply_closure, label##_return_2);     \
-                juvix_apply_closure = juvix_result;                      \
-                ASSIGN_CARGS(juvix_apply_closure,                        \
-                             { STACK_POP(CARG(juvix_closure_nargs)); }); \
-                goto juvix_apply_1;                                      \
-            }                                                            \
-            case 3:                                                      \
-                GOTO_CLOSURE;                                            \
-            default: {                                                   \
-                size_t n = get_closure_nargs(juvix_apply_closure);       \
-                PREALLOC(                                                \
-                    n + CLOSURE_SKIP + 1 + 3,                            \
-                    {                                                    \
-                        STACK_PUSH(juvix_apply_closure);                 \
-                        STACK_PUSH(CARG(n));                             \
-                        STACK_PUSH(CARG(n + 1));                         \
-                        STACK_PUSH(CARG(n + 2));                         \
-                    },                                                   \
-                    {                                                    \
-                        STACK_POP(CARG(n + 2));                          \
-                        STACK_POP(CARG(n + 1));                          \
-                        STACK_POP(CARG(n));                              \
-                        STACK_POP(juvix_apply_closure);                  \
-                    });                                                  \
-                EXTEND_CLOSURE(juvix_result, juvix_apply_closure, 3, {   \
-                    CLOSURE_ARG(juvix_result, juvix_closure_nargs) =     \
-                        CARG(juvix_closure_nargs);                       \
-                    CLOSURE_ARG(juvix_result, juvix_closure_nargs + 1) = \
-                        CARG(juvix_closure_nargs + 1);                   \
-                    CLOSURE_ARG(juvix_result, juvix_closure_nargs + 2) = \
-                        CARG(juvix_closure_nargs + 2);                   \
-                });                                                      \
-                RETURN_CLOSURE;                                          \
-            }                                                            \
-        }                                                                \
+#define GEN_APPLY_3(GOTO_CLOSURE, RETURN_CLOSURE, label)                  \
+    do {                                                                  \
+    label:                                                                \
+        switch (get_closure_largs(juvix_apply_closure)) {                 \
+            case 1: {                                                     \
+                size_t n = get_closure_nargs(juvix_apply_closure);        \
+                STACK_PUSH(CARG(n + 2));                                  \
+                STACK_PUSH(CARG(n + 1));                                  \
+                CALL_CLOSURE(juvix_apply_closure, label##_return_1);      \
+                juvix_apply_closure = juvix_result;                       \
+                ASSIGN_CARGS(juvix_apply_closure, {                       \
+                    STACK_POP(CARG(juvix_closure_nargs));                 \
+                    STACK_POP(CARG(juvix_closure_nargs + 1));             \
+                });                                                       \
+                goto juvix_apply_2;                                       \
+            }                                                             \
+            case 2: {                                                     \
+                size_t n = get_closure_nargs(juvix_apply_closure);        \
+                STACK_PUSH(CARG(n + 2));                                  \
+                CALL_CLOSURE(juvix_apply_closure, label##_return_2);      \
+                juvix_apply_closure = juvix_result;                       \
+                ASSIGN_CARGS(juvix_apply_closure,                         \
+                             { STACK_POP(CARG(juvix_closure_nargs)); });  \
+                goto juvix_apply_1;                                       \
+            }                                                             \
+            case 3:                                                       \
+                GOTO_CLOSURE;                                             \
+            default: {                                                    \
+                UNUSED size_t n = get_closure_nargs(juvix_apply_closure); \
+                PREALLOC(                                                 \
+                    n + CLOSURE_SKIP + 1 + 3,                             \
+                    {                                                     \
+                        STACK_PUSH(juvix_apply_closure);                  \
+                        STACK_PUSH(CARG(n));                              \
+                        STACK_PUSH(CARG(n + 1));                          \
+                        STACK_PUSH(CARG(n + 2));                          \
+                    },                                                    \
+                    {                                                     \
+                        STACK_POP(CARG(n + 2));                           \
+                        STACK_POP(CARG(n + 1));                           \
+                        STACK_POP(CARG(n));                               \
+                        STACK_POP(juvix_apply_closure);                   \
+                    });                                                   \
+                EXTEND_CLOSURE(juvix_result, juvix_apply_closure, 3, {    \
+                    CLOSURE_ARG(juvix_result, juvix_closure_nargs) =      \
+                        CARG(juvix_closure_nargs);                        \
+                    CLOSURE_ARG(juvix_result, juvix_closure_nargs + 1) =  \
+                        CARG(juvix_closure_nargs + 1);                    \
+                    CLOSURE_ARG(juvix_result, juvix_closure_nargs + 2) =  \
+                        CARG(juvix_closure_nargs + 2);                    \
+                });                                                       \
+                RETURN_CLOSURE;                                           \
+            }                                                             \
+        }                                                                 \
     } while (0)
 
 #define DECL_APPLY_1 \

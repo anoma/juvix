@@ -193,11 +193,11 @@ fromReg target debug tab =
 
     prologueDecls :: [Statement]
     prologueDecls =
-      [ StatementExpr $
-          macroCall
+      StatementExpr
+        ( macroCall
             "JUVIX_PROLOGUE"
             [integer (info ^. Reg.extraInfoMaxArgsNum + info ^. Reg.extraInfoMaxCallClosuresArgsNum)]
-      ]
+        )
         : makeCStrings
 
     infoDecls :: [Statement]

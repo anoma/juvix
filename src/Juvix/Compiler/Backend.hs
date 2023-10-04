@@ -77,7 +77,8 @@ getLimits tgt debug = case tgt of
         _limitsMaxStackDelta = 8184,
         _limitsMaxFunctionAlloc = 8184,
         _limitsDispatchStackSize = 4,
-        _limitsBuiltinUIDsNum = 8
+        _limitsBuiltinUIDsNum = 8,
+        _limitsSpecialisedApply = 3
       }
   TargetGeb ->
     defaultLimits
