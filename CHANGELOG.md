@@ -4,6 +4,49 @@
 <img align="right" width="300" height="300" alt="Juvix Mascot" src="../assets/images/tara-smiling.svg" />
 </a>
 
+## [v0.5.2](https://github.com/anoma/juvix/tree/v0.5.2)
+
+[Full Changelog](https://github.com/anoma/juvix/compare/v0.5.1...v0.5.2)
+
+**Implemented enhancements:**
+
+- Add `juvix dependencies update` command [\#2419](https://github.com/anoma/juvix/pull/2419) ([paulcadman](https://github.com/paulcadman))
+- Add Juvix package lockfile support [\#2334](https://github.com/anoma/juvix/issues/2334)
+- Add `Partial` trait [\#2409](https://github.com/anoma/juvix/pull/2409) ([lukaszcz](https://github.com/lukaszcz))
+- Fix for crash with wildcard used in type definition [\#2405](https://github.com/anoma/juvix/pull/2405) ([janmasrovira](https://github.com/janmasrovira))
+- Improve closure calls in the runtime [\#2396](https://github.com/anoma/juvix/pull/2396) ([lukaszcz](https://github.com/lukaszcz))
+- Allow open statements in let expressions [\#2395](https://github.com/anoma/juvix/pull/2395) ([janmasrovira](https://github.com/janmasrovira))
+- Fix delay instance resolution [\#2393](https://github.com/anoma/juvix/pull/2393) ([lukaszcz](https://github.com/lukaszcz))
+- Support functions in instance parameters [\#2385](https://github.com/anoma/juvix/pull/2385) ([lukaszcz](https://github.com/lukaszcz))
+- Do not call `git fetch` on git dependency if ref already exists in clone [\#2379](https://github.com/anoma/juvix/pull/2379) ([paulcadman](https://github.com/paulcadman))
+- Improve inlining [\#2377](https://github.com/anoma/juvix/pull/2377) ([lukaszcz](https://github.com/lukaszcz))
+- Record creation syntax with function definitions [\#2369](https://github.com/anoma/juvix/pull/2369) ([lukaszcz](https://github.com/lukaszcz))
+
+**Merged pull requests:**
+
+- Fix record creation error message location [\#2424](https://github.com/anoma/juvix/pull/2424) ([lukaszcz](https://github.com/lukaszcz))
+- Fix bug in instance termination checking [\#2423](https://github.com/anoma/juvix/pull/2423) ([lukaszcz](https://github.com/lukaszcz))
+- Reinstate the project .hlint.yaml [\#2420](https://github.com/anoma/juvix/pull/2420) ([paulcadman](https://github.com/paulcadman))
+- Remove package.yaml entry for PNG assets [\#2418](https://github.com/anoma/juvix/pull/2418) ([paulcadman](https://github.com/paulcadman))
+- Update benchmarks [\#2415](https://github.com/anoma/juvix/pull/2415) ([lukaszcz](https://github.com/lukaszcz))
+- Fix minor: case and error message [\#2407](https://github.com/anoma/juvix/pull/2407) ([jonaprieto](https://github.com/jonaprieto))
+- Fix tara url svg [\#2406](https://github.com/anoma/juvix/pull/2406) ([jonaprieto](https://github.com/jonaprieto))
+- Update pre-commit to check JSON formatting [\#2400](https://github.com/anoma/juvix/pull/2400) ([jonaprieto](https://github.com/jonaprieto))
+- Simplify README [\#2399](https://github.com/anoma/juvix/pull/2399) ([jonaprieto](https://github.com/jonaprieto))
+- Remove unused files [\#2398](https://github.com/anoma/juvix/pull/2398) ([jonaprieto](https://github.com/jonaprieto))
+- Minor changes to midsquare [\#2397](https://github.com/anoma/juvix/pull/2397) ([jonaprieto](https://github.com/jonaprieto))
+- Add fixity `none` and make aliases inherit fixity [\#2391](https://github.com/anoma/juvix/pull/2391) ([lukaszcz](https://github.com/lukaszcz))
+- Add nodes with no edges to the dependency graph [\#2390](https://github.com/anoma/juvix/pull/2390) ([janmasrovira](https://github.com/janmasrovira))
+- Remove function clause from `Internal` [\#2389](https://github.com/anoma/juvix/pull/2389) ([janmasrovira](https://github.com/janmasrovira))
+- Add package lockfile support [\#2388](https://github.com/anoma/juvix/pull/2388) ([paulcadman](https://github.com/paulcadman))
+- Fix case formatting [\#2387](https://github.com/anoma/juvix/pull/2387) ([lukaszcz](https://github.com/lukaszcz))
+- Instance holes [\#2384](https://github.com/anoma/juvix/pull/2384) ([lukaszcz](https://github.com/lukaszcz))
+- Update standard library list functions to use traits [\#2382](https://github.com/anoma/juvix/pull/2382) ([lukaszcz](https://github.com/lukaszcz))
+- Avoid serialization of \_packageFile field in juvix.yaml [\#2381](https://github.com/anoma/juvix/pull/2381) ([paulcadman](https://github.com/paulcadman))
+- Avoid the `-Os` option when generating WebAssembly [\#2378](https://github.com/anoma/juvix/pull/2378) ([lukaszcz](https://github.com/lukaszcz))
+- Error on local instances [\#2376](https://github.com/anoma/juvix/pull/2376) ([lukaszcz](https://github.com/lukaszcz))
+- Error for an instance subsumed by other instances [\#2375](https://github.com/anoma/juvix/pull/2375) ([lukaszcz](https://github.com/lukaszcz))
+
 ## [0.5.1](https://github.com/anoma/juvix/tree/v0.5.1)
 
 [Full Changelog](https://github.com/anoma/juvix/compare/v0.5.0...v0.5.1)
