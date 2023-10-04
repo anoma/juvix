@@ -82,9 +82,10 @@ paramToExpression = \case
     _instanceAppExpression
   InstanceParamFun InstanceFun {..} ->
     _instanceFunExpression
-  InstanceParamHole h -> ExpressionHole h
-  InstanceParamMeta {} ->
-    impossible
+  InstanceParamHole h ->
+    ExpressionHole h
+  InstanceParamMeta v ->
+    ExpressionIden (IdenVar v)
 
 paramFromExpression :: HashSet VarName -> Expression -> Maybe InstanceParam
 paramFromExpression metaVars e = case e of

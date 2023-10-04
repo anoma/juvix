@@ -27,6 +27,9 @@ checkStrictSubterm :: InstanceParam -> InstanceParam -> Bool
 checkStrictSubterm p1 p2 = case p2 of
   InstanceParamApp InstanceApp {..} ->
     any (checkSubterm p1) _instanceAppArgs
+  InstanceParamFun InstanceFun {..} ->
+    checkSubterm p1 _instanceFunLeft
+      || checkSubterm p1 _instanceFunRight
   _ ->
     False
 
