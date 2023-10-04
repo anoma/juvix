@@ -256,9 +256,7 @@ zkllvmArgs buildDir o outfile inputFile =
          "-DAPI_ZKLLVM",
          "-O" <> show (maybe defaultOptLevel (max 1) (o ^. compileOptimizationLevel)),
          "-target",
-         "assigner",
-         "-Xclang",
-         "-no-opaque-pointers"
+         "assigner"
        ]
     ++ ( if
              | o ^. compilePreprocess -> []
@@ -358,8 +356,7 @@ runLLVMLink outputFile' progFile libFile = do
 
 llvmLinkArgs :: Path Abs File -> Path Abs File -> Path Abs File -> [String]
 llvmLinkArgs outputFile' progFile libFile =
-  [ "-opaque-pointers=0",
-    "-S",
+  [ "-S",
     "-o",
     toFilePath outputFile',
     toFilePath progFile,

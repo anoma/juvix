@@ -34,6 +34,6 @@ ASM BUILDDIR = _build.asm
 ASM CFLAGS = -S -O0 --target=i386 -DARCH_NATIVE32 -DAPI_LIBC
 
 ZKLLVM BUILDDIR = _build.zkllvm
-ZKLLVM CFLAGS = -O3 -target assigner -Xclang -no-opaque-pointers -emit-llvm -S -Izkllvm/libs/stdlib/libc/include -DNDEBUG -DARCH_ZKLLVM -DAPI_ZKLLVM
+ZKLLVM CFLAGS = -O3 -target assigner -emit-llvm -S -Izkllvm/libs/stdlib/libc/include -DNDEBUG -DARCH_ZKLLVM -DAPI_ZKLLVM
 ZKLLVM LIBTOOL = llvm-link
-ZKLLVM LIBFLAGS := -opaque-pointers=0 -S -o
+ZKLLVM LIBFLAGS := -S -o
