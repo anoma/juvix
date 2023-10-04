@@ -751,8 +751,9 @@ instance ToGenericError ConstructorNotARecord where
       i :: Interval
       i = getLoc _constructorNotARecord
 
-newtype NotARecord = NotARecord
-  { _notARecord :: Name
+data NotARecord = NotARecord
+  { _notARecord :: Name,
+    _notARecordLocation :: Interval
   }
   deriving stock (Show)
 
@@ -771,7 +772,7 @@ instance ToGenericError NotARecord where
         }
     where
       i :: Interval
-      i = getLoc _notARecord
+      i = _notARecordLocation
 
 newtype UnexpectedField = UnexpectedField
   { _unexpectedField :: Symbol

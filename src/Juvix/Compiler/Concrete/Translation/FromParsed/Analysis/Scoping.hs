@@ -2088,7 +2088,7 @@ checkRecordCreation RecordCreation {..} = do
     Just ci -> do
       let name = NameUnqualified (ci ^. constructorInfoTypeName . nameConcrete)
           nameId = ci ^. constructorInfoTypeName . S.nameId
-      info <- getRecordInfo' name nameId
+      info <- getRecordInfo' (getLoc _recordCreationConstructor) name nameId
       let sig = info ^. recordInfoSignature
       (vars', fields') <- withLocalScope $ localBindings $ ignoreSyntax $ do
         vs <- mapM (reserveFunctionSymbol . (^. fieldDefineFunDef)) _recordCreationFields
@@ -2201,19 +2201,20 @@ getRecordInfo ::
   (Members '[State ScoperState, Error ScoperError] r) =>
   ScopedIden ->
   Sem r RecordInfo
-getRecordInfo indTy = getRecordInfo' (indTy ^. scopedIdenFinal . nameConcrete) (indTy ^. scopedIdenFinal . S.nameId)
+getRecordInfo indTy = getRecordInfo' (getLoc indTy) (indTy ^. scopedIdenFinal . nameConcrete) (indTy ^. scopedIdenFinal . S.nameId)
 
 getRecordInfo' ::
   forall r.
   (Members '[State ScoperState, Error ScoperError] r) =>
+  Interval ->
   Name ->
   NameId ->
   Sem r RecordInfo
-getRecordInfo' name nameId =
+getRecordInfo' loc name nameId =
   fromMaybeM err (gets (^. scoperRecordFields . at nameId))
   where
     err :: Sem r a
-    err = throw (ErrNotARecord (NotARecord name))
+    err = throw (ErrNotARecord (NotARecord name loc))
 
 getNameSignature :: (Members '[State ScoperState, Error ScoperError] r) => ScopedIden -> Sem r NameSignature
 getNameSignature s = do
