@@ -63,7 +63,11 @@ tests =
     PosTest
       "Recursive function on a tree"
       $(mkRelDir ".")
-      $(mkRelFile "TreeGen.juvix")
+      $(mkRelFile "TreeGen.juvix"),
+    PosTest
+      "Ignore instance arguments"
+      $(mkRelDir ".")
+      $(mkRelFile "issue2414.juvix")
   ]
 
 testsWithKeyword :: [PosTest]
