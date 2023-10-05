@@ -111,6 +111,7 @@ import Data.HashSet qualified as HashSet
 import Data.Hashable
 import Data.Int
 import Data.IntMap.Strict (IntMap)
+import Data.IntMap.Strict qualified as IntMap
 import Data.IntSet (IntSet)
 import Data.List.Extra hiding (allSame, groupSortOn, head, last, mconcatMap)
 import Data.List.Extra qualified as List
@@ -547,3 +548,6 @@ popFirstJust f = \case
 
 uncurryF :: (Functor f) => (a -> b -> c) -> f (a, b) -> f c
 uncurryF g input = uncurry g <$> input
+
+indexedByInt :: (Foldable f) => (a -> Int) -> f a -> IntMap a
+indexedByInt getIx l = IntMap.fromList [(getIx i, i) | i <- toList l]

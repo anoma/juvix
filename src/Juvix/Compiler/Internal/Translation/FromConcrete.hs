@@ -401,12 +401,17 @@ goFunctionDef FunctionDef {..} = do
     goNameSignature = fmap Internal.DefaultSignature . concatMapM goBlock . (^. nameSignatureArgs)
       where
         goBlock :: NameBlock 'Scoped -> Sem r [Maybe Internal.Expression]
-        goBlock =
-          mapM (mapM goExpression . (^? nameItemDefault . _Just . argDefaultValue))
-            -- TODO are index meant to be contiguous?
-            . sortOn (^. nameItemIndex)
-            . toList
-            . (^. nameBlock)
+        goBlock blk = do
+          let tbl = indexedByInt (^. nameItemIndex) (blk ^. nameBlock)
+              mmaxIx = fst <$> IntMap.lookupMax tbl
+          case mmaxIx of
+            Nothing -> return []
+            Just maxIx ->
+              execOutputList $ forM_ [0 .. maxIx] $ \idx ->
+                case tbl ^. at idx of
+                  Nothing -> output (Nothing @Internal.Expression)
+                  Just i -> mapM goExpression (i ^? nameItemDefault . _Just . argDefaultValue) >>= output
+
     goBody :: Sem r Internal.Expression
     goBody = do
       commonPatterns <- concatMapM (fmap toList . argToPattern) _signArgs
