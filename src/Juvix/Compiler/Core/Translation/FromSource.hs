@@ -136,7 +136,7 @@ statementDef = do
       let fi = fromMaybe impossible $ HashMap.lookup sym (tab ^. infoIdentifiers)
           ty = fromMaybe (fi ^. identifierType) mty
       unless (isDynamic (fi ^. identifierType) || ty == fi ^. identifierType) $
-        parseFailure off ("type signature doesn't match earlier definition")
+        parseFailure off "type signature doesn't match earlier definition"
       parseDefinition sym ty
       return sym
     Just IdentInd {} ->
@@ -258,7 +258,7 @@ expr ::
   -- | reverse de Bruijn indices (de Bruijn levels)
   HashMap Text Level ->
   ParsecS r Node
-expr varsNum vars = typeExpr varsNum vars
+expr = typeExpr
 
 bracedExpr ::
   (Member InfoTableBuilder r) =>

@@ -283,13 +283,7 @@ preFunctionDef f = do
             _identifierIsExported = False,
             _identifierBuiltin = f ^. Internal.funDefBuiltin,
             _identifierPragmas =
-              over
-                pragmasInline
-                (fmap (adjustPragmaInline implParamsNum))
-                $ over
-                  pragmasSpecialiseArgs
-                  (fmap (over pragmaSpecialiseArgs (map (implParamsNum +))))
-                  (f ^. Internal.funDefPragmas),
+              adjustPragmas implParamsNum (f ^. Internal.funDefPragmas),
             _identifierArgNames = argnames
           }
   case f ^. Internal.funDefBuiltin of
@@ -328,11 +322,6 @@ preFunctionDef f = do
         | _functionLeft ^. Internal.paramImplicit == Implicit ->
             implicitParametersNum _functionRight + 1
       _ -> 0
-
-    adjustPragmaInline :: Int -> PragmaInline -> PragmaInline
-    adjustPragmaInline n = \case
-      InlinePartiallyApplied k -> InlinePartiallyApplied (k + n)
-      x -> x
 
     getPatternName :: Internal.PatternArg -> Maybe Text
     getPatternName pat = case pat ^. Internal.patternArgName of
@@ -795,7 +784,7 @@ goPatternArgs ::
   [Internal.PatternArg] ->
   [Type] -> -- types of the patterns
   Sem r MatchBranch
-goPatternArgs lvl0 body ps0 ptys0 = go lvl0 [] ps0 ptys0
+goPatternArgs lvl0 body = go lvl0 []
   where
     -- `lvl` is the level of the lambda-bound variable corresponding to the current pattern
     go :: Level -> [Pattern] -> [Internal.PatternArg] -> [Type] -> Sem r MatchBranch
@@ -894,7 +883,7 @@ goIden i = do
     Internal.IdenConstructor n -> do
       m <- getIdent identIndex
       return $ case m of
-        Just (IdentConstr tag) -> (mkConstr (setInfoLocation (n ^. nameLoc) (Info.singleton (NameInfo (n ^. namePretty)))) tag [])
+        Just (IdentConstr tag) -> mkConstr (setInfoLocation (n ^. nameLoc) (Info.singleton (NameInfo (n ^. namePretty)))) tag []
         Just _ -> error ("internal to core: not a constructor " <> txt)
         Nothing -> undeclared
     Internal.IdenAxiom n -> do
