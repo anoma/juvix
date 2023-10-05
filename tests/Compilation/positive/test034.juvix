@@ -2,7 +2,6 @@
 module test034;
 
 import Stdlib.Prelude open;
-import Stdlib.Data.Nat.Ord open;
 
 sum : Nat → Nat :=
   let

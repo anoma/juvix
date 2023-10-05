@@ -2,7 +2,6 @@
 module test015;
 
 import Stdlib.Prelude open;
-import Stdlib.Data.Nat.Ord open;
 
 terminating
 f : Nat → Nat → Nat
