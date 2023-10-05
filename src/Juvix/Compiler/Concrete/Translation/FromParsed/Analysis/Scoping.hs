@@ -916,6 +916,7 @@ checkInductiveDef InductiveDef {..} = do
             _inductiveAssignKw,
             _inductiveKw
           }
+  registerDefaultArgs (inductiveName' ^. S.nameId) indDef
   forM_ inductiveConstructors' $ \c ->
     registerDefaultArgs (c ^. constructorName . S.nameId) (indDef, c)
   registerInductive @$> indDef

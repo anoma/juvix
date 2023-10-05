@@ -36,13 +36,16 @@ runNamedArguments napp = do
       $ helper (getLoc napp)
   return (foldl' mkApp (ExpressionIdentifier (napp ^. namedAppName)) args)
   where
-    -- sig :: NameSignature 'Scoped = napp ^. namedAppSignature . unIrrelevant
     mkApp :: Expression -> Expression -> Expression
     mkApp a = ExpressionApplication . Application a
 
     mkIniBuilderState :: Sem r BuilderState
     mkIniBuilderState = do
-      sig <- asks @NameSignatures (^?! at (napp ^. namedAppName . scopedIdenName . S.nameId) . _Just)
+      let name = napp ^. namedAppName . scopedIdenName
+      msig <- asks @NameSignatures (^. at (name ^. S.nameId))
+      let sig = fromMaybe err msig
+            where
+              err = error ("impossible: could not find name signature for " <> prettyText name)
       return
         BuilderState
           { _stateRemainingArgs = toList (napp ^. namedAppArgs),
