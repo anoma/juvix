@@ -496,7 +496,6 @@ checkLambda ari l = do
       where
         loc = getLoc cl
 
--- TODO default
 idenArity :: (Members '[Reader LocalVars, Reader InfoTable] r) => Iden -> Sem r Arity
 idenArity = \case
   IdenVar v -> getLocalArity v

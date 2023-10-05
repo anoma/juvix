@@ -124,7 +124,6 @@ addFunctionParameters FunctionParameters {..} = forM_ _paramNames addParameter
   where
     addParameter :: FunctionParameter s -> Sem r ()
     addParameter = \case
-      -- TODO add default values to Pi types?
       FunctionParameterName p -> addSymbol @s _paramImplicit Nothing (symbolParsed p)
       FunctionParameterWildcard {} -> endBuild (Proxy @s)
 
