@@ -18,12 +18,16 @@ axiom c : C;
 
 axiom d : D;
 
-mk {f1 : A := a} {f2 : Type} {f3 : C := c} (x : f2) : A × f2 × C :=
-  f1, x, f3;
+-- mk {f1 : A := a} {f2 : Type} {f3 : C := c} (x : f2) : A × f2 × C :=
+--   f1, x, f3;
 
-x1 : A × B × C := mk (x := b);
+-- x1 : A × B × C := mk (x := b);
 
-mk2 {f1 : A := a} {f2 : Type} {f3 : C := c} (x : f2) {f4 : D := d} (y : f2) : A × f2 × C :=
-  f1, x, f3;
+-- mk2 {f1 : A := a} {f2 : Type} {f3 : C := c} (x : f2) {f4 : D := d} (y : f2) : A × f2 × C :=
+--   f1, x, f3;
 
-x2 : A × B × C := mk2 (x := b) (y := b);
+-- x2 : A × B × C := mk2 (x := b) (y := b);
+
+mk3 {f0 : A := a} {f1 : A := a} : A := f1;
+
+x3 : A := mk3;

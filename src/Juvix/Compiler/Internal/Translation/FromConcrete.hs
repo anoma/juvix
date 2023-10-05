@@ -320,7 +320,7 @@ goModuleBody stmts = do
       sequence
         [ Indexed i <$> funDef
           | Indexed i (StatementFunctionDef f) <- ss,
-            let funDef = goTopFunctionDef f
+            let funDef = goFunctionDef f
         ]
 
 scanImports :: [Statement 'Scoped] -> [Import 'Scoped]
@@ -377,12 +377,12 @@ goProjectionDef ProjectionDef {..} = do
   info <- gets @ConstructorInfos (^?! at c . _Just)
   Internal.genFieldProjection (goSymbol _projectionField) info _projectionFieldIx
 
-goTopFunctionDef ::
+goFunctionDef ::
   forall r.
   (Members '[Reader Pragmas, Error ScoperError, Builtins, NameIdGen, Reader NameSignatures] r) =>
   FunctionDef 'Scoped ->
   Sem r Internal.FunctionDef
-goTopFunctionDef FunctionDef {..} = do
+goFunctionDef FunctionDef {..} = do
   let _funDefName = goSymbol _signName
       _funDefTerminating = isJust _signTerminating
       _funDefInstance = isJust _signInstance
@@ -391,10 +391,22 @@ goTopFunctionDef FunctionDef {..} = do
   _funDefExamples <- goExamples _signDoc
   _funDefPragmas <- goPragmas _signPragmas
   _funDefBody <- goBody
+  msig <- asks @NameSignatures (^. at (_funDefName ^. Internal.nameId))
+  _funDefDefaultSingature <- maybe (return mempty) goNameSignature msig
   let fun = Internal.FunctionDef {..}
   whenJust _signBuiltin (registerBuiltinFunction fun . (^. withLocParam))
   return fun
   where
+    goNameSignature :: NameSignature 'Scoped -> Sem r Internal.DefaultSignature
+    goNameSignature = fmap Internal.DefaultSignature . concatMapM goBlock . (^. nameSignatureArgs)
+      where
+        goBlock :: NameBlock 'Scoped -> Sem r [Maybe Internal.Expression]
+        goBlock =
+          mapM (mapM goExpression . (^? nameItemDefault . _Just . argDefaultValue))
+            -- TODO are index meant to be contiguous?
+            . sortOn (^. nameItemIndex)
+            . toList
+            . (^. nameBlock)
     goBody :: Sem r Internal.Expression
     goBody = do
       commonPatterns <- concatMapM (fmap toList . argToPattern) _signArgs
@@ -886,7 +898,7 @@ goExpression = \case
           where
             preLetStatement :: LetStatement 'Scoped -> Sem r (Maybe Internal.PreLetStatement)
             preLetStatement = \case
-              LetFunctionDef f -> Just . Internal.PreLetFunctionDef <$> goTopFunctionDef f
+              LetFunctionDef f -> Just . Internal.PreLetFunctionDef <$> goFunctionDef f
               LetAliasDef {} -> return Nothing
               LetOpen {} -> return Nothing
 

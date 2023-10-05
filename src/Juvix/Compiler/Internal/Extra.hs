@@ -93,6 +93,7 @@ genFieldProjection _funDefName info fieldIx = do
         _funDefTerminating = False,
         _funDefInstance = False,
         _funDefBuiltin = Nothing,
+        _funDefDefaultSingature = mempty,
         _funDefPragmas = mempty,
         _funDefBody = body',
         _funDefType = foldFunType (inductiveArgs ++ [saturatedTy]) retTy,

@@ -161,16 +161,22 @@ subsHoles s = over leafExpressions helper
 instance HasExpressions Example where
   leafExpressions f = traverseOf exampleExpression (leafExpressions f)
 
+instance HasExpressions DefaultSignature where
+  leafExpressions f (DefaultSignature a) =
+    DefaultSignature <$> traverse (traverse (leafExpressions f)) a
+
 instance HasExpressions FunctionDef where
   leafExpressions f FunctionDef {..} = do
     body' <- leafExpressions f _funDefBody
     ty' <- leafExpressions f _funDefType
     examples' <- traverse (leafExpressions f) _funDefExamples
+    defaults' <- leafExpressions f _funDefDefaultSingature
     pure
       FunctionDef
         { _funDefBody = body',
           _funDefType = ty',
           _funDefExamples = examples',
+          _funDefDefaultSingature = defaults',
           _funDefTerminating,
           _funDefInstance,
           _funDefName,
@@ -329,6 +335,12 @@ unfoldFunType :: Expression -> ([FunctionParameter], Expression)
 unfoldFunType t = case t of
   ExpressionFunction (Function l r) -> first (l :) (unfoldFunType r)
   _ -> ([], t)
+
+isImplicitOrInstance :: IsImplicit -> Bool
+isImplicitOrInstance = \case
+  Implicit -> True
+  ImplicitInstance -> True
+  Explicit -> False
 
 unfoldTypeAbsType :: Expression -> ([VarName], Expression)
 unfoldTypeAbsType t = case t of
@@ -683,3 +695,8 @@ idenName = \case
   IdenVar v -> v
   IdenInductive i -> i
   IdenAxiom a -> a
+
+-- TODO generate fresh binders
+-- freshBinders :: Members '[NameIdGen] r => Expression -> Sem r Expression
+freshBinders :: Expression -> Sem r Expression
+freshBinders = pure

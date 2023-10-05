@@ -90,6 +90,7 @@ data FunctionDef = FunctionDef
     _funDefTerminating :: Bool,
     _funDefInstance :: Bool,
     _funDefBuiltin :: Maybe BuiltinFunction,
+    _funDefDefaultSingature :: DefaultSignature,
     _funDefPragmas :: Pragmas
   }
   deriving stock (Eq, Generic, Data)
@@ -285,6 +286,14 @@ data ConstructorDef = ConstructorDef
   }
   deriving stock (Data)
 
+newtype DefaultSignature = DefaultSignature
+  { _defaultSignature :: [Maybe Expression]
+  }
+  deriving stock (Eq, Generic, Data)
+  deriving newtype (Monoid, Semigroup)
+
+instance Hashable DefaultSignature
+
 data FunctionParameter = FunctionParameter
   { _paramName :: Maybe VarName,
     _paramImplicit :: IsImplicit,
@@ -308,6 +317,7 @@ newtype ModuleIndex = ModuleIndex
   deriving stock (Data)
 
 makeLenses ''ModuleIndex
+makeLenses ''DefaultSignature
 makeLenses ''Case
 makeLenses ''CaseBranch
 makeLenses ''Module'

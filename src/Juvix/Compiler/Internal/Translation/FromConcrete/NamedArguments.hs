@@ -10,9 +10,9 @@ import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Gen qualified as Gen
 import Juvix.Compiler.Concrete.Keywords
 import Juvix.Compiler.Concrete.Language
+import Juvix.Compiler.Concrete.Pretty (ppTrace)
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
 import Juvix.Prelude
-import Juvix.Compiler.Concrete.Pretty (ppTrace)
 
 type NameSignatures = HashMap NameId (NameSignature 'Scoped)
 
@@ -177,13 +177,14 @@ helper loc = do
 
             fillPosition :: (Members '[NameIdGen] r') => Int -> Sem r' Expression
             fillPosition idx = do
-              e' <- exprBraces . WithLoc loc
-                <$> case defaults ^. at idx of
-                  Nothing -> exprHole . mkHole loc <$> freshNameId
-                  -- TODO generate fresh binders
-                  -- TODO update location
-                  Just d -> return (d ^. argDefaultValue)
-              traceM ("fill position " <> show idx <> " : " <> ppTrace e')
+              e' <-
+                exprBraces . WithLoc loc
+                  <$> case defaults ^. at idx of
+                    Nothing -> exprHole . mkHole loc <$> freshNameId
+                    -- TODO generate fresh binders
+                    -- TODO update location
+                    Just d -> return (d ^. argDefaultValue)
+              -- traceM ("fill position " <> show idx <> " : " <> ppTrace e')
               return e'
         maxIx :: Maybe Int
         maxIx = fmap maximum1 . nonEmpty . map (^. nameItemIndex) $ omittedArgs

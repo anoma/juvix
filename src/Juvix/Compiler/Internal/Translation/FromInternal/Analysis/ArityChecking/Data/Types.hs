@@ -1,5 +1,6 @@
 module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Data.Types where
 
+import Juvix.Compiler.Internal.Language
 import Juvix.Prelude
 import Juvix.Prelude.Pretty
 
@@ -28,17 +29,34 @@ data UnfoldedArity = UnfoldedArity
 
 data ArityParameter
   = ParamExplicit Arity
-  | ParamImplicit
+  | ParamImplicit ImplicitParam
   | ParamImplicitInstance
   deriving stock (Eq)
 
+newtype ImplicitParam = ImplicitParam
+  { _implicitParamDefault :: Maybe Expression
+  }
+
+instance Eq ImplicitParam where
+  ImplicitParam _ == ImplicitParam _ = True
+
 makeLenses ''UnfoldedArity
+makeLenses ''ImplicitParam
+
+unfoldingArity :: (UnfoldedArity -> UnfoldedArity) -> Arity -> Arity
+unfoldingArity f = foldArity . f . unfoldArity'
 
 arityParameter :: ArityParameter -> Arity
 arityParameter = \case
-  ParamImplicit -> ArityUnit
+  ParamImplicit {} -> ArityUnit
   ParamImplicitInstance -> ArityUnit
   ParamExplicit a -> a
+
+arityParameterImplicitOrInstance :: ArityParameter -> Bool
+arityParameterImplicitOrInstance = \case
+  ParamExplicit {} -> False
+  ParamImplicit {} -> True
+  ParamImplicitInstance -> True
 
 arityCommonPrefix :: Arity -> Arity -> [ArityParameter]
 arityCommonPrefix p1 p2 = commonPrefix u1 u2
@@ -72,12 +90,7 @@ foldArity UnfoldedArity {..} = go _ufoldArityParams
       [] -> case _ufoldArityRest of
         ArityRestUnit -> ArityUnit
         ArityRestUnknown -> ArityUnknown
-      (a : as) -> ArityFunction (FunctionArity l (go as))
-        where
-          l = case a of
-            ParamExplicit e -> ParamExplicit e
-            ParamImplicit -> ParamImplicit
-            ParamImplicitInstance -> ParamImplicitInstance
+      (a : as) -> ArityFunction (FunctionArity a (go as))
 
 instance HasAtomicity FunctionArity where
   atomicity = const (Aggregate funFixity)
@@ -90,7 +103,7 @@ instance HasAtomicity Arity where
 
 instance Pretty ArityParameter where
   pretty = \case
-    ParamImplicit -> "{𝟙}"
+    ParamImplicit {} -> "{𝟙}"
     ParamImplicitInstance -> "{{𝟙}}"
     ParamExplicit f -> pretty f
 
