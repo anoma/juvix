@@ -2,7 +2,6 @@
 module ackermann;
 
 import Stdlib.Prelude open;
-import Stdlib.Data.Nat.Ord open;
 
 iter : {A : Type} → (A → A) → Nat → A → A
   | f zero := id

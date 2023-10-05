@@ -2,7 +2,6 @@
 module test018;
 
 import Stdlib.Prelude open;
-import Stdlib.Data.Nat.Ord open;
 
 pow : Nat -> Nat
   | zero := 1

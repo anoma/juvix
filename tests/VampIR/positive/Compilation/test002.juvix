@@ -2,7 +2,6 @@
 module test002;
 
 import Stdlib.Prelude open;
-import Stdlib.Data.Nat.Ord open;
 
 type optbool :=
   | Just : Bool -> optbool

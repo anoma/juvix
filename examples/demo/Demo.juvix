@@ -2,9 +2,6 @@ module Demo;
 
 -- standard library prelude
 import Stdlib.Prelude open;
--- for comparisons on natural numbers
-import Stdlib.Data.Nat.Ord open;
--- for Ordering
 
 even : Nat → Bool
   | zero := true

@@ -1,7 +1,6 @@
 module builtinTrace;
 
 import Stdlib.Prelude open;
-import Stdlib.Data.Nat.Ord open;
 
 builtin trace
 axiom trace : {A : Type} → A → A;

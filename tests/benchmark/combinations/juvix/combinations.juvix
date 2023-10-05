@@ -2,7 +2,6 @@
 module combinations;
 
 import Stdlib.Prelude open;
-import Stdlib.Data.Nat.Ord open;
 
 terminating
 go : Nat → Nat → Nat

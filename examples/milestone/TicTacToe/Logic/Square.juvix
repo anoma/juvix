@@ -2,7 +2,6 @@ module Logic.Square;
 
 import Stdlib.Prelude open;
 import Logic.Symbol open;
-import Stdlib.Data.Nat.Ord open;
 import Logic.Extra open;
 
 --- A square is each of the holes in a board
@@ -26,7 +25,7 @@ showSquare : Square → String
 replace (player : Symbol) (k : Nat) : Square → Square
   | (empty n) :=
     if
-      (n Stdlib.Data.Nat.Ord.== k)
+      (n == k)
       (occupied player)
       (empty n)
   | s := s;

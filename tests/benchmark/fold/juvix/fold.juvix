@@ -2,7 +2,6 @@
 module fold;
 
 import Stdlib.Prelude open;
-import Stdlib.Data.Nat.Ord open;
 
 plusMod : Nat → Nat → Nat
   | x y := mod (x + y) 268435456;

@@ -2,7 +2,6 @@
 module mergesort;
 
 import Stdlib.Prelude open;
-import Stdlib.Data.Nat.Ord open;
 
 split_go
   : {A : Type} → List A → List A → List A → List A × List A
