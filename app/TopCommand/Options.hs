@@ -1,6 +1,7 @@
 module TopCommand.Options where
 
 import Commands.Compile.Options
+import Commands.Dependencies.Options qualified as Dependencies
 import Commands.Dev.Options qualified as Dev
 import Commands.Doctor.Options
 import Commands.Eval.Options
@@ -27,6 +28,7 @@ data TopCommand
   | Init
   | JuvixRepl ReplOptions
   | JuvixFormat FormatOptions
+  | Dependencies Dependencies.DependenciesCommand
   deriving stock (Data)
 
 topCommandInputPath :: TopCommand -> IO (Maybe (SomePath Abs))
@@ -90,12 +92,13 @@ parseUtility =
     ( mconcat
         [ commandGroup "Utility commands:",
           metavar "UTILITY_CMD",
-          commandDoctor,
           commandInit,
-          commandDev,
           commandRepl,
           commandFormat,
-          commandClean
+          commandClean,
+          commandDependencies,
+          commandDoctor,
+          commandDev
         ]
     )
   where
@@ -148,6 +151,12 @@ parseUtility =
       command
         "clean"
         (info (pure Clean) (progDesc "Delete build artifacts"))
+
+    commandDependencies :: Mod CommandFields TopCommand
+    commandDependencies =
+      command
+        "dependencies"
+        (info (Dependencies <$> Dependencies.parseDependenciesCommand) (progDesc "Subcommands related to dependencies"))
 
 commandCheck :: Mod CommandFields TopCommand
 commandCheck =

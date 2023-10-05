@@ -441,6 +441,98 @@ tests:
       contains: Hello from dep
     exit-status: 0
 
+  - name: git-dependencies-uses-generated-lockfile-update
+    command:
+      shell:
+        - bash
+      script: |
+        temp=$(mktemp -d)
+        trap 'rm -rf -- "$temp"' EXIT
+
+        # create dependency
+        mkdir $temp/dep
+        cd $temp/dep
+        git init
+
+        cat <<-EOF > HelloDep.juvix
+        module HelloDep;
+        import Stdlib.Prelude open;
+        main : IO := printStringLn "Hello from dep";
+        EOF
+        touch juvix.yaml
+
+        git add -A
+        git commit -m "commit1"
+
+        dep1hash1=$(git rev-parse HEAD)
+
+        # update dependency
+        cd $temp/dep
+        cat <<-EOF > HelloDep.juvix
+        module HelloDep;
+        import Stdlib.Prelude open;
+        main : IO := printStringLn "Hello from commit 2";
+        EOF
+
+        git add -A
+        git commit -m "commit2"
+
+        dep1hash2=$(git rev-parse HEAD)
+
+        # create project that uses dependency
+        mkdir $temp/base
+        cd $temp/base
+
+        cat <<-EOF > juvix.yaml
+        name: HelloWorld
+        main: HelloWorld.juvix
+        dependencies:
+          - .juvix-build/stdlib
+          - git:
+              url: $temp/dep
+              name: dep1
+              ref: $dep1hash1
+        version: 0.1.0
+        EOF
+
+        cat <<-EOF > HelloWorld.juvix
+        -- HelloWorld.juvix
+        module HelloWorld;
+
+        import Stdlib.Prelude open;
+        import HelloDep;
+
+        main : IO := HelloDep.main;
+        EOF
+
+        # compile project and generate the lockfile
+        # that uses $dep1hash1
+        juvix compile HelloWorld.juvix
+
+        cd $temp/base
+
+        cat <<-EOF > juvix.yaml
+        name: HelloWorld
+        main: HelloWorld.juvix
+        dependencies:
+          - .juvix-build/stdlib
+          - git:
+              url: $temp/dep
+              name: dep1
+              ref: $dep1hash2
+        version: 0.1.0
+        EOF
+
+        # update the lockfile
+        juvix dependencies update
+
+        # compile should now use $dep1hash2
+        juvix compile HelloWorld.juvix
+        ./HelloWorld
+    stdout:
+      contains: Hello from commit 2
+    exit-status: 0
+
   - name: git-dependencies-nested-lockfile
     command:
       shell:

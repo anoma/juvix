@@ -69,7 +69,7 @@ testDescr PosTest {..} = helper renderCodeNew
                   runIO'
                     entryPoint
                     ( do
-                        void entrySetup
+                        void (entrySetup defaultDependenciesConfig)
                         Concrete.fromParsed p
                     )
 

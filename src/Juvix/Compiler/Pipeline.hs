@@ -3,6 +3,7 @@ module Juvix.Compiler.Pipeline
     module Juvix.Compiler.Pipeline.EntryPoint,
     module Juvix.Compiler.Pipeline.Artifacts,
     module Juvix.Compiler.Pipeline.Root,
+    module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.DependenciesConfig,
   )
 where
 
@@ -22,6 +23,7 @@ import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Translation.FromParsed qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver qualified as PathResolver
+import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.DependenciesConfig
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Data.Context qualified as Scoped
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as P
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
@@ -49,10 +51,16 @@ type TopPipelineEff = '[PathResolver, Error DependencyError, GitClone, Error Git
 -- Workflows
 --------------------------------------------------------------------------------
 
+upToSetup ::
+  (Members '[Reader EntryPoint, Files, GitClone, PathResolver] r) =>
+  DependenciesConfig ->
+  Sem r ()
+upToSetup = entrySetup
+
 upToParsing ::
   (Members '[HighlightBuilder, Reader EntryPoint, Files, Error JuvixError, NameIdGen, GitClone, PathResolver] r) =>
   Sem r Parser.ParserResult
-upToParsing = entrySetup >> ask >>= Parser.fromSource
+upToParsing = upToSetup defaultDependenciesConfig >> ask >>= Parser.fromSource
 
 upToScoping ::
   (Members '[HighlightBuilder, Reader EntryPoint, Files, NameIdGen, Error JuvixError, GitClone, PathResolver] r) =>

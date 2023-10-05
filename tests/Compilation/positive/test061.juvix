@@ -66,6 +66,15 @@ instance
 showPairI {A B} {{Show A}} {{Show B}} : Show (A × B) :=
   mkShow λ {(x, y) := Show.show x ++str ", " ++str Show.show y};
 
+trait
+type T A := mkT { a : A };
+
+instance
+tNatI : T Nat := mkT 0;
+
+instance
+tFunI {A} {{T A}} : T (A -> A) := mkT \ { a := a };
+
 main : IO :=
   printStringLn (Show.show true) >>
   printStringLn (f false) >>
@@ -82,4 +91,4 @@ main : IO :=
   printStringLn (f5 "abba" 3) >>
   printStringLn (Show.show {{_}} ["a"; "b"; "c"; "d"]) >>
   printStringLn (Show.show (λ{x := not x})) >>
-  printStringLn (Show.show (3, [1; 2]));
+  printStringLn (Show.show (3, [1; 2 + T.a 0]));

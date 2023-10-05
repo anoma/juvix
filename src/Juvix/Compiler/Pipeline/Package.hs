@@ -21,6 +21,7 @@ module Juvix.Compiler.Pipeline.Package
     readGlobalPackage,
     mkPackageFilePath,
     packageLockfile,
+    unsetPackageLockfile,
   )
 where
 
@@ -190,6 +191,9 @@ processPackage _packageFile buildDir lockfile pkg = do
       where
         base :: SomeBase Dir = resolveBuildDir buildDir <///> relStdlibDir
         stdlib = mkPathDependency (fromSomeDir base)
+
+unsetPackageLockfile :: Package -> Package
+unsetPackageLockfile = set packageLockfile Nothing
 
 defaultStdlibDep :: BuildDir -> Dependency
 defaultStdlibDep buildDir = mkPathDependency (fromSomeDir (resolveBuildDir buildDir <///> relStdlibDir))
