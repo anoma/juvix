@@ -133,8 +133,7 @@ checkFunctionDef FunctionDef {..} = do
   _funDefType' <- withEmptyLocalVars (checkType _funDefType)
   _funDefBody' <- checkFunctionBody arity _funDefBody
   _funDefExamples' <- withEmptyLocalVars (mapM checkExample _funDefExamples)
-  -- TODO what to do here
-  _funDefDefaultSingature' <- return _funDefDefaultSingature
+  let _funDefDefaultSingature' = _funDefDefaultSingature
   return
     FunctionDef
       { _funDefBody = _funDefBody',

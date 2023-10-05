@@ -35,3 +35,7 @@ x3 : D := mk3;
 mk4 {A := Type} {f1 f2 f3 : D := d} : _ := f3;
 
 x4 : D := mk4;
+
+mk5 {A := Type} {f1 f2 f3 : D := mk4} : _ := f3;
+
+x5 : D := mk5;
