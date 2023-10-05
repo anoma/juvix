@@ -806,9 +806,10 @@ checkFunctionDef ::
   Sem r (FunctionDef 'Scoped)
 checkFunctionDef FunctionDef {..} = do
   sigName' <- bindFunctionSymbol _signName
+  topScope <- get
   sigDoc' <- mapM checkJudoc _signDoc
   (args', sigType', sigBody') <- withLocalScope $ do
-    a' <- mapM checkArg _signArgs
+    a' <- mapM (checkArg topScope) _signArgs
     t' <- mapM checkParseExpressionAtoms _signRetType
     b' <- checkBody
     return (a', t', b')
@@ -824,8 +825,8 @@ checkFunctionDef FunctionDef {..} = do
   registerDefaultArgs (sigName' ^. S.nameId) def
   registerFunctionDef @$> def
   where
-    checkArg :: SigArg 'Parsed -> Sem r (SigArg 'Scoped)
-    checkArg arg@SigArg {..} = do
+    checkArg :: Scope -> SigArg 'Parsed -> Sem r (SigArg 'Scoped)
+    checkArg topScope arg@SigArg {..} = do
       names' <- forM _sigArgNames $ \case
         ArgumentSymbol s -> ArgumentSymbol <$> bindVariableSymbol s
         ArgumentWildcard w -> return $ ArgumentWildcard w
@@ -838,7 +839,7 @@ checkFunctionDef FunctionDef {..} = do
                 Explicit -> err
                 ImplicitInstance -> err
                 Implicit -> do
-                  val' <- checkParseExpressionAtoms _argDefaultValue
+                  val' <- withScope topScope (checkParseExpressionAtoms _argDefaultValue)
                   return (Just ArgDefault {_argDefaultValue = val', ..})
       return
         SigArg
@@ -1075,6 +1076,14 @@ withTopScope ma = do
           before
   put scope'
   ma
+
+withScope :: (Members '[State Scope] r) => Scope -> Sem r a -> Sem r a
+withScope scope ma = do
+  before <- get @Scope
+  put scope
+  x <- ma
+  put before
+  return x
 
 withLocalScope :: (Members '[State Scope] r) => Sem r a -> Sem r a
 withLocalScope ma = do

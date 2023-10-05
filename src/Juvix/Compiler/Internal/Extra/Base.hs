@@ -695,8 +695,3 @@ idenName = \case
   IdenVar v -> v
   IdenInductive i -> i
   IdenAxiom a -> a
-
--- TODO generate fresh binders
--- freshBinders :: Members '[NameIdGen] r => Expression -> Sem r Expression
-freshBinders :: Expression -> Sem r Expression
-freshBinders = pure

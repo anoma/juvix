@@ -750,7 +750,7 @@ checkExpression hintArity expr = case expr of
 newHoleImplicit :: (Member NameIdGen r) => ImplicitParam -> Interval -> Sem r Expression
 newHoleImplicit i loc = case i ^. implicitParamDefault of
   Nothing -> ExpressionHole . mkHole loc <$> freshNameId
-  Just e -> freshBinders e
+  Just e -> return e
 
 newHoleInstance :: (Member NameIdGen r) => Interval -> Sem r Hole
 newHoleInstance loc = mkHole loc <$> freshNameId

@@ -178,16 +178,12 @@ helper loc = do
             fillUntil n' = forM_ [n .. n' - 1] (fillPosition >=> output)
 
             fillPosition :: (Members '[NameIdGen] r') => Int -> Sem r' Expression
-            fillPosition idx = do
-              e' <-
-                exprBraces . WithLoc loc
-                  <$> case defaults ^. at idx of
-                    Nothing -> exprHole . mkHole loc <$> freshNameId
-                    -- TODO generate fresh binders
-                    -- TODO update location
-                    Just d -> return (d ^. argDefaultValue)
-              -- traceM ("fill position " <> show idx <> " : " <> ppTrace e')
-              return e'
+            fillPosition idx =
+              exprBraces . WithLoc loc
+                <$> case defaults ^. at idx of
+                  Nothing -> exprHole . mkHole loc <$> freshNameId
+                  -- TODO update location
+                  Just d -> return (d ^. argDefaultValue)
         maxIx :: Maybe Int
         maxIx = fmap maximum1 . nonEmpty . map (^. nameItemIndex) $ omittedArgs
 

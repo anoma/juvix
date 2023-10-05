@@ -1100,11 +1100,6 @@ functionDefinition allowOmitType allowInstance _signBuiltin = P.label "<function
       _sigArgDefault <- optional $ do
         _argDefaultAssign <- Irrelevant <$> kw kwAssign
         _argDefaultValue <- parseExpressionAtoms
-        -- case _sigArgImplicit of
-        --     Implicit -> return ()
-        --     _ -> do
-        --       off <- P.getOffset
-        --       parseFailure off "Only allowed implicit arguments can have default values."
         return ArgDefault {..}
       closeDelim <- implicitClose _sigArgImplicit
       let _sigArgDelims = Irrelevant (openDelim, closeDelim)
