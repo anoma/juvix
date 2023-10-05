@@ -19,6 +19,7 @@ data InfoTable = InfoTable
     _infoInductives :: HashMap Symbol InductiveInfo,
     _infoConstructors :: HashMap Tag ConstructorInfo,
     _infoAxioms :: HashMap Text AxiomInfo,
+    _infoSpecialisations :: HashMap Symbol [SpecialisationInfo],
     _infoLiteralIntToNat :: Maybe Symbol,
     _infoLiteralIntToInt :: Maybe Symbol,
     _infoNextSymbol :: Word,
@@ -36,6 +37,7 @@ emptyInfoTable =
       _infoInductives = mempty,
       _infoConstructors = mempty,
       _infoAxioms = mempty,
+      _infoSpecialisations = mempty,
       _infoLiteralIntToNat = Nothing,
       _infoLiteralIntToInt = Nothing,
       _infoNextSymbol = 1,
@@ -106,12 +108,18 @@ data AxiomInfo = AxiomInfo
     _axiomPragmas :: Pragmas
   }
 
+data SpecialisationInfo = SpecialisationInfo
+  { _specSignature :: ([Node], [Int]),
+    _specSymbol :: Symbol
+  }
+
 makeLenses ''InfoTable
 makeLenses ''IdentifierInfo
 makeLenses ''InductiveInfo
 makeLenses ''ConstructorInfo
 makeLenses ''ParameterInfo
 makeLenses ''AxiomInfo
+makeLenses ''SpecialisationInfo
 
 lookupInductiveInfo' :: InfoTable -> Symbol -> Maybe InductiveInfo
 lookupInductiveInfo' tab sym = HashMap.lookup sym (tab ^. infoInductives)
@@ -124,6 +132,9 @@ lookupIdentifierInfo' tab sym = HashMap.lookup sym (tab ^. infoIdentifiers)
 
 lookupIdentifierNode' :: InfoTable -> Symbol -> Maybe Node
 lookupIdentifierNode' tab sym = HashMap.lookup sym (tab ^. identContext)
+
+lookupSpecialisationInfo :: InfoTable -> Symbol -> [SpecialisationInfo]
+lookupSpecialisationInfo tab sym = fromMaybe [] $ HashMap.lookup sym (tab ^. infoSpecialisations)
 
 lookupInductiveInfo :: InfoTable -> Symbol -> InductiveInfo
 lookupInductiveInfo tab sym = fromJust $ lookupInductiveInfo' tab sym

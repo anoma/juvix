@@ -17,7 +17,7 @@ optimize' CoreOptions {..} tab =
       (4 * _optOptimizationLevel)
       ( compose 2 (letFolding' (isInlineableLambda _optInliningDepth))
           . lambdaFolding
-          . inlining' _optInliningDepth (recursiveIdents tab)
+          . doInlining
           . caseFolding
           . letFolding' (isInlineableLambda _optInliningDepth)
           . lambdaFolding
@@ -25,6 +25,17 @@ optimize' CoreOptions {..} tab =
       )
     . letFolding
     $ tab
+  where
+    recs :: HashSet Symbol
+    recs = recursiveIdents tab
+
+    doInlining :: InfoTable -> InfoTable
+    doInlining tab' = inlining' _optInliningDepth recs' tab'
+      where
+        recs' =
+          if
+              | _optOptimizationLevel > 1 -> recursiveIdents tab'
+              | otherwise -> recs
 
 optimize :: (Member (Reader CoreOptions) r) => InfoTable -> Sem r InfoTable
 optimize tab = do
