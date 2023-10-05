@@ -359,6 +359,13 @@ scoperErrorTests =
         ErrAmbiguousSym {} -> Nothing
         _ -> wrongError,
     NegTest
+      "Invalid default"
+      $(mkRelDir ".")
+      $(mkRelFile "InvalidDefault.juvix")
+      $ \case
+        ErrWrongDefaultValue {} -> Nothing
+        _ -> wrongError,
+    NegTest
       "Unsupported type"
       $(mkRelDir ".")
       $(mkRelFile "UnsupportedType.juvix")
