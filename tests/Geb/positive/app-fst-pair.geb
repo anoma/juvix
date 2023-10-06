@@ -8,5 +8,5 @@
       (index 0)))
   (list
     (pair
-      bit-choice 10
-      bit-choice 20)))
+      (bit-choice 10)
+      (bit-choice 20))))

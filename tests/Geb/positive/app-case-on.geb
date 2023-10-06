@@ -8,11 +8,11 @@
       (index 0)
       (right
         int
-        bit-choice 1)
+        (bit-choice 1))
       (left
         int
-        bit-choice 2)))
+        (bit-choice 2))))
   (list
     (left
       int
-      bit-choice 3)))
+      (bit-choice 3))))
