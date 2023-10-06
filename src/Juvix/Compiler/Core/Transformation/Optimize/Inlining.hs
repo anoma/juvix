@@ -48,6 +48,16 @@ convertNode inlineDepth recSyms tab = dmapL go
                   def = lookupIdentifierNode tab _identSymbol
               _ ->
                 node
+      NIdt Ident {..} ->
+        case pi of
+          Just InlineFullyApplied | argsNum == 0 -> def
+          Just (InlinePartiallyApplied 0) -> def
+          _ -> node
+        where
+          ii = lookupIdentifierInfo tab _identSymbol
+          pi = ii ^. identifierPragmas . pragmasInline
+          argsNum = ii ^. identifierArgsNum
+          def = lookupIdentifierNode tab _identSymbol
       -- inline zero-argument definitions automatically if inlining would result
       -- in case reduction
       NCase cs@Case {..} -> case _caseValue of
