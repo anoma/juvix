@@ -44,5 +44,5 @@ liftTest _testEval =
 checkNoRecursion :: InfoTable -> Assertion
 checkNoRecursion tab =
   when
-    (isCyclic (createIdentDependencyInfo tab))
+    (isCyclic (createCallGraph tab))
     (assertFailure "recursion detected")
