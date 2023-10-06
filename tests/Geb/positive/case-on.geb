@@ -1,14 +1,10 @@
-(typed
-  (case-on
-    (right
-      so1
-      (unit))
-    (right
-      so1
-      (unit))
-    (left
-      so1
-      (unit)))
-  (coprod
+(case-on
+  (right
     so1
-    so1))
+    (unit))
+  (right
+    so1
+    (unit))
+  (left
+    so1
+    (unit)))

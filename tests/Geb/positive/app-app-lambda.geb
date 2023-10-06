@@ -1,23 +1,21 @@
-(typed
+(app
   (app
     (app
-      (app
+      (lamb
+        (list
+          (fun-type
+            so1
+            so1))
         (lamb
           (list
-            (so-hom-obj
-              so1
-              so1))
-          (lamb
-            (list
-              int)
-            (index 1)))
-        (list
-          (lamb
-            (list
-              so1)
-            (index 0))))
+            int)
+          (index 1)))
       (list
-        12345))
+        (lamb
+          (list
+            so1)
+          (index 0))))
     (list
-      (unit)))
-  so1)
+      (bit-choice 12345)))
+  (list
+    (unit)))

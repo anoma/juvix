@@ -1,22 +1,18 @@
-(typed
-  (app
-    (lamb
-      (list
-        (coprod
-          int
-          int))
-      (case-on
-        (index 0)
-        (right
-          int
-          1)
-        (left
-          int
-          2)))
+(app
+  (lamb
     (list
+      (coprod
+        int
+        int))
+    (case-on
+      (index 0)
+      (right
+        int
+        (bit-choice 1))
       (left
         int
-        3)))
-  (coprod
-    int
-    int))
+        (bit-choice 2))))
+  (list
+    (left
+      int
+      (bit-choice 3))))

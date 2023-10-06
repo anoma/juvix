@@ -157,7 +157,7 @@ fromCore tab = case tab ^. Core.infoMain of
 
     convertConstant :: Core.Constant -> Trans Morphism
     convertConstant Core.Constant {..} = case _constantValue of
-      Core.ConstInteger n -> return $ MorphismInteger n
+      Core.ConstInteger n -> return $ MorphismInteger (BitChoice {_bitChoice = n})
       Core.ConstString {} -> unsupported
 
     convertApp :: Core.App -> Trans Morphism

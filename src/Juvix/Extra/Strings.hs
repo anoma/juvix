@@ -638,29 +638,32 @@ gebApp = "app"
 gebVar :: (IsString s) => s
 gebVar = "index"
 
+gebBitChoice :: (IsString s) => s
+gebBitChoice = "bit-choice"
+
 gebAdd :: (IsString s) => s
-gebAdd = "add"
+gebAdd = "plus"
 
 gebSub :: (IsString s) => s
-gebSub = "sub"
+gebSub = "minus"
 
 gebMul :: (IsString s) => s
-gebMul = "mul"
+gebMul = "times"
 
 gebDiv :: (IsString s) => s
-gebDiv = "div"
+gebDiv = "divide"
 
 gebMod :: (IsString s) => s
-gebMod = "mod"
+gebMod = "modulo"
 
 gebFail :: (IsString s) => s
 gebFail = "err"
 
 gebEq :: (IsString s) => s
-gebEq = "eq"
+gebEq = "lamb-eq"
 
 gebLt :: (IsString s) => s
-gebLt = "lt"
+gebLt = "lamb-lt"
 
 gebInitial :: (IsString s) => s
 gebInitial = "so0"
@@ -675,7 +678,7 @@ gebCoprod :: (IsString s) => s
 gebCoprod = "coprod"
 
 gebHom :: (IsString s) => s
-gebHom = "so-hom-obj"
+gebHom = "fun-type"
 
 gebInteger :: (IsString s) => s
 gebInteger = "int"

@@ -67,6 +67,9 @@ kwEq = keyword Str.gebEq
 kwLt :: Doc Ann
 kwLt = keyword Str.gebLt
 
+kwBitChoice :: Doc Ann
+kwBitChoice = keyword Str.gebBitChoice
+
 kwInitial :: Doc Ann
 kwInitial = keyword Str.gebInitial
 
