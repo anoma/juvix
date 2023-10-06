@@ -1048,8 +1048,8 @@ goPatternApplication a = uncurry mkConstructorApp <$> viewApp (PatternApplicatio
 
 goWildcardConstructor ::
   WildcardConstructor 'Scoped ->
-  Internal.ConstructorApp
-goWildcardConstructor a = mkConstructorApp (goScopedIden (a ^. wildcardConstructor)) []
+  Internal.WildcardConstructor
+goWildcardConstructor a = Internal.WildcardConstructor (goScopedIden (a ^. wildcardConstructor))
 
 goPatternConstructor ::
   (Members '[Builtins, NameIdGen, Error ScoperError] r) =>
@@ -1110,7 +1110,7 @@ goPattern p = case p of
   PatternVariable a -> return $ Internal.PatternVariable (goSymbol a)
   PatternList a -> goListPattern a
   PatternConstructor c -> Internal.PatternConstructorApp <$> goPatternConstructor c
-  PatternWildcardConstructor c -> return (Internal.PatternConstructorApp (goWildcardConstructor c))
+  PatternWildcardConstructor c -> return (Internal.PatternWildcardConstructor (goWildcardConstructor c))
   PatternApplication a -> Internal.PatternConstructorApp <$> goPatternApplication a
   PatternInfixApplication a -> Internal.PatternConstructorApp <$> goInfixPatternApplication a
   PatternPostfixApplication a -> Internal.PatternConstructorApp <$> goPostfixPatternApplication a

@@ -716,6 +716,7 @@ fromPatternArg pa = case pa ^. Internal.patternArgName of
 
     fromPattern :: Maybe (Name, Type) -> Internal.Pattern -> Sem r Pattern
     fromPattern asPat = \case
+      Internal.PatternWildcardConstructor {} -> impossible
       Internal.PatternVariable n -> do
         ty <- getPatternType n
         varsNum <- (^. indexTableVarsNum) <$> get
@@ -832,6 +833,7 @@ addPatternVariableNames p lvl vars =
     getPatternVars = \case
       Internal.PatternVariable n -> [Just n]
       Internal.PatternConstructorApp {} -> impossible
+      Internal.PatternWildcardConstructor {} -> impossible
 
 goIden ::
   forall r.

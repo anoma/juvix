@@ -207,8 +207,12 @@ goConstructorDef indName c = do
 goPattern :: forall r. (Member (State DependencyGraph) r) => Maybe Name -> PatternArg -> Sem r ()
 goPattern n p = case p ^. patternArgPattern of
   PatternVariable {} -> return ()
+  PatternWildcardConstructor c -> goWildcardConstructor c
   PatternConstructorApp a -> goApp a
   where
+    goWildcardConstructor :: WildcardConstructor -> Sem r ()
+    goWildcardConstructor w = addEdgeMay n (w ^. wildcardConstructor)
+
     goApp :: ConstructorApp -> Sem r ()
     goApp (ConstructorApp ctr ps _) = do
       addEdgeMay n ctr

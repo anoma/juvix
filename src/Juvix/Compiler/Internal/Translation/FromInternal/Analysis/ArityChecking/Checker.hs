@@ -387,7 +387,7 @@ checkLhs loc guessedBody ariSignature pats = do
 
 checkPattern ::
   forall r.
-  (Members '[Reader InfoTable, Error ArityCheckerError, State LocalVars] r) =>
+  (Members '[Reader InfoTable, Error ArityCheckerError, State LocalVars, NameIdGen] r) =>
   Arity ->
   PatternArg ->
   Sem r PatternArg
@@ -395,9 +395,11 @@ checkPattern ari = traverseOf (patternArgName . each) nameAri >=> traverseOf pat
   where
     nameAri :: VarName -> Sem r VarName
     nameAri n = addArity n ari $> n
+
     patternAri :: Pattern -> Sem r Pattern
     patternAri = \case
       PatternVariable v -> addArity v ari $> PatternVariable v
+      PatternWildcardConstructor v -> PatternConstructorApp <$> checkWildcardConstructor v
       PatternConstructorApp c -> case ari of
         ArityUnit -> PatternConstructorApp <$> checkConstructorApp c
         ArityUnknown -> PatternConstructorApp <$> checkConstructorApp c
@@ -409,9 +411,25 @@ checkPattern ari = traverseOf (patternArgName . each) nameAri >=> traverseOf pat
                   }
             )
 
+checkWildcardConstructor ::
+  forall r.
+  (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError, State LocalVars] r) =>
+  WildcardConstructor ->
+  Sem r ConstructorApp
+checkWildcardConstructor w = do
+  let c = w ^. wildcardConstructor
+  numArgs <- length . constructorArgs . (^. constructorInfoType) <$> lookupConstructor c
+  holeArgs <- replicateM numArgs (explicitPatternArg . PatternVariable . varFromHole <$> newHole (getLoc w))
+  return
+    ConstructorApp
+      { _constrAppConstructor = c,
+        _constrAppParameters = holeArgs,
+        _constrAppType = Nothing
+      }
+
 checkConstructorApp ::
   forall r.
-  (Members '[Reader InfoTable, Error ArityCheckerError, State LocalVars] r) =>
+  (Members '[Reader InfoTable, Error ArityCheckerError, State LocalVars, NameIdGen] r) =>
   ConstructorApp ->
   Sem r ConstructorApp
 checkConstructorApp ca = do

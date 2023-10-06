@@ -72,6 +72,7 @@ instance HasExpressions Pattern where
   leafExpressions f p = case p of
     PatternVariable {} -> pure p
     PatternConstructorApp a -> PatternConstructorApp <$> leafExpressions f a
+    PatternWildcardConstructor {} -> pure p
 
 instance HasExpressions CaseBranch where
   leafExpressions f b = do
@@ -253,6 +254,7 @@ patternArgVariables f (PatternArg i n p) = PatternArg i <$> traverse f n <*> pat
 patternVariables :: Traversal' Pattern VarName
 patternVariables f p = case p of
   PatternVariable v -> PatternVariable <$> f v
+  PatternWildcardConstructor {} -> pure p
   PatternConstructorApp a -> PatternConstructorApp <$> goApp f a
   where
     goApp :: Traversal' ConstructorApp VarName
@@ -360,6 +362,7 @@ unfoldApplication = fmap (fmap (^. appArg)) . unfoldApplication'
 patternCosmos :: SimpleFold Pattern Pattern
 patternCosmos f p = case p of
   PatternVariable {} -> f p
+  PatternWildcardConstructor {} -> f p
   PatternConstructorApp ConstructorApp {..} ->
     f p *> do
       args' <- traverse (traverseOf patternArgPattern (patternCosmos f)) _constrAppParameters
@@ -389,6 +392,7 @@ patternArgCosmos f p = do
 patternSubCosmos :: SimpleFold Pattern Pattern
 patternSubCosmos f p = case p of
   PatternVariable {} -> pure p
+  PatternWildcardConstructor {} -> pure p
   PatternConstructorApp ConstructorApp {..} -> do
     args' <- traverse (patternArgCosmos f) _constrAppParameters
     pure $
@@ -475,6 +479,9 @@ instance IsExpression ConstructorApp where
   toExpression (ConstructorApp c args _) =
     foldApplication (toExpression c) (map toApplicationArg args)
 
+instance IsExpression WildcardConstructor where
+  toExpression = toExpression . (^. wildcardConstructor)
+
 toApplicationArg :: PatternArg -> ApplicationArg
 toApplicationArg p =
   set appArgIsImplicit (p ^. patternArgIsImplicit) (helper (p ^. patternArgPattern))
@@ -483,6 +490,7 @@ toApplicationArg p =
     helper = \case
       PatternVariable v -> ApplicationArg Explicit (toExpression v)
       PatternConstructorApp a -> ApplicationArg Explicit (toExpression a)
+      PatternWildcardConstructor a -> ApplicationArg Explicit (toExpression a)
 
 expressionArrow :: (IsExpression a, IsExpression b) => IsImplicit -> a -> b -> Expression
 expressionArrow isImpl a b =
@@ -683,3 +691,11 @@ idenName = \case
   IdenVar v -> v
   IdenInductive i -> i
   IdenAxiom a -> a
+
+explicitPatternArg :: Pattern -> PatternArg
+explicitPatternArg _patternArgPattern =
+  PatternArg
+    { _patternArgName = Nothing,
+      _patternArgIsImplicit = Explicit,
+      _patternArgPattern
+    }
