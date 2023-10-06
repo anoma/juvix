@@ -141,7 +141,7 @@ parseNatural :: ParsecS r Integer
 parseNatural = lexeme P.decimal
 
 morphismBitChoice :: ParsecS r Geb.BitChoice
-morphismBitChoice = do 
+morphismBitChoice = do
   P.label "<geb MorphismBitChoice>" $ do
     kw kwGebBitChoice <* space
     _bitChoice <- parseNatural
