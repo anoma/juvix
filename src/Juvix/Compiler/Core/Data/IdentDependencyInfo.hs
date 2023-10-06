@@ -1,5 +1,6 @@
 module Juvix.Compiler.Core.Data.IdentDependencyInfo where
 
+import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Core.Data.InfoTable
 import Juvix.Compiler.Core.Extra.Utils
@@ -9,8 +10,8 @@ import Juvix.Compiler.Core.Language
 type IdentDependencyInfo = DependencyInfo Symbol
 
 -- | Compute the call graph
-createIdentDependencyInfo :: InfoTable -> IdentDependencyInfo
-createIdentDependencyInfo tab = createDependencyInfo graph startVertices
+createCallGraph :: InfoTable -> IdentDependencyInfo
+createCallGraph tab = createDependencyInfo graph startVertices
   where
     graph :: HashMap Symbol (HashSet Symbol)
     graph =
@@ -27,5 +28,28 @@ createIdentDependencyInfo tab = createDependencyInfo graph startVertices
     syms :: [Symbol]
     syms = maybe [] singleton (tab ^. infoMain)
 
+createSymbolDependencyInfo :: InfoTable -> IdentDependencyInfo
+createSymbolDependencyInfo tab = createDependencyInfo graph startVertices
+  where
+    graph :: HashMap Symbol (HashSet Symbol)
+    graph =
+      fmap
+        ( \IdentifierInfo {..} ->
+            getSymbols tab (lookupIdentifierNode tab _identifierSymbol)
+        )
+        (tab ^. infoIdentifiers)
+        <> foldr
+          ( \ConstructorInfo {..} ->
+              HashMap.insert _constructorInductive (getSymbols tab _constructorType)
+          )
+          mempty
+          (tab ^. infoConstructors)
+
+    startVertices :: HashSet Symbol
+    startVertices = HashSet.fromList syms
+
+    syms :: [Symbol]
+    syms = maybe [] singleton (tab ^. infoMain)
+
 recursiveIdents :: InfoTable -> HashSet Symbol
-recursiveIdents = nodesOnCycles . createIdentDependencyInfo
+recursiveIdents = nodesOnCycles . createCallGraph

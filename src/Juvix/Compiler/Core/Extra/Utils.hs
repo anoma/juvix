@@ -144,12 +144,28 @@ nodeIdents f = ufoldA reassemble go
       NIdt i -> NIdt <$> f i
       n -> pure n
 
+getInductives :: Node -> HashSet Symbol
+getInductives n = HashSet.fromList (n ^.. nodeInductives)
+
 nodeInductives :: Traversal' Node Symbol
 nodeInductives f = ufoldA reassemble go
   where
     go = \case
       NTyp ty -> NTyp <$> traverseOf typeConstrSymbol f ty
       n -> pure n
+
+getSymbols :: InfoTable -> Node -> HashSet Symbol
+getSymbols tab = gather go mempty
+  where
+    go :: HashSet Symbol -> Node -> HashSet Symbol
+    go acc = \case
+      NTyp TypeConstr {..} -> HashSet.insert _typeConstrSymbol acc
+      NIdt Ident {..} -> HashSet.insert _identSymbol acc
+      NCase Case {..} -> HashSet.insert _caseInductive acc
+      NCtr Constr {..}
+        | Just ci <- lookupConstructorInfo' tab _constrTag ->
+            HashSet.insert (ci ^. constructorInductive) acc
+      _ -> acc
 
 -- | Prism for NRec
 _NRec :: SimpleFold Node LetRec
