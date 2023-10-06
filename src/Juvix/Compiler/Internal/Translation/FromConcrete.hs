@@ -743,30 +743,33 @@ goExpression = \case
     goNamedApplication = runNamedArguments >=> goExpression
 
     goRecordCreation :: Concrete.RecordCreation 'Scoped -> Sem r Internal.Expression
-    goRecordCreation Concrete.RecordCreation {..} = do
-      args <- mapM goRecordDefineField _recordCreationFields
-      let defs = fmap (^. fieldDefineFunDef) _recordCreationFields
-          app =
-            Concrete.NamedApplication
-              { _namedAppName = _recordCreationConstructor,
-                _namedAppArgs =
-                  NonEmpty.singleton $
-                    Concrete.ArgumentBlock
-                      { _argBlockDelims = Irrelevant Nothing,
-                        _argBlockImplicit = Explicit,
-                        _argBlockArgs = args
-                      },
-                _namedAppSignature =
-                  Irrelevant (NameSignature [NameBlock (_recordCreationExtra ^. unIrrelevant . recordCreationExtraSignature . recordNames) Explicit])
-              }
-      cls <- goLetFunDefs (fmap Concrete.LetFunctionDef defs)
-      e <- runNamedArguments app >>= goExpression
-      return $
-        Internal.ExpressionLet $
-          Internal.Let
-            { _letClauses = nonEmpty' cls,
-              _letExpression = e
-            }
+    goRecordCreation Concrete.RecordCreation {..} =
+      case nonEmpty _recordCreationFields of
+        Nothing -> return (Internal.ExpressionIden (Internal.IdenConstructor (goScopedIden _recordCreationConstructor)))
+        Just fields1 -> do
+          args <- mapM goRecordDefineField fields1
+          let defs = fmap (^. fieldDefineFunDef) fields1
+              app =
+                Concrete.NamedApplication
+                  { _namedAppName = _recordCreationConstructor,
+                    _namedAppArgs =
+                      NonEmpty.singleton $
+                        Concrete.ArgumentBlock
+                          { _argBlockDelims = Irrelevant Nothing,
+                            _argBlockImplicit = Explicit,
+                            _argBlockArgs = args
+                          },
+                    _namedAppSignature =
+                      Irrelevant (NameSignature [NameBlock (_recordCreationExtra ^. unIrrelevant . recordCreationExtraSignature . recordNames) Explicit])
+                  }
+          cls <- goLetFunDefs (fmap Concrete.LetFunctionDef defs)
+          e <- runNamedArguments app >>= goExpression
+          return $
+            Internal.ExpressionLet $
+              Internal.Let
+                { _letClauses = nonEmpty' cls,
+                  _letExpression = e
+                }
 
     goRecordDefineField :: Concrete.RecordDefineField 'Scoped -> Sem r (Concrete.NamedArgument 'Scoped)
     goRecordDefineField Concrete.RecordDefineField {..} = do

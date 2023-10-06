@@ -925,20 +925,20 @@ checkInductiveDef InductiveDef {..} = do
             _rhsRecordDelim
           }
       where
-        checkFields :: NonEmpty (RecordField 'Parsed) -> Sem r (NonEmpty (RecordField 'Scoped))
-        checkFields (RecordField {..} :| fs) = do
-          type' <- checkParseExpressionAtoms _fieldType
-          withLocalScope $ do
-            name' <- bindVariableSymbol _fieldName
-            let f =
-                  RecordField
-                    { _fieldType = type',
-                      _fieldName = name',
-                      ..
-                    }
-            case nonEmpty fs of
-              Nothing -> return (pure f)
-              Just fs1 -> (pure f <>) <$> checkFields fs1
+        checkFields :: [RecordField 'Parsed] -> Sem r [RecordField 'Scoped]
+        checkFields = \case
+          [] -> return []
+          RecordField {..} : fs -> do
+            type' <- checkParseExpressionAtoms _fieldType
+            withLocalScope $ do
+              name' <- bindVariableSymbol _fieldName
+              let f =
+                    RecordField
+                      { _fieldType = type',
+                        _fieldName = name',
+                        ..
+                      }
+              (f :) <$> checkFields fs
 
     checkAdt :: RhsAdt 'Parsed -> Sem r (RhsAdt 'Scoped)
     checkAdt RhsAdt {..} = do
@@ -1279,7 +1279,7 @@ checkSections sec = do
                                   _projectionFieldIx = idx
                                 }
 
-                            getFields :: Sem (Fail ': s') (NonEmpty (RecordField 'Parsed))
+                            getFields :: Sem (Fail ': s') [RecordField 'Parsed]
                             getFields = case i ^. inductiveConstructors of
                               c :| [] -> case c ^. constructorRhs of
                                 ConstructorRhsRecord r -> return (r ^. rhsRecordFields)
@@ -2090,7 +2090,7 @@ checkRecordCreation RecordCreation {..} = do
           nameId = ci ^. constructorInfoTypeName . S.nameId
       info <- getRecordInfo' (getLoc _recordCreationConstructor) name nameId
       let sig = info ^. recordInfoSignature
-      (vars', fields') <- withLocalScope $ localBindings $ ignoreSyntax $ do
+      (vars', fields') <- withLocalScope . localBindings . ignoreSyntax $ do
         vs <- mapM (reserveFunctionSymbol . (^. fieldDefineFunDef)) _recordCreationFields
         fs <- mapM (checkDefineField sig) _recordCreationFields
         return (vs, fs)

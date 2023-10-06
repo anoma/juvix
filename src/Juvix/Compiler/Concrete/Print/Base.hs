@@ -300,7 +300,7 @@ instance (SingI s) => PrettyPrint (RecordUpdate s) where
   ppCode RecordUpdate {..} = do
     let Irrelevant (l, r) = _recordUpdateDelims
         fields'
-          | null (_recordUpdateFields ^. _tail1) = ppCode (_recordUpdateFields ^. _head1)
+          | [f] <- _recordUpdateFields = ppCode f
           | otherwise =
               line
                 <> indent
@@ -1112,7 +1112,7 @@ instance (SingI s) => PrettyPrint (RhsRecord s) where
   ppCode RhsRecord {..} = do
     let Irrelevant (l, r) = _rhsRecordDelim
         fields'
-          | null (_rhsRecordFields ^. _tail1) = ppCode (_rhsRecordFields ^. _head1)
+          | [f] <- _rhsRecordFields = ppCode f
           | otherwise =
               hardline
                 <> indent

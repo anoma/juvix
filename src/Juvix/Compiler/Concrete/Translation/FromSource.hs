@@ -668,7 +668,7 @@ recordUpdate = do
   _recordUpdateAtKw <- Irrelevant <$> kw kwAt
   _recordUpdateTypeName <- name
   l <- kw delimBraceL
-  _recordUpdateFields <- P.sepEndBy1 recordUpdateField semicolon
+  _recordUpdateFields <- P.sepEndBy recordUpdateField semicolon
   r <- kw delimBraceR
   let _recordUpdateDelims = Irrelevant (l, r)
       _recordUpdateExtra = Irrelevant ()
@@ -843,7 +843,7 @@ recordCreation = P.label "<record creation>" $ do
     a <- Irrelevant <$> kw kwAt
     lbrace
     return (n, a)
-  defs <- P.sepEndBy1 (functionDefinition True False Nothing) semicolon
+  defs <- P.sepEndBy (functionDefinition True False Nothing) semicolon
   rbrace
   let _recordCreationFields = fmap mkField defs
       _recordCreationExtra = Irrelevant ()
@@ -1268,7 +1268,7 @@ rhsAdt = P.label "<constructor arguments>" $ do
 rhsRecord :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (RhsRecord 'Parsed)
 rhsRecord = P.label "<constructor record>" $ do
   l <- kw delimBraceL
-  _rhsRecordFields <- P.sepEndBy1 recordField semicolon
+  _rhsRecordFields <- P.sepEndBy recordField semicolon
   r <- kw delimBraceR
   let _rhsRecordDelim = Irrelevant (l, r)
   return RhsRecord {..}
