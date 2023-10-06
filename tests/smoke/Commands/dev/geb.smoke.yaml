@@ -55,7 +55,7 @@ tests:
       - dev
       - geb
       - repl
-    stdin: ':t (times 2 3)'
+    stdin: ':t (times (bit-choice 2) (bit-choice 3))'
     stdout:
       contains: 'int'
     exit-status: 0
@@ -78,10 +78,10 @@ tests:
       - dev
       - geb
       - repl
-    stdin: '(plus 2 (times 3 4))'
+    stdin: '(plus (bit-choice 2) (times (bit-choice 3) (bit-choice 4)))'
     stdout:
       contains: |
-        (bit-choice 14)
+        14
     exit-status: 0
 
   - name: geb-eval-with-spaces
