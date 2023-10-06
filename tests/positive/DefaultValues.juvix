@@ -39,3 +39,7 @@ x4 : D := mk4;
 mk5 {A := Type} {f1 f2 f3 : D := mk4} : _ := f3;
 
 x5 : D := mk5;
+
+rec1 {a1 : A := rec2 {a}} : A := rec2 {a1 := a1};
+
+rec2 {a1 : A := rec1 {a}} : A := a1;
