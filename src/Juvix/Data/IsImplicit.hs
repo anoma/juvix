@@ -9,6 +9,12 @@ data IsImplicit
   | ImplicitInstance
   deriving stock (Show, Eq, Ord, Generic, Data)
 
+isImplicitOrInstance :: IsImplicit -> Bool
+isImplicitOrInstance = \case
+  Explicit -> False
+  Implicit -> True
+  ImplicitInstance -> True
+
 instance Hashable IsImplicit
 
 instance Pretty IsImplicit where

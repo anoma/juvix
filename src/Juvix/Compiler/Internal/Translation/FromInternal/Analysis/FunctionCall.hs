@@ -14,11 +14,14 @@ viewCall ::
   Expression ->
   Sem r (Maybe FunCall)
 viewCall = \case
-  ExpressionApplication (Application f _ Implicit) -> viewCall f -- implicit arguments are ignored
-  ExpressionApplication (Application f x Explicit) -> do
-    c <- viewCall f
-    x' <- callArg
-    return $ over callArgs (`snoc` x') <$> c
+  ExpressionIden (IdenFunction x) ->
+    return (Just (singletonCall x))
+  ExpressionApplication (Application f x impl)
+    | isImplicitOrInstance impl -> viewCall f -- implicit arguments are ignored
+    | otherwise -> do
+        c <- viewCall f
+        x' <- callArg
+        return $ over callArgs (`snoc` x') <$> c
     where
       callArg :: Sem r (CallRow, Expression)
       callArg = do
@@ -43,8 +46,6 @@ viewCall = \case
                   Nothing -> CallRow Nothing
                   Just s' -> CallRow (Just (s', REq))
               Nothing -> return (CallRow Nothing)
-  ExpressionIden (IdenFunction x) ->
-    return (Just (singletonCall x))
   _ -> return Nothing
   where
     singletonCall :: FunctionRef -> FunCall
