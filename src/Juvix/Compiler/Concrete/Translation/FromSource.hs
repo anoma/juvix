@@ -1290,9 +1290,14 @@ constructorDef _constructorPipe = do
 wildcard :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r Wildcard
 wildcard = Wildcard . snd <$> interval (kw kwWildcard)
 
---------------------------------------------------------------------------------
--- Pattern section
---------------------------------------------------------------------------------
+patternAtomWildcardConstructor :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (WildcardConstructor 'Parsed)
+patternAtomWildcardConstructor = P.try $ do
+  _wildcardConstructor <- name
+  _wildcardConstructorAtKw <- Irrelevant <$> kw kwAt
+  l <- kw delimBraceL
+  r <- kw delimBraceR
+  let _wildcardConstructorDelims = Irrelevant (l, r)
+  return WildcardConstructor {..}
 
 patternAtomAnon :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (PatternAtom 'Parsed)
 patternAtomAnon =
@@ -1303,9 +1308,10 @@ patternAtomAnon =
     <|> PatternAtomList <$> parseListPattern
 
 patternAtomAt :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => Symbol -> ParsecS r PatternBinding
-patternAtomAt s = do
-  void (kw kwAt)
-  PatternBinding s <$> patternAtom
+patternAtomAt _patternBindingName = do
+  _patternBindingAtKw <- Irrelevant <$> kw kwAt
+  _patternBindingPattern <- patternAtom
+  return PatternBinding {..}
 
 recordPatternItem :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (RecordPatternItem 'Parsed)
 recordPatternItem = do
@@ -1373,7 +1379,8 @@ patternAtom = patternAtom' False
 patternAtom' :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => Bool -> ParsecS r (PatternAtom 'Parsed)
 patternAtom' nested =
   P.label "<pattern>" $
-    patternAtomNamed nested
+    PatternAtomWildcardConstructor <$> patternAtomWildcardConstructor
+      <|> patternAtomNamed nested
       <|> patternAtomAnon
 
 parsePatternAtoms :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (PatternAtoms 'Parsed)

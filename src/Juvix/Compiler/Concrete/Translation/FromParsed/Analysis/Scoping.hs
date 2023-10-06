@@ -2003,9 +2003,9 @@ checkPatternBinding ::
   (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
   PatternBinding ->
   Sem r PatternArg
-checkPatternBinding (PatternBinding n p) = do
-  p' <- checkParsePatternAtom p
-  n' <- bindVariableSymbol n
+checkPatternBinding PatternBinding {..} = do
+  p' <- checkParsePatternAtom _patternBindingPattern
+  n' <- bindVariableSymbol _patternBindingName
   if
       | isJust (p' ^. patternArgName) -> throw (ErrDoubleBinderPattern (DoubleBinderPattern n' p'))
       | otherwise -> return (set patternArgName (Just n') p')
@@ -2036,6 +2036,17 @@ checkPatternAtom = \case
   PatternAtomAt p -> PatternAtomAt <$> checkPatternBinding p
   PatternAtomList l -> PatternAtomList <$> checkListPattern l
   PatternAtomRecord l -> PatternAtomRecord <$> checkRecordPattern l
+  PatternAtomWildcardConstructor l -> PatternAtomWildcardConstructor <$> checkWildcardConstructor l
+
+checkWildcardConstructor :: (Members '[InfoTableBuilder, State ScoperState, Error ScoperError, State Scope] r) => WildcardConstructor 'Parsed -> Sem r (WildcardConstructor 'Scoped)
+checkWildcardConstructor WildcardConstructor {..} = do
+  let err = nameNotInScope _wildcardConstructor
+  c' <- fromMaybeM err (lookupNameOfKind KNameConstructor _wildcardConstructor)
+  return
+    WildcardConstructor
+      { _wildcardConstructor = c',
+        ..
+      }
 
 checkName ::
   (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder] r) =>
@@ -2853,6 +2864,7 @@ parsePatternTerm = do
       <|> parseParens
       <|> parseBraces
       <|> parseWildcard
+      <|> parseWildcardConstructor
       <|> parseEmpty
       <|> parseAt
       <|> parseList
@@ -2964,6 +2976,14 @@ parsePatternTerm = do
         parenPat :: PatternAtom 'Scoped -> Maybe PatternArg
         parenPat = \case
           PatternAtomParens r -> Just r
+          _ -> Nothing
+
+    parseWildcardConstructor :: ParsePat PatternArg
+    parseWildcardConstructor = explicitP <$> P.token wildcardConstr mempty
+      where
+        wildcardConstr :: PatternAtom 'Scoped -> Maybe Pattern
+        wildcardConstr = \case
+          PatternAtomWildcardConstructor r -> Just (PatternWildcardConstructor r)
           _ -> Nothing
 
 mkPatternParser ::

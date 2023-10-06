@@ -725,6 +725,7 @@ data PatternArg = PatternArg
 data Pattern
   = PatternVariable (SymbolType 'Scoped)
   | PatternConstructor ScopedIden
+  | PatternWildcardConstructor (WildcardConstructor 'Scoped)
   | PatternApplication PatternApp
   | PatternList (ListPattern 'Scoped)
   | PatternInfixApplication PatternInfixApp
@@ -741,6 +742,7 @@ data PatternScopedIden
 
 data PatternBinding = PatternBinding
   { _patternBindingName :: Symbol,
+    _patternBindingAtKw :: Irrelevant KeywordRef,
     _patternBindingPattern :: PatternAtom 'Parsed
   }
   deriving stock (Ord, Eq, Show)
@@ -833,11 +835,30 @@ deriving stock instance Ord (RecordPattern 'Parsed)
 
 deriving stock instance Ord (RecordPattern 'Scoped)
 
+data WildcardConstructor (s :: Stage) = WildcardConstructor
+  { _wildcardConstructor :: IdentifierType s,
+    _wildcardConstructorAtKw :: Irrelevant KeywordRef,
+    _wildcardConstructorDelims :: Irrelevant (KeywordRef, KeywordRef)
+  }
+
+deriving stock instance Show (WildcardConstructor 'Parsed)
+
+deriving stock instance Show (WildcardConstructor 'Scoped)
+
+deriving stock instance Eq (WildcardConstructor 'Parsed)
+
+deriving stock instance Eq (WildcardConstructor 'Scoped)
+
+deriving stock instance Ord (WildcardConstructor 'Parsed)
+
+deriving stock instance Ord (WildcardConstructor 'Scoped)
+
 data PatternAtom (s :: Stage)
   = PatternAtomIden (PatternAtomIdenType s)
   | PatternAtomWildcard Wildcard
   | PatternAtomEmpty Interval
   | PatternAtomList (ListPattern s)
+  | PatternAtomWildcardConstructor (WildcardConstructor s)
   | PatternAtomRecord (RecordPattern s)
   | PatternAtomParens (PatternParensType s)
   | PatternAtomBraces (PatternParensType s)
@@ -1771,6 +1792,7 @@ newtype ModuleIndex = ModuleIndex
   }
 
 makeLenses ''PatternArg
+makeLenses ''WildcardConstructor
 makeLenses ''DoubleBracesExpression
 makeLenses ''Alias
 makeLenses ''FieldPun
@@ -2199,7 +2221,7 @@ instance HasLoc PatternScopedIden where
     PatternScopedConstructor c -> getLoc c
 
 instance HasLoc PatternBinding where
-  getLoc (PatternBinding n p) = getLoc n <> getLoc p
+  getLoc PatternBinding {..} = getLoc _patternBindingName <> getLoc _patternBindingPattern
 
 instance HasLoc (ListPattern s) where
   getLoc l = getLoc (l ^. listpBracketL) <> getLoc (l ^. listpBracketR)
@@ -2225,10 +2247,15 @@ instance (SingI s) => HasLoc (RecordPatternItem s) where
 instance (SingI s) => HasLoc (RecordPattern s) where
   getLoc r = getLocIdentifierType (r ^. recordPatternConstructor) <>? (getLocSpan <$> nonEmpty (r ^. recordPatternItems))
 
+instance (SingI s) => HasLoc (WildcardConstructor s) where
+  getLoc WildcardConstructor {..} =
+    getLocIdentifierType _wildcardConstructor
+
 instance (SingI s) => HasLoc (PatternAtom s) where
   getLoc = \case
     PatternAtomIden i -> getLocIden i
     PatternAtomWildcard w -> getLoc w
+    PatternAtomWildcardConstructor w -> getLoc w
     PatternAtomEmpty i -> i
     PatternAtomList l -> getLoc l
     PatternAtomParens p -> getLocParens p
@@ -2272,6 +2299,7 @@ instance HasLoc PatternApp where
 instance HasLoc Pattern where
   getLoc = \case
     PatternVariable v -> getLoc v
+    PatternWildcardConstructor v -> getLoc v
     PatternConstructor c -> getLoc c
     PatternApplication a -> getLoc a
     PatternWildcard w -> getLoc w
@@ -2618,9 +2646,13 @@ instance HasAtomicity (ListPattern s) where
 instance HasAtomicity (RecordPattern s) where
   atomicity = const Atom
 
+instance HasAtomicity (WildcardConstructor s) where
+  atomicity = const Atom
+
 instance HasAtomicity Pattern where
   atomicity e = case e of
     PatternVariable {} -> Atom
+    PatternWildcardConstructor a -> atomicity a
     PatternConstructor {} -> Atom
     PatternApplication {} -> Aggregate appFixity
     PatternInfixApplication a -> Aggregate (getFixity a)

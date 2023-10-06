@@ -1046,6 +1046,11 @@ goPatternApplication ::
   Sem r Internal.ConstructorApp
 goPatternApplication a = uncurry mkConstructorApp <$> viewApp (PatternApplication a)
 
+goWildcardConstructor ::
+  WildcardConstructor 'Scoped ->
+  Internal.ConstructorApp
+goWildcardConstructor a = mkConstructorApp (goScopedIden (a ^. wildcardConstructor)) []
+
 goPatternConstructor ::
   (Members '[Builtins, NameIdGen, Error ScoperError] r) =>
   ScopedIden ->
@@ -1067,6 +1072,7 @@ goPostfixPatternApplication a = uncurry mkConstructorApp <$> viewApp (PatternPos
 viewApp :: forall r. (Members '[Builtins, NameIdGen, Error ScoperError] r) => Pattern -> Sem r (Internal.ConstrName, [Internal.PatternArg])
 viewApp p = case p of
   PatternConstructor c -> return (goScopedIden c, [])
+  PatternWildcardConstructor c -> return (goScopedIden (c ^. wildcardConstructor), [])
   PatternApplication app@(PatternApp _ r) -> do
     r' <- goPatternArg r
     second (`snoc` r') <$> viewAppLeft app
@@ -1104,6 +1110,7 @@ goPattern p = case p of
   PatternVariable a -> return $ Internal.PatternVariable (goSymbol a)
   PatternList a -> goListPattern a
   PatternConstructor c -> Internal.PatternConstructorApp <$> goPatternConstructor c
+  PatternWildcardConstructor c -> return (Internal.PatternConstructorApp (goWildcardConstructor c))
   PatternApplication a -> Internal.PatternConstructorApp <$> goPatternApplication a
   PatternInfixApplication a -> Internal.PatternConstructorApp <$> goInfixPatternApplication a
   PatternPostfixApplication a -> Internal.PatternConstructorApp <$> goPostfixPatternApplication a

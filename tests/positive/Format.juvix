@@ -262,6 +262,18 @@ module Comments;
   type list (A : Type) : Type := cons A (list A);
 end;
 
+module EmptyRecords;
+  import Stdlib.Data.Bool.Base open;
+
+  type T := mkT {};
+
+  x : T := mkT@{};
+
+  isZero : Nat -> Bool
+    | zero := true
+    | suc@{} := false;
+end;
+
 --- Traits
 module Traits;
   import Stdlib.Prelude open hiding {Show; mkShow; module Show};
