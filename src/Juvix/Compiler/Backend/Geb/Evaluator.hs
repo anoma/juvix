@@ -87,7 +87,6 @@ evalBitChoice :: BitChoice -> Sem r GebValue
 evalBitChoice n = do
   return (GebValueMorphismInteger (n ^. bitChoice))
 
-
 evalVar :: (EvalEffects r) => Var -> Sem r GebValue
 evalVar var = do
   ctx <- asks (^. envContext)
