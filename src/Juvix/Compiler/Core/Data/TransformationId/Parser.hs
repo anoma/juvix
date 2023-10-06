@@ -86,6 +86,7 @@ transformationText = \case
   LambdaFolding -> strLambdaFolding
   LetHoisting -> strLetHoisting
   Inlining -> strInlining
+  MandatoryInlining -> strMandatoryInlining
   FoldTypeSynonyms -> strFoldTypeSynonyms
   CaseCallLifting -> strCaseCallLifting
   SimplifyIfs -> strSimplifyIfs
@@ -190,6 +191,9 @@ strLambdaFolding = "lambda-folding"
 
 strInlining :: Text
 strInlining = "inlining"
+
+strMandatoryInlining :: Text
+strMandatoryInlining = "mandatory-inlining"
 
 strFoldTypeSynonyms :: Text
 strFoldTypeSynonyms = "fold-type-synonyms"

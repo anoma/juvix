@@ -26,6 +26,7 @@ data TransformationId
   | LambdaFolding
   | LetHoisting
   | Inlining
+  | MandatoryInlining
   | FoldTypeSynonyms
   | CaseCallLifting
   | SimplifyIfs
@@ -82,7 +83,7 @@ toStrippedTransformations =
   toEvalTransformations ++ [CheckExec, LambdaLetRecLifting, TopEtaExpand, OptPhaseExec, MoveApps, RemoveTypeArgs]
 
 toGebTransformations :: [TransformationId]
-toGebTransformations = toEvalTransformations ++ [FilterUnreachable, LetRecLifting, OptPhaseGeb, CheckGeb, UnrollRecursion, FoldTypeSynonyms, ComputeTypeInfo]
+toGebTransformations = toEvalTransformations ++ [FilterUnreachable, CheckGeb, LetRecLifting, OptPhaseGeb, UnrollRecursion, FoldTypeSynonyms, ComputeTypeInfo]
 
 pipeline :: PipelineId -> [TransformationId]
 pipeline = \case

@@ -32,6 +32,8 @@ convertNode inlineDepth recSyms tab = dmapL go
                   Just (InlinePartiallyApplied k)
                     | length args >= k ->
                         mkApps def args
+                  Just InlineAlways ->
+                    mkApps def args
                   Just InlineNever ->
                     node
                   _
@@ -52,6 +54,7 @@ convertNode inlineDepth recSyms tab = dmapL go
         case pi of
           Just InlineFullyApplied | argsNum == 0 -> def
           Just (InlinePartiallyApplied 0) -> def
+          Just InlineAlways -> def
           _ -> node
         where
           ii = lookupIdentifierInfo tab _identSymbol

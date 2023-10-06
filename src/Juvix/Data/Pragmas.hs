@@ -5,7 +5,8 @@ import Juvix.Data.Yaml
 import Juvix.Prelude.Base
 
 data PragmaInline
-  = InlineNever
+  = InlineAlways
+  | InlineNever
   | InlineFullyApplied
   | InlinePartiallyApplied {_pragmaInlineArgsNum :: Int}
   deriving stock (Show, Eq, Ord, Data, Generic)
@@ -116,7 +117,7 @@ instance FromJSON Pragmas where
         return Pragmas {..}
 
       parseInline :: Parse YamlError PragmaInline
-      parseInline = parseInlineArgsNum Aeson.<|> parseInlineBool
+      parseInline = parseInlineArgsNum Aeson.<|> parseInlineBool Aeson.<|> parseInlineAlwaysNever
         where
           parseInlineArgsNum :: Parse YamlError PragmaInline
           parseInlineArgsNum = do
@@ -127,6 +128,14 @@ instance FromJSON Pragmas where
           parseInlineBool = do
             b <- asBool
             (if b then return InlineFullyApplied else return InlineNever)
+
+          parseInlineAlwaysNever :: Parse YamlError PragmaInline
+          parseInlineAlwaysNever = do
+            txt <- asText
+            case txt of
+              "always" -> return InlineAlways
+              "never" -> return InlineNever
+              _ -> throwCustomError ("unrecognized inline specification: " <> txt)
 
       parseUnroll :: Parse YamlError PragmaUnroll
       parseUnroll = do
@@ -209,6 +218,7 @@ instance Monoid Pragmas where
 adjustPragmaInline :: Int -> PragmaInline -> PragmaInline
 adjustPragmaInline n = \case
   InlinePartiallyApplied k -> InlinePartiallyApplied (k + n)
+  InlineAlways -> InlineAlways
   InlineNever -> InlineNever
   InlineFullyApplied -> InlineFullyApplied
 
