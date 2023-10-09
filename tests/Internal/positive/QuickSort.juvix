@@ -39,6 +39,5 @@ four : Nat := suc three;
 
 main : List Nat :=
   uniq
-    compare
-    (quickSort compare (flatten (gen2 three four nil)));
-
+    Ord.cmp
+    (quickSort Ord.cmp (flatten (gen2 three four nil)));
