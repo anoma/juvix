@@ -225,9 +225,15 @@ instance PrettyCode ConstructorApp where
       Nothing -> return $ hsep (constr' : params')
       Just ty' -> return $ parens (hsep (constr' : params') <+> kwColon <+> ty')
 
+instance PrettyCode WildcardConstructor where
+  ppCode p = do
+    constr' <- ppCode (p ^. wildcardConstructor)
+    return $ constr' <> kwAt <> braces mempty
+
 instance PrettyCode Pattern where
   ppCode p = case p of
     PatternVariable v -> ppCode v
+    PatternWildcardConstructor v -> ppCode v
     PatternConstructorApp a -> ppCode a
 
 instance PrettyCode BuiltinFunction where

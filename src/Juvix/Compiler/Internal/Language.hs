@@ -252,8 +252,17 @@ data PatternArg = PatternArg
 
 instance Hashable PatternArg
 
+newtype WildcardConstructor = WildcardConstructor
+  { _wildcardConstructor :: ConstrName
+  }
+  deriving stock (Eq, Generic, Data)
+
+instance Hashable WildcardConstructor
+
 data Pattern
   = PatternVariable VarName
+  | -- | PatternWildcardConstructor gets removed by the arity checker
+    PatternWildcardConstructor WildcardConstructor
   | PatternConstructorApp ConstructorApp
   deriving stock (Eq, Generic, Data)
 
@@ -308,6 +317,7 @@ newtype ModuleIndex = ModuleIndex
   deriving stock (Data)
 
 makeLenses ''ModuleIndex
+makeLenses ''WildcardConstructor
 makeLenses ''Case
 makeLenses ''CaseBranch
 makeLenses ''Module'
@@ -395,6 +405,7 @@ instance HasAtomicity Pattern where
   atomicity p = case p of
     PatternConstructorApp a -> atomicity a
     PatternVariable {} -> Atom
+    PatternWildcardConstructor {} -> Atom
 
 instance HasLoc AxiomDef where
   getLoc a = getLoc (a ^. axiomName) <> getLoc (a ^. axiomType)
@@ -470,10 +481,14 @@ instance HasLoc Iden where
     IdenAxiom a -> getLoc a
     IdenInductive a -> getLoc a
 
+instance HasLoc WildcardConstructor where
+  getLoc WildcardConstructor {..} = getLoc _wildcardConstructor
+
 instance HasLoc Pattern where
   getLoc = \case
     PatternVariable v -> getLoc v
     PatternConstructorApp a -> getLoc a
+    PatternWildcardConstructor a -> getLoc a
 
 instance HasLoc PatternArg where
   getLoc a = fmap getLoc (a ^. patternArgName) ?<> getLoc (a ^. patternArgPattern)
