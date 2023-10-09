@@ -89,7 +89,7 @@ geval opts herr ctx env0 = eval' env0
           Closure env' (NLam (Lambda i' bi b)) ->
             let !v = eval' env r in evalBody i' bi env' v b
           lv
-            | opts ^. evalOptionsNormalize ->
+            | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
                 let !v = eval' env r in goNormApp i lv v
             | otherwise ->
                 evalError "invalid application" (mkApp i lv (substEnv env r))
@@ -106,7 +106,7 @@ geval opts herr ctx env0 = eval' env0
           NCtr (Constr _ tag args) ->
             branch n env args tag def bs
           v'
-            | opts ^. evalOptionsNormalize ->
+            | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
                 goNormCase env i sym v' bs def
             | otherwise ->
                 evalError "matching on non-data" (substEnv env (mkCase i sym v' bs def))
@@ -214,7 +214,7 @@ geval opts herr ctx env0 = eval' env0
                 (Just v1, Just v2) ->
                   toNode (v1 `op` v2)
                 _
-                  | opts ^. evalOptionsNormalize ->
+                  | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
                       mkBuiltinApp' opcode [vl, vr]
                   | otherwise ->
                       evalError "wrong operand type" n
