@@ -133,13 +133,13 @@ checkFunctionDef FunctionDef {..} = do
   _funDefType' <- withEmptyLocalVars (checkType _funDefType)
   _funDefBody' <- checkFunctionBody arity _funDefBody
   _funDefExamples' <- withEmptyLocalVars (mapM checkExample _funDefExamples)
-  let _funDefDefaultSingature' = _funDefDefaultSingature
+  let _funDefDefaultSignature' = _funDefDefaultSignature
   return
     FunctionDef
       { _funDefBody = _funDefBody',
         _funDefExamples = _funDefExamples',
         _funDefType = _funDefType',
-        _funDefDefaultSingature = _funDefDefaultSingature',
+        _funDefDefaultSignature = _funDefDefaultSignature',
         _funDefName,
         _funDefTerminating,
         _funDefInstance,
@@ -518,7 +518,7 @@ idenArity = \case
   IdenFunction f -> do
     fun <- (^. functionInfoDef) <$> lookupFunction f
     let ari = typeArity (fun ^. funDefType)
-        defaults = fun ^. funDefDefaultSingature
+        defaults = fun ^. funDefDefaultSignature
     return (addDefaults defaults ari)
   IdenConstructor c -> typeArity <$> lookupConstructorType c
   IdenAxiom a -> typeArity . (^. axiomInfoDef . axiomType) <$> lookupAxiom a

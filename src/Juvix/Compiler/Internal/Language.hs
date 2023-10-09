@@ -90,7 +90,7 @@ data FunctionDef = FunctionDef
     _funDefTerminating :: Bool,
     _funDefInstance :: Bool,
     _funDefBuiltin :: Maybe BuiltinFunction,
-    _funDefDefaultSingature :: DefaultSignature,
+    _funDefDefaultSignature :: DefaultSignature,
     _funDefPragmas :: Pragmas
   }
   deriving stock (Eq, Generic, Data)

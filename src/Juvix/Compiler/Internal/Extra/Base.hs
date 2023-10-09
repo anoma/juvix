@@ -171,13 +171,13 @@ instance HasExpressions FunctionDef where
     body' <- leafExpressions f _funDefBody
     ty' <- leafExpressions f _funDefType
     examples' <- traverse (leafExpressions f) _funDefExamples
-    defaults' <- leafExpressions f _funDefDefaultSingature
+    defaults' <- leafExpressions f _funDefDefaultSignature
     pure
       FunctionDef
         { _funDefBody = body',
           _funDefType = ty',
           _funDefExamples = examples',
-          _funDefDefaultSingature = defaults',
+          _funDefDefaultSignature = defaults',
           _funDefTerminating,
           _funDefInstance,
           _funDefName,

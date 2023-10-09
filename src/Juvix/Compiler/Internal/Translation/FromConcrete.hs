@@ -392,7 +392,7 @@ goFunctionDef FunctionDef {..} = do
   _funDefPragmas <- goPragmas _signPragmas
   _funDefBody <- goBody
   msig <- asks @NameSignatures (^. at (_funDefName ^. Internal.nameId))
-  _funDefDefaultSingature <- maybe (return mempty) goNameSignature msig
+  _funDefDefaultSignature <- maybe (return mempty) goNameSignature msig
   let fun = Internal.FunctionDef {..}
   whenJust _signBuiltin (registerBuiltinFunction fun . (^. withLocParam))
   return fun
