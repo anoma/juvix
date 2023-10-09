@@ -74,11 +74,7 @@ tests:
     stdin: ":def + (+) (((+)))"
     stdout:
       contains: |
-        --- Addition for ;Nat;s.
-        builtin nat-plus
-        + : Nat → Nat → Nat
-          | zero b := b
-          | (suc a) b := suc (a + b)
+        + {A} {{Natural A}} : A -> A -> A := Natural.+
     exit-status: 0
 
   - name: repl-def-infix
@@ -89,11 +85,7 @@ tests:
     stdin: ":def +"
     stdout:
       contains: |
-        --- Addition for ;Nat;s.
-        builtin nat-plus
-        + : Nat → Nat → Nat
-          | zero b := b
-          | (suc a) b := suc (a + b)
+        + {A} {{Natural A}} : A -> A -> A := Natural.+
     exit-status: 0
 
   - name: open
@@ -454,7 +446,7 @@ tests:
     command:
       - juvix
       - repl
-    stdin: "import Stdlib.Data.Int.Ord as Int open\n1 == 1"
+    stdin: "import Stdlib.Data.Int.Ord as Int open\n1 Int.== 1"
     stdout:
       contains: "true"
     exit-status: 0
@@ -463,9 +455,9 @@ tests:
     command:
       - juvix
       - repl
-    stdin: "import Stdlib.Data.Int.Ord open\n1 == 1"
+    stdin: "import Stdlib.Data.Int.Ord open\ncompare 1 1"
     stdout:
-      contains: "true"
+      contains: "EQ"
     exit-status: 0
 
   - name: infix-constructors
