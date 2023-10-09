@@ -764,28 +764,31 @@ goExpression = \case
     goNamedApplication = runNamedArguments >=> goExpression
 
     goRecordCreation :: Concrete.RecordCreation 'Scoped -> Sem r Internal.Expression
-    goRecordCreation Concrete.RecordCreation {..} = do
-      args <- mapM goRecordDefineField _recordCreationFields
-      let defs = fmap (^. fieldDefineFunDef) _recordCreationFields
-          app =
-            Concrete.NamedApplication
-              { _namedAppName = _recordCreationConstructor,
-                _namedAppArgs =
-                  NonEmpty.singleton $
-                    Concrete.ArgumentBlock
-                      { _argBlockDelims = Irrelevant Nothing,
-                        _argBlockImplicit = Explicit,
-                        _argBlockArgs = args
-                      }
-              }
-      cls <- goLetFunDefs (fmap Concrete.LetFunctionDef defs)
-      e <- runNamedArguments app >>= goExpression
-      return $
-        Internal.ExpressionLet $
-          Internal.Let
-            { _letClauses = nonEmpty' cls,
-              _letExpression = e
-            }
+    goRecordCreation Concrete.RecordCreation {..} =
+      case nonEmpty _recordCreationFields of
+        Nothing -> return (Internal.ExpressionIden (Internal.IdenConstructor (goScopedIden _recordCreationConstructor)))
+        Just fields1 -> do
+          args <- mapM goRecordDefineField fields1
+          let defs = fmap (^. fieldDefineFunDef) fields1
+              app =
+                Concrete.NamedApplication
+                  { _namedAppName = _recordCreationConstructor,
+                    _namedAppArgs =
+                      NonEmpty.singleton $
+                        Concrete.ArgumentBlock
+                          { _argBlockDelims = Irrelevant Nothing,
+                            _argBlockImplicit = Explicit,
+                            _argBlockArgs = args
+                          }
+                  }
+          cls <- goLetFunDefs (fmap Concrete.LetFunctionDef defs)
+          e <- runNamedArguments app >>= goExpression
+          return $
+            Internal.ExpressionLet $
+              Internal.Let
+                { _letClauses = nonEmpty' cls,
+                  _letExpression = e
+                }
 
     goRecordDefineField :: Concrete.RecordDefineField 'Scoped -> Sem r (Concrete.NamedArgument 'Scoped)
     goRecordDefineField Concrete.RecordDefineField {..} = do
@@ -1062,6 +1065,11 @@ goPatternApplication ::
   Sem r Internal.ConstructorApp
 goPatternApplication a = uncurry mkConstructorApp <$> viewApp (PatternApplication a)
 
+goWildcardConstructor ::
+  WildcardConstructor 'Scoped ->
+  Internal.WildcardConstructor
+goWildcardConstructor a = Internal.WildcardConstructor (goScopedIden (a ^. wildcardConstructor))
+
 goPatternConstructor ::
   (Members '[Builtins, NameIdGen, Error ScoperError] r) =>
   ScopedIden ->
@@ -1083,6 +1091,7 @@ goPostfixPatternApplication a = uncurry mkConstructorApp <$> viewApp (PatternPos
 viewApp :: forall r. (Members '[Builtins, NameIdGen, Error ScoperError] r) => Pattern -> Sem r (Internal.ConstrName, [Internal.PatternArg])
 viewApp p = case p of
   PatternConstructor c -> return (goScopedIden c, [])
+  PatternWildcardConstructor c -> return (goScopedIden (c ^. wildcardConstructor), [])
   PatternApplication app@(PatternApp _ r) -> do
     r' <- goPatternArg r
     second (`snoc` r') <$> viewAppLeft app
@@ -1120,6 +1129,7 @@ goPattern p = case p of
   PatternVariable a -> return $ Internal.PatternVariable (goSymbol a)
   PatternList a -> goListPattern a
   PatternConstructor c -> Internal.PatternConstructorApp <$> goPatternConstructor c
+  PatternWildcardConstructor c -> return (Internal.PatternWildcardConstructor (goWildcardConstructor c))
   PatternApplication a -> Internal.PatternConstructorApp <$> goPatternApplication a
   PatternInfixApplication a -> Internal.PatternConstructorApp <$> goInfixPatternApplication a
   PatternPostfixApplication a -> Internal.PatternConstructorApp <$> goPostfixPatternApplication a

@@ -1,14 +1,12 @@
-(typed
-  (app
-    (lamb
-      (list
-        (prod
-          int
-          int))
-      (fst
-        (index 0)))
+(app
+  (lamb
     (list
-      (pair
-        10
-        20)))
-  int)
+      (prod
+        int
+        int))
+    (fst
+      (index 0)))
+  (list
+    (pair
+      (bit-choice 10)
+      (bit-choice 20))))

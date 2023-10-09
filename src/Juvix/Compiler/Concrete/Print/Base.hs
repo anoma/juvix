@@ -153,7 +153,7 @@ instance PrettyPrint PatternBinding where
   ppCode PatternBinding {..} = do
     let n' = ppSymbolType _patternBindingName
         p' = ppCode _patternBindingPattern
-    n' <> ppCode Kw.kwAt <> p'
+    n' <> ppCode _patternBindingAtKw <> p'
 
 instance (SingI s) => PrettyPrint (ListPattern s) where
   ppCode ListPattern {..} = do
@@ -190,10 +190,19 @@ instance (SingI s) => PrettyPrint (NameSignature s) where
     | null _nameSignatureArgs = noLoc (pretty @Text "<empty name signature>")
     | otherwise = hsep . map ppCode $ _nameSignatureArgs
 
+instance (SingI s) => PrettyPrint (WildcardConstructor s) where
+  ppCode WildcardConstructor {..} = do
+    let (l, r) = _wildcardConstructorDelims ^. unIrrelevant
+    ppIdentifierType _wildcardConstructor
+      <> ppCode _wildcardConstructorAtKw
+      <> ppCode l
+      <> ppCode r
+
 instance (SingI s) => PrettyPrint (PatternAtom s) where
   ppCode = \case
     PatternAtomIden n -> ppPatternAtomIdenType n
     PatternAtomWildcard w -> ppCode w
+    PatternAtomWildcardConstructor w -> ppCode w
     PatternAtomList l -> ppCode l
     PatternAtomEmpty {} -> parens (return ())
     PatternAtomParens p -> parens (ppPatternParensType p)
@@ -283,12 +292,14 @@ instance (SingI s) => PrettyPrint (NamedApplication s) where
 
 instance (SingI s) => PrettyPrint (RecordCreation s) where
   ppCode RecordCreation {..} = do
-    let fields' =
-          blockIndent
-            ( sequenceWith
-                (semicolon >> line)
-                (ppCode <$> _recordCreationFields)
-            )
+    let fields'
+          | null _recordCreationFields = mempty
+          | otherwise =
+              blockIndent
+                ( sequenceWith
+                    (semicolon >> line)
+                    (ppCode <$> _recordCreationFields)
+                )
     ppIdentifierType _recordCreationConstructor
       <> ppCode _recordCreationAtKw
       <> braces fields'
@@ -304,7 +315,7 @@ instance (SingI s) => PrettyPrint (RecordUpdate s) where
   ppCode RecordUpdate {..} = do
     let Irrelevant (l, r) = _recordUpdateDelims
         fields'
-          | null (_recordUpdateFields ^. _tail1) = ppCode (_recordUpdateFields ^. _head1)
+          | [f] <- _recordUpdateFields = ppCode f
           | otherwise =
               line
                 <> indent
@@ -984,6 +995,7 @@ instance PrettyPrint Pattern where
           r' = ppRightExpression appFixity r
       l' <+> r'
     PatternWildcard w -> ppCode w
+    PatternWildcardConstructor w -> ppCode w
     PatternList w -> ppCode w
     PatternEmpty {} -> parens (return ())
     PatternConstructor constr -> ppCode constr
@@ -1122,7 +1134,8 @@ instance (SingI s) => PrettyPrint (RhsRecord s) where
   ppCode RhsRecord {..} = do
     let Irrelevant (l, r) = _rhsRecordDelim
         fields'
-          | null (_rhsRecordFields ^. _tail1) = ppCode (_rhsRecordFields ^. _head1)
+          | [] <- _rhsRecordFields = mempty
+          | [f] <- _rhsRecordFields = ppCode f
           | otherwise =
               hardline
                 <> indent

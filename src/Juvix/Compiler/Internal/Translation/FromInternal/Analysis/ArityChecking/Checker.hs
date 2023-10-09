@@ -295,7 +295,7 @@ checkLhs loc guessedBody ariSignature pats = do
         Just tailUnderscores -> do
           let n = length tailUnderscores
               a' = foldArity (over ufoldArityParams (drop n) (unfoldArity' a))
-          wildcards <- mapM genWildcard tailUnderscores
+          wildcards <- mapM genWildcard' tailUnderscores
           return (wildcards, a')
       lhs@(p : ps) -> case a of
         ArityUnit ->
@@ -341,22 +341,20 @@ checkLhs loc guessedBody ariSignature pats = do
                       }
                 )
             (ImplicitInstance, ParamImplicit {}) -> do
-              wildcard <- genWildcard Implicit
+              wildcard <- genWildcard' Implicit
               first (wildcard :) <$> goLhs r lhs
             (Explicit, ParamImplicit {}) -> do
-              wildcard <- genWildcard Implicit
+              wildcard <- genWildcard' Implicit
               first (wildcard :) <$> goLhs r lhs
             (Explicit, ParamImplicitInstance) -> do
-              wildcard <- genWildcard ImplicitInstance
+              wildcard <- genWildcard' ImplicitInstance
               first (wildcard :) <$> goLhs r lhs
             (Explicit, ParamExplicit pa) -> do
               p' <- checkPattern pa p
               first (p' :) <$> goLhs r ps
       where
-        genWildcard :: forall r'. (Members '[NameIdGen] r') => IsImplicit -> Sem r' PatternArg
-        genWildcard impl = do
-          var <- varFromWildcard (Wildcard loc)
-          return (PatternArg impl Nothing (PatternVariable var))
+        genWildcard' :: forall r'. (Members '[NameIdGen] r') => IsImplicit -> Sem r' PatternArg
+        genWildcard' = genWildcard loc
 
     -- This is an heuristic and it can have an undesired result.
     -- Sometimes the outcome may even be confusing.
@@ -389,7 +387,7 @@ checkLhs loc guessedBody ariSignature pats = do
 
 checkPattern ::
   forall r.
-  (Members '[Reader InfoTable, Error ArityCheckerError, State LocalVars] r) =>
+  (Members '[Reader InfoTable, Error ArityCheckerError, State LocalVars, NameIdGen] r) =>
   Arity ->
   PatternArg ->
   Sem r PatternArg
@@ -397,9 +395,11 @@ checkPattern ari = traverseOf (patternArgName . each) nameAri >=> traverseOf pat
   where
     nameAri :: VarName -> Sem r VarName
     nameAri n = addArity n ari $> n
+
     patternAri :: Pattern -> Sem r Pattern
     patternAri = \case
       PatternVariable v -> addArity v ari $> PatternVariable v
+      PatternWildcardConstructor v -> PatternConstructorApp <$> checkWildcardConstructor v
       PatternConstructorApp c -> case ari of
         ArityUnit -> PatternConstructorApp <$> checkConstructorApp c
         ArityUnknown -> PatternConstructorApp <$> checkConstructorApp c
@@ -411,9 +411,25 @@ checkPattern ari = traverseOf (patternArgName . each) nameAri >=> traverseOf pat
                   }
             )
 
+checkWildcardConstructor ::
+  forall r.
+  (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError, State LocalVars] r) =>
+  WildcardConstructor ->
+  Sem r ConstructorApp
+checkWildcardConstructor w = do
+  let c = w ^. wildcardConstructor
+  numArgs <- length . constructorArgs . (^. constructorInfoType) <$> lookupConstructor c
+  holeArgs <- replicateM numArgs (genWildcard (getLoc w) Explicit)
+  return
+    ConstructorApp
+      { _constrAppConstructor = c,
+        _constrAppParameters = holeArgs,
+        _constrAppType = Nothing
+      }
+
 checkConstructorApp ::
   forall r.
-  (Members '[Reader InfoTable, Error ArityCheckerError, State LocalVars] r) =>
+  (Members '[Reader InfoTable, Error ArityCheckerError, State LocalVars, NameIdGen] r) =>
   ConstructorApp ->
   Sem r ConstructorApp
 checkConstructorApp ca = do

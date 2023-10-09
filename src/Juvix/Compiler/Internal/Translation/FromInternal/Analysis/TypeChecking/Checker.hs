@@ -455,6 +455,7 @@ checkPattern = go
       whenJust name (\n -> addVar n ty argTy)
       pat' <- case pat of
         PatternVariable v -> addVar v ty argTy $> pat
+        PatternWildcardConstructor {} -> impossible
         PatternConstructorApp a -> do
           s <- checkSaturatedInductive ty
           info <- lookupConstructor (a ^. constrAppConstructor)

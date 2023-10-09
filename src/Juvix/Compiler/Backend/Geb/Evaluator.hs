@@ -73,7 +73,7 @@ eval morph =
     MorphismBinop op -> evalBinop op
     MorphismCase c -> evalCase c
     MorphismFirst f -> evalFirst f
-    MorphismInteger i -> return $ GebValueMorphismInteger i
+    MorphismInteger i -> evalBitChoice i
     MorphismLambda l -> evalLambda l
     MorphismLeft m -> evalLeftInj m
     MorphismPair p -> evalPair p
@@ -82,6 +82,10 @@ eval morph =
     MorphismUnit -> return GebValueMorphismUnit
     MorphismVar x -> evalVar x
     MorphismFail x -> evalFail x
+
+evalBitChoice :: BitChoice -> Sem r GebValue
+evalBitChoice n = do
+  return (GebValueMorphismInteger (n ^. bitChoice))
 
 evalVar :: (EvalEffects r) => Var -> Sem r GebValue
 evalVar var = do
@@ -303,11 +307,14 @@ valueFalse =
 quote :: GebValue -> Morphism
 quote = \case
   GebValueClosure cls -> quoteClosure cls
-  GebValueMorphismInteger i -> MorphismInteger i
+  GebValueMorphismInteger i -> quoteBitChoice i
   GebValueMorphismLeft m -> quoteValueMorphismLeft m
   GebValueMorphismPair m -> quoteValueMorphismPair m
   GebValueMorphismRight m -> quoteValueMorphismRight m
   GebValueMorphismUnit -> MorphismUnit
+
+quoteBitChoice :: Integer -> Morphism
+quoteBitChoice n = MorphismInteger (BitChoice {_bitChoice = n})
 
 quoteClosure :: ValueClosure -> Morphism
 quoteClosure cls =

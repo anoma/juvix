@@ -951,20 +951,20 @@ checkInductiveDef InductiveDef {..} = do
             _rhsRecordDelim
           }
       where
-        checkFields :: NonEmpty (RecordField 'Parsed) -> Sem r (NonEmpty (RecordField 'Scoped))
-        checkFields (RecordField {..} :| fs) = do
-          type' <- checkParseExpressionAtoms _fieldType
-          withLocalScope $ do
-            name' <- bindVariableSymbol _fieldName
-            let f =
-                  RecordField
-                    { _fieldType = type',
-                      _fieldName = name',
-                      ..
-                    }
-            case nonEmpty fs of
-              Nothing -> return (pure f)
-              Just fs1 -> (pure f <>) <$> checkFields fs1
+        checkFields :: [RecordField 'Parsed] -> Sem r [RecordField 'Scoped]
+        checkFields = \case
+          [] -> return []
+          RecordField {..} : fs -> do
+            type' <- checkParseExpressionAtoms _fieldType
+            withLocalScope $ do
+              name' <- bindVariableSymbol _fieldName
+              let f =
+                    RecordField
+                      { _fieldType = type',
+                        _fieldName = name',
+                        ..
+                      }
+              (f :) <$> checkFields fs
 
     checkAdt :: RhsAdt 'Parsed -> Sem r (RhsAdt 'Scoped)
     checkAdt RhsAdt {..} = do
@@ -1313,7 +1313,7 @@ checkSections sec = do
                                   _projectionFieldIx = idx
                                 }
 
-                            getFields :: Sem (Fail ': s') (NonEmpty (RecordField 'Parsed))
+                            getFields :: Sem (Fail ': s') [RecordField 'Parsed]
                             getFields = case i ^. inductiveConstructors of
                               c :| [] -> case c ^. constructorRhs of
                                 ConstructorRhsRecord r -> return (r ^. rhsRecordFields)
@@ -2039,9 +2039,9 @@ checkPatternBinding ::
   (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
   PatternBinding ->
   Sem r PatternArg
-checkPatternBinding (PatternBinding n p) = do
-  p' <- checkParsePatternAtom p
-  n' <- bindVariableSymbol n
+checkPatternBinding PatternBinding {..} = do
+  p' <- checkParsePatternAtom _patternBindingPattern
+  n' <- bindVariableSymbol _patternBindingName
   if
       | isJust (p' ^. patternArgName) -> throw (ErrDoubleBinderPattern (DoubleBinderPattern n' p'))
       | otherwise -> return (set patternArgName (Just n') p')
@@ -2072,6 +2072,17 @@ checkPatternAtom = \case
   PatternAtomAt p -> PatternAtomAt <$> checkPatternBinding p
   PatternAtomList l -> PatternAtomList <$> checkListPattern l
   PatternAtomRecord l -> PatternAtomRecord <$> checkRecordPattern l
+  PatternAtomWildcardConstructor l -> PatternAtomWildcardConstructor <$> checkWildcardConstructor l
+
+checkWildcardConstructor :: (Members '[InfoTableBuilder, State ScoperState, Error ScoperError, State Scope] r) => WildcardConstructor 'Parsed -> Sem r (WildcardConstructor 'Scoped)
+checkWildcardConstructor WildcardConstructor {..} = do
+  let err = nameNotInScope _wildcardConstructor
+  c' <- fromMaybeM err (lookupNameOfKind KNameConstructor _wildcardConstructor)
+  return
+    WildcardConstructor
+      { _wildcardConstructor = c',
+        ..
+      }
 
 checkName ::
   (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder] r) =>
@@ -2126,7 +2137,7 @@ checkRecordCreation RecordCreation {..} = do
           nameId = ci ^. constructorInfoTypeName . S.nameId
       info <- getRecordInfo' (getLoc _recordCreationConstructor) name nameId
       let sig = info ^. recordInfoSignature
-      (vars', fields') <- withLocalScope $ localBindings $ ignoreSyntax $ do
+      (vars', fields') <- withLocalScope . localBindings . ignoreSyntax $ do
         vs <- mapM (reserveFunctionSymbol . (^. fieldDefineFunDef)) _recordCreationFields
         fs <- mapM (checkDefineField sig) _recordCreationFields
         return (vs, fs)
@@ -2890,6 +2901,7 @@ parsePatternTerm = do
       <|> parseParens
       <|> parseBraces
       <|> parseWildcard
+      <|> parseWildcardConstructor
       <|> parseEmpty
       <|> parseAt
       <|> parseList
@@ -3001,6 +3013,14 @@ parsePatternTerm = do
         parenPat :: PatternAtom 'Scoped -> Maybe PatternArg
         parenPat = \case
           PatternAtomParens r -> Just r
+          _ -> Nothing
+
+    parseWildcardConstructor :: ParsePat PatternArg
+    parseWildcardConstructor = explicitP <$> P.token wildcardConstr mempty
+      where
+        wildcardConstr :: PatternAtom 'Scoped -> Maybe Pattern
+        wildcardConstr = \case
+          PatternAtomWildcardConstructor r -> Just (PatternWildcardConstructor r)
           _ -> Nothing
 
 mkPatternParser ::

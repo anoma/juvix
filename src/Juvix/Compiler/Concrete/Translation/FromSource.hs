@@ -667,7 +667,7 @@ recordUpdate = do
   _recordUpdateAtKw <- Irrelevant <$> kw kwAt
   _recordUpdateTypeName <- name
   l <- kw delimBraceL
-  _recordUpdateFields <- P.sepEndBy1 recordUpdateField semicolon
+  _recordUpdateFields <- P.sepEndBy recordUpdateField semicolon
   r <- kw delimBraceR
   let _recordUpdateDelims = Irrelevant (l, r)
       _recordUpdateExtra = Irrelevant ()
@@ -842,7 +842,7 @@ recordCreation = P.label "<record creation>" $ do
     a <- Irrelevant <$> kw kwAt
     lbrace
     return (n, a)
-  defs <- P.sepEndBy1 (functionDefinition True False Nothing) semicolon
+  defs <- P.sepEndBy (functionDefinition True False Nothing) semicolon
   rbrace
   let _recordCreationFields = fmap mkField defs
       _recordCreationExtra = Irrelevant ()
@@ -1271,7 +1271,7 @@ rhsAdt = P.label "<constructor arguments>" $ do
 rhsRecord :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (RhsRecord 'Parsed)
 rhsRecord = P.label "<constructor record>" $ do
   l <- kw delimBraceL
-  _rhsRecordFields <- P.sepEndBy1 recordField semicolon
+  _rhsRecordFields <- P.sepEndBy recordField semicolon
   r <- kw delimBraceR
   let _rhsRecordDelim = Irrelevant (l, r)
   return RhsRecord {..}
@@ -1293,9 +1293,14 @@ constructorDef _constructorPipe = do
 wildcard :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r Wildcard
 wildcard = Wildcard . snd <$> interval (kw kwWildcard)
 
---------------------------------------------------------------------------------
--- Pattern section
---------------------------------------------------------------------------------
+patternAtomWildcardConstructor :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (WildcardConstructor 'Parsed)
+patternAtomWildcardConstructor = P.try $ do
+  _wildcardConstructor <- name
+  _wildcardConstructorAtKw <- Irrelevant <$> kw kwAt
+  l <- kw delimBraceL
+  r <- kw delimBraceR
+  let _wildcardConstructorDelims = Irrelevant (l, r)
+  return WildcardConstructor {..}
 
 patternAtomAnon :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (PatternAtom 'Parsed)
 patternAtomAnon =
@@ -1306,9 +1311,10 @@ patternAtomAnon =
     <|> PatternAtomList <$> parseListPattern
 
 patternAtomAt :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => Symbol -> ParsecS r PatternBinding
-patternAtomAt s = do
-  void (kw kwAt)
-  PatternBinding s <$> patternAtom
+patternAtomAt _patternBindingName = do
+  _patternBindingAtKw <- Irrelevant <$> kw kwAt
+  _patternBindingPattern <- patternAtom
+  return PatternBinding {..}
 
 recordPatternItem :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (RecordPatternItem 'Parsed)
 recordPatternItem = do
@@ -1376,7 +1382,8 @@ patternAtom = patternAtom' False
 patternAtom' :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => Bool -> ParsecS r (PatternAtom 'Parsed)
 patternAtom' nested =
   P.label "<pattern>" $
-    patternAtomNamed nested
+    PatternAtomWildcardConstructor <$> patternAtomWildcardConstructor
+      <|> patternAtomNamed nested
       <|> patternAtomAnon
 
 parsePatternAtoms :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (PatternAtoms 'Parsed)
