@@ -2,7 +2,6 @@
 module test021;
 
 import Stdlib.Prelude open;
-import Stdlib.Data.Nat.Ord open;
 
 power : Nat → Nat → Nat :=
   let

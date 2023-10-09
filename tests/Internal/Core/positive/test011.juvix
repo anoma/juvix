@@ -1,7 +1,6 @@
 module test011;
 
 import Stdlib.Prelude open;
-import Stdlib.Data.Nat.Ord open;
 
 fib' : Nat -> Nat -> Nat -> Nat
   | zero x _ := x

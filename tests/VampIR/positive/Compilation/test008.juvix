@@ -2,7 +2,6 @@
 module test008;
 
 import Stdlib.Prelude open;
-import Stdlib.Data.Nat.Ord open;
 
 f : Nat → Nat → Nat
   | x :=

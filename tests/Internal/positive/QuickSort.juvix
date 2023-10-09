@@ -1,7 +1,6 @@
 module QuickSort;
 
 import Stdlib.Prelude open hiding {quickSort};
-import Stdlib.Data.Nat.Ord open;
 
 qsHelper : {A : Type} → A → List A × List A → List A
   | a (l, r) := l ++ (a :: nil) ++ r;
@@ -40,6 +39,5 @@ four : Nat := suc three;
 
 main : List Nat :=
   uniq
-    compare
-    (quickSort compare (flatten (gen2 three four nil)));
-
+    Ord.cmp
+    (quickSort Ord.cmp (flatten (gen2 three four nil)));

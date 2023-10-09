@@ -2,11 +2,10 @@
 module test023;
 
 import Stdlib.Prelude open;
-import Stdlib.Data.Nat.Ord open;
 
 terminating
 f : Nat → Nat
-  
+
   | x := if (x < 1) 1 (2 * x + g (sub x 1));
 
 terminating

@@ -1,9 +1,7 @@
 -- Builtin Int
 module test049;
 
-import Stdlib.Prelude open hiding {+; *; div; mod};
-import Stdlib.Data.Int.Ord open;
-import Stdlib.Data.Int open;
+import Stdlib.Prelude open;
 
 f : Int -> Nat
   | (negSuc n) := n
@@ -23,8 +21,8 @@ main : IO :=
     >> printBoolLn (-1 == -2)
     >> printBoolLn (-1 == -1)
     >> printBoolLn (1 == 1)
-    >> printBoolLn (-1 == 1)
-    >> printIntLn (-1 + 1)
+    >> printBoolLn (-1 == ofNat 1)
+    >> printIntLn (-1 + ofNat 1)
     >> printIntLn (negNat (suc zero))
     >> printIntLn
       (let
@@ -35,9 +33,9 @@ main : IO :=
       (let
         g : Int -> Int := neg;
       in g -1)
-    >> printIntLn (-2 * 2)
-    >> printIntLn (div 4 -2)
-    >> printIntLn (2 - 2)
+    >> printIntLn (-2 * ofNat 2)
+    >> printIntLn (div (ofNat 4) -2)
+    >> printIntLn (ofNat 2 - ofNat 2)
     >> printBoolLn (nonNeg 0)
     >> printBoolLn (nonNeg -1)
     >> printIntLn (mod -5 -2)
@@ -45,5 +43,5 @@ main : IO :=
     >> printBoolLn (0 <= 0)
     >> printBoolLn (0 < 1)
     >> printBoolLn (1 <= 0)
-    >> printIntLn (mod 5 -3)
-    >> printIntLn (div 5 -3);
+    >> printIntLn (mod (ofNat 5) -3)
+    >> printIntLn (div (ofNat 5) -3);

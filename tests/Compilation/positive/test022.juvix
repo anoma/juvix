@@ -2,7 +2,6 @@
 module test022;
 
 import Stdlib.Prelude open;
-import Stdlib.Data.Nat.Ord open;
 
 gen : Nat → List Nat
   | zero := nil

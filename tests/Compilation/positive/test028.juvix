@@ -2,7 +2,6 @@
 module test028;
 
 import Stdlib.Prelude open;
-import Stdlib.Data.Nat.Ord open;
 
 type Stream :=
   | cons : Nat → (Unit → Stream) → Stream;

@@ -2,7 +2,6 @@
 module test032;
 
 import Stdlib.Prelude open;
-import Stdlib.Data.Nat.Ord open;
 
 split : {A : Type} → Nat → List A → List A × List A
   | zero xs := nil, xs

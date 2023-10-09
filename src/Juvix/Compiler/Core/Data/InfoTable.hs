@@ -209,20 +209,33 @@ filterByFile f t =
     matchesLocation :: Maybe Location -> Bool
     matchesLocation l = l ^? _Just . intervalFile == Just f
 
--- | Prunes the orphaned entries of identMap and indentContext, i.e., ones that
--- have no corresponding entries in infoIdentifiers or infoInductives
+-- | Prunes the orphaned entries of identMap, indentContext and
+-- infoConstructors, i.e., ones that have no corresponding entries in
+-- infoIdentifiers or infoInductives
 pruneInfoTable :: InfoTable -> InfoTable
 pruneInfoTable tab =
-  over
-    identMap
-    ( HashMap.filter
-        ( \case
-            IdentFun s -> HashMap.member s (tab ^. infoIdentifiers)
-            IdentInd s -> HashMap.member s (tab ^. infoInductives)
-            IdentConstr tag -> HashMap.member tag (tab ^. infoConstructors)
-        )
-    )
+  pruneIdentMap
+    $ over
+      infoConstructors
+      ( HashMap.filter
+          ( \ConstructorInfo {..} ->
+              HashMap.member _constructorInductive (tab ^. infoInductives)
+          )
+      )
     $ over
       identContext
       (HashMap.filterWithKey (\s _ -> HashMap.member s (tab ^. infoIdentifiers)))
       tab
+  where
+    pruneIdentMap :: InfoTable -> InfoTable
+    pruneIdentMap tab' =
+      over
+        identMap
+        ( HashMap.filter
+            ( \case
+                IdentFun s -> HashMap.member s (tab' ^. infoIdentifiers)
+                IdentInd s -> HashMap.member s (tab' ^. infoInductives)
+                IdentConstr tag -> HashMap.member tag (tab' ^. infoConstructors)
+            )
+        )
+        tab'

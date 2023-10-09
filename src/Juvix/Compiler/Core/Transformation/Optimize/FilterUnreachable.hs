@@ -5,10 +5,13 @@ import Juvix.Compiler.Core.Data.IdentDependencyInfo
 import Juvix.Compiler.Core.Transformation.Base
 
 filterUnreachable :: InfoTable -> InfoTable
-filterUnreachable tab = pruneInfoTable $ over infoIdentifiers goFilter tab
+filterUnreachable tab =
+  pruneInfoTable $
+    over infoInductives goFilter $
+      over infoIdentifiers goFilter tab
   where
-    depInfo = createIdentDependencyInfo tab
+    depInfo = createSymbolDependencyInfo tab
 
-    goFilter :: HashMap Symbol IdentifierInfo -> HashMap Symbol IdentifierInfo
-    goFilter idents =
-      HashMap.filterWithKey (\sym _ -> isReachable depInfo sym) idents
+    goFilter :: HashMap Symbol a -> HashMap Symbol a
+    goFilter =
+      HashMap.filterWithKey (\sym _ -> isReachable depInfo sym)

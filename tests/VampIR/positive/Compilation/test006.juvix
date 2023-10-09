@@ -2,7 +2,6 @@
 module test006;
 
 import Stdlib.Prelude open;
-import Stdlib.Data.Nat.Ord open;
 
 type enum :=
   | opt0 : enum

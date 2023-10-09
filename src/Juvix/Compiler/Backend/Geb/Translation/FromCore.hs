@@ -58,7 +58,7 @@ fromCore :: Core.InfoTable -> (Morphism, Object)
 fromCore tab = case tab ^. Core.infoMain of
   Just sym ->
     let node = Core.lookupIdentifierNode tab sym
-        syms = reverse $ filter (/= sym) $ Core.createIdentDependencyInfo tab ^. Core.depInfoTopSort
+        syms = reverse $ filter (/= sym) $ Core.createCallGraph tab ^. Core.depInfoTopSort
         idents = map (Core.lookupIdentifierInfo tab) syms
         morph = run . runReader emptyEnv $ goIdents node idents
         obj = convertType $ Info.getNodeType node

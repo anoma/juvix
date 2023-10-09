@@ -1,4 +1,4 @@
--- Moves al let expressions at the top, just after the top lambdas. This
+-- Moves all let expressions at the top, just after the top lambdas. This
 -- transformation assumes:
 -- - There are no LetRecs, Lambdas (other than the ones at the top), nor Match.
 -- - Case nodes do not have binders.
