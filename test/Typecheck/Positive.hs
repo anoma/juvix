@@ -296,7 +296,11 @@ tests =
     posTest
       "Hole in type parameter"
       $(mkRelDir ".")
-      $(mkRelFile "HoleTypeParameter.juvix")
+      $(mkRelFile "HoleTypeParameter.juvix"),
+    posTest
+      "Instance axiom"
+      $(mkRelDir ".")
+      $(mkRelFile "InstanceAxiom.juvix")
   ]
     <> [ compilationTest t | t <- Compilation.tests
        ]

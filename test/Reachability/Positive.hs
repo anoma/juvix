@@ -46,14 +46,14 @@ getNames m =
   concatMap getDeclName (m ^. Internal.moduleBody . Internal.moduleStatements)
     <> concatMap (getNames . (^. Internal.importModule . Internal.moduleIxModule)) (m ^. Internal.moduleBody . Internal.moduleImports)
   where
-    getDeclName :: Internal.Statement -> [Text]
+    getDeclName :: Internal.MutualBlock -> [Text]
     getDeclName = \case
-      Internal.StatementMutual (Internal.MutualBlock f) -> map getMutualName (toList f)
-      Internal.StatementAxiom ax -> [ax ^. (Internal.axiomName . Internal.nameText)]
+      (Internal.MutualBlock f) -> map getMutualName (toList f)
     getMutualName :: Internal.MutualStatement -> Text
     getMutualName = \case
       Internal.StatementFunction f -> f ^. Internal.funDefName . Internal.nameText
       Internal.StatementInductive f -> f ^. Internal.inductiveName . Internal.nameText
+      Internal.StatementAxiom ax -> ax ^. (Internal.axiomName . Internal.nameText)
 
 allTests :: TestTree
 allTests =

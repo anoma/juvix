@@ -260,28 +260,28 @@ fromPreModuleBody b = do
   let moduleStatements' = map goSCC sccs
   return (set Internal.moduleStatements moduleStatements' b)
   where
-    goSCC :: SCC Internal.PreStatement -> Internal.Statement
+    goSCC :: SCC Internal.PreStatement -> Internal.MutualBlock
     goSCC = \case
       AcyclicSCC s -> goAcyclic s
       CyclicSCC c -> goCyclic (nonEmpty' c)
       where
-        goCyclic :: NonEmpty Internal.PreStatement -> Internal.Statement
-        goCyclic c = Internal.StatementMutual (Internal.MutualBlock (goMutual <$> c))
+        goCyclic :: NonEmpty Internal.PreStatement -> Internal.MutualBlock
+        goCyclic c = Internal.MutualBlock (goMutual <$> c)
           where
             goMutual :: Internal.PreStatement -> Internal.MutualStatement
             goMutual = \case
               Internal.PreInductiveDef i -> Internal.StatementInductive i
               Internal.PreFunctionDef i -> Internal.StatementFunction i
-              _ -> impossible
+              Internal.PreAxiomDef i -> Internal.StatementAxiom i
 
-        goAcyclic :: Internal.PreStatement -> Internal.Statement
+        goAcyclic :: Internal.PreStatement -> Internal.MutualBlock
         goAcyclic = \case
           Internal.PreInductiveDef i -> one (Internal.StatementInductive i)
           Internal.PreFunctionDef i -> one (Internal.StatementFunction i)
-          Internal.PreAxiomDef i -> Internal.StatementAxiom i
+          Internal.PreAxiomDef i -> one (Internal.StatementAxiom i)
           where
-            one :: Internal.MutualStatement -> Internal.Statement
-            one = Internal.StatementMutual . Internal.MutualBlock . pure
+            one :: Internal.MutualStatement -> Internal.MutualBlock
+            one = Internal.MutualBlock . pure
 
 goModuleBody ::
   forall r.

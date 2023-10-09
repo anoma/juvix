@@ -79,7 +79,7 @@ computeTable recurIntoImports (ModuleIndex m) = compute
     mutuals :: [MutualStatement]
     mutuals =
       [ d
-        | StatementMutual (MutualBlock b) <- ss,
+        | MutualBlock b <- ss,
           d <- toList b
       ]
 
@@ -119,7 +119,7 @@ computeTable recurIntoImports (ModuleIndex m) = compute
     _infoAxioms =
       HashMap.fromList
         [ (d ^. axiomName, AxiomInfo d)
-          | StatementAxiom d <- ss
+          | StatementAxiom d <- mutuals
         ]
 
     _infoInstances :: InstanceTable
@@ -137,7 +137,7 @@ computeTable recurIntoImports (ModuleIndex m) = compute
           | otherwise =
               Nothing
 
-    ss :: [Statement]
+    ss :: [MutualBlock]
     ss = m ^. moduleBody . moduleStatements
 
 lookupConstructor :: forall r. (Member (Reader InfoTable) r) => Name -> Sem r ConstructorInfo

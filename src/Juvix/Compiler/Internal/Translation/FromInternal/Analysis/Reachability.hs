@@ -41,7 +41,7 @@ goModuleNoCache (ModuleIndex m) = do
   where
     goBody :: ModuleBody -> Sem r ModuleBody
     goBody body = do
-      _moduleStatements <- mapMaybeM goStatement (body ^. moduleStatements)
+      _moduleStatements <- mapMaybeM goMutual (body ^. moduleStatements)
       _moduleImports <- mapM goImport (body ^. moduleImports)
       return ModuleBody {..}
 
@@ -51,16 +51,12 @@ goModule = cacheGet . ModuleIndex
 goModuleIndex :: (Members '[Reader NameDependencyInfo, MCache] r) => ModuleIndex -> Sem r ModuleIndex
 goModuleIndex = fmap ModuleIndex . cacheGet
 
-goStatement :: forall r. (Member (Reader NameDependencyInfo) r) => Statement -> Sem r (Maybe Statement)
-goStatement s = case s of
-  StatementMutual m -> fmap StatementMutual <$> goMutual m
-  StatementAxiom ax -> returnIfReachable (ax ^. axiomName) s
-  where
-    -- note that the first mutual statement is reachable iff all are reachable
-    goMutual :: MutualBlock -> Sem r (Maybe MutualBlock)
-    goMutual b@(MutualBlock (m :| _)) = case m of
-      StatementFunction f -> returnIfReachable (f ^. funDefName) b
-      StatementInductive f -> returnIfReachable (f ^. inductiveName) b
+-- note that the first mutual statement is reachable iff all are reachable
+goMutual :: forall r. (Member (Reader NameDependencyInfo) r) => MutualBlock -> Sem r (Maybe MutualBlock)
+goMutual b@(MutualBlock (m :| _)) = case m of
+  StatementFunction f -> returnIfReachable (f ^. funDefName) b
+  StatementInductive f -> returnIfReachable (f ^. inductiveName) b
+  StatementAxiom ax -> returnIfReachable (ax ^. axiomName) b
 
 goImport :: forall r. (Members '[Reader NameDependencyInfo, MCache] r) => Import -> Sem r Import
 goImport i = do

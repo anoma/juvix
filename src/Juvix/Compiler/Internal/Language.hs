@@ -17,11 +17,11 @@ import Juvix.Data.Universe hiding (smallUniverse)
 import Juvix.Data.WithLoc
 import Juvix.Prelude
 
-type Module = Module' Statement
+type Module = Module' MutualBlock
 
 type PreModule = Module' PreStatement
 
-type ModuleBody = ModuleBody' Statement
+type ModuleBody = ModuleBody' MutualBlock
 
 type PreModuleBody = ModuleBody' PreStatement
 
@@ -52,14 +52,10 @@ data ModuleBody' stmt = ModuleBody
   }
   deriving stock (Data)
 
-data Statement
-  = StatementMutual MutualBlock
-  | StatementAxiom AxiomDef
-  deriving stock (Data)
-
 data MutualStatement
   = StatementInductive InductiveDef
   | StatementFunction FunctionDef
+  | StatementAxiom AxiomDef
   deriving stock (Generic, Data)
 
 newtype MutualBlock = MutualBlock
