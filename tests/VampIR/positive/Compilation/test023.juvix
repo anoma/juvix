@@ -2,7 +2,6 @@
 module test023;
 
 import Stdlib.Prelude open;
-import Stdlib.Data.Nat.Ord open;
 
 main : Nat → Nat → Nat
   | x y :=

@@ -1,7 +1,6 @@
 module test006;
 
 import Stdlib.Prelude open;
-import Stdlib.Data.Nat.Ord open;
 
 terminating
 loop : Nat := loop;

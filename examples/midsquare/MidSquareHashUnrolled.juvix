@@ -6,7 +6,6 @@
 module MidSquareHashUnrolled;
 
 import Stdlib.Prelude open;
-import Stdlib.Data.Nat.Ord open;
 
 --- `powN` is 2 ^ N
 pow0 : Nat := 1;

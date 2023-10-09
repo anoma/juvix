@@ -6,8 +6,6 @@ module Bank;
 import Stdlib.Prelude open;
 import Stdlib.Debug.Fail open;
 
-import Stdlib.Data.Nat.Ord open;
-
 import Stdlib.Data.Nat as Nat;
 
 Address : Type := Nat;

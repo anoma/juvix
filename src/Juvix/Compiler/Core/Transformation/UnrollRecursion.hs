@@ -13,7 +13,7 @@ unrollRecursion tab = do
   (mp, tab') <-
     runState @(HashMap Symbol Symbol) mempty $
       execInfoTableBuilder tab $
-        forM_ (buildSCCs (createIdentDependencyInfo tab)) goSCC
+        forM_ (buildSCCs (createCallGraph tab)) goSCC
   return $ mapIdentSymbols mp $ pruneInfoTable tab'
   where
     mapIdentSymbols :: HashMap Symbol Symbol -> InfoTable -> InfoTable

@@ -2,7 +2,6 @@
 module fibonacci;
 
 import Stdlib.Prelude open;
-import Stdlib.Data.Nat.Ord open;
 
 go : Nat → Nat → Nat → Nat
   | zero n _ := n

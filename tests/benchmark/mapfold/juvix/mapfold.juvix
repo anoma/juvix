@@ -2,7 +2,6 @@
 module mapfold;
 
 import Stdlib.Prelude open;
-import Stdlib.Data.Nat.Ord open;
 
 run : Nat → Nat → List Nat → Nat
   | zero acc lst := acc

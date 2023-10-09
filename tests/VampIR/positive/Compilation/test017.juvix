@@ -2,7 +2,6 @@
 module test017;
 
 import Stdlib.Prelude open;
-import Stdlib.Data.Nat.Ord open;
 
 {-# unroll: 11 #-}
 terminating

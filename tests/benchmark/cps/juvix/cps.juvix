@@ -2,7 +2,6 @@
 module cps;
 
 import Stdlib.Prelude open;
-import Stdlib.Data.Nat.Ord open;
 
 step : Nat → Nat → Nat → (Nat → Nat → Nat → Nat) → Nat
   | zero n _ _ := n

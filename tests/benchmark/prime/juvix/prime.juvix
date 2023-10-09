@@ -2,7 +2,6 @@
 module prime;
 
 import Stdlib.Prelude open;
-import Stdlib.Data.Nat.Ord open;
 
 checkDivisible : Nat → List Nat → Bool
   | p nil := false

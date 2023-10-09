@@ -1,7 +1,6 @@
 --- Some generic helper definitions.
 module Logic.Extra;
 
-import Stdlib.Data.Nat.Ord open;
 import Stdlib.Prelude open;
 
 --- Concatenates a list of strings

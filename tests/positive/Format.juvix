@@ -12,8 +12,6 @@ hiding -- Hide some names
 -- Bool either
 Bool; true; false; mkShow; module Show};
 
-import Stdlib.Data.Nat.Ord open;
-
 -- Lorem ipsum dolor sit amet, consectetur adipiscing elit
 terminating
 -- Comment between terminating and type sig

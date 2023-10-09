@@ -2,7 +2,6 @@
 module test001;
 
 import Stdlib.Prelude open;
-import Stdlib.Data.Nat.Ord open;
 
 main : Nat -> Nat
   | x := if (x == 0) 1 0;

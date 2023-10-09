@@ -1,7 +1,6 @@
 module Collatz;
 
 import Stdlib.Prelude open;
-import Stdlib.Data.Nat.Ord open;
 
 collatzNext (n : Nat) : Nat :=
   if (mod n 2 == 0) (div n 2) (3 * n + 1);
