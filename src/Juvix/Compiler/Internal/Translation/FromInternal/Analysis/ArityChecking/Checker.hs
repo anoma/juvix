@@ -125,6 +125,7 @@ checkMutualBlock ::
 checkMutualBlock (MutualBlock funs) = MutualBlock <$> mapM checkMutualStatement funs
 
 checkFunctionDef ::
+  forall r.
   (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r) =>
   FunctionDef ->
   Sem r FunctionDef
@@ -133,7 +134,8 @@ checkFunctionDef FunctionDef {..} = do
   _funDefType' <- withEmptyLocalVars (checkType _funDefType)
   _funDefBody' <- checkFunctionBody arity _funDefBody
   _funDefExamples' <- withEmptyLocalVars (mapM checkExample _funDefExamples)
-  let _funDefDefaultSignature' = _funDefDefaultSignature
+  let argTys = fst (unfoldFunType _funDefType')
+  _funDefDefaultSignature' <- checkDefaultArguments _funDefDefaultSignature argTys
   return
     FunctionDef
       { _funDefBody = _funDefBody',
@@ -146,6 +148,26 @@ checkFunctionDef FunctionDef {..} = do
         _funDefBuiltin,
         _funDefPragmas
       }
+  where
+    checkDefaultArguments :: DefaultSignature -> [FunctionParameter] -> Sem r DefaultSignature
+    checkDefaultArguments (DefaultSignature defaults) =
+      fmap DefaultSignature
+        . execOutputList
+        . go defaults
+      where
+        go :: [Maybe Expression] -> [FunctionParameter] -> Sem (Output (Maybe Expression) ': r) ()
+        go = \case
+          [] -> const (return ())
+          d : ds' -> \case
+            [] -> impossible
+            p : ps' -> do
+              dval <- case (d, p ^. paramImplicit) of
+                (Nothing, _) -> return Nothing
+                (Just val, Implicit) ->
+                  Just <$> withEmptyLocalVars (checkExpression (typeArity (p ^. paramType)) val)
+                (Just {}, _) -> impossible
+              output dval
+              go ds' ps'
 
 checkFunctionBody ::
   (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r) =>
