@@ -1271,10 +1271,13 @@ rhsAdt = P.label "<constructor arguments>" $ do
 rhsRecord :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (RhsRecord 'Parsed)
 rhsRecord = P.label "<constructor record>" $ do
   l <- kw delimBraceL
-  _rhsRecordFields <- P.sepEndBy recordField semicolon
+  _rhsRecordStatements <- P.sepEndBy recordStatement semicolon
   r <- kw delimBraceR
   let _rhsRecordDelim = Irrelevant (l, r)
   return RhsRecord {..}
+
+recordStatement :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (RecordStatement 'Parsed)
+recordStatement = RecordStatementField <$> recordField
 
 pconstructorRhs :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (ConstructorRhs 'Parsed)
 pconstructorRhs =

@@ -626,7 +626,7 @@ deriving stock instance Ord (RhsAdt 'Scoped)
 
 data RhsRecord (s :: Stage) = RhsRecord
   { _rhsRecordDelim :: Irrelevant (KeywordRef, KeywordRef),
-    _rhsRecordFields :: [RecordField s]
+    _rhsRecordStatements :: [RecordStatement s]
   }
 
 deriving stock instance Show (RhsRecord 'Parsed)
@@ -1634,6 +1634,21 @@ deriving stock instance Eq (NamedApplication 'Scoped)
 deriving stock instance Ord (NamedApplication 'Parsed)
 
 deriving stock instance Ord (NamedApplication 'Scoped)
+
+newtype RecordStatement (s :: Stage)
+  = RecordStatementField (RecordField s)
+
+deriving stock instance Show (RecordStatement 'Parsed)
+
+deriving stock instance Show (RecordStatement 'Scoped)
+
+deriving stock instance Eq (RecordStatement 'Parsed)
+
+deriving stock instance Eq (RecordStatement 'Scoped)
+
+deriving stock instance Ord (RecordStatement 'Parsed)
+
+deriving stock instance Ord (RecordStatement 'Scoped)
 
 data RecordCreation (s :: Stage) = RecordCreation
   { _recordCreationConstructor :: IdentifierType s,
@@ -2652,6 +2667,10 @@ _SyntaxAlias :: Traversal' (SyntaxDef s) (AliasDef s)
 _SyntaxAlias f x = case x of
   SyntaxAlias r -> SyntaxAlias <$> f r
   _ -> pure x
+
+_RecordStatementField :: Traversal' (RecordStatement s) (RecordField s)
+_RecordStatementField f x = case x of
+  RecordStatementField p -> RecordStatementField <$> f p
 
 scopedIdenName :: Lens' ScopedIden S.Name
 scopedIdenName f n = case n ^. scopedIdenAlias of
