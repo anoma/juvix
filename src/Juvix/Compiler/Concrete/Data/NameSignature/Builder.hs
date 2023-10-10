@@ -58,21 +58,11 @@ instance (SingI s) => HasNameSignature s (InductiveDef s, ConstructorDef s) wher
       addRecord :: RhsRecord s -> Sem r ()
       addRecord RhsRecord {..} = mapM_ addField _rhsRecordStatements
         where
-<<<<<<< variant A
-          addField :: RecordField s -> Sem r ()
-          addField RecordField {..} = addSymbol @s Explicit Nothing (symbolParsed _fieldName)
-      addRhs :: ConstructorRhs s -> Sem r ()
->>>>>>> variant B
-          addField :: RecordStatement 'Parsed -> Sem r ()
+          addField :: RecordStatement s -> Sem r ()
           addField = \case
-            RecordStatementField RecordField {..} -> addSymbol Explicit _fieldName
+            RecordStatementField RecordField {..} -> addSymbol @s Explicit Nothing (symbolParsed _fieldName)
             RecordStatementOperator {} -> return ()
-      addRhs :: ConstructorRhs 'Parsed -> Sem r ()
-####### Ancestor
-          addField :: RecordField 'Parsed -> Sem r ()
-          addField RecordField {..} = addSymbol Explicit _fieldName
-      addRhs :: ConstructorRhs 'Parsed -> Sem r ()
-======= end
+      addRhs :: ConstructorRhs s -> Sem r ()
       addRhs = \case
         ConstructorRhsGadt g -> addExpressionType (g ^. rhsGadtType)
         ConstructorRhsRecord g -> addRecord g
@@ -224,14 +214,8 @@ mkRecordNameSignature :: RhsRecord 'Parsed -> RecordNameSignature
 mkRecordNameSignature rhs =
   RecordNameSignature
     ( HashMap.fromList
-<<<<<<< variant A
-        [ (s, NameItem s idx Nothing) | (Indexed idx field) <- indexFrom 0 (toList (rhs ^. rhsRecordFields)), let s = field ^. fieldName
->>>>>>> variant B
-        [ (s, (s, idx))
+        [ (s, (NameItem s idx Nothing))
           | (Indexed idx field) <- indexFrom 0 (toList (rhs ^.. rhsRecordStatements . each . _RecordStatementField)),
             let s = field ^. fieldName
-####### Ancestor
-        [ (s, (s, idx)) | (Indexed idx field) <- indexFrom 0 (toList (rhs ^. rhsRecordFields)), let s = field ^. fieldName
-======= end
         ]
     )
