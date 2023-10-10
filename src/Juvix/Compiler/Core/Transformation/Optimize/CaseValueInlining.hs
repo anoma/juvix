@@ -1,4 +1,4 @@
-module Juvix.Compiler.Core.Transformation.Optimize.MandatoryInlining where
+module Juvix.Compiler.Core.Transformation.Optimize.CaseValueInlining where
 
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Transformation.Base
@@ -8,9 +8,6 @@ convertNode tab = dmap go
   where
     go :: Node -> Node
     go node = case node of
-      NIdt Ident {..}
-        | Just InlineAlways <- lookupIdentifierInfo tab _identSymbol ^. identifierPragmas . pragmasInline ->
-            lookupIdentifierNode tab _identSymbol
       NCase cs@Case {..} -> case _caseValue of
         NIdt Ident {..}
           | Just InlineCase <- lookupIdentifierInfo tab _identSymbol ^. identifierPragmas . pragmasInline ->
@@ -20,5 +17,5 @@ convertNode tab = dmap go
       _ ->
         node
 
-mandatoryInlining :: InfoTable -> InfoTable
-mandatoryInlining tab = mapAllNodes (convertNode tab) tab
+caseValueInlining :: InfoTable -> InfoTable
+caseValueInlining tab = mapAllNodes (convertNode tab) tab

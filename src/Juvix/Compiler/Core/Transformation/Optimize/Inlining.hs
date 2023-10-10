@@ -61,15 +61,19 @@ convertNode inlineDepth recSyms tab = dmapL go
           pi = ii ^. identifierPragmas . pragmasInline
           argsNum = ii ^. identifierArgsNum
           def = lookupIdentifierNode tab _identSymbol
-      -- inline zero-argument definitions automatically if inlining would result
+      -- inline zero-argument definitions (automatically) if inlining would result
       -- in case reduction
       NCase cs@Case {..} -> case _caseValue of
-        NIdt Ident {..}
-          | isNothing pi
-              && not (HashSet.member _identSymbol recSyms)
-              && isConstructorApp def
-              && checkDepth tab bl inlineDepth def ->
-              NCase cs {_caseValue = def}
+        NIdt Ident {..} -> case pi of
+          Just InlineCase ->
+            NCase cs {_caseValue = def}
+          Nothing
+            | not (HashSet.member _identSymbol recSyms)
+                && isConstructorApp def
+                && checkDepth tab bl inlineDepth def ->
+                NCase cs {_caseValue = def}
+          _ ->
+            node
           where
             ii = lookupIdentifierInfo tab _identSymbol
             pi = ii ^. identifierPragmas . pragmasInline
