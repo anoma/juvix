@@ -101,12 +101,8 @@ goModuleNoVisit ::
   Sem r ()
 goModuleNoVisit (Internal.ModuleIndex m) = do
   mapM_ goImport (m ^. Internal.moduleBody . Internal.moduleImports)
-  mapM_ go (m ^. Internal.moduleBody . Internal.moduleStatements)
+  mapM_ goMutualBlock (m ^. Internal.moduleBody . Internal.moduleStatements)
   where
-    go :: Internal.Statement -> Sem r ()
-    go = \case
-      Internal.StatementAxiom a -> goAxiomInductive a >> goAxiomDef a
-      Internal.StatementMutual f -> goMutualBlock f
     goImport :: Internal.Import -> Sem r ()
     goImport (Internal.Import i) = visit i
 
@@ -238,14 +234,17 @@ goMutualBlock (Internal.MutualBlock m) = preMutual m >>= goMutual
     preMutual :: NonEmpty Internal.MutualStatement -> Sem r PreMutual
     preMutual stmts = do
       let (inds, funs) = partition isInd (toList stmts)
-      -- inductives must be pre-registered first to avoid crashing on unknown
-      -- inductive types when pre-registering functions
+      -- types must be pre-registered first to avoid crashing on unknown types
+      -- when pre-registering functions/axioms
       execState (PreMutual [] []) $ mapM_ step (inds ++ funs)
       where
         isInd :: Internal.MutualStatement -> Bool
         isInd = \case
           Internal.StatementInductive {} -> True
           Internal.StatementFunction {} -> False
+          Internal.StatementAxiom Internal.AxiomDef {..}
+            | Internal.ExpressionUniverse {} <- _axiomType -> True
+            | otherwise -> False
 
         step :: Internal.MutualStatement -> Sem (State PreMutual ': r) ()
         step = \case
@@ -255,6 +254,9 @@ goMutualBlock (Internal.MutualBlock m) = preMutual m >>= goMutual
           Internal.StatementInductive i -> do
             p <- preInductiveDef i
             modify' (over preInductives (p :))
+          Internal.StatementAxiom a -> do
+            goAxiomInductive a
+            goAxiomDef a
 
     goMutual :: PreMutual -> Sem r ()
     goMutual PreMutual {..} = do

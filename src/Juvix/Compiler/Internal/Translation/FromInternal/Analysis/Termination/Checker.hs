@@ -113,12 +113,7 @@ scanModule ::
 scanModule m = scanModuleBody (m ^. moduleBody)
 
 scanModuleBody :: (Members '[State CallMap] r) => ModuleBody -> Sem r ()
-scanModuleBody body = mapM_ scanStatement (body ^. moduleStatements)
-
-scanStatement :: (Members '[State CallMap] r) => Statement -> Sem r ()
-scanStatement = \case
-  StatementAxiom a -> scanAxiom a
-  StatementMutual m -> scanMutual m
+scanModuleBody body = mapM_ scanMutual (body ^. moduleStatements)
 
 scanMutual :: (Members '[State CallMap] r) => MutualBlock -> Sem r ()
 scanMutual (MutualBlock ss) = mapM_ scanMutualStatement ss
@@ -135,6 +130,7 @@ scanMutualStatement :: (Members '[State CallMap] r) => MutualStatement -> Sem r 
 scanMutualStatement = \case
   StatementInductive i -> scanInductive i
   StatementFunction i -> scanFunctionDef i
+  StatementAxiom a -> scanAxiom a
 
 scanAxiom :: (Members '[State CallMap] r) => AxiomDef -> Sem r ()
 scanAxiom = scanTopExpression . (^. axiomType)

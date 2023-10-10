@@ -72,7 +72,7 @@ checkModuleBody ::
   Sem r ModuleBody
 checkModuleBody ModuleBody {..} = do
   _moduleImports' <- mapM checkImport _moduleImports
-  _moduleStatements' <- mapM checkStatement _moduleStatements
+  _moduleStatements' <- mapM checkMutualBlock _moduleStatements
   return
     ModuleBody
       { _moduleStatements = _moduleStatements',
@@ -85,15 +85,11 @@ checkImport ::
   Sem r Import
 checkImport = traverseOf importModule checkModuleIndex
 
-checkStatement ::
+checkMutualBlock ::
   (Members '[HighlightBuilder, Reader EntryPoint, State NegativeTypeParameters, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example, Builtins, Termination] r) =>
-  Statement ->
-  Sem r Statement
-checkStatement s = case s of
-  StatementMutual mut -> StatementMutual <$> runReader emptyLocalVars (checkTopMutualBlock mut)
-  StatementAxiom ax -> do
-    registerNameIdType (ax ^. axiomName . nameId) (ax ^. axiomType)
-    return s
+  MutualBlock ->
+  Sem r MutualBlock
+checkMutualBlock s = runReader emptyLocalVars (checkTopMutualBlock s)
 
 checkInductiveDef ::
   forall r.
@@ -175,6 +171,9 @@ checkMutualStatement ::
 checkMutualStatement = \case
   StatementFunction f -> StatementFunction <$> resolveInstanceHoles (checkFunctionDef f)
   StatementInductive f -> StatementInductive <$> resolveInstanceHoles (checkInductiveDef f)
+  StatementAxiom ax -> do
+    registerNameIdType (ax ^. axiomName . nameId) (ax ^. axiomType)
+    return $ StatementAxiom ax
 
 checkFunctionDef ::
   (Members '[HighlightBuilder, Reader LocalVars, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example, Builtins, Inference, Termination, Output TypedHole] r) =>

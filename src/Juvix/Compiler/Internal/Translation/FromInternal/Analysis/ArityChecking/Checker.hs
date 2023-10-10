@@ -37,7 +37,7 @@ checkModuleBody ::
   ModuleBody ->
   Sem r ModuleBody
 checkModuleBody ModuleBody {..} = do
-  _moduleStatements' <- mapM checkStatement _moduleStatements
+  _moduleStatements' <- mapM checkMutualBlock _moduleStatements
   _moduleImports' <- mapM checkImport _moduleImports
   return
     ModuleBody
@@ -56,14 +56,6 @@ checkImport ::
   Import ->
   Sem r Import
 checkImport = traverseOf importModule checkModuleIndex
-
-checkStatement ::
-  (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r) =>
-  Statement ->
-  Sem r Statement
-checkStatement s = case s of
-  StatementMutual b -> StatementMutual <$> checkMutualBlock b
-  StatementAxiom a -> StatementAxiom <$> checkAxiom a
 
 checkInductive :: forall r. (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r) => InductiveDef -> Sem r InductiveDef
 checkInductive d = do
@@ -111,6 +103,7 @@ checkMutualStatement ::
 checkMutualStatement = \case
   StatementFunction f -> StatementFunction <$> checkFunctionDef f
   StatementInductive f -> StatementInductive <$> checkInductive f
+  StatementAxiom a -> StatementAxiom <$> checkAxiom a
 
 checkMutualBlockLet ::
   (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r) =>

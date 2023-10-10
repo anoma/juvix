@@ -1,0 +1,9 @@
+module InstanceAxiom;
+
+trait
+type T := t;
+
+axiom <body> : T;
+
+instance
+inst : T := <body>;
