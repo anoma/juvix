@@ -186,8 +186,15 @@ instance HasExpressions MutualStatement where
     StatementAxiom d -> StatementAxiom <$> leafExpressions f d
 
 instance HasExpressions AxiomDef where
-  leafExpressions _ ax@AxiomDef {} = do
-    pure ax
+  leafExpressions f AxiomDef {..} = do
+    ty' <- leafExpressions f _axiomType
+    pure
+      AxiomDef
+        { _axiomType = ty',
+          _axiomName,
+          _axiomBuiltin,
+          _axiomPragmas
+        }
 
 instance HasExpressions InductiveParameter where
   leafExpressions _ param@InductiveParameter {} = do
