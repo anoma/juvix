@@ -4,6 +4,7 @@ import Juvix.Compiler.Core.Data.IdentDependencyInfo
 import Juvix.Compiler.Core.Options
 import Juvix.Compiler.Core.Transformation.Base
 import Juvix.Compiler.Core.Transformation.Optimize.CaseFolding
+import Juvix.Compiler.Core.Transformation.Optimize.CasePermutation
 import Juvix.Compiler.Core.Transformation.Optimize.FilterUnreachable
 import Juvix.Compiler.Core.Transformation.Optimize.Inlining
 import Juvix.Compiler.Core.Transformation.Optimize.LambdaFolding
@@ -19,6 +20,7 @@ optimize' CoreOptions {..} tab =
           . lambdaFolding
           . doInlining
           . caseFolding
+          . casePermutation
           . letFolding' (isInlineableLambda _optInliningDepth)
           . lambdaFolding
           . specializeArgs
