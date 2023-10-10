@@ -322,4 +322,23 @@ module Traits;
 
 end;
 
+module OperatorRecord;
+  trait
+  type Natural A :=
+    myNatural {
+      syntax operator + additive;
+      + : A -> A -> A;
+
+      syntax operator * multiplicative;
+      * : A -> A -> A
+    };
+
+  open Natural;
+
+  calc {A : Type} {{Natural A}} (n m : A) : A :=
+    let
+      open Natural;
+    in n + m * m;
+end;
+
 -- Comment at the end of a module

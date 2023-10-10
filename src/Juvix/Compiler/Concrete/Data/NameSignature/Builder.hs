@@ -66,6 +66,7 @@ instance (SingI s) => HasNameSignature s (InductiveDef s, ConstructorDef s) wher
           addField :: RecordStatement 'Parsed -> Sem r ()
           addField = \case
             RecordStatementField RecordField {..} -> addSymbol Explicit _fieldName
+            RecordStatementOperator {} -> return ()
       addRhs :: ConstructorRhs 'Parsed -> Sem r ()
 ####### Ancestor
           addField :: RecordField 'Parsed -> Sem r ()

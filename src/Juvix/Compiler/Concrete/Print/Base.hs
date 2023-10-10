@@ -293,6 +293,7 @@ instance (SingI s) => PrettyPrint (NamedApplication s) where
 instance (SingI s) => PrettyPrint (RecordStatement s) where
   ppCode = \case
     RecordStatementField f -> ppCode f
+    RecordStatementOperator f -> ppCode f
 
 instance (SingI s) => PrettyPrint (RecordCreation s) where
   ppCode RecordCreation {..} = do

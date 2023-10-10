@@ -1276,8 +1276,15 @@ rhsRecord = P.label "<constructor record>" $ do
   let _rhsRecordDelim = Irrelevant (l, r)
   return RhsRecord {..}
 
-recordStatement :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (RecordStatement 'Parsed)
-recordStatement = RecordStatementField <$> recordField
+recordStatement :: forall r. (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (RecordStatement 'Parsed)
+recordStatement =
+  RecordStatementOperator <$> operator
+    <|> RecordStatementField <$> recordField
+  where
+    operator :: ParsecS r OperatorSyntaxDef
+    operator = do
+      syn <- kw kwSyntax
+      operatorSyntaxDef syn
 
 pconstructorRhs :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (ConstructorRhs 'Parsed)
 pconstructorRhs =

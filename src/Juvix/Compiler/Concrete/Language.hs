@@ -1635,8 +1635,9 @@ deriving stock instance Ord (NamedApplication 'Parsed)
 
 deriving stock instance Ord (NamedApplication 'Scoped)
 
-newtype RecordStatement (s :: Stage)
+data RecordStatement (s :: Stage)
   = RecordStatementField (RecordField s)
+  | RecordStatementOperator OperatorSyntaxDef
 
 deriving stock instance Show (RecordStatement 'Parsed)
 
@@ -2671,6 +2672,7 @@ _SyntaxAlias f x = case x of
 _RecordStatementField :: Traversal' (RecordStatement s) (RecordField s)
 _RecordStatementField f x = case x of
   RecordStatementField p -> RecordStatementField <$> f p
+  _ -> pure x
 
 scopedIdenName :: Lens' ScopedIden S.Name
 scopedIdenName f n = case n ^. scopedIdenAlias of

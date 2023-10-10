@@ -954,9 +954,12 @@ checkInductiveDef InductiveDef {..} = do
         checkRecordStatements :: [RecordStatement 'Parsed] -> Sem r [RecordStatement 'Scoped]
         checkRecordStatements = \case
           [] -> return []
-          RecordStatementField f : fs -> do
-            f' <- checkField f
-            (RecordStatementField f' :) <$> checkRecordStatements fs
+          f : fs -> case f of
+            RecordStatementOperator d ->
+              (RecordStatementOperator d :) <$> checkRecordStatements fs
+            RecordStatementField d -> do
+              d' <- checkField d
+              (RecordStatementField d' :) <$> checkRecordStatements fs
 
         checkField :: RecordField 'Parsed -> Sem r (RecordField 'Scoped)
         checkField RecordField {..} = do
@@ -1310,14 +1313,21 @@ checkSections sec = do
                           where
                             goRecordStatement :: RecordStatement 'Parsed -> Sem '[State Int] (Statement 'Parsed)
                             goRecordStatement = \case
-                              RecordStatementField f -> do
-                                idx <- get
-                                let s = mkProjection (Indexed idx f)
-                                incFieldIx
-                                return (StatementProjectionDef s)
-                                where
-                                  incFieldIx :: Sem '[State Int] ()
-                                  incFieldIx = modify' @Int succ
+                              RecordStatementOperator f -> StatementSyntax . SyntaxOperator <$> goOperator f
+                              RecordStatementField f -> goField f
+                              where
+                                goOperator :: OperatorSyntaxDef -> Sem '[State Int] OperatorSyntaxDef
+                                goOperator = pure
+
+                                goField :: RecordField 'Parsed -> Sem '[State Int] (Statement 'Parsed)
+                                goField f = do
+                                  idx <- get
+                                  let s = mkProjection (Indexed idx f)
+                                  incFieldIx
+                                  return (StatementProjectionDef s)
+                                  where
+                                    incFieldIx :: Sem '[State Int] ()
+                                    incFieldIx = modify' @Int succ
 
                             mkProjection ::
                               Indexed (RecordField 'Parsed) ->
