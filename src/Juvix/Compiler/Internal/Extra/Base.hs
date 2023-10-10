@@ -189,6 +189,18 @@ instance HasExpressions MutualStatement where
   leafExpressions f = \case
     StatementFunction d -> StatementFunction <$> leafExpressions f d
     StatementInductive d -> StatementInductive <$> leafExpressions f d
+    StatementAxiom d -> StatementAxiom <$> leafExpressions f d
+
+instance HasExpressions AxiomDef where
+  leafExpressions f AxiomDef {..} = do
+    ty' <- leafExpressions f _axiomType
+    pure
+      AxiomDef
+        { _axiomType = ty',
+          _axiomName,
+          _axiomBuiltin,
+          _axiomPragmas
+        }
 
 instance HasExpressions InductiveParameter where
   leafExpressions _ param@InductiveParameter {} = do

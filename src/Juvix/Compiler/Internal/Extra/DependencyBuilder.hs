@@ -89,7 +89,7 @@ goModuleNoVisited :: forall r. (Members '[Reader ExportsTable, State DependencyG
 goModuleNoVisited (ModuleIndex m) = do
   checkStartNode (m ^. moduleName)
   let b = m ^. moduleBody
-  mapM_ (goStatement (m ^. moduleName)) (b ^. moduleStatements)
+  mapM_ (goMutual (m ^. moduleName)) (b ^. moduleStatements)
   mapM_ goImport (b ^. moduleImports)
 
 goImport :: (Members '[Reader ExportsTable, State DependencyGraph, State StartNodes, Visit ModuleIndex] r) => Import -> Sem r ()
@@ -105,11 +105,6 @@ goPreModule m = do
   -- added from definitions in M to definitions in N)
   mapM_ goImport (b ^. moduleImports)
 
-goStatement :: forall r. (Members '[Reader ExportsTable, State DependencyGraph, State StartNodes] r) => Name -> Statement -> Sem r ()
-goStatement parentModule = \case
-  StatementAxiom ax -> goAxiom parentModule ax
-  StatementMutual f -> goMutual parentModule f
-
 goMutual :: forall r. (Members '[Reader ExportsTable, State DependencyGraph, State StartNodes] r) => Name -> MutualBlock -> Sem r ()
 goMutual parentModule (MutualBlock s) = mapM_ go s
   where
@@ -117,6 +112,7 @@ goMutual parentModule (MutualBlock s) = mapM_ go s
     go = \case
       StatementInductive i -> goInductive parentModule i
       StatementFunction i -> goTopFunctionDef parentModule i
+      StatementAxiom ax -> goAxiom parentModule ax
 
 goPreLetStatement ::
   forall r.

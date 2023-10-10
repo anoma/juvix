@@ -275,6 +275,7 @@ instance PrettyCode MutualStatement where
   ppCode = \case
     StatementInductive d -> ppCode d
     StatementFunction d -> ppCode d
+    StatementAxiom d -> ppCode d
 
 instance PrettyCode MutualBlock where
   ppCode (MutualBlock funs) = ppMutual funs
@@ -282,11 +283,6 @@ instance PrettyCode MutualBlock where
 instance PrettyCode MutualBlockLet where
   ppCode (MutualBlockLet funs) =
     vsep2 <$> mapM ppCode funs
-
-instance PrettyCode Statement where
-  ppCode = \case
-    StatementMutual f -> ppCode f
-    StatementAxiom f -> ppCode f
 
 instance PrettyCode ModuleBody where
   ppCode m = do
