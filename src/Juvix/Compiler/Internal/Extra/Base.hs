@@ -162,16 +162,22 @@ subsHoles s = over leafExpressions helper
 instance HasExpressions Example where
   leafExpressions f = traverseOf exampleExpression (leafExpressions f)
 
+instance HasExpressions DefaultSignature where
+  leafExpressions f (DefaultSignature a) =
+    DefaultSignature <$> traverse (traverse (leafExpressions f)) a
+
 instance HasExpressions FunctionDef where
   leafExpressions f FunctionDef {..} = do
     body' <- leafExpressions f _funDefBody
     ty' <- leafExpressions f _funDefType
     examples' <- traverse (leafExpressions f) _funDefExamples
+    defaults' <- leafExpressions f _funDefDefaultSignature
     pure
       FunctionDef
         { _funDefBody = body',
           _funDefType = ty',
           _funDefExamples = examples',
+          _funDefDefaultSignature = defaults',
           _funDefTerminating,
           _funDefInstance,
           _funDefName,
@@ -567,6 +573,14 @@ freshVar _nameLoc n = do
         _nameFixity = Nothing,
         _nameLoc
       }
+
+genWildcard :: forall r'. (Members '[NameIdGen] r') => Interval -> IsImplicit -> Sem r' PatternArg
+genWildcard loc impl = do
+  var <- varFromWildcard (Wildcard loc)
+  return (PatternArg impl Nothing (PatternVariable var))
+
+freshWildcard :: (Members '[NameIdGen] r) => Interval -> Sem r Hole
+freshWildcard l = mkHole l <$> freshNameId
 
 freshHole :: (Members '[NameIdGen] r) => Interval -> Sem r Hole
 freshHole l = mkHole l <$> freshNameId

@@ -38,6 +38,7 @@ iniScoperState =
       _scoperModules = mempty,
       _scoperScope = mempty,
       _scoperSignatures = mempty,
+      _scoperScopedSignatures = mempty,
       _scoperRecordFields = mempty,
       _scoperAlias = mempty,
       _scoperConstructorFields = mempty
@@ -186,7 +187,7 @@ freshSymbol _nameKind _nameConcrete = do
 reserveSymbolSignatureOf ::
   forall (k :: NameKind) r d.
   ( Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder] r,
-    HasNameSignature d,
+    HasNameSignature 'Parsed d,
     SingI (NameKindNameSpace k)
   ) =>
   Sing k ->
@@ -197,6 +198,13 @@ reserveSymbolSignatureOf k d s = do
   sig <- mkNameSignature d
   reserveSymbolOf k (Just sig) s
 
+registerDefaultArgs ::
+  (Members '[State ScoperState, Error ScoperError] r, HasNameSignature 'Scoped d) =>
+  S.NameId ->
+  d ->
+  Sem r ()
+registerDefaultArgs uid = mkNameSignature >=> modify . (set (scoperScopedSignatures . at uid)) . Just
+
 reserveSymbolOf ::
   forall (nameKind :: NameKind) (ns :: NameSpace) r.
   ( Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder] r,
@@ -204,7 +212,7 @@ reserveSymbolOf ::
     SingI ns
   ) =>
   Sing nameKind ->
-  Maybe NameSignature ->
+  Maybe (NameSignature 'Parsed) ->
   Symbol ->
   Sem r S.Symbol
 reserveSymbolOf k nameSig s = do
@@ -798,32 +806,46 @@ checkFunctionDef ::
   Sem r (FunctionDef 'Scoped)
 checkFunctionDef FunctionDef {..} = do
   sigName' <- bindFunctionSymbol _signName
+  topScope <- get
   sigDoc' <- mapM checkJudoc _signDoc
   (args', sigType', sigBody') <- withLocalScope $ do
-    a' <- mapM checkArg _signArgs
+    a' <- mapM (checkArg topScope) _signArgs
     t' <- mapM checkParseExpressionAtoms _signRetType
     b' <- checkBody
     return (a', t', b')
-  registerFunctionDef
-    @$> FunctionDef
-      { _signName = sigName',
-        _signRetType = sigType',
-        _signDoc = sigDoc',
-        _signBody = sigBody',
-        _signArgs = args',
-        ..
-      }
+  let def =
+        FunctionDef
+          { _signName = sigName',
+            _signRetType = sigType',
+            _signDoc = sigDoc',
+            _signBody = sigBody',
+            _signArgs = args',
+            ..
+          }
+  registerDefaultArgs (sigName' ^. S.nameId) def
+  registerFunctionDef @$> def
   where
-    checkArg :: SigArg 'Parsed -> Sem r (SigArg 'Scoped)
-    checkArg SigArg {..} = do
+    checkArg :: Scope -> SigArg 'Parsed -> Sem r (SigArg 'Scoped)
+    checkArg topScope arg@SigArg {..} = do
       names' <- forM _sigArgNames $ \case
         ArgumentSymbol s -> ArgumentSymbol <$> bindVariableSymbol s
         ArgumentWildcard w -> return $ ArgumentWildcard w
       ty' <- mapM checkParseExpressionAtoms _sigArgType
+      default' <- case _sigArgDefault of
+        Nothing -> return Nothing
+        Just ArgDefault {..} ->
+          let err = throw (ErrWrongDefaultValue WrongDefaultValue {_wrongDefaultValue = arg})
+           in case _sigArgImplicit of
+                Explicit -> err
+                ImplicitInstance -> err
+                Implicit -> do
+                  val' <- withScope topScope (checkParseExpressionAtoms _argDefaultValue)
+                  return (Just ArgDefault {_argDefaultValue = val', ..})
       return
         SigArg
           { _sigArgNames = names',
             _sigArgType = ty',
+            _sigArgDefault = default',
             ..
           }
     checkBody :: Sem r (FunctionDefBody 'Scoped)
@@ -881,20 +903,24 @@ checkInductiveDef InductiveDef {..} = do
             | (cname, cdef) <- zipExact (toList constructorNames') (toList _inductiveConstructors)
           ]
     return (inductiveParameters', inductiveType', inductiveDoc', inductiveConstructors')
-  registerInductive
-    @$> InductiveDef
-      { _inductiveName = inductiveName',
-        _inductiveDoc = inductiveDoc',
-        _inductivePragmas = _inductivePragmas,
-        _inductiveParameters = inductiveParameters',
-        _inductiveType = inductiveType',
-        _inductiveConstructors = inductiveConstructors',
-        _inductiveBuiltin,
-        _inductivePositive,
-        _inductiveTrait,
-        _inductiveAssignKw,
-        _inductiveKw
-      }
+  let indDef =
+        InductiveDef
+          { _inductiveName = inductiveName',
+            _inductiveDoc = inductiveDoc',
+            _inductivePragmas = _inductivePragmas,
+            _inductiveParameters = inductiveParameters',
+            _inductiveType = inductiveType',
+            _inductiveConstructors = inductiveConstructors',
+            _inductiveBuiltin,
+            _inductivePositive,
+            _inductiveTrait,
+            _inductiveAssignKw,
+            _inductiveKw
+          }
+  registerDefaultArgs (inductiveName' ^. S.nameId) indDef
+  forM_ inductiveConstructors' $ \c ->
+    registerDefaultArgs (c ^. constructorName . S.nameId) (indDef, c)
+  registerInductive @$> indDef
   where
     -- note that the constructor name is not bound here
     checkConstructorDef :: S.Symbol -> S.Symbol -> ConstructorDef 'Parsed -> Sem r (ConstructorDef 'Scoped)
@@ -1050,6 +1076,14 @@ withTopScope ma = do
           before
   put scope'
   ma
+
+withScope :: (Members '[State Scope] r) => Scope -> Sem r a -> Sem r a
+withScope scope ma = do
+  before <- get @Scope
+  put scope
+  x <- ma
+  put before
+  return x
 
 withLocalScope :: (Members '[State Scope] r) => Sem r a -> Sem r a
 withLocalScope ma = do
@@ -1631,7 +1665,9 @@ checkAxiomDef AxiomDef {..} = do
   axiomType' <- withLocalScope (checkParseExpressionAtoms _axiomType)
   axiomName' <- bindAxiomSymbol _axiomName
   axiomDoc' <- withLocalScope (mapM checkJudoc _axiomDoc)
-  registerAxiom @$> AxiomDef {_axiomName = axiomName', _axiomType = axiomType', _axiomDoc = axiomDoc', ..}
+  let a = AxiomDef {_axiomName = axiomName', _axiomType = axiomType', _axiomDoc = axiomDoc', ..}
+  registerDefaultArgs (a ^. axiomName . S.nameId) a
+  registerAxiom @$> a
 
 entryToSymbol :: forall (ns :: NameSpace). (SingI ns) => NameSpaceEntryType ns -> Symbol -> S.Symbol
 entryToSymbol sentry csym = set S.nameConcrete csym (sentry ^. nsEntry)
@@ -1735,7 +1771,7 @@ checkRecordPattern r = do
       RecordPatternItemFieldPun a -> RecordPatternItemFieldPun <$> checkPun a
       where
         findField :: Symbol -> Sem r' Int
-        findField f = fromMaybeM (throw err) (asks (^? recordNames . at f . _Just . _2))
+        findField f = fromMaybeM (throw err) (asks (^? recordNames . at f . _Just . nameItemIndex))
           where
             err :: ScoperError
             err = ErrUnexpectedField (UnexpectedField f)
@@ -2171,7 +2207,7 @@ checkUpdateField ::
   Sem r (RecordUpdateField 'Scoped)
 checkUpdateField sig f = do
   value' <- checkParseExpressionAtoms (f ^. fieldUpdateValue)
-  idx' <- maybe (throw unexpectedField) return (sig ^? recordNames . at (f ^. fieldUpdateName) . _Just . _2)
+  idx' <- maybe (throw unexpectedField) return (sig ^? recordNames . at (f ^. fieldUpdateName) . _Just . nameItemIndex)
   return
     RecordUpdateField
       { _fieldUpdateName = f ^. fieldUpdateName,
@@ -2200,6 +2236,7 @@ checkNamedApplication napp = do
           _namedArgAssignKw = n ^. namedArgAssignKw
       _namedArgValue <- checkParseExpressionAtoms (n ^. namedArgValue)
       return NamedArgument {..}
+
     checkArgumentBlock :: ArgumentBlock 'Parsed -> Sem r (ArgumentBlock 'Scoped)
     checkArgumentBlock b = do
       let _argBlockDelims = b ^. argBlockDelims
@@ -2227,7 +2264,7 @@ getRecordInfo' loc name nameId =
     err :: Sem r a
     err = throw (ErrNotARecord (NotARecord name loc))
 
-getNameSignature :: (Members '[State ScoperState, Error ScoperError] r) => ScopedIden -> Sem r NameSignature
+getNameSignature :: (Members '[State ScoperState, Error ScoperError] r) => ScopedIden -> Sem r (NameSignature 'Parsed)
 getNameSignature s = do
   sig <- maybeM (throw err) return (lookupNameSignature (s ^. scopedIdenFinal . S.nameId))
   when (null (sig ^. nameSignatureArgs)) (throw err)
@@ -2235,7 +2272,7 @@ getNameSignature s = do
   where
     err = ErrNoNameSignature (NoNameSignature s)
 
-lookupNameSignature :: (Members '[State ScoperState] r) => S.NameId -> Sem r (Maybe NameSignature)
+lookupNameSignature :: (Members '[State ScoperState] r) => S.NameId -> Sem r (Maybe (NameSignature 'Parsed))
 lookupNameSignature s = gets (^. scoperSignatures . at s)
 
 checkIterator ::

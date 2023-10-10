@@ -13,6 +13,7 @@
         - DataKinds
         - DerivingStrategies
         - GADTs
+        - FunctionalDependencies
         - ImportQualifiedPost
         - LambdaCase
         - NoImplicitPrelude

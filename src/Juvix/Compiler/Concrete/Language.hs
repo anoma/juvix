@@ -24,7 +24,6 @@ import Juvix.Compiler.Concrete.Data.Literal
 import Juvix.Compiler.Concrete.Data.ModuleIsTop
 import Juvix.Compiler.Concrete.Data.Name
 import Juvix.Compiler.Concrete.Data.NameRef
-import Juvix.Compiler.Concrete.Data.NameSignature.Base
 import Juvix.Compiler.Concrete.Data.NameSpace
 import Juvix.Compiler.Concrete.Data.PublicAnn
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
@@ -123,7 +122,7 @@ type family RecordNameSignatureType s = res | res -> s where
 type NameSignatureType :: Stage -> GHC.Type
 type family NameSignatureType s = res | res -> s where
   NameSignatureType 'Parsed = ()
-  NameSignatureType 'Scoped = NameSignature
+  NameSignatureType 'Scoped = NameSignature 'Scoped
 
 type ModulePathType :: Stage -> ModuleIsTop -> GHC.Type
 type family ModulePathType s t = res | res -> t s where
@@ -148,6 +147,28 @@ type family ModuleEndType t = res | res -> t where
 -- pretty-printing. Also, we probably don't want to impose pragma formatting
 -- choices on the user.
 type ParsedPragmas = WithLoc (WithSource Pragmas)
+
+data NameItem (s :: Stage) = NameItem
+  { _nameItemSymbol :: Symbol,
+    _nameItemIndex :: Int,
+    _nameItemDefault :: Maybe (ArgDefault s)
+  }
+
+data NameBlock (s :: Stage) = NameBlock
+  { -- | Symbols map to themselves so we can retrive the location
+    -- | NOTE the index is wrt to the block, not the whole signature.
+    _nameBlock :: HashMap Symbol (NameItem s),
+    _nameImplicit :: IsImplicit
+  }
+
+-- | Two consecutive blocks should have different implicitness
+newtype NameSignature (s :: Stage) = NameSignature
+  { _nameSignatureArgs :: [NameBlock s]
+  }
+
+newtype RecordNameSignature = RecordNameSignature
+  { _recordNames :: HashMap Symbol (NameItem 'Parsed)
+  }
 
 data Argument (s :: Stage)
   = ArgumentSymbol (SymbolType s)
@@ -386,6 +407,23 @@ data IteratorSyntaxDef = IteratorSyntaxDef
 instance HasLoc IteratorSyntaxDef where
   getLoc IteratorSyntaxDef {..} = getLoc _iterSyntaxKw <> getLoc _iterSymbol
 
+data ArgDefault (s :: Stage) = ArgDefault
+  { _argDefaultAssign :: Irrelevant KeywordRef,
+    _argDefaultValue :: ExpressionType s
+  }
+
+deriving stock instance Show (ArgDefault 'Parsed)
+
+deriving stock instance Show (ArgDefault 'Scoped)
+
+deriving stock instance Eq (ArgDefault 'Parsed)
+
+deriving stock instance Eq (ArgDefault 'Scoped)
+
+deriving stock instance Ord (ArgDefault 'Parsed)
+
+deriving stock instance Ord (ArgDefault 'Scoped)
+
 data SigArg (s :: Stage) = SigArg
   { _sigArgDelims :: Irrelevant (KeywordRef, KeywordRef),
     _sigArgImplicit :: IsImplicit,
@@ -394,7 +432,8 @@ data SigArg (s :: Stage) = SigArg
     _sigArgColon :: Maybe (Irrelevant KeywordRef),
     -- | The type is only optional for implicit arguments. Omitting the rhs is
     -- equivalent to writing `: Type`.
-    _sigArgType :: Maybe (ExpressionType s)
+    _sigArgType :: Maybe (ExpressionType s),
+    _sigArgDefault :: Maybe (ArgDefault s)
   }
 
 deriving stock instance Show (SigArg 'Parsed)
@@ -1541,14 +1580,12 @@ data RecordUpdateExtra = RecordUpdateExtra
     _recordUpdateExtraVars :: [S.Symbol],
     _recordUpdateExtraSignature :: RecordNameSignature
   }
-  deriving stock (Show)
 
 data RecordCreationExtra = RecordCreationExtra
   { -- | Implicitly bound fields sorted by index
     _recordCreationExtraVars :: [S.Symbol],
     _recordCreationExtraSignature :: RecordNameSignature
   }
-  deriving stock (Show)
 
 newtype ParensRecordUpdate = ParensRecordUpdate
   { _parensRecordUpdate :: RecordUpdate 'Scoped
@@ -1583,8 +1620,7 @@ data RecordUpdateApp = RecordUpdateApp
 
 data NamedApplication (s :: Stage) = NamedApplication
   { _namedAppName :: IdentifierType s,
-    _namedAppArgs :: NonEmpty (ArgumentBlock s),
-    _namedAppSignature :: Irrelevant (NameSignatureType s)
+    _namedAppArgs :: NonEmpty (ArgumentBlock s)
   }
 
 deriving stock instance Show (NamedApplication 'Parsed)
@@ -1842,6 +1878,7 @@ makeLenses ''IteratorSyntaxDef
 makeLenses ''ConstructorDef
 makeLenses ''Module
 makeLenses ''SigArg
+makeLenses ''ArgDefault
 makeLenses ''FunctionDef
 makeLenses ''AxiomDef
 makeLenses ''ExportInfo
@@ -1872,6 +1909,10 @@ makeLenses ''AliasDef
 makeLenses ''FixitySyntaxDef
 makeLenses ''ParsedFixityInfo
 makeLenses ''ParsedFixityFields
+makeLenses ''NameSignature
+makeLenses ''RecordNameSignature
+makeLenses ''NameBlock
+makeLenses ''NameItem
 
 fixityFieldHelper :: SimpleGetter (ParsedFixityFields s) (Maybe a) -> SimpleGetter (ParsedFixityInfo s) (Maybe a)
 fixityFieldHelper l = to (^? fixityFields . _Just . l . _Just)
@@ -2171,6 +2212,9 @@ getLocExpressionType :: forall s. (SingI s) => ExpressionType s -> Interval
 getLocExpressionType = case sing :: SStage s of
   SParsed -> getLoc
   SScoped -> getLoc
+
+instance (SingI s) => HasLoc (ArgDefault s) where
+  getLoc ArgDefault {..} = getLoc _argDefaultAssign <> getLocExpressionType _argDefaultValue
 
 instance HasLoc (SigArg s) where
   getLoc SigArg {..} = getLoc l <> getLoc r

@@ -50,6 +50,7 @@ data ScoperError
   | ErrIncomparablePrecedences IncomaprablePrecedences
   | ErrAliasCycle AliasCycle
   | ErrInvalidRangeNumber InvalidRangeNumber
+  | ErrWrongDefaultValue WrongDefaultValue
   | ErrUnsupported Unsupported
 
 instance ToGenericError ScoperError where
@@ -92,4 +93,5 @@ instance ToGenericError ScoperError where
     ErrIncomparablePrecedences e -> genericError e
     ErrAliasCycle e -> genericError e
     ErrInvalidRangeNumber e -> genericError e
+    ErrWrongDefaultValue e -> genericError e
     ErrUnsupported e -> genericError e

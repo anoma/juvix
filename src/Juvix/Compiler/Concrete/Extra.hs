@@ -10,13 +10,13 @@ module Juvix.Compiler.Concrete.Extra
     getExpressionAtomIden,
     getPatternAtomIden,
     isBodyExpression,
+    symbolParsed,
   )
 where
 
 import Data.HashMap.Strict qualified as HashMap
 import Data.IntMap.Strict qualified as IntMap
 import Data.List.NonEmpty qualified as NonEmpty
-import Juvix.Compiler.Concrete.Data.NameSignature.Base
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Language
 import Juvix.Prelude hiding (some)
@@ -117,11 +117,6 @@ groupStatements = \case
       StatementFunctionDef d -> n == symbolParsed (d ^. signName)
       _ -> False
       where
-        symbolParsed :: SymbolType s -> Symbol
-        symbolParsed sym = case sing :: SStage s of
-          SParsed -> sym
-          SScoped -> sym ^. S.nameConcrete
-
         syms :: InductiveDef s -> [Symbol]
         syms InductiveDef {..} =
           let constructors = toList _inductiveConstructors
@@ -132,13 +127,21 @@ groupStatements = \case
                     ^. S.nameConcrete
                     : map (^. constructorName . S.nameConcrete) constructors
 
+symbolParsed :: forall s. (SingI s) => SymbolType s -> Symbol
+symbolParsed sym = case sing :: SStage s of
+  SParsed -> sym
+  SScoped -> sym ^. S.nameConcrete
+
 flattenStatement :: Statement s -> [Statement s]
 flattenStatement = \case
   StatementModule m -> concatMap flattenStatement (m ^. moduleBody)
   s -> [s]
 
 recordNameSignatureByIndex :: RecordNameSignature -> IntMap Symbol
-recordNameSignatureByIndex = IntMap.fromList . (^.. recordNames . each . to swap)
+recordNameSignatureByIndex = IntMap.fromList . (^.. recordNames . each . to mkAssoc)
+  where
+    mkAssoc :: NameItem s -> (Int, Symbol)
+    mkAssoc NameItem {..} = (_nameItemIndex, _nameItemSymbol)
 
 getExpressionAtomIden :: ExpressionAtom 'Scoped -> Maybe S.Name
 getExpressionAtomIden = \case

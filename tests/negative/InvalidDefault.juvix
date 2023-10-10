@@ -1,0 +1,3 @@
+module InvalidDefault;
+
+f (x : Type := Type) : Type := x;

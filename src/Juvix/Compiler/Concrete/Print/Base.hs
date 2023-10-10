@@ -10,7 +10,6 @@ where
 import Data.HashMap.Strict qualified as HashMap
 import Data.List.NonEmpty.Extra qualified as NonEmpty
 import Juvix.Compiler.Concrete.Data.InfoTable
-import Juvix.Compiler.Concrete.Data.NameSignature.Base
 import Juvix.Compiler.Concrete.Data.Scope.Base
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Extra qualified as Concrete
@@ -56,15 +55,14 @@ docNoComments :: (PrettyPrint c) => Options -> c -> Doc Ann
 docNoComments = docHelper Nothing
 
 docHelper :: (PrettyPrint c) => Maybe FileComments -> Options -> c -> Doc Ann
-docHelper cs opts x =
+docHelper cs opts =
   run
     . execExactPrint cs
     . runReader opts
     . ppCode
-    $ x
 
 docNoLoc :: (PrettyPrint c) => Options -> c -> Doc Ann
-docNoLoc opts x = docHelper Nothing opts x
+docNoLoc = docHelper Nothing
 
 doc :: (PrettyPrint c, HasLoc c) => Options -> Comments -> c -> Doc Ann
 doc opts cs x = docHelper (Just (fileComments file cs)) opts x
@@ -167,21 +165,27 @@ instance (SingI s) => PrettyPrint (ListPattern s) where
 instance PrettyPrint Void where
   ppCode = absurd
 
-instance PrettyPrint NameBlock where
-  ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => NameBlock -> Sem r ()
+instance (SingI s) => PrettyPrint (NameItem s) where
+  ppCode NameItem {..} = do
+    let defaultVal = do
+          d <- _nameItemDefault
+          return (noLoc C.kwAssign <+> ppExpressionType (d ^. argDefaultValue))
+    ppCode _nameItemSymbol <> ppCode Kw.kwExclamation <> noLoc (pretty _nameItemIndex)
+      <+?> defaultVal
+
+instance (SingI s) => PrettyPrint (NameBlock s) where
+  ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => NameBlock s -> Sem r ()
   ppCode NameBlock {..} = do
     let delims = case _nameImplicit of
           Implicit -> braces
           ImplicitInstance -> doubleBraces
           Explicit -> parens
-        ppElem :: (Symbol, Int) -> Sem r ()
-        ppElem (sym, idx) = ppCode sym <> ppCode Kw.kwExclamation <> noLoc (pretty idx)
-    delims (hsepSemicolon (map ppElem (toList _nameBlock)))
+    delims (hsepSemicolon (map ppCode (toList _nameBlock)))
 
 instance (PrettyPrint a, PrettyPrint b) => PrettyPrint (a, b) where
   ppCode (a, b) = tuple [ppCode a, ppCode b]
 
-instance PrettyPrint NameSignature where
+instance (SingI s) => PrettyPrint (NameSignature s) where
   ppCode NameSignature {..}
     | null _nameSignatureArgs = noLoc (pretty @Text "<empty name signature>")
     | otherwise = hsep . map ppCode $ _nameSignatureArgs
@@ -910,6 +914,10 @@ instance (SingI s) => PrettyPrint (Argument s) where
     ArgumentSymbol s -> ppSymbolType s
     ArgumentWildcard w -> ppCode w
 
+instance (SingI s) => PrettyPrint (ArgDefault s) where
+  ppCode ArgDefault {..} = do
+    ppCode _argDefaultAssign <+> ppExpressionType _argDefaultValue
+
 instance (SingI s) => PrettyPrint (SigArg s) where
   ppCode :: (Members '[ExactPrint, Reader Options] r) => SigArg s -> Sem r ()
   ppCode SigArg {..} = do
@@ -918,9 +926,11 @@ instance (SingI s) => PrettyPrint (SigArg s) where
         colon' = ppCode <$> _sigArgColon
         ty = ppExpressionType <$> _sigArgType
         arg = case _sigArgImplicit of
-          ImplicitInstance | isNothing colon' -> mempty <>? ty
+          ImplicitInstance
+            | isNothing colon' -> mempty <>? ty
           _ -> names' <+?> colon' <+?> ty
-    ppCode l <> arg <> ppCode r
+        defaultVal = ppCode <$> _sigArgDefault
+    ppCode l <> arg <+?> defaultVal <> ppCode r
 
 ppFunctionSignature :: (SingI s) => PrettyPrinting (FunctionDef s)
 ppFunctionSignature FunctionDef {..} = do

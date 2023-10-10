@@ -201,6 +201,13 @@ tests =
       $(mkRelFile "InstanceTermination.juvix")
       $ \case
         ErrTraitNotTerminating {} -> Nothing
+        _ -> wrongError,
+    NegTest
+      "Default value wrong type"
+      $(mkRelDir "Internal")
+      $(mkRelFile "DefaultTypeError.juvix")
+      $ \case
+        ErrWrongType {} -> Nothing
         _ -> wrongError
   ]
 

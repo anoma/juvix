@@ -176,24 +176,45 @@ checkMutualStatement = \case
     return $ StatementAxiom ax
 
 checkFunctionDef ::
+  forall r.
   (Members '[HighlightBuilder, Reader LocalVars, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example, Builtins, Inference, Termination, Output TypedHole] r) =>
   FunctionDef ->
   Sem r FunctionDef
 checkFunctionDef FunctionDef {..} = do
   funDef <- do
     _funDefType' <- checkDefType _funDefType
+    _funDefExamples' <- mapM checkExample _funDefExamples
     registerIdenType _funDefName _funDefType'
     _funDefBody' <- checkExpression _funDefType' _funDefBody
+    let params = fst (unfoldFunType _funDefType')
+    _funDefDefaultSignature' <- checkDefaultValues params
     return
       FunctionDef
         { _funDefBody = _funDefBody',
           _funDefType = _funDefType',
-          ..
+          _funDefExamples = _funDefExamples',
+          _funDefDefaultSignature = _funDefDefaultSignature',
+          _funDefName,
+          _funDefTerminating,
+          _funDefInstance,
+          _funDefBuiltin,
+          _funDefPragmas
         }
   when _funDefInstance $
     checkInstanceType funDef
   registerFunctionDef funDef
-  traverseOf funDefExamples (mapM checkExample) funDef
+  return funDef
+  where
+    -- Since default arguments come from the left of the : then it must be that
+    -- there are at least n FunctionParameter
+    checkDefaultValues :: [FunctionParameter] -> Sem r DefaultSignature
+    checkDefaultValues allparams = DefaultSignature <$> mapM go (zipExact defaults params)
+      where
+        params = take n allparams
+        defaults = _funDefDefaultSignature ^. defaultSignature
+        n = length defaults
+        go :: (Maybe Expression, FunctionParameter) -> Sem r (Maybe Expression)
+        go (me, p) = forM me $ \e' -> checkExpression (p ^. paramType) e'
 
 checkIsType ::
   (Members '[HighlightBuilder, Reader InfoTable, State FunctionsTable, Error TypeCheckerError, NameIdGen, Reader LocalVars, Inference, Builtins, Output Example, State TypesTable, Termination, Output TypedHole] r) =>

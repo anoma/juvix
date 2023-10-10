@@ -5,11 +5,14 @@ module Juvix.Data.Irrelevant where
 import Juvix.Data.Loc
 import Juvix.Prelude.Base
 import Juvix.Prelude.Pretty
+import Prelude (show)
 
 newtype Irrelevant a = Irrelevant
   { _unIrrelevant :: a
   }
-  deriving stock (Show)
+
+instance Show (Irrelevant a) where
+  show = const "Irrelevant {}"
 
 instance (HasLoc a) => HasLoc (Irrelevant a) where
   getLoc (Irrelevant a) = getLoc a
