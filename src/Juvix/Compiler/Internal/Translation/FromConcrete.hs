@@ -650,8 +650,8 @@ goConstructorDef retTy ConstructorDef {..} = do
         _inductiveConstructorPragmas = pragmas'
       }
   where
-    goAdt :: Concrete.RhsAdt 'Scoped -> Sem r Internal.Expression
-    goAdt RhsAdt {..} = do
+    goAdtType :: Concrete.RhsAdt 'Scoped -> Sem r Internal.Expression
+    goAdtType RhsAdt {..} = do
       args <- mapM goArg _rhsAdtArguments
       return (Internal.foldFunType args retTy)
       where
@@ -665,29 +665,32 @@ goConstructorDef retTy ConstructorDef {..} = do
                 _paramType = ty'
               }
 
-    goRecord :: Concrete.RhsRecord 'Scoped -> Sem r Internal.Expression
-    goRecord RhsRecord {..} = do
-      params <- mapM goField _rhsRecordFields
-      return (Internal.foldFunType (toList params) retTy)
+    goRecordType :: Concrete.RhsRecord 'Scoped -> Sem r Internal.Expression
+    goRecordType RhsRecord {..} = do
+      params <- mapMaybeM goRecordStatement _rhsRecordStatements
+      return (Internal.foldFunType params retTy)
       where
-        goField :: Concrete.RecordField 'Scoped -> Sem r Internal.FunctionParameter
-        goField RecordField {..} = do
-          ty' <- goExpression _fieldType
-          return
-            Internal.FunctionParameter
-              { _paramName = Just (goSymbol _fieldName),
-                _paramImplicit = Explicit,
-                _paramType = ty'
-              }
+        goRecordStatement :: Concrete.RecordStatement 'Scoped -> Sem r (Maybe Internal.FunctionParameter)
+        goRecordStatement = \case
+          Concrete.RecordStatementOperator {} -> return Nothing
+          Concrete.RecordStatementField RecordField {..} -> do
+            ty' <- goExpression _fieldType
+            return $
+              Just
+                Internal.FunctionParameter
+                  { _paramName = Just (goSymbol _fieldName),
+                    _paramImplicit = Explicit,
+                    _paramType = ty'
+                  }
 
-    goGadt :: Concrete.RhsGadt 'Scoped -> Sem r Internal.Expression
-    goGadt = goExpression . (^. Concrete.rhsGadtType)
+    goGadtType :: Concrete.RhsGadt 'Scoped -> Sem r Internal.Expression
+    goGadtType = goExpression . (^. Concrete.rhsGadtType)
 
     goRhs :: Concrete.ConstructorRhs 'Scoped -> Sem r Internal.Expression
     goRhs = \case
-      ConstructorRhsGadt r -> goGadt r
-      ConstructorRhsRecord r -> goRecord r
-      ConstructorRhsAdt r -> goAdt r
+      ConstructorRhsGadt r -> goGadtType r
+      ConstructorRhsRecord r -> goRecordType r
+      ConstructorRhsAdt r -> goAdtType r
 
 goLiteral :: LiteralLoc -> Internal.LiteralLoc
 goLiteral = fmap go

@@ -290,6 +290,11 @@ instance (SingI s) => PrettyPrint (NamedApplication s) where
   -- ppCode :: Members '[ExactPrint, Reader Options] r => NamedApplication s -> Sem r ()
   ppCode = apeHelper
 
+instance (SingI s) => PrettyPrint (RecordStatement s) where
+  ppCode = \case
+    RecordStatementField f -> ppCode f
+    RecordStatementOperator f -> ppCode f
+
 instance (SingI s) => PrettyPrint (RecordCreation s) where
   ppCode RecordCreation {..} = do
     let fields'
@@ -1134,14 +1139,14 @@ instance (SingI s) => PrettyPrint (RhsRecord s) where
   ppCode RhsRecord {..} = do
     let Irrelevant (l, r) = _rhsRecordDelim
         fields'
-          | [] <- _rhsRecordFields = mempty
-          | [f] <- _rhsRecordFields = ppCode f
+          | [] <- _rhsRecordStatements = mempty
+          | [f] <- _rhsRecordStatements = ppCode f
           | otherwise =
               hardline
                 <> indent
                   ( sequenceWith
                       (semicolon >> line)
-                      (ppCode <$> _rhsRecordFields)
+                      (ppCode <$> _rhsRecordStatements)
                   )
                 <> hardline
     ppCode l <> fields' <> ppCode r

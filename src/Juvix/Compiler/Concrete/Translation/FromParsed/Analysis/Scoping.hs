@@ -944,27 +944,36 @@ checkInductiveDef InductiveDef {..} = do
 
     checkRecord :: RhsRecord 'Parsed -> Sem r (RhsRecord 'Scoped)
     checkRecord RhsRecord {..} = do
-      fields' <- checkFields _rhsRecordFields
+      fields' <- checkRecordStatements _rhsRecordStatements
       return
         RhsRecord
-          { _rhsRecordFields = fields',
+          { _rhsRecordStatements = fields',
             _rhsRecordDelim
           }
       where
-        checkFields :: [RecordField 'Parsed] -> Sem r [RecordField 'Scoped]
-        checkFields = \case
+        checkRecordStatements :: [RecordStatement 'Parsed] -> Sem r [RecordStatement 'Scoped]
+        checkRecordStatements = \case
           [] -> return []
-          RecordField {..} : fs -> do
-            type' <- checkParseExpressionAtoms _fieldType
-            withLocalScope $ do
-              name' <- bindVariableSymbol _fieldName
-              let f =
-                    RecordField
-                      { _fieldType = type',
-                        _fieldName = name',
-                        ..
-                      }
-              (f :) <$> checkFields fs
+          f : fs -> case f of
+            RecordStatementOperator d ->
+              (RecordStatementOperator d :) <$> checkRecordStatements fs
+            RecordStatementField d -> do
+              d' <- checkField d
+              (RecordStatementField d' :) <$> checkRecordStatements fs
+
+        checkField :: RecordField 'Parsed -> Sem r (RecordField 'Scoped)
+        checkField RecordField {..} = do
+          type' <- checkParseExpressionAtoms _fieldType
+          -- Since we don't allow dependent types in constructor types, each
+          -- field is checked with a local scope
+          withLocalScope $ do
+            name' <- bindVariableSymbol _fieldName
+            return
+              RecordField
+                { _fieldType = type',
+                  _fieldName = name',
+                  ..
+                }
 
     checkAdt :: RhsAdt 'Parsed -> Sem r (RhsAdt 'Scoped)
     checkAdt RhsAdt {..} = do
@@ -1300,9 +1309,27 @@ checkSections sec = do
                       where
                         genFieldProjections :: Sem (Fail ': s') [Statement 'Parsed]
                         genFieldProjections = do
-                          fs <- indexFrom 0 . toList <$> getFields
-                          return (map (StatementProjectionDef . mkProjection) fs)
+                          fs <- toList <$> getFields
+                          return . run . evalState 0 $ mapM goRecordStatement fs
                           where
+                            goRecordStatement :: RecordStatement 'Parsed -> Sem '[State Int] (Statement 'Parsed)
+                            goRecordStatement = \case
+                              RecordStatementOperator f -> StatementSyntax . SyntaxOperator <$> goOperator f
+                              RecordStatementField f -> goField f
+                              where
+                                goOperator :: OperatorSyntaxDef -> Sem '[State Int] OperatorSyntaxDef
+                                goOperator = pure
+
+                                goField :: RecordField 'Parsed -> Sem '[State Int] (Statement 'Parsed)
+                                goField f = do
+                                  idx <- get
+                                  let s = mkProjection (Indexed idx f)
+                                  incFieldIx
+                                  return (StatementProjectionDef s)
+                                  where
+                                    incFieldIx :: Sem '[State Int] ()
+                                    incFieldIx = modify' @Int succ
+
                             mkProjection ::
                               Indexed (RecordField 'Parsed) ->
                               ProjectionDef 'Parsed
@@ -1313,10 +1340,10 @@ checkSections sec = do
                                   _projectionFieldIx = idx
                                 }
 
-                            getFields :: Sem (Fail ': s') [RecordField 'Parsed]
+                            getFields :: Sem (Fail ': s') [RecordStatement 'Parsed]
                             getFields = case i ^. inductiveConstructors of
                               c :| [] -> case c ^. constructorRhs of
-                                ConstructorRhsRecord r -> return (r ^. rhsRecordFields)
+                                ConstructorRhsRecord r -> return (r ^. rhsRecordStatements)
                                 _ -> fail
                               _ -> fail
 
@@ -2165,7 +2192,7 @@ checkDefineField ::
   RecordDefineField 'Parsed ->
   Sem r (RecordDefineField 'Scoped)
 checkDefineField sig RecordDefineField {..} = do
-  def <- localBindings $ ignoreSyntax $ checkFunctionDef _fieldDefineFunDef
+  def <- localBindings . ignoreSyntax $ checkFunctionDef _fieldDefineFunDef
   iden <- checkScopedIden _fieldDefineIden
   let fname = def ^. signName . nameConcrete
   unless (HashMap.member fname (sig ^. recordNames)) $

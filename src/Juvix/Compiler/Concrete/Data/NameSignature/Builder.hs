@@ -56,10 +56,12 @@ instance (SingI s) => HasNameSignature s (InductiveDef s, ConstructorDef s) wher
     addRhs (c ^. constructorRhs)
     where
       addRecord :: RhsRecord s -> Sem r ()
-      addRecord RhsRecord {..} = mapM_ addField _rhsRecordFields
+      addRecord RhsRecord {..} = mapM_ addField _rhsRecordStatements
         where
-          addField :: RecordField s -> Sem r ()
-          addField RecordField {..} = addSymbol @s Explicit Nothing (symbolParsed _fieldName)
+          addField :: RecordStatement s -> Sem r ()
+          addField = \case
+            RecordStatementField RecordField {..} -> addSymbol @s Explicit Nothing (symbolParsed _fieldName)
+            RecordStatementOperator {} -> return ()
       addRhs :: ConstructorRhs s -> Sem r ()
       addRhs = \case
         ConstructorRhsGadt g -> addExpressionType (g ^. rhsGadtType)
@@ -212,6 +214,8 @@ mkRecordNameSignature :: RhsRecord 'Parsed -> RecordNameSignature
 mkRecordNameSignature rhs =
   RecordNameSignature
     ( HashMap.fromList
-        [ (s, NameItem s idx Nothing) | (Indexed idx field) <- indexFrom 0 (toList (rhs ^. rhsRecordFields)), let s = field ^. fieldName
+        [ (s, (NameItem s idx Nothing))
+          | (Indexed idx field) <- indexFrom 0 (toList (rhs ^.. rhsRecordStatements . each . _RecordStatementField)),
+            let s = field ^. fieldName
         ]
     )
