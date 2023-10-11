@@ -964,7 +964,8 @@ checkInductiveDef InductiveDef {..} = do
         checkField :: RecordField 'Parsed -> Sem r (RecordField 'Scoped)
         checkField RecordField {..} = do
           type' <- checkParseExpressionAtoms _fieldType
-          -- TODO local scope??
+          -- Since we don't allow dependent types in constructor types, each
+          -- field is checked with a local scope
           withLocalScope $ do
             name' <- bindVariableSymbol _fieldName
             return
