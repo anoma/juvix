@@ -30,9 +30,13 @@ isConstructorTree c node = case run $ runFail $ go mempty node of
 
     go :: (Member Fail r) => HashMap Tag Int -> Node -> Sem r (HashMap Tag Int)
     go ctrs = \case
-      NCtr Constr {..} -> return $ HashMap.alter (Just . maybe 1 (+ 1)) _constrTag ctrs
-      NCase Case {..} -> foldM go ctrs (map (^. caseBranchBody) _caseBranches)
-      _ -> fail
+      NCtr Constr {..} ->
+        return $ HashMap.alter (Just . maybe 1 (+ 1)) _constrTag ctrs
+      NCase Case {..} -> do
+        ctrs' <- maybe (return ctrs) (go ctrs) _caseDefault
+        foldM go ctrs' (map (^. caseBranchBody) _caseBranches)
+      _ ->
+        fail
 
 convertNode :: Node -> Node
 convertNode = dmap go
