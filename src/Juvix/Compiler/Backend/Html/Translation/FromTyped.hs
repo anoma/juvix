@@ -39,7 +39,9 @@ data JudocArgs = JudocArgs
     _judocArgsCtx :: InternalTypedResult,
     _judocArgsTheme :: Theme,
     _judocArgsNonRecursive :: Bool,
-    _judocArgsNoFooter :: Bool
+    _judocArgsNoFooter :: Bool,
+    _judocArgsIdPrefix :: Text,
+    _judocArgsNoPath :: Bool
   }
 
 makeLenses ''JudocArgs
@@ -190,9 +192,12 @@ genJudocHtml JudocArgs {..} =
           _htmlOptionsAssetsPrefix = _judocArgsAssetsPrefix,
           _htmlOptionsOutputDir = _judocArgsOutputDir,
           _htmlOptionsUrlPrefix = _judocArgsUrlPrefix,
+          _htmlOptionsIdPrefix = _judocArgsIdPrefix,
           _htmlOptionsParamBase = _judocArgsBaseName,
           _htmlOptionsTheme = _judocArgsTheme,
-          _htmlOptionsNoFooter = _judocArgsNoFooter
+          _htmlOptionsNoFooter = _judocArgsNoFooter,
+          _htmlOptionsOnlyCode = False,
+          _htmlOptionsNoPath = _judocArgsNoPath
         }
 
     allModules

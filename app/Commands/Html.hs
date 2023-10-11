@@ -22,9 +22,12 @@ runGenOnlySourceHtml HtmlOptions {..} = do
     Html.genSourceHtml
       GenSourceHtmlArgs
         { _genSourceHtmlArgsAssetsDir = _htmlAssetsPrefix,
-          _genSourceHtmlArgsHtmlKind = Html.HtmlSrc,
+          _genSourceHtmlArgsHtmlKind = Html.HtmlOnly,
+          _genSourceHtmlArgsOnlyCode = _htmlOnlyCode,
           _genSourceHtmlArgsParamBase = "",
           _genSourceHtmlArgsUrlPrefix = _htmlUrlPrefix,
+          _genSourceHtmlArgsIdPrefix = _htmlIdPrefix,
+          _genSourceHtmlArgsNoPath = _htmlNoPath,
           _genSourceHtmlArgsConcreteOpts = Concrete.defaultOptions,
           _genSourceHtmlArgsModule = m,
           _genSourceHtmlArgsComments = res ^. comments,
@@ -47,9 +50,11 @@ runCommand HtmlOptions {..}
             _judocArgsCtx = ctx,
             _judocArgsOutputDir = outputDir,
             _judocArgsUrlPrefix = _htmlUrlPrefix,
+            _judocArgsIdPrefix = _htmlIdPrefix,
             _judocArgsTheme = _htmlTheme,
             _judocArgsNonRecursive = _htmlNonRecursive,
-            _judocArgsNoFooter = _htmlNoFooter
+            _judocArgsNoFooter = _htmlNoFooter,
+            _judocArgsNoPath = _htmlNoPath
           }
       when _htmlOpen $ case openCmd of
         Nothing -> say "Could not recognize the 'open' command for your OS"
