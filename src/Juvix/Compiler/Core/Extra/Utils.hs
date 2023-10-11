@@ -100,6 +100,11 @@ isImmediate tab = \case
   NVar {} -> True
   NIdt {} -> True
   NCst {} -> True
+  NCtr Constr {..}
+    | Just ci <- lookupConstructorInfo' tab _constrTag ->
+        let paramsNum = length (takeWhile (isTypeConstr tab) (typeArgs (ci ^. constructorType)))
+         in length _constrArgs <= paramsNum
+    | otherwise -> all (isType tab mempty) _constrArgs
   node@(NApp {}) ->
     let (h, args) = unfoldApps' node
      in case h of

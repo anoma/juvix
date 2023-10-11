@@ -5,25 +5,26 @@ import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Transformation.Base
 
-isConstructorTree :: Case -> Node -> Bool
-isConstructorTree c node = case run $ runFail $ go mempty node of
+isConstructorTree :: InfoTable -> Case -> Node -> Bool
+isConstructorTree tab c node = case run $ runFail $ go mempty node of
   Just ctrsMap ->
     all (checkOne ctrsMap) tags && checkDefault ctrsMap (c ^. caseDefault)
   Nothing -> False
   where
     tags = map (^. caseBranchTag) (c ^. caseBranches)
+    tagMap = HashMap.fromList (map (\br -> (br ^. caseBranchTag, br ^. caseBranchBody)) (c ^. caseBranches))
 
     checkOne :: HashMap Tag Int -> Tag -> Bool
     checkOne ctrsMap tag = case HashMap.lookup tag ctrsMap of
       Just 1 -> True
       Nothing -> True
-      _ -> {- isImmediate -} False
+      _ -> isImmediate tab (fromJust $ HashMap.lookup tag tagMap)
 
     checkDefault :: HashMap Tag Int -> Maybe Node -> Bool
     checkDefault ctrsMap = \case
-      Just {} ->
-        -- or isImmediate
+      Just d ->
         sum (HashMap.filterWithKey (\k _ -> not (HashSet.member k tags')) ctrsMap) <= 1
+          || isImmediate tab d
         where
           tags' = HashSet.fromList tags
       Nothing -> True
@@ -38,14 +39,14 @@ isConstructorTree c node = case run $ runFail $ go mempty node of
       _ ->
         fail
 
-convertNode :: Node -> Node
-convertNode = dmap go
+convertNode :: InfoTable -> Node -> Node
+convertNode tab = dmap go
   where
     go :: Node -> Node
     go node = case node of
       NCase c@Case {..} -> case _caseValue of
         NCase c'
-          | isConstructorTree c _caseValue ->
+          | isConstructorTree tab c _caseValue ->
               NCase
                 c'
                   { _caseBranches = map permuteBranch (c' ^. caseBranches),
@@ -66,4 +67,4 @@ convertNode = dmap go
       _ -> node
 
 casePermutation :: InfoTable -> InfoTable
-casePermutation = mapAllNodes convertNode
+casePermutation tab = mapAllNodes (convertNode tab) tab
