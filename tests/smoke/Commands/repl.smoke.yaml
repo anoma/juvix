@@ -71,10 +71,11 @@ tests:
       - juvix
       - repl
       - ../examples/milestone/HelloWorld/HelloWorld.juvix
-    stdin: ":def + (+) (((+)))"
+    stdin: ":def >> (>>) (((>>)))"
     stdout:
       contains: |
-        + {A} {{Natural A}} : A -> A -> A := Natural.+
+        builtin IO-sequence
+        axiom >> : IO → IO → IO
     exit-status: 0
 
   - name: repl-def-infix
@@ -82,10 +83,11 @@ tests:
       - juvix
       - repl
       - ../examples/milestone/HelloWorld/HelloWorld.juvix
-    stdin: ":def +"
+    stdin: ":def >>"
     stdout:
       contains: |
-        + {A} {{Natural A}} : A -> A -> A := Natural.+
+        builtin IO-sequence
+        axiom >> : IO → IO → IO
     exit-status: 0
 
   - name: open

@@ -18,15 +18,9 @@ optimize' CoreOptions {..} tab =
   filterUnreachable
     . compose
       (4 * _optOptimizationLevel)
-      ( compose 2 (letFolding' (isInlineableLambda _optInliningDepth))
-          . lambdaFolding
+      ( doSimplification 2
           . doInlining
-          . simplifyIfs' (_optOptimizationLevel <= 1)
-          . simplifyComparisons
-          . caseFolding
-          . casePermutation
-          . letFolding' (isInlineableLambda _optInliningDepth)
-          . lambdaFolding
+          . doSimplification 1
           . specializeArgs
       )
     . letFolding
@@ -42,6 +36,15 @@ optimize' CoreOptions {..} tab =
           if
               | _optOptimizationLevel > 1 -> recursiveIdents tab'
               | otherwise -> recs
+
+    doSimplification :: Int -> InfoTable -> InfoTable
+    doSimplification n =
+      simplifyIfs' (_optOptimizationLevel <= 1)
+        . simplifyComparisons
+        . caseFolding
+        . casePermutation
+        . compose n (letFolding' (isInlineableLambda _optInliningDepth))
+        . lambdaFolding
 
 optimize :: (Member (Reader CoreOptions) r) => InfoTable -> Sem r InfoTable
 optimize tab = do

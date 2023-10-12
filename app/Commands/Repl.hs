@@ -366,9 +366,11 @@ printDefinition = replParseIdentifiers >=> printIdentifiers
             printFunction :: Scoped.NameId -> Repl ()
             printFunction fun = do
               tbl :: Scoped.InfoTable <- getInfoTable
-              let def :: Scoped.FunctionInfo = tbl ^?! Scoped.infoFunctions . at fun . _Just
-              printLocation def
-              printConcreteLn def
+              case tbl ^. Scoped.infoFunctions . at fun of
+                Just def -> do
+                  printLocation def
+                  printConcreteLn def
+                Nothing -> return ()
 
             printInductive :: Scoped.NameId -> Repl ()
             printInductive ind = do

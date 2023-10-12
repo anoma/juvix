@@ -90,6 +90,7 @@ transformationText = \case
   FoldTypeSynonyms -> strFoldTypeSynonyms
   CaseCallLifting -> strCaseCallLifting
   SimplifyIfs -> strSimplifyIfs
+  SimplifyComparisons -> strSimplifyComparisons
   SpecializeArgs -> strSpecializeArgs
   CaseFolding -> strCaseFolding
   CasePermutation -> strCasePermutation
@@ -204,6 +205,9 @@ strCaseCallLifting = "case-call-lifting"
 
 strSimplifyIfs :: Text
 strSimplifyIfs = "simplify-ifs"
+
+strSimplifyComparisons :: Text
+strSimplifyComparisons = "simplify-comparisons"
 
 strSpecializeArgs :: Text
 strSpecializeArgs = "specialize-args"
