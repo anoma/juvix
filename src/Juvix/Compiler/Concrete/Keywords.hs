@@ -34,6 +34,7 @@ import Juvix.Data.Keyword.All
     kwBracketR,
     kwBuiltin,
     kwCase,
+    kwCoercion,
     kwColon,
     kwEnd,
     kwEq,

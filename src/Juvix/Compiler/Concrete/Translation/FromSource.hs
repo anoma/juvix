@@ -328,7 +328,7 @@ parseYaml l r = do
   off <- P.getOffset
   str <- P.manyTill P.anySingle (P.chunk r)
   let str'
-        | elem '\n' str = str
+        | '\n' `elem` str = str
         | otherwise = '{' : str ++ "}"
   space
   let bs = BS.fromString str'
@@ -1039,10 +1039,16 @@ functionDefinition ::
   ParsecS r (FunctionDef 'Parsed)
 functionDefinition allowOmitType allowInstance _signBuiltin = P.label "<function definition>" $ do
   _signTerminating <- optional (kw kwTerminating)
-  off <- P.getOffset
+  off0 <- P.getOffset
   _signInstance <- optional (kw kwInstance)
   unless (allowInstance || isNothing _signInstance) $
-    parseFailure off "instance not allowed here"
+    parseFailure off0 "instance not allowed here"
+  off <- P.getOffset
+  _signCoercion <- optional (kw kwCoercion)
+  unless (allowInstance || isNothing _signCoercion) $
+    parseFailure off "coercion not allowed here"
+  unless (isNothing _signCoercion || isNothing _signInstance) $
+    parseFailure off0 "a definition cannot be both a coercion and an instance"
   _signName <- symbol
   _signArgs <- many parseArg
   off' <- P.getOffset
