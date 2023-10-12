@@ -23,6 +23,16 @@ convertNode tab = dmap go
               NCase c@Case {..}
                 | isCaseBoolean _caseBranches ->
                     translateCaseIf (goCmp v b1) c
+              NBlt blt'
+                | OpIntLt <- blt' ^. builtinAppOp,
+                  blt ^. builtinAppArgs == blt' ^. builtinAppArgs ->
+                    if
+                        | isFalseConstr b1 ->
+                            b2
+                        | isTrueConstr b1 ->
+                            NBlt blt {_builtinAppOp = OpIntLe}
+                        | otherwise ->
+                            mkIf' boolSym v b1 b2
               _ ->
                 mkIf' boolSym v b1 b2
         | OpIntLt <- _builtinAppOp,
