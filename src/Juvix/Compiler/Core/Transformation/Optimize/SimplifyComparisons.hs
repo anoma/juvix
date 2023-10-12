@@ -17,7 +17,7 @@ convertNode tab = dmap go
 
     goIf :: Node -> Node -> Node -> Node
     goIf v b1 b2 = case v of
-      NBlt BuiltinApp {..}
+      NBlt blt@BuiltinApp {..}
         | OpEq <- _builtinAppOp ->
             case b2 of
               NCase c@Case {..}
@@ -25,6 +25,20 @@ convertNode tab = dmap go
                     translateCaseIf (goCmp v b1) c
               _ ->
                 mkIf' boolSym v b1 b2
+        | OpIntLt <- _builtinAppOp,
+          isFalseConstr b1 && isTrueConstr b2 ->
+            NBlt
+              blt
+                { _builtinAppOp = OpIntLe,
+                  _builtinAppArgs = reverse _builtinAppArgs
+                }
+        | OpIntLe <- _builtinAppOp,
+          isFalseConstr b1 && isTrueConstr b2 ->
+            NBlt
+              blt
+                { _builtinAppOp = OpIntLt,
+                  _builtinAppArgs = reverse _builtinAppArgs
+                }
       _ ->
         mkIf' boolSym v b1 b2
 
@@ -40,6 +54,20 @@ convertNode tab = dmap go
                     v
                 | isTrueConstr b1 && isTrueConstr b1' && isFalseConstr b2' ->
                     NBlt blt {_builtinAppOp = OpIntLe}
+                | isFalseConstr b1 && isFalseConstr b1' && isTrueConstr b2' ->
+                    NBlt
+                      blt
+                        { _builtinAppOp = OpIntLt,
+                          _builtinAppArgs = reverse (blt ^. builtinAppArgs)
+                        }
+                | isTrueConstr b1 && isFalseConstr b1' && isTrueConstr b2' ->
+                    NBlt
+                      blt
+                        { _builtinAppOp = OpIntLe,
+                          _builtinAppArgs = reverse (blt ^. builtinAppArgs)
+                        }
+                | isFalseConstr b1 && isTrueConstr b1' && isTrueConstr b2' ->
+                    mkIf' boolSym v b1 b1'
                 | b1 == b2' ->
                     mkIf' boolSym v' b1' b2'
                 | b1' == b2' ->
