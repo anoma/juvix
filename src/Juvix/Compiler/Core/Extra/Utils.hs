@@ -100,6 +100,11 @@ isImmediate tab = \case
   NVar {} -> True
   NIdt {} -> True
   NCst {} -> True
+  NCtr Constr {..}
+    | Just ci <- lookupConstructorInfo' tab _constrTag ->
+        let paramsNum = length (takeWhile (isTypeConstr tab) (typeArgs (ci ^. constructorType)))
+         in length _constrArgs <= paramsNum
+    | otherwise -> all (isType tab mempty) _constrArgs
   node@(NApp {}) ->
     let (h, args) = unfoldApps' node
      in case h of
@@ -123,6 +128,16 @@ isDataValue = \case
 isFailNode :: Node -> Bool
 isFailNode = \case
   NBlt (BuiltinApp {..}) | _builtinAppOp == OpFail -> True
+  _ -> False
+
+isTrueConstr :: Node -> Bool
+isTrueConstr = \case
+  NCtr Constr {..} | _constrTag == BuiltinTag TagTrue -> True
+  _ -> False
+
+isFalseConstr :: Node -> Bool
+isFalseConstr = \case
+  NCtr Constr {..} | _constrTag == BuiltinTag TagFalse -> True
   _ -> False
 
 freeVarsSortedMany :: [Node] -> Set Var
@@ -356,25 +371,28 @@ builtinOpArgTypes = \case
   OpFail -> [mkTypeString']
 
 translateCase :: (Node -> Node -> Node -> a) -> a -> Case -> a
-translateCase translateIf dflt Case {..} = case _caseBranches of
+translateCase translateIfFun dflt Case {..} = case _caseBranches of
   [br@CaseBranch {..}]
     | _caseBranchTag == BuiltinTag TagTrue ->
-        translateIf _caseValue (br ^. caseBranchBody) (fromMaybe branchFailure _caseDefault)
+        translateIfFun _caseValue (br ^. caseBranchBody) (fromMaybe branchFailure _caseDefault)
   [br@CaseBranch {..}]
     | _caseBranchTag == BuiltinTag TagFalse ->
-        translateIf _caseValue (fromMaybe branchFailure _caseDefault) (br ^. caseBranchBody)
+        translateIfFun _caseValue (fromMaybe branchFailure _caseDefault) (br ^. caseBranchBody)
   [br1, br2]
     | br1 ^. caseBranchTag == BuiltinTag TagTrue
         && br2 ^. caseBranchTag == BuiltinTag TagFalse ->
-        translateIf _caseValue (br1 ^. caseBranchBody) (br2 ^. caseBranchBody)
+        translateIfFun _caseValue (br1 ^. caseBranchBody) (br2 ^. caseBranchBody)
     | br1 ^. caseBranchTag == BuiltinTag TagFalse
         && br2 ^. caseBranchTag == BuiltinTag TagTrue ->
-        translateIf _caseValue (br2 ^. caseBranchBody) (br1 ^. caseBranchBody)
+        translateIfFun _caseValue (br2 ^. caseBranchBody) (br1 ^. caseBranchBody)
   _ ->
     dflt
   where
     branchFailure :: Node
     branchFailure = mkBuiltinApp' OpFail [mkConstant' (ConstString "illegal `if` branch")]
+
+translateCaseIf :: (Node -> Node -> Node -> a) -> Case -> a
+translateCaseIf f = translateCase f impossible
 
 checkDepth :: InfoTable -> BinderList Binder -> Int -> Node -> Bool
 checkDepth tab bl 0 node = isType tab bl node

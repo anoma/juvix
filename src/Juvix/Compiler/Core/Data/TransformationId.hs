@@ -32,6 +32,7 @@ data TransformationId
   | SimplifyIfs
   | SpecializeArgs
   | CaseFolding
+  | CasePermutation
   | FilterUnreachable
   | OptPhaseEval
   | OptPhaseExec

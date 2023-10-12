@@ -1,21 +1,30 @@
-module Juvix.Compiler.Core.Transformation.Optimize.SimplifyIfs (simplifyIfs) where
+module Juvix.Compiler.Core.Transformation.Optimize.SimplifyIfs (simplifyIfs, simplifyIfs') where
 
-import Data.List qualified as List
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Transformation.Base
 
-convertNode :: Node -> Node
-convertNode = umap go
+convertNode :: Bool -> InfoTable -> Node -> Node
+convertNode bFast tab = umap go
   where
+    boolSym = lookupConstructorInfo tab (BuiltinTag TagTrue) ^. constructorInductive
+
     go :: Node -> Node
     go node = case node of
-      NCase Case {..}
-        | isCaseBoolean _caseBranches
-            && all (== List.head bodies) (List.tail bodies) ->
-            List.head bodies
-        where
-          bodies = map (^. caseBranchBody) _caseBranches ++ maybeToList _caseDefault
+      NCase c@Case {..}
+        | isCaseBoolean _caseBranches ->
+            translateCaseIf goIf c
       _ -> node
 
+    goIf :: Node -> Node -> Node -> Node
+    goIf v b1 b2
+      | isTrueConstr b1 && isFalseConstr b2 = v
+      | bFast && isTrueConstr b1 && isTrueConstr b2 = b1
+      | bFast && isFalseConstr b1 && isFalseConstr b2 = b1
+      | not bFast && b1 == b2 = b1
+      | otherwise = mkIf' boolSym v b1 b2
+
+simplifyIfs' :: Bool -> InfoTable -> InfoTable
+simplifyIfs' bFast tab = mapAllNodes (convertNode bFast tab) tab
+
 simplifyIfs :: InfoTable -> InfoTable
-simplifyIfs = mapAllNodes convertNode
+simplifyIfs = simplifyIfs' False

@@ -92,6 +92,7 @@ transformationText = \case
   SimplifyIfs -> strSimplifyIfs
   SpecializeArgs -> strSpecializeArgs
   CaseFolding -> strCaseFolding
+  CasePermutation -> strCasePermutation
   FilterUnreachable -> strFilterUnreachable
   OptPhaseEval -> strOptPhaseEval
   OptPhaseExec -> strOptPhaseExec
@@ -209,6 +210,9 @@ strSpecializeArgs = "specialize-args"
 
 strCaseFolding :: Text
 strCaseFolding = "case-folding"
+
+strCasePermutation :: Text
+strCasePermutation = "case-permutation"
 
 strFilterUnreachable :: Text
 strFilterUnreachable = "filter-unreachable"
