@@ -30,6 +30,7 @@ data TransformationId
   | FoldTypeSynonyms
   | CaseCallLifting
   | SimplifyIfs
+  | SimplifyComparisons
   | SpecializeArgs
   | CaseFolding
   | CasePermutation

@@ -42,6 +42,7 @@ import Juvix.Compiler.Core.Transformation.Optimize.Phase.Exec qualified as Phase
 import Juvix.Compiler.Core.Transformation.Optimize.Phase.Geb qualified as Phase.Geb
 import Juvix.Compiler.Core.Transformation.Optimize.Phase.Main qualified as Phase.Main
 import Juvix.Compiler.Core.Transformation.Optimize.Phase.VampIR qualified as Phase.VampIR
+import Juvix.Compiler.Core.Transformation.Optimize.SimplifyComparisons (simplifyComparisons)
 import Juvix.Compiler.Core.Transformation.Optimize.SimplifyIfs
 import Juvix.Compiler.Core.Transformation.Optimize.SpecializeArgs
 import Juvix.Compiler.Core.Transformation.RemoveTypeArgs
@@ -80,6 +81,7 @@ applyTransformations ts tbl = foldM (flip appTrans) tbl ts
       FoldTypeSynonyms -> return . foldTypeSynonyms
       CaseCallLifting -> return . caseCallLifting
       SimplifyIfs -> return . simplifyIfs
+      SimplifyComparisons -> return . simplifyComparisons
       SpecializeArgs -> return . specializeArgs
       CaseFolding -> return . caseFolding
       CasePermutation -> return . casePermutation
