@@ -197,6 +197,7 @@ checkFunctionDef FunctionDef {..} = do
           _funDefName,
           _funDefTerminating,
           _funDefInstance,
+          _funDefCoercion,
           _funDefBuiltin,
           _funDefPragmas
         }
@@ -242,7 +243,7 @@ checkInstanceType FunctionDef {..} = case mi of
     tab <- ask
     unless (isTrait tab _instanceInfoInductive) $
       throw (ErrTargetNotATrait (TargetNotATrait _funDefType))
-    is <- map fst <$> subsumingInstances (tab ^. infoInstances) ii
+    is <- subsumingInstances (tab ^. infoInstances) ii
     unless (null is) $
       throw (ErrSubsumedInstance (SubsumedInstance ii is (getLoc _funDefName)))
     let metaVars = HashSet.fromList $ mapMaybe (^. paramName) _instanceInfoArgs
