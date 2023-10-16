@@ -212,7 +212,7 @@ tests =
     NegTest
       "Coercion target not a trait"
       $(mkRelDir "Internal")
-      $(mkRelFile "CoercionNotATrait.juvix")
+      $(mkRelFile "CoercionTargetNotATrait.juvix")
       $ \case
         ErrTargetNotATrait {} -> Nothing
         _ -> wrongError,
