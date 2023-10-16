@@ -70,3 +70,14 @@ coercionFromTypedExpression TypedExpression {..}
     args' = init args
     t = List.last args
     metaVars = HashSet.fromList $ mapMaybe (^. paramName) args'
+
+cyclicCoercions :: CoercionTable -> HashSet Name
+cyclicCoercions ctab = nodesOnCycles depInfo
+  where
+    depInfo =
+      createDependencyInfo
+        ( HashMap.map
+            (HashSet.fromList . map (^. coercionInfoTarget . instanceAppHead))
+            (ctab ^. coercionTableMap)
+        )
+        mempty

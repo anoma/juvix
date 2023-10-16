@@ -455,6 +455,30 @@ instance ToGenericError NotATrait where
             "Expected a trait:"
               <+> ppCode opts' (e ^. notATraitExpression)
 
+newtype CoercionCycles = CoercionCycles
+  { _coercionCycles :: NonEmpty Name
+  }
+
+makeLenses ''CoercionCycles
+
+instance ToGenericError CoercionCycles where
+  genericError e = ask >>= generr
+    where
+      generr opts =
+        return
+          GenericError
+            { _genericErrorLoc = i,
+              _genericErrorMessage = ppOutput msg,
+              _genericErrorIntervals = [i]
+            }
+        where
+          opts' = fromGenericOptions opts
+          i = getLoc (head (e ^. coercionCycles))
+          msg =
+            "There exist coercion cycles involving these traits:"
+              <> line
+              <> indent' (hsep (ppCode opts' <$> take 10 (toList (e ^. coercionCycles))))
+
 data NoInstance = NoInstance
   { _noInstanceType :: Expression,
     _noInstanceLoc :: Interval

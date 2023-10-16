@@ -37,6 +37,15 @@ registerNameIdType uid ty = do
   modify (HashMap.insert uid ty)
   modify (set (highlightTypes . at uid) (Just ty))
 
+checkTable ::
+  (Members '[Reader InfoTable, Error TypeCheckerError] r) =>
+  Sem r ()
+checkTable = do
+  tab <- ask
+  let s = toList $ cyclicCoercions (tab ^. infoCoercions)
+  unless (null s) $
+    throw (ErrCoercionCycles (CoercionCycles (nonEmpty' s)))
+
 checkModule ::
   (Members '[HighlightBuilder, Reader EntryPoint, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example, Builtins, MCache] r) =>
   Module ->

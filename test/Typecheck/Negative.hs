@@ -236,6 +236,13 @@ tests =
       $(mkRelFile "AmbiguousCoercions.juvix")
       $ \case
         ErrAmbiguousInstances {} -> Nothing
+        _ -> wrongError,
+    NegTest
+      "Coercion cycles"
+      $(mkRelDir "Internal")
+      $(mkRelFile "LoopingCoercion.juvix")
+      $ \case
+        ErrCoercionCycles {} -> Nothing
         _ -> wrongError
   ]
 
