@@ -52,17 +52,19 @@ lookupCoercionTable :: CoercionTable -> Name -> Maybe [CoercionInfo]
 lookupCoercionTable tab name = HashMap.lookup name (tab ^. coercionTableMap)
 
 coercionFromTypedExpression :: TypedExpression -> Maybe CoercionInfo
-coercionFromTypedExpression TypedExpression {..} = do
-  tgt <- traitFromExpression metaVars (t ^. paramType)
-  InstanceApp {..} <- traitFromExpression metaVars e
-  return $
-    CoercionInfo
-      { _coercionInfoInductive = _instanceAppHead,
-        _coercionInfoParams = _instanceAppArgs,
-        _coercionInfoTarget = tgt,
-        _coercionInfoResult = _typedExpression,
-        _coercionInfoArgs = args'
-      }
+coercionFromTypedExpression TypedExpression {..}
+  | null args = Nothing
+  | otherwise = do
+      tgt <- traitFromExpression metaVars (t ^. paramType)
+      InstanceApp {..} <- traitFromExpression metaVars e
+      return $
+        CoercionInfo
+          { _coercionInfoInductive = _instanceAppHead,
+            _coercionInfoParams = _instanceAppArgs,
+            _coercionInfoTarget = tgt,
+            _coercionInfoResult = _typedExpression,
+            _coercionInfoArgs = args'
+          }
   where
     (args, e) = unfoldFunType _typedType
     args' = init args
