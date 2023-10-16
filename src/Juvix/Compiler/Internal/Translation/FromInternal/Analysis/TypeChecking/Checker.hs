@@ -8,6 +8,7 @@ import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Builtins.Effect
 import Juvix.Compiler.Concrete.Data.Highlight.Input
+import Juvix.Compiler.Internal.Data.CoercionInfo
 import Juvix.Compiler.Internal.Data.InstanceInfo
 import Juvix.Compiler.Internal.Data.LocalVars
 import Juvix.Compiler.Internal.Data.TypedHole
@@ -203,6 +204,8 @@ checkFunctionDef FunctionDef {..} = do
         }
   when _funDefInstance $
     checkInstanceType funDef
+  when _funDefCoercion $
+    checkCoercionType funDef
   registerFunctionDef funDef
   return funDef
   where
@@ -274,6 +277,36 @@ checkInstanceParam :: (Member (Error TypeCheckerError) r) => InfoTable -> Expres
 checkInstanceParam tab ty = case traitFromExpression mempty ty of
   Just InstanceApp {..} | isTrait tab _instanceAppHead -> return ()
   _ -> throw (ErrNotATrait (NotATrait ty))
+
+checkCoercionType ::
+  forall r.
+  (Members '[Error TypeCheckerError, Reader InfoTable, Inference] r) =>
+  FunctionDef ->
+  Sem r ()
+checkCoercionType FunctionDef {..} = case mi of
+  Just CoercionInfo {..} -> do
+    tab <- ask
+    unless (isTrait tab _coercionInfoInductive) $
+      throw (ErrTargetNotATrait (TargetNotATrait _funDefType))
+    unless (isTrait tab (_coercionInfoTarget ^. instanceAppHead)) $
+      throw (ErrInvalidCoercionType (InvalidCoercionType _funDefType))
+    mapM_ checkArg _coercionInfoArgs
+  Nothing ->
+    throw (ErrInvalidCoercionType (InvalidCoercionType _funDefType))
+  where
+    mi =
+      coercionFromTypedExpression
+        ( TypedExpression
+            { _typedType = _funDefType,
+              _typedExpression = ExpressionIden (IdenFunction _funDefName)
+            }
+        )
+
+    checkArg :: FunctionParameter -> Sem r ()
+    checkArg fp@FunctionParameter {..} = case _paramImplicit of
+      Implicit -> return ()
+      Explicit -> throw (ErrWrongCoercionArgument (WrongCoercionArgument fp))
+      ImplicitInstance -> throw (ErrWrongCoercionArgument (WrongCoercionArgument fp))
 
 checkExample ::
   (Members '[HighlightBuilder, Reader InfoTable, State FunctionsTable, Error TypeCheckerError, Builtins, NameIdGen, Output Example, State TypesTable, Termination] r) =>
