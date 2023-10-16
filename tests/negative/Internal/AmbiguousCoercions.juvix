@@ -1,0 +1,31 @@
+module AmbiguousCoercions;
+
+
+type Unit := unit;
+
+trait
+type T A := mkT { pp : A → A };
+
+trait
+type T1 A := mkT1 { pp : A → A };
+
+trait
+type T2 A := mkT2 { pp : A → A };
+
+instance
+unitT1 : T1 Unit := mkT1 (pp := λ{_ := unit});
+
+instance
+unitT2 : T2 Unit := mkT2 (pp := λ{_ := unit});
+
+coercion
+fromT1toT {A} {{T1 A}} : T A := mkT@{
+  pp := T1.pp
+};
+
+coercion
+fromT2toT {A} {{T2 A}} : T A := mkT@{
+  pp := T2.pp
+};
+
+main : Unit := T.pp unit;

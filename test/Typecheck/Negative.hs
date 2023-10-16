@@ -208,6 +208,34 @@ tests =
       $(mkRelFile "DefaultTypeError.juvix")
       $ \case
         ErrWrongType {} -> Nothing
+        _ -> wrongError,
+    NegTest
+      "Coercion target not a trait"
+      $(mkRelDir "Internal")
+      $(mkRelFile "CoercionNotATrait.juvix")
+      $ \case
+        ErrTargetNotATrait {} -> Nothing
+        _ -> wrongError,
+    NegTest
+      "Invalid coercion type"
+      $(mkRelDir "Internal")
+      $(mkRelFile "InvalidCoercionType.juvix")
+      $ \case
+        ErrInvalidCoercionType {} -> Nothing
+        _ -> wrongError,
+    NegTest
+      "Wrong coercion argument"
+      $(mkRelDir "Internal")
+      $(mkRelFile "WrongCoercionArgument.juvix")
+      $ \case
+        ErrWrongCoercionArgument {} -> Nothing
+        _ -> wrongError,
+    NegTest
+      "Ambiguous coercions"
+      $(mkRelDir "Internal")
+      $(mkRelFile "AmbiguousCoercions.juvix")
+      $ \case
+        ErrAmbiguousInstances {} -> Nothing
         _ -> wrongError
   ]
 

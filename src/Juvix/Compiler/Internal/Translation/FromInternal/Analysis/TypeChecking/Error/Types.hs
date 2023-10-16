@@ -402,7 +402,11 @@ instance ToGenericError WrongCoercionArgument where
         return
           GenericError
             { _genericErrorLoc = i,
-              _genericErrorMessage = ppOutput "Expected an implicit type argument.",
+              _genericErrorMessage =
+                ppOutput $
+                  "Expected an implicit type argument."
+                    <> line
+                    <> "A coercion can have only implicit type arguments followed by exactly one instance argument.",
               _genericErrorIntervals = [i]
             }
         where
@@ -416,7 +420,7 @@ instance ToGenericError TargetNotATrait where
   genericError TargetNotATrait {..} = do
     opts <- fromGenericOptions <$> ask
     let msg =
-          "Expected an instance or coercion type with a trait in the target:"
+          "Expected a type with a trait in the target:"
             <+> ppCode opts _targetNotATraitType
     return
       GenericError
