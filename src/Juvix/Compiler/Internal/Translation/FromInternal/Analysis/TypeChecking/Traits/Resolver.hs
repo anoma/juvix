@@ -53,7 +53,7 @@ subsumingInstances ::
   InstanceInfo ->
   Sem r [(InstanceInfo)]
 subsumingInstances tab InstanceInfo {..} = do
-  is <- lookupInstance' False mempty tab _instanceInfoInductive _instanceInfoParams
+  is <- lookupInstance' [] False mempty tab _instanceInfoInductive _instanceInfoParams
   return $
     map snd3 $
       filter (\(_, x, _) -> x ^. instanceInfoResult /= _instanceInfoResult) is
@@ -156,20 +156,23 @@ expandArity loc subs params e = case params of
 lookupInstance' ::
   forall r.
   (Member Inference r) =>
+  [Name] ->
   Bool ->
   CoercionTable ->
   InstanceTable ->
   Name ->
   [InstanceParam] ->
   Sem r [(CoercionChain, InstanceInfo, SubsI)]
-lookupInstance' canFillHoles ctab tab name params = do
-  let is = fromMaybe [] $ lookupInstanceTable tab name
-  rs <- mapMaybeM matchInstance is
-  case rs of
-    [] -> do
-      let coes = fromMaybe [] $ lookupCoercionTable ctab name
-      concat <$> mapMaybeM matchCoercion coes
-    _ -> return rs
+lookupInstance' visited canFillHoles ctab tab name params
+  | name `elem` visited = return []
+  | otherwise = do
+      let is = fromMaybe [] $ lookupInstanceTable tab name
+      rs <- mapMaybeM matchInstance is
+      case rs of
+        [] -> do
+          let coes = fromMaybe [] $ lookupCoercionTable ctab name
+          concat <$> mapMaybeM matchCoercion coes
+        _ -> return rs
   where
     matchInstance :: InstanceInfo -> Sem r (Maybe (CoercionChain, InstanceInfo, SubsI))
     matchInstance ii@InstanceInfo {..} = runFail $ do
@@ -189,7 +192,7 @@ lookupInstance' canFillHoles ctab tab name params = do
       failUnless b
       let name' = _coercionInfoTarget ^. instanceAppHead
           args' = map (substitutionI si) (_coercionInfoTarget ^. instanceAppArgs)
-      is <- lookupInstance' canFillHoles ctab tab name' args'
+      is <- lookupInstance' (name : visited) canFillHoles ctab tab name' args'
       return $ map (first3 ((ci, si) :)) is
 
     goMatch :: InstanceParam -> InstanceParam -> Sem (State SubsI ': Fail ': r) Bool
@@ -243,6 +246,6 @@ lookupInstance ::
 lookupInstance ctab tab ty = do
   case traitFromExpression mempty ty of
     Just InstanceApp {..} ->
-      lookupInstance' True ctab tab _instanceAppHead _instanceAppArgs
+      lookupInstance' [] True ctab tab _instanceAppHead _instanceAppArgs
     _ ->
       return []
