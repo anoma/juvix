@@ -811,20 +811,26 @@ goExpression = \case
     goRecordCreation :: Concrete.RecordCreation 'Scoped -> Sem r Internal.Expression
     goRecordCreation Concrete.RecordCreation {..} = do
       sig :: RecordNameSignature 'Scoped <- fromJust <$> asks @ConstructorNameSignatures (^. at (_recordCreationConstructor ^. Concrete.scopedIdenName . S.nameId))
-      let byIndex :: IntMap (NameItem 'Scoped) = indexedByInt (^. nameItemIndex) (toList (sig ^. recordNames))
       case nonEmpty _recordCreationFields of
         Nothing -> return (Internal.ExpressionIden (Internal.IdenConstructor (goScopedIden _recordCreationConstructor)))
-        Just fields1 -> do
-          let args :: [Internal.Name] = goSymbol . (^. nameItemSymbol) <$> toList byIndex
-          cls <- goLetFunDefs (fmap (Concrete.LetFunctionDef . (^. fieldDefineFunDef)) fields1)
+        Just (fields1 :: NonEmpty (RecordDefineField 'Scoped)) -> do
+          let getIx fi =
+                let sym = Concrete.symbolParsed (fi ^. Concrete.fieldDefineFunDef . Concrete.signName)
+                 in sig ^?! recordNames . at sym . _Just . nameItemIndex
+          let fieldsByIx = nonEmpty' (sortOn getIx (toList fields1))
+          let args :: [Internal.Name] = map (^. Concrete.fieldDefineFunDef . Concrete.signName . to goSymbol) (toList fieldsByIx)
+          cls <- mapM goField fieldsByIx
           let constr = Internal.toExpression (goScopedIden _recordCreationConstructor)
               e = foldExplicitApplication constr (map Internal.toExpression args)
           return $
             Internal.ExpressionLet $
               Internal.Let
-                { _letClauses = nonEmpty' cls,
+                { _letClauses = cls,
                   _letExpression = e
                 }
+          where
+            goField :: RecordDefineField 'Scoped -> Sem r Internal.LetClause
+            goField = fmap Internal.LetFunDef . goFunctionDef . (^. fieldDefineFunDef)
 
     goRecordUpdate :: Concrete.RecordUpdate 'Scoped -> Sem r Internal.Lambda
     goRecordUpdate r = do
