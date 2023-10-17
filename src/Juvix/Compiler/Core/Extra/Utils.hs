@@ -93,6 +93,34 @@ isType tab bl node = case node of
         isTypeConstr tab (ii ^. identifierType)
   _ -> isType' node
 
+isZeroOrderType :: InfoTable -> Type -> Bool
+isZeroOrderType tab = \case
+  NPi {} -> False
+  NTyp TypeConstr {..} ->
+    isFirstOrderInductive tab _typeConstrSymbol
+      && all (isZeroOrderType tab) _typeConstrArgs
+  ty -> isType' ty
+
+isFirstOrderType :: InfoTable -> Type -> Bool
+isFirstOrderType tab ty = case ty of
+  NVar {} -> True
+  NPi Pi {..} ->
+    isZeroOrderType tab (_piBinder ^. binderType)
+      && isFirstOrderType tab _piBody
+  NUniv {} -> True
+  NPrim {} -> True
+  NTyp {} -> isZeroOrderType tab ty
+  NDyn {} -> True
+  _ -> assert (not (isType' ty)) False
+
+isFirstOrderInductive :: InfoTable -> Symbol -> Bool
+isFirstOrderInductive tab sym = case lookupInductiveInfo' tab sym of
+  Nothing -> False
+  Just ii ->
+    all
+      (isFirstOrderType tab . (^. constructorType) . lookupConstructorInfo tab)
+      (ii ^. inductiveConstructors)
+
 -- | True for nodes whose evaluation immediately returns a value, i.e.,
 -- no reduction or memory allocation in the runtime is required.
 isImmediate :: InfoTable -> Node -> Bool

@@ -47,3 +47,6 @@ getFreeVarsInfo = fromJust . Info.lookup kFreeVarsInfo . getInfo
 
 freeVarOccurrences :: Index -> Node -> Int
 freeVarOccurrences idx n = fromMaybe 0 (Map.lookup idx (getFreeVarsInfo n ^. infoFreeVars))
+
+isClosed :: Node -> Bool
+isClosed node = sum (Map.elems (getFreeVarsInfo node ^. infoFreeVars)) == 0
