@@ -8,6 +8,7 @@ module Juvix.Compiler.Internal.Translation.FromConcrete.NamedArguments
     argName,
     argImplicit,
     argValue,
+    argType,
   )
 where
 
@@ -29,6 +30,7 @@ data BuilderState = BuilderState
 data Arg = Arg
   { _argName :: S.Symbol,
     _argImplicit :: IsImplicit,
+    _argType :: Expression,
     _argValue :: Expression
   }
 
@@ -205,6 +207,7 @@ helper loc = do
                 Arg
                   { _argName = nm ^. nameItemSymbol,
                     _argImplicit = impl,
+                    _argType = nm ^. nameItemType,
                     _argValue
                   }
         maxIx :: Maybe Int
@@ -243,6 +246,7 @@ helper loc = do
                     Arg
                       { _argName = idx ^. nameItemSymbol,
                         _argValue = (arg ^. namedArgValue),
+                        _argType = idx ^. nameItemType,
                         _argImplicit = impl
                       }
               modify' (IntMap.insert (idx ^. nameItemIndex) newArg)

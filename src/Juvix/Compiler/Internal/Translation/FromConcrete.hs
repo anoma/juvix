@@ -788,8 +788,7 @@ goExpression = \case
         mkClause :: Arg -> Sem r Internal.LetClause
         mkClause arg = do
           body' <- goExpression (arg ^. argValue)
-          -- TODO use type from signature instead of hole?
-          ty <- Internal.ExpressionHole <$> Internal.freshHole (getLoc body')
+          ty <- goExpression (arg ^. argType)
           -- TODO create helper function for simple function definitions
           return $
             Internal.LetFunDef

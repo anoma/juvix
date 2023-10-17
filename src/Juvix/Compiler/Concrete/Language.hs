@@ -151,6 +151,7 @@ type ParsedPragmas = WithLoc (WithSource Pragmas)
 data NameItem (s :: Stage) = NameItem
   { _nameItemSymbol :: SymbolType s,
     _nameItemIndex :: Int,
+    _nameItemType :: ExpressionType s,
     _nameItemDefault :: Maybe (ArgDefault s)
   }
 
