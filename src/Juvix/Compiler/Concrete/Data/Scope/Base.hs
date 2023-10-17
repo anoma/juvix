@@ -50,7 +50,7 @@ data ScopeParameters = ScopeParameters
 
 data RecordInfo = RecordInfo
   { _recordInfoConstructor :: S.Symbol,
-    _recordInfoSignature :: RecordNameSignature
+    _recordInfoSignature :: RecordNameSignature 'Parsed
   }
 
 data ScoperState = ScoperState
@@ -64,7 +64,8 @@ data ScoperState = ScoperState
     -- | Indexed by the inductive type. This is used for record updates
     _scoperRecordFields :: HashMap S.NameId RecordInfo,
     -- | Indexed by constructor. This is used for record patterns
-    _scoperConstructorFields :: HashMap S.NameId RecordNameSignature
+    _scoperConstructorFields :: HashMap S.NameId (RecordNameSignature 'Parsed),
+    _scoperScopedConstructorFields :: HashMap S.NameId (RecordNameSignature 'Scoped)
   }
 
 data SymbolOperator = SymbolOperator

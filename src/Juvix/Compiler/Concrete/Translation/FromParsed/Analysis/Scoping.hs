@@ -41,7 +41,8 @@ iniScoperState =
       _scoperScopedSignatures = mempty,
       _scoperRecordFields = mempty,
       _scoperAlias = mempty,
-      _scoperConstructorFields = mempty
+      _scoperConstructorFields = mempty,
+      _scoperScopedConstructorFields = mempty
     }
 
 scopeCheck ::
@@ -934,62 +935,64 @@ checkInductiveDef InductiveDef {..} = do
             _constructorPragmas = _constructorPragmas,
             _constructorPipe
           }
-
-    checkRhs :: ConstructorRhs 'Parsed -> Sem r (ConstructorRhs 'Scoped)
-    checkRhs = \case
-      ConstructorRhsGadt r -> ConstructorRhsGadt <$> checkGadt r
-      ConstructorRhsRecord r -> ConstructorRhsRecord <$> checkRecord r
-      ConstructorRhsAdt r -> ConstructorRhsAdt <$> checkAdt r
-
-    checkRecord :: RhsRecord 'Parsed -> Sem r (RhsRecord 'Scoped)
-    checkRecord RhsRecord {..} = do
-      fields' <- checkRecordStatements _rhsRecordStatements
-      return
-        RhsRecord
-          { _rhsRecordStatements = fields',
-            _rhsRecordDelim
-          }
       where
-        checkRecordStatements :: [RecordStatement 'Parsed] -> Sem r [RecordStatement 'Scoped]
-        checkRecordStatements = \case
-          [] -> return []
-          f : fs -> case f of
-            RecordStatementOperator d ->
-              (RecordStatementOperator d :) <$> checkRecordStatements fs
-            RecordStatementField d -> do
-              d' <- checkField d
-              (RecordStatementField d' :) <$> checkRecordStatements fs
+        checkRhs :: ConstructorRhs 'Parsed -> Sem r (ConstructorRhs 'Scoped)
+        checkRhs = \case
+          ConstructorRhsGadt r -> ConstructorRhsGadt <$> checkGadt r
+          ConstructorRhsRecord r -> ConstructorRhsRecord <$> checkRecord r
+          ConstructorRhsAdt r -> ConstructorRhsAdt <$> checkAdt r
 
-        checkField :: RecordField 'Parsed -> Sem r (RecordField 'Scoped)
-        checkField RecordField {..} = do
-          type' <- checkParseExpressionAtoms _fieldType
-          -- Since we don't allow dependent types in constructor types, each
-          -- field is checked with a local scope
-          withLocalScope $ do
-            name' <- bindVariableSymbol _fieldName
-            return
-              RecordField
-                { _fieldType = type',
-                  _fieldName = name',
-                  ..
-                }
+        checkRecord :: RhsRecord 'Parsed -> Sem r (RhsRecord 'Scoped)
+        checkRecord RhsRecord {..} = do
+          fields' <- checkRecordStatements _rhsRecordStatements
+          let rhs' =
+                RhsRecord
+                  { _rhsRecordStatements = fields',
+                    _rhsRecordDelim
+                  }
+          modify' (set (scoperScopedConstructorFields . at (constructorName' ^. S.nameId)) (Just (mkRecordNameSignature rhs')))
+          return rhs'
+          where
+            checkRecordStatements :: [RecordStatement 'Parsed] -> Sem r [RecordStatement 'Scoped]
+            checkRecordStatements = \case
+              [] -> return []
+              f : fs -> case f of
+                RecordStatementOperator d ->
+                  (RecordStatementOperator d :) <$> checkRecordStatements fs
+                RecordStatementField d -> do
+                  d' <- checkField d
+                  (RecordStatementField d' :) <$> checkRecordStatements fs
 
-    checkAdt :: RhsAdt 'Parsed -> Sem r (RhsAdt 'Scoped)
-    checkAdt RhsAdt {..} = do
-      args' <- mapM checkParseExpressionAtoms _rhsAdtArguments
-      return
-        RhsAdt
-          { _rhsAdtArguments = args'
-          }
+            checkField :: RecordField 'Parsed -> Sem r (RecordField 'Scoped)
+            checkField RecordField {..} = do
+              type' <- checkParseExpressionAtoms _fieldType
+              -- Since we don't allow dependent types in constructor types, each
+              -- field is checked with a local scope
+              withLocalScope $ do
+                name' <- bindVariableSymbol _fieldName
+                return
+                  RecordField
+                    { _fieldType = type',
+                      _fieldName = name',
+                      ..
+                    }
 
-    checkGadt :: RhsGadt 'Parsed -> Sem r (RhsGadt 'Scoped)
-    checkGadt RhsGadt {..} = do
-      constructorType' <- checkParseExpressionAtoms _rhsGadtType
-      return
-        RhsGadt
-          { _rhsGadtType = constructorType',
-            _rhsGadtColon
-          }
+        checkAdt :: RhsAdt 'Parsed -> Sem r (RhsAdt 'Scoped)
+        checkAdt RhsAdt {..} = do
+          args' <- mapM checkParseExpressionAtoms _rhsAdtArguments
+          return
+            RhsAdt
+              { _rhsAdtArguments = args'
+              }
+
+        checkGadt :: RhsGadt 'Parsed -> Sem r (RhsGadt 'Scoped)
+        checkGadt RhsGadt {..} = do
+          constructorType' <- checkParseExpressionAtoms _rhsGadtType
+          return
+            RhsGadt
+              { _rhsGadtType = constructorType',
+                _rhsGadtColon
+              }
 
 createExportsTable :: ExportInfo -> HashSet NameId
 createExportsTable = HashSet.fromList . (^.. exportAllNames . S.nameId)
@@ -1252,7 +1255,7 @@ checkSections sec = do
                     reserveConstructor :: ConstructorDef 'Parsed -> Sem r' S.Symbol
                     reserveConstructor c = do
                       c' <- reserveConstructorSymbol d c
-                      let storeSig :: RecordNameSignature -> Sem r' ()
+                      let storeSig :: RecordNameSignature 'Parsed -> Sem r' ()
                           storeSig sig = modify' (set (scoperConstructorFields . at (c' ^. S.nameId)) (Just sig))
                       whenJust (c ^? constructorRhs . _ConstructorRhsRecord) (storeSig . mkRecordNameSignature)
                       return c'
@@ -1789,7 +1792,7 @@ checkRecordPattern r = do
     noFields = ErrConstructorNotARecord . ConstructorNotARecord
     checkItem ::
       forall r'.
-      (Members '[Reader RecordNameSignature, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r') =>
+      (Members '[Reader (RecordNameSignature 'Parsed), Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r') =>
       RecordPatternItem 'Parsed ->
       Sem r' (RecordPatternItem 'Scoped)
     checkItem = \case
@@ -1797,7 +1800,9 @@ checkRecordPattern r = do
       RecordPatternItemFieldPun a -> RecordPatternItemFieldPun <$> checkPun a
       where
         findField :: Symbol -> Sem r' Int
-        findField f = fromMaybeM (throw err) (asks (^? recordNames . at f . _Just . nameItemIndex))
+        findField f =
+          fromMaybeM (throw err) $
+            asks @(RecordNameSignature 'Parsed) (^? recordNames . at f . _Just . nameItemIndex)
           where
             err :: ScoperError
             err = ErrUnexpectedField (UnexpectedField f)
@@ -2169,8 +2174,7 @@ checkRecordCreation RecordCreation {..} = do
         return (vs, fs)
       let extra' =
             RecordCreationExtra
-              { _recordCreationExtraSignature = sig,
-                _recordCreationExtraVars = vars'
+              { _recordCreationExtraVars = vars'
               }
           snames = HashSet.fromList (HashMap.keys (sig ^. recordNames))
           sfields = HashSet.fromList (map (^. fieldDefineFunDef . signName . nameConcrete) (toList fields'))
@@ -2187,7 +2191,7 @@ checkRecordCreation RecordCreation {..} = do
 
 checkDefineField ::
   (Members '[Error ScoperError, State Scope, State ScoperState, Reader ScopeParameters, InfoTableBuilder, NameIdGen] r) =>
-  RecordNameSignature ->
+  RecordNameSignature 'Parsed ->
   RecordDefineField 'Parsed ->
   Sem r (RecordDefineField 'Scoped)
 checkDefineField sig RecordDefineField {..} = do
@@ -2213,8 +2217,7 @@ checkRecordUpdate RecordUpdate {..} = do
     return (vs, fs)
   let extra' =
         RecordUpdateExtra
-          { _recordUpdateExtraSignature = sig,
-            _recordUpdateExtraVars = vars',
+          { _recordUpdateExtraVars = vars',
             _recordUpdateExtraConstructor = info ^. recordInfoConstructor
           }
   return
@@ -2228,7 +2231,7 @@ checkRecordUpdate RecordUpdate {..} = do
 
 checkUpdateField ::
   (Members '[Error ScoperError, State Scope, State ScoperState, Reader ScopeParameters, InfoTableBuilder, NameIdGen] r) =>
-  RecordNameSignature ->
+  RecordNameSignature 'Parsed ->
   RecordUpdateField 'Parsed ->
   Sem r (RecordUpdateField 'Scoped)
 checkUpdateField sig f = do

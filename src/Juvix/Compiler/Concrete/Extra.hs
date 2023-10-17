@@ -137,10 +137,10 @@ flattenStatement = \case
   StatementModule m -> concatMap flattenStatement (m ^. moduleBody)
   s -> [s]
 
-recordNameSignatureByIndex :: RecordNameSignature -> IntMap Symbol
+recordNameSignatureByIndex :: forall s. (SingI s) => RecordNameSignature s -> IntMap Symbol
 recordNameSignatureByIndex = IntMap.fromList . (^.. recordNames . each . to mkAssoc)
   where
-    mkAssoc :: (SingI s) => NameItem s -> (Int, Symbol)
+    mkAssoc :: NameItem s -> (Int, Symbol)
     mkAssoc NameItem {..} = (_nameItemIndex, symbolParsed _nameItemSymbol)
 
 getExpressionAtomIden :: ExpressionAtom 'Scoped -> Maybe S.Name

@@ -229,14 +229,14 @@ addSymbol' impl mdef sym ty = do
 endBuild' :: forall s r a. Sem (Re s r) a
 endBuild' = get @(BuilderState s) >>= throw
 
-mkRecordNameSignature :: RhsRecord 'Parsed -> RecordNameSignature
+mkRecordNameSignature :: forall s. (SingI s) => RhsRecord s -> RecordNameSignature s
 mkRecordNameSignature rhs =
   RecordNameSignature
     ( HashMap.fromList
-        [ (_nameItemSymbol, (NameItem {..}))
+        [ (symbolParsed _nameItemSymbol, NameItem {..})
           | (Indexed _nameItemIndex field) <- indexFrom 0 (toList (rhs ^.. rhsRecordStatements . each . _RecordStatementField)),
-            let _nameItemSymbol = field ^. fieldName
+            let _nameItemSymbol :: SymbolType s = field ^. fieldName
                 _nameItemType = field ^. fieldType
-                _nameItemDefault :: Maybe (ArgDefault 'Parsed) = Nothing
+                _nameItemDefault :: Maybe (ArgDefault s) = Nothing
         ]
     )

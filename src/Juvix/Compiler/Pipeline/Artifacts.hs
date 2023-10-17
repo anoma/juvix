@@ -142,4 +142,5 @@ runFromConcreteCache =
       . evalState (mempty :: Internal.ConstructorInfos)
       . runTerminationArtifacts
       . runReaderArtifacts (artifactScoperState . scoperScopedSignatures)
+      . runReaderArtifacts (artifactScoperState . scoperScopedConstructorFields)
       . Internal.goModuleNoCache

@@ -11,12 +11,10 @@ where
 
 import Data.HashMap.Strict qualified as HashMap
 import Data.IntMap.Strict qualified as IntMap
-import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Compiler.Builtins
-import Juvix.Compiler.Concrete.Data.Scope.Base (ScoperState, scoperScopedSignatures)
+import Juvix.Compiler.Concrete.Data.Scope.Base (ScoperState, scoperScopedConstructorFields, scoperScopedSignatures)
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Extra qualified as Concrete
-import Juvix.Compiler.Concrete.Gen qualified as Gen
 import Juvix.Compiler.Concrete.Language qualified as Concrete
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
@@ -49,6 +47,7 @@ fromConcrete _resultScoper =
         . runReader @ExportsTable exportTbl
         . evalState @ConstructorInfos mempty
         . runReader namesSigs
+        . runReader constrSigs
         . runCacheEmpty goModuleNoCache
         $ mapM goTopModule ms
     let _resultTable = buildTable _resultModules
@@ -58,6 +57,7 @@ fromConcrete _resultScoper =
   where
     ms = _resultScoper ^. Scoper.resultModules
     exportTbl = _resultScoper ^. Scoper.resultExports
+    constrSigs = _resultScoper ^. Scoper.resultScoperState . scoperScopedConstructorFields
     namesSigs = _resultScoper ^. Scoper.resultScoperState . scoperScopedSignatures
 
 -- | `StatementInclude`s are not included in the result
@@ -138,10 +138,12 @@ buildLetMutualBlocks ss = nonEmpty' . mapMaybe nameToPreStatement $ scomponents
 fromConcreteExpression :: (Members '[Builtins, Error JuvixError, NameIdGen, Termination, State ScoperState] r) => Scoper.Expression -> Sem r Internal.Expression
 fromConcreteExpression e = do
   nameSigs <- gets (^. scoperScopedSignatures)
+  constrSigs <- gets (^. scoperScopedConstructorFields)
   e' <-
     mapError (JuvixError @ScoperError)
       . runReader @Pragmas mempty
       . runReader nameSigs
+      . runReader constrSigs
       . goExpression
       $ e
   checkTerminationShallow e'
@@ -161,7 +163,7 @@ fromConcreteImport i = do
   return i'
 
 goLocalModule ::
-  (Members '[Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ConstructorInfos, Reader NameSignatures] r) =>
+  (Members '[Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ConstructorInfos, Reader NameSignatures, Reader ConstructorNameSignatures] r) =>
   Module 'Scoped 'ModuleLocal ->
   Sem r [Internal.PreStatement]
 goLocalModule = concatMapM goAxiomInductive . (^. moduleBody)
@@ -173,7 +175,7 @@ goTopModule ::
 goTopModule = cacheGet . ModuleIndex
 
 goModuleNoCache ::
-  (Members '[Reader EntryPoint, Reader ExportsTable, Error JuvixError, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, MCache, State ConstructorInfos, Termination, Reader NameSignatures] r) =>
+  (Members '[Reader EntryPoint, Reader ExportsTable, Error JuvixError, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, MCache, State ConstructorInfos, Termination, Reader NameSignatures, Reader ConstructorNameSignatures] r) =>
   ModuleIndex ->
   Sem r Internal.Module
 goModuleNoCache (ModuleIndex m) = do
@@ -224,7 +226,7 @@ traverseM' f x = sequence <$> traverse f x
 
 toPreModule ::
   forall r t.
-  (SingI t, Members '[Reader ExportsTable, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, MCache, State ConstructorInfos, Reader NameSignatures] r) =>
+  (SingI t, Members '[Reader ExportsTable, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, MCache, State ConstructorInfos, Reader NameSignatures, Reader ConstructorNameSignatures] r) =>
   Module 'Scoped t ->
   Sem r Internal.PreModule
 toPreModule Module {..} = do
@@ -289,7 +291,7 @@ fromPreModuleBody b = do
 
 goModuleBody ::
   forall r.
-  (Members '[Reader ExportsTable, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, MCache, State ConstructorInfos, Reader NameSignatures] r) =>
+  (Members '[Reader ExportsTable, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, MCache, State ConstructorInfos, Reader NameSignatures, Reader ConstructorNameSignatures] r) =>
   [Statement 'Scoped] ->
   Sem r Internal.PreModuleBody
 goModuleBody stmts = do
@@ -354,7 +356,7 @@ goImport Import {..} = do
 -- | Ignores functions
 goAxiomInductive ::
   forall r.
-  (Members '[Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ConstructorInfos, Reader NameSignatures] r) =>
+  (Members '[Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ConstructorInfos, Reader NameSignatures, Reader ConstructorNameSignatures] r) =>
   Statement 'Scoped ->
   Sem r [Internal.PreStatement]
 goAxiomInductive = \case
@@ -379,7 +381,7 @@ goProjectionDef ProjectionDef {..} = do
 
 goFunctionDef ::
   forall r.
-  (Members '[Reader Pragmas, Error ScoperError, Builtins, NameIdGen, Reader NameSignatures] r) =>
+  (Members '[Reader Pragmas, Error ScoperError, Builtins, NameIdGen, Reader NameSignatures, Reader ConstructorNameSignatures] r) =>
   FunctionDef 'Scoped ->
   Sem r Internal.FunctionDef
 goFunctionDef FunctionDef {..} = do
@@ -486,7 +488,7 @@ goFunctionDef FunctionDef {..} = do
 
 goExamples ::
   forall r.
-  (Members '[Builtins, NameIdGen, Error ScoperError, Reader Pragmas, Reader NameSignatures] r) =>
+  (Members '[Builtins, NameIdGen, Error ScoperError, Reader Pragmas, Reader NameSignatures, Reader ConstructorNameSignatures] r) =>
   Maybe (Judoc 'Scoped) ->
   Sem r [Internal.Example]
 goExamples = mapM goExample . maybe [] judocExamples
@@ -502,7 +504,7 @@ goExamples = mapM goExample . maybe [] judocExamples
 
 goInductiveParameters ::
   forall r.
-  (Members '[Builtins, NameIdGen, Error ScoperError, Reader Pragmas, Reader NameSignatures] r) =>
+  (Members '[Builtins, NameIdGen, Error ScoperError, Reader Pragmas, Reader NameSignatures, Reader ConstructorNameSignatures] r) =>
   InductiveParameters 'Scoped ->
   Sem r [Internal.InductiveParameter]
 goInductiveParameters params@InductiveParameters {..} = do
@@ -596,7 +598,7 @@ registerBuiltinAxiom d = \case
   BuiltinIntPrint -> registerIntPrint d
 
 goInductive ::
-  (Members '[NameIdGen, Reader Pragmas, Builtins, Error ScoperError, State ConstructorInfos, Reader NameSignatures] r) =>
+  (Members '[NameIdGen, Reader Pragmas, Builtins, Error ScoperError, State ConstructorInfos, Reader NameSignatures, Reader ConstructorNameSignatures] r) =>
   InductiveDef 'Scoped ->
   Sem r Internal.InductiveDef
 goInductive ty@InductiveDef {..} = do
@@ -634,7 +636,7 @@ registerInductiveConstructors indDef = do
 
 goConstructorDef ::
   forall r.
-  (Members '[Builtins, NameIdGen, Error ScoperError, Reader Pragmas, Reader NameSignatures] r) =>
+  (Members '[Builtins, NameIdGen, Error ScoperError, Reader Pragmas, Reader NameSignatures, Reader ConstructorNameSignatures] r) =>
   Internal.Expression ->
   ConstructorDef 'Scoped ->
   Sem r Internal.ConstructorDef
@@ -736,7 +738,7 @@ goListPattern l = do
 
 goExpression ::
   forall r.
-  (Members '[Builtins, NameIdGen, Error ScoperError, Reader Pragmas, Reader NameSignatures] r) =>
+  (Members '[Builtins, NameIdGen, Error ScoperError, Reader Pragmas, Reader NameSignatures, Reader ConstructorNameSignatures] r) =>
   Expression ->
   Sem r Internal.Expression
 goExpression = \case
@@ -764,7 +766,9 @@ goExpression = \case
   ExpressionParensRecordUpdate i -> Internal.ExpressionLambda <$> goRecordUpdate (i ^. parensRecordUpdate)
   where
     goNamedApplication :: Concrete.NamedApplication 'Scoped -> Sem r Internal.Expression
-    goNamedApplication = runNamedArguments >=> goDesugaredNamedApplication
+    goNamedApplication w = do
+      s <- ask @NameSignatures
+      runReader s (runNamedArguments w) >>= goDesugaredNamedApplication
 
     goDesugaredNamedApplication :: DesugaredNamedApplication -> Sem r Internal.Expression
     goDesugaredNamedApplication a = do
@@ -805,41 +809,22 @@ goExpression = \case
                 }
 
     goRecordCreation :: Concrete.RecordCreation 'Scoped -> Sem r Internal.Expression
-    goRecordCreation Concrete.RecordCreation {..} =
+    goRecordCreation Concrete.RecordCreation {..} = do
+      sig :: RecordNameSignature 'Scoped <- fromJust <$> asks @ConstructorNameSignatures (^. at (_recordCreationConstructor ^. Concrete.scopedIdenName . S.nameId))
+      let byIndex :: IntMap (NameItem 'Scoped) = indexedByInt (^. nameItemIndex) (toList (sig ^. recordNames))
       case nonEmpty _recordCreationFields of
         Nothing -> return (Internal.ExpressionIden (Internal.IdenConstructor (goScopedIden _recordCreationConstructor)))
         Just fields1 -> do
-          args <- mapM goRecordDefineField fields1
-          let defs = fmap (^. fieldDefineFunDef) fields1
-              app =
-                Concrete.NamedApplication
-                  { _namedAppName = _recordCreationConstructor,
-                    _namedAppArgs =
-                      NonEmpty.singleton $
-                        Concrete.ArgumentBlock
-                          { _argBlockDelims = Irrelevant Nothing,
-                            _argBlockImplicit = Explicit,
-                            _argBlockArgs = args
-                          }
-                  }
-          cls <- goLetFunDefs (fmap Concrete.LetFunctionDef defs)
-          e <- runNamedArguments app >>= goDesugaredNamedApplication
+          let args :: [Internal.Name] = goSymbol . (^. nameItemSymbol) <$> toList byIndex
+          cls <- goLetFunDefs (fmap (Concrete.LetFunctionDef . (^. fieldDefineFunDef)) fields1)
+          let constr = Internal.toExpression (goScopedIden _recordCreationConstructor)
+              e = foldExplicitApplication constr (map Internal.toExpression args)
           return $
             Internal.ExpressionLet $
               Internal.Let
                 { _letClauses = nonEmpty' cls,
                   _letExpression = e
                 }
-
-    goRecordDefineField :: Concrete.RecordDefineField 'Scoped -> Sem r (Concrete.NamedArgument 'Scoped)
-    goRecordDefineField Concrete.RecordDefineField {..} = do
-      dummyAssignKw <- runReader (getLoc _fieldDefineFunDef) (Gen.kw Gen.kwAssign)
-      return
-        Concrete.NamedArgument
-          { _namedArgName = _fieldDefineFunDef ^. signName . S.nameConcrete,
-            _namedArgAssignKw = Irrelevant dummyAssignKw,
-            _namedArgValue = Concrete.ExpressionIdentifier _fieldDefineIden
-          }
 
     goRecordUpdate :: Concrete.RecordUpdate 'Scoped -> Sem r Internal.Lambda
     goRecordUpdate r = do
@@ -1018,7 +1003,7 @@ goExpression = \case
         mkApp :: Internal.Expression -> Internal.Expression -> Internal.Expression
         mkApp a1 a2 = Internal.ExpressionApplication $ Internal.Application a1 a2 Explicit
 
-goCase :: forall r. (Members '[Builtins, NameIdGen, Error ScoperError, Reader Pragmas, Reader NameSignatures] r) => Case 'Scoped -> Sem r Internal.Case
+goCase :: forall r. (Members '[Builtins, NameIdGen, Error ScoperError, Reader Pragmas, Reader NameSignatures, Reader ConstructorNameSignatures] r) => Case 'Scoped -> Sem r Internal.Case
 goCase c = do
   _caseExpression <- goExpression (c ^. caseExpression)
   _caseBranches <- mapM goBranch (c ^. caseBranches)
@@ -1033,7 +1018,7 @@ goCase c = do
       _caseBranchExpression <- goExpression (b ^. caseBranchExpression)
       return Internal.CaseBranch {..}
 
-goNewCase :: forall r. (Members '[Builtins, NameIdGen, Error ScoperError, Reader Pragmas, Reader NameSignatures] r) => NewCase 'Scoped -> Sem r Internal.Case
+goNewCase :: forall r. (Members '[Builtins, NameIdGen, Error ScoperError, Reader Pragmas, Reader NameSignatures, Reader ConstructorNameSignatures] r) => NewCase 'Scoped -> Sem r Internal.Case
 goNewCase c = do
   _caseExpression <- goExpression (c ^. newCaseExpression)
   _caseBranches <- mapM goBranch (c ^. newCaseBranches)
@@ -1048,7 +1033,7 @@ goNewCase c = do
       _caseBranchExpression <- goExpression (b ^. newCaseBranchExpression)
       return Internal.CaseBranch {..}
 
-goLambda :: forall r. (Members '[Builtins, NameIdGen, Error ScoperError, Reader Pragmas, Reader NameSignatures] r) => Lambda 'Scoped -> Sem r Internal.Lambda
+goLambda :: forall r. (Members '[Builtins, NameIdGen, Error ScoperError, Reader Pragmas, Reader NameSignatures, Reader ConstructorNameSignatures] r) => Lambda 'Scoped -> Sem r Internal.Lambda
 goLambda l = do
   clauses' <- mapM goClause (l ^. lambdaClauses)
   return
@@ -1068,7 +1053,7 @@ goUniverse u
   | isSmallUniverse u = SmallUniverse (getLoc u)
   | otherwise = error "only small universe is supported"
 
-goFunction :: (Members '[Builtins, NameIdGen, Error ScoperError, Reader Pragmas, Reader NameSignatures] r) => Function 'Scoped -> Sem r Internal.Function
+goFunction :: (Members '[Builtins, NameIdGen, Error ScoperError, Reader Pragmas, Reader NameSignatures, Reader ConstructorNameSignatures] r) => Function 'Scoped -> Sem r Internal.Function
 goFunction f = do
   headParam :| tailParams <- goFunctionParameters (f ^. funParameters)
   ret <- goExpression (f ^. funReturn)
@@ -1079,7 +1064,7 @@ goFunction f = do
       }
 
 goFunctionParameters ::
-  (Members '[Builtins, NameIdGen, Error ScoperError, Reader Pragmas, Reader NameSignatures] r) =>
+  (Members '[Builtins, NameIdGen, Error ScoperError, Reader Pragmas, Reader NameSignatures, Reader ConstructorNameSignatures] r) =>
   FunctionParameters 'Scoped ->
   Sem r (NonEmpty Internal.FunctionParameter)
 goFunctionParameters FunctionParameters {..} = do
@@ -1246,7 +1231,7 @@ goRecordPattern r = do
               v <- Internal.freshVar loc ("x" <> show idx)
               output (Internal.patternArgFromVar Internal.Explicit v)
 
-goAxiom :: (Members '[Reader Pragmas, Error ScoperError, Builtins, NameIdGen, Reader NameSignatures] r) => AxiomDef 'Scoped -> Sem r Internal.AxiomDef
+goAxiom :: (Members '[Reader Pragmas, Error ScoperError, Builtins, NameIdGen, Reader NameSignatures, Reader ConstructorNameSignatures] r) => AxiomDef 'Scoped -> Sem r Internal.AxiomDef
 goAxiom a = do
   _axiomType' <- goExpression (a ^. axiomType)
   _axiomPragmas' <- goPragmas (a ^. axiomPragmas)
