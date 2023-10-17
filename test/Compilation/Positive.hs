@@ -369,5 +369,10 @@ tests =
       "Test062: Overapplication"
       $(mkRelDir ".")
       $(mkRelFile "test062.juvix")
-      $(mkRelFile "out/test062.out")
+      $(mkRelFile "out/test062.out"),
+    posTest
+      "Test063: Dependent default values inserted during translation FromConcrete"
+      $(mkRelDir ".")
+      $(mkRelFile "test063.juvix")
+      $(mkRelFile "out/test063.out")
   ]
