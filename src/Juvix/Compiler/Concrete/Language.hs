@@ -149,7 +149,7 @@ type family ModuleEndType t = res | res -> t where
 type ParsedPragmas = WithLoc (WithSource Pragmas)
 
 data NameItem (s :: Stage) = NameItem
-  { _nameItemSymbol :: Symbol,
+  { _nameItemSymbol :: SymbolType s,
     _nameItemIndex :: Int,
     _nameItemDefault :: Maybe (ArgDefault s)
   }

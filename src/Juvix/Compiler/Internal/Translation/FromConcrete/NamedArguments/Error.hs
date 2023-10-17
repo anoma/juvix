@@ -1,5 +1,6 @@
 module Juvix.Compiler.Internal.Translation.FromConcrete.NamedArguments.Error where
 
+import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Pretty.Options
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error.Pretty
@@ -57,7 +58,7 @@ instance ToGenericError UnexpectedArguments where
 
 data MissingArguments = MissingArguments
   { _missingArgumentsLoc :: Interval,
-    _missingArguments :: NonEmpty Symbol
+    _missingArguments :: NonEmpty S.Symbol
   }
   deriving stock (Show)
 

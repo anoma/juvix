@@ -764,7 +764,46 @@ goExpression = \case
   ExpressionParensRecordUpdate i -> Internal.ExpressionLambda <$> goRecordUpdate (i ^. parensRecordUpdate)
   where
     goNamedApplication :: Concrete.NamedApplication 'Scoped -> Sem r Internal.Expression
-    goNamedApplication = runNamedArguments >=> goExpression
+    goNamedApplication = runNamedArguments >=> goDesugaredNamedApplication
+
+    goDesugaredNamedApplication :: DesugaredNamedApplication -> Sem r Internal.Expression
+    goDesugaredNamedApplication a = do
+      let fun = goScopedIden (a ^. dnamedAppIdentifier)
+          mkAppArg :: Arg -> Internal.ApplicationArg
+          mkAppArg arg =
+            Internal.ApplicationArg
+              { _appArgIsImplicit = arg ^. argImplicit,
+                _appArg = Internal.toExpression (goSymbol (arg ^. argName))
+              }
+          argNames :: NonEmpty Internal.ApplicationArg = mkAppArg <$> a ^. dnamedAppArgs
+          app = Internal.foldApplication (Internal.toExpression fun) (toList argNames)
+      clauses <- mapM mkClause (a ^. dnamedAppArgs)
+      return $
+        Internal.ExpressionLet
+          Internal.Let
+            { _letExpression = app,
+              _letClauses = clauses
+            }
+      where
+        mkClause :: Arg -> Sem r Internal.LetClause
+        mkClause arg = do
+          body' <- goExpression (arg ^. argValue)
+          -- TODO use type from signature instead of hole?
+          ty <- Internal.ExpressionHole <$> Internal.freshHole (getLoc body')
+          -- TODO create helper function for simple function definitions
+          return $
+            Internal.LetFunDef
+              Internal.FunctionDef
+                { _funDefName = goSymbol (arg ^. argName),
+                  _funDefType = ty,
+                  _funDefExamples = [],
+                  _funDefInstance = False,
+                  _funDefPragmas = mempty,
+                  _funDefDefaultSignature = mempty,
+                  _funDefTerminating = False,
+                  _funDefBuiltin = Nothing,
+                  _funDefBody = body'
+                }
 
     goRecordCreation :: Concrete.RecordCreation 'Scoped -> Sem r Internal.Expression
     goRecordCreation Concrete.RecordCreation {..} =
@@ -785,7 +824,7 @@ goExpression = \case
                           }
                   }
           cls <- goLetFunDefs (fmap Concrete.LetFunctionDef defs)
-          e <- runNamedArguments app >>= goExpression
+          e <- runNamedArguments app >>= goDesugaredNamedApplication
           return $
             Internal.ExpressionLet $
               Internal.Let
@@ -925,16 +964,21 @@ goExpression = \case
                   getFun = \case
                     Internal.PreLetFunctionDef f -> f
 
+    goApplicationArg :: Expression -> Sem r Internal.ApplicationArg
+    goApplicationArg arg =
+      let (e, i) = case arg of
+            ExpressionBraces b -> (b ^. withLocParam, Implicit)
+            ExpressionDoubleBraces b -> (b ^. doubleBracesExpression, ImplicitInstance)
+            _ -> (arg, Explicit)
+       in do
+            e' <- goExpression e
+            return (Internal.ApplicationArg i e')
+
     goApplication :: Application -> Sem r Internal.Application
     goApplication (Application l arg) = do
       l' <- goExpression l
-      r' <- goExpression r
-      return (Internal.Application l' r' i)
-      where
-        (r, i) = case arg of
-          ExpressionBraces b -> (b ^. withLocParam, Implicit)
-          ExpressionDoubleBraces b -> (b ^. doubleBracesExpression, ImplicitInstance)
-          _ -> (arg, Explicit)
+      Internal.ApplicationArg {..} <- goApplicationArg arg
+      return (Internal.Application l' _appArg _appArgIsImplicit)
 
     goPostfix :: PostfixApplication -> Sem r Internal.Application
     goPostfix (PostfixApplication l op) = do

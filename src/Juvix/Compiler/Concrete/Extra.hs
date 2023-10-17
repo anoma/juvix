@@ -140,8 +140,8 @@ flattenStatement = \case
 recordNameSignatureByIndex :: RecordNameSignature -> IntMap Symbol
 recordNameSignatureByIndex = IntMap.fromList . (^.. recordNames . each . to mkAssoc)
   where
-    mkAssoc :: NameItem s -> (Int, Symbol)
-    mkAssoc NameItem {..} = (_nameItemIndex, _nameItemSymbol)
+    mkAssoc :: (SingI s) => NameItem s -> (Int, Symbol)
+    mkAssoc NameItem {..} = (_nameItemIndex, symbolParsed _nameItemSymbol)
 
 getExpressionAtomIden :: ExpressionAtom 'Scoped -> Maybe S.Name
 getExpressionAtomIden = \case

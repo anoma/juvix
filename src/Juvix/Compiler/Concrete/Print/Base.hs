@@ -170,7 +170,7 @@ instance (SingI s) => PrettyPrint (NameItem s) where
     let defaultVal = do
           d <- _nameItemDefault
           return (noLoc C.kwAssign <+> ppExpressionType (d ^. argDefaultValue))
-    ppCode _nameItemSymbol <> ppCode Kw.kwExclamation <> noLoc (pretty _nameItemIndex)
+    ppSymbolType _nameItemSymbol <> ppCode Kw.kwExclamation <> noLoc (pretty _nameItemIndex)
       <+?> defaultVal
 
 instance (SingI s) => PrettyPrint (NameBlock s) where
