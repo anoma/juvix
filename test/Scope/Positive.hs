@@ -30,7 +30,7 @@ data PosTest = PosTest
   }
 
 posTest :: String -> Path Rel Dir -> Path Rel File -> PosTest
-posTest _name _relDir _file = PosTest {_pathResolverMode = PackagePathResolver, ..}
+posTest _name _relDir _file = PosTest {_pathResolverMode = FullPathResolver, ..}
 
 makeLenses ''PosTest
 
