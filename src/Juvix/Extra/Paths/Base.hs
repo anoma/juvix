@@ -26,11 +26,26 @@ projectPath = FE.makeRelativeToProject "." >>= lift . absDir
 stdlibDir :: Q Exp
 stdlibDir = FE.makeRelativeToProject "juvix-stdlib" >>= FE.embedDir
 
+packageDescriptionDirContents :: Q Exp
+packageDescriptionDirContents = FE.makeRelativeToProject (toFilePath packageDescriptionDir) >>= FE.embedDir
+
 juvixYamlFile :: Path Rel File
 juvixYamlFile = $(mkRelFile "juvix.yaml")
 
 juvixLockfile :: Path Rel File
 juvixLockfile = $(mkRelFile "juvix.lock.yaml")
+
+packageDescriptionDir :: Path Rel Dir
+packageDescriptionDir = $(mkRelDir "include/package")
+
+packageDescriptionFile :: Path Rel File
+packageDescriptionFile = packageDescriptionDir <//> packageDescriptionFilename
+
+packageDescriptionFilename :: Path Rel File
+packageDescriptionFilename = $(mkRelFile "PackageDescription.juvix")
+
+packageFilePath :: Path Rel File
+packageFilePath = $(mkRelFile "Package.juvix")
 
 relBuildDir :: Path Rel Dir
 relBuildDir = $(mkRelDir ".juvix-build")

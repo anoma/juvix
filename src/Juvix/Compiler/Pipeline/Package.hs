@@ -22,6 +22,7 @@ module Juvix.Compiler.Pipeline.Package
     mkPackageFilePath,
     packageLockfile,
     unsetPackageLockfile,
+    mkPackagePath,
   )
 where
 
@@ -218,6 +219,9 @@ globalPackage =
 
 mkPackageFilePath :: Path Abs Dir -> Path Abs File
 mkPackageFilePath = (<//> juvixYamlFile)
+
+mkPackagePath :: Path Abs Dir -> Path Abs File
+mkPackagePath = (<//> packageFilePath)
 
 -- | Given some directory d it tries to read the file d/juvix.yaml and parse its contents
 readPackage ::

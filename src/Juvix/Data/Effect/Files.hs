@@ -69,6 +69,21 @@ walkDirRel handler topdir = do
             | otherwise -> modify' (HashSet.insert ufid) $> False
   evalState mempty (walkAvoidLoop $(mkRelDir "."))
 
+-- | Find all files relative to a root directory
+relFiles :: (Member Files r) => Path Abs Dir -> Sem r (HashSet (Path Rel File))
+relFiles root = walkDirRelAccum handler root mempty
+  where
+    handler ::
+      Path Abs Dir ->
+      [Path Rel Dir] ->
+      [Path Rel File] ->
+      HashSet (Path Rel File) ->
+      Sem r (HashSet (Path Rel File), Recurse Rel)
+    handler cd _ fs acc = return (acc <> HashSet.fromList (mkRel cd <$> fs), RecurseFilter (\_ _ -> True))
+
+    mkRel :: Path Abs Dir -> Path Rel File -> Path Rel File
+    mkRel cd f = fromJust (stripProperPrefix root (cd <//> f))
+
 -- | Restore the original contents of a file if an error occurs in an action.
 restoreFileOnError :: forall r a. (Members '[Resource, Files, TempFile] r) => Path Abs File -> Sem r a -> Sem r a
 restoreFileOnError p action = do
@@ -85,3 +100,6 @@ globalYaml = (<//> juvixYamlFile) <$> globalRoot
 
 globalRoot :: (Members '[Files] r) => Sem r (Path Abs Dir)
 globalRoot = (<//> $(mkRelDir "global-project")) <$> juvixConfigDir
+
+globalPackageDescriptionRoot :: (Members '[Files] r) => Sem r (Path Abs Dir)
+globalPackageDescriptionRoot = (<//> $(mkRelDir "package")) <$> juvixConfigDir

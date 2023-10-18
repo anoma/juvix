@@ -35,6 +35,7 @@ import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Che
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context qualified as Typed
 import Juvix.Compiler.Pipeline.Artifacts
 import Juvix.Compiler.Pipeline.EntryPoint
+import Juvix.Compiler.Pipeline.Loader.PathResolver
 import Juvix.Compiler.Pipeline.Root
 import Juvix.Compiler.Pipeline.Setup
 import Juvix.Compiler.Reg.Data.InfoTable qualified as Reg
@@ -182,6 +183,9 @@ runPipelineHighlight entry = fmap fst . runIOEitherHelper entry
 runIOEitherHelper :: forall a. EntryPoint -> Sem PipelineEff a -> IO (HighlightInput, (Either JuvixError (ResolverState, a)))
 runIOEitherHelper entry = do
   let hasInternet = not (entry ^. entryPointOffline)
+      runPathResolver'
+        | mainIsPackageFile = runPackagePathResolver' (entry ^. entryPointResolverRoot)
+        | otherwise = runPathResolverPipe
   runM
     . evalInternet hasInternet
     . runHighlightBuilder
@@ -195,7 +199,12 @@ runIOEitherHelper entry = do
     . mapError (JuvixError @GitProcessError)
     . runGitProcess
     . mapError (JuvixError @DependencyError)
-    . runPathResolverPipe
+    . runPathResolver'
+  where
+    mainIsPackageFile :: Bool
+    mainIsPackageFile = case entry ^? entryPointModulePaths . _head of
+      Just p -> p == mkPackagePath (entry ^. entryPointResolverRoot)
+      Nothing -> False
 
 runIO :: GenericOptions -> EntryPoint -> Sem PipelineEff a -> IO (ResolverState, a)
 runIO opts entry = runIOEither entry >=> mayThrow

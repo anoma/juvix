@@ -1,0 +1,51 @@
+module PackageDescription;
+
+import Stdlib.Prelude open;
+
+type Package :=
+  mkPackage {
+    name : String;
+    version : SemVer;
+    dependencies : List Dependency;
+    main : Maybe String;
+    buildDir : Maybe String
+  };
+
+mkPackageDefault (name : String)
+          {version : SemVer := mkVersion 0 0 0}
+          {dependencies : List Dependency := []}
+          {main : Maybe String := nothing}
+          {buildDir : Maybe String := nothing} : Package :=
+  mkPackage name version dependencies main buildDir;
+
+type SemVer :=
+  mkSemVer {
+    major : Nat;
+    minor : Nat;
+    patch : Nat;
+    release : Maybe String;
+    meta : Maybe String
+  };
+
+mkVersion (major : Nat)
+    (minor : Nat)
+    (patch : Nat)
+    {release : Maybe String := nothing}
+    {meta : Maybe String := nothing} : SemVer :=
+  mkSemVer
+    (major := major;
+    minor := minor;
+    patch := patch;
+    release := release;
+    meta := meta);
+
+type Dependency :=
+  | pathDependency {path : String}
+  | gitDependency {
+      url : String;
+      name : String;
+      ref : String
+    };
+
+github (org repo ref : String) : Dependency :=
+  gitDependency ("https://github.com/" ++str org ++str "/" ++str repo) (org ++str "_" ++str repo) ref;
