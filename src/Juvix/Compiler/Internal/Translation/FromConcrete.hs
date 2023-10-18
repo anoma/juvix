@@ -817,20 +817,20 @@ goExpression = \case
           let getIx fi =
                 let sym = Concrete.symbolParsed (fi ^. Concrete.fieldDefineFunDef . Concrete.signName)
                  in sig ^?! recordNames . at sym . _Just . nameItemIndex
-          let fieldsByIx = nonEmpty' (sortOn getIx (toList fields1))
-          let args :: [Internal.Name] = map (^. Concrete.fieldDefineFunDef . Concrete.signName . to goSymbol) (toList fieldsByIx)
+              fieldsByIx = nonEmpty' (sortOn getIx (toList fields1))
           cls <- mapM goField fieldsByIx
-          let constr = Internal.toExpression (goScopedIden _recordCreationConstructor)
+          let args :: [Internal.Name] = map (^. Internal.funDefName) (toList cls)
+              constr = Internal.toExpression (goScopedIden _recordCreationConstructor)
               e = foldExplicitApplication constr (map Internal.toExpression args)
           return $
             Internal.ExpressionLet $
               Internal.Let
-                { _letClauses = cls,
+                { _letClauses = Internal.LetFunDef <$> cls,
                   _letExpression = e
                 }
           where
-            goField :: RecordDefineField 'Scoped -> Sem r Internal.LetClause
-            goField = fmap Internal.LetFunDef . goFunctionDef . (^. fieldDefineFunDef)
+            goField :: RecordDefineField 'Scoped -> Sem r Internal.FunctionDef
+            goField = goFunctionDef . (^. fieldDefineFunDef)
 
     goRecordUpdate :: Concrete.RecordUpdate 'Scoped -> Sem r Internal.Lambda
     goRecordUpdate r = do

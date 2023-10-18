@@ -173,15 +173,14 @@ strongNormalize' = go
           return (ExpressionApplication (Application l' r' i))
 
     goIden :: Iden -> Sem r Expression
-    goIden i = case i of
-      IdenFunction f -> do
-        f' <- askFunctionDef f
-        case f' of
-          Nothing -> return i'
-          Just x -> go x
-      _ -> return i'
-      where
-        i' = ExpressionIden i
+    goIden i = do
+      funBody <- runFailDefault (ExpressionIden i) $ do
+        funName <- case i of
+          IdenFunction f -> return f
+          IdenVar f -> return f
+          _ -> fail
+        askFunctionDef funName >>= failMaybe
+      go funBody
 
 weakNormalize' :: forall r. (Members '[State FunctionsTable, State InferenceState] r) => Expression -> Sem r Expression
 weakNormalize' = go
