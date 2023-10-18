@@ -136,7 +136,8 @@ typeChecking a = do
       . runReader table
       . mapError (JuvixError @TypeCheckerError)
       . evalCacheEmpty checkModuleNoCache
-      $ mapM checkModule (res ^. ArityChecking.resultModules)
+      $ do
+        mapM checkModule (res ^. ArityChecking.resultModules)
   return
     InternalTypedResult
       { _resultInternalArityResult = res,

@@ -7,8 +7,6 @@ import Juvix.Compiler.Internal.Data.LocalVars
 import Juvix.Compiler.Internal.Language
 import Juvix.Prelude
 
-type SubsE = HashMap VarName Expression
-
 type Rename = HashMap VarName VarName
 
 type Subs = HashMap VarName Expression
@@ -237,9 +235,6 @@ instance HasExpressions ConstructorDef where
           _inductiveConstructorPragmas
         }
 
-fillHoles :: HashMap Hole Expression -> Expression -> Expression
-fillHoles = subsHoles
-
 substituteIndParams :: [(InductiveParameter, Expression)] -> Expression -> Expression
 substituteIndParams = substitutionE . HashMap.fromList . map (first (^. inductiveParamName))
 
@@ -263,7 +258,7 @@ unnamedParameter = unnamedParameter' Explicit
 singletonRename :: VarName -> VarName -> Rename
 singletonRename = HashMap.singleton
 
-renameToSubsE :: Rename -> SubsE
+renameToSubsE :: Rename -> Subs
 renameToSubsE = fmap (ExpressionIden . IdenVar)
 
 patternArgVariables :: Traversal' PatternArg VarName
@@ -292,10 +287,10 @@ substitutionApp (mv, ty) = case mv of
   Nothing -> id
   Just v -> substitutionE (HashMap.singleton v ty)
 
-localsToSubsE :: LocalVars -> SubsE
+localsToSubsE :: LocalVars -> Subs
 localsToSubsE l = ExpressionIden . IdenVar <$> l ^. localTyMap
 
-substitutionE :: SubsE -> Expression -> Expression
+substitutionE :: Subs -> Expression -> Expression
 substitutionE m = over leafExpressions goLeaf
   where
     goLeaf :: Expression -> Expression
@@ -725,3 +720,6 @@ explicitPatternArg _patternArgPattern =
       _patternArgIsImplicit = Explicit,
       _patternArgPattern
     }
+
+simpleFunctionDef :: Name -> Expression -> Expression -> FunctionDef
+simpleFunctionDef = undefined

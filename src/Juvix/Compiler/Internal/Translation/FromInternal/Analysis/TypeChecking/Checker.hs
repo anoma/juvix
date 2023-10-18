@@ -203,6 +203,7 @@ checkFunctionDef FunctionDef {..} = do
   when _funDefInstance $
     checkInstanceType funDef
   registerFunctionDef funDef
+  rememberFunctionDef funDef
   return funDef
   where
     -- Since default arguments come from the left of the : then it must be that
@@ -384,18 +385,13 @@ inferExpression ::
   Sem r TypedExpression
 inferExpression hint e = resolveInstanceHoles $ inferExpression' hint e
 
--- | Needs to lookup the functions table as fallback because
--- of the let clauses introduced by desugaring named applications
--- TODO Maybe functions introduced in let clauses should be treated as local variables?
 lookupVar :: (Members '[Reader LocalVars, Reader InfoTable] r) => Name -> Sem r Expression
 lookupVar v = do
   locals <- asks (^. localTypes)
-  funs <- asks (^. infoFunctions)
   return
     ( fromMaybe
         err
         ( locals ^. at v
-            <|> (funs ^? at v . _Just . functionInfoDef . funDefType)
         )
     )
   where

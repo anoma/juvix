@@ -773,6 +773,10 @@ goExpression = \case
     goDesugaredNamedApplication :: DesugaredNamedApplication -> Sem r Internal.Expression
     goDesugaredNamedApplication a = do
       let fun = goScopedIden (a ^. dnamedAppIdentifier)
+          rename :: Internal.Subs =
+            HashMap.fromList
+              [ (s, Internal.ExpressionIden s') | s <- a ^.. dnamedAppArgs . each . argName . to goSymbol, let s' = Internal.IdenFunction (set Internal.nameKind KNameFunction s)
+              ]
           mkAppArg :: Arg -> Internal.ApplicationArg
           mkAppArg arg =
             Internal.ApplicationArg
@@ -782,8 +786,9 @@ goExpression = \case
           argNames :: NonEmpty Internal.ApplicationArg = mkAppArg <$> a ^. dnamedAppArgs
           app = Internal.foldApplication (Internal.toExpression fun) (toList argNames)
       clauses <- mapM mkClause (a ^. dnamedAppArgs)
-      return $
-        Internal.ExpressionLet
+      return
+        . Internal.substitutionE rename
+        $ Internal.ExpressionLet
           Internal.Let
             { _letExpression = app,
               _letClauses = clauses
@@ -822,12 +827,18 @@ goExpression = \case
           let args :: [Internal.Name] = map (^. Internal.funDefName) (toList cls)
               constr = Internal.toExpression (goScopedIden _recordCreationConstructor)
               e = foldExplicitApplication constr (map Internal.toExpression args)
-          return $
-            Internal.ExpressionLet $
-              Internal.Let
-                { _letClauses = Internal.LetFunDef <$> cls,
-                  _letExpression = e
-                }
+              rename :: Internal.Subs =
+                HashMap.fromList
+                  [ (s, Internal.toExpression s') | s <- args, let s' = Internal.IdenFunction (set Internal.nameKind KNameFunction s)
+                  ]
+
+          return
+            . Internal.substitutionE rename
+            . Internal.ExpressionLet
+            $ Internal.Let
+              { _letClauses = Internal.LetFunDef <$> cls,
+                _letExpression = e
+              }
           where
             goField :: RecordDefineField 'Scoped -> Sem r Internal.FunctionDef
             goField = goFunctionDef . (^. fieldDefineFunDef)

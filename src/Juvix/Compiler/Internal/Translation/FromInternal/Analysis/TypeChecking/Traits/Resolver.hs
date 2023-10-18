@@ -12,7 +12,7 @@ import Juvix.Prelude
 
 type SubsI = HashMap VarName InstanceParam
 
-subsIToE :: SubsI -> SubsE
+subsIToE :: SubsI -> Subs
 subsIToE = fmap paramToExpression
 
 isTrait :: InfoTable -> Name -> Bool
@@ -50,7 +50,7 @@ varsToInstances tbl LocalVars {..} =
 expandArity ::
   (Members '[Error TypeCheckerError, NameIdGen] r) =>
   Interval ->
-  SubsE ->
+  Subs ->
   [FunctionParameter] ->
   Expression ->
   Sem r Expression

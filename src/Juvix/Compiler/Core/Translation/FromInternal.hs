@@ -353,13 +353,17 @@ goFunctionDef PreFunctionDef {..} = do
       let (is, _) = unfoldLambdas node
       setIdentArgs _preFunSym (map (^. lambdaLhsBinder) is)
 
+strongNormalizeHelper :: (Member (State InternalTyped.FunctionsTable) r) => Internal.Expression -> Sem r Internal.Expression
+strongNormalizeHelper ty = evalState InternalTyped.iniState (InternalTyped.strongNormalize' ty)
+
 goType ::
   forall r.
   (Members '[InfoTableBuilder, Reader Internal.InfoTable, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader IndexTable] r) =>
   Internal.Expression ->
   Sem r Type
 goType ty = do
-  normTy <- evalState InternalTyped.iniState (InternalTyped.strongNormalize' ty)
+  normTy <- strongNormalizeHelper ty
+  -- traceM ("ty = " <> Internal.ppTrace ty <> ". Normalized = " <> Internal.ppTrace normTy)
   squashApps <$> goExpression normTy
 
 mkFunBody ::

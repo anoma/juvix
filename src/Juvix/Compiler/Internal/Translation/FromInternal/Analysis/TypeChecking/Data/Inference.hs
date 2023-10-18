@@ -1,6 +1,20 @@
 module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Inference
-  ( module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Inference,
-    module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.FunctionsTable,
+  ( module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.FunctionsTable,
+    Inference,
+    MatchError,
+    registerFunctionDef,
+    matchErrorLeft,
+    matchErrorRight,
+    queryMetavar,
+    registerIdenType,
+    strongNormalize',
+    iniState,
+    strongNormalize,
+    weakNormalize,
+    runInferenceDefs,
+    runInferenceDef,
+    rememberFunctionDef,
+    matchTypes,
   )
 where
 
@@ -30,6 +44,7 @@ data Inference m a where
   MatchTypes :: Expression -> Expression -> Inference m (Maybe MatchError)
   QueryMetavar :: Hole -> Inference m (Maybe Expression)
   RegisterIdenType :: Name -> Expression -> Inference m ()
+  RememberFunctionDef :: FunctionDef -> Inference m ()
   StrongNormalize :: Expression -> Inference m Expression
   WeakNormalize :: Expression -> Inference m Expression
 
@@ -37,6 +52,7 @@ makeSem ''Inference
 
 data InferenceState = InferenceState
   { _inferenceMap :: HashMap Hole MetavarState,
+    _inferenceFunctionsStash :: [FunctionDef],
     _inferenceIdens :: TypesTable
   }
 
@@ -46,6 +62,7 @@ iniState :: InferenceState
 iniState =
   InferenceState
     { _inferenceMap = mempty,
+      _inferenceFunctionsStash = [],
       _inferenceIdens = mempty
     }
 
@@ -173,14 +190,15 @@ strongNormalize' = go
           return (ExpressionApplication (Application l' r' i))
 
     goIden :: Iden -> Sem r Expression
-    goIden i = do
-      funBody <- runFailDefault (ExpressionIden i) $ do
-        funName <- case i of
-          IdenFunction f -> return f
-          IdenVar f -> return f
-          _ -> fail
-        askFunctionDef funName >>= failMaybe
-      go funBody
+    goIden i = case i of
+      IdenFunction f -> do
+        f' <- askFunctionDef f
+        case f' of
+          Nothing -> return i'
+          Just x -> go x
+      _ -> return i'
+      where
+        i' = ExpressionIden i
 
 weakNormalize' :: forall r. (Members '[State FunctionsTable, State InferenceState] r) => Expression -> Sem r Expression
 weakNormalize' = go
@@ -245,6 +263,7 @@ re ::
 re = reinterpret $ \case
   MatchTypes a b -> matchTypes' a b
   QueryMetavar h -> queryMetavar' h
+  RememberFunctionDef f -> modify' (over inferenceFunctionsStash (f :))
   RegisterIdenType i ty -> registerIdenType' i ty
   StrongNormalize ty -> strongNormalize' ty
   WeakNormalize ty -> weakNormalize' ty
@@ -420,17 +439,20 @@ matchPatterns (PatternArg impl1 name1 pat1) (PatternArg impl2 name2 pat2) =
     err = return False
 
 runInferenceDefs ::
-  (Members '[HighlightBuilder, Error TypeCheckerError, State FunctionsTable, State TypesTable] r, HasExpressions funDef) =>
+  (Members '[Termination, HighlightBuilder, Error TypeCheckerError, State FunctionsTable, State TypesTable] r, HasExpressions funDef) =>
   Sem (Inference ': r) (NonEmpty funDef) ->
   Sem r (NonEmpty funDef)
 runInferenceDefs a = do
-  ((subs, idens), expr) <- runState iniState (re a) >>= firstM closeState
-  let idens' = fillHoles subs <$> idens
+  (finalState, expr) <- runState iniState (re a)
+  (subs, idens) <- closeState finalState
+  let idens' = subsHoles subs <$> idens
+      stash' = map (subsHoles subs) (finalState ^. inferenceFunctionsStash)
+  forM_ stash' registerFunctionDef
   addIdens idens'
   return (subsHoles subs <$> expr)
 
 runInferenceDef ::
-  (Members '[HighlightBuilder, Error TypeCheckerError, State FunctionsTable, State TypesTable] r, HasExpressions funDef) =>
+  (Members '[Termination, HighlightBuilder, Error TypeCheckerError, State FunctionsTable, State TypesTable] r, HasExpressions funDef) =>
   Sem (Inference ': r) funDef ->
   Sem r funDef
 runInferenceDef = fmap head . runInferenceDefs . fmap pure
