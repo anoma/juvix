@@ -17,6 +17,8 @@ kFreeVarsInfo = Proxy
 
 makeLenses ''FreeVarsInfo
 
+-- | Computes free variable info for each subnode. Assumption: no subnode is a
+-- closure.
 computeFreeVarsInfo :: Node -> Node
 computeFreeVarsInfo = umap go
   where

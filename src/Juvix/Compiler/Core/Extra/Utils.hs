@@ -93,33 +93,39 @@ isType tab bl node = case node of
         isTypeConstr tab (ii ^. identifierType)
   _ -> isType' node
 
-isZeroOrderType :: InfoTable -> Type -> Bool
-isZeroOrderType tab = \case
+isZeroOrderType' :: HashSet Symbol -> InfoTable -> Type -> Bool
+isZeroOrderType' foinds tab = \case
   NPi {} -> False
+  NDyn {} -> False
   NTyp TypeConstr {..} ->
-    isFirstOrderInductive tab _typeConstrSymbol
-      && all (isZeroOrderType tab) _typeConstrArgs
+    isFirstOrderInductive' foinds tab _typeConstrSymbol
+      && all (isZeroOrderType' foinds tab) _typeConstrArgs
   ty -> isType' ty
 
-isFirstOrderType :: InfoTable -> Type -> Bool
-isFirstOrderType tab ty = case ty of
+isFirstOrderType' :: HashSet Symbol -> InfoTable -> Type -> Bool
+isFirstOrderType' foinds tab ty = case ty of
   NVar {} -> True
   NPi Pi {..} ->
-    isZeroOrderType tab (_piBinder ^. binderType)
-      && isFirstOrderType tab _piBody
+    isZeroOrderType' foinds tab (_piBinder ^. binderType)
+      && isFirstOrderType' foinds tab _piBody
   NUniv {} -> True
   NPrim {} -> True
-  NTyp {} -> isZeroOrderType tab ty
-  NDyn {} -> True
+  NTyp {} -> isZeroOrderType' foinds tab ty
+  NDyn {} -> False
   _ -> assert (not (isType' ty)) False
 
-isFirstOrderInductive :: InfoTable -> Symbol -> Bool
-isFirstOrderInductive tab sym = case lookupInductiveInfo' tab sym of
-  Nothing -> False
-  Just ii ->
-    all
-      (isFirstOrderType tab . (^. constructorType) . lookupConstructorInfo tab)
-      (ii ^. inductiveConstructors)
+isFirstOrderInductive' :: HashSet Symbol -> InfoTable -> Symbol -> Bool
+isFirstOrderInductive' foinds tab sym
+  | HashSet.member sym foinds = True
+  | otherwise = case lookupInductiveInfo' tab sym of
+      Nothing -> False
+      Just ii ->
+        all
+          (isFirstOrderType' (HashSet.insert sym foinds) tab . (^. constructorType) . lookupConstructorInfo tab)
+          (ii ^. inductiveConstructors)
+
+isFirstOrderType :: InfoTable -> Type -> Bool
+isFirstOrderType = isFirstOrderType' mempty
 
 -- | True for nodes whose evaluation immediately returns a value, i.e.,
 -- no reduction or memory allocation in the runtime is required.

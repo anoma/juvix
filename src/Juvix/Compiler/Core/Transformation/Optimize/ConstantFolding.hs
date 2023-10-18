@@ -8,32 +8,45 @@ import Juvix.Compiler.Core.Info.FreeVarsInfo as Info
 import Juvix.Compiler.Core.Transformation.Base
 
 convertNode :: HashSet Symbol -> InfoTable -> Node -> Node
-convertNode recSyms tab = umap go
+convertNode nonRecSyms tab = umap go
   where
     go :: Node -> Node
     go node = case node of
-      NBlt {}
-        | Info.isClosed node ->
+      NBlt BuiltinApp {..}
+        | Info.isClosed node
+            && _builtinAppOp /= OpFail
+            && _builtinAppOp /= OpTrace
+            && all isNonRecValue _builtinAppArgs ->
             doEval node
       NApp {}
         | Info.isClosed node ->
-            let (h, args) = unfoldApps' node
-             in case h of
-                  NIdt Ident {..}
-                    | not (HashSet.member _identSymbol recSyms)
-                        && all isNonRecValue args ->
-                        doEval node
-                  _ -> node
+            case h of
+              NIdt Ident {..}
+                | HashSet.member _identSymbol nonRecSyms
+                    && length args == ii ^. identifierArgsNum
+                    && length tyargs == ii ^. identifierArgsNum
+                    && isFirstOrderType tab tgt
+                    && all isNonRecValue args ->
+                    doEval node
+                where
+                  ii = lookupIdentifierInfo tab _identSymbol
+                  (tyargs, tgt) = unfoldPi' (ii ^. identifierType)
+              _ -> node
+        where
+          (h, args) = unfoldApps' node
       _ -> node
 
     isNonRecValue :: Node -> Bool
     isNonRecValue node = case node of
       NCst {} -> True
       NIdt Ident {..} ->
-        not (HashSet.member _identSymbol recSyms) && isFirstOrderType tab ty
+        HashSet.member _identSymbol nonRecSyms && isFirstOrderType tab ty
         where
           ty = lookupIdentifierInfo tab _identSymbol ^. identifierType
       NCtr Constr {..} -> all isNonRecValue _constrArgs
+      NApp {} ->
+        let (h, args) = unfoldApps' node
+         in isNonRecValue h && all isType' args
       _ -> isType' node
 
     doEval :: Node -> Node
@@ -46,13 +59,13 @@ convertNode recSyms tab = umap go
             }
 
 constantFolding' :: HashSet Symbol -> InfoTable -> InfoTable
-constantFolding' recSyms tab =
+constantFolding' nonRecSyms tab =
   mapAllNodes
     ( removeInfo kFreeVarsInfo
-        . convertNode recSyms tab
+        . convertNode nonRecSyms tab
         . computeFreeVarsInfo
     )
     tab
 
 constantFolding :: InfoTable -> InfoTable
-constantFolding tab = constantFolding' (recursiveIdentsClosure tab) tab
+constantFolding tab = constantFolding' (nonRecursiveIdents tab) tab

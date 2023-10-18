@@ -75,14 +75,15 @@ recursiveIdentsClosure tab =
           | HashSet.member sym visited ->
               return acc
           | otherwise -> do
-              let acc' =
+              let path' = HashSet.insert sym path
+                  acc' =
                     if
-                        | any (`HashSet.member` path) chlds ->
+                        | any (`HashSet.member` path') chlds ->
                             HashSet.insert sym acc
                         | otherwise ->
                             acc
               modify' (HashSet.insert sym)
-              acc'' <- foldM (dfs (HashSet.insert sym path)) acc' chlds
+              acc'' <- foldM (dfs path') acc' chlds
               if
                   | any (`HashSet.member` acc'') chlds ->
                       return $ HashSet.insert sym acc''
@@ -90,3 +91,10 @@ recursiveIdentsClosure tab =
                       return acc''
       where
         chlds = fromJust $ HashMap.lookup sym graph
+
+-- | Complement of recursiveIdentsClosure
+nonRecursiveIdents :: InfoTable -> HashSet Symbol
+nonRecursiveIdents tab =
+  HashSet.difference
+    (HashSet.fromList (HashMap.keys (tab ^. infoIdentifiers)))
+    (recursiveIdentsClosure tab)
