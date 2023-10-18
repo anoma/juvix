@@ -55,4 +55,4 @@ constantFolding' recSyms tab =
     tab
 
 constantFolding :: InfoTable -> InfoTable
-constantFolding tab = constantFolding' (recursiveIdents tab) tab
+constantFolding tab = constantFolding' (recursiveIdentsClosure tab) tab
