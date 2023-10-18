@@ -127,6 +127,9 @@ isFirstOrderInductive' foinds tab sym
 isFirstOrderType :: InfoTable -> Type -> Bool
 isFirstOrderType = isFirstOrderType' mempty
 
+isZeroOrderType :: InfoTable -> Type -> Bool
+isZeroOrderType = isZeroOrderType' mempty
+
 -- | True for nodes whose evaluation immediately returns a value, i.e.,
 -- no reduction or memory allocation in the runtime is required.
 isImmediate :: InfoTable -> Node -> Bool

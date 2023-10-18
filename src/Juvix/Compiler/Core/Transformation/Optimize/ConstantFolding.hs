@@ -16,6 +16,7 @@ convertNode nonRecSyms tab = umap go
         | Info.isClosed node
             && _builtinAppOp /= OpFail
             && _builtinAppOp /= OpTrace
+            && _builtinAppOp /= OpSeq
             && all isNonRecValue _builtinAppArgs ->
             doEval node
       NApp {}
@@ -25,12 +26,15 @@ convertNode nonRecSyms tab = umap go
                 | HashSet.member _identSymbol nonRecSyms
                     && length args == ii ^. identifierArgsNum
                     && length tyargs == ii ^. identifierArgsNum
-                    && isFirstOrderType tab tgt
+                    && isZeroOrderType tab tgt'
                     && all isNonRecValue args ->
                     doEval node
                 where
                   ii = lookupIdentifierInfo tab _identSymbol
                   (tyargs, tgt) = unfoldPi' (ii ^. identifierType)
+                  n = length (takeWhile (isTypeConstr tab) tyargs)
+                  tys = reverse (take n args)
+                  tgt' = substs tys (shift (-(length tyargs - n)) tgt)
               _ -> node
         where
           (h, args) = unfoldApps' node
@@ -40,9 +44,7 @@ convertNode nonRecSyms tab = umap go
     isNonRecValue node = case node of
       NCst {} -> True
       NIdt Ident {..} ->
-        HashSet.member _identSymbol nonRecSyms && isFirstOrderType tab ty
-        where
-          ty = lookupIdentifierInfo tab _identSymbol ^. identifierType
+        HashSet.member _identSymbol nonRecSyms
       NCtr Constr {..} -> all isNonRecValue _constrArgs
       NApp {} ->
         let (h, args) = unfoldApps' node
