@@ -132,21 +132,52 @@ strongNormalize' = go
       ExpressionSimpleLambda l -> ExpressionSimpleLambda <$> goSimpleLambda l
       ExpressionLambda l -> ExpressionLambda <$> goLambda l
       -- NOTE: we cannot always normalize let expressions because we do not have closures.
-      -- We give up
-      ExpressionLet {} -> error "normalization of let expressions is not supported yet"
+      -- We just recurse inside
+      ExpressionLet l -> ExpressionLet <$> goLet l
       -- TODO it should normalize like an applied lambda
       ExpressionCase {} -> error "normalization of case expressions is not supported yet"
 
-    goClause :: LambdaClause -> Sem r LambdaClause
-    goClause (LambdaClause p b) = do
-      b' <- go b
-      return (LambdaClause p b')
+    goLet :: Let -> Sem r Let
+    goLet Let {..} = do
+      clauses' <- mapM goLetClause _letClauses
+      body' <- go _letExpression
+      return
+        Let
+          { _letClauses = clauses',
+            _letExpression = body'
+          }
+      where
+        goLetClause :: LetClause -> Sem r LetClause
+        goLetClause = \case
+          LetFunDef f -> LetFunDef <$> goFunDef f
+          LetMutualBlock f -> LetMutualBlock <$> goMutualBlockLet f
+          where
+            goMutualBlockLet :: MutualBlockLet -> Sem r MutualBlockLet
+            goMutualBlockLet MutualBlockLet {..} = do
+              defs' <- mapM goFunDef _mutualLet
+              return MutualBlockLet {_mutualLet = defs'}
+
+            goFunDef :: FunctionDef -> Sem r FunctionDef
+            goFunDef FunctionDef {..} = do
+              type' <- go _funDefType
+              body' <- go _funDefBody
+              return
+                FunctionDef
+                  { _funDefBody = body',
+                    _funDefType = type',
+                    ..
+                  }
 
     goLambda :: Lambda -> Sem r Lambda
     goLambda l = do
-      _lambdaClauses <- mapM goClause (l ^. lambdaClauses)
+      _lambdaClauses <- mapM goLambdaClause (l ^. lambdaClauses)
       _lambdaType <- mapM go (l ^. lambdaType)
       return Lambda {..}
+      where
+        goLambdaClause :: LambdaClause -> Sem r LambdaClause
+        goLambdaClause (LambdaClause p b) = do
+          b' <- go b
+          return (LambdaClause p b')
 
     goSimpleLambda :: SimpleLambda -> Sem r SimpleLambda
     goSimpleLambda (SimpleLambda lamVar lamTy lamBody) = do
@@ -299,6 +330,8 @@ re = reinterpret $ \case
                 (ExpressionLambda a, ExpressionLambda b) -> goLambda a b
                 (ExpressionHole h, a) -> goHole h a
                 (a, ExpressionHole h) -> goHole h a
+                (_, ExpressionLet r) -> go normA (r ^. letExpression)
+                (ExpressionLet l, _) -> go (l ^. letExpression) normB
                 (ExpressionInstanceHole {}, _) -> err
                 (_, ExpressionInstanceHole {}) -> err
                 (ExpressionSimpleLambda {}, _) -> err
@@ -315,8 +348,6 @@ re = reinterpret $ \case
                 (_, ExpressionLambda {}) -> err
                 (_, ExpressionCase {}) -> error "not implemented"
                 (ExpressionCase {}, _) -> error "not implemented"
-                (_, ExpressionLet {}) -> error "not implemented"
-                (ExpressionLet {}, _) -> error "not implemented"
                 (ExpressionLiteral l, ExpressionLiteral l') -> check (l == l')
               where
                 ok :: Sem r (Maybe MatchError)
