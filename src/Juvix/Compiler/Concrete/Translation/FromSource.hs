@@ -1039,16 +1039,16 @@ functionDefinition ::
   ParsecS r (FunctionDef 'Parsed)
 functionDefinition allowOmitType allowInstance _signBuiltin = P.label "<function definition>" $ do
   _signTerminating <- optional (kw kwTerminating)
-  off0 <- P.getOffset
-  _signInstance <- optional (kw kwInstance)
-  unless (allowInstance || isNothing _signInstance) $
-    parseFailure off0 "instance not allowed here"
   off <- P.getOffset
   _signCoercion <- optional (kw kwCoercion)
   unless (allowInstance || isNothing _signCoercion) $
     parseFailure off "coercion not allowed here"
-  unless (isNothing _signCoercion || isNothing _signInstance) $
-    parseFailure off0 "a definition cannot be both a coercion and an instance"
+  off0 <- P.getOffset
+  _signInstance <- optional (kw kwInstance)
+  unless (allowInstance || isNothing _signInstance) $
+    parseFailure off0 "instance not allowed here"
+  when (isJust _signCoercion && isNothing _signInstance) $
+    parseFailure off0 "expected: instance"
   _signName <- symbol
   _signArgs <- many parseArg
   off' <- P.getOffset
