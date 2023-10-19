@@ -1,5 +1,5 @@
 -- Constant folding
-module test063;
+module test064;
 
 import Stdlib.Prelude open;
 import Stdlib.Debug.Fail as Debug;
