@@ -965,10 +965,11 @@ goSimpleLambda ::
   Internal.SimpleLambda ->
   Sem r Node
 goSimpleLambda l = do
-  ty <- goType (l ^. Internal.slambdaVarType)
-  let loc = l ^. Internal.slambdaVar . nameLoc
-      name = l ^. Internal.slambdaVar . nameText
-  localAddName (l ^. Internal.slambdaVar) (mkLambda mempty (Binder name (Just loc) ty) <$> goExpression (l ^. Internal.slambdaBody))
+  let var = l ^. Internal.slambdaBinder . Internal.sbinderVar
+  ty <- goType (l ^. Internal.slambdaBinder . Internal.sbinderType)
+  let loc = var ^. nameLoc
+      name = var ^. nameText
+  localAddName var (mkLambda mempty (Binder name (Just loc) ty) <$> goExpression (l ^. Internal.slambdaBody))
 
 goApplication ::
   forall r.

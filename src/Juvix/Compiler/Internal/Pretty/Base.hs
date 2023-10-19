@@ -46,7 +46,7 @@ instance PrettyCode Iden where
 instance PrettyCode SimpleLambda where
   ppCode l = do
     b' <- ppCode (l ^. slambdaBody)
-    v' <- ppCode (l ^. slambdaVar)
+    v' <- ppCode (l ^. slambdaBinder . sbinderVar)
     return $ kwLambda <+> braces (v' <+> kwAssign <+> b')
 
 instance PrettyCode Application where

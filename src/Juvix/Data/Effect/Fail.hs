@@ -33,6 +33,10 @@ failWhen :: (Member Fail r) => Bool -> Sem r ()
 failWhen c = when c fail
 {-# INLINE failWhen #-}
 
+failUnlessM :: (Member Fail r) => Sem r Bool -> Sem r ()
+failUnlessM c = unlessM c fail
+{-# INLINE failUnlessM #-}
+
 failUnless :: (Member Fail r) => Bool -> Sem r ()
 failUnless c = unless c fail
 {-# INLINE failUnless #-}

@@ -221,7 +221,7 @@ goExpression ::
   Expression ->
   Sem r ()
 goExpression p e = case e of
-  ExpressionIden i -> addEdgeMay p (idenName i)
+  ExpressionIden i -> addEdgeMay p (i ^. idenName)
   ExpressionUniverse {} -> return ()
   ExpressionFunction f -> do
     goFunctionParameter p (f ^. functionLeft)
@@ -239,7 +239,7 @@ goExpression p e = case e of
   where
     goSimpleLambda :: SimpleLambda -> Sem r ()
     goSimpleLambda l = do
-      addEdgeMay p (l ^. slambdaVar)
+      addEdgeMay p (l ^. slambdaBinder . sbinderVar)
 
     goLambda :: Lambda -> Sem r ()
     goLambda Lambda {..} = mapM_ goClause _lambdaClauses

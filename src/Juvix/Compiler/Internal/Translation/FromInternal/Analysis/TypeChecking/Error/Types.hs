@@ -84,7 +84,9 @@ newtype UnsolvedMeta = UnsolvedMeta
 makeLenses ''UnsolvedMeta
 
 instance ToGenericError UnsolvedMeta where
-  genericError e =
+  genericError :: forall r. (Member (Reader GenericOptions) r) => UnsolvedMeta -> Sem r GenericError
+  genericError e = do
+    msg <- mkMsg
     return
       GenericError
         { _genericErrorLoc = i,
@@ -93,8 +95,15 @@ instance ToGenericError UnsolvedMeta where
         }
     where
       i = getLoc (e ^. unsolvedMeta)
-      msg :: Doc a
-      msg = "Unable to infer the hole"
+      mkMsg :: Sem r (Doc Ann)
+      mkMsg = do
+        m <- holeid
+        return ("Unable to infer the hole" <>? m)
+      holeid :: Sem r (Maybe (Doc Ann))
+      holeid = runFail $ do
+        opts <- fromGenericOptions <$> ask
+        failUnlessM (asks (^. showNameIds))
+        return (" " <> ppCode opts (e ^. unsolvedMeta . holeId))
 
 -- | The arguments of a constructor pattern do not match
 -- the expected arguments of the constructor

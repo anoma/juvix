@@ -660,7 +660,7 @@ inferExpression' hint e = case e of
           }
 
     goSimpleLambda :: SimpleLambda -> Sem r TypedExpression
-    goSimpleLambda (SimpleLambda v ty b) = do
+    goSimpleLambda (SimpleLambda (SimpleBinder v ty) b) = do
       b' <- inferExpression' Nothing b
       let smallUni = smallUniverseE (getLoc ty)
       ty' <- checkExpression smallUni ty
@@ -668,7 +668,7 @@ inferExpression' hint e = case e of
       return
         TypedExpression
           { _typedType = ExpressionFunction fun,
-            _typedExpression = ExpressionSimpleLambda (SimpleLambda v ty' (b' ^. typedExpression))
+            _typedExpression = ExpressionSimpleLambda (SimpleLambda (SimpleBinder v ty') (b' ^. typedExpression))
           }
 
     goCase :: Case -> Sem r TypedExpression

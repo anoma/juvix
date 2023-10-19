@@ -166,9 +166,14 @@ data Example = Example
 
 instance Hashable Example
 
+data SimpleBinder = SimpleBinder
+  { _sbinderVar :: VarName,
+    _sbinderType :: Expression
+  }
+  deriving stock (Eq, Generic, Data)
+
 data SimpleLambda = SimpleLambda
-  { _slambdaVar :: VarName,
-    _slambdaVarType :: Expression,
+  { _slambdaBinder :: SimpleBinder,
     _slambdaBody :: Expression
   }
   deriving stock (Eq, Generic, Data)
@@ -210,6 +215,8 @@ data LambdaClause = LambdaClause
 instance Hashable Lambda
 
 instance Hashable LambdaClause
+
+instance Hashable SimpleBinder
 
 instance Hashable SimpleLambda
 
@@ -341,6 +348,7 @@ makeLenses ''Application
 makeLenses ''TypedExpression
 makeLenses ''Function
 makeLenses ''SimpleLambda
+makeLenses ''SimpleBinder
 makeLenses ''Lambda
 makeLenses ''LambdaClause
 makeLenses ''FunctionParameter
@@ -436,8 +444,11 @@ instance HasLoc Function where
 instance HasLoc Application where
   getLoc (Application l r _) = getLoc l <> getLoc r
 
+instance HasLoc SimpleBinder where
+  getLoc l = getLoc (l ^. sbinderVar) <> getLoc (l ^. sbinderType)
+
 instance HasLoc SimpleLambda where
-  getLoc l = getLoc (l ^. slambdaVar) <> getLoc (l ^. slambdaBody)
+  getLoc l = getLoc (l ^. slambdaBinder) <> getLoc (l ^. slambdaBody)
 
 instance HasLoc LambdaClause where
   getLoc (LambdaClause ps e) = getLocSpan ps <> getLoc e

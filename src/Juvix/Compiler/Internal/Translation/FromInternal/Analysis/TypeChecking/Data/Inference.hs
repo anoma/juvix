@@ -180,10 +180,10 @@ strongNormalize' = go
           return (LambdaClause p b')
 
     goSimpleLambda :: SimpleLambda -> Sem r SimpleLambda
-    goSimpleLambda (SimpleLambda lamVar lamTy lamBody) = do
+    goSimpleLambda (SimpleLambda (SimpleBinder lamVar lamTy) lamBody) = do
       lamTy' <- go lamTy
       lamBody' <- go lamBody
-      return (SimpleLambda lamVar lamTy' lamBody')
+      return (SimpleLambda (SimpleBinder lamVar lamTy') lamBody')
 
     goFunctionParam :: FunctionParameter -> Sem r FunctionParameter
     goFunctionParam (FunctionParameter mvar i ty) = do
@@ -214,7 +214,7 @@ strongNormalize' = go
     goApp (Application l r i) = do
       l' <- go l
       case l' of
-        ExpressionSimpleLambda (SimpleLambda lamVar _ lamBody) -> do
+        ExpressionSimpleLambda (SimpleLambda (SimpleBinder lamVar _) lamBody) -> do
           go (substitutionE (HashMap.singleton lamVar r) lamBody)
         _ -> do
           r' <- go r
@@ -261,7 +261,7 @@ weakNormalize' = go
     goApp (Application l r i) = do
       l' <- go l
       case l' of
-        ExpressionSimpleLambda (SimpleLambda lamVar _ lamBody) -> do
+        ExpressionSimpleLambda (SimpleLambda (SimpleBinder lamVar _) lamBody) -> do
           go (substitutionE (HashMap.singleton lamVar r) lamBody)
         _ -> return (ExpressionApplication (Application l' r i))
     goHole :: Hole -> Sem r Expression
@@ -401,7 +401,7 @@ re = reinterpret $ \case
                 goApplication (Application f x _) (Application f' x' _) = bicheck (go f f') (go x x')
 
                 goSimpleLambda :: SimpleLambda -> SimpleLambda -> Sem r (Maybe MatchError)
-                goSimpleLambda (SimpleLambda v1 ty1 b1) (SimpleLambda v2 ty2 b2) = do
+                goSimpleLambda (SimpleLambda (SimpleBinder v1 ty1) b1) (SimpleLambda (SimpleBinder v2 ty2) b2) = do
                   let local' :: Sem r x -> Sem r x
                       local' = local (HashMap.insert v1 v2)
                   bicheck (go ty1 ty2) (local' (go b1 b2))
@@ -505,9 +505,8 @@ addIdens idens = do
 functionDefEval :: forall r'. (Members '[State FunctionsTable, Termination, Error TypeCheckerError] r') => FunctionDef -> Sem r' (Maybe Expression)
 functionDefEval f = do
   (params :: [FunctionParameter], ret :: Expression) <- unfoldFunType <$> strongNorm (f ^. funDefType)
-  let retTy = isUniverse ret
-  r <- runFail (goTop params retTy)
-  when (isNothing r && retTy) (throw (ErrUnsupportedTypeFunction (UnsupportedTypeFunction f)))
+  r <- runFail (goTop params (canBeUniverse ret))
+  when (isNothing r && isUniverse ret) (throw (ErrUnsupportedTypeFunction (UnsupportedTypeFunction f)))
   return r
   where
     strongNorm :: (Members '[State FunctionsTable] r) => Expression -> Sem r Expression
@@ -516,6 +515,14 @@ functionDefEval f = do
     isUniverse :: Expression -> Bool
     isUniverse = \case
       ExpressionUniverse {} -> True
+      _ -> False
+
+    -- REVISE!
+    canBeUniverse :: Expression -> Bool
+    canBeUniverse = \case
+      ExpressionUniverse {} -> True
+      ExpressionHole {} -> True
+      ExpressionIden {} -> True
       _ -> False
 
     goTop ::
@@ -553,7 +560,7 @@ functionDefEval f = do
               _ -> fail
             goPattern :: (Pattern, Expression) -> Expression -> Sem r Expression
             goPattern (p, ty) = case p of
-              PatternVariable v -> return . ExpressionSimpleLambda . SimpleLambda v ty
+              PatternVariable v -> return . ExpressionSimpleLambda . SimpleLambda (SimpleBinder v ty)
               _ -> const fail
             go :: [(PatternArg, Expression)] -> Sem r Expression
             go = \case

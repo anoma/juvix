@@ -113,11 +113,16 @@ instance HasExpressions TypedExpression where
     _typedType <- leafExpressions f (a ^. typedType)
     pure TypedExpression {..}
 
-instance HasExpressions SimpleLambda where
-  leafExpressions f (SimpleLambda v ty b) = do
-    b' <- leafExpressions f b
+instance HasExpressions SimpleBinder where
+  leafExpressions f (SimpleBinder v ty) = do
     ty' <- leafExpressions f ty
-    pure (SimpleLambda v ty' b')
+    pure (SimpleBinder v ty')
+
+instance HasExpressions SimpleLambda where
+  leafExpressions f (SimpleLambda bi b) = do
+    bi' <- leafExpressions f bi
+    b' <- leafExpressions f b
+    pure (SimpleLambda bi' b')
 
 instance HasExpressions FunctionParameter where
   leafExpressions f (FunctionParameter m i e) = do
@@ -261,17 +266,40 @@ singletonRename = HashMap.singleton
 renameToSubsE :: Rename -> Subs
 renameToSubsE = fmap (ExpressionIden . IdenVar)
 
-patternArgVariables :: Traversal' PatternArg VarName
-patternArgVariables f (PatternArg i n p) = PatternArg i <$> traverse f n <*> patternVariables f p
+class HasBinders a where
+  bindersTraversal :: Traversal' a VarName
 
-patternVariables :: Traversal' Pattern VarName
-patternVariables f p = case p of
-  PatternVariable v -> PatternVariable <$> f v
-  PatternWildcardConstructor {} -> pure p
-  PatternConstructorApp a -> PatternConstructorApp <$> goApp f a
-  where
-    goApp :: Traversal' ConstructorApp VarName
-    goApp g = traverseOf constrAppParameters (traverse (patternArgVariables g))
+instance HasBinders PatternArg where
+  bindersTraversal f (PatternArg i n p) = PatternArg i <$> traverse f n <*> bindersTraversal f p
+
+instance HasBinders Pattern where
+  bindersTraversal f p = case p of
+    PatternVariable v -> PatternVariable <$> f v
+    PatternWildcardConstructor {} -> pure p
+    PatternConstructorApp a -> PatternConstructorApp <$> goApp f a
+    where
+      goApp :: Traversal' ConstructorApp VarName
+      goApp g = traverseOf constrAppParameters (traverse (bindersTraversal g))
+
+instance HasBinders FunctionParameter where
+  bindersTraversal = paramName . _Just
+
+instance HasBinders InductiveParameter where
+  bindersTraversal = inductiveParamName
+
+instance HasBinders SimpleBinder where
+  bindersTraversal = sbinderVar
+
+instance HasBinders FunctionDef where
+  bindersTraversal = funDefName
+
+instance HasBinders MutualBlockLet where
+  bindersTraversal = mutualLet . each . bindersTraversal
+
+instance HasBinders LetClause where
+  bindersTraversal f = \case
+    LetFunDef fun -> LetFunDef <$> bindersTraversal f fun
+    LetMutualBlock b -> LetMutualBlock <$> bindersTraversal f b
 
 inductiveTypeVarsAssoc :: (Foldable f) => InductiveDef -> f a -> HashMap VarName a
 inductiveTypeVarsAssoc def l
@@ -705,13 +733,13 @@ allTypeSignatures a =
     <> [f ^. axiomType | f@AxiomDef {} <- universeBi a]
     <> [f ^. inductiveType | f@InductiveDef {} <- universeBi a]
 
-idenName :: Iden -> Name
-idenName = \case
-  IdenFunction f -> f
-  IdenConstructor c -> c
-  IdenVar v -> v
-  IdenInductive i -> i
-  IdenAxiom a -> a
+idenName :: Lens' Iden Name
+idenName f = \case
+  IdenFunction g -> IdenFunction <$> f g
+  IdenConstructor c -> IdenConstructor <$> f c
+  IdenVar v -> IdenVar <$> f v
+  IdenInductive i -> IdenInductive <$> f i
+  IdenAxiom a -> IdenAxiom <$> f a
 
 explicitPatternArg :: Pattern -> PatternArg
 explicitPatternArg _patternArgPattern =
@@ -720,6 +748,3 @@ explicitPatternArg _patternArgPattern =
       _patternArgIsImplicit = Explicit,
       _patternArgPattern
     }
-
-simpleFunctionDef :: Name -> Expression -> Expression -> FunctionDef
-simpleFunctionDef = undefined

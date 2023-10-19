@@ -808,7 +808,7 @@ goExpression = \case
                   _funDefInstance = False,
                   _funDefPragmas = mempty,
                   _funDefDefaultSignature = mempty,
-                  _funDefTerminating = False,
+                  _funDefTerminating = True,
                   _funDefBuiltin = Nothing,
                   _funDefBody = body'
                 }
