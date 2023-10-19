@@ -6,7 +6,7 @@ type T1 A := mkT1 {pp : A -> A};
 trait
 type T2 A := mkT2 {pp : A -> A};
 
-coercion
+coercion instance
 coe {A} {{T1 A}} {{T1 A}} : T2 A :=
   mkT2@{
     pp := T1.pp

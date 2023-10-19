@@ -5,5 +5,5 @@ type T A := mkT {a : A};
 
 type Maybe A := just A | nothing;
 
-coercion
+coercion instance
 inst {A} {{T A}} : Maybe A := nothing;

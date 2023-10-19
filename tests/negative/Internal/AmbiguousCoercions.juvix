@@ -17,12 +17,12 @@ unitT1 : T1 Unit := mkT1 (pp := λ{_ := unit});
 instance
 unitT2 : T2 Unit := mkT2 (pp := λ{_ := unit});
 
-coercion
+coercion instance
 fromT1toT {A} {{T1 A}} : T A := mkT@{
   pp := T1.pp
 };
 
-coercion
+coercion instance
 fromT2toT {A} {{T2 A}} : T A := mkT@{
   pp := T2.pp
 };
