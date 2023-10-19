@@ -92,6 +92,7 @@ genFieldProjection _funDefName info fieldIx = do
       { _funDefExamples = [],
         _funDefTerminating = False,
         _funDefInstance = False,
+        _funDefCoercion = False,
         _funDefBuiltin = Nothing,
         _funDefDefaultSignature = mempty,
         _funDefPragmas = mempty {_pragmasInline = Just InlineAlways},

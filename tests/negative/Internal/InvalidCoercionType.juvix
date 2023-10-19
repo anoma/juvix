@@ -1,0 +1,10 @@
+module InvalidCoercionType;
+
+trait
+type T A := mkT {pp : A -> A};
+
+coercion instance
+coe {A} : T A :=
+  mkT@{
+    pp (x : A) : A := x
+  };

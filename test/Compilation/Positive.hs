@@ -374,6 +374,11 @@ tests =
       $(mkRelFile "test062.juvix")
       $(mkRelFile "out/test062.out"),
     posTest
+      "Test063: Coercions"
+      $(mkRelDir ".")
+      $(mkRelFile "test063.juvix")
+      $(mkRelFile "out/test063.out"),
+    posTest
       "Test064: Constant folding"
       $(mkRelDir ".")
       $(mkRelFile "test064.juvix")

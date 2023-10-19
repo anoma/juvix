@@ -1,6 +1,12 @@
-module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Traits.Resolver where
+module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Traits.Resolver
+  ( isTrait,
+    resolveTraitInstance,
+    subsumingInstances,
+  )
+where
 
 import Data.HashMap.Strict qualified as HashMap
+import Juvix.Compiler.Internal.Data.CoercionInfo
 import Juvix.Compiler.Internal.Data.InfoTable
 import Juvix.Compiler.Internal.Data.InstanceInfo
 import Juvix.Compiler.Internal.Data.LocalVars
@@ -15,6 +21,8 @@ type SubsI = HashMap VarName InstanceParam
 subsIToE :: SubsI -> SubsE
 subsIToE = fmap paramToExpression
 
+type CoercionChain = [(CoercionInfo, SubsI)]
+
 isTrait :: InfoTable -> Name -> Bool
 isTrait tab name = maybe False (^. inductiveInfoDef . inductiveTrait) (HashMap.lookup name (tab ^. infoInductives))
 
@@ -26,13 +34,63 @@ resolveTraitInstance TypedHole {..} = do
   tbl <- ask
   let tab = foldr (flip updateInstanceTable) (tbl ^. infoInstances) (varsToInstances tbl _typedHoleLocalVars)
   ty <- strongNormalize _typedHoleType
-  is <- lookupInstance tab ty
+  is <- lookupInstance (tbl ^. infoCoercions) tab ty
   case is of
-    [(ii, subs)] -> expandArity loc (subsIToE subs) (ii ^. instanceInfoArgs) (ii ^. instanceInfoResult)
-    [] -> throw (ErrNoInstance (NoInstance ty loc))
-    _ -> throw (ErrAmbiguousInstances (AmbiguousInstances ty (map fst is) loc))
+    [(cs, ii, subs)] ->
+      expandArity loc (subsIToE subs) (ii ^. instanceInfoArgs) (ii ^. instanceInfoResult)
+        >>= applyCoercions loc cs
+    [] ->
+      throw (ErrNoInstance (NoInstance ty loc))
+    _ ->
+      throw (ErrAmbiguousInstances (AmbiguousInstances ty (map snd3 is) loc))
   where
     loc = getLoc _typedHoleHole
+
+subsumingInstances ::
+  forall r.
+  (Members '[Error TypeCheckerError, Inference] r) =>
+  InstanceTable ->
+  InstanceInfo ->
+  Sem r [(InstanceInfo)]
+subsumingInstances tab InstanceInfo {..} = do
+  is <- lookupInstance' [] False mempty tab _instanceInfoInductive _instanceInfoParams
+  return $
+    map snd3 $
+      filter (\(_, x, _) -> x ^. instanceInfoResult /= _instanceInfoResult) is
+
+-------------------------------------------------------------------------------------
+-- Local functions
+-------------------------------------------------------------------------------------
+
+substitutionI :: SubsI -> InstanceParam -> InstanceParam
+substitutionI subs p = case p of
+  InstanceParamVar {} -> p
+  InstanceParamApp InstanceApp {..} ->
+    InstanceParamApp
+      InstanceApp
+        { _instanceAppHead,
+          _instanceAppArgs = map (substitutionI subs) _instanceAppArgs,
+          _instanceAppExpression = substitutionE (subsIToE subs) _instanceAppExpression
+        }
+  InstanceParamFun InstanceFun {..} ->
+    InstanceParamFun
+      InstanceFun
+        { _instanceFunLeft = substitutionI subs _instanceFunLeft,
+          _instanceFunRight = substitutionI subs _instanceFunRight,
+          _instanceFunExpression = substitutionE (subsIToE subs) _instanceFunExpression
+        }
+  InstanceParamHole {} -> p
+  InstanceParamMeta v
+    | Just p' <- HashMap.lookup v subs ->
+        p'
+    | otherwise ->
+        p
+
+instanceFromTypedExpression' :: InfoTable -> TypedExpression -> Maybe InstanceInfo
+instanceFromTypedExpression' tbl e = do
+  ii@InstanceInfo {..} <- instanceFromTypedExpression e
+  guard (isTrait tbl _instanceInfoInductive)
+  return ii
 
 varsToInstances :: InfoTable -> LocalVars -> [InstanceInfo]
 varsToInstances tbl LocalVars {..} =
@@ -47,6 +105,26 @@ varsToInstances tbl LocalVars {..} =
           _typedExpression = ExpressionIden (IdenVar v)
         }
 
+applyCoercions ::
+  (Members '[Error TypeCheckerError, NameIdGen] r) =>
+  Interval ->
+  CoercionChain ->
+  Expression ->
+  Sem r Expression
+applyCoercions loc cs e =
+  foldM (flip (applyCoercion loc)) e (reverse cs)
+
+applyCoercion ::
+  (Members '[Error TypeCheckerError, NameIdGen] r) =>
+  Interval ->
+  (CoercionInfo, SubsI) ->
+  Expression ->
+  Sem r Expression
+applyCoercion loc (CoercionInfo {..}, subs) e = do
+  e' <- expandArity loc (subsIToE subs) _coercionInfoArgs _coercionInfoResult
+  return $
+    ExpressionApplication (Application e' e ImplicitInstance)
+
 expandArity ::
   (Members '[Error TypeCheckerError, NameIdGen] r) =>
   Interval ->
@@ -60,7 +138,8 @@ expandArity loc subs params e = case params of
   fp@FunctionParameter {..} : params' -> do
     (appr, appi) <-
       if
-          | Just (Just t) <- flip HashMap.lookup subs <$> _paramName -> return (t, _paramImplicit)
+          | Just (Just t) <- flip HashMap.lookup subs <$> _paramName ->
+              return (t, _paramImplicit)
           | _paramImplicit == Implicit -> do
               h <- newHole
               return (ExpressionHole h, Implicit)
@@ -77,23 +156,44 @@ expandArity loc subs params e = case params of
 lookupInstance' ::
   forall r.
   (Member Inference r) =>
+  [Name] ->
   Bool ->
+  CoercionTable ->
   InstanceTable ->
   Name ->
   [InstanceParam] ->
-  Sem r [(InstanceInfo, SubsI)]
-lookupInstance' canFillHoles tab name params = do
-  let is = fromMaybe [] $ lookupInstanceTable tab name
-  mapMaybeM matchInstance is
+  Sem r [(CoercionChain, InstanceInfo, SubsI)]
+lookupInstance' visited canFillHoles ctab tab name params
+  | name `elem` visited = return []
+  | otherwise = do
+      let is = fromMaybe [] $ lookupInstanceTable tab name
+      rs <- mapMaybeM matchInstance is
+      case rs of
+        [] -> do
+          let coes = fromMaybe [] $ lookupCoercionTable ctab name
+          concat <$> mapMaybeM matchCoercion coes
+        _ -> return rs
   where
-    matchInstance :: InstanceInfo -> Sem r (Maybe (InstanceInfo, SubsI))
+    matchInstance :: InstanceInfo -> Sem r (Maybe (CoercionChain, InstanceInfo, SubsI))
     matchInstance ii@InstanceInfo {..} = runFail $ do
       failUnless (length params == length _instanceInfoParams)
       (si, b) <-
         runState mempty $
           and <$> sequence (zipWithExact goMatch _instanceInfoParams params)
       failUnless b
-      return (ii, si)
+      return ([], ii, si)
+
+    matchCoercion :: CoercionInfo -> Sem r (Maybe [(CoercionChain, InstanceInfo, SubsI)])
+    matchCoercion ci@CoercionInfo {..} = runFail $ do
+      failUnless (length params == length _coercionInfoParams)
+      (si, b) <-
+        runState mempty $
+          and <$> sequence (zipWithExact goMatch _coercionInfoParams params)
+      failUnless b
+      let name' = _coercionInfoTarget ^. instanceAppHead
+          args' = map (substitutionI si) (_coercionInfoTarget ^. instanceAppArgs)
+      is <- lookupInstance' (name : visited) canFillHoles ctab tab name' args'
+      return $ map (first3 ((ci, si) :)) is
 
     goMatch :: InstanceParam -> InstanceParam -> Sem (State SubsI ': Fail ': r) Bool
     goMatch pat t = case (pat, t) of
@@ -139,29 +239,13 @@ lookupInstance' canFillHoles tab name params = do
 lookupInstance ::
   forall r.
   (Members '[Error TypeCheckerError, Inference] r) =>
+  CoercionTable ->
   InstanceTable ->
   Expression ->
-  Sem r [(InstanceInfo, SubsI)]
-lookupInstance tab ty = do
+  Sem r [(CoercionChain, InstanceInfo, SubsI)]
+lookupInstance ctab tab ty = do
   case traitFromExpression mempty ty of
     Just InstanceApp {..} ->
-      lookupInstance' True tab _instanceAppHead _instanceAppArgs
+      lookupInstance' [] True ctab tab _instanceAppHead _instanceAppArgs
     _ ->
       return []
-
-subsumingInstances ::
-  forall r.
-  (Members '[Error TypeCheckerError, Inference] r) =>
-  InstanceTable ->
-  InstanceInfo ->
-  Sem r [(InstanceInfo, SubsI)]
-subsumingInstances tab InstanceInfo {..} = do
-  is <- lookupInstance' False tab _instanceInfoInductive _instanceInfoParams
-  return $
-    filter (\(x, _) -> x ^. instanceInfoResult /= _instanceInfoResult) is
-
-instanceFromTypedExpression' :: InfoTable -> TypedExpression -> Maybe InstanceInfo
-instanceFromTypedExpression' tbl e = do
-  ii@InstanceInfo {..} <- instanceFromTypedExpression e
-  guard (isTrait tbl _instanceInfoInductive)
-  return ii
