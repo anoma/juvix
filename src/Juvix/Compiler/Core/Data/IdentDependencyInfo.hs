@@ -62,7 +62,7 @@ recursiveIdentsClosure :: InfoTable -> HashSet Symbol
 recursiveIdentsClosure tab =
   -- unfortunately, there is no Graph library function which would allow to
   -- compute this in linear time; hence, we implement this directly
-  run $
+  run .
     evalState (mempty :: HashSet Symbol) $
       foldM (dfs mempty) mempty (HashMap.keys graph)
   where
