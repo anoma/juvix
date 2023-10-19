@@ -209,13 +209,19 @@ checkFunctionDef FunctionDef {..} = do
     -- Since default arguments come from the left of the : then it must be that
     -- there are at least n FunctionParameter
     checkDefaultValues :: [FunctionParameter] -> Sem r DefaultSignature
-    checkDefaultValues allparams = DefaultSignature <$> mapM go (zipExact defaults params)
+    checkDefaultValues allparams = fmap DefaultSignature . execOutputList $ do
+      go (zipExact defaults params)
       where
         params = take n allparams
         defaults = _funDefDefaultSignature ^. defaultSignature
         n = length defaults
-        go :: (Maybe Expression, FunctionParameter) -> Sem r (Maybe Expression)
-        go (me, p) = forM me $ \e' -> checkExpression (p ^. paramType) e'
+        go :: [(Maybe Expression, FunctionParameter)] -> Sem (Output (Maybe Expression) ': r) ()
+        go = \case
+          [] -> return ()
+          (me, p) : rest -> do
+            me' <- mapM (checkExpression (p ^. paramType)) me
+            output me'
+            withLocalTypeMaybe (p ^. paramName) (p ^. paramType) (go rest)
 
 checkIsType ::
   (Members '[HighlightBuilder, Reader InfoTable, State FunctionsTable, Error TypeCheckerError, NameIdGen, Reader LocalVars, Inference, Builtins, Output Example, State TypesTable, Termination, Output TypedHole] r) =>
@@ -395,7 +401,7 @@ lookupVar v = do
         )
     )
   where
-    err = error $ "internal error: could not find var " <> ppTrace v
+    err = error $ "internal error: could not find var " <> ppTrace v <> " at " <> ppTrace (getLoc v)
 
 -- | helper function for function clauses and lambda functions
 checkClause ::
@@ -724,9 +730,7 @@ inferExpression' hint e = case e of
       let uni = smallUniverseE (getLoc l)
       l' <- checkFunctionParameter l
       let bodyEnv :: Sem r a -> Sem r a
-          bodyEnv = case l ^. paramName of
-            Nothing -> id
-            Just v -> local (over localTypes (HashMap.insert v (l ^. paramType)))
+          bodyEnv = withLocalTypeMaybe (l ^. paramName) (l ^. paramType)
       r' <- bodyEnv (checkExpression uni r)
       return (TypedExpression uni (ExpressionFunction (Function l' r')))
 
