@@ -52,7 +52,7 @@ convertNode nonRecSyms tab = umap go
       _ -> isType' node
 
     doEval :: Node -> Node
-    doEval = geval opts stderr (tab ^. identContext) []
+    doEval = removeClosures . geval opts stderr (tab ^. identContext) []
       where
         opts =
           defaultEvalOptions

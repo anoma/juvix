@@ -366,6 +366,14 @@ substVar idx t = umapN go
         | _varIndex > k + idx -> mkVar _varInfo (_varIndex - 1)
       _ -> n
 
+removeClosures :: Node -> Node
+removeClosures = dmap go
+  where
+    go :: Node -> Node
+    go = \case
+      Closure {..} -> substEnv _closureEnv _closureNode
+      node -> node
+
 etaExpand :: [Type] -> Node -> Node
 etaExpand [] n = n
 etaExpand argtys n =
