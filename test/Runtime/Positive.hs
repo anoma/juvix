@@ -20,10 +20,11 @@ testDescr PosTest {..} =
   let tRoot = root <//> _relDir
       file' = tRoot <//> _file
       expected' = tRoot <//> _expectedFile
+      optLevel :: Int = 3
    in TestDescr
         { _testName = _name,
           _testRoot = tRoot,
-          _testAssertion = Steps $ clangAssertion file' expected' ""
+          _testAssertion = Steps $ clangAssertion optLevel file' expected' ""
         }
 
 allTests :: TestTree

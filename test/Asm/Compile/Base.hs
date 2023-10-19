@@ -11,8 +11,8 @@ import Juvix.Compiler.Backend.C qualified as C
 import Juvix.Compiler.Pipeline qualified as Pipeline
 import Runtime.Base qualified as Runtime
 
-asmCompileAssertion' :: InfoTable -> Path Abs File -> Path Abs File -> Text -> (String -> IO ()) -> Assertion
-asmCompileAssertion' tab mainFile expectedFile stdinText step = do
+asmCompileAssertion' :: Int -> InfoTable -> Path Abs File -> Path Abs File -> Text -> (String -> IO ()) -> Assertion
+asmCompileAssertion' optLevel tab mainFile expectedFile stdinText step = do
   step "Generate C code"
   case run $ runReader asmOpts $ runError @JuvixError $ Pipeline.asmToMiniC' tab of
     Left e -> do
@@ -23,7 +23,7 @@ asmCompileAssertion' tab mainFile expectedFile stdinText step = do
         ( \dirPath -> do
             let cFile = dirPath <//> replaceExtension' ".c" (filename mainFile)
             TIO.writeFile (toFilePath cFile) _resultCCode
-            Runtime.clangAssertion cFile expectedFile stdinText step
+            Runtime.clangAssertion optLevel cFile expectedFile stdinText step
         )
   where
     -- TODO: In the future, the target supplied here might need to correspond to
@@ -39,4 +39,4 @@ asmCompileAssertion mainFile expectedFile stdinText step = do
   s <- readFile (toFilePath mainFile)
   case runParser (toFilePath mainFile) s of
     Left err -> assertFailure (show err)
-    Right tab -> asmCompileAssertion' tab mainFile expectedFile stdinText step
+    Right tab -> asmCompileAssertion' 3 tab mainFile expectedFile stdinText step
