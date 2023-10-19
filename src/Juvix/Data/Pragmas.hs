@@ -52,6 +52,11 @@ newtype PragmaSpecialiseBy = PragmaSpecialiseBy
   }
   deriving stock (Show, Eq, Ord, Data, Generic)
 
+newtype PragmaEval = PragmaEval
+  { _pragmaEval :: Bool
+  }
+  deriving stock (Show, Eq, Ord, Data, Generic)
+
 data Pragmas = Pragmas
   { _pragmasInline :: Maybe PragmaInline,
     _pragmasUnroll :: Maybe PragmaUnroll,
@@ -60,7 +65,8 @@ data Pragmas = Pragmas
     _pragmasFormat :: Maybe PragmaFormat,
     _pragmasSpecialise :: Maybe PragmaSpecialise,
     _pragmasSpecialiseArgs :: Maybe PragmaSpecialiseArgs,
-    _pragmasSpecialiseBy :: Maybe PragmaSpecialiseBy
+    _pragmasSpecialiseBy :: Maybe PragmaSpecialiseBy,
+    _pragmasEval :: Maybe PragmaEval
   }
   deriving stock (Show, Eq, Ord, Data, Generic)
 
@@ -70,6 +76,7 @@ makeLenses ''PragmaPublic
 makeLenses ''PragmaFormat
 makeLenses ''PragmaSpecialiseArgs
 makeLenses ''PragmaSpecialiseBy
+makeLenses ''PragmaEval
 makeLenses ''Pragmas
 
 instance Hashable PragmaInline
@@ -89,6 +96,8 @@ instance Hashable PragmaSpecialiseArgs
 instance Hashable PragmaSpecialise
 
 instance Hashable PragmaSpecialiseBy
+
+instance Hashable PragmaEval
 
 instance Hashable Pragmas
 
@@ -115,6 +124,7 @@ instance FromJSON Pragmas where
         specby <- keyMay "specialise-by" parseSpecialiseBy
         specby' <- keyMay "specialize-by" parseSpecialiseBy
         let _pragmasSpecialiseBy = specby <|> specby'
+        _pragmasEval <- keyMay "eval" parseEval
         return Pragmas {..}
 
       parseInline :: Parse YamlError PragmaInline
@@ -161,6 +171,11 @@ instance FromJSON Pragmas where
         _pragmaFormat <- asBool
         return PragmaFormat {..}
 
+      parseEval :: Parse YamlError PragmaEval
+      parseEval = do
+        _pragmaEval <- asBool
+        return PragmaEval {..}
+
       parseSpecialiseArg :: Parse YamlError PragmaSpecialiseArg
       parseSpecialiseArg =
         (SpecialiseArgNum <$> asIntegral)
@@ -199,6 +214,7 @@ instance Semigroup Pragmas where
         _pragmasArgNames = p2 ^. pragmasArgNames,
         _pragmasPublic = p2 ^. pragmasPublic,
         _pragmasFormat = p2 ^. pragmasFormat <|> p1 ^. pragmasFormat,
+        _pragmasEval = p2 ^. pragmasEval <|> p1 ^. pragmasEval,
         _pragmasSpecialise = p2 ^. pragmasSpecialise <|> p1 ^. pragmasSpecialise,
         _pragmasSpecialiseArgs = p2 ^. pragmasSpecialiseArgs <|> p1 ^. pragmasSpecialiseArgs,
         _pragmasSpecialiseBy = p2 ^. pragmasSpecialiseBy <|> p1 ^. pragmasSpecialiseBy
@@ -214,7 +230,8 @@ instance Monoid Pragmas where
         _pragmasFormat = Nothing,
         _pragmasSpecialise = Nothing,
         _pragmasSpecialiseArgs = Nothing,
-        _pragmasSpecialiseBy = Nothing
+        _pragmasSpecialiseBy = Nothing,
+        _pragmasEval = Nothing
       }
 
 adjustPragmaInline :: Int -> PragmaInline -> PragmaInline

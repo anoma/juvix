@@ -24,6 +24,7 @@ convertNode nonRecSyms tab = umap go
             case h of
               NIdt Ident {..}
                 | HashSet.member _identSymbol nonRecSyms
+                    && evalAllowed
                     && length args == ii ^. identifierArgsNum
                     && length tyargs == ii ^. identifierArgsNum
                     && isZeroOrderType tab tgt'
@@ -31,6 +32,7 @@ convertNode nonRecSyms tab = umap go
                     doEval node
                 where
                   ii = lookupIdentifierInfo tab _identSymbol
+                  evalAllowed = maybe True (^. pragmaEval) (ii ^. identifierPragmas . pragmasEval)
                   (tyargs, tgt) = unfoldPi' (ii ^. identifierType)
                   n = length (takeWhile (isTypeConstr tab) tyargs)
                   tys = reverse (take n args)
