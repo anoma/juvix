@@ -12,14 +12,9 @@ convertNode = dmap go
         | _builtinAppOp == OpIntAdd,
           [NBlt blt', n] <- _builtinAppArgs,
           blt' ^. builtinAppOp == OpIntSub,
-          [x, m] <- blt' ^. builtinAppArgs ->
-            if
-                | m == n ->
-                    x
-                | x == n ->
-                    m
-                | otherwise ->
-                    node
+          [x, m] <- blt' ^. builtinAppArgs,
+          m == n ->
+            x
       NBlt BuiltinApp {..}
         | _builtinAppOp == OpIntSub,
           [NBlt blt', n] <- _builtinAppArgs,
@@ -44,7 +39,7 @@ convertNode = dmap go
           [x, NCst (Constant _ (ConstInteger 0))] <- _builtinAppArgs ->
             x
       NBlt BuiltinApp {..}
-        | _builtinAppOp == OpIntAdd || _builtinAppOp == OpIntSub,
+        | _builtinAppOp == OpIntAdd,
           [NCst (Constant _ (ConstInteger 0)), x] <- _builtinAppArgs ->
             x
       NBlt BuiltinApp {..}
