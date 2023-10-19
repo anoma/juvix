@@ -10,6 +10,7 @@ import Juvix.Compiler.Core.Transformation.Optimize.FilterUnreachable
 import Juvix.Compiler.Core.Transformation.Optimize.Inlining
 import Juvix.Compiler.Core.Transformation.Optimize.LambdaFolding
 import Juvix.Compiler.Core.Transformation.Optimize.LetFolding
+import Juvix.Compiler.Core.Transformation.Optimize.SimplifyArithmetic
 import Juvix.Compiler.Core.Transformation.Optimize.SimplifyComparisons
 import Juvix.Compiler.Core.Transformation.Optimize.SimplifyIfs
 import Juvix.Compiler.Core.Transformation.Optimize.SpecializeArgs
@@ -53,7 +54,8 @@ optimize' CoreOptions {..} tab =
 
     doSimplification :: Int -> InfoTable -> InfoTable
     doSimplification n =
-      simplifyIfs' (_optOptimizationLevel <= 1)
+      simplifyArithmetic
+        . simplifyIfs' (_optOptimizationLevel <= 1)
         . simplifyComparisons
         . caseFolding
         . casePermutation
