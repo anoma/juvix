@@ -413,6 +413,9 @@ trait = "trait"
 instance_ :: (IsString s) => s
 instance_ = "instance"
 
+coercion_ :: (IsString s) => s
+coercion_ = "coercion"
+
 waveArrow :: (IsString s) => s
 waveArrow = "↝"
 

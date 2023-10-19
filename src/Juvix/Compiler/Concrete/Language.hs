@@ -493,7 +493,8 @@ data FunctionDef (s :: Stage) = FunctionDef
     _signBuiltin :: Maybe (WithLoc BuiltinFunction),
     _signBody :: FunctionDefBody s,
     _signTerminating :: Maybe KeywordRef,
-    _signInstance :: Maybe KeywordRef
+    _signInstance :: Maybe KeywordRef,
+    _signCoercion :: Maybe KeywordRef
   }
 
 deriving stock instance Show (FunctionDef 'Parsed)

@@ -188,7 +188,7 @@ goFunctionDefHelper ::
 goFunctionDefHelper f = do
   addNode (f ^. funDefName)
   checkStartNode (f ^. funDefName)
-  when (f ^. funDefInstance) $
+  when (f ^. funDefInstance || f ^. funDefCoercion) $
     goInstance f
   goExpression (Just (f ^. funDefName)) (f ^. funDefType)
   goExpression (Just (f ^. funDefName)) (f ^. funDefBody)

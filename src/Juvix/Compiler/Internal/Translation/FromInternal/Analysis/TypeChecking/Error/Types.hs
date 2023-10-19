@@ -367,6 +367,51 @@ instance ToGenericError InvalidInstanceType where
       i :: Interval
       i = getLoc _invalidInstanceTypeExpression
 
+newtype InvalidCoercionType = InvalidCoercionType
+  { _invalidCoercionTypeExpression :: Expression
+  }
+
+instance ToGenericError InvalidCoercionType where
+  genericError InvalidCoercionType {..} = do
+    opts <- fromGenericOptions <$> ask
+    let msg =
+          "Invalid coercion type:"
+            <+> ppCode opts _invalidCoercionTypeExpression
+              <> line
+              <> "A coercion must have exactly one instance argument."
+    return
+      GenericError
+        { _genericErrorLoc = i,
+          _genericErrorMessage = mkAnsiText msg,
+          _genericErrorIntervals = [i]
+        }
+    where
+      i :: Interval
+      i = getLoc _invalidCoercionTypeExpression
+
+newtype WrongCoercionArgument = WrongCoercionArgument
+  { _wrongCoercionArgumentParameter :: FunctionParameter
+  }
+
+makeLenses ''WrongCoercionArgument
+
+instance ToGenericError WrongCoercionArgument where
+  genericError e = generr
+    where
+      generr =
+        return
+          GenericError
+            { _genericErrorLoc = i,
+              _genericErrorMessage =
+                ppOutput $
+                  "Expected an implicit type argument."
+                    <> line
+                    <> "A coercion can have only implicit type arguments followed by exactly one instance argument.",
+              _genericErrorIntervals = [i]
+            }
+        where
+          i = getLoc (e ^. wrongCoercionArgumentParameter)
+
 newtype TargetNotATrait = TargetNotATrait
   { _targetNotATraitType :: Expression
   }
@@ -375,7 +420,7 @@ instance ToGenericError TargetNotATrait where
   genericError TargetNotATrait {..} = do
     opts <- fromGenericOptions <$> ask
     let msg =
-          "Expected an instance type with a trait in the target:"
+          "Expected a type with a trait in the target:"
             <+> ppCode opts _targetNotATraitType
     return
       GenericError
@@ -409,6 +454,30 @@ instance ToGenericError NotATrait where
           msg =
             "Expected a trait:"
               <+> ppCode opts' (e ^. notATraitExpression)
+
+newtype CoercionCycles = CoercionCycles
+  { _coercionCycles :: NonEmpty Name
+  }
+
+makeLenses ''CoercionCycles
+
+instance ToGenericError CoercionCycles where
+  genericError e = ask >>= generr
+    where
+      generr opts =
+        return
+          GenericError
+            { _genericErrorLoc = i,
+              _genericErrorMessage = ppOutput msg,
+              _genericErrorIntervals = [i]
+            }
+        where
+          opts' = fromGenericOptions opts
+          i = getLoc (head (e ^. coercionCycles))
+          msg =
+            "There exist coercion cycles involving these traits:"
+              <> line
+              <> indent' (hsep (ppCode opts' <$> take 10 (toList (e ^. coercionCycles))))
 
 data NoInstance = NoInstance
   { _noInstanceType :: Expression,
