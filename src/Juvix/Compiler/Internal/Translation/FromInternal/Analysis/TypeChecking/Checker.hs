@@ -43,8 +43,10 @@ checkTable ::
 checkTable = do
   tab <- ask
   let s = toList $ cyclicCoercions (tab ^. infoCoercions)
-  unless (null s) $
-    throw (ErrCoercionCycles (CoercionCycles (nonEmpty' s)))
+  whenJust (nonEmpty s)
+    $ throw
+    . ErrCoercionCycles
+    . CoercionCycles
 
 checkModule ::
   (Members '[HighlightBuilder, Reader EntryPoint, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example, Builtins, MCache] r) =>
