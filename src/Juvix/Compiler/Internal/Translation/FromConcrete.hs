@@ -369,13 +369,15 @@ goAxiomInductive = \case
 
 goProjectionDef ::
   forall r.
-  (Members '[NameIdGen, State ConstructorInfos] r) =>
+  (Members '[NameIdGen, Error ScoperError, Builtins, State ConstructorInfos] r) =>
   ProjectionDef 'Scoped ->
   Sem r Internal.FunctionDef
 goProjectionDef ProjectionDef {..} = do
   let c = goSymbol _projectionConstructor
   info <- gets @ConstructorInfos (^?! at c . _Just)
-  Internal.genFieldProjection (goSymbol _projectionField) info _projectionFieldIx
+  fun <- Internal.genFieldProjection (goSymbol _projectionField) ((^. withLocParam) <$> _projectionFieldBuiltin) info _projectionFieldIx
+  whenJust (fun ^. Internal.funDefBuiltin) (registerBuiltinFunction fun)
+  return fun
 
 goFunctionDef ::
   forall r.
@@ -572,6 +574,8 @@ registerBuiltinFunction d = \case
   BuiltinIntNonNeg -> registerIntNonNeg d
   BuiltinIntLe -> registerIntLe d
   BuiltinIntLt -> registerIntLt d
+  BuiltinFromNat -> registerFromNat d
+  BuiltinFromInt -> registerFromInt d
   BuiltinSeq -> registerSeq d
 
 registerBuiltinAxiom ::
@@ -699,7 +703,7 @@ goLiteral = fmap go
     go :: Literal -> Internal.Literal
     go = \case
       LitString s -> Internal.LitString s
-      LitInteger i -> Internal.LitInteger i
+      LitInteger i -> Internal.LitNumeric i
 
 goListPattern :: (Members '[Builtins, Error ScoperError, NameIdGen] r) => Concrete.ListPattern 'Scoped -> Sem r Internal.Pattern
 goListPattern l = do

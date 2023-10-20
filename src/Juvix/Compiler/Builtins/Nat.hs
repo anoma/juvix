@@ -301,3 +301,7 @@ registerNatEq f = do
         _funInfoFreeVars = [varn, varm],
         _funInfoFreeTypeVars = []
       }
+
+registerFromNat :: (Members '[Builtins, NameIdGen] r) => FunctionDef -> Sem r ()
+registerFromNat f = do
+  registerBuiltin BuiltinFromNat (f ^. funDefName)

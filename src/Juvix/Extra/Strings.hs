@@ -275,6 +275,12 @@ intLe = "int-le"
 intLt :: (IsString s) => s
 intLt = "int-lt"
 
+fromNat :: (IsString s) => s
+fromNat = "from-nat"
+
+fromInt :: (IsString s) => s
+fromInt = "from-int"
+
 intPrint :: (IsString s) => s
 intPrint = "int-print"
 

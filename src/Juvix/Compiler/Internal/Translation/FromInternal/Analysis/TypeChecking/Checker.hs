@@ -769,8 +769,21 @@ inferExpression' hint e = case e of
 
     goLiteral :: LiteralLoc -> Sem r TypedExpression
     goLiteral lit@(WithLoc i l) = case l of
-      LitInteger v -> typedLitInteger v
-      LitNatural v -> typedLitInteger v
+      LitNumeric v -> typedLitNumeric v
+      LitInteger {} -> do
+        ty <- getIntTy
+        return $
+          TypedExpression
+            { _typedType = ty,
+              _typedExpression = ExpressionLiteral lit
+            }
+      LitNatural {} -> do
+        ty <- getNatTy
+        return $
+          TypedExpression
+            { _typedType = ty,
+              _typedExpression = ExpressionLiteral lit
+            }
       LitString {} -> do
         str <- getBuiltinName i BuiltinString
         return
@@ -779,62 +792,32 @@ inferExpression' hint e = case e of
               _typedType = ExpressionIden (IdenAxiom str)
             }
       where
-        typedLitInteger :: Integer -> Sem r TypedExpression
-        typedLitInteger v = do
-          inferredTy <- inferLitTypeFromValue
-          ty <- case hint of
-            Nothing -> return inferredTy
-            Just ExpressionHole {} -> return inferredTy
-            Just hintTy -> checkHint inferredTy hintTy
-          lit' <- WithLoc i <$> valueFromType ty
-          return
-            TypedExpression
-              { _typedExpression = ExpressionLiteral lit',
-                _typedType = ty
-              }
+        typedLitNumeric :: Integer -> Sem r TypedExpression
+        typedLitNumeric v
+          | v < 0 = typedLit LitInteger BuiltinFromInt
+          | otherwise = typedLit LitNatural BuiltinFromNat
           where
-            mkBuiltinInductive :: BuiltinInductive -> Sem r Expression
-            mkBuiltinInductive = fmap (ExpressionIden . IdenInductive) . getBuiltinName i
+            typedLit :: (Integer -> Literal) -> BuiltinFunction -> Sem r TypedExpression
+            typedLit litt blt = do
+              from <- getBuiltinName i blt
+              tyhole <- freshHole i
+              ihole <- freshHole i
+              inferExpression' hint $
+                foldApplication
+                  (ExpressionIden (IdenFunction from))
+                  [ ApplicationArg Implicit (ExpressionHole tyhole),
+                    ApplicationArg ImplicitInstance (ExpressionInstanceHole ihole),
+                    ApplicationArg Explicit (ExpressionLiteral (WithLoc i (litt v)))
+                  ]
 
-            getIntTy :: Sem r Expression
-            getIntTy = mkBuiltinInductive BuiltinInt
+        mkBuiltinInductive :: BuiltinInductive -> Sem r Expression
+        mkBuiltinInductive = fmap (ExpressionIden . IdenInductive) . getBuiltinName i
 
-            getNatTy :: Sem r Expression
-            getNatTy = mkBuiltinInductive BuiltinNat
+        getIntTy :: Sem r Expression
+        getIntTy = mkBuiltinInductive BuiltinInt
 
-            inferLitTypeFromValue :: Sem r Expression
-            inferLitTypeFromValue
-              | v < 0 = getIntTy
-              | otherwise = getNatTy
-
-            valueFromType :: Expression -> Sem r Literal
-            valueFromType exp = do
-              natTy <- getNatTy
-              if
-                  | exp == natTy -> return $ LitNatural v
-                  | otherwise -> do
-                      -- Avoid looking up Int type when negative literals are not used.
-                      intTy <- getIntTy
-                      return $
-                        if
-                            | exp == intTy -> LitInteger v
-                            | otherwise -> l
-
-            checkHint :: Expression -> Expression -> Sem r Expression
-            checkHint inferredTy hintTy = do
-              natTy <- getNatTy
-              if
-                  -- Avoid looking up Int type when only Nat type is used.
-                  | inferredTy == natTy, hintTy == natTy -> return natTy
-                  | inferredTy == natTy -> checkHintWithInt
-                  | otherwise -> return inferredTy
-              where
-                checkHintWithInt :: Sem r Expression
-                checkHintWithInt = do
-                  intTy <- getIntTy
-                  if
-                      | hintTy == intTy -> return intTy
-                      | otherwise -> return inferredTy
+        getNatTy :: Sem r Expression
+        getNatTy = mkBuiltinInductive BuiltinNat
 
     goIden :: Iden -> Sem r TypedExpression
     goIden i = case i of

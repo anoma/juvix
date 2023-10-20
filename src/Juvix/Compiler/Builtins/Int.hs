@@ -399,3 +399,7 @@ registerIntLt f = do
   where
     builtinName :: (IsBuiltin a) => a -> Sem r Name
     builtinName = getBuiltinName (getLoc f)
+
+registerFromInt :: (Members '[Builtins, NameIdGen] r) => FunctionDef -> Sem r ()
+registerFromInt f = do
+  registerBuiltin BuiltinFromInt (f ^. funDefName)

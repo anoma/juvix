@@ -137,6 +137,7 @@ type LiteralLoc = WithLoc Literal
 
 data Literal
   = LitString Text
+  | LitNumeric Integer
   | LitInteger Integer
   | LitNatural Integer
   deriving stock (Show, Eq, Ord, Generic, Data)
@@ -373,6 +374,7 @@ instance HasAtomicity Let where
 
 instance HasAtomicity Literal where
   atomicity = \case
+    LitNumeric {} -> Atom
     LitNatural {} -> Atom
     LitInteger {} -> Atom
     LitString {} -> Atom

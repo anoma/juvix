@@ -1134,8 +1134,12 @@ instance (SingI s) => PrettyPrint (RhsGadt s) where
     ppCode _rhsGadtColon <+> ppExpressionType _rhsGadtType
 
 instance (SingI s) => PrettyPrint (RecordField s) where
-  ppCode RecordField {..} =
-    ppSymbolType _fieldName <+> ppCode _fieldColon <+> ppExpressionType _fieldType
+  ppCode RecordField {..} = do
+    let builtin' = (<> line) . ppCode <$> _fieldBuiltin
+    builtin'
+      ?<> ppSymbolType _fieldName
+      <+> ppCode _fieldColon
+      <+> ppExpressionType _fieldType
 
 instance (SingI s) => PrettyPrint (RhsRecord s) where
   ppCode RhsRecord {..} = do

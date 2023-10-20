@@ -24,6 +24,7 @@ fromCore tab =
           _infoInductives = HashMap.filter (maybe True shouldKeepType . (^. inductiveBuiltin)) (tab ^. infoInductives),
           _infoConstructors = HashMap.filter (maybe True shouldKeepConstructor . (^. constructorBuiltin)) (tab ^. infoConstructors)
         }
+
     shouldKeepFunction :: BuiltinFunction -> Bool
     shouldKeepFunction = \case
       BuiltinNatPlus -> False
@@ -51,6 +52,8 @@ fromCore tab =
       BuiltinIntLe -> False
       BuiltinIntLt -> False
       BuiltinSeq -> False
+      BuiltinFromNat -> True
+      BuiltinFromInt -> True
 
     shouldKeepConstructor :: BuiltinConstructor -> Bool
     shouldKeepConstructor = \case

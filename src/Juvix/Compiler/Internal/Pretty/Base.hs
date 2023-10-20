@@ -115,6 +115,7 @@ instance PrettyCode LetClause where
 instance PrettyCode Literal where
   ppCode =
     return . \case
+      LitNumeric n -> pretty n
       LitNatural n -> pretty n
       LitInteger n -> pretty n
       LitString s -> ppStringLit s

@@ -145,6 +145,7 @@ checkProjectionDef p = do
     ProjectionDef
       { _projectionFieldIx = p ^. projectionFieldIx,
         _projectionConstructor = p ^. projectionConstructor,
+        _projectionFieldBuiltin = p ^. projectionFieldBuiltin,
         _projectionField
       }
 
@@ -1337,7 +1338,8 @@ checkSections sec = do
                               ProjectionDef
                                 { _projectionConstructor = headConstr,
                                   _projectionField = field ^. fieldName,
-                                  _projectionFieldIx = idx
+                                  _projectionFieldIx = idx,
+                                  _projectionFieldBuiltin = field ^. fieldBuiltin
                                 }
 
                             getFields :: Sem (Fail ': s') [RecordStatement 'Parsed]
