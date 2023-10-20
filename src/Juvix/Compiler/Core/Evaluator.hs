@@ -23,7 +23,8 @@ import Text.Read qualified as T
 
 data EvalOptions = EvalOptions
   { _evalOptionsNormalize :: Bool,
-    _evalOptionsNoFailure :: Bool
+    _evalOptionsNoFailure :: Bool,
+    _evalOptionsSilent :: Bool
   }
 
 makeLenses ''EvalOptions
@@ -32,7 +33,8 @@ defaultEvalOptions :: EvalOptions
 defaultEvalOptions =
   EvalOptions
     { _evalOptionsNormalize = False,
-      _evalOptionsNoFailure = False
+      _evalOptionsNoFailure = False,
+      _evalOptionsSilent = False
     }
 
 data EvalError = EvalError
@@ -278,7 +280,11 @@ geval opts herr ctx env0 = eval' env0
         traceOp :: [Node] -> Node
         traceOp = unary $ \msg ->
           let !v = eval' env msg
-           in unsafePerformIO (hPutStrLn herr (printNode v) >> return v)
+           in if
+                  | opts ^. evalOptionsSilent ->
+                      v
+                  | otherwise ->
+                      unsafePerformIO (hPutStrLn herr (printNode v) >> return v)
         {-# INLINE traceOp #-}
     {-# INLINE applyBuiltin #-}
 

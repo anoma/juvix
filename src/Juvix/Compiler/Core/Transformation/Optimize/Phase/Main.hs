@@ -5,6 +5,7 @@ import Juvix.Compiler.Core.Options
 import Juvix.Compiler.Core.Transformation.Base
 import Juvix.Compiler.Core.Transformation.Optimize.CaseFolding
 import Juvix.Compiler.Core.Transformation.Optimize.CasePermutation
+import Juvix.Compiler.Core.Transformation.Optimize.ConstantFolding
 import Juvix.Compiler.Core.Transformation.Optimize.FilterUnreachable
 import Juvix.Compiler.Core.Transformation.Optimize.Inlining
 import Juvix.Compiler.Core.Transformation.Optimize.LambdaFolding
@@ -18,16 +19,29 @@ optimize' CoreOptions {..} tab =
   filterUnreachable
     . compose
       (4 * _optOptimizationLevel)
-      ( doSimplification 2
+      ( doConstantFolding
+          . doSimplification 2
           . doInlining
           . doSimplification 1
           . specializeArgs
       )
+    . doConstantFolding
     . letFolding
     $ tab
   where
     recs :: HashSet Symbol
     recs = recursiveIdents tab
+
+    nonRecs :: HashSet Symbol
+    nonRecs = nonRecursiveIdents tab
+
+    doConstantFolding :: InfoTable -> InfoTable
+    doConstantFolding tab' = constantFolding' nonRecs' tab'
+      where
+        nonRecs' =
+          if
+              | _optOptimizationLevel > 1 -> nonRecursiveIdents tab'
+              | otherwise -> nonRecs
 
     doInlining :: InfoTable -> InfoTable
     doInlining tab' = inlining' _optInliningDepth recs' tab'

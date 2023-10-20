@@ -50,8 +50,8 @@ readProcess cmd args stdinText =
         return r
     )
 
-clangAssertion :: Path Abs File -> Path Abs File -> Text -> ((String -> IO ()) -> Assertion)
-clangAssertion inputFile expectedFile stdinText step = do
+clangAssertion :: Int -> Path Abs File -> Path Abs File -> Text -> ((String -> IO ()) -> Assertion)
+clangAssertion optLevel inputFile expectedFile stdinText step = do
   step "Check clang and wasmer are on path"
   assertCmdExists $(mkRelFile "clang")
   assertCmdExists $(mkRelFile "wasmer")
@@ -68,12 +68,12 @@ clangAssertion inputFile expectedFile stdinText step = do
       executeNative outputFile = readProcess (toFilePath outputFile) [] stdinText
 
   step "Compile C to WASM32-WASI"
-  actualWasm <- clangCompile (wasiArgs sysrootPath) inputFile $(mkRelFile "Program.wasm") executeWasm step
+  actualWasm <- clangCompile (wasiArgs optLevel sysrootPath) inputFile $(mkRelFile "Program.wasm") executeWasm step
   step "Compare expected and actual program output"
   assertEqDiffText ("check: WASM output = " <> toFilePath expectedFile) actualWasm expected
 
   step "Compile C to native 64-bit code"
-  actualNative <- clangCompile native64Args inputFile $(mkRelFile "Program") executeNative step
+  actualNative <- clangCompile (native64Args optLevel) inputFile $(mkRelFile "Program") executeNative step
   step "Compare expected and actual program output"
   assertEqDiffText ("check: native output = " <> toFilePath expectedFile) actualNative expected
 
@@ -95,13 +95,13 @@ commonArgs outputFile =
     runtimeInclude :: FilePath
     runtimeInclude = $(makeRelativeToProject "runtime/include" >>= strToExp)
 
-native64Args :: Path Abs File -> Path Abs File -> [String]
-native64Args outputFile inputFile =
+native64Args :: Int -> Path Abs File -> Path Abs File -> [String]
+native64Args optLevel outputFile inputFile =
   commonArgs outputFile
     <> [ "-DARCH_NATIVE64",
          "-DAPI_LIBC",
          "-m64",
-         "-O3",
+         "-O" <> show optLevel,
          "-L",
          juvixLibraryDir,
          toFilePath inputFile,
@@ -111,12 +111,12 @@ native64Args outputFile inputFile =
     juvixLibraryDir :: FilePath
     juvixLibraryDir = $(makeRelativeToProject "runtime/_build.native64-debug" >>= strToExp)
 
-wasiArgs :: Path Abs Dir -> Path Abs File -> Path Abs File -> [String]
-wasiArgs sysrootPath outputFile inputFile =
+wasiArgs :: Int -> Path Abs Dir -> Path Abs File -> Path Abs File -> [String]
+wasiArgs optLevel sysrootPath outputFile inputFile =
   commonArgs outputFile
     <> [ "-DARCH_WASM32",
          "-DAPI_WASI",
-         "-O3",
+         "-O" <> show optLevel,
          "-nodefaultlibs",
          "--target=wasm32-wasi",
          "--sysroot",

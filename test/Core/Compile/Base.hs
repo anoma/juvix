@@ -38,21 +38,24 @@ toTestDescr Test {..} =
         }
 
 coreCompileAssertion' ::
+  Int ->
   InfoTable ->
   Path Abs File ->
   Path Abs File ->
   Text ->
   (String -> IO ()) ->
   Assertion
-coreCompileAssertion' tab mainFile expectedFile stdinText step = do
+coreCompileAssertion' optLevel tab mainFile expectedFile stdinText step = do
   step "Translate to JuvixAsm"
-  case run $ runReader defaultCoreOptions $ runError $ toStripped' tab of
+  case run $ runReader opts $ runError $ toStripped' tab of
     Left err -> assertFailure (show (pretty (fromJuvixError @GenericError err)))
     Right tab0 -> do
       assertBool "Check info table" (checkInfoTable tab0)
       let tab' = Asm.fromCore $ Stripped.fromCore $ tab0
       length (fromText (Asm.ppPrint tab' tab') :: String) `seq`
-        Asm.asmCompileAssertion' tab' mainFile expectedFile stdinText step
+        Asm.asmCompileAssertion' optLevel tab' mainFile expectedFile stdinText step
+  where
+    opts = defaultCoreOptions {_optOptimizationLevel = optLevel}
 
 coreCompileAssertion ::
   Path Abs File ->
@@ -70,4 +73,4 @@ coreCompileAssertion mainFile expectedFile stdinText step = do
       expected <- TIO.readFile (toFilePath expectedFile)
       assertEqDiffText ("Check: EVAL output = " <> toFilePath expectedFile) "" expected
     Right (tabIni, Just node) ->
-      coreCompileAssertion' (setupMainFunction tabIni node) mainFile expectedFile stdinText step
+      coreCompileAssertion' 3 (setupMainFunction tabIni node) mainFile expectedFile stdinText step

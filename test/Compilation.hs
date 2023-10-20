@@ -5,4 +5,4 @@ import Compilation.Negative qualified as N
 import Compilation.Positive qualified as P
 
 allTests :: TestTree
-allTests = testGroup "Juvix compilation pipeline tests" [P.allTests, N.allTests]
+allTests = testGroup "Juvix compilation pipeline tests" [P.allTestsNoOptimize, P.allTests, N.allTests]
