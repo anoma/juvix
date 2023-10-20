@@ -67,6 +67,9 @@ instance Clonable Hole where
 instance Clonable SmallUniverse where
   freshNameIds = return
 
+instance (Clonable a) => Clonable [a] where
+  freshNameIds = mapM freshNameIds
+
 instance (Clonable a) => Clonable (Maybe a) where
   freshNameIds = mapM freshNameIds
 
@@ -93,14 +96,14 @@ underClonableBinder :: forall r a binding. (Clonable binding, HasBinders binding
 underClonableBinder ps0 f = underClonableBindersNonEmpty (pure ps0) (f . head)
 
 underClonableBinders :: forall r a binding. (Clonable binding, HasBinders binding, Members '[State HolesState, Reader FreshBindersContext, NameIdGen] r) => [binding] -> ([binding] -> Sem r a) -> Sem r a
-underClonableBinders ps0 f = do
+underClonableBinders binders f = do
   ctx <- ask @FreshBindersContext
-  let binders0 :: [NameId] = ps0 ^.. each . bindersTraversal . nameId
-  binders' <- mapM (const freshNameId) binders0
-  let ctx' = ctx <> HashMap.fromList (zipExact binders0 binders')
+  let bindersIds :: [NameId] = binders ^.. each . bindersTraversal . nameId
+  bindersIds' <- mapM (const freshNameId) bindersIds
+  let ctx' = ctx <> HashMap.fromList (zipExact bindersIds bindersIds')
   local (const ctx') $ do
-    ps' <- mapM freshNameIds ps0
-    f ps'
+    binders' <- freshNameIds binders
+    f binders'
 
 underBinders :: forall r a binding. (HasBinders binding, Members '[State HolesState, Reader FreshBindersContext, NameIdGen] r) => [binding] -> ([binding] -> Sem r a) -> Sem r a
 underBinders ps f = do
@@ -245,16 +248,26 @@ instance Clonable Expression where
     ExpressionSimpleLambda l -> ExpressionSimpleLambda <$> freshNameIds l
     ExpressionLambda l -> ExpressionLambda <$> freshNameIds l
 
+instance Clonable DefaultSignature where
+  freshNameIds DefaultSignature {..} = do
+    sig' <- mapM freshNameIds _defaultSignature
+    return
+      DefaultSignature
+        { _defaultSignature = sig'
+        }
+
 instance Clonable FunctionDef where
   freshNameIds :: (Members '[State HolesState, Reader FreshBindersContext, NameIdGen] r) => FunctionDef -> Sem r FunctionDef
   freshNameIds fun@FunctionDef {..} = do
     ty' <- freshNameIds _funDefType
     underBinder fun $ \fun' -> do
       body' <- freshNameIds _funDefBody
+      defaultSig' <- freshNameIds _funDefDefaultSignature
       return
         FunctionDef
           { _funDefName = fun' ^. funDefName,
             _funDefType = ty',
             _funDefBody = body',
+            _funDefDefaultSignature = defaultSig',
             ..
           }
