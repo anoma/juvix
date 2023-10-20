@@ -147,7 +147,7 @@ loadDefaultPrelude = whenJustM defaultPreludeEntryPoint $ \e -> do
     . runM
     . evalInternet hasInternet
     . runFilesIO
-    . runError @Text
+    . runError @JuvixError
     . runReader e
     . runLogIO
     . runProcessIO
