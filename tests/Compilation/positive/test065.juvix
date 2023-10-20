@@ -1,5 +1,5 @@
 -- Default values inserted in the translation FromConcrete
-module test063;
+module test065;
 
 import Stdlib.Data.Nat.Base open;
 
