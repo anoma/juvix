@@ -109,7 +109,9 @@ ppMutual = \case
 instance PrettyCode LetClause where
   ppCode :: forall r. (Member (Reader Options) r) => LetClause -> Sem r (Doc Ann)
   ppCode = \case
-    LetFunDef f -> ppCode f
+    LetFunDef f -> do
+      fun' <- ppCode f
+      return (kwNotMutual <+> fun')
     LetMutualBlock b -> ppMutual (b ^. mutualLet)
 
 instance PrettyCode Literal where

@@ -66,6 +66,9 @@ primitive = annotate (AnnKind KNameAxiom) . pretty
 keyword :: Text -> Doc Ann
 keyword = annotate AnnKeyword . pretty
 
+kwNotMutual :: Doc Ann
+kwNotMutual = keyword Str.notMutual
+
 kwMutual :: Doc Ann
 kwMutual = keyword Str.mutual
 
