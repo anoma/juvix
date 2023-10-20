@@ -388,7 +388,7 @@ tests =
       $(mkRelDir ".")
       $(mkRelFile "test065.juvix")
       $(mkRelFile "out/test065.out"),
-   posText
+    posText
       "Test066: Dependent default values inserted in the arity checker"
       $(mkRelDir ".")
       $(mkRelFile "test066.juvix")
