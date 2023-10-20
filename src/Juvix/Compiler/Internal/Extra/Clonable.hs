@@ -89,6 +89,9 @@ underBindersNonEmpty p f = underBinders (toList p) (f . nonEmpty')
 underClonableBindersNonEmpty :: forall r a binding. (Clonable binding, HasBinders binding, Members '[State HolesState, Reader FreshBindersContext, NameIdGen] r) => NonEmpty binding -> (NonEmpty binding -> Sem r a) -> Sem r a
 underClonableBindersNonEmpty ps0 f = underClonableBinders (toList ps0) (f . nonEmpty')
 
+underClonableBinder :: forall r a binding. (Clonable binding, HasBinders binding, Members '[State HolesState, Reader FreshBindersContext, NameIdGen] r) => binding -> (binding -> Sem r a) -> Sem r a
+underClonableBinder ps0 f = underClonableBindersNonEmpty (pure ps0) (f . head)
+
 underClonableBinders :: forall r a binding. (Clonable binding, HasBinders binding, Members '[State HolesState, Reader FreshBindersContext, NameIdGen] r) => [binding] -> ([binding] -> Sem r a) -> Sem r a
 underClonableBinders ps0 f = do
   ctx <- ask @FreshBindersContext
@@ -140,9 +143,18 @@ instance Clonable Case where
           _caseParens
         }
 
+instance Clonable FunctionParameter where
+  freshNameIds FunctionParameter {..} = do
+    ty' <- freshNameIds _paramType
+    return
+      FunctionParameter
+        { _paramType = ty',
+          ..
+        }
+
 instance Clonable Function where
   freshNameIds Function {..} =
-    underBinder _functionLeft $ \l' -> do
+    underClonableBinder _functionLeft $ \l' -> do
       r' <- freshNameIds _functionRight
       return
         Function
