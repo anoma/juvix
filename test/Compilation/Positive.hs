@@ -383,12 +383,12 @@ tests =
       $(mkRelDir ".")
       $(mkRelFile "test064.juvix")
       $(mkRelFile "out/test064.out"),
-    posText
+    posTest
       "Test065: Dependent default values inserted during translation FromConcrete"
       $(mkRelDir ".")
       $(mkRelFile "test065.juvix")
       $(mkRelFile "out/test065.out"),
-    posText
+    posTest
       "Test066: Dependent default values inserted in the arity checker"
       $(mkRelDir ".")
       $(mkRelFile "test066.juvix")
