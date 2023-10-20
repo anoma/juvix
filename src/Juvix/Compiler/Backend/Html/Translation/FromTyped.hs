@@ -431,7 +431,7 @@ goStatement = \case
   StatementOpenModule t -> goOpen t
   StatementFunctionDef t -> goFunctionDef t
   StatementSyntax s -> goSyntax s
-  StatementImport {} -> mempty
+  StatementImport s -> goImport s
   StatementModule m -> goLocalModule m
   StatementProjectionDef {} -> mempty
   where
@@ -506,6 +506,11 @@ goLocalModule def = fmap (fromMaybe mempty) . runFail $ do
       )
       <$> mconcatMap goStatement (def ^. moduleBody)
   return (header' <> body')
+
+goImport :: forall r. (Members '[Reader HtmlOptions] r) => Import 'Scoped -> Sem r Html
+goImport op
+  | Just Public <- op ^? importOpen . _Just . openPublic = noDefHeader <$> ppCodeHtml defaultOptions op
+  | otherwise = mempty
 
 goOpen :: forall r. (Members '[Reader HtmlOptions] r) => OpenModule 'Scoped -> Sem r Html
 goOpen op
