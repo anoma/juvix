@@ -1,4 +1,4 @@
-module Juvix.Compiler.Pipeline.Loader.PathResolver where
+module Juvix.Compiler.Pipeline.Package.Loader.PathResolver where
 
 import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Concrete hiding (Symbol)
