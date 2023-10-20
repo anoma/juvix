@@ -1,13 +1,27 @@
-module Juvix.Compiler.Internal.Extra.Clonable where
+module Juvix.Compiler.Internal.Extra.Clonable
+  ( Clonable,
+    clone,
+  )
+where
 
-import Juvix.Compiler.Internal.Extra.Base
 -- import Data.HashMap.Strict qualified as HashMap
+
+import Data.HashMap.Strict qualified as HashMap
+import Juvix.Compiler.Internal.Extra.Base
 import Juvix.Compiler.Internal.Language
 import Juvix.Prelude
 
 type FreshBindersContext = HashMap NameId NameId
 
 type HolesState = HashMap Hole Hole
+
+clone :: (Clonable a, Members '[NameIdGen] r) => a -> Sem r a
+clone = evalState iniState . runReader iniCtx . freshNameIds
+  where
+    iniState :: HolesState
+    iniState = mempty
+    iniCtx :: FreshBindersContext
+    iniCtx = mempty
 
 class Clonable a where
   freshNameIds :: (Members '[State HolesState, Reader FreshBindersContext, NameIdGen] r) => a -> Sem r a
@@ -72,6 +86,19 @@ underBindersNonEmpty ::
   Sem r a
 underBindersNonEmpty p f = underBinders (toList p) (f . nonEmpty')
 
+underClonableBindersNonEmpty :: forall r a binding. (Clonable binding, HasBinders binding, Members '[State HolesState, Reader FreshBindersContext, NameIdGen] r) => NonEmpty binding -> (NonEmpty binding -> Sem r a) -> Sem r a
+underClonableBindersNonEmpty ps0 f = underClonableBinders (toList ps0) (f . nonEmpty')
+
+underClonableBinders :: forall r a binding. (Clonable binding, HasBinders binding, Members '[State HolesState, Reader FreshBindersContext, NameIdGen] r) => [binding] -> ([binding] -> Sem r a) -> Sem r a
+underClonableBinders ps0 f = do
+  ctx <- ask @FreshBindersContext
+  let binders0 :: [NameId] = ps0 ^.. each . bindersTraversal . nameId
+  binders' <- mapM (const freshNameId) binders0
+  let ctx' = ctx <> HashMap.fromList (zipExact binders0 binders')
+  local (const ctx') $ do
+    ps' <- mapM freshNameIds ps0
+    f ps'
+
 underBinders :: forall r a binding. (HasBinders binding, Members '[State HolesState, Reader FreshBindersContext, NameIdGen] r) => [binding] -> ([binding] -> Sem r a) -> Sem r a
 underBinders ps f = do
   ctx <- ask @FreshBindersContext
@@ -79,12 +106,12 @@ underBinders ps f = do
   local (const ctx') (f ps')
   where
     goBinders :: forall r'. (Members '[State FreshBindersContext, NameIdGen] r') => binding -> Sem r' binding
-    goBinders pat = do
-      forOf bindersTraversal pat addVar
+    goBinders pat = forOf bindersTraversal pat addVar
       where
         addVar :: VarName -> Sem r' VarName
         addVar v = do
-          uid' <- freshNameId
+          ctx <- get @FreshBindersContext
+          uid' <- maybe freshNameId return (ctx ^. at (v ^. nameId))
           modify' @FreshBindersContext (set (at (v ^. nameId)) (Just uid'))
           return (set nameId uid' v)
 
@@ -128,7 +155,7 @@ instance (Clonable a) => Clonable (NonEmpty a) where
 
 instance Clonable MutualBlockLet where
   freshNameIds MutualBlockLet {..} =
-    underBindersNonEmpty _mutualLet $ \funs -> do
+    underClonableBindersNonEmpty _mutualLet $ \funs -> do
       funs' <- mapM freshNameIds funs
       return
         MutualBlockLet
@@ -143,12 +170,8 @@ instance Clonable LetClause where
 instance Clonable Let where
   freshNameIds :: (Members '[State HolesState, Reader FreshBindersContext, NameIdGen] r) => Let -> Sem r Let
   freshNameIds Let {..} = do
-    underBindersNonEmpty _letClauses $ \clauses -> do
-      -- FIXME at this point the functions in the clauses have already been renamed
-      -- but we are cloning them again!
-      clauses' <- freshNameIds clauses
+    underClonableBindersNonEmpty _letClauses $ \clauses' -> do
       e' <- freshNameIds _letExpression
-      -- TODO this is wrong!!!!
       return
         Let
           { _letClauses = clauses',

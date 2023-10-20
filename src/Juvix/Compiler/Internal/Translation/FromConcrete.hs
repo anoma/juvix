@@ -19,7 +19,6 @@ import Juvix.Compiler.Concrete.Language qualified as Concrete
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
 import Juvix.Compiler.Internal.Data.NameDependencyInfo qualified as Internal
-import Juvix.Compiler.Internal.Extra (foldExplicitApplication)
 import Juvix.Compiler.Internal.Extra qualified as Internal
 import Juvix.Compiler.Internal.Extra.DependencyBuilder
 import Juvix.Compiler.Internal.Language (varFromWildcard)
@@ -773,7 +772,7 @@ goExpression = \case
     goDesugaredNamedApplication :: DesugaredNamedApplication -> Sem r Internal.Expression
     goDesugaredNamedApplication a = do
       let fun = goScopedIden (a ^. dnamedAppIdentifier)
-          rename :: Internal.Subs =
+          updateKind :: Internal.Subs =
             HashMap.fromList
               [ (s, Internal.ExpressionIden s') | s <- a ^.. dnamedAppArgs . each . argName . to goSymbol, let s' = Internal.IdenFunction (set Internal.nameKind KNameFunction s)
               ]
@@ -786,13 +785,14 @@ goExpression = \case
           argNames :: NonEmpty Internal.ApplicationArg = mkAppArg <$> a ^. dnamedAppArgs
           app = Internal.foldApplication (Internal.toExpression fun) (toList argNames)
       clauses <- mapM mkClause (a ^. dnamedAppArgs)
-      return
-        . Internal.substitutionE rename
-        $ Internal.ExpressionLet
-          Internal.Let
-            { _letExpression = app,
-              _letClauses = clauses
-            }
+      let expr =
+            Internal.substitutionE updateKind $
+              Internal.ExpressionLet
+                Internal.Let
+                  { _letExpression = app,
+                    _letClauses = clauses
+                  }
+      Internal.clone expr
       where
         mkClause :: Arg -> Sem r Internal.LetClause
         mkClause arg = do
@@ -826,19 +826,21 @@ goExpression = \case
           cls <- mapM goField fieldsByIx
           let args :: [Internal.Name] = map (^. Internal.funDefName) (toList cls)
               constr = Internal.toExpression (goScopedIden _recordCreationConstructor)
-              e = foldExplicitApplication constr (map Internal.toExpression args)
-              rename :: Internal.Subs =
+              e = Internal.foldExplicitApplication constr (map Internal.toExpression args)
+              -- changes the kind from Variable to Function
+              updateKind :: Internal.Subs =
                 HashMap.fromList
                   [ (s, Internal.toExpression s') | s <- args, let s' = Internal.IdenFunction (set Internal.nameKind KNameFunction s)
                   ]
 
-          return
-            . Internal.substitutionE rename
-            . Internal.ExpressionLet
-            $ Internal.Let
-              { _letClauses = Internal.LetFunDef <$> cls,
-                _letExpression = e
-              }
+          let expr =
+                Internal.substitutionE updateKind
+                  . Internal.ExpressionLet
+                  $ Internal.Let
+                    { _letClauses = Internal.LetFunDef <$> cls,
+                      _letExpression = e
+                    }
+          Internal.clone expr
           where
             goField :: RecordDefineField 'Scoped -> Sem r Internal.FunctionDef
             goField = goFunctionDef . (^. fieldDefineFunDef)
@@ -899,14 +901,14 @@ goExpression = \case
           return
             Internal.LambdaClause
               { _lambdaPatterns = pure patArg,
-                _lambdaBody = foldExplicitApplication (Internal.toExpression constr) args
+                _lambdaBody = Internal.foldExplicitApplication (Internal.toExpression constr) args
               }
 
     goRecordUpdateApp :: Concrete.RecordUpdateApp -> Sem r Internal.Expression
     goRecordUpdateApp r = do
       expr' <- goExpression (r ^. recordAppExpression)
       lam <- Internal.ExpressionLambda <$> goRecordUpdate (r ^. recordAppUpdate)
-      return $ foldExplicitApplication lam [expr']
+      return $ Internal.foldExplicitApplication lam [expr']
 
     goList :: Concrete.List 'Scoped -> Sem r Internal.Expression
     goList l = do

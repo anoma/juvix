@@ -2,12 +2,14 @@ module Juvix.Compiler.Internal.Extra
   ( module Juvix.Compiler.Internal.Extra,
     module Juvix.Compiler.Internal.Extra.Base,
     module Juvix.Compiler.Internal.Language,
+    module Juvix.Compiler.Internal.Extra.Clonable,
   )
 where
 
 import Data.Stream qualified as Stream
 import Juvix.Compiler.Internal.Data.InfoTable.Base
 import Juvix.Compiler.Internal.Extra.Base
+import Juvix.Compiler.Internal.Extra.Clonable
 import Juvix.Compiler.Internal.Language
 import Juvix.Prelude
 
