@@ -517,7 +517,6 @@ functionDefEval f = do
       ExpressionUniverse {} -> True
       _ -> False
 
-    -- REVISE!
     canBeUniverse :: Expression -> Bool
     canBeUniverse = \case
       ExpressionUniverse {} -> True
