@@ -100,11 +100,13 @@ instance PrettyCode Let where
     return $ kwLet <+> letClauses' <+> kwIn <+> letExpression'
 
 ppMutual :: (Member (Reader Options) r, PrettyCode a) => NonEmpty a -> Sem r (Doc Ann)
-ppMutual = \case
-  b :| [] -> ppCode b
-  l -> do
-    b' <- vsep2 <$> mapM ppCode l
-    return (kwMutual <+> braces (line <> indent' b' <> line))
+ppMutual l = do
+  defs' <- case l of
+    b :| [] -> ppCode b
+    t -> do
+      b' <- vsep2 <$> mapM ppCode t
+      return (braces (line <> indent' b' <> line))
+  return (kwMutual <+> defs')
 
 instance PrettyCode LetClause where
   ppCode :: forall r. (Member (Reader Options) r) => LetClause -> Sem r (Doc Ann)

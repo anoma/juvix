@@ -823,8 +823,8 @@ goExpression = \case
                 let sym = Concrete.symbolParsed (fi ^. Concrete.fieldDefineFunDef . Concrete.signName)
                  in sig ^?! recordNames . at sym . _Just . nameItemIndex
               fieldsByIx = nonEmpty' (sortOn getIx (toList fields1))
-          cls <- mapM goField fieldsByIx
-          let args :: [Internal.Name] = map (^. Internal.funDefName) (toList cls)
+          cls <- goFields fieldsByIx
+          let args :: [Internal.Name] = fieldsByIx ^.. each . fieldDefineFunDef . signName . to goSymbol
               constr = Internal.toExpression (goScopedIden _recordCreationConstructor)
               e = Internal.foldExplicitApplication constr (map Internal.toExpression args)
               -- changes the kind from Variable to Function
@@ -837,13 +837,16 @@ goExpression = \case
                 Internal.substitutionE updateKind
                   . Internal.ExpressionLet
                   $ Internal.Let
-                    { _letClauses = Internal.LetFunDef <$> cls,
+                    { _letClauses = cls,
                       _letExpression = e
                     }
           Internal.clone expr
           where
-            goField :: RecordDefineField 'Scoped -> Sem r Internal.FunctionDef
-            goField = goFunctionDef . (^. fieldDefineFunDef)
+            goFields :: NonEmpty (RecordDefineField 'Scoped) -> Sem r (NonEmpty Internal.LetClause)
+            goFields recordfields = nonEmpty' . goPreLetStatements <$> mapM goField recordfields
+              where
+                goField :: RecordDefineField 'Scoped -> Sem r Internal.PreLetStatement
+                goField = fmap Internal.PreLetFunctionDef . goFunctionDef . (^. fieldDefineFunDef)
 
     goRecordUpdate :: Concrete.RecordUpdate 'Scoped -> Sem r Internal.Lambda
     goRecordUpdate r = do
@@ -941,20 +944,9 @@ goExpression = \case
         Just _letClauses -> Internal.ExpressionLet Internal.Let {..}
         Nothing -> _letExpression
 
-    goLetFunDefs :: NonEmpty (LetStatement 'Scoped) -> Sem r [Internal.LetClause]
-    goLetFunDefs clauses = fmap goSCC <$> preLetStatements clauses
+    goPreLetStatements :: NonEmpty Internal.PreLetStatement -> [Internal.LetClause]
+    goPreLetStatements pre = goSCC <$> (toList (buildLetMutualBlocks pre))
       where
-        preLetStatements :: NonEmpty (LetStatement 'Scoped) -> Sem r [SCC Internal.PreLetStatement]
-        preLetStatements cl = do
-          pre <- mapMaybeM preLetStatement (toList cl)
-          return $ maybe [] (toList . buildLetMutualBlocks) (nonEmpty pre)
-          where
-            preLetStatement :: LetStatement 'Scoped -> Sem r (Maybe Internal.PreLetStatement)
-            preLetStatement = \case
-              LetFunctionDef f -> Just . Internal.PreLetFunctionDef <$> goFunctionDef f
-              LetAliasDef {} -> return Nothing
-              LetOpen {} -> return Nothing
-
         goSCC :: SCC Internal.PreLetStatement -> Internal.LetClause
         goSCC = \case
           AcyclicSCC (Internal.PreLetFunctionDef f) -> Internal.LetFunDef f
@@ -966,6 +958,18 @@ goExpression = \case
                   getFun :: Internal.PreLetStatement -> Internal.FunctionDef
                   getFun = \case
                     Internal.PreLetFunctionDef f -> f
+
+    goLetFunDefs :: NonEmpty (LetStatement 'Scoped) -> Sem r [Internal.LetClause]
+    goLetFunDefs clauses = maybe [] goPreLetStatements . nonEmpty <$> preLetStatements clauses
+      where
+        preLetStatements :: NonEmpty (LetStatement 'Scoped) -> Sem r [Internal.PreLetStatement]
+        preLetStatements cl = mapMaybeM preLetStatement (toList cl)
+          where
+            preLetStatement :: LetStatement 'Scoped -> Sem r (Maybe Internal.PreLetStatement)
+            preLetStatement = \case
+              LetFunctionDef f -> Just . Internal.PreLetFunctionDef <$> goFunctionDef f
+              LetAliasDef {} -> return Nothing
+              LetOpen {} -> return Nothing
 
     goApplicationArg :: Expression -> Sem r Internal.ApplicationArg
     goApplicationArg arg =

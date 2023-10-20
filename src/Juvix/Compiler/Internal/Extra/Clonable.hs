@@ -158,10 +158,9 @@ instance (Clonable a) => Clonable (NonEmpty a) where
 instance Clonable MutualBlockLet where
   freshNameIds MutualBlockLet {..} =
     underClonableBindersNonEmpty _mutualLet $ \funs -> do
-      funs' <- mapM freshNameIds funs
       return
         MutualBlockLet
-          { _mutualLet = funs'
+          { _mutualLet = funs
           }
 
 instance Clonable LetClause where
