@@ -30,6 +30,7 @@ import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Erro
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.PackageInfo
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Compiler.Pipeline.Lockfile
+import Juvix.Compiler.Pipeline.Package
 import Juvix.Data.Effect.Git
 import Juvix.Extra.Paths
 import Juvix.Extra.Stdlib (ensureStdlib)
