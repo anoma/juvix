@@ -148,6 +148,9 @@ kwTrait = asciiKw Str.trait
 kwInstance :: Keyword
 kwInstance = asciiKw Str.instance_
 
+kwCoercion :: Keyword
+kwCoercion = asciiKw Str.coercion_
+
 kwUsing :: Keyword
 kwUsing = asciiKw Str.using
 

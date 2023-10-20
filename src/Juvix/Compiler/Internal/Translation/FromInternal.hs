@@ -113,7 +113,7 @@ typeCheckImport i = do
     . withEmptyVars
     -- TODO Store cache in Artifacts and use it here
     . evalCacheEmpty checkModuleNoCache
-    $ checkImport i
+    $ checkTable >> checkImport i
 
 typeChecking ::
   forall r.
@@ -121,14 +121,14 @@ typeChecking ::
   Sem (Termination ': r) ArityChecking.InternalArityResult ->
   Sem r InternalTypedResult
 typeChecking a = do
-  (termin, (res, (normalized, (idens, (funs, r))))) <- runTermination iniTerminationState $ do
+  (termin, (res, table, (normalized, (idens, (funs, r))))) <- runTermination iniTerminationState $ do
     res <- a
     let table :: InfoTable
         table = buildTable (res ^. ArityChecking.resultModules)
 
         entryPoint :: EntryPoint
         entryPoint = res ^. ArityChecking.internalArityResultEntryPoint
-    fmap (res,)
+    fmap (res,table,)
       . runOutputList
       . runReader entryPoint
       . runState (mempty :: TypesTable)
@@ -136,8 +136,7 @@ typeChecking a = do
       . runReader table
       . mapError (JuvixError @TypeCheckerError)
       . evalCacheEmpty checkModuleNoCache
-      $ do
-        mapM checkModule (res ^. ArityChecking.resultModules)
+      $ checkTable >> mapM checkModule (res ^. ArityChecking.resultModules)
   return
     InternalTypedResult
       { _resultInternalArityResult = res,
@@ -146,5 +145,5 @@ typeChecking a = do
         _resultNormalized = HashMap.fromList [(e ^. exampleId, e ^. exampleExpression) | e <- normalized],
         _resultIdenTypes = idens,
         _resultFunctions = funs,
-        _resultInfoTable = buildTable r
+        _resultInfoTable = table
       }

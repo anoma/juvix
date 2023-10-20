@@ -85,6 +85,7 @@ data FunctionDef = FunctionDef
     _funDefBody :: Expression,
     _funDefTerminating :: Bool,
     _funDefInstance :: Bool,
+    _funDefCoercion :: Bool,
     _funDefBuiltin :: Maybe BuiltinFunction,
     _funDefDefaultSignature :: DefaultSignature,
     _funDefPragmas :: Pragmas

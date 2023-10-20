@@ -13,12 +13,13 @@ data CompileAssertionMode
   | EvalAndCompile
 
 compileAssertion ::
+  Int ->
   CompileAssertionMode ->
   Path Abs File ->
   Path Abs File ->
   (String -> IO ()) ->
   Assertion
-compileAssertion mode mainFile expectedFile step = do
+compileAssertion optLevel mode mainFile expectedFile step = do
   step "Translate to JuvixCore"
   entryPoint <- defaultEntryPointCwdIO mainFile
   tab <- (^. Core.coreResultTable) . snd <$> runIO' entryPoint upToCore
@@ -26,7 +27,7 @@ compileAssertion mode mainFile expectedFile step = do
     Left err -> assertFailure (show (pretty (fromJuvixError @GenericError err)))
     Right tab' -> do
       let evalAssertion = coreEvalAssertion' EvalModePlain tab' mainFile expectedFile step
-          compileAssertion' stdinText = coreCompileAssertion' tab' mainFile expectedFile stdinText step
+          compileAssertion' stdinText = coreCompileAssertion' optLevel tab' mainFile expectedFile stdinText step
       case mode of
         EvalOnly -> evalAssertion
         CompileOnly stdinText -> compileAssertion' stdinText

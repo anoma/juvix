@@ -24,6 +24,9 @@ data TypeCheckerError
   | ErrNoPositivity NoPositivity
   | ErrUnsupportedTypeFunction UnsupportedTypeFunction
   | ErrInvalidInstanceType InvalidInstanceType
+  | ErrInvalidCoercionType InvalidCoercionType
+  | ErrWrongCoercionArgument WrongCoercionArgument
+  | ErrCoercionCycles CoercionCycles
   | ErrTargetNotATrait TargetNotATrait
   | ErrNotATrait NotATrait
   | ErrNoInstance NoInstance
@@ -47,6 +50,9 @@ instance ToGenericError TypeCheckerError where
     ErrNoPositivity e -> genericError e
     ErrUnsupportedTypeFunction e -> genericError e
     ErrInvalidInstanceType e -> genericError e
+    ErrInvalidCoercionType e -> genericError e
+    ErrWrongCoercionArgument e -> genericError e
+    ErrCoercionCycles e -> genericError e
     ErrTargetNotATrait e -> genericError e
     ErrNotATrait e -> genericError e
     ErrNoInstance e -> genericError e

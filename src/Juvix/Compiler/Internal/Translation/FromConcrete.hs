@@ -386,7 +386,8 @@ goFunctionDef ::
 goFunctionDef FunctionDef {..} = do
   let _funDefName = goSymbol _signName
       _funDefTerminating = isJust _signTerminating
-      _funDefInstance = isJust _signInstance
+      _funDefInstance = isJust _signInstance && isNothing _signCoercion
+      _funDefCoercion = isJust _signCoercion
       _funDefBuiltin = (^. withLocParam) <$> _signBuiltin
   _funDefType <- goDefType
   _funDefExamples <- goExamples _signDoc
@@ -798,13 +799,14 @@ goExpression = \case
         mkClause arg = do
           body' <- goExpression (arg ^. argValue)
           ty <- goExpression (arg ^. argType)
-          -- TODO create helper function for simple function definitions
+          -- TODO consider creating a helper function for simple function definitions
           return $
             Internal.LetFunDef
               Internal.FunctionDef
                 { _funDefName = goSymbol (arg ^. argName),
                   _funDefType = ty,
                   _funDefExamples = [],
+                  _funDefCoercion = False,
                   _funDefInstance = False,
                   _funDefPragmas = mempty,
                   _funDefDefaultSignature = mempty,

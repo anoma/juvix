@@ -17,6 +17,8 @@ kFreeVarsInfo = Proxy
 
 makeLenses ''FreeVarsInfo
 
+-- | Computes free variable info for each subnode. Assumption: no subnode is a
+-- closure.
 computeFreeVarsInfo :: Node -> Node
 computeFreeVarsInfo = umap go
   where
@@ -47,3 +49,6 @@ getFreeVarsInfo = fromJust . Info.lookup kFreeVarsInfo . getInfo
 
 freeVarOccurrences :: Index -> Node -> Int
 freeVarOccurrences idx n = fromMaybe 0 (Map.lookup idx (getFreeVarsInfo n ^. infoFreeVars))
+
+isClosed :: Node -> Bool
+isClosed node = sum (Map.elems (getFreeVarsInfo node ^. infoFreeVars)) == 0

@@ -940,6 +940,7 @@ instance (SingI s) => PrettyPrint (SigArg s) where
 ppFunctionSignature :: (SingI s) => PrettyPrinting (FunctionDef s)
 ppFunctionSignature FunctionDef {..} = do
   let termin' = (<> line) . ppCode <$> _signTerminating
+      coercion' = (<> if isJust instance' then space else line) . ppCode <$> _signCoercion
       instance' = (<> line) . ppCode <$> _signInstance
       args' = hsep . fmap ppCode <$> nonEmpty _signArgs
       builtin' = (<> line) . ppCode <$> _signBuiltin
@@ -949,6 +950,7 @@ ppFunctionSignature FunctionDef {..} = do
       name' = annDef _signName (ppSymbolType _signName)
    in builtin'
         ?<> termin'
+        ?<> coercion'
         ?<> instance'
         ?<> ( name'
                 <+?> args'

@@ -1,5 +1,6 @@
 module Juvix.Compiler.Internal.Data.InfoTable.Base where
 
+import Juvix.Compiler.Internal.Data.CoercionInfo
 import Juvix.Compiler.Internal.Data.InstanceInfo
 import Juvix.Compiler.Internal.Language
 import Juvix.Prelude
@@ -30,7 +31,8 @@ data InfoTable = InfoTable
     _infoAxioms :: HashMap Name AxiomInfo,
     _infoFunctions :: HashMap Name FunctionInfo,
     _infoInductives :: HashMap Name InductiveInfo,
-    _infoInstances :: InstanceTable
+    _infoInstances :: InstanceTable,
+    _infoCoercions :: CoercionTable
   }
 
 makeLenses ''InfoTable
@@ -46,7 +48,8 @@ instance Semigroup InfoTable where
         _infoAxioms = a ^. infoAxioms <> b ^. infoAxioms,
         _infoFunctions = a ^. infoFunctions <> b ^. infoFunctions,
         _infoInductives = a ^. infoInductives <> b ^. infoInductives,
-        _infoInstances = a ^. infoInstances <> b ^. infoInstances
+        _infoInstances = a ^. infoInstances <> b ^. infoInstances,
+        _infoCoercions = a ^. infoCoercions <> b ^. infoCoercions
       }
 
 instance Monoid InfoTable where
@@ -56,5 +59,6 @@ instance Monoid InfoTable where
         _infoAxioms = mempty,
         _infoFunctions = mempty,
         _infoInductives = mempty,
-        _infoInstances = mempty
+        _infoInstances = mempty,
+        _infoCoercions = mempty
       }

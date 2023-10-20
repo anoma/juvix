@@ -24,7 +24,7 @@ toTestDescr PosTest {..} =
   TestDescr
     { _testRoot = _dir,
       _testName = _name,
-      _testAssertion = Steps $ compileAssertion (CompileOnly _stdin) _file _expectedFile
+      _testAssertion = Steps $ compileAssertion 3 (CompileOnly _stdin) _file _expectedFile
     }
 
 allTests :: TestTree

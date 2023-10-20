@@ -13,28 +13,31 @@ data PosTest = PosTest
 
 makeLenses ''PosTest
 
-fromTest :: PosTest -> TestTree
-fromTest = mkTest . toTestDescr
-
 root :: Path Abs Dir
 root = relToProject $(mkRelDir "tests/Compilation/positive/")
 
-toTestDescr :: PosTest -> TestDescr
-toTestDescr PosTest {..} =
+toTestDescr :: Int -> PosTest -> TestDescr
+toTestDescr optLevel PosTest {..} =
   let tRoot = _dir
       file' = _file
       expected' = _expectedFile
    in TestDescr
         { _testName = _name,
           _testRoot = tRoot,
-          _testAssertion = Steps $ compileAssertion _assertionMode file' expected'
+          _testAssertion = Steps $ compileAssertion optLevel _assertionMode file' expected'
         }
 
 allTests :: TestTree
 allTests =
   testGroup
     "Juvix compilation pipeline positive tests"
-    (map (mkTest . toTestDescr) tests)
+    (map (mkTest . toTestDescr 3) tests)
+
+allTestsNoOptimize :: TestTree
+allTestsNoOptimize =
+  testGroup
+    "Juvix compilation pipeline positive tests (no optimization)"
+    (map (mkTest . toTestDescr 0) tests)
 
 posTest' :: CompileAssertionMode -> String -> Path Rel Dir -> Path Rel File -> Path Rel File -> PosTest
 posTest' _assertionMode _name rdir rfile routfile =
@@ -371,8 +374,23 @@ tests =
       $(mkRelFile "test062.juvix")
       $(mkRelFile "out/test062.out"),
     posTest
-      "Test063: Dependent default values inserted during translation FromConcrete"
+      "Test063: Coercions"
       $(mkRelDir ".")
       $(mkRelFile "test063.juvix")
-      $(mkRelFile "out/test063.out")
+      $(mkRelFile "out/test063.out"),
+    posTest
+      "Test064: Constant folding"
+      $(mkRelDir ".")
+      $(mkRelFile "test064.juvix")
+      $(mkRelFile "out/test064.out"),
+    posText
+      "Test065: Dependent default values inserted during translation FromConcrete"
+      $(mkRelDir ".")
+      $(mkRelFile "test065.juvix")
+      $(mkRelFile "out/test065.out"),
+   posText
+      "Test066: Dependent default values inserted in the arity checker"
+      $(mkRelDir ".")
+      $(mkRelFile "test066.juvix")
+      $(mkRelFile "out/test066.out")
   ]

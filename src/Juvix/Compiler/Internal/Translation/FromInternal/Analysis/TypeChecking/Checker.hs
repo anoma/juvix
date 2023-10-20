@@ -8,6 +8,7 @@ import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Builtins.Effect
 import Juvix.Compiler.Concrete.Data.Highlight.Input
+import Juvix.Compiler.Internal.Data.CoercionInfo
 import Juvix.Compiler.Internal.Data.InstanceInfo
 import Juvix.Compiler.Internal.Data.LocalVars
 import Juvix.Compiler.Internal.Data.TypedHole
@@ -35,6 +36,17 @@ registerNameIdType :: (Members '[HighlightBuilder, State TypesTable, Reader Info
 registerNameIdType uid ty = do
   modify (HashMap.insert uid ty)
   modify (set (highlightTypes . at uid) (Just ty))
+
+checkTable ::
+  (Members '[Reader InfoTable, Error TypeCheckerError] r) =>
+  Sem r ()
+checkTable = do
+  tab <- ask
+  let s = toList $ cyclicCoercions (tab ^. infoCoercions)
+  whenJust (nonEmpty s) $
+    throw
+      . ErrCoercionCycles
+      . CoercionCycles
 
 checkModule ::
   (Members '[HighlightBuilder, Reader EntryPoint, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example, Builtins, MCache] r) =>
@@ -197,11 +209,14 @@ checkFunctionDef FunctionDef {..} = do
           _funDefName,
           _funDefTerminating,
           _funDefInstance,
+          _funDefCoercion,
           _funDefBuiltin,
           _funDefPragmas
         }
   when _funDefInstance $
     checkInstanceType funDef
+  when _funDefCoercion $
+    checkCoercionType funDef
   registerFunctionDef funDef
   rememberFunctionDef funDef
   return funDef
@@ -249,7 +264,7 @@ checkInstanceType FunctionDef {..} = case mi of
     tab <- ask
     unless (isTrait tab _instanceInfoInductive) $
       throw (ErrTargetNotATrait (TargetNotATrait _funDefType))
-    is <- map fst <$> subsumingInstances (tab ^. infoInstances) ii
+    is <- subsumingInstances (tab ^. infoInstances) ii
     unless (null is) $
       throw (ErrSubsumedInstance (SubsumedInstance ii is (getLoc _funDefName)))
     let metaVars = HashSet.fromList $ mapMaybe (^. paramName) _instanceInfoArgs
@@ -280,6 +295,36 @@ checkInstanceParam :: (Member (Error TypeCheckerError) r) => InfoTable -> Expres
 checkInstanceParam tab ty = case traitFromExpression mempty ty of
   Just InstanceApp {..} | isTrait tab _instanceAppHead -> return ()
   _ -> throw (ErrNotATrait (NotATrait ty))
+
+checkCoercionType ::
+  forall r.
+  (Members '[Error TypeCheckerError, Reader InfoTable, Inference] r) =>
+  FunctionDef ->
+  Sem r ()
+checkCoercionType FunctionDef {..} = case mi of
+  Just CoercionInfo {..} -> do
+    tab <- ask
+    unless (isTrait tab _coercionInfoInductive) $
+      throw (ErrTargetNotATrait (TargetNotATrait _funDefType))
+    unless (isTrait tab (_coercionInfoTarget ^. instanceAppHead)) $
+      throw (ErrInvalidCoercionType (InvalidCoercionType _funDefType))
+    mapM_ checkArg _coercionInfoArgs
+  Nothing ->
+    throw (ErrInvalidCoercionType (InvalidCoercionType _funDefType))
+  where
+    mi =
+      coercionFromTypedExpression
+        ( TypedExpression
+            { _typedType = _funDefType,
+              _typedExpression = ExpressionIden (IdenFunction _funDefName)
+            }
+        )
+
+    checkArg :: FunctionParameter -> Sem r ()
+    checkArg fp@FunctionParameter {..} = case _paramImplicit of
+      Implicit -> return ()
+      Explicit -> throw (ErrWrongCoercionArgument (WrongCoercionArgument fp))
+      ImplicitInstance -> throw (ErrWrongCoercionArgument (WrongCoercionArgument fp))
 
 checkExample ::
   (Members '[HighlightBuilder, Reader InfoTable, State FunctionsTable, Error TypeCheckerError, Builtins, NameIdGen, Output Example, State TypesTable, Termination] r) =>

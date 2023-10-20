@@ -19,6 +19,7 @@ where
 
 import Data.Generics.Uniplate.Data
 import Data.HashMap.Strict qualified as HashMap
+import Juvix.Compiler.Internal.Data.CoercionInfo
 import Juvix.Compiler.Internal.Data.InfoTable.Base
 import Juvix.Compiler.Internal.Data.InstanceInfo
 import Juvix.Compiler.Internal.Extra
@@ -129,6 +130,21 @@ computeTable recurIntoImports (ModuleIndex m) = compute
         mkInstance (FunctionInfo FunctionDef {..})
           | _funDefInstance =
               instanceFromTypedExpression
+                ( TypedExpression
+                    { _typedType = _funDefType,
+                      _typedExpression = ExpressionIden (IdenFunction _funDefName)
+                    }
+                )
+          | otherwise =
+              Nothing
+
+    _infoCoercions :: CoercionTable
+    _infoCoercions = foldr (flip updateCoercionTable) mempty $ mapMaybe mkCoercion (HashMap.elems _infoFunctions)
+      where
+        mkCoercion :: FunctionInfo -> Maybe CoercionInfo
+        mkCoercion (FunctionInfo FunctionDef {..})
+          | _funDefCoercion =
+              coercionFromTypedExpression
                 ( TypedExpression
                     { _typedType = _funDefType,
                       _typedExpression = ExpressionIden (IdenFunction _funDefName)

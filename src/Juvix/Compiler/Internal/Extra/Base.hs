@@ -183,6 +183,7 @@ instance HasExpressions FunctionDef where
           _funDefDefaultSignature = defaults',
           _funDefTerminating,
           _funDefInstance,
+          _funDefCoercion,
           _funDefName,
           _funDefBuiltin,
           _funDefPragmas
