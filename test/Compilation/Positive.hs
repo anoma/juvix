@@ -392,5 +392,10 @@ tests =
       "Test066: Dependent default values inserted in the arity checker"
       $(mkRelDir ".")
       $(mkRelFile "test066.juvix")
-      $(mkRelFile "out/test066.out")
+      $(mkRelFile "out/test066.out"),
+    posTest
+      "Test067: Dependent default values for Ord trait"
+      $(mkRelDir ".")
+      $(mkRelFile "test067.juvix")
+      $(mkRelFile "out/test067.out")
   ]

@@ -33,12 +33,13 @@ data ArityParameter
   | ParamImplicitInstance
   deriving stock (Eq)
 
-newtype ImplicitParam = ImplicitParam
-  { _implicitParamDefault :: Maybe Expression
+data ImplicitParam = ImplicitParam
+  { _implicitParamArity :: Arity,
+    _implicitParamDefault :: Maybe Expression
   }
 
 instance Eq ImplicitParam where
-  ImplicitParam _ == ImplicitParam _ = True
+  (ImplicitParam ari1 _) == (ImplicitParam ari2 _) = ari1 == ari2
 
 makeLenses ''UnfoldedArity
 makeLenses ''ImplicitParam
@@ -48,7 +49,7 @@ unfoldingArity f = foldArity . f . unfoldArity'
 
 arityParameter :: ArityParameter -> Arity
 arityParameter = \case
-  ParamImplicit {} -> ArityUnit
+  ParamImplicit ImplicitParam {..} -> _implicitParamArity
   ParamImplicitInstance -> ArityUnit
   ParamExplicit a -> a
 
@@ -101,9 +102,12 @@ instance HasAtomicity Arity where
     ArityUnknown -> Atom
     ArityFunction f -> atomicity f
 
+instance Pretty ImplicitParam where
+  pretty ImplicitParam {..} = "{" <> pretty _implicitParamArity <> "}"
+
 instance Pretty ArityParameter where
   pretty = \case
-    ParamImplicit {} -> "{𝟙}"
+    ParamImplicit p -> pretty p
     ParamImplicitInstance -> "{{𝟙}}"
     ParamExplicit f -> pretty f
 

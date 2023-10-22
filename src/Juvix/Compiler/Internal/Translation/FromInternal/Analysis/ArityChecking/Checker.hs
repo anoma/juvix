@@ -380,6 +380,7 @@ checkLhs loc guessedBody ariSignature pats = do
 
     -- This is an heuristic and it can have an undesired result.
     -- Sometimes the outcome may even be confusing.
+    -- TODO default arguments??
     tailHelper :: Arity -> Maybe [IsImplicit]
     tailHelper a
       | 0 < pref = Just pref'
@@ -603,7 +604,12 @@ typeArity = go
     goParam :: FunctionParameter -> ArityParameter
     goParam (FunctionParameter _ i e) = case i of
       ImplicitInstance -> ParamImplicitInstance
-      Implicit -> ParamImplicit (ImplicitParam Nothing)
+      Implicit ->
+        ParamImplicit
+          ImplicitParam
+            { _implicitParamDefault = Nothing,
+              _implicitParamArity = go e
+            }
       Explicit -> ParamExplicit (go e)
 
     goFun :: Function -> FunctionArity
@@ -786,7 +792,9 @@ checkExpression hintArity expr = case expr of
 newHoleImplicit :: (Member NameIdGen r) => ImplicitParam -> Interval -> Sem r Expression
 newHoleImplicit i loc = case i ^. implicitParamDefault of
   Nothing -> ExpressionHole . mkHole loc <$> freshNameId
-  Just e -> return e
+  Just e -> do
+    -- TODO update location
+    return e
 
 newHoleInstance :: (Member NameIdGen r) => Interval -> Sem r Hole
 newHoleInstance loc = mkHole loc <$> freshNameId
