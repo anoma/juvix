@@ -104,5 +104,11 @@ packageErrorTests =
       $(mkRelDir "PackageJuvixDuplicateDependencies")
       $ \case
         PackageLoaderError _ ErrDuplicateDependencyError {} -> Nothing
+        _ -> wrongError,
+    NegTest
+      "Package.juvix lockfile YAML parse error"
+      $(mkRelDir "InvalidLockfile")
+      $ \case
+        PackageLoaderError _ ErrLockfileYamlParseError {} -> Nothing
         _ -> wrongError
   ]

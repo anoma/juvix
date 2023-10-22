@@ -82,5 +82,12 @@ packageLoadingTests =
       $ \p _ ->
         if
             | p ^. packageName == "package-juvix" -> Nothing
-            | otherwise -> Just "Expected package name to be package-juvix"
+            | otherwise -> Just "Expected package name to be package-juvix",
+    PosTest
+      "Package.juvix uses lock file"
+      $(mkRelDir "PackageJuvixUsesLockfile")
+      $ \p _ ->
+        if
+            | isJust (p ^. packageLockfile) -> Nothing
+            | otherwise -> Just "No lock file was read"
   ]

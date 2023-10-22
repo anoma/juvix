@@ -1,0 +1,6 @@
+dependencies:
+- git:
+    url: url
+    name: name
+    ref: ref2
+  dependencies: []

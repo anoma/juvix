@@ -79,7 +79,7 @@ readPackage ::
   BuildDir ->
   Sem r Package
 readPackage root buildDir = do
-  ifM (fileExists' f) (readPackageFile f) (readYamlPackage root buildDir)
+  ifM (fileExists' f) (readPackageFile root f) (readYamlPackage root buildDir)
   where
     f :: Path Abs File
     f = mkPackagePath root
@@ -113,12 +113,14 @@ readYamlPackage root buildDir = mapError (JuvixError @PackageLoaderError) $ do
 
 readPackageFile ::
   (Members '[Files, Error JuvixError, EvalFileEff] r) =>
+  Path Abs Dir ->
   Path Abs File ->
   Sem r Package
-readPackageFile f = mapError (JuvixError @PackageLoaderError) $ do
+readPackageFile root f = mapError (JuvixError @PackageLoaderError) $ do
   pkg <- loadPackage f
+  mLockfile <- mayReadLockfile root
   checkNoDuplicateDepNames f (pkg ^. packageDependencies)
-  return pkg
+  return (pkg {_packageLockfile = mLockfile})
 
 readPackageIO :: Path Abs Dir -> BuildDir -> IO Package
 readPackageIO root buildDir =
