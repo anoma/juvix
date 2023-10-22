@@ -1,6 +1,6 @@
 module Juvix.Compiler.Pipeline.Setup where
 
-import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver
+import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Base
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Data.Effect.Git
 import Juvix.Prelude

@@ -1,4 +1,4 @@
-module Juvix.Compiler.Pipeline.Package.Loader.PackageLoader.IO where
+module Juvix.Compiler.Pipeline.Package.Loader.EvalEff.IO where
 
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Builtins
@@ -9,12 +9,12 @@ import Juvix.Compiler.Core.Evaluator
 import Juvix.Compiler.Core.Extra.Value
 import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Pipeline
-import Juvix.Compiler.Pipeline.Package.Loader.PackageLoader
 import Juvix.Compiler.Pipeline.Package.Loader.Error
+import Juvix.Compiler.Pipeline.Package.Loader.EvalEff
+import Juvix.Compiler.Pipeline.Package.Loader.PathResolver
 import Juvix.Data.Effect.Git
 import Juvix.Data.Effect.Process
 import Juvix.Extra.Paths qualified as Paths
-import Juvix.Compiler.Pipeline.Package.Loader.PathResolver
 
 data LoaderResource = LoaderResource
   { _loaderResourceResult :: CoreResult,
@@ -23,8 +23,8 @@ data LoaderResource = LoaderResource
 
 makeLenses ''LoaderResource
 
-runPackageFileLoaderIO :: forall r a. (Members '[Embed IO, Error PackageLoaderError] r) => Sem (PackageFileLoader ': r) a -> Sem r a
-runPackageFileLoaderIO = interpretScopedAs allocator handler
+runEvalFileEffIO :: forall r a. (Members '[Embed IO, Error PackageLoaderError] r) => Sem (EvalFileEff ': r) a -> Sem r a
+runEvalFileEffIO = interpretScopedAs allocator handler
   where
     allocator :: Path Abs File -> Sem r LoaderResource
     allocator p = do
@@ -35,12 +35,17 @@ runPackageFileLoaderIO = interpretScopedAs allocator handler
             _loaderResourcePackagePath = p
           }
 
-    handler :: LoaderResource -> PackageLoader m x -> Sem r x
+    handler :: LoaderResource -> EvalEff m x -> Sem r x
     handler res = \case
       Eval' n -> toValue tab <$> evalNode n
       LookupIdentifier n ->
         ( maybe
-            (throw PackageLoaderError {_packageLoaderErrorPath=packagePath, _packageLoaderErrorCause=ErrPackageSymbolNotFound}  )
+            ( throw
+                PackageLoaderError
+                  { _packageLoaderErrorPath = packagePath,
+                    _packageLoaderErrorCause = ErrPackageSymbolNotFound
+                  }
+            )
             return
             ( identifierSymbol n
                 >>= (`HashMap.lookup` (tab ^. Core.identContext))
@@ -66,11 +71,14 @@ runPackageFileLoaderIO = interpretScopedAs allocator handler
           case n' of
             Left e -> do
               throw
-                PackageLoaderError {_packageLoaderErrorPath=packagePath,
-                                    _packageLoaderErrorCause= ErrPackageEvaluationError
-                    PackageEvaluationError
-                      { _packageEvaluationErrorError = JuvixError e
-                      }}
+                PackageLoaderError
+                  { _packageLoaderErrorPath = packagePath,
+                    _packageLoaderErrorCause =
+                      ErrPackageEvaluationError
+                        PackageEvaluationError
+                          { _packageEvaluationErrorError = JuvixError e
+                          }
+                  }
             Right resN -> return resN
           where
             packageLoc :: Interval
@@ -87,7 +95,7 @@ runPackageFileLoaderIO = interpretScopedAs allocator handler
             _ -> err
           where
             err :: Sem r b
-            err = throw PackageLoaderError {_packageLoaderErrorPath=packagePath, _packageLoaderErrorCause=ErrPackageTypeError}
+            err = throw PackageLoaderError {_packageLoaderErrorPath = packagePath, _packageLoaderErrorCause = ErrPackageTypeError}
 
             -- Check that the type of the package identifier is the expected type from the specific
             -- PackageDescription module that is provided by the PathResolver
@@ -104,8 +112,13 @@ runPackageFileLoaderIO = interpretScopedAs allocator handler
 
 loadPackage' :: (Members '[Embed IO, Error PackageLoaderError] r) => Path Abs File -> Sem r CoreResult
 loadPackage' packagePath = do
-  ( mapError (\e -> PackageLoaderError {_packageLoaderErrorPath=packagePath,
-                                        _packageLoaderErrorCause=ErrPackageJuvixError (PackageJuvixError e)})
+  ( mapError
+      ( \e ->
+          PackageLoaderError
+            { _packageLoaderErrorPath = packagePath,
+              _packageLoaderErrorCause = ErrPackageJuvixError (PackageJuvixError e)
+            }
+      )
       . evalInternetOffline
       . ignoreHighlightBuilder
       . runProcessIO

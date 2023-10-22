@@ -5,8 +5,8 @@ import Data.Versions
 import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Core.Language.Value
 import Juvix.Compiler.Pipeline.Package.Base
-import Juvix.Compiler.Pipeline.Package.Loader.EvalEff
 import Juvix.Compiler.Pipeline.Package.Loader.Error
+import Juvix.Compiler.Pipeline.Package.Loader.EvalEff
 import Juvix.Extra.Paths
 import Juvix.Extra.Strings qualified as Str
 import Language.Haskell.TH.Syntax
@@ -18,14 +18,13 @@ packageTypeName = "Package"
 -- | Load a package file in the context of the PackageDescription module and the global package stdlib.
 loadPackage :: (Members '[Files, EvalFileEff, Error PackageLoaderError] r) => Path Abs File -> Sem r Package
 loadPackage packagePath = do
-        globalPackageDir <- globalPackageDescriptionRoot
-        let packageDescriptionPath' = globalPackageDir <//> filename packageDescriptionPath
+  globalPackageDir <- globalPackageDescriptionRoot
+  let packageDescriptionPath' = globalPackageDir <//> filename packageDescriptionPath
 
-        scoped @(Path Abs File) @EvalEff packagePath $ do
-                v <- getPackageNode packageDescriptionPath' >>= eval'
-                toPackage packagePath v
-
-    where
+  scoped @(Path Abs File) @EvalEff packagePath $ do
+    v <- getPackageNode packageDescriptionPath' >>= eval'
+    toPackage packagePath v
+  where
     -- Obtain the Node corresponding to the `package` identifier in the loaded
     -- Package
     --
@@ -63,8 +62,12 @@ toPackage packagePath = \case
   _ -> err
   where
     err :: Sem r a
-    err = throw PackageLoaderError {_packageLoaderErrorPath=packagePath,
-                                    _packageLoaderErrorCause=ErrPackageTypeError}
+    err =
+      throw
+        PackageLoaderError
+          { _packageLoaderErrorPath = packagePath,
+            _packageLoaderErrorCause = ErrPackageTypeError
+          }
 
     toMaybe :: (Value -> Sem r a) -> Value -> Sem r (Maybe a)
     toMaybe f = \case
