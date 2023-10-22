@@ -24,7 +24,7 @@ processPackage :: forall r. (Members '[Error PackageLoaderError] r) => Path Abs 
 processPackage _packageFile buildDir lockfile pkg = do
   let _packageName = fromMaybe defaultPackageName (pkg ^. packageName)
       _packageDependencies = resolveDependencies
-  checkNoDuplicateDepNames _packageDependencies
+  checkNoDuplicateDepNames _packageFile _packageDependencies
   _packageVersion <- getVersion
   return
     Package
@@ -48,29 +48,29 @@ processPackage _packageFile buildDir lockfile pkg = do
                 _packageLoaderErrorPath = _packageFile
               }
 
-    checkNoDuplicateDepNames :: [Dependency] -> Sem r ()
-    checkNoDuplicateDepNames deps = go HashSet.empty (deps ^.. traversed . _GitDependency . gitDependencyName)
-      where
-        go :: HashSet Text -> [Text] -> Sem r ()
-        go _ [] = return ()
-        go s (x : xs)
-          | x `HashSet.member` s =
-              throw
-                PackageLoaderError
-                  { _packageLoaderErrorPath = _packageFile,
-                    _packageLoaderErrorCause =
-                      ErrDuplicateDependencyError
-                        DuplicateDependencyError
-                          { _duplicateDependencyErrorName = x
-                          }
-                  }
-          | otherwise = go (HashSet.insert x s) xs
-
     resolveDependencies :: [Dependency]
     resolveDependencies = fromMaybe [stdlib] (pkg ^. packageDependencies)
       where
         base :: SomeBase Dir = resolveBuildDir buildDir <///> relStdlibDir
         stdlib = mkPathDependency (fromSomeDir base)
+
+checkNoDuplicateDepNames :: forall r. (Members '[Error PackageLoaderError] r) => Path Abs File -> [Dependency] -> Sem r ()
+checkNoDuplicateDepNames p deps = go HashSet.empty (deps ^.. traversed . _GitDependency . gitDependencyName)
+  where
+    go :: HashSet Text -> [Text] -> Sem r ()
+    go _ [] = return ()
+    go s (x : xs)
+      | x `HashSet.member` s =
+          throw
+            PackageLoaderError
+              { _packageLoaderErrorPath = p,
+                _packageLoaderErrorCause =
+                  ErrDuplicateDependencyError
+                    DuplicateDependencyError
+                      { _duplicateDependencyErrorName = x
+                      }
+              }
+      | otherwise = go (HashSet.insert x s) xs
 
 readPackage ::
   forall r.
@@ -115,7 +115,10 @@ readPackageFile ::
   (Members '[Files, Error JuvixError, EvalFileEff] r) =>
   Path Abs File ->
   Sem r Package
-readPackageFile = mapError (JuvixError @PackageLoaderError) . loadPackage
+readPackageFile f = mapError (JuvixError @PackageLoaderError) $ do
+  pkg <- loadPackage f
+  checkNoDuplicateDepNames f (pkg ^. packageDependencies)
+  return pkg
 
 readPackageIO :: Path Abs Dir -> BuildDir -> IO Package
 readPackageIO root buildDir =

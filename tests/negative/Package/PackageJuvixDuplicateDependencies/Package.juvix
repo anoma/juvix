@@ -1,0 +1,8 @@
+module Package;
+
+import Stdlib.Prelude open;
+import PackageDescription open;
+
+package : Package := mkPackageDefault (name := "abc") {version := mkVersion 0 0 1 ; dependencies := [ github "org" "repo" "ref1" ; github "org" "repo" "ref2" ]};
+
+main : Package := package;

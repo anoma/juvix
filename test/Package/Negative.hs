@@ -98,5 +98,11 @@ packageErrorTests =
       $(mkRelDir "PackageJuvixPackageSymbolWrongType2")
       $ \case
         PackageLoaderError _ ErrPackageTypeError {} -> Nothing
+        _ -> wrongError,
+    NegTest
+      "Package.juvix duplicate dependencies"
+      $(mkRelDir "PackageJuvixDuplicateDependencies")
+      $ \case
+        PackageLoaderError _ ErrDuplicateDependencyError {} -> Nothing
         _ -> wrongError
   ]
