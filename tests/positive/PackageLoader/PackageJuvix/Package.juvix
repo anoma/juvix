@@ -1,0 +1,7 @@
+module Package;
+
+import Stdlib.Prelude open;
+import PackageDescription open;
+
+package : Package :=
+  mkPackageDefault (name := "abc") {version := mkVersion 0 0 0};

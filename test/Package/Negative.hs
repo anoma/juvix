@@ -2,7 +2,7 @@ module Package.Negative where
 
 import Base
 import Juvix.Compiler.Pipeline.Package
-import Juvix.Compiler.Pipeline.Package.Loader.Error
+import Juvix.Compiler.Pipeline.Package.Loader.EvalEff.IO
 
 type FailMsg = String
 
@@ -22,7 +22,17 @@ testDescr NegTest {..} =
         { _testName = _name,
           _testRoot = tRoot,
           _testAssertion = Single $ do
-            res <- withTempDir' (runM . runError . runFilesIO . readPackage tRoot . CustomBuildDir . Abs)
+            res <-
+              withTempDir'
+                ( runM
+                    . runError
+                    . runFilesIO
+                    . mapError (JuvixError @PackageLoaderError)
+                    . runEvalFileEffIO
+                    . readPackage tRoot
+                    . CustomBuildDir
+                    . Abs
+                )
             case mapLeft fromJuvixError res of
               Left (Just err) -> whenJust (_checkErr err) assertFailure
               Left Nothing -> assertFailure "An error ocurred but it was not when reading the package."
@@ -64,5 +74,29 @@ packageErrorTests =
       $(mkRelDir "YamlDuplicateDependencies")
       $ \case
         PackageLoaderError _ ErrDuplicateDependencyError {} -> Nothing
+        _ -> wrongError,
+    NegTest
+      "Package.juvix doesn't compile"
+      $(mkRelDir "PackageJuvixDoesntCompile")
+      $ \case
+        PackageLoaderError _ ErrPackageJuvixError {} -> Nothing
+        _ -> wrongError,
+    NegTest
+      "Package.juvix no package symbol"
+      $(mkRelDir "PackageJuvixNoPackageSymbol")
+      $ \case
+        PackageLoaderError _ ErrPackageSymbolNotFound {} -> Nothing
+        _ -> wrongError,
+    NegTest
+      "Package.juvix package symbol has wrong type1"
+      $(mkRelDir "PackageJuvixPackageSymbolWrongType1")
+      $ \case
+        PackageLoaderError _ ErrPackageTypeError {} -> Nothing
+        _ -> wrongError,
+    NegTest
+      "Package.juvix package symbol has wrong type2"
+      $(mkRelDir "PackageJuvixPackageSymbolWrongType2")
+      $ \case
+        PackageLoaderError _ ErrPackageTypeError {} -> Nothing
         _ -> wrongError
   ]

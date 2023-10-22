@@ -1,4 +1,8 @@
-module Juvix.Compiler.Pipeline.Package.Loader.EvalEff.IO where
+module Juvix.Compiler.Pipeline.Package.Loader.EvalEff.IO
+  ( module Juvix.Compiler.Pipeline.Package.Loader.Error,
+    module Juvix.Compiler.Pipeline.Package.Loader.EvalEff.IO,
+  )
+where
 
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Builtins

@@ -13,7 +13,10 @@ import Data.Versions
 import Data.Yaml
 import Juvix.Compiler.Pipeline.Lockfile
 import Juvix.Compiler.Pipeline.Package.Base
+import Juvix.Compiler.Pipeline.Package.Loader
 import Juvix.Compiler.Pipeline.Package.Loader.Error
+import Juvix.Compiler.Pipeline.Package.Loader.EvalEff
+import Juvix.Compiler.Pipeline.Package.Loader.EvalEff.IO
 import Juvix.Extra.Paths
 import Juvix.Prelude
 
@@ -69,14 +72,26 @@ processPackage _packageFile buildDir lockfile pkg = do
         base :: SomeBase Dir = resolveBuildDir buildDir <///> relStdlibDir
         stdlib = mkPathDependency (fromSomeDir base)
 
--- | Given some directory d it tries to read the file d/juvix.yaml and parse its contents
 readPackage ::
   forall r.
-  (Members '[Files, Error JuvixError] r) =>
+  (Members '[Error JuvixError, Files, EvalFileEff] r) =>
   Path Abs Dir ->
   BuildDir ->
   Sem r Package
-readPackage root buildDir = mapError (JuvixError @PackageLoaderError) $ do
+readPackage root buildDir = do
+  ifM (fileExists' f) (readPackageFile f) (readYamlPackage root buildDir)
+  where
+    f :: Path Abs File
+    f = mkPackagePath root
+
+-- | Given some directory d it tries to read the file d/juvix.yaml and parse its contents
+readYamlPackage ::
+  forall r.
+  (Members '[Files, EvalFileEff, Error JuvixError] r) =>
+  Path Abs Dir ->
+  BuildDir ->
+  Sem r Package
+readYamlPackage root buildDir = mapError (JuvixError @PackageLoaderError) $ do
   bs <- readFileBS' yamlPath
   mLockfile <- mayReadLockfile root
   if
@@ -96,13 +111,31 @@ readPackage root buildDir = mapError (JuvixError @PackageLoaderError) $ do
                   }
           }
 
+readPackageFile ::
+  (Members '[Files, Error JuvixError, EvalFileEff] r) =>
+  Path Abs File ->
+  Sem r Package
+readPackageFile = mapError (JuvixError @PackageLoaderError) . loadPackage
+
 readPackageIO :: Path Abs Dir -> BuildDir -> IO Package
-readPackageIO root buildDir = runM (runFilesIO (runErrorIO' @JuvixError (readPackage root buildDir)))
+readPackageIO root buildDir =
+  runM
+    . runFilesIO
+    . runErrorIO' @JuvixError
+    . mapError (JuvixError @PackageLoaderError)
+    . runEvalFileEffIO
+    $ readPackage root buildDir
 
 readGlobalPackageIO :: IO Package
-readGlobalPackageIO = runM (runFilesIO . runErrorIO' @JuvixError $ readGlobalPackage)
+readGlobalPackageIO =
+  runM
+    . runFilesIO
+    . runErrorIO' @JuvixError
+    . mapError (JuvixError @PackageLoaderError)
+    . runEvalFileEffIO
+    $ readGlobalPackage
 
-readGlobalPackage :: (Members '[Error JuvixError, Files] r) => Sem r Package
+readGlobalPackage :: (Members '[Error JuvixError, EvalFileEff, Files] r) => Sem r Package
 readGlobalPackage = do
   yamlPath <- globalYaml
   unlessM (fileExists' yamlPath) writeGlobalPackage

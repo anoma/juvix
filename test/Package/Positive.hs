@@ -2,6 +2,7 @@ module Package.Positive where
 
 import Base
 import Juvix.Compiler.Pipeline.Package
+import Juvix.Compiler.Pipeline.Package.Loader.EvalEff.IO
 
 type FailMsg = String
 
@@ -23,7 +24,14 @@ testDescr PosTest {..} =
           _testAssertion = Single $ do
             withTempDir' $ \d -> do
               let buildDir = CustomBuildDir (Abs d)
-              res <- runM . runError @JuvixError . runFilesIO . readPackage tRoot $ buildDir
+              res <-
+                runM
+                  . runError @JuvixError
+                  . runFilesIO
+                  . mapError (JuvixError @PackageLoaderError)
+                  . runEvalFileEffIO
+                  . readPackage tRoot
+                  $ buildDir
               case res of
                 Right p -> whenJust (_checkPackage p buildDir) assertFailure
                 Left {} -> assertFailure "An error ocurred when reading the package."
@@ -60,5 +68,19 @@ packageLoadingTests =
       $ \p _ ->
         if
             | null (p ^. packageDependencies) -> Nothing
-            | otherwise -> Just "Expected dependencies to be empty"
+            | otherwise -> Just "Expected dependencies to be empty",
+    PosTest
+      "Package.juvix is read"
+      $(mkRelDir "PackageJuvix")
+      $ \p _ ->
+        if
+            | null (p ^. packageDependencies) -> Nothing
+            | otherwise -> Just "Expected dependencies to be empty",
+    PosTest
+      "Package.juvix is read in priority over yaml"
+      $(mkRelDir "PackageJuvixAndYaml")
+      $ \p _ ->
+        if
+            | p ^. packageName == "package-juvix" -> Nothing
+            | otherwise -> Just "Expected package name to be package-juvix"
   ]

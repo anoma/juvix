@@ -20,6 +20,8 @@ import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking qualified as Typed
 import Juvix.Compiler.Pipeline
 import Juvix.Compiler.Pipeline.Artifacts.PathResolver
+import Juvix.Compiler.Pipeline.Package.Loader.Error
+import Juvix.Compiler.Pipeline.Package.Loader.EvalEff.IO
 import Juvix.Compiler.Pipeline.Package.Loader.PathResolver
 import Juvix.Data.Effect.Git
 import Juvix.Data.Effect.Process
@@ -55,6 +57,8 @@ runIOEitherHelper entry = do
     . mapError (JuvixError @GitProcessError)
     . runGitProcess
     . mapError (JuvixError @DependencyError)
+    . mapError (JuvixError @PackageLoaderError)
+    . runEvalFileEffIO
     . runPathResolver'
   where
     mainIsPackageFile :: Bool
@@ -106,6 +110,8 @@ corePipelineIOEither entry = do
       . runProcessIO
       . runGitProcess
       . mapError (JuvixError @DependencyError)
+      . mapError (JuvixError @PackageLoaderError)
+      . runEvalFileEffIO
       . runPathResolverArtifacts
       $ upToCore
   return $ case eith of
