@@ -128,7 +128,7 @@ checkFunctionDef FunctionDef {..} = do
   _funDefBody' <- checkFunctionBody arity _funDefBody
   _funDefExamples' <- withEmptyLocalVars (mapM checkExample _funDefExamples)
   let argTys = fst (unfoldFunType _funDefType')
-  _funDefDefaultSignature' <- checkDefaultArguments _funDefDefaultSignature argTys
+  _funDefDefaultSignature' <- withEmptyLocalVars (checkDefaultArguments _funDefDefaultSignature argTys)
   return
     FunctionDef
       { _funDefBody = _funDefBody',
@@ -142,26 +142,27 @@ checkFunctionDef FunctionDef {..} = do
         _funDefBuiltin,
         _funDefPragmas
       }
+
+checkDefaultArguments :: forall r. (Members '[NameIdGen, Reader LocalVars, Error ArityCheckerError, Reader InfoTable] r) => DefaultSignature -> [FunctionParameter] -> Sem r DefaultSignature
+checkDefaultArguments (DefaultSignature defaults) =
+  fmap DefaultSignature
+    . execOutputList
+    . go defaults
   where
-    checkDefaultArguments :: DefaultSignature -> [FunctionParameter] -> Sem r DefaultSignature
-    checkDefaultArguments (DefaultSignature defaults) =
-      fmap DefaultSignature
-        . execOutputList
-        . go defaults
-      where
-        go :: [Maybe Expression] -> [FunctionParameter] -> Sem (Output (Maybe Expression) ': r) ()
-        go = \case
-          [] -> const (return ())
-          d : ds' -> \case
-            [] -> impossible
-            p : ps' -> do
-              dval <- case (d, p ^. paramImplicit) of
-                (Nothing, _) -> return Nothing
-                (Just val, Implicit) ->
-                  Just <$> withEmptyLocalVars (checkExpression (typeArity (p ^. paramType)) val)
-                (Just {}, _) -> impossible
-              output dval
-              go ds' ps'
+    go :: [Maybe Expression] -> [FunctionParameter] -> Sem (Output (Maybe Expression) ': r) ()
+    go = \case
+      [] -> const (return ())
+      d : ds' -> \case
+        [] -> impossible
+        p : ps' -> do
+          let ari = typeArity (p ^. paramType)
+          dval <- case (d, p ^. paramImplicit) of
+            (Nothing, _) -> return Nothing
+            (Just val, Implicit) ->
+              Just <$> checkExpression ari val
+            (Just {}, _) -> impossible
+          output dval
+          withLocalVarMaybe ari (p ^. paramName) (go ds' ps')
 
 checkFunctionBody ::
   (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r) =>
@@ -192,6 +193,11 @@ checkFunctionBody ari body = do
 
 simplelambda :: a
 simplelambda = error "simple lambda expressions are not supported by the arity checker"
+
+withLocalVarMaybe :: (Members '[Reader LocalVars] r) => Arity -> Maybe VarName -> Sem r a -> Sem r a
+withLocalVarMaybe ari mv = case mv of
+  Nothing -> id
+  Just v -> withLocalVar ari v
 
 withLocalVar :: (Members '[Reader LocalVars] r) => Arity -> VarName -> Sem r a -> Sem r a
 withLocalVar ari v = local (withArity v ari)
