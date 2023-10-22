@@ -47,3 +47,6 @@ runPackagePathResolver' :: (Members '[Files] r) => Path Abs Dir -> Sem (PathReso
 runPackagePathResolver' root eff = do
   res <- runPackagePathResolver root eff
   return (iniResolverState, res)
+
+runPackagePathResolver'' :: (Members '[Files] r) => Path Abs Dir -> ResolverState -> Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
+runPackagePathResolver'' root _ eff = runPackagePathResolver' root eff

@@ -42,7 +42,7 @@ runIOEitherHelper :: forall a. EntryPoint -> Sem PipelineEff a -> IO (HighlightI
 runIOEitherHelper entry = do
   let hasInternet = not (entry ^. entryPointOffline)
       runPathResolver'
-        | mainIsPackageFile = runPackagePathResolver' (entry ^. entryPointResolverRoot)
+        | mainIsPackageFile entry = runPackagePathResolver' (entry ^. entryPointResolverRoot)
         | otherwise = runPathResolverPipe
   runM
     . evalInternet hasInternet
@@ -60,11 +60,11 @@ runIOEitherHelper entry = do
     . mapError (JuvixError @PackageLoaderError)
     . runEvalFileEffIO
     . runPathResolver'
-  where
-    mainIsPackageFile :: Bool
-    mainIsPackageFile = case entry ^? entryPointModulePaths . _head of
-      Just p -> p == mkPackagePath (entry ^. entryPointResolverRoot)
-      Nothing -> False
+
+mainIsPackageFile :: EntryPoint -> Bool
+mainIsPackageFile entry = case entry ^? entryPointModulePaths . _head of
+  Just p -> p == mkPackagePath (entry ^. entryPointResolverRoot)
+  Nothing -> False
 
 runIO :: GenericOptions -> EntryPoint -> Sem PipelineEff a -> IO (ResolverState, a)
 runIO opts entry = runIOEither entry >=> mayThrow
@@ -93,10 +93,11 @@ corePipelineIOEither ::
   IO (Either JuvixError Artifacts)
 corePipelineIOEither entry = do
   let hasInternet = not (entry ^. entryPointOffline)
+      runPathResolver'
+        | mainIsPackageFile entry = runPackagePathResolverArtifacts (entry ^. entryPointResolverRoot)
+        | otherwise = runPathResolverArtifacts
   eith <-
-    runFinal
-      . resourceToIOFinal
-      . embedToFinal @IO
+    runM
       . evalInternet hasInternet
       . ignoreHighlightBuilder
       . runError
@@ -112,7 +113,7 @@ corePipelineIOEither entry = do
       . mapError (JuvixError @DependencyError)
       . mapError (JuvixError @PackageLoaderError)
       . runEvalFileEffIO
-      . runPathResolverArtifacts
+      . runPathResolver'
       $ upToCore
   return $ case eith of
     Left err -> Left err
