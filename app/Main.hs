@@ -7,11 +7,12 @@ import CommonOptions
 import Data.String.Interpolate (i)
 import GlobalOptions
 import Juvix.Compiler.Pipeline.Root
+import Main.Utf8 (withUtf8)
 import TopCommand
 import TopCommand.Options
 
 main :: IO ()
-main = do
+main = withUtf8 $ do
   let parserPreferences = prefs showHelpOnEmpty
   invokeDir <- getCurrentDir
   (_runAppIOArgsGlobalOptions, cli) <- customExecParser parserPreferences descr
