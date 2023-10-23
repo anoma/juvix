@@ -38,25 +38,27 @@ allTests =
 
 packageLoadingTests :: [PosTest]
 packageLoadingTests =
-  [
-    PosTest
+  [ PosTest
       "empty YAML is valid"
       $(mkRelDir "YamlEmpty")
-      $ \p _ -> if
-         | p ^. packageName == defaultPackageName -> Nothing
-         | otherwise -> Just "Package did not have default name",
+      $ \p _ ->
+        if
+            | p ^. packageName == defaultPackageName -> Nothing
+            | otherwise -> Just "Package did not have default name",
     PosTest
       "no dependencies uses default stdlib"
       $(mkRelDir "YamlNoDependencies")
       $ \p b -> case p ^? packageDependencies . _head of
-         Just d -> if
-           | d == defaultStdlibDep b -> Nothing
-           | otherwise -> Just "Package dependency is not the default standard library"
-         _ -> Just "The package has no dependencies",
+        Just d ->
+          if
+              | d == defaultStdlibDep b -> Nothing
+              | otherwise -> Just "Package dependency is not the default standard library"
+        _ -> Just "The package has no dependencies",
     PosTest
       "empty dependencies does not use default stdlib"
       $(mkRelDir "YamlEmptyDependencies")
-      $ \p _ -> if
-         | null (p ^. packageDependencies) -> Nothing
-         | otherwise -> Just "Expected dependencies to be empty"
+      $ \p _ ->
+        if
+            | null (p ^. packageDependencies) -> Nothing
+            | otherwise -> Just "Expected dependencies to be empty"
   ]
