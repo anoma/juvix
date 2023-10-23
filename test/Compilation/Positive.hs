@@ -382,5 +382,10 @@ tests =
       "Test064: Constant folding"
       $(mkRelDir ".")
       $(mkRelFile "test064.juvix")
-      $(mkRelFile "out/test064.out")
+      $(mkRelFile "out/test064.out"),
+    posTest
+      "Test065: Arithmetic simplification"
+      $(mkRelDir ".")
+      $(mkRelFile "test065.juvix")
+      $(mkRelFile "out/test065.out")
   ]
