@@ -10,17 +10,27 @@ import Juvix.Compiler.Concrete.Print qualified as P
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
+import Juvix.Compiler.Pipeline.Loader.PathResolver
 import Juvix.Compiler.Pipeline.Setup
 import Juvix.Data.Effect.Git
 import Juvix.Data.Effect.Process
 import Juvix.Prelude.Aeson
 import Juvix.Prelude.Pretty
 
+data PathResolverMode
+  = FullPathResolver
+  | PackagePathResolver
+  deriving stock (Eq)
+
 data PosTest = PosTest
   { _name :: String,
     _relDir :: Path Rel Dir,
-    _file :: Path Rel File
+    _file :: Path Rel File,
+    _pathResolverMode :: PathResolverMode
   }
+
+posTest :: String -> Path Rel Dir -> Path Rel File -> PosTest
+posTest _name _relDir _file = PosTest {_pathResolverMode = FullPathResolver, ..}
 
 makeLenses ''PosTest
 
@@ -43,7 +53,10 @@ testDescr PosTest {..} = helper renderCodeNew
               _testAssertion = Steps $ \step -> do
                 entryPoint <- defaultEntryPointCwdIO file'
                 let runHelper :: HashMap (Path Abs File) Text -> Sem PipelineEff a -> IO (ResolverState, a)
-                    runHelper files =
+                    runHelper files = do
+                      let runPathResolver' = case _pathResolverMode of
+                            FullPathResolver -> runPathResolverPipe
+                            PackagePathResolver -> runPackagePathResolver' (entryPoint ^. entryPointResolverRoot)
                       runM
                         . evalInternetOffline
                         . ignoreHighlightBuilder
@@ -57,7 +70,7 @@ testDescr PosTest {..} = helper renderCodeNew
                         . mapError (JuvixError @GitProcessError)
                         . runGitProcess
                         . mapError (JuvixError @DependencyError)
-                        . runPathResolverPipe
+                        . runPathResolver'
                     evalHelper :: HashMap (Path Abs File) Text -> Sem PipelineEff a -> IO a
                     evalHelper files = fmap snd . runHelper files
 
@@ -123,144 +136,149 @@ allTests =
 
 tests :: [PosTest]
 tests =
-  [ PosTest
+  [ posTest
       "Inductive"
       $(mkRelDir ".")
       $(mkRelFile "Inductive.juvix"),
-    PosTest
+    posTest
       "Pipes symbol as possible prefix for each data constructor"
       $(mkRelDir ".")
       $(mkRelFile "InductivePipes.juvix"),
-    PosTest
+    posTest
       "Imports and qualified names"
       $(mkRelDir "Imports")
       $(mkRelFile "A.juvix"),
-    PosTest
+    posTest
       "Data.Bool from the stdlib"
       $(mkRelDir "StdlibList")
       $(mkRelFile "Data/Bool.juvix"),
-    PosTest
+    posTest
       "Data.Nat from the stdlib"
       $(mkRelDir "StdlibList")
       $(mkRelFile "Data/Nat.juvix"),
-    PosTest
+    posTest
       "Data.Ord from the stdlib"
       $(mkRelDir "StdlibList")
       $(mkRelFile "Data/Ord.juvix"),
-    PosTest
+    posTest
       "Data.Product from the stdlib"
       $(mkRelDir "StdlibList")
       $(mkRelFile "Data/Product.juvix"),
-    PosTest
+    posTest
       "Data.List and friends from the stdlib"
       $(mkRelDir "StdlibList")
       $(mkRelFile "Data/List.juvix"),
-    PosTest
+    posTest
       "Operators (+)"
       $(mkRelDir ".")
       $(mkRelFile "Operators.juvix"),
-    PosTest
+    posTest
       "Literals"
       $(mkRelDir ".")
       $(mkRelFile "Literals.juvix"),
-    PosTest
+    posTest
       "Axiom with backends"
       $(mkRelDir ".")
       $(mkRelFile "Axiom.juvix"),
-    PosTest
+    posTest
       "Multiple modules non-ambiguous symbol - same file"
       $(mkRelDir "QualifiedSymbol")
       $(mkRelFile "M.juvix"),
-    PosTest
+    posTest
       "Multiple modules non-ambiguous symbol"
       $(mkRelDir "QualifiedSymbol2")
       $(mkRelFile "N.juvix"),
-    PosTest
+    posTest
       "Multiple modules constructor non-ambiguous symbol"
       $(mkRelDir "QualifiedConstructor")
       $(mkRelFile "M.juvix"),
-    PosTest
+    posTest
       "Parsing"
       $(mkRelDir ".")
       $(mkRelFile "Parsing.juvix"),
-    PosTest
+    posTest
       "open overrides open public"
       $(mkRelDir ".")
       $(mkRelFile "ShadowPublicOpen.juvix"),
-    PosTest
+    posTest
       "Infix chains"
       $(mkRelDir ".")
       $(mkRelFile "Ape.juvix"),
-    PosTest
+    posTest
       "Import embedded standard library"
       $(mkRelDir "StdlibImport")
       $(mkRelFile "StdlibImport.juvix"),
-    PosTest
+    posTest
       "Basic dependencies"
       $(mkRelDir "Dependencies")
       $(mkRelFile "Input.juvix"),
-    PosTest
+    posTest
       "Check Valid Symbols"
       $(mkRelDir ".")
       $(mkRelFile "Symbols.juvix"),
-    PosTest
+    posTest
       "Builtin bool"
       $(mkRelDir ".")
       $(mkRelFile "BuiltinsBool.juvix"),
-    PosTest
+    posTest
       "Type signature with body"
       $(mkRelDir ".")
       $(mkRelFile "SignatureWithBody.juvix"),
-    PosTest
+    posTest
       "Case expressions"
       $(mkRelDir "Internal")
       $(mkRelFile "Case.juvix"),
-    PosTest
+    posTest
       "Qualified imports"
       $(mkRelDir "QualifiedImports")
       $(mkRelFile "Main.juvix"),
-    PosTest
+    posTest
       "Short syntax for multiple parameters"
       $(mkRelDir ".")
       $(mkRelFile "MultiParams.juvix"),
-    PosTest
+    posTest
       "Shadow imported symbol"
       $(mkRelDir "ImportShadow")
       $(mkRelFile "Main.juvix"),
-    PosTest
+    posTest
       "Judoc"
       $(mkRelDir ".")
       $(mkRelFile "Judoc.juvix"),
-    PosTest
+    posTest
       "Pragmas"
       $(mkRelDir ".")
       $(mkRelFile "Pragmas.juvix"),
-    PosTest
+    posTest
       "Import as open"
       $(mkRelDir "ImportAsOpen")
       $(mkRelFile "Main.juvix"),
-    PosTest
+    posTest
       "Iterators"
       $(mkRelDir ".")
       $(mkRelFile "Iterators.juvix"),
-    PosTest
+    posTest
       "New function syntax"
       $(mkRelDir ".")
       $(mkRelFile "Syntax.juvix"),
-    PosTest
+    posTest
       "Format pragma"
       $(mkRelDir ".")
       $(mkRelFile "FormatPragma.juvix"),
-    PosTest
+    posTest
       "Namespaces"
       $(mkRelDir ".")
       $(mkRelFile "Namespaces.juvix"),
-    PosTest
+    posTest
       "Adt"
       $(mkRelDir ".")
       $(mkRelFile "Adt.juvix"),
-    PosTest
+    posTest
       "Let open"
       $(mkRelDir ".")
-      $(mkRelFile "LetOpen.juvix")
+      $(mkRelFile "LetOpen.juvix"),
+    PosTest
+      "Package file"
+      $(mkRelDir "package")
+      $(mkRelFile "Package.juvix")
+      PackagePathResolver
   ]
