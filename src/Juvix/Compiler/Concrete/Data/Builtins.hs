@@ -210,7 +210,6 @@ isNatBuiltin = \case
   BuiltinNatLe -> True
   BuiltinNatLt -> True
   BuiltinNatEq -> True
-  BuiltinFromNat -> True
   _ -> False
 
 isIntBuiltin :: BuiltinFunction -> Bool
@@ -227,8 +226,13 @@ isIntBuiltin = \case
   BuiltinIntNonNeg -> True
   BuiltinIntLe -> True
   BuiltinIntLt -> True
+  _ -> False
+
+isCastBuiltin :: BuiltinFunction -> Bool
+isCastBuiltin = \case
+  BuiltinFromNat -> True
   BuiltinFromInt -> True
   _ -> False
 
 isIgnoredBuiltin :: BuiltinFunction -> Bool
-isIgnoredBuiltin f = not (isNatBuiltin f) && not (isIntBuiltin f)
+isIgnoredBuiltin f = not (isNatBuiltin f) && not (isIntBuiltin f) && not (isCastBuiltin f)

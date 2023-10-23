@@ -78,6 +78,11 @@ addCastEdges = do
   case (nat, fromNat) of
     (Just nat', Just fromNat') -> addEdge nat' fromNat'
     _ -> return ()
+  int <- gets (^. builderStateInt)
+  fromInt <- gets (^. builderStateFromInt)
+  case (int, fromInt) of
+    (Just int', Just fromInt') -> addEdge int' fromInt'
+    _ -> return ()
 
 addStartNode :: (Member (State StartNodes) r) => Name -> Sem r ()
 addStartNode n = modify (HashSet.insert n)
