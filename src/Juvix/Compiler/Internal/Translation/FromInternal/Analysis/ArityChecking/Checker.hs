@@ -128,13 +128,13 @@ checkFunctionDef FunctionDef {..} = do
   _funDefBody' <- checkFunctionBody arity _funDefBody
   _funDefExamples' <- withEmptyLocalVars (mapM checkExample _funDefExamples)
   let argTys = fst (unfoldFunType _funDefType')
-  _funDefDefaultSignature' <- withEmptyLocalVars (checkDefaultArguments _funDefDefaultSignature argTys)
+  _funDefArgsInfo' <- withEmptyLocalVars (checkArgsInfo _funDefArgsInfo argTys)
   return
     FunctionDef
       { _funDefBody = _funDefBody',
         _funDefExamples = _funDefExamples',
         _funDefType = _funDefType',
-        _funDefDefaultSignature = _funDefDefaultSignature',
+        _funDefArgsInfo = _funDefArgsInfo',
         _funDefName,
         _funDefTerminating,
         _funDefInstance,
@@ -143,25 +143,29 @@ checkFunctionDef FunctionDef {..} = do
         _funDefPragmas
       }
 
-checkDefaultArguments :: forall r. (Members '[NameIdGen, Reader LocalVars, Error ArityCheckerError, Reader InfoTable] r) => DefaultSignature -> [FunctionParameter] -> Sem r DefaultSignature
-checkDefaultArguments (DefaultSignature defaults) =
-  fmap DefaultSignature
-    . execOutputList
+checkArgsInfo ::
+  forall r.
+  (Members '[NameIdGen, Reader LocalVars, Error ArityCheckerError, Reader InfoTable] r) =>
+  [ArgInfo] ->
+  [FunctionParameter] ->
+  Sem r [ArgInfo]
+checkArgsInfo defaults =
+  execOutputList
     . go defaults
   where
-    go :: [Maybe Expression] -> [FunctionParameter] -> Sem (Output (Maybe Expression) ': r) ()
+    go :: [ArgInfo] -> [FunctionParameter] -> Sem (Output ArgInfo ': r) ()
     go = \case
       [] -> const (return ())
       d : ds' -> \case
         [] -> impossible
         p : ps' -> do
           let ari = typeArity (p ^. paramType)
-          dval <- case (d, p ^. paramImplicit) of
+          dval <- case (d ^. argInfoDefault, p ^. paramImplicit) of
             (Nothing, _) -> return Nothing
             (Just val, Implicit) ->
               Just <$> checkExpression ari val
             (Just {}, _) -> impossible
-          output dval
+          output (set argInfoDefault dval d)
           withLocalVarMaybe ari (p ^. paramName) (go ds' ps')
 
 checkFunctionBody ::
@@ -287,7 +291,15 @@ arityLambda :: Lambda -> Arity
 arityLambda l =
   foldArity
     UnfoldedArity
-      { _ufoldArityParams = replicate (maximum1 (fmap numPatterns (l ^. lambdaClauses))) (ParamExplicit ArityUnknown),
+      { _ufoldArityParams =
+          replicate
+            (maximum1 (fmap numPatterns (l ^. lambdaClauses)))
+            ( ParamExplicit
+                ArityParamInfo
+                  { _arityParamInfoArity = ArityUnknown,
+                    _arityParamArgInfo = emptyArgInfo
+                  }
+            ),
         _ufoldArityRest = ArityRestUnknown
       }
   where
@@ -372,7 +384,7 @@ checkLhs loc guessedBody ariSignature pats = do
               wildcard <- genWildcard' ImplicitInstance
               first (wildcard :) <$> goLhs r lhs
             (Explicit, ParamExplicit pa) -> do
-              p' <- checkPattern pa p
+              p' <- checkPattern (pa ^. arityParamInfoArity) p
               first (p' :) <$> goLhs r ps
       where
         genWildcard' :: forall r'. (Members '[NameIdGen] r') => IsImplicit -> Sem r' PatternArg
@@ -541,27 +553,26 @@ idenArity = \case
   IdenFunction f -> do
     fun <- (^. functionInfoDef) <$> lookupFunction f
     let ari = typeArity (fun ^. funDefType)
-        defaults = fun ^. funDefDefaultSignature
-    return (addDefaults defaults ari)
+        defaults = fun ^. funDefArgsInfo
+    return (addArgsInfo defaults ari)
   IdenConstructor c -> typeArity <$> lookupConstructorType c
   IdenAxiom a -> typeArity . (^. axiomInfoDef . axiomType) <$> lookupAxiom a
 
-addDefaults :: DefaultSignature -> Arity -> Arity
-addDefaults = unfoldingArity . helper . (^. defaultSignature)
+addArgsInfo :: [ArgInfo] -> Arity -> Arity
+addArgsInfo = unfoldingArity . helper
   where
-    helper :: [Maybe Expression] -> UnfoldedArity -> UnfoldedArity
+    helper :: [ArgInfo] -> UnfoldedArity -> UnfoldedArity
     helper = over ufoldArityParams . go
 
-    go :: [Maybe Expression] -> [ArityParameter] -> [ArityParameter]
-    go ds as = case ds of
-      [] -> as
-      md : ds' -> case as of
+    go :: [ArgInfo] -> [ArityParameter] -> [ArityParameter]
+    go infos params = case infos of
+      [] -> params
+      info : infos' -> case params of
         [] -> impossible
-        a : as' -> case md of
-          Nothing -> a : go ds' (tail as)
-          Just d -> case a of
-            ParamImplicit i -> ParamImplicit (set implicitParamDefault (Just d) i) : go ds' as'
-            _ -> impossible
+        para : params' -> case para of
+          ParamExplicit p -> ParamExplicit (set arityParamArgInfo info p) : go infos' params'
+          ParamImplicit p -> ParamImplicit (set arityParamArgInfo info p) : go infos' params'
+          ParamImplicitInstance -> ParamImplicitInstance : go infos' params'
 
 -- | let x be some expression of type T. The argument of this function is T and it returns
 -- the arity of x. In other words, given (T : Type), it returns the arity of the elements of T.
@@ -602,15 +613,20 @@ typeArity = go
       IdenAxiom {} -> ArityUnknown
 
     goParam :: FunctionParameter -> ArityParameter
-    goParam (FunctionParameter _ i e) = case i of
+    goParam FunctionParameter {..} = case _paramImplicit of
       ImplicitInstance -> ParamImplicitInstance
       Implicit ->
         ParamImplicit
-          ImplicitParam
-            { _implicitParamDefault = Nothing,
-              _implicitParamArity = go e
+          ArityParamInfo
+            { _arityParamInfoArity = go _paramType,
+              _arityParamArgInfo = emptyArgInfo
             }
-      Explicit -> ParamExplicit (go e)
+      Explicit ->
+        ParamExplicit
+          ArityParamInfo
+            { _arityParamInfoArity = go _paramType,
+              _arityParamArgInfo = emptyArgInfo
+            }
 
     goFun :: Function -> FunctionArity
     goFun (Function l r) =
@@ -789,8 +805,8 @@ checkExpression hintArity expr = case expr of
                 (ArityUnknown, []) -> return []
                 (ArityUnknown, p : ps) -> (p :) <$> go (succ idx) ArityUnknown ps
 
-newHoleImplicit :: (Member NameIdGen r) => ImplicitParam -> Interval -> Sem r Expression
-newHoleImplicit i loc = case i ^. implicitParamDefault of
+newHoleImplicit :: (Member NameIdGen r) => ArityParamInfo -> Interval -> Sem r Expression
+newHoleImplicit i loc = case i ^. arityParamArgInfo . argInfoDefault of
   Nothing -> ExpressionHole . mkHole loc <$> freshNameId
   Just e -> do
     -- TODO update location

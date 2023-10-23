@@ -199,13 +199,13 @@ checkFunctionDef FunctionDef {..} = do
     registerIdenType _funDefName _funDefType'
     _funDefBody' <- checkExpression _funDefType' _funDefBody
     let params = fst (unfoldFunType _funDefType')
-    _funDefDefaultSignature' <- checkDefaultValues params
+    _funDefArgsInfo' <- checkArgsInfo params
     return
       FunctionDef
         { _funDefBody = _funDefBody',
           _funDefType = _funDefType',
           _funDefExamples = _funDefExamples',
-          _funDefDefaultSignature = _funDefDefaultSignature',
+          _funDefArgsInfo = _funDefArgsInfo',
           _funDefName,
           _funDefTerminating,
           _funDefInstance,
@@ -223,18 +223,18 @@ checkFunctionDef FunctionDef {..} = do
   where
     -- Since default arguments come from the left of the : then it must be that
     -- there are at least n FunctionParameter
-    checkDefaultValues :: [FunctionParameter] -> Sem r DefaultSignature
-    checkDefaultValues allparams = fmap DefaultSignature . execOutputList $ do
-      go (zipExact defaults params)
+    checkArgsInfo :: [FunctionParameter] -> Sem r [ArgInfo]
+    checkArgsInfo allparams = execOutputList $ do
+      go (zipExact infos params)
       where
         params = take n allparams
-        defaults = _funDefDefaultSignature ^. defaultSignature
-        n = length defaults
-        go :: [(Maybe Expression, FunctionParameter)] -> Sem (Output (Maybe Expression) ': r) ()
+        infos = _funDefArgsInfo
+        n = length infos
+        go :: [(ArgInfo, FunctionParameter)] -> Sem (Output ArgInfo ': r) ()
         go = \case
           [] -> return ()
           (me, p) : rest -> do
-            me' <- mapM (checkExpression (p ^. paramType)) me
+            me' <- traverseOf (argInfoDefault . _Just) (checkExpression (p ^. paramType)) me
             output me'
             withLocalTypeMaybe (p ^. paramName) (p ^. paramType) (go rest)
 

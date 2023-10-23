@@ -394,15 +394,15 @@ goFunctionDef FunctionDef {..} = do
   _funDefPragmas <- goPragmas _signPragmas
   _funDefBody <- goBody
   msig <- asks @NameSignatures (^. at (_funDefName ^. Internal.nameId))
-  _funDefDefaultSignature <- maybe (return mempty) goNameSignature msig
+  _funDefArgsInfo <- maybe (return mempty) goNameSignature msig
   let fun = Internal.FunctionDef {..}
   whenJust _signBuiltin (registerBuiltinFunction fun . (^. withLocParam))
   return fun
   where
-    goNameSignature :: NameSignature 'Scoped -> Sem r Internal.DefaultSignature
-    goNameSignature = fmap Internal.DefaultSignature . concatMapM goBlock . (^. nameSignatureArgs)
+    goNameSignature :: NameSignature 'Scoped -> Sem r [Internal.ArgInfo]
+    goNameSignature = concatMapM goBlock . (^. nameSignatureArgs)
       where
-        goBlock :: NameBlock 'Scoped -> Sem r [Maybe Internal.Expression]
+        goBlock :: NameBlock 'Scoped -> Sem r [Internal.ArgInfo]
         goBlock blk = do
           let tbl = indexedByInt (^. nameItemIndex) (blk ^. nameBlock)
               mmaxIx = fst <$> IntMap.lookupMax tbl
@@ -411,8 +411,14 @@ goFunctionDef FunctionDef {..} = do
             Just maxIx ->
               execOutputList $ forM_ [0 .. maxIx] $ \idx ->
                 case tbl ^. at idx of
-                  Nothing -> output (Nothing @Internal.Expression)
-                  Just i -> mapM goExpression (i ^? nameItemDefault . _Just . argDefaultValue) >>= output
+                  Nothing -> output Internal.emptyArgInfo
+                  Just i -> do
+                    _argInfoDefault' <- mapM goExpression (i ^? nameItemDefault . _Just . argDefaultValue)
+                    output
+                      Internal.ArgInfo
+                        { _argInfoDefault = _argInfoDefault',
+                          _argInfoName = Just (goSymbol (i ^. nameItemSymbol))
+                        }
 
     goBody :: Sem r Internal.Expression
     goBody = do
@@ -809,7 +815,7 @@ goExpression = \case
                   _funDefCoercion = False,
                   _funDefInstance = False,
                   _funDefPragmas = mempty,
-                  _funDefDefaultSignature = mempty,
+                  _funDefArgsInfo = mempty,
                   _funDefTerminating = True,
                   _funDefBuiltin = Nothing,
                   _funDefBody = body'

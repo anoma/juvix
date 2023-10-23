@@ -28,30 +28,30 @@ data UnfoldedArity = UnfoldedArity
   deriving stock (Eq)
 
 data ArityParameter
-  = ParamExplicit Arity
-  | ParamImplicit ImplicitParam
+  = ParamExplicit ArityParamInfo
+  | ParamImplicit ArityParamInfo
   | ParamImplicitInstance
   deriving stock (Eq)
 
-data ImplicitParam = ImplicitParam
-  { _implicitParamArity :: Arity,
-    _implicitParamDefault :: Maybe Expression
+data ArityParamInfo = ArityParamInfo
+  { _arityParamInfoArity :: Arity,
+    _arityParamArgInfo :: ArgInfo
   }
 
-instance Eq ImplicitParam where
-  (ImplicitParam ari1 _) == (ImplicitParam ari2 _) = ari1 == ari2
+instance Eq ArityParamInfo where
+  (ArityParamInfo ari1 _) == (ArityParamInfo ari2 _) = ari1 == ari2
 
 makeLenses ''UnfoldedArity
-makeLenses ''ImplicitParam
+makeLenses ''ArityParamInfo
 
 unfoldingArity :: (UnfoldedArity -> UnfoldedArity) -> Arity -> Arity
 unfoldingArity f = foldArity . f . unfoldArity'
 
 arityParameter :: ArityParameter -> Arity
 arityParameter = \case
-  ParamImplicit ImplicitParam {..} -> _implicitParamArity
+  ParamImplicit ArityParamInfo {..} -> _arityParamInfoArity
   ParamImplicitInstance -> ArityUnit
-  ParamExplicit a -> a
+  ParamExplicit ArityParamInfo {..} -> _arityParamInfoArity
 
 arityParameterImplicitOrInstance :: ArityParameter -> Bool
 arityParameterImplicitOrInstance = \case
@@ -102,14 +102,11 @@ instance HasAtomicity Arity where
     ArityUnknown -> Atom
     ArityFunction f -> atomicity f
 
-instance Pretty ImplicitParam where
-  pretty ImplicitParam {..} = "{" <> pretty _implicitParamArity <> "}"
-
 instance Pretty ArityParameter where
   pretty = \case
-    ParamImplicit p -> pretty p
+    ParamImplicit p -> "{" <> pretty (p ^. arityParamInfoArity) <> "}"
     ParamImplicitInstance -> "{{𝟙}}"
-    ParamExplicit f -> pretty f
+    ParamExplicit p -> pretty (p ^. arityParamInfoArity)
 
 instance Pretty FunctionArity where
   pretty f@(FunctionArity l r) =

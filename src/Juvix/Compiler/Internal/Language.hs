@@ -87,7 +87,7 @@ data FunctionDef = FunctionDef
     _funDefInstance :: Bool,
     _funDefCoercion :: Bool,
     _funDefBuiltin :: Maybe BuiltinFunction,
-    _funDefDefaultSignature :: DefaultSignature,
+    _funDefArgsInfo :: [ArgInfo],
     _funDefPragmas :: Pragmas
   }
   deriving stock (Eq, Generic, Data)
@@ -299,13 +299,22 @@ data ConstructorDef = ConstructorDef
   }
   deriving stock (Data)
 
-newtype DefaultSignature = DefaultSignature
-  { _defaultSignature :: [Maybe Expression]
+-- | At the moment we only use the name when we have a default value, so
+-- isNull _argInfoDefault implies isNull _argInfoName
+data ArgInfo = ArgInfo
+  { _argInfoDefault :: Maybe Expression,
+    _argInfoName :: Maybe Name
   }
   deriving stock (Eq, Generic, Data)
-  deriving newtype (Monoid, Semigroup)
 
-instance Hashable DefaultSignature
+emptyArgInfo :: ArgInfo
+emptyArgInfo =
+  ArgInfo
+    { _argInfoDefault = Nothing,
+      _argInfoName = Nothing
+    }
+
+instance Hashable ArgInfo
 
 data FunctionParameter = FunctionParameter
   { _paramName :: Maybe VarName,
@@ -330,7 +339,7 @@ newtype ModuleIndex = ModuleIndex
   deriving stock (Data)
 
 makeLenses ''ModuleIndex
-makeLenses ''DefaultSignature
+makeLenses ''ArgInfo
 makeLenses ''WildcardConstructor
 makeLenses ''Case
 makeLenses ''CaseBranch

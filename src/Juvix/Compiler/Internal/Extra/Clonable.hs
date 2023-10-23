@@ -234,12 +234,13 @@ instance Clonable Expression where
     ExpressionSimpleLambda l -> ExpressionSimpleLambda <$> freshNameIds l
     ExpressionLambda l -> ExpressionLambda <$> freshNameIds l
 
-instance Clonable DefaultSignature where
-  freshNameIds DefaultSignature {..} = do
-    sig' <- mapM freshNameIds _defaultSignature
+instance Clonable ArgInfo where
+  freshNameIds ArgInfo {..} = do
+    sig' <- mapM freshNameIds _argInfoDefault
     return
-      DefaultSignature
-        { _defaultSignature = sig'
+      ArgInfo
+        { _argInfoDefault = sig',
+          _argInfoName
         }
 
 instance Clonable FunctionDef where
@@ -248,12 +249,12 @@ instance Clonable FunctionDef where
     ty' <- freshNameIds _funDefType
     underBinder fun $ \fun' -> do
       body' <- freshNameIds _funDefBody
-      defaultSig' <- freshNameIds _funDefDefaultSignature
+      defaultSig' <- freshNameIds _funDefArgsInfo
       return
         FunctionDef
           { _funDefName = fun' ^. funDefName,
             _funDefType = ty',
             _funDefBody = body',
-            _funDefDefaultSignature = defaultSig',
+            _funDefArgsInfo = defaultSig',
             ..
           }
