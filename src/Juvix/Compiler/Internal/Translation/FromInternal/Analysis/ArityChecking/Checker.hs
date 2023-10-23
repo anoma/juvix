@@ -757,34 +757,42 @@ checkExpression hintArity expr = case expr of
           Arity ->
           [ApplicationArg] ->
           Sem r [ApplicationArg]
-        addHoles loc hint = go 0
+        addHoles loc hint ari0 = evalState 0 . execOutputList . go ari0
           where
             go ::
-              Int ->
               Arity ->
               [ApplicationArg] ->
-              Sem r [ApplicationArg]
-            go idx ari goargs =
+              Sem (Output ApplicationArg ': State Int ': r) ()
+            go ari goargs = do
+              let emit :: ApplicationArg -> Sem (Output ApplicationArg ': State Int ': r) ()
+                  emit x = do
+                    output x
+                    modify' @Int succ
               case (ari, goargs) of
-                (ArityFunction (FunctionArity (ParamImplicit {}) r), (ApplicationArg Implicit e) : rest) ->
-                  ((ApplicationArg Implicit e) :) <$> go (succ idx) r rest
-                (ArityFunction (FunctionArity ParamImplicitInstance r), (ApplicationArg ImplicitInstance e) : rest) ->
-                  ((ApplicationArg ImplicitInstance e) :) <$> go (succ idx) r rest
-                (ArityFunction (FunctionArity (ParamExplicit {}) r), (ApplicationArg Explicit e) : rest) ->
-                  ((ApplicationArg Explicit e) :) <$> go (succ idx) r rest
+                (ArityFunction (FunctionArity (ParamImplicit {}) r), (ApplicationArg Implicit e) : rest) -> do
+                  emit (ApplicationArg Implicit e)
+                  go r rest
+                (ArityFunction (FunctionArity ParamImplicitInstance r), (ApplicationArg ImplicitInstance e) : rest) -> do
+                  emit (ApplicationArg ImplicitInstance e)
+                  go r rest
+                (ArityFunction (FunctionArity (ParamExplicit {}) r), (ApplicationArg Explicit e) : rest) -> do
+                  output (ApplicationArg Explicit e)
+                  go r rest
                 (ArityFunction (FunctionArity impl _), [])
                   -- When there are no remaining arguments and the expected arity of the
                   -- expression matches the current arity we should *not* insert a hole.
                   | arityParameterImplicitOrInstance impl
-                      && ari == hint ->
-                      return []
+                      && ari == hint -> return ()
                 (ArityFunction (FunctionArity (ParamImplicit defaul) r), _) -> do
                   h <- newHoleImplicit defaul loc
-                  ((ApplicationArg Implicit h) :) <$> go (succ idx) r goargs
+                  emit (ApplicationArg Implicit h)
+                  go r goargs
                 (ArityFunction (FunctionArity ParamImplicitInstance r), _) -> do
                   h <- newHoleInstance loc
-                  ((ApplicationArg ImplicitInstance (ExpressionInstanceHole h)) :) <$> go (succ idx) r goargs
-                (ArityFunction (FunctionArity (ParamExplicit {}) _), (ApplicationArg _ _) : _) ->
+                  emit (ApplicationArg ImplicitInstance (ExpressionInstanceHole h))
+                  go r goargs
+                (ArityFunction (FunctionArity (ParamExplicit {}) _), (ApplicationArg _ _) : _) -> do
+                  idx <- get @Int
                   throw
                     ( ErrExpectedExplicitArgument
                         ExpectedExplicitArgument
@@ -792,8 +800,8 @@ checkExpression hintArity expr = case expr of
                             _expectedExplicitArgumentIx = idx
                           }
                     )
-                (ArityUnit, []) -> return []
-                (ArityFunction (FunctionArity (ParamExplicit _) _), []) -> return []
+                (ArityUnit, []) -> return ()
+                (ArityFunction (FunctionArity (ParamExplicit _) _), []) -> return ()
                 (ArityUnit, _ : _) ->
                   throw
                     ( ErrTooManyArguments
@@ -802,8 +810,10 @@ checkExpression hintArity expr = case expr of
                             _tooManyArgumentsUnexpected = length goargs
                           }
                     )
-                (ArityUnknown, []) -> return []
-                (ArityUnknown, p : ps) -> (p :) <$> go (succ idx) ArityUnknown ps
+                (ArityUnknown, []) -> return ()
+                (ArityUnknown, p : ps) -> do
+                  emit p
+                  go ArityUnknown ps
 
 newHoleImplicit :: (Member NameIdGen r) => ArityParamInfo -> Interval -> Sem r Expression
 newHoleImplicit i loc = case i ^. arityParamArgInfo . argInfoDefault of
