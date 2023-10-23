@@ -32,6 +32,7 @@ import Juvix.Compiler.Core.Transformation.DisambiguateNames (disambiguateNames)
 import Juvix.Compiler.Internal.Language qualified as Internal
 import Juvix.Compiler.Internal.Pretty qualified as Internal
 import Juvix.Compiler.Pipeline.Repl
+import Juvix.Compiler.Pipeline.Run
 import Juvix.Compiler.Pipeline.Setup (entrySetup)
 import Juvix.Data.Effect.Git
 import Juvix.Data.Effect.Process

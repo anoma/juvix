@@ -1,9 +1,9 @@
 module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Error where
 
 import Juvix.Compiler.Concrete.Language
-import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Base
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.PackageInfo
-import Juvix.Compiler.Pipeline.Package
+import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Paths
+import Juvix.Compiler.Pipeline.Package.Base
 import Juvix.Data.CodeAnn
 import Juvix.Data.Effect.Git
 import Juvix.Prelude

@@ -1,11 +1,11 @@
 module Juvix.Compiler.Pipeline.EntryPoint
   ( module Juvix.Compiler.Pipeline.EntryPoint,
-    module Juvix.Compiler.Pipeline.Package,
+    module Juvix.Compiler.Pipeline.Package.Base,
   )
 where
 
 import Juvix.Compiler.Backend
-import Juvix.Compiler.Pipeline.Package
+import Juvix.Compiler.Pipeline.Package.Base
 import Juvix.Compiler.Pipeline.Root
 import Juvix.Extra.Paths
 import Juvix.Prelude
@@ -44,18 +44,6 @@ data EntryPoint = EntryPoint
   deriving stock (Eq, Show)
 
 makeLenses ''EntryPoint
-
-defaultEntryPointCwdIO :: Path Abs File -> IO EntryPoint
-defaultEntryPointCwdIO mainFile = do
-  cwd <- getCurrentDir
-  roots <- findRootAndChangeDir (Just (parent mainFile)) Nothing cwd
-  return (defaultEntryPoint roots mainFile)
-
-defaultEntryPointNoFileCwdIO :: IO EntryPoint
-defaultEntryPointNoFileCwdIO = do
-  cwd <- getCurrentDir
-  roots <- findRootAndChangeDir Nothing Nothing cwd
-  return (defaultEntryPointNoFile roots)
 
 defaultEntryPoint :: Roots -> Path Abs File -> EntryPoint
 defaultEntryPoint roots mainFile =

@@ -3,17 +3,17 @@
 -- Arguments to the *Artifacts functions in this module should not modify the
 -- Artifacts State since any changes will be overwritten by the
 -- `runStateLikeArtifacts` wrapper.
-module Juvix.Compiler.Pipeline.Artifacts where
+module Juvix.Compiler.Pipeline.Artifacts
+  ( module Juvix.Compiler.Pipeline.Artifacts,
+    module Juvix.Compiler.Pipeline.Artifacts.Base,
+  )
+where
 
 import Juvix.Compiler.Builtins
-import Juvix.Compiler.Concrete.Data.InfoTable qualified as Scoped
 import Juvix.Compiler.Concrete.Data.InfoTableBuilder qualified as Scoped
-import Juvix.Compiler.Concrete.Data.ParsedInfoTableBuilder (BuilderState)
 import Juvix.Compiler.Concrete.Data.ParsedInfoTableBuilder qualified as Concrete
 import Juvix.Compiler.Concrete.Data.Scope
 import Juvix.Compiler.Concrete.Data.Scope qualified as S
-import Juvix.Compiler.Concrete.Data.Scope qualified as Scoped
-import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping (ScoperError)
 import Juvix.Compiler.Core.Data.InfoTableBuilder qualified as Core
 import Juvix.Compiler.Internal.Extra.DependencyBuilder (ExportsTable)
@@ -21,35 +21,9 @@ import Juvix.Compiler.Internal.Language qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromConcrete qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context
+import Juvix.Compiler.Pipeline.Artifacts.Base
 import Juvix.Compiler.Pipeline.EntryPoint
-import Juvix.Data.Effect.Git
 import Juvix.Prelude
-
--- | `Artifacts` contains enough information so that the pipeline can be
--- restarted while preserving existing state.
-data Artifacts = Artifacts
-  { _artifactParsing :: BuilderState,
-    -- Scoping
-    _artifactResolver :: ResolverState,
-    _artifactBuiltins :: BuiltinsState,
-    _artifactNameIdState :: Stream NameId,
-    _artifactScopeTable :: Scoped.InfoTable,
-    _artifactScopeExports :: HashSet NameId,
-    _artifactMainModuleScope :: Maybe Scope,
-    _artifactScoperState :: Scoped.ScoperState,
-    -- Concrete -> Internal
-    _artifactInternalModuleCache :: Internal.ModulesCache,
-    _artifactTerminationState :: TerminationState,
-    -- Typechecking
-    _artifactTypes :: TypesTable,
-    _artifactFunctions :: FunctionsTable,
-    -- | This includes the InfoTable from all type checked modules
-    _artifactInternalTypedTable :: Internal.InfoTable,
-    -- Core
-    _artifactCoreTable :: Core.InfoTable
-  }
-
-makeLenses ''Artifacts
 
 -- | It only reads the Artifacts. It does not modify the table in it.
 extendedTableReplArtifacts :: forall r. (Members '[State Artifacts] r) => Internal.Expression -> Sem r Internal.InfoTable
@@ -64,9 +38,6 @@ tmpCoreInfoTableBuilderArtifacts m = do
   a <- runStateLikeArtifacts Core.runInfoTableBuilder artifactCoreTable m
   modify' (set artifactCoreTable tbl)
   return a
-
-runPathResolverArtifacts :: (Members '[Files, Reader EntryPoint, State Artifacts, Error DependencyError, GitClone] r) => Sem (PathResolver ': r) a -> Sem r a
-runPathResolverArtifacts = runStateLikeArtifacts runPathResolverPipe' artifactResolver
 
 runBuiltinsArtifacts :: (Members '[Error JuvixError, State Artifacts] r) => Sem (Builtins ': r) a -> Sem r a
 runBuiltinsArtifacts = runStateLikeArtifacts runBuiltins artifactBuiltins
