@@ -10,6 +10,7 @@ import Data.String.Interpolate (i)
 import Data.Yaml
 import Data.Yaml.Pretty
 import Juvix.Compiler.Pipeline.Package.Dependency
+import Juvix.Compiler.Pipeline.Package.Loader.Error
 import Juvix.Extra.Paths
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Extra.Version
@@ -84,20 +85,32 @@ mkPackageLockfilePath = (<//> juvixLockfile)
 
 mayReadLockfile ::
   forall r.
-  (Members '[Files, Error Text] r) =>
+  (Members '[Files, Error PackageLoaderError] r) =>
   Path Abs Dir ->
   Sem r (Maybe LockfileInfo)
 mayReadLockfile root = do
-  let lockfilePath = mkPackageLockfilePath root
   lockfileExists <- fileExists' lockfilePath
   if
       | lockfileExists -> do
           bs <- readFileBS' lockfilePath
-          either (throw . pack . prettyPrintParseException) ((return . Just) . mkLockfileInfo lockfilePath) (decodeEither' @Lockfile bs)
+          either (throwErr . pack . prettyPrintParseException) ((return . Just) . mkLockfileInfo lockfilePath) (decodeEither' @Lockfile bs)
       | otherwise -> return Nothing
   where
     mkLockfileInfo :: Path Abs File -> Lockfile -> LockfileInfo
     mkLockfileInfo _lockfileInfoPath _lockfileInfoLockfile = LockfileInfo {..}
+
+    lockfilePath :: Path Abs File
+    lockfilePath = mkPackageLockfilePath root
+
+    throwErr :: Text -> Sem r a
+    throwErr e =
+      throw
+        PackageLoaderError
+          { _packageLoaderErrorPath = lockfilePath,
+            _packageLoaderErrorCause =
+              ErrLockfileYamlParseError
+                LockfileYamlParseError {_lockfileYamlParseErrorError = e}
+          }
 
 lockfileEncodeConfig :: Config
 lockfileEncodeConfig = setConfCompare keyCompare defConfig

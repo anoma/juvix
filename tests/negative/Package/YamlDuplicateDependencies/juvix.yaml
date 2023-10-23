@@ -1,0 +1,10 @@
+name: abc
+dependencies:
+  - git:
+      url: repo
+      name: dep
+      ref: abc
+  - git:
+      url: repo
+      name: dep
+      ref: abc

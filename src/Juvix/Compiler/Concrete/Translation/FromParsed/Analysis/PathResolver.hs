@@ -30,7 +30,7 @@ import Juvix.Prelude
 
 mkPackage ::
   forall r.
-  (Members '[Files, Error Text, Reader ResolverEnv, GitClone] r) =>
+  (Members '[Files, Error JuvixError, Reader ResolverEnv, GitClone] r) =>
   Maybe EntryPoint ->
   Path Abs Dir ->
   Sem r Package
@@ -43,7 +43,7 @@ mkPackage mpackageEntry _packageRoot = do
 
 mkPackageInfo ::
   forall r.
-  (Members '[Files, Error Text, Reader ResolverEnv, Error DependencyError, GitClone] r) =>
+  (Members '[Files, Error JuvixError, Reader ResolverEnv, Error DependencyError, GitClone] r) =>
   Maybe EntryPoint ->
   Path Abs Dir ->
   Package ->
@@ -162,7 +162,7 @@ resolveDependency i = case i ^. packageDepdendencyInfoDependency of
 
 registerDependencies' ::
   forall r.
-  (Members '[Reader EntryPoint, State ResolverState, Reader ResolverEnv, Files, Error Text, Error DependencyError, GitClone] r) =>
+  (Members '[Reader EntryPoint, State ResolverState, Reader ResolverEnv, Files, Error JuvixError, Error DependencyError, GitClone] r) =>
   DependenciesConfig ->
   Sem r ()
 registerDependencies' conf = do
@@ -186,7 +186,7 @@ registerDependencies' conf = do
 
 addRootDependency ::
   forall r.
-  (Members '[State ResolverState, Reader ResolverEnv, Files, Error Text, Error DependencyError, GitClone] r) =>
+  (Members '[State ResolverState, Reader ResolverEnv, Files, Error JuvixError, Error DependencyError, GitClone] r) =>
   DependenciesConfig ->
   EntryPoint ->
   Path Abs Dir ->
@@ -207,7 +207,7 @@ addRootDependency conf e root = do
 
 addDependency ::
   forall r.
-  (Members '[State ResolverState, Reader ResolverEnv, Files, Error Text, Error DependencyError, GitClone] r) =>
+  (Members '[State ResolverState, Reader ResolverEnv, Files, Error JuvixError, Error DependencyError, GitClone] r) =>
   Maybe EntryPoint ->
   PackageDependencyInfo ->
   Sem r LockfileDependency
@@ -224,7 +224,7 @@ addDependency me d = do
 
 addDependency' ::
   forall r.
-  (Members '[State ResolverState, Reader ResolverEnv, Files, Error Text, Error DependencyError, GitClone] r) =>
+  (Members '[State ResolverState, Reader ResolverEnv, Files, Error JuvixError, Error DependencyError, GitClone] r) =>
   Package ->
   Maybe EntryPoint ->
   ResolvedDependency ->
@@ -319,7 +319,7 @@ expectedPath' actualPath m = do
 
 re ::
   forall r a.
-  (Members '[Reader EntryPoint, Files, Error Text, Error DependencyError, GitClone] r) =>
+  (Members '[Reader EntryPoint, Files, Error JuvixError, Error DependencyError, GitClone] r) =>
   Sem (PathResolver ': r) a ->
   Sem (Reader ResolverEnv ': State ResolverState ': r) a
 re = reinterpret2H helper
@@ -342,13 +342,13 @@ re = reinterpret2H helper
               Right (r, _) -> r
         raise (evalPathResolver' st' root' (a' x'))
 
-evalPathResolver' :: (Members '[Reader EntryPoint, Files, Error Text, Error DependencyError, GitClone] r) => ResolverState -> Path Abs Dir -> Sem (PathResolver ': r) a -> Sem r a
+evalPathResolver' :: (Members '[Reader EntryPoint, Files, Error JuvixError, Error DependencyError, GitClone] r) => ResolverState -> Path Abs Dir -> Sem (PathResolver ': r) a -> Sem r a
 evalPathResolver' st root = fmap snd . runPathResolver' st root
 
-runPathResolver :: (Members '[Reader EntryPoint, Files, Error Text, Error DependencyError, GitClone] r) => Path Abs Dir -> Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
+runPathResolver :: (Members '[Reader EntryPoint, Files, Error JuvixError, Error DependencyError, GitClone] r) => Path Abs Dir -> Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
 runPathResolver = runPathResolver' iniResolverState
 
-runPathResolver' :: (Members '[Reader EntryPoint, Files, Error Text, Error DependencyError, GitClone] r) => ResolverState -> Path Abs Dir -> Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
+runPathResolver' :: (Members '[Reader EntryPoint, Files, Error JuvixError, Error DependencyError, GitClone] r) => ResolverState -> Path Abs Dir -> Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
 runPathResolver' st root x = do
   e <- ask
   let _envSingleFile :: Maybe (Path Abs File)
@@ -364,15 +364,15 @@ runPathResolver' st root x = do
           }
   runState st (runReader env (re x))
 
-runPathResolverPipe' :: (Members '[Files, Reader EntryPoint, Error DependencyError, GitClone] r) => ResolverState -> Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
+runPathResolverPipe' :: (Members '[Files, Reader EntryPoint, Error DependencyError, GitClone, Error JuvixError] r) => ResolverState -> Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
 runPathResolverPipe' iniState a = do
   r <- asks (^. entryPointResolverRoot)
-  runError (runPathResolver' iniState r (raiseUnder a)) >>= either error return
+  runPathResolver' iniState r a
 
-runPathResolverPipe :: (Members '[Files, Reader EntryPoint, Error DependencyError, GitClone] r) => Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
+runPathResolverPipe :: (Members '[Files, Reader EntryPoint, Error DependencyError, GitClone, Error JuvixError] r) => Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
 runPathResolverPipe a = do
   r <- asks (^. entryPointResolverRoot)
-  runError (runPathResolver r (raiseUnder a)) >>= either error return
+  runPathResolver r a
 
-evalPathResolverPipe :: (Members '[Files, Reader EntryPoint, Error DependencyError, GitClone] r) => Sem (PathResolver ': r) a -> Sem r a
+evalPathResolverPipe :: (Members '[Files, Reader EntryPoint, Error DependencyError, GitClone, Error JuvixError] r) => Sem (PathResolver ': r) a -> Sem r a
 evalPathResolverPipe = fmap snd . runPathResolverPipe
