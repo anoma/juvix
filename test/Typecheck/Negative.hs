@@ -137,14 +137,14 @@ tests =
       $(mkRelDir "Internal")
       $(mkRelFile "LiteralInteger.juvix")
       $ \case
-        ErrWrongType {} -> Nothing
+        ErrNoInstance {} -> Nothing
         _ -> wrongError,
     NegTest
       "Integer literal cannot be used as a String"
       $(mkRelDir "Internal")
       $(mkRelFile "LiteralIntegerString.juvix")
       $ \case
-        ErrWrongType {} -> Nothing
+        ErrNoInstance {} -> Nothing
         _ -> wrongError,
     NegTest
       "Unsupported type function"

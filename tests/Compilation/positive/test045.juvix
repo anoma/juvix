@@ -16,4 +16,4 @@ syntax operator + additive;
   | zero b := b
   | (suc a) b := suc (a + b);
 
-main : Nat := 1 + 3;
+main : Nat := suc zero + suc (suc (suc zero));
