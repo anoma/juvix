@@ -41,3 +41,45 @@ tests:
         Copying assets files to .*
         Writing .*HelloWorld.html
     exit-status: 0
+
+  - name: html-only-code
+    command:
+      shell:
+        - bash
+      script: |
+        cd milestone/HelloWorld
+        rm -rf html
+        juvix html HelloWorld.juvix --only-source --only-code --non-recursive
+        cat html/HelloWorld.html
+    stdout:
+      matches: |
+        <span class="ju-comment">-- HelloWorld.juvix</span>.*
+    exit-status: 0
+
+  - name: html-id-prefix
+    command:
+      shell:
+        - bash
+      script: |
+        cd milestone/HelloWorld
+        rm -rf html
+        juvix html HelloWorld.juvix --only-source --only-code --prefix-id="XYZ"
+        cat html/HelloWorld.html
+    stdout:
+      matches: |
+        .*href="HelloWorld.html#XYZ[0-9]+".*
+    exit-status: 0
+
+  - name: html-no-path
+    command:
+      shell:
+        - bash
+      script: |
+        cd milestone/HelloWorld
+        rm -rf html
+        juvix html HelloWorld.juvix --only-source --only-code --no-path
+        cat html/HelloWorld.html
+    stdout:
+      matches: |
+        .*href="#[0-9]+".*
+    exit-status: 0

@@ -43,8 +43,7 @@ kindSuffix = \case
   HtmlOnly -> ""
 
 data GenSourceHtmlArgs = GenSourceHtmlArgs
-  { 
-    _genSourceHtmlArgsConcreteOpts :: Options,
+  { _genSourceHtmlArgsConcreteOpts :: Options,
     _genSourceHtmlArgsAssetsDir :: Text,
     _genSourceHtmlArgsHtmlKind :: HtmlKind,
     _genSourceHtmlArgsParamBase :: Text,
@@ -58,7 +57,6 @@ data GenSourceHtmlArgs = GenSourceHtmlArgs
     _genSourceHtmlArgsNoPath :: Bool,
     _genSourceHtmlArgsComments :: Comments,
     _genSourceHtmlArgsTheme :: Theme
-    
   }
 
 makeLenses ''GenSourceHtmlArgs
@@ -132,7 +130,7 @@ genSourceHtml o@GenSourceHtmlArgs {..} = do
         )
       where
         htmlFile :: Path Rel File
-        htmlFile = relFile (topModulePathToDottedPath (m ^. modulePath . S.nameConcrete))
+        htmlFile = relFile (topModulePathToDottedPath (m ^. modulePath . S.nameConcrete) <.> ".html")
 
 genModuleText ::
   forall r.
