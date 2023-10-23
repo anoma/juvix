@@ -10,7 +10,8 @@ where
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Internal.Data.NameDependencyInfo
-import Juvix.Compiler.Internal.Extra
+import Juvix.Compiler.Internal.Extra.Base
+import Juvix.Compiler.Internal.Language
 import Juvix.Prelude
 
 -- adjacency set representation

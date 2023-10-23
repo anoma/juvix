@@ -27,37 +27,30 @@ data UnfoldedArity = UnfoldedArity
   }
   deriving stock (Eq)
 
-data ArityParameter
-  = ParamExplicit ArityParamInfo
-  | ParamImplicit ArityParamInfo
-  | ParamImplicitInstance
+data ArityParameter = ArityParameter
+  { _arityParameterArity :: Arity,
+    _arityParameterImplicit :: IsImplicit,
+    _arityParameterInfo :: ArgInfo
+  }
   deriving stock (Eq)
 
-data ArityParamInfo = ArityParamInfo
-  { _arityParamInfoArity :: Arity,
-    _arityParamArgInfo :: ArgInfo
-  }
-
-instance Eq ArityParamInfo where
-  (ArityParamInfo ari1 _) == (ArityParamInfo ari2 _) = ari1 == ari2
-
 makeLenses ''UnfoldedArity
-makeLenses ''ArityParamInfo
+makeLenses ''ArityParameter
+
+arityParameterName :: Lens' ArityParameter (Maybe Name)
+arityParameterName = arityParameterInfo . argInfoName
 
 unfoldingArity :: (UnfoldedArity -> UnfoldedArity) -> Arity -> Arity
 unfoldingArity f = foldArity . f . unfoldArity'
 
 arityParameter :: ArityParameter -> Arity
-arityParameter = \case
-  ParamImplicit ArityParamInfo {..} -> _arityParamInfoArity
-  ParamImplicitInstance -> ArityUnit
-  ParamExplicit ArityParamInfo {..} -> _arityParamInfoArity
+arityParameter = (^. arityParameterArity)
 
 arityParameterImplicitOrInstance :: ArityParameter -> Bool
-arityParameterImplicitOrInstance = \case
-  ParamExplicit {} -> False
-  ParamImplicit {} -> True
-  ParamImplicitInstance -> True
+arityParameterImplicitOrInstance a = case a ^. arityParameterImplicit of
+  Explicit {} -> False
+  Implicit {} -> True
+  ImplicitInstance -> True
 
 arityCommonPrefix :: Arity -> Arity -> [ArityParameter]
 arityCommonPrefix p1 p2 = commonPrefix u1 u2
@@ -103,10 +96,12 @@ instance HasAtomicity Arity where
     ArityFunction f -> atomicity f
 
 instance Pretty ArityParameter where
-  pretty = \case
-    ParamImplicit p -> "{" <> pretty (p ^. arityParamInfoArity) <> "}"
-    ParamImplicitInstance -> "{{𝟙}}"
-    ParamExplicit p -> pretty (p ^. arityParamInfoArity)
+  pretty a =
+    let ari = arityParameter a
+     in case a ^. arityParameterImplicit of
+          Implicit -> "{" <> pretty ari <> "}"
+          ImplicitInstance -> "{{𝟙}}"
+          Explicit -> pretty ari
 
 instance Pretty FunctionArity where
   pretty f@(FunctionArity l r) =

@@ -269,6 +269,9 @@ unnamedParameter = unnamedParameter' Explicit
 singletonRename :: VarName -> VarName -> Rename
 singletonRename = HashMap.singleton
 
+renameKind :: NameKind -> [Name] -> Subs
+renameKind k l = HashMap.fromList [(n, toExpression (set nameKind k n)) | n <- l]
+
 renameToSubsE :: Rename -> Subs
 renameToSubsE = fmap (ExpressionIden . IdenVar)
 
@@ -590,6 +593,9 @@ infixl 9 @@
 (@@) :: (IsExpression a, IsExpression b) => a -> b -> Expression
 a @@ b = toExpression (Application (toExpression a) (toExpression b) Explicit)
 
+freshFunVar :: (Member NameIdGen r) => Interval -> Text -> Sem r VarName
+freshFunVar i n = set nameKind KNameFunction <$> freshVar i n
+
 freshVar :: (Member NameIdGen r) => Interval -> Text -> Sem r VarName
 freshVar _nameLoc n = do
   uid <- freshNameId
@@ -753,4 +759,19 @@ explicitPatternArg _patternArgPattern =
     { _patternArgName = Nothing,
       _patternArgIsImplicit = Explicit,
       _patternArgPattern
+    }
+
+simpleFunDef :: Name -> Expression -> Expression -> FunctionDef
+simpleFunDef funName ty body =
+  FunctionDef
+    { _funDefName = funName,
+      _funDefType = ty,
+      _funDefExamples = [],
+      _funDefCoercion = False,
+      _funDefInstance = False,
+      _funDefPragmas = mempty,
+      _funDefArgsInfo = mempty,
+      _funDefTerminating = False,
+      _funDefBuiltin = Nothing,
+      _funDefBody = body
     }

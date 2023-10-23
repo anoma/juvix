@@ -5,6 +5,7 @@ module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.C
 where
 
 import Juvix.Compiler.Internal.Extra
+import Juvix.Compiler.Internal.Extra qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromConcrete.Data.Context
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Data.LocalVars
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Data.Types
@@ -252,15 +253,15 @@ guessArity = \case
 
         refine :: [IsImplicit] -> [ArityParameter] -> Maybe [ArityParameter]
         refine as ps = case (as, ps) of
-          (Explicit : as', ParamExplicit {} : ps') -> refine as' ps'
-          (Implicit : as', ParamImplicit {} : ps') -> refine as' ps'
-          (ImplicitInstance : as', ParamImplicitInstance {} : ps') -> refine as' ps'
-          (as'@(Explicit : _), ParamImplicit {} : ps') -> refine as' ps'
-          (as'@(Explicit : _), ParamImplicitInstance {} : ps') -> refine as' ps'
-          (Implicit : _, ParamExplicit {} : _) -> Nothing
-          (ImplicitInstance : _, ParamExplicit {} : _) -> Nothing
-          (Implicit : _, ParamImplicitInstance : _) -> Nothing
-          (ImplicitInstance : _, ParamImplicit {} : _) -> Nothing
+          (Explicit : as', ArityParameter {_arityParameterImplicit = Explicit} : ps') -> refine as' ps'
+          (Implicit : as', ArityParameter {_arityParameterImplicit = Implicit} : ps') -> refine as' ps'
+          (ImplicitInstance : as', ArityParameter {_arityParameterImplicit = ImplicitInstance} : ps') -> refine as' ps'
+          (as'@(Explicit : _), ArityParameter {_arityParameterImplicit = Implicit} : ps') -> refine as' ps'
+          (as'@(Explicit : _), ArityParameter {_arityParameterImplicit = ImplicitInstance} : ps') -> refine as' ps'
+          (Implicit : _, ArityParameter {_arityParameterImplicit = Explicit} : _) -> Nothing
+          (ImplicitInstance : _, ArityParameter {_arityParameterImplicit = Explicit} : _) -> Nothing
+          (Implicit : _, ArityParameter {_arityParameterImplicit = ImplicitInstance} : _) -> Nothing
+          (ImplicitInstance : _, ArityParameter {_arityParameterImplicit = Implicit} : _) -> Nothing
           ([], ps') -> Just ps'
           (_ : _, []) -> Nothing
 
@@ -294,11 +295,11 @@ arityLambda l =
       { _ufoldArityParams =
           replicate
             (maximum1 (fmap numPatterns (l ^. lambdaClauses)))
-            ( ParamExplicit
-                ArityParamInfo
-                  { _arityParamInfoArity = ArityUnknown,
-                    _arityParamArgInfo = emptyArgInfo
-                  }
+            ( ArityParameter
+                { _arityParameterArity = ArityUnknown,
+                  _arityParameterImplicit = Explicit,
+                  _arityParameterInfo = emptyArgInfo
+                }
             ),
         _ufoldArityRest = ArityRestUnknown
       }
@@ -343,11 +344,11 @@ checkLhs loc guessedBody ariSignature pats = do
           p' <- checkPattern ArityUnknown p
           first (p' :) <$> goLhs ArityUnknown ps
         ArityFunction (FunctionArity l r) ->
-          case (p ^. patternArgIsImplicit, l) of
-            (Implicit, ParamImplicit {}) -> do
+          case (p ^. patternArgIsImplicit, l ^. arityParameterImplicit) of
+            (Implicit, Implicit {}) -> do
               b' <- checkPattern (arityParameter l) p
               first (b' :) <$> goLhs r ps
-            (Implicit, ParamExplicit {}) ->
+            (Implicit, Explicit {}) ->
               throw
                 ( ErrWrongPatternIsImplicit
                     WrongPatternIsImplicit
@@ -355,7 +356,7 @@ checkLhs loc guessedBody ariSignature pats = do
                         _wrongPatternIsImplicitActual = p
                       }
                 )
-            (Implicit, ParamImplicitInstance {}) ->
+            (Implicit, ImplicitInstance {}) ->
               throw
                 ( ErrWrongPatternIsImplicit
                     WrongPatternIsImplicit
@@ -363,10 +364,10 @@ checkLhs loc guessedBody ariSignature pats = do
                         _wrongPatternIsImplicitActual = p
                       }
                 )
-            (ImplicitInstance, ParamImplicitInstance) -> do
+            (ImplicitInstance, ImplicitInstance) -> do
               b' <- checkPattern (arityParameter l) p
               first (b' :) <$> goLhs r ps
-            (ImplicitInstance, ParamExplicit {}) ->
+            (ImplicitInstance, Explicit {}) ->
               throw
                 ( ErrWrongPatternIsImplicit
                     WrongPatternIsImplicit
@@ -374,17 +375,17 @@ checkLhs loc guessedBody ariSignature pats = do
                         _wrongPatternIsImplicitActual = p
                       }
                 )
-            (ImplicitInstance, ParamImplicit {}) -> do
+            (ImplicitInstance, Implicit {}) -> do
               wildcard <- genWildcard' Implicit
               first (wildcard :) <$> goLhs r lhs
-            (Explicit, ParamImplicit {}) -> do
+            (Explicit, Implicit {}) -> do
               wildcard <- genWildcard' Implicit
               first (wildcard :) <$> goLhs r lhs
-            (Explicit, ParamImplicitInstance) -> do
+            (Explicit, ImplicitInstance) -> do
               wildcard <- genWildcard' ImplicitInstance
               first (wildcard :) <$> goLhs r lhs
-            (Explicit, ParamExplicit pa) -> do
-              p' <- checkPattern (pa ^. arityParamInfoArity) p
+            (Explicit, Explicit) -> do
+              p' <- checkPattern (l ^. arityParameterArity) p
               first (p' :) <$> goLhs r ps
       where
         genWildcard' :: forall r'. (Members '[NameIdGen] r') => IsImplicit -> Sem r' PatternArg
@@ -403,22 +404,13 @@ checkLhs loc guessedBody ariSignature pats = do
         pref :: Int
         pref = aI - targetI
         preceedingImplicits :: Arity -> Int
-        preceedingImplicits = length . takeWhile isParamImplicit . unfoldArity
-          where
-            isParamImplicit :: ArityParameter -> Bool
-            isParamImplicit = \case
-              ParamExplicit {} -> False
-              ParamImplicit {} -> True
-              ParamImplicitInstance -> True
+        preceedingImplicits = length . takeWhile (isImplicitOrInstance . (^. arityParameterImplicit)) . unfoldArity
         aI :: Int
         aI = preceedingImplicits a
         targetI :: Int
         targetI = preceedingImplicits guessedBody
         paramToImplicit :: ArityParameter -> IsImplicit
-        paramToImplicit = \case
-          ParamExplicit {} -> impossible
-          ParamImplicit {} -> Implicit
-          ParamImplicitInstance -> ImplicitInstance
+        paramToImplicit = (^. arityParameterImplicit)
 
 checkPattern ::
   forall r.
@@ -569,10 +561,8 @@ addArgsInfo = unfoldingArity . helper
       [] -> params
       info : infos' -> case params of
         [] -> impossible
-        para : params' -> case para of
-          ParamExplicit p -> ParamExplicit (set arityParamArgInfo info p) : go infos' params'
-          ParamImplicit p -> ParamImplicit (set arityParamArgInfo info p) : go infos' params'
-          ParamImplicitInstance -> ParamImplicitInstance : go infos' params'
+        para : params' ->
+          set arityParameterInfo info para : go infos' params'
 
 -- | let x be some expression of type T. The argument of this function is T and it returns
 -- the arity of x. In other words, given (T : Type), it returns the arity of the elements of T.
@@ -613,20 +603,15 @@ typeArity = go
       IdenAxiom {} -> ArityUnknown
 
     goParam :: FunctionParameter -> ArityParameter
-    goParam FunctionParameter {..} = case _paramImplicit of
-      ImplicitInstance -> ParamImplicitInstance
-      Implicit ->
-        ParamImplicit
-          ArityParamInfo
-            { _arityParamInfoArity = go _paramType,
-              _arityParamArgInfo = emptyArgInfo
-            }
-      Explicit ->
-        ParamExplicit
-          ArityParamInfo
-            { _arityParamInfoArity = go _paramType,
-              _arityParamArgInfo = emptyArgInfo
-            }
+    goParam FunctionParameter {..} =
+      ArityParameter
+        { _arityParameterArity = case _paramImplicit of
+            Explicit -> go _paramType
+            Implicit -> go _paramType
+            ImplicitInstance -> ArityUnit,
+          _arityParameterImplicit = _paramImplicit,
+          _arityParameterInfo = emptyArgInfo
+        }
 
     goFun :: Function -> FunctionArity
     goFun (Function l r) =
@@ -719,7 +704,7 @@ checkExpression hintArity expr = case expr of
       (fun', args') :: (Expression, [ApplicationArg]) <- case fun0 of
         ExpressionHole {} -> (fun0,) <$> mapM (traverseOf appArg (checkExpression ArityUnknown)) args
         ExpressionInstanceHole {} -> (fun0,) <$> mapM (traverseOf appArg (checkExpression ArityUnknown)) args
-        ExpressionIden i -> (fun0,) <$> (idenArity i >>= helper (getLoc i))
+        ExpressionIden i -> (,[]) <$> goAppLeftIden i
         ExpressionLiteral l -> (fun0,) <$> helper (getLoc l) arityLiteral
         ExpressionUniverse l -> (fun0,) <$> helper (getLoc l) arityUniverse
         ExpressionLambda l -> do
@@ -743,55 +728,104 @@ checkExpression hintArity expr = case expr of
         ExpressionApplication {} -> impossible
       return (foldApplication fun' args')
       where
+        goAppLeftIden :: Iden -> Sem r Expression
+        goAppLeftIden i = do
+          namedArgs :: [(Name, ApplicationArg)] <- idenArity i >>= helperDefaultArgs (getLoc i)
+          case nonEmpty namedArgs of
+            Nothing -> return (toExpression i)
+            Just args' -> do
+              let mkClause :: (Name, ApplicationArg) -> Sem r Internal.PreLetStatement
+                  mkClause (nm, arg) = do
+                    -- TODO put actual type instead of hole?
+                    ty <- mkFreshHole (getLoc arg)
+                    return (Internal.PreLetFunctionDef (Internal.simpleFunDef nm ty (arg ^. appArg)))
+                  mkAppArg :: (Name, ApplicationArg) -> ApplicationArg
+                  mkAppArg (nm, arg) =
+                    ApplicationArg
+                      { _appArgIsImplicit = arg ^. appArgIsImplicit,
+                        _appArg = toExpression nm
+                      }
+              clauses :: NonEmpty Internal.LetClause <- nonEmpty' . Internal.mkLetClauses <$> mapM mkClause args'
+              let app = foldApplication (toExpression fun0) (map mkAppArg namedArgs)
+                  letexpr =
+                    Internal.substitutionE (renameKind KNameFunction (map fst namedArgs)) $
+                      ExpressionLet
+                        Let
+                          { _letClauses = clauses,
+                            _letExpression = app
+                          }
+              Internal.clone letexpr
+
         helper :: Interval -> Arity -> Sem r [ApplicationArg]
-        helper i ari = do
+        helper i ari = map snd <$> helperDefaultArgs i ari
+
+        helperDefaultArgs :: Interval -> Arity -> Sem r [(Name, ApplicationArg)]
+        helperDefaultArgs i ari = do
           let argsAris :: [Arity]
               argsAris = map arityParameter (unfoldArity ari)
-          argsWithHoles :: [ApplicationArg] <- addHoles i hintArity ari args
-          let argsWithAris :: [(IsImplicit, (Arity, Expression))]
-              argsWithAris = [(i', (a, e')) | (a, (ApplicationArg i' e')) <- zip (argsAris ++ repeat ArityUnknown) argsWithHoles]
-          mapM (fmap (uncurry ApplicationArg) . secondM (uncurry checkExpression)) argsWithAris
+          argsWithHoles :: [(Name, ApplicationArg)] <- addHoles i hintArity ari args
+          let argsWithAris :: [(IsImplicit, Name, (Arity, Expression))]
+              argsWithAris = [(i', argName, (a, e')) | (a, (argName, (ApplicationArg i' e'))) <- zip (argsAris ++ repeat ArityUnknown) argsWithHoles]
+          forM argsWithAris $ \(impl, name, (argAri, argExpr)) -> do
+            expr' <- checkExpression argAri argExpr
+            return
+              ( name,
+                ApplicationArg
+                  { _appArgIsImplicit = impl,
+                    _appArg = expr'
+                  }
+              )
+
         addHoles ::
           Interval ->
           Arity ->
           Arity ->
           [ApplicationArg] ->
-          Sem r [ApplicationArg]
+          Sem r [(Name, ApplicationArg)]
         addHoles loc hint ari0 = evalState 0 . execOutputList . go ari0
           where
             go ::
               Arity ->
               [ApplicationArg] ->
-              Sem (Output ApplicationArg ': State Int ': r) ()
+              Sem (Output (Name, ApplicationArg) ': State Int ': r) ()
             go ari goargs = do
-              let emit :: ApplicationArg -> Sem (Output ApplicationArg ': State Int ': r) ()
-                  emit x = do
-                    output x
+              let emitNoName :: ApplicationArg -> Sem (Output (Name, ApplicationArg) ': State Int ': r) ()
+                  emitNoName x = do
+                    let l = getLoc x
+                    v <- freshFunVar l "gen_helper"
+                    output (v, x)
+                    modify' @Int succ
+                  emitWithParameter :: ArityParameter -> ApplicationArg -> Sem (Output (Name, ApplicationArg) ': State Int ': r) ()
+                  emitWithParameter p = maybe emitNoName emit (p ^. arityParameterName)
+                  emit :: Name -> ApplicationArg -> Sem (Output (Name, ApplicationArg) ': State Int ': r) ()
+                  emit n x = do
+                    output (n, x)
                     modify' @Int succ
               case (ari, goargs) of
-                (ArityFunction (FunctionArity (ParamImplicit {}) r), (ApplicationArg Implicit e) : rest) -> do
-                  emit (ApplicationArg Implicit e)
+                (ArityFunction (FunctionArity (p@ArityParameter {_arityParameterImplicit = Implicit}) r), (ApplicationArg Implicit e) : rest) -> do
+                  emitWithParameter p (ApplicationArg Implicit e)
                   go r rest
-                (ArityFunction (FunctionArity ParamImplicitInstance r), (ApplicationArg ImplicitInstance e) : rest) -> do
-                  emit (ApplicationArg ImplicitInstance e)
+                (ArityFunction (FunctionArity (ArityParameter {_arityParameterImplicit = ImplicitInstance}) r), (ApplicationArg ImplicitInstance e) : rest) -> do
+                  emitNoName (ApplicationArg ImplicitInstance e)
                   go r rest
-                (ArityFunction (FunctionArity (ParamExplicit {}) r), (ApplicationArg Explicit e) : rest) -> do
-                  output (ApplicationArg Explicit e)
+                (ArityFunction (FunctionArity (p@ArityParameter {_arityParameterImplicit = Explicit}) r), (ApplicationArg Explicit e) : rest) -> do
+                  emitWithParameter p (ApplicationArg Explicit e)
                   go r rest
                 (ArityFunction (FunctionArity impl _), [])
                   -- When there are no remaining arguments and the expected arity of the
                   -- expression matches the current arity we should *not* insert a hole.
                   | arityParameterImplicitOrInstance impl
-                      && ari == hint -> return ()
-                (ArityFunction (FunctionArity (ParamImplicit defaul) r), _) -> do
-                  h <- newHoleImplicit defaul loc
-                  emit (ApplicationArg Implicit h)
+                      && ari == hint ->
+                      return ()
+                (ArityFunction (FunctionArity (p@ArityParameter {_arityParameterImplicit = Implicit}) r), _) -> do
+                  h <- newHoleImplicit p loc
+                  emitWithParameter p (ApplicationArg Implicit h)
                   go r goargs
-                (ArityFunction (FunctionArity ParamImplicitInstance r), _) -> do
+                (ArityFunction (FunctionArity (ArityParameter {_arityParameterImplicit = ImplicitInstance}) r), _) -> do
                   h <- newHoleInstance loc
-                  emit (ApplicationArg ImplicitInstance (ExpressionInstanceHole h))
+                  emitNoName (ApplicationArg ImplicitInstance (ExpressionInstanceHole h))
                   go r goargs
-                (ArityFunction (FunctionArity (ParamExplicit {}) _), (ApplicationArg _ _) : _) -> do
+                (ArityFunction (FunctionArity (ArityParameter {_arityParameterImplicit = Explicit}) _), (ApplicationArg _ _) : _) -> do
                   idx <- get @Int
                   throw
                     ( ErrExpectedExplicitArgument
@@ -801,7 +835,7 @@ checkExpression hintArity expr = case expr of
                           }
                     )
                 (ArityUnit, []) -> return ()
-                (ArityFunction (FunctionArity (ParamExplicit _) _), []) -> return ()
+                (ArityFunction (FunctionArity (ArityParameter {_arityParameterImplicit = Explicit}) _), []) -> return ()
                 (ArityUnit, _ : _) ->
                   throw
                     ( ErrTooManyArguments
@@ -812,11 +846,11 @@ checkExpression hintArity expr = case expr of
                     )
                 (ArityUnknown, []) -> return ()
                 (ArityUnknown, p : ps) -> do
-                  emit p
+                  emitNoName p
                   go ArityUnknown ps
 
-newHoleImplicit :: (Member NameIdGen r) => ArityParamInfo -> Interval -> Sem r Expression
-newHoleImplicit i loc = case i ^. arityParamArgInfo . argInfoDefault of
+newHoleImplicit :: (Member NameIdGen r) => ArityParameter -> Interval -> Sem r Expression
+newHoleImplicit i loc = case i ^. arityParameterInfo . argInfoDefault of
   Nothing -> ExpressionHole . mkHole loc <$> freshNameId
   Just e -> do
     -- TODO update location

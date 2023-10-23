@@ -19,6 +19,7 @@ import Juvix.Compiler.Concrete.Language qualified as Concrete
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
 import Juvix.Compiler.Internal.Data.NameDependencyInfo qualified as Internal
+import Juvix.Compiler.Internal.Extra (mkLetClauses)
 import Juvix.Compiler.Internal.Extra qualified as Internal
 import Juvix.Compiler.Internal.Extra.DependencyBuilder
 import Juvix.Compiler.Internal.Language (varFromWildcard)
@@ -99,34 +100,6 @@ buildMutualBlocks ss = do
     getStmt n = statementsByName ^. at n
 
     nameToPreStatement :: SCC Internal.Name -> Maybe (SCC Internal.PreStatement)
-    nameToPreStatement = nonEmptySCC . fmap getStmt
-      where
-        nonEmptySCC :: SCC (Maybe a) -> Maybe (SCC a)
-        nonEmptySCC = \case
-          AcyclicSCC a -> AcyclicSCC <$> a
-          CyclicSCC p -> CyclicSCC . toList <$> nonEmpty (catMaybes p)
-
-buildLetMutualBlocks ::
-  NonEmpty Internal.PreLetStatement ->
-  NonEmpty (SCC Internal.PreLetStatement)
-buildLetMutualBlocks ss = nonEmpty' . mapMaybe nameToPreStatement $ scomponents
-  where
-    -- TODO buildDependencyInfoLet is repeating too much work when there are big nested lets
-    depInfo = buildDependencyInfoLet ss
-
-    scomponents :: [SCC Internal.Name] = buildSCCs depInfo
-
-    statementsByName :: HashMap Internal.Name Internal.PreLetStatement
-    statementsByName = HashMap.fromList (map mkAssoc (toList ss))
-      where
-        mkAssoc :: Internal.PreLetStatement -> (Internal.Name, Internal.PreLetStatement)
-        mkAssoc s = case s of
-          Internal.PreLetFunctionDef i -> (i ^. Internal.funDefName, s)
-
-    getStmt :: Internal.Name -> Maybe Internal.PreLetStatement
-    getStmt n = statementsByName ^. at n
-
-    nameToPreStatement :: SCC Internal.Name -> Maybe (SCC Internal.PreLetStatement)
     nameToPreStatement = nonEmptySCC . fmap getStmt
       where
         nonEmptySCC :: SCC (Maybe a) -> Maybe (SCC a)
@@ -805,21 +778,12 @@ goExpression = \case
         mkClause arg = do
           body' <- goExpression (arg ^. argValue)
           ty <- goExpression (arg ^. argType)
-          -- TODO consider creating a helper function for simple function definitions
           return $
             Internal.LetFunDef
-              Internal.FunctionDef
-                { _funDefName = goSymbol (arg ^. argName),
-                  _funDefType = ty,
-                  _funDefExamples = [],
-                  _funDefCoercion = False,
-                  _funDefInstance = False,
-                  _funDefPragmas = mempty,
-                  _funDefArgsInfo = mempty,
-                  _funDefTerminating = True,
-                  _funDefBuiltin = Nothing,
-                  _funDefBody = body'
-                }
+              ( (Internal.simpleFunDef (goSymbol (arg ^. argName)) ty body')
+                  { Internal._funDefTerminating = True
+                  }
+              )
 
     goRecordCreation :: Concrete.RecordCreation 'Scoped -> Sem r Internal.Expression
     goRecordCreation Concrete.RecordCreation {..} = do
@@ -851,7 +815,7 @@ goExpression = \case
           Internal.clone expr
           where
             goFields :: NonEmpty (RecordDefineField 'Scoped) -> Sem r (NonEmpty Internal.LetClause)
-            goFields recordfields = nonEmpty' . goPreLetStatements <$> mapM goField recordfields
+            goFields recordfields = nonEmpty' . mkLetClauses <$> mapM goField recordfields
               where
                 goField :: RecordDefineField 'Scoped -> Sem r Internal.PreLetStatement
                 goField = fmap Internal.PreLetFunctionDef . goFunctionDef . (^. fieldDefineFunDef)
@@ -952,23 +916,8 @@ goExpression = \case
         Just _letClauses -> Internal.ExpressionLet Internal.Let {..}
         Nothing -> _letExpression
 
-    goPreLetStatements :: NonEmpty Internal.PreLetStatement -> [Internal.LetClause]
-    goPreLetStatements pre = goSCC <$> (toList (buildLetMutualBlocks pre))
-      where
-        goSCC :: SCC Internal.PreLetStatement -> Internal.LetClause
-        goSCC = \case
-          AcyclicSCC (Internal.PreLetFunctionDef f) -> Internal.LetFunDef f
-          CyclicSCC fs -> Internal.LetMutualBlock (Internal.MutualBlockLet fs')
-            where
-              fs' :: NonEmpty Internal.FunctionDef
-              fs' = nonEmpty' (map getFun fs)
-                where
-                  getFun :: Internal.PreLetStatement -> Internal.FunctionDef
-                  getFun = \case
-                    Internal.PreLetFunctionDef f -> f
-
     goLetFunDefs :: NonEmpty (LetStatement 'Scoped) -> Sem r [Internal.LetClause]
-    goLetFunDefs clauses = maybe [] goPreLetStatements . nonEmpty <$> preLetStatements clauses
+    goLetFunDefs clauses = maybe [] mkLetClauses . nonEmpty <$> preLetStatements clauses
       where
         preLetStatements :: NonEmpty (LetStatement 'Scoped) -> Sem r [Internal.PreLetStatement]
         preLetStatements cl = mapMaybeM preLetStatement (toList cl)

@@ -6,10 +6,12 @@ module Juvix.Compiler.Internal.Extra
   )
 where
 
+import Data.HashMap.Strict qualified as HashMap
 import Data.Stream qualified as Stream
 import Juvix.Compiler.Internal.Data.InfoTable.Base
 import Juvix.Compiler.Internal.Extra.Base
 import Juvix.Compiler.Internal.Extra.Clonable
+import Juvix.Compiler.Internal.Extra.DependencyBuilder
 import Juvix.Compiler.Internal.Language
 import Juvix.Prelude
 
@@ -117,3 +119,46 @@ genFieldProjection _funDefName info fieldIx = do
           { _lambdaType = Nothing,
             _lambdaClauses = pure cl
           }
+
+buildLetMutualBlocks ::
+  NonEmpty PreLetStatement ->
+  NonEmpty (SCC PreLetStatement)
+buildLetMutualBlocks ss = nonEmpty' . mapMaybe nameToPreStatement $ scomponents
+  where
+    -- TODO buildDependencyInfoLet is repeating too much work when there are big nested lets
+    depInfo = buildDependencyInfoLet ss
+
+    scomponents :: [SCC Name] = buildSCCs depInfo
+
+    statementsByName :: HashMap Name PreLetStatement
+    statementsByName = HashMap.fromList (map mkAssoc (toList ss))
+      where
+        mkAssoc :: PreLetStatement -> (Name, PreLetStatement)
+        mkAssoc s = case s of
+          PreLetFunctionDef i -> (i ^. funDefName, s)
+
+    getStmt :: Name -> Maybe PreLetStatement
+    getStmt n = statementsByName ^. at n
+
+    nameToPreStatement :: SCC Name -> Maybe (SCC PreLetStatement)
+    nameToPreStatement = nonEmptySCC . fmap getStmt
+      where
+        nonEmptySCC :: SCC (Maybe a) -> Maybe (SCC a)
+        nonEmptySCC = \case
+          AcyclicSCC a -> AcyclicSCC <$> a
+          CyclicSCC p -> CyclicSCC . toList <$> nonEmpty (catMaybes p)
+
+mkLetClauses :: NonEmpty PreLetStatement -> [LetClause]
+mkLetClauses pre = goSCC <$> (toList (buildLetMutualBlocks pre))
+  where
+    goSCC :: SCC PreLetStatement -> LetClause
+    goSCC = \case
+      AcyclicSCC (PreLetFunctionDef f) -> LetFunDef f
+      CyclicSCC fs -> LetMutualBlock (MutualBlockLet fs')
+        where
+          fs' :: NonEmpty FunctionDef
+          fs' = nonEmpty' (map getFun fs)
+            where
+              getFun :: PreLetStatement -> FunctionDef
+              getFun = \case
+                PreLetFunctionDef f -> f
