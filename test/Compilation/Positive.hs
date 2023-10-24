@@ -407,5 +407,10 @@ tests =
       "Test069: Dependent default values for Ord trait"
       $(mkRelDir ".")
       $(mkRelFile "test069.juvix")
-      $(mkRelFile "out/test069.out")
+      $(mkRelFile "out/test069.out"),
+    posTest
+      "Test070: Nested default values and named arguments"
+      $(mkRelDir ".")
+      $(mkRelFile "test070.juvix")
+      $(mkRelFile "out/test070.out")
   ]
