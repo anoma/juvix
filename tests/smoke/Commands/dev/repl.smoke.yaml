@@ -291,7 +291,7 @@ tests:
       - dev
       - repl
       - -t
-      - identity
+      - identity,eta-expand-apps
     stdin: "0"
     stdout:
       contains: |
