@@ -7,7 +7,6 @@ import Juvix.Compiler.Concrete.Print (ppOutDefault)
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromSource.Data.Context
 import Juvix.Compiler.Pipeline.EntryPoint
-import Juvix.Data.FileExt
 import Juvix.Extra.Paths
 import Juvix.Prelude
 import Juvix.Prelude.Pretty
