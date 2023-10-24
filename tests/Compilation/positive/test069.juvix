@@ -20,10 +20,12 @@ mkOrdHelper
   (cmp : A -> A -> Ordering)
   {lt : A -> A -> Bool := λ {a b := isLT (cmp a b)}}
   {gt : A -> A -> Bool := λ {a b := isGT (cmp a b)}}
-  (n : Nat)
   : Ord A :=
   mkOrd cmp lt gt;
 
--- ordNatNamed : Ord Nat := mkOrdHelper (cmp := Ord.compare; n := 2);
+ordNatNamed : Ord Nat := mkOrdHelper (cmp := Ord.compare);
 
-ordNat : Ord Nat := mkOrdHelper Ord.compare 2;
+instance
+ordNat : Ord Nat := mkOrdHelper Ord.compare;
+
+main : Bool := Ord.lt 1 2;
