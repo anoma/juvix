@@ -32,7 +32,10 @@ data ArityParameter = ArityParameter
     _arityParameterImplicit :: IsImplicit,
     _arityParameterInfo :: ArgInfo
   }
-  deriving stock (Eq)
+
+instance Eq ArityParameter where
+  (ArityParameter ari impl _info) == (ArityParameter ari' impl' _info') =
+    (ari, impl) == (ari', impl')
 
 makeLenses ''UnfoldedArity
 makeLenses ''ArityParameter
