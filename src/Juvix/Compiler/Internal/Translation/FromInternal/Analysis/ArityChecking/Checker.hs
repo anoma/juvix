@@ -734,14 +734,14 @@ checkExpression hintArity expr = case expr of
             infos <- (^. functionInfoDef . funDefArgsInfo) <$> lookupFunction f
             let hasADefault = has (each . argInfoDefault . _Just) infos
             if
-              | hasADefault -> goAppLeftIdenWithDefaults i
-              | otherwise -> noDefaults
+                | hasADefault -> goAppLeftIdenWithDefaults i
+                | otherwise -> noDefaults
           _ -> noDefaults
           where
-          noDefaults :: Sem r Expression
-          noDefaults = do
-            args' :: [ApplicationArg] <- map snd <$> (idenArity i >>= helperDefaultArgs (getLoc i))
-            return (foldApplication fun0 args')
+            noDefaults :: Sem r Expression
+            noDefaults = do
+              args' :: [ApplicationArg] <- map snd <$> (idenArity i >>= helperDefaultArgs (getLoc i))
+              return (foldApplication fun0 args')
 
         goAppLeftIdenWithDefaults :: Iden -> Sem r Expression
         goAppLeftIdenWithDefaults i = do
