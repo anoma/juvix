@@ -384,18 +384,18 @@ tests =
       $(mkRelFile "test064.juvix")
       $(mkRelFile "out/test064.out"),
     posTest
-      "Test065: Dependent default values inserted during translation FromConcrete"
-      $(mkRelDir ".")
-      $(mkRelFile "test065.juvix")
-      $(mkRelFile "out/test065.out"),
-    posTest
-      "Test066: Dependent default values inserted in the arity checker"
-      $(mkRelDir ".")
-      $(mkRelFile "test066.juvix")
-      $(mkRelFile "out/test066.out"),
-    posTest
-      "Test067: Dependent default values for Ord trait"
+      "Test067: Dependent default values inserted during translation FromConcrete"
       $(mkRelDir ".")
       $(mkRelFile "test067.juvix")
-      $(mkRelFile "out/test067.out")
+      $(mkRelFile "out/test067.out"),
+    posTest
+      "Test068: Dependent default values inserted in the arity checker"
+      $(mkRelDir ".")
+      $(mkRelFile "test068.juvix")
+      $(mkRelFile "out/test068.out"),
+    posTest
+      "Test069: Dependent default values for Ord trait"
+      $(mkRelDir ".")
+      $(mkRelFile "test069.juvix")
+      $(mkRelFile "out/test069.out")
   ]
