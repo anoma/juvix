@@ -4,7 +4,7 @@ import Stdlib.Prelude open;
 import PackageDescription open;
 
 package : Package :=
-  mkPackageDefault
+  defaultPackage
      {name := "abc";
       version := mkVersion 0 0 0 ;
-      dependencies := [gitDependency "url" "name" "ref1"]};
+      dependencies := [git "name" "url" "ref1"]};

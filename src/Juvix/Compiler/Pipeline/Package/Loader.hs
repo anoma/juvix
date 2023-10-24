@@ -134,7 +134,7 @@ toPackage buildDir packagePath = \case
         [v] -> do
           p <- mkPrepath . unpack <$> toText v
           return (DependencyPath (PathDependency {_pathDependencyPath = p}))
-        [vUrl, vName, vRef] -> do
+        [vName, vUrl, vRef] -> do
           _gitDependencyUrl <- toText vUrl
           _gitDependencyName <- toText vName
           _gitDependencyRef <- toText vRef

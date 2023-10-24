@@ -38,12 +38,12 @@ tests:
         import PackageDescription open;
 
         package : Package :=
-          mkPackageDefault
+          defaultPackage
             {name := "HelloWorld";
             version := mkVersion 0 0 1;
             dependencies :=
-               [pathDependency ".juvix-build/stdlib";
-                gitDependency "$temp/dep" "dep1" "$dep1hash"];
+               [path ".juvix-build/stdlib";
+                git "dep1" "$temp/dep" "$dep1hash"];
             main := just "HelloWorld.juvix"};
         EOF
 
@@ -104,12 +104,12 @@ tests:
         import PackageDescription open;
 
         package : Package :=
-          mkPackageDefault
+          defaultPackage
             {name := "HelloWorld";
             version := mkVersion 0 0 1;
             dependencies :=
-               [pathDependency ".juvix-build/stdlib";
-                gitDependency "$temp/dep" "dep1" "$dep1hash"];
+               [path ".juvix-build/stdlib";
+                git "dep1" "$temp/dep" "$dep1hash"];
             main := just "HelloWorld.juvix"};
         EOF
 
@@ -174,12 +174,12 @@ tests:
         import PackageDescription open;
 
         package : Package :=
-          mkPackageDefault
+          defaultPackage
             {name := "HelloWorld";
             version := mkVersion 0 0 1;
             dependencies :=
-               [pathDependency ".juvix-build/stdlib";
-                gitDependency "$temp/dep" "dep1" "$dep1hash"];
+               [path ".juvix-build/stdlib";
+                git "dep1" "$temp/dep" "$dep1hash"];
             main := just "HelloWorld.juvix"};
         EOF
 
@@ -221,12 +221,12 @@ tests:
         import PackageDescription open;
 
         package : Package :=
-          mkPackageDefault
+          defaultPackage
             {name := "HelloWorld";
             version := mkVersion 0 0 1;
             dependencies :=
-               [pathDependency ".juvix-build/stdlib";
-                gitDependency "$temp/dep" "dep1" "$dep1hash"];
+               [path ".juvix-build/stdlib";
+                git "dep1" "$temp/dep" "$dep1hash"];
             main := just "HelloWorld.juvix"};
         EOF
 
@@ -283,12 +283,12 @@ tests:
         import PackageDescription open;
 
         package : Package :=
-          mkPackageDefault
+          defaultPackage
             {name := "Dep1";
             version := mkVersion 0 1 0;
             dependencies :=
-               [pathDependency ".juvix-build/stdlib/";
-                gitDependency "$temp/dep2" "dep2" "main"]};
+               [path ".juvix-build/stdlib/";
+                git "dep2" "$temp/dep2" "main"]};
         EOF
 
         git add -A
@@ -308,12 +308,12 @@ tests:
         import PackageDescription open;
 
         package : Package :=
-          mkPackageDefault
+          defaultPackage
             {name := "HelloWorld";
             version := mkVersion 0 0 1;
             dependencies :=
-               [pathDependency ".juvix-build/stdlib/";
-                gitDependency "$temp/dep1" "dep1" "main"];
+               [path ".juvix-build/stdlib/";
+                git "dep1" "$temp/dep1" "main"];
             main := just "HelloWorld.juvix"};
         EOF
 
@@ -420,12 +420,12 @@ tests:
         import PackageDescription open;
 
         package : Package :=
-          mkPackageDefault
+          defaultPackage
             {name := "HelloWorld";
             version := mkVersion 0 0 1;
             dependencies :=
-               [pathDependency ".juvix-build/stdlib";
-                gitDependency "$temp/dep" "dep1" "$dep1hash"];
+               [path ".juvix-build/stdlib";
+                git "dep1" "$temp/dep" "$dep1hash"];
             main := just "HelloWorld.juvix"};
         EOF
 
@@ -466,12 +466,12 @@ tests:
         import PackageDescription open;
 
         package : Package :=
-          mkPackageDefault
+          defaultPackage
             {name := "HelloWorld";
             version := mkVersion 0 0 1;
             dependencies :=
-               [pathDependency ".juvix-build/stdlib";
-                gitDependency "$temp/dep" "dep1" "$dep1hash"];
+               [path ".juvix-build/stdlib";
+                git "dep1" "$temp/dep" "$dep1hash"];
             main := just "HelloWorld.juvix"};
         EOF
 
@@ -531,12 +531,12 @@ tests:
         import PackageDescription open;
 
         package : Package :=
-          mkPackageDefault
+          defaultPackage
             {name := "HelloWorld";
             version := mkVersion 0 0 1;
             dependencies :=
-               [pathDependency ".juvix-build/stdlib";
-                gitDependency "$temp/dep" "dep1" "$dep1hash1"];
+               [path ".juvix-build/stdlib";
+                git "dep1" "$temp/dep" "$dep1hash1"];
             main := just "HelloWorld.juvix"};
         EOF
 
@@ -564,12 +564,12 @@ tests:
         import PackageDescription open;
 
         package : Package :=
-          mkPackageDefault
+          defaultPackage
             {name := "HelloWorld";
             version := mkVersion 0 0 1;
             dependencies :=
-               [pathDependency ".juvix-build/stdlib";
-                gitDependency "$temp/dep" "dep1" "$dep1hash2"];
+               [path ".juvix-build/stdlib";
+                git "dep1" "$temp/dep" "$dep1hash2"];
             main := just "HelloWorld.juvix"};
         EOF
 
@@ -639,12 +639,12 @@ tests:
         import PackageDescription open;
 
         package : Package :=
-          mkPackageDefault
+          defaultPackage
             {name := "Dep1";
             version := mkVersion 0 1 0;
             dependencies :=
-               [pathDependency ".juvix-build/stdlib/";
-                gitDependency "$temp/dep2" "dep2" "main"]};
+               [path ".juvix-build/stdlib/";
+                git "dep2" "$temp/dep2" "main"]};
         EOF
 
         cat <<-EOF > juvix.lock.yaml
@@ -677,12 +677,12 @@ tests:
         import PackageDescription open;
 
         package : Package :=
-          mkPackageDefault
+          defaultPackage
             {name := "HelloWorld";
             version := mkVersion 0 0 1;
             dependencies :=
-               [pathDependency ".juvix-build/stdlib/";
-                gitDependency "$temp/dep1" "dep1" "$dep1hash"];
+               [path ".juvix-build/stdlib/";
+                git "dep1" "$temp/dep1" "$dep1hash"];
             main := just "HelloWorld.juvix"};
         EOF
 
@@ -741,12 +741,12 @@ tests:
         import PackageDescription open;
 
         package : Package :=
-          mkPackageDefault
+          defaultPackage
             {name := "HelloWorld";
             version := mkVersion 0 0 1;
             dependencies :=
-               [pathDependency ".juvix-build/stdlib/";
-                gitDependency "$temp/dep1" "dep1" "$dep1hash"];
+               [path ".juvix-build/stdlib/";
+                git "dep1" "$temp/dep1" "$dep1hash"];
             main := just "HelloWorld.juvix"};
         EOF
 
@@ -825,12 +825,12 @@ tests:
         import PackageDescription open;
 
         package : Package :=
-          mkPackageDefault
+          defaultPackage
             {name := "HelloWorld";
             version := mkVersion 0 0 1;
             dependencies :=
-               [pathDependency ".juvix-build/stdlib";
-                gitDependency "$temp/dep" "dep1" "$dep1hash1"];
+               [path ".juvix-build/stdlib";
+                git "dep1" "$temp/dep" "$dep1hash1"];
             main := just "HelloWorld.juvix"};
         EOF
 
@@ -863,12 +863,12 @@ tests:
         import PackageDescription open;
 
         package : Package :=
-          mkPackageDefault
+          defaultPackage
             {name := "HelloWorld";
             version := mkVersion 0 0 1;
             dependencies :=
-               [pathDependency ".juvix-build/stdlib";
-                gitDependency "$temp/dep" "dep1" "$dep1hash2"];
+               [path ".juvix-build/stdlib";
+                git "dep1" "$temp/dep" "$dep1hash2"];
             main := just "HelloWorld.juvix"};
         EOF
 
@@ -914,12 +914,12 @@ tests:
         import PackageDescription open;
 
         package : Package :=
-          mkPackageDefault
+          defaultPackage
             {name := "HelloWorld";
             version := mkVersion 0 0 1;
             dependencies :=
-               [pathDependency ".juvix-build/stdlib";
-                gitDependency "$temp/dep" "dep1" "invalid-ref"];
+               [path ".juvix-build/stdlib";
+                git "dep1" "$temp/dep" "invalid-ref"];
             main := just "HelloWorld.juvix"};
         EOF
 
@@ -961,12 +961,12 @@ tests:
         import PackageDescription open;
 
         package : Package :=
-          mkPackageDefault
+          defaultPackage
             {name := "HelloWorld";
             version := mkVersion 0 0 1;
             dependencies :=
-               [pathDependency ".juvix-build/stdlib";
-                gitDependency "$temp/dep" "dep1" "main"];
+               [path ".juvix-build/stdlib";
+                git "dep1" "$temp/dep" "main"];
             main := just "HelloWorld.juvix"};
         EOF
 
@@ -1008,12 +1008,12 @@ tests:
         import PackageDescription open;
 
         package : Package :=
-          mkPackageDefault
+          defaultPackage
             {name := "HelloWorld";
             version := mkVersion 0 0 1;
             dependencies :=
-               [pathDependency ".juvix-build/stdlib";
-                gitDependency "$temp/dep" "dep1" "main"];
+               [path ".juvix-build/stdlib";
+                git "dep1" "$temp/dep" "main"];
             main := just "HelloWorld.juvix"};
         EOF
 
@@ -1077,12 +1077,12 @@ tests:
         import PackageDescription open;
 
         package : Package :=
-          mkPackageDefault
+          defaultPackage
             {name := "HelloWorld";
             version := mkVersion 0 0 1;
             dependencies :=
-               [pathDependency ".juvix-build/stdlib";
-                gitDependency "$temp/dep" "dep1" "$dep1hash"];
+               [path ".juvix-build/stdlib";
+                git "dep1" "$temp/dep" "$dep1hash"];
             main := just "HelloWorld.juvix"};
         EOF
 
@@ -1130,13 +1130,13 @@ tests:
         import PackageDescription open;
 
         package : Package :=
-          mkPackageDefault
+          defaultPackage
             {name := "HelloWorld";
             version := mkVersion 0 0 1;
             dependencies :=
-               [pathDependency ".juvix-build/stdlib";
-                gitDependency "$temp/dep1" "dep1" "main";
-                gitDependency "$temp/dep2" "dep1" "main"];
+               [path ".juvix-build/stdlib";
+                git "dep1" "$temp/dep1" "main";
+                git "dep1" "$temp/dep2" "main"];
             main := just "HelloWorld.juvix"};
         EOF
 
@@ -1195,12 +1195,12 @@ tests:
         import PackageDescription open;
 
         package : Package :=
-          mkPackageDefault
+          defaultPackage
             {name := "HelloWorld";
             version := mkVersion 0 0 1;
             dependencies :=
-               [pathDependency ".juvix-build/stdlib";
-                gitDependency "$temp/dep" "dep1" "$dep1hash"];
+               [path ".juvix-build/stdlib";
+                git "dep1" "$temp/dep" "$dep1hash"];
             main := just "HelloWorld.juvix"};
         EOF
 
