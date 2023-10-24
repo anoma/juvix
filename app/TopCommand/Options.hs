@@ -186,16 +186,6 @@ commandHtml =
       (Html <$> parseHtml)
       (progDesc "Generate HTML for a Juvix file")
 
-<<<<<<< HEAD
-=======
-commandMarkdown :: Mod CommandFields TopCommand
-commandMarkdown =
-  command "markdown" $
-    info
-      (Markdown <$> parseJuvixMarkdown)
-      (progDesc "Translate Juvix code blocks in a Markdown file to HTML")
-
->>>>>>> 79ec18a0 (Refactor. Add FileExt type)
 commandDev :: Mod CommandFields TopCommand
 commandDev =
   command "dev" $

@@ -1,23 +1,23 @@
 module Juvix.Data.FileExt where
 
-import Juvix.Prelude.Path
-import Juvix.Prelude.Base
-import Juvix.Prelude.Pretty
 import Data.Text qualified as Text
+import Juvix.Prelude.Base
+import Juvix.Prelude.Path
+import Juvix.Prelude.Pretty
 import Prelude (show)
 
 -- | File extensions Juvix interacts with.
-data FileExt = 
-      FileExtJuvix
-    | FileExtJuvixMarkdown
-    | FileExtJuvixGeb
-    | FileExtJuvixCore
-    | FileExtJuvixAsm
-    | FileExtLisp
-    | FileC 
-    | FileExtMarkdown
-    | FileExtHtml
-    deriving stock (Eq)
+data FileExt
+  = FileExtJuvix
+  | FileExtJuvixMarkdown
+  | FileExtJuvixGeb
+  | FileExtJuvixCore
+  | FileExtJuvixAsm
+  | FileExtLisp
+  | FileC
+  | FileExtMarkdown
+  | FileExtHtml
+  deriving stock (Eq)
 
 juvixFileExt :: IsString a => a
 juvixFileExt = ".juvix"
@@ -59,7 +59,7 @@ toText = \case
   FileExtHtml -> htmlFileExt
 
 toMetavar :: FileExt -> String
-toMetavar = \case 
+toMetavar = \case
   FileExtJuvix -> "JUVIX_FILE"
   FileExtJuvixMarkdown -> "JUVIX_MARKDOWN_FILE"
   FileExtJuvixGeb -> "JUVIX_GEB_FILE"
@@ -81,7 +81,7 @@ isJuvixFile = (== Just juvixFileExt) . fileExtension
 
 isJuvixMarkdownFile :: Path b File -> Bool
 isJuvixMarkdownFile p = case splitExtension p of
-  Just (f, ext) -> ext == juvixMarkdownFileExt && isJuvixFile f 
+  Just (f, ext) -> ext == juvixMarkdownFileExt && isJuvixFile f
   _ -> False
 
 isJuvixGebFile :: Path b File -> Bool
