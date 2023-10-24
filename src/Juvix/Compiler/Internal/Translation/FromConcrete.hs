@@ -780,10 +780,7 @@ goExpression = \case
           ty <- goExpression (arg ^. argType)
           return $
             Internal.LetFunDef
-              ( (Internal.simpleFunDef (goSymbol (arg ^. argName)) ty body')
-                  { Internal._funDefTerminating = True
-                  }
-              )
+              (Internal.simpleFunDef (goSymbol (arg ^. argName)) ty body')
 
     goRecordCreation :: Concrete.RecordCreation 'Scoped -> Sem r Internal.Expression
     goRecordCreation Concrete.RecordCreation {..} = do

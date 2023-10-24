@@ -75,7 +75,7 @@ registerFunctionDef ::
   (Members '[State CallMap] r) =>
   FunctionDef ->
   Sem r ()
-registerFunctionDef f = modify' (set ((callMapScanned . at (f ^. funDefName))) (Just f))
+registerFunctionDef f = modify' (set (callMapScanned . at (f ^. funDefName)) (Just f))
 
 registerCall ::
   (Members '[State CallMap, Reader FunctionRef] r) =>
