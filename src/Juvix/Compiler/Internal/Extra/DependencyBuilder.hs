@@ -193,7 +193,7 @@ goFunctionDefHelper f = do
     goInstance f
   goExpression (Just (f ^. funDefName)) (f ^. funDefType)
   goExpression (Just (f ^. funDefName)) (f ^. funDefBody)
-  mapM_ (goExpression (Just (f ^. funDefName))) (catMaybes (concat (f ^. funDefDefaultSignature ^.. defaultSignature)))
+  mapM_ (goExpression (Just (f ^. funDefName))) (f ^.. funDefArgsInfo . each . argInfoDefault . _Just)
 
 -- constructors of an inductive type depend on the inductive type, not the other
 -- way round; an inductive type depends on the types of its constructors
