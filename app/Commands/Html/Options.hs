@@ -6,12 +6,15 @@ import Juvix.Compiler.Backend.Html.Data.Options hiding (HtmlOptions)
 data HtmlOptions = HtmlOptions
   { _htmlNonRecursive :: Bool,
     _htmlOnlySource :: Bool,
+    _htmlOnlyCode :: Bool,
     _htmlTheme :: Theme,
     _htmlOutputDir :: AppPath Dir,
     _htmlInputFile :: AppPath File,
     _htmlNoFooter :: Bool,
+    _htmlNoPath :: Bool,
     _htmlAssetsPrefix :: Text,
     _htmlUrlPrefix :: Text,
+    _htmlIdPrefix :: Text,
     _htmlOpen :: Bool
   }
   deriving stock (Data)
@@ -23,12 +26,17 @@ parseHtml = do
   _htmlNonRecursive <-
     switch
       ( long "non-recursive"
-          <> help "Don't process imported modules recursively"
+          <> help "Do not process imported modules recursively"
       )
   _htmlOnlySource <-
     switch
       ( long "only-source"
           <> help "Generate only Html for the source code with syntax highlighting"
+      )
+  _htmlOnlyCode <-
+    switch
+      ( long "only-code"
+          <> help "If --only-source is enabled, only generate the code without the header and footer"
       )
   _htmlTheme <-
     option
@@ -52,6 +60,11 @@ parseHtml = do
       ( long "no-footer"
           <> help "Remove HTML Juvix footer"
       )
+  _htmlNoPath <-
+    switch
+      ( long "no-path"
+          <> help "Remove the path from all hyperlinks"
+      )
   _htmlAssetsPrefix <-
     strOption
       ( value ""
@@ -65,6 +78,13 @@ parseHtml = do
           <> long "prefix-url"
           <> showDefault
           <> help "Prefix used for inner Juvix hyperlinks"
+      )
+  _htmlIdPrefix <-
+    strOption
+      ( value ""
+          <> long "prefix-id"
+          <> showDefault
+          <> help "Prefix used for HTML element IDs"
       )
   _htmlOpen <-
     switch

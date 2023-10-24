@@ -10,6 +10,7 @@ import Examples qualified
 import Format qualified
 import Formatter qualified
 import Internal qualified
+import Package qualified
 import Parsing qualified
 import Reachability qualified
 import Runtime qualified
@@ -43,7 +44,8 @@ fastTests =
       Typecheck.allTests,
       Reachability.allTests,
       Format.allTests,
-      Formatter.allTests
+      Formatter.allTests,
+      Package.allTests
     ]
 
 main :: IO ()

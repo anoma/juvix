@@ -5,14 +5,16 @@ module Base
     module Base,
     module Juvix.Extra.Paths,
     module Juvix.Prelude.Env,
-    module Juvix.Compiler.Pipeline,
+    module Juvix.Compiler.Pipeline.Run,
+    module Juvix.Compiler.Pipeline.EntryPoint.IO,
   )
 where
 
 import Control.Monad.Extra as Monad
 import Data.Algorithm.Diff
 import Data.Algorithm.DiffOutput
-import Juvix.Compiler.Pipeline
+import Juvix.Compiler.Pipeline.EntryPoint.IO
+import Juvix.Compiler.Pipeline.Run
 import Juvix.Extra.Paths
 import Juvix.Prelude hiding (assert)
 import Juvix.Prelude.Env

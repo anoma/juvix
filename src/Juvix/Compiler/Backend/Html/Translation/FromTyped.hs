@@ -39,7 +39,9 @@ data JudocArgs = JudocArgs
     _judocArgsCtx :: InternalTypedResult,
     _judocArgsTheme :: Theme,
     _judocArgsNonRecursive :: Bool,
-    _judocArgsNoFooter :: Bool
+    _judocArgsNoFooter :: Bool,
+    _judocArgsIdPrefix :: Text,
+    _judocArgsNoPath :: Bool
   }
 
 makeLenses ''JudocArgs
@@ -190,9 +192,12 @@ genJudocHtml JudocArgs {..} =
           _htmlOptionsAssetsPrefix = _judocArgsAssetsPrefix,
           _htmlOptionsOutputDir = _judocArgsOutputDir,
           _htmlOptionsUrlPrefix = _judocArgsUrlPrefix,
+          _htmlOptionsIdPrefix = _judocArgsIdPrefix,
           _htmlOptionsParamBase = _judocArgsBaseName,
           _htmlOptionsTheme = _judocArgsTheme,
-          _htmlOptionsNoFooter = _judocArgsNoFooter
+          _htmlOptionsNoFooter = _judocArgsNoFooter,
+          _htmlOptionsOnlyCode = False,
+          _htmlOptionsNoPath = _judocArgsNoPath
         }
 
     allModules
@@ -426,7 +431,7 @@ goStatement = \case
   StatementOpenModule t -> goOpen t
   StatementFunctionDef t -> goFunctionDef t
   StatementSyntax s -> goSyntax s
-  StatementImport {} -> mempty
+  StatementImport s -> goImport s
   StatementModule m -> goLocalModule m
   StatementProjectionDef {} -> mempty
   where
@@ -501,6 +506,11 @@ goLocalModule def = fmap (fromMaybe mempty) . runFail $ do
       )
       <$> mconcatMap goStatement (def ^. moduleBody)
   return (header' <> body')
+
+goImport :: forall r. (Members '[Reader HtmlOptions] r) => Import 'Scoped -> Sem r Html
+goImport op
+  | Just Public <- op ^? importOpen . _Just . openPublic = noDefHeader <$> ppCodeHtml defaultOptions op
+  | otherwise = mempty
 
 goOpen :: forall r. (Members '[Reader HtmlOptions] r) => OpenModule 'Scoped -> Sem r Html
 goOpen op

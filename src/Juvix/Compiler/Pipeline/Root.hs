@@ -1,20 +1,14 @@
-module Juvix.Compiler.Pipeline.Root where
+module Juvix.Compiler.Pipeline.Root
+  ( module Juvix.Compiler.Pipeline.Root,
+    module Juvix.Compiler.Pipeline.Root.Base,
+  )
+where
 
 import Control.Exception qualified as IO
 import Juvix.Compiler.Pipeline.Package
+import Juvix.Compiler.Pipeline.Root.Base
 import Juvix.Extra.Paths qualified as Paths
 import Juvix.Prelude
-
-data Roots = Roots
-  { _rootsRootDir :: Path Abs Dir,
-    _rootsPackage :: Package,
-    _rootsPackageGlobal :: Bool,
-    _rootsBuildDir :: Path Abs Dir,
-    _rootsInvokeDir :: Path Abs Dir
-  }
-  deriving stock (Show)
-
-makeLenses ''Roots
 
 findRootAndChangeDir ::
   Maybe (Path Abs Dir) ->

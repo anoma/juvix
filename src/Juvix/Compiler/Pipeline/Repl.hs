@@ -13,6 +13,7 @@ import Juvix.Compiler.Internal qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromConcrete qualified as FromConcrete
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker
 import Juvix.Compiler.Pipeline.Artifacts
+import Juvix.Compiler.Pipeline.Artifacts.PathResolver
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Data.Effect.Git.Process
 import Juvix.Data.Effect.Git.Process.Error

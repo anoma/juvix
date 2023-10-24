@@ -6,7 +6,7 @@
 
 // The least significant two bits encode object kind
 #define KIND_MASK 3
-#define GET_KIND(x) ((word_t)(x)&KIND_MASK)
+#define GET_KIND(x) ((word_t)(x) & KIND_MASK)
 
 #define KIND_PTR 0
 #define KIND_UNBOXED0 1
@@ -14,7 +14,7 @@
 #define KIND_HEADER 2
 
 #define KIND3_MASK 7
-#define GET_KIND3(x) ((word_t)(x)&KIND3_MASK)
+#define GET_KIND3(x) ((word_t)(x) & KIND3_MASK)
 
 static inline bool is_unboxed(word_t x) { return x & 1; }
 static inline bool is_ptr(word_t x) { return GET_KIND(x) == KIND_PTR; }
@@ -60,7 +60,7 @@ static inline word_t clear_mark(word_t x) { return x & ~MARK_MASK; }
 
 #define UID_MASK ((word_t)0x00FFFFF0)
 #define UID_SHIFT 4U
-#define GET_UID(x) (((word_t)(x)&UID_MASK) >> UID_SHIFT)
+#define GET_UID(x) (((word_t)(x) & UID_MASK) >> UID_SHIFT)
 
 #define NFIELDS_MASK 0xFF000000
 #define NFIELDS_SHIFT 24U
@@ -105,16 +105,16 @@ static inline bool is_special_header(word_t x) {
 
 #define SUID_MASK ((word_t)0x30)
 #define SUID_SHIFT 4U
-#define GET_SUID(x) (((word_t)(x)&SUID_MASK) >> SUID_SHIFT)
+#define GET_SUID(x) (((word_t)(x) & SUID_MASK) >> SUID_SHIFT)
 
 #define SKIP_MASK ((word_t)0xC0)
 #define SKIP_SHIFT 6U
-#define GET_SKIP(x) (((word_t)(x)&SKIP_MASK) >> SKIP_SHIFT)
+#define GET_SKIP(x) (((word_t)(x) & SKIP_MASK) >> SKIP_SHIFT)
 #define SKIP_ALL 3U
 
 #define RESERVED_MASK 0x00FFFF00
 #define RESERVED_SHIFT 8U
-#define GET_RESERVED(x) (((word_t)(x)&RESERVED_MASK) >> RESERVED_SHIFT)
+#define GET_RESERVED(x) (((word_t)(x) & RESERVED_MASK) >> RESERVED_SHIFT)
 
 static inline word_t make_special_header(word_t suid, word_t nfields,
                                          word_t skip, word_t reserved) {

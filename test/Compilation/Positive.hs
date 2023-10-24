@@ -384,6 +384,16 @@ tests =
       $(mkRelFile "test064.juvix")
       $(mkRelFile "out/test064.out"),
     posTest
+      "Test065: Arithmetic simplification"
+      $(mkRelDir ".")
+      $(mkRelFile "test065.juvix")
+      $(mkRelFile "out/test065.out"),
+    posTest
+      "Test066: Import function with a function call in default argument"
+      $(mkRelDir "test066")
+      $(mkRelFile "M.juvix")
+      $(mkRelFile "out/test066.out"),
+    posTest
       "Test067: Dependent default values inserted during translation FromConcrete"
       $(mkRelDir ".")
       $(mkRelFile "test067.juvix")

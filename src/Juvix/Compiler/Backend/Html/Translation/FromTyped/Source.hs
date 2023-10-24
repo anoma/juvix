@@ -48,10 +48,13 @@ data GenSourceHtmlArgs = GenSourceHtmlArgs
     _genSourceHtmlArgsHtmlKind :: HtmlKind,
     _genSourceHtmlArgsParamBase :: Text,
     _genSourceHtmlArgsUrlPrefix :: Text,
+    _genSourceHtmlArgsIdPrefix :: Text,
+    _genSourceHtmlArgsOnlyCode :: Bool,
     _genSourceHtmlArgsModule :: Module 'Scoped 'ModuleTop,
     _genSourceHtmlArgsOutputDir :: Path Abs Dir,
     _genSourceHtmlArgsNonRecursive :: Bool,
     _genSourceHtmlArgsNoFooter :: Bool,
+    _genSourceHtmlArgsNoPath :: Bool,
     _genSourceHtmlArgsComments :: Comments,
     _genSourceHtmlArgsTheme :: Theme
   }
@@ -89,11 +92,14 @@ genSourceHtml o@GenSourceHtmlArgs {..} = do
       HtmlOptions
         { _htmlOptionsOutputDir = o ^. genSourceHtmlArgsOutputDir,
           _htmlOptionsUrlPrefix = o ^. genSourceHtmlArgsUrlPrefix,
+          _htmlOptionsIdPrefix = o ^. genSourceHtmlArgsIdPrefix,
+          _htmlOptionsOnlyCode = o ^. genSourceHtmlArgsOnlyCode,
           _htmlOptionsAssetsPrefix = o ^. genSourceHtmlArgsAssetsDir,
           _htmlOptionsKind = o ^. genSourceHtmlArgsHtmlKind,
           _htmlOptionsParamBase = o ^. genSourceHtmlArgsParamBase,
           _htmlOptionsTheme = o ^. genSourceHtmlArgsTheme,
-          _htmlOptionsNoFooter = o ^. genSourceHtmlArgsNoFooter
+          _htmlOptionsNoFooter = o ^. genSourceHtmlArgsNoFooter,
+          _htmlOptionsNoPath = o ^. genSourceHtmlArgsNoPath
         }
 
     entry = o ^. genSourceHtmlArgsModule
@@ -148,10 +154,15 @@ genModuleHtml ::
   GenModuleHtmlArgs ->
   Sem r Html
 genModuleHtml o = do
-  outHtml <- mhead <> mbody
-  return $
-    docTypeHtml ! Attr.xmlns "http://www.w3.org/1999/xhtml" $
-      outHtml
+  onlyCode <- asks (^. htmlOptionsOnlyCode)
+  if
+      | onlyCode -> justCode
+      | otherwise -> do
+          hd <- mhead
+          bd <- mbody
+          return $
+            docTypeHtml ! Attr.xmlns "http://www.w3.org/1999/xhtml" $
+              hd <> bd
   where
     mhead :: Sem r Html
     mhead = do
@@ -166,7 +177,7 @@ genModuleHtml o = do
     mbody =
       fold
         [ mheader,
-          prettySrc,
+          preTagCode,
           htmlJuvixFooter,
           formattedTime
         ]
@@ -181,14 +192,15 @@ genModuleHtml o = do
               "%Y-%m-%d %-H:%M %Z"
               (o ^. genModuleHtmlArgsUTC)
 
-    prettySrc :: Sem r Html
-    prettySrc = do
-      pp <-
-        ppModuleSrcHtml
-          (o ^. genModuleHtmlArgsConcreteOpts)
-          (o ^. genModuleHtmlArgsComments)
-          (o ^. genModuleHtmlArgsModule)
-      return $ (pre ! Attr.id "src-content") pp
+    justCode :: Sem r Html
+    justCode =
+      ppModuleSrcHtml
+        (o ^. genModuleHtmlArgsConcreteOpts)
+        (o ^. genModuleHtmlArgsComments)
+        (o ^. genModuleHtmlArgsModule)
+
+    preTagCode :: Sem r Html
+    preTagCode = (pre ! Attr.id "src-content") <$> justCode
 
     mheader :: Sem r Html
     mheader =
@@ -305,7 +317,8 @@ putTag ann x = case ann of
     tagDef :: TopModulePath -> S.NameId -> Sem r Html
     tagDef tmp nid = do
       ref' <- tagRef tmp nid
-      return $ (Html.span ! Attr.id (nameIdAttr nid)) ref'
+      attrId <- nameIdAttr nid
+      return $ (Html.span ! Attr.id attrId) ref'
 
     tagRef :: TopModulePath -> S.NameId -> Sem r Html
     tagRef tmp ni = do
@@ -330,8 +343,10 @@ putTag ann x = case ann of
               S.KNameFixity -> JuFixity
           )
 
-nameIdAttr :: S.NameId -> AttributeValue
-nameIdAttr (S.NameId k) = fromString . show $ k
+nameIdAttr :: (Members '[Reader HtmlOptions] r) => S.NameId -> Sem r AttributeValue
+nameIdAttr (S.NameId k) = do
+  pfx <- unpack <$> asks (^. htmlOptionsIdPrefix)
+  return $ fromString $ pfx <> show k
 
 moduleDocRelativePath :: (Members '[Reader HtmlOptions] r) => TopModulePath -> Sem r (Path Rel File)
 moduleDocRelativePath m = do
@@ -340,10 +355,13 @@ moduleDocRelativePath m = do
 
 nameIdAttrRef :: (Members '[Reader HtmlOptions] r) => TopModulePath -> Maybe S.NameId -> Sem r AttributeValue
 nameIdAttrRef tp s = do
-  pth <- toFilePath <$> moduleDocRelativePath tp
   prefixUrl <- unpack <$> asks (^. htmlOptionsUrlPrefix)
-  return $
-    fromString prefixUrl
-      <> fromString pth
-      <> preEscapedToValue '#'
-      <>? (nameIdAttr <$> s)
+  path <- toFilePath <$> moduleDocRelativePath tp
+  noPath <- asks (^. htmlOptionsNoPath)
+  let prefix = prefixUrl <> if noPath then "" else path
+  attr <-
+    maybe
+      (return mempty)
+      (((preEscapedToValue '#' <>) <$>) . nameIdAttr)
+      s
+  return $ fromString prefix <> attr

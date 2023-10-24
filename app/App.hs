@@ -5,7 +5,7 @@ import Data.ByteString qualified as ByteString
 import GlobalOptions
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker
-import Juvix.Compiler.Pipeline
+import Juvix.Compiler.Pipeline.Run
 import Juvix.Data.Error qualified as Error
 import Juvix.Extra.Paths.Base
 import Juvix.Prelude.Pretty hiding
