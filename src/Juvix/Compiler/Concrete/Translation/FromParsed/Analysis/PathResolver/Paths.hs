@@ -4,7 +4,8 @@ import Juvix.Compiler.Concrete.Data.Name
 import Juvix.Prelude
 
 topModulePathToRelativePath' :: TopModulePath -> Path Rel File
-topModulePathToRelativePath' = topModulePathToRelativePath ".juvix" "" (</>)
+topModulePathToRelativePath' =
+  topModulePathToRelativePath (show FileExtJuvix) "" (</>)
 
 topModulePathToRelativePath :: String -> String -> (FilePath -> FilePath -> FilePath) -> TopModulePath -> Path Rel File
 topModulePathToRelativePath ext suffix joinpath mp = relFile relFilePath

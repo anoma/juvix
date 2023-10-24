@@ -1,6 +1,7 @@
 module Commands.Dev.Geb.Eval.Options where
 
 import CommonOptions
+import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Compiler.Backend.Geb.Evaluator qualified as Geb
 import Juvix.Compiler.Backend.Geb.Pretty qualified as Geb
 

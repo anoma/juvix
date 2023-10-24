@@ -1,6 +1,7 @@
 module Commands.Dev.Geb.Read.Options where
 
 import CommonOptions
+import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Compiler.Backend.Geb.Pretty qualified as Geb
 
 newtype GebReadOptions = GebReadOptions
