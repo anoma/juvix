@@ -1,5 +1,5 @@
 -- Default values inserted in the arity checker
-module test066;
+module test068;
 
 import Stdlib.Data.Nat.Base open;
 
