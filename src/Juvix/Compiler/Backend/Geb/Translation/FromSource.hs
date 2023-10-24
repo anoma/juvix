@@ -7,6 +7,7 @@ where
 import Juvix.Compiler.Backend.Geb.Keywords
 import Juvix.Compiler.Backend.Geb.Language qualified as Geb
 import Juvix.Compiler.Backend.Geb.Translation.FromSource.Lexer
+import Juvix.Data.FileExt
 import Juvix.Parser.Error
 import Juvix.Prelude
 import Text.Megaparsec qualified as P

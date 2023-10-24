@@ -29,7 +29,7 @@ instance CanonicalProjection EvalOptions Eval.EvalOptions where
 
 parseEvalOptions :: Parser EvalOptions
 parseEvalOptions = do
-  _evalInputFile <- parseInputJuvixFile
+  _evalInputFile <- parseInputFile FileExtJuvix
   _evalSymbolName <-
     optional $
       strOption

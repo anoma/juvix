@@ -26,7 +26,7 @@ parseHighlight = do
           <> completeWith (map show allBackends)
       )
 
-  _highlightInputFile <- parseInputJuvixFile
+  _highlightInputFile <- parseInputFile FileExtJuvix
   pure HighlightOptions {..}
   where
     allBackends :: [HighlightBackend]

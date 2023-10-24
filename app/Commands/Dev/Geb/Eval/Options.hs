@@ -23,7 +23,7 @@ instance CanonicalProjection GebEvalOptions Geb.Options where
 
 parseGebEvalOptions :: Parser GebEvalOptions
 parseGebEvalOptions = do
-  _gebEvalOptionsInputFile <- parseInputJuvixGebFile
+  _gebEvalOptionsInputFile <- parseInputFile FileExtJuvixGeb
   _gebEvalOptionsOutputMorphism <- optOutputMorphism
   pure GebEvalOptions {..}
 

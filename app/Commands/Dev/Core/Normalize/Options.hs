@@ -38,5 +38,5 @@ parseCoreNormalizeOptions = do
   _coreNormalizeShowIdentIds <- optIdentIds
   _coreNormalizeShowArgsNum <- optArgsNum
   _coreNormalizeNoDisambiguate <- optNoDisambiguate
-  _coreNormalizeInputFile <- parseInputJuvixCoreFile
+  _coreNormalizeInputFile <- parseInputFile FileExtJuvixCore
   pure CoreNormalizeOptions {..}

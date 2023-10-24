@@ -2,6 +2,7 @@ module Juvix.Data
   ( module Juvix.Data.Effect,
     module Juvix.Data.Error,
     module Juvix.Data.Fixity,
+    module Juvix.Data.FileExt,
     module Juvix.Data.Hole,
     module Juvix.Data.IsImplicit,
     module Juvix.Data.Loc,
@@ -23,6 +24,7 @@ import Juvix.Data.Comment
 import Juvix.Data.DependencyInfo
 import Juvix.Data.Effect
 import Juvix.Data.Error
+import Juvix.Data.FileExt
 import Juvix.Data.Fixity
 import Juvix.Data.Hole
 import Juvix.Data.Irrelevant

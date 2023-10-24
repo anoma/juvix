@@ -25,7 +25,7 @@ parseScope = do
       ( long "list-comments"
           <> help "List the user comments"
       )
-  _scopeInputFile <- parseInputJuvixFile
+  _scopeInputFile <- parseInputFile FileExtJuvix
   pure ScopeOptions {..}
 
 instance CanonicalProjection (GlobalOptions, ScopeOptions) Scoper.Options where

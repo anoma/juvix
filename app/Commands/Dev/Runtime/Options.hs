@@ -19,7 +19,7 @@ parseRuntimeOptions :: Parser CompileOptions
 parseRuntimeOptions =
   parseCompileOptions
     runtimeSupportedTargets
-    parseInputJuvixFile
+    (parseInputFile FileExtJuvix)
 
 parseRuntimeCommand :: Parser RuntimeCommand
 parseRuntimeCommand =

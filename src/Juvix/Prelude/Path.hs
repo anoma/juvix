@@ -64,15 +64,6 @@ destructAbsFile x = (root, dirs, filename x)
   where
     (root, dirs) = destructAbsDir (parent x)
 
-isJuvixFile :: Path b File -> Bool
-isJuvixFile = (== Just ".juvix") . fileExtension
-
-isJuvixGebFile :: Path b File -> Bool
-isJuvixGebFile = (== Just ".geb") . fileExtension
-
-isLispFile :: Path b File -> Bool
-isLispFile = (== Just ".lisp") . fileExtension
-
 isHiddenDirectory :: Path b Dir -> Bool
 isHiddenDirectory p
   | toFilePath p == relRootFP = False

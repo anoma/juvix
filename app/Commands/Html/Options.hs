@@ -91,7 +91,7 @@ parseHtml = do
       ( long "open"
           <> help "Open the documentation after generating it"
       )
-  _htmlInputFile <- parseInputJuvixFile
+  _htmlInputFile <- parseInputFile FileExtJuvix
   pure HtmlOptions {..}
   where
     allThemes :: [Theme]

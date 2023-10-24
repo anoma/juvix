@@ -3,6 +3,7 @@ module Commands.Dev.Core.Eval.Options where
 import CommonOptions
 import Evaluator qualified as Eval
 import Juvix.Compiler.Core.Pretty.Options qualified as Core
+import Juvix.Data.FileExt
 
 data CoreEvalOptions = CoreEvalOptions
   { _coreEvalNoIO :: Bool,
@@ -44,5 +45,5 @@ parseCoreEvalOptions = do
   _coreEvalShowIdentIds <- optIdentIds
   _coreEvalShowArgsNum <- optArgsNum
   _coreEvalNoDisambiguate <- optNoDisambiguate
-  _coreEvalInputFile <- parseInputJuvixCoreFile
+  _coreEvalInputFile <- parseInputFile FileExtJuvixCore
   pure CoreEvalOptions {..}

@@ -17,5 +17,5 @@ parseAsmRunOptions = do
       ( long "no-validate"
           <> help "Don't validate the input before running"
       )
-  _asmRunInputFile <- parseInputJuvixAsmFile
+  _asmRunInputFile <- parseInputFile FileExtJuvixAsm
   pure AsmRunOptions {..}

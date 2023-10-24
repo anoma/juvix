@@ -21,4 +21,4 @@ parseAsmCompileOptions :: Parser AsmCompileOptions
 parseAsmCompileOptions =
   parseCompileOptions
     asmSupportedTargets
-    parseInputJuvixAsmFile
+    (parseInputFile FileExtJuvixAsm)

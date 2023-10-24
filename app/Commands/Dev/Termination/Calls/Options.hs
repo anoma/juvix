@@ -34,7 +34,7 @@ parseCalls = do
           <> value Internal.ArgRel
           <> help "possible values: argument, relation, both"
       )
-  _callsInputFile <- parseInputJuvixFile
+  _callsInputFile <- parseInputFile FileExtJuvix
   pure CallsOptions {..}
   where
     decrArgsParser :: ReadM Internal.ShowDecrArgs

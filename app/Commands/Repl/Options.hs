@@ -30,7 +30,7 @@ parseRepl = do
       _replNoDisambiguate = False
       _replPrintValues = True
       _replIsDev = False
-  _replInputFile <- optional parseInputJuvixFile
+  _replInputFile <- optional (parseInputFile FileExtJuvix)
   _replNoPrelude <-
     switch
       ( long "no-prelude"

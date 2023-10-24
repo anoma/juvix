@@ -12,7 +12,7 @@ makeLenses ''TypecheckOptions
 
 parseTypecheck :: Parser TypecheckOptions
 parseTypecheck = do
-  _typecheckInputFile <- parseInputJuvixFile
+  _typecheckInputFile <- parseInputFile FileExtJuvix
   pure TypecheckOptions {..}
 
 instance CanonicalProjection TypecheckOptions Internal.InternalTypeOptions where
