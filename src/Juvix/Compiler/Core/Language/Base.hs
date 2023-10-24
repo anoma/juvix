@@ -10,6 +10,7 @@ where
 
 import Juvix.Compiler.Core.Info (Info, IsInfo, Key)
 import Juvix.Compiler.Core.Language.Builtins
+import Juvix.Extra.Serialize
 import Juvix.Prelude
 
 type Location = Interval
@@ -30,6 +31,8 @@ data Tag
   deriving stock (Eq, Generic, Ord, Show)
 
 instance Hashable Tag
+
+instance Serialize Tag
 
 isBuiltinTag :: Tag -> Bool
 isBuiltinTag = \case

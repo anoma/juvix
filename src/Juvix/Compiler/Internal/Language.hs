@@ -15,6 +15,7 @@ import Juvix.Data.Hole
 import Juvix.Data.IsImplicit
 import Juvix.Data.Universe hiding (smallUniverse)
 import Juvix.Data.WithLoc
+import Juvix.Extra.Serialize
 import Juvix.Prelude
 
 type Module = Module' MutualBlock
@@ -39,18 +40,18 @@ data Module' stmt = Module
     _moduleBody :: ModuleBody' stmt,
     _modulePragmas :: Pragmas
   }
-  deriving stock (Data)
+  deriving stock (Data, Generic)
 
 newtype Import = Import
   { _importModule :: ModuleIndex
   }
-  deriving stock (Data)
+  deriving stock (Data, Generic)
 
 data ModuleBody' stmt = ModuleBody
   { _moduleImports :: [Import],
     _moduleStatements :: [stmt]
   }
-  deriving stock (Data)
+  deriving stock (Data, Generic)
 
 data MutualStatement
   = StatementInductive InductiveDef
@@ -70,13 +71,15 @@ newtype MutualBlockLet = MutualBlockLet
 
 instance Hashable MutualBlockLet
 
+instance Serialize MutualBlockLet
+
 data AxiomDef = AxiomDef
   { _axiomName :: AxiomName,
     _axiomBuiltin :: Maybe BuiltinAxiom,
     _axiomType :: Expression,
     _axiomPragmas :: Pragmas
   }
-  deriving stock (Data)
+  deriving stock (Data, Generic)
 
 data FunctionDef = FunctionDef
   { _funDefName :: FunctionName,
@@ -93,6 +96,8 @@ data FunctionDef = FunctionDef
   deriving stock (Eq, Generic, Data)
 
 instance Hashable FunctionDef
+
+instance Serialize FunctionDef
 
 data Iden
   = IdenFunction Name
@@ -112,6 +117,8 @@ getName = \case
 
 instance Hashable Iden
 
+instance Serialize Iden
+
 data TypedExpression = TypedExpression
   { _typedType :: Expression,
     _typedExpression :: Expression
@@ -125,6 +132,8 @@ data LetClause
 
 instance Hashable LetClause
 
+instance Serialize LetClause
+
 data Let = Let
   { _letClauses :: NonEmpty LetClause,
     _letExpression :: Expression
@@ -132,6 +141,8 @@ data Let = Let
   deriving stock (Eq, Generic, Data)
 
 instance Hashable Let
+
+instance Serialize Let
 
 type LiteralLoc = WithLoc Literal
 
@@ -146,6 +157,8 @@ data Literal
   deriving stock (Show, Eq, Ord, Generic, Data)
 
 instance Hashable Literal
+
+instance Serialize Literal
 
 data Expression
   = ExpressionIden Iden
@@ -163,6 +176,8 @@ data Expression
 
 instance Hashable Expression
 
+instance Serialize Expression
+
 data Example = Example
   { _exampleId :: NameId,
     _exampleExpression :: Expression
@@ -171,17 +186,23 @@ data Example = Example
 
 instance Hashable Example
 
+instance Serialize Example
+
 data SimpleBinder = SimpleBinder
   { _sbinderVar :: VarName,
     _sbinderType :: Expression
   }
   deriving stock (Eq, Generic, Data)
 
+instance Serialize SimpleBinder
+
 data SimpleLambda = SimpleLambda
   { _slambdaBinder :: SimpleBinder,
     _slambdaBody :: Expression
   }
   deriving stock (Eq, Generic, Data)
+
+instance Serialize SimpleLambda
 
 data CaseBranch = CaseBranch
   { _caseBranchPattern :: PatternArg,
@@ -190,6 +211,8 @@ data CaseBranch = CaseBranch
   deriving stock (Eq, Generic, Data)
 
 instance Hashable CaseBranch
+
+instance Serialize CaseBranch
 
 data Case = Case
   { _caseExpression :: Expression,
@@ -203,6 +226,8 @@ data Case = Case
   deriving stock (Eq, Generic, Data)
 
 instance Hashable Case
+
+instance Serialize Case
 
 data Lambda = Lambda
   { _lambdaClauses :: NonEmpty LambdaClause,
@@ -225,16 +250,20 @@ instance Hashable SimpleBinder
 
 instance Hashable SimpleLambda
 
+instance Serialize Lambda
+
+instance Serialize LambdaClause
+
 data Application = Application
   { _appLeft :: Expression,
     _appRight :: Expression,
     _appImplicit :: IsImplicit
   }
-  deriving stock (Data)
+  deriving stock (Data, Generic)
+
+instance Serialize Application
 
 -- TODO: Eq and Hashable instances ignore the _appImplicit field
---  to workaround a crash in Micro->Mono translation when looking up
--- a concrete type.
 instance Eq Application where
   (Application l r _) == (Application l' r' _) = (l == l') && (r == r')
 
@@ -252,6 +281,8 @@ data ConstructorApp = ConstructorApp
 
 instance Hashable ConstructorApp
 
+instance Serialize ConstructorApp
+
 data PatternArg = PatternArg
   { _patternArgIsImplicit :: IsImplicit,
     _patternArgName :: Maybe VarName,
@@ -261,12 +292,16 @@ data PatternArg = PatternArg
 
 instance Hashable PatternArg
 
+instance Serialize PatternArg
+
 newtype WildcardConstructor = WildcardConstructor
   { _wildcardConstructor :: ConstrName
   }
   deriving stock (Eq, Generic, Data)
 
 instance Hashable WildcardConstructor
+
+instance Serialize WildcardConstructor
 
 data Pattern
   = PatternVariable VarName
@@ -276,6 +311,8 @@ data Pattern
   deriving stock (Eq, Generic, Data)
 
 instance Hashable Pattern
+
+instance Serialize Pattern
 
 newtype InductiveParameter = InductiveParameter
   { _inductiveParamName :: VarName
@@ -320,6 +357,8 @@ emptyArgInfo =
 
 instance Hashable ArgInfo
 
+instance Serialize DefaultSignature
+
 data FunctionParameter = FunctionParameter
   { _paramName :: Maybe VarName,
     _paramImplicit :: IsImplicit,
@@ -329,6 +368,8 @@ data FunctionParameter = FunctionParameter
 
 instance Hashable FunctionParameter
 
+instance Serialize FunctionParameter
+
 data Function = Function
   { _functionLeft :: FunctionParameter,
     _functionRight :: Expression
@@ -336,6 +377,8 @@ data Function = Function
   deriving stock (Eq, Generic, Data)
 
 instance Hashable Function
+
+instance Serialize Function
 
 newtype ModuleIndex = ModuleIndex
   { _moduleIxModule :: Module

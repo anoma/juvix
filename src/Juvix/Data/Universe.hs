@@ -4,6 +4,7 @@ import Juvix.Data.Fixity
 import Juvix.Data.Keyword
 import Juvix.Data.Keyword.All (kwType)
 import Juvix.Data.Loc
+import Juvix.Extra.Serialize
 import Juvix.Prelude.Base
 
 data Universe = Universe
@@ -22,6 +23,8 @@ instance Eq SmallUniverse where
   _ == _ = True
 
 instance Hashable SmallUniverse
+
+instance Serialize SmallUniverse
 
 getUniverseLevel :: Universe -> Natural
 getUniverseLevel Universe {..} = fromMaybe defaultLevel _universeLevel

@@ -4,6 +4,7 @@ import Juvix.Data.Keyword
 import Juvix.Data.Keyword.All (kwWildcard)
 import Juvix.Data.Loc
 import Juvix.Data.NameId
+import Juvix.Extra.Serialize as S
 import Juvix.Prelude.Base
 import Prettyprinter
 
@@ -11,7 +12,7 @@ data Hole = Hole
   { _holeId :: NameId,
     _holeKw :: KeywordRef
   }
-  deriving stock (Show, Data)
+  deriving stock (Show, Data, Generic)
 
 mkHole :: Interval -> NameId -> Hole
 mkHole loc uid =
@@ -28,6 +29,16 @@ mkHole loc uid =
         }
 
 makeLenses ''Hole
+
+instance Serialize Hole where
+  put Hole {..} = do
+    S.put _holeId
+    S.put (_holeKw ^. keywordRefInterval)
+
+  get = do
+    i <- S.get
+    loc <- S.get
+    return $ mkHole loc i
 
 instance Eq Hole where
   (==) = (==) `on` (^. holeId)

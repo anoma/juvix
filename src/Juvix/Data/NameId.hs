@@ -1,5 +1,6 @@
 module Juvix.Data.NameId where
 
+import Juvix.Extra.Serialize
 import Juvix.Prelude.Base
 import Prettyprinter
 
@@ -15,3 +16,5 @@ instance Pretty NameId where
   pretty (NameId w) = pretty w
 
 instance Hashable NameId
+
+instance Serialize NameId

@@ -9,6 +9,7 @@ where
 import Juvix.Data.Fixity
 import Juvix.Data.NameId
 import Juvix.Data.NameKind
+import Juvix.Extra.Serialize
 import Juvix.Prelude
 import Juvix.Prelude.Pretty
 
@@ -21,9 +22,11 @@ data Name = Name
     _nameLoc :: Interval,
     _nameFixity :: Maybe Fixity
   }
-  deriving stock (Show, Data)
+  deriving stock (Show, Data, Generic)
 
 makeLenses ''Name
+
+instance Serialize Name
 
 varFromHole :: Hole -> VarName
 varFromHole h =

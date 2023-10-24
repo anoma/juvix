@@ -6,6 +6,7 @@ module Juvix.Compiler.Core.Language.Nodes
   )
 where
 
+import Data.Serialize
 import Juvix.Compiler.Core.Language.Base
 import Juvix.Compiler.Core.Language.Primitives
 
@@ -14,6 +15,7 @@ data Var' i = Var
   { _varInfo :: i,
     _varIndex :: !Index
   }
+  deriving stock (Generic)
 
 -- | Global identifier of a function (with corresponding `Node` in the global
 -- context).
@@ -21,16 +23,18 @@ data Ident' i = Ident
   { _identInfo :: i,
     _identSymbol :: !Symbol
   }
+  deriving stock (Generic)
 
 data Constant' i = Constant
   { _constantInfo :: i,
     _constantValue :: !ConstantValue
   }
+  deriving stock (Generic)
 
 data ConstantValue
   = ConstInteger !Integer
   | ConstString !Text
-  deriving stock (Eq)
+  deriving stock (Eq, Generic)
 
 -- | Info about a single binder. Associated with Lambda, Pi, Let, Case or Match.
 data Binder' ty = Binder
@@ -38,6 +42,7 @@ data Binder' ty = Binder
     _binderLocation :: Maybe Location,
     _binderType :: ty
   }
+  deriving stock (Generic)
 
 -- Other things we might need in the future:
 -- - ConstFloat or ConstFixedPoint
@@ -47,12 +52,14 @@ data App' i a = App
     _appLeft :: !a,
     _appRight :: !a
   }
+  deriving stock (Generic)
 
 data Apps' i f a = Apps
   { _appsInfo :: i,
     _appsFun :: !f,
     _appsArgs :: ![a]
   }
+  deriving stock (Generic)
 
 -- | A builtin application. A builtin has no corresponding Node. It is treated
 -- specially by the evaluator and the code generator. For example, basic
@@ -66,6 +73,7 @@ data BuiltinApp' i a = BuiltinApp
     _builtinAppOp :: !BuiltinOp,
     _builtinAppArgs :: ![a]
   }
+  deriving stock (Generic)
 
 -- | A data constructor application. The number of arguments supplied must be
 -- equal to the number of arguments expected by the constructor.
@@ -74,6 +82,7 @@ data Constr' i a = Constr
     _constrTag :: !Tag,
     _constrArgs :: ![a]
   }
+  deriving stock (Generic)
 
 -- | Useful for unfolding lambdas
 data LambdaLhs' i ty = LambdaLhs
@@ -86,6 +95,7 @@ data Lambda' i a ty = Lambda
     _lambdaBinder :: Binder' ty,
     _lambdaBody :: !a
   }
+  deriving stock (Generic)
 
 -- | `let x := value in body` is not reducible to lambda + application for the
 -- purposes of ML-polymorphic / dependent type checking or code generation!
@@ -94,11 +104,13 @@ data Let' i a ty = Let
     _letItem :: {-# UNPACK #-} !(LetItem' a ty),
     _letBody :: !a
   }
+  deriving stock (Generic)
 
 data LetItem' a ty = LetItem
   { _letItemBinder :: Binder' ty,
     _letItemValue :: a
   }
+  deriving stock (Generic)
 
 -- | Represents a block of mutually recursive local definitions. Both in the
 -- body and in the values `length _letRecValues` implicit binders are introduced
@@ -111,6 +123,7 @@ data LetRec' i a ty = LetRec
     _letRecValues :: !(NonEmpty (LetItem' a ty)),
     _letRecBody :: !a
   }
+  deriving stock (Generic)
 
 -- | One-level case matching on the tag of a data constructor: `Case value
 -- branches default`. `Case` is lazy: only the selected branch is evaluated.
@@ -121,6 +134,7 @@ data Case' i bi a ty = Case
     _caseBranches :: ![CaseBranch' bi a ty],
     _caseDefault :: !(Maybe a)
   }
+  deriving stock (Generic)
 
 -- | `CaseBranch tag binders bindersNum branch`
 -- - `binders` are the arguments of the constructor tagged with `tag`,
@@ -132,6 +146,7 @@ data CaseBranch' i a ty = CaseBranch
     _caseBranchBindersNum :: !Int,
     _caseBranchBody :: !a
   }
+  deriving stock (Generic)
 
 -- | A special form of `Case` for the booleans. Used only in Core.Stripped.
 data If' i a = If
@@ -140,6 +155,7 @@ data If' i a = If
     _ifTrue :: !a,
     _ifFalse :: !a
   }
+  deriving stock (Generic)
 
 -- | Complex pattern match. `Match` is lazy: only the selected branch is evaluated.
 data Match' i a = Match
@@ -196,12 +212,14 @@ data Pi' i a = Pi
     _piBinder :: Binder' a,
     _piBody :: !a
   }
+  deriving stock (Generic)
 
 -- | Universe. Compilation-time only.
 data Univ' i = Univ
   { _univInfo :: i,
     _univLevel :: !Int
   }
+  deriving stock (Generic)
 
 -- | Type constructor application. Compilation-time only.
 data TypeConstr' i a = TypeConstr
@@ -209,12 +227,14 @@ data TypeConstr' i a = TypeConstr
     _typeConstrSymbol :: !Symbol,
     _typeConstrArgs :: ![a]
   }
+  deriving stock (Generic)
 
 -- | A primitive type.
 data TypePrim' i = TypePrim
   { _typePrimInfo :: i,
     _typePrimPrimitive :: Primitive
   }
+  deriving stock (Generic)
 
 -- | Dynamic type. A Node with a dynamic type has an unknown type. Useful
 -- for transformations that introduce partial type information, e.g., one can
@@ -222,15 +242,57 @@ data TypePrim' i = TypePrim
 newtype Dynamic' i = Dynamic
   { _dynamicInfo :: i
   }
+  deriving stock (Generic)
 
 -- | A fail node.
 data Bottom' i a = Bottom
   { _bottomInfo :: i,
     _bottomType :: !a
   }
+  deriving stock (Generic)
 
 {-------------------------------------------------------------------}
 {- Typeclass instances -}
+
+instance (Serialize i) => Serialize (Var' i)
+
+instance (Serialize i) => Serialize (Ident' i)
+
+instance Serialize ConstantValue
+
+instance (Serialize i) => Serialize (Constant' i)
+
+instance (Serialize i, Serialize a) => Serialize (App' i a)
+
+instance (Serialize i, Serialize a) => Serialize (BuiltinApp' i a)
+
+instance (Serialize i, Serialize a) => Serialize (Constr' i a)
+
+instance (Serialize ty) => Serialize (Binder' ty)
+
+instance (Serialize i, Serialize a, Serialize ty) => Serialize (Lambda' i a ty)
+
+instance (Serialize a, Serialize ty) => Serialize (LetItem' a ty)
+
+instance (Serialize i, Serialize a, Serialize ty) => Serialize (Let' i a ty)
+
+instance (Serialize i, Serialize a, Serialize ty) => Serialize (LetRec' i a ty)
+
+instance (Serialize bi, Serialize a, Serialize ty) => Serialize (CaseBranch' bi a ty)
+
+instance (Serialize i, Serialize bi, Serialize a, Serialize ty) => Serialize (Case' i bi a ty)
+
+instance (Serialize i, Serialize a) => Serialize (Pi' i a)
+
+instance (Serialize i) => Serialize (Univ' i)
+
+instance (Serialize i) => Serialize (TypePrim' i)
+
+instance (Serialize i, Serialize a) => Serialize (TypeConstr' i a)
+
+instance (Serialize i) => Serialize (Dynamic' i)
+
+instance (Serialize i, Serialize a) => Serialize (Bottom' i a)
 
 instance HasAtomicity (Var' i) where
   atomicity _ = Atom
