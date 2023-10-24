@@ -40,4 +40,4 @@ formatStdinPath :: Path Abs File
 formatStdinPath = $(mkAbsFile "/format-stdin")
 
 gebReplPath :: Path Abs File
-gebReplPath = $(mkAbsFile "/repl.geb")
+gebReplPath = $(mkAbsFile "/gebrepl")

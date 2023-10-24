@@ -100,9 +100,9 @@ vampIRDefs bits unsafe =
     <> ";\n\n"
     <> if
         | unsafe ->
-            UTF8.toString $(FE.makeRelativeToProject "runtime/src/vampir/stdlib_unsafe.pir" >>= FE.embedFile)
+            UTF8.toString $(FE.makeRelativeToProject ("runtime/src/vampir/stdlib_unsafe" <> vampIRFileExt) >>= FE.embedFile)
         | otherwise ->
-            UTF8.toString $(FE.makeRelativeToProject "runtime/src/vampir/stdlib.pir" >>= FE.embedFile)
+            UTF8.toString $(FE.makeRelativeToProject ("runtime/src/vampir/stdlib" <> vampIRFileExt) >>= FE.embedFile)
 
 --------------------------------------------------------------------------------
 -- helper functions

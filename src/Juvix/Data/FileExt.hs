@@ -13,10 +13,15 @@ data FileExt
   | FileExtJuvixGeb
   | FileExtJuvixCore
   | FileExtJuvixAsm
+  | FileExtVampIR
+  | FileExtVampIRParams
+  | FileExtPlonk
+  | FileExtHalo
   | FileExtLisp
-  | FileC
+  | FileExtC
   | FileExtMarkdown
   | FileExtHtml
+  | FileExtCss
   deriving stock (Eq)
 
 juvixFileExt :: (IsString a) => a
@@ -34,6 +39,18 @@ juvixCoreFileExt = ".jvc"
 juvixAsmFileExt :: (IsString a) => a
 juvixAsmFileExt = ".jva"
 
+vampIRFileExt :: (IsString a) => a
+vampIRFileExt = ".pir"
+
+vampIRParamsFileExt :: (IsString a) => a
+vampIRParamsFileExt = ".pp"
+
+plonkFileExt :: (IsString a) => a
+plonkFileExt = ".plonk"
+
+haloFileExt :: (IsString a) => a
+haloFileExt = ".halo2"
+
 lispFileExt :: (IsString a) => a
 lispFileExt = ".lisp"
 
@@ -46,6 +63,9 @@ markdownFileExt = ".md"
 cFileExt :: (IsString a) => a
 cFileExt = ".c"
 
+cssFileExt :: (IsString a) => a
+cssFileExt = ".css"
+
 fileExtToText :: FileExt -> Text
 fileExtToText = \case
   FileExtJuvix -> juvixFileExt
@@ -53,10 +73,15 @@ fileExtToText = \case
   FileExtJuvixGeb -> juvixGebFileExt
   FileExtJuvixCore -> juvixCoreFileExt
   FileExtJuvixAsm -> juvixAsmFileExt
+  FileExtVampIR -> vampIRFileExt
+  FileExtVampIRParams -> vampIRParamsFileExt
+  FileExtPlonk -> plonkFileExt
+  FileExtHalo -> haloFileExt
   FileExtLisp -> lispFileExt
-  FileC -> cFileExt
+  FileExtC -> cFileExt
   FileExtMarkdown -> markdownFileExt
   FileExtHtml -> htmlFileExt
+  FileExtCss -> cssFileExt
 
 toMetavar :: FileExt -> String
 toMetavar = \case
@@ -65,10 +90,15 @@ toMetavar = \case
   FileExtJuvixGeb -> "JUVIX_GEB_FILE"
   FileExtJuvixCore -> "JUVIX_CORE_FILE"
   FileExtJuvixAsm -> "JUVIX_ASM_FILE"
+  FileExtVampIR -> "VAMPIR_FILE"
+  FileExtVampIRParams -> "VAMPIR_PARAMS_FILE"
+  FileExtPlonk -> "PLONK_FILE"
+  FileExtHalo -> "HALO_FILE"
   FileExtLisp -> "LISP_FILE"
-  FileC -> "C_FILE"
+  FileExtC -> "C_FILE"
   FileExtMarkdown -> "MARKDOWN_FILE"
   FileExtHtml -> "HTML_FILE"
+  FileExtCss -> "CSS_FILE"
 
 instance Show FileExt where
   show = Text.unpack . fileExtToText
@@ -90,6 +120,18 @@ isJuvixGebFile = (== Just juvixGebFileExt) . fileExtension
 isJuvixCoreFile :: Path b File -> Bool
 isJuvixCoreFile = (== Just juvixCoreFileExt) . fileExtension
 
+isVampIRFile :: Path b File -> Bool
+isVampIRFile = (== Just vampIRFileExt) . fileExtension
+
+isVampIRParamsFile :: Path b File -> Bool
+isVampIRParamsFile = (== Just vampIRParamsFileExt) . fileExtension
+
+isPlonkFile :: Path b File -> Bool
+isPlonkFile = (== Just plonkFileExt) . fileExtension
+
+isHaloFile :: Path b File -> Bool
+isHaloFile = (== Just haloFileExt) . fileExtension
+
 isJuvixAsmFile :: Path b File -> Bool
 isJuvixAsmFile = (== Just juvixAsmFileExt) . fileExtension
 
@@ -104,3 +146,6 @@ isCFile = (== Just cFileExt) . fileExtension
 
 isHtmlFile :: Path b File -> Bool
 isHtmlFile = (== Just htmlFileExt) . fileExtension
+
+isCssFile :: Path b File -> Bool
+isCssFile = (== Just cssFileExt) . fileExtension

@@ -38,7 +38,7 @@ parseCoreEvalOptions = do
   _coreEvalNoIO <-
     switch
       ( long "no-io"
-          <> help "Don't interpret the IO effects"
+          <> help "Do not interpret the IO effects"
       )
   _coreEvalShowDeBruijn <- optDeBruijn
   _coreEvalShowIdentIds <- optIdentIds
