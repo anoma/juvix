@@ -19,31 +19,31 @@ data FileExt
   | FileExtHtml
   deriving stock (Eq)
 
-juvixFileExt :: IsString a => a
+juvixFileExt :: (IsString a) => a
 juvixFileExt = ".juvix"
 
-juvixMarkdownFileExt :: IsString a => a
+juvixMarkdownFileExt :: (IsString a) => a
 juvixMarkdownFileExt = ".juvix.md"
 
-juvixGebFileExt :: IsString a => a
+juvixGebFileExt :: (IsString a) => a
 juvixGebFileExt = ".geb"
 
-juvixCoreFileExt :: IsString a => a
+juvixCoreFileExt :: (IsString a) => a
 juvixCoreFileExt = ".jvc"
 
-juvixAsmFileExt :: IsString a => a
+juvixAsmFileExt :: (IsString a) => a
 juvixAsmFileExt = ".jva"
 
-lispFileExt :: IsString a => a
+lispFileExt :: (IsString a) => a
 lispFileExt = ".lisp"
 
-htmlFileExt :: IsString a => a
+htmlFileExt :: (IsString a) => a
 htmlFileExt = ".html"
 
-markdownFileExt :: IsString a => a
+markdownFileExt :: (IsString a) => a
 markdownFileExt = ".md"
 
-cFileExt :: IsString a => a
+cFileExt :: (IsString a) => a
 cFileExt = ".c"
 
 toText :: FileExt -> Text
