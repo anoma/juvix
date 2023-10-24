@@ -16,14 +16,14 @@ packageTypeName :: Text
 packageTypeName = "Package"
 
 -- | Load a package file in the context of the PackageDescription module and the global package stdlib.
-loadPackage :: (Members '[Files, EvalFileEff, Error PackageLoaderError] r) => Path Abs File -> Sem r Package
-loadPackage packagePath = do
+loadPackage :: (Members '[Files, EvalFileEff, Error PackageLoaderError] r) => BuildDir -> Path Abs File -> Sem r Package
+loadPackage buildDir packagePath = do
   globalPackageDir <- globalPackageDescriptionRoot
   let packageDescriptionPath' = globalPackageDir <//> filename packageDescriptionPath
 
   scoped @(Path Abs File) @EvalEff packagePath $ do
     v <- getPackageNode packageDescriptionPath' >>= eval'
-    toPackage packagePath v
+    toPackage buildDir packagePath v
   where
     -- Obtain the Node corresponding to the `package` identifier in the loaded
     -- Package
@@ -45,10 +45,11 @@ loadPackage packagePath = do
 toPackage ::
   forall r.
   (Member (Error PackageLoaderError) r) =>
+  BuildDir ->
   Path Abs File ->
   Value ->
   Sem r Package
-toPackage packagePath = \case
+toPackage buildDir packagePath = \case
   ValueConstrApp ctor -> do
     case ctor ^. constrAppArgs of
       [vName, vVersion, vDeps, vMain, vBuildDir] -> do
@@ -129,6 +130,7 @@ toPackage packagePath = \case
     toDependency :: Value -> Sem r Dependency
     toDependency = \case
       ValueConstrApp c -> case c ^. constrAppArgs of
+        [] -> return defaultStdlib
         [v] -> do
           p <- mkPrepath . unpack <$> toText v
           return (DependencyPath (PathDependency {_pathDependencyPath = p}))
@@ -139,6 +141,12 @@ toPackage packagePath = \case
           return (DependencyGit (GitDependency {..}))
         _ -> err
       _ -> err
+
+    defaultStdlib :: Dependency
+    defaultStdlib = mkPathDependency (fromSomeDir p)
+      where
+        p :: SomeBase Dir
+        p = resolveBuildDir buildDir <///> relStdlibDir
 
 packageDescriptionPath :: Path Abs File
 packageDescriptionPath =

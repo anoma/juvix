@@ -74,8 +74,8 @@ packageLoadingTests =
       $(mkRelDir "PackageJuvix")
       $ \p _ ->
         if
-            | null (p ^. packageDependencies) -> Nothing
-            | otherwise -> Just "Expected dependencies to be empty",
+            | p ^. packageName == "package-juvix" -> Nothing
+            | otherwise -> Just "Expected package name to be package-juvix",
     PosTest
       "Package.juvix is read in priority over yaml"
       $(mkRelDir "PackageJuvixAndYaml")
@@ -89,5 +89,21 @@ packageLoadingTests =
       $ \p _ ->
         if
             | isJust (p ^. packageLockfile) -> Nothing
-            | otherwise -> Just "No lock file was read"
+            | otherwise -> Just "No lock file was read",
+    PosTest
+      "Package.juvix unspecified dependencies uses default stdlib"
+      $(mkRelDir "PackageJuvixNoDependencies")
+      $ \p b -> case p ^? packageDependencies . _head of
+        Just d ->
+          if
+              | d == defaultStdlibDep b -> Nothing
+              | otherwise -> Just ("Package dependency is not the default standard library: " <> show (d, defaultStdlibDep b))
+        _ -> Just "The package has no dependencies",
+    PosTest
+      "empty dependencies does not use default stdlib"
+      $(mkRelDir "PackageJuvixEmptyDependencies")
+      $ \p _ ->
+        if
+            | null (p ^. packageDependencies) -> Nothing
+            | otherwise -> Just "Expected dependencies to be empty"
   ]

@@ -4,4 +4,4 @@ import Stdlib.Prelude open;
 import PackageDescription open;
 
 package : Package :=
-  mkPackageDefault (name := "package-juvix") {version := mkVersion 0 0 0};
+  mkPackageDefault {name := "package-juvix"};
