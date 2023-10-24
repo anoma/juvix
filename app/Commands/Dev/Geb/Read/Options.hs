@@ -15,5 +15,6 @@ instance CanonicalProjection GebReadOptions Geb.Options where
 
 parseGebReadOptions :: Parser GebReadOptions
 parseGebReadOptions = do
-  _gebReadOptionsInputFile <- parseInputFile FileExtJuvixGeb
+  _gebReadOptionsInputFile <-
+    parseInputFiles (NonEmpty.fromList [FileExtJuvixGeb, FileExtJuvix])
   pure GebReadOptions {..}
