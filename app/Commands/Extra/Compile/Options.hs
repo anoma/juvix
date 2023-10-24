@@ -48,7 +48,7 @@ parseCompileOptions ::
   SupportedTargets ->
   Parser (AppPath File) ->
   Parser CompileOptions
-parseCompileOptions supportedTargets parseInputFile = do
+parseCompileOptions supportedTargets parserFile = do
   _compileDebug <-
     switch
       ( short 'g'
@@ -110,7 +110,7 @@ parseCompileOptions supportedTargets parseInputFile = do
       )
   _compileTarget <- optCompileTarget supportedTargets
   _compileOutputFile <- optional parseGenericOutputFile
-  _compileInputFile <- optional parseInputFile
+  _compileInputFile <- optional parserFile
   pure CompileOptions {..}
 
 optCompileTarget :: SupportedTargets -> Parser CompileTarget

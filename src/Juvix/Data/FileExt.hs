@@ -46,8 +46,8 @@ markdownFileExt = ".md"
 cFileExt :: (IsString a) => a
 cFileExt = ".c"
 
-toText :: FileExt -> Text
-toText = \case
+fileExtToText :: FileExt -> Text
+fileExtToText = \case
   FileExtJuvix -> juvixFileExt
   FileExtJuvixMarkdown -> juvixMarkdownFileExt
   FileExtJuvixGeb -> juvixGebFileExt
@@ -71,10 +71,10 @@ toMetavar = \case
   FileExtHtml -> "HTML_FILE"
 
 instance Show FileExt where
-  show = Text.unpack . toText
+  show = Text.unpack . fileExtToText
 
 instance Pretty FileExt where
-  pretty = pretty . toText
+  pretty = pretty . fileExtToText
 
 isJuvixFile :: Path b File -> Bool
 isJuvixFile = (== Just juvixFileExt) . fileExtension

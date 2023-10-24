@@ -8,7 +8,6 @@ where
 
 import Control.Exception qualified as GHC
 import Data.List.NonEmpty qualified as NonEmpty
-import Data.Text qualified as Text
 import Juvix.Compiler.Core.Data.TransformationId.Parser
 import Juvix.Data.FileExt
 import Juvix.Prelude
