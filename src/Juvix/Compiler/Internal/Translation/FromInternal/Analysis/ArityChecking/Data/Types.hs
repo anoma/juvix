@@ -3,6 +3,17 @@ module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.D
 import Juvix.Compiler.Internal.Language
 import Juvix.Prelude
 import Juvix.Prelude.Pretty
+import Juvix.Compiler.Internal.Extra
+
+-- | Helper type used during insertion of default arguments in the arity
+-- checker.
+data InsertedArg = InsertedArg {
+  _insertedArgName :: Name,
+  _insertedArg :: ApplicationArg,
+  -- | True if this corresponds to an automatically inserted default argument.
+  -- False if it is an inserted hole or an argument present in the source code.
+  _insertedDefault :: Bool
+  }
 
 data Arity
   = ArityUnit
@@ -38,6 +49,7 @@ instance Eq ArityParameter where
     (ari, impl) == (ari', impl')
 
 makeLenses ''UnfoldedArity
+makeLenses ''InsertedArg
 makeLenses ''ArityParameter
 
 arityParameterName :: Lens' ArityParameter (Maybe Name)
