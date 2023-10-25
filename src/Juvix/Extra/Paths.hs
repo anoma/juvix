@@ -4,6 +4,7 @@ module Juvix.Extra.Paths
   )
 where
 
+import Juvix.Data.FileExt
 import Juvix.Extra.Paths.Base
 import Juvix.Prelude.Base
 import Juvix.Prelude.Path
@@ -40,4 +41,4 @@ formatStdinPath :: Path Abs File
 formatStdinPath = $(mkAbsFile "/format-stdin")
 
 gebReplPath :: Path Abs File
-gebReplPath = $(mkAbsFile "/gebrepl")
+gebReplPath = $(mkAbsFile ("/repl" <> juvixGebFileExt))

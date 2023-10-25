@@ -16,6 +16,5 @@ instance CanonicalProjection GebInferOptions Geb.Options where
 
 parseGebInferOptions :: Parser GebInferOptions
 parseGebInferOptions = do
-  _gebInferOptionsInputFile <-
-    (parseInputFiles (NonEmpty.fromList [FileExtJuvixGeb, FileExtJuvix]))
+  _gebInferOptionsInputFile <- parseInputFiles (NonEmpty.fromList [FileExtJuvixGeb, FileExtLisp])
   pure GebInferOptions {..}
