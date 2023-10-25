@@ -707,7 +707,7 @@ resolveFixitySyntaxDef fdef@FixitySyntaxDef {..} = topBindings $ do
       belowPrec = fromIntegral $ maximum (minInt + 1 : maybe [] (map (getPrec tab)) above)
       abovePrec :: Integer
       abovePrec = fromIntegral $ minimum (maxInt - 1 : maybe [] (map (getPrec tab)) below)
-  when (belowPrec >= abovePrec + 1) $
+  when (belowPrec + 1 >= abovePrec) $
     throw (ErrPrecedenceInconsistency (PrecedenceInconsistencyError fdef))
   when (isJust same && not (null below && null above)) $
     throw (ErrPrecedenceInconsistency (PrecedenceInconsistencyError fdef))
