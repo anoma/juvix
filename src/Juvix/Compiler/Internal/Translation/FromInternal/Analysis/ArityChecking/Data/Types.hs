@@ -1,7 +1,6 @@
 module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Data.Types where
 
 import Juvix.Compiler.Internal.Extra
-import Juvix.Compiler.Internal.Language
 import Juvix.Prelude
 import Juvix.Prelude.Pretty
 
