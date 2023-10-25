@@ -12,7 +12,7 @@ makeLenses ''AsmValidateOptions
 
 parseAsmValidateOptions :: Parser AsmValidateOptions
 parseAsmValidateOptions = do
-  _asmValidateInputFile <- parseInputJuvixAsmFile
+  _asmValidateInputFile <- parseInputFile FileExtJuvixAsm
   _asmValidateNoPrint <-
     switch
       ( long "no-print"

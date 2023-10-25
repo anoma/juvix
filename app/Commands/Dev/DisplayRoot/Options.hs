@@ -18,5 +18,5 @@ parseRoot = do
           <> help "print the juvix.yaml file as parsed"
       )
 
-  _rootMainFile <- optional parseInputJuvixFile
+  _rootMainFile <- optional (parseInputFile FileExtJuvix)
   pure RootOptions {..}

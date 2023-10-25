@@ -1,6 +1,7 @@
 module Commands.Dev.Geb.Eval.Options where
 
 import CommonOptions
+import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Compiler.Backend.Geb.Evaluator qualified as Geb
 import Juvix.Compiler.Backend.Geb.Pretty qualified as Geb
 
@@ -23,7 +24,7 @@ instance CanonicalProjection GebEvalOptions Geb.Options where
 
 parseGebEvalOptions :: Parser GebEvalOptions
 parseGebEvalOptions = do
-  _gebEvalOptionsInputFile <- parseInputJuvixGebFile
+  _gebEvalOptionsInputFile <- parseInputFiles (NonEmpty.fromList [FileExtJuvixGeb, FileExtLisp])
   _gebEvalOptionsOutputMorphism <- optOutputMorphism
   pure GebEvalOptions {..}
 

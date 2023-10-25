@@ -15,8 +15,8 @@ parseInputJuvixFileOrDir :: Parser (Prepath FileOrDir)
 parseInputJuvixFileOrDir =
   strArgument
     ( metavar "JUVIX_FILE_OR_PROJECT"
-        <> help "Path to a .juvix file or to a directory containing a Juvix project."
-        <> completer juvixCompleter
+        <> help ("Path to a " <> show FileExtJuvix <> " file or to a directory containing a Juvix project.")
+        <> completer (extCompleter FileExtJuvix)
         <> action "directory"
     )
 

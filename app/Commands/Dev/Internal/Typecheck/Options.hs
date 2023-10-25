@@ -17,5 +17,5 @@ parseInternalType = do
       ( long "print-result"
           <> help "Print the type checked module if successful"
       )
-  _internalTypeInputFile <- parseInputJuvixFile
+  _internalTypeInputFile <- parseInputFile FileExtJuvix
   pure InternalTypeOptions {..}

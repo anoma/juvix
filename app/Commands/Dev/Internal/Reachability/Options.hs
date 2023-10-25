@@ -11,5 +11,5 @@ makeLenses ''InternalReachabilityOptions
 
 parseInternalReachability :: Parser InternalReachabilityOptions
 parseInternalReachability = do
-  _internalReachabilityInputFile <- parseInputJuvixFile
+  _internalReachabilityInputFile <- parseInputFile FileExtJuvix
   pure InternalReachabilityOptions {..}

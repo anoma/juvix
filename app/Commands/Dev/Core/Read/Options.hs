@@ -71,5 +71,5 @@ parseCoreReadOptions = do
           <> help "normalize after the transformation"
       )
   _coreReadTransformations <- optTransformationIds
-  _coreReadInputFile <- parseInputJuvixCoreFile
+  _coreReadInputFile <- parseInputFile FileExtJuvixCore
   pure CoreReadOptions {..}

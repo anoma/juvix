@@ -15,4 +15,4 @@ parseMainCompileOptions :: Parser CompileOptions
 parseMainCompileOptions =
   parseCompileOptions
     supportedTargets
-    parseInputJuvixFile
+    (parseInputFile FileExtJuvix)

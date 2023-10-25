@@ -1,6 +1,7 @@
 module Commands.Dev.Geb.Read.Options where
 
 import CommonOptions
+import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Compiler.Backend.Geb.Pretty qualified as Geb
 
 newtype GebReadOptions = GebReadOptions
@@ -15,5 +16,6 @@ instance CanonicalProjection GebReadOptions Geb.Options where
 
 parseGebReadOptions :: Parser GebReadOptions
 parseGebReadOptions = do
-  _gebReadOptionsInputFile <- parseInputJuvixGebFile
+  _gebReadOptionsInputFile <-
+    parseInputFiles (NonEmpty.fromList [FileExtJuvixGeb, FileExtLisp])
   pure GebReadOptions {..}

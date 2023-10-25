@@ -86,26 +86,26 @@ outputFile opts inputFile =
       return $ case opts ^. compileTarget of
         TargetNative64 ->
           if
-              | opts ^. compileCOutput -> replaceExtension' ".c" inputFile
-              | opts ^. compilePreprocess -> addExtension' ".c" (addExtension' ".out" (removeExtension' inputFile))
+              | opts ^. compileCOutput -> replaceExtension' cFileExt inputFile
+              | opts ^. compilePreprocess -> addExtension' cFileExt (addExtension' ".out" (removeExtension' inputFile))
               | opts ^. compileAssembly -> replaceExtension' ".s" inputFile
               | otherwise -> removeExtension' baseOutputFile
         TargetWasm32Wasi ->
           if
-              | opts ^. compileCOutput -> replaceExtension' ".c" inputFile
-              | opts ^. compilePreprocess -> addExtension' ".c" (addExtension' ".out" (removeExtension' inputFile))
+              | opts ^. compileCOutput -> replaceExtension' cFileExt inputFile
+              | opts ^. compilePreprocess -> addExtension' cFileExt (addExtension' ".out" (removeExtension' inputFile))
               | opts ^. compileAssembly -> replaceExtension' ".wat" inputFile
               | otherwise -> replaceExtension' ".wasm" baseOutputFile
         TargetGeb ->
           if
-              | opts ^. compileTerm -> replaceExtension' ".geb" inputFile
-              | otherwise -> replaceExtension' ".lisp" baseOutputFile
+              | opts ^. compileTerm -> replaceExtension' juvixGebFileExt inputFile
+              | otherwise -> replaceExtension' lispFileExt baseOutputFile
         TargetVampIR ->
-          replaceExtension' ".pir" baseOutputFile
+          replaceExtension' vampIRFileExt baseOutputFile
         TargetCore ->
-          replaceExtension' ".jvc" baseOutputFile
+          replaceExtension' juvixCoreFileExt baseOutputFile
         TargetAsm ->
-          replaceExtension' ".jva" baseOutputFile
+          replaceExtension' juvixAsmFileExt baseOutputFile
 
 clangNativeCompile ::
   forall r.
