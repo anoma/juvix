@@ -262,3 +262,28 @@ instance ToGenericError BuiltinNotFullyApplied where
               <+> "must be applied to exactly"
               <+> pretty argsNum
               <+> "arguments"
+
+newtype DefaultArgCycle = DefaultArgCycle
+  { _defaultArgCycle :: NonEmpty Name
+  }
+
+makeLenses ''DefaultArgCycle
+
+instance ToGenericError DefaultArgCycle where
+  genericError DefaultArgCycle {..} = ask >>= generr
+    where
+      generr opts =
+        return
+          GenericError
+            { _genericErrorLoc = i,
+              _genericErrorMessage = ppOutput msg,
+              _genericErrorIntervals = map getLoc (toList _defaultArgCycle)
+            }
+        where
+          opts' = fromGenericOptions opts
+          i = getLoc (head _defaultArgCycle)
+          ss = ppCode opts' <$> _defaultArgCycle
+          msg =
+            "Arity checker: There is a cyclic dependency between some default arguments:"
+              <> line
+              <> itemize ss

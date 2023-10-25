@@ -4,6 +4,7 @@ module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.C
   )
 where
 
+import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Compiler.Internal.Extra
 import Juvix.Compiler.Internal.Extra qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromConcrete.Data.Context
@@ -26,7 +27,7 @@ checkModuleIndexNoCache ::
   ModuleIndex ->
   Sem r Module
 checkModuleIndexNoCache (ModuleIndex Module {..}) = do
-  _moduleBody' <- checkModuleBody _moduleBody
+  _moduleBody' <- runReader @InsertedArgsStack mempty (checkModuleBody _moduleBody)
   return
     Module
       { _moduleBody = _moduleBody',
@@ -34,7 +35,7 @@ checkModuleIndexNoCache (ModuleIndex Module {..}) = do
       }
 
 checkModuleBody ::
-  (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError, MCache] r) =>
+  (Members '[Reader InsertedArgsStack, Reader InfoTable, NameIdGen, Error ArityCheckerError, MCache] r) =>
   ModuleBody ->
   Sem r ModuleBody
 checkModuleBody ModuleBody {..} = do
@@ -58,7 +59,7 @@ checkImport ::
   Sem r Import
 checkImport = traverseOf importModule checkModuleIndex
 
-checkInductive :: forall r. (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r) => InductiveDef -> Sem r InductiveDef
+checkInductive :: forall r. (Members '[Reader InsertedArgsStack, Reader InfoTable, NameIdGen, Error ArityCheckerError] r) => InductiveDef -> Sem r InductiveDef
 checkInductive d = do
   let _inductiveName = d ^. inductiveName
       _inductiveBuiltin = d ^. inductiveBuiltin
@@ -77,7 +78,7 @@ checkInductive d = do
         checkParam :: InductiveParameter -> Sem (State LocalVars ': r) InductiveParameter
         checkParam = return
 
-checkConstructor :: (Members '[Reader LocalVars, Reader InfoTable, NameIdGen, Error ArityCheckerError] r) => ConstructorDef -> Sem r ConstructorDef
+checkConstructor :: (Members '[Reader InsertedArgsStack, Reader LocalVars, Reader InfoTable, NameIdGen, Error ArityCheckerError] r) => ConstructorDef -> Sem r ConstructorDef
 checkConstructor c = do
   let _inductiveConstructorName = c ^. inductiveConstructorName
       _inductiveConstructorPragmas = c ^. inductiveConstructorPragmas
@@ -86,10 +87,10 @@ checkConstructor c = do
   return ConstructorDef {..}
 
 -- | check the arity of some ty : Type
-checkType :: (Members '[Reader LocalVars, Reader InfoTable, NameIdGen, Error ArityCheckerError] r) => Expression -> Sem r Expression
+checkType :: (Members '[Reader InsertedArgsStack, Reader LocalVars, Reader InfoTable, NameIdGen, Error ArityCheckerError] r) => Expression -> Sem r Expression
 checkType = checkExpression ArityUnit
 
-checkAxiom :: (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r) => AxiomDef -> Sem r AxiomDef
+checkAxiom :: (Members '[Reader InsertedArgsStack, Reader InfoTable, NameIdGen, Error ArityCheckerError] r) => AxiomDef -> Sem r AxiomDef
 checkAxiom a = do
   let _axiomName = a ^. axiomName
       _axiomBuiltin = a ^. axiomBuiltin
@@ -98,7 +99,7 @@ checkAxiom a = do
   return AxiomDef {..}
 
 checkMutualStatement ::
-  (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r) =>
+  (Members '[Reader InsertedArgsStack, Reader InfoTable, NameIdGen, Error ArityCheckerError] r) =>
   MutualStatement ->
   Sem r MutualStatement
 checkMutualStatement = \case
@@ -107,20 +108,20 @@ checkMutualStatement = \case
   StatementAxiom a -> StatementAxiom <$> checkAxiom a
 
 checkMutualBlockLet ::
-  (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r) =>
+  (Members '[Reader InsertedArgsStack, Reader InfoTable, NameIdGen, Error ArityCheckerError] r) =>
   MutualBlockLet ->
   Sem r MutualBlockLet
 checkMutualBlockLet (MutualBlockLet funs) = MutualBlockLet <$> mapM checkFunctionDef funs
 
 checkMutualBlock ::
-  (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r) =>
+  (Members '[Reader InsertedArgsStack, Reader InfoTable, NameIdGen, Error ArityCheckerError] r) =>
   MutualBlock ->
   Sem r MutualBlock
 checkMutualBlock (MutualBlock funs) = MutualBlock <$> mapM checkMutualStatement funs
 
 checkFunctionDef ::
   forall r.
-  (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r) =>
+  (Members '[Reader InsertedArgsStack, Reader InfoTable, NameIdGen, Error ArityCheckerError] r) =>
   FunctionDef ->
   Sem r FunctionDef
 checkFunctionDef FunctionDef {..} = do
@@ -146,7 +147,7 @@ checkFunctionDef FunctionDef {..} = do
 
 checkArgsInfo ::
   forall r.
-  (Members '[NameIdGen, Reader LocalVars, Error ArityCheckerError, Reader InfoTable] r) =>
+  (Members '[Reader InsertedArgsStack, NameIdGen, Reader LocalVars, Error ArityCheckerError, Reader InfoTable] r) =>
   [ArgInfo] ->
   [FunctionParameter] ->
   Sem r [ArgInfo]
@@ -170,7 +171,7 @@ checkArgsInfo defaults =
           withLocalVarMaybe ari (p ^. paramName) (go ds' ps')
 
 checkFunctionBody ::
-  (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r) =>
+  (Members '[Reader InsertedArgsStack, Reader InfoTable, NameIdGen, Error ArityCheckerError] r) =>
   Arity ->
   Expression ->
   Sem r Expression
@@ -216,7 +217,9 @@ arityLet l = guessArity (l ^. letExpression)
 inferReplExpression :: (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r) => Expression -> Sem r Expression
 inferReplExpression e = do
   ari <- guessArity e
-  withEmptyLocalVars (checkExpression ari e)
+  withEmptyLocalVars
+    . runReader @InsertedArgsStack mempty
+    $ checkExpression ari e
 
 guessArity ::
   forall r.
@@ -481,7 +484,7 @@ checkConstructorApp ca = do
 
 checkCase ::
   forall r.
-  (Members '[Error ArityCheckerError, Reader LocalVars, Reader InfoTable, NameIdGen] r) =>
+  (Members '[Reader InsertedArgsStack, Error ArityCheckerError, Reader LocalVars, Reader InfoTable, NameIdGen] r) =>
   Arity ->
   Case ->
   Sem r Case
@@ -498,7 +501,7 @@ checkCase ari l = do
 
 checkLet ::
   forall r.
-  (Members '[Error ArityCheckerError, Reader LocalVars, Reader InfoTable, NameIdGen] r) =>
+  (Members '[Reader InsertedArgsStack, Error ArityCheckerError, Reader LocalVars, Reader InfoTable, NameIdGen] r) =>
   Arity ->
   Let ->
   Sem r Let
@@ -514,7 +517,7 @@ checkLet ari l = do
 
 checkLambda ::
   forall r.
-  (Members '[Error ArityCheckerError, Reader LocalVars, Reader InfoTable, NameIdGen] r) =>
+  (Members '[Reader InsertedArgsStack, Error ArityCheckerError, Reader LocalVars, Reader InfoTable, NameIdGen] r) =>
   Arity ->
   Lambda ->
   Sem r Lambda
@@ -624,14 +627,14 @@ typeArity = go
 
 checkExample ::
   forall r.
-  (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError, Reader LocalVars] r) =>
+  (Members '[Reader InsertedArgsStack, Reader InfoTable, NameIdGen, Error ArityCheckerError, Reader LocalVars] r) =>
   Example ->
   Sem r Example
 checkExample = traverseOf exampleExpression (checkExpression ArityUnknown)
 
 checkExpression ::
   forall r.
-  (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError, Reader LocalVars] r) =>
+  (Members '[Reader InsertedArgsStack, Reader InfoTable, NameIdGen, Error ArityCheckerError, Reader LocalVars] r) =>
   Arity ->
   Expression ->
   Sem r Expression
@@ -740,30 +743,32 @@ checkExpression hintArity expr = case expr of
           where
             noDefaults :: Sem r Expression
             noDefaults = do
-              args' :: [ApplicationArg] <- map snd <$> (idenArity i >>= helperDefaultArgs (getLoc i))
+              args' :: [ApplicationArg] <- map (^. insertedArg) <$> (idenArity i >>= helperDefaultArgs (getLoc i))
               return (foldApplication fun0 args')
 
         goAppLeftIdenWithDefaults :: Iden -> Sem r Expression
         goAppLeftIdenWithDefaults i = do
-          namedArgs :: [(Name, ApplicationArg)] <- idenArity i >>= helperDefaultArgs (getLoc i)
+          namedArgs :: [InsertedArg] <- idenArity i >>= helperDefaultArgs (getLoc i)
           case nonEmpty namedArgs of
             Nothing -> return (toExpression i)
             Just args' -> do
-              let mkClause :: (Name, ApplicationArg) -> Sem r Internal.PreLetStatement
-                  mkClause (nm, arg) = do
+              let mkClause :: InsertedArg -> Sem r Internal.PreLetStatement
+                  mkClause InsertedArg {..} = do
                     -- TODO put actual type instead of hole?
+                    let arg = _insertedArg
+                        nm = _insertedArgName
                     ty <- mkFreshHole (getLoc arg)
                     return (Internal.PreLetFunctionDef (Internal.simpleFunDef nm ty (arg ^. appArg)))
-                  mkAppArg :: (Name, ApplicationArg) -> ApplicationArg
-                  mkAppArg (nm, arg) =
+                  mkAppArg :: InsertedArg -> ApplicationArg
+                  mkAppArg InsertedArg {..} =
                     ApplicationArg
-                      { _appArgIsImplicit = arg ^. appArgIsImplicit,
-                        _appArg = toExpression nm
+                      { _appArgIsImplicit = _insertedArg ^. appArgIsImplicit,
+                        _appArg = toExpression _insertedArgName
                       }
               clauses :: NonEmpty Internal.LetClause <- nonEmpty' . Internal.mkLetClauses <$> mapM mkClause args'
               let app = foldApplication (toExpression fun0) (map mkAppArg namedArgs)
                   letexpr =
-                    Internal.substitutionE (renameKind KNameFunction (map fst namedArgs)) $
+                    Internal.substitutionE (renameKind KNameFunction (map (^. insertedArgName) namedArgs)) $
                       ExpressionLet
                         Let
                           { _letClauses = clauses,
@@ -772,59 +777,77 @@ checkExpression hintArity expr = case expr of
               Internal.clone letexpr
 
         helper :: Interval -> Arity -> Sem r [ApplicationArg]
-        helper i ari = map snd <$> helperDefaultArgs i ari
+        helper i ari = map (^. insertedArg) <$> helperDefaultArgs i ari
 
-        helperDefaultArgs :: Interval -> Arity -> Sem r [(Name, ApplicationArg)]
+        helperDefaultArgs :: Interval -> Arity -> Sem r [InsertedArg]
         helperDefaultArgs i ari = do
           let argsAris :: [Arity]
               argsAris = map arityParameter (unfoldArity ari)
-          argsWithHoles :: [(Name, ApplicationArg)] <- addHoles i hintArity ari args
-          let argsWithAris :: [(IsImplicit, Name, (Arity, Expression))]
-              argsWithAris = [(i', argName, (a, e')) | (a, (argName, (ApplicationArg i' e'))) <- zip (argsAris ++ repeat ArityUnknown) argsWithHoles]
-          forM argsWithAris $ \(impl, name, (argAri, argExpr)) -> do
-            expr' <- checkExpression argAri argExpr
-            return
-              ( name,
-                ApplicationArg
-                  { _appArgIsImplicit = impl,
-                    _appArg = expr'
-                  }
-              )
+          argsWithHoles :: [InsertedArg] <- addHoles i hintArity ari args
+          let argsWithAris :: [(InsertedArg, Arity)]
+              argsWithAris = zip argsWithHoles (argsAris ++ repeat ArityUnknown)
+          forM argsWithAris $ \(ia, argAri) -> do
+            checkDefaultArgCycle ia
+            let adjustCtx
+                  | ia ^. insertedArgDefault = over insertedArgsStack ((ia ^. insertedArgName) :)
+                  | otherwise = id
+            local adjustCtx (traverseOf (insertedArg . appArg) (checkExpression argAri) ia)
+          where
+            checkDefaultArgCycle :: InsertedArg -> Sem r ()
+            checkDefaultArgCycle ia = do
+              st <- asks (^. insertedArgsStack)
+              case span (/= (ia ^. insertedArgName)) st of
+                (_, []) -> return ()
+                (c, _) ->
+                  let cyc = NonEmpty.reverse (ia ^. insertedArgName :| c)
+                   in throw (ErrDefaultArgCycle (DefaultArgCycle cyc))
 
         addHoles ::
           Interval ->
           Arity ->
           Arity ->
           [ApplicationArg] ->
-          Sem r [(Name, ApplicationArg)]
+          Sem r [InsertedArg]
         addHoles loc hint ari0 = evalState 0 . execOutputList . go ari0
           where
             go ::
               Arity ->
               [ApplicationArg] ->
-              Sem (Output (Name, ApplicationArg) ': State Int ': r) ()
+              Sem (Output InsertedArg ': State Int ': r) ()
             go ari goargs = do
-              let emitNoName :: ApplicationArg -> Sem (Output (Name, ApplicationArg) ': State Int ': r) ()
-                  emitNoName x = do
+              let emitNoName :: Bool -> ApplicationArg -> Sem (Output InsertedArg ': State Int ': r) ()
+                  emitNoName isDef x = do
                     let l = getLoc x
                     v <- freshFunVar l "gen_helper"
-                    output (v, x)
-                    modify' @Int succ
-                  emitWithParameter :: ArityParameter -> ApplicationArg -> Sem (Output (Name, ApplicationArg) ': State Int ': r) ()
-                  emitWithParameter p = maybe emitNoName emit (p ^. arityParameterName)
-                  emit :: Name -> ApplicationArg -> Sem (Output (Name, ApplicationArg) ': State Int ': r) ()
-                  emit n x = do
-                    output (n, x)
+                    emit isDef v x
+                  emitWithParameter :: Bool -> ArityParameter -> ApplicationArg -> Sem (Output InsertedArg ': State Int ': r) ()
+                  emitWithParameter isDef p = maybe (emitNoName isDef) (emit isDef) (p ^. arityParameterName)
+                  emitInstanceHole :: Sem (Output InsertedArg ': State Int ': r) ()
+                  emitInstanceHole = do
+                    h <- newHoleInstance loc
+                    emitNoName False (ApplicationArg ImplicitInstance (ExpressionInstanceHole h))
+                  emitImplicitHole :: ArityParameter -> Sem (Output InsertedArg ': State Int ': r) ()
+                  emitImplicitHole p = do
+                    (isDef, h) <- newHoleImplicit p loc
+                    emitWithParameter isDef p (ApplicationArg Implicit h)
+                  emit :: Bool -> Name -> ApplicationArg -> Sem (Output InsertedArg ': State Int ': r) ()
+                  emit isDef n x = do
+                    output
+                      InsertedArg
+                        { _insertedArg = x,
+                          _insertedArgDefault = isDef,
+                          _insertedArgName = n
+                        }
                     modify' @Int succ
               case (ari, goargs) of
                 (ArityFunction (FunctionArity (p@ArityParameter {_arityParameterImplicit = Implicit}) r), (ApplicationArg Implicit e) : rest) -> do
-                  emitWithParameter p (ApplicationArg Implicit e)
+                  emitWithParameter False p (ApplicationArg Implicit e)
                   go r rest
                 (ArityFunction (FunctionArity (ArityParameter {_arityParameterImplicit = ImplicitInstance}) r), (ApplicationArg ImplicitInstance e) : rest) -> do
-                  emitNoName (ApplicationArg ImplicitInstance e)
+                  emitNoName False (ApplicationArg ImplicitInstance e)
                   go r rest
                 (ArityFunction (FunctionArity (p@ArityParameter {_arityParameterImplicit = Explicit}) r), (ApplicationArg Explicit e) : rest) -> do
-                  emitWithParameter p (ApplicationArg Explicit e)
+                  emitWithParameter False p (ApplicationArg Explicit e)
                   go r rest
                 (ArityFunction (FunctionArity impl _), [])
                   -- When there are no remaining arguments and the expected arity of the
@@ -833,12 +856,12 @@ checkExpression hintArity expr = case expr of
                       && ari == hint ->
                       return ()
                 (ArityFunction (FunctionArity (p@ArityParameter {_arityParameterImplicit = Implicit}) r), _) -> do
-                  h <- newHoleImplicit p loc
-                  emitWithParameter p (ApplicationArg Implicit h)
+                  -- h <- newHoleImplicit p loc
+                  -- emitWithParameter p (ApplicationArg Implicit h)
+                  emitImplicitHole p
                   go r goargs
                 (ArityFunction (FunctionArity (ArityParameter {_arityParameterImplicit = ImplicitInstance}) r), _) -> do
-                  h <- newHoleInstance loc
-                  emitNoName (ApplicationArg ImplicitInstance (ExpressionInstanceHole h))
+                  emitInstanceHole
                   go r goargs
                 (ArityFunction (FunctionArity (ArityParameter {_arityParameterImplicit = Explicit}) _), (ApplicationArg _ _) : _) -> do
                   idx <- get @Int
@@ -861,15 +884,15 @@ checkExpression hintArity expr = case expr of
                     )
                 (ArityUnknown, []) -> return ()
                 (ArityUnknown, p : ps) -> do
-                  emitNoName p
+                  emitNoName False p
                   go ArityUnknown ps
 
-newHoleImplicit :: (Member NameIdGen r) => ArityParameter -> Interval -> Sem r Expression
+newHoleImplicit :: (Member NameIdGen r) => ArityParameter -> Interval -> Sem r (Bool, Expression)
 newHoleImplicit i loc = case i ^. arityParameterInfo . argInfoDefault of
-  Nothing -> ExpressionHole . mkHole loc <$> freshNameId
+  Nothing -> (False,) . ExpressionHole . mkHole loc <$> freshNameId
   Just e -> do
     -- TODO update location
-    return e
+    return (True, e)
 
 newHoleInstance :: (Member NameIdGen r) => Interval -> Sem r Hole
 newHoleInstance loc = mkHole loc <$> freshNameId
