@@ -8,6 +8,7 @@ module Juvix.Compiler.Internal.Translation.FromConcrete.NamedArguments
     Arg,
     argName,
     argImplicit,
+    argAutoInserted,
     argValue,
     argType,
   )
@@ -34,6 +35,7 @@ data Arg = Arg
   { _argName :: S.Symbol,
     _argImplicit :: IsImplicit,
     _argType :: Expression,
+    _argAutoInserted :: Bool,
     _argValue :: Expression
   }
 
@@ -211,6 +213,7 @@ helper loc = do
                   { _argName = nm ^. nameItemSymbol,
                     _argImplicit = impl,
                     _argType = nm ^. nameItemType,
+                    _argAutoInserted = True,
                     _argValue
                   }
         maxIx :: Maybe Int
@@ -248,7 +251,8 @@ helper loc = do
               let newArg =
                     Arg
                       { _argName = idx ^. nameItemSymbol,
-                        _argValue = (arg ^. namedArgValue),
+                        _argValue = arg ^. namedArgValue,
+                        _argAutoInserted = False,
                         _argType = idx ^. nameItemType,
                         _argImplicit = impl
                       }
