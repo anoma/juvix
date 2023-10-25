@@ -19,7 +19,7 @@ runCommand opts = do
   let b :: AppPath File
       b = project opts ^. gebEvalOptionsInputFile
   f :: Path Abs File <- fromAppPathFile b
-  content :: Text <- embed (readFile (toFilePath f))
+  content :: Text <- readFile (toFilePath f)
   case Geb.runParser f content of
     Left err -> exitJuvixError (JuvixError err)
     Right gebTerm -> do

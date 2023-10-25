@@ -11,7 +11,7 @@ runCommand :: forall r a. (Members '[Embed IO, App] r, CanonicalProjection a Cor
 runCommand opts = do
   gopts <- askGlobalOptions
   inputFile :: Path Abs File <- fromAppPathFile sinputFile
-  s' <- embed (readFile $ toFilePath inputFile)
+  s' <- readFile $ toFilePath inputFile
   tab <- getRight (mapLeft JuvixError (Core.runParserMain inputFile Core.emptyInfoTable s'))
   r <- runReader (project @GlobalOptions @Core.CoreOptions gopts) $ runError @JuvixError $ Core.toStripped' tab
   tab' <- Asm.fromCore . Stripped.fromCore <$> getRight r

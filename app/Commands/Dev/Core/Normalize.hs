@@ -9,7 +9,7 @@ import Juvix.Compiler.Core.Translation.FromSource qualified as Core
 runCommand :: forall r. (Members '[Embed IO, App] r) => CoreNormalizeOptions -> Sem r ()
 runCommand opts = do
   f :: Path Abs File <- fromAppPathFile b
-  s <- embed (readFile (toFilePath f))
+  s <- readFile (toFilePath f)
   case Core.runParser f Core.emptyInfoTable s of
     Left err -> exitJuvixError (JuvixError err)
     Right (tab, Just node) -> do normalizeAndPrint opts tab node

@@ -74,7 +74,7 @@ runRepl opts tab = do
           Right (tab', Nothing) ->
             runRepl opts tab'
       ':' : 'l' : ' ' : f -> do
-        s' <- embed (readFile f)
+        s' <- readFile f
         sf <- someBaseToAbs' (someFile f)
         case Core.runParser sf Core.emptyInfoTable s' of
           Left err -> do

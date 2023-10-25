@@ -19,7 +19,7 @@ runCommand opts = do
           { _entryPointTarget = tgt,
             _entryPointDebug = opts ^. compileDebug
           }
-  s <- embed (readFile (toFilePath file))
+  s <- readFile (toFilePath file)
   case Asm.runParser (toFilePath file) s of
     Left err -> exitJuvixError (JuvixError err)
     Right tab -> do
