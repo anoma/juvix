@@ -7,7 +7,9 @@ module CommonOptions
 where
 
 import Control.Exception qualified as GHC
+import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Compiler.Core.Data.TransformationId.Parser
+import Juvix.Data.FileExt
 import Juvix.Prelude
 import Options.Applicative
 import System.Process
@@ -26,61 +28,25 @@ makeLenses ''AppPath
 instance Show (AppPath f) where
   show = Prelude.show . (^. pathPath)
 
-parseInputJuvixFile :: Parser (AppPath File)
-parseInputJuvixFile = do
+parseInputFiles :: NonEmpty FileExt -> Parser (AppPath File)
+parseInputFiles exts' = do
+  let exts = NonEmpty.toList exts'
+      mvars = intercalate "|" (map toMetavar exts)
+      dotExts = intercalate ", " (map Prelude.show exts)
+      helpMsg = "Path to a " <> dotExts <> " file"
+      completers = foldMap (completer . extCompleter) exts
   _pathPath <-
     argument
       somePreFileOpt
-      ( metavar "JUVIX_FILE"
-          <> help "Path to a .juvix file"
-          <> completer juvixCompleter
+      ( metavar mvars
+          <> help helpMsg
+          <> completers
+          <> action "file"
       )
   pure AppPath {_pathIsInput = True, ..}
 
-parseInputJuvixCoreFile :: Parser (AppPath File)
-parseInputJuvixCoreFile = do
-  _pathPath <-
-    argument
-      somePreFileOpt
-      ( metavar "JUVIX_CORE_FILE"
-          <> help "Path to a .jvc file"
-          <> completer juvixCoreCompleter
-      )
-  pure AppPath {_pathIsInput = True, ..}
-
-parseInputJuvixGebFile :: Parser (AppPath File)
-parseInputJuvixGebFile = do
-  _pathPath <-
-    argument
-      somePreFileOpt
-      ( metavar "JUVIX_GEB_FILE"
-          <> help "Path to a .geb or custom .lisp file"
-          <> completer juvixGebCompleter
-          <> completer juvixGebLispCompleter
-      )
-  pure AppPath {_pathIsInput = True, ..}
-
-parseInputJuvixAsmFile :: Parser (AppPath File)
-parseInputJuvixAsmFile = do
-  _pathPath <-
-    argument
-      somePreFileOpt
-      ( metavar "JUVIX_ASM_FILE"
-          <> help "Path to a .jva file"
-          <> completer juvixAsmCompleter
-      )
-  pure AppPath {_pathIsInput = True, ..}
-
-parseInputCFile :: Parser (AppPath File)
-parseInputCFile = do
-  _pathPath <-
-    argument
-      somePreFileOpt
-      ( metavar "C_FILE"
-          <> help "Path to a .c file"
-          <> completer juvixCCompleter
-      )
-  pure AppPath {_pathIsInput = True, ..}
+parseInputFile :: FileExt -> Parser (AppPath File)
+parseInputFile = parseInputFiles . NonEmpty.singleton
 
 parseGenericInputFile :: Parser (AppPath File)
 parseGenericInputFile = do
@@ -143,29 +109,11 @@ naturalNumberOpt = eitherReader aux
     aux :: String -> Either String Word
     aux s = maybe (Left $ s <> " is not a nonnegative number") Right (readMaybe s :: Maybe Word)
 
-extCompleter :: String -> Completer
+extCompleter :: FileExt -> Completer
 extCompleter ext = mkCompleter $ \word -> do
-  let cmd = unwords ["compgen", "-o", "plusdirs", "-f", "-X", "!*." <> ext, "--", requote word]
+  let cmd = unwords ["compgen", "-o", "plusdirs", "-f", "-X", "!*" <> Prelude.show ext, "--", requote word]
   result <- GHC.try @GHC.SomeException $ readProcess "bash" ["-c", cmd] ""
   return . lines . fromRight [] $ result
-
-juvixCompleter :: Completer
-juvixCompleter = extCompleter "juvix"
-
-juvixCoreCompleter :: Completer
-juvixCoreCompleter = extCompleter "jvc"
-
-juvixGebLispCompleter :: Completer
-juvixGebLispCompleter = extCompleter "lisp"
-
-juvixGebCompleter :: Completer
-juvixGebCompleter = extCompleter "geb"
-
-juvixAsmCompleter :: Completer
-juvixAsmCompleter = extCompleter "jva"
-
-juvixCCompleter :: Completer
-juvixCCompleter = extCompleter "c"
 
 requote :: String -> String
 requote s =

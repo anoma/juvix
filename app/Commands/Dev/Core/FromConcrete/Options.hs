@@ -66,7 +66,7 @@ parseCoreFromConcreteOptions = do
       ( long "no-io"
           <> help "Don't interpret the IO effects"
       )
-  _coreFromConcreteInputFile <- parseInputJuvixFile
+  _coreFromConcreteInputFile <- parseInputFile FileExtJuvixCore
   _coreFromConcreteSymbolName <-
     optional $
       strOption

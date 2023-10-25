@@ -38,11 +38,11 @@ parseCoreEvalOptions = do
   _coreEvalNoIO <-
     switch
       ( long "no-io"
-          <> help "Don't interpret the IO effects"
+          <> help "Do not interpret the IO effects"
       )
   _coreEvalShowDeBruijn <- optDeBruijn
   _coreEvalShowIdentIds <- optIdentIds
   _coreEvalShowArgsNum <- optArgsNum
   _coreEvalNoDisambiguate <- optNoDisambiguate
-  _coreEvalInputFile <- parseInputJuvixCoreFile
+  _coreEvalInputFile <- parseInputFile FileExtJuvixCore
   pure CoreEvalOptions {..}

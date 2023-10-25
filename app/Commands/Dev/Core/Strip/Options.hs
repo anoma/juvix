@@ -26,5 +26,5 @@ parseCoreStripOptions = do
       ( long "no-print"
           <> help "do not print the stripped code"
       )
-  _coreStripInputFile <- parseInputJuvixCoreFile
+  _coreStripInputFile <- parseInputFile FileExtJuvixCore
   pure CoreStripOptions {..}

@@ -22,5 +22,5 @@ parseCallGraph = do
               <> short 'f'
               <> help "Only shows the specified function"
           )
-  _graphInputFile <- parseInputJuvixFile
+  _graphInputFile <- parseInputFile FileExtJuvix
   pure CallGraphOptions {..}

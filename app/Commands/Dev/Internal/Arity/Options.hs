@@ -11,5 +11,5 @@ makeLenses ''InternalArityOptions
 
 parseInternalArity :: Parser InternalArityOptions
 parseInternalArity = do
-  _internalArityInputFile <- parseInputJuvixFile
+  _internalArityInputFile <- parseInputFile FileExtJuvix
   pure InternalArityOptions {..}

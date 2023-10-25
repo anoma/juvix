@@ -8,7 +8,7 @@ parseDevRepl :: Parser ReplOptions
 parseDevRepl = do
   let _replPrintValues = False
       _replIsDev = True
-  _replInputFile <- optional parseInputJuvixFile
+  _replInputFile <- optional (parseInputFile FileExtJuvix)
   _replTransformations <- do
     ts <- optTransformationIds
     pure $

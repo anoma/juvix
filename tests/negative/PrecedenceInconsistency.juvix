@@ -1,0 +1,5 @@
+module PrecedenceInconsistency;
+
+syntax fixity f1 := binary {assoc := left};
+syntax fixity f2 := binary {assoc := left; same := f1};
+syntax fixity f3 := binary {assoc := left; above := [f1]; below := [f2]};

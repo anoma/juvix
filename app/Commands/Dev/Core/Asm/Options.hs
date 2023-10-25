@@ -17,5 +17,5 @@ parseCoreAsmOptions = do
       ( long "print"
           <> help "print the generated JuvixAsm code instead of running it"
       )
-  _coreAsmInputFile <- parseInputJuvixCoreFile
+  _coreAsmInputFile <- parseInputFile FileExtJuvixCore
   pure CoreAsmOptions {..}

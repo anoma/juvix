@@ -11,5 +11,5 @@ makeLenses ''InternalPrettyOptions
 
 parseInternalPretty :: Parser InternalPrettyOptions
 parseInternalPretty = do
-  _internalPrettyInputFile <- parseInputJuvixFile
+  _internalPrettyInputFile <- parseInputFile FileExtJuvix
   pure InternalPrettyOptions {..}
