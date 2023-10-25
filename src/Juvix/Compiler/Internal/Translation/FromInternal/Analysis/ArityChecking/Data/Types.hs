@@ -1,18 +1,24 @@
 module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Data.Types where
 
+import Juvix.Compiler.Internal.Extra
 import Juvix.Compiler.Internal.Language
 import Juvix.Prelude
 import Juvix.Prelude.Pretty
-import Juvix.Compiler.Internal.Extra
+
+-- | Used to detect of cycles of default arguments in the arity checker.
+newtype InsertedArgsStack = InsertedArgsStack
+  { _insertedArgsStack :: [Name]
+  }
+  deriving newtype (Monoid, Semigroup)
 
 -- | Helper type used during insertion of default arguments in the arity
 -- checker.
-data InsertedArg = InsertedArg {
-  _insertedArgName :: Name,
-  _insertedArg :: ApplicationArg,
-  -- | True if this corresponds to an automatically inserted default argument.
-  -- False if it is an inserted hole or an argument present in the source code.
-  _insertedDefault :: Bool
+data InsertedArg = InsertedArg
+  { _insertedArgName :: Name,
+    _insertedArg :: ApplicationArg,
+    -- | True if this corresponds to an automatically inserted default argument.
+    -- False if it is an inserted hole or an argument present in the source code.
+    _insertedArgDefault :: Bool
   }
 
 data Arity
@@ -51,6 +57,7 @@ instance Eq ArityParameter where
 makeLenses ''UnfoldedArity
 makeLenses ''InsertedArg
 makeLenses ''ArityParameter
+makeLenses ''InsertedArgsStack
 
 arityParameterName :: Lens' ArityParameter (Maybe Name)
 arityParameterName = arityParameterInfo . argInfoName

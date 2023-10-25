@@ -16,6 +16,7 @@ data ArityCheckerError
   | ErrTooManyArguments TooManyArguments
   | ErrFunctionApplied FunctionApplied
   | ErrBuiltinNotFullyApplied BuiltinNotFullyApplied
+  | ErrDefaultArgCycle DefaultArgCycle
 
 instance ToGenericError ArityCheckerError where
   genericError :: (Member (Reader GenericOptions) r) => ArityCheckerError -> Sem r GenericError
@@ -28,3 +29,4 @@ instance ToGenericError ArityCheckerError where
     ErrTooManyArguments e -> genericError e
     ErrFunctionApplied e -> genericError e
     ErrBuiltinNotFullyApplied e -> genericError e
+    ErrDefaultArgCycle e -> genericError e

@@ -4,6 +4,7 @@ module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.C
   )
 where
 
+import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Compiler.Internal.Extra
 import Juvix.Compiler.Internal.Extra qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromConcrete.Data.Context
@@ -26,7 +27,7 @@ checkModuleIndexNoCache ::
   ModuleIndex ->
   Sem r Module
 checkModuleIndexNoCache (ModuleIndex Module {..}) = do
-  _moduleBody' <- checkModuleBody _moduleBody
+  _moduleBody' <- runReader @InsertedArgsStack mempty (checkModuleBody _moduleBody)
   return
     Module
       { _moduleBody = _moduleBody',
@@ -34,7 +35,7 @@ checkModuleIndexNoCache (ModuleIndex Module {..}) = do
       }
 
 checkModuleBody ::
-  (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError, MCache] r) =>
+  (Members '[Reader InsertedArgsStack, Reader InfoTable, NameIdGen, Error ArityCheckerError, MCache] r) =>
   ModuleBody ->
   Sem r ModuleBody
 checkModuleBody ModuleBody {..} = do
@@ -58,7 +59,7 @@ checkImport ::
   Sem r Import
 checkImport = traverseOf importModule checkModuleIndex
 
-checkInductive :: forall r. (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r) => InductiveDef -> Sem r InductiveDef
+checkInductive :: forall r. (Members '[Reader InsertedArgsStack, Reader InfoTable, NameIdGen, Error ArityCheckerError] r) => InductiveDef -> Sem r InductiveDef
 checkInductive d = do
   let _inductiveName = d ^. inductiveName
       _inductiveBuiltin = d ^. inductiveBuiltin
@@ -77,7 +78,7 @@ checkInductive d = do
         checkParam :: InductiveParameter -> Sem (State LocalVars ': r) InductiveParameter
         checkParam = return
 
-checkConstructor :: (Members '[Reader LocalVars, Reader InfoTable, NameIdGen, Error ArityCheckerError] r) => ConstructorDef -> Sem r ConstructorDef
+checkConstructor :: (Members '[Reader InsertedArgsStack, Reader LocalVars, Reader InfoTable, NameIdGen, Error ArityCheckerError] r) => ConstructorDef -> Sem r ConstructorDef
 checkConstructor c = do
   let _inductiveConstructorName = c ^. inductiveConstructorName
       _inductiveConstructorPragmas = c ^. inductiveConstructorPragmas
@@ -86,10 +87,10 @@ checkConstructor c = do
   return ConstructorDef {..}
 
 -- | check the arity of some ty : Type
-checkType :: (Members '[Reader LocalVars, Reader InfoTable, NameIdGen, Error ArityCheckerError] r) => Expression -> Sem r Expression
+checkType :: (Members '[Reader InsertedArgsStack, Reader LocalVars, Reader InfoTable, NameIdGen, Error ArityCheckerError] r) => Expression -> Sem r Expression
 checkType = checkExpression ArityUnit
 
-checkAxiom :: (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r) => AxiomDef -> Sem r AxiomDef
+checkAxiom :: (Members '[Reader InsertedArgsStack, Reader InfoTable, NameIdGen, Error ArityCheckerError] r) => AxiomDef -> Sem r AxiomDef
 checkAxiom a = do
   let _axiomName = a ^. axiomName
       _axiomBuiltin = a ^. axiomBuiltin
@@ -98,7 +99,7 @@ checkAxiom a = do
   return AxiomDef {..}
 
 checkMutualStatement ::
-  (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r) =>
+  (Members '[Reader InsertedArgsStack, Reader InfoTable, NameIdGen, Error ArityCheckerError] r) =>
   MutualStatement ->
   Sem r MutualStatement
 checkMutualStatement = \case
@@ -107,20 +108,20 @@ checkMutualStatement = \case
   StatementAxiom a -> StatementAxiom <$> checkAxiom a
 
 checkMutualBlockLet ::
-  (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r) =>
+  (Members '[Reader InsertedArgsStack, Reader InfoTable, NameIdGen, Error ArityCheckerError] r) =>
   MutualBlockLet ->
   Sem r MutualBlockLet
 checkMutualBlockLet (MutualBlockLet funs) = MutualBlockLet <$> mapM checkFunctionDef funs
 
 checkMutualBlock ::
-  (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r) =>
+  (Members '[Reader InsertedArgsStack, Reader InfoTable, NameIdGen, Error ArityCheckerError] r) =>
   MutualBlock ->
   Sem r MutualBlock
 checkMutualBlock (MutualBlock funs) = MutualBlock <$> mapM checkMutualStatement funs
 
 checkFunctionDef ::
   forall r.
-  (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r) =>
+  (Members '[Reader InsertedArgsStack, Reader InfoTable, NameIdGen, Error ArityCheckerError] r) =>
   FunctionDef ->
   Sem r FunctionDef
 checkFunctionDef FunctionDef {..} = do
@@ -146,7 +147,7 @@ checkFunctionDef FunctionDef {..} = do
 
 checkArgsInfo ::
   forall r.
-  (Members '[NameIdGen, Reader LocalVars, Error ArityCheckerError, Reader InfoTable] r) =>
+  (Members '[Reader InsertedArgsStack, NameIdGen, Reader LocalVars, Error ArityCheckerError, Reader InfoTable] r) =>
   [ArgInfo] ->
   [FunctionParameter] ->
   Sem r [ArgInfo]
@@ -170,7 +171,7 @@ checkArgsInfo defaults =
           withLocalVarMaybe ari (p ^. paramName) (go ds' ps')
 
 checkFunctionBody ::
-  (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r) =>
+  (Members '[Reader InsertedArgsStack, Reader InfoTable, NameIdGen, Error ArityCheckerError] r) =>
   Arity ->
   Expression ->
   Sem r Expression
@@ -216,7 +217,9 @@ arityLet l = guessArity (l ^. letExpression)
 inferReplExpression :: (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r) => Expression -> Sem r Expression
 inferReplExpression e = do
   ari <- guessArity e
-  withEmptyLocalVars (checkExpression ari e)
+  withEmptyLocalVars
+    . runReader @InsertedArgsStack mempty
+    $ checkExpression ari e
 
 guessArity ::
   forall r.
@@ -481,7 +484,7 @@ checkConstructorApp ca = do
 
 checkCase ::
   forall r.
-  (Members '[Error ArityCheckerError, Reader LocalVars, Reader InfoTable, NameIdGen] r) =>
+  (Members '[Reader InsertedArgsStack, Error ArityCheckerError, Reader LocalVars, Reader InfoTable, NameIdGen] r) =>
   Arity ->
   Case ->
   Sem r Case
@@ -498,7 +501,7 @@ checkCase ari l = do
 
 checkLet ::
   forall r.
-  (Members '[Error ArityCheckerError, Reader LocalVars, Reader InfoTable, NameIdGen] r) =>
+  (Members '[Reader InsertedArgsStack, Error ArityCheckerError, Reader LocalVars, Reader InfoTable, NameIdGen] r) =>
   Arity ->
   Let ->
   Sem r Let
@@ -514,7 +517,7 @@ checkLet ari l = do
 
 checkLambda ::
   forall r.
-  (Members '[Error ArityCheckerError, Reader LocalVars, Reader InfoTable, NameIdGen] r) =>
+  (Members '[Reader InsertedArgsStack, Error ArityCheckerError, Reader LocalVars, Reader InfoTable, NameIdGen] r) =>
   Arity ->
   Lambda ->
   Sem r Lambda
@@ -624,14 +627,14 @@ typeArity = go
 
 checkExample ::
   forall r.
-  (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError, Reader LocalVars] r) =>
+  (Members '[Reader InsertedArgsStack, Reader InfoTable, NameIdGen, Error ArityCheckerError, Reader LocalVars] r) =>
   Example ->
   Sem r Example
 checkExample = traverseOf exampleExpression (checkExpression ArityUnknown)
 
 checkExpression ::
   forall r.
-  (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError, Reader LocalVars] r) =>
+  (Members '[Reader InsertedArgsStack, Reader InfoTable, NameIdGen, Error ArityCheckerError, Reader LocalVars] r) =>
   Arity ->
   Expression ->
   Sem r Expression
@@ -784,9 +787,20 @@ checkExpression hintArity expr = case expr of
           let argsWithAris :: [(InsertedArg, Arity)]
               argsWithAris = zip argsWithHoles (argsAris ++ repeat ArityUnknown)
           forM argsWithAris $ \(ia, argAri) -> do
-            -- TODO put context
-            let adjustCtx = case isa of
-            traverseOf (insertedArg . appArg) (checkExpression argAri) ia
+            checkDefaultArgCycle ia
+            let adjustCtx
+                  | ia ^. insertedArgDefault = over insertedArgsStack ((ia ^. insertedArgName) :)
+                  | otherwise = id
+            local adjustCtx (traverseOf (insertedArg . appArg) (checkExpression argAri) ia)
+          where
+            checkDefaultArgCycle :: InsertedArg -> Sem r ()
+            checkDefaultArgCycle ia = do
+              st <- asks (^. insertedArgsStack)
+              case span (/= (ia ^. insertedArgName)) st of
+                (_, []) -> return ()
+                (c, _) ->
+                  let cyc = NonEmpty.reverse (ia ^. insertedArgName :| c)
+                   in throw (ErrDefaultArgCycle (DefaultArgCycle cyc))
 
         addHoles ::
           Interval ->
@@ -818,11 +832,12 @@ checkExpression hintArity expr = case expr of
                     emitWithParameter isDef p (ApplicationArg Implicit h)
                   emit :: Bool -> Name -> ApplicationArg -> Sem (Output InsertedArg ': State Int ': r) ()
                   emit isDef n x = do
-                    output InsertedArg {
-                      _insertedArg = x,
-                      _insertedDefault = isDef,
-                      _insertedArgName = n
-                                       }
+                    output
+                      InsertedArg
+                        { _insertedArg = x,
+                          _insertedArgDefault = isDef,
+                          _insertedArgName = n
+                        }
                     modify' @Int succ
               case (ari, goargs) of
                 (ArityFunction (FunctionArity (p@ArityParameter {_arityParameterImplicit = Implicit}) r), (ApplicationArg Implicit e) : rest) -> do

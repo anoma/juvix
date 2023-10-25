@@ -104,5 +104,12 @@ tests =
       $(mkRelFile "issue2293.juvix")
       $ \case
         ErrWrongConstructorAppLength {} -> Nothing
+        _ -> wrongError,
+    NegTest
+      "Detect default argument cycle in the arity checker"
+      $(mkRelDir "Internal")
+      $(mkRelFile "DefaultArgCycleArity.juvix")
+      $ \case
+        ErrDefaultArgCycle {} -> Nothing
         _ -> wrongError
   ]
