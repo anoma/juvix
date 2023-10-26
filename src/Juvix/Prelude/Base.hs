@@ -42,6 +42,7 @@ module Juvix.Prelude.Base
     module Data.String,
     module Data.Text.Encoding,
     module Data.Text.IO,
+    module Data.Text.IO.Utf8,
     module Data.Traversable,
     module Data.Tuple.Extra,
     module Data.Typeable,
@@ -144,7 +145,8 @@ import Data.String
 import Data.Text (Text, pack, strip, unpack)
 import Data.Text qualified as Text
 import Data.Text.Encoding
-import Data.Text.IO
+import Data.Text.IO hiding (appendFile, readFile, writeFile)
+import Data.Text.IO.Utf8
 import Data.Traversable
 import Data.Tuple.Extra hiding (both)
 import Data.Type.Equality (type (~))

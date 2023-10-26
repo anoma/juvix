@@ -12,7 +12,7 @@ runCommand :: forall r a. (Members '[Embed IO, App] r, CanonicalProjection a Cor
 runCommand opts = do
   gopts <- askGlobalOptions
   inputFile :: Path Abs File <- fromAppPathFile sinputFile
-  s' <- embed (readFile $ toFilePath inputFile)
+  s' <- readFile $ toFilePath inputFile
   (tab, _) <- getRight (mapLeft JuvixError (Core.runParser inputFile Core.emptyInfoTable s'))
   let r =
         run $
