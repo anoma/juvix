@@ -42,7 +42,7 @@ instance Clonable Application where
       Application
         { _appLeft = l',
           _appRight = r',
-          ..
+          _appImplicit
         }
 
 instance (Clonable a) => Clonable (WithLoc a) where
@@ -185,7 +185,7 @@ instance Clonable SimpleBinder where
     return
       SimpleBinder
         { _sbinderType = ty',
-          ..
+          _sbinderVar
         }
 
 instance Clonable SimpleLambda where
@@ -250,11 +250,18 @@ instance Clonable FunctionDef where
     underBinder fun $ \fun' -> do
       body' <- freshNameIds _funDefBody
       defaultSig' <- freshNameIds _funDefArgsInfo
+
       return
         FunctionDef
           { _funDefName = fun' ^. funDefName,
             _funDefType = ty',
             _funDefBody = body',
             _funDefArgsInfo = defaultSig',
-            ..
+            -- clones do not need to preserve examples
+            _funDefExamples = [],
+            _funDefTerminating,
+            _funDefInstance,
+            _funDefCoercion,
+            _funDefBuiltin,
+            _funDefPragmas
           }
