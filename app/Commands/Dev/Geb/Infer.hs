@@ -13,7 +13,7 @@ runCommand opts = do
   let b :: AppPath File
       b = opts ^. gebInferOptionsInputFile
   f :: Path Abs File <- fromAppPathFile b
-  content :: Text <- embed (readFile (toFilePath f))
+  content :: Text <- readFile (toFilePath f)
   case Geb.runParser f content of
     Right (Geb.ExpressionMorphism gebTerm) ->
       case Geb.inferObject' gebTerm of
