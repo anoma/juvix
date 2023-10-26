@@ -57,7 +57,7 @@ documentedMessage w = uncurry DocumentedMessage (first (baseUrl <>) warningInfo)
       NoWasmer -> ("could-not-find-the-wasmer-command", "Could not find the wasmer command")
 
     baseUrl :: Text
-    baseUrl = "https://docs.juvix.org/dev/reference/tooling/doctor/#"
+    baseUrl = "https://docs.juvix.org/" <> V.versionDoc <> "/reference/tooling/doctor/#"
 
 heading :: (Member Log r) => Text -> Sem r ()
 heading = log . ("> " <>)
