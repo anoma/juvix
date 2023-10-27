@@ -15,6 +15,7 @@ module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Da
     runInferenceDef,
     rememberFunctionDef,
     matchTypes,
+    queryMetavarFinal,
   )
 where
 
