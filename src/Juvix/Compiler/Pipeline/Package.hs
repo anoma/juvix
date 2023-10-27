@@ -13,7 +13,10 @@ import Data.Versions
 import Data.Yaml
 import Juvix.Compiler.Pipeline.Lockfile
 import Juvix.Compiler.Pipeline.Package.Base
+import Juvix.Compiler.Pipeline.Package.Loader
 import Juvix.Compiler.Pipeline.Package.Loader.Error
+import Juvix.Compiler.Pipeline.Package.Loader.EvalEff
+import Juvix.Compiler.Pipeline.Package.Loader.EvalEff.IO
 import Juvix.Extra.Paths
 import Juvix.Prelude
 
@@ -21,7 +24,7 @@ processPackage :: forall r. (Members '[Error PackageLoaderError] r) => Path Abs 
 processPackage _packageFile buildDir lockfile pkg = do
   let _packageName = fromMaybe defaultPackageName (pkg ^. packageName)
       _packageDependencies = resolveDependencies
-  checkNoDuplicateDepNames _packageDependencies
+  checkNoDuplicateDepNames _packageFile _packageDependencies
   _packageVersion <- getVersion
   return
     Package
@@ -45,38 +48,50 @@ processPackage _packageFile buildDir lockfile pkg = do
                 _packageLoaderErrorPath = _packageFile
               }
 
-    checkNoDuplicateDepNames :: [Dependency] -> Sem r ()
-    checkNoDuplicateDepNames deps = go HashSet.empty (deps ^.. traversed . _GitDependency . gitDependencyName)
-      where
-        go :: HashSet Text -> [Text] -> Sem r ()
-        go _ [] = return ()
-        go s (x : xs)
-          | x `HashSet.member` s =
-              throw
-                PackageLoaderError
-                  { _packageLoaderErrorPath = _packageFile,
-                    _packageLoaderErrorCause =
-                      ErrDuplicateDependencyError
-                        DuplicateDependencyError
-                          { _duplicateDependencyErrorName = x
-                          }
-                  }
-          | otherwise = go (HashSet.insert x s) xs
-
     resolveDependencies :: [Dependency]
     resolveDependencies = fromMaybe [stdlib] (pkg ^. packageDependencies)
       where
         base :: SomeBase Dir = resolveBuildDir buildDir <///> relStdlibDir
         stdlib = mkPathDependency (fromSomeDir base)
 
--- | Given some directory d it tries to read the file d/juvix.yaml and parse its contents
+checkNoDuplicateDepNames :: forall r. (Members '[Error PackageLoaderError] r) => Path Abs File -> [Dependency] -> Sem r ()
+checkNoDuplicateDepNames p deps = go HashSet.empty (deps ^.. traversed . _GitDependency . gitDependencyName)
+  where
+    go :: HashSet Text -> [Text] -> Sem r ()
+    go _ [] = return ()
+    go s (x : xs)
+      | x `HashSet.member` s =
+          throw
+            PackageLoaderError
+              { _packageLoaderErrorPath = p,
+                _packageLoaderErrorCause =
+                  ErrDuplicateDependencyError
+                    DuplicateDependencyError
+                      { _duplicateDependencyErrorName = x
+                      }
+              }
+      | otherwise = go (HashSet.insert x s) xs
+
 readPackage ::
   forall r.
-  (Members '[Files, Error JuvixError] r) =>
+  (Members '[Error JuvixError, Files, EvalFileEff] r) =>
   Path Abs Dir ->
   BuildDir ->
   Sem r Package
-readPackage root buildDir = mapError (JuvixError @PackageLoaderError) $ do
+readPackage root buildDir = do
+  ifM (fileExists' f) (readPackageFile root buildDir f) (readYamlPackage root buildDir)
+  where
+    f :: Path Abs File
+    f = mkPackagePath root
+
+-- | Given some directory d it tries to read the file d/juvix.yaml and parse its contents
+readYamlPackage ::
+  forall r.
+  (Members '[Files, EvalFileEff, Error JuvixError] r) =>
+  Path Abs Dir ->
+  BuildDir ->
+  Sem r Package
+readYamlPackage root buildDir = mapError (JuvixError @PackageLoaderError) $ do
   bs <- readFileBS' yamlPath
   mLockfile <- mayReadLockfile root
   if
@@ -96,13 +111,37 @@ readPackage root buildDir = mapError (JuvixError @PackageLoaderError) $ do
                   }
           }
 
+readPackageFile ::
+  (Members '[Files, Error JuvixError, EvalFileEff] r) =>
+  Path Abs Dir ->
+  BuildDir ->
+  Path Abs File ->
+  Sem r Package
+readPackageFile root buildDir f = mapError (JuvixError @PackageLoaderError) $ do
+  pkg <- loadPackage buildDir f
+  mLockfile <- mayReadLockfile root
+  checkNoDuplicateDepNames f (pkg ^. packageDependencies)
+  return (pkg {_packageLockfile = mLockfile})
+
 readPackageIO :: Path Abs Dir -> BuildDir -> IO Package
-readPackageIO root buildDir = runM (runFilesIO (runErrorIO' @JuvixError (readPackage root buildDir)))
+readPackageIO root buildDir =
+  runM
+    . runFilesIO
+    . runErrorIO' @JuvixError
+    . mapError (JuvixError @PackageLoaderError)
+    . runEvalFileEffIO
+    $ readPackage root buildDir
 
 readGlobalPackageIO :: IO Package
-readGlobalPackageIO = runM (runFilesIO . runErrorIO' @JuvixError $ readGlobalPackage)
+readGlobalPackageIO =
+  runM
+    . runFilesIO
+    . runErrorIO' @JuvixError
+    . mapError (JuvixError @PackageLoaderError)
+    . runEvalFileEffIO
+    $ readGlobalPackage
 
-readGlobalPackage :: (Members '[Error JuvixError, Files] r) => Sem r Package
+readGlobalPackage :: (Members '[Error JuvixError, EvalFileEff, Files] r) => Sem r Package
 readGlobalPackage = do
   yamlPath <- globalYaml
   unlessM (fileExists' yamlPath) writeGlobalPackage

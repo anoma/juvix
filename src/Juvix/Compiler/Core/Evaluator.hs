@@ -399,6 +399,18 @@ hEvalIO = hEvalIO' defaultEvalOptions
 evalIO :: IdentContext -> Env -> Node -> IO Node
 evalIO = hEvalIO stderr stdin stdout
 
+doEval ::
+  forall r.
+  (Members '[Embed IO] r) =>
+  Bool ->
+  Interval ->
+  InfoTable ->
+  Node ->
+  Sem r (Either CoreError Node)
+doEval noIO loc tab node
+  | noIO = embed $ catchEvalError loc (eval stderr (tab ^. identContext) [] node)
+  | otherwise = embed $ catchEvalErrorIO loc (evalIO (tab ^. identContext) [] node)
+
 -- | Catch EvalError and convert it to CoreError. Needs a default location in case
 -- no location is available in EvalError.
 catchEvalError :: Location -> a -> IO (Either CoreError a)

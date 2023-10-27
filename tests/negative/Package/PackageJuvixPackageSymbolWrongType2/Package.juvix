@@ -1,0 +1,7 @@
+module Package;
+
+import Stdlib.Prelude open;
+
+type Package := p;
+
+package : Package := p;

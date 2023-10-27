@@ -28,10 +28,17 @@ findRootAndChangeDir minputFileDir mbuildDir _rootsInvokeDir = do
     possiblePaths :: Path Abs Dir -> [Path Abs Dir]
     possiblePaths p = p : toList (parents p)
 
+    findPackageFile :: IO (Maybe (Path Abs File))
+    findPackageFile = do
+      cwd <- getCurrentDir
+      let findPackageFile' = findFile (possiblePaths cwd)
+      yamlFile <- findPackageFile' Paths.juvixYamlFile
+      pFile <- findPackageFile' Paths.packageFilePath
+      return (pFile <|> yamlFile)
+
     go :: IO Roots
     go = do
-      cwd <- getCurrentDir
-      l <- findFile (possiblePaths cwd) Paths.juvixYamlFile
+      l <- findPackageFile
       case l of
         Nothing -> do
           _rootsPackage <- readGlobalPackageIO

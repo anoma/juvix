@@ -796,3 +796,6 @@ dependencies = "dependencies"
 
 path_ :: (IsString s) => s
 path_ = "path"
+
+package :: (IsString s) => s
+package = "package"

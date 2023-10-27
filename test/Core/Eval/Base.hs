@@ -10,7 +10,7 @@ import Data.Text.Read
 import GHC.Base (seq)
 import Juvix.Compiler.Core.Data.InfoTable
 import Juvix.Compiler.Core.Error
-import Juvix.Compiler.Core.Evaluator
+import Juvix.Compiler.Core.Evaluator hiding (doEval)
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Extra.Value
 import Juvix.Compiler.Core.Info qualified as Info

@@ -10,6 +10,8 @@ import Juvix.Compiler.Concrete.Print qualified as P
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
+import Juvix.Compiler.Pipeline.Package.Loader.Error
+import Juvix.Compiler.Pipeline.Package.Loader.EvalEff.IO
 import Juvix.Compiler.Pipeline.Package.Loader.PathResolver
 import Juvix.Compiler.Pipeline.Setup
 import Juvix.Data.Effect.Git
@@ -70,6 +72,8 @@ testDescr PosTest {..} = helper renderCodeNew
                         . mapError (JuvixError @GitProcessError)
                         . runGitProcess
                         . mapError (JuvixError @DependencyError)
+                        . mapError (JuvixError @PackageLoaderError)
+                        . runEvalFileEffIO
                         . runPathResolver'
                     evalHelper :: HashMap (Path Abs File) Text -> Sem PipelineEff a -> IO a
                     evalHelper files = fmap snd . runHelper files

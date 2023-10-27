@@ -6,7 +6,7 @@ where
 
 import Juvix.Compiler.Backend
 import Juvix.Compiler.Pipeline.Package.Base
-import Juvix.Compiler.Pipeline.Root
+import Juvix.Compiler.Pipeline.Root.Base
 import Juvix.Extra.Paths
 import Juvix.Prelude
 

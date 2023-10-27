@@ -93,12 +93,14 @@ instance PrettyCodeAnn MissingLockfileDependency where
 data PathResolverError
   = ErrDependencyConflict DependencyConflict
   | ErrMissingModule MissingModule
+  | ErrPackageInvalidImport PackageInvalidImport
   deriving stock (Show)
 
 instance PrettyCodeAnn PathResolverError where
   ppCodeAnn = \case
     ErrDependencyConflict e -> ppCodeAnn e
     ErrMissingModule e -> ppCodeAnn e
+    ErrPackageInvalidImport e -> ppCodeAnn e
 
 data DependencyConflict = DependencyConflict
   { _conflictPackages :: NonEmpty PackageInfo,
@@ -151,3 +153,15 @@ instance PrettyCodeAnn MissingModule where
         where
           deps :: [Dependency]
           deps = _missingInfo ^. packagePackage . packageDependencies
+
+newtype PackageInvalidImport = PackageInvalidImport
+  {_packageInvalidImport :: TopModulePath}
+  deriving stock (Show)
+
+instance PrettyCodeAnn PackageInvalidImport where
+  ppCodeAnn PackageInvalidImport {..} =
+    "The module"
+      <+> pcode _packageInvalidImport
+      <+> "cannot be imported by the Package file."
+        <> line
+        <> "Package files may only import modules from the Juvix standard library or from the PackageDescription module."
