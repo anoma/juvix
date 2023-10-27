@@ -18,7 +18,7 @@ convertNode nonRecSyms tab = umap go
             && _builtinAppOp /= OpTrace
             && _builtinAppOp /= OpSeq
             && all isNonRecValue _builtinAppArgs ->
-            doEval node
+            doEval' node
       NApp {}
         | Info.isClosed node ->
             case h of
@@ -29,7 +29,7 @@ convertNode nonRecSyms tab = umap go
                     && length tyargs == ii ^. identifierArgsNum
                     && isZeroOrderType tab tgt'
                     && all isNonRecValue args ->
-                    doEval node
+                    doEval' node
                 where
                   ii = lookupIdentifierInfo tab _identSymbol
                   evalAllowed = maybe True (^. pragmaEval) (ii ^. identifierPragmas . pragmasEval)
@@ -53,8 +53,8 @@ convertNode nonRecSyms tab = umap go
          in isNonRecValue h && all isType' args
       _ -> isType' node
 
-    doEval :: Node -> Node
-    doEval = removeClosures . geval opts stderr (tab ^. identContext) []
+    doEval' :: Node -> Node
+    doEval' = removeClosures . geval opts stderr (tab ^. identContext) []
       where
         opts =
           defaultEvalOptions

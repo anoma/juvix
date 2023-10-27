@@ -4,9 +4,9 @@ import Stdlib.Prelude open;
 import PackageDescription open;
 
 package : Package :=
-  mkPackageDefault
-    (name := "foo")
-    {version := mkVersion 0 1 0;
+  defaultPackage
+    {name := "foo";
+     version := mkVersion 0 1 0;
      dependencies := [github
        "anoma"
        "juvix-stdlib"

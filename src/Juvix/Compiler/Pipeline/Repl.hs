@@ -15,6 +15,8 @@ import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Che
 import Juvix.Compiler.Pipeline.Artifacts
 import Juvix.Compiler.Pipeline.Artifacts.PathResolver
 import Juvix.Compiler.Pipeline.EntryPoint
+import Juvix.Compiler.Pipeline.Package.Loader.Error
+import Juvix.Compiler.Pipeline.Package.Loader.EvalEff.IO
 import Juvix.Data.Effect.Git.Process
 import Juvix.Data.Effect.Git.Process.Error
 import Juvix.Data.Effect.Process (runProcessIO)
@@ -199,6 +201,8 @@ compileReplInputIO fp txt = do
     . runProcessIO
     . runGitProcess
     . mapError (JuvixError @DependencyError)
+    . mapError (JuvixError @PackageLoaderError)
+    . runEvalFileEffIO
     . runPathResolverArtifacts
     $ do
       p <- parseReplInput fp txt

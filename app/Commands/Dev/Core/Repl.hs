@@ -2,8 +2,8 @@ module Commands.Dev.Core.Repl where
 
 import Commands.Base
 import Commands.Dev.Core.Repl.Options
-import Evaluator
 import Juvix.Compiler.Core.Data.InfoTable qualified as Core
+import Juvix.Compiler.Core.Evaluator qualified as Core
 import Juvix.Compiler.Core.Extra.Base qualified as Core
 import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Info.NoDisplayInfo qualified as Info
@@ -97,7 +97,7 @@ runRepl opts tab = do
   where
     replEval :: Bool -> Core.InfoTable -> Core.Node -> Sem r ()
     replEval noIO tab' node = do
-      r <- doEval noIO defaultLoc tab' node
+      r <- Core.doEval noIO defaultLoc tab' node
       case r of
         Left err -> do
           printJuvixError (JuvixError err)

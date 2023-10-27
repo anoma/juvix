@@ -23,25 +23,13 @@ data EvalOptions = EvalOptions
 
 makeLenses ''EvalOptions
 
-doEval ::
-  forall r.
-  (Members '[Embed IO] r) =>
-  Bool ->
-  Interval ->
-  Core.InfoTable ->
-  Core.Node ->
-  Sem r (Either Core.CoreError Core.Node)
-doEval noIO loc tab node
-  | noIO = embed $ Core.catchEvalError loc (Core.eval stderr (tab ^. Core.identContext) [] node)
-  | otherwise = embed $ Core.catchEvalErrorIO loc (Core.evalIO (tab ^. Core.identContext) [] node)
-
 doEvalIO ::
   Bool ->
   Interval ->
   Core.InfoTable ->
   Core.Node ->
   IO (Either Core.CoreError Core.Node)
-doEvalIO noIO i tab node = runM (doEval noIO i tab node)
+doEvalIO noIO i tab node = runM (Core.doEval noIO i tab node)
 
 evalAndPrint ::
   forall r a.
@@ -52,7 +40,7 @@ evalAndPrint ::
   Sem r ()
 evalAndPrint opts tab node = do
   loc <- defaultLoc
-  r <- doEval (project opts ^. evalNoIO) loc tab node
+  r <- Core.doEval (project opts ^. evalNoIO) loc tab node
   case r of
     Left err -> exitJuvixError (JuvixError err)
     Right node'

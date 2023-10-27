@@ -31,6 +31,8 @@ import Juvix.Compiler.Core.Transformation qualified as Core
 import Juvix.Compiler.Core.Transformation.DisambiguateNames (disambiguateNames)
 import Juvix.Compiler.Internal.Language qualified as Internal
 import Juvix.Compiler.Internal.Pretty qualified as Internal
+import Juvix.Compiler.Pipeline.Package.Loader.Error
+import Juvix.Compiler.Pipeline.Package.Loader.EvalEff.IO
 import Juvix.Compiler.Pipeline.Repl
 import Juvix.Compiler.Pipeline.Run
 import Juvix.Compiler.Pipeline.Setup (entrySetup)
@@ -154,6 +156,8 @@ loadDefaultPrelude = whenJustM defaultPreludeEntryPoint $ \e -> do
     . runError @GitProcessError
     . runGitProcess
     . runError @DependencyError
+    . runError @PackageLoaderError
+    . runEvalFileEffIO
     . runPathResolver root
     $ entrySetup defaultDependenciesConfig
   loadEntryPoint e
