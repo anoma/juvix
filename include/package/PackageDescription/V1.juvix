@@ -1,4 +1,4 @@
-module PackageDescription;
+module PackageDescription.V1;
 
 import Stdlib.Prelude open;
 
