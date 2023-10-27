@@ -1,7 +1,7 @@
 -- Nested named application with default values
 module test070;
 
-import Stdlib.Data.Nat.Base open;
+import Stdlib.Data.Nat open;
 
 fun {a : Nat := 1} {b : Nat := a + 1} {c : Nat := b + a + 1}
   : Nat := a * b + c;

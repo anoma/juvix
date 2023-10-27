@@ -1,7 +1,7 @@
 -- Default values inserted in the arity checker
 module test069;
 
-import Stdlib.Data.Nat.Base open;
+import Stdlib.Data.Nat open hiding {Ord; mkOrd};
 import Stdlib.Data.Nat.Ord as Ord;
 import Stdlib.Data.Product as Ord;
 import Stdlib.Data.Bool.Base open;
