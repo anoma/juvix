@@ -68,6 +68,9 @@ doubleBraces = enclose (enqueue C.kwDoubleBraceL) (noLoc C.kwDoubleBraceR)
 lineOrEmpty :: (Members '[ExactPrint] r) => Sem r ()
 lineOrEmpty = noLoc P.line'
 
+spaceOrEmpty :: (Members '[ExactPrint] r) => Sem r ()
+spaceOrEmpty = noLoc P.spaceOrEmpty
+
 grouped :: (Members '[ExactPrint] r) => Sem r () -> Sem r ()
 grouped = region P.group
 
@@ -109,6 +112,9 @@ sepSemicolon = grouped . vsepSemicolon
 
 vsepSemicolon :: (Members '[ExactPrint] r, Foldable l) => l (Sem r ()) -> Sem r ()
 vsepSemicolon = sequenceWith (semicolon <> line)
+
+vcatPreSemicolon :: (Members '[ExactPrint] r, Foldable l) => l (Sem r ()) -> Sem r ()
+vcatPreSemicolon = sequenceWith (lineOrEmpty <> semicolon <> space)
 
 hsepSemicolon :: (Members '[ExactPrint] r, Foldable l) => l (Sem r ()) -> Sem r ()
 hsepSemicolon = sequenceWith (semicolon <> space)

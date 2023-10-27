@@ -266,8 +266,8 @@ instance (SingI s) => PrettyPrint (List s) where
   ppCode List {..} = do
     let l = ppCode _listBracketL
         r = ppCode _listBracketR
-        e = hsepSemicolon (map ppExpressionType _listItems)
-    l <> e <> r
+        es = vcatPreSemicolon (map ppExpressionType _listItems)
+    grouped (align (l <> spaceOrEmpty <> es <> lineOrEmpty <> r))
 
 instance (SingI s) => PrettyPrint (NamedArgument s) where
   ppCode NamedArgument {..} = do
