@@ -970,3 +970,27 @@ instance ToGenericError Unsupported where
     where
       i :: Interval
       i = _unsupportedLoc
+
+newtype DefaultArgCycle = DefaultArgCycle
+  { _defaultArgCycle :: NonEmpty S.Symbol
+  }
+  deriving stock (Show)
+
+instance ToGenericError DefaultArgCycle where
+  genericError :: (Member (Reader GenericOptions) r) => DefaultArgCycle -> Sem r GenericError
+  genericError DefaultArgCycle {..} = do
+    opts <- fromGenericOptions <$> ask
+    let ss = ppCode opts <$> _defaultArgCycle
+        msg =
+          "There is a cyclic dependency between some default arguments:"
+            <> line
+            <> itemize ss
+    return
+      GenericError
+        { _genericErrorLoc = i,
+          _genericErrorMessage = mkAnsiText msg,
+          _genericErrorIntervals = map getLoc (toList _defaultArgCycle)
+        }
+    where
+      i :: Interval
+      i = getLoc (head _defaultArgCycle)

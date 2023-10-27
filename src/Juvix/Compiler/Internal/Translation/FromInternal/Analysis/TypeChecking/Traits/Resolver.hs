@@ -18,7 +18,7 @@ import Juvix.Prelude
 
 type SubsI = HashMap VarName InstanceParam
 
-subsIToE :: SubsI -> SubsE
+subsIToE :: SubsI -> Subs
 subsIToE = fmap paramToExpression
 
 type CoercionChain = [(CoercionInfo, SubsI)]
@@ -128,7 +128,7 @@ applyCoercion loc (CoercionInfo {..}, subs) e = do
 expandArity ::
   (Members '[Error TypeCheckerError, NameIdGen] r) =>
   Interval ->
-  SubsE ->
+  Subs ->
   [FunctionParameter] ->
   Expression ->
   Sem r Expression

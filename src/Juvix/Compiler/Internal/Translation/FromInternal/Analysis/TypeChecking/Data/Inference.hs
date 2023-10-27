@@ -1,6 +1,20 @@
 module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Inference
-  ( module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Inference,
-    module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.FunctionsTable,
+  ( module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.FunctionsTable,
+    Inference,
+    MatchError,
+    registerFunctionDef,
+    matchErrorLeft,
+    matchErrorRight,
+    queryMetavar,
+    registerIdenType,
+    strongNormalize',
+    iniState,
+    strongNormalize,
+    weakNormalize,
+    runInferenceDefs,
+    runInferenceDef,
+    rememberFunctionDef,
+    matchTypes,
   )
 where
 
@@ -30,6 +44,7 @@ data Inference m a where
   MatchTypes :: Expression -> Expression -> Inference m (Maybe MatchError)
   QueryMetavar :: Hole -> Inference m (Maybe Expression)
   RegisterIdenType :: Name -> Expression -> Inference m ()
+  RememberFunctionDef :: FunctionDef -> Inference m ()
   StrongNormalize :: Expression -> Inference m Expression
   WeakNormalize :: Expression -> Inference m Expression
 
@@ -37,6 +52,7 @@ makeSem ''Inference
 
 data InferenceState = InferenceState
   { _inferenceMap :: HashMap Hole MetavarState,
+    _inferenceFunctionsStash :: [FunctionDef],
     _inferenceIdens :: TypesTable
   }
 
@@ -46,6 +62,7 @@ iniState :: InferenceState
 iniState =
   InferenceState
     { _inferenceMap = mempty,
+      _inferenceFunctionsStash = [],
       _inferenceIdens = mempty
     }
 
@@ -115,27 +132,58 @@ strongNormalize' = go
       ExpressionSimpleLambda l -> ExpressionSimpleLambda <$> goSimpleLambda l
       ExpressionLambda l -> ExpressionLambda <$> goLambda l
       -- NOTE: we cannot always normalize let expressions because we do not have closures.
-      -- We give up
-      ExpressionLet {} -> error "normalization of let expressions is not supported yet"
+      -- We just recurse inside
+      ExpressionLet l -> ExpressionLet <$> goLet l
       -- TODO it should normalize like an applied lambda
       ExpressionCase {} -> error "normalization of case expressions is not supported yet"
 
-    goClause :: LambdaClause -> Sem r LambdaClause
-    goClause (LambdaClause p b) = do
-      b' <- go b
-      return (LambdaClause p b')
+    goLet :: Let -> Sem r Let
+    goLet Let {..} = do
+      clauses' <- mapM goLetClause _letClauses
+      body' <- go _letExpression
+      return
+        Let
+          { _letClauses = clauses',
+            _letExpression = body'
+          }
+      where
+        goLetClause :: LetClause -> Sem r LetClause
+        goLetClause = \case
+          LetFunDef f -> LetFunDef <$> goFunDef f
+          LetMutualBlock f -> LetMutualBlock <$> goMutualBlockLet f
+          where
+            goMutualBlockLet :: MutualBlockLet -> Sem r MutualBlockLet
+            goMutualBlockLet MutualBlockLet {..} = do
+              defs' <- mapM goFunDef _mutualLet
+              return MutualBlockLet {_mutualLet = defs'}
+
+            goFunDef :: FunctionDef -> Sem r FunctionDef
+            goFunDef FunctionDef {..} = do
+              type' <- go _funDefType
+              body' <- go _funDefBody
+              return
+                FunctionDef
+                  { _funDefBody = body',
+                    _funDefType = type',
+                    ..
+                  }
 
     goLambda :: Lambda -> Sem r Lambda
     goLambda l = do
-      _lambdaClauses <- mapM goClause (l ^. lambdaClauses)
+      _lambdaClauses <- mapM goLambdaClause (l ^. lambdaClauses)
       _lambdaType <- mapM go (l ^. lambdaType)
       return Lambda {..}
+      where
+        goLambdaClause :: LambdaClause -> Sem r LambdaClause
+        goLambdaClause (LambdaClause p b) = do
+          b' <- go b
+          return (LambdaClause p b')
 
     goSimpleLambda :: SimpleLambda -> Sem r SimpleLambda
-    goSimpleLambda (SimpleLambda lamVar lamTy lamBody) = do
+    goSimpleLambda (SimpleLambda (SimpleBinder lamVar lamTy) lamBody) = do
       lamTy' <- go lamTy
       lamBody' <- go lamBody
-      return (SimpleLambda lamVar lamTy' lamBody')
+      return (SimpleLambda (SimpleBinder lamVar lamTy') lamBody')
 
     goFunctionParam :: FunctionParameter -> Sem r FunctionParameter
     goFunctionParam (FunctionParameter mvar i ty) = do
@@ -166,7 +214,7 @@ strongNormalize' = go
     goApp (Application l r i) = do
       l' <- go l
       case l' of
-        ExpressionSimpleLambda (SimpleLambda lamVar _ lamBody) -> do
+        ExpressionSimpleLambda (SimpleLambda (SimpleBinder lamVar _) lamBody) -> do
           go (substitutionE (HashMap.singleton lamVar r) lamBody)
         _ -> do
           r' <- go r
@@ -213,7 +261,7 @@ weakNormalize' = go
     goApp (Application l r i) = do
       l' <- go l
       case l' of
-        ExpressionSimpleLambda (SimpleLambda lamVar _ lamBody) -> do
+        ExpressionSimpleLambda (SimpleLambda (SimpleBinder lamVar _) lamBody) -> do
           go (substitutionE (HashMap.singleton lamVar r) lamBody)
         _ -> return (ExpressionApplication (Application l' r i))
     goHole :: Hole -> Sem r Expression
@@ -246,6 +294,7 @@ re ::
 re = reinterpret $ \case
   MatchTypes a b -> matchTypes' a b
   QueryMetavar h -> queryMetavar' h
+  RememberFunctionDef f -> modify' (over inferenceFunctionsStash (f :))
   RegisterIdenType i ty -> registerIdenType' i ty
   StrongNormalize ty -> strongNormalize' ty
   WeakNormalize ty -> weakNormalize' ty
@@ -281,6 +330,8 @@ re = reinterpret $ \case
                 (ExpressionLambda a, ExpressionLambda b) -> goLambda a b
                 (ExpressionHole h, a) -> goHole h a
                 (a, ExpressionHole h) -> goHole h a
+                (_, ExpressionLet r) -> go normA (r ^. letExpression)
+                (ExpressionLet l, _) -> go (l ^. letExpression) normB
                 (ExpressionInstanceHole {}, _) -> err
                 (_, ExpressionInstanceHole {}) -> err
                 (ExpressionSimpleLambda {}, _) -> err
@@ -297,8 +348,6 @@ re = reinterpret $ \case
                 (_, ExpressionLambda {}) -> err
                 (_, ExpressionCase {}) -> error "not implemented"
                 (ExpressionCase {}, _) -> error "not implemented"
-                (_, ExpressionLet {}) -> error "not implemented"
-                (ExpressionLet {}, _) -> error "not implemented"
                 (ExpressionLiteral l, ExpressionLiteral l') -> check (l == l')
               where
                 ok :: Sem r (Maybe MatchError)
@@ -352,7 +401,7 @@ re = reinterpret $ \case
                 goApplication (Application f x _) (Application f' x' _) = bicheck (go f f') (go x x')
 
                 goSimpleLambda :: SimpleLambda -> SimpleLambda -> Sem r (Maybe MatchError)
-                goSimpleLambda (SimpleLambda v1 ty1 b1) (SimpleLambda v2 ty2 b2) = do
+                goSimpleLambda (SimpleLambda (SimpleBinder v1 ty1) b1) (SimpleLambda (SimpleBinder v2 ty2) b2) = do
                   let local' :: Sem r x -> Sem r x
                       local' = local (HashMap.insert v1 v2)
                   bicheck (go ty1 ty2) (local' (go b1 b2))
@@ -421,17 +470,20 @@ matchPatterns (PatternArg impl1 name1 pat1) (PatternArg impl2 name2 pat2) =
     err = return False
 
 runInferenceDefs ::
-  (Members '[HighlightBuilder, Error TypeCheckerError, State FunctionsTable, State TypesTable] r, HasExpressions funDef) =>
+  (Members '[Termination, HighlightBuilder, Error TypeCheckerError, State FunctionsTable, State TypesTable] r, HasExpressions funDef) =>
   Sem (Inference ': r) (NonEmpty funDef) ->
   Sem r (NonEmpty funDef)
 runInferenceDefs a = do
-  ((subs, idens), expr) <- runState iniState (re a) >>= firstM closeState
-  let idens' = fillHoles subs <$> idens
+  (finalState, expr) <- runState iniState (re a)
+  (subs, idens) <- closeState finalState
+  let idens' = subsHoles subs <$> idens
+      stash' = map (subsHoles subs) (finalState ^. inferenceFunctionsStash)
+  forM_ stash' registerFunctionDef
   addIdens idens'
   return (subsHoles subs <$> expr)
 
 runInferenceDef ::
-  (Members '[HighlightBuilder, Error TypeCheckerError, State FunctionsTable, State TypesTable] r, HasExpressions funDef) =>
+  (Members '[Termination, HighlightBuilder, Error TypeCheckerError, State FunctionsTable, State TypesTable] r, HasExpressions funDef) =>
   Sem (Inference ': r) funDef ->
   Sem r funDef
 runInferenceDef = fmap head . runInferenceDefs . fmap pure
@@ -453,9 +505,8 @@ addIdens idens = do
 functionDefEval :: forall r'. (Members '[State FunctionsTable, Termination, Error TypeCheckerError] r') => FunctionDef -> Sem r' (Maybe Expression)
 functionDefEval f = do
   (params :: [FunctionParameter], ret :: Expression) <- unfoldFunType <$> strongNorm (f ^. funDefType)
-  let retTy = isUniverse ret
-  r <- runFail (goTop params retTy)
-  when (isNothing r && retTy) (throw (ErrUnsupportedTypeFunction (UnsupportedTypeFunction f)))
+  r <- runFail (goTop params (canBeUniverse ret))
+  when (isNothing r && isUniverse ret) (throw (ErrUnsupportedTypeFunction (UnsupportedTypeFunction f)))
   return r
   where
     strongNorm :: (Members '[State FunctionsTable] r) => Expression -> Sem r Expression
@@ -464,6 +515,13 @@ functionDefEval f = do
     isUniverse :: Expression -> Bool
     isUniverse = \case
       ExpressionUniverse {} -> True
+      _ -> False
+
+    canBeUniverse :: Expression -> Bool
+    canBeUniverse = \case
+      ExpressionUniverse {} -> True
+      ExpressionHole {} -> True
+      ExpressionIden {} -> True
       _ -> False
 
     goTop ::
@@ -501,7 +559,7 @@ functionDefEval f = do
               _ -> fail
             goPattern :: (Pattern, Expression) -> Expression -> Sem r Expression
             goPattern (p, ty) = case p of
-              PatternVariable v -> return . ExpressionSimpleLambda . SimpleLambda v ty
+              PatternVariable v -> return . ExpressionSimpleLambda . SimpleLambda (SimpleBinder v ty)
               _ -> const fail
             go :: [(PatternArg, Expression)] -> Sem r Expression
             go = \case

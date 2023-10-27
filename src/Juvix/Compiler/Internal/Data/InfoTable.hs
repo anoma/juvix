@@ -204,6 +204,7 @@ lookupFunction f = do
         $ "impossible: "
           <> ppTrace f
           <> " is not in the InfoTable\n"
+          <> ppTrace (getLoc f)
           <> "The registered functions are: "
           <> ppTrace (HashMap.keys tbl)
 

@@ -392,5 +392,25 @@ tests =
       "Test066: Import function with a function call in default argument"
       $(mkRelDir "test066")
       $(mkRelFile "M.juvix")
-      $(mkRelFile "out/test066.out")
+      $(mkRelFile "out/test066.out"),
+    posTest
+      "Test067: Dependent default values inserted during translation FromConcrete"
+      $(mkRelDir ".")
+      $(mkRelFile "test067.juvix")
+      $(mkRelFile "out/test067.out"),
+    posTest
+      "Test068: Dependent default values inserted in the arity checker"
+      $(mkRelDir ".")
+      $(mkRelFile "test068.juvix")
+      $(mkRelFile "out/test068.out"),
+    posTest
+      "Test069: Dependent default values for Ord trait"
+      $(mkRelDir ".")
+      $(mkRelFile "test069.juvix")
+      $(mkRelFile "out/test069.out"),
+    posTest
+      "Test070: Nested default values and named arguments"
+      $(mkRelDir ".")
+      $(mkRelFile "test070.juvix")
+      $(mkRelFile "out/test070.out")
   ]

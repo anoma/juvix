@@ -52,6 +52,7 @@ data ScoperError
   | ErrInvalidRangeNumber InvalidRangeNumber
   | ErrWrongDefaultValue WrongDefaultValue
   | ErrUnsupported Unsupported
+  | ErrDefaultArgCycle DefaultArgCycle
 
 instance ToGenericError ScoperError where
   genericError = \case
@@ -95,3 +96,4 @@ instance ToGenericError ScoperError where
     ErrInvalidRangeNumber e -> genericError e
     ErrWrongDefaultValue e -> genericError e
     ErrUnsupported e -> genericError e
+    ErrDefaultArgCycle e -> genericError e

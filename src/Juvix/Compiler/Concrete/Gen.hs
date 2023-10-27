@@ -17,3 +17,14 @@ kw k = do
         _keywordRefUnicode = Ascii,
         _keywordRefInterval = loc
       }
+
+smallUniverseExpression :: forall s r. (SingI s) => (Members '[Reader Interval] r) => Sem r (ExpressionType s)
+smallUniverseExpression = do
+  loc <- ask @Interval
+  return $ case sing :: SStage s of
+    SScoped -> ExpressionUniverse (smallUniverse loc)
+    SParsed ->
+      ExpressionAtoms
+        { _expressionAtomsLoc = Irrelevant loc,
+          _expressionAtoms = pure (AtomUniverse (smallUniverse loc))
+        }

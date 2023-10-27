@@ -107,7 +107,7 @@ checkStrictlyPositiveOccurrences ty ctorName name recLimit ref =
           helper inside (d ^. funDefBody)
 
         helperSimpleLambda :: SimpleLambda -> Sem r ()
-        helperSimpleLambda (SimpleLambda _ lamVarTy lamBody) = do
+        helperSimpleLambda (SimpleLambda (SimpleBinder _ lamVarTy) lamBody) = do
           helper inside lamVarTy
           helper inside lamBody
 

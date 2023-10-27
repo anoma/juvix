@@ -144,6 +144,17 @@ scanFunctionDef f@FunctionDef {..} = do
   runReader (Just _funDefName) $ do
     scanTypeSignature _funDefType
     scanFunctionBody _funDefBody
+    scanDefaultArgs _funDefArgsInfo
+
+scanDefaultArgs ::
+  forall r.
+  (Members '[Reader (Maybe FunctionRef), State CallMap] r) =>
+  [ArgInfo] ->
+  Sem r ()
+scanDefaultArgs = mapM_ scanArgInfo
+  where
+    scanArgInfo :: ArgInfo -> Sem r ()
+    scanArgInfo = mapM_ scanTypeSignature . (^. argInfoDefault)
 
 scanTypeSignature ::
   (Members '[State CallMap, Reader (Maybe FunctionRef)] r) =>

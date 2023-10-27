@@ -80,5 +80,11 @@ tests =
       $(mkRelDir ".")
       $(mkRelFile "Axiom.juvix")
       $ \case
+        ErrNoLexOrder {} -> Nothing,
+    NegTest
+      "Loop with default arguments"
+      $(mkRelDir ".")
+      $(mkRelFile "DefaultArguments.juvix")
+      $ \case
         ErrNoLexOrder {} -> Nothing
   ]
