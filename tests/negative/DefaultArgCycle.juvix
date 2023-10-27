@@ -1,0 +1,6 @@
+module DefaultArgCycle;
+
+import Stdlib.Data.Nat.Base open;
+
+fun {a : Nat := 1} {b : Nat := fun {c := 3} + a + 1} {c : Nat := b + a + 1}
+  : Nat := a * b + c;

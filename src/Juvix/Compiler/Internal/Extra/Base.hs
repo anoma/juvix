@@ -7,8 +7,6 @@ import Juvix.Compiler.Internal.Data.LocalVars
 import Juvix.Compiler.Internal.Language
 import Juvix.Prelude
 
-type SubsE = HashMap VarName Expression
-
 type Rename = HashMap VarName VarName
 
 type Subs = HashMap VarName Expression
@@ -115,11 +113,16 @@ instance HasExpressions TypedExpression where
     _typedType <- leafExpressions f (a ^. typedType)
     pure TypedExpression {..}
 
-instance HasExpressions SimpleLambda where
-  leafExpressions f (SimpleLambda v ty b) = do
-    b' <- leafExpressions f b
+instance HasExpressions SimpleBinder where
+  leafExpressions f (SimpleBinder v ty) = do
     ty' <- leafExpressions f ty
-    pure (SimpleLambda v ty' b')
+    pure (SimpleBinder v ty')
+
+instance HasExpressions SimpleLambda where
+  leafExpressions f (SimpleLambda bi b) = do
+    bi' <- leafExpressions f bi
+    b' <- leafExpressions f b
+    pure (SimpleLambda bi' b')
 
 instance HasExpressions FunctionParameter where
   leafExpressions f (FunctionParameter m i e) = do
@@ -162,22 +165,27 @@ subsHoles s = over leafExpressions helper
 instance HasExpressions Example where
   leafExpressions f = traverseOf exampleExpression (leafExpressions f)
 
-instance HasExpressions DefaultSignature where
-  leafExpressions f (DefaultSignature a) =
-    DefaultSignature <$> traverse (traverse (leafExpressions f)) a
+instance HasExpressions ArgInfo where
+  leafExpressions f ArgInfo {..} = do
+    d' <- traverse (leafExpressions f) _argInfoDefault
+    return
+      ArgInfo
+        { _argInfoDefault = d',
+          _argInfoName
+        }
 
 instance HasExpressions FunctionDef where
   leafExpressions f FunctionDef {..} = do
     body' <- leafExpressions f _funDefBody
     ty' <- leafExpressions f _funDefType
     examples' <- traverse (leafExpressions f) _funDefExamples
-    defaults' <- leafExpressions f _funDefDefaultSignature
+    infos' <- traverse (leafExpressions f) _funDefArgsInfo
     pure
       FunctionDef
         { _funDefBody = body',
           _funDefType = ty',
           _funDefExamples = examples',
-          _funDefDefaultSignature = defaults',
+          _funDefArgsInfo = infos',
           _funDefTerminating,
           _funDefInstance,
           _funDefCoercion,
@@ -238,9 +246,6 @@ instance HasExpressions ConstructorDef where
           _inductiveConstructorPragmas
         }
 
-fillHoles :: HashMap Hole Expression -> Expression -> Expression
-fillHoles = subsHoles
-
 substituteIndParams :: [(InductiveParameter, Expression)] -> Expression -> Expression
 substituteIndParams = substitutionE . HashMap.fromList . map (first (^. inductiveParamName))
 
@@ -264,20 +269,46 @@ unnamedParameter = unnamedParameter' Explicit
 singletonRename :: VarName -> VarName -> Rename
 singletonRename = HashMap.singleton
 
-renameToSubsE :: Rename -> SubsE
+renameKind :: NameKind -> [Name] -> Subs
+renameKind k l = HashMap.fromList [(n, toExpression (set nameKind k n)) | n <- l]
+
+renameToSubsE :: Rename -> Subs
 renameToSubsE = fmap (ExpressionIden . IdenVar)
 
-patternArgVariables :: Traversal' PatternArg VarName
-patternArgVariables f (PatternArg i n p) = PatternArg i <$> traverse f n <*> patternVariables f p
+class HasBinders a where
+  bindersTraversal :: Traversal' a VarName
 
-patternVariables :: Traversal' Pattern VarName
-patternVariables f p = case p of
-  PatternVariable v -> PatternVariable <$> f v
-  PatternWildcardConstructor {} -> pure p
-  PatternConstructorApp a -> PatternConstructorApp <$> goApp f a
-  where
-    goApp :: Traversal' ConstructorApp VarName
-    goApp g = traverseOf constrAppParameters (traverse (patternArgVariables g))
+instance HasBinders PatternArg where
+  bindersTraversal f (PatternArg i n p) = PatternArg i <$> traverse f n <*> bindersTraversal f p
+
+instance HasBinders Pattern where
+  bindersTraversal f p = case p of
+    PatternVariable v -> PatternVariable <$> f v
+    PatternWildcardConstructor {} -> pure p
+    PatternConstructorApp a -> PatternConstructorApp <$> goApp f a
+    where
+      goApp :: Traversal' ConstructorApp VarName
+      goApp g = traverseOf constrAppParameters (traverse (bindersTraversal g))
+
+instance HasBinders FunctionParameter where
+  bindersTraversal = paramName . _Just
+
+instance HasBinders InductiveParameter where
+  bindersTraversal = inductiveParamName
+
+instance HasBinders SimpleBinder where
+  bindersTraversal = sbinderVar
+
+instance HasBinders FunctionDef where
+  bindersTraversal = funDefName
+
+instance HasBinders MutualBlockLet where
+  bindersTraversal = mutualLet . each . bindersTraversal
+
+instance HasBinders LetClause where
+  bindersTraversal f = \case
+    LetFunDef fun -> LetFunDef <$> bindersTraversal f fun
+    LetMutualBlock b -> LetMutualBlock <$> bindersTraversal f b
 
 inductiveTypeVarsAssoc :: (Foldable f) => InductiveDef -> f a -> HashMap VarName a
 inductiveTypeVarsAssoc def l
@@ -293,10 +324,10 @@ substitutionApp (mv, ty) = case mv of
   Nothing -> id
   Just v -> substitutionE (HashMap.singleton v ty)
 
-localsToSubsE :: LocalVars -> SubsE
+localsToSubsE :: LocalVars -> Subs
 localsToSubsE l = ExpressionIden . IdenVar <$> l ^. localTyMap
 
-substitutionE :: SubsE -> Expression -> Expression
+substitutionE :: Subs -> Expression -> Expression
 substitutionE m = over leafExpressions goLeaf
   where
     goLeaf :: Expression -> Expression
@@ -562,6 +593,9 @@ infixl 9 @@
 (@@) :: (IsExpression a, IsExpression b) => a -> b -> Expression
 a @@ b = toExpression (Application (toExpression a) (toExpression b) Explicit)
 
+freshFunVar :: (Member NameIdGen r) => Interval -> Text -> Sem r VarName
+freshFunVar i n = set nameKind KNameFunction <$> freshVar i n
+
 freshVar :: (Member NameIdGen r) => Interval -> Text -> Sem r VarName
 freshVar _nameLoc n = do
   uid <- freshNameId
@@ -711,13 +745,13 @@ allTypeSignatures a =
     <> [f ^. axiomType | f@AxiomDef {} <- universeBi a]
     <> [f ^. inductiveType | f@InductiveDef {} <- universeBi a]
 
-idenName :: Iden -> Name
-idenName = \case
-  IdenFunction f -> f
-  IdenConstructor c -> c
-  IdenVar v -> v
-  IdenInductive i -> i
-  IdenAxiom a -> a
+idenName :: Lens' Iden Name
+idenName f = \case
+  IdenFunction g -> IdenFunction <$> f g
+  IdenConstructor c -> IdenConstructor <$> f c
+  IdenVar v -> IdenVar <$> f v
+  IdenInductive i -> IdenInductive <$> f i
+  IdenAxiom a -> IdenAxiom <$> f a
 
 explicitPatternArg :: Pattern -> PatternArg
 explicitPatternArg _patternArgPattern =
@@ -725,4 +759,19 @@ explicitPatternArg _patternArgPattern =
     { _patternArgName = Nothing,
       _patternArgIsImplicit = Explicit,
       _patternArgPattern
+    }
+
+simpleFunDef :: Name -> Expression -> Expression -> FunctionDef
+simpleFunDef funName ty body =
+  FunctionDef
+    { _funDefName = funName,
+      _funDefType = ty,
+      _funDefExamples = [],
+      _funDefCoercion = False,
+      _funDefInstance = False,
+      _funDefPragmas = mempty,
+      _funDefArgsInfo = mempty,
+      _funDefTerminating = False,
+      _funDefBuiltin = Nothing,
+      _funDefBody = body
     }

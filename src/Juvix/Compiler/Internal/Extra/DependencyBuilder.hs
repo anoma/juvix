@@ -10,7 +10,8 @@ where
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Internal.Data.NameDependencyInfo
-import Juvix.Compiler.Internal.Extra
+import Juvix.Compiler.Internal.Extra.Base
+import Juvix.Compiler.Internal.Language
 import Juvix.Prelude
 
 -- adjacency set representation
@@ -240,7 +241,7 @@ goFunctionDefHelper f = do
     goInstance f
   goExpression (Just (f ^. funDefName)) (f ^. funDefType)
   goExpression (Just (f ^. funDefName)) (f ^. funDefBody)
-  mapM_ (goExpression (Just (f ^. funDefName))) (catMaybes (concat (f ^. funDefDefaultSignature ^.. defaultSignature)))
+  mapM_ (goExpression (Just (f ^. funDefName))) (f ^.. funDefArgsInfo . each . argInfoDefault . _Just)
 
 -- constructors of an inductive type depend on the inductive type, not the other
 -- way round; an inductive type depends on the types of its constructors
@@ -270,7 +271,7 @@ goExpression ::
   Expression ->
   Sem r ()
 goExpression p e = case e of
-  ExpressionIden i -> addEdgeMay p (idenName i)
+  ExpressionIden i -> addEdgeMay p (i ^. idenName)
   ExpressionUniverse {} -> return ()
   ExpressionFunction f -> do
     goFunctionParameter p (f ^. functionLeft)
@@ -288,7 +289,7 @@ goExpression p e = case e of
   where
     goSimpleLambda :: SimpleLambda -> Sem r ()
     goSimpleLambda l = do
-      addEdgeMay p (l ^. slambdaVar)
+      addEdgeMay p (l ^. slambdaBinder . sbinderVar)
 
     goLambda :: Lambda -> Sem r ()
     goLambda Lambda {..} = mapM_ goClause _lambdaClauses

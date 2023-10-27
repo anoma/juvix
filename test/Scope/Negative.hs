@@ -378,5 +378,12 @@ scoperErrorTests =
       $(mkRelFile "UnsupportedType.juvix")
       $ \case
         ErrUnsupported {} -> Nothing
+        _ -> wrongError,
+    NegTest
+      "Default argument cycle in FromConcrete"
+      $(mkRelDir ".")
+      $(mkRelFile "DefaultArgCycle.juvix")
+      $ \case
+        ErrDefaultArgCycle {} -> Nothing
         _ -> wrongError
   ]

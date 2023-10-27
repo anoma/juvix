@@ -12,11 +12,12 @@ where
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Concrete.Data.NameSignature.Error
 import Juvix.Compiler.Concrete.Extra (symbolParsed)
+import Juvix.Compiler.Concrete.Gen qualified as Gen
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
 import Juvix.Prelude
 
 data NameSignatureBuilder s m a where
-  AddSymbol :: IsImplicit -> Maybe (ArgDefault s) -> Symbol -> NameSignatureBuilder s m ()
+  AddSymbol :: IsImplicit -> Maybe (ArgDefault s) -> SymbolType s -> ExpressionType s -> NameSignatureBuilder s m ()
   EndBuild :: Proxy s -> NameSignatureBuilder s m a
   -- | for debugging
   GetBuilder :: NameSignatureBuilder s m (BuilderState s)
@@ -25,7 +26,7 @@ data BuilderState (s :: Stage) = BuilderState
   { _stateCurrentImplicit :: Maybe IsImplicit,
     _stateNextIx :: Int,
     -- | maps to itself
-    _stateSymbols :: HashMap Symbol Symbol,
+    _stateSymbols :: HashMap Symbol (SymbolType s),
     _stateReverseClosedBlocks :: [NameBlock s],
     _stateCurrentBlock :: HashMap Symbol (NameItem s)
   }
@@ -60,7 +61,7 @@ instance (SingI s) => HasNameSignature s (InductiveDef s, ConstructorDef s) wher
         where
           addField :: RecordStatement s -> Sem r ()
           addField = \case
-            RecordStatementField RecordField {..} -> addSymbol @s Explicit Nothing (symbolParsed _fieldName)
+            RecordStatementField RecordField {..} -> addSymbol @s Explicit Nothing _fieldName _fieldType
             RecordStatementOperator {} -> return ()
       addRhs :: ConstructorRhs s -> Sem r ()
       addRhs = \case
@@ -121,12 +122,12 @@ addExpression = \case
       addFunctionParameters (f ^. funParameters)
       addExpression (f ^. funReturn)
 
-addFunctionParameters :: forall s r. (SingI s, Members '[NameSignatureBuilder s] r) => FunctionParameters s -> Sem r ()
+addFunctionParameters :: forall s r. (Members '[NameSignatureBuilder s] r) => FunctionParameters s -> Sem r ()
 addFunctionParameters FunctionParameters {..} = forM_ _paramNames addParameter
   where
     addParameter :: FunctionParameter s -> Sem r ()
     addParameter = \case
-      FunctionParameterName p -> addSymbol @s _paramImplicit Nothing (symbolParsed p)
+      FunctionParameterName p -> addSymbol @s _paramImplicit Nothing p _paramType
       FunctionParameterWildcard {} -> endBuild (Proxy @s)
 
 addExpressionType :: forall s r. (SingI s, Members '[NameSignatureBuilder s] r) => ExpressionType s -> Sem r ()
@@ -144,8 +145,12 @@ addAtoms atoms = addAtom . (^. expressionAtoms . _head1) $ atoms
         addAtoms (f ^. funReturn)
       _ -> endBuild (Proxy @'Parsed)
 
-addInductiveParams' :: forall s r. (SingI s) => (Members '[NameSignatureBuilder s] r) => IsImplicit -> InductiveParameters s -> Sem r ()
-addInductiveParams' i a = forM_ (a ^. inductiveParametersNames) (addSymbol @s i Nothing . symbolParsed)
+addInductiveParams' :: forall s r. (SingI s, Members '[NameSignatureBuilder s] r) => IsImplicit -> InductiveParameters s -> Sem r ()
+addInductiveParams' i a =
+  forM_ (a ^. inductiveParametersNames) $ \sym ->
+    addSymbol @s i Nothing sym defaultType
+  where
+    defaultType = run (runReader (getLoc a) Gen.smallUniverseExpression)
 
 addInductiveParams :: (SingI s, Members '[NameSignatureBuilder s] r) => InductiveParameters s -> Sem r ()
 addInductiveParams = addInductiveParams' Explicit
@@ -155,7 +160,14 @@ addConstructorParams = addInductiveParams' Implicit
 
 addSigArg :: (SingI s, Members '[NameSignatureBuilder s] r) => SigArg s -> Sem r ()
 addSigArg a = forM_ (a ^. sigArgNames) $ \case
-  ArgumentSymbol s -> addSymbol (a ^. sigArgImplicit) (a ^. sigArgDefault) (symbolParsed s)
+  ArgumentSymbol s ->
+    addSymbol
+      (a ^. sigArgImplicit)
+      (a ^. sigArgDefault)
+      s
+      (fromMaybe defaultType (a ^. sigArgType))
+    where
+      defaultType = run (runReader (getLoc a) Gen.smallUniverseExpression)
   ArgumentWildcard {} -> return ()
 
 type Re s r = State (BuilderState s) ': Error (BuilderState s) ': Error NameSignatureError ': r
@@ -166,13 +178,13 @@ re ::
   Sem (NameSignatureBuilder s ': r) a ->
   Sem (Re s r) a
 re = reinterpret3 $ \case
-  AddSymbol impl mdef k -> addSymbol' impl mdef k
+  AddSymbol impl mdef k ty -> addSymbol' impl mdef k ty
   EndBuild {} -> endBuild'
   GetBuilder -> get
 {-# INLINE re #-}
 
-addSymbol' :: forall s r. (SingI s) => IsImplicit -> Maybe (ArgDefault s) -> Symbol -> Sem (Re s r) ()
-addSymbol' impl mdef sym = do
+addSymbol' :: forall s r. (SingI s) => IsImplicit -> Maybe (ArgDefault s) -> SymbolType s -> ExpressionType s -> Sem (Re s r) ()
+addSymbol' impl mdef sym ty = do
   curImpl <- gets @(BuilderState s) (^. stateCurrentImplicit)
   if
       | Just impl == curImpl -> addToCurrentBlock
@@ -183,18 +195,25 @@ addSymbol' impl mdef sym = do
       throw $
         ErrDuplicateName
           DuplicateName
-            { _dupNameSecond = sym,
+            { _dupNameSecond = symbolParsed sym,
               ..
             }
 
     addToCurrentBlock :: Sem (Re s r) ()
     addToCurrentBlock = do
       idx <- gets @(BuilderState s) (^. stateNextIx)
-      let itm = NameItem sym idx mdef
+      let itm =
+            NameItem
+              { _nameItemDefault = mdef,
+                _nameItemSymbol = sym,
+                _nameItemIndex = idx,
+                _nameItemType = ty
+              }
+          psym = symbolParsed sym
       modify' @(BuilderState s) (over stateNextIx succ)
-      whenJustM (gets @(BuilderState s) (^. stateSymbols . at sym)) errDuplicateName
-      modify' @(BuilderState s) (set (stateSymbols . at sym) (Just sym))
-      modify' @(BuilderState s) (set (stateCurrentBlock . at sym) (Just itm))
+      whenJustM (gets @(BuilderState s) (^. stateSymbols . at psym)) (errDuplicateName . symbolParsed)
+      modify' @(BuilderState s) (set (stateSymbols . at psym) (Just sym))
+      modify' @(BuilderState s) (set (stateCurrentBlock . at psym) (Just itm))
 
     startNewBlock :: Sem (Re s r) ()
     startNewBlock = do
@@ -205,17 +224,19 @@ addSymbol' impl mdef sym = do
       modify' @(BuilderState s) (set stateNextIx 0)
       whenJust mcurImpl $ \curImpl ->
         modify' (over stateReverseClosedBlocks (NameBlock curBlock curImpl :))
-      addSymbol' impl mdef sym
+      addSymbol' impl mdef sym ty
 
 endBuild' :: forall s r a. Sem (Re s r) a
 endBuild' = get @(BuilderState s) >>= throw
 
-mkRecordNameSignature :: RhsRecord 'Parsed -> RecordNameSignature
+mkRecordNameSignature :: forall s. (SingI s) => RhsRecord s -> RecordNameSignature s
 mkRecordNameSignature rhs =
   RecordNameSignature
     ( HashMap.fromList
-        [ (s, (NameItem s idx Nothing))
-          | (Indexed idx field) <- indexFrom 0 (toList (rhs ^.. rhsRecordStatements . each . _RecordStatementField)),
-            let s = field ^. fieldName
+        [ (symbolParsed _nameItemSymbol, NameItem {..})
+          | (Indexed _nameItemIndex field) <- indexFrom 0 (toList (rhs ^.. rhsRecordStatements . each . _RecordStatementField)),
+            let _nameItemSymbol :: SymbolType s = field ^. fieldName
+                _nameItemType = field ^. fieldType
+                _nameItemDefault :: Maybe (ArgDefault s) = Nothing
         ]
     )

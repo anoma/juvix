@@ -117,7 +117,7 @@ type family ImportType s = res | res -> s where
 type RecordNameSignatureType :: Stage -> GHC.Type
 type family RecordNameSignatureType s = res | res -> s where
   RecordNameSignatureType 'Parsed = ()
-  RecordNameSignatureType 'Scoped = RecordNameSignature
+  RecordNameSignatureType 'Scoped = RecordNameSignature 'Parsed
 
 type NameSignatureType :: Stage -> GHC.Type
 type family NameSignatureType s = res | res -> s where
@@ -149,8 +149,9 @@ type family ModuleEndType t = res | res -> t where
 type ParsedPragmas = WithLoc (WithSource Pragmas)
 
 data NameItem (s :: Stage) = NameItem
-  { _nameItemSymbol :: Symbol,
+  { _nameItemSymbol :: SymbolType s,
     _nameItemIndex :: Int,
+    _nameItemType :: ExpressionType s,
     _nameItemDefault :: Maybe (ArgDefault s)
   }
 
@@ -166,8 +167,8 @@ newtype NameSignature (s :: Stage) = NameSignature
   { _nameSignatureArgs :: [NameBlock s]
   }
 
-newtype RecordNameSignature = RecordNameSignature
-  { _recordNames :: HashMap Symbol (NameItem 'Parsed)
+newtype RecordNameSignature s = RecordNameSignature
+  { _recordNames :: HashMap Symbol (NameItem s)
   }
 
 data Argument (s :: Stage)
@@ -861,6 +862,7 @@ deriving stock instance Ord (RecordPatternItem 'Scoped)
 
 data RecordPattern (s :: Stage) = RecordPattern
   { _recordPatternConstructor :: IdentifierType s,
+    -- TODO remove this field. This information should be retrieved from the scoper state.
     _recordPatternSignature :: Irrelevant (RecordNameSignatureType s),
     _recordPatternItems :: [RecordPatternItem s]
   }
@@ -1580,14 +1582,12 @@ deriving stock instance Ord (ArgumentBlock 'Scoped)
 data RecordUpdateExtra = RecordUpdateExtra
   { _recordUpdateExtraConstructor :: S.Symbol,
     -- | Implicitly bound fields sorted by index
-    _recordUpdateExtraVars :: [S.Symbol],
-    _recordUpdateExtraSignature :: RecordNameSignature
+    _recordUpdateExtraVars :: [S.Symbol]
   }
 
-data RecordCreationExtra = RecordCreationExtra
+newtype RecordCreationExtra = RecordCreationExtra
   { -- | Implicitly bound fields sorted by index
-    _recordCreationExtraVars :: [S.Symbol],
-    _recordCreationExtraSignature :: RecordNameSignature
+    _recordCreationExtraVars :: [S.Symbol]
   }
 
 newtype ParensRecordUpdate = ParensRecordUpdate

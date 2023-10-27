@@ -15,6 +15,14 @@ runFail ::
 runFail = fmap (^? _Right) . runError @() . reinterpret (\Fail -> throw ())
 {-# INLINE runFail #-}
 
+-- | Run a 'Fail' effect purely with a default value.
+runFailDefault ::
+  a ->
+  Sem (Fail ': r) a ->
+  Sem r a
+runFailDefault defaultVal = fmap (fromMaybe defaultVal . (^? _Right)) . runError @() . reinterpret (\Fail -> throw ())
+{-# INLINE runFailDefault #-}
+
 ignoreFail ::
   Sem (Fail ': r) a ->
   Sem r ()
@@ -24,6 +32,10 @@ ignoreFail = void . runFail
 failWhen :: (Member Fail r) => Bool -> Sem r ()
 failWhen c = when c fail
 {-# INLINE failWhen #-}
+
+failUnlessM :: (Member Fail r) => Sem r Bool -> Sem r ()
+failUnlessM c = unlessM c fail
+{-# INLINE failUnlessM #-}
 
 failUnless :: (Member Fail r) => Bool -> Sem r ()
 failUnless c = unless c fail

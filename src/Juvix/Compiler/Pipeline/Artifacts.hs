@@ -110,7 +110,9 @@ runFromConcreteCache =
     (artifactInternalModuleCache . Internal.cachedModules)
     $ mapError (JuvixError @ScoperError)
       . runReader (mempty :: Pragmas)
+      . runReader (mempty :: Internal.DefaultArgsStack)
       . evalState (mempty :: Internal.ConstructorInfos)
       . runTerminationArtifacts
       . runReaderArtifacts (artifactScoperState . scoperScopedSignatures)
+      . runReaderArtifacts (artifactScoperState . scoperScopedConstructorFields)
       . Internal.goModuleNoCache

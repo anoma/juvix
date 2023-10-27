@@ -87,7 +87,7 @@ data FunctionDef = FunctionDef
     _funDefInstance :: Bool,
     _funDefCoercion :: Bool,
     _funDefBuiltin :: Maybe BuiltinFunction,
-    _funDefDefaultSignature :: DefaultSignature,
+    _funDefArgsInfo :: [ArgInfo],
     _funDefPragmas :: Pragmas
   }
   deriving stock (Eq, Generic, Data)
@@ -168,9 +168,14 @@ data Example = Example
 
 instance Hashable Example
 
+data SimpleBinder = SimpleBinder
+  { _sbinderVar :: VarName,
+    _sbinderType :: Expression
+  }
+  deriving stock (Eq, Generic, Data)
+
 data SimpleLambda = SimpleLambda
-  { _slambdaVar :: VarName,
-    _slambdaVarType :: Expression,
+  { _slambdaBinder :: SimpleBinder,
     _slambdaBody :: Expression
   }
   deriving stock (Eq, Generic, Data)
@@ -212,6 +217,8 @@ data LambdaClause = LambdaClause
 instance Hashable Lambda
 
 instance Hashable LambdaClause
+
+instance Hashable SimpleBinder
 
 instance Hashable SimpleLambda
 
@@ -293,13 +300,22 @@ data ConstructorDef = ConstructorDef
   }
   deriving stock (Data)
 
-newtype DefaultSignature = DefaultSignature
-  { _defaultSignature :: [Maybe Expression]
+-- | At the moment we only use the name when we have a default value, so
+-- isNull _argInfoDefault implies isNull _argInfoName
+data ArgInfo = ArgInfo
+  { _argInfoDefault :: Maybe Expression,
+    _argInfoName :: Maybe Name
   }
   deriving stock (Eq, Generic, Data)
-  deriving newtype (Monoid, Semigroup)
 
-instance Hashable DefaultSignature
+emptyArgInfo :: ArgInfo
+emptyArgInfo =
+  ArgInfo
+    { _argInfoDefault = Nothing,
+      _argInfoName = Nothing
+    }
+
+instance Hashable ArgInfo
 
 data FunctionParameter = FunctionParameter
   { _paramName :: Maybe VarName,
@@ -324,7 +340,7 @@ newtype ModuleIndex = ModuleIndex
   deriving stock (Data)
 
 makeLenses ''ModuleIndex
-makeLenses ''DefaultSignature
+makeLenses ''ArgInfo
 makeLenses ''WildcardConstructor
 makeLenses ''Case
 makeLenses ''CaseBranch
@@ -343,6 +359,7 @@ makeLenses ''Application
 makeLenses ''TypedExpression
 makeLenses ''Function
 makeLenses ''SimpleLambda
+makeLenses ''SimpleBinder
 makeLenses ''Lambda
 makeLenses ''LambdaClause
 makeLenses ''FunctionParameter
@@ -439,8 +456,11 @@ instance HasLoc Function where
 instance HasLoc Application where
   getLoc (Application l r _) = getLoc l <> getLoc r
 
+instance HasLoc SimpleBinder where
+  getLoc l = getLoc (l ^. sbinderVar) <> getLoc (l ^. sbinderType)
+
 instance HasLoc SimpleLambda where
-  getLoc l = getLoc (l ^. slambdaVar) <> getLoc (l ^. slambdaBody)
+  getLoc l = getLoc (l ^. slambdaBinder) <> getLoc (l ^. slambdaBody)
 
 instance HasLoc LambdaClause where
   getLoc (LambdaClause ps e) = getLocSpan ps <> getLoc e

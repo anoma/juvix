@@ -200,13 +200,13 @@ checkFunctionDef FunctionDef {..} = do
     registerIdenType _funDefName _funDefType'
     _funDefBody' <- checkExpression _funDefType' _funDefBody
     let params = fst (unfoldFunType _funDefType')
-    _funDefDefaultSignature' <- checkDefaultValues params
+    _funDefArgsInfo' <- checkArgsInfo params
     return
       FunctionDef
         { _funDefBody = _funDefBody',
           _funDefType = _funDefType',
           _funDefExamples = _funDefExamples',
-          _funDefDefaultSignature = _funDefDefaultSignature',
+          _funDefArgsInfo = _funDefArgsInfo',
           _funDefName,
           _funDefTerminating,
           _funDefInstance,
@@ -219,18 +219,25 @@ checkFunctionDef FunctionDef {..} = do
   when _funDefCoercion $
     checkCoercionType funDef
   registerFunctionDef funDef
+  rememberFunctionDef funDef
   return funDef
   where
     -- Since default arguments come from the left of the : then it must be that
     -- there are at least n FunctionParameter
-    checkDefaultValues :: [FunctionParameter] -> Sem r DefaultSignature
-    checkDefaultValues allparams = DefaultSignature <$> mapM go (zipExact defaults params)
+    checkArgsInfo :: [FunctionParameter] -> Sem r [ArgInfo]
+    checkArgsInfo allparams = execOutputList $ do
+      go (zipExact infos params)
       where
         params = take n allparams
-        defaults = _funDefDefaultSignature ^. defaultSignature
-        n = length defaults
-        go :: (Maybe Expression, FunctionParameter) -> Sem r (Maybe Expression)
-        go (me, p) = forM me $ \e' -> checkExpression (p ^. paramType) e'
+        infos = _funDefArgsInfo
+        n = length infos
+        go :: [(ArgInfo, FunctionParameter)] -> Sem (Output ArgInfo ': r) ()
+        go = \case
+          [] -> return ()
+          (me, p) : rest -> do
+            me' <- traverseOf (argInfoDefault . _Just) (checkExpression (p ^. paramType)) me
+            output me'
+            withLocalTypeMaybe (p ^. paramName) (p ^. paramType) (go rest)
 
 checkIsType ::
   (Members '[HighlightBuilder, Reader InfoTable, State FunctionsTable, Error TypeCheckerError, NameIdGen, Reader LocalVars, Inference, Builtins, Output Example, State TypesTable, Termination, Output TypedHole, Output CastHole] r) =>
@@ -460,10 +467,17 @@ inferExpression ::
   Sem r TypedExpression
 inferExpression hint e = resolveInstanceHoles $ resolveCastHoles $ inferExpression' hint e
 
-lookupVar :: (Member (Reader LocalVars) r) => Name -> Sem r Expression
-lookupVar v = HashMap.lookupDefault err v <$> asks (^. localTypes)
+lookupVar :: (Members '[Reader LocalVars, Reader InfoTable] r) => Name -> Sem r Expression
+lookupVar v = do
+  locals <- asks (^. localTypes)
+  return
+    ( fromMaybe
+        err
+        ( locals ^. at v
+        )
+    )
   where
-    err = error $ "internal error: could not find var " <> ppTrace v
+    err = error $ "internal error: could not find var " <> ppTrace v <> " at " <> ppTrace (getLoc v)
 
 -- | helper function for function clauses and lambda functions
 checkClause ::
@@ -722,7 +736,7 @@ inferExpression' hint e = case e of
           }
 
     goSimpleLambda :: SimpleLambda -> Sem r TypedExpression
-    goSimpleLambda (SimpleLambda v ty b) = do
+    goSimpleLambda (SimpleLambda (SimpleBinder v ty) b) = do
       b' <- inferExpression' Nothing b
       let smallUni = smallUniverseE (getLoc ty)
       ty' <- checkExpression smallUni ty
@@ -730,7 +744,7 @@ inferExpression' hint e = case e of
       return
         TypedExpression
           { _typedType = ExpressionFunction fun,
-            _typedExpression = ExpressionSimpleLambda (SimpleLambda v ty' (b' ^. typedExpression))
+            _typedExpression = ExpressionSimpleLambda (SimpleLambda (SimpleBinder v ty') (b' ^. typedExpression))
           }
 
     goCase :: Case -> Sem r TypedExpression
@@ -792,9 +806,7 @@ inferExpression' hint e = case e of
       let uni = smallUniverseE (getLoc l)
       l' <- checkFunctionParameter l
       let bodyEnv :: Sem r a -> Sem r a
-          bodyEnv = case l ^. paramName of
-            Nothing -> id
-            Just v -> local (over localTypes (HashMap.insert v (l ^. paramType)))
+          bodyEnv = withLocalTypeMaybe (l ^. paramName) (l ^. paramType)
       r' <- bodyEnv (checkExpression uni r)
       return (TypedExpression uni (ExpressionFunction (Function l' r')))
 

@@ -455,6 +455,9 @@ mod = "%"
 dollar :: (IsString s) => s
 dollar = "$"
 
+notMutual :: (IsString s) => s
+notMutual = "not-mutual"
+
 mutual :: (IsString s) => s
 mutual = "mutual"
 
