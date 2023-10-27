@@ -13,6 +13,7 @@ import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Pretty.Options (Options, fromGenericOptions)
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error.Pretty
+import Juvix.Compiler.Store.Scoped.Language (FixitySymbolEntry, ModuleSymbolEntry, PreSymbolEntry)
 import Juvix.Data.CodeAnn
 import Juvix.Prelude
 
@@ -611,7 +612,7 @@ instance ToGenericError ConstructorExpectedLeftApplication where
 
 data ModuleDoesNotExportSymbol = ModuleDoesNotExportSymbol
   { _moduleDoesNotExportSymbol :: Symbol,
-    _moduleDoesNotExportModule :: ModuleRef
+    _moduleDoesNotExportModule :: ScopedModuleRef
   }
   deriving stock (Show)
 

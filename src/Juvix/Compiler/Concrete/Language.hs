@@ -26,9 +26,11 @@ import Juvix.Compiler.Concrete.Data.Name
 import Juvix.Compiler.Concrete.Data.NameRef
 import Juvix.Compiler.Concrete.Data.NameSpace
 import Juvix.Compiler.Concrete.Data.PublicAnn
+import Juvix.Compiler.Concrete.Data.ScopedName (nameDefined)
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Data.Stage
 import Juvix.Compiler.Concrete.Data.VisibilityAnn
+import Juvix.Compiler.Store.Scoped.Language
 import Juvix.Data
 import Juvix.Data.Ape.Base as Ape
 import Juvix.Data.Fixity
@@ -67,7 +69,7 @@ type family SymbolType s = res | res -> s where
 type ModuleRefType :: Stage -> GHC.Type
 type family ModuleRefType s = res | res -> s where
   ModuleRefType 'Parsed = Name
-  ModuleRefType 'Scoped = ModuleRef
+  ModuleRefType 'Scoped = ScopedModuleRef
 
 type IdentifierType :: Stage -> GHC.Type
 type family IdentifierType s = res | res -> s where
@@ -107,7 +109,7 @@ type family PatternAtType s = res | res -> s where
 type ImportType :: Stage -> GHC.Type
 type family ImportType s = res | res -> s where
   ImportType 'Parsed = TopModulePath
-  ImportType 'Scoped = ModuleRef'' 'S.Concrete 'ModuleTop
+  ImportType 'Scoped = ScopedModule
 
 type RecordNameSignatureType :: Stage -> GHC.Type
 type family RecordNameSignatureType s = res | res -> s where
@@ -1042,94 +1044,47 @@ deriving stock instance Ord (UsingHiding 'Parsed)
 
 deriving stock instance Ord (UsingHiding 'Scoped)
 
-type ModuleRef = ModuleRef' 'S.Concrete
-
-newtype ModuleRef' (c :: S.IsConcrete) = ModuleRef'
-  { _unModuleRef' :: Σ ModuleIsTop (TyCon1 (ModuleRef'' c))
-  }
-
-instance (SingI c) => Show (ModuleRef' c) where
-  show = show . getModuleRefNameId
-
-instance (SingI c) => Eq (ModuleRef' c) where
-  (==) = (==) `on` getModuleRefNameId
-
-instance (SingI c) => Ord (ModuleRef' c) where
-  compare = compare `on` getModuleRefNameId
-
 getNameRefId :: forall c. (SingI c) => RefNameType c -> S.NameId
 getNameRefId = case sing :: S.SIsConcrete c of
   S.SConcrete -> (^. S.nameId)
   S.SNotConcrete -> (^. S.nameId)
 
-getModuleRefExportInfo :: ModuleRef' c -> ExportInfo
-getModuleRefExportInfo (ModuleRef' (_ :&: ModuleRef'' {..})) = _moduleExportInfo
-
-getModuleRefNameType :: ModuleRef' c -> RefNameType c
-getModuleRefNameType (ModuleRef' (_ :&: ModuleRef'' {..})) = _moduleRefName
-
-getModuleRefNameId :: forall c. (SingI c) => ModuleRef' c -> S.NameId
-getModuleRefNameId (ModuleRef' (t :&: ModuleRef'' {..})) =
-  case sing :: S.SIsConcrete c of
-    S.SConcrete -> case t of
-      SModuleTop -> _moduleRefName ^. S.nameId
-      SModuleLocal -> _moduleRefName ^. S.nameId
-    S.SNotConcrete -> _moduleRefName ^. S.nameId
-
-data ModuleRef'' (c :: S.IsConcrete) (t :: ModuleIsTop) = ModuleRef''
-  { _moduleRefName :: RefNameType c,
-    _moduleExportInfo :: ExportInfo,
-    _moduleRefModule :: Module 'Scoped t
+data ScopedModuleRef' (t :: ModuleIsTop) = ScopedModuleRef'
+  { _scopedModuleRefScopedModule :: ScopedModule,
+    _scopedModuleRefModule :: Module 'Scoped t
   }
 
-instance (Show (RefNameType s)) => Show (ModuleRef'' s t) where
-  show ModuleRef'' {..} = show _moduleRefName
+instance Show (ScopedModuleRef' t) where
+  show ScopedModuleRef' {..} = show (_scopedModuleRefScopedModule ^. scopedModuleName)
 
-instance Eq (ModuleRef'' 'S.Concrete t) where
-  (ModuleRef'' n _ _) == (ModuleRef'' n' _ _) = n == n'
+instance Eq (ScopedModuleRef' t) where
+  ScopedModuleRef' m1 _ == ScopedModuleRef' m2 _ = m1 ^. scopedModuleName == m2 ^. scopedModuleName
 
-instance Ord (ModuleRef'' 'S.Concrete t) where
-  compare (ModuleRef'' n _ _) (ModuleRef'' n' _ _) = compare n n'
+instance Ord (ScopedModuleRef' t) where
+  compare (ScopedModuleRef' m1 _) (ScopedModuleRef' m2 _) =
+    compare (m1 ^. scopedModuleName) (m2 ^. scopedModuleName)
 
-newtype Alias = Alias
-  { _aliasName :: S.Name' ()
+newtype ScopedModuleRef = ScopedModuleRef
+  { _unModuleRef :: Σ ModuleIsTop (TyCon1 ScopedModuleRef')
   }
-  deriving stock (Show)
 
--- | Either an alias or a symbol entry.
-data PreSymbolEntry
-  = PreSymbolAlias Alias
-  | PreSymbolFinal SymbolEntry
-  deriving stock (Show)
+instance Show ScopedModuleRef where
+  show = show . getModuleRefNameId
 
--- | A symbol which is not an alias.
-newtype SymbolEntry = SymbolEntry
-  { _symbolEntry :: S.Name' ()
-  }
-  deriving stock (Show, Eq, Ord, Generic)
+instance Eq ScopedModuleRef where
+  (==) = (==) `on` getModuleRefNameId
 
-instance Hashable SymbolEntry
+instance Ord ScopedModuleRef where
+  compare = compare `on` getModuleRefNameId
 
-newtype ModuleSymbolEntry = ModuleSymbolEntry
-  { _moduleEntry :: S.Name' ()
-  }
-  deriving stock (Show)
+getModuleRefExportInfo :: ScopedModuleRef -> ExportInfo
+getModuleRefExportInfo (ScopedModuleRef (_ :&: ScopedModuleRef' {..})) = _scopedModuleRefScopedModule ^. scopedModuleExportInfo
 
-newtype FixitySymbolEntry = FixitySymbolEntry
-  { _fixityEntry :: S.Name' ()
-  }
-  deriving stock (Show)
+getModuleRefName :: ScopedModuleRef -> ScopedName
+getModuleRefName (ScopedModuleRef (_ :&: ScopedModuleRef' {..})) = _scopedModuleRefScopedModule ^. scopedModuleName
 
-instance (SingI t) => CanonicalProjection (ModuleRef'' c t) (ModuleRef' c) where
-  project r = ModuleRef' (sing :&: r)
-
--- | Symbols that a module exports
-data ExportInfo = ExportInfo
-  { _exportSymbols :: HashMap Symbol PreSymbolEntry,
-    _exportModuleSymbols :: HashMap Symbol ModuleSymbolEntry,
-    _exportFixitySymbols :: HashMap Symbol FixitySymbolEntry
-  }
-  deriving stock (Show)
+getModuleRefNameId :: ScopedModuleRef -> S.NameId
+getModuleRefNameId m = getModuleRefName m ^. S.nameId
 
 data OpenModule (s :: Stage) = OpenModule
   { _openModuleName :: ModuleRefType s,
@@ -1838,7 +1793,6 @@ newtype ModuleIndex = ModuleIndex
 makeLenses ''PatternArg
 makeLenses ''WildcardConstructor
 makeLenses ''DoubleBracesExpression
-makeLenses ''Alias
 makeLenses ''FieldPun
 makeLenses ''RecordPatternAssign
 makeLenses ''RecordPattern
@@ -1851,9 +1805,6 @@ makeLenses ''NonDefinitionsSection
 makeLenses ''DefinitionsSection
 makeLenses ''ProjectionDef
 makeLenses ''ScopedIden
-makeLenses ''SymbolEntry
-makeLenses ''ModuleSymbolEntry
-makeLenses ''FixitySymbolEntry
 makeLenses ''FixityDef
 makeLenses ''RecordField
 makeLenses ''RhsRecord
@@ -1887,11 +1838,9 @@ makeLenses ''SigArg
 makeLenses ''ArgDefault
 makeLenses ''FunctionDef
 makeLenses ''AxiomDef
-makeLenses ''ExportInfo
 makeLenses ''InductiveParameters
 makeLenses ''InductiveParametersRhs
-makeLenses ''ModuleRef'
-makeLenses ''ModuleRef''
+makeLenses ''ScopedModuleRef'
 makeLenses ''OpenModule
 makeLenses ''OpenModuleParams
 makeLenses ''PatternApp
@@ -1921,6 +1870,7 @@ makeLenses ''NameSignature
 makeLenses ''RecordNameSignature
 makeLenses ''NameBlock
 makeLenses ''NameItem
+makeLenses ''ScopedModuleRef
 
 fixityFieldHelper :: SimpleGetter (ParsedFixityFields s) (Maybe a) -> SimpleGetter (ParsedFixityInfo s) (Maybe a)
 fixityFieldHelper l = to (^? fixityFields . _Just . l . _Just)
@@ -2050,8 +2000,8 @@ instance (SingI s) => HasLoc (InductiveParameters s) where
 instance HasLoc (InductiveDef s) where
   getLoc i = (getLoc <$> i ^. inductivePositive) ?<> getLoc (i ^. inductiveKw)
 
-instance HasLoc ModuleRef where
-  getLoc (ModuleRef' (_ :&: r)) = getLoc r
+instance HasLoc ScopedModuleRef where
+  getLoc (ScopedModuleRef (_ :&: r)) = getLoc r
 
 instance (SingI s) => HasLoc (AxiomDef s) where
   getLoc m = getLoc (m ^. axiomKw) <> getLocExpressionType (m ^. axiomType)
@@ -2195,8 +2145,8 @@ instance (SingI s) => HasLoc (Import s) where
     SParsed -> getLoc _importKw
     SScoped -> getLoc _importKw
 
-instance HasLoc (ModuleRef'' 'S.Concrete t) where
-  getLoc ref = getLoc (ref ^. moduleRefName)
+instance HasLoc (ScopedModuleRef' t) where
+  getLoc ref = ref ^. scopedModuleRefScopedModule . scopedModuleName . nameDefined
 
 instance (SingI s, SingI t) => HasLoc (Module s t) where
   getLoc m = case sing :: SStage s of
@@ -2594,46 +2544,11 @@ judocExamples (Judoc bs) = concatMap goGroup bs
       JudocExample e -> [e]
       _ -> mempty
 
-instance HasLoc Alias where
-  getLoc = (^. aliasName . S.nameDefined)
-
-instance HasLoc PreSymbolEntry where
-  getLoc = \case
-    PreSymbolAlias a -> getLoc a
-    PreSymbolFinal a -> getLoc a
-
-instance HasLoc SymbolEntry where
-  getLoc = (^. symbolEntry . S.nameDefined)
-
-instance HasNameKind ModuleSymbolEntry where
-  getNameKind (ModuleSymbolEntry s) = getNameKind s
-
-instance HasLoc ModuleSymbolEntry where
-  getLoc (ModuleSymbolEntry s) = s ^. S.nameDefined
-
-overModuleRef'' :: forall s s'. (forall t. ModuleRef'' s t -> ModuleRef'' s' t) -> ModuleRef' s -> ModuleRef' s'
-overModuleRef'' f = over unModuleRef' (\(t :&: m'') -> t :&: f m'')
-
-symbolEntryNameId :: SymbolEntry -> NameId
-symbolEntryNameId = (^. symbolEntry . S.nameId)
-
 instance HasNameKind ScopedIden where
   getNameKind = getNameKind . (^. scopedIdenFinal)
 
-instance HasNameKind SymbolEntry where
-  getNameKind = getNameKind . (^. symbolEntry)
-
-exportAllNames :: SimpleFold ExportInfo (S.Name' ())
-exportAllNames =
-  exportSymbols
-    . each
-    . preSymbolName
-    <> exportModuleSymbols
-      . each
-      . moduleEntry
-    <> exportFixitySymbols
-      . each
-      . fixityEntry
+overModuleRef' :: (forall t. ScopedModuleRef' t -> ScopedModuleRef' t) -> ScopedModuleRef -> ScopedModuleRef
+overModuleRef' f = over unModuleRef (\(t :&: m'') -> t :&: f m'')
 
 exportNameSpace :: forall ns. (SingI ns) => Lens' ExportInfo (HashMap Symbol (NameSpaceEntryType ns))
 exportNameSpace = case sing :: SNameSpace ns of
@@ -2680,11 +2595,6 @@ instance HasFixity PostfixApplication where
 
 instance HasFixity InfixApplication where
   getFixity (InfixApplication _ op _) = fromMaybe impossible (op ^. scopedIdenName . S.nameFixity)
-
-preSymbolName :: Lens' PreSymbolEntry (S.Name' ())
-preSymbolName f = \case
-  PreSymbolAlias a -> PreSymbolAlias <$> traverseOf aliasName f a
-  PreSymbolFinal a -> PreSymbolFinal <$> traverseOf symbolEntry f a
 
 instance HasFixity PatternInfixApp where
   getFixity (PatternInfixApp _ op _) = fromMaybe impossible (op ^. scopedIdenName . S.nameFixity)

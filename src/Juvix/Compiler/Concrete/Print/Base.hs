@@ -16,6 +16,7 @@ import Juvix.Compiler.Concrete.Extra qualified as Concrete
 import Juvix.Compiler.Concrete.Keywords qualified as Kw
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Pretty.Options
+import Juvix.Compiler.Store.Scoped.Language (Alias, ModuleSymbolEntry, PreSymbolEntry (..), SymbolEntry, aliasName, moduleEntry, symbolEntry)
 import Juvix.Data.Ape.Base
 import Juvix.Data.Ape.Print
 import Juvix.Data.CodeAnn (Ann, CodeAnn (..), ppStringLit)

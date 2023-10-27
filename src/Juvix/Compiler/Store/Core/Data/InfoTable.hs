@@ -1,9 +1,7 @@
-module Juvix.Compiler.Store.Data.InfoTable where
+module Juvix.Compiler.Store.Core.Data.InfoTable where
 
 import Juvix.Compiler.Concrete.Data.Builtins
-import Juvix.Compiler.Internal.Data.Name
-import Juvix.Compiler.Internal.Language as Internal
-import Juvix.Compiler.Store.Language
+import Juvix.Compiler.Store.Core.Language
 import Juvix.Extra.Serialize
 
 data InfoTable = InfoTable
@@ -15,6 +13,7 @@ data InfoTable = InfoTable
     _infoAxioms :: Map Text AxiomInfo,
     _infoSpecialisations :: Map Symbol [SpecialisationInfo],
     _infoBuiltins :: Map BuiltinPrim IdentKind,
+    _infoPriorities :: IntSet,
     _infoPrecedenceGraph :: Map NameId (Set NameId)
   }
   deriving stock (Generic)
@@ -30,6 +29,7 @@ emptyInfoTable =
       _infoAxioms = mempty,
       _infoSpecialisations = mempty,
       _infoBuiltins = mempty,
+      _infoPriorities = mempty,
       _infoPrecedenceGraph = mempty
     }
 
@@ -40,11 +40,9 @@ data IdentKind
   deriving stock (Generic)
 
 data IdentifierInfo = IdentifierInfo
-  { _identifierName :: Name,
+  { _identifierName :: Text,
     _identifierLocation :: Maybe Location,
     _identifierSymbol :: Symbol,
-    _identifierInternalType :: Internal.Expression,
-    _identifierInternalDef :: Maybe Internal.Expression,
     _identifierType :: Type,
     -- | The number of lambdas in the identifier body
     _identifierArgsNum :: Int,
@@ -60,7 +58,7 @@ data IdentifierInfo = IdentifierInfo
   deriving stock (Generic)
 
 data InductiveInfo = InductiveInfo
-  { _inductiveName :: Name,
+  { _inductiveName :: Text,
     _inductiveLocation :: Maybe Location,
     _inductiveSymbol :: Symbol,
     _inductiveKind :: Type,
@@ -74,10 +72,9 @@ data InductiveInfo = InductiveInfo
   deriving stock (Generic)
 
 data ConstructorInfo = ConstructorInfo
-  { _constructorName :: Name,
+  { _constructorName :: Text,
     _constructorLocation :: Maybe Location,
     _constructorTag :: Tag,
-    _constructorInternalType :: Internal.Expression,
     _constructorType :: Type,
     _constructorArgsNum :: Int,
     _constructorInductive :: Symbol,
@@ -88,16 +85,15 @@ data ConstructorInfo = ConstructorInfo
   deriving stock (Generic)
 
 data ParameterInfo = ParameterInfo
-  { _paramName :: Name,
+  { _paramName :: Text,
     _paramLocation :: Maybe Location,
-    _paramInternalKind :: Internal.Expression,
     _paramKind :: Type,
     _paramIsImplicit :: Bool
   }
   deriving stock (Generic)
 
 data AxiomInfo = AxiomInfo
-  { _axiomName :: Name,
+  { _axiomName :: Text,
     _axiomLocation :: Maybe Location,
     _axiomType :: Type,
     _axiomPragmas :: Pragmas

@@ -3,6 +3,7 @@ module Juvix.Compiler.Concrete.Data.Scope.Base where
 import Juvix.Compiler.Concrete.Data.NameSpace
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Language
+import Juvix.Compiler.Store.Scoped.Language
 import Juvix.Prelude
 
 newtype SymbolInfo (n :: NameSpace) = SymbolInfo
@@ -28,7 +29,7 @@ data Scope = Scope
     -- several imports under the same name. E.g.
     -- import A as X;
     -- import B as X;
-    _scopeTopModules :: HashMap TopModulePath (HashMap S.NameId (ModuleRef'' 'S.NotConcrete 'ModuleTop)),
+    _scopeTopModules :: HashMap TopModulePath (HashMap S.NameId ScopedModule),
     -- | Symbols that have been defined in the current scope level. Every symbol
     -- should map to itself. This is needed because we may query it with a
     -- symbol with a different location but we may want the location of the
@@ -39,13 +40,13 @@ data Scope = Scope
   }
 
 newtype ModulesCache = ModulesCache
-  { _cachedModules :: HashMap TopModulePath (ModuleRef'' 'S.NotConcrete 'ModuleTop)
+  { _cachedModules :: HashMap TopModulePath ScopedModule
   }
 
 data ScopeParameters = ScopeParameters
   { -- | Used for import cycle detection.
     _scopeTopParents :: [Import 'Parsed],
-    _scopeParsedModules :: HashMap TopModulePath (Module 'Parsed 'ModuleTop)
+    _scopeParsedModules :: HashMap TopModulePath ScopedModule
   }
 
 data RecordInfo = RecordInfo
@@ -56,7 +57,7 @@ data RecordInfo = RecordInfo
 data ScoperState = ScoperState
   { _scoperModulesCache :: ModulesCache,
     -- | Local and top modules
-    _scoperModules :: HashMap S.ModuleNameId (ModuleRef' 'S.NotConcrete),
+    _scoperModules :: HashMap S.ModuleNameId ScopedModuleRef,
     _scoperScope :: HashMap TopModulePath Scope,
     _scoperAlias :: HashMap S.NameId PreSymbolEntry,
     _scoperSignatures :: HashMap S.NameId (NameSignature 'Parsed),

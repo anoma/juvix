@@ -27,6 +27,7 @@ import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
 import Juvix.Compiler.Concrete.Translation.FromSource.Data.Context (ParserResult)
 import Juvix.Compiler.Concrete.Translation.FromSource.Data.Context qualified as Parsed
 import Juvix.Compiler.Pipeline.EntryPoint
+import Juvix.Compiler.Store.Scoped.Language as Store
 import Juvix.Data.FixityInfo qualified as FI
 import Juvix.Data.NameKind
 import Juvix.Prelude hiding (scoped)
@@ -369,12 +370,11 @@ checkImport ::
 checkImport import_@Import {..} = do
   checkCycle
   cache <- gets (^. scoperModulesCache . cachedModules)
-  moduleRef <- maybe (readScopeModule import_) return (cache ^. at _importModule)
-  let checked :: Module 'Scoped 'ModuleTop = moduleRef ^. moduleRefModule
-      sname :: S.TopModulePath = checked ^. modulePath
+  smodule <- maybe (readScopeModule import_) return (cache ^. at _importModule)
+  let sname :: S.TopModulePath = smodule ^. scopedModulePath
       sname' :: S.Name = set S.nameConcrete (topModulePathToName _importModule) sname
       moduleId = sname ^. S.nameId
-      cmoduleRef :: ModuleRef'' 'S.Concrete 'ModuleTop = set moduleRefName sname' moduleRef
+      cmodule = set scopedModuleName sname' smodule
       importName :: S.TopModulePath = set S.nameConcrete _importModule sname
       synonymName :: Maybe S.TopModulePath = do
         synonym <- _importAsName
@@ -383,7 +383,7 @@ checkImport import_@Import {..} = do
       qual' = do
         asName <- _importAsName
         return (set S.nameConcrete asName sname')
-  addModuleToScope moduleRef
+  addModuleToScope smodule
   registerName importName
   whenJust synonymName registerName
   let moduleRef' = mkModuleRef' moduleRef
@@ -626,19 +626,15 @@ exportScope Scope {..} = do
                 )
             )
 
-getParsedModule :: (Members '[Reader ScopeParameters] r) => TopModulePath -> Sem r (Module 'Parsed 'ModuleTop)
+getParsedModule :: (Members '[Reader ScopeParameters] r) => TopModulePath -> Sem r ScopedModule
 getParsedModule i = asks (^?! scopeParsedModules . at i . _Just)
 
 readScopeModule ::
   (Members '[Error ScoperError, Reader ScopeParameters, NameIdGen, State ScoperState, InfoTableBuilder] r) =>
   Import 'Parsed ->
-  Sem r (ModuleRef'' 'S.NotConcrete 'ModuleTop)
+  Sem r ScopedModule
 readScopeModule import_ = do
-  m <- getParsedModule (import_ ^. importModule)
-  local addImport (checkTopModule m)
-  where
-    addImport :: ScopeParameters -> ScopeParameters
-    addImport = over scopeTopParents (cons import_)
+  getParsedModule (import_ ^. importModule)
 
 checkFixityInfo ::
   forall r.

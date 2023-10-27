@@ -1,5 +1,5 @@
-module Juvix.Compiler.Store.Language
-  ( module Juvix.Compiler.Store.Language,
+module Juvix.Compiler.Store.Core.Language
+  ( module Juvix.Compiler.Store.Core.Language,
     module Juvix.Compiler.Core.Language.Nodes,
   )
 where
