@@ -10,7 +10,6 @@ import Data.Text qualified as Text
 import Juvix.Prelude.Base
 import Prettyprinter hiding (concatWith, defaultLayoutOptions, hsep, sep, vsep)
 import Prettyprinter qualified as PP
-import Prettyprinter.Internal.Type
 import Prettyprinter.Render.Terminal (AnsiStyle)
 import Prettyprinter.Render.Terminal qualified as Ansi
 import Prettyprinter.Render.Text qualified as Text
@@ -168,7 +167,7 @@ hang' :: Doc ann -> Doc ann
 hang' = hang 2
 
 spaceOrEmpty :: Doc ann
-spaceOrEmpty = FlatAlt (Char ' ') mempty
+spaceOrEmpty = flatAlt (pretty ' ') mempty
 
 oneLineOrNext :: Doc ann -> Doc ann
 oneLineOrNext x = PP.group (flatAlt (line <> indent' x) (space <> x))
