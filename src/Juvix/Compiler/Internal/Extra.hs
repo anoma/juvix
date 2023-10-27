@@ -98,12 +98,12 @@ genFieldProjection _funDefName _funDefBuiltin info fieldIx = do
         _funDefTerminating = False,
         _funDefInstance = False,
         _funDefCoercion = False,
-        _funDefBuiltin = Nothing,
         _funDefArgsInfo = mempty,
         _funDefPragmas = mempty {_pragmasInline = Just InlineAlways},
         _funDefBody = body',
         _funDefType = foldFunType (inductiveArgs ++ [saturatedTy]) retTy,
-        ..
+        _funDefName,
+        _funDefBuiltin
       }
   where
     genBody :: Sem r Expression
