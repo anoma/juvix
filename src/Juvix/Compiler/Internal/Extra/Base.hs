@@ -3,7 +3,6 @@ module Juvix.Compiler.Internal.Extra.Base where
 import Data.Generics.Uniplate.Data hiding (holes)
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
-import Juvix.Compiler.Internal.Data.LocalVars
 import Juvix.Compiler.Internal.Language
 import Juvix.Prelude
 
@@ -324,8 +323,8 @@ substitutionApp (mv, ty) = case mv of
   Nothing -> id
   Just v -> substitutionE (HashMap.singleton v ty)
 
-substitutionE :: Subs -> Expression -> Expression
-substitutionE m = over leafExpressions goLeaf
+substitution :: (HasExpressions a) => Subs -> a -> a
+substitution m = over leafExpressions goLeaf
   where
     goLeaf :: Expression -> Expression
     goLeaf = \case
@@ -336,6 +335,9 @@ substitutionE m = over leafExpressions goLeaf
       IdenVar v
         | Just e <- HashMap.lookup v m -> e
       _ -> ExpressionIden i
+
+substitutionE :: Subs -> Expression -> Expression
+substitutionE = substitution
 
 smallUniverseE :: Interval -> Expression
 smallUniverseE = ExpressionUniverse . SmallUniverse

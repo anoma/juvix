@@ -21,6 +21,7 @@ import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking qu
 import Juvix.Data.Loc qualified as Loc
 import Juvix.Data.PPOutput
 import Juvix.Extra.Strings qualified as Str
+import Juvix.Compiler.Internal.Pretty (ppTrace)
 
 type MVisit = Visit Internal.ModuleIndex
 
@@ -716,7 +717,7 @@ fromPatternArg pa = case pa ^. Internal.patternArgName of
 
     getPatternType :: Name -> Sem r Type
     getPatternType n = do
-      ty <- asks (fromJust . HashMap.lookup (n ^. nameId))
+      ty <- asks @InternalTyped.TypesTable (fromJust . HashMap.lookup (n ^. nameId))
       idt :: IndexTable <- get
       runReader idt (goType ty)
 
@@ -859,7 +860,11 @@ goIden i = do
           )
   case i of
     Internal.IdenVar n -> do
-      k <- HashMap.lookupDefault impossible id_ <$> asks (^. indexTableVars)
+      tbl <- asks (^. indexTableVars)
+      let err = error ("impossible: could not find variable " <> ppTrace n
+                       <> "\n" <> ppTrace (getLoc n)
+                       <> "\nIndex table:\n" <> ppTrace tbl)
+          k = HashMap.lookupDefault err id_ tbl
       varsNum <- asks (^. indexTableVarsNum)
       return (mkVar (setInfoLocation (n ^. nameLoc) (Info.singleton (NameInfo (n ^. nameText)))) (varsNum - k - 1))
     Internal.IdenFunction n -> do

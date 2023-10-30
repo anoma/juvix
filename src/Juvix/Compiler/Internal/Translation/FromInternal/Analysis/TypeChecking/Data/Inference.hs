@@ -19,7 +19,6 @@ module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Da
   )
 where
 
-import Data.DisjointSet qualified as DSet
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Concrete.Data.Highlight.Input
 import Juvix.Compiler.Internal.Extra
@@ -29,6 +28,7 @@ import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Da
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.FunctionsTable
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error
 import Juvix.Prelude hiding (fromEither)
+import Juvix.Prelude.DisjointSet qualified as DSet
 
 data MetavarState
   = Fresh
@@ -483,13 +483,24 @@ runInferenceDefs ::
   Sem (Inference ': r) (NonEmpty funDef) ->
   Sem r (NonEmpty funDef)
 runInferenceDefs a = do
-  (finalState, expr) <- runState iniState (re a)
+  (finalState, defs) <- runState iniState (re a)
   (subs, idens) <- closeState finalState
-  let idens' = subsHoles subs <$> idens
-      stash' = map (subsHoles subs) (finalState ^. inferenceFunctionsStash)
+  let subsUnifiedVars :: Subs
+      subsUnifiedVars =
+        renameToSubsE $
+          HashMap.fromList
+            [ (v, repr)
+              | cl <- DSet.toLists (finalState ^. inferenceUnifiedVars),
+                let repr = minimum cl,
+                v <- toList cl
+            ]
+      applySubs :: (HasExpressions a) => a -> a
+      applySubs = substitution subsUnifiedVars . subsHoles subs
+      idens' = applySubs <$> idens
+      stash' = map applySubs (finalState ^. inferenceFunctionsStash)
   forM_ stash' registerFunctionDef
   addIdens idens'
-  return (subsHoles subs <$> expr)
+  return (applySubs <$> defs)
 
 runInferenceDef ::
   (Members '[Termination, HighlightBuilder, Error TypeCheckerError, State FunctionsTable, State TypesTable] r, HasExpressions funDef) =>

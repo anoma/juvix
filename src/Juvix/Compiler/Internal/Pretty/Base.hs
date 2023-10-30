@@ -14,6 +14,7 @@ import Juvix.Compiler.Internal.Pretty.Options
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Data.Types (Arity)
 import Juvix.Data.CodeAnn
 import Juvix.Prelude
+import Juvix.Compiler.Core.Translation.FromInternal.Data.IndexTable
 
 doc :: (PrettyCode c) => Options -> c -> Doc Ann
 doc opts =
@@ -146,7 +147,6 @@ instance (PrettyCode a, PrettyCode b, PrettyCode c) => PrettyCode (a, b, c) wher
 
 instance PrettyCode NameDependencyInfo where
   ppCode DependencyInfo {..} = do
-    let header x = annotate AnnImportant x <> line
     edges' <- vsep <$> mapM ppCode _depInfoEdgeList
     reachable' <- ppCode (toList _depInfoReachable)
     topsort' <- ppCode _depInfoTopSort
@@ -322,13 +322,36 @@ instance PrettyCode Module where
 instance PrettyCode Interval where
   ppCode = return . annotate AnnCode . pretty
 
+instance (PrettyCode k, PrettyCode v) => PrettyCode (HashMap k v) where
+  ppCode :: forall r. (Member (Reader Options) r) => HashMap k v -> Sem r (Doc Ann)
+  ppCode tbl = do
+    let ppItem :: (k, v) -> Sem r (Doc Ann)
+        ppItem (k, v) = do
+          k' <- ppCode k
+          v' <- ppCode v
+          return (k' <+> "↦" <+> v')
+    items' <- mapM ppItem (HashMap.toList tbl)
+    return (encloseSep "{" "}" ", " items')
+
+instance PrettyCode Int where
+  ppCode = return . pretty
+
+instance PrettyCode IndexTable where
+  ppCode tbl = do
+    indx' <- ppCode (tbl ^. indexTableVars)
+    return $ header "IndexTable"
+      <> "\n========\n"
+      <> indx'
+
+header :: Text -> Doc Ann
+header :: Text -> Doc Ann = annotate AnnImportant . pretty
+
 instance PrettyCode InfoTable where
   ppCode tbl = do
     inds <- ppCode (HashMap.keys (tbl ^. infoInductives))
     constrs <- ppCode (HashMap.keys (tbl ^. infoConstructors))
     funs <- ppCode (HashMap.keys (tbl ^. infoFunctions))
     insts <- ppCode $ map (map (^. instanceInfoResult)) $ HashMap.elems (tbl ^. infoInstances . instanceTableMap)
-    let header :: Text -> Doc Ann = annotate AnnImportant . pretty
     return $
       header "InfoTable"
         <> "\n========="

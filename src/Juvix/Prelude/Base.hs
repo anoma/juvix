@@ -10,6 +10,7 @@ module Juvix.Prelude.Base
     module Data.Graph,
     module Text.Show.Unicode,
     module Data.DisjointSet,
+    module Data.DisjointMap,
     module Data.Map.Strict,
     module Data.Set,
     module Data.IntMap.Strict,
@@ -100,6 +101,7 @@ import Data.ByteString (ByteString)
 import Data.Char
 import Data.Char qualified as Char
 import Data.Data
+import Data.DisjointMap (DisjointMap)
 import Data.DisjointSet (DisjointSet)
 import Data.Either.Extra
 import Data.Eq

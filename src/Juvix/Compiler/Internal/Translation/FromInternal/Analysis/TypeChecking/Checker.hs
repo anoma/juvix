@@ -374,7 +374,9 @@ resolveInstanceHoles s = do
     goResolve :: TypedHole -> Sem r Expression
     goResolve h@TypedHole {..} = do
       t <- resolveTraitInstance h
-      resolveInstanceHoles $ runReader _typedHoleLocalVars $ checkExpression _typedHoleType t
+      resolveInstanceHoles
+        . runReader _typedHoleLocalVars
+        $ checkExpression _typedHoleType t
 
 checkFunctionParameter ::
   (Members '[HighlightBuilder, Reader InfoTable, State FunctionsTable, Error TypeCheckerError, NameIdGen, Reader LocalVars, Inference, Builtins, Output Example, State TypesTable, Termination, Output TypedHole] r) =>
