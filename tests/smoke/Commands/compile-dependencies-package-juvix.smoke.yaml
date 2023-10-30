@@ -35,7 +35,7 @@ tests:
         module Package;
 
         import Stdlib.Prelude open;
-        import PackageDescription open;
+        import PackageDescription.V1 open;
 
         package : Package :=
           defaultPackage
@@ -101,7 +101,7 @@ tests:
         module Package;
 
         import Stdlib.Prelude open;
-        import PackageDescription open;
+        import PackageDescription.V1 open;
 
         package : Package :=
           defaultPackage
@@ -171,7 +171,7 @@ tests:
         module Package;
 
         import Stdlib.Prelude open;
-        import PackageDescription open;
+        import PackageDescription.V1 open;
 
         package : Package :=
           defaultPackage
@@ -218,7 +218,7 @@ tests:
         module Package;
 
         import Stdlib.Prelude open;
-        import PackageDescription open;
+        import PackageDescription.V1 open;
 
         package : Package :=
           defaultPackage
@@ -280,7 +280,7 @@ tests:
         module Package;
 
         import Stdlib.Prelude open;
-        import PackageDescription open;
+        import PackageDescription.V1 open;
 
         package : Package :=
           defaultPackage
@@ -305,7 +305,7 @@ tests:
         module Package;
 
         import Stdlib.Prelude open;
-        import PackageDescription open;
+        import PackageDescription.V1 open;
 
         package : Package :=
           defaultPackage
@@ -417,7 +417,7 @@ tests:
         module Package;
 
         import Stdlib.Prelude open;
-        import PackageDescription open;
+        import PackageDescription.V1 open;
 
         package : Package :=
           defaultPackage
@@ -463,7 +463,7 @@ tests:
         module Package;
 
         import Stdlib.Prelude open;
-        import PackageDescription open;
+        import PackageDescription.V1 open;
 
         package : Package :=
           defaultPackage
@@ -528,7 +528,7 @@ tests:
         module Package;
 
         import Stdlib.Prelude open;
-        import PackageDescription open;
+        import PackageDescription.V1 open;
 
         package : Package :=
           defaultPackage
@@ -561,7 +561,7 @@ tests:
         module Package;
 
         import Stdlib.Prelude open;
-        import PackageDescription open;
+        import PackageDescription.V1 open;
 
         package : Package :=
           defaultPackage
@@ -636,7 +636,7 @@ tests:
         module Package;
 
         import Stdlib.Prelude open;
-        import PackageDescription open;
+        import PackageDescription.V1 open;
 
         package : Package :=
           defaultPackage
@@ -674,7 +674,7 @@ tests:
         module Package;
 
         import Stdlib.Prelude open;
-        import PackageDescription open;
+        import PackageDescription.V1 open;
 
         package : Package :=
           defaultPackage
@@ -738,7 +738,7 @@ tests:
         module Package;
 
         import Stdlib.Prelude open;
-        import PackageDescription open;
+        import PackageDescription.V1 open;
 
         package : Package :=
           defaultPackage
@@ -822,7 +822,7 @@ tests:
         module Package;
 
         import Stdlib.Prelude open;
-        import PackageDescription open;
+        import PackageDescription.V1 open;
 
         package : Package :=
           defaultPackage
@@ -860,7 +860,7 @@ tests:
         module Package;
 
         import Stdlib.Prelude open;
-        import PackageDescription open;
+        import PackageDescription.V1 open;
 
         package : Package :=
           defaultPackage
@@ -911,7 +911,7 @@ tests:
         module Package;
 
         import Stdlib.Prelude open;
-        import PackageDescription open;
+        import PackageDescription.V1 open;
 
         package : Package :=
           defaultPackage
@@ -958,7 +958,7 @@ tests:
         module Package;
 
         import Stdlib.Prelude open;
-        import PackageDescription open;
+        import PackageDescription.V1 open;
 
         package : Package :=
           defaultPackage
@@ -1005,7 +1005,7 @@ tests:
         module Package;
 
         import Stdlib.Prelude open;
-        import PackageDescription open;
+        import PackageDescription.V1 open;
 
         package : Package :=
           defaultPackage
@@ -1074,7 +1074,7 @@ tests:
         module Package;
 
         import Stdlib.Prelude open;
-        import PackageDescription open;
+        import PackageDescription.V1 open;
 
         package : Package :=
           defaultPackage
@@ -1127,7 +1127,7 @@ tests:
         module Package;
 
         import Stdlib.Prelude open;
-        import PackageDescription open;
+        import PackageDescription.V1 open;
 
         package : Package :=
           defaultPackage
@@ -1192,7 +1192,7 @@ tests:
         module Package;
 
         import Stdlib.Prelude open;
-        import PackageDescription open;
+        import PackageDescription.V1 open;
 
         package : Package :=
           defaultPackage

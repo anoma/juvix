@@ -88,14 +88,14 @@ runEvalFileEffIO = interpretScopedAs allocator handler
             packageLoc :: Interval
             packageLoc = singletonInterval (mkInitialLoc packagePath)
 
-        assertNodeType' :: Node -> TypeSpec -> Sem r ()
-        assertNodeType' n s = do
+        assertNodeType' :: (Foldable f) => Node -> f TypeSpec -> Sem r ()
+        assertNodeType' n tys = do
           evalN <- evalNode n
           case evalN of
             NCtr Constr {..} -> do
               let ci = Core.lookupConstructorInfo tab _constrTag
                   ii = Core.lookupInductiveInfo tab (ci ^. Core.constructorInductive)
-              checkInductiveType ii
+              unless (any (checkInductiveType ii) tys) err
             _ -> err
           where
             err :: Sem r b
@@ -103,16 +103,16 @@ runEvalFileEffIO = interpretScopedAs allocator handler
 
             -- Check that the type of the package identifier is the expected type from the specific
             -- PackageDescription module that is provided by the PathResolver
-            checkInductiveType :: Core.InductiveInfo -> Sem r ()
-            checkInductiveType ii = checkPackageName >> checkPackageLocation
+            checkInductiveType :: Core.InductiveInfo -> TypeSpec -> Bool
+            checkInductiveType ii t = checkPackageName (t ^. typeSpecName) && checkPackageLocation (t ^. typeSpecFile)
               where
-                checkPackageName :: Sem r ()
-                checkPackageName = unless (ii ^. Core.inductiveName == s ^. typeSpecName) err
+                checkPackageName :: Text -> Bool
+                checkPackageName typeName = ii ^. Core.inductiveName == typeName
 
-                checkPackageLocation :: Sem r ()
-                checkPackageLocation = case ii ^. Core.inductiveLocation of
-                  Just l -> unless (l ^. intervalFile == s ^. typeSpecFile) err
-                  Nothing -> err
+                checkPackageLocation :: Path Abs File -> Bool
+                checkPackageLocation f = case ii ^. Core.inductiveLocation of
+                  Just l -> l ^. intervalFile == f
+                  Nothing -> False
 
 loadPackage' :: (Members '[Embed IO, Error PackageLoaderError] r) => Path Abs File -> Sem r CoreResult
 loadPackage' packagePath = do

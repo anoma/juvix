@@ -38,11 +38,8 @@ juvixLockfile = $(mkRelFile "juvix.lock.yaml")
 packageDescriptionDir :: Path Rel Dir
 packageDescriptionDir = $(mkRelDir "include/package")
 
-packageDescriptionFile :: Path Rel File
-packageDescriptionFile = packageDescriptionDir <//> packageDescriptionFilename
-
-packageDescriptionFilename :: Path Rel File
-packageDescriptionFilename = $(mkRelFile "PackageDescription.juvix")
+v1PackageDescriptionFile :: Path Rel File
+v1PackageDescriptionFile = $(mkRelFile "PackageDescription/V1.juvix")
 
 packageFilePath :: Path Rel File
 packageFilePath = $(mkRelFile "Package.juvix")
