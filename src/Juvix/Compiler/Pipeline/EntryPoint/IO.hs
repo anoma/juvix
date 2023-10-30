@@ -7,11 +7,11 @@ import Juvix.Prelude
 defaultEntryPointCwdIO :: Path Abs File -> IO EntryPoint
 defaultEntryPointCwdIO mainFile = do
   cwd <- getCurrentDir
-  roots <- findRootAndChangeDir (Just (parent mainFile)) Nothing cwd
-  return (defaultEntryPoint roots mainFile)
+  root <- findRootAndChangeDir (Just (parent mainFile)) Nothing cwd
+  return (defaultEntryPoint root mainFile)
 
 defaultEntryPointNoFileCwdIO :: IO EntryPoint
 defaultEntryPointNoFileCwdIO = do
   cwd <- getCurrentDir
-  roots <- findRootAndChangeDir Nothing Nothing cwd
-  return (defaultEntryPointNoFile roots)
+  root <- findRootAndChangeDir Nothing Nothing cwd
+  return (defaultEntryPointNoFile root)

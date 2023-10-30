@@ -143,20 +143,20 @@ loadPackage' packagePath = do
     rootPath = parent packagePath
 
     packageEntryPoint :: EntryPoint
-    packageEntryPoint = defaultEntryPoint roots packagePath
+    packageEntryPoint = defaultEntryPoint root packagePath
       where
-        roots :: Roots
-        roots =
-          Roots
-            { _rootsRootDir = rootPath,
-              _rootsPackageGlobal = False,
-              _rootsPackage = rootsPkg,
-              _rootsInvokeDir = rootPath,
-              _rootsBuildDir = Paths.rootBuildDir rootPath
+        root :: Root
+        root =
+          Root
+            { _rootRootDir = rootPath,
+              _rootPackageGlobal = False,
+              _rootPackage = rootPkg,
+              _rootInvokeDir = rootPath,
+              _rootBuildDir = Paths.rootBuildDir rootPath
             }
 
-        rootsPkg :: Package
-        rootsPkg =
+        rootPkg :: Package
+        rootPkg =
           Package
             { _packageVersion = defaultVersion,
               _packageName = "Package",

@@ -18,7 +18,7 @@ main = do
   mbuildDir <- mapM (prepathToAbsDir invokeDir) (_runAppIOArgsGlobalOptions ^? globalBuildDir . _Just . pathPath)
   mainFile <- topCommandInputPath cli
   mapM_ checkMainFile mainFile
-  _runAppIOArgsRoots <- findRootAndChangeDir (containingDir <$> mainFile) mbuildDir invokeDir
+  _runAppIOArgsRoot <- findRootAndChangeDir (containingDir <$> mainFile) mbuildDir invokeDir
   runFinal
     . resourceToIOFinal
     . embedToFinal @IO

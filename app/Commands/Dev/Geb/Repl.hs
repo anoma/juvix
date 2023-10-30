@@ -36,14 +36,14 @@ makeLenses ''ReplState
 runCommand :: (Members '[Embed IO, App] r) => GebReplOptions -> Sem r ()
 runCommand replOpts = do
   invokeDir <- askInvokeDir
-  roots <- askRoots
+  root <- askRoot
   globalOptions <- askGlobalOptions
   let getReplEntryPoint :: SomeBase File -> Repl EntryPoint
       getReplEntryPoint inputFile = do
         gopts <- State.gets (^. replStateGlobalOptions)
         absInputFile :: Path Abs File <- replMakeAbsolute inputFile
         set entryPointTarget Backend.TargetGeb
-          <$> liftIO (entryPointFromGlobalOptions roots absInputFile gopts)
+          <$> liftIO (entryPointFromGlobalOptions root absInputFile gopts)
   embed
     ( State.evalStateT
         (replAction replOpts getReplEntryPoint)

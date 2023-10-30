@@ -40,7 +40,7 @@ import Juvix.Data.Effect.Git
 import Juvix.Data.Effect.Process
 import Juvix.Data.Error.GenericError qualified as Error
 import Juvix.Data.NameKind
-import Juvix.Extra.Paths
+import Juvix.Extra.Paths qualified as P
 import Juvix.Extra.Stdlib
 import Juvix.Extra.Version
 import Juvix.Prelude.Pretty
@@ -81,7 +81,7 @@ printHelpTxt opts = do
   |]
 
 replDefaultLoc :: Interval
-replDefaultLoc = singletonInterval (mkInitialLoc replPath)
+replDefaultLoc = singletonInterval (mkInitialLoc P.replPath)
 
 replFromJust :: Repl a -> Maybe a -> Repl a
 replFromJust err = maybe err return
@@ -140,7 +140,7 @@ loadFile f = do
 
 loadDefaultPrelude :: Repl ()
 loadDefaultPrelude = whenJustM defaultPreludeEntryPoint $ \e -> do
-  root <- Reader.asks (^. replRoots . rootsRootDir)
+  root <- Reader.asks (^. replRoot . rootRootDir)
   let hasInternet = not (e ^. entryPointOffline)
   -- The following is needed to ensure that the default location of the
   -- standard library exists
@@ -162,11 +162,11 @@ loadDefaultPrelude = whenJustM defaultPreludeEntryPoint $ \e -> do
     $ entrySetup defaultDependenciesConfig
   loadEntryPoint e
 
-getReplEntryPoint :: (Roots -> a -> GlobalOptions -> IO EntryPoint) -> a -> Repl EntryPoint
+getReplEntryPoint :: (Root -> a -> GlobalOptions -> IO EntryPoint) -> a -> Repl EntryPoint
 getReplEntryPoint f inputFile = do
-  roots <- Reader.asks (^. replRoots)
+  root <- Reader.asks (^. replRoot)
   gopts <- State.gets (^. replStateGlobalOptions)
-  liftIO (set entryPointSymbolPruningMode KeepAll <$> f roots inputFile gopts)
+  liftIO (set entryPointSymbolPruningMode KeepAll <$> f root inputFile gopts)
 
 getReplEntryPointFromPrepath :: Prepath File -> Repl EntryPoint
 getReplEntryPointFromPrepath = getReplEntryPoint entryPointFromGlobalOptionsPre
@@ -197,7 +197,7 @@ replCommand opts input = catchAll $ do
 
         eval :: Core.Node -> Repl Core.Node
         eval n = do
-          ep <- getReplEntryPointFromPrepath (mkPrepath (toFilePath replPath))
+          ep <- getReplEntryPointFromPrepath (mkPrepath (toFilePath P.replPath))
           let shouldDisambiguate :: Bool
               shouldDisambiguate = not (opts ^. replNoDisambiguate)
           (artif', n') <-
@@ -489,12 +489,12 @@ replTabComplete = Prefix (wordCompleter optsCompleter) defaultMatcher
 
 printRoot :: String -> Repl ()
 printRoot _ = do
-  r <- State.gets (^. replStateRoots . rootsRootDir)
+  r <- State.gets (^. replStateRoot . rootRootDir)
   liftIO $ putStrLn (pack (toFilePath r))
 
 runCommand :: (Members '[Embed IO, App] r) => ReplOptions -> Sem r ()
 runCommand opts = do
-  roots <- askRoots
+  root <- askRoot
   let replAction :: ReplS ()
       replAction = do
         evalReplOpts
@@ -511,12 +511,12 @@ runCommand opts = do
   globalOptions <- askGlobalOptions
   let env =
         ReplEnv
-          { _replRoots = roots,
+          { _replRoot = root,
             _replOptions = opts
           }
       iniState =
         ReplState
-          { _replStateRoots = roots,
+          { _replStateRoot = root,
             _replStateContext = Nothing,
             _replStateGlobalOptions = globalOptions
           }
@@ -533,23 +533,23 @@ runCommand opts = do
 -- | If the package contains the stdlib as a dependency, loads the Prelude
 defaultPreludeEntryPoint :: Repl (Maybe EntryPoint)
 defaultPreludeEntryPoint = do
-  roots <- State.gets (^. replStateRoots)
-  let buildDir = roots ^. rootsBuildDir
-      root = roots ^. rootsRootDir
-      pkg = roots ^. rootsPackage
-  mstdlibPath <- liftIO (runM (runFilesIO (packageStdlib root buildDir (pkg ^. packageDependencies))))
+  root <- State.gets (^. replStateRoot)
+  let buildDir = root ^. rootBuildDir
+      buildRoot = root ^. rootRootDir
+      pkg = root ^. rootPackage
+  mstdlibPath <- liftIO (runM (runFilesIO (packageStdlib buildRoot buildDir (pkg ^. packageDependencies))))
   case mstdlibPath of
     Just stdlibPath ->
       Just
         . set entryPointResolverRoot stdlibPath
-        <$> getReplEntryPointFromPath (stdlibPath <//> preludePath)
+        <$> getReplEntryPointFromPath (stdlibPath <//> P.preludePath)
     Nothing -> return Nothing
 
 replMakeAbsolute :: SomeBase b -> Repl (Path Abs b)
 replMakeAbsolute = \case
   Abs p -> return p
   Rel r -> do
-    invokeDir <- State.gets (^. replStateRoots . rootsInvokeDir)
+    invokeDir <- State.gets (^. replStateRoot . rootInvokeDir)
     return (invokeDir <//> r)
 
 replExpressionUpToScopedAtoms :: Text -> Repl (Concrete.ExpressionAtoms 'Concrete.Scoped)
@@ -561,7 +561,7 @@ replExpressionUpToScopedAtoms txt = do
       . runError
       . evalState (ctx ^. replContextArtifacts)
       . runReader (ctx ^. replContextEntryPoint)
-      $ expressionUpToAtomsScoped replPath txt
+      $ expressionUpToAtomsScoped P.replPath txt
   replFromEither x
 
 replExpressionUpToTyped :: Text -> Repl Internal.TypedExpression
@@ -573,7 +573,7 @@ replExpressionUpToTyped txt = do
       . runError
       . evalState (ctx ^. replContextArtifacts)
       . runReader (ctx ^. replContextEntryPoint)
-      $ expressionUpToTyped replPath txt
+      $ expressionUpToTyped P.replPath txt
   replFromEither x
 
 compileReplInputIO' :: ReplContext -> Text -> IO (Artifacts, (Either JuvixError (Maybe Core.Node)))
@@ -582,7 +582,7 @@ compileReplInputIO' ctx txt =
     . runState (ctx ^. replContextArtifacts)
     . runReader (ctx ^. replContextEntryPoint)
     $ do
-      r <- compileReplInputIO replPath txt
+      r <- compileReplInputIO P.replPath txt
       return (extractNode <$> r)
   where
     extractNode :: ReplPipelineResult -> Maybe Core.Node
