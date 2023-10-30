@@ -14,8 +14,8 @@ findRootAndChangeDir ::
   Maybe (Path Abs Dir) ->
   Maybe (Path Abs Dir) ->
   Path Abs Dir ->
-  IO Roots
-findRootAndChangeDir minputFileDir mbuildDir _rootsInvokeDir = do
+  IO Root
+findRootAndChangeDir minputFileDir mbuildDir _rootInvokeDir = do
   whenJust minputFileDir setCurrentDir
   r <- IO.try go
   case r of
@@ -23,7 +23,7 @@ findRootAndChangeDir minputFileDir mbuildDir _rootsInvokeDir = do
       putStrLn "Something went wrong when looking for the root of the project"
       putStrLn (pack (IO.displayException err))
       exitFailure
-    Right roots -> return roots
+    Right root -> return root
   where
     possiblePaths :: Path Abs Dir -> [Path Abs Dir]
     possiblePaths p = p : toList (parents p)
@@ -36,22 +36,22 @@ findRootAndChangeDir minputFileDir mbuildDir _rootsInvokeDir = do
       pFile <- findPackageFile' Paths.packageFilePath
       return (pFile <|> yamlFile)
 
-    go :: IO Roots
+    go :: IO Root
     go = do
       l <- findPackageFile
       case l of
         Nothing -> do
-          _rootsPackage <- readGlobalPackageIO
-          _rootsRootDir <- runM (runFilesIO globalRoot)
-          let _rootsPackageGlobal = True
-              _rootsBuildDir = getBuildDir mbuildDir _rootsRootDir
-          return Roots {..}
+          _rootPackage <- readGlobalPackageIO
+          _rootRootDir <- runM (runFilesIO globalRoot)
+          let _rootPackageGlobal = True
+              _rootBuildDir = getBuildDir mbuildDir _rootRootDir
+          return Root {..}
         Just yamlPath -> do
-          let _rootsRootDir = parent yamlPath
-              _rootsPackageGlobal = False
-              _rootsBuildDir = getBuildDir mbuildDir _rootsRootDir
-          _rootsPackage <- readPackageIO _rootsRootDir (CustomBuildDir (Abs _rootsBuildDir))
-          return Roots {..}
+          let _rootRootDir = parent yamlPath
+              _rootPackageGlobal = False
+              _rootBuildDir = getBuildDir mbuildDir _rootRootDir
+          _rootPackage <- readPackageIO _rootRootDir (CustomBuildDir (Abs _rootBuildDir))
+          return Root {..}
 
 getBuildDir :: Maybe (Path Abs Dir) -> Path Abs Dir -> Path Abs Dir
 getBuildDir mbuildDirOpt pkgDir = case mbuildDirOpt of

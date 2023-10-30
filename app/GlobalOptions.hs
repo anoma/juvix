@@ -139,16 +139,16 @@ parseBuildDir m = do
       )
   pure AppPath {_pathIsInput = False, ..}
 
-entryPointFromGlobalOptionsPre :: Roots -> Prepath File -> GlobalOptions -> IO EntryPoint
-entryPointFromGlobalOptionsPre roots premainFile opts = do
-  mainFile <- prepathToAbsFile (roots ^. rootsInvokeDir) premainFile
-  entryPointFromGlobalOptions roots mainFile opts
+entryPointFromGlobalOptionsPre :: Root -> Prepath File -> GlobalOptions -> IO EntryPoint
+entryPointFromGlobalOptionsPre root premainFile opts = do
+  mainFile <- prepathToAbsFile (root ^. rootInvokeDir) premainFile
+  entryPointFromGlobalOptions root mainFile opts
 
-entryPointFromGlobalOptions :: Roots -> Path Abs File -> GlobalOptions -> IO EntryPoint
-entryPointFromGlobalOptions roots mainFile opts = do
+entryPointFromGlobalOptions :: Root -> Path Abs File -> GlobalOptions -> IO EntryPoint
+entryPointFromGlobalOptions root mainFile opts = do
   mabsBuildDir :: Maybe (Path Abs Dir) <- mapM (prepathToAbsDir cwd) optBuildDir
   let def :: EntryPoint
-      def = defaultEntryPoint roots mainFile
+      def = defaultEntryPoint root mainFile
   return
     def
       { _entryPointNoTermination = opts ^. globalNoTermination,
@@ -163,13 +163,13 @@ entryPointFromGlobalOptions roots mainFile opts = do
   where
     optBuildDir :: Maybe (Prepath Dir)
     optBuildDir = fmap (^. pathPath) (opts ^. globalBuildDir)
-    cwd = roots ^. rootsInvokeDir
+    cwd = root ^. rootInvokeDir
 
-entryPointFromGlobalOptionsNoFile :: Roots -> GlobalOptions -> IO EntryPoint
-entryPointFromGlobalOptionsNoFile roots opts = do
+entryPointFromGlobalOptionsNoFile :: Root -> GlobalOptions -> IO EntryPoint
+entryPointFromGlobalOptionsNoFile root opts = do
   mabsBuildDir :: Maybe (Path Abs Dir) <- mapM (prepathToAbsDir cwd) optBuildDir
   let def :: EntryPoint
-      def = defaultEntryPointNoFile roots
+      def = defaultEntryPointNoFile root
   return
     def
       { _entryPointNoTermination = opts ^. globalNoTermination,
@@ -184,4 +184,4 @@ entryPointFromGlobalOptionsNoFile roots opts = do
   where
     optBuildDir :: Maybe (Prepath Dir)
     optBuildDir = fmap (^. pathPath) (opts ^. globalBuildDir)
-    cwd = roots ^. rootsInvokeDir
+    cwd = root ^. rootInvokeDir

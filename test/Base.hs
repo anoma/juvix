@@ -15,7 +15,7 @@ import Data.Algorithm.Diff
 import Data.Algorithm.DiffOutput
 import Juvix.Compiler.Pipeline.EntryPoint.IO
 import Juvix.Compiler.Pipeline.Run
-import Juvix.Extra.Paths
+import Juvix.Extra.Paths hiding (rootBuildDir)
 import Juvix.Prelude hiding (assert)
 import Juvix.Prelude.Env
 import Test.Tasty

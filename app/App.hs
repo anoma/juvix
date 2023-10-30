@@ -7,7 +7,7 @@ import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker
 import Juvix.Compiler.Pipeline.Run
 import Juvix.Data.Error qualified as Error
-import Juvix.Extra.Paths.Base
+import Juvix.Extra.Paths.Base hiding (rootBuildDir)
 import Juvix.Prelude.Pretty hiding
   ( Doc,
   )
@@ -17,7 +17,7 @@ data App m a where
   ExitMsg :: ExitCode -> Text -> App m a
   ExitJuvixError :: JuvixError -> App m a
   PrintJuvixError :: JuvixError -> App m ()
-  AskRoots :: App m Roots
+  AskRoot :: App m Root
   AskInvokeDir :: App m (Path Abs Dir)
   AskPkgDir :: App m (Path Abs Dir)
   AskBuildDir :: App m (Path Abs Dir)
@@ -38,7 +38,7 @@ makeSem ''App
 
 data RunAppIOArgs = RunAppIOArgs
   { _runAppIOArgsGlobalOptions :: GlobalOptions,
-    _runAppIOArgsRoots :: Roots
+    _runAppIOArgsRoot :: Root
   }
 
 runAppIO ::
@@ -49,7 +49,7 @@ runAppIO ::
   Sem r a
 runAppIO args@RunAppIOArgs {..} =
   interpret $ \case
-    AskPackageGlobal -> return (_runAppIOArgsRoots ^. rootsPackageGlobal)
+    AskPackageGlobal -> return (_runAppIOArgsRoot ^. rootPackageGlobal)
     FromAppPathFile p -> embed (prepathToAbsFile invDir (p ^. pathPath))
     GetMainFile m -> getMainFile' m
     FromAppPathDir p -> embed (prepathToAbsDir invDir (p ^. pathPath))
@@ -59,11 +59,11 @@ runAppIO args@RunAppIOArgs {..} =
           sup <- Ansi.hSupportsANSIColor stdout
           renderIO (not (_runAppIOArgsGlobalOptions ^. globalNoColors) && sup) t
     AskGlobalOptions -> return _runAppIOArgsGlobalOptions
-    AskPackage -> return (_runAppIOArgsRoots ^. rootsPackage)
-    AskRoots -> return _runAppIOArgsRoots
+    AskPackage -> return (_runAppIOArgsRoot ^. rootPackage)
+    AskRoot -> return _runAppIOArgsRoot
     AskInvokeDir -> return invDir
-    AskPkgDir -> return (_runAppIOArgsRoots ^. rootsRootDir)
-    AskBuildDir -> return (_runAppIOArgsRoots ^. rootsBuildDir)
+    AskPkgDir -> return (_runAppIOArgsRoot ^. rootRootDir)
+    AskBuildDir -> return (_runAppIOArgsRoot ^. rootBuildDir)
     RunCorePipelineEither input -> do
       entry <- embed (getEntryPoint' args input)
       embed (corePipelineIOEither entry)
@@ -100,9 +100,9 @@ runAppIO args@RunAppIOArgs {..} =
             <> pack (toFilePath juvixYamlFile)
             <> " file"
         )
-    invDir = _runAppIOArgsRoots ^. rootsInvokeDir
+    invDir = _runAppIOArgsRoot ^. rootInvokeDir
     pkg :: Package
-    pkg = _runAppIOArgsRoots ^. rootsPackage
+    pkg = _runAppIOArgsRoot ^. rootPackage
     g :: GlobalOptions
     g = _runAppIOArgsGlobalOptions
     printErr e =
@@ -111,22 +111,22 @@ runAppIO args@RunAppIOArgs {..} =
 getEntryPoint' :: RunAppIOArgs -> AppPath File -> IO EntryPoint
 getEntryPoint' RunAppIOArgs {..} inputFile = do
   let opts = _runAppIOArgsGlobalOptions
-      roots = _runAppIOArgsRoots
+      root = _runAppIOArgsRoot
   estdin <-
     if
         | opts ^. globalStdin -> Just <$> getContents
         | otherwise -> return Nothing
-  set entryPointStdin estdin <$> entryPointFromGlobalOptionsPre roots (inputFile ^. pathPath) opts
+  set entryPointStdin estdin <$> entryPointFromGlobalOptionsPre root (inputFile ^. pathPath) opts
 
 getEntryPointStdin' :: RunAppIOArgs -> IO EntryPoint
 getEntryPointStdin' RunAppIOArgs {..} = do
   let opts = _runAppIOArgsGlobalOptions
-      roots = _runAppIOArgsRoots
+      root = _runAppIOArgsRoot
   estdin <-
     if
         | opts ^. globalStdin -> Just <$> getContents
         | otherwise -> return Nothing
-  set entryPointStdin estdin <$> entryPointFromGlobalOptionsNoFile roots opts
+  set entryPointStdin estdin <$> entryPointFromGlobalOptionsNoFile root opts
 
 someBaseToAbs' :: (Members '[App] r) => SomeBase a -> Sem r (Path Abs a)
 someBaseToAbs' f = do
@@ -144,7 +144,7 @@ askGenericOptions = project <$> askGlobalOptions
 getEntryPoint :: (Members '[Embed IO, App] r) => AppPath File -> Sem r EntryPoint
 getEntryPoint inputFile = do
   _runAppIOArgsGlobalOptions <- askGlobalOptions
-  _runAppIOArgsRoots <- askRoots
+  _runAppIOArgsRoot <- askRoot
   embed (getEntryPoint' (RunAppIOArgs {..}) inputFile)
 
 runPipelineTermination :: (Member App r) => AppPath File -> Sem (Termination ': PipelineEff) a -> Sem r a
