@@ -11,6 +11,9 @@ import Juvix.Data.Effect.ExactPrint
 import Juvix.Data.PPOutput
 import Juvix.Prelude
 
+ppOutDefaultNoComments :: (PrettyPrint c) => c -> AnsiText
+ppOutDefaultNoComments = mkAnsiText . PPOutput . docNoComments defaultOptions
+
 ppOutDefault :: (HasLoc c, PrettyPrint c) => Comments -> c -> AnsiText
 ppOutDefault cs = mkAnsiText . PPOutput . doc defaultOptions cs
 
