@@ -166,6 +166,9 @@ indent' = indent 2
 hang' :: Doc ann -> Doc ann
 hang' = hang 2
 
+spaceOrEmpty :: Doc ann
+spaceOrEmpty = flatAlt (pretty ' ') mempty
+
 oneLineOrNext :: Doc ann -> Doc ann
 oneLineOrNext x = PP.group (flatAlt (line <> indent' x) (space <> x))
 
