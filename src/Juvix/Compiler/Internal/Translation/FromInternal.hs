@@ -2,6 +2,7 @@ module Juvix.Compiler.Internal.Translation.FromInternal
   ( module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Reachability,
     arityChecking,
     typeChecking,
+    typeCheckingNew,
     typeCheckExpression,
     typeCheckExpressionType,
     arityCheckExpression,
@@ -15,11 +16,12 @@ import Juvix.Compiler.Builtins.Effect
 import Juvix.Compiler.Concrete.Data.Highlight.Input
 import Juvix.Compiler.Internal.Language
 import Juvix.Compiler.Internal.Pretty
-import Juvix.Compiler.Internal.Translation.FromConcrete.Data.Context
+import Juvix.Compiler.Internal.Translation.FromConcrete.Data.Context as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking qualified as ArityChecking
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Reachability
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.CheckerNew qualified as New
 import Juvix.Compiler.Pipeline.Artifacts
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Data.Effect.NameIdGen
@@ -140,6 +142,39 @@ typeChecking a = do
   return
     InternalTypedResult
       { _resultInternalArityResult = res,
+        _resultModules = r,
+        _resultTermination = termin,
+        _resultNormalized = HashMap.fromList [(e ^. exampleId, e ^. exampleExpression) | e <- normalized],
+        _resultIdenTypes = idens,
+        _resultFunctions = funs,
+        _resultInfoTable = table
+      }
+
+typeCheckingNew ::
+  forall r.
+  (Members '[HighlightBuilder, Error JuvixError, Builtins, NameIdGen] r) =>
+  Sem (Termination ': r) InternalResult ->
+  Sem r InternalTypedResult
+typeCheckingNew a = do
+  (termin, (res, table, (normalized, (idens, (funs, r))))) <- runTermination iniTerminationState $ do
+    res <- a
+    let table :: InfoTable
+        table = buildTable (res ^. Internal.resultModules)
+
+        entryPoint :: EntryPoint
+        entryPoint = res ^. Internal.internalResultEntryPoint
+    fmap (res,table,)
+      . runOutputList
+      . runReader entryPoint
+      . runState (mempty :: TypesTable)
+      . runState (mempty :: FunctionsTable)
+      . runReader table
+      . mapError (JuvixError @TypeCheckerError)
+      . evalCacheEmpty checkModuleNoCache
+      $ checkTable >> mapM New.checkModule (res ^. Internal.resultModules)
+  return
+    InternalTypedResult
+      { _resultInternalArityResult = undefined,
         _resultModules = r,
         _resultTermination = termin,
         _resultNormalized = HashMap.fromList [(e ^. exampleId, e ^. exampleExpression) | e <- normalized],
