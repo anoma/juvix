@@ -5,6 +5,7 @@ module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Da
     registerFunctionDef,
     matchErrorLeft,
     matchErrorRight,
+    unifyVars,
     queryMetavar,
     registerIdenType,
     strongNormalize',
@@ -18,6 +19,7 @@ module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Da
   )
 where
 
+import Data.DisjointSet qualified as DSet
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Concrete.Data.Highlight.Input
 import Juvix.Compiler.Internal.Extra
@@ -42,6 +44,7 @@ makeLenses ''MatchError
 
 data Inference m a where
   MatchTypes :: Expression -> Expression -> Inference m (Maybe MatchError)
+  UnifyVars :: VarName -> VarName -> Inference m ()
   QueryMetavar :: Hole -> Inference m (Maybe Expression)
   RegisterIdenType :: Name -> Expression -> Inference m ()
   RememberFunctionDef :: FunctionDef -> Inference m ()
@@ -53,6 +56,7 @@ makeSem ''Inference
 data InferenceState = InferenceState
   { _inferenceMap :: HashMap Hole MetavarState,
     _inferenceFunctionsStash :: [FunctionDef],
+    _inferenceUnifiedVars :: DisjointSet VarName,
     _inferenceIdens :: TypesTable
   }
 
@@ -63,6 +67,7 @@ iniState =
   InferenceState
     { _inferenceMap = mempty,
       _inferenceFunctionsStash = [],
+      _inferenceUnifiedVars = mempty,
       _inferenceIdens = mempty
     }
 
@@ -277,6 +282,9 @@ weakNormalize' = go
         Fresh -> return (ExpressionInstanceHole h)
         Refined r -> go r
 
+unifyVars' :: (Members '[State InferenceState] r) => VarName -> VarName -> Sem r ()
+unifyVars' a b = modify' (over inferenceUnifiedVars (DSet.union a b))
+
 queryMetavar' :: (Members '[State InferenceState] r) => Hole -> Sem r (Maybe Expression)
 queryMetavar' h = do
   m <- gets (^. inferenceMap . at h)
@@ -294,6 +302,7 @@ re ::
 re = reinterpret $ \case
   MatchTypes a b -> matchTypes' a b
   QueryMetavar h -> queryMetavar' h
+  UnifyVars a b -> unifyVars' a b
   RememberFunctionDef f -> modify' (over inferenceFunctionsStash (f :))
   RegisterIdenType i ty -> registerIdenType' i ty
   StrongNormalize ty -> strongNormalize' ty
@@ -304,13 +313,13 @@ re = reinterpret $ \case
 
     -- Supports alpha equivalence.
     matchTypes' :: (Members '[State InferenceState, State FunctionsTable, Error TypeCheckerError] r) => Expression -> Expression -> Sem r (Maybe MatchError)
-    matchTypes' ty = runReader ini . go ty
+    matchTypes' mty1 mty2 = do
+      ini <- gets (^. inferenceUnifiedVars)
+      runReader ini (go mty1 mty2)
       where
-        ini :: HashMap VarName VarName
-        ini = mempty
         go ::
           forall r.
-          (Members '[State InferenceState, Reader (HashMap VarName VarName), State FunctionsTable, Error TypeCheckerError] r) =>
+          (Members '[State InferenceState, Reader (DisjointSet VarName), State FunctionsTable, Error TypeCheckerError] r) =>
           Expression ->
           Expression ->
           Sem r (Maybe MatchError)
@@ -386,7 +395,7 @@ re = reinterpret $ \case
                   (IdenFunction a, IdenFunction b) -> check (a == b)
                   (IdenConstructor a, IdenConstructor b) -> check (a == b)
                   (IdenVar a, IdenVar b) -> do
-                    mappedEq <- (== Just b) . HashMap.lookup a <$> ask
+                    mappedEq <- DSet.equivalent a b <$> ask
                     check (a == b || mappedEq)
                   (IdenAxiom {}, _) -> err
                   (_, IdenAxiom {}) -> err
@@ -403,7 +412,7 @@ re = reinterpret $ \case
                 goSimpleLambda :: SimpleLambda -> SimpleLambda -> Sem r (Maybe MatchError)
                 goSimpleLambda (SimpleLambda (SimpleBinder v1 ty1) b1) (SimpleLambda (SimpleBinder v2 ty2) b2) = do
                   let local' :: Sem r x -> Sem r x
-                      local' = local (HashMap.insert v1 v2)
+                      local' = local (DSet.union v1 v2)
                   bicheck (go ty1 ty2) (local' (go b1 b2))
 
                 goFunction :: Function -> Function -> Sem r (Maybe MatchError)
@@ -413,7 +422,7 @@ re = reinterpret $ \case
                     | i1 == i2 = do
                         let local' :: Sem r x -> Sem r x
                             local' = case (m1, m2) of
-                              (Just v1, Just v2) -> local (HashMap.insert v1 v2)
+                              (Just v1, Just v2) -> local (DSet.union v1 v2)
                               _ -> id
                         bicheck (go l1 l2) (local' (go r1 r2))
                     | otherwise = err
@@ -428,7 +437,7 @@ re = reinterpret $ \case
                       case zipExactMay (toList p1) (toList p2) of
                         Nothing -> err
                         Just z -> do
-                          m <- ask @(HashMap VarName VarName)
+                          m <- ask @(DisjointSet VarName)
                           (m', patMatch) <- runState m (mapM (uncurry matchPatterns) z)
                           if
                               | and patMatch -> local (const m') (go b1 b2)
@@ -436,7 +445,7 @@ re = reinterpret $ \case
 
 matchPatterns ::
   forall r.
-  (Members '[State InferenceState, State (HashMap VarName VarName), State FunctionsTable] r) =>
+  (Members '[State InferenceState, State (DisjointSet VarName), State FunctionsTable] r) =>
   PatternArg ->
   PatternArg ->
   Sem r Bool
@@ -446,12 +455,12 @@ matchPatterns (PatternArg impl1 name1 pat1) (PatternArg impl2 name2 pat2) =
     (&&>=) :: (Monad m) => m Bool -> m Bool -> m Bool
     (&&>=) = liftM2 (&&)
     goName :: Maybe VarName -> Maybe VarName -> Sem r Bool
-    goName (Just n1) (Just n2) = modify (HashMap.insert n1 n2) $> True
+    goName (Just n1) (Just n2) = modify (DSet.union n1 n2) $> True
     goName Nothing Nothing = ok
     goName _ _ = err
     goPattern :: Pattern -> Pattern -> Sem r Bool
     goPattern p1 p2 = case (p1, p2) of
-      (PatternVariable v1, PatternVariable v2) -> modify (HashMap.insert v1 v2) $> True
+      (PatternVariable v1, PatternVariable v2) -> modify (DSet.union v1 v2) $> True
       (PatternConstructorApp c1, PatternConstructorApp c2) -> goConstructor c1 c2
       (PatternVariable {}, _) -> err
       (_, PatternVariable {}) -> err

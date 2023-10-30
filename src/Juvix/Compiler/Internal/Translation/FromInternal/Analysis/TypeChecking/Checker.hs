@@ -101,7 +101,7 @@ checkMutualBlock ::
   (Members '[HighlightBuilder, Reader EntryPoint, State NegativeTypeParameters, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example, Builtins, Termination] r) =>
   MutualBlock ->
   Sem r MutualBlock
-checkMutualBlock s = runReader emptyLocalVars (checkTopMutualBlock s)
+checkMutualBlock = withEmptyVars . checkTopMutualBlock
 
 checkInductiveDef ::
   forall r.
@@ -132,8 +132,7 @@ checkInductiveDef InductiveDef {..} = runInferenceDef $ do
     paramLocals :: LocalVars
     paramLocals =
       LocalVars
-        { _localTypes = HashMap.fromList [(p ^. inductiveParamName, smallUniverseE (getLoc p)) | p <- _inductiveParameters],
-          _localTyMap = mempty
+        { _localTypes = HashMap.fromList [(p ^. inductiveParamName, smallUniverseE (getLoc p)) | p <- _inductiveParameters]
         }
     goConstructor :: ConstructorDef -> Sem (Inference ': r) ConstructorDef
     goConstructor ConstructorDef {..} = do
@@ -166,7 +165,7 @@ checkInductiveDef InductiveDef {..} = runInferenceDef $ do
             )
 
 withEmptyVars :: Sem (Reader LocalVars ': r) a -> Sem r a
-withEmptyVars = runReader emptyLocalVars
+withEmptyVars = runReader (mempty :: LocalVars)
 
 -- TODO should we register functions (type synonyms) first?
 checkTopMutualBlock ::
@@ -463,12 +462,11 @@ checkClause clauseType clausePats body = do
   locals0 <- ask
   (localsPats, (checkedPatterns, bodyType)) <- helper clausePats clauseType
   let locals' = locals0 <> localsPats
-      bodyTy' = substitutionE (localsToSubsE locals') bodyType
-  checkedBody <- local (const locals') (checkExpression bodyTy' body)
+  checkedBody <- local (const locals') (checkExpression bodyType body)
   return (checkedPatterns, checkedBody)
   where
     helper :: [PatternArg] -> Expression -> Sem r (LocalVars, ([PatternArg], Expression))
-    helper pats ty = runState emptyLocalVars (go pats ty)
+    helper pats ty = runState (mempty :: LocalVars) (go pats ty)
 
     go :: [PatternArg] -> Expression -> Sem (State LocalVars ': r) ([PatternArg], Expression)
     go pats bodyTy = case pats of
@@ -527,8 +525,7 @@ checkPattern = go
     go :: FunctionParameter -> PatternArg -> Sem r PatternArg
     go argTy patArg = do
       matchIsImplicit (argTy ^. paramImplicit) patArg
-      tyVarMap <- fmap (ExpressionIden . IdenVar) . (^. localTyMap) <$> get
-      let ty = substitutionE tyVarMap (argTy ^. paramType)
+      let ty = argTy ^. paramType
           pat = patArg ^. patternArgPattern
           name = patArg ^. patternArgName
       whenJust name (\n -> addVar n ty argTy)
@@ -583,7 +580,7 @@ checkPattern = go
         addVar v ty argType = do
           modify (addType v ty)
           registerIdenType v ty
-          whenJust (argType ^. paramName) (\v' -> modify (addTypeMapping v' v))
+          whenJust (argType ^. paramName) (unifyVars v)
         goConstr :: Iden -> ConstructorApp -> [(InductiveParameter, Expression)] -> Sem r ConstructorApp
         goConstr inductivename app@(ConstructorApp c ps _) ctx = do
           (_, psTys) <- constructorArgTypes <$> lookupConstructor c

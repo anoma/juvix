@@ -9,6 +9,7 @@ module Juvix.Prelude.Base
     module Control.Applicative,
     module Data.Graph,
     module Text.Show.Unicode,
+    module Data.DisjointSet,
     module Data.Map.Strict,
     module Data.Set,
     module Data.IntMap.Strict,
@@ -99,6 +100,7 @@ import Data.ByteString (ByteString)
 import Data.Char
 import Data.Char qualified as Char
 import Data.Data
+import Data.DisjointSet (DisjointSet)
 import Data.Either.Extra
 import Data.Eq
 import Data.Foldable hiding (minimum, minimumBy)

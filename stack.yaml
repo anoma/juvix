@@ -2,6 +2,7 @@ ghc-options:
   "$locals": -optP-Wno-nonportable-include-path
 resolver: lts-21.6
 extra-deps:
+  - disjoint-containers-0.3.0
   - git: https://github.com/janmasrovira/repline.git
     commit: a735ab1459db408adda080eb5ea21b96fb4a6011
   - git: https://github.com/janmasrovira/haskeline.git

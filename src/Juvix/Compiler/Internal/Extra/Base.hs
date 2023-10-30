@@ -324,9 +324,6 @@ substitutionApp (mv, ty) = case mv of
   Nothing -> id
   Just v -> substitutionE (HashMap.singleton v ty)
 
-localsToSubsE :: LocalVars -> Subs
-localsToSubsE l = ExpressionIden . IdenVar <$> l ^. localTyMap
-
 substitutionE :: Subs -> Expression -> Expression
 substitutionE m = over leafExpressions goLeaf
   where
