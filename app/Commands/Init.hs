@@ -1,7 +1,7 @@
 module Commands.Init where
 
 import Data.Text qualified as Text
-import Data.Text.IO.Utf8 qualified as Text
+import Data.Text.IO.Utf8 qualified as Utf8
 import Data.Versions
 import Juvix.Compiler.Concrete.Print (ppOutDefaultNoComments)
 import Juvix.Compiler.Pipeline.Package
@@ -29,7 +29,7 @@ init = do
   say "I will help you set it up"
   pkg <- getPackage
   say ("creating " <> pack (toFilePath packageFilePath))
-  embed (Text.writeFile @IO (toFilePath packageFilePath) (renderPackage pkg))
+  embed (Utf8.writeFile @IO (toFilePath packageFilePath) (renderPackage pkg))
   say "you are all set"
   where
     renderPackage :: Package -> Text
