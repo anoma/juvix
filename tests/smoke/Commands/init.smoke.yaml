@@ -10,12 +10,11 @@ tests:
         trap 'rm -rf -- "$temp"' EXIT
         cd $temp
         echo -e 'abc\n\n\n' | juvix init
-        cat juvix.yaml
+        juvix typecheck Package.juvix
     stdout:
-      contains:
-        "name: abc"
+      contains: type checks
     exit-status: 0
-  - name: init-does-not-contain-file-field
+  - name: init-name
     command:
       shell:
         - bash
@@ -23,12 +22,33 @@ tests:
         temp=$(mktemp -d)
         trap 'rm -rf -- "$temp"' EXIT
         cd $temp
-        echo -e 'abc\n\n\n' | juvix init
-        cat juvix.yaml
+        echo -e 'packagename\n\n\n' | juvix init
+        juvix repl Package.juvix
     stdout:
-      matches:
-        regex: |-
-          ^((?!file:).)*$
-        options:
-          - dot-all
+      contains: '"packagename"'
+    stdin: Package.name package
+    exit-status: 0
+  - name: init-version
+    command:
+      shell:
+        - bash
+      script: |
+        temp=$(mktemp -d)
+        trap 'rm -rf -- "$temp"' EXIT
+        cd $temp
+        echo -e 'packagename\n1.2.3-prerel+meta\n\n' | juvix init
+        juvix repl Package.juvix
+    stdout:
+      contains: |
+        Package> 1
+        Package> 2
+        Package> 3
+        Package> just "prerel"
+        Package> just "meta"
+    stdin: |
+      SemVer.major (Package.version package)
+      SemVer.minor (Package.version package)
+      SemVer.patch (Package.version package)
+      SemVer.release (Package.version package)
+      SemVer.meta (Package.version package)
     exit-status: 0
