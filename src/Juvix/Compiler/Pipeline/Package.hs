@@ -2,9 +2,9 @@ module Juvix.Compiler.Pipeline.Package
   ( module Juvix.Compiler.Pipeline.Package.Base,
     readPackage,
     readPackageIO,
-    readPackageIO',
     readGlobalPackageIO,
     readGlobalPackage,
+    loadPackageFileIO,
   )
 where
 
@@ -124,18 +124,21 @@ readPackageFile root buildDir f = mapError (JuvixError @PackageLoaderError) $ do
   checkNoDuplicateDepNames f (pkg ^. packageDependencies)
   return (pkg {_packageLockfile = mLockfile})
 
-readPackageIO' :: (Members '[Error JuvixError, Embed IO] r) => Path Abs Dir -> BuildDir -> Sem r Package
-readPackageIO' root buildDir =
+loadPackageFileIO :: (Members '[Error JuvixError, Embed IO] r) => Path Abs Dir -> BuildDir -> Sem r Package
+loadPackageFileIO root buildDir =
   runFilesIO
     . mapError (JuvixError @PackageLoaderError)
     . runEvalFileEffIO
-    $ readPackage root buildDir
+    $ loadPackage buildDir (mkPackagePath root)
 
 readPackageIO :: Path Abs Dir -> BuildDir -> IO Package
 readPackageIO root buildDir =
   runM
+    . runFilesIO
     . runErrorIO' @JuvixError
-    $ readPackageIO' root buildDir
+    . mapError (JuvixError @PackageLoaderError)
+    . runEvalFileEffIO
+    $ readPackage root buildDir
 
 readGlobalPackageIO :: IO Package
 readGlobalPackageIO =
