@@ -374,8 +374,6 @@ l4 : List (List Int) :=
   ; longLongLongListArg
   ];
 
--- Comment at the end of a module
-
 -- Format as-pattern interacting with implicit args.
 
 implicitWithInnerParens : {_ : Nat} -> Nat
@@ -387,3 +385,5 @@ i2479' : {_ : Nat} -> Nat
   | {suc (suc x)} := x
   | {suc x} := x
   | {_} := zero;
+
+-- Comment at the end of a module

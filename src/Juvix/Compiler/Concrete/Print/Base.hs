@@ -1018,7 +1018,7 @@ instance PrettyPrint PatternArg where
     let delimCond :: Bool
         delimCond = isJust _patternArgName && not (isAtomic _patternArgPattern)
 
-    let asPatternInfo =
+        asPatternInfo =
           ((name' <&> (<> ppCode Kw.kwAt)) ?<>)
             . if delimCond then parens else id
 
