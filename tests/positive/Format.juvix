@@ -387,15 +387,3 @@ i2479' : {_ : Nat} -> Nat
   | {_} := zero;
 
 -- Comment at the end of a module
-
--- Format as-pattern interacting with implicit args.
-
-implicitWithInnerParens : {_ : Nat} -> Nat
-  | {A@(suc B@(suc x))} := x
-  | {B@(suc x)} := B
-  | {_} := zero;
-
-i2479' : {_ : Nat} -> Nat
-  | {suc (suc x)} := x
-  | {suc x} := x
-  | {_} := zero;
