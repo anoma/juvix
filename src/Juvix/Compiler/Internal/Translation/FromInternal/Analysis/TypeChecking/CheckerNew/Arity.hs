@@ -23,8 +23,8 @@ data InsertedArg = InsertedArg
 -- pattern ArityParam :: IsImplicit -> ArityParameter
 -- pattern ArityParam impl <- ArityParameter {_arityParameterImplicit = impl}
 
-data Blocking =
-  BlockingVar VarName
+data Blocking
+  = BlockingVar VarName
   | BlockingHole Hole
   deriving stock (Show, Eq)
 
@@ -108,11 +108,12 @@ unfoldArity' = \case
   ArityFunction (FunctionArity l r) ->
     over ufoldArityParams (l :) (unfoldArity' r)
   where
-  notKnown :: UnfoldedArity
-  notKnown = UnfoldedArity {
-    _ufoldArityParams = [],
-    _ufoldArityRest = ArityRestUnknown
-                              }
+    notKnown :: UnfoldedArity
+    notKnown =
+      UnfoldedArity
+        { _ufoldArityParams = [],
+          _ufoldArityRest = ArityRestUnknown
+        }
 
 unfoldArity :: Arity -> [ArityParameter]
 unfoldArity = (^. ufoldArityParams) . unfoldArity'
