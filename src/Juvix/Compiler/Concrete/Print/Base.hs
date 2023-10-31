@@ -1028,7 +1028,6 @@ instance PrettyPrint PatternArg where
       Implicit -> braces . asPatternInfo $ pat'
 
 instance PrettyPrint Text where
-  ppCode :: (Members '[ExactPrint, Reader Options] r) => Text -> Sem r ()
   ppCode = noLoc . pretty
 
 ppUnkindedSymbol :: (Members '[Reader Options, ExactPrint] r) => WithLoc Text -> Sem r ()
