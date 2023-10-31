@@ -4,8 +4,7 @@ type Bool :=
   | true : Bool
   | false : Bool;
 
-type T :=
-  | t : T;
+type T := t : T;
 
 type Nat :=
   | zero : Nat
@@ -16,7 +15,7 @@ f : _
   | true _ := false;
 
 type Pair (A : Type) (B : Type) :=
-  | mkPair : A → B → Pair A B;
+  mkPair : A → B → Pair A B;
 
 g : _
   | (mkPair (mkPair zero false) true) := mkPair false zero;

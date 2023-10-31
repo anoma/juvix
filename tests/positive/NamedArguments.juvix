@@ -16,8 +16,7 @@ axiom g : Type;
 
 axiom h : Type;
 
-type Unit :=
-  | unit : Unit;
+type Unit := unit : Unit;
 
 axiom fun1 : (a : Type) -> (b : Type) -> {c : Type} -> Type;
 
@@ -83,7 +82,7 @@ t6' : Type :=
 
 module FakeRecord;
   type Pair (A B : Type) :=
-    | mkPair : (fst : A) -> (snd : B) -> Pair A B;
+    mkPair : (fst : A) -> (snd : B) -> Pair A B;
 
   pp : Pair (B := Unit; A := Type) :=
     mkPair (snd := unit; fst := Type);

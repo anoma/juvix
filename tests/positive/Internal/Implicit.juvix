@@ -20,8 +20,7 @@ type Nat :=
 
 syntax operator × functor;
 syntax operator , pair;
-type × (A : Type) (B : Type) :=
-  | , : A → B → A × B;
+type × (A : Type) (B : Type) := , : A → B → A × B;
 
 uncurry
   : {A : Type}
@@ -80,8 +79,7 @@ upToTwo : _ := zero :: suc zero :: suc (suc zero) :: nil;
 p1 : Nat → Nat → Nat × Nat
   | a b := a, b;
 
-type Proxy (A : Type) :=
-  | proxy : Proxy A;
+type Proxy (A : Type) := proxy : Proxy A;
 
 t2' : {A : Type} → Proxy A := proxy;
 

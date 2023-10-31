@@ -5,4 +5,4 @@ type List (A : Type) : Type :=
   | cons : A -> List A -> List A;
 
 type RoseTree (A : Type) : Type :=
-  | node : A -> List (RoseTree A) -> RoseTree A;
+  node : A -> List (RoseTree A) -> RoseTree A;

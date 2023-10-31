@@ -1,7 +1,6 @@
 module IdInType;
 
-type Unit :=
-  | unit : Unit;
+type Unit := unit : Unit;
 
 id : {a : Type} -> a -> a
   | a := a;

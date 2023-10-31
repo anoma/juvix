@@ -5,7 +5,7 @@ type Bool :=
   | false : Bool;
 
 type Pair (A : Type) (B : Type) :=
-  | mkPair : A → B → Pair A B;
+  mkPair : A → B → Pair A B;
 
 f : _ → _
   | (mkPair false true) := true

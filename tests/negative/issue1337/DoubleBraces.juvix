@@ -4,6 +4,4 @@ type Nat :=
   | O : Nat
   | S : Nat -> Nat;
 
-fun (n : Nat) : Nat :=
-  case n
-    | S {{y}} := O;
+fun (n : Nat) : Nat := case n of {S {{y}} := O};

@@ -10,6 +10,7 @@ type Nat :=
 
 is-zero : Nat → Bool
   | n :=
-    case n
+    case n of {
       | zero := true
-      | suc _ := false;
+      | suc _ := false
+    };

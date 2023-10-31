@@ -28,8 +28,7 @@ builtin nat-plus
 
 syntax operator × functor;
 syntax operator , pair;
-type × (A : Type) (B : Type) :=
-  | , : A → B → A × B;
+type × (A : Type) (B : Type) := , : A → B → A × B;
 
 fst : {A : Type} → {B : Type} → A × B → A
   | p@(a, _) := a;

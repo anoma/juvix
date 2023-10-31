@@ -1,5 +1,4 @@
 module U;
 
-type Unit :=
-  | t : Unit;
+type Unit := t : Unit;
 

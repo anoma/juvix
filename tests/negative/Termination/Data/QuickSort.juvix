@@ -13,10 +13,7 @@ type List (A : Type) :=
 filter : {A : Type} → (A → Bool) → List A → List A
   | f nil := nil
   | f (cons h hs) :=
-    ite
-      (f h)
-      (cons h (filter f hs))
-      (filter f hs);
+    ite (f h) (cons h (filter f hs)) (filter f hs);
 
 concat : {A : Type} → List A → List A → List A
   | nil ys := ys
