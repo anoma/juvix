@@ -14,9 +14,9 @@ import Juvix.Compiler.Internal.Data.LocalVars
 import Juvix.Compiler.Internal.Data.TypedHole
 import Juvix.Compiler.Internal.Extra
 import Juvix.Compiler.Internal.Pretty
-import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Data.Types
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Positivity.Checker
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker (Termination)
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.CheckerNew.Arity
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Inference
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error
@@ -866,16 +866,21 @@ inferExpression' hint e = case e of
 
     goApplication :: Application -> Sem r TypedExpression
     goApplication (Application l r iapp) = do
+      -- TODO instead of Nothing we could hint _ -> _ where
       inferExpression' Nothing l >>= helper
       where
         helper :: TypedExpression -> Sem r TypedExpression
         helper l' = do
           l'ty <- weakNormalize (l' ^. typedType)
+          -- TODO detect default arguments
           case l'ty of
             ExpressionHole h -> do
               fun <- ExpressionFunction <$> holeRefineToFunction iapp h
               helper (set typedType fun l')
-            ExpressionFunction f -> appLeftFunctionTy f
+            ExpressionFunction f -> do
+              f' <- addHoles (toExpression f) (Just iapp)
+              -- appLeftFunctionTy (f')
+              undefined
             _ -> throw tyErr
               where
                 tyErr :: TypeCheckerError
@@ -888,30 +893,122 @@ inferExpression' hint e = case e of
                         }
                     )
           where
+            addHoles ::
+              -- type of the appLeft
+              Expression ->
+              -- implicitness of the appRight, if any
+              Maybe IsImplicit ->
+              Sem r Expression
+            addHoles leftTy mimplArg = do
+              ariFun <- typeArity leftTy
+              case ariFun of
+                ArityUnit -> throwTooManyArgs
+                ArityError -> doNothing
+                ArityBlocking {} -> doNothing
+                ArityNotKnown -> doNothing
+                ArityFunction a -> leftArityFunction a
+              where
+              throwTooManyArgs :: Sem r Expression
+              throwTooManyArgs =
+                      throw . ErrArityCheckerError . ErrTooManyArguments $ TooManyArguments {
+                      _tooManyArgumentsUnexpected = undefined,
+                      _tooManyArgumentsApp = undefined
+                                                                                          }
+
+              doNothing :: Sem r Expression
+              doNothing = undefined
+
+              leftArityFunction :: FunctionArity -> Sem r Expression
+              leftArityFunction funAri = maybe noMoreArgs moreArgs mimplArg
+                where
+                noMoreArgs :: Sem r Expression
+                noMoreArgs = undefined
+
+                moreArgs :: IsImplicit -> Sem r Expression
+                moreArgs argImpl = do
+                  let ariParam = funAri ^. functionArityLeft
+                      funImpl = ariParam ^. arityParameterImplicit
+                      -- TODO I think arityParameterArity is unused
+                  case (funImpl, argImpl) of
+                    (Explicit, Explicit) -> doNothing
+                    (Implicit, Implicit) -> doNothing
+                    (ImplicitInstance, ImplicitInstance) -> doNothing
+                    (Explicit, ImplicitInstance) -> throwExpectedExplicit
+                    (Explicit, Implicit) -> throwExpectedExplicit
+                    (Implicit, Explicit) -> insertHole
+                    (Implicit, ImplicitInstance) -> insertHole
+                    (ImplicitInstance, Implicit) -> insertHoleInstance
+                    (ImplicitInstance, Explicit) -> insertHoleInstance
+                  where
+                    throwExpectedExplicit :: Sem r Expression
+                    throwExpectedExplicit = throw .
+                      ErrArityCheckerError
+                      $
+                        ErrExpectedExplicitArgument
+                            ExpectedExplicitArgument
+                              { _expectedExplicitArgumentApp = (l, undefined),
+                                _expectedExplicitArgumentIx = 1234 -- TODO provide index
+                              }
+
+                    insertHole :: Sem r Expression
+                    insertHole = do
+                      h <- newHoleImplicit (getLoc l)
+                      return $ (l @@? h) Implicit
+
+                    insertHoleInstance :: Sem r Expression
+                    insertHoleInstance = do
+                      h <- newHoleInstance (getLoc l)
+                      return $ (l @@? h) ImplicitInstance
+
+
             appLeftFunctionTy :: Function -> Sem r TypedExpression
             appLeftFunctionTy (Function (FunctionParameter paraName ifun funL) funR) = do
-              unless
-                (iapp == ifun)
-                ( error
-                    ( "Impossible: implicitness mismatch"
-                        <> show ifun
-                        <> show iapp
-                        <> "\n"
-                        <> ppTrace (Application l r iapp)
-                    )
-                )
-              r' <- checkExpression funL r
-              return
-                TypedExpression
-                  { _typedExpression =
-                      ExpressionApplication
-                        Application
-                          { _appLeft = l' ^. typedExpression,
-                            _appRight = r',
-                            _appImplicit = iapp
-                          },
-                    _typedType = substitutionApp (paraName, r') funR
-                  }
+              case (ifun, iapp) of
+                (Explicit, Explicit) -> checkArg
+                (Implicit, Implicit) -> checkArg
+                (ImplicitInstance, ImplicitInstance) -> checkArg
+                (Explicit, ImplicitInstance) -> throwExpectedExplicit
+                (Explicit, Implicit) -> throwExpectedExplicit
+                (Implicit, Explicit) -> insertHole
+                (Implicit, ImplicitInstance) -> insertHole
+                (ImplicitInstance, Implicit) -> insertHoleInstance
+                (ImplicitInstance, Explicit) -> insertHoleInstance
+              where
+                throwExpectedExplicit :: Sem r TypedExpression
+                throwExpectedExplicit = throw .
+                  ErrArityCheckerError
+                  $
+                     ErrExpectedExplicitArgument
+                        ExpectedExplicitArgument
+                          { _expectedExplicitArgumentApp = (l, undefined),
+                            _expectedExplicitArgumentIx = 1234 -- TODO provide index
+                          }
+
+                insertHole :: Sem r TypedExpression
+                insertHole = do
+                  h <- newHoleImplicit (getLoc l)
+                  goApplication (Application ((l @@? h) Implicit) r iapp)
+
+                insertHoleInstance :: Sem r TypedExpression
+                insertHoleInstance = do
+                  h <- newHoleInstance (getLoc l)
+                  goApplication (Application ((l @@? h) ImplicitInstance) r iapp)
+
+                checkArg :: Sem r TypedExpression
+                checkArg = do
+                  r' <- checkExpression funL r
+                  return
+                    TypedExpression
+                      { _typedExpression =
+                          ExpressionApplication
+                            Application
+                              { _appLeft = l' ^. typedExpression,
+                                _appRight = r',
+                                _appImplicit = iapp
+                              },
+                        -- TODO use some context instead of substitution
+                        _typedType = substitutionApp (paraName, r') funR
+                      }
 
 viewInductiveApp ::
   (Members '[Error TypeCheckerError, Inference, State FunctionsTable] r) =>
@@ -944,26 +1041,23 @@ typeArity = weakNormalize >=> go
       ExpressionApplication a -> goApplication a
       ExpressionLiteral l -> goLiteral (l ^. withLocParam)
       ExpressionFunction f -> ArityFunction <$> goFun f
-      ExpressionHole {} -> return ArityUnknown
+      ExpressionHole h -> return (ArityBlocking (BlockingHole h))
       ExpressionInstanceHole {} -> return ArityUnit
-      ExpressionLambda {} -> return ArityUnknown -- TODO Do better here
-      ExpressionCase {} -> return ArityUnknown
+      ExpressionLambda {} -> return ArityError
+      ExpressionCase {} -> return ArityNotKnown -- TODO Do better here
       ExpressionUniverse {} -> return ArityUnit
       ExpressionSimpleLambda {} -> simplelambda
       ExpressionLet l -> goLet l
 
-    simplelambda :: a
-    simplelambda = error "simple lambda expressions are not supported by the arity checker"
-
     -- It will be a type error since there are no literals that are types at the moment
     goLiteral :: Literal -> Sem r Arity
-    goLiteral _ = return ArityUnknown
+    goLiteral _ = return ArityError
 
     -- TODO could we do better here?
     goApplication :: Application -> Sem r Arity
     goApplication a = case lhs of
       ExpressionIden IdenInductive {} -> return ArityUnit
-      _ -> return ArityUnknown
+      _ -> return ArityNotKnown
       where
         lhs :: Expression
         lhs = fst (unfoldApplication a)
@@ -974,11 +1068,12 @@ typeArity = weakNormalize >=> go
 
     goIden :: Iden -> Sem r Arity
     goIden = \case
-      IdenVar {} -> error "todo"
+      IdenVar v -> return (ArityBlocking (BlockingVar v))
       IdenInductive {} -> return ArityUnit
-      IdenFunction {} -> return ArityUnknown
-      IdenConstructor {} -> return ArityUnknown -- will be a type error
-      IdenAxiom {} -> return ArityUnknown -- TODO shouldn't this be ArityUnit?
+      IdenFunction {} -> return ArityNotKnown
+      IdenConstructor {} -> return ArityError
+      IdenAxiom {} -> return ArityNotKnown
+
     goParam :: FunctionParameter -> Sem r ArityParameter
     goParam FunctionParameter {..} = do
       paramAri' <- case _paramImplicit of
@@ -1001,3 +1096,145 @@ typeArity = weakNormalize >=> go
           { _functionArityLeft = l',
             _functionArityRight = r'
           }
+
+guessArity ::
+  forall r.
+  (Members '[Reader InfoTable, Inference] r) =>
+  Expression ->
+  Sem r Arity
+guessArity = \case
+  ExpressionHole {} -> return ArityNotKnown
+  ExpressionInstanceHole {} -> return ArityUnit
+  ExpressionFunction {} -> return ArityUnit
+  ExpressionLiteral {} -> return arityLiteral
+  ExpressionApplication a -> appHelper a
+  ExpressionIden i -> idenHelper i
+  ExpressionUniverse {} -> return arityUniverse
+  ExpressionSimpleLambda {} -> simplelambda
+  ExpressionLambda l -> return (arityLambda l)
+  ExpressionLet l -> arityLet l
+  ExpressionCase l -> arityCase l
+  where
+    idenHelper :: Iden -> Sem r Arity
+    idenHelper = withEmptyLocalVars . idenArity
+
+    appHelper :: Application -> Sem r Arity
+    appHelper a = do
+      f' <- arif
+      let u = unfoldArity' f'
+      return $ case refine args (u ^. ufoldArityParams) of
+        Nothing -> ArityNotKnown
+        Just a' -> foldArity (set ufoldArityParams a' u)
+      where
+        (f, args) = second (map (^. appArgIsImplicit) . toList) (unfoldApplication' a)
+
+        refine :: [IsImplicit] -> [ArityParameter] -> Maybe [ArityParameter]
+        refine as ps = case (as, ps) of
+          (Explicit : as', ArityParameter {_arityParameterImplicit = Explicit} : ps') -> refine as' ps'
+          (Implicit : as', ArityParameter {_arityParameterImplicit = Implicit} : ps') -> refine as' ps'
+          (ImplicitInstance : as', ArityParameter {_arityParameterImplicit = ImplicitInstance} : ps') -> refine as' ps'
+          (as'@(Explicit : _), ArityParameter {_arityParameterImplicit = Implicit} : ps') -> refine as' ps'
+          (as'@(Explicit : _), ArityParameter {_arityParameterImplicit = ImplicitInstance} : ps') -> refine as' ps'
+          (Implicit : _, ArityParameter {_arityParameterImplicit = Explicit} : _) -> Nothing
+          (ImplicitInstance : _, ArityParameter {_arityParameterImplicit = Explicit} : _) -> Nothing
+          (Implicit : _, ArityParameter {_arityParameterImplicit = ImplicitInstance} : _) -> Nothing
+          (ImplicitInstance : _, ArityParameter {_arityParameterImplicit = Implicit} : _) -> Nothing
+          ([], ps') -> Just ps'
+          (_ : _, []) -> Nothing
+
+        -- (Explicit : as', ArityParam Explicit : ps') -> refine as' ps'
+        -- (Implicit : as', ArityParam Implicit : ps') -> refine as' ps'
+        -- (ImplicitInstance : as', ArityParam ImplicitInstance : ps') -> refine as' ps'
+        -- (as'@(Explicit : _), ArityParam Implicit : ps') -> refine as' ps'
+        -- (as'@(Explicit : _), ArityParam ImplicitInstance : ps') -> refine as' ps'
+        -- (Implicit : _, ArityParam Explicit : _) -> Nothing
+        -- (ImplicitInstance : _, ArityParam Explicit : _) -> Nothing
+        -- (Implicit : _, ArityParam ImplicitInstance : _) -> Nothing
+        -- (ImplicitInstance : _, ArityParam Implicit : _) -> Nothing
+        -- ([], ps') -> Just ps'
+        -- (_ : _, []) -> Nothing
+
+        arif :: Sem r Arity
+        arif = guessArity f
+
+arityLiteral :: Arity
+arityLiteral = ArityUnit
+
+arityUniverse :: Arity
+arityUniverse = ArityUnit
+
+simplelambda :: a
+simplelambda = error "simple lambda expressions are not supported by the arity checker"
+
+-- | Since we do not have dependent types, it is ok to (partially) infer the
+-- arity of the lambda from the clause with the most patterns.
+-- FIXME this is wrong
+arityLambda :: Lambda -> Arity
+arityLambda l =
+  foldArity
+    UnfoldedArity
+      { _ufoldArityParams =
+          replicate
+            (maximum1 (fmap numPatterns (l ^. lambdaClauses)))
+            ( ArityParameter
+                { _arityParameterArity = ArityNotKnown,
+                  _arityParameterImplicit = Explicit,
+                  _arityParameterInfo = emptyArgInfo
+                }
+            ),
+        _ufoldArityRest = ArityRestUnknown
+      }
+  where
+    numPatterns :: LambdaClause -> Int
+    numPatterns (LambdaClause ps _) = length ps
+
+arityLet :: (Members '[Reader InfoTable, Inference] r) => Let -> Sem r Arity
+arityLet l = guessArity (l ^. letExpression)
+
+-- | All branches should have the same arity. If they are all the same, we
+-- return that, otherwise we return ArityBlocking. Probably something better can
+-- be done.
+arityCase :: (Members '[Reader InfoTable, Inference] r) => Case -> Sem r Arity
+arityCase c = do
+  aris <- mapM (guessArity . (^. caseBranchExpression)) (c ^. caseBranches)
+  return
+    if
+        | allSame aris -> head aris
+        | otherwise -> ArityNotKnown
+
+idenArity :: (Members '[Inference, Reader LocalVars, Reader InfoTable] r) => Iden -> Sem r Arity
+idenArity = \case
+  IdenVar v -> getLocalArity v
+  IdenInductive i -> lookupInductiveType i >>= typeArity
+  IdenFunction f -> do
+    fun <- (^. functionInfoDef) <$> lookupFunction f
+    ari <- typeArity (fun ^. funDefType)
+    let defaults = fun ^. funDefArgsInfo
+    return (addArgsInfo defaults ari)
+  IdenConstructor c -> lookupConstructorType c >>= typeArity
+  IdenAxiom a -> lookupAxiom a >>= typeArity . (^. axiomInfoDef . axiomType)
+
+addArgsInfo :: [ArgInfo] -> Arity -> Arity
+addArgsInfo = unfoldingArity . helper
+  where
+    helper :: [ArgInfo] -> UnfoldedArity -> UnfoldedArity
+    helper = over ufoldArityParams . go
+
+    go :: [ArgInfo] -> [ArityParameter] -> [ArityParameter]
+    go infos params = case infos of
+      [] -> params
+      info : infos' -> case params of
+        [] -> impossible
+        para : params' ->
+          set arityParameterInfo info para : go infos' params'
+
+getLocalArity :: (Members '[Reader LocalVars, Inference] r) => VarName -> Sem r Arity
+getLocalArity v = do
+  mty <- asks (^. localTypes . at v)
+  maybe (return ArityNotKnown) typeArity mty
+
+newHoleImplicit :: (Member NameIdGen r) => Interval -> Sem r Expression
+newHoleImplicit loc = ExpressionHole . mkHole loc <$> freshNameId
+
+newHoleInstance :: (Member NameIdGen r) => Interval -> Sem r Hole
+newHoleInstance loc = mkHole loc <$> freshNameId

@@ -75,7 +75,7 @@ defaultEntryPointNoFile root =
       _entryPointModulePaths = [],
       _entryPointSymbolPruningMode = FilterUnreachable,
       _entryPointOffline = False,
-      _entryPointNewTypeCheckingAlgorithm = False
+      _entryPointNewTypeCheckingAlgorithm = True
     }
 
 defaultUnrollLimit :: Int

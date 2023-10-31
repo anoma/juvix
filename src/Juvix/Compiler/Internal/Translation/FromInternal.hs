@@ -18,6 +18,7 @@ import Juvix.Compiler.Internal.Language
 import Juvix.Compiler.Internal.Pretty
 import Juvix.Compiler.Internal.Translation.FromConcrete.Data.Context as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking qualified as ArityChecking
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Data.Context (InternalArityResult (InternalArityResult))
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Reachability
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking
@@ -157,7 +158,7 @@ typeCheckingNew ::
   Sem r InternalTypedResult
 typeCheckingNew a = do
   (termin, (res, table, (normalized, (idens, (funs, r))))) <- runTermination iniTerminationState $ do
-    res <- a
+    res :: InternalResult <- a
     let table :: InfoTable
         table = buildTable (res ^. Internal.resultModules)
 
@@ -170,11 +171,17 @@ typeCheckingNew a = do
       . runState (mempty :: FunctionsTable)
       . runReader table
       . mapError (JuvixError @TypeCheckerError)
-      . evalCacheEmpty checkModuleNoCache
+      . evalCacheEmpty New.checkModuleNoCache
       $ checkTable >> mapM New.checkModule (res ^. Internal.resultModules)
+  let ariRes :: InternalArityResult
+      ariRes =
+        InternalArityResult
+          { _resultInternalResult = res,
+            _resultModules = res ^. Internal.resultModules
+          }
   return
     InternalTypedResult
-      { _resultInternalArityResult = undefined,
+      { _resultInternalArityResult = ariRes,
         _resultModules = r,
         _resultTermination = termin,
         _resultNormalized = HashMap.fromList [(e ^. exampleId, e ^. exampleExpression) | e <- normalized],

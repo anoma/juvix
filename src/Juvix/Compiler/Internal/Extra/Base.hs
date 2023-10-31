@@ -588,6 +588,11 @@ infix 4 ==%
 (==%) :: (IsExpression a, IsExpression b) => a -> b -> HashSet Name -> Bool
 (==%) a b free = leftEq a b free || leftEq b a free
 
+infixl 9 @@?
+
+(@@?) :: (IsExpression a, IsExpression b) => a -> b -> IsImplicit -> Expression
+a @@? b = toExpression . Application (toExpression a) (toExpression b)
+
 infixl 9 @@
 
 (@@) :: (IsExpression a, IsExpression b) => a -> b -> Expression

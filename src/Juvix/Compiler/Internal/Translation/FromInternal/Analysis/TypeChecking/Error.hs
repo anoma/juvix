@@ -34,6 +34,7 @@ data TypeCheckerError
   | ErrSubsumedInstance SubsumedInstance
   | ErrExplicitInstanceArgument ExplicitInstanceArgument
   | ErrTraitNotTerminating TraitNotTerminating
+  | ErrArityCheckerError ArityCheckerError
 
 instance ToGenericError TypeCheckerError where
   genericError :: (Member (Reader GenericOptions) r) => TypeCheckerError -> Sem r GenericError
@@ -60,3 +61,4 @@ instance ToGenericError TypeCheckerError where
     ErrSubsumedInstance e -> genericError e
     ErrExplicitInstanceArgument e -> genericError e
     ErrTraitNotTerminating e -> genericError e
+    ErrArityCheckerError e -> genericError e
