@@ -1014,13 +1014,21 @@ instance PrettyPrint PatternArg where
   ppCode PatternArg {..} = do
     let name' = ppCode <$> _patternArgName
         pat' = ppCode _patternArgPattern
-    (name' <&> (<> ppCode Kw.kwAt))
-      ?<> delimIf _patternArgIsImplicit delimCond pat'
-    where
-      delimCond :: Bool
-      delimCond = isJust _patternArgName && not (isAtomic _patternArgPattern)
+
+    let delimCond :: Bool
+        delimCond = isJust _patternArgName && not (isAtomic _patternArgPattern)
+
+    let asPatternInfo =
+          ((name' <&> (<> ppCode Kw.kwAt)) ?<>)
+            . if delimCond then parens else id
+
+    case _patternArgIsImplicit of
+      Explicit -> asPatternInfo pat'
+      ImplicitInstance -> doubleBraces . asPatternInfo $ pat'
+      Implicit -> braces . asPatternInfo $ pat'
 
 instance PrettyPrint Text where
+  ppCode :: (Members '[ExactPrint, Reader Options] r) => Text -> Sem r ()
   ppCode = noLoc . pretty
 
 ppUnkindedSymbol :: (Members '[Reader Options, ExactPrint] r) => WithLoc Text -> Sem r ()
