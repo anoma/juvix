@@ -9,11 +9,11 @@ type Ord :=
   | Lim : (ℕ -> Ord) -> Ord;
 
 addord : Ord -> Ord -> Ord
-  
+
   | Zord y := y
   | (SOrd x) y := SOrd (addord x y)
   | (Lim f) y := Lim (aux-addord f y);
 
 aux-addord : (ℕ -> Ord) -> Ord -> ℕ -> Ord
-  
+
   | f y z := addord (f z) y;

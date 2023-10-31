@@ -328,3 +328,31 @@ tests:
     stdout:
       contains: juvix format error
     exit-status: 1
+
+  - name: check-trailing-whitespace-no-pass
+    command:
+      shell:
+        - bash
+      script: |
+        juvix format --check positive/LocalModWithAxiom.juvix
+    exit-status: 1
+    stdout: 
+      contains: ''
+
+  - name: dealing-with-trailing-whitespace
+    command:
+      shell:
+        - bash
+      script: |
+        temp=$(mktemp -d)
+        loc=$(pwd)
+        trap 'rm -rf -- "$temp"' EXIT
+        tail -n +2 positive/LocalModWithAxiom.juvix > $temp/LocalModWithAxiom.juvix
+        cd $temp
+        juvix format --in-place LocalModWithAxiom.juvix
+        diff --text LocalModWithAxiom.juvix <(tail -n +2 $loc/positive/LocalModWithAxiom.juvix) > $loc/positive/LocalModWithAxiom.o
+        cd $loc/positive
+        diff LocalModWithAxiom.diff LocalModWithAxiom.o
+    exit-status: 0
+    stdout: 
+      contains: ''

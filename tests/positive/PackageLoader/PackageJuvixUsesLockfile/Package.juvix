@@ -5,6 +5,6 @@ import PackageDescription.V1 open;
 
 package : Package :=
   defaultPackage
-     {name := "abc";
-      version := mkVersion 0 0 0 ;
-      dependencies := [git "name" "url" "ref1"]};
+    {name := "abc";
+     version := mkVersion 0 0 0;
+     dependencies := [git "name" "url" "ref1"]};

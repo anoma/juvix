@@ -3,6 +3,7 @@ module DefaultArguments;
 type T := t;
 
 g : T := f;
+
 f {a : T := g} : T := a;
 
 main : T := f;

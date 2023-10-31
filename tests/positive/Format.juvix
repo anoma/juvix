@@ -188,12 +188,14 @@ f : Nat -> Nat :=
   };
 
 module Patterns;
+
   syntax operator × functor;
   syntax operator , pair;
   type × (A : Type) (B : Type) := , : A → B → A × B;
 
   f : Nat × Nat × Nat × Nat -> Nat
     | (a, b, c, d) := a;
+
 end;
 
 module UnicodeStrings;
@@ -201,6 +203,7 @@ module UnicodeStrings;
 end;
 
 module Comments;
+
   axiom a1 : Type;
   -- attached to a1
 
