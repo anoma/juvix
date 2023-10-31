@@ -48,7 +48,7 @@ checkNotInProject =
 checkPackage :: forall r. (Members '[Embed IO] r) => Sem r ()
 checkPackage = do
   cwd <- getCurrentDir
-  ep <- runError @JuvixError (readPackageIO' cwd DefaultBuildDir)
+  ep <- runError @JuvixError (loadPackageFileIO cwd DefaultBuildDir)
   case ep of
     Left {} -> do
       say "Package.juvix is invalid. Please raise an issue at https://github.com/anoma/juvix/issues"
