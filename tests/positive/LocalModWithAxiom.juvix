@@ -1,9 +1,9 @@
 {-# format: false #-}
 module LocalModWithAxiom;
-
+  
 module A;
-
+  
   axiom B : Type;
-
+  
 end;
 

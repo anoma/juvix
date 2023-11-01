@@ -36,6 +36,7 @@ import Juvix.Compiler.Pipeline.Package.Loader.EvalEff.IO
 import Juvix.Compiler.Pipeline.Repl
 import Juvix.Compiler.Pipeline.Run
 import Juvix.Compiler.Pipeline.Setup (entrySetup)
+import Juvix.Data.CodeAnn (Ann)
 import Juvix.Data.Effect.Git
 import Juvix.Data.Effect.Process
 import Juvix.Data.Error.GenericError qualified as Error
@@ -308,9 +309,9 @@ printDocumentation = replParseIdentifiers >=> printIdentifiers
             printDoc :: Maybe (Concrete.Judoc 'Concrete.Scoped) -> Repl ()
             printDoc = \case
               Nothing -> do
-                s' <- ppConcrete s
-                renderOut (mkAnsiText @Text "No documentation available for ")
-                renderOutLn s'
+                let s' :: Doc Ann = pretty s
+                    msg = "No documentation available for" <+> s'
+                renderOutLn (toAnsiText True msg)
               Just ju -> printConcrete ju
 
             getDocFunction :: Scoped.NameId -> Repl (Maybe (Concrete.Judoc 'Concrete.Scoped))
