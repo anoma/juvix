@@ -647,8 +647,8 @@ inferExpression' ::
   Expression ->
   Sem r TypedExpression
 inferExpression' hint e = case e of
-  ExpressionIden i -> goIden i
-  ExpressionApplication a -> goApplication a
+  ExpressionIden i -> goIden i >>= withTrailingHoles hint
+  ExpressionApplication a -> inferApplication a
   ExpressionLiteral l -> goLiteral l
   ExpressionFunction f -> goFunction f
   ExpressionHole h -> goHole h
@@ -864,170 +864,182 @@ inferExpression' hint e = case e of
         kind <- lookupInductiveType v
         return (TypedExpression kind (ExpressionIden i))
 
-    goApplication :: Application -> Sem r TypedExpression
-    goApplication (Application l r iapp) = do
-      -- TODO instead of Nothing we could hint _ -> _ where
-      inferExpression' Nothing l >>= helper
+inferApplication :: forall r. (Members '[HighlightBuilder, Reader InfoTable, State FunctionsTable, State TypesTable, Reader LocalVars, Error TypeCheckerError, NameIdGen, Inference, Output Example, Output TypedHole, Builtins, Termination] r) => Application -> Sem r TypedExpression
+inferApplication a@(Application l r iapp) = do
+  -- TODO instead of Nothing we could hint _ -> _ where
+  inferExpression' Nothing l >>= helper
+  where
+    helper :: TypedExpression -> Sem r TypedExpression
+    helper l' = do
+      l'ty <- weakNormalize (l' ^. typedType)
+      -- TODO detect default arguments
+      case l'ty of
+        ExpressionHole h -> do
+          fun <- ExpressionFunction <$> holeRefineToFunction iapp h
+          helper (set typedType fun l')
+        _ -> do
+          let norml' = set typedType l'ty l'
+          withHoles norml' (Right iapp) $ \lwithHoles -> do
+            case lwithHoles ^. typedType of
+              ExpressionFunction f -> checkRightArgument f
+              _ -> throw tyErr
+                where
+                  tyErr :: TypeCheckerError
+                  tyErr =
+                    ErrExpectedFunctionType
+                      ( ExpectedFunctionType
+                          { _expectedFunctionTypeExpression = toExpression a,
+                            _expectedFunctionTypeApp = l,
+                            _expectedFunctionTypeType = l' ^. typedType
+                          }
+                      )
       where
-        helper :: TypedExpression -> Sem r TypedExpression
-        helper l' = do
-          l'ty <- weakNormalize (l' ^. typedType)
-          -- TODO detect default arguments
-          case l'ty of
-            ExpressionHole h -> do
-              fun <- ExpressionFunction <$> holeRefineToFunction iapp h
-              helper (set typedType fun l')
-            ExpressionFunction f -> do
-              mwithExtraHole <- addHole (toExpression f) (Just iapp)
-              case mwithExtraHole of
-                -- TODO improve performance by avoiding inferring the left part again
-                Just f' -> goApplication (Application f' r iapp)
-                Nothing -> checkRightArgument f
-            _ -> throw tyErr
-              where
-                tyErr :: TypeCheckerError
-                tyErr =
-                  ErrExpectedFunctionType
-                    ( ExpectedFunctionType
-                        { _expectedFunctionTypeExpression = e,
-                          _expectedFunctionTypeApp = l,
-                          _expectedFunctionTypeType = l' ^. typedType
-                        }
-                    )
+        checkRightArgument :: Function -> Sem r TypedExpression
+        checkRightArgument (Function (FunctionParameter paraName _ifun funL) funR) = do
+          r' <- checkExpression funL r
+          return
+            TypedExpression
+              { _typedExpression =
+                  ExpressionApplication
+                    Application
+                      { _appLeft = l' ^. typedExpression,
+                        _appRight = r',
+                        _appImplicit = iapp
+                      },
+                -- TODO use some context instead of substitution
+                _typedType = substitutionApp (paraName, r') funR
+              }
+
+withTrailingHoles ::
+  (Members '[HighlightBuilder, Reader InfoTable, State FunctionsTable, State TypesTable, Reader LocalVars, Error TypeCheckerError, NameIdGen, Inference, Output Example, Output TypedHole, Builtins, Termination] r) =>
+  Maybe Expression ->
+  TypedExpression ->
+  Sem r TypedExpression
+withTrailingHoles mhint tyExpr = case mhint of
+  Nothing -> return tyExpr
+  Just hint -> withHoles tyExpr (Left hint) return
+
+withHoles ::
+  (Members '[HighlightBuilder, Reader InfoTable, State FunctionsTable, State TypesTable, Reader LocalVars, Error TypeCheckerError, NameIdGen, Inference, Output Example, Output TypedHole, Builtins, Termination] r) =>
+  TypedExpression ->
+  Either Expression IsImplicit ->
+  (TypedExpression -> Sem r TypedExpression) ->
+  Sem r TypedExpression
+withHoles leftTyExpr mimplArg g = do
+  -- let leftTy = leftTyExpr ^. typedType
+  mwithExtraHole <- addHole leftTyExpr mimplArg
+  case mwithExtraHole of
+    Just a -> do
+      -- TODO improve performance by avoiding inferring the left part again
+      a' <- inferApplication a
+      withHoles a' mimplArg g
+    Nothing -> g leftTyExpr
+
+-- | E.g. when we find `nil`, should we return `nil {_}`?
+-- TODO default values
+addTrailingHoles ::
+  forall r.
+  (Members '[HighlightBuilder, Reader InfoTable, State FunctionsTable, State TypesTable, Reader LocalVars, Error TypeCheckerError, NameIdGen, Inference, Output Example, Output TypedHole, Builtins, Termination] r) =>
+  TypedExpression ->
+  Expression ->
+  Sem r (Maybe Application)
+addTrailingHoles tyExpr hintTy = do
+  let preImplicits :: Expression -> Sem r [IsImplicit]
+      preImplicits x = takeWhile isImplicitOrInstance . map (^. arityParameterImplicit) . unfoldArity <$> typeArity x
+  ariExpr <- preImplicits (tyExpr ^. typedType)
+  ariHint <- preImplicits hintTy
+  let toBeInserted = take (length ariExpr - length ariHint) ariExpr
+      expr = tyExpr ^. typedExpression
+      loc = getLoc (tyExpr ^. typedExpression)
+  forM (nonEmpty toBeInserted) $ \l -> do
+    let gen :: IsImplicit -> Sem r ApplicationArg
+        gen i =
+          ApplicationArg i <$> case i of
+            Explicit -> impossible
+            Implicit -> newHoleImplicit loc
+            ImplicitInstance -> newHoleInstance loc
+    argHoles <- mapM gen l
+    return (foldApplication' expr argHoles)
+
+addHole ::
+  forall r.
+  (Members '[HighlightBuilder, Reader InfoTable, State FunctionsTable, State TypesTable, Reader LocalVars, Error TypeCheckerError, NameIdGen, Inference, Output Example, Output TypedHole, Builtins, Termination] r) =>
+  -- type of the appLeft
+  TypedExpression ->
+  -- Right: implicitness of the appRight, if any
+  -- Left: hint type for the left expr
+  Either Expression IsImplicit ->
+  -- returns Nothing if no hole was added
+  Sem r (Maybe Application)
+addHole leftTyExpr mimplArg = do
+  ariFun <- typeArity (leftTyExpr ^. typedType)
+  case ariFun of
+    ArityUnit -> checkNoArg
+    ArityError -> doNothing
+    ArityBlocking {} -> doNothing
+    ArityNotKnown -> doNothing
+    ArityFunction a -> leftArityFunction a
+  where
+    checkNoArg :: Sem r (Maybe a)
+    checkNoArg = case mimplArg of
+      Left {} -> return Nothing
+      Right {} -> throwTooManyArgs
+
+    throwTooManyArgs :: Sem r a
+    throwTooManyArgs =
+      throw . ErrArityCheckerError . ErrTooManyArguments $
+        TooManyArguments
+          { _tooManyArgumentsUnexpected = error "FIXME",
+            _tooManyArgumentsApp = error "FIXME"
+          }
+
+    doNothing :: Sem r (Maybe a)
+    doNothing = return Nothing
+
+    leftArityFunction :: FunctionArity -> Sem r (Maybe Application)
+    leftArityFunction funAri = either noMoreArgs moreArgs mimplArg
+      where
+        noMoreArgs :: Expression -> Sem r (Maybe Application)
+        noMoreArgs = addTrailingHoles leftTyExpr
+
+        moreArgs :: IsImplicit -> Sem r (Maybe Application)
+        moreArgs argImpl = do
+          let ariParam = funAri ^. functionArityLeft
+              funImpl = ariParam ^. arityParameterImplicit
+          -- TODO I think arityParameterArity is unused
+          case (funImpl, argImpl) of
+            (Explicit, Explicit) -> doNothing
+            (Implicit, Implicit) -> doNothing
+            (ImplicitInstance, ImplicitInstance) -> doNothing
+            (Explicit, ImplicitInstance) -> throwExpectedExplicit
+            (Explicit, Implicit) -> throwExpectedExplicit
+            (Implicit, Explicit) -> Just <$> insertHole
+            (Implicit, ImplicitInstance) -> Just <$> insertHole
+            (ImplicitInstance, Implicit) -> Just <$> insertHoleInstance
+            (ImplicitInstance, Explicit) -> Just <$> insertHoleInstance
           where
-            checkRightArgument :: Function -> Sem r TypedExpression
-            checkRightArgument (Function (FunctionParameter paraName _ifun funL) funR) = do
-              r' <- checkExpression funL r
-              return
-                TypedExpression
-                  { _typedExpression =
-                      ExpressionApplication
-                        Application
-                          { _appLeft = l' ^. typedExpression,
-                            _appRight = r',
-                            _appImplicit = iapp
-                          },
-                    -- TODO use some context instead of substitution
-                    _typedType = substitutionApp (paraName, r') funR
-                  }
+            throwExpectedExplicit :: Sem r a
+            throwExpectedExplicit =
+              throw
+                . ErrArityCheckerError
+                $ ErrExpectedExplicitArgument
+                  ExpectedExplicitArgument
+                    { _expectedExplicitArgumentApp = (l, error "FIXME"),
+                      _expectedExplicitArgumentIx = error "FIXME"
+                    }
 
-            addHole ::
-              -- type of the appLeft
-              Expression ->
-              -- implicitness of the appRight, if any
-              Maybe IsImplicit ->
-              -- returns Nothing if no holes were added
-              Sem r (Maybe Expression)
-            addHole leftTy mimplArg = do
-              ariFun <- typeArity leftTy
-              case ariFun of
-                ArityUnit -> throwTooManyArgs
-                ArityError -> doNothing
-                ArityBlocking {} -> doNothing
-                ArityNotKnown -> doNothing
-                ArityFunction a -> leftArityFunction a
-              where
-                throwTooManyArgs :: Sem r a
-                throwTooManyArgs =
-                  throw . ErrArityCheckerError . ErrTooManyArguments $
-                    TooManyArguments
-                      { _tooManyArgumentsUnexpected = undefined,
-                        _tooManyArgumentsApp = undefined
-                      }
+            l :: Expression
+            l = leftTyExpr ^. typedExpression
 
-                doNothing :: Sem r (Maybe Expression)
-                doNothing = return Nothing
+            insertHole :: Sem r Application
+            insertHole = do
+              h <- newHoleImplicit (getLoc l)
+              return $ Application l h Implicit
 
-                leftArityFunction :: FunctionArity -> Sem r (Maybe Expression)
-                leftArityFunction funAri = maybe noMoreArgs moreArgs mimplArg
-                  where
-                    noMoreArgs :: Sem r (Maybe Expression)
-                    noMoreArgs = undefined
-
-                    moreArgs :: IsImplicit -> Sem r (Maybe Expression)
-                    moreArgs argImpl = do
-                      let ariParam = funAri ^. functionArityLeft
-                          funImpl = ariParam ^. arityParameterImplicit
-                      -- TODO I think arityParameterArity is unused
-                      case (funImpl, argImpl) of
-                        (Explicit, Explicit) -> doNothing
-                        (Implicit, Implicit) -> doNothing
-                        (ImplicitInstance, ImplicitInstance) -> doNothing
-                        (Explicit, ImplicitInstance) -> throwExpectedExplicit
-                        (Explicit, Implicit) -> throwExpectedExplicit
-                        (Implicit, Explicit) -> Just <$> insertHole
-                        (Implicit, ImplicitInstance) -> Just <$> insertHole
-                        (ImplicitInstance, Implicit) -> Just <$> insertHoleInstance
-                        (ImplicitInstance, Explicit) -> Just <$> insertHoleInstance
-                      where
-                        throwExpectedExplicit :: Sem r a
-                        throwExpectedExplicit =
-                          throw
-                            . ErrArityCheckerError
-                            $ ErrExpectedExplicitArgument
-                              ExpectedExplicitArgument
-                                { _expectedExplicitArgumentApp = (l, undefined),
-                                  _expectedExplicitArgumentIx = 1234 -- TODO provide index
-                                }
-
-                        insertHole :: Sem r Expression
-                        insertHole = do
-                          h <- newHoleImplicit (getLoc l)
-                          return $ (l @@? h) Implicit
-
-                        insertHoleInstance :: Sem r Expression
-                        insertHoleInstance = do
-                          h <- newHoleInstance (getLoc l)
-                          return $ (l @@? h) ImplicitInstance
-
-            appLeftFunctionTy :: Function -> Sem r TypedExpression
-            appLeftFunctionTy (Function (FunctionParameter paraName ifun funL) funR) = do
-              case (ifun, iapp) of
-                (Explicit, Explicit) -> checkArg
-                (Implicit, Implicit) -> checkArg
-                (ImplicitInstance, ImplicitInstance) -> checkArg
-                (Explicit, ImplicitInstance) -> throwExpectedExplicit
-                (Explicit, Implicit) -> throwExpectedExplicit
-                (Implicit, Explicit) -> insertHole
-                (Implicit, ImplicitInstance) -> insertHole
-                (ImplicitInstance, Implicit) -> insertHoleInstance
-                (ImplicitInstance, Explicit) -> insertHoleInstance
-              where
-                throwExpectedExplicit :: Sem r TypedExpression
-                throwExpectedExplicit =
-                  throw
-                    . ErrArityCheckerError
-                    $ ErrExpectedExplicitArgument
-                      ExpectedExplicitArgument
-                        { _expectedExplicitArgumentApp = (l, undefined),
-                          _expectedExplicitArgumentIx = 1234 -- TODO provide index
-                        }
-
-                insertHole :: Sem r TypedExpression
-                insertHole = do
-                  h <- newHoleImplicit (getLoc l)
-                  goApplication (Application ((l @@? h) Implicit) r iapp)
-
-                insertHoleInstance :: Sem r TypedExpression
-                insertHoleInstance = do
-                  h <- newHoleInstance (getLoc l)
-                  goApplication (Application ((l @@? h) ImplicitInstance) r iapp)
-
-                checkArg :: Sem r TypedExpression
-                checkArg = do
-                  r' <- checkExpression funL r
-                  return
-                    TypedExpression
-                      { _typedExpression =
-                          ExpressionApplication
-                            Application
-                              { _appLeft = l' ^. typedExpression,
-                                _appRight = r',
-                                _appImplicit = iapp
-                              },
-                        -- TODO use some context instead of substitution
-                        _typedType = substitutionApp (paraName, r') funR
-                      }
+            insertHoleInstance :: Sem r Application
+            insertHoleInstance = do
+              h <- newHoleInstance (getLoc l)
+              return $ Application l h ImplicitInstance
 
 viewInductiveApp ::
   (Members '[Error TypeCheckerError, Inference, State FunctionsTable] r) =>
@@ -1255,5 +1267,5 @@ getLocalArity v = do
 newHoleImplicit :: (Member NameIdGen r) => Interval -> Sem r Expression
 newHoleImplicit loc = ExpressionHole . mkHole loc <$> freshNameId
 
-newHoleInstance :: (Member NameIdGen r) => Interval -> Sem r Hole
-newHoleInstance loc = mkHole loc <$> freshNameId
+newHoleInstance :: (Member NameIdGen r) => Interval -> Sem r Expression
+newHoleInstance loc = ExpressionHole . mkHole loc <$> freshNameId

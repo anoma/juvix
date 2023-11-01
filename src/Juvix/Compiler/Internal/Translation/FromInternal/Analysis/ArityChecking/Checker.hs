@@ -396,7 +396,6 @@ checkLhs loc guessedBody ariSignature pats = do
 
     -- This is an heuristic and it can have an undesired result.
     -- Sometimes the outcome may even be confusing.
-    -- TODO default arguments??
     tailHelper :: Arity -> Maybe [IsImplicit]
     tailHelper a
       | 0 < pref = Just pref'

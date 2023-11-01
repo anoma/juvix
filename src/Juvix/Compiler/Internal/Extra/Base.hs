@@ -391,10 +391,20 @@ unfoldTypeAbsType t = case t of
 foldExplicitApplication :: Expression -> [Expression] -> Expression
 foldExplicitApplication f = foldApplication f . map (ApplicationArg Explicit)
 
+foldApplication' :: Expression -> NonEmpty ApplicationArg -> Application
+foldApplication' f (arg :| args) =
+  let ApplicationArg i a = arg
+   in go (Application f a i) args
+  where
+    go :: Application -> [ApplicationArg] -> Application
+    go acc = \case
+      [] -> acc
+      ApplicationArg i a : as -> go (Application f a i) as
+
 foldApplication :: Expression -> [ApplicationArg] -> Expression
-foldApplication f args = case args of
-  [] -> f
-  ApplicationArg i a : as -> foldApplication (ExpressionApplication (Application f a i)) as
+foldApplication f args = case nonEmpty args of
+  Nothing -> f
+  Just args' -> ExpressionApplication (foldApplication' f args')
 
 unfoldApplication' :: Application -> (Expression, NonEmpty ApplicationArg)
 unfoldApplication' (Application l' r' i') = second (|: (ApplicationArg i' r')) (unfoldExpressionApp l')
