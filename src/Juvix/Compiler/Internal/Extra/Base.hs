@@ -399,7 +399,7 @@ foldApplication' f (arg :| args) =
     go :: Application -> [ApplicationArg] -> Application
     go acc = \case
       [] -> acc
-      ApplicationArg i a : as -> go (Application f a i) as
+      ApplicationArg i a : as -> go (Application (ExpressionApplication acc) a i) as
 
 foldApplication :: Expression -> [ApplicationArg] -> Expression
 foldApplication f args = case nonEmpty args of
