@@ -130,7 +130,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: main/.hie
-          key: ${{ runner.os }}-stack-hie-${{ hashFiles('main/**/*.hs') }}-${{ hashFiles('main/package.yaml', 'main/stack.yaml') }}
+          key: ${{ runner.os }}-stack-hie
 
       - name: Stack setup
         id: stack
@@ -278,7 +278,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: main/.hie
-          key: ${{ runner.os }}-stack-hie-${{ hashFiles('main/**/*.hs') }}-${{ hashFiles('main/package.yaml', 'main/stack.yaml') }}
+          key: ${{ runner.os }}-stack-hie
 
       - name: Stack setup
         id: stack
