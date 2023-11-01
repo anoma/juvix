@@ -4,7 +4,7 @@
 <img align="right" width="300" height="300" alt="Juvix Mascot" src="../assets/images/tara-smiling.svg" />
 </a>
 
-## [v0.5.3](https://github.com/anoma/juvix/tree/v0.5.3)
+## [v0.5.3](https://github.com/anoma/juvix/tree/v0.5.3) (2023-11-01)
 
 [Full Changelog](https://github.com/anoma/juvix/compare/v0.5.2...v0.5.3)
 
@@ -50,7 +50,7 @@
 - Improve the specialisation optimisation [\#2417](https://github.com/anoma/juvix/pull/2417) ([lukaszcz](https://github.com/lukaszcz))
 - Fix formatting for all Juvix files in tests folder [\#2404](https://github.com/anoma/juvix/pull/2404) ([jonaprieto](https://github.com/jonaprieto))
 
-## [v0.5.2](https://github.com/anoma/juvix/tree/v0.5.2)
+## [v0.5.2](https://github.com/anoma/juvix/tree/v0.5.2) (2023-10-04)
 
 [Full Changelog](https://github.com/anoma/juvix/compare/v0.5.1...v0.5.2)
 
@@ -93,7 +93,7 @@
 - Error on local instances [\#2376](https://github.com/anoma/juvix/pull/2376) ([lukaszcz](https://github.com/lukaszcz))
 - Error for an instance subsumed by other instances [\#2375](https://github.com/anoma/juvix/pull/2375) ([lukaszcz](https://github.com/lukaszcz))
 
-## [0.5.1](https://github.com/anoma/juvix/tree/v0.5.1)
+## [0.5.1](https://github.com/anoma/juvix/tree/v0.5.1) (2023-09-15)
 
 [Full Changelog](https://github.com/anoma/juvix/compare/v0.5.0...v0.5.1)
 
@@ -101,7 +101,7 @@
 
 - Fix bug in isTrait [\#2368](https://github.com/anoma/juvix/pull/2368) ([lukaszcz](https://github.com/lukaszcz))
 
-## [v0.5.0](https://github.com/anoma/juvix/tree/v0.5.0)
+## [v0.5.0](https://github.com/anoma/juvix/tree/v0.5.0) (2023-09-14)
 
 [Full Changelog](https://github.com/anoma/juvix/compare/v0.4.3...v0.5.0)
 
@@ -141,9 +141,9 @@
 - Add pragma face [\#2312](https://github.com/anoma/juvix/pull/2312) ([janmasrovira](https://github.com/janmasrovira))
 - Remove `open import` syntax [\#2307](https://github.com/anoma/juvix/pull/2307) ([lukaszcz](https://github.com/lukaszcz))
 
-## [v0.4.3](https://github.com/anoma/juvix/tree/.v0.4.3)
+## [v0.4.3](https://github.com/anoma/juvix/tree/v0.4.3) (2023-08-24)
 
-[Full Changelog](https://github.com/anoma/juvix/compare/v0.4.2....v0.4.3)
+[Full Changelog](https://github.com/anoma/juvix/compare/v0.4.2...v0.4.3)
 
 **Implemented enhancements:**
 
