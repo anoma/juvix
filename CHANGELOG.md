@@ -4,7 +4,53 @@
 <img align="right" width="300" height="300" alt="Juvix Mascot" src="../assets/images/tara-smiling.svg" />
 </a>
 
-## [v0.5.2](https://github.com/anoma/juvix/tree/v0.5.2)
+## [v0.5.3](https://github.com/anoma/juvix/tree/v0.5.3) (2023-11-01)
+
+[Full Changelog](https://github.com/anoma/juvix/compare/v0.5.2...v0.5.3)
+
+**Implemented enhancements:**
+
+- Arithmetic simplification [\#2454](https://github.com/anoma/juvix/pull/2454) ([lukaszcz](https://github.com/lukaszcz))
+- Constant folding [\#2450](https://github.com/anoma/juvix/pull/2450) ([lukaszcz](https://github.com/lukaszcz))
+- Proposal: Use a Juvix source file to define a package instead of YAML [\#2336](https://github.com/anoma/juvix/pull/2336) ([paulcadman](https://github.com/paulcadman))
+- Dependent default values [\#2446](https://github.com/anoma/juvix/pull/2446) ([janmasrovira](https://github.com/janmasrovira))
+- Instance coercions [\#2444](https://github.com/anoma/juvix/pull/2444) ([lukaszcz](https://github.com/lukaszcz))
+- Comparison optimization [\#2443](https://github.com/anoma/juvix/pull/2443) ([lukaszcz](https://github.com/lukaszcz))
+- Allow `syntax operator` in the rhs of a record declaration [\#2442](https://github.com/anoma/juvix/pull/2442) ([janmasrovira](https://github.com/janmasrovira))
+- Add constructor wildcards [\#2437](https://github.com/anoma/juvix/pull/2437) ([janmasrovira](https://github.com/janmasrovira))
+- Add default arguments [\#2408](https://github.com/anoma/juvix/pull/2408) ([janmasrovira](https://github.com/janmasrovira))
+
+**Merged pull requests:**
+
+- Cache .hie directory in CI [\#2490](https://github.com/anoma/juvix/pull/2490) ([paulcadman](https://github.com/paulcadman))
+- Fix \#2479 [\#2486](https://github.com/anoma/juvix/pull/2486) ([jonaprieto](https://github.com/jonaprieto))
+- Update Lisp File Printer [\#2484](https://github.com/anoma/juvix/pull/2484) ([agureev](https://github.com/agureev))
+- Rename Roots type to Root [\#2480](https://github.com/anoma/juvix/pull/2480) ([paulcadman](https://github.com/paulcadman))
+- Version the PackageDescription module [\#2478](https://github.com/anoma/juvix/pull/2478) ([paulcadman](https://github.com/paulcadman))
+- Format long list literals by splitting using pre-comma multiline [\#2477](https://github.com/anoma/juvix/pull/2477) ([paulcadman](https://github.com/paulcadman))
+- Use a versioned documentation link in the doctor output [\#2475](https://github.com/anoma/juvix/pull/2475) ([paulcadman](https://github.com/paulcadman))
+- Add missing juvix.yaml files to test project roots [\#2474](https://github.com/anoma/juvix/pull/2474) ([paulcadman](https://github.com/paulcadman))
+- Use system locale independent readFile and writeFile APIs from with-utf8 [\#2473](https://github.com/anoma/juvix/pull/2473) ([paulcadman](https://github.com/paulcadman))
+- Fix precedence inconsistency bug [\#2470](https://github.com/anoma/juvix/pull/2470) ([lukaszcz](https://github.com/lukaszcz))
+- Add FileExt type [\#2467](https://github.com/anoma/juvix/pull/2467) ([jonaprieto](https://github.com/jonaprieto))
+- Update clang formatting [\#2465](https://github.com/anoma/juvix/pull/2465) ([jonaprieto](https://github.com/jonaprieto))
+- Add dependency on expressions in function default arguments [\#2462](https://github.com/anoma/juvix/pull/2462) ([paulcadman](https://github.com/paulcadman))
+- Use JuvixError instead of Text for errors in Package file loading [\#2459](https://github.com/anoma/juvix/pull/2459) ([paulcadman](https://github.com/paulcadman))
+- Refactor EntryPoint, Package, Pipeline, Root packages [\#2458](https://github.com/anoma/juvix/pull/2458) ([paulcadman](https://github.com/paulcadman))
+- Show import with public keyword in the html doc [\#2456](https://github.com/anoma/juvix/pull/2456) ([janmasrovira](https://github.com/janmasrovira))
+- Process $root/Package.juvix using a special PathResolver [\#2451](https://github.com/anoma/juvix/pull/2451) ([paulcadman](https://github.com/paulcadman))
+- Add new flags to the Html backend [\#2447](https://github.com/anoma/juvix/pull/2447) ([jonaprieto](https://github.com/jonaprieto))
+- Case value inlining [\#2441](https://github.com/anoma/juvix/pull/2441) ([lukaszcz](https://github.com/lukaszcz))
+- Fix instance axiom bug [\#2439](https://github.com/anoma/juvix/pull/2439) ([lukaszcz](https://github.com/lukaszcz))
+- Update Geb backend [\#2436](https://github.com/anoma/juvix/pull/2436) ([agureev](https://github.com/agureev))
+- Ignore instance arguments in the termination checker [\#2435](https://github.com/anoma/juvix/pull/2435) ([janmasrovira](https://github.com/janmasrovira))
+- Use a Juvix source file to define a package [\#2434](https://github.com/anoma/juvix/pull/2434) ([paulcadman](https://github.com/paulcadman))
+- Numeric, ordering and equality traits [\#2433](https://github.com/anoma/juvix/pull/2433) ([lukaszcz](https://github.com/lukaszcz))
+- Synchronize stdlib submodule [\#2428](https://github.com/anoma/juvix/pull/2428) ([paulcadman](https://github.com/paulcadman))
+- Improve the specialisation optimisation [\#2417](https://github.com/anoma/juvix/pull/2417) ([lukaszcz](https://github.com/lukaszcz))
+- Fix formatting for all Juvix files in tests folder [\#2404](https://github.com/anoma/juvix/pull/2404) ([jonaprieto](https://github.com/jonaprieto))
+
+## [v0.5.2](https://github.com/anoma/juvix/tree/v0.5.2) (2023-10-04)
 
 [Full Changelog](https://github.com/anoma/juvix/compare/v0.5.1...v0.5.2)
 
@@ -47,7 +93,7 @@
 - Error on local instances [\#2376](https://github.com/anoma/juvix/pull/2376) ([lukaszcz](https://github.com/lukaszcz))
 - Error for an instance subsumed by other instances [\#2375](https://github.com/anoma/juvix/pull/2375) ([lukaszcz](https://github.com/lukaszcz))
 
-## [0.5.1](https://github.com/anoma/juvix/tree/v0.5.1)
+## [0.5.1](https://github.com/anoma/juvix/tree/v0.5.1) (2023-09-15)
 
 [Full Changelog](https://github.com/anoma/juvix/compare/v0.5.0...v0.5.1)
 
@@ -55,7 +101,7 @@
 
 - Fix bug in isTrait [\#2368](https://github.com/anoma/juvix/pull/2368) ([lukaszcz](https://github.com/lukaszcz))
 
-## [v0.5.0](https://github.com/anoma/juvix/tree/v0.5.0)
+## [v0.5.0](https://github.com/anoma/juvix/tree/v0.5.0) (2023-09-14)
 
 [Full Changelog](https://github.com/anoma/juvix/compare/v0.4.3...v0.5.0)
 
@@ -95,9 +141,9 @@
 - Add pragma face [\#2312](https://github.com/anoma/juvix/pull/2312) ([janmasrovira](https://github.com/janmasrovira))
 - Remove `open import` syntax [\#2307](https://github.com/anoma/juvix/pull/2307) ([lukaszcz](https://github.com/lukaszcz))
 
-## [v0.4.3](https://github.com/anoma/juvix/tree/.v0.4.3)
+## [v0.4.3](https://github.com/anoma/juvix/tree/v0.4.3) (2023-08-24)
 
-[Full Changelog](https://github.com/anoma/juvix/compare/v0.4.2....v0.4.3)
+[Full Changelog](https://github.com/anoma/juvix/compare/v0.4.2...v0.4.3)
 
 **Implemented enhancements:**
 
