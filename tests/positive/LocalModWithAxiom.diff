@@ -12,12 +12,12 @@
 < 
 ---
 >           
-9a10,11
+10,11c10,11
+< 
+<   axiom D : Type;
+---
 >   
 >   axiom D : Type;        
-11,12d12
-<   axiom D : Type;
-< 
 13a14,15
 >     
 >     axiom F : Type;    
