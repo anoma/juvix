@@ -2,11 +2,10 @@ module Format where
 
 import Base
 import Juvix.Compiler.Concrete qualified as Concrete
-import Juvix.Compiler.Concrete.Print qualified as P
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
 import Juvix.Compiler.Pipeline.Setup
-import Juvix.Prelude.Pretty
+import Juvix.Formatter
 
 data PosTest = PosTest
   { _name :: String,
@@ -18,9 +17,6 @@ makeLenses ''PosTest
 
 root :: Path Abs Dir
 root = relToProject $(mkRelDir "tests/positive")
-
-renderCode :: (HasLoc a, P.PrettyPrint a) => P.Comments -> a -> Text
-renderCode c = toPlainText . P.ppOutDefault c
 
 posTest :: String -> Path Rel Dir -> Path Rel File -> PosTest
 posTest _name rdir rfile =
@@ -52,7 +48,7 @@ testDescr PosTest {..} =
               )
 
         let formatted :: Text
-            formatted = renderCode (s ^. Scoper.comments) (s ^. Scoper.mainModule)
+            formatted = formatScoperResult' original s
 
         step "Format"
         assertEqDiffText "check: pretty . scope . parse = id" original formatted

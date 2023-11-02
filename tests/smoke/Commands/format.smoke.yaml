@@ -335,7 +335,7 @@ tests:
         - bash
       script: |
         juvix format --check positive/LocalModWithAxiom.juvix
-    exit-status: 1
+    exit-status: 0
     stdout: 
       contains: ''
 
