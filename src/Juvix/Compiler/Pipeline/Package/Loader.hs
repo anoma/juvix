@@ -6,9 +6,9 @@ where
 
 import Data.FileEmbed qualified as FE
 import Data.Versions
+import Juvix.Compiler.Concrete.Gen
 import Juvix.Compiler.Concrete.Language
-import Juvix.Compiler.Concrete.Translation.FromSource
-import Juvix.Compiler.Concrete.Translation.FromSource.Lexer
+import Juvix.Compiler.Concrete.Translation.FromSource hiding (symbol)
 import Juvix.Compiler.Core.Language qualified as Core
 import Juvix.Compiler.Core.Language.Value
 import Juvix.Compiler.Pipeline.Package.Base
@@ -159,77 +159,79 @@ toPackage buildDir packagePath = \case
         p = resolveBuildDir buildDir <///> relStdlibDir
 
 toConcrete :: PackageDescriptionType -> Package -> Module 'Parsed 'ModuleTop
-toConcrete t p = do
-  let _importModule :: TopModulePath = mkTopModulePath (fromJust (nonEmpty (mkSymbol . pack . FP.dropExtension <$> FP.splitDirectories (toFilePath (t ^. packageDescriptionTypePath)))))
-      retTy :: ExpressionAtoms 'Parsed =
-        ExpressionAtoms
-          { _expressionAtomsLoc = Irrelevant l,
-            _expressionAtoms = AtomIdentifier (NameUnqualified (mkSymbol (t ^. packageDescriptionTypeName))) :| []
-          }
-      stdlibImport :: [Statement 'Parsed]
-        | (t ^. packageDescriptionTypeNeedsStdlibImport) p = [mkStdlibImport]
-        | otherwise = []
-      _moduleBody :: [Statement 'Parsed] =
-        stdlibImport
-          <> [ mkImport _importModule,
-               StatementFunctionDef
-                 FunctionDef
-                   { _signTerminating = Nothing,
-                     _signRetType = Just retTy,
-                     _signPragmas = Nothing,
-                     _signName = mkSymbol Str.package,
-                     _signInstance = Nothing,
-                     _signDoc = Nothing,
-                     _signColonKw = Irrelevant (Just (mkKeywordRef kwColon)),
-                     _signCoercion = Nothing,
-                     _signBuiltin = Nothing,
-                     _signBody = (t ^. packageDescriptionTypeTransform) p,
-                     _signArgs = []
-                   }
-             ]
-   in Module
-        { _modulePath = mkTopModulePath (mkSymbol "Package" :| []),
-          _moduleKwEnd = (),
-          _moduleInductive = (),
-          _moduleDoc = Nothing,
-          _modulePragmas = Nothing,
-          _moduleKw = mkKeywordRef kwModule,
-          ..
-        }
+toConcrete t p = run . runReader l $ do
+  packageSymbol <- symbol "Package"
+  importModuleSymbols <- mapM symbol (pack . FP.dropExtension <$> FP.splitDirectories (toFilePath (t ^. packageDescriptionTypePath)))
+  let _importModule :: TopModulePath = mkTopModulePath (fromJust (nonEmpty importModuleSymbols))
+  _moduleBody :: [Statement 'Parsed] <- do
+    stdlib <- maybeToList <$> stdlibImport
+    body <- sequence [mkImport _importModule, funDef]
+    return (stdlib <> body)
+  _moduleKw <- kw kwModule
+  let _modulePath = mkTopModulePath (packageSymbol :| [])
+  return
+    Module
+      { _moduleKwEnd = (),
+        _moduleInductive = (),
+        _moduleDoc = Nothing,
+        _modulePragmas = Nothing,
+        ..
+      }
   where
-    mkImport :: TopModulePath -> Statement 'Parsed
-    mkImport _importModule =
-      StatementImport
-        Import
-          { _importOpen =
-              Just
-                OpenModuleParams
-                  { _openUsingHiding = Nothing,
-                    _openPublicKw = Irrelevant Nothing,
-                    _openPublic = NoPublic,
-                    _openModuleKw = mkKeywordRef kwOpen
-                  },
-            _importKw = mkKeywordRef kwImport,
-            _importAsName = Nothing,
-            ..
-          }
+    funDef :: (Member (Reader Interval) r) => Sem r (Statement 'Parsed)
+    funDef = do
+      packageTypeIdentifier <- identifier (t ^. packageDescriptionTypeName)
+      _signRetType <- Just <$> expressionAtoms' (packageTypeIdentifier :| [])
+      _signName <- symbol Str.package
+      _signColonKw <- Irrelevant . Just <$> kw kwColon
+      let _signBody = (t ^. packageDescriptionTypeTransform) p
+      return
+        ( StatementFunctionDef
+            FunctionDef
+              { _signTerminating = Nothing,
+                _signPragmas = Nothing,
+                _signInstance = Nothing,
+                _signDoc = Nothing,
+                _signCoercion = Nothing,
+                _signBuiltin = Nothing,
+                _signArgs = [],
+                ..
+              }
+        )
 
-    mkStdlibImport :: Statement 'Parsed
-    mkStdlibImport = mkImport (mkTopModulePath (mkSymbol "Stdlib" :| [mkSymbol "Prelude"]))
+    stdlibImport :: (Member (Reader Interval) r) => Sem r (Maybe (Statement 'Parsed))
+    stdlibImport
+      | (t ^. packageDescriptionTypeNeedsStdlibImport) p = Just <$> mkStdlibImport
+      | otherwise = return Nothing
+
+    mkImport :: (Member (Reader Interval) r) => TopModulePath -> Sem r (Statement 'Parsed)
+    mkImport _importModule = do
+      _openModuleKw <- kw kwOpen
+      _importKw <- kw kwImport
+      return
+        ( StatementImport
+            Import
+              { _importOpen =
+                  Just
+                    OpenModuleParams
+                      { _openUsingHiding = Nothing,
+                        _openPublicKw = Irrelevant Nothing,
+                        _openPublic = NoPublic,
+                        ..
+                      },
+                _importAsName = Nothing,
+                ..
+              }
+        )
+
+    mkStdlibImport :: (Member (Reader Interval) r) => Sem r (Statement 'Parsed)
+    mkStdlibImport = do
+      stdlibSymbol <- symbol "Stdlib"
+      preludeSymbol <- symbol "Prelude"
+      mkImport (mkTopModulePath (stdlibSymbol :| [preludeSymbol]))
 
     l :: Interval
     l = singletonInterval (mkInitialLoc (p ^. packageFile))
-
-    mkSymbol :: Text -> Symbol
-    mkSymbol = WithLoc l
-
-    mkKeywordRef :: Keyword -> KeywordRef
-    mkKeywordRef k =
-      KeywordRef
-        { _keywordRefUnicode = Ascii,
-          _keywordRefKeyword = k,
-          _keywordRefInterval = l
-        }
 
 packageDescriptionDir' :: Path Abs Dir
 packageDescriptionDir' =
