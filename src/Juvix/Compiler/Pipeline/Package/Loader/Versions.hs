@@ -65,11 +65,48 @@ v1PackageDescriptionType = PackageDescriptionType v1PackageDescriptionFile "Pack
               _keywordRefInterval = l
             }
 
+        mkExpressionAtoms :: NonEmpty (ExpressionAtom 'Parsed) -> ExpressionAtoms 'Parsed
+        mkExpressionAtoms as =
+          ExpressionAtoms
+            { _expressionAtomsLoc = Irrelevant l,
+              _expressionAtoms = as
+            }
+
         mkNamedArgs :: NonEmpty (NamedArgument 'Parsed)
-        mkNamedArgs = mkNameArg :| [mkVersionArg]
+        mkNamedArgs = mkNameArg :| mkVersionArg : mkDependenciesArg : catMaybes [mkMainArg, mkBuildDirArg]
           where
             mkNameArg :: NamedArgument 'Parsed
             mkNameArg = mkNamedArg "name" (mkLitText (p ^. packageName) :| [])
+
+            mkDependenciesArg :: NamedArgument 'Parsed
+            mkDependenciesArg = mkNamedArg "dependencies" (mkList (mkDependencyArg <$> p ^. packageDependencies))
+              where
+                mkDependencyArg :: Dependency -> NonEmpty (ExpressionAtom 'Parsed)
+                mkDependencyArg = \case
+                  DependencyPath x -> mkIdentifier "path" :| [mkLitText (pack (unsafePrepathToFilePath (x ^. pathDependencyPath)))]
+                  DependencyGit x -> mkIdentifier "git" :| [mkLitText (x ^. gitDependencyName), mkLitText (x ^. gitDependencyUrl), mkLitText (x ^. gitDependencyRef)]
+
+                mkList :: [NonEmpty (ExpressionAtom 'Parsed)] -> NonEmpty (ExpressionAtom 'Parsed)
+                mkList as =
+                  AtomList
+                    List
+                      { _listItems = mkExpressionAtoms <$> as,
+                        _listBracketR = Irrelevant (mkKeywordRef kwBracketR),
+                        _listBracketL = Irrelevant (mkKeywordRef kwBracketL)
+                      }
+                    :| []
+
+            mkMainArg :: Maybe (NamedArgument 'Parsed)
+            mkMainArg = mkNamedArg "main" . mainArg <$> p ^. packageMain
+              where
+                mainArg :: Prepath File -> NonEmpty (ExpressionAtom 'Parsed)
+                mainArg = mkJust . mkLitText . pack . unsafePrepathToFilePath
+
+            mkBuildDirArg :: Maybe (NamedArgument 'Parsed)
+            mkBuildDirArg = mkNamedArg "buildDir" . buildDirArg <$> p ^. packageBuildDir
+              where
+                buildDirArg :: SomeBase Dir -> NonEmpty (ExpressionAtom 'Parsed)
+                buildDirArg = mkJust . mkLitText . pack . fromSomeDir
 
             mkLitText :: Text -> ExpressionAtom 'Parsed
             mkLitText = AtomLiteral . WithLoc l . LitString
@@ -85,11 +122,7 @@ v1PackageDescriptionType = PackageDescriptionType v1PackageDescriptionFile "Pack
               AtomBraces
                 ( WithLoc
                     l
-                    ( ExpressionAtoms
-                        { _expressionAtomsLoc = Irrelevant l,
-                          _expressionAtoms = mkJust a
-                        }
-                    )
+                    (mkExpressionAtoms (mkJust a))
                 )
 
             mkNothingArg :: ExpressionAtom 'Parsed
@@ -97,11 +130,7 @@ v1PackageDescriptionType = PackageDescriptionType v1PackageDescriptionFile "Pack
               AtomBraces
                 ( WithLoc
                     l
-                    ( ExpressionAtoms
-                        { _expressionAtomsLoc = Irrelevant l,
-                          _expressionAtoms = mkIdentifier "nothing" :| []
-                        }
-                    )
+                    (mkExpressionAtoms (mkIdentifier "nothing" :| []))
                 )
 
             mkVersionArg :: NamedArgument 'Parsed
@@ -144,11 +173,7 @@ v1PackageDescriptionType = PackageDescriptionType v1PackageDescriptionFile "Pack
             mkNamedArg :: Text -> NonEmpty (ExpressionAtom 'Parsed) -> NamedArgument 'Parsed
             mkNamedArg n v =
               NamedArgument
-                { _namedArgValue =
-                    ExpressionAtoms
-                      { _expressionAtomsLoc = Irrelevant l,
-                        _expressionAtoms = v
-                      },
+                { _namedArgValue = mkExpressionAtoms v,
                   _namedArgName = mkSymbol n,
                   _namedArgAssignKw = Irrelevant (mkKeywordRef kwAssign)
                 }
