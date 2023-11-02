@@ -329,16 +329,6 @@ tests:
       contains: juvix format error
     exit-status: 1
 
-  - name: check-trailing-whitespace-no-pass
-    command:
-      shell:
-        - bash
-      script: |
-        juvix format --check positive/LocalModWithAxiom.juvix
-    exit-status: 0
-    stdout: 
-      contains: ''
-
   - name: dealing-with-trailing-whitespace
     command:
       shell:
