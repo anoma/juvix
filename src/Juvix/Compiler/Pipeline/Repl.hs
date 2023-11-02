@@ -28,12 +28,11 @@ arityCheckExpression ::
   Sem r Internal.Expression
 arityCheckExpression p = do
   scopeTable <- gets (^. artifactScopeTable)
-  runNameIdGenArtifacts
-    . runBuiltinsArtifacts
+  runBuiltinsArtifacts
     . runScoperScopeArtifacts
     . runStateArtifacts artifactScoperState
-    $ Scoper.scopeCheckExpression scopeTable p
-      >>= Internal.fromConcreteExpression
+    $ runNameIdGenArtifacts (Scoper.scopeCheckExpression scopeTable p)
+      >>= runNameIdGenArtifacts . Internal.fromConcreteExpression
       >>= Internal.arityCheckExpression
 
 expressionUpToAtomsParsed ::
@@ -140,7 +139,7 @@ compileExpression ::
   (Members '[Error JuvixError, State Artifacts] r) =>
   ExpressionAtoms 'Parsed ->
   Sem r Core.Node
-compileExpression p = do
+compileExpression p =
   runTerminationArtifacts
     ( arityCheckExpression p
         >>= Internal.typeCheckExpression
