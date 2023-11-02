@@ -29,13 +29,13 @@ rTW = removeTrailingWhitespace . layoutPretty defaultLayoutOptions
 
 class HasAnsiBackend a where
   toAnsiStream :: a -> SimpleDocStream Ansi.AnsiStyle
-  toAnsiStream = rTW . toAnsiDoc
+  toAnsiStream = layoutPretty defaultLayoutOptions . toAnsiDoc
 
   toAnsiDoc :: a -> Doc Ansi.AnsiStyle
 
 class HasTextBackend a where
   toTextStream :: a -> SimpleDocStream b
-  toTextStream = rTW . toTextDoc
+  toTextStream = layoutPretty defaultLayoutOptions . toTextDoc
 
   toTextDoc :: a -> Doc b
 
@@ -125,6 +125,9 @@ toAnsiText useColors
 
 toPlainText :: (HasTextBackend a) => a -> Text
 toPlainText = Text.renderStrict . toTextStream
+
+toPlainTextTrim :: (HasTextBackend a) => a -> Text
+toPlainTextTrim = Text.renderStrict . rTW . toTextDoc
 
 prettyText :: (Pretty a) => a -> Text
 prettyText = Text.renderStrict . layoutPretty defaultLayoutOptions . pretty

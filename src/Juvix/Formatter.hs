@@ -44,7 +44,7 @@ combineResults :: [FormatResult] -> FormatResult
 combineResults = mconcat
 
 ansiPlainText :: NonEmpty AnsiText -> Text
-ansiPlainText = T.concat . toList . fmap toPlainText
+ansiPlainText = T.concat . toList . fmap toPlainTextTrim
 
 formattedFileInfoContentsText :: SimpleGetter FormattedFileInfo Text
 formattedFileInfoContentsText = to infoToPlainText
