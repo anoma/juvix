@@ -3,8 +3,8 @@ module Juvix.Compiler.Pipeline.Package.Loader.Versions where
 import Data.List.NonEmpty qualified as NEL
 import Data.Text qualified as T
 import Data.Versions
+import Juvix.Compiler.Concrete.Gen
 import Juvix.Compiler.Concrete.Language
-import Juvix.Compiler.Concrete.Translation.FromSource.Lexer
 import Juvix.Compiler.Pipeline.Package.Base
 import Juvix.Extra.Paths
 import Juvix.Prelude
@@ -28,137 +28,97 @@ v1PackageDescriptionType = PackageDescriptionType v1PackageDescriptionFile "Pack
     needsStdlib :: Package -> Bool
     needsStdlib p =
       let SemVer {..} = p ^. packageVersion
-       in isJust _svMeta || isJust _svPreRel
+       in isJust _svMeta || isJust _svPreRel || isJust (p ^. packageMain) || isJust (p ^. packageBuildDir)
 
-    -- Supports the subset of Package fields that are customizable with `juvix init`
     fromPackage :: Package -> FunctionDefBody 'Parsed
-    fromPackage p =
-      SigBodyExpression
-        ExpressionAtoms
-          { _expressionAtomsLoc = Irrelevant l,
-            _expressionAtoms =
-              AtomNamedApplication
-                NamedApplication
-                  { _namedAppName = NameUnqualified (mkSymbol "defaultPackage"),
-                    _namedAppArgs =
-                      ArgumentBlock
-                        { _argBlockImplicit = Implicit,
-                          _argBlockDelims = Irrelevant (Just (mkKeywordRef delimBraceL, mkKeywordRef delimBraceR)),
-                          _argBlockArgs = mkNamedArgs
-                        }
-                        :| []
-                  }
-                :| []
-          }
+    fromPackage p = run . runReader l $ do
+      defaultPackageName' <- NameUnqualified <$> symbol "defaultPackage"
+      argBlock <- argumentBlock Implicit =<< mkNamedArgs
+      let defaultPackageArg = namedApplication defaultPackageName' (argBlock :| [])
+      functionDefExpression (defaultPackageArg :| [])
       where
         l :: Interval
         l = singletonInterval (mkInitialLoc (p ^. packageFile))
 
-        mkSymbol :: Text -> Symbol
-        mkSymbol = WithLoc l
-
-        mkKeywordRef :: Keyword -> KeywordRef
-        mkKeywordRef k =
-          KeywordRef
-            { _keywordRefUnicode = Ascii,
-              _keywordRefKeyword = k,
-              _keywordRefInterval = l
-            }
-
-        mkExpressionAtoms :: NonEmpty (ExpressionAtom 'Parsed) -> ExpressionAtoms 'Parsed
-        mkExpressionAtoms as =
-          ExpressionAtoms
-            { _expressionAtomsLoc = Irrelevant l,
-              _expressionAtoms = as
-            }
-
-        mkNamedArgs :: NonEmpty (NamedArgument 'Parsed)
-        mkNamedArgs = mkNameArg :| mkVersionArg : mkDependenciesArg : catMaybes [mkMainArg, mkBuildDirArg]
+        mkNamedArgs :: forall r. (Member (Reader Interval) r) => Sem r (NonEmpty (NamedArgument 'Parsed))
+        mkNamedArgs = do
+          args <- sequence (mkNameArg :| [mkVersionArg, mkDependenciesArg])
+          optionalArgs <- catMaybes <$> sequence [mkMainArg, mkBuildDirArg]
+          return (appendList args optionalArgs)
           where
-            mkNameArg :: NamedArgument 'Parsed
-            mkNameArg = mkNamedArg "name" (mkLitText (p ^. packageName) :| [])
+            mkNameArg :: Sem r (NamedArgument 'Parsed)
+            mkNameArg = do
+              n <- literalString (p ^. packageName)
+              namedArgument "name" (n :| [])
 
-            mkDependenciesArg :: NamedArgument 'Parsed
-            mkDependenciesArg = mkNamedArg "dependencies" (mkList (mkDependencyArg <$> p ^. packageDependencies))
+            mkDependenciesArg :: Sem r (NamedArgument 'Parsed)
+            mkDependenciesArg = do
+              deps <- mkList =<< mapM mkDependencyArg (p ^. packageDependencies)
+              namedArgument "dependencies" (deps :| [])
               where
-                mkDependencyArg :: Dependency -> NonEmpty (ExpressionAtom 'Parsed)
+                mkDependencyArg :: Dependency -> Sem r (NonEmpty (ExpressionAtom 'Parsed))
                 mkDependencyArg = \case
-                  DependencyPath x -> mkIdentifier "path" :| [mkLitText (pack (unsafePrepathToFilePath (x ^. pathDependencyPath)))]
-                  DependencyGit x -> mkIdentifier "git" :| [mkLitText (x ^. gitDependencyName), mkLitText (x ^. gitDependencyUrl), mkLitText (x ^. gitDependencyRef)]
+                  DependencyPath x ->
+                    sequence
+                      ( identifier "path"
+                          :| [literalString (pack (unsafePrepathToFilePath (x ^. pathDependencyPath)))]
+                      )
+                  DependencyGit x ->
+                    sequence
+                      ( identifier "git"
+                          :| ( literalString
+                                 <$> [ x ^. gitDependencyName,
+                                       x ^. gitDependencyUrl,
+                                       x ^. gitDependencyRef
+                                     ]
+                             )
+                      )
 
-                mkList :: [NonEmpty (ExpressionAtom 'Parsed)] -> NonEmpty (ExpressionAtom 'Parsed)
-                mkList as =
-                  AtomList
-                    List
-                      { _listItems = mkExpressionAtoms <$> as,
-                        _listBracketR = Irrelevant (mkKeywordRef kwBracketR),
-                        _listBracketL = Irrelevant (mkKeywordRef kwBracketL)
-                      }
-                    :| []
-
-            mkMainArg :: Maybe (NamedArgument 'Parsed)
-            mkMainArg = mkNamedArg "main" . mainArg <$> p ^. packageMain
+            mkMainArg :: Sem r (Maybe (NamedArgument 'Parsed))
+            mkMainArg = do
+              arg <- mapM mainArg (p ^. packageMain)
+              mapM (namedArgument "main") arg
               where
-                mainArg :: Prepath File -> NonEmpty (ExpressionAtom 'Parsed)
-                mainArg = mkJust . mkLitText . pack . unsafePrepathToFilePath
+                mainArg :: Prepath File -> Sem r (NonEmpty (ExpressionAtom 'Parsed))
+                mainArg p' = mkJust =<< literalString (pack (unsafePrepathToFilePath p'))
 
-            mkBuildDirArg :: Maybe (NamedArgument 'Parsed)
-            mkBuildDirArg = mkNamedArg "buildDir" . buildDirArg <$> p ^. packageBuildDir
+            mkBuildDirArg :: Sem r (Maybe (NamedArgument 'Parsed))
+            mkBuildDirArg = do
+              arg <- mapM buildDirArg (p ^. packageBuildDir)
+              mapM (namedArgument "buildDir") arg
               where
-                buildDirArg :: SomeBase Dir -> NonEmpty (ExpressionAtom 'Parsed)
-                buildDirArg = mkJust . mkLitText . pack . fromSomeDir
+                buildDirArg :: SomeBase Dir -> Sem r (NonEmpty (ExpressionAtom 'Parsed))
+                buildDirArg d = mkJust =<< literalString (pack (fromSomeDir d))
 
-            mkLitText :: Text -> ExpressionAtom 'Parsed
-            mkLitText = AtomLiteral . WithLoc l . LitString
-
-            mkIdentifier :: Text -> ExpressionAtom 'Parsed
-            mkIdentifier = AtomIdentifier . NameUnqualified . mkSymbol
-
-            mkJust :: ExpressionAtom 'Parsed -> NonEmpty (ExpressionAtom 'Parsed)
-            mkJust a = mkIdentifier "just" :| [a]
-
-            mkJustArg :: ExpressionAtom 'Parsed -> ExpressionAtom 'Parsed
-            mkJustArg a =
-              AtomBraces
-                ( WithLoc
-                    l
-                    (mkExpressionAtoms (mkJust a))
-                )
-
-            mkNothingArg :: ExpressionAtom 'Parsed
-            mkNothingArg =
-              AtomBraces
-                ( WithLoc
-                    l
-                    (mkExpressionAtoms (mkIdentifier "nothing" :| []))
-                )
-
-            mkVersionArg :: NamedArgument 'Parsed
-            mkVersionArg = mkNamedArg "version" ((mkIdentifier "mkVersion") :| args)
+            mkVersionArg :: Sem r (NamedArgument 'Parsed)
+            mkVersionArg = do
+              mkVersionArgs <- liftM2 (++) explicitArgs implicitArgs
+              mkVersionName <- identifier "mkVersion"
+              namedArgument "version" (mkVersionName :| mkVersionArgs)
               where
-                args :: [ExpressionAtom 'Parsed]
-                args = wordArgs <> optionalArgs
-
-                optionalArgs :: [ExpressionAtom 'Parsed]
-                optionalArgs = case (releaseArg, metaArg) of
-                  (Nothing, Nothing) -> []
-                  (Nothing, Just ma) -> mkNothingArg : [mkJustArg ma]
-                  (Just ra, Nothing) -> [mkJustArg ra]
-                  (Just ra, Just ma) -> mkJustArg ra : [mkJustArg ma]
-
-                mkWordArg :: Word -> ExpressionAtom 'Parsed
-                mkWordArg w = AtomLiteral (WithLoc l (LitInteger (toInteger w)))
-
-                wordArgs :: [ExpressionAtom 'Parsed]
-                wordArgs =
+                explicitArgs :: Sem r [ExpressionAtom 'Parsed]
+                explicitArgs =
                   let SemVer {..} = p ^. packageVersion
-                   in mkWordArg <$> [_svMajor, _svMinor, _svPatch]
+                   in mapM literalInteger [_svMajor, _svMinor, _svPatch]
 
-                releaseArg :: Maybe (ExpressionAtom 'Parsed)
-                releaseArg = let SemVer {..} = p ^. packageVersion in mkReleaseArg <$> _svPreRel
+                implicitArgs :: Sem r [ExpressionAtom 'Parsed]
+                implicitArgs = do
+                  releaseArg' <- releaseArg
+                  metaArg' <- metaArg
+                  mapM
+                    (>>= braced)
+                    ( case (releaseArg', metaArg') of
+                        (Nothing, Nothing) -> []
+                        (Nothing, Just ma) -> [mkNothing, mkJust ma]
+                        (Just ra, Nothing) -> [mkJust ra]
+                        (Just ra, Just ma) -> [mkJust ra, mkJust ma]
+                    )
+
+                releaseArg :: Sem r (Maybe (ExpressionAtom 'Parsed))
+                releaseArg = let SemVer {..} = p ^. packageVersion in mapM mkReleaseArg _svPreRel
                   where
-                    mkReleaseArg :: Release -> ExpressionAtom 'Parsed
-                    mkReleaseArg = mkLitText . prettyRelease
+                    mkReleaseArg :: Release -> Sem r (ExpressionAtom 'Parsed)
+                    mkReleaseArg = literalString . prettyRelease
 
                     prettyRelease :: Release -> Text
                     prettyRelease (Release cs) = T.intercalate "." . map prettyChunk $ NEL.toList cs
@@ -167,13 +127,15 @@ v1PackageDescriptionType = PackageDescriptionType v1PackageDescriptionFile "Pack
                     prettyChunk (Numeric n) = show n
                     prettyChunk (Alphanum s) = s
 
-                metaArg :: Maybe (ExpressionAtom 'Parsed)
-                metaArg = let SemVer {..} = p ^. packageVersion in mkLitText <$> _svMeta
+                metaArg :: Sem r (Maybe (ExpressionAtom 'Parsed))
+                metaArg = let SemVer {..} = p ^. packageVersion in mapM literalString _svMeta
 
-            mkNamedArg :: Text -> NonEmpty (ExpressionAtom 'Parsed) -> NamedArgument 'Parsed
-            mkNamedArg n v =
-              NamedArgument
-                { _namedArgValue = mkExpressionAtoms v,
-                  _namedArgName = mkSymbol n,
-                  _namedArgAssignKw = Irrelevant (mkKeywordRef kwAssign)
-                }
+            mkJust :: ExpressionAtom 'Parsed -> Sem r (NonEmpty (ExpressionAtom 'Parsed))
+            mkJust a = do
+              justIdent <- identifier "just"
+              return (justIdent :| [a])
+
+            mkNothing :: Sem r (NonEmpty (ExpressionAtom 'Parsed))
+            mkNothing = do
+              nothingIdent <- identifier "nothing"
+              return (nothingIdent :| [])
