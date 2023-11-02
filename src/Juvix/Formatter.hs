@@ -98,7 +98,7 @@ formatPath ::
   Sem r Text
 formatPath p = do
   res <- scopeFile p
-  formatScoperResult res
+  formatScoperResult False res
 
 formatStdin ::
   forall r.
@@ -108,7 +108,7 @@ formatStdin = do
   res <- scopeStdin
   let originalContents = fromMaybe "" (res ^. Scoper.resultParserResult . resultEntry . entryPointStdin)
   runReader originalContents $ do
-    formattedContents :: Text <- formatScoperResult res
+    formattedContents :: Text <- formatScoperResult False res
     formatResultFromContents formattedContents formatStdinPath
 
 formatResultFromContents ::
@@ -135,15 +135,16 @@ formatResultFromContents formattedContents filepath = do
       return res
 
 formatScoperResult' ::
-  Text -> Scoper.ScoperResult -> Text
-formatScoperResult' original sres =
-  run . runReader original $ formatScoperResult sres
+  Bool -> Text -> Scoper.ScoperResult -> Text
+formatScoperResult' force original sres =
+  run . runReader original $ formatScoperResult force sres
 
 formatScoperResult ::
   (Members '[Reader Text] r) =>
+  Bool ->
   Scoper.ScoperResult ->
   Sem r Text
-formatScoperResult res = do
+formatScoperResult force res = do
   let cs = res ^. Scoper.comments
   formattedModules <-
     runReader cs
@@ -156,7 +157,7 @@ formatScoperResult res = do
     Just pragmas ->
       case pragmas ^. withLocParam . withSourceValue . pragmasFormat of
         Just PragmaFormat {..}
-          | not _pragmaFormat -> ask @Text
+          | not _pragmaFormat && not force -> ask @Text
         _ ->
           return txt
     Nothing ->
