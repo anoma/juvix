@@ -861,6 +861,29 @@ recordCreation = P.label "<record creation>" $ do
           _fieldDefineIden = NameUnqualified $ f ^. signName
         }
 
+namedApplicationNew ::
+  forall r.
+  (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
+  ParsecS r (NamedApplicationNew 'Parsed)
+namedApplicationNew = P.label "<named application>" $ do
+  (_namedApplicationNewName, _namedApplicationNewAtKw) <- P.try $ do
+    n <- name
+    a <- Irrelevant <$> kw kwAt
+    lbrace
+    return (n, a)
+  defs <- P.sepEndBy (functionDefinition True False Nothing) semicolon
+  rbrace
+  let _namedApplicationNewArguments = fmap mkArg defs
+      _namedApplicationNewExtra = Irrelevant ()
+  return NamedApplicationNew {..}
+  where
+    mkArg :: FunctionDef 'Parsed -> NamedArgumentNew 'Parsed
+    mkArg f =
+      NamedArgumentNew
+        { _namedArgumentNewFunDef = f,
+          _namedArgumentNewIden = NameUnqualified $ f ^. signName
+        }
+
 namedApplication ::
   forall r.
   (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) =>

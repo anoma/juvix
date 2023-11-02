@@ -764,6 +764,11 @@ goExpression = \case
       s <- ask @NameSignatures
       runReader s (runNamedArguments w) >>= goDesugaredNamedApplication
 
+    goNamedApplicationNew :: Concrete.NamedApplicationNew 'Scoped -> Sem r Internal.Expression
+    goNamedApplicationNew w = do
+      s <- ask @NameSignatures
+      runReader s (runNamedArgumentsNew w) >>= goDesugaredNamedApplication
+
     goDesugaredNamedApplication :: DesugaredNamedApplication -> Sem r Internal.Expression
     goDesugaredNamedApplication a = do
       let fun = goScopedIden (a ^. dnamedAppIdentifier)

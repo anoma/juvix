@@ -2156,6 +2156,65 @@ checkExpressionAtom e = case e of
   AtomRecordCreation i -> pure . AtomRecordCreation <$> checkRecordCreation i
   AtomRecordUpdate i -> pure . AtomRecordUpdate <$> checkRecordUpdate i
 
+checkNamedApplicationNew :: forall r. (Members '[Error ScoperError, State Scope, State ScoperState, Reader ScopeParameters, InfoTableBuilder, NameIdGen] r) => NamedApplicationNew 'Parsed -> Sem r (NamedApplicationNew 'Scoped)
+checkNamedApplicationNew napp = do
+  aname <- checkScopedIden (napp ^. namedApplicationNewName)
+  sig <- getNameSignature aname
+  let snames = HashSet.fromList (concatMap (HashMap.keys . (^. nameBlock)) (sig ^. nameSignatureArgs))
+  (vars', args') <- withLocalScope . localBindings . ignoreSyntax $ do
+    vs <- mapM (reserveFunctionSymbol . (^. namedArgumentNewFunDef)) (napp ^. namedApplicationNewArguments)
+    fs <- mapM (checkNamedArgumentNew snames) (napp ^. namedApplicationNewArguments)
+    return (vs, fs)
+  let extra' =
+        RecordCreationExtra
+          { _recordCreationExtraVars = vars'
+          }
+      sargs = HashSet.fromList (map (^. namedArgumentNewFunDef . signName . nameConcrete) (toList args'))
+      missingFields = HashSet.difference snames sargs
+  unless (null missingFields) $
+    throw (ErrMissingFields (MissingFields (aname ^. scopedIdenFinal . nameConcrete) missingFields))
+  return
+    NamedApplicationNew
+      { _namedApplicationNewName = aname,
+        _namedApplicationNewArguments = args',
+        _namedApplicationNewAtKw = napp ^. namedApplicationNewAtKw,
+        _namedApplicationNewExtra = Irrelevant extra'
+      }
+
+checkNamedArgumentNew ::
+  (Members '[Error ScoperError, State Scope, State ScoperState, Reader ScopeParameters, InfoTableBuilder, NameIdGen] r) =>
+  HashSet Symbol ->
+  NamedArgumentNew 'Parsed ->
+  Sem r (NamedArgumentNew 'Scoped)
+checkNamedArgumentNew snames NamedArgumentNew {..} = do
+  def <- localBindings . ignoreSyntax $ checkFunctionDef _namedArgumentNewFunDef
+  iden <- checkScopedIden _namedArgumentNewIden
+  let fname = def ^. signName . nameConcrete
+  unless (HashSet.member fname snames) $
+    throw (ErrUnexpectedField (UnexpectedField fname))
+  return
+    NamedArgumentNew
+      { _namedArgumentNewFunDef = def,
+        _namedArgumentNewIden = iden
+      }
+
+checkDefineField ::
+  (Members '[Error ScoperError, State Scope, State ScoperState, Reader ScopeParameters, InfoTableBuilder, NameIdGen] r) =>
+  RecordNameSignature 'Parsed ->
+  RecordDefineField 'Parsed ->
+  Sem r (RecordDefineField 'Scoped)
+checkDefineField sig RecordDefineField {..} = do
+  def <- localBindings . ignoreSyntax $ checkFunctionDef _fieldDefineFunDef
+  iden <- checkScopedIden _fieldDefineIden
+  let fname = def ^. signName . nameConcrete
+  unless (HashMap.member fname (sig ^. recordNames)) $
+    throw (ErrUnexpectedField (UnexpectedField fname))
+  return
+    RecordDefineField
+      { _fieldDefineFunDef = def,
+        _fieldDefineIden = iden
+      }
+
 checkRecordCreation :: forall r. (Members '[Error ScoperError, State Scope, State ScoperState, Reader ScopeParameters, InfoTableBuilder, NameIdGen] r) => RecordCreation 'Parsed -> Sem r (RecordCreation 'Scoped)
 checkRecordCreation RecordCreation {..} = do
   constrIden <- getNameOfKind KNameConstructor _recordCreationConstructor
@@ -2190,23 +2249,6 @@ checkRecordCreation RecordCreation {..} = do
             _recordCreationExtra = Irrelevant extra',
             _recordCreationAtKw
           }
-
-checkDefineField ::
-  (Members '[Error ScoperError, State Scope, State ScoperState, Reader ScopeParameters, InfoTableBuilder, NameIdGen] r) =>
-  RecordNameSignature 'Parsed ->
-  RecordDefineField 'Parsed ->
-  Sem r (RecordDefineField 'Scoped)
-checkDefineField sig RecordDefineField {..} = do
-  def <- localBindings . ignoreSyntax $ checkFunctionDef _fieldDefineFunDef
-  iden <- checkScopedIden _fieldDefineIden
-  let fname = def ^. signName . nameConcrete
-  unless (HashMap.member fname (sig ^. recordNames)) $
-    throw (ErrUnexpectedField (UnexpectedField fname))
-  return
-    RecordDefineField
-      { _fieldDefineFunDef = def,
-        _fieldDefineIden = iden
-      }
 
 checkRecordUpdate :: forall r. (Members '[Error ScoperError, State Scope, State ScoperState, Reader ScopeParameters, InfoTableBuilder, NameIdGen] r) => RecordUpdate 'Parsed -> Sem r (RecordUpdate 'Scoped)
 checkRecordUpdate RecordUpdate {..} = do
@@ -2257,7 +2299,6 @@ checkNamedApplication ::
   Sem r (NamedApplication 'Scoped)
 checkNamedApplication napp = do
   _namedAppName <- checkScopedIden (napp ^. namedAppName)
-  _namedAppSignature <- Irrelevant <$> getNameSignature _namedAppName
   _namedAppArgs <- mapM checkArgumentBlock (napp ^. namedAppArgs)
   return NamedApplication {..}
   where

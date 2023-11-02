@@ -1,5 +1,6 @@
 module Juvix.Compiler.Internal.Translation.FromConcrete.NamedArguments
   ( runNamedArguments,
+    runNamedArgumentsNew,
     NameSignatures,
     ConstructorNameSignatures,
     DesugaredNamedApplication,
@@ -77,6 +78,14 @@ runNamedArguments napp = do
           { _stateRemainingArgs = toList (napp ^. namedAppArgs),
             _stateRemainingNames = sig ^. nameSignatureArgs
           }
+
+runNamedArgumentsNew ::
+  forall r.
+  (Members '[NameIdGen, Error ScoperError, Reader NameSignatures] r) =>
+  NamedApplicationNew 'Scoped ->
+  Sem r DesugaredNamedApplication
+runNamedArgumentsNew napp = do
+  undefined
 
 type NamesByIndex = IntMap (NameItem 'Scoped)
 

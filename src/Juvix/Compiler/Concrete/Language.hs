@@ -1638,6 +1638,42 @@ deriving stock instance Ord (NamedApplication 'Parsed)
 
 deriving stock instance Ord (NamedApplication 'Scoped)
 
+data NamedArgumentNew (s :: Stage) = NamedArgumentNew
+  { _namedArgumentNewFunDef :: FunctionDef s,
+    _namedArgumentNewIden :: IdentifierType s
+  }
+
+deriving stock instance Show (NamedArgumentNew 'Parsed)
+
+deriving stock instance Show (NamedArgumentNew 'Scoped)
+
+deriving stock instance Eq (NamedArgumentNew 'Parsed)
+
+deriving stock instance Eq (NamedArgumentNew 'Scoped)
+
+deriving stock instance Ord (NamedArgumentNew 'Parsed)
+
+deriving stock instance Ord (NamedArgumentNew 'Scoped)
+
+data NamedApplicationNew (s :: Stage) = NamedApplicationNew
+  { _namedApplicationNewName :: IdentifierType s,
+    _namedApplicationNewAtKw :: Irrelevant KeywordRef,
+    _namedApplicationNewArguments :: [NamedArgumentNew s],
+    _namedApplicationNewExtra :: Irrelevant (RecordCreationExtraType s)
+  }
+
+deriving stock instance Show (NamedApplicationNew 'Parsed)
+
+deriving stock instance Show (NamedApplicationNew 'Scoped)
+
+deriving stock instance Eq (NamedApplicationNew 'Parsed)
+
+deriving stock instance Eq (NamedApplicationNew 'Scoped)
+
+deriving stock instance Ord (NamedApplicationNew 'Parsed)
+
+deriving stock instance Ord (NamedApplicationNew 'Scoped)
+
 data RecordStatement (s :: Stage)
   = RecordStatementField (RecordField s)
   | RecordStatementOperator OperatorSyntaxDef
@@ -1924,6 +1960,8 @@ makeLenses ''ModuleIndex
 makeLenses ''ArgumentBlock
 makeLenses ''NamedArgument
 makeLenses ''NamedApplication
+makeLenses ''NamedArgumentNew
+makeLenses ''NamedApplicationNew
 makeLenses ''AliasDef
 makeLenses ''FixitySyntaxDef
 makeLenses ''ParsedFixityInfo
