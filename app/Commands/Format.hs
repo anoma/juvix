@@ -4,7 +4,6 @@ import Commands.Base
 import Commands.Format.Options
 import Data.Text qualified as Text
 import Juvix.Formatter
-import Juvix.Prelude.Pretty
 
 data FormatNoEditRenderMode
   = ReformattedFile Text
