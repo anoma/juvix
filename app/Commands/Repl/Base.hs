@@ -19,12 +19,12 @@ data ReplContext = ReplContext
   }
 
 data ReplEnv = ReplEnv
-  { _replRoots :: Roots,
+  { _replRoot :: Root,
     _replOptions :: ReplOptions
   }
 
 data ReplState = ReplState
-  { _replStateRoots :: Roots,
+  { _replStateRoot :: Root,
     _replStateContext :: Maybe ReplContext,
     _replStateGlobalOptions :: GlobalOptions
   }

@@ -29,7 +29,11 @@ docLisp opts packageName entryName morph _ =
     <> line
     <> indent' "(:shadowing-import-from :geb.spec #:case)"
     <> line
-    <> indent' "(:use #:common-lisp #:geb.lambda.spec #:geb))"
+    <> indent' "(:shadowing-import-from :geb.lambda.trans #:int)"
+    <> line
+    <> indent' "(:use #:common-lisp #:geb.lambda.spec #:geb)"
+    <> line
+    <> indent' "(:export :*entry*))"
     <> line
     <> line
     <> "(in-package :"

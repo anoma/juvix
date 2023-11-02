@@ -1,5 +1,4 @@
 module WrongReturnTypeTooFewArguments;
 
-type A (B : Type) :=
-  | c : A;
+type A (B : Type) := c : A;
 

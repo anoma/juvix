@@ -11,35 +11,39 @@ import Juvix.Extra.Paths
 import Juvix.Extra.Strings qualified as Str
 import Language.Haskell.TH.Syntax
 
--- | The name of the Package type name in the PackageDescription module
-packageTypeName :: Text
-packageTypeName = "Package"
+-- | The names of the Package type name in every version of the PackageDescription module
+packageDescriptionTypes :: [(Path Rel File, Text)]
+packageDescriptionTypes = [(v1PackageDescriptionFile, "Package")]
+
+acceptableTypes :: (Member Files r) => Sem r [TypeSpec]
+acceptableTypes = do
+  globalPackageDir <- globalPackageDescriptionRoot
+  return (go . first (globalPackageDir <//>) <$> packageDescriptionTypes)
+  where
+    go :: (Path Abs File, Text) -> TypeSpec
+    go (p, typeName) =
+      TypeSpec
+        { _typeSpecName = typeName,
+          _typeSpecFile = p
+        }
 
 -- | Load a package file in the context of the PackageDescription module and the global package stdlib.
 loadPackage :: (Members '[Files, EvalFileEff, Error PackageLoaderError] r) => BuildDir -> Path Abs File -> Sem r Package
 loadPackage buildDir packagePath = do
-  globalPackageDir <- globalPackageDescriptionRoot
-  let packageDescriptionPath' = globalPackageDir <//> filename packageDescriptionPath
-
   scoped @(Path Abs File) @EvalEff packagePath $ do
-    v <- getPackageNode packageDescriptionPath' >>= eval'
+    v <- getPackageNode >>= eval'
     toPackage buildDir packagePath v
   where
     -- Obtain the Node corresponding to the `package` identifier in the loaded
     -- Package
     --
-    -- This function also checks that the type of the identifier is the expected
-    -- type from the specific PackageDescription module that is provided by the
-    -- PathResolver.
-    getPackageNode :: forall r. (Members '[EvalEff] r) => Path Abs File -> Sem r Node
-    getPackageNode packageDescriptionPath' = do
+    -- This function also checks that the type of the identifier is among the
+    -- expected types from the specific PackageDescription modules that are
+    -- provided by the PathResolver.
+    getPackageNode :: forall r. (Members '[Files, EvalEff] r) => Sem r Node
+    getPackageNode = do
       n <- lookupIdentifier Str.package
-      assertNodeType
-        n
-        TypeSpec
-          { _typeSpecFile = packageDescriptionPath',
-            _typeSpecName = packageTypeName
-          }
+      acceptableTypes >>= assertNodeType n
       return n
 
 toPackage ::
@@ -148,9 +152,9 @@ toPackage buildDir packagePath = \case
         p :: SomeBase Dir
         p = resolveBuildDir buildDir <///> relStdlibDir
 
-packageDescriptionPath :: Path Abs File
-packageDescriptionPath =
-  $( FE.makeRelativeToProject (toFilePath packageDescriptionFile)
-       >>= runIO . parseAbsFile
+packageDescriptionDir' :: Path Abs Dir
+packageDescriptionDir' =
+  $( FE.makeRelativeToProject (toFilePath packageDescriptionDir)
+       >>= runIO . parseAbsDir
        >>= lift
    )

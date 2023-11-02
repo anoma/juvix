@@ -4,6 +4,5 @@ type Tree (A : Type) :=
   | leaf : Tree A
   | node : (A -> Tree A) -> Tree A;
 
-type Bad :=
-  | bad : Tree Bad -> Bad;
+type Bad := bad : Tree Bad -> Bad;
 

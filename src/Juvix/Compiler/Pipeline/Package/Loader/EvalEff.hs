@@ -13,7 +13,8 @@ makeLenses ''TypeSpec
 data EvalEff m a where
   Eval' :: Node -> EvalEff m Value
   LookupIdentifier :: Text -> EvalEff m Node
-  AssertNodeType :: Node -> TypeSpec -> EvalEff m ()
+  -- | Assert that the Node has a type given by one of the 'TypeSpec's
+  AssertNodeType :: (Foldable f) => Node -> f TypeSpec -> EvalEff m ()
 
 makeSem ''EvalEff
 

@@ -341,4 +341,49 @@ module OperatorRecord;
     in n + m * m;
 end;
 
+longLongLongArg : Int := 0;
+
+longLongLongListArg : List Int := [];
+
+l1 : List Int :=
+  [ 1
+  ; 2
+  ; longLongLongArg
+  ; longLongLongArg
+  ; longLongLongArg
+  ; longLongLongArg
+  ];
+
+l2 : List Int := [1; 2; 3];
+
+l3 : List (List Int) :=
+  [ [1; 2; 3]
+  ; longLongLongListArg
+  ; longLongLongListArg
+  ; longLongLongListArg
+  ];
+
+l4 : List (List Int) :=
+  [ [1; 2; 3]
+  ; longLongLongListArg
+  ; [ longLongLongListArg
+    ; longLongLongListArg
+    ; longLongLongListArg
+    ; longLongLongListArg
+    ]
+  ; longLongLongListArg
+  ];
+
+-- Format as-pattern interacting with implicit args.
+
+implicitWithInnerParens : {_ : Nat} -> Nat
+  | {A@(suc B@(suc x))} := x
+  | {B@(suc x)} := B
+  | {_} := zero;
+
+i2479' : {_ : Nat} -> Nat
+  | {suc (suc x)} := x
+  | {suc x} := x
+  | {_} := zero;
+
 -- Comment at the end of a module

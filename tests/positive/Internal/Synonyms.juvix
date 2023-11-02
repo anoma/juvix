@@ -9,7 +9,7 @@ idTy (A : Type) : Type := A;
 idTy2 : typeToType
   | A := A;
 
-typeToType  : Type := Type -> Type;
+typeToType : Type := Type -> Type;
 
 Ty2 : idTy Type := Ty1;
 

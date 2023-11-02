@@ -1,7 +1,6 @@
 module Simple;
 
-type T :=
-  | tt : T;
+type T := tt : T;
 
 someT : T := tt;
 

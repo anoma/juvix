@@ -6,5 +6,4 @@ import Stdlib.Prelude open hiding {Unit};
 test : {A : Type} -> A -> A
   | x := x;
 
-type Unit :=
-  | unit : Unit;
+type Unit := unit : Unit;

@@ -5,6 +5,6 @@ type Unit := unit;
 type Box A := box A;
 
 trait
-type T A := mkT { pp : A → A };
+type T A := mkT {pp : A → A};
 
 main : Box Unit := T.pp (box unit);

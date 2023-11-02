@@ -118,6 +118,20 @@ jobs:
           cd main
           make runtime
 
+      # We use the options:
+      #   - -fhide-source-paths
+      #   - -fwrite-ide-info -hiedir=.hie
+      # in package.yaml.
+      #
+      # If a previously available .hie directory is missing then GHC will rebuild the whole project.
+      # with reason: HIE file is missing. So we need to cache it.
+      - name: Cache .hie
+        id: cache-hie
+        uses: actions/cache@v3
+        with:
+          path: main/.hie
+          key: ${{ runner.os }}-stack-hie
+
       - name: Stack setup
         id: stack
         uses: freckle/stack-action@v4
@@ -251,6 +265,20 @@ jobs:
         run: |
           cd main
           make CC=$CC LIBTOOL=$LIBTOOL runtime
+
+      # We use the options:
+      #   - -fhide-source-paths
+      #   - -fwrite-ide-info -hiedir=.hie
+      # in package.yaml.
+      #
+      # If a previously available .hie directory is missing then GHC will rebuild the whole project.
+      # with reason: HIE file is missing. So we need to cache it.
+      - name: Cache .hie
+        id: cache-hie
+        uses: actions/cache@v3
+        with:
+          path: main/.hie
+          key: ${{ runner.os }}-stack-hie
 
       - name: Stack setup
         id: stack

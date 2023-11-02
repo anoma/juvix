@@ -4,21 +4,20 @@ type Maybe (A : Type) :=
   | nothing : Maybe A
   | just : A -> Maybe A;
 
-type T :=
-  | t : T;
+type T := t : T;
 
 module M;
   type RecA (A B : Type) :=
-    | mkRecA {
-        arg : Maybe (RecB B A);
-        arg2 : A
-      };
+    mkRecA {
+      arg : Maybe (RecB B A);
+      arg2 : A
+    };
 
   type RecB (A B : Type) :=
-    | mkRecB {
-        arg : RecA B A;
-        arg2 : T
-      };
+    mkRecB {
+      arg : RecA B A;
+      arg2 : T
+    };
 
   p1 : RecA T (Maybe T) :=
     mkRecA
@@ -40,10 +39,10 @@ p4 : T := arg2 p1;
 
 module M2;
   type Pair (A B : Type) :=
-    | mkPair {
-        fst : A;
-        snd : B
-      };
+    mkPair {
+      fst : A;
+      snd : B
+    };
 
   open Pair public;
 end;

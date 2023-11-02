@@ -8,8 +8,7 @@ type Nat :=
 
 syntax operator × functor;
 syntax operator , pair;
-type × (A : Type) (B : Type) :=
-  | , : A → B → A × B;
+type × (A : Type) (B : Type) := , : A → B → A × B;
 
 syntax operator ∘ composition;
 
@@ -160,8 +159,7 @@ t
     → List A × List B :=
   id {({X : Type} → List X) → _} λ {f := f {_}, f {_}};
 
-type Box (A : Type) :=
-  | box : A → Box A;
+type Box (A : Type) := box : A → Box A;
 
 x : Box ((A : Type) → A → A) := box λ {A a := a};
 
