@@ -14,6 +14,7 @@ import Juvix.Compiler.Internal.Pretty.Options
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Data.Types (Arity)
 import Juvix.Data.CodeAnn
 import Juvix.Prelude
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.CheckerNew.Arity qualified as New
 
 doc :: (PrettyCode c) => Options -> c -> Doc Ann
 doc opts =
@@ -322,6 +323,9 @@ instance PrettyCode Module where
 
 instance PrettyCode Interval where
   ppCode = return . annotate AnnCode . pretty
+
+instance PrettyCode New.ArityParameter where
+  ppCode = return . pretty
 
 instance PrettyCode InfoTable where
   ppCode tbl = do

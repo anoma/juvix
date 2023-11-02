@@ -188,6 +188,14 @@ checkMutualStatement = \case
     registerNameIdType (ax ^. axiomName . nameId) (ax ^. axiomType)
     return $ StatementAxiom ax
 
+unfoldFunType' :: (Members '[Inference] r) => Expression -> Sem r ([FunctionParameter], Expression)
+unfoldFunType' =
+  weakNormalize
+    >=> ( \t -> case t of
+            ExpressionFunction (Function l r) -> first (l :) <$> unfoldFunType' r
+            _ -> return ([], t)
+        )
+
 checkFunctionDef ::
   forall r.
   (Members '[HighlightBuilder, Reader LocalVars, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example, Builtins, Inference, Termination, Output TypedHole] r) =>
@@ -198,8 +206,8 @@ checkFunctionDef FunctionDef {..} = do
     _funDefType' <- checkDefType _funDefType
     _funDefExamples' <- mapM checkExample _funDefExamples
     registerIdenType _funDefName _funDefType'
-    _funDefBody' <- checkExpression _funDefType' _funDefBody
-    let params = fst (unfoldFunType _funDefType')
+    _funDefBody' <- checkFunctionBody _funDefType' _funDefBody
+    params <- fst <$> unfoldFunType' _funDefType'
     _funDefArgsInfo' <- checkArgsInfo params
     return
       FunctionDef
@@ -450,10 +458,35 @@ lookupVar v = do
   where
     err = error $ "internal error: could not find var " <> ppTrace v <> " at " <> ppTrace (getLoc v)
 
--- | helper function for function clauses and lambda functions
+checkFunctionBody ::
+  (Members '[Reader LocalVars, Reader InfoTable, NameIdGen, Error TypeCheckerError, Output Example, Output TypedHole, State TypesTable, State HighlightInput, State FunctionsTable, Builtins, Inference, Termination] r) =>
+  Expression ->
+  Expression ->
+  Sem r Expression
+checkFunctionBody expectedTy body =
+  case body of
+    ExpressionLambda {} -> checkExpression expectedTy body
+    _ -> do
+      (patterns', typedBody) <- checkClause (getLoc body) expectedTy [] body
+      return $ case nonEmpty patterns' of
+        Nothing -> typedBody
+        Just lambdaPatterns' ->
+          ExpressionLambda
+            Lambda
+              { _lambdaType = Nothing,
+                _lambdaClauses =
+                  pure
+                    LambdaClause
+                      { _lambdaPatterns = lambdaPatterns',
+                        _lambdaBody = typedBody
+                      }
+              }
+
+-- | helper function for lambda functions and case branches
 checkClause ::
   forall r.
   (Members '[HighlightBuilder, Reader InfoTable, State FunctionsTable, Reader LocalVars, Error TypeCheckerError, NameIdGen, Inference, Builtins, Output Example, State TypesTable, Termination, Output TypedHole] r) =>
+  Interval ->
   -- | Type
   Expression ->
   -- | Arguments
@@ -461,7 +494,7 @@ checkClause ::
   -- | Body
   Expression ->
   Sem r ([PatternArg], Expression) -- (Checked patterns, Checked body)
-checkClause clauseType clausePats body = do
+checkClause clauseLoc clauseType clausePats body = do
   locals0 <- ask
   (localsPats, (checkedPatterns, bodyType)) <- helper clausePats clauseType
   let locals' = locals0 <> localsPats
@@ -474,18 +507,72 @@ checkClause clauseType clausePats body = do
 
     go :: [PatternArg] -> Expression -> Sem (State LocalVars ': r) ([PatternArg], Expression)
     go pats bodyTy = case pats of
-      [] -> return ([], bodyTy)
+      [] -> do
+        (bodyParams, bodyRest) <- unfoldFunType' bodyTy
+        guessedBodyParams <- unfoldArity <$> guessArity body
+        let pref' :: [IsImplicit] = map (^. paramImplicit) (take pref bodyParams)
+            pref :: Int = aI - targetI
+            preImplicits =  length . takeWhile isImplicitOrInstance
+            aI :: Int = preImplicits (map (^. paramImplicit) bodyParams)
+            targetI :: Int = preImplicits (map (^. arityParameterImplicit) guessedBodyParams)
+        if
+          | 0 < pref -> do
+            let n = length pref'
+                bodyParams' = drop n bodyParams
+                ty' = foldFunType bodyParams' bodyRest
+            wildcards <- mapM (genWildcard clauseLoc) pref'
+            return (wildcards, ty')
+          | otherwise -> do
+            return ([], bodyTy)
       p : ps -> do
         bodyTy' <- weakNormalize bodyTy
         case bodyTy' of
           ExpressionHole h -> do
             fun <- holeRefineToFunction (p ^. patternArgIsImplicit) h
             go pats (ExpressionFunction fun)
-          _ -> case unfoldFunType bodyTy' of
-            ([], _) -> error "too many patterns"
-            (par : pars, ret) -> do
-              par' <- checkPattern par p
-              first (par' :) <$> go ps (foldFunType pars ret)
+          _ -> do
+            unfoldedBodyTy' <- unfoldFunType' bodyTy'
+            case unfoldedBodyTy' of
+              ([], _) -> throwTooManyPatterns
+              (par : pars, ret) -> do
+                let checkPatternAndContinue = do
+                      par' <- checkPattern par p
+                      first (par' :) <$> go ps (foldFunType pars ret)
+
+                    loc :: Interval
+                    loc = getLoc par
+
+                    insertWildcard :: IsImplicit -> Sem (State LocalVars ': r) ([PatternArg], Expression)
+                    insertWildcard impl = do
+                      w <- genWildcard loc impl
+                      go (w : p : ps) bodyTy'
+
+                case (par ^. paramImplicit, p ^. patternArgIsImplicit) of
+                  (Explicit, Explicit) -> checkPatternAndContinue
+                  (Implicit, Implicit) -> checkPatternAndContinue
+                  (ImplicitInstance, ImplicitInstance) -> checkPatternAndContinue
+                  (Explicit, Implicit) -> throwWrongIsImplicit p Implicit
+                  (Explicit, ImplicitInstance) -> throwWrongIsImplicit p ImplicitInstance
+                  (Implicit, Explicit) -> insertWildcard Implicit
+                  (Implicit, ImplicitInstance) -> insertWildcard Implicit
+                  (ImplicitInstance, Explicit) -> insertWildcard ImplicitInstance
+                  (ImplicitInstance, Implicit) -> insertWildcard ImplicitInstance
+        where
+          throwWrongIsImplicit :: (Members '[Error TypeCheckerError] r') => PatternArg -> IsImplicit -> Sem r' a
+          throwWrongIsImplicit patArg expected =
+            throw . ErrArityCheckerError $
+              ErrWrongPatternIsImplicit
+                WrongPatternIsImplicit
+                  { _wrongPatternIsImplicitActual = patArg,
+                    _wrongPatternIsImplicitExpected = expected
+                  }
+          throwTooManyPatterns :: (Members '[Error TypeCheckerError] r') => Sem r' a
+          throwTooManyPatterns =
+            throw . ErrArityCheckerError $
+              ErrLhsTooManyPatterns
+                LhsTooManyPatterns
+                  { _lhsTooManyPatternsRemaining = p :| ps
+                  }
 
 -- | Refines a hole into a function type. I.e. '_@1' is matched with '_@fresh → _@fresh'
 holeRefineToFunction :: (Members '[Inference, NameIdGen] r) => IsImplicit -> Hole -> Sem r Function
@@ -537,7 +624,11 @@ checkPattern = go
       pat' <- case pat of
         PatternVariable v -> addVar v ty argTy $> pat
         PatternWildcardConstructor {} -> impossible
-        PatternConstructorApp a -> do
+        PatternConstructorApp a -> goPatternConstructor pat ty a
+      return (set patternArgPattern pat' patArg)
+      where
+        goPatternConstructor :: Pattern -> Expression -> ConstructorApp -> Sem r Pattern
+        goPatternConstructor pat ty a = do
           s <- checkSaturatedInductive ty
           info <- lookupConstructor (a ^. constrAppConstructor)
           let constrIndName = info ^. constructorInfoInductive
@@ -579,13 +670,13 @@ checkPattern = go
                     )
                 )
               PatternConstructorApp <$> goConstr (IdenInductive ind) a tyArgs
-      return (set patternArgPattern pat' patArg)
-      where
+
         addVar :: VarName -> Expression -> FunctionParameter -> Sem r ()
         addVar v ty argType = do
           modify (addType v ty)
           registerIdenType v ty
           whenJust (argType ^. paramName) (\v' -> modify (addTypeMapping v' v))
+
         goConstr :: Iden -> ConstructorApp -> [(InductiveParameter, Expression)] -> Sem r ConstructorApp
         goConstr inductivename app@(ConstructorApp c ps _) ctx = do
           (_, psTys) <- constructorArgTypes <$> lookupConstructor c
@@ -596,6 +687,7 @@ checkPattern = go
           pis <- zipWithM go w ps
           let appTy = foldExplicitApplication (ExpressionIden inductivename) (map snd ctx)
           return app {_constrAppType = Just appTy, _constrAppParameters = pis}
+
         appErr :: ConstructorApp -> Int -> TypeCheckerError
         appErr app expected =
           ErrArity
@@ -725,7 +817,7 @@ inferExpression' hint e = case e of
           _caseExpressionWholeType = Just ty
           goBranch :: CaseBranch -> Sem r CaseBranch
           goBranch b = do
-            (onePat, _caseBranchExpression) <- checkClause funty [b ^. caseBranchPattern] (b ^. caseBranchExpression)
+            (onePat, _caseBranchExpression) <- checkClause (getLoc b) funty [b ^. caseBranchPattern] (b ^. caseBranchExpression)
             let _caseBranchPattern = case onePat of
                   [x] -> x
                   _ -> impossible
@@ -756,8 +848,8 @@ inferExpression' hint e = case e of
           }
       where
         goClause :: Expression -> LambdaClause -> Sem r LambdaClause
-        goClause ty (LambdaClause pats body) = do
-          (pats', body') <- checkClause ty (toList pats) body
+        goClause ty cl@LambdaClause {..} = do
+          (pats', body') <- checkClause (getLoc cl) ty (toList _lambdaPatterns) _lambdaBody
           return (LambdaClause (nonEmpty' pats') body')
 
     goUniverse :: SmallUniverse -> Sem r TypedExpression
@@ -1151,7 +1243,7 @@ guessArity = \case
 
     appHelper :: Application -> Sem r Arity
     appHelper a = do
-      f' <- arif
+      f' <- guessArity f
       let u = unfoldArity' f'
       return $ case refine args (u ^. ufoldArityParams) of
         Nothing -> ArityNotKnown
@@ -1172,21 +1264,6 @@ guessArity = \case
           (ImplicitInstance : _, ArityParameter {_arityParameterImplicit = Implicit} : _) -> Nothing
           ([], ps') -> Just ps'
           (_ : _, []) -> Nothing
-
-        -- (Explicit : as', ArityParam Explicit : ps') -> refine as' ps'
-        -- (Implicit : as', ArityParam Implicit : ps') -> refine as' ps'
-        -- (ImplicitInstance : as', ArityParam ImplicitInstance : ps') -> refine as' ps'
-        -- (as'@(Explicit : _), ArityParam Implicit : ps') -> refine as' ps'
-        -- (as'@(Explicit : _), ArityParam ImplicitInstance : ps') -> refine as' ps'
-        -- (Implicit : _, ArityParam Explicit : _) -> Nothing
-        -- (ImplicitInstance : _, ArityParam Explicit : _) -> Nothing
-        -- (Implicit : _, ArityParam ImplicitInstance : _) -> Nothing
-        -- (ImplicitInstance : _, ArityParam Implicit : _) -> Nothing
-        -- ([], ps') -> Just ps'
-        -- (_ : _, []) -> Nothing
-
-        arif :: Sem r Arity
-        arif = guessArity f
 
 arityLiteral :: Arity
 arityLiteral = ArityUnit
