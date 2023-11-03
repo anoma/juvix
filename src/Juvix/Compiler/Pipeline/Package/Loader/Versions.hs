@@ -18,6 +18,8 @@ data PackageDescriptionType = PackageDescriptionType
 
 makeLenses ''PackageDescriptionType
 
+data PackageVersion = PackageVersion1
+
 -- | The names of the Package type name in every version of the PackageDescription module
 packageDescriptionTypes :: [PackageDescriptionType]
 packageDescriptionTypes = [v1PackageDescriptionType]
@@ -57,22 +59,24 @@ v1PackageDescriptionType = PackageDescriptionType v1PackageDescriptionFile "Pack
               namedArgument "dependencies" (deps :| [])
               where
                 mkDependencyArg :: Dependency -> Sem r (NonEmpty (ExpressionAtom 'Parsed))
-                mkDependencyArg = \case
-                  DependencyPath x ->
-                    sequence
-                      ( identifier "path"
-                          :| [literalString (pack (unsafePrepathToFilePath (x ^. pathDependencyPath)))]
-                      )
-                  DependencyGit x ->
-                    sequence
-                      ( identifier "git"
-                          :| ( literalString
-                                 <$> [ x ^. gitDependencyName,
-                                       x ^. gitDependencyUrl,
-                                       x ^. gitDependencyRef
-                                     ]
-                             )
-                      )
+                mkDependencyArg d
+                  | d == defaultStdlibDep DefaultBuildDir = NEL.singleton <$> identifier "defaultStdlib"
+                  | otherwise = case d of
+                      DependencyPath x ->
+                        sequence
+                          ( identifier "path"
+                              :| [literalString (pack (unsafePrepathToFilePath (x ^. pathDependencyPath)))]
+                          )
+                      DependencyGit x ->
+                        sequence
+                          ( identifier "git"
+                              :| ( literalString
+                                     <$> [ x ^. gitDependencyName,
+                                           x ^. gitDependencyUrl,
+                                           x ^. gitDependencyRef
+                                         ]
+                                 )
+                          )
 
             mkMainArg :: Sem r (Maybe (NamedArgument 'Parsed))
             mkMainArg = do

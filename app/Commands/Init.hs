@@ -3,7 +3,6 @@ module Commands.Init where
 import Data.Text qualified as Text
 import Data.Text.IO.Utf8 qualified as Utf8
 import Data.Versions
-import Juvix.Compiler.Concrete.Print (ppOutDefaultNoComments)
 import Juvix.Compiler.Pipeline.Package
 import Juvix.Compiler.Pipeline.Package.Loader
 import Juvix.Data.Effect.Fail.Extra qualified as Fail
@@ -29,12 +28,9 @@ init = do
   say "I will help you set it up"
   pkg <- getPackage
   say ("creating " <> pack (toFilePath packageFilePath))
-  embed (Utf8.writeFile @IO (toFilePath packageFilePath) (renderPackage pkg))
+  embed (Utf8.writeFile @IO (toFilePath packageFilePath) (renderPackageVersion PackageVersion1 pkg))
   checkPackage
   say "you are all set"
-  where
-    renderPackage :: Package -> Text
-    renderPackage pkg = toPlainText (ppOutDefaultNoComments (toConcrete v1PackageDescriptionType pkg))
 
 checkNotInProject :: forall r. (Members '[Embed IO] r) => Sem r ()
 checkNotInProject =

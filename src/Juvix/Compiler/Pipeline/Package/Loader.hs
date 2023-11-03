@@ -8,6 +8,7 @@ import Data.FileEmbed qualified as FE
 import Data.Versions
 import Juvix.Compiler.Concrete.Gen
 import Juvix.Compiler.Concrete.Language
+import Juvix.Compiler.Concrete.Print (ppOutDefaultNoComments)
 import Juvix.Compiler.Concrete.Translation.FromSource hiding (symbol)
 import Juvix.Compiler.Core.Language qualified as Core
 import Juvix.Compiler.Core.Language.Value
@@ -18,6 +19,7 @@ import Juvix.Compiler.Pipeline.Package.Loader.Versions
 import Juvix.Extra.Paths
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude
+import Juvix.Prelude.Pretty
 import Language.Haskell.TH.Syntax hiding (Module)
 import System.FilePath qualified as FP
 
@@ -32,6 +34,13 @@ acceptableTypes = mapM go packageDescriptionTypes
           { _typeSpecName = t ^. packageDescriptionTypeName,
             _typeSpecFile = globalPackageDir <//> (t ^. packageDescriptionTypePath)
           }
+
+renderPackageVersion :: PackageVersion -> Package -> Text
+renderPackageVersion v pkg = toPlainText (ppOutDefaultNoComments (toConcrete packageType pkg))
+  where
+    packageType :: PackageDescriptionType
+    packageType = case v of
+      PackageVersion1 -> v1PackageDescriptionType
 
 -- | Load a package file in the context of the PackageDescription module and the global package stdlib.
 loadPackage :: (Members '[Files, EvalFileEff, Error PackageLoaderError] r) => BuildDir -> Path Abs File -> Sem r Package
