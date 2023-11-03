@@ -13,6 +13,44 @@ tests:
     stdout: ""
     exit-status: 0
 
+  - name: global-clean-with-no-config-dir
+    command:
+      shell:
+        - bash
+      script: |
+        temp=$(mktemp -d)
+        trap 'rm -rf -- "$temp"' EXIT
+        config=$(mktemp -d)
+        rm -rf "$config"
+        export XDG_CONFIG_HOME=$config
+        cd $temp
+        juvix clean -g
+    stdout: ""
+    exit-status: 0
+
+  - name: global-clean-xdg-config-dir
+    command:
+      shell:
+        - bash
+      script: |
+        baseDir=$PWD
+        temp=$(mktemp -d)
+        trap 'rm -rf -- "$temp"' EXIT
+        config=$(mktemp -d)
+        export XDG_CONFIG_HOME=$config
+        version=$(juvix --numeric-version)
+        configDir="$config/juvix/$version"
+        cd $temp
+        cp "$baseDir/examples/milestone/HelloWorld/HelloWorld.juvix" .
+        juvix compile HelloWorld.juvix
+        [ -d $configDir ]
+        juvix clean
+        [ -d $configDir ]
+        juvix clean -g
+        [ ! -d $configDir ]
+    stdout: ""
+    exit-status: 0
+
   - name: clean-with-default-build-dir
     command:
       shell:

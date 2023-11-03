@@ -1,5 +1,6 @@
 module TopCommand.Options where
 
+import Commands.Clean.Options
 import Commands.Compile.Options
 import Commands.Dependencies.Options qualified as Dependencies
 import Commands.Dev.Options qualified as Dev
@@ -20,7 +21,7 @@ data TopCommand
   | DisplayHelp
   | Typecheck TypecheckOptions
   | Compile CompileOptions
-  | Clean
+  | Clean CleanOptions
   | Eval EvalOptions
   | Html HtmlOptions
   | Dev Dev.DevCommand
@@ -150,7 +151,7 @@ parseUtility =
     commandClean =
       command
         "clean"
-        (info (pure Clean) (progDesc "Delete build artifacts"))
+        (info (Clean <$> parseCleanOptions) (progDesc "Delete build artifacts"))
 
     commandDependencies :: Mod CommandFields TopCommand
     commandDependencies =
