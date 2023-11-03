@@ -321,7 +321,14 @@ scoperErrorTests =
       $(mkRelDir ".")
       $(mkRelFile "MissingFields.juvix")
       $ \case
-        ErrMissingFields {} -> Nothing
+        ErrMissingArgs {} -> Nothing
+        _ -> wrongError,
+    NegTest
+      "Unexpected argument"
+      $(mkRelDir ".")
+      $(mkRelFile "UnexpectedArgumentNew.juvix")
+      $ \case
+        ErrUnexpectedArgument UnexpectedArgument {} -> Nothing
         _ -> wrongError,
     NegTest
       "Incomparable precedences"
