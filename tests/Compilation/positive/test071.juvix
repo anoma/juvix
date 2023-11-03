@@ -1,0 +1,15 @@
+-- Named application
+module test071;
+
+import Stdlib.Data.Nat open;
+
+fun {a : Nat := 1} {b : Nat := a + 1} {c : Nat := b + a + 1}
+  : Nat := a * b + c;
+
+f {a : Nat := 2} {b : Nat := a + 1} {c : Nat} : Nat := a * b * c;
+
+g {a : Nat := 2} {b : Nat := a + 1} (c : Nat) : Nat := a * b * c;
+
+main : Nat :=
+  fun@{a := fun; b := fun@{b := 3} * fun@{b := fun {2}}} +
+  f@{c := 5} + g@?{b := 4} 3;
