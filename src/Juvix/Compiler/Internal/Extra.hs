@@ -81,10 +81,11 @@ genFieldProjection ::
   forall r.
   (Members '[NameIdGen] r) =>
   FunctionName ->
+  Maybe BuiltinFunction ->
   ConstructorInfo ->
   Int ->
   Sem r FunctionDef
-genFieldProjection _funDefName info fieldIx = do
+genFieldProjection _funDefName _funDefBuiltin info fieldIx = do
   body' <- genBody
   let (inductiveParams, constrArgs) = constructorArgTypes info
       implicity = constructorImplicity info
@@ -97,12 +98,12 @@ genFieldProjection _funDefName info fieldIx = do
         _funDefTerminating = False,
         _funDefInstance = False,
         _funDefCoercion = False,
-        _funDefBuiltin = Nothing,
         _funDefArgsInfo = mempty,
         _funDefPragmas = mempty {_pragmasInline = Just InlineAlways},
         _funDefBody = body',
         _funDefType = foldFunType (inductiveArgs ++ [saturatedTy]) retTy,
-        ..
+        _funDefName,
+        _funDefBuiltin
       }
   where
     genBody :: Sem r Expression

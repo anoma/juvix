@@ -79,7 +79,7 @@ main : IO :=
   printStringLn (Show.show true) >>
   printStringLn (f false) >>
   printStringLn (Show.show 3) >>
-  printStringLn (Show.show g) >>
+  printStringLn (Show.show (g {Nat})) >>
   printStringLn (Show.show [true; false]) >>
   printStringLn (Show.show [1; 2; 3]) >>
   printStringLn (f' [1; 2]) >>

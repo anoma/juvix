@@ -19,25 +19,45 @@ type DependencyGraph = HashMap Name (HashSet Name)
 
 type StartNodes = HashSet Name
 
+data BuilderState = BuilderState
+  { _builderStateNat :: Maybe Name,
+    _builderStateFromNat :: Maybe Name,
+    _builderStateInt :: Maybe Name,
+    _builderStateFromInt :: Maybe Name
+  }
+
+makeLenses ''BuilderState
+
+emptyBuilderState :: BuilderState
+emptyBuilderState =
+  BuilderState
+    { _builderStateNat = Nothing,
+      _builderStateFromNat = Nothing,
+      _builderStateInt = Nothing,
+      _builderStateFromInt = Nothing
+    }
+
 type ExportsTable = HashSet NameId
 
 buildDependencyInfoPreModule :: PreModule -> ExportsTable -> NameDependencyInfo
 buildDependencyInfoPreModule ms tab =
-  buildDependencyInfoHelper tab (goPreModule ms)
+  buildDependencyInfoHelper tab (goPreModule ms >> addCastEdges)
 
 buildDependencyInfo :: NonEmpty Module -> ExportsTable -> NameDependencyInfo
 buildDependencyInfo ms tab =
-  buildDependencyInfoHelper tab (mapM_ (visit . ModuleIndex) ms)
+  buildDependencyInfoHelper tab (mapM_ (visit . ModuleIndex) ms >> addCastEdges)
 
 buildDependencyInfoExpr :: Expression -> NameDependencyInfo
-buildDependencyInfoExpr = buildDependencyInfoHelper mempty . goExpression Nothing
+buildDependencyInfoExpr e =
+  buildDependencyInfoHelper mempty (goExpression Nothing e >> addCastEdges)
 
 buildDependencyInfoLet :: NonEmpty PreLetStatement -> NameDependencyInfo
-buildDependencyInfoLet = buildDependencyInfoHelper mempty . mapM_ goPreLetStatement
+buildDependencyInfoLet ls =
+  buildDependencyInfoHelper mempty (mapM_ goPreLetStatement ls >> addCastEdges)
 
 buildDependencyInfoHelper ::
   ExportsTable ->
-  Sem '[Visit ModuleIndex, Reader ExportsTable, State DependencyGraph, State StartNodes] () ->
+  Sem '[Visit ModuleIndex, Reader ExportsTable, State DependencyGraph, State StartNodes, State BuilderState] () ->
   NameDependencyInfo
 buildDependencyInfoHelper tbl m = createDependencyInfo graph startNodes
   where
@@ -45,11 +65,25 @@ buildDependencyInfoHelper tbl m = createDependencyInfo graph startNodes
     graph :: DependencyGraph
     (startNodes, graph) =
       run
+        . evalState emptyBuilderState
         . runState HashSet.empty
         . execState HashMap.empty
         . runReader tbl
         . evalVisitEmpty goModuleNoVisited
         $ m
+
+addCastEdges :: (Members '[State DependencyGraph, State BuilderState] r) => Sem r ()
+addCastEdges = do
+  nat <- gets (^. builderStateNat)
+  fromNat <- gets (^. builderStateFromNat)
+  case (nat, fromNat) of
+    (Just nat', Just fromNat') -> addEdge nat' fromNat'
+    _ -> return ()
+  int <- gets (^. builderStateInt)
+  fromInt <- gets (^. builderStateFromInt)
+  case (int, fromInt) of
+    (Just int', Just fromInt') -> addEdge int' fromInt'
+    _ -> return ()
 
 addStartNode :: (Member (State StartNodes) r) => Name -> Sem r ()
 addStartNode n = modify (HashSet.insert n)
@@ -79,24 +113,24 @@ addEdge n1 n2 =
         n1
     )
 
-checkStartNode :: (Members '[Reader ExportsTable, State StartNodes] r) => Name -> Sem r ()
+checkStartNode :: (Members '[Reader ExportsTable, State StartNodes, State BuilderState] r) => Name -> Sem r ()
 checkStartNode n = do
   tab <- ask
   when
     (HashSet.member (n ^. nameId) tab)
     (addStartNode n)
 
-goModuleNoVisited :: forall r. (Members '[Reader ExportsTable, State DependencyGraph, State StartNodes, Visit ModuleIndex] r) => ModuleIndex -> Sem r ()
+goModuleNoVisited :: forall r. (Members '[Reader ExportsTable, State DependencyGraph, State StartNodes, State BuilderState, Visit ModuleIndex] r) => ModuleIndex -> Sem r ()
 goModuleNoVisited (ModuleIndex m) = do
   checkStartNode (m ^. moduleName)
   let b = m ^. moduleBody
   mapM_ (goMutual (m ^. moduleName)) (b ^. moduleStatements)
   mapM_ goImport (b ^. moduleImports)
 
-goImport :: (Members '[Reader ExportsTable, State DependencyGraph, State StartNodes, Visit ModuleIndex] r) => Import -> Sem r ()
+goImport :: (Members '[Reader ExportsTable, State DependencyGraph, State StartNodes, State BuilderState, Visit ModuleIndex] r) => Import -> Sem r ()
 goImport (Import m) = visit m
 
-goPreModule :: (Members '[Reader ExportsTable, State DependencyGraph, State StartNodes, Visit ModuleIndex] r) => PreModule -> Sem r ()
+goPreModule :: (Members '[Reader ExportsTable, State DependencyGraph, State StartNodes, State BuilderState, Visit ModuleIndex] r) => PreModule -> Sem r ()
 goPreModule m = do
   checkStartNode (m ^. moduleName)
   let b = m ^. moduleBody
@@ -106,7 +140,7 @@ goPreModule m = do
   -- added from definitions in M to definitions in N)
   mapM_ goImport (b ^. moduleImports)
 
-goMutual :: forall r. (Members '[Reader ExportsTable, State DependencyGraph, State StartNodes] r) => Name -> MutualBlock -> Sem r ()
+goMutual :: forall r. (Members '[Reader ExportsTable, State DependencyGraph, State StartNodes, State BuilderState] r) => Name -> MutualBlock -> Sem r ()
 goMutual parentModule (MutualBlock s) = mapM_ go s
   where
     go :: MutualStatement -> Sem r ()
@@ -117,7 +151,7 @@ goMutual parentModule (MutualBlock s) = mapM_ go s
 
 goPreLetStatement ::
   forall r.
-  (Members '[Reader ExportsTable, State DependencyGraph, State StartNodes] r) =>
+  (Members '[Reader ExportsTable, State DependencyGraph, State StartNodes, State BuilderState] r) =>
   PreLetStatement ->
   Sem r ()
 goPreLetStatement = \case
@@ -125,19 +159,19 @@ goPreLetStatement = \case
 
 -- | Declarations in a module depend on the module, not the other way round (a
 -- module is reachable if at least one of the declarations in it is reachable)
-goPreStatement :: forall r. (Members '[Reader ExportsTable, State DependencyGraph, State StartNodes] r) => Name -> PreStatement -> Sem r ()
+goPreStatement :: forall r. (Members '[Reader ExportsTable, State DependencyGraph, State StartNodes, State BuilderState] r) => Name -> PreStatement -> Sem r ()
 goPreStatement parentModule = \case
   PreAxiomDef ax -> goAxiom parentModule ax
   PreFunctionDef f -> goTopFunctionDef parentModule f
   PreInductiveDef i -> goInductive parentModule i
 
-goAxiom :: forall r. (Members '[Reader ExportsTable, State DependencyGraph, State StartNodes] r) => Name -> AxiomDef -> Sem r ()
+goAxiom :: forall r. (Members '[Reader ExportsTable, State DependencyGraph, State StartNodes, State BuilderState] r) => Name -> AxiomDef -> Sem r ()
 goAxiom parentModule ax = do
   checkStartNode (ax ^. axiomName)
   addEdge (ax ^. axiomName) parentModule
   goExpression (Just (ax ^. axiomName)) (ax ^. axiomType)
 
-goInductive :: forall r. (Members '[Reader ExportsTable, State DependencyGraph, State StartNodes] r) => Name -> InductiveDef -> Sem r ()
+goInductive :: forall r. (Members '[Reader ExportsTable, State DependencyGraph, State StartNodes, State BuilderState] r) => Name -> InductiveDef -> Sem r ()
 goInductive parentModule i = do
   checkStartNode (i ^. inductiveName)
   checkBuiltinInductiveStartNode i
@@ -148,20 +182,24 @@ goInductive parentModule i = do
 
 -- BuiltinBool and BuiltinNat are required by the Internal to Core translation
 -- when translating literal integers to Nats.
-checkBuiltinInductiveStartNode :: forall r. (Member (State StartNodes) r) => InductiveDef -> Sem r ()
+checkBuiltinInductiveStartNode :: forall r. (Members '[State StartNodes, State BuilderState] r) => InductiveDef -> Sem r ()
 checkBuiltinInductiveStartNode i = whenJust (i ^. inductiveBuiltin) go
   where
     go :: BuiltinInductive -> Sem r ()
     go = \case
-      BuiltinNat -> addInductiveStartNode
+      BuiltinNat -> do
+        modify (set builderStateNat (Just (i ^. inductiveName)))
+        addInductiveStartNode
       BuiltinBool -> addInductiveStartNode
-      BuiltinInt -> addInductiveStartNode
+      BuiltinInt -> do
+        modify (set builderStateInt (Just (i ^. inductiveName)))
+        addInductiveStartNode
       BuiltinList -> return ()
 
     addInductiveStartNode :: Sem r ()
     addInductiveStartNode = addStartNode (i ^. inductiveName)
 
-goTopFunctionDef :: (Members '[State DependencyGraph, State StartNodes, Reader ExportsTable] r) => Name -> FunctionDef -> Sem r ()
+goTopFunctionDef :: (Members '[State DependencyGraph, State StartNodes, State BuilderState, Reader ExportsTable] r) => Name -> FunctionDef -> Sem r ()
 goTopFunctionDef modName f = do
   addEdge (f ^. funDefName) modName
   goFunctionDefHelper f
@@ -170,7 +208,7 @@ goTopFunctionDef modName f = do
 -- checking the instance holes are not filled which may result in missing
 -- dependencies. In other words, the trait needs to depend on all its instances.
 goInstance ::
-  (Members '[State DependencyGraph, State StartNodes, Reader ExportsTable] r) =>
+  (Members '[State DependencyGraph, State StartNodes, State BuilderState, Reader ExportsTable] r) =>
   FunctionDef ->
   Sem r ()
 goInstance f = do
@@ -182,13 +220,23 @@ goInstance f = do
     _ ->
       return ()
 
+checkCast ::
+  (Member (State BuilderState) r) =>
+  FunctionDef ->
+  Sem r ()
+checkCast f = case f ^. funDefBuiltin of
+  Just BuiltinFromNat -> modify (set builderStateFromNat (Just (f ^. funDefName)))
+  Just BuiltinFromInt -> modify (set builderStateFromInt (Just (f ^. funDefName)))
+  _ -> return ()
+
 goFunctionDefHelper ::
-  (Members '[State DependencyGraph, State StartNodes, Reader ExportsTable] r) =>
+  (Members '[State DependencyGraph, State StartNodes, State BuilderState, Reader ExportsTable] r) =>
   FunctionDef ->
   Sem r ()
 goFunctionDefHelper f = do
   addNode (f ^. funDefName)
   checkStartNode (f ^. funDefName)
+  checkCast f
   when (f ^. funDefInstance || f ^. funDefCoercion) $
     goInstance f
   goExpression (Just (f ^. funDefName)) (f ^. funDefType)
@@ -197,7 +245,7 @@ goFunctionDefHelper f = do
 
 -- constructors of an inductive type depend on the inductive type, not the other
 -- way round; an inductive type depends on the types of its constructors
-goConstructorDef :: (Members '[State DependencyGraph, State StartNodes, Reader ExportsTable] r) => Name -> ConstructorDef -> Sem r ()
+goConstructorDef :: (Members '[State DependencyGraph, State StartNodes, State BuilderState, Reader ExportsTable] r) => Name -> ConstructorDef -> Sem r ()
 goConstructorDef indName c = do
   addEdge (c ^. inductiveConstructorName) indName
   goExpression (Just indName) (c ^. inductiveConstructorType)
@@ -218,7 +266,7 @@ goPattern n p = case p ^. patternArgPattern of
 
 goExpression ::
   forall r.
-  (Members '[State DependencyGraph, State StartNodes, Reader ExportsTable] r) =>
+  (Members '[State DependencyGraph, State StartNodes, State BuilderState, Reader ExportsTable] r) =>
   Maybe Name ->
   Expression ->
   Sem r ()
@@ -272,7 +320,7 @@ goExpression p e = case e of
       LetMutualBlock MutualBlockLet {..} -> mapM_ goFunctionDefHelper _mutualLet
 
 goInductiveParameter ::
-  (Members '[State DependencyGraph, State StartNodes, Reader ExportsTable] r) =>
+  (Members '[State DependencyGraph, State StartNodes, State BuilderState, Reader ExportsTable] r) =>
   Maybe Name ->
   InductiveParameter ->
   Sem r ()
@@ -280,7 +328,7 @@ goInductiveParameter p param =
   addEdgeMay p (param ^. inductiveParamName)
 
 goFunctionParameter ::
-  (Members '[State DependencyGraph, State StartNodes, Reader ExportsTable] r) =>
+  (Members '[State DependencyGraph, State StartNodes, State BuilderState, Reader ExportsTable] r) =>
   Maybe Name ->
   FunctionParameter ->
   Sem r ()

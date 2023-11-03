@@ -107,6 +107,8 @@ data BuiltinFunction
   | BuiltinIntNonNeg
   | BuiltinIntLe
   | BuiltinIntLt
+  | BuiltinFromNat
+  | BuiltinFromInt
   | BuiltinSeq
   deriving stock (Show, Eq, Ord, Enum, Bounded, Generic, Data)
 
@@ -138,6 +140,8 @@ instance Pretty BuiltinFunction where
     BuiltinIntNonNeg -> Str.intNonNeg
     BuiltinIntLe -> Str.intLe
     BuiltinIntLt -> Str.intLt
+    BuiltinFromNat -> Str.fromNat
+    BuiltinFromInt -> Str.fromInt
     BuiltinSeq -> Str.builtinSeq
 
 data BuiltinAxiom
@@ -224,5 +228,11 @@ isIntBuiltin = \case
   BuiltinIntLt -> True
   _ -> False
 
+isCastBuiltin :: BuiltinFunction -> Bool
+isCastBuiltin = \case
+  BuiltinFromNat -> True
+  BuiltinFromInt -> True
+  _ -> False
+
 isIgnoredBuiltin :: BuiltinFunction -> Bool
-isIgnoredBuiltin f = not (isNatBuiltin f) && not (isIntBuiltin f)
+isIgnoredBuiltin f = not (isNatBuiltin f) && not (isIntBuiltin f) && not (isCastBuiltin f)

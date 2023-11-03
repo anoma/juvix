@@ -614,9 +614,6 @@ genWildcard loc impl = do
   var <- varFromWildcard (Wildcard loc)
   return (PatternArg impl Nothing (PatternVariable var))
 
-freshWildcard :: (Members '[NameIdGen] r) => Interval -> Sem r Hole
-freshWildcard l = mkHole l <$> freshNameId
-
 freshHole :: (Members '[NameIdGen] r) => Interval -> Sem r Hole
 freshHole l = mkHole l <$> freshNameId
 

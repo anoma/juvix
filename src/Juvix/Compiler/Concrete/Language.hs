@@ -242,7 +242,8 @@ deriving stock instance Ord (Statement 'Scoped)
 data ProjectionDef s = ProjectionDef
   { _projectionConstructor :: S.Symbol,
     _projectionField :: SymbolType s,
-    _projectionFieldIx :: Int
+    _projectionFieldIx :: Int,
+    _projectionFieldBuiltin :: Maybe (WithLoc BuiltinFunction)
   }
 
 deriving stock instance Show (ProjectionDef 'Parsed)
@@ -595,7 +596,8 @@ deriving stock instance Ord (RecordDefineField 'Scoped)
 data RecordField (s :: Stage) = RecordField
   { _fieldName :: SymbolType s,
     _fieldColon :: Irrelevant (KeywordRef),
-    _fieldType :: ExpressionType s
+    _fieldType :: ExpressionType s,
+    _fieldBuiltin :: Maybe (WithLoc BuiltinFunction)
   }
 
 deriving stock instance Show (RecordField 'Parsed)

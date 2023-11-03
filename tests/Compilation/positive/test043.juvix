@@ -16,6 +16,6 @@ builtin seq
 seq : {A B : Type} → A → B → B
   | x y := y;
 
-f : Nat := seq (trace "a") 1;
+f : Nat := seq (trace "a") (suc zero);
 
 main : Nat := f;

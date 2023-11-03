@@ -371,6 +371,9 @@ registerIntLt :: forall r. (Members '[Builtins, NameIdGen] r) => FunctionDef -> 
 registerIntLt f = do
   int <- builtinName BuiltinInt
   bool_ <- builtinName BuiltinBool
+  ofNat <- toExpression <$> builtinName BuiltinIntOfNat
+  suc <- toExpression <$> getBuiltinName (getLoc f) BuiltinNatSuc
+  zero <- toExpression <$> getBuiltinName (getLoc f) BuiltinNatZero
   intLe <- toExpression <$> builtinName BuiltinIntLe
   intPlus <- toExpression <$> builtinName BuiltinIntPlus
   let l = getLoc f
@@ -380,7 +383,7 @@ registerIntLt f = do
       (.+.) :: (IsExpression a, IsExpression b) => a -> b -> Expression
       x .+. y = intPlus @@ x @@ y
       (.<=.) :: (IsExpression a, IsExpression b) => a -> b -> Expression
-      lit1 = ExpressionLiteral (WithLoc (getLoc f) (LitInteger 1))
+      lit1 = ofNat @@ (suc @@ zero)
       x .<=. y = intLe @@ x @@ y
       m = toExpression varm
       n = toExpression varn
@@ -399,3 +402,7 @@ registerIntLt f = do
   where
     builtinName :: (IsBuiltin a) => a -> Sem r Name
     builtinName = getBuiltinName (getLoc f)
+
+registerFromInt :: (Members '[Builtins, NameIdGen] r) => FunctionDef -> Sem r ()
+registerFromInt f = do
+  registerBuiltin BuiltinFromInt (f ^. funDefName)

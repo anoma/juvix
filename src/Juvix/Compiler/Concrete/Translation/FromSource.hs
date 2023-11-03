@@ -495,6 +495,11 @@ builtinStatement = do
     <|> (builtinFunction >>= fmap StatementFunctionDef . builtinFunctionDef)
     <|> (builtinAxiom >>= fmap StatementAxiom . builtinAxiomDef)
 
+builtinRecordField :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (WithLoc BuiltinFunction)
+builtinRecordField = do
+  void (kw kwBuiltin)
+  builtinFunction
+
 --------------------------------------------------------------------------------
 -- Syntax declaration
 --------------------------------------------------------------------------------
@@ -1265,6 +1270,7 @@ rhsGadt = P.label "<constructor gadt>" $ do
 
 recordField :: (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (RecordField 'Parsed)
 recordField = do
+  _fieldBuiltin <- optional builtinRecordField
   _fieldName <- symbol
   _fieldColon <- Irrelevant <$> kw kwColon
   _fieldType <- parseExpressionAtoms

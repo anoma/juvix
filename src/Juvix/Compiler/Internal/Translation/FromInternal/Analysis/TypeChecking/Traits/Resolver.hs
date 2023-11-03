@@ -246,6 +246,6 @@ lookupInstance ::
 lookupInstance ctab tab ty = do
   case traitFromExpression mempty ty of
     Just InstanceApp {..} ->
-      lookupInstance' [] True ctab tab _instanceAppHead _instanceAppArgs
+      lookupInstance' [] False ctab tab _instanceAppHead _instanceAppArgs
     _ ->
       return []

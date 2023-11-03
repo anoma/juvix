@@ -8,6 +8,8 @@ tests:
       - core
       - from-concrete
       - --eval
+      - --transforms
+      - eta-expand-apps
     args:
       - positive/Internal/LiteralInt.juvix
     stdout: |
@@ -22,7 +24,7 @@ tests:
       - from-concrete
       - --eval
       - --transforms
-      - nat-to-primint
+      - eta-expand-apps,nat-to-primint
     args:
       - positive/Internal/LiteralInt.juvix
     stdout: |
@@ -36,6 +38,8 @@ tests:
       - core
       - from-concrete
       - --eval
+      - --transforms
+      - eta-expand-apps
       - --symbol-name
       - f
     args:

@@ -1,6 +1,6 @@
 module Records2;
 
-import Stdlib.Data.Nat.Base open;
+import Stdlib.Data.Nat open;
 
 type Pair (A B : Type) :=
   mkPair {

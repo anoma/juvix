@@ -453,6 +453,16 @@ tests:
       contains: "true"
     exit-status: 0
 
+  - name: literal-comparison
+    command:
+      - juvix
+      - repl
+    stdin: |
+      1 == 1
+    stdout:
+      contains: "true"
+    exit-status: 0
+
   - name: open-import-from-stdlib
     command:
       - juvix

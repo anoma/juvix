@@ -137,8 +137,12 @@ type LiteralLoc = WithLoc Literal
 
 data Literal
   = LitString Text
-  | LitInteger Integer
-  | LitNatural Integer
+  | -- | `LitNumeric` represents a numeric literal of undetermined type
+    LitNumeric Integer
+  | -- | `LitInteger` represents a literal of type `Int`
+    LitInteger Integer
+  | -- | `LitNatural` represents a literal of type `Nat`
+    LitNatural Integer
   deriving stock (Show, Eq, Ord, Generic, Data)
 
 instance Hashable Literal
@@ -390,6 +394,7 @@ instance HasAtomicity Let where
 
 instance HasAtomicity Literal where
   atomicity = \case
+    LitNumeric {} -> Atom
     LitNatural {} -> Atom
     LitInteger {} -> Atom
     LitString {} -> Atom

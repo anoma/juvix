@@ -1,7 +1,7 @@
 -- Default values inserted in the translation FromConcrete
 module test067;
 
-import Stdlib.Data.Nat.Base open;
+import Stdlib.Data.Nat open;
 
 f {a : Nat := 2} {b : Nat := a + 1} {c : Nat} : Nat := a * b * c;
 

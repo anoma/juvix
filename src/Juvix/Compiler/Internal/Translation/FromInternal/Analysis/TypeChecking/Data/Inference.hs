@@ -15,6 +15,7 @@ module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Da
     runInferenceDef,
     rememberFunctionDef,
     matchTypes,
+    queryMetavarFinal,
   )
 where
 
@@ -116,6 +117,13 @@ getMetavar :: (Member (State InferenceState) r) => Hole -> Sem r MetavarState
 getMetavar h = do
   void (queryMetavar' h)
   gets (fromJust . (^. inferenceMap . at h))
+
+queryMetavarFinal :: (Member Inference r) => Hole -> Sem r (Maybe Expression)
+queryMetavarFinal h = do
+  m <- queryMetavar h
+  case m of
+    Just (ExpressionHole h') -> queryMetavarFinal h'
+    _ -> return m
 
 strongNormalize' :: forall r. (Members '[State FunctionsTable, State InferenceState] r) => Expression -> Sem r Expression
 strongNormalize' = go
