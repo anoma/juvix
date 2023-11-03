@@ -4,6 +4,7 @@ module Juvix.Compiler.Pipeline.Package
     readPackageIO,
     readGlobalPackageIO,
     readGlobalPackage,
+    loadPackageFileIO,
   )
 where
 
@@ -122,6 +123,13 @@ readPackageFile root buildDir f = mapError (JuvixError @PackageLoaderError) $ do
   mLockfile <- mayReadLockfile root
   checkNoDuplicateDepNames f (pkg ^. packageDependencies)
   return (pkg {_packageLockfile = mLockfile})
+
+loadPackageFileIO :: (Members '[Error JuvixError, Embed IO] r) => Path Abs Dir -> BuildDir -> Sem r Package
+loadPackageFileIO root buildDir =
+  runFilesIO
+    . mapError (JuvixError @PackageLoaderError)
+    . runEvalFileEffIO
+    $ loadPackage buildDir (mkPackagePath root)
 
 readPackageIO :: Path Abs Dir -> BuildDir -> IO Package
 readPackageIO root buildDir =

@@ -1,31 +1,37 @@
-module Juvix.Compiler.Pipeline.Package.Loader where
+module Juvix.Compiler.Pipeline.Package.Loader
+  ( module Juvix.Compiler.Pipeline.Package.Loader,
+    module Juvix.Compiler.Pipeline.Package.Loader.Versions,
+  )
+where
 
 import Data.FileEmbed qualified as FE
 import Data.Versions
-import Juvix.Compiler.Core.Language
+import Juvix.Compiler.Concrete.Gen
+import Juvix.Compiler.Concrete.Language
+import Juvix.Compiler.Concrete.Translation.FromSource hiding (symbol)
+import Juvix.Compiler.Core.Language qualified as Core
 import Juvix.Compiler.Core.Language.Value
 import Juvix.Compiler.Pipeline.Package.Base
 import Juvix.Compiler.Pipeline.Package.Loader.Error
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff
+import Juvix.Compiler.Pipeline.Package.Loader.Versions
 import Juvix.Extra.Paths
 import Juvix.Extra.Strings qualified as Str
-import Language.Haskell.TH.Syntax
+import Juvix.Prelude
+import Language.Haskell.TH.Syntax hiding (Module)
+import System.FilePath qualified as FP
 
--- | The names of the Package type name in every version of the PackageDescription module
-packageDescriptionTypes :: [(Path Rel File, Text)]
-packageDescriptionTypes = [(v1PackageDescriptionFile, "Package")]
-
-acceptableTypes :: (Member Files r) => Sem r [TypeSpec]
-acceptableTypes = do
-  globalPackageDir <- globalPackageDescriptionRoot
-  return (go . first (globalPackageDir <//>) <$> packageDescriptionTypes)
+acceptableTypes :: forall r. (Member Files r) => Sem r [TypeSpec]
+acceptableTypes = mapM go packageDescriptionTypes
   where
-    go :: (Path Abs File, Text) -> TypeSpec
-    go (p, typeName) =
-      TypeSpec
-        { _typeSpecName = typeName,
-          _typeSpecFile = p
-        }
+    go :: PackageDescriptionType -> Sem r TypeSpec
+    go t = do
+      globalPackageDir <- globalPackageDescriptionRoot
+      return
+        TypeSpec
+          { _typeSpecName = t ^. packageDescriptionTypeName,
+            _typeSpecFile = globalPackageDir <//> (t ^. packageDescriptionTypePath)
+          }
 
 -- | Load a package file in the context of the PackageDescription module and the global package stdlib.
 loadPackage :: (Members '[Files, EvalFileEff, Error PackageLoaderError] r) => BuildDir -> Path Abs File -> Sem r Package
@@ -40,7 +46,7 @@ loadPackage buildDir packagePath = do
     -- This function also checks that the type of the identifier is among the
     -- expected types from the specific PackageDescription modules that are
     -- provided by the PathResolver.
-    getPackageNode :: forall r. (Members '[Files, EvalEff] r) => Sem r Node
+    getPackageNode :: forall r. (Members '[Files, EvalEff] r) => Sem r Core.Node
     getPackageNode = do
       n <- lookupIdentifier Str.package
       acceptableTypes >>= assertNodeType n
@@ -95,12 +101,12 @@ toPackage buildDir packagePath = \case
 
     toText :: Value -> Sem r Text
     toText = \case
-      ValueConstant (ConstString s) -> return s
+      ValueConstant (Core.ConstString s) -> return s
       _ -> err
 
     toInteger' :: Value -> Sem r Integer
     toInteger' = \case
-      ValueConstant (ConstInteger i) -> return i
+      ValueConstant (Core.ConstInteger i) -> return i
       _ -> err
 
     toWord :: Value -> Sem r Word
@@ -152,9 +158,85 @@ toPackage buildDir packagePath = \case
         p :: SomeBase Dir
         p = resolveBuildDir buildDir <///> relStdlibDir
 
+toConcrete :: PackageDescriptionType -> Package -> Module 'Parsed 'ModuleTop
+toConcrete t p = run . runReader l $ do
+  packageSymbol <- symbol "Package"
+  importModuleSymbols <- mapM symbol (pack . FP.dropExtension <$> FP.splitDirectories (toFilePath (t ^. packageDescriptionTypePath)))
+  let _importModule :: TopModulePath = mkTopModulePath (fromJust (nonEmpty importModuleSymbols))
+  _moduleBody :: [Statement 'Parsed] <- do
+    stdlib <- maybeToList <$> stdlibImport
+    body <- sequence [mkImport _importModule, funDef]
+    return (stdlib <> body)
+  _moduleKw <- kw kwModule
+  let _modulePath = mkTopModulePath (packageSymbol :| [])
+  return
+    Module
+      { _moduleKwEnd = (),
+        _moduleInductive = (),
+        _moduleDoc = Nothing,
+        _modulePragmas = Nothing,
+        ..
+      }
+  where
+    funDef :: (Member (Reader Interval) r) => Sem r (Statement 'Parsed)
+    funDef = do
+      packageTypeIdentifier <- identifier (t ^. packageDescriptionTypeName)
+      _signRetType <- Just <$> expressionAtoms' (packageTypeIdentifier :| [])
+      _signName <- symbol Str.package
+      _signColonKw <- Irrelevant . Just <$> kw kwColon
+      let _signBody = (t ^. packageDescriptionTypeTransform) p
+      return
+        ( StatementFunctionDef
+            FunctionDef
+              { _signTerminating = Nothing,
+                _signPragmas = Nothing,
+                _signInstance = Nothing,
+                _signDoc = Nothing,
+                _signCoercion = Nothing,
+                _signBuiltin = Nothing,
+                _signArgs = [],
+                ..
+              }
+        )
+
+    stdlibImport :: (Member (Reader Interval) r) => Sem r (Maybe (Statement 'Parsed))
+    stdlibImport
+      | (t ^. packageDescriptionTypeNeedsStdlibImport) p = Just <$> mkStdlibImport
+      | otherwise = return Nothing
+
+    mkImport :: (Member (Reader Interval) r) => TopModulePath -> Sem r (Statement 'Parsed)
+    mkImport _importModule = do
+      _openModuleKw <- kw kwOpen
+      _importKw <- kw kwImport
+      return
+        ( StatementImport
+            Import
+              { _importOpen =
+                  Just
+                    OpenModuleParams
+                      { _openUsingHiding = Nothing,
+                        _openPublicKw = Irrelevant Nothing,
+                        _openPublic = NoPublic,
+                        ..
+                      },
+                _importAsName = Nothing,
+                ..
+              }
+        )
+
+    mkStdlibImport :: (Member (Reader Interval) r) => Sem r (Statement 'Parsed)
+    mkStdlibImport = do
+      stdlibSymbol <- symbol "Stdlib"
+      preludeSymbol <- symbol "Prelude"
+      mkImport (mkTopModulePath (stdlibSymbol :| [preludeSymbol]))
+
+    l :: Interval
+    l = singletonInterval (mkInitialLoc (p ^. packageFile))
+
 packageDescriptionDir' :: Path Abs Dir
 packageDescriptionDir' =
   $( FE.makeRelativeToProject (toFilePath packageDescriptionDir)
-       >>= runIO . parseAbsDir
+       >>= runIO
+         . parseAbsDir
        >>= lift
    )

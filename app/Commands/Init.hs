@@ -1,9 +1,11 @@
 module Commands.Init where
 
 import Data.Text qualified as Text
+import Data.Text.IO.Utf8 qualified as Utf8
 import Data.Versions
-import Data.Yaml (encodeFile)
+import Juvix.Compiler.Concrete.Print (ppOutDefaultNoComments)
 import Juvix.Compiler.Pipeline.Package
+import Juvix.Compiler.Pipeline.Package.Loader
 import Juvix.Data.Effect.Fail.Extra qualified as Fail
 import Juvix.Extra.Paths
 import Juvix.Prelude
@@ -26,18 +28,32 @@ init = do
   say "✨ Your next Juvix adventure is about to begin! ✨"
   say "I will help you set it up"
   pkg <- getPackage
-  say ("creating " <> pack (toFilePath juvixYamlFile))
-  embed (encodeFile (toFilePath juvixYamlFile) (rawPackage pkg))
+  say ("creating " <> pack (toFilePath packageFilePath))
+  embed (Utf8.writeFile @IO (toFilePath packageFilePath) (renderPackage pkg))
+  checkPackage
   say "you are all set"
+  where
+    renderPackage :: Package -> Text
+    renderPackage pkg = toPlainText (ppOutDefaultNoComments (toConcrete v1PackageDescriptionType pkg))
 
 checkNotInProject :: forall r. (Members '[Embed IO] r) => Sem r ()
 checkNotInProject =
-  whenM (doesFileExist juvixYamlFile) err
+  whenM (orM [doesFileExist juvixYamlFile, doesFileExist packageFilePath]) err
   where
     err :: Sem r ()
     err = do
       say "You are already in a Juvix project"
       embed exitFailure
+
+checkPackage :: forall r. (Members '[Embed IO] r) => Sem r ()
+checkPackage = do
+  cwd <- getCurrentDir
+  ep <- runError @JuvixError (loadPackageFileIO cwd DefaultBuildDir)
+  case ep of
+    Left {} -> do
+      say "Package.juvix is invalid. Please raise an issue at https://github.com/anoma/juvix/issues"
+      embed exitFailure
+    Right {} -> return ()
 
 getPackage :: forall r. (Members '[Embed IO] r) => Sem r Package
 getPackage = do

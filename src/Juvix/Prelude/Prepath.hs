@@ -7,6 +7,7 @@ module Juvix.Prelude.Prepath
     prepathToAbsFile,
     prepathToFilePath,
     preFileFromAbs,
+    unsafePrepathToFilePath,
   )
 where
 
@@ -124,3 +125,6 @@ fromPreFileOrDir cwd fp = do
 
 preFileFromAbs :: Path Abs File -> Prepath File
 preFileFromAbs = mkPrepath . toFilePath
+
+unsafePrepathToFilePath :: Prepath a -> FilePath
+unsafePrepathToFilePath (Prepath p) = p
