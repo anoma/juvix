@@ -12,4 +12,3 @@ if : {A : Type} -> Bool -> A -> A -> A
 
 f : Bool -> Bool
   | x := if x;
-

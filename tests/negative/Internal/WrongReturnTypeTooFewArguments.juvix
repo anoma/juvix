@@ -1,4 +1,3 @@
 module WrongReturnTypeTooFewArguments;
 
 type A (B : Type) := c : A;
-

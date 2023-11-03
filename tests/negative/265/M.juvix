@@ -10,4 +10,3 @@ type Pair (A : Type) (B : Type) :=
 f : _ → _
   | (mkPair false true) := true
   | true := false;
-

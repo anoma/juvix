@@ -6,4 +6,3 @@ type Nat :=
 
 fun : Nat -> Nat
   | (S {S {x}}) := x;
-

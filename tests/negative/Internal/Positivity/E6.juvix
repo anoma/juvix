@@ -3,4 +3,3 @@ module E6;
 axiom A : Type;
 
 type T (A : Type) := c : (A -> A -> T A -> A) -> T A;
-

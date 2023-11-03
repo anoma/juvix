@@ -4,4 +4,3 @@ import Other;
 import U;
 
 u : Other.Unit := U.t;
-

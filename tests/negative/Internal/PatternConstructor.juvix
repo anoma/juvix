@@ -6,4 +6,3 @@ type B := b : B;
 
 f : A → B
   | b := b;
-

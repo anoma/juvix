@@ -11,4 +11,3 @@ f : (A : Type) → Tree A → Tree A → Tree A
 g : (A : Type) → Tree A → Tree A → Tree A
   | A x leaf := x
   | A x (branch y z) := g A z (g A x y);
-

@@ -8,4 +8,3 @@ f : A -> A -> A
 
 g : A -> A -> A
   | x y := f x x;
-

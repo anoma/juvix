@@ -6,4 +6,3 @@ alias : Type -> Type -> Type
   | A B := A -> B;
 
 type T1 := c : alias T1 T1 -> _;
-
