@@ -81,6 +81,6 @@ tests =
       "TrailingWhitespace"
       $(mkRelDir ".")
       $(mkRelFile "LocalModWithAxiom.juvix")
-      (Just $(mkRelFile "LocalModWithAxiom.formatted.juvix"))
+      (Just $(mkRelFile "LocalModWithAxiom.juvix.formatted"))
       True
   ]

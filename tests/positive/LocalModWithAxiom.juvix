@@ -1,21 +1,29 @@
 {-# format: false #-}
-module LocalModWithAxiom;                                  
-       
-module A;    
-  
-  axiom B : Type;
+module LocalModWithAxiom;                
+
+module A;                    
           
-end;
-
+  axiom B : Type;           
+         
+end;         
+      
 module C;
+
+
   
-  axiom D : Type;        
-
+  axiom D : Type;
+   
   module E;
-    
-    axiom F : Type;    
 
-  end;    
-             
+
+    
+    axiom F : Type;  
+   
+  end;  
+  
 end;
+   
+
+
+
    

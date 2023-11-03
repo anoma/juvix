@@ -24,9 +24,6 @@ defaultLayoutOptions =
     { layoutPageWidth = AvailablePerLine 150 0.4
     }
 
-rTW :: Doc a -> SimpleDocStream a
-rTW = removeTrailingWhitespace . layoutPretty defaultLayoutOptions
-
 class HasAnsiBackend a where
   toAnsiStream :: a -> SimpleDocStream Ansi.AnsiStyle
   toAnsiStream = layoutPretty defaultLayoutOptions . toAnsiDoc
@@ -127,7 +124,12 @@ toPlainText :: (HasTextBackend a) => a -> Text
 toPlainText = Text.renderStrict . toTextStream
 
 toPlainTextTrim :: (HasTextBackend a) => a -> Text
-toPlainTextTrim = Text.renderStrict . rTW . toTextDoc
+toPlainTextTrim =
+  Text.unlines
+    . map Text.stripEnd
+    . dropWhile Text.null
+    . Text.lines
+    . toPlainText
 
 prettyText :: (Pretty a) => a -> Text
 prettyText = Text.renderStrict . layoutPretty defaultLayoutOptions . pretty
