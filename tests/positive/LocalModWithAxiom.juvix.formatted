@@ -1,4 +1,10 @@
-{-# format: false #-}
+-- Hola
+
+{-- This is Judoc block comment --}
+
+-- Bonjour
+
+{-# format : false #-}
 module LocalModWithAxiom;
 
 module A;
@@ -18,4 +24,3 @@ module C;
   end;
 
 end;
-

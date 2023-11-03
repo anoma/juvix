@@ -3,4 +3,3 @@ module E9;
 type B := b : B;
 
 type T := c : ((B → T) -> T) -> T;
-

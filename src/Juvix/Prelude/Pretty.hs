@@ -127,6 +127,7 @@ toPlainTextTrim :: (HasTextBackend a) => a -> Text
 toPlainTextTrim =
   Text.unlines
     . map Text.stripEnd
+    . dropWhileEnd Text.null
     . dropWhile Text.null
     . Text.lines
     . toPlainText

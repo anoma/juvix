@@ -2,4 +2,3 @@ module ImplicitPatternLeftApplication;
 
 f : {A : Type} -> A -> A
   | ({x} y) := y;
-

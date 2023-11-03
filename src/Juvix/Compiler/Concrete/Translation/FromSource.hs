@@ -182,7 +182,7 @@ topModuleDef ::
   (Members '[Error ParserError, Files, PathResolver, InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
   ParsecS r (Module 'Parsed 'ModuleTop)
 topModuleDef = do
-  optional_ stashJudoc
+  space >> optional_ stashJudoc
   optional_ stashPragmas
   m <- top moduleDef
   P.lift (checkPath (m ^. modulePath))

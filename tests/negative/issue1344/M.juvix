@@ -5,4 +5,3 @@ import Other;
 type Unit := t : Unit;
 
 u : Other.Unit := t;
-

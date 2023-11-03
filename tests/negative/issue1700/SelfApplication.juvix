@@ -4,4 +4,3 @@ module SelfApplication;
 import Stdlib.Prelude open;
 
 main : IO := printNatLn (λ {x := x x} id (3 + 4));
-

@@ -1,4 +1,3 @@
 module Foo;
 
 import Foo.Data.Bool open;
-
