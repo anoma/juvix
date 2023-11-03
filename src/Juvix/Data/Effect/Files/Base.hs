@@ -31,7 +31,6 @@ data Files m a where
   EnsureDir' :: Path Abs Dir -> Files m ()
   DirectoryExists' :: Path Abs Dir -> Files m Bool
   FileExists' :: Path Abs File -> Files m Bool
-  GetDirAbsPath :: Path Rel Dir -> Files m (Path Abs Dir)
   ListDirRel :: Path Abs Dir -> Files m ([Path Rel Dir], [Path Rel File])
   PathUid :: Path Abs b -> Files m Uid
   ReadFile' :: Path Abs File -> Files m Text
