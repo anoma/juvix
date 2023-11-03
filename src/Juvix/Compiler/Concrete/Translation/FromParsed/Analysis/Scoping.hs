@@ -2158,12 +2158,13 @@ checkExpressionAtom e = case e of
 
 checkNamedApplicationNew :: forall r. (Members '[Error ScoperError, State Scope, State ScoperState, Reader ScopeParameters, InfoTableBuilder, NameIdGen] r) => NamedApplicationNew 'Parsed -> Sem r (NamedApplicationNew 'Scoped)
 checkNamedApplicationNew napp = do
+  let nargs = napp ^. namedApplicationNewArguments
   aname <- checkScopedIden (napp ^. namedApplicationNewName)
-  sig <- getNameSignature aname
+  sig <- if null nargs then return $ NameSignature [] else getNameSignature aname
   let snames = HashSet.fromList (concatMap (HashMap.keys . (^. nameBlock)) (sig ^. nameSignatureArgs))
   args' <- withLocalScope . localBindings . ignoreSyntax $ do
-    mapM_ (reserveFunctionSymbol . (^. namedArgumentNewFunDef)) (napp ^. namedApplicationNewArguments)
-    mapM (checkNamedArgumentNew snames) (napp ^. namedApplicationNewArguments)
+    mapM_ (reserveFunctionSymbol . (^. namedArgumentNewFunDef)) nargs
+    mapM (checkNamedArgumentNew snames) nargs
   let enames = HashSet.fromList (concatMap (HashMap.keys . (^. nameBlock)) (filter (not . isImplicitOrInstance . (^. nameImplicit)) (sig ^. nameSignatureArgs)))
       sargs = HashSet.fromList (map (^. namedArgumentNewFunDef . signName . nameConcrete) (toList args'))
       missingArgs = HashSet.difference enames sargs
