@@ -11,7 +11,8 @@ data PosTest = PosTest
   { _name :: String,
     _dir :: Path Abs Dir,
     _file :: Path Abs File,
-    _expectedFile :: Maybe (Path Abs File)
+    _expectedFile :: Maybe (Path Abs File),
+    _force :: Bool
   }
 
 makeLenses ''PosTest
@@ -19,8 +20,8 @@ makeLenses ''PosTest
 root :: Path Abs Dir
 root = relToProject $(mkRelDir "tests/positive")
 
-posTest :: String -> Path Rel Dir -> Path Rel File -> Maybe (Path Rel File) -> PosTest
-posTest _name rdir rfile efile =
+posTest :: String -> Path Rel Dir -> Path Rel File -> Maybe (Path Rel File) -> Bool -> PosTest
+posTest _name rdir rfile efile _force =
   let _dir = root <//> rdir
       _file = _dir <//> rfile
       _expectedFile = (_dir <//>) <$> efile
@@ -51,14 +52,13 @@ testDescr PosTest {..} =
                   Concrete.fromParsed p
               )
 
+        let formatted = formatScoperResult' _force original s
         case _expectedFile of
           Nothing -> do
-            let formatted = formatScoperResult' False original s
             step "Format"
             assertEqDiffText "check: pretty . scope . parse = id" original formatted
           Just eFile -> do
             step "Checking against expected output file"
-            let formatted = formatScoperResult' True original s
             expFile :: Text <- readFile (toFilePath eFile)
             assertEqDiffText "Compare to expected output" formatted expFile
     }
@@ -75,10 +75,12 @@ tests =
       "Format"
       $(mkRelDir ".")
       $(mkRelFile "Format.juvix")
-      Nothing,
+      Nothing
+      False,
     posTest
       "TrailingWhitespace"
       $(mkRelDir ".")
       $(mkRelFile "LocalModWithAxiom.juvix")
-      (Just $(mkRelFile "LocalModWithAxiom.o"))
+      (Just $(mkRelFile "LocalModWithAxiom.formatted.juvix"))
+      True
   ]
