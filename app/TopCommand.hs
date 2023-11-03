@@ -30,7 +30,7 @@ runTopCommand = \case
   DisplayNumericVersion -> embed runDisplayNumericVersion
   DisplayHelp -> embed showHelpText
   Doctor opts -> runLogIO (Doctor.runCommand opts)
-  Init -> runLogIO Init.init
+  Init opts -> runLogIO (Init.init opts)
   Dev opts -> Dev.runCommand opts
   Typecheck opts -> Typecheck.runCommand opts
   Compile opts -> Compile.runCommand opts

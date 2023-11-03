@@ -1,5 +1,6 @@
 module Commands.Init where
 
+import Commands.Init.Options
 import Data.Text qualified as Text
 import Data.Text.IO.Utf8 qualified as Utf8
 import Data.Versions
@@ -21,16 +22,32 @@ parse p t = mapLeft ppErr (P.runParser p "<stdin>" t)
 ppErr :: P.ParseErrorBundle Text Void -> Text
 ppErr = pack . errorBundlePretty
 
-init :: forall r. (Members '[Embed IO] r) => Sem r ()
-init = do
+init :: forall r. (Members '[Embed IO] r) => InitOptions -> Sem r ()
+init opts = do
   checkNotInProject
-  say "✨ Your next Juvix adventure is about to begin! ✨"
-  say "I will help you set it up"
-  pkg <- getPackage
-  say ("creating " <> pack (toFilePath packageFilePath))
-  embed (Utf8.writeFile @IO (toFilePath packageFilePath) (renderPackageVersion PackageVersion1 pkg))
+  pkg <-
+    if
+        | isInteractive -> do
+            say "✨ Your next Juvix adventure is about to begin! ✨"
+            say "I will help you set it up"
+            getPackage
+        | otherwise -> do
+            cwd <- getCurrentDir
+            projectName <- getDefaultProjectName
+            let emptyPkg = emptyPackage DefaultBuildDir (cwd <//> packageFilePath)
+            return $ case projectName of
+              Nothing -> emptyPkg
+              Just n -> emptyPkg {_packageName = n}
+  when isInteractive (say ("creating " <> pack (toFilePath packageFilePath)))
+  writePackage pkg
   checkPackage
-  say "you are all set"
+  when isInteractive (say "you are all set")
+  where
+    writePackage :: Package -> Sem r ()
+    writePackage pkg = embed (Utf8.writeFile @IO (toFilePath packageFilePath) (renderPackageVersion PackageVersion1 pkg))
+
+    isInteractive :: Bool
+    isInteractive = not (opts ^. initOptionsNonInteractive)
 
 checkNotInProject :: forall r. (Members '[Embed IO] r) => Sem r ()
 checkNotInProject =
@@ -68,9 +85,14 @@ getPackage = do
         _packageLockfile = Nothing
       }
 
+getDefaultProjectName :: (Member (Embed IO) r) => Sem r (Maybe Text)
+getDefaultProjectName = runFail $ do
+  dir <- map toLower . dropTrailingPathSeparator . toFilePath . dirname <$> getCurrentDir
+  Fail.fromRight (parse projectNameParser (pack dir))
+
 getProjName :: forall r. (Members '[Embed IO] r) => Sem r Text
 getProjName = do
-  d <- getDefault
+  d <- getDefaultProjectName
   let defMsg :: Text
       defMsg = case d of
         Nothing -> mempty
@@ -82,10 +104,6 @@ getProjName = do
     )
   readName d
   where
-    getDefault :: Sem r (Maybe Text)
-    getDefault = runFail $ do
-      dir <- map toLower . dropTrailingPathSeparator . toFilePath . dirname <$> getCurrentDir
-      Fail.fromRight (parse projectNameParser (pack dir))
     readName :: Maybe Text -> Sem r Text
     readName def = go
       where
