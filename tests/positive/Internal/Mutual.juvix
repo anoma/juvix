@@ -13,11 +13,11 @@ not : _
   | true := false;
 
 odd : _
-  
+
   | zero := false
   | (suc n) := even n;
 
 even : _
-  
+
   | zero := true
   | (suc n) := odd n;

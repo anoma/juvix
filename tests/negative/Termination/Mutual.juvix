@@ -3,7 +3,7 @@ module Mutual;
 axiom A : Type;
 
 f : A -> A -> A
-  
+
   | x y := g x (f x x);
 
 g : A -> A -> A

@@ -9,13 +9,15 @@ trait
 type T2 A := mkT2 {pp : A -> A};
 
 coercion instance
-fromT1toT2 {A} {{T1 A}} : T2 A := mkT2@{
-  pp := T1.pp
-};
+fromT1toT2 {A} {{T1 A}} : T2 A :=
+  mkT2@{
+    pp := T1.pp
+  };
 
 coercion instance
-fromT2toT1 {A} {{T2 A}} : T1 A := mkT1@{
-  pp := T2.pp
-};
+fromT2toT1 {A} {{T2 A}} : T1 A :=
+  mkT1@{
+    pp := T2.pp
+  };
 
 main : Unit := T1.pp unit;

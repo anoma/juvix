@@ -70,6 +70,9 @@ doc opts cs x = docHelper (Just (fileComments file cs)) opts x
     file :: Path Abs File
     file = getLoc x ^. intervalFile
 
+docDefault :: (PrettyPrint c, HasLoc c) => Comments -> c -> Doc Ann
+docDefault cs = doc defaultOptions cs
+
 ppModulePathType ::
   forall t s r.
   (SingI t, SingI s, Members '[ExactPrint, Reader Options] r) =>

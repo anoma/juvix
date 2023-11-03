@@ -4,10 +4,9 @@ import Commands.Base
 import Commands.Format.Options
 import Data.Text qualified as Text
 import Juvix.Formatter
-import Juvix.Prelude.Pretty
 
 data FormatNoEditRenderMode
-  = ReformattedFile (NonEmpty AnsiText)
+  = ReformattedFile Text
   | InputPath (Path Abs File)
   | Silent
 
@@ -72,9 +71,9 @@ renderModeFromOptions target opts formattedInfo
   | opts ^. formatInPlace = whenContentsModified (EditInPlace formattedInfo)
   | opts ^. formatCheck = NoEdit Silent
   | otherwise = case target of
-      TargetFile {} -> NoEdit (ReformattedFile (formattedInfo ^. formattedFileInfoContentsAnsi))
+      TargetFile {} -> NoEdit (ReformattedFile (formattedInfo ^. formattedFileInfoContents))
       TargetProject {} -> whenContentsModified (NoEdit (InputPath (formattedInfo ^. formattedFileInfoPath)))
-      TargetStdin -> NoEdit (ReformattedFile (formattedInfo ^. formattedFileInfoContentsAnsi))
+      TargetStdin -> NoEdit (ReformattedFile (formattedInfo ^. formattedFileInfoContents))
   where
     whenContentsModified :: FormatRenderMode -> FormatRenderMode
     whenContentsModified res
@@ -91,9 +90,9 @@ renderFormattedOutput target opts fInfo = do
       EditInPlace i@FormattedFileInfo {..} ->
         runTempFileIO
           . restoreFileOnError _formattedFileInfoPath
-          $ writeFile' _formattedFileInfoPath (i ^. formattedFileInfoContentsText)
+          $ writeFile' _formattedFileInfoPath (i ^. formattedFileInfoContents)
       NoEdit m -> case m of
-        ReformattedFile ts -> forM_ ts renderStdOut
+        ReformattedFile ts -> renderStdOut ts
         InputPath p -> say (pack (toFilePath p))
         Silent -> return ()
 

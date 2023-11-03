@@ -1,19 +1,18 @@
 module Juvix.Formatter where
 
 import Data.List.NonEmpty qualified as NonEmpty
-import Data.Text qualified as T
 import Juvix.Compiler.Concrete.Language
-import Juvix.Compiler.Concrete.Print (ppOutDefault)
+import Juvix.Compiler.Concrete.Print (docDefault)
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromSource.Data.Context
 import Juvix.Compiler.Pipeline.EntryPoint
+import Juvix.Data.CodeAnn
 import Juvix.Extra.Paths
 import Juvix.Prelude
-import Juvix.Prelude.Pretty
 
 data FormattedFileInfo = FormattedFileInfo
   { _formattedFileInfoPath :: Path Abs File,
-    _formattedFileInfoContentsAnsi :: NonEmpty AnsiText,
+    _formattedFileInfoContents :: Text,
     _formattedFileInfoContentsModified :: Bool
   }
 
@@ -40,18 +39,6 @@ instance Semigroup FormatResult where
 instance Monoid FormatResult where
   mempty = FormatResultOK
 
-combineResults :: [FormatResult] -> FormatResult
-combineResults = mconcat
-
-ansiPlainText :: NonEmpty AnsiText -> Text
-ansiPlainText = T.concat . toList . fmap toPlainText
-
-formattedFileInfoContentsText :: SimpleGetter FormattedFileInfo Text
-formattedFileInfoContentsText = to infoToPlainText
-  where
-    infoToPlainText :: FormattedFileInfo -> Text
-    infoToPlainText fInfo = ansiPlainText (fInfo ^. formattedFileInfoContentsAnsi)
-
 -- | Format a single Juvix file.
 --
 -- If the file requires formatting then the function returns 'FormatResultNotFormatted'.
@@ -68,7 +55,7 @@ format ::
 format p = do
   originalContents <- readFile' p
   runReader originalContents $ do
-    formattedContents <- formatPath p
+    formattedContents :: Text <- formatPath p
     formatResultFromContents formattedContents p
 
 -- | Format a Juvix project.
@@ -102,13 +89,16 @@ formatProject p = do
       Sem r (FormatResult, Recurse Rel)
     handler cd _ files res = do
       let juvixFiles = [cd <//> f | f <- files, isJuvixFile f]
-      subRes <- combineResults <$> mapM format juvixFiles
+      subRes <- mconcat <$> mapM format juvixFiles
       return (res <> subRes, RecurseFilter (\hasJuvixYaml d -> not hasJuvixYaml && not (isHiddenDirectory d)))
 
-formatPath :: (Members '[Reader Text, ScopeEff] r) => Path Abs File -> Sem r (NonEmpty AnsiText)
+formatPath ::
+  (Members '[Reader Text, ScopeEff] r) =>
+  Path Abs File ->
+  Sem r Text
 formatPath p = do
   res <- scopeFile p
-  formatScoperResult res
+  formatScoperResult False res
 
 formatStdin ::
   forall r.
@@ -118,19 +108,19 @@ formatStdin = do
   res <- scopeStdin
   let originalContents = fromMaybe "" (res ^. Scoper.resultParserResult . resultEntry . entryPointStdin)
   runReader originalContents $ do
-    formattedContents <- formatScoperResult res
+    formattedContents :: Text <- formatScoperResult False res
     formatResultFromContents formattedContents formatStdinPath
 
 formatResultFromContents ::
   forall r.
   (Members '[Reader Text, Output FormattedFileInfo] r) =>
-  NonEmpty AnsiText ->
+  Text ->
   Path Abs File ->
   Sem r FormatResult
 formatResultFromContents formattedContents filepath = do
   originalContents <- ask
   if
-      | originalContents /= ansiPlainText formattedContents -> mkResult FormatResultNotFormatted
+      | originalContents /= formattedContents -> mkResult FormatResultNotFormatted
       | otherwise -> mkResult FormatResultOK
   where
     mkResult :: FormatResult -> Sem r FormatResult
@@ -138,31 +128,42 @@ formatResultFromContents formattedContents filepath = do
       output
         ( FormattedFileInfo
             { _formattedFileInfoPath = filepath,
-              _formattedFileInfoContentsAnsi = formattedContents,
+              _formattedFileInfoContents = formattedContents,
               _formattedFileInfoContentsModified = res == FormatResultNotFormatted
             }
         )
       return res
 
-formatScoperResult :: (Members '[Reader Text] r) => Scoper.ScoperResult -> Sem r (NonEmpty AnsiText)
-formatScoperResult res = do
+formatScoperResult' ::
+  Bool -> Text -> Scoper.ScoperResult -> Text
+formatScoperResult' force original sres =
+  run . runReader original $ formatScoperResult force sres
+
+formatScoperResult ::
+  (Members '[Reader Text] r) =>
+  Bool ->
+  Scoper.ScoperResult ->
+  Sem r Text
+formatScoperResult force res = do
   let cs = res ^. Scoper.comments
   formattedModules <-
     runReader cs
       . mapM formatTopModule
-      $ res ^. Scoper.resultModules
+      $ res
+        ^. Scoper.resultModules
+  let txt :: Text = toPlainTextTrim . mconcat . NonEmpty.toList $ formattedModules
+
   case res ^. Scoper.mainModule . modulePragmas of
     Just pragmas ->
       case pragmas ^. withLocParam . withSourceValue . pragmasFormat of
         Just PragmaFormat {..}
-          | not _pragmaFormat ->
-              NonEmpty.singleton . mkAnsiText @Text <$> ask
+          | not _pragmaFormat && not force -> ask @Text
         _ ->
-          return formattedModules
+          return txt
     Nothing ->
-      return formattedModules
+      return txt
   where
-    formatTopModule :: (Members '[Reader Comments] r) => Module 'Scoped 'ModuleTop -> Sem r AnsiText
+    formatTopModule :: (Members '[Reader Comments] r) => Module 'Scoped 'ModuleTop -> Sem r (Doc Ann)
     formatTopModule m = do
-      cs <- ask
-      return (ppOutDefault cs m)
+      cs :: Comments <- ask
+      return $ docDefault cs m

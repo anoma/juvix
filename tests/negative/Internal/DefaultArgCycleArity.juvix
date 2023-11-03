@@ -2,5 +2,6 @@ module DefaultArgCycleArity;
 
 import Stdlib.Data.Nat open;
 
-fun {a : Nat := 1} {b : Nat := fun + a + 1} {c : Nat := b + a + 1}
-  : Nat := a * b + c;
+fun {a : Nat := 1} {b : Nat := fun + a + 1} {c : Nat := b
+  + a
+  + 1} : Nat := a * b + c;

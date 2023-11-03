@@ -123,6 +123,14 @@ toAnsiText useColors
 toPlainText :: (HasTextBackend a) => a -> Text
 toPlainText = Text.renderStrict . toTextStream
 
+toPlainTextTrim :: (HasTextBackend a) => a -> Text
+toPlainTextTrim =
+  Text.unlines
+    . map Text.stripEnd
+    . dropWhile Text.null
+    . Text.lines
+    . toPlainText
+
 prettyText :: (Pretty a) => a -> Text
 prettyText = Text.renderStrict . layoutPretty defaultLayoutOptions . pretty
 
@@ -157,31 +165,31 @@ hsepMaybe l
   | null l = Nothing
   | otherwise = Just (hsep l)
 
-nest' :: Doc ann -> Doc ann
+nest' :: Doc a -> Doc a
 nest' = nest 2
 
-indent' :: Doc ann -> Doc ann
+indent' :: Doc a -> Doc a
 indent' = indent 2
 
-hang' :: Doc ann -> Doc ann
+hang' :: Doc a -> Doc a
 hang' = hang 2
 
-spaceOrEmpty :: Doc ann
+spaceOrEmpty :: Doc a
 spaceOrEmpty = flatAlt (pretty ' ') mempty
 
-oneLineOrNext :: Doc ann -> Doc ann
+oneLineOrNext :: Doc a -> Doc a
 oneLineOrNext x = PP.group (flatAlt (line <> indent' x) (space <> x))
 
-oneLineOrNextNoIndent :: Doc ann -> Doc ann
+oneLineOrNextNoIndent :: Doc a -> Doc a
 oneLineOrNextNoIndent x = PP.group (flatAlt (line <> x) (space <> x))
 
-oneLineOrNextBlock :: Doc ann -> Doc ann
+oneLineOrNextBlock :: Doc a -> Doc a
 oneLineOrNextBlock x = PP.group (flatAlt (line <> indent' x <> line) (space <> x <> space))
 
-oneLineOrNextBraces :: Doc ann -> Doc ann
+oneLineOrNextBraces :: Doc a -> Doc a
 oneLineOrNextBraces x = PP.group (flatAlt (lbrace <> line <> indent' x <> line <> rbrace) (lbrace <> x <> rbrace))
 
-nextLine :: Doc ann -> Doc ann
+nextLine :: Doc a -> Doc a
 nextLine x = PP.group (line <> x)
 
 ordinal :: Int -> Doc a
@@ -212,5 +220,5 @@ articleFor n
   | isVowel (Text.head n) = "an"
   | otherwise = "a"
 
-itemize :: (Functor f, Foldable f) => f (Doc ann) -> Doc ann
+itemize :: (Functor f, Foldable f) => f (Doc a) -> Doc a
 itemize = vsep . fmap ("• " <>)

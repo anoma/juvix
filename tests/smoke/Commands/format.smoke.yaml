@@ -328,3 +328,4 @@ tests:
     stdout:
       contains: juvix format error
     exit-status: 1
+
