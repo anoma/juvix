@@ -44,5 +44,6 @@ data Files m a where
   CopyFile' :: Path Abs File -> Path Abs File -> Files m ()
   JuvixConfigDir :: Files m (Path Abs Dir)
   CanonicalDir :: Path Abs Dir -> Prepath Dir -> Files m (Path Abs Dir)
+  NormalizeDir :: Path b Dir -> Files m (Path Abs Dir)
 
 makeSem ''Files

@@ -496,3 +496,21 @@ tests:
     stdout:
       contains: "100"
     exit-status: 0
+
+  - name: repl-symlink-XDG_CONFIG_HOME
+    command:
+      shell:
+        - bash
+      script: |
+        config=$(mktemp -d)
+        temp=$(mktemp -d)
+        trap 'rm -rf -- "$temp"' EXIT
+        trap 'rm -rf -- "$config"' EXIT
+        mkdir "$config/root"
+        ln -s "$config/root" "$config/symlink"
+        cd $temp
+        export XDG_CONFIG_HOME="$config/symlink"
+        juvix repl
+    stdout:
+      contains: "Stdlib.Prelude>"
+    exit-status: 0

@@ -21,7 +21,8 @@ packageStdlib rootDir buildDir = firstJustM isStdLib
     isStdLib = \case
       DependencyPath dep -> do
         adir <- canonicalDir rootDir (dep ^. pathDependencyPath)
-        let mstdlib :: Maybe (Path Rel Dir) = stripProperPrefix buildDir adir
+        normBuildDir <- normalizeDir buildDir
+        let mstdlib :: Maybe (Path Rel Dir) = stripProperPrefix normBuildDir adir
         return $
           if
               | mstdlib == Just relStdlibDir -> Just stdLibBuildDir

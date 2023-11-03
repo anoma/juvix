@@ -50,6 +50,7 @@ runFilesIO = interpret helper
       CopyFile' p1 p2 -> Path.copyFile p1 p2
       JuvixConfigDir -> juvixConfigDirIO
       CanonicalDir root d -> prepathToAbsDir root d
+      NormalizeDir p -> canonicalizePath p
 
 juvixConfigDirIO :: IO (Path Abs Dir)
 juvixConfigDirIO = (<//> versionDir) . absDir <$> getUserConfigDir "juvix"
