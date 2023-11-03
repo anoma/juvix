@@ -2166,9 +2166,9 @@ checkNamedApplicationNew napp = do
     mapM (checkNamedArgumentNew snames) (napp ^. namedApplicationNewArguments)
   let enames = HashSet.fromList (concatMap (HashMap.keys . (^. nameBlock)) (filter (not . isImplicitOrInstance . (^. nameImplicit)) (sig ^. nameSignatureArgs)))
       sargs = HashSet.fromList (map (^. namedArgumentNewFunDef . signName . nameConcrete) (toList args'))
-      missingFields = HashSet.difference enames sargs
-  unless (null missingFields || not (napp ^. namedApplicationNewExhaustive)) $
-    throw (ErrMissingFields (MissingFields (aname ^. scopedIdenFinal . nameConcrete) missingFields))
+      missingArgs = HashSet.difference enames sargs
+  unless (null missingArgs || not (napp ^. namedApplicationNewExhaustive)) $
+    throw (ErrMissingArgs (MissingArgs (aname ^. scopedIdenFinal . nameConcrete) missingArgs))
   return
     NamedApplicationNew
       { _namedApplicationNewName = aname,
@@ -2186,7 +2186,7 @@ checkNamedArgumentNew snames NamedArgumentNew {..} = do
   def <- localBindings . ignoreSyntax $ checkFunctionDef _namedArgumentNewFunDef
   let fname = def ^. signName . nameConcrete
   unless (HashSet.member fname snames) $
-    throw (ErrUnexpectedField (UnexpectedField fname))
+    throw (ErrUnexpectedArgument (UnexpectedArgument fname))
   return
     NamedArgumentNew
       { _namedArgumentNewFunDef = def

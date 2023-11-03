@@ -41,11 +41,12 @@ data ScoperError
   | ErrNoNameSignature NoNameSignature
   | ErrNamedArgumentsError NamedArgumentsError
   | ErrNotARecord NotARecord
+  | ErrUnexpectedArgument UnexpectedArgument
   | ErrUnexpectedField UnexpectedField
   | ErrRepeatedField RepeatedField
   | ErrConstructorNotARecord ConstructorNotARecord
   | ErrNotAConstructor NotAConstructor
-  | ErrMissingFields MissingFields
+  | ErrMissingArgs MissingArgs
   | ErrPrecedenceInconsistency PrecedenceInconsistencyError
   | ErrIncomparablePrecedences IncomaprablePrecedences
   | ErrAliasCycle AliasCycle
@@ -85,11 +86,12 @@ instance ToGenericError ScoperError where
     ErrNoNameSignature e -> genericError e
     ErrNamedArgumentsError e -> genericError e
     ErrNotARecord e -> genericError e
+    ErrUnexpectedArgument e -> genericError e
     ErrUnexpectedField e -> genericError e
     ErrRepeatedField e -> genericError e
     ErrConstructorNotARecord e -> genericError e
     ErrNotAConstructor e -> genericError e
-    ErrMissingFields e -> genericError e
+    ErrMissingArgs e -> genericError e
     ErrPrecedenceInconsistency e -> genericError e
     ErrIncomparablePrecedences e -> genericError e
     ErrAliasCycle e -> genericError e

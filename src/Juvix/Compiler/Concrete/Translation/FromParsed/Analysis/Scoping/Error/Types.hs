@@ -774,6 +774,27 @@ instance ToGenericError NotARecord where
       i :: Interval
       i = _notARecordLocation
 
+newtype UnexpectedArgument = UnexpectedArgument
+  { _unexpectedArgument :: Symbol
+  }
+  deriving stock (Show)
+
+instance ToGenericError UnexpectedArgument where
+  genericError UnexpectedArgument {..} = do
+    opts <- fromGenericOptions <$> ask
+    let msg =
+          "Unexpected argument"
+            <+> ppCode opts _unexpectedArgument
+    return
+      GenericError
+        { _genericErrorLoc = i,
+          _genericErrorMessage = mkAnsiText msg,
+          _genericErrorIntervals = [i]
+        }
+    where
+      i :: Interval
+      i = getLoc _unexpectedArgument
+
 newtype UnexpectedField = UnexpectedField
   { _unexpectedField :: Symbol
   }
@@ -838,21 +859,21 @@ instance ToGenericError NotAConstructor where
       i :: Interval
       i = getLoc _notAConstructor
 
-data MissingFields = MissingFields
-  { _missingFieldsConstructor :: Name,
-    _missingFields :: HashSet Symbol
+data MissingArgs = MissingArgs
+  { _missingArgsName :: Name,
+    _missingArgs :: HashSet Symbol
   }
   deriving stock (Show)
 
-instance ToGenericError MissingFields where
-  genericError MissingFields {..} = do
+instance ToGenericError MissingArgs where
+  genericError MissingArgs {..} = do
     opts <- fromGenericOptions <$> ask
     let msg =
-          "Missing fields for the record constructor"
-            <+> ppCode opts _missingFieldsConstructor
+          "Missing arguments for "
+            <+> ppCode opts _missingArgsName
               <> ":"
               <> line
-              <> itemize (map (ppCode opts) (toList _missingFields))
+              <> itemize (map (ppCode opts) (toList _missingArgs))
     return
       GenericError
         { _genericErrorLoc = i,
@@ -861,7 +882,7 @@ instance ToGenericError MissingFields where
         }
     where
       i :: Interval
-      i = getLoc _missingFieldsConstructor
+      i = getLoc _missingArgsName
 
 newtype PrecedenceInconsistencyError = PrecedenceInconsistencyError
   { _precedenceInconsistencyErrorFixityDef :: FixitySyntaxDef 'Parsed
