@@ -327,6 +327,15 @@ instance PrettyCode Interval where
 instance PrettyCode New.ArityParameter where
   ppCode = return . pretty
 
+instance (PrettyCode a, PrettyCode b) => PrettyCode (Either a b) where
+  ppCode = \case
+    Left l -> do
+      l' <- ppCode l
+      return ("Left" <+> l')
+    Right r -> do
+      r' <- ppCode r
+      return ("Right" <+> r')
+
 instance PrettyCode InfoTable where
   ppCode tbl = do
     inds <- ppCode (HashMap.keys (tbl ^. infoInductives))

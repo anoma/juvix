@@ -254,7 +254,7 @@ weakNormalize' = go
       ExpressionSimpleLambda {} -> return e
       ExpressionLambda {} -> return e
       ExpressionLet {} -> return e
-      ExpressionCase {} -> error "todo"
+      ExpressionCase {} -> return e
     goIden :: Iden -> Sem r Expression
     goIden i = case i of
       IdenFunction f -> do

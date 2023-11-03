@@ -188,13 +188,26 @@ checkMutualStatement = \case
     registerNameIdType (ax ^. axiomName . nameId) (ax ^. axiomType)
     return $ StatementAxiom ax
 
-unfoldFunType' :: (Members '[Inference] r) => Expression -> Sem r ([FunctionParameter], Expression)
-unfoldFunType' =
+unfoldApp1 :: (Members '[Inference] r) => Expression -> Sem r (Maybe Application)
+unfoldApp1 =
   weakNormalize
-    >=> ( \t -> case t of
-            ExpressionFunction (Function l r) -> first (l :) <$> unfoldFunType' r
-            _ -> return ([], t)
-        )
+    >=>  \case
+            ExpressionApplication a -> return (Just a)
+            _ -> return Nothing
+
+unfoldFunType1' :: (Members '[Inference] r) => Expression -> Sem r (Maybe (FunctionParameter, Expression))
+unfoldFunType1' =
+  weakNormalize
+    >=>  \case
+            ExpressionFunction (Function l r) -> return (Just (l, r))
+            _ -> return Nothing
+
+unfoldFunType' :: (Members '[Inference] r) => Expression -> Sem r ([FunctionParameter], Expression)
+unfoldFunType' e = do
+  e' <- unfoldFunType1' e
+  case e' of
+     Just (l, r) -> first (l :) <$> unfoldFunType' r
+     _ -> return ([], e)
 
 checkFunctionDef ::
   forall r.
@@ -358,12 +371,13 @@ checkExpression expectedTy e = do
   where
     err :: Expression -> Sem r a
     err inferred = do
+      e' <- strongNormalize e
       inferred' <- strongNormalize inferred
       expected' <- strongNormalize expectedTy
       throw $
         ErrWrongType
           ( WrongType
-              { _wrongTypeThing = Left e,
+              { _wrongTypeThing = Left e',
                 _wrongTypeActual = inferred',
                 _wrongTypeExpected = expected'
               }
@@ -547,16 +561,16 @@ checkClause clauseLoc clauseType clausePats body = do
                       w <- genWildcard loc impl
                       go (w : p : ps) bodyTy'
 
-                case (par ^. paramImplicit, p ^. patternArgIsImplicit) of
+                case (p ^. patternArgIsImplicit, par ^. paramImplicit) of
                   (Explicit, Explicit) -> checkPatternAndContinue
                   (Implicit, Implicit) -> checkPatternAndContinue
                   (ImplicitInstance, ImplicitInstance) -> checkPatternAndContinue
-                  (Explicit, Implicit) -> throwWrongIsImplicit p Implicit
-                  (Explicit, ImplicitInstance) -> throwWrongIsImplicit p ImplicitInstance
-                  (Implicit, Explicit) -> insertWildcard Implicit
-                  (Implicit, ImplicitInstance) -> insertWildcard Implicit
-                  (ImplicitInstance, Explicit) -> insertWildcard ImplicitInstance
-                  (ImplicitInstance, Implicit) -> insertWildcard ImplicitInstance
+                  (Implicit, Explicit) -> throwWrongIsImplicit p Implicit
+                  (ImplicitInstance, Explicit) -> throwWrongIsImplicit p ImplicitInstance
+                  (Explicit, Implicit) -> insertWildcard Implicit
+                  (ImplicitInstance, Implicit) -> insertWildcard Implicit
+                  (Explicit, ImplicitInstance) -> insertWildcard ImplicitInstance
+                  (Implicit, ImplicitInstance) -> insertWildcard ImplicitInstance
         where
           throwWrongIsImplicit :: (Members '[Error TypeCheckerError] r') => PatternArg -> IsImplicit -> Sem r' a
           throwWrongIsImplicit patArg expected =
@@ -738,9 +752,22 @@ inferExpression' ::
   Maybe Expression ->
   Expression ->
   Sem r TypedExpression
-inferExpression' hint e = case e of
-  ExpressionIden i -> goIden i >>= withTrailingHoles hint
-  ExpressionApplication a -> inferApplication a
+inferExpression' hint e = undefined
+
+inferExpressionAtom ::
+  forall r.
+  (Members '[HighlightBuilder, Reader InfoTable, State FunctionsTable, State TypesTable, Reader LocalVars, Error TypeCheckerError, NameIdGen, Inference, Output Example, Output TypedHole, Builtins, Termination] r) =>
+  Maybe Expression ->
+  Expression ->
+  Sem r TypedExpression
+inferExpressionAtom hint e = case e of
+  ExpressionIden i -> do
+    i' <- goIden i
+    traceM ("inferIden 0: " <> ppTrace i')
+    -- r <- withTrailingHoles hint i'
+    -- traceM ("inferIden 1: " <> ppTrace r)
+    return i'
+  ExpressionApplication a -> impossible
   ExpressionLiteral l -> goLiteral l
   ExpressionFunction f -> goFunction f
   ExpressionHole h -> goHole h
@@ -956,6 +983,13 @@ inferExpression' hint e = case e of
         kind <- lookupInductiveType v
         return (TypedExpression kind (ExpressionIden i))
 
+-- | The hint is used for trailing holes only
+holesHelper :: forall r. (Members '[HighlightBuilder, Reader InfoTable, State FunctionsTable, State TypesTable, Reader LocalVars, Error TypeCheckerError, NameIdGen, Inference, Output Example, Output TypedHole, Builtins, Termination] r) => Maybe Expression -> Expression -> Sem r TypedExpression
+holesHelper mhint expr = do
+  let (f, args) = unfoldExpressionApp expr
+  fTy <- inferExpression' Nothing f
+  undefined
+
 inferApplication :: forall r. (Members '[HighlightBuilder, Reader InfoTable, State FunctionsTable, State TypesTable, Reader LocalVars, Error TypeCheckerError, NameIdGen, Inference, Output Example, Output TypedHole, Builtins, Termination] r) => Application -> Sem r TypedExpression
 inferApplication a@(Application l r iapp) = do
   -- TODO instead of Nothing we could hint _ -> _ where
@@ -1007,9 +1041,13 @@ withTrailingHoles ::
   Maybe Expression ->
   TypedExpression ->
   Sem r TypedExpression
-withTrailingHoles mhint tyExpr = case mhint of
-  Nothing -> return tyExpr
-  Just hint -> withHoles tyExpr (Left hint) return
+withTrailingHoles mhint tyExpr = do
+  res <- case mhint of
+    Nothing -> return tyExpr
+    Just hint -> withHoles tyExpr (Left hint) return
+  traceM ("withTrailingHoles " <> ppTrace tyExpr)
+  traceM ("withTrailingHoles result " <> ppTrace res)
+  return res
 
 withHoles ::
   (Members '[HighlightBuilder, Reader InfoTable, State FunctionsTable, State TypesTable, Reader LocalVars, Error TypeCheckerError, NameIdGen, Inference, Output Example, Output TypedHole, Builtins, Termination] r) =>
@@ -1018,14 +1056,21 @@ withHoles ::
   (TypedExpression -> Sem r TypedExpression) ->
   Sem r TypedExpression
 withHoles leftTyExpr mimplArg g = do
-  -- let leftTy = leftTyExpr ^. typedType
+  traceM ("withHoles before addHole " <> ppTrace leftTyExpr)
   mwithExtraHole <- addHole leftTyExpr mimplArg
-  case mwithExtraHole of
+  traceM ("withHoles after addHole " <> ppTrace mwithExtraHole)
+  res <- case mwithExtraHole of
     Just a -> do
       -- TODO improve performance by avoiding inferring the left part again
+      traceM ("withHoles before inferApp " <> ppTrace mwithExtraHole)
       a' <- inferApplication a
+      traceM ("withHoles after inferApp " <> ppTrace mwithExtraHole)
       withHoles a' mimplArg g
     Nothing -> g leftTyExpr
+  traceM ("adding holes to " <> ppTrace leftTyExpr)
+  traceM ("hint " <> ppTrace mimplArg)
+  traceM ("result " <> ppTrace res)
+  return res
 
 -- | E.g. when we find `nil`, should we return `nil {_}`?
 -- TODO default values
@@ -1099,16 +1144,16 @@ addHole leftTyExpr mimplArg = do
           let ariParam = funAri ^. functionArityLeft
               funImpl = ariParam ^. arityParameterImplicit
           -- TODO I think arityParameterArity is unused
-          case (funImpl, argImpl) of
+          case (argImpl, funImpl) of
             (Explicit, Explicit) -> doNothing
             (Implicit, Implicit) -> doNothing
             (ImplicitInstance, ImplicitInstance) -> doNothing
-            (Explicit, ImplicitInstance) -> throwExpectedExplicit
-            (Explicit, Implicit) -> throwExpectedExplicit
-            (Implicit, Explicit) -> Just <$> insertHole
-            (Implicit, ImplicitInstance) -> Just <$> insertHole
-            (ImplicitInstance, Implicit) -> Just <$> insertHoleInstance
-            (ImplicitInstance, Explicit) -> Just <$> insertHoleInstance
+            (ImplicitInstance, Explicit) -> throwExpectedExplicit
+            (Implicit, Explicit) -> throwExpectedExplicit
+            (Explicit, Implicit) -> Just <$> insertHole
+            (ImplicitInstance, Implicit) -> Just <$> insertHole
+            (Implicit, ImplicitInstance) -> Just <$> insertHoleInstance
+            (Explicit, ImplicitInstance) -> Just <$> insertHoleInstance
           where
             throwExpectedExplicit :: Sem r a
             throwExpectedExplicit =
