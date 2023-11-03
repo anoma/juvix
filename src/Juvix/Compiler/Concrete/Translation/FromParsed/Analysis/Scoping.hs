@@ -2153,6 +2153,7 @@ checkExpressionAtom e = case e of
   AtomList l -> pure . AtomList <$> checkList l
   AtomIterator i -> pure . AtomIterator <$> checkIterator i
   AtomNamedApplication i -> pure . AtomNamedApplication <$> checkNamedApplication i
+  AtomNamedApplicationNew i -> pure . AtomNamedApplicationNew <$> checkNamedApplicationNew i
   AtomRecordCreation i -> pure . AtomRecordCreation <$> checkRecordCreation i
   AtomRecordUpdate i -> pure . AtomRecordUpdate <$> checkRecordUpdate i
 
@@ -2161,24 +2162,19 @@ checkNamedApplicationNew napp = do
   aname <- checkScopedIden (napp ^. namedApplicationNewName)
   sig <- getNameSignature aname
   let snames = HashSet.fromList (concatMap (HashMap.keys . (^. nameBlock)) (sig ^. nameSignatureArgs))
-  (vars', args') <- withLocalScope . localBindings . ignoreSyntax $ do
-    vs <- mapM (reserveFunctionSymbol . (^. namedArgumentNewFunDef)) (napp ^. namedApplicationNewArguments)
-    fs <- mapM (checkNamedArgumentNew snames) (napp ^. namedApplicationNewArguments)
-    return (vs, fs)
-  let extra' =
-        RecordCreationExtra
-          { _recordCreationExtraVars = vars'
-          }
+  args' <- withLocalScope . localBindings . ignoreSyntax $ do
+    mapM_ (reserveFunctionSymbol . (^. namedArgumentNewFunDef)) (napp ^. namedApplicationNewArguments)
+    mapM (checkNamedArgumentNew snames) (napp ^. namedApplicationNewArguments)
+  let enames = HashSet.fromList (concatMap (HashMap.keys . (^. nameBlock)) (filter (not . isImplicitOrInstance . (^. nameImplicit)) (sig ^. nameSignatureArgs)))
       sargs = HashSet.fromList (map (^. namedArgumentNewFunDef . signName . nameConcrete) (toList args'))
-      missingFields = HashSet.difference snames sargs
+      missingFields = HashSet.difference enames sargs
   unless (null missingFields) $
     throw (ErrMissingFields (MissingFields (aname ^. scopedIdenFinal . nameConcrete) missingFields))
   return
     NamedApplicationNew
       { _namedApplicationNewName = aname,
         _namedApplicationNewArguments = args',
-        _namedApplicationNewAtKw = napp ^. namedApplicationNewAtKw,
-        _namedApplicationNewExtra = Irrelevant extra'
+        _namedApplicationNewAtKw = napp ^. namedApplicationNewAtKw
       }
 
 checkNamedArgumentNew ::
@@ -2188,14 +2184,12 @@ checkNamedArgumentNew ::
   Sem r (NamedArgumentNew 'Scoped)
 checkNamedArgumentNew snames NamedArgumentNew {..} = do
   def <- localBindings . ignoreSyntax $ checkFunctionDef _namedArgumentNewFunDef
-  iden <- checkScopedIden _namedArgumentNewIden
   let fname = def ^. signName . nameConcrete
   unless (HashSet.member fname snames) $
     throw (ErrUnexpectedField (UnexpectedField fname))
   return
     NamedArgumentNew
-      { _namedArgumentNewFunDef = def,
-        _namedArgumentNewIden = iden
+      { _namedArgumentNewFunDef = def
       }
 
 checkDefineField ::
@@ -2205,14 +2199,12 @@ checkDefineField ::
   Sem r (RecordDefineField 'Scoped)
 checkDefineField sig RecordDefineField {..} = do
   def <- localBindings . ignoreSyntax $ checkFunctionDef _fieldDefineFunDef
-  iden <- checkScopedIden _fieldDefineIden
   let fname = def ^. signName . nameConcrete
   unless (HashMap.member fname (sig ^. recordNames)) $
     throw (ErrUnexpectedField (UnexpectedField fname))
   return
     RecordDefineField
-      { _fieldDefineFunDef = def,
-        _fieldDefineIden = iden
+      { _fieldDefineFunDef = def
       }
 
 checkRecordCreation :: forall r. (Members '[Error ScoperError, State Scope, State ScoperState, Reader ScopeParameters, InfoTableBuilder, NameIdGen] r) => RecordCreation 'Parsed -> Sem r (RecordCreation 'Scoped)
@@ -2229,15 +2221,10 @@ checkRecordCreation RecordCreation {..} = do
           nameId = ci ^. constructorInfoTypeName . S.nameId
       info <- getRecordInfo' (getLoc _recordCreationConstructor) name nameId
       let sig = info ^. recordInfoSignature
-      (vars', fields') <- withLocalScope . localBindings . ignoreSyntax $ do
-        vs <- mapM (reserveFunctionSymbol . (^. fieldDefineFunDef)) _recordCreationFields
-        fs <- mapM (checkDefineField sig) _recordCreationFields
-        return (vs, fs)
-      let extra' =
-            RecordCreationExtra
-              { _recordCreationExtraVars = vars'
-              }
-          snames = HashSet.fromList (HashMap.keys (sig ^. recordNames))
+      fields' <- withLocalScope . localBindings . ignoreSyntax $ do
+        mapM_ (reserveFunctionSymbol . (^. fieldDefineFunDef)) _recordCreationFields
+        mapM (checkDefineField sig) _recordCreationFields
+      let snames = HashSet.fromList (HashMap.keys (sig ^. recordNames))
           sfields = HashSet.fromList (map (^. fieldDefineFunDef . signName . nameConcrete) (toList fields'))
           missingFields = HashSet.difference snames sfields
       unless (null missingFields) $
@@ -2246,7 +2233,6 @@ checkRecordCreation RecordCreation {..} = do
         RecordCreation
           { _recordCreationConstructor = constrIden,
             _recordCreationFields = fields',
-            _recordCreationExtra = Irrelevant extra',
             _recordCreationAtKw
           }
 
@@ -2747,10 +2733,10 @@ parseTerm =
       <|> parseLiteral
       <|> parseLet
       <|> parseIterator
-      <|> parseRecordCreation
       <|> parseDoubleBraces
       <|> parseBraces
       <|> parseNamedApplication
+      <|> parseNamedApplicationNew
   where
     parseHole :: Parse Expression
     parseHole = ExpressionHole <$> P.token lit mempty
@@ -2832,6 +2818,13 @@ parseTerm =
           AtomNamedApplication u -> Just u
           _ -> Nothing
 
+    parseNamedApplicationNew :: Parse Expression
+    parseNamedApplicationNew = ExpressionNamedApplicationNew <$> P.token namedApp mempty
+      where
+        namedApp :: ExpressionAtom 'Scoped -> Maybe (NamedApplicationNew 'Scoped)
+        namedApp s = case s of
+          AtomNamedApplicationNew u -> Just u
+          _ -> Nothing
     parseLet :: Parse Expression
     parseLet = ExpressionLet <$> P.token letBlock mempty
       where
@@ -2846,14 +2839,6 @@ parseTerm =
         iterator :: ExpressionAtom 'Scoped -> Maybe (Iterator 'Scoped)
         iterator s = case s of
           AtomIterator u -> Just u
-          _ -> Nothing
-
-    parseRecordCreation :: Parse Expression
-    parseRecordCreation = ExpressionRecordCreation <$> P.token record mempty
-      where
-        record :: ExpressionAtom 'Scoped -> Maybe (RecordCreation 'Scoped)
-        record s = case s of
-          AtomRecordCreation u -> Just u
           _ -> Nothing
 
     parseNoInfixIdentifier :: Parse Expression

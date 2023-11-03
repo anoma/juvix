@@ -684,7 +684,7 @@ expressionAtom =
   P.label "<expression>" $
     AtomLiteral <$> P.try literal
       <|> either AtomIterator AtomNamedApplication <$> iterator
-      <|> AtomRecordCreation <$> recordCreation
+      <|> AtomNamedApplicationNew <$> namedApplicationNew
       <|> AtomNamedApplication <$> namedApplication
       <|> AtomList <$> parseList
       <|> AtomIdentifier <$> name
@@ -838,29 +838,6 @@ iterator = do
         _ -> parseFailure off "an iterator must have at least one range"
       return NamedArgument {..}
 
-recordCreation ::
-  forall r.
-  (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
-  ParsecS r (RecordCreation 'Parsed)
-recordCreation = P.label "<record creation>" $ do
-  (_recordCreationConstructor, _recordCreationAtKw) <- P.try $ do
-    n <- name
-    a <- Irrelevant <$> kw kwAt
-    lbrace
-    return (n, a)
-  defs <- P.sepEndBy (functionDefinition True False Nothing) semicolon
-  rbrace
-  let _recordCreationFields = fmap mkField defs
-      _recordCreationExtra = Irrelevant ()
-  return RecordCreation {..}
-  where
-    mkField :: FunctionDef 'Parsed -> RecordDefineField 'Parsed
-    mkField f =
-      RecordDefineField
-        { _fieldDefineFunDef = f,
-          _fieldDefineIden = NameUnqualified $ f ^. signName
-        }
-
 namedApplicationNew ::
   forall r.
   (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
@@ -880,8 +857,7 @@ namedApplicationNew = P.label "<named application>" $ do
     mkArg :: FunctionDef 'Parsed -> NamedArgumentNew 'Parsed
     mkArg f =
       NamedArgumentNew
-        { _namedArgumentNewFunDef = f,
-          _namedArgumentNewIden = NameUnqualified $ f ^. signName
+        { _namedArgumentNewFunDef = f
         }
 
 namedApplication ::

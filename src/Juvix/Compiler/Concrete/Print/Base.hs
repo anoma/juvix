@@ -290,8 +290,24 @@ instance (SingI s) => PrettyPrint (ArgumentBlock s) where
       Irrelevant d = _argBlockDelims
 
 instance (SingI s) => PrettyPrint (NamedApplication s) where
-  -- ppCode :: Members '[ExactPrint, Reader Options] r => NamedApplication s -> Sem r ()
   ppCode = apeHelper
+
+instance (SingI s) => PrettyPrint (NamedApplicationNew s) where
+  ppCode NamedApplicationNew {..} = do
+    let args'
+          | null _namedApplicationNewArguments = mempty
+          | otherwise =
+              blockIndent
+                ( sequenceWith
+                    (semicolon >> line)
+                    (ppCode <$> _namedApplicationNewArguments)
+                )
+    ppIdentifierType _namedApplicationNewName
+      <> ppCode _namedApplicationNewAtKw
+      <> braces args'
+
+instance (SingI s) => PrettyPrint (NamedArgumentNew s) where
+  ppCode NamedArgumentNew {..} = ppCode _namedArgumentNewFunDef
 
 instance (SingI s) => PrettyPrint (RecordStatement s) where
   ppCode = \case
@@ -363,6 +379,7 @@ instance (SingI s) => PrettyPrint (ExpressionAtom s) where
     AtomInstanceHole w -> ppHoleType w
     AtomIterator i -> ppCode i
     AtomNamedApplication i -> ppCode i
+    AtomNamedApplicationNew i -> ppCode i
     AtomRecordCreation i -> ppCode i
 
 instance PrettyPrint PatternScopedIden where
@@ -800,7 +817,7 @@ instance PrettyPrint Expression where
     ExpressionNewCase c -> ppCode c
     ExpressionIterator i -> ppCode i
     ExpressionNamedApplication i -> ppCode i
-    ExpressionRecordCreation i -> ppCode i
+    ExpressionNamedApplicationNew i -> ppCode i
     ExpressionRecordUpdate i -> ppCode i
     ExpressionParensRecordUpdate i -> ppCode i
 

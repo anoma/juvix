@@ -54,11 +54,6 @@ type family RecordUpdateExtraType s = res | res -> s where
   RecordUpdateExtraType 'Parsed = ()
   RecordUpdateExtraType 'Scoped = RecordUpdateExtra
 
-type RecordCreationExtraType :: Stage -> GHC.Type
-type family RecordCreationExtraType s = res | res -> s where
-  RecordCreationExtraType 'Parsed = ()
-  RecordCreationExtraType 'Scoped = RecordCreationExtra
-
 type FieldArgIxType :: Stage -> GHC.Type
 type family FieldArgIxType s = res | res -> s where
   FieldArgIxType 'Parsed = ()
@@ -576,9 +571,8 @@ deriving stock instance Ord (RecordUpdateField 'Parsed)
 
 deriving stock instance Ord (RecordUpdateField 'Scoped)
 
-data RecordDefineField (s :: Stage) = RecordDefineField
-  { _fieldDefineFunDef :: FunctionDef s,
-    _fieldDefineIden :: IdentifierType s
+newtype RecordDefineField (s :: Stage) = RecordDefineField
+  { _fieldDefineFunDef :: FunctionDef s
   }
 
 deriving stock instance Show (RecordDefineField 'Parsed)
@@ -1217,7 +1211,7 @@ data Expression
   | ExpressionDoubleBraces (DoubleBracesExpression 'Scoped)
   | ExpressionIterator (Iterator 'Scoped)
   | ExpressionNamedApplication (NamedApplication 'Scoped)
-  | ExpressionRecordCreation (RecordCreation 'Scoped)
+  | ExpressionNamedApplicationNew (NamedApplicationNew 'Scoped)
   deriving stock (Show, Eq, Ord)
 
 data DoubleBracesExpression (s :: Stage) = DoubleBracesExpression
@@ -1585,11 +1579,6 @@ data RecordUpdateExtra = RecordUpdateExtra
     _recordUpdateExtraVars :: [S.Symbol]
   }
 
-newtype RecordCreationExtra = RecordCreationExtra
-  { -- | Implicitly bound fields sorted by index
-    _recordCreationExtraVars :: [S.Symbol]
-  }
-
 newtype ParensRecordUpdate = ParensRecordUpdate
   { _parensRecordUpdate :: RecordUpdate 'Scoped
   }
@@ -1638,9 +1627,8 @@ deriving stock instance Ord (NamedApplication 'Parsed)
 
 deriving stock instance Ord (NamedApplication 'Scoped)
 
-data NamedArgumentNew (s :: Stage) = NamedArgumentNew
-  { _namedArgumentNewFunDef :: FunctionDef s,
-    _namedArgumentNewIden :: IdentifierType s
+newtype NamedArgumentNew (s :: Stage) = NamedArgumentNew
+  { _namedArgumentNewFunDef :: FunctionDef s
   }
 
 deriving stock instance Show (NamedArgumentNew 'Parsed)
@@ -1658,8 +1646,7 @@ deriving stock instance Ord (NamedArgumentNew 'Scoped)
 data NamedApplicationNew (s :: Stage) = NamedApplicationNew
   { _namedApplicationNewName :: IdentifierType s,
     _namedApplicationNewAtKw :: Irrelevant KeywordRef,
-    _namedApplicationNewArguments :: [NamedArgumentNew s],
-    _namedApplicationNewExtra :: Irrelevant (RecordCreationExtraType s)
+    _namedApplicationNewArguments :: [NamedArgumentNew s]
   }
 
 deriving stock instance Show (NamedApplicationNew 'Parsed)
@@ -1693,8 +1680,7 @@ deriving stock instance Ord (RecordStatement 'Scoped)
 data RecordCreation (s :: Stage) = RecordCreation
   { _recordCreationConstructor :: IdentifierType s,
     _recordCreationAtKw :: Irrelevant KeywordRef,
-    _recordCreationFields :: [RecordDefineField s],
-    _recordCreationExtra :: Irrelevant (RecordCreationExtraType s)
+    _recordCreationFields :: [RecordDefineField s]
   }
 
 deriving stock instance Show (RecordCreation 'Parsed)
@@ -1729,6 +1715,7 @@ data ExpressionAtom (s :: Stage)
   | AtomParens (ExpressionType s)
   | AtomIterator (Iterator s)
   | AtomNamedApplication (NamedApplication s)
+  | AtomNamedApplicationNew (NamedApplicationNew s)
   | AtomRecordCreation (RecordCreation s)
 
 deriving stock instance Show (ExpressionAtom 'Parsed)
@@ -1891,7 +1878,6 @@ makeLenses ''RecordPatternAssign
 makeLenses ''RecordPattern
 makeLenses ''ParensRecordUpdate
 makeLenses ''RecordUpdateExtra
-makeLenses ''RecordCreationExtra
 makeLenses ''RecordUpdate
 makeLenses ''RecordUpdateApp
 makeLenses ''RecordUpdateField
@@ -2029,6 +2015,9 @@ instance HasAtomicity (ArgumentBlock s) where
 instance HasAtomicity (NamedApplication s) where
   atomicity = const (Aggregate appFixity)
 
+instance HasAtomicity (NamedApplicationNew s) where
+  atomicity = const (Aggregate appFixity)
+
 instance HasAtomicity (RecordCreation s) where
   atomicity = const (Aggregate updateFixity)
 
@@ -2053,7 +2042,7 @@ instance HasAtomicity Expression where
     ExpressionNewCase c -> atomicity c
     ExpressionIterator i -> atomicity i
     ExpressionNamedApplication i -> atomicity i
-    ExpressionRecordCreation i -> atomicity i
+    ExpressionNamedApplicationNew i -> atomicity i
     ExpressionRecordUpdate {} -> Aggregate updateFixity
     ExpressionParensRecordUpdate {} -> Atom
 
@@ -2183,6 +2172,9 @@ instance HasLoc (List s) where
 instance (SingI s) => HasLoc (NamedApplication s) where
   getLoc NamedApplication {..} = getLocIdentifierType _namedAppName <> getLoc (last _namedAppArgs)
 
+instance (SingI s) => HasLoc (NamedApplicationNew s) where
+  getLoc NamedApplicationNew {..} = getLocIdentifierType _namedApplicationNewName
+
 instance (SingI s) => HasLoc (RecordUpdateField s) where
   getLoc f = getLocSymbolType (f ^. fieldUpdateName) <> getLocExpressionType (f ^. fieldUpdateValue)
 
@@ -2231,7 +2223,7 @@ instance HasLoc Expression where
     ExpressionDoubleBraces i -> getLoc i
     ExpressionIterator i -> getLoc i
     ExpressionNamedApplication i -> getLoc i
-    ExpressionRecordCreation i -> getLoc i
+    ExpressionNamedApplicationNew i -> getLoc i
     ExpressionRecordUpdate i -> getLoc i
     ExpressionParensRecordUpdate i -> getLoc i
 
@@ -2523,6 +2515,14 @@ instance (SingI s) => IsApe (NamedApplication s) ApeLeaf where
     where
       f = toApeIdentifierType _namedAppName
 
+instance (SingI s) => IsApe (NamedApplicationNew s) ApeLeaf where
+  toApe a =
+    ApeLeaf $
+      Leaf
+        { _leafAtomicity = atomicity a,
+          _leafExpr = ApeLeafAtom (sing :&: AtomNamedApplicationNew a)
+        }
+
 instance (SingI s) => IsApe (RecordCreation s) ApeLeaf where
   toApe :: RecordCreation s -> Ape ApeLeaf
   toApe a =
@@ -2588,7 +2588,7 @@ instance IsApe Expression ApeLeaf where
     ExpressionPostfixApplication a -> toApe a
     ExpressionFunction a -> toApe a
     ExpressionNamedApplication a -> toApe a
-    ExpressionRecordCreation a -> toApe a
+    ExpressionNamedApplicationNew a -> toApe a
     ExpressionRecordUpdate a -> toApe a
     ExpressionParensRecordUpdate {} -> leaf
     ExpressionParensIdentifier {} -> leaf
