@@ -314,26 +314,9 @@ instance (SingI s) => PrettyPrint (RecordStatement s) where
     RecordStatementField f -> ppCode f
     RecordStatementOperator f -> ppCode f
 
-instance (SingI s) => PrettyPrint (RecordCreation s) where
-  ppCode RecordCreation {..} = do
-    let fields'
-          | null _recordCreationFields = mempty
-          | otherwise =
-              blockIndent
-                ( sequenceWith
-                    (semicolon >> line)
-                    (ppCode <$> _recordCreationFields)
-                )
-    ppIdentifierType _recordCreationConstructor
-      <> ppCode _recordCreationAtKw
-      <> braces fields'
-
 instance (SingI s) => PrettyPrint (RecordUpdateField s) where
   ppCode RecordUpdateField {..} =
     ppSymbolType _fieldUpdateName <+> ppCode _fieldUpdateAssignKw <+> ppExpressionType _fieldUpdateValue
-
-instance (SingI s) => PrettyPrint (RecordDefineField s) where
-  ppCode RecordDefineField {..} = ppCode _fieldDefineFunDef
 
 instance (SingI s) => PrettyPrint (RecordUpdate s) where
   ppCode RecordUpdate {..} = do
@@ -380,7 +363,6 @@ instance (SingI s) => PrettyPrint (ExpressionAtom s) where
     AtomIterator i -> ppCode i
     AtomNamedApplication i -> ppCode i
     AtomNamedApplicationNew i -> ppCode i
-    AtomRecordCreation i -> ppCode i
 
 instance PrettyPrint PatternScopedIden where
   ppCode = \case

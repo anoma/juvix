@@ -401,6 +401,9 @@ underscore = "_"
 at_ :: (IsString s) => s
 at_ = "@"
 
+atQuestion :: (IsString s) => s
+atQuestion = "@?"
+
 dot :: (IsString s) => s
 dot = "."
 

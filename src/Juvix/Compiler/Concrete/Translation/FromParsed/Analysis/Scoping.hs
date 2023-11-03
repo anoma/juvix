@@ -2154,7 +2154,6 @@ checkExpressionAtom e = case e of
   AtomIterator i -> pure . AtomIterator <$> checkIterator i
   AtomNamedApplication i -> pure . AtomNamedApplication <$> checkNamedApplication i
   AtomNamedApplicationNew i -> pure . AtomNamedApplicationNew <$> checkNamedApplicationNew i
-  AtomRecordCreation i -> pure . AtomRecordCreation <$> checkRecordCreation i
   AtomRecordUpdate i -> pure . AtomRecordUpdate <$> checkRecordUpdate i
 
 checkNamedApplicationNew :: forall r. (Members '[Error ScoperError, State Scope, State ScoperState, Reader ScopeParameters, InfoTableBuilder, NameIdGen] r) => NamedApplicationNew 'Parsed -> Sem r (NamedApplicationNew 'Scoped)
@@ -2168,13 +2167,14 @@ checkNamedApplicationNew napp = do
   let enames = HashSet.fromList (concatMap (HashMap.keys . (^. nameBlock)) (filter (not . isImplicitOrInstance . (^. nameImplicit)) (sig ^. nameSignatureArgs)))
       sargs = HashSet.fromList (map (^. namedArgumentNewFunDef . signName . nameConcrete) (toList args'))
       missingFields = HashSet.difference enames sargs
-  unless (null missingFields) $
+  unless (null missingFields || not (napp ^. namedApplicationNewExhaustive)) $
     throw (ErrMissingFields (MissingFields (aname ^. scopedIdenFinal . nameConcrete) missingFields))
   return
     NamedApplicationNew
       { _namedApplicationNewName = aname,
         _namedApplicationNewArguments = args',
-        _namedApplicationNewAtKw = napp ^. namedApplicationNewAtKw
+        _namedApplicationNewAtKw = napp ^. namedApplicationNewAtKw,
+        _namedApplicationNewExhaustive = napp ^. namedApplicationNewExhaustive
       }
 
 checkNamedArgumentNew ::
@@ -2191,50 +2191,6 @@ checkNamedArgumentNew snames NamedArgumentNew {..} = do
     NamedArgumentNew
       { _namedArgumentNewFunDef = def
       }
-
-checkDefineField ::
-  (Members '[Error ScoperError, State Scope, State ScoperState, Reader ScopeParameters, InfoTableBuilder, NameIdGen] r) =>
-  RecordNameSignature 'Parsed ->
-  RecordDefineField 'Parsed ->
-  Sem r (RecordDefineField 'Scoped)
-checkDefineField sig RecordDefineField {..} = do
-  def <- localBindings . ignoreSyntax $ checkFunctionDef _fieldDefineFunDef
-  let fname = def ^. signName . nameConcrete
-  unless (HashMap.member fname (sig ^. recordNames)) $
-    throw (ErrUnexpectedField (UnexpectedField fname))
-  return
-    RecordDefineField
-      { _fieldDefineFunDef = def
-      }
-
-checkRecordCreation :: forall r. (Members '[Error ScoperError, State Scope, State ScoperState, Reader ScopeParameters, InfoTableBuilder, NameIdGen] r) => RecordCreation 'Parsed -> Sem r (RecordCreation 'Scoped)
-checkRecordCreation RecordCreation {..} = do
-  constrIden <- getNameOfKind KNameConstructor _recordCreationConstructor
-  let cname = constrIden ^. scopedIdenFinal
-  tab <- getInfoTable
-  let mci = HashMap.lookup (cname ^. S.nameId) (tab ^. infoConstructors)
-  case mci of
-    Nothing ->
-      throw (ErrNotAConstructor (NotAConstructor (cname ^. nameConcrete)))
-    Just ci -> do
-      let name = NameUnqualified (ci ^. constructorInfoTypeName . nameConcrete)
-          nameId = ci ^. constructorInfoTypeName . S.nameId
-      info <- getRecordInfo' (getLoc _recordCreationConstructor) name nameId
-      let sig = info ^. recordInfoSignature
-      fields' <- withLocalScope . localBindings . ignoreSyntax $ do
-        mapM_ (reserveFunctionSymbol . (^. fieldDefineFunDef)) _recordCreationFields
-        mapM (checkDefineField sig) _recordCreationFields
-      let snames = HashSet.fromList (HashMap.keys (sig ^. recordNames))
-          sfields = HashSet.fromList (map (^. fieldDefineFunDef . signName . nameConcrete) (toList fields'))
-          missingFields = HashSet.difference snames sfields
-      unless (null missingFields) $
-        throw (ErrMissingFields (MissingFields (cname ^. nameConcrete) missingFields))
-      return
-        RecordCreation
-          { _recordCreationConstructor = constrIden,
-            _recordCreationFields = fields',
-            _recordCreationAtKw
-          }
 
 checkRecordUpdate :: forall r. (Members '[Error ScoperError, State Scope, State ScoperState, Reader ScopeParameters, InfoTableBuilder, NameIdGen] r) => RecordUpdate 'Parsed -> Sem r (RecordUpdate 'Scoped)
 checkRecordUpdate RecordUpdate {..} = do

@@ -571,22 +571,6 @@ deriving stock instance Ord (RecordUpdateField 'Parsed)
 
 deriving stock instance Ord (RecordUpdateField 'Scoped)
 
-newtype RecordDefineField (s :: Stage) = RecordDefineField
-  { _fieldDefineFunDef :: FunctionDef s
-  }
-
-deriving stock instance Show (RecordDefineField 'Parsed)
-
-deriving stock instance Show (RecordDefineField 'Scoped)
-
-deriving stock instance Eq (RecordDefineField 'Parsed)
-
-deriving stock instance Eq (RecordDefineField 'Scoped)
-
-deriving stock instance Ord (RecordDefineField 'Parsed)
-
-deriving stock instance Ord (RecordDefineField 'Scoped)
-
 data RecordField (s :: Stage) = RecordField
   { _fieldName :: SymbolType s,
     _fieldColon :: Irrelevant (KeywordRef),
@@ -1646,6 +1630,7 @@ deriving stock instance Ord (NamedArgumentNew 'Scoped)
 data NamedApplicationNew (s :: Stage) = NamedApplicationNew
   { _namedApplicationNewName :: IdentifierType s,
     _namedApplicationNewAtKw :: Irrelevant KeywordRef,
+    _namedApplicationNewExhaustive :: Bool,
     _namedApplicationNewArguments :: [NamedArgumentNew s]
   }
 
@@ -1677,24 +1662,6 @@ deriving stock instance Ord (RecordStatement 'Parsed)
 
 deriving stock instance Ord (RecordStatement 'Scoped)
 
-data RecordCreation (s :: Stage) = RecordCreation
-  { _recordCreationConstructor :: IdentifierType s,
-    _recordCreationAtKw :: Irrelevant KeywordRef,
-    _recordCreationFields :: [RecordDefineField s]
-  }
-
-deriving stock instance Show (RecordCreation 'Parsed)
-
-deriving stock instance Show (RecordCreation 'Scoped)
-
-deriving stock instance Eq (RecordCreation 'Parsed)
-
-deriving stock instance Eq (RecordCreation 'Scoped)
-
-deriving stock instance Ord (RecordCreation 'Parsed)
-
-deriving stock instance Ord (RecordCreation 'Scoped)
-
 -- | Expressions without application
 data ExpressionAtom (s :: Stage)
   = AtomIdentifier (IdentifierType s)
@@ -1716,7 +1683,6 @@ data ExpressionAtom (s :: Stage)
   | AtomIterator (Iterator s)
   | AtomNamedApplication (NamedApplication s)
   | AtomNamedApplicationNew (NamedApplicationNew s)
-  | AtomRecordCreation (RecordCreation s)
 
 deriving stock instance Show (ExpressionAtom 'Parsed)
 
@@ -1881,7 +1847,6 @@ makeLenses ''RecordUpdateExtra
 makeLenses ''RecordUpdate
 makeLenses ''RecordUpdateApp
 makeLenses ''RecordUpdateField
-makeLenses ''RecordDefineField
 makeLenses ''NonDefinitionsSection
 makeLenses ''DefinitionsSection
 makeLenses ''ProjectionDef
@@ -2016,9 +1981,6 @@ instance HasAtomicity (NamedApplication s) where
   atomicity = const (Aggregate appFixity)
 
 instance HasAtomicity (NamedApplicationNew s) where
-  atomicity = const (Aggregate appFixity)
-
-instance HasAtomicity (RecordCreation s) where
   atomicity = const (Aggregate updateFixity)
 
 instance HasAtomicity Expression where
@@ -2178,15 +2140,8 @@ instance (SingI s) => HasLoc (NamedApplicationNew s) where
 instance (SingI s) => HasLoc (RecordUpdateField s) where
   getLoc f = getLocSymbolType (f ^. fieldUpdateName) <> getLocExpressionType (f ^. fieldUpdateValue)
 
-instance (SingI s) => HasLoc (RecordDefineField s) where
-  getLoc f = getLoc (f ^. fieldDefineFunDef)
-
 instance HasLoc (RecordUpdate s) where
   getLoc r = getLoc (r ^. recordUpdateAtKw) <> getLoc (r ^. recordUpdateDelims . unIrrelevant . _2)
-
--- TODO add delims
-instance (SingI s) => HasLoc (RecordCreation s) where
-  getLoc RecordCreation {..} = getLocIdentifierType _recordCreationConstructor
 
 instance HasLoc RecordUpdateApp where
   getLoc r = getLoc (r ^. recordAppExpression) <> getLoc (r ^. recordAppUpdate)
@@ -2521,15 +2476,6 @@ instance (SingI s) => IsApe (NamedApplicationNew s) ApeLeaf where
       Leaf
         { _leafAtomicity = atomicity a,
           _leafExpr = ApeLeafAtom (sing :&: AtomNamedApplicationNew a)
-        }
-
-instance (SingI s) => IsApe (RecordCreation s) ApeLeaf where
-  toApe :: RecordCreation s -> Ape ApeLeaf
-  toApe a =
-    ApeLeaf $
-      Leaf
-        { _leafAtomicity = atomicity a,
-          _leafExpr = ApeLeafAtom (sing :&: AtomRecordCreation a)
         }
 
 instance IsApe Application ApeLeaf where

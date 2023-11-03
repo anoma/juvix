@@ -843,11 +843,11 @@ namedApplicationNew ::
   (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
   ParsecS r (NamedApplicationNew 'Parsed)
 namedApplicationNew = P.label "<named application>" $ do
-  (_namedApplicationNewName, _namedApplicationNewAtKw) <- P.try $ do
+  (_namedApplicationNewName, _namedApplicationNewAtKw, _namedApplicationNewExhaustive) <- P.try $ do
     n <- name
-    a <- Irrelevant <$> kw kwAt
+    (a, b) <- first Irrelevant <$> ((,False) <$> kw kwAtQuestion <|> (,True) <$> kw kwAt)
     lbrace
-    return (n, a)
+    return (n, a, b)
   defs <- P.sepEndBy (functionDefinition True False Nothing) semicolon
   rbrace
   let _namedApplicationNewArguments = fmap mkArg defs
