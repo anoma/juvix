@@ -14,6 +14,21 @@ tests:
     stdout:
       contains: type checks
     exit-status: 0
+  - name: init-non-interactive-name
+    command:
+      shell:
+        - bash
+      script: |
+        temp=$(mktemp -d)
+        trap 'rm -rf -- "$temp"' EXIT
+        mkdir "$temp/packagename"
+        cd "$temp/packagename"
+        juvix init -n
+        juvix repl Package.juvix
+    stdout:
+      contains: '"packagename"'
+    stdin: Package.name package
+    exit-status: 0
   - name: init-name
     command:
       shell:

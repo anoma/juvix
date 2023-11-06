@@ -8,6 +8,7 @@ import Commands.Doctor.Options
 import Commands.Eval.Options
 import Commands.Format.Options
 import Commands.Html.Options
+import Commands.Init.Options
 import Commands.Repl.Options
 import Commands.Typecheck.Options
 import CommonOptions hiding (Doc)
@@ -26,7 +27,7 @@ data TopCommand
   | Html HtmlOptions
   | Dev Dev.DevCommand
   | Doctor DoctorOptions
-  | Init
+  | Init InitOptions
   | JuvixRepl ReplOptions
   | JuvixFormat FormatOptions
   | Dependencies Dependencies.DependenciesCommand
@@ -108,7 +109,7 @@ parseUtility =
       command
         "init"
         ( info
-            (pure Init)
+            (Init <$> parseInitOptions)
             (progDesc "Interactively initialize a Juvix project in the current directory")
         )
     commandDoctor :: Mod CommandFields TopCommand
