@@ -55,3 +55,13 @@ withEnvRoot root' = local (set envRoot root')
 
 withLockfile :: (Members '[Reader ResolverEnv] r) => LockfileInfo -> Sem r a -> Sem r a
 withLockfile f = local (set envLockfileInfo (Just f))
+
+setResolverCacheItem :: (Members '[Files, State ResolverState] r) => Path Abs Dir -> Maybe (ResolverCacheItem) -> Sem r ()
+setResolverCacheItem p mi = do
+  np <- normalizeDir p
+  modify' (set (resolverCache . at np) mi)
+
+getResolverCacheItem :: (Members '[Files, State ResolverState] r) => Path Abs Dir -> Sem r (Maybe (ResolverCacheItem))
+getResolverCacheItem p = do
+  np <- normalizeDir p
+  gets (^. resolverCache . at np)

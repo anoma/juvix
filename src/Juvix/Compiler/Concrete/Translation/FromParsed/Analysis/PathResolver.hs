@@ -245,17 +245,12 @@ addDependency' pkg me resolvedDependency = do
             { _lockfileDependencyDependency = resolvedDependency ^. resolvedDependencyDependency,
               _lockfileDependencyDependencies = subDeps
             }
-    modify'
-      ( set
-          (resolverCache . at (resolvedDependency ^. resolvedDependencyPath))
-          ( Just
-              ( ResolverCacheItem
-                  { _resolverCacheItemPackage = pkgInfo,
-                    _resolverCacheItemDependency = dep
-                  }
-              )
-          )
-      )
+        cacheItem =
+          ResolverCacheItem
+            { _resolverCacheItemPackage = pkgInfo,
+              _resolverCacheItemDependency = dep
+            }
+    setResolverCacheItem (resolvedDependency ^. resolvedDependencyPath) (Just cacheItem)
     return dep
   where
     selectPackageLockfile :: Package -> Sem r a -> Sem r a
@@ -276,14 +271,14 @@ addDependency' pkg me resolvedDependency = do
           Just dlf -> withLockfile dlf action
           Nothing -> action
 
-currentPackage :: (Members '[State ResolverState, Reader ResolverEnv] r) => Sem r PackageInfo
+currentPackage :: (Members '[Files, State ResolverState, Reader ResolverEnv] r) => Sem r PackageInfo
 currentPackage = do
   curRoot <- asks (^. envRoot)
-  (^. resolverCacheItemPackage) <$> gets (^?! resolverCache . at curRoot . _Just)
+  (^. resolverCacheItemPackage) . fromJust <$> getResolverCacheItem curRoot
 
 -- | Returns the root of the package where the module belongs and the path to
 -- the module relative to the root.
-resolvePath' :: (Members '[State ResolverState, Reader ResolverEnv] r) => TopModulePath -> Sem r (Either PathResolverError (Path Abs Dir, Path Rel File))
+resolvePath' :: (Members '[Files, State ResolverState, Reader ResolverEnv] r) => TopModulePath -> Sem r (Either PathResolverError (Path Abs Dir, Path Rel File))
 resolvePath' mp = do
   z <- gets (^. resolverFiles)
   curPkg <- currentPackage

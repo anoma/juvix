@@ -44,12 +44,12 @@ runFilesIO = interpret helper
         let P.CDev dev = P.deviceID status
             P.CIno fid = P.fileID status
         return (Uid (dev, fid))
-      GetDirAbsPath f -> canonicalizePath f
       RemoveFile' f -> Path.removeFile f
       RenameFile' p1 p2 -> Path.renameFile p1 p2
       CopyFile' p1 p2 -> Path.copyFile p1 p2
       JuvixConfigDir -> juvixConfigDirIO
       CanonicalDir root d -> prepathToAbsDir root d
+      NormalizeDir p -> canonicalizePath p
 
 juvixConfigDirIO :: IO (Path Abs Dir)
 juvixConfigDirIO = (<//> versionDir) . absDir <$> getUserConfigDir "juvix"

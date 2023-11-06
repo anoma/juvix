@@ -72,7 +72,6 @@ re cwd = reinterpret $ \case
   FileExists' f -> isJust <$> lookupFile f
   PathUid p -> return (Uid (toFilePath p))
   ReadFileBS' f -> encodeUtf8 <$> lookupFile' f
-  GetDirAbsPath p -> return (absDir (cwd' </> toFilePath p))
   EnsureDir' p -> ensureDirHelper p
   DirectoryExists' p -> isJust <$> lookupDir p
   WriteFile' p t -> writeFileHelper p t
@@ -86,6 +85,7 @@ re cwd = reinterpret $ \case
   CopyFile' p1 p2 -> copyFileHelper p1 p2
   JuvixConfigDir -> return juvixConfigDirPure
   CanonicalDir root d -> return (canonicalDirPure root d)
+  NormalizeDir p -> return (absDir (cwd' </> toFilePath p))
   where
     cwd' :: FilePath
     cwd' = toFilePath cwd
