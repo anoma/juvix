@@ -135,9 +135,6 @@ topModulePathSymbol = over nameConcrete (^. C.modulePathName)
 topModulePathName :: TopModulePath -> Name
 topModulePathName = over nameConcrete C.topModulePathToName
 
-unConcrete :: Name' a -> Name' (Maybe C.Name)
-unConcrete = set nameConcrete Nothing
-
 symbolText :: Symbol -> Text
 symbolText s = s ^. nameConcrete . C.symbolText
 

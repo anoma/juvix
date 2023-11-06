@@ -46,7 +46,7 @@ newtype ModulesCache = ModulesCache
 data ScopeParameters = ScopeParameters
   { -- | Used for import cycle detection.
     _scopeTopParents :: [Import 'Parsed],
-    _scopeParsedModules :: HashMap TopModulePath ScopedModule
+    _scopeParsedModules :: HashMap TopModulePath (Either ScopedModule (Module 'Parsed 'ModuleTop))
   }
 
 data RecordInfo = RecordInfo
@@ -57,7 +57,7 @@ data RecordInfo = RecordInfo
 data ScoperState = ScoperState
   { _scoperModulesCache :: ModulesCache,
     -- | Local and top modules
-    _scoperModules :: HashMap S.ModuleNameId ScopedModuleRef,
+    _scoperModules :: HashMap S.ModuleNameId ScopedModule,
     _scoperScope :: HashMap TopModulePath Scope,
     _scoperAlias :: HashMap S.NameId PreSymbolEntry,
     _scoperSignatures :: HashMap S.NameId (NameSignature 'Parsed),

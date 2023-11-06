@@ -69,7 +69,7 @@ type family SymbolType s = res | res -> s where
 type ModuleRefType :: Stage -> GHC.Type
 type family ModuleRefType s = res | res -> s where
   ModuleRefType 'Parsed = Name
-  ModuleRefType 'Scoped = ScopedModuleRef
+  ModuleRefType 'Scoped = ScopedModule
 
 type IdentifierType :: Stage -> GHC.Type
 type family IdentifierType s = res | res -> s where
@@ -1086,6 +1086,9 @@ getModuleRefName (ScopedModuleRef (_ :&: ScopedModuleRef' {..})) = _scopedModule
 getModuleRefNameId :: ScopedModuleRef -> S.NameId
 getModuleRefNameId m = getModuleRefName m ^. S.nameId
 
+getScopedModuleNameId :: ScopedModule -> S.NameId
+getScopedModuleNameId m = m ^. scopedModuleName . S.nameId
+
 data OpenModule (s :: Stage) = OpenModule
   { _openModuleName :: ModuleRefType s,
     _openModuleParams :: OpenModuleParams s
@@ -2009,7 +2012,6 @@ instance (SingI s) => HasLoc (AxiomDef s) where
 instance HasLoc (OpenModule 'Scoped) where
   getLoc m =
     getLoc (m ^. openModuleParams . openModuleKw)
-      <> getLoc (m ^. openModuleName)
       <>? fmap getLoc (m ^. openModuleParams . openPublicKw . unIrrelevant)
 
 instance HasLoc (ProjectionDef s) where

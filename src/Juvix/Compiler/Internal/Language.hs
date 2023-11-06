@@ -357,7 +357,7 @@ emptyArgInfo =
 
 instance Hashable ArgInfo
 
-instance Serialize DefaultSignature
+instance Serialize ArgInfo
 
 data FunctionParameter = FunctionParameter
   { _paramName :: Maybe VarName,

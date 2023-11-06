@@ -93,7 +93,7 @@ runToInternal m = do
     . runScoperInfoTableBuilderArtifacts
     . runScoperScopeArtifacts
     . runReaderArtifacts artifactScopeExports
-    . runReader (Scoper.ScopeParameters mempty parsedModules)
+    . runReader (Scoper.ScopeParameters mempty (fmap Right parsedModules))
     . runFromConcreteCache
     . runStateArtifacts artifactScoperState
     $ m

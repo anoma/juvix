@@ -226,7 +226,7 @@ reserveSymbolOf k nameSig s = do
   whenJust nameSig (modify' . set (scoperSignatures . at (s' ^. S.nameId)) . Just)
   modify (set (scopeNameSpaceLocal sns . at s) (Just s'))
   registerName s'
-  let u = S.unConcrete s'
+  let u = S.unqualifiedSymbol s'
       entry :: NameSpaceEntryType (NameKindNameSpace nameKind)
       entry =
         let symE
@@ -383,24 +383,23 @@ checkImport import_@Import {..} = do
       qual' = do
         asName <- _importAsName
         return (set S.nameConcrete asName sname')
-  addModuleToScope smodule
+  addModuleToScope cmodule
   registerName importName
   whenJust synonymName registerName
-  let moduleRef' = mkModuleRef' moduleRef
-  modify (over scoperModules (HashMap.insert moduleId moduleRef'))
-  importOpen' <- mapM (checkImportOpenParams cmoduleRef) _importOpen
+  modify (over scoperModules (HashMap.insert moduleId cmodule))
+  importOpen' <- mapM (checkImportOpenParams cmodule) _importOpen
   return
     Import
-      { _importModule = cmoduleRef,
+      { _importModule = cmodule,
         _importAsName = qual',
         _importOpen = importOpen',
         ..
       }
   where
-    addModuleToScope :: ModuleRef'' 'S.NotConcrete 'ModuleTop -> Sem r ()
+    addModuleToScope :: ScopedModule -> Sem r ()
     addModuleToScope moduleRef = do
       let mpath :: TopModulePath = fromMaybe _importModule _importAsName
-          uid :: S.NameId = moduleRef ^. moduleRefName . S.nameId
+          uid :: S.NameId = moduleRef ^. scopedModuleName . S.nameId
           singTbl = HashMap.singleton uid moduleRef
       modify (over (scopeTopModules . at mpath) (Just . maybe singTbl (HashMap.insert uid moduleRef)))
     checkCycle :: Sem r ()
@@ -420,7 +419,7 @@ getTopModulePath Module {..} =
     }
 
 getModuleExportInfo :: forall r. (Members '[State ScoperState] r) => ModuleSymbolEntry -> Sem r ExportInfo
-getModuleExportInfo m = fromMaybeM err (gets (^? scoperModules . at (m ^. moduleEntry . S.nameId) . _Just . to getModuleRefExportInfo))
+getModuleExportInfo m = fromMaybeM err (gets (^? scoperModules . at (m ^. moduleEntry . S.nameId) . _Just . scopedModuleExportInfo))
   where
     err :: Sem r a
     err = do
@@ -462,14 +461,12 @@ lookupSymbolAux modules final = do
     importedTopModule :: Sem r ()
     importedTopModule = do
       tbl <- gets (^. scopeTopModules)
-      mapM_ output (tbl ^.. at path . _Just . each . to (mkModuleEntry . mkModuleRef'))
+      mapM_ output (tbl ^.. at path . _Just . each . to mkModuleEntry)
       where
         path = TopModulePath modules final
 
-mkModuleEntry :: ModuleRef' 'S.NotConcrete -> ModuleSymbolEntry
-mkModuleEntry (ModuleRef' (t :&: m)) = ModuleSymbolEntry $ case t of
-  SModuleTop -> S.unConcrete (m ^. moduleRefModule . modulePath)
-  SModuleLocal -> S.unConcrete (m ^. moduleRefModule . modulePath)
+mkModuleEntry :: ScopedModule -> ModuleSymbolEntry
+mkModuleEntry m = ModuleSymbolEntry (m ^. scopedModuleName)
 
 lookInExport ::
   forall r.
@@ -530,7 +527,7 @@ lookupQualifiedSymbol sms = do
             lookInTopModule topPath remaining = do
               tbl <- gets (^. scopeTopModules)
               sequence_
-                [ lookInExport sym remaining (ref ^. moduleExportInfo)
+                [ lookInExport sym remaining (ref ^. scopedModuleExportInfo)
                   | Just t <- [tbl ^. at topPath],
                     ref <- toList t
                 ]
@@ -626,7 +623,7 @@ exportScope Scope {..} = do
                 )
             )
 
-getParsedModule :: (Members '[Reader ScopeParameters] r) => TopModulePath -> Sem r ScopedModule
+getParsedModule :: (Members '[Reader ScopeParameters] r) => TopModulePath -> Sem r (Either ScopedModule (Module 'Parsed 'ModuleTop))
 getParsedModule i = asks (^?! scopeParsedModules . at i . _Just)
 
 readScopeModule ::
@@ -634,7 +631,14 @@ readScopeModule ::
   Import 'Parsed ->
   Sem r ScopedModule
 readScopeModule import_ = do
-  getParsedModule (import_ ^. importModule)
+  m <- getParsedModule (import_ ^. importModule)
+  case m of
+    Left m' -> return m'
+    Right m' ->
+      (^. scopedModuleRefScopedModule) <$> local addImport (checkTopModule m')
+    where
+      addImport :: ScopeParameters -> ScopeParameters
+      addImport = over scopeTopParents (cons import_)
 
 checkFixityInfo ::
   forall r.
@@ -1001,14 +1005,14 @@ checkTopModules ::
   Sem r (NonEmpty (Module 'Scoped 'ModuleTop), HashSet NameId)
 checkTopModules modules = do
   checked <- mapM checkTopModule modules
-  return ((^. moduleRefModule) <$> checked, createExportsTable (head checked ^. moduleExportInfo))
+  return ((^. scopedModuleRefModule) <$> checked, createExportsTable (head checked ^. scopedModuleRefScopedModule . scopedModuleExportInfo))
 
 checkTopModule_ ::
   forall r.
   (Members '[Error ScoperError, Reader ScopeParameters, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
   Module 'Parsed 'ModuleTop ->
   Sem r (Module 'Scoped 'ModuleTop)
-checkTopModule_ = fmap (^. moduleRefModule) . checkTopModule
+checkTopModule_ = fmap (^. scopedModuleRefModule) . checkTopModule
 
 topBindings :: Sem (Reader BindingStrategy ': r) a -> Sem r a
 topBindings = runReader BindingTop
@@ -1020,11 +1024,11 @@ checkTopModule ::
   forall r.
   (Members '[Error ScoperError, Reader ScopeParameters, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
   Module 'Parsed 'ModuleTop ->
-  Sem r (ModuleRef'' 'S.NotConcrete 'ModuleTop)
+  Sem r (ScopedModuleRef' 'ModuleTop)
 checkTopModule m@Module {..} = do
   r <- checkedModule
-  modify (over (scoperModulesCache . cachedModules) (HashMap.insert _modulePath r))
-  registerModule (r ^. moduleRefModule)
+  modify (over (scoperModulesCache . cachedModules) (HashMap.insert _modulePath (r ^. scopedModuleRefScopedModule)))
+  registerModule (r ^. scopedModuleRefModule)
   return r
   where
     freshTopModulePath ::
@@ -1052,14 +1056,14 @@ checkTopModule m@Module {..} = do
     iniScope :: Scope
     iniScope = emptyScope (getTopModulePath m)
 
-    checkedModule :: Sem r (ModuleRef'' 'S.NotConcrete 'ModuleTop)
+    checkedModule :: Sem r (ScopedModuleRef' 'ModuleTop)
     checkedModule = do
       (s, (m', p)) <- runState iniScope $ do
         path' <- freshTopModulePath
         withTopScope $ do
-          (_moduleExportInfo, body') <- topBindings (checkModuleBody _moduleBody)
+          (e, body') <- topBindings (checkModuleBody _moduleBody)
           doc' <- mapM checkJudoc _moduleDoc
-          let _moduleRefModule =
+          let _scopedModuleRefModule =
                 Module
                   { _modulePath = path',
                     _moduleBody = body',
@@ -1069,8 +1073,13 @@ checkTopModule m@Module {..} = do
                     _moduleInductive,
                     _moduleKwEnd
                   }
-              _moduleRefName = S.unConcrete path'
-          return (ModuleRef'' {..}, path')
+              _scopedModuleRefScopedModule =
+                ScopedModule
+                  { _scopedModulePath = path',
+                    _scopedModuleName = S.topModulePathName path',
+                    _scopedModuleExportInfo = e
+                  }
+          return (ScopedModuleRef' {..}, path')
       modify (set (scoperScope . at (p ^. S.nameConcrete)) (Just s))
       return m'
 
@@ -1415,7 +1424,7 @@ checkLocalModule ::
   Module 'Parsed 'ModuleLocal ->
   Sem r (Module 'Scoped 'ModuleLocal)
 checkLocalModule Module {..} = do
-  (_moduleExportInfo, moduleBody', moduleDoc') <-
+  (moduleExportInfo, moduleBody', moduleDoc') <-
     withLocalScope $ do
       inheritScope
       (e, b) <- checkModuleBody _moduleBody
@@ -1423,8 +1432,8 @@ checkLocalModule Module {..} = do
       return (e, b, doc')
   _modulePath' <- reserveLocalModuleSymbol _modulePath
   let moduleId = _modulePath' ^. S.nameId
-      _moduleRefName = S.unConcrete _modulePath'
-      _moduleRefModule =
+      moduleName = S.unqualifiedSymbol _modulePath'
+      m =
         Module
           { _modulePath = _modulePath',
             _moduleBody = moduleBody',
@@ -1434,11 +1443,15 @@ checkLocalModule Module {..} = do
             _moduleInductive,
             _moduleKwEnd
           }
-      mref :: ModuleRef' 'S.NotConcrete
-      mref = mkModuleRef' @'ModuleLocal ModuleRef'' {..}
-  modify (over scoperModules (HashMap.insert moduleId mref))
+      smod =
+        ScopedModule
+          { _scopedModulePath = set nameConcrete (moduleNameToTopModulePath (NameUnqualified _modulePath)) moduleName,
+            _scopedModuleName = moduleName,
+            _scopedModuleExportInfo = moduleExportInfo
+          }
+  modify (over scoperModules (HashMap.insert moduleId smod))
   registerName _modulePath'
-  return _moduleRefModule
+  return m
   where
     inheritScope :: Sem r ()
     inheritScope = do
@@ -1474,24 +1487,24 @@ checkOrphanIterators = do
 symbolInfoSingle :: (SingI ns) => NameSpaceEntryType ns -> SymbolInfo ns
 symbolInfoSingle p = SymbolInfo $ HashMap.singleton (p ^. nsEntry . S.nameDefinedIn) p
 
-getModuleRef ::
+getModule ::
   (Members '[State ScoperState] r) =>
   ModuleSymbolEntry ->
   Name ->
-  Sem r ModuleRef
-getModuleRef e n =
-  overModuleRef'' (set (moduleRefName . S.nameConcrete) n)
+  Sem r ScopedModule
+getModule e n =
+  set (scopedModuleName . S.nameConcrete) n
     <$> gets (^?! scoperModules . at (e ^. moduleEntry . S.nameId) . _Just)
 
 lookupModuleSymbol ::
   (Members '[Error ScoperError, State Scope, State ScoperState] r) =>
   Name ->
-  Sem r ModuleRef
+  Sem r ScopedModule
 lookupModuleSymbol n = do
   es <- snd3 <$> lookupQualifiedSymbol (path, sym)
   case nonEmpty (resolveShadowing es) of
     Nothing -> notInScope
-    Just (x :| []) -> getModuleRef x n
+    Just (x :| []) -> getModule x n
     Just more -> throw (ErrAmbiguousModuleSym (AmbiguousModuleSym n more))
   where
     notInScope = throw (ErrModuleNotInScope (ModuleNotInScope n))
@@ -1502,7 +1515,7 @@ lookupModuleSymbol n = do
 checkImportOpenParams ::
   forall r.
   (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
-  ModuleRef'' 'S.Concrete 'ModuleTop ->
+  ScopedModule ->
   OpenModuleParams 'Parsed ->
   Sem r (OpenModuleParams 'Scoped)
 checkImportOpenParams m p =
@@ -1511,7 +1524,7 @@ checkImportOpenParams m p =
       (Just m)
       OpenModule
         { _openModuleParams = p,
-          _openModuleName = m ^. moduleRefName . S.nameConcrete
+          _openModuleName = m ^. scopedModuleName . S.nameConcrete
         }
 
 checkOpenModule ::
@@ -1524,15 +1537,15 @@ checkOpenModule = checkOpenModuleHelper Nothing
 checkOpenModuleHelper ::
   forall r.
   (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
-  Maybe (ModuleRef'' 'S.Concrete 'ModuleTop) ->
+  Maybe ScopedModule ->
   OpenModule 'Parsed ->
   Sem r (OpenModule 'Scoped)
 checkOpenModuleHelper importModuleHint OpenModule {..} = do
-  openModuleName'@(ModuleRef' (_ :&: moduleRef'')) <- case importModuleHint of
+  cmod <- case importModuleHint of
     Nothing -> lookupModuleSymbol _openModuleName
-    Just m -> return (project m)
-  let exportInfo = moduleRef'' ^. moduleExportInfo
-  registerName (moduleRef'' ^. moduleRefName)
+    Just m -> return m
+  let exportInfo = cmod ^. scopedModuleExportInfo
+  registerName (cmod ^. scopedModuleName)
 
   let checkUsingHiding :: UsingHiding 'Parsed -> Sem r (UsingHiding 'Scoped)
       checkUsingHiding = \case
@@ -1548,7 +1561,7 @@ checkOpenModuleHelper importModuleHint OpenModule {..} = do
                     ( ErrModuleDoesNotExportSymbol
                         ( ModuleDoesNotExportSymbol
                             { _moduleDoesNotExportSymbol = s,
-                              _moduleDoesNotExportModule = openModuleName'
+                              _moduleDoesNotExportModule = cmod
                             }
                         )
                     )
@@ -1612,7 +1625,7 @@ checkOpenModuleHelper importModuleHint OpenModule {..} = do
   mergeScope (alterScope (openParams' ^. openUsingHiding) exportInfo)
   return
     OpenModule
-      { _openModuleName = openModuleName',
+      { _openModuleName = cmod,
         _openModuleParams = openParams',
         ..
       }

@@ -5,7 +5,7 @@ import Juvix.Compiler.Concrete.Data.ScopedName (HasNameKind)
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Prelude
 
-type ScopedName = S.Name' ()
+type ScopedName = S.Name
 
 newtype Alias = Alias
   { _aliasName :: ScopedName
@@ -44,7 +44,7 @@ data ExportInfo = ExportInfo
   }
   deriving stock (Show, Eq, Ord, Generic)
 
-data ScopedModule = StoredModule
+data ScopedModule = ScopedModule
   { _scopedModulePath :: S.TopModulePath,
     _scopedModuleName :: ScopedName,
     _scopedModuleExportInfo :: ExportInfo

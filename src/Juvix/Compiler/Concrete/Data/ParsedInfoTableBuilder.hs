@@ -78,7 +78,7 @@ build :: BuilderState -> InfoTable
 build st =
   InfoTable
     { _infoParsedComments = mkComments (st ^. stateComments),
-      _infoParsedModules = st ^. stateModules
+      _infoParsedModules = fmap Right (st ^. stateModules)
     }
 
 registerItem' :: (Members '[HighlightBuilder] r) => ParsedItem -> Sem r ()

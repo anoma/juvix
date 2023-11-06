@@ -6,7 +6,7 @@ import Juvix.Prelude
 
 data InfoTable = InfoTable
   { _infoParsedComments :: Comments,
-    _infoParsedModules :: HashMap TopModulePath ScopedModule
+    _infoParsedModules :: HashMap TopModulePath (Either ScopedModule (Module 'Parsed 'ModuleTop))
   }
 
 makeLenses ''InfoTable

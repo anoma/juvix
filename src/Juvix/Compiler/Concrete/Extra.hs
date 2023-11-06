@@ -60,7 +60,7 @@ groupStatements = \case
             ^. importModule
               . scopedModulePath
               . S.nameId
-            == getModuleRefNameId (o ^. openModuleName)
+            == getScopedModuleNameId (o ^. openModuleName)
       (StatementImport _, _) -> False
       (StatementOpenModule {}, StatementOpenModule {}) -> True
       (StatementOpenModule {}, _) -> False
