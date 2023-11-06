@@ -197,7 +197,7 @@ instance ToGenericError WrongType where
 -- a function type.
 data ExpectedFunctionType = ExpectedFunctionType
   { _expectedFunctionTypeExpression :: Expression,
-    _expectedFunctionTypeApp :: Expression,
+    _expectedFunctionTypeLeft :: Expression,
     _expectedFunctionTypeType :: Expression
   }
 
@@ -226,7 +226,7 @@ instance ToGenericError ExpectedFunctionType where
                 <> indent' (ppCode opts' (e ^. expectedFunctionTypeExpression))
                 <> line
                 <> "the expression"
-              <+> ppCode opts' (e ^. expectedFunctionTypeApp)
+              <+> ppCode opts' (e ^. expectedFunctionTypeLeft)
               <+> "is expected to have a function type but has type:"
                 <> line
                 <> indent' (ppCode opts' (e ^. expectedFunctionTypeType))

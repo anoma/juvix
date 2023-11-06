@@ -933,7 +933,7 @@ inferExpression' hint e = case e of
                   ErrExpectedFunctionType
                     ( ExpectedFunctionType
                         { _expectedFunctionTypeExpression = e,
-                          _expectedFunctionTypeApp = l,
+                          _expectedFunctionTypeLeft = l,
                           _expectedFunctionTypeType = l' ^. typedType
                         }
                     )
