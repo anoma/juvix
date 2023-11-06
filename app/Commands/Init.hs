@@ -1,11 +1,10 @@
 module Commands.Init where
 
+import Commands.Extra.Package
 import Commands.Init.Options
 import Data.Text qualified as Text
-import Data.Text.IO.Utf8 qualified as Utf8
 import Data.Versions
 import Juvix.Compiler.Pipeline.Package
-import Juvix.Compiler.Pipeline.Package.Loader
 import Juvix.Data.Effect.Fail.Extra qualified as Fail
 import Juvix.Extra.Paths
 import Juvix.Prelude
@@ -39,13 +38,11 @@ init opts = do
               Nothing -> emptyPkg
               Just n -> emptyPkg {_packageName = n}
   when isInteractive (say ("creating " <> pack (toFilePath packageFilePath)))
-  writePackage pkg
+  cwd <- getCurrentDir
+  writePackageFile cwd pkg
   checkPackage
   when isInteractive (say "you are all set")
   where
-    writePackage :: Package -> Sem r ()
-    writePackage pkg = embed (Utf8.writeFile @IO (toFilePath packageFilePath) (renderPackageVersion PackageVersion1 pkg))
-
     isInteractive :: Bool
     isInteractive = not (opts ^. initOptionsNonInteractive)
 
