@@ -90,7 +90,7 @@ formatProject p = do
     handler cd _ files res = do
       let juvixFiles = [cd <//> f | f <- files, isJuvixFile f]
       subRes <- mconcat <$> mapM format juvixFiles
-      return (res <> subRes, RecurseFilter (\hasJuvixYaml d -> not hasJuvixYaml && not (isHiddenDirectory d)))
+      return (res <> subRes, RecurseFilter (\hasJuvixPackage d -> not hasJuvixPackage && not (isHiddenDirectory d)))
 
 formatPath ::
   (Members '[Reader Text, ScopeEff] r) =>
