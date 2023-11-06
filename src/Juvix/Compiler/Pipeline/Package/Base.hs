@@ -100,6 +100,9 @@ resolveBuildDir = \case
   DefaultBuildDir -> Rel (relBuildDir)
   CustomBuildDir d -> d
 
+resolveAbsBuildDir :: Path Abs Dir -> BuildDir -> Path Abs Dir
+resolveAbsBuildDir root = someBaseToAbs root . resolveBuildDir
+
 mapCustomBuildDir :: (SomeBase Dir -> SomeBase Dir) -> BuildDir -> BuildDir
 mapCustomBuildDir f = \case
   DefaultBuildDir -> DefaultBuildDir

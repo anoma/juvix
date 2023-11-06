@@ -18,7 +18,6 @@ import Juvix.Compiler.Pipeline.Package.Loader.EvalEff
 import Juvix.Compiler.Pipeline.Package.Loader.PathResolver
 import Juvix.Data.Effect.Git
 import Juvix.Data.Effect.Process
-import Juvix.Extra.Paths qualified as Paths
 
 data LoaderResource = LoaderResource
   { _loaderResourceResult :: CoreResult,
@@ -152,7 +151,7 @@ loadPackage' packagePath = do
               _rootPackageGlobal = False,
               _rootPackage = rootPkg,
               _rootInvokeDir = rootPath,
-              _rootBuildDir = Paths.rootBuildDir rootPath
+              _rootBuildDir = DefaultBuildDir
             }
 
         rootPkg :: Package
