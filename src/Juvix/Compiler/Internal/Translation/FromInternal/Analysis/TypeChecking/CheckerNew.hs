@@ -13,7 +13,8 @@ import Juvix.Compiler.Internal.Data.CoercionInfo
 import Juvix.Compiler.Internal.Data.InstanceInfo
 import Juvix.Compiler.Internal.Data.LocalVars
 import Juvix.Compiler.Internal.Data.TypedHole
-import Juvix.Compiler.Internal.Extra
+import Juvix.Compiler.Internal.Extra hiding (freshHole)
+import Juvix.Compiler.Internal.Extra qualified as Extra
 import Juvix.Compiler.Internal.Pretty
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Positivity.Checker
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker (Termination)
@@ -446,12 +447,18 @@ checkFunctionParameter ::
   (Members '[HighlightBuilder, Reader InfoTable, State FunctionsTable, Error TypeCheckerError, NameIdGen, Reader LocalVars, Inference, Builtins, Output Example, State TypesTable, Termination, Output TypedHole, Output CastHole] r) =>
   FunctionParameter ->
   Sem r FunctionParameter
-checkFunctionParameter (FunctionParameter mv i e) = do
-  e' <- checkIsType (getLoc e) e
-  when (i == ImplicitInstance) $ do
+checkFunctionParameter FunctionParameter {..} = do
+  let ty = _paramType
+  ty' <- checkIsType (getLoc ty) ty
+  when (_paramImplicit == ImplicitInstance) $ do
     tab <- ask
-    checkInstanceParam tab e'
-  return (FunctionParameter mv i e')
+    checkInstanceParam tab ty'
+  return
+    FunctionParameter
+      { _paramType = ty',
+        _paramName,
+        _paramImplicit
+      }
 
 checkConstructorDef ::
   ( Members
@@ -630,6 +637,12 @@ checkClause clauseLoc clauseType clausePats body = do
                   { _lhsTooManyPatternsRemaining = p :| ps
                   }
 
+freshHoleImpl :: (Members '[NameIdGen] r) => Interval -> IsImplicit -> Sem r Expression
+freshHoleImpl loc = \case
+  Explicit -> impossible
+  Implicit -> ExpressionHole <$> Extra.freshHole loc
+  ImplicitInstance -> ExpressionInstanceHole <$> Extra.freshHole loc
+
 -- | Refines a hole into a function type. I.e. '_@1' is matched with '_@fresh → _@fresh'
 holeRefineToFunction :: (Members '[Inference, NameIdGen] r) => IsImplicit -> Hole -> Sem r Function
 holeRefineToFunction impl h = do
@@ -640,8 +653,8 @@ holeRefineToFunction impl h = do
       ExpressionHole h'' -> holeRefineToFunction impl h''
       _ -> error "cannot refine hole to function"
     Nothing -> do
-      l <- ExpressionHole <$> freshHole (getLoc h)
-      r <- ExpressionHole <$> freshHole (getLoc h)
+      l <- freshHoleImpl (getLoc h) impl
+      r <- freshHoleImpl (getLoc h) Implicit
       let fun = Function (unnamedParameter' impl l) r
       whenJustM (matchTypes (ExpressionHole h) (ExpressionFunction fun)) impossible
       return fun
@@ -706,7 +719,7 @@ checkPattern = go
                   indName :: Iden
                   indName = IdenInductive (info ^. constructorInfoInductive)
                   loc = getLoc a
-              paramHoles <- map ExpressionHole <$> replicateM numIndParams (freshHole loc)
+              paramHoles <- replicateM numIndParams (freshHoleImpl loc Implicit)
               let patternTy = foldApplication (ExpressionIden indName) (map (ApplicationArg Explicit) paramHoles)
               whenJustM
                 (matchTypes patternTy (ExpressionHole hole))
@@ -803,7 +816,7 @@ inferLeftAppExpression ::
   Maybe Expression ->
   Expression ->
   Sem r TypedExpression
-inferLeftAppExpression hint e = case e of
+inferLeftAppExpression mhint e = case e of
   ExpressionApplication {} -> impossible
   ExpressionIden i -> goIden i
   ExpressionLiteral l -> goLiteral l
@@ -819,7 +832,7 @@ inferLeftAppExpression hint e = case e of
     goLet :: Let -> Sem r TypedExpression
     goLet l = do
       _letClauses <- mapM goLetClause (l ^. letClauses)
-      typedBody <- inferExpression' hint (l ^. letExpression)
+      typedBody <- inferExpression' mhint (l ^. letExpression)
       return
         TypedExpression
           { _typedType = typedBody ^. typedType,
@@ -842,15 +855,16 @@ inferLeftAppExpression hint e = case e of
     goHole :: Hole -> Sem r TypedExpression
     goHole h = do
       void (queryMetavar h)
+      ty <- maybe (freshHoleImpl (getLoc h) Implicit) return mhint
       return
         TypedExpression
           { _typedExpression = ExpressionHole h,
-            _typedType = ExpressionUniverse (SmallUniverse (getLoc h))
+            _typedType = ty
           }
 
     goInstanceHole :: Hole -> Sem r TypedExpression
     goInstanceHole h = do
-      let ty = fromMaybe impossible hint
+      let ty = fromMaybe impossible mhint
       locals <- ask
       output (TypedHole h ty locals)
       return
@@ -873,8 +887,8 @@ inferLeftAppExpression hint e = case e of
 
     goCase :: Case -> Sem r TypedExpression
     goCase c = do
-      ty <- case hint of
-        Nothing -> ExpressionHole <$> freshHole (getLoc c)
+      ty <- case mhint of
+        Nothing -> freshHoleImpl (getLoc c) Implicit
         Just hi -> return hi
       typedCaseExpression <- inferExpression' Nothing (c ^. caseExpression)
       let _caseExpression = typedCaseExpression ^. typedExpression
@@ -900,9 +914,9 @@ inferLeftAppExpression hint e = case e of
 
     goLambda :: Lambda -> Sem r TypedExpression
     goLambda l = do
-      ty <- case hint of
+      ty <- case mhint of
         Just hi -> return hi
-        Nothing -> ExpressionHole <$> freshHole (getLoc l)
+        Nothing -> freshHoleImpl (getLoc l) Implicit
       _lambdaClauses <- mapM (goClause ty) (l ^. lambdaClauses)
       let _lambdaType = Just ty
           l' = Lambda {..}
@@ -915,7 +929,10 @@ inferLeftAppExpression hint e = case e of
         goClause :: Expression -> LambdaClause -> Sem r LambdaClause
         goClause ty cl@LambdaClause {..} = do
           (pats', body') <- checkClause (getLoc cl) ty (toList _lambdaPatterns) _lambdaBody
-          return (LambdaClause (nonEmpty' pats') body')
+          return LambdaClause {
+                     _lambdaPatterns =  nonEmpty' pats',
+                     _lambdaBody = body'
+                               }
 
     goUniverse :: SmallUniverse -> Sem r TypedExpression
     goUniverse u =
@@ -967,13 +984,13 @@ inferLeftAppExpression hint e = case e of
             typedLit :: (Integer -> Literal) -> BuiltinFunction -> Expression -> Sem r TypedExpression
             typedLit litt blt ty = do
               from <- getBuiltinName i blt
-              ihole <- freshHole i
-              let ty' = fromMaybe ty hint
+              ihole <- freshHoleImpl i ImplicitInstance
+              let ty' = fromMaybe ty mhint
               inferExpression' (Just ty') $
                 foldApplication
                   (ExpressionIden (IdenFunction from))
                   [ ApplicationArg Implicit ty',
-                    ApplicationArg ImplicitInstance (ExpressionInstanceHole ihole),
+                    ApplicationArg ImplicitInstance ihole,
                     ApplicationArg Explicit (ExpressionLiteral (WithLoc i (litt v)))
                   ]
 
@@ -988,12 +1005,12 @@ inferLeftAppExpression hint e = case e of
 
         outHole :: Integer -> Sem r ()
         outHole v
-          | v < 0 = case hint of
+          | v < 0 = case mhint of
               Just (ExpressionHole h) ->
                 output CastHole {_castHoleHole = h, _castHoleType = CastInt}
               _ ->
                 return ()
-          | otherwise = case hint of
+          | otherwise = case mhint of
               Just (ExpressionHole h) ->
                 output CastHole {_castHoleHole = h, _castHoleType = CastNat}
               _ ->
@@ -1044,12 +1061,34 @@ holesHelper mhint expr = do
             _appBuilderType = fTy ^. typedType,
             _appBuilderArgs = args
           }
+  traceM
+    ( "\n\nHolesHelper\n"
+        <> "Builder: "
+        <> ppTrace f
+        <> "\nType: "
+        <> ppTrace (fTy ^. typedType)
+        <> "\nArgs: "
+        <> ppTrace args
+        <> "\nHint: "
+        <> ppTrace mhint
+    )
   st' <- execState iniBuilder goArgs
-  return
-    TypedExpression
-      { _typedType = st' ^. appBuilderType,
-        _typedExpression = st' ^. appBuilder
-      }
+  let ret = TypedExpression
+        { _typedType = st' ^. appBuilderType,
+          _typedExpression = st' ^. appBuilder
+        }
+  traceM
+    ( "\n\nReturn for HolesHelper\n"
+        <> "Builder: "
+        <> ppTrace f
+        <> "\nType: "
+        <> ppTrace (fTy ^. typedType)
+        <> "\nArgs: "
+        <> ppTrace args
+        <> "\nRet: "
+        <> ppTrace ret
+    )
+  return ret
   where
     goArgs :: forall r'. (r' ~ State AppBuilder ': r) => Sem r' ()
     goArgs = peekArg >>= maybe (insertTrailingHolesMay mhint) goNextArg
@@ -1077,6 +1116,7 @@ holesHelper mhint expr = do
           where
             addTrailingHole :: ApplicationArg -> Sem r' ()
             addTrailingHole a = do
+              traceM $ "insert trailing " <> ppTrace (a ^. appArgIsImplicit)
               fun <- peekFunctionType (a ^. appArgIsImplicit)
               modify' (over appBuilderArgs (a :))
               checkMatchingArg a fun
@@ -1093,7 +1133,7 @@ holesHelper mhint expr = do
                 ExpressionApplication
                   Application
                     { _appLeft = l,
-                      _appRight = arg ^. appArg,
+                      _appRight = arg',
                       _appImplicit = arg ^. appArgIsImplicit
                     }
           modify' (set appBuilderType (subs funR))
@@ -1125,7 +1165,12 @@ holesHelper mhint expr = do
                 insertMiddleHole :: IsImplicit -> Sem r' ()
                 insertMiddleHole impl = do
                   l <- gets (^. appBuilder)
-                  h <- newHoleImplicit (getLoc l)
+                  let loc = getLoc l
+                  traceM $ "insert middle " <> ppTrace impl
+                  h <- case impl of
+                    Implicit -> newHoleImplicit loc
+                    ImplicitInstance -> newHoleInstance loc
+                    Explicit -> impossible
                   modify' (over appBuilderArgs (ApplicationArg impl h :))
                   goArgs
 
