@@ -1077,20 +1077,30 @@ holesHelper mhint expr = do
             addTrailingHole a = do
               fun <- peekFunctionType (a ^. appArgIsImplicit)
               modify' (over appBuilderArgs (a :))
-              checkMatchingArg (a ^. appArg) fun
+              checkMatchingArg a fun
 
-        checkMatchingArg :: Expression -> Function -> Sem r' ()
-        checkMatchingArg argExpr fun = do
+        checkMatchingArg :: ApplicationArg -> Function -> Sem r' ()
+        checkMatchingArg arg fun = do
           let funParam = fun ^. functionLeft
               funL = funParam ^. paramType
               funR = fun ^. functionRight
-          arg' <- checkExpression funL argExpr
+          arg' <- checkExpression funL (arg ^. appArg)
           let subs :: Expression -> Expression = substitutionApp (funParam ^. paramName, arg')
+              applyArg :: Expression -> Expression
+              applyArg l =
+                ExpressionApplication
+                  Application
+                    { _appLeft = l,
+                      _appRight = arg ^. appArg,
+                      _appImplicit = arg ^. appArgIsImplicit
+                    }
           modify' (set appBuilderType (subs funR))
+          modify' (over appBuilder applyArg)
           dropArg
 
         goNextArg :: ApplicationArg -> Sem r' ()
-        goNextArg (ApplicationArg i argExpr) = do
+        goNextArg arg = do
+          let i = arg ^. appArgIsImplicit
           fun <- peekFunctionType i
           insertMiddleHoleOrCheck fun i
           where
@@ -1098,7 +1108,7 @@ holesHelper mhint expr = do
             insertMiddleHoleOrCheck fun argImpl =
               let funParam = fun ^. functionLeft
                   funImpl = funParam ^. paramImplicit
-                  checkThisArg = checkMatchingArg argExpr fun >> goArgs
+                  checkThisArg = checkMatchingArg arg fun >> goArgs
                in case (argImpl, funImpl) of
                     (Explicit, Explicit) -> checkThisArg
                     (Implicit, Implicit) -> checkThisArg
