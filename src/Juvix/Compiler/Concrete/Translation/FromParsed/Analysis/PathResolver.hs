@@ -36,10 +36,9 @@ mkPackage ::
   Path Abs Dir ->
   Sem r Package
 mkPackage mpackageEntry _packageRoot = do
-  let buildDir :: Path Abs Dir = maybe (rootBuildDir _packageRoot) (someBaseToAbs _packageRoot . (^. entryPointBuildDir)) mpackageEntry
-      buildDirDep :: BuildDir
-        | isJust mpackageEntry = CustomBuildDir (Abs buildDir)
-        | otherwise = DefaultBuildDir
+  let buildDirDep = case mpackageEntry of
+        Just packageEntry -> rootedBuildDir _packageRoot (packageEntry ^. entryPointBuildDir)
+        Nothing -> DefaultBuildDir
   maybe (readPackage _packageRoot buildDirDep) (return . (^. entryPointPackage)) mpackageEntry
 
 mkPackageInfo ::
@@ -50,7 +49,7 @@ mkPackageInfo ::
   Package ->
   Sem r PackageInfo
 mkPackageInfo mpackageEntry _packageRoot pkg = do
-  let buildDir :: Path Abs Dir = maybe (rootBuildDir _packageRoot) (someBaseToAbs _packageRoot . (^. entryPointBuildDir)) mpackageEntry
+  let buildDir :: Path Abs Dir = maybe (rootBuildDir _packageRoot) (someBaseToAbs _packageRoot . resolveBuildDir . (^. entryPointBuildDir)) mpackageEntry
   deps <- getDependencies
   let _packagePackage = set packageDependencies deps pkg
   depsPaths <- mapM (fmap (^. resolvedDependencyPath) . resolveDependency . mkPackageDependencyInfo pkgFile) deps

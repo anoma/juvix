@@ -50,10 +50,15 @@ findRootAndChangeDir minputFileDir mbuildDir _rootInvokeDir = do
           let _rootRootDir = parent yamlPath
               _rootPackageGlobal = False
               _rootBuildDir = getBuildDir mbuildDir _rootRootDir
-          _rootPackage <- readPackageIO _rootRootDir (CustomBuildDir (Abs _rootBuildDir))
+          _rootPackage <- readPackageIO _rootRootDir (getBuildDir' mbuildDir)
           return Root {..}
 
 getBuildDir :: Maybe (Path Abs Dir) -> Path Abs Dir -> Path Abs Dir
 getBuildDir mbuildDirOpt pkgDir = case mbuildDirOpt of
   Nothing -> Paths.rootBuildDir pkgDir
   Just p -> p
+
+getBuildDir' :: Maybe (Path Abs Dir) -> BuildDir
+getBuildDir' mbuildDirOpt = case mbuildDirOpt of
+  Nothing -> DefaultBuildDir
+  Just p -> CustomBuildDir (Abs p)
