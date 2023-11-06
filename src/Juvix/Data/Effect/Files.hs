@@ -98,6 +98,9 @@ restoreFileOnError p action = do
 globalYaml :: (Members '[Files] r) => Sem r (Path Abs File)
 globalYaml = (<//> juvixYamlFile) <$> globalRoot
 
+globalPackageJuvix :: (Members '[Files] r) => Sem r (Path Abs File)
+globalPackageJuvix = (<//> packageFilePath) <$> globalRoot
+
 globalRoot :: (Members '[Files] r) => Sem r (Path Abs Dir)
 globalRoot = (<//> $(mkRelDir "global-project")) <$> juvixConfigDir
 

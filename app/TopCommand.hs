@@ -34,7 +34,7 @@ runTopCommand = \case
   Dev opts -> Dev.runCommand opts
   Typecheck opts -> Typecheck.runCommand opts
   Compile opts -> Compile.runCommand opts
-  Clean -> runFilesIO Clean.runCommand
+  Clean opts -> runFilesIO (Clean.runCommand opts)
   Eval opts -> Eval.runCommand opts
   Html opts -> Html.runCommand opts
   JuvixRepl opts -> Repl.runCommand opts

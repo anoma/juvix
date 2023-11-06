@@ -151,12 +151,12 @@ readGlobalPackageIO =
 
 readGlobalPackage :: (Members '[Error JuvixError, EvalFileEff, Files] r) => Sem r Package
 readGlobalPackage = do
-  yamlPath <- globalYaml
-  unlessM (fileExists' yamlPath) writeGlobalPackage
-  readPackage (parent yamlPath) DefaultBuildDir
+  packagePath <- globalPackageJuvix
+  unlessM (fileExists' packagePath) writeGlobalPackage
+  readPackage (parent packagePath) DefaultBuildDir
 
 writeGlobalPackage :: (Members '[Files] r) => Sem r ()
 writeGlobalPackage = do
-  yamlPath <- globalYaml
-  ensureDir' (parent yamlPath)
-  writeFileBS yamlPath (encode globalPackage)
+  packagePath <- globalPackageJuvix
+  ensureDir' (parent packagePath)
+  writeFile' packagePath (renderPackageVersion PackageVersion1 (globalPackage packagePath))

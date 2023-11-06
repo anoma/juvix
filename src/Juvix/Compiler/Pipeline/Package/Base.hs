@@ -136,15 +136,15 @@ defaultStdlibDep buildDir = mkPathDependency (fromSomeDir (resolveBuildDir build
 defaultPackageName :: Text
 defaultPackageName = "my-project"
 
-globalPackage :: RawPackage
-globalPackage =
+globalPackage :: Path Abs File -> Package
+globalPackage p =
   Package
-    { _packageDependencies = Just [defaultStdlibDep DefaultBuildDir],
-      _packageName = Just "global-juvix-package",
-      _packageVersion = Just (prettySemVer defaultVersion),
+    { _packageDependencies = [defaultStdlibDep DefaultBuildDir],
+      _packageName = "global-juvix-package",
+      _packageVersion = defaultVersion,
       _packageMain = Nothing,
       _packageBuildDir = Nothing,
-      _packageFile = Nothing,
+      _packageFile = p,
       _packageLockfile = Nothing
     }
 
