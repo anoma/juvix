@@ -257,7 +257,7 @@ checkDefType ty = checkIsType loc ty
 
 checkInstanceType ::
   forall r.
-  (Members '[Error TypeCheckerError, Reader InfoTable, Inference] r) =>
+  (Members '[Error TypeCheckerError, Reader InfoTable, Inference, NameIdGen] r) =>
   FunctionDef ->
   Sem r ()
 checkInstanceType FunctionDef {..} = case mi of
@@ -401,7 +401,7 @@ resolveInstanceHoles s = do
   (hs, e) <- runOutputList s
   ts <- mapM goResolve hs
   let subs = HashMap.fromList (zipExact (map (^. typedHoleHole) hs) ts)
-  return $ subsHoles subs e
+  subsHoles subs e
   where
     goResolve :: TypedHole -> Sem r Expression
     goResolve h@TypedHole {..} = do
@@ -494,7 +494,7 @@ checkClause clauseType clausePats body = do
   locals0 <- ask
   (localsPats, (checkedPatterns, bodyType)) <- helper clausePats clauseType
   let locals' = locals0 <> localsPats
-      bodyTy' = substitutionE (localsToSubsE locals') bodyType
+  bodyTy' <- substitutionE (localsToSubsE locals') bodyType
   checkedBody <- local (const locals') (checkExpression bodyTy' body)
   return (checkedPatterns, checkedBody)
   where
@@ -559,8 +559,8 @@ checkPattern = go
     go argTy patArg = do
       matchIsImplicit (argTy ^. paramImplicit) patArg
       tyVarMap <- fmap (ExpressionIden . IdenVar) . (^. localTyMap) <$> get
-      let ty = substitutionE tyVarMap (argTy ^. paramType)
-          pat = patArg ^. patternArgPattern
+      ty <- substitutionE tyVarMap (argTy ^. paramType)
+      let pat = patArg ^. patternArgPattern
           name = patArg ^. patternArgName
       whenJust name (\n -> addVar n ty argTy)
       pat' <- case pat of
@@ -618,8 +618,8 @@ checkPattern = go
         goConstr :: Iden -> ConstructorApp -> [(InductiveParameter, Expression)] -> Sem r ConstructorApp
         goConstr inductivename app@(ConstructorApp c ps _) ctx = do
           (_, psTys) <- constructorArgTypes <$> lookupConstructor c
-          let psTys' = map (substituteIndParams ctx) psTys
-              expectedNum = length psTys
+          psTys' <- mapM (substituteIndParams ctx) psTys
+          let expectedNum = length psTys
               w = map unnamedParameter psTys'
           when (expectedNum /= length ps) (throw (appErr app expectedNum))
           pis <- zipWithM go w ps
@@ -912,6 +912,7 @@ inferExpression' hint e = case e of
                         <> ppTrace (Application l r iapp)
                     )
                 )
+              ty <- substitutionApp (paraName, r') funR
               return
                 TypedExpression
                   { _typedExpression =
@@ -921,7 +922,7 @@ inferExpression' hint e = case e of
                             _appRight = r',
                             _appImplicit = iapp
                           },
-                    _typedType = substitutionApp (paraName, r') funR
+                    _typedType = ty
                   }
             ExpressionHole h -> do
               fun <- ExpressionFunction <$> holeRefineToFunction h

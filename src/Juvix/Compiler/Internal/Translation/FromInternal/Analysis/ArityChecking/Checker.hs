@@ -767,13 +767,13 @@ checkExpression hintArity expr = case expr of
                       }
               clauses :: NonEmpty Internal.LetClause <- nonEmpty' . Internal.mkLetClauses <$> mapM mkClause args'
               let app = foldApplication (toExpression fun0) (map mkAppArg namedArgs)
-                  letexpr =
-                    Internal.substitutionE (renameKind KNameFunction (map (^. insertedArgName) namedArgs)) $
-                      ExpressionLet
-                        Let
-                          { _letClauses = clauses,
-                            _letExpression = app
-                          }
+              letexpr <-
+                Internal.substitutionE (renameKind KNameFunction (map (^. insertedArgName) namedArgs)) $
+                  ExpressionLet
+                    Let
+                      { _letClauses = clauses,
+                        _letExpression = app
+                      }
               Internal.clone letexpr
 
         helper :: Interval -> Arity -> Sem r [ApplicationArg]

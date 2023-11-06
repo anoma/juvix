@@ -125,7 +125,7 @@ queryMetavarFinal h = do
     Just (ExpressionHole h') -> queryMetavarFinal h'
     _ -> return m
 
-strongNormalize' :: forall r. (Members '[State FunctionsTable, State InferenceState] r) => Expression -> Sem r Expression
+strongNormalize' :: forall r. (Members '[State FunctionsTable, State InferenceState, NameIdGen] r) => Expression -> Sem r Expression
 strongNormalize' = go
   where
     go :: Expression -> Sem r Expression
@@ -223,7 +223,8 @@ strongNormalize' = go
       l' <- go l
       case l' of
         ExpressionSimpleLambda (SimpleLambda (SimpleBinder lamVar _) lamBody) -> do
-          go (substitutionE (HashMap.singleton lamVar r) lamBody)
+          b' <- substitutionE (HashMap.singleton lamVar r) lamBody
+          go b'
         _ -> do
           r' <- go r
           return (ExpressionApplication (Application l' r' i))
@@ -239,7 +240,7 @@ strongNormalize' = go
       where
         i' = ExpressionIden i
 
-weakNormalize' :: forall r. (Members '[State FunctionsTable, State InferenceState] r) => Expression -> Sem r Expression
+weakNormalize' :: forall r. (Members '[State FunctionsTable, State InferenceState, NameIdGen] r) => Expression -> Sem r Expression
 weakNormalize' = go
   where
     go :: Expression -> Sem r Expression
@@ -270,7 +271,8 @@ weakNormalize' = go
       l' <- go l
       case l' of
         ExpressionSimpleLambda (SimpleLambda (SimpleBinder lamVar _) lamBody) -> do
-          go (substitutionE (HashMap.singleton lamVar r) lamBody)
+          b' <- substitutionE (HashMap.singleton lamVar r) lamBody
+          go b'
         _ -> return (ExpressionApplication (Application l' r i))
     goHole :: Hole -> Sem r Expression
     goHole h = do
@@ -296,7 +298,7 @@ queryMetavar' h = do
     Just (Refined e) -> return (Just e)
 
 re ::
-  (Members '[State FunctionsTable, Error TypeCheckerError] r) =>
+  (Members '[State FunctionsTable, Error TypeCheckerError, NameIdGen] r) =>
   Sem (Inference ': r) a ->
   Sem (State InferenceState ': r) a
 re = reinterpret $ \case
@@ -311,14 +313,14 @@ re = reinterpret $ \case
     registerIdenType' i ty = modify (over inferenceIdens (HashMap.insert (i ^. nameId) ty))
 
     -- Supports alpha equivalence.
-    matchTypes' :: (Members '[State InferenceState, State FunctionsTable, Error TypeCheckerError] r) => Expression -> Expression -> Sem r (Maybe MatchError)
+    matchTypes' :: (Members '[State InferenceState, State FunctionsTable, Error TypeCheckerError, NameIdGen] r) => Expression -> Expression -> Sem r (Maybe MatchError)
     matchTypes' ty = runReader ini . go ty
       where
         ini :: HashMap VarName VarName
         ini = mempty
         go ::
           forall r.
-          (Members '[State InferenceState, Reader (HashMap VarName VarName), State FunctionsTable, Error TypeCheckerError] r) =>
+          (Members '[State InferenceState, Reader (HashMap VarName VarName), State FunctionsTable, Error TypeCheckerError, NameIdGen] r) =>
           Expression ->
           Expression ->
           Sem r (Maybe MatchError)
@@ -478,20 +480,20 @@ matchPatterns (PatternArg impl1 name1 pat1) (PatternArg impl2 name2 pat2) =
     err = return False
 
 runInferenceDefs ::
-  (Members '[Termination, HighlightBuilder, Error TypeCheckerError, State FunctionsTable, State TypesTable] r, HasExpressions funDef) =>
+  (Members '[Termination, HighlightBuilder, Error TypeCheckerError, State FunctionsTable, State TypesTable, NameIdGen] r, HasExpressions funDef) =>
   Sem (Inference ': r) (NonEmpty funDef) ->
   Sem r (NonEmpty funDef)
 runInferenceDefs a = do
   (finalState, expr) <- runState iniState (re a)
   (subs, idens) <- closeState finalState
-  let idens' = subsHoles subs <$> idens
-      stash' = map (subsHoles subs) (finalState ^. inferenceFunctionsStash)
+  idens' <- mapM (subsHoles subs) idens
+  stash' <- mapM (subsHoles subs) (finalState ^. inferenceFunctionsStash)
   forM_ stash' registerFunctionDef
   addIdens idens'
-  return (subsHoles subs <$> expr)
+  mapM (subsHoles subs) expr
 
 runInferenceDef ::
-  (Members '[Termination, HighlightBuilder, Error TypeCheckerError, State FunctionsTable, State TypesTable] r, HasExpressions funDef) =>
+  (Members '[Termination, HighlightBuilder, Error TypeCheckerError, State FunctionsTable, State TypesTable, NameIdGen] r, HasExpressions funDef) =>
   Sem (Inference ': r) funDef ->
   Sem r funDef
 runInferenceDef = fmap head . runInferenceDefs . fmap pure
@@ -510,14 +512,14 @@ addIdens idens = do
 --
 -- Throws an error if the return type is Type and it does not satisfy the
 -- above conditions.
-functionDefEval :: forall r'. (Members '[State FunctionsTable, Termination, Error TypeCheckerError] r') => FunctionDef -> Sem r' (Maybe Expression)
+functionDefEval :: forall r'. (Members '[State FunctionsTable, Termination, Error TypeCheckerError, NameIdGen] r') => FunctionDef -> Sem r' (Maybe Expression)
 functionDefEval f = do
   (params :: [FunctionParameter], ret :: Expression) <- unfoldFunType <$> strongNorm (f ^. funDefType)
   r <- runFail (goTop params (canBeUniverse ret))
   when (isNothing r && isUniverse ret) (throw (ErrUnsupportedTypeFunction (UnsupportedTypeFunction f)))
   return r
   where
-    strongNorm :: (Members '[State FunctionsTable] r) => Expression -> Sem r Expression
+    strongNorm :: (Members '[State FunctionsTable, NameIdGen] r) => Expression -> Sem r Expression
     strongNorm = evalState iniState . strongNormalize'
 
     isUniverse :: Expression -> Bool
@@ -576,6 +578,6 @@ functionDefEval f = do
                 | Implicit <- p ^. patternArgIsImplicit -> fail
                 | otherwise -> go ps >>= goPattern (p ^. patternArgPattern, ty)
 
-registerFunctionDef :: (Members '[State FunctionsTable, Error TypeCheckerError, Termination] r) => FunctionDef -> Sem r ()
+registerFunctionDef :: (Members '[State FunctionsTable, Error TypeCheckerError, NameIdGen, Termination] r) => FunctionDef -> Sem r ()
 registerFunctionDef f = whenJustM (functionDefEval f) $ \e ->
   modify (over functionsTable (HashMap.insert (f ^. funDefName) e))

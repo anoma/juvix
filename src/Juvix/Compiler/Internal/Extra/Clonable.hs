@@ -5,7 +5,7 @@ module Juvix.Compiler.Internal.Extra.Clonable
 where
 
 import Data.HashMap.Strict qualified as HashMap
-import Juvix.Compiler.Internal.Extra.Base
+import Juvix.Compiler.Internal.Extra.Binders
 import Juvix.Compiler.Internal.Language
 import Juvix.Prelude
 
@@ -52,7 +52,9 @@ instance Clonable Literal where
   freshNameIds = return
 
 instance Clonable Hole where
-  freshNameIds h = do
+  freshNameIds h = return h
+
+{-    do
     tbl <- get @HolesState
     case tbl ^. at h of
       Just h' -> return h'
@@ -61,6 +63,7 @@ instance Clonable Hole where
         let h' = set holeId uid' h
         modify' @HolesState (set (at h) (Just h'))
         return h'
+-}
 
 instance Clonable SmallUniverse where
   freshNameIds = return

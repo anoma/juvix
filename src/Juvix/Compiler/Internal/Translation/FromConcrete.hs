@@ -780,13 +780,13 @@ goExpression = \case
           argNames :: NonEmpty Internal.ApplicationArg = mkAppArg <$> a ^. dnamedAppArgs
           app = Internal.foldApplication (Internal.toExpression fun) (toList argNames)
       clauses <- mapM mkClause (a ^. dnamedAppArgs)
-      let expr =
-            Internal.substitutionE updateKind $
-              Internal.ExpressionLet
-                Internal.Let
-                  { _letExpression = app,
-                    _letClauses = clauses
-                  }
+      expr <-
+        Internal.substitutionE updateKind $
+          Internal.ExpressionLet
+            Internal.Let
+              { _letExpression = app,
+                _letClauses = clauses
+              }
       Internal.clone expr
       where
         mkClause :: Arg -> Sem r Internal.LetClause
@@ -831,14 +831,13 @@ goExpression = \case
                 HashMap.fromList
                   [ (s, Internal.toExpression s') | s <- args, let s' = Internal.IdenFunction (set Internal.nameKind KNameFunction s)
                   ]
-
-          let expr =
-                Internal.substitutionE updateKind
-                  . Internal.ExpressionLet
-                  $ Internal.Let
-                    { _letClauses = cls,
-                      _letExpression = e
-                    }
+          expr <-
+            Internal.substitutionE updateKind
+              . Internal.ExpressionLet
+              $ Internal.Let
+                { _letClauses = cls,
+                  _letExpression = e
+                }
           Internal.clone expr
           where
             goFields :: NonEmpty (RecordDefineField 'Scoped) -> Sem r (NonEmpty Internal.LetClause)
