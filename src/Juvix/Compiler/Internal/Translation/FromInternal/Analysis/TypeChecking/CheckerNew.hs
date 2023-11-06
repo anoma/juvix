@@ -1032,9 +1032,12 @@ weakNormalizeArity = \case
 -- | The hint is used for trailing holes only
 holesHelper :: forall r. (Members '[HighlightBuilder, Reader InfoTable, State FunctionsTable, State TypesTable, Reader LocalVars, Error TypeCheckerError, NameIdGen, Inference, Output Example, Output TypedHole, Builtins, Termination, Output CastHole] r) => Maybe Expression -> Expression -> Sem r TypedExpression
 holesHelper mhint expr = do
-  -- TODO put the hint in the builder and apply substitutions there as well
   (f, args) <- unfoldExpressionApp <$> weakNormalize expr
-  fTy <- inferLeftAppExpression Nothing f
+  -- TODO revise
+  let hint
+        | null args = mhint
+        | otherwise = Nothing
+  fTy <- inferLeftAppExpression hint f
   let iniBuilder =
         AppBuilder
           { _appBuilder = f,
@@ -1049,8 +1052,7 @@ holesHelper mhint expr = do
       }
   where
     goArgs :: forall r'. (r' ~ State AppBuilder ': r) => Sem r' ()
-    goArgs = do
-      peekArg >>= maybe (insertTrailingHolesMay mhint) goNextArg
+    goArgs = peekArg >>= maybe (insertTrailingHolesMay mhint) goNextArg
       where
         insertTrailingHolesMay :: Maybe Expression -> Sem r' ()
         insertTrailingHolesMay = flip whenJust insertTrailingHoles
