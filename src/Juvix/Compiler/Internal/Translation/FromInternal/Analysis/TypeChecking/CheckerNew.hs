@@ -1057,7 +1057,7 @@ holesHelper mhint expr = do
   fTy <- inferLeftAppExpression hint f
   let iniBuilder =
         AppBuilder
-          { _appBuilder = f,
+          { _appBuilder = fTy ^. typedExpression,
             _appBuilderType = fTy ^. typedType,
             _appBuilderArgs = args
           }
