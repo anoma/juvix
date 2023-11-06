@@ -72,6 +72,9 @@ kwNotMutual = keyword Str.notMutual
 kwMutual :: Doc Ann
 kwMutual = keyword Str.mutual
 
+kwSimpleLambda :: Doc Ann
+kwSimpleLambda = keyword (Str.lambdaUnicode <> Str.exclamation)
+
 kwLambda :: Doc Ann
 kwLambda = keyword Str.lambdaUnicode
 

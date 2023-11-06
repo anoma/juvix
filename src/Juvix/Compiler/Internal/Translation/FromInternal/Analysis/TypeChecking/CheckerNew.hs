@@ -1,6 +1,9 @@
 module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.CheckerNew
-  ( module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.CheckerNew,
-    module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error,
+  ( module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error,
+    checkModule,
+    checkTable,
+    checkModuleIndex,
+    checkModuleNoCache,
   )
 where
 
@@ -228,13 +231,6 @@ checkMutualStatement = \case
     registerNameIdType (ax ^. axiomName . nameId) (ax ^. axiomType)
     return $ StatementAxiom ax
 
-unfoldApp1 :: (Members '[Inference] r) => Expression -> Sem r (Maybe (Expression, ApplicationArg))
-unfoldApp1 =
-  weakNormalize
-    >=> \case
-      ExpressionApplication (Application l r i) -> return (Just (l, ApplicationArg i r))
-      _ -> return Nothing
-
 unfoldFunType1' :: (Members '[Inference] r) => Expression -> Sem r (Maybe (FunctionParameter, Expression))
 unfoldFunType1' =
   weakNormalize
@@ -404,7 +400,9 @@ checkExpression ::
   Expression ->
   Sem r Expression
 checkExpression expectedTy e = do
+  -- traceM ("inferring  " <> ppTrace e <> " with " <> ppTrace expectedTy)
   e' <- inferExpression' (Just expectedTy) e
+  -- traceM ("inferred type of " <>  ppTrace e')
   let inferredType = e' ^. typedType
   whenJustM (matchTypes expectedTy inferredType) (const (err inferredType))
   return (e' ^. typedExpression)
@@ -459,47 +457,6 @@ checkFunctionParameter FunctionParameter {..} = do
         _paramName,
         _paramImplicit
       }
-
-checkConstructorDef ::
-  ( Members
-      '[ Reader EntryPoint,
-         Reader InfoTable,
-         Error TypeCheckerError,
-         State NegativeTypeParameters
-       ]
-      r
-  ) =>
-  InductiveDef ->
-  ConstructorDef ->
-  Sem r ()
-checkConstructorDef ty ctor = checkConstructorReturnType ty ctor
-
-checkConstructorReturnType ::
-  (Members '[Reader InfoTable, Error TypeCheckerError] r) =>
-  InductiveDef ->
-  ConstructorDef ->
-  Sem r ()
-checkConstructorReturnType indType ctor = do
-  let ctorName = ctor ^. inductiveConstructorName
-      tyName = indType ^. inductiveName
-      indParams = map (^. inductiveParamName) (indType ^. inductiveParameters)
-      ctorReturnType = snd (viewConstructorType (ctor ^. inductiveConstructorType))
-      expectedReturnType =
-        foldExplicitApplication
-          (ExpressionIden (IdenInductive tyName))
-          (map (ExpressionIden . IdenVar) indParams)
-  when
-    (ctorReturnType /= expectedReturnType)
-    ( throw
-        ( ErrWrongReturnType
-            ( WrongReturnType
-                { _wrongReturnTypeConstructorName = ctorName,
-                  _wrongReturnTypeExpected = expectedReturnType,
-                  _wrongReturnTypeActual = ctorReturnType
-                }
-            )
-        )
-    )
 
 inferExpression ::
   (Members '[HighlightBuilder, Reader InfoTable, State FunctionsTable, Error TypeCheckerError, NameIdGen, Reader LocalVars, Inference, Builtins, Output Example, State TypesTable, Termination] r) =>
@@ -639,7 +596,7 @@ checkClause clauseLoc clauseType clausePats body = do
 
 freshHoleImpl :: (Members '[NameIdGen] r) => Interval -> IsImplicit -> Sem r Expression
 freshHoleImpl loc = \case
-  Explicit -> impossible
+  Explicit -> ExpressionHole <$> Extra.freshHole loc
   Implicit -> ExpressionHole <$> Extra.freshHole loc
   ImplicitInstance -> ExpressionInstanceHole <$> Extra.freshHole loc
 
@@ -875,7 +832,7 @@ inferLeftAppExpression mhint e = case e of
 
     goSimpleLambda :: SimpleLambda -> Sem r TypedExpression
     goSimpleLambda (SimpleLambda (SimpleBinder v ty) b) = do
-      b' <- inferExpression' Nothing b
+      b' <- withLocalType v ty (inferExpression' Nothing b)
       let smallUni = smallUniverseE (getLoc ty)
       ty' <- checkExpression smallUni ty
       let fun = Function (unnamedParameter smallUni) (b' ^. typedType)
@@ -929,10 +886,11 @@ inferLeftAppExpression mhint e = case e of
         goClause :: Expression -> LambdaClause -> Sem r LambdaClause
         goClause ty cl@LambdaClause {..} = do
           (pats', body') <- checkClause (getLoc cl) ty (toList _lambdaPatterns) _lambdaBody
-          return LambdaClause {
-                     _lambdaPatterns =  nonEmpty' pats',
-                     _lambdaBody = body'
-                               }
+          return
+            LambdaClause
+              { _lambdaPatterns = nonEmpty' pats',
+                _lambdaBody = body'
+              }
 
     goUniverse :: SmallUniverse -> Sem r TypedExpression
     goUniverse u =
@@ -1034,22 +992,13 @@ inferLeftAppExpression mhint e = case e of
         kind <- lookupInductiveType v
         return (TypedExpression kind (ExpressionIden i))
 
-weakNormalizeArity :: forall r. (Members '[Inference] r) => Arity -> Sem r Arity
-weakNormalizeArity = \case
-  ArityBlocking b -> weakNormalizeBlocking b >>= typeArity
-  a -> return a
-  where
-    weakNormalizeBlocking :: Blocking -> Sem r Expression
-    weakNormalizeBlocking = weakNormalize . blockingToExpression
-    blockingToExpression :: Blocking -> Expression
-    blockingToExpression = \case
-      BlockingVar b -> toExpression b
-      BlockingHole b -> toExpression b
-
 -- | The hint is used for trailing holes only
 holesHelper :: forall r. (Members '[HighlightBuilder, Reader InfoTable, State FunctionsTable, State TypesTable, Reader LocalVars, Error TypeCheckerError, NameIdGen, Inference, Output Example, Output TypedHole, Builtins, Termination, Output CastHole] r) => Maybe Expression -> Expression -> Sem r TypedExpression
 holesHelper mhint expr = do
+  -- traceM ("holes helper " <> ppTrace expr)
   (f, args) <- unfoldExpressionApp <$> weakNormalize expr
+  -- traceM ("holes helper left part " <> ppTrace f <> " args: " <> ppTrace args)
+  -- let (f, args) = unfoldExpressionApp expr
   -- TODO revise
   let hint
         | null args = mhint
@@ -1061,33 +1010,34 @@ holesHelper mhint expr = do
             _appBuilderType = fTy ^. typedType,
             _appBuilderArgs = args
           }
-  traceM
-    ( "\n\nHolesHelper\n"
-        <> "Builder: "
-        <> ppTrace f
-        <> "\nType: "
-        <> ppTrace (fTy ^. typedType)
-        <> "\nArgs: "
-        <> ppTrace args
-        <> "\nHint: "
-        <> ppTrace mhint
-    )
+  -- traceM
+  --   ( "\n\nHolesHelper\n"
+  --       <> "Builder: "
+  --       <> ppTrace f
+  --       <> "\nType: "
+  --       <> ppTrace (fTy ^. typedType)
+  --       <> "\nArgs: "
+  --       <> ppTrace args
+  --       <> "\nHint: "
+  --       <> ppTrace mhint
+  --   )
   st' <- execState iniBuilder goArgs
-  let ret = TypedExpression
-        { _typedType = st' ^. appBuilderType,
-          _typedExpression = st' ^. appBuilder
-        }
-  traceM
-    ( "\n\nReturn for HolesHelper\n"
-        <> "Builder: "
-        <> ppTrace f
-        <> "\nType: "
-        <> ppTrace (fTy ^. typedType)
-        <> "\nArgs: "
-        <> ppTrace args
-        <> "\nRet: "
-        <> ppTrace ret
-    )
+  let ret =
+        TypedExpression
+          { _typedType = st' ^. appBuilderType,
+            _typedExpression = st' ^. appBuilder
+          }
+  -- traceM
+  --   ( "\n\nReturn for HolesHelper\n"
+  --       <> "Builder: "
+  --       <> ppTrace f
+  --       <> "\nType: "
+  --       <> ppTrace (fTy ^. typedType)
+  --       <> "\nArgs: "
+  --       <> ppTrace args
+  --       <> "\nRet: "
+  --       <> ppTrace ret
+  --   )
   return ret
   where
     goArgs :: forall r'. (r' ~ State AppBuilder ': r) => Sem r' ()
@@ -1116,7 +1066,7 @@ holesHelper mhint expr = do
           where
             addTrailingHole :: ApplicationArg -> Sem r' ()
             addTrailingHole a = do
-              traceM $ "insert trailing " <> ppTrace (a ^. appArgIsImplicit)
+              -- traceM $ "insert trailing " <> ppTrace (a ^. appArgIsImplicit)
               fun <- peekFunctionType (a ^. appArgIsImplicit)
               modify' (over appBuilderArgs (a :))
               checkMatchingArg a fun
@@ -1126,7 +1076,10 @@ holesHelper mhint expr = do
           let funParam = fun ^. functionLeft
               funL = funParam ^. paramType
               funR = fun ^. functionRight
+          -- traceM ("checkMatching Arg " <> ppTrace arg <> " with " <> ppTrace funL)
           arg' <- checkExpression funL (arg ^. appArg)
+          -- traceM ("AFTER checkMatching Arg " <> ppTrace arg <> " with " <> ppTrace funL
+          --         <> " returns " <> ppTrace arg')
           let subs :: Expression -> Expression = substitutionApp (funParam ^. paramName, arg')
               applyArg :: Expression -> Expression
               applyArg l =
@@ -1166,7 +1119,7 @@ holesHelper mhint expr = do
                 insertMiddleHole impl = do
                   l <- gets (^. appBuilder)
                   let loc = getLoc l
-                  traceM $ "insert middle " <> ppTrace impl
+                  -- traceM $ "insert middle " <> ppTrace impl
                   h <- case impl of
                     Implicit -> newHoleImplicit loc
                     ImplicitInstance -> newHoleInstance loc

@@ -515,6 +515,7 @@ functionDefEval f = do
   (params :: [FunctionParameter], ret :: Expression) <- unfoldFunType <$> strongNorm (f ^. funDefType)
   r <- runFail (goTop params (canBeUniverse ret))
   when (isNothing r && isUniverse ret) (throw (ErrUnsupportedTypeFunction (UnsupportedTypeFunction f)))
+  -- traceM ("XXXXXXXXXXXXXXXXXXXXXXX funDefEval " <> ppTrace f <> " results in " <> ppTrace r)
   return r
   where
     strongNorm :: (Members '[State FunctionsTable] r) => Expression -> Sem r Expression
@@ -563,7 +564,7 @@ functionDefEval f = do
               mapM simpleExplicitParam nfirst
             simpleExplicitParam :: FunctionParameter -> Sem r Expression
             simpleExplicitParam = \case
-              FunctionParameter _ Explicit ty -> return ty
+              FunctionParameter Nothing Explicit ty -> return ty
               _ -> fail
             goPattern :: (Pattern, Expression) -> Expression -> Sem r Expression
             goPattern (p, ty) = case p of
@@ -573,7 +574,7 @@ functionDefEval f = do
             go = \case
               [] -> return body'
               (p, ty) : ps
-                | Implicit <- p ^. patternArgIsImplicit -> fail
+                | isImplicitOrInstance (p ^. patternArgIsImplicit) -> fail
                 | otherwise -> go ps >>= goPattern (p ^. patternArgPattern, ty)
 
 registerFunctionDef :: (Members '[State FunctionsTable, Error TypeCheckerError, Termination] r) => FunctionDef -> Sem r ()
