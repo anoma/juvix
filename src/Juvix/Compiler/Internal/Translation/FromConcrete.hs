@@ -11,6 +11,7 @@ module Juvix.Compiler.Internal.Translation.FromConcrete
 where
 
 import Data.HashMap.Strict qualified as HashMap
+import Data.HashSet qualified as HashSet
 import Data.IntMap.Strict qualified as IntMap
 import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Compiler.Builtins
@@ -755,7 +756,7 @@ goExpression = \case
   ExpressionInstanceHole h -> return (Internal.ExpressionInstanceHole h)
   ExpressionIterator i -> goIterator i
   ExpressionNamedApplication i -> goNamedApplication i
-  ExpressionRecordCreation i -> goRecordCreation i
+  ExpressionNamedApplicationNew i -> goNamedApplicationNew i
   ExpressionRecordUpdate i -> goRecordUpdateApp i
   ExpressionParensRecordUpdate i -> Internal.ExpressionLambda <$> goRecordUpdate (i ^. parensRecordUpdate)
   where
@@ -763,6 +764,74 @@ goExpression = \case
     goNamedApplication w = do
       s <- ask @NameSignatures
       runReader s (runNamedArguments w) >>= goDesugaredNamedApplication
+
+    goNamedApplicationNew :: Concrete.NamedApplicationNew 'Scoped -> Sem r Internal.Expression
+    goNamedApplicationNew napp = case nonEmpty (napp ^. namedApplicationNewArguments) of
+      Nothing -> return $ goIden (napp ^. namedApplicationNewName)
+      Just appargs -> do
+        let name = napp ^. namedApplicationNewName . scopedIdenName
+        sig <- fromJust <$> asks @NameSignatures (^. at (name ^. S.nameId))
+        cls <- goArgs appargs
+        let args :: [Internal.Name] = appargs ^.. each . namedArgumentNewFunDef . signName . to goSymbol
+            -- changes the kind from Variable to Function
+            updateKind :: Internal.Subs =
+              HashMap.fromList
+                [ (s, Internal.toExpression s') | s <- args, let s' = Internal.IdenFunction (set Internal.nameKind KNameFunction s)
+                ]
+            napp' =
+              Concrete.NamedApplication
+                { _namedAppName = napp ^. namedApplicationNewName,
+                  _namedAppArgs = nonEmpty' $ createArgumentBlocks (sig ^. nameSignatureArgs)
+                }
+        e <- goNamedApplication napp'
+        let expr =
+              Internal.substitutionE updateKind
+                . Internal.ExpressionLet
+                $ Internal.Let
+                  { _letClauses = cls,
+                    _letExpression = e
+                  }
+        Internal.clone expr
+        where
+          goArgs :: NonEmpty (NamedArgumentNew 'Scoped) -> Sem r (NonEmpty Internal.LetClause)
+          goArgs args = nonEmpty' . mkLetClauses <$> mapM goArg args
+            where
+              goArg :: NamedArgumentNew 'Scoped -> Sem r Internal.PreLetStatement
+              goArg = fmap Internal.PreLetFunctionDef . goFunctionDef . (^. namedArgumentNewFunDef)
+
+          createArgumentBlocks :: [NameBlock 'Scoped] -> [ArgumentBlock 'Scoped]
+          createArgumentBlocks sblocks = snd $ foldr goBlock (args0, []) sblocks
+            where
+              args0 :: HashSet S.Symbol = HashSet.fromList $ fmap (^. namedArgumentNewFunDef . signName) (toList appargs)
+              goBlock :: NameBlock 'Scoped -> (HashSet S.Symbol, [ArgumentBlock 'Scoped]) -> (HashSet S.Symbol, [ArgumentBlock 'Scoped])
+              goBlock NameBlock {..} (args, blocks)
+                | null namesInBlock = (args', blocks)
+                | otherwise = (args', block' : blocks)
+                where
+                  namesInBlock =
+                    HashSet.intersection
+                      (HashSet.fromList $ HashMap.keys _nameBlock)
+                      (HashSet.map (^. S.nameConcrete) args)
+                  argNames = HashMap.fromList $ map (\n -> (n ^. S.nameConcrete, n)) $ toList args
+                  args' = HashSet.filter (not . flip HashSet.member namesInBlock . (^. S.nameConcrete)) args
+                  _argBlockArgs = nonEmpty' $ map goArg (toList namesInBlock)
+                  block' =
+                    ArgumentBlock
+                      { _argBlockDelims = Irrelevant Nothing,
+                        _argBlockImplicit = _nameImplicit,
+                        _argBlockArgs
+                      }
+                  goArg :: Symbol -> NamedArgument 'Scoped
+                  goArg sym =
+                    NamedArgument
+                      { _namedArgName = sym,
+                        _namedArgAssignKw = Irrelevant dummyKw,
+                        _namedArgValue = Concrete.ExpressionIdentifier $ ScopedIden name Nothing
+                      }
+                    where
+                      name = over S.nameConcrete NameUnqualified $ fromJust $ HashMap.lookup sym argNames
+                      dummyKw = KeywordRef (asciiKw ":=") dummyLoc Ascii
+                      dummyLoc = getLoc sym
 
     goDesugaredNamedApplication :: DesugaredNamedApplication -> Sem r Internal.Expression
     goDesugaredNamedApplication a = do
@@ -811,40 +880,6 @@ goExpression = \case
                 (c, _) ->
                   let cyc = NonEmpty.reverse ((arg ^. argName) :| c)
                    in throw (ErrDefaultArgCycle (DefaultArgCycle cyc))
-
-    goRecordCreation :: Concrete.RecordCreation 'Scoped -> Sem r Internal.Expression
-    goRecordCreation Concrete.RecordCreation {..} = do
-      sig :: RecordNameSignature 'Scoped <- fromJust <$> asks @ConstructorNameSignatures (^. at (_recordCreationConstructor ^. Concrete.scopedIdenName . S.nameId))
-      case nonEmpty _recordCreationFields of
-        Nothing -> return (Internal.ExpressionIden (Internal.IdenConstructor (goScopedIden _recordCreationConstructor)))
-        Just (fields1 :: NonEmpty (RecordDefineField 'Scoped)) -> do
-          let getIx fi =
-                let sym = Concrete.symbolParsed (fi ^. Concrete.fieldDefineFunDef . Concrete.signName)
-                 in sig ^?! recordNames . at sym . _Just . nameItemIndex
-              fieldsByIx = nonEmpty' (sortOn getIx (toList fields1))
-          cls <- goFields fieldsByIx
-          let args :: [Internal.Name] = fieldsByIx ^.. each . fieldDefineFunDef . signName . to goSymbol
-              constr = Internal.toExpression (goScopedIden _recordCreationConstructor)
-              e = Internal.foldExplicitApplication constr (map Internal.toExpression args)
-              -- changes the kind from Variable to Function
-              updateKind :: Internal.Subs =
-                HashMap.fromList
-                  [ (s, Internal.toExpression s') | s <- args, let s' = Internal.IdenFunction (set Internal.nameKind KNameFunction s)
-                  ]
-          expr <-
-            Internal.substitutionE updateKind
-              . Internal.ExpressionLet
-              $ Internal.Let
-                { _letClauses = cls,
-                  _letExpression = e
-                }
-          Internal.clone expr
-          where
-            goFields :: NonEmpty (RecordDefineField 'Scoped) -> Sem r (NonEmpty Internal.LetClause)
-            goFields recordfields = nonEmpty' . mkLetClauses <$> mapM goField recordfields
-              where
-                goField :: RecordDefineField 'Scoped -> Sem r Internal.PreLetStatement
-                goField = fmap Internal.PreLetFunctionDef . goFunctionDef . (^. fieldDefineFunDef)
 
     goRecordUpdate :: Concrete.RecordUpdate 'Scoped -> Sem r Internal.Lambda
     goRecordUpdate r = do

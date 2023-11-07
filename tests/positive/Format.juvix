@@ -369,10 +369,10 @@ l3 : List (List Int) :=
 l4 : List (List Int) :=
   [ [1; 2; 3]
   ; longLongLongListArg
-  ; [ longLongLongListArg
-    ; longLongLongListArg
-    ; longLongLongListArg
-    ; longLongLongListArg
+  ; [ longLongLongArg
+    ; longLongLongArg
+    ; longLongLongArg
+    ; longLongLongArg
     ]
   ; longLongLongListArg
   ];

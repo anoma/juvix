@@ -290,34 +290,33 @@ instance (SingI s) => PrettyPrint (ArgumentBlock s) where
       Irrelevant d = _argBlockDelims
 
 instance (SingI s) => PrettyPrint (NamedApplication s) where
-  -- ppCode :: Members '[ExactPrint, Reader Options] r => NamedApplication s -> Sem r ()
   ppCode = apeHelper
+
+instance (SingI s) => PrettyPrint (NamedApplicationNew s) where
+  ppCode NamedApplicationNew {..} = do
+    let args'
+          | null _namedApplicationNewArguments = mempty
+          | otherwise =
+              blockIndent
+                ( sequenceWith
+                    (semicolon >> line)
+                    (ppCode <$> _namedApplicationNewArguments)
+                )
+    ppIdentifierType _namedApplicationNewName
+      <> ppCode _namedApplicationNewAtKw
+      <> braces args'
+
+instance (SingI s) => PrettyPrint (NamedArgumentNew s) where
+  ppCode NamedArgumentNew {..} = ppCode _namedArgumentNewFunDef
 
 instance (SingI s) => PrettyPrint (RecordStatement s) where
   ppCode = \case
     RecordStatementField f -> ppCode f
     RecordStatementOperator f -> ppCode f
 
-instance (SingI s) => PrettyPrint (RecordCreation s) where
-  ppCode RecordCreation {..} = do
-    let fields'
-          | null _recordCreationFields = mempty
-          | otherwise =
-              blockIndent
-                ( sequenceWith
-                    (semicolon >> line)
-                    (ppCode <$> _recordCreationFields)
-                )
-    ppIdentifierType _recordCreationConstructor
-      <> ppCode _recordCreationAtKw
-      <> braces fields'
-
 instance (SingI s) => PrettyPrint (RecordUpdateField s) where
   ppCode RecordUpdateField {..} =
     ppSymbolType _fieldUpdateName <+> ppCode _fieldUpdateAssignKw <+> ppExpressionType _fieldUpdateValue
-
-instance (SingI s) => PrettyPrint (RecordDefineField s) where
-  ppCode RecordDefineField {..} = ppCode _fieldDefineFunDef
 
 instance (SingI s) => PrettyPrint (RecordUpdate s) where
   ppCode RecordUpdate {..} = do
@@ -363,7 +362,7 @@ instance (SingI s) => PrettyPrint (ExpressionAtom s) where
     AtomInstanceHole w -> ppHoleType w
     AtomIterator i -> ppCode i
     AtomNamedApplication i -> ppCode i
-    AtomRecordCreation i -> ppCode i
+    AtomNamedApplicationNew i -> ppCode i
 
 instance PrettyPrint PatternScopedIden where
   ppCode = \case
@@ -800,7 +799,7 @@ instance PrettyPrint Expression where
     ExpressionNewCase c -> ppCode c
     ExpressionIterator i -> ppCode i
     ExpressionNamedApplication i -> ppCode i
-    ExpressionRecordCreation i -> ppCode i
+    ExpressionNamedApplicationNew i -> ppCode i
     ExpressionRecordUpdate i -> ppCode i
     ExpressionParensRecordUpdate i -> ppCode i
 
