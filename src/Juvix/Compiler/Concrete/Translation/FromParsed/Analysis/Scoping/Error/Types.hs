@@ -869,7 +869,7 @@ instance ToGenericError MissingArgs where
   genericError MissingArgs {..} = do
     opts <- fromGenericOptions <$> ask
     let msg =
-          "Missing arguments for "
+          "Missing arguments for"
             <+> ppCode opts _missingArgsName
               <> ":"
               <> line

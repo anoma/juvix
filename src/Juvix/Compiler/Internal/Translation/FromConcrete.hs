@@ -799,27 +799,27 @@ goExpression = \case
               goArg :: NamedArgumentNew 'Scoped -> Sem r Internal.PreLetStatement
               goArg = fmap Internal.PreLetFunctionDef . goFunctionDef . (^. namedArgumentNewFunDef)
 
-          -- TODO: error on unprocessed args
           createArgumentBlocks :: [NameBlock 'Scoped] -> [ArgumentBlock 'Scoped]
           createArgumentBlocks sblocks = snd $ foldr goBlock (args0, []) sblocks
             where
               args0 :: HashSet S.Symbol = HashSet.fromList $ fmap (^. namedArgumentNewFunDef . signName) (toList appargs)
               goBlock :: NameBlock 'Scoped -> (HashSet S.Symbol, [ArgumentBlock 'Scoped]) -> (HashSet S.Symbol, [ArgumentBlock 'Scoped])
               goBlock NameBlock {..} (args, blocks)
-                | null names = (args', blocks)
+                | null namesInBlock = (args', blocks)
                 | otherwise = (args', block' : blocks)
                 where
-                  names =
+                  namesInBlock =
                     HashSet.intersection
                       (HashSet.fromList $ HashMap.keys _nameBlock)
                       (HashSet.map (^. S.nameConcrete) args)
-                  args' = HashSet.filter (not . flip HashSet.member names . (^. S.nameConcrete)) args
-                  nargs = nonEmpty' $ map goArg (toList names)
+                  argNames = HashMap.fromList $ map (\n -> (n ^. S.nameConcrete, n)) $ toList args
+                  args' = HashSet.filter (not . flip HashSet.member namesInBlock . (^. S.nameConcrete)) args
+                  _argBlockArgs = nonEmpty' $ map goArg (toList namesInBlock)
                   block' =
                     ArgumentBlock
                       { _argBlockDelims = Irrelevant Nothing,
                         _argBlockImplicit = _nameImplicit,
-                        _argBlockArgs = nargs
+                        _argBlockArgs
                       }
                   goArg :: Symbol -> NamedArgument 'Scoped
                   goArg sym =
@@ -829,7 +829,7 @@ goExpression = \case
                         _namedArgValue = Concrete.ExpressionIdentifier $ ScopedIden name Nothing
                       }
                     where
-                      name = over S.nameConcrete NameUnqualified $ fromJust $ find ((== sym) . (^. S.nameConcrete)) args
+                      name = over S.nameConcrete NameUnqualified $ fromJust $ HashMap.lookup sym argNames
                       dummyKw = KeywordRef (asciiKw ":=") dummyLoc Ascii
                       dummyLoc = getLoc sym
 
