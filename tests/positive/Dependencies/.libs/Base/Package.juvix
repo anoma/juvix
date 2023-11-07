@@ -1,0 +1,9 @@
+module Package;
+
+import PackageDescription.V1 open;
+
+package : Package :=
+  defaultPackage
+    {name := "base";
+     version := mkVersion 1 0 0;
+     dependencies := []};

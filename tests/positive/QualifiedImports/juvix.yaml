@@ -1,4 +1,0 @@
-dependencies:
-- .juvix-build/stdlib/
-name: qualifiedimports
-version: 0.0.0
