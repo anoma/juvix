@@ -47,6 +47,9 @@ tests:
       shell:
         - bash
       script: |
+        temp=$(mktemp -d)
+        trap 'rm -rf -- "$temp"' EXIT
+        export XDG_CONFIG_HOME="$temp"
         HOME="home" JUVIX_TEST_PATH="other dep" juvix typecheck positive/FancyPaths/Main.juvix
     stdout:
       equals: "Well done! It type checks\n"
