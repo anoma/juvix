@@ -784,13 +784,13 @@ goExpression = \case
                   _namedAppArgs = nonEmpty' $ createArgumentBlocks (sig ^. nameSignatureArgs)
                 }
         e <- goNamedApplication napp'
-        let expr =
-              Internal.substitutionE updateKind
-                . Internal.ExpressionLet
-                $ Internal.Let
-                  { _letClauses = cls,
-                    _letExpression = e
-                  }
+        expr <-
+          Internal.substitutionE updateKind
+            . Internal.ExpressionLet
+            $ Internal.Let
+              { _letClauses = cls,
+                _letExpression = e
+              }
         Internal.clone expr
         where
           goArgs :: NonEmpty (NamedArgumentNew 'Scoped) -> Sem r (NonEmpty Internal.LetClause)
@@ -849,13 +849,13 @@ goExpression = \case
           argNames :: NonEmpty Internal.ApplicationArg = mkAppArg <$> a ^. dnamedAppArgs
           app = Internal.foldApplication (Internal.toExpression fun) (toList argNames)
       clauses <- mapM mkClause (a ^. dnamedAppArgs)
-      let expr =
-            Internal.substitutionE updateKind $
-              Internal.ExpressionLet
-                Internal.Let
-                  { _letExpression = app,
-                    _letClauses = clauses
-                  }
+      expr <-
+        Internal.substitutionE updateKind $
+          Internal.ExpressionLet
+            Internal.Let
+              { _letExpression = app,
+                _letClauses = clauses
+              }
       Internal.clone expr
       where
         mkClause :: Arg -> Sem r Internal.LetClause

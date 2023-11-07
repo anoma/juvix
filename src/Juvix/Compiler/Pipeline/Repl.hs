@@ -161,7 +161,8 @@ fromInternalImport :: (Members '[State Artifacts] r) => Internal.Import -> Sem r
 fromInternalImport i = do
   artiTable <- gets (^. artifactInternalTypedTable)
   let table = Internal.buildTable [i ^. Internal.importModule . Internal.moduleIxModule] <> artiTable
-  runReader table
+  runNameIdGenArtifacts
+    . runReader table
     . runCoreInfoTableBuilderArtifacts
     . runFunctionsTableArtifacts
     . readerTypesTableArtifacts
@@ -173,7 +174,8 @@ fromInternalImport i = do
 fromInternalExpression :: (Members '[State Artifacts] r) => Internal.Expression -> Sem r Core.Node
 fromInternalExpression exp = do
   typedTable <- gets (^. artifactInternalTypedTable)
-  runReader typedTable
+  runNameIdGenArtifacts
+    . runReader typedTable
     . tmpCoreInfoTableBuilderArtifacts
     . runFunctionsTableArtifacts
     . readerTypesTableArtifacts
