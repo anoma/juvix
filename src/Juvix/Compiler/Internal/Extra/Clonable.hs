@@ -5,24 +5,20 @@ module Juvix.Compiler.Internal.Extra.Clonable
 where
 
 import Data.HashMap.Strict qualified as HashMap
-import Juvix.Compiler.Internal.Extra.Base
+import Juvix.Compiler.Internal.Extra.Binders
 import Juvix.Compiler.Internal.Language
 import Juvix.Prelude
 
 type FreshBindersContext = HashMap NameId NameId
 
-type HolesState = HashMap Hole Hole
-
 clone :: (Clonable a, Members '[NameIdGen] r) => a -> Sem r a
-clone = evalState iniState . runReader iniCtx . freshNameIds
+clone = runReader iniCtx . freshNameIds
   where
-    iniState :: HolesState
-    iniState = mempty
     iniCtx :: FreshBindersContext
     iniCtx = mempty
 
 class Clonable a where
-  freshNameIds :: (Members '[State HolesState, Reader FreshBindersContext, NameIdGen] r) => a -> Sem r a
+  freshNameIds :: (Members '[Reader FreshBindersContext, NameIdGen] r) => a -> Sem r a
 
 instance Clonable Name where
   freshNameIds n = do
@@ -51,16 +47,11 @@ instance (Clonable a) => Clonable (WithLoc a) where
 instance Clonable Literal where
   freshNameIds = return
 
+instance Clonable InstanceHole where
+  freshNameIds = return
+
 instance Clonable Hole where
-  freshNameIds h = do
-    tbl <- get @HolesState
-    case tbl ^. at h of
-      Just h' -> return h'
-      Nothing -> do
-        uid' <- freshNameId
-        let h' = set holeId uid' h
-        modify' @HolesState (set (at h) (Just h'))
-        return h'
+  freshNameIds = return
 
 instance Clonable SmallUniverse where
   freshNameIds = return
@@ -73,7 +64,7 @@ instance (Clonable a) => Clonable (Maybe a) where
 
 underBinder ::
   forall r a binding.
-  (HasBinders binding, Members '[State HolesState, Reader FreshBindersContext, NameIdGen] r) =>
+  (HasBinders binding, Members '[Reader FreshBindersContext, NameIdGen] r) =>
   binding ->
   (binding -> Sem r a) ->
   Sem r a
@@ -81,16 +72,16 @@ underBinder p f = underBinders [p] (f . headDef impossible)
 
 underBindersNonEmpty ::
   forall r a binding.
-  (HasBinders binding, Members '[State HolesState, Reader FreshBindersContext, NameIdGen] r) =>
+  (HasBinders binding, Members '[Reader FreshBindersContext, NameIdGen] r) =>
   NonEmpty binding ->
   (NonEmpty binding -> Sem r a) ->
   Sem r a
 underBindersNonEmpty p f = underBinders (toList p) (f . nonEmpty')
 
-underClonableBindersNonEmpty :: forall r a binding. (Clonable binding, HasBinders binding, Members '[State HolesState, Reader FreshBindersContext, NameIdGen] r) => NonEmpty binding -> (NonEmpty binding -> Sem r a) -> Sem r a
+underClonableBindersNonEmpty :: forall r a binding. (Clonable binding, HasBinders binding, Members '[Reader FreshBindersContext, NameIdGen] r) => NonEmpty binding -> (NonEmpty binding -> Sem r a) -> Sem r a
 underClonableBindersNonEmpty ps0 f = underClonableBinders (toList ps0) (f . nonEmpty')
 
-underClonableBinders :: forall r a binding. (Clonable binding, HasBinders binding, Members '[State HolesState, Reader FreshBindersContext, NameIdGen] r) => [binding] -> ([binding] -> Sem r a) -> Sem r a
+underClonableBinders :: forall r a binding. (Clonable binding, HasBinders binding, Members '[Reader FreshBindersContext, NameIdGen] r) => [binding] -> ([binding] -> Sem r a) -> Sem r a
 underClonableBinders binders f = do
   ctx <- ask @FreshBindersContext
   let bindersIds :: [NameId] = binders ^.. each . bindersTraversal . nameId
@@ -100,7 +91,7 @@ underClonableBinders binders f = do
     binders' <- freshNameIds binders
     f binders'
 
-underBinders :: forall r a binding. (HasBinders binding, Members '[State HolesState, Reader FreshBindersContext, NameIdGen] r) => [binding] -> ([binding] -> Sem r a) -> Sem r a
+underBinders :: forall r a binding. (HasBinders binding, Members '[Reader FreshBindersContext, NameIdGen] r) => [binding] -> ([binding] -> Sem r a) -> Sem r a
 underBinders ps f = do
   ctx <- ask @FreshBindersContext
   (ctx', ps') <- runState ctx (mapM goBinders ps)
@@ -169,7 +160,7 @@ instance Clonable LetClause where
     LetMutualBlock m -> LetMutualBlock <$> freshNameIds m
 
 instance Clonable Let where
-  freshNameIds :: (Members '[State HolesState, Reader FreshBindersContext, NameIdGen] r) => Let -> Sem r Let
+  freshNameIds :: (Members '[Reader FreshBindersContext, NameIdGen] r) => Let -> Sem r Let
   freshNameIds Let {..} = do
     underClonableBindersNonEmpty _letClauses $ \clauses' -> do
       e' <- freshNameIds _letExpression
@@ -220,7 +211,7 @@ instance Clonable Lambda where
         }
 
 instance Clonable Expression where
-  freshNameIds :: (Members '[State HolesState, Reader FreshBindersContext, NameIdGen] r) => Expression -> Sem r Expression
+  freshNameIds :: (Members '[Reader FreshBindersContext, NameIdGen] r) => Expression -> Sem r Expression
   freshNameIds = \case
     ExpressionIden i -> ExpressionIden <$> freshNameIds i
     ExpressionApplication a -> ExpressionApplication <$> freshNameIds a
@@ -244,7 +235,7 @@ instance Clonable ArgInfo where
         }
 
 instance Clonable FunctionDef where
-  freshNameIds :: (Members '[State HolesState, Reader FreshBindersContext, NameIdGen] r) => FunctionDef -> Sem r FunctionDef
+  freshNameIds :: (Members '[Reader FreshBindersContext, NameIdGen] r) => FunctionDef -> Sem r FunctionDef
   freshNameIds fun@FunctionDef {..} = do
     ty' <- freshNameIds _funDefType
     underBinder fun $ \fun' -> do

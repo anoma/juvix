@@ -4,6 +4,7 @@ import Data.Generics.Uniplate.Data hiding (holes)
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Internal.Data.LocalVars
+import Juvix.Compiler.Internal.Extra.Clonable
 import Juvix.Compiler.Internal.Language
 import Juvix.Prelude
 
@@ -153,21 +154,21 @@ holes = leafExpressions . _ExpressionHole
 hasHoles :: (HasExpressions a) => a -> Bool
 hasHoles = has holes
 
-subsInstanceHoles :: (HasExpressions a) => HashMap InstanceHole Expression -> a -> a
-subsInstanceHoles s = over leafExpressions helper
+subsInstanceHoles :: forall r a. (HasExpressions a, Member NameIdGen r) => HashMap InstanceHole Expression -> a -> Sem r a
+subsInstanceHoles s = leafExpressions helper
   where
-    helper :: Expression -> Expression
+    helper :: Expression -> Sem r Expression
     helper e = case e of
-      ExpressionInstanceHole h -> fromMaybe e (s ^. at h)
-      _ -> e
+      ExpressionInstanceHole h -> maybe (clone e) return (s ^. at h)
+      _ -> return e
 
-subsHoles :: (HasExpressions a) => HashMap Hole Expression -> a -> a
-subsHoles s = over leafExpressions helper
+subsHoles :: forall r a. (HasExpressions a, Member NameIdGen r) => HashMap Hole Expression -> a -> Sem r a
+subsHoles s = leafExpressions helper
   where
-    helper :: Expression -> Expression
+    helper :: Expression -> Sem r Expression
     helper e = case e of
-      ExpressionHole h -> fromMaybe e (s ^. at h)
-      _ -> e
+      ExpressionHole h -> maybe (clone e) return (s ^. at h)
+      _ -> return e
 
 instance HasExpressions Example where
   leafExpressions f = traverseOf exampleExpression (leafExpressions f)
@@ -253,7 +254,7 @@ instance HasExpressions ConstructorDef where
           _inductiveConstructorPragmas
         }
 
-substituteIndParams :: [(InductiveParameter, Expression)] -> Expression -> Expression
+substituteIndParams :: forall r. (Member NameIdGen r) => [(InductiveParameter, Expression)] -> Expression -> Sem r Expression
 substituteIndParams = substitutionE . HashMap.fromList . map (first (^. inductiveParamName))
 
 typeAbstraction :: IsImplicit -> Name -> FunctionParameter
@@ -282,41 +283,6 @@ renameKind k l = HashMap.fromList [(n, toExpression (set nameKind k n)) | n <- l
 renameToSubsE :: Rename -> Subs
 renameToSubsE = fmap (ExpressionIden . IdenVar)
 
-class HasBinders a where
-  bindersTraversal :: Traversal' a VarName
-
-instance HasBinders PatternArg where
-  bindersTraversal f (PatternArg i n p) = PatternArg i <$> traverse f n <*> bindersTraversal f p
-
-instance HasBinders Pattern where
-  bindersTraversal f p = case p of
-    PatternVariable v -> PatternVariable <$> f v
-    PatternWildcardConstructor {} -> pure p
-    PatternConstructorApp a -> PatternConstructorApp <$> goApp f a
-    where
-      goApp :: Traversal' ConstructorApp VarName
-      goApp g = traverseOf constrAppParameters (traverse (bindersTraversal g))
-
-instance HasBinders FunctionParameter where
-  bindersTraversal = paramName . _Just
-
-instance HasBinders InductiveParameter where
-  bindersTraversal = inductiveParamName
-
-instance HasBinders SimpleBinder where
-  bindersTraversal = sbinderVar
-
-instance HasBinders FunctionDef where
-  bindersTraversal = funDefName
-
-instance HasBinders MutualBlockLet where
-  bindersTraversal = mutualLet . each . bindersTraversal
-
-instance HasBinders LetClause where
-  bindersTraversal f = \case
-    LetFunDef fun -> LetFunDef <$> bindersTraversal f fun
-    LetMutualBlock b -> LetMutualBlock <$> bindersTraversal f b
-
 inductiveTypeVarsAssoc :: (Foldable f) => InductiveDef -> f a -> HashMap VarName a
 inductiveTypeVarsAssoc def l
   | length vars < n = impossible
@@ -326,26 +292,26 @@ inductiveTypeVarsAssoc def l
     vars :: [VarName]
     vars = def ^.. inductiveParameters . each . inductiveParamName
 
-substitutionApp :: (Maybe Name, Expression) -> Expression -> Expression
+substitutionApp :: forall r. (Member NameIdGen r) => (Maybe Name, Expression) -> Expression -> Sem r Expression
 substitutionApp (mv, ty) = case mv of
-  Nothing -> id
+  Nothing -> return
   Just v -> substitutionE (HashMap.singleton v ty)
 
 localsToSubsE :: LocalVars -> Subs
 localsToSubsE l = ExpressionIden . IdenVar <$> l ^. localTyMap
 
-substitutionE :: Subs -> Expression -> Expression
-substitutionE m = over leafExpressions goLeaf
+substitutionE :: forall r. (Member NameIdGen r) => Subs -> Expression -> Sem r Expression
+substitutionE m = leafExpressions goLeaf
   where
-    goLeaf :: Expression -> Expression
+    goLeaf :: Expression -> Sem r Expression
     goLeaf = \case
       ExpressionIden i -> goIden i
-      e -> e
-    goIden :: Iden -> Expression
+      e -> return e
+    goIden :: Iden -> Sem r Expression
     goIden i = case i of
       IdenVar v
-        | Just e <- HashMap.lookup v m -> e
-      _ -> ExpressionIden i
+        | Just e <- HashMap.lookup v m -> clone e
+      _ -> return $ ExpressionIden i
 
 smallUniverseE :: Interval -> Expression
 smallUniverseE = ExpressionUniverse . SmallUniverse
@@ -763,14 +729,6 @@ allTypeSignatures a =
   [f ^. funDefType | f@FunctionDef {} <- universeBi a]
     <> [f ^. axiomType | f@AxiomDef {} <- universeBi a]
     <> [f ^. inductiveType | f@InductiveDef {} <- universeBi a]
-
-idenName :: Lens' Iden Name
-idenName f = \case
-  IdenFunction g -> IdenFunction <$> f g
-  IdenConstructor c -> IdenConstructor <$> f c
-  IdenVar v -> IdenVar <$> f v
-  IdenInductive i -> IdenInductive <$> f i
-  IdenAxiom a -> IdenAxiom <$> f a
 
 explicitPatternArg :: Pattern -> PatternArg
 explicitPatternArg _patternArgPattern =

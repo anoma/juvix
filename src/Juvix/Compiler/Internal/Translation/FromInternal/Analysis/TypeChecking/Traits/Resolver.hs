@@ -48,7 +48,7 @@ resolveTraitInstance TypedHole {..} = do
 
 subsumingInstances ::
   forall r.
-  (Members '[Error TypeCheckerError, Inference] r) =>
+  (Members '[Error TypeCheckerError, Inference, NameIdGen] r) =>
   InstanceTable ->
   InstanceInfo ->
   Sem r [(InstanceInfo)]
@@ -62,29 +62,37 @@ subsumingInstances tab InstanceInfo {..} = do
 -- Local functions
 -------------------------------------------------------------------------------------
 
-substitutionI :: SubsI -> InstanceParam -> InstanceParam
+substitutionI :: (Member NameIdGen r) => SubsI -> InstanceParam -> Sem r InstanceParam
 substitutionI subs p = case p of
-  InstanceParamVar {} -> p
-  InstanceParamApp InstanceApp {..} ->
-    InstanceParamApp
-      InstanceApp
-        { _instanceAppHead,
-          _instanceAppArgs = map (substitutionI subs) _instanceAppArgs,
-          _instanceAppExpression = substitutionE (subsIToE subs) _instanceAppExpression
-        }
-  InstanceParamFun InstanceFun {..} ->
-    InstanceParamFun
-      InstanceFun
-        { _instanceFunLeft = substitutionI subs _instanceFunLeft,
-          _instanceFunRight = substitutionI subs _instanceFunRight,
-          _instanceFunExpression = substitutionE (subsIToE subs) _instanceFunExpression
-        }
-  InstanceParamHole {} -> p
+  InstanceParamVar {} -> return p
+  InstanceParamApp InstanceApp {..} -> do
+    args <- mapM (substitutionI subs) _instanceAppArgs
+    e <- substitutionE (subsIToE subs) _instanceAppExpression
+    return $
+      InstanceParamApp
+        InstanceApp
+          { _instanceAppHead,
+            _instanceAppArgs = args,
+            _instanceAppExpression = e
+          }
+  InstanceParamFun InstanceFun {..} -> do
+    l <- substitutionI subs _instanceFunLeft
+    r <- substitutionI subs _instanceFunRight
+    e <- substitutionE (subsIToE subs) _instanceFunExpression
+    return $
+      InstanceParamFun
+        InstanceFun
+          { _instanceFunLeft = l,
+            _instanceFunRight = r,
+            _instanceFunExpression = e
+          }
+  InstanceParamHole {} -> return p
   InstanceParamMeta v
     | Just p' <- HashMap.lookup v subs ->
-        p'
+        -- we don't need to clone here because `InstanceParam` doesn't have binders
+        return p'
     | otherwise ->
-        p
+        return p
 
 instanceFromTypedExpression' :: InfoTable -> TypedExpression -> Maybe InstanceInfo
 instanceFromTypedExpression' tbl e = do
@@ -155,7 +163,7 @@ expandArity loc subs params e = case params of
 
 lookupInstance' ::
   forall r.
-  (Member Inference r) =>
+  (Members '[Inference, NameIdGen] r) =>
   [Name] ->
   Bool ->
   CoercionTable ->
@@ -191,7 +199,7 @@ lookupInstance' visited canFillHoles ctab tab name params
           and <$> sequence (zipWithExact goMatch _coercionInfoParams params)
       failUnless b
       let name' = _coercionInfoTarget ^. instanceAppHead
-          args' = map (substitutionI si) (_coercionInfoTarget ^. instanceAppArgs)
+      args' <- mapM (substitutionI si) (_coercionInfoTarget ^. instanceAppArgs)
       is <- lookupInstance' (name : visited) canFillHoles ctab tab name' args'
       return $ map (first3 ((ci, si) :)) is
 
@@ -238,7 +246,7 @@ lookupInstance' visited canFillHoles ctab tab name params
 
 lookupInstance ::
   forall r.
-  (Members '[Error TypeCheckerError, Inference] r) =>
+  (Members '[Error TypeCheckerError, Inference, NameIdGen] r) =>
   CoercionTable ->
   InstanceTable ->
   Expression ->

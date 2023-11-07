@@ -57,8 +57,14 @@ walkDirRel handler topdir = do
             where
               filterSubdirs :: Path Rel Dir -> Sem (State (HashSet Uid) ': r) Bool
               filterSubdirs d = do
-                hasJuvixYaml <- fileExists' (topdir <//> curdir <//> d <//> juvixYamlFile)
-                return (fi hasJuvixYaml d)
+                hasJuvixPackage <-
+                  orM
+                    ( fileExists' . (rootDir <//>) <$> [juvixYamlFile, packageFilePath]
+                    )
+                return (fi hasJuvixPackage d)
+                where
+                  rootDir :: Path Abs Dir
+                  rootDir = topdir <//> curdir <//> d
 
       checkLoop :: Path Abs Dir -> Sem (State (HashSet Uid) ': r) Bool
       checkLoop dir = do

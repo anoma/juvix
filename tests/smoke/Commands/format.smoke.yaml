@@ -194,6 +194,26 @@ tests:
     stdout: ''
     exit-status: 0
 
+  - name: format-ignore-subproject-project-juvix
+    command:
+      shell:
+        - bash
+      script: |
+        temp=$(mktemp -d)
+        trap 'rm -rf -- "$temp"' EXIT
+        pushd $temp > /dev/null
+        juvix init -n
+        popd > /dev/null
+        cp positive/Format.juvix $temp
+        mkdir $temp/sub
+        pushd $temp/sub > /dev/null
+        juvix init -n
+        popd > /dev/null
+        cp positive/Format.juvix $temp/sub
+        juvix format $temp
+    stdout: ''
+    exit-status: 0
+
   - name: format-dir-containing-unformatted-check-no-stdout
     command:
       shell:

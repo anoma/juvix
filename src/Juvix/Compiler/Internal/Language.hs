@@ -530,3 +530,11 @@ instance HasLoc ConstructorApp where
     case last <$> nonEmpty _constrAppParameters of
       Just p -> getLoc _constrAppConstructor <> getLoc p
       Nothing -> getLoc _constrAppConstructor
+
+idenName :: Lens' Iden Name
+idenName f = \case
+  IdenFunction g -> IdenFunction <$> f g
+  IdenConstructor c -> IdenConstructor <$> f c
+  IdenVar v -> IdenVar <$> f v
+  IdenInductive i -> IdenInductive <$> f i
+  IdenAxiom a -> IdenAxiom <$> f a

@@ -63,7 +63,7 @@ mkPackageInfo mpackageEntry _packageRoot pkg = do
   return PackageInfo {..}
   where
     juvixAccum :: Path Abs Dir -> [Path Rel Dir] -> [Path Rel File] -> [Path Abs File] -> Sem r ([Path Abs File], Recurse Rel)
-    juvixAccum cd _ files acc = return (newJuvixFiles <> acc, RecurseFilter (\hasJuvixYaml d -> not hasJuvixYaml && not (isHiddenDirectory d)))
+    juvixAccum cd _ files acc = return (newJuvixFiles <> acc, RecurseFilter (\hasJuvixPackage d -> not hasJuvixPackage && not (isHiddenDirectory d)))
       where
         newJuvixFiles :: [Path Abs File]
         newJuvixFiles = [cd <//> f | f <- files, isJuvixFile f]
