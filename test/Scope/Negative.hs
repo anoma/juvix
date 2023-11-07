@@ -293,7 +293,7 @@ scoperErrorTests =
       $(mkRelDir ".")
       $(mkRelFile "NoNamedArguments.juvix")
       $ \case
-        ErrNoNameSignature NoNameSignature {} -> Nothing
+        ErrNamedArgumentsError ErrUnexpectedArguments {} -> Nothing
         _ -> wrongError,
     NegTest
       "Not a record"
@@ -321,7 +321,14 @@ scoperErrorTests =
       $(mkRelDir ".")
       $(mkRelFile "MissingFields.juvix")
       $ \case
-        ErrMissingFields {} -> Nothing
+        ErrMissingArgs {} -> Nothing
+        _ -> wrongError,
+    NegTest
+      "Unexpected argument"
+      $(mkRelDir ".")
+      $(mkRelFile "UnexpectedArgumentNew.juvix")
+      $ \case
+        ErrUnexpectedArgument UnexpectedArgument {} -> Nothing
         _ -> wrongError,
     NegTest
       "Incomparable precedences"

@@ -684,7 +684,7 @@ expressionAtom =
   P.label "<expression>" $
     AtomLiteral <$> P.try literal
       <|> either AtomIterator AtomNamedApplication <$> iterator
-      <|> AtomRecordCreation <$> recordCreation
+      <|> AtomNamedApplicationNew <$> namedApplicationNew
       <|> AtomNamedApplication <$> namedApplication
       <|> AtomList <$> parseList
       <|> AtomIdentifier <$> name
@@ -838,27 +838,26 @@ iterator = do
         _ -> parseFailure off "an iterator must have at least one range"
       return NamedArgument {..}
 
-recordCreation ::
+namedApplicationNew ::
   forall r.
   (Members '[InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
-  ParsecS r (RecordCreation 'Parsed)
-recordCreation = P.label "<record creation>" $ do
-  (_recordCreationConstructor, _recordCreationAtKw) <- P.try $ do
+  ParsecS r (NamedApplicationNew 'Parsed)
+namedApplicationNew = P.label "<named application>" $ do
+  (_namedApplicationNewName, _namedApplicationNewAtKw, _namedApplicationNewExhaustive) <- P.try $ do
     n <- name
-    a <- Irrelevant <$> kw kwAt
+    (a, b) <- first Irrelevant <$> ((,False) <$> kw kwAtQuestion <|> (,True) <$> kw kwAt)
     lbrace
-    return (n, a)
+    return (n, a, b)
   defs <- P.sepEndBy (functionDefinition True False Nothing) semicolon
   rbrace
-  let _recordCreationFields = fmap mkField defs
-      _recordCreationExtra = Irrelevant ()
-  return RecordCreation {..}
+  let _namedApplicationNewArguments = fmap mkArg defs
+      _namedApplicationNewExtra = Irrelevant ()
+  return NamedApplicationNew {..}
   where
-    mkField :: FunctionDef 'Parsed -> RecordDefineField 'Parsed
-    mkField f =
-      RecordDefineField
-        { _fieldDefineFunDef = f,
-          _fieldDefineIden = NameUnqualified $ f ^. signName
+    mkArg :: FunctionDef 'Parsed -> NamedArgumentNew 'Parsed
+    mkArg f =
+      NamedArgumentNew
+        { _namedArgumentNewFunDef = f
         }
 
 namedApplication ::

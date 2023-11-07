@@ -412,5 +412,10 @@ tests =
       "Test070: Nested default values and named arguments"
       $(mkRelDir ".")
       $(mkRelFile "test070.juvix")
-      $(mkRelFile "out/test070.out")
+      $(mkRelFile "out/test070.out"),
+    posTest
+      "Test071: Named application"
+      $(mkRelDir ".")
+      $(mkRelFile "test071.juvix")
+      $(mkRelFile "out/test071.out")
   ]

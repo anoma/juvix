@@ -1,5 +1,3 @@
--- | Used when you annotate some AST with some information that you want to be
--- ignored when checking for equality/ordering
 module Juvix.Data.Irrelevant where
 
 import Juvix.Data.Loc
@@ -7,6 +5,8 @@ import Juvix.Prelude.Base
 import Juvix.Prelude.Pretty
 import Prelude (show)
 
+-- | Used when you annotate some AST with some information that you want to be
+-- ignored when checking for equality/ordering
 newtype Irrelevant a = Irrelevant
   { _unIrrelevant :: a
   }
