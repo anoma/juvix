@@ -8,11 +8,11 @@ where
 
 import Data.HashMap.Strict qualified as HashMap
 import Data.Stream qualified as Stream
-import Juvix.Compiler.Internal.Data.InfoTable.Base
 import Juvix.Compiler.Internal.Extra.Base
 import Juvix.Compiler.Internal.Extra.Clonable
 import Juvix.Compiler.Internal.Extra.DependencyBuilder
 import Juvix.Compiler.Internal.Language
+import Juvix.Compiler.Store.Internal.Data.InfoTable
 import Juvix.Prelude
 
 constructorArgTypes :: ConstructorInfo -> ([VarName], [Expression])

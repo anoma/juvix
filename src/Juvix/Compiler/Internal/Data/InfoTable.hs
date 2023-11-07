@@ -1,5 +1,5 @@
 module Juvix.Compiler.Internal.Data.InfoTable
-  ( module Juvix.Compiler.Internal.Data.InfoTable.Base,
+  ( module Juvix.Compiler.Store.Internal.Language,
     buildTable,
     extendWithReplExpression,
     lookupConstructor,
@@ -12,7 +12,6 @@ module Juvix.Compiler.Internal.Data.InfoTable
     lookupConstructorType,
     getAxiomBuiltinInfo,
     getFunctionBuiltinInfo,
-    buildTableShallow,
     mkConstructorEntries,
   )
 where
@@ -20,25 +19,40 @@ where
 import Data.Generics.Uniplate.Data
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Internal.Data.CoercionInfo
-import Juvix.Compiler.Internal.Data.InfoTable.Base
 import Juvix.Compiler.Internal.Data.InstanceInfo
 import Juvix.Compiler.Internal.Extra
 import Juvix.Compiler.Internal.Pretty (ppTrace)
+import Juvix.Compiler.Store.Internal.Language
 import Juvix.Prelude
 
-type MCache = Cache ModuleIndex InfoTable
+buildTable :: (Foldable f) => StoredModuleTable -> f Module -> InfoTable
+buildTable mtab = mconcatMap (computeTable mtab)
 
-buildTable :: (Foldable f) => f Module -> InfoTable
-buildTable = run . evalCache (computeTable True) mempty . getMany
+functionInfoFromFunctionDef :: FunctionDef -> FunctionInfo
+functionInfoFromFunctionDef FunctionDef {..} =
+  FunctionInfo
+    { _functionInfoName = _funDefName,
+      _functionInfoType = _funDefType,
+      _functionInfoArgsInfo = _funDefArgsInfo,
+      _functionInfoBuiltin = _funDefBuiltin,
+      _functionInfoCoercion = _funDefCoercion,
+      _functionInfoInstance = _funDefInstance,
+      _functionInfoTerminating = _funDefTerminating,
+      _functionInfoPragmas = _funDefPragmas
+    }
 
-buildTable' :: (Foldable f) => Bool -> f Module -> InfoTable
-buildTable' recurIntoImports = run . evalCache (computeTable recurIntoImports) mempty . getMany
-
-buildTableShallow :: Module -> InfoTable
-buildTableShallow = buildTable' False . pure @[]
-
-getMany :: (Members '[MCache] r, Foldable f) => f Module -> Sem r InfoTable
-getMany = mconcatMap (cacheGet . ModuleIndex)
+inductiveInfoFromInductiveDef :: InductiveDef -> InductiveInfo
+inductiveInfoFromInductiveDef InductiveDef {..} =
+  InductiveInfo
+    { _inductiveInfoName = _inductiveName,
+      _inductiveInfoType = _inductiveType,
+      _inductiveInfoBuiltin = _inductiveBuiltin,
+      _inductiveInfoParameters = _inductiveParameters,
+      _inductiveInfoConstructors = map (^. inductiveConstructorName) _inductiveConstructors,
+      _inductiveInfoPositive = _inductivePositive,
+      _inductiveInfoTrait = _inductiveTrait,
+      _inductiveInfoPragmas = _inductivePragmas
+    }
 
 extendWithReplExpression :: Expression -> InfoTable -> InfoTable
 extendWithReplExpression e =
@@ -46,7 +60,7 @@ extendWithReplExpression e =
     infoFunctions
     ( HashMap.union
         ( HashMap.fromList
-            [ (f ^. funDefName, FunctionInfo f)
+            [ (f ^. funDefName, functionInfoFromFunctionDef f)
               | f <- letFunctionDefs e
             ]
         )
@@ -64,18 +78,20 @@ letFunctionDefs e =
       LetFunDef f -> pure f
       LetMutualBlock (MutualBlockLet fs) -> fs
 
-computeTable :: forall r. (Members '[MCache] r) => Bool -> ModuleIndex -> Sem r InfoTable
-computeTable recurIntoImports (ModuleIndex m) = compute
+computeTable :: StoredModuleTable -> Module -> InfoTable
+computeTable mtab m = compute
   where
-    compute :: Sem r InfoTable
-    compute = do
-      infoInc <- mconcatMapM (cacheGet . (^. importModule)) imports
-      return (InfoTable {..} <> infoInc)
+    compute :: InfoTable
+    compute =
+      InfoTable {..} <> mconcatMap goImport imports
+      where
+        goImport :: Import -> InfoTable
+        goImport Import {..} =
+          let sm = lookupStoredModule mtab _importModuleName
+           in sm ^. storedModuleInfoTable <> mconcatMap goImport (sm ^. storedModuleImports)
 
     imports :: [Import]
-    imports
-      | recurIntoImports = m ^. moduleBody . moduleImports
-      | otherwise = []
+    imports = m ^. moduleBody . moduleImports
 
     mutuals :: [MutualStatement]
     mutuals =
@@ -93,7 +109,7 @@ computeTable recurIntoImports (ModuleIndex m) = compute
     _infoInductives :: HashMap Name InductiveInfo
     _infoInductives =
       HashMap.fromList
-        [ (d ^. inductiveName, InductiveInfo d)
+        [ (d ^. inductiveName, inductiveInfoFromInductiveDef d)
           | d <- inductives
         ]
 
@@ -108,10 +124,10 @@ computeTable recurIntoImports (ModuleIndex m) = compute
     _infoFunctions :: HashMap Name FunctionInfo
     _infoFunctions =
       HashMap.fromList $
-        [ (f ^. funDefName, FunctionInfo f)
+        [ (f ^. funDefName, functionInfoFromFunctionDef f)
           | StatementFunction f <- mutuals
         ]
-          <> [ (f ^. funDefName, FunctionInfo f)
+          <> [ (f ^. funDefName, functionInfoFromFunctionDef f)
                | s <- ss,
                  f <- letFunctionDefs s
              ]
@@ -127,12 +143,12 @@ computeTable recurIntoImports (ModuleIndex m) = compute
     _infoInstances = foldr (flip updateInstanceTable) mempty $ mapMaybe mkInstance (HashMap.elems _infoFunctions)
       where
         mkInstance :: FunctionInfo -> Maybe InstanceInfo
-        mkInstance (FunctionInfo FunctionDef {..})
-          | _funDefInstance =
+        mkInstance (FunctionInfo {..})
+          | _functionInfoInstance =
               instanceFromTypedExpression
                 ( TypedExpression
-                    { _typedType = _funDefType,
-                      _typedExpression = ExpressionIden (IdenFunction _funDefName)
+                    { _typedType = _functionInfoType,
+                      _typedExpression = ExpressionIden (IdenFunction _functionInfoName)
                     }
                 )
           | otherwise =
@@ -142,12 +158,12 @@ computeTable recurIntoImports (ModuleIndex m) = compute
     _infoCoercions = foldr (flip updateCoercionTable) mempty $ mapMaybe mkCoercion (HashMap.elems _infoFunctions)
       where
         mkCoercion :: FunctionInfo -> Maybe CoercionInfo
-        mkCoercion (FunctionInfo FunctionDef {..})
-          | _funDefCoercion =
+        mkCoercion (FunctionInfo {..})
+          | _functionInfoCoercion =
               coercionFromTypedExpression
                 ( TypedExpression
-                    { _typedType = _funDefType,
-                      _typedExpression = ExpressionIden (IdenFunction _funDefName)
+                    { _typedType = _functionInfoType,
+                      _typedExpression = ExpressionIden (IdenFunction _functionInfoName)
                     }
                 )
           | otherwise =
@@ -214,7 +230,7 @@ lookupAxiom f = HashMap.lookupDefault impossible f <$> asks (^. infoAxioms)
 lookupInductiveType :: (Member (Reader InfoTable) r) => Name -> Sem r Expression
 lookupInductiveType v = do
   info <- lookupInductive v
-  let ps = info ^. inductiveInfoDef . inductiveParameters
+  let ps = info ^. inductiveInfoParameters
   return $
     foldr
       (\_ k -> uni --> k)
@@ -240,7 +256,7 @@ getFunctionBuiltinInfo :: (Member (Reader InfoTable) r) => Name -> Sem r (Maybe 
 getFunctionBuiltinInfo n = do
   maybeFunInfo <- HashMap.lookup n <$> asks (^. infoFunctions)
   return $ case maybeFunInfo of
-    Just funInfo -> funInfo ^. functionInfoDef . funDefBuiltin
+    Just funInfo -> funInfo ^. functionInfoBuiltin
     Nothing -> Nothing
 
 mkConstructorEntries :: InductiveDef -> [(ConstructorName, ConstructorInfo)]

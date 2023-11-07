@@ -328,14 +328,16 @@ goImport ::
   (Members '[Reader ExportsTable, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, MCache] r) =>
   Import 'Scoped ->
   Sem r Internal.Import
-goImport Import {..} = do
-  let m = _importModule ^. moduleRefModule
+goImport Import {..} = undefined
+
+{-  let m = _importModule ^. moduleRefModule
   m' <- goTopModule m
   return
     ( Internal.Import
-        { _importModule = Internal.ModuleIndex m'
+        { _importModuleName = undefined
         }
     )
+-}
 
 -- | Ignores functions
 goAxiomInductive ::

@@ -31,35 +31,35 @@ type CheckPositivityEffects r =
 checkPositivity ::
   forall r.
   (CheckPositivityEffects r) =>
-  InductiveDef ->
+  InductiveInfo ->
   Sem r ()
-checkPositivity ty = do
-  let indName = ty ^. inductiveName
+checkPositivity indInfo = do
+  let indName = indInfo ^. inductiveInfoName
   numInductives <- HashMap.size <$> asks (^. infoInductives)
   noCheckPositivity <- asks (^. E.entryPointNoPositivity)
-  forM_ (ty ^. inductiveConstructors) $ \ctor -> do
-    let ctorName = ctor ^. inductiveConstructorName
-        args = constructorArgs (ctor ^. inductiveConstructorType)
-    unless (noCheckPositivity || ty ^. inductivePositive) $
+  forM_ (indInfo ^. inductiveInfoConstructors) $ \ctorName -> do
+    ctorType <- lookupConstructorType ctorName
+    let args = constructorArgs ctorType
+    unless (noCheckPositivity || indInfo ^. inductiveInfoPositive) $
       forM_
         args
-        (checkStrictlyPositiveOccurrences ty ctorName indName numInductives Nothing)
+        (checkStrictlyPositiveOccurrences indInfo ctorName indName numInductives Nothing)
 
 checkStrictlyPositiveOccurrences ::
   forall r.
   (CheckPositivityEffects r) =>
-  InductiveDef ->
+  InductiveInfo ->
   ConstrName ->
   Name ->
   RecursionLimit ->
   ErrorReference ->
   TypeOfConstructor ->
   Sem r ()
-checkStrictlyPositiveOccurrences ty ctorName name recLimit ref =
+checkStrictlyPositiveOccurrences indInfo ctorName name recLimit ref =
   strongNormalize >=> helper False
   where
     indName :: Name
-    indName = ty ^. inductiveName
+    indName = indInfo ^. inductiveInfoName
 
     -- The following `helper` function determines if there is any negative
     -- occurence of the symbol `name` in the given expression. The `inside` flag
@@ -124,7 +124,7 @@ checkStrictlyPositiveOccurrences ty ctorName name recLimit ref =
           IdenVar name'
             | not inside -> return ()
             | name == name' -> strictlyPositivityError expr
-            | InductiveParameter name' `elem` ty ^. inductiveParameters -> modify (HashSet.insert name')
+            | InductiveParameter name' `elem` indInfo ^. inductiveInfoParameters -> modify (HashSet.insert name')
             | otherwise -> return ()
           _ -> return ()
 
@@ -134,38 +134,38 @@ checkStrictlyPositiveOccurrences ty ctorName name recLimit ref =
           case hdExpr of
             ExpressionIden (IdenInductive ty') -> do
               when (inside && name == ty') (strictlyPositivityError expr)
-              InductiveInfo indType' <- lookupInductive ty'
+              indInfo' <- lookupInductive ty'
 
               -- We now need to know whether `name` negatively occurs at `indTy'`
               -- or not. The way to know is by checking that the type ty'
               -- preserves the positivity condition, i.e., its type parameters
               -- are no negative.
 
-              let paramsTy' = indType' ^. inductiveParameters
-              helperInductiveApp indType' (zip paramsTy' (toList args))
+              let paramsTy' = indInfo' ^. inductiveInfoParameters
+              helperInductiveApp indInfo' (zip paramsTy' (toList args))
             _ -> return ()
 
-        helperInductiveApp :: InductiveDef -> [(InductiveParameter, Expression)] -> Sem r ()
-        helperInductiveApp indType' = \case
+        helperInductiveApp :: InductiveInfo -> [(InductiveParameter, Expression)] -> Sem r ()
+        helperInductiveApp indInfo' = \case
           ((InductiveParameter pName', tyArg) : ps) -> do
             negParms :: NegativeTypeParameters <- get
             when (varOrInductiveInExpression name tyArg) $ do
               when (HashSet.member pName' negParms) (strictlyPositivityError tyArg)
               when (recLimit > 0) $
-                forM_ (indType' ^. inductiveConstructors) $ \ctor' -> do
-                  let ctorName' = ctor' ^. inductiveConstructorName
-                      errorRef = fromMaybe tyArg ref
-                      args = constructorArgs (ctor' ^. inductiveConstructorType)
+                forM_ (indInfo' ^. inductiveInfoConstructors) $ \ctorName' -> do
+                  ctorType' <- lookupConstructorType ctorName'
+                  let errorRef = fromMaybe tyArg ref
+                      args = constructorArgs ctorType'
                   mapM_
                     ( checkStrictlyPositiveOccurrences
-                        indType'
+                        indInfo'
                         ctorName'
                         pName'
                         (recLimit - 1)
                         (Just errorRef)
                     )
                     args
-            helperInductiveApp indType' ps
+            helperInductiveApp indInfo' ps
           [] -> return ()
 
     strictlyPositivityError :: Expression -> Sem r ()

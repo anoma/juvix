@@ -1,8 +1,9 @@
-module Juvix.Compiler.Internal.Data.InfoTable.Base where
+module Juvix.Compiler.Store.Internal.Data.InfoTable where
 
 import Juvix.Compiler.Internal.Data.CoercionInfo
 import Juvix.Compiler.Internal.Data.InstanceInfo
 import Juvix.Compiler.Internal.Language
+import Juvix.Extra.Serialize
 import Juvix.Prelude
 
 data ConstructorInfo = ConstructorInfo
@@ -13,18 +14,44 @@ data ConstructorInfo = ConstructorInfo
     _constructorInfoBuiltin :: Maybe BuiltinConstructor,
     _constructorInfoTrait :: Bool
   }
+  deriving stock (Generic)
 
-newtype FunctionInfo = FunctionInfo
-  { _functionInfoDef :: FunctionDef
+instance Serialize ConstructorInfo
+
+data FunctionInfo = FunctionInfo
+  { _functionInfoName :: FunctionName,
+    _functionInfoType :: Expression,
+    _functionInfoTerminating :: Bool,
+    _functionInfoInstance :: Bool,
+    _functionInfoCoercion :: Bool,
+    _functionInfoBuiltin :: Maybe BuiltinFunction,
+    _functionInfoArgsInfo :: [ArgInfo],
+    _functionInfoPragmas :: Pragmas
   }
+  deriving stock (Generic)
+
+instance Serialize FunctionInfo
 
 newtype AxiomInfo = AxiomInfo
   { _axiomInfoDef :: AxiomDef
   }
+  deriving stock (Generic)
 
-newtype InductiveInfo = InductiveInfo
-  { _inductiveInfoDef :: InductiveDef
+instance Serialize AxiomInfo
+
+data InductiveInfo = InductiveInfo
+  { _inductiveInfoName :: InductiveName,
+    _inductiveInfoBuiltin :: Maybe BuiltinInductive,
+    _inductiveInfoType :: Expression,
+    _inductiveInfoParameters :: [InductiveParameter],
+    _inductiveInfoConstructors :: [ConstrName],
+    _inductiveInfoPositive :: Bool,
+    _inductiveInfoTrait :: Bool,
+    _inductiveInfoPragmas :: Pragmas
   }
+  deriving stock (Generic)
+
+instance Serialize InductiveInfo
 
 data InfoTable = InfoTable
   { _infoConstructors :: HashMap Name ConstructorInfo,
@@ -34,6 +61,9 @@ data InfoTable = InfoTable
     _infoInstances :: InstanceTable,
     _infoCoercions :: CoercionTable
   }
+  deriving stock (Generic)
+
+instance Serialize InfoTable
 
 makeLenses ''InfoTable
 makeLenses ''FunctionInfo

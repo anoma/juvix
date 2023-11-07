@@ -7,6 +7,7 @@ module Juvix.Extra.Serialize
   )
 where
 
+import Data.HashMap.Strict qualified as HashMap
 import Data.Serialize as S
 import Juvix.Prelude.Base
 import Juvix.Prelude.Path
@@ -19,3 +20,8 @@ instance Serialize Text where
   get = pack <$> S.get
 
 instance (Serialize a) => Serialize (NonEmpty a)
+
+instance (Hashable k, Serialize k, Serialize a) => Serialize (HashMap k a) where
+  put m = S.put (HashMap.toList m)
+
+  get = HashMap.fromList <$> S.get

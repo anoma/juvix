@@ -57,7 +57,7 @@ checkImport ::
   (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError, MCache] r) =>
   Import ->
   Sem r Import
-checkImport = traverseOf importModule checkModuleIndex
+checkImport = undefined
 
 checkInductive :: forall r. (Members '[Reader InsertedArgsStack, Reader InfoTable, NameIdGen, Error ArityCheckerError] r) => InductiveDef -> Sem r InductiveDef
 checkInductive d = do
@@ -546,9 +546,9 @@ idenArity = \case
   IdenVar v -> getLocalArity v
   IdenInductive i -> typeArity <$> lookupInductiveType i
   IdenFunction f -> do
-    fun <- (^. functionInfoDef) <$> lookupFunction f
-    let ari = typeArity (fun ^. funDefType)
-        defaults = fun ^. funDefArgsInfo
+    fun <- lookupFunction f
+    let ari = typeArity (fun ^. functionInfoType)
+        defaults = fun ^. functionInfoArgsInfo
     return (addArgsInfo defaults ari)
   IdenConstructor c -> typeArity <$> lookupConstructorType c
   IdenAxiom a -> typeArity . (^. axiomInfoDef . axiomType) <$> lookupAxiom a
@@ -734,7 +734,7 @@ checkExpression hintArity expr = case expr of
         goAppLeftIden :: Iden -> Sem r Expression
         goAppLeftIden i = case i of
           IdenFunction f -> do
-            infos <- (^. functionInfoDef . funDefArgsInfo) <$> lookupFunction f
+            infos <- (^. functionInfoArgsInfo) <$> lookupFunction f
             let hasADefault = has (each . argInfoDefault . _Just) infos
             if
                 | hasADefault -> goAppLeftIdenWithDefaults i

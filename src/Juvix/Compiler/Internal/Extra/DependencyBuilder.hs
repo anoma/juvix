@@ -128,7 +128,7 @@ goModuleNoVisited (ModuleIndex m) = do
   mapM_ goImport (b ^. moduleImports)
 
 goImport :: (Members '[Reader ExportsTable, State DependencyGraph, State StartNodes, State BuilderState, Visit ModuleIndex] r) => Import -> Sem r ()
-goImport (Import m) = visit m
+goImport (Import m) = undefined
 
 goPreModule :: (Members '[Reader ExportsTable, State DependencyGraph, State StartNodes, State BuilderState, Visit ModuleIndex] r) => PreModule -> Sem r ()
 goPreModule m = do

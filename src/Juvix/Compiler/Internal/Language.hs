@@ -43,9 +43,11 @@ data Module' stmt = Module
   deriving stock (Data, Generic)
 
 newtype Import = Import
-  { _importModule :: ModuleIndex
+  { _importModuleName :: Name
   }
   deriving stock (Data, Generic)
+
+instance Serialize Import
 
 data ModuleBody' stmt = ModuleBody
   { _moduleImports :: [Import],
@@ -80,6 +82,8 @@ data AxiomDef = AxiomDef
     _axiomPragmas :: Pragmas
   }
   deriving stock (Data, Generic)
+
+instance Serialize AxiomDef
 
 data FunctionDef = FunctionDef
   { _funDefName :: FunctionName,
@@ -317,7 +321,9 @@ instance Serialize Pattern
 newtype InductiveParameter = InductiveParameter
   { _inductiveParamName :: VarName
   }
-  deriving stock (Eq, Data)
+  deriving stock (Eq, Data, Generic)
+
+instance Serialize InductiveParameter
 
 data InductiveDef = InductiveDef
   { _inductiveName :: InductiveName,
