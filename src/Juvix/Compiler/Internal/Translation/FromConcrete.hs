@@ -784,13 +784,13 @@ goExpression = \case
                   _namedAppArgs = nonEmpty' $ createArgumentBlocks (sig ^. nameSignatureArgs)
                 }
         e <- goNamedApplication napp'
-        let expr =
-              Internal.substitutionE updateKind
-                . Internal.ExpressionLet
-                $ Internal.Let
-                  { _letClauses = cls,
-                    _letExpression = e
-                  }
+        expr <-
+          Internal.substitutionE updateKind
+            . Internal.ExpressionLet
+            $ Internal.Let
+              { _letClauses = cls,
+                _letExpression = e
+              }
         Internal.clone expr
         where
           goArgs :: NonEmpty (NamedArgumentNew 'Scoped) -> Sem r (NonEmpty Internal.LetClause)
