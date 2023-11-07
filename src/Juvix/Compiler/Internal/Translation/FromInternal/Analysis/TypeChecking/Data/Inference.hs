@@ -556,7 +556,7 @@ functionDefEval f = do
       goBody (f ^. funDefBody)
       where
         checkTerminating :: Sem r ()
-        checkTerminating = unlessM (functionIsTerminating (f ^. funDefName)) fail
+        checkTerminating = unlessM (functionSafeToNormalize (f ^. funDefName)) fail
 
         goBody :: Expression -> Sem r Expression
         goBody body = do

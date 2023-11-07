@@ -1083,6 +1083,8 @@ holesHelper mhint expr = do
 
         checkMatchingArg :: ApplicationArg -> Function -> Sem r' ()
         checkMatchingArg arg fun = do
+          -- traceM ("chekc arg: " <> ppTrace arg <> " " <> ppTrace (getLoc arg))
+          dropArg
           let funParam = fun ^. functionLeft
               funL = funParam ^. paramType
               funR = fun ^. functionRight
@@ -1102,7 +1104,6 @@ holesHelper mhint expr = do
           funR' <- subs funR
           modify' (set appBuilderType funR')
           modify' (over appBuilder applyArg)
-          dropArg
 
         goNextArg :: ApplicationArg -> Sem r' ()
         goNextArg arg = do
