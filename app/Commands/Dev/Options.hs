@@ -18,6 +18,7 @@ import Commands.Dev.DisplayRoot.Options
 import Commands.Dev.Geb.Options
 import Commands.Dev.Highlight.Options
 import Commands.Dev.Internal.Options
+import Commands.Dev.MigrateJuvixYaml.Options
 import Commands.Dev.Parse.Options
 import Commands.Dev.Repl.Options
 import Commands.Dev.Runtime.Options
@@ -38,6 +39,7 @@ data DevCommand
   | Scope ScopeOptions
   | Termination TerminationCommand
   | JuvixDevRepl ReplOptions
+  | MigrateJuvixYaml MigrateJuvixYamlOptions
   deriving stock (Data)
 
 parseDevCommand :: Parser DevCommand
@@ -54,7 +56,8 @@ parseDevCommand =
           commandScope,
           commandShowRoot,
           commandTermination,
-          commandJuvixDevRepl
+          commandJuvixDevRepl,
+          commandMigrateJuvixYaml
         ]
     )
 
@@ -136,3 +139,10 @@ commandJuvixDevRepl =
         (JuvixDevRepl <$> parseDevRepl)
         (progDesc "Run the Juvix dev REPL")
     )
+
+commandMigrateJuvixYaml :: Mod CommandFields DevCommand
+commandMigrateJuvixYaml =
+  command "migrate-juvix-yaml" $
+    info
+      (MigrateJuvixYaml <$> parseMigrateJuvixYaml)
+      (progDesc "Migrate juvix.yaml to Package.juvix in the current project")
