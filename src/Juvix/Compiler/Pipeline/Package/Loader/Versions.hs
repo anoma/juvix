@@ -34,49 +34,73 @@ v1PackageDescriptionType = PackageDescriptionType v1PackageDescriptionFile "Pack
 
     fromPackage :: Package -> FunctionDefBody 'Parsed
     fromPackage p = run . runReader l $ do
-      defaultPackageName' <- NameUnqualified <$> symbol "defaultPackage"
-      argBlock <- argumentBlock Implicit =<< mkNamedArgs
-      let defaultPackageArg = namedApplication defaultPackageName' (argBlock :| [])
-      functionDefExpression (defaultPackageArg :| [])
+      bodyExpression <-
+        maybeM
+          defaultPackageNoArgs
+          defaultPackageWithArgs
+          (nonEmpty <$> mkNamedArgs)
+      functionDefExpression bodyExpression
       where
+        defaultPackageStr :: Text
+        defaultPackageStr = "defaultPackage"
+
+        defaultPackageNoArgs :: (Member (Reader Interval) r) => Sem r (NonEmpty (ExpressionAtom 'Parsed))
+        defaultPackageNoArgs = NEL.singleton <$> identifier defaultPackageStr
+
+        defaultPackageWithArgs :: (Member (Reader Interval) r) => NonEmpty (NamedArgument 'Parsed) -> Sem r (NonEmpty (ExpressionAtom 'Parsed))
+        defaultPackageWithArgs as = do
+          defaultPackageName' <- NameUnqualified <$> symbol defaultPackageStr
+          argBlock <- argumentBlock Implicit as
+          let defaultPackageArg = namedApplication defaultPackageName' (argBlock :| [])
+          return (defaultPackageArg :| [])
+
         l :: Interval
         l = singletonInterval (mkInitialLoc (p ^. packageFile))
 
-        mkNamedArgs :: forall r. (Member (Reader Interval) r) => Sem r (NonEmpty (NamedArgument 'Parsed))
+        mkNamedArgs :: forall r. (Member (Reader Interval) r) => Sem r [NamedArgument 'Parsed]
         mkNamedArgs = do
-          args <- sequence (mkNameArg :| [mkVersionArg, mkDependenciesArg])
-          optionalArgs <- catMaybes <$> sequence [mkMainArg, mkBuildDirArg]
-          return (appendList args optionalArgs)
+          catMaybes <$> sequence [mkNameArg, mkVersionArg, mkDependenciesArg, mkMainArg, mkBuildDirArg]
           where
-            mkNameArg :: Sem r (NamedArgument 'Parsed)
-            mkNameArg = do
-              n <- literalString (p ^. packageName)
-              namedArgument "name" (n :| [])
+            mkNameArg :: Sem r (Maybe (NamedArgument 'Parsed))
+            mkNameArg
+              | defaultPackageName == p ^. packageName = return Nothing
+              | otherwise = do
+                  n <- literalString (p ^. packageName)
+                  Just <$> namedArgument "name" (n :| [])
 
-            mkDependenciesArg :: Sem r (NamedArgument 'Parsed)
+            mkDependenciesArg :: Sem r (Maybe (NamedArgument 'Parsed))
             mkDependenciesArg = do
-              deps <- mkList =<< mapM mkDependencyArg (p ^. packageDependencies)
-              namedArgument "dependencies" (deps :| [])
+              let deps = p ^. packageDependencies
+                  dependenciesArg = Just <$> mkDependenciesArg' (p ^. packageDependencies)
+              case deps of
+                [d] ->
+                  if
+                      | d == defaultStdlibDep DefaultBuildDir -> return Nothing
+                      | otherwise -> dependenciesArg
+                _ -> dependenciesArg
               where
+                mkDependenciesArg' :: [Dependency] -> Sem r (NamedArgument 'Parsed)
+                mkDependenciesArg' ds = do
+                  deps <- mkList =<< mapM mkDependencyArg ds
+                  namedArgument "dependencies" (deps :| [])
+
                 mkDependencyArg :: Dependency -> Sem r (NonEmpty (ExpressionAtom 'Parsed))
-                mkDependencyArg d
-                  | d == defaultStdlibDep DefaultBuildDir = NEL.singleton <$> identifier "defaultStdlib"
-                  | otherwise = case d of
-                      DependencyPath x ->
-                        sequence
-                          ( identifier "path"
-                              :| [literalString (pack (unsafePrepathToFilePath (x ^. pathDependencyPath)))]
-                          )
-                      DependencyGit x ->
-                        sequence
-                          ( identifier "git"
-                              :| ( literalString
-                                     <$> [ x ^. gitDependencyName,
-                                           x ^. gitDependencyUrl,
-                                           x ^. gitDependencyRef
-                                         ]
-                                 )
-                          )
+                mkDependencyArg = \case
+                  DependencyPath x ->
+                    sequence
+                      ( identifier "path"
+                          :| [literalString (pack (unsafePrepathToFilePath (x ^. pathDependencyPath)))]
+                      )
+                  DependencyGit x ->
+                    sequence
+                      ( identifier "git"
+                          :| ( literalString
+                                 <$> [ x ^. gitDependencyName,
+                                       x ^. gitDependencyUrl,
+                                       x ^. gitDependencyRef
+                                     ]
+                             )
+                      )
 
             mkMainArg :: Sem r (Maybe (NamedArgument 'Parsed))
             mkMainArg = do
@@ -94,12 +118,17 @@ v1PackageDescriptionType = PackageDescriptionType v1PackageDescriptionFile "Pack
                 buildDirArg :: SomeBase Dir -> Sem r (NonEmpty (ExpressionAtom 'Parsed))
                 buildDirArg d = mkJust =<< literalString (pack (fromSomeDir d))
 
-            mkVersionArg :: Sem r (NamedArgument 'Parsed)
-            mkVersionArg = do
-              mkVersionArgs <- liftM2 (++) explicitArgs implicitArgs
-              mkVersionName <- identifier "mkVersion"
-              namedArgument "version" (mkVersionName :| mkVersionArgs)
+            mkVersionArg :: Sem r (Maybe (NamedArgument 'Parsed))
+            mkVersionArg
+              | p ^. packageVersion == defaultVersion = return Nothing
+              | otherwise = Just <$> mkVersionArg'
               where
+                mkVersionArg' :: Sem r (NamedArgument 'Parsed)
+                mkVersionArg' = do
+                  mkVersionArgs <- liftM2 (++) explicitArgs implicitArgs
+                  mkVersionName <- identifier "mkVersion"
+                  namedArgument "version" (mkVersionName :| mkVersionArgs)
+
                 explicitArgs :: Sem r [ExpressionAtom 'Parsed]
                 explicitArgs =
                   let SemVer {..} = p ^. packageVersion
