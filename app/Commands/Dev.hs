@@ -11,6 +11,7 @@ import Commands.Dev.DisplayRoot qualified as DisplayRoot
 import Commands.Dev.Geb qualified as Geb
 import Commands.Dev.Highlight qualified as Highlight
 import Commands.Dev.Internal qualified as Internal
+import Commands.Dev.MigrateJuvixYaml qualified as MigrateJuvixYaml
 import Commands.Dev.Options
 import Commands.Dev.Parse qualified as Parse
 import Commands.Dev.Runtime qualified as Runtime
@@ -31,3 +32,4 @@ runCommand = \case
   Runtime opts -> Runtime.runCommand opts
   DisplayRoot opts -> DisplayRoot.runCommand opts
   JuvixDevRepl opts -> Repl.runCommand opts
+  MigrateJuvixYaml opts -> runFilesIO $ MigrateJuvixYaml.runCommand opts

@@ -63,7 +63,7 @@ runAppIO args@RunAppIOArgs {..} =
     AskRoot -> return _runAppIOArgsRoot
     AskInvokeDir -> return invDir
     AskPkgDir -> return (_runAppIOArgsRoot ^. rootRootDir)
-    AskBuildDir -> return (_runAppIOArgsRoot ^. rootBuildDir)
+    AskBuildDir -> return (resolveAbsBuildDir (_runAppIOArgsRoot ^. rootRootDir) (_runAppIOArgsRoot ^. rootBuildDir))
     RunCorePipelineEither input -> do
       entry <- embed (getEntryPoint' args input)
       embed (corePipelineIOEither entry)

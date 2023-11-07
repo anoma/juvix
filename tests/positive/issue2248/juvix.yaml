@@ -1,4 +1,0 @@
-dependencies:
-- .juvix-build/stdlib/
-name: issue2248
-version: 0.0.0
