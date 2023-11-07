@@ -195,6 +195,11 @@ instance PrettyCode Function where
     funReturn' <- ppRightExpression funFixity r
     return $ funParameter' <+> kwArrow <+> funReturn'
 
+instance PrettyCode InstanceHole where
+  ppCode h = do
+    showNameId <- asks (^. optShowNameIds)
+    return (addNameIdTag showNameId (h ^. iholeId) kwHole)
+
 instance PrettyCode Hole where
   ppCode h = do
     showNameId <- asks (^. optShowNameIds)

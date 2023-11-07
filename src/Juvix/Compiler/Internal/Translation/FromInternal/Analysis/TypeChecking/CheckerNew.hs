@@ -318,7 +318,7 @@ checkDefType ty = checkIsType loc ty
 
 checkInstanceType ::
   forall r.
-  (Members '[Error TypeCheckerError, Reader InfoTable, Inference] r) =>
+  (Members '[Error TypeCheckerError, Reader InfoTable, Inference, NameIdGen] r) =>
   FunctionDef ->
   Sem r ()
 checkInstanceType FunctionDef {..} = case mi of
@@ -444,7 +444,7 @@ resolveInstanceHoles s = do
   --       <> "\nequals "
   --       <> ppTrace (subsHoles subs e)
   --   )
-  return $ subsHoles subs e
+  subsInstanceHoles subs e
   where
     goResolve :: TypedHole -> Sem r Expression
     goResolve h@TypedHole {..} = do
@@ -531,7 +531,7 @@ checkClause clauseLoc clauseType clausePats body = do
   locals0 <- ask
   (localsPats, (checkedPatterns, bodyType)) <- helper clausePats clauseType
   let locals' = locals0 <> localsPats
-      bodyTy' = substitutionE (localsToSubsE locals') bodyType
+  bodyTy' <- substitutionE (localsToSubsE locals') bodyType
   checkedBody <- local (const locals') (checkExpression bodyTy' body)
   return (checkedPatterns, checkedBody)
   where
@@ -611,7 +611,7 @@ freshHoleImpl :: (Members '[NameIdGen] r) => Interval -> IsImplicit -> Sem r Exp
 freshHoleImpl loc = \case
   Explicit -> ExpressionHole <$> Extra.freshHole loc
   Implicit -> ExpressionHole <$> Extra.freshHole loc
-  ImplicitInstance -> ExpressionInstanceHole <$> Extra.freshHole loc
+  ImplicitInstance -> ExpressionInstanceHole <$> Extra.freshInstanceHole loc
 
 -- | Refines a hole into a function type. I.e. '_@1' is matched with '_@fresh → _@fresh'
 holeRefineToFunction :: (Members '[Inference, NameIdGen] r) => IsImplicit -> Hole -> Sem r Function
@@ -653,8 +653,8 @@ checkPattern = go
     go argTy patArg = do
       matchIsImplicit (argTy ^. paramImplicit) patArg
       tyVarMap <- fmap (ExpressionIden . IdenVar) . (^. localTyMap) <$> get
-      let ty = substitutionE tyVarMap (argTy ^. paramType)
-          pat = patArg ^. patternArgPattern
+      ty <- substitutionE tyVarMap (argTy ^. paramType)
+      let pat = patArg ^. patternArgPattern
           name = patArg ^. patternArgName
       whenJust name (\n -> addVar n ty argTy)
       pat' <- case pat of
@@ -716,8 +716,8 @@ checkPattern = go
         goConstr :: Iden -> ConstructorApp -> [(InductiveParameter, Expression)] -> Sem r ConstructorApp
         goConstr inductivename app@(ConstructorApp c ps _) ctx = do
           (_, psTys) <- constructorArgTypes <$> lookupConstructor c
-          let psTys' = map (substituteIndParams ctx) psTys
-              expectedNum = length psTys
+          psTys' <- mapM (substituteIndParams ctx) psTys
+          let expectedNum = length psTys
               w = map unnamedParameter psTys'
           when (expectedNum /= length ps) (throw (appErr app expectedNum))
           pis <- zipWithM go w ps
@@ -829,7 +829,7 @@ inferLeftAppExpression mhint e = case e of
             _typedType = ty
           }
 
-    goInstanceHole :: Hole -> Sem r TypedExpression
+    goInstanceHole :: InstanceHole -> Sem r TypedExpression
     goInstanceHole h = do
       let ty = fromMaybe impossible mhint
       locals <- ask
@@ -1090,7 +1090,7 @@ holesHelper mhint expr = do
           arg' <- checkExpression funL (arg ^. appArg)
           -- traceM ("AFTER checkMatching Arg " <> ppTrace arg <> " with " <> ppTrace funL
           --         <> " returns " <> ppTrace arg')
-          let subs :: Expression -> Expression = substitutionApp (funParam ^. paramName, arg')
+          let subs :: Expression -> Sem r' Expression = substitutionApp (funParam ^. paramName, arg')
               applyArg :: Expression -> Expression
               applyArg l =
                 ExpressionApplication
@@ -1099,7 +1099,8 @@ holesHelper mhint expr = do
                       _appRight = arg',
                       _appImplicit = arg ^. appArgIsImplicit
                     }
-          modify' (set appBuilderType (subs funR))
+          funR' <- subs funR
+          modify' (set appBuilderType funR')
           modify' (over appBuilder applyArg)
           dropArg
 
@@ -1390,4 +1391,4 @@ newHoleImplicit :: (Member NameIdGen r) => Interval -> Sem r Expression
 newHoleImplicit loc = ExpressionHole . mkHole loc <$> freshNameId
 
 newHoleInstance :: (Member NameIdGen r) => Interval -> Sem r Expression
-newHoleInstance loc = ExpressionHole . mkHole loc <$> freshNameId
+newHoleInstance loc = ExpressionInstanceHole . mkInstanceHole loc <$> freshNameId

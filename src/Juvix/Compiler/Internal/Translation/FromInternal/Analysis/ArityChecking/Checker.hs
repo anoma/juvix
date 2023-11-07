@@ -893,5 +893,5 @@ newHoleImplicit i loc = case i ^. arityParameterInfo . argInfoDefault of
     -- TODO update location
     return (True, e)
 
-newHoleInstance :: (Member NameIdGen r) => Interval -> Sem r Hole
-newHoleInstance loc = mkHole loc <$> freshNameId
+newHoleInstance :: (Member NameIdGen r) => Interval -> Sem r InstanceHole
+newHoleInstance loc = mkInstanceHole loc <$> freshNameId

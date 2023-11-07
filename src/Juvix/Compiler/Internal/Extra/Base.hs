@@ -159,7 +159,7 @@ subsInstanceHoles s = leafExpressions helper
   where
     helper :: Expression -> Sem r Expression
     helper e = case e of
-      ExpressionInstanceHole h -> maybe (clone e) return (s ^. at h)
+      ExpressionInstanceHole h -> clone (fromMaybe e (s ^. at h))
       _ -> return e
 
 subsHoles :: forall r a. (HasExpressions a, Member NameIdGen r) => HashMap Hole Expression -> a -> Sem r a
@@ -167,7 +167,7 @@ subsHoles s = leafExpressions helper
   where
     helper :: Expression -> Sem r Expression
     helper e = case e of
-      ExpressionHole h -> maybe (clone e) return (s ^. at h)
+      ExpressionHole h -> clone (fromMaybe e (s ^. at h))
       _ -> return e
 
 instance HasExpressions Example where
@@ -601,6 +601,9 @@ genWildcard :: forall r'. (Members '[NameIdGen] r') => Interval -> IsImplicit ->
 genWildcard loc impl = do
   var <- varFromWildcard (Wildcard loc)
   return (PatternArg impl Nothing (PatternVariable var))
+
+freshInstanceHole :: (Members '[NameIdGen] r) => Interval -> Sem r InstanceHole
+freshInstanceHole l = mkInstanceHole l <$> freshNameId
 
 freshHole :: (Members '[NameIdGen] r) => Interval -> Sem r Hole
 freshHole l = mkHole l <$> freshNameId

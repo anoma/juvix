@@ -152,12 +152,14 @@ expandArity loc subs params e = case params of
               h <- newHole
               return (ExpressionHole h, Implicit)
           | _paramImplicit == ImplicitInstance -> do
-              h <- newHole
+              h <- newInstanceHole
               return (ExpressionInstanceHole h, ImplicitInstance)
           | otherwise ->
               throw (ErrExplicitInstanceArgument (ExplicitInstanceArgument fp))
     expandArity loc subs params' (ExpressionApplication (Application e appr appi))
   where
+    newInstanceHole :: (Member NameIdGen r) => Sem r InstanceHole
+    newInstanceHole = mkInstanceHole loc <$> freshNameId
     newHole :: (Member NameIdGen r) => Sem r Hole
     newHole = mkHole loc <$> freshNameId
 

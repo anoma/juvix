@@ -401,7 +401,7 @@ resolveInstanceHoles s = do
   (hs, e) <- runOutputList s
   ts <- mapM goResolve hs
   let subs = HashMap.fromList (zipExact (map (^. typedHoleHole) hs) ts)
-  subsHoles subs e
+  subsInstanceHoles subs e
   where
     goResolve :: TypedHole -> Sem r Expression
     goResolve h@TypedHole {..} = do
@@ -724,7 +724,7 @@ inferExpression' hint e = case e of
             _typedType = ExpressionUniverse (SmallUniverse (getLoc h))
           }
 
-    goInstanceHole :: Hole -> Sem r TypedExpression
+    goInstanceHole :: InstanceHole -> Sem r TypedExpression
     goInstanceHole h = do
       let ty = fromMaybe impossible hint
       locals <- ask
@@ -843,7 +843,7 @@ inferExpression' hint e = case e of
             typedLit :: (Integer -> Literal) -> BuiltinFunction -> Expression -> Sem r TypedExpression
             typedLit litt blt ty = do
               from <- getBuiltinName i blt
-              ihole <- freshHole i
+              ihole <- freshInstanceHole i
               let ty' = fromMaybe ty hint
               inferExpression' (Just ty') $
                 foldApplication

@@ -217,15 +217,8 @@ strongNormalize' = go
         Fresh -> return (ExpressionHole h)
         Refined r -> go r
 
-    -- goInstanceHole :: Hole -> Sem r Expression
-    -- goInstanceHole h = do
-    --   s <- getMetavar h
-    --   case s of
-    --     Fresh -> return (ExpressionInstanceHole h)
-    --     Refined r -> go r
-
-    goInstanceHole :: Hole -> Sem r Expression
-    goInstanceHole h = return (ExpressionInstanceHole h)
+    goInstanceHole :: InstanceHole -> Sem r Expression
+    goInstanceHole = return . ExpressionInstanceHole
 
     goApp :: Application -> Sem r Expression
     goApp (Application l r i) = do
@@ -295,8 +288,8 @@ weakNormalize' = go
     --   case s of
     --     Fresh -> return (ExpressionInstanceHole h)
     --     Refined r -> go r
-    goInstanceHole :: Hole -> Sem r Expression
-    goInstanceHole h = return (ExpressionInstanceHole h)
+    goInstanceHole :: InstanceHole -> Sem r Expression
+    goInstanceHole = return . ExpressionInstanceHole
 
 queryMetavar' :: (Members '[State InferenceState] r) => Hole -> Sem r (Maybe Expression)
 queryMetavar' h = do
