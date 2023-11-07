@@ -153,13 +153,20 @@ holes = leafExpressions . _ExpressionHole
 hasHoles :: (HasExpressions a) => a -> Bool
 hasHoles = has holes
 
+subsInstanceHoles :: (HasExpressions a) => HashMap InstanceHole Expression -> a -> a
+subsInstanceHoles s = over leafExpressions helper
+  where
+    helper :: Expression -> Expression
+    helper e = case e of
+      ExpressionInstanceHole h -> fromMaybe e (s ^. at h)
+      _ -> e
+
 subsHoles :: (HasExpressions a) => HashMap Hole Expression -> a -> a
 subsHoles s = over leafExpressions helper
   where
     helper :: Expression -> Expression
     helper e = case e of
       ExpressionHole h -> fromMaybe e (s ^. at h)
-      ExpressionInstanceHole h -> fromMaybe e (s ^. at h)
       _ -> e
 
 instance HasExpressions Example where

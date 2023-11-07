@@ -153,7 +153,7 @@ data Expression
   | ExpressionFunction Function
   | ExpressionLiteral LiteralLoc
   | ExpressionHole Hole
-  | ExpressionInstanceHole Hole
+  | ExpressionInstanceHole InstanceHole
   | ExpressionLet Let
   | ExpressionUniverse SmallUniverse
   | ExpressionSimpleLambda SimpleLambda

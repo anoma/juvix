@@ -96,7 +96,13 @@ closeState = \case
         goHole h =
           let st = getState h
            in case st of
-                Fresh -> throw (ErrUnsolvedMeta (UnsolvedMeta h))
+                Fresh ->
+                  throw $
+                    ErrUnsolvedMeta
+                      UnsolvedMeta
+                        { _unsolvedMeta = h,
+                          _unsolvedIsLoop = False
+                        }
                 Refined t -> do
                   s <- gets @(HashMap Hole Expression) (^. at h)
                   case s of
@@ -211,12 +217,15 @@ strongNormalize' = go
         Fresh -> return (ExpressionHole h)
         Refined r -> go r
 
+    -- goInstanceHole :: Hole -> Sem r Expression
+    -- goInstanceHole h = do
+    --   s <- getMetavar h
+    --   case s of
+    --     Fresh -> return (ExpressionInstanceHole h)
+    --     Refined r -> go r
+
     goInstanceHole :: Hole -> Sem r Expression
-    goInstanceHole h = do
-      s <- getMetavar h
-      case s of
-        Fresh -> return (ExpressionInstanceHole h)
-        Refined r -> go r
+    goInstanceHole h = return (ExpressionInstanceHole h)
 
     goApp :: Application -> Sem r Expression
     goApp (Application l r i) = do
@@ -278,12 +287,14 @@ weakNormalize' = go
       case s of
         Fresh -> return (ExpressionHole h)
         Refined r -> go r
+    -- goInstanceHole :: Hole -> Sem r Expression
+    -- goInstanceHole h = do
+    --   s <- getMetavar h
+    --   case s of
+    --     Fresh -> return (ExpressionInstanceHole h)
+    --     Refined r -> go r
     goInstanceHole :: Hole -> Sem r Expression
-    goInstanceHole h = do
-      s <- getMetavar h
-      case s of
-        Fresh -> return (ExpressionInstanceHole h)
-        Refined r -> go r
+    goInstanceHole h = return (ExpressionInstanceHole h)
 
 queryMetavar' :: (Members '[State InferenceState] r) => Hole -> Sem r (Maybe Expression)
 queryMetavar' h = do
@@ -381,7 +392,13 @@ re = reinterpret $ \case
                       | otherwise =
                           do
                             holTy' <- strongNormalize' holTy
-                            when (ExpressionHole hol `elem` holTy' ^.. leafExpressions) (throw (ErrUnsolvedMeta (UnsolvedMeta hol)))
+                            let er =
+                                  ErrUnsolvedMeta
+                                    UnsolvedMeta
+                                      { _unsolvedMeta = hol,
+                                        _unsolvedIsLoop = True
+                                      }
+                            when (ExpressionHole hol `elem` holTy' ^.. leafExpressions) (throw er)
                             s <- gets (fromJust . (^. inferenceMap . at hol))
                             case s of
                               Fresh -> modify (over inferenceMap (HashMap.insert hol (Refined holTy')))

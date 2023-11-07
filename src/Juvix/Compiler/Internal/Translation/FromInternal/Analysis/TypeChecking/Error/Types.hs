@@ -77,8 +77,9 @@ instance ToGenericError WrongReturnType where
                 <> line
                 <> indent' (ppCode opts' (e ^. wrongReturnTypeExpected))
 
-newtype UnsolvedMeta = UnsolvedMeta
-  { _unsolvedMeta :: Hole
+data UnsolvedMeta = UnsolvedMeta
+  { _unsolvedMeta :: Hole,
+    _unsolvedIsLoop :: Bool
   }
 
 makeLenses ''UnsolvedMeta
@@ -98,7 +99,11 @@ instance ToGenericError UnsolvedMeta where
       mkMsg :: Sem r (Doc Ann)
       mkMsg = do
         m <- holeid
-        return ("Unable to infer the hole" <>? m)
+        let loopMsg
+              | e ^. unsolvedIsLoop = Just "The inference algorithm found a loop."
+              | otherwise = Nothing
+            msg = "Unable to infer the hole" <>? loopMsg <>? m
+        return msg
       holeid :: Sem r (Maybe (Doc Ann))
       holeid = runFail $ do
         opts <- fromGenericOptions <$> ask

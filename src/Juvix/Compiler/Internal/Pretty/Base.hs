@@ -8,7 +8,9 @@ where
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Internal.Data.InfoTable.Base
 import Juvix.Compiler.Internal.Data.InstanceInfo (instanceInfoResult, instanceTableMap)
+import Juvix.Compiler.Internal.Data.LocalVars
 import Juvix.Compiler.Internal.Data.NameDependencyInfo
+import Juvix.Compiler.Internal.Data.TypedHole
 import Juvix.Compiler.Internal.Extra
 import Juvix.Compiler.Internal.Pretty.Options
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Data.Types (Arity)
@@ -335,6 +337,16 @@ instance (PrettyCode a, PrettyCode b) => PrettyCode (Either a b) where
     Right r -> do
       r' <- ppCode r
       return ("Right" <+> r')
+
+instance PrettyCode LocalVars where
+  ppCode LocalVars {..} = ppCode (HashMap.toList _localTypes)
+
+instance PrettyCode TypedHole where
+  ppCode TypedHole {..} = do
+    h <- ppCode _typedHoleHole
+    ty <- ppCode _typedHoleType
+    vars <- ppCode _typedHoleLocalVars
+    return (h <+> kwColon <+> ty <> kwAt <> vars)
 
 instance PrettyCode InfoTable where
   ppCode tbl = do

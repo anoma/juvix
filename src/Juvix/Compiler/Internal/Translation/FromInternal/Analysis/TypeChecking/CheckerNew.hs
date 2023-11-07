@@ -225,7 +225,11 @@ checkMutualStatement ::
   MutualStatement ->
   Sem r MutualStatement
 checkMutualStatement = \case
-  StatementFunction f -> StatementFunction <$> resolveInstanceHoles (resolveCastHoles (checkFunctionDef f))
+  StatementFunction f -> do
+    -- traceM ("checkstatement f " <> ppTrace f)
+    f' <- resolveInstanceHoles (resolveCastHoles (checkFunctionDef f))
+    -- traceM ("checkstatement f' " <> ppTrace f')
+    return (StatementFunction f')
   StatementInductive f -> StatementInductive <$> resolveInstanceHoles (resolveCastHoles (checkInductiveDef f))
   StatementAxiom ax -> do
     registerNameIdType (ax ^. axiomName . nameId) (ax ^. axiomType)
@@ -429,8 +433,17 @@ resolveInstanceHoles ::
   Sem r a
 resolveInstanceHoles s = do
   (hs, e) <- runOutputList s
+  -- traceM ("holes: " <> ppTrace hs)
   ts <- mapM goResolve hs
   let subs = HashMap.fromList (zipExact (map (^. typedHoleHole) hs) ts)
+  -- traceM
+  --   ( "apply subs: "
+  --       <> ppTrace (HashMap.toList subs)
+  --       <> "\nto "
+  --       <> ppTrace e
+  --       <> "\nequals "
+  --       <> ppTrace (subsHoles subs e)
+  --   )
   return $ subsHoles subs e
   where
     goResolve :: TypedHole -> Sem r Expression
@@ -620,16 +633,13 @@ matchIsImplicit :: (Member (Error TypeCheckerError) r) => IsImplicit -> PatternA
 matchIsImplicit expected actual =
   unless
     (expected == actual ^. patternArgIsImplicit)
-    ( throw
-        ( ErrArity
-            ( ErrWrongPatternIsImplicit
-                WrongPatternIsImplicit
-                  { _wrongPatternIsImplicitExpected = expected,
-                    _wrongPatternIsImplicitActual = actual
-                  }
-            )
-        )
-    )
+    . throw
+    . ErrArity
+    $ ErrWrongPatternIsImplicit
+      WrongPatternIsImplicit
+        { _wrongPatternIsImplicitExpected = expected,
+          _wrongPatternIsImplicitActual = actual
+        }
 
 checkPattern ::
   forall r.
