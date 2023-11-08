@@ -537,13 +537,6 @@ functionDefEval f = do
       ExpressionUniverse {} -> True
       _ -> False
 
-    canBeUniverse :: Expression -> Bool
-    canBeUniverse = \case
-      ExpressionUniverse {} -> True
-      ExpressionHole {} -> True
-      ExpressionIden {} -> True
-      _ -> False
-
     goTop ::
       forall r.
       (Members '[Fail, State FunctionsTable, Error TypeCheckerError, Termination] r) =>

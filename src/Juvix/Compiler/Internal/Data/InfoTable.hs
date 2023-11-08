@@ -172,7 +172,7 @@ lookupConstructor f = do
           <> "The registered constructors are: "
           <> ppTrace (HashMap.keys tbl)
 
-lookupConstructorArgTypes :: (Member (Reader InfoTable) r) => Name -> Sem r ([VarName], [Expression])
+lookupConstructorArgTypes :: (Member (Reader InfoTable) r) => Name -> Sem r ([InductiveParameter], [Expression])
 lookupConstructorArgTypes = fmap constructorArgTypes . lookupConstructor
 
 lookupInductive :: forall r. (Member (Reader InfoTable) r) => InductiveName -> Sem r InductiveInfo
@@ -212,16 +212,7 @@ lookupAxiom :: (Member (Reader InfoTable) r) => Name -> Sem r AxiomInfo
 lookupAxiom f = HashMap.lookupDefault impossible f <$> asks (^. infoAxioms)
 
 lookupInductiveType :: (Member (Reader InfoTable) r) => Name -> Sem r Expression
-lookupInductiveType v = do
-  info <- lookupInductive v
-  let ps = info ^. inductiveInfoDef . inductiveParameters
-  return $
-    foldr
-      (\_ k -> uni --> k)
-      (smallUniverseE (getLoc v))
-      ps
-  where
-    uni = smallUniverseE (getLoc v)
+lookupInductiveType v = fullInductiveType <$> lookupInductive v
 
 lookupConstructorType :: (Member (Reader InfoTable) r) => ConstrName -> Sem r Expression
 lookupConstructorType = fmap constructorType . lookupConstructor

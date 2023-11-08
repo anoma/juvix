@@ -502,6 +502,7 @@ goInductiveParameters ::
   Sem r [Internal.InductiveParameter]
 goInductiveParameters params@InductiveParameters {..} = do
   paramType' <- goRhs _inductiveParametersRhs
+  -- FIXME add check only for old algorithm
   case paramType' of
     Internal.ExpressionUniverse {} -> return ()
     Internal.ExpressionHole {} -> return ()
@@ -516,7 +517,8 @@ goInductiveParameters params@InductiveParameters {..} = do
   let goInductiveParameter :: S.Symbol -> Internal.InductiveParameter
       goInductiveParameter var =
         Internal.InductiveParameter
-          { _inductiveParamName = goSymbol var
+          { _inductiveParamName = goSymbol var,
+            _inductiveParamType = paramType'
           }
   return (map goInductiveParameter (toList _inductiveParametersNames))
   where

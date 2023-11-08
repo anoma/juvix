@@ -31,8 +31,11 @@ withLocalTypeMaybe = \case
   Nothing -> const id
   Just n -> withLocalType n
 
+withLocalTypes :: (Members '[Reader LocalVars] r) => [(VarName, Expression)] -> Sem r a -> Sem r a
+withLocalTypes assocs = local (over localTypes (<> HashMap.fromList assocs))
+
 withLocalType :: (Members '[Reader LocalVars] r) => VarName -> Expression -> Sem r a -> Sem r a
-withLocalType v ty = local (over localTypes (HashMap.insert v ty))
+withLocalType v ty = withLocalTypes [(v, ty)]
 
 addType :: VarName -> Expression -> LocalVars -> LocalVars
 addType v t = over localTypes (HashMap.insert v t)
