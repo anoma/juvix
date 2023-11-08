@@ -108,27 +108,28 @@ format:
 clang-format:
 	@cd runtime && ${MAKE} format
 
-JUVIXFILESTOFORMAT=$(shell find  \
-	./examples  \
+JUVIX_PACKAGES_IN_REPO=$(shell find \
+	./examples \
 	./tests/positive \
 	./tests/negative \
 	-type d \( -name ".juvix-build" -o -name "FancyPaths" \) -prune -o \
-	-type f -name "*.juvix" -print)
+	-type f -name 'Package.juvix' -print \
+	| awk -F'/Package.juvix' '{print $$1}' | sort -u)
 
 JUVIXFORMATFLAGS?=--in-place
 JUVIXTYPECHECKFLAGS?=--only-errors
 
 .PHONY: format-juvix-files
 format-juvix-files:
-	@for file in $(JUVIXFILESTOFORMAT); do \
-		${JUVIXBIN} format $(JUVIXFORMATFLAGS) "$$file" > /dev/null 2>&1; \
+	@for p in $(JUVIX_PACKAGES_IN_REPO); do \
+		${JUVIXBIN} format $(JUVIXFORMATFLAGS) "$$p" > /dev/null 2>&1; \
 		exit_code=$$?; \
 		if [ $$exit_code -eq 0 ]; then \
-			echo "[OK] $$file"; \
-		elif [[ $$exit_code -ne 0 && "$$file" == *"tests/"* ]]; then \
-			echo "[CONTINUE] $$file is in tests directory."; \
+			echo "[OK] $$p is formatted"; \
+		elif [[ $$exit_code -ne 0 && "$$p" == *"tests/"* ]]; then \
+			echo "[CONTINUE] $$p is in tests directory."; \
 		else \
-			echo "[FAIL] $$file formatting failed" && exit 1; \
+			echo "[FAIL] $$p formatting failed" && exit 1; \
 		fi; \
 		done;
 

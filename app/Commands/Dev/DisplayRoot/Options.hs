@@ -15,7 +15,7 @@ parseRoot = do
   _rootPrintPackage <-
     switch
       ( long "print-package"
-          <> help "print the juvix.yaml file as parsed"
+          <> help "print the Package.juvix file as parsed"
       )
 
   _rootMainFile <- optional (parseInputFile FileExtJuvix)

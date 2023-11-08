@@ -2,7 +2,7 @@ module Commands.Dev.DisplayRoot where
 
 import Commands.Base
 import Commands.Dev.DisplayRoot.Options
-import Data.Yaml
+import Commands.Extra.Package
 
 runCommand :: forall r. (Members '[Embed IO, App] r) => RootOptions -> Sem r ()
 runCommand RootOptions {..} = do
@@ -12,4 +12,4 @@ runCommand RootOptions {..} = do
     printPackage :: Sem r ()
     printPackage = do
       say "+----------------------------+"
-      askPackage >>= say . decodeUtf8 . encode . rawPackage
+      askPackage >>= say . renderPackage

@@ -7,7 +7,6 @@ where
 import Juvix.Compiler.Backend
 import Juvix.Compiler.Pipeline.Package.Base
 import Juvix.Compiler.Pipeline.Root.Base
-import Juvix.Extra.Paths
 import Juvix.Prelude
 
 -- | An option specifiying how symbols should be pruned in the Internal to Core translation
@@ -22,7 +21,7 @@ data EntryPoint = EntryPoint
     -- | initial root for the path resolver. Usually it should be equal to
     -- _entryPointRoot. It only differs for `juvix repl`.
     _entryPointResolverRoot :: Path Abs Dir,
-    _entryPointBuildDir :: SomeBase Dir,
+    _entryPointBuildDir :: BuildDir,
     _entryPointNoTermination :: Bool,
     _entryPointNoPositivity :: Bool,
     _entryPointNoCoverage :: Bool,
@@ -57,7 +56,7 @@ defaultEntryPointNoFile root =
   EntryPoint
     { _entryPointRoot = root ^. rootRootDir,
       _entryPointResolverRoot = root ^. rootRootDir,
-      _entryPointBuildDir = Rel relBuildDir,
+      _entryPointBuildDir = DefaultBuildDir,
       _entryPointNoTermination = False,
       _entryPointNoPositivity = False,
       _entryPointNoCoverage = False,

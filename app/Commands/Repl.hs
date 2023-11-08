@@ -535,8 +535,8 @@ runCommand opts = do
 defaultPreludeEntryPoint :: Repl (Maybe EntryPoint)
 defaultPreludeEntryPoint = do
   root <- State.gets (^. replStateRoot)
-  let buildDir = root ^. rootBuildDir
-      buildRoot = root ^. rootRootDir
+  let buildRoot = root ^. rootRootDir
+      buildDir = resolveAbsBuildDir buildRoot (root ^. rootBuildDir)
       pkg = root ^. rootPackage
   mstdlibPath <- liftIO (runM (runFilesIO (packageStdlib buildRoot buildDir (pkg ^. packageDependencies))))
   case mstdlibPath of

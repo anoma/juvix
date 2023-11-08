@@ -164,7 +164,7 @@ entryPointFromGlobalOptions root mainFile opts = do
         _entryPointNoStdlib = opts ^. globalNoStdlib,
         _entryPointUnrollLimit = opts ^. globalUnrollLimit,
         _entryPointGenericOptions = project opts,
-        _entryPointBuildDir = maybe (def ^. entryPointBuildDir) Abs mabsBuildDir,
+        _entryPointBuildDir = maybe (def ^. entryPointBuildDir) (CustomBuildDir . Abs) mabsBuildDir,
         _entryPointOffline = opts ^. globalOffline,
         _entryPointNewTypeCheckingAlgorithm = opts ^. globalNewTypecheckingAlgorithm
       }
@@ -186,7 +186,7 @@ entryPointFromGlobalOptionsNoFile root opts = do
         _entryPointNoStdlib = opts ^. globalNoStdlib,
         _entryPointUnrollLimit = opts ^. globalUnrollLimit,
         _entryPointGenericOptions = project opts,
-        _entryPointBuildDir = maybe (def ^. entryPointBuildDir) Abs mabsBuildDir,
+        _entryPointBuildDir = maybe (def ^. entryPointBuildDir) (CustomBuildDir . Abs) mabsBuildDir,
         _entryPointOffline = opts ^. globalOffline
       }
   where

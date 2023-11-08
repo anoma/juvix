@@ -1,0 +1,10 @@
+module Package;
+
+import Stdlib.Prelude open;
+import PackageDescription.V1 open;
+
+package : Package :=
+  defaultPackage
+    {name := "Hanoi";
+     version := mkVersion 0 1 0;
+     main := just "Hanoi.juvix"};

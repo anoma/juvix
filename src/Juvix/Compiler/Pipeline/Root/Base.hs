@@ -7,7 +7,7 @@ data Root = Root
   { _rootRootDir :: Path Abs Dir,
     _rootPackage :: Package,
     _rootPackageGlobal :: Bool,
-    _rootBuildDir :: Path Abs Dir,
+    _rootBuildDir :: BuildDir,
     _rootInvokeDir :: Path Abs Dir
   }
   deriving stock (Show)

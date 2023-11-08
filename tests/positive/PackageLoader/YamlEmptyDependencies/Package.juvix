@@ -1,0 +1,6 @@
+module Package;
+
+import PackageDescription.V1 open;
+
+package : Package :=
+  defaultPackage {name := "abc"; dependencies := []};

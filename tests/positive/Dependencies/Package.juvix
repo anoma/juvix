@@ -1,0 +1,12 @@
+module Package;
+
+import PackageDescription.V1 open;
+
+package : Package :=
+  defaultPackage
+    {name := "main-project";
+     version := mkVersion 0 0 1;
+     dependencies := [ path ".libs/Extra"
+                     ; path ".libs/Base"
+                     ; path ".juvix-build/stdlib"
+                     ]};

@@ -17,6 +17,7 @@ import Lens.Micro.Platform qualified as Lens
 data BuildDir
   = DefaultBuildDir
   | CustomBuildDir (SomeBase Dir)
+  deriving stock (Eq, Show)
 
 type NameType :: IsProcessed -> GHC.Type
 type family NameType s = res | res -> s where
@@ -98,6 +99,17 @@ resolveBuildDir :: BuildDir -> SomeBase Dir
 resolveBuildDir = \case
   DefaultBuildDir -> Rel (relBuildDir)
   CustomBuildDir d -> d
+
+resolveAbsBuildDir :: Path Abs Dir -> BuildDir -> Path Abs Dir
+resolveAbsBuildDir root = someBaseToAbs root . resolveBuildDir
+
+mapCustomBuildDir :: (SomeBase Dir -> SomeBase Dir) -> BuildDir -> BuildDir
+mapCustomBuildDir f = \case
+  DefaultBuildDir -> DefaultBuildDir
+  CustomBuildDir d -> CustomBuildDir (f d)
+
+rootedBuildDir :: Path Abs Dir -> BuildDir -> BuildDir
+rootedBuildDir root = mapCustomBuildDir (Abs . someBaseToAbs root)
 
 -- | This is used when juvix.yaml exists but it is empty
 emptyPackage :: BuildDir -> Path Abs File -> Package
