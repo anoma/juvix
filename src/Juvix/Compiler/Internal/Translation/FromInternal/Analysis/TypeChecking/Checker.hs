@@ -92,11 +92,8 @@ checkModuleBody ModuleBody {..} = do
         _moduleImports = _moduleImports'
       }
 
-checkImport ::
-  (Members '[HighlightBuilder, Reader EntryPoint, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example, Builtins, MCache, Termination] r) =>
-  Import ->
-  Sem r Import
-checkImport = traverseOf importModule checkModuleIndex
+checkImport :: Import -> Sem r Import
+checkImport = return
 
 checkMutualBlock ::
   (Members '[HighlightBuilder, Reader EntryPoint, State NegativeTypeParameters, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example, Builtins, Termination] r) =>
@@ -127,7 +124,7 @@ checkInductiveDef InductiveDef {..} = runInferenceDef $ do
             _inductiveTrait,
             _inductivePragmas
           }
-  checkPositivity d
+  checkPositivity (inductiveInfoFromInductiveDef d)
   return d
   where
     paramLocals :: LocalVars
@@ -643,7 +640,7 @@ checkPattern = go
         Left hole -> return (Left hole)
         Right (ind, args) -> do
           params :: [InductiveParameter] <-
-            (^. inductiveInfoDef . inductiveParameters)
+            (^. inductiveInfoParameters)
               <$> lookupInductive ind
           let numArgs = length args
               numParams = length params
@@ -879,7 +876,7 @@ inferExpression' hint e = case e of
     goIden i = case i of
       IdenFunction fun -> do
         info <- lookupFunction fun
-        return (TypedExpression (info ^. functionInfoDef . funDefType) (ExpressionIden i))
+        return (TypedExpression (info ^. functionInfoType) (ExpressionIden i))
       IdenConstructor c -> do
         ty <- lookupConstructorType c
         return (TypedExpression ty (ExpressionIden i))

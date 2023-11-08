@@ -20,7 +20,7 @@ newtype ModulesCache = ModulesCache
 
 data InternalResult = InternalResult
   { _resultScoper :: Concrete.ScoperResult,
-    _resultTable :: InfoTable,
+    _resultTable :: StoredModuleTable,
     _resultModules :: NonEmpty Module,
     _resultDepInfo :: NameDependencyInfo,
     _resultModulesCache :: ModulesCache

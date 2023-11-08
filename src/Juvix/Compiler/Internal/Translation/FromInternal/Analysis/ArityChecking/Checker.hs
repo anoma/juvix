@@ -53,11 +53,8 @@ checkModuleIndex ::
   Sem r ModuleIndex
 checkModuleIndex (ModuleIndex m) = ModuleIndex <$> checkModule m
 
-checkImport ::
-  (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError, MCache] r) =>
-  Import ->
-  Sem r Import
-checkImport = undefined
+checkImport :: Import -> Sem r Import
+checkImport = return
 
 checkInductive :: forall r. (Members '[Reader InsertedArgsStack, Reader InfoTable, NameIdGen, Error ArityCheckerError] r) => InductiveDef -> Sem r InductiveDef
 checkInductive d = do

@@ -23,6 +23,7 @@ newtype StoredModuleTable = StoredModuleTable
   { _storedModuleTable :: HashMap Name StoredModule
   }
   deriving stock (Generic)
+  deriving newtype (Semigroup, Monoid)
 
 instance Serialize StoredModuleTable
 

@@ -78,16 +78,10 @@ upToInternalTyped ::
   Sem r Internal.InternalTypedResult
 upToInternalTyped = Internal.typeChecking upToInternalArity
 
-upToInternalReachability ::
-  (Members '[HighlightBuilder, Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, GitClone, PathResolver] r) =>
-  Sem r Internal.InternalTypedResult
-upToInternalReachability =
-  upToInternalTyped >>= Internal.filterUnreachable
-
 upToCore ::
   (Members '[HighlightBuilder, Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, GitClone, PathResolver] r) =>
   Sem r Core.CoreResult
-upToCore = upToInternalReachability >>= Core.fromInternal
+upToCore = upToInternalTyped >>= Core.fromInternal
 
 upToAsm ::
   (Members '[HighlightBuilder, Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, GitClone, PathResolver] r) =>

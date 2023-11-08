@@ -30,6 +30,7 @@ import Juvix.Compiler.Internal.Translation.FromConcrete.Data.Context
 import Juvix.Compiler.Internal.Translation.FromConcrete.NamedArguments
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker
 import Juvix.Compiler.Pipeline.EntryPoint
+import Juvix.Compiler.Store.Scoped.Language qualified as S
 import Juvix.Data.NameKind
 import Juvix.Prelude
 import Safe (lastMay)
@@ -61,7 +62,7 @@ fromConcrete _resultScoper =
         . runReader @DefaultArgsStack mempty
         . runCacheEmpty goModuleNoCache
         $ mapM goTopModule ms
-    let _resultTable = buildTable _resultModules
+    let _resultTable = buildTable _resultModules -- TODO: imports
         _resultDepInfo = buildDependencyInfo _resultModules exportTbl
         _resultModulesCache = ModulesCache modulesCache
     return InternalResult {..}
@@ -138,13 +139,10 @@ fromConcreteImport ::
   Scoper.Import 'Scoped ->
   Sem r Internal.Import
 fromConcreteImport i = do
-  i' <-
-    mapError (JuvixError @ScoperError)
-      . runReader @Pragmas mempty
-      . goImport
-      $ i
-  checkTerminationShallow i'
-  return i'
+  mapError (JuvixError @ScoperError)
+    . runReader @Pragmas mempty
+    . goImport
+    $ i
 
 goLocalModule ::
   (Members '[Reader DefaultArgsStack, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ConstructorInfos, Reader NameSignatures, Reader ConstructorNameSignatures] r) =>
@@ -177,11 +175,12 @@ goPragmas p = do
   return $ p' <> p ^. _Just . withLocParam . withSourceValue
 
 goScopedIden :: ScopedIden -> Internal.Name
-goScopedIden iden =
+goScopedIden iden = goName (iden ^. scopedIdenFinal)
+
+goName :: S.Name -> Internal.Name
+goName name =
   set Internal.namePretty prettyStr (goSymbol (S.nameUnqualify name))
   where
-    name :: S.Name
-    name = iden ^. scopedIdenFinal
     prettyStr :: Text
     prettyStr = prettyText name
 
@@ -325,19 +324,14 @@ scanImports = mconcatMap go
 
 goImport ::
   forall r.
-  (Members '[Reader ExportsTable, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, MCache] r) =>
   Import 'Scoped ->
   Sem r Internal.Import
-goImport Import {..} = undefined
-
-{-  let m = _importModule ^. moduleRefModule
-  m' <- goTopModule m
+goImport Import {..} =
   return
     ( Internal.Import
-        { _importModuleName = undefined
+        { _importModuleName = goName (_importModule ^. S.scopedModuleName)
         }
     )
--}
 
 -- | Ignores functions
 goAxiomInductive ::

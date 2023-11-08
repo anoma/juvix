@@ -1,6 +1,7 @@
 module Juvix.Compiler.Internal.Data.InfoTable
   ( module Juvix.Compiler.Store.Internal.Language,
     buildTable,
+    buildInfoTable,
     extendWithReplExpression,
     lookupConstructor,
     lookupConstructorArgTypes,
@@ -13,6 +14,8 @@ module Juvix.Compiler.Internal.Data.InfoTable
     getAxiomBuiltinInfo,
     getFunctionBuiltinInfo,
     mkConstructorEntries,
+    functionInfoFromFunctionDef,
+    inductiveInfoFromInductiveDef,
   )
 where
 
@@ -24,9 +27,6 @@ import Juvix.Compiler.Internal.Extra
 import Juvix.Compiler.Internal.Pretty (ppTrace)
 import Juvix.Compiler.Store.Internal.Language
 import Juvix.Prelude
-
-buildTable :: (Foldable f) => StoredModuleTable -> f Module -> InfoTable
-buildTable mtab = mconcatMap (computeTable mtab)
 
 functionInfoFromFunctionDef :: FunctionDef -> FunctionInfo
 functionInfoFromFunctionDef FunctionDef {..} =
@@ -78,21 +78,29 @@ letFunctionDefs e =
       LetFunDef f -> pure f
       LetMutualBlock (MutualBlockLet fs) -> fs
 
-computeTable :: StoredModuleTable -> Module -> InfoTable
-computeTable mtab m = compute
+buildInfoTable :: StoredModuleTable -> InfoTable
+buildInfoTable = mconcatMap (^. storedModuleInfoTable) . HashMap.elems . (^. storedModuleTable)
+
+buildTable :: (Foldable f) => f Module -> StoredModuleTable
+buildTable = foldr go mempty
   where
-    compute :: InfoTable
-    compute =
-      InfoTable {..} <> mconcatMap goImport imports
+    go :: Module -> StoredModuleTable -> StoredModuleTable
+    go m mtab = mtab'
       where
-        goImport :: Import -> InfoTable
-        goImport Import {..} =
-          let sm = lookupStoredModule mtab _importModuleName
-           in sm ^. storedModuleInfoTable <> mconcatMap goImport (sm ^. storedModuleImports)
+        sm = computeStoredModule m
+        mtab' = over storedModuleTable (HashMap.insert (sm ^. storedModuleName) sm) mtab
 
-    imports :: [Import]
-    imports = m ^. moduleBody . moduleImports
+computeStoredModule :: Module -> StoredModule
+computeStoredModule m@Module {..} =
+  StoredModule
+    { _storedModuleName = _moduleName,
+      _storedModuleImports = _moduleBody ^. moduleImports,
+      _storedModuleInfoTable = computeInfoTable m
+    }
 
+computeInfoTable :: Module -> InfoTable
+computeInfoTable m = InfoTable {..}
+  where
     mutuals :: [MutualStatement]
     mutuals =
       [ d

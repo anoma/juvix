@@ -53,9 +53,6 @@ evalTermination s = fmap snd . runTermination s
 execTermination :: (Members '[Error JuvixError] r) => TerminationState -> Sem (Termination ': r) a -> Sem r TerminationState
 execTermination s = fmap fst . runTermination s
 
-instance Scannable Import where
-  buildCallMap = buildCallMap . (^. importModule . moduleIxModule)
-
 instance Scannable Module where
   buildCallMap =
     run

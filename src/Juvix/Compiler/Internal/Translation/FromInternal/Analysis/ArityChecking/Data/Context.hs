@@ -4,11 +4,13 @@ import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Data.Cont
 import Juvix.Compiler.Internal.Language
 import Juvix.Compiler.Internal.Translation.FromConcrete.Data.Context qualified as Internal
 import Juvix.Compiler.Pipeline.EntryPoint qualified as E
+import Juvix.Compiler.Store.Internal.Language
 import Juvix.Prelude
 
 data InternalArityResult = InternalArityResult
   { _resultInternalResult :: Internal.InternalResult,
-    _resultModules :: NonEmpty Module
+    _resultModules :: NonEmpty Module,
+    _resultTable :: StoredModuleTable
   }
 
 makeLenses ''InternalArityResult
