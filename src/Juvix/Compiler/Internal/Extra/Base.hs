@@ -159,8 +159,8 @@ subsHoles s = leafExpressions helper
   where
     helper :: Expression -> Sem r Expression
     helper e = case e of
-      ExpressionHole h -> maybe (clone e) return (s ^. at h)
-      ExpressionInstanceHole h -> maybe (clone e) return (s ^. at h)
+      ExpressionHole h -> clone (fromMaybe e (s ^. at h))
+      ExpressionInstanceHole h -> clone (fromMaybe e (s ^. at h))
       _ -> return e
 
 instance HasExpressions Example where
