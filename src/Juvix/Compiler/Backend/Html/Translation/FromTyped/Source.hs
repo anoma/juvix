@@ -1,5 +1,6 @@
 module Juvix.Compiler.Backend.Html.Translation.FromTyped.Source where
 
+import Data.HashMap.Strict qualified as HashMap
 import Data.Text qualified as Text
 import Data.Text.IO qualified as Text
 import Data.Text.Lazy (toStrict)
@@ -8,7 +9,6 @@ import Data.Time.Format
 import Juvix.Compiler.Backend.Html.Data.Options
 import Juvix.Compiler.Backend.Html.Extra
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
-import Juvix.Compiler.Concrete.Extra
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Print
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver
@@ -108,8 +108,9 @@ genSourceHtml o@GenSourceHtmlArgs {..} = do
       | _genSourceHtmlArgsNonRecursive = pure entry
       | otherwise = toList topModules
 
+    -- TODO: top modules
     topModules :: HashMap NameId (Module 'Scoped 'ModuleTop)
-    topModules = getAllModules entry
+    topModules = HashMap.fromList [(entry ^. modulePath . S.nameId, entry)]
 
     outputModule :: Module 'Scoped 'ModuleTop -> IO ()
     outputModule m = do

@@ -3,7 +3,6 @@ module Commands.Dev.Termination.CallGraph where
 import Commands.Base
 import Commands.Dev.Termination.CallGraph.Options
 import Data.HashMap.Strict qualified as HashMap
-import Juvix.Compiler.Internal.Language qualified as Internal
 import Juvix.Compiler.Internal.Pretty qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromConcrete.Data.Context qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination qualified as Termination
@@ -17,7 +16,8 @@ runCommand CallGraphOptions {..} = do
       mainModule = head topModules
       toAnsiText' :: forall a. (HasAnsiBackend a, HasTextBackend a) => a -> Text
       toAnsiText' = toAnsiText (not (globalOpts ^. globalNoColors))
-      infotable = Internal.buildTable topModules
+      mtab = Internal.buildTable topModules
+      infotable = Internal.buildInfoTable mtab
       callMap = Termination.buildCallMap mainModule
       completeGraph = Termination.completeCallGraph callMap
       filteredGraph =
@@ -36,7 +36,7 @@ runCommand CallGraphOptions {..} = do
             impossible
             funName
             (infotable ^. Internal.infoFunctions)
-        markedTerminating = funInfo ^. (Internal.functionInfoDef . Internal.funDefTerminating)
+        markedTerminating = funInfo ^. Internal.functionInfoTerminating
         n = toAnsiText' (Internal.ppOut globalOpts funName)
     renderStdOut (Internal.ppOut globalOpts r)
     newline

@@ -13,7 +13,6 @@ import Juvix.Compiler.Backend.Html.Data
 import Juvix.Compiler.Backend.Html.Extra
 import Juvix.Compiler.Backend.Html.Translation.FromTyped.Source hiding (go)
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
-import Juvix.Compiler.Concrete.Extra
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Print
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoped
@@ -204,8 +203,9 @@ genJudocHtml JudocArgs {..} =
       | _judocArgsNonRecursive = pure mainMod
       | otherwise = toList topModules
 
+    -- TODO: calculate top modules
     topModules :: HashMap NameId (Module 'Scoped 'ModuleTop)
-    topModules = getAllModules mainMod
+    topModules = HashMap.fromList [(mainMod ^. modulePath . S.nameId, mainMod)]
 
 moduleDocPath :: (Members '[Reader HtmlOptions] r) => Module 'Scoped 'ModuleTop -> Sem r (Path Abs File)
 moduleDocPath m = do

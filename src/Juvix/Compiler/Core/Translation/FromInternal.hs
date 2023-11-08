@@ -67,7 +67,8 @@ fromInternal i = do
       reserveLiteralIntToNatSymbol
       reserveLiteralIntToIntSymbol
       let resultModules = toList (i ^. InternalTyped.resultModules)
-      runReader (Internal.buildTable resultModules)
+          resultTable = i ^. InternalTyped.resultTable
+      runReader (Internal.buildInfoTable resultTable)
         . evalVisitEmpty goModuleNoVisit
         $ mapM_ goModule resultModules
       tab <- getInfoTable
@@ -79,9 +80,9 @@ fromInternal i = do
 
 fromInternalExpression :: (Member NameIdGen r) => CoreResult -> Internal.Expression -> Sem r Node
 fromInternalExpression res exp = do
-  let modules = res ^. coreResultInternalTypedResult . InternalTyped.resultModules
+  let mtab = res ^. coreResultInternalTypedResult . InternalTyped.resultTable
   fmap snd
-    . runReader (Internal.buildTable modules)
+    . runReader (Internal.buildInfoTable mtab)
     . runInfoTableBuilder (res ^. coreResultTable)
     . evalState (res ^. coreResultInternalTypedResult . InternalTyped.resultFunctions)
     . runReader (res ^. coreResultInternalTypedResult . InternalTyped.resultIdenTypes)
@@ -100,11 +101,7 @@ goModuleNoVisit ::
   Internal.ModuleIndex ->
   Sem r ()
 goModuleNoVisit (Internal.ModuleIndex m) = do
-  mapM_ goImport (m ^. Internal.moduleBody . Internal.moduleImports)
   mapM_ goMutualBlock (m ^. Internal.moduleBody . Internal.moduleStatements)
-  where
-    goImport :: Internal.Import -> Sem r ()
-    goImport (Internal.Import i) = visit i
 
 -- | predefine an inductive definition
 preInductiveDef ::

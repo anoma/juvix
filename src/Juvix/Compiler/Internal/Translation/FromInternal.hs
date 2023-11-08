@@ -123,14 +123,14 @@ typeChecking ::
   Sem (Termination ': r) ArityChecking.InternalArityResult ->
   Sem r InternalTypedResult
 typeChecking a = do
-  (termin, (res, table, (normalized, (idens, (funs, r))))) <- runTermination iniTerminationState $ do
+  (termin, (res, (normalized, (idens, (funs, r))))) <- runTermination iniTerminationState $ do
     res <- a
     let table :: InfoTable
         table = buildInfoTable (res ^. ArityChecking.resultTable)
 
         entryPoint :: EntryPoint
         entryPoint = res ^. ArityChecking.internalArityResultEntryPoint
-    fmap (res,table,)
+    fmap (res,)
       . runOutputList
       . runReader entryPoint
       . runState (mempty :: TypesTable)
@@ -147,5 +147,5 @@ typeChecking a = do
         _resultNormalized = HashMap.fromList [(e ^. exampleId, e ^. exampleExpression) | e <- normalized],
         _resultIdenTypes = idens,
         _resultFunctions = funs,
-        _resultInfoTable = table
+        _resultTable = buildTable r
       }

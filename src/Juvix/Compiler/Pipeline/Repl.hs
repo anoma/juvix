@@ -107,7 +107,7 @@ importToInternal i = runToInternal $ do
     >>= Internal.fromConcreteImport
 
 importToInternalTyped ::
-  (Members '[Reader EntryPoint, Error JuvixError, State Artifacts, Termination] r) =>
+  --  (Members '[Reader EntryPoint, Error JuvixError, State Artifacts, Termination] r) =>
   Internal.Import ->
   Sem r Internal.Import
 importToInternalTyped = Internal.arityCheckImport >=> Internal.typeCheckImport
@@ -157,9 +157,13 @@ registerImport p =
     )
     >>= fromInternalImport
 
-fromInternalImport :: (Members '[State Artifacts] r) => Internal.Import -> Sem r ()
-fromInternalImport i = do
-  artiTable <- gets (^. artifactInternalTypedTable)
+fromInternalImport ::
+  --  (Members '[State Artifacts] r) =>
+  Internal.Import ->
+  Sem r ()
+fromInternalImport _ = return ()
+
+{-  artiTable <- gets (^. artifactInternalTypedTable)
   let table = Internal.buildTable [i ^. Internal.importModule . Internal.moduleIxModule] <> artiTable
   runNameIdGenArtifacts
     . runReader table
@@ -170,6 +174,7 @@ fromInternalImport i = do
     -- TODO add cache in Artifacts
     . evalVisitEmpty Core.goModuleNoVisit
     $ Core.goModule (i ^. Internal.importModule . Internal.moduleIxModule)
+-}
 
 fromInternalExpression :: (Members '[State Artifacts] r) => Internal.Expression -> Sem r Core.Node
 fromInternalExpression exp = do

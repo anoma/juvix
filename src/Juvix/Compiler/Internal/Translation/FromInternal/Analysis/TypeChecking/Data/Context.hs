@@ -26,7 +26,7 @@ data InternalTypedResult = InternalTypedResult
     _resultNormalized :: NormalizedTable,
     _resultIdenTypes :: TypesTable,
     _resultFunctions :: FunctionsTable,
-    _resultInfoTable :: InfoTable
+    _resultTable :: StoredModuleTable
   }
 
 makeLenses ''InternalTypedResult

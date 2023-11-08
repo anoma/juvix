@@ -130,7 +130,7 @@ corePipelineIOEither entry = do
           functionsTable = typedResult ^. Typed.resultFunctions
 
           typedTable :: Internal.InfoTable
-          typedTable = typedResult ^. Typed.resultInfoTable
+          typedTable = Internal.buildInfoTable (typedResult ^. Typed.resultTable)
 
           internalResult :: Internal.InternalResult
           internalResult =
