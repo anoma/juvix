@@ -161,6 +161,7 @@ instance ToGenericError WrongConstructorAppArgs where
 -- | the type of an expression does not match the inferred type
 data WrongType = WrongType
   { _wrongTypeThing :: Either Expression Pattern,
+    _wrongTypeThingWithHoles :: Maybe (Either Expression Pattern),
     _wrongTypeExpected :: Expression,
     _wrongTypeActual :: Expression
   }
@@ -183,6 +184,7 @@ instance ToGenericError WrongType where
           msg =
             "The"
               <+> thing
+              -- <+> either (ppCode opts') (ppCode opts') subjectThing
               <+> either (ppCode opts') (ppCode opts') subjectThing
               <+> "has type:"
                 <> line
@@ -196,7 +198,7 @@ instance ToGenericError WrongType where
             Left {} -> "expression"
             Right {} -> "pattern"
           subjectThing :: Either Expression Pattern
-          subjectThing = e ^. wrongTypeThing
+          subjectThing = fromMaybe (e ^. wrongTypeThing) (e ^. wrongTypeThingWithHoles)
 
 -- | The left hand expression of a function application is not
 -- a function type.

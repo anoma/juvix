@@ -525,9 +525,8 @@ addIdens idens = do
 functionDefEval :: forall r'. (Members '[State FunctionsTable, Termination, Error TypeCheckerError, NameIdGen] r') => FunctionDef -> Sem r' (Maybe Expression)
 functionDefEval f = do
   (params :: [FunctionParameter], ret :: Expression) <- unfoldFunType <$> strongNorm (f ^. funDefType)
-  r <- runFail (goTop params (canBeUniverse ret))
+  r <- runFail (goTop params (isUniverse ret))
   when (isNothing r && isUniverse ret) (throw (ErrUnsupportedTypeFunction (UnsupportedTypeFunction f)))
-  -- traceM ("XXXXXXXXXXXXXXXXXXXXXXX funDefEval " <> ppTrace f <> " results in " <> ppTrace r)
   return r
   where
     strongNorm :: (Members '[State FunctionsTable, NameIdGen] r) => Expression -> Sem r Expression
@@ -576,7 +575,7 @@ functionDefEval f = do
               mapM simpleExplicitParam nfirst
             simpleExplicitParam :: FunctionParameter -> Sem r Expression
             simpleExplicitParam = \case
-              FunctionParameter Nothing Explicit ty -> return ty
+              FunctionParameter _ Explicit ty -> return ty
               _ -> fail
             goPattern :: (Pattern, Expression) -> Expression -> Sem r Expression
             goPattern (p, ty) = case p of

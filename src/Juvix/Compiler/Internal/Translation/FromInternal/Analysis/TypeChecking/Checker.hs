@@ -356,6 +356,7 @@ checkExpression expectedTy e = do
         ErrWrongType
           ( WrongType
               { _wrongTypeThing = Left e,
+                _wrongTypeThingWithHoles = Nothing,
                 _wrongTypeActual = inferred',
                 _wrongTypeExpected = expected'
               }
@@ -577,6 +578,7 @@ checkPattern = go
                   ( ErrWrongType
                       WrongType
                         { _wrongTypeThing = Right pat,
+                          _wrongTypeThingWithHoles = Nothing,
                           _wrongTypeExpected = m ^. matchErrorRight,
                           _wrongTypeActual = m ^. matchErrorLeft
                         }

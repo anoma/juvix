@@ -404,26 +404,24 @@ checkExpression ::
   Expression ->
   Sem r Expression
 checkExpression expectedTy e = do
-  -- traceM ("inferring  " <> ppTrace e <> " with " <> ppTrace expectedTy)
   e' <- inferExpression' (Just expectedTy) e
-  -- traceM ("inferred type of " <>  ppTrace e')
   let inferredType = e' ^. typedType
-  whenJustM (matchTypes expectedTy inferredType) (const (err inferredType))
+  whenJustM (matchTypes expectedTy inferredType) (const (err e'))
   return (e' ^. typedExpression)
   where
-    err :: Expression -> Sem r a
+    err :: TypedExpression -> Sem r a
     err inferred = do
       e' <- strongNormalize e
-      inferred' <- strongNormalize inferred
+      inferred' <- strongNormalize (inferred ^. typedType)
       expected' <- strongNormalize expectedTy
-      throw $
-        ErrWrongType
-          ( WrongType
-              { _wrongTypeThing = Left e',
-                _wrongTypeActual = inferred',
-                _wrongTypeExpected = expected'
-              }
-          )
+      throw
+        . ErrWrongType
+        $ WrongType
+          { _wrongTypeThing = Left e',
+            _wrongTypeThingWithHoles = Just (Left (inferred ^. typedExpression)),
+            _wrongTypeActual = inferred',
+            _wrongTypeExpected = expected'
+          }
 
 resolveInstanceHoles ::
   forall a r.
@@ -675,6 +673,7 @@ checkPattern = go
                   ( ErrWrongType
                       WrongType
                         { _wrongTypeThing = Right pat,
+                          _wrongTypeThingWithHoles = Nothing,
                           _wrongTypeExpected = m ^. matchErrorRight,
                           _wrongTypeActual = m ^. matchErrorLeft
                         }
@@ -885,8 +884,12 @@ inferLeftAppExpression mhint e = case e of
         Just hi -> return hi
         Nothing -> freshHoleImpl (getLoc l) Implicit
       _lambdaClauses <- mapM (goClause ty) (l ^. lambdaClauses)
-      let _lambdaType = Just ty
-          l' = Lambda {..}
+      let lty' = Just ty
+          l' =
+            Lambda
+              { _lambdaType = lty',
+                _lambdaClauses
+              }
       return
         TypedExpression
           { _typedType = ty,
@@ -1006,10 +1009,11 @@ inferLeftAppExpression mhint e = case e of
 holesHelper :: forall r. (Members '[HighlightBuilder, Reader InfoTable, State FunctionsTable, State TypesTable, Reader LocalVars, Error TypeCheckerError, NameIdGen, Inference, Output Example, Output TypedHole, Builtins, Termination, Output CastHole] r) => Maybe Expression -> Expression -> Sem r TypedExpression
 holesHelper mhint expr = do
   -- traceM ("holes helper " <> ppTrace expr)
-  (f, args) <- unfoldExpressionApp <$> weakNormalize expr
+  -- (f, args) <- unfoldExpressionApp <$> weakNormalize expr
+  -- TODO investigate why normalizing here gives problems with simple lambda
+  let (f, args) = unfoldExpressionApp expr
   -- traceM ("holes helper left part " <> ppTrace f <> " args: " <> ppTrace args)
   -- let (f, args) = unfoldExpressionApp expr
-  -- TODO revise
   let hint
         | null args = mhint
         | otherwise = Nothing
@@ -1058,13 +1062,16 @@ holesHelper mhint expr = do
 
         insertTrailingHoles :: Expression -> Sem r' ()
         insertTrailingHoles hintTy = do
-          let preImplicits :: Expression -> Sem r' [IsImplicit]
-              preImplicits x = takeWhile isImplicitOrInstance . map (^. arityParameterImplicit) . unfoldArity <$> typeArity x
           builderTy <- gets (^. appBuilderType)
-          ariExpr <- preImplicits builderTy
-          ariHint <- preImplicits hintTy
+          ariHint <- typeArity hintTy
+          ariExpr <- typeArity builderTy
+          let preImplicits :: Arity -> [IsImplicit]
+              preImplicits = takeWhile isImplicitOrInstance . map (^. arityParameterImplicit) . unfoldArity
+          builder <- gets (^. appBuilder)
+          let preAriExpr = preImplicits ariExpr
+              preAriHint = preImplicits ariHint
           loc <- getLoc <$> gets (^. appBuilder)
-          let toBeInserted :: [IsImplicit] = take (length ariExpr - length ariHint) ariExpr
+          let toBeInserted :: [IsImplicit] = take (length preAriExpr - length preAriHint) preAriExpr
               mkHoleArg :: IsImplicit -> Sem r' ApplicationArg
               mkHoleArg i =
                 ApplicationArg i <$> case i of
@@ -1072,6 +1079,14 @@ holesHelper mhint expr = do
                   Implicit -> newHoleImplicit loc
                   ImplicitInstance -> newHoleInstance loc
           trailingHoles <- mapM mkHoleArg toBeInserted
+          hi' <- strongNormalize hintTy
+          -- traceM ("adding trailing for " <> ppTrace builder
+          --         <> "\nwith type: " <> ppTrace builderTy
+          --         <> "\nariHint: " <> ppTrace ariHint
+          --         <> "\nariExpr: " <> ppTrace ariExpr
+          --         <> "\ntrailing: " <> ppTrace trailingHoles
+          --         <> "\nmhint: " <> ppTrace hi'
+          --        )
           mapM_ addTrailingHole trailingHoles
           where
             addTrailingHole :: ApplicationArg -> Sem r' ()
@@ -1202,7 +1217,7 @@ viewInductiveApp ty = do
         second (`snoc` r) (viewTypeApp l)
       _ -> (tyapp, [])
 
-typeArity :: forall r. (Members '[Inference] r) => Expression -> Sem r Arity
+typeArity :: forall r. (Members '[Inference, Reader LocalVars] r) => Expression -> Sem r Arity
 typeArity = weakNormalize >=> go
   where
     go :: Expression -> Sem r Arity
@@ -1281,7 +1296,7 @@ guessArity = \case
   ExpressionIden i -> idenHelper i
   ExpressionUniverse {} -> return arityUniverse
   ExpressionSimpleLambda {} -> simplelambda
-  ExpressionLambda l -> return (arityLambda l)
+  ExpressionLambda l -> arityLambda l
   ExpressionLet l -> arityLet l
   ExpressionCase l -> arityCase l
   where
@@ -1321,27 +1336,42 @@ arityUniverse = ArityUnit
 simplelambda :: a
 simplelambda = error "simple lambda expressions are not supported by the arity checker"
 
--- | Since we do not have dependent types, it is ok to (partially) infer the
--- arity of the lambda from the clause with the most patterns.
--- FIXME this is wrong
-arityLambda :: Lambda -> Arity
-arityLambda l =
-  foldArity
-    UnfoldedArity
-      { _ufoldArityParams =
-          replicate
-            (maximum1 (fmap numPatterns (l ^. lambdaClauses)))
-            ( ArityParameter
-                { _arityParameterArity = ArityNotKnown,
-                  _arityParameterImplicit = Explicit,
-                  _arityParameterInfo = emptyArgInfo
-                }
-            ),
-        _ufoldArityRest = ArityRestUnknown
-      }
+arityLambda :: forall r. (Members '[Reader InfoTable, Inference] r) => Lambda -> Sem r Arity
+arityLambda l = do
+  aris <- mapM guessClauseArity (l ^. lambdaClauses)
+  return $
+    if
+        | allSame aris -> head aris
+        | otherwise -> ArityNotKnown
   where
-    numPatterns :: LambdaClause -> Int
-    numPatterns (LambdaClause ps _) = length ps
+    guessClauseArity :: LambdaClause -> Sem r Arity
+    guessClauseArity cl = do
+      body <- unfoldArity' <$> guessArity (cl ^. lambdaBody)
+      let ps = guessPatternArgArity <$> cl ^. lambdaPatterns
+          uari' =
+            UnfoldedArity
+              { _ufoldArityParams = toList ps <> body ^. ufoldArityParams,
+                _ufoldArityRest = body ^. ufoldArityRest
+              }
+      return (foldArity uari')
+
+guessPatternArity :: Pattern -> Arity
+guessPatternArity = \case
+  PatternVariable {} -> ArityNotKnown
+  PatternWildcardConstructor {} -> ArityUnit
+  PatternConstructorApp {} -> ArityUnit
+
+guessPatternArgArity :: PatternArg -> ArityParameter
+guessPatternArgArity p =
+  ArityParameter
+    { _arityParameterArity = guessPatternArity (p ^. patternArgPattern),
+      _arityParameterImplicit = p ^. patternArgIsImplicit,
+      _arityParameterInfo =
+        ArgInfo
+          { _argInfoDefault = Nothing,
+            _argInfoName = Nothing
+          }
+    }
 
 arityLet :: (Members '[Reader InfoTable, Inference] r) => Let -> Sem r Arity
 arityLet l = guessArity (l ^. letExpression)
