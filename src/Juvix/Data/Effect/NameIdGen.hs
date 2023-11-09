@@ -8,8 +8,13 @@ import Data.Stream (Stream (Cons))
 import Juvix.Data.NameId
 import Juvix.Prelude.Base
 
-allNameIds :: Stream NameId
-allNameIds = NameId <$> ids
+data NameIdGenState = NameIdGenState
+  { _nameIdGenStateModuleId :: ModuleId,
+    _nameIdGenStateStream :: Stream Word64
+  }
+
+genNameIdState :: ModuleId -> NameIdGenState
+genNameIdState mid = NameIdGenState mid ids
   where
     ids :: Stream Word64
     ids = aux minBound
@@ -21,18 +26,18 @@ data NameIdGen m a where
 
 makeSem ''NameIdGen
 
-toState :: Sem (NameIdGen ': r) a -> Sem (State (Stream NameId) ': r) a
+toState :: Sem (NameIdGen ': r) a -> Sem (State NameIdGenState ': r) a
 toState = reinterpret $ \case
   FreshNameId -> do
-    (Cons fresh rest) <- get
-    put rest
-    return fresh
+    NameIdGenState mid (Cons fresh rest) <- get
+    put (NameIdGenState mid rest)
+    return (NameId fresh mid)
 
-runNameIdGen :: Stream NameId -> Sem (NameIdGen ': r) a -> Sem r (Stream NameId, a)
+runNameIdGen :: NameIdGenState -> Sem (NameIdGen ': r) a -> Sem r (NameIdGenState, a)
 runNameIdGen s = runState s . toState
 
-runTopNameIdGen :: Sem (NameIdGen ': r) a -> Sem r (Stream NameId, a)
-runTopNameIdGen = runNameIdGen allNameIds
+runTopNameIdGen :: ModuleId -> Sem (NameIdGen ': r) a -> Sem r (NameIdGenState, a)
+runTopNameIdGen mid = runNameIdGen (genNameIdState mid)
 
-evalTopNameIdGen :: Sem (NameIdGen ': r) a -> Sem r a
-evalTopNameIdGen = fmap snd . runTopNameIdGen
+evalTopNameIdGen :: ModuleId -> Sem (NameIdGen ': r) a -> Sem r a
+evalTopNameIdGen mid = fmap snd . runTopNameIdGen mid

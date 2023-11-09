@@ -19,7 +19,7 @@ data Artifacts = Artifacts
     -- Scoping
     _artifactResolver :: ResolverState,
     _artifactBuiltins :: BuiltinsState,
-    _artifactNameIdState :: Stream NameId,
+    _artifactNameIdState :: NameIdGenState,
     _artifactScopeTable :: Scoped.InfoTable,
     _artifactScopeExports :: HashSet NameId,
     _artifactMainModuleScope :: Maybe Scope,

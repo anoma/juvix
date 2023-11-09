@@ -47,7 +47,7 @@ unsupported thing = error ("Internal to Core: Not yet supported: " <> thing)
 
 -- | Translation of a Name into the identifier index used in the Core InfoTable
 mkIdentIndex :: Name -> Text
-mkIdentIndex = show . (^. Internal.nameId . Internal.unNameId)
+mkIdentIndex = show . (^. Internal.nameId)
 
 fromInternal :: (Member NameIdGen k) => Internal.InternalTypedResult -> Sem k CoreResult
 fromInternal i = do

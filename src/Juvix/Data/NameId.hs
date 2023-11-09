@@ -1,19 +1,24 @@
-module Juvix.Data.NameId where
+module Juvix.Data.NameId
+  ( module Juvix.Data.NameId,
+    module Juvix.Data.ModuleId,
+  )
+where
 
+import Juvix.Data.ModuleId
 import Juvix.Extra.Serialize
 import Juvix.Prelude.Base
 import Prettyprinter
 
-newtype NameId = NameId
-  { _unNameId :: Word64
+data NameId = NameId
+  { _nameIdUid :: Word64,
+    _nameIdModuleId :: ModuleId
   }
   deriving stock (Show, Eq, Ord, Generic, Data)
-  deriving newtype (Enum)
 
 makeLenses ''NameId
 
 instance Pretty NameId where
-  pretty (NameId w) = pretty w
+  pretty (NameId w m) = pretty m <> ":" <> pretty w
 
 instance Hashable NameId
 

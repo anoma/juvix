@@ -382,7 +382,7 @@ withNameIdSuffix nid a = do
   when showNameId (noLoc "@" <> ppCode nid)
 
 instance PrettyPrint S.NameId where
-  ppCode (S.NameId k) = noLoc (pretty k)
+  ppCode = noLoc . pretty
 
 ppModuleHeader :: (SingI t, SingI s) => PrettyPrinting (Module s t)
 ppModuleHeader Module {..} = do

@@ -28,7 +28,7 @@ runPrettyCode :: (PrettyCode c) => Options -> c -> Doc Ann
 runPrettyCode opts = run . runReader opts . ppCode
 
 instance PrettyCode NameId where
-  ppCode (NameId k) = return (pretty k)
+  ppCode = return . pretty
 
 instance PrettyCode Name where
   ppCode n = do

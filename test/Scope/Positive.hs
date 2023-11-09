@@ -70,7 +70,7 @@ testDescr PosTest {..} = helper renderCodeNew
                         . ignoreHighlightBuilder
                         . runErrorIO' @JuvixError
                         . evalTopBuiltins
-                        . evalTopNameIdGen
+                        . evalTopNameIdGen defaultModuleId
                         . runFilesPure files tRoot
                         . runReader entryPoint
                         . ignoreLog

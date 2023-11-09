@@ -49,7 +49,7 @@ runIOEitherHelper entry = do
     . runHighlightBuilder
     . runJuvixError
     . evalTopBuiltins
-    . evalTopNameIdGen
+    . evalTopNameIdGen defaultModuleId -- TODO: module id
     . runFilesIO
     . runReader entry
     . runLogIO
@@ -181,7 +181,7 @@ corePipelineIOEither entry = do
           _artifactTypes = mempty,
           _artifactTerminationState = iniTerminationState,
           _artifactResolver = iniResolverState,
-          _artifactNameIdState = allNameIds,
+          _artifactNameIdState = genNameIdState defaultModuleId, -- TODO: module id
           _artifactFunctions = mempty,
           _artifactCoreTable = Core.emptyInfoTable,
           _artifactScopeTable = Scoped.emptyInfoTable,

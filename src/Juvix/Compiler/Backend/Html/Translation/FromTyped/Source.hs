@@ -345,9 +345,9 @@ putTag ann x = case ann of
           )
 
 nameIdAttr :: (Members '[Reader HtmlOptions] r) => S.NameId -> Sem r AttributeValue
-nameIdAttr (S.NameId k) = do
+nameIdAttr nid = do
   pfx <- unpack <$> asks (^. htmlOptionsIdPrefix)
-  return $ fromString $ pfx <> show k
+  return $ fromString $ pfx <> show nid
 
 moduleDocRelativePath :: (Members '[Reader HtmlOptions] r) => TopModulePath -> Sem r (Path Rel File)
 moduleDocRelativePath m = do
