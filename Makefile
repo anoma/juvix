@@ -23,7 +23,7 @@ METAFILES:=README.md \
 			 LICENSE.md
 
 STACKFLAGS?=--jobs $(THREADS)
-STACKTESTFLAGS?=--ta --hide-successes --ta --ansi-tricks=false
+STACKTESTFLAGS?=--ta --hide-successes --ta --ansi-tricks=false --ta "+RTS -N -RTS"
 SMOKEFLAGS?=--color --diff=git
 STACK?=stack
 
