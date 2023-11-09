@@ -80,15 +80,21 @@ import Stdlib.Data.Product open;
   | (a, b) f := case f b of {a', b' := a <> a', b'};
 
 instance
-×-Monad {X : Type} {{Semigroup X}} {{Monoid X}}
-  : Monad ((×) X) :=
+×-Monad {A : Type} {{Semigroup A}} {{Monoid A}}
+  : Monad ((×) A) :=
   mkMonad@{
-    bind := ×-bind {X};
+    bind := ×-bind;
     return := λ {b := Monoid.mempty, b};
     functor := ×-Functor
   };
 
 type Reader (r a : Type) := mkReader {runReader : r -> a};
+
+Reader-fmap {R A B : Type} (f : A -> B) : Reader R A -> Reader R B
+  | (mkReader ra) := mkReader (f ∘ ra);
+
+Reader-Functor-NoNamed {R : Type} : Functor (Reader R) :=
+  mkFunctor Reader-fmap;
 
 instance
 Reader-Functor {R : Type} : Functor (Reader R) :=
