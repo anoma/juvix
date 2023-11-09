@@ -182,7 +182,6 @@ checkInductiveDef InductiveDef {..} = runInferenceDef $ do
 withEmptyVars :: Sem (Reader LocalVars ': r) a -> Sem r a
 withEmptyVars = runReader emptyLocalVars
 
--- TODO should we register functions (type synonyms) first?
 checkTopMutualBlock ::
   (Members '[HighlightBuilder, State NegativeTypeParameters, Reader EntryPoint, Reader LocalVars, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example, Builtins, Termination] r) =>
   MutualBlock ->
@@ -469,12 +468,7 @@ inferExpression hint = resolveInstanceHoles . resolveCastHoles . inferExpression
 lookupVar :: (Members '[Reader LocalVars, Reader InfoTable] r) => Name -> Sem r Expression
 lookupVar v = do
   locals <- asks (^. localTypes)
-  return
-    ( fromMaybe
-        err
-        ( locals ^. at v
-        )
-    )
+  return $ fromMaybe err (locals ^. at v)
   where
     err = error $ "internal error: could not find var " <> ppTrace v <> " at " <> ppTrace (getLoc v)
 
@@ -1010,10 +1004,10 @@ holesHelper mhint expr = do
           }
   st' <- execState iniBuilder goArgs
   return
-        TypedExpression
-          { _typedType = st' ^. appBuilderType,
-            _typedExpression = st' ^. appBuilder
-          }
+    TypedExpression
+      { _typedType = st' ^. appBuilderType,
+        _typedExpression = st' ^. appBuilder
+      }
   where
     goArgs :: forall r'. (r' ~ State AppBuilder ': r) => Sem r' ()
     goArgs = peekArg >>= maybe (insertTrailingHolesMay mhint) goNextArg

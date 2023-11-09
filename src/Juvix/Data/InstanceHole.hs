@@ -1,12 +1,12 @@
 module Juvix.Data.InstanceHole where
 
+import Juvix.Data.Hole qualified as Hole
 import Juvix.Data.Keyword
 import Juvix.Data.Keyword.All (kwWildcard)
 import Juvix.Data.Loc
 import Juvix.Data.NameId
 import Juvix.Prelude.Base
 import Prettyprinter
-import Juvix.Data.Hole qualified as Hole
 
 fromHole :: Hole.Hole -> InstanceHole
 fromHole (Hole.Hole a b) = InstanceHole a b

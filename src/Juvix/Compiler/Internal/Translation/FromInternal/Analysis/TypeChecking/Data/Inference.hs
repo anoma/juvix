@@ -282,12 +282,6 @@ weakNormalize' = go
       case s of
         Fresh -> return (ExpressionHole h)
         Refined r -> go r
-    -- goInstanceHole :: Hole -> Sem r Expression
-    -- goInstanceHole h = do
-    --   s <- getMetavar h
-    --   case s of
-    --     Fresh -> return (ExpressionInstanceHole h)
-    --     Refined r -> go r
     goInstanceHole :: InstanceHole -> Sem r Expression
     goInstanceHole = return . ExpressionInstanceHole
 
