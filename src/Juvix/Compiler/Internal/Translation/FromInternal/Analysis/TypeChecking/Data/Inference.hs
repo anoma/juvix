@@ -519,7 +519,7 @@ addIdens idens = do
 functionDefEval :: forall r'. (Members '[State FunctionsTable, Termination, Error TypeCheckerError, NameIdGen] r') => FunctionDef -> Sem r' (Maybe Expression)
 functionDefEval f = do
   (params :: [FunctionParameter], ret :: Expression) <- unfoldFunType <$> strongNorm (f ^. funDefType)
-  r <- runFail (goTop params (isUniverse ret))
+  r <- runFail (goTop params (canBeUniverse ret))
   when (isNothing r && isUniverse ret) (throw (ErrUnsupportedTypeFunction (UnsupportedTypeFunction f)))
   return r
   where
@@ -529,6 +529,13 @@ functionDefEval f = do
     isUniverse :: Expression -> Bool
     isUniverse = \case
       ExpressionUniverse {} -> True
+      _ -> False
+
+    canBeUniverse :: Expression -> Bool
+    canBeUniverse = \case
+      ExpressionUniverse {} -> True
+      ExpressionHole {} -> True
+      ExpressionIden {} -> True
       _ -> False
 
     goTop ::

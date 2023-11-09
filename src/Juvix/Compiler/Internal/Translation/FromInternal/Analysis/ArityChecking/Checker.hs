@@ -852,7 +852,8 @@ checkExpression hintArity expr = case expr of
                   -- When there are no remaining arguments and the expected arity of the
                   -- expression matches the current arity we should *not* insert a hole.
                   | arityParameterImplicitOrInstance impl
-                      && ari == hint -> return ()
+                      && ari == hint ->
+                      return ()
                 (ArityFunction (FunctionArity (p@ArityParameter {_arityParameterImplicit = Implicit}) r), _) -> do
                   -- h <- newHoleImplicit p loc
                   -- emitWithParameter p (ApplicationArg Implicit h)
