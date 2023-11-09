@@ -62,7 +62,7 @@ runIOEitherHelper entry = do
     . runPathResolver'
 
 mainIsPackageFile :: EntryPoint -> Bool
-mainIsPackageFile entry = case entry ^? entryPointModulePaths . _head of
+mainIsPackageFile entry = case entry ^. entryPointModulePath of
   Just p -> p == mkPackagePath (entry ^. entryPointResolverRoot)
   Nothing -> False
 

@@ -51,17 +51,17 @@ fromSource e = mapError (JuvixError @ParserError) $ do
       forall r.
       (Members '[PathResolver, Files, Error ParserError, InfoTableBuilder, NameIdGen] r) =>
       Sem r (NonEmpty (Module 'Parsed 'ModuleTop))
-    getParsedModuleTops = case (e ^. entryPointStdin, e ^. entryPointModulePaths) of
-      (Nothing, []) -> throw $ ErrStdinOrFile StdinOrFileError
-      (Just txt, x : _) ->
+    getParsedModuleTops = case (e ^. entryPointStdin, e ^. entryPointModulePath) of
+      (Nothing, Nothing) -> throw $ ErrStdinOrFile StdinOrFileError
+      (Just txt, Just x) ->
         runModuleParser x txt >>= \case
           Left err -> throw err
           Right r -> return (r :| [])
-      (Just txt, []) ->
+      (Just txt, Nothing) ->
         runModuleStdinParser txt >>= \case
           Left err -> throw err
           Right r -> return (r :| [])
-      (_, x : xs) -> mapM goFile (x :| xs)
+      (Nothing, Just x) -> mapM goFile (x :| [])
 
     goFile ::
       forall r.
@@ -77,7 +77,7 @@ fromSource e = mapError (JuvixError @ParserError) $ do
       where
         getFileContents :: Path Abs File -> Sem r Text
         getFileContents fp
-          | Just fp == e ^? mainModulePath,
+          | Just fp == e ^. entryPointModulePath,
             Just txt <- e ^. entryPointStdin =
               return txt
           | otherwise = readFile' fp

@@ -62,7 +62,7 @@ loadEntryPoint ep = do
         replContextEntryPoint
         (Just ep)
     )
-  let epPath :: Maybe (Path Abs File) = ep ^? entryPointModulePaths . _head
+  let epPath :: Maybe (Path Abs File) = ep ^. entryPointModulePath
   whenJust epPath $ \path -> do
     let filepath = toFilePath path
     liftIO (putStrLn . pack $ "OK loaded " <> filepath)

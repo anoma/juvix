@@ -36,7 +36,7 @@ data EntryPoint = EntryPoint
     _entryPointOptimizationLevel :: Int,
     _entryPointInliningDepth :: Int,
     _entryPointGenericOptions :: GenericOptions,
-    _entryPointModulePaths :: [Path Abs File],
+    _entryPointModulePath :: Maybe (Path Abs File),
     _entryPointSymbolPruningMode :: SymbolPruningMode,
     _entryPointOffline :: Bool
   }
@@ -47,7 +47,7 @@ makeLenses ''EntryPoint
 defaultEntryPoint :: Root -> Path Abs File -> EntryPoint
 defaultEntryPoint root mainFile =
   (defaultEntryPointNoFile root)
-    { _entryPointModulePaths = pure mainFile
+    { _entryPointModulePath = Just mainFile
     }
 
 defaultEntryPointNoFile :: Root -> EntryPoint
@@ -70,7 +70,7 @@ defaultEntryPointNoFile root =
       _entryPointUnrollLimit = defaultUnrollLimit,
       _entryPointOptimizationLevel = defaultOptimizationLevel,
       _entryPointInliningDepth = defaultInliningDepth,
-      _entryPointModulePaths = [],
+      _entryPointModulePath = Nothing,
       _entryPointSymbolPruningMode = FilterUnreachable,
       _entryPointOffline = False
     }
@@ -83,6 +83,3 @@ defaultOptimizationLevel = 1
 
 defaultInliningDepth :: Int
 defaultInliningDepth = 3
-
-mainModulePath :: Traversal' EntryPoint (Path Abs File)
-mainModulePath = entryPointModulePaths . _head

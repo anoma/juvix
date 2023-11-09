@@ -348,7 +348,7 @@ runPathResolver' st root x = do
   e <- ask
   let _envSingleFile :: Maybe (Path Abs File)
       _envSingleFile
-        | e ^. entryPointPackageGlobal = e ^? entryPointModulePaths . _head
+        | e ^. entryPointPackageGlobal = e ^. entryPointModulePath
         | otherwise = Nothing
       env :: ResolverEnv
       env =
