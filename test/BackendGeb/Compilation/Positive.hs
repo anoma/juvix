@@ -23,7 +23,7 @@ testDescr PosTest {..} =
           _testRoot = tRoot,
           _testAssertion =
             Steps $
-              gebCompilationAssertion file' expected'
+              gebCompilationAssertion tRoot file' expected'
         }
 
 allTests :: TestTree

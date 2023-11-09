@@ -53,7 +53,7 @@ testDescr PosTest {..} = helper renderCodeNew
             { _testName = _name,
               _testRoot = tRoot,
               _testAssertion = Steps $ \step -> do
-                entryPoint <- defaultEntryPointCwdIO file'
+                entryPoint <- defaultEntryPointIO tRoot file'
                 let runHelper :: HashMap (Path Abs File) Text -> Sem PipelineEff a -> IO (ResolverState, a)
                     runHelper files = do
                       let runPathResolver' = case _pathResolverMode of

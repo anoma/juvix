@@ -6,12 +6,13 @@ import Juvix.Compiler.Backend (Target (TargetGeb))
 import Juvix.Compiler.Core qualified as Core
 
 gebCompilationAssertion ::
+  Path Abs Dir ->
   Path Abs File ->
   Path Abs File ->
   (String -> IO ()) ->
   Assertion
-gebCompilationAssertion mainFile expectedFile step = do
+gebCompilationAssertion root mainFile expectedFile step = do
   step "Translate to JuvixCore"
-  entryPoint <- set entryPointTarget TargetGeb <$> defaultEntryPointCwdIO mainFile
+  entryPoint <- set entryPointTarget TargetGeb <$> defaultEntryPointIO root mainFile
   tab <- (^. Core.coreResultTable) . snd <$> runIO' entryPoint upToCore
   coreToGebTranslationAssertion' tab entryPoint expectedFile step

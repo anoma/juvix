@@ -33,7 +33,7 @@ testDescr PosTest {..} =
     { _testName = _name,
       _testRoot = _dir,
       _testAssertion = Steps $ \step -> do
-        entryPoint <- defaultEntryPointCwdIO _file
+        entryPoint <- defaultEntryPointIO _dir _file
         let maybeFile = entryPoint ^? entryPointModulePaths . _head
         f <- fromMaybeM (assertFailure "Not a module") (return maybeFile)
 

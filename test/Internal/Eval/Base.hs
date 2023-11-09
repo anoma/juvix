@@ -12,10 +12,10 @@ import Juvix.Compiler.Core.Pretty
 import Juvix.Compiler.Core.Transformation (etaExpansionApps)
 import Juvix.Compiler.Core.Translation.FromInternal.Data as Core
 
-internalCoreAssertion :: Path Abs File -> Path Abs File -> (String -> IO ()) -> Assertion
-internalCoreAssertion mainFile expectedFile step = do
+internalCoreAssertion :: Path Abs Dir -> Path Abs File -> Path Abs File -> (String -> IO ()) -> Assertion
+internalCoreAssertion root' mainFile expectedFile step = do
   step "Translate to Core"
-  entryPoint <- defaultEntryPointCwdIO mainFile
+  entryPoint <- defaultEntryPointIO root' mainFile
   tab0 <- (^. Core.coreResultTable) . snd <$> runIO' entryPoint upToCore
   let tab = etaExpansionApps tab0
   case (tab ^. infoMain) >>= ((tab ^. identContext) HashMap.!?) of

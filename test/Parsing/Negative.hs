@@ -23,7 +23,7 @@ testDescr NegTest {..} =
         { _testName = _name,
           _testRoot = tRoot,
           _testAssertion = Single $ do
-            entryPoint <- defaultEntryPointCwdIO _file
+            entryPoint <- defaultEntryPointIO tRoot _file
             res <- runIOEither entryPoint upToParsing
             case mapLeft fromJuvixError res of
               Left (Just parErr) -> whenJust (_checkErr parErr) assertFailure

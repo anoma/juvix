@@ -20,7 +20,7 @@ testDescr PosTest {..} =
         { _testName = _name,
           _testRoot = tRoot,
           _testAssertion = Single $ do
-            entryPoint <- set entryPointNoStdlib True <$> defaultEntryPointCwdIO file'
+            entryPoint <- set entryPointNoStdlib True <$> defaultEntryPointIO tRoot file'
             (void . runIO' entryPoint) upToInternalTyped
         }
 
@@ -42,7 +42,7 @@ testDescrFlag N.NegTest {..} =
             entryPoint <-
               set entryPointNoTermination True
                 . set entryPointNoStdlib True
-                <$> defaultEntryPointCwdIO file'
+                <$> defaultEntryPointIO tRoot file'
             (void . runIO' entryPoint) upToInternalTyped
         }
 
@@ -88,7 +88,7 @@ negTests = N.tests
 allTests :: TestTree
 allTests =
   testGroup
-    "Positive tests"
+    "Termination positive tests"
     [ testGroup
         "Well-known terminating functions"
         (map (mkTest . testDescr) tests),

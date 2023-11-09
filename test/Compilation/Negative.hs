@@ -19,7 +19,7 @@ testDescr NegTest {..} =
    in TestDescr
         { _testName = _name,
           _testRoot = tRoot,
-          _testAssertion = Steps $ compileErrorAssertion file'
+          _testAssertion = Steps $ compileErrorAssertion tRoot file'
         }
 
 allTests :: TestTree

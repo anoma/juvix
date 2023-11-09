@@ -13,15 +13,16 @@ data CompileAssertionMode
   | EvalAndCompile
 
 compileAssertion ::
+  Path Abs Dir ->
   Int ->
   CompileAssertionMode ->
   Path Abs File ->
   Path Abs File ->
   (String -> IO ()) ->
   Assertion
-compileAssertion optLevel mode mainFile expectedFile step = do
+compileAssertion root' optLevel mode mainFile expectedFile step = do
   step "Translate to JuvixCore"
-  entryPoint <- defaultEntryPointCwdIO mainFile
+  entryPoint <- defaultEntryPointIO root' mainFile
   tab <- (^. Core.coreResultTable) . snd <$> runIO' entryPoint upToCore
   case run $ runReader Core.defaultCoreOptions $ runError $ Core.toEval' tab of
     Left err -> assertFailure (show (pretty (fromJuvixError @GenericError err)))
@@ -34,12 +35,13 @@ compileAssertion optLevel mode mainFile expectedFile step = do
         EvalAndCompile -> evalAssertion >> compileAssertion' ""
 
 compileErrorAssertion ::
+  Path Abs Dir ->
   Path Abs File ->
   (String -> IO ()) ->
   Assertion
-compileErrorAssertion mainFile step = do
+compileErrorAssertion root' mainFile step = do
   step "Translate to JuvixCore"
-  entryPoint <- defaultEntryPointCwdIO mainFile
+  entryPoint <- defaultEntryPointIO root' mainFile
   tab <- (^. Core.coreResultTable) . snd <$> runIO' entryPoint upToCore
   case run $ runReader Core.defaultCoreOptions $ runError @JuvixError $ Core.toStripped' tab of
     Left _ -> assertBool "" True

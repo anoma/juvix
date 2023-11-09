@@ -20,7 +20,7 @@ testDescr NegTest {..} =
         { _testName = _name,
           _testRoot = tRoot,
           _testAssertion = Single $ do
-            entryPoint <- set entryPointNoStdlib True <$> defaultEntryPointCwdIO file'
+            entryPoint <- set entryPointNoStdlib True <$> defaultEntryPointIO tRoot file'
             result <- runIOEither entryPoint upToInternalTyped
             case mapLeft fromJuvixError result of
               Left (Just lexError) -> whenJust (_checkErr lexError) assertFailure

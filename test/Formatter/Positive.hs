@@ -5,13 +5,13 @@ import Juvix.Formatter
 import Scope.Positive qualified
 import Scope.Positive qualified as Scope
 
-runScopeEffIO :: (Member (Embed IO) r) => Sem (ScopeEff ': r) a -> Sem r a
-runScopeEffIO = interpret $ \case
+runScopeEffIO :: (Member (Embed IO) r) => Path Abs Dir -> Sem (ScopeEff ': r) a -> Sem r a
+runScopeEffIO root = interpret $ \case
   ScopeFile p -> do
-    entry <- embed (defaultEntryPointCwdIO p)
+    entry <- embed (defaultEntryPointIO root p)
     embed (snd <$> runIO' entry upToScoping)
   ScopeStdin -> do
-    entry <- embed defaultEntryPointNoFileCwdIO
+    entry <- embed (defaultEntryPointNoFileIO root)
     embed (snd <$> runIO' entry upToScoping)
 
 makeFormatTest' :: Scope.PosTest -> TestDescr
@@ -26,7 +26,7 @@ makeFormatTest' Scope.PosTest {..} =
               runM
                 . runError
                 . runOutputList @FormattedFileInfo
-                . runScopeEffIO
+                . runScopeEffIO tRoot
                 . runFilesIO
                 $ format file'
             case d of

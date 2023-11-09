@@ -24,7 +24,7 @@ toTestDescr optLevel PosTest {..} =
    in TestDescr
         { _testName = _name,
           _testRoot = tRoot,
-          _testAssertion = Steps $ compileAssertion optLevel _assertionMode file' expected'
+          _testAssertion = Steps $ compileAssertion _dir optLevel _assertionMode file' expected'
         }
 
 allTests :: TestTree

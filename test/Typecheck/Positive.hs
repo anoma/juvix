@@ -27,7 +27,7 @@ testDescr PosTest {..} =
     { _testName = _name,
       _testRoot = _dir,
       _testAssertion = Single $ do
-        entryPoint <- defaultEntryPointCwdIO _file
+        entryPoint <- defaultEntryPointIO _dir _file
         (void . runIO' entryPoint) upToInternalTyped
     }
 
@@ -45,7 +45,7 @@ testNoPositivityFlag N.NegTest {..} =
           _testAssertion = Single $ do
             entryPoint <-
               set entryPointNoPositivity True
-                <$> defaultEntryPointCwdIO file'
+                <$> defaultEntryPointIO tRoot file'
             (void . runIO' entryPoint) upToInternalTyped
         }
 

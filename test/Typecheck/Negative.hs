@@ -20,7 +20,7 @@ testDescr NegTest {..} =
         { _testName = _name,
           _testRoot = tRoot,
           _testAssertion = Single $ do
-            entryPoint <- defaultEntryPointCwdIO file'
+            entryPoint <- defaultEntryPointIO tRoot file'
             result <- runIOEither entryPoint upToInternalTyped
             case mapLeft fromJuvixError result of
               Left (Just tyError) -> whenJust (_checkErr tyError) assertFailure

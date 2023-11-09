@@ -29,7 +29,7 @@ testDescr PosTest {..} =
             let noStdlib = _stdlibMode == StdlibExclude
             entryPoint <-
               set entryPointNoStdlib noStdlib
-                <$> defaultEntryPointCwdIO file'
+                <$> defaultEntryPointIO tRoot file'
 
             step "Pipeline up to reachability"
             p :: Internal.InternalTypedResult <- snd <$> runIO' entryPoint upToInternalReachability
