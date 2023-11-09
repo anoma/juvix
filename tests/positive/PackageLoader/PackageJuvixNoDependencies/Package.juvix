@@ -1,7 +1,5 @@
 module Package;
 
-import Stdlib.Prelude open;
-import PackageDescription.V1 open;
+import PackageDescription.Basic open;
 
-package : Package :=
-  defaultPackage {name := "package-juvix"};
+package : Package := basicPackage;

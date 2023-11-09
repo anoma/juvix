@@ -87,14 +87,15 @@ runEvalFileEffIO = interpretScopedAs allocator handler
             packageLoc :: Interval
             packageLoc = singletonInterval (mkInitialLoc packagePath)
 
-        assertNodeType' :: (Foldable f) => Node -> f TypeSpec -> Sem r ()
+        assertNodeType' :: (Foldable f) => Node -> f TypeSpec -> Sem r TypeSpec
         assertNodeType' n tys = do
           evalN <- evalNode n
           case evalN of
             NCtr Constr {..} -> do
               let ci = Core.lookupConstructorInfo tab _constrTag
                   ii = Core.lookupInductiveInfo tab (ci ^. Core.constructorInductive)
-              unless (any (checkInductiveType ii) tys) err
+                  ty = find (checkInductiveType ii) tys
+              fromMaybeM err (return ty)
             _ -> err
           where
             err :: Sem r b

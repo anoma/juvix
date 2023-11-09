@@ -1,0 +1,3 @@
+module PackageDescription.Basic;
+
+type Package := basicPackage;

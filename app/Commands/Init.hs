@@ -24,27 +24,29 @@ ppErr = pack . errorBundlePretty
 init :: forall r. (Members '[Embed IO] r) => InitOptions -> Sem r ()
 init opts = do
   checkNotInProject
-  pkg <-
-    if
-        | isInteractive -> do
-            say "✨ Your next Juvix adventure is about to begin! ✨"
-            say "I will help you set it up"
-            getPackage
-        | otherwise -> do
-            cwd <- getCurrentDir
-            projectName <- getDefaultProjectName
-            let emptyPkg = emptyPackage DefaultBuildDir (cwd <//> packageFilePath)
-            return $ case projectName of
-              Nothing -> emptyPkg
-              Just n -> emptyPkg {_packageName = n}
-  when isInteractive (say ("creating " <> pack (toFilePath packageFilePath)))
   cwd <- getCurrentDir
-  writePackageFile cwd pkg
+  when isInteractive (say ("creating " <> pack (toFilePath packageFilePath)))
+  if
+      | opts ^. initOptionsBasic -> writeBasicPackage cwd
+      | otherwise -> do
+          pkg <-
+            if
+                | isInteractive -> do
+                    say "✨ Your next Juvix adventure is about to begin! ✨"
+                    say "I will help you set it up"
+                    getPackage
+                | otherwise -> do
+                    projectName <- getDefaultProjectName
+                    let emptyPkg = emptyPackage DefaultBuildDir (cwd <//> packageFilePath)
+                    return $ case projectName of
+                      Nothing -> emptyPkg
+                      Just n -> emptyPkg {_packageName = n}
+          writePackageFile cwd pkg
   checkPackage
   when isInteractive (say "you are all set")
   where
     isInteractive :: Bool
-    isInteractive = not (opts ^. initOptionsNonInteractive)
+    isInteractive = not (opts ^. initOptionsNonInteractive) && not (opts ^. initOptionsBasic)
 
 checkNotInProject :: forall r. (Members '[Embed IO] r) => Sem r ()
 checkNotInProject =
