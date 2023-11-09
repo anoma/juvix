@@ -148,10 +148,10 @@ checkInductiveDef InductiveDef {..} = runInferenceDef $ do
     checkParams :: Sem (Inference ': r) [(Name, Expression)]
     checkParams = mapM checkParam _inductiveParameters
       where
-      checkParam :: InductiveParameter -> Sem (Inference ': r) (Name, Expression)
-      checkParam p = do
-        ty' <- checkIsType (getLoc p) (p ^. inductiveParamType)
-        return (p ^. inductiveParamName,  ty')
+        checkParam :: InductiveParameter -> Sem (Inference ': r) (Name, Expression)
+        checkParam p = do
+          ty' <- checkIsType (getLoc p) (p ^. inductiveParamType)
+          return (p ^. inductiveParamName, ty')
 
     goConstructor :: ConstructorDef -> Sem (Inference ': r) ConstructorDef
     goConstructor ConstructorDef {..} = do
@@ -184,7 +184,6 @@ checkInductiveDef InductiveDef {..} = runInferenceDef $ do
 withEmptyVars :: Sem (Reader LocalVars ': r) a -> Sem r a
 withEmptyVars = runReader emptyLocalVars
 
--- TODO should we register functions (type synonyms) first?
 checkTopMutualBlock ::
   (Members '[HighlightBuilder, State NegativeTypeParameters, Reader EntryPoint, Reader LocalVars, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example, Builtins, Termination] r) =>
   MutualBlock ->
@@ -228,9 +227,7 @@ checkMutualStatement ::
   Sem r MutualStatement
 checkMutualStatement = \case
   StatementFunction f -> do
-    -- traceM ("checkstatement f " <> ppTrace f)
     f' <- resolveInstanceHoles (resolveCastHoles (checkFunctionDef f))
-    -- traceM ("checkstatement f' " <> ppTrace f')
     return (StatementFunction f')
   StatementInductive f -> StatementInductive <$> resolveInstanceHoles (resolveCastHoles (checkInductiveDef f))
   StatementAxiom ax -> do
@@ -433,17 +430,8 @@ resolveInstanceHoles ::
   Sem r a
 resolveInstanceHoles s = do
   (hs, e) <- runOutputList s
-  -- traceM ("holes: " <> ppTrace hs)
   ts <- mapM goResolve hs
   let subs = HashMap.fromList (zipExact (map (^. typedHoleHole) hs) ts)
-  -- traceM
-  --   ( "apply subs: "
-  --       <> ppTrace (HashMap.toList subs)
-  --       <> "\nto "
-  --       <> ppTrace e
-  --       <> "\nequals "
-  --       <> ppTrace (subsHoles subs e)
-  --   )
   subsInstanceHoles subs e
   where
     goResolve :: TypedHole -> Sem r Expression
@@ -482,12 +470,7 @@ inferExpression hint = resolveInstanceHoles . resolveCastHoles . inferExpression
 lookupVar :: (Members '[Reader LocalVars, Reader InfoTable] r) => Name -> Sem r Expression
 lookupVar v = do
   locals <- asks (^. localTypes)
-  return
-    ( fromMaybe
-        err
-        ( locals ^. at v
-        )
-    )
+  return $ fromMaybe err (locals ^. at v)
   where
     err = error $ "internal error: could not find var " <> ppTrace v <> " at " <> ppTrace (getLoc v)
 
@@ -1010,13 +993,8 @@ inferLeftAppExpression mhint e = case e of
 -- | The hint is used for trailing holes only
 holesHelper :: forall r. (Members '[HighlightBuilder, Reader InfoTable, State FunctionsTable, State TypesTable, Reader LocalVars, Error TypeCheckerError, NameIdGen, Inference, Output Example, Output TypedHole, Builtins, Termination, Output CastHole] r) => Maybe Expression -> Expression -> Sem r TypedExpression
 holesHelper mhint expr = do
-  -- traceM ("holes helper " <> ppTrace expr)
-  -- (f, args) <- unfoldExpressionApp <$> weakNormalize expr
-  -- TODO investigate why normalizing here gives problems with simple lambda
   let (f, args) = unfoldExpressionApp expr
-  -- traceM ("holes helper left part " <> ppTrace f <> " args: " <> ppTrace args)
-  -- let (f, args) = unfoldExpressionApp expr
-  let hint
+      hint
         | null args = mhint
         | otherwise = Nothing
   fTy <- inferLeftAppExpression hint f
@@ -1026,35 +1004,12 @@ holesHelper mhint expr = do
             _appBuilderType = fTy ^. typedType,
             _appBuilderArgs = args
           }
-  -- traceM
-  --   ( "\n\nHolesHelper\n"
-  --       <> "Builder: "
-  --       <> ppTrace f
-  --       <> "\nType: "
-  --       <> ppTrace (fTy ^. typedType)
-  --       <> "\nArgs: "
-  --       <> ppTrace args
-  --       <> "\nHint: "
-  --       <> ppTrace mhint
-  --   )
   st' <- execState iniBuilder goArgs
-  let ret =
-        TypedExpression
-          { _typedType = st' ^. appBuilderType,
-            _typedExpression = st' ^. appBuilder
-          }
-  -- traceM
-  --   ( "\n\nReturn for HolesHelper\n"
-  --       <> "Builder: "
-  --       <> ppTrace f
-  --       <> "\nType: "
-  --       <> ppTrace (fTy ^. typedType)
-  --       <> "\nArgs: "
-  --       <> ppTrace args
-  --       <> "\nRet: "
-  --       <> ppTrace ret
-  --   )
-  return ret
+  return
+    TypedExpression
+      { _typedType = st' ^. appBuilderType,
+        _typedExpression = st' ^. appBuilder
+      }
   where
     goArgs :: forall r'. (r' ~ State AppBuilder ': r) => Sem r' ()
     goArgs = peekArg >>= maybe (insertTrailingHolesMay mhint) goNextArg
@@ -1069,7 +1024,7 @@ holesHelper mhint expr = do
           ariExpr <- typeArity builderTy
           let preImplicits :: Arity -> [IsImplicit]
               preImplicits = takeWhile isImplicitOrInstance . map (^. arityParameterImplicit) . unfoldArity
-          let preAriExpr = preImplicits ariExpr
+              preAriExpr = preImplicits ariExpr
               preAriHint = preImplicits ariHint
           loc <- getLoc <$> gets (^. appBuilder)
           let toBeInserted :: [IsImplicit] = take (length preAriExpr - length preAriHint) preAriExpr
@@ -1080,33 +1035,21 @@ holesHelper mhint expr = do
                   Implicit -> newHoleImplicit loc
                   ImplicitInstance -> newHoleInstance loc
           trailingHoles <- mapM mkHoleArg toBeInserted
-          -- traceM ("adding trailing for " <> ppTrace builder
-          --         <> "\nwith type: " <> ppTrace builderTy
-          --         <> "\nariHint: " <> ppTrace ariHint
-          --         <> "\nariExpr: " <> ppTrace ariExpr
-          --         <> "\ntrailing: " <> ppTrace trailingHoles
-          --         <> "\nmhint: " <> ppTrace hi'
-          --        )
           mapM_ addTrailingHole trailingHoles
           where
             addTrailingHole :: ApplicationArg -> Sem r' ()
             addTrailingHole a = do
-              -- traceM $ "insert trailing " <> ppTrace (a ^. appArgIsImplicit)
               fun <- peekFunctionType (a ^. appArgIsImplicit)
               modify' (over appBuilderArgs (a :))
               checkMatchingArg a fun
 
         checkMatchingArg :: ApplicationArg -> Function -> Sem r' ()
         checkMatchingArg arg fun = do
-          -- traceM ("chekc arg: " <> ppTrace arg <> " " <> ppTrace (getLoc arg))
           dropArg
           let funParam = fun ^. functionLeft
               funL = funParam ^. paramType
               funR = fun ^. functionRight
-          -- traceM ("checkMatching Arg " <> ppTrace arg <> " with " <> ppTrace funL)
           arg' <- checkExpression funL (arg ^. appArg)
-          -- traceM ("AFTER checkMatching Arg " <> ppTrace arg <> " with " <> ppTrace funL
-          --         <> " returns " <> ppTrace arg')
           let subs :: Expression -> Sem r' Expression = substitutionApp (funParam ^. paramName, arg')
               applyArg :: Expression -> Expression
               applyArg l =
@@ -1146,7 +1089,6 @@ holesHelper mhint expr = do
                 insertMiddleHole impl = do
                   l <- gets (^. appBuilder)
                   let loc = getLoc l
-                  -- traceM $ "insert middle " <> ppTrace impl
                   h <- case impl of
                     Implicit -> newHoleImplicit loc
                     ImplicitInstance -> newHoleInstance loc

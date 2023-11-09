@@ -234,10 +234,10 @@ endBuild' = get @(BuilderState s) >>= throw
 mkRecordNameSignature :: forall s. (SingI s) => RhsRecord s -> RecordNameSignature s
 mkRecordNameSignature rhs =
   RecordNameSignature $
-     HashMap.fromList
-        [ (symbolParsed _nameItemSymbol, NameItem {..})
-          | (Indexed _nameItemIndex field) <- indexFrom 0 (toList (rhs ^.. rhsRecordStatements . each . _RecordStatementField)),
-            let _nameItemSymbol :: SymbolType s = field ^. fieldName
-                _nameItemType = field ^. fieldType
-                _nameItemDefault :: Maybe (ArgDefault s) = Nothing
-        ]
+    HashMap.fromList
+      [ (symbolParsed _nameItemSymbol, NameItem {..})
+        | (Indexed _nameItemIndex field) <- indexFrom 0 (toList (rhs ^.. rhsRecordStatements . each . _RecordStatementField)),
+          let _nameItemSymbol :: SymbolType s = field ^. fieldName
+              _nameItemType = field ^. fieldType
+              _nameItemDefault :: Maybe (ArgDefault s) = Nothing
+      ]

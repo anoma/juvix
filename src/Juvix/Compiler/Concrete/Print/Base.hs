@@ -174,8 +174,9 @@ instance (SingI s) => PrettyPrint (NameItem s) where
           d <- _nameItemDefault
           return (noLoc C.kwAssign <+> ppExpressionType (d ^. argDefaultValue))
     ppSymbolType _nameItemSymbol <> ppCode Kw.kwExclamation <> noLoc (pretty _nameItemIndex)
-       <+> ppCode Kw.kwColon <+> ppExpressionType _nameItemType
-       <+?> defaultVal
+      <+> ppCode Kw.kwColon
+      <+> ppExpressionType _nameItemType
+      <+?> defaultVal
 
 instance (SingI s) => PrettyPrint (NameBlock s) where
   ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => NameBlock s -> Sem r ()

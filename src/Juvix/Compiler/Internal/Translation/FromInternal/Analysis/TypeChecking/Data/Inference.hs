@@ -282,12 +282,6 @@ weakNormalize' = go
       case s of
         Fresh -> return (ExpressionHole h)
         Refined r -> go r
-    -- goInstanceHole :: Hole -> Sem r Expression
-    -- goInstanceHole h = do
-    --   s <- getMetavar h
-    --   case s of
-    --     Fresh -> return (ExpressionInstanceHole h)
-    --     Refined r -> go r
     goInstanceHole :: InstanceHole -> Sem r Expression
     goInstanceHole = return . ExpressionInstanceHole
 
@@ -525,7 +519,7 @@ addIdens idens = do
 functionDefEval :: forall r'. (Members '[State FunctionsTable, Termination, Error TypeCheckerError, NameIdGen] r') => FunctionDef -> Sem r' (Maybe Expression)
 functionDefEval f = do
   (params :: [FunctionParameter], ret :: Expression) <- unfoldFunType <$> strongNorm (f ^. funDefType)
-  r <- runFail (goTop params (isUniverse ret))
+  r <- runFail (goTop params (canBeUniverse ret))
   when (isNothing r && isUniverse ret) (throw (ErrUnsupportedTypeFunction (UnsupportedTypeFunction f)))
   return r
   where

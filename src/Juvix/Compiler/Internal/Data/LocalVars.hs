@@ -6,7 +6,6 @@ import Juvix.Prelude
 
 data LocalVars = LocalVars
   { _localTypes :: HashMap VarName Expression,
-    -- _localDefs :: HashMap Name Expression,
     _localTyMap :: HashMap VarName VarName
   }
 
@@ -18,7 +17,6 @@ emptyLocalVars =
   LocalVars
     { _localTypes = mempty,
       _localTyMap = mempty
-      -- _localDefs = mempty
     }
 
 instance Monoid LocalVars where

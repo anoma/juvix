@@ -361,7 +361,6 @@ goType ::
   Sem r Type
 goType ty = do
   normTy <- strongNormalizeHelper ty
-  -- traceM ("ty = " <> Internal.ppTrace ty <> ". Normalized = " <> Internal.ppTrace normTy)
   squashApps <$> goExpression normTy
 
 mkFunBody ::

@@ -506,9 +506,10 @@ goInductiveParameters params@InductiveParameters {..} = do
   case paramType' of
     Internal.ExpressionUniverse {} -> return ()
     Internal.ExpressionHole {} -> return ()
-    _ -> unless newAlgo .
-      throw $
-        ErrUnsupported
+    _ ->
+      unless newAlgo
+        . throw
+        $ ErrUnsupported
           Unsupported
             { _unsupportedMsg = "only type variables of small types are allowed",
               _unsupportedLoc = getLoc params

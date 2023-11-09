@@ -184,7 +184,6 @@ instance ToGenericError WrongType where
           msg =
             "The"
               <+> thing
-              -- <+> either (ppCode opts') (ppCode opts') subjectThing
               <+> either (ppCode opts') (ppCode opts') subjectThing
               <+> "has type:"
                 <> line
