@@ -636,9 +636,9 @@ readScopeModule import_ = do
     Left m' -> return m'
     Right m' ->
       (^. scopedModuleRefScopedModule) <$> local addImport (checkTopModule m')
-    where
-      addImport :: ScopeParameters -> ScopeParameters
-      addImport = over scopeTopParents (cons import_)
+  where
+    addImport :: ScopeParameters -> ScopeParameters
+    addImport = over scopeTopParents (cons import_)
 
 checkFixityInfo ::
   forall r.
@@ -1077,6 +1077,7 @@ checkTopModule m@Module {..} = do
                 ScopedModule
                   { _scopedModulePath = path',
                     _scopedModuleName = S.topModulePathName path',
+                    _scopedModuleFilePath = P.getModuleFilePath m,
                     _scopedModuleExportInfo = e
                   }
           return (ScopedModuleRef' {..}, path')
@@ -1423,7 +1424,7 @@ checkLocalModule ::
   (Members '[Error ScoperError, State Scope, Reader ScopeParameters, State ScoperState, InfoTableBuilder, NameIdGen, Reader BindingStrategy] r) =>
   Module 'Parsed 'ModuleLocal ->
   Sem r (Module 'Scoped 'ModuleLocal)
-checkLocalModule Module {..} = do
+checkLocalModule md@Module {..} = do
   (moduleExportInfo, moduleBody', moduleDoc') <-
     withLocalScope $ do
       inheritScope
@@ -1447,6 +1448,7 @@ checkLocalModule Module {..} = do
         ScopedModule
           { _scopedModulePath = set nameConcrete (moduleNameToTopModulePath (NameUnqualified _modulePath)) moduleName,
             _scopedModuleName = moduleName,
+            _scopedModuleFilePath = P.getModuleFilePath md,
             _scopedModuleExportInfo = moduleExportInfo
           }
   modify (over scoperModules (HashMap.insert moduleId smod))

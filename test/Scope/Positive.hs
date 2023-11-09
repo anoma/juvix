@@ -14,6 +14,7 @@ import Juvix.Compiler.Pipeline.Package.Loader.Error
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff.IO
 import Juvix.Compiler.Pipeline.Package.Loader.PathResolver
 import Juvix.Compiler.Pipeline.Setup
+import Juvix.Compiler.Store.Scoped.Language
 import Juvix.Data.Effect.Git
 import Juvix.Data.Effect.Process
 import Juvix.Prelude.Aeson
@@ -41,6 +42,11 @@ root = relToProject $(mkRelDir "tests/positive")
 
 renderCodeNew :: (P.PrettyPrint c) => c -> Text
 renderCodeNew = toPlainText . P.ppOutNoComments P.defaultOptions
+
+getModuleFilePath' :: Either ScopedModule (Scoper.Module s 'Scoper.ModuleTop) -> Path Abs File
+getModuleFilePath' = \case
+  Left m -> m ^. scopedModuleFilePath
+  Right m -> getModuleFilePath m
 
 testDescr :: PosTest -> TestDescr
 testDescr PosTest {..} = helper renderCodeNew
@@ -105,7 +111,7 @@ testDescr PosTest {..} = helper renderCodeNew
                     fsParsed :: HashMap (Path Abs File) Text
                     fsParsed =
                       HashMap.fromList $
-                        [ (getModuleFilePath m, renderCodeNew m)
+                        [ (getModuleFilePath' m, either renderCodeNew renderCodeNew m)
                           | m <- toList (p ^. Parser.resultTable . Parser.infoParsedModules)
                         ]
                           <> yamlFiles

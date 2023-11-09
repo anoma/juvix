@@ -20,7 +20,7 @@ import Juvix.Compiler.Store.Scoped.Language
 import Juvix.Prelude hiding (some)
 import Juvix.Prelude.Parsing
 
-getModuleFilePath :: Module s 'ModuleTop -> Path Abs File
+getModuleFilePath :: Module s r -> Path Abs File
 getModuleFilePath m = getLoc (m ^. moduleKw) ^. intervalFile
 
 unfoldApplication :: Application -> (Expression, [Expression])

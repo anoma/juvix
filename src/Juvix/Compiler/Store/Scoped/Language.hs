@@ -47,6 +47,7 @@ data ExportInfo = ExportInfo
 data ScopedModule = ScopedModule
   { _scopedModulePath :: S.TopModulePath,
     _scopedModuleName :: ScopedName,
+    _scopedModuleFilePath :: Path Abs File,
     _scopedModuleExportInfo :: ExportInfo
   }
   deriving stock (Show, Eq, Ord, Generic)

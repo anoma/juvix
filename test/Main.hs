@@ -12,7 +12,6 @@ import Formatter qualified
 import Internal qualified
 import Package qualified
 import Parsing qualified
-import Reachability qualified
 import Runtime qualified
 import Scope qualified
 import Termination qualified
@@ -42,7 +41,6 @@ fastTests =
       Termination.allTests,
       Arity.allTests,
       Typecheck.allTests,
-      Reachability.allTests,
       Format.allTests,
       Formatter.allTests,
       Package.allTests

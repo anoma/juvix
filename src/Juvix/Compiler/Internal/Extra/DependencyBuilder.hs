@@ -127,8 +127,11 @@ goModuleNoVisited (ModuleIndex m) = do
   mapM_ (goMutual (m ^. moduleName)) (b ^. moduleStatements)
   mapM_ goImport (b ^. moduleImports)
 
-goImport :: (Members '[Reader ExportsTable, State DependencyGraph, State StartNodes, State BuilderState, Visit ModuleIndex] r) => Import -> Sem r ()
-goImport (Import m) = undefined
+goImport ::
+  --  (Members '[Reader ExportsTable, State DependencyGraph, State StartNodes, State BuilderState, Visit ModuleIndex] r) =>
+  Import ->
+  Sem r ()
+goImport (Import _) = return ()
 
 goPreModule :: (Members '[Reader ExportsTable, State DependencyGraph, State StartNodes, State BuilderState, Visit ModuleIndex] r) => PreModule -> Sem r ()
 goPreModule m = do
