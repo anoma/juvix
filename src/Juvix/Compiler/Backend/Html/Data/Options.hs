@@ -16,6 +16,21 @@ data HtmlOptions = HtmlOptions
     _htmlOptionsNoFooter :: Bool
   }
 
+defaultHtmlOptions :: HtmlOptions
+defaultHtmlOptions =
+  HtmlOptions
+    { _htmlOptionsKind = HtmlDoc,
+      _htmlOptionsAssetsPrefix = "",
+      _htmlOptionsUrlPrefix = "",
+      _htmlOptionsIdPrefix = "",
+      _htmlOptionsOnlyCode = False,
+      _htmlOptionsNoPath = False,
+      _htmlOptionsOutputDir = $(mkAbsDir "/tmp"),
+      _htmlOptionsParamBase = "",
+      _htmlOptionsTheme = Nord,
+      _htmlOptionsNoFooter = False
+    }
+
 data Theme
   = Nord
   | Ayu

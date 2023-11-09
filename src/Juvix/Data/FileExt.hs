@@ -111,7 +111,7 @@ isJuvixFile = (== Just juvixFileExt) . fileExtension
 
 isJuvixMarkdownFile :: Path b File -> Bool
 isJuvixMarkdownFile p = case splitExtension p of
-  Just (f, ext) -> ext == juvixMarkdownFileExt && isJuvixFile f
+  Just (f, ext) -> ext == markdownFileExt && isJuvixFile f
   _ -> False
 
 isJuvixGebFile :: Path b File -> Bool

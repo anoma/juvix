@@ -1071,7 +1071,8 @@ checkTopModule m@Module {..} = do
                     _modulePragmas = _modulePragmas,
                     _moduleKw,
                     _moduleInductive,
-                    _moduleKwEnd
+                    _moduleKwEnd,
+                    ..
                   }
               _moduleRefName = S.unConcrete path'
           return (ModuleRef'' {..}, path')
@@ -1304,6 +1305,8 @@ checkSections sec = do
                       { _moduleDoc = Nothing,
                         _modulePragmas = Nothing,
                         _moduleInductive = True,
+                        _moduleMarkdown = Nothing,
+                        _moduleMarkdownSeparation = Nothing,
                         ..
                       }
                   where
@@ -1434,6 +1437,8 @@ checkLocalModule Module {..} = do
             _moduleBody = moduleBody',
             _moduleDoc = moduleDoc',
             _modulePragmas = _modulePragmas,
+            _moduleMarkdown = Nothing,
+            _moduleMarkdownSeparation = Nothing,
             _moduleKw,
             _moduleInductive,
             _moduleKwEnd

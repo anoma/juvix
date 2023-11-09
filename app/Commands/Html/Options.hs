@@ -1,6 +1,7 @@
 module Commands.Html.Options where
 
 import CommonOptions
+import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Compiler.Backend.Html.Data.Options hiding (HtmlOptions)
 
 data HtmlOptions = HtmlOptions
@@ -91,7 +92,7 @@ parseHtml = do
       ( long "open"
           <> help "Open the documentation after generating it"
       )
-  _htmlInputFile <- parseInputFile FileExtJuvix
+  _htmlInputFile <- parseInputFiles (NonEmpty.fromList [FileExtJuvix, FileExtJuvixMarkdown])
   pure HtmlOptions {..}
   where
     allThemes :: [Theme]

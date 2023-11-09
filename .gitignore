@@ -90,3 +90,4 @@ hie.yaml
 /.shake/
 /.benchmark-results/
 docs/assets/**
+.repos
