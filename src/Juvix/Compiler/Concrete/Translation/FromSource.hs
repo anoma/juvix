@@ -36,6 +36,15 @@ import Juvix.Prelude.Pretty
   ( Pretty,
     prettyText,
   )
+import Polysemy.Input (Input)
+import Polysemy.Input qualified as Input
+
+data MdModuleBuilder = MdModuleBuilder
+  { _mdModuleBuilder :: Module 'Parsed 'ModuleTop,
+    _mdModuleBuilderBlocksLengths :: [Int]
+  }
+
+makeLenses ''MdModuleBuilder
 
 type JudocStash = State (Maybe (Judoc 'Parsed))
 
@@ -143,17 +152,27 @@ runModuleParser fileName input
         Right r -> registerModule r $> Right r
 
 runMarkdownModuleParser ::
-  (Members '[Error ParserError, Files, PathResolver, NameIdGen, InfoTableBuilder] r) =>
+  (Members '[Files, PathResolver, NameIdGen, InfoTableBuilder] r) =>
   Path Abs File ->
   Mk ->
   Sem r (Either ParserError (Module 'Parsed 'ModuleTop))
-runMarkdownModuleParser fileName mk = do
-  res <- go Nothing (MK.extractJuvixCodeBlock mk) []
-  case res of
-    Left err -> return . Left $ err
-    Right m' -> do
-      let m = set moduleMarkdown (Just mk) m'
-      registerModule m $> Right m
+runMarkdownModuleParser fileName mk =
+  runError $ case nonEmpty (MK.extractJuvixCodeBlock mk) of
+    -- TODO proper error
+    Nothing -> error "There is no module declaration in the markdown file"
+    Just (firstBlock :| restBlocks) -> do
+      m0 <- parseFirstBlock firstBlock
+      let iniBuilder =
+            MdModuleBuilder
+              { _mdModuleBuilder = m0,
+                _mdModuleBuilderBlocksLengths = [length (m0 ^. moduleBody)]
+              }
+      res <- Input.runInputList restBlocks (execState iniBuilder parseRestBlocks)
+      let m =
+            set moduleMarkdown (Just mk)
+              . set moduleMarkdownSeparation (Just (reverse (res ^. mdModuleBuilderBlocksLengths)))
+              $ res ^. mdModuleBuilder
+      registerModule m $> m
   where
     getInitPos :: Interval -> P.SourcePos
     getInitPos i =
@@ -183,39 +202,36 @@ runMarkdownModuleParser fileName mk = do
               P.stateOffset = 0,
               P.stateParseErrors = []
             }
-    go ::
-      forall r.
-      (Members '[Error ParserError, Files, PathResolver, NameIdGen, InfoTableBuilder] r) =>
-      Maybe (Module 'Parsed 'ModuleTop) ->
-      [MK.JuvixCodeBlock] ->
-      [Int] ->
-      Sem r (Either ParserError (Module 'Parsed 'ModuleTop))
-    go Nothing [] _ =
-      error "There is no module declaration in the markdown file"
-    go Nothing (x : xs) ls = do
-      (_, res) <-
-        evalState (Nothing @ParsedPragmas)
+    parseHelper ::
+      (Members '[Error ParserError] r') =>
+      P.ParsecT Void Text (Sem (JudocStash ': PragmasStash ': r')) a ->
+      MK.JuvixCodeBlock ->
+      Sem r' a
+    parseHelper p x = do
+      res <-
+        fmap snd
+          . evalState (Nothing @ParsedPragmas)
           . evalState (Nothing @(Judoc 'Parsed))
-          $ P.runParserT' topMarkdownModuleDef (getInitialParserState x)
+          $ P.runParserT' p (getInitialParserState x)
       case res of
-        Left err ->
-          return . Left . ErrMegaparsec . MegaparsecError $ err
-        Right m -> do
-          go (Just m) xs (length (m ^. moduleBody) : ls)
-    go (Just m) [] ls =
-      return
-        . Right
-        $ set moduleMarkdownSeparation (Just (reverse ls)) m
-    go (Just m') (x : xs) n = do
-      (_, res) <-
-        evalState (Nothing @ParsedPragmas)
-          . evalState (Nothing @(Judoc 'Parsed))
-          $ P.runParserT' parseTopStatements (getInitialParserState x)
-      case res of
-        Left err -> return . Left . ErrMegaparsec . MegaparsecError $ err
-        Right stmts -> do
-          let m = set moduleBody (m' ^. moduleBody <> stmts) m'
-          go (Just m) xs (length stmts : n)
+        Left err -> throw . ErrMegaparsec . MegaparsecError $ err
+        Right m -> return m
+
+    parseFirstBlock ::
+      (Members '[Error ParserError, Files, InfoTableBuilder, NameIdGen, PathResolver] r') =>
+      MK.JuvixCodeBlock ->
+      Sem r' (Module 'Parsed 'ModuleTop)
+    parseFirstBlock x = parseHelper topMarkdownModuleDef x
+
+    parseRestBlocks ::
+      forall r'.
+      (Members '[Error ParserError, Input (Maybe MK.JuvixCodeBlock), State MdModuleBuilder, Files, PathResolver, NameIdGen, InfoTableBuilder] r') =>
+      Sem r' ()
+    parseRestBlocks = whenJustM Input.input $ \x -> do
+      stmts <- parseHelper parseTopStatements x
+      modify' (over (mdModuleBuilder . moduleBody) (<> stmts))
+      modify' (over mdModuleBuilderBlocksLengths (length stmts :))
+      parseRestBlocks
 
 runModuleStdinParser ::
   (Members '[Error ParserError, Files, PathResolver, NameIdGen, InfoTableBuilder] r) =>
