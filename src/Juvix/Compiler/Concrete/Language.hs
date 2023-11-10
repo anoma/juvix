@@ -921,6 +921,7 @@ type FunctionName s = SymbolType s
 
 type LocalModuleName s = SymbolType s
 
+-- TODO add MarkdownInfo that has both new fields
 data Module (s :: Stage) (t :: ModuleIsTop) = Module
   { _moduleKw :: KeywordRef,
     _modulePath :: ModulePathType s t,
