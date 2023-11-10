@@ -997,6 +997,7 @@ holesHelper mhint expr = do
       hint
         | null args = mhint
         | otherwise = Nothing
+  arityCheckBuiltins f args
   fTy <- inferLeftAppExpression hint f
   let iniBuilder =
         AppBuilder
@@ -1011,6 +1012,44 @@ holesHelper mhint expr = do
         _typedExpression = st' ^. appBuilder
       }
   where
+    arityCheckBuiltins :: Expression -> [ApplicationArg] -> Sem r ()
+    arityCheckBuiltins f args = do
+      case f of
+        ExpressionIden (IdenAxiom n) -> do
+          blt <- getAxiomBuiltinInfo n
+          case blt of
+            Just BuiltinIOSequence -> checkBuiltinApp n 0 2 args
+            Just BuiltinTrace -> checkBuiltinApp n 1 1 args
+            _ -> return ()
+        ExpressionIden (IdenFunction n) -> do
+          blt <- getFunctionBuiltinInfo n
+          case blt of
+            Just BuiltinBoolIf -> checkBuiltinApp n 1 3 args
+            Just BuiltinBoolOr -> checkBuiltinApp n 0 2 args
+            Just BuiltinBoolAnd -> checkBuiltinApp n 0 2 args
+            Just BuiltinSeq -> checkBuiltinApp n 2 2 args
+            _ -> return ()
+        _ -> return ()
+
+    checkBuiltinApp :: Name -> Int -> Int -> [ApplicationArg] -> Sem r ()
+    checkBuiltinApp n implArgsNum argsNum args = do
+      args' <- goImplArgs implArgsNum args
+      if
+          | length args' >= argsNum -> return ()
+          | otherwise ->
+              throw
+                . ErrArityCheckerError
+                $ ErrBuiltinNotFullyApplied
+                  BuiltinNotFullyApplied
+                    { _builtinNotFullyAppliedName = n,
+                      _builtinNotFullyAplliedExpectedArgsNum = argsNum
+                    }
+      where
+        goImplArgs :: Int -> [ApplicationArg] -> Sem r [ApplicationArg]
+        goImplArgs 0 as = return as
+        goImplArgs k ((ApplicationArg Implicit _) : as) = goImplArgs (k - 1) as
+        goImplArgs _ as = return as
+
     goArgs :: forall r'. (r' ~ State AppBuilder ': r) => Sem r' ()
     goArgs = peekArg >>= maybe (insertTrailingHolesMay mhint) goNextArg
       where
