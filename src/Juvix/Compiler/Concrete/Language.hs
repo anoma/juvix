@@ -921,6 +921,12 @@ type FunctionName s = SymbolType s
 
 type LocalModuleName s = SymbolType s
 
+data MarkdownInfo = MarkdownInfo
+  { _markdownInfo :: Mk,
+    _markdownInfoBlockLengths :: [Int]
+  }
+  deriving stock (Show, Eq, Ord)
+
 -- TODO add MarkdownInfo that has both new fields
 data Module (s :: Stage) (t :: ModuleIsTop) = Module
   { _moduleKw :: KeywordRef,
@@ -930,8 +936,7 @@ data Module (s :: Stage) (t :: ModuleIsTop) = Module
     _moduleBody :: [Statement s],
     _moduleKwEnd :: ModuleEndType t,
     _moduleInductive :: ModuleInductiveType t,
-    _moduleMarkdown :: Maybe Mk,
-    _moduleMarkdownSeparation :: Maybe [Int]
+    _moduleMarkdownInfo :: Maybe MarkdownInfo
   }
 
 deriving stock instance Show (Module 'Parsed 'ModuleTop)

@@ -169,8 +169,11 @@ runMarkdownModuleParser fileName mk =
               }
       res <- Input.runInputList restBlocks (execState iniBuilder parseRestBlocks)
       let m =
-            set moduleMarkdown (Just mk)
-              . set moduleMarkdownSeparation (Just (reverse (res ^. mdModuleBuilderBlocksLengths)))
+            set moduleMarkdownInfo (Just
+              MarkdownInfo
+                { _markdownInfo = mk,
+                  _markdownInfoBlockLengths = reverse (res ^. mdModuleBuilderBlocksLengths)
+                })
               $ res ^. mdModuleBuilder
       registerModule m $> m
   where
@@ -1632,8 +1635,7 @@ moduleDef = P.label "<module definition>" $ do
   _moduleKwEnd <- endModule
   return
     Module
-      { _moduleMarkdown = Nothing,
-        _moduleMarkdownSeparation = Nothing,
+      { _moduleMarkdownInfo = Nothing,
         ..
       }
   where
