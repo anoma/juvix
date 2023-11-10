@@ -26,8 +26,8 @@ data ProcessJuvixBlocksArgs = ProcessJuvixBlocksArgs
 
 data ProcessingState = ProcessingState
   { _processingStateMk :: Mk,
-    _processingStateFlag :: Bool,
-    _processingStateSep :: [Int],
+    _processingStateFirstBlock :: Bool,
+    _processingStateStmtsSeparation :: [Int],
     _processingStateStmts :: [Concrete.Statement 'Concrete.Scoped]
   }
 
@@ -60,8 +60,8 @@ fromJuvixMarkdown opts = do
       let st =
             ProcessingState
               { _processingStateMk = mk,
-                _processingStateFlag = True,
-                _processingStateSep = sepr,
+                _processingStateFirstBlock = True,
+                _processingStateStmtsSeparation = sepr,
                 _processingStateStmts = indModuleFilter $ m ^. Concrete.moduleBody
               }
       (_, r) <- runState st . runReader htmlOptions . runReader opts $ go
@@ -83,8 +83,8 @@ go ::
   ) =>
   Sem r Mk
 go = do
-  sepr <- gets @ProcessingState (^. processingStateSep)
   stmts <- gets @ProcessingState (^. processingStateStmts)
+  sepr <- gets @ProcessingState (^. processingStateStmtsSeparation)
   mk <- gets @ProcessingState (^. processingStateMk)
   case (sepr, stmts) of
     ([], _) -> return mk
@@ -93,16 +93,16 @@ go = do
         MkNull -> return mk
         MkTextBlock _ -> return mk
         MkConcat l r -> do
-          modify (over processingStateMk (const l))
+          modify (set processingStateMk l)
           lS <- go
-          modify (over processingStateMk (const r))
+          modify (set processingStateMk r)
           MkConcat lS <$> go
         MkJuvixCodeBlock j -> do
           m <-
             asks @ProcessJuvixBlocksArgs
               (^. processJuvixBlocksArgsModule)
 
-          f <- gets @ProcessingState (^. processingStateFlag)
+          isFirstBlock <- gets @ProcessingState (^. processingStateFirstBlock)
 
           let stmts' = take n stmts
 
@@ -116,7 +116,7 @@ go = do
               . (code ! Attr.class_ "juvix")
               . (pre ! Attr.class_ "src-content")
               <$> do
-                if f
+                if isFirstBlock
                   then do
                     let m' = set Concrete.moduleBody stmts' m
                     goRender m'
@@ -125,7 +125,7 @@ go = do
                       Html.preEscapedText $
                         Text.intercalate "\n\n" $
                           map (toStrict . Html.renderHtml) htmlStatements
-          let mock =
+          let _processingStateMk =
                 if j ^. juvixCodeBlockOptions . mkJuvixBlockOptionsHide
                   then MkNull
                   else
@@ -134,15 +134,15 @@ go = do
                         { _textBlock = resHtml,
                           _textBlockInterval = j ^. juvixCodeBlockInterval
                         }
-
-          modify @ProcessingState $ \s ->
-            s
-              { _processingStateMk = mock,
-                _processingStateFlag = False,
-                _processingStateSep = ns,
-                _processingStateStmts = drop n stmts
-              }
-          return mock
+          let newState =
+                ProcessingState
+                  { _processingStateFirstBlock = False,
+                    _processingStateStmtsSeparation = ns,
+                    _processingStateStmts = drop n stmts,
+                    ..
+                  }
+          modify @ProcessingState $ \_ -> newState
+          return _processingStateMk
 
 goRender :: (Concrete.PrettyPrint a, Members '[Reader HtmlRender.HtmlOptions, Reader ProcessJuvixBlocksArgs] r) => a -> Sem r Html
 goRender xs = do

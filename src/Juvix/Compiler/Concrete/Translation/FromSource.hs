@@ -266,6 +266,7 @@ topModuleDefStdin = do
   optional_ stashJudoc
   top moduleDef
 
+-- FIX: https://github.com/anoma/juvix/pull/251
 checkPath ::
   (Members '[PathResolver, Error ParserError] s) =>
   Maybe (Path Abs File) ->
@@ -337,6 +338,8 @@ juvixCodeBlockParser = do
           (t ^. withLocParam)
           (Just $ t ^. withLocInt)
 
+-- Keep it. Intended to be used later for processing Markdown inside TextBlocks
+-- or (Judoc) comments.
 commanMarkParser ::
   (Members '[Error ParserError, Files, NameIdGen, InfoTableBuilder, PathResolver] r) =>
   Path Abs File ->
