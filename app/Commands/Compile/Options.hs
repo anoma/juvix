@@ -15,4 +15,4 @@ parseMainCompileOptions :: Parser CompileOptions
 parseMainCompileOptions =
   parseCompileOptions
     supportedTargets
-    (parseInputFile FileExtJuvix)
+    (parseInputFiles (NonEmpty.fromList [FileExtJuvix, FileExtJuvixMarkdown]))

@@ -19,6 +19,7 @@ module Juvix.Compiler.Concrete.Language
 where
 
 import Data.Kind qualified as GHC
+import Juvix.Compiler.Backend.Markdown.Data.Types (Mk)
 import Juvix.Compiler.Concrete.Data.Builtins
 import Juvix.Compiler.Concrete.Data.Literal
 import Juvix.Compiler.Concrete.Data.ModuleIsTop
@@ -927,7 +928,9 @@ data Module (s :: Stage) (t :: ModuleIsTop) = Module
     _modulePragmas :: Maybe ParsedPragmas,
     _moduleBody :: [Statement s],
     _moduleKwEnd :: ModuleEndType t,
-    _moduleInductive :: ModuleInductiveType t
+    _moduleInductive :: ModuleInductiveType t,
+    _moduleMarkdown :: Maybe Mk,
+    _moduleMarkdownSeparation :: Maybe [Int]
   }
 
 deriving stock instance Show (Module 'Parsed 'ModuleTop)

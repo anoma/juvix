@@ -1,6 +1,7 @@
 module Commands.Eval.Options where
 
 import CommonOptions
+import Data.List.NonEmpty qualified as NonEmpty
 import Evaluator qualified as Eval
 import Juvix.Compiler.Core.Pretty.Options qualified as Core
 
@@ -29,7 +30,7 @@ instance CanonicalProjection EvalOptions Eval.EvalOptions where
 
 parseEvalOptions :: Parser EvalOptions
 parseEvalOptions = do
-  _evalInputFile <- parseInputFile FileExtJuvix
+  _evalInputFile <- parseInputFiles (NonEmpty.fromList [FileExtJuvix, FileExtJuvixMarkdown])
   _evalSymbolName <-
     optional $
       strOption
