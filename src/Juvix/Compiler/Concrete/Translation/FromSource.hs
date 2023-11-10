@@ -6,11 +6,14 @@ module Juvix.Compiler.Concrete.Translation.FromSource
   )
 where
 
+import Commonmark qualified as MK
 import Control.Applicative.Permutations
 import Data.ByteString.UTF8 qualified as BS
 import Data.List.NonEmpty.Extra qualified as NonEmpty
 import Data.Singletons
 import Data.Text qualified as Text
+import Juvix.Compiler.Backend.Markdown.Data.Types (Mk (..))
+import Juvix.Compiler.Backend.Markdown.Data.Types qualified as MK
 import Juvix.Compiler.Concrete.Data.Highlight.Input (HighlightBuilder, ignoreHighlightBuilder)
 import Juvix.Compiler.Concrete.Data.ParsedInfoTable
 import Juvix.Compiler.Concrete.Data.ParsedInfoTableBuilder
@@ -119,15 +122,100 @@ runReplInputParser fileName input = do
     Left err -> throw (ErrMegaparsec (MegaparsecError err))
     Right r -> return r
 
-runModuleParser :: (Members '[Error ParserError, Files, PathResolver, NameIdGen, InfoTableBuilder] r) => Path Abs File -> Text -> Sem r (Either ParserError (Module 'Parsed 'ModuleTop))
-runModuleParser fileName input = do
-  m <-
-    evalState (Nothing @ParsedPragmas)
-      . evalState (Nothing @(Judoc 'Parsed))
-      $ P.runParserT topModuleDef (toFilePath fileName) input
-  case m of
-    Left err -> return (Left (ErrMegaparsec (MegaparsecError err)))
-    Right r -> registerModule r $> Right r
+runModuleParser ::
+  (Members '[Error ParserError, Files, PathResolver, NameIdGen, InfoTableBuilder] r) =>
+  Path Abs File ->
+  Text ->
+  Sem r (Either ParserError (Module 'Parsed 'ModuleTop))
+runModuleParser fileName input
+  | isJuvixMarkdownFile fileName = do
+      res <- P.runParserT juvixCodeBlockParser (toFilePath fileName) input
+      case res of
+        Left err -> return . Left . ErrMegaparsec . MegaparsecError $ err
+        Right r -> runMarkdownModuleParser fileName r
+  | otherwise = do
+      m <-
+        evalState (Nothing @ParsedPragmas)
+          . evalState (Nothing @(Judoc 'Parsed))
+          $ P.runParserT topModuleDef (toFilePath fileName) input
+      case m of
+        Left err -> return . Left . ErrMegaparsec . MegaparsecError $ err
+        Right r -> registerModule r $> Right r
+
+runMarkdownModuleParser ::
+  (Members '[Error ParserError, Files, PathResolver, NameIdGen, InfoTableBuilder] r) =>
+  Path Abs File ->
+  Mk ->
+  Sem r (Either ParserError (Module 'Parsed 'ModuleTop))
+runMarkdownModuleParser fileName mk = do
+  res <- go Nothing (MK.extractJuvixCodeBlock mk) []
+  case res of
+    Left err -> return . Left $ err
+    Right m' -> do
+      let m = set moduleMarkdown (Just mk) m'
+      registerModule m $> Right m
+  where
+    getInitPos :: Interval -> P.SourcePos
+    getInitPos i =
+      P.SourcePos
+        { P.sourceName = fromAbsFile $ i ^. intervalFile,
+          P.sourceLine = P.mkPos (intervalStartLine i),
+          P.sourceColumn = P.mkPos (intervalStartCol i)
+        }
+
+    getInitialParserState :: forall a. MK.JuvixCodeBlock -> P.State Text a
+    getInitialParserState code =
+      let initPos =
+            maybe
+              (P.initialPos (toFilePath fileName))
+              getInitPos
+              (code ^. MK.juvixCodeBlockInterval)
+       in P.State
+            { P.stateInput = code ^. MK.juvixCodeBlock,
+              P.statePosState =
+                P.PosState
+                  { P.pstateInput = code ^. MK.juvixCodeBlock,
+                    P.pstateOffset = 0,
+                    P.pstateSourcePos = initPos,
+                    P.pstateTabWidth = P.defaultTabWidth,
+                    P.pstateLinePrefix = ""
+                  },
+              P.stateOffset = 0,
+              P.stateParseErrors = []
+            }
+    go ::
+      forall r.
+      (Members '[Error ParserError, Files, PathResolver, NameIdGen, InfoTableBuilder] r) =>
+      Maybe (Module 'Parsed 'ModuleTop) ->
+      [MK.JuvixCodeBlock] ->
+      [Int] ->
+      Sem r (Either ParserError (Module 'Parsed 'ModuleTop))
+    go Nothing [] _ =
+      error "There is no module declaration in the markdown file"
+    go Nothing (x : xs) ls = do
+      (_, res) <-
+        evalState (Nothing @ParsedPragmas)
+          . evalState (Nothing @(Judoc 'Parsed))
+          $ P.runParserT' topMarkdownModuleDef (getInitialParserState x)
+      case res of
+        Left err ->
+          return . Left . ErrMegaparsec . MegaparsecError $ err
+        Right m -> do
+          go (Just m) xs (length (m ^. moduleBody) : ls)
+    go (Just m) [] ls =
+      return
+        . Right
+        $ set moduleMarkdownSeparation (Just (reverse ls)) m
+    go (Just m') (x : xs) n = do
+      (_, res) <-
+        evalState (Nothing @ParsedPragmas)
+          . evalState (Nothing @(Judoc 'Parsed))
+          $ P.runParserT' parseTopStatements (getInitialParserState x)
+      case res of
+        Left err -> return . Left . ErrMegaparsec . MegaparsecError $ err
+        Right stmts -> do
+          let m = set moduleBody (m' ^. moduleBody <> stmts) m'
+          go (Just m) xs (length stmts : n)
 
 runModuleStdinParser ::
   (Members '[Error ParserError, Files, PathResolver, NameIdGen, InfoTableBuilder] r) =>
@@ -178,6 +266,26 @@ topModuleDefStdin = do
   optional_ stashJudoc
   top moduleDef
 
+-- FIX: https://github.com/anoma/juvix/pull/251
+checkPath ::
+  (Members '[PathResolver, Error ParserError] s) =>
+  Maybe (Path Abs File) ->
+  TopModulePath ->
+  Sem s ()
+checkPath maybePath path = do
+  let actualPath = fromMaybe (getLoc path ^. intervalFile) maybePath
+  mexpectedPath <- expectedModulePath actualPath path
+  whenJust mexpectedPath $ \expectedPath ->
+    unlessM (equalPaths expectedPath actualPath) $
+      throw
+        ( ErrWrongTopModuleName
+            WrongTopModuleName
+              { _wrongTopModuleNameActualName = path,
+                _wrongTopModuleNameExpectedPath = expectedPath,
+                _wrongTopModuleNameActualPath = actualPath
+              }
+        )
+
 topModuleDef ::
   (Members '[Error ParserError, Files, PathResolver, InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
   ParsecS r (Module 'Parsed 'ModuleTop)
@@ -185,23 +293,77 @@ topModuleDef = do
   space >> optional_ stashJudoc
   optional_ stashPragmas
   m <- top moduleDef
-  P.lift (checkPath (m ^. modulePath))
+  P.lift (checkPath Nothing (m ^. modulePath))
   return m
+
+juvixCodeBlockParser ::
+  ParsecS r Mk
+juvixCodeBlockParser = do
+  ls :: [Mk] <-
+    many $
+      goJuvixCodeBlock
+        <|> MK.MkTextBlock <$> goTextBlock
+  return $ foldl' (<>) MkNull ls
   where
-    checkPath :: (Members '[PathResolver, Error ParserError] s) => TopModulePath -> Sem s ()
-    checkPath path = do
-      let actualPath :: Path Abs File = getLoc path ^. intervalFile
-      mexpectedPath <- expectedModulePath actualPath path
-      whenJust mexpectedPath $ \expectedPath ->
-        unlessM (equalPaths expectedPath actualPath) $
-          throw
-            ( ErrWrongTopModuleName
-                WrongTopModuleName
-                  { _wrongTopModuleNameActualName = path,
-                    _wrongTopModuleNameExpectedPath = expectedPath,
-                    _wrongTopModuleNameActualPath = actualPath
-                  }
-            )
+    mdCodeToken :: ParsecS r Text
+    mdCodeToken = P.string "```"
+
+    goValidText :: ParsecS r (WithLoc Text)
+    goValidText = do
+      p <- withLoc $ P.manyTill P.anySingle (P.lookAhead mdCodeToken)
+      return $
+        WithLoc
+          { _withLocInt = getLoc p,
+            _withLocParam = Text.pack $ p ^. withLocParam
+          }
+
+    goTextBlock :: ParsecS r MK.TextBlock
+    goTextBlock = do
+      w <- goValidText
+      return $
+        MK.TextBlock
+          { _textBlock = w ^. withLocParam,
+            _textBlockInterval = Just $ getLoc w
+          }
+
+    goJuvixCodeBlock :: ParsecS r MK.Mk
+    goJuvixCodeBlock = do
+      void mdCodeToken
+      info :: Text <- Text.pack <$> P.manyTill P.anySingle (P.lookAhead (P.string "\n"))
+      t <- goValidText
+      void mdCodeToken
+      return $
+        MK.processCodeBlock
+          info
+          (t ^. withLocParam)
+          (Just $ t ^. withLocInt)
+
+-- Keep it. Intended to be used later for processing Markdown inside TextBlocks
+-- or (Judoc) comments.
+commanMarkParser ::
+  (Members '[Error ParserError, Files, NameIdGen, InfoTableBuilder, PathResolver] r) =>
+  Path Abs File ->
+  Text ->
+  Sem r (Either ParserError (Module 'Parsed 'ModuleTop))
+commanMarkParser fileName input = do
+  res <- MK.commonmarkWith MK.defaultSyntaxSpec (toFilePath fileName) input
+  case res of
+    Right (r :: Mk) -> runMarkdownModuleParser fileName r
+    Left r -> return . Left . ErrCommonmark . CommonmarkError $ r
+
+topMarkdownModuleDef ::
+  (Members '[Error ParserError, Files, PathResolver, InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
+  ParsecS r (Module 'Parsed 'ModuleTop)
+topMarkdownModuleDef = do
+  optional_ stashJudoc
+  optional_ stashPragmas
+  top moduleDef
+
+parseTopStatements ::
+  forall r.
+  (Members '[Error ParserError, Files, PathResolver, InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
+  ParsecS r [Statement 'Parsed]
+parseTopStatements = top $ P.sepEndBy statement semicolon
 
 replInput :: forall r. (Members '[Files, PathResolver, InfoTableBuilder, JudocStash, NameIdGen, Error ParserError, State (Maybe ParsedPragmas)] r) => ParsecS r ReplInput
 replInput =
@@ -290,6 +452,22 @@ l <?|> r = do
         P.lift (put j)
         r
   P.withRecovery (const recover) (P.try l)
+
+initialState :: String -> s -> P.State s e
+initialState fpath s =
+  P.State
+    { stateInput = s,
+      stateOffset = 0,
+      statePosState =
+        P.PosState
+          { pstateInput = s,
+            pstateOffset = 0,
+            pstateSourcePos = P.initialPos fpath,
+            pstateTabWidth = P.defaultTabWidth,
+            pstateLinePrefix = ""
+          },
+      stateParseErrors = []
+    }
 
 statement :: (Members '[Files, Error ParserError, PathResolver, InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) => ParsecS r (Statement 'Parsed)
 statement = P.label "<top level statement>" $ do
@@ -1436,7 +1614,12 @@ moduleDef = P.label "<module definition>" $ do
   semicolon
   _moduleBody <- P.sepEndBy statement semicolon
   _moduleKwEnd <- endModule
-  return Module {..}
+  return
+    Module
+      { _moduleMarkdown = Nothing,
+        _moduleMarkdownSeparation = Nothing,
+        ..
+      }
   where
     _moduleInductive :: ModuleInductiveType t
     _moduleInductive = case sing :: SModuleIsTop t of

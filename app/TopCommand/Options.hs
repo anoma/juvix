@@ -9,6 +9,7 @@ import Commands.Eval.Options
 import Commands.Format.Options
 import Commands.Html.Options
 import Commands.Init.Options
+import Commands.Markdown.Options
 import Commands.Repl.Options
 import Commands.Typecheck.Options
 import CommonOptions hiding (Doc)
@@ -25,6 +26,7 @@ data TopCommand
   | Clean CleanOptions
   | Eval EvalOptions
   | Html HtmlOptions
+  | Markdown MarkdownOptions
   | Dev Dev.DevCommand
   | Doctor DoctorOptions
   | Init InitOptions
@@ -188,6 +190,13 @@ commandHtml =
       (Html <$> parseHtml)
       (progDesc "Generate HTML for a Juvix file")
 
+commandMarkdown :: Mod CommandFields TopCommand
+commandMarkdown =
+  command "markdown" $
+    info
+      (Markdown <$> parseJuvixMarkdown)
+      (progDesc "Translate Juvix code blocks in a Markdown file to Markdown")
+
 commandDev :: Mod CommandFields TopCommand
 commandDev =
   command "dev" $
@@ -204,7 +213,8 @@ parseCompilerCommand =
           commandCheck,
           commandCompile,
           commandEval,
-          commandHtml
+          commandHtml,
+          commandMarkdown
         ]
     )
 

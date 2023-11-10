@@ -297,7 +297,11 @@ tests =
     posTest
       "Instance axiom"
       $(mkRelDir ".")
-      $(mkRelFile "InstanceAxiom.juvix")
+      $(mkRelFile "InstanceAxiom.juvix"),
+    posTest
+      "Markdown"
+      $(mkRelDir "Markdown")
+      $(mkRelFile "Test.juvix.md")
   ]
     <> [ compilationTest t | t <- Compilation.tests
        ]
