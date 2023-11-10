@@ -19,6 +19,7 @@ import Juvix.Compiler.Pipeline.Package.Loader.Error
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff.IO
 import Juvix.Data.Effect.Git.Process
 import Juvix.Data.Effect.Git.Process.Error
+import Juvix.Data.Effect.Lock.NoLock
 import Juvix.Data.Effect.Process (runProcessIO)
 import Juvix.Prelude
 
@@ -203,6 +204,7 @@ compileReplInputIO fp txt = do
     . runGitProcess
     . mapError (JuvixError @DependencyError)
     . mapError (JuvixError @PackageLoaderError)
+    . runNoLock
     . runEvalFileEffIO
     . runPathResolverArtifacts
     $ do

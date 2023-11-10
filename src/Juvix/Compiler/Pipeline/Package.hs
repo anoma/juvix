@@ -18,6 +18,8 @@ import Juvix.Compiler.Pipeline.Package.Loader
 import Juvix.Compiler.Pipeline.Package.Loader.Error
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff.IO
+import Juvix.Data.Effect.Lock.Base
+import Juvix.Data.Effect.Lock.NoLock
 import Juvix.Extra.Paths
 import Juvix.Prelude
 
@@ -124,7 +126,7 @@ readPackageFile root buildDir f = mapError (JuvixError @PackageLoaderError) $ do
   checkNoDuplicateDepNames f (pkg ^. packageDependencies)
   return (pkg {_packageLockfile = mLockfile})
 
-loadPackageFileIO :: (Members '[Error JuvixError, Embed IO] r) => Path Abs Dir -> BuildDir -> Sem r Package
+loadPackageFileIO :: (Members '[ScopedLock, Error JuvixError, Embed IO] r) => Path Abs Dir -> BuildDir -> Sem r Package
 loadPackageFileIO root buildDir =
   runFilesIO
     . mapError (JuvixError @PackageLoaderError)
@@ -137,6 +139,7 @@ readPackageIO root buildDir =
     . runFilesIO
     . runErrorIO' @JuvixError
     . mapError (JuvixError @PackageLoaderError)
+    . runNoLock
     . runEvalFileEffIO
     $ readPackage root buildDir
 
@@ -146,6 +149,7 @@ readGlobalPackageIO =
     . runFilesIO
     . runErrorIO' @JuvixError
     . mapError (JuvixError @PackageLoaderError)
+    . runNoLock
     . runEvalFileEffIO
     $ readGlobalPackage
 

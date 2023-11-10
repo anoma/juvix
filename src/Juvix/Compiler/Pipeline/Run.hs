@@ -24,6 +24,7 @@ import Juvix.Compiler.Pipeline.Package.Loader.Error
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff.IO
 import Juvix.Compiler.Pipeline.Package.Loader.PathResolver
 import Juvix.Data.Effect.Git
+import Juvix.Data.Effect.Lock.NoLock
 import Juvix.Data.Effect.Process
 import Juvix.Prelude
 
@@ -58,6 +59,7 @@ runIOEitherHelper entry = do
     . runGitProcess
     . mapError (JuvixError @DependencyError)
     . mapError (JuvixError @PackageLoaderError)
+    . runNoLock
     . runEvalFileEffIO
     . runPathResolver'
 
@@ -112,6 +114,7 @@ corePipelineIOEither entry = do
       . runGitProcess
       . mapError (JuvixError @DependencyError)
       . mapError (JuvixError @PackageLoaderError)
+      . runNoLock
       . runEvalFileEffIO
       . runPathResolver'
       $ upToCore
