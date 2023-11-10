@@ -1,4 +1,4 @@
-module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.DependenciesConfig where
+module Juvix.Compiler.Pipeline.Loader.PathResolver.DependenciesConfig where
 
 import Juvix.Prelude.Base
 

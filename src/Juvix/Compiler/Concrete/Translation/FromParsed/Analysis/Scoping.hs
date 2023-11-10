@@ -49,14 +49,14 @@ iniScoperState =
 scopeCheck ::
   (Members '[HighlightBuilder, Error ScoperError, NameIdGen, Reader EntryPoint] r) =>
   ParserResult ->
-  NonEmpty (Module 'Parsed 'ModuleTop) ->
+  Module 'Parsed 'ModuleTop ->
   Sem r ScoperResult
-scopeCheck pr modules =
+scopeCheck pr m =
   fmap mkResult
     . runInfoTableBuilder emptyInfoTable
     . runReader iniScopeParameters
     . runState iniScoperState
-    $ checkTopModules modules
+    $ checkTopModules m
   where
     iniScopeParameters :: ScopeParameters
     iniScopeParameters =
@@ -373,7 +373,7 @@ checkImport import_@Import {..} = do
   smodule <- maybe (readScopeModule import_) return (cache ^. at _importModule)
   let sname :: S.TopModulePath = smodule ^. scopedModulePath
       sname' :: S.Name = set S.nameConcrete (topModulePathToName _importModule) sname
-      moduleId = sname ^. S.nameId
+      mid = sname ^. S.nameId
       cmodule = set scopedModuleName sname' smodule
       importName :: S.TopModulePath = set S.nameConcrete _importModule sname
       synonymName :: Maybe S.TopModulePath = do
@@ -386,7 +386,7 @@ checkImport import_@Import {..} = do
   addModuleToScope cmodule
   registerName importName
   whenJust synonymName registerName
-  modify (over scoperModules (HashMap.insert moduleId cmodule))
+  modify (over scoperModules (HashMap.insert mid cmodule))
   importOpen' <- mapM (checkImportOpenParams cmodule) _importOpen
   return
     Import
@@ -1071,7 +1071,8 @@ checkTopModule m@Module {..} = do
                     _modulePragmas = _modulePragmas,
                     _moduleKw,
                     _moduleInductive,
-                    _moduleKwEnd
+                    _moduleKwEnd,
+                    _moduleId
                   }
               _scopedModuleRefScopedModule =
                 ScopedModule

@@ -1,12 +1,12 @@
-module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Base
-  ( module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Base,
-    module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.DependenciesConfig,
+module Juvix.Compiler.Pipeline.Loader.PathResolver.Base
+  ( module Juvix.Compiler.Pipeline.Loader.PathResolver.Base,
+    module Juvix.Compiler.Pipeline.Loader.PathResolver.DependenciesConfig,
   )
 where
 
 import Juvix.Compiler.Concrete.Data.Name
-import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.DependenciesConfig
-import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Error
+import Juvix.Compiler.Pipeline.Loader.PathResolver.DependenciesConfig
+import Juvix.Compiler.Pipeline.Loader.PathResolver.Error
 import Juvix.Prelude
 
 data PathResolver m a where

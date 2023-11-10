@@ -929,7 +929,8 @@ data Module (s :: Stage) (t :: ModuleIsTop) = Module
     _modulePragmas :: Maybe ParsedPragmas,
     _moduleBody :: [Statement s],
     _moduleKwEnd :: ModuleEndType t,
-    _moduleInductive :: ModuleInductiveType t
+    _moduleInductive :: ModuleInductiveType t,
+    _moduleId :: ModuleId
   }
 
 deriving stock instance Show (Module 'Parsed 'ModuleTop)

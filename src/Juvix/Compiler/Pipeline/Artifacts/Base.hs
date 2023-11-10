@@ -2,14 +2,13 @@ module Juvix.Compiler.Pipeline.Artifacts.Base where
 
 import Juvix.Compiler.Builtins
 import Juvix.Compiler.Concrete.Data.InfoTable qualified as Scoped
-import Juvix.Compiler.Concrete.Data.ParsedInfoTableBuilder (BuilderState)
 import Juvix.Compiler.Concrete.Data.Scope
 import Juvix.Compiler.Concrete.Data.Scope qualified as Scoped
-import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Data
 import Juvix.Compiler.Core.Data.InfoTableBuilder qualified as Core
 import Juvix.Compiler.Internal.Translation.FromConcrete qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context
+import Juvix.Compiler.Pipeline.Loader.PathResolver.Data
 import Juvix.Prelude
 
 -- | `Artifacts` contains enough information so that the pipeline can be

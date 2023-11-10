@@ -19,9 +19,6 @@ import Juvix.Compiler.Builtins
 import Juvix.Compiler.Concrete.Data.Highlight.Input
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Translation.FromParsed qualified as Scoper
-import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Base
-import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.DependenciesConfig
-import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Error
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
 import Juvix.Compiler.Core qualified as Core
 import Juvix.Compiler.Core.Translation.Stripped.FromCore qualified as Stripped
@@ -46,12 +43,6 @@ type TopPipelineEff = '[PathResolver, EvalFileEff, Error PackageLoaderError, Err
 --------------------------------------------------------------------------------
 -- Workflows
 --------------------------------------------------------------------------------
-
-upToSetup ::
-  (Members '[Reader EntryPoint, Files, GitClone, PathResolver] r) =>
-  DependenciesConfig ->
-  Sem r ()
-upToSetup = entrySetup
 
 upToParsing ::
   (Members '[HighlightBuilder, Reader EntryPoint, Files, Error JuvixError, NameIdGen, GitClone, PathResolver] r) =>

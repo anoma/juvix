@@ -1,4 +1,4 @@
-module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.PackageInfo where
+module Juvix.Compiler.Pipeline.Loader.PathResolver.PackageInfo where
 
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Prelude

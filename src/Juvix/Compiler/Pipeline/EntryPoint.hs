@@ -15,7 +15,7 @@ data SymbolPruningMode
   | KeepAll
   deriving stock (Eq, Show)
 
--- | The head of _entryModulePaths is assumed to be the Main module
+-- | A module in _entryModulePath is the unit of compilation
 data EntryPoint = EntryPoint
   { _entryPointRoot :: Path Abs Dir,
     -- | initial root for the path resolver. Usually it should be equal to

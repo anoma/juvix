@@ -4,7 +4,6 @@ import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Print (docDefault)
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
-import Juvix.Compiler.Concrete.Translation.FromSource.Data.Context
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Data.CodeAnn
 import Juvix.Extra.Paths

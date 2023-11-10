@@ -5,12 +5,10 @@ module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Data.Cont
 where
 
 import Juvix.Compiler.Concrete.Data.InfoTable
-import Juvix.Compiler.Concrete.Data.ParsedInfoTable qualified as Parsed
 import Juvix.Compiler.Concrete.Data.Scope
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as Scoped
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Translation.FromSource.Data.Context qualified as Parsed
-import Juvix.Compiler.Pipeline.EntryPoint (EntryPoint)
 import Juvix.Prelude
 
 data ScoperResult = ScoperResult
@@ -27,15 +25,9 @@ makeLenses ''ScoperResult
 mainModule :: Lens' ScoperResult (Module 'Scoped 'ModuleTop)
 mainModule = resultModules . _head1
 
-entryPoint :: Lens' ScoperResult EntryPoint
-entryPoint = resultParserResult . Parsed.resultEntry
-
 mainModuleSope :: ScoperResult -> Scope
 mainModuleSope r =
   r
     ^?! resultScope
       . at (r ^. mainModule . modulePath . Scoped.nameConcrete)
       . _Just
-
-comments :: Lens' ScoperResult Comments
-comments = resultParserResult . Parsed.resultTable . Parsed.infoParsedComments

@@ -2,8 +2,8 @@ module Juvix.Parser.Error where
 
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Pretty.Options (fromGenericOptions)
-import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Error
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error.Pretty
+import Juvix.Compiler.Pipeline.Loader.PathResolver.Error
 import Juvix.Extra.Paths
 import Juvix.Prelude
 import Text.Megaparsec qualified as M

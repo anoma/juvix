@@ -1,9 +1,9 @@
-module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver
-  ( module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Paths,
-    module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Base,
-    module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Error,
-    module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Data,
-    module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.PackageInfo,
+module Juvix.Compiler.Concrete.Translation.Pipeline.Loader.PathResolver
+  ( module Juvix.Compiler.Concrete.Translation.Pipeline.Loader.PathResolver.Paths,
+    module Juvix.Compiler.Concrete.Translation.Pipeline.Loader.PathResolver.Base,
+    module Juvix.Compiler.Concrete.Translation.Pipeline.Loader.PathResolver.Error,
+    module Juvix.Compiler.Concrete.Translation.Pipeline.Loader.PathResolver.Data,
+    module Juvix.Compiler.Concrete.Translation.Pipeline.Loader.PathResolver.PackageInfo,
     runPathResolver,
     runPathResolverPipe,
     runPathResolverPipe',
@@ -15,12 +15,12 @@ import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
 import Data.Text qualified as T
 import Juvix.Compiler.Concrete.Data.Name
-import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Base
-import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Data
-import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Error
-import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.PackageInfo
-import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Paths
 import Juvix.Compiler.Pipeline.EntryPoint
+import Juvix.Compiler.Pipeline.Loader.PathResolver.Base
+import Juvix.Compiler.Pipeline.Loader.PathResolver.Data
+import Juvix.Compiler.Pipeline.Loader.PathResolver.Error
+import Juvix.Compiler.Pipeline.Loader.PathResolver.PackageInfo
+import Juvix.Compiler.Pipeline.Loader.PathResolver.Paths
 import Juvix.Compiler.Pipeline.Lockfile
 import Juvix.Compiler.Pipeline.Package
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff

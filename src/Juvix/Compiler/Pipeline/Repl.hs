@@ -6,7 +6,6 @@ import Juvix.Compiler.Concrete.Data.ParsedInfoTableBuilder.BuilderState qualifie
 import Juvix.Compiler.Concrete.Data.Scope qualified as Scoper
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Translation.FromParsed qualified as Scoper
-import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
 import Juvix.Compiler.Core qualified as Core
 import Juvix.Compiler.Internal qualified as Internal
