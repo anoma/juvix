@@ -305,13 +305,18 @@ resolvePath' mp = do
               }
         )
 
-expectedPath' :: (Members '[Reader ResolverEnv] r) => Path Abs File -> TopModulePath -> Sem r (Maybe (Path Abs File))
+expectedPath' :: (Members '[Reader ResolverEnv] r) 
+  => Path Abs File -> TopModulePath -> Sem r (Path Abs File)
 expectedPath' actualPath m = do
   root <- asks (^. envRoot)
+  traceM $ "expected root" <> show root
   msingle <- asks (^. envSingleFile)
+  traceM $ "expected single" <> show msingle
+  let tp = topModulePathToRelativePath' m
+  traceM $ "expected topModpath" <> show tp 
   if
-      | msingle == Just actualPath -> return Nothing
-      | otherwise -> return (Just (root <//> topModulePathToRelativePath' m))
+      | msingle == Just actualPath -> return actualPath
+      | otherwise -> return (root <//> tp)
 
 re ::
   forall r a.

@@ -12,6 +12,8 @@ import Juvix.Extra.PackageFiles
 import Juvix.Extra.Paths
 import Juvix.Extra.Stdlib
 
+
+
 -- | A PackageResolver interpreter intended to be used to load a Package file.
 -- It aggregates files at `rootPath` and files from the global package stdlib.
 runPackagePathResolver :: forall r a. (Members '[TaggedLock, Files] r) => Path Abs Dir -> Sem (PathResolver ': r) a -> Sem r a
@@ -24,24 +26,40 @@ runPackagePathResolver rootPath sem = do
   let mkPackageRoot' = mkPackageRoot packageFiles' globalPackageDir globalStdlib
   ( interpretH $ \case
       RegisterDependencies {} -> pureT ()
-      ExpectedModulePath _ m -> do
+      ExpectedModulePath t m -> do
         let relPath = topModulePathToRelativePath' m
-        pureT ((<//> relPath) <$> (mkPackageRoot' relPath))
+        pureT $ PathInfoTopModule {
+          _pathInfoTopModule = t,
+          _pathInfoPackageRoot = mkPackageRoot' relPath,
+          _pathInfoRelPath = relPath
+        }
       WithPath m a -> do
         let relPath = topModulePathToRelativePath' m
             x :: Either PathResolverError (Path Abs Dir, Path Rel File)
             x = case mkPackageRoot' relPath of
-              Just p -> Right (p, relPath)
+              Just p -> Right (p ^. packageRoot, relPath)
               Nothing -> Left (ErrPackageInvalidImport PackageInvalidImport {_packageInvalidImport = m})
         runTSimple (return x) >>= bindTSimple a
     )
     sem
   where
-    mkPackageRoot :: HashSet (Path Rel File) -> Path Abs Dir -> Path Abs Dir -> Path Rel File -> Maybe (Path Abs Dir)
+    mkPackageRoot :: HashSet (Path Rel File) -> Path Abs Dir -> Path Abs Dir -> Path Rel File -> Maybe PackageRoot
     mkPackageRoot pkgFiles globalPackageDir globalStdlib relPath
-      | parent preludePath `isProperPrefixOf` relPath = Just globalStdlib
-      | relPath `HashSet.member` pkgFiles = Just globalPackageDir
-      | relPath == packageFilePath = Just rootPath
+      | parent preludePath `isProperPrefixOf` relPath =
+        Just $ PackageRoot {
+          _packageRoot = globalStdlib,
+          _packageRootType = RootGlobalStdlib
+        }
+      | relPath `HashSet.member` pkgFiles =
+        Just $ PackageRoot {
+          _packageRoot = globalPackageDir,
+          _packageRootType = RootGlobalPackage
+        }
+      | relPath == packageFilePath = 
+        Just $ PackageRoot {
+          _packageRoot = rootPath,
+          _packageRootType = RootLocalPackage
+        }
       | otherwise = Nothing
 
 runPackagePathResolver' :: (Members '[TaggedLock, Files] r) => Path Abs Dir -> Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
