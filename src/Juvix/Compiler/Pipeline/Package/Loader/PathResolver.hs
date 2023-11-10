@@ -27,12 +27,10 @@ runPackagePathResolver rootPath sem = do
   ( interpretH $ \case
       RegisterDependencies {} -> pureT ()
       ExpectedModulePath t m -> do
-        let relPath = topModulePathToRelativePath' m
-        pureT $ PathInfoTopModule {
-          _pathInfoTopModule = t,
-          _pathInfoPackageRoot = mkPackageRoot' relPath,
-          _pathInfoRelPath = relPath
-        }
+        let _pathInfoRelPath = topModulePathToRelativePath' m
+            _pathInfoTopModule = m ^. topModulePath
+            _pathInfoPackageRoot = mkPackageRoot' _pathInfoRelPath
+        pureT . Just $ PathInfoTopModule {..}
       WithPath m a -> do
         let relPath = topModulePathToRelativePath' m
             x :: Either PathResolverError (Path Abs Dir, Path Rel File)
