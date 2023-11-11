@@ -1,4 +1,3 @@
--- TODO remove comments after https://github.com/anoma/juvix/issues/2362 has been addressed
 module Traits2;
 
 trait

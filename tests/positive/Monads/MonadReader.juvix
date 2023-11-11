@@ -1,0 +1,11 @@
+module MonadReader;
+
+import Monad open;
+import Stdlib.Data.Unit open;
+
+trait
+type MonadReader (S : Type) (M : Type -> Type) :=
+  mkMonadReader {
+    monad : Monad M;
+    ask : M S;
+  };
