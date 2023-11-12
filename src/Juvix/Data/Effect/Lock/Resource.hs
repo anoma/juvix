@@ -1,11 +1,12 @@
 module Juvix.Data.Effect.Lock.Resource where
 
+import Control.Concurrent
 import Juvix.Data.Effect.Lock.Base
 import Juvix.Prelude
-import Control.Concurrent
 import Polysemy.Opaque
 
-runLockResource :: forall r a.
+runLockResource ::
+  forall r a.
   (Members '[Resource, Embed IO] r) =>
   Sem (ScopedLock ': r) a ->
   Sem r a

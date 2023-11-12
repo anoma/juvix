@@ -4,7 +4,8 @@ import Juvix.Data.Effect.Lock.Base
 import Juvix.Prelude
 import Polysemy.Opaque
 
-runNoLock :: forall r a.
+runNoLock ::
+  forall r a.
   Sem (ScopedLock ': r) a ->
   Sem r a
 runNoLock = interpretScopedH allocator handler

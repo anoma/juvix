@@ -3,6 +3,7 @@ module Package.Positive where
 import Base
 import Juvix.Compiler.Pipeline.Package
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff.IO
+import Juvix.Data.Effect.Lock.NoLock
 
 type FailMsg = String
 
@@ -29,6 +30,7 @@ testDescr PosTest {..} =
                   . runError @JuvixError
                   . runFilesIO
                   . mapError (JuvixError @PackageLoaderError)
+                  . runNoLock
                   . runEvalFileEffIO
                   . readPackage tRoot
                   $ buildDir
