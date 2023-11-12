@@ -96,7 +96,13 @@ closeState = \case
         goHole h =
           let st = getState h
            in case st of
-                Fresh -> throw (ErrUnsolvedMeta (UnsolvedMeta h))
+                Fresh ->
+                  throw $
+                    ErrUnsolvedMeta
+                      UnsolvedMeta
+                        { _unsolvedMeta = h,
+                          _unsolvedIsLoop = False
+                        }
                 Refined t -> do
                   s <- gets @(HashMap Hole Expression) (^. at h)
                   case s of
@@ -211,12 +217,8 @@ strongNormalize' = go
         Fresh -> return (ExpressionHole h)
         Refined r -> go r
 
-    goInstanceHole :: Hole -> Sem r Expression
-    goInstanceHole h = do
-      s <- getMetavar h
-      case s of
-        Fresh -> return (ExpressionInstanceHole h)
-        Refined r -> go r
+    goInstanceHole :: InstanceHole -> Sem r Expression
+    goInstanceHole = return . ExpressionInstanceHole
 
     goApp :: Application -> Sem r Expression
     goApp (Application l r i) = do
@@ -255,7 +257,7 @@ weakNormalize' = go
       ExpressionSimpleLambda {} -> return e
       ExpressionLambda {} -> return e
       ExpressionLet {} -> return e
-      ExpressionCase {} -> error "todo"
+      ExpressionCase {} -> return e
     goIden :: Iden -> Sem r Expression
     goIden i = case i of
       IdenFunction f -> do
@@ -280,12 +282,8 @@ weakNormalize' = go
       case s of
         Fresh -> return (ExpressionHole h)
         Refined r -> go r
-    goInstanceHole :: Hole -> Sem r Expression
-    goInstanceHole h = do
-      s <- getMetavar h
-      case s of
-        Fresh -> return (ExpressionInstanceHole h)
-        Refined r -> go r
+    goInstanceHole :: InstanceHole -> Sem r Expression
+    goInstanceHole = return . ExpressionInstanceHole
 
 queryMetavar' :: (Members '[State InferenceState] r) => Hole -> Sem r (Maybe Expression)
 queryMetavar' h = do
@@ -383,7 +381,13 @@ re = reinterpret $ \case
                       | otherwise =
                           do
                             holTy' <- strongNormalize' holTy
-                            when (ExpressionHole hol `elem` holTy' ^.. leafExpressions) (throw (ErrUnsolvedMeta (UnsolvedMeta hol)))
+                            let er =
+                                  ErrUnsolvedMeta
+                                    UnsolvedMeta
+                                      { _unsolvedMeta = hol,
+                                        _unsolvedIsLoop = True
+                                      }
+                            when (ExpressionHole hol `elem` holTy' ^.. leafExpressions) (throw er)
                             s <- gets (fromJust . (^. inferenceMap . at hol))
                             case s of
                               Fresh -> modify (over inferenceMap (HashMap.insert hol (Refined holTy')))
@@ -545,7 +549,7 @@ functionDefEval f = do
       goBody (f ^. funDefBody)
       where
         checkTerminating :: Sem r ()
-        checkTerminating = unlessM (functionIsTerminating (f ^. funDefName)) fail
+        checkTerminating = unlessM (functionSafeToNormalize (f ^. funDefName)) fail
 
         goBody :: Expression -> Sem r Expression
         goBody body = do
@@ -575,7 +579,7 @@ functionDefEval f = do
             go = \case
               [] -> return body'
               (p, ty) : ps
-                | Implicit <- p ^. patternArgIsImplicit -> fail
+                | isImplicitOrInstance (p ^. patternArgIsImplicit) -> fail
                 | otherwise -> go ps >>= goPattern (p ^. patternArgPattern, ty)
 
 registerFunctionDef :: (Members '[State FunctionsTable, Error TypeCheckerError, NameIdGen, Termination] r) => FunctionDef -> Sem r ()

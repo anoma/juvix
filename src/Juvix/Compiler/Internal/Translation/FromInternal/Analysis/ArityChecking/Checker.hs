@@ -396,7 +396,6 @@ checkLhs loc guessedBody ariSignature pats = do
 
     -- This is an heuristic and it can have an undesired result.
     -- Sometimes the outcome may even be confusing.
-    -- TODO default arguments??
     tailHelper :: Arity -> Maybe [IsImplicit]
     tailHelper a
       | 0 < pref = Just pref'
@@ -894,5 +893,5 @@ newHoleImplicit i loc = case i ^. arityParameterInfo . argInfoDefault of
     -- TODO update location
     return (True, e)
 
-newHoleInstance :: (Member NameIdGen r) => Interval -> Sem r Hole
-newHoleInstance loc = mkHole loc <$> freshNameId
+newHoleInstance :: (Member NameIdGen r) => Interval -> Sem r InstanceHole
+newHoleInstance loc = mkInstanceHole loc <$> freshNameId

@@ -753,7 +753,7 @@ goExpression = \case
   ExpressionUniverse uni -> return (Internal.ExpressionUniverse (goUniverse uni))
   ExpressionFunction func -> Internal.ExpressionFunction <$> goFunction func
   ExpressionHole h -> return (Internal.ExpressionHole h)
-  ExpressionInstanceHole h -> return (Internal.ExpressionInstanceHole h)
+  ExpressionInstanceHole h -> return (Internal.ExpressionInstanceHole (fromHole h))
   ExpressionIterator i -> goIterator i
   ExpressionNamedApplication i -> goNamedApplication i
   ExpressionNamedApplicationNew i -> goNamedApplicationNew i

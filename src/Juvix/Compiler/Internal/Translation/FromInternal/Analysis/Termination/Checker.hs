@@ -5,7 +5,7 @@ module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Che
     runTermination,
     evalTermination,
     execTermination,
-    functionIsTerminating,
+    functionSafeToNormalize,
     module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Data.TerminationState,
   )
 where
@@ -28,13 +28,8 @@ data Termination m a where
 
 makeSem ''Termination
 
-functionIsTerminating :: (Members '[Termination] r) => FunctionRef -> Sem r Bool
-functionIsTerminating = fmap terminates . functionTermination
-  where
-    terminates :: IsTerminating -> Bool
-    terminates = \case
-      TerminatingCheckedOrMarked -> True
-      TerminatingFailed -> False
+functionSafeToNormalize :: (Members '[Termination] r) => FunctionRef -> Sem r Bool
+functionSafeToNormalize = fmap safeToNormalize . functionTermination
 
 runTermination :: forall r a. (Members '[Error JuvixError] r) => TerminationState -> Sem (Termination ': r) a -> Sem r (TerminationState, a)
 runTermination ini m = do
@@ -79,7 +74,7 @@ functionTermination' ::
   (Members '[State TerminationState] r) =>
   FunctionName ->
   Sem r IsTerminating
-functionTermination' f = fromMaybe TerminatingCheckedOrMarked <$> gets (^. terminationTable . at f)
+functionTermination' f = fromMaybe TerminatingChecked <$> gets (^. terminationTable . at f)
 
 -- | Returns the set of non-terminating functions. Does not go into imports.
 checkTerminationShallow' ::
@@ -102,9 +97,9 @@ checkTerminationShallow' topModule = do
         order = findOrder rb
     addTerminating funName $
       if
-          | markedTerminating -> TerminatingCheckedOrMarked
+          | Just {} <- order -> TerminatingChecked
+          | markedTerminating -> TerminatingFailedMarked
           | Nothing <- order -> TerminatingFailed
-          | Just {} <- order -> TerminatingCheckedOrMarked
 
 scanModule ::
   (Members '[State CallMap] r) =>

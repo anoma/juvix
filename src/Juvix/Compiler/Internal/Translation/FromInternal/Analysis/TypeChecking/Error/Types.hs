@@ -77,8 +77,9 @@ instance ToGenericError WrongReturnType where
                 <> line
                 <> indent' (ppCode opts' (e ^. wrongReturnTypeExpected))
 
-newtype UnsolvedMeta = UnsolvedMeta
-  { _unsolvedMeta :: Hole
+data UnsolvedMeta = UnsolvedMeta
+  { _unsolvedMeta :: Hole,
+    _unsolvedIsLoop :: Bool
   }
 
 makeLenses ''UnsolvedMeta
@@ -98,7 +99,11 @@ instance ToGenericError UnsolvedMeta where
       mkMsg :: Sem r (Doc Ann)
       mkMsg = do
         m <- holeid
-        return ("Unable to infer the hole" <>? m)
+        let loopMsg
+              | e ^. unsolvedIsLoop = Just "The inference algorithm found a loop."
+              | otherwise = Nothing
+            msg = "Unable to infer the hole" <>? loopMsg <>? m
+        return msg
       holeid :: Sem r (Maybe (Doc Ann))
       holeid = runFail $ do
         opts <- fromGenericOptions <$> ask
@@ -156,6 +161,7 @@ instance ToGenericError WrongConstructorAppArgs where
 -- | the type of an expression does not match the inferred type
 data WrongType = WrongType
   { _wrongTypeThing :: Either Expression Pattern,
+    _wrongTypeThingWithHoles :: Maybe (Either Expression Pattern),
     _wrongTypeExpected :: Expression,
     _wrongTypeActual :: Expression
   }
@@ -191,13 +197,13 @@ instance ToGenericError WrongType where
             Left {} -> "expression"
             Right {} -> "pattern"
           subjectThing :: Either Expression Pattern
-          subjectThing = e ^. wrongTypeThing
+          subjectThing = fromMaybe (e ^. wrongTypeThing) (e ^. wrongTypeThingWithHoles)
 
 -- | The left hand expression of a function application is not
 -- a function type.
 data ExpectedFunctionType = ExpectedFunctionType
   { _expectedFunctionTypeExpression :: Expression,
-    _expectedFunctionTypeApp :: Expression,
+    _expectedFunctionTypeLeft :: Expression,
     _expectedFunctionTypeType :: Expression
   }
 
@@ -226,7 +232,7 @@ instance ToGenericError ExpectedFunctionType where
                 <> indent' (ppCode opts' (e ^. expectedFunctionTypeExpression))
                 <> line
                 <> "the expression"
-              <+> ppCode opts' (e ^. expectedFunctionTypeApp)
+              <+> ppCode opts' (e ^. expectedFunctionTypeLeft)
               <+> "is expected to have a function type but has type:"
                 <> line
                 <> indent' (ppCode opts' (e ^. expectedFunctionTypeType))

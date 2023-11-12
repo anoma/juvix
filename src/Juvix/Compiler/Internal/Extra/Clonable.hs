@@ -47,6 +47,9 @@ instance (Clonable a) => Clonable (WithLoc a) where
 instance Clonable Literal where
   freshNameIds = return
 
+instance Clonable InstanceHole where
+  freshNameIds = return
+
 instance Clonable Hole where
   freshNameIds = return
 

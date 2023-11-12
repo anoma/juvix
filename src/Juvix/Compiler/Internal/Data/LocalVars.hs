@@ -12,6 +12,16 @@ data LocalVars = LocalVars
 instance Semigroup LocalVars where
   (LocalVars a b) <> (LocalVars a' b') = LocalVars (a <> a') (b <> b')
 
+emptyLocalVars :: LocalVars
+emptyLocalVars =
+  LocalVars
+    { _localTypes = mempty,
+      _localTyMap = mempty
+    }
+
+instance Monoid LocalVars where
+  mempty = emptyLocalVars
+
 makeLenses ''LocalVars
 
 withLocalTypeMaybe :: (Members '[Reader LocalVars] r) => Maybe VarName -> Expression -> Sem r a -> Sem r a
@@ -28,9 +38,5 @@ addType v t = over localTypes (HashMap.insert v t)
 addTypeMapping :: VarName -> VarName -> LocalVars -> LocalVars
 addTypeMapping v v' = over localTyMap (HashMap.insert v v')
 
-emptyLocalVars :: LocalVars
-emptyLocalVars =
-  LocalVars
-    { _localTypes = mempty,
-      _localTyMap = mempty
-    }
+withEmptyLocalVars :: Sem (Reader LocalVars ': r) a -> Sem r a
+withEmptyLocalVars = runReader emptyLocalVars

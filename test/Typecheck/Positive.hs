@@ -10,6 +10,8 @@ data PosTest = PosTest
     _file :: Path Abs File
   }
 
+makeLenses ''PosTest
+
 root :: Path Abs Dir
 root = relToProject $(mkRelDir "tests/positive")
 
@@ -29,13 +31,10 @@ testDescr PosTest {..} =
         (void . runIO' entryPoint) upToInternalTyped
     }
 
---------------------------------------------------------------------------------
--- Testing --no-positivity flag with all related negative tests
---------------------------------------------------------------------------------
-
 rootNegTests :: Path Abs Dir
 rootNegTests = relToProject $(mkRelDir "tests/negative/")
 
+-- Testing --no-positivity flag with all related negative tests
 testNoPositivityFlag :: N.NegTest -> TestDescr
 testNoPositivityFlag N.NegTest {..} =
   let tRoot = rootNegTests <//> _relDir
@@ -83,8 +82,6 @@ positivityTestGroup =
         "Well-defined inductive definitions"
         (map (mkTest . testDescr) testWellDefinedInductiveDefs)
     ]
-
---------------------------------------------------------------------------------
 
 allTests :: TestTree
 allTests =

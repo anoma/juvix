@@ -8,10 +8,13 @@ where
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Internal.Data.InfoTable.Base
 import Juvix.Compiler.Internal.Data.InstanceInfo (instanceInfoResult, instanceTableMap)
+import Juvix.Compiler.Internal.Data.LocalVars
 import Juvix.Compiler.Internal.Data.NameDependencyInfo
+import Juvix.Compiler.Internal.Data.TypedHole
 import Juvix.Compiler.Internal.Extra
 import Juvix.Compiler.Internal.Pretty.Options
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Data.Types (Arity)
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.CheckerNew.Arity qualified as New
 import Juvix.Data.CodeAnn
 import Juvix.Prelude
 
@@ -48,7 +51,7 @@ instance PrettyCode SimpleLambda where
   ppCode l = do
     b' <- ppCode (l ^. slambdaBody)
     v' <- ppCode (l ^. slambdaBinder . sbinderVar)
-    return $ kwLambda <+> braces (v' <+> kwAssign <+> b')
+    return $ kwSimpleLambda <+> braces (v' <+> kwAssign <+> b')
 
 instance PrettyCode Application where
   ppCode a = do
@@ -192,6 +195,11 @@ instance PrettyCode Function where
     funReturn' <- ppRightExpression funFixity r
     return $ funParameter' <+> kwArrow <+> funReturn'
 
+instance PrettyCode InstanceHole where
+  ppCode h = do
+    showNameId <- asks (^. optShowNameIds)
+    return (addNameIdTag showNameId (h ^. iholeId) kwHole)
+
 instance PrettyCode Hole where
   ppCode h = do
     showNameId <- asks (^. optShowNameIds)
@@ -322,6 +330,28 @@ instance PrettyCode Module where
 
 instance PrettyCode Interval where
   ppCode = return . annotate AnnCode . pretty
+
+instance PrettyCode New.ArityParameter where
+  ppCode = return . pretty
+
+instance (PrettyCode a, PrettyCode b) => PrettyCode (Either a b) where
+  ppCode = \case
+    Left l -> do
+      l' <- ppCode l
+      return ("Left" <+> l')
+    Right r -> do
+      r' <- ppCode r
+      return ("Right" <+> r')
+
+instance PrettyCode LocalVars where
+  ppCode LocalVars {..} = ppCode (HashMap.toList _localTypes)
+
+instance PrettyCode TypedHole where
+  ppCode TypedHole {..} = do
+    h <- ppCode _typedHoleHole
+    ty <- ppCode _typedHoleType
+    vars <- ppCode _typedHoleLocalVars
+    return (h <+> kwColon <+> ty <> kwAt <> vars)
 
 instance PrettyCode InfoTable where
   ppCode tbl = do
