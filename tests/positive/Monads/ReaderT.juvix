@@ -9,20 +9,20 @@ type ReaderT (S : Type) (M : Type → Type) (A : Type) :=
   mkReaderT {runReaderT : S → M A};
 
 instance
-ReaderT-Functor {S : Type} {M : Type → Type} {{func : Functor
-  M}} : Functor (ReaderT S M) :=
+ReaderT-Functor {S : Type} {M : Type
+  → Type} {{func : Functor M}} : Functor (ReaderT S M) :=
   mkFunctor@{
-    <$> {A B : Type} (f : A → B) : ReaderT S M A → ReaderT S M B
+    <$> {A B : Type} (f : A → B)
+      : ReaderT S M A → ReaderT S M B
       | (mkReaderT g) :=
         -- NOTE we cannot use unqualified <$> or the scoper gets confused
         let
           open MFunctor;
-        in mkReaderT
-          λ {s := λ {a := f a} MFunctor.<$> g s}
+        in mkReaderT λ {s := λ {a := f a} MFunctor.<$> g s}
   };
 
 instance
-ReaderT-Monad {S : Type} {M : Type → Type} {{Monad M}}
+ReaderT-Monad {S : Type} {M : Type → Type} {{mon : Monad M}}
   : Monad (ReaderT S M) :=
   mkMonad@{
     functor :=
@@ -41,10 +41,33 @@ ReaderT-Monad {S : Type} {M : Type → Type} {{Monad M}}
 
 import MonadReader open;
 import Stdlib.Data.Unit open;
+import Stdlib.Function open;
 
 instance
-ReaderT-MonadReader {S : Type} {M : Type → Type} {{Monad M}} : MonadReader S (ReaderT S M) :=
+ReaderT-MonadReader {S : Type} {M : Type → Type} {{Monad M}}
+  : MonadReader S (ReaderT S M) :=
   mkMonadReader@{
     monad := ReaderT-Monad;
     ask : ReaderT S M S := mkReaderT λ {s := MMonad.return s};
+    reader {A : Type} (f : S → A) : ReaderT S M A := mkReaderT (MMonad.return ∘ f);
   };
+
+import MonadState open;
+import StateT open;
+import Stdlib.Data.Product open;
+
+liftReaderT {R A : Type} {M : Type → Type} (m : M A)
+  : ReaderT R M A := mkReaderT (const m);
+
+liftStateT {S A : Type} {M : Type → Type} {{Monad M}} (m : M A)
+  : StateT S M A := mkStateT λ {s := m MMonad.>>= λ {a := MMonad.return (a, s)}};
+
+-- FIXME fails instance termination
+-- instance
+-- StateT-MonadReader {R S : Type} {M : Type
+--   → Type} {{mreader : MonadReader R M}} : MonadReader R (StateT S M) :=
+--   mkMonadReader@{
+--     monad := StateT-Monad@{mon := MonadReader.monad {{mreader}}};
+--     reader {A : Type} : (R → A) → StateT S M A := liftStateT ∘ MonadReader.reader;
+--     ask : StateT S M R := liftStateT MonadReader.ask;
+--   };

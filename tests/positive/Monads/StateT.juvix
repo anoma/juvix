@@ -22,7 +22,7 @@ StateT-Functor {S : Type} {M : Type → Type} {{func : Functor
   };
 
 instance
-StateT-Monad {S : Type} {M : Type → Type} {{Monad M}}
+StateT-Monad {S : Type} {M : Type → Type} {{mon : Monad M}}
   : Monad (StateT S M) :=
   mkMonad@{
     functor :=
