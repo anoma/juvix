@@ -4,6 +4,7 @@ import Juvix.Compiler.Builtins
 import Juvix.Compiler.Concrete.Data.InfoTable qualified as Scoped
 import Juvix.Compiler.Concrete.Data.Scope
 import Juvix.Compiler.Concrete.Data.Scope qualified as Scoped
+import Juvix.Compiler.Concrete.Translation.FromSource.Data.ParserState
 import Juvix.Compiler.Core.Data.InfoTableBuilder qualified as Core
 import Juvix.Compiler.Internal.Translation.FromConcrete qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker
@@ -14,7 +15,7 @@ import Juvix.Prelude
 -- | `Artifacts` contains enough information so that the pipeline can be
 -- restarted while preserving existing state.
 data Artifacts = Artifacts
-  { _artifactParsing :: BuilderState,
+  { _artifactParsing :: ParserState,
     -- Scoping
     _artifactResolver :: ResolverState,
     _artifactBuiltins :: BuiltinsState,
@@ -24,7 +25,6 @@ data Artifacts = Artifacts
     _artifactMainModuleScope :: Maybe Scope,
     _artifactScoperState :: Scoped.ScoperState,
     -- Concrete -> Internal
-    _artifactInternalModuleCache :: Internal.ModulesCache,
     _artifactTerminationState :: TerminationState,
     -- Typechecking
     _artifactTypes :: TypesTable,

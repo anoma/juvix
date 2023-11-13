@@ -4,7 +4,7 @@ module Juvix.Compiler.Internal.Translation.FromConcrete
     MCache,
     ConstructorInfos,
     DefaultArgsStack,
-    goModuleNoCache,
+    goTopModule,
     fromConcreteExpression,
     fromConcreteImport,
   )
@@ -21,6 +21,7 @@ import Juvix.Compiler.Concrete.Extra qualified as Concrete
 import Juvix.Compiler.Concrete.Language qualified as Concrete
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
+import Juvix.Compiler.Internal.Data.InfoTable qualified as Internal
 import Juvix.Compiler.Internal.Data.NameDependencyInfo qualified as Internal
 import Juvix.Compiler.Internal.Extra (mkLetClauses)
 import Juvix.Compiler.Internal.Extra qualified as Internal
@@ -53,21 +54,18 @@ fromConcrete ::
   Sem r InternalResult
 fromConcrete _resultScoper =
   mapError (JuvixError @ScoperError) $ do
-    (modulesCache, _resultModules) <-
+    _resultModule <-
       runReader @Pragmas mempty
         . runReader @ExportsTable exportTbl
         . evalState @ConstructorInfos mempty
         . runReader namesSigs
         . runReader constrSigs
         . runReader @DefaultArgsStack mempty
-        . runCacheEmpty goModuleNoCache
-        $ mapM goTopModule ms
-    let _resultTable = buildTable _resultModules -- TODO: imports
-        _resultDepInfo = buildDependencyInfo _resultModules exportTbl
-        _resultModulesCache = ModulesCache modulesCache
+        $ goTopModule m
+    let _resultStoredModule = Internal.computeStoredModule _resultModule
     return InternalResult {..}
   where
-    ms = _resultScoper ^. Scoper.resultModules
+    m = _resultScoper ^. Scoper.resultModule
     exportTbl = _resultScoper ^. Scoper.resultExports
     constrSigs = _resultScoper ^. Scoper.resultScoperState . scoperScopedConstructorFields
     namesSigs = _resultScoper ^. Scoper.resultScoperState . scoperScopedSignatures
@@ -135,7 +133,7 @@ fromConcreteExpression e = do
   return e'
 
 fromConcreteImport ::
-  (Members '[Reader ExportsTable, Error JuvixError, NameIdGen, Builtins, MCache, Termination] r) =>
+  (Members '[Reader ExportsTable, Error JuvixError, NameIdGen, Builtins, Termination] r) =>
   Scoper.Import 'Scoped ->
   Sem r Internal.Import
 fromConcreteImport i = do
@@ -151,16 +149,10 @@ goLocalModule ::
 goLocalModule = concatMapM goAxiomInductive . (^. moduleBody)
 
 goTopModule ::
-  (Members '[Reader ExportsTable, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, MCache] r) =>
+  (Members '[Reader DefaultArgsStack, Reader EntryPoint, Reader ExportsTable, Error JuvixError, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ConstructorInfos, Termination, Reader NameSignatures, Reader ConstructorNameSignatures] r) =>
   Module 'Scoped 'ModuleTop ->
   Sem r Internal.Module
-goTopModule = cacheGet . ModuleIndex
-
-goModuleNoCache ::
-  (Members '[Reader DefaultArgsStack, Reader EntryPoint, Reader ExportsTable, Error JuvixError, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, MCache, State ConstructorInfos, Termination, Reader NameSignatures, Reader ConstructorNameSignatures] r) =>
-  ModuleIndex ->
-  Sem r Internal.Module
-goModuleNoCache (ModuleIndex m) = do
+goTopModule m = do
   p <- toPreModule m
   tbl <- ask
   let depInfo = buildDependencyInfoPreModule p tbl
@@ -209,7 +201,7 @@ traverseM' f x = sequence <$> traverse f x
 
 toPreModule ::
   forall r t.
-  (SingI t, Members '[Reader DefaultArgsStack, Reader ExportsTable, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, MCache, State ConstructorInfos, Reader NameSignatures, Reader ConstructorNameSignatures] r) =>
+  (SingI t, Members '[Reader DefaultArgsStack, Reader ExportsTable, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ConstructorInfos, Reader NameSignatures, Reader ConstructorNameSignatures] r) =>
   Module 'Scoped t ->
   Sem r Internal.PreModule
 toPreModule Module {..} = do
@@ -274,7 +266,7 @@ fromPreModuleBody b = do
 
 goModuleBody ::
   forall r.
-  (Members '[Reader DefaultArgsStack, Reader ExportsTable, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, MCache, State ConstructorInfos, Reader NameSignatures, Reader ConstructorNameSignatures] r) =>
+  (Members '[Reader DefaultArgsStack, Reader ExportsTable, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ConstructorInfos, Reader NameSignatures, Reader ConstructorNameSignatures] r) =>
   [Statement 'Scoped] ->
   Sem r Internal.PreModuleBody
 goModuleBody stmts = do

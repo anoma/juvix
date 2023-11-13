@@ -23,10 +23,11 @@ import Juvix.Data.Effect.NameIdGen
 import Juvix.Prelude hiding (fromEither)
 
 arityChecking ::
-  (Members '[Error JuvixError, NameIdGen] r) =>
+  (Members '[Error JuvixError, NameIdGen, Reader StoredModuleTable] r) =>
   InternalResult ->
   Sem r ArityChecking.InternalArityResult
-arityChecking res@InternalResult {..} =
+arityChecking res@InternalResult {..} = do
+  table <- buildInfoTable <$> ask
   mapError (JuvixError @ArityChecking.ArityCheckerError) $ do
     r <-
       runReader table
@@ -38,9 +39,6 @@ arityChecking res@InternalResult {..} =
           _resultModules = r,
           _resultTable = buildTable r
         }
-  where
-    table :: InfoTable
-    table = buildInfoTable _resultTable
 
 arityCheckExpression ::
   (Members '[Error JuvixError, State Artifacts] r) =>

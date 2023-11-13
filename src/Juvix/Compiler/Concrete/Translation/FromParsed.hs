@@ -5,18 +5,18 @@ module Juvix.Compiler.Concrete.Translation.FromParsed
   )
 where
 
-import Juvix.Compiler.Concrete.Data.Highlight.Input
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Data.Context
-import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
 import Juvix.Compiler.Concrete.Translation.FromSource.Data.Context qualified as Parsed
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Prelude
 
 fromParsed ::
-  (Members '[HighlightBuilder, Error JuvixError, Files, NameIdGen, Reader EntryPoint] r) =>
-  Parsed.ParserResult ->
+  (Members '[Reader EntryPoint, Reader ImportTable, Reader Parsed.ParserResult, Error JuvixError, NameIdGen] r) =>
   Sem r ScoperResult
-fromParsed pr = mapError (JuvixError @ScoperError) $ do
-  scopeCheck pr (pr ^. Parser.resultModule)
+fromParsed = do
+  e <- ask
+  tab <- ask
+  r <- ask
+  scopeCheck e tab r

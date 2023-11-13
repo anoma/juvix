@@ -11,7 +11,6 @@ where
 
 import Juvix.Compiler.Builtins
 import Juvix.Compiler.Concrete.Data.InfoTableBuilder qualified as Scoped
-import Juvix.Compiler.Concrete.Data.ParsedInfoTableBuilder qualified as Concrete
 import Juvix.Compiler.Concrete.Data.Scope
 import Juvix.Compiler.Concrete.Data.Scope qualified as S
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping (ScoperError)
@@ -41,9 +40,6 @@ tmpCoreInfoTableBuilderArtifacts m = do
 
 runBuiltinsArtifacts :: (Members '[Error JuvixError, State Artifacts] r) => Sem (Builtins ': r) a -> Sem r a
 runBuiltinsArtifacts = runStateLikeArtifacts runBuiltins artifactBuiltins
-
-runParserInfoTableBuilderArtifacts :: (Members '[State Artifacts] r) => Sem (Concrete.InfoTableBuilder ': r) a -> Sem r a
-runParserInfoTableBuilderArtifacts = runStateLikeArtifacts Concrete.runParserInfoTableBuilderRepl artifactParsing
 
 runScoperInfoTableBuilderArtifacts :: (Members '[State Artifacts] r) => Sem (Scoped.InfoTableBuilder ': r) a -> Sem r a
 runScoperInfoTableBuilderArtifacts = runStateLikeArtifacts Scoped.runInfoTableBuilderRepl artifactScopeTable

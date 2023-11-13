@@ -33,7 +33,9 @@ data InfoTable = InfoTable
     _infoFunctions :: HashMap S.NameId FunctionInfo,
     _infoFixities :: HashMap S.NameId FixityDef,
     _infoPriorities :: IntSet,
-    _infoPrecedenceGraph :: HashMap S.NameId (HashSet S.NameId)
+    _infoPrecedenceGraph :: HashMap S.NameId (HashSet S.NameId),
+    _infoHighlightDoc :: DocTable,
+    _infoHighlightNames :: [S.AName]
   }
 
 emptyInfoTable :: InfoTable
@@ -46,7 +48,9 @@ emptyInfoTable =
       _infoFunctions = mempty,
       _infoFixities = mempty,
       _infoPriorities = mempty,
-      _infoPrecedenceGraph = mempty
+      _infoPrecedenceGraph = mempty,
+      _infoHighlightDoc = mempty,
+      _infoHighlightNames = mempty
     }
 
 makeLenses ''InfoTable

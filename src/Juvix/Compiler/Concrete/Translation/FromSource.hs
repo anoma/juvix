@@ -35,12 +35,14 @@ type JudocStash = State (Maybe (Judoc 'Parsed))
 type PragmasStash = State (Maybe ParsedPragmas)
 
 fromSource ::
-  (Members '[Files, PathResolver, Error JuvixError, NameIdGen] r) =>
+  (Members '[Files, PathResolver, Error JuvixError] r) =>
   EntryPoint ->
   Sem r ParserResult
 fromSource e = mapError (JuvixError @ParserError) $ do
-  (_resultParserState, _resultModule) <- runParserResultBuilder mempty (runReader e getParsedModuleTop)
-  let _resultEntry = e
+  (_resultParserState, _resultModule) <-
+    runParserResultBuilder mempty $
+      evalTopNameIdGen defaultModuleId $
+        runReader e getParsedModuleTop
   return ParserResult {..}
   where
     getParsedModuleTop ::

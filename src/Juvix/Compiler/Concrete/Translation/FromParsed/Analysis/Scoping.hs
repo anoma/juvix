@@ -24,13 +24,28 @@ import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Pretty (ppTrace)
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Data.Context
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
-import Juvix.Compiler.Concrete.Translation.FromSource.Data.Context (ParserResult)
-import Juvix.Compiler.Concrete.Translation.FromSource.Data.Context qualified as Parsed
+import Juvix.Compiler.Concrete.Translation.FromSource.Data.Context qualified as Parser
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Compiler.Store.Scoped.Language as Store
 import Juvix.Data.FixityInfo qualified as FI
 import Juvix.Data.NameKind
 import Juvix.Prelude hiding (scoped)
+
+type ImportTable = HashMap TopModulePath ScopedModule
+
+scopeCheck ::
+  (Members '[Error JuvixError, NameIdGen] r) =>
+  EntryPoint ->
+  ImportTable ->
+  Parser.ParserResult ->
+  Sem r ScoperResult
+scopeCheck entry importMap pr =
+  mapError (JuvixError @ScoperError) $
+    runReader entry $
+      scopeCheck' importMap pr m
+  where
+    m :: Module 'Parsed 'ModuleTop
+    m = pr ^. Parser.resultModule
 
 iniScoperState :: ScoperState
 iniScoperState =
@@ -46,43 +61,48 @@ iniScoperState =
       _scoperScopedConstructorFields = mempty
     }
 
-scopeCheck ::
-  (Members '[HighlightBuilder, Error ScoperError, NameIdGen, Reader EntryPoint] r) =>
-  ParserResult ->
+scopeCheck' ::
+  (Members '[Error ScoperError, NameIdGen, Reader EntryPoint] r) =>
+  ImportTable ->
+  Parser.ParserResult ->
   Module 'Parsed 'ModuleTop ->
   Sem r ScoperResult
-scopeCheck pr m =
+scopeCheck' importTab pr m = do
   fmap mkResult
     . runInfoTableBuilder emptyInfoTable
     . runReader iniScopeParameters
     . runState iniScoperState
-    $ checkTopModules m
+    $ checkTopModule m
   where
     iniScopeParameters :: ScopeParameters
     iniScopeParameters =
       ScopeParameters
-        { _scopeTopParents = mempty,
-          _scopeParsedModules = pr ^. Parsed.resultTable . Parsed.infoParsedModules
+        { _scopeImportedModules = importTab
         }
-    mkResult :: (InfoTable, (ScoperState, (NonEmpty (Module 'Scoped 'ModuleTop), HashSet NameId))) -> ScoperResult
-    mkResult (st, (scoperSt, (ms, exp))) =
-      ScoperResult
-        { _resultParserResult = pr,
-          _resultScoperTable = st,
-          _resultModules = ms,
-          _resultExports = exp,
-          _resultScope = scoperSt ^. scoperScope,
-          _resultScoperState = scoperSt
-        }
+    mkResult :: (InfoTable, (ScoperState, ScopedModuleRef' 'ModuleTop)) -> ScoperResult
+    mkResult (st, (scoperSt, mref)) =
+      let md = mref ^. scopedModuleRefModule
+          sm = mref ^. scopedModuleRefScopedModule
+          exp = createExportsTable (sm ^. scopedModuleExportInfo)
+       in ScoperResult
+            { _resultParserResult = pr,
+              _resultScoperTable = st,
+              _resultModule = md,
+              _resultScopedModule = sm,
+              _resultExports = exp,
+              _resultScope = scoperSt ^. scoperScope,
+              _resultScoperState = scoperSt
+            }
 
 -- TODO refactor to have less code duplication
 scopeCheckExpressionAtoms ::
   forall r.
-  (Members '[Error JuvixError, NameIdGen, State Scope] r) =>
+  (Members '[Error JuvixError, NameIdGen, Reader EntryPoint, State Scope] r) =>
+  ImportTable ->
   InfoTable ->
   ExpressionAtoms 'Parsed ->
   Sem r (ExpressionAtoms 'Scoped)
-scopeCheckExpressionAtoms tab as = mapError (JuvixError @ScoperError) $ do
+scopeCheckExpressionAtoms importTab tab as = mapError (JuvixError @ScoperError) $ do
   fmap snd
     . ignoreHighlightBuilder
     . runInfoTableBuilder tab
@@ -94,17 +114,17 @@ scopeCheckExpressionAtoms tab as = mapError (JuvixError @ScoperError) $ do
     iniScopeParameters :: ScopeParameters
     iniScopeParameters =
       ScopeParameters
-        { _scopeTopParents = mempty,
-          _scopeParsedModules = mempty
+        { _scopeImportedModules = importTab
         }
 
 scopeCheckExpression ::
   forall r.
-  (Members '[Error JuvixError, NameIdGen, State Scope, State ScoperState] r) =>
+  (Members '[Error JuvixError, NameIdGen, Reader EntryPoint, State Scope, State ScoperState] r) =>
+  ImportTable ->
   InfoTable ->
   ExpressionAtoms 'Parsed ->
   Sem r Expression
-scopeCheckExpression tab as = mapError (JuvixError @ScoperError) $ do
+scopeCheckExpression importTab tab as = mapError (JuvixError @ScoperError) $ do
   fmap snd
     . ignoreHighlightBuilder
     . runInfoTableBuilder tab
@@ -115,8 +135,7 @@ scopeCheckExpression tab as = mapError (JuvixError @ScoperError) $ do
     iniScopeParameters :: ScopeParameters
     iniScopeParameters =
       ScopeParameters
-        { _scopeTopParents = mempty,
-          _scopeParsedModules = mempty
+        { _scopeImportedModules = importTab
         }
 
 scopeCheckImport ::
@@ -368,7 +387,6 @@ checkImport ::
   Import 'Parsed ->
   Sem r (Import 'Scoped)
 checkImport import_@Import {..} = do
-  checkCycle
   cache <- gets (^. scoperModulesCache . cachedModules)
   smodule <- maybe (readScopeModule import_) return (cache ^. at _importModule)
   let sname :: S.TopModulePath = smodule ^. scopedModulePath
@@ -402,14 +420,6 @@ checkImport import_@Import {..} = do
           uid :: S.NameId = moduleRef ^. scopedModuleName . S.nameId
           singTbl = HashMap.singleton uid moduleRef
       modify (over (scopeTopModules . at mpath) (Just . maybe singTbl (HashMap.insert uid moduleRef)))
-    checkCycle :: Sem r ()
-    checkCycle = do
-      topp <- asks (^. scopeTopParents)
-      case span (/= import_) topp of
-        (_, []) -> return ()
-        (c, _) ->
-          let cyc = NonEmpty.reverse (import_ :| c)
-           in throw (ErrImportCycle (ImportCycle cyc))
 
 getTopModulePath :: Module 'Parsed 'ModuleTop -> S.AbsModulePath
 getTopModulePath Module {..} =
@@ -623,22 +633,12 @@ exportScope Scope {..} = do
                 )
             )
 
-getParsedModule :: (Members '[Reader ScopeParameters] r) => TopModulePath -> Sem r (Either ScopedModule (Module 'Parsed 'ModuleTop))
-getParsedModule i = asks (^?! scopeParsedModules . at i . _Just)
-
 readScopeModule ::
   (Members '[Error ScoperError, Reader ScopeParameters, NameIdGen, State ScoperState, InfoTableBuilder] r) =>
   Import 'Parsed ->
   Sem r ScopedModule
 readScopeModule import_ = do
-  m <- getParsedModule (import_ ^. importModule)
-  case m of
-    Left m' -> return m'
-    Right m' ->
-      (^. scopedModuleRefScopedModule) <$> local addImport (checkTopModule m')
-  where
-    addImport :: ScopeParameters -> ScopeParameters
-    addImport = over scopeTopParents (cons import_)
+  asks (^?! scopeImportedModules . at (import_ ^. importModule) . _Just)
 
 checkFixityInfo ::
   forall r.
@@ -669,7 +669,7 @@ checkFixityInfo ParsedFixityInfo {..} = do
 
 checkFixitySyntaxDef ::
   forall r.
-  (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, State ScoperSyntax, NameIdGen, InfoTableBuilder] r) =>
+  (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, State ScoperSyntax, NameIdGen, Reader EntryPoint, InfoTableBuilder] r) =>
   FixitySyntaxDef 'Parsed ->
   Sem r (FixitySyntaxDef 'Scoped)
 checkFixitySyntaxDef FixitySyntaxDef {..} = topBindings $ do
@@ -803,7 +803,7 @@ resolveIteratorSyntaxDef s@IteratorSyntaxDef {..} = do
 
 checkFunctionDef ::
   forall r.
-  (Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, State ScoperSyntax, Reader BindingStrategy] r) =>
+  (Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, Reader EntryPoint, State ScoperSyntax, Reader BindingStrategy] r) =>
   FunctionDef 'Parsed ->
   Sem r (FunctionDef 'Scoped)
 checkFunctionDef FunctionDef {..} = do
@@ -869,7 +869,7 @@ checkFunctionDef FunctionDef {..} = do
 
 checkInductiveParameters ::
   forall r.
-  (Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
+  (Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, Reader EntryPoint] r) =>
   InductiveParameters 'Parsed ->
   Sem r (InductiveParameters 'Scoped)
 checkInductiveParameters params = do
@@ -885,7 +885,7 @@ checkInductiveParameters params = do
 
 checkInductiveDef ::
   forall r.
-  (Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, State ScoperSyntax, Reader BindingStrategy] r) =>
+  (Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, Reader EntryPoint, State ScoperSyntax, Reader BindingStrategy] r) =>
   InductiveDef 'Parsed ->
   Sem r (InductiveDef 'Scoped)
 checkInductiveDef InductiveDef {..} = do
@@ -998,22 +998,6 @@ checkInductiveDef InductiveDef {..} = do
 createExportsTable :: ExportInfo -> HashSet NameId
 createExportsTable = HashSet.fromList . (^.. exportAllNames . S.nameId)
 
-checkTopModules ::
-  forall r.
-  (Members '[Error ScoperError, Reader ScopeParameters, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
-  NonEmpty (Module 'Parsed 'ModuleTop) ->
-  Sem r (NonEmpty (Module 'Scoped 'ModuleTop), HashSet NameId)
-checkTopModules modules = do
-  checked <- mapM checkTopModule modules
-  return ((^. scopedModuleRefModule) <$> checked, createExportsTable (head checked ^. scopedModuleRefScopedModule . scopedModuleExportInfo))
-
-checkTopModule_ ::
-  forall r.
-  (Members '[Error ScoperError, Reader ScopeParameters, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
-  Module 'Parsed 'ModuleTop ->
-  Sem r (Module 'Scoped 'ModuleTop)
-checkTopModule_ = fmap (^. scopedModuleRefModule) . checkTopModule
-
 topBindings :: Sem (Reader BindingStrategy ': r) a -> Sem r a
 topBindings = runReader BindingTop
 
@@ -1022,7 +1006,7 @@ localBindings = runReader BindingLocal
 
 checkTopModule ::
   forall r.
-  (Members '[Error ScoperError, Reader ScopeParameters, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
+  (Members '[Error ScoperError, Reader ScopeParameters, State ScoperState, InfoTableBuilder, NameIdGen, Reader EntryPoint] r) =>
   Module 'Parsed 'ModuleTop ->
   Sem r (ScopedModuleRef' 'ModuleTop)
 checkTopModule m@Module {..} = do
@@ -1127,7 +1111,7 @@ syntaxBlock m =
 
 checkModuleBody ::
   forall r.
-  (Members '[Error ScoperError, State Scope, Reader ScopeParameters, State ScoperState, InfoTableBuilder, NameIdGen, Reader BindingStrategy] r) =>
+  (Members '[Error ScoperError, State Scope, Reader ScopeParameters, State ScoperState, InfoTableBuilder, NameIdGen, Reader EntryPoint, Reader BindingStrategy] r) =>
   [Statement 'Parsed] ->
   Sem r (ExportInfo, [Statement 'Scoped])
 checkModuleBody body = do
@@ -1170,7 +1154,7 @@ checkModuleBody body = do
 
 checkSections ::
   forall r.
-  (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, State ScoperSyntax] r) =>
+  (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, State ScoperSyntax, Reader EntryPoint] r) =>
   StatementSections 'Parsed ->
   Sem r (StatementSections 'Scoped)
 checkSections sec = do
@@ -1300,8 +1284,16 @@ checkSections sec = do
               m <- runReader (getLoc (i ^. inductiveName)) genModule
               checkLocalModule m >>= output
               where
-                genModule :: forall s'. (Members '[Reader Interval] s') => Sem s' (Module 'Parsed 'ModuleLocal)
+                genModule :: forall s'. (Members '[Reader Interval, Reader EntryPoint, State Scope] s') => Sem s' (Module 'Parsed 'ModuleLocal)
                 genModule = do
+                  path <- gets (^. scopePath)
+                  p <- asks (^. entryPointPackage)
+                  let _moduleId =
+                        ModuleId
+                          { _moduleIdPath = show path <> "." <> show (i ^. inductiveName),
+                            _moduleIdPackage = p ^. packageName,
+                            _moduleIdPackageVersion = show (p ^. packageVersion)
+                          }
                   _moduleKw <- G.kw G.kwModule
                   _moduleKwEnd <- G.kw G.kwEnd
                   let _modulePath = i ^. inductiveName
@@ -1414,7 +1406,7 @@ mkSections = \case
       StatementOpenModule o -> Right (NonDefinitionOpenModule o)
 
 reserveLocalModuleSymbol ::
-  (Members '[Error ScoperError, State Scope, Reader ScopeParameters, State ScoperState, InfoTableBuilder, NameIdGen, Reader BindingStrategy] r) =>
+  (Members '[Error ScoperError, State Scope, Reader ScopeParameters, State ScoperState, InfoTableBuilder, NameIdGen, Reader EntryPoint, Reader BindingStrategy] r) =>
   Symbol ->
   Sem r S.Symbol
 reserveLocalModuleSymbol =
@@ -1422,7 +1414,7 @@ reserveLocalModuleSymbol =
 
 checkLocalModule ::
   forall r.
-  (Members '[Error ScoperError, State Scope, Reader ScopeParameters, State ScoperState, InfoTableBuilder, NameIdGen, Reader BindingStrategy] r) =>
+  (Members '[Error ScoperError, State Scope, Reader ScopeParameters, State ScoperState, InfoTableBuilder, NameIdGen, Reader EntryPoint, Reader BindingStrategy] r) =>
   Module 'Parsed 'ModuleLocal ->
   Sem r (Module 'Scoped 'ModuleLocal)
 checkLocalModule md@Module {..} = do
@@ -1433,7 +1425,7 @@ checkLocalModule md@Module {..} = do
       doc' <- mapM checkJudoc _moduleDoc
       return (e, b, doc')
   _modulePath' <- reserveLocalModuleSymbol _modulePath
-  let moduleId = _modulePath' ^. S.nameId
+  let mid = _modulePath' ^. S.nameId
       moduleName = S.unqualifiedSymbol _modulePath'
       m =
         Module
@@ -1443,7 +1435,8 @@ checkLocalModule md@Module {..} = do
             _modulePragmas = _modulePragmas,
             _moduleKw,
             _moduleInductive,
-            _moduleKwEnd
+            _moduleKwEnd,
+            _moduleId
           }
       smod =
         ScopedModule
@@ -1452,7 +1445,7 @@ checkLocalModule md@Module {..} = do
             _scopedModuleFilePath = P.getModuleFilePath md,
             _scopedModuleExportInfo = moduleExportInfo
           }
-  modify (over scoperModules (HashMap.insert moduleId smod))
+  modify (over scoperModules (HashMap.insert mid smod))
   registerName _modulePath'
   return m
   where
@@ -1701,7 +1694,7 @@ checkOpenModuleHelper importModuleHint OpenModule {..} = do
           Nothing -> id
 
 checkAxiomDef ::
-  (Members '[Reader ScopeParameters, InfoTableBuilder, Error ScoperError, State Scope, State ScoperState, NameIdGen, State ScoperSyntax, Reader BindingStrategy] r) =>
+  (Members '[Reader ScopeParameters, InfoTableBuilder, Error ScoperError, State Scope, State ScoperState, NameIdGen, State ScoperSyntax, Reader BindingStrategy, Reader EntryPoint] r) =>
   AxiomDef 'Parsed ->
   Sem r (AxiomDef 'Scoped)
 checkAxiomDef AxiomDef {..} = do
@@ -1717,7 +1710,7 @@ entryToSymbol sentry csym = set S.nameConcrete csym (sentry ^. nsEntry)
 
 checkFunction ::
   forall r.
-  (Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
+  (Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, Reader EntryPoint] r) =>
   Function 'Parsed ->
   Sem r (Function 'Scoped)
 checkFunction f = do
@@ -1736,7 +1729,7 @@ checkFunction f = do
 
 -- | for now functions defined in let clauses cannot be infix operators
 checkLetStatements ::
-  (Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
+  (Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, Reader EntryPoint] r) =>
   NonEmpty (LetStatement 'Parsed) ->
   Sem r (NonEmpty (LetStatement 'Scoped))
 checkLetStatements =
@@ -1855,7 +1848,7 @@ checkListPattern l = do
 
 checkList ::
   forall r.
-  (Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
+  (Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, Reader EntryPoint] r) =>
   List 'Parsed ->
   Sem r (List 'Scoped)
 checkList l = do
@@ -1866,7 +1859,7 @@ checkList l = do
 
 checkLet ::
   forall r.
-  (Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
+  (Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, Reader EntryPoint] r) =>
   Let 'Parsed ->
   Sem r (Let 'Scoped)
 checkLet Let {..} =
@@ -1883,7 +1876,7 @@ checkLet Let {..} =
 
 checkCaseBranch ::
   forall r.
-  (Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
+  (Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, Reader EntryPoint] r) =>
   CaseBranch 'Parsed ->
   Sem r (CaseBranch 'Scoped)
 checkCaseBranch CaseBranch {..} = withLocalScope $ do
@@ -1898,7 +1891,7 @@ checkCaseBranch CaseBranch {..} = withLocalScope $ do
 
 checkNewCaseBranch ::
   forall r.
-  (Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
+  (Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, Reader EntryPoint] r) =>
   NewCaseBranch 'Parsed ->
   Sem r (NewCaseBranch 'Scoped)
 checkNewCaseBranch NewCaseBranch {..} = withLocalScope $ do
@@ -1912,7 +1905,7 @@ checkNewCaseBranch NewCaseBranch {..} = withLocalScope $ do
       }
 
 checkCase ::
-  (Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
+  (Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, Reader EntryPoint] r) =>
   Case 'Parsed ->
   Sem r (Case 'Scoped)
 checkCase Case {..} = do
@@ -1927,7 +1920,7 @@ checkCase Case {..} = do
       }
 
 checkNewCase ::
-  (Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
+  (Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, Reader EntryPoint] r) =>
   NewCase 'Parsed ->
   Sem r (NewCase 'Scoped)
 checkNewCase NewCase {..} = do
@@ -1942,7 +1935,7 @@ checkNewCase NewCase {..} = do
       }
 
 checkLambda ::
-  (Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
+  (Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, Reader EntryPoint] r) =>
   Lambda 'Parsed ->
   Sem r (Lambda 'Scoped)
 checkLambda Lambda {..} = do
@@ -1955,7 +1948,7 @@ checkLambda Lambda {..} = do
       }
 
 checkLambdaClause ::
-  (Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
+  (Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, Reader EntryPoint] r) =>
   LambdaClause 'Parsed ->
   Sem r (LambdaClause 'Scoped)
 checkLambdaClause LambdaClause {..} = withLocalScope $ do
@@ -2144,7 +2137,7 @@ checkScopedIden ::
 checkScopedIden n = checkName n >>= entryToScopedIden n
 
 checkExpressionAtom ::
-  (Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
+  (Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, Reader EntryPoint] r) =>
   ExpressionAtom 'Parsed ->
   Sem r (NonEmpty (ExpressionAtom 'Scoped))
 checkExpressionAtom e = case e of
@@ -2168,7 +2161,7 @@ checkExpressionAtom e = case e of
   AtomNamedApplicationNew i -> pure . AtomNamedApplicationNew <$> checkNamedApplicationNew i
   AtomRecordUpdate i -> pure . AtomRecordUpdate <$> checkRecordUpdate i
 
-checkNamedApplicationNew :: forall r. (Members '[Error ScoperError, State Scope, State ScoperState, Reader ScopeParameters, InfoTableBuilder, NameIdGen] r) => NamedApplicationNew 'Parsed -> Sem r (NamedApplicationNew 'Scoped)
+checkNamedApplicationNew :: forall r. (Members '[Error ScoperError, State Scope, State ScoperState, Reader ScopeParameters, InfoTableBuilder, NameIdGen, Reader EntryPoint] r) => NamedApplicationNew 'Parsed -> Sem r (NamedApplicationNew 'Scoped)
 checkNamedApplicationNew napp = do
   let nargs = napp ^. namedApplicationNewArguments
   aname <- checkScopedIden (napp ^. namedApplicationNewName)
@@ -2191,7 +2184,7 @@ checkNamedApplicationNew napp = do
       }
 
 checkNamedArgumentNew ::
-  (Members '[Error ScoperError, State Scope, State ScoperState, Reader ScopeParameters, InfoTableBuilder, NameIdGen] r) =>
+  (Members '[Error ScoperError, State Scope, State ScoperState, Reader ScopeParameters, InfoTableBuilder, NameIdGen, Reader EntryPoint] r) =>
   HashSet Symbol ->
   NamedArgumentNew 'Parsed ->
   Sem r (NamedArgumentNew 'Scoped)
@@ -2205,7 +2198,7 @@ checkNamedArgumentNew snames NamedArgumentNew {..} = do
       { _namedArgumentNewFunDef = def
       }
 
-checkRecordUpdate :: forall r. (Members '[Error ScoperError, State Scope, State ScoperState, Reader ScopeParameters, InfoTableBuilder, NameIdGen] r) => RecordUpdate 'Parsed -> Sem r (RecordUpdate 'Scoped)
+checkRecordUpdate :: forall r. (Members '[Error ScoperError, State Scope, State ScoperState, Reader ScopeParameters, InfoTableBuilder, NameIdGen, Reader EntryPoint] r) => RecordUpdate 'Parsed -> Sem r (RecordUpdate 'Scoped)
 checkRecordUpdate RecordUpdate {..} = do
   tyName' <- getNameOfKind KNameInductive _recordUpdateTypeName
   info <- getRecordInfo tyName'
@@ -2229,7 +2222,7 @@ checkRecordUpdate RecordUpdate {..} = do
       }
 
 checkUpdateField ::
-  (Members '[Error ScoperError, State Scope, State ScoperState, Reader ScopeParameters, InfoTableBuilder, NameIdGen] r) =>
+  (Members '[Error ScoperError, State Scope, State ScoperState, Reader ScopeParameters, InfoTableBuilder, NameIdGen, Reader EntryPoint] r) =>
   RecordNameSignature 'Parsed ->
   RecordUpdateField 'Parsed ->
   Sem r (RecordUpdateField 'Scoped)
@@ -2249,7 +2242,7 @@ checkUpdateField sig f = do
 
 checkNamedApplication ::
   forall r.
-  (Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
+  (Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, Reader EntryPoint] r) =>
   NamedApplication 'Parsed ->
   Sem r (NamedApplication 'Scoped)
 checkNamedApplication napp = do
@@ -2303,7 +2296,7 @@ lookupNameSignature :: (Members '[State ScoperState] r) => S.NameId -> Sem r (Ma
 lookupNameSignature s = gets (^. scoperSignatures . at s)
 
 checkIterator ::
-  (Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
+  (Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, Reader EntryPoint] r) =>
   Iterator 'Parsed ->
   Sem r (Iterator 'Scoped)
 checkIterator iter = do
@@ -2346,7 +2339,7 @@ checkIterator iter = do
     return Iterator {..}
 
 checkInitializer ::
-  (Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
+  (Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, Reader EntryPoint] r) =>
   Initializer 'Parsed ->
   Sem r (Initializer 'Scoped)
 checkInitializer ini = do
@@ -2359,7 +2352,7 @@ checkInitializer ini = do
       }
 
 checkRange ::
-  (Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
+  (Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, Reader EntryPoint] r) =>
   Range 'Parsed ->
   Sem r (Range 'Scoped)
 checkRange rng = do
@@ -2384,7 +2377,7 @@ checkHole h = do
       }
 
 checkParens ::
-  (Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
+  (Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, Reader EntryPoint] r) =>
   ExpressionAtoms 'Parsed ->
   Sem r Expression
 checkParens e@(ExpressionAtoms as _) = case as of
@@ -2401,19 +2394,19 @@ checkParens e@(ExpressionAtoms as _) = case as of
 
 checkExpressionAtoms ::
   forall r.
-  (Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
+  (Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, Reader EntryPoint] r) =>
   ExpressionAtoms 'Parsed ->
   Sem r (ExpressionAtoms 'Scoped)
 checkExpressionAtoms (ExpressionAtoms l i) = (`ExpressionAtoms` i) <$> sconcatMap checkExpressionAtom l
 
 checkJudoc ::
-  (Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
+  (Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, Reader EntryPoint] r) =>
   Judoc 'Parsed ->
   Sem r (Judoc 'Scoped)
 checkJudoc (Judoc groups) = Judoc <$> mapM checkJudocGroup groups
 
 checkJudocGroup ::
-  (Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
+  (Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, Reader EntryPoint] r) =>
   JudocGroup 'Parsed ->
   Sem r (JudocGroup 'Scoped)
 checkJudocGroup = \case
@@ -2421,7 +2414,7 @@ checkJudocGroup = \case
   JudocGroupLines l -> JudocGroupLines <$> mapM checkJudocBlock l
 
 checkJudocBlock ::
-  (Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
+  (Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, Reader EntryPoint] r) =>
   JudocBlock 'Parsed ->
   Sem r (JudocBlock 'Scoped)
 checkJudocBlock = \case
@@ -2429,19 +2422,19 @@ checkJudocBlock = \case
   JudocExample e -> JudocExample <$> traverseOf exampleExpression checkParseExpressionAtoms e
 
 checkJudocBlockParagraph ::
-  (Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
+  (Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, Reader EntryPoint] r) =>
   JudocBlockParagraph 'Parsed ->
   Sem r (JudocBlockParagraph 'Scoped)
 checkJudocBlockParagraph = traverseOf judocBlockParagraphBlocks (mapM checkJudocBlock)
 
 checkJudocLine ::
-  (Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
+  (Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, Reader EntryPoint] r) =>
   JudocLine 'Parsed ->
   Sem r (JudocLine 'Scoped)
 checkJudocLine (JudocLine delim atoms) = JudocLine delim <$> mapM (mapM checkJudocAtom) atoms
 
 checkJudocAtom ::
-  (Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
+  (Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, Reader EntryPoint] r) =>
   JudocAtom 'Parsed ->
   Sem r (JudocAtom 'Scoped)
 checkJudocAtom = \case
@@ -2450,7 +2443,7 @@ checkJudocAtom = \case
 
 checkParseExpressionAtoms ::
   forall r.
-  (Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
+  (Members '[Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, Reader EntryPoint] r) =>
   ExpressionAtoms 'Parsed ->
   Sem r Expression
 checkParseExpressionAtoms = checkExpressionAtoms >=> parseExpressionAtoms
@@ -2462,7 +2455,7 @@ checkParsePatternAtom ::
 checkParsePatternAtom = checkPatternAtom >=> parsePatternAtom
 
 checkSyntaxDef ::
-  (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, State ScoperSyntax] r) =>
+  (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, Reader EntryPoint, State ScoperSyntax] r) =>
   SyntaxDef 'Parsed ->
   Sem r (SyntaxDef 'Scoped)
 checkSyntaxDef = \case

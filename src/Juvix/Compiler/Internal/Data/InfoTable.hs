@@ -2,6 +2,7 @@ module Juvix.Compiler.Internal.Data.InfoTable
   ( module Juvix.Compiler.Store.Internal.Language,
     buildTable,
     buildInfoTable,
+    computeStoredModule,
     extendWithReplExpression,
     lookupConstructor,
     lookupConstructorArgTypes,

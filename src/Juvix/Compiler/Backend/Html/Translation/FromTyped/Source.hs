@@ -11,8 +11,8 @@ import Juvix.Compiler.Backend.Html.Extra
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Print
-import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver
 import Juvix.Compiler.Internal.Pretty qualified as Internal
+import Juvix.Compiler.Pipeline.Loader.PathResolver
 import Juvix.Extra.Assets (writeAssets)
 import Juvix.Prelude
 import Prettyprinter

@@ -1,9 +1,9 @@
-module Juvix.Compiler.Concrete.Translation.Pipeline.Loader.PathResolver
-  ( module Juvix.Compiler.Concrete.Translation.Pipeline.Loader.PathResolver.Paths,
-    module Juvix.Compiler.Concrete.Translation.Pipeline.Loader.PathResolver.Base,
-    module Juvix.Compiler.Concrete.Translation.Pipeline.Loader.PathResolver.Error,
-    module Juvix.Compiler.Concrete.Translation.Pipeline.Loader.PathResolver.Data,
-    module Juvix.Compiler.Concrete.Translation.Pipeline.Loader.PathResolver.PackageInfo,
+module Juvix.Compiler.Pipeline.Loader.PathResolver
+  ( module Juvix.Compiler.Pipeline.Loader.PathResolver.Paths,
+    module Juvix.Compiler.Pipeline.Loader.PathResolver.Base,
+    module Juvix.Compiler.Pipeline.Loader.PathResolver.Error,
+    module Juvix.Compiler.Pipeline.Loader.PathResolver.Data,
+    module Juvix.Compiler.Pipeline.Loader.PathResolver.PackageInfo,
     runPathResolver,
     runPathResolverPipe,
     runPathResolverPipe',

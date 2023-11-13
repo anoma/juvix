@@ -43,10 +43,8 @@ newtype ModulesCache = ModulesCache
   { _cachedModules :: HashMap TopModulePath ScopedModule
   }
 
-data ScopeParameters = ScopeParameters
-  { -- | Used for import cycle detection.
-    _scopeTopParents :: [Import 'Parsed],
-    _scopeParsedModules :: HashMap TopModulePath (Either ScopedModule (Module 'Parsed 'ModuleTop))
+newtype ScopeParameters = ScopeParameters
+  { _scopeImportedModules :: HashMap TopModulePath ScopedModule
   }
 
 data RecordInfo = RecordInfo

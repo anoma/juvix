@@ -25,10 +25,10 @@ data InfoTableBuilder m a where
 
 makeSem ''InfoTableBuilder
 
-registerDoc :: (Members '[HighlightBuilder] r) => NameId -> Maybe (Judoc 'Scoped) -> Sem r ()
-registerDoc k md = modify (set (highlightDoc . at k) md)
+registerDoc :: forall r. (Member (State InfoTable) r) => NameId -> Maybe (Judoc 'Scoped) -> Sem r ()
+registerDoc k md = modify (set (infoHighlightDoc . at k) md)
 
-toState :: (Members '[HighlightBuilder] r) => Sem (InfoTableBuilder ': r) a -> Sem (State InfoTable ': r) a
+toState :: Sem (InfoTableBuilder ': r) a -> Sem (State InfoTable ': r) a
 toState = reinterpret $ \case
   RegisterAxiom d ->
     let ref = d ^. axiomName . S.nameId
@@ -58,8 +58,8 @@ toState = reinterpret $ \case
      in do
           modify (set (infoFunctions . at ref) (Just info))
           registerDoc (f ^. signName . nameId) j
-  RegisterName n -> modify (over highlightNames (cons (S.anameFromName n)))
-  RegisterScopedIden n -> modify (over highlightNames (cons (anameFromScopedIden n)))
+  RegisterName n -> modify (over infoHighlightNames (cons (S.anameFromName n)))
+  RegisterScopedIden n -> modify (over infoHighlightNames (cons (anameFromScopedIden n)))
   RegisterModule m -> do
     let j = m ^. moduleDoc
     modify (over infoModules (HashMap.insert (m ^. modulePath) m))
@@ -81,10 +81,10 @@ toState = reinterpret $ \case
 runInfoTableBuilderRepl :: InfoTable -> Sem (InfoTableBuilder ': r) a -> Sem r (InfoTable, a)
 runInfoTableBuilderRepl tab = ignoreHighlightBuilder . runInfoTableBuilder tab . raiseUnder
 
-runInfoTableBuilder :: (Members '[HighlightBuilder] r) => InfoTable -> Sem (InfoTableBuilder ': r) a -> Sem r (InfoTable, a)
+runInfoTableBuilder :: InfoTable -> Sem (InfoTableBuilder ': r) a -> Sem r (InfoTable, a)
 runInfoTableBuilder tab = runState tab . toState
 
-ignoreInfoTableBuilder :: (Members '[HighlightBuilder] r) => Sem (InfoTableBuilder ': r) a -> Sem r a
+ignoreInfoTableBuilder :: Sem (InfoTableBuilder ': r) a -> Sem r a
 ignoreInfoTableBuilder = evalState emptyInfoTable . toState
 
 anameFromScopedIden :: ScopedIden -> AName
