@@ -1,6 +1,5 @@
 module Package;
 
-import PackageDescription.V1 open;
+import PackageDescription.Basic open;
 
-package : Package :=
-  defaultPackage {name := "qualifiedimports"};
+package : Package := basicPackage;
