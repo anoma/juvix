@@ -20,35 +20,38 @@ runCommand opts = do
   scopedM <- runPipeline inputFile upToScoping
   let m = head (scopedM ^. Scoper.resultModules)
   outputDir <- fromAppPathDir (opts ^. markdownOutputDir)
-  md :: Text <-
-    MK.fromJuvixMarkdown
-      ProcessJuvixBlocksArgs
-        { _processJuvixBlocksArgsConcreteOpts = Concrete.defaultOptions,
-          _processJuvixBlocksArgsUrlPrefix = opts ^. markdownUrlPrefix,
-          _processJuvixBlocksArgsIdPrefix =
-            opts ^. markdownIdPrefix,
-          _processJuvixBlocksArgsNoPath =
-            opts ^. markdownNoPath,
-          _processJuvixBlocksArgsComments = scopedM ^. Scoper.comments,
-          _processJuvixBlocksArgsModule = m,
-          _processJuvixBlocksArgsOutputDir = outputDir
-        }
-  if
-      | opts ^. markdownStdout -> liftIO . putStrLn $ md
-      | otherwise -> do
-          ensureDir outputDir
-          when (opts ^. markdownWriteAssets) $
-            liftIO $
-              writeAssets outputDir
+  let res =
+        MK.fromJuvixMarkdown'
+          ProcessJuvixBlocksArgs
+            { _processJuvixBlocksArgsConcreteOpts = Concrete.defaultOptions,
+              _processJuvixBlocksArgsUrlPrefix = opts ^. markdownUrlPrefix,
+              _processJuvixBlocksArgsIdPrefix =
+                opts ^. markdownIdPrefix,
+              _processJuvixBlocksArgsNoPath =
+                opts ^. markdownNoPath,
+              _processJuvixBlocksArgsComments = scopedM ^. Scoper.comments,
+              _processJuvixBlocksArgsModule = m,
+              _processJuvixBlocksArgsOutputDir = outputDir
+            }
+  case res of
+    Left err -> exitJuvixError (JuvixError err)
+    Right md ->
+      if
+          | opts ^. markdownStdout -> liftIO . putStrLn $ md
+          | otherwise -> do
+              ensureDir outputDir
+              when (opts ^. markdownWriteAssets) $
+                liftIO $
+                  writeAssets outputDir
 
-          let mdFile :: Path Rel File
-              mdFile =
-                relFile
-                  ( Concrete.topModulePathToDottedPath
-                      (m ^. Concrete.modulePath . S.nameConcrete)
-                      <.> markdownFileExt
-                  )
-              absPath :: Path Abs File
-              absPath = outputDir <//> mdFile
+              let mdFile :: Path Rel File
+                  mdFile =
+                    relFile
+                      ( Concrete.topModulePathToDottedPath
+                          (m ^. Concrete.modulePath . S.nameConcrete)
+                          <.> markdownFileExt
+                      )
+                  absPath :: Path Abs File
+                  absPath = outputDir <//> mdFile
 
-          liftIO $ Text.writeFile (toFilePath absPath) md
+              liftIO $ Text.writeFile (toFilePath absPath) md

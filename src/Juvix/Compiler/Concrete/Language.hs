@@ -927,7 +927,6 @@ data MarkdownInfo = MarkdownInfo
   }
   deriving stock (Show, Eq, Ord)
 
--- TODO add MarkdownInfo that has both new fields
 data Module (s :: Stage) (t :: ModuleIsTop) = Module
   { _moduleKw :: KeywordRef,
     _modulePath :: ModulePathType s t,
@@ -1930,6 +1929,7 @@ makeLenses ''NameSignature
 makeLenses ''RecordNameSignature
 makeLenses ''NameBlock
 makeLenses ''NameItem
+makeLenses ''MarkdownInfo
 
 fixityFieldHelper :: SimpleGetter (ParsedFixityFields s) (Maybe a) -> SimpleGetter (ParsedFixityInfo s) (Maybe a)
 fixityFieldHelper l = to (^? fixityFields . _Just . l . _Just)

@@ -14,6 +14,7 @@ import Data.Singletons
 import Data.Text qualified as Text
 import Juvix.Compiler.Backend.Markdown.Data.Types (Mk (..))
 import Juvix.Compiler.Backend.Markdown.Data.Types qualified as MK
+import Juvix.Compiler.Backend.Markdown.Error
 import Juvix.Compiler.Concrete.Data.Highlight.Input (HighlightBuilder, ignoreHighlightBuilder)
 import Juvix.Compiler.Concrete.Data.ParsedInfoTable
 import Juvix.Compiler.Concrete.Data.ParsedInfoTableBuilder
@@ -156,10 +157,16 @@ runMarkdownModuleParser ::
   Path Abs File ->
   Mk ->
   Sem r (Either ParserError (Module 'Parsed 'ModuleTop))
-runMarkdownModuleParser fileName mk =
+runMarkdownModuleParser fpath mk =
   runError $ case nonEmpty (MK.extractJuvixCodeBlock mk) of
-    -- TODO proper error
-    Nothing -> error "There is no module declaration in the markdown file"
+    Nothing ->
+      throw
+        ( ErrMarkdownBackend $
+            ErrNoJuvixCodeBlocks
+              NoJuvixCodeBlocksError
+                { _noJuvixCodeBlocksErrorFilepath = fpath
+                }
+        )
     Just (firstBlock :| restBlocks) -> do
       m0 <- parseFirstBlock firstBlock
       let iniBuilder =
@@ -169,11 +176,14 @@ runMarkdownModuleParser fileName mk =
               }
       res <- Input.runInputList restBlocks (execState iniBuilder parseRestBlocks)
       let m =
-            set moduleMarkdownInfo (Just
-              MarkdownInfo
-                { _markdownInfo = mk,
-                  _markdownInfoBlockLengths = reverse (res ^. mdModuleBuilderBlocksLengths)
-                })
+            set
+              moduleMarkdownInfo
+              ( Just
+                  MarkdownInfo
+                    { _markdownInfo = mk,
+                      _markdownInfoBlockLengths = reverse (res ^. mdModuleBuilderBlocksLengths)
+                    }
+              )
               $ res ^. mdModuleBuilder
       registerModule m $> m
   where
@@ -189,7 +199,7 @@ runMarkdownModuleParser fileName mk =
     getInitialParserState code =
       let initPos =
             maybe
-              (P.initialPos (toFilePath fileName))
+              (P.initialPos (toFilePath fpath))
               getInitPos
               (code ^. MK.juvixCodeBlockInterval)
        in P.State
@@ -254,13 +264,13 @@ runExpressionParser ::
   Path Abs File ->
   Text ->
   Sem r (Either ParserError (ExpressionAtoms 'Parsed))
-runExpressionParser fileName input = do
+runExpressionParser fpath input = do
   m <-
     ignoreHighlightBuilder
       . runParserInfoTableBuilder
       . evalState (Nothing @ParsedPragmas)
       . evalState (Nothing @(Judoc 'Parsed))
-      $ P.runParserT parseExpressionAtoms (toFilePath fileName) input
+      $ P.runParserT parseExpressionAtoms (toFilePath fpath) input
   case m of
     (_, _, Left err) -> return (Left (ErrMegaparsec (MegaparsecError err)))
     (_, _, Right r) -> return (Right r)

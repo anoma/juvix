@@ -61,11 +61,13 @@ testDescr PosTest {..} =
                     root <//> $(mkRelDir "markdown")
                 }
 
-        let md :: Text = fromJuvixMarkdown' opts
-
-        step "Checking against expected output file"
-        expFile :: Text <- readFile (toFilePath _expectedFile)
-        assertEqDiffText "Compare to expected output" md expFile
+        let res = fromJuvixMarkdown' opts
+        case res of
+          Left err -> exitJuvixError (JuvixError err)
+          Right md -> do
+            step "Checking against expected output file"
+            expFile :: Text <- readFile (toFilePath _expectedFile)
+            assertEqDiffText "Compare to expected output" md expFile
     }
 
 allTests :: TestTree
