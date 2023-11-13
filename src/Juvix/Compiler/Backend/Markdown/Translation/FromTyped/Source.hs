@@ -65,15 +65,7 @@ fromJuvixMarkdown opts = do
       let mk :: Mk = mkInfo ^. Concrete.markdownInfo
           sepr :: [Int] = mkInfo ^. Concrete.markdownInfoBlockLengths
 
-      unless (nullMk mk) $
-        throw
-          ( ErrEmptyMarkdown
-              EmptyMarkdownError
-                { _emptyMarkdownErrorFilepath = fname
-                }
-          )
-
-      unless (null sepr) $
+      when (nullMk mk || null sepr) $
         throw
           ( ErrNoJuvixCodeBlocks
               NoJuvixCodeBlocksError
@@ -92,9 +84,9 @@ fromJuvixMarkdown opts = do
       return $ MK.toPlainText r
     Nothing ->
       throw
-        ( ErrEmptyMarkdown
-            EmptyMarkdownError
-              { _emptyMarkdownErrorFilepath = fname
+        ( ErrNoMarkdownInfo
+            NoMarkdownInfoError
+              { _noMarkdownInfoFilepath = fname
               }
         )
 

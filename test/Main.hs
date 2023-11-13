@@ -3,6 +3,7 @@ module Main (main) where
 import Arity qualified
 import Asm qualified
 import BackendGeb qualified
+import BackendMarkdown qualified
 import Base
 import Compilation qualified
 import Core qualified
@@ -45,7 +46,8 @@ fastTests =
       Reachability.allTests,
       Format.allTests,
       Formatter.allTests,
-      Package.allTests
+      Package.allTests,
+      BackendMarkdown.allTests
     ]
 
 main :: IO ()

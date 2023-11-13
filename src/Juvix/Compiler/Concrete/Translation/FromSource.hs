@@ -142,7 +142,10 @@ runModuleParser fileName input
       res <- P.runParserT juvixCodeBlockParser (toFilePath fileName) input
       case res of
         Left err -> return . Left . ErrMegaparsec . MegaparsecError $ err
-        Right r -> runMarkdownModuleParser fileName r
+        Right r -> do
+          if
+              | MK.nullMk r -> return . Left . ErrMarkdownBackend $ ErrNoJuvixCodeBlocks NoJuvixCodeBlocksError {_noJuvixCodeBlocksErrorFilepath = fileName}
+              | otherwise -> runMarkdownModuleParser fileName r
   | otherwise = do
       m <-
         evalState (Nothing @ParsedPragmas)

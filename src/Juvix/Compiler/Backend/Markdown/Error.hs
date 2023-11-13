@@ -4,25 +4,24 @@ import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error.Pretty
 import Juvix.Prelude
 
-
-data MarkdownBackendError 
-  = ErrEmptyMarkdown EmptyMarkdownError
+data MarkdownBackendError
+  = ErrNoMarkdownInfo NoMarkdownInfoError
   | ErrNoJuvixCodeBlocks NoJuvixCodeBlocksError
   deriving stock (Show)
 
 instance ToGenericError MarkdownBackendError where
   genericError = \case
-    ErrEmptyMarkdown e -> genericError e
+    ErrNoMarkdownInfo e -> genericError e
     ErrNoJuvixCodeBlocks e -> genericError e
 
-newtype EmptyMarkdownError = EmptyMarkdownError
-  { _emptyMarkdownErrorFilepath :: Path Abs File 
+newtype NoMarkdownInfoError = NoMarkdownInfoError
+  { _noMarkdownInfoFilepath :: Path Abs File
   }
   deriving stock (Show)
 
-instance ToGenericError EmptyMarkdownError where
-  genericError EmptyMarkdownError {..} = do
-    let msg = "The markdown file is empty:\n" <+> pretty _emptyMarkdownErrorFilepath
+instance ToGenericError NoMarkdownInfoError where
+  genericError NoMarkdownInfoError {..} = do
+    let msg = "The markdown file is empty:\n" <+> pretty _noMarkdownInfoFilepath
     return
       GenericError
         { _genericErrorLoc = i,
@@ -31,11 +30,10 @@ instance ToGenericError EmptyMarkdownError where
         }
     where
       i :: Interval
-      i = singletonInterval . mkInitialLoc $ _emptyMarkdownErrorFilepath
-
+      i = singletonInterval . mkInitialLoc $ _noMarkdownInfoFilepath
 
 newtype NoJuvixCodeBlocksError = NoJuvixCodeBlocksError
-  { _noJuvixCodeBlocksErrorFilepath :: Path Abs File 
+  { _noJuvixCodeBlocksErrorFilepath :: Path Abs File
   }
   deriving stock (Show)
 
