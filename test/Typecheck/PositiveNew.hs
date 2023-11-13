@@ -29,11 +29,27 @@ allTests =
     "New typechecker positive tests"
     [ testGroup
         "New typechecker General typechecking tests"
-        (map (mkTest . testDescr) (filter (not . isIgnored) Old.tests))
+        (map (mkTest . testDescr) (filter (not . isIgnored) (extraTests <> Old.tests)))
     ]
 
 isIgnored :: Old.PosTest -> Bool
 isIgnored t = HashSet.member (t ^. Old.name) ignored
+
+extraTests :: [Old.PosTest]
+extraTests =
+  [ Old.posTest
+      "Monad transformers (State)"
+      $(mkRelDir "Monads")
+      $(mkRelFile "State.juvix"),
+    Old.posTest
+      "Monad transformers (Reader)"
+      $(mkRelDir "Monads")
+      $(mkRelFile "Reader.juvix"),
+    Old.posTest
+      "Monad transformers (ReaderT)"
+      $(mkRelDir "Monads")
+      $(mkRelFile "ReaderT.juvix")
+  ]
 
 -- | Default values are not supported by the new type checker at the moment
 ignored :: HashSet String
