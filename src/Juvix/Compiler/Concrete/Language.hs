@@ -19,6 +19,7 @@ module Juvix.Compiler.Concrete.Language
 where
 
 import Data.Kind qualified as GHC
+import Juvix.Compiler.Backend.Markdown.Data.Types (Mk)
 import Juvix.Compiler.Concrete.Data.Builtins
 import Juvix.Compiler.Concrete.Data.Literal
 import Juvix.Compiler.Concrete.Data.ModuleIsTop
@@ -920,6 +921,7 @@ type FunctionName s = SymbolType s
 
 type LocalModuleName s = SymbolType s
 
+-- TODO add MarkdownInfo that has both new fields
 data Module (s :: Stage) (t :: ModuleIsTop) = Module
   { _moduleKw :: KeywordRef,
     _modulePath :: ModulePathType s t,
@@ -927,7 +929,9 @@ data Module (s :: Stage) (t :: ModuleIsTop) = Module
     _modulePragmas :: Maybe ParsedPragmas,
     _moduleBody :: [Statement s],
     _moduleKwEnd :: ModuleEndType t,
-    _moduleInductive :: ModuleInductiveType t
+    _moduleInductive :: ModuleInductiveType t,
+    _moduleMarkdown :: Maybe Mk,
+    _moduleMarkdownSeparation :: Maybe [Int]
   }
 
 deriving stock instance Show (Module 'Parsed 'ModuleTop)

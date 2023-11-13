@@ -123,14 +123,16 @@ toAnsiText useColors
 toPlainText :: (HasTextBackend a) => a -> Text
 toPlainText = Text.renderStrict . toTextStream
 
-toPlainTextTrim :: (HasTextBackend a) => a -> Text
-toPlainTextTrim =
+trimText :: Text -> Text
+trimText =
   Text.unlines
     . map Text.stripEnd
     . dropWhileEnd Text.null
     . dropWhile Text.null
     . Text.lines
-    . toPlainText
+
+toPlainTextTrim :: (HasTextBackend a) => a -> Text
+toPlainTextTrim = trimText . toPlainText
 
 prettyText :: (Pretty a) => a -> Text
 prettyText = Text.renderStrict . layoutPretty defaultLayoutOptions . pretty

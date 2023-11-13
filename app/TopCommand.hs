@@ -10,6 +10,7 @@ import Commands.Eval qualified as Eval
 import Commands.Format qualified as Format
 import Commands.Html qualified as Html
 import Commands.Init qualified as Init
+import Commands.Markdown qualified as Markdown
 import Commands.Repl qualified as Repl
 import Commands.Typecheck qualified as Typecheck
 import Juvix.Extra.Version
@@ -37,6 +38,7 @@ runTopCommand = \case
   Clean opts -> runFilesIO (Clean.runCommand opts)
   Eval opts -> Eval.runCommand opts
   Html opts -> Html.runCommand opts
+  Markdown opts -> Markdown.runCommand opts
   JuvixRepl opts -> Repl.runCommand opts
   JuvixFormat opts -> runFilesIO (Format.runCommand opts)
   Dependencies opts -> Dependencies.runCommand opts

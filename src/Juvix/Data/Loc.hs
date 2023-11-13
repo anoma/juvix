@@ -107,6 +107,9 @@ intervalEndLine a = a ^. intervalEnd . locLine . unPos . to fromIntegral
 intervalStartLine :: Interval -> Int
 intervalStartLine a = a ^. intervalStart . locLine . unPos . to fromIntegral
 
+intervalStartCol :: Interval -> Int
+intervalStartCol a = a ^. intervalStart . locCol . unPos . to fromIntegral
+
 intervalStartLoc :: Interval -> Loc
 intervalStartLoc i =
   Loc

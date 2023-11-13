@@ -184,6 +184,8 @@ toConcrete t p = run . runReader l $ do
         _moduleInductive = (),
         _moduleDoc = Nothing,
         _modulePragmas = Nothing,
+        _moduleMarkdown = Nothing,
+        _moduleMarkdownSeparation = Nothing,
         ..
       }
   where
