@@ -4,9 +4,15 @@ import Juvix.Compiler.Internal.Extra
 import Juvix.Prelude
 import Juvix.Prelude.Pretty
 
+data ArgId = ArgId
+  { _argIdFunctionName :: Name,
+    _argIdIx :: Int
+  }
+  deriving stock (Eq, Ord)
+
 -- | Used to detect of cycles of default arguments in the arity checker.
 newtype InsertedArgsStack = InsertedArgsStack
-  { _insertedArgsStack :: [Name]
+  { _insertedArgsStack :: [ArgId]
   }
   deriving newtype (Monoid, Semigroup)
 
@@ -65,6 +71,7 @@ instance Eq ArityParameter where
     (ari, impl) == (ari', impl')
 
 makeLenses ''UnfoldedArity
+makeLenses ''ArgId
 makeLenses ''FunctionArity
 makeLenses ''InsertedArg
 makeLenses ''ArityParameter

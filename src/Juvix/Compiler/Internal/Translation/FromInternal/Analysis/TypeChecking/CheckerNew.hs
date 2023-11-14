@@ -35,7 +35,7 @@ type MCache = Cache ModuleIndex Module
 
 data FunctionDefault = FunctionDefault
   { _functionDefaultLeft :: FunctionParameter,
-    _functionDefaultDefault :: Maybe Expression,
+    _functionDefaultDefault :: Maybe (ArgId, Expression),
     _functionDefaultRight :: BuilderType
   }
 
@@ -44,9 +44,13 @@ data BuilderType
   = BuilderTypeNoDefaults Expression
   | BuilderTypeDefaults FunctionDefault
 
-data AppBuilderArg = AppBuilderArg {
-  _appBuilderArgIsDefault :: Bool,
-  _appBuilderArg :: ApplicationArg
+data IsDefault
+  = ItIsDefault ArgId
+  | ItIsNotDefault
+
+data AppBuilderArg = AppBuilderArg
+  { _appBuilderArgIsDefault :: IsDefault,
+    _appBuilderArg :: ApplicationArg
   }
 
 data AppBuilder = AppBuilder
@@ -1019,17 +1023,22 @@ holesHelper mhint expr = do
   fTy <- inferLeftAppExpression hint f
   iniBuilderType <- mkInitBuilderType fTy
   let iniArg :: ApplicationArg -> AppBuilderArg
-      iniArg a = AppBuilderArg {
-        _appBuilderArgIsDefault = False,
-        _appBuilderArg = a
-                               }
+      iniArg a =
+        AppBuilderArg
+          { _appBuilderArgIsDefault = ItIsNotDefault,
+            _appBuilderArg = a
+          }
       iniBuilder =
         AppBuilder
           { _appBuilder = fTy ^. typedExpression,
             _appBuilderType = iniBuilderType,
             _appBuilderArgs = map iniArg args
           }
-  st' <- execState iniBuilder goArgs
+  st' <-
+    runReader (mempty @InsertedArgsStack) $
+      execState
+        iniBuilder
+        goArgs
   let ty' = mkFinalBuilderType (st' ^. appBuilderType)
   return
     TypedExpression
@@ -1040,30 +1049,47 @@ holesHelper mhint expr = do
     mkFinalBuilderType :: BuilderType -> Expression
     mkFinalBuilderType = \case
       BuilderTypeNoDefaults e -> e
-      BuilderTypeDefaults f -> ExpressionFunction Function {
-        _functionLeft = f ^. functionDefaultLeft,
-        _functionRight = mkFinalBuilderType (f ^. functionDefaultRight)
-                                                           }
+      BuilderTypeDefaults f ->
+        ExpressionFunction
+          Function
+            { _functionLeft = f ^. functionDefaultLeft,
+              _functionRight = mkFinalBuilderType (f ^. functionDefaultRight)
+            }
+
+    getFunctionName :: Expression -> Maybe Name
+    getFunctionName = \case
+      ExpressionIden (IdenFunction fun) -> Just fun
+      _ -> Nothing
 
     mkInitBuilderType :: TypedExpression -> Sem r BuilderType
     mkInitBuilderType fTy = do
       let ty = fTy ^. typedType
-      case fTy ^.  typedExpression of
-        ExpressionIden (IdenFunction fun) -> do
+      case getFunctionName (fTy ^. typedExpression) of
+        Just fun -> do
           infos <- (^. functionInfoDef . funDefArgsInfo) <$> lookupFunction fun
-          return $ toFunctionDefaultMay ty infos
-        _ -> return (BuilderTypeNoDefaults ty)
+          return $ toFunctionDefaultMay fun ty infos
+        Nothing -> return (BuilderTypeNoDefaults ty)
       where
-      toFunctionDefaultMay :: Expression -> [ArgInfo] -> BuilderType
-      toFunctionDefaultMay ty infos = maybe (BuilderTypeNoDefaults ty) (BuilderTypeDefaults . toFunctionDefault ty) (nonEmpty infos)
-      toFunctionDefault :: Expression -> NonEmpty ArgInfo -> FunctionDefault
-      toFunctionDefault e (a :| as) = case e of
-        ExpressionFunction f -> FunctionDefault {
-          _functionDefaultLeft = f ^. functionLeft,
-          _functionDefaultRight = toFunctionDefaultMay (f ^. functionRight) as,
-          _functionDefaultDefault = a ^. argInfoDefault
-                                                }
-        _ -> impossible
+        toFunctionDefaultMay :: Name -> Expression -> [ArgInfo] -> BuilderType
+        toFunctionDefaultMay funName ty infos =
+          let ixInfos = nonEmpty (indexFrom 0 infos)
+           in maybe (BuilderTypeNoDefaults ty) (BuilderTypeDefaults . toFunctionDefault funName ty) ixInfos
+
+        toFunctionDefault :: Name -> Expression -> NonEmpty (Indexed ArgInfo) -> FunctionDefault
+        toFunctionDefault _argIdFunctionName e (Indexed _argIdIx a :| as) = case e of
+          ExpressionFunction f ->
+            FunctionDefault
+              { _functionDefaultLeft = f ^. functionLeft,
+                _functionDefaultRight =
+                  toFunctionDefaultMay
+                    _argIdFunctionName
+                    (f ^. functionRight)
+                    (map (^. indexedThing) as),
+                _functionDefaultDefault =
+                  let uid = ArgId {_argIdFunctionName, _argIdIx}
+                   in (uid,) <$> a ^. argInfoDefault
+              }
+          _ -> impossible
 
     arityCheckBuiltins :: Expression -> [ApplicationArg] -> Sem r ()
     arityCheckBuiltins f args = do
@@ -1103,7 +1129,7 @@ holesHelper mhint expr = do
         goImplArgs k ((ApplicationArg Implicit _) : as) = goImplArgs (k - 1) as
         goImplArgs _ as = return as
 
-    goArgs :: forall r'. (r' ~ State AppBuilder ': r) => Sem r' ()
+    goArgs :: forall r'. (r' ~ State AppBuilder ': Reader InsertedArgsStack ': r) => Sem r' ()
     goArgs = peekArg >>= maybe (insertTrailingHolesMay mhint) goNextArg
       where
         insertTrailingHolesMay :: Maybe Expression -> Sem r' ()
@@ -1113,27 +1139,57 @@ holesHelper mhint expr = do
         insertTrailingHoles hintTy = do
           builderTy <- gets (^. appBuilderType)
           ariHint <- typeArity hintTy
-          ariExpr <- typeArity (mkFinalBuilderType builderTy)
+          (defaults, restExprTy) <- peelDefault builderTy
+          restExprAri <- typeArity restExprTy
           let preImplicits :: Arity -> [IsImplicit]
               preImplicits = takeWhile isImplicitOrInstance . map (^. arityParameterImplicit) . unfoldArity
-              preAriExpr = preImplicits ariExpr
+              preRestAriExpr = preImplicits restExprAri
               preAriHint = preImplicits ariHint
           loc <- getLoc <$> gets (^. appBuilder)
-          let toBeInserted :: [IsImplicit] = take (length preAriExpr - length preAriHint) preAriExpr
-              mkHoleArg :: IsImplicit -> Sem r' AppBuilderArg
-              mkHoleArg i =
-                ApplicationArg i <$> case i of
+          let numberOfExtraHoles = length preRestAriExpr + length defaults - length preAriHint
+              toBeInserted :: [(IsImplicit, Maybe (ArgId, Expression))] =
+                take numberOfExtraHoles (defaults <> (map (,Nothing) preRestAriExpr))
+              mkHoleArg :: (IsImplicit, Maybe (ArgId, Expression)) -> Sem r' AppBuilderArg
+              mkHoleArg (i, mdef) = do
+                (_appArg, _appBuilderArgIsDefault) <- case i of
                   Explicit -> impossible
-                  Implicit -> newHoleImplicit loc
-                  ImplicitInstance -> newHoleInstance loc
+                  Implicit -> case mdef of
+                    Nothing -> (,ItIsNotDefault) <$> newHoleImplicit loc
+                    Just (uid, def) -> return (def, ItIsDefault uid)
+                  ImplicitInstance -> (,ItIsNotDefault) <$> newHoleInstance loc
+                return
+                  AppBuilderArg
+                    { _appBuilderArg =
+                        ApplicationArg
+                          { _appArgIsImplicit = i,
+                            _appArg
+                          },
+                      _appBuilderArgIsDefault
+                    }
           trailingHoles <- mapM mkHoleArg toBeInserted
           mapM_ addTrailingHole trailingHoles
           where
+            peelDefault :: BuilderType -> Sem r' ([(IsImplicit, Maybe (ArgId, Expression))], Expression)
+            peelDefault bty = runOutputList (go bty)
+              where
+                go :: BuilderType -> Sem (Output (IsImplicit, Maybe (ArgId, Expression)) ': r') Expression
+                go = \case
+                  BuilderTypeNoDefaults e -> return e
+                  BuilderTypeDefaults d -> do
+                    let impl = d ^. functionDefaultLeft . paramImplicit
+                    output (impl, d ^. functionDefaultDefault)
+                    go (d ^. functionDefaultRight)
+
             addTrailingHole :: AppBuilderArg -> Sem r' ()
             addTrailingHole holeArg = do
               fun <- peekFunctionType (holeArg ^. appBuilderArg . appArgIsImplicit)
               modify' (over appBuilderArgs (holeArg :))
               checkMatchingArg holeArg fun
+
+        checkLoop :: AppBuilderArg -> Sem r' ()
+        checkLoop arg = case arg ^. appBuilderArgIsDefault of
+          ItIsNotDefault -> return ()
+          ItIsDefault uid -> undefined
 
         checkMatchingArg :: AppBuilderArg -> FunctionDefault -> Sem r' ()
         checkMatchingArg arg fun = do
@@ -1141,13 +1197,20 @@ holesHelper mhint expr = do
           let funParam = fun ^. functionDefaultLeft
               funL = funParam ^. paramType
               funR = fun ^. functionDefaultRight
-          arg' <- checkExpression funL (arg ^. appArg)
+              checkLeft :: Sem r' Expression
+              checkLeft = do
+                checkLoop arg
+                let adjustCtx = case fun ^. functionDefaultDefault of
+                      Nothing -> id
+                      Just (uid, _) -> local (over insertedArgsStack (uid :))
+                adjustCtx (checkExpression funL (arg ^. appBuilderArg . appArg))
+          arg' <- checkLeft
           let subsE :: (HasExpressions expr) => expr -> Sem r' expr
               subsE = substitutionApp (funParam ^. paramName, arg')
-          let subsBuilderType :: BuilderType -> Sem r' BuilderType = \case
+              subsBuilderType :: BuilderType -> Sem r' BuilderType = \case
                 BuilderTypeNoDefaults e -> BuilderTypeNoDefaults <$> subsE e
                 BuilderTypeDefaults FunctionDefault {..} -> do
-                  def' <- mapM subsE _functionDefaultDefault
+                  def' <- mapM (secondM subsE) _functionDefaultDefault
                   l' <- subsE _functionDefaultLeft
                   r' <- subsBuilderType _functionDefaultRight
                   return
@@ -1197,15 +1260,16 @@ holesHelper mhint expr = do
                   l <- gets (^. appBuilder)
                   let loc = getLoc l
                   (h, _appBuilderArgIsDefault) <- case impl of
-                    ImplicitInstance -> (,False) <$> newHoleInstance loc
+                    ImplicitInstance -> (,ItIsNotDefault) <$> newHoleInstance loc
                     Explicit -> impossible
                     Implicit -> case fun ^. functionDefaultDefault of
-                      Nothing -> (,False) <$> newHoleImplicit loc
-                      Just e -> return (e, True)
-                  let a = AppBuilderArg {
-                        _appBuilderArg = ApplicationArg impl h,
-                        _appBuilderArgIsDefault
-                        }
+                      Nothing -> (,ItIsNotDefault) <$> newHoleImplicit loc
+                      Just (uid, e) -> return (e, ItIsDefault uid)
+                  let a =
+                        AppBuilderArg
+                          { _appBuilderArg = ApplicationArg impl h,
+                            _appBuilderArgIsDefault
+                          }
                   modify' (over appBuilderArgs (a :))
                   goArgs
 
