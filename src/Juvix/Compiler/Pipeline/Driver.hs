@@ -1,24 +1,24 @@
 module Juvix.Compiler.Pipeline.Driver where
 
-import Juvix.Compiler.Concrete.Translation.FromParsed qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
 import Juvix.Compiler.Pipeline
 import Juvix.Compiler.Pipeline.Loader.PathResolver
-import Juvix.Compiler.Pipeline.Setup (entrySetup)
+import Juvix.Compiler.Store.Language qualified as Store
 import Juvix.Data.Effect.Git
 import Juvix.Prelude
 
-processFiles ::
-  forall a b r.
+processModule ::
+  forall r.
   (Members '[Error JuvixError, Files, GitClone, PathResolver] r) =>
-  (EntryPoint -> b -> Parser.ParserResult -> Sem r a) ->
-  ([a] -> b) ->
   EntryPoint ->
-  DependenciesConfig ->
-  Sem r (NonEmpty a)
-processFiles f coll entry depconfig = do
-  entrySetup depconfig
-  res <- Parser.fromSource entry
-  -- TODO: process imports
-  a <- f entry (coll []) res
-  return $ nonEmpty' [a]
+  Sem r Store.ModuleInfo
+processModule entry = undefined
+
+processDependencies ::
+  forall r.
+  (Members '[Error JuvixError, Files, GitClone, PathResolver] r) =>
+  EntryPoint ->
+  Sem r (Parser.ParserResult, Store.ModuleTable)
+processDependencies entry = do
+  res <- runReader entry upToParsing
+  undefined

@@ -86,10 +86,7 @@ buildTable :: (Foldable f) => f Module -> StoredModuleTable
 buildTable = foldr go mempty
   where
     go :: Module -> StoredModuleTable -> StoredModuleTable
-    go m mtab = mtab'
-      where
-        sm = computeStoredModule m
-        mtab' = over storedModuleTable (HashMap.insert (sm ^. storedModuleName) sm) mtab
+    go m mtab = insertStoredModule mtab (computeStoredModule m)
 
 computeStoredModule :: Module -> StoredModule
 computeStoredModule m@Module {..} =

@@ -32,3 +32,6 @@ makeLenses ''StoredModuleTable
 
 lookupStoredModule :: StoredModuleTable -> Name -> StoredModule
 lookupStoredModule mtab n = fromJust $ HashMap.lookup n (mtab ^. storedModuleTable)
+
+insertStoredModule :: StoredModuleTable -> StoredModule -> StoredModuleTable
+insertStoredModule tab sm = over storedModuleTable (HashMap.insert (sm ^. storedModuleName) sm) tab

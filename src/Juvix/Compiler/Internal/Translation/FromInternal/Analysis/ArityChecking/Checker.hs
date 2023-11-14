@@ -14,19 +14,11 @@ import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.E
 import Juvix.Data.Effect.NameIdGen
 import Juvix.Prelude hiding (fromEither)
 
-type MCache = Cache ModuleIndex Module
-
 checkModule ::
-  (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError, MCache] r) =>
+  (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r) =>
   Module ->
   Sem r Module
-checkModule = cacheGet . ModuleIndex
-
-checkModuleIndexNoCache ::
-  (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError, MCache] r) =>
-  ModuleIndex ->
-  Sem r Module
-checkModuleIndexNoCache (ModuleIndex Module {..}) = do
+checkModule Module {..} = do
   _moduleBody' <- runReader @InsertedArgsStack mempty (checkModuleBody _moduleBody)
   return
     Module
@@ -35,7 +27,7 @@ checkModuleIndexNoCache (ModuleIndex Module {..}) = do
       }
 
 checkModuleBody ::
-  (Members '[Reader InsertedArgsStack, Reader InfoTable, NameIdGen, Error ArityCheckerError, MCache] r) =>
+  (Members '[Reader InsertedArgsStack, Reader InfoTable, NameIdGen, Error ArityCheckerError] r) =>
   ModuleBody ->
   Sem r ModuleBody
 checkModuleBody ModuleBody {..} = do
@@ -48,7 +40,7 @@ checkModuleBody ModuleBody {..} = do
       }
 
 checkModuleIndex ::
-  (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError, MCache] r) =>
+  (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r) =>
   ModuleIndex ->
   Sem r ModuleIndex
 checkModuleIndex (ModuleIndex m) = ModuleIndex <$> checkModule m

@@ -5,16 +5,16 @@ import Juvix.Compiler.Store.Core.Language
 import Juvix.Extra.Serialize
 
 data InfoTable = InfoTable
-  { _identMap :: Map Text IdentKind,
+  { _identMap :: HashMap Text IdentKind,
     _infoMain :: Maybe Symbol,
-    _infoIdentifiers :: Map Symbol IdentifierInfo,
-    _infoInductives :: Map Symbol InductiveInfo,
-    _infoConstructors :: Map Tag ConstructorInfo,
-    _infoAxioms :: Map Text AxiomInfo,
-    _infoSpecialisations :: Map Symbol [SpecialisationInfo],
-    _infoBuiltins :: Map BuiltinPrim IdentKind,
+    _infoIdentifiers :: HashMap Symbol IdentifierInfo,
+    _infoInductives :: HashMap Symbol InductiveInfo,
+    _infoConstructors :: HashMap Tag ConstructorInfo,
+    _infoAxioms :: HashMap Text AxiomInfo,
+    _infoSpecialisations :: HashMap Symbol [SpecialisationInfo],
+    _infoBuiltins :: HashMap BuiltinPrim IdentKind,
     _infoPriorities :: IntSet,
-    _infoPrecedenceGraph :: Map NameId (Set NameId)
+    _infoPrecedenceGraph :: HashMap NameId (Set NameId)
   }
   deriving stock (Generic)
 

@@ -30,8 +30,10 @@ import Juvix.Compiler.Pipeline.Loader.PathResolver.Error
 import Juvix.Compiler.Pipeline.Package.Loader.Error
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff
 import Juvix.Compiler.Pipeline.Root.Base
+import Juvix.Compiler.Pipeline.Setup (entrySetup)
 import Juvix.Compiler.Reg.Data.InfoTable qualified as Reg
 import Juvix.Compiler.Reg.Translation.FromAsm qualified as Reg
+import Juvix.Compiler.Store.Language qualified as Store
 import Juvix.Data.Effect.Git
 import Juvix.Data.Effect.Process
 import Juvix.Prelude
@@ -41,66 +43,81 @@ type PipelineEff = '[PathResolver, EvalFileEff, Error PackageLoaderError, Error 
 type TopPipelineEff = '[PathResolver, EvalFileEff, Error PackageLoaderError, Error DependencyError, GitClone, Error GitProcessError, Process, Log, Reader EntryPoint, Files, NameIdGen, Builtins, State Artifacts, Error JuvixError, HighlightBuilder, Embed IO]
 
 --------------------------------------------------------------------------------
--- Workflows
+-- Workflows from source
+--------------------------------------------------------------------------------
+
+upToSetup ::
+  (Members '[Reader EntryPoint, PathResolver] r) =>
+  DependenciesConfig ->
+  Sem r ()
+upToSetup = entrySetup
+
+upToParsing ::
+  (Members '[Reader EntryPoint, Error JuvixError, Files, PathResolver] r) =>
+  Sem r Parser.ParserResult
+upToParsing = upToSetup defaultDependenciesConfig >> ask >>= Parser.fromSource
+
+--------------------------------------------------------------------------------
+-- Workflows from parsed source
 --------------------------------------------------------------------------------
 
 upToScoping ::
-  (Members '[Reader EntryPoint, Reader Scoper.ImportTable, Reader Parser.ParserResult, Error JuvixError, NameIdGen] r) =>
+  (Members '[Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Error JuvixError, NameIdGen] r) =>
   Sem r Scoper.ScoperResult
 upToScoping = Scoper.fromParsed
 
 upToInternal ::
-  (Members '[Reader EntryPoint, Reader Scoper.ImportTable, Reader Parser.ParserResult, Error JuvixError, NameIdGen, Builtins, Termination] r) =>
+  (Members '[Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Error JuvixError, NameIdGen, Builtins, Termination] r) =>
   Sem r Internal.InternalResult
 upToInternal = upToScoping >>= Internal.fromConcrete
 
 upToInternalArity ::
-  (Members '[Reader EntryPoint, Reader Scoper.ImportTable, Reader Parser.ParserResult, Reader Internal.StoredModuleTable, Error JuvixError, NameIdGen, Builtins, Termination] r) =>
+  (Members '[Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Error JuvixError, NameIdGen, Builtins, Termination] r) =>
   Sem r Internal.InternalArityResult
 upToInternalArity = upToInternal >>= Internal.arityChecking
 
 upToInternalTyped ::
-  (Members '[Error JuvixError, Reader EntryPoint, Reader Scoper.ImportTable, Reader Parser.ParserResult] r) =>
+  (Members '[Reader Parser.ParserResult, Error JuvixError, Reader EntryPoint, Reader Store.ModuleTable, NameIdGen, Builtins] r) =>
   Sem r Internal.InternalTypedResult
 upToInternalTyped = Internal.typeChecking upToInternalArity
 
 upToCore ::
-  (Members '[HighlightBuilder, Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, GitClone, PathResolver] r) =>
+  (Members '[Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError, Builtins, GitClone, PathResolver] r) =>
   Sem r Core.CoreResult
 upToCore = upToInternalTyped >>= Core.fromInternal
 
 upToAsm ::
-  (Members '[HighlightBuilder, Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, GitClone, PathResolver] r) =>
+  (Members '[Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError, Builtins, GitClone, PathResolver] r) =>
   Sem r Asm.InfoTable
 upToAsm =
   upToCore >>= \Core.CoreResult {..} -> coreToAsm _coreResultTable
 
 upToMiniC ::
-  (Members '[HighlightBuilder, Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, GitClone, PathResolver] r) =>
+  (Members '[Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError, Builtins, GitClone, PathResolver] r) =>
   Sem r C.MiniCResult
 upToMiniC = upToAsm >>= asmToMiniC
 
 upToVampIR ::
-  (Members '[HighlightBuilder, Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, GitClone, PathResolver] r) =>
+  (Members '[Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError, Builtins, GitClone, PathResolver] r) =>
   Sem r VampIR.Result
 upToVampIR =
   upToCore >>= \Core.CoreResult {..} -> coreToVampIR _coreResultTable
 
 upToGeb ::
-  (Members '[HighlightBuilder, Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, GitClone, PathResolver] r) =>
+  (Members '[Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError, Builtins, GitClone, PathResolver] r) =>
   Geb.ResultSpec ->
   Sem r Geb.Result
 upToGeb spec =
   upToCore >>= \Core.CoreResult {..} -> coreToGeb spec _coreResultTable
 
 upToCoreTypecheck ::
-  (Members '[HighlightBuilder, Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, GitClone, PathResolver] r) =>
+  (Members '[Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError, Builtins, GitClone, PathResolver] r) =>
   Sem r Core.CoreResult
 upToCoreTypecheck =
   upToCore >>= \r -> Core.toTypechecked (r ^. Core.coreResultTable) >>= \tab -> return r {Core._coreResultTable = tab}
 
 upToEval ::
-  (Members '[HighlightBuilder, Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, GitClone, PathResolver] r) =>
+  (Members '[Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError, Builtins, GitClone, PathResolver] r) =>
   Sem r Core.CoreResult
 upToEval =
   upToCore >>= \r -> Core.toEval (r ^. Core.coreResultTable) >>= \tab -> return r {Core._coreResultTable = tab}

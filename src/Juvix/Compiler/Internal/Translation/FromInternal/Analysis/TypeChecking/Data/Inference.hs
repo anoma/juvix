@@ -20,7 +20,6 @@ module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Da
 where
 
 import Data.HashMap.Strict qualified as HashMap
-import Juvix.Compiler.Concrete.Data.Highlight.Input
 import Juvix.Compiler.Internal.Extra
 import Juvix.Compiler.Internal.Pretty
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker
@@ -480,7 +479,7 @@ matchPatterns (PatternArg impl1 name1 pat1) (PatternArg impl2 name2 pat2) =
     err = return False
 
 runInferenceDefs ::
-  (Members '[Termination, HighlightBuilder, Error TypeCheckerError, State FunctionsTable, State TypesTable, NameIdGen] r, HasExpressions funDef) =>
+  (Members '[Termination, Error TypeCheckerError, State FunctionsTable, State TypesTable, NameIdGen] r, HasExpressions funDef) =>
   Sem (Inference ': r) (NonEmpty funDef) ->
   Sem r (NonEmpty funDef)
 runInferenceDefs a = do
@@ -493,15 +492,14 @@ runInferenceDefs a = do
   mapM (subsHoles subs) expr
 
 runInferenceDef ::
-  (Members '[Termination, HighlightBuilder, Error TypeCheckerError, State FunctionsTable, State TypesTable, NameIdGen] r, HasExpressions funDef) =>
+  (Members '[Termination, Error TypeCheckerError, State FunctionsTable, State TypesTable, NameIdGen] r, HasExpressions funDef) =>
   Sem (Inference ': r) funDef ->
   Sem r funDef
 runInferenceDef = fmap head . runInferenceDefs . fmap pure
 
-addIdens :: (Members '[HighlightBuilder, State TypesTable] r) => TypesTable -> Sem r ()
+addIdens :: (Members '[State TypesTable] r) => TypesTable -> Sem r ()
 addIdens idens = do
   modify (HashMap.union idens)
-  modify (over highlightTypes (HashMap.union idens))
 
 -- | Assumes the given function has been type checked. Does *not* register the
 -- function.
