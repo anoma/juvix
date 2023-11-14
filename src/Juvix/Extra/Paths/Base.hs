@@ -41,6 +41,9 @@ packageDescriptionDir = $(mkRelDir "include/package")
 v1PackageDescriptionFile :: Path Rel File
 v1PackageDescriptionFile = $(mkRelFile "PackageDescription/V1.juvix")
 
+basicPackageDescriptionFile :: Path Rel File
+basicPackageDescriptionFile = $(mkRelFile "PackageDescription/Basic.juvix")
+
 packageFilePath :: Path Rel File
 packageFilePath = $(mkRelFile "Package.juvix")
 

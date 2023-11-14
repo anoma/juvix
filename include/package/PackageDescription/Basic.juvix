@@ -1,0 +1,15 @@
+module PackageDescription.Basic;
+
+--- A ;Package; defines the configuration for a Juvix package
+type Package :=
+  --- A package with the following settings:
+  ---
+  --- name: "my-project"
+  --- version: 0.0.0
+  --- dependencies: The default standard library
+  --- main: nothing
+  --- buildDir: nothing
+  ---
+  --- Use this in situations where you don't want the package configuration file
+  --- to use the standard library.
+  basicPackage;

@@ -105,5 +105,12 @@ packageLoadingTests =
       $ \p _ ->
         if
             | null (p ^. packageDependencies) -> Nothing
-            | otherwise -> Just "Expected dependencies to be empty"
+            | otherwise -> Just "Expected dependencies to be empty",
+    PosTest
+      "Package.juvix can be defined with PackageDescription.Basic"
+      $(mkRelDir "PackageJuvixBasic")
+      $ \p _ ->
+        if
+            | p ^. packageName == defaultPackageName -> Nothing
+            | otherwise -> Just "Package did not have default name"
   ]

@@ -5,32 +5,173 @@ import Data.Text qualified as T
 import Data.Versions
 import Juvix.Compiler.Concrete.Gen
 import Juvix.Compiler.Concrete.Language
+import Juvix.Compiler.Core.Language qualified as Core
+import Juvix.Compiler.Core.Language.Value
 import Juvix.Compiler.Pipeline.Package.Base
+import Juvix.Compiler.Pipeline.Package.Loader.Error
 import Juvix.Extra.Paths
 import Juvix.Prelude
+
+data PackageVersion
+  = PackageVersion1
+  | PackageBasic
 
 data PackageDescriptionType = PackageDescriptionType
   { _packageDescriptionTypePath :: Path Rel File,
     _packageDescriptionTypeName :: Text,
     _packageDescriptionTypeTransform :: Package -> FunctionDefBody 'Parsed,
-    _packageDescriptionTypeNeedsStdlibImport :: Package -> Bool
+    _packageDescriptionTypeNeedsStdlibImport :: Package -> Bool,
+    _packageDescriptionTypeVersion :: PackageVersion,
+    _packageDescriptionTypeToPackage :: forall r. (Member (Error PackageLoaderError) r) => BuildDir -> Path Abs File -> Value -> Sem r Package
   }
 
 makeLenses ''PackageDescriptionType
 
-data PackageVersion = PackageVersion1
-
 -- | The names of the Package type name in every version of the PackageDescription module
 packageDescriptionTypes :: [PackageDescriptionType]
-packageDescriptionTypes = [v1PackageDescriptionType]
+packageDescriptionTypes = [v1PackageDescriptionType, basicPackageDescriptionType]
+
+basicPackageDescriptionType :: PackageDescriptionType
+basicPackageDescriptionType =
+  PackageDescriptionType
+    { _packageDescriptionTypePath = basicPackageDescriptionFile,
+      _packageDescriptionTypeName = "Package",
+      _packageDescriptionTypeTransform = fromPackage,
+      _packageDescriptionTypeToPackage = toPackage,
+      _packageDescriptionTypeNeedsStdlibImport = const False,
+      _packageDescriptionTypeVersion = PackageBasic
+    }
+  where
+    fromPackage :: Package -> FunctionDefBody 'Parsed
+    fromPackage p = run . runReader l $ do
+      bodyExpression <- NEL.singleton <$> identifier "basicPackage"
+      functionDefExpression bodyExpression
+      where
+        l :: Interval
+        l = singletonInterval (mkInitialLoc (p ^. packageFile))
+
+    toPackage ::
+      BuildDir ->
+      Path Abs File ->
+      Value ->
+      Sem r Package
+    toPackage buildDir f _ = return (emptyPackage buildDir f)
 
 v1PackageDescriptionType :: PackageDescriptionType
-v1PackageDescriptionType = PackageDescriptionType v1PackageDescriptionFile "Package" fromPackage needsStdlib
+v1PackageDescriptionType =
+  PackageDescriptionType
+    { _packageDescriptionTypePath = v1PackageDescriptionFile,
+      _packageDescriptionTypeName = "Package",
+      _packageDescriptionTypeTransform = fromPackage,
+      _packageDescriptionTypeToPackage = toPackage,
+      _packageDescriptionTypeNeedsStdlibImport = needsStdlib,
+      _packageDescriptionTypeVersion = PackageVersion1
+    }
   where
     needsStdlib :: Package -> Bool
     needsStdlib p =
       let SemVer {..} = p ^. packageVersion
        in isJust _svMeta || isJust _svPreRel || isJust (p ^. packageMain) || isJust (p ^. packageBuildDir)
+
+    toPackage ::
+      forall r.
+      (Member (Error PackageLoaderError) r) =>
+      BuildDir ->
+      Path Abs File ->
+      Value ->
+      Sem r Package
+    toPackage buildDir packagePath = \case
+      ValueConstrApp ctor -> do
+        case ctor ^. constrAppArgs of
+          [vName, vVersion, vDeps, vMain, vBuildDir] -> do
+            _packageName <- toText vName
+            _packageMain <- toMaybeMain vMain
+            _packageBuildDir <- toMaybeBuildDir vBuildDir
+            _packageDependencies <- toList' toDependency vDeps
+            _packageVersion <- toVersion vVersion
+            return Package {_packageLockfile = Nothing, _packageFile = packagePath, ..}
+          _ -> err
+      _ -> err
+      where
+        err :: Sem r a
+        err =
+          throw
+            PackageLoaderError
+              { _packageLoaderErrorPath = packagePath,
+                _packageLoaderErrorCause = ErrPackageTypeError
+              }
+
+        toMaybe :: (Value -> Sem r a) -> Value -> Sem r (Maybe a)
+        toMaybe f = \case
+          ValueConstrApp c -> case c ^. constrAppArgs of
+            [] -> return Nothing
+            [v] -> Just <$> f v
+            _ -> err
+          _ -> err
+
+        toList' :: (Value -> Sem r a) -> Value -> Sem r [a]
+        toList' f = \case
+          ValueConstrApp c -> case c ^. constrAppArgs of
+            [] -> return []
+            [x, xs] -> do
+              v <- f x
+              vs <- toList' f xs
+              return (v : vs)
+            _ -> err
+          _ -> err
+
+        toText :: Value -> Sem r Text
+        toText = \case
+          ValueConstant (Core.ConstString s) -> return s
+          _ -> err
+
+        toInteger' :: Value -> Sem r Integer
+        toInteger' = \case
+          ValueConstant (Core.ConstInteger i) -> return i
+          _ -> err
+
+        toWord :: Value -> Sem r Word
+        toWord = fmap fromInteger . toInteger'
+
+        toMaybeMain :: Value -> Sem r (Maybe (Prepath File))
+        toMaybeMain = toMaybe (fmap (mkPrepath . unpack) . toText)
+
+        toMaybeBuildDir :: Value -> Sem r (Maybe (SomeBase Dir))
+        toMaybeBuildDir = toMaybe go
+          where
+            go :: Value -> Sem r (SomeBase Dir)
+            go v = do
+              s <- unpack <$> toText v
+              let p :: Maybe (SomeBase Dir)
+                  p = (Abs <$> parseAbsDir s) <|> (Rel <$> parseRelDir s)
+              maybe err return p
+
+        toVersion :: Value -> Sem r SemVer
+        toVersion = \case
+          ValueConstrApp c -> case c ^. constrAppArgs of
+            [vMaj, vMin, vPatch, _, vMeta] -> do
+              maj <- toWord vMaj
+              min' <- toWord vMin
+              patch' <- toWord vPatch
+              meta' <- toMaybe toText vMeta
+              return (SemVer maj min' patch' Nothing meta')
+            _ -> err
+          _ -> err
+
+        toDependency :: Value -> Sem r Dependency
+        toDependency = \case
+          ValueConstrApp c -> case c ^. constrAppArgs of
+            [] -> return (defaultStdlib buildDir)
+            [v] -> do
+              p <- mkPrepath . unpack <$> toText v
+              return (DependencyPath (PathDependency {_pathDependencyPath = p}))
+            [vName, vUrl, vRef] -> do
+              _gitDependencyUrl <- toText vUrl
+              _gitDependencyName <- toText vName
+              _gitDependencyRef <- toText vRef
+              return (DependencyGit (GitDependency {..}))
+            _ -> err
+          _ -> err
 
     fromPackage :: Package -> FunctionDefBody 'Parsed
     fromPackage p = run . runReader l $ do
@@ -172,3 +313,9 @@ v1PackageDescriptionType = PackageDescriptionType v1PackageDescriptionFile "Pack
             mkNothing = do
               nothingIdent <- identifier "nothing"
               return (nothingIdent :| [])
+
+defaultStdlib :: BuildDir -> Dependency
+defaultStdlib buildDir = mkPathDependency (fromSomeDir p)
+  where
+    p :: SomeBase Dir
+    p = resolveBuildDir buildDir <///> relStdlibDir

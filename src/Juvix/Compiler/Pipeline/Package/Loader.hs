@@ -5,13 +5,11 @@ module Juvix.Compiler.Pipeline.Package.Loader
 where
 
 import Data.FileEmbed qualified as FE
-import Data.Versions
 import Juvix.Compiler.Concrete.Gen
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Print (ppOutDefaultNoComments)
 import Juvix.Compiler.Concrete.Translation.FromSource hiding (symbol)
 import Juvix.Compiler.Core.Language qualified as Core
-import Juvix.Compiler.Core.Language.Value
 import Juvix.Compiler.Pipeline.Package.Base
 import Juvix.Compiler.Pipeline.Package.Loader.Error
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff
@@ -32,22 +30,24 @@ acceptableTypes = mapM go packageDescriptionTypes
       return
         TypeSpec
           { _typeSpecName = t ^. packageDescriptionTypeName,
-            _typeSpecFile = globalPackageDir <//> (t ^. packageDescriptionTypePath)
+            _typeSpecFile = globalPackageDir <//> (t ^. packageDescriptionTypePath),
+            _typeSpecVersion = t ^. packageDescriptionTypeVersion
           }
 
 renderPackageVersion :: PackageVersion -> Package -> Text
-renderPackageVersion v pkg = toPlainText (ppOutDefaultNoComments (toConcrete packageType pkg))
-  where
-    packageType :: PackageDescriptionType
-    packageType = case v of
-      PackageVersion1 -> v1PackageDescriptionType
+renderPackageVersion v pkg = toPlainText (ppOutDefaultNoComments (toConcrete (getPackageType v) pkg))
+
+getPackageType :: PackageVersion -> PackageDescriptionType
+getPackageType = \case
+  PackageVersion1 -> v1PackageDescriptionType
+  PackageBasic -> basicPackageDescriptionType
 
 -- | Load a package file in the context of the PackageDescription module and the global package stdlib.
 loadPackage :: (Members '[Files, EvalFileEff, Error PackageLoaderError] r) => BuildDir -> Path Abs File -> Sem r Package
 loadPackage buildDir packagePath = do
   scoped @(Path Abs File) @EvalEff packagePath $ do
-    v <- getPackageNode >>= eval'
-    toPackage buildDir packagePath v
+    (v, t) <- getPackageNode
+    ((getPackageType (t ^. typeSpecVersion)) ^. packageDescriptionTypeToPackage) buildDir packagePath =<< eval' v
   where
     -- Obtain the Node corresponding to the `package` identifier in the loaded
     -- Package
@@ -55,117 +55,11 @@ loadPackage buildDir packagePath = do
     -- This function also checks that the type of the identifier is among the
     -- expected types from the specific PackageDescription modules that are
     -- provided by the PathResolver.
-    getPackageNode :: forall r. (Members '[Files, EvalEff] r) => Sem r Core.Node
+    getPackageNode :: forall r. (Members '[Files, EvalEff] r) => Sem r (Core.Node, TypeSpec)
     getPackageNode = do
       n <- lookupIdentifier Str.package
-      acceptableTypes >>= assertNodeType n
-      return n
-
-toPackage ::
-  forall r.
-  (Member (Error PackageLoaderError) r) =>
-  BuildDir ->
-  Path Abs File ->
-  Value ->
-  Sem r Package
-toPackage buildDir packagePath = \case
-  ValueConstrApp ctor -> do
-    case ctor ^. constrAppArgs of
-      [vName, vVersion, vDeps, vMain, vBuildDir] -> do
-        _packageName <- toText vName
-        _packageMain <- toMaybeMain vMain
-        _packageBuildDir <- toMaybeBuildDir vBuildDir
-        _packageDependencies <- toList' toDependency vDeps
-        _packageVersion <- toVersion vVersion
-        return Package {_packageLockfile = Nothing, _packageFile = packagePath, ..}
-      _ -> err
-  _ -> err
-  where
-    err :: Sem r a
-    err =
-      throw
-        PackageLoaderError
-          { _packageLoaderErrorPath = packagePath,
-            _packageLoaderErrorCause = ErrPackageTypeError
-          }
-
-    toMaybe :: (Value -> Sem r a) -> Value -> Sem r (Maybe a)
-    toMaybe f = \case
-      ValueConstrApp c -> case c ^. constrAppArgs of
-        [] -> return Nothing
-        [v] -> Just <$> f v
-        _ -> err
-      _ -> err
-
-    toList' :: (Value -> Sem r a) -> Value -> Sem r [a]
-    toList' f = \case
-      ValueConstrApp c -> case c ^. constrAppArgs of
-        [] -> return []
-        [x, xs] -> do
-          v <- f x
-          vs <- toList' f xs
-          return (v : vs)
-        _ -> err
-      _ -> err
-
-    toText :: Value -> Sem r Text
-    toText = \case
-      ValueConstant (Core.ConstString s) -> return s
-      _ -> err
-
-    toInteger' :: Value -> Sem r Integer
-    toInteger' = \case
-      ValueConstant (Core.ConstInteger i) -> return i
-      _ -> err
-
-    toWord :: Value -> Sem r Word
-    toWord = fmap fromInteger . toInteger'
-
-    toMaybeMain :: Value -> Sem r (Maybe (Prepath File))
-    toMaybeMain = toMaybe (fmap (mkPrepath . unpack) . toText)
-
-    toMaybeBuildDir :: Value -> Sem r (Maybe (SomeBase Dir))
-    toMaybeBuildDir = toMaybe go
-      where
-        go :: Value -> Sem r (SomeBase Dir)
-        go v = do
-          s <- unpack <$> toText v
-          let p :: Maybe (SomeBase Dir)
-              p = (Abs <$> parseAbsDir s) <|> (Rel <$> parseRelDir s)
-          maybe err return p
-
-    toVersion :: Value -> Sem r SemVer
-    toVersion = \case
-      ValueConstrApp c -> case c ^. constrAppArgs of
-        [vMaj, vMin, vPatch, _, vMeta] -> do
-          maj <- toWord vMaj
-          min' <- toWord vMin
-          patch' <- toWord vPatch
-          meta' <- toMaybe toText vMeta
-          return (SemVer maj min' patch' Nothing meta')
-        _ -> err
-      _ -> err
-
-    toDependency :: Value -> Sem r Dependency
-    toDependency = \case
-      ValueConstrApp c -> case c ^. constrAppArgs of
-        [] -> return defaultStdlib
-        [v] -> do
-          p <- mkPrepath . unpack <$> toText v
-          return (DependencyPath (PathDependency {_pathDependencyPath = p}))
-        [vName, vUrl, vRef] -> do
-          _gitDependencyUrl <- toText vUrl
-          _gitDependencyName <- toText vName
-          _gitDependencyRef <- toText vRef
-          return (DependencyGit (GitDependency {..}))
-        _ -> err
-      _ -> err
-
-    defaultStdlib :: Dependency
-    defaultStdlib = mkPathDependency (fromSomeDir p)
-      where
-        p :: SomeBase Dir
-        p = resolveBuildDir buildDir <///> relStdlibDir
+      ty <- acceptableTypes >>= assertNodeType n
+      return (n, ty)
 
 toConcrete :: PackageDescriptionType -> Package -> Module 'Parsed 'ModuleTop
 toConcrete t p = run . runReader l $ do
