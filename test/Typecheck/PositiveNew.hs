@@ -19,7 +19,7 @@ testDescr Old.PosTest {..} =
     { _testName = _name,
       _testRoot = _dir,
       _testAssertion = Single $ do
-        entryPoint <- set entryPointNewTypeCheckingAlgorithm True <$> defaultEntryPointCwdIO _file
+        entryPoint <- set entryPointNewTypeCheckingAlgorithm True <$> defaultEntryPointIO _dir _file
         (void . runIO' entryPoint) upToInternalTyped
     }
 

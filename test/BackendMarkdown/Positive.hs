@@ -35,7 +35,7 @@ testDescr PosTest {..} =
     { _testName = _name,
       _testRoot = _dir,
       _testAssertion = Steps $ \step -> do
-        entryPoint <- defaultEntryPointCwdIO _file
+        entryPoint <- defaultEntryPointIO _dir _file
         step "Parsing"
         p :: Parser.ParserResult <- snd <$> runIO' entryPoint upToParsing
         step "Scoping"
