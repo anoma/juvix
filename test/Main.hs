@@ -19,6 +19,8 @@ import Scope qualified
 import Termination qualified
 import Typecheck qualified
 import VampIR qualified
+import Lock qualified
+import Control.Concurrent.Extra (newLock)
 
 slowTests :: TestTree
 slowTests =
@@ -51,4 +53,6 @@ fastTests =
     ]
 
 main :: IO ()
-main = defaultMain (testGroup "Juvix tests" [fastTests, after AllFinish "Juvix fast tests" slowTests])
+main = do
+  l <- newLock
+  defaultMain (testGroup "Juvix tests" [fastTests, after AllFinish "Juvix fast tests" slowTests, Lock.allTests l])

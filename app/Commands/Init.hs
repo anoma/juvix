@@ -6,7 +6,7 @@ import Data.Text qualified as Text
 import Data.Versions
 import Juvix.Compiler.Pipeline.Package
 import Juvix.Data.Effect.Fail.Extra qualified as Fail
-import Juvix.Data.Effect.Lock.NoLock
+import Juvix.Data.Effect.FileLock
 import Juvix.Extra.Paths
 import Juvix.Prelude
 import Juvix.Prelude.Pretty
@@ -61,7 +61,7 @@ checkNotInProject =
 checkPackage :: forall r. (Members '[Embed IO] r) => Sem r ()
 checkPackage = do
   cwd <- getCurrentDir
-  ep <- runError @JuvixError (runNoLock (loadPackageFileIO cwd DefaultBuildDir))
+  ep <- runError @JuvixError (runFileLockPermissive (loadPackageFileIO cwd DefaultBuildDir))
   case ep of
     Left {} -> do
       say "Package.juvix is invalid. Please raise an issue at https://github.com/anoma/juvix/issues"

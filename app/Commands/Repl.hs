@@ -37,8 +37,8 @@ import Juvix.Compiler.Pipeline.Repl
 import Juvix.Compiler.Pipeline.Run
 import Juvix.Compiler.Pipeline.Setup (entrySetup)
 import Juvix.Data.CodeAnn (Ann)
+import Juvix.Data.Effect.FileLock
 import Juvix.Data.Effect.Git
-import Juvix.Data.Effect.Lock.NoLock
 import Juvix.Data.Effect.Process
 import Juvix.Data.Error.GenericError qualified as Error
 import Juvix.Data.NameKind
@@ -159,7 +159,7 @@ loadDefaultPrelude = whenJustM defaultPreludeEntryPoint $ \e -> do
     . runGitProcess
     . runError @DependencyError
     . runError @PackageLoaderError
-    . runNoLock
+    . runFileLockPermissive
     . runEvalFileEffIO
     . runPathResolver root
     $ entrySetup defaultDependenciesConfig

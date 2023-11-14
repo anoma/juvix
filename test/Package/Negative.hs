@@ -3,7 +3,7 @@ module Package.Negative where
 import Base
 import Juvix.Compiler.Pipeline.Package
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff.IO
-import Juvix.Data.Effect.Lock.NoLock
+import Juvix.Data.Effect.FileLock
 
 type FailMsg = String
 
@@ -29,7 +29,7 @@ testDescr NegTest {..} =
                     . runError
                     . runFilesIO
                     . mapError (JuvixError @PackageLoaderError)
-                    . runNoLock
+                    . runFileLockPermissive
                     . runEvalFileEffIO
                     . readPackage tRoot
                     . CustomBuildDir

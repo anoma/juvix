@@ -8,6 +8,7 @@ import Juvix.Data.Uid
 import Juvix.Prelude.Base
 import Juvix.Prelude.Prepath
 import Path
+import Path.IO
 
 data RecursorArgs = RecursorArgs
   { _recCurDir :: Path Rel Dir,
@@ -24,6 +25,7 @@ makeLenses ''RecursorArgs
 data TempFile m a where
   TempFilePath :: TempFile m (Path Abs File)
   RemoveTempFile :: Path Abs File -> TempFile m ()
+  TempDir :: Text -> TempFile m (Path Abs Dir)
 
 makeSem ''TempFile
 
@@ -36,6 +38,7 @@ data Files m a where
   ReadFile' :: Path Abs File -> Files m Text
   ReadFileBS' :: Path Abs File -> Files m ByteString
   RemoveDirectoryRecursive' :: Path Abs Dir -> Files m ()
+  TryRemoveDirectoryRecursive :: Path Abs Dir -> Files m ()
   WriteFile' :: Path Abs File -> Text -> Files m ()
   WriteFileBS :: Path Abs File -> ByteString -> Files m ()
   RemoveFile' :: Path Abs File -> Files m ()
@@ -44,5 +47,7 @@ data Files m a where
   JuvixConfigDir :: Files m (Path Abs Dir)
   CanonicalDir :: Path Abs Dir -> Prepath Dir -> Files m (Path Abs Dir)
   NormalizeDir :: Path b Dir -> Files m (Path Abs Dir)
+  NormalizeFile :: Path b File -> Files m (Path Abs File)
+  Normalize' :: (AnyPath p) => p -> Files m (AbsPath p)
 
 makeSem ''Files

@@ -38,6 +38,7 @@ runFilesIO = interpret helper
       ReadFileBS' f -> ByteString.readFile (toFilePath f)
       FileExists' f -> Path.doesFileExist f
       RemoveDirectoryRecursive' d -> removeDirRecur d
+      TryRemoveDirectoryRecursive d -> tryRemoveDirRecur d
       ListDirRel p -> Path.listDirRel p
       PathUid f -> do
         status <- P.getFileStatus (toFilePath f)
@@ -50,9 +51,17 @@ runFilesIO = interpret helper
       JuvixConfigDir -> juvixConfigDirIO
       CanonicalDir root d -> prepathToAbsDir root d
       NormalizeDir p -> canonicalizePath p
+      NormalizeFile b -> canonicalizePath b
+      Normalize' p -> canonicalizePath p
 
 juvixConfigDirIO :: IO (Path Abs Dir)
 juvixConfigDirIO = (<//> versionDir) . absDir <$> getUserConfigDir "juvix"
+
+tryRemoveDirRecur :: Path Abs Dir -> IO ()
+tryRemoveDirRecur d = ignoringDoesNotExistError (removeDirRecur d)
+  where
+    ignoringDoesNotExistError :: IO () -> IO ()
+    ignoringDoesNotExistError a = MC.catchIf isDoesNotExistError a (const (return ()))
 
 runTempFileIO ::
   forall r a.
@@ -65,3 +74,6 @@ runTempFileIO = interpret $ \case
     where
       ignoringIOErrors :: IO () -> IO ()
       ignoringIOErrors ioe = MC.catch ioe (\(_ :: IOError) -> return ())
+  TempDir template -> embed $ do
+    rootTmp <- getCanonicalTemporaryDirectory
+    createTempDirectory rootTmp (unpack template) >>= parseAbsDir >>= canonicalizePath

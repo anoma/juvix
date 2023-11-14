@@ -77,6 +77,7 @@ re cwd = reinterpret $ \case
   WriteFile' p t -> writeFileHelper p t
   WriteFileBS p t -> writeFileHelper p (decodeUtf8 t)
   RemoveDirectoryRecursive' p -> removeDirRecurHelper p
+  TryRemoveDirectoryRecursive p -> removeDirRecurHelper p
   ListDirRel p -> do
     n <- lookupDir' p
     return (HashMap.keys (n ^. dirDirs), HashMap.keys (n ^. dirFiles))
@@ -86,6 +87,7 @@ re cwd = reinterpret $ \case
   JuvixConfigDir -> return juvixConfigDirPure
   CanonicalDir root d -> return (canonicalDirPure root d)
   NormalizeDir p -> return (absDir (cwd' </> toFilePath p))
+  NormalizeFile p -> return (absFile (cwd' </> toFilePath p))
   where
     cwd' :: FilePath
     cwd' = toFilePath cwd

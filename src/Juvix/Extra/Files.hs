@@ -2,17 +2,12 @@ module Juvix.Extra.Files where
 
 import Control.Concurrent.MVar
 import Juvix.Data.Effect.Files
-import Juvix.Data.Effect.Lock.Base
+import Juvix.Data.Effect.FileLock
 import Juvix.Extra.Paths
 import Juvix.Extra.Version
 import Juvix.Prelude
 
 type OutputRoot = Path Abs Dir
-
-type FileLock = MVar ()
-
-newFileLock :: IO FileLock
-newFileLock = newMVar ()
 
 juvixFiles :: [(FilePath, ByteString)] -> [(Path Rel File, ByteString)]
 juvixFiles fs = mapMaybe helper fs
@@ -52,8 +47,8 @@ readVersion = do
   vf <- versionFile
   whenMaybeM (fileExists' vf) (readFile' vf)
 
-updateFiles :: (Members '[ScopedLock, Reader OutputRoot, Files] r) => (forall r0. (Members '[Files, Reader OutputRoot] r0) => Sem r0 ()) -> Sem r ()
-updateFiles action = scoped_ @Lock . withLock $
+updateFiles :: (Members '[Reader OutputRoot, Files] r) => (forall r0. (Members '[Files, Reader OutputRoot] r0) => Sem r0 ()) -> Sem r ()
+updateFiles action = do
   whenM shouldUpdate $ do
     whenM
       (ask @OutputRoot >>= directoryExists')
