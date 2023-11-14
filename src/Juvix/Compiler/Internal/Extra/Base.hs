@@ -292,7 +292,7 @@ inductiveTypeVarsAssoc def l
     vars :: [VarName]
     vars = def ^.. inductiveParameters . each . inductiveParamName
 
-substitutionApp :: forall r. (Member NameIdGen r) => (Maybe Name, Expression) -> Expression -> Sem r Expression
+substitutionApp :: forall r expr. (Member NameIdGen r, HasExpressions expr) => (Maybe Name, Expression) -> expr -> Sem r expr
 substitutionApp (mv, ty) = case mv of
   Nothing -> return
   Just v -> substitutionE (HashMap.singleton v ty)
@@ -300,7 +300,7 @@ substitutionApp (mv, ty) = case mv of
 localsToSubsE :: LocalVars -> Subs
 localsToSubsE l = ExpressionIden . IdenVar <$> l ^. localTyMap
 
-substitutionE :: forall r. (Member NameIdGen r) => Subs -> Expression -> Sem r Expression
+substitutionE :: forall r expr. (Member NameIdGen r, HasExpressions expr) => Subs -> expr -> Sem r expr
 substitutionE m = leafExpressions goLeaf
   where
     goLeaf :: Expression -> Sem r Expression
