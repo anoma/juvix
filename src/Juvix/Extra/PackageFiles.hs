@@ -1,7 +1,7 @@
 module Juvix.Extra.PackageFiles where
 
-import Juvix.Data.Effect.Files
 import Juvix.Data.Effect.FileLock
+import Juvix.Data.Effect.Files
 import Juvix.Extra.Files
 import Juvix.Extra.Paths
 import Juvix.Prelude

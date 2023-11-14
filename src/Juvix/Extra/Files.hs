@@ -1,8 +1,8 @@
 module Juvix.Extra.Files where
 
 import Control.Concurrent.MVar
-import Juvix.Data.Effect.Files
 import Juvix.Data.Effect.FileLock
+import Juvix.Data.Effect.Files
 import Juvix.Extra.Paths
 import Juvix.Extra.Version
 import Juvix.Prelude

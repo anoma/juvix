@@ -2,11 +2,12 @@ module Lock where
 
 import Base
 -- import Juvix.Data.Effect.Lock
-import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver (withLockfile)
-import Extra
+
 import Control.Concurrent
-import System.FileLock hiding (FileLock)
+import Extra
+import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver (withLockfile)
 import Juvix.Data.Effect.FileLock
+import System.FileLock hiding (FileLock)
 
 allTests :: Lock -> TestTree
 allTests l = testGroup "Lock tests" (replicate 100 (lockTest'' l))
@@ -22,12 +23,13 @@ lockTest' _ = testCase "acquireAndReleaseLock" $ do
   output "helloworld"
 
 runLock :: Sem '[FileLock, Files, TempFile, Embed IO, Resource, Final IO] a -> IO a
-runLock = runFinal
-  . resourceToIOFinal
-  . embedToFinal @IO
-  . runTempFileIO
-  . runFilesIO
-  . runFileLockIO
+runLock =
+  runFinal
+    . resourceToIOFinal
+    . embedToFinal @IO
+    . runTempFileIO
+    . runFilesIO
+    . runFileLockIO
 
 lockTest'' :: Lock -> TestTree
 lockTest'' _ = testCase "acquireAndReleaseLock" $ runLock $ do

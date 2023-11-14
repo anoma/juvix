@@ -14,8 +14,8 @@ import Juvix.Compiler.Pipeline.Package.Loader.Error
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff.IO
 import Juvix.Compiler.Pipeline.Package.Loader.PathResolver
 import Juvix.Compiler.Pipeline.Setup
-import Juvix.Data.Effect.Git
 import Juvix.Data.Effect.FileLock
+import Juvix.Data.Effect.Git
 import Juvix.Data.Effect.Process
 import Juvix.Prelude.Aeson
 import Juvix.Prelude.Pretty

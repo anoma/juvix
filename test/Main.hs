@@ -6,11 +6,13 @@ import BackendGeb qualified
 import BackendMarkdown qualified
 import Base
 import Compilation qualified
+import Control.Concurrent.Extra (newLock)
 import Core qualified
 import Examples qualified
 import Format qualified
 import Formatter qualified
 import Internal qualified
+import Lock qualified
 import Package qualified
 import Parsing qualified
 import Reachability qualified
@@ -19,8 +21,6 @@ import Scope qualified
 import Termination qualified
 import Typecheck qualified
 import VampIR qualified
-import Lock qualified
-import Control.Concurrent.Extra (newLock)
 
 slowTests :: TestTree
 slowTests =
