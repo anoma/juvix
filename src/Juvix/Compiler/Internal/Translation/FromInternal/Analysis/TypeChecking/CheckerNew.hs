@@ -56,6 +56,7 @@ data AppBuilderArg = AppBuilderArg
 
 data AppBuilder = AppBuilder
   { _appBuilder :: Expression,
+    _appBuilderCheckedArgs :: [InsertedArg],
     _appBuilderType :: BuilderType,
     _appBuilderArgs :: [AppBuilderArg]
   }
@@ -1032,6 +1033,7 @@ holesHelper mhint expr = do
       iniBuilder =
         AppBuilder
           { _appBuilder = fTy ^. typedExpression,
+            _appBuilderCheckedArgs = [],
             _appBuilderType = iniBuilderType,
             _appBuilderArgs = map iniArg args
           }
@@ -1047,6 +1049,38 @@ holesHelper mhint expr = do
         _typedExpression = st' ^. appBuilder
       }
   where
+    mkFinalExpression :: Expression -> [InsertedArg] -> Sem r Expression
+    mkFinalExpression f args =
+      case nonEmpty  args of
+        Nothing -> return f
+        Just args'
+          | not hasADefault -> return (foldApplication f (map (^. insertedArg) args))
+          | otherwise  -> do
+            let mkClause :: InsertedArg -> Sem r PreLetStatement
+                mkClause InsertedArg {..} = do
+                      -- TODO put actual type instead of hole?
+                      let arg = _insertedArg
+                          nm = _insertedArgName
+                      ty <- mkFreshHole (getLoc arg)
+                      return (PreLetFunctionDef (simpleFunDef nm ty (arg ^. appArg)))
+                mkAppArg :: InsertedArg -> ApplicationArg
+                mkAppArg InsertedArg {..} =
+                      ApplicationArg
+                        { _appArgIsImplicit = _insertedArg ^. appArgIsImplicit,
+                          _appArg = toExpression _insertedArgName
+                        }
+                app = foldApplication f (map mkAppArg args)
+            clauses :: NonEmpty LetClause <- nonEmpty' . mkLetClauses <$> mapM mkClause args'
+            letexpr <- substitutionE (renameKind KNameFunction (map (^. insertedArgName) args)) $
+                    ExpressionLet
+                      Let
+                        { _letClauses = clauses,
+                          _letExpression = app
+                        }
+            clone letexpr
+        where
+         hasADefault = any (^. insertedArgDefault) args
+
     mkFinalBuilderType :: BuilderType -> Expression
     mkFinalBuilderType = \case
       BuilderTypeNoDefaults e -> e
@@ -1235,6 +1269,8 @@ holesHelper mhint expr = do
                             _functionDefaultRight = r'
                           }
                     )
+              -- FIXME add arg' to appBuilderCheckedArgs
+              -- TODO we need to update the FunctionsTable if necessary!
               applyArg :: Expression -> Expression
               applyArg l =
                 ExpressionApplication
