@@ -23,7 +23,7 @@ compileAssertion ::
 compileAssertion root' optLevel mode mainFile expectedFile step = do
   step "Translate to JuvixCore"
   entryPoint <- defaultEntryPointIO root' mainFile
-  tab <- (^. Core.coreResultTable) . snd <$> runIO' entryPoint upToCore
+  tab <- (^. Core.coreResultTable) . snd <$> runIOExclusive entryPoint upToCore
   case run $ runReader Core.defaultCoreOptions $ runError $ Core.toEval' tab of
     Left err -> assertFailure (show (pretty (fromJuvixError @GenericError err)))
     Right tab' -> do
