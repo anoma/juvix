@@ -60,8 +60,8 @@ fromJuvixMarkdown opts = do
       fname :: Path Abs File
       fname = getLoc m ^. intervalFile
 
-  case (m ^. Concrete.moduleMarkdownInfo) of
-    (Just mkInfo) -> do
+  case m ^. Concrete.moduleMarkdownInfo of
+    Just mkInfo -> do
       let mk :: Mk = mkInfo ^. Concrete.markdownInfo
           sepr :: [Int] = mkInfo ^. Concrete.markdownInfoBlockLengths
 
@@ -84,7 +84,7 @@ fromJuvixMarkdown opts = do
       return $ MK.toPlainText r
     Nothing ->
       throw
-        ( ErrNoMarkdownInfo
+        ( ErrInternalNoMarkdownInfo
             NoMarkdownInfoError
               { _noMarkdownInfoFilepath = fname
               }

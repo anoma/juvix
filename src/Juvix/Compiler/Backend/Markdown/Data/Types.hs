@@ -236,6 +236,7 @@ instance-- (MK.IsInline TextBlock) =>
 
 nullMk :: Mk -> Bool
 nullMk = \case
+  MkConcat a b -> nullMk a && nullMk b
   MkNull -> True
   _ -> False
 

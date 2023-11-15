@@ -35,23 +35,22 @@ runCommand opts = do
             }
   case res of
     Left err -> exitJuvixError (JuvixError err)
-    Right md ->
-      if
-          | opts ^. markdownStdout -> liftIO . putStrLn $ md
-          | otherwise -> do
-              ensureDir outputDir
-              when (opts ^. markdownWriteAssets) $
-                liftIO $
-                  writeAssets outputDir
+    Right md
+      | opts ^. markdownStdout -> liftIO . putStrLn $ md
+      | otherwise -> do
+          ensureDir outputDir
+          when (opts ^. markdownWriteAssets) $
+            liftIO $
+              writeAssets outputDir
 
-              let mdFile :: Path Rel File
-                  mdFile =
-                    relFile
-                      ( Concrete.topModulePathToDottedPath
-                          (m ^. Concrete.modulePath . S.nameConcrete)
-                          <.> markdownFileExt
-                      )
-                  absPath :: Path Abs File
-                  absPath = outputDir <//> mdFile
+          let mdFile :: Path Rel File
+              mdFile =
+                relFile
+                  ( Concrete.topModulePathToDottedPath
+                      (m ^. Concrete.modulePath . S.nameConcrete)
+                      <.> markdownFileExt
+                  )
+              absPath :: Path Abs File
+              absPath = outputDir <//> mdFile
 
-              liftIO $ Text.writeFile (toFilePath absPath) md
+          liftIO $ Text.writeFile (toFilePath absPath) md

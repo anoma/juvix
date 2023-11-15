@@ -5,13 +5,13 @@ import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error.Pre
 import Juvix.Prelude
 
 data MarkdownBackendError
-  = ErrNoMarkdownInfo NoMarkdownInfoError
+  = ErrInternalNoMarkdownInfo NoMarkdownInfoError
   | ErrNoJuvixCodeBlocks NoJuvixCodeBlocksError
   deriving stock (Show)
 
 instance ToGenericError MarkdownBackendError where
   genericError = \case
-    ErrNoMarkdownInfo e -> genericError e
+    ErrInternalNoMarkdownInfo e -> genericError e
     ErrNoJuvixCodeBlocks e -> genericError e
 
 newtype NoMarkdownInfoError = NoMarkdownInfoError
