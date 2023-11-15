@@ -6,6 +6,7 @@ import Juvix.Compiler.Concrete qualified as Concrete
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
 import Juvix.Compiler.Pipeline.Setup
+import Juvix.Data.Effect.TaggedLock
 
 data PosTest = PosTest
   { _name :: String,
@@ -35,7 +36,7 @@ testDescr PosTest {..} =
     { _testName = _name,
       _testRoot = _dir,
       _testAssertion = Steps $ \step -> do
-        entryPoint <- defaultEntryPointIO _dir _file
+        entryPoint <- defaultEntryPointIO' LockModeExclusive _dir _file
         step "Parsing"
         p :: Parser.ParserResult <- snd <$> runIO' entryPoint upToParsing
         step "Scoping"

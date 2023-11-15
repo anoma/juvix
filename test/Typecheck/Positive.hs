@@ -2,6 +2,7 @@ module Typecheck.Positive where
 
 import Base
 import Compilation.Positive qualified as Compilation
+import Juvix.Data.Effect.TaggedLock
 import Typecheck.Negative qualified as N
 
 data PosTest = PosTest
@@ -27,7 +28,7 @@ testDescr PosTest {..} =
     { _testName = _name,
       _testRoot = _dir,
       _testAssertion = Single $ do
-        entryPoint <- defaultEntryPointIO _dir _file
+        entryPoint <- defaultEntryPointIO' LockModeExclusive _dir _file
         (void . runIO' entryPoint) upToInternalTyped
     }
 
@@ -45,7 +46,7 @@ testNoPositivityFlag N.NegTest {..} =
           _testAssertion = Single $ do
             entryPoint <-
               set entryPointNoPositivity True
-                <$> defaultEntryPointIO tRoot file'
+                <$> defaultEntryPointIO' LockModeExclusive tRoot file'
             (void . runIO' entryPoint) upToInternalTyped
         }
 

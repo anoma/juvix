@@ -25,11 +25,13 @@ testDescr NegTest {..} =
           _testAssertion = Single $ do
             res <-
               withTempDir'
-                ( runM
+                ( runFinal
+                    . resourceToIOFinal
+                    . embedToFinal @IO
                     . runError
                     . runFilesIO
                     . mapError (JuvixError @PackageLoaderError)
-                    . runTaggedLockPermissive
+                    . runTaggedLock LockModeExclusive
                     . runEvalFileEffIO
                     . readPackage tRoot
                     . CustomBuildDir

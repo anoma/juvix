@@ -23,6 +23,7 @@ packageStdlib rootDir buildDir = firstJustM isStdLib
       DependencyPath dep -> do
         adir <- canonicalDir rootDir (dep ^. pathDependencyPath)
         normBuildDir <- normalizeDir buildDir
+        -- traceShowM ("rootDir", rootDir, "depPath", adir, "buildDir", buildDir, "normbuildDir", normBuildDir, "stdlibbuilddir", stdLibBuildDir)
         let mstdlib :: Maybe (Path Rel Dir) = stripProperPrefix normBuildDir adir
         return $
           if

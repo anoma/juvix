@@ -93,7 +93,7 @@ runIO opts entry = runIOEither entry >=> mayThrow
       Right r -> return r
 
 runIO' :: EntryPoint -> Sem PipelineEff a -> IO (ResolverState, a)
-runIO' = runIO defaultGenericOptions
+runIO' = runIOLockMode LockModeExclusive defaultGenericOptions
 
 runIOExclusive :: EntryPoint -> Sem PipelineEff a -> IO (ResolverState, a)
 runIOExclusive = runIOLockMode LockModeExclusive defaultGenericOptions

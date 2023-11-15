@@ -70,7 +70,7 @@ testDescr PosTest {..} = helper renderCodeNew
                         . evalTopNameIdGen
                         . runFilesPure files tRoot
                         . runReader entryPoint
-                        . runTaggedLock LockModePermissive
+                        . runTaggedLock LockModeExclusive
                         . ignoreLog
                         . runProcessIO
                         . mapError (JuvixError @GitProcessError)

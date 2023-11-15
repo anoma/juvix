@@ -4,6 +4,7 @@ import Base
 import Core.Compile.Base
 import Core.Eval.Base
 import Juvix.Compiler.Core qualified as Core
+import Juvix.Data.Effect.TaggedLock
 import Juvix.Data.PPOutput
 
 data CompileAssertionMode
@@ -22,7 +23,7 @@ compileAssertion ::
   Assertion
 compileAssertion root' optLevel mode mainFile expectedFile step = do
   step "Translate to JuvixCore"
-  entryPoint <- defaultEntryPointIO root' mainFile
+  entryPoint <- defaultEntryPointIO' LockModeExclusive root' mainFile
   tab <- (^. Core.coreResultTable) . snd <$> runIOExclusive entryPoint upToCore
   case run $ runReader Core.defaultCoreOptions $ runError $ Core.toEval' tab of
     Left err -> assertFailure (show (pretty (fromJuvixError @GenericError err)))
@@ -41,7 +42,7 @@ compileErrorAssertion ::
   Assertion
 compileErrorAssertion root' mainFile step = do
   step "Translate to JuvixCore"
-  entryPoint <- defaultEntryPointIO root' mainFile
+  entryPoint <- defaultEntryPointIO' LockModeExclusive root' mainFile
   tab <- (^. Core.coreResultTable) . snd <$> runIO' entryPoint upToCore
   case run $ runReader Core.defaultCoreOptions $ runError @JuvixError $ Core.toStripped' tab of
     Left _ -> assertBool "" True

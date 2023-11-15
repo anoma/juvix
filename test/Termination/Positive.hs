@@ -1,6 +1,7 @@
 module Termination.Positive where
 
 import Base
+import Juvix.Data.Effect.TaggedLock (LockMode (LockModeExclusive))
 import Termination.Negative qualified as N
 
 data PosTest = PosTest
@@ -20,7 +21,7 @@ testDescr PosTest {..} =
         { _testName = _name,
           _testRoot = tRoot,
           _testAssertion = Single $ do
-            entryPoint <- set entryPointNoStdlib True <$> defaultEntryPointIO tRoot file'
+            entryPoint <- set entryPointNoStdlib True <$> defaultEntryPointIO' LockModeExclusive tRoot file'
             (void . runIO' entryPoint) upToInternalTyped
         }
 
@@ -42,7 +43,7 @@ testDescrFlag N.NegTest {..} =
             entryPoint <-
               set entryPointNoTermination True
                 . set entryPointNoStdlib True
-                <$> defaultEntryPointIO tRoot file'
+                <$> defaultEntryPointIO' LockModeExclusive tRoot file'
             (void . runIO' entryPoint) upToInternalTyped
         }
 

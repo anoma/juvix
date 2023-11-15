@@ -7,6 +7,7 @@ import Juvix.Compiler.Backend (Target (TargetGeb))
 import Juvix.Compiler.Backend.Geb qualified as Geb
 import Juvix.Compiler.Core qualified as Core
 import Juvix.Compiler.Core.Pretty qualified as Core
+import Juvix.Data.Effect.TaggedLock
 import Juvix.Prelude.Pretty
 
 coreToGebTranslationAssertion ::
@@ -18,7 +19,7 @@ coreToGebTranslationAssertion ::
 coreToGebTranslationAssertion root mainFile expectedFile step = do
   step "Parse Juvix Core file"
   input <- readFile . toFilePath $ mainFile
-  entryPoint <- set entryPointTarget TargetGeb <$> defaultEntryPointIO root mainFile
+  entryPoint <- set entryPointTarget TargetGeb <$> defaultEntryPointIO' LockModeExclusive root mainFile
   case Core.runParserMain mainFile Core.emptyInfoTable input of
     Left err -> assertFailure . show . pretty $ err
     Right coreInfoTable -> coreToGebTranslationAssertion' coreInfoTable entryPoint expectedFile step
