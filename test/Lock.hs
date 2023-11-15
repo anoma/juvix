@@ -7,10 +7,11 @@ import Control.Concurrent
 import Extra
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver (withLockfile)
 import Juvix.Data.Effect.FileLock
+import Juvix.Data.Effect.TaggedLock
 import System.FileLock hiding (FileLock)
 
 allTests :: Lock -> TestTree
-allTests l = testGroup "Lock tests" (replicate 100 (lockTest'' l))
+allTests l = testGroup "Lock tests" (replicate 100 (lockTest'''' l))
 
 lockTest :: Lock -> TestTree
 lockTest l = testCase "acquireAndReleaseLock" $ do
@@ -31,7 +32,31 @@ runLock =
     . runFilesIO
     . runFileLockIO
 
+runLock' :: Sem '[TaggedLock, Files, TempFile, Embed IO, Resource, Final IO] a -> IO a
+runLock' =
+  runFinal
+    . resourceToIOFinal
+    . embedToFinal @IO
+    . runTempFileIO
+    . runFilesIO
+    . runTaggedLockIO
+
 lockTest'' :: Lock -> TestTree
 lockTest'' _ = testCase "acquireAndReleaseLock" $ runLock $ do
-  let output = withFileLockDir $(mkAbsDir "/tmp/lalalala") . (\msg -> embed (putStrLn msg >> hFlush stdout))
+  let output = withFileLock' $(mkAbsFile "/tmp/lalalala") . (\msg -> embed (putStrLn msg >> hFlush stdout))
   output "helloworld"
+
+lockTest''' :: Lock -> TestTree
+lockTest''' _ = testCase "acquireAndReleaseLock" $ runLock' $ do
+  let output = withTaggedLockDir $(mkAbsDir "/a/b/c") . (\msg -> embed (putStrLn msg >> hFlush stdout))
+  output "helloworld"
+
+lockTest'''' :: Lock -> TestTree
+lockTest'''' _ =
+  testCase "aaaa"
+    $ runFinal
+      . resourceToIOFinal
+      . embedToFinal @IO
+      . runFilesIO
+      . runTaggedLockIO
+    $ withTaggedLockDir $(mkAbsDir "/a/b/c") (embed (putStrLn "Hello" >> hFlush stdout))
