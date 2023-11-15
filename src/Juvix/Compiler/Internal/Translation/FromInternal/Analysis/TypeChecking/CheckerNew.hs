@@ -9,6 +9,7 @@ where
 
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
+import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Compiler.Builtins.Effect
 import Juvix.Compiler.Concrete.Data.Highlight.Input
 import Juvix.Compiler.Internal.Data.Cast
@@ -1086,7 +1087,12 @@ holesHelper mhint expr = do
                     (f ^. functionRight)
                     (map (^. indexedThing) as),
                 _functionDefaultDefault =
-                  let uid = ArgId {_argIdFunctionName, _argIdIx}
+                  let uid =
+                        ArgId
+                          { _argIdDefinitionLoc = getLoc f,
+                            _argIdFunctionName,
+                            _argIdIx
+                          }
                    in (uid,) <$> a ^. argInfoDefault
               }
           _ -> impossible
@@ -1189,7 +1195,13 @@ holesHelper mhint expr = do
         checkLoop :: AppBuilderArg -> Sem r' ()
         checkLoop arg = case arg ^. appBuilderArgIsDefault of
           ItIsNotDefault -> return ()
-          ItIsDefault uid -> undefined
+          ItIsDefault uid -> do
+            st <- asks (^. insertedArgsStack)
+            case span (/= uid) st of
+              (_, []) -> return ()
+              (c, _) ->
+                let cyc = NonEmpty.reverse (uid :| c)
+                 in throw (ErrDefaultArgLoop (DefaultArgLoop cyc))
 
         checkMatchingArg :: AppBuilderArg -> FunctionDefault -> Sem r' ()
         checkMatchingArg arg fun = do

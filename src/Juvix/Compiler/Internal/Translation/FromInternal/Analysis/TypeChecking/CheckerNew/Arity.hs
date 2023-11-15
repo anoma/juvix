@@ -6,6 +6,7 @@ import Juvix.Prelude.Pretty
 
 data ArgId = ArgId
   { _argIdFunctionName :: Name,
+    _argIdDefinitionLoc :: Interval,
     _argIdIx :: Int
   }
   deriving stock (Eq, Ord)
@@ -25,9 +26,6 @@ data InsertedArg = InsertedArg
     -- False if it is an inserted hole or an argument present in the source code.
     _insertedArgDefault :: Bool
   }
-
--- pattern ArityParam :: IsImplicit -> ArityParameter
--- pattern ArityParam impl <- ArityParameter {_arityParameterImplicit = impl}
 
 data Blocking
   = BlockingVar VarName
@@ -76,6 +74,9 @@ makeLenses ''FunctionArity
 makeLenses ''InsertedArg
 makeLenses ''ArityParameter
 makeLenses ''InsertedArgsStack
+
+instance HasLoc ArgId where
+  getLoc = (^. argIdDefinitionLoc)
 
 arityParameterName :: Lens' ArityParameter (Maybe Name)
 arityParameterName = arityParameterInfo . argInfoName

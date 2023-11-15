@@ -35,6 +35,7 @@ data TypeCheckerError
   | ErrExplicitInstanceArgument ExplicitInstanceArgument
   | ErrTraitNotTerminating TraitNotTerminating
   | ErrArityCheckerError ArityCheckerError
+  | ErrDefaultArgLoop DefaultArgLoop
 
 instance ToGenericError TypeCheckerError where
   genericError :: (Member (Reader GenericOptions) r) => TypeCheckerError -> Sem r GenericError
@@ -62,3 +63,4 @@ instance ToGenericError TypeCheckerError where
     ErrExplicitInstanceArgument e -> genericError e
     ErrTraitNotTerminating e -> genericError e
     ErrArityCheckerError e -> genericError e
+    ErrDefaultArgLoop e -> genericError e

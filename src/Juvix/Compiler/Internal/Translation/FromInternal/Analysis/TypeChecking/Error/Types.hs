@@ -3,6 +3,7 @@ module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Er
 import Juvix.Compiler.Internal.Data.InstanceInfo
 import Juvix.Compiler.Internal.Language
 import Juvix.Compiler.Internal.Pretty (fromGenericOptions)
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.CheckerNew.Arity
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error.Pretty
 import Juvix.Data.PPOutput
 import Juvix.Prelude
@@ -620,3 +621,24 @@ instance ToGenericError TraitNotTerminating where
               <+> ppCode opts' (e ^. traitNotTerminating)
                 <> line
                 <> "Each parameter of a trait in an instance argument must be structurally smaller than some parameter of the trait in the instance target"
+
+newtype DefaultArgLoop = DefaultArgLoop
+  { _defaultArgLoop :: NonEmpty ArgId
+  }
+
+makeLenses ''DefaultArgLoop
+
+instance ToGenericError DefaultArgLoop where
+  genericError e = ask >>= generr
+    where
+      generr opts =
+        return
+          GenericError
+            { _genericErrorLoc = i,
+              _genericErrorMessage = ppOutput msg,
+              _genericErrorIntervals = [i]
+            }
+        where
+          opts' = fromGenericOptions opts
+          i = getLoc (head (e ^. defaultArgLoop))
+          msg = "Inserting default arguments is looping"
