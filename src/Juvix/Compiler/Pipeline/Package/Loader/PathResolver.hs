@@ -7,14 +7,14 @@ import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Data
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Error
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Paths
 import Juvix.Compiler.Core.Language
-import Juvix.Data.Effect.FileLock
+import Juvix.Data.Effect.TaggedLock
 import Juvix.Extra.PackageFiles
 import Juvix.Extra.Paths
 import Juvix.Extra.Stdlib
 
 -- | A PackageResolver interpreter intended to be used to load a Package file.
 -- It aggregates files at `rootPath` and files from the global package stdlib.
-runPackagePathResolver :: forall r a. (Members '[FileLock, Files] r) => Path Abs Dir -> Sem (PathResolver ': r) a -> Sem r a
+runPackagePathResolver :: forall r a. (Members '[TaggedLock, Files] r) => Path Abs Dir -> Sem (PathResolver ': r) a -> Sem r a
 runPackagePathResolver rootPath sem = do
   globalStdlib <- juvixStdlibDir . rootBuildDir <$> globalRoot
   globalPackageDir <- globalPackageDescriptionRoot
@@ -44,10 +44,10 @@ runPackagePathResolver rootPath sem = do
       | relPath == packageFilePath = Just rootPath
       | otherwise = Nothing
 
-runPackagePathResolver' :: (Members '[FileLock, Files] r) => Path Abs Dir -> Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
+runPackagePathResolver' :: (Members '[TaggedLock, Files] r) => Path Abs Dir -> Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
 runPackagePathResolver' root eff = do
   res <- runPackagePathResolver root eff
   return (iniResolverState, res)
 
-runPackagePathResolver'' :: (Members '[FileLock, Files] r) => Path Abs Dir -> ResolverState -> Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
+runPackagePathResolver'' :: (Members '[TaggedLock, Files] r) => Path Abs Dir -> ResolverState -> Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
 runPackagePathResolver'' root _ eff = runPackagePathResolver' root eff

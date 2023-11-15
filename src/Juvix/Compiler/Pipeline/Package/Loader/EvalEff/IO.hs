@@ -16,9 +16,9 @@ import Juvix.Compiler.Pipeline
 import Juvix.Compiler.Pipeline.Package.Loader.Error
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff
 import Juvix.Compiler.Pipeline.Package.Loader.PathResolver
-import Juvix.Data.Effect.FileLock
 import Juvix.Data.Effect.Git
 import Juvix.Data.Effect.Process
+import Juvix.Data.Effect.TaggedLock
 
 data LoaderResource = LoaderResource
   { _loaderResourceResult :: CoreResult,
@@ -27,7 +27,7 @@ data LoaderResource = LoaderResource
 
 makeLenses ''LoaderResource
 
-runEvalFileEffIO :: forall r a. (Members '[FileLock, Embed IO, Error PackageLoaderError] r) => Sem (EvalFileEff ': r) a -> Sem r a
+runEvalFileEffIO :: forall r a. (Members '[TaggedLock, Embed IO, Error PackageLoaderError] r) => Sem (EvalFileEff ': r) a -> Sem r a
 runEvalFileEffIO = interpretScopedAs allocator handler
   where
     allocator :: Path Abs File -> Sem r LoaderResource
@@ -115,7 +115,7 @@ runEvalFileEffIO = interpretScopedAs allocator handler
                   Just l -> l ^. intervalFile == f
                   Nothing -> False
 
-loadPackage' :: (Members '[FileLock, Embed IO, Error PackageLoaderError] r) => Path Abs File -> Sem r CoreResult
+loadPackage' :: (Members '[TaggedLock, Embed IO, Error PackageLoaderError] r) => Path Abs File -> Sem r CoreResult
 loadPackage' packagePath = do
   ( mapError
       ( \e ->

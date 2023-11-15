@@ -7,15 +7,17 @@ where
 import Control.Exception qualified as IO
 import Juvix.Compiler.Pipeline.Package
 import Juvix.Compiler.Pipeline.Root.Base
+import Juvix.Data.Effect.TaggedLock
 import Juvix.Extra.Paths qualified as Paths
 import Juvix.Prelude
 
 findRootAndChangeDir ::
+  LockMode ->
   Maybe (Path Abs Dir) ->
   Maybe (Path Abs Dir) ->
   Path Abs Dir ->
   IO Root
-findRootAndChangeDir minputFileDir mbuildDir _rootInvokeDir = do
+findRootAndChangeDir lockMode minputFileDir mbuildDir _rootInvokeDir = do
   whenJust minputFileDir setCurrentDir
   r <- IO.try go
   case r of
@@ -40,7 +42,7 @@ findRootAndChangeDir minputFileDir mbuildDir _rootInvokeDir = do
       l <- findPackageFile
       case l of
         Nothing -> do
-          _rootPackage <- readGlobalPackageIO
+          _rootPackage <- readGlobalPackageIO lockMode
           _rootRootDir <- runM (runFilesIO globalRoot)
           let _rootPackageGlobal = True
               _rootBuildDir = getBuildDir mbuildDir
@@ -49,7 +51,7 @@ findRootAndChangeDir minputFileDir mbuildDir _rootInvokeDir = do
           let _rootRootDir = parent yamlPath
               _rootPackageGlobal = False
               _rootBuildDir = getBuildDir mbuildDir
-          _rootPackage <- readPackageIO _rootRootDir _rootBuildDir
+          _rootPackage <- readPackageIO lockMode _rootRootDir _rootBuildDir
           return Root {..}
 
 getBuildDir :: Maybe (Path Abs Dir) -> BuildDir

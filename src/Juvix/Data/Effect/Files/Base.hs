@@ -8,7 +8,6 @@ import Juvix.Data.Uid
 import Juvix.Prelude.Base
 import Juvix.Prelude.Prepath
 import Path
-import Path.IO
 
 data RecursorArgs = RecursorArgs
   { _recCurDir :: Path Rel Dir,
@@ -48,6 +47,5 @@ data Files m a where
   CanonicalDir :: Path Abs Dir -> Prepath Dir -> Files m (Path Abs Dir)
   NormalizeDir :: Path b Dir -> Files m (Path Abs Dir)
   NormalizeFile :: Path b File -> Files m (Path Abs File)
-  Normalize' :: (AnyPath p) => p -> Files m (AbsPath p)
 
 makeSem ''Files

@@ -52,7 +52,6 @@ runFilesIO = interpret helper
       CanonicalDir root d -> prepathToAbsDir root d
       NormalizeDir p -> canonicalizePath p
       NormalizeFile b -> canonicalizePath b
-      Normalize' p -> canonicalizePath p
 
 juvixConfigDirIO :: IO (Path Abs Dir)
 juvixConfigDirIO = (<//> versionDir) . absDir <$> getUserConfigDir "juvix"

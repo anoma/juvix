@@ -6,13 +6,11 @@ import BackendGeb qualified
 import BackendMarkdown qualified
 import Base
 import Compilation qualified
-import Control.Concurrent.Extra (newLock)
 import Core qualified
 import Examples qualified
 import Format qualified
 import Formatter qualified
 import Internal qualified
-import Lock qualified
 import Package qualified
 import Parsing qualified
 import Reachability qualified
@@ -53,6 +51,4 @@ fastTests =
     ]
 
 main :: IO ()
-main = do
-  l <- newLock
-  defaultMain (testGroup "Juvix tests" [fastTests, after AllFinish "Juvix fast tests" slowTests, Lock.allTests l])
+main = defaultMain (testGroup "Juvix tests" [fastTests, slowTests])

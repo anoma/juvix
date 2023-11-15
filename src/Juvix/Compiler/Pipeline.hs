@@ -35,14 +35,14 @@ import Juvix.Compiler.Pipeline.Root.Base
 import Juvix.Compiler.Pipeline.Setup
 import Juvix.Compiler.Reg.Data.InfoTable qualified as Reg
 import Juvix.Compiler.Reg.Translation.FromAsm qualified as Reg
-import Juvix.Data.Effect.FileLock
 import Juvix.Data.Effect.Git
 import Juvix.Data.Effect.Process
+import Juvix.Data.Effect.TaggedLock
 import Juvix.Prelude
 
-type PipelineEff = '[PathResolver, EvalFileEff, FileLock, Error PackageLoaderError, Error DependencyError, GitClone, Error GitProcessError, Process, Log, Reader EntryPoint, Files, NameIdGen, Builtins, Error JuvixError, HighlightBuilder, Internet, Embed IO]
+type PipelineEff = '[PathResolver, EvalFileEff, Error PackageLoaderError, Error DependencyError, GitClone, Error GitProcessError, Process, Log, TaggedLock, Reader EntryPoint, Files, NameIdGen, Builtins, Error JuvixError, HighlightBuilder, Internet, Embed IO, Resource, Final IO]
 
-type TopPipelineEff = '[PathResolver, EvalFileEff, FileLock, Error PackageLoaderError, Error DependencyError, GitClone, Error GitProcessError, Process, Log, Reader EntryPoint, Files, NameIdGen, Builtins, State Artifacts, Error JuvixError, HighlightBuilder, Embed IO]
+type TopPipelineEff = '[PathResolver, EvalFileEff, Error PackageLoaderError, Error DependencyError, GitClone, Error GitProcessError, Process, Log, TaggedLock, Reader EntryPoint, Files, NameIdGen, Builtins, State Artifacts, Error JuvixError, HighlightBuilder, Embed IO, Resource, Final IO]
 
 --------------------------------------------------------------------------------
 -- Workflows
