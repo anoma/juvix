@@ -156,10 +156,10 @@ readGlobalPackageIO lockMode =
     . runEvalFileEffIO
     $ readGlobalPackage
 
-readGlobalPackage :: (Members '[Error JuvixError, EvalFileEff, Files] r) => Sem r Package
+readGlobalPackage :: (Members '[TaggedLock, Error JuvixError, EvalFileEff, Files] r) => Sem r Package
 readGlobalPackage = do
   packagePath <- globalPackageJuvix
-  unlessM (fileExists' packagePath) writeGlobalPackage
+  withTaggedLockDir (parent packagePath) (unlessM (fileExists' packagePath) writeGlobalPackage)
   readPackage (parent packagePath) DefaultBuildDir
 
 writeGlobalPackage :: (Members '[Files] r) => Sem r ()
