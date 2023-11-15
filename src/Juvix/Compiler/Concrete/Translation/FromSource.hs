@@ -342,7 +342,7 @@ juvixCodeBlockParser = do
 
     goValidText :: ParsecS r (WithLoc Text)
     goValidText = do
-      p <- withLoc $ P.manyTill P.anySingle (P.lookAhead mdCodeToken)
+      p <- withLoc $ toList <$> P.some (P.notFollowedBy mdCodeToken >> P.anySingle)
       return $
         WithLoc
           { _withLocInt = getLoc p,
