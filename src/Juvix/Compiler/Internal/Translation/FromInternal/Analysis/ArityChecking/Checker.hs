@@ -76,7 +76,15 @@ checkInductive d = do
     checkParameters = runState emptyLocalVars . mapM checkParam
       where
         checkParam :: InductiveParameter -> Sem (State LocalVars ': r) InductiveParameter
-        checkParam = return
+        checkParam param = do
+          lv1 <- get @LocalVars
+          ty' <- runReader lv1 (checkType (param ^. inductiveParamType))
+          addArity (param ^. inductiveParamName) (typeArity ty')
+          return
+            InductiveParameter
+              { _inductiveParamName = param ^. inductiveParamName,
+                _inductiveParamType = ty'
+              }
 
 checkConstructor :: (Members '[Reader InsertedArgsStack, Reader LocalVars, Reader InfoTable, NameIdGen, Error ArityCheckerError] r) => ConstructorDef -> Sem r ConstructorDef
 checkConstructor c = do

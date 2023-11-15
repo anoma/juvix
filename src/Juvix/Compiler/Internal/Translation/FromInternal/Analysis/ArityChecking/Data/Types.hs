@@ -105,7 +105,7 @@ foldArity UnfoldedArity {..} = go _ufoldArityParams
       [] -> case _ufoldArityRest of
         ArityRestUnit -> ArityUnit
         ArityRestUnknown -> ArityUnknown
-      (a : as) -> ArityFunction (FunctionArity a (go as))
+      a : as -> ArityFunction (FunctionArity a (go as))
 
 instance HasAtomicity FunctionArity where
   atomicity = const (Aggregate funFixity)
@@ -124,12 +124,20 @@ instance Pretty ArityParameter where
           ImplicitInstance -> "{{𝟙}}"
           Explicit -> pretty ari
 
+instance HasAtomicity ArityParameter where
+  atomicity a = case a ^. arityParameterImplicit of
+    Explicit -> atomicity (a ^. arityParameterArity)
+    Implicit {} -> Atom
+    ImplicitInstance -> Atom
+
 instance Pretty FunctionArity where
-  pretty f@(FunctionArity l r) =
-    parensCond (atomParens (const True) (atomicity f) funFixity) (pretty l)
+  pretty (FunctionArity l r) =
+    ppSide False l
       <> " → "
-      <> pretty r
+      <> ppSide True r
     where
+      ppSide :: (HasAtomicity a, Pretty a) => Bool -> a -> Doc ann
+      ppSide isright lr = parensCond (atomParens (const isright) (atomicity lr) funFixity) (pretty lr)
       parensCond :: Bool -> Doc a -> Doc a
       parensCond t d = if t then parens d else d
 

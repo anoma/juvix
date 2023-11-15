@@ -115,9 +115,6 @@ ppMutual l = do
 instance PrettyCode Arity where
   ppCode = return . pretty
 
-instance PrettyCode IsImplicit where
-  ppCode = return . pretty
-
 instance PrettyCode ApplicationArg where
   ppCode ApplicationArg {..} =
     implicitDelim _appArgIsImplicit <$> ppCode _appArg
@@ -148,9 +145,11 @@ instance (PrettyCode a, PrettyCode b, PrettyCode c) => PrettyCode (a, b, c) wher
     c' <- ppCode c
     return $ tuple [a', b', c']
 
+header :: Text -> Doc Ann
+header = annotate AnnImportant . pretty
+
 instance PrettyCode NameDependencyInfo where
   ppCode DependencyInfo {..} = do
-    let header x = annotate AnnImportant x <> line
     edges' <- vsep <$> mapM ppCode _depInfoEdgeList
     reachable' <- ppCode (toList _depInfoReachable)
     topsort' <- ppCode _depInfoTopSort
@@ -218,9 +217,10 @@ ppBlock ::
 ppBlock items = vsep . toList <$> mapM ppCode items
 
 instance PrettyCode InductiveParameter where
-  ppCode (InductiveParameter v) = do
-    v' <- ppCode v
-    return $ parens (v' <+> kwColon <+> kwType)
+  ppCode InductiveParameter {..} = do
+    v' <- ppCode _inductiveParamName
+    ty' <- ppCode _inductiveParamType
+    return $ parens (v' <+> kwColon <+> ty')
 
 instance PrettyCode BuiltinInductive where
   ppCode = return . annotate AnnKeyword . pretty
@@ -359,7 +359,6 @@ instance PrettyCode InfoTable where
     constrs <- ppCode (HashMap.keys (tbl ^. infoConstructors))
     funs <- ppCode (HashMap.keys (tbl ^. infoFunctions))
     insts <- ppCode $ map (map (^. instanceInfoResult)) $ HashMap.elems (tbl ^. infoInstances . instanceTableMap)
-    let header :: Text -> Doc Ann = annotate AnnImportant . pretty
     return $
       header "InfoTable"
         <> "\n========="
@@ -429,3 +428,6 @@ instance (PrettyCode a) => PrettyCode [a] where
 
 instance (PrettyCode a) => PrettyCode (NonEmpty a) where
   ppCode x = ppCode (toList x)
+
+instance PrettyCode IsImplicit where
+  ppCode = return . pretty

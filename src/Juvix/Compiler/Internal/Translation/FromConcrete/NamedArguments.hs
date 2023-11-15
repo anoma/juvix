@@ -62,7 +62,7 @@ runNamedArguments napp = do
       . mapError ErrNamedArgumentsError
       . execState iniSt
       $ helper (getLoc napp)
-  let _dnamedAppIdentifier = (napp ^. namedAppName)
+  let _dnamedAppIdentifier = napp ^. namedAppName
   return DesugaredNamedApplication {..}
   where
     mkIniBuilderState :: Sem r BuilderState

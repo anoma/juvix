@@ -148,8 +148,10 @@ addAtoms atoms = addAtom . (^. expressionAtoms . _head1) $ atoms
 addInductiveParams' :: forall s r. (SingI s, Members '[NameSignatureBuilder s] r) => IsImplicit -> InductiveParameters s -> Sem r ()
 addInductiveParams' i a =
   forM_ (a ^. inductiveParametersNames) $ \sym ->
-    addSymbol @s i Nothing sym defaultType
+    addSymbol @s i Nothing sym ty
   where
+    mty = a ^? inductiveParametersRhs . _Just . inductiveParametersType
+    ty = fromMaybe defaultType mty
     defaultType = run (runReader (getLoc a) Gen.smallUniverseExpression)
 
 addInductiveParams :: (SingI s, Members '[NameSignatureBuilder s] r) => InductiveParameters s -> Sem r ()
@@ -231,12 +233,11 @@ endBuild' = get @(BuilderState s) >>= throw
 
 mkRecordNameSignature :: forall s. (SingI s) => RhsRecord s -> RecordNameSignature s
 mkRecordNameSignature rhs =
-  RecordNameSignature
-    ( HashMap.fromList
-        [ (symbolParsed _nameItemSymbol, NameItem {..})
-          | (Indexed _nameItemIndex field) <- indexFrom 0 (toList (rhs ^.. rhsRecordStatements . each . _RecordStatementField)),
-            let _nameItemSymbol :: SymbolType s = field ^. fieldName
-                _nameItemType = field ^. fieldType
-                _nameItemDefault :: Maybe (ArgDefault s) = Nothing
-        ]
-    )
+  RecordNameSignature $
+    HashMap.fromList
+      [ (symbolParsed _nameItemSymbol, NameItem {..})
+        | (Indexed _nameItemIndex field) <- indexFrom 0 (toList (rhs ^.. rhsRecordStatements . each . _RecordStatementField)),
+          let _nameItemSymbol :: SymbolType s = field ^. fieldName
+              _nameItemType = field ^. fieldType
+              _nameItemDefault :: Maybe (ArgDefault s) = Nothing
+      ]

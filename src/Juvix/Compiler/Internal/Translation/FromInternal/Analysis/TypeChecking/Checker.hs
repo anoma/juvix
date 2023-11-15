@@ -133,7 +133,7 @@ checkInductiveDef InductiveDef {..} = runInferenceDef $ do
     paramLocals :: LocalVars
     paramLocals =
       LocalVars
-        { _localTypes = HashMap.fromList [(p ^. inductiveParamName, smallUniverseE (getLoc p)) | p <- _inductiveParameters],
+        { _localTypes = HashMap.fromList [(p ^. inductiveParamName, p ^. inductiveParamType) | p <- _inductiveParameters],
           _localTyMap = mempty
         }
     goConstructor :: ConstructorDef -> Sem (Inference ': r) ConstructorDef

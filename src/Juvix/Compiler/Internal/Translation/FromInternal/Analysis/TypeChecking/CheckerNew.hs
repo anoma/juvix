@@ -119,42 +119,44 @@ checkMutualBlock s = runReader emptyLocalVars (checkTopMutualBlock s)
 
 checkInductiveDef ::
   forall r.
-  (Members '[HighlightBuilder, Reader EntryPoint, Reader InfoTable, State FunctionsTable, Error TypeCheckerError, NameIdGen, State TypesTable, State NegativeTypeParameters, Output Example, Builtins, Termination, Output TypedHole, Output CastHole] r) =>
+  (Members '[HighlightBuilder, Reader EntryPoint, Reader InfoTable, State FunctionsTable, Error TypeCheckerError, NameIdGen, State TypesTable, State NegativeTypeParameters, Output Example, Builtins, Termination, Output TypedHole, Output CastHole, Reader LocalVars] r) =>
   InductiveDef ->
   Sem r InductiveDef
 checkInductiveDef InductiveDef {..} = runInferenceDef $ do
-  constrs' <- mapM goConstructor _inductiveConstructors
-  ty <- lookupInductiveType _inductiveName
-  registerNameIdType (_inductiveName ^. nameId) ty
-  examples' <- mapM checkExample _inductiveExamples
-  inductiveType' <- runReader paramLocals (checkDefType _inductiveType)
-  let d =
-        InductiveDef
-          { _inductiveConstructors = constrs',
-            _inductiveExamples = examples',
-            _inductiveType = inductiveType',
-            _inductiveName,
-            _inductiveBuiltin,
-            _inductivePositive,
-            _inductiveParameters,
-            _inductiveTrait,
-            _inductivePragmas
-          }
-  checkPositivity d
-  return d
+  params <- checkParams
+  withLocalTypes params $ do
+    constrs' <- mapM goConstructor _inductiveConstructors
+    ty <- lookupInductiveType _inductiveName
+    registerNameIdType (_inductiveName ^. nameId) ty
+    examples' <- mapM checkExample _inductiveExamples
+    inductiveType' <- checkDefType _inductiveType
+    let d =
+          InductiveDef
+            { _inductiveConstructors = constrs',
+              _inductiveExamples = examples',
+              _inductiveType = inductiveType',
+              _inductiveName,
+              _inductiveBuiltin,
+              _inductivePositive,
+              _inductiveParameters,
+              _inductiveTrait,
+              _inductivePragmas
+            }
+    checkPositivity d
+    return d
   where
-    paramLocals :: LocalVars
-    paramLocals =
-      LocalVars
-        { _localTypes = HashMap.fromList [(p ^. inductiveParamName, smallUniverseE (getLoc p)) | p <- _inductiveParameters],
-          _localTyMap = mempty
-        }
+    checkParams :: Sem (Inference ': r) [(Name, Expression)]
+    checkParams = mapM checkParam _inductiveParameters
+      where
+        checkParam :: InductiveParameter -> Sem (Inference ': r) (Name, Expression)
+        checkParam p = do
+          ty' <- checkIsType (getLoc p) (p ^. inductiveParamType)
+          return (p ^. inductiveParamName, ty')
+
     goConstructor :: ConstructorDef -> Sem (Inference ': r) ConstructorDef
     goConstructor ConstructorDef {..} = do
       expectedRetTy <- lookupConstructorReturnType _inductiveConstructorName
-      cty' <-
-        runReader paramLocals $
-          checkIsType (getLoc _inductiveConstructorType) _inductiveConstructorType
+      cty' <- checkIsType (getLoc _inductiveConstructorType) _inductiveConstructorType
       examples' <- mapM checkExample _inductiveConstructorExamples
       whenJustM (matchTypes expectedRetTy ret) (const (errRet expectedRetTy))
       let c' =
