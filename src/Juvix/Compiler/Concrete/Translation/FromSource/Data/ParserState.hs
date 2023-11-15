@@ -5,7 +5,7 @@ import Juvix.Compiler.Concrete.Language
 import Juvix.Prelude
 
 data ParserState = ParserState
-  { _parserStateImports :: [TopModulePath],
+  { _parserStateImports :: [Import 'Parsed],
     _parserStateComments :: [SpaceSpan],
     _parserStateParsedItems :: [ParsedItem]
   }

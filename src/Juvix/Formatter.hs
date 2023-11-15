@@ -1,9 +1,10 @@
 module Juvix.Formatter where
 
-import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Print (docDefault)
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
+import Juvix.Compiler.Concrete.Translation.FromSource.Data.Context
+import Juvix.Compiler.Concrete.Translation.FromSource.Data.ParserState (parserStateComments)
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Data.CodeAnn
 import Juvix.Extra.Paths
@@ -101,11 +102,12 @@ formatPath p = do
 
 formatStdin ::
   forall r.
-  (Members '[ScopeEff, Files, Output FormattedFileInfo] r) =>
+  (Members '[Reader EntryPoint, ScopeEff, Files, Output FormattedFileInfo] r) =>
   Sem r FormatResult
 formatStdin = do
+  entry <- ask
   res <- scopeStdin
-  let originalContents = fromMaybe "" (res ^. Scoper.resultParserResult . resultEntry . entryPointStdin)
+  let originalContents = fromMaybe "" (entry ^. entryPointStdin)
   runReader originalContents $ do
     formattedContents :: Text <- formatScoperResult False res
     formatResultFromContents formattedContents formatStdinPath
@@ -144,14 +146,13 @@ formatScoperResult ::
   Scoper.ScoperResult ->
   Sem r Text
 formatScoperResult force res = do
-  let cs = res ^. Scoper.comments
-  formattedModules <-
+  let cs = mkComments $ res ^. Scoper.resultParserResult . resultParserState . parserStateComments
+  formattedModule <-
     runReader cs
-      . mapM formatTopModule
+      . formatTopModule
       $ res
-        ^. Scoper.resultModules
-  let txt :: Text = toPlainTextTrim . mconcat . NonEmpty.toList $ formattedModules
-
+        ^. Scoper.resultModule
+  let txt :: Text = toPlainTextTrim formattedModule
   case res ^. Scoper.mainModule . modulePragmas of
     Just pragmas ->
       case pragmas ^. withLocParam . withSourceValue . pragmasFormat of

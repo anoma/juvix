@@ -1,9 +1,17 @@
-module Juvix.Compiler.Pipeline.Driver where
+module Juvix.Compiler.Pipeline.Driver
+  ( processFile,
+    processModule,
+  )
+where
 
+import Juvix.Compiler.Builtins
+import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
+import Juvix.Compiler.Concrete.Translation.FromSource.Data.ParserState qualified as Parser
 import Juvix.Compiler.Pipeline
 import Juvix.Compiler.Pipeline.Loader.PathResolver
 import Juvix.Compiler.Store.Language qualified as Store
+import Juvix.Data.CodeAnn
 import Juvix.Data.Effect.Git
 import Juvix.Prelude
 
@@ -12,13 +20,52 @@ processModule ::
   (Members '[Error JuvixError, Files, GitClone, PathResolver] r) =>
   EntryPoint ->
   Sem r Store.ModuleInfo
-processModule entry = undefined
+processModule entry = do
+  (res, mtab) <- processFile entry
+  cres <-
+    runReader res $
+      runReader entry $
+        runReader mtab $
+          evalTopNameIdGen
+            (res ^. Parser.resultModule . moduleId)
+            upToEval
+  undefined
 
-processDependencies ::
+processFile ::
   forall r.
   (Members '[Error JuvixError, Files, GitClone, PathResolver] r) =>
   EntryPoint ->
   Sem r (Parser.ParserResult, Store.ModuleTable)
-processDependencies entry = do
+processFile entry = do
   res <- runReader entry upToParsing
-  undefined
+  let imports = res ^. Parser.resultParserState . Parser.parserStateImports
+  modules <- forM imports goImport
+  return (res, Store.mkModuleTable modules)
+  where
+    goImport :: Import 'Parsed -> Sem r Store.ModuleInfo
+    goImport i =
+      withPath'
+        i
+        ( \path ->
+            processModule (entry {_entryPointModulePath = Just path})
+        )
+
+withPath' ::
+  forall r a.
+  (Members '[PathResolver, Error JuvixError] r) =>
+  Import 'Parsed ->
+  (Path Abs File -> Sem r a) ->
+  Sem r a
+withPath' i a = withPathFile (i ^. importModule) (either throwError a)
+  where
+    throwError :: PathResolverError -> Sem r a
+    throwError e =
+      mapError (JuvixError @GenericError) $
+        throw
+          GenericError
+            { _genericErrorLoc = loc,
+              _genericErrorMessage = mkAnsiText $ ppCodeAnn e,
+              _genericErrorIntervals = [loc]
+            }
+      where
+        loc = getLoc i

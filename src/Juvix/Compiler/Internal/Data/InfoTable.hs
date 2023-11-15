@@ -145,6 +145,34 @@ computeInfoTable m = InfoTable {..}
           | StatementAxiom d <- mutuals
         ]
 
+    _infoBuiltins :: HashMap BuiltinPrim Name
+    _infoBuiltins =
+      HashMap.fromList $
+        mapMaybe goInd (HashMap.elems _infoInductives)
+          <> mapMaybe goConstr (HashMap.elems _infoConstructors)
+          <> mapMaybe goFun (HashMap.elems _infoFunctions)
+          <> mapMaybe goAxiom (HashMap.elems _infoAxioms)
+      where
+        goInd :: InductiveInfo -> Maybe (BuiltinPrim, Name)
+        goInd InductiveInfo {..} =
+          _inductiveInfoBuiltin
+            >>= (\b -> Just (BuiltinsInductive b, _inductiveInfoName))
+
+        goConstr :: ConstructorInfo -> Maybe (BuiltinPrim, Name)
+        goConstr ConstructorInfo {..} =
+          _constructorInfoBuiltin
+            >>= (\b -> Just (BuiltinsConstructor b, _constructorInfoName))
+
+        goFun :: FunctionInfo -> Maybe (BuiltinPrim, Name)
+        goFun FunctionInfo {..} =
+          _functionInfoBuiltin
+            >>= (\b -> Just (BuiltinsFunction b, _functionInfoName))
+
+        goAxiom :: AxiomInfo -> Maybe (BuiltinPrim, Name)
+        goAxiom AxiomInfo {..} =
+          _axiomInfoDef ^. axiomBuiltin
+            >>= (\b -> Just (BuiltinsAxiom b, _axiomInfoDef ^. axiomName))
+
     _infoInstances :: InstanceTable
     _infoInstances = foldr (flip updateInstanceTable) mempty $ mapMaybe mkInstance (HashMap.elems _infoFunctions)
       where

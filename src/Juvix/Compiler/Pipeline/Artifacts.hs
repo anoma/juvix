@@ -111,4 +111,4 @@ runFromConcreteCache =
       . runTerminationArtifacts
       . runReaderArtifacts (artifactScoperState . scoperScopedSignatures)
       . runReaderArtifacts (artifactScoperState . scoperScopedConstructorFields)
-      . Internal.goModuleNoCache
+      . Internal.goTopModule

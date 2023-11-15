@@ -6,6 +6,7 @@ module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Er
   )
 where
 
+import Juvix.Compiler.Builtins.Error (NotDefined)
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Error
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error.Pretty
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error.Types
@@ -34,6 +35,7 @@ data TypeCheckerError
   | ErrSubsumedInstance SubsumedInstance
   | ErrExplicitInstanceArgument ExplicitInstanceArgument
   | ErrTraitNotTerminating TraitNotTerminating
+  | ErrBuiltinNotDefined NotDefined
 
 instance ToGenericError TypeCheckerError where
   genericError :: (Member (Reader GenericOptions) r) => TypeCheckerError -> Sem r GenericError
@@ -60,3 +62,4 @@ instance ToGenericError TypeCheckerError where
     ErrSubsumedInstance e -> genericError e
     ErrExplicitInstanceArgument e -> genericError e
     ErrTraitNotTerminating e -> genericError e
+    ErrBuiltinNotDefined e -> genericError e

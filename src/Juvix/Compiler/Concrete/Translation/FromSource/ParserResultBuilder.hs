@@ -9,7 +9,7 @@ import Juvix.Prelude
 data ParserResultBuilder m a where
   RegisterItem :: ParsedItem -> ParserResultBuilder m ()
   RegisterSpaceSpan :: SpaceSpan -> ParserResultBuilder m ()
-  RegisterImport :: TopModulePath -> ParserResultBuilder m ()
+  RegisterImport :: Import 'Parsed -> ParserResultBuilder m ()
 
 makeSem ''ParserResultBuilder
 

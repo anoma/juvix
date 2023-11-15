@@ -3,7 +3,6 @@ module Juvix.Parser.Error where
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Pretty.Options (fromGenericOptions)
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error.Pretty
-import Juvix.Compiler.Pipeline.Loader.PathResolver.Error
 import Juvix.Extra.Paths
 import Juvix.Prelude
 import Text.Megaparsec qualified as M
@@ -11,7 +10,6 @@ import Text.Megaparsec.Error (errorOffset)
 
 data ParserError
   = ErrMegaparsec MegaparsecError
-  | ErrTopModulePath TopModulePathError
   | ErrWrongTopModuleName WrongTopModuleName
   | ErrStdinOrFile StdinOrFileError
   | ErrDanglingJudoc DanglingJudoc
@@ -20,7 +18,6 @@ data ParserError
 instance ToGenericError ParserError where
   genericError = \case
     ErrMegaparsec e -> genericError e
-    ErrTopModulePath e -> genericError e
     ErrWrongTopModuleName e -> genericError e
     ErrStdinOrFile e -> genericError e
     ErrDanglingJudoc e -> genericError e
@@ -54,25 +51,6 @@ instance ToGenericError MegaparsecError where
         }
     where
       i = getLoc e
-
-data TopModulePathError = TopModulePathError
-  { _topModulePathErrorPath :: TopModulePath,
-    _topModulePathError :: PathResolverError
-  }
-  deriving stock (Show)
-
-instance ToGenericError TopModulePathError where
-  genericError TopModulePathError {..} = do
-    let msg = ppCodeAnn _topModulePathError
-    return
-      GenericError
-        { _genericErrorLoc = i,
-          _genericErrorMessage = mkAnsiText msg,
-          _genericErrorIntervals = [i]
-        }
-    where
-      i :: Interval
-      i = getLoc _topModulePathErrorPath
 
 data WrongTopModuleName = WrongTopModuleName
   { _wrongTopModuleNameExpectedPath :: Path Abs File,

@@ -629,10 +629,11 @@ import_ :: forall r. (Members '[Files, PathResolver, ParserResultBuilder, Pragma
 import_ = do
   _importKw <- kw kwImport
   _importModule <- topModulePath
-  P.lift (registerImport _importModule)
   _importAsName <- optional pasName
   _importOpen <- optional popenModuleParams
-  return Import {..}
+  let i = Import {..}
+  P.lift (registerImport i)
+  return i
   where
     pasName :: ParsecS r TopModulePath
     pasName = void (kw kwAs) >> topModulePath

@@ -21,15 +21,14 @@ registerBuiltin = registerBuiltin' . toBuiltinPrim
 getBuiltinName :: (IsBuiltin a, Member Builtins r) => Interval -> a -> Sem r Name
 getBuiltinName i = getBuiltinName' i . toBuiltinPrim
 
-data BuiltinsState = BuiltinsState
-  { _builtinsTable :: HashMap BuiltinPrim Name,
-    _builtinsNameTable :: HashMap Name BuiltinPrim
+newtype BuiltinsState = BuiltinsState
+  { _builtinsTable :: HashMap BuiltinPrim Name
   }
 
 makeLenses ''BuiltinsState
 
 iniBuiltins :: BuiltinsState
-iniBuiltins = BuiltinsState mempty mempty
+iniBuiltins = BuiltinsState mempty
 
 re :: forall r a. (Member (Error JuvixError) r) => Sem (Builtins ': r) a -> Sem (State BuiltinsState ': r) a
 re = reinterpret $ \case
@@ -43,13 +42,11 @@ re = reinterpret $ \case
               { _notDefinedBuiltin = b,
                 _notDefinedLoc = i
               }
-  -- GetBuiltin n -> gets (^. builtinsNameTable . at n)
   RegisterBuiltin' b n -> do
     s <- gets (^. builtinsTable . at b)
     case s of
       Nothing -> do
         modify (over builtinsTable (set (at b) (Just n)))
-        modify (over builtinsNameTable (set (at n) (Just b)))
       Just {} -> alreadyDefined
     where
       alreadyDefined :: Sem (State BuiltinsState ': r) x
@@ -61,11 +58,8 @@ re = reinterpret $ \case
                 _alreadyDefinedLoc = getLoc n
               }
 
-evalTopBuiltins :: (Member (Error JuvixError) r) => Sem (Builtins ': r) a -> Sem r a
-evalTopBuiltins = fmap snd . runTopBuiltins
-
-runTopBuiltins :: (Member (Error JuvixError) r) => Sem (Builtins ': r) a -> Sem r (BuiltinsState, a)
-runTopBuiltins = runBuiltins iniBuiltins
+evalBuiltins :: (Member (Error JuvixError) r) => BuiltinsState -> Sem (Builtins ': r) a -> Sem r a
+evalBuiltins s = fmap snd . runBuiltins s
 
 runBuiltins :: (Member (Error JuvixError) r) => BuiltinsState -> Sem (Builtins ': r) a -> Sem r (BuiltinsState, a)
 runBuiltins s = runState s . re

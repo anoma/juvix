@@ -139,7 +139,7 @@ goPreModule m = do
   let b = m ^. moduleBody
   mapM_ (goPreStatement (m ^. moduleName)) (b ^. moduleStatements)
   -- We cannot ignore imports with instances, because a trait in a module M may
-  -- depend on an instance in a module N which imports M  (i.e. new edges may be
+  -- depend on an instance in a module N which imports M (i.e. new edges may be
   -- added from definitions in M to definitions in N)
   mapM_ goImport (b ^. moduleImports)
 

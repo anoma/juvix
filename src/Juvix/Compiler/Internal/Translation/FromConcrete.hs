@@ -1,7 +1,6 @@
 module Juvix.Compiler.Internal.Translation.FromConcrete
   ( module Juvix.Compiler.Internal.Translation.FromConcrete.Data.Context,
     fromConcrete,
-    MCache,
     ConstructorInfos,
     DefaultArgsStack,
     goTopModule,
@@ -31,15 +30,19 @@ import Juvix.Compiler.Internal.Translation.FromConcrete.Data.Context
 import Juvix.Compiler.Internal.Translation.FromConcrete.NamedArguments
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker
 import Juvix.Compiler.Pipeline.EntryPoint
+import Juvix.Compiler.Store.Language qualified as Store
 import Juvix.Compiler.Store.Scoped.Language qualified as S
 import Juvix.Data.NameKind
 import Juvix.Prelude
 import Safe (lastMay)
 
-type MCache = Cache Concrete.ModuleIndex Internal.Module
-
 -- | Needed to generate field projections.
-type ConstructorInfos = HashMap Internal.ConstructorName ConstructorInfo
+newtype ConstructorInfos = ConstructorInfos
+  { _constructorInfos :: HashMap Internal.ConstructorName ConstructorInfo
+  }
+  deriving newtype (Semigroup, Monoid)
+
+makeLenses ''ConstructorInfos
 
 newtype DefaultArgsStack = DefaultArgsStack
   { _defaultArgsStack :: [S.Symbol]
@@ -49,18 +52,24 @@ newtype DefaultArgsStack = DefaultArgsStack
 makeLenses ''DefaultArgsStack
 
 fromConcrete ::
-  (Members '[Reader EntryPoint, Error JuvixError, Builtins, NameIdGen, Termination] r) =>
+  (Members '[Reader EntryPoint, Error JuvixError, Reader Store.ModuleTable, NameIdGen, Termination] r) =>
   Scoper.ScoperResult ->
   Sem r InternalResult
-fromConcrete _resultScoper =
+fromConcrete _resultScoper = do
+  mtab <- ask
+  let blts =
+        mconcatMap
+          (^. Store.moduleInfoStoredModule . storedModuleInfoTable . infoBuiltins)
+          (HashMap.elems (mtab ^. Store.moduleTable))
   mapError (JuvixError @ScoperError) $ do
     _resultModule <-
       runReader @Pragmas mempty
         . runReader @ExportsTable exportTbl
-        . evalState @ConstructorInfos mempty
         . runReader namesSigs
         . runReader constrSigs
+        . evalState @ConstructorInfos mempty
         . runReader @DefaultArgsStack mempty
+        . evalBuiltins (BuiltinsState blts)
         $ goTopModule m
     let _resultStoredModule = Internal.computeStoredModule _resultModule
     return InternalResult {..}
@@ -348,7 +357,7 @@ goProjectionDef ::
   Sem r Internal.FunctionDef
 goProjectionDef ProjectionDef {..} = do
   let c = goSymbol _projectionConstructor
-  info <- gets @ConstructorInfos (^?! at c . _Just)
+  info <- gets (^?! constructorInfos . at c . _Just)
   fun <- Internal.genFieldProjection (goSymbol _projectionField) ((^. withLocParam) <$> _projectionFieldBuiltin) info _projectionFieldIx
   whenJust (fun ^. Internal.funDefBuiltin) (registerBuiltinFunction fun)
   return fun
@@ -614,8 +623,8 @@ goInductive ty@InductiveDef {..} = do
 -- | Registers constructors so we can access them for generating field projections
 registerInductiveConstructors :: (Members '[State ConstructorInfos] r) => Internal.InductiveDef -> Sem r ()
 registerInductiveConstructors indDef = do
-  m <- get
-  put (foldr (uncurry HashMap.insert) m (mkConstructorEntries indDef))
+  m <- gets (^. constructorInfos)
+  put (ConstructorInfos $ foldr (uncurry HashMap.insert) m (mkConstructorEntries indDef))
 
 goConstructorDef ::
   forall r.

@@ -126,7 +126,6 @@ loadPackage' packagePath = do
       . ignoreHighlightBuilder
       . runProcessIO
       . runFilesIO
-      . evalTopBuiltins
       . evalTopNameIdGen defaultModuleId
       . runReader packageEntryPoint
       . ignoreLog
