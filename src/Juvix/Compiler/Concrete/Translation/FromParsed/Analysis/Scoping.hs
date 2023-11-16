@@ -1305,8 +1305,7 @@ checkSections sec = do
                       { _moduleDoc = Nothing,
                         _modulePragmas = Nothing,
                         _moduleInductive = True,
-                        _moduleMarkdown = Nothing,
-                        _moduleMarkdownSeparation = Nothing,
+                        _moduleMarkdownInfo = Nothing,
                         ..
                       }
                   where
@@ -1437,8 +1436,7 @@ checkLocalModule Module {..} = do
             _moduleBody = moduleBody',
             _moduleDoc = moduleDoc',
             _modulePragmas = _modulePragmas,
-            _moduleMarkdown = Nothing,
-            _moduleMarkdownSeparation = Nothing,
+            _moduleMarkdownInfo = Nothing,
             _moduleKw,
             _moduleInductive,
             _moduleKwEnd

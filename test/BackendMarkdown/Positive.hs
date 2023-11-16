@@ -1,4 +1,4 @@
-module Markdown where
+module BackendMarkdown.Positive where
 
 import Base
 import Juvix.Compiler.Backend.Markdown.Translation.FromTyped.Source
@@ -61,17 +61,19 @@ testDescr PosTest {..} =
                     root <//> $(mkRelDir "markdown")
                 }
 
-        let md :: Text = fromJuvixMarkdown' opts
-
-        step "Checking against expected output file"
-        expFile :: Text <- readFile (toFilePath _expectedFile)
-        assertEqDiffText "Compare to expected output" md expFile
+        let res = fromJuvixMarkdown' opts
+        case res of
+          Left err -> assertFailure (show err)
+          Right md -> do
+            step "Checking against expected output file"
+            expFile :: Text <- readFile (toFilePath _expectedFile)
+            assertEqDiffText "Compare to expected output" md expFile
     }
 
 allTests :: TestTree
 allTests =
   testGroup
-    "Format positive tests"
+    "Markdown positive tests"
     (map (mkTest . testDescr) tests)
 
 tests :: [PosTest]

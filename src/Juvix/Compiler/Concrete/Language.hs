@@ -921,7 +921,12 @@ type FunctionName s = SymbolType s
 
 type LocalModuleName s = SymbolType s
 
--- TODO add MarkdownInfo that has both new fields
+data MarkdownInfo = MarkdownInfo
+  { _markdownInfo :: Mk,
+    _markdownInfoBlockLengths :: [Int]
+  }
+  deriving stock (Show, Eq, Ord)
+
 data Module (s :: Stage) (t :: ModuleIsTop) = Module
   { _moduleKw :: KeywordRef,
     _modulePath :: ModulePathType s t,
@@ -930,8 +935,7 @@ data Module (s :: Stage) (t :: ModuleIsTop) = Module
     _moduleBody :: [Statement s],
     _moduleKwEnd :: ModuleEndType t,
     _moduleInductive :: ModuleInductiveType t,
-    _moduleMarkdown :: Maybe Mk,
-    _moduleMarkdownSeparation :: Maybe [Int]
+    _moduleMarkdownInfo :: Maybe MarkdownInfo
   }
 
 deriving stock instance Show (Module 'Parsed 'ModuleTop)
@@ -1925,6 +1929,7 @@ makeLenses ''NameSignature
 makeLenses ''RecordNameSignature
 makeLenses ''NameBlock
 makeLenses ''NameItem
+makeLenses ''MarkdownInfo
 
 fixityFieldHelper :: SimpleGetter (ParsedFixityFields s) (Maybe a) -> SimpleGetter (ParsedFixityInfo s) (Maybe a)
 fixityFieldHelper l = to (^? fixityFields . _Just . l . _Just)

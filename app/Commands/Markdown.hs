@@ -20,20 +20,22 @@ runCommand opts = do
   scopedM <- runPipeline inputFile upToScoping
   let m = head (scopedM ^. Scoper.resultModules)
   outputDir <- fromAppPathDir (opts ^. markdownOutputDir)
-  md :: Text <-
-    MK.fromJuvixMarkdown
-      ProcessJuvixBlocksArgs
-        { _processJuvixBlocksArgsConcreteOpts = Concrete.defaultOptions,
-          _processJuvixBlocksArgsUrlPrefix = opts ^. markdownUrlPrefix,
-          _processJuvixBlocksArgsIdPrefix =
-            opts ^. markdownIdPrefix,
-          _processJuvixBlocksArgsNoPath =
-            opts ^. markdownNoPath,
-          _processJuvixBlocksArgsComments = scopedM ^. Scoper.comments,
-          _processJuvixBlocksArgsModule = m,
-          _processJuvixBlocksArgsOutputDir = outputDir
-        }
-  if
+  let res =
+        MK.fromJuvixMarkdown'
+          ProcessJuvixBlocksArgs
+            { _processJuvixBlocksArgsConcreteOpts = Concrete.defaultOptions,
+              _processJuvixBlocksArgsUrlPrefix = opts ^. markdownUrlPrefix,
+              _processJuvixBlocksArgsIdPrefix =
+                opts ^. markdownIdPrefix,
+              _processJuvixBlocksArgsNoPath =
+                opts ^. markdownNoPath,
+              _processJuvixBlocksArgsComments = scopedM ^. Scoper.comments,
+              _processJuvixBlocksArgsModule = m,
+              _processJuvixBlocksArgsOutputDir = outputDir
+            }
+  case res of
+    Left err -> exitJuvixError (JuvixError err)
+    Right md
       | opts ^. markdownStdout -> liftIO . putStrLn $ md
       | otherwise -> do
           ensureDir outputDir

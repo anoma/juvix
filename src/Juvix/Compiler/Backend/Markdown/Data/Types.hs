@@ -234,6 +234,12 @@ instance-- (MK.IsInline TextBlock) =>
           xs
       )
 
+nullMk :: Mk -> Bool
+nullMk = \case
+  MkConcat a b -> nullMk a && nullMk b
+  MkNull -> True
+  _ -> False
+
 extractJuvixCodeBlock :: Mk -> [JuvixCodeBlock]
 extractJuvixCodeBlock = \case
   MkJuvixCodeBlock j -> [j]

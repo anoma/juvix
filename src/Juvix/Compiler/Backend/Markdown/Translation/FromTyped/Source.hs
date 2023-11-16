@@ -6,6 +6,7 @@ import Data.Text.Lazy (toStrict)
 import Juvix.Compiler.Backend.Html.Data.Options qualified as HtmlRender
 import Juvix.Compiler.Backend.Html.Translation.FromTyped.Source qualified as HtmlRender
 import Juvix.Compiler.Backend.Markdown.Data.Types
+import Juvix.Compiler.Backend.Markdown.Error
 import Juvix.Compiler.Concrete.Language qualified as Concrete
 import Juvix.Compiler.Concrete.Pretty qualified as Concrete
 import Juvix.Prelude
@@ -34,10 +35,11 @@ data ProcessingState = ProcessingState
 makeLenses ''ProcessJuvixBlocksArgs
 makeLenses ''ProcessingState
 
-fromJuvixMarkdown' :: ProcessJuvixBlocksArgs -> Text
-fromJuvixMarkdown' = run . fromJuvixMarkdown
+fromJuvixMarkdown' :: ProcessJuvixBlocksArgs -> Either MarkdownBackendError Text
+fromJuvixMarkdown' = run . runError . fromJuvixMarkdown
 
 fromJuvixMarkdown ::
+  (Members '[Error MarkdownBackendError] r) =>
   ProcessJuvixBlocksArgs ->
   Sem r Text
 fromJuvixMarkdown opts = do
@@ -55,8 +57,22 @@ fromJuvixMarkdown opts = do
       m :: Concrete.Module 'Concrete.Scoped 'Concrete.ModuleTop
       m = opts ^. processJuvixBlocksArgsModule
 
-  case (m ^. Concrete.moduleMarkdown, m ^. Concrete.moduleMarkdownSeparation) of
-    (Just mk, Just sepr) -> do
+      fname :: Path Abs File
+      fname = getLoc m ^. intervalFile
+
+  case m ^. Concrete.moduleMarkdownInfo of
+    Just mkInfo -> do
+      let mk :: Mk = mkInfo ^. Concrete.markdownInfo
+          sepr :: [Int] = mkInfo ^. Concrete.markdownInfoBlockLengths
+
+      when (nullMk mk || null sepr) $
+        throw
+          ( ErrNoJuvixCodeBlocks
+              NoJuvixCodeBlocksError
+                { _noJuvixCodeBlocksErrorFilepath = fname
+                }
+          )
+
       let st =
             ProcessingState
               { _processingStateMk = mk,
@@ -66,8 +82,13 @@ fromJuvixMarkdown opts = do
               }
       (_, r) <- runState st . runReader htmlOptions . runReader opts $ go
       return $ MK.toPlainText r
-    (Nothing, _) -> error "This module has no Markdown"
-    (_, _) -> error "This Markdown file has no Juvix code blocks"
+    Nothing ->
+      throw
+        ( ErrInternalNoMarkdownInfo
+            NoMarkdownInfoError
+              { _noMarkdownInfoFilepath = fname
+              }
+        )
 
 htmlSemicolon :: Html
 htmlSemicolon = Html.span ! HtmlRender.juColor HtmlRender.JuDelimiter $ ";"
@@ -141,7 +162,7 @@ go = do
                     _processingStateStmts = drop n stmts,
                     ..
                   }
-          modify @ProcessingState $ \_ -> newState
+          modify @ProcessingState $ const newState
           return _processingStateMk
 
 goRender :: (Concrete.PrettyPrint a, Members '[Reader HtmlRender.HtmlOptions, Reader ProcessJuvixBlocksArgs] r) => a -> Sem r Html

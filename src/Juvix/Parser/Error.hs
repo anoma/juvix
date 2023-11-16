@@ -1,6 +1,7 @@
 module Juvix.Parser.Error where
 
 import Commonmark qualified as MK
+import Juvix.Compiler.Backend.Markdown.Error
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Pretty.Options (fromGenericOptions)
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Error
@@ -19,6 +20,7 @@ data ParserError
   | ErrWrongTopModuleName WrongTopModuleName
   | ErrStdinOrFile StdinOrFileError
   | ErrDanglingJudoc DanglingJudoc
+  | ErrMarkdownBackend MarkdownBackendError
   deriving stock (Show)
 
 instance ToGenericError ParserError where
@@ -29,6 +31,7 @@ instance ToGenericError ParserError where
     ErrWrongTopModuleName e -> genericError e
     ErrStdinOrFile e -> genericError e
     ErrDanglingJudoc e -> genericError e
+    ErrMarkdownBackend e -> genericError e
 
 instance Pretty MegaparsecError where
   pretty (MegaparsecError b) = pretty (M.errorBundlePretty b)
