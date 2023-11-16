@@ -305,18 +305,19 @@ resolvePath' mp = do
               }
         )
 
-expectedPath' :: (Members '[Reader ResolverEnv] r) 
-  => Path Abs File -> TopModulePath -> Sem r (Path Abs File)
-expectedPath' actualPath m = do
-  root <- asks (^. envRoot)
-  traceM $ "expected root" <> show root
+expectedPath' ::
+  (Members '[Reader ResolverEnv] r) =>
+  TopModulePath ->
+  Sem r PathInfoTopModule
+expectedPath' m = do
   msingle <- asks (^. envSingleFile)
-  traceM $ "expected single" <> show msingle
-  let tp = topModulePathToRelativePath' m
-  traceM $ "expected topModpath" <> show tp 
-  if
-      | msingle == Just actualPath -> return actualPath
-      | otherwise -> return (root <//> tp)
+  let _pathInfoTopModule = m
+  _rootInfoPath <- asks (^. envRoot)
+  let _rootInfoKind = case msingle of
+        Just _ -> RootKindGlobalPackage
+        Nothing -> RootKindLocalPackage
+      _pathInfoRootInfo = Just RootInfo {..}
+  return PathInfoTopModule {..}
 
 re ::
   forall r a.
@@ -331,7 +332,7 @@ re = reinterpret2H helper
       Tactical PathResolver (Sem rInitial) (Reader ResolverEnv ': (State ResolverState ': r)) x
     helper = \case
       RegisterDependencies forceUpdateLockfile -> registerDependencies' forceUpdateLockfile >>= pureT
-      ExpectedModulePath a m -> expectedPath' a m >>= pureT
+      ExpectedPathInfoTopModule m -> expectedPath' m >>= pureT
       WithPath m a -> do
         x :: Either PathResolverError (Path Abs Dir, Path Rel File) <- resolvePath' m
         oldroot <- asks (^. envRoot)

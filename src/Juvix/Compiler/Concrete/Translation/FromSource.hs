@@ -300,24 +300,26 @@ topModuleDefStdin = do
   top moduleDef
 
 -- FIX: https://github.com/anoma/juvix/pull/251
-checkPath ::
+checkModulePath ::
   (Members '[PathResolver, Error ParserError] s) =>
-  Maybe (Path Abs File) ->
-  TopModulePath ->
+  Module 'Parsed 'ModuleTop ->
   Sem s ()
-checkPath maybePath path = do
-  let actualPath = fromMaybe (getLoc path ^. intervalFile) maybePath
-  mexpectedPath <- expectedModulePath actualPath path
-  whenJust mexpectedPath $ \expectedPath ->
-    unlessM (equalPaths expectedPath actualPath) $
-      throw
-        ( ErrWrongTopModuleName
-            WrongTopModuleName
-              { _wrongTopModuleNameActualName = path,
-                _wrongTopModuleNameExpectedPath = expectedPath,
-                _wrongTopModuleNameActualPath = actualPath
-              }
-        )
+checkModulePath m = do
+  let topJuvixPath :: TopModulePath = m ^. modulePath
+  pathInfo :: PathInfoTopModule <- expectedPathInfoTopModule topJuvixPath
+  whenJust (pathInfo ^. pathInfoRootInfo) $
+    \expectedRootInfo -> do
+      let expectedAbsPath = (expectedPackageRoot ^. rootInfoPath) <//> (pathInfo ^. pathInfoRelPath)
+          actualPath = getLoc topJuvixPath ^. intervalFile
+      unlessM (equalPaths actualPath expectedAbsPath) $
+        throw
+          ( ErrWrongTopModuleName
+              WrongTopModuleName
+                { _wrongTopModuleNameActualName = topJuvixPath,
+                  _wrongTopModuleNameExpectedPath = expectedAbsPath,
+                  _wrongTopModuleNameActualPath = actualPath
+                }
+          )
 
 topModuleDef ::
   (Members '[Error ParserError, Files, PathResolver, InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
@@ -326,7 +328,7 @@ topModuleDef = do
   space >> optional_ stashJudoc
   optional_ stashPragmas
   m <- top moduleDef
-  P.lift (checkPath Nothing (m ^. modulePath))
+  P.lift (checkModulePath m)
   return m
 
 juvixCodeBlockParser ::

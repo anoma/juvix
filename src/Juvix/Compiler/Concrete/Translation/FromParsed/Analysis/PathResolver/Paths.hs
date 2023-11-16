@@ -4,8 +4,10 @@ import Juvix.Compiler.Concrete.Data.Name
 import Juvix.Prelude
 
 topModulePathToRelativePath' :: TopModulePath -> Path Rel File
-topModulePathToRelativePath' =
-  topModulePathToRelativePath (show FileExtJuvix) "" (</>)
+topModulePathToRelativePath' m =
+  let absPath :: Path Abs File = getLoc m ^. intervalFile
+      ext = fileExtension' absPath
+   in topModulePathToRelativePath ext "" (</>) m
 
 topModulePathToRelativePath :: String -> String -> (FilePath -> FilePath -> FilePath) -> TopModulePath -> Path Rel File
 topModulePathToRelativePath ext suffix joinpath mp = relFile relFilePath
