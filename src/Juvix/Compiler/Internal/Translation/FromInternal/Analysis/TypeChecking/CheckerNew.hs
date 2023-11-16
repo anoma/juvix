@@ -1151,10 +1151,14 @@ holesHelper mhint expr = do
               preImplicits = takeWhile isImplicitOrInstance . map (^. arityParameterImplicit) . unfoldArity
               preImplicitsTypeRest = preImplicits restExprAri
               preAriHint = preImplicits ariHint
-              preImplicitsInType = length (takeWhile isImplicitOrInstance
-                                             (map fst defaults ++ preImplicitsTypeRest))
+              preImplicitsInType =
+                length
+                  ( takeWhile
+                      isImplicitOrInstance
+                      (map fst defaults ++ preImplicitsTypeRest)
+                  )
           loc <- getLoc <$> gets (^. appBuilder)
-          let numberOfExtraHoles =  preImplicitsInType - length preAriHint
+          let numberOfExtraHoles = preImplicitsInType - length preAriHint
               toBeInserted :: [(IsImplicit, Maybe (ArgId, Expression))] =
                 take numberOfExtraHoles (defaults <> (map (,Nothing) preImplicitsTypeRest))
               mkHoleArg :: (IsImplicit, Maybe (ArgId, Expression)) -> Sem r' AppBuilderArg
