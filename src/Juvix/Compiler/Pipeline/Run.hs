@@ -37,7 +37,10 @@ runIOEither' :: forall a. LockMode -> EntryPoint -> Sem PipelineEff a -> IO (Eit
 runIOEither' lockMode entry = fmap snd . runIOEitherHelper' lockMode entry
 
 runIOEitherTermination :: forall a. EntryPoint -> Sem (Termination ': PipelineEff) a -> IO (Either JuvixError (ResolverState, a))
-runIOEitherTermination entry = fmap snd . runIOEitherHelper entry . evalTermination iniTerminationState
+runIOEitherTermination = runIOEitherTermination' LockModePermissive
+
+runIOEitherTermination' :: forall a. LockMode -> EntryPoint -> Sem (Termination ': PipelineEff) a -> IO (Either JuvixError (ResolverState, a))
+runIOEitherTermination' lockMode entry = fmap snd . runIOEitherHelper' lockMode entry . evalTermination iniTerminationState
 
 runPipelineHighlight :: forall a. EntryPoint -> Sem PipelineEff a -> IO HighlightInput
 runPipelineHighlight entry = fmap fst . runIOEitherHelper entry

@@ -11,7 +11,7 @@ vampirCompileAssertion :: Path Abs Dir -> Path Abs File -> Path Abs File -> (Str
 vampirCompileAssertion root' mainFile dataFile step = do
   step "Translate to JuvixCore"
   entryPoint <- defaultEntryPointIO' LockModeExclusive root' mainFile
-  tab <- (^. coreResultTable) . snd <$> runIO' entryPoint upToCore
+  tab <- (^. coreResultTable) . snd <$> runIOExclusive entryPoint upToCore
   coreVampIRAssertion' tab toVampIRTransformations mainFile dataFile step
   vampirAssertion' VampirHalo2 tab dataFile step
 
