@@ -24,7 +24,6 @@ makeLenses ''RecursorArgs
 data TempFile m a where
   TempFilePath :: TempFile m (Path Abs File)
   RemoveTempFile :: Path Abs File -> TempFile m ()
-  TempDir :: Text -> TempFile m (Path Abs Dir)
 
 makeSem ''TempFile
 

@@ -66,6 +66,3 @@ runTempFileIO = interpret $ \case
     where
       ignoringIOErrors :: IO () -> IO ()
       ignoringIOErrors ioe = MC.catch ioe (\(_ :: IOError) -> return ())
-  TempDir template -> embed $ do
-    rootTmp <- getCanonicalTemporaryDirectory
-    createTempDirectory rootTmp (unpack template) >>= parseAbsDir >>= canonicalizePath
