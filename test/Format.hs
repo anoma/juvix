@@ -41,12 +41,12 @@ testDescr PosTest {..} =
         original :: Text <- readFile (toFilePath f)
 
         step "Parsing"
-        p :: Parser.ParserResult <- snd <$> runIO' entryPoint upToParsing
+        p :: Parser.ParserResult <- snd <$> runIOExclusive entryPoint upToParsing
 
         step "Scoping"
         s :: Scoper.ScoperResult <-
           snd
-            <$> runIO'
+            <$> runIOExclusive
               entryPoint
               ( do
                   void (entrySetup defaultDependenciesConfig)

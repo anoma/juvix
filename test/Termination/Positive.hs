@@ -22,7 +22,7 @@ testDescr PosTest {..} =
           _testRoot = tRoot,
           _testAssertion = Single $ do
             entryPoint <- set entryPointNoStdlib True <$> defaultEntryPointIO' LockModeExclusive tRoot file'
-            (void . runIO' entryPoint) upToInternalTyped
+            (void . runIOExclusive entryPoint) upToInternalTyped
         }
 
 --------------------------------------------------------------------------------
@@ -44,7 +44,7 @@ testDescrFlag N.NegTest {..} =
               set entryPointNoTermination True
                 . set entryPointNoStdlib True
                 <$> defaultEntryPointIO' LockModeExclusive tRoot file'
-            (void . runIO' entryPoint) upToInternalTyped
+            (void . runIOExclusive entryPoint) upToInternalTyped
         }
 
 tests :: [PosTest]

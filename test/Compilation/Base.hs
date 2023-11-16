@@ -43,7 +43,7 @@ compileErrorAssertion ::
 compileErrorAssertion root' mainFile step = do
   step "Translate to JuvixCore"
   entryPoint <- defaultEntryPointIO' LockModeExclusive root' mainFile
-  tab <- (^. Core.coreResultTable) . snd <$> runIO' entryPoint upToCore
+  tab <- (^. Core.coreResultTable) . snd <$> runIOExclusive entryPoint upToCore
   case run $ runReader Core.defaultCoreOptions $ runError @JuvixError $ Core.toStripped' tab of
     Left _ -> assertBool "" True
     Right _ -> assertFailure "no error"

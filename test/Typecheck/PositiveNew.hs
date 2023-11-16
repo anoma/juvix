@@ -21,7 +21,7 @@ testDescr Old.PosTest {..} =
       _testRoot = _dir,
       _testAssertion = Single $ do
         entryPoint <- set entryPointNewTypeCheckingAlgorithm True <$> defaultEntryPointIO' LockModeExclusive _dir _file
-        (void . runIO' entryPoint) upToInternalTyped
+        (void . runIOExclusive entryPoint) upToInternalTyped
     }
 
 allTests :: TestTree

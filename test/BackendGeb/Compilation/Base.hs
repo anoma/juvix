@@ -15,5 +15,5 @@ gebCompilationAssertion ::
 gebCompilationAssertion root mainFile expectedFile step = do
   step "Translate to JuvixCore"
   entryPoint <- set entryPointTarget TargetGeb <$> defaultEntryPointIO' LockModeExclusive root mainFile
-  tab <- (^. Core.coreResultTable) . snd <$> runIO' entryPoint upToCore
+  tab <- (^. Core.coreResultTable) . snd <$> runIOExclusive entryPoint upToCore
   coreToGebTranslationAssertion' tab entryPoint expectedFile step

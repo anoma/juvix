@@ -29,7 +29,7 @@ testDescr PosTest {..} =
       _testRoot = _dir,
       _testAssertion = Single $ do
         entryPoint <- defaultEntryPointIO' LockModeExclusive _dir _file
-        (void . runIO' entryPoint) upToInternalTyped
+        (void . runIOExclusive entryPoint) upToInternalTyped
     }
 
 rootNegTests :: Path Abs Dir
@@ -47,7 +47,7 @@ testNoPositivityFlag N.NegTest {..} =
             entryPoint <-
               set entryPointNoPositivity True
                 <$> defaultEntryPointIO' LockModeExclusive tRoot file'
-            (void . runIO' entryPoint) upToInternalTyped
+            (void . runIOExclusive entryPoint) upToInternalTyped
         }
 
 negPositivityTests :: [N.NegTest]

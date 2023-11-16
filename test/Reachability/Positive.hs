@@ -33,7 +33,7 @@ testDescr PosTest {..} =
                 <$> defaultEntryPointIO' LockModeExclusive tRoot file'
 
             step "Pipeline up to reachability"
-            p :: Internal.InternalTypedResult <- snd <$> runIO' entryPoint upToInternalReachability
+            p :: Internal.InternalTypedResult <- snd <$> runIOExclusive entryPoint upToInternalReachability
 
             step "Check reachability results"
             let names = concatMap getNames (p ^. Internal.resultModules)

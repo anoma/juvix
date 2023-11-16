@@ -92,9 +92,6 @@ runIO opts entry = runIOEither entry >=> mayThrow
       Left err -> runM . runReader opts $ printErrorAnsiSafe err >> embed exitFailure
       Right r -> return r
 
-runIO' :: EntryPoint -> Sem PipelineEff a -> IO (ResolverState, a)
-runIO' = runIOLockMode LockModeExclusive defaultGenericOptions
-
 runIOExclusive :: EntryPoint -> Sem PipelineEff a -> IO (ResolverState, a)
 runIOExclusive = runIOLockMode LockModeExclusive defaultGenericOptions
 
