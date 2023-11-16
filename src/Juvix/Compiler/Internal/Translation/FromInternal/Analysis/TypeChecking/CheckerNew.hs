@@ -1089,7 +1089,8 @@ holesHelper mhint expr = do
                 _functionDefaultDefault =
                   let uid =
                         ArgId
-                          { _argIdDefinitionLoc = getLoc f,
+                          { _argIdDefinitionLoc = Irrelevant (getLoc f),
+                            _argIdName = Irrelevant (a ^. argInfoName),
                             _argIdFunctionName,
                             _argIdIx
                           }
