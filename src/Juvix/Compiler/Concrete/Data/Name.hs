@@ -1,6 +1,7 @@
 module Juvix.Compiler.Concrete.Data.Name where
 
 import Data.List.NonEmpty.Extra qualified as NonEmpty
+import Juvix.Extra.Serialize
 import Juvix.Prelude
 import Juvix.Prelude.Pretty as Pretty
 
@@ -15,7 +16,9 @@ symbolLoc = withLocInt
 data Name
   = NameQualified QualifiedName
   | NameUnqualified Symbol
-  deriving stock (Show, Eq, Ord)
+  deriving stock (Show, Eq, Ord, Generic)
+
+instance Serialize Name
 
 instance HasLoc Name where
   getLoc = \case
@@ -41,13 +44,17 @@ instance Pretty Name where
 newtype SymbolPath = SymbolPath
   { _pathParts :: NonEmpty Symbol
   }
-  deriving stock (Show, Eq, Ord)
+  deriving stock (Show, Eq, Ord, Generic)
+
+instance Serialize SymbolPath
 
 data QualifiedName = QualifiedName
   { _qualifiedPath :: SymbolPath,
     _qualifiedSymbol :: Symbol
   }
   deriving stock (Show, Eq, Ord, Generic)
+
+instance Serialize QualifiedName
 
 instance HasLoc QualifiedName where
   getLoc QualifiedName {..} =
@@ -69,6 +76,8 @@ data TopModulePath = TopModulePath
     _modulePathName :: Symbol
   }
   deriving stock (Show, Eq, Ord, Generic)
+
+instance Serialize TopModulePath
 
 makeLenses ''TopModulePath
 

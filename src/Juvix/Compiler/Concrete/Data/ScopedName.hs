@@ -13,6 +13,7 @@ import Juvix.Data.Fixity qualified as C
 import Juvix.Data.IteratorInfo
 import Juvix.Data.NameId
 import Juvix.Data.NameKind
+import Juvix.Extra.Serialize
 import Juvix.Prelude
 import Juvix.Prelude.Pretty
 
@@ -21,6 +22,8 @@ data AbsModulePath = AbsModulePath
     _absLocalPath :: [C.Symbol]
   }
   deriving stock (Show, Eq, Generic)
+
+instance Serialize AbsModulePath
 
 makeLenses ''AbsModulePath
 
@@ -54,7 +57,9 @@ data WhyInScope
     BecauseImportedOpened
   | -- | Defined in this module.
     BecauseDefined
-  deriving stock (Eq, Show)
+  deriving stock (Eq, Show, Generic)
+
+instance Serialize WhyInScope
 
 type Name = Name' C.Name
 
@@ -77,7 +82,13 @@ data Name' n = Name'
     -- | The textual representation of the name at the binding site
     _nameVerbatim :: Text
   }
-  deriving stock (Show)
+  deriving stock (Show, Generic)
+
+instance Serialize Name
+
+instance Serialize Symbol
+
+instance Serialize TopModulePath
 
 -- | For highlighting
 data AName = AName

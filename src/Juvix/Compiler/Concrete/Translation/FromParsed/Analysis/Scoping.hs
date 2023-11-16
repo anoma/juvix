@@ -995,9 +995,6 @@ checkInductiveDef InductiveDef {..} = do
                 _rhsGadtColon
               }
 
-createExportsTable :: ExportInfo -> HashSet NameId
-createExportsTable = HashSet.fromList . (^.. exportAllNames . S.nameId)
-
 topBindings :: Sem (Reader BindingStrategy ': r) a -> Sem r a
 topBindings = runReader BindingTop
 
@@ -1791,7 +1788,6 @@ checkRecordPattern r = do
   return
     RecordPattern
       { _recordPatternConstructor = c',
-        _recordPatternSignature = Irrelevant fields,
         _recordPatternItems = l'
       }
   where

@@ -1347,10 +1347,7 @@ patternAtomRecord _recordPatternConstructor = do
   _recordPatternItems <- P.sepEndBy recordPatternItem semicolon
   kw delimBraceR
   return
-    RecordPattern
-      { _recordPatternSignature = Irrelevant (),
-        ..
-      }
+    RecordPattern {..}
 
 -- | A pattern that starts with an identifier
 patternAtomNamed :: forall r. (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) => Bool -> ParsecS r (PatternAtom 'Parsed)

@@ -1,13 +1,16 @@
 module Juvix.Data.WithSource where
 
 import Juvix.Data.Fixity
+import Juvix.Extra.Serialize
 import Juvix.Prelude.Base
 
 data WithSource a = WithSource
   { _withSourceText :: Text,
     _withSourceValue :: a
   }
-  deriving stock (Show, Data)
+  deriving stock (Show, Data, Generic)
+
+instance (Serialize a) => Serialize (WithSource a)
 
 makeLenses ''WithSource
 

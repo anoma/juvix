@@ -31,6 +31,7 @@ import Juvix.Compiler.Internal.Translation.FromConcrete.NamedArguments
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Compiler.Store.Language qualified as Store
+import Juvix.Compiler.Store.Scoped.Language (createExportsTable)
 import Juvix.Compiler.Store.Scoped.Language qualified as S
 import Juvix.Data.NameKind
 import Juvix.Prelude
@@ -57,10 +58,14 @@ fromConcrete ::
   Sem r InternalResult
 fromConcrete _resultScoper = do
   mtab <- ask
-  let blts =
+  let ms = HashMap.elems (mtab ^. Store.moduleTable)
+      blts =
         mconcatMap
           (^. Store.moduleInfoStoredModule . storedModuleInfoTable . infoBuiltins)
-          (HashMap.elems (mtab ^. Store.moduleTable))
+          ms
+      exportTbl =
+        _resultScoper ^. Scoper.resultExports
+          <> mconcatMap (createExportsTable . (^. Store.moduleInfoScopedModule . S.scopedModuleExportInfo)) ms
   mapError (JuvixError @ScoperError) $ do
     _resultModule <-
       runReader @Pragmas mempty
@@ -75,7 +80,6 @@ fromConcrete _resultScoper = do
     return InternalResult {..}
   where
     m = _resultScoper ^. Scoper.resultModule
-    exportTbl = _resultScoper ^. Scoper.resultExports
     constrSigs = _resultScoper ^. Scoper.resultScoperState . scoperScopedConstructorFields
     namesSigs = _resultScoper ^. Scoper.resultScoperState . scoperScopedSignatures
 

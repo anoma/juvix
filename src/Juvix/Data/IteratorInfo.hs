@@ -1,5 +1,6 @@
 module Juvix.Data.IteratorInfo where
 
+import Juvix.Extra.Serialize
 import Juvix.Prelude.Base
 
 data IteratorInfo = IteratorInfo
@@ -7,6 +8,8 @@ data IteratorInfo = IteratorInfo
     _iteratorInfoRangeNum :: Maybe Int
   }
   deriving stock (Show, Eq, Ord, Generic)
+
+instance Serialize IteratorInfo
 
 makeLenses ''IteratorInfo
 

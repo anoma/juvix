@@ -1,13 +1,16 @@
 module Juvix.Data.Wildcard where
 
 import Juvix.Data.Loc
+import Juvix.Extra.Serialize
 import Juvix.Prelude.Base
 import Prettyprinter
 
 newtype Wildcard = Wildcard
   { _wildcardLoc :: Interval
   }
-  deriving stock (Show, Data)
+  deriving stock (Show, Data, Generic)
+
+instance Serialize Wildcard
 
 makeLenses ''Wildcard
 

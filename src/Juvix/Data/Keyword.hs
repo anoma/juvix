@@ -2,19 +2,24 @@ module Juvix.Data.Keyword where
 
 import Data.HashSet qualified as HashSet
 import Juvix.Data.Loc
+import Juvix.Extra.Serialize
 import Juvix.Prelude.Base
 import Juvix.Prelude.Pretty
 
 data IsUnicode
   = Unicode
   | Ascii
-  deriving stock (Eq, Show, Ord, Data)
+  deriving stock (Eq, Show, Ord, Data, Generic)
+
+instance Serialize IsUnicode
 
 data KeywordType
   = KeywordTypeKeyword
   | KeywordTypeDelimiter
   | KeywordTypeJudoc
-  deriving stock (Eq, Show, Ord, Data)
+  deriving stock (Eq, Show, Ord, Data, Generic)
+
+instance Serialize KeywordType
 
 data Keyword = Keyword
   { _keywordAscii :: Text,
@@ -23,14 +28,18 @@ data Keyword = Keyword
     _keywordHasReserved :: Bool,
     _keywordType :: KeywordType
   }
-  deriving stock (Eq, Show, Ord, Data)
+  deriving stock (Eq, Show, Ord, Data, Generic)
+
+instance Serialize Keyword
 
 data KeywordRef = KeywordRef
   { _keywordRefKeyword :: Keyword,
     _keywordRefInterval :: Interval,
     _keywordRefUnicode :: IsUnicode
   }
-  deriving stock (Show, Data)
+  deriving stock (Show, Data, Generic)
+
+instance Serialize KeywordRef
 
 makeLenses ''Keyword
 makeLenses ''KeywordRef

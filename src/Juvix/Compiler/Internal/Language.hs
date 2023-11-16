@@ -347,7 +347,7 @@ data ConstructorDef = ConstructorDef
   deriving stock (Data)
 
 -- | At the moment we only use the name when we have a default value, so
--- isNull _argInfoDefault implies isNull _argInfoName
+-- isNothing _argInfoDefault implies isNothing _argInfoName
 data ArgInfo = ArgInfo
   { _argInfoDefault :: Maybe Expression,
     _argInfoName :: Maybe Name

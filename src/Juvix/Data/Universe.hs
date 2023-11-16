@@ -12,7 +12,9 @@ data Universe = Universe
     _universeKw :: KeywordRef,
     _universeLevelLoc :: Maybe Interval
   }
-  deriving stock (Show, Ord, Data)
+  deriving stock (Show, Ord, Data, Generic)
+
+instance Serialize Universe
 
 newtype SmallUniverse = SmallUniverse
   { _smallUniverseLoc :: Interval

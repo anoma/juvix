@@ -1,8 +1,10 @@
 module Juvix.Compiler.Store.Scoped.Language where
 
+import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Concrete.Data.Name qualified as C
 import Juvix.Compiler.Concrete.Data.ScopedName (HasNameKind)
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
+import Juvix.Extra.Serialize
 import Juvix.Prelude
 
 type ScopedName = S.Name
@@ -12,11 +14,15 @@ newtype Alias = Alias
   }
   deriving stock (Show, Eq, Ord, Generic)
 
+instance Serialize Alias
+
 -- | Either an alias or a symbol entry.
 data PreSymbolEntry
   = PreSymbolAlias Alias
   | PreSymbolFinal SymbolEntry
   deriving stock (Show, Eq, Ord, Generic)
+
+instance Serialize PreSymbolEntry
 
 -- | A symbol which is not an alias.
 newtype SymbolEntry = SymbolEntry
@@ -26,15 +32,21 @@ newtype SymbolEntry = SymbolEntry
 
 instance Hashable SymbolEntry
 
+instance Serialize SymbolEntry
+
 newtype ModuleSymbolEntry = ModuleSymbolEntry
   { _moduleEntry :: ScopedName
   }
   deriving stock (Show, Eq, Ord, Generic)
 
+instance Serialize ModuleSymbolEntry
+
 newtype FixitySymbolEntry = FixitySymbolEntry
   { _fixityEntry :: ScopedName
   }
   deriving stock (Show, Eq, Ord, Generic)
+
+instance Serialize FixitySymbolEntry
 
 -- | Symbols that a module exports
 data ExportInfo = ExportInfo
@@ -44,6 +56,8 @@ data ExportInfo = ExportInfo
   }
   deriving stock (Show, Eq, Ord, Generic)
 
+instance Serialize ExportInfo
+
 data ScopedModule = ScopedModule
   { _scopedModulePath :: S.TopModulePath,
     _scopedModuleName :: ScopedName,
@@ -51,6 +65,8 @@ data ScopedModule = ScopedModule
     _scopedModuleExportInfo :: ExportInfo
   }
   deriving stock (Show, Eq, Ord, Generic)
+
+instance Serialize ScopedModule
 
 makeLenses ''Alias
 makeLenses ''SymbolEntry
@@ -98,3 +114,6 @@ exportAllNames =
     <> exportFixitySymbols
       . each
       . fixityEntry
+
+createExportsTable :: ExportInfo -> HashSet NameId
+createExportsTable = HashSet.fromList . (^.. exportAllNames . S.nameId)

@@ -38,6 +38,7 @@ import Juvix.Data.FixityInfo (Arity (..), FixityInfo)
 import Juvix.Data.IteratorInfo
 import Juvix.Data.Keyword
 import Juvix.Data.NameKind
+import Juvix.Extra.Serialize
 import Juvix.Parser.Lexer (isDelimiterStr)
 import Juvix.Prelude hiding (show)
 import Juvix.Prelude.Pretty (Pretty, pretty, prettyText)
@@ -111,11 +112,6 @@ type family ImportType s = res | res -> s where
   ImportType 'Parsed = TopModulePath
   ImportType 'Scoped = ScopedModule
 
-type RecordNameSignatureType :: Stage -> GHC.Type
-type family RecordNameSignatureType s = res | res -> s where
-  RecordNameSignatureType 'Parsed = ()
-  RecordNameSignatureType 'Scoped = RecordNameSignature 'Parsed
-
 type NameSignatureType :: Stage -> GHC.Type
 type family NameSignatureType s = res | res -> s where
   NameSignatureType 'Parsed = ()
@@ -171,6 +167,9 @@ newtype RecordNameSignature s = RecordNameSignature
 data Argument (s :: Stage)
   = ArgumentSymbol (SymbolType s)
   | ArgumentWildcard Wildcard
+  deriving stock (Generic)
+
+instance Serialize (Argument 'Scoped)
 
 deriving stock instance Show (Argument 'Parsed)
 
@@ -280,6 +279,9 @@ data AliasDef (s :: Stage) = AliasDef
     _aliasDefName :: SymbolType s,
     _aliasDefAsName :: IdentifierType s
   }
+  deriving stock (Generic)
+
+instance Serialize (AliasDef 'Scoped)
 
 deriving stock instance (Show (AliasDef 'Parsed))
 
@@ -410,6 +412,9 @@ data ArgDefault (s :: Stage) = ArgDefault
   { _argDefaultAssign :: Irrelevant KeywordRef,
     _argDefaultValue :: ExpressionType s
   }
+  deriving stock (Generic)
+
+instance Serialize (ArgDefault 'Scoped)
 
 deriving stock instance Show (ArgDefault 'Parsed)
 
@@ -434,6 +439,9 @@ data SigArg (s :: Stage) = SigArg
     _sigArgType :: Maybe (ExpressionType s),
     _sigArgDefault :: Maybe (ArgDefault s)
   }
+  deriving stock (Generic)
+
+instance Serialize (SigArg 'Scoped)
 
 deriving stock instance Show (SigArg 'Parsed)
 
@@ -453,6 +461,9 @@ data FunctionClause (s :: Stage) = FunctionClause
     _clausenAssignKw :: Irrelevant KeywordRef,
     _clausenBody :: ExpressionType s
   }
+  deriving stock (Generic)
+
+instance Serialize (FunctionClause 'Scoped)
 
 deriving stock instance Show (FunctionClause 'Parsed)
 
@@ -469,6 +480,9 @@ deriving stock instance Ord (FunctionClause 'Scoped)
 data FunctionDefBody (s :: Stage)
   = SigBodyExpression (ExpressionType s)
   | SigBodyClauses (NonEmpty (FunctionClause s))
+  deriving stock (Generic)
+
+instance Serialize (FunctionDefBody 'Scoped)
 
 deriving stock instance Show (FunctionDefBody 'Parsed)
 
@@ -495,6 +509,9 @@ data FunctionDef (s :: Stage) = FunctionDef
     _signInstance :: Maybe KeywordRef,
     _signCoercion :: Maybe KeywordRef
   }
+  deriving stock (Generic)
+
+instance Serialize (FunctionDef 'Scoped)
 
 deriving stock instance Show (FunctionDef 'Parsed)
 
@@ -560,6 +577,9 @@ data RecordUpdateField (s :: Stage) = RecordUpdateField
     _fieldUpdateAssignKw :: Irrelevant (KeywordRef),
     _fieldUpdateValue :: ExpressionType s
   }
+  deriving stock (Generic)
+
+instance Serialize (RecordUpdateField 'Scoped)
 
 deriving stock instance Show (RecordUpdateField 'Parsed)
 
@@ -723,27 +743,35 @@ data PatternApp = PatternApp
   { _patAppLeft :: PatternArg,
     _patAppRight :: PatternArg
   }
-  deriving stock (Show, Eq, Ord)
+  deriving stock (Show, Eq, Ord, Generic)
+
+instance Serialize PatternApp
 
 data PatternInfixApp = PatternInfixApp
   { _patInfixLeft :: PatternArg,
     _patInfixConstructor :: ScopedIden,
     _patInfixRight :: PatternArg
   }
-  deriving stock (Show, Eq, Ord)
+  deriving stock (Show, Eq, Ord, Generic)
+
+instance Serialize PatternInfixApp
 
 data PatternPostfixApp = PatternPostfixApp
   { _patPostfixParameter :: PatternArg,
     _patPostfixConstructor :: ScopedIden
   }
-  deriving stock (Show, Eq, Ord)
+  deriving stock (Show, Eq, Ord, Generic)
+
+instance Serialize PatternPostfixApp
 
 data PatternArg = PatternArg
   { _patternArgIsImplicit :: IsImplicit,
     _patternArgName :: Maybe S.Symbol,
     _patternArgPattern :: Pattern
   }
-  deriving stock (Show, Eq, Ord)
+  deriving stock (Show, Eq, Ord, Generic)
+
+instance Serialize PatternArg
 
 data Pattern
   = PatternVariable (SymbolType 'Scoped)
@@ -756,7 +784,9 @@ data Pattern
   | PatternWildcard Wildcard
   | PatternEmpty Interval
   | PatternRecord (RecordPattern 'Scoped)
-  deriving stock (Show, Eq, Ord)
+  deriving stock (Show, Eq, Ord, Generic)
+
+instance Serialize Pattern
 
 data PatternScopedIden
   = PatternScopedVar S.Symbol
@@ -775,6 +805,9 @@ data ListPattern (s :: Stage) = ListPattern
     _listpBracketR :: Irrelevant KeywordRef,
     _listpItems :: [PatternParensType s]
   }
+  deriving stock (Generic)
+
+instance Serialize (ListPattern 'Scoped)
 
 deriving stock instance Show (ListPattern 'Parsed)
 
@@ -794,6 +827,9 @@ data RecordPatternAssign (s :: Stage) = RecordPatternAssign
     _recordPatternAssignFieldIx :: FieldArgIxType s,
     _recordPatternAssignPattern :: PatternParensType s
   }
+  deriving stock (Generic)
+
+instance Serialize (RecordPatternAssign 'Scoped)
 
 deriving stock instance Show (RecordPatternAssign 'Parsed)
 
@@ -811,6 +847,9 @@ data FieldPun (s :: Stage) = FieldPun
   { _fieldPunIx :: FieldArgIxType s,
     _fieldPunField :: SymbolType s
   }
+  deriving stock (Generic)
+
+instance Serialize (FieldPun 'Scoped)
 
 deriving stock instance Show (FieldPun 'Parsed)
 
@@ -827,6 +866,9 @@ deriving stock instance Ord (FieldPun 'Scoped)
 data RecordPatternItem (s :: Stage)
   = RecordPatternItemFieldPun (FieldPun s)
   | RecordPatternItemAssign (RecordPatternAssign s)
+  deriving stock (Generic)
+
+instance Serialize (RecordPatternItem 'Scoped)
 
 deriving stock instance Show (RecordPatternItem 'Parsed)
 
@@ -842,10 +884,11 @@ deriving stock instance Ord (RecordPatternItem 'Scoped)
 
 data RecordPattern (s :: Stage) = RecordPattern
   { _recordPatternConstructor :: IdentifierType s,
-    -- TODO remove this field. This information should be retrieved from the scoper state.
-    _recordPatternSignature :: Irrelevant (RecordNameSignatureType s),
     _recordPatternItems :: [RecordPatternItem s]
   }
+  deriving stock (Generic)
+
+instance Serialize (RecordPattern 'Scoped)
 
 deriving stock instance Show (RecordPattern 'Parsed)
 
@@ -864,6 +907,9 @@ data WildcardConstructor (s :: Stage) = WildcardConstructor
     _wildcardConstructorAtKw :: Irrelevant KeywordRef,
     _wildcardConstructorDelims :: Irrelevant (KeywordRef, KeywordRef)
   }
+  deriving stock (Generic)
+
+instance Serialize (WildcardConstructor 'Scoped)
 
 deriving stock instance Show (WildcardConstructor 'Parsed)
 
@@ -961,6 +1007,9 @@ data HidingItem (s :: Stage) = HidingItem
   { _hidingSymbol :: SymbolType s,
     _hidingModuleKw :: Maybe KeywordRef
   }
+  deriving stock (Generic)
+
+instance Serialize (HidingItem 'Scoped)
 
 deriving stock instance Show (HidingItem 'Parsed)
 
@@ -980,6 +1029,9 @@ data UsingItem (s :: Stage) = UsingItem
     _usingAsKw :: Irrelevant (Maybe KeywordRef),
     _usingAs :: Maybe (SymbolType s)
   }
+  deriving stock (Generic)
+
+instance Serialize (UsingItem 'Scoped)
 
 deriving stock instance Show (UsingItem 'Parsed)
 
@@ -998,6 +1050,9 @@ data UsingList (s :: Stage) = UsingList
     _usingBraces :: Irrelevant (KeywordRef, KeywordRef),
     _usingList :: NonEmpty (UsingItem s)
   }
+  deriving stock (Generic)
+
+instance Serialize (UsingList 'Scoped)
 
 deriving stock instance Show (UsingList 'Parsed)
 
@@ -1016,6 +1071,9 @@ data HidingList (s :: Stage) = HidingList
     _hidingBraces :: Irrelevant (KeywordRef, KeywordRef),
     _hidingList :: NonEmpty (HidingItem s)
   }
+  deriving stock (Generic)
+
+instance Serialize (HidingList 'Scoped)
 
 deriving stock instance Show (HidingList 'Parsed)
 
@@ -1032,6 +1090,9 @@ deriving stock instance Ord (HidingList 'Scoped)
 data UsingHiding (s :: Stage)
   = Using (UsingList s)
   | Hiding (HidingList s)
+  deriving stock (Generic)
+
+instance Serialize (UsingHiding 'Scoped)
 
 deriving stock instance Show (UsingHiding 'Parsed)
 
@@ -1094,6 +1155,9 @@ data OpenModule (s :: Stage) = OpenModule
   { _openModuleName :: ModuleRefType s,
     _openModuleParams :: OpenModuleParams s
   }
+  deriving stock (Generic)
+
+instance Serialize (OpenModule 'Scoped)
 
 deriving stock instance Show (OpenModule 'Parsed)
 
@@ -1113,6 +1177,9 @@ data OpenModuleParams (s :: Stage) = OpenModuleParams
     _openPublicKw :: Irrelevant (Maybe KeywordRef),
     _openPublic :: PublicAnn
   }
+  deriving stock (Generic)
+
+instance Serialize (OpenModuleParams 'Scoped)
 
 deriving stock instance Show (OpenModuleParams 'Parsed)
 
@@ -1130,7 +1197,9 @@ data ScopedIden = ScopedIden
   { _scopedIdenFinal :: S.Name,
     _scopedIdenAlias :: Maybe S.Name
   }
-  deriving stock (Show, Eq, Ord)
+  deriving stock (Show, Eq, Ord, Generic)
+
+instance Serialize ScopedIden
 
 data Expression
   = ExpressionIdentifier ScopedIden
@@ -1155,12 +1224,17 @@ data Expression
   | ExpressionIterator (Iterator 'Scoped)
   | ExpressionNamedApplication (NamedApplication 'Scoped)
   | ExpressionNamedApplicationNew (NamedApplicationNew 'Scoped)
-  deriving stock (Show, Eq, Ord)
+  deriving stock (Show, Eq, Ord, Generic)
+
+instance Serialize Expression
 
 data DoubleBracesExpression (s :: Stage) = DoubleBracesExpression
   { _doubleBracesExpression :: ExpressionType s,
     _doubleBracesDelims :: Irrelevant (KeywordRef, KeywordRef)
   }
+  deriving stock (Generic)
+
+instance Serialize (DoubleBracesExpression 'Scoped)
 
 deriving stock instance Show (DoubleBracesExpression 'Parsed)
 
@@ -1180,6 +1254,9 @@ instance HasAtomicity (Lambda s) where
 data FunctionParameter (s :: Stage)
   = FunctionParameterName (SymbolType s)
   | FunctionParameterWildcard KeywordRef
+  deriving stock (Generic)
+
+instance Serialize (FunctionParameter 'Scoped)
 
 deriving stock instance Show (FunctionParameter 'Parsed)
 
@@ -1200,6 +1277,9 @@ data FunctionParameters (s :: Stage) = FunctionParameters
     _paramColon :: Irrelevant (Maybe KeywordRef),
     _paramType :: ExpressionType s
   }
+  deriving stock (Generic)
+
+instance Serialize (FunctionParameters 'Scoped)
 
 deriving stock instance Show (FunctionParameters 'Parsed)
 
@@ -1219,6 +1299,9 @@ data Function (s :: Stage) = Function
     _funKw :: KeywordRef,
     _funReturn :: ExpressionType s
   }
+  deriving stock (Generic)
+
+instance Serialize (Function 'Scoped)
 
 deriving stock instance Show (Function 'Parsed)
 
@@ -1237,6 +1320,9 @@ data Lambda (s :: Stage) = Lambda
     _lambdaBraces :: Irrelevant (KeywordRef, KeywordRef),
     _lambdaClauses :: NonEmpty (LambdaClause s)
   }
+  deriving stock (Generic)
+
+instance Serialize (Lambda 'Scoped)
 
 deriving stock instance Show (Lambda 'Parsed)
 
@@ -1256,6 +1342,9 @@ data LambdaClause (s :: Stage) = LambdaClause
     _lambdaAssignKw :: Irrelevant KeywordRef,
     _lambdaBody :: ExpressionType s
   }
+  deriving stock (Generic)
+
+instance Serialize (LambdaClause 'Scoped)
 
 deriving stock instance Show (LambdaClause 'Parsed)
 
@@ -1273,25 +1362,34 @@ data Application = Application
   { _applicationFunction :: Expression,
     _applicationParameter :: Expression
   }
-  deriving stock (Show, Eq, Ord)
+  deriving stock (Show, Eq, Ord, Generic)
+
+instance Serialize Application
 
 data InfixApplication = InfixApplication
   { _infixAppLeft :: Expression,
     _infixAppOperator :: ScopedIden,
     _infixAppRight :: Expression
   }
-  deriving stock (Show, Eq, Ord)
+  deriving stock (Show, Eq, Ord, Generic)
+
+instance Serialize InfixApplication
 
 data PostfixApplication = PostfixApplication
   { _postfixAppParameter :: Expression,
     _postfixAppOperator :: ScopedIden
   }
-  deriving stock (Show, Eq, Ord)
+  deriving stock (Show, Eq, Ord, Generic)
+
+instance Serialize PostfixApplication
 
 data LetStatement (s :: Stage)
   = LetFunctionDef (FunctionDef s)
   | LetAliasDef (AliasDef s)
   | LetOpen (OpenModule s)
+  deriving stock (Generic)
+
+instance Serialize (LetStatement 'Scoped)
 
 deriving stock instance Show (LetStatement 'Parsed)
 
@@ -1311,6 +1409,9 @@ data Let (s :: Stage) = Let
     _letFunDefs :: NonEmpty (LetStatement s),
     _letExpression :: ExpressionType s
   }
+  deriving stock (Generic)
+
+instance Serialize (Let 'Scoped)
 
 deriving stock instance Show (Let 'Parsed)
 
@@ -1330,6 +1431,9 @@ data CaseBranch (s :: Stage) = CaseBranch
     _caseBranchPattern :: PatternParensType s,
     _caseBranchExpression :: ExpressionType s
   }
+  deriving stock (Generic)
+
+instance Serialize (CaseBranch 'Scoped)
 
 deriving stock instance Show (CaseBranch 'Parsed)
 
@@ -1351,6 +1455,9 @@ data Case (s :: Stage) = Case
     _caseExpression :: ExpressionType s,
     _caseBranches :: NonEmpty (CaseBranch s)
   }
+  deriving stock (Generic)
+
+instance Serialize (Case 'Scoped)
 
 deriving stock instance Show (Case 'Parsed)
 
@@ -1370,6 +1477,9 @@ data NewCaseBranch (s :: Stage) = NewCaseBranch
     _newCaseBranchPattern :: PatternParensType s,
     _newCaseBranchExpression :: ExpressionType s
   }
+  deriving stock (Generic)
+
+instance Serialize (NewCaseBranch 'Scoped)
 
 deriving stock instance Show (NewCaseBranch 'Parsed)
 
@@ -1389,6 +1499,9 @@ data NewCase (s :: Stage) = NewCase
     _newCaseExpression :: ExpressionType s,
     _newCaseBranches :: NonEmpty (NewCaseBranch s)
   }
+  deriving stock (Generic)
+
+instance Serialize (NewCase 'Scoped)
 
 deriving stock instance Show (NewCase 'Parsed)
 
@@ -1407,6 +1520,9 @@ data Initializer (s :: Stage) = Initializer
     _initializerAssignKw :: Irrelevant KeywordRef,
     _initializerExpression :: ExpressionType s
   }
+  deriving stock (Generic)
+
+instance Serialize (Initializer 'Scoped)
 
 deriving stock instance Show (Initializer 'Parsed)
 
@@ -1425,6 +1541,9 @@ data Range (s :: Stage) = Range
     _rangeInKw :: Irrelevant KeywordRef,
     _rangeExpression :: ExpressionType s
   }
+  deriving stock (Generic)
+
+instance Serialize (Range 'Scoped)
 
 deriving stock instance Show (Range 'Parsed)
 
@@ -1449,6 +1568,9 @@ data Iterator s = Iterator
     -- the iterator was surrounded by parentheses in the code.
     _iteratorParens :: Bool
   }
+  deriving stock (Generic)
+
+instance Serialize (Iterator 'Scoped)
 
 deriving stock instance Show (Iterator 'Parsed)
 
@@ -1467,6 +1589,9 @@ data List (s :: Stage) = List
     _listBracketR :: Irrelevant KeywordRef,
     _listItems :: [ExpressionType s]
   }
+  deriving stock (Generic)
+
+instance Serialize (List 'Scoped)
 
 deriving stock instance Show (List 'Parsed)
 
@@ -1485,6 +1610,9 @@ data NamedArgument (s :: Stage) = NamedArgument
     _namedArgAssignKw :: Irrelevant KeywordRef,
     _namedArgValue :: ExpressionType s
   }
+  deriving stock (Generic)
+
+instance Serialize (NamedArgument 'Scoped)
 
 deriving stock instance Show (NamedArgument 'Parsed)
 
@@ -1503,6 +1631,9 @@ data ArgumentBlock (s :: Stage) = ArgumentBlock
     _argBlockImplicit :: IsImplicit,
     _argBlockArgs :: NonEmpty (NamedArgument s)
   }
+  deriving stock (Generic)
+
+instance Serialize (ArgumentBlock 'Scoped)
 
 deriving stock instance Show (ArgumentBlock 'Parsed)
 
@@ -1521,11 +1652,16 @@ data RecordUpdateExtra = RecordUpdateExtra
     -- | Implicitly bound fields sorted by index
     _recordUpdateExtraVars :: [S.Symbol]
   }
+  deriving stock (Generic)
+
+instance Serialize RecordUpdateExtra
 
 newtype ParensRecordUpdate = ParensRecordUpdate
   { _parensRecordUpdate :: RecordUpdate 'Scoped
   }
-  deriving stock (Show, Eq, Ord)
+  deriving stock (Show, Eq, Ord, Generic)
+
+instance Serialize ParensRecordUpdate
 
 data RecordUpdate (s :: Stage) = RecordUpdate
   { _recordUpdateAtKw :: Irrelevant KeywordRef,
@@ -1534,6 +1670,9 @@ data RecordUpdate (s :: Stage) = RecordUpdate
     _recordUpdateExtra :: Irrelevant (RecordUpdateExtraType s),
     _recordUpdateFields :: [RecordUpdateField s]
   }
+  deriving stock (Generic)
+
+instance Serialize (RecordUpdate 'Scoped)
 
 deriving stock instance Show (RecordUpdate 'Parsed)
 
@@ -1551,12 +1690,17 @@ data RecordUpdateApp = RecordUpdateApp
   { _recordAppUpdate :: RecordUpdate 'Scoped,
     _recordAppExpression :: Expression
   }
-  deriving stock (Show, Eq, Ord)
+  deriving stock (Show, Eq, Ord, Generic)
+
+instance Serialize RecordUpdateApp
 
 data NamedApplication (s :: Stage) = NamedApplication
   { _namedAppName :: IdentifierType s,
     _namedAppArgs :: NonEmpty (ArgumentBlock s)
   }
+  deriving stock (Generic)
+
+instance Serialize (NamedApplication 'Scoped)
 
 deriving stock instance Show (NamedApplication 'Parsed)
 
@@ -1573,6 +1717,9 @@ deriving stock instance Ord (NamedApplication 'Scoped)
 newtype NamedArgumentNew (s :: Stage) = NamedArgumentNew
   { _namedArgumentNewFunDef :: FunctionDef s
   }
+  deriving newtype (Generic)
+
+instance Serialize (NamedArgumentNew 'Scoped)
 
 deriving stock instance Show (NamedArgumentNew 'Parsed)
 
@@ -1592,6 +1739,9 @@ data NamedApplicationNew (s :: Stage) = NamedApplicationNew
     _namedApplicationNewExhaustive :: Bool,
     _namedApplicationNewArguments :: [NamedArgumentNew s]
   }
+  deriving stock (Generic)
+
+instance Serialize (NamedApplicationNew 'Scoped)
 
 deriving stock instance Show (NamedApplicationNew 'Parsed)
 
@@ -1675,7 +1825,9 @@ deriving stock instance Ord (ExpressionAtoms 'Scoped)
 newtype Judoc (s :: Stage) = Judoc
   { _judocGroups :: NonEmpty (JudocGroup s)
   }
-  deriving newtype (Semigroup)
+  deriving newtype (Semigroup, Generic)
+
+instance Serialize (Judoc 'Scoped)
 
 deriving stock instance Show (Judoc 'Parsed)
 
@@ -1694,6 +1846,9 @@ data Example (s :: Stage) = Example
     _exampleLoc :: Interval,
     _exampleExpression :: ExpressionType s
   }
+  deriving stock (Generic)
+
+instance Serialize (Example 'Scoped)
 
 deriving stock instance Show (Example 'Parsed)
 
@@ -1712,6 +1867,9 @@ data JudocBlockParagraph (s :: Stage) = JudocBlockParagraph
     _judocBlockParagraphBlocks :: [JudocBlock s],
     _judocBlockParagraphEnd :: KeywordRef
   }
+  deriving stock (Generic)
+
+instance Serialize (JudocBlockParagraph 'Scoped)
 
 deriving stock instance Show (JudocBlockParagraph 'Parsed)
 
@@ -1728,6 +1886,9 @@ deriving stock instance Ord (JudocBlockParagraph 'Scoped)
 data JudocGroup (s :: Stage)
   = JudocGroupBlock (JudocBlockParagraph s)
   | JudocGroupLines (NonEmpty (JudocBlock s))
+  deriving stock (Generic)
+
+instance Serialize (JudocGroup 'Scoped)
 
 deriving stock instance Show (JudocGroup 'Parsed)
 
@@ -1744,6 +1905,9 @@ deriving stock instance Ord (JudocGroup 'Scoped)
 data JudocBlock (s :: Stage)
   = JudocLines (NonEmpty (JudocLine s))
   | JudocExample (Example s)
+  deriving stock (Generic)
+
+instance Serialize (JudocBlock 'Scoped)
 
 deriving stock instance Show (JudocBlock 'Parsed)
 
@@ -1761,6 +1925,9 @@ data JudocLine (s :: Stage) = JudocLine
   { _judocLineDelim :: Maybe KeywordRef,
     _judocLineAtoms :: NonEmpty (WithLoc (JudocAtom s))
   }
+  deriving stock (Generic)
+
+instance Serialize (JudocLine 'Scoped)
 
 deriving stock instance Show (JudocLine 'Parsed)
 
@@ -1777,6 +1944,9 @@ deriving stock instance Ord (JudocLine 'Scoped)
 data JudocAtom (s :: Stage)
   = JudocExpression (ExpressionType s)
   | JudocText Text
+  deriving stock (Generic)
+
+instance Serialize (JudocAtom 'Scoped)
 
 deriving stock instance Show (JudocAtom 'Parsed)
 
