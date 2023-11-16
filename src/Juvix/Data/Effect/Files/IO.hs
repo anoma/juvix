@@ -38,7 +38,6 @@ runFilesIO = interpret helper
       ReadFileBS' f -> ByteString.readFile (toFilePath f)
       FileExists' f -> Path.doesFileExist f
       RemoveDirectoryRecursive' d -> removeDirRecur d
-      TryRemoveDirectoryRecursive d -> tryRemoveDirRecur d
       ListDirRel p -> Path.listDirRel p
       PathUid f -> do
         status <- P.getFileStatus (toFilePath f)
@@ -55,12 +54,6 @@ runFilesIO = interpret helper
 
 juvixConfigDirIO :: IO (Path Abs Dir)
 juvixConfigDirIO = (<//> versionDir) . absDir <$> getUserConfigDir "juvix"
-
-tryRemoveDirRecur :: Path Abs Dir -> IO ()
-tryRemoveDirRecur d = ignoringDoesNotExistError (removeDirRecur d)
-  where
-    ignoringDoesNotExistError :: IO () -> IO ()
-    ignoringDoesNotExistError a = MC.catchIf isDoesNotExistError a (const (return ()))
 
 runTempFileIO ::
   forall r a.
