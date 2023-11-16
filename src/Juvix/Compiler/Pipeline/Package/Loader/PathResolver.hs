@@ -44,7 +44,7 @@ runPackagePathResolver rootPath sem = do
           Just $
             RootInfo
               { _rootInfoPath = globalStdlib,
-                _rootInfoKind = RootKindGlobalStdlib
+                _rootInfoKind = RootKindGlobalPackage
               }
       | relPath `HashSet.member` pkgFiles =
           Just $

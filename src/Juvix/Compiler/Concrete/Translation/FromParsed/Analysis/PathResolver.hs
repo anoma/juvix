@@ -66,7 +66,7 @@ mkPackageInfo mpackageEntry _packageRoot pkg = do
     juvixAccum cd _ files acc = return (newJuvixFiles <> acc, RecurseFilter (\hasJuvixPackage d -> not hasJuvixPackage && not (isHiddenDirectory d)))
       where
         newJuvixFiles :: [Path Abs File]
-        newJuvixFiles = [cd <//> f | f <- files, isJuvixFile f]
+        newJuvixFiles = [cd <//> f | f <- files, isJuvixFile f || isJuvixMarkdownFile f]
 
     pkgFile :: Path Abs File
     pkgFile = pkg ^. packageFile
@@ -296,7 +296,6 @@ resolvePath' mp = do
 
       visible :: PackageInfo -> Bool
       visible pkg = HashSet.member (pkg ^. packageRoot) (curPkg ^. packageAvailableRoots)
-
   return $ case packagesWithModule of
     [(r, relPath)] -> Right (r ^. packageRoot, relPath)
     [] ->
@@ -325,7 +324,7 @@ expectedPath' m = do
   let _pathInfoTopModule = m
   _rootInfoPath <- asks (^. envRoot)
   let _rootInfoKind = case msingle of
-        Just _ -> RootKindGlobalStdlib
+        Just _ -> RootKindGlobalPackage
         Nothing -> RootKindLocalPackage
       _pathInfoRootInfo = Just RootInfo {..}
   return PathInfoTopModule {..}
@@ -343,7 +342,8 @@ re = reinterpret2H helper
       Tactical PathResolver (Sem rInitial) (Reader ResolverEnv ': (State ResolverState ': r)) x
     helper = \case
       RegisterDependencies forceUpdateLockfile -> registerDependencies' forceUpdateLockfile >>= pureT
-      ExpectedPathInfoTopModule m -> expectedPath' m >>= pureT
+      ExpectedPathInfoTopModule m ->
+        expectedPath' m >>= pureT
       WithPath m a -> do
         x :: Either PathResolverError (Path Abs Dir, Path Rel File) <- resolvePath' m
         oldroot <- asks (^. envRoot)

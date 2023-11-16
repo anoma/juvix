@@ -111,11 +111,11 @@ filesErrorTests =
         ErrWrongTopModuleName {} -> Nothing
         _ -> wrongError,
     negTestAbsDir
-      "Incorrect top module path in a subdirectory without Package.juvix"
+      "Incorrect top module path of an orphan file."
       (relToProject $(mkRelDir "tests/WithoutPackageFile"))
-      $(mkRelFile "A.juvix")
+      $(mkRelFile "NoGood.juvix")
       $ \case
-        ErrWrongTopModuleName {} -> Nothing
+        ErrWrongTopModuleNameOrphan {} -> Nothing
         _ -> wrongError,
     negTest
       "Import a module that doesn't exist"

@@ -18,6 +18,7 @@ data ParserError
   | ErrCommonmark CommonmarkError
   | ErrTopModulePath TopModulePathError
   | ErrWrongTopModuleName WrongTopModuleName
+  | ErrWrongTopModuleNameOrphan WrongTopModuleNameOrphan
   | ErrStdinOrFile StdinOrFileError
   | ErrDanglingJudoc DanglingJudoc
   | ErrMarkdownBackend MarkdownBackendError
@@ -29,6 +30,7 @@ instance ToGenericError ParserError where
     ErrCommonmark e -> genericError e
     ErrTopModulePath e -> genericError e
     ErrWrongTopModuleName e -> genericError e
+    ErrWrongTopModuleNameOrphan e -> genericError e
     ErrStdinOrFile e -> genericError e
     ErrDanglingJudoc e -> genericError e
     ErrMarkdownBackend e -> genericError e
@@ -149,6 +151,32 @@ instance ToGenericError WrongTopModuleName where
                 <> "But it should be in the file:"
                 <> line
                 <> pretty _wrongTopModuleNameExpectedPath
+
+data WrongTopModuleNameOrphan = WrongTopModuleNameOrphan
+  { _wrongTopModuleNameOrpahnExpectedName :: Text,
+    _wrongTopModuleNameOrpahnActualName :: TopModulePath
+  }
+  deriving stock (Show)
+
+instance ToGenericError WrongTopModuleNameOrphan where
+  genericError WrongTopModuleNameOrphan {..} = ask >>= generr
+    where
+      generr opts =
+        return
+          GenericError
+            { _genericErrorLoc = i,
+              _genericErrorMessage = prettyError msg,
+              _genericErrorIntervals = [i]
+            }
+        where
+          opts' = fromGenericOptions opts
+          i = getLoc _wrongTopModuleNameOrpahnActualName
+          msg =
+            "Expected module name:"
+              <+> pretty _wrongTopModuleNameOrpahnExpectedName
+                <> line
+                <> "Actual module name:"
+              <+> ppCode opts' _wrongTopModuleNameOrpahnActualName
 
 data StdinOrFileError = StdinOrFileError
   deriving stock (Show)

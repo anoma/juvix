@@ -7,25 +7,24 @@ where
 import Juvix.Compiler.Concrete.Data.Name
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.DependenciesConfig
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Error
-import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Paths
 import Juvix.Prelude
 
 data RootKind
-  = RootKindGlobalStdlib
-  | RootKindGlobalPackage
+  = RootKindGlobalPackage
   | RootKindLocalPackage
-  deriving stock (Show, Eq, Ord)
+  deriving stock (Show)
 
 data RootInfo = RootInfo
   { _rootInfoPath :: Path Abs Dir,
     _rootInfoKind :: RootKind
   }
-  deriving stock (Show, Eq, Ord)
+  deriving stock (Show)
 
 data PathInfoTopModule = PathInfoTopModule
   { _pathInfoTopModule :: TopModulePath,
     _pathInfoRootInfo :: Maybe RootInfo
   }
+  deriving stock (Show)
 
 data PathResolver m a where
   RegisterDependencies :: DependenciesConfig -> PathResolver m ()

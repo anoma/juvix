@@ -300,28 +300,52 @@ topModuleDefStdin = do
   optional_ stashJudoc
   top moduleDef
 
--- FIX: https://github.com/anoma/juvix/pull/251
 checkModulePath ::
-  (Members '[PathResolver, Error ParserError] s) =>
+  (Members '[PathResolver, Files, Error ParserError] s) =>
   Module 'Parsed 'ModuleTop ->
   Sem s ()
 checkModulePath m = do
   let topJuvixPath :: TopModulePath = m ^. modulePath
   pathInfo :: PathInfoTopModule <- expectedPathInfoTopModule topJuvixPath
+  pathGlobalProject <- globalRoot
+  pathPackageDescription <- globalPackageDescriptionRoot
   whenJust (pathInfo ^. pathInfoRootInfo) $
-    \expectedRootInfo -> do
-      let relPath = topModulePathToRelativePath' (pathInfo ^. pathInfoTopModule)
-      let expectedAbsPath = (expectedRootInfo ^. rootInfoPath) <//> relPath
-          actualPath = getLoc topJuvixPath ^. intervalFile
-      unlessM (equalPaths actualPath expectedAbsPath) $
-        throw
-          ( ErrWrongTopModuleName
-              WrongTopModuleName
-                { _wrongTopModuleNameActualName = topJuvixPath,
-                  _wrongTopModuleNameExpectedPath = expectedAbsPath,
-                  _wrongTopModuleNameActualPath = actualPath
-                }
-          )
+    \expectedRootInfo ->
+      do
+        let actualPath = getLoc topJuvixPath ^. intervalFile
+            relPath = topModulePathToRelativePath' (pathInfo ^. pathInfoTopModule)
+
+            expectedAbsPath = (expectedRootInfo ^. rootInfoPath) <//> relPath
+
+            isOrphan = case expectedRootInfo ^. rootInfoKind of
+              RootKindGlobalPackage ->
+                not
+                  ( pathGlobalProject `isProperPrefixOf` actualPath
+                      || pathPackageDescription `isProperPrefixOf` actualPath
+                  )
+              RootKindLocalPackage -> False
+        if
+            | isOrphan -> do
+                let expectedName = Text.pack $ toFilePath . removeExtensions . filename $ actualPath
+                    actualName = topModulePathToDottedPath topJuvixPath
+                unless (expectedName == actualName) $
+                  throw
+                    ( ErrWrongTopModuleNameOrphan
+                        WrongTopModuleNameOrphan
+                          { _wrongTopModuleNameOrpahnExpectedName = expectedName,
+                            _wrongTopModuleNameOrpahnActualName = topJuvixPath
+                          }
+                    )
+            | otherwise ->
+                unlessM (equalPaths actualPath expectedAbsPath) $
+                  throw
+                    ( ErrWrongTopModuleName
+                        WrongTopModuleName
+                          { _wrongTopModuleNameActualName = topJuvixPath,
+                            _wrongTopModuleNameExpectedPath = expectedAbsPath,
+                            _wrongTopModuleNameActualPath = actualPath
+                          }
+                    )
 
 topModuleDef ::
   (Members '[Error ParserError, Files, PathResolver, InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
@@ -330,7 +354,7 @@ topModuleDef = do
   space >> optional_ stashJudoc
   optional_ stashPragmas
   m <- top moduleDef
-  -- P.lift (checkModulePath m)
+  P.lift (checkModulePath m)
   return m
 
 juvixCodeBlockParser ::

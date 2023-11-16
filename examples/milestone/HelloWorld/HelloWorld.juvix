@@ -1,5 +1,5 @@
 -- HelloWorld.juvix
-module AHelloWorld;
+module HelloWorld;
 
 import Stdlib.Prelude open;
 

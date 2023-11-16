@@ -17,10 +17,15 @@ root :: Path Abs Dir
 root = relToProject $(mkRelDir "tests/positive")
 
 posTest :: String -> Path Rel Dir -> Path Rel File -> PosTest
-posTest _name rdir rfile =
-  let _dir = root <//> rdir
-      _file = _dir <//> rfile
-   in PosTest {..}
+posTest _name rdir rfile = posTestAbsDir _name (root <//> rdir) rfile
+
+posTestAbsDir :: String -> Path Abs Dir -> Path Rel File -> PosTest
+posTestAbsDir _name _dir f =
+  PosTest
+    { _file = _dir <//> f,
+      _dir,
+      _name
+    }
 
 testDescr :: PosTest -> TestDescr
 testDescr PosTest {..} =
@@ -302,7 +307,19 @@ tests =
     posTest
       "Markdown"
       $(mkRelDir "Markdown")
-      $(mkRelFile "Test.juvix.md")
+      $(mkRelFile "Test.juvix.md"),
+    posTest
+      "Import a .juvix.md module in a .juvix file"
+      $(mkRelDir "MarkdownImport")
+      $(mkRelFile "A.juvix"),
+    posTest
+      "Import a .juvix.md module in a .juvix.md file"
+      $(mkRelDir "MarkdownImport")
+      $(mkRelFile "C.juvix.md"),
+    posTestAbsDir
+      "Typecheck orphan file"
+      (relToProject $(mkRelDir "tests/WithoutPackageFile"))
+      $(mkRelFile "Good.juvix")
   ]
     <> [ compilationTest t | t <- Compilation.tests
        ]
