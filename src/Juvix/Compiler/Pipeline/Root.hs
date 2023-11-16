@@ -18,7 +18,6 @@ findRootAndChangeDir ::
   Path Abs Dir ->
   IO Root
 findRootAndChangeDir lockMode minputFileDir mbuildDir _rootInvokeDir = do
-  whenJust minputFileDir setCurrentDir
   r <- IO.try go
   case r of
     Left (err :: IO.SomeException) -> do
@@ -32,7 +31,8 @@ findRootAndChangeDir lockMode minputFileDir mbuildDir _rootInvokeDir = do
 
     findPackageFile :: IO (Maybe (Path Abs File))
     findPackageFile = do
-      let findPackageFile' = findFile (possiblePaths _rootInvokeDir)
+      let cwd = fromMaybe _rootInvokeDir minputFileDir
+          findPackageFile' = findFile (possiblePaths cwd)
       yamlFile <- findPackageFile' Paths.juvixYamlFile
       pFile <- findPackageFile' Paths.packageFilePath
       return (pFile <|> yamlFile)
