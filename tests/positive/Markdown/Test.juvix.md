@@ -9,6 +9,7 @@ module Test;
 
 Certain blocks can be hidden from the output by adding the `hide` attribute, as shown below.
 
+
 ```juvix hide
 import Stdlib.Prelude open;
 ```

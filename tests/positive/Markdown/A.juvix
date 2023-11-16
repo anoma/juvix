@@ -1,0 +1,3 @@
+module A;
+
+import Test open;

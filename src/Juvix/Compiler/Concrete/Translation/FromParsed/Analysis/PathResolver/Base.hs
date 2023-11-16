@@ -41,6 +41,3 @@ makeSem ''PathResolver
 
 withPathFile :: (Members '[PathResolver] r) => TopModulePath -> (Either PathResolverError (Path Abs File) -> Sem r a) -> Sem r a
 withPathFile m f = withPath m (f . mapRight (uncurry (<//>)))
-
-pathInfoPath :: Lens' PathInfoTopModule (Path Rel File)
-pathInfoPath = pathInfoTopModule . topModulePathToRelativePath'

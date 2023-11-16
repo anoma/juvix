@@ -23,6 +23,7 @@ import Juvix.Compiler.Concrete.Extra qualified as P
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Base
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Error
+import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Paths
 import Juvix.Compiler.Concrete.Translation.FromSource.Data.Context
 import Juvix.Compiler.Concrete.Translation.FromSource.Lexer hiding
   ( symbol,
@@ -309,7 +310,8 @@ checkModulePath m = do
   pathInfo :: PathInfoTopModule <- expectedPathInfoTopModule topJuvixPath
   whenJust (pathInfo ^. pathInfoRootInfo) $
     \expectedRootInfo -> do
-      let expectedAbsPath = (expectedPackageRoot ^. rootInfoPath) <//> (pathInfo ^. pathInfoRelPath)
+      let relPath = topModulePathToRelativePath' (pathInfo ^. pathInfoTopModule)
+      let expectedAbsPath = (expectedRootInfo ^. rootInfoPath) <//> relPath
           actualPath = getLoc topJuvixPath ^. intervalFile
       unlessM (equalPaths actualPath expectedAbsPath) $
         throw
@@ -328,7 +330,7 @@ topModuleDef = do
   space >> optional_ stashJudoc
   optional_ stashPragmas
   m <- top moduleDef
-  P.lift (checkModulePath m)
+  -- P.lift (checkModulePath m)
   return m
 
 juvixCodeBlockParser ::

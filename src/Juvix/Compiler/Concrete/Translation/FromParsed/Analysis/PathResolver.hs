@@ -282,12 +282,23 @@ resolvePath' :: (Members '[Files, State ResolverState, Reader ResolverEnv] r) =>
 resolvePath' mp = do
   z <- gets (^. resolverFiles)
   curPkg <- currentPackage
-  let rel = topModulePathToRelativePath' mp
-      packagesWithModule = z ^. at rel
+  let exts = [FileExtJuvix, FileExtJuvixMarkdown]
+  let rpaths = map (`topModulePathToRelativePathByExt` mp) exts
+
+      packagesWithModule :: [(PackageInfo, Path Rel File)]
+      packagesWithModule =
+        [ (pkg, p)
+          | p <- rpaths,
+            pkgs <- toList (HashMap.lookup p z),
+            pkg <- toList pkgs,
+            visible pkg
+        ]
+
       visible :: PackageInfo -> Bool
-      visible p = HashSet.member (p ^. packageRoot) (curPkg ^. packageAvailableRoots)
-  return $ case filter visible (maybe [] toList packagesWithModule) of
-    [r] -> Right (r ^. packageRoot, rel)
+      visible pkg = HashSet.member (pkg ^. packageRoot) (curPkg ^. packageAvailableRoots)
+
+  return $ case packagesWithModule of
+    [(r, relPath)] -> Right (r ^. packageRoot, relPath)
     [] ->
       Left
         ( ErrMissingModule
@@ -296,11 +307,11 @@ resolvePath' mp = do
                 _missingModule = mp
               }
         )
-    (r : rs) ->
+    ((r, _) : rs) ->
       Left
         ( ErrDependencyConflict
             DependencyConflict
-              { _conflictPackages = r :| rs,
+              { _conflictPackages = r :| map fst rs,
                 _conflictPath = mp
               }
         )
@@ -314,7 +325,7 @@ expectedPath' m = do
   let _pathInfoTopModule = m
   _rootInfoPath <- asks (^. envRoot)
   let _rootInfoKind = case msingle of
-        Just _ -> RootKindGlobalPackage
+        Just _ -> RootKindGlobalStdlib
         Nothing -> RootKindLocalPackage
       _pathInfoRootInfo = Just RootInfo {..}
   return PathInfoTopModule {..}
