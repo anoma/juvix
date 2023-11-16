@@ -16,6 +16,7 @@ import Juvix.Compiler.Pipeline.Package.Loader.PathResolver
 import Juvix.Compiler.Pipeline.Setup
 import Juvix.Data.Effect.Git
 import Juvix.Data.Effect.Process
+import Juvix.Data.Effect.TaggedLock
 import Juvix.Prelude.Aeson
 import Juvix.Prelude.Pretty
 
@@ -53,13 +54,15 @@ testDescr PosTest {..} = helper renderCodeNew
             { _testName = _name,
               _testRoot = tRoot,
               _testAssertion = Steps $ \step -> do
-                entryPoint <- defaultEntryPointCwdIO file'
+                entryPoint <- defaultEntryPointIO' LockModeExclusive tRoot file'
                 let runHelper :: HashMap (Path Abs File) Text -> Sem PipelineEff a -> IO (ResolverState, a)
                     runHelper files = do
                       let runPathResolver' = case _pathResolverMode of
                             FullPathResolver -> runPathResolverPipe
                             PackagePathResolver -> runPackagePathResolver' (entryPoint ^. entryPointResolverRoot)
-                      runM
+                      runFinal
+                        . resourceToIOFinal
+                        . embedToFinal @IO
                         . evalInternetOffline
                         . ignoreHighlightBuilder
                         . runErrorIO' @JuvixError
@@ -67,6 +70,7 @@ testDescr PosTest {..} = helper renderCodeNew
                         . evalTopNameIdGen
                         . runFilesPure files tRoot
                         . runReader entryPoint
+                        . runTaggedLock LockModeExclusive
                         . ignoreLog
                         . runProcessIO
                         . mapError (JuvixError @GitProcessError)
@@ -79,11 +83,11 @@ testDescr PosTest {..} = helper renderCodeNew
                     evalHelper files = fmap snd . runHelper files
 
                 step "Parsing"
-                p :: Parser.ParserResult <- snd <$> runIO' entryPoint upToParsing
+                p :: Parser.ParserResult <- snd <$> runIOExclusive entryPoint upToParsing
 
                 step "Scoping"
                 (resolverState :: ResolverState, s :: Scoper.ScoperResult) <-
-                  runIO'
+                  runIOExclusive
                     entryPoint
                     ( do
                         void (entrySetup defaultDependenciesConfig)

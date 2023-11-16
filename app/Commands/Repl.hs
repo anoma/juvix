@@ -39,6 +39,7 @@ import Juvix.Compiler.Pipeline.Setup (entrySetup)
 import Juvix.Data.CodeAnn (Ann)
 import Juvix.Data.Effect.Git
 import Juvix.Data.Effect.Process
+import Juvix.Data.Effect.TaggedLock
 import Juvix.Data.Error.GenericError qualified as Error
 import Juvix.Data.NameKind
 import Juvix.Extra.Paths qualified as P
@@ -152,6 +153,7 @@ loadDefaultPrelude = whenJustM defaultPreludeEntryPoint $ \e -> do
     . runFilesIO
     . runError @JuvixError
     . runReader e
+    . runTaggedLockPermissive
     . runLogIO
     . runProcessIO
     . runError @GitProcessError

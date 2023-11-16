@@ -18,6 +18,7 @@ import Juvix.Compiler.Pipeline.Package.Loader
 import Juvix.Compiler.Pipeline.Package.Loader.Error
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff.IO
+import Juvix.Data.Effect.TaggedLock
 import Juvix.Extra.Paths
 import Juvix.Prelude
 
@@ -124,35 +125,41 @@ readPackageFile root buildDir f = mapError (JuvixError @PackageLoaderError) $ do
   checkNoDuplicateDepNames f (pkg ^. packageDependencies)
   return (pkg {_packageLockfile = mLockfile})
 
-loadPackageFileIO :: (Members '[Error JuvixError, Embed IO] r) => Path Abs Dir -> BuildDir -> Sem r Package
+loadPackageFileIO :: (Members '[TaggedLock, Error JuvixError, Embed IO] r) => Path Abs Dir -> BuildDir -> Sem r Package
 loadPackageFileIO root buildDir =
   runFilesIO
     . mapError (JuvixError @PackageLoaderError)
     . runEvalFileEffIO
     $ loadPackage buildDir (mkPackagePath root)
 
-readPackageIO :: Path Abs Dir -> BuildDir -> IO Package
-readPackageIO root buildDir =
-  runM
+readPackageIO :: LockMode -> Path Abs Dir -> BuildDir -> IO Package
+readPackageIO lockMode root buildDir =
+  runFinal
+    . resourceToIOFinal
+    . embedToFinal @IO
     . runFilesIO
     . runErrorIO' @JuvixError
     . mapError (JuvixError @PackageLoaderError)
+    . runTaggedLock lockMode
     . runEvalFileEffIO
     $ readPackage root buildDir
 
-readGlobalPackageIO :: IO Package
-readGlobalPackageIO =
-  runM
+readGlobalPackageIO :: LockMode -> IO Package
+readGlobalPackageIO lockMode =
+  runFinal
+    . resourceToIOFinal
+    . embedToFinal @IO
     . runFilesIO
     . runErrorIO' @JuvixError
     . mapError (JuvixError @PackageLoaderError)
+    . runTaggedLock lockMode
     . runEvalFileEffIO
     $ readGlobalPackage
 
-readGlobalPackage :: (Members '[Error JuvixError, EvalFileEff, Files] r) => Sem r Package
+readGlobalPackage :: (Members '[TaggedLock, Error JuvixError, EvalFileEff, Files] r) => Sem r Package
 readGlobalPackage = do
   packagePath <- globalPackageJuvix
-  unlessM (fileExists' packagePath) writeGlobalPackage
+  withTaggedLockDir (parent packagePath) (unlessM (fileExists' packagePath) writeGlobalPackage)
   readPackage (parent packagePath) DefaultBuildDir
 
 writeGlobalPackage :: (Members '[Files] r) => Sem r ()

@@ -86,6 +86,7 @@ re cwd = reinterpret $ \case
   JuvixConfigDir -> return juvixConfigDirPure
   CanonicalDir root d -> return (canonicalDirPure root d)
   NormalizeDir p -> return (absDir (cwd' </> toFilePath p))
+  NormalizeFile p -> return (absFile (cwd' </> toFilePath p))
   where
     cwd' :: FilePath
     cwd' = toFilePath cwd

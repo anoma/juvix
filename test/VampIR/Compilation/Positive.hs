@@ -26,7 +26,7 @@ toTestDescr PosTest {..} =
    in TestDescr
         { _testName = _name,
           _testRoot = tRoot,
-          _testAssertion = Steps $ vampirCompileAssertion file' data'
+          _testAssertion = Steps $ vampirCompileAssertion _dir file' data'
         }
 
 allTests :: TestTree

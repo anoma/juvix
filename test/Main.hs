@@ -51,5 +51,4 @@ fastTests =
     ]
 
 main :: IO ()
-main = do
-  defaultMain (testGroup "Juvix tests" [fastTests, slowTests])
+main = defaultMain (testGroup "Juvix tests" [fastTests, slowTests])

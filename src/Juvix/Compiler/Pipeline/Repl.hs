@@ -20,6 +20,7 @@ import Juvix.Compiler.Pipeline.Package.Loader.EvalEff.IO
 import Juvix.Data.Effect.Git.Process
 import Juvix.Data.Effect.Git.Process.Error
 import Juvix.Data.Effect.Process (runProcessIO)
+import Juvix.Data.Effect.TaggedLock
 import Juvix.Prelude
 
 arityCheckExpression ::
@@ -196,6 +197,7 @@ compileReplInputIO fp txt = do
   hasInternet <- not <$> asks (^. entryPointOffline)
   runError
     . evalInternet hasInternet
+    . runTaggedLockPermissive
     . runLogIO
     . runFilesIO
     . mapError (JuvixError @GitProcessError)

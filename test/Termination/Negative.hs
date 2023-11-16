@@ -2,6 +2,7 @@ module Termination.Negative (module Termination.Negative) where
 
 import Base
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination
+import Juvix.Data.Effect.TaggedLock
 
 type FailMsg = String
 
@@ -20,8 +21,8 @@ testDescr NegTest {..} =
         { _testName = _name,
           _testRoot = tRoot,
           _testAssertion = Single $ do
-            entryPoint <- set entryPointNoStdlib True <$> defaultEntryPointCwdIO file'
-            result <- runIOEither entryPoint upToInternalTyped
+            entryPoint <- set entryPointNoStdlib True <$> defaultEntryPointIO' LockModeExclusive tRoot file'
+            result <- runIOEither' LockModeExclusive entryPoint upToInternalTyped
             case mapLeft fromJuvixError result of
               Left (Just lexError) -> whenJust (_checkErr lexError) assertFailure
               Left Nothing -> assertFailure "The termination checker did not find an error."

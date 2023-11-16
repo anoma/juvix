@@ -1,6 +1,7 @@
 module Juvix.Extra.Files where
 
 import Juvix.Data.Effect.Files
+import Juvix.Data.Effect.TaggedLock
 import Juvix.Extra.Paths
 import Juvix.Extra.Version
 import Juvix.Prelude
@@ -38,23 +39,27 @@ versionFile :: (Member (Reader OutputRoot) r) => Sem r (Path Abs File)
 versionFile = (<//> $(mkRelFile ".version")) <$> ask
 
 writeVersion :: forall r. (Members '[Reader OutputRoot, Files] r) => Sem r ()
-writeVersion = versionFile >>= flip writeFile' versionTag
+writeVersion = do
+  vf <- versionFile
+  ensureDir' (parent vf)
+  writeFile' vf versionTag
 
 readVersion :: (Members '[Reader OutputRoot, Files] r) => Sem r (Maybe Text)
 readVersion = do
   vf <- versionFile
   whenMaybeM (fileExists' vf) (readFile' vf)
 
-updateFiles :: forall r. (Members '[Reader OutputRoot, Files] r) => Sem r () -> Sem r ()
-updateFiles action =
-  whenM shouldUpdate $ do
+updateFiles :: (Members '[TaggedLock, Reader OutputRoot, Files] r) => (forall r0. (Members '[Files, Reader OutputRoot] r0) => Sem r0 ()) -> Sem r ()
+updateFiles action = do
+  root <- ask @OutputRoot
+  withTaggedLockDir root . whenM shouldUpdate $ do
     whenM
-      (ask @OutputRoot >>= directoryExists')
-      (ask @OutputRoot >>= removeDirectoryRecursive')
-    action
+      (directoryExists' root)
+      (removeDirectoryRecursive' root)
     writeVersion
+    action
   where
-    shouldUpdate :: Sem r Bool
+    shouldUpdate :: (Members '[Files, Reader OutputRoot] r) => Sem r Bool
     shouldUpdate =
       orM
         [ not <$> (ask @OutputRoot >>= directoryExists'),

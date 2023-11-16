@@ -2,6 +2,7 @@ module Typecheck.PositiveNew where
 
 import Base
 import Data.HashSet qualified as HashSet
+import Juvix.Data.Effect.TaggedLock
 import Typecheck.Positive qualified as Old
 
 root :: Path Abs Dir
@@ -19,8 +20,8 @@ testDescr Old.PosTest {..} =
     { _testName = _name,
       _testRoot = _dir,
       _testAssertion = Single $ do
-        entryPoint <- set entryPointNewTypeCheckingAlgorithm True <$> defaultEntryPointCwdIO _file
-        (void . runIO' entryPoint) upToInternalTyped
+        entryPoint <- set entryPointNewTypeCheckingAlgorithm True <$> defaultEntryPointIO' LockModeExclusive _dir _file
+        (void . runIOExclusive entryPoint) upToInternalTyped
     }
 
 allTests :: TestTree

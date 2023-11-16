@@ -3,6 +3,7 @@ module Package.Positive where
 import Base
 import Juvix.Compiler.Pipeline.Package
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff.IO
+import Juvix.Data.Effect.TaggedLock
 
 type FailMsg = String
 
@@ -25,10 +26,13 @@ testDescr PosTest {..} =
             withTempDir' $ \d -> do
               let buildDir = CustomBuildDir (Abs d)
               res <-
-                runM
+                runFinal
+                  . resourceToIOFinal
+                  . embedToFinal @IO
                   . runError @JuvixError
                   . runFilesIO
                   . mapError (JuvixError @PackageLoaderError)
+                  . runTaggedLock LockModeExclusive
                   . runEvalFileEffIO
                   . readPackage tRoot
                   $ buildDir

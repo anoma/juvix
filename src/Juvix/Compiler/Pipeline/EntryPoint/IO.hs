@@ -2,16 +2,21 @@ module Juvix.Compiler.Pipeline.EntryPoint.IO where
 
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Compiler.Pipeline.Root
+import Juvix.Data.Effect.TaggedLock
 import Juvix.Prelude
 
-defaultEntryPointCwdIO :: Path Abs File -> IO EntryPoint
-defaultEntryPointCwdIO mainFile = do
-  cwd <- getCurrentDir
-  root <- findRootAndChangeDir (Just (parent mainFile)) Nothing cwd
+defaultEntryPointIO :: Path Abs Dir -> Path Abs File -> IO EntryPoint
+defaultEntryPointIO = defaultEntryPointIO' LockModePermissive
+
+defaultEntryPointIO' :: LockMode -> Path Abs Dir -> Path Abs File -> IO EntryPoint
+defaultEntryPointIO' lockMode cwd mainFile = do
+  root <- findRootAndChangeDir lockMode (Just (parent mainFile)) Nothing cwd
   return (defaultEntryPoint root mainFile)
 
-defaultEntryPointNoFileCwdIO :: IO EntryPoint
-defaultEntryPointNoFileCwdIO = do
-  cwd <- getCurrentDir
-  root <- findRootAndChangeDir Nothing Nothing cwd
+defaultEntryPointNoFileIO :: Path Abs Dir -> IO EntryPoint
+defaultEntryPointNoFileIO = defaultEntryPointNoFileIO' LockModePermissive
+
+defaultEntryPointNoFileIO' :: LockMode -> Path Abs Dir -> IO EntryPoint
+defaultEntryPointNoFileIO' lockMode cwd = do
+  root <- findRootAndChangeDir lockMode Nothing Nothing cwd
   return (defaultEntryPointNoFile root)

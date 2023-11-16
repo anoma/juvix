@@ -1,18 +1,19 @@
 module Formatter.Positive where
 
 import Base
+import Juvix.Data.Effect.TaggedLock
 import Juvix.Formatter
 import Scope.Positive qualified
 import Scope.Positive qualified as Scope
 
-runScopeEffIO :: (Member (Embed IO) r) => Sem (ScopeEff ': r) a -> Sem r a
-runScopeEffIO = interpret $ \case
+runScopeEffIO :: (Member (Embed IO) r) => Path Abs Dir -> Sem (ScopeEff ': r) a -> Sem r a
+runScopeEffIO root = interpret $ \case
   ScopeFile p -> do
-    entry <- embed (defaultEntryPointCwdIO p)
-    embed (snd <$> runIO' entry upToScoping)
+    entry <- embed (defaultEntryPointIO' LockModeExclusive root p)
+    embed (snd <$> runIOExclusive entry upToScoping)
   ScopeStdin -> do
-    entry <- embed defaultEntryPointNoFileCwdIO
-    embed (snd <$> runIO' entry upToScoping)
+    entry <- embed (defaultEntryPointNoFileIO' LockModeExclusive root)
+    embed (snd <$> runIOExclusive entry upToScoping)
 
 makeFormatTest' :: Scope.PosTest -> TestDescr
 makeFormatTest' Scope.PosTest {..} =
@@ -26,7 +27,7 @@ makeFormatTest' Scope.PosTest {..} =
               runM
                 . runError
                 . runOutputList @FormattedFileInfo
-                . runScopeEffIO
+                . runScopeEffIO tRoot
                 . runFilesIO
                 $ format file'
             case d of

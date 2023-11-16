@@ -4,6 +4,7 @@ import Data.Text qualified as T
 import Juvix.Data.Effect.Git.Base
 import Juvix.Data.Effect.Git.Process.Error
 import Juvix.Data.Effect.Process
+import Juvix.Data.Effect.TaggedLock
 import Juvix.Prelude
 import Polysemy.Opaque
 
@@ -62,15 +63,15 @@ gitHeadRef :: (Members '[Process, Error GitProcessError, Reader CloneEnv] r) => 
 gitHeadRef = gitNormalizeRef "HEAD"
 
 -- | Checkout the clone at a particular ref
-gitCheckout :: (Members '[Process, Error GitProcessError, Reader CloneEnv] r) => Text -> Sem r ()
-gitCheckout ref = void (runGitCmdInDir ["checkout", ref])
+gitCheckout :: (Members '[TaggedLock, Process, Error GitProcessError, Reader CloneEnv] r) => Text -> Sem r ()
+gitCheckout ref = withTaggedLockDir' (void (runGitCmdInDir ["checkout", ref]))
 
 -- | Fetch in the clone
-gitFetch :: (Members '[Process, Error GitProcessError, Reader CloneEnv, Internet] r) => Sem r ()
+gitFetch :: (Members '[TaggedLock, Process, Error GitProcessError, Reader CloneEnv, Internet] r) => Sem r ()
 gitFetch = whenHasInternet gitFetchOnline
 
-gitFetchOnline :: (Members '[Reader CloneEnv, Error GitProcessError, Process, Online] r) => Sem r ()
-gitFetchOnline = void (runGitCmdInDir ["fetch"])
+gitFetchOnline :: (Members '[TaggedLock, Reader CloneEnv, Error GitProcessError, Process, Online] r) => Sem r ()
+gitFetchOnline = withTaggedLockDir' (void (runGitCmdInDir ["fetch"]))
 
 gitCloneOnline :: (Members '[Log, Error GitProcessError, Process, Online, Reader CloneEnv] r) => Text -> Sem r ()
 gitCloneOnline url = do
@@ -81,10 +82,10 @@ gitCloneOnline url = do
 cloneGitRepo :: (Members '[Log, Files, Process, Error GitProcessError, Reader CloneEnv, Internet] r) => Text -> Sem r ()
 cloneGitRepo = whenHasInternet . gitCloneOnline
 
-initGitRepo :: (Members '[Log, Files, Process, Error GitProcessError, Reader CloneEnv, Internet] r) => Text -> Sem r (Path Abs Dir)
+initGitRepo :: (Members '[TaggedLock, Log, Files, Process, Error GitProcessError, Reader CloneEnv, Internet] r) => Text -> Sem r (Path Abs Dir)
 initGitRepo url = do
   p <- asks (^. cloneEnvDir)
-  unlessM (directoryExists' p) (cloneGitRepo url)
+  withTaggedLockDir' (unlessM (directoryExists' p) (cloneGitRepo url))
   return p
 
 handleNotACloneError :: (Member (Error GitProcessError) r, Monad m) => (GitError -> m x) -> Tactical e m r x -> Tactical e m r x
@@ -97,9 +98,14 @@ handleNormalizeRefError errorHandler ref eff = catch @GitProcessError eff $ \cas
   GitCmdError GitCmdErrorDetails {_gitCmdErrorDetailsExitCode = ExitFailure 128} -> runTSimple (return (NoSuchRef ref)) >>= bindTSimple errorHandler
   e -> throw e
 
+withTaggedLockDir' :: (Members '[TaggedLock, Reader CloneEnv] r) => Sem r a -> Sem r a
+withTaggedLockDir' ma = do
+  p <- asks (^. cloneEnvDir)
+  withTaggedLockDir p ma
+
 runGitProcess ::
   forall r a.
-  (Members '[Log, Files, Process, Error GitProcessError, Internet] r) =>
+  (Members '[TaggedLock, Log, Files, Process, Error GitProcessError, Internet] r) =>
   Sem (Scoped CloneArgs Git ': r) a ->
   Sem r a
 runGitProcess = interpretScopedH allocator handler

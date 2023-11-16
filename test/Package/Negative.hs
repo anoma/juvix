@@ -3,6 +3,7 @@ module Package.Negative where
 import Base
 import Juvix.Compiler.Pipeline.Package
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff.IO
+import Juvix.Data.Effect.TaggedLock
 
 type FailMsg = String
 
@@ -24,10 +25,13 @@ testDescr NegTest {..} =
           _testAssertion = Single $ do
             res <-
               withTempDir'
-                ( runM
+                ( runFinal
+                    . resourceToIOFinal
+                    . embedToFinal @IO
                     . runError
                     . runFilesIO
                     . mapError (JuvixError @PackageLoaderError)
+                    . runTaggedLock LockModeExclusive
                     . runEvalFileEffIO
                     . readPackage tRoot
                     . CustomBuildDir

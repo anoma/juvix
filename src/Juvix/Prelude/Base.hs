@@ -163,7 +163,7 @@ import GHC.Stack.Types
 import Language.Haskell.TH.Syntax (Lift)
 import Lens.Micro.Platform
 import Path
-import Path.IO qualified as Path
+import Path.IO qualified as Path hiding (getCurrentDir, setCurrentDir, withCurrentDir)
 import Polysemy
 import Polysemy.Embed
 import Polysemy.Error hiding (fromEither)

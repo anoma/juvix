@@ -19,7 +19,7 @@ testDescr NegTest {..} =
    in TestDescr
         { _testName = _name,
           _testRoot = tRoot,
-          _testAssertion = Steps $ vampirCompileErrorAssertion file'
+          _testAssertion = Steps $ vampirCompileErrorAssertion tRoot file'
         }
 
 allTests :: TestTree

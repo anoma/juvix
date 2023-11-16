@@ -54,6 +54,7 @@ dependencies:
   - exceptions == 0.10.*
   - extra == 1.7.*
   - file-embed == 0.0.*
+  - filelock == 0.1.*
   - filepath == 1.4.*
   - githash == 0.1.*
   - hashable == 1.4.*
@@ -174,6 +175,8 @@ tests:
       - juvix
     verbatim:
       default-language: GHC2021
+    ghc-options:
+      - -threaded
 
 benchmarks:
   juvix-bench:

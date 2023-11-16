@@ -25,26 +25,38 @@ import Juvix.Compiler.Pipeline.Package.Loader.EvalEff.IO
 import Juvix.Compiler.Pipeline.Package.Loader.PathResolver
 import Juvix.Data.Effect.Git
 import Juvix.Data.Effect.Process
+import Juvix.Data.Effect.TaggedLock
 import Juvix.Prelude
 
 -- | It returns `ResolverState` so that we can retrieve the `juvix.yaml` files,
 -- which we require for `Scope` tests.
 runIOEither :: forall a. EntryPoint -> Sem PipelineEff a -> IO (Either JuvixError (ResolverState, a))
-runIOEither entry = fmap snd . runIOEitherHelper entry
+runIOEither = runIOEither' LockModePermissive
+
+runIOEither' :: forall a. LockMode -> EntryPoint -> Sem PipelineEff a -> IO (Either JuvixError (ResolverState, a))
+runIOEither' lockMode entry = fmap snd . runIOEitherHelper' lockMode entry
 
 runIOEitherTermination :: forall a. EntryPoint -> Sem (Termination ': PipelineEff) a -> IO (Either JuvixError (ResolverState, a))
-runIOEitherTermination entry = fmap snd . runIOEitherHelper entry . evalTermination iniTerminationState
+runIOEitherTermination = runIOEitherTermination' LockModePermissive
+
+runIOEitherTermination' :: forall a. LockMode -> EntryPoint -> Sem (Termination ': PipelineEff) a -> IO (Either JuvixError (ResolverState, a))
+runIOEitherTermination' lockMode entry = fmap snd . runIOEitherHelper' lockMode entry . evalTermination iniTerminationState
 
 runPipelineHighlight :: forall a. EntryPoint -> Sem PipelineEff a -> IO HighlightInput
 runPipelineHighlight entry = fmap fst . runIOEitherHelper entry
 
 runIOEitherHelper :: forall a. EntryPoint -> Sem PipelineEff a -> IO (HighlightInput, (Either JuvixError (ResolverState, a)))
-runIOEitherHelper entry = do
+runIOEitherHelper = runIOEitherHelper' LockModePermissive
+
+runIOEitherHelper' :: forall a. LockMode -> EntryPoint -> Sem PipelineEff a -> IO (HighlightInput, (Either JuvixError (ResolverState, a)))
+runIOEitherHelper' lockMode entry = do
   let hasInternet = not (entry ^. entryPointOffline)
       runPathResolver'
         | mainIsPackageFile entry = runPackagePathResolver' (entry ^. entryPointResolverRoot)
         | otherwise = runPathResolverPipe
-  runM
+  runFinal
+    . resourceToIOFinal
+    . embedToFinal @IO
     . evalInternet hasInternet
     . runHighlightBuilder
     . runJuvixError
@@ -52,6 +64,7 @@ runIOEitherHelper entry = do
     . evalTopNameIdGen
     . runFilesIO
     . runReader entry
+    . runTaggedLock lockMode
     . runLogIO
     . runProcessIO
     . mapError (JuvixError @GitProcessError)
@@ -66,6 +79,14 @@ mainIsPackageFile entry = case entry ^? entryPointModulePaths . _head of
   Just p -> p == mkPackagePath (entry ^. entryPointResolverRoot)
   Nothing -> False
 
+runIOLockMode :: LockMode -> GenericOptions -> EntryPoint -> Sem PipelineEff a -> IO (ResolverState, a)
+runIOLockMode lockMode opts entry = runIOEither' lockMode entry >=> mayThrow
+  where
+    mayThrow :: Either JuvixError r -> IO r
+    mayThrow = \case
+      Left err -> runM . runReader opts $ printErrorAnsiSafe err >> embed exitFailure
+      Right r -> return r
+
 runIO :: GenericOptions -> EntryPoint -> Sem PipelineEff a -> IO (ResolverState, a)
 runIO opts entry = runIOEither entry >=> mayThrow
   where
@@ -74,8 +95,8 @@ runIO opts entry = runIOEither entry >=> mayThrow
       Left err -> runM . runReader opts $ printErrorAnsiSafe err >> embed exitFailure
       Right r -> return r
 
-runIO' :: EntryPoint -> Sem PipelineEff a -> IO (ResolverState, a)
-runIO' = runIO defaultGenericOptions
+runIOExclusive :: EntryPoint -> Sem PipelineEff a -> IO (ResolverState, a)
+runIOExclusive = runIOLockMode LockModeExclusive defaultGenericOptions
 
 corePipelineIO' :: EntryPoint -> IO Artifacts
 corePipelineIO' = corePipelineIO defaultGenericOptions
@@ -91,13 +112,21 @@ corePipelineIO opts entry = corePipelineIOEither entry >>= mayThrow
 corePipelineIOEither ::
   EntryPoint ->
   IO (Either JuvixError Artifacts)
-corePipelineIOEither entry = do
+corePipelineIOEither = corePipelineIOEither' LockModePermissive
+
+corePipelineIOEither' ::
+  LockMode ->
+  EntryPoint ->
+  IO (Either JuvixError Artifacts)
+corePipelineIOEither' lockMode entry = do
   let hasInternet = not (entry ^. entryPointOffline)
       runPathResolver'
         | mainIsPackageFile entry = runPackagePathResolverArtifacts (entry ^. entryPointResolverRoot)
         | otherwise = runPathResolverArtifacts
   eith <-
-    runM
+    runFinal
+      . resourceToIOFinal
+      . embedToFinal @IO
       . evalInternet hasInternet
       . ignoreHighlightBuilder
       . runError
@@ -106,6 +135,7 @@ corePipelineIOEither entry = do
       . runNameIdGenArtifacts
       . runFilesIO
       . runReader entry
+      . runTaggedLock lockMode
       . runLogIO
       . mapError (JuvixError @GitProcessError)
       . runProcessIO
