@@ -629,9 +629,9 @@ newtype DefaultArgLoop = DefaultArgLoop
 makeLenses ''DefaultArgLoop
 
 instance ToGenericError DefaultArgLoop where
-  genericError e = generr
+  genericError e = ask >>= generr
     where
-      generr =
+      generr opts =
         return
           GenericError
             { _genericErrorLoc = i,
@@ -639,5 +639,9 @@ instance ToGenericError DefaultArgLoop where
               _genericErrorIntervals = [i]
             }
         where
+          opts' = fromGenericOptions opts
           i = getLoc (head (e ^. defaultArgLoop))
-          msg :: Doc Ann = "Inserting default arguments is looping"
+          msg :: Doc Ann =
+            "Inserting default arguments caused a loop. The involved arguments are:"
+              <> line
+              <> itemize (ppCode opts' <$> e ^. defaultArgLoop)

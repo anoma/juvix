@@ -6,8 +6,9 @@ import Juvix.Prelude.Pretty
 
 data ArgId = ArgId
   { _argIdFunctionName :: Name,
-    _argIdDefinitionLoc :: Interval,
-    _argIdIx :: Int
+    _argIdIx :: Int,
+    _argIdDefinitionLoc :: Irrelevant Interval,
+    _argIdName :: Irrelevant (Maybe Name)
   }
   deriving stock (Eq, Ord)
 
@@ -76,7 +77,7 @@ makeLenses ''ArityParameter
 makeLenses ''InsertedArgsStack
 
 instance HasLoc ArgId where
-  getLoc = (^. argIdDefinitionLoc)
+  getLoc = (^. argIdDefinitionLoc . unIrrelevant)
 
 arityParameterName :: Lens' ArityParameter (Maybe Name)
 arityParameterName = arityParameterInfo . argInfoName

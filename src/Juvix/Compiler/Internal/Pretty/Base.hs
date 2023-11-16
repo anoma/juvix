@@ -331,6 +331,16 @@ instance PrettyCode Module where
 instance PrettyCode Interval where
   ppCode = return . annotate AnnCode . pretty
 
+instance PrettyCode New.ArgId where
+  ppCode a = case a ^. New.argIdName . unIrrelevant of
+    Nothing -> do
+      f' <- ppCode (a ^. New.argIdFunctionName)
+      return (ordinal (a ^. New.argIdIx) <+> "argument of" <+> f')
+    Just n -> do
+      n' <- ppCode n
+      loc' <- ppCode (getLoc n)
+      return (n' <+> "at" <+> loc')
+
 instance PrettyCode New.ArityParameter where
   ppCode = return . pretty
 
