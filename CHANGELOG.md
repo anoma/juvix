@@ -4,6 +4,38 @@
 <img align="right" width="300" height="300" alt="Juvix Mascot" src="../assets/images/tara-smiling.svg" />
 </a>
 
+## [v0.5.4](https://github.com/anoma/juvix/tree/v0.5.4) (2023-11-17)
+
+[Full Changelog](https://github.com/anoma/juvix/compare/v0.5.3...v0.5.4)
+
+**Implemented enhancements:**
+
+- Add MarkdownInfo entry in Module Concrete Decl and proper errors [\#2515](https://github.com/anoma/juvix/pull/2515) ([jonaprieto](https://github.com/jonaprieto))
+- Fix check for module name for Orphan Juvix files and imports of Juvix Markdown files [\#2512](https://github.com/anoma/juvix/pull/2512) ([jonaprieto](https://github.com/jonaprieto))
+- General inductive parameters [\#2506](https://github.com/anoma/juvix/pull/2506) ([janmasrovira](https://github.com/janmasrovira))
+- Named arguments syntax with function definitions [\#2494](https://github.com/anoma/juvix/pull/2494) ([lukaszcz](https://github.com/lukaszcz))
+- Update juvix init to generate Package.juvix instead of juvix.yaml [\#2483](https://github.com/anoma/juvix/pull/2483) ([paulcadman](https://github.com/paulcadman))
+- Interleave arity and typechecking [\#2481](https://github.com/anoma/juvix/pull/2481) ([janmasrovira](https://github.com/janmasrovira))
+- Literal casting [\#2457](https://github.com/anoma/juvix/pull/2457) ([lukaszcz](https://github.com/lukaszcz))
+
+**Merged pull requests:**
+
+- Fix Bank Example [\#2514](https://github.com/anoma/juvix/pull/2514) ([jonaprieto](https://github.com/jonaprieto))
+- Refactor markdown parsing [\#2513](https://github.com/anoma/juvix/pull/2513) ([janmasrovira](https://github.com/janmasrovira))
+- Add PackageDescription.Basic module Package variant [\#2509](https://github.com/anoma/juvix/pull/2509) ([paulcadman](https://github.com/paulcadman))
+- Run test suite in parallel [\#2507](https://github.com/anoma/juvix/pull/2507) ([paulcadman](https://github.com/paulcadman))
+- test: Run juvix format on juvix packages rather than files [\#2505](https://github.com/anoma/juvix/pull/2505) ([paulcadman](https://github.com/paulcadman))
+- Fix `clone` in `subsHoles` [\#2504](https://github.com/anoma/juvix/pull/2504) ([lukaszcz](https://github.com/lukaszcz))
+- Migrate all Juvix projects from juvix.yaml to Package.juvix in the repository [\#2503](https://github.com/anoma/juvix/pull/2503) ([paulcadman](https://github.com/paulcadman))
+- Update file walker to use Package.juvix to detect a Juvix package [\#2502](https://github.com/anoma/juvix/pull/2502) ([paulcadman](https://github.com/paulcadman))
+- Refresh bound variable ids when substituting in Internal [\#2501](https://github.com/anoma/juvix/pull/2501) ([lukaszcz](https://github.com/lukaszcz))
+- Add -n/--non-interactive option to juvix init [\#2500](https://github.com/anoma/juvix/pull/2500) ([paulcadman](https://github.com/paulcadman))
+- Use Package.juvix in the global project [\#2499](https://github.com/anoma/juvix/pull/2499) ([paulcadman](https://github.com/paulcadman))
+- Normalise paths on ResolverCache set and lookup [\#2498](https://github.com/anoma/juvix/pull/2498) ([paulcadman](https://github.com/paulcadman))
+- Fix Empty Lines at the Beginning of a File with No module decl Prevent Parsing [\#2496](https://github.com/anoma/juvix/pull/2496) ([jonaprieto](https://github.com/jonaprieto))
+- Fix remove unexpected whitespaces introduced by formatting [\#2489](https://github.com/anoma/juvix/pull/2489) ([jonaprieto](https://github.com/jonaprieto))
+- Add support for Literate Juvix Markdown [\#2448](https://github.com/anoma/juvix/pull/2448) ([jonaprieto](https://github.com/jonaprieto))
+
 ## [v0.5.3](https://github.com/anoma/juvix/tree/v0.5.3) (2023-11-01)
 
 [Full Changelog](https://github.com/anoma/juvix/compare/v0.5.2...v0.5.3)
