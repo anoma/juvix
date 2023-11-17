@@ -26,7 +26,7 @@ arityChecking ::
   (Members '[Error JuvixError, NameIdGen, Reader ModuleTable] r) =>
   InternalResult ->
   Sem r ArityChecking.InternalArityResult
-arityChecking InternalResult {..} = do
+arityChecking res@InternalResult {..} = do
   stab <- getStoredModuleTable <$> ask
   let table = buildInfoTable (insertStoredModule stab _resultStoredModule)
   mapError (JuvixError @ArityChecking.ArityCheckerError) $ do
@@ -35,7 +35,8 @@ arityChecking InternalResult {..} = do
         ArityChecking.checkModule _resultModule
     return
       ArityChecking.InternalArityResult
-        { _resultModule = r,
+        { _resultInternal = res,
+          _resultModule = r,
           _resultStoredModule = computeStoredModule r
         }
 

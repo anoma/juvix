@@ -54,7 +54,7 @@ data RecordInfo = RecordInfo
   }
 
 data ScoperState = ScoperState
-  { -- | Local and top modules
+  { -- | Local and top modules currently in scope - used to look up qualified symbols
     _scoperModules :: HashMap S.ModuleNameId ScopedModule,
     _scoperScope :: HashMap TopModulePath Scope,
     _scoperAlias :: HashMap S.NameId PreSymbolEntry,

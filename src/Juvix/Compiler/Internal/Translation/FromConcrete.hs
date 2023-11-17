@@ -31,13 +31,14 @@ import Juvix.Compiler.Internal.Translation.FromConcrete.NamedArguments
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Compiler.Store.Language qualified as Store
+import Juvix.Compiler.Store.Scoped.Data.NameSignatures
 import Juvix.Compiler.Store.Scoped.Language (createExportsTable)
 import Juvix.Compiler.Store.Scoped.Language qualified as S
 import Juvix.Data.NameKind
 import Juvix.Prelude
 import Safe (lastMay)
 
--- | Needed to generate field projections.
+-- | Needed only to generate field projections.
 newtype ConstructorInfos = ConstructorInfos
   { _constructorInfos :: HashMap Internal.ConstructorName ConstructorInfo
   }
@@ -45,6 +46,7 @@ newtype ConstructorInfos = ConstructorInfos
 
 makeLenses ''ConstructorInfos
 
+-- | Needed to detect looping while inserting default arguments
 newtype DefaultArgsStack = DefaultArgsStack
   { _defaultArgsStack :: [S.Symbol]
   }
@@ -66,12 +68,14 @@ fromConcrete _resultScoper = do
       exportTbl =
         _resultScoper ^. Scoper.resultExports
           <> mconcatMap (createExportsTable . (^. Store.moduleInfoScopedModule . S.scopedModuleExportInfo)) ms
+      constrSigs' = constrSigs <> mconcatMap (^. Store.moduleInfoScopedModule . S.scopedModuleConstructorNameSignatures) ms
+      namesSigs' = namesSigs <> mconcatMap (^. Store.moduleInfoScopedModule . S.scopedModuleNameSignatures) ms
   mapError (JuvixError @ScoperError) $ do
     _resultModule <-
       runReader @Pragmas mempty
         . runReader @ExportsTable exportTbl
-        . runReader namesSigs
-        . runReader constrSigs
+        . runReader namesSigs'
+        . runReader constrSigs'
         . evalState @ConstructorInfos mempty
         . runReader @DefaultArgsStack mempty
         . evalBuiltins (BuiltinsState blts)
@@ -80,8 +84,8 @@ fromConcrete _resultScoper = do
     return InternalResult {..}
   where
     m = _resultScoper ^. Scoper.resultModule
-    constrSigs = _resultScoper ^. Scoper.resultScoperState . scoperScopedConstructorFields
-    namesSigs = _resultScoper ^. Scoper.resultScoperState . scoperScopedSignatures
+    constrSigs = ConstructorNameSignatures $ _resultScoper ^. Scoper.resultScoperState . scoperScopedConstructorFields
+    namesSigs = NameSignatures $ _resultScoper ^. Scoper.resultScoperState . scoperScopedSignatures
 
 -- | `StatementInclude`s are not included in the result
 buildMutualBlocks ::
@@ -130,10 +134,10 @@ buildMutualBlocks ss = do
           AcyclicSCC a -> AcyclicSCC <$> a
           CyclicSCC p -> CyclicSCC . toList <$> nonEmpty (catMaybes p)
 
-fromConcreteExpression :: (Members '[Builtins, Error JuvixError, NameIdGen, Termination, State ScoperState] r) => Scoper.Expression -> Sem r Internal.Expression
+fromConcreteExpression :: (Members '[Builtins, Error JuvixError, NameIdGen, Termination, Reader ScoperState] r) => Scoper.Expression -> Sem r Internal.Expression
 fromConcreteExpression e = do
-  nameSigs <- gets (^. scoperScopedSignatures)
-  constrSigs <- gets (^. scoperScopedConstructorFields)
+  nameSigs <- NameSignatures <$> asks (^. scoperScopedSignatures)
+  constrSigs <- ConstructorNameSignatures <$> asks (^. scoperScopedConstructorFields)
   e' <-
     mapError (JuvixError @ScoperError)
       . runReader @Pragmas mempty
@@ -381,7 +385,7 @@ goFunctionDef FunctionDef {..} = do
   _funDefExamples <- goExamples _signDoc
   _funDefPragmas <- goPragmas _signPragmas
   _funDefBody <- goBody
-  msig <- asks @NameSignatures (^. at (_funDefName ^. Internal.nameId))
+  msig <- asks (^. nameSignatures . at (_funDefName ^. Internal.nameId))
   _funDefArgsInfo <- maybe (return mempty) goNameSignature msig
   let fun = Internal.FunctionDef {..}
   whenJust _signBuiltin (registerBuiltinFunction fun . (^. withLocParam))
@@ -771,7 +775,7 @@ goExpression = \case
       Nothing -> return $ goIden (napp ^. namedApplicationNewName)
       Just appargs -> do
         let name = napp ^. namedApplicationNewName . scopedIdenName
-        sig <- fromJust <$> asks @NameSignatures (^. at (name ^. S.nameId))
+        sig <- fromJust <$> asks (^. nameSignatures . at (name ^. S.nameId))
         cls <- goArgs appargs
         let args :: [Internal.Name] = appargs ^.. each . namedArgumentNewFunDef . signName . to goSymbol
             -- changes the kind from Variable to Function
@@ -1258,7 +1262,7 @@ goRecordPattern r = do
 
     mkPatterns :: Sem r [Internal.PatternArg]
     mkPatterns = do
-      sig :: RecordNameSignature 'Scoped <- asks (fromJust . HashMap.lookup (constr ^. Internal.nameId))
+      sig <- asks (fromJust . HashMap.lookup (constr ^. Internal.nameId) . (^. constructorNameSignatures))
       let maxIdx = length (sig ^. recordNames) - 1
       args <- IntMap.toAscList <$> byIndex
       execOutputList (go maxIdx 0 args)

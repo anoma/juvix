@@ -220,7 +220,7 @@ toConcrete t p = run . runReader l $ do
       | otherwise = return Nothing
 
     mkImport :: (Member (Reader Interval) r) => TopModulePath -> Sem r (Statement 'Parsed)
-    mkImport _importModule = do
+    mkImport _importModulePath = do
       _openModuleKw <- kw kwOpen
       _importKw <- kw kwImport
       return

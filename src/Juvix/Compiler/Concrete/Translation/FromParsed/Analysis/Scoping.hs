@@ -409,12 +409,13 @@ checkImport import_@Import {..} = do
         ..
       }
   where
+    -- TODO: update ScoperState
     addModuleToScope :: ScopedModule -> Sem r ()
-    addModuleToScope moduleRef = do
+    addModuleToScope smod = do
       let mpath :: TopModulePath = fromMaybe _importModulePath _importAsName
-          uid :: S.NameId = moduleRef ^. scopedModuleName . S.nameId
-          singTbl = HashMap.singleton uid moduleRef
-      modify (over (scopeTopModules . at mpath) (Just . maybe singTbl (HashMap.insert uid moduleRef)))
+          uid :: S.NameId = smod ^. scopedModuleName . S.nameId
+          singTbl = HashMap.singleton uid smod
+      modify (over (scopeTopModules . at mpath) (Just . maybe singTbl (HashMap.insert uid smod)))
 
 getTopModulePath :: Module 'Parsed 'ModuleTop -> S.AbsModulePath
 getTopModulePath Module {..} =
@@ -514,7 +515,7 @@ lookupQualifiedSymbol sms = do
         -- Current module.
         here :: Sem r' ()
         here = lookupSymbolAux path sym
-        -- Looks for a top level modules
+        -- Looks for top level modules
         there :: Sem r' ()
         there = mapM_ (uncurry lookInTopModule) allTopPaths
           where

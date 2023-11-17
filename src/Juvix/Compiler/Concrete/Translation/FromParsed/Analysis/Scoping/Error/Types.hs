@@ -614,7 +614,6 @@ data ModuleDoesNotExportSymbol = ModuleDoesNotExportSymbol
   { _moduleDoesNotExportSymbol :: Symbol,
     _moduleDoesNotExportModule :: ScopedModule
   }
-  deriving stock (Show)
 
 instance ToGenericError ModuleDoesNotExportSymbol where
   genericError :: (Member (Reader GenericOptions) r) => ModuleDoesNotExportSymbol -> Sem r GenericError

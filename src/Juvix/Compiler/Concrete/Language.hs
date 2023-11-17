@@ -132,6 +132,9 @@ data NameItem (s :: Stage) = NameItem
     _nameItemType :: ExpressionType s,
     _nameItemDefault :: Maybe (ArgDefault s)
   }
+  deriving stock (Generic)
+
+instance Serialize (NameItem 'Scoped)
 
 data NameBlock (s :: Stage) = NameBlock
   { -- | Symbols map to themselves so we can retrive the location
@@ -139,15 +142,24 @@ data NameBlock (s :: Stage) = NameBlock
     _nameBlock :: HashMap Symbol (NameItem s),
     _nameImplicit :: IsImplicit
   }
+  deriving stock (Generic)
+
+instance Serialize (NameBlock 'Scoped)
 
 -- | Two consecutive blocks should have different implicitness
 newtype NameSignature (s :: Stage) = NameSignature
   { _nameSignatureArgs :: [NameBlock s]
   }
+  deriving stock (Generic)
+
+instance Serialize (NameSignature 'Scoped)
 
 newtype RecordNameSignature s = RecordNameSignature
   { _recordNames :: HashMap Symbol (NameItem s)
   }
+  deriving stock (Generic)
+
+instance Serialize (RecordNameSignature 'Scoped)
 
 data Argument (s :: Stage)
   = ArgumentSymbol (SymbolType s)

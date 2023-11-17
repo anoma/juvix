@@ -4,6 +4,7 @@ import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Concrete.Data.Name qualified as C
 import Juvix.Compiler.Concrete.Data.ScopedName (HasNameKind)
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
+import Juvix.Compiler.Store.Scoped.Data.NameSignatures
 import Juvix.Extra.Serialize
 import Juvix.Prelude
 
@@ -60,9 +61,11 @@ data ScopedModule = ScopedModule
   { _scopedModulePath :: S.TopModulePath,
     _scopedModuleName :: S.Name,
     _scopedModuleFilePath :: Path Abs File,
-    _scopedModuleExportInfo :: ExportInfo
+    _scopedModuleExportInfo :: ExportInfo,
+    _scopedModuleNameSignatures :: NameSignatures,
+    _scopedModuleConstructorNameSignatures :: ConstructorNameSignatures
   }
-  deriving stock (Show, Eq, Ord, Generic)
+  deriving stock (Generic)
 
 instance Serialize ScopedModule
 
