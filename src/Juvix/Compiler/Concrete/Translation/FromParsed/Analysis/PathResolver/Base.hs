@@ -12,6 +12,7 @@ import Juvix.Prelude
 data RootKind
   = RootKindGlobalPackage
   | RootKindLocalPackage
+  | RootKindSingleFile
   deriving stock (Show)
 
 data RootInfo = RootInfo

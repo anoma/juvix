@@ -87,6 +87,7 @@ re cwd = reinterpret $ \case
   CanonicalDir root d -> return (canonicalDirPure root d)
   NormalizeDir p -> return (absDir (cwd' </> toFilePath p))
   NormalizeFile p -> return (absFile (cwd' </> toFilePath p))
+  FindFile' ps f -> lookupFileDirs ps f
   where
     cwd' :: FilePath
     cwd' = toFilePath cwd
@@ -221,3 +222,6 @@ lookupFile' p =
   fromMaybeM err (lookupFile p)
   where
     err = missingErr (toFilePath p)
+
+lookupFileDirs :: (Members '[State FS] r) => [Path Abs Dir] -> Path Rel File -> Sem r (Maybe Text)
+lookupFileDirs ps f = asum <$> mapM (\p -> lookupFile (p <//> f)) ps

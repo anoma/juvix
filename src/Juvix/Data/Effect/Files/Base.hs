@@ -45,5 +45,6 @@ data Files m a where
   CanonicalDir :: Path Abs Dir -> Prepath Dir -> Files m (Path Abs Dir)
   NormalizeDir :: Path b Dir -> Files m (Path Abs Dir)
   NormalizeFile :: Path b File -> Files m (Path Abs File)
+  FindFile' :: [Path Abs Dir] -> Path Rel File -> Files m (Maybe Text)
 
 makeSem ''Files

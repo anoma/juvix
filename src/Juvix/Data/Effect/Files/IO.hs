@@ -51,6 +51,11 @@ runFilesIO = interpret helper
       CanonicalDir root d -> prepathToAbsDir root d
       NormalizeDir p -> canonicalizePath p
       NormalizeFile b -> canonicalizePath b
+      FindFile' possiblePaths f -> do
+        mpath <- Path.findFile possiblePaths f
+        case mpath of
+          Nothing -> return Nothing
+          Just p -> Just <$> readFile (toFilePath p)
 
 juvixConfigDirIO :: IO (Path Abs Dir)
 juvixConfigDirIO = (<//> versionDir) . absDir <$> getUserConfigDir "juvix"
