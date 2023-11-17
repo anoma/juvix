@@ -4,6 +4,7 @@ import Juvix.Compiler.Concrete.Data.Scope
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as Scoped
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Translation.FromSource.Data.Context qualified as Parsed
+import Juvix.Compiler.Store.Scoped.Data.SignatureInfo
 import Juvix.Compiler.Store.Scoped.Language
 import Juvix.Prelude
 
@@ -12,6 +13,7 @@ data ScoperResult = ScoperResult
     _resultModule :: Module 'Scoped 'ModuleTop,
     _resultScopedModule :: ScopedModule,
     _resultExports :: HashSet NameId,
+    _resultSigInfo :: SignatureInfo,
     _resultScope :: HashMap TopModulePath Scope,
     _resultScoperState :: ScoperState
   }

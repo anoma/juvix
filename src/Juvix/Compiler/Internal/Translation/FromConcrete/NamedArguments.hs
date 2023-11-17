@@ -18,7 +18,7 @@ import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Extra (symbolParsed)
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
-import Juvix.Compiler.Store.Scoped.Data.NameSignatures
+import Juvix.Compiler.Store.Scoped.Data.SignatureInfo
 import Juvix.Prelude
 
 data BuilderState = BuilderState
@@ -63,7 +63,7 @@ runNamedArguments napp = do
     mkIniBuilderState :: Sem r BuilderState
     mkIniBuilderState = do
       let name = napp ^. namedAppName . scopedIdenName
-      msig <- asks (^. nameSignatures . at (name ^. S.nameId))
+      msig <- asks @NameSignatures (^. at (name ^. S.nameId))
       let sig = fromMaybe err msig
             where
               err = error ("impossible: could not find name signature for " <> prettyText name)
