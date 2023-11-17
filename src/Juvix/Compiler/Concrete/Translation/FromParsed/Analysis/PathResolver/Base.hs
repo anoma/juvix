@@ -10,8 +10,7 @@ import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Erro
 import Juvix.Prelude
 
 data RootKind
-  = RootKindGlobalPackage
-  | RootKindLocalPackage
+  = RootKindPackage
   | RootKindSingleFile
   deriving stock (Show)
 
@@ -23,7 +22,7 @@ data RootInfo = RootInfo
 
 data PathInfoTopModule = PathInfoTopModule
   { _pathInfoTopModule :: TopModulePath,
-    _pathInfoRootInfo :: Maybe RootInfo
+    _pathInfoRootInfo :: RootInfo
   }
   deriving stock (Show)
 

@@ -16,9 +16,8 @@ instance
 Identity-Monad : Monad Identity :=
   mkMonad@{
     functor := Identity-Functor;
-    return {A : Type} (a : A) : Identity A :=
-      mkIdentity a;
+    return {A : Type} (a : A) : Identity A := mkIdentity a;
     >>= {A B : Type}
       : Identity A -> (A -> Identity B) -> Identity B
-      | (mkIdentity a) f := f a;
+      | (mkIdentity a) f := f a
   };

@@ -49,7 +49,8 @@ ReaderT-MonadReader {S : Type} {M : Type → Type} {{Monad M}}
   mkMonadReader@{
     monad := ReaderT-Monad;
     ask : ReaderT S M S := mkReaderT λ {s := MMonad.return s};
-    reader {A : Type} (f : S → A) : ReaderT S M A := mkReaderT (MMonad.return ∘ f);
+    reader {A : Type} (f : S → A) : ReaderT S M A :=
+      mkReaderT (MMonad.return ∘ f)
   };
 
 import MonadState open;
@@ -59,8 +60,10 @@ import Stdlib.Data.Product open;
 liftReaderT {R A : Type} {M : Type → Type} (m : M A)
   : ReaderT R M A := mkReaderT (const m);
 
-liftStateT {S A : Type} {M : Type → Type} {{Monad M}} (m : M A)
-  : StateT S M A := mkStateT λ {s := m MMonad.>>= λ {a := MMonad.return (a, s)}};
+liftStateT {S A : Type} {M : Type → Type} {{Monad M}} (m : M
+  A) : StateT S M A :=
+  mkStateT
+    λ {s := m MMonad.>>= λ {a := MMonad.return (a, s)}};
 
 -- FIXME fails instance termination
 -- instance

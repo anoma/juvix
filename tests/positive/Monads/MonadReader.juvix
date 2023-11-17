@@ -8,5 +8,5 @@ type MonadReader (S : Type) (M : Type -> Type) :=
   mkMonadReader {
     monad : Monad M;
     ask : M S;
-    reader : {A : Type} → (S → A) → M A;
+    reader : {A : Type} → (S → A) → M A
   };

@@ -26,7 +26,10 @@ runPackagePathResolver rootPath sem = do
       RegisterDependencies {} -> pureT ()
       ExpectedPathInfoTopModule m -> do
         let _pathInfoTopModule = m
-            _pathInfoRootInfo = mkRootInfo' (topModulePathToRelativePath' m)
+            _pathInfoRootInfo =
+              --  A Package file is a member of a package by definition.
+              fromMaybe (error "runPackagePathResolver: expected root info") $
+                mkRootInfo' (topModulePathToRelativePath' m)
         pureT PathInfoTopModule {..}
       WithPath m a -> do
         let relPath = topModulePathToRelativePath' m
@@ -44,19 +47,19 @@ runPackagePathResolver rootPath sem = do
           Just $
             RootInfo
               { _rootInfoPath = globalStdlib,
-                _rootInfoKind = RootKindGlobalPackage
+                _rootInfoKind = RootKindPackage
               }
       | relPath `HashSet.member` pkgFiles =
           Just $
             RootInfo
               { _rootInfoPath = globalPackageDir,
-                _rootInfoKind = RootKindGlobalPackage
+                _rootInfoKind = RootKindPackage
               }
       | relPath == packageFilePath =
           Just $
             RootInfo
               { _rootInfoPath = rootPath,
-                _rootInfoKind = RootKindLocalPackage
+                _rootInfoKind = RootKindPackage
               }
       | otherwise = Nothing
 

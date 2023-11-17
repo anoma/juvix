@@ -175,7 +175,7 @@ instance ToGenericError WrongTopModuleNameOrphan where
             "This is a standalone module, but it's name is not the same as the file name."
               <> line
               <> "Expected module name:"
-              <+> pretty _wrongTopModuleNameOrpahnExpectedName
+              <+> pcode _wrongTopModuleNameOrpahnExpectedName
                 <> line
                 <> "Actual module name:"
               <+> ppCode opts' _wrongTopModuleNameOrpahnActualName

@@ -4,9 +4,9 @@ import Monad open;
 import Stdlib.Data.Unit open;
 
 trait
-type MonadState  (S : Type) (M : Type -> Type) :=
+type MonadState (S : Type) (M : Type -> Type) :=
   mkMonadState {
     monad : Monad M;
     get : M S;
-    put : S -> M Unit;
+    put : S -> M Unit
   };

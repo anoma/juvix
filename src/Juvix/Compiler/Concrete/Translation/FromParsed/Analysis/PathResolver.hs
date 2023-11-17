@@ -338,16 +338,13 @@ expectedPath' ::
   TopModulePath ->
   Sem r PathInfoTopModule
 expectedPath' m = do
-  msingle <- asks (^. envSingleFile)
   let _pathInfoTopModule = m
   _rootInfoPath <- asks (^. envRoot)
   isOrphan <- isModuleOrphan m
   let _rootInfoKind
         | isOrphan = RootKindSingleFile
-        | otherwise = case msingle of
-            Just _ -> RootKindGlobalPackage
-            Nothing -> RootKindLocalPackage
-      _pathInfoRootInfo = Just RootInfo {..}
+        | otherwise = RootKindPackage
+      _pathInfoRootInfo = RootInfo {..}
   return PathInfoTopModule {..}
 
 re ::
