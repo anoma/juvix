@@ -66,7 +66,7 @@ mkPackageInfo mpackageEntry _packageRoot pkg = do
     juvixAccum cd _ files acc = return (newJuvixFiles <> acc, RecurseFilter (\hasJuvixPackage d -> not hasJuvixPackage && not (isHiddenDirectory d)))
       where
         newJuvixFiles :: [Path Abs File]
-        newJuvixFiles = [cd <//> f | f <- files, isJuvixFile f]
+        newJuvixFiles = [cd <//> f | f <- files, isJuvixFile f || isJuvixMarkdownFile f]
 
     pkgFile :: Path Abs File
     pkgFile = pkg ^. packageFile
@@ -282,12 +282,22 @@ resolvePath' :: (Members '[Files, State ResolverState, Reader ResolverEnv] r) =>
 resolvePath' mp = do
   z <- gets (^. resolverFiles)
   curPkg <- currentPackage
-  let rel = topModulePathToRelativePath' mp
-      packagesWithModule = z ^. at rel
+  let exts = [FileExtJuvix, FileExtJuvixMarkdown]
+  let rpaths = map (`topModulePathToRelativePathByExt` mp) exts
+
+      packagesWithModule :: [(PackageInfo, Path Rel File)]
+      packagesWithModule =
+        [ (pkg, p)
+          | p <- rpaths,
+            pkgs <- toList (HashMap.lookup p z),
+            pkg <- toList pkgs,
+            visible pkg
+        ]
+
       visible :: PackageInfo -> Bool
-      visible p = HashSet.member (p ^. packageRoot) (curPkg ^. packageAvailableRoots)
-  return $ case filter visible (maybe [] toList packagesWithModule) of
-    [r] -> Right (r ^. packageRoot, rel)
+      visible pkg = HashSet.member (pkg ^. packageRoot) (curPkg ^. packageAvailableRoots)
+  return $ case packagesWithModule of
+    [(r, relPath)] -> Right (r ^. packageRoot, relPath)
     [] ->
       Left
         ( ErrMissingModule
@@ -296,22 +306,46 @@ resolvePath' mp = do
                 _missingModule = mp
               }
         )
-    (r : rs) ->
+    ((r, _) : rs) ->
       Left
         ( ErrDependencyConflict
             DependencyConflict
-              { _conflictPackages = r :| rs,
+              { _conflictPackages = r :| map fst rs,
                 _conflictPath = mp
               }
         )
 
-expectedPath' :: (Members '[Reader ResolverEnv] r) => Path Abs File -> TopModulePath -> Sem r (Maybe (Path Abs File))
-expectedPath' actualPath m = do
-  root <- asks (^. envRoot)
-  msingle <- asks (^. envSingleFile)
-  if
-      | msingle == Just actualPath -> return Nothing
-      | otherwise -> return (Just (root <//> topModulePathToRelativePath' m))
+isModuleOrphan ::
+  (Members '[Files] r) =>
+  TopModulePath ->
+  Sem r Bool
+isModuleOrphan topJuvixPath = do
+  let actualPath = getLoc topJuvixPath ^. intervalFile
+
+      possiblePaths :: Path Abs Dir -> [Path Abs Dir]
+      possiblePaths p = p : toList (parents p)
+
+  packageFileExists <- findFile' (possiblePaths (parent actualPath)) packageFilePath
+
+  yamlFileExists <- findFile' (possiblePaths (parent actualPath)) juvixYamlFile
+
+  pathPackageDescription <- globalPackageDescriptionRoot
+
+  return $ isNothing (packageFileExists <|> yamlFileExists) && not (pathPackageDescription `isProperPrefixOf` actualPath)
+
+expectedPath' ::
+  (Members '[Reader ResolverEnv, Files] r) =>
+  TopModulePath ->
+  Sem r PathInfoTopModule
+expectedPath' m = do
+  let _pathInfoTopModule = m
+  _rootInfoPath <- asks (^. envRoot)
+  isOrphan <- isModuleOrphan m
+  let _rootInfoKind
+        | isOrphan = RootKindSingleFile
+        | otherwise = RootKindPackage
+      _pathInfoRootInfo = RootInfo {..}
+  return PathInfoTopModule {..}
 
 re ::
   forall r a.
@@ -326,7 +360,7 @@ re = reinterpret2H helper
       Tactical PathResolver (Sem rInitial) (Reader ResolverEnv ': (State ResolverState ': r)) x
     helper = \case
       RegisterDependencies forceUpdateLockfile -> registerDependencies' forceUpdateLockfile >>= pureT
-      ExpectedModulePath a m -> expectedPath' a m >>= pureT
+      ExpectedPathInfoTopModule m -> expectedPath' m >>= pureT
       WithPath m a -> do
         x :: Either PathResolverError (Path Abs Dir, Path Rel File) <- resolvePath' m
         oldroot <- asks (^. envRoot)

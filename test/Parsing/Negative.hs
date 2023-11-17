@@ -43,14 +43,16 @@ wrongError :: Maybe FailMsg
 wrongError = Just "Incorrect error"
 
 negTest :: String -> Path Rel Dir -> Path Rel File -> (ParserError -> Maybe FailMsg) -> NegTest
-negTest _name d f _checkErr =
-  let _dir = root <//> d
-   in NegTest
-        { _file = _dir <//> f,
-          _dir,
-          _name,
-          _checkErr
-        }
+negTest _name d f _checkErr = negTestAbsDir _name (root <//> d) f _checkErr
+
+negTestAbsDir :: String -> Path Abs Dir -> Path Rel File -> (ParserError -> Maybe FailMsg) -> NegTest
+negTestAbsDir _name _dir f _checkErr =
+  NegTest
+    { _file = _dir <//> f,
+      _dir,
+      _name,
+      _checkErr
+    }
 
 parserErrorTests :: [NegTest]
 parserErrorTests =
@@ -107,6 +109,13 @@ filesErrorTests =
       $(mkRelFile "WrongModuleName.juvix")
       $ \case
         ErrWrongTopModuleName {} -> Nothing
+        _ -> wrongError,
+    negTestAbsDir
+      "Incorrect top module path of an orphan file."
+      (relToProject $(mkRelDir "tests/WithoutPackageFile"))
+      $(mkRelFile "NoGood.juvix")
+      $ \case
+        ErrWrongTopModuleNameOrphan {} -> Nothing
         _ -> wrongError,
     negTest
       "Import a module that doesn't exist"

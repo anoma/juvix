@@ -43,9 +43,12 @@ import MonadState open;
 import Stdlib.Data.Unit open;
 
 instance
-StateT-MonadState {S : Type} {M : Type → Type} {{Monad M}} : MonadState S (StateT S M) :=
+StateT-MonadState {S : Type} {M : Type → Type} {{Monad M}}
+  : MonadState S (StateT S M) :=
   mkMonadState@{
     monad := StateT-Monad;
-    get : StateT S M S := mkStateT λ {s := MMonad.return (s, s)};
-    put (s : S) : StateT S M Unit := mkStateT λ {_ := MMonad.return (unit, s)};
+    get : StateT S M S :=
+      mkStateT λ {s := MMonad.return (s, s)};
+    put (s : S) : StateT S M Unit :=
+      mkStateT λ {_ := MMonad.return (unit, s)}
   };

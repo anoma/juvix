@@ -9,14 +9,33 @@ import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Depe
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Error
 import Juvix.Prelude
 
+data RootKind
+  = RootKindPackage
+  | RootKindSingleFile
+  deriving stock (Show)
+
+data RootInfo = RootInfo
+  { _rootInfoPath :: Path Abs Dir,
+    _rootInfoKind :: RootKind
+  }
+  deriving stock (Show)
+
+data PathInfoTopModule = PathInfoTopModule
+  { _pathInfoTopModule :: TopModulePath,
+    _pathInfoRootInfo :: RootInfo
+  }
+  deriving stock (Show)
+
 data PathResolver m a where
   RegisterDependencies :: DependenciesConfig -> PathResolver m ()
-  ExpectedModulePath :: Path Abs File -> TopModulePath -> PathResolver m (Maybe (Path Abs File))
+  ExpectedPathInfoTopModule :: TopModulePath -> PathResolver m PathInfoTopModule
   WithPath ::
     TopModulePath ->
     (Either PathResolverError (Path Abs Dir, Path Rel File) -> m x) ->
     PathResolver m x
 
+makeLenses ''RootInfo
+makeLenses ''PathInfoTopModule
 makeSem ''PathResolver
 
 withPathFile :: (Members '[PathResolver] r) => TopModulePath -> (Either PathResolverError (Path Abs File) -> Sem r a) -> Sem r a
