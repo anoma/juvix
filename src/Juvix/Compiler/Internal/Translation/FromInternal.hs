@@ -10,7 +10,6 @@ module Juvix.Compiler.Internal.Translation.FromInternal
 where
 
 import Data.HashMap.Strict qualified as HashMap
-import Juvix.Compiler.Builtins.Effect
 import Juvix.Compiler.Concrete.Data.Highlight.Input
 import Juvix.Compiler.Internal.Language
 import Juvix.Compiler.Internal.Translation.FromConcrete.Data.Context
@@ -85,7 +84,7 @@ typeCheckImport = return
 
 typeChecking ::
   forall r.
-  (Members '[Reader EntryPoint, Error JuvixError, Builtins, NameIdGen, Reader ModuleTable] r) =>
+  (Members '[Reader EntryPoint, Error JuvixError, NameIdGen, Reader ModuleTable] r) =>
   Sem (Termination ': r) ArityChecking.InternalArityResult ->
   Sem r InternalTypedResult
 typeChecking a = do

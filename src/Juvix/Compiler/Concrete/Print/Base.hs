@@ -92,18 +92,13 @@ ppSymbolType = case sing :: SStage s of
   SParsed -> ppCode
   SScoped -> ppCode
 
+ppModuleNameType :: forall s. (SingI s) => PrettyPrinting (ModuleNameType s)
+ppModuleNameType = case sing :: SStage s of
+  SParsed -> ppCode
+  SScoped -> ppCode
+
 ppIdentifierType :: forall s. (SingI s) => PrettyPrinting (IdentifierType s)
 ppIdentifierType = case sing :: SStage s of
-  SParsed -> ppCode
-  SScoped -> ppCode
-
-ppModuleRefType :: forall s. (SingI s) => PrettyPrinting (ModuleRefType s)
-ppModuleRefType = case sing :: SStage s of
-  SParsed -> ppCode
-  SScoped -> ppCode
-
-ppImportType :: forall s. (SingI s) => PrettyPrinting (ImportType s)
-ppImportType = case sing :: SStage s of
   SParsed -> ppCode
   SScoped -> ppCode
 
@@ -1071,7 +1066,7 @@ instance (SingI s) => PrettyPrint (Import s) where
   ppCode i = do
     let open' = ppOpenModuleHelper Nothing <$> (i ^. importOpen)
     ppCode (i ^. importKw)
-      <+> ppImportType (i ^. importModule)
+      <+> ppModulePathType (i ^. importModulePath)
       <+?> ppAlias
       <+?> open'
     where
@@ -1080,9 +1075,9 @@ instance (SingI s) => PrettyPrint (Import s) where
         Nothing -> Nothing
         Just as -> Just (ppCode Kw.kwAs <+> ppModulePathType as)
 
-ppOpenModuleHelper :: (SingI s) => Maybe (ModuleRefType s) -> PrettyPrinting (OpenModuleParams s)
+ppOpenModuleHelper :: (SingI s) => Maybe (ModuleNameType s) -> PrettyPrinting (OpenModuleParams s)
 ppOpenModuleHelper modName OpenModuleParams {..} = do
-  let name' = ppModuleRefType <$> modName
+  let name' = ppModuleNameType <$> modName
       usingHiding' = ppCode <$> _openUsingHiding
       openkw = ppCode _openModuleKw
       public' = ppCode <$> _openPublicKw ^. unIrrelevant

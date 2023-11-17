@@ -1,6 +1,8 @@
-module Juvix.Compiler.Concrete.Data.NameSpace where
+module Juvix.Compiler.Store.Scoped.Data.NameSpace where
 
 import Data.Kind qualified as GHC
+import Juvix.Compiler.Concrete.Data.Name qualified as C
+import Juvix.Compiler.Store.Scoped.Language
 import Juvix.Data.NameKind
 import Juvix.Prelude
 
@@ -11,9 +13,6 @@ data NameSpace
   deriving stock (Eq, Generic, Enum, Bounded, Show, Ord)
 
 instance Hashable NameSpace
-
-type AnyNameSpace (k :: NameSpace -> GHC.Type) =
-  Σ NameSpace (TyCon1 k)
 
 $(genSingletons [''NameSpace])
 
@@ -28,3 +27,15 @@ type family NameKindNameSpace s = res where
   NameKindNameSpace 'KNameLocalModule = 'NameSpaceModules
   NameKindNameSpace 'KNameTopModule = 'NameSpaceModules
   NameKindNameSpace 'KNameFixity = 'NameSpaceFixities
+
+type NameSpaceEntryType :: NameSpace -> GHC.Type
+type family NameSpaceEntryType s = res | res -> s where
+  NameSpaceEntryType 'NameSpaceSymbols = PreSymbolEntry
+  NameSpaceEntryType 'NameSpaceModules = ModuleSymbolEntry
+  NameSpaceEntryType 'NameSpaceFixities = FixitySymbolEntry
+
+exportNameSpace :: forall ns. (SingI ns) => Lens' ExportInfo (HashMap C.Symbol (NameSpaceEntryType ns))
+exportNameSpace = case sing :: SNameSpace ns of
+  SNameSpaceSymbols -> exportSymbols
+  SNameSpaceModules -> exportModuleSymbols
+  SNameSpaceFixities -> exportFixitySymbols

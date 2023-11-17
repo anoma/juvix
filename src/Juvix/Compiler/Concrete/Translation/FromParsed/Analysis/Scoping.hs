@@ -385,10 +385,10 @@ checkImport ::
 checkImport import_@Import {..} = do
   smodule <- readScopeModule import_
   let sname :: S.TopModulePath = smodule ^. scopedModulePath
-      sname' :: S.Name = set S.nameConcrete (topModulePathToName _importModule) sname
+      sname' :: S.Name = set S.nameConcrete (topModulePathToName _importModulePath) sname
       mid = sname ^. S.nameId
       cmodule = set scopedModuleName sname' smodule
-      importName :: S.TopModulePath = set S.nameConcrete _importModule sname
+      importName :: S.TopModulePath = set S.nameConcrete _importModulePath sname
       synonymName :: Maybe S.TopModulePath = do
         synonym <- _importAsName
         return (set S.nameConcrete synonym sname)
@@ -403,7 +403,7 @@ checkImport import_@Import {..} = do
   importOpen' <- mapM (checkImportOpenParams cmodule) _importOpen
   return
     Import
-      { _importModule = cmodule,
+      { _importModulePath = sname,
         _importAsName = qual',
         _importOpen = importOpen',
         ..
@@ -411,7 +411,7 @@ checkImport import_@Import {..} = do
   where
     addModuleToScope :: ScopedModule -> Sem r ()
     addModuleToScope moduleRef = do
-      let mpath :: TopModulePath = fromMaybe _importModule _importAsName
+      let mpath :: TopModulePath = fromMaybe _importModulePath _importAsName
           uid :: S.NameId = moduleRef ^. scopedModuleName . S.nameId
           singTbl = HashMap.singleton uid moduleRef
       modify (over (scopeTopModules . at mpath) (Just . maybe singTbl (HashMap.insert uid moduleRef)))
@@ -633,7 +633,7 @@ readScopeModule ::
   Import 'Parsed ->
   Sem r ScopedModule
 readScopeModule import_ = do
-  asks (^?! scopeImportedModules . at (import_ ^. importModule) . _Just)
+  asks (^?! scopeImportedModules . at (import_ ^. importModulePath) . _Just)
 
 checkFixityInfo ::
   forall r.
@@ -1612,7 +1612,7 @@ checkOpenModuleHelper importModuleHint OpenModule {..} = do
   mergeScope (alterScope (openParams' ^. openUsingHiding) exportInfo)
   return
     OpenModule
-      { _openModuleName = cmod,
+      { _openModuleName = cmod ^. scopedModuleName,
         _openModuleParams = openParams',
         ..
       }

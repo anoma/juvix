@@ -5,7 +5,7 @@ module Juvix.Compiler.Pipeline.Root
 where
 
 import Control.Exception qualified as IO
-import Juvix.Compiler.Pipeline.Package
+import Juvix.Compiler.Pipeline.Package.IO
 import Juvix.Compiler.Pipeline.Root.Base
 import Juvix.Extra.Paths qualified as Paths
 import Juvix.Prelude

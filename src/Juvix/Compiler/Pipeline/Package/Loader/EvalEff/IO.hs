@@ -5,7 +5,6 @@ module Juvix.Compiler.Pipeline.Package.Loader.EvalEff.IO
 where
 
 import Data.HashMap.Strict qualified as HashMap
-import Juvix.Compiler.Builtins
 import Juvix.Compiler.Concrete hiding (Symbol)
 import Juvix.Compiler.Core (CoreResult, coreResultTable)
 import Juvix.Compiler.Core qualified as Core
@@ -13,6 +12,7 @@ import Juvix.Compiler.Core.Evaluator
 import Juvix.Compiler.Core.Extra.Value
 import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Pipeline
+import Juvix.Compiler.Pipeline.Driver (processFileToEval)
 import Juvix.Compiler.Pipeline.Package.Loader.Error
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff
 import Juvix.Compiler.Pipeline.Package.Loader.PathResolver
@@ -127,12 +127,11 @@ loadPackage' packagePath = do
       . runProcessIO
       . runFilesIO
       . evalTopNameIdGen defaultModuleId
-      . runReader packageEntryPoint
       . ignoreLog
       . mapError (JuvixError @GitProcessError)
       . runGitProcess
       . runPackagePathResolver rootPath
-      $ upToEval
+      $ processFileToEval packageEntryPoint
     )
   where
     rootPath :: Path Abs Dir

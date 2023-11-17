@@ -16,7 +16,6 @@ import Data.IntMap.Strict qualified as IntMap
 import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Language
-import Juvix.Compiler.Store.Scoped.Language
 import Juvix.Prelude hiding (some)
 import Juvix.Prelude.Parsing
 
@@ -55,12 +54,7 @@ groupStatements = \case
       (StatementImport _, StatementImport _) -> True
       (StatementImport i, StatementOpenModule o) -> case sing :: SStage s of
         SParsed -> True
-        SScoped ->
-          i
-            ^. importModule
-              . scopedModulePath
-              . S.nameId
-            == getScopedModuleNameId (o ^. openModuleName)
+        SScoped -> i ^. importModulePath . S.nameId == o ^. openModuleName . S.nameId
       (StatementImport _, _) -> False
       (StatementOpenModule {}, StatementOpenModule {}) -> True
       (StatementOpenModule {}, _) -> False

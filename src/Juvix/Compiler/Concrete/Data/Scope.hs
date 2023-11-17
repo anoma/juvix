@@ -1,16 +1,16 @@
 module Juvix.Compiler.Concrete.Data.Scope
   ( module Juvix.Compiler.Concrete.Data.Scope,
     module Juvix.Compiler.Concrete.Data.InfoTable,
-    module Juvix.Compiler.Concrete.Data.NameSpace,
+    module Juvix.Compiler.Store.Scoped.Data.NameSpace,
     module Juvix.Compiler.Concrete.Data.Scope.Base,
   )
 where
 
 import Juvix.Compiler.Concrete.Data.InfoTable
-import Juvix.Compiler.Concrete.Data.NameSpace
 import Juvix.Compiler.Concrete.Data.Scope.Base
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Language
+import Juvix.Compiler.Store.Scoped.Data.NameSpace
 import Juvix.Compiler.Store.Scoped.Language
 import Juvix.Prelude
 

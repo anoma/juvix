@@ -334,7 +334,7 @@ goImport ::
 goImport Import {..} =
   return
     ( Internal.Import
-        { _importModuleName = goName (_importModule ^. S.scopedModuleName)
+        { _importModuleName = goName (S.topModulePathName _importModulePath)
         }
     )
 

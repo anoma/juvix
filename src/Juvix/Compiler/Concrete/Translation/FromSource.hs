@@ -628,7 +628,7 @@ iteratorSyntaxDef _iterSyntaxKw = do
 import_ :: forall r. (Members '[Files, PathResolver, ParserResultBuilder, PragmasStash, JudocStash, NameIdGen, Error ParserError] r) => ParsecS r (Import 'Parsed)
 import_ = do
   _importKw <- kw kwImport
-  _importModule <- topModulePath
+  _importModulePath <- topModulePath
   _importAsName <- optional pasName
   _importOpen <- optional popenModuleParams
   let i = Import {..}

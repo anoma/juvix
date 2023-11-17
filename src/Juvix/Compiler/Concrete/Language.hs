@@ -24,12 +24,10 @@ import Juvix.Compiler.Concrete.Data.Literal
 import Juvix.Compiler.Concrete.Data.ModuleIsTop
 import Juvix.Compiler.Concrete.Data.Name
 import Juvix.Compiler.Concrete.Data.NameRef
-import Juvix.Compiler.Concrete.Data.NameSpace
 import Juvix.Compiler.Concrete.Data.PublicAnn
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Data.Stage
 import Juvix.Compiler.Concrete.Data.VisibilityAnn
-import Juvix.Compiler.Store.Scoped.Language
 import Juvix.Data
 import Juvix.Data.Ape.Base as Ape
 import Juvix.Data.Fixity
@@ -37,18 +35,12 @@ import Juvix.Data.FixityInfo (Arity (..), FixityInfo)
 import Juvix.Data.IteratorInfo
 import Juvix.Data.Keyword
 import Juvix.Data.NameKind
-import Juvix.Extra.Serialize
+import Juvix.Extra.Serialize as Ser
 import Juvix.Parser.Lexer (isDelimiterStr)
 import Juvix.Prelude hiding (show)
 import Juvix.Prelude.Pretty (Pretty, pretty, prettyText)
 
 type Delims = Irrelevant (Maybe (KeywordRef, KeywordRef))
-
-type NameSpaceEntryType :: NameSpace -> GHC.Type
-type family NameSpaceEntryType s = res | res -> s where
-  NameSpaceEntryType 'NameSpaceSymbols = PreSymbolEntry
-  NameSpaceEntryType 'NameSpaceModules = ModuleSymbolEntry
-  NameSpaceEntryType 'NameSpaceFixities = FixitySymbolEntry
 
 type RecordUpdateExtraType :: Stage -> GHC.Type
 type family RecordUpdateExtraType s = res | res -> s where
@@ -64,11 +56,6 @@ type SymbolType :: Stage -> GHC.Type
 type family SymbolType s = res | res -> s where
   SymbolType 'Parsed = Symbol
   SymbolType 'Scoped = S.Symbol
-
-type ModuleRefType :: Stage -> GHC.Type
-type family ModuleRefType s = res | res -> s where
-  ModuleRefType 'Parsed = Name
-  ModuleRefType 'Scoped = ScopedModule
 
 type IdentifierType :: Stage -> GHC.Type
 type family IdentifierType s = res | res -> s where
@@ -105,11 +92,6 @@ type family PatternAtType s = res | res -> s where
   PatternAtType 'Parsed = PatternBinding
   PatternAtType 'Scoped = PatternArg
 
-type ImportType :: Stage -> GHC.Type
-type family ImportType s = res | res -> s where
-  ImportType 'Parsed = TopModulePath
-  ImportType 'Scoped = ScopedModule
-
 type NameSignatureType :: Stage -> GHC.Type
 type family NameSignatureType s = res | res -> s where
   NameSignatureType 'Parsed = ()
@@ -121,6 +103,11 @@ type family ModulePathType s t = res | res -> t s where
   ModulePathType 'Scoped 'ModuleTop = S.TopModulePath
   ModulePathType 'Parsed 'ModuleLocal = Symbol
   ModulePathType 'Scoped 'ModuleLocal = S.Symbol
+
+type ModuleNameType :: Stage -> GHC.Type
+type family ModuleNameType s = res | res -> s where
+  ModuleNameType 'Parsed = Name
+  ModuleNameType 'Scoped = S.Name
 
 type ModuleInductiveType :: ModuleIsTop -> GHC.Type
 type family ModuleInductiveType t = res | res -> t where
@@ -254,7 +241,7 @@ deriving stock instance Ord (ProjectionDef 'Scoped)
 
 data Import (s :: Stage) = Import
   { _importKw :: KeywordRef,
-    _importModule :: ImportType s,
+    _importModulePath :: ModulePathType s 'ModuleTop,
     _importAsName :: Maybe (ModulePathType s 'ModuleTop),
     _importOpen :: Maybe (OpenModuleParams s)
   }
@@ -1109,11 +1096,8 @@ getNameRefId = case sing :: S.SIsConcrete c of
   S.SConcrete -> (^. S.nameId)
   S.SNotConcrete -> (^. S.nameId)
 
-getScopedModuleNameId :: ScopedModule -> S.NameId
-getScopedModuleNameId m = m ^. scopedModuleName . S.nameId
-
 data OpenModule (s :: Stage) = OpenModule
-  { _openModuleName :: ModuleRefType s,
+  { _openModuleName :: ModuleNameType s,
     _openModuleParams :: OpenModuleParams s
   }
   deriving stock (Generic)
@@ -2672,12 +2656,6 @@ judocExamples (Judoc bs) = concatMap goGroup bs
 
 instance HasNameKind ScopedIden where
   getNameKind = getNameKind . (^. scopedIdenFinal)
-
-exportNameSpace :: forall ns. (SingI ns) => Lens' ExportInfo (HashMap Symbol (NameSpaceEntryType ns))
-exportNameSpace = case sing :: SNameSpace ns of
-  SNameSpaceSymbols -> exportSymbols
-  SNameSpaceModules -> exportModuleSymbols
-  SNameSpaceFixities -> exportFixitySymbols
 
 _ConstructorRhsRecord :: Traversal' (ConstructorRhs s) (RhsRecord s)
 _ConstructorRhsRecord f rhs = case rhs of

@@ -14,7 +14,6 @@ import Juvix.Compiler.Backend qualified as Backend
 import Juvix.Compiler.Backend.C qualified as C
 import Juvix.Compiler.Backend.Geb qualified as Geb
 import Juvix.Compiler.Backend.VampIR.Translation qualified as VampIR
-import Juvix.Compiler.Builtins
 import Juvix.Compiler.Concrete.Data.Highlight.Input
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Translation.FromParsed qualified as Scoper
