@@ -315,19 +315,23 @@ resolvePath' mp = do
               }
         )
 
-isModuleOrphan :: (Members '[Files] r) =>
-  TopModulePath -> Sem r Bool
+isModuleOrphan ::
+  (Members '[Files] r) =>
+  TopModulePath ->
+  Sem r Bool
 isModuleOrphan topJuvixPath = do
   let actualPath = getLoc topJuvixPath ^. intervalFile
+
       possiblePaths :: Path Abs Dir -> [Path Abs Dir]
       possiblePaths p = p : toList (parents p)
-  
+
   packageFileExists <- findFile' (possiblePaths (parent actualPath)) packageFilePath
 
   yamlFileExists <- findFile' (possiblePaths (parent actualPath)) juvixYamlFile
-  pathPackageDescription <- globalPackageDescriptionRoot
-  return $ isNothing (packageFileExists <|> yamlFileExists) && not (pathPackageDescription `isProperPrefixOf` actualPath)
 
+  pathPackageDescription <- globalPackageDescriptionRoot
+
+  return $ isNothing (packageFileExists <|> yamlFileExists) && not (pathPackageDescription `isProperPrefixOf` actualPath)
 
 expectedPath' ::
   (Members '[Reader ResolverEnv, Files] r) =>
@@ -341,8 +345,8 @@ expectedPath' m = do
   let _rootInfoKind
         | isOrphan = RootKindSingleFile
         | otherwise = case msingle of
-          Just _ -> RootKindGlobalPackage
-          Nothing -> RootKindLocalPackage 
+            Just _ -> RootKindGlobalPackage
+            Nothing -> RootKindLocalPackage
       _pathInfoRootInfo = Just RootInfo {..}
   return PathInfoTopModule {..}
 

@@ -308,47 +308,33 @@ checkModulePath m = do
   let topJuvixPath :: TopModulePath = m ^. modulePath
   pathInfo :: PathInfoTopModule <- expectedPathInfoTopModule topJuvixPath
   whenJust (pathInfo ^. pathInfoRootInfo) $
-    \expectedRootInfo ->
-      do
-        let actualPath = getLoc topJuvixPath ^. intervalFile
-            relPath = topModulePathToRelativePath' topJuvixPath
+    \expectedRootInfo -> do
+      let actualPath = getLoc topJuvixPath ^. intervalFile
+      case expectedRootInfo ^. rootInfoKind of
+        RootKindSingleFile -> do
+          let expectedName = Text.pack . toFilePath . removeExtensions . filename $ actualPath
+              actualName = topModulePathToDottedPath topJuvixPath
 
-            possiblePaths :: Path Abs Dir -> [Path Abs Dir]
-            possiblePaths p = p : toList (parents p)
-
-        packageFileExists <- findFile' (possiblePaths (parent actualPath)) packageFilePath
-
-        yamlFileExists <- findFile' (possiblePaths (parent actualPath)) juvixYamlFile
-
-        pathPackageDescription <- globalPackageDescriptionRoot
-        let isOrphan = case (packageFileExists <|> yamlFileExists) of
-              Just _ -> False
-              Nothing -> not (pathPackageDescription `isProperPrefixOf` actualPath)
-        -- PackageDescription.* are the only files that can be orphan
-        if
-            | isOrphan -> do
-                let expectedName = Text.pack . toFilePath . removeExtensions . filename $ actualPath
-                    actualName = topModulePathToDottedPath topJuvixPath
-
-                unless (expectedName == actualName) $
-                  throw
-                    ( ErrWrongTopModuleNameOrphan
-                        WrongTopModuleNameOrphan
-                          { _wrongTopModuleNameOrpahnExpectedName = expectedName,
-                            _wrongTopModuleNameOrpahnActualName = topJuvixPath
-                          }
-                    )
-            | otherwise -> do
-                let expectedAbsPath = (expectedRootInfo ^. rootInfoPath) <//> relPath
-                unlessM (equalPaths actualPath expectedAbsPath) $
-                  throw
-                    ( ErrWrongTopModuleName
-                        WrongTopModuleName
-                          { _wrongTopModuleNameActualName = topJuvixPath,
-                            _wrongTopModuleNameExpectedPath = expectedAbsPath,
-                            _wrongTopModuleNameActualPath = actualPath
-                          }
-                    )
+          unless (expectedName == actualName) $
+            throw
+              ( ErrWrongTopModuleNameOrphan
+                  WrongTopModuleNameOrphan
+                    { _wrongTopModuleNameOrpahnExpectedName = expectedName,
+                      _wrongTopModuleNameOrpahnActualName = topJuvixPath
+                    }
+              )
+        _ -> do
+          let relPath = topModulePathToRelativePath' topJuvixPath
+              expectedAbsPath = (expectedRootInfo ^. rootInfoPath) <//> relPath
+          unlessM (equalPaths actualPath expectedAbsPath) $
+            throw
+              ( ErrWrongTopModuleName
+                  WrongTopModuleName
+                    { _wrongTopModuleNameActualName = topJuvixPath,
+                      _wrongTopModuleNameExpectedPath = expectedAbsPath,
+                      _wrongTopModuleNameActualPath = actualPath
+                    }
+              )
 
 topModuleDef ::
   (Members '[Error ParserError, Files, PathResolver, InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) =>

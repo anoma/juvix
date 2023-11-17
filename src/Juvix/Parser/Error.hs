@@ -172,7 +172,8 @@ instance ToGenericError WrongTopModuleNameOrphan where
           opts' = fromGenericOptions opts
           i = getLoc _wrongTopModuleNameOrpahnActualName
           msg =
-            "This is a standalone module, but it's name is not the same as the file name." <> line
+            "This is a standalone module, but it's name is not the same as the file name."
+              <> line
               <> "Expected module name:"
               <+> pretty _wrongTopModuleNameOrpahnExpectedName
                 <> line
