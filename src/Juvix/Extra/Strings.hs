@@ -802,3 +802,6 @@ path_ = "path"
 
 package :: (IsString s) => s
 package = "package"
+
+version :: (IsString s) => s
+version = "version"
