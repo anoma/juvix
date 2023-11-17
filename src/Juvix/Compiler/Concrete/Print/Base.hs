@@ -1066,9 +1066,6 @@ instance (SingI s) => PrettyPrint (UsingItem s) where
         kwmodule = ppCode <$> (ui ^. usingModuleKw)
     kwmodule <?+> (sym' <+?> kwAs' <+?> alias')
 
-instance PrettyPrint ScopedModuleRef where
-  ppCode (ScopedModuleRef (_ :&: ScopedModuleRef' {..})) = ppCode (_scopedModuleRefScopedModule ^. scopedModuleName)
-
 instance (SingI s) => PrettyPrint (Import s) where
   ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => Import s -> Sem r ()
   ppCode i = do

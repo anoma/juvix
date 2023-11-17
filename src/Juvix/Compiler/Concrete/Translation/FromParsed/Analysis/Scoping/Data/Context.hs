@@ -1,10 +1,5 @@
-module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Data.Context
-  ( module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Data.Context,
-    module Juvix.Compiler.Concrete.Data.InfoTable,
-  )
-where
+module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Data.Context where
 
-import Juvix.Compiler.Concrete.Data.InfoTable
 import Juvix.Compiler.Concrete.Data.Scope
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as Scoped
 import Juvix.Compiler.Concrete.Language
@@ -14,7 +9,6 @@ import Juvix.Prelude
 
 data ScoperResult = ScoperResult
   { _resultParserResult :: Parsed.ParserResult,
-    _resultScoperTable :: InfoTable,
     _resultModule :: Module 'Scoped 'ModuleTop,
     _resultScopedModule :: ScopedModule,
     _resultExports :: HashSet NameId,

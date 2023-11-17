@@ -50,8 +50,7 @@ scopeCheck entry importMap pr =
 iniScoperState :: ScoperState
 iniScoperState =
   ScoperState
-    { _scoperModulesCache = ModulesCache mempty,
-      _scoperModules = mempty,
+    { _scoperModules = mempty,
       _scoperScope = mempty,
       _scoperSignatures = mempty,
       _scoperScopedSignatures = mempty,
@@ -79,14 +78,11 @@ scopeCheck' importTab pr m = do
       ScopeParameters
         { _scopeImportedModules = importTab
         }
-    mkResult :: (InfoTable, (ScoperState, ScopedModuleRef' 'ModuleTop)) -> ScoperResult
-    mkResult (st, (scoperSt, mref)) =
-      let md = mref ^. scopedModuleRefModule
-          sm = mref ^. scopedModuleRefScopedModule
-          exp = createExportsTable (sm ^. scopedModuleExportInfo)
+    mkResult :: (InfoTable, (ScoperState, (Module 'Scoped 'ModuleTop, ScopedModule))) -> ScoperResult
+    mkResult (_, (scoperSt, (md, sm))) =
+      let exp = createExportsTable (sm ^. scopedModuleExportInfo)
        in ScoperResult
             { _resultParserResult = pr,
-              _resultScoperTable = st,
               _resultModule = md,
               _resultScopedModule = sm,
               _resultExports = exp,
@@ -387,8 +383,7 @@ checkImport ::
   Import 'Parsed ->
   Sem r (Import 'Scoped)
 checkImport import_@Import {..} = do
-  cache <- gets (^. scoperModulesCache . cachedModules)
-  smodule <- maybe (readScopeModule import_) return (cache ^. at _importModule)
+  smodule <- readScopeModule import_
   let sname :: S.TopModulePath = smodule ^. scopedModulePath
       sname' :: S.Name = set S.nameConcrete (topModulePathToName _importModule) sname
       mid = sname ^. S.nameId
@@ -1005,12 +1000,11 @@ checkTopModule ::
   forall r.
   (Members '[Error ScoperError, Reader ScopeParameters, State ScoperState, InfoTableBuilder, NameIdGen, Reader EntryPoint] r) =>
   Module 'Parsed 'ModuleTop ->
-  Sem r (ScopedModuleRef' 'ModuleTop)
+  Sem r (Module 'Scoped 'ModuleTop, ScopedModule)
 checkTopModule m@Module {..} = do
-  r <- checkedModule
-  modify (over (scoperModulesCache . cachedModules) (HashMap.insert _modulePath (r ^. scopedModuleRefScopedModule)))
-  registerModule (r ^. scopedModuleRefModule)
-  return r
+  (md, smd) <- checkedModule
+  registerModule md
+  return (md, smd)
   where
     freshTopModulePath ::
       forall s.
@@ -1037,14 +1031,14 @@ checkTopModule m@Module {..} = do
     iniScope :: Scope
     iniScope = emptyScope (getTopModulePath m)
 
-    checkedModule :: Sem r (ScopedModuleRef' 'ModuleTop)
+    checkedModule :: Sem r (Module 'Scoped 'ModuleTop, ScopedModule)
     checkedModule = do
-      (s, (m', p)) <- runState iniScope $ do
+      (s, (md, smd, p)) <- runState iniScope $ do
         path' <- freshTopModulePath
         withTopScope $ do
           (e, body') <- topBindings (checkModuleBody _moduleBody)
           doc' <- mapM checkJudoc _moduleDoc
-          let _scopedModuleRefModule =
+          let md =
                 Module
                   { _modulePath = path',
                     _moduleBody = body',
@@ -1055,16 +1049,16 @@ checkTopModule m@Module {..} = do
                     _moduleKwEnd,
                     _moduleId
                   }
-              _scopedModuleRefScopedModule =
+              smd =
                 ScopedModule
                   { _scopedModulePath = path',
                     _scopedModuleName = S.topModulePathName path',
                     _scopedModuleFilePath = P.getModuleFilePath m,
                     _scopedModuleExportInfo = e
                   }
-          return (ScopedModuleRef' {..}, path')
+          return (md, smd, path')
       modify (set (scoperScope . at (p ^. S.nameConcrete)) (Just s))
-      return m'
+      return (md, smd)
 
 withTopScope :: (Members '[State Scope] r) => Sem r a -> Sem r a
 withTopScope ma = do

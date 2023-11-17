@@ -14,7 +14,7 @@ import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Store.Scoped.Language
 import Juvix.Prelude
 
-nsEntry :: forall ns. (SingI ns) => Lens' (NameSpaceEntryType ns) ScopedName
+nsEntry :: forall ns. (SingI ns) => Lens' (NameSpaceEntryType ns) S.Name
 nsEntry = case sing :: SNameSpace ns of
   SNameSpaceModules -> moduleEntry
   SNameSpaceSymbols -> preSymbolName

@@ -698,7 +698,7 @@ goLiteral = fmap go
       LitString s -> Internal.LitString s
       LitInteger i -> Internal.LitNumeric i
 
-goListPattern :: (Members '[Builtins, Error ScoperError, NameIdGen] r) => Concrete.ListPattern 'Scoped -> Sem r Internal.Pattern
+goListPattern :: (Members '[Builtins, Error ScoperError, NameIdGen, Reader ConstructorNameSignatures] r) => Concrete.ListPattern 'Scoped -> Sem r Internal.Pattern
 goListPattern l = do
   nil_ <- getBuiltinName loc BuiltinListNil
   cons_ <- getBuiltinName loc BuiltinListCons
@@ -1133,7 +1133,7 @@ mkConstructorApp :: Internal.ConstrName -> [Internal.PatternArg] -> Internal.Con
 mkConstructorApp a b = Internal.ConstructorApp a b Nothing
 
 goPatternApplication ::
-  (Members '[Builtins, NameIdGen, Error ScoperError] r) =>
+  (Members '[Builtins, NameIdGen, Error ScoperError, Reader ConstructorNameSignatures] r) =>
   PatternApp ->
   Sem r Internal.ConstructorApp
 goPatternApplication a = uncurry mkConstructorApp <$> viewApp (PatternApplication a)
@@ -1144,24 +1144,24 @@ goWildcardConstructor ::
 goWildcardConstructor a = Internal.WildcardConstructor (goScopedIden (a ^. wildcardConstructor))
 
 goPatternConstructor ::
-  (Members '[Builtins, NameIdGen, Error ScoperError] r) =>
+  (Members '[Builtins, NameIdGen, Error ScoperError, Reader ConstructorNameSignatures] r) =>
   ScopedIden ->
   Sem r Internal.ConstructorApp
 goPatternConstructor a = uncurry mkConstructorApp <$> viewApp (PatternConstructor a)
 
 goInfixPatternApplication ::
-  (Members '[Builtins, NameIdGen, Error ScoperError] r) =>
+  (Members '[Builtins, NameIdGen, Error ScoperError, Reader ConstructorNameSignatures] r) =>
   PatternInfixApp ->
   Sem r Internal.ConstructorApp
 goInfixPatternApplication a = uncurry mkConstructorApp <$> viewApp (PatternInfixApplication a)
 
 goPostfixPatternApplication ::
-  (Members '[Builtins, NameIdGen, Error ScoperError] r) =>
+  (Members '[Builtins, NameIdGen, Error ScoperError, Reader ConstructorNameSignatures] r) =>
   PatternPostfixApp ->
   Sem r Internal.ConstructorApp
 goPostfixPatternApplication a = uncurry mkConstructorApp <$> viewApp (PatternPostfixApplication a)
 
-viewApp :: forall r. (Members '[Builtins, NameIdGen, Error ScoperError] r) => Pattern -> Sem r (Internal.ConstrName, [Internal.PatternArg])
+viewApp :: forall r. (Members '[Builtins, NameIdGen, Error ScoperError, Reader ConstructorNameSignatures] r) => Pattern -> Sem r (Internal.ConstrName, [Internal.PatternArg])
 viewApp p = case p of
   PatternConstructor c -> return (goScopedIden c, [])
   PatternWildcardConstructor c -> return (goScopedIden (c ^. wildcardConstructor), [])
@@ -1187,7 +1187,7 @@ viewApp p = case p of
       | otherwise = viewApp (l ^. patternArgPattern)
     err = throw (ErrConstructorExpectedLeftApplication (ConstructorExpectedLeftApplication p))
 
-goPatternArg :: (Members '[Builtins, NameIdGen, Error ScoperError] r) => PatternArg -> Sem r Internal.PatternArg
+goPatternArg :: (Members '[Builtins, NameIdGen, Error ScoperError, Reader ConstructorNameSignatures] r) => PatternArg -> Sem r Internal.PatternArg
 goPatternArg p = do
   pat' <- goPattern (p ^. patternArgPattern)
   return
@@ -1197,7 +1197,7 @@ goPatternArg p = do
         _patternArgPattern = pat'
       }
 
-goPattern :: (Members '[Builtins, NameIdGen, Error ScoperError] r) => Pattern -> Sem r Internal.Pattern
+goPattern :: (Members '[Builtins, NameIdGen, Error ScoperError, Reader ConstructorNameSignatures] r) => Pattern -> Sem r Internal.Pattern
 goPattern p = case p of
   PatternVariable a -> return $ Internal.PatternVariable (goSymbol a)
   PatternList a -> goListPattern a
@@ -1210,9 +1210,8 @@ goPattern p = case p of
   PatternRecord i -> goRecordPattern i
   PatternEmpty {} -> error "unsupported empty pattern"
 
-goRecordPattern :: forall r. (Members '[NameIdGen, Error ScoperError, Builtins] r) => RecordPattern 'Scoped -> Sem r Internal.Pattern
+goRecordPattern :: forall r. (Members '[NameIdGen, Error ScoperError, Reader ConstructorNameSignatures, Builtins] r) => RecordPattern 'Scoped -> Sem r Internal.Pattern
 goRecordPattern r = do
-  let constr = goScopedIden (r ^. recordPatternConstructor)
   params' <- mkPatterns
   return
     ( Internal.PatternConstructorApp
@@ -1223,6 +1222,9 @@ goRecordPattern r = do
           }
     )
   where
+    constr :: Internal.Name
+    constr = goScopedIden (r ^. recordPatternConstructor)
+
     itemField :: RecordPatternItem 'Scoped -> Symbol
     itemField = \case
       RecordPatternItemAssign a -> a ^. recordPatternAssignField
@@ -1256,19 +1258,19 @@ goRecordPattern r = do
 
     mkPatterns :: Sem r [Internal.PatternArg]
     mkPatterns = do
+      sig :: RecordNameSignature 'Scoped <- asks (fromJust . HashMap.lookup (constr ^. Internal.nameId))
+      let maxIdx = length (sig ^. recordNames) - 1
       args <- IntMap.toAscList <$> byIndex
-      execOutputList (go 0 args)
+      execOutputList (go maxIdx 0 args)
       where
         loc = getLoc r
-        maxIdx :: Int
-        maxIdx = length (r ^. recordPatternSignature . unIrrelevant . recordNames) - 1
-        go :: Int -> [(Int, Internal.PatternArg)] -> Sem (Output Internal.PatternArg ': r) ()
-        go idx args
+        go :: Int -> Int -> [(Int, Internal.PatternArg)] -> Sem (Output Internal.PatternArg ': r) ()
+        go maxIdx idx args
           | idx > maxIdx = return ()
           | (ix', arg') : args' <- args,
             ix' == idx = do
               output arg'
-              go (idx + 1) args'
+              go maxIdx (idx + 1) args'
           | otherwise = do
               v <- Internal.freshVar loc ("x" <> show idx)
               output (Internal.patternArgFromVar Internal.Explicit v)

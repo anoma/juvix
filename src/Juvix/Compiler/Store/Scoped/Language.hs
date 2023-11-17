@@ -7,10 +7,8 @@ import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Extra.Serialize
 import Juvix.Prelude
 
-type ScopedName = S.Name
-
 newtype Alias = Alias
-  { _aliasName :: ScopedName
+  { _aliasName :: S.Name
   }
   deriving stock (Show, Eq, Ord, Generic)
 
@@ -26,7 +24,7 @@ instance Serialize PreSymbolEntry
 
 -- | A symbol which is not an alias.
 newtype SymbolEntry = SymbolEntry
-  { _symbolEntry :: ScopedName
+  { _symbolEntry :: S.Name
   }
   deriving stock (Show, Eq, Ord, Generic)
 
@@ -35,14 +33,14 @@ instance Hashable SymbolEntry
 instance Serialize SymbolEntry
 
 newtype ModuleSymbolEntry = ModuleSymbolEntry
-  { _moduleEntry :: ScopedName
+  { _moduleEntry :: S.Name
   }
   deriving stock (Show, Eq, Ord, Generic)
 
 instance Serialize ModuleSymbolEntry
 
 newtype FixitySymbolEntry = FixitySymbolEntry
-  { _fixityEntry :: ScopedName
+  { _fixityEntry :: S.Name
   }
   deriving stock (Show, Eq, Ord, Generic)
 
@@ -60,7 +58,7 @@ instance Serialize ExportInfo
 
 data ScopedModule = ScopedModule
   { _scopedModulePath :: S.TopModulePath,
-    _scopedModuleName :: ScopedName,
+    _scopedModuleName :: S.Name,
     _scopedModuleFilePath :: Path Abs File,
     _scopedModuleExportInfo :: ExportInfo
   }
@@ -98,12 +96,12 @@ symbolEntryNameId = (^. symbolEntry . S.nameId)
 instance HasNameKind SymbolEntry where
   getNameKind = S.getNameKind . (^. symbolEntry)
 
-preSymbolName :: Lens' PreSymbolEntry ScopedName
+preSymbolName :: Lens' PreSymbolEntry S.Name
 preSymbolName f = \case
   PreSymbolAlias a -> PreSymbolAlias <$> traverseOf aliasName f a
   PreSymbolFinal a -> PreSymbolFinal <$> traverseOf symbolEntry f a
 
-exportAllNames :: SimpleFold ExportInfo ScopedName
+exportAllNames :: SimpleFold ExportInfo S.Name
 exportAllNames =
   exportSymbols
     . each

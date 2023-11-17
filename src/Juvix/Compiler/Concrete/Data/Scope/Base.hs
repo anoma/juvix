@@ -23,6 +23,7 @@ data BindingStrategy
 data Scope = Scope
   { _scopePath :: S.AbsModulePath,
     _scopeSymbols :: HashMap Symbol (SymbolInfo 'NameSpaceSymbols),
+    -- | Local module symbols (excluding top modules associated with files)
     _scopeModuleSymbols :: HashMap Symbol (SymbolInfo 'NameSpaceModules),
     _scopeFixitySymbols :: HashMap Symbol (SymbolInfo 'NameSpaceFixities),
     -- | The map from S.NameId to Modules is needed because we support merging
@@ -53,8 +54,7 @@ data RecordInfo = RecordInfo
   }
 
 data ScoperState = ScoperState
-  { _scoperModulesCache :: ModulesCache,
-    -- | Local and top modules
+  { -- | Local and top modules
     _scoperModules :: HashMap S.ModuleNameId ScopedModule,
     _scoperScope :: HashMap TopModulePath Scope,
     _scoperAlias :: HashMap S.NameId PreSymbolEntry,

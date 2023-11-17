@@ -26,7 +26,6 @@ import Juvix.Compiler.Concrete.Data.Name
 import Juvix.Compiler.Concrete.Data.NameRef
 import Juvix.Compiler.Concrete.Data.NameSpace
 import Juvix.Compiler.Concrete.Data.PublicAnn
-import Juvix.Compiler.Concrete.Data.ScopedName (nameDefined)
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Data.Stage
 import Juvix.Compiler.Concrete.Data.VisibilityAnn
@@ -42,7 +41,6 @@ import Juvix.Extra.Serialize
 import Juvix.Parser.Lexer (isDelimiterStr)
 import Juvix.Prelude hiding (show)
 import Juvix.Prelude.Pretty (Pretty, pretty, prettyText)
-import Prelude (show)
 
 type Delims = Irrelevant (Maybe (KeywordRef, KeywordRef))
 
@@ -1111,43 +1109,6 @@ getNameRefId = case sing :: S.SIsConcrete c of
   S.SConcrete -> (^. S.nameId)
   S.SNotConcrete -> (^. S.nameId)
 
-data ScopedModuleRef' (t :: ModuleIsTop) = ScopedModuleRef'
-  { _scopedModuleRefScopedModule :: ScopedModule,
-    _scopedModuleRefModule :: Module 'Scoped t
-  }
-
-instance Show (ScopedModuleRef' t) where
-  show ScopedModuleRef' {..} = show (_scopedModuleRefScopedModule ^. scopedModuleName)
-
-instance Eq (ScopedModuleRef' t) where
-  ScopedModuleRef' m1 _ == ScopedModuleRef' m2 _ = m1 ^. scopedModuleName == m2 ^. scopedModuleName
-
-instance Ord (ScopedModuleRef' t) where
-  compare (ScopedModuleRef' m1 _) (ScopedModuleRef' m2 _) =
-    compare (m1 ^. scopedModuleName) (m2 ^. scopedModuleName)
-
-newtype ScopedModuleRef = ScopedModuleRef
-  { _unModuleRef :: Σ ModuleIsTop (TyCon1 ScopedModuleRef')
-  }
-
-instance Show ScopedModuleRef where
-  show = show . getModuleRefNameId
-
-instance Eq ScopedModuleRef where
-  (==) = (==) `on` getModuleRefNameId
-
-instance Ord ScopedModuleRef where
-  compare = compare `on` getModuleRefNameId
-
-getModuleRefExportInfo :: ScopedModuleRef -> ExportInfo
-getModuleRefExportInfo (ScopedModuleRef (_ :&: ScopedModuleRef' {..})) = _scopedModuleRefScopedModule ^. scopedModuleExportInfo
-
-getModuleRefName :: ScopedModuleRef -> ScopedName
-getModuleRefName (ScopedModuleRef (_ :&: ScopedModuleRef' {..})) = _scopedModuleRefScopedModule ^. scopedModuleName
-
-getModuleRefNameId :: ScopedModuleRef -> S.NameId
-getModuleRefNameId m = getModuleRefName m ^. S.nameId
-
 getScopedModuleNameId :: ScopedModule -> S.NameId
 getScopedModuleNameId m = m ^. scopedModuleName . S.nameId
 
@@ -2014,7 +1975,6 @@ makeLenses ''FunctionDef
 makeLenses ''AxiomDef
 makeLenses ''InductiveParameters
 makeLenses ''InductiveParametersRhs
-makeLenses ''ScopedModuleRef'
 makeLenses ''OpenModule
 makeLenses ''OpenModuleParams
 makeLenses ''PatternApp
@@ -2044,7 +2004,6 @@ makeLenses ''NameSignature
 makeLenses ''RecordNameSignature
 makeLenses ''NameBlock
 makeLenses ''NameItem
-makeLenses ''ScopedModuleRef
 
 fixityFieldHelper :: SimpleGetter (ParsedFixityFields s) (Maybe a) -> SimpleGetter (ParsedFixityInfo s) (Maybe a)
 fixityFieldHelper l = to (^? fixityFields . _Just . l . _Just)
@@ -2173,9 +2132,6 @@ instance (SingI s) => HasLoc (InductiveParameters s) where
 
 instance HasLoc (InductiveDef s) where
   getLoc i = (getLoc <$> i ^. inductivePositive) ?<> getLoc (i ^. inductiveKw)
-
-instance HasLoc ScopedModuleRef where
-  getLoc (ScopedModuleRef (_ :&: r)) = getLoc r
 
 instance (SingI s) => HasLoc (AxiomDef s) where
   getLoc m = getLoc (m ^. axiomKw) <> getLocExpressionType (m ^. axiomType)
@@ -2317,9 +2273,6 @@ instance (SingI s) => HasLoc (Import s) where
   getLoc Import {..} = case sing :: SStage s of
     SParsed -> getLoc _importKw
     SScoped -> getLoc _importKw
-
-instance HasLoc (ScopedModuleRef' t) where
-  getLoc ref = ref ^. scopedModuleRefScopedModule . scopedModuleName . nameDefined
 
 instance (SingI s, SingI t) => HasLoc (Module s t) where
   getLoc m = case sing :: SStage s of
@@ -2719,9 +2672,6 @@ judocExamples (Judoc bs) = concatMap goGroup bs
 
 instance HasNameKind ScopedIden where
   getNameKind = getNameKind . (^. scopedIdenFinal)
-
-overModuleRef' :: (forall t. ScopedModuleRef' t -> ScopedModuleRef' t) -> ScopedModuleRef -> ScopedModuleRef
-overModuleRef' f = over unModuleRef (\(t :&: m'') -> t :&: f m'')
 
 exportNameSpace :: forall ns. (SingI ns) => Lens' ExportInfo (HashMap Symbol (NameSpaceEntryType ns))
 exportNameSpace = case sing :: SNameSpace ns of

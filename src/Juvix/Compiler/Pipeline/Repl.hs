@@ -14,6 +14,8 @@ import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Che
 import Juvix.Compiler.Pipeline.Artifacts
 import Juvix.Compiler.Pipeline.Artifacts.PathResolver
 import Juvix.Compiler.Pipeline.EntryPoint
+import Juvix.Compiler.Pipeline.Loader.PathResolver.Base
+import Juvix.Compiler.Pipeline.Loader.PathResolver.Error
 import Juvix.Compiler.Pipeline.Package.Loader.Error
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff.IO
 import Juvix.Data.Effect.Git.Process
@@ -74,7 +76,6 @@ runToInternal ::
   (Members '[Reader EntryPoint, State Artifacts, Error JuvixError] r) =>
   Sem
     ( State Scoper.ScoperState
-        ': FromConcrete.MCache
         ': Reader Scoper.ScopeParameters
         ': Reader (HashSet NameId)
         ': State Scoper.Scope
