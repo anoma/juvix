@@ -1,5 +1,5 @@
 module A;
 
-import B  open;
+import B open;
 
-axiom a : D; 
+axiom a : D;

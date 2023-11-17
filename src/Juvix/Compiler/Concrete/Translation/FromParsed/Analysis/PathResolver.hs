@@ -363,8 +363,7 @@ re = reinterpret2H helper
       Tactical PathResolver (Sem rInitial) (Reader ResolverEnv ': (State ResolverState ': r)) x
     helper = \case
       RegisterDependencies forceUpdateLockfile -> registerDependencies' forceUpdateLockfile >>= pureT
-      ExpectedPathInfoTopModule m ->
-        expectedPath' m >>= pureT
+      ExpectedPathInfoTopModule m -> expectedPath' m >>= pureT
       WithPath m a -> do
         x :: Either PathResolverError (Path Abs Dir, Path Rel File) <- resolvePath' m
         oldroot <- asks (^. envRoot)

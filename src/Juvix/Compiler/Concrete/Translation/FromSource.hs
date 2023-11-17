@@ -343,7 +343,7 @@ topModuleDef = do
   space >> optional_ stashJudoc
   optional_ stashPragmas
   m <- top moduleDef
-  P.lift (checkModulePath m)
+  P.lift . checkModulePath $ m
   return m
 
 juvixCodeBlockParser ::
