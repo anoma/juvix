@@ -309,6 +309,7 @@ checkModulePath m = do
   pathInfo :: PathInfoTopModule <- expectedPathInfoTopModule topJuvixPath
   pathGlobalProject <- globalRoot
   pathPackageDescription <- globalPackageDescriptionRoot
+  globalStdlib <- juvixStdlibDir . rootBuildDir <$> globalRoot
   whenJust (pathInfo ^. pathInfoRootInfo) $
     \expectedRootInfo ->
       do
@@ -322,6 +323,7 @@ checkModulePath m = do
                 not
                   ( pathGlobalProject `isProperPrefixOf` actualPath
                       || pathPackageDescription `isProperPrefixOf` actualPath
+                      || globalStdlib `isProperPrefixOf` actualPath
                   )
               RootKindLocalPackage -> False
         if
