@@ -349,7 +349,6 @@ tests:
 
         # rebuild the project (should use the first commit)
         cd $temp/base
-        cat juvix.lock.yaml
 
         # compile with the new hash
         juvix compile HelloWorld.juvix
