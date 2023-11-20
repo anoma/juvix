@@ -9,7 +9,6 @@ module Juvix.Compiler.Concrete.Data.NameSignature.Builder
   )
 where
 
-import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Concrete.Data.NameSignature.Error
 import Juvix.Compiler.Concrete.Extra (symbolParsed)
 import Juvix.Compiler.Concrete.Gen qualified as Gen
@@ -46,14 +45,14 @@ instance (SingI s) => HasNameSignature s (FunctionDef s) where
     mapM_ addSigArg (a ^. signArgs)
     whenJust (a ^. signRetType) addExpressionType
 
-instance (SingI s) => HasNameSignature s (InductiveDef s, ConstructorDef s) where
+instance (SingI s) => HasNameSignature s ([InductiveParameters s], ConstructorDef s) where
   addArgs ::
     forall r.
     (Members '[NameSignatureBuilder s] r) =>
-    (InductiveDef s, ConstructorDef s) ->
+    ([InductiveParameters s], ConstructorDef s) ->
     Sem r ()
-  addArgs (i, c) = do
-    mapM_ addConstructorParams (i ^. inductiveParameters)
+  addArgs (iparams, c) = do
+    mapM_ addConstructorParams iparams
     addRhs (c ^. constructorRhs)
     where
       addRecord :: RhsRecord s -> Sem r ()
@@ -63,6 +62,7 @@ instance (SingI s) => HasNameSignature s (InductiveDef s, ConstructorDef s) wher
           addField = \case
             RecordStatementField RecordField {..} -> addSymbol @s Explicit Nothing _fieldName _fieldType
             RecordStatementOperator {} -> return ()
+
       addRhs :: ConstructorRhs s -> Sem r ()
       addRhs = \case
         ConstructorRhsGadt g -> addExpressionType (g ^. rhsGadtType)
@@ -231,13 +231,44 @@ addSymbol' impl mdef sym ty = do
 endBuild' :: forall s r a. Sem (Re s r) a
 endBuild' = get @(BuilderState s) >>= throw
 
-mkRecordNameSignature :: forall s. (SingI s) => RhsRecord s -> RecordNameSignature s
-mkRecordNameSignature rhs =
-  RecordNameSignature $
-    HashMap.fromList
-      [ (symbolParsed _nameItemSymbol, NameItem {..})
-        | (Indexed _nameItemIndex field) <- indexFrom 0 (toList (rhs ^.. rhsRecordStatements . each . _RecordStatementField)),
-          let _nameItemSymbol :: SymbolType s = field ^. fieldName
-              _nameItemType = field ^. fieldType
-              _nameItemDefault :: Maybe (ArgDefault s) = Nothing
-      ]
+-- FIXME is this ever used???
+mkRecordNameSignature :: forall s. (SingI s) => [InductiveParameters s] -> RhsRecord s -> RecordNameSignature s
+mkRecordNameSignature ps rhs =
+  undefined $
+    RecordNameSignature $
+      indexedByHash (symbolParsed . (^. nameItemSymbol)) (run (execOutputList (evalState 0 helper)))
+  where
+    helper :: forall r. (r ~ '[State Int, Output (NameItem s)]) => Sem r ()
+    helper = do
+      forM_ ps emitParameters
+      forOf_ (rhsRecordStatements . each . _RecordStatementField) rhs emitField
+      where
+        emitItem :: (Int -> NameItem s) -> Sem r ()
+        emitItem mkitem = do
+          idx <- get
+          output (mkitem idx)
+          put (idx + 1)
+
+        emitField :: RecordField s -> Sem r ()
+        emitField field = emitItem $ \_nameItemIndex ->
+          NameItem
+            { _nameItemSymbol = field ^. fieldName,
+              _nameItemType = field ^. fieldType,
+              _nameItemDefault = Nothing,
+              _nameItemIndex
+            }
+
+        emitParameters :: InductiveParameters s -> Sem r ()
+        emitParameters params = forM_ (params ^. inductiveParametersNames) emitParam
+          where
+            -- TODO  implicitness!!
+            emitParam :: SymbolType s -> Sem r ()
+            emitParam sym = error "nameblock" $ emitItem $ \_nameItemIndex ->
+              NameItem
+                { _nameItemSymbol = sym,
+                  _nameItemType = fromMaybe defaultType (params ^? inductiveParametersRhs . _Just . inductiveParametersType),
+                  _nameItemDefault = Nothing,
+                  _nameItemIndex
+                }
+              where
+                defaultType = run (runReader (getLocSymbolType sym) Gen.smallUniverseExpression)

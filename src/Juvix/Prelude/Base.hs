@@ -553,3 +553,6 @@ uncurryF g input = uncurry g <$> input
 
 indexedByInt :: (Foldable f) => (a -> Int) -> f a -> IntMap a
 indexedByInt getIx l = IntMap.fromList [(getIx i, i) | i <- toList l]
+
+indexedByHash :: (Foldable f, Hashable k) => (a -> k) -> f a -> HashMap k a
+indexedByHash getIx l = HashMap.fromList [(getIx i, i) | i <- toList l]

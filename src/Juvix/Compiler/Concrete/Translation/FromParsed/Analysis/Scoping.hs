@@ -315,7 +315,7 @@ reserveConstructorSymbol ::
   InductiveDef 'Parsed ->
   ConstructorDef 'Parsed ->
   Sem r S.Symbol
-reserveConstructorSymbol d c = reserveSymbolSignatureOf SKNameConstructor (d, c) (c ^. constructorName)
+reserveConstructorSymbol d c = reserveSymbolSignatureOf SKNameConstructor (d ^. inductiveParameters, c) (c ^. constructorName)
 
 reserveFunctionSymbol ::
   (Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder] r) =>
@@ -903,7 +903,7 @@ checkInductiveDef InductiveDef {..} = do
     inductiveConstructors' <-
       nonEmpty'
         <$> sequence
-          [ checkConstructorDef inductiveName' cname cdef
+          [ checkConstructorDef inductiveName' inductiveParameters' cname cdef
             | (cname, cdef) <- zipExact (toList constructorNames') (toList _inductiveConstructors)
           ]
     return (inductiveParameters', inductiveType', inductiveDoc', inductiveConstructors')
@@ -923,12 +923,12 @@ checkInductiveDef InductiveDef {..} = do
           }
   registerDefaultArgs (inductiveName' ^. S.nameId) indDef
   forM_ inductiveConstructors' $ \c ->
-    registerDefaultArgs (c ^. constructorName . S.nameId) (indDef, c)
+    registerDefaultArgs (c ^. constructorName . S.nameId) (indDef ^. inductiveParameters, c)
   registerInductive @$> indDef
   where
     -- note that the constructor name is not bound here
-    checkConstructorDef :: S.Symbol -> S.Symbol -> ConstructorDef 'Parsed -> Sem r (ConstructorDef 'Scoped)
-    checkConstructorDef tyName constructorName' ConstructorDef {..} = do
+    checkConstructorDef :: S.Symbol -> [InductiveParameters 'Scoped] -> S.Symbol -> ConstructorDef 'Parsed -> Sem r (ConstructorDef 'Scoped)
+    checkConstructorDef tyName tyParams constructorName' ConstructorDef {..} = do
       doc' <- mapM checkJudoc _constructorDoc
       rhs' <- checkRhs _constructorRhs
       registerConstructor tyName
@@ -954,7 +954,7 @@ checkInductiveDef InductiveDef {..} = do
                   { _rhsRecordStatements = fields',
                     _rhsRecordDelim
                   }
-          modify' (set (scoperScopedConstructorFields . at (constructorName' ^. S.nameId)) (Just (mkRecordNameSignature rhs')))
+          modify' (set (scoperScopedConstructorFields . at (constructorName' ^. S.nameId)) (Just (mkRecordNameSignature tyParams rhs')))
           return rhs'
           where
             checkRecordStatements :: [RecordStatement 'Parsed] -> Sem r [RecordStatement 'Scoped]
@@ -1262,7 +1262,7 @@ checkSections sec = do
                       c' <- reserveConstructorSymbol d c
                       let storeSig :: RecordNameSignature 'Parsed -> Sem r' ()
                           storeSig sig = modify' (set (scoperConstructorFields . at (c' ^. S.nameId)) (Just sig))
-                      whenJust (c ^? constructorRhs . _ConstructorRhsRecord) (storeSig . mkRecordNameSignature)
+                      whenJust (c ^? constructorRhs . _ConstructorRhsRecord) (storeSig . mkRecordNameSignature (d ^. inductiveParameters))
                       return c'
 
                     registerRecordType :: S.Symbol -> S.Symbol -> Sem (Fail ': r') ()
@@ -1276,7 +1276,7 @@ checkSections sec = do
                                   mkRec
                                     ^? constructorRhs
                                     . _ConstructorRhsRecord
-                                    . to mkRecordNameSignature
+                                    . to (mkRecordNameSignature (d ^. inductiveParameters))
                               let info =
                                     RecordInfo
                                       { _recordInfoSignature = fs,
