@@ -988,6 +988,88 @@ tests:
       contains: duplicate
     exit-status: 1
 
+  - name: lockfile-update-when-package-file-is-updated
+    command:
+      shell:
+        - bash
+      script: |
+        temp=$(mktemp -d)
+        # trap 'rm -rf -- "$temp"' EXIT
+        echo $temp
+
+        # create dependency
+        mkdir $temp/dep
+        cd $temp/dep
+        git init
+
+        cat <<-EOF > HelloDep.juvix
+        module HelloDep;
+        import Stdlib.Prelude open;
+        main : IO := printStringLn "Hello from dep";
+        EOF
+
+        cat <<-EOF > Package.juvix
+        module Package;
+        import PackageDescription.Basic open;
+        package : Package := basicPackage;
+        EOF
+
+        git add -A
+        git commit -m "commit1"
+
+        # create project that uses dependency
+        mkdir $temp/base
+        cd $temp/base
+
+        cat <<-EOF > Package.juvix
+        module Package;
+        import PackageDescription.V1 open;
+        package : Package := defaultPackage {dependencies := [defaultStdlib ; git "dep1" "$temp/dep" "main"]}
+        EOF
+
+        cat <<-EOF > HelloWorld.juvix
+        -- HelloWorld.juvix
+        module HelloWorld;
+
+        import Stdlib.Prelude open;
+        import HelloDep;
+
+        main : IO := HelloDep.main;
+        EOF
+
+        # compile project to create lock file
+        juvix compile HelloWorld.juvix
+
+        cd $temp/dep
+        cat <<-EOF > HelloDep.juvix
+        module HelloDep;
+        import Stdlib.Prelude open;
+        main : IO := printStringLn "Hello from commit2";
+        EOF
+
+        git add -A
+        git commit -m "commit2"
+
+        cd $temp/base
+        juvix clean
+        juvix compile HelloWorld.juvix
+        ./HelloWorld
+
+        # Update the Package file and recompile
+        # it should use the latest commit
+        echo "-- comment" >> Package.juvix
+        juvix clean
+        juvix compile HelloWorld.juvix
+        ./HelloWorld
+
+    stderr: ""
+    stdout:
+      matches:
+        regex: "Hello from dep\n(.*?)Hello from commit2"
+        options:
+          - dot-all
+    exit-status: 0
+
   - name: git-dependencies-no-fetch-if-ref-exists-in-clone
     command:
       shell:
