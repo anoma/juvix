@@ -287,7 +287,11 @@ tests:
         version: 0.1.0
         EOF
 
+        checksum=$(sha256sum juvix.yaml | cut -d " " -f 1)
+
         cat <<-EOF > juvix.lock.yaml
+        version: 2
+        checksum: $checksum
         dependencies:
           - path: .juvix-build/stdlib/
             dependencies: []
@@ -323,6 +327,7 @@ tests:
         cat <<-EOF > HelloDep.juvix
         module HelloDep;
         import HelloDep2 open;
+        import Stdlib.Prelude open;
         main : IO := printStringLn "This is from the second commit" >> printStringLn hello;
         EOF
 
@@ -342,8 +347,9 @@ tests:
         git add -A
         git commit -m "commit2"
 
-        # rebuild the project (should use the first commit
+        # rebuild the project (should use the first commit)
         cd $temp/base
+        cat juvix.lock.yaml
 
         # compile with the new hash
         juvix compile HelloWorld.juvix
@@ -358,8 +364,7 @@ tests:
         - bash
       script: |
         temp=$(mktemp -d)
-        echo $temp
-        # trap 'rm -rf -- "$temp"' EXIT
+        trap 'rm -rf -- "$temp"' EXIT
 
         # create dependency
         mkdir $temp/dep
@@ -390,7 +395,7 @@ tests:
           - git:
               url: $temp/dep
               name: dep1
-              ref: $dep1hash
+              ref: main
         version: 0.1.0
         EOF
 
@@ -423,18 +428,7 @@ tests:
         # compile project with new ref - should use lockfile ref
         cd $temp/base
 
-        cat <<-EOF > juvix.yaml
-        name: HelloWorld
-        main: HelloWorld.juvix
-        dependencies:
-          - .juvix-build/stdlib
-          - git:
-              url: $temp/dep
-              name: dep1
-              ref: $dep1hash
-        version: 0.1.0
-        EOF
-
+        juvix clean
         juvix compile HelloWorld.juvix
         ./HelloWorld
     stdout:
@@ -642,73 +636,6 @@ tests:
     stdout:
       contains: "Hello from dep1\nHello from dep2"
     exit-status: 0
-
-  - name: git-dependencies-lockfile-missing-dependency
-    command:
-      shell:
-        - bash
-      script: |
-        temp=$(mktemp -d)
-        trap 'rm -rf -- "$temp"' EXIT
-
-        # create dependency
-        mkdir $temp/dep1
-        cd $temp/dep1
-        git init
-
-        cat <<-EOF > HelloDep.juvix
-        module HelloDep;
-        import Stdlib.Prelude open;
-        main : IO := printStringLn "Hello from dep";
-        EOF
-
-        touch juvix.yaml
-
-        git add -A
-        git commit -m "commit1"
-
-        dep1hash=$(git rev-parse HEAD)
-
-        # create project that uses dependency
-        mkdir $temp/base
-        cd $temp/base
-
-        cat <<-EOF > juvix.yaml
-        name: HelloWorld
-        main: HelloWorld.juvix
-        dependencies:
-          - .juvix-build/stdlib/
-          - git:
-              url: $temp/dep1
-              name: dep1
-              ref: $dep1hash
-        version: 0.1.0
-        EOF
-
-        cat <<-EOF > juvix.lock.yaml
-        dependencies:
-          - path: .juvix-build/stdlib/
-            dependencies: []
-        EOF
-
-        cat <<-EOF > HelloWorld.juvix
-        -- HelloWorld.juvix
-        module HelloWorld;
-
-        import Stdlib.Prelude open;
-        import HelloDep;
-
-        main : IO := HelloDep.main;
-        EOF
-
-        # compile and run the project
-        juvix compile HelloWorld.juvix
-    stderr:
-      contains: "dep1"
-    stdout:
-      matches:
-        regex: ".*"
-    exit-status: 1
 
   - name: git-dependencies-update-ref-offline
     command:

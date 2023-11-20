@@ -240,10 +240,12 @@ fast-test-skip-slow:
 	@${STACK} test --fast ${STACKFLAGS} ${STACKTESTFLAGS} --ta '-p "! /slow tests/"'
 
 SMOKE := $(shell command -v smoke 2> /dev/null)
+SHA256SUM := $(shell command -v sha256sum 2> /dev/null)
 
 .PHONY : smoke-only
 smoke-only:
 	@$(if $(SMOKE),, $(error "Smoke not found, please install it from https://github.com/jonaprieto/smoke"))
+	@$(if $(SHA256SUM),, $(error "sha256sum not found, please install the GNU coreutils package (e.g {apt, brew} install coreutils)"))
 	@smoke $(shell find tests -name '*.smoke.yaml')
 
 .PHONY : smoke
