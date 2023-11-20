@@ -176,14 +176,14 @@ registerDependencies' conf = do
           void (addRootDependency conf e glob)
       | otherwise -> do
           lockfile <- addRootDependency conf e (e ^. entryPointRoot)
-          root <- asks (^. envRoot)
-          packageFileChecksum <- SHA256.digestFile (mkPackageFilePath root)
-          whenM shouldWriteLockfile (writeLockfile root packageFileChecksum lockfile)
+          whenM shouldWriteLockfile $ do
+            packageFileChecksum <- SHA256.digestFile (e ^. entryPointPackage . packageFile)
+            lockfilePath' <- lockfilePath
+            writeLockfile lockfilePath' packageFileChecksum lockfile
   where
     shouldWriteLockfile :: Sem r Bool
     shouldWriteLockfile = do
-      root <- asks (^. envRoot)
-      lockfileExists <- fileExists' (mkPackageLockfilePath root)
+      lockfileExists <- lockfilePath >>= fileExists'
       hasRemoteDependencies <- gets (^. resolverHasRemoteDependencies)
       shouldUpdateLockfile' <- gets (^. resolverShouldUpdateLockfile)
 
@@ -191,6 +191,11 @@ registerDependencies' conf = do
           shouldWriteInitialLockfile = not lockfileExists && hasRemoteDependencies
           shouldUpdateLockfile = lockfileExists && shouldUpdateLockfile'
       return (shouldForce || shouldWriteInitialLockfile || shouldUpdateLockfile)
+
+    lockfilePath :: Sem r (Path Abs File)
+    lockfilePath = do
+      root <- asks (^. envRoot)
+      return (mkPackageLockfilePath root)
 
 addRootDependency ::
   forall r.
