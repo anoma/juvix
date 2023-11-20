@@ -33,7 +33,7 @@ newtype Lockfile = Lockfile
 type LockfileV1 = Lockfile
 
 data LockfileV2 = LockfileV2
-  { _lockfileV2PackageFileChecksum :: Text,
+  { _lockfileV2Checksum :: Text,
     _lockfileV2Dependencies :: [LockfileDependency]
   }
   deriving stock (Generic, Show, Eq)
@@ -77,7 +77,7 @@ lockfile' = to $ \case
 checksum :: SimpleGetter VersionedLockfile (Maybe Text)
 checksum = to $ \case
   V1Lockfile {} -> Nothing
-  V2Lockfile l -> Just (l ^. lockfileV2PackageFileChecksum)
+  V2Lockfile l -> Just (l ^. lockfileV2Checksum)
 
 version' :: SimpleGetter VersionedLockfile RawVersionedLockfile
 version' = to $ \case
@@ -113,7 +113,7 @@ instance FromJSON LockfileDependency where
 lockfileOptions :: Options
 lockfileOptions =
   defaultOptions
-    { fieldLabelModifier = over Lens._head toLower . dropPrefix "_lockfile",
+    { fieldLabelModifier = over Lens._head toLower . dropPrefix "_lockfileV2",
       rejectUnknownFields = True,
       omitNothingFields = True
     }
@@ -148,7 +148,7 @@ instance FromJSON VersionedLockfile where
 
       parseV2 :: Parse LockfileParseErr LockfileV2
       parseV2 = do
-        _lockfileV2PackageFileChecksum <- key "packageFileChecksum" asText
+        _lockfileV2Checksum <- key "checksum" asText
         _lockfileV2Dependencies <- key Str.dependencies fromAesonParser
         return LockfileV2 {..}
 
@@ -165,7 +165,7 @@ instance FromJSON VersionedLockfile where
 
       displayErr :: LockfileParseErr -> Text
       displayErr = \case
-        LockfileUnsupportedVersion -> "lockfile error: unsupported version. Supported versions: " <> T.intercalate "," (show . lockfileVersionNumber <$> allVersionedLockfiles)
+        LockfileUnsupportedVersion -> "lockfile error: unsupported version. Supported versions: " <> T.intercalate ", " (show . lockfileVersionNumber <$> allVersionedLockfiles)
 
 mkPackageLockfilePath :: Path Abs Dir -> Path Abs File
 mkPackageLockfilePath = (<//> juvixLockfile)
@@ -208,17 +208,22 @@ mayReadLockfile root = do
 lockfileEncodeConfig :: Config
 lockfileEncodeConfig = setConfCompare keyCompare defConfig
   where
-    -- serialize the dependencies after all other keys
+    -- serialize the dependencies field after all other keys and the version
+    -- field before all other keys
     keyCompare :: Text -> Text -> Ordering
     keyCompare x y =
       if
-          | y == Str.dependencies || x == Str.dependencies -> GT
+          | y == Str.dependencies -> LT
+          | x == Str.dependencies -> GT
+          | x == Str.version -> LT
+          | y == Str.version -> GT
           | otherwise -> compare x y
 
-writeLockfile :: (Members '[Files] r) => Path Abs Dir -> Lockfile -> Sem r ()
-writeLockfile root lf = do
+writeLockfile :: (Members '[Files] r) => Path Abs Dir -> Text -> Lockfile -> Sem r ()
+writeLockfile root _lockfileV2Checksum lf = do
   ensureDir' (parent lockfilePath)
-  writeFileBS lockfilePath (header <> encodePretty lockfileEncodeConfig lf)
+  let v2lf = LockfileV2 {_lockfileV2Dependencies = lf ^. lockfileDependencies, ..}
+  writeFileBS lockfilePath (header <> encodePretty lockfileEncodeConfig (V2Lockfile v2lf))
   where
     lockfilePath :: Path Abs File
     lockfilePath = mkPackageLockfilePath root
