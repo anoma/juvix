@@ -7,7 +7,7 @@ import Juvix.Prelude
 data InternalArityResult = InternalArityResult
   { _resultInternal :: InternalResult,
     _resultModule :: Module,
-    _resultStoredModule :: StoredModule
+    _resultInternalModule :: InternalModule
   }
 
 makeLenses ''InternalArityResult

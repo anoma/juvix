@@ -10,28 +10,28 @@ import Juvix.Compiler.Store.Internal.Data.InfoTable
 import Juvix.Extra.Serialize
 import Juvix.Prelude
 
-data StoredModule = StoredModule
-  { _storedModuleName :: Name,
-    _storedModuleImports :: [Import],
-    _storedModuleInfoTable :: InfoTable
+data InternalModule = InternalModule
+  { _internalModuleName :: Name,
+    _internalModuleImports :: [Import],
+    _internalModuleInfoTable :: InfoTable
   }
   deriving stock (Generic)
 
-instance Serialize StoredModule
+instance Serialize InternalModule
 
-newtype StoredModuleTable = StoredModuleTable
-  { _storedModuleTable :: HashMap Name StoredModule
+newtype InternalModuleTable = InternalModuleTable
+  { _internalModuleTable :: HashMap Name InternalModule
   }
   deriving stock (Generic)
   deriving newtype (Semigroup, Monoid)
 
-instance Serialize StoredModuleTable
+instance Serialize InternalModuleTable
 
-makeLenses ''StoredModule
-makeLenses ''StoredModuleTable
+makeLenses ''InternalModule
+makeLenses ''InternalModuleTable
 
-lookupStoredModule :: StoredModuleTable -> Name -> StoredModule
-lookupStoredModule mtab n = fromJust $ HashMap.lookup n (mtab ^. storedModuleTable)
+lookupInternalModule :: InternalModuleTable -> Name -> InternalModule
+lookupInternalModule mtab n = fromJust $ HashMap.lookup n (mtab ^. internalModuleTable)
 
-insertStoredModule :: StoredModuleTable -> StoredModule -> StoredModuleTable
-insertStoredModule tab sm = over storedModuleTable (HashMap.insert (sm ^. storedModuleName) sm) tab
+insertInternalModule :: InternalModuleTable -> InternalModule -> InternalModuleTable
+insertInternalModule tab sm = over internalModuleTable (HashMap.insert (sm ^. internalModuleName) sm) tab

@@ -11,7 +11,7 @@ import Juvix.Prelude
 
 data InternalResult = InternalResult
   { _resultScoper :: Concrete.ScoperResult,
-    _resultStoredModule :: StoredModule,
+    _resultInternalModule :: InternalModule,
     _resultModule :: Module
   }
 

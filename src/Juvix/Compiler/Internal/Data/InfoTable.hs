@@ -2,7 +2,7 @@ module Juvix.Compiler.Internal.Data.InfoTable
   ( module Juvix.Compiler.Store.Internal.Language,
     buildTable,
     buildInfoTable,
-    computeStoredModule,
+    computeInternalModule,
     extendWithReplExpression,
     lookupConstructor,
     lookupConstructorArgTypes,
@@ -79,21 +79,21 @@ letFunctionDefs e =
       LetFunDef f -> pure f
       LetMutualBlock (MutualBlockLet fs) -> fs
 
-buildInfoTable :: StoredModuleTable -> InfoTable
-buildInfoTable = mconcatMap (^. storedModuleInfoTable) . HashMap.elems . (^. storedModuleTable)
+buildInfoTable :: InternalModuleTable -> InfoTable
+buildInfoTable = mconcatMap (^. internalModuleInfoTable) . HashMap.elems . (^. internalModuleTable)
 
-buildTable :: (Foldable f) => f Module -> StoredModuleTable
+buildTable :: (Foldable f) => f Module -> InternalModuleTable
 buildTable = foldr go mempty
   where
-    go :: Module -> StoredModuleTable -> StoredModuleTable
-    go m mtab = insertStoredModule mtab (computeStoredModule m)
+    go :: Module -> InternalModuleTable -> InternalModuleTable
+    go m mtab = insertInternalModule mtab (computeInternalModule m)
 
-computeStoredModule :: Module -> StoredModule
-computeStoredModule m@Module {..} =
-  StoredModule
-    { _storedModuleName = _moduleName,
-      _storedModuleImports = _moduleBody ^. moduleImports,
-      _storedModuleInfoTable = computeInfoTable m
+computeInternalModule :: Module -> InternalModule
+computeInternalModule m@Module {..} =
+  InternalModule
+    { _internalModuleName = _moduleName,
+      _internalModuleImports = _moduleBody ^. moduleImports,
+      _internalModuleInfoTable = computeInfoTable m
     }
 
 computeInfoTable :: Module -> InfoTable

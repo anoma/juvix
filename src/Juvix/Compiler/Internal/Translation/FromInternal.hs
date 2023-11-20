@@ -27,8 +27,8 @@ arityChecking ::
   InternalResult ->
   Sem r ArityChecking.InternalArityResult
 arityChecking res@InternalResult {..} = do
-  stab <- getStoredModuleTable <$> ask
-  let table = buildInfoTable (insertStoredModule stab _resultStoredModule)
+  stab <- getInternalModuleTable <$> ask
+  let table = buildInfoTable (insertInternalModule stab _resultInternalModule)
   mapError (JuvixError @ArityChecking.ArityCheckerError) $ do
     r <-
       runReader table $
@@ -37,7 +37,7 @@ arityChecking res@InternalResult {..} = do
       ArityChecking.InternalArityResult
         { _resultInternal = res,
           _resultModule = r,
-          _resultStoredModule = computeStoredModule r
+          _resultInternalModule = computeInternalModule r
         }
 
 arityCheckExpression ::
@@ -91,9 +91,9 @@ typeChecking ::
 typeChecking a = do
   (termin, (normalized, (idens, (funs, r)))) <- runTermination iniTerminationState $ do
     res <- a
-    stab <- getStoredModuleTable <$> ask
+    stab <- getInternalModuleTable <$> ask
     let table :: InfoTable
-        table = buildInfoTable (insertStoredModule stab (res ^. ArityChecking.resultStoredModule))
+        table = buildInfoTable (insertInternalModule stab (res ^. ArityChecking.resultInternalModule))
     runOutputList
       . runState (mempty :: TypesTable)
       . runState (mempty :: FunctionsTable)
@@ -103,7 +103,7 @@ typeChecking a = do
   return
     InternalTypedResult
       { _resultModule = r,
-        _resultStoredModule = computeStoredModule r,
+        _resultInternalModule = computeInternalModule r,
         _resultTermination = termin,
         _resultNormalized = HashMap.fromList [(e ^. exampleId, e ^. exampleExpression) | e <- normalized],
         _resultIdenTypes = idens,

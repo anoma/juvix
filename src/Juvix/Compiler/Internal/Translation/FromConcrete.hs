@@ -63,7 +63,7 @@ fromConcrete _resultScoper = do
   let ms = HashMap.elems (mtab ^. Store.moduleTable)
       blts =
         mconcatMap
-          (^. Store.moduleInfoStoredModule . storedModuleInfoTable . infoBuiltins)
+          (^. Store.moduleInfoInternalModule . internalModuleInfoTable . infoBuiltins)
           ms
       exportTbl =
         _resultScoper ^. Scoper.resultExports
@@ -80,7 +80,7 @@ fromConcrete _resultScoper = do
         . runReader @DefaultArgsStack mempty
         . evalBuiltins (BuiltinsState blts)
         $ goTopModule m
-    let _resultStoredModule = Internal.computeStoredModule _resultModule
+    let _resultInternalModule = Internal.computeInternalModule _resultModule
     return InternalResult {..}
   where
     m = _resultScoper ^. Scoper.resultModule

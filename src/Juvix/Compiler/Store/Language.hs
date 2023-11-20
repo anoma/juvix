@@ -10,7 +10,7 @@ import Juvix.Prelude
 
 data ModuleInfo = ModuleInfo
   { _moduleInfoScopedModule :: ScopedModule,
-    _moduleInfoStoredModule :: StoredModule,
+    _moduleInfoInternalModule :: InternalModule,
     _moduleInfoCoreTable :: Core.InfoTable
   }
 
@@ -29,10 +29,10 @@ getScopedModuleTable :: ModuleTable -> ScopedModuleTable
 getScopedModuleTable mtab =
   ScopedModuleTable $ fmap (^. moduleInfoScopedModule) (mtab ^. moduleTable)
 
-getStoredModuleTable :: ModuleTable -> StoredModuleTable
-getStoredModuleTable mtab =
-  StoredModuleTable $
-    HashMap.fromList (map (\mi -> (mi ^. moduleInfoStoredModule . storedModuleName, mi ^. moduleInfoStoredModule)) (HashMap.elems (mtab ^. moduleTable)))
+getInternalModuleTable :: ModuleTable -> InternalModuleTable
+getInternalModuleTable mtab =
+  InternalModuleTable $
+    HashMap.fromList (map (\mi -> (mi ^. moduleInfoInternalModule . internalModuleName, mi ^. moduleInfoInternalModule)) (HashMap.elems (mtab ^. moduleTable)))
 
 mkModuleTable :: [ModuleInfo] -> ModuleTable
 mkModuleTable = ModuleTable . HashMap.fromList . map (\mi -> (getModulePath mi, mi))
