@@ -4,7 +4,7 @@ import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Concrete.Data.Name qualified as C
 import Juvix.Compiler.Concrete.Data.ScopedName (HasNameKind)
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
-import Juvix.Compiler.Store.Scoped.Data.SignatureInfo
+import Juvix.Compiler.Store.Scoped.Data.InfoTable
 import Juvix.Extra.Serialize
 import Juvix.Prelude
 
@@ -62,7 +62,7 @@ data ScopedModule = ScopedModule
     _scopedModuleName :: S.Name,
     _scopedModuleFilePath :: Path Abs File,
     _scopedModuleExportInfo :: ExportInfo,
-    _scopedModuleSigInfo :: SignatureInfo
+    _scopedModuleInfoTable :: InfoTable
   }
   deriving stock (Generic)
 
@@ -125,3 +125,6 @@ createExportsTable = HashSet.fromList . (^.. exportAllNames . S.nameId)
 
 getScopedModuleNameId :: ScopedModule -> S.NameId
 getScopedModuleNameId m = m ^. scopedModuleName . S.nameId
+
+getCombinedInfoTable :: ScopedModuleTable -> InfoTable
+getCombinedInfoTable stab = mconcatMap (^. scopedModuleInfoTable) (stab ^. scopedModuleTable)

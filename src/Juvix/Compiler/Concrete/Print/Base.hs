@@ -9,7 +9,6 @@ where
 
 import Data.HashMap.Strict qualified as HashMap
 import Data.List.NonEmpty.Extra qualified as NonEmpty
-import Juvix.Compiler.Concrete.Data.InfoTable
 import Juvix.Compiler.Concrete.Data.Scope.Base
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Extra qualified as Concrete
@@ -256,10 +255,6 @@ instance (SingI s) => PrettyPrint (Iterator s) where
 
 instance PrettyPrint S.AName where
   ppCode n = annotated (AnnKind (S.getNameKind n)) (noLoc (pretty (n ^. S.anameVerbatim)))
-
-instance PrettyPrint FunctionInfo where
-  ppCode = \case
-    FunctionInfo f -> ppCode f
 
 instance (SingI s) => PrettyPrint (List s) where
   ppCode List {..} = do

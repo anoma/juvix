@@ -2,7 +2,6 @@ module Juvix.Compiler.Concrete.Data.InfoTableBuilder where
 
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
-import Data.IntSet qualified as IntSet
 import Juvix.Compiler.Concrete.Data.Highlight.Input
 import Juvix.Compiler.Concrete.Data.Scope
 import Juvix.Compiler.Concrete.Data.ScopedName
@@ -12,7 +11,7 @@ import Juvix.Prelude
 
 data InfoTableBuilder m a where
   RegisterAxiom :: AxiomDef 'Scoped -> InfoTableBuilder m ()
-  RegisterConstructor :: S.Symbol -> ConstructorDef 'Scoped -> InfoTableBuilder m ()
+  RegisterConstructor :: ConstructorDef 'Scoped -> InfoTableBuilder m ()
   RegisterInductive :: InductiveDef 'Scoped -> InfoTableBuilder m ()
   RegisterFunctionDef :: FunctionDef 'Scoped -> InfoTableBuilder m ()
   RegisterName :: (HasLoc c) => S.Name' c -> InfoTableBuilder m ()
@@ -21,6 +20,8 @@ data InfoTableBuilder m a where
   RegisterFixity :: FixityDef -> InfoTableBuilder m ()
   RegisterPrecedence :: S.NameId -> S.NameId -> InfoTableBuilder m ()
   RegisterHighlightDoc :: S.NameId -> Maybe (Judoc 'Scoped) -> InfoTableBuilder m ()
+  RegisterNameSig :: S.NameId -> NameSignature 'Scoped -> InfoTableBuilder m ()
+  RegisterConstructorSig :: S.NameId -> RecordNameSignature 'Scoped -> InfoTableBuilder m ()
   GetInfoTable :: InfoTableBuilder m InfoTable
 
 makeSem ''InfoTableBuilder
@@ -31,43 +32,29 @@ registerDoc k md = modify (set (infoHighlightDoc . at k) md)
 toState :: Sem (InfoTableBuilder ': r) a -> Sem (State InfoTable ': r) a
 toState = reinterpret $ \case
   RegisterAxiom d ->
-    let ref = d ^. axiomName . S.nameId
-        info = AxiomInfo d
-        j = d ^. axiomDoc
+    let j = d ^. axiomDoc
      in do
-          modify (over infoAxioms (HashMap.insert ref info))
           registerDoc (d ^. axiomName . nameId) j
-  RegisterConstructor ind c ->
-    let ref = c ^. constructorName . S.nameId
-        info = ConstructorInfo c ind
-        j = c ^. constructorDoc
+  RegisterConstructor c ->
+    let j = c ^. constructorDoc
      in do
-          modify (over infoConstructors (HashMap.insert ref info))
           registerDoc (c ^. constructorName . nameId) j
   RegisterInductive ity ->
-    let ref = ity ^. inductiveName . S.nameId
-        info = InductiveInfo {_inductiveInfoDef = ity}
-        j = ity ^. inductiveDoc
+    let j = ity ^. inductiveDoc
      in do
-          modify (over infoInductives (HashMap.insert ref info))
           registerDoc (ity ^. inductiveName . nameId) j
   RegisterFunctionDef f ->
-    let ref = f ^. signName . S.nameId
-        info = FunctionInfo f
-        j = f ^. signDoc
+    let j = f ^. signDoc
      in do
-          modify (set (infoFunctions . at ref) (Just info))
           registerDoc (f ^. signName . nameId) j
   RegisterName n -> modify (over infoHighlightNames (cons (S.anameFromName n)))
   RegisterScopedIden n -> modify (over infoHighlightNames (cons (anameFromScopedIden n)))
   RegisterModule m -> do
     let j = m ^. moduleDoc
-    modify (over infoModules (HashMap.insert (m ^. modulePath) m))
     registerDoc (m ^. modulePath . nameId) j
   RegisterFixity f -> do
     let sid = f ^. fixityDefSymbol . S.nameId
     modify (over infoFixities (HashMap.insert sid f))
-    modify (over infoPriorities (IntSet.insert (f ^. fixityDefPrec)))
     case f ^. fixityDefFixity . fixityId of
       Just fid -> modify (over infoPrecedenceGraph (HashMap.alter (Just . fromMaybe mempty) fid))
       Nothing -> return ()
@@ -75,6 +62,10 @@ toState = reinterpret $ \case
     modify (over infoPrecedenceGraph (HashMap.alter (Just . HashSet.insert h . fromMaybe mempty) l))
   RegisterHighlightDoc fid doc ->
     registerDoc fid doc
+  RegisterNameSig uid sig ->
+    modify (over infoNameSigs (HashMap.insert uid sig))
+  RegisterConstructorSig uid sig ->
+    modify (over infoConstructorSigs (HashMap.insert uid sig))
   GetInfoTable ->
     get
 
@@ -85,7 +76,7 @@ runInfoTableBuilder :: InfoTable -> Sem (InfoTableBuilder ': r) a -> Sem r (Info
 runInfoTableBuilder tab = runState tab . toState
 
 ignoreInfoTableBuilder :: Sem (InfoTableBuilder ': r) a -> Sem r a
-ignoreInfoTableBuilder = evalState emptyInfoTable . toState
+ignoreInfoTableBuilder = evalState mempty . toState
 
 anameFromScopedIden :: ScopedIden -> AName
 anameFromScopedIden s =
@@ -96,3 +87,11 @@ anameFromScopedIden s =
       _anameDefinedLoc = s ^. scopedIdenName . nameDefined,
       _anameVerbatim = s ^. scopedIdenName . nameVerbatim
     }
+
+lookupInfo :: (Members '[InfoTableBuilder, Reader InfoTable] r) => (InfoTable -> Maybe a) -> Sem r a
+lookupInfo f = do
+  tab1 <- ask
+  fromMaybe (fromJust (f tab1)) . f <$> getInfoTable
+
+lookupFixity :: (Members '[InfoTableBuilder, Reader InfoTable] r) => S.NameId -> Sem r FixityDef
+lookupFixity uid = lookupInfo (HashMap.lookup uid . (^. infoFixities))

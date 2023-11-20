@@ -8,6 +8,7 @@ module Juvix.Extra.Serialize
 where
 
 import Data.HashMap.Strict qualified as HashMap
+import Data.HashSet qualified as HashSet
 import Data.Serialize as S
 import Juvix.Prelude.Base
 import Juvix.Prelude.Path
@@ -25,3 +26,8 @@ instance (Hashable k, Serialize k, Serialize a) => Serialize (HashMap k a) where
   put m = S.put (HashMap.toList m)
 
   get = HashMap.fromList <$> S.get
+
+instance (Hashable a, Serialize a) => Serialize (HashSet a) where
+  put s = S.put (HashSet.toList s)
+
+  get = HashSet.fromList <$> S.get

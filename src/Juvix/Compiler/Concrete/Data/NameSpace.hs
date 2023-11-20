@@ -1,4 +1,4 @@
-module Juvix.Compiler.Store.Scoped.Data.NameSpace where
+module Juvix.Compiler.Concrete.Data.NameSpace where
 
 import Data.Kind qualified as GHC
 import Juvix.Compiler.Concrete.Data.Name qualified as C

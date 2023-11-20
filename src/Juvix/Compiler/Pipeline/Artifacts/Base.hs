@@ -1,7 +1,6 @@
 module Juvix.Compiler.Pipeline.Artifacts.Base where
 
 import Juvix.Compiler.Builtins
-import Juvix.Compiler.Concrete.Data.InfoTable qualified as Scoped
 import Juvix.Compiler.Concrete.Data.Scope
 import Juvix.Compiler.Concrete.Data.Scope qualified as Scoped
 import Juvix.Compiler.Concrete.Translation.FromSource.Data.ParserState

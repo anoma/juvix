@@ -98,6 +98,9 @@ data AName = AName
     _anameDocId :: NameId,
     _anameVerbatim :: Text
   }
+  deriving stock (Generic)
+
+instance Serialize AName
 
 makeLenses ''Name'
 makeLenses ''AName

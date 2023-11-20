@@ -12,10 +12,10 @@ import Juvix.Compiler.Concrete.Data.Highlight.Input
 import Juvix.Compiler.Concrete.Data.Highlight.PrettyJudoc
 import Juvix.Compiler.Concrete.Data.Highlight.Properties
 import Juvix.Compiler.Concrete.Data.Highlight.RenderEmacs
-import Juvix.Compiler.Concrete.Data.InfoTable qualified as Scoped
 import Juvix.Compiler.Concrete.Data.ScopedName
 import Juvix.Compiler.Internal.Language qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context qualified as Internal
+import Juvix.Compiler.Store.Scoped.Data.InfoTable qualified as Scoped
 import Juvix.Data.CodeAnn
 import Juvix.Data.Emacs
 import Juvix.Prelude as Prelude hiding (show)
