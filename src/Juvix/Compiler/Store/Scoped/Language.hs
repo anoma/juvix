@@ -68,12 +68,17 @@ data ScopedModule = ScopedModule
 
 instance Serialize ScopedModule
 
+newtype ScopedModuleTable = ScopedModuleTable
+  { _scopedModuleTable :: HashMap C.TopModulePath ScopedModule
+  }
+
 makeLenses ''Alias
 makeLenses ''SymbolEntry
 makeLenses ''ModuleSymbolEntry
 makeLenses ''FixitySymbolEntry
 makeLenses ''ExportInfo
 makeLenses ''ScopedModule
+makeLenses ''ScopedModuleTable
 
 instance HasLoc Alias where
   getLoc = (^. aliasName . S.nameDefined)

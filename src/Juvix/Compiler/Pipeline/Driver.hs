@@ -1,6 +1,6 @@
 module Juvix.Compiler.Pipeline.Driver
   ( processFile,
-    processFileToEval,
+    processFileToStored,
     processModule,
   )
 where
@@ -35,12 +35,12 @@ processFile entry = do
             processModule (entry {_entryPointModulePath = Just path})
         )
 
-processFileToEval ::
+processFileToStored ::
   forall r.
   (Members '[Error JuvixError, Files, GitClone, PathResolver] r) =>
   EntryPoint ->
   Sem r Core.CoreResult
-processFileToEval entry = do
+processFileToStored entry = do
   (res, mtab) <- processFile entry
   runReader res $
     runReader entry $
@@ -55,7 +55,7 @@ processModule ::
   EntryPoint ->
   Sem r Store.ModuleInfo
 processModule entry = do
-  cres <- processFileToEval entry
+  cres <- processFileToStored entry
   undefined
 
 withPath' ::

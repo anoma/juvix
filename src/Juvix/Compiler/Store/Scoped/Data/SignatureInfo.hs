@@ -8,7 +8,7 @@ type NameSignatures = HashMap NameId (NameSignature 'Scoped)
 
 data SignatureInfo = SignatureInfo
   { _sigInfoConstructorSigs :: HashMap NameId (RecordNameSignature 'Scoped),
-    _sigInfoFunctionSigs :: HashMap NameId (NameSignature 'Scoped)
+    _sigInfoNameSigs :: HashMap NameId (NameSignature 'Scoped)
   }
   deriving stock (Generic)
 
@@ -20,7 +20,7 @@ instance Semigroup SignatureInfo where
   s1 <> s2 =
     SignatureInfo
       { _sigInfoConstructorSigs = s1 ^. sigInfoConstructorSigs <> s2 ^. sigInfoConstructorSigs,
-        _sigInfoFunctionSigs = s1 ^. sigInfoFunctionSigs <> s2 ^. sigInfoFunctionSigs
+        _sigInfoNameSigs = s1 ^. sigInfoNameSigs <> s2 ^. sigInfoNameSigs
       }
 
 instance Monoid SignatureInfo where

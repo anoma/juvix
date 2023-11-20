@@ -25,6 +25,10 @@ makeLenses ''ModuleTable
 getModulePath :: ModuleInfo -> TopModulePath
 getModulePath mi = mi ^. moduleInfoScopedModule . scopedModulePath . S.nameConcrete
 
+getScopedModuleTable :: ModuleTable -> ScopedModuleTable
+getScopedModuleTable mtab =
+  ScopedModuleTable $ fmap (^. moduleInfoScopedModule) (mtab ^. moduleTable)
+
 getStoredModuleTable :: ModuleTable -> StoredModuleTable
 getStoredModuleTable mtab =
   StoredModuleTable $

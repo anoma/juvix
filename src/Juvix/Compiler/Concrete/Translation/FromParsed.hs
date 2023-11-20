@@ -20,5 +20,4 @@ fromParsed = do
   e <- ask
   tab <- ask
   r <- ask
-  let tab' = fmap (^. moduleInfoScopedModule) (tab ^. moduleTable)
-  scopeCheck e tab' r
+  scopeCheck e (getScopedModuleTable tab) r

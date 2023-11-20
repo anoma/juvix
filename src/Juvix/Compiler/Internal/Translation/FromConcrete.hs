@@ -69,7 +69,7 @@ fromConcrete _resultScoper = do
         _resultScoper ^. Scoper.resultExports
           <> mconcatMap (createExportsTable . (^. Store.moduleInfoScopedModule . S.scopedModuleExportInfo)) ms
       sigInfo =
-        _resultScoper ^. Scoper.resultSigInfo
+        _resultScoper ^. Scoper.resultScopedModule . S.scopedModuleSigInfo
           <> mconcatMap (^. Store.moduleInfoScopedModule . S.scopedModuleSigInfo) ms
   mapError (JuvixError @ScoperError) $ do
     _resultModule <-
@@ -383,7 +383,7 @@ goFunctionDef FunctionDef {..} = do
   _funDefExamples <- goExamples _signDoc
   _funDefPragmas <- goPragmas _signPragmas
   _funDefBody <- goBody
-  msig <- asks (^. sigInfoFunctionSigs . at (_funDefName ^. Internal.nameId))
+  msig <- asks (^. sigInfoNameSigs . at (_funDefName ^. Internal.nameId))
   _funDefArgsInfo <- maybe (return mempty) goNameSignature msig
   let fun = Internal.FunctionDef {..}
   whenJust _signBuiltin (registerBuiltinFunction fun . (^. withLocParam))
@@ -765,7 +765,7 @@ goExpression = \case
   where
     goNamedApplication :: Concrete.NamedApplication 'Scoped -> Sem r Internal.Expression
     goNamedApplication w = do
-      s <- asks (^. sigInfoFunctionSigs)
+      s <- asks (^. sigInfoNameSigs)
       runReader s (runNamedArguments w) >>= goDesugaredNamedApplication
 
     goNamedApplicationNew :: Concrete.NamedApplicationNew 'Scoped -> Sem r Internal.Expression
@@ -773,7 +773,7 @@ goExpression = \case
       Nothing -> return $ goIden (napp ^. namedApplicationNewName)
       Just appargs -> do
         let name = napp ^. namedApplicationNewName . scopedIdenName
-        sig <- fromJust <$> asks (^. sigInfoFunctionSigs . at (name ^. S.nameId))
+        sig <- fromJust <$> asks (^. sigInfoNameSigs . at (name ^. S.nameId))
         cls <- goArgs appargs
         let args :: [Internal.Name] = appargs ^.. each . namedArgumentNewFunDef . signName . to goSymbol
             -- changes the kind from Variable to Function
