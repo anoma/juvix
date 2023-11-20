@@ -33,7 +33,8 @@ newtype Lockfile = Lockfile
 type LockfileV1 = Lockfile
 
 data LockfileV2 = LockfileV2
-  { _lockfileV2Checksum :: Text,
+  { _lockfileV2Version :: Int,
+    _lockfileV2Checksum :: Text,
     _lockfileV2Dependencies :: [LockfileDependency]
   }
   deriving stock (Generic, Show, Eq)
@@ -43,23 +44,22 @@ data VersionedLockfile
   | V2Lockfile LockfileV2
   deriving stock (Show, Eq)
 
-data RawVersionedLockfile
-  = RawLockfileV1
-  | RawLockfileV2
+data LockfileVersionTag
+  = LockfileV1Tag
+  | LockfileV2Tag
   deriving stock (Show, Eq)
 
-allVersionedLockfiles :: [RawVersionedLockfile]
-allVersionedLockfiles = [RawLockfileV1, RawLockfileV2]
+allVersionedLockfiles :: [LockfileVersionTag]
+allVersionedLockfiles = [LockfileV1Tag, LockfileV2Tag]
 
-lockfileVersionNumber :: RawVersionedLockfile -> Int
+lockfileVersionNumber :: LockfileVersionTag -> Int
 lockfileVersionNumber = \case
-  RawLockfileV1 -> 1
-  RawLockfileV2 -> 2
+  LockfileV1Tag -> 1
+  LockfileV2Tag -> 2
 
 data LockfileInfo = LockfileInfo
   { _lockfileInfoPath :: Path Abs File,
     _lockfileInfoChecksum :: Maybe Text,
-    _lockfileInfoVersion :: RawVersionedLockfile,
     _lockfileInfoLockfile :: Lockfile
   }
   deriving stock (Eq, Show)
@@ -68,6 +68,10 @@ makeLenses ''LockfileDependency
 makeLenses ''Lockfile
 makeLenses ''LockfileV2
 makeLenses ''LockfileInfo
+
+mkLockfileV2 :: Text -> [LockfileDependency] -> LockfileV2
+mkLockfileV2 _lockfileV2Checksum _lockfileV2Dependencies =
+  LockfileV2 {_lockfileV2Version = lockfileVersionNumber LockfileV2Tag, ..}
 
 lockfile' :: SimpleGetter VersionedLockfile Lockfile
 lockfile' = to $ \case
@@ -78,11 +82,6 @@ checksum :: SimpleGetter VersionedLockfile (Maybe Text)
 checksum = to $ \case
   V1Lockfile {} -> Nothing
   V2Lockfile l -> Just (l ^. lockfileV2Checksum)
-
-version' :: SimpleGetter VersionedLockfile RawVersionedLockfile
-version' = to $ \case
-  V1Lockfile {} -> RawLockfileV1
-  V2Lockfile {} -> RawLockfileV2
 
 instance ToJSON LockfileDependency where
   toJSON d = object [dep, Str.dependencies .= toJSON (d ^. lockfileDependencyDependencies)]
@@ -110,57 +109,45 @@ instance FromJSON LockfileDependency where
       p' :: Parse' Dependency
       p' = DependencyPath <$> (key Str.path_ fromAesonParser) Aeson.<|> DependencyGit <$> (key Str.git fromAesonParser)
 
-lockfileOptions :: Options
-lockfileOptions =
+lockfileV2Options :: Options
+lockfileV2Options =
   defaultOptions
     { fieldLabelModifier = over Lens._head toLower . dropPrefix "_lockfileV2",
       rejectUnknownFields = True,
       omitNothingFields = True
     }
 
-instance ToJSON Lockfile where
-  toJSON = genericToJSON lockfileOptions
-  toEncoding = genericToEncoding lockfileOptions
-
 instance ToJSON LockfileV2 where
-  toJSON = genericToJSON lockfileOptions
-  toEncoding = genericToEncoding lockfileOptions
-
-instance FromJSON Lockfile where
-  parseJSON = toAesonParser' (Lockfile <$> (key Str.dependencies fromAesonParser))
+  toJSON = genericToJSON lockfileV2Options
+  toEncoding = genericToEncoding lockfileV2Options
 
 data LockfileParseErr = LockfileUnsupportedVersion
-
-instance ToJSON VersionedLockfile where
-  toJSON = \case
-    V1Lockfile x -> toJSON x
-    V2Lockfile x -> appendFields [Str.version .= toJSON (lockfileVersionNumber RawLockfileV2)] (toJSON x)
 
 instance FromJSON VersionedLockfile where
   parseJSON = toAesonParser displayErr $ do
     v <- parseVersion
     case v of
-      RawLockfileV1 -> V1Lockfile <$> parseV1
-      RawLockfileV2 -> V2Lockfile <$> parseV2
+      LockfileV1Tag -> V1Lockfile <$> parseV1
+      LockfileV2Tag -> V2Lockfile <$> parseV2
     where
       parseV1 :: Parse LockfileParseErr Lockfile
       parseV1 = Lockfile <$> key Str.dependencies fromAesonParser
 
       parseV2 :: Parse LockfileParseErr LockfileV2
       parseV2 = do
-        _lockfileV2Checksum <- key "checksum" asText
-        _lockfileV2Dependencies <- key Str.dependencies fromAesonParser
-        return LockfileV2 {..}
+        checksum' <- key "checksum" asText
+        deps <- key Str.dependencies fromAesonParser
+        return (mkLockfileV2 checksum' deps)
 
-      parseVersion :: Parse LockfileParseErr RawVersionedLockfile
-      parseVersion = fromMaybeM (return RawLockfileV1) (keyMay Str.version parseVersion')
+      parseVersion :: Parse LockfileParseErr LockfileVersionTag
+      parseVersion = fromMaybeM (return LockfileV1Tag) (keyMay Str.version parseVersion')
         where
-          parseVersion' :: Parse LockfileParseErr RawVersionedLockfile
+          parseVersion' :: Parse LockfileParseErr LockfileVersionTag
           parseVersion' = do
             n <- asIntegral
             if
-                | lockfileVersionNumber RawLockfileV1 == n -> return RawLockfileV1
-                | lockfileVersionNumber RawLockfileV2 == n -> return RawLockfileV2
+                | lockfileVersionNumber LockfileV1Tag == n -> return LockfileV1Tag
+                | lockfileVersionNumber LockfileV2Tag == n -> return LockfileV2Tag
                 | otherwise -> throwCustomError LockfileUnsupportedVersion
 
       displayErr :: LockfileParseErr -> Text
@@ -187,7 +174,6 @@ mayReadLockfile root = do
     mkLockfileInfo _lockfileInfoPath vl =
       LockfileInfo
         { _lockfileInfoChecksum = vl ^. checksum,
-          _lockfileInfoVersion = vl ^. version',
           _lockfileInfoLockfile = vl ^. lockfile',
           ..
         }
@@ -220,10 +206,10 @@ lockfileEncodeConfig = setConfCompare keyCompare defConfig
           | otherwise -> compare x y
 
 writeLockfile :: (Members '[Files] r) => Path Abs File -> Text -> Lockfile -> Sem r ()
-writeLockfile lockfilePath _lockfileV2Checksum lf = do
+writeLockfile lockfilePath checksum' lf = do
   ensureDir' (parent lockfilePath)
-  let v2lf = LockfileV2 {_lockfileV2Dependencies = lf ^. lockfileDependencies, ..}
-  writeFileBS lockfilePath (header <> encodePretty lockfileEncodeConfig (V2Lockfile v2lf))
+  let v2lf = mkLockfileV2 checksum' (lf ^. lockfileDependencies)
+  writeFileBS lockfilePath (header <> encodePretty lockfileEncodeConfig v2lf)
   where
     header :: ByteString
     header = [i|\# This file was autogenerated by Juvix version #{versionDoc}.\n\# Do not edit this file manually.\n\n|]
