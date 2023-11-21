@@ -12,9 +12,7 @@ data InfoTable = InfoTable
     _infoConstructors :: HashMap Tag ConstructorInfo,
     _infoAxioms :: HashMap Text AxiomInfo,
     _infoSpecialisations :: HashMap Symbol [SpecialisationInfo],
-    _infoBuiltins :: HashMap BuiltinPrim IdentKind,
-    _infoPriorities :: IntSet,
-    _infoPrecedenceGraph :: HashMap NameId (Set NameId)
+    _infoBuiltins :: HashMap BuiltinPrim IdentKind
   }
   deriving stock (Generic)
 
@@ -28,9 +26,7 @@ emptyInfoTable =
       _infoConstructors = mempty,
       _infoAxioms = mempty,
       _infoSpecialisations = mempty,
-      _infoBuiltins = mempty,
-      _infoPriorities = mempty,
-      _infoPrecedenceGraph = mempty
+      _infoBuiltins = mempty
     }
 
 data IdentKind

@@ -80,7 +80,7 @@ fromConcrete _resultScoper = do
         . runReader @DefaultArgsStack mempty
         . evalBuiltins (BuiltinsState blts)
         $ goTopModule m
-    let _resultInternalModule = Internal.computeInternalModule _resultModule
+    let _resultInternalModule = Internal.computeInternalModule mempty mempty _resultModule
     return InternalResult {..}
   where
     m = _resultScoper ^. Scoper.resultModule

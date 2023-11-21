@@ -37,7 +37,7 @@ arityChecking res@InternalResult {..} = do
       ArityChecking.InternalArityResult
         { _resultInternal = res,
           _resultModule = r,
-          _resultInternalModule = computeInternalModule r
+          _resultInternalModule = computeInternalModule mempty mempty r
         }
 
 arityCheckExpression ::
@@ -89,14 +89,15 @@ typeChecking ::
   Sem (Termination ': r) ArityChecking.InternalArityResult ->
   Sem r InternalTypedResult
 typeChecking a = do
-  (termin, (normalized, (idens, (funs, r)))) <- runTermination iniTerminationState $ do
+  (termin, (res, (normalized, (idens, (funs, r))))) <- runTermination iniTerminationState $ do
     res <- a
     itab <- getInternalModuleTable <$> ask
     let md :: InternalModule
         md = res ^. ArityChecking.resultInternalModule
         table :: InfoTable
         table = buildInfoTable (insertInternalModule itab md)
-    runOutputList
+    fmap (res,)
+      . runOutputList
       . runState (computeTypesTable itab)
       . runState (computeFunctionsTable itab)
       . runReader table
@@ -104,8 +105,9 @@ typeChecking a = do
       $ checkTable >> checkModule (res ^. ArityChecking.resultModule)
   return
     InternalTypedResult
-      { _resultModule = r,
-        _resultInternalModule = computeInternalModule r,
+      { _resultInternal = res,
+        _resultModule = r,
+        _resultInternalModule = computeInternalModule idens funs r,
         _resultTermination = termin,
         _resultNormalized = HashMap.fromList [(e ^. exampleId, e ^. exampleExpression) | e <- normalized],
         _resultIdenTypes = idens,

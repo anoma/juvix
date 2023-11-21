@@ -6,9 +6,13 @@ module Juvix.Compiler.Pipeline.Driver
 where
 
 import Juvix.Compiler.Concrete.Language
+import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Data.Context qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
 import Juvix.Compiler.Concrete.Translation.FromSource.Data.ParserState qualified as Parser
 import Juvix.Compiler.Core.Translation.FromInternal.Data.Context qualified as Core
+import Juvix.Compiler.Internal.Translation.FromConcrete.Data.Context qualified as Internal
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Data.Context qualified as InternalArity
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context qualified as InternalTyped
 import Juvix.Compiler.Pipeline
 import Juvix.Compiler.Pipeline.Loader.PathResolver
 import Juvix.Compiler.Store.Language qualified as Store
@@ -47,16 +51,22 @@ processFileToStoredCore entry = do
       runReader mtab $
         evalTopNameIdGen
           (res ^. Parser.resultModule . moduleId)
-          upToEval
+          upToStoredCore
 
 processModule ::
   forall r.
   (Members '[Error JuvixError, Files, GitClone, PathResolver] r) =>
   EntryPoint ->
   Sem r Store.ModuleInfo
-processModule entry = do
-  cres <- processFileToStoredCore entry
-  undefined
+processModule entry = mkModuleInfo <$> processFileToStoredCore entry
+  where
+    mkModuleInfo :: Core.CoreResult -> Store.ModuleInfo
+    mkModuleInfo Core.CoreResult {..} =
+      Store.ModuleInfo
+        { _moduleInfoScopedModule = _coreResultInternalTypedResult ^. InternalTyped.resultInternal . InternalArity.resultInternal . Internal.resultScoper . Scoper.resultScopedModule,
+          _moduleInfoInternalModule = _coreResultInternalTypedResult ^. InternalTyped.resultInternalModule,
+          _moduleInfoCoreTable = undefined
+        }
 
 withPath' ::
   forall r a.

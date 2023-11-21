@@ -1,6 +1,5 @@
 module Juvix.Compiler.Internal.Data.InfoTable
   ( module Juvix.Compiler.Store.Internal.Language,
-    buildTable,
     buildInfoTable,
     computeInternalModule,
     extendWithReplExpression,
@@ -26,6 +25,8 @@ import Juvix.Compiler.Internal.Data.CoercionInfo
 import Juvix.Compiler.Internal.Data.InstanceInfo
 import Juvix.Compiler.Internal.Extra
 import Juvix.Compiler.Internal.Pretty (ppTrace)
+import Juvix.Compiler.Store.Internal.Data.FunctionsTable
+import Juvix.Compiler.Store.Internal.Data.TypesTable
 import Juvix.Compiler.Store.Internal.Language
 import Juvix.Prelude
 
@@ -82,18 +83,14 @@ letFunctionDefs e =
 buildInfoTable :: InternalModuleTable -> InfoTable
 buildInfoTable = mconcatMap (^. internalModuleInfoTable) . HashMap.elems . (^. internalModuleTable)
 
-buildTable :: (Foldable f) => f Module -> InternalModuleTable
-buildTable = foldr go mempty
-  where
-    go :: Module -> InternalModuleTable -> InternalModuleTable
-    go m mtab = insertInternalModule mtab (computeInternalModule m)
-
-computeInternalModule :: Module -> InternalModule
-computeInternalModule m@Module {..} =
+computeInternalModule :: TypesTable -> FunctionsTable -> Module -> InternalModule
+computeInternalModule tysTab funsTab m@Module {..} =
   InternalModule
     { _internalModuleName = _moduleName,
       _internalModuleImports = _moduleBody ^. moduleImports,
-      _internalModuleInfoTable = computeInfoTable m
+      _internalModuleInfoTable = computeInfoTable m,
+      _internalModuleTypesTable = tysTab,
+      _internalModuleFunctionsTable = funsTab
     }
 
 computeInfoTable :: Module -> InfoTable
