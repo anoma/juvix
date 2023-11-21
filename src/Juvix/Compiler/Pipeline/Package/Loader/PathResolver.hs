@@ -49,16 +49,16 @@ runPackagePathResolver rootPath sem = do
               { _rootInfoPath = globalStdlib,
                 _rootInfoKind = RootKindPackage
               }
-      | relPath `HashSet.member` pkgFiles =
-          Just $
-            RootInfo
-              { _rootInfoPath = globalPackageDir,
-                _rootInfoKind = RootKindPackage
-              }
       | relPath == packageFilePath =
           Just $
             RootInfo
               { _rootInfoPath = rootPath,
+                _rootInfoKind = RootKindPackage
+              }
+      | relPath `HashSet.member` pkgFiles =
+          Just $
+            RootInfo
+              { _rootInfoPath = globalPackageDir,
                 _rootInfoKind = RootKindPackage
               }
       | otherwise = Nothing
