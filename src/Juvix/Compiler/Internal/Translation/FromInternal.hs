@@ -62,10 +62,10 @@ typeCheckExpressionType ::
 typeCheckExpressionType exp = do
   table <- extendedTableReplArtifacts exp
   runTypesTableArtifacts
-    . ignoreHighlightBuilder
     . runFunctionsTableArtifacts
     . runBuiltinsArtifacts
     . runNameIdGenArtifacts
+    . ignoreHighlightBuilder
     . runReader table
     . ignoreOutput @Example
     . withEmptyVars
@@ -91,12 +91,14 @@ typeChecking ::
 typeChecking a = do
   (termin, (normalized, (idens, (funs, r)))) <- runTermination iniTerminationState $ do
     res <- a
-    stab <- getInternalModuleTable <$> ask
-    let table :: InfoTable
-        table = buildInfoTable (insertInternalModule stab (res ^. ArityChecking.resultInternalModule))
+    itab <- getInternalModuleTable <$> ask
+    let md :: InternalModule
+        md = res ^. ArityChecking.resultInternalModule
+        table :: InfoTable
+        table = buildInfoTable (insertInternalModule itab md)
     runOutputList
-      . runState (mempty :: TypesTable)
-      . runState (mempty :: FunctionsTable)
+      . runState (computeTypesTable itab)
+      . runState (computeFunctionsTable itab)
       . runReader table
       . mapError (JuvixError @TypeCheckerError)
       $ checkTable >> checkModule (res ^. ArityChecking.resultModule)

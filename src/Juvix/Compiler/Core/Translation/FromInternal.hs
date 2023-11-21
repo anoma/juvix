@@ -18,11 +18,10 @@ import Juvix.Compiler.Internal.Extra qualified as Internal
 import Juvix.Compiler.Internal.Pretty qualified as Internal
 import Juvix.Compiler.Internal.Translation.Extra qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking qualified as InternalTyped
+import Juvix.Compiler.Store.Language qualified as Store
 import Juvix.Data.Loc qualified as Loc
 import Juvix.Data.PPOutput
 import Juvix.Extra.Strings qualified as Str
-
-type MVisit = Visit Internal.ModuleIndex
 
 data PreInductiveDef = PreInductiveDef
   { _preInductiveInternal :: Internal.InductiveDef,
@@ -49,40 +48,41 @@ unsupported thing = error ("Internal to Core: Not yet supported: " <> thing)
 mkIdentIndex :: Name -> Text
 mkIdentIndex = show . (^. Internal.nameId)
 
-fromInternal :: (Member NameIdGen k) => Internal.InternalTypedResult -> Sem k CoreResult
+fromInternal :: (Members '[NameIdGen, Reader Store.ModuleTable] k) => Internal.InternalTypedResult -> Sem k CoreResult
 fromInternal i = do
+  importTab <- asks Store.getInternalModuleTable
   res <-
     execInfoTableBuilder emptyInfoTable
       . evalState (i ^. InternalTyped.resultFunctions)
       . runReader (i ^. InternalTyped.resultIdenTypes)
-      $ f
+      $ do
+        reserveLiteralIntToNatSymbol
+        reserveLiteralIntToIntSymbol
+        let resultModule = i ^. InternalTyped.resultModule
+            resultTable =
+              Internal.buildInfoTable importTab
+                <> i ^. InternalTyped.resultInternalModule . Internal.internalModuleInfoTable
+        runReader resultTable $
+          goModule resultModule
+        tab <- getInfoTable
+        when
+          (isNothing (lookupBuiltinInductive tab BuiltinBool))
+          declareBoolBuiltins
+        setupLiteralIntToNat literalIntToNatNode
+        setupLiteralIntToInt literalIntToIntNode
   return $
     CoreResult
       { _coreResultTable = res,
         _coreResultInternalTypedResult = i
       }
-  where
-    f :: (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, State InternalTyped.FunctionsTable, NameIdGen] r) => Sem r ()
-    f = do
-      reserveLiteralIntToNatSymbol
-      reserveLiteralIntToIntSymbol
-      let resultModules = toList (i ^. InternalTyped.resultModules)
-          resultTable = i ^. InternalTyped.resultTable
-      runReader (Internal.buildInfoTable resultTable)
-        . evalVisitEmpty goModuleNoVisit
-        $ mapM_ goModule resultModules
-      tab <- getInfoTable
-      when
-        (isNothing (lookupBuiltinInductive tab BuiltinBool))
-        declareBoolBuiltins
-      setupLiteralIntToNat literalIntToNatNode
-      setupLiteralIntToInt literalIntToIntNode
 
-fromInternalExpression :: (Member NameIdGen r) => CoreResult -> Internal.Expression -> Sem r Node
-fromInternalExpression res exp = do
-  let mtab = res ^. coreResultInternalTypedResult . InternalTyped.resultTable
+fromInternalExpression :: (Member NameIdGen r) => Internal.InternalModuleTable -> CoreResult -> Internal.Expression -> Sem r Node
+fromInternalExpression importTab res exp = do
+  let mtab =
+        res ^. coreResultInternalTypedResult . InternalTyped.resultInternalModule . Internal.internalModuleInfoTable
+          <> Internal.buildInfoTable importTab
   fmap snd
-    . runReader (Internal.buildInfoTable mtab)
+    . runReader mtab
     . runInfoTableBuilder (res ^. coreResultTable)
     . evalState (res ^. coreResultInternalTypedResult . InternalTyped.resultFunctions)
     . runReader (res ^. coreResultInternalTypedResult . InternalTyped.resultIdenTypes)
@@ -90,17 +90,10 @@ fromInternalExpression res exp = do
 
 goModule ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable, MVisit] r) =>
+  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable, NameIdGen] r) =>
   Internal.Module ->
   Sem r ()
-goModule = visit . Internal.ModuleIndex
-
-goModuleNoVisit ::
-  forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable, NameIdGen, MVisit] r) =>
-  Internal.ModuleIndex ->
-  Sem r ()
-goModuleNoVisit (Internal.ModuleIndex m) = do
+goModule m = do
   mapM_ goMutualBlock (m ^. Internal.moduleBody . Internal.moduleStatements)
 
 -- | predefine an inductive definition
@@ -713,7 +706,7 @@ fromPatternArg pa = case pa ^. Internal.patternArgName of
 
     getPatternType :: Name -> Sem r Type
     getPatternType n = do
-      ty <- asks (fromJust . HashMap.lookup (n ^. nameId))
+      ty <- asks (fromJust . HashMap.lookup (n ^. nameId) . (^. InternalTyped.typesTable))
       idt :: IndexTable <- get
       runReader idt (goType ty)
 

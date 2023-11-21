@@ -12,7 +12,7 @@ import Juvix.Compiler.Core.Evaluator
 import Juvix.Compiler.Core.Extra.Value
 import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Pipeline
-import Juvix.Compiler.Pipeline.Driver (processFileToStored)
+import Juvix.Compiler.Pipeline.Driver (processFileToStoredCore)
 import Juvix.Compiler.Pipeline.Package.Loader.Error
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff
 import Juvix.Compiler.Pipeline.Package.Loader.PathResolver
@@ -131,7 +131,7 @@ loadPackage' packagePath = do
       . mapError (JuvixError @GitProcessError)
       . runGitProcess
       . runPackagePathResolver rootPath
-      $ processFileToStored packageEntryPoint
+      $ processFileToStoredCore packageEntryPoint
     )
   where
     rootPath :: Path Abs Dir

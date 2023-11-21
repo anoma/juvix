@@ -32,7 +32,7 @@ registerConstructor ctr = do
 
 registerNameIdType :: (Members '[State TypesTable, Reader InfoTable] r) => NameId -> Expression -> Sem r ()
 registerNameIdType uid ty = do
-  modify (HashMap.insert uid ty)
+  modify (over typesTable (HashMap.insert uid ty))
 
 checkTable ::
   (Members '[Reader InfoTable, Error TypeCheckerError] r) =>

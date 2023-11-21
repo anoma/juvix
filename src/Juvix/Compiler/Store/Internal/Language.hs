@@ -6,14 +6,18 @@ where
 
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Internal.Language
+import Juvix.Compiler.Store.Internal.Data.FunctionsTable
 import Juvix.Compiler.Store.Internal.Data.InfoTable
+import Juvix.Compiler.Store.Internal.Data.TypesTable
 import Juvix.Extra.Serialize
 import Juvix.Prelude
 
 data InternalModule = InternalModule
   { _internalModuleName :: Name,
     _internalModuleImports :: [Import],
-    _internalModuleInfoTable :: InfoTable
+    _internalModuleInfoTable :: InfoTable,
+    _internalModuleTypesTable :: TypesTable,
+    _internalModuleFunctionsTable :: FunctionsTable
   }
   deriving stock (Generic)
 
@@ -35,3 +39,9 @@ lookupInternalModule mtab n = fromJust $ HashMap.lookup n (mtab ^. internalModul
 
 insertInternalModule :: InternalModuleTable -> InternalModule -> InternalModuleTable
 insertInternalModule tab sm = over internalModuleTable (HashMap.insert (sm ^. internalModuleName) sm) tab
+
+computeTypesTable :: InternalModuleTable -> TypesTable
+computeTypesTable = mconcatMap (^. internalModuleTypesTable) . (^. internalModuleTable)
+
+computeFunctionsTable :: InternalModuleTable -> FunctionsTable
+computeFunctionsTable = mconcatMap (^. internalModuleFunctionsTable) . (^. internalModuleTable)

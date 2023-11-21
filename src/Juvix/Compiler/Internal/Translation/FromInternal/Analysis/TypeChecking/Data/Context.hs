@@ -1,6 +1,7 @@
 module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context
   ( module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context,
-    module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.FunctionsTable,
+    module Juvix.Compiler.Store.Internal.Data.FunctionsTable,
+    module Juvix.Compiler.Store.Internal.Data.TypesTable,
     module Juvix.Compiler.Internal.Data.InfoTable,
   )
 where
@@ -8,10 +9,9 @@ where
 import Juvix.Compiler.Internal.Data.InfoTable
 import Juvix.Compiler.Internal.Language
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker (TerminationState)
-import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.FunctionsTable
+import Juvix.Compiler.Store.Internal.Data.FunctionsTable
+import Juvix.Compiler.Store.Internal.Data.TypesTable
 import Juvix.Prelude
-
-type TypesTable = HashMap NameId Expression
 
 type NormalizedTable = HashMap NameId Expression
 
@@ -24,4 +24,5 @@ data InternalTypedResult = InternalTypedResult
     _resultFunctions :: FunctionsTable
   }
 
+makeLenses ''TypesTable
 makeLenses ''InternalTypedResult
