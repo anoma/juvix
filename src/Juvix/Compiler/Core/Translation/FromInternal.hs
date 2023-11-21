@@ -21,6 +21,7 @@ import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking qu
 import Juvix.Data.Loc qualified as Loc
 import Juvix.Data.PPOutput
 import Juvix.Extra.Strings qualified as Str
+import Juvix.Compiler.Internal.Pretty (ppTrace)
 
 type MVisit = Visit Internal.ModuleIndex
 
@@ -856,7 +857,8 @@ goIden i = do
           )
   case i of
     Internal.IdenVar n -> do
-      k <- HashMap.lookupDefault impossible id_ <$> asks (^. indexTableVars)
+      let err = error ("impossible: var not found: " <> ppTrace n <> " at " <> prettyText (getLoc n))
+      k <- HashMap.lookupDefault err id_ <$> asks (^. indexTableVars)
       varsNum <- asks (^. indexTableVarsNum)
       return (mkVar (setInfoLocation (n ^. nameLoc) (Info.singleton (NameInfo (n ^. nameText)))) (varsNum - k - 1))
     Internal.IdenFunction n -> do

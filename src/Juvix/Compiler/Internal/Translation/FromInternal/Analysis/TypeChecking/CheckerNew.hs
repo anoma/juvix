@@ -1129,7 +1129,7 @@ holesHelper mhint expr = do
       where
         goImplArgs :: Int -> [ApplicationArg] -> Sem r [ApplicationArg]
         goImplArgs 0 as = return as
-        goImplArgs k ((ApplicationArg Implicit _) : as) = goImplArgs (k - 1) as
+        goImplArgs k (ApplicationArg Implicit _ : as) = goImplArgs (k - 1) as
         goImplArgs _ as = return as
 
     goArgs :: forall r'. (r' ~ State AppBuilder ': r) => Sem r' ()

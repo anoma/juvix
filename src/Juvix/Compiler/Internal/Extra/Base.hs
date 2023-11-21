@@ -305,13 +305,13 @@ substitutionE m = leafExpressions goLeaf
   where
     goLeaf :: Expression -> Sem r Expression
     goLeaf = \case
-      ExpressionIden i -> goIden i
+      ExpressionIden i -> goName (i ^. idenName)
       e -> return e
-    goIden :: Iden -> Sem r Expression
-    goIden i = case i of
-      IdenVar v
-        | Just e <- HashMap.lookup v m -> clone e
-      _ -> return $ ExpressionIden i
+    goName :: Name -> Sem r Expression
+    goName n =
+      case HashMap.lookup n m of
+        Just e -> clone e
+        Nothing -> return (toExpression n)
 
 smallUniverseE :: Interval -> Expression
 smallUniverseE = ExpressionUniverse . SmallUniverse

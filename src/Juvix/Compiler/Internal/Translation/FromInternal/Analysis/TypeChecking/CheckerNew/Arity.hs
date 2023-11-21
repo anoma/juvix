@@ -1,6 +1,7 @@
 module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.CheckerNew.Arity where
 
-import Juvix.Compiler.Internal.Extra
+import Juvix.Compiler.Internal.Extra.Base
+import Juvix.Compiler.Internal.Language
 import Juvix.Prelude
 import Juvix.Prelude.Pretty
 

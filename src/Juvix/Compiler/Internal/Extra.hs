@@ -180,3 +180,42 @@ mkLetClauses pre = goSCC <$> (toList (buildLetMutualBlocks pre))
               getFun :: PreLetStatement -> FunctionDef
               getFun = \case
                 PreLetFunctionDef f -> f
+
+inlineLet :: forall r. (Members '[NameIdGen] r) => Let -> Sem r Expression
+inlineLet l = do
+  (lclauses, subs) <-
+    runOutputList
+      . execState (mempty @Subs)
+      $ forM (l ^. letClauses) helper
+  body' <- substitutionE subs (l ^. letExpression)
+  return $ case nonEmpty lclauses of
+    Nothing -> body'
+    Just cl' ->
+      ExpressionLet
+        Let
+          { _letClauses = cl',
+            _letExpression = body'
+          }
+  where
+    helper :: forall r'. (r' ~ (State Subs ': Output LetClause ': r)) => LetClause -> Sem r' ()
+    helper c = do
+      subs <- get
+      c' <- substitutionE subs c
+      case subsClause c' of
+        Nothing -> output c'
+        Just (n, b) -> modify' @Subs (set (at n) (Just b))
+
+    subsClause :: LetClause -> Maybe (Name, Expression)
+    subsClause = \case
+      LetMutualBlock {} -> Nothing
+      LetFunDef f -> mkAssoc f
+      where
+        mkAssoc :: FunctionDef -> Maybe (Name, Expression)
+        mkAssoc = \case
+          FunctionDef
+            { _funDefType = ExpressionHole {},
+              _funDefBody = body,
+              _funDefName = name,
+              _funDefArgsInfo = []
+            } -> Just (name, body)
+          _ -> Nothing

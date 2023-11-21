@@ -775,7 +775,7 @@ goExpression = \case
       Just appargs -> do
         let name = napp ^. namedApplicationNewName . scopedIdenName
         sig <- fromJust <$> asks @NameSignatures (^. at (name ^. S.nameId))
-        cls <- goArgs sig appargs
+        cls <- goArgs appargs
         let args :: [Internal.Name] = appargs ^.. each . namedArgumentNewFunDef . signName . to goSymbol
             -- changes the kind from Variable to Function
             updateKind :: Internal.Subs =
@@ -788,37 +788,40 @@ goExpression = \case
                   _namedAppArgs = nonEmpty' (createArgumentBlocks (sig ^. nameSignatureArgs))
                 }
         e <- goNamedApplication napp'
+        let l =
+              Internal.Let
+                { _letClauses = cls,
+                  _letExpression = e
+                }
         expr <-
-          Internal.substitutionE updateKind
-            . Internal.ExpressionLet
-            $ Internal.Let
-              { _letClauses = cls,
-                _letExpression = e
-              }
-        Internal.clone expr
+          Internal.substitutionE updateKind l
+            -- >>= Internal.inlineLet
+        -- pure (Internal.ExpressionLet l)
+        Internal.clone (Internal.ExpressionLet expr)
         where
-          goArgs :: NameSignature 'Scoped -> NonEmpty (NamedArgumentNew 'Scoped) -> Sem r (NonEmpty Internal.LetClause)
-          goArgs sig args = nonEmpty' . mkLetClauses <$> mapM goArg args
+          goArgs :: NonEmpty (NamedArgumentNew 'Scoped) -> Sem r (NonEmpty Internal.LetClause)
+          goArgs args = nonEmpty' . mkLetClauses <$> mapM goArg args
             where
               goArg :: NamedArgumentNew 'Scoped -> Sem r Internal.PreLetStatement
-              goArg = fmap Internal.PreLetFunctionDef . goFunctionDef . addType . (^. namedArgumentNewFunDef)
+              -- goArg = fmap Internal.PreLetFunctionDef . goFunctionDef . addType . (^. namedArgumentNewFunDef)
+              goArg = fmap Internal.PreLetFunctionDef . goFunctionDef . (^. namedArgumentNewFunDef)
 
-              getTypeFromSig :: Symbol -> Expression
-              getTypeFromSig s = fromMaybe impossible (firstJust goBlock (sig ^. nameSignatureArgs))
-                where
-                  goBlock :: NameBlock 'Scoped -> Maybe Expression
-                  goBlock b = b ^? nameBlock . at s . _Just . nameItemType
+          -- getTypeFromSig :: Symbol -> Expression
+          -- getTypeFromSig s = fromMaybe impossible (firstJust goBlock (sig ^. nameSignatureArgs))
+          --   where
+          --     goBlock :: NameBlock 'Scoped -> Maybe Expression
+          --     goBlock b = b ^? nameBlock . at s . _Just . nameItemType
 
-              -- NOTE Because of https://github.com/anoma/juvix/issues/2247, we
-              -- cannot put a hole in the type and rely on inference.
-              addType :: FunctionDef 'Scoped -> FunctionDef 'Scoped
-              addType d
-                | True = d
-                | otherwise = case d ^. signRetType of
-                  Just {} -> d
-                  Nothing -> case nonEmpty (d ^. signArgs) of
-                    Just {} -> impossible
-                    Nothing -> set signRetType (Just (getTypeFromSig (Concrete.symbolParsed (d ^. signName)))) d
+          -- NOTE Because of https://github.com/anoma/juvix/issues/2247, we
+          -- cannot put a hole in the type and rely on inference.
+          -- addType :: FunctionDef 'Scoped -> FunctionDef 'Scoped
+          -- addType d
+          --   | True = d
+          --   | otherwise = case d ^. signRetType of
+          --     Just {} -> d
+          --     Nothing -> case nonEmpty (d ^. signArgs) of
+          --       Just {} -> impossible
+          --       Nothing -> set signRetType (Just (getTypeFromSig (Concrete.symbolParsed (d ^. signName)))) d
 
           createArgumentBlocks :: [NameBlock 'Scoped] -> [ArgumentBlock 'Scoped]
           createArgumentBlocks = snd . foldr goBlock (args0, [])
