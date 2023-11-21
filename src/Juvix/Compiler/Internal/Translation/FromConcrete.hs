@@ -31,7 +31,6 @@ import Juvix.Compiler.Internal.Translation.FromConcrete.NamedArguments
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Compiler.Store.Language qualified as Store
-import Juvix.Compiler.Store.Scoped.Data.SignatureInfo
 import Juvix.Compiler.Store.Scoped.Language (createExportsTable)
 import Juvix.Compiler.Store.Scoped.Language qualified as S
 import Juvix.Data.NameKind

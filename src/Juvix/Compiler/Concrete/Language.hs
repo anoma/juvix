@@ -169,6 +169,14 @@ instance Serialize (RecordNameSignature 'Scoped)
 
 instance Serialize (RecordNameSignature 'Parsed)
 
+data RecordInfo = RecordInfo
+  { _recordInfoConstructor :: S.Symbol,
+    _recordInfoSignature :: RecordNameSignature 'Parsed
+  }
+  deriving stock (Generic)
+
+instance Serialize RecordInfo
+
 data Argument (s :: Stage)
   = ArgumentSymbol (SymbolType s)
   | ArgumentWildcard Wildcard
@@ -2124,6 +2132,7 @@ makeLenses ''NameSignature
 makeLenses ''RecordNameSignature
 makeLenses ''NameBlock
 makeLenses ''NameItem
+makeLenses ''RecordInfo
 
 fixityFieldHelper :: SimpleGetter (ParsedFixityFields s) (Maybe a) -> SimpleGetter (ParsedFixityInfo s) (Maybe a)
 fixityFieldHelper l = to (^? fixityFields . _Just . l . _Just)

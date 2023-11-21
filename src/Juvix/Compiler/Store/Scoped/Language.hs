@@ -126,5 +126,5 @@ createExportsTable = HashSet.fromList . (^.. exportAllNames . S.nameId)
 getScopedModuleNameId :: ScopedModule -> S.NameId
 getScopedModuleNameId m = m ^. scopedModuleName . S.nameId
 
-getCombinedInfoTable :: ScopedModuleTable -> InfoTable
-getCombinedInfoTable stab = mconcatMap (^. scopedModuleInfoTable) (stab ^. scopedModuleTable)
+computeCombinedInfoTable :: ScopedModuleTable -> InfoTable
+computeCombinedInfoTable stab = mconcatMap (^. scopedModuleInfoTable) (stab ^. scopedModuleTable)

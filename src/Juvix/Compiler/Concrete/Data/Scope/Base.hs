@@ -1,8 +1,8 @@
 module Juvix.Compiler.Concrete.Data.Scope.Base where
 
+import Juvix.Compiler.Concrete.Data.NameSpace
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Language
-import Juvix.Compiler.Store.Scoped.Data.NameSpace
 import Juvix.Compiler.Store.Scoped.Language
 import Juvix.Prelude
 
@@ -46,11 +46,6 @@ newtype ModulesCache = ModulesCache
 
 newtype ScopeParameters = ScopeParameters
   { _scopeImportedModules :: HashMap TopModulePath ScopedModule
-  }
-
-data RecordInfo = RecordInfo
-  { _recordInfoConstructor :: S.Symbol,
-    _recordInfoSignature :: RecordNameSignature 'Parsed
   }
 
 data ScoperState = ScoperState
@@ -106,4 +101,3 @@ makeLenses ''ScoperSyntax
 makeLenses ''ScoperState
 makeLenses ''ScopeParameters
 makeLenses ''ModulesCache
-makeLenses ''RecordInfo

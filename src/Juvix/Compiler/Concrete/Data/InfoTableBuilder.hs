@@ -16,12 +16,15 @@ data InfoTableBuilder m a where
   RegisterFunctionDef :: FunctionDef 'Scoped -> InfoTableBuilder m ()
   RegisterName :: (HasLoc c) => S.Name' c -> InfoTableBuilder m ()
   RegisterScopedIden :: ScopedIden -> InfoTableBuilder m ()
-  RegisterModule :: Module 'Scoped 'ModuleTop -> InfoTableBuilder m ()
+  RegisterModuleDoc :: S.NameId -> Maybe (Judoc 'Scoped) -> InfoTableBuilder m ()
   RegisterFixity :: FixityDef -> InfoTableBuilder m ()
   RegisterPrecedence :: S.NameId -> S.NameId -> InfoTableBuilder m ()
   RegisterHighlightDoc :: S.NameId -> Maybe (Judoc 'Scoped) -> InfoTableBuilder m ()
   RegisterNameSig :: S.NameId -> NameSignature 'Scoped -> InfoTableBuilder m ()
   RegisterConstructorSig :: S.NameId -> RecordNameSignature 'Scoped -> InfoTableBuilder m ()
+  RegisterParsedNameSig :: S.NameId -> NameSignature 'Parsed -> InfoTableBuilder m ()
+  RegisterParsedConstructorSig :: S.NameId -> RecordNameSignature 'Parsed -> InfoTableBuilder m ()
+  RegisterRecordInfo :: S.NameId -> RecordInfo -> InfoTableBuilder m ()
   GetInfoTable :: InfoTableBuilder m InfoTable
 
 makeSem ''InfoTableBuilder
@@ -49,9 +52,8 @@ toState = reinterpret $ \case
           registerDoc (f ^. signName . nameId) j
   RegisterName n -> modify (over infoHighlightNames (cons (S.anameFromName n)))
   RegisterScopedIden n -> modify (over infoHighlightNames (cons (anameFromScopedIden n)))
-  RegisterModule m -> do
-    let j = m ^. moduleDoc
-    registerDoc (m ^. modulePath . nameId) j
+  RegisterModuleDoc uid doc -> do
+    registerDoc uid doc
   RegisterFixity f -> do
     let sid = f ^. fixityDefSymbol . S.nameId
     modify (over infoFixities (HashMap.insert sid f))
@@ -66,14 +68,20 @@ toState = reinterpret $ \case
     modify (over infoNameSigs (HashMap.insert uid sig))
   RegisterConstructorSig uid sig ->
     modify (over infoConstructorSigs (HashMap.insert uid sig))
+  RegisterParsedNameSig uid sig ->
+    modify (over infoParsedNameSigs (HashMap.insert uid sig))
+  RegisterParsedConstructorSig uid sig ->
+    modify (over infoParsedConstructorSigs (HashMap.insert uid sig))
+  RegisterRecordInfo uid recInfo ->
+    modify (over infoRecords (HashMap.insert uid recInfo))
   GetInfoTable ->
     get
 
-runInfoTableBuilderRepl :: InfoTable -> Sem (InfoTableBuilder ': r) a -> Sem r (InfoTable, a)
-runInfoTableBuilderRepl tab = ignoreHighlightBuilder . runInfoTableBuilder tab . raiseUnder
+runInfoTableBuilderRepl :: Sem (InfoTableBuilder ': r) a -> Sem r (InfoTable, a)
+runInfoTableBuilderRepl = ignoreHighlightBuilder . runInfoTableBuilder . raiseUnder
 
-runInfoTableBuilder :: InfoTable -> Sem (InfoTableBuilder ': r) a -> Sem r (InfoTable, a)
-runInfoTableBuilder tab = runState tab . toState
+runInfoTableBuilder :: Sem (InfoTableBuilder ': r) a -> Sem r (InfoTable, a)
+runInfoTableBuilder = runState mempty . toState
 
 ignoreInfoTableBuilder :: Sem (InfoTableBuilder ': r) a -> Sem r a
 ignoreInfoTableBuilder = evalState mempty . toState

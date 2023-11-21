@@ -15,7 +15,8 @@ data InfoTable = InfoTable
     _infoConstructorSigs :: HashMap NameId (RecordNameSignature 'Scoped),
     _infoNameSigs :: HashMap NameId (NameSignature 'Scoped),
     _infoParsedConstructorSigs :: HashMap NameId (RecordNameSignature 'Parsed),
-    _infoParsedNameSigs :: HashMap NameId (NameSignature 'Parsed)
+    _infoParsedNameSigs :: HashMap NameId (NameSignature 'Parsed),
+    _infoRecords :: HashMap NameId RecordInfo
   }
   deriving stock (Generic)
 
@@ -33,7 +34,8 @@ instance Semigroup InfoTable where
         _infoConstructorSigs = tab1 ^. infoConstructorSigs <> tab2 ^. infoConstructorSigs,
         _infoNameSigs = tab1 ^. infoNameSigs <> tab2 ^. infoNameSigs,
         _infoParsedConstructorSigs = tab1 ^. infoParsedConstructorSigs <> tab2 ^. infoParsedConstructorSigs,
-        _infoParsedNameSigs = tab1 ^. infoParsedNameSigs <> tab2 ^. infoParsedNameSigs
+        _infoParsedNameSigs = tab1 ^. infoParsedNameSigs <> tab2 ^. infoParsedNameSigs,
+        _infoRecords = tab1 ^. infoRecords <> tab2 ^. infoRecords
       }
 
 instance Monoid InfoTable where
@@ -46,5 +48,6 @@ instance Monoid InfoTable where
         _infoConstructorSigs = mempty,
         _infoNameSigs = mempty,
         _infoParsedConstructorSigs = mempty,
-        _infoParsedNameSigs = mempty
+        _infoParsedNameSigs = mempty,
+        _infoRecords = mempty
       }

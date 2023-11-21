@@ -45,16 +45,16 @@ scopeCheck entry importMap pr =
     m :: Module 'Parsed 'ModuleTop
     m = pr ^. Parser.resultModule
 
-iniScoperState :: ScoperState
-iniScoperState =
+iniScoperState :: InfoTable -> ScoperState
+iniScoperState tab =
   ScoperState
     { _scoperModules = mempty,
-      _scoperSignatures = mempty,
-      _scoperScopedSignatures = mempty,
-      _scoperRecordFields = mempty,
+      _scoperSignatures = tab ^. infoParsedNameSigs,
+      _scoperScopedSignatures = tab ^. infoNameSigs,
+      _scoperRecordFields = tab ^. infoRecords,
       _scoperAlias = mempty,
-      _scoperConstructorFields = mempty,
-      _scoperScopedConstructorFields = mempty
+      _scoperConstructorFields = tab ^. infoParsedConstructorSigs,
+      _scoperScopedConstructorFields = tab ^. infoConstructorSigs
     }
 
 scopeCheck' ::
@@ -65,21 +65,20 @@ scopeCheck' ::
   Sem r ScoperResult
 scopeCheck' importTab pr m = do
   fmap mkResult
-    . runInfoTableBuilder mempty
     . runReader tab
     . runReader iniScopeParameters
-    . runState iniScoperState
+    . runState (iniScoperState tab)
     $ checkTopModule m
   where
-    tab = getCombinedInfoTable importTab
+    tab = computeCombinedInfoTable importTab
 
     iniScopeParameters :: ScopeParameters
     iniScopeParameters =
       ScopeParameters
         { _scopeImportedModules = importTab ^. scopedModuleTable
         }
-    mkResult :: (InfoTable, (ScoperState, (Module 'Scoped 'ModuleTop, ScopedModule))) -> ScoperResult
-    mkResult (_, (scoperSt, (md, sm))) =
+    mkResult :: (ScoperState, (Module 'Scoped 'ModuleTop, ScopedModule)) -> ScoperResult
+    mkResult (scoperSt, (md, sm)) =
       let exp = createExportsTable (sm ^. scopedModuleExportInfo)
        in ScoperResult
             { _resultParserResult = pr,
@@ -92,7 +91,7 @@ scopeCheck' importTab pr m = do
 -- TODO refactor to have less code duplication
 scopeCheckExpressionAtoms ::
   forall r.
-  (Members '[Error JuvixError, NameIdGen, Reader EntryPoint, State Scope, Reader InfoTable] r) =>
+  (Members '[Error JuvixError, NameIdGen, Reader EntryPoint, State Scope] r) =>
   ScopedModuleTable ->
   InfoTable ->
   ExpressionAtoms 'Parsed ->
@@ -100,12 +99,15 @@ scopeCheckExpressionAtoms ::
 scopeCheckExpressionAtoms importTab tab as = mapError (JuvixError @ScoperError) $ do
   fmap snd
     . ignoreHighlightBuilder
-    . runInfoTableBuilder tab
+    . runInfoTableBuilder
     . runReader iniScopeParameters
-    . evalState iniScoperState
+    . evalState (iniScoperState tab')
+    . runReader tab'
     . withLocalScope
     $ checkExpressionAtoms as
   where
+    tab' = tab <> computeCombinedInfoTable importTab
+
     iniScopeParameters :: ScopeParameters
     iniScopeParameters =
       ScopeParameters
@@ -114,7 +116,7 @@ scopeCheckExpressionAtoms importTab tab as = mapError (JuvixError @ScoperError) 
 
 scopeCheckExpression ::
   forall r.
-  (Members '[Error JuvixError, NameIdGen, Reader EntryPoint, State Scope, State ScoperState, Reader InfoTable] r) =>
+  (Members '[Error JuvixError, NameIdGen, Reader EntryPoint, State Scope, State ScoperState] r) =>
   ScopedModuleTable ->
   InfoTable ->
   ExpressionAtoms 'Parsed ->
@@ -122,11 +124,14 @@ scopeCheckExpression ::
 scopeCheckExpression importTab tab as = mapError (JuvixError @ScoperError) $ do
   fmap snd
     . ignoreHighlightBuilder
-    . runInfoTableBuilder tab
+    . runInfoTableBuilder
     . runReader iniScopeParameters
+    . runReader tab'
     . withLocalScope
     $ checkParseExpressionAtoms as
   where
+    tab' = tab <> computeCombinedInfoTable importTab
+
     iniScopeParameters :: ScopeParameters
     iniScopeParameters =
       ScopeParameters
@@ -250,6 +255,7 @@ reserveSymbolOf k nameSig s = do
   strat <- ask
   s' <- freshSymbol (fromSing k) s
   whenJust nameSig (modify' . set (scoperSignatures . at (s' ^. S.nameId)) . Just)
+  whenJust nameSig (registerParsedNameSig (s' ^. S.nameId))
   modify (set (scopeNameSpaceLocal sns . at s) (Just s'))
   registerName s'
   let u = S.unqualifiedSymbol s'
@@ -420,7 +426,6 @@ checkImport import_@Import {..} = do
         ..
       }
   where
-    -- TODO: update ScoperState (not necessary?)
     addModuleToScope :: ScopedModule -> Sem r ()
     addModuleToScope smod = do
       let mpath :: TopModulePath = fromMaybe _importModulePath _importAsName
@@ -1011,13 +1016,10 @@ localBindings = runReader BindingLocal
 
 checkTopModule ::
   forall r.
-  (Members '[Error ScoperError, Reader ScopeParameters, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader EntryPoint] r) =>
+  (Members '[Error ScoperError, Reader ScopeParameters, State ScoperState, Reader InfoTable, NameIdGen, Reader EntryPoint] r) =>
   Module 'Parsed 'ModuleTop ->
   Sem r (Module 'Scoped 'ModuleTop, ScopedModule)
-checkTopModule m@Module {..} = do
-  (md, smd) <- checkedModule
-  registerModule md
-  return (md, smd)
+checkTopModule m@Module {..} = checkedModule
   where
     freshTopModulePath ::
       forall s.
@@ -1046,31 +1048,32 @@ checkTopModule m@Module {..} = do
 
     checkedModule :: Sem r (Module 'Scoped 'ModuleTop, ScopedModule)
     checkedModule = do
-      (md, smd) <- evalState iniScope $ do
+      (tab, (e, body', path', doc')) <- evalState iniScope $ runInfoTableBuilder $ do
         path' <- freshTopModulePath
         withTopScope $ do
-          (tab, (e, body')) <- topBindings (checkModuleBody _moduleBody)
           doc' <- mapM checkJudoc _moduleDoc
-          let md =
-                Module
-                  { _modulePath = path',
-                    _moduleBody = body',
-                    _moduleDoc = doc',
-                    _modulePragmas = _modulePragmas,
-                    _moduleKw,
-                    _moduleInductive,
-                    _moduleKwEnd,
-                    _moduleId
-                  }
-              smd =
-                ScopedModule
-                  { _scopedModulePath = path',
-                    _scopedModuleName = S.topModulePathName path',
-                    _scopedModuleFilePath = P.getModuleFilePath m,
-                    _scopedModuleExportInfo = e,
-                    _scopedModuleInfoTable = tab
-                  }
-          return (md, smd)
+          registerModuleDoc (path' ^. S.nameId) doc'
+          (e, body') <- topBindings (checkModuleBody _moduleBody)
+          return (e, body', path', doc')
+      let md =
+            Module
+              { _modulePath = path',
+                _moduleBody = body',
+                _moduleDoc = doc',
+                _modulePragmas = _modulePragmas,
+                _moduleKw,
+                _moduleInductive,
+                _moduleKwEnd,
+                _moduleId
+              }
+          smd =
+            ScopedModule
+              { _scopedModulePath = path',
+                _scopedModuleName = S.topModulePathName path',
+                _scopedModuleFilePath = P.getModuleFilePath m,
+                _scopedModuleExportInfo = e,
+                _scopedModuleInfoTable = tab
+              }
       return (md, smd)
 
 withTopScope :: (Members '[State Scope] r) => Sem r a -> Sem r a
@@ -1115,10 +1118,10 @@ syntaxBlock m =
 
 checkModuleBody ::
   forall r.
-  (Members '[Reader InfoTable, Error ScoperError, State Scope, Reader ScopeParameters, State ScoperState, NameIdGen, Reader EntryPoint, Reader BindingStrategy] r) =>
+  (Members '[InfoTableBuilder, Reader InfoTable, Error ScoperError, State Scope, Reader ScopeParameters, State ScoperState, NameIdGen, Reader EntryPoint, Reader BindingStrategy] r) =>
   [Statement 'Parsed] ->
-  Sem r (InfoTable, (ExportInfo, [Statement 'Scoped]))
-checkModuleBody body = runInfoTableBuilder mempty $ do
+  Sem r (ExportInfo, [Statement 'Scoped])
+checkModuleBody body = do
   body' <-
     fmap flattenSections
       . syntaxBlock
@@ -1254,6 +1257,7 @@ checkSections sec = do
                       let storeSig :: RecordNameSignature 'Parsed -> Sem r' ()
                           storeSig sig = modify' (set (scoperConstructorFields . at (c' ^. S.nameId)) (Just sig))
                       whenJust (c ^? constructorRhs . _ConstructorRhsRecord) (storeSig . mkRecordNameSignature)
+                      whenJust (c ^? constructorRhs . _ConstructorRhsRecord) (registerParsedConstructorSig (c' ^. S.nameId) . mkRecordNameSignature)
                       return c'
 
                     registerRecordType :: S.Symbol -> S.Symbol -> Sem (Fail ': r') ()
@@ -1274,6 +1278,7 @@ checkSections sec = do
                                         _recordInfoConstructor = mconstr
                                       }
                               modify' (set (scoperRecordFields . at (ind ^. S.nameId)) (Just info))
+                              registerRecordInfo (ind ^. S.nameId) info
 
             goDefinition :: Definition 'Parsed -> Sem r' (Definition 'Scoped)
             goDefinition = \case
@@ -1422,12 +1427,12 @@ checkLocalModule ::
   Module 'Parsed 'ModuleLocal ->
   Sem r (Module 'Scoped 'ModuleLocal)
 checkLocalModule md@Module {..} = do
-  (tab, moduleExportInfo, moduleBody', moduleDoc') <-
-    withLocalScope $ do
+  (tab, (moduleExportInfo, moduleBody', moduleDoc')) <-
+    withLocalScope $ runInfoTableBuilder $ do
       inheritScope
-      (tab, (e, b)) <- checkModuleBody _moduleBody
+      (e, b) <- checkModuleBody _moduleBody
       doc' <- mapM checkJudoc _moduleDoc
-      return (tab, e, b, doc')
+      return (e, b, doc')
   _modulePath' <- reserveLocalModuleSymbol _modulePath
   let mid = _modulePath' ^. S.nameId
       moduleName = S.unqualifiedSymbol _modulePath'
@@ -1454,7 +1459,7 @@ checkLocalModule md@Module {..} = do
   registerName _modulePath'
   return m
   where
-    inheritScope :: Sem r ()
+    inheritScope :: (Members '[Error ScoperError, State Scope, Reader ScopeParameters, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader EntryPoint, Reader BindingStrategy] r') => Sem r' ()
     inheritScope = do
       absPath <- (S.<.> _modulePath) <$> gets (^. scopePath)
       modify (set scopePath absPath)
