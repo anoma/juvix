@@ -60,7 +60,8 @@ checkModule Module {..} = do
       { _moduleBody = _moduleBody',
         _moduleName,
         _moduleExamples,
-        _modulePragmas
+        _modulePragmas,
+        _moduleId
       }
 
 checkModuleBody ::

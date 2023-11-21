@@ -52,7 +52,7 @@ fromInternal :: (Members '[NameIdGen, Reader Store.ModuleTable] k) => Internal.I
 fromInternal i = do
   importTab <- asks Store.getInternalModuleTable
   res <-
-    execInfoTableBuilder emptyInfoTable
+    execInfoTableBuilder mid emptyInfoTable
       . evalState (i ^. InternalTyped.resultFunctions)
       . runReader (i ^. InternalTyped.resultIdenTypes)
       $ do
@@ -75,6 +75,8 @@ fromInternal i = do
       { _coreResultTable = res,
         _coreResultInternalTypedResult = i
       }
+  where
+    mid = i ^. InternalTyped.resultInternalModule . Internal.internalModuleId
 
 fromInternalExpression :: (Member NameIdGen r) => Internal.InternalModuleTable -> CoreResult -> Internal.Expression -> Sem r Node
 fromInternalExpression importTab res exp = do
@@ -83,10 +85,12 @@ fromInternalExpression importTab res exp = do
           <> Internal.buildInfoTable importTab
   fmap snd
     . runReader mtab
-    . runInfoTableBuilder (res ^. coreResultTable)
+    . runInfoTableBuilder mid (res ^. coreResultTable)
     . evalState (res ^. coreResultInternalTypedResult . InternalTyped.resultFunctions)
     . runReader (res ^. coreResultInternalTypedResult . InternalTyped.resultIdenTypes)
     $ fromTopIndex (goExpression exp)
+  where
+    mid = res ^. coreResultInternalTypedResult . InternalTyped.resultInternalModule . Internal.internalModuleId
 
 goModule ::
   forall r.

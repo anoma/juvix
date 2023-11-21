@@ -24,7 +24,7 @@ unfoldPolyApplication a =
 
 filterCompileTimeArgsOrPatterns :: (Member (Reader TypesTable) r) => Name -> [a] -> Sem r [a]
 filterCompileTimeArgsOrPatterns idenname lst = do
-  tab <- ask
+  tab <- asks (^. typesTable)
   let funParams = fst (unfoldFunType (ty tab))
       typedArgs =
         map fst $

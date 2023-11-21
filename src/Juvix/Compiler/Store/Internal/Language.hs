@@ -13,7 +13,8 @@ import Juvix.Extra.Serialize
 import Juvix.Prelude
 
 data InternalModule = InternalModule
-  { _internalModuleName :: Name,
+  { _internalModuleId :: ModuleId,
+    _internalModuleName :: Name,
     _internalModuleImports :: [Import],
     _internalModuleInfoTable :: InfoTable,
     _internalModuleTypesTable :: TypesTable,

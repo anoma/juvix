@@ -224,7 +224,8 @@ toPreModule Module {..} = do
       { _moduleName = name',
         _moduleBody = body',
         _moduleExamples = examples',
-        _modulePragmas = pragmas'
+        _modulePragmas = pragmas',
+        _moduleId
       }
   where
     name' :: Internal.Name

@@ -58,7 +58,8 @@ data ExportInfo = ExportInfo
 instance Serialize ExportInfo
 
 data ScopedModule = ScopedModule
-  { _scopedModulePath :: S.TopModulePath,
+  { _scopedModuleId :: ModuleId,
+    _scopedModulePath :: S.TopModulePath,
     _scopedModuleName :: S.Name,
     _scopedModuleFilePath :: Path Abs File,
     _scopedModuleExportInfo :: ExportInfo,

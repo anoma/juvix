@@ -1,31 +1,31 @@
 module Juvix.Compiler.Core.Data.InfoTable
   ( module Juvix.Compiler.Core.Data.InfoTable,
     module Juvix.Compiler.Concrete.Data.Builtins,
+    module Juvix.Compiler.Core.Data.InfoTable.Base,
   )
 where
 
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Concrete.Data.Builtins
+import Juvix.Compiler.Core.Data.InfoTable.Base
 import Juvix.Compiler.Core.Language
 
 type IdentContext = HashMap Symbol Node
 
-data InfoTable = InfoTable
-  { _identContext :: IdentContext,
-    _identMap :: HashMap Text IdentKind,
-    _infoMain :: Maybe Symbol,
-    _infoIdentifiers :: HashMap Symbol IdentifierInfo,
-    _infoInductives :: HashMap Symbol InductiveInfo,
-    _infoConstructors :: HashMap Tag ConstructorInfo,
-    _infoAxioms :: HashMap Text AxiomInfo,
-    _infoSpecialisations :: HashMap Symbol [SpecialisationInfo],
-    _infoLiteralIntToNat :: Maybe Symbol,
-    _infoLiteralIntToInt :: Maybe Symbol,
-    _infoNextSymbol :: Word,
-    _infoNextTag :: Word,
-    _infoBuiltins :: HashMap BuiltinPrim IdentKind
-  }
+type InfoTable = InfoTable' Node
+
+type IdentifierInfo = IdentifierInfo' Node
+
+type InductiveInfo = InductiveInfo' Node
+
+type ConstructorInfo = ConstructorInfo' Node
+
+type AxiomInfo = AxiomInfo' Node
+
+type ParameterInfo = ParameterInfo' Node
+
+type SpecialisationInfo = SpecialisationInfo' Node
 
 emptyInfoTable :: InfoTable
 emptyInfoTable =
@@ -40,8 +40,6 @@ emptyInfoTable =
       _infoSpecialisations = mempty,
       _infoLiteralIntToNat = Nothing,
       _infoLiteralIntToInt = Nothing,
-      _infoNextSymbol = 1,
-      _infoNextTag = 0,
       _infoBuiltins = mempty
     }
 
@@ -52,74 +50,14 @@ emptyInfoTable' mainNode =
       _infoMain = Just 0
     }
 
-data IdentKind
-  = IdentFun Symbol
-  | IdentInd Symbol
-  | IdentConstr Tag
+nextSymbolId :: InfoTable -> Word
+nextSymbolId tab =
+  maximum (0 : HashMap.keys (tab ^. infoIdentifiers) ++ HashMap.keys (tab ^. infoInductives))
+    + 1
 
-data IdentifierInfo = IdentifierInfo
-  { _identifierName :: Text,
-    _identifierLocation :: Maybe Location,
-    _identifierSymbol :: Symbol,
-    _identifierType :: Type,
-    -- | The number of lambdas in the identifier body
-    _identifierArgsNum :: Int,
-    _identifierIsExported :: Bool,
-    _identifierBuiltin :: Maybe BuiltinFunction,
-    _identifierPragmas :: Pragmas,
-    _identifierArgNames :: [Maybe Text]
-  }
-
-data InductiveInfo = InductiveInfo
-  { _inductiveName :: Text,
-    _inductiveLocation :: Maybe Location,
-    _inductiveSymbol :: Symbol,
-    _inductiveKind :: Type,
-    _inductiveConstructors :: [Tag],
-    _inductiveParams :: [ParameterInfo],
-    _inductivePositive :: Bool,
-    _inductiveBuiltin :: Maybe BuiltinType,
-    _inductivePragmas :: Pragmas
-  }
-
-data ConstructorInfo = ConstructorInfo
-  { _constructorName :: Text,
-    _constructorLocation :: Maybe Location,
-    _constructorTag :: Tag,
-    _constructorType :: Type,
-    _constructorArgsNum :: Int,
-    _constructorInductive :: Symbol,
-    _constructorFixity :: Maybe Fixity,
-    _constructorBuiltin :: Maybe BuiltinConstructor,
-    _constructorPragmas :: Pragmas
-  }
-
-data ParameterInfo = ParameterInfo
-  { _paramName :: Text,
-    _paramLocation :: Maybe Location,
-    _paramKind :: Type,
-    _paramIsImplicit :: Bool
-  }
-
-data AxiomInfo = AxiomInfo
-  { _axiomName :: Text,
-    _axiomLocation :: Maybe Location,
-    _axiomType :: Type,
-    _axiomPragmas :: Pragmas
-  }
-
-data SpecialisationInfo = SpecialisationInfo
-  { _specSignature :: ([Node], [Int]),
-    _specSymbol :: Symbol
-  }
-
-makeLenses ''InfoTable
-makeLenses ''IdentifierInfo
-makeLenses ''InductiveInfo
-makeLenses ''ConstructorInfo
-makeLenses ''ParameterInfo
-makeLenses ''AxiomInfo
-makeLenses ''SpecialisationInfo
+nextTagId :: InfoTable -> Word
+nextTagId tab =
+  maximum (0 : mapMaybe getUserTagId (HashMap.keys (tab ^. infoConstructors))) + 1
 
 lookupInductiveInfo' :: InfoTable -> Symbol -> Maybe InductiveInfo
 lookupInductiveInfo' tab sym = HashMap.lookup sym (tab ^. infoInductives)

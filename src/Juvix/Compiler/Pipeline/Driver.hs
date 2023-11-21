@@ -15,6 +15,7 @@ import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.D
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context qualified as InternalTyped
 import Juvix.Compiler.Pipeline
 import Juvix.Compiler.Pipeline.Loader.PathResolver
+import Juvix.Compiler.Store.Core.Extra
 import Juvix.Compiler.Store.Language qualified as Store
 import Juvix.Data.CodeAnn
 import Juvix.Data.Effect.Git
@@ -65,7 +66,7 @@ processModule entry = mkModuleInfo <$> processFileToStoredCore entry
       Store.ModuleInfo
         { _moduleInfoScopedModule = _coreResultInternalTypedResult ^. InternalTyped.resultInternal . InternalArity.resultInternal . Internal.resultScoper . Scoper.resultScopedModule,
           _moduleInfoInternalModule = _coreResultInternalTypedResult ^. InternalTyped.resultInternalModule,
-          _moduleInfoCoreTable = undefined
+          _moduleInfoCoreTable = fromCore _coreResultTable
         }
 
 withPath' ::

@@ -86,7 +86,8 @@ buildInfoTable = mconcatMap (^. internalModuleInfoTable) . HashMap.elems . (^. i
 computeInternalModule :: TypesTable -> FunctionsTable -> Module -> InternalModule
 computeInternalModule tysTab funsTab m@Module {..} =
   InternalModule
-    { _internalModuleName = _moduleName,
+    { _internalModuleId = _moduleId,
+      _internalModuleName = _moduleName,
       _internalModuleImports = _moduleBody ^. moduleImports,
       _internalModuleInfoTable = computeInfoTable m,
       _internalModuleTypesTable = tysTab,

@@ -75,7 +75,7 @@ goGotoProperty n = WithLoc (getLoc n) PropertyGoto {..}
 
 goDocProperty :: Scoped.DocTable -> Internal.TypesTable -> AName -> Maybe (WithLoc PropertyDoc)
 goDocProperty doctbl tbl a = do
-  let ty :: Maybe Internal.Expression = tbl ^. at (a ^. anameDocId)
+  let ty :: Maybe Internal.Expression = tbl ^. Internal.typesTable . at (a ^. anameDocId)
   d <- ppDocDefault a ty (doctbl ^. at (a ^. anameDocId))
   let (_docText, _docSExp) = renderEmacs (layoutPretty defaultLayoutOptions d)
   return (WithLoc (getLoc a) PropertyDoc {..})

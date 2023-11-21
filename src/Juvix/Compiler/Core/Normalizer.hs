@@ -21,7 +21,7 @@ makeLenses ''NormEnv
 type Norm = Sem '[Reader NormEnv, InfoTableBuilder]
 
 normalize :: InfoTable -> Node -> Node
-normalize tab0 = run . evalInfoTableBuilder tab0 . runReader normEnv . normalize'
+normalize tab0 = run . evalInfoTableBuilder defaultModuleId tab0 . runReader normEnv . normalize'
   where
     normEnv =
       NormEnv

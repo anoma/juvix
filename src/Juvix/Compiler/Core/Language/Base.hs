@@ -45,6 +45,11 @@ type Index = Int
 -- | de Bruijn level (reverse de Bruijn index)
 type Level = Int
 
+getUserTagId :: Tag -> Maybe Word
+getUserTagId = \case
+  UserTag u -> Just u
+  BuiltinTag {} -> Nothing
+
 -- | The first argument `bl` is the current binder level (the number of binders
 -- upward).
 getBinderLevel :: Level -> Index -> Level

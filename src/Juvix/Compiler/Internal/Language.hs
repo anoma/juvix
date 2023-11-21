@@ -35,7 +35,8 @@ data PreStatement
   | PreAxiomDef AxiomDef
 
 data Module' stmt = Module
-  { _moduleName :: Name,
+  { _moduleId :: ModuleId,
+    _moduleName :: Name,
     _moduleExamples :: [Example],
     _moduleBody :: ModuleBody' stmt,
     _modulePragmas :: Pragmas
