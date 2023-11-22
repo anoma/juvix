@@ -43,8 +43,8 @@ rootNegTests = relToProject $(mkRelDir "tests/negative/")
 -- Testing --no-positivity flag with all related negative tests
 testNoPositivityFlag :: N.NegTest -> TestDescr
 testNoPositivityFlag N.NegTest {..} =
-  let tRoot = rootNegTests <//> _relDir
-      file' = tRoot <//> _file
+  let tRoot = _dir
+      file' = _file
    in TestDescr
         { _testName = _name,
           _testRoot = tRoot,
