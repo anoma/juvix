@@ -25,12 +25,12 @@ extendedTableReplArtifacts :: forall r. (Members '[State Artifacts] r) => Intern
 extendedTableReplArtifacts e = Internal.extendWithReplExpression e <$> gets (^. artifactInternalTypedTable)
 
 runCoreInfoTableBuilderArtifacts :: (Members '[State Artifacts] r) => Sem (Core.InfoTableBuilder ': r) a -> Sem r a
-runCoreInfoTableBuilderArtifacts = runStateLikeArtifacts Core.runInfoTableBuilder artifactCoreTable
+runCoreInfoTableBuilderArtifacts = runStateLikeArtifacts (Core.runInfoTableBuilder defaultModuleId) artifactCoreTable
 
 tmpCoreInfoTableBuilderArtifacts :: (Members '[State Artifacts] r) => Sem (Core.InfoTableBuilder ': r) a -> Sem r a
 tmpCoreInfoTableBuilderArtifacts m = do
   tbl <- gets (^. artifactCoreTable)
-  a <- runStateLikeArtifacts Core.runInfoTableBuilder artifactCoreTable m
+  a <- runStateLikeArtifacts (Core.runInfoTableBuilder defaultModuleId) artifactCoreTable m
   modify' (set artifactCoreTable tbl)
   return a
 

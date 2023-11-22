@@ -99,14 +99,14 @@ scopeCheckExpressionAtoms ::
 scopeCheckExpressionAtoms importTab tab as = mapError (JuvixError @ScoperError) $ do
   fmap snd
     . ignoreHighlightBuilder
-    . runInfoTableBuilder
+    . runInfoTableBuilder tab
     . runReader iniScopeParameters
     . evalState (iniScoperState tab')
     . runReader tab'
     . withLocalScope
     $ checkExpressionAtoms as
   where
-    tab' = tab <> computeCombinedInfoTable importTab
+    tab' = computeCombinedInfoTable importTab
 
     iniScopeParameters :: ScopeParameters
     iniScopeParameters =
@@ -124,13 +124,13 @@ scopeCheckExpression ::
 scopeCheckExpression importTab tab as = mapError (JuvixError @ScoperError) $ do
   fmap snd
     . ignoreHighlightBuilder
-    . runInfoTableBuilder
+    . runInfoTableBuilder tab
     . runReader iniScopeParameters
     . runReader tab'
     . withLocalScope
     $ checkParseExpressionAtoms as
   where
-    tab' = tab <> computeCombinedInfoTable importTab
+    tab' = computeCombinedInfoTable importTab
 
     iniScopeParameters :: ScopeParameters
     iniScopeParameters =
@@ -1048,7 +1048,7 @@ checkTopModule m@Module {..} = checkedModule
 
     checkedModule :: Sem r (Module 'Scoped 'ModuleTop, ScopedModule)
     checkedModule = do
-      (tab, (e, body', path', doc')) <- evalState iniScope $ runInfoTableBuilder $ do
+      (tab, (e, body', path', doc')) <- evalState iniScope $ runInfoTableBuilder mempty $ do
         path' <- freshTopModulePath
         withTopScope $ do
           doc' <- mapM checkJudoc _moduleDoc
@@ -1429,7 +1429,7 @@ checkLocalModule ::
   Sem r (Module 'Scoped 'ModuleLocal)
 checkLocalModule md@Module {..} = do
   (tab, (moduleExportInfo, moduleBody', moduleDoc')) <-
-    withLocalScope $ runInfoTableBuilder $ do
+    withLocalScope $ runInfoTableBuilder mempty $ do
       inheritScope
       (e, b) <- checkModuleBody _moduleBody
       doc' <- mapM checkJudoc _moduleDoc

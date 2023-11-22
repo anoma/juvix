@@ -36,3 +36,9 @@ getInternalModuleTable mtab =
 
 mkModuleTable :: [ModuleInfo] -> ModuleTable
 mkModuleTable = ModuleTable . HashMap.fromList . map (\mi -> (getModulePath mi, mi))
+
+lookupModule :: ModuleTable -> TopModulePath -> ModuleInfo
+lookupModule mtab n = fromJust $ HashMap.lookup n (mtab ^. moduleTable)
+
+insertModule :: TopModulePath -> ModuleInfo -> ModuleTable -> ModuleTable
+insertModule p mi = over moduleTable (HashMap.insert p mi)

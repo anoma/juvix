@@ -77,11 +77,11 @@ toState = reinterpret $ \case
   GetInfoTable ->
     get
 
-runInfoTableBuilderRepl :: Sem (InfoTableBuilder ': r) a -> Sem r (InfoTable, a)
-runInfoTableBuilderRepl = ignoreHighlightBuilder . runInfoTableBuilder . raiseUnder
+runInfoTableBuilderRepl :: InfoTable -> Sem (InfoTableBuilder ': r) a -> Sem r (InfoTable, a)
+runInfoTableBuilderRepl tab = ignoreHighlightBuilder . runInfoTableBuilder tab . raiseUnder
 
-runInfoTableBuilder :: Sem (InfoTableBuilder ': r) a -> Sem r (InfoTable, a)
-runInfoTableBuilder = runState mempty . toState
+runInfoTableBuilder :: InfoTable -> Sem (InfoTableBuilder ': r) a -> Sem r (InfoTable, a)
+runInfoTableBuilder tab = runState tab . toState
 
 ignoreInfoTableBuilder :: Sem (InfoTableBuilder ': r) a -> Sem r a
 ignoreInfoTableBuilder = evalState mempty . toState

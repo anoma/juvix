@@ -9,6 +9,7 @@ import Juvix.Compiler.Internal.Translation.FromConcrete qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context
 import Juvix.Compiler.Pipeline.Loader.PathResolver.Data
+import Juvix.Compiler.Store.Language qualified as Store
 import Juvix.Prelude
 
 -- | `Artifacts` contains enough information so that the pipeline can be
@@ -31,7 +32,9 @@ data Artifacts = Artifacts
     -- | This includes the InfoTable from all type checked modules
     _artifactInternalTypedTable :: Internal.InfoTable,
     -- Core
-    _artifactCoreTable :: Core.InfoTable
+    _artifactCoreTable :: Core.InfoTable,
+    -- Store
+    _artifactModuleTable :: Store.ModuleTable
   }
 
 makeLenses ''Artifacts

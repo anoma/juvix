@@ -1,38 +1,37 @@
 module Juvix.Compiler.Pipeline.Repl where
 
-import Juvix.Compiler.Builtins (Builtins)
-import Juvix.Compiler.Concrete.Data.InfoTableBuilder qualified as Concrete
-import Juvix.Compiler.Concrete.Data.Scope qualified as Scoper
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Translation.FromParsed qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
+import Juvix.Compiler.Concrete.Translation.FromSource.ParserResultBuilder (runParserResultBuilder)
 import Juvix.Compiler.Core qualified as Core
 import Juvix.Compiler.Internal qualified as Internal
-import Juvix.Compiler.Internal.Translation.FromConcrete qualified as FromConcrete
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker
 import Juvix.Compiler.Pipeline.Artifacts
 import Juvix.Compiler.Pipeline.Artifacts.PathResolver
+import Juvix.Compiler.Pipeline.Driver qualified as Driver
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Compiler.Pipeline.Loader.PathResolver.Base
 import Juvix.Compiler.Pipeline.Loader.PathResolver.Error
 import Juvix.Compiler.Pipeline.Package.Loader.Error
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff.IO
-import Juvix.Data.Effect.Git.Process
-import Juvix.Data.Effect.Git.Process.Error
+import Juvix.Compiler.Store.Language qualified as Store
+import Juvix.Data.Effect.Git
 import Juvix.Data.Effect.Process (runProcessIO)
 import Juvix.Prelude
 
 arityCheckExpression ::
-  (Members '[Error JuvixError, State Artifacts, Termination] r) =>
+  (Members '[Reader EntryPoint, Error JuvixError, State Artifacts, Termination] r) =>
   ExpressionAtoms 'Parsed ->
   Sem r Internal.Expression
 arityCheckExpression p = do
   scopeTable <- gets (^. artifactScopeTable)
+  mtab <- gets (^. artifactModuleTable)
   runBuiltinsArtifacts
     . runScoperScopeArtifacts
     . runStateArtifacts artifactScoperState
-    $ runNameIdGenArtifacts (Scoper.scopeCheckExpression scopeTable p)
-      >>= runNameIdGenArtifacts . Internal.fromConcreteExpression
+    $ runNameIdGenArtifacts (Scoper.scopeCheckExpression (Store.getScopedModuleTable mtab) scopeTable p)
+      >>= runNameIdGenArtifacts . runReader scopeTable . Internal.fromConcreteExpression
       >>= Internal.arityCheckExpression
 
 expressionUpToAtomsParsed ::
@@ -46,70 +45,32 @@ expressionUpToAtomsParsed fp txt =
     $ Parser.expressionFromTextSource fp txt
 
 expressionUpToAtomsScoped ::
-  (Members '[State Artifacts, Error JuvixError] r) =>
+  (Members '[Reader EntryPoint, State Artifacts, Error JuvixError] r) =>
   Path Abs File ->
   Text ->
   Sem r (ExpressionAtoms 'Scoped)
 expressionUpToAtomsScoped fp txt = do
   scopeTable <- gets (^. artifactScopeTable)
+  mtab <- gets (^. artifactModuleTable)
   runNameIdGenArtifacts
     . runBuiltinsArtifacts
     . runScoperScopeArtifacts
     $ Parser.expressionFromTextSource fp txt
-      >>= Scoper.scopeCheckExpressionAtoms scopeTable
+      >>= Scoper.scopeCheckExpressionAtoms (Store.getScopedModuleTable mtab) scopeTable
 
 scopeCheckExpression ::
-  (Members '[Error JuvixError, State Artifacts] r) =>
+  (Members '[Reader EntryPoint, Error JuvixError, State Artifacts] r) =>
   ExpressionAtoms 'Parsed ->
   Sem r Expression
 scopeCheckExpression p = do
   scopeTable <- gets (^. artifactScopeTable)
+  mtab <- gets (^. artifactModuleTable)
   runNameIdGenArtifacts
     . runBuiltinsArtifacts
     . runScoperScopeArtifacts
     . runStateArtifacts artifactScoperState
-    . Scoper.scopeCheckExpression scopeTable
+    . Scoper.scopeCheckExpression (Store.getScopedModuleTable mtab) scopeTable
     $ p
-
-runToInternal ::
-  (Members '[Reader EntryPoint, State Artifacts, Error JuvixError] r) =>
-  Sem
-    ( State Scoper.ScoperState
-        ': Reader Scoper.ScopeParameters
-        ': Reader (HashSet NameId)
-        ': State Scoper.Scope
-        ': Concrete.InfoTableBuilder
-        ': Builtins
-        ': NameIdGen
-        ': r
-    )
-    b ->
-  Sem r b
-runToInternal m = do
-  parsedModules <- gets (^. artifactParsing . C.stateModules)
-  runNameIdGenArtifacts
-    . runBuiltinsArtifacts
-    . runScoperInfoTableBuilderArtifacts
-    . runScoperScopeArtifacts
-    . runReaderArtifacts artifactScopeExports
-    . runReader (Scoper.ScopeParameters mempty (fmap Right parsedModules))
-    . runFromConcreteCache
-    . runStateArtifacts artifactScoperState
-    $ m
-
-importToInternal ::
-  (Members '[Reader EntryPoint, Error JuvixError, State Artifacts, Termination] r) =>
-  Import 'Parsed ->
-  Sem r Internal.Import
-importToInternal i = runToInternal $ do
-  Scoper.scopeCheckImport i
-    >>= Internal.fromConcreteImport
-
-importToInternalTyped ::
-  --  (Members '[Reader EntryPoint, Error JuvixError, State Artifacts, Termination] r) =>
-  Internal.Import ->
-  Sem r Internal.Import
-importToInternalTyped = Internal.arityCheckImport >=> Internal.typeCheckImport
 
 parseReplInput ::
   (Members '[PathResolver, Files, State Artifacts, Error JuvixError] r) =>
@@ -117,13 +78,12 @@ parseReplInput ::
   Text ->
   Sem r Parser.ReplInput
 parseReplInput fp txt =
-  runNameIdGenArtifacts
-    . runBuiltinsArtifacts
-    . runParserInfoTableBuilderArtifacts
-    $ Parser.replInputFromTextSource fp txt
+  runNameIdGenArtifacts $
+    runStateLikeArtifacts runParserResultBuilder artifactParsing $
+      Parser.replInputFromTextSource fp txt
 
 expressionUpToTyped ::
-  (Members '[Error JuvixError, State Artifacts] r) =>
+  (Members '[Reader EntryPoint, Error JuvixError, State Artifacts] r) =>
   Path Abs File ->
   Text ->
   Sem r Internal.TypedExpression
@@ -135,7 +95,7 @@ expressionUpToTyped fp txt = do
     )
 
 compileExpression ::
-  (Members '[Error JuvixError, State Artifacts] r) =>
+  (Members '[Reader EntryPoint, Error JuvixError, State Artifacts] r) =>
   ExpressionAtoms 'Parsed ->
   Sem r Core.Node
 compileExpression p =
@@ -146,34 +106,13 @@ compileExpression p =
     >>= fromInternalExpression
 
 registerImport ::
-  (Members '[Error JuvixError, State Artifacts, Reader EntryPoint] r) =>
+  (Members '[Error JuvixError, State Artifacts, Reader EntryPoint, Files, GitClone, PathResolver] r) =>
   Import 'Parsed ->
   Sem r ()
-registerImport p =
-  runTerminationArtifacts
-    ( importToInternal p
-        >>= importToInternalTyped
-    )
-    >>= fromInternalImport
-
-fromInternalImport ::
-  --  (Members '[State Artifacts] r) =>
-  Internal.Import ->
-  Sem r ()
-fromInternalImport _ = return ()
-
-{-  artiTable <- gets (^. artifactInternalTypedTable)
-  let table = Internal.buildTable [i ^. Internal.importModule . Internal.moduleIxModule] <> artiTable
-  runNameIdGenArtifacts
-    . runReader table
-    . runCoreInfoTableBuilderArtifacts
-    . runFunctionsTableArtifacts
-    . readerTypesTableArtifacts
-    . runReader Core.initIndexTable
-    -- TODO add cache in Artifacts
-    . evalVisitEmpty Core.goModuleNoVisit
-    $ Core.goModule (i ^. Internal.importModule . Internal.moduleIxModule)
--}
+registerImport i = do
+  e <- ask
+  mi <- Driver.processImport e i
+  modify' (over artifactModuleTable (Store.insertModule (i ^. importModulePath) mi))
 
 fromInternalExpression :: (Members '[State Artifacts] r) => Internal.Expression -> Sem r Core.Node
 fromInternalExpression exp = do
@@ -213,12 +152,5 @@ compileReplInputIO fp txt = do
       p <- parseReplInput fp txt
       case p of
         Parser.ReplExpression e -> ReplPipelineResultNode <$> compileExpression e
-        Parser.ReplImport i -> registerImport i $> ReplPipelineResultImport (i ^. importModule)
+        Parser.ReplImport i -> registerImport i $> ReplPipelineResultImport (i ^. importModulePath)
         Parser.ReplOpenImport i -> return (ReplPipelineResultOpen (i ^. openModuleName))
-
-expressionUpToTypedIO ::
-  (Members '[State Artifacts, Embed IO] r) =>
-  Path Abs File ->
-  Text ->
-  Sem r (Either JuvixError Internal.TypedExpression)
-expressionUpToTypedIO fp txt = runError (expressionUpToTyped fp txt)

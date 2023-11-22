@@ -2,6 +2,7 @@ module Juvix.Compiler.Pipeline.Driver
   ( processFile,
     processFileToStoredCore,
     processModule,
+    processImport,
   )
 where
 
@@ -29,30 +30,43 @@ processFile ::
 processFile entry = do
   res <- runReader entry upToParsing
   let imports = res ^. Parser.resultParserState . Parser.parserStateImports
-  modules <- forM imports goImport
+  modules <- forM imports (processImport entry)
   return (res, Store.mkModuleTable modules)
-  where
-    goImport :: Import 'Parsed -> Sem r Store.ModuleInfo
-    goImport i =
-      withPath'
-        i
-        ( \path ->
-            processModule (entry {_entryPointModulePath = Just path})
-        )
+
+processImport ::
+  forall r.
+  (Members '[Error JuvixError, Files, GitClone, PathResolver] r) =>
+  EntryPoint ->
+  Import 'Parsed ->
+  Sem r Store.ModuleInfo
+processImport entry i =
+  withPath'
+    i
+    ( \path ->
+        processModule (entry {_entryPointModulePath = Just path})
+    )
+
+processFileToStoredCore' ::
+  forall r.
+  (Members '[Error JuvixError, Files, GitClone, PathResolver] r) =>
+  EntryPoint ->
+  Sem r (Core.CoreResult, Store.ModuleTable)
+processFileToStoredCore' entry = do
+  (res, mtab) <- processFile entry
+  fmap (,mtab) $
+    runReader res $
+      runReader entry $
+        runReader mtab $
+          evalTopNameIdGen
+            (res ^. Parser.resultModule . moduleId)
+            upToStoredCore
 
 processFileToStoredCore ::
   forall r.
   (Members '[Error JuvixError, Files, GitClone, PathResolver] r) =>
   EntryPoint ->
   Sem r Core.CoreResult
-processFileToStoredCore entry = do
-  (res, mtab) <- processFile entry
-  runReader res $
-    runReader entry $
-      runReader mtab $
-        evalTopNameIdGen
-          (res ^. Parser.resultModule . moduleId)
-          upToStoredCore
+processFileToStoredCore entry = fst <$> processFileToStoredCore' entry
 
 processModule ::
   forall r.

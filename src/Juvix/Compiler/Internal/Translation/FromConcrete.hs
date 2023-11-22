@@ -14,7 +14,6 @@ import Data.HashSet qualified as HashSet
 import Data.IntMap.Strict qualified as IntMap
 import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Compiler.Builtins
-import Juvix.Compiler.Concrete.Data.Scope.Base (ScoperState)
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Extra qualified as Concrete
 import Juvix.Compiler.Concrete.Language qualified as Concrete
@@ -85,7 +84,27 @@ fromConcrete _resultScoper = do
   where
     m = _resultScoper ^. Scoper.resultModule
 
--- | `StatementInclude`s are not included in the result
+fromConcreteExpression :: (Members '[Builtins, Error JuvixError, NameIdGen, Termination, Reader S.InfoTable] r) => Scoper.Expression -> Sem r Internal.Expression
+fromConcreteExpression e = do
+  e' <-
+    mapError (JuvixError @ScoperError)
+      . runReader @Pragmas mempty
+      . runReader @DefaultArgsStack mempty
+      . goExpression
+      $ e
+  checkTerminationShallow e'
+  return e'
+
+fromConcreteImport ::
+  (Members '[Reader ExportsTable, Error JuvixError, NameIdGen, Builtins, Termination] r) =>
+  Scoper.Import 'Scoped ->
+  Sem r Internal.Import
+fromConcreteImport i = do
+  mapError (JuvixError @ScoperError)
+    . runReader @Pragmas mempty
+    . goImport
+    $ i
+
 buildMutualBlocks ::
   (Members '[Reader Internal.NameDependencyInfo] r) =>
   [Internal.PreStatement] ->
@@ -131,27 +150,6 @@ buildMutualBlocks ss = do
         nonEmptySCC = \case
           AcyclicSCC a -> AcyclicSCC <$> a
           CyclicSCC p -> CyclicSCC . toList <$> nonEmpty (catMaybes p)
-
-fromConcreteExpression :: (Members '[Builtins, Error JuvixError, NameIdGen, Termination, Reader ScoperState, Reader S.InfoTable] r) => Scoper.Expression -> Sem r Internal.Expression
-fromConcreteExpression e = do
-  e' <-
-    mapError (JuvixError @ScoperError)
-      . runReader @Pragmas mempty
-      . runReader @DefaultArgsStack mempty
-      . goExpression
-      $ e
-  checkTerminationShallow e'
-  return e'
-
-fromConcreteImport ::
-  (Members '[Reader ExportsTable, Error JuvixError, NameIdGen, Builtins, Termination] r) =>
-  Scoper.Import 'Scoped ->
-  Sem r Internal.Import
-fromConcreteImport i = do
-  mapError (JuvixError @ScoperError)
-    . runReader @Pragmas mempty
-    . goImport
-    $ i
 
 goLocalModule ::
   (Members '[Reader DefaultArgsStack, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ConstructorInfos, Reader S.InfoTable] r) =>

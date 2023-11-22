@@ -13,14 +13,17 @@ import Juvix.Compiler.Concrete.Translation.FromSource qualified as P
 import Juvix.Compiler.Core.Data.InfoTable qualified as Core
 import Juvix.Compiler.Core.Translation.FromInternal.Data qualified as Core
 import Juvix.Compiler.Internal.Translation qualified as Internal
-import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking qualified as Arity
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Data.Context qualified as Arity
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking qualified as Typed
 import Juvix.Compiler.Pipeline
 import Juvix.Compiler.Pipeline.Artifacts.PathResolver
+import Juvix.Compiler.Pipeline.Driver (processFileToStoredCore)
+import Juvix.Compiler.Pipeline.Loader.PathResolver
 import Juvix.Compiler.Pipeline.Package.Loader.Error
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff.IO
 import Juvix.Compiler.Pipeline.Package.Loader.PathResolver
+import Juvix.Compiler.Store.Scoped.Language qualified as Scoped
 import Juvix.Data.Effect.Git
 import Juvix.Data.Effect.Process
 import Juvix.Prelude
@@ -46,7 +49,6 @@ runIOEitherHelper entry = do
     . evalInternet hasInternet
     . runHighlightBuilder
     . runJuvixError
-    . evalTopBuiltins
     . evalTopNameIdGen defaultModuleId -- TODO: module id
     . runFilesIO
     . runReader entry
@@ -112,7 +114,7 @@ corePipelineIOEither entry = do
       . mapError (JuvixError @PackageLoaderError)
       . runEvalFileEffIO
       . runPathResolver'
-      $ upToCore
+      $ processFileToStoredCore entry
   return $ case eith of
     Left err -> Left err
     Right (art, coreRes) ->
@@ -128,13 +130,13 @@ corePipelineIOEither entry = do
           functionsTable = typedResult ^. Typed.resultFunctions
 
           typedTable :: Internal.InfoTable
-          typedTable = Internal.buildInfoTable (typedResult ^. Typed.resultTable)
+          typedTable = typedResult ^. Typed.resultInternalModule . Typed.internalModuleInfoTable
 
           internalResult :: Internal.InternalResult
           internalResult =
             typedResult
-              ^. Typed.resultInternalArityResult
-                . Arity.resultInternalResult
+              ^. Typed.resultInternal
+                . Arity.resultInternal
 
           coreTable :: Core.InfoTable
           coreTable = coreRes ^. Core.coreResultTable
@@ -147,16 +149,12 @@ corePipelineIOEither entry = do
           parserResult :: P.ParserResult
           parserResult = scopedResult ^. Scoped.resultParserResult
 
-          resultScoperTable :: Scoped.InfoTable
-          resultScoperTable = scopedResult ^. Scoped.resultScoperTable
-
-          mainModuleScope_ :: Scope
-          mainModuleScope_ = Scoped.mainModuleSope scopedResult
+          resultScoperTable :: InfoTable
+          resultScoperTable = scopedResult ^. Scoped.resultScopedModule . Scoped.scopedModuleInfoTable
        in Right $
             Artifacts
-              { _artifactMainModuleScope = Just mainModuleScope_,
-                _artifactParsing = parserResult ^. P.resultBuilderState,
-                _artifactInternalModuleCache = internalResult ^. Internal.resultModulesCache,
+              { _artifactMainModuleScope = Nothing,
+                _artifactParsing = parserResult ^. P.resultParserState,
                 _artifactInternalTypedTable = typedTable,
                 _artifactTerminationState = typedResult ^. Typed.resultTermination,
                 _artifactCoreTable = coreTable,
@@ -167,24 +165,25 @@ corePipelineIOEither entry = do
                 _artifactScoperState = scopedResult ^. Scoped.resultScoperState,
                 _artifactResolver = art ^. artifactResolver,
                 _artifactBuiltins = art ^. artifactBuiltins,
-                _artifactNameIdState = art ^. artifactNameIdState
+                _artifactNameIdState = art ^. artifactNameIdState,
+                _artifactModuleTable = mempty -- TODO: imports
               }
   where
     initialArtifacts :: Artifacts
     initialArtifacts =
       Artifacts
-        { _artifactParsing = Concrete.iniState,
+        { _artifactParsing = mempty,
           _artifactMainModuleScope = Nothing,
           _artifactInternalTypedTable = mempty,
           _artifactTypes = mempty,
           _artifactTerminationState = iniTerminationState,
           _artifactResolver = iniResolverState,
-          _artifactNameIdState = genNameIdState defaultModuleId, -- TODO: module id
+          _artifactNameIdState = genNameIdState defaultModuleId, -- TODO: module id (this is fine for REPL?)
           _artifactFunctions = mempty,
           _artifactCoreTable = Core.emptyInfoTable,
-          _artifactScopeTable = Scoped.emptyInfoTable,
+          _artifactScopeTable = mempty,
           _artifactBuiltins = iniBuiltins,
           _artifactScopeExports = mempty,
-          _artifactInternalModuleCache = Internal.ModulesCache mempty,
-          _artifactScoperState = Scoper.iniScoperState
+          _artifactScoperState = Scoper.iniScoperState mempty,
+          _artifactModuleTable = mempty
         }

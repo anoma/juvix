@@ -16,6 +16,8 @@ import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Print
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoped
+import Juvix.Compiler.Concrete.Translation.FromSource.Data.Context qualified as Parser
+import Juvix.Compiler.Concrete.Translation.FromSource.Data.ParserState qualified as Parser
 import Juvix.Compiler.Internal.Translation.FromConcrete qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Data.Context qualified as InternalArity
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking qualified as InternalTyped
@@ -155,8 +157,8 @@ writeHtml f h = Prelude.embed $ do
     dir :: Path Abs Dir
     dir = parent f
 
-genJudocHtml :: (Members '[Embed IO] r) => JudocArgs -> Sem r ()
-genJudocHtml JudocArgs {..} =
+genJudocHtml :: (Members '[Embed IO] r) => EntryPoint -> JudocArgs -> Sem r ()
+genJudocHtml entry JudocArgs {..} =
   runReader htmlOpts . runReader normTable . runReader entry $ do
     Prelude.embed (writeAssets _judocArgsOutputDir)
     mapM_ (goTopModule cs) allModules
@@ -164,14 +166,14 @@ genJudocHtml JudocArgs {..} =
   where
     cs :: Comments
     cs =
-      _judocArgsCtx
-        ^. InternalTyped.resultInternal
-          . InternalArity.resultInternal
-          . Internal.resultScoper
-          . Scoped.comments
-
-    entry :: EntryPoint
-    entry = _judocArgsCtx ^. InternalTyped.internalTypedResultEntryPoint
+      mkComments $
+        _judocArgsCtx
+          ^. InternalTyped.resultInternal
+            . InternalArity.resultInternal
+            . Internal.resultScoper
+            . Scoped.resultParserResult
+            . Parser.resultParserState
+            . Parser.parserStateComments
 
     normTable :: InternalTyped.NormalizedTable
     normTable = _judocArgsCtx ^. InternalTyped.resultNormalized
