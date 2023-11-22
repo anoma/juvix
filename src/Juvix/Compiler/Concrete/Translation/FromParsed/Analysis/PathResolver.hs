@@ -26,6 +26,7 @@ import Juvix.Compiler.Pipeline.Package
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff
 import Juvix.Data.Effect.Git
 import Juvix.Data.Effect.TaggedLock
+import Juvix.Data.SHA256 qualified as SHA256
 import Juvix.Extra.Paths
 import Juvix.Extra.Stdlib (ensureStdlib)
 import Juvix.Prelude
@@ -175,15 +176,26 @@ registerDependencies' conf = do
           void (addRootDependency conf e glob)
       | otherwise -> do
           lockfile <- addRootDependency conf e (e ^. entryPointRoot)
-          root <- asks (^. envRoot)
-          whenM shouldWriteLockfile (writeLockfile root lockfile)
+          whenM shouldWriteLockfile $ do
+            packageFileChecksum <- SHA256.digestFile (e ^. entryPointPackage . packageFile)
+            lockfilePath' <- lockfilePath
+            writeLockfile lockfilePath' packageFileChecksum lockfile
   where
     shouldWriteLockfile :: Sem r Bool
     shouldWriteLockfile = do
+      lockfileExists <- lockfilePath >>= fileExists'
+      hasRemoteDependencies <- gets (^. resolverHasRemoteDependencies)
+      shouldUpdateLockfile' <- gets (^. resolverShouldUpdateLockfile)
+
+      let shouldForce = conf ^. dependenciesConfigForceUpdateLockfile
+          shouldWriteInitialLockfile = not lockfileExists && hasRemoteDependencies
+          shouldUpdateLockfile = lockfileExists && shouldUpdateLockfile'
+      return (shouldForce || shouldWriteInitialLockfile || shouldUpdateLockfile)
+
+    lockfilePath :: Sem r (Path Abs File)
+    lockfilePath = do
       root <- asks (^. envRoot)
-      lockfileExists <- fileExists' (mkPackageLockfilePath root)
-      depsShouldWriteLockfile <- gets (^. resolverShouldWriteLockfile)
-      return (conf ^. dependenciesConfigForceUpdateLockfile || not lockfileExists && depsShouldWriteLockfile)
+      return (mkPackageLockfilePath root)
 
 addRootDependency ::
   forall r.
@@ -196,15 +208,23 @@ addRootDependency conf e root = do
   let pf = mkPackageFilePath root
       d = mkPackageDependencyInfo pf (mkPathDependency (toFilePath root))
   resolvedDependency <- resolveDependency d
-  checkShouldWriteLockfile resolvedDependency
+  checkRemoteDependency resolvedDependency
   let p = resolvedDependency ^. resolvedDependencyPath
   withEnvRoot p $ do
     pkg <- mkPackage (Just e) p
+    shouldUpdateLockfile' <- shouldUpdateLockfile pkg
+    when shouldUpdateLockfile' setShouldUpdateLockfile
     let resolvedPkg :: Package
-          | conf ^. dependenciesConfigForceUpdateLockfile = unsetPackageLockfile pkg
+          | shouldUpdateLockfile' = unsetPackageLockfile pkg
           | otherwise = pkg
     deps <- addDependency' resolvedPkg (Just e) resolvedDependency
     return Lockfile {_lockfileDependencies = deps ^. lockfileDependencyDependencies}
+  where
+    shouldUpdateLockfile :: Package -> Sem r Bool
+    shouldUpdateLockfile pkg = do
+      let checksumMay :: Maybe Text = pkg ^? packageLockfile . _Just . lockfileInfoChecksum . _Just
+      packageFileChecksum <- SHA256.digestFile (pkg ^. packageFile)
+      return (conf ^. dependenciesConfigForceUpdateLockfile || Just packageFileChecksum /= checksumMay)
 
 addDependency ::
   forall r.
@@ -214,7 +234,7 @@ addDependency ::
   Sem r LockfileDependency
 addDependency me d = do
   resolvedDependency <- resolveDependency d
-  checkShouldWriteLockfile resolvedDependency
+  checkRemoteDependency resolvedDependency
   let p = resolvedDependency ^. resolvedDependencyPath
   cached <- lookupCachedDependency p
   case cached of

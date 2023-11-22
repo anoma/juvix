@@ -10,6 +10,7 @@ import Juvix.Compiler.Concrete.Print qualified as P
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
+import Juvix.Compiler.Pipeline.Package.Loader
 import Juvix.Compiler.Pipeline.Package.Loader.Error
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff.IO
 import Juvix.Compiler.Pipeline.Package.Loader.PathResolver
@@ -17,7 +18,6 @@ import Juvix.Compiler.Pipeline.Setup
 import Juvix.Data.Effect.Git
 import Juvix.Data.Effect.Process
 import Juvix.Data.Effect.TaggedLock
-import Juvix.Prelude.Aeson
 import Juvix.Prelude.Pretty
 
 data PathResolverMode
@@ -94,9 +94,9 @@ testDescr PosTest {..} = helper renderCodeNew
                         Concrete.fromParsed p
                     )
 
-                let yamlFiles :: [(Path Abs File, Text)]
-                    yamlFiles =
-                      [ (pkgi ^. packageRoot <//> juvixYamlFile, encodeToText (rawPackage (pkgi ^. packagePackage)))
+                let packageFiles' :: [(Path Abs File, Text)]
+                    packageFiles' =
+                      [ (pkgi ^. packagePackage . packageFile, renderPackageVersion PackageVersion1 (pkgi ^. packagePackage))
                         | pkgi <- (^. resolverCacheItemPackage) <$> toList (resolverState ^. resolverCache)
                       ]
                     fsScoped :: HashMap (Path Abs File) Text
@@ -105,14 +105,14 @@ testDescr PosTest {..} = helper renderCodeNew
                         [ (getModuleFilePath m, renderer m)
                           | m <- toList (s ^. Scoper.resultScoperTable . Scoper.infoModules)
                         ]
-                          <> yamlFiles
+                          <> packageFiles'
                     fsParsed :: HashMap (Path Abs File) Text
                     fsParsed =
                       HashMap.fromList $
                         [ (getModuleFilePath m, renderCodeNew m)
                           | m <- toList (p ^. Parser.resultTable . Parser.infoParsedModules)
                         ]
-                          <> yamlFiles
+                          <> packageFiles'
 
                 step "Parsing pretty scoped"
                 p' :: Parser.ParserResult <- evalHelper fsScoped upToParsing
