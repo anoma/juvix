@@ -561,8 +561,7 @@ checkClause clauseLoc clauseType clausePats body = do
                     ty' = foldFunType bodyParams' bodyRest
                 wildcards <- mapM (genWildcard clauseLoc) pref'
                 return (wildcards, ty')
-            | otherwise -> do
-                return ([], bodyTy)
+            | otherwise -> return ([], bodyTy)
       p : ps -> do
         bodyTy' <- weakNormalize bodyTy
         case bodyTy' of

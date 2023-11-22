@@ -109,7 +109,7 @@ genFieldProjection _funDefName _funDefBuiltin info fieldIx = do
       saturatedTy = unnamedParameter' implicity (constructorReturnType info)
       inductiveArgs = map inductiveToFunctionParam inductiveParams
       retTy = constrArgs !! fieldIx
-  return
+  cloneFunctionDefSameName
     FunctionDef
       { _funDefExamples = [],
         _funDefTerminating = False,
@@ -219,3 +219,8 @@ inlineLet l = do
               _funDefArgsInfo = []
             } -> Just (name, body)
           _ -> Nothing
+
+cloneFunctionDefSameName :: Members '[NameIdGen] r => FunctionDef -> Sem r FunctionDef
+cloneFunctionDefSameName f = do
+  f' <- clone f
+  return (set funDefName (f ^. funDefName) f')

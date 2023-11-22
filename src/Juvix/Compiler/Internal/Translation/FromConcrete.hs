@@ -795,9 +795,9 @@ goExpression = \case
                 }
         expr <-
           Internal.substitutionE updateKind l
-            -- >>= Internal.inlineLet
+            >>= Internal.inlineLet
         -- pure (Internal.ExpressionLet l)
-        Internal.clone (Internal.ExpressionLet expr)
+        Internal.clone expr
         where
           goArgs :: NonEmpty (NamedArgumentNew 'Scoped) -> Sem r (NonEmpty Internal.LetClause)
           goArgs args = nonEmpty' . mkLetClauses <$> mapM goArg args

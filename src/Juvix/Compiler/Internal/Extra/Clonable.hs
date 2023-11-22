@@ -234,6 +234,8 @@ instance Clonable ArgInfo where
           _argInfoName
         }
 
+-- | Note that the name of the function is fresh. This is desirable when the
+-- functionDef is part of a let.
 instance Clonable FunctionDef where
   freshNameIds :: (Members '[Reader FreshBindersContext, NameIdGen] r) => FunctionDef -> Sem r FunctionDef
   freshNameIds fun@FunctionDef {..} = do
@@ -241,7 +243,6 @@ instance Clonable FunctionDef where
     underBinder fun $ \fun' -> do
       body' <- freshNameIds _funDefBody
       defaultSig' <- freshNameIds _funDefArgsInfo
-
       return
         FunctionDef
           { _funDefName = fun' ^. funDefName,
