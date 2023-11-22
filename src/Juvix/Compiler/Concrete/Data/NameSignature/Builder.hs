@@ -232,7 +232,7 @@ endBuild' :: forall s r a. Sem (Re s r) a
 endBuild' = get @(BuilderState s) >>= throw
 
 mkRecordNameSignature :: forall s. (SingI s) => [InductiveParameters s] -> RhsRecord s -> RecordNameSignature s
-mkRecordNameSignature ps rhs =
+mkRecordNameSignature _ps rhs =
   RecordNameSignature $
     indexedByHash (symbolParsed . (^. nameItemSymbol)) (run (execOutputList (evalState 0 helper)))
   where
