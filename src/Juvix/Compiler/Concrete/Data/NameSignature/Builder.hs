@@ -231,16 +231,14 @@ addSymbol' impl mdef sym ty = do
 endBuild' :: forall s r a. Sem (Re s r) a
 endBuild' = get @(BuilderState s) >>= throw
 
--- FIXME is this ever used???
 mkRecordNameSignature :: forall s. (SingI s) => [InductiveParameters s] -> RhsRecord s -> RecordNameSignature s
 mkRecordNameSignature ps rhs =
-  undefined $
     RecordNameSignature $
       indexedByHash (symbolParsed . (^. nameItemSymbol)) (run (execOutputList (evalState 0 helper)))
   where
     helper :: forall r. (r ~ '[State Int, Output (NameItem s)]) => Sem r ()
     helper = do
-      forM_ ps emitParameters
+      -- forM_ ps emitParameters
       forOf_ (rhsRecordStatements . each . _RecordStatementField) rhs emitField
       where
         emitItem :: (Int -> NameItem s) -> Sem r ()
@@ -258,17 +256,17 @@ mkRecordNameSignature ps rhs =
               _nameItemIndex
             }
 
-        emitParameters :: InductiveParameters s -> Sem r ()
-        emitParameters params = forM_ (params ^. inductiveParametersNames) emitParam
-          where
-            -- TODO  implicitness!!
-            emitParam :: SymbolType s -> Sem r ()
-            emitParam sym = error "nameblock" $ emitItem $ \_nameItemIndex ->
-              NameItem
-                { _nameItemSymbol = sym,
-                  _nameItemType = fromMaybe defaultType (params ^? inductiveParametersRhs . _Just . inductiveParametersType),
-                  _nameItemDefault = Nothing,
-                  _nameItemIndex
-                }
-              where
-                defaultType = run (runReader (getLocSymbolType sym) Gen.smallUniverseExpression)
+        -- emitParameters :: InductiveParameters s -> Sem r ()
+        -- emitParameters params = forM_ (params ^. inductiveParametersNames) emitParam
+        --   where
+        --     -- FIXME  implicitness!!
+        --     emitParam :: SymbolType s -> Sem r ()
+        --     emitParam sym = emitItem $ \_nameItemIndex ->
+        --       NameItem
+        --         { _nameItemSymbol = sym,
+        --           _nameItemType = fromMaybe defaultType (params ^? inductiveParametersRhs . _Just . inductiveParametersType),
+        --           _nameItemDefault = Nothing,
+        --           _nameItemIndex
+        --         }
+        --       where
+        --         defaultType = run (runReader (getLocSymbolType sym) Gen.smallUniverseExpression)
