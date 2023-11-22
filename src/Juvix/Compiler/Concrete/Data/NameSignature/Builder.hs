@@ -233,8 +233,8 @@ endBuild' = get @(BuilderState s) >>= throw
 
 mkRecordNameSignature :: forall s. (SingI s) => [InductiveParameters s] -> RhsRecord s -> RecordNameSignature s
 mkRecordNameSignature ps rhs =
-    RecordNameSignature $
-      indexedByHash (symbolParsed . (^. nameItemSymbol)) (run (execOutputList (evalState 0 helper)))
+  RecordNameSignature $
+    indexedByHash (symbolParsed . (^. nameItemSymbol)) (run (execOutputList (evalState 0 helper)))
   where
     helper :: forall r. (r ~ '[State Int, Output (NameItem s)]) => Sem r ()
     helper = do
@@ -256,17 +256,17 @@ mkRecordNameSignature ps rhs =
               _nameItemIndex
             }
 
-        -- emitParameters :: InductiveParameters s -> Sem r ()
-        -- emitParameters params = forM_ (params ^. inductiveParametersNames) emitParam
-        --   where
-        --     -- FIXME  implicitness!!
-        --     emitParam :: SymbolType s -> Sem r ()
-        --     emitParam sym = emitItem $ \_nameItemIndex ->
-        --       NameItem
-        --         { _nameItemSymbol = sym,
-        --           _nameItemType = fromMaybe defaultType (params ^? inductiveParametersRhs . _Just . inductiveParametersType),
-        --           _nameItemDefault = Nothing,
-        --           _nameItemIndex
-        --         }
-        --       where
-        --         defaultType = run (runReader (getLocSymbolType sym) Gen.smallUniverseExpression)
+-- emitParameters :: InductiveParameters s -> Sem r ()
+-- emitParameters params = forM_ (params ^. inductiveParametersNames) emitParam
+--   where
+--     -- FIXME  implicitness!!
+--     emitParam :: SymbolType s -> Sem r ()
+--     emitParam sym = emitItem $ \_nameItemIndex ->
+--       NameItem
+--         { _nameItemSymbol = sym,
+--           _nameItemType = fromMaybe defaultType (params ^? inductiveParametersRhs . _Just . inductiveParametersType),
+--           _nameItemDefault = Nothing,
+--           _nameItemIndex
+--         }
+--       where
+--         defaultType = run (runReader (getLocSymbolType sym) Gen.smallUniverseExpression)

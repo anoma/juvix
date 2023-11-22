@@ -220,7 +220,7 @@ inlineLet l = do
             } -> Just (name, body)
           _ -> Nothing
 
-cloneFunctionDefSameName :: Members '[NameIdGen] r => FunctionDef -> Sem r FunctionDef
+cloneFunctionDefSameName :: (Members '[NameIdGen] r) => FunctionDef -> Sem r FunctionDef
 cloneFunctionDefSameName f = do
   f' <- clone f
   return (set funDefName (f ^. funDefName) f')

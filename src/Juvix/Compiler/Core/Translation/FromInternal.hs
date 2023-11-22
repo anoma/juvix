@@ -15,13 +15,13 @@ import Juvix.Compiler.Core.Translation.FromInternal.Builtins.Nat
 import Juvix.Compiler.Core.Translation.FromInternal.Data
 import Juvix.Compiler.Internal.Data.Name
 import Juvix.Compiler.Internal.Extra qualified as Internal
+import Juvix.Compiler.Internal.Pretty (ppTrace)
 import Juvix.Compiler.Internal.Pretty qualified as Internal
 import Juvix.Compiler.Internal.Translation.Extra qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking qualified as InternalTyped
 import Juvix.Data.Loc qualified as Loc
 import Juvix.Data.PPOutput
 import Juvix.Extra.Strings qualified as Str
-import Juvix.Compiler.Internal.Pretty (ppTrace)
 
 type MVisit = Visit Internal.ModuleIndex
 

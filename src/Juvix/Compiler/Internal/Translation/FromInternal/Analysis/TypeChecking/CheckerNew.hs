@@ -548,7 +548,8 @@ checkClause clauseLoc clauseType clausePats body = do
     go pats bodyTy = case pats of
       [] -> do
         (bodyParams, bodyRest) <- unfoldFunType' bodyTy
-        guessedBodyParams <- unfoldArity <$> guessArity body
+        locals <- get
+        guessedBodyParams <- withLocalVars locals (unfoldArity <$> guessArity body)
         let pref' :: [IsImplicit] = map (^. paramImplicit) (take pref bodyParams)
             pref :: Int = aI - targetI
             preImplicits = length . takeWhile isImplicitOrInstance
@@ -1431,7 +1432,7 @@ typeArity = weakNormalize >=> go
 
 guessArity ::
   forall r.
-  (Members '[Reader InfoTable, Inference] r) =>
+  (Members '[Reader InfoTable, Inference, Reader LocalVars] r) =>
   Expression ->
   Sem r Arity
 guessArity = \case
@@ -1448,7 +1449,7 @@ guessArity = \case
   ExpressionCase l -> arityCase l
   where
     idenHelper :: Iden -> Sem r Arity
-    idenHelper = withEmptyLocalVars . idenArity
+    idenHelper = idenArity
 
     appHelper :: Application -> Sem r Arity
     appHelper a = do
@@ -1483,7 +1484,7 @@ arityUniverse = ArityUnit
 simplelambda :: a
 simplelambda = error "simple lambda expressions are not supported by the arity checker"
 
-arityLambda :: forall r. (Members '[Reader InfoTable, Inference] r) => Lambda -> Sem r Arity
+arityLambda :: forall r. (Members '[Reader InfoTable, Inference, Reader LocalVars] r) => Lambda -> Sem r Arity
 arityLambda l = do
   aris <- mapM guessClauseArity (l ^. lambdaClauses)
   return $
@@ -1520,13 +1521,13 @@ guessPatternArgArity p =
           }
     }
 
-arityLet :: (Members '[Reader InfoTable, Inference] r) => Let -> Sem r Arity
+arityLet :: (Members '[Reader InfoTable, Inference, Reader LocalVars] r) => Let -> Sem r Arity
 arityLet l = guessArity (l ^. letExpression)
 
 -- | All branches should have the same arity. If they are all the same, we
 -- return that, otherwise we return ArityBlocking. Probably something better can
 -- be done.
-arityCase :: (Members '[Reader InfoTable, Inference] r) => Case -> Sem r Arity
+arityCase :: (Members '[Reader InfoTable, Inference, Reader LocalVars] r) => Case -> Sem r Arity
 arityCase c = do
   aris <- mapM (guessArity . (^. caseBranchExpression)) (c ^. caseBranches)
   return
