@@ -49,6 +49,8 @@ type Dynamic = Dynamic' ()
 
 type Bottom = Bottom' () Node
 
+type Binder = Binder' Node
+
 {---------------------------------------------------------------------------------}
 
 data Node

@@ -165,8 +165,8 @@ genJudocHtml JudocArgs {..} =
     cs :: Comments
     cs =
       _judocArgsCtx
-        ^. resultInternalArityResult
-          . InternalArity.resultInternalResult
+        ^. InternalTyped.resultInternal
+          . InternalArity.resultInternal
           . Internal.resultScoper
           . Scoped.comments
 
@@ -179,8 +179,8 @@ genJudocHtml JudocArgs {..} =
     mainMod :: Module 'Scoped 'ModuleTop
     mainMod =
       _judocArgsCtx
-        ^. InternalTyped.resultInternalArityResult
-          . InternalArity.resultInternalResult
+        ^. InternalTyped.resultInternal
+          . InternalArity.resultInternal
           . Internal.resultScoper
           . Scoped.mainModule
 

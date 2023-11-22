@@ -12,7 +12,7 @@ unrollRecursion :: (Member (Reader CoreOptions) r) => InfoTable -> Sem r InfoTab
 unrollRecursion tab = do
   (mp, tab') <-
     runState @(HashMap Symbol Symbol) mempty $
-      execInfoTableBuilder tab $
+      execInfoTableBuilder defaultModuleId tab $ -- TODO: this is wrong
         forM_ (buildSCCs (createCallGraph tab)) goSCC
   return $ mapIdentSymbols mp $ pruneInfoTable tab'
   where
