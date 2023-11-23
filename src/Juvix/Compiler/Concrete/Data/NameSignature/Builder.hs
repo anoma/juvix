@@ -237,9 +237,7 @@ mkRecordNameSignature _ps rhs =
     indexedByHash (symbolParsed . (^. nameItemSymbol)) (run (execOutputList (evalState 0 helper)))
   where
     helper :: forall r. (r ~ '[State Int, Output (NameItem s)]) => Sem r ()
-    helper = do
-      -- forM_ ps emitParameters
-      forOf_ (rhsRecordStatements . each . _RecordStatementField) rhs emitField
+    helper = forOf_ (rhsRecordStatements . each . _RecordStatementField) rhs emitField
       where
         emitItem :: (Int -> NameItem s) -> Sem r ()
         emitItem mkitem = do
@@ -255,18 +253,3 @@ mkRecordNameSignature _ps rhs =
               _nameItemDefault = Nothing,
               _nameItemIndex
             }
-
--- emitParameters :: InductiveParameters s -> Sem r ()
--- emitParameters params = forM_ (params ^. inductiveParametersNames) emitParam
---   where
---     -- FIXME  implicitness!!
---     emitParam :: SymbolType s -> Sem r ()
---     emitParam sym = emitItem $ \_nameItemIndex ->
---       NameItem
---         { _nameItemSymbol = sym,
---           _nameItemType = fromMaybe defaultType (params ^? inductiveParametersRhs . _Just . inductiveParametersType),
---           _nameItemDefault = Nothing,
---           _nameItemIndex
---         }
---       where
---         defaultType = run (runReader (getLocSymbolType sym) Gen.smallUniverseExpression)
