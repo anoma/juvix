@@ -73,7 +73,7 @@ ppName kind name = return $ annotate (AnnKind kind) (pretty name)
 ppIdentName :: (Member (Reader Options) r) => Text -> Symbol -> Sem r (Doc Ann)
 ppIdentName name sym = do
   showIds <- asks (^. optShowIdentIds)
-  let name' = if showIds then name <> "!" <> prettyText sym else name
+  let name' = if showIds then name <> "!" <> show sym else name
   ppName KNameFunction name'
 
 ppCodeVar' :: (Member (Reader Options) r) => Text -> Var' i -> Sem r (Doc Ann)
@@ -468,7 +468,7 @@ instance PrettyCode InfoTable where
         showIds <- asks (^. optShowIdentIds)
         let mname :: Text
             mname = tbl ^. infoIdentifiers . at s . _Just . identifierName
-            mname' = if showIds then (\nm -> nm <> "!" <> prettyText s) mname else mname
+            mname' = if showIds then (\nm -> nm <> "!" <> show s) mname else mname
         sym' <- ppName KNameFunction mname'
         let -- the identifier may be missing if we have filtered out some
             -- identifiers for printing purposes

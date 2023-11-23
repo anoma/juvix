@@ -95,7 +95,7 @@ runInfoTableBuilder' st =
       FreshSymbol -> do
         s <- get
         modify' (over builderStateNextSymbolId (+ 1))
-        return (s ^. builderStateNextSymbolId)
+        return (Symbol (s ^. builderStateModuleId) (s ^. builderStateNextSymbolId))
       FreshTag -> do
         s <- get
         modify' (over builderStateNextTagId (+ 1))

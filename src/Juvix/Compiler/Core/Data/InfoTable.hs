@@ -27,32 +27,9 @@ type ParameterInfo = ParameterInfo' Node
 
 type SpecialisationInfo = SpecialisationInfo' Node
 
-emptyInfoTable :: InfoTable
-emptyInfoTable =
-  InfoTable
-    { _identContext = mempty,
-      _identMap = mempty,
-      _infoMain = Nothing,
-      _infoIdentifiers = mempty,
-      _infoInductives = mempty,
-      _infoConstructors = mempty,
-      _infoAxioms = mempty,
-      _infoSpecialisations = mempty,
-      _infoLiteralIntToNat = Nothing,
-      _infoLiteralIntToInt = Nothing,
-      _infoBuiltins = mempty
-    }
-
-emptyInfoTable' :: Node -> InfoTable
-emptyInfoTable' mainNode =
-  emptyInfoTable
-    { _identContext = HashMap.singleton 0 mainNode,
-      _infoMain = Just 0
-    }
-
 nextSymbolId :: InfoTable -> Word
 nextSymbolId tab =
-  maximum (0 : HashMap.keys (tab ^. infoIdentifiers) ++ HashMap.keys (tab ^. infoInductives))
+  maximum (0 : map (^. symbolId) (HashMap.keys (tab ^. infoIdentifiers)) ++ map (^. symbolId) (HashMap.keys (tab ^. infoInductives)))
     + 1
 
 nextTagId :: InfoTable -> Word

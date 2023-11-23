@@ -18,7 +18,7 @@ fromCore tab = fromCoreNode ii node
 
 fromCoreNode :: IdentifierInfo -> Node -> Program
 fromCoreNode ii node =
-  let (lams, body) = unfoldLambdas (disambiguateNodeNames' disambiguate emptyInfoTable node)
+  let (lams, body) = unfoldLambdas (disambiguateNodeNames' disambiguate mempty node)
       (defs, expr) = convertLets body
       n = length lams
       args = getVampIRInputs n (ii ^. identifierArgNames)

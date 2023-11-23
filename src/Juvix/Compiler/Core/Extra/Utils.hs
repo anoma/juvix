@@ -153,7 +153,7 @@ isImmediate tab = \case
   node -> isType tab mempty node
 
 isImmediate' :: Node -> Bool
-isImmediate' = isImmediate emptyInfoTable
+isImmediate' = isImmediate mempty
 
 -- | True if the argument is fully evaluated first-order data
 isDataValue :: Node -> Bool

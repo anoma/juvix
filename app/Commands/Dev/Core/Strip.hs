@@ -13,7 +13,7 @@ runCommand opts = do
   gopts <- askGlobalOptions
   inputFile :: Path Abs File <- fromAppPathFile sinputFile
   s' <- readFile $ toFilePath inputFile
-  (tab, _) <- getRight (mapLeft JuvixError (Core.runParser inputFile defaultModuleId Core.emptyInfoTable s'))
+  (tab, _) <- getRight (mapLeft JuvixError (Core.runParser inputFile defaultModuleId mempty s'))
   let r =
         run $
           runReader (project gopts) $

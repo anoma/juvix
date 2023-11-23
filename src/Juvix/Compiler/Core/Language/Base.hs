@@ -8,6 +8,7 @@ module Juvix.Compiler.Core.Language.Base
   )
 where
 
+import GHC.Show qualified as Show
 import Juvix.Compiler.Core.Info (Info, IsInfo, Key)
 import Juvix.Compiler.Core.Language.Builtins
 import Juvix.Extra.Serialize
@@ -16,7 +17,18 @@ import Juvix.Prelude
 type Location = Interval
 
 -- | Consecutive symbol IDs for reachable user functions.
-type Symbol = Word
+data Symbol = Symbol
+  { _symbolModuleId :: ModuleId,
+    _symbolId :: Word
+  }
+  deriving stock (Ord, Eq, Generic)
+
+instance Serialize Symbol
+
+instance Hashable Symbol
+
+instance Show Symbol where
+  show Symbol {..} = show _symbolId <> "@" <> show _symbolModuleId
 
 uniqueName :: Text -> Symbol -> Text
 uniqueName txt sym = txt <> "_" <> show sym
@@ -59,3 +71,5 @@ getBinderLevel bl idx = bl - idx - 1
 -- upward).
 getBinderIndex :: Level -> Level -> Index
 getBinderIndex bl lvl = bl - lvl - 1
+
+makeLenses ''Symbol

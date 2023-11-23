@@ -18,7 +18,7 @@ import Juvix.Extra.Paths
 runCommand :: forall r. (Members '[Embed IO, App] r) => CoreReplOptions -> Sem r ()
 runCommand opts = do
   showReplWelcome
-  runRepl opts Core.emptyInfoTable
+  runRepl opts mempty
 
 parseText :: Core.InfoTable -> Text -> Either Core.MegaparsecError (Core.InfoTable, Maybe Core.Node)
 parseText = Core.runParser replPath defaultModuleId
@@ -76,7 +76,7 @@ runRepl opts tab = do
       ':' : 'l' : ' ' : f -> do
         s' <- readFile f
         sf <- someBaseToAbs' (someFile f)
-        case Core.runParser sf defaultModuleId Core.emptyInfoTable s' of
+        case Core.runParser sf defaultModuleId mempty s' of
           Left err -> do
             printJuvixError (JuvixError err)
             runRepl opts tab
@@ -84,7 +84,7 @@ runRepl opts tab = do
             Nothing -> runRepl opts tab'
             Just node -> replEval False tab' node
       ":r" ->
-        runRepl opts Core.emptyInfoTable
+        runRepl opts mempty
       _ ->
         case parseText tab s of
           Left err -> do

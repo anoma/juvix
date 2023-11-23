@@ -52,7 +52,7 @@ fromInternal :: (Members '[NameIdGen, Reader Store.ModuleTable] k) => Internal.I
 fromInternal i = do
   importTab <- asks Store.getInternalModuleTable
   res <-
-    execInfoTableBuilder mid emptyInfoTable
+    execInfoTableBuilder mid mempty
       . evalState (i ^. InternalTyped.resultFunctions)
       . runReader (i ^. InternalTyped.resultIdenTypes)
       $ do

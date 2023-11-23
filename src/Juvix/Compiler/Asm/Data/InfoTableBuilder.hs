@@ -24,7 +24,7 @@ data InfoTableBuilder m a where
 makeSem ''InfoTableBuilder
 
 data BuilderState = BuilderState
-  { _stateNextSymbol :: Word,
+  { _stateNextSymbolId :: Word,
     _stateNextUserTag :: Word,
     _stateInfoTable :: InfoTable,
     _stateIdents :: HashMap Text IdentKind
@@ -35,7 +35,7 @@ makeLenses ''BuilderState
 emptyBuilderState :: BuilderState
 emptyBuilderState =
   BuilderState
-    { _stateNextSymbol = 0,
+    { _stateNextSymbolId = 0,
       _stateNextUserTag = 0,
       _stateInfoTable = emptyInfoTable,
       _stateIdents = mempty
@@ -51,8 +51,8 @@ runInfoTableBuilder =
     interp = \case
       FreshSymbol -> do
         s <- get
-        modify' (over stateNextSymbol (+ 1))
-        return (s ^. stateNextSymbol)
+        modify' (over stateNextSymbolId (+ 1))
+        return (Symbol defaultModuleId (s ^. stateNextSymbolId))
       FreshTag -> do
         modify' (over stateNextUserTag (+ 1))
         s <- get

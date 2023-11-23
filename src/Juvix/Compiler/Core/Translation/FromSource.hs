@@ -37,17 +37,18 @@ runParserMain fileName mid tab input =
   case runParser fileName mid tab input of
     Left err -> Left err
     Right (tab', Nothing) -> Right tab'
-    Right (tab', Just node) -> Right $ setupMainFunction tab' node
+    Right (tab', Just node) -> Right $ setupMainFunction mid tab' node
 
-setupMainFunction :: InfoTable -> Node -> InfoTable
-setupMainFunction tab node =
+setupMainFunction :: ModuleId -> InfoTable -> Node -> InfoTable
+setupMainFunction mid tab node =
   tab
     { _infoMain = Just sym,
       _identContext = HashMap.insert sym node (tab ^. identContext),
       _infoIdentifiers = HashMap.insert sym info (tab ^. infoIdentifiers)
     }
   where
-    sym = nextSymbolId tab
+    symId = nextSymbolId tab
+    sym = Symbol mid symId
     info =
       IdentifierInfo
         { _identifierName = freshIdentName tab "main",
