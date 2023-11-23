@@ -559,7 +559,7 @@ checkPattern = go
     go :: FunctionParameter -> PatternArg -> Sem r PatternArg
     go argTy patArg = do
       matchIsImplicit (argTy ^. paramImplicit) patArg
-      tyVarMap <- fmap (ExpressionIden . IdenVar) . (^. localTyMap) <$> get
+      tyVarMap <- localsToSubsE <$> get
       ty <- substitutionE tyVarMap (argTy ^. paramType)
       let pat = patArg ^. patternArgPattern
           name = patArg ^. patternArgName

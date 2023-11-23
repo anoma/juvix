@@ -414,7 +414,7 @@ tests =
       $(mkRelFile "test070.juvix")
       $(mkRelFile "out/test070.out"),
     posTest
-      "Test071: Named application"
+      "Test071: Named application (Ord instance with default cmp)"
       $(mkRelDir ".")
       $(mkRelFile "test071.juvix")
       $(mkRelFile "out/test071.out")
