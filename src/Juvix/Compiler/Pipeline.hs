@@ -37,7 +37,9 @@ import Juvix.Data.Effect.Git
 import Juvix.Data.Effect.Process
 import Juvix.Prelude
 
-type PipelineEff = '[PathResolver, EvalFileEff, Error PackageLoaderError, Error DependencyError, GitClone, Error GitProcessError, Process, Log, Reader EntryPoint, Files, NameIdGen, Error JuvixError, HighlightBuilder, Internet, Embed IO]
+type PipelineEff' = '[Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, NameIdGen, PathResolver, GitClone, Files, Error JuvixError]
+
+type PipelineEff = '[Reader Parser.ParserResult, Reader Store.ModuleTable, NameIdGen, PathResolver, EvalFileEff, Error PackageLoaderError, Error DependencyError, GitClone, Error GitProcessError, Process, Log, Reader EntryPoint, Files, Error JuvixError, HighlightBuilder, Internet, Embed IO]
 
 type TopPipelineEff = '[PathResolver, EvalFileEff, Error PackageLoaderError, Error DependencyError, GitClone, Error GitProcessError, Process, Log, Reader EntryPoint, Files, NameIdGen, State Artifacts, Error JuvixError, HighlightBuilder, Embed IO]
 

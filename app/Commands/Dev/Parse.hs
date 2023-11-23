@@ -8,6 +8,6 @@ import Text.Show.Pretty (ppShow)
 runCommand :: (Members '[Embed IO, App] r) => ParseOptions -> Sem r ()
 runCommand opts = do
   m <-
-    head . (^. Parser.resultModules)
+    (^. Parser.resultModule)
       <$> runPipeline (opts ^. parseOptionsInputFile) upToParsing
   if opts ^. parseOptionsNoPrettyShow then say (show m) else say (pack (ppShow m))

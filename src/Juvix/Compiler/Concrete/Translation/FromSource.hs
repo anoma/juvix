@@ -1211,7 +1211,7 @@ inductiveDef _inductiveBuiltin = do
       P.<?> "<type annotation e.g. ': Type'>"
   _inductiveAssignKw <- Irrelevant <$> kw kwAssign P.<?> "<assignment symbol ':='>"
   _inductiveConstructors <-
-    pipeSep1 constructorDef
+    pipeSep1 (constructorDef _inductiveName)
       P.<?> "<constructor definition>"
   return InductiveDef {..}
 
@@ -1282,8 +1282,8 @@ pconstructorRhs =
     <|> ConstructorRhsRecord <$> rhsRecord
     <|> ConstructorRhsAdt <$> rhsAdt
 
-constructorDef :: (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) => Irrelevant (Maybe KeywordRef) -> ParsecS r (ConstructorDef 'Parsed)
-constructorDef _constructorPipe = do
+constructorDef :: (Members '[ParserResultBuilder, PragmasStash, JudocStash, NameIdGen] r) => Symbol -> Irrelevant (Maybe KeywordRef) -> ParsecS r (ConstructorDef 'Parsed)
+constructorDef _constructorInductiveName _constructorPipe = do
   _constructorDoc <- optional stashJudoc >> getJudoc
   _constructorPragmas <- optional stashPragmas >> getPragmas
   _constructorName <- symbol P.<?> "<constructor name>"

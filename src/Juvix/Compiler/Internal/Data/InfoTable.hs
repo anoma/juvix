@@ -1,6 +1,5 @@
 module Juvix.Compiler.Internal.Data.InfoTable
   ( module Juvix.Compiler.Store.Internal.Language,
-    buildInfoTable,
     computeInternalModule,
     extendWithReplExpression,
     lookupConstructor,
@@ -79,9 +78,6 @@ letFunctionDefs e =
     flattenClause = \case
       LetFunDef f -> pure f
       LetMutualBlock (MutualBlockLet fs) -> fs
-
-buildInfoTable :: InternalModuleTable -> InfoTable
-buildInfoTable = mconcatMap (^. internalModuleInfoTable) . HashMap.elems . (^. internalModuleTable)
 
 computeInternalModule :: TypesTable -> FunctionsTable -> Module -> InternalModule
 computeInternalModule tysTab funsTab m@Module {..} =

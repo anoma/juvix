@@ -60,7 +60,7 @@ fromInternal i = do
         reserveLiteralIntToIntSymbol
         let resultModule = i ^. InternalTyped.resultModule
             resultTable =
-              Internal.buildInfoTable importTab
+              Internal.computeCombinedInfoTable importTab
                 <> i ^. InternalTyped.resultInternalModule . Internal.internalModuleInfoTable
         runReader resultTable $
           goModule resultModule
@@ -82,7 +82,7 @@ fromInternalExpression :: (Member NameIdGen r) => Internal.InternalModuleTable -
 fromInternalExpression importTab res exp = do
   let mtab =
         res ^. coreResultInternalTypedResult . InternalTyped.resultInternalModule . Internal.internalModuleInfoTable
-          <> Internal.buildInfoTable importTab
+          <> Internal.computeCombinedInfoTable importTab
   fmap snd
     . runReader mtab
     . runInfoTableBuilder mid (res ^. coreResultTable)

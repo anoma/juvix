@@ -14,14 +14,12 @@ import Control.Monad.State.Strict qualified as State
 import Control.Monad.Trans.Class (lift)
 import Data.String.Interpolate (i, __i)
 import Evaluator
-import Juvix.Compiler.Concrete.Data.InfoTable qualified as Scoped
 import Juvix.Compiler.Concrete.Data.Scope (scopePath)
+import Juvix.Compiler.Concrete.Data.Scope qualified as Scoped
 import Juvix.Compiler.Concrete.Data.ScopedName (absTopModulePath)
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as Scoped
 import Juvix.Compiler.Concrete.Language qualified as Concrete
 import Juvix.Compiler.Concrete.Pretty qualified as Concrete
-import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver (runPathResolver)
-import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Error
 import Juvix.Compiler.Core qualified as Core
 import Juvix.Compiler.Core.Extra.Value
 import Juvix.Compiler.Core.Info qualified as Info
@@ -31,6 +29,9 @@ import Juvix.Compiler.Core.Transformation qualified as Core
 import Juvix.Compiler.Core.Transformation.DisambiguateNames (disambiguateNames)
 import Juvix.Compiler.Internal.Language qualified as Internal
 import Juvix.Compiler.Internal.Pretty qualified as Internal
+import Juvix.Compiler.Pipeline.Loader.PathResolver (runPathResolver)
+import Juvix.Compiler.Pipeline.Loader.PathResolver.DependenciesConfig
+import Juvix.Compiler.Pipeline.Loader.PathResolver.Error
 import Juvix.Compiler.Pipeline.Package.Loader.Error
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff.IO
 import Juvix.Compiler.Pipeline.Repl
@@ -317,26 +318,26 @@ printDocumentation = replParseIdentifiers >=> printIdentifiers
             getDocFunction :: Scoped.NameId -> Repl (Maybe (Concrete.Judoc 'Concrete.Scoped))
             getDocFunction fun = do
               tbl :: Scoped.InfoTable <- getInfoTable
-              let def :: Scoped.FunctionInfo = tbl ^?! Scoped.infoFunctions . at fun . _Just
-              return (def ^. Scoped.functionInfoDoc)
+              let def = tbl ^?! Scoped.infoFunctions . at fun . _Just
+              return (def ^. Concrete.signDoc)
 
             getDocInductive :: Scoped.NameId -> Repl (Maybe (Concrete.Judoc 'Concrete.Scoped))
             getDocInductive ind = do
               tbl :: Scoped.InfoTable <- (^. replContextArtifacts . artifactScopeTable) <$> replGetContext
-              let def :: Concrete.InductiveDef 'Concrete.Scoped = tbl ^?! Scoped.infoInductives . at ind . _Just . Scoped.inductiveInfoDef
+              let def :: Concrete.InductiveDef 'Concrete.Scoped = tbl ^?! Scoped.infoInductives . at ind . _Just
               return (def ^. Concrete.inductiveDoc)
 
             getDocAxiom :: Scoped.NameId -> Repl (Maybe (Concrete.Judoc 'Concrete.Scoped))
             getDocAxiom ax = do
               tbl :: Scoped.InfoTable <- (^. replContextArtifacts . artifactScopeTable) <$> replGetContext
-              let def :: Concrete.AxiomDef 'Concrete.Scoped = tbl ^?! Scoped.infoAxioms . at ax . _Just . Scoped.axiomInfoDef
+              let def :: Concrete.AxiomDef 'Concrete.Scoped = tbl ^?! Scoped.infoAxioms . at ax . _Just
               return (def ^. Concrete.axiomDoc)
 
             getDocConstructor :: Scoped.NameId -> Repl (Maybe (Concrete.Judoc 'Concrete.Scoped))
             getDocConstructor c = do
               tbl :: Scoped.InfoTable <- (^. replContextArtifacts . artifactScopeTable) <$> replGetContext
-              let def :: Scoped.ConstructorInfo = tbl ^?! Scoped.infoConstructors . at c . _Just
-              return (def ^. Scoped.constructorInfoDef . Concrete.constructorDoc)
+              let def = tbl ^?! Scoped.infoConstructors . at c . _Just
+              return (def ^. Concrete.constructorDoc)
 
 printDefinition :: String -> Repl ()
 printDefinition = replParseIdentifiers >=> printIdentifiers
@@ -381,21 +382,21 @@ printDefinition = replParseIdentifiers >=> printIdentifiers
             printInductive :: Scoped.NameId -> Repl ()
             printInductive ind = do
               tbl :: Scoped.InfoTable <- (^. replContextArtifacts . artifactScopeTable) <$> replGetContext
-              let def :: Concrete.InductiveDef 'Concrete.Scoped = tbl ^?! Scoped.infoInductives . at ind . _Just . Scoped.inductiveInfoDef
+              let def :: Concrete.InductiveDef 'Concrete.Scoped = tbl ^?! Scoped.infoInductives . at ind . _Just
               printLocation def
               printConcreteLn def
 
             printAxiom :: Scoped.NameId -> Repl ()
             printAxiom ax = do
               tbl :: Scoped.InfoTable <- (^. replContextArtifacts . artifactScopeTable) <$> replGetContext
-              let def :: Concrete.AxiomDef 'Concrete.Scoped = tbl ^?! Scoped.infoAxioms . at ax . _Just . Scoped.axiomInfoDef
+              let def :: Concrete.AxiomDef 'Concrete.Scoped = tbl ^?! Scoped.infoAxioms . at ax . _Just
               printLocation def
               printConcreteLn def
 
             printConstructor :: Scoped.NameId -> Repl ()
             printConstructor c = do
               tbl :: Scoped.InfoTable <- (^. replContextArtifacts . artifactScopeTable) <$> replGetContext
-              let ind :: Scoped.Symbol = tbl ^?! Scoped.infoConstructors . at c . _Just . Scoped.constructorInfoTypeName
+              let ind = tbl ^?! Scoped.infoConstructors . at c . _Just . Concrete.constructorInductiveName
               printInductive (ind ^. Scoped.nameId)
 
 inferType :: String -> Repl ()

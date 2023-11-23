@@ -9,14 +9,14 @@ import Juvix.Compiler.Backend.Html.Translation.FromTyped.Source
   )
 import Juvix.Compiler.Concrete.Pretty qualified as Concrete
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
-import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Data.Context
+import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Data.Context (getScoperResultComments)
 import Juvix.Extra.Process
 import System.Process qualified as Process
 
 runGenOnlySourceHtml :: (Members '[Embed IO, App] r) => HtmlOptions -> Sem r ()
 runGenOnlySourceHtml HtmlOptions {..} = do
   res <- runPipeline _htmlInputFile upToScoping
-  let m = head (res ^. Scoper.resultModules)
+  let m = res ^. Scoper.resultModule
   outputDir <- fromAppPathDir _htmlOutputDir
   embed $
     Html.genSourceHtml
@@ -30,7 +30,7 @@ runGenOnlySourceHtml HtmlOptions {..} = do
           _genSourceHtmlArgsNoPath = _htmlNoPath,
           _genSourceHtmlArgsConcreteOpts = Concrete.defaultOptions,
           _genSourceHtmlArgsModule = m,
-          _genSourceHtmlArgsComments = res ^. comments,
+          _genSourceHtmlArgsComments = getScoperResultComments res,
           _genSourceHtmlArgsOutputDir = outputDir,
           _genSourceHtmlArgsNoFooter = _htmlNoFooter,
           _genSourceHtmlArgsNonRecursive = _htmlNonRecursive,
@@ -41,9 +41,11 @@ runCommand :: (Members '[Embed IO, App] r) => HtmlOptions -> Sem r ()
 runCommand HtmlOptions {..}
   | _htmlOnlySource = runGenOnlySourceHtml HtmlOptions {..}
   | otherwise = do
+      entry <- getEntryPoint _htmlInputFile
       ctx <- runPipeline _htmlInputFile upToInternalTyped
       outputDir <- fromAppPathDir _htmlOutputDir
       Html.genJudocHtml
+        entry
         JudocArgs
           { _judocArgsAssetsPrefix = _htmlAssetsPrefix,
             _judocArgsBaseName = "proj",

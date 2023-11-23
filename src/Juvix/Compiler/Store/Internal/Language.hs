@@ -41,6 +41,9 @@ lookupInternalModule mtab n = fromJust $ HashMap.lookup n (mtab ^. internalModul
 insertInternalModule :: InternalModuleTable -> InternalModule -> InternalModuleTable
 insertInternalModule tab sm = over internalModuleTable (HashMap.insert (sm ^. internalModuleName) sm) tab
 
+computeCombinedInfoTable :: InternalModuleTable -> InfoTable
+computeCombinedInfoTable = mconcatMap (^. internalModuleInfoTable) . HashMap.elems . (^. internalModuleTable)
+
 computeTypesTable :: InternalModuleTable -> TypesTable
 computeTypesTable = mconcatMap (^. internalModuleTypesTable) . (^. internalModuleTable)
 

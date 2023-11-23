@@ -1,6 +1,9 @@
 module Juvix.Compiler.Pipeline.Driver
   ( processFile,
+    processFileUpTo,
+    processFileUpTo',
     processFileToStoredCore,
+    processFileToStoredCore',
     processModule,
     processImport,
   )
@@ -46,20 +49,41 @@ processImport entry i =
         processModule (entry {_entryPointModulePath = Just path})
     )
 
+processFileUpTo' ::
+  forall r a.
+  (Members '[Error JuvixError, Files, GitClone, PathResolver] r) =>
+  (forall r'. (Members PipelineEff' r') => Sem r' a) ->
+  EntryPoint ->
+  Sem r (a, Store.ModuleTable)
+processFileUpTo' a entry = do
+  (res, mtab) <- processFile entry
+  fmap (,mtab)
+    $ evalTopNameIdGen
+      (res ^. Parser.resultModule . moduleId)
+    $ runReader mtab
+    $ runReader entry
+    $ runReader res a
+
+processFileUpTo ::
+  forall r a.
+  (Members '[Reader EntryPoint, Error JuvixError, Files, GitClone, PathResolver] r) =>
+  Sem (Reader Parser.ParserResult ': Reader Store.ModuleTable ': NameIdGen ': r) a ->
+  Sem r (a, Store.ModuleTable)
+processFileUpTo a = do
+  entry <- ask
+  (res, mtab) <- processFile entry
+  fmap (,mtab)
+    $ evalTopNameIdGen
+      (res ^. Parser.resultModule . moduleId)
+    $ runReader mtab
+    $ runReader res a
+
 processFileToStoredCore' ::
   forall r.
   (Members '[Error JuvixError, Files, GitClone, PathResolver] r) =>
   EntryPoint ->
   Sem r (Core.CoreResult, Store.ModuleTable)
-processFileToStoredCore' entry = do
-  (res, mtab) <- processFile entry
-  fmap (,mtab) $
-    runReader res $
-      runReader entry $
-        runReader mtab $
-          evalTopNameIdGen
-            (res ^. Parser.resultModule . moduleId)
-            upToStoredCore
+processFileToStoredCore' = processFileUpTo' upToStoredCore
 
 processFileToStoredCore ::
   forall r.

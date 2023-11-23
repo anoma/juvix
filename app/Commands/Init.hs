@@ -5,6 +5,7 @@ import Commands.Init.Options
 import Data.Text qualified as Text
 import Data.Versions
 import Juvix.Compiler.Pipeline.Package
+import Juvix.Compiler.Pipeline.Package.IO
 import Juvix.Data.Effect.Fail.Extra qualified as Fail
 import Juvix.Extra.Paths
 import Juvix.Prelude

@@ -3,8 +3,6 @@ module Juvix.Formatter where
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Print (docDefault)
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
-import Juvix.Compiler.Concrete.Translation.FromSource.Data.Context
-import Juvix.Compiler.Concrete.Translation.FromSource.Data.ParserState (parserStateComments)
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Data.CodeAnn
 import Juvix.Extra.Paths
@@ -146,7 +144,7 @@ formatScoperResult ::
   Scoper.ScoperResult ->
   Sem r Text
 formatScoperResult force res = do
-  let cs = mkComments $ res ^. Scoper.resultParserResult . resultParserState . parserStateComments
+  let cs = Scoper.getScoperResultComments res
   formattedModule <-
     runReader cs
       . formatTopModule

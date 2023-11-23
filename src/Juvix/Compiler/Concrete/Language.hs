@@ -411,7 +411,9 @@ data OperatorSyntaxDef = OperatorSyntaxDef
     _opKw :: KeywordRef,
     _opSyntaxKw :: KeywordRef
   }
-  deriving stock (Show, Eq, Ord)
+  deriving stock (Show, Eq, Ord, Generic)
+
+instance Serialize OperatorSyntaxDef
 
 instance HasLoc OperatorSyntaxDef where
   getLoc OperatorSyntaxDef {..} = getLoc _opSyntaxKw <> getLoc _opSymbol
@@ -563,6 +565,9 @@ data AxiomDef (s :: Stage) = AxiomDef
     _axiomBuiltin :: Maybe (WithLoc BuiltinAxiom),
     _axiomType :: ExpressionType s
   }
+  deriving stock (Generic)
+
+instance Serialize (AxiomDef 'Scoped)
 
 deriving stock instance Show (AxiomDef 'Parsed)
 
@@ -583,10 +588,14 @@ type InductiveName s = SymbolType s
 data ConstructorDef (s :: Stage) = ConstructorDef
   { _constructorPipe :: Irrelevant (Maybe KeywordRef),
     _constructorName :: InductiveConstructorName s,
+    _constructorInductiveName :: InductiveName s,
     _constructorDoc :: Maybe (Judoc s),
     _constructorPragmas :: Maybe ParsedPragmas,
     _constructorRhs :: ConstructorRhs s
   }
+  deriving stock (Generic)
+
+instance Serialize (ConstructorDef 'Scoped)
 
 deriving stock instance Show (ConstructorDef 'Parsed)
 
@@ -630,6 +639,9 @@ data RecordField (s :: Stage) = RecordField
     _fieldType :: ExpressionType s,
     _fieldBuiltin :: Maybe (WithLoc BuiltinFunction)
   }
+  deriving stock (Generic)
+
+instance Serialize (RecordField 'Scoped)
 
 deriving stock instance Show (RecordField 'Parsed)
 
@@ -646,6 +658,9 @@ deriving stock instance Ord (RecordField 'Scoped)
 newtype RhsAdt (s :: Stage) = RhsAdt
   { _rhsAdtArguments :: [ExpressionType s]
   }
+  deriving stock (Generic)
+
+instance Serialize (RhsAdt 'Scoped)
 
 deriving stock instance Show (RhsAdt 'Parsed)
 
@@ -663,6 +678,9 @@ data RhsRecord (s :: Stage) = RhsRecord
   { _rhsRecordDelim :: Irrelevant (KeywordRef, KeywordRef),
     _rhsRecordStatements :: [RecordStatement s]
   }
+  deriving stock (Generic)
+
+instance Serialize (RhsRecord 'Scoped)
 
 deriving stock instance Show (RhsRecord 'Parsed)
 
@@ -680,6 +698,9 @@ data RhsGadt (s :: Stage) = RhsGadt
   { _rhsGadtColon :: Irrelevant KeywordRef,
     _rhsGadtType :: ExpressionType s
   }
+  deriving stock (Generic)
+
+instance Serialize (RhsGadt 'Scoped)
 
 deriving stock instance Show (RhsGadt 'Parsed)
 
@@ -697,6 +718,9 @@ data ConstructorRhs (s :: Stage)
   = ConstructorRhsGadt (RhsGadt s)
   | ConstructorRhsRecord (RhsRecord s)
   | ConstructorRhsAdt (RhsAdt s)
+  deriving stock (Generic)
+
+instance Serialize (ConstructorRhs 'Scoped)
 
 deriving stock instance Show (ConstructorRhs 'Parsed)
 
@@ -714,6 +738,9 @@ data InductiveParametersRhs (s :: Stage) = InductiveParametersRhs
   { _inductiveParametersColon :: Irrelevant KeywordRef,
     _inductiveParametersType :: ExpressionType s
   }
+  deriving stock (Generic)
+
+instance Serialize (InductiveParametersRhs 'Scoped)
 
 deriving stock instance Show (InductiveParametersRhs 'Parsed)
 
@@ -731,6 +758,9 @@ data InductiveParameters (s :: Stage) = InductiveParameters
   { _inductiveParametersNames :: NonEmpty (SymbolType s),
     _inductiveParametersRhs :: Maybe (InductiveParametersRhs s)
   }
+  deriving stock (Generic)
+
+instance Serialize (InductiveParameters 'Scoped)
 
 deriving stock instance Show (InductiveParameters 'Parsed)
 
@@ -757,6 +787,9 @@ data InductiveDef (s :: Stage) = InductiveDef
     _inductivePositive :: Maybe KeywordRef,
     _inductiveTrait :: Maybe KeywordRef
   }
+  deriving stock (Generic)
+
+instance Serialize (InductiveDef 'Scoped)
 
 deriving stock instance Show (InductiveDef 'Parsed)
 
@@ -1827,6 +1860,9 @@ deriving stock instance Ord (NamedApplicationNew 'Scoped)
 data RecordStatement (s :: Stage)
   = RecordStatementField (RecordField s)
   | RecordStatementOperator OperatorSyntaxDef
+  deriving stock (Generic)
+
+instance Serialize (RecordStatement 'Scoped)
 
 deriving stock instance Show (RecordStatement 'Parsed)
 

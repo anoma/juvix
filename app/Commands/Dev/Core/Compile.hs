@@ -10,7 +10,7 @@ runCommand :: forall r. (Members '[Embed IO, App] r) => CompileOptions -> Sem r 
 runCommand opts = do
   file <- getFile
   s <- readFile (toFilePath file)
-  tab <- getRight (mapLeft JuvixError (Core.runParserMain file Core.emptyInfoTable s))
+  tab <- getRight (mapLeft JuvixError (Core.runParserMain file defaultModuleId Core.emptyInfoTable s))
   let arg = PipelineArg opts file tab
   case opts ^. compileTarget of
     TargetWasm32Wasi -> runCPipeline arg

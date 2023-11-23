@@ -21,7 +21,7 @@ runCommand opts = do
   runRepl opts Core.emptyInfoTable
 
 parseText :: Core.InfoTable -> Text -> Either Core.MegaparsecError (Core.InfoTable, Maybe Core.Node)
-parseText = Core.runParser replPath
+parseText = Core.runParser replPath defaultModuleId
 
 runRepl :: forall r. (Members '[Embed IO, App] r) => CoreReplOptions -> Core.InfoTable -> Sem r ()
 runRepl opts tab = do
@@ -76,7 +76,7 @@ runRepl opts tab = do
       ':' : 'l' : ' ' : f -> do
         s' <- readFile f
         sf <- someBaseToAbs' (someFile f)
-        case Core.runParser sf Core.emptyInfoTable s' of
+        case Core.runParser sf defaultModuleId Core.emptyInfoTable s' of
           Left err -> do
             printJuvixError (JuvixError err)
             runRepl opts tab

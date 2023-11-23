@@ -3,9 +3,10 @@ module App where
 import CommonOptions
 import Data.ByteString qualified as ByteString
 import GlobalOptions
-import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker
+import Juvix.Compiler.Pipeline.Loader.PathResolver
 import Juvix.Compiler.Pipeline.Run
+import Juvix.Compiler.Store.Language qualified as Store
 import Juvix.Data.Error qualified as Error
 import Juvix.Extra.Paths.Base hiding (rootBuildDir)
 import Juvix.Prelude.Pretty hiding
@@ -28,8 +29,8 @@ data App m a where
   GetMainFile :: Maybe (AppPath File) -> App m (Path Abs File)
   FromAppPathDir :: AppPath Dir -> App m (Path Abs Dir)
   RenderStdOut :: (HasAnsiBackend a, HasTextBackend a) => a -> App m ()
-  RunPipelineEither :: AppPath File -> Sem PipelineEff a -> App m (Either JuvixError (ResolverState, a))
-  RunPipelineNoFileEither :: Sem PipelineEff a -> App m (Either JuvixError (ResolverState, a))
+  RunPipelineEither :: AppPath File -> Sem PipelineEff a -> App m (Either JuvixError (ResolverState, (a, Store.ModuleTable)))
+  RunPipelineNoFileEither :: Sem PipelineEff a -> App m (Either JuvixError (ResolverState, (a, Store.ModuleTable)))
   RunCorePipelineEither :: AppPath File -> App m (Either JuvixError Artifacts)
   Say :: Text -> App m ()
   SayRaw :: ByteString -> App m ()
@@ -147,7 +148,13 @@ getEntryPoint inputFile = do
   _runAppIOArgsRoot <- askRoot
   embed (getEntryPoint' (RunAppIOArgs {..}) inputFile)
 
-runPipelineTermination :: (Member App r) => AppPath File -> Sem (Termination ': PipelineEff) a -> Sem r a
+getEntryPointStdin :: (Members '[Embed IO, App] r) => Sem r EntryPoint
+getEntryPointStdin = do
+  _runAppIOArgsGlobalOptions <- askGlobalOptions
+  _runAppIOArgsRoot <- askRoot
+  embed (getEntryPointStdin' (RunAppIOArgs {..}))
+
+runPipelineTermination :: (Member App r) => AppPath File -> Sem (Termination ': PipelineEff) a -> Sem r (a, Store.ModuleTable)
 runPipelineTermination input p = do
   r <- runPipelineEither input (evalTermination iniTerminationState p)
   case r of
@@ -159,14 +166,14 @@ runPipeline input p = do
   r <- runPipelineEither input p
   case r of
     Left err -> exitJuvixError err
-    Right res -> return (snd res)
+    Right res -> return (fst $ snd res)
 
 runPipelineNoFile :: (Member App r) => Sem PipelineEff a -> Sem r a
 runPipelineNoFile p = do
   r <- runPipelineNoFileEither p
   case r of
     Left err -> exitJuvixError err
-    Right res -> return (snd res)
+    Right res -> return (fst $ snd res)
 
 newline :: (Member App r) => Sem r ()
 newline = say ""

@@ -18,11 +18,12 @@ import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking qualified as Typed
 import Juvix.Compiler.Pipeline
 import Juvix.Compiler.Pipeline.Artifacts.PathResolver
-import Juvix.Compiler.Pipeline.Driver (processFileToStoredCore)
+import Juvix.Compiler.Pipeline.Driver
 import Juvix.Compiler.Pipeline.Loader.PathResolver
 import Juvix.Compiler.Pipeline.Package.Loader.Error
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff.IO
 import Juvix.Compiler.Pipeline.Package.Loader.PathResolver
+import Juvix.Compiler.Store.Language qualified as Store
 import Juvix.Compiler.Store.Scoped.Language qualified as Scoped
 import Juvix.Data.Effect.Git
 import Juvix.Data.Effect.Process
@@ -30,17 +31,17 @@ import Juvix.Prelude
 
 -- | It returns `ResolverState` so that we can retrieve the `juvix.yaml` files,
 -- which we require for `Scope` tests.
-runIOEither :: forall a. EntryPoint -> Sem PipelineEff a -> IO (Either JuvixError (ResolverState, a))
+runIOEither :: forall a. EntryPoint -> Sem PipelineEff a -> IO (Either JuvixError (ResolverState, (a, Store.ModuleTable)))
 runIOEither entry = fmap snd . runIOEitherHelper entry
 
-runIOEitherTermination :: forall a. EntryPoint -> Sem (Termination ': PipelineEff) a -> IO (Either JuvixError (ResolverState, a))
+runIOEitherTermination :: forall a. EntryPoint -> Sem (Termination ': PipelineEff) a -> IO (Either JuvixError (ResolverState, (a, Store.ModuleTable)))
 runIOEitherTermination entry = fmap snd . runIOEitherHelper entry . evalTermination iniTerminationState
 
 runPipelineHighlight :: forall a. EntryPoint -> Sem PipelineEff a -> IO HighlightInput
 runPipelineHighlight entry = fmap fst . runIOEitherHelper entry
 
-runIOEitherHelper :: forall a. EntryPoint -> Sem PipelineEff a -> IO (HighlightInput, (Either JuvixError (ResolverState, a)))
-runIOEitherHelper entry = do
+runIOEitherHelper :: forall a. EntryPoint -> Sem PipelineEff a -> IO (HighlightInput, (Either JuvixError (ResolverState, (a, Store.ModuleTable))))
+runIOEitherHelper entry a = do
   let hasInternet = not (entry ^. entryPointOffline)
       runPathResolver'
         | mainIsPackageFile entry = runPackagePathResolver' (entry ^. entryPointResolverRoot)
@@ -49,7 +50,6 @@ runIOEitherHelper entry = do
     . evalInternet hasInternet
     . runHighlightBuilder
     . runJuvixError
-    . evalTopNameIdGen defaultModuleId -- TODO: module id
     . runFilesIO
     . runReader entry
     . runLogIO
@@ -60,13 +60,14 @@ runIOEitherHelper entry = do
     . mapError (JuvixError @PackageLoaderError)
     . runEvalFileEffIO
     . runPathResolver'
+    $ processFileUpTo a
 
 mainIsPackageFile :: EntryPoint -> Bool
 mainIsPackageFile entry = case entry ^. entryPointModulePath of
   Just p -> p == mkPackagePath (entry ^. entryPointResolverRoot)
   Nothing -> False
 
-runIO :: GenericOptions -> EntryPoint -> Sem PipelineEff a -> IO (ResolverState, a)
+runIO :: GenericOptions -> EntryPoint -> Sem PipelineEff a -> IO (ResolverState, (a, Store.ModuleTable))
 runIO opts entry = runIOEither entry >=> mayThrow
   where
     mayThrow :: Either JuvixError r -> IO r
@@ -74,7 +75,7 @@ runIO opts entry = runIOEither entry >=> mayThrow
       Left err -> runM . runReader opts $ printErrorAnsiSafe err >> embed exitFailure
       Right r -> return r
 
-runIO' :: EntryPoint -> Sem PipelineEff a -> IO (ResolverState, a)
+runIO' :: EntryPoint -> Sem PipelineEff a -> IO (ResolverState, (a, Store.ModuleTable))
 runIO' = runIO defaultGenericOptions
 
 corePipelineIO' :: EntryPoint -> IO Artifacts
@@ -114,10 +115,10 @@ corePipelineIOEither entry = do
       . mapError (JuvixError @PackageLoaderError)
       . runEvalFileEffIO
       . runPathResolver'
-      $ processFileToStoredCore entry
+      $ processFileToStoredCore' entry
   return $ case eith of
     Left err -> Left err
-    Right (art, coreRes) ->
+    Right (art, (coreRes, mtab)) ->
       let typedResult :: Internal.InternalTypedResult
           typedResult =
             coreRes
@@ -166,7 +167,7 @@ corePipelineIOEither entry = do
                 _artifactResolver = art ^. artifactResolver,
                 _artifactBuiltins = art ^. artifactBuiltins,
                 _artifactNameIdState = art ^. artifactNameIdState,
-                _artifactModuleTable = mempty -- TODO: imports
+                _artifactModuleTable = mtab
               }
   where
     initialArtifacts :: Artifacts

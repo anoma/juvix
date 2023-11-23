@@ -6,18 +6,19 @@ import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Internal.Pretty qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromConcrete.Data.Context qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination qualified as Termination
+import Juvix.Compiler.Store.Language qualified as Stored
 import Juvix.Prelude.Pretty
 
 runCommand :: (Members '[Embed IO, App] r) => CallGraphOptions -> Sem r ()
 runCommand CallGraphOptions {..} = do
   globalOpts <- askGlobalOptions
-  results <- runPipelineTermination _graphInputFile upToInternal
-  let topModules = results ^. Internal.resultModules
-      mainModule = head topModules
+  (result, mtab) <- runPipelineTermination _graphInputFile upToInternal
+  let mainModule = result ^. Internal.resultModule
       toAnsiText' :: forall a. (HasAnsiBackend a, HasTextBackend a) => a -> Text
       toAnsiText' = toAnsiText (not (globalOpts ^. globalNoColors))
-      mtab = Internal.buildTable topModules
-      infotable = Internal.buildInfoTable mtab
+      infotable =
+        Internal.computeCombinedInfoTable (Stored.getInternalModuleTable mtab)
+          <> result ^. Internal.resultInternalModule . Internal.internalModuleInfoTable
       callMap = Termination.buildCallMap mainModule
       completeGraph = Termination.completeCallGraph callMap
       filteredGraph =

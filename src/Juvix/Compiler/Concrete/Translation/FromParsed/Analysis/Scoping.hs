@@ -913,7 +913,7 @@ checkInductiveDef InductiveDef {..} = do
     inductiveConstructors' <-
       nonEmpty'
         <$> sequence
-          [ checkConstructorDef cname cdef
+          [ checkConstructorDef inductiveName' cname cdef
             | (cname, cdef) <- zipExact (toList constructorNames') (toList _inductiveConstructors)
           ]
     return (inductiveParameters', inductiveType', inductiveDoc', inductiveConstructors')
@@ -937,13 +937,14 @@ checkInductiveDef InductiveDef {..} = do
   registerInductive @$> indDef
   where
     -- note that the constructor name is not bound here
-    checkConstructorDef :: S.Symbol -> ConstructorDef 'Parsed -> Sem r (ConstructorDef 'Scoped)
-    checkConstructorDef constructorName' ConstructorDef {..} = do
+    checkConstructorDef :: S.Symbol -> S.Symbol -> ConstructorDef 'Parsed -> Sem r (ConstructorDef 'Scoped)
+    checkConstructorDef inductiveName' constructorName' ConstructorDef {..} = do
       doc' <- mapM checkJudoc _constructorDoc
       rhs' <- checkRhs _constructorRhs
       registerConstructor
         @$> ConstructorDef
           { _constructorName = constructorName',
+            _constructorInductiveName = inductiveName',
             _constructorRhs = rhs',
             _constructorDoc = doc',
             _constructorPragmas = _constructorPragmas,

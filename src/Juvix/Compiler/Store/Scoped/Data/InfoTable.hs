@@ -16,7 +16,11 @@ data InfoTable = InfoTable
     _infoNameSigs :: HashMap NameId (NameSignature 'Scoped),
     _infoParsedConstructorSigs :: HashMap NameId (RecordNameSignature 'Parsed),
     _infoParsedNameSigs :: HashMap NameId (NameSignature 'Parsed),
-    _infoRecords :: HashMap NameId RecordInfo
+    _infoRecords :: HashMap NameId RecordInfo,
+    _infoFunctions :: HashMap NameId (FunctionDef 'Scoped),
+    _infoInductives :: HashMap NameId (InductiveDef 'Scoped),
+    _infoConstructors :: HashMap NameId (ConstructorDef 'Scoped),
+    _infoAxioms :: HashMap NameId (AxiomDef 'Scoped)
   }
   deriving stock (Generic)
 
@@ -35,7 +39,11 @@ instance Semigroup InfoTable where
         _infoNameSigs = tab1 ^. infoNameSigs <> tab2 ^. infoNameSigs,
         _infoParsedConstructorSigs = tab1 ^. infoParsedConstructorSigs <> tab2 ^. infoParsedConstructorSigs,
         _infoParsedNameSigs = tab1 ^. infoParsedNameSigs <> tab2 ^. infoParsedNameSigs,
-        _infoRecords = tab1 ^. infoRecords <> tab2 ^. infoRecords
+        _infoRecords = tab1 ^. infoRecords <> tab2 ^. infoRecords,
+        _infoFunctions = tab1 ^. infoFunctions <> tab2 ^. infoFunctions,
+        _infoInductives = tab1 ^. infoInductives <> tab2 ^. infoInductives,
+        _infoConstructors = tab1 ^. infoConstructors <> tab2 ^. infoConstructors,
+        _infoAxioms = tab1 ^. infoAxioms <> tab2 ^. infoAxioms
       }
 
 instance Monoid InfoTable where
@@ -49,5 +57,9 @@ instance Monoid InfoTable where
         _infoNameSigs = mempty,
         _infoParsedConstructorSigs = mempty,
         _infoParsedNameSigs = mempty,
-        _infoRecords = mempty
+        _infoRecords = mempty,
+        _infoFunctions = mempty,
+        _infoInductives = mempty,
+        _infoConstructors = mempty,
+        _infoAxioms = mempty
       }

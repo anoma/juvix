@@ -28,7 +28,7 @@ arityChecking ::
   Sem r ArityChecking.InternalArityResult
 arityChecking res@InternalResult {..} = do
   stab <- getInternalModuleTable <$> ask
-  let table = buildInfoTable (insertInternalModule stab _resultInternalModule)
+  let table = computeCombinedInfoTable (insertInternalModule stab _resultInternalModule)
   mapError (JuvixError @ArityChecking.ArityCheckerError) $ do
     r <-
       runReader table $
@@ -95,7 +95,7 @@ typeChecking a = do
     let md :: InternalModule
         md = res ^. ArityChecking.resultInternalModule
         table :: InfoTable
-        table = buildInfoTable (insertInternalModule itab md)
+        table = computeCombinedInfoTable (insertInternalModule itab md)
     fmap (res,)
       . runOutputList
       . runState (computeTypesTable itab)

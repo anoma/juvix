@@ -23,7 +23,7 @@ runCommand opts = do
   gopts <- askGlobalOptions
   inputFile :: Path Abs File <- fromAppPathFile sinputFile
   s' <- readFile . toFilePath $ inputFile
-  tab <- getRight (mapLeft JuvixError (Core.runParserMain inputFile Core.emptyInfoTable s'))
+  tab <- getRight (mapLeft JuvixError (Core.runParserMain inputFile defaultModuleId Core.emptyInfoTable s'))
   let r = run $ runReader (project @GlobalOptions @Core.CoreOptions gopts) $ runError @JuvixError $ Core.applyTransformations (project opts ^. coreReadTransformations) tab
   tab0 <- getRight $ mapLeft JuvixError r
   let tab' = if project opts ^. coreReadNoDisambiguate then tab0 else Core.disambiguateNames tab0

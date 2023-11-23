@@ -12,7 +12,7 @@ runCommand opts = do
   gopts <- askGlobalOptions
   inputFile :: Path Abs File <- fromAppPathFile sinputFile
   s' <- readFile $ toFilePath inputFile
-  tab <- getRight (mapLeft JuvixError (Core.runParserMain inputFile Core.emptyInfoTable s'))
+  tab <- getRight (mapLeft JuvixError (Core.runParserMain inputFile defaultModuleId Core.emptyInfoTable s'))
   r <- runReader (project @GlobalOptions @Core.CoreOptions gopts) $ runError @JuvixError $ Core.toStripped' tab
   tab' <- Asm.fromCore . Stripped.fromCore <$> getRight r
   if

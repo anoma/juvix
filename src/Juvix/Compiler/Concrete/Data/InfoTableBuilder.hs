@@ -37,18 +37,22 @@ toState = reinterpret $ \case
   RegisterAxiom d ->
     let j = d ^. axiomDoc
      in do
+          modify' (over infoAxioms (HashMap.insert (d ^. axiomName . nameId) d))
           registerDoc (d ^. axiomName . nameId) j
   RegisterConstructor c ->
     let j = c ^. constructorDoc
      in do
+          modify' (over infoConstructors (HashMap.insert (c ^. constructorName . nameId) c))
           registerDoc (c ^. constructorName . nameId) j
   RegisterInductive ity ->
     let j = ity ^. inductiveDoc
      in do
+          modify' (over infoInductives (HashMap.insert (ity ^. inductiveName . nameId) ity))
           registerDoc (ity ^. inductiveName . nameId) j
   RegisterFunctionDef f ->
     let j = f ^. signDoc
      in do
+          modify' (over infoFunctions (HashMap.insert (f ^. signName . nameId) f))
           registerDoc (f ^. signName . nameId) j
   RegisterName n -> modify (over infoHighlightNames (cons (S.anameFromName n)))
   RegisterScopedIden n -> modify (over infoHighlightNames (cons (anameFromScopedIden n)))
