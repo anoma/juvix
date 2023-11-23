@@ -544,13 +544,24 @@ checkClause clauseLoc clauseType clausePats body = do
     helper :: [PatternArg] -> Expression -> Sem r (LocalVars, ([PatternArg], Expression))
     helper pats ty = runState emptyLocalVars (go pats ty)
 
+    genPatternWildcard :: Interval -> FunctionParameter -> Sem (State LocalVars ': r) PatternArg
+    genPatternWildcard loc par = do
+      let impl = par ^. paramImplicit
+      var <- maybe (varFromWildcard (Wildcard loc)) return (par ^. paramName)
+      return
+        PatternArg
+          { _patternArgIsImplicit = impl,
+            _patternArgName = Nothing,
+            _patternArgPattern = PatternVariable var
+          }
+
     go :: [PatternArg] -> Expression -> Sem (State LocalVars ': r) ([PatternArg], Expression)
     go pats bodyTy = case pats of
       [] -> do
         (bodyParams, bodyRest) <- unfoldFunType' bodyTy
         locals <- get
         guessedBodyParams <- withLocalVars locals (unfoldArity <$> guessArity body)
-        let pref' :: [IsImplicit] = map (^. paramImplicit) (take pref bodyParams)
+        let pref' :: [FunctionParameter] = take pref bodyParams
             pref :: Int = aI - targetI
             preImplicits = length . takeWhile isImplicitOrInstance
             aI :: Int = preImplicits (map (^. paramImplicit) bodyParams)
@@ -560,7 +571,7 @@ checkClause clauseLoc clauseType clausePats body = do
                 let n = length pref'
                     bodyParams' = drop n bodyParams
                     ty' = foldFunType bodyParams' bodyRest
-                wildcards <- mapM (genWildcard clauseLoc) pref'
+                wildcards <- mapM (genPatternWildcard clauseLoc) pref'
                 return (wildcards, ty')
             | otherwise -> return ([], bodyTy)
       p : ps -> do
@@ -581,9 +592,9 @@ checkClause clauseLoc clauseType clausePats body = do
                     loc :: Interval
                     loc = getLoc par
 
-                    insertWildcard :: IsImplicit -> Sem (State LocalVars ': r) ([PatternArg], Expression)
-                    insertWildcard impl = do
-                      w <- genWildcard loc impl
+                    insertWildcard :: Sem (State LocalVars ': r) ([PatternArg], Expression)
+                    insertWildcard = do
+                      w <- genPatternWildcard loc par
                       go (w : p : ps) bodyTy'
 
                 case (p ^. patternArgIsImplicit, par ^. paramImplicit) of
@@ -592,10 +603,10 @@ checkClause clauseLoc clauseType clausePats body = do
                   (ImplicitInstance, ImplicitInstance) -> checkPatternAndContinue
                   (Implicit, Explicit) -> throwWrongIsImplicit p Implicit
                   (ImplicitInstance, Explicit) -> throwWrongIsImplicit p ImplicitInstance
-                  (Explicit, Implicit) -> insertWildcard Implicit
-                  (ImplicitInstance, Implicit) -> insertWildcard Implicit
-                  (Explicit, ImplicitInstance) -> insertWildcard ImplicitInstance
-                  (Implicit, ImplicitInstance) -> insertWildcard ImplicitInstance
+                  (Explicit, Implicit) -> insertWildcard
+                  (ImplicitInstance, Implicit) -> insertWildcard
+                  (Explicit, ImplicitInstance) -> insertWildcard
+                  (Implicit, ImplicitInstance) -> insertWildcard
         where
           throwWrongIsImplicit :: (Members '[Error TypeCheckerError] r') => PatternArg -> IsImplicit -> Sem r' a
           throwWrongIsImplicit patArg expected =
@@ -647,6 +658,12 @@ matchIsImplicit expected actual =
           _wrongPatternIsImplicitActual = actual
         }
 
+addPatternVar :: (Members '[State LocalVars, Inference] r) => VarName -> Expression -> Maybe Name -> Sem r ()
+addPatternVar v ty argName = do
+  modify (addType v ty)
+  registerIdenType v ty
+  whenJust argName (\v' -> modify (addTypeMapping v' v))
+
 checkPattern ::
   forall r.
   (Members '[Reader InfoTable, Error TypeCheckerError, State LocalVars, Inference, NameIdGen, State FunctionsTable] r) =>
@@ -662,9 +679,9 @@ checkPattern = go
       ty <- substitutionE tyVarMap (argTy ^. paramType)
       let pat = patArg ^. patternArgPattern
           name = patArg ^. patternArgName
-      whenJust name (\n -> addVar n ty argTy)
+      whenJust name (\n -> addPatternVar n ty (argTy ^. paramName))
       pat' <- case pat of
-        PatternVariable v -> addVar v ty argTy $> pat
+        PatternVariable v -> addPatternVar v ty (argTy ^. paramName) $> pat
         PatternWildcardConstructor {} -> impossible
         PatternConstructorApp a -> goPatternConstructor pat ty a
       return (set patternArgPattern pat' patArg)
@@ -713,12 +730,6 @@ checkPattern = go
                     )
                 )
               PatternConstructorApp <$> goConstr (IdenInductive ind) a tyArgs
-
-        addVar :: VarName -> Expression -> FunctionParameter -> Sem r ()
-        addVar v ty argType = do
-          modify (addType v ty)
-          registerIdenType v ty
-          whenJust (argType ^. paramName) (\v' -> modify (addTypeMapping v' v))
 
         goConstr :: Iden -> ConstructorApp -> [(InductiveParameter, Expression)] -> Sem r ConstructorApp
         goConstr inductivename app@(ConstructorApp c ps _) ctx = do

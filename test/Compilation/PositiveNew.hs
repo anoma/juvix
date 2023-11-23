@@ -25,8 +25,8 @@ testDescr optLevel Old.PosTest {..} =
       _testRoot = _dir,
       _testAssertion =
         Steps $
-        let f = set entryPointNewTypeCheckingAlgorithm True
-        in compileAssertionEntry f _dir optLevel _assertionMode _file _expectedFile
+          let f = set entryPointNewTypeCheckingAlgorithm True
+           in compileAssertionEntry f _dir optLevel _assertionMode _file _expectedFile
     }
 
 allTestsNoOptimize :: TestTree
@@ -50,6 +50,6 @@ extraTests =
 ignored :: HashSet String
 ignored =
   HashSet.fromList
-    ["Test070: Nested default values and named arguments",
-     "Test071: Named application (Ord instance with default cmp)"
+    [ "Test070: Nested default values and named arguments",
+      "Test071: Named application (Ord instance with default cmp)"
     ]
