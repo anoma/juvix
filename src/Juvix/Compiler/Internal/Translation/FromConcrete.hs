@@ -796,32 +796,13 @@ goExpression = \case
         expr <-
           Internal.substitutionE updateKind l
             >>= Internal.inlineLet
-        -- pure (Internal.ExpressionLet l)
         Internal.clone expr
         where
           goArgs :: NonEmpty (NamedArgumentNew 'Scoped) -> Sem r (NonEmpty Internal.LetClause)
           goArgs args = nonEmpty' . mkLetClauses <$> mapM goArg args
             where
               goArg :: NamedArgumentNew 'Scoped -> Sem r Internal.PreLetStatement
-              -- goArg = fmap Internal.PreLetFunctionDef . goFunctionDef . addType . (^. namedArgumentNewFunDef)
               goArg = fmap Internal.PreLetFunctionDef . goFunctionDef . (^. namedArgumentNewFunDef)
-
-          -- getTypeFromSig :: Symbol -> Expression
-          -- getTypeFromSig s = fromMaybe impossible (firstJust goBlock (sig ^. nameSignatureArgs))
-          --   where
-          --     goBlock :: NameBlock 'Scoped -> Maybe Expression
-          --     goBlock b = b ^? nameBlock . at s . _Just . nameItemType
-
-          -- NOTE Because of https://github.com/anoma/juvix/issues/2247, we
-          -- cannot put a hole in the type and rely on inference.
-          -- addType :: FunctionDef 'Scoped -> FunctionDef 'Scoped
-          -- addType d
-          --   | True = d
-          --   | otherwise = case d ^. signRetType of
-          --     Just {} -> d
-          --     Nothing -> case nonEmpty (d ^. signArgs) of
-          --       Just {} -> impossible
-          --       Nothing -> set signRetType (Just (getTypeFromSig (Concrete.symbolParsed (d ^. signName)))) d
 
           createArgumentBlocks :: [NameBlock 'Scoped] -> [ArgumentBlock 'Scoped]
           createArgumentBlocks = snd . foldr goBlock (args0, [])
