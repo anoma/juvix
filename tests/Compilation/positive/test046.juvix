@@ -11,4 +11,3 @@ id' : Ty
 fun : {A : Type} → A → Ty := id λ {_ := id'};
 
 main : Nat := fun 5 {Nat} 7;
-

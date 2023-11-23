@@ -548,6 +548,7 @@ checkClause clauseLoc clauseType clausePats body = do
     genPatternWildcard loc par = do
       let impl = par ^. paramImplicit
       var <- maybe (varFromWildcard (Wildcard loc)) return (par ^. paramName)
+      addPatternVar var (par ^. paramType) Nothing
       return
         PatternArg
           { _patternArgIsImplicit = impl,
