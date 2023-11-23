@@ -1,0 +1,7 @@
+module Juvix.Builtin.Nat;
+
+--- Inductive natural numbers. I.e. whole non-negative numbers.
+builtin nat
+type Nat :=
+  | zero
+  | suc Nat;

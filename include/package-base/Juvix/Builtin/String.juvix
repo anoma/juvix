@@ -1,0 +1,9 @@
+module Juvix.Builtin.String;
+
+--- Primitive representation of a sequence of characters.
+builtin string
+axiom String : Type;
+
+--- Concatenation of two ;String;s.
+builtin string-concat
+axiom stringConcat : String -> String -> String;

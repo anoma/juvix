@@ -1,0 +1,8 @@
+module Juvix.Builtin.List;
+
+builtin list
+type List (a : Type) :=
+  | --- The empty list
+    nil
+  | --- An element followed by a list
+    :: a (List a);

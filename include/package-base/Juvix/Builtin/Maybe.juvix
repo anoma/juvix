@@ -1,0 +1,7 @@
+module Juvix.Builtin.Maybe;
+
+--- Represents an optional value that may or may not be present. Provides a way
+--- to handle null or missing values in a type-safe manner.
+type Maybe A :=
+  | nothing
+  | just A;
