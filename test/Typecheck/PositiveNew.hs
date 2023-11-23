@@ -56,10 +56,7 @@ extraTests =
 ignored :: HashSet String
 ignored =
   HashSet.fromList
-    [ "Test066: Import function with a function call in default argument",
-      "Test068: Dependent default values inserted in the arity checker",
-      "Test069: Dependent default values for Ord trait",
-      "Test070: Nested default values and named arguments",
+    [ "Test070: Nested default values and named arguments",
       "Test071: Named application",
       -- This test does not pass with the new hole insertion algorithm
       "Test046: Polymorphic type arguments"

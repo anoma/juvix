@@ -9,6 +9,7 @@ where
 
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
+import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Compiler.Builtins.Effect
 import Juvix.Compiler.Concrete.Data.Highlight.Input
 import Juvix.Compiler.Internal.Data.Cast
@@ -33,13 +34,35 @@ import Juvix.Prelude hiding (fromEither)
 
 type MCache = Cache ModuleIndex Module
 
+data FunctionDefault = FunctionDefault
+  { _functionDefaultLeft :: FunctionParameter,
+    _functionDefaultDefault :: Maybe (ArgId, Expression),
+    _functionDefaultRight :: BuilderType
+  }
+
+-- TODO better name
+data BuilderType
+  = BuilderTypeNoDefaults Expression
+  | BuilderTypeDefaults FunctionDefault
+
+data IsDefault
+  = ItIsDefault ArgId
+  | ItIsNotDefault
+
+data AppBuilderArg = AppBuilderArg
+  { _appBuilderArgIsDefault :: IsDefault,
+    _appBuilderArg :: ApplicationArg
+  }
+
 data AppBuilder = AppBuilder
   { _appBuilder :: Expression,
-    _appBuilderType :: Expression,
-    _appBuilderArgs :: [ApplicationArg]
+    _appBuilderType :: BuilderType,
+    _appBuilderArgs :: [AppBuilderArg]
   }
 
 makeLenses ''AppBuilder
+makeLenses ''AppBuilderArg
+makeLenses ''FunctionDefault
 
 registerConstructor :: (Members '[HighlightBuilder, State TypesTable, Reader InfoTable] r) => ConstructorDef -> Sem r ()
 registerConstructor ctr = do
@@ -78,7 +101,7 @@ checkModuleNoCache ::
   (Members '[HighlightBuilder, Reader EntryPoint, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example, Builtins, MCache, Termination] r) =>
   ModuleIndex ->
   Sem r Module
-checkModuleNoCache (ModuleIndex Module {..}) = do
+checkModuleNoCache (ModuleIndex Module {..}) = runReader (mempty @InsertedArgsStack) $ do
   _moduleBody' <-
     evalState (mempty :: NegativeTypeParameters)
       . checkModuleBody
@@ -93,7 +116,7 @@ checkModuleNoCache (ModuleIndex Module {..}) = do
       }
 
 checkModuleBody ::
-  (Members '[HighlightBuilder, Reader EntryPoint, State NegativeTypeParameters, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example, Builtins, MCache, Termination] r) =>
+  (Members '[HighlightBuilder, Reader EntryPoint, State NegativeTypeParameters, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example, Builtins, MCache, Termination, Reader InsertedArgsStack] r) =>
   ModuleBody ->
   Sem r ModuleBody
 checkModuleBody ModuleBody {..} = do
@@ -112,14 +135,14 @@ checkImport ::
 checkImport = traverseOf importModule checkModuleIndex
 
 checkMutualBlock ::
-  (Members '[HighlightBuilder, Reader EntryPoint, State NegativeTypeParameters, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example, Builtins, Termination] r) =>
+  (Members '[HighlightBuilder, Reader EntryPoint, State NegativeTypeParameters, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example, Builtins, Termination, Reader InsertedArgsStack] r) =>
   MutualBlock ->
   Sem r MutualBlock
 checkMutualBlock s = runReader emptyLocalVars (checkTopMutualBlock s)
 
 checkInductiveDef ::
   forall r.
-  (Members '[HighlightBuilder, Reader EntryPoint, Reader InfoTable, State FunctionsTable, Error TypeCheckerError, NameIdGen, State TypesTable, State NegativeTypeParameters, Output Example, Builtins, Termination, Output TypedHole, Output CastHole, Reader LocalVars] r) =>
+  (Members '[HighlightBuilder, Reader EntryPoint, Reader InfoTable, State FunctionsTable, Error TypeCheckerError, NameIdGen, State TypesTable, State NegativeTypeParameters, Output Example, Builtins, Termination, Output TypedHole, Output CastHole, Reader InsertedArgsStack, Reader LocalVars] r) =>
   InductiveDef ->
   Sem r InductiveDef
 checkInductiveDef InductiveDef {..} = runInferenceDef $ do
@@ -185,7 +208,7 @@ withEmptyVars :: Sem (Reader LocalVars ': r) a -> Sem r a
 withEmptyVars = runReader emptyLocalVars
 
 checkTopMutualBlock ::
-  (Members '[HighlightBuilder, State NegativeTypeParameters, Reader EntryPoint, Reader LocalVars, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example, Builtins, Termination] r) =>
+  (Members '[HighlightBuilder, State NegativeTypeParameters, Reader EntryPoint, Reader LocalVars, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example, Builtins, Termination, Reader InsertedArgsStack] r) =>
   MutualBlock ->
   Sem r MutualBlock
 checkTopMutualBlock (MutualBlock ds) =
@@ -193,7 +216,7 @@ checkTopMutualBlock (MutualBlock ds) =
 
 resolveCastHoles ::
   forall a r.
-  (Members '[HighlightBuilder, Reader InfoTable, State FunctionsTable, Error TypeCheckerError, Builtins, NameIdGen, Inference, Output Example, Output TypedHole, State TypesTable, Termination] r) =>
+  (Members '[HighlightBuilder, Reader InfoTable, State FunctionsTable, Error TypeCheckerError, Builtins, NameIdGen, Inference, Output Example, Output TypedHole, State TypesTable, Termination, Reader InsertedArgsStack] r) =>
   Sem (Output CastHole ': r) a ->
   Sem r a
 resolveCastHoles s = do
@@ -222,7 +245,7 @@ resolveCastHoles s = do
     getNatTy = mkBuiltinInductive BuiltinNat
 
 checkMutualStatement ::
-  (Members '[HighlightBuilder, State NegativeTypeParameters, Reader EntryPoint, Inference, Reader LocalVars, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example, Builtins, Termination] r) =>
+  (Members '[HighlightBuilder, State NegativeTypeParameters, Reader EntryPoint, Inference, Reader LocalVars, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example, Builtins, Termination, Reader InsertedArgsStack] r) =>
   MutualStatement ->
   Sem r MutualStatement
 checkMutualStatement = \case
@@ -250,7 +273,7 @@ unfoldFunType' e = do
 
 checkFunctionDef ::
   forall r.
-  (Members '[HighlightBuilder, Reader LocalVars, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example, Builtins, Inference, Termination, Output TypedHole, Output CastHole] r) =>
+  (Members '[HighlightBuilder, Reader LocalVars, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example, Builtins, Inference, Termination, Output TypedHole, Output CastHole, Reader InsertedArgsStack] r) =>
   FunctionDef ->
   Sem r FunctionDef
 checkFunctionDef FunctionDef {..} = do
@@ -300,7 +323,7 @@ checkFunctionDef FunctionDef {..} = do
             withLocalTypeMaybe (p ^. paramName) (p ^. paramType) (go rest)
 
 checkIsType ::
-  (Members '[HighlightBuilder, Reader InfoTable, State FunctionsTable, Error TypeCheckerError, NameIdGen, Reader LocalVars, Inference, Builtins, Output Example, State TypesTable, Termination, Output TypedHole, Output CastHole] r) =>
+  (Members '[HighlightBuilder, Reader InfoTable, State FunctionsTable, Error TypeCheckerError, NameIdGen, Reader LocalVars, Inference, Builtins, Output Example, State TypesTable, Termination, Output TypedHole, Output CastHole, Reader InsertedArgsStack] r) =>
   Interval ->
   Expression ->
   Sem r Expression
@@ -308,7 +331,7 @@ checkIsType = checkExpression . smallUniverseE
 
 checkDefType ::
   forall r.
-  (Members '[HighlightBuilder, Reader InfoTable, State FunctionsTable, Error TypeCheckerError, NameIdGen, Reader LocalVars, Inference, Builtins, Output Example, State TypesTable, Termination, Output TypedHole, Output CastHole] r) =>
+  (Members '[HighlightBuilder, Reader InfoTable, State FunctionsTable, Error TypeCheckerError, NameIdGen, Reader LocalVars, Inference, Builtins, Output Example, State TypesTable, Termination, Output TypedHole, Output CastHole, Reader InsertedArgsStack] r) =>
   Expression ->
   Sem r Expression
 checkDefType ty = checkIsType loc ty
@@ -388,7 +411,7 @@ checkCoercionType FunctionDef {..} = case mi of
       ImplicitInstance -> throw (ErrWrongCoercionArgument (WrongCoercionArgument fp))
 
 checkExample ::
-  (Members '[HighlightBuilder, Reader InfoTable, State FunctionsTable, Error TypeCheckerError, Builtins, NameIdGen, Output Example, State TypesTable, Termination] r) =>
+  (Members '[HighlightBuilder, Reader InfoTable, State FunctionsTable, Error TypeCheckerError, Builtins, NameIdGen, Output Example, State TypesTable, Termination, Reader InsertedArgsStack] r) =>
   Example ->
   Sem r Example
 checkExample e = do
@@ -398,7 +421,7 @@ checkExample e = do
 
 checkExpression ::
   forall r.
-  (Members '[HighlightBuilder, Reader InfoTable, State FunctionsTable, Error TypeCheckerError, Builtins, NameIdGen, Reader LocalVars, Inference, Output Example, Output TypedHole, State TypesTable, Termination, Output CastHole] r) =>
+  (Members '[HighlightBuilder, Reader InfoTable, State FunctionsTable, Error TypeCheckerError, Builtins, NameIdGen, Reader LocalVars, Inference, Output Example, Output TypedHole, State TypesTable, Termination, Output CastHole, Reader InsertedArgsStack] r) =>
   Expression ->
   Expression ->
   Sem r Expression
@@ -425,7 +448,7 @@ checkExpression expectedTy e = do
 resolveInstanceHoles ::
   forall a r.
   (HasExpressions a) =>
-  (Members '[HighlightBuilder, Reader InfoTable, State FunctionsTable, Error TypeCheckerError, Builtins, NameIdGen, Inference, Output Example, State TypesTable, Termination] r) =>
+  (Members '[HighlightBuilder, Reader InfoTable, State FunctionsTable, Error TypeCheckerError, Builtins, NameIdGen, Inference, Output Example, State TypesTable, Termination, Reader InsertedArgsStack] r) =>
   Sem (Output TypedHole ': r) a ->
   Sem r a
 resolveInstanceHoles s = do
@@ -443,7 +466,7 @@ resolveInstanceHoles s = do
         $ checkExpression _typedHoleType t
 
 checkFunctionParameter ::
-  (Members '[HighlightBuilder, Reader InfoTable, State FunctionsTable, Error TypeCheckerError, NameIdGen, Reader LocalVars, Inference, Builtins, Output Example, State TypesTable, Termination, Output TypedHole, Output CastHole] r) =>
+  (Members '[HighlightBuilder, Reader InfoTable, State FunctionsTable, Error TypeCheckerError, NameIdGen, Reader LocalVars, Inference, Builtins, Output Example, State TypesTable, Termination, Output TypedHole, Output CastHole, Reader InsertedArgsStack] r) =>
   FunctionParameter ->
   Sem r FunctionParameter
 checkFunctionParameter FunctionParameter {..} = do
@@ -460,7 +483,7 @@ checkFunctionParameter FunctionParameter {..} = do
       }
 
 inferExpression ::
-  (Members '[HighlightBuilder, Reader InfoTable, State FunctionsTable, Error TypeCheckerError, NameIdGen, Reader LocalVars, Inference, Builtins, Output Example, State TypesTable, Termination] r) =>
+  (Members '[HighlightBuilder, Reader InfoTable, State FunctionsTable, Error TypeCheckerError, NameIdGen, Reader LocalVars, Inference, Builtins, Output Example, State TypesTable, Termination, Reader InsertedArgsStack] r) =>
   -- | type hint
   Maybe Expression ->
   Expression ->
@@ -475,7 +498,7 @@ lookupVar v = do
     err = error $ "internal error: could not find var " <> ppTrace v <> " at " <> ppTrace (getLoc v)
 
 checkFunctionBody ::
-  (Members '[Reader LocalVars, Reader InfoTable, NameIdGen, Error TypeCheckerError, Output Example, Output TypedHole, State TypesTable, State HighlightInput, State FunctionsTable, Builtins, Inference, Termination, Output CastHole] r) =>
+  (Members '[Reader LocalVars, Reader InfoTable, NameIdGen, Error TypeCheckerError, Output Example, Output TypedHole, State TypesTable, State HighlightInput, State FunctionsTable, Builtins, Inference, Termination, Output CastHole, Reader InsertedArgsStack] r) =>
   Expression ->
   Expression ->
   Sem r Expression
@@ -501,7 +524,7 @@ checkFunctionBody expectedTy body =
 -- | helper function for lambda functions and case branches
 checkClause ::
   forall r.
-  (Members '[HighlightBuilder, Reader InfoTable, State FunctionsTable, Reader LocalVars, Error TypeCheckerError, NameIdGen, Inference, Builtins, Output Example, State TypesTable, Termination, Output TypedHole, Output CastHole] r) =>
+  (Members '[HighlightBuilder, Reader InfoTable, State FunctionsTable, Reader LocalVars, Error TypeCheckerError, NameIdGen, Inference, Builtins, Output Example, State TypesTable, Termination, Output TypedHole, Output CastHole, Reader InsertedArgsStack] r) =>
   Interval ->
   -- | Type
   Expression ->
@@ -754,7 +777,7 @@ checkPattern = go
 
 inferExpression' ::
   forall r.
-  (Members '[HighlightBuilder, Reader InfoTable, State FunctionsTable, State TypesTable, Reader LocalVars, Error TypeCheckerError, NameIdGen, Inference, Output Example, Output TypedHole, Builtins, Termination, Output CastHole] r) =>
+  (Members '[HighlightBuilder, Reader InfoTable, State FunctionsTable, State TypesTable, Reader LocalVars, Error TypeCheckerError, NameIdGen, Inference, Output Example, Output TypedHole, Builtins, Termination, Output CastHole, Reader InsertedArgsStack, Reader InsertedArgsStack] r) =>
   Maybe Expression ->
   Expression ->
   Sem r TypedExpression
@@ -763,7 +786,7 @@ inferExpression' = holesHelper
 -- | Checks anything but an Application. Does not insert holes
 inferLeftAppExpression ::
   forall r.
-  (Members '[HighlightBuilder, Reader InfoTable, State FunctionsTable, State TypesTable, Reader LocalVars, Error TypeCheckerError, NameIdGen, Inference, Output Example, Output TypedHole, Builtins, Termination, Output CastHole] r) =>
+  (Members '[HighlightBuilder, Reader InfoTable, State FunctionsTable, State TypesTable, Reader LocalVars, Error TypeCheckerError, NameIdGen, Inference, Output Example, Output TypedHole, Builtins, Termination, Output CastHole, Reader InsertedArgsStack] r) =>
   Maybe Expression ->
   Expression ->
   Sem r TypedExpression
@@ -991,7 +1014,7 @@ inferLeftAppExpression mhint e = case e of
         return (TypedExpression kind (ExpressionIden i))
 
 -- | The hint is used for trailing holes only
-holesHelper :: forall r. (Members '[HighlightBuilder, Reader InfoTable, State FunctionsTable, State TypesTable, Reader LocalVars, Error TypeCheckerError, NameIdGen, Inference, Output Example, Output TypedHole, Builtins, Termination, Output CastHole] r) => Maybe Expression -> Expression -> Sem r TypedExpression
+holesHelper :: forall r. (Members '[HighlightBuilder, Reader InfoTable, State FunctionsTable, State TypesTable, Reader LocalVars, Error TypeCheckerError, NameIdGen, Inference, Output Example, Output TypedHole, Builtins, Termination, Output CastHole, Reader InsertedArgsStack] r) => Maybe Expression -> Expression -> Sem r TypedExpression
 holesHelper mhint expr = do
   let (f, args) = unfoldExpressionApp expr
       hint
@@ -999,19 +1022,78 @@ holesHelper mhint expr = do
         | otherwise = Nothing
   arityCheckBuiltins f args
   fTy <- inferLeftAppExpression hint f
-  let iniBuilder =
+  iniBuilderType <- mkInitBuilderType fTy
+  let iniArg :: ApplicationArg -> AppBuilderArg
+      iniArg a =
+        AppBuilderArg
+          { _appBuilderArgIsDefault = ItIsNotDefault,
+            _appBuilderArg = a
+          }
+      iniBuilder =
         AppBuilder
           { _appBuilder = fTy ^. typedExpression,
-            _appBuilderType = fTy ^. typedType,
-            _appBuilderArgs = args
+            _appBuilderType = iniBuilderType,
+            _appBuilderArgs = map iniArg args
           }
   st' <- execState iniBuilder goArgs
+  let ty' = mkFinalBuilderType (st' ^. appBuilderType)
   return
     TypedExpression
-      { _typedType = st' ^. appBuilderType,
+      { _typedType = ty',
         _typedExpression = st' ^. appBuilder
       }
   where
+    mkFinalBuilderType :: BuilderType -> Expression
+    mkFinalBuilderType = \case
+      BuilderTypeNoDefaults e -> e
+      BuilderTypeDefaults f ->
+        ExpressionFunction
+          Function
+            { _functionLeft = f ^. functionDefaultLeft,
+              _functionRight = mkFinalBuilderType (f ^. functionDefaultRight)
+            }
+
+    getFunctionName :: Expression -> Maybe Name
+    getFunctionName = \case
+      ExpressionIden (IdenFunction fun) -> Just fun
+      _ -> Nothing
+
+    mkInitBuilderType :: TypedExpression -> Sem r BuilderType
+    mkInitBuilderType fTy = do
+      let ty = fTy ^. typedType
+      case getFunctionName (fTy ^. typedExpression) of
+        Just fun -> do
+          infos <- (^. functionInfoDef . funDefArgsInfo) <$> lookupFunction fun
+          return $ toFunctionDefaultMay fun ty infos
+        Nothing -> return (BuilderTypeNoDefaults ty)
+      where
+        toFunctionDefaultMay :: Name -> Expression -> [ArgInfo] -> BuilderType
+        toFunctionDefaultMay funName ty infos =
+          let ixInfos = nonEmpty (indexFrom 0 infos)
+           in maybe (BuilderTypeNoDefaults ty) (BuilderTypeDefaults . toFunctionDefault funName ty) ixInfos
+
+        toFunctionDefault :: Name -> Expression -> NonEmpty (Indexed ArgInfo) -> FunctionDefault
+        toFunctionDefault _argIdFunctionName e (Indexed _argIdIx a :| as) = case e of
+          ExpressionFunction f ->
+            FunctionDefault
+              { _functionDefaultLeft = f ^. functionLeft,
+                _functionDefaultRight =
+                  toFunctionDefaultMay
+                    _argIdFunctionName
+                    (f ^. functionRight)
+                    (map (^. indexedThing) as),
+                _functionDefaultDefault =
+                  let uid =
+                        ArgId
+                          { _argIdDefinitionLoc = Irrelevant (getLoc f),
+                            _argIdName = Irrelevant (a ^. argInfoName),
+                            _argIdFunctionName,
+                            _argIdIx
+                          }
+                   in (uid,) <$> a ^. argInfoDefault
+              }
+          _ -> impossible
+
     arityCheckBuiltins :: Expression -> [ApplicationArg] -> Sem r ()
     arityCheckBuiltins f args = do
       case f of
@@ -1060,57 +1142,121 @@ holesHelper mhint expr = do
         insertTrailingHoles hintTy = do
           builderTy <- gets (^. appBuilderType)
           ariHint <- typeArity hintTy
-          ariExpr <- typeArity builderTy
+          (defaults, restExprTy) <- peelDefault builderTy
+          restExprAri <- typeArity restExprTy
           let preImplicits :: Arity -> [IsImplicit]
               preImplicits = takeWhile isImplicitOrInstance . map (^. arityParameterImplicit) . unfoldArity
-              preAriExpr = preImplicits ariExpr
+              preImplicitsTypeRest = preImplicits restExprAri
               preAriHint = preImplicits ariHint
+              preImplicitsInType =
+                length
+                  ( takeWhile
+                      isImplicitOrInstance
+                      (map fst defaults ++ preImplicitsTypeRest)
+                  )
           loc <- getLoc <$> gets (^. appBuilder)
-          let toBeInserted :: [IsImplicit] = take (length preAriExpr - length preAriHint) preAriExpr
-              mkHoleArg :: IsImplicit -> Sem r' ApplicationArg
-              mkHoleArg i =
-                ApplicationArg i <$> case i of
+          let numberOfExtraHoles = preImplicitsInType - length preAriHint
+              toBeInserted :: [(IsImplicit, Maybe (ArgId, Expression))] =
+                take numberOfExtraHoles (defaults <> (map (,Nothing) preImplicitsTypeRest))
+              mkHoleArg :: (IsImplicit, Maybe (ArgId, Expression)) -> Sem r' AppBuilderArg
+              mkHoleArg (i, mdef) = do
+                (_appArg, _appBuilderArgIsDefault) <- case i of
                   Explicit -> impossible
-                  Implicit -> newHoleImplicit loc
-                  ImplicitInstance -> newHoleInstance loc
+                  Implicit -> case mdef of
+                    Nothing -> (,ItIsNotDefault) <$> newHoleImplicit loc
+                    Just (uid, def) -> return (def, ItIsDefault uid)
+                  ImplicitInstance -> (,ItIsNotDefault) <$> newHoleInstance loc
+                return
+                  AppBuilderArg
+                    { _appBuilderArg =
+                        ApplicationArg
+                          { _appArgIsImplicit = i,
+                            _appArg
+                          },
+                      _appBuilderArgIsDefault
+                    }
           trailingHoles <- mapM mkHoleArg toBeInserted
           mapM_ addTrailingHole trailingHoles
           where
-            addTrailingHole :: ApplicationArg -> Sem r' ()
-            addTrailingHole a = do
-              fun <- peekFunctionType (a ^. appArgIsImplicit)
-              modify' (over appBuilderArgs (a :))
-              checkMatchingArg a fun
+            peelDefault :: BuilderType -> Sem r' ([(IsImplicit, Maybe (ArgId, Expression))], Expression)
+            peelDefault bty = runOutputList (go bty)
+              where
+                go :: BuilderType -> Sem (Output (IsImplicit, Maybe (ArgId, Expression)) ': r') Expression
+                go = \case
+                  BuilderTypeNoDefaults e -> return e
+                  BuilderTypeDefaults d -> do
+                    let impl = d ^. functionDefaultLeft . paramImplicit
+                    output (impl, d ^. functionDefaultDefault)
+                    go (d ^. functionDefaultRight)
 
-        checkMatchingArg :: ApplicationArg -> Function -> Sem r' ()
+            addTrailingHole :: AppBuilderArg -> Sem r' ()
+            addTrailingHole holeArg = do
+              fun <- peekFunctionType (holeArg ^. appBuilderArg . appArgIsImplicit)
+              modify' (over appBuilderArgs (holeArg :))
+              checkMatchingArg holeArg fun
+
+        checkLoop :: AppBuilderArg -> Sem r' ()
+        checkLoop arg = case arg ^. appBuilderArgIsDefault of
+          ItIsNotDefault -> return ()
+          ItIsDefault uid -> do
+            st <- asks (^. insertedArgsStack)
+            case span (/= uid) st of
+              (_, []) -> return ()
+              (c, _) ->
+                let cyc = NonEmpty.reverse (uid :| c)
+                 in throw (ErrDefaultArgLoop (DefaultArgLoop cyc))
+
+        checkMatchingArg :: AppBuilderArg -> FunctionDefault -> Sem r' ()
         checkMatchingArg arg fun = do
           dropArg
-          let funParam = fun ^. functionLeft
+          let funParam = fun ^. functionDefaultLeft
               funL = funParam ^. paramType
-              funR = fun ^. functionRight
-          arg' <- checkExpression funL (arg ^. appArg)
-          let subs :: Expression -> Sem r' Expression = substitutionApp (funParam ^. paramName, arg')
+              funR = fun ^. functionDefaultRight
+              checkLeft :: Sem r' Expression
+              checkLeft = do
+                checkLoop arg
+                let adjustCtx = case fun ^. functionDefaultDefault of
+                      Nothing -> id
+                      Just (uid, _) -> local (over insertedArgsStack (uid :))
+                adjustCtx (checkExpression funL (arg ^. appBuilderArg . appArg))
+          arg' <- checkLeft
+          let subsE :: (HasExpressions expr) => expr -> Sem r' expr
+              subsE = substitutionApp (funParam ^. paramName, arg')
+              subsBuilderType :: BuilderType -> Sem r' BuilderType = \case
+                BuilderTypeNoDefaults e -> BuilderTypeNoDefaults <$> subsE e
+                BuilderTypeDefaults FunctionDefault {..} -> do
+                  def' <- mapM (secondM subsE) _functionDefaultDefault
+                  l' <- subsE _functionDefaultLeft
+                  r' <- subsBuilderType _functionDefaultRight
+                  return
+                    ( BuilderTypeDefaults
+                        FunctionDefault
+                          { _functionDefaultLeft = l',
+                            _functionDefaultDefault = def',
+                            _functionDefaultRight = r'
+                          }
+                    )
               applyArg :: Expression -> Expression
               applyArg l =
                 ExpressionApplication
                   Application
                     { _appLeft = l,
                       _appRight = arg',
-                      _appImplicit = arg ^. appArgIsImplicit
+                      _appImplicit = arg ^. appBuilderArg . appArgIsImplicit
                     }
-          funR' <- subs funR
+          funR' <- subsBuilderType funR
           modify' (set appBuilderType funR')
           modify' (over appBuilder applyArg)
 
-        goNextArg :: ApplicationArg -> Sem r' ()
+        goNextArg :: AppBuilderArg -> Sem r' ()
         goNextArg arg = do
-          let i = arg ^. appArgIsImplicit
+          let i = arg ^. appBuilderArg . appArgIsImplicit
           fun <- peekFunctionType i
           insertMiddleHoleOrCheck fun i
           where
-            insertMiddleHoleOrCheck :: Function -> IsImplicit -> Sem r' ()
+            insertMiddleHoleOrCheck :: FunctionDefault -> IsImplicit -> Sem r' ()
             insertMiddleHoleOrCheck fun argImpl =
-              let funParam = fun ^. functionLeft
+              let funParam = fun ^. functionDefaultLeft
                   funImpl = funParam ^. paramImplicit
                   checkThisArg = checkMatchingArg arg fun >> goArgs
                in case (argImpl, funImpl) of
@@ -1128,11 +1274,18 @@ holesHelper mhint expr = do
                 insertMiddleHole impl = do
                   l <- gets (^. appBuilder)
                   let loc = getLoc l
-                  h <- case impl of
-                    Implicit -> newHoleImplicit loc
-                    ImplicitInstance -> newHoleInstance loc
+                  (h, _appBuilderArgIsDefault) <- case impl of
+                    ImplicitInstance -> (,ItIsNotDefault) <$> newHoleInstance loc
                     Explicit -> impossible
-                  modify' (over appBuilderArgs (ApplicationArg impl h :))
+                    Implicit -> case fun ^. functionDefaultDefault of
+                      Nothing -> (,ItIsNotDefault) <$> newHoleImplicit loc
+                      Just (uid, e) -> return (e, ItIsDefault uid)
+                  let a =
+                        AppBuilderArg
+                          { _appBuilderArg = ApplicationArg impl h,
+                            _appBuilderArgIsDefault
+                          }
+                  modify' (over appBuilderArgs (a :))
                   goArgs
 
         throwExpectedExplicit :: Sem r' a
@@ -1146,32 +1299,46 @@ holesHelper mhint expr = do
                   _expectedExplicitArgumentIx = error "FIXME"
                 }
 
-        peekFunctionType :: IsImplicit -> Sem r' Function
+        peekFunctionType :: IsImplicit -> Sem r' FunctionDefault
         peekFunctionType impl = do
-          ty <- gets (^. appBuilderType) >>= weakNormalize
-          case ty of
-            ExpressionFunction f -> return f
-            ExpressionHole h -> holeRefineToFunction impl h
-            _ -> throwExpectedFunTy
-              where
-                throwExpectedFunTy :: Sem r' a
-                throwExpectedFunTy = do
-                  l <- gets (^. appBuilder)
-                  builderTy <- gets (^. appBuilderType)
-                  args <- gets (^. appBuilderArgs)
-                  let a :: Expression = foldApplication l args
-                  throw $
-                    ErrExpectedFunctionType
-                      ExpectedFunctionType
-                        { _expectedFunctionTypeExpression = a,
-                          _expectedFunctionTypeLeft = l,
-                          _expectedFunctionTypeType = builderTy
-                        }
+          bty <- gets (^. appBuilderType)
+          case bty of
+            BuilderTypeNoDefaults ty -> fromNoDefault <$> peekFunctionNoDefaults ty
+            BuilderTypeDefaults s -> return s
+          where
+            fromNoDefault :: Function -> FunctionDefault
+            fromNoDefault f =
+              FunctionDefault
+                { _functionDefaultLeft = f ^. functionLeft,
+                  _functionDefaultDefault = Nothing,
+                  _functionDefaultRight = BuilderTypeNoDefaults (f ^. functionRight)
+                }
+            peekFunctionNoDefaults :: Expression -> Sem r' Function
+            peekFunctionNoDefaults ty0 = do
+              ty <- weakNormalize ty0
+              case ty of
+                ExpressionFunction f -> return f
+                ExpressionHole h -> holeRefineToFunction impl h
+                _ -> throwExpectedFunTy
+                  where
+                    throwExpectedFunTy :: Sem r' a
+                    throwExpectedFunTy = do
+                      l <- gets (^. appBuilder)
+                      builderTy <- gets (^. appBuilderType)
+                      args <- gets (^. appBuilderArgs)
+                      let a :: Expression = foldApplication l (map (^. appBuilderArg) args)
+                      throw $
+                        ErrExpectedFunctionType
+                          ExpectedFunctionType
+                            { _expectedFunctionTypeExpression = a,
+                              _expectedFunctionTypeLeft = l,
+                              _expectedFunctionTypeType = (mkFinalBuilderType builderTy)
+                            }
 
         dropArg :: Sem r' ()
         dropArg = modify' (over appBuilderArgs (drop 1))
 
-        peekArg :: Sem r' (Maybe ApplicationArg)
+        peekArg :: Sem r' (Maybe AppBuilderArg)
         peekArg = do
           b <- get
           return (head <$> nonEmpty (b ^. appBuilderArgs))

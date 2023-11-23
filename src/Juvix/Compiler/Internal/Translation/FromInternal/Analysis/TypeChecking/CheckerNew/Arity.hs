@@ -4,9 +4,17 @@ import Juvix.Compiler.Internal.Extra
 import Juvix.Prelude
 import Juvix.Prelude.Pretty
 
+data ArgId = ArgId
+  { _argIdFunctionName :: Name,
+    _argIdIx :: Int,
+    _argIdDefinitionLoc :: Irrelevant Interval,
+    _argIdName :: Irrelevant (Maybe Name)
+  }
+  deriving stock (Eq, Ord)
+
 -- | Used to detect of cycles of default arguments in the arity checker.
 newtype InsertedArgsStack = InsertedArgsStack
-  { _insertedArgsStack :: [Name]
+  { _insertedArgsStack :: [ArgId]
   }
   deriving newtype (Monoid, Semigroup)
 
@@ -19,9 +27,6 @@ data InsertedArg = InsertedArg
     -- False if it is an inserted hole or an argument present in the source code.
     _insertedArgDefault :: Bool
   }
-
--- pattern ArityParam :: IsImplicit -> ArityParameter
--- pattern ArityParam impl <- ArityParameter {_arityParameterImplicit = impl}
 
 data Blocking
   = BlockingVar VarName
@@ -65,10 +70,14 @@ instance Eq ArityParameter where
     (ari, impl) == (ari', impl')
 
 makeLenses ''UnfoldedArity
+makeLenses ''ArgId
 makeLenses ''FunctionArity
 makeLenses ''InsertedArg
 makeLenses ''ArityParameter
 makeLenses ''InsertedArgsStack
+
+instance HasLoc ArgId where
+  getLoc = (^. argIdDefinitionLoc . unIrrelevant)
 
 arityParameterName :: Lens' ArityParameter (Maybe Name)
 arityParameterName = arityParameterInfo . argInfoName
