@@ -99,7 +99,7 @@ runInfoTableBuilder' st =
       FreshTag -> do
         s <- get
         modify' (over builderStateNextTagId (+ 1))
-        return (UserTag (s ^. builderStateNextTagId))
+        return (UserTag (s ^. builderStateModuleId) (s ^. builderStateNextTagId))
       RegisterIdent idt ii -> do
         let sym = ii ^. identifierSymbol
             identKind = IdentFun (ii ^. identifierSymbol)

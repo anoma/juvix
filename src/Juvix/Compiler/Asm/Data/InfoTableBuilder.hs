@@ -56,7 +56,7 @@ runInfoTableBuilder =
       FreshTag -> do
         modify' (over stateNextUserTag (+ 1))
         s <- get
-        return (UserTag (s ^. stateNextUserTag - 1))
+        return (UserTag defaultModuleId (s ^. stateNextUserTag - 1))
       RegisterFunction fi -> do
         modify' (over (stateInfoTable . infoFunctions) (HashMap.insert (fi ^. functionSymbol) fi))
         modify' (over stateIdents (HashMap.insert (fi ^. functionName) (IdentFun (fi ^. functionSymbol))))

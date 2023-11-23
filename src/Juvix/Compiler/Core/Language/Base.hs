@@ -39,7 +39,7 @@ uniqueName txt sym = txt <> "_" <> show sym
 -- can treat them specially.
 data Tag
   = BuiltinTag BuiltinDataTag
-  | UserTag Word
+  | UserTag ModuleId Word
   deriving stock (Eq, Generic, Ord, Show)
 
 instance Hashable Tag
@@ -59,7 +59,7 @@ type Level = Int
 
 getUserTagId :: Tag -> Maybe Word
 getUserTagId = \case
-  UserTag u -> Just u
+  UserTag _ u -> Just u
   BuiltinTag {} -> Nothing
 
 -- | The first argument `bl` is the current binder level (the number of binders
