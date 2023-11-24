@@ -44,7 +44,7 @@ ignored :: HashSet String
 ignored =
   HashSet.fromList
     [ "Test070: Nested default values and named arguments",
-      "Test071: Named application",
+      "Test071: Named application (Ord instance with default cmp)",
       -- This test does not pass with the new hole insertion algorithm
       "Test046: Polymorphic type arguments"
     ]
