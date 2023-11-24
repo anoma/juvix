@@ -6,11 +6,11 @@ module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Er
   )
 where
 
-import Prelude (show)
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Error
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error.Pretty
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error.Types
 import Juvix.Prelude
+import Prelude (show)
 
 data TypeCheckerError
   = ErrWrongConstructorType WrongConstructorType
