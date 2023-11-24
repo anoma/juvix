@@ -56,4 +56,3 @@ main : IO :=
       (take 10 (uniq (sort (flatten (gen2 nil 9 80)))))
     >> printListNatLn
       (take 10 (uniq (sort (flatten (gen2 nil 6 80)))));
-
