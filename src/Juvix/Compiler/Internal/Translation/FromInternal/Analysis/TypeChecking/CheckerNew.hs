@@ -1369,7 +1369,7 @@ viewInductiveApp ty = do
       case r of
         Just h' -> viewInductiveApp h'
         Nothing -> return (Left h)
-    _ -> throw (ErrImpracticalPatternMatching (ImpracticalPatternMatching ty))
+    _ -> throw (ErrInvalidPatternMatching (InvalidPatternMatching ty))
   where
     viewTypeApp :: Expression -> (Expression, [Expression])
     viewTypeApp tyapp = case tyapp of

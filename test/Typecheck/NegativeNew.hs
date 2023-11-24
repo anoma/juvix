@@ -46,7 +46,10 @@ allTests =
         (map (mkTest . testDescr) (filter (not . isIgnored) Old.tests)),
       testGroup
         "Non-strictly positive data types"
-        (map (mkTest . testDescr) Old.negPositivityTests)
+        (map (mkTest . testDescr) Old.negPositivityTests),
+      testGroup
+        "Arity tests"
+        (map (mkTest . testDescr) arityTests)
     ]
 
 isIgnored :: Old.NegTest -> Bool
@@ -56,3 +59,92 @@ ignored :: HashSet String
 ignored =
   HashSet.fromList
     []
+
+wrongError :: Maybe FailMsg
+wrongError = Just "Incorrect error"
+
+negArityTest :: String -> Path Rel Dir -> Path Rel File -> (ArityCheckerError -> Maybe FailMsg) -> Old.NegTest
+negArityTest _name rdir rfile ariErr =
+  let _dir = root <//> rdir
+   in Old.NegTest
+        { _file = _dir <//> rfile,
+          _checkErr = \case
+            ErrArityCheckerError e -> ariErr e
+            _ -> wrongError,
+          _name,
+          _dir
+        }
+
+arityTests :: [Old.NegTest]
+arityTests =
+  [ negTest
+      "Too many arguments in expression"
+      $(mkRelDir "Internal")
+      $(mkRelFile "TooManyArguments.juvix")
+      $ \case
+        ErrExpectedFunctionType {} -> Nothing
+        _ -> wrongError,
+    negTest
+      "Pattern match a function type"
+      $(mkRelDir "Internal")
+      $(mkRelFile "FunctionPattern.juvix")
+      $ \case
+        ErrInvalidPatternMatching {} -> Nothing
+        _ -> wrongError,
+    negTest
+      "Function type (* → *) application"
+      $(mkRelDir "Internal")
+      $(mkRelFile "FunctionApplied.juvix")
+      $ \case
+        ErrExpectedFunctionType {} -> Nothing
+        _ -> wrongError,
+    negArityTest
+      "Expected explicit pattern"
+      $(mkRelDir "Internal")
+      $(mkRelFile "ExpectedExplicitPattern.juvix")
+      $ \case
+        ErrWrongPatternIsImplicit {} -> Nothing
+        _ -> wrongError,
+    negArityTest
+      "Expected explicit argument"
+      $(mkRelDir "Internal")
+      $(mkRelFile "ExpectedExplicitArgument.juvix")
+      $ \case
+        ErrExpectedExplicitArgument {} -> Nothing
+        _ -> wrongError,
+    negArityTest
+      "Function clause with two many patterns in the lhs"
+      $(mkRelDir "Internal")
+      $(mkRelFile "LhsTooManyPatterns.juvix")
+      $ \case
+        ErrLhsTooManyPatterns {} -> Nothing
+        _ -> wrongError,
+    negTest
+      "Too many arguments for the return type of a constructor"
+      $(mkRelDir "Internal")
+      $(mkRelFile "WrongReturnTypeTooManyArguments.juvix")
+      $ \case
+        ErrExpectedFunctionType {} -> Nothing
+        _ -> wrongError,
+    negArityTest
+      "Lazy builtin not fully applied"
+      $(mkRelDir "Internal")
+      $(mkRelFile "LazyBuiltin.juvix")
+      $ \case
+        ErrBuiltinNotFullyApplied {} -> Nothing
+        _ -> wrongError,
+    negArityTest
+      "issue 2293: Non-terminating function with arity error"
+      $(mkRelDir "Internal")
+      $(mkRelFile "issue2293.juvix")
+      $ \case
+        ErrWrongConstructorAppLength {} -> Nothing
+        _ -> wrongError,
+    negTest
+      "Detect default argument cycle in the arity checker"
+      $(mkRelDir "Internal")
+      $(mkRelFile "DefaultArgCycleArity.juvix")
+      $ \case
+        ErrDefaultArgLoop {} -> Nothing
+        _ -> wrongError
+  ]

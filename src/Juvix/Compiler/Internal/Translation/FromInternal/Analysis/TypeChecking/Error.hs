@@ -20,7 +20,7 @@ data TypeCheckerError
   | ErrExpectedFunctionType ExpectedFunctionType
   | ErrTooManyArgumentsIndType WrongNumberArgumentsIndType
   | ErrTooFewArgumentsIndType WrongNumberArgumentsIndType
-  | ErrImpracticalPatternMatching ImpracticalPatternMatching
+  | ErrInvalidPatternMatching InvalidPatternMatching
   | ErrNoPositivity NoPositivity
   | ErrUnsupportedTypeFunction UnsupportedTypeFunction
   | ErrInvalidInstanceType InvalidInstanceType
@@ -48,7 +48,7 @@ instance ToGenericError TypeCheckerError where
     ErrExpectedFunctionType e -> genericError e
     ErrTooManyArgumentsIndType e -> genericError e
     ErrTooFewArgumentsIndType e -> genericError e
-    ErrImpracticalPatternMatching e -> genericError e
+    ErrInvalidPatternMatching e -> genericError e
     ErrNoPositivity e -> genericError e
     ErrUnsupportedTypeFunction e -> genericError e
     ErrInvalidInstanceType e -> genericError e
