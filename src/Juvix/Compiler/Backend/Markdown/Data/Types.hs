@@ -1,7 +1,6 @@
 module Juvix.Compiler.Backend.Markdown.Data.Types where
 
 import Commonmark qualified as MK
-import Data.List.NonEmpty qualified as NonEmpty
 import Data.Text qualified as T
 import Juvix.Data.Loc
 import Juvix.Prelude hiding (Raw)
