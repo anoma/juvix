@@ -65,7 +65,7 @@ We also use other markup for documentation such as:
     2. Second text
 
 
-!!! info
+??? info "Solution"
 
     Initial function arguments that match variables or wildcards in all clauses can
     be moved to the left of the colon in the function definition. For example,
