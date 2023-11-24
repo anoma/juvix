@@ -38,8 +38,8 @@ toValue tab = \case
             _constrAppArgs = map (toValue tab) (drop paramsNum _constrArgs)
           }
       where
-        ci = lookupConstructorInfo tab _constrTag
-        ii = lookupInductiveInfo tab (ci ^. constructorInductive)
+        ci = lookupTabConstructorInfo tab _constrTag
+        ii = lookupTabInductiveInfo tab (ci ^. constructorInductive)
         paramsNum = length (ii ^. inductiveParams)
 
     goType :: Value

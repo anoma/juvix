@@ -25,13 +25,13 @@ extendedTableReplArtifacts :: forall r. (Members '[State Artifacts] r) => Intern
 extendedTableReplArtifacts e = Internal.extendWithReplExpression e <$> gets (^. artifactInternalTypedTable)
 
 runCoreInfoTableBuilderArtifacts :: (Members '[State Artifacts] r) => Sem (Core.InfoTableBuilder ': r) a -> Sem r a
-runCoreInfoTableBuilderArtifacts = runStateLikeArtifacts (Core.runInfoTableBuilder defaultModuleId) artifactCoreTable
+runCoreInfoTableBuilderArtifacts = runStateLikeArtifacts Core.runInfoTableBuilder artifactCoreModule
 
 tmpCoreInfoTableBuilderArtifacts :: (Members '[State Artifacts] r) => Sem (Core.InfoTableBuilder ': r) a -> Sem r a
 tmpCoreInfoTableBuilderArtifacts m = do
-  tbl <- gets (^. artifactCoreTable)
-  a <- runStateLikeArtifacts (Core.runInfoTableBuilder defaultModuleId) artifactCoreTable m
-  modify' (set artifactCoreTable tbl)
+  md <- gets (^. artifactCoreModule)
+  a <- runStateLikeArtifacts Core.runInfoTableBuilder artifactCoreModule m
+  modify' (set artifactCoreModule md)
   return a
 
 runBuiltinsArtifacts :: (Members '[Error JuvixError, State Artifacts] r) => Sem (Builtins ': r) a -> Sem r a

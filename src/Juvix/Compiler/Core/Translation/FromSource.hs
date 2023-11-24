@@ -27,10 +27,10 @@ import Text.Megaparsec qualified as P
 runParser :: Path Abs File -> ModuleId -> InfoTable -> Text -> Either MegaparsecError (InfoTable, Maybe Node)
 runParser fileName mid tab input =
   case run $
-    runInfoTableBuilder mid tab $
+    runInfoTableBuilder (Module mid tab mempty) $
       P.runParserT parseToplevel (fromAbsFile fileName) input of
     (_, Left err) -> Left (MegaparsecError err)
-    (tbl, Right r) -> Right (tbl, r)
+    (md, Right r) -> Right (md ^. moduleInfoTable, r)
 
 runParserMain :: Path Abs File -> ModuleId -> InfoTable -> Text -> Either MegaparsecError InfoTable
 runParserMain fileName mid tab input =
@@ -51,7 +51,7 @@ setupMainFunction mid tab node =
     sym = Symbol mid symId
     info =
       IdentifierInfo
-        { _identifierName = freshIdentName tab "main",
+        { _identifierName = freshIdentName' tab "main",
           _identifierLocation = Nothing,
           _identifierSymbol = sym,
           _identifierArgsNum = 0,
@@ -131,7 +131,7 @@ statementDef = do
       guardSymbolNotDefined
         sym
         (parseFailure off ("duplicate definition of: " ++ fromText txt))
-      tab <- lift getInfoTable
+      tab <- (^. moduleInfoTable) <$> lift getModule
       mty <- optional typeAnnotation
       let fi = fromMaybe impossible $ HashMap.lookup sym (tab ^. infoIdentifiers)
           ty = fromMaybe (fi ^. identifierType) mty
@@ -248,8 +248,8 @@ expression ::
   ParsecS r Node
 expression = do
   node <- expr 0 mempty
-  tab <- lift getInfoTable
-  return $ etaExpandApps tab node
+  md <- lift getModule
+  return $ etaExpandApps md node
 
 expr ::
   (Member InfoTableBuilder r) =>

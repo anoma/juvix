@@ -28,5 +28,5 @@ convertNode = dmap go
       _ ->
         impossible
 
-caseFolding :: InfoTable -> InfoTable
+caseFolding :: Module -> Module
 caseFolding = mapAllNodes convertNode

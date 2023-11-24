@@ -1,8 +1,8 @@
 module Juvix.Compiler.Core.Normalizer where
 
 import Data.HashMap.Strict qualified as HashMap
-import Juvix.Compiler.Core.Data.InfoTable
 import Juvix.Compiler.Core.Data.InfoTableBuilder
+import Juvix.Compiler.Core.Data.Module
 import Juvix.Compiler.Core.Evaluator
 import Juvix.Compiler.Core.Extra.Base
 import Juvix.Compiler.Core.Language
@@ -20,8 +20,8 @@ makeLenses ''NormEnv
 
 type Norm = Sem '[Reader NormEnv, InfoTableBuilder]
 
-normalize :: InfoTable -> Node -> Node
-normalize tab0 = run . evalInfoTableBuilder defaultModuleId tab0 . runReader normEnv . normalize'
+normalize :: Module -> Node -> Node
+normalize md = run . evalInfoTableBuilder md . runReader normEnv . normalize'
   where
     normEnv =
       NormEnv
@@ -29,6 +29,7 @@ normalize tab0 = run . evalInfoTableBuilder defaultModuleId tab0 . runReader nor
           _normEnvLevel = 0,
           _normEnvEvalEnv = []
         }
+    identCtx = computeCombinedIdentContext md
 
     normalize' :: Node -> Norm Node
     normalize' node0 = do
@@ -38,8 +39,7 @@ normalize tab0 = run . evalInfoTableBuilder defaultModuleId tab0 . runReader nor
     neval :: Node -> Norm Node
     neval node = do
       env <- asks (^. normEnvEvalEnv)
-      tab <- getInfoTable
-      return $ geval opts stdout (tab ^. identContext) env node
+      return $ geval opts stdout identCtx env node
       where
         opts =
           defaultEvalOptions

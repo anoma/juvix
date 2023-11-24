@@ -10,10 +10,10 @@ import Juvix.Compiler.Core.Language
 -- so that it can be called recusively.
 literalIntToNatNode :: (Member InfoTableBuilder r) => Symbol -> Sem r Node
 literalIntToNatNode sym = do
-  tab <- getInfoTable
-  let tagZeroM = (^. constructorTag) <$> lookupBuiltinConstructor tab BuiltinNatZero
-      tagSucM = (^. constructorTag) <$> lookupBuiltinConstructor tab BuiltinNatSuc
-      boolSymM = (^. inductiveSymbol) <$> lookupBuiltinInductive tab BuiltinBool
+  md <- getModule
+  let tagZeroM = (^. constructorTag) <$> lookupBuiltinConstructor md BuiltinNatZero
+      tagSucM = (^. constructorTag) <$> lookupBuiltinConstructor md BuiltinNatSuc
+      boolSymM = (^. inductiveSymbol) <$> lookupBuiltinInductive md BuiltinBool
   return $ case (tagZeroM, tagSucM, boolSymM) of
     (Just tagZero, Just tagSuc, Just boolSym) ->
       mkLambda' mkTypeInteger' $

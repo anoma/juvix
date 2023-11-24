@@ -4,20 +4,21 @@ import Commands.Base
 import Commands.Dev.Core.FromConcrete.Options
 import Evaluator
 import Juvix.Compiler.Core.Data.InfoTable
+import Juvix.Compiler.Core.Data.Module qualified as Core
 import Juvix.Compiler.Core.Options qualified as Core
 import Juvix.Compiler.Core.Pretty qualified as Core
 import Juvix.Compiler.Core.Transformation qualified as Core
-import Juvix.Compiler.Core.Transformation.DisambiguateNames (disambiguateNames)
+import Juvix.Compiler.Core.Transformation.DisambiguateNames (disambiguateNames')
 import Juvix.Compiler.Core.Translation
 
 runCommand :: forall r. (Members '[Embed IO, App] r) => CoreFromConcreteOptions -> Sem r ()
 runCommand localOpts = do
   gopts <- askGlobalOptions
-  tab <- (^. coreResultTable) <$> runPipeline (localOpts ^. coreFromConcreteInputFile) upToCore
+  md <- (^. coreResultModule) <$> runPipeline (localOpts ^. coreFromConcreteInputFile) upToCore
   path :: Path Abs File <- fromAppPathFile (localOpts ^. coreFromConcreteInputFile)
-  let r = run $ runReader (project @GlobalOptions @Core.CoreOptions gopts) $ runError @JuvixError $ Core.applyTransformations (project localOpts ^. coreFromConcreteTransformations) tab
-  tab0 :: InfoTable <- getRight r
-  let tab' :: InfoTable = if localOpts ^. coreFromConcreteNoDisambiguate then tab0 else disambiguateNames tab0
+  let r = run $ runReader (project @GlobalOptions @Core.CoreOptions gopts) $ runError @JuvixError $ Core.applyTransformations (project localOpts ^. coreFromConcreteTransformations) md
+  tab0 :: InfoTable <- Core.computeCombinedInfoTable <$> getRight r
+  let tab' :: InfoTable = if localOpts ^. coreFromConcreteNoDisambiguate then tab0 else disambiguateNames' tab0
       inInputModule :: IdentifierInfo -> Bool
       inInputModule _ | not (localOpts ^. coreFromConcreteFilter) = True
       inInputModule x = (== Just path) . (^? identifierLocation . _Just . intervalFile) $ x
@@ -40,12 +41,8 @@ runCommand localOpts = do
       goPrint :: Sem r ()
       goPrint = case localOpts ^. coreFromConcreteSymbolName of
         Just {} -> printNode (fromMaybe err (getDef selInfo))
-        Nothing -> renderStdOut (Core.ppOut localOpts printTab)
+        Nothing -> renderStdOut (Core.ppOut localOpts tab')
         where
-          printTab :: InfoTable
-          printTab
-            | localOpts ^. coreFromConcreteFilter = filterByFile path tab'
-            | otherwise = tab'
           printNode :: (Text, Core.Node) -> Sem r ()
           printNode (name, node) = do
             renderStdOut (name <> " = ")

@@ -7,7 +7,7 @@ import Juvix.Compiler.Core.Transformation.Optimize.LambdaFolding
 import Juvix.Compiler.Core.Transformation.Optimize.LetFolding
 import Juvix.Compiler.Core.Transformation.Optimize.MandatoryInlining
 
-optimize :: InfoTable -> Sem r InfoTable
+optimize :: Module -> Sem r Module
 optimize =
   return
     . letFolding

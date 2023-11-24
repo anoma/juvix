@@ -445,7 +445,7 @@ instance PrettyCode InfoTable where
     sigs <- ppSigs (sortOn (^. identifierSymbol) $ toList (tbl ^. infoIdentifiers))
     ctx' <- ppContext (tbl ^. identContext)
     axioms <- vsep <$> mapM ppCode (tbl ^. infoAxioms)
-    main <- maybe (return "") (\s -> (<> line) . (line <>) <$> ppName KNameFunction (identName tbl s)) (tbl ^. infoMain)
+    main <- maybe (return "") (\s -> (<> line) . (line <>) <$> ppName KNameFunction (identName' tbl s)) (tbl ^. infoMain)
     return
       ( header "Inductives:"
           <> tys
@@ -472,7 +472,7 @@ instance PrettyCode InfoTable where
         sym' <- ppName KNameFunction mname'
         let -- the identifier may be missing if we have filtered out some
             -- identifiers for printing purposes
-            mii = lookupIdentifierInfo' tbl s
+            mii = lookupTabIdentifierInfo' tbl s
         case mii of
           Nothing -> return Nothing
           Just ii -> do
@@ -514,7 +514,7 @@ instance PrettyCode InfoTable where
           ppInductive :: InductiveInfo -> Sem r (Doc Ann)
           ppInductive ii = do
             name <- ppName KNameInductive (ii ^. inductiveName)
-            ctrs <- mapM (fmap (<> semi) . ppCode . lookupConstructorInfo tbl) (ii ^. inductiveConstructors)
+            ctrs <- mapM (fmap (<> semi) . ppCode . lookupTabConstructorInfo tbl) (ii ^. inductiveConstructors)
             return (kwInductive <+> name <+> braces (line <> indent' (vsep ctrs) <> line) <> kwSemicolon)
 
 instance PrettyCode AxiomInfo where

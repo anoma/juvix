@@ -15,8 +15,8 @@ import Juvix.Compiler.Core.Transformation.Optimize.SimplifyComparisons
 import Juvix.Compiler.Core.Transformation.Optimize.SimplifyIfs
 import Juvix.Compiler.Core.Transformation.Optimize.SpecializeArgs
 
-optimize' :: CoreOptions -> InfoTable -> InfoTable
-optimize' CoreOptions {..} tab =
+optimize' :: CoreOptions -> Module -> Module
+optimize' CoreOptions {..} md =
   filterUnreachable
     . compose
       (4 * _optOptimizationLevel)
@@ -28,31 +28,34 @@ optimize' CoreOptions {..} tab =
       )
     . doConstantFolding
     . letFolding
-    $ tab
+    $ md
   where
+    tab :: InfoTable
+    tab = computeCombinedInfoTable md
+
     recs :: HashSet Symbol
-    recs = recursiveIdents tab
+    recs = recursiveIdents' tab
 
     nonRecs :: HashSet Symbol
-    nonRecs = nonRecursiveIdents tab
+    nonRecs = nonRecursiveIdents' tab
 
-    doConstantFolding :: InfoTable -> InfoTable
-    doConstantFolding tab' = constantFolding' nonRecs' tab'
+    doConstantFolding :: Module -> Module
+    doConstantFolding md' = constantFolding' nonRecs' tab' md'
       where
-        nonRecs' =
-          if
-              | _optOptimizationLevel > 1 -> nonRecursiveIdents tab'
-              | otherwise -> nonRecs
+        tab' = computeCombinedInfoTable md'
+        nonRecs'
+          | _optOptimizationLevel > 1 = nonRecursiveIdents' tab'
+          | otherwise = nonRecs
 
-    doInlining :: InfoTable -> InfoTable
-    doInlining tab' = inlining' _optInliningDepth recs' tab'
+    doInlining :: Module -> Module
+    doInlining md' = inlining' _optInliningDepth recs' md'
       where
         recs' =
           if
-              | _optOptimizationLevel > 1 -> recursiveIdents tab'
+              | _optOptimizationLevel > 1 -> recursiveIdents md'
               | otherwise -> recs
 
-    doSimplification :: Int -> InfoTable -> InfoTable
+    doSimplification :: Int -> Module -> Module
     doSimplification n =
       simplifyArithmetic
         . simplifyIfs' (_optOptimizationLevel <= 1)
@@ -62,7 +65,7 @@ optimize' CoreOptions {..} tab =
         . compose n (letFolding' (isInlineableLambda _optInliningDepth))
         . lambdaFolding
 
-optimize :: (Member (Reader CoreOptions) r) => InfoTable -> Sem r InfoTable
+optimize :: (Member (Reader CoreOptions) r) => Module -> Sem r Module
 optimize tab = do
   opts <- ask
   return $ optimize' opts tab

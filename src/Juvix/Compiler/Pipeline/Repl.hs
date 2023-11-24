@@ -111,8 +111,9 @@ registerImport ::
   Sem r ()
 registerImport i = do
   e <- ask
-  mi <- Driver.processImport e i
+  (mi, mtab) <- Driver.processImport e i
   modify' (over artifactModuleTable (Store.insertModule (i ^. importModulePath) mi))
+  modify' (over artifactModuleTable (mtab <>))
 
 fromInternalExpression :: (Members '[State Artifacts] r) => Internal.Expression -> Sem r Core.Node
 fromInternalExpression exp = do

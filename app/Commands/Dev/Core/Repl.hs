@@ -3,6 +3,7 @@ module Commands.Dev.Core.Repl where
 import Commands.Base
 import Commands.Dev.Core.Repl.Options
 import Juvix.Compiler.Core.Data.InfoTable qualified as Core
+import Juvix.Compiler.Core.Data.Module qualified as Core
 import Juvix.Compiler.Core.Evaluator qualified as Core
 import Juvix.Compiler.Core.Extra.Base qualified as Core
 import Juvix.Compiler.Core.Info qualified as Info
@@ -105,7 +106,7 @@ runRepl opts tab = do
         Right node'
           | Info.member Info.kNoDisplayInfo (Core.getInfo node') -> runRepl opts tab'
           | otherwise -> do
-              renderStdOut (Core.ppOut opts (Core.disambiguateNodeNames tab' node'))
+              renderStdOut (Core.ppOut opts (Core.disambiguateNodeNames (Core.Module defaultModuleId tab' mempty) node'))
               embed (putStrLn "")
               runRepl opts tab'
       where
@@ -113,18 +114,20 @@ runRepl opts tab = do
 
     replNormalize :: Core.InfoTable -> Core.Node -> Sem r ()
     replNormalize tab' node =
-      let node' = normalize tab' node
+      let md' = Core.Module defaultModuleId tab' mempty
+          node' = normalize md' node
        in if
               | Info.member Info.kNoDisplayInfo (Core.getInfo node') ->
                   runRepl opts tab'
               | otherwise -> do
-                  renderStdOut (Core.ppOut opts (Core.disambiguateNodeNames tab' node'))
+                  renderStdOut (Core.ppOut opts (Core.disambiguateNodeNames md' node'))
                   embed (putStrLn "")
                   runRepl opts tab'
 
     replType :: Core.InfoTable -> Core.Node -> Sem r ()
     replType tab' node = do
-      let ty = Core.disambiguateNodeNames tab' (Core.computeNodeType tab' node)
+      let md' = Core.Module defaultModuleId tab' mempty
+          ty = Core.disambiguateNodeNames md' (Core.computeNodeType md' node)
       renderStdOut (Core.ppOut opts ty)
       embed (putStrLn "")
       runRepl opts tab'

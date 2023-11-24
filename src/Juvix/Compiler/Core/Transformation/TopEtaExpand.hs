@@ -4,11 +4,11 @@ import Juvix.Compiler.Core.Data.InfoTableBuilder
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Transformation.Base
 
-topEtaExpand :: InfoTable -> InfoTable
-topEtaExpand info = run (mapT' go info)
+topEtaExpand :: Module -> Module
+topEtaExpand md = run (mapT' go md)
   where
     go :: Symbol -> Node -> Sem '[InfoTableBuilder] Node
-    go sym body = case info ^. infoIdentifiers . at sym of
+    go sym body = case lookupIdentifierInfo' md sym of
       Nothing -> return body
       Just idenInfo ->
         let args :: [PiLhs]

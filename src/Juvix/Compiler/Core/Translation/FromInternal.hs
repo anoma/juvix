@@ -18,6 +18,7 @@ import Juvix.Compiler.Internal.Extra qualified as Internal
 import Juvix.Compiler.Internal.Pretty qualified as Internal
 import Juvix.Compiler.Internal.Translation.Extra qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking qualified as InternalTyped
+import Juvix.Compiler.Store.Extra (computeCombinedCoreInfoTable)
 import Juvix.Compiler.Store.Language qualified as Store
 import Juvix.Data.Loc qualified as Loc
 import Juvix.Data.PPOutput
@@ -51,8 +52,15 @@ mkIdentIndex = show . (^. Internal.nameId)
 fromInternal :: (Members '[NameIdGen, Reader Store.ModuleTable] k) => Internal.InternalTypedResult -> Sem k CoreResult
 fromInternal i = do
   importTab <- asks Store.getInternalModuleTable
+  coreImportsTab <- asks computeCombinedCoreInfoTable
+  let md =
+        Module
+          { _moduleId = i ^. InternalTyped.resultInternalModule . Internal.internalModuleId,
+            _moduleInfoTable = mempty,
+            _moduleImportsTable = coreImportsTab
+          }
   res <-
-    execInfoTableBuilder mid mempty
+    execInfoTableBuilder md
       . evalState (i ^. InternalTyped.resultFunctions)
       . runReader (i ^. InternalTyped.resultIdenTypes)
       $ do
@@ -64,7 +72,7 @@ fromInternal i = do
                 <> i ^. InternalTyped.resultInternalModule . Internal.internalModuleInfoTable
         runReader resultTable $
           goModule resultModule
-        tab <- getInfoTable
+        tab <- getModule
         when
           (isNothing (lookupBuiltinInductive tab BuiltinBool))
           declareBoolBuiltins
@@ -72,11 +80,9 @@ fromInternal i = do
         setupLiteralIntToInt literalIntToIntNode
   return $
     CoreResult
-      { _coreResultTable = res,
+      { _coreResultModule = res,
         _coreResultInternalTypedResult = i
       }
-  where
-    mid = i ^. InternalTyped.resultInternalModule . Internal.internalModuleId
 
 fromInternalExpression :: (Member NameIdGen r) => Internal.InternalModuleTable -> CoreResult -> Internal.Expression -> Sem r Node
 fromInternalExpression importTab res exp = do
@@ -85,12 +91,10 @@ fromInternalExpression importTab res exp = do
           <> Internal.computeCombinedInfoTable importTab
   fmap snd
     . runReader mtab
-    . runInfoTableBuilder mid (res ^. coreResultTable)
+    . runInfoTableBuilder (res ^. coreResultModule)
     . evalState (res ^. coreResultInternalTypedResult . InternalTyped.resultFunctions)
     . runReader (res ^. coreResultInternalTypedResult . InternalTyped.resultIdenTypes)
     $ fromTopIndex (goExpression exp)
-  where
-    mid = res ^. coreResultInternalTypedResult . InternalTyped.resultInternalModule . Internal.internalModuleId
 
 goModule ::
   forall r.
@@ -841,7 +845,7 @@ goIden ::
   Internal.Iden ->
   Sem r Node
 goIden i = do
-  infoTableDebug <- Core.ppTrace <$> getInfoTable
+  infoTableDebug <- Core.ppTrace . (^. moduleInfoTable) <$> getModule
   let undeclared =
         error
           ( "internal to core: undeclared identifier: "
@@ -918,8 +922,8 @@ goExpression ::
 goExpression = \case
   Internal.ExpressionLet l -> goLet l
   Internal.ExpressionLiteral l -> do
-    tab <- getInfoTable
-    return (goLiteral (fromJust $ tab ^. infoLiteralIntToNat) (fromJust $ tab ^. infoLiteralIntToInt) l)
+    md <- getModule
+    return (goLiteral (fromJust $ getInfoLiteralIntToNat md) (fromJust $ getInfoLiteralIntToInt md) l)
   Internal.ExpressionIden i -> goIden i
   Internal.ExpressionApplication a -> goApplication a
   Internal.ExpressionSimpleLambda l -> goSimpleLambda l

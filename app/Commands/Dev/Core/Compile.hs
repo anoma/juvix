@@ -3,6 +3,7 @@ module Commands.Dev.Core.Compile where
 import Commands.Base
 import Commands.Dev.Core.Compile.Base
 import Commands.Dev.Core.Compile.Options
+import Juvix.Compiler.Core.Data.Module qualified as Core
 import Juvix.Compiler.Core.Translation.FromSource qualified as Core
 
 runCommand :: forall r. (Members '[Embed IO, App] r) => CompileOptions -> Sem r ()
@@ -10,7 +11,7 @@ runCommand opts = do
   file <- getFile
   s <- readFile (toFilePath file)
   tab <- getRight (mapLeft JuvixError (Core.runParserMain file defaultModuleId mempty s))
-  let arg = PipelineArg opts file tab
+  let arg = PipelineArg opts file (Core.Module defaultModuleId tab mempty)
   case opts ^. compileTarget of
     TargetWasm32Wasi -> runCPipeline arg
     TargetNative64 -> runCPipeline arg

@@ -3,6 +3,7 @@ module Juvix.Compiler.Core.Data.IdentDependencyInfo where
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Core.Data.InfoTable
+import Juvix.Compiler.Core.Data.Module
 import Juvix.Compiler.Core.Extra.Utils
 import Juvix.Compiler.Core.Language
 
@@ -14,7 +15,7 @@ createCallGraphMap tab =
   fmap
     ( \IdentifierInfo {..} ->
         HashSet.map (\Ident {..} -> _identSymbol) $
-          getIdents (lookupIdentifierNode tab _identifierSymbol)
+          getIdents (lookupTabIdentifierNode tab _identifierSymbol)
     )
     (tab ^. infoIdentifiers)
 
@@ -38,12 +39,12 @@ createSymbolDependencyInfo tab = createDependencyInfo graph startVertices
     graph =
       fmap
         ( \IdentifierInfo {..} ->
-            getSymbols tab (lookupIdentifierNode tab _identifierSymbol)
+            getSymbols' tab (lookupTabIdentifierNode tab _identifierSymbol)
         )
         (tab ^. infoIdentifiers)
         <> foldr
           ( \ConstructorInfo {..} ->
-              HashMap.insert _constructorInductive (getSymbols tab _constructorType)
+              HashMap.insert _constructorInductive (getSymbols' tab _constructorType)
           )
           mempty
           (tab ^. infoConstructors)
@@ -54,8 +55,11 @@ createSymbolDependencyInfo tab = createDependencyInfo graph startVertices
     syms :: [Symbol]
     syms = maybe [] singleton (tab ^. infoMain)
 
-recursiveIdents :: InfoTable -> HashSet Symbol
-recursiveIdents = nodesOnCycles . createCallGraph
+recursiveIdents' :: InfoTable -> HashSet Symbol
+recursiveIdents' = nodesOnCycles . createCallGraph
+
+recursiveIdents :: Module -> HashSet Symbol
+recursiveIdents = recursiveIdents' . computeCombinedInfoTable
 
 -- | identifiers from which some recursive identifier can be reached
 recursiveIdentsClosure :: InfoTable -> HashSet Symbol
@@ -93,8 +97,8 @@ recursiveIdentsClosure tab =
         chlds = fromJust $ HashMap.lookup sym graph
 
 -- | Complement of recursiveIdentsClosure
-nonRecursiveIdents :: InfoTable -> HashSet Symbol
-nonRecursiveIdents tab =
+nonRecursiveIdents' :: InfoTable -> HashSet Symbol
+nonRecursiveIdents' tab =
   HashSet.difference
     (HashSet.fromList (HashMap.keys (tab ^. infoIdentifiers)))
     (recursiveIdentsClosure tab)

@@ -3,7 +3,6 @@ module Juvix.Compiler.Pipeline.Driver
     processFileUpTo,
     processFileUpTo',
     processFileToStoredCore,
-    processFileToStoredCore',
     processModule,
     processImport,
   )
@@ -13,6 +12,7 @@ import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Data.Context qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
 import Juvix.Compiler.Concrete.Translation.FromSource.Data.ParserState qualified as Parser
+import Juvix.Compiler.Core.Data.Module qualified as Core
 import Juvix.Compiler.Core.Translation.FromInternal.Data.Context qualified as Core
 import Juvix.Compiler.Internal.Translation.FromConcrete.Data.Context qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Data.Context qualified as InternalArity
@@ -33,15 +33,15 @@ processFile ::
 processFile entry = do
   res <- runReader entry upToParsing
   let imports = res ^. Parser.resultParserState . Parser.parserStateImports
-  modules <- forM imports (processImport entry)
-  return (res, Store.mkModuleTable modules)
+  ms <- forM imports (processImport entry)
+  return (res, Store.mkModuleTable (map fst ms) <> mconcatMap snd ms)
 
 processImport ::
   forall r.
   (Members '[Error JuvixError, Files, GitClone, PathResolver] r) =>
   EntryPoint ->
   Import 'Parsed ->
-  Sem r Store.ModuleInfo
+  Sem r (Store.ModuleInfo, Store.ModuleTable)
 processImport entry i =
   withPath'
     i
@@ -78,33 +78,26 @@ processFileUpTo a = do
     $ runReader mtab
     $ runReader res a
 
-processFileToStoredCore' ::
-  forall r.
-  (Members '[Error JuvixError, Files, GitClone, PathResolver] r) =>
-  EntryPoint ->
-  Sem r (Core.CoreResult, Store.ModuleTable)
-processFileToStoredCore' = processFileUpTo' upToStoredCore
-
 processFileToStoredCore ::
   forall r.
   (Members '[Error JuvixError, Files, GitClone, PathResolver] r) =>
   EntryPoint ->
-  Sem r Core.CoreResult
-processFileToStoredCore entry = fst <$> processFileToStoredCore' entry
+  Sem r (Core.CoreResult, Store.ModuleTable)
+processFileToStoredCore = processFileUpTo' upToStoredCore
 
 processModule ::
   forall r.
   (Members '[Error JuvixError, Files, GitClone, PathResolver] r) =>
   EntryPoint ->
-  Sem r Store.ModuleInfo
-processModule entry = mkModuleInfo <$> processFileToStoredCore entry
+  Sem r (Store.ModuleInfo, Store.ModuleTable)
+processModule entry = first mkModuleInfo <$> processFileToStoredCore entry
   where
     mkModuleInfo :: Core.CoreResult -> Store.ModuleInfo
     mkModuleInfo Core.CoreResult {..} =
       Store.ModuleInfo
         { _moduleInfoScopedModule = _coreResultInternalTypedResult ^. InternalTyped.resultInternal . InternalArity.resultInternal . Internal.resultScoper . Scoper.resultScopedModule,
           _moduleInfoInternalModule = _coreResultInternalTypedResult ^. InternalTyped.resultInternalModule,
-          _moduleInfoCoreTable = fromCore _coreResultTable
+          _moduleInfoCoreTable = fromCore (_coreResultModule ^. Core.moduleInfoTable)
         }
 
 withPath' ::

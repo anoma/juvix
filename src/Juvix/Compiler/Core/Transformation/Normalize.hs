@@ -4,12 +4,12 @@ import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Core.Normalizer qualified as Normalizer
 import Juvix.Compiler.Core.Transformation.Base
 
-normalize :: InfoTable -> InfoTable
-normalize tab =
+normalize :: Module -> Module
+normalize md =
   pruneInfoTable $
-    set identContext (HashMap.singleton sym node) $
-      set infoIdentifiers (HashMap.singleton sym ii) tab
+    set (moduleInfoTable . identContext) (HashMap.singleton sym node) $
+      set (moduleInfoTable . infoIdentifiers) (HashMap.singleton sym ii) md
   where
-    sym = fromJust $ tab ^. infoMain
-    node = Normalizer.normalize tab (lookupIdentifierNode tab sym)
-    ii = lookupIdentifierInfo tab sym
+    sym = fromJust $ getInfoMain md
+    node = Normalizer.normalize md (lookupIdentifierNode md sym)
+    ii = lookupIdentifierInfo md sym

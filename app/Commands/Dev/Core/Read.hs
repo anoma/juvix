@@ -24,9 +24,9 @@ runCommand opts = do
   inputFile :: Path Abs File <- fromAppPathFile sinputFile
   s' <- readFile . toFilePath $ inputFile
   tab <- getRight (mapLeft JuvixError (Core.runParserMain inputFile defaultModuleId mempty s'))
-  let r = run $ runReader (project @GlobalOptions @Core.CoreOptions gopts) $ runError @JuvixError $ Core.applyTransformations (project opts ^. coreReadTransformations) tab
+  let r = run $ runReader (project @GlobalOptions @Core.CoreOptions gopts) $ runError @JuvixError $ Core.applyTransformations (project opts ^. coreReadTransformations) (Core.Module defaultModuleId tab mempty)
   tab0 <- getRight $ mapLeft JuvixError r
-  let tab' = if project opts ^. coreReadNoDisambiguate then tab0 else Core.disambiguateNames tab0
+  let tab' = Core.computeCombinedInfoTable $ if project opts ^. coreReadNoDisambiguate then tab0 else Core.disambiguateNames tab0
   embed (Scoper.scopeTrace tab')
   unless (project opts ^. coreReadNoPrint) $ do
     renderStdOut (Pretty.ppOut opts tab')

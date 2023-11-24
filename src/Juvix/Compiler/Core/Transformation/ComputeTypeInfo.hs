@@ -5,8 +5,8 @@ import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Info.TypeInfo qualified as Info
 import Juvix.Compiler.Core.Transformation.Base
 
-computeNodeType :: InfoTable -> Node -> Type
-computeNodeType tab = Info.getNodeType . computeNodeTypeInfo tab
+computeNodeType :: Module -> Node -> Type
+computeNodeType md = Info.getNodeType . computeNodeTypeInfo md
 
 -- | Computes the TypeInfo for each subnode of a well-typed node.
 --
@@ -17,8 +17,8 @@ computeNodeType tab = Info.getNodeType . computeNodeTypeInfo tab
 -- 3. All cases have at least one branch.
 -- 4. No `Match` nodes.
 -- 5. All inductives and function types are in universe 0.
-computeNodeTypeInfo :: InfoTable -> Node -> Node
-computeNodeTypeInfo tab = umapL go
+computeNodeTypeInfo :: Module -> Node -> Node
+computeNodeTypeInfo md = umapL go
   where
     go :: BinderList Binder -> Node -> Node
     go bl node = Info.setNodeType (nodeType bl node) node
@@ -28,7 +28,7 @@ computeNodeTypeInfo tab = umapL go
       NVar Var {..} ->
         shift (_varIndex + 1) (BL.lookup _varIndex bl ^. binderType)
       NIdt Ident {..} ->
-        lookupIdentifierInfo tab _identSymbol ^. identifierType
+        lookupIdentifierInfo md _identSymbol ^. identifierType
       NCst Constant {..} ->
         case _constantValue of
           ConstInteger {} -> mkTypeInteger'
@@ -60,8 +60,8 @@ computeNodeTypeInfo tab = umapL go
             _ -> error "incorrect trace builtin application"
           OpFail -> Info.getNodeType node
       NCtr Constr {..} ->
-        let ci = lookupConstructorInfo tab _constrTag
-            ii = lookupInductiveInfo tab (ci ^. constructorInductive)
+        let ci = lookupConstructorInfo md _constrTag
+            ii = lookupInductiveInfo md (ci ^. constructorInductive)
          in case ii ^. inductiveBuiltin of
               Just (BuiltinTypeInductive BuiltinBool) ->
                 mkTypeBool'
@@ -96,5 +96,5 @@ computeNodeTypeInfo tab = umapL go
       Closure {} ->
         impossible
 
-computeTypeInfo :: InfoTable -> InfoTable
-computeTypeInfo tab = mapT (const (computeNodeTypeInfo tab)) tab
+computeTypeInfo :: Module -> Module
+computeTypeInfo md = mapT (const (computeNodeTypeInfo md)) md

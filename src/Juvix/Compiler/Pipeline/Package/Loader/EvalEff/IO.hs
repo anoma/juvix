@@ -6,8 +6,9 @@ where
 
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Concrete hiding (Symbol)
-import Juvix.Compiler.Core (CoreResult, coreResultTable)
+import Juvix.Compiler.Core (CoreResult, coreResultModule)
 import Juvix.Compiler.Core qualified as Core
+import Juvix.Compiler.Core.Data.Module (moduleInfoTable)
 import Juvix.Compiler.Core.Evaluator
 import Juvix.Compiler.Core.Extra.Value
 import Juvix.Compiler.Core.Language
@@ -57,7 +58,7 @@ runEvalFileEffIO = interpretScopedAs allocator handler
       AssertNodeType n ty -> assertNodeType' n ty
       where
         tab :: Core.InfoTable
-        tab = res ^. loaderResourceResult . coreResultTable
+        tab = res ^. loaderResourceResult . coreResultModule . moduleInfoTable
 
         packagePath :: Path Abs File
         packagePath = res ^. loaderResourcePackagePath
@@ -92,8 +93,8 @@ runEvalFileEffIO = interpretScopedAs allocator handler
           evalN <- evalNode n
           case evalN of
             NCtr Constr {..} -> do
-              let ci = Core.lookupConstructorInfo tab _constrTag
-                  ii = Core.lookupInductiveInfo tab (ci ^. Core.constructorInductive)
+              let ci = Core.lookupTabConstructorInfo tab _constrTag
+                  ii = Core.lookupTabInductiveInfo tab (ci ^. Core.constructorInductive)
               unless (any (checkInductiveType ii) tys) err
             _ -> err
           where
@@ -131,7 +132,7 @@ loadPackage' packagePath = do
       . mapError (JuvixError @GitProcessError)
       . runGitProcess
       . runPackagePathResolver rootPath
-      $ processFileToStoredCore packageEntryPoint
+      $ fst <$> processFileToStoredCore packageEntryPoint
     )
   where
     rootPath :: Path Abs Dir

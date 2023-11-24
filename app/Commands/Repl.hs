@@ -182,7 +182,7 @@ displayVersion _ = liftIO (putStrLn versionTag)
 replCommand :: ReplOptions -> String -> Repl ()
 replCommand opts input = catchAll $ do
   ctx <- replGetContext
-  let tab = ctx ^. replContextArtifacts . artifactCoreTable
+  let tab = Core.computeCombinedInfoTable $ ctx ^. replContextArtifacts . artifactCoreModule
   evalRes <- compileThenEval ctx input
   whenJust evalRes $ \n ->
     if
@@ -215,7 +215,7 @@ replCommand opts input = catchAll $ do
         doEvalIO' :: Artifacts -> Core.Node -> IO (Either JuvixError Core.Node)
         doEvalIO' artif' n =
           mapLeft (JuvixError @Core.CoreError)
-            <$> doEvalIO False replDefaultLoc (artif' ^. artifactCoreTable) n
+            <$> doEvalIO False replDefaultLoc (Core.computeCombinedInfoTable $ artif' ^. artifactCoreModule) n
 
         compileString :: Repl (Maybe Core.Node)
         compileString = do
@@ -632,8 +632,8 @@ runTransformations shouldDisambiguate ts n = runCoreInfoTableBuilderArtifacts $ 
       Core.registerIdentNode sym node
       -- `n` will get filtered out by the transformations unless it has a
       -- corresponding entry in `infoIdentifiers`
-      tab <- Core.getInfoTable
-      let name = Core.freshIdentName tab "_repl"
+      md <- Core.getModule
+      let name = Core.freshIdentName md "_repl"
           idenInfo =
             Core.IdentifierInfo
               { _identifierName = name,
@@ -651,13 +651,13 @@ runTransformations shouldDisambiguate ts n = runCoreInfoTableBuilderArtifacts $ 
 
     applyTransforms :: Bool -> [Core.TransformationId] -> Sem (Core.InfoTableBuilder ': r) ()
     applyTransforms shouldDisambiguate' ts' = do
-      tab <- Core.getInfoTable
-      tab' <- mapReader Core.fromEntryPoint $ Core.applyTransformations ts' tab
-      let tab'' =
+      md <- Core.getModule
+      md' <- mapReader Core.fromEntryPoint $ Core.applyTransformations ts' md
+      let md'' =
             if
-                | shouldDisambiguate' -> disambiguateNames tab'
-                | otherwise -> tab'
-      Core.setInfoTable tab''
+                | shouldDisambiguate' -> disambiguateNames md'
+                | otherwise -> md'
+      Core.setModule md''
 
     getNode :: Core.Symbol -> Sem (Core.InfoTableBuilder ': r) Core.Node
-    getNode sym = fromMaybe impossible . flip Core.lookupIdentifierNode' sym <$> Core.getInfoTable
+    getNode sym = fromMaybe impossible . flip Core.lookupIdentifierNode' sym <$> Core.getModule

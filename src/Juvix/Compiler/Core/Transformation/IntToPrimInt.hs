@@ -9,30 +9,32 @@ data BuiltinIntCtor
   = BuiltinIntCtorOfNat
   | BuiltinIntCtorNegSuc
 
-convertNode :: InfoTable -> Node -> Node
-convertNode tab = rmap go
+convertNode :: Module -> Node -> Node
+convertNode md = rmap go
   where
+    intToInt = getInfoLiteralIntToInt md
+
     go :: ([BinderChange] -> Node -> Node) -> Node -> Node
     go recur node = case node of
       NApp (App _ (NIdt (Ident {..})) l)
-        | Just _identSymbol == tab ^. infoLiteralIntToInt -> go recur l
+        | Just _identSymbol == intToInt -> go recur l
       NApp (App _ (NApp (App _ (NIdt (Ident {..})) l)) r) ->
         recur [] $ convertIdentApp node (\g -> g _identInfo l r) _identSymbol
       NApp (App _ (NIdt (Ident {..})) l) ->
         recur [] $ convertSingleArgIdentApp node l _identInfo _identSymbol
       NIdt (Ident {..})
-        | Just _identSymbol == tab ^. infoLiteralIntToInt ->
+        | Just _identSymbol == intToInt ->
             mkLambda' mkTypeInteger' (mkVar' 0)
       NIdt (Ident {..}) ->
         recur [] $ convertSingleArgIdent node _identInfo _identSymbol
       NCtr (Constr {..}) ->
-        let ci = lookupConstructorInfo tab _constrTag
+        let ci = lookupConstructorInfo md _constrTag
          in case ci ^. constructorBuiltin of
               Just BuiltinIntOfNat -> recur [] (fromJust (headMay _constrArgs))
               Just BuiltinIntNegSuc -> recur [] (negSucConv (fromJust (headMay _constrArgs)))
               _ -> recur [] node
       NCase (Case {..}) ->
-        let ii = lookupInductiveInfo tab _caseInductive
+        let ii = lookupInductiveInfo md _caseInductive
          in case ii ^. inductiveBuiltin of
               Just (BuiltinTypeInductive BuiltinInt) ->
                 case _caseBranches of
@@ -47,7 +49,7 @@ convertNode tab = rmap go
         where
           makeIf' :: CaseBranch -> Node -> Node
           makeIf' caseBranch defaultNode =
-            let boolSym = lookupConstructorInfo tab (BuiltinTag TagTrue) ^. constructorInductive
+            let boolSym = lookupConstructorInfo md (BuiltinTag TagTrue) ^. constructorInductive
                 cv = go recur _caseValue
                 binder = fromJust (headMay (caseBranch ^. caseBranchBinders))
                 binder' = over binderType (go recur) binder
@@ -70,7 +72,7 @@ convertNode tab = rmap go
 
           makeIf :: CaseBranch -> CaseBranch -> Node
           makeIf ofNatBranch negSucBranch =
-            let boolSym = lookupConstructorInfo tab (BuiltinTag TagTrue) ^. constructorInductive
+            let boolSym = lookupConstructorInfo md (BuiltinTag TagTrue) ^. constructorInductive
                 cv = go recur _caseValue
                 binder :: CaseBranch -> Binder
                 binder br = fromJust (headMay (br ^. caseBranchBinders))
@@ -85,7 +87,7 @@ convertNode tab = rmap go
 
           builtinCtor :: CaseBranch -> BuiltinIntCtor
           builtinCtor CaseBranch {..} =
-            let ci = lookupConstructorInfo tab _caseBranchTag
+            let ci = lookupConstructorInfo md _caseBranchTag
              in case ci ^. constructorBuiltin of
                   Just BuiltinIntOfNat -> BuiltinIntCtorOfNat
                   Just BuiltinIntNegSuc -> BuiltinIntCtorNegSuc
@@ -98,7 +100,7 @@ convertNode tab = rmap go
           Just (BuiltinTypeInductive BuiltinInt) -> mkTypeInteger'
           _ -> recur [] node
         where
-          ii = fromJust $ tab ^. infoInductives . at _typeConstrSymbol
+          ii = lookupInductiveInfo md _typeConstrSymbol
       _ -> recur [] node
 
     -- Transforms n to -(n+1)
@@ -112,7 +114,7 @@ convertNode tab = rmap go
 
     convertIdentApp :: Node -> ((Info -> Node -> Node -> Node) -> Node) -> Symbol -> Node
     convertIdentApp node f sym =
-      let ii = lookupIdentifierInfo tab sym
+      let ii = lookupIdentifierInfo md sym
        in case ii ^. identifierBuiltin of
             Just BuiltinIntEq -> f (\info x y -> mkBuiltinApp info OpEq [x, y])
             Just BuiltinIntPlus -> f (\info x y -> mkBuiltinApp info OpIntAdd [x, y])
@@ -127,7 +129,7 @@ convertNode tab = rmap go
 
     convertSingleArgIdentApp :: Node -> Node -> Info -> Symbol -> Node
     convertSingleArgIdentApp node l info sym =
-      let ii = lookupIdentifierInfo tab sym
+      let ii = lookupIdentifierInfo md sym
           negNode = negNatBody info l
        in case ii ^. identifierBuiltin of
             Just BuiltinIntNegNat -> negNode
@@ -145,7 +147,7 @@ convertNode tab = rmap go
 
     convertSingleArgIdent :: Node -> Info -> Symbol -> Node
     convertSingleArgIdent node info sym =
-      let ii = lookupIdentifierInfo tab sym
+      let ii = lookupIdentifierInfo md sym
           negNode = mkLambda' mkTypeInteger' $ negNatBody info (mkVar' 0)
        in case ii ^. identifierBuiltin of
             Just BuiltinIntNegNat -> negNode
@@ -163,26 +165,26 @@ convertNode tab = rmap go
     negNatBody :: Info -> Node -> Node
     negNatBody info n = mkBuiltinApp info OpIntSub [mkConstant' (ConstInteger 0), n]
 
-filterIntBuiltins :: InfoTable -> InfoTable
-filterIntBuiltins tab =
-  let tab' =
+filterIntBuiltins :: Module -> Module
+filterIntBuiltins md =
+  let md' =
         over
-          infoIdentifiers
+          (moduleInfoTable . infoIdentifiers)
           (HashMap.filter (isNotIntBuiltin . (^. identifierBuiltin)))
-          tab
-   in pruneInfoTable tab'
+          md
+   in pruneInfoTable md'
   where
     isNotIntBuiltin :: Maybe BuiltinFunction -> Bool
     isNotIntBuiltin = \case
       Just b -> not (isIntBuiltin b)
       Nothing -> True
 
-intToPrimInt :: InfoTable -> InfoTable
-intToPrimInt tab = filterIntBuiltins $ mapAllNodes (convertNode tab') tab'
+intToPrimInt :: Module -> Module
+intToPrimInt md = filterIntBuiltins $ mapAllNodes (convertNode md') md'
   where
-    tab' =
-      case tab ^. infoLiteralIntToInt of
+    md' =
+      case md ^. moduleInfoTable . infoLiteralIntToInt of
         Just sym ->
-          tab {_identContext = HashMap.insert sym (mkLambda' mkTypeInteger' (mkVar' 0)) (tab ^. identContext)}
+          over (moduleInfoTable . identContext) (HashMap.insert sym (mkLambda' mkTypeInteger' (mkVar' 0))) md
         Nothing ->
-          tab
+          md

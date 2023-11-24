@@ -28,12 +28,12 @@ type PatternMatrix = [PatternRow]
 -- | Compiles pattern matches (`Match` nodes) to decision trees built up from
 -- `Case` nodes. The algorithm is based on the paper: Luc Maranget, "Compiling
 -- Pattern Matching to Good Decision Trees", ML'08.
-matchToCase :: (Members '[Error CoreError, Reader CoreOptions] r) => InfoTable -> Sem r InfoTable
-matchToCase tab = runReader tab $ mapAllNodesM (rmapM goMatchToCase) tab
+matchToCase :: (Members '[Error CoreError, Reader CoreOptions] r) => Module -> Sem r Module
+matchToCase md = runReader md $ mapAllNodesM (rmapM goMatchToCase) md
 
 goMatchToCase ::
   forall r.
-  (Members '[Error CoreError, Reader CoreOptions, Reader InfoTable] r) =>
+  (Members '[Error CoreError, Reader CoreOptions, Reader Module] r) =>
   ([BinderChange] -> Node -> Sem r Node) ->
   Node ->
   Sem r Node
@@ -177,10 +177,10 @@ goMatchToCase recur node = case node of
       _ : pats ->
         getPatTags pats
 
-    missingTag :: InfoTable -> Symbol -> HashSet Tag -> Tag
-    missingTag tab ind tags = fromJust $ find (not . flip HashSet.member tags) (ii ^. inductiveConstructors)
+    missingTag :: Module -> Symbol -> HashSet Tag -> Tag
+    missingTag md ind tags = fromJust $ find (not . flip HashSet.member tags) (ii ^. inductiveConstructors)
       where
-        ii = lookupInductiveInfo tab ind
+        ii = lookupInductiveInfo md ind
 
     compileMatchingRow :: Level -> [Level] -> PatternRow -> Sem r Node
     compileMatchingRow bindersNum vs PatternRow {..} =

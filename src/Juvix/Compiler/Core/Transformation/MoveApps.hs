@@ -52,5 +52,5 @@ convertNode = dmap go
               _ -> node
       _ -> node
 
-moveApps :: InfoTable -> InfoTable
-moveApps tab = mapT (const convertNode) tab
+moveApps :: Module -> Module
+moveApps = mapT (const convertNode)

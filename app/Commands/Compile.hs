@@ -17,7 +17,7 @@ runCommand opts@CompileOptions {..} = do
         Compile.PipelineArg
           { _pipelineArgFile = inputFile,
             _pipelineArgOptions = opts,
-            _pipelineArgInfoTable = _coreResultTable
+            _pipelineArgModule = _coreResultModule
           }
   case _compileTarget of
     TargetNative64 -> Compile.runCPipeline arg
@@ -31,8 +31,8 @@ writeCoreFile :: (Members '[Embed IO, App] r) => Compile.PipelineArg -> Sem r ()
 writeCoreFile pa@Compile.PipelineArg {..} = do
   entryPoint <- Compile.getEntry pa
   coreFile <- Compile.outputFile _pipelineArgOptions _pipelineArgFile
-  r <- runReader entryPoint $ runError @JuvixError $ Core.toEval _pipelineArgInfoTable
+  r <- runReader entryPoint $ runError @JuvixError $ Core.toEval _pipelineArgModule
   case r of
     Left e -> exitJuvixError e
-    Right tab ->
-      embed $ TIO.writeFile (toFilePath coreFile) (show $ Core.ppOutDefault (Core.disambiguateNames tab))
+    Right md ->
+      embed $ TIO.writeFile (toFilePath coreFile) (show $ Core.ppOutDefault (Core.disambiguateNames md ^. Core.moduleInfoTable))

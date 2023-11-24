@@ -9,8 +9,8 @@ import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Pretty
 import Juvix.Compiler.Core.Transformation.Base
 
-convertNode :: InfoTable -> Node -> Node
-convertNode tab = convert mempty
+convertNode :: Module -> Node -> Node
+convertNode md = convert mempty
   where
     unsupported :: forall a. Node -> a
     unsupported node = error ("remove type arguments: unsupported node\n\t" <> ppTrace node)
@@ -23,15 +23,15 @@ convertNode tab = convert mempty
       NVar v@(Var {..}) ->
         let ty = BL.lookup _varIndex vars ^. binderType
          in if
-                | isTypeConstr tab ty -> End (mkDynamic _varInfo)
+                | isTypeConstr md ty -> End (mkDynamic _varInfo)
                 | otherwise -> End (NVar (shiftVar (-k) v))
         where
-          k = length (filter (isTypeConstr tab . (^. binderType)) (take _varIndex (toList vars)))
+          k = length (filter (isTypeConstr md . (^. binderType)) (take _varIndex (toList vars)))
       NIdt Ident {..} ->
-        let fi = lookupIdentifierInfo tab _identSymbol
+        let fi = lookupIdentifierInfo md _identSymbol
          in if
-                | isTypeConstr tab (fi ^. identifierType) ->
-                    Recur (lookupIdentifierNode tab _identSymbol)
+                | isTypeConstr md (fi ^. identifierType) ->
+                    Recur (lookupIdentifierNode md _identSymbol)
                 | otherwise ->
                     Recur node
       NApp App {..} ->
@@ -41,19 +41,19 @@ convertNode tab = convert mempty
                 NVar (Var {..}) ->
                   BL.lookup _varIndex vars ^. binderType
                 NIdt (Ident {..}) ->
-                  let fi = lookupIdentifierInfo tab _identSymbol
+                  let fi = lookupIdentifierInfo md _identSymbol
                    in fi ^. identifierType
                 _ -> unsupported node
             args' = filterArgs snd ty args
          in if
-                | isTypeConstr tab ty ->
+                | isTypeConstr md ty ->
                     End (mkDynamic _appInfo)
                 | null args' ->
                     End (convert vars h)
                 | otherwise ->
                     End (mkApps (convert vars h) (map (second (convert vars)) args'))
       NCtr (Constr {..}) ->
-        let ci = lookupConstructorInfo tab _constrTag
+        let ci = lookupConstructorInfo md _constrTag
             ty = ci ^. constructorType
             args' = filterArgs id ty _constrArgs
          in End (mkConstr _constrInfo _constrTag (map (convert vars) args'))
@@ -61,13 +61,13 @@ convertNode tab = convert mempty
         End (mkCase _caseInfo _caseInductive (convert vars _caseValue) (map convertBranch _caseBranches) (fmap (convert vars) _caseDefault))
         where
           nParams :: Int
-          nParams = maybe 0 (length . (^. inductiveParams)) (tab ^. infoInductives . at _caseInductive)
+          nParams = maybe 0 (length . (^. inductiveParams)) (lookupInductiveInfo' md _caseInductive)
           convertBranch :: CaseBranch -> CaseBranch
           convertBranch br@CaseBranch {..} =
             let paramBinders = map (set binderType mkSmallUniv) (take nParams _caseBranchBinders)
                 argBinders = drop nParams _caseBranchBinders
-                tyargs = drop nParams (typeArgs (fromJust (tab ^. infoConstructors . at _caseBranchTag) ^. constructorType))
-                argBinders' = zipWith (\b ty -> if isDynamic (b ^. binderType) && isTypeConstr tab ty then set binderType ty b else b) argBinders (tyargs ++ repeat mkDynamic')
+                tyargs = drop nParams (typeArgs (lookupConstructorInfo md _caseBranchTag ^. constructorType))
+                argBinders' = zipWith (\b ty -> if isDynamic (b ^. binderType) && isTypeConstr md ty then set binderType ty b else b) argBinders (tyargs ++ repeat mkDynamic')
                 binders' =
                   filterBinders
                     (BL.prependRev paramBinders vars)
@@ -84,18 +84,18 @@ convertNode tab = convert mempty
           filterBinders :: BinderList Binder -> [Binder] -> [Binder]
           filterBinders _ [] = []
           filterBinders vars' (b : bs)
-            | isTypeConstr tab (b ^. binderType) =
+            | isTypeConstr md (b ^. binderType) =
                 filterBinders (BL.cons b vars') bs
           filterBinders vars' (b : bs) =
             over binderType (convert vars') b : filterBinders (BL.cons b vars') bs
       NLam (Lambda {..})
-        | isTypeConstr tab (_lambdaBinder ^. binderType) ->
+        | isTypeConstr md (_lambdaBinder ^. binderType) ->
             End (convert (BL.cons _lambdaBinder vars) _lambdaBody)
       NLet (Let {..})
-        | isTypeConstr tab (_letItem ^. letItemBinder . binderType) ->
+        | isTypeConstr md (_letItem ^. letItemBinder . binderType) ->
             End (convert (BL.cons (_letItem ^. letItemBinder) vars) _letBody)
       NPi (Pi {..})
-        | isTypeConstr tab (_piBinder ^. binderType) && not (isTypeConstr tab _piBody) ->
+        | isTypeConstr md (_piBinder ^. binderType) && not (isTypeConstr md _piBody) ->
             End (convert (BL.cons _piBinder vars) _piBody)
       _ -> Recur node
       where
@@ -105,61 +105,61 @@ convertNode tab = convert mempty
             let ty' = subst (getNode arg) _piBody
                 args'' = filterArgs getNode ty' args'
              in if
-                    | isTypeConstr tab (_piBinder ^. binderType) ->
+                    | isTypeConstr md (_piBinder ^. binderType) ->
                         args''
                     | otherwise ->
                         arg : args''
           _ ->
             args
 
-convertIdent :: InfoTable -> IdentifierInfo -> IdentifierInfo
-convertIdent tab ii =
+convertIdent :: Module -> IdentifierInfo -> IdentifierInfo
+convertIdent md ii =
   ii
     { _identifierType = ty',
       _identifierArgsNum = length tyargs',
       _identifierArgNames = filterArgNames (ii ^. identifierType) (ii ^. identifierArgNames)
     }
   where
-    ty' = convertNode tab (ii ^. identifierType)
+    ty' = convertNode md (ii ^. identifierType)
     tyargs' = typeArgs ty'
 
     filterArgNames :: Type -> [Maybe Text] -> [Maybe Text]
     filterArgNames ty argnames = case (ty, argnames) of
       (NPi Pi {..}, name : argnames')
-        | isTypeConstr tab (_piBinder ^. binderType) ->
+        | isTypeConstr md (_piBinder ^. binderType) ->
             filterArgNames _piBody argnames'
         | otherwise ->
             name : filterArgNames _piBody argnames'
       _ ->
         argnames
 
-convertConstructor :: InfoTable -> ConstructorInfo -> ConstructorInfo
-convertConstructor tab ci =
+convertConstructor :: Module -> ConstructorInfo -> ConstructorInfo
+convertConstructor md ci =
   ci
     { _constructorType = ty',
       _constructorArgsNum = length (typeArgs ty')
     }
   where
-    ty' = convertNode tab (ci ^. constructorType)
+    ty' = convertNode md (ci ^. constructorType)
 
-convertInductive :: InfoTable -> InductiveInfo -> InductiveInfo
-convertInductive tab ii =
+convertInductive :: Module -> InductiveInfo -> InductiveInfo
+convertInductive md ii =
   ii
     { _inductiveKind = ty',
-      _inductiveParams = map (over paramKind (convertNode tab) . fst) $ filter (not . isTypeConstr tab . snd) (zipExact (ii ^. inductiveParams) tyargs)
+      _inductiveParams = map (over paramKind (convertNode md) . fst) $ filter (not . isTypeConstr md . snd) (zipExact (ii ^. inductiveParams) tyargs)
     }
   where
     tyargs = typeArgs (ii ^. inductiveKind)
-    ty' = convertNode tab (ii ^. inductiveKind)
+    ty' = convertNode md (ii ^. inductiveKind)
 
-convertAxiom :: InfoTable -> AxiomInfo -> AxiomInfo
-convertAxiom tab = over axiomType (convertNode tab)
+convertAxiom :: Module -> AxiomInfo -> AxiomInfo
+convertAxiom md = over axiomType (convertNode md)
 
-removeTypeArgs :: InfoTable -> InfoTable
-removeTypeArgs tab =
+removeTypeArgs :: Module -> Module
+removeTypeArgs md =
   filterOutTypeSynonyms $
-    mapAxioms (convertAxiom tab) $
-      mapInductives (convertInductive tab) $
-        mapConstructors (convertConstructor tab) $
-          mapIdents (convertIdent tab) $
-            mapT (const (convertNode tab)) tab
+    mapAxioms (convertAxiom md) $
+      mapInductives (convertInductive md) $
+        mapConstructors (convertConstructor md) $
+          mapIdents (convertIdent md) $
+            mapT (const (convertNode md)) md

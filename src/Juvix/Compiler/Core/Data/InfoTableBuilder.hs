@@ -6,6 +6,7 @@ where
 
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Core.Data.InfoTable
+import Juvix.Compiler.Core.Data.Module
 import Juvix.Compiler.Core.Extra.Base
 import Juvix.Compiler.Core.Info.NameInfo
 import Juvix.Compiler.Core.Language
@@ -24,24 +25,24 @@ data InfoTableBuilder m a where
   RemoveSymbol :: Symbol -> InfoTableBuilder m ()
   OverIdentArgs :: Symbol -> ([Binder] -> [Binder]) -> InfoTableBuilder m ()
   GetIdent :: Text -> InfoTableBuilder m (Maybe IdentKind)
-  GetInfoTable :: InfoTableBuilder m InfoTable
-  SetInfoTable :: InfoTable -> InfoTableBuilder m ()
+  GetModule :: InfoTableBuilder m Module
+  SetModule :: Module -> InfoTableBuilder m ()
 
 makeSem ''InfoTableBuilder
 
 getConstructorInfo :: (Member InfoTableBuilder r) => Tag -> Sem r ConstructorInfo
-getConstructorInfo tag = flip lookupConstructorInfo tag <$> getInfoTable
+getConstructorInfo tag = flip lookupConstructorInfo tag <$> getModule
 
 getInductiveInfo :: (Member InfoTableBuilder r) => Symbol -> Sem r InductiveInfo
-getInductiveInfo sym = flip lookupInductiveInfo sym <$> getInfoTable
+getInductiveInfo sym = flip lookupInductiveInfo sym <$> getModule
 
 getBuiltinInductiveInfo :: (Member InfoTableBuilder r) => BuiltinInductive -> Sem r InductiveInfo
 getBuiltinInductiveInfo b = do
-  tab <- getInfoTable
+  tab <- getModule
   return $ fromJust (lookupBuiltinInductive tab b)
 
 getIdentifierInfo :: (Member InfoTableBuilder r) => Symbol -> Sem r IdentifierInfo
-getIdentifierInfo sym = flip lookupIdentifierInfo sym <$> getInfoTable
+getIdentifierInfo sym = flip lookupIdentifierInfo sym <$> getModule
 
 getBoolSymbol :: (Member InfoTableBuilder r) => Sem r Symbol
 getBoolSymbol = do
@@ -61,29 +62,31 @@ getIntSymbol = (^. inductiveSymbol) <$> getBuiltinInductiveInfo BuiltinInt
 
 checkSymbolDefined :: (Member InfoTableBuilder r) => Symbol -> Sem r Bool
 checkSymbolDefined sym = do
-  tab <- getInfoTable
-  return $ HashMap.member sym (tab ^. identContext)
+  m <- getModule
+  return $
+    HashMap.member sym (m ^. moduleInfoTable . identContext)
+      || HashMap.member sym (m ^. moduleImportsTable . identContext)
 
 setIdentArgs :: (Member InfoTableBuilder r) => Symbol -> [Binder] -> Sem r ()
 setIdentArgs sym = overIdentArgs sym . const
 
 data BuilderState = BuilderState
-  { _builderStateModuleId :: ModuleId,
-    _builderStateInfoTable :: InfoTable,
+  { _builderStateModule :: Module,
     _builderStateNextSymbolId :: Word,
     _builderStateNextTagId :: Word
   }
 
 makeLenses ''BuilderState
 
-mkBuilderState :: ModuleId -> InfoTable -> BuilderState
-mkBuilderState mid tab =
+mkBuilderState :: Module -> BuilderState
+mkBuilderState m =
   BuilderState
-    { _builderStateModuleId = mid,
-      _builderStateInfoTable = tab,
+    { _builderStateModule = m,
       _builderStateNextSymbolId = nextSymbolId tab,
       _builderStateNextTagId = nextTagId tab
     }
+  where
+    tab = computeCombinedInfoTable m
 
 runInfoTableBuilder' :: BuilderState -> forall r a. Sem (InfoTableBuilder ': r) a -> Sem r (BuilderState, a)
 runInfoTableBuilder' st =
@@ -95,64 +98,65 @@ runInfoTableBuilder' st =
       FreshSymbol -> do
         s <- get
         modify' (over builderStateNextSymbolId (+ 1))
-        return (Symbol (s ^. builderStateModuleId) (s ^. builderStateNextSymbolId))
+        return (Symbol (s ^. builderStateModule . moduleId) (s ^. builderStateNextSymbolId))
       FreshTag -> do
         s <- get
         modify' (over builderStateNextTagId (+ 1))
-        return (UserTag (s ^. builderStateModuleId) (s ^. builderStateNextTagId))
+        return (UserTag (s ^. builderStateModule . moduleId) (s ^. builderStateNextTagId))
       RegisterIdent idt ii -> do
         let sym = ii ^. identifierSymbol
             identKind = IdentFun (ii ^. identifierSymbol)
         whenJust
           (ii ^. identifierBuiltin)
-          (\b -> modify' (over (builderStateInfoTable . infoBuiltins) (HashMap.insert (BuiltinsFunction b) identKind)))
-        modify' (over (builderStateInfoTable . infoIdentifiers) (HashMap.insert sym ii))
-        modify' (over (builderStateInfoTable . identMap) (HashMap.insert idt identKind))
+          (\b -> modify' (over (builderStateModule . moduleInfoTable . infoBuiltins) (HashMap.insert (BuiltinsFunction b) identKind)))
+        modify' (over (builderStateModule . moduleInfoTable . infoIdentifiers) (HashMap.insert sym ii))
+        modify' (over (builderStateModule . moduleInfoTable . identMap) (HashMap.insert idt identKind))
       RegisterConstructor idt ci -> do
         let tag = ci ^. constructorTag
             identKind = IdentConstr tag
         whenJust
           (ci ^. constructorBuiltin)
-          (\b -> modify' (over (builderStateInfoTable . infoBuiltins) (HashMap.insert (BuiltinsConstructor b) identKind)))
-        modify' (over (builderStateInfoTable . infoConstructors) (HashMap.insert tag ci))
-        modify' (over (builderStateInfoTable . identMap) (HashMap.insert idt identKind))
+          (\b -> modify' (over (builderStateModule . moduleInfoTable . infoBuiltins) (HashMap.insert (BuiltinsConstructor b) identKind)))
+        modify' (over (builderStateModule . moduleInfoTable . infoConstructors) (HashMap.insert tag ci))
+        modify' (over (builderStateModule . moduleInfoTable . identMap) (HashMap.insert idt identKind))
       RegisterInductive idt ii -> do
         let sym = ii ^. inductiveSymbol
             identKind = IdentInd sym
         whenJust
           (ii ^. inductiveBuiltin)
-          (\b -> modify' (over (builderStateInfoTable . infoBuiltins) (HashMap.insert (builtinTypeToPrim b) identKind)))
-        modify' (over (builderStateInfoTable . infoInductives) (HashMap.insert sym ii))
-        modify' (over (builderStateInfoTable . identMap) (HashMap.insert idt identKind))
+          (\b -> modify' (over (builderStateModule . moduleInfoTable . infoBuiltins) (HashMap.insert (builtinTypeToPrim b) identKind)))
+        modify' (over (builderStateModule . moduleInfoTable . infoInductives) (HashMap.insert sym ii))
+        modify' (over (builderStateModule . moduleInfoTable . identMap) (HashMap.insert idt identKind))
       RegisterSpecialisation sym spec -> do
         modify'
           ( over
-              (builderStateInfoTable . infoSpecialisations)
+              (builderStateModule . moduleInfoTable . infoSpecialisations)
               (HashMap.alter (Just . maybe [spec] (spec :)) sym)
           )
       RegisterIdentNode sym node ->
-        modify' (over (builderStateInfoTable . identContext) (HashMap.insert sym node))
+        modify' (over (builderStateModule . moduleInfoTable . identContext) (HashMap.insert sym node))
       RegisterMain sym -> do
-        modify' (set (builderStateInfoTable . infoMain) (Just sym))
+        modify' (set (builderStateModule . moduleInfoTable . infoMain) (Just sym))
       RegisterLiteralIntToInt sym -> do
-        modify' (set (builderStateInfoTable . infoLiteralIntToInt) (Just sym))
+        modify' (set (builderStateModule . moduleInfoTable . infoLiteralIntToInt) (Just sym))
       RegisterLiteralIntToNat sym -> do
-        modify' (set (builderStateInfoTable . infoLiteralIntToNat) (Just sym))
+        modify' (set (builderStateModule . moduleInfoTable . infoLiteralIntToNat) (Just sym))
       RemoveSymbol sym -> do
-        modify' (over (builderStateInfoTable . infoMain) (maybe Nothing (\sym' -> if sym' == sym then Nothing else Just sym')))
-        modify' (over (builderStateInfoTable . infoIdentifiers) (HashMap.delete sym))
-        modify' (over (builderStateInfoTable . identContext) (HashMap.delete sym))
-        modify' (over (builderStateInfoTable . infoInductives) (HashMap.delete sym))
+        modify' (over (builderStateModule . moduleInfoTable . infoMain) (maybe Nothing (\sym' -> if sym' == sym then Nothing else Just sym')))
+        modify' (over (builderStateModule . moduleInfoTable . infoIdentifiers) (HashMap.delete sym))
+        modify' (over (builderStateModule . moduleInfoTable . identContext) (HashMap.delete sym))
+        modify' (over (builderStateModule . moduleInfoTable . infoInductives) (HashMap.delete sym))
       OverIdentArgs sym f -> do
-        args <- f <$> gets (^. builderStateInfoTable . identContext . at sym . _Just . to (map (^. lambdaLhsBinder) . fst . unfoldLambdas))
-        modify' (set (builderStateInfoTable . infoIdentifiers . at sym . _Just . identifierArgsNum) (length args))
-        modify' (over (builderStateInfoTable . infoIdentifiers) (HashMap.adjust (over identifierType (expandType args)) sym))
+        args <- f <$> gets (^. builderStateModule . moduleInfoTable . identContext . at sym . _Just . to (map (^. lambdaLhsBinder) . fst . unfoldLambdas))
+        modify' (set (builderStateModule . moduleInfoTable . infoIdentifiers . at sym . _Just . identifierArgsNum) (length args))
+        modify' (over (builderStateModule . moduleInfoTable . infoIdentifiers) (HashMap.adjust (over identifierType (expandType args)) sym))
       GetIdent txt -> do
         s <- get
-        return $ HashMap.lookup txt (s ^. builderStateInfoTable . identMap)
-      GetInfoTable ->
-        (^. builderStateInfoTable) <$> get
-      SetInfoTable t -> modify' (set builderStateInfoTable t)
+        return $ HashMap.lookup txt (s ^. builderStateModule . moduleInfoTable . identMap)
+      GetModule ->
+        (^. builderStateModule) <$> get
+      SetModule md ->
+        modify' (set builderStateModule md)
 
 execInfoTableBuilder' :: BuilderState -> Sem (InfoTableBuilder ': r) a -> Sem r BuilderState
 execInfoTableBuilder' st = fmap fst . runInfoTableBuilder' st
@@ -160,16 +164,16 @@ execInfoTableBuilder' st = fmap fst . runInfoTableBuilder' st
 evalInfoTableBuilder' :: BuilderState -> Sem (InfoTableBuilder ': r) a -> Sem r a
 evalInfoTableBuilder' st = fmap snd . runInfoTableBuilder' st
 
-runInfoTableBuilder :: ModuleId -> InfoTable -> Sem (InfoTableBuilder ': r) a -> Sem r (InfoTable, a)
-runInfoTableBuilder mid tab ma = do
-  (st, a) <- runInfoTableBuilder' (mkBuilderState mid tab) ma
-  return (st ^. builderStateInfoTable, a)
+runInfoTableBuilder :: Module -> Sem (InfoTableBuilder ': r) a -> Sem r (Module, a)
+runInfoTableBuilder m ma = do
+  (st, a) <- runInfoTableBuilder' (mkBuilderState m) ma
+  return (st ^. builderStateModule, a)
 
-execInfoTableBuilder :: ModuleId -> InfoTable -> Sem (InfoTableBuilder ': r) a -> Sem r InfoTable
-execInfoTableBuilder mid tab = fmap fst . runInfoTableBuilder mid tab
+execInfoTableBuilder :: Module -> Sem (InfoTableBuilder ': r) a -> Sem r Module
+execInfoTableBuilder m = fmap fst . runInfoTableBuilder m
 
-evalInfoTableBuilder :: ModuleId -> InfoTable -> Sem (InfoTableBuilder ': r) a -> Sem r a
-evalInfoTableBuilder mid tab = fmap snd . runInfoTableBuilder mid tab
+evalInfoTableBuilder :: Module -> Sem (InfoTableBuilder ': r) a -> Sem r a
+evalInfoTableBuilder m = fmap snd . runInfoTableBuilder m
 
 --------------------------------------------
 -- Builtin declarations
@@ -277,8 +281,8 @@ reserveLiteralIntToIntSymbol = do
 -- | Register a function Int -> Nat used to transform literal integers to builtin Nat
 setupLiteralIntToNat :: forall r. (Member InfoTableBuilder r) => (Symbol -> Sem r Node) -> Sem r ()
 setupLiteralIntToNat mkNode = do
-  tab <- getInfoTable
-  whenJust (tab ^. infoLiteralIntToNat) go
+  m <- getModule
+  whenJust (getInfoLiteralIntToNat m) go
   where
     go :: Symbol -> Sem r ()
     go sym = do
@@ -289,12 +293,12 @@ setupLiteralIntToNat mkNode = do
       where
         info :: Symbol -> Sem r IdentifierInfo
         info s = do
-          tab <- getInfoTable
+          m <- getModule
           ty <- targetType
           return $
             IdentifierInfo
               { _identifierSymbol = s,
-                _identifierName = freshIdentName tab "intToNat",
+                _identifierName = freshIdentName m "intToNat",
                 _identifierLocation = Nothing,
                 _identifierArgsNum = 1,
                 _identifierType = mkPi mempty (Binder "x" Nothing mkTypeInteger') ty,
@@ -306,15 +310,15 @@ setupLiteralIntToNat mkNode = do
 
         targetType :: Sem r Node
         targetType = do
-          tab <- getInfoTable
-          let natSymM = (^. inductiveSymbol) <$> lookupBuiltinInductive tab BuiltinNat
+          m <- getModule
+          let natSymM = (^. inductiveSymbol) <$> lookupBuiltinInductive m BuiltinNat
           return (maybe mkTypeInteger' (\s -> mkTypeConstr (setInfoName "Nat" mempty) s []) natSymM)
 
 -- | Register a function Int -> Int used to transform literal integers to builtin Int
 setupLiteralIntToInt :: forall r. (Member InfoTableBuilder r) => Sem r Node -> Sem r ()
 setupLiteralIntToInt node = do
-  tab <- getInfoTable
-  whenJust (tab ^. infoLiteralIntToInt) go
+  m <- getModule
+  whenJust (getInfoLiteralIntToInt m) go
   where
     go :: Symbol -> Sem r ()
     go sym = do
@@ -325,12 +329,12 @@ setupLiteralIntToInt node = do
       where
         info :: Symbol -> Sem r IdentifierInfo
         info s = do
-          tab <- getInfoTable
+          m <- getModule
           ty <- targetType
           return $
             IdentifierInfo
               { _identifierSymbol = s,
-                _identifierName = freshIdentName tab "literalIntToInt",
+                _identifierName = freshIdentName m "literalIntToInt",
                 _identifierLocation = Nothing,
                 _identifierArgsNum = 1,
                 _identifierType = mkPi mempty (Binder "x" Nothing mkTypeInteger') ty,
@@ -342,6 +346,6 @@ setupLiteralIntToInt node = do
 
         targetType :: Sem r Node
         targetType = do
-          tab <- getInfoTable
-          let intSymM = (^. inductiveSymbol) <$> lookupBuiltinInductive tab BuiltinInt
+          m <- getModule
+          let intSymM = (^. inductiveSymbol) <$> lookupBuiltinInductive m BuiltinInt
           return (maybe mkTypeInteger' (\s -> mkTypeConstr (setInfoName "Int" mempty) s []) intSymM)

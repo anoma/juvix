@@ -57,9 +57,9 @@ withSymbol sym a = do
 fromCore :: Core.InfoTable -> (Morphism, Object)
 fromCore tab = case tab ^. Core.infoMain of
   Just sym ->
-    let node = Core.lookupIdentifierNode tab sym
+    let node = Core.lookupTabIdentifierNode tab sym
         syms = reverse $ filter (/= sym) $ Core.createCallGraph tab ^. Core.depInfoTopSort
-        idents = map (Core.lookupIdentifierInfo tab) syms
+        idents = map (Core.lookupTabIdentifierInfo tab) syms
         morph = run . runReader emptyEnv $ goIdents node idents
         obj = convertType $ Info.getNodeType node
      in (morph, obj)
@@ -104,7 +104,7 @@ fromCore tab = case tab ^. Core.infoMain of
               }
         where
           sym = ii ^. Core.identifierSymbol
-          fundef = Core.lookupIdentifierNode tab sym
+          fundef = Core.lookupTabIdentifierNode tab sym
           argty = convertType (Info.getNodeType fundef)
           mkLambda = do
             body <- withSymbol sym (goIdents node idents)
@@ -268,9 +268,9 @@ fromCore tab = case tab ^. Core.infoMain of
         error "constructor tag out of range"
       return $ (constructors !! tagNum) args
       where
-        ci = Core.lookupConstructorInfo tab _constrTag
+        ci = Core.lookupTabConstructorInfo tab _constrTag
         sym = ci ^. Core.constructorInductive
-        ctrs = Core.lookupInductiveInfo tab sym ^. Core.inductiveConstructors
+        ctrs = Core.lookupTabInductiveInfo tab sym ^. Core.inductiveConstructors
         tagNum =
           fromJust
             $ elemIndex
@@ -391,7 +391,7 @@ fromCore tab = case tab ^. Core.infoMain of
               go indty val branches
       where
         indty = convertInductive _caseInductive
-        ii = Core.lookupInductiveInfo tab _caseInductive
+        ii = Core.lookupTabInductiveInfo tab _caseInductive
         missingCtrs =
           filter
             ( \x ->
@@ -401,7 +401,7 @@ fromCore tab = case tab ^. Core.infoMain of
                       _caseBranches
                   )
             )
-            (map (Core.lookupConstructorInfo tab) (ii ^. Core.inductiveConstructors))
+            (map (Core.lookupTabConstructorInfo tab) (ii ^. Core.inductiveConstructors))
         missingCtrsNum = length missingCtrs
         ctrBrs = map mkCtrBranch missingCtrs
         defaultNode = fromMaybe (error "not all cases covered") _caseDefault
@@ -550,9 +550,9 @@ fromCore tab = case tab ^. Core.infoMain of
     convertInductive :: Symbol -> Object
     convertInductive sym = do
       let ctrs =
-            map (Core.lookupConstructorInfo tab) $
+            map (Core.lookupTabConstructorInfo tab) $
               sort $
-                Core.lookupInductiveInfo tab sym ^. Core.inductiveConstructors
+                Core.lookupTabInductiveInfo tab sym ^. Core.inductiveConstructors
       case reverse ctrs of
         ci : ctrs' -> do
           foldr

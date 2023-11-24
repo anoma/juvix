@@ -8,16 +8,16 @@ import Juvix.Compiler.Core.Info.TypeInfo (setNodeType)
 import Juvix.Compiler.Core.Options
 import Juvix.Compiler.Core.Transformation.Base
 
-unrollRecursion :: (Member (Reader CoreOptions) r) => InfoTable -> Sem r InfoTable
-unrollRecursion tab = do
-  (mp, tab') <-
+unrollRecursion :: (Member (Reader CoreOptions) r) => Module -> Sem r Module
+unrollRecursion md = do
+  (mp, md') <-
     runState @(HashMap Symbol Symbol) mempty $
-      execInfoTableBuilder defaultModuleId tab $ -- TODO: this is wrong
-        forM_ (buildSCCs (createCallGraph tab)) goSCC
-  return $ mapIdentSymbols mp $ pruneInfoTable tab'
+      execInfoTableBuilder md $
+        forM_ (buildSCCs (createCallGraph (md ^. moduleInfoTable))) goSCC
+  return $ mapIdentSymbols mp $ pruneInfoTable md'
   where
-    mapIdentSymbols :: HashMap Symbol Symbol -> InfoTable -> InfoTable
-    mapIdentSymbols mp = over infoMain adjustMain . mapAllNodes (umap go)
+    mapIdentSymbols :: HashMap Symbol Symbol -> Module -> Module
+    mapIdentSymbols mp = over (moduleInfoTable . infoMain) adjustMain . mapAllNodes (umap go)
       where
         go :: Node -> Node
         go = \case
@@ -51,7 +51,7 @@ unrollRecursion tab = do
             go :: Symbol -> Maybe Int
             go sym = fmap (^. pragmaUnrollDepth) (ii ^. identifierPragmas . pragmasUnroll)
               where
-                ii = lookupIdentifierInfo tab sym
+                ii = lookupIdentifierInfo md sym
 
         mapSymbol :: Int -> HashMap (Indexed Symbol) Symbol -> Symbol -> HashMap Symbol Symbol -> HashMap Symbol Symbol
         mapSymbol unrollLimit freshSyms sym = HashMap.insert sym (fromJust $ HashMap.lookup (Indexed unrollLimit sym) freshSyms)
@@ -73,7 +73,7 @@ unrollRecursion tab = do
           forM_ [0 .. unrollLimit] goUnroll
           removeSymbol sym
           where
-            ii = lookupIdentifierInfo tab sym
+            ii = lookupIdentifierInfo md sym
 
             goUnroll :: Int -> Sem r ()
             goUnroll limit = do
@@ -88,7 +88,7 @@ unrollRecursion tab = do
                     | limit == 0 =
                         etaExpand (typeArgs (ii ^. identifierType)) failNode
                     | otherwise =
-                        umap (go limit) (lookupIdentifierNode tab sym)
+                        umap (go limit) (lookupIdentifierNode md sym)
               registerIdentNode sym' node
 
             go :: Int -> Node -> Node

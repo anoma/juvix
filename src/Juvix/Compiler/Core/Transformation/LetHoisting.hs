@@ -34,7 +34,7 @@ type LetsTable = HashMap Symbol (Indexed LItem)
 mkLetsTable :: [Indexed LItem] -> LetsTable
 mkLetsTable l = HashMap.fromList [(i ^. indexedThing . itemSymbol, i) | i <- l]
 
-letHoisting :: InfoTable -> InfoTable
+letHoisting :: Module -> Module
 letHoisting = run . mapT' (const letHoist)
 
 letHoist :: forall r. (Members '[InfoTableBuilder] r) => Node -> Sem r Node

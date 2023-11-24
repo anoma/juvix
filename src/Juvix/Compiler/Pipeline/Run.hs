@@ -10,7 +10,7 @@ import Juvix.Compiler.Concrete.Data.Scope
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoped
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as P
-import Juvix.Compiler.Core.Data.InfoTable qualified as Core
+import Juvix.Compiler.Core.Data.Module qualified as Core
 import Juvix.Compiler.Core.Translation.FromInternal.Data qualified as Core
 import Juvix.Compiler.Internal.Translation qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Data.Context qualified as Arity
@@ -115,7 +115,7 @@ corePipelineIOEither entry = do
       . mapError (JuvixError @PackageLoaderError)
       . runEvalFileEffIO
       . runPathResolver'
-      $ processFileToStoredCore' entry
+      $ processFileToStoredCore entry
   return $ case eith of
     Left err -> Left err
     Right (art, (coreRes, mtab)) ->
@@ -139,8 +139,8 @@ corePipelineIOEither entry = do
               ^. Typed.resultInternal
                 . Arity.resultInternal
 
-          coreTable :: Core.InfoTable
-          coreTable = coreRes ^. Core.coreResultTable
+          coreModule :: Core.Module
+          coreModule = coreRes ^. Core.coreResultModule
 
           scopedResult :: Scoped.ScoperResult
           scopedResult =
@@ -158,7 +158,7 @@ corePipelineIOEither entry = do
                 _artifactParsing = parserResult ^. P.resultParserState,
                 _artifactInternalTypedTable = typedTable,
                 _artifactTerminationState = typedResult ^. Typed.resultTermination,
-                _artifactCoreTable = coreTable,
+                _artifactCoreModule = coreModule,
                 _artifactScopeTable = resultScoperTable,
                 _artifactScopeExports = scopedResult ^. Scoped.resultExports,
                 _artifactTypes = typesTable,
@@ -181,7 +181,7 @@ corePipelineIOEither entry = do
           _artifactResolver = iniResolverState,
           _artifactNameIdState = genNameIdState defaultModuleId, -- TODO: module id (this is fine for REPL?)
           _artifactFunctions = mempty,
-          _artifactCoreTable = mempty,
+          _artifactCoreModule = Core.emptyModule,
           _artifactScopeTable = mempty,
           _artifactBuiltins = iniBuiltins,
           _artifactScopeExports = mempty,

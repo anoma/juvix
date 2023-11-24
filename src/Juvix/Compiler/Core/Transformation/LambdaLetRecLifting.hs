@@ -28,7 +28,7 @@ lambdaLiftNode aboveBl top =
    in goTop aboveBl body topArgs
   where
     nodeType :: Node -> Sem r Type
-    nodeType n = flip computeNodeType n <$> getInfoTable
+    nodeType n = flip computeNodeType n <$> getModule
 
     goTop :: BinderList Binder -> Node -> [LambdaLhs] -> Sem r Node
     goTop bl body = \case
@@ -182,13 +182,13 @@ lambdaLiftNode aboveBl top =
               res = shiftHelper body' (nonEmpty' (zipExact letItems letRecBinders'))
           return (Recur res)
 
-lifting :: Bool -> InfoTable -> InfoTable
+lifting :: Bool -> Module -> Module
 lifting onlyLetRec = run . runReader onlyLetRec . mapT' (const (lambdaLiftNode mempty))
 
-lambdaLetRecLifting :: InfoTable -> InfoTable
+lambdaLetRecLifting :: Module -> Module
 lambdaLetRecLifting = lifting False
 
-letRecLifting :: InfoTable -> InfoTable
+letRecLifting :: Module -> Module
 letRecLifting = lifting True
 
 nodeIsLifted :: Node -> Bool
