@@ -62,8 +62,31 @@ We also use other markup for documentation such as:
         f {n : Nat := 0} {m : Nat := n + 1} ....
         ```
 
-        ```juvix
-        axiom AA : Type
-        ```
-
     2. Second text
+
+
+!!! info
+
+    Initial function arguments that match variables or wildcards in all clauses can
+    be moved to the left of the colon in the function definition. For example,
+
+    ```juvix
+    module move-to-left;
+      import Stdlib.Data.Nat open;
+
+      add (n : Nat) : Nat -> Nat
+        | zero := n
+        | (suc m) := suc (add n m);
+    end;
+    ```
+
+    is equivalent to
+
+    ```juvix
+      module example-add;
+        import Stdlib.Data.Nat open;
+        add : Nat -> Nat -> Nat
+          | n zero := n
+          | n (suc m) := suc (add n m);
+      end;
+    ```

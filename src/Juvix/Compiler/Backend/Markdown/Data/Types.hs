@@ -214,7 +214,7 @@ processCodeBlock info t loc =
 
 instance-- (MK.IsInline TextBlock) =>
   MK.IsBlock TextBlock Mk where
-  paragraph a = MkTextBlock a <> nl'
+  paragraph a = MkTextBlock a
   plain a = MkTextBlock a
   thematicBreak = toMK "---"
   blockQuote p = toMK "> " <> p
