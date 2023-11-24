@@ -30,7 +30,7 @@ testDescr Old.NegTest {..} =
           _testRoot = tRoot,
           _testAssertion = Single $ do
             entryPoint <- set entryPointNewTypeCheckingAlgorithm True <$> defaultEntryPointIO' LockModeExclusive tRoot file'
-            result <- runIOEither' LockModeExclusive entryPoint upToInternalTyped
+            result <- runIOEither' LockModeExclusive entryPoint upToCore
             case mapLeft fromJuvixError result of
               Left (Just tyError) -> whenJust (_checkErr tyError) assertFailure
               Left Nothing -> assertFailure "An error ocurred but it was not in the type checker."
@@ -70,7 +70,7 @@ negArityTest _name rdir rfile ariErr =
         { _file = _dir <//> rfile,
           _checkErr = \case
             ErrArityCheckerError e -> ariErr e
-            _ -> wrongError,
+            e -> error (show e),
           _name,
           _dir
         }

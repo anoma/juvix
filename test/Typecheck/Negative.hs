@@ -108,14 +108,14 @@ tests =
       $(mkRelDir "issue1337")
       $(mkRelFile "Braces.juvix")
       $ \case
-        ErrArity (ErrWrongPatternIsImplicit {}) -> Nothing
+        ErrArityCheckerError (ErrWrongPatternIsImplicit {}) -> Nothing
         _ -> wrongError,
     negTest
       "Unexpected double braces in pattern"
       $(mkRelDir "issue1337")
       $(mkRelFile "DoubleBraces.juvix")
       $ \case
-        ErrArity (ErrWrongPatternIsImplicit {}) -> Nothing
+        ErrArityCheckerError (ErrWrongPatternIsImplicit {}) -> Nothing
         _ -> wrongError,
     negTest
       "Wrong return type name for a constructor of a simple data type"

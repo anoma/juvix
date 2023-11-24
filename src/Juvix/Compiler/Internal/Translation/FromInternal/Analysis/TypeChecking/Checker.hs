@@ -538,7 +538,7 @@ matchIsImplicit expected actual =
   unless
     (expected == actual ^. patternArgIsImplicit)
     ( throw
-        ( ErrArity
+        ( ErrArityCheckerError
             ( ErrWrongPatternIsImplicit
                 WrongPatternIsImplicit
                   { _wrongPatternIsImplicitExpected = expected,
@@ -629,7 +629,7 @@ checkPattern = go
           return app {_constrAppType = Just appTy, _constrAppParameters = pis}
         appErr :: ConstructorApp -> Int -> TypeCheckerError
         appErr app expected =
-          ErrArity
+          ErrArityCheckerError
             ( ErrWrongConstructorAppLength
                 ( WrongConstructorAppLength
                     { _wrongConstructorAppLength = app,

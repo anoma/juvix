@@ -6,6 +6,7 @@ module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Er
   )
 where
 
+import Prelude (show)
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Error
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error.Pretty
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error.Types
@@ -14,7 +15,6 @@ import Juvix.Prelude
 data TypeCheckerError
   = ErrWrongConstructorType WrongConstructorType
   | ErrWrongReturnType WrongReturnType
-  | ErrArity ArityCheckerError
   | ErrWrongType WrongType
   | ErrUnsolvedMeta UnsolvedMeta
   | ErrExpectedFunctionType ExpectedFunctionType
@@ -42,7 +42,6 @@ instance ToGenericError TypeCheckerError where
   genericError = \case
     ErrWrongConstructorType e -> genericError e
     ErrWrongReturnType e -> genericError e
-    ErrArity e -> genericError e
     ErrWrongType e -> genericError e
     ErrUnsolvedMeta e -> genericError e
     ErrExpectedFunctionType e -> genericError e
@@ -64,3 +63,29 @@ instance ToGenericError TypeCheckerError where
     ErrTraitNotTerminating e -> genericError e
     ErrArityCheckerError e -> genericError e
     ErrDefaultArgLoop e -> genericError e
+
+instance Show TypeCheckerError where
+  show = \case
+    ErrWrongConstructorType {} -> "ErrWrongConstructorType"
+    ErrWrongReturnType {} -> "ErrWrongReturnType"
+    ErrWrongType {} -> "ErrWrongType"
+    ErrUnsolvedMeta {} -> "ErrUnsolvedMeta"
+    ErrExpectedFunctionType {} -> "ErrExpectedFunctionType"
+    ErrTooManyArgumentsIndType {} -> "ErrTooManyArgumentsIndType"
+    ErrTooFewArgumentsIndType {} -> "ErrTooFewArgumentsIndType"
+    ErrInvalidPatternMatching {} -> "ErrInvalidPatternMatching"
+    ErrNoPositivity {} -> "ErrNoPositivity"
+    ErrUnsupportedTypeFunction {} -> "ErrUnsupportedTypeFunction"
+    ErrInvalidInstanceType {} -> "ErrInvalidInstanceType"
+    ErrInvalidCoercionType {} -> "ErrInvalidCoercionType"
+    ErrWrongCoercionArgument {} -> "ErrWrongCoercionArgument"
+    ErrCoercionCycles {} -> "ErrCoercionCycles"
+    ErrTargetNotATrait {} -> "ErrTargetNotATrait"
+    ErrNotATrait {} -> "ErrNotATrait"
+    ErrNoInstance {} -> "ErrNoInstance"
+    ErrAmbiguousInstances {} -> "ErrAmbiguousInstances"
+    ErrSubsumedInstance {} -> "ErrSubsumedInstance"
+    ErrExplicitInstanceArgument {} -> "ErrExplicitInstanceArgument"
+    ErrTraitNotTerminating {} -> "ErrTraitNotTerminating"
+    ErrArityCheckerError {} -> "ErrArityCheckerError"
+    ErrDefaultArgLoop {} -> "ErrDefaultArgLoop"
