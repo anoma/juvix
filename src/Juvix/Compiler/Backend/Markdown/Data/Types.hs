@@ -1,6 +1,7 @@
 module Juvix.Compiler.Backend.Markdown.Data.Types where
 
 import Commonmark qualified as MK
+import Data.List.NonEmpty qualified as NonEmpty
 import Data.Text qualified as T
 import Juvix.Data.Loc
 import Juvix.Prelude hiding (Raw)
@@ -123,7 +124,7 @@ instance MK.ToPlainText Mk where
 builder :: Mk -> [Text]
 builder = \case
   MkConcat a b -> builder a <> builder b
-  MkTextBlock t -> [trimText (t ^. textBlock) <> nl]
+  MkTextBlock t -> [t ^. textBlock]
   MkJuvixCodeBlock j -> [textJuvixCodeBlock j]
   MkNull -> mempty
 
@@ -209,12 +210,12 @@ processCodeBlock info t loc =
             _juvixCodeBlockInterval = loc
           }
     _ ->
-      let b = "```" <> info <> nl <> t <> "```"
+      let b = "```" <> info <> t <> "```"
        in MkTextBlock TextBlock {_textBlock = b, _textBlockInterval = loc}
 
 instance-- (MK.IsInline TextBlock) =>
   MK.IsBlock TextBlock Mk where
-  paragraph a = MkTextBlock a
+  paragraph a = MkTextBlock a <> nl'
   plain a = MkTextBlock a
   thematicBreak = toMK "---"
   blockQuote p = toMK "> " <> p
