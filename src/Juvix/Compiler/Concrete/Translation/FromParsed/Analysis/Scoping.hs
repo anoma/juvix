@@ -297,9 +297,12 @@ reserveInductiveSymbol d = reserveSymbolSignatureOf SKNameInductive d (d ^. indu
 
 reserveAliasSymbol ::
   (Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, Reader BindingStrategy, InfoTableBuilder, State ScoperState] r) =>
-  Symbol ->
+  AliasDef 'Parsed ->
   Sem r S.Symbol
-reserveAliasSymbol = reserveSymbolOf SKNameAlias Nothing
+reserveAliasSymbol a = do
+  s <- reserveSymbolOf SKNameAlias Nothing (a ^. aliasDefName)
+  let locAliasDef = getLoc a
+  return (set S.nameDefined locAliasDef s)
 
 reserveProjectionSymbol ::
   (Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, Reader BindingStrategy, InfoTableBuilder, State ScoperState] r) =>
@@ -2480,7 +2483,7 @@ reserveAliasDef ::
   (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, State ScoperSyntax, Reader BindingStrategy] r) =>
   AliasDef 'Parsed ->
   Sem r ()
-reserveAliasDef = void . reserveAliasSymbol . (^. aliasDefName)
+reserveAliasDef = void . reserveAliasSymbol
 
 resolveSyntaxDef ::
   (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, NameIdGen, State ScoperSyntax, Reader BindingStrategy] r) =>
