@@ -16,6 +16,7 @@ import Juvix.Compiler.Core.Transformation.Base
 import Juvix.Compiler.Core.Transformation.Check.Exec
 import Juvix.Compiler.Core.Transformation.Check.Geb
 import Juvix.Compiler.Core.Transformation.Check.VampIR
+import Juvix.Compiler.Core.Transformation.CombineInfoTables (combineInfoTables)
 import Juvix.Compiler.Core.Transformation.ComputeTypeInfo
 import Juvix.Compiler.Core.Transformation.ConvertBuiltinTypes
 import Juvix.Compiler.Core.Transformation.DisambiguateNames
@@ -70,6 +71,7 @@ applyTransformations ts tbl = foldM (flip appTrans) tbl ts
       NaiveMatchToCase -> return . Naive.matchToCase
       EtaExpandApps -> return . etaExpansionApps
       DisambiguateNames -> return . disambiguateNames
+      CombineInfoTables -> return . combineInfoTables
       CheckGeb -> mapError (JuvixError @CoreError) . checkGeb
       CheckExec -> mapError (JuvixError @CoreError) . checkExec
       CheckVampIR -> mapError (JuvixError @CoreError) . checkVampIR

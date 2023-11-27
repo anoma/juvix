@@ -87,11 +87,17 @@ upToCore ::
   Sem r Core.CoreResult
 upToCore = upToInternalTyped >>= Core.fromInternal
 
+upToStoredCore ::
+  (Members '[Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError, GitClone, PathResolver] r) =>
+  Sem r Core.CoreResult
+upToStoredCore =
+  upToCore >>= \r -> Core.toStored (r ^. Core.coreResultModule) >>= \md -> return r {Core._coreResultModule = md}
+
 upToAsm ::
   (Members '[Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError, GitClone, PathResolver] r) =>
   Sem r Asm.InfoTable
 upToAsm =
-  upToCore >>= \Core.CoreResult {..} -> coreToAsm _coreResultModule
+  upToStoredCore >>= \Core.CoreResult {..} -> storedCoreToAsm _coreResultModule
 
 upToMiniC ::
   (Members '[Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError, GitClone, PathResolver] r) =>
@@ -102,14 +108,14 @@ upToVampIR ::
   (Members '[Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError, GitClone, PathResolver] r) =>
   Sem r VampIR.Result
 upToVampIR =
-  upToCore >>= \Core.CoreResult {..} -> coreToVampIR _coreResultModule
+  upToStoredCore >>= \Core.CoreResult {..} -> storedCoreToVampIR _coreResultModule
 
 upToGeb ::
   (Members '[Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError, GitClone, PathResolver] r) =>
   Geb.ResultSpec ->
   Sem r Geb.Result
 upToGeb spec =
-  upToCore >>= \Core.CoreResult {..} -> coreToGeb spec _coreResultModule
+  upToStoredCore >>= \Core.CoreResult {..} -> storedCoreToGeb spec _coreResultModule
 
 upToCoreTypecheck ::
   (Members '[Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError, GitClone, PathResolver] r) =>
@@ -117,21 +123,47 @@ upToCoreTypecheck ::
 upToCoreTypecheck =
   upToCore >>= \r -> Core.toTypechecked (r ^. Core.coreResultModule) >>= \md -> return r {Core._coreResultModule = md}
 
-upToStoredCore ::
-  (Members '[Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError, GitClone, PathResolver] r) =>
-  Sem r Core.CoreResult
-upToStoredCore =
-  upToCore >>= \r -> Core.toEval (r ^. Core.coreResultModule) >>= \md -> return r {Core._coreResultModule = md}
+--------------------------------------------------------------------------------
+-- Workflows from stored Core
+--------------------------------------------------------------------------------
+
+storedCoreToAsm :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r Asm.InfoTable
+storedCoreToAsm = Core.toStripped >=> return . Asm.fromCore . Stripped.fromCore . Core.computeCombinedInfoTable
+
+storedCoreToMiniC :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r C.MiniCResult
+storedCoreToMiniC = storedCoreToAsm >=> asmToMiniC
+
+storedCoreToGeb :: (Members '[Error JuvixError, Reader EntryPoint] r) => Geb.ResultSpec -> Core.Module -> Sem r Geb.Result
+storedCoreToGeb spec = Core.toGeb >=> return . uncurry (Geb.toResult spec) . Geb.fromCore . Core.computeCombinedInfoTable
+
+storedCoreToVampIR :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r VampIR.Result
+storedCoreToVampIR = Core.toVampIR >=> VampIR.fromCore . Core.computeCombinedInfoTable
+
+storedCoreToVampIR' :: (Members '[Error JuvixError, Reader Core.CoreOptions] r) => Core.Module -> Sem r VampIR.Result
+storedCoreToVampIR' = Core.toVampIR' >=> return . VampIR.fromCore' False . Core.computeCombinedInfoTable
 
 --------------------------------------------------------------------------------
--- Internal workflows
+-- Workflows from Core
 --------------------------------------------------------------------------------
 
 coreToAsm :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r Asm.InfoTable
-coreToAsm = Core.toStripped >=> return . Asm.fromCore . Stripped.fromCore . Core.computeCombinedInfoTable
+coreToAsm = Core.toStored >=> storedCoreToAsm
 
 coreToMiniC :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r C.MiniCResult
 coreToMiniC = coreToAsm >=> asmToMiniC
+
+coreToGeb :: (Members '[Error JuvixError, Reader EntryPoint] r) => Geb.ResultSpec -> Core.Module -> Sem r Geb.Result
+coreToGeb spec = Core.toStored >=> storedCoreToGeb spec
+
+coreToVampIR :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r VampIR.Result
+coreToVampIR = Core.toStored >=> storedCoreToVampIR
+
+coreToVampIR' :: (Members '[Error JuvixError, Reader Core.CoreOptions] r) => Core.Module -> Sem r VampIR.Result
+coreToVampIR' = Core.toStored' >=> storedCoreToVampIR'
+
+--------------------------------------------------------------------------------
+-- Other workflows
+--------------------------------------------------------------------------------
 
 asmToMiniC :: (Members '[Error JuvixError, Reader EntryPoint] r) => Asm.InfoTable -> Sem r C.MiniCResult
 asmToMiniC = Asm.toReg >=> regToMiniC . Reg.fromAsm
@@ -141,12 +173,6 @@ regToMiniC tab = do
   e <- ask
   return $ C.fromReg (Backend.getLimits (e ^. entryPointTarget) (e ^. entryPointDebug)) tab
 
-coreToGeb :: (Members '[Error JuvixError, Reader EntryPoint] r) => Geb.ResultSpec -> Core.Module -> Sem r Geb.Result
-coreToGeb spec = Core.toGeb >=> return . uncurry (Geb.toResult spec) . Geb.fromCore . Core.computeCombinedInfoTable
-
-coreToVampIR :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r VampIR.Result
-coreToVampIR = Core.toVampIR >=> VampIR.fromCore . Core.computeCombinedInfoTable
-
 asmToMiniC' :: (Members '[Error JuvixError, Reader Asm.Options] r) => Asm.InfoTable -> Sem r C.MiniCResult
 asmToMiniC' = mapError (JuvixError @Asm.AsmError) . Asm.toReg' >=> regToMiniC' . Reg.fromAsm
 
@@ -154,6 +180,3 @@ regToMiniC' :: (Member (Reader Asm.Options) r) => Reg.InfoTable -> Sem r C.MiniC
 regToMiniC' tab = do
   e <- ask
   return $ C.fromReg (e ^. Asm.optLimits) tab
-
-coreToVampIR' :: (Members '[Error JuvixError, Reader Core.CoreOptions] r) => Core.Module -> Sem r VampIR.Result
-coreToVampIR' = Core.toVampIR' >=> return . VampIR.fromCore' False . Core.computeCombinedInfoTable

@@ -11,8 +11,8 @@ data Module = Module
   { _moduleId :: ModuleId,
     _moduleInfoTable :: InfoTable,
     -- | The imports table contains all dependencies, transitively. E.g., if the
-    -- module imports A but not B, but A imports B, then all identifiers from B
-    -- will be in the imports tables nonetheless.
+    -- module M imports A but not B, but A imports B, then all identifiers from
+    -- B will be in the imports table of M nonetheless.
     _moduleImportsTable :: InfoTable
   }
 

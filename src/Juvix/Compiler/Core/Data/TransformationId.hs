@@ -18,6 +18,7 @@ data TransformationId
   | NaiveMatchToCase
   | EtaExpandApps
   | DisambiguateNames
+  | CombineInfoTables
   | CheckGeb
   | CheckExec
   | CheckVampIR
@@ -43,7 +44,7 @@ data TransformationId
   deriving stock (Data, Bounded, Enum, Show)
 
 data PipelineId
-  = PipelineEval
+  = PipelineStored
   | PipelineNormalize
   | PipelineGeb
   | PipelineVampIR
@@ -71,25 +72,25 @@ fromTransformationLikes = concatMap fromTransformationLike
 toTypecheckTransformations :: [TransformationId]
 toTypecheckTransformations = [MatchToCase]
 
-toEvalTransformations :: [TransformationId]
-toEvalTransformations = [EtaExpandApps, MatchToCase, NatToPrimInt, IntToPrimInt, ConvertBuiltinTypes, OptPhaseEval, DisambiguateNames]
+toStoredTransformations :: [TransformationId]
+toStoredTransformations = [EtaExpandApps, MatchToCase, NatToPrimInt, IntToPrimInt, ConvertBuiltinTypes, OptPhaseEval, DisambiguateNames]
 
 toNormalizeTransformations :: [TransformationId]
-toNormalizeTransformations = toEvalTransformations ++ [LetRecLifting, LetFolding, UnrollRecursion]
+toNormalizeTransformations = [CombineInfoTables, LetRecLifting, LetFolding, UnrollRecursion]
 
 toVampIRTransformations :: [TransformationId]
-toVampIRTransformations = toEvalTransformations ++ [FilterUnreachable, CheckVampIR, LetRecLifting, OptPhaseVampIR, UnrollRecursion, Normalize, LetHoisting]
+toVampIRTransformations = [CombineInfoTables, FilterUnreachable, CheckVampIR, LetRecLifting, OptPhaseVampIR, UnrollRecursion, Normalize, LetHoisting]
 
 toStrippedTransformations :: [TransformationId]
 toStrippedTransformations =
-  toEvalTransformations ++ [CheckExec, LambdaLetRecLifting, TopEtaExpand, OptPhaseExec, MoveApps, RemoveTypeArgs]
+  [CombineInfoTables, FilterUnreachable, CheckExec, LambdaLetRecLifting, TopEtaExpand, OptPhaseExec, MoveApps, RemoveTypeArgs]
 
 toGebTransformations :: [TransformationId]
-toGebTransformations = toEvalTransformations ++ [FilterUnreachable, CheckGeb, LetRecLifting, OptPhaseGeb, UnrollRecursion, FoldTypeSynonyms, ComputeTypeInfo]
+toGebTransformations = [CombineInfoTables, FilterUnreachable, CheckGeb, LetRecLifting, OptPhaseGeb, UnrollRecursion, FoldTypeSynonyms, ComputeTypeInfo]
 
 pipeline :: PipelineId -> [TransformationId]
 pipeline = \case
-  PipelineEval -> toEvalTransformations
+  PipelineStored -> toStoredTransformations
   PipelineNormalize -> toNormalizeTransformations
   PipelineGeb -> toGebTransformations
   PipelineVampIR -> toVampIRTransformations
