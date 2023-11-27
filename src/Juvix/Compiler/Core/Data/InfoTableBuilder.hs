@@ -152,7 +152,9 @@ runInfoTableBuilder' st =
         modify' (over (builderStateModule . moduleInfoTable . infoIdentifiers) (HashMap.adjust (over identifierType (expandType args)) sym))
       GetIdent txt -> do
         s <- get
-        return $ HashMap.lookup txt (s ^. builderStateModule . moduleInfoTable . identMap)
+        let r1 = HashMap.lookup txt (s ^. builderStateModule . moduleInfoTable . identMap)
+            r2 = HashMap.lookup txt (s ^. builderStateModule . moduleImportsTable . identMap)
+        return (r1 <|> r2)
       GetModule ->
         (^. builderStateModule) <$> get
       SetModule md ->

@@ -42,9 +42,6 @@ data PreMutual = PreMutual
 
 makeLenses ''PreMutual
 
-unsupported :: Text -> a
-unsupported thing = error ("Internal to Core: Not yet supported: " <> thing)
-
 -- | Translation of a Name into the identifier index used in the Core InfoTable
 mkIdentIndex :: Name -> Text
 mkIdentIndex = show . (^. Internal.nameId)
@@ -64,8 +61,12 @@ fromInternal i = do
       . evalState (i ^. InternalTyped.resultFunctions)
       . runReader (i ^. InternalTyped.resultIdenTypes)
       $ do
-        reserveLiteralIntToNatSymbol
-        reserveLiteralIntToIntSymbol
+        when
+          (isNothing (coreImportsTab ^. infoLiteralIntToNat))
+          reserveLiteralIntToNatSymbol
+        when
+          (isNothing (coreImportsTab ^. infoLiteralIntToInt))
+          reserveLiteralIntToIntSymbol
         let resultModule = i ^. InternalTyped.resultModule
             resultTable =
               Internal.computeCombinedInfoTable importTab
@@ -76,8 +77,10 @@ fromInternal i = do
         when
           (isNothing (lookupBuiltinInductive tab BuiltinBool))
           declareBoolBuiltins
-        setupLiteralIntToNat literalIntToNatNode
-        setupLiteralIntToInt literalIntToIntNode
+        when (isNothing (coreImportsTab ^. infoLiteralIntToNat)) $
+          setupLiteralIntToNat literalIntToNatNode
+        when (isNothing (coreImportsTab ^. infoLiteralIntToInt)) $
+          setupLiteralIntToInt literalIntToIntNode
   return $
     CoreResult
       { _coreResultModule = res,
@@ -842,6 +845,7 @@ goIden ::
   Internal.Iden ->
   Sem r Node
 goIden i = do
+  importsTableDebug <- Core.ppTrace . (^. moduleImportsTable) <$> getModule
   infoTableDebug <- Core.ppTrace . (^. moduleInfoTable) <$> getModule
   let undeclared =
         error
@@ -849,8 +853,10 @@ goIden i = do
               <> txt
               <> "\nat "
               <> Internal.ppTrace (getLoc i)
-              <> "\n"
+              <> "\nModule:\n-------\n\n"
               <> infoTableDebug
+              <> "\nImports:\n--------\n\n"
+              <> importsTableDebug
           )
   case i of
     Internal.IdenVar n -> do

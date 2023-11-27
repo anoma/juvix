@@ -165,22 +165,8 @@ convertNode md = rmap go
     negNatBody :: Info -> Node -> Node
     negNatBody info n = mkBuiltinApp info OpIntSub [mkConstant' (ConstInteger 0), n]
 
-filterIntBuiltins :: Module -> Module
-filterIntBuiltins md =
-  let md' =
-        over
-          (moduleInfoTable . infoIdentifiers)
-          (HashMap.filter (isNotIntBuiltin . (^. identifierBuiltin)))
-          md
-   in pruneInfoTable md'
-  where
-    isNotIntBuiltin :: Maybe BuiltinFunction -> Bool
-    isNotIntBuiltin = \case
-      Just b -> not (isIntBuiltin b)
-      Nothing -> True
-
 intToPrimInt :: Module -> Module
-intToPrimInt md = filterIntBuiltins $ mapAllNodes (convertNode md') md'
+intToPrimInt md = mapAllNodes (convertNode md') md'
   where
     md' =
       case md ^. moduleInfoTable . infoLiteralIntToInt of

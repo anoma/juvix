@@ -40,8 +40,6 @@ import Juvix.Prelude
 
 type PipelineEff = '[Reader Parser.ParserResult, Reader Store.ModuleTable, NameIdGen, PathResolver, EvalFileEff, Error PackageLoaderError, Error DependencyError, GitClone, Error GitProcessError, Process, Log, Reader EntryPoint, TaggedLock, Files, Error JuvixError, HighlightBuilder, Internet, Embed IO, Resource, Final IO]
 
--- type TopPipelineEff = '[PathResolver, EvalFileEff, Error PackageLoaderError, Error DependencyError, GitClone, Error GitProcessError, Process, Log, Reader EntryPoint, Files, NameIdGen, State Artifacts, Error JuvixError, HighlightBuilder, Embed IO]
-
 --------------------------------------------------------------------------------
 -- Workflows from source
 --------------------------------------------------------------------------------

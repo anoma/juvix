@@ -130,22 +130,8 @@ convertNode md = rmap go
             Just BuiltinNatEq -> f (\info x y -> mkBuiltinApp info OpEq [x, y])
             _ -> node
 
-filterNatBuiltins :: Module -> Module
-filterNatBuiltins md =
-  let md' =
-        over
-          (moduleInfoTable . infoIdentifiers)
-          (HashMap.filter (isNotNatBuiltin . (^. identifierBuiltin)))
-          md
-   in pruneInfoTable md'
-  where
-    isNotNatBuiltin :: Maybe BuiltinFunction -> Bool
-    isNotNatBuiltin = \case
-      Just b -> not (isNatBuiltin b)
-      Nothing -> True
-
 natToPrimInt :: Module -> Module
-natToPrimInt md = filterNatBuiltins $ mapAllNodes (convertNode md') md'
+natToPrimInt md = mapAllNodes (convertNode md') md'
   where
     md' =
       case md ^. moduleInfoTable . infoLiteralIntToNat of

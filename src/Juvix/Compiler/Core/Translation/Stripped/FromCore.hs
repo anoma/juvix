@@ -1,7 +1,7 @@
 module Juvix.Compiler.Core.Translation.Stripped.FromCore (fromCore) where
 
 import Data.HashMap.Strict qualified as HashMap
-import Juvix.Compiler.Core hiding (unsupported)
+import Juvix.Compiler.Core
 import Juvix.Compiler.Core.Data.Stripped.InfoTable qualified as Stripped
 import Juvix.Compiler.Core.Extra.Stripped.Base qualified as Stripped
 import Juvix.Compiler.Core.Info.LocationInfo

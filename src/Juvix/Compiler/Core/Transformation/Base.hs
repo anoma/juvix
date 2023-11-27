@@ -56,7 +56,7 @@ mapT f = over (moduleInfoTable . identContext) (HashMap.mapWithKey f)
 mapT' :: (Symbol -> Node -> Sem (InfoTableBuilder ': r) Node) -> Module -> Sem r Module
 mapT' f m =
   fmap fst $
-    runInfoTableBuilder m $ -- TODO: this is wrong
+    runInfoTableBuilder m $
       mapM_
         (\(k, v) -> f k v >>= registerIdentNode k)
         (HashMap.toList (m ^. moduleInfoTable . identContext))
