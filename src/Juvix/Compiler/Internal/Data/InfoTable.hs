@@ -256,18 +256,7 @@ lookupAxiom :: (Member (Reader InfoTable) r) => Name -> Sem r AxiomInfo
 lookupAxiom f = HashMap.lookupDefault impossible f <$> asks (^. infoAxioms)
 
 lookupInductiveType :: (Member (Reader InfoTable) r) => Name -> Sem r Expression
-lookupInductiveType v = do
-  info <- lookupInductive v
-  let ps = info ^. inductiveInfoParameters
-  return $
-    foldr
-      (\_ k -> uni --> k)
-      (smallUniverseE (getLoc v))
-      ps
-  where
-    uni = smallUniverseE (getLoc v)
-
--- lookupInductiveType v = fullInductiveType <$> lookupInductive v
+lookupInductiveType v = fullInductiveType <$> lookupInductive v
 
 lookupConstructorType :: (Member (Reader InfoTable) r) => ConstrName -> Sem r Expression
 lookupConstructorType = fmap constructorType . lookupConstructor

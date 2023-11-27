@@ -14,7 +14,6 @@ import Data.Text qualified as Text
 import Juvix.Compiler.Backend.Markdown.Data.Types (Mk (..))
 import Juvix.Compiler.Backend.Markdown.Data.Types qualified as MK
 import Juvix.Compiler.Backend.Markdown.Error
-import Juvix.Compiler.Concrete.Data.Highlight.Input (HighlightBuilder, ignoreHighlightBuilder)
 import Juvix.Compiler.Concrete.Extra (takeWhile1P)
 import Juvix.Compiler.Concrete.Extra qualified as P
 import Juvix.Compiler.Concrete.Language
@@ -25,6 +24,7 @@ import Juvix.Compiler.Concrete.Translation.FromSource.Lexer hiding
 import Juvix.Compiler.Concrete.Translation.FromSource.ParserResultBuilder
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Compiler.Pipeline.Loader.PathResolver.Base
+import Juvix.Compiler.Pipeline.Loader.PathResolver.Paths
 import Juvix.Data.Yaml
 import Juvix.Extra.Paths
 import Juvix.Extra.Strings qualified as Str
@@ -132,7 +132,7 @@ runReplInputParser fileName input = do
     Right r -> return r
 
 runModuleParser ::
-  (Members '[Error ParserError, Files, PathResolver, NameIdGen, InfoTableBuilder] r) =>
+  (Members '[Reader EntryPoint, ParserResultBuilder, Error ParserError, Files, PathResolver, NameIdGen] r) =>
   Path Abs File ->
   Text ->
   Sem r (Either ParserError (Module 'Parsed 'ModuleTop))
@@ -156,7 +156,7 @@ runModuleParser fileName input
         Right r -> return $ Right r
 
 runMarkdownModuleParser ::
-  (Members '[Files, PathResolver, NameIdGen, InfoTableBuilder] r) =>
+  (Members '[Reader EntryPoint, ParserResultBuilder, Files, PathResolver, NameIdGen] r) =>
   Path Abs File ->
   Mk ->
   Sem r (Either ParserError (Module 'Parsed 'ModuleTop))
@@ -188,7 +188,7 @@ runMarkdownModuleParser fpath mk =
                     }
               )
               $ res ^. mdModuleBuilder
-      registerModule m $> m
+      return m
   where
     getInitPos :: Interval -> P.SourcePos
     getInitPos i =
@@ -234,14 +234,14 @@ runMarkdownModuleParser fpath mk =
         Right m -> return m
 
     parseFirstBlock ::
-      (Members '[Error ParserError, Files, InfoTableBuilder, NameIdGen, PathResolver] r') =>
+      (Members '[Reader EntryPoint, ParserResultBuilder, Error ParserError, Files, NameIdGen, PathResolver] r') =>
       MK.JuvixCodeBlock ->
       Sem r' (Module 'Parsed 'ModuleTop)
     parseFirstBlock x = parseHelper topMarkdownModuleDef x
 
     parseRestBlocks ::
       forall r'.
-      (Members '[Error ParserError, Input (Maybe MK.JuvixCodeBlock), State MdModuleBuilder, Files, PathResolver, NameIdGen, InfoTableBuilder] r') =>
+      (Members '[Reader EntryPoint, ParserResultBuilder, Error ParserError, Input (Maybe MK.JuvixCodeBlock), State MdModuleBuilder, Files, PathResolver, NameIdGen] r') =>
       Sem r' ()
     parseRestBlocks = whenJustM Input.input $ \x -> do
       stmts <- parseHelper parseTopStatements x
@@ -387,7 +387,7 @@ juvixCodeBlockParser = do
 -- Keep it. Intended to be used later for processing Markdown inside TextBlocks
 -- or (Judoc) comments.
 commanMarkParser ::
-  (Members '[Error ParserError, Files, NameIdGen, InfoTableBuilder, PathResolver] r) =>
+  (Members '[Reader EntryPoint, ParserResultBuilder, Error ParserError, Files, NameIdGen, PathResolver] r) =>
   Path Abs File ->
   Text ->
   Sem r (Either ParserError (Module 'Parsed 'ModuleTop))
@@ -398,7 +398,7 @@ commanMarkParser fileName input = do
     Left r -> return . Left . ErrCommonmark . CommonmarkError $ r
 
 topMarkdownModuleDef ::
-  (Members '[Error ParserError, Files, PathResolver, InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
+  (Members '[Reader EntryPoint, ParserResultBuilder, Error ParserError, Files, PathResolver, PragmasStash, JudocStash, NameIdGen] r) =>
   ParsecS r (Module 'Parsed 'ModuleTop)
 topMarkdownModuleDef = do
   optional_ stashJudoc
@@ -407,7 +407,7 @@ topMarkdownModuleDef = do
 
 parseTopStatements ::
   forall r.
-  (Members '[Error ParserError, Files, PathResolver, InfoTableBuilder, PragmasStash, JudocStash, NameIdGen] r) =>
+  (Members '[Reader EntryPoint, ParserResultBuilder, Error ParserError, Files, PathResolver, PragmasStash, JudocStash, NameIdGen] r) =>
   ParsecS r [Statement 'Parsed]
 parseTopStatements = top $ P.sepEndBy statement semicolon
 

@@ -35,22 +35,22 @@ import Juvix.Prelude
 runIOEither :: forall a. EntryPoint -> Sem PipelineEff a -> IO (Either JuvixError (ResolverState, (a, Store.ModuleTable)))
 runIOEither entry = fmap snd . runIOEitherHelper entry
 
-runIOEither' :: forall a. LockMode -> EntryPoint -> Sem PipelineEff a -> IO (Either JuvixError (ResolverState, a))
+runIOEither' :: forall a. LockMode -> EntryPoint -> Sem PipelineEff a -> IO (Either JuvixError (ResolverState, (a, Store.ModuleTable)))
 runIOEither' lockMode entry = fmap snd . runIOEitherHelper' lockMode entry
 
 runIOEitherTermination :: forall a. EntryPoint -> Sem (Termination ': PipelineEff) a -> IO (Either JuvixError (ResolverState, (a, Store.ModuleTable)))
 runIOEitherTermination entry = fmap snd . runIOEitherHelper entry . evalTermination iniTerminationState
 
-runIOEitherTermination' :: forall a. LockMode -> EntryPoint -> Sem (Termination ': PipelineEff) a -> IO (Either JuvixError (ResolverState, a))
+runIOEitherTermination' :: forall a. LockMode -> EntryPoint -> Sem (Termination ': PipelineEff) a -> IO (Either JuvixError (ResolverState, (a, Store.ModuleTable)))
 runIOEitherTermination' lockMode entry = fmap snd . runIOEitherHelper' lockMode entry . evalTermination iniTerminationState
 
 runPipelineHighlight :: forall a. EntryPoint -> Sem PipelineEff a -> IO HighlightInput
 runPipelineHighlight entry = fmap fst . runIOEitherHelper entry
 
-runIOEitherHelper :: forall a. EntryPoint -> Sem PipelineEff a -> IO (HighlightInput, (Either JuvixError (ResolverState, a)))
+runIOEitherHelper :: forall a. EntryPoint -> Sem PipelineEff a -> IO (HighlightInput, (Either JuvixError (ResolverState, (a, Store.ModuleTable))))
 runIOEitherHelper = runIOEitherHelper' LockModePermissive
 
-runIOEitherHelper' :: forall a. LockMode -> EntryPoint -> Sem PipelineEff a -> IO (HighlightInput, (Either JuvixError (ResolverState, a)))
+runIOEitherHelper' :: forall a. LockMode -> EntryPoint -> Sem PipelineEff a -> IO (HighlightInput, (Either JuvixError (ResolverState, (a, Store.ModuleTable))))
 runIOEitherHelper' lockMode entry a = do
   let hasInternet = not (entry ^. entryPointOffline)
       runPathResolver'
@@ -63,8 +63,8 @@ runIOEitherHelper' lockMode entry a = do
     . runHighlightBuilder
     . runJuvixError
     . runFilesIO
-    . runReader entry
     . runTaggedLock lockMode
+    . runReader entry
     . runLogIO
     . runProcessIO
     . mapError (JuvixError @GitProcessError)
@@ -80,7 +80,7 @@ mainIsPackageFile entry = case entry ^. entryPointModulePath of
   Just p -> p == mkPackagePath (entry ^. entryPointResolverRoot)
   Nothing -> False
 
-runIOLockMode :: LockMode -> GenericOptions -> EntryPoint -> Sem PipelineEff a -> IO (ResolverState, a)
+runIOLockMode :: LockMode -> GenericOptions -> EntryPoint -> Sem PipelineEff a -> IO (ResolverState, (a, Store.ModuleTable))
 runIOLockMode lockMode opts entry = runIOEither' lockMode entry >=> mayThrow
   where
     mayThrow :: Either JuvixError r -> IO r
@@ -88,7 +88,7 @@ runIOLockMode lockMode opts entry = runIOEither' lockMode entry >=> mayThrow
       Left err -> runM . runReader opts $ printErrorAnsiSafe err >> embed exitFailure
       Right r -> return r
 
-runIO :: GenericOptions -> EntryPoint -> Sem PipelineEff a -> IO (ResolverState, a)
+runIO :: GenericOptions -> EntryPoint -> Sem PipelineEff a -> IO (ResolverState, (a, Store.ModuleTable))
 runIO opts entry = runIOEither entry >=> mayThrow
   where
     mayThrow :: Either JuvixError r -> IO r
@@ -96,7 +96,7 @@ runIO opts entry = runIOEither entry >=> mayThrow
       Left err -> runM . runReader opts $ printErrorAnsiSafe err >> embed exitFailure
       Right r -> return r
 
-runIOExclusive :: EntryPoint -> Sem PipelineEff a -> IO (ResolverState, a)
+runIOExclusive :: EntryPoint -> Sem PipelineEff a -> IO (ResolverState, (a, Store.ModuleTable))
 runIOExclusive = runIOLockMode LockModeExclusive defaultGenericOptions
 
 corePipelineIO' :: EntryPoint -> IO Artifacts
@@ -209,7 +209,7 @@ corePipelineIOEither' lockMode entry = do
           _artifactTypes = mempty,
           _artifactTerminationState = iniTerminationState,
           _artifactResolver = iniResolverState,
-          _artifactNameIdState = genNameIdState defaultModuleId, -- TODO: module id (this is fine for REPL?)
+          _artifactNameIdState = genNameIdState defaultModuleId,
           _artifactFunctions = mempty,
           _artifactCoreModule = Core.emptyModule,
           _artifactScopeTable = mempty,

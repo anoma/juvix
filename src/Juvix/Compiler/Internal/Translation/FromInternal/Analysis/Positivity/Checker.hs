@@ -124,7 +124,7 @@ checkStrictlyPositiveOccurrences indInfo ctorName name recLimit ref =
           IdenVar name'
             | not inside -> return ()
             | name == name' -> strictlyPositivityError expr
-            | name' `elem` ty ^.. inductiveParameters . each . inductiveParamName -> modify (HashSet.insert name')
+            | name' `elem` indInfo ^.. inductiveInfoParameters . each . inductiveParamName -> modify (HashSet.insert name')
             | otherwise -> return ()
           _ -> return ()
 
@@ -145,8 +145,8 @@ checkStrictlyPositiveOccurrences indInfo ctorName name recLimit ref =
               helperInductiveApp indInfo' (zip paramsTy' (toList args))
             _ -> return ()
 
-        helperInductiveApp :: InductiveDef -> [(InductiveParameter, Expression)] -> Sem r ()
-        helperInductiveApp indType' = \case
+        helperInductiveApp :: InductiveInfo -> [(InductiveParameter, Expression)] -> Sem r ()
+        helperInductiveApp indInfo' = \case
           (InductiveParameter pName' _ty', tyArg) : ps -> do
             -- TODO handle _ty'
             negParms :: NegativeTypeParameters <- get

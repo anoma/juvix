@@ -1068,7 +1068,8 @@ checkTopModule m@Module {..} = checkedModule
                 _moduleKw,
                 _moduleInductive,
                 _moduleKwEnd,
-                _moduleId
+                _moduleId,
+                _moduleMarkdownInfo
               }
           smd =
             ScopedModule

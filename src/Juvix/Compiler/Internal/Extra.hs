@@ -31,10 +31,10 @@ constructorReturnType info =
 
 fullInductiveType :: InductiveInfo -> Expression
 fullInductiveType info =
-  let ps = info ^. inductiveInfoDef . inductiveParameters
+  let ps = info ^. inductiveInfoParameters
    in foldr
         (\p k -> p ^. inductiveParamType --> k)
-        (info ^. inductiveInfoDef . inductiveType)
+        (info ^. inductiveInfoType)
         ps
 
 constructorType :: ConstructorInfo -> Expression

@@ -13,8 +13,9 @@ where
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Concrete.Data.Highlight.Input
 import Juvix.Compiler.Internal.Language
-import Juvix.Compiler.Internal.Translation.FromConcrete.Data.Context
+import Juvix.Compiler.Internal.Translation.FromConcrete.Data.Context as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking qualified as ArityChecking
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Data.Context
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.CheckerNew qualified as New
@@ -118,39 +119,39 @@ typeChecking a = do
 
 typeCheckingNew ::
   forall r.
-  (Members '[HighlightBuilder, Error JuvixError, Builtins, NameIdGen] r) =>
+  (Members '[Reader EntryPoint, Error JuvixError, NameIdGen, Reader ModuleTable] r) =>
   Sem (Termination ': r) InternalResult ->
   Sem r InternalTypedResult
 typeCheckingNew a = do
-  (termin, (res, table, (normalized, (idens, (funs, r))))) <- runTermination iniTerminationState $ do
-    res :: InternalResult <- a
-    let table :: InfoTable
-        table = buildTable (res ^. Internal.resultModules)
-
-        entryPoint :: EntryPoint
-        entryPoint = res ^. Internal.internalResultEntryPoint
-    fmap (res,table,)
+  (termin, (res, (normalized, (idens, (funs, r))))) <- runTermination iniTerminationState $ do
+    res <- a
+    itab <- getInternalModuleTable <$> ask
+    let md :: InternalModule
+        md = res ^. Internal.resultInternalModule
+        table :: InfoTable
+        table = computeCombinedInfoTable (insertInternalModule itab md)
+    fmap (res,)
       . runOutputList
-      . runReader entryPoint
       . runState (mempty :: TypesTable)
       . runState (mempty :: FunctionsTable)
       . runReader table
       . mapError (JuvixError @TypeCheckerError)
-      . evalCacheEmpty New.checkModuleNoCache
-      $ checkTable >> mapM New.checkModule (res ^. Internal.resultModules)
-  let ariRes :: InternalArityResult
+      $ checkTable >> New.checkModule (res ^. Internal.resultModule)
+  let md = computeInternalModule idens funs r
+      ariRes :: InternalArityResult
       ariRes =
         InternalArityResult
-          { _resultInternalResult = res,
-            _resultModules = res ^. Internal.resultModules
+          { _resultInternal = res,
+            _resultModule = res ^. Internal.resultModule,
+            _resultInternalModule = md
           }
   return
     InternalTypedResult
-      { _resultInternalArityResult = ariRes,
-        _resultModules = r,
+      { _resultInternal = ariRes,
+        _resultModule = r,
+        _resultInternalModule = md,
         _resultTermination = termin,
         _resultNormalized = HashMap.fromList [(e ^. exampleId, e ^. exampleExpression) | e <- normalized],
         _resultIdenTypes = idens,
-        _resultFunctions = funs,
-        _resultInfoTable = table
+        _resultFunctions = funs
       }
