@@ -123,7 +123,7 @@ instance MK.ToPlainText Mk where
 builder :: Mk -> [Text]
 builder = \case
   MkConcat a b -> builder a <> builder b
-  MkTextBlock t -> [trimText (t ^. textBlock) <> nl]
+  MkTextBlock t -> [t ^. textBlock]
   MkJuvixCodeBlock j -> [textJuvixCodeBlock j]
   MkNull -> mempty
 
@@ -209,7 +209,7 @@ processCodeBlock info t loc =
             _juvixCodeBlockInterval = loc
           }
     _ ->
-      let b = "```" <> info <> nl <> t <> "```"
+      let b = "```" <> info <> t <> "```"
        in MkTextBlock TextBlock {_textBlock = b, _textBlockInterval = loc}
 
 instance-- (MK.IsInline TextBlock) =>

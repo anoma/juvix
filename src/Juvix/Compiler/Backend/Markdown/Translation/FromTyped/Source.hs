@@ -146,13 +146,16 @@ go = do
                       Html.preEscapedText $
                         Text.intercalate "\n\n" $
                           map (toStrict . Html.renderHtml) htmlStatements
+
           let _processingStateMk =
                 if j ^. juvixCodeBlockOptions . mkJuvixBlockOptionsHide
                   then MkNull
                   else
                     MkTextBlock
                       TextBlock
-                        { _textBlock = resHtml,
+                        { _textBlock =
+                            Text.replace "\n" "<br/>" $
+                              resHtml,
                           _textBlockInterval = j ^. juvixCodeBlockInterval
                         }
           let newState =
