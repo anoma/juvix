@@ -14,7 +14,7 @@ runCommand opts@EvalOptions {..} = do
         run $
           runReader (project gopts) $
             runError @JuvixError $
-              (Core.toEval' _coreResultModule :: Sem '[Error JuvixError, Reader Core.CoreOptions] Core.Module)
+              (Core.toStored' _coreResultModule :: Sem '[Error JuvixError, Reader Core.CoreOptions] Core.Module)
   tab <- Core.computeCombinedInfoTable <$> getRight r
   let mevalNode =
         if

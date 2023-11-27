@@ -31,7 +31,7 @@ writeCoreFile :: (Members '[Embed IO, App] r) => Compile.PipelineArg -> Sem r ()
 writeCoreFile pa@Compile.PipelineArg {..} = do
   entryPoint <- Compile.getEntry pa
   coreFile <- Compile.outputFile _pipelineArgOptions _pipelineArgFile
-  r <- runReader entryPoint $ runError @JuvixError $ Core.toEval _pipelineArgModule
+  r <- runReader entryPoint $ runError @JuvixError $ Core.toStored _pipelineArgModule
   case r of
     Left e -> exitJuvixError e
     Right md ->
