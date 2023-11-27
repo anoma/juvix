@@ -107,3 +107,9 @@ lookupInfo f = do
 
 lookupFixity :: (Members '[InfoTableBuilder, Reader InfoTable] r) => S.NameId -> Sem r FixityDef
 lookupFixity uid = lookupInfo (HashMap.lookup uid . (^. infoFixities))
+
+getPrecedenceGraph :: (Members '[InfoTableBuilder, Reader InfoTable] r) => Sem r PrecedenceGraph
+getPrecedenceGraph = do
+  tab <- ask
+  tab' <- getInfoTable
+  return $ combinePrecedenceGraphs (tab ^. infoPrecedenceGraph) (tab' ^. infoPrecedenceGraph)

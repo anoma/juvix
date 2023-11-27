@@ -770,13 +770,12 @@ resolveOperatorSyntaxDef ::
 resolveOperatorSyntaxDef s@OperatorSyntaxDef {..} = do
   checkNotDefined
   sym <- checkFixitySymbol _opFixity
-  tab <- getInfoTable
-  let fx = fromJust (HashMap.lookup (sym ^. S.nameId) (tab ^. infoFixities)) ^. fixityDefFixity
-      sf =
+  fx <- lookupFixity (sym ^. S.nameId)
+  let sf =
         SymbolOperator
           { _symbolOperatorUsed = False,
             _symbolOperatorDef = s,
-            _symbolOperatorFixity = fx
+            _symbolOperatorFixity = fx ^. fixityDefFixity
           }
   modify (over scoperSyntaxOperators (over scoperOperators (HashMap.insert _opSymbol sf)))
   where
@@ -2523,9 +2522,9 @@ checkPrecedences ::
   [S.Name] ->
   Sem r ()
 checkPrecedences opers = do
-  tab <- getInfoTable
+  graph <- getPrecedenceGraph
   let fids = mapMaybe (^. fixityId) $ mapMaybe (^. S.nameFixity) opers
-      deps = createDependencyInfo (tab ^. infoPrecedenceGraph) mempty
+      deps = createDependencyInfo graph mempty
   mapM_ (uncurry (checkPath deps)) $
     [(fid1, fid2) | fid1 <- fids, fid2 <- fids, fid1 /= fid2]
   where

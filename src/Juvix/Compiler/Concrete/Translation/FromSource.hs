@@ -1620,8 +1620,8 @@ getModuleId path = do
     ModuleId
       { _moduleIdPath =
           case sing :: SModuleIsTop t of
-            SModuleLocal -> show path
-            SModuleTop -> show path,
+            SModuleLocal -> prettyText path
+            SModuleTop -> prettyText path,
         _moduleIdPackage = p ^. packageName,
         _moduleIdPackageVersion = show (p ^. packageVersion)
       }

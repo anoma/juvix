@@ -74,7 +74,7 @@ toConcrete t p = run . runReader l $ do
   let _modulePath = mkTopModulePath (packageSymbol :| [])
       _moduleId =
         ModuleId
-          { _moduleIdPath = show (p ^. packageFile),
+          { _moduleIdPath = show $ pretty (p ^. packageFile),
             _moduleIdPackage = p ^. packageName,
             _moduleIdPackageVersion = show (p ^. packageVersion)
           }

@@ -1,5 +1,7 @@
 module Juvix.Compiler.Store.Scoped.Data.InfoTable where
 
+import Data.HashMap.Strict qualified as HashMap
+import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Language
 import Juvix.Extra.Serialize
@@ -7,9 +9,11 @@ import Juvix.Prelude
 
 type DocTable = HashMap NameId (Judoc 'Scoped)
 
+type PrecedenceGraph = HashMap S.NameId (HashSet S.NameId)
+
 data InfoTable = InfoTable
   { _infoFixities :: HashMap S.NameId FixityDef,
-    _infoPrecedenceGraph :: HashMap S.NameId (HashSet S.NameId),
+    _infoPrecedenceGraph :: PrecedenceGraph,
     _infoHighlightDoc :: DocTable,
     _infoHighlightNames :: [S.AName],
     _infoConstructorSigs :: HashMap NameId (RecordNameSignature 'Scoped),
@@ -32,7 +36,7 @@ instance Semigroup InfoTable where
   tab1 <> tab2 =
     InfoTable
       { _infoFixities = tab1 ^. infoFixities <> tab2 ^. infoFixities,
-        _infoPrecedenceGraph = tab1 ^. infoPrecedenceGraph <> tab2 ^. infoPrecedenceGraph, -- TODO: compute precedence graphs
+        _infoPrecedenceGraph = combinePrecedenceGraphs (tab1 ^. infoPrecedenceGraph) (tab2 ^. infoPrecedenceGraph),
         _infoHighlightDoc = tab1 ^. infoHighlightDoc <> tab2 ^. infoHighlightDoc,
         _infoHighlightNames = tab1 ^. infoHighlightNames <> tab2 ^. infoHighlightNames,
         _infoConstructorSigs = tab1 ^. infoConstructorSigs <> tab2 ^. infoConstructorSigs,
@@ -63,3 +67,7 @@ instance Monoid InfoTable where
         _infoConstructors = mempty,
         _infoAxioms = mempty
       }
+
+combinePrecedenceGraphs :: PrecedenceGraph -> PrecedenceGraph -> PrecedenceGraph
+combinePrecedenceGraphs g1 g2 =
+  HashMap.unionWith HashSet.union g1 g2

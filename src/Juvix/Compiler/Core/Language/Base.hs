@@ -13,6 +13,7 @@ import Juvix.Compiler.Core.Info (Info, IsInfo, Key)
 import Juvix.Compiler.Core.Language.Builtins
 import Juvix.Extra.Serialize
 import Juvix.Prelude
+import Prettyprinter
 
 type Location = Interval
 
@@ -27,8 +28,11 @@ instance Serialize Symbol
 
 instance Hashable Symbol
 
+instance Pretty Symbol where
+  pretty Symbol {..} = pretty _symbolId <> "@" <> pretty _symbolModuleId
+
 instance Show Symbol where
-  show Symbol {..} = show _symbolId <> "@" <> show _symbolModuleId
+  show = show . pretty
 
 uniqueName :: Text -> Symbol -> Text
 uniqueName txt sym = txt <> "_" <> show sym
