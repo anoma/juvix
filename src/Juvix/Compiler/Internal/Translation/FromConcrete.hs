@@ -778,10 +778,7 @@ goExpression = \case
         cls <- goArgs appargs
         let args :: [Internal.Name] = appargs ^.. each . namedArgumentNewFunDef . signName . to goSymbol
             -- changes the kind from Variable to Function
-            updateKind :: Internal.Subs =
-              HashMap.fromList
-                [ (s, Internal.toExpression s') | s <- args, let s' = Internal.IdenFunction (set Internal.nameKind KNameFunction s)
-                ]
+            updateKind :: Internal.Subs = Internal.subsKind args KNameFunction
             napp' =
               Concrete.NamedApplication
                 { _namedAppName = napp ^. namedApplicationNewName,
@@ -841,10 +838,7 @@ goExpression = \case
     goDesugaredNamedApplication :: DesugaredNamedApplication -> Sem r Internal.Expression
     goDesugaredNamedApplication a = do
       let fun = goScopedIden (a ^. dnamedAppIdentifier)
-          updateKind :: Internal.Subs =
-            HashMap.fromList
-              [ (s, Internal.ExpressionIden s') | s <- a ^.. dnamedAppArgs . each . argName . to goSymbol, let s' = Internal.IdenFunction (set Internal.nameKind KNameFunction s)
-              ]
+          updateKind :: Internal.Subs = Internal.subsKind (a ^.. dnamedAppArgs . each . argName . to goSymbol) KNameFunction
           mkAppArg :: Arg -> Internal.ApplicationArg
           mkAppArg arg =
             Internal.ApplicationArg
