@@ -1,0 +1,47 @@
+module Juvix.Builtin.Nat.Base;
+
+import Juvix.Builtin.Fixity open;
+
+--- Inductive natural numbers. I.e. whole non-negative numbers.
+builtin nat
+type Nat :=
+  | zero
+  | suc Nat;
+
+syntax operator + additive;
+
+--- Addition for ;Nat;s.
+builtin nat-plus
++ : Nat → Nat → Nat
+  | zero b := b
+  | (suc a) b := suc (a + b);
+
+syntax operator * multiplicative;
+
+--- Multiplication for ;Nat;s.
+builtin nat-mul
+* : Nat → Nat → Nat
+  | zero _ := zero
+  | (suc a) b := b + a * b;
+
+--- Truncated subtraction for ;Nat;s.
+builtin nat-sub
+sub : Nat → Nat → Nat
+  | zero _ := zero
+  | n zero := n
+  | (suc n) (suc m) := sub n m;
+
+--- Division for ;Nat;s. Returns ;zero; if the first element is ;zero;.
+builtin nat-udiv
+terminating
+udiv : Nat → Nat → Nat
+  | zero _ := zero
+  | n m := suc (udiv (sub n m) m);
+
+--- Division for ;Nat;s.
+builtin nat-div
+div (n m : Nat) : Nat := udiv (sub (suc n) m) m;
+
+--- Modulo for ;Nat;s.
+builtin nat-mod
+mod (n m : Nat) : Nat := sub n (div n m * m);

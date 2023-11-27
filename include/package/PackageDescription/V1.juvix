@@ -1,6 +1,6 @@
 module PackageDescription.V1;
 
-import Stdlib.Prelude open;
+import Juvix.Builtin open;
 
 --- A ;Package; defines the configuration for a Juvix package
 type Package :=
@@ -67,6 +67,6 @@ type Dependency :=
 --- Constructs a GitHub dependency.
 github (org repo ref : String) : Dependency :=
   git
-    (org ++str "_" ++str repo)
-    ("https://github.com/" ++str org ++str "/" ++str repo)
+    (stringConcat org (stringConcat "_" repo))
+    (stringConcat "https://github.com/" (stringConcat org  (stringConcat "/" repo)))
     ref;

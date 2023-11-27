@@ -1,0 +1,7 @@
+module Juvix.Builtin.Bool;
+
+--- Inductive definition of booleans.
+builtin bool
+type Bool :=
+  | true
+  | false;

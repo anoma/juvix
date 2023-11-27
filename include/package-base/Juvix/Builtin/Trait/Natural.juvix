@@ -1,0 +1,19 @@
+module Juvix.Builtin.Trait.Natural;
+
+import Juvix.Builtin.Nat.Base open using {Nat};
+import Juvix.Builtin.Fixity open;
+
+trait
+type Natural A :=
+  mkNatural {
+    syntax operator + additive;
+    + : A -> A -> A;
+    syntax operator * multiplicative;
+    * : A -> A -> A;
+    div : A -> A -> A;
+    mod : A -> A -> A;
+    builtin from-nat
+    fromNat : Nat -> A
+  };
+
+open Natural public;

@@ -1,7 +1,16 @@
 module Juvix.Builtin.Nat;
 
---- Inductive natural numbers. I.e. whole non-negative numbers.
-builtin nat
-type Nat :=
-  | zero
-  | suc Nat;
+import Juvix.Builtin.Trait.Natural open public;
+import Juvix.Builtin.Nat.Base open hiding {+; *; div; mod} public;
+import Juvix.Builtin.Nat.Base as Nat;
+
+{-# specialize: true, inline: case #-}
+instance
+naturalNatI : Natural Nat :=
+  mkNatural@{
+    + := (Nat.+);
+    * := (Nat.*);
+    div := Nat.div;
+    mod := Nat.mod;
+    fromNat (x : Nat) : Nat := x
+  };

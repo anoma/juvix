@@ -15,6 +15,7 @@ import Path qualified
 import Path.IO hiding (listDirRel, walkDirRel)
 import Path.Internal
 import System.FilePath qualified as FilePath
+import Data.List qualified as L
 
 data FileOrDir
 
@@ -140,3 +141,8 @@ splitDrive (Path fp) =
 -- Remove when we upgrade to path-0.9.5
 dropDrive :: Path Abs t -> Maybe (Path Rel t)
 dropDrive = snd . splitDrive
+
+isPathPrefix :: Path b Dir -> Path b t -> Bool
+isPathPrefix p1 p2 = case L.stripPrefix (toFilePath p1) (toFilePath p2) of
+  Nothing -> False
+  Just {} -> True

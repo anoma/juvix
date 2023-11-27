@@ -30,6 +30,7 @@ import Juvix.Data.SHA256 qualified as SHA256
 import Juvix.Extra.Paths
 import Juvix.Extra.Stdlib (ensureStdlib)
 import Juvix.Prelude
+import Juvix.Extra.PackageFiles
 
 mkPackage ::
   forall r.
@@ -58,9 +59,10 @@ mkPackageInfo mpackageEntry _packageRoot pkg = do
   ensureStdlib _packageRoot buildDir deps
   files :: [Path Rel File] <-
     map (fromJust . stripProperPrefix _packageRoot) <$> walkDirRelAccum juvixAccum _packageRoot []
+  packageBaseAbsDir <- globalPackageBaseRoot
   let _packageRelativeFiles = HashSet.fromList files
       _packageAvailableRoots =
-        HashSet.fromList (_packageRoot : depsPaths)
+        HashSet.fromList (packageBaseAbsDir : _packageRoot : depsPaths)
   return PackageInfo {..}
   where
     juvixAccum :: Path Abs Dir -> [Path Rel Dir] -> [Path Rel File] -> [Path Abs File] -> Sem r ([Path Abs File], Recurse Rel)
@@ -162,12 +164,32 @@ resolveDependency i = case i ^. packageDepdendencyInfoDependency of
               _dependencyErrorPackageFile = i ^. packageDependencyInfoPackageFile
             }
 
+registerPackageBase ::
+  forall r.
+  (Members '[TaggedLock, State ResolverState, Reader ResolverEnv, Files] r) => Sem r ()
+registerPackageBase = do
+  packageBaseAbsDir <- globalPackageBaseRoot
+  runReader packageBaseAbsDir updatePackageBaseFiles
+  packageBaseRelFiles <- relFiles packageBaseAbsDir
+  let pkgInfo = PackageInfo {_packageRoot=packageBaseAbsDir,
+                             _packageRelativeFiles=packageBaseRelFiles,
+                             _packagePackage=packageBasePackage,
+                             _packageAvailableRoots=HashSet.singleton packageBaseAbsDir}
+      dep = LockfileDependency {_lockfileDependencyDependency=mkPathDependency (toFilePath packageBaseAbsDir),
+                                _lockfileDependencyDependencies=[]}
+      cacheItem = ResolverCacheItem {_resolverCacheItemPackage=pkgInfo,
+                                      _resolverCacheItemDependency=dep}
+  setResolverCacheItem packageBaseAbsDir (Just cacheItem)
+  forM_ (pkgInfo ^. packageRelativeFiles) $ \f -> do
+    modify' (over resolverFiles (HashMap.insertWith (<>) f (pure pkgInfo)))
+
 registerDependencies' ::
   forall r.
   (Members '[TaggedLock, Reader EntryPoint, State ResolverState, Reader ResolverEnv, Files, Error JuvixError, Error DependencyError, GitClone, EvalFileEff] r) =>
   DependenciesConfig ->
   Sem r ()
 registerDependencies' conf = do
+  registerPackageBase
   e <- ask @EntryPoint
   isGlobal <- asks (^. entryPointPackageGlobal)
   if
@@ -294,6 +316,7 @@ addDependency' pkg me resolvedDependency = do
 currentPackage :: (Members '[Files, State ResolverState, Reader ResolverEnv] r) => Sem r PackageInfo
 currentPackage = do
   curRoot <- asks (^. envRoot)
+  -- traceShowM curRoot
   (^. resolverCacheItemPackage) . fromJust <$> getResolverCacheItem curRoot
 
 -- | Returns the root of the package where the module belongs and the path to
@@ -341,17 +364,15 @@ isModuleOrphan ::
   Sem r Bool
 isModuleOrphan topJuvixPath = do
   let actualPath = getLoc topJuvixPath ^. intervalFile
-
       possiblePaths :: Path Abs Dir -> [Path Abs Dir]
       possiblePaths p = p : toList (parents p)
-
   packageFileExists <- findFile' (possiblePaths (parent actualPath)) packageFilePath
-
   yamlFileExists <- findFile' (possiblePaths (parent actualPath)) juvixYamlFile
-
   pathPackageDescription <- globalPackageDescriptionRoot
-
-  return $ isNothing (packageFileExists <|> yamlFileExists) && not (pathPackageDescription `isProperPrefixOf` actualPath)
+  pathPackageBase <- globalPackageBaseRoot
+  return (isNothing (packageFileExists <|> yamlFileExists)
+          && not (pathPackageDescription `isProperPrefixOf` actualPath)
+          && not (pathPackageBase `isProperPrefixOf` actualPath))
 
 expectedPath' ::
   (Members '[Reader ResolverEnv, Files] r) =>

@@ -1,0 +1,8 @@
+module Juvix.Builtin;
+
+import Juvix.Builtin.Nat open public;
+import Juvix.Builtin.Trait.Natural open public;
+import Juvix.Builtin.String open public;
+import Juvix.Builtin.Bool open public;
+import Juvix.Builtin.Maybe open public;
+import Juvix.Builtin.List open public;
