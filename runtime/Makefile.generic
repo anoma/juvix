@@ -240,23 +240,23 @@ $(CLEXSOURCES) : $(BUILDDIR)%.c : %.lex
 
 $(CDEPENDS) : $(BUILDDIR)%.d : %.c
 	$(CC) $(CDEPFLAGS) -MM -MT $(patsubst %.c,$(BUILDDIR)%.o,$<) $< > $@
-	printf "\t$(CC) -c $(CFLAGS) -o $(patsubst %.c,$(BUILDDIR)%.o,$<) $<\n" >> $@
+	printf "\t\$$(CC) -c \$$(CFLAGS) -o $(patsubst %.c,$(BUILDDIR)%.o,$<) $<\n" >> $@
 
 $(CYLDEPENDS) : $(BUILDDIR)%.d : $(BUILDDIR)%.c
 	$(CC) $(CDEPFLAGS) -MM -MT $(patsubst %.c,%.o,$<) $< > $@
-	printf "\t$(CC) -c $(CFLAGS) -o $(patsubst %.c,%.o,$<) $<\n" >> $@
+	printf "\t\$$(CC) -c \$$(CFLAGS) -o $(patsubst %.c,%.o,$<) $<\n" >> $@
 
 $(CPPDEPENDS) : $(BUILDDIR)%.d : %.cpp
 	$(CXX) $(CXXDEPFLAGS) -MM -MT $(patsubst %.cpp,$(BUILDDIR)%.o,$<) $< > $@
-	printf "\t$(CXX) -c $(CXXFLAGS) -o $(patsubst %.cpp,$(BUILDDIR)%.o,$<) $<\n" >> $@
+	printf "\t\$$(CXX) -c \$$(CXXFLAGS) -o $(patsubst %.cpp,$(BUILDDIR)%.o,$<) $<\n" >> $@
 
 $(CXXDEPENDS) : $(BUILDDIR)%.d : %.cxx
 	$(CXX) $(CXXDEPFLAGS) -MM -MT $(patsubst %.cxx,$(BUILDDIR)%.o,$<) $< > $@
-	printf "\t$(CXX) -c $(CXXFLAGS) -o $(patsubst %.cxx,$(BUILDDIR)%.o,$<) $<\n" >> $@
+	printf "\t\$$(CXX) -c \$$(CXXFLAGS) -o $(patsubst %.cxx,$(BUILDDIR)%.o,$<) $<\n" >> $@
 
 $(CCDEPENDS) : $(BUILDDIR)%.d : %.cc
 	$(CXX) $(CXXDEPFLAGS) -MM -MT $(patsubst %.cc,$(BUILDDIR)%.o,$<) $< > $@
-	printf "\t$(CXX) -c $(CXXFLAGS) -o $(patsubst %.cc,$(BUILDDIR)%.o,$<) $<\n" >> $@
+	printf "\t\$$(CXX) -c \$$(CXXFLAGS) -o $(patsubst %.cc,$(BUILDDIR)%.o,$<) $<\n" >> $@
 
 $(CPROGRAMS) : % : $(ALLOBJECTS)
 	$(CCLD) -o $@ $@.o $(OBJECTS) $(CCLDFLAGS)
