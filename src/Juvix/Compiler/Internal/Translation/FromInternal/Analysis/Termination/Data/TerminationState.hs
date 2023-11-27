@@ -3,6 +3,7 @@ module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Dat
     TerminationState,
     iniTerminationState,
     addTerminating,
+    safeToNormalize,
     terminationTable,
     terminationFailedSet,
   )
@@ -13,9 +14,11 @@ import Juvix.Compiler.Internal.Language
 import Juvix.Prelude
 
 data IsTerminating
-  = -- | Has been checked or marked for termination.
-    TerminatingCheckedOrMarked
-  | -- | Has been checked for termination but failed.
+  = -- | Has been checked for termination
+    TerminatingChecked
+  | -- | Has failed termination checking but has been marked for termination
+    TerminatingFailedMarked
+  | -- | Has failed termination checking
     TerminatingFailed
 
 data TerminationState = TerminationState
@@ -35,12 +38,19 @@ iniTerminationState =
 addTerminating :: (Members '[State TerminationState] r) => FunctionName -> IsTerminating -> Sem r ()
 addTerminating f i = do
   modify' (set (iterminationTable . at f) (Just i))
-  when isFailed (modify' (over iterminationFailed (HashSet.insert f)))
-  where
-    isFailed :: Bool
-    isFailed = case i of
-      TerminatingFailed -> True
-      TerminatingCheckedOrMarked -> False
+  unless (passesTermination i) (modify' (over iterminationFailed (HashSet.insert f)))
+
+safeToNormalize :: IsTerminating -> Bool
+safeToNormalize = \case
+  TerminatingFailed -> False
+  TerminatingFailedMarked -> False
+  TerminatingChecked -> True
+
+passesTermination :: IsTerminating -> Bool
+passesTermination = \case
+  TerminatingFailed -> False
+  TerminatingFailedMarked -> True
+  TerminatingChecked -> True
 
 terminationTable :: SimpleGetter TerminationState (HashMap FunctionName IsTerminating)
 terminationTable = iterminationTable

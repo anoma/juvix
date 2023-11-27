@@ -111,9 +111,9 @@ prepathToAbsDir :: Path Abs Dir -> Prepath Dir -> IO (Path Abs Dir)
 prepathToAbsDir root = fmap absDir . prepathToFilePath root
 
 prepathToFilePath :: Path Abs Dir -> Prepath d -> IO FilePath
-prepathToFilePath root pre =
-  withCurrentDir root $
-    expandPrepath pre >>= System.canonicalizePath
+prepathToFilePath root pre = do
+  expandedPre <- expandPrepath pre
+  System.canonicalizePath (toFilePath root </> expandedPre)
 
 fromPreFileOrDir :: Path Abs Dir -> Prepath FileOrDir -> IO (Either (Path Abs File) (Path Abs Dir))
 fromPreFileOrDir cwd fp = do

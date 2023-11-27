@@ -198,6 +198,14 @@ jobs:
         run: |
           sed --version
 
+      - name: Install coreutils
+        run: |
+          brew install coreutils
+
+      - name: Test sha256sum (used by smoke)
+        run: |
+          sha256sum --version
+
       - name: Download and extract wasi-sysroot
         run: >
           curl

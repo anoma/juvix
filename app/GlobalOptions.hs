@@ -20,7 +20,8 @@ data GlobalOptions = GlobalOptions
     _globalNoCoverage :: Bool,
     _globalNoStdlib :: Bool,
     _globalUnrollLimit :: Int,
-    _globalOffline :: Bool
+    _globalOffline :: Bool,
+    _globalNewTypecheckingAlgorithm :: Bool
   }
   deriving stock (Eq, Show)
 
@@ -60,7 +61,8 @@ defaultGlobalOptions =
       _globalNoCoverage = False,
       _globalNoStdlib = False,
       _globalUnrollLimit = defaultUnrollLimit,
-      _globalOffline = False
+      _globalOffline = False,
+      _globalNewTypecheckingAlgorithm = False
     }
 
 -- | Get a parser for global flags which can be hidden or not depending on
@@ -71,11 +73,6 @@ parseGlobalFlags = do
     switch
       ( long "no-colors"
           <> help "Disable ANSI formatting"
-      )
-  _globalShowNameIds <-
-    switch
-      ( long "show-name-ids"
-          <> help "Show the unique number of each identifier when pretty printing"
       )
   _globalBuildDir <-
     optional
@@ -126,6 +123,16 @@ parseGlobalFlags = do
       ( long "offline"
           <> help "Disable access to network resources"
       )
+  _globalShowNameIds <-
+    switch
+      ( long "show-name-ids"
+          <> help "[DEV] Show the unique number of each identifier when pretty printing"
+      )
+  _globalNewTypecheckingAlgorithm <-
+    switch
+      ( long "new-typechecker"
+          <> help "[DEV] Use the new experimental typechecker"
+      )
   return GlobalOptions {..}
 
 parseBuildDir :: Mod OptionFields (Prepath Dir) -> Parser (AppPath Dir)
@@ -158,7 +165,8 @@ entryPointFromGlobalOptions root mainFile opts = do
         _entryPointUnrollLimit = opts ^. globalUnrollLimit,
         _entryPointGenericOptions = project opts,
         _entryPointBuildDir = maybe (def ^. entryPointBuildDir) (CustomBuildDir . Abs) mabsBuildDir,
-        _entryPointOffline = opts ^. globalOffline
+        _entryPointOffline = opts ^. globalOffline,
+        _entryPointNewTypeCheckingAlgorithm = opts ^. globalNewTypecheckingAlgorithm
       }
   where
     optBuildDir :: Maybe (Prepath Dir)

@@ -113,24 +113,22 @@ preInductiveDef ::
 preInductiveDef i = do
   sym <- freshSymbol
   let _inductiveName = i ^. Internal.inductiveName . nameText
-      params =
-        map
-          ( \p ->
-              ParameterInfo
-                { _paramName = p ^. Internal.inductiveParamName . nameText,
-                  _paramLocation = Just $ p ^. Internal.inductiveParamName . nameLoc,
-                  _paramIsImplicit = False,
-                  _paramKind = mkSmallUniv
-                }
-          )
-          (i ^. Internal.inductiveParameters)
-      info =
+  params' <- fromTopIndex $ forM (i ^. Internal.inductiveParameters) $ \p -> do
+    ty' <- goExpression (p ^. Internal.inductiveParamType)
+    return
+      ParameterInfo
+        { _paramName = p ^. Internal.inductiveParamName . nameText,
+          _paramLocation = Just $ getLoc p,
+          _paramIsImplicit = False,
+          _paramKind = ty'
+        }
+  let info =
         InductiveInfo
           { _inductiveLocation = Just $ i ^. Internal.inductiveName . nameLoc,
             _inductiveSymbol = sym,
             _inductiveKind = mkSmallUniv,
             _inductiveConstructors = [],
-            _inductiveParams = params,
+            _inductiveParams = params',
             _inductivePositive = i ^. Internal.inductivePositive,
             _inductiveBuiltin = BuiltinTypeInductive <$> i ^. Internal.inductiveBuiltin,
             _inductivePragmas = i ^. Internal.inductivePragmas,
@@ -361,7 +359,6 @@ goType ::
   Sem r Type
 goType ty = do
   normTy <- strongNormalizeHelper ty
-  -- traceM ("ty = " <> Internal.ppTrace ty <> ". Normalized = " <> Internal.ppTrace normTy)
   squashApps <$> goExpression normTy
 
 mkFunBody ::
@@ -952,7 +949,7 @@ goFunction (params, returnTypeExpr) = go params
                   _binderType = paramTy
                 }
         case param ^. Internal.paramName of
-          Nothing -> mkPi mempty paramBinder <$> local (over indexTableVarsNum (+ 1)) (go params')
+          Nothing -> mkPi mempty paramBinder <$> underBinders 1 (go params')
           Just vn -> mkPi mempty paramBinder <$> localAddName vn (go params')
       [] ->
         goType returnTypeExpr

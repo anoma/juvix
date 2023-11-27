@@ -3,6 +3,7 @@ module Main (main) where
 import Arity qualified
 import Asm qualified
 import BackendGeb qualified
+import BackendMarkdown qualified
 import Base
 import Compilation qualified
 import Core qualified
@@ -43,9 +44,9 @@ fastTests =
       Typecheck.allTests,
       Format.allTests,
       Formatter.allTests,
-      Package.allTests
+      Package.allTests,
+      BackendMarkdown.allTests
     ]
 
 main :: IO ()
-main = do
-  defaultMain (testGroup "Juvix tests" [fastTests, slowTests])
+main = defaultMain (testGroup "Juvix tests" [fastTests, slowTests])

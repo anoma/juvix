@@ -154,13 +154,20 @@ holes = leafExpressions . _ExpressionHole
 hasHoles :: (HasExpressions a) => a -> Bool
 hasHoles = has holes
 
-subsHoles :: forall a r. (HasExpressions a, Member NameIdGen r) => HashMap Hole Expression -> a -> Sem r a
+subsInstanceHoles :: forall r a. (HasExpressions a, Member NameIdGen r) => HashMap InstanceHole Expression -> a -> Sem r a
+subsInstanceHoles s = leafExpressions helper
+  where
+    helper :: Expression -> Sem r Expression
+    helper e = case e of
+      ExpressionInstanceHole h -> clone (fromMaybe e (s ^. at h))
+      _ -> return e
+
+subsHoles :: forall r a. (HasExpressions a, Member NameIdGen r) => HashMap Hole Expression -> a -> Sem r a
 subsHoles s = leafExpressions helper
   where
     helper :: Expression -> Sem r Expression
     helper e = case e of
       ExpressionHole h -> clone (fromMaybe e (s ^. at h))
-      ExpressionInstanceHole h -> clone (fromMaybe e (s ^. at h))
       _ -> return e
 
 instance HasExpressions Example where
@@ -285,7 +292,7 @@ inductiveTypeVarsAssoc def l
     vars :: [VarName]
     vars = def ^.. inductiveParameters . each . inductiveParamName
 
-substitutionApp :: forall r. (Member NameIdGen r) => (Maybe Name, Expression) -> Expression -> Sem r Expression
+substitutionApp :: forall r expr. (Member NameIdGen r, HasExpressions expr) => (Maybe Name, Expression) -> expr -> Sem r expr
 substitutionApp (mv, ty) = case mv of
   Nothing -> return
   Just v -> substitutionE (HashMap.singleton v ty)
@@ -293,7 +300,7 @@ substitutionApp (mv, ty) = case mv of
 localsToSubsE :: LocalVars -> Subs
 localsToSubsE l = ExpressionIden . IdenVar <$> l ^. localTyMap
 
-substitutionE :: forall r. (Member NameIdGen r) => Subs -> Expression -> Sem r Expression
+substitutionE :: forall r expr. (Member NameIdGen r, HasExpressions expr) => Subs -> expr -> Sem r expr
 substitutionE m = leafExpressions goLeaf
   where
     goLeaf :: Expression -> Sem r Expression
@@ -357,10 +364,20 @@ unfoldTypeAbsType t = case t of
 foldExplicitApplication :: Expression -> [Expression] -> Expression
 foldExplicitApplication f = foldApplication f . map (ApplicationArg Explicit)
 
+foldApplication' :: Expression -> NonEmpty ApplicationArg -> Application
+foldApplication' f (arg :| args) =
+  let ApplicationArg i a = arg
+   in go (Application f a i) args
+  where
+    go :: Application -> [ApplicationArg] -> Application
+    go acc = \case
+      [] -> acc
+      ApplicationArg i a : as -> go (Application (ExpressionApplication acc) a i) as
+
 foldApplication :: Expression -> [ApplicationArg] -> Expression
-foldApplication f args = case args of
-  [] -> f
-  ApplicationArg i a : as -> foldApplication (ExpressionApplication (Application f a i)) as
+foldApplication f args = case nonEmpty args of
+  Nothing -> f
+  Just args' -> ExpressionApplication (foldApplication' f args')
 
 unfoldApplication' :: Application -> (Expression, NonEmpty ApplicationArg)
 unfoldApplication' (Application l' r' i') = second (|: (ApplicationArg i' r')) (unfoldExpressionApp l')
@@ -554,6 +571,11 @@ infix 4 ==%
 (==%) :: (IsExpression a, IsExpression b) => a -> b -> HashSet Name -> Bool
 (==%) a b free = leftEq a b free || leftEq b a free
 
+infixl 9 @@?
+
+(@@?) :: (IsExpression a, IsExpression b) => a -> b -> IsImplicit -> Expression
+a @@? b = toExpression . Application (toExpression a) (toExpression b)
+
 infixl 9 @@
 
 (@@) :: (IsExpression a, IsExpression b) => a -> b -> Expression
@@ -579,6 +601,9 @@ genWildcard :: forall r'. (Members '[NameIdGen] r') => Interval -> IsImplicit ->
 genWildcard loc impl = do
   var <- varFromWildcard (Wildcard loc)
   return (PatternArg impl Nothing (PatternVariable var))
+
+freshInstanceHole :: (Members '[NameIdGen] r) => Interval -> Sem r InstanceHole
+freshInstanceHole l = mkInstanceHole l <$> freshNameId
 
 freshHole :: (Members '[NameIdGen] r) => Interval -> Sem r Hole
 freshHole l = mkHole l <$> freshNameId

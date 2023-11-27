@@ -293,6 +293,18 @@ juColor = Attr.class_ . toStr
       JuVar -> "ju-var"
       JuNumber -> "ju-number"
 
+juKindColor :: S.NameKind -> CssColor
+juKindColor = \case
+  S.KNameConstructor -> JuConstructor
+  S.KNameInductive -> JuInductive
+  S.KNameFunction -> JuFunction
+  S.KNameLocal -> JuVar
+  S.KNameAxiom -> JuAxiom
+  S.KNameLocalModule -> JuVar
+  S.KNameAlias -> JuVar
+  S.KNameTopModule -> JuVar
+  S.KNameFixity -> JuFixity
+
 putTag :: forall r. (Members '[Reader HtmlOptions] r) => Ann -> Html -> Sem r Html
 putTag ann x = case ann of
   AnnKind k -> return (tagKind k x)
@@ -331,18 +343,7 @@ putTag ann x = case ann of
 
     tagKind k =
       Html.span
-        ! juColor
-          ( case k of
-              S.KNameConstructor -> JuConstructor
-              S.KNameInductive -> JuInductive
-              S.KNameFunction -> JuFunction
-              S.KNameLocal -> JuVar
-              S.KNameAxiom -> JuAxiom
-              S.KNameLocalModule -> JuVar
-              S.KNameAlias -> JuVar
-              S.KNameTopModule -> JuVar
-              S.KNameFixity -> JuFixity
-          )
+        ! juColor (juKindColor k)
 
 nameIdAttr :: (Members '[Reader HtmlOptions] r) => S.NameId -> Sem r AttributeValue
 nameIdAttr nid = do

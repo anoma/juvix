@@ -25,6 +25,8 @@ import Juvix.Compiler.Pipeline.Lockfile
 import Juvix.Compiler.Pipeline.Package
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff
 import Juvix.Data.Effect.Git
+import Juvix.Data.Effect.TaggedLock
+import Juvix.Data.SHA256 qualified as SHA256
 import Juvix.Extra.Paths
 import Juvix.Extra.Stdlib (ensureStdlib)
 import Juvix.Prelude
@@ -43,7 +45,7 @@ mkPackage mpackageEntry _packageRoot = do
 
 mkPackageInfo ::
   forall r.
-  (Members '[Files, Error JuvixError, Reader ResolverEnv, Error DependencyError, GitClone] r) =>
+  (Members '[TaggedLock, Files, Error JuvixError, Reader ResolverEnv, Error DependencyError, GitClone] r) =>
   Maybe EntryPoint ->
   Path Abs Dir ->
   Package ->
@@ -65,7 +67,7 @@ mkPackageInfo mpackageEntry _packageRoot pkg = do
     juvixAccum cd _ files acc = return (newJuvixFiles <> acc, RecurseFilter (\hasJuvixPackage d -> not hasJuvixPackage && not (isHiddenDirectory d)))
       where
         newJuvixFiles :: [Path Abs File]
-        newJuvixFiles = [cd <//> f | f <- files, isJuvixFile f]
+        newJuvixFiles = [cd <//> f | f <- files, isJuvixFile f || isJuvixMarkdownFile f]
 
     pkgFile :: Path Abs File
     pkgFile = pkg ^. packageFile
@@ -162,7 +164,7 @@ resolveDependency i = case i ^. packageDepdendencyInfoDependency of
 
 registerDependencies' ::
   forall r.
-  (Members '[Reader EntryPoint, State ResolverState, Reader ResolverEnv, Files, Error JuvixError, Error DependencyError, GitClone, EvalFileEff] r) =>
+  (Members '[TaggedLock, Reader EntryPoint, State ResolverState, Reader ResolverEnv, Files, Error JuvixError, Error DependencyError, GitClone, EvalFileEff] r) =>
   DependenciesConfig ->
   Sem r ()
 registerDependencies' conf = do
@@ -174,19 +176,30 @@ registerDependencies' conf = do
           void (addRootDependency conf e glob)
       | otherwise -> do
           lockfile <- addRootDependency conf e (e ^. entryPointRoot)
-          root <- asks (^. envRoot)
-          whenM shouldWriteLockfile (writeLockfile root lockfile)
+          whenM shouldWriteLockfile $ do
+            packageFileChecksum <- SHA256.digestFile (e ^. entryPointPackage . packageFile)
+            lockfilePath' <- lockfilePath
+            writeLockfile lockfilePath' packageFileChecksum lockfile
   where
     shouldWriteLockfile :: Sem r Bool
     shouldWriteLockfile = do
+      lockfileExists <- lockfilePath >>= fileExists'
+      hasRemoteDependencies <- gets (^. resolverHasRemoteDependencies)
+      shouldUpdateLockfile' <- gets (^. resolverShouldUpdateLockfile)
+
+      let shouldForce = conf ^. dependenciesConfigForceUpdateLockfile
+          shouldWriteInitialLockfile = not lockfileExists && hasRemoteDependencies
+          shouldUpdateLockfile = lockfileExists && shouldUpdateLockfile'
+      return (shouldForce || shouldWriteInitialLockfile || shouldUpdateLockfile)
+
+    lockfilePath :: Sem r (Path Abs File)
+    lockfilePath = do
       root <- asks (^. envRoot)
-      lockfileExists <- fileExists' (mkPackageLockfilePath root)
-      depsShouldWriteLockfile <- gets (^. resolverShouldWriteLockfile)
-      return (conf ^. dependenciesConfigForceUpdateLockfile || not lockfileExists && depsShouldWriteLockfile)
+      return (mkPackageLockfilePath root)
 
 addRootDependency ::
   forall r.
-  (Members '[State ResolverState, Reader ResolverEnv, Files, Error JuvixError, Error DependencyError, GitClone, EvalFileEff] r) =>
+  (Members '[TaggedLock, State ResolverState, Reader ResolverEnv, Files, Error JuvixError, Error DependencyError, GitClone, EvalFileEff] r) =>
   DependenciesConfig ->
   EntryPoint ->
   Path Abs Dir ->
@@ -195,25 +208,33 @@ addRootDependency conf e root = do
   let pf = mkPackageFilePath root
       d = mkPackageDependencyInfo pf (mkPathDependency (toFilePath root))
   resolvedDependency <- resolveDependency d
-  checkShouldWriteLockfile resolvedDependency
+  checkRemoteDependency resolvedDependency
   let p = resolvedDependency ^. resolvedDependencyPath
   withEnvRoot p $ do
     pkg <- mkPackage (Just e) p
+    shouldUpdateLockfile' <- shouldUpdateLockfile pkg
+    when shouldUpdateLockfile' setShouldUpdateLockfile
     let resolvedPkg :: Package
-          | conf ^. dependenciesConfigForceUpdateLockfile = unsetPackageLockfile pkg
+          | shouldUpdateLockfile' = unsetPackageLockfile pkg
           | otherwise = pkg
     deps <- addDependency' resolvedPkg (Just e) resolvedDependency
     return Lockfile {_lockfileDependencies = deps ^. lockfileDependencyDependencies}
+  where
+    shouldUpdateLockfile :: Package -> Sem r Bool
+    shouldUpdateLockfile pkg = do
+      let checksumMay :: Maybe Text = pkg ^? packageLockfile . _Just . lockfileInfoChecksum . _Just
+      packageFileChecksum <- SHA256.digestFile (pkg ^. packageFile)
+      return (conf ^. dependenciesConfigForceUpdateLockfile || Just packageFileChecksum /= checksumMay)
 
 addDependency ::
   forall r.
-  (Members '[State ResolverState, Reader ResolverEnv, Files, Error JuvixError, Error DependencyError, GitClone, EvalFileEff] r) =>
+  (Members '[TaggedLock, State ResolverState, Reader ResolverEnv, Files, Error JuvixError, Error DependencyError, GitClone, EvalFileEff] r) =>
   Maybe EntryPoint ->
   PackageDependencyInfo ->
   Sem r LockfileDependency
 addDependency me d = do
   resolvedDependency <- resolveDependency d
-  checkShouldWriteLockfile resolvedDependency
+  checkRemoteDependency resolvedDependency
   let p = resolvedDependency ^. resolvedDependencyPath
   cached <- lookupCachedDependency p
   case cached of
@@ -224,7 +245,7 @@ addDependency me d = do
 
 addDependency' ::
   forall r.
-  (Members '[State ResolverState, Reader ResolverEnv, Files, Error JuvixError, Error DependencyError, GitClone, EvalFileEff] r) =>
+  (Members '[TaggedLock, State ResolverState, Reader ResolverEnv, Files, Error JuvixError, Error DependencyError, GitClone, EvalFileEff] r) =>
   Package ->
   Maybe EntryPoint ->
   ResolvedDependency ->
@@ -281,12 +302,22 @@ resolvePath' :: (Members '[Files, State ResolverState, Reader ResolverEnv] r) =>
 resolvePath' mp = do
   z <- gets (^. resolverFiles)
   curPkg <- currentPackage
-  let rel = topModulePathToRelativePath' mp
-      packagesWithModule = z ^. at rel
+  let exts = [FileExtJuvix, FileExtJuvixMarkdown]
+  let rpaths = map (`topModulePathToRelativePathByExt` mp) exts
+
+      packagesWithModule :: [(PackageInfo, Path Rel File)]
+      packagesWithModule =
+        [ (pkg, p)
+          | p <- rpaths,
+            pkgs <- toList (HashMap.lookup p z),
+            pkg <- toList pkgs,
+            visible pkg
+        ]
+
       visible :: PackageInfo -> Bool
-      visible p = HashSet.member (p ^. packageRoot) (curPkg ^. packageAvailableRoots)
-  return $ case filter visible (maybe [] toList packagesWithModule) of
-    [r] -> Right (r ^. packageRoot, rel)
+      visible pkg = HashSet.member (pkg ^. packageRoot) (curPkg ^. packageAvailableRoots)
+  return $ case packagesWithModule of
+    [(r, relPath)] -> Right (r ^. packageRoot, relPath)
     [] ->
       Left
         ( ErrMissingModule
@@ -295,26 +326,50 @@ resolvePath' mp = do
                 _missingModule = mp
               }
         )
-    (r : rs) ->
+    ((r, _) : rs) ->
       Left
         ( ErrDependencyConflict
             DependencyConflict
-              { _conflictPackages = r :| rs,
+              { _conflictPackages = r :| map fst rs,
                 _conflictPath = mp
               }
         )
 
-expectedPath' :: (Members '[Reader ResolverEnv] r) => Path Abs File -> TopModulePath -> Sem r (Maybe (Path Abs File))
-expectedPath' actualPath m = do
-  root <- asks (^. envRoot)
-  msingle <- asks (^. envSingleFile)
-  if
-      | msingle == Just actualPath -> return Nothing
-      | otherwise -> return (Just (root <//> topModulePathToRelativePath' m))
+isModuleOrphan ::
+  (Members '[Files] r) =>
+  TopModulePath ->
+  Sem r Bool
+isModuleOrphan topJuvixPath = do
+  let actualPath = getLoc topJuvixPath ^. intervalFile
+
+      possiblePaths :: Path Abs Dir -> [Path Abs Dir]
+      possiblePaths p = p : toList (parents p)
+
+  packageFileExists <- findFile' (possiblePaths (parent actualPath)) packageFilePath
+
+  yamlFileExists <- findFile' (possiblePaths (parent actualPath)) juvixYamlFile
+
+  pathPackageDescription <- globalPackageDescriptionRoot
+
+  return $ isNothing (packageFileExists <|> yamlFileExists) && not (pathPackageDescription `isProperPrefixOf` actualPath)
+
+expectedPath' ::
+  (Members '[Reader ResolverEnv, Files] r) =>
+  TopModulePath ->
+  Sem r PathInfoTopModule
+expectedPath' m = do
+  let _pathInfoTopModule = m
+  _rootInfoPath <- asks (^. envRoot)
+  isOrphan <- isModuleOrphan m
+  let _rootInfoKind
+        | isOrphan = RootKindSingleFile
+        | otherwise = RootKindPackage
+      _pathInfoRootInfo = RootInfo {..}
+  return PathInfoTopModule {..}
 
 re ::
   forall r a.
-  (Members '[Reader EntryPoint, Files, Error JuvixError, Error DependencyError, GitClone, EvalFileEff] r) =>
+  (Members '[TaggedLock, Reader EntryPoint, Files, Error JuvixError, Error DependencyError, GitClone, EvalFileEff] r) =>
   Sem (PathResolver ': r) a ->
   Sem (Reader ResolverEnv ': State ResolverState ': r) a
 re = reinterpret2H helper
@@ -325,7 +380,7 @@ re = reinterpret2H helper
       Tactical PathResolver (Sem rInitial) (Reader ResolverEnv ': (State ResolverState ': r)) x
     helper = \case
       RegisterDependencies forceUpdateLockfile -> registerDependencies' forceUpdateLockfile >>= pureT
-      ExpectedModulePath a m -> expectedPath' a m >>= pureT
+      ExpectedPathInfoTopModule m -> expectedPath' m >>= pureT
       WithPath m a -> do
         x :: Either PathResolverError (Path Abs Dir, Path Rel File) <- resolvePath' m
         oldroot <- asks (^. envRoot)
@@ -337,13 +392,13 @@ re = reinterpret2H helper
               Right (r, _) -> r
         raise (evalPathResolver' st' root' (a' x'))
 
-evalPathResolver' :: (Members '[Reader EntryPoint, Files, Error JuvixError, Error DependencyError, GitClone, EvalFileEff] r) => ResolverState -> Path Abs Dir -> Sem (PathResolver ': r) a -> Sem r a
+evalPathResolver' :: (Members '[TaggedLock, Reader EntryPoint, Files, Error JuvixError, Error DependencyError, GitClone, EvalFileEff] r) => ResolverState -> Path Abs Dir -> Sem (PathResolver ': r) a -> Sem r a
 evalPathResolver' st root = fmap snd . runPathResolver' st root
 
-runPathResolver :: (Members '[Reader EntryPoint, Files, Error JuvixError, Error DependencyError, GitClone, EvalFileEff] r) => Path Abs Dir -> Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
+runPathResolver :: (Members '[TaggedLock, Reader EntryPoint, Files, Error JuvixError, Error DependencyError, GitClone, EvalFileEff] r) => Path Abs Dir -> Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
 runPathResolver = runPathResolver' iniResolverState
 
-runPathResolver' :: (Members '[Reader EntryPoint, Files, Error JuvixError, Error DependencyError, GitClone, EvalFileEff] r) => ResolverState -> Path Abs Dir -> Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
+runPathResolver' :: (Members '[TaggedLock, Reader EntryPoint, Files, Error JuvixError, Error DependencyError, GitClone, EvalFileEff] r) => ResolverState -> Path Abs Dir -> Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
 runPathResolver' st root x = do
   e <- ask
   let _envSingleFile :: Maybe (Path Abs File)
@@ -359,15 +414,15 @@ runPathResolver' st root x = do
           }
   runState st (runReader env (re x))
 
-runPathResolverPipe' :: (Members '[Files, Reader EntryPoint, Error DependencyError, GitClone, Error JuvixError, EvalFileEff] r) => ResolverState -> Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
+runPathResolverPipe' :: (Members '[TaggedLock, Files, Reader EntryPoint, Error DependencyError, GitClone, Error JuvixError, EvalFileEff] r) => ResolverState -> Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
 runPathResolverPipe' iniState a = do
   r <- asks (^. entryPointResolverRoot)
   runPathResolver' iniState r a
 
-runPathResolverPipe :: (Members '[Files, Reader EntryPoint, Error DependencyError, GitClone, Error JuvixError, EvalFileEff] r) => Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
+runPathResolverPipe :: (Members '[TaggedLock, Files, Reader EntryPoint, Error DependencyError, GitClone, Error JuvixError, EvalFileEff] r) => Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
 runPathResolverPipe a = do
   r <- asks (^. entryPointResolverRoot)
   runPathResolver r a
 
-evalPathResolverPipe :: (Members '[Files, Reader EntryPoint, Error DependencyError, GitClone, Error JuvixError, EvalFileEff] r) => Sem (PathResolver ': r) a -> Sem r a
+evalPathResolverPipe :: (Members '[TaggedLock, Files, Reader EntryPoint, Error DependencyError, GitClone, Error JuvixError, EvalFileEff] r) => Sem (PathResolver ': r) a -> Sem r a
 evalPathResolverPipe = fmap snd . runPathResolverPipe

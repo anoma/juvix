@@ -1,6 +1,7 @@
 module Termination.Positive where
 
 import Base
+import Juvix.Data.Effect.TaggedLock (LockMode (LockModeExclusive))
 import Termination.Negative qualified as N
 
 data PosTest = PosTest
@@ -20,8 +21,8 @@ testDescr PosTest {..} =
         { _testName = _name,
           _testRoot = tRoot,
           _testAssertion = Single $ do
-            entryPoint <- set entryPointNoStdlib True <$> defaultEntryPointCwdIO file'
-            (void . runIO' entryPoint) upToInternalTyped
+            entryPoint <- set entryPointNoStdlib True <$> defaultEntryPointIO' LockModeExclusive tRoot file'
+            (void . runIOExclusive entryPoint) upToInternalTyped
         }
 
 --------------------------------------------------------------------------------
@@ -42,8 +43,8 @@ testDescrFlag N.NegTest {..} =
             entryPoint <-
               set entryPointNoTermination True
                 . set entryPointNoStdlib True
-                <$> defaultEntryPointCwdIO file'
-            (void . runIO' entryPoint) upToInternalTyped
+                <$> defaultEntryPointIO' LockModeExclusive tRoot file'
+            (void . runIOExclusive entryPoint) upToInternalTyped
         }
 
 tests :: [PosTest]
@@ -88,7 +89,7 @@ negTests = N.tests
 allTests :: TestTree
 allTests =
   testGroup
-    "Positive tests"
+    "Termination positive tests"
     [ testGroup
         "Well-known terminating functions"
         (map (mkTest . testDescr) tests),

@@ -2,6 +2,7 @@ module Scope.Negative (allTests) where
 
 import Base
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
+import Juvix.Data.Effect.TaggedLock
 
 type FailMsg = String
 
@@ -23,8 +24,8 @@ testDescr NegTest {..} =
         { _testName = _name,
           _testRoot = tRoot,
           _testAssertion = Single $ do
-            entryPoint <- defaultEntryPointCwdIO file'
-            res <- runIOEitherTermination entryPoint upToInternal
+            entryPoint <- defaultEntryPointIO' LockModeExclusive tRoot file'
+            res <- runIOEitherTermination' LockModeExclusive entryPoint upToInternal
             case mapLeft fromJuvixError res of
               Left (Just err) -> whenJust (_checkErr err) assertFailure
               Left Nothing -> assertFailure "An error ocurred but it was not in the scoper."

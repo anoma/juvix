@@ -115,7 +115,7 @@ checkInductiveDef InductiveDef {..} = runInferenceDef $ do
     paramLocals :: LocalVars
     paramLocals =
       LocalVars
-        { _localTypes = HashMap.fromList [(p ^. inductiveParamName, smallUniverseE (getLoc p)) | p <- _inductiveParameters],
+        { _localTypes = HashMap.fromList [(p ^. inductiveParamName, p ^. inductiveParamType) | p <- _inductiveParameters],
           _localTyMap = mempty
         }
     goConstructor :: ConstructorDef -> Sem (Inference ': r) ConstructorDef
@@ -338,6 +338,7 @@ checkExpression expectedTy e = do
         ErrWrongType
           ( WrongType
               { _wrongTypeThing = Left e,
+                _wrongTypeThingWithHoles = Nothing,
                 _wrongTypeActual = inferred',
                 _wrongTypeExpected = expected'
               }
@@ -383,7 +384,7 @@ resolveInstanceHoles s = do
   (hs, e) <- runOutputList s
   ts <- mapM goResolve hs
   let subs = HashMap.fromList (zipExact (map (^. typedHoleHole) hs) ts)
-  subsHoles subs e
+  subsInstanceHoles subs e
   where
     goResolve :: TypedHole -> Sem r Expression
     goResolve h@TypedHole {..} = do
@@ -559,6 +560,7 @@ checkPattern = go
                   ( ErrWrongType
                       WrongType
                         { _wrongTypeThing = Right pat,
+                          _wrongTypeThingWithHoles = Nothing,
                           _wrongTypeExpected = m ^. matchErrorRight,
                           _wrongTypeActual = m ^. matchErrorLeft
                         }
@@ -706,7 +708,7 @@ inferExpression' hint e = case e of
             _typedType = ExpressionUniverse (SmallUniverse (getLoc h))
           }
 
-    goInstanceHole :: Hole -> Sem r TypedExpression
+    goInstanceHole :: InstanceHole -> Sem r TypedExpression
     goInstanceHole h = do
       let ty = fromMaybe impossible hint
       locals <- ask
@@ -825,7 +827,7 @@ inferExpression' hint e = case e of
             typedLit :: (Integer -> Literal) -> BuiltinFunction -> Expression -> Sem r TypedExpression
             typedLit litt blt ty = do
               from <- getBuiltinName i blt
-              ihole <- freshHole i
+              ihole <- freshInstanceHole i
               let ty' = fromMaybe ty hint
               inferExpression' (Just ty') $
                 foldApplication
@@ -916,7 +918,7 @@ inferExpression' hint e = case e of
                   ErrExpectedFunctionType
                     ( ExpectedFunctionType
                         { _expectedFunctionTypeExpression = e,
-                          _expectedFunctionTypeApp = l,
+                          _expectedFunctionTypeLeft = l,
                           _expectedFunctionTypeType = l' ^. typedType
                         }
                     )

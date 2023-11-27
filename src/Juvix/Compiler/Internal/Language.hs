@@ -171,7 +171,7 @@ data Expression
   | ExpressionFunction Function
   | ExpressionLiteral LiteralLoc
   | ExpressionHole Hole
-  | ExpressionInstanceHole Hole
+  | ExpressionInstanceHole InstanceHole
   | ExpressionLet Let
   | ExpressionUniverse SmallUniverse
   | ExpressionSimpleLambda SimpleLambda
@@ -319,8 +319,9 @@ instance Hashable Pattern
 
 instance Serialize Pattern
 
-newtype InductiveParameter = InductiveParameter
-  { _inductiveParamName :: VarName
+data InductiveParameter = InductiveParameter
+  { _inductiveParamName :: VarName,
+    _inductiveParamType :: Expression
   }
   deriving stock (Eq, Data, Generic)
 
@@ -494,7 +495,7 @@ instance HasLoc ConstructorDef where
     getLoc _inductiveConstructorName <> getLoc _inductiveConstructorType
 
 instance HasLoc InductiveParameter where
-  getLoc (InductiveParameter n) = getLoc n
+  getLoc InductiveParameter {..} = getLoc _inductiveParamName <> getLoc _inductiveParamType
 
 instance HasLoc FunctionParameter where
   getLoc f = v (getLoc (f ^. paramType))

@@ -10,6 +10,7 @@ import Juvix.Compiler.Concrete.Print qualified as P
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
+import Juvix.Compiler.Pipeline.Package.Loader
 import Juvix.Compiler.Pipeline.Package.Loader.Error
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff.IO
 import Juvix.Compiler.Pipeline.Package.Loader.PathResolver
@@ -17,7 +18,7 @@ import Juvix.Compiler.Pipeline.Setup
 import Juvix.Compiler.Store.Scoped.Language
 import Juvix.Data.Effect.Git
 import Juvix.Data.Effect.Process
-import Juvix.Prelude.Aeson
+import Juvix.Data.Effect.TaggedLock
 import Juvix.Prelude.Pretty
 
 data PathResolverMode
@@ -59,13 +60,15 @@ testDescr PosTest {..} = helper renderCodeNew
             { _testName = _name,
               _testRoot = tRoot,
               _testAssertion = Steps $ \step -> do
-                entryPoint <- defaultEntryPointCwdIO file'
+                entryPoint <- defaultEntryPointIO' LockModeExclusive tRoot file'
                 let runHelper :: HashMap (Path Abs File) Text -> Sem PipelineEff a -> IO (ResolverState, a)
                     runHelper files = do
                       let runPathResolver' = case _pathResolverMode of
                             FullPathResolver -> runPathResolverPipe
                             PackagePathResolver -> runPackagePathResolver' (entryPoint ^. entryPointResolverRoot)
-                      runM
+                      runFinal
+                        . resourceToIOFinal
+                        . embedToFinal @IO
                         . evalInternetOffline
                         . ignoreHighlightBuilder
                         . runErrorIO' @JuvixError
@@ -73,6 +76,7 @@ testDescr PosTest {..} = helper renderCodeNew
                         . evalTopNameIdGen defaultModuleId
                         . runFilesPure files tRoot
                         . runReader entryPoint
+                        . runTaggedLock LockModeExclusive
                         . ignoreLog
                         . runProcessIO
                         . mapError (JuvixError @GitProcessError)
@@ -85,20 +89,20 @@ testDescr PosTest {..} = helper renderCodeNew
                     evalHelper files = fmap snd . runHelper files
 
                 step "Parsing"
-                p :: Parser.ParserResult <- snd <$> runIO' entryPoint upToParsing
+                p :: Parser.ParserResult <- snd <$> runIOExclusive entryPoint upToParsing
 
                 step "Scoping"
                 (resolverState :: ResolverState, s :: Scoper.ScoperResult) <-
-                  runIO'
+                  runIOExclusive
                     entryPoint
                     ( do
                         void (entrySetup defaultDependenciesConfig)
                         Concrete.fromParsed p
                     )
 
-                let yamlFiles :: [(Path Abs File, Text)]
-                    yamlFiles =
-                      [ (pkgi ^. packageRoot <//> juvixYamlFile, encodeToText (rawPackage (pkgi ^. packagePackage)))
+                let packageFiles' :: [(Path Abs File, Text)]
+                    packageFiles' =
+                      [ (pkgi ^. packagePackage . packageFile, renderPackageVersion PackageVersion1 (pkgi ^. packagePackage))
                         | pkgi <- (^. resolverCacheItemPackage) <$> toList (resolverState ^. resolverCache)
                       ]
                     fsScoped :: HashMap (Path Abs File) Text
@@ -107,14 +111,14 @@ testDescr PosTest {..} = helper renderCodeNew
                         [ (getModuleFilePath m, renderer m)
                           | m <- toList (s ^. Scoper.resultScoperTable . Scoper.infoModules)
                         ]
-                          <> yamlFiles
+                          <> packageFiles'
                     fsParsed :: HashMap (Path Abs File) Text
                     fsParsed =
                       HashMap.fromList $
                         [ (getModuleFilePath' m, either renderCodeNew renderCodeNew m)
                           | m <- toList (p ^. Parser.resultTable . Parser.infoParsedModules)
                         ]
-                          <> yamlFiles
+                          <> packageFiles'
 
                 step "Parsing pretty scoped"
                 p' :: Parser.ParserResult <- evalHelper fsScoped upToParsing

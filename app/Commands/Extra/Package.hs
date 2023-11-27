@@ -9,10 +9,16 @@ import Juvix.Prelude
 renderPackage :: Package -> Text
 renderPackage = renderPackageVersion PackageVersion1
 
-writePackageFile :: (Member (Embed IO) r) => Path Abs Dir -> Package -> Sem r ()
-writePackageFile root pkg =
+writePackageFile' :: (Member (Embed IO) r) => PackageVersion -> Path Abs Dir -> Package -> Sem r ()
+writePackageFile' v root pkg =
   embed
     ( Utf8.writeFile @IO
         (toFilePath (root <//> packageFilePath))
-        (renderPackage pkg)
+        (renderPackageVersion v pkg)
     )
+
+writePackageFile :: (Member (Embed IO) r) => Path Abs Dir -> Package -> Sem r ()
+writePackageFile = writePackageFile' PackageVersion1
+
+writeBasicPackage :: (Member (Embed IO) r) => Path Abs Dir -> Sem r ()
+writeBasicPackage root = writePackageFile' PackageBasic root (emptyPackage DefaultBuildDir (root <//> packageFilePath))

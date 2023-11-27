@@ -111,7 +111,7 @@ isJuvixFile = (== Just juvixFileExt) . fileExtension
 
 isJuvixMarkdownFile :: Path b File -> Bool
 isJuvixMarkdownFile p = case splitExtension p of
-  Just (f, ext) -> ext == juvixMarkdownFileExt && isJuvixFile f
+  Just (f, ext) -> ext == markdownFileExt && isJuvixFile f
   _ -> False
 
 isJuvixGebFile :: Path b File -> Bool
@@ -149,3 +149,26 @@ isHtmlFile = (== Just htmlFileExt) . fileExtension
 
 isCssFile :: Path b File -> Bool
 isCssFile = (== Just cssFileExt) . fileExtension
+
+toFileExt :: Path b File -> Maybe FileExt
+toFileExt p
+  | isJuvixFile p = Just FileExtJuvix
+  | isJuvixMarkdownFile p = Just FileExtJuvixMarkdown
+  | isJuvixGebFile p = Just FileExtJuvixGeb
+  | isJuvixCoreFile p = Just FileExtJuvixCore
+  | isJuvixAsmFile p = Just FileExtJuvixAsm
+  | isVampIRFile p = Just FileExtVampIR
+  | isVampIRParamsFile p = Just FileExtVampIRParams
+  | isPlonkFile p = Just FileExtPlonk
+  | isHaloFile p = Just FileExtHalo
+  | isLispFile p = Just FileExtLisp
+  | isCFile p = Just FileExtC
+  | isMarkdownFile p = Just FileExtMarkdown
+  | isHtmlFile p = Just FileExtHtml
+  | isCssFile p = Just FileExtCss
+  | otherwise = Nothing
+
+fileExtension' :: Path b File -> String
+fileExtension' p = case toFileExt p of
+  Just ext -> Text.unpack $ fileExtToText ext
+  Nothing -> mconcat $ fileExtension p

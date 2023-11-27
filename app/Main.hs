@@ -7,6 +7,7 @@ import CommonOptions
 import Data.String.Interpolate (i)
 import GlobalOptions
 import Juvix.Compiler.Pipeline.Root
+import Juvix.Data.Effect.TaggedLock
 import TopCommand
 import TopCommand.Options
 
@@ -18,7 +19,7 @@ main = do
   mbuildDir <- mapM (prepathToAbsDir invokeDir) (_runAppIOArgsGlobalOptions ^? globalBuildDir . _Just . pathPath)
   mainFile <- topCommandInputPath cli
   mapM_ checkMainFile mainFile
-  _runAppIOArgsRoot <- findRootAndChangeDir (containingDir <$> mainFile) mbuildDir invokeDir
+  _runAppIOArgsRoot <- findRootAndChangeDir LockModePermissive (containingDir <$> mainFile) mbuildDir invokeDir
   runFinal
     . resourceToIOFinal
     . embedToFinal @IO

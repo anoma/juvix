@@ -65,7 +65,15 @@ checkInductive d = do
     checkParameters = runState emptyLocalVars . mapM checkParam
       where
         checkParam :: InductiveParameter -> Sem (State LocalVars ': r) InductiveParameter
-        checkParam = return
+        checkParam param = do
+          lv1 <- get @LocalVars
+          ty' <- runReader lv1 (checkType (param ^. inductiveParamType))
+          addArity (param ^. inductiveParamName) (typeArity ty')
+          return
+            InductiveParameter
+              { _inductiveParamName = param ^. inductiveParamName,
+                _inductiveParamType = ty'
+              }
 
 checkConstructor :: (Members '[Reader InsertedArgsStack, Reader LocalVars, Reader InfoTable, NameIdGen, Error ArityCheckerError] r) => ConstructorDef -> Sem r ConstructorDef
 checkConstructor c = do
@@ -385,7 +393,6 @@ checkLhs loc guessedBody ariSignature pats = do
 
     -- This is an heuristic and it can have an undesired result.
     -- Sometimes the outcome may even be confusing.
-    -- TODO default arguments??
     tailHelper :: Arity -> Maybe [IsImplicit]
     tailHelper a
       | 0 < pref = Just pref'
@@ -883,5 +890,5 @@ newHoleImplicit i loc = case i ^. arityParameterInfo . argInfoDefault of
     -- TODO update location
     return (True, e)
 
-newHoleInstance :: (Member NameIdGen r) => Interval -> Sem r Hole
-newHoleInstance loc = mkHole loc <$> freshNameId
+newHoleInstance :: (Member NameIdGen r) => Interval -> Sem r InstanceHole
+newHoleInstance loc = mkInstanceHole loc <$> freshNameId

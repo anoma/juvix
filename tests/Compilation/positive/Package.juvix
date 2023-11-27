@@ -1,5 +1,5 @@
 module Package;
 
-import PackageDescription.V1 open;
+import PackageDescription.Basic open;
 
-package : Package := defaultPackage {name := "tests"};
+package : Package := basicPackage;

@@ -14,6 +14,7 @@ import Juvix.Compiler.Pipeline.Package.Base
 import Juvix.Compiler.Pipeline.Package.Loader
 import Juvix.Compiler.Pipeline.Package.Loader.Error
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff
+import Juvix.Data.Effect.TaggedLock
 import Juvix.Extra.Paths
 import Juvix.Prelude
 
@@ -120,10 +121,10 @@ readPackageFile root buildDir f = mapError (JuvixError @PackageLoaderError) $ do
   checkNoDuplicateDepNames f (pkg ^. packageDependencies)
   return (pkg {_packageLockfile = mLockfile})
 
-readGlobalPackage :: (Members '[Error JuvixError, EvalFileEff, Files] r) => Sem r Package
+readGlobalPackage :: (Members '[TaggedLock, Error JuvixError, EvalFileEff, Files] r) => Sem r Package
 readGlobalPackage = do
   packagePath <- globalPackageJuvix
-  unlessM (fileExists' packagePath) writeGlobalPackage
+  withTaggedLockDir (parent packagePath) (unlessM (fileExists' packagePath) writeGlobalPackage)
   readPackage (parent packagePath) DefaultBuildDir
 
 writeGlobalPackage :: (Members '[Files] r) => Sem r ()

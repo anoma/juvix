@@ -23,7 +23,8 @@ data ResolverState = ResolverState
     _resolverFiles :: HashMap (Path Rel File) (NonEmpty PackageInfo),
     -- | PackageInfos indexed by root
     _resolverCache :: HashMap (Path Abs Dir) ResolverCacheItem,
-    _resolverShouldWriteLockfile :: Bool
+    _resolverHasRemoteDependencies :: Bool,
+    _resolverShouldUpdateLockfile :: Bool
   }
   deriving stock (Show)
 
@@ -42,12 +43,19 @@ iniResolverState =
   ResolverState
     { _resolverCache = mempty,
       _resolverFiles = mempty,
-      _resolverShouldWriteLockfile = False
+      _resolverHasRemoteDependencies = False,
+      _resolverShouldUpdateLockfile = False
     }
 
-checkShouldWriteLockfile :: (Member (State ResolverState) r) => ResolvedDependency -> Sem r ()
-checkShouldWriteLockfile d = case d ^. resolvedDependencyDependency of
-  DependencyGit {} -> modify' (set resolverShouldWriteLockfile True)
+setHasRemoteDependencies :: (Member (State ResolverState) r) => Sem r ()
+setHasRemoteDependencies = modify' (set resolverHasRemoteDependencies True)
+
+setShouldUpdateLockfile :: (Member (State ResolverState) r) => Sem r ()
+setShouldUpdateLockfile = modify' (set resolverShouldUpdateLockfile True)
+
+checkRemoteDependency :: (Member (State ResolverState) r) => ResolvedDependency -> Sem r ()
+checkRemoteDependency d = case d ^. resolvedDependencyDependency of
+  DependencyGit {} -> setHasRemoteDependencies
   DependencyPath {} -> return ()
 
 withEnvRoot :: (Members '[Reader ResolverEnv] r) => Path Abs Dir -> Sem r a -> Sem r a

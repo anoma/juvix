@@ -2,6 +2,7 @@ module Typecheck.Positive where
 
 import Base
 import Compilation.Positive qualified as Compilation
+import Juvix.Data.Effect.TaggedLock
 import Typecheck.Negative qualified as N
 
 data PosTest = PosTest
@@ -10,14 +11,21 @@ data PosTest = PosTest
     _file :: Path Abs File
   }
 
+makeLenses ''PosTest
+
 root :: Path Abs Dir
 root = relToProject $(mkRelDir "tests/positive")
 
 posTest :: String -> Path Rel Dir -> Path Rel File -> PosTest
-posTest _name rdir rfile =
-  let _dir = root <//> rdir
-      _file = _dir <//> rfile
-   in PosTest {..}
+posTest _name rdir rfile = posTestAbsDir _name (root <//> rdir) rfile
+
+posTestAbsDir :: String -> Path Abs Dir -> Path Rel File -> PosTest
+posTestAbsDir _name _dir f =
+  PosTest
+    { _file = _dir <//> f,
+      _dir,
+      _name
+    }
 
 testDescr :: PosTest -> TestDescr
 testDescr PosTest {..} =
@@ -25,17 +33,14 @@ testDescr PosTest {..} =
     { _testName = _name,
       _testRoot = _dir,
       _testAssertion = Single $ do
-        entryPoint <- defaultEntryPointCwdIO _file
-        (void . runIO' entryPoint) upToInternalTyped
+        entryPoint <- defaultEntryPointIO' LockModeExclusive _dir _file
+        (void . runIOExclusive entryPoint) upToInternalTyped
     }
-
---------------------------------------------------------------------------------
--- Testing --no-positivity flag with all related negative tests
---------------------------------------------------------------------------------
 
 rootNegTests :: Path Abs Dir
 rootNegTests = relToProject $(mkRelDir "tests/negative/")
 
+-- Testing --no-positivity flag with all related negative tests
 testNoPositivityFlag :: N.NegTest -> TestDescr
 testNoPositivityFlag N.NegTest {..} =
   let tRoot = rootNegTests <//> _relDir
@@ -46,8 +51,8 @@ testNoPositivityFlag N.NegTest {..} =
           _testAssertion = Single $ do
             entryPoint <-
               set entryPointNoPositivity True
-                <$> defaultEntryPointCwdIO file'
-            (void . runIO' entryPoint) upToInternalTyped
+                <$> defaultEntryPointIO' LockModeExclusive tRoot file'
+            (void . runIOExclusive entryPoint) upToInternalTyped
         }
 
 negPositivityTests :: [N.NegTest]
@@ -83,8 +88,6 @@ positivityTestGroup =
         "Well-defined inductive definitions"
         (map (mkTest . testDescr) testWellDefinedInductiveDefs)
     ]
-
---------------------------------------------------------------------------------
 
 allTests :: TestTree
 allTests =
@@ -300,7 +303,23 @@ tests =
     posTest
       "Instance axiom"
       $(mkRelDir ".")
-      $(mkRelFile "InstanceAxiom.juvix")
+      $(mkRelFile "InstanceAxiom.juvix"),
+    posTest
+      "Markdown"
+      $(mkRelDir "Markdown")
+      $(mkRelFile "Test.juvix.md"),
+    posTest
+      "Import a .juvix.md module in a .juvix file"
+      $(mkRelDir "MarkdownImport")
+      $(mkRelFile "A.juvix"),
+    posTest
+      "Import a .juvix.md module in a .juvix.md file"
+      $(mkRelDir "MarkdownImport")
+      $(mkRelFile "C.juvix.md"),
+    posTestAbsDir
+      "Typecheck orphan file"
+      (relToProject $(mkRelDir "tests/WithoutPackageFile"))
+      $(mkRelFile "Good.juvix")
   ]
     <> [ compilationTest t | t <- Compilation.tests
        ]

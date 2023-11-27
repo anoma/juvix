@@ -7,6 +7,7 @@ import Data.Aeson.BetterErrors qualified as Aeson
 import Data.Aeson.Encoding (pair)
 import Data.Aeson.TH
 import Data.String.Interpolate (i)
+import Data.Text qualified as T
 import Data.Yaml
 import Data.Yaml.Pretty
 import Juvix.Compiler.Pipeline.Package.Dependency
@@ -29,15 +30,58 @@ newtype Lockfile = Lockfile
   }
   deriving stock (Generic, Show, Eq)
 
+type LockfileV1 = Lockfile
+
+data LockfileV2 = LockfileV2
+  { _lockfileV2Version :: Int,
+    _lockfileV2Checksum :: Text,
+    _lockfileV2Dependencies :: [LockfileDependency]
+  }
+  deriving stock (Generic, Show, Eq)
+
+data VersionedLockfile
+  = V1Lockfile LockfileV1
+  | V2Lockfile LockfileV2
+  deriving stock (Show, Eq)
+
+data LockfileVersionTag
+  = LockfileV1Tag
+  | LockfileV2Tag
+  deriving stock (Show, Eq)
+
+allVersionedLockfiles :: [LockfileVersionTag]
+allVersionedLockfiles = [LockfileV1Tag, LockfileV2Tag]
+
+lockfileVersionNumber :: LockfileVersionTag -> Int
+lockfileVersionNumber = \case
+  LockfileV1Tag -> 1
+  LockfileV2Tag -> 2
+
 data LockfileInfo = LockfileInfo
   { _lockfileInfoPath :: Path Abs File,
+    _lockfileInfoChecksum :: Maybe Text,
     _lockfileInfoLockfile :: Lockfile
   }
   deriving stock (Eq, Show)
 
 makeLenses ''LockfileDependency
 makeLenses ''Lockfile
+makeLenses ''LockfileV2
 makeLenses ''LockfileInfo
+
+mkLockfileV2 :: Text -> [LockfileDependency] -> LockfileV2
+mkLockfileV2 _lockfileV2Checksum _lockfileV2Dependencies =
+  LockfileV2 {_lockfileV2Version = lockfileVersionNumber LockfileV2Tag, ..}
+
+lockfile' :: SimpleGetter VersionedLockfile Lockfile
+lockfile' = to $ \case
+  V1Lockfile l -> l
+  V2Lockfile l -> Lockfile {_lockfileDependencies = l ^. lockfileV2Dependencies}
+
+checksum :: SimpleGetter VersionedLockfile (Maybe Text)
+checksum = to $ \case
+  V1Lockfile {} -> Nothing
+  V2Lockfile l -> Just (l ^. lockfileV2Checksum)
 
 instance ToJSON LockfileDependency where
   toJSON d = object [dep, Str.dependencies .= toJSON (d ^. lockfileDependencyDependencies)]
@@ -65,20 +109,50 @@ instance FromJSON LockfileDependency where
       p' :: Parse' Dependency
       p' = DependencyPath <$> (key Str.path_ fromAesonParser) Aeson.<|> DependencyGit <$> (key Str.git fromAesonParser)
 
-lockfileOptions :: Options
-lockfileOptions =
+lockfileV2Options :: Options
+lockfileV2Options =
   defaultOptions
-    { fieldLabelModifier = over Lens._head toLower . dropPrefix "_lockfile",
+    { fieldLabelModifier = over Lens._head toLower . dropPrefix "_lockfileV2",
       rejectUnknownFields = True,
       omitNothingFields = True
     }
 
-instance ToJSON Lockfile where
-  toJSON = genericToJSON lockfileOptions
-  toEncoding = genericToEncoding lockfileOptions
+instance ToJSON LockfileV2 where
+  toJSON = genericToJSON lockfileV2Options
+  toEncoding = genericToEncoding lockfileV2Options
 
-instance FromJSON Lockfile where
-  parseJSON = toAesonParser' (Lockfile <$> (key Str.dependencies fromAesonParser))
+data LockfileParseErr = LockfileUnsupportedVersion
+
+instance FromJSON VersionedLockfile where
+  parseJSON = toAesonParser displayErr $ do
+    v <- parseVersion
+    case v of
+      LockfileV1Tag -> V1Lockfile <$> parseV1
+      LockfileV2Tag -> V2Lockfile <$> parseV2
+    where
+      parseV1 :: Parse LockfileParseErr Lockfile
+      parseV1 = Lockfile <$> key Str.dependencies fromAesonParser
+
+      parseV2 :: Parse LockfileParseErr LockfileV2
+      parseV2 = do
+        checksum' <- key "checksum" asText
+        deps <- key Str.dependencies fromAesonParser
+        return (mkLockfileV2 checksum' deps)
+
+      parseVersion :: Parse LockfileParseErr LockfileVersionTag
+      parseVersion = fromMaybeM (return LockfileV1Tag) (keyMay Str.version parseVersion')
+        where
+          parseVersion' :: Parse LockfileParseErr LockfileVersionTag
+          parseVersion' = do
+            n <- asIntegral
+            if
+                | lockfileVersionNumber LockfileV1Tag == n -> return LockfileV1Tag
+                | lockfileVersionNumber LockfileV2Tag == n -> return LockfileV2Tag
+                | otherwise -> throwCustomError LockfileUnsupportedVersion
+
+      displayErr :: LockfileParseErr -> Text
+      displayErr = \case
+        LockfileUnsupportedVersion -> "lockfile error: unsupported version. Supported versions: " <> T.intercalate ", " (show . lockfileVersionNumber <$> allVersionedLockfiles)
 
 mkPackageLockfilePath :: Path Abs Dir -> Path Abs File
 mkPackageLockfilePath = (<//> juvixLockfile)
@@ -93,11 +167,16 @@ mayReadLockfile root = do
   if
       | lockfileExists -> do
           bs <- readFileBS' lockfilePath
-          either (throwErr . pack . prettyPrintParseException) ((return . Just) . mkLockfileInfo lockfilePath) (decodeEither' @Lockfile bs)
+          either (throwErr . pack . prettyPrintParseException) ((return . Just) . mkLockfileInfo lockfilePath) (decodeEither' @VersionedLockfile bs)
       | otherwise -> return Nothing
   where
-    mkLockfileInfo :: Path Abs File -> Lockfile -> LockfileInfo
-    mkLockfileInfo _lockfileInfoPath _lockfileInfoLockfile = LockfileInfo {..}
+    mkLockfileInfo :: Path Abs File -> VersionedLockfile -> LockfileInfo
+    mkLockfileInfo _lockfileInfoPath vl =
+      LockfileInfo
+        { _lockfileInfoChecksum = vl ^. checksum,
+          _lockfileInfoLockfile = vl ^. lockfile',
+          ..
+        }
 
     lockfilePath :: Path Abs File
     lockfilePath = mkPackageLockfilePath root
@@ -115,21 +194,23 @@ mayReadLockfile root = do
 lockfileEncodeConfig :: Config
 lockfileEncodeConfig = setConfCompare keyCompare defConfig
   where
-    -- serialize the dependencies after all other keys
+    -- serialize the dependencies field after all other keys and the version
+    -- field before all other keys
     keyCompare :: Text -> Text -> Ordering
     keyCompare x y =
       if
-          | y == Str.dependencies || x == Str.dependencies -> GT
+          | y == Str.dependencies -> LT
+          | x == Str.dependencies -> GT
+          | x == Str.version -> LT
+          | y == Str.version -> GT
           | otherwise -> compare x y
 
-writeLockfile :: (Members '[Files] r) => Path Abs Dir -> Lockfile -> Sem r ()
-writeLockfile root lf = do
+writeLockfile :: (Members '[Files] r) => Path Abs File -> Text -> Lockfile -> Sem r ()
+writeLockfile lockfilePath checksum' lf = do
   ensureDir' (parent lockfilePath)
-  writeFileBS lockfilePath (header <> encodePretty lockfileEncodeConfig lf)
+  let v2lf = mkLockfileV2 checksum' (lf ^. lockfileDependencies)
+  writeFileBS lockfilePath (header <> encodePretty lockfileEncodeConfig v2lf)
   where
-    lockfilePath :: Path Abs File
-    lockfilePath = mkPackageLockfilePath root
-
     header :: ByteString
     header = [i|\# This file was autogenerated by Juvix version #{versionDoc}.\n\# Do not edit this file manually.\n\n|]
 

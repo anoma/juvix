@@ -1,6 +1,7 @@
 module Juvix.Compiler.Internal.Translation.FromInternal
   ( arityChecking,
     typeChecking,
+    typeCheckingNew,
     typeCheckExpression,
     typeCheckExpressionType,
     arityCheckExpression,
@@ -16,6 +17,7 @@ import Juvix.Compiler.Internal.Translation.FromConcrete.Data.Context
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking qualified as ArityChecking
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.CheckerNew qualified as New
 import Juvix.Compiler.Pipeline.Artifacts
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Compiler.Store.Language
@@ -112,4 +114,43 @@ typeChecking a = do
         _resultNormalized = HashMap.fromList [(e ^. exampleId, e ^. exampleExpression) | e <- normalized],
         _resultIdenTypes = idens,
         _resultFunctions = funs
+      }
+
+typeCheckingNew ::
+  forall r.
+  (Members '[HighlightBuilder, Error JuvixError, Builtins, NameIdGen] r) =>
+  Sem (Termination ': r) InternalResult ->
+  Sem r InternalTypedResult
+typeCheckingNew a = do
+  (termin, (res, table, (normalized, (idens, (funs, r))))) <- runTermination iniTerminationState $ do
+    res :: InternalResult <- a
+    let table :: InfoTable
+        table = buildTable (res ^. Internal.resultModules)
+
+        entryPoint :: EntryPoint
+        entryPoint = res ^. Internal.internalResultEntryPoint
+    fmap (res,table,)
+      . runOutputList
+      . runReader entryPoint
+      . runState (mempty :: TypesTable)
+      . runState (mempty :: FunctionsTable)
+      . runReader table
+      . mapError (JuvixError @TypeCheckerError)
+      . evalCacheEmpty New.checkModuleNoCache
+      $ checkTable >> mapM New.checkModule (res ^. Internal.resultModules)
+  let ariRes :: InternalArityResult
+      ariRes =
+        InternalArityResult
+          { _resultInternalResult = res,
+            _resultModules = res ^. Internal.resultModules
+          }
+  return
+    InternalTypedResult
+      { _resultInternalArityResult = ariRes,
+        _resultModules = r,
+        _resultTermination = termin,
+        _resultNormalized = HashMap.fromList [(e ^. exampleId, e ^. exampleExpression) | e <- normalized],
+        _resultIdenTypes = idens,
+        _resultFunctions = funs,
+        _resultInfoTable = table
       }

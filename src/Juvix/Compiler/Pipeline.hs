@@ -35,13 +35,12 @@ import Juvix.Compiler.Reg.Translation.FromAsm qualified as Reg
 import Juvix.Compiler.Store.Language qualified as Store
 import Juvix.Data.Effect.Git
 import Juvix.Data.Effect.Process
+import Juvix.Data.Effect.TaggedLock
 import Juvix.Prelude
 
-type PipelineEff' = '[Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, NameIdGen, PathResolver, GitClone, Files, Error JuvixError]
+-- type PipelineEff = '[Reader Parser.ParserResult, Reader Store.ModuleTable, NameIdGen, PathResolver, EvalFileEff, Error PackageLoaderError, Error DependencyError, GitClone, Error GitProcessError, Process, Log, Reader EntryPoint, Files, Error JuvixError, HighlightBuilder, Internet, Embed IO]
 
-type PipelineEff = '[Reader Parser.ParserResult, Reader Store.ModuleTable, NameIdGen, PathResolver, EvalFileEff, Error PackageLoaderError, Error DependencyError, GitClone, Error GitProcessError, Process, Log, Reader EntryPoint, Files, Error JuvixError, HighlightBuilder, Internet, Embed IO]
-
-type TopPipelineEff = '[PathResolver, EvalFileEff, Error PackageLoaderError, Error DependencyError, GitClone, Error GitProcessError, Process, Log, Reader EntryPoint, Files, NameIdGen, State Artifacts, Error JuvixError, HighlightBuilder, Embed IO]
+-- type TopPipelineEff = '[PathResolver, EvalFileEff, Error PackageLoaderError, Error DependencyError, GitClone, Error GitProcessError, Process, Log, Reader EntryPoint, Files, NameIdGen, State Artifacts, Error JuvixError, HighlightBuilder, Embed IO]
 
 --------------------------------------------------------------------------------
 -- Workflows from source
@@ -80,7 +79,11 @@ upToInternalArity = upToInternal >>= Internal.arityChecking
 upToInternalTyped ::
   (Members '[Reader Parser.ParserResult, Error JuvixError, Reader EntryPoint, Reader Store.ModuleTable, NameIdGen] r) =>
   Sem r Internal.InternalTypedResult
-upToInternalTyped = Internal.typeChecking upToInternalArity
+upToInternalTyped = do
+  newAlgorithm <- asks (^. entryPointNewTypeCheckingAlgorithm)
+  if
+      | newAlgorithm -> Internal.typeCheckingNew upToInternal
+      | otherwise -> Internal.typeChecking upToInternalArity
 
 upToCore ::
   (Members '[Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError, GitClone, PathResolver] r) =>

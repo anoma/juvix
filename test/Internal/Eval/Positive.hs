@@ -24,7 +24,7 @@ testDescr r PosTest {..} =
    in TestDescr
         { _testName = _name,
           _testRoot = tRoot,
-          _testAssertion = Steps $ internalCoreAssertion file' expected'
+          _testAssertion = Steps $ internalCoreAssertion tRoot file' expected'
         }
 
 allTests :: TestTree

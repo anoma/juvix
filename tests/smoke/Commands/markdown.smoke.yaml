@@ -1,0 +1,92 @@
+working-directory: ./../../positive/Markdown
+
+tests:
+  - name: markdown-help-theme
+    command:
+      - juvix
+      - markdown
+      - --help
+    stdout:
+      contains: JUVIX_MARKDOWN_FILE
+    exit-status: 0
+
+  - name: markdown-stdout
+    command:
+      shell:
+        - bash
+      script: |
+        temp=$(mktemp -d)
+        trap 'rm -rf -- "$temp"' EXIT
+        cp Test.juvix.md $temp
+        cd $temp
+        touch juvix.yaml
+        juvix markdown Test.juvix.md --stdout
+    stdout:
+      contains:
+        <pre class="highlight"><code class="juvix">
+    exit-status: 0
+
+  - name: output-dir
+    command:
+      shell:
+        - bash
+      script: |
+        temp=$(mktemp -d)
+        trap 'rm -rf -- "$temp"' EXIT
+        cp Test.juvix.md $temp
+        cd $temp
+        touch juvix.yaml
+        juvix markdown Test.juvix.md --output-dir=OUT
+        [ -d OUT ]
+        [ -f OUT/Test.md ]
+    stdout: ''
+    exit-status: 0
+
+  - name: markdown-id-prefix
+    command:
+      shell:
+        - bash
+      script: |
+        temp=$(mktemp -d)
+        trap 'rm -rf -- "$temp"' EXIT
+        cp Test.juvix.md $temp
+        cd $temp
+        touch juvix.yaml
+        juvix markdown Test.juvix.md --prefix-id="XYZ"
+        cat markdown/Test.md
+    stdout:
+      matches: |
+        .*href="Test.html#XYZ[0-9]+".*
+    exit-status: 0
+
+  - name: markdown-no-path
+    command:
+      shell:
+        - bash
+      script: |
+        temp=$(mktemp -d)
+        trap 'rm -rf -- "$temp"' EXIT
+        cp Test.juvix.md $temp
+        cd $temp
+        touch juvix.yaml
+        juvix markdown Test.juvix.md --no-path --stdout
+    stdout:
+      matches: |
+        .*href="#[0-9]+".*
+    exit-status: 0
+
+  - name: markdown-options-for-mkdocs
+    command:
+      shell:
+        - bash
+      script: |
+        temp=$(mktemp -d)
+        trap 'rm -rf -- "$temp"' EXIT
+        cp Test.juvix.md $temp
+        cd $temp
+        touch juvix.yaml
+        juvix markdown Test.juvix.md --no-path --prefix-url Y --prefix-id X --stdout
+    stdout:
+      matches: |
+        .*href="Y#X[0-9]+".*
+    exit-status: 0

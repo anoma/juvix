@@ -86,6 +86,8 @@ re cwd = reinterpret $ \case
   JuvixConfigDir -> return juvixConfigDirPure
   CanonicalDir root d -> return (canonicalDirPure root d)
   NormalizeDir p -> return (absDir (cwd' </> toFilePath p))
+  NormalizeFile p -> return (absFile (cwd' </> toFilePath p))
+  FindFile' ps f -> lookupFileDirs cwd ps f
   where
     cwd' :: FilePath
     cwd' = toFilePath cwd
@@ -220,3 +222,12 @@ lookupFile' p =
   fromMaybeM err (lookupFile p)
   where
     err = missingErr (toFilePath p)
+
+lookupFileDirs :: (Members '[State FS] r) => Path Abs Dir -> [Path a Dir] -> Path Rel File -> Sem r (Maybe (Path Abs File))
+lookupFileDirs cwd ps f =
+  asum <$> mapM helper ps
+  where
+    helper p = do
+      let rpath = absDir (toFilePath cwd </> toFilePath p)
+      let p' :: Path Abs File = rpath <//> f
+      fmap (const p') <$> (lookupFile p')

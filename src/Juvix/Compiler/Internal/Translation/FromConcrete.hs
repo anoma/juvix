@@ -152,7 +152,7 @@ buildMutualBlocks ss = do
           CyclicSCC p -> CyclicSCC . toList <$> nonEmpty (catMaybes p)
 
 goLocalModule ::
-  (Members '[Reader DefaultArgsStack, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ConstructorInfos, Reader S.InfoTable] r) =>
+  (Members '[Reader EntryPoint, Reader DefaultArgsStack, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ConstructorInfos, Reader S.InfoTable] r) =>
   Module 'Scoped 'ModuleLocal ->
   Sem r [Internal.PreStatement]
 goLocalModule = concatMapM goAxiomInductive . (^. moduleBody)
@@ -210,7 +210,7 @@ traverseM' f x = sequence <$> traverse f x
 
 toPreModule ::
   forall r t.
-  (SingI t, Members '[Reader DefaultArgsStack, Reader ExportsTable, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ConstructorInfos, Reader S.InfoTable] r) =>
+  (SingI t, Members '[Reader EntryPoint, Reader DefaultArgsStack, Reader ExportsTable, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ConstructorInfos, Reader S.InfoTable] r) =>
   Module 'Scoped t ->
   Sem r Internal.PreModule
 toPreModule Module {..} = do
@@ -276,7 +276,7 @@ fromPreModuleBody b = do
 
 goModuleBody ::
   forall r.
-  (Members '[Reader DefaultArgsStack, Reader ExportsTable, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ConstructorInfos, Reader S.InfoTable] r) =>
+  (Members '[Reader EntryPoint, Reader DefaultArgsStack, Reader ExportsTable, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ConstructorInfos, Reader S.InfoTable] r) =>
   [Statement 'Scoped] ->
   Sem r Internal.PreModuleBody
 goModuleBody stmts = do
@@ -338,7 +338,7 @@ goImport Import {..} =
 -- | Ignores functions
 goAxiomInductive ::
   forall r.
-  (Members '[Reader DefaultArgsStack, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ConstructorInfos, Reader S.InfoTable] r) =>
+  (Members '[Reader EntryPoint, Reader DefaultArgsStack, Error ScoperError, Builtins, NameIdGen, Reader Pragmas, State ConstructorInfos, Reader S.InfoTable] r) =>
   Statement 'Scoped ->
   Sem r [Internal.PreStatement]
 goAxiomInductive = \case
@@ -495,17 +495,19 @@ goExamples = mapM goExample . maybe [] judocExamples
 
 goInductiveParameters ::
   forall r.
-  (Members '[Reader DefaultArgsStack, Builtins, NameIdGen, Error ScoperError, Reader Pragmas, Reader S.InfoTable] r) =>
+  (Members '[Reader EntryPoint, Reader DefaultArgsStack, Builtins, NameIdGen, Error ScoperError, Reader Pragmas, Reader S.InfoTable] r) =>
   InductiveParameters 'Scoped ->
   Sem r [Internal.InductiveParameter]
 goInductiveParameters params@InductiveParameters {..} = do
   paramType' <- goRhs _inductiveParametersRhs
+  newAlgo <- asks (^. entryPointNewTypeCheckingAlgorithm)
   case paramType' of
     Internal.ExpressionUniverse {} -> return ()
     Internal.ExpressionHole {} -> return ()
     _ ->
-      throw $
-        ErrUnsupported
+      unless newAlgo
+        . throw
+        $ ErrUnsupported
           Unsupported
             { _unsupportedMsg = "only type variables of small types are allowed",
               _unsupportedLoc = getLoc params
@@ -514,7 +516,8 @@ goInductiveParameters params@InductiveParameters {..} = do
   let goInductiveParameter :: S.Symbol -> Internal.InductiveParameter
       goInductiveParameter var =
         Internal.InductiveParameter
-          { _inductiveParamName = goSymbol var
+          { _inductiveParamName = goSymbol var,
+            _inductiveParamType = paramType'
           }
   return (map goInductiveParameter (toList _inductiveParametersNames))
   where
@@ -591,7 +594,7 @@ registerBuiltinAxiom d = \case
   BuiltinIntPrint -> registerIntPrint d
 
 goInductive ::
-  (Members '[Reader DefaultArgsStack, NameIdGen, Reader Pragmas, Builtins, Error ScoperError, State ConstructorInfos, Reader S.InfoTable] r) =>
+  (Members '[Reader EntryPoint, Reader DefaultArgsStack, NameIdGen, Reader Pragmas, Builtins, Error ScoperError, State ConstructorInfos, Reader S.InfoTable] r) =>
   InductiveDef 'Scoped ->
   Sem r Internal.InductiveDef
 goInductive ty@InductiveDef {..} = do
@@ -751,7 +754,7 @@ goExpression = \case
   ExpressionUniverse uni -> return (Internal.ExpressionUniverse (goUniverse uni))
   ExpressionFunction func -> Internal.ExpressionFunction <$> goFunction func
   ExpressionHole h -> return (Internal.ExpressionHole h)
-  ExpressionInstanceHole h -> return (Internal.ExpressionInstanceHole h)
+  ExpressionInstanceHole h -> return (Internal.ExpressionInstanceHole (fromHole h))
   ExpressionIterator i -> goIterator i
   ExpressionNamedApplication i -> goNamedApplication i
   ExpressionNamedApplicationNew i -> goNamedApplicationNew i

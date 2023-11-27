@@ -55,6 +55,28 @@ tests:
       equals: "Well done! It type checks\n"
     exit-status: 0
 
+  - name: typecheck-package-description
+    command:
+      shell:
+        - bash
+      script: |
+        base=$PWD
+        temp=$(mktemp -d)
+        trap 'rm -rf -- "$temp"' EXIT
+        configDir=$temp/config
+        projDir=$temp/projDir
+        mkdir $configDir
+        export XDG_CONFIG_HOME="$configDir"
+        mkdir $projDir
+        cd $projDir
+        # side-effect: initializes the global project / the package package
+        globalPackageDir=$(juvix dev root)
+        packagePackageDir="$(dirname $globalPackageDir)"/package
+        juvix typecheck "$packagePackageDir/PackageDescription/V1.juvix"
+    stdout:
+      equals: "Well done! It type checks\n"
+    exit-status: 0
+
   - name: typecheck-stdin
     command:
       - juvix

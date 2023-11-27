@@ -5,6 +5,7 @@ import Juvix.Compiler.Concrete qualified as Concrete
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
 import Juvix.Compiler.Pipeline.Setup
+import Juvix.Data.Effect.TaggedLock
 import Juvix.Formatter
 
 data PosTest = PosTest
@@ -33,19 +34,19 @@ testDescr PosTest {..} =
     { _testName = _name,
       _testRoot = _dir,
       _testAssertion = Steps $ \step -> do
-        entryPoint <- defaultEntryPointCwdIO _file
+        entryPoint <- defaultEntryPointIO' LockModeExclusive _dir _file
         let maybeFile = entryPoint ^. entryPointModulePath
         f <- fromMaybeM (assertFailure "Not a module") (return maybeFile)
 
         original :: Text <- readFile (toFilePath f)
 
         step "Parsing"
-        p :: Parser.ParserResult <- snd <$> runIO' entryPoint upToParsing
+        p :: Parser.ParserResult <- snd <$> runIOExclusive entryPoint upToParsing
 
         step "Scoping"
         s :: Scoper.ScoperResult <-
           snd
-            <$> runIO'
+            <$> runIOExclusive
               entryPoint
               ( do
                   void (entrySetup defaultDependenciesConfig)

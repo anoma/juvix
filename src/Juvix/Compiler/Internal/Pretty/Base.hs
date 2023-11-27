@@ -7,10 +7,13 @@ where
 
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Internal.Data.InstanceInfo (instanceInfoResult, instanceTableMap)
+import Juvix.Compiler.Internal.Data.LocalVars
 import Juvix.Compiler.Internal.Data.NameDependencyInfo
+import Juvix.Compiler.Internal.Data.TypedHole
 import Juvix.Compiler.Internal.Extra
 import Juvix.Compiler.Internal.Pretty.Options
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Data.Types (Arity)
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.CheckerNew.Arity qualified as New
 import Juvix.Compiler.Store.Internal.Data.InfoTable
 import Juvix.Data.CodeAnn
 import Juvix.Prelude
@@ -48,7 +51,7 @@ instance PrettyCode SimpleLambda where
   ppCode l = do
     b' <- ppCode (l ^. slambdaBody)
     v' <- ppCode (l ^. slambdaBinder . sbinderVar)
-    return $ kwLambda <+> braces (v' <+> kwAssign <+> b')
+    return $ kwSimpleLambda <+> braces (v' <+> kwAssign <+> b')
 
 instance PrettyCode Application where
   ppCode a = do
@@ -112,9 +115,6 @@ ppMutual l = do
 instance PrettyCode Arity where
   ppCode = return . pretty
 
-instance PrettyCode IsImplicit where
-  ppCode = return . pretty
-
 instance PrettyCode ApplicationArg where
   ppCode ApplicationArg {..} =
     implicitDelim _appArgIsImplicit <$> ppCode _appArg
@@ -145,9 +145,11 @@ instance (PrettyCode a, PrettyCode b, PrettyCode c) => PrettyCode (a, b, c) wher
     c' <- ppCode c
     return $ tuple [a', b', c']
 
+header :: Text -> Doc Ann
+header = annotate AnnImportant . pretty
+
 instance PrettyCode NameDependencyInfo where
   ppCode DependencyInfo {..} = do
-    let header x = annotate AnnImportant x <> line
     edges' <- vsep <$> mapM ppCode _depInfoEdgeList
     reachable' <- ppCode (toList _depInfoReachable)
     topsort' <- ppCode _depInfoTopSort
@@ -192,6 +194,11 @@ instance PrettyCode Function where
     funReturn' <- ppRightExpression funFixity r
     return $ funParameter' <+> kwArrow <+> funReturn'
 
+instance PrettyCode InstanceHole where
+  ppCode h = do
+    showNameId <- asks (^. optShowNameIds)
+    return (addNameIdTag showNameId (h ^. iholeId) kwHole)
+
 instance PrettyCode Hole where
   ppCode h = do
     showNameId <- asks (^. optShowNameIds)
@@ -210,9 +217,10 @@ ppBlock ::
 ppBlock items = vsep . toList <$> mapM ppCode items
 
 instance PrettyCode InductiveParameter where
-  ppCode (InductiveParameter v) = do
-    v' <- ppCode v
-    return $ parens (v' <+> kwColon <+> kwType)
+  ppCode InductiveParameter {..} = do
+    v' <- ppCode _inductiveParamName
+    ty' <- ppCode _inductiveParamType
+    return $ parens (v' <+> kwColon <+> ty')
 
 instance PrettyCode BuiltinInductive where
   ppCode = return . annotate AnnKeyword . pretty
@@ -323,13 +331,44 @@ instance PrettyCode Module where
 instance PrettyCode Interval where
   ppCode = return . annotate AnnCode . pretty
 
+instance PrettyCode New.ArgId where
+  ppCode a = case a ^. New.argIdName . unIrrelevant of
+    Nothing -> do
+      f' <- ppCode (a ^. New.argIdFunctionName)
+      return (ordinal (a ^. New.argIdIx) <+> "argument of" <+> f')
+    Just n -> do
+      n' <- ppCode n
+      loc' <- ppCode (getLoc n)
+      return (n' <+> "at" <+> loc')
+
+instance PrettyCode New.ArityParameter where
+  ppCode = return . pretty
+
+instance (PrettyCode a, PrettyCode b) => PrettyCode (Either a b) where
+  ppCode = \case
+    Left l -> do
+      l' <- ppCode l
+      return ("Left" <+> l')
+    Right r -> do
+      r' <- ppCode r
+      return ("Right" <+> r')
+
+instance PrettyCode LocalVars where
+  ppCode LocalVars {..} = ppCode (HashMap.toList _localTypes)
+
+instance PrettyCode TypedHole where
+  ppCode TypedHole {..} = do
+    h <- ppCode _typedHoleHole
+    ty <- ppCode _typedHoleType
+    vars <- ppCode _typedHoleLocalVars
+    return (h <+> kwColon <+> ty <> kwAt <> vars)
+
 instance PrettyCode InfoTable where
   ppCode tbl = do
     inds <- ppCode (HashMap.keys (tbl ^. infoInductives))
     constrs <- ppCode (HashMap.keys (tbl ^. infoConstructors))
     funs <- ppCode (HashMap.keys (tbl ^. infoFunctions))
     insts <- ppCode $ map (map (^. instanceInfoResult)) $ HashMap.elems (tbl ^. infoInstances . instanceTableMap)
-    let header :: Text -> Doc Ann = annotate AnnImportant . pretty
     return $
       header "InfoTable"
         <> "\n========="
@@ -399,3 +438,6 @@ instance (PrettyCode a) => PrettyCode [a] where
 
 instance (PrettyCode a) => PrettyCode (NonEmpty a) where
   ppCode x = ppCode (toList x)
+
+instance PrettyCode IsImplicit where
+  ppCode = return . pretty
