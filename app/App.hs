@@ -31,6 +31,7 @@ data App m a where
   RenderStdOut :: (HasAnsiBackend a, HasTextBackend a) => a -> App m ()
   RunPipelineEither :: AppPath File -> Sem PipelineEff a -> App m (Either JuvixError (ResolverState, (a, Store.ModuleTable)))
   RunPipelineNoFileEither :: Sem PipelineEff a -> App m (Either JuvixError (ResolverState, (a, Store.ModuleTable)))
+  RunPipelineSetupEither :: Sem PipelineEff' a -> App m (Either JuvixError (ResolverState, a))
   RunCorePipelineEither :: AppPath File -> App m (Either JuvixError Artifacts)
   Say :: Text -> App m ()
   SayRaw :: ByteString -> App m ()
@@ -74,6 +75,9 @@ runAppIO args@RunAppIOArgs {..} =
     RunPipelineNoFileEither p -> do
       entry <- embed (getEntryPointStdin' args)
       embed (runIOEither entry p)
+    RunPipelineSetupEither p -> do
+      entry <- embed (getEntryPointStdin' args)
+      embed (runIOEitherPipeline entry p)
     Say t
       | g ^. globalOnlyErrors -> return ()
       | otherwise -> embed (putStrLn t)
@@ -174,6 +178,13 @@ runPipelineNoFile p = do
   case r of
     Left err -> exitJuvixError err
     Right res -> return (fst $ snd res)
+
+runPipelineSetup :: (Member App r) => Sem PipelineEff' a -> Sem r a
+runPipelineSetup p = do
+  r <- runPipelineSetupEither p
+  case r of
+    Left err -> exitJuvixError err
+    Right res -> return (snd res)
 
 newline :: (Member App r) => Sem r ()
 newline = say ""

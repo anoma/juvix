@@ -29,7 +29,6 @@ import Juvix.Compiler.Pipeline.Loader.PathResolver.Error
 import Juvix.Compiler.Pipeline.Package.Loader.Error
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff
 import Juvix.Compiler.Pipeline.Root.Base
-import Juvix.Compiler.Pipeline.Setup (entrySetup)
 import Juvix.Compiler.Reg.Data.InfoTable qualified as Reg
 import Juvix.Compiler.Reg.Translation.FromAsm qualified as Reg
 import Juvix.Compiler.Store.Language qualified as Store
@@ -38,22 +37,18 @@ import Juvix.Data.Effect.Process
 import Juvix.Data.Effect.TaggedLock
 import Juvix.Prelude
 
-type PipelineEff = '[Reader Parser.ParserResult, Reader Store.ModuleTable, NameIdGen, PathResolver, EvalFileEff, Error PackageLoaderError, Error DependencyError, GitClone, Error GitProcessError, Process, Log, Reader EntryPoint, TaggedLock, Files, Error JuvixError, HighlightBuilder, Internet, Embed IO, Resource, Final IO]
+type PipelineEff' = '[PathResolver, EvalFileEff, Error PackageLoaderError, Error DependencyError, GitClone, Error GitProcessError, Process, Log, Reader EntryPoint, TaggedLock, Files, Error JuvixError, HighlightBuilder, Internet, Embed IO, Resource, Final IO]
+
+type PipelineEff = Reader Parser.ParserResult ': Reader Store.ModuleTable ': NameIdGen ': PipelineEff'
 
 --------------------------------------------------------------------------------
 -- Workflows from source
 --------------------------------------------------------------------------------
 
-upToSetup ::
-  (Members '[Reader EntryPoint, PathResolver] r) =>
-  DependenciesConfig ->
-  Sem r ()
-upToSetup = entrySetup
-
 upToParsing ::
   (Members '[Reader EntryPoint, Error JuvixError, Files, PathResolver] r) =>
   Sem r Parser.ParserResult
-upToParsing = upToSetup defaultDependenciesConfig >> ask >>= Parser.fromSource
+upToParsing = ask >>= Parser.fromSource
 
 --------------------------------------------------------------------------------
 -- Workflows from parsed source

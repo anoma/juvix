@@ -23,6 +23,7 @@ import Juvix.Compiler.Pipeline.Loader.PathResolver
 import Juvix.Compiler.Pipeline.Package.Loader.Error
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff.IO
 import Juvix.Compiler.Pipeline.Package.Loader.PathResolver
+import Juvix.Compiler.Pipeline.Setup
 import Juvix.Compiler.Store.Language qualified as Store
 import Juvix.Compiler.Store.Scoped.Language qualified as Scoped
 import Juvix.Data.Effect.Git
@@ -52,6 +53,23 @@ runIOEitherHelper = runIOEitherHelper' LockModePermissive
 
 runIOEitherHelper' :: forall a. LockMode -> EntryPoint -> Sem PipelineEff a -> IO (HighlightInput, (Either JuvixError (ResolverState, (a, Store.ModuleTable))))
 runIOEitherHelper' lockMode entry a = do
+  runIOEitherPipeline' lockMode entry $
+    entrySetup defaultDependenciesConfig >> processFileUpTo a
+
+runIOEitherPipeline ::
+  forall a.
+  EntryPoint ->
+  Sem PipelineEff' a ->
+  IO (Either JuvixError (ResolverState, a))
+runIOEitherPipeline entry = fmap snd . runIOEitherPipeline' LockModePermissive entry
+
+runIOEitherPipeline' ::
+  forall a.
+  LockMode ->
+  EntryPoint ->
+  Sem PipelineEff' a ->
+  IO (HighlightInput, (Either JuvixError (ResolverState, a)))
+runIOEitherPipeline' lockMode entry a = do
   let hasInternet = not (entry ^. entryPointOffline)
       runPathResolver'
         | mainIsPackageFile entry = runPackagePathResolver' (entry ^. entryPointResolverRoot)
@@ -73,7 +91,7 @@ runIOEitherHelper' lockMode entry a = do
     . mapError (JuvixError @PackageLoaderError)
     . runEvalFileEffIO
     . runPathResolver'
-    $ processFileUpTo a
+    $ a
 
 mainIsPackageFile :: EntryPoint -> Bool
 mainIsPackageFile entry = case entry ^. entryPointModulePath of
