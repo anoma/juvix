@@ -7,6 +7,7 @@ module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Er
 where
 
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Error
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Positivity.Error
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error.Pretty
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error.Types
 import Juvix.Prelude
@@ -21,7 +22,7 @@ data TypeCheckerError
   | ErrTooManyArgumentsIndType WrongNumberArgumentsIndType
   | ErrTooFewArgumentsIndType WrongNumberArgumentsIndType
   | ErrInvalidPatternMatching InvalidPatternMatching
-  | ErrNoPositivity NoPositivity
+  | ErrNonStrictlyPositive NonStrictlyPositiveError
   | ErrUnsupportedTypeFunction UnsupportedTypeFunction
   | ErrInvalidInstanceType InvalidInstanceType
   | ErrInvalidCoercionType InvalidCoercionType
@@ -47,8 +48,13 @@ instance ToGenericError TypeCheckerError where
     ErrExpectedFunctionType e -> genericError e
     ErrTooManyArgumentsIndType e -> genericError e
     ErrTooFewArgumentsIndType e -> genericError e
+<<<<<<< HEAD
     ErrInvalidPatternMatching e -> genericError e
     ErrNoPositivity e -> genericError e
+=======
+    ErrImpracticalPatternMatching e -> genericError e
+    ErrNonStrictlyPositive e -> genericError e
+>>>>>>> 781ad323 (W.i.p)
     ErrUnsupportedTypeFunction e -> genericError e
     ErrInvalidInstanceType e -> genericError e
     ErrInvalidCoercionType e -> genericError e

@@ -1,0 +1,5 @@
+module FreeT;
+
+type Free (f : Type -> Type) (A : Type) : Type :=
+  | Leaf : A -> Free f A
+  | Branch : f (Free f A) -> Free f A;

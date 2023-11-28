@@ -1,0 +1,6 @@
+module EvilWithAxiom;
+
+axiom g : Type -> Type;
+
+type Evil (f : Type -> Type) :=
+  magic : g (Evil f) -> Evil f;
