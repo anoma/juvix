@@ -1067,10 +1067,10 @@ inferLeftAppExpression mhint e = case e of
 
 -- | The hint is used for trailing holes only
 holesHelper :: forall r. (Members '[HighlightBuilder, Reader InfoTable, State FunctionsTable, State TypesTable, Reader LocalVars, Error TypeCheckerError, NameIdGen, Inference, Output Example, Output TypedHole, Builtins, Termination, Output CastHole, Reader InsertedArgsStack] r) => Maybe Expression -> Expression -> Sem r TypedExpression
-holesHelper mhint expr = do
+holesHelper mhintTop expr = do
   let (f, args) = unfoldExpressionApp expr
       hint
-        | null args = mhint
+        | null args = mhintTop
         | otherwise = Nothing
   arityCheckBuiltins f args
   fTy <- inferLeftAppExpression hint f
@@ -1125,7 +1125,7 @@ holesHelper mhint expr = do
       let ty = fTy ^. typedType
       in runFailDefault (BuilderTypeNoDefaults ty) $ do
         fun <- failMaybe (getFunctionName (fTy ^. typedExpression))
-        infos <- (^. functionInfoDef . funDefArgsInfo) <$> (lookupFunctionMaybe fun >>= failMaybe)
+        infos <- (^. functionInfoDef . funDefArgsInfo) <$> (lookupFunction fun)
         return $ toFunctionDefaultMay fun ty infos
       where
         toFunctionDefaultMay :: Name -> Expression -> [ArgInfo] -> BuilderType
@@ -1193,8 +1193,8 @@ holesHelper mhint expr = do
         goImplArgs k (ApplicationArg Implicit _ : as) = goImplArgs (k - 1) as
         goImplArgs _ as = return as
 
-    goArgs :: forall r'. (r' ~ State AppBuilder ': Output InsertedArg ': r) => Sem r' ()
-    goArgs = peekArg >>= maybe (insertTrailingHolesMay mhint) goNextArg
+    goArgs :: forall r'. (r' ~ State AppBuilder ': Output InsertedArg ': r) => Maybe Expression -> Sem r' ()
+    goArgs mhint = peekArg >>= maybe (insertTrailingHolesMay mhint) goNextArg
       where
         insertTrailingHolesMay :: Maybe Expression -> Sem r' ()
         insertTrailingHolesMay = flip whenJust insertTrailingHoles
@@ -1313,7 +1313,7 @@ holesHelper mhint expr = do
             insertMiddleHoleOrCheck fun argImpl =
               let funParam = fun ^. functionDefaultLeft
                   funImpl = funParam ^. paramImplicit
-                  checkThisArg = checkMatchingArg arg fun >> goArgs
+                  checkThisArg = checkMatchingArg arg fun >> goArgs mhint
                in case (argImpl, funImpl) of
                     (Explicit, Explicit) -> checkThisArg
                     (Implicit, Implicit) -> checkThisArg
