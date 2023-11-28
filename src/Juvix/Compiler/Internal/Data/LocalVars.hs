@@ -43,3 +43,6 @@ addTypeMapping v v' = over localTyMap (HashMap.insert v v')
 
 withEmptyLocalVars :: Sem (Reader LocalVars ': r) a -> Sem r a
 withEmptyLocalVars = runReader emptyLocalVars
+
+withLocalVars :: LocalVars -> Sem (Reader LocalVars ': r) a -> Sem r a
+withLocalVars = runReader

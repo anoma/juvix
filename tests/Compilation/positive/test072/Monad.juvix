@@ -13,3 +13,9 @@ type Monad (f : Type -> Type) :=
     syntax operator >>= bind;
     >>= : {A B : Type} -> f A -> (A -> f B) -> f B
   };
+
+open Monad public;
+
+syntax operator >> bind;
+>> {M : Type → Type} {A B : Type} {{Monad M}} (x : M
+  A) (y : M B) : M B := x >>= λ {_ := y};

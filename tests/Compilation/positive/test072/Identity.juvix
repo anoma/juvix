@@ -5,6 +5,8 @@ import Functor open;
 
 type Identity (a : Type) := mkIdentity {runIdentity : a};
 
+open Identity public;
+
 instance
 Identity-Functor : Functor Identity :=
   mkFunctor@{

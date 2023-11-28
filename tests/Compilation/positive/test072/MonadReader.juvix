@@ -10,3 +10,5 @@ type MonadReader (S : Type) (M : Type -> Type) :=
     ask : M S;
     reader : {A : Type} → (S → A) → M A
   };
+
+open MonadReader public;

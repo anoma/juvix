@@ -524,12 +524,25 @@ checkClause clauseLoc clauseType clausePats body = do
     helper :: [PatternArg] -> Expression -> Sem r (LocalVars, ([PatternArg], Expression))
     helper pats ty = runState emptyLocalVars (go pats ty)
 
+    genPatternWildcard :: Interval -> FunctionParameter -> Sem (State LocalVars ': r) PatternArg
+    genPatternWildcard loc par = do
+      let impl = par ^. paramImplicit
+      var <- maybe (varFromWildcard (Wildcard loc)) return (par ^. paramName)
+      addPatternVar var (par ^. paramType) Nothing
+      return
+        PatternArg
+          { _patternArgIsImplicit = impl,
+            _patternArgName = Nothing,
+            _patternArgPattern = PatternVariable var
+          }
+
     go :: [PatternArg] -> Expression -> Sem (State LocalVars ': r) ([PatternArg], Expression)
     go pats bodyTy = case pats of
       [] -> do
         (bodyParams, bodyRest) <- unfoldFunType' bodyTy
-        guessedBodyParams <- unfoldArity <$> guessArity body
-        let pref' :: [IsImplicit] = map (^. paramImplicit) (take pref bodyParams)
+        locals <- get
+        guessedBodyParams <- withLocalVars locals (unfoldArity <$> guessArity body)
+        let pref' :: [FunctionParameter] = take pref bodyParams
             pref :: Int = aI - targetI
             preImplicits = length . takeWhile isImplicitOrInstance
             aI :: Int = preImplicits (map (^. paramImplicit) bodyParams)
@@ -539,10 +552,9 @@ checkClause clauseLoc clauseType clausePats body = do
                 let n = length pref'
                     bodyParams' = drop n bodyParams
                     ty' = foldFunType bodyParams' bodyRest
-                wildcards <- mapM (genWildcard clauseLoc) pref'
+                wildcards <- mapM (genPatternWildcard clauseLoc) pref'
                 return (wildcards, ty')
-            | otherwise -> do
-                return ([], bodyTy)
+            | otherwise -> return ([], bodyTy)
       p : ps -> do
         bodyTy' <- weakNormalize bodyTy
         case bodyTy' of
@@ -561,9 +573,9 @@ checkClause clauseLoc clauseType clausePats body = do
                     loc :: Interval
                     loc = getLoc par
 
-                    insertWildcard :: IsImplicit -> Sem (State LocalVars ': r) ([PatternArg], Expression)
-                    insertWildcard impl = do
-                      w <- genWildcard loc impl
+                    insertWildcard :: Sem (State LocalVars ': r) ([PatternArg], Expression)
+                    insertWildcard = do
+                      w <- genPatternWildcard loc par
                       go (w : p : ps) bodyTy'
 
                 case (p ^. patternArgIsImplicit, par ^. paramImplicit) of
@@ -572,10 +584,10 @@ checkClause clauseLoc clauseType clausePats body = do
                   (ImplicitInstance, ImplicitInstance) -> checkPatternAndContinue
                   (Implicit, Explicit) -> throwWrongIsImplicit p Implicit
                   (ImplicitInstance, Explicit) -> throwWrongIsImplicit p ImplicitInstance
-                  (Explicit, Implicit) -> insertWildcard Implicit
-                  (ImplicitInstance, Implicit) -> insertWildcard Implicit
-                  (Explicit, ImplicitInstance) -> insertWildcard ImplicitInstance
-                  (Implicit, ImplicitInstance) -> insertWildcard ImplicitInstance
+                  (Explicit, Implicit) -> insertWildcard
+                  (ImplicitInstance, Implicit) -> insertWildcard
+                  (Explicit, ImplicitInstance) -> insertWildcard
+                  (Implicit, ImplicitInstance) -> insertWildcard
         where
           throwWrongIsImplicit :: (Members '[Error TypeCheckerError] r') => PatternArg -> IsImplicit -> Sem r' a
           throwWrongIsImplicit patArg expected =
@@ -627,6 +639,12 @@ matchIsImplicit expected actual =
           _wrongPatternIsImplicitActual = actual
         }
 
+addPatternVar :: (Members '[State LocalVars, Inference] r) => VarName -> Expression -> Maybe Name -> Sem r ()
+addPatternVar v ty argName = do
+  modify (addType v ty)
+  registerIdenType v ty
+  whenJust argName (\v' -> modify (addTypeMapping v' v))
+
 checkPattern ::
   forall r.
   (Members '[Reader InfoTable, Error TypeCheckerError, State LocalVars, Inference, NameIdGen, State FunctionsTable] r) =>
@@ -642,9 +660,9 @@ checkPattern = go
       ty <- substitutionE tyVarMap (argTy ^. paramType)
       let pat = patArg ^. patternArgPattern
           name = patArg ^. patternArgName
-      whenJust name (\n -> addVar n ty argTy)
+      whenJust name (\n -> addPatternVar n ty (argTy ^. paramName))
       pat' <- case pat of
-        PatternVariable v -> addVar v ty argTy $> pat
+        PatternVariable v -> addPatternVar v ty (argTy ^. paramName) $> pat
         PatternWildcardConstructor {} -> impossible
         PatternConstructorApp a -> goPatternConstructor pat ty a
       return (set patternArgPattern pat' patArg)
@@ -693,12 +711,6 @@ checkPattern = go
                     )
                 )
               PatternConstructorApp <$> goConstr (IdenInductive ind) a tyArgs
-
-        addVar :: VarName -> Expression -> FunctionParameter -> Sem r ()
-        addVar v ty argType = do
-          modify (addType v ty)
-          registerIdenType v ty
-          whenJust (argType ^. paramName) (\v' -> modify (addTypeMapping v' v))
 
         goConstr :: Iden -> ConstructorApp -> [(InductiveParameter, Expression)] -> Sem r ConstructorApp
         goConstr inductivename app@(ConstructorApp c ps _) ctx = do
@@ -1109,7 +1121,7 @@ holesHelper mhint expr = do
       where
         goImplArgs :: Int -> [ApplicationArg] -> Sem r [ApplicationArg]
         goImplArgs 0 as = return as
-        goImplArgs k ((ApplicationArg Implicit _) : as) = goImplArgs (k - 1) as
+        goImplArgs k (ApplicationArg Implicit _ : as) = goImplArgs (k - 1) as
         goImplArgs _ as = return as
 
     goArgs :: forall r'. (r' ~ State AppBuilder ': r) => Sem r' ()
@@ -1412,7 +1424,7 @@ typeArity = weakNormalize >=> go
 
 guessArity ::
   forall r.
-  (Members '[Reader InfoTable, Inference] r) =>
+  (Members '[Reader InfoTable, Inference, Reader LocalVars] r) =>
   Expression ->
   Sem r Arity
 guessArity = \case
@@ -1429,7 +1441,7 @@ guessArity = \case
   ExpressionCase l -> arityCase l
   where
     idenHelper :: Iden -> Sem r Arity
-    idenHelper = withEmptyLocalVars . idenArity
+    idenHelper = idenArity
 
     appHelper :: Application -> Sem r Arity
     appHelper a = do
@@ -1464,7 +1476,7 @@ arityUniverse = ArityUnit
 simplelambda :: a
 simplelambda = error "simple lambda expressions are not supported by the arity checker"
 
-arityLambda :: forall r. (Members '[Reader InfoTable, Inference] r) => Lambda -> Sem r Arity
+arityLambda :: forall r. (Members '[Reader InfoTable, Inference, Reader LocalVars] r) => Lambda -> Sem r Arity
 arityLambda l = do
   aris <- mapM guessClauseArity (l ^. lambdaClauses)
   return $
@@ -1501,13 +1513,13 @@ guessPatternArgArity p =
           }
     }
 
-arityLet :: (Members '[Reader InfoTable, Inference] r) => Let -> Sem r Arity
+arityLet :: (Members '[Reader InfoTable, Inference, Reader LocalVars] r) => Let -> Sem r Arity
 arityLet l = guessArity (l ^. letExpression)
 
 -- | All branches should have the same arity. If they are all the same, we
 -- return that, otherwise we return ArityBlocking. Probably something better can
 -- be done.
-arityCase :: (Members '[Reader InfoTable, Inference] r) => Case -> Sem r Arity
+arityCase :: (Members '[Reader InfoTable, Inference, Reader LocalVars] r) => Case -> Sem r Arity
 arityCase c = do
   aris <- mapM (guessArity . (^. caseBranchExpression)) (c ^. caseBranches)
   return

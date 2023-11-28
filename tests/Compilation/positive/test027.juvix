@@ -31,4 +31,3 @@ main : IO :=
   printNatLn (toNat (num 7))
     >> printNatLn (toNat (add (num 7) (num 3)))
     >> printNatLn (toNat (mul (num 7) (num 3)));
-
