@@ -22,7 +22,7 @@ newtype InsertedArgsStack = InsertedArgsStack
 -- checker.
 data InsertedArg = InsertedArg
   { _insertedImplicit :: IsImplicit,
-    _insertedFunction :: FunctionDef,
+    _insertedValue :: Expression,
     -- | True if this corresponds to an automatically inserted default argument.
     -- False if it is an inserted hole or an argument present in the source code.
     _insertedArgDefault :: Bool

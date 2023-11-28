@@ -67,7 +67,6 @@ data AppBuilder = AppBuilder
 makeLenses ''AppBuilder
 makeLenses ''AppBuilderArg
 makeLenses ''FunctionDefault
-makeLenses ''FunctionDefaultInfo
 
 instance HasExpressions FunctionDefaultInfo where
   leafExpressions f FunctionDefaultInfo {..} = do
@@ -1089,7 +1088,7 @@ holesHelper mhint expr = do
           }
   (insertedArgs, st') <- runOutputList (execState iniBuilder goArgs)
   let ty' = mkFinalBuilderType (st' ^. appBuilderType)
-  expr' <- mkFinalExpression (st' ^. appBuilderLeft) insertedArgs
+      expr' = mkFinalExpression (st' ^. appBuilderLeft) insertedArgs
   return
     TypedExpression
       { _typedType = ty',
@@ -1099,30 +1098,11 @@ holesHelper mhint expr = do
     mkArg :: InsertedArg -> ApplicationArg
     mkArg i =
       ApplicationArg
-        { _appArg = toExpression (i ^. insertedFunction . funDefName),
+        { _appArg = i ^. insertedValue,
           _appArgIsImplicit = i ^. insertedImplicit
         }
-    mkFinalExpression :: Expression -> [InsertedArg] -> Sem r Expression
-    mkFinalExpression f args =
-      case nonEmpty args of
-        Nothing -> return f
-        Just args'
-          | not hasADefault -> return (foldApplication f (map mkArg args))
-          | otherwise -> do
-              let mkClause :: InsertedArg -> PreLetStatement
-                  mkClause InsertedArg {..} = PreLetFunctionDef _insertedFunction
-                  app = foldApplication f (map mkArg args)
-                  clauses :: NonEmpty LetClause = nonEmpty' (mkLetClauses (mkClause <$> args'))
-              letexpr <-
-                substitutionE (renameKind KNameFunction (map (^. insertedFunction . funDefName) args)) $
-                  ExpressionLet
-                    Let
-                      { _letClauses = clauses,
-                        _letExpression = app
-                      }
-              clone letexpr
-      where
-        hasADefault = any (^. insertedArgDefault) args
+    mkFinalExpression :: Expression -> [InsertedArg] -> Expression
+    mkFinalExpression f args = foldApplication f (map mkArg args)
 
     mkFinalBuilderType :: BuilderType -> Expression
     mkFinalBuilderType = \case
@@ -1310,48 +1290,15 @@ holesHelper mhint expr = do
           arg' <- checkLeft
           let subsE :: (HasExpressions expr) => expr -> Sem r' expr
               subsE = substitutionApp (funParam ^. paramName, arg')
-              subsBuilderType :: BuilderType -> Sem r' BuilderType = \case
-                BuilderTypeNoDefaults e -> BuilderTypeNoDefaults <$> subsE e
-                BuilderTypeDefaults FunctionDefault {..} -> do
-                  def' <- mapM subsE _functionDefaultDefault
-                  l' <- subsE _functionDefaultLeft
-                  r' <- subsBuilderType _functionDefaultRight
-                  return
-                    ( BuilderTypeDefaults
-                        FunctionDefault
-                          { _functionDefaultLeft = l',
-                            _functionDefaultDefault = def',
-                            _functionDefaultRight = r'
-                          }
-                    )
-              -- TODO rename to KNameFunction
+              subsBuilderType :: BuilderType -> Sem r' BuilderType = subsE
               applyArg :: Sem r' ()
               applyArg = do
-                get >>= appBuilderArgs (mapM (substitutionE updateKind)) >>= put
-                name <- case mname of
-                  Just n -> return n
-                  Nothing -> do
-                    _nameId <- freshNameId
-                    let str :: Text = "param" <> prettyText _nameId
-                    return
-                      Name
-                        { _nameText = str,
-                          _namePretty = str,
-                          _nameFixity = Nothing,
-                          _nameKind = KNameFunction,
-                          _nameLoc = getLoc funParam,
-                          _nameId
-                        }
-
-                let ty = funL
+                -- get >>= appBuilderArgs (mapM (substitutionE updateKind)) >>= put
                 let body = arg ^. appBuilderArg . appArg
-                    def = simpleFunDef name ty body
-                registerFunctionDef def
-                -- FIXME unregister def if not used!
                 output
                   InsertedArg
                     { _insertedImplicit = arg ^. appBuilderArg . appArgIsImplicit,
-                      _insertedFunction = def,
+                      _insertedValue = body,
                       _insertedArgDefault = case arg ^. appBuilderArgIsDefault of
                         ItIsDefault {} -> True
                         ItIsNotDefault -> False
