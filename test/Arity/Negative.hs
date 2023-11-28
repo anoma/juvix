@@ -1,4 +1,4 @@
-module Arity.Negative (allTests) where
+module Arity.Negative where
 
 import Base
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Error

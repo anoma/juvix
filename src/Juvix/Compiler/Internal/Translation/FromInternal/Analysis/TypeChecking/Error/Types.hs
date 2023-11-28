@@ -281,13 +281,13 @@ instance ToGenericError WrongNumberArgumentsIndType where
                   )
               <+> "given"
 
-newtype ImpracticalPatternMatching = ImpracticalPatternMatching
+newtype InvalidPatternMatching = InvalidPatternMatching
   { _impracticalPatternMatchingType :: Expression
   }
 
-makeLenses ''ImpracticalPatternMatching
+makeLenses ''InvalidPatternMatching
 
-instance ToGenericError ImpracticalPatternMatching where
+instance ToGenericError InvalidPatternMatching where
   genericError e = ask >>= generr
     where
       generr opts =

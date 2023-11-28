@@ -652,7 +652,7 @@ matchIsImplicit expected actual =
   unless
     (expected == actual ^. patternArgIsImplicit)
     . throw
-    . ErrArity
+    . ErrArityCheckerError
     $ ErrWrongPatternIsImplicit
       WrongPatternIsImplicit
         { _wrongPatternIsImplicitExpected = expected,
@@ -745,7 +745,7 @@ checkPattern = go
 
         appErr :: ConstructorApp -> Int -> TypeCheckerError
         appErr app expected =
-          ErrArity
+          ErrArityCheckerError
             ( ErrWrongConstructorAppLength
                 ( WrongConstructorAppLength
                     { _wrongConstructorAppLength = app,
@@ -1369,7 +1369,7 @@ viewInductiveApp ty = do
       case r of
         Just h' -> viewInductiveApp h'
         Nothing -> return (Left h)
-    _ -> throw (ErrImpracticalPatternMatching (ImpracticalPatternMatching ty))
+    _ -> throw (ErrInvalidPatternMatching (InvalidPatternMatching ty))
   where
     viewTypeApp :: Expression -> (Expression, [Expression])
     viewTypeApp tyapp = case tyapp of
