@@ -112,5 +112,19 @@ tests =
       $(mkRelFile "DefaultArgCycleArity.juvix")
       $ \case
         ErrDefaultArgCycle {} -> Nothing
+        _ -> wrongError,
+    NegTest
+      "Unexpected braces in pattern"
+      $(mkRelDir "issue1337")
+      $(mkRelFile "Braces.juvix")
+      $ \case
+        ErrWrongPatternIsImplicit {} -> Nothing
+        _ -> wrongError,
+    NegTest
+      "Unexpected double braces in pattern"
+      $(mkRelDir "issue1337")
+      $(mkRelFile "DoubleBraces.juvix")
+      $ \case
+        ErrWrongPatternIsImplicit {} -> Nothing
         _ -> wrongError
   ]

@@ -14,7 +14,6 @@ import Juvix.Prelude
 data TypeCheckerError
   = ErrWrongConstructorType WrongConstructorType
   | ErrWrongReturnType WrongReturnType
-  | ErrArity ArityCheckerError
   | ErrWrongType WrongType
   | ErrUnsolvedMeta UnsolvedMeta
   | ErrExpectedFunctionType ExpectedFunctionType
@@ -42,7 +41,6 @@ instance ToGenericError TypeCheckerError where
   genericError = \case
     ErrWrongConstructorType e -> genericError e
     ErrWrongReturnType e -> genericError e
-    ErrArity e -> genericError e
     ErrWrongType e -> genericError e
     ErrUnsolvedMeta e -> genericError e
     ErrExpectedFunctionType e -> genericError e
