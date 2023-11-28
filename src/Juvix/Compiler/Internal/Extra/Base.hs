@@ -126,11 +126,12 @@ instance HasExpressions SimpleLambda where
 instance HasExpressions FunctionParameter where
   leafExpressions f FunctionParameter {..} = do
     ty' <- leafExpressions f _paramType
-    pure FunctionParameter {
-      _paramType = ty',
-      _paramName,
-      _paramImplicit
-                           }
+    pure
+      FunctionParameter
+        { _paramType = ty',
+          _paramName,
+          _paramImplicit
+        }
 
 instance HasExpressions Function where
   leafExpressions f (Function l r) = do
@@ -306,10 +307,10 @@ inductiveTypeVarsAssoc def l
     vars :: [VarName]
     vars = def ^.. inductiveParameters . each . inductiveParamName
 
-substitutionApp :: forall r expr. (Member NameIdGen r, HasExpressions expr) => (Maybe Name, Expression) -> expr -> Sem r expr
+substitutionApp :: (Maybe Name, Expression) -> Subs
 substitutionApp (mv, ty) = case mv of
-  Nothing -> return
-  Just v -> substitutionE (HashMap.singleton v ty)
+  Nothing -> mempty
+  Just v -> HashMap.singleton v ty
 
 localsToSubsE :: LocalVars -> Subs
 localsToSubsE l = ExpressionIden . IdenVar <$> l ^. localTyMap

@@ -915,7 +915,7 @@ inferExpression' hint e = case e of
                         <> ppTrace (Application l r iapp)
                     )
                 )
-              ty <- substitutionApp (paraName, r') funR
+              ty <- substitutionE (substitutionApp (paraName, r')) funR
               return
                 TypedExpression
                   { _typedExpression =
