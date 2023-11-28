@@ -67,14 +67,15 @@ data AppBuilder = AppBuilder
 makeLenses ''AppBuilder
 makeLenses ''AppBuilderArg
 makeLenses ''FunctionDefault
+makeLenses ''FunctionDefaultInfo
 
 instance HasExpressions FunctionDefaultInfo where
-  leafExpressions f FunctionDefaultInfo {..} = do
-    val' <- leafExpressions f _functionDefaultValue
+  leafExpressions f i = do
+    val' <- leafExpressions f (i ^. functionDefaultValue)
     pure
       FunctionDefaultInfo
         { _functionDefaultValue = val',
-          _functionDefaultArgId
+          _functionDefaultArgId = i ^. functionDefaultArgId
         }
 
 instance HasExpressions FunctionDefault where
@@ -1276,10 +1277,7 @@ holesHelper mhint expr = do
         checkMatchingArg arg fun = do
           dropArg
           let funParam = fun ^. functionDefaultLeft
-              -- TODO clone funL?
               funL = funParam ^. paramType
-              mname = funParam ^. paramName
-              updateKind = subsKind (mname ^.. _Just) KNameFunction
               checkLeft :: Sem r' Expression
               checkLeft = do
                 checkLoop arg
@@ -1290,10 +1288,8 @@ holesHelper mhint expr = do
           arg' <- checkLeft
           let subsE :: (HasExpressions expr) => expr -> Sem r' expr
               subsE = substitutionApp (funParam ^. paramName, arg')
-              subsBuilderType :: BuilderType -> Sem r' BuilderType = subsE
               applyArg :: Sem r' ()
               applyArg = do
-                -- get >>= appBuilderArgs (mapM (substitutionE updateKind)) >>= put
                 let body = arg ^. appBuilderArg . appArg
                 output
                   InsertedArg
@@ -1303,9 +1299,7 @@ holesHelper mhint expr = do
                         ItIsDefault {} -> True
                         ItIsNotDefault -> False
                     }
-          -- this should only be done if default arguments are in the application
-          funR' <- substitutionE updateKind (fun ^. functionDefaultRight)
-               >>= subsBuilderType
+          funR' <- subsE (fun ^. functionDefaultRight)
           modify' (set appBuilderType funR')
           applyArg
 
