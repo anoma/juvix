@@ -124,9 +124,13 @@ instance HasExpressions SimpleLambda where
     pure (SimpleLambda bi' b')
 
 instance HasExpressions FunctionParameter where
-  leafExpressions f (FunctionParameter m i e) = do
-    e' <- leafExpressions f e
-    pure (FunctionParameter m i e')
+  leafExpressions f FunctionParameter {..} = do
+    ty' <- leafExpressions f _paramType
+    pure FunctionParameter {
+      _paramType = ty',
+      _paramName,
+      _paramImplicit
+                           }
 
 instance HasExpressions Function where
   leafExpressions f (Function l r) = do
