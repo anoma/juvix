@@ -1107,7 +1107,7 @@ holesHelper mhint expr = do
       case nonEmpty args of
         Nothing -> return f
         Just args'
-          | False && not hasADefault -> return (foldApplication f (map mkArg args))
+          | not hasADefault -> return (foldApplication f (map mkArg args))
           | otherwise -> do
               let mkClause :: InsertedArg -> PreLetStatement
                   mkClause InsertedArg {..} = PreLetFunctionDef _insertedFunction
@@ -1140,13 +1140,12 @@ holesHelper mhint expr = do
       _ -> Nothing
 
     mkInitBuilderType :: TypedExpression -> Sem r BuilderType
-    mkInitBuilderType fTy = do
+    mkInitBuilderType fTy =
       let ty = fTy ^. typedType
-      case getFunctionName (fTy ^. typedExpression) of
-        Just fun -> do
-          infos <- (^. functionInfoDef . funDefArgsInfo) <$> lookupFunction fun
-          return $ toFunctionDefaultMay fun ty infos
-        Nothing -> return (BuilderTypeNoDefaults ty)
+      in runFailDefault (BuilderTypeNoDefaults ty) $ do
+        fun <- failMaybe (getFunctionName (fTy ^. typedExpression))
+        infos <- (^. functionInfoDef . funDefArgsInfo) <$> (lookupFunctionMaybe fun >>= failMaybe)
+        return $ toFunctionDefaultMay fun ty infos
       where
         toFunctionDefaultMay :: Name -> Expression -> [ArgInfo] -> BuilderType
         toFunctionDefaultMay funName ty infos =
@@ -1223,7 +1222,7 @@ holesHelper mhint expr = do
         insertTrailingHoles hintTy = do
           builderTy <- gets (^. appBuilderType)
           ariHint <- typeArity hintTy
-          (defaults, restExprTy) <- peelDefault builderTy
+          let (defaults, restExprTy) = peelDefault builderTy
           restExprAri <- typeArity restExprTy
           let preImplicits :: Arity -> [IsImplicit]
               preImplicits = takeWhile isImplicitOrInstance . map (^. arityParameterImplicit) . unfoldArity
@@ -1256,13 +1255,19 @@ holesHelper mhint expr = do
                           },
                       _appBuilderArgIsDefault
                     }
-          trailingHoles <- mapM mkHoleArg toBeInserted
-          mapM_ addTrailingHole trailingHoles
+          case listToMaybe toBeInserted of
+            Nothing -> return ()
+            Just tbh -> do
+              mkHoleArg tbh >>= addTrailingHole
+              goArgs
+          -- trailingHoles <- mapM mkHoleArg toBeInserted
+          -- TODO substitution to the remaining holes
+          -- mapM_ addTrailingHole trailingHoles
           where
-            peelDefault :: BuilderType -> Sem r' ([(IsImplicit, Maybe FunctionDefaultInfo)], Expression)
-            peelDefault bty = runOutputList (go bty)
+            peelDefault :: BuilderType -> ([(IsImplicit, Maybe FunctionDefaultInfo)], Expression)
+            peelDefault = run . runOutputList . go
               where
-                go :: BuilderType -> Sem (Output (IsImplicit, Maybe FunctionDefaultInfo) ': r') Expression
+                go :: BuilderType -> Sem '[Output (IsImplicit, Maybe FunctionDefaultInfo)] Expression
                 go = \case
                   BuilderTypeNoDefaults e -> return e
                   BuilderTypeDefaults d -> do
@@ -1272,7 +1277,6 @@ holesHelper mhint expr = do
 
             addTrailingHole :: AppBuilderArg -> Sem r' ()
             addTrailingHole holeArg = do
-              traceM ("add trailing hole " <> ppTrace (holeArg ^. appBuilderArg))
               fun <- peekFunctionType (holeArg ^. appBuilderArg . appArgIsImplicit)
               modify' (over appBuilderArgs (holeArg :))
               checkMatchingArg holeArg fun
@@ -1290,7 +1294,6 @@ holesHelper mhint expr = do
 
         checkMatchingArg :: AppBuilderArg -> FunctionDefault -> Sem r' ()
         checkMatchingArg arg fun = do
-          traceM ("checking arg " <> ppTrace (arg ^. appBuilderArg))
           dropArg
           let funParam = fun ^. functionDefaultLeft
               -- TODO clone funL?
@@ -1307,7 +1310,6 @@ holesHelper mhint expr = do
           arg' <- checkLeft
           let subsE :: (HasExpressions expr) => expr -> Sem r' expr
               subsE = substitutionApp (funParam ^. paramName, arg')
-              -- FIXME what is this doing??
               subsBuilderType :: BuilderType -> Sem r' BuilderType = \case
                 BuilderTypeNoDefaults e -> BuilderTypeNoDefaults <$> subsE e
                 BuilderTypeDefaults FunctionDefault {..} -> do
@@ -1345,9 +1347,6 @@ holesHelper mhint expr = do
                 let body = arg ^. appBuilderArg . appArg
                     def = simpleFunDef name ty body
                 registerFunctionDef def
-                traceM ("register " <> ppTrace def)
-                tmpargs <- gets (^. appBuilderArgs)
-                traceM ("remaining args " <> ppTrace (map (^. appBuilderArg) tmpargs))
                 -- FIXME unregister def if not used!
                 output
                   InsertedArg
@@ -1357,10 +1356,10 @@ holesHelper mhint expr = do
                         ItIsDefault {} -> True
                         ItIsNotDefault -> False
                     }
-          funR' <- substitutionE updateKind (fun ^. functionDefaultRight) >>= subsBuilderType
+          -- this should only be done if default arguments are in the application
+          funR' <- substitutionE updateKind (fun ^. functionDefaultRight)
+               >>= subsBuilderType
           modify' (set appBuilderType funR')
-          r' :: BuilderType <- gets (^. appBuilderType)
-          traceM ("r' =====> " <> ppTrace (mkFinalBuilderType r'))
           applyArg
 
         goNextArg :: AppBuilderArg -> Sem r' ()
