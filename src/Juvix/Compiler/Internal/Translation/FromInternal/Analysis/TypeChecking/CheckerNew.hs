@@ -61,6 +61,7 @@ data AppBuilderArg = AppBuilderArg
 data AppBuilder = AppBuilder
   { _appBuilderLeft :: Expression,
     _appBuilderType :: BuilderType,
+    _appBuilderTypeCtx :: Subs,
     _appBuilderArgs :: [AppBuilderArg]
   }
 
@@ -1067,10 +1068,10 @@ inferLeftAppExpression mhint e = case e of
 
 -- | The hint is used for trailing holes only
 holesHelper :: forall r. (Members '[HighlightBuilder, Reader InfoTable, State FunctionsTable, State TypesTable, Reader LocalVars, Error TypeCheckerError, NameIdGen, Inference, Output Example, Output TypedHole, Builtins, Termination, Output CastHole, Reader InsertedArgsStack] r) => Maybe Expression -> Expression -> Sem r TypedExpression
-holesHelper mhintTop expr = do
+holesHelper mhint expr = do
   let (f, args) = unfoldExpressionApp expr
       hint
-        | null args = mhintTop
+        | null args = mhint
         | otherwise = Nothing
   arityCheckBuiltins f args
   fTy <- inferLeftAppExpression hint f
@@ -1085,6 +1086,7 @@ holesHelper mhintTop expr = do
         AppBuilder
           { _appBuilderLeft = fTy ^. typedExpression,
             _appBuilderType = iniBuilderType,
+            _appBuilderTypeCtx = mempty,
             _appBuilderArgs = map iniArg args
           }
   (insertedArgs, st') <- runOutputList (execState iniBuilder goArgs)
@@ -1115,6 +1117,15 @@ holesHelper mhintTop expr = do
               _functionRight = mkFinalBuilderType (f ^. functionDefaultRight)
             }
 
+    extendCtx :: (Members '[State AppBuilder] r') => FunctionParameter -> Expression -> Sem r' ()
+    extendCtx funParam arg' = whenJust (funParam ^. paramName) $ \nm -> do
+      modify' (over appBuilderTypeCtx (set (at nm) (Just arg')))
+
+    applyCtx :: (Members '[State AppBuilder, NameIdGen] r', HasExpressions expr) => expr -> Sem r' expr
+    applyCtx x = do
+      s <- gets (^. appBuilderTypeCtx)
+      substitutionE s x
+
     getFunctionName :: Expression -> Maybe Name
     getFunctionName = \case
       ExpressionIden (IdenFunction fun) -> Just fun
@@ -1123,10 +1134,10 @@ holesHelper mhintTop expr = do
     mkInitBuilderType :: TypedExpression -> Sem r BuilderType
     mkInitBuilderType fTy =
       let ty = fTy ^. typedType
-      in runFailDefault (BuilderTypeNoDefaults ty) $ do
-        fun <- failMaybe (getFunctionName (fTy ^. typedExpression))
-        infos <- (^. functionInfoDef . funDefArgsInfo) <$> (lookupFunction fun)
-        return $ toFunctionDefaultMay fun ty infos
+       in runFailDefault (BuilderTypeNoDefaults ty) $ do
+            fun <- failMaybe (getFunctionName (fTy ^. typedExpression))
+            infos <- (^. functionInfoDef . funDefArgsInfo) <$> (lookupFunction fun)
+            return $ toFunctionDefaultMay fun ty infos
       where
         toFunctionDefaultMay :: Name -> Expression -> [ArgInfo] -> BuilderType
         toFunctionDefaultMay funName ty infos =
@@ -1193,8 +1204,10 @@ holesHelper mhintTop expr = do
         goImplArgs k (ApplicationArg Implicit _ : as) = goImplArgs (k - 1) as
         goImplArgs _ as = return as
 
-    goArgs :: forall r'. (r' ~ State AppBuilder ': Output InsertedArg ': r) => Maybe Expression -> Sem r' ()
-    goArgs mhint = peekArg >>= maybe (insertTrailingHolesMay mhint) goNextArg
+    goArgs :: forall r'. (r' ~ State AppBuilder ': Output InsertedArg ': r) => Sem r' ()
+    goArgs = do
+      peekArg >>= maybe (insertTrailingHolesMay mhint) goNextArg
+      gets (^. appBuilderType) >>= applyCtx >>= modify' . set appBuilderType
       where
         insertTrailingHolesMay :: Maybe Expression -> Sem r' ()
         insertTrailingHolesMay = flip whenJust insertTrailingHoles
@@ -1236,14 +1249,8 @@ holesHelper mhintTop expr = do
                           },
                       _appBuilderArgIsDefault
                     }
-          case listToMaybe toBeInserted of
-            Nothing -> return ()
-            Just tbh -> do
-              mkHoleArg tbh >>= addTrailingHole
-              goArgs
-          -- trailingHoles <- mapM mkHoleArg toBeInserted
-          -- TODO substitution to the remaining holes
-          -- mapM_ addTrailingHole trailingHoles
+          trailingHoles <- mapM mkHoleArg toBeInserted
+          mapM_ addTrailingHole trailingHoles
           where
             peelDefault :: BuilderType -> ([(IsImplicit, Maybe FunctionDefaultInfo)], Expression)
             peelDefault = run . runOutputList . go
@@ -1257,7 +1264,8 @@ holesHelper mhintTop expr = do
                     go (d ^. functionDefaultRight)
 
             addTrailingHole :: AppBuilderArg -> Sem r' ()
-            addTrailingHole holeArg = do
+            addTrailingHole holeArg0 = do
+              holeArg <- applyCtx holeArg0
               fun <- peekFunctionType (holeArg ^. appBuilderArg . appArgIsImplicit)
               modify' (over appBuilderArgs (holeArg :))
               checkMatchingArg holeArg fun
@@ -1286,21 +1294,18 @@ holesHelper mhintTop expr = do
                       Just dinfo -> local (over insertedArgsStack (dinfo ^. functionDefaultArgId :))
                 adjustCtx (checkExpression funL (arg ^. appBuilderArg . appArg))
           arg' <- checkLeft
-          let subsE :: (HasExpressions expr) => expr -> Sem r' expr
-              subsE = substitutionApp (funParam ^. paramName, arg')
-              applyArg :: Sem r' ()
+          let applyArg :: Sem r' ()
               applyArg = do
-                let body = arg ^. appBuilderArg . appArg
+                extendCtx funParam arg'
                 output
                   InsertedArg
                     { _insertedImplicit = arg ^. appBuilderArg . appArgIsImplicit,
-                      _insertedValue = body,
+                      _insertedValue = arg',
                       _insertedArgDefault = case arg ^. appBuilderArgIsDefault of
                         ItIsDefault {} -> True
                         ItIsNotDefault -> False
                     }
-          funR' <- subsE (fun ^. functionDefaultRight)
-          modify' (set appBuilderType funR')
+          modify' (set appBuilderType (fun ^. functionDefaultRight))
           applyArg
 
         goNextArg :: AppBuilderArg -> Sem r' ()
@@ -1313,7 +1318,7 @@ holesHelper mhintTop expr = do
             insertMiddleHoleOrCheck fun argImpl =
               let funParam = fun ^. functionDefaultLeft
                   funImpl = funParam ^. paramImplicit
-                  checkThisArg = checkMatchingArg arg fun >> goArgs mhint
+                  checkThisArg = checkMatchingArg arg fun >> goArgs
                in case (argImpl, funImpl) of
                     (Explicit, Explicit) -> checkThisArg
                     (Implicit, Implicit) -> checkThisArg
@@ -1357,9 +1362,10 @@ holesHelper mhintTop expr = do
         peekFunctionType :: IsImplicit -> Sem r' FunctionDefault
         peekFunctionType impl = do
           bty <- gets (^. appBuilderType)
-          case bty of
+          x <- case bty of
             BuilderTypeNoDefaults ty -> fromNoDefault <$> peekFunctionNoDefaults ty
             BuilderTypeDefaults s -> return s
+          applyCtx x
           where
             fromNoDefault :: Function -> FunctionDefault
             fromNoDefault f =
