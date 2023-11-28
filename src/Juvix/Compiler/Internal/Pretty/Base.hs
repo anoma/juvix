@@ -11,7 +11,8 @@ import Juvix.Compiler.Internal.Data.InstanceInfo (instanceInfoResult, instanceTa
 import Juvix.Compiler.Internal.Data.LocalVars
 import Juvix.Compiler.Internal.Data.NameDependencyInfo
 import Juvix.Compiler.Internal.Data.TypedHole
-import Juvix.Compiler.Internal.Extra
+import Juvix.Compiler.Internal.Extra.Base
+import Juvix.Compiler.Internal.Language
 import Juvix.Compiler.Internal.Pretty.Options
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Data.Types (Arity)
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.CheckerNew.Arity qualified as New

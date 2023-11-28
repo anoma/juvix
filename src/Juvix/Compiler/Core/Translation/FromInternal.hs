@@ -15,6 +15,7 @@ import Juvix.Compiler.Core.Translation.FromInternal.Builtins.Nat
 import Juvix.Compiler.Core.Translation.FromInternal.Data
 import Juvix.Compiler.Internal.Data.Name
 import Juvix.Compiler.Internal.Extra qualified as Internal
+import Juvix.Compiler.Internal.Pretty (ppTrace)
 import Juvix.Compiler.Internal.Pretty qualified as Internal
 import Juvix.Compiler.Internal.Translation.Extra qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking qualified as InternalTyped
@@ -856,7 +857,8 @@ goIden i = do
           )
   case i of
     Internal.IdenVar n -> do
-      k <- HashMap.lookupDefault impossible id_ <$> asks (^. indexTableVars)
+      let err = error ("impossible: var not found: " <> ppTrace n <> " at " <> prettyText (getLoc n))
+      k <- HashMap.lookupDefault err id_ <$> asks (^. indexTableVars)
       varsNum <- asks (^. indexTableVarsNum)
       return (mkVar (setInfoLocation (n ^. nameLoc) (Info.singleton (NameInfo (n ^. nameText)))) (varsNum - k - 1))
     Internal.IdenFunction n -> do

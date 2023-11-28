@@ -427,7 +427,7 @@ instance HasAtomicity ConstructorApp where
 
 instance HasAtomicity PatternArg where
   atomicity p
-    | Implicit <- p ^. patternArgIsImplicit = Atom
+    | isImplicitOrInstance (p ^. patternArgIsImplicit) = Atom
     | isJust (p ^. patternArgName) = Atom
     | otherwise = atomicity (p ^. patternArgPattern)
 

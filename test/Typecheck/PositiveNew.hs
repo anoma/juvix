@@ -37,27 +37,14 @@ isIgnored :: Old.PosTest -> Bool
 isIgnored t = HashSet.member (t ^. Old.name) ignored
 
 extraTests :: [Old.PosTest]
-extraTests =
-  [ Old.posTest
-      "Monad transformers (State)"
-      $(mkRelDir "Monads")
-      $(mkRelFile "State.juvix"),
-    Old.posTest
-      "Monad transformers (Reader)"
-      $(mkRelDir "Monads")
-      $(mkRelFile "Reader.juvix"),
-    Old.posTest
-      "Monad transformers (ReaderT)"
-      $(mkRelDir "Monads")
-      $(mkRelFile "ReaderT.juvix")
-  ]
+extraTests = []
 
 -- | Default values are not supported by the new type checker at the moment
 ignored :: HashSet String
 ignored =
   HashSet.fromList
     [ "Test070: Nested default values and named arguments",
-      "Test071: Named application",
+      "Test071: Named application (Ord instance with default cmp)",
       -- This test does not pass with the new hole insertion algorithm
       "Test046: Polymorphic type arguments"
     ]

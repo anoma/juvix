@@ -9,6 +9,15 @@ import Stdlib.Data.Product open;
 type StateT (S : Type) (M : Type → Type) (A : Type) :=
   mkStateT {runStateT : S → M (A × S)};
 
+runState {S A : Type} {M : Type → Type} (s : S) (m : StateT
+  S
+  M
+  A) : M (A × S) := StateT.runStateT m s;
+
+evalState {S A : Type} {M : Type → Type} {{Functor
+  M}} (s : S) (m : StateT S M A) : M A :=
+  fst Functor.<$> runState s m;
+
 instance
 StateT-Functor {S : Type} {M : Type → Type} {{func : Functor
   M}} : Functor (StateT S M) :=

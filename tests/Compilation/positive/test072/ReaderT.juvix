@@ -8,6 +8,10 @@ import Functor open using {module Functor as MFunctor};
 type ReaderT (S : Type) (M : Type → Type) (A : Type) :=
   mkReaderT {runReaderT : S → M A};
 
+runReader {S A : Type} {M : Type
+  → Type} (r : S) (m : ReaderT S M A) : M A :=
+  ReaderT.runReaderT m r;
+
 instance
 ReaderT-Functor {S : Type} {M : Type
   → Type} {{func : Functor M}} : Functor (ReaderT S M) :=
@@ -34,9 +38,7 @@ ReaderT-Monad {S : Type} {M : Type → Type} {{mon : Monad M}}
     >>= {A B : Type} (x : ReaderT S M A) (f : A → ReaderT S M B)
       : ReaderT S M B :=
       mkReaderT
-        λ {s :=
-          ReaderT.runReaderT x s
-            MMonad.>>= λ {a := ReaderT.runReaderT (f a) s}}
+        λ {s := runReader s x MMonad.>>= λ {a := runReader s (f a)}}
   };
 
 import MonadReader open;
@@ -55,6 +57,7 @@ ReaderT-MonadReader {S : Type} {M : Type → Type} {{Monad M}}
 
 import MonadState open;
 import StateT open;
+import Identity open;
 import Stdlib.Data.Product open;
 
 liftReaderT {R A : Type} {M : Type → Type} (m : M A)
@@ -64,6 +67,19 @@ liftStateT {S A : Type} {M : Type → Type} {{Monad M}} (m : M
   A) : StateT S M A :=
   mkStateT
     λ {s := m MMonad.>>= λ {a := MMonad.return (a, s)}};
+
+import Stdlib.Data.Nat open;
+
+askNat {M : Type → Type} {{Monad M}} : ReaderT Nat M Nat :=
+  ask;
+
+monadic : ReaderT Nat (StateT Nat Identity) Nat :=
+  askNat
+    >>= λ {n :=
+      liftReaderT (modify λ {m := m * n}) >> liftReaderT get};
+
+main : Nat :=
+  runIdentity (evalState 2 (runReader 5 monadic));
 
 -- FIXME fails instance termination
 -- instance

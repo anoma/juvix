@@ -18,6 +18,7 @@ import Juvix.Compiler.Builtins
 import Juvix.Compiler.Concrete.Data.Scope.Base (ScoperState, scoperScopedConstructorFields, scoperScopedSignatures)
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Extra qualified as Concrete
+import Juvix.Compiler.Concrete.Gen qualified as Gen
 import Juvix.Compiler.Concrete.Language qualified as Concrete
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
@@ -784,16 +785,17 @@ goExpression = \case
             napp' =
               Concrete.NamedApplication
                 { _namedAppName = napp ^. namedApplicationNewName,
-                  _namedAppArgs = nonEmpty' $ createArgumentBlocks (sig ^. nameSignatureArgs)
+                  _namedAppArgs = nonEmpty' (createArgumentBlocks (sig ^. nameSignatureArgs))
                 }
         e <- goNamedApplication napp'
+        let l =
+              Internal.Let
+                { _letClauses = cls,
+                  _letExpression = e
+                }
         expr <-
-          Internal.substitutionE updateKind
-            . Internal.ExpressionLet
-            $ Internal.Let
-              { _letClauses = cls,
-                _letExpression = e
-              }
+          Internal.substitutionE updateKind l
+            >>= Internal.inlineLet
         Internal.clone expr
         where
           goArgs :: NonEmpty (NamedArgumentNew 'Scoped) -> Sem r (NonEmpty Internal.LetClause)
@@ -803,7 +805,7 @@ goExpression = \case
               goArg = fmap Internal.PreLetFunctionDef . goFunctionDef . (^. namedArgumentNewFunDef)
 
           createArgumentBlocks :: [NameBlock 'Scoped] -> [ArgumentBlock 'Scoped]
-          createArgumentBlocks sblocks = snd $ foldr goBlock (args0, []) sblocks
+          createArgumentBlocks = snd . foldr goBlock (args0, [])
             where
               args0 :: HashSet S.Symbol = HashSet.fromList $ fmap (^. namedArgumentNewFunDef . signName) (toList appargs)
               goBlock :: NameBlock 'Scoped -> (HashSet S.Symbol, [ArgumentBlock 'Scoped]) -> (HashSet S.Symbol, [ArgumentBlock 'Scoped])
@@ -813,11 +815,11 @@ goExpression = \case
                 where
                   namesInBlock =
                     HashSet.intersection
-                      (HashSet.fromList $ HashMap.keys _nameBlock)
+                      (HashSet.fromList (HashMap.keys _nameBlock))
                       (HashSet.map (^. S.nameConcrete) args)
-                  argNames = HashMap.fromList $ map (\n -> (n ^. S.nameConcrete, n)) $ toList args
+                  argNames = HashMap.fromList . map (\n -> (n ^. S.nameConcrete, n)) $ toList args
                   args' = HashSet.filter (not . flip HashSet.member namesInBlock . (^. S.nameConcrete)) args
-                  _argBlockArgs = nonEmpty' $ map goArg (toList namesInBlock)
+                  _argBlockArgs = nonEmpty' (map goArg (toList namesInBlock))
                   block' =
                     ArgumentBlock
                       { _argBlockDelims = Irrelevant Nothing,
@@ -829,11 +831,11 @@ goExpression = \case
                     NamedArgument
                       { _namedArgName = sym,
                         _namedArgAssignKw = Irrelevant dummyKw,
-                        _namedArgValue = Concrete.ExpressionIdentifier $ ScopedIden name Nothing
+                        _namedArgValue = Concrete.ExpressionIdentifier (ScopedIden name Nothing)
                       }
                     where
                       name = over S.nameConcrete NameUnqualified $ fromJust $ HashMap.lookup sym argNames
-                      dummyKw = KeywordRef (asciiKw ":=") dummyLoc Ascii
+                      dummyKw = run (runReader dummyLoc (Gen.kw Gen.kwAssign))
                       dummyLoc = getLoc sym
 
     goDesugaredNamedApplication :: DesugaredNamedApplication -> Sem r Internal.Expression

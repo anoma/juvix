@@ -21,9 +21,20 @@ compileAssertion ::
   Path Abs File ->
   (String -> IO ()) ->
   Assertion
-compileAssertion root' optLevel mode mainFile expectedFile step = do
+compileAssertion = compileAssertionEntry id
+
+compileAssertionEntry ::
+  (EntryPoint -> EntryPoint) ->
+  Path Abs Dir ->
+  Int ->
+  CompileAssertionMode ->
+  Path Abs File ->
+  Path Abs File ->
+  (String -> IO ()) ->
+  Assertion
+compileAssertionEntry adjustEntry root' optLevel mode mainFile expectedFile step = do
   step "Translate to JuvixCore"
-  entryPoint <- defaultEntryPointIO' LockModeExclusive root' mainFile
+  entryPoint <- adjustEntry <$> defaultEntryPointIO' LockModeExclusive root' mainFile
   tab <- (^. Core.coreResultTable) . snd <$> runIOExclusive entryPoint upToCore
   case run $ runReader Core.defaultCoreOptions $ runError $ Core.toEval' tab of
     Left err -> assertFailure (show (pretty (fromJuvixError @GenericError err)))
