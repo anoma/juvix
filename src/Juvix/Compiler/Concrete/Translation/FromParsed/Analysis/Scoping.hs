@@ -420,6 +420,8 @@ checkImport import_@Import {..} = do
   registerName importName
   whenJust synonymName registerName
   modify (over scoperModules (HashMap.insert mid cmodule))
+  -- TODO: this needs to be transitive
+  modify (over scoperModules (HashMap.union (cmodule ^. scopedModuleLocalModules)))
   importOpen' <- mapM (checkImportOpenParams cmodule) _importOpen
   return
     Import
@@ -647,6 +649,16 @@ exportScope Scope {..} = do
                     )
                 )
             )
+
+getLocalModules :: (Member (State ScoperState) r) => ExportInfo -> Sem r (HashMap S.NameId ScopedModule)
+getLocalModules ExportInfo {..} = do
+  mds <- gets (^. scoperModules)
+  return $ HashMap.fromList $ map (fetch mds) $ HashMap.elems _exportModuleSymbols
+  where
+    fetch :: HashMap NameId ScopedModule -> ModuleSymbolEntry -> (NameId, ScopedModule)
+    fetch mds ModuleSymbolEntry {..} = (n, fromJust $ HashMap.lookup n mds)
+      where
+        n = _moduleEntry ^. S.nameId
 
 readScopeModule ::
   (Members '[Error ScoperError, Reader ScopeParameters, NameIdGen, State ScoperState, InfoTableBuilder, Reader InfoTable] r) =>
@@ -1058,6 +1070,7 @@ checkTopModule m@Module {..} = checkedModule
           registerModuleDoc (path' ^. S.nameId) doc'
           (e, body') <- topBindings (checkModuleBody _moduleBody)
           return (e, body', path', doc')
+      localModules <- getLocalModules e
       let md =
             Module
               { _modulePath = path',
@@ -1077,6 +1090,7 @@ checkTopModule m@Module {..} = checkedModule
                 _scopedModuleName = S.topModulePathName path',
                 _scopedModuleFilePath = P.getModuleFilePath m,
                 _scopedModuleExportInfo = e,
+                _scopedModuleLocalModules = localModules,
                 _scopedModuleInfoTable = tab
               }
       return (md, smd)
@@ -1440,6 +1454,7 @@ checkLocalModule md@Module {..} = do
       doc' <- mapM checkJudoc _moduleDoc
       return (e, b, doc')
   _modulePath' <- reserveLocalModuleSymbol _modulePath
+  localModules <- getLocalModules moduleExportInfo
   let mid = _modulePath' ^. S.nameId
       moduleName = S.unqualifiedSymbol _modulePath'
       m =
@@ -1461,6 +1476,7 @@ checkLocalModule md@Module {..} = do
             _scopedModuleName = moduleName,
             _scopedModuleFilePath = P.getModuleFilePath md,
             _scopedModuleExportInfo = moduleExportInfo,
+            _scopedModuleLocalModules = localModules,
             _scopedModuleInfoTable = tab
           }
   modify (over scoperModules (HashMap.insert mid smod))

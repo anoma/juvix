@@ -63,6 +63,7 @@ data ScopedModule = ScopedModule
     _scopedModuleName :: S.Name,
     _scopedModuleFilePath :: Path Abs File,
     _scopedModuleExportInfo :: ExportInfo,
+    _scopedModuleLocalModules :: HashMap S.NameId ScopedModule,
     _scopedModuleInfoTable :: InfoTable
   }
   deriving stock (Generic)

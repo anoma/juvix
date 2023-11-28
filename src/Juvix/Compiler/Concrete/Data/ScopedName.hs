@@ -67,8 +67,6 @@ type Symbol = Name' C.Symbol
 
 type TopModulePath = Name' C.TopModulePath
 
-type ModuleNameId = NameId
-
 data Name' n = Name'
   { _nameConcrete :: n,
     _nameId :: NameId,

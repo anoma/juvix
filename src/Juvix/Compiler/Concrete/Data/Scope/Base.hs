@@ -50,7 +50,7 @@ newtype ScopeParameters = ScopeParameters
 
 data ScoperState = ScoperState
   { -- | Local and top modules currently in scope - used to look up qualified symbols
-    _scoperModules :: HashMap S.ModuleNameId ScopedModule,
+    _scoperModules :: HashMap S.NameId ScopedModule,
     _scoperAlias :: HashMap S.NameId PreSymbolEntry,
     _scoperSignatures :: HashMap S.NameId (NameSignature 'Parsed),
     _scoperScopedSignatures :: HashMap S.NameId (NameSignature 'Scoped),
