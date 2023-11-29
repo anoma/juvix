@@ -48,13 +48,8 @@ instance ToGenericError TypeCheckerError where
     ErrExpectedFunctionType e -> genericError e
     ErrTooManyArgumentsIndType e -> genericError e
     ErrTooFewArgumentsIndType e -> genericError e
-<<<<<<< HEAD
     ErrInvalidPatternMatching e -> genericError e
-    ErrNoPositivity e -> genericError e
-=======
-    ErrImpracticalPatternMatching e -> genericError e
     ErrNonStrictlyPositive e -> genericError e
->>>>>>> 781ad323 (W.i.p)
     ErrUnsupportedTypeFunction e -> genericError e
     ErrInvalidInstanceType e -> genericError e
     ErrInvalidCoercionType e -> genericError e
