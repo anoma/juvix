@@ -40,6 +40,7 @@ renderPackageVersion v pkg = toPlainText (ppOutDefaultNoComments (toConcrete (ge
 getPackageType :: PackageVersion -> PackageDescriptionType
 getPackageType = \case
   PackageVersion1 -> v1PackageDescriptionType
+  PackageVersion2 -> v2PackageDescriptionType
   PackageBasic -> basicPackageDescriptionType
 
 -- | Load a package file in the context of the PackageDescription module and the global package stdlib.

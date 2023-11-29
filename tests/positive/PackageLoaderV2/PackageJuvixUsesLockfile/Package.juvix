@@ -1,0 +1,9 @@
+module Package;
+
+import PackageDescription.V2 open;
+
+package : Package :=
+  defaultPackage
+    {name := "abc";
+     version := mkVersion 0 0 0;
+     dependencies := [git "name" "url" "ref1"]};
