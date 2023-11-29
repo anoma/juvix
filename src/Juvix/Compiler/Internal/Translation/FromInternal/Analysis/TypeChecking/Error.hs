@@ -11,17 +11,17 @@ import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.E
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error.Pretty
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error.Types
 import Juvix.Prelude
+import Prelude (show)
 
 data TypeCheckerError
   = ErrWrongConstructorType WrongConstructorType
   | ErrWrongReturnType WrongReturnType
-  | ErrArity ArityCheckerError
   | ErrWrongType WrongType
   | ErrUnsolvedMeta UnsolvedMeta
   | ErrExpectedFunctionType ExpectedFunctionType
   | ErrTooManyArgumentsIndType WrongNumberArgumentsIndType
   | ErrTooFewArgumentsIndType WrongNumberArgumentsIndType
-  | ErrImpracticalPatternMatching ImpracticalPatternMatching
+  | ErrInvalidPatternMatching InvalidPatternMatching
   | ErrNoPositivity NoPositivity
   | ErrUnsupportedTypeFunction UnsupportedTypeFunction
   | ErrInvalidInstanceType InvalidInstanceType
@@ -44,13 +44,12 @@ instance ToGenericError TypeCheckerError where
   genericError = \case
     ErrWrongConstructorType e -> genericError e
     ErrWrongReturnType e -> genericError e
-    ErrArity e -> genericError e
     ErrWrongType e -> genericError e
     ErrUnsolvedMeta e -> genericError e
     ErrExpectedFunctionType e -> genericError e
     ErrTooManyArgumentsIndType e -> genericError e
     ErrTooFewArgumentsIndType e -> genericError e
-    ErrImpracticalPatternMatching e -> genericError e
+    ErrInvalidPatternMatching e -> genericError e
     ErrNoPositivity e -> genericError e
     ErrUnsupportedTypeFunction e -> genericError e
     ErrInvalidInstanceType e -> genericError e
@@ -67,3 +66,29 @@ instance ToGenericError TypeCheckerError where
     ErrBuiltinNotDefined e -> genericError e
     ErrArityCheckerError e -> genericError e
     ErrDefaultArgLoop e -> genericError e
+
+instance Show TypeCheckerError where
+  show = \case
+    ErrWrongConstructorType {} -> "ErrWrongConstructorType"
+    ErrWrongReturnType {} -> "ErrWrongReturnType"
+    ErrWrongType {} -> "ErrWrongType"
+    ErrUnsolvedMeta {} -> "ErrUnsolvedMeta"
+    ErrExpectedFunctionType {} -> "ErrExpectedFunctionType"
+    ErrTooManyArgumentsIndType {} -> "ErrTooManyArgumentsIndType"
+    ErrTooFewArgumentsIndType {} -> "ErrTooFewArgumentsIndType"
+    ErrInvalidPatternMatching {} -> "ErrInvalidPatternMatching"
+    ErrNoPositivity {} -> "ErrNoPositivity"
+    ErrUnsupportedTypeFunction {} -> "ErrUnsupportedTypeFunction"
+    ErrInvalidInstanceType {} -> "ErrInvalidInstanceType"
+    ErrInvalidCoercionType {} -> "ErrInvalidCoercionType"
+    ErrWrongCoercionArgument {} -> "ErrWrongCoercionArgument"
+    ErrCoercionCycles {} -> "ErrCoercionCycles"
+    ErrTargetNotATrait {} -> "ErrTargetNotATrait"
+    ErrNotATrait {} -> "ErrNotATrait"
+    ErrNoInstance {} -> "ErrNoInstance"
+    ErrAmbiguousInstances {} -> "ErrAmbiguousInstances"
+    ErrSubsumedInstance {} -> "ErrSubsumedInstance"
+    ErrExplicitInstanceArgument {} -> "ErrExplicitInstanceArgument"
+    ErrTraitNotTerminating {} -> "ErrTraitNotTerminating"
+    ErrArityCheckerError {} -> "ErrArityCheckerError"
+    ErrDefaultArgLoop {} -> "ErrDefaultArgLoop"
