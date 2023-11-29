@@ -136,10 +136,10 @@ checkStrictlyPositiveOccurrences p = do
         goIden :: Iden -> Sem r ()
         goIden = \case
           IdenInductive ty' ->
-            when (inside && name == ty') (strictlyPositivityError expr)
+            when (inside && name == ty') (throwNegativePositonError expr)
           IdenVar name'
             | not inside -> return ()
-            | name == name' -> strictlyPositivityError expr
+            | name == name' -> throwNegativePositonError expr
             | name' `elem` ty ^.. inductiveParameters . each . inductiveParamName -> modify (HashSet.insert name')
           _ -> return ()
 
@@ -147,8 +147,14 @@ checkStrictlyPositiveOccurrences p = do
         goApp tyApp = do
           let (hdExpr, args) = unfoldApplication tyApp
           case hdExpr of
+            ax@(ExpressionIden (IdenAxiom _)) -> do
+              when (isJust $ find (varOrInductiveInExpression name) args) $
+                throwTypeAsArgumentOfBoundVarError ax
+            var@(ExpressionIden (IdenVar _)) -> do
+              when (isJust $ find (varOrInductiveInExpression name) args) $
+                throwTypeAsArgumentOfBoundVarError var
             ExpressionIden (IdenInductive ty') -> do
-              when (inside && name == ty') (strictlyPositivityError expr)
+              when (inside && name == ty') (throwNegativePositonError expr)
               InductiveInfo indType' <- lookupInductive ty'
 
               {- We now need to know whether `name` negatively occurs at
@@ -166,7 +172,9 @@ checkStrictlyPositiveOccurrences p = do
           (InductiveParameter pName' _ty', tyArg) : ps -> do
             negParms :: NegativeTypeParameters <- get
             when (varOrInductiveInExpression name tyArg) $ do
-              when (HashSet.member pName' negParms) (strictlyPositivityError tyArg)
+              when
+                (HashSet.member pName' negParms)
+                (throwNegativePositonError tyArg)
               when (recLimit > 0) $
                 forM_ (indType' ^. inductiveConstructors) $ \ctor' -> do
                   let ctorName' = ctor' ^. inductiveConstructorName
@@ -187,8 +195,8 @@ checkStrictlyPositiveOccurrences p = do
                     args
             goInductiveApp indType' ps
 
-    strictlyPositivityError :: Expression -> Sem r ()
-    strictlyPositivityError expr = do
+    throwNegativePositonError :: Expression -> Sem r ()
+    throwNegativePositonError expr = do
       let errLoc = fromMaybe expr ref
       throw
         . ErrNonStrictlyPositive
@@ -197,6 +205,18 @@ checkStrictlyPositiveOccurrences p = do
           { _typeInNegativePositionType = indName,
             _typeInNegativePositionConstructor = ctorName,
             _typeInNegativePositionArgument = errLoc
+          }
+
+    throwTypeAsArgumentOfBoundVarError :: Expression -> Sem r ()
+    throwTypeAsArgumentOfBoundVarError expr = do
+      let errLoc = fromMaybe expr ref
+      throw
+        . ErrNonStrictlyPositive
+        . ErrTypeAsArgumentOfBoundVar
+        $ TypeAsArgumentOfBoundVar
+          { _typeAsArgumentOfBoundVarType = indName,
+            _typeAsArgumentOfBoundVarConstructor = ctorName,
+            _typeAsArgumentOfBoundVarReference = errLoc
           }
 
 varOrInductiveInExpression :: Name -> Expression -> Bool

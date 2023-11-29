@@ -2,6 +2,7 @@ module Typecheck.Negative where
 
 import Base
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Positivity.Error
 import Juvix.Data.Effect.TaggedLock
 
 type FailMsg = String

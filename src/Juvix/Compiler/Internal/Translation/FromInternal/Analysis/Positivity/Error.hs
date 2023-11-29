@@ -1,8 +1,7 @@
 module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Positivity.Error
- (module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Positivity.Error,
-  module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Positivity.Error.Types,
- )
-
+  ( module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Positivity.Error,
+    module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Positivity.Error.Types,
+  )
 where
 
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Positivity.Error.Types
@@ -17,4 +16,3 @@ instance ToGenericError NonStrictlyPositiveError where
   genericError = \case
     ErrTypeInNegativePosition e -> genericError e
     ErrTypeAsArgumentOfBoundVar e -> genericError e
-
