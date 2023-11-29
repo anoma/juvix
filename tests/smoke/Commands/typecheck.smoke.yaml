@@ -72,7 +72,7 @@ tests:
         # side-effect: initializes the global project / the package package
         globalPackageDir=$(juvix dev root)
         packagePackageDir="$(dirname $globalPackageDir)"/package
-        juvix typecheck "$packagePackageDir/PackageDescription/V1.juvix"
+        juvix typecheck "$packagePackageDir/PackageDescription/V2.juvix"
     stdout:
       equals: "Well done! It type checks\n"
     exit-status: 0
