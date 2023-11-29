@@ -192,10 +192,12 @@ registerDependencies' conf = do
   registerPackageBase
   e <- ask @EntryPoint
   isGlobal <- asks (^. entryPointPackageGlobal)
+  packageBaseRoot <- globalPackageBaseRoot
   if
       | isGlobal -> do
           glob <- globalRoot
           void (addRootDependency conf e glob)
+      | isPathPrefix (e ^. entryPointRoot) packageBaseRoot -> return ()
       | otherwise -> do
           lockfile <- addRootDependency conf e (e ^. entryPointRoot)
           whenM shouldWriteLockfile $ do
