@@ -170,10 +170,13 @@ writeGlobalPackage = do
   writeFile' packagePath (renderPackageVersion PackageVersion1 (globalPackage packagePath))
 
 packageBasePackage :: Package
-packageBasePackage = Package {_packageVersion=defaultVersion,
-                     _packageName = "package-base",
-                     _packageMain = Nothing,
-                     _packageLockfile = Nothing,
-                     _packageFile = $(mkAbsFile "/<package-base>"),
-                     _packageDependencies=[],
-                     _packageBuildDir=Nothing}
+packageBasePackage =
+  Package
+    { _packageVersion = defaultVersion,
+      _packageName = "package-base",
+      _packageMain = Nothing,
+      _packageLockfile = Nothing,
+      _packageFile = $(mkAbsFile "/<package-base>"),
+      _packageDependencies = [],
+      _packageBuildDir = Nothing
+    }

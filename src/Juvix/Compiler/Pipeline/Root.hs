@@ -44,12 +44,13 @@ findRootAndChangeDir lockMode minputFileDir mbuildDir _rootInvokeDir = do
         Nothing -> do
           let cwd = fromMaybe _rootInvokeDir minputFileDir
           packageBaseRootDir <- runM (runFilesIO globalPackageBaseRoot)
-          (_rootPackage, _rootRootDir, _rootPackageGlobal) <- if
-            | isPathPrefix packageBaseRootDir cwd -> return (packageBasePackage, packageBaseRootDir, False)
-            | otherwise -> do
-                globalPkg <- readGlobalPackageIO lockMode
-                r <- runM (runFilesIO globalRoot)
-                return (globalPkg, r, True)
+          (_rootPackage, _rootRootDir, _rootPackageGlobal) <-
+            if
+                | isPathPrefix packageBaseRootDir cwd -> return (packageBasePackage, packageBaseRootDir, False)
+                | otherwise -> do
+                    globalPkg <- readGlobalPackageIO lockMode
+                    r <- runM (runFilesIO globalRoot)
+                    return (globalPkg, r, True)
           let _rootBuildDir = getBuildDir mbuildDir
           return Root {..}
         Just yamlPath -> do

@@ -814,31 +814,31 @@ inferExpression' hint e = case e of
 
     goLiteral :: LiteralLoc -> Sem r TypedExpression
     goLiteral lit@(WithLoc i l) = do
-     -- traceM (show l)
+      -- traceM (show l)
 
-     case l of
-      LitNumeric v -> outHole v >> typedLitNumeric v
-      LitInteger {} -> do
-        ty <- getIntTy
-        return $
-          TypedExpression
-            { _typedType = ty,
-              _typedExpression = ExpressionLiteral lit
-            }
-      LitNatural {} -> do
-        ty <- getNatTy
-        return $
-          TypedExpression
-            { _typedType = ty,
-              _typedExpression = ExpressionLiteral lit
-            }
-      LitString {} -> do
-        str <- getBuiltinName i BuiltinString
-        return
-          TypedExpression
-            { _typedExpression = ExpressionLiteral lit,
-              _typedType = ExpressionIden (IdenAxiom str)
-            }
+      case l of
+        LitNumeric v -> outHole v >> typedLitNumeric v
+        LitInteger {} -> do
+          ty <- getIntTy
+          return $
+            TypedExpression
+              { _typedType = ty,
+                _typedExpression = ExpressionLiteral lit
+              }
+        LitNatural {} -> do
+          ty <- getNatTy
+          return $
+            TypedExpression
+              { _typedType = ty,
+                _typedExpression = ExpressionLiteral lit
+              }
+        LitString {} -> do
+          str <- getBuiltinName i BuiltinString
+          return
+            TypedExpression
+              { _typedExpression = ExpressionLiteral lit,
+                _typedType = ExpressionIden (IdenAxiom str)
+              }
       where
         typedLitNumeric :: Integer -> Sem r TypedExpression
         typedLitNumeric v

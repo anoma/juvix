@@ -6,6 +6,7 @@ module Juvix.Prelude.Path
   )
 where
 
+import Data.List qualified as L
 import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Prelude.Base
 import Juvix.Prelude.Path.OrphanInstances ()
@@ -15,7 +16,6 @@ import Path qualified
 import Path.IO hiding (listDirRel, walkDirRel)
 import Path.Internal
 import System.FilePath qualified as FilePath
-import Data.List qualified as L
 
 data FileOrDir
 

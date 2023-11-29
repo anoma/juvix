@@ -27,10 +27,10 @@ import Juvix.Compiler.Pipeline.Package.Loader.EvalEff
 import Juvix.Data.Effect.Git
 import Juvix.Data.Effect.TaggedLock
 import Juvix.Data.SHA256 qualified as SHA256
+import Juvix.Extra.PackageFiles
 import Juvix.Extra.Paths
 import Juvix.Extra.Stdlib (ensureStdlib)
 import Juvix.Prelude
-import Juvix.Extra.PackageFiles
 
 mkPackage ::
   forall r.
@@ -166,19 +166,29 @@ resolveDependency i = case i ^. packageDepdendencyInfoDependency of
 
 registerPackageBase ::
   forall r.
-  (Members '[TaggedLock, State ResolverState, Reader ResolverEnv, Files] r) => Sem r ()
+  (Members '[TaggedLock, State ResolverState, Reader ResolverEnv, Files] r) =>
+  Sem r ()
 registerPackageBase = do
   packageBaseAbsDir <- globalPackageBaseRoot
   runReader packageBaseAbsDir updatePackageBaseFiles
   packageBaseRelFiles <- relFiles packageBaseAbsDir
-  let pkgInfo = PackageInfo {_packageRoot=packageBaseAbsDir,
-                             _packageRelativeFiles=packageBaseRelFiles,
-                             _packagePackage=packageBasePackage,
-                             _packageAvailableRoots=HashSet.singleton packageBaseAbsDir}
-      dep = LockfileDependency {_lockfileDependencyDependency=mkPathDependency (toFilePath packageBaseAbsDir),
-                                _lockfileDependencyDependencies=[]}
-      cacheItem = ResolverCacheItem {_resolverCacheItemPackage=pkgInfo,
-                                      _resolverCacheItemDependency=dep}
+  let pkgInfo =
+        PackageInfo
+          { _packageRoot = packageBaseAbsDir,
+            _packageRelativeFiles = packageBaseRelFiles,
+            _packagePackage = packageBasePackage,
+            _packageAvailableRoots = HashSet.singleton packageBaseAbsDir
+          }
+      dep =
+        LockfileDependency
+          { _lockfileDependencyDependency = mkPathDependency (toFilePath packageBaseAbsDir),
+            _lockfileDependencyDependencies = []
+          }
+      cacheItem =
+        ResolverCacheItem
+          { _resolverCacheItemPackage = pkgInfo,
+            _resolverCacheItemDependency = dep
+          }
   setResolverCacheItem packageBaseAbsDir (Just cacheItem)
   forM_ (pkgInfo ^. packageRelativeFiles) $ \f -> do
     modify' (over resolverFiles (HashMap.insertWith (<>) f (pure pkgInfo)))
@@ -372,9 +382,11 @@ isModuleOrphan topJuvixPath = do
   yamlFileExists <- findFile' (possiblePaths (parent actualPath)) juvixYamlFile
   pathPackageDescription <- globalPackageDescriptionRoot
   pathPackageBase <- globalPackageBaseRoot
-  return (isNothing (packageFileExists <|> yamlFileExists)
-          && not (pathPackageDescription `isProperPrefixOf` actualPath)
-          && not (pathPackageBase `isProperPrefixOf` actualPath))
+  return
+    ( isNothing (packageFileExists <|> yamlFileExists)
+        && not (pathPackageDescription `isProperPrefixOf` actualPath)
+        && not (pathPackageBase `isProperPrefixOf` actualPath)
+    )
 
 expectedPath' ::
   (Members '[Reader ResolverEnv, Files] r) =>
