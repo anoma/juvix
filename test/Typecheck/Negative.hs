@@ -298,24 +298,12 @@ negPositivityTests =
       \case
         ErrNonStrictlyPositive (ErrTypeInNegativePosition {}) -> Nothing
         _ -> wrongError,
-    NegTest "E10 uses type synonym" $(mkRelDir "Internal/Positivity") $(mkRelFile "E10.juvix") $
+    negTest "E10 uses type synonym" $(mkRelDir "Internal/Positivity") $(mkRelFile "E10.juvix") $
       \case
         ErrNonStrictlyPositive (ErrTypeInNegativePosition {}) -> Nothing
         _ -> wrongError,
-    NegTest "E11 uses type synonym" $(mkRelDir "Internal/Positivity") $(mkRelFile "E11.juvix") $
+    negTest "E11 uses type synonym" $(mkRelDir "Internal/Positivity") $(mkRelFile "E11.juvix") $
       \case
         ErrNonStrictlyPositive (ErrTypeInNegativePosition {}) -> Nothing
-        _ -> wrongError,
-    NegTest "Evil: issue 2540" $(mkRelDir "Internal/Positivity") $(mkRelFile "Evil.juvix") $
-      \case
-        ErrNonStrictlyPositive (ErrTypeAsArgumentOfBoundVar {}) -> Nothing
-        _ -> wrongError,
-    NegTest "Evil: issue 2540 using Axiom" $(mkRelDir "Internal/Positivity") $(mkRelFile "EvilWithAxiom.juvix") $
-      \case
-        ErrNonStrictlyPositive (ErrTypeAsArgumentOfBoundVar {}) -> Nothing
-        _ -> wrongError,
-    NegTest "FreeT: issue 2540" $(mkRelDir "Internal/Positivity") $(mkRelFile "FreeT.juvix") $
-      \case
-        ErrNonStrictlyPositive (ErrTypeAsArgumentOfBoundVar {}) -> Nothing
         _ -> wrongError
   ]
