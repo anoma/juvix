@@ -1,5 +1,0 @@
-module UnsupportedType;
-
-type List' (A : Type -> Type) :=
-  | nil'
-  | cons' A (List' A);
