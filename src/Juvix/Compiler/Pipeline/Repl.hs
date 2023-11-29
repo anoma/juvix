@@ -23,18 +23,17 @@ import Juvix.Data.Effect.Process (runProcessIO)
 import Juvix.Data.Effect.TaggedLock
 import Juvix.Prelude
 
-arityCheckExpression ::
+upToInternalExpression ::
   (Members '[Error JuvixError, State Artifacts, Termination] r) =>
   ExpressionAtoms 'Parsed ->
   Sem r Internal.Expression
-arityCheckExpression p = do
+upToInternalExpression p = do
   scopeTable <- gets (^. artifactScopeTable)
   runBuiltinsArtifacts
     . runScoperScopeArtifacts
     . runStateArtifacts artifactScoperState
     $ runNameIdGenArtifacts (Scoper.scopeCheckExpression scopeTable p)
       >>= runNameIdGenArtifacts . Internal.fromConcreteExpression
-      >>= Internal.arityCheckExpression
 
 expressionUpToAtomsParsed ::
   (Members '[State Artifacts, Error JuvixError] r) =>
@@ -111,7 +110,7 @@ importToInternalTyped ::
   (Members '[Reader EntryPoint, Error JuvixError, State Artifacts, Termination] r) =>
   Internal.Import ->
   Sem r Internal.Import
-importToInternalTyped = Internal.arityCheckImport >=> Internal.typeCheckImport
+importToInternalTyped = Internal.typeCheckImport
 
 parseReplInput ::
   (Members '[PathResolver, Files, State Artifacts, Error JuvixError] r) =>
@@ -132,7 +131,7 @@ expressionUpToTyped ::
 expressionUpToTyped fp txt = do
   p <- expressionUpToAtomsParsed fp txt
   runTerminationArtifacts
-    ( arityCheckExpression p
+    ( upToInternalExpression p
         >>= Internal.typeCheckExpressionType
     )
 
@@ -142,7 +141,7 @@ compileExpression ::
   Sem r Core.Node
 compileExpression p =
   runTerminationArtifacts
-    ( arityCheckExpression p
+    ( upToInternalExpression p
         >>= Internal.typeCheckExpression
     )
     >>= fromInternalExpression

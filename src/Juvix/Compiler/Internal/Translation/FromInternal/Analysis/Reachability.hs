@@ -3,7 +3,6 @@ module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Reachability (f
 import Juvix.Compiler.Internal.Data.NameDependencyInfo
 import Juvix.Compiler.Internal.Language
 import Juvix.Compiler.Internal.Translation.FromConcrete.Data.Context
-import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking qualified as Arity
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context qualified as Typed
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Prelude
@@ -16,7 +15,7 @@ filterUnreachable r = do
     KeepAll -> return r
     FilterUnreachable -> return (set Typed.resultModules modules' r)
   where
-    depInfo = r ^. Typed.resultInternalArityResult . Arity.resultInternalResult . resultDepInfo
+    depInfo = r ^. Typed.resultInternalResult . resultDepInfo
     modules = r ^. Typed.resultModules
     modules' =
       run

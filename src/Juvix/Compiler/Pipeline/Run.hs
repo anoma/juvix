@@ -15,7 +15,6 @@ import Juvix.Compiler.Concrete.Translation.FromSource qualified as P
 import Juvix.Compiler.Core.Data.InfoTable qualified as Core
 import Juvix.Compiler.Core.Translation.FromInternal.Data qualified as Core
 import Juvix.Compiler.Internal.Translation qualified as Internal
-import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking qualified as Arity
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking qualified as Typed
 import Juvix.Compiler.Pipeline
@@ -165,8 +164,7 @@ corePipelineIOEither' lockMode entry = do
           internalResult :: Internal.InternalResult
           internalResult =
             typedResult
-              ^. Typed.resultInternalArityResult
-                . Arity.resultInternalResult
+              ^. Typed.resultInternalResult
 
           coreTable :: Core.InfoTable
           coreTable = coreRes ^. Core.coreResultTable
