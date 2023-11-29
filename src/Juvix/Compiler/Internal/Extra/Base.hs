@@ -405,6 +405,7 @@ foldApplication f args = case nonEmpty args of
 unfoldApplication' :: Application -> (Expression, NonEmpty ApplicationArg)
 unfoldApplication' (Application l' r' i') = second (|: (ApplicationArg i' r')) (unfoldExpressionApp l')
 
+-- TODO make it tail recursive
 unfoldExpressionApp :: Expression -> (Expression, [ApplicationArg])
 unfoldExpressionApp = \case
   ExpressionApplication (Application l r i) ->
