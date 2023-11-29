@@ -164,7 +164,6 @@ checkStrictlyPositiveOccurrences p = do
         goInductiveApp indType' = \case
           [] -> return ()
           (InductiveParameter pName' _ty', tyArg) : ps -> do
-            -- TODO handle _ty'
             negParms :: NegativeTypeParameters <- get
             when (varOrInductiveInExpression name tyArg) $ do
               when (HashSet.member pName' negParms) (strictlyPositivityError tyArg)
