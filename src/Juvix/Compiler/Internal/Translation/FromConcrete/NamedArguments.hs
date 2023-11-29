@@ -5,6 +5,7 @@ module Juvix.Compiler.Internal.Translation.FromConcrete.NamedArguments
     DesugaredNamedApplication,
     dnamedAppIdentifier,
     dnamedAppArgs,
+    dnamedExtraArgs,
     Arg,
     argName,
     argImplicit,
@@ -18,8 +19,8 @@ import Data.HashMap.Strict qualified as HashMap
 import Data.IntMap.Strict qualified as IntMap
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Extra (symbolParsed)
-import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
+import Juvix.Compiler.Internal.Extra.Base qualified as Internal
 import Juvix.Prelude
 
 type NameSignatures = HashMap NameId (NameSignature 'Scoped)
@@ -42,7 +43,8 @@ data Arg = Arg
 -- | The result of desugaring a named application
 data DesugaredNamedApplication = DesugaredNamedApplication
   { _dnamedAppIdentifier :: ScopedIden,
-    _dnamedAppArgs :: NonEmpty Arg
+    _dnamedAppArgs :: NonEmpty Arg,
+    _dnamedExtraArgs :: [Internal.ApplicationArg]
   }
 
 makeLenses ''BuilderState
@@ -53,17 +55,22 @@ runNamedArguments ::
   forall r.
   (Members '[NameIdGen, Error ScoperError, Reader NameSignatures] r) =>
   NamedApplication 'Scoped ->
+  [Internal.ApplicationArg] ->
   Sem r DesugaredNamedApplication
-runNamedArguments napp = do
+runNamedArguments napp extraArgs = do
   iniSt <- mkIniBuilderState
-  _dnamedAppArgs <-
+  namedArgs <-
     fmap nonEmpty'
       . execOutputList
       . mapError ErrNamedArgumentsError
       . execState iniSt
       $ helper (getLoc napp)
-  let _dnamedAppIdentifier = napp ^. namedAppName
-  return DesugaredNamedApplication {..}
+  return
+    DesugaredNamedApplication
+      { _dnamedAppIdentifier = napp ^. namedAppName,
+        _dnamedAppArgs = namedArgs,
+        _dnamedExtraArgs = extraArgs
+      }
   where
     mkIniBuilderState :: Sem r BuilderState
     mkIniBuilderState = do

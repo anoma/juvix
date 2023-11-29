@@ -1089,14 +1089,15 @@ holesHelper mhint expr = do
             _appBuilderTypeCtx = mempty,
             _appBuilderArgs = map iniArg args
           }
-  (insertedArgs, st') <- runOutputList (execState iniBuilder goArgs)
+  (insertedArgs, st') <- runOutputList (execState iniBuilder goAllArgs)
   let ty' = mkFinalBuilderType (st' ^. appBuilderType)
       expr' = mkFinalExpression (st' ^. appBuilderLeft) insertedArgs
-  return
-    TypedExpression
-      { _typedType = ty',
-        _typedExpression = expr'
-      }
+  let ret =
+        TypedExpression
+          { _typedType = ty',
+            _typedExpression = expr'
+          }
+  return ret
   where
     mkArg :: InsertedArg -> ApplicationArg
     mkArg i =
@@ -1136,7 +1137,7 @@ holesHelper mhint expr = do
       let ty = fTy ^. typedType
        in runFailDefault (BuilderTypeNoDefaults ty) $ do
             fun <- failMaybe (getFunctionName (fTy ^. typedExpression))
-            infos <- (^. functionInfoDef . funDefArgsInfo) <$> (lookupFunction fun)
+            infos <- (^. functionInfoDef . funDefArgsInfo) <$> lookupFunction fun
             return $ toFunctionDefaultMay fun ty infos
       where
         toFunctionDefaultMay :: Name -> Expression -> [ArgInfo] -> BuilderType
@@ -1147,23 +1148,24 @@ holesHelper mhint expr = do
         toFunctionDefault :: Name -> Expression -> NonEmpty (Indexed ArgInfo) -> FunctionDefault
         toFunctionDefault _argIdFunctionName e (Indexed _argIdIx a :| as) = case e of
           ExpressionFunction f ->
-            FunctionDefault
-              { _functionDefaultLeft = f ^. functionLeft,
-                _functionDefaultRight =
+            let r' =
                   toFunctionDefaultMay
                     _argIdFunctionName
                     (f ^. functionRight)
-                    (map (^. indexedThing) as),
-                _functionDefaultDefault =
-                  let uid =
-                        ArgId
-                          { _argIdDefinitionLoc = Irrelevant (getLoc f),
-                            _argIdName = Irrelevant (a ^. argInfoName),
-                            _argIdFunctionName,
-                            _argIdIx
-                          }
-                   in FunctionDefaultInfo uid <$> a ^. argInfoDefault
-              }
+                    (map (^. indexedThing) as)
+             in FunctionDefault
+                  { _functionDefaultLeft = f ^. functionLeft,
+                    _functionDefaultRight = r',
+                    _functionDefaultDefault =
+                      let uid =
+                            ArgId
+                              { _argIdDefinitionLoc = Irrelevant (getLoc f),
+                                _argIdName = Irrelevant (a ^. argInfoName),
+                                _argIdFunctionName,
+                                _argIdIx
+                              }
+                       in FunctionDefaultInfo uid <$> a ^. argInfoDefault
+                  }
           _ -> impossible
 
     arityCheckBuiltins :: Expression -> [ApplicationArg] -> Sem r ()
@@ -1204,17 +1206,20 @@ holesHelper mhint expr = do
         goImplArgs k (ApplicationArg Implicit _ : as) = goImplArgs (k - 1) as
         goImplArgs _ as = return as
 
-    goArgs :: forall r'. (r' ~ State AppBuilder ': Output InsertedArg ': r) => Sem r' ()
-    goArgs = do
-      peekArg >>= maybe (insertTrailingHolesMay mhint) goNextArg
+    goAllArgs :: forall r'. (r' ~ State AppBuilder ': Output InsertedArg ': r) => Sem r' ()
+    goAllArgs = do
+      goArgs
       gets (^. appBuilderType) >>= applyCtx >>= modify' . set appBuilderType
+
+    goArgs :: forall r'. (r' ~ State AppBuilder ': Output InsertedArg ': r) => Sem r' ()
+    goArgs = peekArg >>= maybe (insertTrailingHolesMay mhint) goNextArg
       where
         insertTrailingHolesMay :: Maybe Expression -> Sem r' ()
         insertTrailingHolesMay = flip whenJust insertTrailingHoles
 
         insertTrailingHoles :: Expression -> Sem r' ()
         insertTrailingHoles hintTy = do
-          builderTy <- gets (^. appBuilderType)
+          builderTy <- gets (^. appBuilderType) >>= applyCtx
           ariHint <- typeArity hintTy
           let (defaults, restExprTy) = peelDefault builderTy
           restExprAri <- typeArity restExprTy
@@ -1236,10 +1241,10 @@ holesHelper mhint expr = do
               mkHoleArg (i, mdef) = do
                 (_appArg, _appBuilderArgIsDefault) <- case i of
                   Explicit -> impossible
+                  ImplicitInstance -> (,ItIsNotDefault) <$> newHoleInstance loc
                   Implicit -> case mdef of
                     Nothing -> (,ItIsNotDefault) <$> newHoleImplicit loc
                     Just (FunctionDefaultInfo uid def) -> return (def, ItIsDefault uid)
-                  ImplicitInstance -> (,ItIsNotDefault) <$> newHoleInstance loc
                 return
                   AppBuilderArg
                     { _appBuilderArg =

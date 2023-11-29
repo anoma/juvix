@@ -743,7 +743,7 @@ goExpression ::
 goExpression = \case
   ExpressionIdentifier nt -> return (goIden nt)
   ExpressionParensIdentifier nt -> return (goIden nt)
-  ExpressionApplication a -> Internal.ExpressionApplication <$> goApplication a
+  ExpressionApplication a -> goApplication a
   ExpressionCase a -> Internal.ExpressionCase <$> goCase a
   ExpressionNewCase a -> Internal.ExpressionCase <$> goNewCase a
   ExpressionInfixApplication ia -> Internal.ExpressionApplication <$> goInfix ia
@@ -759,19 +759,19 @@ goExpression = \case
   ExpressionHole h -> return (Internal.ExpressionHole h)
   ExpressionInstanceHole h -> return (Internal.ExpressionInstanceHole (fromHole h))
   ExpressionIterator i -> goIterator i
-  ExpressionNamedApplication i -> goNamedApplication i
-  ExpressionNamedApplicationNew i -> goNamedApplicationNew i
+  ExpressionNamedApplication i -> goNamedApplication i []
+  ExpressionNamedApplicationNew i -> goNamedApplicationNew i []
   ExpressionRecordUpdate i -> goRecordUpdateApp i
   ExpressionParensRecordUpdate i -> Internal.ExpressionLambda <$> goRecordUpdate (i ^. parensRecordUpdate)
   where
-    goNamedApplication :: Concrete.NamedApplication 'Scoped -> Sem r Internal.Expression
-    goNamedApplication w = do
+    goNamedApplication :: Concrete.NamedApplication 'Scoped -> [Internal.ApplicationArg] -> Sem r Internal.Expression
+    goNamedApplication w extraArgs = do
       s <- ask @NameSignatures
-      runReader s (runNamedArguments w) >>= goDesugaredNamedApplication
+      runReader s (runNamedArguments w extraArgs) >>= goDesugaredNamedApplication
 
-    goNamedApplicationNew :: Concrete.NamedApplicationNew 'Scoped -> Sem r Internal.Expression
-    goNamedApplicationNew napp = case nonEmpty (napp ^. namedApplicationNewArguments) of
-      Nothing -> return $ goIden (napp ^. namedApplicationNewName)
+    goNamedApplicationNew :: Concrete.NamedApplicationNew 'Scoped -> [Internal.ApplicationArg] -> Sem r Internal.Expression
+    goNamedApplicationNew napp extraArgs = case nonEmpty (napp ^. namedApplicationNewArguments) of
+      Nothing -> return (goIden (napp ^. namedApplicationNewName))
       Just appargs -> do
         let name = napp ^. namedApplicationNewName . scopedIdenName
         sig <- fromJust <$> asks @NameSignatures (^. at (name ^. S.nameId))
@@ -784,7 +784,7 @@ goExpression = \case
                 { _namedAppName = napp ^. namedApplicationNewName,
                   _namedAppArgs = nonEmpty' (createArgumentBlocks (sig ^. nameSignatureArgs))
                 }
-        e <- goNamedApplication napp'
+        e <- goNamedApplication napp' extraArgs
         let l =
               Internal.Let
                 { _letClauses = cls,
@@ -845,8 +845,9 @@ goExpression = \case
               { _appArgIsImplicit = arg ^. argImplicit,
                 _appArg = Internal.toExpression (goSymbol (arg ^. argName))
               }
-          argNames :: NonEmpty Internal.ApplicationArg = mkAppArg <$> a ^. dnamedAppArgs
-          app = Internal.foldApplication (Internal.toExpression fun) (toList argNames)
+          namedArgNames :: NonEmpty Internal.ApplicationArg = mkAppArg <$> a ^. dnamedAppArgs
+          allArgs = toList namedArgNames <> a ^. dnamedExtraArgs
+          app = Internal.foldApplication (Internal.toExpression fun) allArgs
       clauses <- mapM mkClause (a ^. dnamedAppArgs)
       expr <-
         Internal.substitutionE updateKind $
@@ -998,11 +999,26 @@ goExpression = \case
             e' <- goExpression e
             return (Internal.ApplicationArg i e')
 
-    goApplication :: Application -> Sem r Internal.Application
-    goApplication (Application l arg) = do
-      l' <- goExpression l
-      Internal.ApplicationArg {..} <- goApplicationArg arg
-      return (Internal.Application l' _appArg _appArgIsImplicit)
+    goApplication :: Application -> Sem r Internal.Expression
+    goApplication a = do
+      let (f, args) = unfoldApp a
+      args' <- toList <$> mapM goApplicationArg args
+      case f of
+        ExpressionNamedApplication n -> goNamedApplication n args'
+        ExpressionNamedApplicationNew n -> goNamedApplicationNew n args'
+        _ -> do
+          f' <- goExpression f
+          return (Internal.foldApplication f' args')
+      where
+        unfoldApp :: Application -> (Expression, NonEmpty Expression)
+        unfoldApp (Application l' r') =
+          let (f, largs) = go [] l'
+           in (f, largs |: r')
+          where
+            go :: [Expression] -> Expression -> (Expression, [Expression])
+            go ac = \case
+              ExpressionApplication (Application l r) -> go (r : ac) l
+              e -> (e, ac)
 
     goPostfix :: PostfixApplication -> Sem r Internal.Application
     goPostfix (PostfixApplication l op) = do
