@@ -993,8 +993,7 @@ tests:
         - bash
       script: |
         temp=$(mktemp -d)
-        # trap 'rm -rf -- "$temp"' EXIT
-        echo $temp
+        trap 'rm -rf -- "$temp"' EXIT
 
         # create dependency
         mkdir $temp/dep
