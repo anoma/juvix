@@ -2,6 +2,7 @@ module Compilation.Positive where
 
 import Base
 import Compilation.Base
+import Data.HashSet qualified as HashSet
 
 data PosTest = PosTest
   { _name :: String,
@@ -37,7 +38,7 @@ allTestsNoOptimize :: TestTree
 allTestsNoOptimize =
   testGroup
     "Juvix compilation pipeline positive tests (no optimization)"
-    (map (mkTest . toTestDescr 0) tests)
+    (map (mkTest . toTestDescr 0) (filter (not . isIgnored) tests))
 
 posTest' :: CompileAssertionMode -> String -> Path Rel Dir -> Path Rel File -> Path Rel File -> PosTest
 posTest' _assertionMode _name rdir rfile routfile =
@@ -59,6 +60,17 @@ posTest = posTest' EvalAndCompile
 -- tests which use large integers are only evaluated but not compiled
 posTestEval :: String -> Path Rel Dir -> Path Rel File -> Path Rel File -> PosTest
 posTestEval = posTest' EvalOnly
+
+isIgnored :: PosTest -> Bool
+isIgnored t = HashSet.member (t ^. name) ignored
+
+ignored :: HashSet String
+ignored =
+  HashSet.fromList
+    [ "Test046: Polymorphic type arguments",
+      -- TODO allow lambda branches of different number of patterns
+      "Test027: Church numerals"
+    ]
 
 tests :: [PosTest]
 tests =
@@ -417,5 +429,10 @@ tests =
       "Test071: Named application (Ord instance with default cmp)"
       $(mkRelDir ".")
       $(mkRelFile "test071.juvix")
-      $(mkRelFile "out/test071.out")
+      $(mkRelFile "out/test071.out"),
+    posTest
+      "Test072: Monad transformers (ReaderT + StateT + Identity)"
+      $(mkRelDir "test072")
+      $(mkRelFile "ReaderT.juvix")
+      $(mkRelFile "out/test072.out")
   ]

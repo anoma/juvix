@@ -29,7 +29,7 @@ testDescr Old.NegTest {..} =
         { _testName = _name,
           _testRoot = tRoot,
           _testAssertion = Single $ do
-            entryPoint <- set entryPointNewTypeCheckingAlgorithm True <$> defaultEntryPointIO' LockModeExclusive tRoot file'
+            entryPoint <- defaultEntryPointIO' LockModeExclusive tRoot file'
             result <- runIOEither' LockModeExclusive entryPoint upToCore
             case mapLeft fromJuvixError result of
               Left (Just tyError) -> whenJust (_checkErr tyError) assertFailure
