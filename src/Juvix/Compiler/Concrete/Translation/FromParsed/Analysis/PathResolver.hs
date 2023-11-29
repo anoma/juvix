@@ -24,6 +24,7 @@ import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Compiler.Pipeline.Lockfile
 import Juvix.Compiler.Pipeline.Package
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff
+import Juvix.Compiler.Pipeline.Root.Base (PackageType (..))
 import Juvix.Data.Effect.Git
 import Juvix.Data.Effect.TaggedLock
 import Juvix.Data.SHA256 qualified as SHA256
@@ -199,21 +200,20 @@ registerDependencies' ::
   DependenciesConfig ->
   Sem r ()
 registerDependencies' conf = do
-  registerPackageBase
   e <- ask @EntryPoint
-  isGlobal <- asks (^. entryPointPackageGlobal)
-  packageBaseRoot <- globalPackageBaseRoot
-  if
-      | isGlobal -> do
-          glob <- globalRoot
-          void (addRootDependency conf e glob)
-      | isPathPrefix (e ^. entryPointRoot) packageBaseRoot -> return ()
-      | otherwise -> do
-          lockfile <- addRootDependency conf e (e ^. entryPointRoot)
-          whenM shouldWriteLockfile $ do
-            packageFileChecksum <- SHA256.digestFile (e ^. entryPointPackage . packageFile)
-            lockfilePath' <- lockfilePath
-            writeLockfile lockfilePath' packageFileChecksum lockfile
+  registerPackageBase
+  case e ^. entryPointPackageType of
+    GlobalStdlib -> do
+      glob <- globalRoot
+      void (addRootDependency conf e glob)
+    GlobalPackageBase -> return ()
+    GlobalPackageDescription -> void (addRootDependency conf e (e ^. entryPointRoot))
+    LocalPackage -> do
+      lockfile <- addRootDependency conf e (e ^. entryPointRoot)
+      whenM shouldWriteLockfile $ do
+        packageFileChecksum <- SHA256.digestFile (e ^. entryPointPackage . packageFile)
+        lockfilePath' <- lockfilePath
+        writeLockfile lockfilePath' packageFileChecksum lockfile
   where
     shouldWriteLockfile :: Sem r Bool
     shouldWriteLockfile = do
@@ -438,7 +438,7 @@ runPathResolver' st root x = do
   e <- ask
   let _envSingleFile :: Maybe (Path Abs File)
       _envSingleFile
-        | e ^. entryPointPackageGlobal = e ^? entryPointModulePaths . _head
+        | e ^. entryPointPackageType == GlobalStdlib = e ^? entryPointModulePaths . _head
         | otherwise = Nothing
       env :: ResolverEnv
       env =
