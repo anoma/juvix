@@ -1,22 +1,16 @@
--- | Checker for strictly positive inductive data types
 module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Positivity.Checker where
 
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Internal.Data.InfoTable
 import Juvix.Compiler.Internal.Extra
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Positivity.Error
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Inference
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error
 import Juvix.Compiler.Pipeline.EntryPoint qualified as E
 import Juvix.Prelude hiding (fromEither)
 
 type NegativeTypeParameters = HashSet VarName
-
-type ErrorReference = Maybe Expression
-
-type TypeOfConstructor = Expression
-
-type RecursionLimit = Int
 
 type CheckPositivityEffects r =
   Members
@@ -28,157 +22,201 @@ type CheckPositivityEffects r =
      ]
     r
 
+data CheckPositivityArgs = CheckPositivityArgs
+  { _checkPositivityArgsInductive :: InductiveDef,
+    _checkPositivityArgsConstructorName :: Name,
+    _checkPositivityArgsInductiveName :: Name,
+    _checkPositivityArgsRecursionLimit :: Int,
+    _checkPositivityArgsErrorReference :: Maybe Expression,
+    _checkPositivityArgsTypeOfConstructor :: Expression
+  }
+
+makeLenses ''CheckPositivityArgs
+
 checkPositivity ::
   forall r.
   (CheckPositivityEffects r) =>
   InductiveDef ->
   Sem r ()
 checkPositivity ty = do
-  let indName = ty ^. inductiveName
-  numInductives <- HashMap.size <$> asks (^. infoInductives)
-  noCheckPositivity <- asks (^. E.entryPointNoPositivity)
-  forM_ (ty ^. inductiveConstructors) $ \ctor -> do
-    let ctorName = ctor ^. inductiveConstructorName
-        args = constructorArgs (ctor ^. inductiveConstructorType)
-    unless (noCheckPositivity || ty ^. inductivePositive) $
-      forM_
-        args
-        (checkStrictlyPositiveOccurrences ty ctorName indName numInductives Nothing)
+  unlessM (asks (^. E.entryPointNoPositivity)) $
+    forM_ (ty ^. inductiveConstructors) $ \ctor -> do
+      unless (ty ^. inductivePositive) $ do
+        numInductives <- HashMap.size <$> asks (^. infoInductives)
+        forM_
+          (constructorArgs (ctor ^. inductiveConstructorType))
+          $ \typeOfConstr ->
+            checkStrictlyPositiveOccurrences
+              ( CheckPositivityArgs
+                  { _checkPositivityArgsInductive = ty,
+                    _checkPositivityArgsConstructorName =
+                      ctor ^. inductiveConstructorName,
+                    _checkPositivityArgsInductiveName = ty ^. inductiveName,
+                    _checkPositivityArgsRecursionLimit = numInductives,
+                    _checkPositivityArgsErrorReference = Nothing,
+                    _checkPositivityArgsTypeOfConstructor = typeOfConstr
+                  }
+              )
 
 checkStrictlyPositiveOccurrences ::
   forall r.
   (CheckPositivityEffects r) =>
-  InductiveDef ->
-  ConstrName ->
-  Name ->
-  RecursionLimit ->
-  ErrorReference ->
-  TypeOfConstructor ->
+  CheckPositivityArgs ->
   Sem r ()
-checkStrictlyPositiveOccurrences ty ctorName name recLimit ref =
-  strongNormalize >=> helper False
+checkStrictlyPositiveOccurrences p = do
+  typeOfConstr <- strongNormalize (p ^. checkPositivityArgsTypeOfConstructor)
+  go False typeOfConstr
   where
+    ty = p ^. checkPositivityArgsInductive
+    ctorName = p ^. checkPositivityArgsConstructorName
+    name = p ^. checkPositivityArgsInductiveName
+    recLimit = p ^. checkPositivityArgsRecursionLimit
+    ref = p ^. checkPositivityArgsErrorReference
+
     indName :: Name
     indName = ty ^. inductiveName
 
-    -- The following `helper` function determines if there is any negative
-    -- occurence of the symbol `name` in the given expression. The `inside` flag
-    -- used below indicates whether the current search is performed on the left
-    -- of an inner arrow or not.
-
-    helper :: Bool -> Expression -> Sem r ()
-    helper inside expr = case expr of
-      ExpressionApplication tyApp -> helperApp tyApp
-      ExpressionCase l -> helperCase l
-      ExpressionFunction (Function l r) -> helper True (l ^. paramType) >> helper inside r
+    {- The following `go` function determines if there is any negative
+     occurence of the symbol `name` in the given expression. The `inside` flag
+     used below indicates whether the current search is performed on the left of
+     an inner arrow or not.
+    -}
+    go :: Bool -> Expression -> Sem r ()
+    go inside expr = case expr of
+      ExpressionApplication tyApp -> goApp tyApp
+      ExpressionCase l -> goCase l
+      ExpressionFunction (Function l r) -> go True (l ^. paramType) >> go inside r
       ExpressionHole {} -> return ()
       ExpressionInstanceHole {} -> return ()
-      ExpressionIden i -> helperIden i
-      ExpressionLambda l -> helperLambda l
-      ExpressionLet l -> helperLet l
+      ExpressionIden i -> goIden i
+      ExpressionLambda l -> goLambda l
+      ExpressionLet l -> goLet l
       ExpressionLiteral {} -> return ()
-      ExpressionSimpleLambda l -> helperSimpleLambda l
+      ExpressionSimpleLambda l -> goSimpleLambda l
       ExpressionUniverse {} -> return ()
       where
-        helperCase :: Case -> Sem r ()
-        helperCase l = do
-          helper inside (l ^. caseExpression)
-          mapM_ helperCaseBranch (l ^. caseBranches)
+        goCase :: Case -> Sem r ()
+        goCase l = do
+          go inside (l ^. caseExpression)
+          mapM_ goCaseBranch (l ^. caseBranches)
 
-        helperCaseBranch :: CaseBranch -> Sem r ()
-        helperCaseBranch b = helper inside (b ^. caseBranchExpression)
+        goCaseBranch :: CaseBranch -> Sem r ()
+        goCaseBranch b = go inside (b ^. caseBranchExpression)
 
-        helperLet :: Let -> Sem r ()
-        helperLet l = do
-          helper inside (l ^. letExpression)
-          mapM_ helperLetClause (l ^. letClauses)
+        goLet :: Let -> Sem r ()
+        goLet l = do
+          go inside (l ^. letExpression)
+          mapM_ goLetClause (l ^. letClauses)
 
-        helperLetClause :: LetClause -> Sem r ()
-        helperLetClause = \case
-          LetFunDef f -> helperFunctionDef f
-          LetMutualBlock b -> helperMutualBlockLet b
+        goLetClause :: LetClause -> Sem r ()
+        goLetClause = \case
+          LetFunDef f -> goFunctionDef f
+          LetMutualBlock b -> goMutualBlockLet b
 
-        helperMutualBlockLet :: MutualBlockLet -> Sem r ()
-        helperMutualBlockLet b = mapM_ helperFunctionDef (b ^. mutualLet)
+        goMutualBlockLet :: MutualBlockLet -> Sem r ()
+        goMutualBlockLet b = mapM_ goFunctionDef (b ^. mutualLet)
 
-        helperFunctionDef :: FunctionDef -> Sem r ()
-        helperFunctionDef d = do
-          helper inside (d ^. funDefType)
-          helper inside (d ^. funDefBody)
+        goFunctionDef :: FunctionDef -> Sem r ()
+        goFunctionDef d = do
+          go inside (d ^. funDefType)
+          go inside (d ^. funDefBody)
 
-        helperSimpleLambda :: SimpleLambda -> Sem r ()
-        helperSimpleLambda (SimpleLambda (SimpleBinder _ lamVarTy) lamBody) = do
-          helper inside lamVarTy
-          helper inside lamBody
+        goSimpleLambda :: SimpleLambda -> Sem r ()
+        goSimpleLambda (SimpleLambda (SimpleBinder _ lamVarTy) lamBody) = do
+          go inside lamVarTy
+          go inside lamBody
 
-        helperLambda :: Lambda -> Sem r ()
-        helperLambda l = mapM_ goClause (l ^. lambdaClauses)
+        goLambda :: Lambda -> Sem r ()
+        goLambda l = mapM_ goClause (l ^. lambdaClauses)
           where
             goClause :: LambdaClause -> Sem r ()
-            goClause (LambdaClause _ b) = helper inside b
+            goClause (LambdaClause _ b) = go inside b
 
-        helperIden :: Iden -> Sem r ()
-        helperIden = \case
+        goIden :: Iden -> Sem r ()
+        goIden = \case
           IdenInductive ty' ->
-            when (inside && name == ty') (strictlyPositivityError expr)
+            when (inside && name == ty') (throwNegativePositonError expr)
           IdenVar name'
             | not inside -> return ()
-            | name == name' -> strictlyPositivityError expr
+            | name == name' -> throwNegativePositonError expr
             | name' `elem` ty ^.. inductiveParameters . each . inductiveParamName -> modify (HashSet.insert name')
           _ -> return ()
 
-        helperApp :: Application -> Sem r ()
-        helperApp tyApp = do
+        goApp :: Application -> Sem r ()
+        goApp tyApp = do
           let (hdExpr, args) = unfoldApplication tyApp
           case hdExpr of
+            ax@(ExpressionIden IdenAxiom {}) -> do
+              when (isJust $ find (varOrInductiveInExpression name) args) $
+                throwTypeAsArgumentOfBoundVarError ax
+            var@(ExpressionIden IdenVar {}) -> do
+              when (isJust $ find (varOrInductiveInExpression name) args) $
+                throwTypeAsArgumentOfBoundVarError var
             ExpressionIden (IdenInductive ty') -> do
-              when (inside && name == ty') (strictlyPositivityError expr)
+              when (inside && name == ty') (throwNegativePositonError expr)
               InductiveInfo indType' <- lookupInductive ty'
 
-              -- We now need to know whether `name` negatively occurs at `indTy'`
-              -- or not. The way to know is by checking that the type ty'
-              -- preserves the positivity condition, i.e., its type parameters
-              -- are no negative.
-
+              {- We now need to know whether `name` negatively occurs at
+               `indTy'` or not. The way to know is by checking that the type ty'
+               preserves the positivity condition, i.e., its type parameters are
+               no negative.
+              -}
               let paramsTy' = indType' ^. inductiveParameters
-              helperInductiveApp indType' (zip paramsTy' (toList args))
+              goInductiveApp indType' (zip paramsTy' (toList args))
             _ -> return ()
 
-        helperInductiveApp :: InductiveDef -> [(InductiveParameter, Expression)] -> Sem r ()
-        helperInductiveApp indType' = \case
+        goInductiveApp :: InductiveDef -> [(InductiveParameter, Expression)] -> Sem r ()
+        goInductiveApp indType' = \case
+          [] -> return ()
           (InductiveParameter pName' _ty', tyArg) : ps -> do
-            -- TODO handle _ty'
             negParms :: NegativeTypeParameters <- get
             when (varOrInductiveInExpression name tyArg) $ do
-              when (HashSet.member pName' negParms) (strictlyPositivityError tyArg)
+              when
+                (HashSet.member pName' negParms)
+                (throwNegativePositonError tyArg)
               when (recLimit > 0) $
                 forM_ (indType' ^. inductiveConstructors) $ \ctor' -> do
                   let ctorName' = ctor' ^. inductiveConstructorName
                       errorRef = fromMaybe tyArg ref
                       args = constructorArgs (ctor' ^. inductiveConstructorType)
                   mapM_
-                    ( checkStrictlyPositiveOccurrences
-                        indType'
-                        ctorName'
-                        pName'
-                        (recLimit - 1)
-                        (Just errorRef)
+                    ( \tyConstr' ->
+                        checkStrictlyPositiveOccurrences
+                          CheckPositivityArgs
+                            { _checkPositivityArgsInductive = indType',
+                              _checkPositivityArgsConstructorName = ctorName',
+                              _checkPositivityArgsInductiveName = pName',
+                              _checkPositivityArgsRecursionLimit = recLimit - 1,
+                              _checkPositivityArgsErrorReference = Just errorRef,
+                              _checkPositivityArgsTypeOfConstructor = tyConstr'
+                            }
                     )
                     args
-            helperInductiveApp indType' ps
-          [] -> return ()
+            goInductiveApp indType' ps
 
-    strictlyPositivityError :: Expression -> Sem r ()
-    strictlyPositivityError expr = do
+    throwNegativePositonError :: Expression -> Sem r ()
+    throwNegativePositonError expr = do
       let errLoc = fromMaybe expr ref
       throw
-        ( ErrNoPositivity $
-            NoPositivity
-              { _noStrictPositivityType = indName,
-                _noStrictPositivityConstructor = ctorName,
-                _noStrictPositivityArgument = errLoc
-              }
-        )
+        . ErrNonStrictlyPositive
+        . ErrTypeInNegativePosition
+        $ TypeInNegativePosition
+          { _typeInNegativePositionType = indName,
+            _typeInNegativePositionConstructor = ctorName,
+            _typeInNegativePositionArgument = errLoc
+          }
+
+    throwTypeAsArgumentOfBoundVarError :: Expression -> Sem r ()
+    throwTypeAsArgumentOfBoundVarError expr = do
+      let errLoc = fromMaybe expr ref
+      throw
+        . ErrNonStrictlyPositive
+        . ErrTypeAsArgumentOfBoundVar
+        $ TypeAsArgumentOfBoundVar
+          { _typeAsArgumentOfBoundVarType = indName,
+            _typeAsArgumentOfBoundVarConstructor = ctorName,
+            _typeAsArgumentOfBoundVarReference = errLoc
+          }
 
 varOrInductiveInExpression :: Name -> Expression -> Bool
 varOrInductiveInExpression n = \case

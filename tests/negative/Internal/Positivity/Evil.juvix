@@ -1,0 +1,4 @@
+module Evil;
+
+type Evil (f : Type -> Type) :=
+  magic : f (Evil f) -> Evil f;
