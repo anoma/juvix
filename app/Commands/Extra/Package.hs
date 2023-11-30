@@ -6,8 +6,11 @@ import Juvix.Compiler.Pipeline.Package.Loader
 import Juvix.Extra.Paths
 import Juvix.Prelude
 
+currentPackageVersion :: PackageVersion
+currentPackageVersion = PackageVersion2
+
 renderPackage :: Package -> Text
-renderPackage = renderPackageVersion PackageVersion2
+renderPackage = renderPackageVersion currentPackageVersion
 
 writePackageFile' :: (Member (Embed IO) r) => PackageVersion -> Path Abs Dir -> Package -> Sem r ()
 writePackageFile' v root pkg =
@@ -18,7 +21,7 @@ writePackageFile' v root pkg =
     )
 
 writePackageFile :: (Member (Embed IO) r) => Path Abs Dir -> Package -> Sem r ()
-writePackageFile = writePackageFile' PackageVersion2
+writePackageFile = writePackageFile' currentPackageVersion
 
 writeBasicPackage :: (Member (Embed IO) r) => Path Abs Dir -> Sem r ()
 writeBasicPackage root = writePackageFile' PackageBasic root (emptyPackage DefaultBuildDir (root <//> packageFilePath))
