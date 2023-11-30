@@ -16,6 +16,7 @@ data PackageVersion
   = PackageVersion1
   | PackageVersion2
   | PackageBasic
+  deriving stock (Bounded, Enum)
 
 data PackageDescriptionType = PackageDescriptionType
   { _packageDescriptionTypePath :: Path Rel File,
@@ -28,9 +29,15 @@ data PackageDescriptionType = PackageDescriptionType
 
 makeLenses ''PackageDescriptionType
 
+getPackageType :: PackageVersion -> PackageDescriptionType
+getPackageType = \case
+  PackageVersion1 -> v1PackageDescriptionType
+  PackageVersion2 -> v2PackageDescriptionType
+  PackageBasic -> basicPackageDescriptionType
+
 -- | The names of the Package type name in every version of the PackageDescription module
 packageDescriptionTypes :: [PackageDescriptionType]
-packageDescriptionTypes = [v2PackageDescriptionType, v1PackageDescriptionType, basicPackageDescriptionType]
+packageDescriptionTypes = map getPackageType allElements
 
 basicPackageDescriptionType :: PackageDescriptionType
 basicPackageDescriptionType =
