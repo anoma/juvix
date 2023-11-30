@@ -67,8 +67,7 @@ isIgnored t = HashSet.member (t ^. name) ignored
 ignored :: HashSet String
 ignored =
   HashSet.fromList
-    [ "Test046: Polymorphic type arguments",
-      -- TODO allow lambda branches of different number of patterns
+    [ -- TODO allow lambda branches of different number of patterns
       "Test027: Church numerals"
     ]
 
