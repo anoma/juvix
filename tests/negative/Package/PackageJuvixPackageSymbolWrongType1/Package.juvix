@@ -1,6 +1,5 @@
 module Package;
 
-import Stdlib.Prelude open;
-import PackageDescription.V1 open;
+import PackageDescription.V2 open;
 
 package : Nat := 1;

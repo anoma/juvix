@@ -34,8 +34,7 @@ tests:
         -- juvix-package-version:1
         module Package;
 
-        import Stdlib.Prelude open;
-        import PackageDescription.V1 open;
+        import PackageDescription.V2 open;
 
         package : Package :=
           defaultPackage
@@ -100,8 +99,7 @@ tests:
         -- juvix-package-version:1
         module Package;
 
-        import Stdlib.Prelude open;
-        import PackageDescription.V1 open;
+        import PackageDescription.V2 open;
 
         package : Package :=
           defaultPackage
@@ -170,8 +168,7 @@ tests:
         -- juvix-package-version:1
         module Package;
 
-        import Stdlib.Prelude open;
-        import PackageDescription.V1 open;
+        import PackageDescription.V2 open;
 
         package : Package :=
           defaultPackage
@@ -217,8 +214,7 @@ tests:
         -- juvix-package-version:1
         module Package;
 
-        import Stdlib.Prelude open;
-        import PackageDescription.V1 open;
+        import PackageDescription.V2 open;
 
         package : Package :=
           defaultPackage
@@ -279,8 +275,7 @@ tests:
         -- juvix-package-version:1
         module Package;
 
-        import Stdlib.Prelude open;
-        import PackageDescription.V1 open;
+        import PackageDescription.V2 open;
 
         package : Package :=
           defaultPackage
@@ -304,8 +299,7 @@ tests:
         -- juvix-package-version:1
         module Package;
 
-        import Stdlib.Prelude open;
-        import PackageDescription.V1 open;
+        import PackageDescription.V2 open;
 
         package : Package :=
           defaultPackage
@@ -420,8 +414,7 @@ tests:
         -- juvix-package-version:1
         module Package;
 
-        import Stdlib.Prelude open;
-        import PackageDescription.V1 open;
+        import PackageDescription.V2 open;
 
         package : Package :=
           defaultPackage
@@ -515,8 +508,7 @@ tests:
         -- juvix-package-version:1
         module Package;
 
-        import Stdlib.Prelude open;
-        import PackageDescription.V1 open;
+        import PackageDescription.V2 open;
 
         package : Package :=
           defaultPackage
@@ -548,8 +540,7 @@ tests:
         -- juvix-package-version:1
         module Package;
 
-        import Stdlib.Prelude open;
-        import PackageDescription.V1 open;
+        import PackageDescription.V2 open;
 
         package : Package :=
           defaultPackage
@@ -623,8 +614,7 @@ tests:
         -- juvix-package-version:1
         module Package;
 
-        import Stdlib.Prelude open;
-        import PackageDescription.V1 open;
+        import PackageDescription.V2 open;
 
         package : Package :=
           defaultPackage
@@ -661,8 +651,7 @@ tests:
         -- juvix-package-version:1
         module Package;
 
-        import Stdlib.Prelude open;
-        import PackageDescription.V1 open;
+        import PackageDescription.V2 open;
 
         package : Package :=
           defaultPackage
@@ -737,8 +726,7 @@ tests:
         -- juvix-package-version:1
         module Package;
 
-        import Stdlib.Prelude open;
-        import PackageDescription.V1 open;
+        import PackageDescription.V2 open;
 
         package : Package :=
           defaultPackage
@@ -775,8 +763,7 @@ tests:
         -- juvix-package-version:1
         module Package;
 
-        import Stdlib.Prelude open;
-        import PackageDescription.V1 open;
+        import PackageDescription.V2 open;
 
         package : Package :=
           defaultPackage
@@ -826,8 +813,7 @@ tests:
         -- juvix-package-version:1
         module Package;
 
-        import Stdlib.Prelude open;
-        import PackageDescription.V1 open;
+        import PackageDescription.V2 open;
 
         package : Package :=
           defaultPackage
@@ -873,8 +859,7 @@ tests:
         -- juvix-package-version:1
         module Package;
 
-        import Stdlib.Prelude open;
-        import PackageDescription.V1 open;
+        import PackageDescription.V2 open;
 
         package : Package :=
           defaultPackage
@@ -920,8 +905,7 @@ tests:
         -- juvix-package-version:1
         module Package;
 
-        import Stdlib.Prelude open;
-        import PackageDescription.V1 open;
+        import PackageDescription.V2 open;
 
         package : Package :=
           defaultPackage
@@ -989,8 +973,7 @@ tests:
         -- juvix-package-version:1
         module Package;
 
-        import Stdlib.Prelude open;
-        import PackageDescription.V1 open;
+        import PackageDescription.V2 open;
 
         package : Package :=
           defaultPackage
@@ -1042,8 +1025,7 @@ tests:
         -- juvix-package-version:1
         module Package;
 
-        import Stdlib.Prelude open;
-        import PackageDescription.V1 open;
+        import PackageDescription.V2 open;
 
         package : Package :=
           defaultPackage
@@ -1107,8 +1089,7 @@ tests:
         -- juvix-package-version:1
         module Package;
 
-        import Stdlib.Prelude open;
-        import PackageDescription.V1 open;
+        import PackageDescription.V2 open;
 
         package : Package :=
           defaultPackage

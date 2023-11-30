@@ -1,0 +1,12 @@
+module Juvix.Builtin.V1.String;
+
+import Juvix.Builtin.V1.Fixity open;
+
+--- Primitive representation of a sequence of characters.
+builtin string
+axiom String : Type;
+
+syntax operator ++str cons;
+--- Concatenation of two ;String;s.
+builtin string-concat
+axiom ++str : String -> String -> String;

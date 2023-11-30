@@ -5,6 +5,7 @@ module Juvix.Compiler.Pipeline.Package
     readGlobalPackageIO,
     readGlobalPackage,
     loadPackageFileIO,
+    packageBasePackage,
   )
 where
 
@@ -167,3 +168,15 @@ writeGlobalPackage = do
   packagePath <- globalPackageJuvix
   ensureDir' (parent packagePath)
   writeFile' packagePath (renderPackageVersion PackageVersion1 (globalPackage packagePath))
+
+packageBasePackage :: Package
+packageBasePackage =
+  Package
+    { _packageVersion = defaultVersion,
+      _packageName = "package-base",
+      _packageMain = Nothing,
+      _packageLockfile = Nothing,
+      _packageFile = $(mkAbsFile "/<package-base>"),
+      _packageDependencies = [],
+      _packageBuildDir = Nothing
+    }

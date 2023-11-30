@@ -1,0 +1,12 @@
+module Juvix.Builtin.V1.List;
+
+import Juvix.Builtin.V1.Fixity open;
+
+syntax operator :: cons;
+--- Inductive list.
+builtin list
+type List (a : Type) :=
+  | --- The empty list
+    nil
+  | --- An element followed by a list
+    :: a (List a);

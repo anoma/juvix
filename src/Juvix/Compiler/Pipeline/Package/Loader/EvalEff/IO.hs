@@ -149,7 +149,7 @@ loadPackage' packagePath = do
         root =
           Root
             { _rootRootDir = rootPath,
-              _rootPackageGlobal = False,
+              _rootPackageType = GlobalPackageDescription,
               _rootPackage = rootPkg,
               _rootInvokeDir = rootPath,
               _rootBuildDir = DefaultBuildDir

@@ -13,11 +13,14 @@ data PosTest = PosTest
     _checkPackage :: Package -> BuildDir -> Maybe FailMsg
   }
 
-root :: Path Abs Dir
-root = relToProject $(mkRelDir "tests/positive/PackageLoader")
+v1Root :: Path Abs Dir
+v1Root = relToProject $(mkRelDir "tests/positive/PackageLoader")
 
-testDescr :: PosTest -> TestDescr
-testDescr PosTest {..} =
+v2Root :: Path Abs Dir
+v2Root = relToProject $(mkRelDir "tests/positive/PackageLoaderV2")
+
+testDescr :: Path Abs Dir -> PosTest -> TestDescr
+testDescr root PosTest {..} =
   let tRoot = root <//> _relDir
    in TestDescr
         { _testName = _name,
@@ -45,11 +48,13 @@ allTests :: TestTree
 allTests =
   testGroup
     "Package loading positive tests"
-    ( map (mkTest . testDescr) packageLoadingTests
+    ( map (mkTest . testDescr v1Root) yamlTests
+        <> map (mkTest . testDescr v1Root) packageLoadingTests
+        <> map (mkTest . testDescr v2Root) packageLoadingTests
     )
 
-packageLoadingTests :: [PosTest]
-packageLoadingTests =
+yamlTests :: [PosTest]
+yamlTests =
   [ PosTest
       "empty YAML is valid"
       $(mkRelDir "YamlEmpty")
@@ -72,8 +77,12 @@ packageLoadingTests =
       $ \p _ ->
         if
             | null (p ^. packageDependencies) -> Nothing
-            | otherwise -> Just "Expected dependencies to be empty",
-    PosTest
+            | otherwise -> Just "Expected dependencies to be empty"
+  ]
+
+packageLoadingTests :: [PosTest]
+packageLoadingTests =
+  [ PosTest
       "Package.juvix is read"
       $(mkRelDir "PackageJuvix")
       $ \p _ ->

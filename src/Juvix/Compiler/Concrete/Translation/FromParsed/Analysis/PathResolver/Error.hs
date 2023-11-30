@@ -164,4 +164,4 @@ instance PrettyCodeAnn PackageInvalidImport where
       <+> pcode _packageInvalidImport
       <+> "cannot be imported by the Package file."
         <> line
-        <> "Package files may only import modules from the Juvix standard library or from the PackageDescription module."
+        <> "Package files may only import modules from the Juvix standard library, Juvix.Builtin modules, or from the PackageDescription module."
