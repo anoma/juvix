@@ -328,7 +328,6 @@ addDependency' pkg me resolvedDependency = do
 currentPackage :: (Members '[Files, State ResolverState, Reader ResolverEnv] r) => Sem r PackageInfo
 currentPackage = do
   curRoot <- asks (^. envRoot)
-  -- traceShowM curRoot
   (^. resolverCacheItemPackage) . fromJust <$> getResolverCacheItem curRoot
 
 -- | Returns the root of the package where the module belongs and the path to

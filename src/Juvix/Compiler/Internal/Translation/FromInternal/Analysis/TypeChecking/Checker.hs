@@ -814,8 +814,6 @@ inferExpression' hint e = case e of
 
     goLiteral :: LiteralLoc -> Sem r TypedExpression
     goLiteral lit@(WithLoc i l) = do
-      -- traceM (show l)
-
       case l of
         LitNumeric v -> outHole v >> typedLitNumeric v
         LitInteger {} -> do
@@ -850,9 +848,6 @@ inferExpression' hint e = case e of
               from <- getBuiltinName i blt
               ihole <- freshInstanceHole i
               let ty' = fromMaybe ty hint
-              -- traceM (ppTrace from)
-              -- traceM (ppTrace ty)
-              -- traceM (ppTrace ty')
               inferExpression' (Just ty') $
                 foldApplication
                   (ExpressionIden (IdenFunction from))
