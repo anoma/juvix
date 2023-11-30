@@ -50,9 +50,7 @@ extraTests =
 ignored :: HashSet String
 ignored =
   HashSet.fromList
-    [ "Test070: Nested default values and named arguments",
-      "Test071: Named application (Ord instance with default cmp)",
-      "Test046: Polymorphic type arguments",
+    [ "Test046: Polymorphic type arguments",
       -- TODO allow lambda branches of different number of patterns
       "Test027: Church numerals"
     ]

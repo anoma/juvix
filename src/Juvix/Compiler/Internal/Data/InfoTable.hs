@@ -4,6 +4,7 @@ module Juvix.Compiler.Internal.Data.InfoTable
     extendWithReplExpression,
     lookupConstructor,
     lookupConstructorArgTypes,
+    lookupFunctionMaybe,
     lookupFunction,
     lookupConstructorReturnType,
     lookupInductive,
@@ -169,7 +170,7 @@ lookupConstructor f = do
         $ "impossible: "
           <> ppTrace f
           <> " is not in the InfoTable\n"
-          <> "The registered constructors are: "
+          <> "\nThe registered constructors are: "
           <> ppTrace (HashMap.keys tbl)
 
 lookupConstructorArgTypes :: (Member (Reader InfoTable) r) => Name -> Sem r ([InductiveParameter], [Expression])
@@ -188,13 +189,16 @@ lookupInductive f = do
         $ "impossible: "
           <> ppTrace f
           <> " is not in the InfoTable\n"
-          <> "The registered inductives are: "
+          <> "\nThe registered inductives are: "
           <> ppTrace (HashMap.keys tbl)
+
+lookupFunctionMaybe :: forall r. (Member (Reader InfoTable) r) => Name -> Sem r (Maybe FunctionInfo)
+lookupFunctionMaybe f = HashMap.lookup f <$> asks (^. infoFunctions)
 
 lookupFunction :: forall r. (Member (Reader InfoTable) r) => Name -> Sem r FunctionInfo
 lookupFunction f = do
   err <- impossibleErr
-  HashMap.lookupDefault err f <$> asks (^. infoFunctions)
+  fromMaybe err <$> lookupFunctionMaybe f
   where
     impossibleErr :: Sem r a
     impossibleErr = do
@@ -205,7 +209,7 @@ lookupFunction f = do
           <> ppTrace f
           <> " is not in the InfoTable\n"
           <> ppTrace (getLoc f)
-          <> "The registered functions are: "
+          <> "\nThe registered functions are: "
           <> ppTrace (HashMap.keys tbl)
 
 lookupAxiom :: (Member (Reader InfoTable) r) => Name -> Sem r AxiomInfo

@@ -71,11 +71,19 @@ isBinary f = case f ^. fixityArity of
 isUnary :: Fixity -> Bool
 isUnary = not . isBinary
 
+letFixity :: Fixity
+letFixity =
+  Fixity
+    { _fixityPrecedence = PrecArrow,
+      _fixityArity = OpBinary AssocRight,
+      _fixityId = Nothing
+    }
+
 appFixity :: Fixity
 appFixity =
   Fixity
     { _fixityPrecedence = PrecApp,
-      _fixityArity = (OpBinary AssocLeft),
+      _fixityArity = OpBinary AssocLeft,
       _fixityId = Nothing
     }
 
@@ -83,7 +91,7 @@ funFixity :: Fixity
 funFixity =
   Fixity
     { _fixityPrecedence = PrecArrow,
-      _fixityArity = (OpBinary AssocRight),
+      _fixityArity = OpBinary AssocRight,
       _fixityId = Nothing
     }
 
@@ -91,7 +99,7 @@ updateFixity :: Fixity
 updateFixity =
   Fixity
     { _fixityPrecedence = PrecUpdate,
-      _fixityArity = (OpUnary AssocPostfix),
+      _fixityArity = OpUnary AssocPostfix,
       _fixityId = Nothing
     }
 

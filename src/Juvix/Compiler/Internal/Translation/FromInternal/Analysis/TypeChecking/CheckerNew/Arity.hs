@@ -1,6 +1,5 @@
 module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.CheckerNew.Arity where
 
-import Juvix.Compiler.Internal.Extra.Base
 import Juvix.Compiler.Internal.Language
 import Juvix.Prelude
 import Juvix.Prelude.Pretty
@@ -22,8 +21,8 @@ newtype InsertedArgsStack = InsertedArgsStack
 -- | Helper type used during insertion of default arguments in the arity
 -- checker.
 data InsertedArg = InsertedArg
-  { _insertedArgName :: Name,
-    _insertedArg :: ApplicationArg,
+  { _insertedImplicit :: IsImplicit,
+    _insertedValue :: Expression,
     -- | True if this corresponds to an automatically inserted default argument.
     -- False if it is an inserted hole or an argument present in the source code.
     _insertedArgDefault :: Bool
