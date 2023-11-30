@@ -1,4 +1,4 @@
-module Juvix.Builtin.Fixity;
+module Juvix.Builtin.V1.Fixity;
 
 syntax fixity none := none;
 

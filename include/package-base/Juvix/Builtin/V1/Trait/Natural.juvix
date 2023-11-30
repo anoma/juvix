@@ -1,7 +1,7 @@
-module Juvix.Builtin.Trait.Natural;
+module Juvix.Builtin.V1.Trait.Natural;
 
-import Juvix.Builtin.Nat.Base open using {Nat};
-import Juvix.Builtin.Fixity open;
+import Juvix.Builtin.V1.Nat.Base open using {Nat};
+import Juvix.Builtin.V1.Fixity open;
 
 trait
 type Natural A :=

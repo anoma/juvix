@@ -1,4 +1,4 @@
-module Juvix.Builtin.Bool;
+module Juvix.Builtin.V1.Bool;
 
 --- Inductive definition of booleans.
 builtin bool

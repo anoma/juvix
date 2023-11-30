@@ -1,8 +1,8 @@
-module Juvix.Builtin.Nat;
+module Juvix.Builtin.V1.Nat;
 
-import Juvix.Builtin.Trait.Natural open public;
-import Juvix.Builtin.Nat.Base open hiding {+; *; div; mod} public;
-import Juvix.Builtin.Nat.Base as Nat;
+import Juvix.Builtin.V1.Trait.Natural open public;
+import Juvix.Builtin.V1.Nat.Base open hiding {+; *; div; mod} public;
+import Juvix.Builtin.V1.Nat.Base as Nat;
 
 {-# specialize: true, inline: case #-}
 instance

@@ -1,4 +1,4 @@
-module Juvix.Builtin.Maybe;
+module Juvix.Builtin.V1.Maybe;
 
 --- Represents an optional value that may or may not be present. Provides a way
 --- to handle null or missing values in a type-safe manner.

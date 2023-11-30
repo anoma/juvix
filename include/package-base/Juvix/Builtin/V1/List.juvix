@@ -1,6 +1,6 @@
-module Juvix.Builtin.List;
+module Juvix.Builtin.V1.List;
 
-import Stdlib.Data.Fixity open;
+import Juvix.Builtin.V1.Fixity open;
 
 syntax operator :: cons;
 --- Inductive list.

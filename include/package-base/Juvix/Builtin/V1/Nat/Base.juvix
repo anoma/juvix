@@ -1,6 +1,6 @@
-module Juvix.Builtin.Nat.Base;
+module Juvix.Builtin.V1.Nat.Base;
 
-import Juvix.Builtin.Fixity open;
+import Juvix.Builtin.V1.Fixity open;
 
 --- Inductive natural numbers. I.e. whole non-negative numbers.
 builtin nat
