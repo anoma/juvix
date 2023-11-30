@@ -150,7 +150,7 @@ arityTests =
         _ -> wrongError,
     negTest "Evil: issue 2540" $(mkRelDir "Internal/Positivity") $(mkRelFile "Evil.juvix") $
       \case
-        ErrNonStrictlyPositive (ErrTypeAsArgumentOfBoundVar {}) -> Nothing
+        ErrNonStrictlyPositive ErrTypeAsArgumentOfBoundVar {} -> Nothing
         _ -> wrongError,
     negTest "Evil: issue 2540 using Axiom" $(mkRelDir "Internal/Positivity") $(mkRelFile "EvilWithAxiom.juvix") $
       \case

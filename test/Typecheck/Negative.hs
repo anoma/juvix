@@ -264,7 +264,7 @@ negPositivityTests :: [NegTest]
 negPositivityTests =
   [ negTest "E1" $(mkRelDir "Internal/Positivity") $(mkRelFile "E1.juvix") $
       \case
-        ErrNonStrictlyPositive (ErrTypeInNegativePosition {}) -> Nothing
+        ErrNonStrictlyPositive ErrTypeInNegativePosition {} -> Nothing
         _ -> wrongError,
     negTest "E2" $(mkRelDir "Internal/Positivity") $(mkRelFile "E2.juvix") $
       \case

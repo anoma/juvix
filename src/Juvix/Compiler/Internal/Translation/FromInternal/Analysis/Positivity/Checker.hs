@@ -43,21 +43,20 @@ checkPositivity ty = do
     forM_ (ty ^. inductiveConstructors) $ \ctor -> do
       unless (ty ^. inductivePositive) $ do
         numInductives <- HashMap.size <$> asks (^. infoInductives)
-        mapM_
-          ( \typeOfConstr ->
-              checkStrictlyPositiveOccurrences
-                ( CheckPositivityArgs
-                    { _checkPositivityArgsInductive = ty,
-                      _checkPositivityArgsConstructorName =
-                        ctor ^. inductiveConstructorName,
-                      _checkPositivityArgsInductiveName = ty ^. inductiveName,
-                      _checkPositivityArgsRecursionLimit = numInductives,
-                      _checkPositivityArgsErrorReference = Nothing,
-                      _checkPositivityArgsTypeOfConstructor = typeOfConstr
-                    }
-                )
-          )
+        forM_
           (constructorArgs (ctor ^. inductiveConstructorType))
+          $ \typeOfConstr ->
+            checkStrictlyPositiveOccurrences
+              ( CheckPositivityArgs
+                  { _checkPositivityArgsInductive = ty,
+                    _checkPositivityArgsConstructorName =
+                      ctor ^. inductiveConstructorName,
+                    _checkPositivityArgsInductiveName = ty ^. inductiveName,
+                    _checkPositivityArgsRecursionLimit = numInductives,
+                    _checkPositivityArgsErrorReference = Nothing,
+                    _checkPositivityArgsTypeOfConstructor = typeOfConstr
+                  }
+              )
 
 checkStrictlyPositiveOccurrences ::
   forall r.
@@ -147,10 +146,10 @@ checkStrictlyPositiveOccurrences p = do
         goApp tyApp = do
           let (hdExpr, args) = unfoldApplication tyApp
           case hdExpr of
-            ax@(ExpressionIden (IdenAxiom _)) -> do
+            ax@(ExpressionIden IdenAxiom {}) -> do
               when (isJust $ find (varOrInductiveInExpression name) args) $
                 throwTypeAsArgumentOfBoundVarError ax
-            var@(ExpressionIden (IdenVar _)) -> do
+            var@(ExpressionIden IdenVar {}) -> do
               when (isJust $ find (varOrInductiveInExpression name) args) $
                 throwTypeAsArgumentOfBoundVarError var
             ExpressionIden (IdenInductive ty') -> do
