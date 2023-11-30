@@ -1,5 +1,9 @@
 module Juvix.Builtin.List;
 
+import Stdlib.Data.Fixity open;
+
+syntax operator :: cons;
+--- Inductive list.
 builtin list
 type List (a : Type) :=
   | --- The empty list
