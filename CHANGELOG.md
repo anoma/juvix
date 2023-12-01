@@ -4,6 +4,31 @@
 <img align="right" width="300" height="300" alt="Juvix Mascot" src="../assets/images/tara-smiling.svg" />
 </a>
 
+## [v0.5.5](https://github.com/anoma/juvix/tree/HEAD) (2023-12-01)
+
+[Full Changelog](https://github.com/anoma/juvix/compare/v0.5.4...v0.5.5)
+
+**Implemented enhancements:**
+
+- Add new case for positivity checker: type cannot occur as arg of bound var [\#2542](https://github.com/anoma/juvix/pull/2542) ([jonaprieto](https://github.com/jonaprieto))
+- Add dependent defaults for the new typechecker [\#2541](https://github.com/anoma/juvix/pull/2541) ([janmasrovira](https://github.com/janmasrovira))
+- Extract builtin definitions for loading a Package into bundled package-base package [\#2535](https://github.com/anoma/juvix/pull/2535) ([paulcadman](https://github.com/paulcadman))
+- Update the Juvix lock file when the Package file changes [\#2522](https://github.com/anoma/juvix/pull/2522) ([paulcadman](https://github.com/paulcadman))
+- Add non-dependent default values to the new typechecking algorithm [\#2516](https://github.com/anoma/juvix/pull/2516) ([janmasrovira](https://github.com/janmasrovira))
+
+**Merged pull requests:**
+
+- Update to the latest juvix-stdlib [\#2546](https://github.com/anoma/juvix/pull/2546) ([paulcadman](https://github.com/paulcadman))
+- Remove old typechecker [\#2545](https://github.com/anoma/juvix/pull/2545) ([janmasrovira](https://github.com/janmasrovira))
+- Fix codeblocks indentation in Markdown output [\#2539](https://github.com/anoma/juvix/pull/2539) ([jonaprieto](https://github.com/jonaprieto))
+- runtime Makefile: Do not resolve variables when writing a dependency file [\#2538](https://github.com/anoma/juvix/pull/2538) ([paulcadman](https://github.com/paulcadman))
+- Fix location for aliases [\#2536](https://github.com/anoma/juvix/pull/2536) ([jonaprieto](https://github.com/jonaprieto))
+- Add Makefile to hyperfine benchmarks [\#2533](https://github.com/anoma/juvix/pull/2533) ([jonaprieto](https://github.com/jonaprieto))
+- Negative tests for `--new-typechecker` [\#2532](https://github.com/anoma/juvix/pull/2532) ([janmasrovira](https://github.com/janmasrovira))
+- Fix the global 'package' package so that modules within it can be type-checked independently [\#2526](https://github.com/anoma/juvix/pull/2526) ([paulcadman](https://github.com/paulcadman))
+- Improve inference for `--new-typechecker` [\#2524](https://github.com/anoma/juvix/pull/2524) ([janmasrovira](https://github.com/janmasrovira))
+
+
 ## [v0.5.4](https://github.com/anoma/juvix/tree/v0.5.4) (2023-11-17)
 
 [Full Changelog](https://github.com/anoma/juvix/compare/v0.5.3...v0.5.4)
