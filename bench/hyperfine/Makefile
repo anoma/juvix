@@ -5,7 +5,8 @@ RUNS?=10
 HYPERFINEFLAGS?=--warmup ${WARMUP} \
 				 --runs ${RUNS}
 
-JUVIXVERSIONS?=-v0.4.3,-v0.5.0,-v0.5.1,-v0.5.2,-v0.5.3,-v0.5.4,
+# Don't forget to add the comma at the end of the dev version
+JUVIXVERSIONS?=-v0.4.3,-v0.5.0,-v0.5.1,-v0.5.2,-v0.5.3,-v0.5.4,-v0.5.5,
 TASKS?="dev root" \
        "dev parse" \
 	   "dev highlight" \
