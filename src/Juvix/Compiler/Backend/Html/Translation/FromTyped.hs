@@ -18,7 +18,6 @@ import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Print
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoped
 import Juvix.Compiler.Internal.Translation.FromConcrete qualified as Internal
-import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Data.Context qualified as InternalArity
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking qualified as InternalTyped
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context
 import Juvix.Compiler.Pipeline.EntryPoint
@@ -166,8 +165,7 @@ genJudocHtml JudocArgs {..} =
     cs :: Comments
     cs =
       _judocArgsCtx
-        ^. resultInternalArityResult
-          . InternalArity.resultInternalResult
+        ^. resultInternalResult
           . Internal.resultScoper
           . Scoped.comments
 
@@ -180,8 +178,7 @@ genJudocHtml JudocArgs {..} =
     mainMod :: Module 'Scoped 'ModuleTop
     mainMod =
       _judocArgsCtx
-        ^. InternalTyped.resultInternalArityResult
-          . InternalArity.resultInternalResult
+        ^. InternalTyped.resultInternalResult
           . Internal.resultScoper
           . Scoped.mainModule
 

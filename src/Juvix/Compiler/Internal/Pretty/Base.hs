@@ -11,10 +11,8 @@ import Juvix.Compiler.Internal.Data.InstanceInfo (instanceInfoResult, instanceTa
 import Juvix.Compiler.Internal.Data.LocalVars
 import Juvix.Compiler.Internal.Data.NameDependencyInfo
 import Juvix.Compiler.Internal.Data.TypedHole
-import Juvix.Compiler.Internal.Extra.Base
 import Juvix.Compiler.Internal.Language
 import Juvix.Compiler.Internal.Pretty.Options
-import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Data.Types (Arity)
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.CheckerNew.Arity qualified as New
 import Juvix.Data.CodeAnn
 import Juvix.Prelude
@@ -112,13 +110,6 @@ ppMutual l = do
       b' <- vsep2 <$> mapM ppCode t
       return (braces (line <> indent' b' <> line))
   return (kwMutual <+> defs')
-
-instance PrettyCode Arity where
-  ppCode = return . pretty
-
-instance PrettyCode ApplicationArg where
-  ppCode ApplicationArg {..} =
-    implicitDelim _appArgIsImplicit <$> ppCode _appArg
 
 instance PrettyCode LetClause where
   ppCode :: forall r. (Member (Reader Options) r) => LetClause -> Sem r (Doc Ann)

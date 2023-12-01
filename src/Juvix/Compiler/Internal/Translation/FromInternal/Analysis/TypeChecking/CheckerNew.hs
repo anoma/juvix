@@ -4,6 +4,10 @@ module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Ch
     checkTable,
     checkModuleIndex,
     checkModuleNoCache,
+    checkImport,
+    withEmptyInsertedArgsStack,
+    withEmptyLocalVars,
+    inferExpression,
   )
 where
 
@@ -138,11 +142,14 @@ checkModuleIndex ::
   Sem r ModuleIndex
 checkModuleIndex = fmap ModuleIndex . cacheGet
 
+withEmptyInsertedArgsStack :: Sem (Reader InsertedArgsStack ': r) a -> Sem r a
+withEmptyInsertedArgsStack = runReader (mempty @InsertedArgsStack)
+
 checkModuleNoCache ::
   (Members '[HighlightBuilder, Reader EntryPoint, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example, Builtins, MCache, Termination] r) =>
   ModuleIndex ->
   Sem r Module
-checkModuleNoCache (ModuleIndex Module {..}) = runReader (mempty @InsertedArgsStack) $ do
+checkModuleNoCache (ModuleIndex Module {..}) = withEmptyInsertedArgsStack $ do
   _moduleBody' <-
     evalState (mempty :: NegativeTypeParameters)
       . checkModuleBody
