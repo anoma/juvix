@@ -69,19 +69,10 @@ upToInternal ::
   Sem r Internal.InternalResult
 upToInternal = upToScoping >>= Internal.fromConcrete
 
-upToInternalArity ::
-  (Members '[HighlightBuilder, Reader EntryPoint, Files, NameIdGen, Builtins, Error JuvixError, GitClone, PathResolver, Termination] r) =>
-  Sem r Internal.InternalArityResult
-upToInternalArity = upToInternal >>= Internal.arityChecking
-
 upToInternalTyped ::
   (Members '[HighlightBuilder, Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, GitClone, PathResolver] r) =>
   Sem r Internal.InternalTypedResult
-upToInternalTyped = do
-  newAlgorithm <- asks (^. entryPointNewTypeCheckingAlgorithm)
-  if
-      | newAlgorithm -> Internal.typeCheckingNew upToInternal
-      | otherwise -> Internal.typeChecking upToInternalArity
+upToInternalTyped = Internal.typeCheckingNew upToInternal
 
 upToInternalReachability ::
   (Members '[HighlightBuilder, Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, GitClone, PathResolver] r) =>

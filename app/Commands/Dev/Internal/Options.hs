@@ -1,6 +1,5 @@
 module Commands.Dev.Internal.Options where
 
-import Commands.Dev.Internal.Arity.Options
 import Commands.Dev.Internal.Pretty.Options
 import Commands.Dev.Internal.Reachability.Options
 import Commands.Dev.Internal.Typecheck.Options
@@ -9,7 +8,6 @@ import CommonOptions
 data InternalCommand
   = Pretty InternalPrettyOptions
   | TypeCheck InternalTypeOptions
-  | Arity InternalArityOptions
   | Reachability InternalReachabilityOptions
   deriving stock (Data)
 
@@ -18,14 +16,10 @@ parseInternalCommand =
   hsubparser $
     mconcat
       [ commandPretty,
-        commandArity,
         commandTypeCheck,
         commandReachability
       ]
   where
-    commandArity :: Mod CommandFields InternalCommand
-    commandArity = command "arity" arityInfo
-
     commandPretty :: Mod CommandFields InternalCommand
     commandPretty = command "pretty" prettyInfo
 
@@ -34,12 +28,6 @@ parseInternalCommand =
 
     commandReachability :: Mod CommandFields InternalCommand
     commandReachability = command "reachability" reachabilityInfo
-
-    arityInfo :: ParserInfo InternalCommand
-    arityInfo =
-      info
-        (Arity <$> parseInternalArity)
-        (progDesc "Translate a Juvix file to Internal and insert holes")
 
     prettyInfo :: ParserInfo InternalCommand
     prettyInfo =
