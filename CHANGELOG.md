@@ -28,7 +28,6 @@
 - Fix the global 'package' package so that modules within it can be type-checked independently [\#2526](https://github.com/anoma/juvix/pull/2526) ([paulcadman](https://github.com/paulcadman))
 - Improve inference for `--new-typechecker` [\#2524](https://github.com/anoma/juvix/pull/2524) ([janmasrovira](https://github.com/janmasrovira))
 
-
 ## [v0.5.4](https://github.com/anoma/juvix/tree/v0.5.4) (2023-11-17)
 
 [Full Changelog](https://github.com/anoma/juvix/compare/v0.5.3...v0.5.4)
