@@ -4,7 +4,7 @@
 <img align="right" width="300" height="300" alt="Juvix Mascot" src="../assets/images/tara-smiling.svg" />
 </a>
 
-## [v0.5.5](https://github.com/anoma/juvix/tree/HEAD) (2023-12-01)
+## [v0.5.5](https://github.com/anoma/juvix/tree/v0.5.5) (2023-12-01)
 
 [Full Changelog](https://github.com/anoma/juvix/compare/v0.5.4...v0.5.5)
 
