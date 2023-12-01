@@ -1,0 +1,72 @@
+module PackageDescription.V2;
+
+import Juvix.Builtin.V1 open public;
+
+--- A ;Package; defines the configuration for a Juvix package
+type Package :=
+  mkPackage {
+    -- The name of the package
+    name : String;
+    -- The version for the package
+    version : SemVer;
+    -- The dependencies of this package
+    dependencies : List Dependency;
+    -- A path to the Main module for this package
+    main : Maybe String;
+    -- A path to a directory where Juvix should output intermediate build products
+    buildDir : Maybe String
+  };
+
+--- Construct a ;Package; with useful default arguments.
+defaultPackage {name : String := "my-project"} {version : SemVer := defaultVersion} {dependencies : List
+  Dependency := [defaultStdlib]} {main : Maybe
+  String := nothing} {buildDir : Maybe String := nothing}
+  : Package :=
+  mkPackage name version dependencies main buildDir;
+
+--- A ;SemVer; defines a version that conforms to the Semantic Versioning specification.
+type SemVer :=
+  mkSemVer {
+    major : Nat;
+    minor : Nat;
+    patch : Nat;
+    release : Maybe String;
+    meta : Maybe String
+  };
+
+--- Construct a ;SemVer; with useful default arguments.
+mkVersion (major minor patch : Nat) {release : Maybe
+  String := nothing} {meta : Maybe String := nothing}
+  : SemVer :=
+  mkSemVer
+    (major := major;
+    minor := minor;
+    patch := patch;
+    release := release;
+    meta := meta);
+
+--- The default version used in `defaultPackage`.
+defaultVersion : SemVer := mkVersion 0 0 0;
+
+--- A ;Dependency; defines a Juvix package dependency.
+type Dependency :=
+  | --- A filesystem path to another Juvix Package.
+    path {path : String}
+  | --- A ;git; repository containing a Juvix package at its root
+    git {
+      -- A name for this dependency
+      name : String;
+      -- The URL to the git repository
+      url : String;
+      -- The git ref to checkout
+      ref : String
+    }
+  | --- The ;defaultStdlib; that is bundled with the Juvix compiler.
+    defaultStdlib;
+
+--- Constructs a GitHub dependency.
+github (org repo ref : String) : Dependency :=
+  git
+    (org ++str "_" ++str repo)
+    ("https://github.com/" ++str org ++str "/" ++str repo)
+    ref;

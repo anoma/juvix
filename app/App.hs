@@ -51,7 +51,7 @@ runAppIO ::
   Sem r a
 runAppIO args@RunAppIOArgs {..} =
   interpret $ \case
-    AskPackageGlobal -> return (_runAppIOArgsRoot ^. rootPackageGlobal)
+    AskPackageGlobal -> return (_runAppIOArgsRoot ^. rootPackageType `elem` [GlobalStdlib, GlobalPackageDescription, GlobalPackageBase])
     FromAppPathFile p -> embed (prepathToAbsFile invDir (p ^. pathPath))
     GetMainFile m -> getMainFile' m
     FromAppPathDir p -> embed (prepathToAbsDir invDir (p ^. pathPath))

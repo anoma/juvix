@@ -37,11 +37,6 @@ acceptableTypes = mapM go packageDescriptionTypes
 renderPackageVersion :: PackageVersion -> Package -> Text
 renderPackageVersion v pkg = toPlainText (ppOutDefaultNoComments (toConcrete (getPackageType v) pkg))
 
-getPackageType :: PackageVersion -> PackageDescriptionType
-getPackageType = \case
-  PackageVersion1 -> v1PackageDescriptionType
-  PackageBasic -> basicPackageDescriptionType
-
 -- | Load a package file in the context of the PackageDescription module and the global package stdlib.
 loadPackage :: (Members '[Files, EvalFileEff, Error PackageLoaderError] r) => BuildDir -> Path Abs File -> Sem r Package
 loadPackage buildDir packagePath = do

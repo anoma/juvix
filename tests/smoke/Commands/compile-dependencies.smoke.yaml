@@ -993,8 +993,7 @@ tests:
         - bash
       script: |
         temp=$(mktemp -d)
-        # trap 'rm -rf -- "$temp"' EXIT
-        echo $temp
+        trap 'rm -rf -- "$temp"' EXIT
 
         # create dependency
         mkdir $temp/dep
@@ -1022,7 +1021,7 @@ tests:
 
         cat <<-EOF > Package.juvix
         module Package;
-        import PackageDescription.V1 open;
+        import PackageDescription.V2 open;
         package : Package := defaultPackage {dependencies := [defaultStdlib ; git "dep1" "$temp/dep" "main"]}
         EOF
 

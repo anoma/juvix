@@ -1,0 +1,23 @@
+module Juvix.Builtin.V1.Fixity;
+
+syntax fixity none := none;
+
+syntax fixity rapp := binary {assoc := right};
+syntax fixity lapp := binary {assoc := left; same := rapp};
+syntax fixity seq := binary {assoc := left; above := [lapp]};
+
+syntax fixity functor := binary {assoc := right};
+
+syntax fixity logical := binary {assoc := right; above := [seq]};
+syntax fixity comparison := binary {assoc := none; above := [logical]};
+
+syntax fixity pair := binary {assoc := right};
+syntax fixity cons := binary {assoc := right; above := [pair]};
+
+syntax fixity step := binary {assoc := right};
+syntax fixity range := binary {assoc := right; above := [step]};
+
+syntax fixity additive := binary {assoc := left; above := [comparison; range; cons]};
+syntax fixity multiplicative := binary {assoc := left; above := [additive]};
+
+syntax fixity composition := binary {assoc := right; above := [multiplicative]};

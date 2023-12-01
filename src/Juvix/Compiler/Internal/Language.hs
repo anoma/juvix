@@ -441,7 +441,7 @@ instance HasAtomicity SimpleLambda where
   atomicity = const Atom
 
 instance HasAtomicity Let where
-  atomicity l = atomicity (l ^. letExpression)
+  atomicity = const (Aggregate letFixity)
 
 instance HasAtomicity Literal where
   atomicity = \case

@@ -112,3 +112,6 @@ globalRoot = (<//> $(mkRelDir "global-project")) <$> juvixConfigDir
 
 globalPackageDescriptionRoot :: (Members '[Files] r) => Sem r (Path Abs Dir)
 globalPackageDescriptionRoot = (<//> $(mkRelDir "package")) <$> juvixConfigDir
+
+globalPackageBaseRoot :: (Members '[Files] r) => Sem r (Path Abs Dir)
+globalPackageBaseRoot = (<//> $(mkRelDir "package-base")) <$> juvixConfigDir

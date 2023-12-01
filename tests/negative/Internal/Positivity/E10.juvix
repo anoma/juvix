@@ -2,6 +2,6 @@ module E10;
 
 type T0 (A : Type) := t : (A -> T0 A) -> T0 A;
 
-alias : Type -> Type := T0;
+T0alias : Type -> Type := T0;
 
-type T1 := c : alias T1 -> T1;
+type T1 := c : T0alias T1 -> T1;

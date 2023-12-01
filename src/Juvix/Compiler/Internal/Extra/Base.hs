@@ -12,8 +12,6 @@ type Rename = HashMap VarName VarName
 
 type Subs = HashMap VarName Expression
 
-type VarMap = HashMap VarName VarName
-
 data ApplicationArg = ApplicationArg
   { _appArgIsImplicit :: IsImplicit,
     _appArg :: Expression
@@ -126,15 +124,32 @@ instance HasExpressions SimpleLambda where
     pure (SimpleLambda bi' b')
 
 instance HasExpressions FunctionParameter where
-  leafExpressions f (FunctionParameter m i e) = do
-    e' <- leafExpressions f e
-    pure (FunctionParameter m i e')
+  leafExpressions f FunctionParameter {..} = do
+    ty' <- leafExpressions f _paramType
+    pure
+      FunctionParameter
+        { _paramType = ty',
+          _paramName,
+          _paramImplicit
+        }
 
 instance HasExpressions Function where
   leafExpressions f (Function l r) = do
     l' <- leafExpressions f l
     r' <- leafExpressions f r
     pure (Function l' r')
+
+instance HasExpressions ApplicationArg where
+  leafExpressions f ApplicationArg {..} = do
+    arg' <- leafExpressions f _appArg
+    pure
+      ApplicationArg
+        { _appArg = arg',
+          _appArgIsImplicit
+        }
+
+instance (HasExpressions a) => HasExpressions (Maybe a) where
+  leafExpressions = _Just . leafExpressions
 
 instance HasExpressions Application where
   leafExpressions f (Application l r i) = do
@@ -292,16 +307,24 @@ inductiveTypeVarsAssoc def l
     vars :: [VarName]
     vars = def ^.. inductiveParameters . each . inductiveParamName
 
-substitutionApp :: forall r expr. (Member NameIdGen r, HasExpressions expr) => (Maybe Name, Expression) -> expr -> Sem r expr
+substitutionApp :: (Maybe Name, Expression) -> Subs
 substitutionApp (mv, ty) = case mv of
-  Nothing -> return
-  Just v -> substitutionE (HashMap.singleton v ty)
+  Nothing -> mempty
+  Just v -> HashMap.singleton v ty
 
 localsToSubsE :: LocalVars -> Subs
 localsToSubsE l = ExpressionIden . IdenVar <$> l ^. localTyMap
 
+subsKind :: [Name] -> NameKind -> Subs
+subsKind uids k =
+  HashMap.fromList
+    [ (s, toExpression s') | s <- uids, let s' = toExpression (set nameKind k s)
+    ]
+
 substitutionE :: forall r expr. (Member NameIdGen r, HasExpressions expr) => Subs -> expr -> Sem r expr
-substitutionE m = leafExpressions goLeaf
+substitutionE m
+  | null m = pure
+  | otherwise = leafExpressions goLeaf
   where
     goLeaf :: Expression -> Sem r Expression
     goLeaf = \case
@@ -382,6 +405,7 @@ foldApplication f args = case nonEmpty args of
 unfoldApplication' :: Application -> (Expression, NonEmpty ApplicationArg)
 unfoldApplication' (Application l' r' i') = second (|: (ApplicationArg i' r')) (unfoldExpressionApp l')
 
+-- TODO make it tail recursive
 unfoldExpressionApp :: Expression -> (Expression, [ApplicationArg])
 unfoldExpressionApp = \case
   ExpressionApplication (Application l r i) ->
