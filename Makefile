@@ -262,5 +262,5 @@ HYPERFINEBIN := $(shell command -v hyperfine 2> /dev/null)
 
 .PHONY : hyperfine-benchmarks
 hyperfine-benchmarks:
-	@$(if $(HYPERFINEBIN),, $(error "hyperfine not found, please install it using cargo"))
+	@$(if $(HYPERFINEBIN),, $(error "hyperfine not found, please install it using cargo or from https://github.com/sharkdp/hyperfine"))
 	cd bench/hyperfine && ${MAKE}
