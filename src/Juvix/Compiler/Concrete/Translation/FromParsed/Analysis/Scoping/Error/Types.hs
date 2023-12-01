@@ -98,7 +98,7 @@ instance ToGenericError InfixErrorP where
 
 newtype ImportCycle = ImportCycle
   { -- | If we have [a, b, c] it means that a import b imports c imports a.
-    _importCycleImports :: NonEmpty (Import 'Parsed)
+    _importCycleImports :: NonEmpty TopModulePath
   }
   deriving stock (Show)
 
@@ -121,7 +121,7 @@ instance ToGenericError ImportCycle where
               <> line
               <> indent' (vsep (intersperse "⇓" (map pp (toList (tie _importCycleImports)))))
 
-          pp :: Import 'Parsed -> Doc Ann
+          pp :: TopModulePath -> Doc Ann
           pp t = ppCode opts' t <+> parens ("at" <+> pretty (getLoc t))
 
           tie :: NonEmpty a -> NonEmpty a
