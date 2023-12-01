@@ -33,9 +33,9 @@ extra-source-files:
   - assets/css/*.css
   - assets/js/*.js
   - assets/images/*.svg
-  - juvix-stdlib/juvix.yaml
   - juvix-stdlib/**/*.juvix
   - include/package/**/*.juvix
+  - include/package-base/**/*.juvix
   - runtime/include/**/*.h
   - runtime/**/*.a
   - runtime/src/vampir/*.pir
