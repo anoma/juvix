@@ -257,3 +257,10 @@ smoke: install submodules
 .PHONY : changelog
 changelog :
 	@github_changelog_generator
+
+HYPERFINEBIN := $(shell command -v hyperfine 2> /dev/null)
+
+.PHONY : hyperfine-benchmarks
+hyperfine-benchmarks:
+	@$(if $(HYPERFINEBIN),, $(error "hyperfine not found, please install it using cargo or from https://github.com/sharkdp/hyperfine"))
+	cd bench/hyperfine && ${MAKE}
