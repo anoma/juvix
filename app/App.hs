@@ -5,6 +5,7 @@ import Data.ByteString qualified as ByteString
 import GlobalOptions
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker
+import Juvix.Compiler.Pipeline.Package
 import Juvix.Compiler.Pipeline.Run
 import Juvix.Data.Error qualified as Error
 import Juvix.Extra.Paths.Base hiding (rootBuildDir)
@@ -41,14 +42,26 @@ data RunAppIOArgs = RunAppIOArgs
     _runAppIOArgsRoot :: Root
   }
 
+makeLenses ''RunAppIOArgs
+
 runAppIO ::
   forall r a.
   (Members '[Embed IO, TaggedLock] r) =>
   RunAppIOArgs ->
   Sem (App ': r) a ->
   Sem r a
-runAppIO args@RunAppIOArgs {..} =
-  interpret $ \case
+runAppIO args = evalSingletonCache (readPackageRootIO root) . reAppIO args
+  where
+    root = args ^. runAppIOArgsRoot
+
+reAppIO ::
+  forall r a.
+  (Members '[Embed IO, TaggedLock] r) =>
+  RunAppIOArgs ->
+  Sem (App ': r) a ->
+  Sem (SCache Package ': r) a
+reAppIO args@RunAppIOArgs {..} =
+  reinterpret $ \case
     AskPackageGlobal -> return (_runAppIOArgsRoot ^. rootPackageType `elem` [GlobalStdlib, GlobalPackageDescription, GlobalPackageBase])
     FromAppPathFile p -> embed (prepathToAbsFile invDir (p ^. pathPath))
     GetMainFile m -> getMainFile' m
@@ -84,11 +97,13 @@ runAppIO args@RunAppIOArgs {..} =
     ExitMsg exitCode t -> exitMsg' exitCode t
     SayRaw b -> embed (ByteString.putStr b)
   where
-    getPkg :: Sem r Package
-    getPkg = undefined
-    exitMsg' :: ExitCode -> Text -> Sem r x
-    exitMsg' exitCode t = embed (putStrLn t >> hFlush stdout >> exitWith exitCode)
-    getMainFile' :: Maybe (AppPath File) -> Sem r (Path Abs File)
+    getPkg :: (Members '[SCache Package] r') => Sem r' Package
+    getPkg = cacheSingletonGet
+
+    exitMsg' :: (Members '[Embed IO] r') => ExitCode -> Text -> Sem r' x
+    exitMsg' exitCode t = liftIO (putStrLn t >> hFlush stdout >> exitWith exitCode)
+
+    getMainFile' :: (Members '[SCache Package, Embed IO] r') => Maybe (AppPath File) -> Sem r' (Path Abs File)
     getMainFile' = \case
       Just p -> embed (prepathToAbsFile invDir (p ^. pathPath))
       -- Nothing -> case pkg ^. packageMain of
@@ -97,7 +112,8 @@ runAppIO args@RunAppIOArgs {..} =
         case pkg ^. packageMain of
           Just p -> embed (prepathToAbsFile invDir p)
           Nothing -> missingMainErr
-    missingMainErr :: Sem r x
+
+    missingMainErr :: (Members '[Embed IO] r') => Sem r' x
     missingMainErr =
       exitMsg'
         (ExitFailure 1)

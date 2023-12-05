@@ -8,13 +8,12 @@ import Control.Exception (SomeException)
 import Control.Exception qualified as IO
 import Juvix.Compiler.Pipeline.Package
 import Juvix.Compiler.Pipeline.Root.Base
-import Juvix.Data.Effect.TaggedLock
 import Juvix.Extra.Paths qualified as Paths
 import Juvix.Prelude
 
 findRootAndChangeDir ::
   forall r.
-  (Members '[Embed IO, TaggedLock, Final IO] r) =>
+  (Members '[Embed IO, Final IO] r) =>
   Maybe (Path Abs Dir) ->
   Maybe (Path Abs Dir) ->
   Path Abs Dir ->
@@ -46,14 +45,13 @@ findRootAndChangeDir minputFileDir mbuildDir _rootInvokeDir = do
         Nothing -> do
           let cwd = fromMaybe _rootInvokeDir minputFileDir
           packageBaseRootDir <- runFilesIO globalPackageBaseRoot
-          (_rootPackage, _rootRootDir, _rootPackageType) <-
+          (_rootRootDir, _rootPackageType) <-
             if
                 | isPathPrefix packageBaseRootDir cwd ->
-                    return (packageBasePackage, packageBaseRootDir, GlobalPackageBase)
+                    return (packageBaseRootDir, GlobalPackageBase)
                 | otherwise -> do
-                    globalPkg <- readGlobalPackageIO
                     r <- runFilesIO globalRoot
-                    return (globalPkg, r, GlobalStdlib)
+                    return (r, GlobalStdlib)
           let _rootBuildDir = getBuildDir mbuildDir
           return Root {..}
         Just pkgPath -> do
@@ -63,7 +61,6 @@ findRootAndChangeDir minputFileDir mbuildDir _rootInvokeDir = do
                 | isPathPrefix packageDescriptionRootDir _rootRootDir = GlobalPackageDescription
                 | otherwise = LocalPackage
               _rootBuildDir = getBuildDir mbuildDir
-          _rootPackage <- readPackageIO _rootRootDir _rootBuildDir
           return Root {..}
 
 getBuildDir :: Maybe (Path Abs Dir) -> BuildDir
