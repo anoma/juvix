@@ -45,8 +45,7 @@ type PipelineAppEffects = '[TaggedLock, Embed IO, Resource, Final IO]
 
 type PipelineLocalEff = '[PathResolver, EvalFileEff, Error PackageLoaderError, Error DependencyError, GitClone, Error GitProcessError, Process, Log, Reader EntryPoint, Files, NameIdGen, Builtins, Error JuvixError, HighlightBuilder, Internet]
 
--- type PipelineEff r = PipelineLocalEff ++ r
-type PipelineEff r = PathResolver ': EvalFileEff ': Error PackageLoaderError ': Error DependencyError ': GitClone ': Error GitProcessError ': Process ': Log ': Reader EntryPoint ': Files ': NameIdGen ': Builtins ': Error JuvixError ': HighlightBuilder ': Internet ': r
+type PipelineEff r = PipelineLocalEff ++ r
 
 --------------------------------------------------------------------------------
 -- Workflows
