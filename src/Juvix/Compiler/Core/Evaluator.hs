@@ -401,23 +401,24 @@ evalIO = hEvalIO stderr stdin stdout
 
 doEval ::
   forall r.
-  (Members '[Embed IO] r) =>
+  (MonadIO (Sem r)) =>
   Bool ->
   Interval ->
   InfoTable ->
   Node ->
   Sem r (Either CoreError Node)
 doEval noIO loc tab node
-  | noIO = embed $ catchEvalError loc (eval stderr (tab ^. identContext) [] node)
-  | otherwise = embed $ catchEvalErrorIO loc (evalIO (tab ^. identContext) [] node)
+  | noIO = catchEvalError loc (eval stderr (tab ^. identContext) [] node)
+  | otherwise = liftIO (catchEvalErrorIO loc (evalIO (tab ^. identContext) [] node))
 
 -- | Catch EvalError and convert it to CoreError. Needs a default location in case
 -- no location is available in EvalError.
-catchEvalError :: Location -> a -> IO (Either CoreError a)
+catchEvalError :: (MonadIO m) => Location -> a -> m (Either CoreError a)
 catchEvalError loc a =
-  Exception.catch
-    (Exception.evaluate a <&> Right)
-    (\(ex :: EvalError) -> return (Left (toCoreError loc ex)))
+  liftIO $
+    Exception.catch
+      (Exception.evaluate a <&> Right)
+      (\(ex :: EvalError) -> return (Left (toCoreError loc ex)))
 
 catchEvalErrorIO :: Location -> IO a -> IO (Either CoreError a)
 catchEvalErrorIO loc ma =

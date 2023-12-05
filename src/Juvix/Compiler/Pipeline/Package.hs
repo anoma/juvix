@@ -2,6 +2,7 @@ module Juvix.Compiler.Pipeline.Package
   ( module Juvix.Compiler.Pipeline.Package.Base,
     readPackage,
     readPackageIO,
+    readPackageRootIO,
     readGlobalPackageIO,
     readGlobalPackage,
     loadPackageFileIO,
@@ -19,6 +20,8 @@ import Juvix.Compiler.Pipeline.Package.Loader
 import Juvix.Compiler.Pipeline.Package.Loader.Error
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff.IO
+import Juvix.Compiler.Pipeline.Root.Base
+import Juvix.Compiler.Pipeline.Root.Base qualified as Root
 import Juvix.Data.Effect.TaggedLock
 import Juvix.Extra.Paths
 import Juvix.Prelude
@@ -133,27 +136,22 @@ loadPackageFileIO root buildDir =
     . runEvalFileEffIO
     $ loadPackage buildDir (mkPackagePath root)
 
-readPackageIO :: LockMode -> Path Abs Dir -> BuildDir -> IO Package
-readPackageIO lockMode root buildDir =
-  runFinal
-    . resourceToIOFinal
-    . embedToFinal @IO
-    . runFilesIO
+readPackageRootIO :: (Members '[TaggedLock, Embed IO] r) => Root -> Sem r Package
+readPackageRootIO root = readPackageIO (root ^. rootRootDir) (root ^. Root.rootBuildDir)
+
+readPackageIO :: (Members '[TaggedLock, Embed IO] r) => Path Abs Dir -> BuildDir -> Sem r Package
+readPackageIO root buildDir =
+  runFilesIO
     . runErrorIO' @JuvixError
     . mapError (JuvixError @PackageLoaderError)
-    . runTaggedLock lockMode
     . runEvalFileEffIO
     $ readPackage root buildDir
 
-readGlobalPackageIO :: LockMode -> IO Package
-readGlobalPackageIO lockMode =
-  runFinal
-    . resourceToIOFinal
-    . embedToFinal @IO
-    . runFilesIO
+readGlobalPackageIO :: (Members '[Embed IO, TaggedLock] r) => Sem r Package
+readGlobalPackageIO =
+  runFilesIO
     . runErrorIO' @JuvixError
     . mapError (JuvixError @PackageLoaderError)
-    . runTaggedLock lockMode
     . runEvalFileEffIO
     $ readGlobalPackage
 

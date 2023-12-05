@@ -143,14 +143,13 @@ loadPackage' packagePath = do
     rootPath = parent packagePath
 
     packageEntryPoint :: EntryPoint
-    packageEntryPoint = defaultEntryPoint root packagePath
+    packageEntryPoint = defaultEntryPoint rootPkg root packagePath
       where
         root :: Root
         root =
           Root
             { _rootRootDir = rootPath,
               _rootPackageType = GlobalPackageDescription,
-              _rootPackage = rootPkg,
               _rootInvokeDir = rootPath,
               _rootBuildDir = DefaultBuildDir
             }

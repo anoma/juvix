@@ -42,7 +42,7 @@ data PrepathPart
 -- 3. ~ is reserved for $(HOME). I.e. the prepath ~~ will expand to $HOME$HOME.
 -- 4. Nested environment variables are not allowed.
 -- 5. Paths cannot start with space.
-expandPrepath :: Prepath a -> IO FilePath
+expandPrepath :: (MonadIO m) => Prepath a -> m FilePath
 expandPrepath (Prepath p) =
   let e = parseHelper prepathParts p
    in case e of
@@ -77,14 +77,14 @@ expandPrepath (Prepath p) =
             str :: m String
             str = P.takeWhile1P (Just "<Path>") notReserved
 
-expandParts :: PrepathParts -> IO FilePath
+expandParts :: forall m. (MonadIO m) => PrepathParts -> m FilePath
 expandParts = mconcatMapM fromPart
   where
-    fromPart :: PrepathPart -> IO String
+    fromPart :: PrepathPart -> m String
     fromPart = \case
       PrepathString s -> return s
-      PrepathHome -> getHomeDirectory
-      PrepathVar s -> fromMaybe err <$> lookupEnv s
+      PrepathHome -> liftIO getHomeDirectory
+      PrepathVar s -> fromMaybe err <$> liftIO (lookupEnv s)
         where
           err = error ("The environment variable " <> pack s <> " is not defined")
 
@@ -107,13 +107,13 @@ instance Pretty (Prepath d) where
 prepathToAbsFile :: Path Abs Dir -> Prepath File -> IO (Path Abs File)
 prepathToAbsFile root = fmap absFile . prepathToFilePath root
 
-prepathToAbsDir :: Path Abs Dir -> Prepath Dir -> IO (Path Abs Dir)
+prepathToAbsDir :: (MonadIO m) => Path Abs Dir -> Prepath Dir -> m (Path Abs Dir)
 prepathToAbsDir root = fmap absDir . prepathToFilePath root
 
-prepathToFilePath :: Path Abs Dir -> Prepath d -> IO FilePath
+prepathToFilePath :: (MonadIO m) => Path Abs Dir -> Prepath d -> m FilePath
 prepathToFilePath root pre = do
   expandedPre <- expandPrepath pre
-  System.canonicalizePath (toFilePath root </> expandedPre)
+  liftIO (System.canonicalizePath (toFilePath root </> expandedPre))
 
 fromPreFileOrDir :: Path Abs Dir -> Prepath FileOrDir -> IO (Either (Path Abs File) (Path Abs Dir))
 fromPreFileOrDir cwd fp = do

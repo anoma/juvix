@@ -43,7 +43,7 @@ data RunAppIOArgs = RunAppIOArgs
 
 runAppIO ::
   forall r a.
-  (Member (Embed IO) r) =>
+  (Members '[Embed IO, TaggedLock] r) =>
   RunAppIOArgs ->
   Sem (App ': r) a ->
   Sem r a
@@ -52,26 +52,26 @@ runAppIO args@RunAppIOArgs {..} =
     AskPackageGlobal -> return (_runAppIOArgsRoot ^. rootPackageType `elem` [GlobalStdlib, GlobalPackageDescription, GlobalPackageBase])
     FromAppPathFile p -> embed (prepathToAbsFile invDir (p ^. pathPath))
     GetMainFile m -> getMainFile' m
-    FromAppPathDir p -> embed (prepathToAbsDir invDir (p ^. pathPath))
+    FromAppPathDir p -> liftIO (prepathToAbsDir invDir (p ^. pathPath))
     RenderStdOut t
       | _runAppIOArgsGlobalOptions ^. globalOnlyErrors -> return ()
       | otherwise -> embed $ do
           sup <- Ansi.hSupportsANSIColor stdout
           renderIO (not (_runAppIOArgsGlobalOptions ^. globalNoColors) && sup) t
     AskGlobalOptions -> return _runAppIOArgsGlobalOptions
-    AskPackage -> return (_runAppIOArgsRoot ^. rootPackage)
+    AskPackage -> getPkg
     AskRoot -> return _runAppIOArgsRoot
     AskInvokeDir -> return invDir
     AskPkgDir -> return (_runAppIOArgsRoot ^. rootRootDir)
     AskBuildDir -> return (resolveAbsBuildDir (_runAppIOArgsRoot ^. rootRootDir) (_runAppIOArgsRoot ^. rootBuildDir))
     RunCorePipelineEither input -> do
-      entry <- embed (getEntryPoint' args input)
+      entry <- getEntryPoint' args input
       embed (corePipelineIOEither entry)
     RunPipelineEither input p -> do
-      entry <- embed (getEntryPoint' args input)
+      entry <- getEntryPoint' args input
       embed (runIOEither entry p)
     RunPipelineNoFileEither p -> do
-      entry <- embed (getEntryPointStdin' args)
+      entry <- getEntryPointStdin' args
       embed (runIOEither entry p)
     Say t
       | g ^. globalOnlyErrors -> return ()
@@ -84,14 +84,19 @@ runAppIO args@RunAppIOArgs {..} =
     ExitMsg exitCode t -> exitMsg' exitCode t
     SayRaw b -> embed (ByteString.putStr b)
   where
+    getPkg :: Sem r Package
+    getPkg = undefined
     exitMsg' :: ExitCode -> Text -> Sem r x
     exitMsg' exitCode t = embed (putStrLn t >> hFlush stdout >> exitWith exitCode)
     getMainFile' :: Maybe (AppPath File) -> Sem r (Path Abs File)
     getMainFile' = \case
       Just p -> embed (prepathToAbsFile invDir (p ^. pathPath))
-      Nothing -> case pkg ^. packageMain of
-        Just p -> embed (prepathToAbsFile invDir p)
-        Nothing -> missingMainErr
+      -- Nothing -> case pkg ^. packageMain of
+      Nothing -> do
+        pkg <- getPkg
+        case pkg ^. packageMain of
+          Just p -> embed (prepathToAbsFile invDir p)
+          Nothing -> missingMainErr
     missingMainErr :: Sem r x
     missingMainErr =
       exitMsg'
@@ -101,30 +106,28 @@ runAppIO args@RunAppIOArgs {..} =
             <> " file"
         )
     invDir = _runAppIOArgsRoot ^. rootInvokeDir
-    pkg :: Package
-    pkg = _runAppIOArgsRoot ^. rootPackage
     g :: GlobalOptions
     g = _runAppIOArgsGlobalOptions
     printErr e =
       embed $ hPutStrLn stderr $ run $ runReader (project' @GenericOptions g) $ Error.render (not (_runAppIOArgsGlobalOptions ^. globalNoColors)) (g ^. globalOnlyErrors) e
 
-getEntryPoint' :: RunAppIOArgs -> AppPath File -> IO EntryPoint
+getEntryPoint' :: (Members '[Embed IO, TaggedLock] r) => RunAppIOArgs -> AppPath File -> Sem r EntryPoint
 getEntryPoint' RunAppIOArgs {..} inputFile = do
   let opts = _runAppIOArgsGlobalOptions
       root = _runAppIOArgsRoot
   estdin <-
     if
-        | opts ^. globalStdin -> Just <$> getContents
+        | opts ^. globalStdin -> Just <$> liftIO getContents
         | otherwise -> return Nothing
   set entryPointStdin estdin <$> entryPointFromGlobalOptionsPre root (inputFile ^. pathPath) opts
 
-getEntryPointStdin' :: RunAppIOArgs -> IO EntryPoint
+getEntryPointStdin' :: (Members '[Embed IO, TaggedLock] r) => RunAppIOArgs -> Sem r EntryPoint
 getEntryPointStdin' RunAppIOArgs {..} = do
   let opts = _runAppIOArgsGlobalOptions
       root = _runAppIOArgsRoot
   estdin <-
     if
-        | opts ^. globalStdin -> Just <$> getContents
+        | opts ^. globalStdin -> Just <$> liftIO getContents
         | otherwise -> return Nothing
   set entryPointStdin estdin <$> entryPointFromGlobalOptionsNoFile root opts
 
@@ -141,11 +144,11 @@ filePathToAbs fp = do
 askGenericOptions :: (Members '[App] r) => Sem r GenericOptions
 askGenericOptions = project <$> askGlobalOptions
 
-getEntryPoint :: (Members '[Embed IO, App] r) => AppPath File -> Sem r EntryPoint
+getEntryPoint :: (Members '[Embed IO, App, TaggedLock] r) => AppPath File -> Sem r EntryPoint
 getEntryPoint inputFile = do
   _runAppIOArgsGlobalOptions <- askGlobalOptions
   _runAppIOArgsRoot <- askRoot
-  embed (getEntryPoint' (RunAppIOArgs {..}) inputFile)
+  getEntryPoint' (RunAppIOArgs {..}) inputFile
 
 runPipelineTermination :: (Member App r) => AppPath File -> Sem (Termination ': PipelineEff) a -> Sem r a
 runPipelineTermination input p = do
