@@ -7,7 +7,7 @@ import Juvix.Compiler.Concrete.Print qualified as Print
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
 import Juvix.Prelude.Pretty
 
-runCommand :: (Members '[Embed IO, App] r) => ScopeOptions -> Sem r ()
+runCommand :: (Members '[Embed IO, TaggedLock, App] r) => ScopeOptions -> Sem r ()
 runCommand opts = do
   globalOpts <- askGlobalOptions
   res :: Scoper.ScoperResult <- runPipeline (opts ^. scopeInputFile) upToScoping

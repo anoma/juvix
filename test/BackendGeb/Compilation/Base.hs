@@ -4,7 +4,6 @@ import BackendGeb.FromCore.Base
 import Base
 import Juvix.Compiler.Backend (Target (TargetGeb))
 import Juvix.Compiler.Core qualified as Core
-import Juvix.Data.Effect.TaggedLock
 
 gebCompilationAssertion ::
   Path Abs Dir ->
@@ -14,6 +13,6 @@ gebCompilationAssertion ::
   Assertion
 gebCompilationAssertion root mainFile expectedFile step = do
   step "Translate to JuvixCore"
-  entryPoint <- set entryPointTarget TargetGeb <$> defaultEntryPointIO' LockModeExclusive root mainFile
-  tab <- (^. Core.coreResultTable) . snd <$> runIOExclusive entryPoint upToCore
+  entryPoint <- set entryPointTarget TargetGeb <$> testDefaultEntryPointIO root mainFile
+  tab <- (^. Core.coreResultTable) . snd <$> testRunIO entryPoint upToCore
   coreToGebTranslationAssertion' tab entryPoint expectedFile step

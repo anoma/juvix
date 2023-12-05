@@ -4,7 +4,6 @@ import Base
 import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Internal.Language qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context qualified as Internal
-import Juvix.Data.Effect.TaggedLock
 
 data PosTest = PosTest
   { _name :: String,
@@ -30,10 +29,10 @@ testDescr PosTest {..} =
             let noStdlib = _stdlibMode == StdlibExclude
             entryPoint <-
               set entryPointNoStdlib noStdlib
-                <$> defaultEntryPointIO' LockModeExclusive tRoot file'
+                <$> testDefaultEntryPointIO tRoot file'
 
             step "Pipeline up to reachability"
-            p :: Internal.InternalTypedResult <- snd <$> runIOExclusive entryPoint upToInternalReachability
+            p :: Internal.InternalTypedResult <- snd <$> testRunIO entryPoint upToInternalReachability
 
             step "Check reachability results"
             let names = concatMap getNames (p ^. Internal.resultModules)

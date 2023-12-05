@@ -12,5 +12,5 @@ runCommand HighlightOptions {..} = do
   hinput <-
     Highlight.filterInput
       inputFile
-      <$> liftIO (runPipelineHighlight entry upToInternalTyped)
+      <$> runPipelineHighlight entry upToInternalTyped
   sayRaw (Highlight.highlight _highlightBackend hinput)

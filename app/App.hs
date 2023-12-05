@@ -19,6 +19,7 @@ data App m a where
   ExitJuvixError :: JuvixError -> App m a
   PrintJuvixError :: JuvixError -> App m ()
   AskRoot :: App m Root
+  AskArgs :: App m RunAppIOArgs
   AskInvokeDir :: App m (Path Abs Dir)
   AskPkgDir :: App m (Path Abs Dir)
   AskBuildDir :: App m (Path Abs Dir)
@@ -29,19 +30,16 @@ data App m a where
   GetMainFile :: Maybe (AppPath File) -> App m (Path Abs File)
   FromAppPathDir :: AppPath Dir -> App m (Path Abs Dir)
   RenderStdOut :: (HasAnsiBackend a, HasTextBackend a) => a -> App m ()
-  RunPipelineEither :: AppPath File -> Sem PipelineEff a -> App m (Either JuvixError (ResolverState, a))
-  RunPipelineNoFileEither :: Sem PipelineEff a -> App m (Either JuvixError (ResolverState, a))
   RunCorePipelineEither :: AppPath File -> App m (Either JuvixError Artifacts)
   Say :: Text -> App m ()
   SayRaw :: ByteString -> App m ()
-
-makeSem ''App
 
 data RunAppIOArgs = RunAppIOArgs
   { _runAppIOArgsGlobalOptions :: GlobalOptions,
     _runAppIOArgsRoot :: Root
   }
 
+makeSem ''App
 makeLenses ''RunAppIOArgs
 
 runAppIO ::
@@ -73,6 +71,7 @@ reAppIO args@RunAppIOArgs {..} =
           renderIO (not (_runAppIOArgsGlobalOptions ^. globalNoColors) && sup) t
     AskGlobalOptions -> return _runAppIOArgsGlobalOptions
     AskPackage -> getPkg
+    AskArgs -> return args
     AskRoot -> return _runAppIOArgsRoot
     AskInvokeDir -> return invDir
     AskPkgDir -> return (_runAppIOArgsRoot ^. rootRootDir)
@@ -80,12 +79,6 @@ reAppIO args@RunAppIOArgs {..} =
     RunCorePipelineEither input -> do
       entry <- getEntryPoint' args input
       embed (corePipelineIOEither entry)
-    RunPipelineEither input p -> do
-      entry <- getEntryPoint' args input
-      embed (runIOEither entry p)
-    RunPipelineNoFileEither p -> do
-      entry <- getEntryPointStdin' args
-      embed (runIOEither entry p)
     Say t
       | g ^. globalOnlyErrors -> return ()
       | otherwise -> embed (putStrLn t)
@@ -137,6 +130,18 @@ getEntryPoint' RunAppIOArgs {..} inputFile = do
         | otherwise -> return Nothing
   set entryPointStdin estdin <$> entryPointFromGlobalOptionsPre root (inputFile ^. pathPath) opts
 
+runPipelineNoFileEither :: (Members '[Embed IO, TaggedLock, App] r) => Sem (PipelineEff r) a -> Sem r (Either JuvixError (ResolverState, a))
+runPipelineNoFileEither p = do
+  args <- askArgs
+  entry <- getEntryPointStdin' args
+  snd <$> runIOEither entry p
+
+runPipelineEither :: (Members '[Embed IO, TaggedLock, App] r) => AppPath File -> Sem (PipelineEff r) a -> Sem r (Either JuvixError (ResolverState, a))
+runPipelineEither input p = do
+  args <- askArgs
+  entry <- getEntryPoint' args input
+  snd <$> runIOEither entry p
+
 getEntryPointStdin' :: (Members '[Embed IO, TaggedLock] r) => RunAppIOArgs -> Sem r EntryPoint
 getEntryPointStdin' RunAppIOArgs {..} = do
   let opts = _runAppIOArgsGlobalOptions
@@ -166,21 +171,21 @@ getEntryPoint inputFile = do
   _runAppIOArgsRoot <- askRoot
   getEntryPoint' (RunAppIOArgs {..}) inputFile
 
-runPipelineTermination :: (Member App r) => AppPath File -> Sem (Termination ': PipelineEff) a -> Sem r a
+runPipelineTermination :: (Members '[App, Embed IO, TaggedLock] r) => AppPath File -> Sem (Termination ': PipelineEff r) a -> Sem r a
 runPipelineTermination input p = do
   r <- runPipelineEither input (evalTermination iniTerminationState p)
   case r of
     Left err -> exitJuvixError err
     Right res -> return (snd res)
 
-runPipeline :: (Member App r) => AppPath File -> Sem PipelineEff a -> Sem r a
+runPipeline :: (Members '[App, Embed IO, TaggedLock] r) => AppPath File -> Sem (PipelineEff r) a -> Sem r a
 runPipeline input p = do
   r <- runPipelineEither input p
   case r of
     Left err -> exitJuvixError err
     Right res -> return (snd res)
 
-runPipelineNoFile :: (Member App r) => Sem PipelineEff a -> Sem r a
+runPipelineNoFile :: (Members '[App, Embed IO, TaggedLock] r) => Sem (PipelineEff r) a -> Sem r a
 runPipelineNoFile p = do
   r <- runPipelineNoFileEither p
   case r of

@@ -6,7 +6,7 @@ import Evaluator qualified as Eval
 import Juvix.Compiler.Core qualified as Core
 import Juvix.Extra.Strings qualified as Str
 
-runCommand :: (Members '[Embed IO, App] r) => EvalOptions -> Sem r ()
+runCommand :: (Members '[Embed IO, TaggedLock, App] r) => EvalOptions -> Sem r ()
 runCommand opts@EvalOptions {..} = do
   gopts <- askGlobalOptions
   Core.CoreResult {..} <- runPipeline _evalInputFile upToCore
