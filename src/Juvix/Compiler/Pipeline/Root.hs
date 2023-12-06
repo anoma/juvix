@@ -8,18 +8,20 @@ import Control.Exception (SomeException)
 import Control.Exception qualified as IO
 import Juvix.Compiler.Pipeline.Package
 import Juvix.Compiler.Pipeline.Root.Base
+import Juvix.Data.Effect.TaggedLock
 import Juvix.Extra.Paths qualified as Paths
 import Juvix.Prelude
 
 findRootAndChangeDir ::
   forall r.
-  (Members '[Embed IO, Final IO] r) =>
+  (Members '[TaggedLock, Embed IO, Final IO] r) =>
   Maybe (Path Abs Dir) ->
   Maybe (Path Abs Dir) ->
   Path Abs Dir ->
   Sem r Root
 findRootAndChangeDir minputFileDir mbuildDir _rootInvokeDir = do
   r <- runError (fromExceptionSem @SomeException go)
+  runFilesIO ensureGlobalPackage
   case r of
     Left (err :: IO.SomeException) -> liftIO $ do
       putStrLn "Something went wrong when looking for the root of the project"

@@ -7,6 +7,7 @@ module Juvix.Compiler.Pipeline.Package
     readGlobalPackage,
     loadPackageFileIO,
     packageBasePackage,
+    ensureGlobalPackage,
   )
 where
 
@@ -155,17 +156,22 @@ readGlobalPackageIO =
     . runEvalFileEffIO
     $ readGlobalPackage
 
-readGlobalPackage :: (Members '[TaggedLock, Error JuvixError, EvalFileEff, Files] r) => Sem r Package
-readGlobalPackage = do
+ensureGlobalPackage :: (Members '[TaggedLock, Files] r) => Sem r (Path Abs File)
+ensureGlobalPackage = do
   packagePath <- globalPackageJuvix
   withTaggedLockDir (parent packagePath) (unlessM (fileExists' packagePath) writeGlobalPackage)
+  return packagePath
+
+readGlobalPackage :: (Members '[TaggedLock, Error JuvixError, EvalFileEff, Files] r) => Sem r Package
+readGlobalPackage = do
+  packagePath <- ensureGlobalPackage
   readPackage (parent packagePath) DefaultBuildDir
 
 writeGlobalPackage :: (Members '[Files] r) => Sem r ()
 writeGlobalPackage = do
   packagePath <- globalPackageJuvix
   ensureDir' (parent packagePath)
-  writeFile' packagePath (renderPackageVersion PackageVersion1 (globalPackage packagePath))
+  writeFile' packagePath (renderPackageVersion currentPackageVersion (globalPackage packagePath))
 
 packageBasePackage :: Package
 packageBasePackage =
