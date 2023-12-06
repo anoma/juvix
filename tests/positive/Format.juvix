@@ -390,18 +390,20 @@ i2479' : {_ : Nat} -> Nat
   | {_} := zero;
 
 -- formatting arguments that do not fit in a line
-fffffffffffffffffffffffffffffffffffffffffffffffff {f : List
-  Nat} : Nat := zero;
+fffffffffffffffffffffffffffffffffffffffffffffffff
+  {f : List Nat} : Nat := zero;
 
 -- formatting arguments that do not fit in a line
-fff {f : List Nat}
-{f0 : List Nat}
-{f1 : List Nat}
-{f2 : List Nat}
-{f3 : List Nat}
-{f4 : List Nat}
-{f5 : List Nat}
-{f6 : List Nat}
-{f7 : List Nat} : Nat := zero;
+fff
+  {f : List Nat}
+  {f0 : List Nat}
+  {f1 : List Nat}
+  {f2 : List Nat}
+  {f3 : List Nat}
+  {f4 : List Nat}
+  {f5 : List Nat}
+  {f6 : List Nat}
+  {f7 : List Nat}
+  : Nat := zero;
 
 -- Comment at the end of a module
