@@ -10,3 +10,7 @@ type either (A B : Type) :=
 isLeft {A B} : either A B → Bool
  | left@{} := true
  | right@{} := false;
+
+not : Bool → Bool
+ | false@{} := true
+ | true := false;
