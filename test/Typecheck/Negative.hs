@@ -3,7 +3,6 @@ module Typecheck.Negative where
 import Base
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Positivity.Error
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error
-import Juvix.Data.Effect.TaggedLock
 
 type FailMsg = String
 
@@ -24,8 +23,8 @@ testDescr NegTest {..} =
         { _testName = _name,
           _testRoot = tRoot,
           _testAssertion = Single $ do
-            entryPoint <- defaultEntryPointIO' LockModeExclusive tRoot file'
-            result <- runIOEither' LockModeExclusive entryPoint upToInternalTyped
+            entryPoint <- testDefaultEntryPointIO tRoot file'
+            result <- snd <$> testRunIOEither entryPoint upToInternalTyped
             case mapLeft fromJuvixError result of
               Left (Just tyError) -> whenJust (_checkErr tyError) assertFailure
               Left Nothing -> assertFailure "An error ocurred but it was not in the type checker."

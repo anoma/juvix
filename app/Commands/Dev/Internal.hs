@@ -6,7 +6,7 @@ import Commands.Dev.Internal.Pretty qualified as Pretty
 import Commands.Dev.Internal.Reachability qualified as Reachability
 import Commands.Dev.Internal.Typecheck qualified as Typecheck
 
-runCommand :: (Members '[Embed IO, App] r) => InternalCommand -> Sem r ()
+runCommand :: (Members '[Embed IO, App, TaggedLock] r) => InternalCommand -> Sem r ()
 runCommand = \case
   Pretty opts -> Pretty.runCommand opts
   TypeCheck opts -> Typecheck.runCommand opts

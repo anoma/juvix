@@ -54,8 +54,8 @@ testDescr PosTest {..} = helper renderCodeNew
             { _testName = _name,
               _testRoot = tRoot,
               _testAssertion = Steps $ \step -> do
-                entryPoint <- defaultEntryPointIO' LockModeExclusive tRoot file'
-                let runHelper :: HashMap (Path Abs File) Text -> Sem PipelineEff a -> IO (ResolverState, a)
+                entryPoint <- testDefaultEntryPointIO tRoot file'
+                let runHelper :: HashMap (Path Abs File) Text -> Sem (PipelineEff PipelineAppEffects) a -> IO (ResolverState, a)
                     runHelper files = do
                       let runPathResolver' = case _pathResolverMode of
                             FullPathResolver -> runPathResolverPipe
@@ -63,6 +63,7 @@ testDescr PosTest {..} = helper renderCodeNew
                       runFinal
                         . resourceToIOFinal
                         . embedToFinal @IO
+                        . runTaggedLock LockModeExclusive
                         . evalInternetOffline
                         . ignoreHighlightBuilder
                         . runErrorIO' @JuvixError
@@ -70,7 +71,6 @@ testDescr PosTest {..} = helper renderCodeNew
                         . evalTopNameIdGen
                         . runFilesPure files tRoot
                         . runReader entryPoint
-                        . runTaggedLock LockModeExclusive
                         . ignoreLog
                         . runProcessIO
                         . mapError (JuvixError @GitProcessError)
@@ -79,15 +79,15 @@ testDescr PosTest {..} = helper renderCodeNew
                         . mapError (JuvixError @PackageLoaderError)
                         . runEvalFileEffIO
                         . runPathResolver'
-                    evalHelper :: HashMap (Path Abs File) Text -> Sem PipelineEff a -> IO a
+                    evalHelper :: HashMap (Path Abs File) Text -> Sem (PipelineEff PipelineAppEffects) a -> IO a
                     evalHelper files = fmap snd . runHelper files
 
                 step "Parsing"
-                p :: Parser.ParserResult <- snd <$> runIOExclusive entryPoint upToParsing
+                p :: Parser.ParserResult <- snd <$> testRunIO entryPoint upToParsing
 
                 step "Scoping"
                 (resolverState :: ResolverState, s :: Scoper.ScoperResult) <-
-                  runIOExclusive
+                  testRunIO
                     entryPoint
                     ( do
                         void (entrySetup defaultDependenciesConfig)

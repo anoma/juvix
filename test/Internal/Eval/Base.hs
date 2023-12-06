@@ -11,13 +11,12 @@ import Juvix.Compiler.Core.Info.NoDisplayInfo
 import Juvix.Compiler.Core.Pretty
 import Juvix.Compiler.Core.Transformation (etaExpansionApps)
 import Juvix.Compiler.Core.Translation.FromInternal.Data as Core
-import Juvix.Data.Effect.TaggedLock
 
 internalCoreAssertion :: Path Abs Dir -> Path Abs File -> Path Abs File -> (String -> IO ()) -> Assertion
 internalCoreAssertion root' mainFile expectedFile step = do
   step "Translate to Core"
-  entryPoint <- defaultEntryPointIO' LockModeExclusive root' mainFile
-  tab0 <- (^. Core.coreResultTable) . snd <$> runIOExclusive entryPoint upToCore
+  entryPoint <- testDefaultEntryPointIO root' mainFile
+  tab0 <- (^. Core.coreResultTable) . snd <$> testRunIO entryPoint upToCore
   let tab = etaExpansionApps tab0
   case (tab ^. infoMain) >>= ((tab ^. identContext) HashMap.!?) of
     Just node -> do

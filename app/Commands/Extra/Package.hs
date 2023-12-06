@@ -6,9 +6,6 @@ import Juvix.Compiler.Pipeline.Package.Loader
 import Juvix.Extra.Paths
 import Juvix.Prelude
 
-currentPackageVersion :: PackageVersion
-currentPackageVersion = PackageVersion2
-
 renderPackage :: Package -> Text
 renderPackage = renderPackageVersion currentPackageVersion
 

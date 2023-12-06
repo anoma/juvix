@@ -1,7 +1,6 @@
 module Formatter.Positive where
 
 import Base
-import Juvix.Data.Effect.TaggedLock
 import Juvix.Formatter
 import Scope.Positive qualified
 import Scope.Positive qualified as Scope
@@ -9,11 +8,11 @@ import Scope.Positive qualified as Scope
 runScopeEffIO :: (Member (Embed IO) r) => Path Abs Dir -> Sem (ScopeEff ': r) a -> Sem r a
 runScopeEffIO root = interpret $ \case
   ScopeFile p -> do
-    entry <- embed (defaultEntryPointIO' LockModeExclusive root p)
-    embed (snd <$> runIOExclusive entry upToScoping)
+    entry <- embed (testDefaultEntryPointIO root p)
+    embed (snd <$> testRunIO entry upToScoping)
   ScopeStdin -> do
-    entry <- embed (defaultEntryPointNoFileIO' LockModeExclusive root)
-    embed (snd <$> runIOExclusive entry upToScoping)
+    entry <- embed (testDefaultEntryPointNoFileIO root)
+    embed (snd <$> testRunIO entry upToScoping)
 
 makeFormatTest' :: Scope.PosTest -> TestDescr
 makeFormatTest' Scope.PosTest {..} =

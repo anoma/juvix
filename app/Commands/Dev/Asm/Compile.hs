@@ -8,7 +8,7 @@ import Juvix.Compiler.Asm.Translation.FromSource qualified as Asm
 import Juvix.Compiler.Backend qualified as Backend
 import Juvix.Compiler.Backend.C qualified as C
 
-runCommand :: forall r. (Members '[Embed IO, App] r) => AsmCompileOptions -> Sem r ()
+runCommand :: forall r. (Members '[Embed IO, App, TaggedLock] r) => AsmCompileOptions -> Sem r ()
 runCommand opts = do
   file <- getFile
   ep <- getEntryPoint (AppPath (preFileFromAbs file) True)

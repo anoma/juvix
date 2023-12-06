@@ -13,8 +13,12 @@ where
 import Control.Monad.Extra as Monad
 import Data.Algorithm.Diff
 import Data.Algorithm.DiffOutput
+import Juvix.Compiler.Concrete (HighlightInput)
+import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination
 import Juvix.Compiler.Pipeline.EntryPoint.IO
 import Juvix.Compiler.Pipeline.Run
+import Juvix.Data.Effect.TaggedLock
 import Juvix.Extra.Paths hiding (rootBuildDir)
 import Juvix.Prelude hiding (assert)
 import Juvix.Prelude.Env
@@ -74,3 +78,38 @@ assertCmdExists cmd =
   assertBool ("Command: " <> toFilePath cmd <> " is not present on $PATH")
     . isJust
     =<< findExecutable cmd
+
+testTaggedLockedToIO :: Sem PipelineAppEffects a -> IO a
+testTaggedLockedToIO =
+  runFinal
+    . resourceToIOFinal
+    . embedToFinal @IO
+    . runTaggedLock LockModeExclusive
+
+testRunIO ::
+  forall a.
+  EntryPoint ->
+  Sem (PipelineEff PipelineAppEffects) a ->
+  IO (ResolverState, a)
+testRunIO e = testTaggedLockedToIO . runIO defaultGenericOptions e
+
+testDefaultEntryPointIO :: Path Abs Dir -> Path Abs File -> IO EntryPoint
+testDefaultEntryPointIO cwd mainFile = testTaggedLockedToIO (defaultEntryPointIO cwd mainFile)
+
+testDefaultEntryPointNoFileIO :: Path Abs Dir -> IO EntryPoint
+testDefaultEntryPointNoFileIO cwd = testTaggedLockedToIO (defaultEntryPointNoFileIO cwd)
+
+testRunIOEither ::
+  EntryPoint ->
+  Sem (PipelineEff PipelineAppEffects) a ->
+  IO (HighlightInput, (Either JuvixError (ResolverState, a)))
+testRunIOEither entry = testTaggedLockedToIO . runIOEither entry
+
+testRunIOEitherTermination ::
+  EntryPoint ->
+  Sem (Termination ': PipelineEff PipelineAppEffects) a ->
+  IO (Either JuvixError (ResolverState, a))
+testRunIOEitherTermination entry =
+  fmap snd
+    . testRunIOEither entry
+    . evalTermination iniTerminationState

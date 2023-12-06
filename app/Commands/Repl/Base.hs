@@ -20,6 +20,7 @@ data ReplContext = ReplContext
 
 data ReplEnv = ReplEnv
   { _replRoot :: Root,
+    _replPackage :: Package,
     _replOptions :: ReplOptions
   }
 

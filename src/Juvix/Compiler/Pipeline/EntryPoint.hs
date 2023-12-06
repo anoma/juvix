@@ -44,14 +44,14 @@ data EntryPoint = EntryPoint
 
 makeLenses ''EntryPoint
 
-defaultEntryPoint :: Root -> Path Abs File -> EntryPoint
-defaultEntryPoint root mainFile =
-  (defaultEntryPointNoFile root)
+defaultEntryPoint :: Package -> Root -> Path Abs File -> EntryPoint
+defaultEntryPoint pkg root mainFile =
+  (defaultEntryPointNoFile pkg root)
     { _entryPointModulePaths = pure mainFile
     }
 
-defaultEntryPointNoFile :: Root -> EntryPoint
-defaultEntryPointNoFile root =
+defaultEntryPointNoFile :: Package -> Root -> EntryPoint
+defaultEntryPointNoFile pkg root =
   EntryPoint
     { _entryPointRoot = root ^. rootRootDir,
       _entryPointResolverRoot = root ^. rootRootDir,
@@ -61,7 +61,7 @@ defaultEntryPointNoFile root =
       _entryPointNoCoverage = False,
       _entryPointNoStdlib = False,
       _entryPointStdin = Nothing,
-      _entryPointPackage = root ^. rootPackage,
+      _entryPointPackage = pkg,
       _entryPointPackageType = root ^. rootPackageType,
       _entryPointGenericOptions = defaultGenericOptions,
       _entryPointTarget = TargetCore,

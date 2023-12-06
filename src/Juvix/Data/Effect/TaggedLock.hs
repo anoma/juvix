@@ -31,7 +31,9 @@ withTaggedLockDir d = do
       p = maybe lockFile (<//> lockFile) (dropDrive d)
   withTaggedLock p
 
-data LockMode = LockModePermissive | LockModeExclusive
+data LockMode
+  = LockModePermissive
+  | LockModeExclusive
 
 runTaggedLock :: (Members '[Resource, Embed IO] r) => LockMode -> Sem (TaggedLock ': r) a -> Sem r a
 runTaggedLock = \case

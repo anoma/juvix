@@ -4,6 +4,7 @@ module Juvix.Compiler.Pipeline.Root
   )
 where
 
+import Control.Exception (SomeException)
 import Control.Exception qualified as IO
 import Juvix.Compiler.Pipeline.Package
 import Juvix.Compiler.Pipeline.Root.Base
@@ -12,15 +13,17 @@ import Juvix.Extra.Paths qualified as Paths
 import Juvix.Prelude
 
 findRootAndChangeDir ::
-  LockMode ->
+  forall r.
+  (Members '[TaggedLock, Embed IO, Final IO] r) =>
   Maybe (Path Abs Dir) ->
   Maybe (Path Abs Dir) ->
   Path Abs Dir ->
-  IO Root
-findRootAndChangeDir lockMode minputFileDir mbuildDir _rootInvokeDir = do
-  r <- IO.try go
+  Sem r Root
+findRootAndChangeDir minputFileDir mbuildDir _rootInvokeDir = do
+  r <- runError (fromExceptionSem @SomeException go)
+  runFilesIO ensureGlobalPackage
   case r of
-    Left (err :: IO.SomeException) -> do
+    Left (err :: IO.SomeException) -> liftIO $ do
       putStrLn "Something went wrong when looking for the root of the project"
       putStrLn (pack (IO.displayException err))
       exitFailure
@@ -29,7 +32,7 @@ findRootAndChangeDir lockMode minputFileDir mbuildDir _rootInvokeDir = do
     possiblePaths :: Path Abs Dir -> [Path Abs Dir]
     possiblePaths p = p : toList (parents p)
 
-    findPackageFile :: IO (Maybe (Path Abs File))
+    findPackageFile :: (Members '[Embed IO] r') => Sem r' (Maybe (Path Abs File))
     findPackageFile = do
       let cwd = fromMaybe _rootInvokeDir minputFileDir
           findPackageFile' = findFile (possiblePaths cwd)
@@ -37,31 +40,29 @@ findRootAndChangeDir lockMode minputFileDir mbuildDir _rootInvokeDir = do
       pFile <- findPackageFile' Paths.packageFilePath
       return (pFile <|> yamlFile)
 
-    go :: IO Root
+    go :: Sem (Error SomeException ': r) Root
     go = do
       l <- findPackageFile
       case l of
         Nothing -> do
           let cwd = fromMaybe _rootInvokeDir minputFileDir
-          packageBaseRootDir <- runM (runFilesIO globalPackageBaseRoot)
-          (_rootPackage, _rootRootDir, _rootPackageType) <-
+          packageBaseRootDir <- runFilesIO globalPackageBaseRoot
+          (_rootRootDir, _rootPackageType) <-
             if
                 | isPathPrefix packageBaseRootDir cwd ->
-                    return (packageBasePackage, packageBaseRootDir, GlobalPackageBase)
+                    return (packageBaseRootDir, GlobalPackageBase)
                 | otherwise -> do
-                    globalPkg <- readGlobalPackageIO lockMode
-                    r <- runM (runFilesIO globalRoot)
-                    return (globalPkg, r, GlobalStdlib)
+                    r <- runFilesIO globalRoot
+                    return (r, GlobalStdlib)
           let _rootBuildDir = getBuildDir mbuildDir
           return Root {..}
         Just pkgPath -> do
-          packageDescriptionRootDir <- runM (runFilesIO globalPackageDescriptionRoot)
+          packageDescriptionRootDir <- runFilesIO globalPackageDescriptionRoot
           let _rootRootDir = parent pkgPath
               _rootPackageType
                 | isPathPrefix packageDescriptionRootDir _rootRootDir = GlobalPackageDescription
                 | otherwise = LocalPackage
               _rootBuildDir = getBuildDir mbuildDir
-          _rootPackage <- readPackageIO lockMode _rootRootDir _rootBuildDir
           return Root {..}
 
 getBuildDir :: Maybe (Path Abs Dir) -> BuildDir
