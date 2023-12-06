@@ -316,6 +316,10 @@ tests =
       $(mkRelDir "MarkdownImport")
       $(mkRelFile "C.juvix.md"),
     posTestAbsDir
+      "Typecheck constructor wildcard"
+      (relToProject $(mkRelDir "."))
+      $(mkRelFile "ConstructorWildcard.juvix"),
+    posTestAbsDir
       "Typecheck orphan file"
       (relToProject $(mkRelDir "tests/WithoutPackageFile"))
       $(mkRelFile "Good.juvix")

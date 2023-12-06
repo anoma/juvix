@@ -731,10 +731,23 @@ checkPattern = go
       whenJust name (\n -> addPatternVar n ty (argTy ^. paramName))
       pat' <- case pat of
         PatternVariable v -> addPatternVar v ty (argTy ^. paramName) $> pat
-        PatternWildcardConstructor {} -> impossible
+        PatternWildcardConstructor c -> checkWildcardConstructor pat ty c
         PatternConstructorApp a -> goPatternConstructor pat ty a
       return (set patternArgPattern pat' patArg)
       where
+        checkWildcardConstructor :: Pattern -> Expression -> WildcardConstructor -> Sem r Pattern
+        checkWildcardConstructor pat ty w = do
+          let c = w ^. wildcardConstructor
+          numArgs <- length . constructorArgs . (^. constructorInfoType) <$> lookupConstructor c
+          holeArgs <- replicateM numArgs (genWildcard (getLoc w) Explicit)
+          let capp =
+                ConstructorApp
+                  { _constrAppConstructor = c,
+                    _constrAppParameters = holeArgs,
+                    _constrAppType = Nothing
+                  }
+          goPatternConstructor pat ty capp
+
         goPatternConstructor :: Pattern -> Expression -> ConstructorApp -> Sem r Pattern
         goPatternConstructor pat ty a = do
           s <- checkSaturatedInductive ty
