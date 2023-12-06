@@ -946,7 +946,7 @@ ppFunctionSignature FunctionDef {..} = do
   let termin' = (<> line) . ppCode <$> _signTerminating
       coercion' = (<> if isJust instance' then space else line) . ppCode <$> _signCoercion
       instance' = (<> line) . ppCode <$> _signInstance
-      args' = hsep . fmap ppCode <$> nonEmpty _signArgs
+      args' = sep . fmap ppCode <$> nonEmpty _signArgs
       builtin' = (<> line) . ppCode <$> _signBuiltin
       type' = case _signColonKw ^. unIrrelevant of
         Just col -> oneLineOrNext (ppCode col <+> ppExpressionType (fromJust _signRetType))
