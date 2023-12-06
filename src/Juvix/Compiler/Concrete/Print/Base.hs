@@ -961,7 +961,7 @@ ppFunctionSignature FunctionDef {..} = do
         ?<> termin'
         ?<> coercion'
         ?<> instance'
-        ?<> ( name' <>? (oneLineOrNext . sep <$> argsAndType'))
+        ?<> (name' <>? (oneLineOrNext . sep <$> argsAndType'))
 
 instance (SingI s) => PrettyPrint (FunctionDef s) where
   ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => FunctionDef s -> Sem r ()
