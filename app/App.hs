@@ -99,7 +99,6 @@ reAppIO args@RunAppIOArgs {..} =
     getMainFile' :: (Members '[SCache Package, Embed IO] r') => Maybe (AppPath File) -> Sem r' (Path Abs File)
     getMainFile' = \case
       Just p -> embed (prepathToAbsFile invDir (p ^. pathPath))
-      -- Nothing -> case pkg ^. packageMain of
       Nothing -> do
         pkg <- getPkg
         case pkg ^. packageMain of
