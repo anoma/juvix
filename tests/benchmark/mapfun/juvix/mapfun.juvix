@@ -1,9 +1,7 @@
 -- successively map K functions to a list of N integers
 module mapfun;
 
-import Stdlib.Prelude open hiding {+};
-import Stdlib.Data.Int open;
-import Stdlib.Data.Int.Ord open;
+import Stdlib.Prelude open;
 
 mapfun : {A : Type} → List (A → A) → List A → List A
   | nil xs := xs
