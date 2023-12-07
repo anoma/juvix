@@ -946,20 +946,22 @@ ppFunctionSignature FunctionDef {..} = do
   let termin' = (<> line) . ppCode <$> _signTerminating
       coercion' = (<> if isJust instance' then space else line) . ppCode <$> _signCoercion
       instance' = (<> line) . ppCode <$> _signInstance
-      args' = hsep . fmap ppCode <$> nonEmpty _signArgs
       builtin' = (<> line) . ppCode <$> _signBuiltin
-      type' = case _signColonKw ^. unIrrelevant of
-        Just col -> oneLineOrNext (ppCode col <+> ppExpressionType (fromJust _signRetType))
-        Nothing -> mempty
+      margs' = fmap ppCode <$> nonEmpty _signArgs
+      mtype' = case _signColonKw ^. unIrrelevant of
+        Just col -> Just (ppCode col <+> ppExpressionType (fromJust _signRetType))
+        Nothing -> Nothing
+      argsAndType' = case mtype' of
+        Nothing -> margs'
+        Just ty' -> case margs' of
+          Nothing -> Just (pure ty')
+          Just args' -> Just (args' <> pure ty')
       name' = annDef _signName (ppSymbolType _signName)
    in builtin'
         ?<> termin'
         ?<> coercion'
         ?<> instance'
-        ?<> ( name'
-                <+?> args'
-                  <> type'
-            )
+        ?<> (name' <>? (oneLineOrNext . sep <$> argsAndType'))
 
 instance (SingI s) => PrettyPrint (FunctionDef s) where
   ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => FunctionDef s -> Sem r ()

@@ -51,8 +51,8 @@ syntax operator >>= bind;
     -> (A -> M B)
     -> M B := Monad.bind;
 
-Maybe-bind {A B : Type}
-  : Maybe A -> (A -> Maybe B) -> Maybe B
+Maybe-bind
+  {A B : Type} : Maybe A -> (A -> Maybe B) -> Maybe B
   | nothing _ := nothing
   | (just a) f := f a;
 
@@ -74,13 +74,16 @@ import Stdlib.Data.Product open;
 ×-Functor : {A : Type} -> Functor ((×) A) :=
   mkFunctor ×-fmap;
 
-×-bind {A : Type} {{Semigroup A}} {B C : Type}
+×-bind
+  {A : Type}
+  {{Semigroup A}}
+  {B C : Type}
   : A × B -> (B -> A × C) -> A × C
   | (a, b) f := case f b of {a', b' := a <> a', b'};
 
 instance
-×-Monad {A : Type} {{Semigroup A}} {{Monoid A}}
-  : Monad ((×) A) :=
+×-Monad
+  {A : Type} {{Semigroup A}} {{Monoid A}} : Monad ((×) A) :=
   mkMonad@{
     bind := ×-bind;
     return := λ {b := Monoid.mempty, b};
@@ -89,8 +92,8 @@ instance
 
 type Reader (r a : Type) := mkReader {runReader : r -> a};
 
-Reader-fmap {R A B : Type} (f : A -> B)
-  : Reader R A -> Reader R B
+Reader-fmap
+  {R A B : Type} (f : A -> B) : Reader R A -> Reader R B
   | (mkReader ra) := mkReader (f ∘ ra);
 
 Reader-Functor-NoNamed {R : Type} : Functor (Reader R) :=
@@ -109,7 +112,8 @@ Reader-Monad {R : Type} : Monad (Reader R) :=
     functor := Reader-Functor;
     return {A : Type} (a : A) : Reader R A :=
       mkReader (const a);
-    bind {A B : Type}
+    bind
+      {A B : Type}
       : Reader R A -> (A -> Reader R B) -> Reader R B
       | (mkReader ra) arb :=
         let

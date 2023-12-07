@@ -1,16 +1,17 @@
 module ConstructorWildcard;
 
 type Bool :=
- false | true;
+  | false
+  | true;
 
 type either (A B : Type) :=
-  left A
+  | left A
   | right B;
 
 isLeft {A B} : either A B → Bool
- | left@{} := true
- | right@{} := false;
+  | left@{} := true
+  | right@{} := false;
 
 not : Bool → Bool
- | false@{} := true
- | true := false;
+  | false@{} := true
+  | true := false;
