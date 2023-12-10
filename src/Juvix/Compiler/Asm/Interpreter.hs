@@ -129,7 +129,7 @@ runCodeR infoTable funInfo = goCode (funInfo ^. functionCode) >> popLastValueSta
         v <- topValueStack
         runtimeError $ mappend "failure: " (printVal v)
       ArgsNum -> do
-        v <- topValueStack
+        v <- popValueStack
         case v of
           ValClosure cl -> do
             let n = lookupFunInfo infoTable (cl ^. closureSymbol) ^. functionArgsNum - length (cl ^. closureArgs)

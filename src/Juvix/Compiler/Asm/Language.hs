@@ -96,8 +96,8 @@ data Instruction
     -- the stack. JVA opcode: 'fail'.
     Failure
   | -- | Computes the number of expected arguments for the closure on top of the
-    -- stack and pushes the result on top of the stack. Does not pop the closure
-    -- from the stack. JVA opcode: 'argsnum'.
+    -- stack, pops the stack and pushes the result on top of the stack. JVA
+    -- opcode: 'argsnum'.
     ArgsNum
   | -- | Preallocate memory. This instruction is inserted automatically before
     -- translation to JuvixReg. It does not occur in JVA files.
