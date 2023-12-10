@@ -4,51 +4,51 @@ type stream {
   cons : integer -> (unit -> stream) -> stream;
 }
 
-function force(unit -> stream) : stream {
+function force(f : unit -> stream) : stream {
   push unit;
-  push arg[0];
+  push f;
   tcall $ 1;
 }
 
-function filter(integer -> bool, unit -> stream, unit) : stream {
-  push arg[1];
+function filter(f : integer -> bool, s : unit -> stream, unit) : stream {
+  push s;
   call force;
-  tsave {
-    push tmp[0].cons[0];
-    push arg[0];
+  tsave s1 {
+    push s1.cons[0];
+    push f;
     call $ 1;
     br {
       true: {
-        push tmp[0].cons[1];
-        push arg[0];
+        push s1.cons[1];
+        push f;
         calloc filter 2;
-        push tmp[0].cons[0];
+        push s1.cons[0];
         alloc cons;
         ret;
       }
       false: {
         push unit;
-        push tmp[0].cons[1];
-        push arg[0];
+        push s1.cons[1];
+        push f;
         tcall filter;
       }
     };
   };
 }
 
-function nth(integer, unit -> stream) : integer {
-  push arg[1];
+function nth(n : integer, s : unit -> stream) : integer {
+  push s;
   call force;
-  tsave {
-    push arg[0];
+  tsave s1 {
+    push n;
     push 0;
     eq;
     br {
-      true: { push tmp[0].cons[0]; ret; }
+      true: { push s1.cons[0]; ret; }
       false: {
-        push tmp[0].cons[1];
+        push s1.cons[1];
         push 1;
-        push arg[0];
+        push n;
         sub;
         tcall nth;
       }
@@ -56,19 +56,19 @@ function nth(integer, unit -> stream) : integer {
   };
 }
 
-function numbers(integer, unit) : stream {
-  push arg[0];
+function numbers(n : integer, unit) : stream {
+  push n;
   push 1;
   add;
   calloc numbers 1;
-  push arg[0];
+  push n;
   alloc cons;
   ret;
 }
 
-function indivisible(integer, integer) : bool {
-  push arg[0];
-  push arg[1];
+function indivisible(n : integer, m : integer) : bool {
+  push n;
+  push m;
   mod;
   push 0;
   eq;
@@ -78,16 +78,16 @@ function indivisible(integer, integer) : bool {
   };
 }
 
-function eratostenes(unit -> stream, unit) : stream {
-  push arg[0];
+function eratostenes(s : unit -> stream, unit) : stream {
+  push s;
   call force;
-  tsave {
-    push tmp[0].cons[1];
-    push tmp[0].cons[0];
+  tsave s1 {
+    push s1.cons[1];
+    push s1.cons[0];
     calloc indivisible 1;
     calloc filter 2;
     calloc eratostenes 1;
-    push tmp[0].cons[0];
+    push s1.cons[0];
     alloc cons;
     ret;
   };
