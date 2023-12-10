@@ -121,7 +121,7 @@ computeStringMap strs = snd . run . execState (HashMap.size strs, strs) . mapM g
       Failure InstrFailure {..} ->
         goVal _instrFailureValue
       ArgsNum InstrArgsNum {..} ->
-        goVal _instrArgsNumArg
+        goVal _instrArgsNumValue
       Prealloc {} -> return ()
       Alloc InstrAlloc {..} ->
         mapM_ goVal _instrAllocArgs

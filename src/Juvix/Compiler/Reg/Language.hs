@@ -101,7 +101,7 @@ newtype InstrFailure = InstrFailure
 
 data InstrArgsNum = InstrArgsNum
   { _instrArgsNumResult :: VarRef,
-    _instrArgsNumArg :: Value
+    _instrArgsNumValue :: Value
   }
 
 data InstrPrealloc = InstrPrealloc
