@@ -350,10 +350,10 @@ instance (PrettyCode a) => PrettyCode [a] where
 
 instance PrettyCode FunctionInfo where
   ppCode FunctionInfo {..} = do
-    argtys <- mapM ppCode (typeArgs _functionType)
+    argtys <- mapM ppCode (take _functionArgsNum (typeArgs _functionType))
     let argnames = map (fmap variable) _functionArgNames
         args = zipWithExact (\mn ty -> maybe mempty (\n -> n <+> colon <> space) mn <> ty) argnames argtys
-    targetty <- ppCode (typeTarget _functionType)
+    targetty <- ppCode (if _functionArgsNum == 0 then _functionType else typeTarget _functionType)
     c <- ppCodeCode _functionCode
     return $
       keyword Str.function
