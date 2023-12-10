@@ -128,6 +128,14 @@ runCodeR infoTable funInfo = goCode (funInfo ^. functionCode) >> popLastValueSta
       Failure -> do
         v <- topValueStack
         runtimeError $ mappend "failure: " (printVal v)
+      ArgsNum -> do
+        v <- topValueStack
+        case v of
+          ValClosure cl -> do
+            let n = lookupFunInfo infoTable (cl ^. closureSymbol) ^. functionArgsNum - length (cl ^. closureArgs)
+            pushValueStack (ValInteger (toInteger n))
+            goCode cont
+          _ -> runtimeError "invalid operation: expected closure on top of value stack"
       Prealloc {} ->
         goCode cont
       AllocConstr tag -> do

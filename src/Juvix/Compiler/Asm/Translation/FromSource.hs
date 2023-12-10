@@ -330,6 +330,8 @@ command = do
       return $ mkInstr' loc Dump
     "fail" ->
       return $ mkInstr' loc Failure
+    "argsnum" ->
+      return $ mkInstr' loc ArgsNum
     "alloc" ->
       mkInstr' loc . AllocConstr <$> constrTag
     "calloc" ->

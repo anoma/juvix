@@ -113,6 +113,12 @@ recurse' sig = go True
               return mem
             Failure ->
               return $ pushValueStack TyDynamic (popValueStack 1 mem)
+            ArgsNum -> do
+              when (null (mem ^. memoryValueStack)) $
+                throw $
+                  AsmError loc "empty value stack"
+              checkFunType (topValueStack' 0 mem)
+              return $ pushValueStack mkTypeInteger mem
             Prealloc {} ->
               return mem
             AllocConstr tag -> do
@@ -384,6 +390,8 @@ recurseS' sig = go
               return si
             Failure ->
               return si
+            ArgsNum ->
+              return (stackInfoPushValueStack 1 si)
             Prealloc {} ->
               return si
             AllocConstr tag -> do

@@ -232,6 +232,8 @@ fromRegInstr bNoStack info = \case
     return [StatementExpr $ macroVar "JUVIX_DUMP"]
   Reg.Failure Reg.InstrFailure {..} ->
     return [StatementExpr $ macroCall "JUVIX_FAILURE" [fromValue _instrFailureValue]]
+  Reg.ArgsNum Reg.InstrArgsNum {..} ->
+    return [StatementExpr $ macroCall "JUVIX_ARGS_NUM" [fromVarRef _instrArgsNumResult, fromValue _instrArgsNumArg]]
   Reg.Prealloc x ->
     return [fromPrealloc x]
   Reg.Alloc x ->

@@ -280,6 +280,7 @@ instance PrettyCode Instruction where
     Trace -> return $ primitive Str.instrTrace
     Dump -> return $ primitive Str.instrDump
     Failure -> return $ primitive Str.instrFailure
+    ArgsNum -> return $ primitive Str.instrArgsNum
     Prealloc InstrPrealloc {..} ->
       return $ primitive Str.instrPrealloc <+> integer _preallocWordsNum
     AllocConstr tag -> (primitive Str.instrAlloc <+>) <$> ppConstrName tag

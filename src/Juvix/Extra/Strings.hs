@@ -584,6 +584,9 @@ instrDump = "dump"
 instrFailure :: (IsString s) => s
 instrFailure = "fail"
 
+instrArgsNum :: (IsString s) => s
+instrArgsNum = "argsnum"
+
 instrPrealloc :: (IsString s) => s
 instrPrealloc = "prealloc"
 

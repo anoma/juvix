@@ -24,6 +24,7 @@ computeMaxStackHeight lims = maximum . map go
       Trace {} -> 0
       Dump -> 0
       Failure {} -> 0
+      ArgsNum {} -> 0
       Prealloc InstrPrealloc {..} ->
         length _instrPreallocLiveVars
       Alloc {} -> 0
@@ -74,6 +75,7 @@ computeMaxCallClosuresArgsNum = maximum . map go
       Trace {} -> 0
       Dump -> 0
       Failure {} -> 0
+      ArgsNum {} -> 0
       Prealloc InstrPrealloc {} -> 0
       Alloc {} -> 0
       AllocClosure {} -> 0
@@ -118,6 +120,8 @@ computeStringMap strs = snd . run . execState (HashMap.size strs, strs) . mapM g
       Dump -> return ()
       Failure InstrFailure {..} ->
         goVal _instrFailureValue
+      ArgsNum InstrArgsNum {..} ->
+        goVal _instrArgsNumArg
       Prealloc {} -> return ()
       Alloc InstrAlloc {..} ->
         mapM_ goVal _instrAllocArgs

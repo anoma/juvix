@@ -95,6 +95,10 @@ data Instruction
   | -- | Interrupt execution with a runtime error printing the value on top of
     -- the stack. JVA opcode: 'fail'.
     Failure
+  | -- | Computes the number of expected arguments for the closure on top of the
+    -- stack and pushes the result on top of the stack. Does not pop the closure
+    -- from the stack. JVA opcode: 'argsnum'.
+    ArgsNum
   | -- | Preallocate memory. This instruction is inserted automatically before
     -- translation to JuvixReg. It does not occur in JVA files.
     Prealloc InstrPrealloc
