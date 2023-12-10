@@ -27,13 +27,22 @@ fromCore tab =
 -- Generate code for a single function.
 genCode :: Core.InfoTable -> Core.FunctionInfo -> FunctionInfo
 genCode infoTable fi =
-  let code =
+  let argnames = map (Just . (^. Core.argumentName)) (fi ^. Core.functionArgsInfo)
+      code =
         DL.toList $
           go
             True
             0
             ( BL.fromList $
-                reverse (map (Ref . DRef . ArgRef) [0 .. fi ^. Core.functionArgsNum - 1])
+                reverse
+                  ( map
+                      (Ref . DRef . ArgRef)
+                      ( zipWithExact
+                          OffsetRef
+                          [0 .. fi ^. Core.functionArgsNum - 1]
+                          argnames
+                      )
+                  )
             )
             (fi ^. Core.functionBody)
    in FunctionInfo
@@ -41,6 +50,7 @@ genCode infoTable fi =
           _functionLocation = fi ^. Core.functionLocation,
           _functionSymbol = fi ^. Core.functionSymbol,
           _functionArgsNum = fi ^. Core.functionArgsNum,
+          _functionArgNames = argnames,
           _functionType = convertType (fi ^. Core.functionArgsNum) (fi ^. Core.functionType),
           _functionCode = code,
           _functionMaxTempStackHeight = -1, -- computed later
@@ -175,9 +185,19 @@ genCode infoTable fi =
 
     goLet :: Bool -> Int -> BinderList Value -> Core.Let -> Code'
     goLet isTail tempSize refs (Core.Let {..}) =
-      DL.append
-        (DL.snoc (go False tempSize refs (_letItem ^. Core.letItemValue)) (mkInstr PushTemp))
-        (snocPopTemp isTail $ go isTail (tempSize + 1) (BL.cons (Ref (DRef (TempRef tempSize))) refs) _letBody)
+      DL.snoc
+        (go False tempSize refs (_letItem ^. Core.letItemValue))
+        ( Save $
+            CmdSave
+              { _cmdSaveInfo = emptyInfo,
+                _cmdSaveIsTail = isTail,
+                _cmdSaveCode = DL.toList $ go isTail (tempSize + 1) (BL.cons (Ref (DRef (TempRef nameRef))) refs) _letBody,
+                _cmdSaveName = Just name
+              }
+        )
+      where
+        name = _letItem ^. Core.letItemBinder . Core.binderName
+        nameRef = OffsetRef tempSize (Just name)
 
     goCase :: Bool -> Int -> BinderList Value -> Core.Case -> Code'
     goCase isTail tempSize refs (Core.Case {..}) =
@@ -217,21 +237,26 @@ genCode infoTable fi =
         compileCaseBranch bindersNum tag body =
           CaseBranch
             tag
-            ( DL.toList $
-                DL.cons (mkInstr PushTemp) $
-                  snocPopTemp isTail $
-                    go
-                      isTail
-                      (tempSize + 1)
-                      ( BL.prepend
-                          ( map
-                              (Ref . ConstrRef . Field tag (TempRef tempSize))
-                              (reverse [0 .. bindersNum - 1])
+            [ Save $
+                CmdSave
+                  { _cmdSaveInfo = emptyInfo,
+                    _cmdSaveIsTail = isTail,
+                    _cmdSaveName = Nothing,
+                    _cmdSaveCode =
+                      DL.toList $
+                        go
+                          isTail
+                          (tempSize + 1)
+                          ( BL.prepend
+                              ( map
+                                  (Ref . ConstrRef . Field Nothing tag (TempRef (OffsetRef tempSize Nothing)))
+                                  (reverse [0 .. bindersNum - 1])
+                              )
+                              refs
                           )
-                          refs
-                      )
-                      body
-            )
+                          body
+                  }
+            ]
 
         compileCaseDefault :: Core.Node -> Code
         compileCaseDefault =
@@ -278,10 +303,6 @@ genCode infoTable fi =
     snocReturn :: Bool -> Code' -> Code'
     snocReturn True code = DL.snoc code (mkInstr Return)
     snocReturn False code = code
-
-    snocPopTemp :: Bool -> Code' -> Code'
-    snocPopTemp False code = DL.snoc code (mkInstr PopTemp)
-    snocPopTemp True code = code
 
 -- | Be mindful that JuvixAsm types are explicitly uncurried, while
 -- Core.Stripped types are always curried. If a function takes `n` arguments,
@@ -343,6 +364,7 @@ translateConstructorInfo ci =
       _constructorLocation = ci ^. Core.constructorLocation,
       _constructorTag = ci ^. Core.constructorTag,
       _constructorArgsNum = length (typeArgs ty),
+      _constructorArgNames = ci ^. Core.constructorArgNames,
       _constructorType = ty,
       _constructorInductive = ci ^. Core.constructorInductive,
       _constructorRepresentation = MemRepConstr,

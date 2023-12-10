@@ -18,35 +18,36 @@ function h(integer -> integer, integer -> integer, integer) : integer {
 function f(integer) : integer -> integer {
   push arg[0];
   calloc g 1;
-  pusht;
-  push arg[0];
-  push 0;
-  eq;
-  br {
-    true: {
-      push 10;
-      tcall f;
-    }
-    false: {
-      push 10;
-      push arg[0];
-      lt;
-      br {
-        true: {
-          push 1;
-          push arg[0];
-          sub;
-          call f;
-          push tmp[0];
-          calloc h 2;
-          ret;
-        }
-        false: {
-          push tmp[0];
-          ret;
-        }
-      };
-    }
+  tsave {
+    push arg[0];
+    push 0;
+    eq;
+    br {
+      true: {
+        push 10;
+        tcall f;
+      }
+      false: {
+        push 10;
+        push arg[0];
+        lt;
+        br {
+          true: {
+            push 1;
+            push arg[0];
+            sub;
+            call f;
+            push tmp[0];
+            calloc h 2;
+            ret;
+          }
+          false: {
+            push tmp[0];
+            ret;
+          }
+        };
+      }
+    };
   };
 }
 

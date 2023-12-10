@@ -58,6 +58,8 @@ computeMaxStackHeight lims = maximum . map go
               )
           )
           (maybe 0 (computeMaxStackHeight lims) _instrCaseDefault)
+      Block InstrBlock {..} ->
+        computeMaxStackHeight lims _instrBlockCode
 
 computeMaxCallClosuresArgsNum :: Code -> Int
 computeMaxCallClosuresArgsNum = maximum . map go
@@ -93,6 +95,8 @@ computeMaxCallClosuresArgsNum = maximum . map go
               )
           )
           (maybe 0 computeMaxCallClosuresArgsNum _instrCaseDefault)
+      Block InstrBlock {..} ->
+        computeMaxCallClosuresArgsNum _instrBlockCode
 
 computeStringMap :: HashMap Text Int -> Code -> HashMap Text Int
 computeStringMap strs = snd . run . execState (HashMap.size strs, strs) . mapM go
@@ -135,6 +139,8 @@ computeStringMap strs = snd . run . execState (HashMap.size strs, strs) . mapM g
         goVal _instrCaseValue
         mapM_ (mapM_ go . (^. caseBranchCode)) _instrCaseBranches
         maybe (return ()) (mapM_ go) _instrCaseDefault
+      Block InstrBlock {..} ->
+        mapM_ go _instrBlockCode
 
     goVal :: (Member (State (Int, HashMap Text Int)) r) => Value -> Sem r ()
     goVal = \case

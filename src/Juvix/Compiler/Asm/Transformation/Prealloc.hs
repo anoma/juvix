@@ -19,7 +19,8 @@ computeCodePrealloc maxArgsNum tab code = prealloc <$> foldS sig code (0, [])
           _foldAdjust = second (const []),
           _foldInstr = const goInstr,
           _foldBranch = const goBranch,
-          _foldCase = const goCase
+          _foldCase = const goCase,
+          _foldSave = const goSave
         }
 
     goInstr :: CmdInstr -> (Int, Code) -> Sem r (Int, Code)
@@ -77,6 +78,15 @@ computeCodePrealloc maxArgsNum tab code = prealloc <$> foldS sig code (0, [])
                 _cmdCaseDefault = fmap prealloc md
               }
 
+    goSave :: CmdSave -> (Int, Code) -> (Int, Code) -> Sem r (Int, Code)
+    goSave cmd (k, br) (_, c) = return (k, cmd' : c)
+      where
+        cmd' =
+          Save
+            cmd
+              { _cmdSaveCode = br
+              }
+
     prealloc :: (Int, Code) -> Code
     prealloc (0, c) = c
     prealloc (n, c) = mkInstr (Prealloc (InstrPrealloc n)) : c
@@ -100,7 +110,8 @@ checkCodePrealloc maxArgsNum tab code = do
           _foldAdjust = id,
           _foldInstr = const goInstr,
           _foldBranch = const goBranch,
-          _foldCase = const goCase
+          _foldCase = const goCase,
+          _foldSave = const goSave
         }
 
     goInstr :: CmdInstr -> (Int -> Int) -> Sem r (Int -> Int)
@@ -144,6 +155,10 @@ checkCodePrealloc maxArgsNum tab code = do
             kd = fmap (\f -> f k) md
             k' = min (minimum ks) (fromMaybe k kd)
          in cont k'
+
+    goSave :: CmdSave -> (Int -> Int) -> (Int -> Int) -> Sem r (Int -> Int)
+    goSave _ br cont =
+      return $ cont . br
 
 checkPrealloc :: Options -> InfoTable -> Bool
 checkPrealloc opts tab =

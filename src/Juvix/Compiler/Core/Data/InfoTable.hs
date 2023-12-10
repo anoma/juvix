@@ -88,6 +88,7 @@ data ConstructorInfo = ConstructorInfo
     _constructorTag :: Tag,
     _constructorType :: Type,
     _constructorArgsNum :: Int,
+    _constructorArgNames :: [Maybe Text],
     _constructorInductive :: Symbol,
     _constructorFixity :: Maybe Fixity,
     _constructorBuiltin :: Maybe BuiltinConstructor,

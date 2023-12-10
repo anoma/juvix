@@ -13,44 +13,46 @@ function force(unit -> stream) : stream {
 function filter(integer -> bool, unit -> stream, unit) : stream {
   push arg[1];
   call force;
-  pusht;
-  push tmp[0].cons[0];
-  push arg[0];
-  call $ 1;
-  br {
-    true: {
-      push tmp[0].cons[1];
-      push arg[0];
-      calloc filter 2;
-      push tmp[0].cons[0];
-      alloc cons;
-      ret;
-    }
-    false: {
-      push unit;
-      push tmp[0].cons[1];
-      push arg[0];
-      tcall filter;
-    }
+  tsave {
+    push tmp[0].cons[0];
+    push arg[0];
+    call $ 1;
+    br {
+      true: {
+        push tmp[0].cons[1];
+        push arg[0];
+        calloc filter 2;
+        push tmp[0].cons[0];
+        alloc cons;
+        ret;
+      }
+      false: {
+        push unit;
+        push tmp[0].cons[1];
+        push arg[0];
+        tcall filter;
+      }
+    };
   };
 }
 
 function nth(integer, unit -> stream) : integer {
   push arg[1];
   call force;
-  pusht;
-  push arg[0];
-  push 0;
-  eq;
-  br {
-    true: { push tmp[0].cons[0]; ret; }
-    false: {
-      push tmp[0].cons[1];
-      push 1;
-      push arg[0];
-      sub;
-      tcall nth;
-    }
+  tsave {
+    push arg[0];
+    push 0;
+    eq;
+    br {
+      true: { push tmp[0].cons[0]; ret; }
+      false: {
+        push tmp[0].cons[1];
+        push 1;
+        push arg[0];
+        sub;
+        tcall nth;
+      }
+    };
   };
 }
 
@@ -79,15 +81,16 @@ function indivisible(integer, integer) : bool {
 function eratostenes(unit -> stream, unit) : stream {
   push arg[0];
   call force;
-  pusht;
-  push tmp[0].cons[1];
-  push tmp[0].cons[0];
-  calloc indivisible 1;
-  calloc filter 2;
-  calloc eratostenes 1;
-  push tmp[0].cons[0];
-  alloc cons;
-  ret;
+  tsave {
+    push tmp[0].cons[1];
+    push tmp[0].cons[0];
+    calloc indivisible 1;
+    calloc filter 2;
+    calloc eratostenes 1;
+    push tmp[0].cons[0];
+    alloc cons;
+    ret;
+  };
 }
 
 function primes() : unit -> stream {

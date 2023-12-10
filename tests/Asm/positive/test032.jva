@@ -131,8 +131,9 @@ function pred((* -> *, *) -> *) : (* -> *, *) -> * {
   calloc pred_step 0;
   push arg[0];
   call $ 2;
-  pusht;
-  push tmp[0].pair[0];
+  save {
+    push tmp[0].pair[0];
+  };
   ret;
 }
 
@@ -161,26 +162,27 @@ function fib((* -> *, *) -> *) : (* -> *, *) -> * {
     false: {
       push arg[0];
       call pred;
-      pusht;
-      push tmp[0];
-      call isZero;
-      br {
-        true: {
-          calloc zero 0;
-          calloc succ 1;
-          calloc uncurry 1;
-          ret;
-        }
-        false: {
-          push tmp[0];
-          call pred;
-          call fib;
-          push tmp[0];
-          call fib;
-          calloc add 2;
-          calloc uncurry 1;
-          ret;
-        }
+      tsave {
+        push tmp[0];
+        call isZero;
+        br {
+          true: {
+            calloc zero 0;
+            calloc succ 1;
+            calloc uncurry 1;
+            ret;
+          }
+          false: {
+            push tmp[0];
+            call pred;
+            call fib;
+            push tmp[0];
+            call fib;
+            calloc add 2;
+            calloc uncurry 1;
+            ret;
+          }
+        };
       };
     }
   };

@@ -25,6 +25,8 @@ data FunctionInfo = FunctionInfo
     -- (_functionType))` only if it is 0 (the "function" takes zero arguments)
     -- and the result is a function.
     _functionArgsNum :: Int,
+    -- | length _functionArgNames == _functionArgsNum
+    _functionArgNames :: [Maybe Text],
     _functionType :: Type,
     _functionMaxValueStackHeight :: Int,
     _functionMaxTempStackHeight :: Int,
@@ -39,6 +41,8 @@ data ConstructorInfo = ConstructorInfo
     -- (_constructorType))`. It is stored separately mainly for the benefit of
     -- the interpreter (so it does not have to recompute it every time).
     _constructorArgsNum :: Int,
+    -- | length _constructorArgNames == _constructorArgsNum
+    _constructorArgNames :: [Maybe Text],
     -- | Constructor types are assumed to be fully uncurried, i.e., `uncurryType
     -- _constructorType == _constructorType`
     _constructorType :: Type,
