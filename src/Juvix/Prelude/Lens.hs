@@ -25,3 +25,6 @@ overM :: (Applicative m) => Lens' a b -> (b -> m b) -> a -> m a
 overM l f a = do
   a' <- f (a ^. l)
   return $ set l a' a
+
+setAndRemember :: LensLike ((,) a) s t a b -> b -> s -> (a, t)
+setAndRemember = (<<.~)
