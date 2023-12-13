@@ -31,14 +31,13 @@ instance PrettyCode Natural where
 instance (PrettyCode a) => PrettyCode (Cell a) where
   ppCode c = do
     m <- asks (^. optPrettyMode)
-    case m of
+    inside <- case m of
       AllDelimiters -> do
         l' <- ppCode (c ^. cellLeft)
         r' <- ppCode (c ^. cellRight)
-        return (brackets (oneLineOrNextNoSpace (l' <+> r')))
-      MinimizeDelimiters -> do
-        l <- mapM ppCode (unfoldCell c)
-        return (brackets (oneLineOrNextNoSpace (sep l)))
+        return (l' <+> r')
+      MinimizeDelimiters -> sep <$> mapM ppCode (unfoldCell c)
+    return (oneLineOrNextBrackets inside)
 
 unfoldCell :: Cell a -> NonEmpty (Term a)
 unfoldCell c = c ^. cellLeft :| go [] (c ^. cellRight)

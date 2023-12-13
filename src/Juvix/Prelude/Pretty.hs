@@ -183,8 +183,8 @@ spaceOrEmpty = flatAlt (pretty ' ') mempty
 oneLineOrNext :: Doc a -> Doc a
 oneLineOrNext x = PP.group (flatAlt (line <> indent' x) (space <> x))
 
-oneLineOrNextNoSpace :: Doc a -> Doc a
-oneLineOrNextNoSpace x = PP.group (flatAlt (line <> indent' x) x)
+oneLineOrNextBrackets :: Doc a -> Doc a
+oneLineOrNextBrackets = oneLineOrNextDelims lbracket rbracket
 
 oneLineOrNextNoIndent :: Doc a -> Doc a
 oneLineOrNextNoIndent x = PP.group (flatAlt (line <> x) (space <> x))
@@ -192,8 +192,11 @@ oneLineOrNextNoIndent x = PP.group (flatAlt (line <> x) (space <> x))
 oneLineOrNextBlock :: Doc a -> Doc a
 oneLineOrNextBlock x = PP.group (flatAlt (line <> indent' x <> line) (space <> x <> space))
 
+oneLineOrNextDelims :: Doc a -> Doc a -> Doc a -> Doc a
+oneLineOrNextDelims l r x = PP.group (flatAlt (l <> line <> indent' x <> line <> r) (l <> x <> r))
+
 oneLineOrNextBraces :: Doc a -> Doc a
-oneLineOrNextBraces x = PP.group (flatAlt (lbrace <> line <> indent' x <> line <> rbrace) (lbrace <> x <> rbrace))
+oneLineOrNextBraces = oneLineOrNextDelims lbrace rbrace
 
 nextLine :: Doc a -> Doc a
 nextLine x = PP.group (line <> x)
