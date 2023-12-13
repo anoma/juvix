@@ -24,6 +24,9 @@ testDescr PosTest {..} =
           _testAssertion = Steps $ asmRunAssertion file' expected' return (const (return ()))
         }
 
+filterTests :: [String] -> [PosTest] -> [PosTest]
+filterTests incl = filter (\PosTest {..} -> _name `elem` incl)
+
 allTests :: TestTree
 allTests =
   testGroup
