@@ -183,6 +183,9 @@ spaceOrEmpty = flatAlt (pretty ' ') mempty
 oneLineOrNext :: Doc a -> Doc a
 oneLineOrNext x = PP.group (flatAlt (line <> indent' x) (space <> x))
 
+oneLineOrNextNoSpace :: Doc a -> Doc a
+oneLineOrNextNoSpace x = PP.group (flatAlt (line <> indent' x) x)
+
 oneLineOrNextNoIndent :: Doc a -> Doc a
 oneLineOrNextNoIndent x = PP.group (flatAlt (line <> x) (space <> x))
 
