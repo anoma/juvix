@@ -1,0 +1,253 @@
+-- apply & argsnum
+
+function apply_1(*, *) : * {
+    push arg[0];
+    argsnum;
+    push 1;
+    eq;
+    br {
+        true: { -- argsnum = 1
+            push arg[1];
+            push arg[0];
+            tcall $ 1;
+        }
+        false: { -- argsnum > 1
+            push arg[1];
+            push arg[0];
+            cextend 1;
+            ret;
+        }
+    };
+}
+
+function apply_2(*, *, *) : * {
+    push arg[0];
+    argsnum;
+    tsave n {
+        push n;
+        push 2;
+        eq;
+        br {
+            true: { -- argsnum = 2
+                push arg[2];
+                push arg[1];
+                push arg[0];
+                tcall $ 2;
+            }
+            false: {
+                push n;
+                push 1;
+                eq;
+                br {
+                    true: { -- argsnum = 1
+                        push arg[2];
+                        push arg[1];
+                        push arg[0];
+                        call $ 1;
+                        tcall apply_1;
+                    }
+                    false: { -- argsnum > 2
+                        push arg[2];
+                        push arg[1];
+                        push arg[0];
+                        cextend 2;
+                        ret;
+                    }
+                };
+            }
+        };
+    };
+}
+
+function apply_3(*, *, *, *) : * {
+    push arg[0];
+    argsnum;
+    tsave n {
+        push n;
+        push 3;
+        eq;
+        br {
+            true: { -- argsnum = 3
+                push arg[3];
+                push arg[2];
+                push arg[1];
+                push arg[0];
+                tcall $ 3;
+            }
+            false: {
+                push n;
+                push 3;
+                lt;
+                br {
+                    true: { -- argsnum > 3
+                        push arg[3];
+                        push arg[2];
+                        push arg[1];
+                        push arg[0];
+                        cextend 3;
+                        ret;
+                    }
+                    false: { -- argsnum <= 2
+                        push n;
+                        push 2;
+                        eq;
+                        br {
+                            true: { -- argsnum = 2
+                                push arg[3];
+                                push arg[2];
+                                push arg[1];
+                                push arg[0];
+                                call $ 2;
+                                tcall apply_1;
+                            }
+                            false: { -- argsnum = 1
+                                push arg[3];
+                                push arg[2];
+                                push arg[1];
+                                push arg[0];
+                                call $ 1;
+                                tcall apply_2;
+                            }
+                        };
+                    }
+                };
+            }
+        };
+    };
+}
+
+function apply_4(*, *, *, *, *) : * {
+    push arg[0];
+    argsnum;
+    tsave n {
+        push n;
+        push 4;
+        eq;
+        br {
+            true: { -- argsnum = 4
+                push arg[4];
+                push arg[3];
+                push arg[2];
+                push arg[1];
+                push arg[0];
+                tcall $ 4;
+            }
+            false: {
+                push n;
+                push 4;
+                lt;
+                br {
+                    true: { -- argsnum > 4
+                        push arg[4];
+                        push arg[3];
+                        push arg[2];
+                        push arg[1];
+                        push arg[0];
+                        cextend 4;
+                        ret;
+                    }
+                    false: { -- argsnum <= 3
+                        push n;
+                        push 3;
+                        eq;
+                        br {
+                            true: { -- argsnum = 3
+                                push arg[4];
+                                push arg[3];
+                                push arg[2];
+                                push arg[1];
+                                push arg[0];
+                                call $ 3;
+                                tcall apply_1;
+                            }
+                            false: {
+                                push n;
+                                push 2;
+                                eq;
+                                br {
+                                    true: { -- argsnum = 2
+                                        push arg[4];
+                                        push arg[3];
+                                        push arg[2];
+                                        push arg[1];
+                                        push arg[0];
+                                        call $ 2;
+                                        tcall apply_2;
+                                    }
+                                    false: { -- argsnum = 1
+                                        push arg[4];
+                                        push arg[3];
+                                        push arg[2];
+                                        push arg[1];
+                                        push arg[0];
+                                        call $ 1;
+                                        tcall apply_3;
+                                    }
+                                };
+                            }
+                        };
+                    }
+                };
+            }
+        };
+    };
+}
+
+function S(*, *, *) {
+  push arg[2];
+  push arg[1];
+  call apply_1;
+  push arg[2];
+  push arg[0];
+  tcall apply_2;
+}
+
+function K(*, *) {
+  push arg[0];
+  ret;
+}
+
+function I(*) {
+  push arg[0];
+  calloc K 0;
+  push $;
+  tcall S;
+}
+
+function f3(integer, integer, integer) : integer {
+    push arg[2];
+    push arg[1];
+    push arg[0];
+    add;
+    mul;
+    ret;
+}
+
+function main() {
+    push 7;
+    push 1;
+    calloc I 0;
+    push $;
+    push $;
+    push $;
+    push $;
+    push $;
+    push $;
+    call apply_4;
+    call apply_3;
+    push 2;
+    calloc I 0;
+    push $;
+    push $;
+    call apply_3;
+    push 3;
+    calloc I 0;
+    push $;
+    push $;
+    call apply_3;
+    calloc f3 0;
+    call apply_3;
+    calloc K 0;
+    tcall apply_2;
+    -- result: 5
+}

@@ -219,5 +219,10 @@ tests =
       "Test037: String instructions"
       $(mkRelDir ".")
       $(mkRelFile "test037.jva")
-      $(mkRelFile "out/test037.out")
+      $(mkRelFile "out/test037.out"),
+    PosTest
+      "Test038: Apply & argsnum"
+      $(mkRelDir ".")
+      $(mkRelFile "test038.jva")
+      $(mkRelFile "out/test038.out")
   ]
