@@ -86,7 +86,7 @@ fromAsmInstr funInfo tab si Asm.CmdInstr {..} =
     Asm.Trace -> return $ Trace $ InstrTrace (VRef $ VarRef VarGroupStack n)
     Asm.Dump -> return Dump
     Asm.Failure -> return $ Failure $ InstrFailure (VRef $ VarRef VarGroupStack n)
-    Asm.ArgsNum -> return $ mkArgsNum (VarRef VarGroupStack (n + 1)) (VRef $ VarRef VarGroupStack n)
+    Asm.ArgsNum -> return $ mkArgsNum (VarRef VarGroupStack n) (VRef $ VarRef VarGroupStack n)
     Asm.Prealloc x -> return $ mkPrealloc x
     Asm.AllocConstr tag -> return $ mkAlloc tag
     Asm.AllocClosure x -> return $ mkAllocClosure x
