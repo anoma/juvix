@@ -1,11 +1,11 @@
 module Juvix.Compiler.Nockma.Translation.FromSource where
 
+import Juvix.Compiler.Nockma.Language qualified as N
+import Juvix.Parser.Error
 import Juvix.Prelude hiding (Atom, many, some)
 import Juvix.Prelude.Parsing hiding (runParser)
-import Text.Megaparsec.Char.Lexer qualified as L
-import Juvix.Compiler.Nockma.Language qualified as N
 import Text.Megaparsec qualified as P
-import Juvix.Parser.Error
+import Text.Megaparsec.Char.Lexer qualified as L
 
 type Parser = Parsec Void Text
 
@@ -20,8 +20,8 @@ runParser f input = case P.runParser topTerm f input of
 lexeme :: Parser a -> Parser a
 lexeme = L.lexeme spaceConsumer
   where
-        spaceConsumer :: Parser ()
-        spaceConsumer = L.space space1 empty empty
+    spaceConsumer :: Parser ()
+    spaceConsumer = L.space space1 empty empty
 
 lsbracket :: Parser ()
 lsbracket = void (lexeme "[")
@@ -42,7 +42,6 @@ cell = do
   restTerms <- some term
   rsbracket
   return (buildCell firstTerm restTerms)
-
   where
     buildCell :: N.Term Natural -> NonEmpty (N.Term Natural) -> N.Term Natural
     buildCell h = \case
