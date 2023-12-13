@@ -29,11 +29,20 @@ lsbracket = void (lexeme "[")
 rsbracket :: Parser ()
 rsbracket = void (lexeme "]")
 
-natural :: Parser Natural
-natural = lexeme L.decimal
+dottedNatural :: Parser Natural
+dottedNatural = lexeme $ do
+  firstDigit <- digit
+  rest <- many (digit <|> dotAndDigit)
+  return (foldl' (\acc n -> acc * 10 + fromIntegral (digitToInt n)) 0 (firstDigit : rest))
+  where
+    dotAndDigit :: Parser Char
+    dotAndDigit = char '.' *> satisfy isDigit
+
+    digit :: Parser Char
+    digit = satisfy isDigit
 
 atom :: Parser (N.Term Natural)
-atom = N.TermAtom . N.Atom <$> natural
+atom = N.TermAtom . N.Atom <$> dottedNatural
 
 cell :: Parser (N.Term Natural)
 cell = do
