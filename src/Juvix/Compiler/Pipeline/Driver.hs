@@ -134,7 +134,7 @@ processModule' ::
   Sem r (Store.ModuleInfo, Store.ModuleTable)
 processModule' entry = do
   let buildDir = resolveAbsBuildDir root (entry ^. entryPointBuildDir)
-      relPath = fromJust $ replaceExtension ".jvo" $ fromJust $ stripProperPrefix root sourcePath
+      relPath = fromJust $ replaceExtension ".jvo" $ fromJust $ stripProperPrefix $(mkAbsDir "/") sourcePath
       absPath = buildDir Path.</> relPath
   sha256 <- SHA256.digestFile sourcePath
   m :: Maybe Store.ModuleInfo <- loadFromFile absPath

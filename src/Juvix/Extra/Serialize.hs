@@ -39,12 +39,18 @@ instance (Hashable a, Serialize a) => Serialize (HashSet a) where
 
 saveToFile :: (Member Files r, Serialize a) => Path Abs File -> a -> Sem r ()
 saveToFile file a = do
+  ensureDir' (parent file)
   let bs = runPut (S.put a)
   writeFileBS file bs
 
 loadFromFile :: forall a r. (Member Files r, Serialize a) => Path Abs File -> Sem r (Maybe a)
 loadFromFile file = do
-  bs <- readFileBS' file
-  case runGet (S.get @a) bs of
-    Left {} -> return Nothing
-    Right a -> return (Just a)
+  ex <- fileExists' file
+  if
+      | ex -> do
+          bs <- readFileBS' file
+          case runGet (S.get @a) bs of
+            Left {} -> return Nothing
+            Right a -> return (Just a)
+      | otherwise ->
+          return Nothing

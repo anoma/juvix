@@ -8,7 +8,6 @@ import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Concrete hiding (Symbol)
 import Juvix.Compiler.Core (CoreResult, coreResultModule)
 import Juvix.Compiler.Core qualified as Core
-import Juvix.Compiler.Core.Data.Module (moduleInfoTable)
 import Juvix.Compiler.Core.Evaluator
 import Juvix.Compiler.Core.Extra.Value
 import Juvix.Compiler.Core.Language
@@ -59,7 +58,7 @@ runEvalFileEffIO = interpretScopedAs allocator handler
       AssertNodeType n ty -> assertNodeType' n ty
       where
         tab :: Core.InfoTable
-        tab = res ^. loaderResourceResult . coreResultModule . moduleInfoTable
+        tab = Core.computeCombinedInfoTable (res ^. loaderResourceResult . coreResultModule)
 
         packagePath :: Path Abs File
         packagePath = res ^. loaderResourcePackagePath
