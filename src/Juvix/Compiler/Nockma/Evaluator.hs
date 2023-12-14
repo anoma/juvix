@@ -105,8 +105,6 @@ parseCell c = case c ^. cellLeft of
         11 -> return OpHint
         _ -> throw InvalidOpCode
 
-      return OpAddress
-
 eval :: forall r a. (Members '[Error NockEvalError, Error (ErrNockNaturalDecoding a)] r, NockNatural a) => Term a -> Term a -> Sem r (Term a)
 eval stack = \case
   a@TermAtom {} -> return a
