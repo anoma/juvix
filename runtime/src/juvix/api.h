@@ -112,7 +112,7 @@ closure_label:
         error_exit();      \
     } while (0)
 
-#define JUVIX_ARGS_NUM(var, val) (var = get_closure_largs(val))
+#define JUVIX_ARGS_NUM(var, val) (var = make_smallint(get_closure_largs(val)))
 
 #define JUVIX_ALLOC_INT(var, val) (var = make_smallint(val))
 // ALLOC_CONSTR_BOXED(var, uid, nargs)
