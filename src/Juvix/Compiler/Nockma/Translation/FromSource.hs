@@ -13,7 +13,7 @@ parseText :: Text -> Either MegaparsecError (N.Term Natural)
 parseText = runParser ""
 
 runParser :: FilePath -> Text -> Either MegaparsecError (N.Term Natural)
-runParser f input = case P.runParser topTerm f input of
+runParser f input = case P.runParser term f input of
   Left err -> Left (MegaparsecError err)
   Right t -> Right t
 
@@ -59,6 +59,3 @@ cell = do
 
 term :: Parser (N.Term Natural)
 term = atom <|> cell
-
-topTerm :: Parser (N.Term Natural)
-topTerm = cell
