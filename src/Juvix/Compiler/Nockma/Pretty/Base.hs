@@ -22,13 +22,36 @@ class PrettyCode c where
 runPrettyCode :: (PrettyCode c) => Options -> c -> Doc Ann
 runPrettyCode opts = run . runReader opts . ppCode
 
-instance (PrettyCode a) => PrettyCode (Atom a) where
-  ppCode (Atom k) = annotate (AnnKind KNameFunction) <$> ppCode k
+instance (PrettyCode a, NockNatural a) => PrettyCode (Atom a) where
+  ppCode atm@(Atom k h) = runFailDefaultM (annotate (AnnKind KNameFunction) <$> ppCode k)
+    . failFromError @(ErrNockNatural a)
+    $ do
+      h' <- failMaybe (h ^. unIrrelevant)
+      case h' of
+        AtomHintOp -> nockOp atm >>= ppCode
+        AtomHintPosition -> nockPosition atm >>= ppCode
+        AtomHintBool
+          | atm == nockTrue -> return (annotate (AnnKind KNameInductive) "true")
+          | atm == nockFalse -> return (annotate (AnnKind KNameAxiom) "false")
+          | otherwise -> fail
 
 instance PrettyCode Natural where
   ppCode = return . pretty
 
-instance (PrettyCode a) => PrettyCode (Cell a) where
+instance PrettyCode Position where
+  ppCode p = mconcatMapM ppCode (p ^. positionDirections)
+
+instance PrettyCode Direction where
+  ppCode =
+    return . \case
+      L -> annotate (AnnKind KNameAxiom) "L"
+      R -> annotate AnnKeyword "R"
+
+instance PrettyCode NockOp where
+  ppCode =
+    return . annotate (AnnKind KNameFunction) . pretty
+
+instance (PrettyCode a, NockNatural a) => PrettyCode (Cell a) where
   ppCode c = do
     m <- asks (^. optPrettyMode)
     inside <- case m of
@@ -47,7 +70,7 @@ unfoldCell c = c ^. cellLeft :| go [] (c ^. cellRight)
       t@TermAtom {} -> reverse (t : acc)
       TermCell (Cell l r) -> go (l : acc) r
 
-instance (PrettyCode a) => PrettyCode (Term a) where
+instance (PrettyCode a, NockNatural a) => PrettyCode (Term a) where
   ppCode = \case
     TermAtom t -> ppCode t
     TermCell c -> ppCode c

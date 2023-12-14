@@ -3,6 +3,7 @@ module Juvix.Prelude.Pretty
     module Prettyprinter,
     module Prettyprinter.Render.Terminal,
     module Prettyprinter.Util,
+    module Prettyprinter.Render.Text,
   )
 where
 
@@ -12,6 +13,7 @@ import Prettyprinter hiding (concatWith, defaultLayoutOptions, hsep, sep, vsep)
 import Prettyprinter qualified as PP
 import Prettyprinter.Render.Terminal (AnsiStyle)
 import Prettyprinter.Render.Terminal qualified as Ansi
+import Prettyprinter.Render.Text (renderStrict)
 import Prettyprinter.Render.Text qualified as Text
 import Prettyprinter.Util (reflow)
 import Prelude

@@ -5,6 +5,9 @@ import Data.ByteString qualified as BS
 import Juvix.Compiler.Nockma.Language
 import Juvix.Compiler.Nockma.Pretty (ppPrint)
 import Juvix.Compiler.Nockma.Translation.FromSource (parseText)
+import Juvix.Parser.Error
+import Juvix.Prelude.Pretty
+import Text.Megaparsec
 
 data PosTest = PosTest
   { _name :: String,
@@ -39,7 +42,7 @@ testDescr PosTest {..} =
 
 assertParse :: Text -> IO (Term Natural)
 assertParse txt = case parseText txt of
-  Left _ -> assertFailure "Nockma parsing failed"
+  Left (MegaparsecError b) -> assertFailure ("Nockma parsing failed " <> unpack (prettyText (errorBundlePretty b)))
   Right t -> return t
 
 allTests :: TestTree
@@ -48,5 +51,6 @@ allTests = testGroup "Nockma parse positive" (map (mkTest . testDescr) tests)
 tests :: [PosTest]
 tests =
   [ PosTest "Identity" $(mkRelDir ".") $(mkRelFile "Identity.nock"),
-    PosTest "Identity" $(mkRelDir ".") $(mkRelFile "Stdlib.nock")
+    PosTest "Identity Pretty" $(mkRelDir ".") $(mkRelFile "IdentityPretty.pnock"),
+    PosTest "Stdlib" $(mkRelDir ".") $(mkRelFile "Stdlib.nock")
   ]

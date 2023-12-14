@@ -11,7 +11,6 @@ import Juvix.Compiler.Nockma.Pretty.Options
 import Juvix.Data.PPOutput
 import Juvix.Prelude
 import Prettyprinter.Render.Terminal qualified as Ansi
-import Prettyprinter.Render.Text (renderStrict)
 
 ppOutDefault :: (PrettyCode c) => c -> AnsiText
 ppOutDefault = mkAnsiText . PPOutput . doc defaultOptions

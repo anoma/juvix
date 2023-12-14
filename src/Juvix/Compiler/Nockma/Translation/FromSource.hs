@@ -1,5 +1,6 @@
 module Juvix.Compiler.Nockma.Translation.FromSource where
 
+import Data.HashMap.Internal.Strict qualified as HashMap
 import Juvix.Compiler.Nockma.Language qualified as N
 import Juvix.Parser.Error
 import Juvix.Prelude hiding (Atom, many, some)
@@ -17,11 +18,14 @@ runParser f input = case P.runParser term f input of
   Left err -> Left (MegaparsecError err)
   Right t -> Right t
 
+spaceConsumer :: Parser ()
+spaceConsumer = L.space space1 empty empty
+
 lexeme :: Parser a -> Parser a
 lexeme = L.lexeme spaceConsumer
-  where
-    spaceConsumer :: Parser ()
-    spaceConsumer = L.space space1 empty empty
+
+symbol :: Text -> Parser Text
+symbol = L.symbol spaceConsumer
 
 lsbracket :: Parser ()
 lsbracket = void (lexeme "[")
@@ -41,10 +45,18 @@ dottedNatural = lexeme $ do
     digit :: Parser Char
     digit = satisfy isDigit
 
-atom :: Parser (N.Term Natural)
-atom = N.TermAtom . N.Atom <$> dottedNatural
+atomOp :: Parser (N.Atom Natural)
+atomOp = do
+  op' <- choice [symbol opName $> op | (opName, op) <- HashMap.toList N.atomOps]
+  return (N.Atom (N.serializeNockOp op') (Irrelevant (Just N.AtomHintOp)))
 
-cell :: Parser (N.Term Natural)
+atomNat :: Parser (N.Atom Natural)
+atomNat = (\n -> N.Atom n (Irrelevant Nothing)) <$> dottedNatural
+
+atom :: Parser (N.Atom Natural)
+atom = atomOp <|> atomNat
+
+cell :: Parser (N.Cell Natural)
 cell = do
   lsbracket
   firstTerm <- term
@@ -52,10 +64,12 @@ cell = do
   rsbracket
   return (buildCell firstTerm restTerms)
   where
-    buildCell :: N.Term Natural -> NonEmpty (N.Term Natural) -> N.Term Natural
+    buildCell :: N.Term Natural -> NonEmpty (N.Term Natural) -> N.Cell Natural
     buildCell h = \case
-      x :| [] -> N.TermCell (N.Cell h x)
-      y :| (w : ws) -> N.TermCell (N.Cell h (buildCell y (w :| ws)))
+      x :| [] -> N.Cell h x
+      y :| (w : ws) -> N.Cell h (N.TermCell (buildCell y (w :| ws)))
 
 term :: Parser (N.Term Natural)
-term = atom <|> cell
+term =
+  N.TermAtom <$> atom
+    <|> N.TermCell <$> cell
