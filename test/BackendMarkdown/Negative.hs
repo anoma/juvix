@@ -2,7 +2,6 @@ module BackendMarkdown.Negative where
 
 import Base
 import Juvix.Compiler.Backend.Markdown.Error
-import Juvix.Data.Effect.TaggedLock
 import Juvix.Parser.Error
 
 type FailMsg = String
@@ -22,8 +21,8 @@ testDescr NegTest {..} =
         { _testName = _name,
           _testRoot = tRoot,
           _testAssertion = Single $ do
-            entryPoint <- defaultEntryPointIO' LockModeExclusive tRoot file'
-            result <- runIOEither' LockModeExclusive entryPoint upToParsing
+            entryPoint <- testDefaultEntryPointIO tRoot file'
+            result <- testTaggedLockedToIO (snd <$> runIOEither entryPoint upToParsing)
             case mapLeft fromJuvixError result of
               Left (Just err) -> whenJust (_checkErr err) assertFailure
               Right _ -> assertFailure "Unexpected success."

@@ -100,8 +100,8 @@ issue : Address -> Address -> Nat -> Token
     assert (caller == bankAddress) (mkToken owner 0 amount);
 
 --- Deposits some amount of money into the bank.
-deposit (bal : Balances) (token : Token) (amount : Nat)
-  : Token :=
+deposit
+  (bal : Balances) (token : Token) (amount : Nat) : Token :=
   let
     difference : Nat := sub (getAmount token) amount;
     remaining : Token :=
@@ -111,7 +111,13 @@ deposit (bal : Balances) (token : Token) (amount : Nat)
   in runOnChain (commitBalances bal') remaining;
 
 --- Returns a new ;Token; containing the amount of money withdrawn.
-withdraw (bal : Balances) (caller : Address) (recipient : Address) (amount : Nat) (rate : Nat) (periods : Nat)
+withdraw
+  (bal : Balances)
+  (caller : Address)
+  (recipient : Address)
+  (amount : Nat)
+  (rate : Nat)
+  (periods : Nat)
   : Token :=
   assert
     (caller == bankAddress)

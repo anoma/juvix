@@ -12,11 +12,9 @@ data PackageType
 
 data Root = Root
   { _rootRootDir :: Path Abs Dir,
-    _rootPackage :: Package,
     _rootPackageType :: PackageType,
     _rootBuildDir :: BuildDir,
     _rootInvokeDir :: Path Abs Dir
   }
-  deriving stock (Show)
 
 makeLenses ''Root

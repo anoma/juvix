@@ -38,21 +38,20 @@ data EntryPoint = EntryPoint
     _entryPointGenericOptions :: GenericOptions,
     _entryPointModulePath :: Maybe (Path Abs File),
     _entryPointSymbolPruningMode :: SymbolPruningMode,
-    _entryPointOffline :: Bool,
-    _entryPointNewTypeCheckingAlgorithm :: Bool
+    _entryPointOffline :: Bool
   }
   deriving stock (Eq, Show)
 
 makeLenses ''EntryPoint
 
-defaultEntryPoint :: Root -> Path Abs File -> EntryPoint
-defaultEntryPoint root mainFile =
-  (defaultEntryPointNoFile root)
-    { _entryPointModulePath = Just mainFile
+defaultEntryPoint :: Package -> Root -> Path Abs File -> EntryPoint
+defaultEntryPoint pkg root mainFile =
+  (defaultEntryPointNoFile pkg root)
+    { _entryPointModulePath = pure mainFile
     }
 
-defaultEntryPointNoFile :: Root -> EntryPoint
-defaultEntryPointNoFile root =
+defaultEntryPointNoFile :: Package -> Root -> EntryPoint
+defaultEntryPointNoFile pkg root =
   EntryPoint
     { _entryPointRoot = root ^. rootRootDir,
       _entryPointResolverRoot = root ^. rootRootDir,
@@ -62,7 +61,7 @@ defaultEntryPointNoFile root =
       _entryPointNoCoverage = False,
       _entryPointNoStdlib = False,
       _entryPointStdin = Nothing,
-      _entryPointPackage = root ^. rootPackage,
+      _entryPointPackage = pkg,
       _entryPointPackageType = root ^. rootPackageType,
       _entryPointGenericOptions = defaultGenericOptions,
       _entryPointTarget = TargetCore,
@@ -73,8 +72,7 @@ defaultEntryPointNoFile root =
       _entryPointInliningDepth = defaultInliningDepth,
       _entryPointModulePath = Nothing,
       _entryPointSymbolPruningMode = FilterUnreachable,
-      _entryPointOffline = False,
-      _entryPointNewTypeCheckingAlgorithm = False
+      _entryPointOffline = False
     }
 
 defaultUnrollLimit :: Int

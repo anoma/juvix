@@ -5,7 +5,10 @@ module Juvix.Data.Effect.Cache
     runCacheEmpty,
     cacheGet,
     cacheLookup,
+    evalSingletonCache,
+    cacheSingletonGet,
     Cache,
+    SCache,
   )
 where
 
@@ -14,6 +17,9 @@ import Juvix.Prelude.Base
 data Cache k v m a where
   CacheGet :: k -> Cache k v m v
   CacheLookup :: k -> Cache k v m (Maybe v)
+
+-- | Singleton cache
+type SCache = Cache ()
 
 makeSem ''Cache
 
@@ -51,6 +57,16 @@ runCacheEmpty ::
   Sem r (HashMap k v, a)
 runCacheEmpty f = runCache f mempty
 {-# INLINE runCacheEmpty #-}
+
+cacheSingletonGet :: (Members '[SCache v] r) => Sem r v
+cacheSingletonGet = cacheGet ()
+
+evalSingletonCache ::
+  Sem (SCache v ': r) v ->
+  Sem (SCache v ': r) a ->
+  Sem r a
+evalSingletonCache f c = evalCacheEmpty @() (const f) c
+{-# INLINE evalSingletonCache #-}
 
 re ::
   forall k v r a.

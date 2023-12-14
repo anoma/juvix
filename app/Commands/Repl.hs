@@ -40,7 +40,6 @@ import Juvix.Compiler.Pipeline.Setup (entrySetup)
 import Juvix.Data.CodeAnn (Ann)
 import Juvix.Data.Effect.Git
 import Juvix.Data.Effect.Process
-import Juvix.Data.Effect.TaggedLock
 import Juvix.Data.Error.GenericError qualified as Error
 import Juvix.Data.NameKind
 import Juvix.Extra.Paths qualified as P
@@ -173,10 +172,10 @@ getReplEntryPoint f inputFile = do
   liftIO (set entryPointSymbolPruningMode KeepAll <$> f root inputFile gopts)
 
 getReplEntryPointFromPrepath :: Prepath File -> Repl EntryPoint
-getReplEntryPointFromPrepath = getReplEntryPoint entryPointFromGlobalOptionsPre
+getReplEntryPointFromPrepath = getReplEntryPoint (\r x -> runM . runTaggedLockPermissive . entryPointFromGlobalOptionsPre r x)
 
 getReplEntryPointFromPath :: Path Abs File -> Repl EntryPoint
-getReplEntryPointFromPath = getReplEntryPoint entryPointFromGlobalOptions
+getReplEntryPointFromPath = getReplEntryPoint (\r a -> runM . runTaggedLockPermissive . entryPointFromGlobalOptions r a)
 
 displayVersion :: String -> Repl ()
 displayVersion _ = liftIO (putStrLn versionTag)
@@ -496,9 +495,10 @@ printRoot _ = do
   r <- State.gets (^. replStateRoot . rootRootDir)
   liftIO $ putStrLn (pack (toFilePath r))
 
-runCommand :: (Members '[Embed IO, App] r) => ReplOptions -> Sem r ()
+runCommand :: (Members '[Embed IO, App, TaggedLock] r) => ReplOptions -> Sem r ()
 runCommand opts = do
   root <- askRoot
+  pkg <- askPackage
   let replAction :: ReplS ()
       replAction = do
         evalReplOpts
@@ -516,7 +516,8 @@ runCommand opts = do
   let env =
         ReplEnv
           { _replRoot = root,
-            _replOptions = opts
+            _replOptions = opts,
+            _replPackage = pkg
           }
       iniState =
         ReplState
@@ -540,7 +541,7 @@ defaultPreludeEntryPoint = do
   root <- State.gets (^. replStateRoot)
   let buildRoot = root ^. rootRootDir
       buildDir = resolveAbsBuildDir buildRoot (root ^. rootBuildDir)
-      pkg = root ^. rootPackage
+  pkg <- Reader.asks (^. replPackage)
   mstdlibPath <- liftIO (runM (runFilesIO (packageStdlib buildRoot buildDir (pkg ^. packageDependencies))))
   case mstdlibPath of
     Just stdlibPath ->

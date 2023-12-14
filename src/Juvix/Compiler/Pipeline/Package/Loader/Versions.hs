@@ -12,6 +12,9 @@ import Juvix.Compiler.Pipeline.Package.Loader.Error
 import Juvix.Extra.Paths
 import Juvix.Prelude
 
+currentPackageVersion :: PackageVersion
+currentPackageVersion = PackageVersion2
+
 data PackageVersion
   = PackageVersion1
   | PackageVersion2

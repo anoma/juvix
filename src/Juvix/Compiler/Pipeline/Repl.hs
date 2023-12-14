@@ -25,7 +25,8 @@ arityCheckExpression ::
   (Members '[Reader EntryPoint, Error JuvixError, State Artifacts, Termination] r) =>
   ExpressionAtoms 'Parsed ->
   Sem r Internal.Expression
-arityCheckExpression p = do
+
+upToInternalExpression p = do
   scopeTable <- gets (^. artifactScopeTable)
   mtab <- gets (^. artifactModuleTable)
   runBuiltinsArtifacts
@@ -91,7 +92,7 @@ expressionUpToTyped ::
 expressionUpToTyped fp txt = do
   p <- expressionUpToAtomsParsed fp txt
   runTerminationArtifacts
-    ( arityCheckExpression p
+    ( upToInternalExpression p
         >>= Internal.typeCheckExpressionType
     )
 
@@ -101,7 +102,7 @@ compileExpression ::
   Sem r Core.Node
 compileExpression p =
   runTerminationArtifacts
-    ( arityCheckExpression p
+    ( upToInternalExpression p
         >>= Internal.typeCheckExpression
     )
     >>= fromInternalExpression

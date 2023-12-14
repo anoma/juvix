@@ -31,6 +31,9 @@ import Juvix.Data.Effect.Process
 import Juvix.Data.Effect.TaggedLock
 import Juvix.Prelude
 
+runPipelineHighlight :: forall r a. (Members '[TaggedLock, Embed IO] r) => EntryPoint -> Sem (PipelineEff r) a -> Sem r HighlightInput
+runPipelineHighlight entry = fmap fst . runIOEither entry
+
 -- | It returns `ResolverState` so that we can retrieve the `juvix.yaml` files,
 -- which we require for `Scope` tests.
 runIOEither :: forall a. EntryPoint -> Sem PipelineEff a -> IO (Either JuvixError (ResolverState, (a, Store.ModuleTable)))
@@ -74,10 +77,7 @@ runIOEitherPipeline' lockMode entry a = do
       runPathResolver'
         | mainIsPackageFile entry = runPackagePathResolver' (entry ^. entryPointResolverRoot)
         | otherwise = runPathResolverPipe
-  runFinal
-    . resourceToIOFinal
-    . embedToFinal @IO
-    . evalInternet hasInternet
+  evalInternet hasInternet
     . runHighlightBuilder
     . runJuvixError
     . runFilesIO
@@ -101,7 +101,7 @@ mainIsPackageFile entry = case entry ^. entryPointModulePath of
 runIOLockMode :: LockMode -> GenericOptions -> EntryPoint -> Sem PipelineEff a -> IO (ResolverState, (a, Store.ModuleTable))
 runIOLockMode lockMode opts entry = runIOEither' lockMode entry >=> mayThrow
   where
-    mayThrow :: Either JuvixError r -> IO r
+    mayThrow :: (Members '[Embed IO] r') => Either JuvixError x -> Sem r' x
     mayThrow = \case
       Left err -> runM . runReader opts $ printErrorAnsiSafe err >> embed exitFailure
       Right r -> return r

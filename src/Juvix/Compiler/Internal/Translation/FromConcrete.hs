@@ -501,19 +501,6 @@ goInductiveParameters ::
   Sem r [Internal.InductiveParameter]
 goInductiveParameters params@InductiveParameters {..} = do
   paramType' <- goRhs _inductiveParametersRhs
-  newAlgo <- asks (^. entryPointNewTypeCheckingAlgorithm)
-  case paramType' of
-    Internal.ExpressionUniverse {} -> return ()
-    Internal.ExpressionHole {} -> return ()
-    _ ->
-      unless newAlgo
-        . throw
-        $ ErrUnsupported
-          Unsupported
-            { _unsupportedMsg = "only type variables of small types are allowed",
-              _unsupportedLoc = getLoc params
-            }
-
   let goInductiveParameter :: S.Symbol -> Internal.InductiveParameter
       goInductiveParameter var =
         Internal.InductiveParameter

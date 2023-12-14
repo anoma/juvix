@@ -4,7 +4,6 @@ import Base
 import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Positivity.Error
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error
-import Juvix.Data.Effect.TaggedLock
 import Typecheck.Negative qualified as Old
 
 type FailMsg = String
@@ -30,8 +29,8 @@ testDescr Old.NegTest {..} =
         { _testName = _name,
           _testRoot = tRoot,
           _testAssertion = Single $ do
-            entryPoint <- set entryPointNewTypeCheckingAlgorithm True <$> defaultEntryPointIO' LockModeExclusive tRoot file'
-            result <- runIOEither' LockModeExclusive entryPoint upToCore
+            entryPoint <- testDefaultEntryPointIO tRoot file'
+            result <- snd <$> testRunIOEither entryPoint upToCore
             case mapLeft fromJuvixError result of
               Left (Just tyError) -> whenJust (_checkErr tyError) assertFailure
               Left Nothing -> assertFailure "An error ocurred but it was not in the type checker."

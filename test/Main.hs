@@ -1,6 +1,5 @@
 module Main (main) where
 
-import Arity qualified
 import Asm qualified
 import BackendGeb qualified
 import BackendMarkdown qualified
@@ -40,7 +39,6 @@ fastTests =
     [ Parsing.allTests,
       Scope.allTests,
       Termination.allTests,
-      Arity.allTests,
       Typecheck.allTests,
       Format.allTests,
       Formatter.allTests,

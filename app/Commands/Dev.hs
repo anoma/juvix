@@ -19,7 +19,7 @@ import Commands.Dev.Scope qualified as Scope
 import Commands.Dev.Termination qualified as Termination
 import Commands.Repl qualified as Repl
 
-runCommand :: (Members '[Embed IO, App] r) => DevCommand -> Sem r ()
+runCommand :: (Members '[Embed IO, App, TaggedLock] r) => DevCommand -> Sem r ()
 runCommand = \case
   Highlight opts -> Highlight.runCommand opts
   Parse opts -> Parse.runCommand opts

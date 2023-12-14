@@ -6,6 +6,7 @@ module Juvix.Compiler.Pipeline
   )
 where
 
+import Data.List.Singletons
 import Juvix.Compiler.Asm.Error qualified as Asm
 import Juvix.Compiler.Asm.Options qualified as Asm
 import Juvix.Compiler.Asm.Pipeline qualified as Asm
@@ -37,9 +38,13 @@ import Juvix.Data.Effect.Process
 import Juvix.Data.Effect.TaggedLock
 import Juvix.Prelude
 
-type PipelineEff' = '[PathResolver, EvalFileEff, Error PackageLoaderError, Error DependencyError, GitClone, Error GitProcessError, Process, Log, Reader EntryPoint, TaggedLock, Files, Error JuvixError, HighlightBuilder, Internet, Embed IO, Resource, Final IO]
+type PipelineAppEffects = '[TaggedLock, Embed IO, Resource, Final IO]
 
-type PipelineEff = Reader Parser.ParserResult ': Reader Store.ModuleTable ': NameIdGen ': PipelineEff'
+type PipelineLocalEff = '[PathResolver, EvalFileEff, Error PackageLoaderError, Error DependencyError, GitClone, Error GitProcessError, Process, Log, Reader EntryPoint, Files, Error JuvixError, HighlightBuilder, Internet]
+
+type PipelineEff' r = PipelineLocalEff ++ r
+
+type PipelineEff r = Reader Parser.ParserResult ': Reader Store.ModuleTable ': NameIdGen ': PipelineEff' r
 
 --------------------------------------------------------------------------------
 -- Workflows from source
@@ -64,19 +69,10 @@ upToInternal ::
   Sem r Internal.InternalResult
 upToInternal = upToScoping >>= Internal.fromConcrete
 
-upToInternalArity ::
-  (Members '[Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Error JuvixError, NameIdGen, Termination] r) =>
-  Sem r Internal.InternalArityResult
-upToInternalArity = upToInternal >>= Internal.arityChecking
-
 upToInternalTyped ::
   (Members '[Reader Parser.ParserResult, Error JuvixError, Reader EntryPoint, Reader Store.ModuleTable, NameIdGen] r) =>
   Sem r Internal.InternalTypedResult
-upToInternalTyped = do
-  newAlgorithm <- asks (^. entryPointNewTypeCheckingAlgorithm)
-  if
-      | newAlgorithm -> Internal.typeCheckingNew upToInternal
-      | otherwise -> Internal.typeChecking upToInternalArity
+upToInternalTyped = Internal.typeCheckingNew upToInternal
 
 upToCore ::
   (Members '[Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError, GitClone, PathResolver] r) =>

@@ -45,7 +45,7 @@ targetFromOptions opts = do
                     "Use the --help option to display more usage information."
                   ]
 
-runCommand :: forall r. (Members '[Embed IO, App, Resource, Files] r) => FormatOptions -> Sem r ()
+runCommand :: forall r. (Members '[Embed IO, App, TaggedLock, Resource, Files] r) => FormatOptions -> Sem r ()
 runCommand opts = do
   target <- targetFromOptions opts
   runOutputSem (renderFormattedOutput target opts) $ runScopeFileApp $ do
@@ -98,7 +98,7 @@ renderFormattedOutput target opts fInfo = do
         InputPath p -> say (pack (toFilePath p))
         Silent -> return ()
 
-runScopeFileApp :: (Member App r) => Sem (ScopeEff ': r) a -> Sem r a
+runScopeFileApp :: (Members '[App, Embed IO, TaggedLock] r) => Sem (ScopeEff ': r) a -> Sem r a
 runScopeFileApp = interpret $ \case
   ScopeFile p -> do
     let appFile =

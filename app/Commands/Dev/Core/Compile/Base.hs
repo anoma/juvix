@@ -18,7 +18,7 @@ data PipelineArg = PipelineArg
     _pipelineArgModule :: Core.Module
   }
 
-getEntry :: (Members '[Embed IO, App] r) => PipelineArg -> Sem r EntryPoint
+getEntry :: (Members '[Embed IO, App, TaggedLock] r) => PipelineArg -> Sem r EntryPoint
 getEntry PipelineArg {..} = do
   ep <- getEntryPoint (AppPath (preFileFromAbs _pipelineArgFile) True)
   return $
@@ -46,7 +46,7 @@ getEntry PipelineArg {..} = do
 
 runCPipeline ::
   forall r.
-  (Members '[Embed IO, App] r) =>
+  (Members '[Embed IO, App, TaggedLock] r) =>
   PipelineArg ->
   Sem r ()
 runCPipeline pa@PipelineArg {..} = do
@@ -69,7 +69,7 @@ runCPipeline pa@PipelineArg {..} = do
 
 runGebPipeline ::
   forall r.
-  (Members '[Embed IO, App] r) =>
+  (Members '[Embed IO, App, TaggedLock] r) =>
   PipelineArg ->
   Sem r ()
 runGebPipeline pa@PipelineArg {..} = do
@@ -89,7 +89,7 @@ runGebPipeline pa@PipelineArg {..} = do
 
 runVampIRPipeline ::
   forall r.
-  (Members '[Embed IO, App] r) =>
+  (Members '[Embed IO, App, TaggedLock] r) =>
   PipelineArg ->
   Sem r ()
 runVampIRPipeline pa@PipelineArg {..} = do
@@ -98,7 +98,7 @@ runVampIRPipeline pa@PipelineArg {..} = do
   VampIR.Result {..} <- getRight (run (runReader entryPoint (runError (coreToVampIR _pipelineArgModule :: Sem '[Error JuvixError, Reader EntryPoint] VampIR.Result))))
   embed $ TIO.writeFile (toFilePath vampirFile) _resultCode
 
-runAsmPipeline :: (Members '[Embed IO, App] r) => PipelineArg -> Sem r ()
+runAsmPipeline :: (Members '[Embed IO, App, TaggedLock] r) => PipelineArg -> Sem r ()
 runAsmPipeline pa@PipelineArg {..} = do
   entryPoint <- getEntry pa
   asmFile <- Compile.outputFile _pipelineArgOptions _pipelineArgFile

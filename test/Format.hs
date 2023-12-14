@@ -5,7 +5,6 @@ import Juvix.Compiler.Concrete qualified as Concrete
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
 import Juvix.Compiler.Pipeline.Setup
-import Juvix.Data.Effect.TaggedLock
 import Juvix.Formatter
 
 data PosTest = PosTest
@@ -41,12 +40,12 @@ testDescr PosTest {..} =
         original :: Text <- readFile (toFilePath f)
 
         step "Parsing"
-        p :: Parser.ParserResult <- snd <$> runIOExclusive entryPoint upToParsing
+        p :: Parser.ParserResult <- snd <$> testRunIO entryPoint upToParsing
 
         step "Scoping"
         s :: Scoper.ScoperResult <-
           snd
-            <$> runIOExclusive
+            <$> testRunIO
               entryPoint
               ( do
                   void (entrySetup defaultDependenciesConfig)

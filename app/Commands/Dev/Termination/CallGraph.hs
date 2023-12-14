@@ -9,7 +9,7 @@ import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination qua
 import Juvix.Compiler.Store.Language qualified as Stored
 import Juvix.Prelude.Pretty
 
-runCommand :: (Members '[Embed IO, App] r) => CallGraphOptions -> Sem r ()
+runCommand :: (Members '[Embed IO, TaggedLock, App] r) => CallGraphOptions -> Sem r ()
 runCommand CallGraphOptions {..} = do
   globalOpts <- askGlobalOptions
   (result, mtab) <- runPipelineTermination _graphInputFile upToInternal

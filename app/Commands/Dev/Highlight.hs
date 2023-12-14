@@ -5,12 +5,12 @@ import Commands.Dev.Highlight.Options
 import Juvix.Compiler.Concrete.Data.Highlight qualified as Highlight
 import Juvix.Compiler.Pipeline.Run
 
-runCommand :: (Members '[Embed IO, App] r) => HighlightOptions -> Sem r ()
+runCommand :: (Members '[Embed IO, App, TaggedLock] r) => HighlightOptions -> Sem r ()
 runCommand HighlightOptions {..} = do
   entry <- getEntryPoint _highlightInputFile
   inputFile <- fromAppPathFile _highlightInputFile
   hinput <-
     Highlight.filterInput
       inputFile
-      <$> liftIO (runPipelineHighlight entry upToInternalTyped)
+      <$> runPipelineHighlight entry upToInternalTyped
   sayRaw (Highlight.highlight _highlightBackend hinput)

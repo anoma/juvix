@@ -1,5 +1,6 @@
 module GlobalOptions
   ( module GlobalOptions,
+    module Juvix.Data.Effect.TaggedLock,
   )
 where
 
@@ -7,6 +8,8 @@ import CommonOptions
 import Juvix.Compiler.Core.Options qualified as Core
 import Juvix.Compiler.Internal.Pretty.Options qualified as Internal
 import Juvix.Compiler.Pipeline
+import Juvix.Compiler.Pipeline.Package (readPackageRootIO)
+import Juvix.Data.Effect.TaggedLock
 import Juvix.Data.Error.GenericError qualified as E
 
 data GlobalOptions = GlobalOptions
@@ -20,8 +23,7 @@ data GlobalOptions = GlobalOptions
     _globalNoCoverage :: Bool,
     _globalNoStdlib :: Bool,
     _globalUnrollLimit :: Int,
-    _globalOffline :: Bool,
-    _globalNewTypecheckingAlgorithm :: Bool
+    _globalOffline :: Bool
   }
   deriving stock (Eq, Show)
 
@@ -61,8 +63,7 @@ defaultGlobalOptions =
       _globalNoCoverage = False,
       _globalNoStdlib = False,
       _globalUnrollLimit = defaultUnrollLimit,
-      _globalOffline = False,
-      _globalNewTypecheckingAlgorithm = False
+      _globalOffline = False
     }
 
 -- | Get a parser for global flags which can be hidden or not depending on
@@ -128,11 +129,6 @@ parseGlobalFlags = do
       ( long "show-name-ids"
           <> help "[DEV] Show the unique number of each identifier when pretty printing"
       )
-  _globalNewTypecheckingAlgorithm <-
-    switch
-      ( long "new-typechecker"
-          <> help "[DEV] Use the new experimental typechecker"
-      )
   return GlobalOptions {..}
 
 parseBuildDir :: Mod OptionFields (Prepath Dir) -> Parser (AppPath Dir)
@@ -146,16 +142,17 @@ parseBuildDir m = do
       )
   pure AppPath {_pathIsInput = False, ..}
 
-entryPointFromGlobalOptionsPre :: Root -> Prepath File -> GlobalOptions -> IO EntryPoint
+entryPointFromGlobalOptionsPre :: (Members '[TaggedLock, Embed IO] r) => Root -> Prepath File -> GlobalOptions -> Sem r EntryPoint
 entryPointFromGlobalOptionsPre root premainFile opts = do
-  mainFile <- prepathToAbsFile (root ^. rootInvokeDir) premainFile
+  mainFile <- liftIO (prepathToAbsFile (root ^. rootInvokeDir) premainFile)
   entryPointFromGlobalOptions root mainFile opts
 
-entryPointFromGlobalOptions :: Root -> Path Abs File -> GlobalOptions -> IO EntryPoint
+entryPointFromGlobalOptions :: (Members '[TaggedLock, Embed IO] r) => Root -> Path Abs File -> GlobalOptions -> Sem r EntryPoint
 entryPointFromGlobalOptions root mainFile opts = do
-  mabsBuildDir :: Maybe (Path Abs Dir) <- mapM (prepathToAbsDir cwd) optBuildDir
+  mabsBuildDir :: Maybe (Path Abs Dir) <- liftIO (mapM (prepathToAbsDir cwd) optBuildDir)
+  pkg <- readPackageRootIO root
   let def :: EntryPoint
-      def = defaultEntryPoint root mainFile
+      def = defaultEntryPoint pkg root mainFile
   return
     def
       { _entryPointNoTermination = opts ^. globalNoTermination,
@@ -165,19 +162,19 @@ entryPointFromGlobalOptions root mainFile opts = do
         _entryPointUnrollLimit = opts ^. globalUnrollLimit,
         _entryPointGenericOptions = project opts,
         _entryPointBuildDir = maybe (def ^. entryPointBuildDir) (CustomBuildDir . Abs) mabsBuildDir,
-        _entryPointOffline = opts ^. globalOffline,
-        _entryPointNewTypeCheckingAlgorithm = opts ^. globalNewTypecheckingAlgorithm
+        _entryPointOffline = opts ^. globalOffline
       }
   where
     optBuildDir :: Maybe (Prepath Dir)
     optBuildDir = fmap (^. pathPath) (opts ^. globalBuildDir)
     cwd = root ^. rootInvokeDir
 
-entryPointFromGlobalOptionsNoFile :: Root -> GlobalOptions -> IO EntryPoint
+entryPointFromGlobalOptionsNoFile :: (Members '[Embed IO, TaggedLock] r, MonadIO (Sem r)) => Root -> GlobalOptions -> Sem r EntryPoint
 entryPointFromGlobalOptionsNoFile root opts = do
   mabsBuildDir :: Maybe (Path Abs Dir) <- mapM (prepathToAbsDir cwd) optBuildDir
+  pkg <- readPackageRootIO root
   let def :: EntryPoint
-      def = defaultEntryPointNoFile root
+      def = defaultEntryPointNoFile pkg root
   return
     def
       { _entryPointNoTermination = opts ^. globalNoTermination,

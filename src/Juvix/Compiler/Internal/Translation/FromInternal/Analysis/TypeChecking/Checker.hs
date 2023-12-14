@@ -148,9 +148,6 @@ checkInductiveDef InductiveDef {..} = runInferenceDef $ do
                   }
             )
 
-withEmptyVars :: Sem (Reader LocalVars ': r) a -> Sem r a
-withEmptyVars = runReader emptyLocalVars
-
 -- TODO should we register functions (type synonyms) first?
 checkTopMutualBlock ::
   (Members '[State NegativeTypeParameters, Reader EntryPoint, Reader LocalVars, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example, Termination] r) =>
@@ -314,7 +311,7 @@ checkExample ::
   Example ->
   Sem r Example
 checkExample e = do
-  e' <- withEmptyVars (runInferenceDef (traverseOf exampleExpression (fmap (^. typedExpression) . inferExpression Nothing >=> strongNormalize) e))
+  e' <- withEmptyLocalVars (runInferenceDef (traverseOf exampleExpression (fmap (^. typedExpression) . inferExpression Nothing >=> strongNormalize) e))
   output e'
   return e'
 

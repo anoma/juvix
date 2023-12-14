@@ -1,11 +1,8 @@
 module Juvix.Compiler.Internal.Translation.FromInternal
-  ( arityChecking,
-    typeChecking,
+  ( typeChecking,
     typeCheckingNew,
     typeCheckExpression,
     typeCheckExpressionType,
-    arityCheckExpression,
-    arityCheckImport,
     typeCheckImport,
   )
 where
@@ -14,48 +11,14 @@ import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Concrete.Data.Highlight.Input
 import Juvix.Compiler.Internal.Language
 import Juvix.Compiler.Internal.Translation.FromConcrete.Data.Context as Internal
-import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking qualified as ArityChecking
-import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Data.Context
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Reachability
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking
-import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.CheckerNew qualified as New
 import Juvix.Compiler.Pipeline.Artifacts
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Compiler.Store.Language
 import Juvix.Data.Effect.NameIdGen
 import Juvix.Prelude hiding (fromEither)
-
-arityChecking ::
-  (Members '[Error JuvixError, NameIdGen, Reader ModuleTable] r) =>
-  InternalResult ->
-  Sem r ArityChecking.InternalArityResult
-arityChecking res@InternalResult {..} = do
-  stab <- getInternalModuleTable <$> ask
-  let table = computeCombinedInfoTable (insertInternalModule stab _resultInternalModule)
-  mapError (JuvixError @ArityChecking.ArityCheckerError) $ do
-    r <-
-      runReader table $
-        ArityChecking.checkModule _resultModule
-    return
-      ArityChecking.InternalArityResult
-        { _resultInternal = res,
-          _resultModule = r,
-          _resultInternalModule = computeInternalModule mempty mempty r
-        }
-
-arityCheckExpression ::
-  (Members '[Error JuvixError, State Artifacts] r) =>
-  Expression ->
-  Sem r Expression
-arityCheckExpression exp = do
-  table <- extendedTableReplArtifacts exp
-  mapError (JuvixError @ArityChecking.ArityCheckerError)
-    . runReader table
-    . runNameIdGenArtifacts
-    $ ArityChecking.inferReplExpression exp
-
-arityCheckImport :: Import -> Sem r Import
-arityCheckImport = return
 
 typeCheckExpressionType ::
   forall r.
@@ -71,7 +34,8 @@ typeCheckExpressionType exp = do
     . ignoreHighlightBuilder
     . runReader table
     . ignoreOutput @Example
-    . withEmptyVars
+    . withEmptyLocalVars
+    . withEmptyInsertedArgsStack
     . mapError (JuvixError @TypeCheckerError)
     . runInferenceDef
     $ inferExpression Nothing exp
