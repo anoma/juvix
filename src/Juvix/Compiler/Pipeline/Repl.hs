@@ -12,6 +12,7 @@ import Juvix.Compiler.Core.Transformation qualified as Core
 import Juvix.Compiler.Core.Transformation.DisambiguateNames (disambiguateNames)
 import Juvix.Compiler.Internal qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error
 import Juvix.Compiler.Pipeline.Artifacts
 import Juvix.Compiler.Pipeline.Artifacts.PathResolver
 import Juvix.Compiler.Pipeline.Driver
@@ -132,7 +133,7 @@ registerImport i = do
     . runStateArtifacts artifactScoperState
     $ Scoper.scopeCheckImport (Store.getScopedModuleTable mtab'') scopeTable i
 
-fromInternalExpression :: (Members '[State Artifacts] r) => Internal.Expression -> Sem r Core.Node
+fromInternalExpression :: (Members '[State Artifacts, Error JuvixError] r) => Internal.Expression -> Sem r Core.Node
 fromInternalExpression exp = do
   typedTable <- gets (^. artifactInternalTypedTable)
   runNameIdGenArtifacts
@@ -141,6 +142,7 @@ fromInternalExpression exp = do
     . readerFunctionsTableArtifacts
     . readerTypesTableArtifacts
     . runReader Core.initIndexTable
+    . mapError (JuvixError . ErrBadScope)
     $ Core.goExpression exp
 
 data ReplPipelineResult
