@@ -295,6 +295,12 @@ queryMetavar' h = do
     Just Fresh -> return Nothing
     Just (Refined e) -> return (Just e)
 
+newtype MatchCtx = MatchCtx
+  { _matchAlpha :: HashMap VarName VarName
+  }
+
+makeLenses ''MatchCtx
+
 re ::
   (Members '[State FunctionsTable, Error TypeCheckerError, NameIdGen] r) =>
   Sem (Inference ': r) a ->
@@ -314,11 +320,14 @@ re = reinterpret $ \case
     matchTypes' :: (Members '[State InferenceState, State FunctionsTable, Error TypeCheckerError, NameIdGen] r) => Expression -> Expression -> Sem r (Maybe MatchError)
     matchTypes' ty = runReader ini . go ty
       where
-        ini :: HashMap VarName VarName
-        ini = mempty
+        ini :: MatchCtx
+        ini =
+          MatchCtx
+            { _matchAlpha = mempty
+            }
         go ::
           forall r.
-          (Members '[State InferenceState, Reader (HashMap VarName VarName), State FunctionsTable, Error TypeCheckerError, NameIdGen] r) =>
+          (Members '[State InferenceState, Reader MatchCtx, State FunctionsTable, Error TypeCheckerError, NameIdGen] r) =>
           Expression ->
           Expression ->
           Sem r (Maybe MatchError)
@@ -360,14 +369,18 @@ re = reinterpret $ \case
               where
                 ok :: Sem r (Maybe MatchError)
                 ok = return Nothing
+
                 check :: Bool -> Sem r (Maybe MatchError)
                 check b
                   | b = ok
                   | otherwise = err
+
                 bicheck :: Sem r (Maybe MatchError) -> Sem r (Maybe MatchError) -> Sem r (Maybe MatchError)
                 bicheck = liftA2 (<|>)
+
                 err :: Sem r (Maybe MatchError)
                 err = return (Just (MatchError normA normB))
+
                 goHole :: Hole -> Expression -> Sem r (Maybe MatchError)
                 goHole h t = do
                   r <- queryMetavar' h
@@ -400,7 +413,7 @@ re = reinterpret $ \case
                   (IdenFunction a, IdenFunction b) -> check (a == b)
                   (IdenConstructor a, IdenConstructor b) -> check (a == b)
                   (IdenVar a, IdenVar b) -> do
-                    mappedEq <- (== Just b) . HashMap.lookup a <$> ask
+                    mappedEq <- (== Just b) . HashMap.lookup a <$> asks (^. matchAlpha)
                     check (a == b || mappedEq)
                   (IdenAxiom {}, _) -> err
                   (_, IdenAxiom {}) -> err
@@ -417,7 +430,7 @@ re = reinterpret $ \case
                 goSimpleLambda :: SimpleLambda -> SimpleLambda -> Sem r (Maybe MatchError)
                 goSimpleLambda (SimpleLambda (SimpleBinder v1 ty1) b1) (SimpleLambda (SimpleBinder v2 ty2) b2) = do
                   let local' :: Sem r x -> Sem r x
-                      local' = local (HashMap.insert v1 v2)
+                      local' = local (over matchAlpha (HashMap.insert v1 v2))
                   bicheck (go ty1 ty2) (local' (go b1 b2))
 
                 goFunction :: Function -> Function -> Sem r (Maybe MatchError)
@@ -427,7 +440,7 @@ re = reinterpret $ \case
                     | i1 == i2 = do
                         let local' :: Sem r x -> Sem r x
                             local' = case (m1, m2) of
-                              (Just v1, Just v2) -> local (HashMap.insert v1 v2)
+                              (Just v1, Just v2) -> local (over matchAlpha (HashMap.insert v1 v2))
                               _ -> id
                         bicheck (go l1 l2) (local' (go r1 r2))
                     | otherwise = err
@@ -442,10 +455,10 @@ re = reinterpret $ \case
                       case zipExactMay (toList p1) (toList p2) of
                         Nothing -> err
                         Just z -> do
-                          m <- ask @(HashMap VarName VarName)
+                          m <- asks (^. matchAlpha)
                           (m', patMatch) <- runState m (mapM (uncurry matchPatterns) z)
                           if
-                              | and patMatch -> local (const m') (go b1 b2)
+                              | and patMatch -> local (set matchAlpha m') (go b1 b2)
                               | otherwise -> err
 
 matchPatterns ::
