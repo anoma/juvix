@@ -9,7 +9,7 @@ import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination qua
 runCommand :: (Members '[Embed IO, TaggedLock, App] r) => CallsOptions -> Sem r ()
 runCommand localOpts@CallsOptions {..} = do
   globalOpts <- askGlobalOptions
-  (result, _) <- runPipelineTermination _callsInputFile upToInternal
+  PipelineResult result _ <- runPipelineTermination _callsInputFile upToInternal
   let callMap0 = Termination.buildCallMap (result ^. Internal.resultModule)
       callMap = case _callsFunctionNameFilter of
         Nothing -> callMap0

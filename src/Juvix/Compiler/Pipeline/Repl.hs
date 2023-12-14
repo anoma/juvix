@@ -15,6 +15,7 @@ import Juvix.Compiler.Pipeline.Loader.PathResolver.Base
 import Juvix.Compiler.Pipeline.Loader.PathResolver.Error
 import Juvix.Compiler.Pipeline.Package.Loader.Error
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff.IO
+import Juvix.Compiler.Pipeline.Result
 import Juvix.Compiler.Store.Language qualified as Store
 import Juvix.Data.Effect.Git
 import Juvix.Data.Effect.Process (runProcessIO)
@@ -111,7 +112,7 @@ registerImport ::
   Sem r ()
 registerImport i = do
   e <- ask
-  (mi, mtab) <- Driver.processImport e i
+  PipelineResult mi mtab <- Driver.processImport e i
   modify' (over artifactModuleTable (Store.insertModule (i ^. importModulePath) mi))
   modify' (over artifactModuleTable (mtab <>))
 

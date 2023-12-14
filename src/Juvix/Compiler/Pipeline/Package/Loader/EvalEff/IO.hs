@@ -134,7 +134,7 @@ loadPackage' packagePath = do
       . mapError (JuvixError @GitProcessError)
       . runGitProcess
       . runPackagePathResolver rootPath
-      $ fst <$> processFileToStoredCore packageEntryPoint
+      $ (^. pipelineResult) <$> processFileToStoredCore packageEntryPoint
     )
   where
     rootPath :: Path Abs Dir

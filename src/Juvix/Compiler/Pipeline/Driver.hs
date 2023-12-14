@@ -42,7 +42,7 @@ processFile ::
   forall r.
   (Members '[Error JuvixError, Files, GitClone, PathResolver] r) =>
   EntryPoint ->
-  Sem r (Parser.ParserResult, Store.ModuleTable)
+  Sem r (PipelineResult Parser.ParserResult)
 processFile entry = runReader @ImportParents mempty $ processFile' entry
 
 processImport ::
@@ -50,33 +50,48 @@ processImport ::
   (Members '[Error JuvixError, Files, GitClone, PathResolver] r) =>
   EntryPoint ->
   Import 'Parsed ->
-  Sem r (Store.ModuleInfo, Store.ModuleTable)
+  Sem r (PipelineResult Store.ModuleInfo)
 processImport entry i = runReader @ImportParents mempty $ processImport' entry (i ^. importModulePath)
 
 processModule ::
   forall r.
   (Members '[Error JuvixError, Files, GitClone, PathResolver] r) =>
   EntryPoint ->
-  Sem r (Store.ModuleInfo, Store.ModuleTable)
+  Sem r (PipelineResult Store.ModuleInfo)
 processModule entry = runReader @ImportParents mempty $ processModule' entry
 
 processFileToStoredCore ::
   forall r.
   (Members '[Error JuvixError, Files, GitClone, PathResolver] r) =>
   EntryPoint ->
-  Sem r (Core.CoreResult, Store.ModuleTable)
+  Sem r (PipelineResult Core.CoreResult)
 processFileToStoredCore entry = runReader @ImportParents mempty $ processFileToStoredCore' entry
+
+processFileUpTo ::
+  forall r a.
+  (Members '[Reader EntryPoint, Error JuvixError, Files, GitClone, PathResolver] r) =>
+  Sem (Reader Parser.ParserResult ': Reader Store.ModuleTable ': NameIdGen ': r) a ->
+  Sem r (PipelineResult a)
+processFileUpTo a = do
+  entry <- ask
+  res <- processFile entry
+  a' <-
+    evalTopNameIdGen
+      (res ^. pipelineResult . Parser.resultModule . moduleId)
+      $ runReader (res ^. pipelineResultImports)
+      $ runReader (res ^. pipelineResult) a
+  return $ set pipelineResult a' res
 
 processFile' ::
   forall r.
   (Members '[Reader ImportParents, Error JuvixError, Files, GitClone, PathResolver] r) =>
   EntryPoint ->
-  Sem r (Parser.ParserResult, Store.ModuleTable)
+  Sem r (PipelineResult Parser.ParserResult)
 processFile' entry = do
   res <- runReader entry upToParsing
   let imports = res ^. Parser.resultParserState . Parser.parserStateImports
   mtab <- processImports' entry (map (^. importModulePath) imports)
-  return (res, mtab)
+  return (PipelineResult res mtab)
 
 processImports' ::
   forall r.
@@ -86,14 +101,14 @@ processImports' ::
   Sem r Store.ModuleTable
 processImports' entry imports = do
   ms <- forM imports (processImport' entry)
-  return $ Store.mkModuleTable (map fst ms) <> mconcatMap snd ms
+  return $ Store.mkModuleTable (map (^. pipelineResult) ms) <> mconcatMap (^. pipelineResultImports) ms
 
 processImport' ::
   forall r.
   (Members '[Reader ImportParents, Error JuvixError, Files, GitClone, PathResolver] r) =>
   EntryPoint ->
   TopModulePath ->
-  Sem r (Store.ModuleInfo, Store.ModuleTable)
+  Sem r (PipelineResult Store.ModuleInfo)
 processImport' entry p = do
   checkCycle
   local (over importParents (p :)) $
@@ -117,21 +132,22 @@ processFileToStoredCore' ::
   forall r.
   (Members '[Reader ImportParents, Error JuvixError, Files, GitClone, PathResolver] r) =>
   EntryPoint ->
-  Sem r (Core.CoreResult, Store.ModuleTable)
+  Sem r (PipelineResult Core.CoreResult)
 processFileToStoredCore' entry = do
-  (res, mtab) <- processFile' entry
-  fmap (,mtab)
-    $ evalTopNameIdGen
-      (res ^. Parser.resultModule . moduleId)
-    $ runReader mtab
-    $ runReader entry
-    $ runReader res upToStoredCore
+  res <- processFile' entry
+  r <-
+    evalTopNameIdGen
+      (res ^. pipelineResult . Parser.resultModule . moduleId)
+      $ runReader (res ^. pipelineResultImports)
+      $ runReader entry
+      $ runReader (res ^. pipelineResult) upToStoredCore
+  return $ set pipelineResult r res
 
 processModule' ::
   forall r.
   (Members '[Reader ImportParents, Error JuvixError, Files, GitClone, PathResolver] r) =>
   EntryPoint ->
-  Sem r (Store.ModuleInfo, Store.ModuleTable)
+  Sem r (PipelineResult Store.ModuleInfo)
 processModule' entry = do
   let buildDir = resolveAbsBuildDir root (entry ^. entryPointBuildDir)
       relPath = fromJust $ replaceExtension ".jvo" $ fromJust $ stripProperPrefix $(mkAbsDir "/") sourcePath
@@ -143,11 +159,11 @@ processModule' entry = do
       | info ^. Store.moduleInfoSHA256 == sha256
           && info ^. Store.moduleInfoOptions == opts -> do
           mtab <- processImports' entry (info ^. Store.moduleInfoImports)
-          return (info, mtab)
+          return (PipelineResult info mtab)
     _ -> do
-      (info, mtab) <- processModule'' sha256 entry
-      saveToFile absPath info
-      return (info, mtab)
+      res <- processModule'' sha256 entry
+      saveToFile absPath (res ^. pipelineResult)
+      return res
   where
     root = entry ^. entryPointRoot
     sourcePath = fromJust $ entry ^. entryPointModulePath
@@ -158,8 +174,8 @@ processModule'' ::
   (Members '[Reader ImportParents, Error JuvixError, Files, GitClone, PathResolver] r) =>
   Text ->
   EntryPoint ->
-  Sem r (Store.ModuleInfo, Store.ModuleTable)
-processModule'' sha256 entry = first mkModuleInfo <$> processFileToStoredCore' entry
+  Sem r (PipelineResult Store.ModuleInfo)
+processModule'' sha256 entry = over pipelineResult mkModuleInfo <$> processFileToStoredCore' entry
   where
     mkModuleInfo :: Core.CoreResult -> Store.ModuleInfo
     mkModuleInfo Core.CoreResult {..} =
@@ -173,20 +189,6 @@ processModule'' sha256 entry = first mkModuleInfo <$> processFileToStoredCore' e
         }
       where
         scoperResult = _coreResultInternalTypedResult ^. InternalTyped.resultInternal . Internal.resultScoper
-
-processFileUpTo ::
-  forall r a.
-  (Members '[Reader EntryPoint, Error JuvixError, Files, GitClone, PathResolver] r) =>
-  Sem (Reader Parser.ParserResult ': Reader Store.ModuleTable ': NameIdGen ': r) a ->
-  Sem r (a, Store.ModuleTable)
-processFileUpTo a = do
-  entry <- ask
-  (res, mtab) <- processFile entry
-  fmap (,mtab)
-    $ evalTopNameIdGen
-      (res ^. Parser.resultModule . moduleId)
-    $ runReader mtab
-    $ runReader res a
 
 withPath' ::
   forall r a.

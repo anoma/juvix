@@ -3,6 +3,7 @@ module Juvix.Compiler.Pipeline
     module Juvix.Compiler.Pipeline.EntryPoint,
     module Juvix.Compiler.Pipeline.Artifacts,
     module Juvix.Compiler.Pipeline.Root.Base,
+    module Juvix.Compiler.Pipeline.Result,
   )
 where
 
@@ -29,6 +30,7 @@ import Juvix.Compiler.Pipeline.Loader.PathResolver.Base
 import Juvix.Compiler.Pipeline.Loader.PathResolver.Error
 import Juvix.Compiler.Pipeline.Package.Loader.Error
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff
+import Juvix.Compiler.Pipeline.Result
 import Juvix.Compiler.Pipeline.Root.Base
 import Juvix.Compiler.Reg.Data.InfoTable qualified as Reg
 import Juvix.Compiler.Reg.Translation.FromAsm qualified as Reg
