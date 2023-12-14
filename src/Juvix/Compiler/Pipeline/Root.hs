@@ -12,6 +12,9 @@ import Juvix.Data.Effect.TaggedLock
 import Juvix.Extra.Paths qualified as Paths
 import Juvix.Prelude
 
+readPackageRootIO :: (Members '[TaggedLock, Embed IO] r) => Root -> Sem r Package
+readPackageRootIO root = readPackageIO (root ^. rootRootDir) (root ^. rootBuildDir)
+
 findRootAndChangeDir ::
   forall r.
   (Members '[TaggedLock, Embed IO, Final IO] r) =>

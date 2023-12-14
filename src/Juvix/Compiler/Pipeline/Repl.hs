@@ -21,11 +21,10 @@ import Juvix.Data.Effect.Process (runProcessIO)
 import Juvix.Data.Effect.TaggedLock
 import Juvix.Prelude
 
-arityCheckExpression ::
+upToInternalExpression ::
   (Members '[Reader EntryPoint, Error JuvixError, State Artifacts, Termination] r) =>
   ExpressionAtoms 'Parsed ->
   Sem r Internal.Expression
-
 upToInternalExpression p = do
   scopeTable <- gets (^. artifactScopeTable)
   mtab <- gets (^. artifactModuleTable)
@@ -34,7 +33,6 @@ upToInternalExpression p = do
     . runStateArtifacts artifactScoperState
     $ runNameIdGenArtifacts (Scoper.scopeCheckExpression (Store.getScopedModuleTable mtab) scopeTable p)
       >>= runNameIdGenArtifacts . runReader scopeTable . Internal.fromConcreteExpression
-      >>= Internal.arityCheckExpression
 
 expressionUpToAtomsParsed ::
   (Members '[State Artifacts, Error JuvixError] r) =>

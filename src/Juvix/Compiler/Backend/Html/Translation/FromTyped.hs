@@ -168,7 +168,6 @@ genJudocHtml entry JudocArgs {..} =
       mkComments $
         _judocArgsCtx
           ^. InternalTyped.resultInternal
-            . InternalArity.resultInternal
             . Internal.resultScoper
             . Scoped.resultParserResult
             . Parser.resultParserState
@@ -181,7 +180,6 @@ genJudocHtml entry JudocArgs {..} =
     mainMod =
       _judocArgsCtx
         ^. InternalTyped.resultInternal
-          . InternalArity.resultInternal
           . Internal.resultScoper
           . Scoped.mainModule
 

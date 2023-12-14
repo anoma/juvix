@@ -4,7 +4,6 @@ module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Ch
     checkTable,
     checkImport,
     withEmptyInsertedArgsStack,
-    withEmptyLocalVars,
     inferExpression,
   )
 where
@@ -1650,3 +1649,6 @@ getBuiltinName i b = fromMaybeM notDefined (asks (^. infoBuiltins . at b'))
             { _notDefinedBuiltin = b',
               _notDefinedLoc = i
             }
+
+withEmptyInsertedArgsStack :: Sem (Reader InsertedArgsStack ': r) a -> Sem r a
+withEmptyInsertedArgsStack = runReader (mempty @InsertedArgsStack)

@@ -18,26 +18,18 @@ loadPackageFileIO root buildDir =
     . runEvalFileEffIO
     $ loadPackage buildDir (mkPackagePath root)
 
-readPackageIO :: LockMode -> Path Abs Dir -> BuildDir -> IO Package
-readPackageIO lockMode root buildDir =
-  runFinal
-    . resourceToIOFinal
-    . embedToFinal @IO
-    . runFilesIO
+readPackageIO :: (Members '[TaggedLock, Embed IO] r) => Path Abs Dir -> BuildDir -> Sem r Package
+readPackageIO root buildDir =
+  runFilesIO
     . runErrorIO' @JuvixError
     . mapError (JuvixError @PackageLoaderError)
-    . runTaggedLock lockMode
     . runEvalFileEffIO
     $ readPackage root buildDir
 
-readGlobalPackageIO :: LockMode -> IO Package
-readGlobalPackageIO lockMode =
-  runFinal
-    . resourceToIOFinal
-    . embedToFinal @IO
-    . runFilesIO
+readGlobalPackageIO :: (Members '[Embed IO, TaggedLock] r) => Sem r Package
+readGlobalPackageIO =
+  runFilesIO
     . runErrorIO' @JuvixError
     . mapError (JuvixError @PackageLoaderError)
-    . runTaggedLock lockMode
     . runEvalFileEffIO
     $ readGlobalPackage

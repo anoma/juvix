@@ -1,6 +1,5 @@
 module Juvix.Compiler.Internal.Translation.FromInternal
-  ( typeChecking,
-    typeCheckingNew,
+  ( typeCheckingNew,
     typeCheckExpression,
     typeCheckExpressionType,
     typeCheckImport,
@@ -9,9 +8,9 @@ where
 
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Concrete.Data.Highlight.Input
+import Juvix.Compiler.Internal.Data.LocalVars
 import Juvix.Compiler.Internal.Language
 import Juvix.Compiler.Internal.Translation.FromConcrete.Data.Context as Internal
-import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Reachability
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking
 import Juvix.Compiler.Pipeline.Artifacts
@@ -50,37 +49,6 @@ typeCheckExpression exp = (^. typedExpression) <$> typeCheckExpressionType exp
 typeCheckImport :: Import -> Sem r Import
 typeCheckImport = return
 
-typeChecking ::
-  forall r.
-  (Members '[Reader EntryPoint, Error JuvixError, NameIdGen, Reader ModuleTable] r) =>
-  Sem (Termination ': r) ArityChecking.InternalArityResult ->
-  Sem r InternalTypedResult
-typeChecking a = do
-  (termin, (res, (normalized, (idens, (funs, r))))) <- runTermination iniTerminationState $ do
-    res <- a
-    itab <- getInternalModuleTable <$> ask
-    let md :: InternalModule
-        md = res ^. ArityChecking.resultInternalModule
-        table :: InfoTable
-        table = computeCombinedInfoTable (insertInternalModule itab md)
-    fmap (res,)
-      . runOutputList
-      . runState (computeTypesTable itab)
-      . runState (computeFunctionsTable itab)
-      . runReader table
-      . mapError (JuvixError @TypeCheckerError)
-      $ checkTable >> checkModule (res ^. ArityChecking.resultModule)
-  return
-    InternalTypedResult
-      { _resultInternal = res,
-        _resultModule = r,
-        _resultInternalModule = computeInternalModule idens funs r,
-        _resultTermination = termin,
-        _resultNormalized = HashMap.fromList [(e ^. exampleId, e ^. exampleExpression) | e <- normalized],
-        _resultIdenTypes = idens,
-        _resultFunctions = funs
-      }
-
 typeCheckingNew ::
   forall r.
   (Members '[Reader EntryPoint, Error JuvixError, NameIdGen, Reader ModuleTable] r) =>
@@ -100,18 +68,11 @@ typeCheckingNew a = do
       . runState (mempty :: FunctionsTable)
       . runReader table
       . mapError (JuvixError @TypeCheckerError)
-      $ checkTable >> New.checkModule (res ^. Internal.resultModule)
+      $ checkTable >> checkModule (res ^. Internal.resultModule)
   let md = computeInternalModule idens funs r
-      ariRes :: InternalArityResult
-      ariRes =
-        InternalArityResult
-          { _resultInternal = res,
-            _resultModule = res ^. Internal.resultModule,
-            _resultInternalModule = md
-          }
   return
     InternalTypedResult
-      { _resultInternal = ariRes,
+      { _resultInternal = res,
         _resultModule = r,
         _resultInternalModule = md,
         _resultTermination = termin,

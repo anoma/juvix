@@ -1,7 +1,6 @@
 module Juvix.Compiler.Pipeline.EntryPoint.IO where
 
 import Juvix.Compiler.Pipeline.EntryPoint
-import Juvix.Compiler.Pipeline.Package
 import Juvix.Compiler.Pipeline.Root
 import Juvix.Data.Effect.TaggedLock
 import Juvix.Prelude

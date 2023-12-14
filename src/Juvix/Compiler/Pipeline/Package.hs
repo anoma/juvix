@@ -123,8 +123,8 @@ readPackageFile root buildDir f = mapError (JuvixError @PackageLoaderError) $ do
   checkNoDuplicateDepNames f (pkg ^. packageDependencies)
   return (pkg {_packageLockfile = mLockfile})
 
-readGlobalPackage :: (Members '[TaggedLock, Error JuvixError, EvalFileEff, Files] r) => Sem r Package
-readGlobalPackage = do
+ensureGlobalPackage :: (Members '[TaggedLock, Files] r) => Sem r (Path Abs File)
+ensureGlobalPackage = do
   packagePath <- globalPackageJuvix
   withTaggedLockDir (parent packagePath) (unlessM (fileExists' packagePath) writeGlobalPackage)
   return packagePath

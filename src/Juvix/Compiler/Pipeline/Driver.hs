@@ -17,7 +17,6 @@ import Juvix.Compiler.Concrete.Translation.FromSource.Data.ParserState qualified
 import Juvix.Compiler.Core.Data.Module qualified as Core
 import Juvix.Compiler.Core.Translation.FromInternal.Data.Context qualified as Core
 import Juvix.Compiler.Internal.Translation.FromConcrete.Data.Context qualified as Internal
-import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Data.Context qualified as InternalArity
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context qualified as InternalTyped
 import Juvix.Compiler.Pipeline
 import Juvix.Compiler.Pipeline.Loader.PathResolver
@@ -173,7 +172,7 @@ processModule'' sha256 entry = first mkModuleInfo <$> processFileToStoredCore' e
           _moduleInfoSHA256 = sha256
         }
       where
-        scoperResult = _coreResultInternalTypedResult ^. InternalTyped.resultInternal . InternalArity.resultInternal . Internal.resultScoper
+        scoperResult = _coreResultInternalTypedResult ^. InternalTyped.resultInternal . Internal.resultScoper
 
 processFileUpTo ::
   forall r a.

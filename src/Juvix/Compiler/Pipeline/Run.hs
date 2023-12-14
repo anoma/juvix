@@ -13,7 +13,6 @@ import Juvix.Compiler.Concrete.Translation.FromSource qualified as P
 import Juvix.Compiler.Core.Data.Module qualified as Core
 import Juvix.Compiler.Core.Translation.FromInternal.Data qualified as Core
 import Juvix.Compiler.Internal.Translation qualified as Internal
-import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Data.Context qualified as Arity
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking qualified as Typed
 import Juvix.Compiler.Pipeline
@@ -31,48 +30,37 @@ import Juvix.Data.Effect.Process
 import Juvix.Data.Effect.TaggedLock
 import Juvix.Prelude
 
-runPipelineHighlight :: forall r a. (Members '[TaggedLock, Embed IO] r) => EntryPoint -> Sem (PipelineEff r) a -> Sem r HighlightInput
-runPipelineHighlight entry = fmap fst . runIOEither entry
-
 -- | It returns `ResolverState` so that we can retrieve the `juvix.yaml` files,
 -- which we require for `Scope` tests.
-runIOEither :: forall a. EntryPoint -> Sem PipelineEff a -> IO (Either JuvixError (ResolverState, (a, Store.ModuleTable)))
+runIOEither :: forall a r. (Members '[TaggedLock, Embed IO] r) => EntryPoint -> Sem (PipelineEff r) a -> Sem r (Either JuvixError (ResolverState, (a, Store.ModuleTable)))
 runIOEither entry = fmap snd . runIOEitherHelper entry
 
-runIOEither' :: forall a. LockMode -> EntryPoint -> Sem PipelineEff a -> IO (Either JuvixError (ResolverState, (a, Store.ModuleTable)))
-runIOEither' lockMode entry = fmap snd . runIOEitherHelper' lockMode entry
+runIOEither' :: forall a r. (Members '[TaggedLock, Embed IO] r) => EntryPoint -> Sem (PipelineEff r) a -> Sem r (Either JuvixError (ResolverState, (a, Store.ModuleTable)))
+runIOEither' entry = fmap snd . runIOEitherHelper entry
 
-runIOEitherTermination :: forall a. EntryPoint -> Sem (Termination ': PipelineEff) a -> IO (Either JuvixError (ResolverState, (a, Store.ModuleTable)))
-runIOEitherTermination entry = fmap snd . runIOEitherHelper entry . evalTermination iniTerminationState
-
-runIOEitherTermination' :: forall a. LockMode -> EntryPoint -> Sem (Termination ': PipelineEff) a -> IO (Either JuvixError (ResolverState, (a, Store.ModuleTable)))
-runIOEitherTermination' lockMode entry = fmap snd . runIOEitherHelper' lockMode entry . evalTermination iniTerminationState
-
-runPipelineHighlight :: forall a. EntryPoint -> Sem PipelineEff a -> IO HighlightInput
+runPipelineHighlight :: forall a r. (Members '[TaggedLock, Embed IO] r) => EntryPoint -> Sem (PipelineEff r) a -> Sem r HighlightInput
 runPipelineHighlight entry = fmap fst . runIOEitherHelper entry
 
-runIOEitherHelper :: forall a. EntryPoint -> Sem PipelineEff a -> IO (HighlightInput, (Either JuvixError (ResolverState, (a, Store.ModuleTable))))
-runIOEitherHelper = runIOEitherHelper' LockModePermissive
-
-runIOEitherHelper' :: forall a. LockMode -> EntryPoint -> Sem PipelineEff a -> IO (HighlightInput, (Either JuvixError (ResolverState, (a, Store.ModuleTable))))
-runIOEitherHelper' lockMode entry a = do
-  runIOEitherPipeline' lockMode entry $
+runIOEitherHelper :: forall a r. (Members '[TaggedLock, Embed IO] r) => EntryPoint -> Sem (PipelineEff r) a -> Sem r (HighlightInput, (Either JuvixError (ResolverState, (a, Store.ModuleTable))))
+runIOEitherHelper entry a = do
+  runIOEitherPipeline' entry $
     entrySetup defaultDependenciesConfig >> processFileUpTo a
 
 runIOEitherPipeline ::
-  forall a.
+  forall a r.
+  (Members '[TaggedLock, Embed IO] r) =>
   EntryPoint ->
-  Sem PipelineEff' a ->
-  IO (Either JuvixError (ResolverState, a))
-runIOEitherPipeline entry = fmap snd . runIOEitherPipeline' LockModePermissive entry
+  Sem (PipelineEff' r) a ->
+  Sem r (Either JuvixError (ResolverState, a))
+runIOEitherPipeline entry = fmap snd . runIOEitherPipeline' entry
 
 runIOEitherPipeline' ::
-  forall a.
-  LockMode ->
+  forall a r.
+  (Members '[TaggedLock, Embed IO] r) =>
   EntryPoint ->
-  Sem PipelineEff' a ->
-  IO (HighlightInput, (Either JuvixError (ResolverState, a)))
-runIOEitherPipeline' lockMode entry a = do
+  Sem (PipelineEff' r) a ->
+  Sem r (HighlightInput, (Either JuvixError (ResolverState, a)))
+runIOEitherPipeline' entry a = do
   let hasInternet = not (entry ^. entryPointOffline)
       runPathResolver'
         | mainIsPackageFile entry = runPackagePathResolver' (entry ^. entryPointResolverRoot)
@@ -81,7 +69,6 @@ runIOEitherPipeline' lockMode entry a = do
     . runHighlightBuilder
     . runJuvixError
     . runFilesIO
-    . runTaggedLock lockMode
     . runReader entry
     . runLogIO
     . runProcessIO
@@ -98,24 +85,19 @@ mainIsPackageFile entry = case entry ^. entryPointModulePath of
   Just p -> p == mkPackagePath (entry ^. entryPointResolverRoot)
   Nothing -> False
 
-runIOLockMode :: LockMode -> GenericOptions -> EntryPoint -> Sem PipelineEff a -> IO (ResolverState, (a, Store.ModuleTable))
-runIOLockMode lockMode opts entry = runIOEither' lockMode entry >=> mayThrow
+runIO ::
+  forall a r.
+  (Members '[TaggedLock, Embed IO] r) =>
+  GenericOptions ->
+  EntryPoint ->
+  Sem (PipelineEff r) a ->
+  Sem r (ResolverState, (a, Store.ModuleTable))
+runIO opts entry = runIOEither entry >=> mayThrow
   where
     mayThrow :: (Members '[Embed IO] r') => Either JuvixError x -> Sem r' x
     mayThrow = \case
-      Left err -> runM . runReader opts $ printErrorAnsiSafe err >> embed exitFailure
+      Left err -> runReader opts $ printErrorAnsiSafe err >> embed exitFailure
       Right r -> return r
-
-runIO :: GenericOptions -> EntryPoint -> Sem PipelineEff a -> IO (ResolverState, (a, Store.ModuleTable))
-runIO opts entry = runIOEither entry >=> mayThrow
-  where
-    mayThrow :: Either JuvixError r -> IO r
-    mayThrow = \case
-      Left err -> runM . runReader opts $ printErrorAnsiSafe err >> embed exitFailure
-      Right r -> return r
-
-runIOExclusive :: EntryPoint -> Sem PipelineEff a -> IO (ResolverState, (a, Store.ModuleTable))
-runIOExclusive = runIOLockMode LockModeExclusive defaultGenericOptions
 
 corePipelineIO' :: EntryPoint -> IO Artifacts
 corePipelineIO' = corePipelineIO defaultGenericOptions
@@ -185,7 +167,6 @@ corePipelineIOEither' lockMode entry = do
           internalResult =
             typedResult
               ^. Typed.resultInternal
-                . Arity.resultInternal
 
           coreModule :: Core.Module
           coreModule = coreRes ^. Core.coreResultModule
