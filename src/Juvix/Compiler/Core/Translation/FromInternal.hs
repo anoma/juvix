@@ -15,12 +15,11 @@ import Juvix.Compiler.Core.Translation.FromInternal.Builtins.Nat
 import Juvix.Compiler.Core.Translation.FromInternal.Data
 import Juvix.Compiler.Internal.Data.Name
 import Juvix.Compiler.Internal.Extra qualified as Internal
-import Juvix.Compiler.Internal.Pretty (ppTrace)
 import Juvix.Compiler.Internal.Pretty qualified as Internal
 import Juvix.Compiler.Internal.Translation.Extra qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking qualified as InternalTyped
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error
 import Juvix.Data.Loc qualified as Loc
-import Juvix.Data.PPOutput
 import Juvix.Extra.Strings qualified as Str
 
 type MVisit = Visit Internal.ModuleIndex
@@ -50,8 +49,8 @@ unsupported thing = error ("Internal to Core: Not yet supported: " <> thing)
 mkIdentIndex :: Name -> Text
 mkIdentIndex = show . (^. Internal.nameId . Internal.unNameId)
 
-fromInternal :: (Member NameIdGen k) => Internal.InternalTypedResult -> Sem k CoreResult
-fromInternal i = do
+fromInternal :: (Members '[NameIdGen, Error JuvixError] k) => Internal.InternalTypedResult -> Sem k CoreResult
+fromInternal i = mapError (JuvixError . ErrBadScope) $ do
   res <-
     execInfoTableBuilder emptyInfoTable
       . evalState (i ^. InternalTyped.resultFunctions)
@@ -63,7 +62,7 @@ fromInternal i = do
         _coreResultInternalTypedResult = i
       }
   where
-    f :: (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, State InternalTyped.FunctionsTable, NameIdGen] r) => Sem r ()
+    f :: (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, State InternalTyped.FunctionsTable, NameIdGen, Error BadScope] r) => Sem r ()
     f = do
       reserveLiteralIntToNatSymbol
       reserveLiteralIntToIntSymbol
@@ -78,7 +77,7 @@ fromInternal i = do
       setupLiteralIntToNat literalIntToNatNode
       setupLiteralIntToInt literalIntToIntNode
 
-fromInternalExpression :: (Member NameIdGen r) => CoreResult -> Internal.Expression -> Sem r Node
+fromInternalExpression :: (Members '[NameIdGen, Error BadScope] r) => CoreResult -> Internal.Expression -> Sem r Node
 fromInternalExpression res exp = do
   let modules = res ^. coreResultInternalTypedResult . InternalTyped.resultModules
   fmap snd
@@ -97,7 +96,7 @@ goModule = visit . Internal.ModuleIndex
 
 goModuleNoVisit ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable, NameIdGen, MVisit] r) =>
+  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable, NameIdGen, MVisit, Error BadScope] r) =>
   Internal.ModuleIndex ->
   Sem r ()
 goModuleNoVisit (Internal.ModuleIndex m) = do
@@ -110,7 +109,7 @@ goModuleNoVisit (Internal.ModuleIndex m) = do
 -- | predefine an inductive definition
 preInductiveDef ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable, NameIdGen] r) =>
+  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable, NameIdGen, Error BadScope] r) =>
   Internal.InductiveDef ->
   Sem r PreInductiveDef
 preInductiveDef i = do
@@ -149,7 +148,7 @@ preInductiveDef i = do
 
 goInductiveDef ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable, NameIdGen] r) =>
+  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable, NameIdGen, Error BadScope] r) =>
   PreInductiveDef ->
   Sem r ()
 goInductiveDef PreInductiveDef {..} = do
@@ -163,7 +162,7 @@ goInductiveDef PreInductiveDef {..} = do
 
 goConstructor ::
   forall r.
-  (Members '[InfoTableBuilder, Reader Internal.InfoTable, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, NameIdGen] r) =>
+  (Members '[InfoTableBuilder, Reader Internal.InfoTable, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, NameIdGen, Error BadScope] r) =>
   Symbol ->
   Internal.ConstructorDef ->
   Sem r ConstructorInfo
@@ -225,7 +224,7 @@ goConstructor sym ctor = do
 
 goMutualBlock ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable, NameIdGen] r) =>
+  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable, NameIdGen, Error BadScope] r) =>
   Internal.MutualBlock ->
   Sem r ()
 goMutualBlock (Internal.MutualBlock m) = preMutual m >>= goMutual
@@ -264,7 +263,7 @@ goMutualBlock (Internal.MutualBlock m) = preMutual m >>= goMutual
 
 preFunctionDef ::
   forall r.
-  (Members '[InfoTableBuilder, Reader Internal.InfoTable, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, NameIdGen] r) =>
+  (Members '[InfoTableBuilder, Reader Internal.InfoTable, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, NameIdGen, Error BadScope] r) =>
   Internal.FunctionDef ->
   Sem r PreFunctionDef
 preFunctionDef f = do
@@ -333,7 +332,7 @@ preFunctionDef f = do
 
 goFunctionDef ::
   forall r.
-  (Members '[InfoTableBuilder, Reader Internal.InfoTable, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, NameIdGen] r) =>
+  (Members '[InfoTableBuilder, Reader Internal.InfoTable, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, NameIdGen, Error BadScope] r) =>
   PreFunctionDef ->
   Sem r ()
 goFunctionDef PreFunctionDef {..} = do
@@ -357,7 +356,7 @@ strongNormalizeHelper ty = evalState InternalTyped.iniState (InternalTyped.stron
 
 goType ::
   forall r.
-  (Members '[InfoTableBuilder, Reader Internal.InfoTable, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, NameIdGen, Reader IndexTable] r) =>
+  (Members '[InfoTableBuilder, Reader Internal.InfoTable, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, NameIdGen, Reader IndexTable, Error BadScope] r) =>
   Internal.Expression ->
   Sem r Type
 goType ty = do
@@ -366,7 +365,7 @@ goType ty = do
 
 mkFunBody ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable, NameIdGen] r) =>
+  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable, NameIdGen, Error BadScope] r) =>
   Type -> -- converted type of the function
   Internal.FunctionDef ->
   Sem r Node
@@ -378,7 +377,7 @@ mkFunBody ty f =
 
 mkBody ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable, NameIdGen] r) =>
+  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable, NameIdGen, Error BadScope] r) =>
   Type -> -- type of the function
   Location ->
   NonEmpty ([Internal.PatternArg], Internal.Expression) ->
@@ -465,7 +464,7 @@ mkBody ty loc clauses
 
 goCase ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable, NameIdGen] r) =>
+  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable, NameIdGen, Error BadScope] r) =>
   Internal.Case ->
   Sem r Node
 goCase c = do
@@ -499,7 +498,7 @@ goCase c = do
 
 goLambda ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable, NameIdGen] r) =>
+  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable, NameIdGen, Error BadScope] r) =>
   Internal.Lambda ->
   Sem r Node
 goLambda l = do
@@ -508,7 +507,7 @@ goLambda l = do
 
 goLet ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable, NameIdGen] r) =>
+  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable, NameIdGen, Error BadScope] r) =>
   Internal.Let ->
   Sem r Node
 goLet l = goClauses (toList (l ^. Internal.letClauses))
@@ -596,7 +595,7 @@ fromTopIndex = runReader initIndexTable
 
 goAxiomDef ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable, NameIdGen] r) =>
+  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable, NameIdGen, Error BadScope] r) =>
   Internal.AxiomDef ->
   Sem r ()
 goAxiomDef a = maybe goAxiomNotBuiltin builtinBody (a ^. Internal.axiomBuiltin)
@@ -699,7 +698,7 @@ goAxiomDef a = maybe goAxiomNotBuiltin builtinBody (a ^. Internal.axiomBuiltin)
 
 fromPatternArg ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable, State IndexTable, NameIdGen] r) =>
+  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable, State IndexTable, NameIdGen, Error BadScope] r) =>
   Internal.PatternArg ->
   Sem r Pattern
 fromPatternArg pa = case pa ^. Internal.patternArgName of
@@ -783,7 +782,7 @@ fromPatternArg pa = case pa ^. Internal.patternArgName of
 
 goPatternArgs ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable, NameIdGen] r) =>
+  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable, NameIdGen, Error BadScope] r) =>
   Level -> -- the level of the first binder for the matched value
   Internal.Expression ->
   [Internal.PatternArg] ->
@@ -841,7 +840,7 @@ addPatternVariableNames p lvl vars =
 
 goIden ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable] r) =>
+  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable, Error BadScope] r) =>
   Internal.Iden ->
   Sem r Node
 goIden i = do
@@ -857,8 +856,8 @@ goIden i = do
           )
   case i of
     Internal.IdenVar n -> do
-      let err = error ("impossible: var not found: " <> ppTrace n <> " at " <> prettyText (getLoc n))
-      k <- HashMap.lookupDefault err id_ <$> asks (^. indexTableVars)
+      let err = throw (BadScope n)
+      k <- fromMaybeM err (HashMap.lookup id_ <$> asks (^. indexTableVars))
       varsNum <- asks (^. indexTableVarsNum)
       return (mkVar (setInfoLocation (n ^. nameLoc) (Info.singleton (NameInfo (n ^. nameText)))) (varsNum - k - 1))
     Internal.IdenFunction n -> do
@@ -917,7 +916,7 @@ goIden i = do
 
 goExpression ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable, NameIdGen] r) =>
+  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable, NameIdGen, Error BadScope] r) =>
   Internal.Expression ->
   Sem r Node
 goExpression = \case
@@ -937,7 +936,7 @@ goExpression = \case
 
 goFunction ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable, NameIdGen] r) =>
+  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable, NameIdGen, Error BadScope] r) =>
   ([Internal.FunctionParameter], Internal.Expression) ->
   Sem r Node
 goFunction (params, returnTypeExpr) = go params
@@ -960,7 +959,7 @@ goFunction (params, returnTypeExpr) = go params
 
 goSimpleLambda ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable, NameIdGen] r) =>
+  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable, NameIdGen, Error BadScope] r) =>
   Internal.SimpleLambda ->
   Sem r Node
 goSimpleLambda l = do
@@ -972,7 +971,7 @@ goSimpleLambda l = do
 
 goApplication ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable, NameIdGen] r) =>
+  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, State InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable, NameIdGen, Error BadScope] r) =>
   Internal.Application ->
   Sem r Node
 goApplication a = do
