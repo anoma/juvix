@@ -1,4 +1,8 @@
-module Juvix.Compiler.Nockma.Evaluator where
+module Juvix.Compiler.Nockma.Evaluator
+  ( module Juvix.Compiler.Nockma.Evaluator,
+    module Juvix.Compiler.Nockma.Evaluator.Error,
+  )
+where
 
 import Juvix.Compiler.Nockma.Evaluator.Error
 import Juvix.Compiler.Nockma.Language
