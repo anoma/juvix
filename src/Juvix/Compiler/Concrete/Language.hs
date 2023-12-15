@@ -2093,10 +2093,6 @@ deriving stock instance Ord (JudocAtom 'Parsed)
 
 deriving stock instance Ord (JudocAtom 'Scoped)
 
-newtype ModuleIndex = ModuleIndex
-  { _moduleIxModule :: Module 'Scoped 'ModuleTop
-  }
-
 makeLenses ''PatternArg
 makeLenses ''WildcardConstructor
 makeLenses ''DoubleBracesExpression
@@ -2162,7 +2158,6 @@ makeLenses ''ExpressionAtoms
 makeLenses ''Iterator
 makeLenses ''Initializer
 makeLenses ''Range
-makeLenses ''ModuleIndex
 makeLenses ''ArgumentBlock
 makeLenses ''NamedArgument
 makeLenses ''NamedApplication
@@ -2214,12 +2209,6 @@ instance (SingI s) => HasLoc (SyntaxDef s) where
     SyntaxOperator t -> getLoc t
     SyntaxIterator t -> getLoc t
     SyntaxAlias t -> getLoc t
-
-instance Eq ModuleIndex where
-  (==) = (==) `on` (^. moduleIxModule . modulePath)
-
-instance Hashable ModuleIndex where
-  hashWithSalt s = hashWithSalt s . (^. moduleIxModule . modulePath)
 
 instance (SingI s) => HasLoc (NamedArgument s) where
   getLoc NamedArgument {..} = getLocSymbolType _namedArgName <> getLocExpressionType _namedArgValue

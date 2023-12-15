@@ -38,12 +38,29 @@ newtype ImportParents = ImportParents
 
 makeLenses ''ImportParents
 
+newtype EntryIndex = EntryIndex
+  { _entryIxEntry :: EntryPoint
+  }
+
+makeLenses ''EntryIndex
+
+instance Eq EntryIndex where
+  (==) = (==) `on` (^. entryIxEntry . entryPointModulePath)
+
+instance Hashable EntryIndex where
+  hashWithSalt s = hashWithSalt s . (^. entryIxEntry . entryPointModulePath)
+
+type MCache = Cache EntryIndex (PipelineResult Store.ModuleInfo)
+
 processFile ::
   forall r.
   (Members '[Error JuvixError, Files, GitClone, PathResolver] r) =>
   EntryPoint ->
   Sem r (PipelineResult Parser.ParserResult)
-processFile entry = runReader @ImportParents mempty $ processFile' entry
+processFile entry =
+  runReader @ImportParents mempty $
+    evalCacheEmpty processModule' $
+      processFile' entry
 
 processImport ::
   forall r.
@@ -51,21 +68,30 @@ processImport ::
   EntryPoint ->
   Import 'Parsed ->
   Sem r (PipelineResult Store.ModuleInfo)
-processImport entry i = runReader @ImportParents mempty $ processImport' entry (i ^. importModulePath)
+processImport entry i =
+  runReader @ImportParents mempty $
+    evalCacheEmpty processModule' $
+      processImport' entry (i ^. importModulePath)
 
 processModule ::
   forall r.
   (Members '[Error JuvixError, Files, GitClone, PathResolver] r) =>
   EntryPoint ->
   Sem r (PipelineResult Store.ModuleInfo)
-processModule entry = runReader @ImportParents mempty $ processModule' entry
+processModule entry =
+  runReader @ImportParents mempty $
+    evalCacheEmpty processModule' $
+      processModule' (EntryIndex entry)
 
 processFileToStoredCore ::
   forall r.
   (Members '[Error JuvixError, Files, GitClone, PathResolver] r) =>
   EntryPoint ->
   Sem r (PipelineResult Core.CoreResult)
-processFileToStoredCore entry = runReader @ImportParents mempty $ processFileToStoredCore' entry
+processFileToStoredCore entry =
+  runReader @ImportParents mempty $
+    evalCacheEmpty processModule' $
+      processFileToStoredCore' entry
 
 processFileUpTo ::
   forall r a.
@@ -84,7 +110,7 @@ processFileUpTo a = do
 
 processFile' ::
   forall r.
-  (Members '[Reader ImportParents, Error JuvixError, Files, GitClone, PathResolver] r) =>
+  (Members '[Reader ImportParents, Error JuvixError, Files, GitClone, PathResolver, MCache] r) =>
   EntryPoint ->
   Sem r (PipelineResult Parser.ParserResult)
 processFile' entry = do
@@ -95,7 +121,7 @@ processFile' entry = do
 
 processImports' ::
   forall r.
-  (Members '[Reader ImportParents, Error JuvixError, Files, GitClone, PathResolver] r) =>
+  (Members '[Reader ImportParents, Error JuvixError, Files, GitClone, PathResolver, MCache] r) =>
   EntryPoint ->
   [TopModulePath] ->
   Sem r Store.ModuleTable
@@ -105,7 +131,7 @@ processImports' entry imports = do
 
 processImport' ::
   forall r.
-  (Members '[Reader ImportParents, Error JuvixError, Files, GitClone, PathResolver] r) =>
+  (Members '[Reader ImportParents, Error JuvixError, Files, GitClone, PathResolver, MCache] r) =>
   EntryPoint ->
   TopModulePath ->
   Sem r (PipelineResult Store.ModuleInfo)
@@ -115,7 +141,7 @@ processImport' entry p = do
     withPath'
       p
       ( \path ->
-          processModule' (entry {_entryPointModulePath = Just path})
+          cacheGet (EntryIndex entry {_entryPointModulePath = Just path})
       )
   where
     checkCycle :: Sem r ()
@@ -130,7 +156,7 @@ processImport' entry p = do
 
 processFileToStoredCore' ::
   forall r.
-  (Members '[Reader ImportParents, Error JuvixError, Files, GitClone, PathResolver] r) =>
+  (Members '[Reader ImportParents, Error JuvixError, Files, GitClone, PathResolver, MCache] r) =>
   EntryPoint ->
   Sem r (PipelineResult Core.CoreResult)
 processFileToStoredCore' entry = do
@@ -145,10 +171,10 @@ processFileToStoredCore' entry = do
 
 processModule' ::
   forall r.
-  (Members '[Reader ImportParents, Error JuvixError, Files, GitClone, PathResolver] r) =>
-  EntryPoint ->
+  (Members '[Reader ImportParents, Error JuvixError, Files, GitClone, PathResolver, MCache] r) =>
+  EntryIndex ->
   Sem r (PipelineResult Store.ModuleInfo)
-processModule' entry = do
+processModule' (EntryIndex entry) = do
   let buildDir = resolveAbsBuildDir root (entry ^. entryPointBuildDir)
       relPath = fromJust $ replaceExtension ".jvo" $ fromJust $ stripProperPrefix $(mkAbsDir "/") sourcePath
       absPath = buildDir Path.</> relPath
@@ -171,7 +197,7 @@ processModule' entry = do
 
 processModule'' ::
   forall r.
-  (Members '[Reader ImportParents, Error JuvixError, Files, GitClone, PathResolver] r) =>
+  (Members '[Reader ImportParents, Error JuvixError, Files, GitClone, PathResolver, MCache] r) =>
   Text ->
   EntryPoint ->
   Sem r (PipelineResult Store.ModuleInfo)
