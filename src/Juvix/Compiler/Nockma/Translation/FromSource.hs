@@ -1,6 +1,7 @@
 module Juvix.Compiler.Nockma.Translation.FromSource where
 
 import Data.HashMap.Internal.Strict qualified as HashMap
+import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Compiler.Nockma.Language qualified as N
 import Juvix.Parser.Error
 import Juvix.Prelude hiding (Atom, many, some)
@@ -50,11 +51,19 @@ atomOp = do
   op' <- choice [symbol opName $> op | (opName, op) <- HashMap.toList N.atomOps]
   return (N.Atom (N.serializeNockOp op') (Irrelevant (Just N.AtomHintOp)))
 
+atomDirection :: Parser (N.Atom Natural)
+atomDirection = do
+  dirs <- some (choice [symbol "L" $> N.L, symbol "R" $> N.R])
+  return (N.Atom (N.serializePosition (N.Position (NonEmpty.toList dirs))) (Irrelevant (Just N.AtomHintPosition)))
+
 atomNat :: Parser (N.Atom Natural)
 atomNat = (\n -> N.Atom n (Irrelevant Nothing)) <$> dottedNatural
 
+atomBool :: Parser (N.Atom Natural)
+atomBool = choice [symbol "true" $> N.nockTrue, symbol "false" $> N.nockFalse]
+
 atom :: Parser (N.Atom Natural)
-atom = atomOp <|> atomNat
+atom = atomOp <|> atomNat <|> atomDirection <|> atomBool
 
 cell :: Parser (N.Cell Natural)
 cell = do

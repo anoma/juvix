@@ -130,10 +130,19 @@ decodePosition ep = Position <$> execOutputList (go ep)
                 go ((x - 1) `div` 2)
                 output R
 
+serializePositionNatural :: Position -> Natural
+serializePositionNatural p = foldl' step 1 (p ^. positionDirections)
+  where
+    step :: Natural -> Direction -> Natural
+    step n = \case
+      R -> 2 * n + 1
+      L -> 2 * n
+
 class (Eq a) => NockNatural a where
   type ErrNockNatural a :: Type
   nockNatural :: (Member (Error (ErrNockNatural a)) r) => Atom a -> Sem r Natural
   serializeNockOp :: NockOp -> a
+  serializePosition :: Position -> a
 
   errInvalidOp :: Atom a -> ErrNockNatural a
 
@@ -166,3 +175,4 @@ instance NockNatural Natural where
   errInvalidOp atm = NaturalInvalidOp atm
   errInvalidPosition atm = NaturalInvalidPosition atm
   serializeNockOp = serializeOp
+  serializePosition = serializePositionNatural
