@@ -39,9 +39,11 @@ runParser fileName input = (^. stateInfoTable) <$> runParser' emptyBuilderState 
 runParser' :: BuilderState -> FilePath -> Text -> Either MegaparsecError BuilderState
 runParser' bs fileName input =
   case run $
-    runInfoTableBuilder' bs $
-      evalTopNameIdGen defaultModuleId $
-        P.runParserT parseToplevel fileName input of
+    evalState @Index 0 $
+      evalState @LocalNameMap mempty $
+        runInfoTableBuilder' bs $
+          evalTopNameIdGen defaultModuleId $
+            P.runParserT parseToplevel fileName input of
     (_, Left err) -> Left (MegaparsecError err)
     (bs', Right ()) -> Right bs'
 
