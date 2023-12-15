@@ -295,8 +295,10 @@ queryMetavar' h = do
     Just Fresh -> return Nothing
     Just (Refined e) -> return (Just e)
 
-newtype MatchCtx = MatchCtx
-  { _matchAlpha :: HashMap VarName VarName
+data MatchCtx = MatchCtx
+  { _matchAlpha :: Rename,
+    _matchLeftAbsorb :: Rename,
+    _matchRightAbsorb :: Rename
   }
 
 makeLenses ''MatchCtx
@@ -318,25 +320,29 @@ re = reinterpret $ \case
 
     -- Supports alpha equivalence.
     matchTypes' :: (Members '[State InferenceState, State FunctionsTable, Error TypeCheckerError, NameIdGen] r) => Expression -> Expression -> Sem r (Maybe MatchError)
-    matchTypes' ty = runReader ini . go ty
+    matchTypes' ty = fmap (^? _Left) . runError . matchTypesNoCtx ty
       where
+        matchTypesNoCtx :: (Members '[State InferenceState, State FunctionsTable, Error TypeCheckerError, NameIdGen, Error MatchError] r) => Expression -> Expression -> Sem r ()
+        matchTypesNoCtx nty = runReader ini . go nty
         ini :: MatchCtx
         ini =
           MatchCtx
-            { _matchAlpha = mempty
+            { _matchAlpha = mempty,
+              _matchLeftAbsorb = mempty,
+              _matchRightAbsorb = mempty
             }
         go ::
           forall r.
-          (Members '[State InferenceState, Reader MatchCtx, State FunctionsTable, Error TypeCheckerError, NameIdGen] r) =>
+          (Members '[State InferenceState, Reader MatchCtx, State FunctionsTable, Error TypeCheckerError, NameIdGen, Error MatchError] r) =>
           Expression ->
           Expression ->
-          Sem r (Maybe MatchError)
+          Sem r ()
         go inputA inputB = do
           normA <- weakNormalize' inputA
           normB <- weakNormalize' inputB
           goNormalized normA normB
           where
-            goNormalized :: Expression -> Expression -> Sem r (Maybe MatchError)
+            goNormalized :: Expression -> Expression -> Sem r ()
             goNormalized normA normB =
               case (normA, normB) of
                 (ExpressionIden a, ExpressionIden b) -> goIden a b
@@ -367,26 +373,28 @@ re = reinterpret $ \case
                 (ExpressionCase {}, _) -> error "not implemented"
                 (ExpressionLiteral l, ExpressionLiteral l') -> check (l == l')
               where
-                ok :: Sem r (Maybe MatchError)
-                ok = return Nothing
+                ok :: Sem r ()
+                ok = return ()
 
-                check :: Bool -> Sem r (Maybe MatchError)
+                check :: Bool -> Sem r ()
                 check b
                   | b = ok
                   | otherwise = err
 
-                bicheck :: Sem r (Maybe MatchError) -> Sem r (Maybe MatchError) -> Sem r (Maybe MatchError)
-                bicheck = liftA2 (<|>)
+                bicheck :: Sem r () -> Sem r () -> Sem r ()
+                bicheck = (>>)
 
-                err :: Sem r (Maybe MatchError)
-                err = return (Just (MatchError normA normB))
+                err :: Sem r ()
+                err = throw (MatchError normA normB)
 
-                goHole :: Hole -> Expression -> Sem r (Maybe MatchError)
+                goHole :: Hole -> Expression -> Sem r ()
                 goHole h t = do
                   r <- queryMetavar' h
                   case r of
-                    Nothing -> refineFreshMetavar h t $> Nothing
-                    Just ht -> matchTypes' t ht
+                    Nothing -> refineFreshMetavar h t
+                    -- Just ht -> matchTypes' t ht
+                    -- Just ht -> matchTypesNoCtx t ht
+                    Just ht -> go t ht
                   where
                     refineFreshMetavar :: Hole -> Expression -> Sem r ()
                     refineFreshMetavar hol holTy
@@ -406,7 +414,7 @@ re = reinterpret $ \case
                               Fresh -> modify (over inferenceMap (HashMap.insert hol (Refined holTy')))
                               Refined {} -> impossible
 
-                goIden :: Iden -> Iden -> Sem r (Maybe MatchError)
+                goIden :: Iden -> Iden -> Sem r ()
                 goIden ia ib = case (ia, ib) of
                   (IdenInductive a, IdenInductive b) -> check (a == b)
                   (IdenAxiom a, IdenAxiom b) -> check (a == b)
@@ -424,33 +432,56 @@ re = reinterpret $ \case
                   (IdenConstructor {}, _) -> err
                   (_, IdenConstructor {}) -> err
 
-                goApplication :: Application -> Application -> Sem r (Maybe MatchError)
+                goApplication :: Application -> Application -> Sem r ()
                 goApplication (Application f x _) (Application f' x' _) = bicheck (go f f') (go x x')
 
-                goSimpleLambda :: SimpleLambda -> SimpleLambda -> Sem r (Maybe MatchError)
+                goSimpleLambda :: SimpleLambda -> SimpleLambda -> Sem r ()
                 goSimpleLambda (SimpleLambda (SimpleBinder v1 ty1) b1) (SimpleLambda (SimpleBinder v2 ty2) b2) = do
                   let local' :: Sem r x -> Sem r x
                       local' = local (over matchAlpha (HashMap.insert v1 v2))
                   bicheck (go ty1 ty2) (local' (go b1 b2))
 
-                goFunction :: Function -> Function -> Sem r (Maybe MatchError)
+                goFunction :: Function -> Function -> Sem r ()
                 goFunction
-                  (Function (FunctionParameter m1 i1 l1) r1)
-                  (Function (FunctionParameter m2 i2 l2) r2)
-                    | i1 == i2 = do
-                        let local' :: Sem r x -> Sem r x
-                            local' = case (m1, m2) of
-                              (Just v1, Just v2) -> local (over matchAlpha (HashMap.insert v1 v2))
-                              _ -> id
-                        bicheck (go l1 l2) (local' (go r1 r2))
-                    | otherwise = err
+                  (Function (FunctionParameter mname1 i1 l1) r1)
+                  (Function (FunctionParameter mname2 i2 l2) r2) = do
+                    unless (i1 == i2) err
+                    l1' <- weakNormalize' l1
+                    l2' <- weakNormalize' l1
+                    let adjustAlpha :: MatchCtx -> MatchCtx
+                        adjustAlpha = case (mname1, mname2) of
+                          (Just var1, Just var2) -> over matchAlpha (HashMap.insert var1 var2)
+                          _ -> id
+
+                        adjustAbsorb :: MatchCtx -> MatchCtx
+                        adjustAbsorb ctx = fromMaybe ctx $ do
+                          var1 <- mname1
+                          var2 <- mname2
+
+                          traceM "absorbing 00"
+                          let holeInLeft = do
+                                guard (isNormalHole l1')
+                                return (over matchLeftAbsorb (HashMap.insert var2 var1) ctx)
+
+                              holeInRight = do
+                                guard (isNormalHole l2')
+                                return (over matchRightAbsorb (HashMap.insert var1 var2) ctx)
+
+                          res <- holeInLeft <|> holeInRight
+                          traceM "absorbing!!!"
+                          return res
+
+                        withCtx' :: Sem r x -> Sem r x
+                        withCtx' = local (adjustAbsorb . adjustAlpha)
+                    bicheck (go l1 l2) (withCtx' (go r1 r2))
+
                 -- NOTE type is ignored, I think it is ok
-                goLambda :: Lambda -> Lambda -> Sem r (Maybe MatchError)
+                goLambda :: Lambda -> Lambda -> Sem r ()
                 goLambda (Lambda l1 _) (Lambda l2 _) = case zipExactMay (toList l1) (toList l2) of
-                  Just z -> asum <$> mapM (uncurry goClause) z
+                  Just z -> mapM_ (uncurry goClause) z
                   _ -> err
                   where
-                    goClause :: LambdaClause -> LambdaClause -> Sem r (Maybe MatchError)
+                    goClause :: LambdaClause -> LambdaClause -> Sem r ()
                     goClause (LambdaClause p1 b1) (LambdaClause p2 b2) =
                       case zipExactMay (toList p1) (toList p2) of
                         Nothing -> err

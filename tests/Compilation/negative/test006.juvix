@@ -7,5 +7,10 @@ type Box (A : Type) :=
 x : Box ((B : Type) → B → B) :=
   box {_} λ {C x := x};
 
+-- hint = Box ((B : Type) -> B -> B)
+-- expr = box
+
+-- match 1 λ {C x := x} ==> 1 ~ _ → 2 → 2
+
 -- (B : Type) → B → B
 -- (x1 : _@1) -> (x2 : _@2) -> _@3
