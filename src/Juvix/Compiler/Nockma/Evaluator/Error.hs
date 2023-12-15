@@ -5,8 +5,6 @@ import Juvix.Prelude.Pretty
 
 data NockEvalError
   = InvalidPosition
-  | InvalidEncodedPosition
-  | InvalidOpCode
   | ExpectedAtom
   | ExpectedCell
   deriving stock (Show)

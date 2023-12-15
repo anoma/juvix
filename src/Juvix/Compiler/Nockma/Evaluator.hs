@@ -61,7 +61,7 @@ parseCell c = case c ^. cellLeft of
   where
     parseOperatorCell :: Atom a -> Term a -> Sem r (OperatorCell a)
     parseOperatorCell a t = do
-      op <- failWithError InvalidOpCode (nockOp a)
+      op <- nockOp a
       return
         OperatorCell
           { _operatorCellOp = op,
