@@ -70,7 +70,7 @@ parseCell c = case c ^. cellLeft of
 
 eval :: forall r a. (Members '[Error NockEvalError, Error (ErrNockNatural a)] r, NockNatural a) => Term a -> Term a -> Sem r (Term a)
 eval stack = \case
-  a@TermAtom {} -> return a
+  TermAtom {} -> throw ExpectedCell
   TermCell c -> do
     pc <- parseCell c
     case pc of
