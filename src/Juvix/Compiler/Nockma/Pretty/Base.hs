@@ -39,7 +39,9 @@ instance PrettyCode Natural where
   ppCode = return . pretty
 
 instance PrettyCode Position where
-  ppCode p = mconcatMapM ppCode (p ^. positionDirections)
+  ppCode p = case p ^. positionDirections of
+    [] -> return "S"
+    ds -> mconcatMapM ppCode ds
 
 instance PrettyCode Direction where
   ppCode =
