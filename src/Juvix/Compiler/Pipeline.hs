@@ -158,3 +158,6 @@ regToMiniC' tab = do
 
 coreToVampIR' :: (Members '[Error JuvixError, Reader Core.CoreOptions] r) => Core.InfoTable -> Sem r VampIR.Result
 coreToVampIR' = Core.toVampIR' >=> return . VampIR.fromCore' False
+
+coreToGeb' :: (Members '[Error JuvixError, Reader Core.CoreOptions] r) => Geb.ResultSpec -> Core.InfoTable -> Sem r Geb.Result
+coreToGeb' spec = Core.toGeb' >=> return . uncurry (Geb.toResult spec) . Geb.fromCore
