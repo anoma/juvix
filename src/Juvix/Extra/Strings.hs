@@ -491,6 +491,12 @@ void = "void"
 case_ :: (IsString s) => s
 case_ = "case"
 
+save :: (IsString s) => s
+save = "save"
+
+tsave :: (IsString s) => s
+tsave = "tsave"
+
 caseOn :: (IsString s) => s
 caseOn = "case-on"
 
@@ -577,6 +583,9 @@ instrDump = "dump"
 
 instrFailure :: (IsString s) => s
 instrFailure = "fail"
+
+instrArgsNum :: (IsString s) => s
+instrArgsNum = "argsnum"
 
 instrPrealloc :: (IsString s) => s
 instrPrealloc = "prealloc"

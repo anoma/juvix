@@ -30,7 +30,12 @@ runCommand opts = do
           ensureDir buildDir
           cFile <- inputCFile file
           embed $ TIO.writeFile (toFilePath cFile) _resultCCode
-          Compile.runCommand opts {_compileInputFile = Just (AppPath (preFileFromAbs cFile) False)}
+          outfile <- Compile.outputFile opts file
+          Compile.runCommand
+            opts
+              { _compileInputFile = Just (AppPath (preFileFromAbs cFile) False),
+                _compileOutputFile = Just (AppPath (preFileFromAbs outfile) False)
+              }
   where
     getFile :: Sem r (Path Abs File)
     getFile = getMainFile (opts ^. compileInputFile)

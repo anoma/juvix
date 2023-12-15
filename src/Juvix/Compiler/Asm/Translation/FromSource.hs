@@ -1,10 +1,12 @@
 module Juvix.Compiler.Asm.Translation.FromSource
   ( module Juvix.Compiler.Asm.Translation.FromSource,
     module Juvix.Parser.Error,
+    BuilderState,
   )
 where
 
 import Control.Monad.Trans.Class (lift)
+import Data.HashMap.Strict qualified as HashMap
 import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Compiler.Asm.Data.InfoTable
 import Juvix.Compiler.Asm.Data.InfoTableBuilder
@@ -15,17 +17,33 @@ import Juvix.Compiler.Asm.Translation.FromSource.Lexer
 import Juvix.Parser.Error
 import Text.Megaparsec qualified as P
 
+type LocalNameMap = HashMap Text DirectRef
+
+localS :: (Member (State s) r) => (s -> s) -> ParsecS r a -> ParsecS r a
+localS update a = do
+  s <- lift get
+  lift $ put (update s)
+  a' <- a
+  lift $ put s
+  return a'
+
 parseText :: Text -> Either MegaparsecError InfoTable
 parseText = runParser ""
 
+parseText' :: BuilderState -> Text -> Either MegaparsecError BuilderState
+parseText' bs = runParser' bs ""
+
 runParser :: FilePath -> Text -> Either MegaparsecError InfoTable
-runParser fileName input =
+runParser fileName input = (^. stateInfoTable) <$> runParser' emptyBuilderState fileName input
+
+runParser' :: BuilderState -> FilePath -> Text -> Either MegaparsecError BuilderState
+runParser' bs fileName input =
   case run $
-    runInfoTableBuilder $
+    runInfoTableBuilder' bs $
       evalTopNameIdGen defaultModuleId $
         P.runParserT parseToplevel fileName input of
     (_, Left err) -> Left (MegaparsecError err)
-    (tbl, Right ()) -> Right tbl
+    (bs', Right ()) -> Right bs'
 
 createBuiltinConstr ::
   Symbol ->
@@ -42,12 +60,13 @@ createBuiltinConstr sym btag name ty i =
           _constructorTag = BuiltinTag btag,
           _constructorType = ty,
           _constructorArgsNum = n,
+          _constructorArgNames = replicate n Nothing,
           _constructorInductive = sym,
           _constructorRepresentation = MemRepConstr,
           _constructorFixity = Nothing
         }
 
-declareBuiltins :: (Member InfoTableBuilder r) => ParsecS r ()
+declareBuiltins :: (Members '[InfoTableBuilder, State LocalNameMap, State Index] r) => ParsecS r ()
 declareBuiltins = do
   loc <- curLoc
   let i = mkInterval loc loc
@@ -73,7 +92,7 @@ declareBuiltins = do
   lift $ mapM_ registerConstr constrs
 
 parseToplevel ::
-  (Member InfoTableBuilder r) =>
+  (Members '[InfoTableBuilder, State LocalNameMap, State Index] r) =>
   ParsecS r ()
 parseToplevel = do
   declareBuiltins
@@ -82,12 +101,12 @@ parseToplevel = do
   P.eof
 
 statement ::
-  (Member InfoTableBuilder r) =>
+  (Members '[InfoTableBuilder, State LocalNameMap, State Index] r) =>
   ParsecS r ()
 statement = statementFunction <|> statementInductive
 
 statementFunction ::
-  (Member InfoTableBuilder r) =>
+  (Members '[InfoTableBuilder, State LocalNameMap, State Index] r) =>
   ParsecS r ()
 statementFunction = do
   kw kwFun
@@ -100,7 +119,9 @@ statementFunction = do
     _ -> parseFailure off ("duplicate identifier: " ++ fromText txt)
   when (txt == "main") $
     lift (registerMain sym)
-  argtys <- functionArguments
+  args <- functionArguments
+  let argtys = map snd args
+      argnames = map fst args
   when (txt == "main" && not (null argtys)) $
     parseFailure off "the 'main' function must take zero arguments"
   mrty <- optional typeAnnotation
@@ -111,12 +132,21 @@ statementFunction = do
             _functionLocation = Just i,
             _functionCode = [],
             _functionArgsNum = length argtys,
+            _functionArgNames = argnames,
             _functionType = mkTypeFun argtys (fromMaybe TyDynamic mrty),
             _functionMaxValueStackHeight = -1, -- computed later
             _functionMaxTempStackHeight = -1
           }
   lift $ registerFunction fi0
-  mcode <- (kw delimSemicolon $> Nothing) <|> optional (braces parseCode)
+  let updateNames :: LocalNameMap -> LocalNameMap
+      updateNames names =
+        foldr
+          (\(mn, idx) h -> maybe h (\n -> HashMap.insert n (ArgRef (OffsetRef idx (Just n))) h) mn)
+          names
+          (zip argnames [0 ..])
+  mcode <-
+    (kw delimSemicolon $> Nothing)
+      <|> optional (braces (localS updateNames parseCode))
   let fi = fi0 {_functionCode = fromMaybe [] mcode}
   case idt of
     Just (IdentFwd _) -> do
@@ -135,7 +165,7 @@ statementFunction = do
         lift (registerForward txt sym)
 
 statementInductive ::
-  (Member InfoTableBuilder r) =>
+  (Members '[InfoTableBuilder, State LocalNameMap, State Index] r) =>
   ParsecS r ()
 statementInductive = do
   kw kwInductive
@@ -159,16 +189,16 @@ statementInductive = do
   lift $ registerInductive ii {_inductiveConstructors = map (^. constructorTag) ctrs}
 
 functionArguments ::
-  (Member InfoTableBuilder r) =>
-  ParsecS r [Type]
+  (Members '[InfoTableBuilder, State LocalNameMap, State Index] r) =>
+  ParsecS r [(Maybe Text, Type)]
 functionArguments = do
   lparen
-  args <- P.sepBy parseType comma
+  args <- P.sepBy parseArgument comma
   rparen
   return args
 
 constrDecl ::
-  (Member InfoTableBuilder r) =>
+  (Members '[InfoTableBuilder, State LocalNameMap, State Index] r) =>
   Symbol ->
   ParsecS r ConstructorInfo
 constrDecl symInd = do
@@ -180,12 +210,14 @@ constrDecl symInd = do
   tag <- lift freshTag
   ty <- typeAnnotation
   let ty' = uncurryType ty
-  let ci =
+      argsNum = length (typeArgs ty')
+      ci =
         ConstructorInfo
           { _constructorName = txt,
             _constructorLocation = Just i,
             _constructorTag = tag,
-            _constructorArgsNum = length (typeArgs ty'),
+            _constructorArgsNum = argsNum,
+            _constructorArgNames = replicate argsNum Nothing,
             _constructorType = ty',
             _constructorInductive = symInd,
             _constructorRepresentation = MemRepConstr,
@@ -195,14 +227,23 @@ constrDecl symInd = do
   return ci
 
 typeAnnotation ::
-  (Member InfoTableBuilder r) =>
+  (Members '[InfoTableBuilder, State LocalNameMap, State Index] r) =>
   ParsecS r Type
 typeAnnotation = do
   kw kwColon
   parseType
 
+parseArgument :: (Members '[InfoTableBuilder, State LocalNameMap, State Index] r) => ParsecS r (Maybe Text, Type)
+parseArgument = do
+  n <- optional $ P.try $ do
+    txt <- identifier
+    kw kwColon
+    return txt
+  ty <- parseType
+  return (n, ty)
+
 parseType ::
-  (Member InfoTableBuilder r) =>
+  (Members '[InfoTableBuilder, State LocalNameMap, State Index] r) =>
   ParsecS r Type
 parseType = do
   tys <- typeArguments
@@ -214,7 +255,7 @@ parseType = do
       return (head tys)
 
 typeFun' ::
-  (Member InfoTableBuilder r) =>
+  (Members '[InfoTableBuilder, State LocalNameMap, State Index] r) =>
   NonEmpty Type ->
   ParsecS r Type
 typeFun' tyargs = do
@@ -222,7 +263,7 @@ typeFun' tyargs = do
   TyFun . TypeFun tyargs <$> parseType
 
 typeArguments ::
-  (Member InfoTableBuilder r) =>
+  (Members '[InfoTableBuilder, State LocalNameMap, State Index] r) =>
   ParsecS r (NonEmpty Type)
 typeArguments = do
   parens (P.sepBy1 parseType comma <&> NonEmpty.fromList)
@@ -233,7 +274,7 @@ typeDynamic :: ParsecS r Type
 typeDynamic = kw kwStar $> TyDynamic
 
 typeNamed ::
-  (Member InfoTableBuilder r) =>
+  (Members '[InfoTableBuilder, State LocalNameMap, State Index] r) =>
   ParsecS r Type
 typeNamed = do
   off <- P.getOffset
@@ -250,12 +291,12 @@ typeNamed = do
         _ -> parseFailure off ("not a type: " ++ fromText txt)
 
 parseCode ::
-  (Member InfoTableBuilder r) =>
+  (Members '[InfoTableBuilder, State LocalNameMap, State Index] r) =>
   ParsecS r Code
 parseCode = P.sepEndBy command (kw delimSemicolon)
 
 command ::
-  (Member InfoTableBuilder r) =>
+  (Members '[InfoTableBuilder, State LocalNameMap, State Index] r) =>
   ParsecS r Command
 command = do
   off <- P.getOffset
@@ -288,16 +329,14 @@ command = do
       mkInstr' loc . Push <$> value
     "pop" ->
       return $ mkInstr' loc Pop
-    "pusht" ->
-      return $ mkInstr' loc PushTemp
-    "popt" ->
-      return $ mkInstr' loc PopTemp
     "trace" ->
       return $ mkInstr' loc Trace
     "dump" ->
       return $ mkInstr' loc Dump
     "fail" ->
       return $ mkInstr' loc Failure
+    "argsnum" ->
+      return $ mkInstr' loc ArgsNum
     "alloc" ->
       mkInstr' loc . AllocConstr <$> constrTag
     "calloc" ->
@@ -327,11 +366,36 @@ command = do
       def <- optional defaultBranch
       rbrace
       return $ Case (CmdCase (CommandInfo loc) sym brs def)
+    "save" ->
+      parseSave loc False
+    "tsave" ->
+      parseSave loc True
     _ ->
       parseFailure off ("unknown instruction: " ++ fromText txt)
 
+parseSave ::
+  (Members '[InfoTableBuilder, State LocalNameMap, State Index] r) =>
+  Maybe Interval ->
+  Bool ->
+  ParsecS r Command
+parseSave loc isTail = do
+  mn <- optional identifier
+  tmpNum <- lift get
+  let updateNames :: LocalNameMap -> LocalNameMap
+      updateNames mp = maybe mp (\n -> HashMap.insert n (TempRef (OffsetRef tmpNum (Just n))) mp) mn
+  c <- braces (localS @Index (+ 1) $ localS updateNames parseCode)
+  return $
+    Save
+      ( CmdSave
+          { _cmdSaveInfo = CommandInfo loc,
+            _cmdSaveIsTail = isTail,
+            _cmdSaveCode = c,
+            _cmdSaveName = mn
+          }
+      )
+
 value ::
-  (Member InfoTableBuilder r) =>
+  (Members '[InfoTableBuilder, State LocalNameMap, State Index] r) =>
   ParsecS r Value
 value = integerValue <|> boolValue <|> stringValue <|> unitValue <|> voidValue <|> memValue
 
@@ -357,14 +421,14 @@ voidValue :: ParsecS r Value
 voidValue = kw kwVoid $> ConstVoid
 
 memValue ::
-  (Member InfoTableBuilder r) =>
+  (Members '[InfoTableBuilder, State LocalNameMap, State Index] r) =>
   ParsecS r Value
 memValue = do
   r <- directRef
   parseField r <|> return (Ref (DRef r))
 
-directRef :: ParsecS r DirectRef
-directRef = stackRef <|> argRef <|> tempRef
+directRef :: (Member (State LocalNameMap) r) => ParsecS r DirectRef
+directRef = stackRef <|> argRef <|> tempRef <|> namedRef
 
 stackRef :: ParsecS r DirectRef
 stackRef = kw kwDollar $> StackRef
@@ -373,26 +437,35 @@ argRef :: ParsecS r DirectRef
 argRef = do
   kw kwArg
   (off, _) <- brackets integer
-  return $ ArgRef (fromInteger off)
+  return $ ArgRef (OffsetRef (fromInteger off) Nothing)
 
 tempRef :: ParsecS r DirectRef
 tempRef = do
   kw kwTmp
   (off, _) <- brackets integer
-  return $ TempRef (fromInteger off)
+  return $ TempRef (OffsetRef (fromInteger off) Nothing)
+
+namedRef :: (Member (State LocalNameMap) r) => ParsecS r DirectRef
+namedRef = do
+  off <- P.getOffset
+  txt <- identifier
+  mr <- lift $ gets (HashMap.lookup txt)
+  case mr of
+    Just r -> return r
+    Nothing -> parseFailure off "undeclared identifier"
 
 parseField ::
-  (Member InfoTableBuilder r) =>
+  (Members '[InfoTableBuilder, State LocalNameMap, State Index] r) =>
   DirectRef ->
   ParsecS r Value
 parseField dref = do
   dot
   tag <- constrTag
   (off, _) <- brackets integer
-  return $ Ref (ConstrRef (Field tag dref (fromInteger off)))
+  return $ Ref (ConstrRef (Field Nothing tag dref (fromInteger off)))
 
 constrTag ::
-  (Member InfoTableBuilder r) =>
+  (Members '[InfoTableBuilder, State LocalNameMap, State Index] r) =>
   ParsecS r Tag
 constrTag = do
   off <- P.getOffset
@@ -403,7 +476,7 @@ constrTag = do
     _ -> parseFailure off "expected a constructor"
 
 indSymbol ::
-  (Member InfoTableBuilder r) =>
+  (Members '[InfoTableBuilder, State LocalNameMap, State Index] r) =>
   ParsecS r Symbol
 indSymbol = do
   off <- P.getOffset
@@ -414,7 +487,7 @@ indSymbol = do
     _ -> parseFailure off "expected an inductive type"
 
 funSymbol ::
-  (Member InfoTableBuilder r) =>
+  (Members '[InfoTableBuilder, State LocalNameMap, State Index] r) =>
   ParsecS r Symbol
 funSymbol = do
   off <- P.getOffset
@@ -426,7 +499,7 @@ funSymbol = do
     _ -> parseFailure off "expected a function"
 
 instrAllocClosure ::
-  (Member InfoTableBuilder r) =>
+  (Members '[InfoTableBuilder, State LocalNameMap, State Index] r) =>
   ParsecS r InstrAllocClosure
 instrAllocClosure = do
   sym <- funSymbol
@@ -439,7 +512,7 @@ instrExtendClosure = do
   return $ InstrExtendClosure (fromInteger argsNum)
 
 instrCall ::
-  (Member InfoTableBuilder r) =>
+  (Members '[InfoTableBuilder, State LocalNameMap, State Index] r) =>
   ParsecS r InstrCall
 instrCall = do
   ct <- parseCallType
@@ -453,7 +526,7 @@ instrCall = do
   return (InstrCall ct argsNum)
 
 parseCallType ::
-  (Member InfoTableBuilder r) =>
+  (Members '[InfoTableBuilder, State LocalNameMap, State Index] r) =>
   ParsecS r CallType
 parseCallType = (kw kwDollar $> CallClosure) <|> (CallFun <$> funSymbol)
 
@@ -463,26 +536,26 @@ instrCallClosures = do
   return (InstrCallClosures (fromInteger argsNum))
 
 branchCode ::
-  (Member InfoTableBuilder r) =>
+  (Members '[InfoTableBuilder, State LocalNameMap, State Index] r) =>
   ParsecS r Code
 branchCode = braces parseCode <|> (command >>= \x -> return [x])
 
 trueBranch ::
-  (Member InfoTableBuilder r) =>
+  (Members '[InfoTableBuilder, State LocalNameMap, State Index] r) =>
   ParsecS r Code
 trueBranch = do
   symbol "true:"
   branchCode
 
 falseBranch ::
-  (Member InfoTableBuilder r) =>
+  (Members '[InfoTableBuilder, State LocalNameMap, State Index] r) =>
   ParsecS r Code
 falseBranch = do
   symbol "false:"
   branchCode
 
 caseBranch ::
-  (Member InfoTableBuilder r) =>
+  (Members '[InfoTableBuilder, State LocalNameMap, State Index] r) =>
   ParsecS r CaseBranch
 caseBranch = do
   tag <- P.try constrTag
@@ -490,6 +563,6 @@ caseBranch = do
   CaseBranch tag <$> branchCode
 
 defaultBranch ::
-  (Member InfoTableBuilder r) =>
+  (Members '[InfoTableBuilder, State LocalNameMap, State Index] r) =>
   ParsecS r Code
 defaultBranch = symbol "default:" >> branchCode

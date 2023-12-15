@@ -17,52 +17,55 @@ function gen(integer) : tree {
       push 3;
       push arg[0];
       mod;
-      pusht;
-      push tmp[0];
-      push 0;
-      eq;
-      br {
-        true: {
-          push 1;
-          push arg[0];
-          sub;
-          call gen;
-          alloc node1;
-          ret;
-        }
-        false: {
-          push tmp[0];
-          push 1;
-          eq;
-          br {
-            true: {
-              push 1;
-              push arg[0];
-              sub;
-              pusht;
-              push tmp[1];
-              call gen;
-              push tmp[1];
-              call gen;
-              alloc node2;
-              ret;
-            }
-            false: {
-              push 1;
-              push arg[0];
-              sub;
-              pusht;
-              push tmp[1];
-              call gen;
-              push tmp[1];
-              call gen;
-              push tmp[1];
-              call gen;
-              alloc node3;
-              ret;
-            }
-          };
-        }
+      tsave {
+        push tmp[0];
+        push 0;
+        eq;
+        br {
+          true: {
+            push 1;
+            push arg[0];
+            sub;
+            call gen;
+            alloc node1;
+            ret;
+          }
+          false: {
+            push tmp[0];
+            push 1;
+            eq;
+            br {
+              true: {
+                push 1;
+                push arg[0];
+                sub;
+                tsave {
+                  push tmp[1];
+                  call gen;
+                  push tmp[1];
+                  call gen;
+                  alloc node2;
+                  ret;
+                };
+              }
+              false: {
+                push 1;
+                push arg[0];
+                sub;
+                tsave {
+                  push tmp[1];
+                  call gen;
+                  push tmp[1];
+                  call gen;
+                  push tmp[1];
+                  call gen;
+                  alloc node3;
+                  ret;
+                };
+              }
+            };
+          }
+        };
       };
     }
   };

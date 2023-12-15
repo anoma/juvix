@@ -221,12 +221,14 @@ constrDecl symInd = do
     parseFailure off ("duplicate identifier: " ++ fromText txt)
   tag <- lift freshTag
   ty <- typeAnnotation
-  let ci =
+  let argsNum = length (typeArgs ty)
+      ci =
         ConstructorInfo
           { _constructorName = txt,
             _constructorLocation = Just i,
             _constructorTag = tag,
-            _constructorArgsNum = length (typeArgs ty),
+            _constructorArgsNum = argsNum,
+            _constructorArgNames = replicate argsNum Nothing,
             _constructorType = ty,
             _constructorInductive = symInd,
             _constructorFixity = Nothing,

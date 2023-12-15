@@ -66,7 +66,8 @@ fromAsmFun tab fi =
         { _recursorInfoTable = tab,
           _recurseInstr = fromAsmInstr fi tab,
           _recurseBranch = fromAsmBranch,
-          _recurseCase = fromAsmCase tab
+          _recurseCase = fromAsmCase tab,
+          _recurseSave = fromAsmSave
         }
 
 fromAsmInstr ::
@@ -82,15 +83,10 @@ fromAsmInstr funInfo tab si Asm.CmdInstr {..} =
     Asm.StrToInt -> return $ mkStrToInt (VarRef VarGroupStack n) (VRef $ VarRef VarGroupStack n)
     Asm.Push val -> return $ mkAssign (VarRef VarGroupStack (n + 1)) (mkValue val)
     Asm.Pop -> return Nop
-    Asm.PushTemp ->
-      return $
-        mkAssign
-          (VarRef VarGroupTemp (si ^. Asm.stackInfoTempStackHeight))
-          (VRef $ VarRef VarGroupStack n)
-    Asm.PopTemp -> return Nop
     Asm.Trace -> return $ Trace $ InstrTrace (VRef $ VarRef VarGroupStack n)
     Asm.Dump -> return Dump
     Asm.Failure -> return $ Failure $ InstrFailure (VRef $ VarRef VarGroupStack n)
+    Asm.ArgsNum -> return $ mkArgsNum (VarRef VarGroupStack n) (VRef $ VarRef VarGroupStack n)
     Asm.Prealloc x -> return $ mkPrealloc x
     Asm.AllocConstr tag -> return $ mkAlloc tag
     Asm.AllocClosure x -> return $ mkAllocClosure x
@@ -151,6 +147,9 @@ fromAsmInstr funInfo tab si Asm.CmdInstr {..} =
     mkAssign :: VarRef -> Value -> Instruction
     mkAssign tgt src = Assign (InstrAssign tgt src)
 
+    mkArgsNum :: VarRef -> Value -> Instruction
+    mkArgsNum tgt src = ArgsNum (InstrArgsNum tgt src)
+
     mkValue :: Asm.Value -> Value
     mkValue = \case
       Asm.ConstInt v -> ConstInt v
@@ -174,8 +173,8 @@ fromAsmInstr funInfo tab si Asm.CmdInstr {..} =
     mkVar :: Asm.DirectRef -> VarRef
     mkVar = \case
       Asm.StackRef -> VarRef VarGroupStack n
-      Asm.ArgRef idx -> VarRef VarGroupArgs idx
-      Asm.TempRef idx -> VarRef VarGroupTemp idx
+      Asm.ArgRef Asm.OffsetRef {..} -> VarRef VarGroupArgs _offsetRefOffset
+      Asm.TempRef Asm.OffsetRef {..} -> VarRef VarGroupTemp _offsetRefOffset
 
     mkPrealloc :: Asm.InstrPrealloc -> Instruction
     mkPrealloc Asm.InstrPrealloc {..} =
@@ -306,3 +305,21 @@ fromAsmCase tab si Asm.CmdCase {..} brs def =
     ii =
       fromMaybe impossible $
         HashMap.lookup _cmdCaseInductive (tab ^. Asm.infoInductives)
+
+fromAsmSave ::
+  Asm.StackInfo ->
+  Asm.CmdSave ->
+  Code ->
+  Sem r Instruction
+fromAsmSave si Asm.CmdSave {} block =
+  return $
+    Block $
+      InstrBlock
+        { _instrBlockCode =
+            Assign
+              ( InstrAssign
+                  (VarRef VarGroupTemp (si ^. Asm.stackInfoTempStackHeight))
+                  (VRef $ VarRef VarGroupStack (si ^. Asm.stackInfoValueStackHeight - 1))
+              )
+              : block
+        }

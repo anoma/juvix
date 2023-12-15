@@ -18,7 +18,8 @@ data RecursorSig m r a = RecursorSig
   { _recursorInfoTable :: InfoTable,
     _recurseInstr :: m -> CmdInstr -> Sem r a,
     _recurseBranch :: m -> CmdBranch -> [a] -> [a] -> Sem r a,
-    _recurseCase :: m -> CmdCase -> [[a]] -> Maybe [a] -> Sem r a
+    _recurseCase :: m -> CmdCase -> [[a]] -> Maybe [a] -> Sem r a,
+    _recurseSave :: m -> CmdSave -> [a] -> Sem r a
   }
 
 makeLenses ''RecursorSig
@@ -43,6 +44,8 @@ recurse' sig = go True
           goNextCmd isTail (x ^. (cmdBranchInfo . commandInfoLocation)) (goBranch (isTail && null t) mem x) t
         Case x ->
           goNextCmd isTail (x ^. (cmdCaseInfo . commandInfoLocation)) (goCase (isTail && null t) mem x) t
+        Save x ->
+          goNextCmd isTail (x ^. (cmdSaveInfo . commandInfoLocation)) (goSave (isTail && null t) mem x) t
 
     goNextCmd :: Bool -> Maybe Location -> Sem r (Memory, a) -> Code -> Sem r (Memory, [a])
     goNextCmd isTail loc mp t = do
@@ -104,22 +107,18 @@ recurse' sig = go True
                 throw $
                   AsmError loc "popping empty value stack"
               return (popValueStack 1 mem)
-            PushTemp -> do
-              when (null (mem ^. memoryValueStack)) $
-                throw $
-                  AsmError loc "popping empty value stack"
-              return $ pushTempStack (topValueStack' 0 mem) (popValueStack 1 mem)
-            PopTemp -> do
-              when (null (mem ^. memoryTempStack)) $
-                throw $
-                  AsmError loc "popping empty temporary stack"
-              return $ popTempStack 1 mem
             Trace ->
               return mem
             Dump ->
               return mem
             Failure ->
               return $ pushValueStack TyDynamic (popValueStack 1 mem)
+            ArgsNum -> do
+              when (null (mem ^. memoryValueStack)) $
+                throw $
+                  AsmError loc "empty value stack"
+              checkFunType (topValueStack' 0 mem)
+              return $ pushValueStack mkTypeInteger (popValueStack 1 mem)
             Prealloc {} ->
               return mem
             AllocConstr tag -> do
@@ -275,6 +274,27 @@ recurse' sig = go True
       where
         loc = cmd ^. (cmdCaseInfo . commandInfoLocation)
 
+    goSave :: Bool -> Memory -> CmdSave -> Sem r (Memory, a)
+    goSave isTail mem cmd@CmdSave {..} = do
+      when (null (mem ^. memoryValueStack)) $
+        throw $
+          AsmError loc "popping empty value stack"
+      let mem1 = pushTempStack (topValueStack' 0 mem) (popValueStack 1 mem)
+      (mem2, a) <- go isTail mem1 _cmdSaveCode
+      a' <- (sig ^. recurseSave) mem cmd a
+      when (not isTail && _cmdSaveIsTail) $
+        throw $
+          AsmError loc "'tsave' not in tail position"
+      when (isTail && not _cmdSaveIsTail) $
+        throw $
+          AsmError loc "'save' in tail position"
+      when (not isTail && null (mem2 ^. memoryTempStack)) $
+        throw $
+          AsmError loc "popping empty temporary stack"
+      return (if isTail then mem2 else popTempStack 1 mem2, a')
+      where
+        loc = _cmdSaveInfo ^. commandInfoLocation
+
     checkBranchInvariant :: Int -> Maybe Location -> Memory -> Memory -> Sem r ()
     checkBranchInvariant k loc mem mem' = do
       unless (length (mem' ^. memoryValueStack) == length (mem ^. memoryValueStack) + k) $
@@ -320,6 +340,8 @@ recurseS' sig = go
           goNextCmd (goBranch si x) t
         Case x ->
           goNextCmd (goCase si x) t
+        Save x ->
+          goNextCmd (goSave si x) t
 
     goNextCmd :: Sem r (StackInfo, a) -> Code -> Sem r (StackInfo, [a])
     goNextCmd mp t = do
@@ -362,15 +384,14 @@ recurseS' sig = go
               return (stackInfoPushValueStack 1 si)
             Pop -> do
               return (stackInfoPopValueStack 1 si)
-            PushTemp -> do
-              return $ stackInfoPushTempStack 1 (stackInfoPopValueStack 1 si)
-            PopTemp -> do
-              return $ stackInfoPopTempStack 1 si
             Trace ->
               return si
             Dump ->
               return si
             Failure ->
+              return si
+            ArgsNum ->
+              -- push + pop = nop
               return si
             Prealloc {} ->
               return si
@@ -436,6 +457,14 @@ recurseS' sig = go
       where
         loc = cmd ^. (cmdCaseInfo . commandInfoLocation)
 
+    goSave :: StackInfo -> CmdSave -> Sem r (StackInfo, a)
+    goSave si cmd@CmdSave {..} = do
+      let si1 = stackInfoPushTempStack 1 (stackInfoPopValueStack 1 si)
+      (si2, c) <- go si1 _cmdSaveCode
+      c' <- (sig ^. recurseSave) si cmd c
+      let si' = if _cmdSaveIsTail then si2 else stackInfoPopTempStack 1 si2
+      return (si', c')
+
     checkStackInfo :: Maybe Location -> StackInfo -> StackInfo -> Sem r ()
     checkStackInfo loc si1 si2 =
       when (si1 /= si2) $
@@ -463,7 +492,8 @@ data FoldSig m r a = FoldSig
     _foldAdjust :: a -> a,
     _foldInstr :: m -> CmdInstr -> a -> Sem r a,
     _foldBranch :: m -> CmdBranch -> a -> a -> a -> Sem r a,
-    _foldCase :: m -> CmdCase -> [a] -> Maybe a -> a -> Sem r a
+    _foldCase :: m -> CmdCase -> [a] -> Maybe a -> a -> Sem r a,
+    _foldSave :: m -> CmdSave -> a -> a -> Sem r a
   }
 
 makeLenses ''FoldSig
@@ -499,6 +529,13 @@ foldS' sig si code acc = do
                     Just d -> Just <$> compose' d a'
                     Nothing -> return Nothing
                   (sig ^. foldCase) s cmd as ad a
+              ),
+          _recurseSave = \s cmd br ->
+            return
+              ( \a -> do
+                  let a' = (sig ^. foldAdjust) a
+                  a'' <- compose' br a'
+                  (sig ^. foldSave) s cmd a'' a
               )
         }
 

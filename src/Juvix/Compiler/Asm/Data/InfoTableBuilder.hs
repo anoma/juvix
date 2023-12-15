@@ -42,9 +42,11 @@ emptyBuilderState =
     }
 
 runInfoTableBuilder :: Sem (InfoTableBuilder ': r) a -> Sem r (InfoTable, a)
-runInfoTableBuilder =
-  fmap (first (^. stateInfoTable))
-    . runState emptyBuilderState
+runInfoTableBuilder = fmap (first (^. stateInfoTable)) . runInfoTableBuilder' emptyBuilderState
+
+runInfoTableBuilder' :: BuilderState -> Sem (InfoTableBuilder ': r) a -> Sem r (BuilderState, a)
+runInfoTableBuilder' bs =
+  runState bs
     . reinterpret interp
   where
     interp :: InfoTableBuilder m a -> Sem (State BuilderState ': r) a

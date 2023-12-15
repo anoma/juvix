@@ -44,6 +44,7 @@ data Instruction
   | Trace InstrTrace
   | Dump
   | Failure InstrFailure
+  | ArgsNum InstrArgsNum
   | Prealloc InstrPrealloc
   | Alloc InstrAlloc
   | AllocClosure InstrAllocClosure
@@ -53,6 +54,7 @@ data Instruction
   | Return InstrReturn
   | Branch InstrBranch
   | Case InstrCase
+  | Block InstrBlock
 
 type Code = [Instruction]
 
@@ -95,6 +97,11 @@ newtype InstrTrace = InstrTrace
 
 newtype InstrFailure = InstrFailure
   { _instrFailureValue :: Value
+  }
+
+data InstrArgsNum = InstrArgsNum
+  { _instrArgsNumResult :: VarRef,
+    _instrArgsNumValue :: Value
   }
 
 data InstrPrealloc = InstrPrealloc
@@ -167,6 +174,10 @@ data CaseBranch = CaseBranch
     _caseBranchMemRep :: MemRep,
     _caseBranchArgsNum :: Int,
     _caseBranchCode :: Code
+  }
+
+newtype InstrBlock = InstrBlock
+  { _instrBlockCode :: Code
   }
 
 makeLenses ''ConstrField

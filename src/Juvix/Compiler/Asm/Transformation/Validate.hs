@@ -13,7 +13,8 @@ validateCode tab fi code = do
         { _recursorInfoTable = tab,
           _recurseInstr = \_ _ -> return (),
           _recurseBranch = \_ _ _ _ -> return (),
-          _recurseCase = \_ _ _ _ -> return ()
+          _recurseCase = \_ _ _ _ -> return (),
+          _recurseSave = \_ _ _ -> return ()
         }
 
 validateFunction :: (Member (Error AsmError) r) => InfoTable -> FunctionInfo -> Sem r FunctionInfo

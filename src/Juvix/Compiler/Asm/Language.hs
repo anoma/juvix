@@ -45,14 +45,20 @@ data DirectRef
     StackRef
   | -- | ArgRef references an argument in the argument area (0-based offsets).
     --   JVA code: 'arg[<offset>]'.
-    ArgRef Offset
+    ArgRef OffsetRef
   | -- | TempRef references a value in the temporary area (0-based offsets). JVA
     --   code: 'tmp[<offset>]'.
-    TempRef Offset
+    TempRef OffsetRef
+
+data OffsetRef = OffsetRef
+  { _offsetRefOffset :: Offset,
+    _offsetRefName :: Maybe Text
+  }
 
 -- | Constructor field reference. JVA code: '<dref>.<tag>[<offset>]'
 data Field = Field
-  { -- | tag of the constructor being referenced
+  { _fieldName :: Maybe Text,
+    -- | tag of the constructor being referenced
     _fieldTag :: Tag,
     -- | location where the data is stored
     _fieldRef :: DirectRef,
@@ -60,6 +66,7 @@ data Field = Field
   }
 
 makeLenses ''Field
+makeLenses ''OffsetRef
 
 -- | Function call type
 data CallType = CallFun Symbol | CallClosure
@@ -80,10 +87,6 @@ data Instruction
     Push Value
   | -- | Pop the stack. JVA opcode: 'pop'.
     Pop
-  | -- | Push the top of the value stack onto the temporary stack, pop the value
-    -- stack. Used to implement Core.Let and Core.Case. JVA opcodes: 'pusht', 'popt'.
-    PushTemp
-  | PopTemp
   | -- | Print a debug log of the object on top of the stack. Does not pop the
     -- stack. JVA opcode: 'trace'.
     Trace
@@ -92,6 +95,10 @@ data Instruction
   | -- | Interrupt execution with a runtime error printing the value on top of
     -- the stack. JVA opcode: 'fail'.
     Failure
+  | -- | Computes the number of expected arguments for the closure on top of the
+    -- stack, pops the stack and pushes the result on top of the stack. JVA
+    -- opcode: 'argsnum'.
+    ArgsNum
   | -- | Preallocate memory. This instruction is inserted automatically before
     -- translation to JuvixReg. It does not occur in JVA files.
     Prealloc InstrPrealloc
@@ -220,6 +227,13 @@ data Command
     -- JVA code: 'case <ind> { <tag>: {<code>} ... <tag>: {<code>} default: {<code>} }'
     -- (any branch may be omitted).
     Case CmdCase
+  | -- | Push the top of the value stack onto the temporary stack, pop the value
+    -- stack, execute the nested code, and if not tail recursive then pop the
+    -- temporary stack afterwards. Used to implement Core.Let and Core.Case. JVA
+    -- codes: 'save {<code>}', 'save <name> {<code>}', 'tsave {<code>}', 'tsave
+    -- <name> {<code>}'. The 'tsave' version does not pop the temporary stack
+    -- after executing '<code>' (which is supposed to return).
+    Save CmdSave
 
 newtype CommandInfo = CommandInfo
   { _commandInfoLocation :: Maybe Location
@@ -251,6 +265,13 @@ data CaseBranch = CaseBranch
     _caseBranchCode :: Code
   }
 
+data CmdSave = CmdSave
+  { _cmdSaveInfo :: CommandInfo,
+    _cmdSaveIsTail :: Bool,
+    _cmdSaveName :: Maybe Text,
+    _cmdSaveCode :: Code
+  }
+
 -- | `Code` corresponds to JuvixAsm code for a single function.
 type Code = [Command]
 
@@ -263,3 +284,4 @@ makeLenses ''CmdInstr
 makeLenses ''CmdBranch
 makeLenses ''CmdCase
 makeLenses ''CaseBranch
+makeLenses ''CmdSave
