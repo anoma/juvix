@@ -26,6 +26,8 @@ env:
   SKIP: ormolu,format-juvix-files,typecheck-juvix-examples
   VAMPIRREPO: anoma/vamp-ir
   VAMPIRVERSION: v0.1.3
+  GEBREPO: anoma/geb
+  GEBVERSION: v0.6.0
 
 jobs:
   pre-commit:
@@ -112,6 +114,20 @@ jobs:
         shell: bash
         run: |
           vamp-ir --version
+
+      - name: Install Geb-lisp for testing generated Lisp
+        uses: jaxxstorm/action-install-gh-release@v1.10.0
+        with:
+          repo: ${{ env.GEBREPO }}
+          platform: linux
+          tag: ${{ env.GEBVERSION }}
+          chmod: 0755
+          rename-to: geb.image
+
+      - name: Test Geb binary
+        shell: bash
+        run: |
+          geb.image --version
 
       - name: Make runtime
         run: |
