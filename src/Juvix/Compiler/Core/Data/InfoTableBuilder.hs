@@ -159,12 +159,15 @@ createBuiltinConstr sym tag nameTxt ty cblt =
       _constructorLocation = Nothing,
       _constructorTag = tag,
       _constructorType = ty,
-      _constructorArgsNum = length (typeArgs ty),
+      _constructorArgsNum = argsNum,
+      _constructorArgNames = replicate argsNum Nothing,
       _constructorInductive = sym,
       _constructorFixity = Nothing,
       _constructorBuiltin = cblt,
       _constructorPragmas = mempty
     }
+  where
+    argsNum = length (typeArgs ty)
 
 builtinConstrs ::
   Symbol ->

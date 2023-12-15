@@ -211,12 +211,16 @@ instance PrettyCode Type where
     TyFun x ->
       ppCode x
 
+ppOffsetRef :: Text -> OffsetRef -> Sem r (Doc Ann)
+ppOffsetRef str OffsetRef {..} =
+  return $ maybe (variable str <> lbracket <> integer _offsetRefOffset <> rbracket) variable _offsetRefName
+
 instance PrettyCode DirectRef where
   ppCode :: DirectRef -> Sem r (Doc Ann)
   ppCode = \case
     StackRef -> return $ variable Str.dollar
-    ArgRef off -> return $ variable Str.arg <> lbracket <> integer off <> rbracket
-    TempRef off -> return $ variable Str.tmp <> lbracket <> integer off <> rbracket
+    ArgRef roff -> ppOffsetRef Str.arg roff
+    TempRef roff -> ppOffsetRef Str.tmp roff
 
 instance PrettyCode Field where
   ppCode :: (Member (Reader Options) r) => Field -> Sem r (Doc Ann)
@@ -273,8 +277,6 @@ instance PrettyCode Instruction where
     StrToInt -> return $ primitive Str.instrStrToInt
     Push val -> (primitive Str.instrPush <+>) <$> ppCode val
     Pop -> return $ primitive Str.instrPop
-    PushTemp -> return $ primitive Str.instrPusht
-    PopTemp -> return $ primitive Str.instrPopt
     Trace -> return $ primitive Str.instrTrace
     Dump -> return $ primitive Str.instrDump
     Failure -> return $ primitive Str.instrFailure
@@ -336,6 +338,10 @@ instance PrettyCode Command where
           return $ brs ++ [d]
         Nothing -> return brs
       return $ primitive Str.case_ <+> name <+> braces' (vsep brs')
+    Save CmdSave {..} -> do
+      c <- ppCodeCode _cmdSaveCode
+      let s = if _cmdSaveIsTail then Str.tsave else Str.save
+      return $ primitive s <+> (maybe mempty ((<> space) . variable) _cmdSaveName) <> braces' c
 
 instance (PrettyCode a) => PrettyCode [a] where
   ppCode x = do
@@ -344,13 +350,15 @@ instance (PrettyCode a) => PrettyCode [a] where
 
 instance PrettyCode FunctionInfo where
   ppCode FunctionInfo {..} = do
-    argtys <- mapM ppCode (typeArgs _functionType)
-    targetty <- ppCode (typeTarget _functionType)
+    argtys <- mapM ppCode (take _functionArgsNum (typeArgs _functionType))
+    let argnames = map (fmap variable) _functionArgNames
+        args = zipWithExact (\mn ty -> maybe mempty (\n -> n <+> colon <> space) mn <> ty) argnames argtys
+    targetty <- ppCode (if _functionArgsNum == 0 then _functionType else typeTarget _functionType)
     c <- ppCodeCode _functionCode
     return $
       keyword Str.function
         <+> annotate (AnnKind KNameFunction) (pretty (quoteAsmFunName $ quoteAsmName _functionName))
-          <> encloseSep lparen rparen ", " argtys
+          <> encloseSep lparen rparen ", " args
         <+> colon
         <+> targetty
         <+> braces' c

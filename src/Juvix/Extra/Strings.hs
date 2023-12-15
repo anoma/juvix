@@ -491,6 +491,12 @@ void = "void"
 case_ :: (IsString s) => s
 case_ = "case"
 
+save :: (IsString s) => s
+save = "save"
+
+tsave :: (IsString s) => s
+tsave = "tsave"
+
 caseOn :: (IsString s) => s
 caseOn = "case-on"
 

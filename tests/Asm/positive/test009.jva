@@ -28,16 +28,16 @@ function map(* -> *, list) : list {
   case list {
     nil: ret
     cons: {
-      pusht;
-      push tmp[0].cons[1];
-      push arg[0];
-      call map;
-      push tmp[0].cons[0];
-      push arg[0];
-      call $ 1;
-      alloc cons;
-      popt;
-      ret;
+      tsave {
+        push tmp[0].cons[1];
+        push arg[0];
+        call map;
+        push tmp[0].cons[0];
+        push arg[0];
+        call $ 1;
+        alloc cons;
+        ret;
+      };
     }
   };
 }
@@ -78,36 +78,36 @@ function main() {
   alloc cons;
   push 0;
   alloc cons;
-  pusht;
-  push tmp[0];
-  call null;
-  trace;
-  pop;
-  alloc nil;
-  call null;
-  trace;
-  pop;
-  push tmp[0];
-  call hd;
-  trace;
-  pop;
-  push tmp[0];
-  call tl;
-  trace;
-  pop;
-  push tmp[0];
-  call tl;
-  call hd;
-  trace;
-  pop;
-  push tmp[0];
-  calloc add_one 0;
-  call map;
-  trace;
-  pop;
-  push tmp[0];
-  calloc add_one 0;
-  call map';
-  popt;
+  save {
+    push tmp[0];
+    call null;
+    trace;
+    pop;
+    alloc nil;
+    call null;
+    trace;
+    pop;
+    push tmp[0];
+    call hd;
+    trace;
+    pop;
+    push tmp[0];
+    call tl;
+    trace;
+    pop;
+    push tmp[0];
+    call tl;
+    call hd;
+    trace;
+    pop;
+    push tmp[0];
+    calloc add_one 0;
+    call map;
+    trace;
+    pop;
+    push tmp[0];
+    calloc add_one 0;
+    call map';
+  };
   ret;
 }

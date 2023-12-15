@@ -53,6 +53,7 @@ data Instruction
   | Return InstrReturn
   | Branch InstrBranch
   | Case InstrCase
+  | Block InstrBlock
 
 type Code = [Instruction]
 
@@ -167,6 +168,10 @@ data CaseBranch = CaseBranch
     _caseBranchMemRep :: MemRep,
     _caseBranchArgsNum :: Int,
     _caseBranchCode :: Code
+  }
+
+newtype InstrBlock = InstrBlock
+  { _instrBlockCode :: Code
   }
 
 makeLenses ''ConstrField

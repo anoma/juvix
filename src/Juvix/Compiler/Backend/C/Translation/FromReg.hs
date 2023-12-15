@@ -256,6 +256,8 @@ fromRegInstr bNoStack info = \case
     fromBranch x
   Reg.Case x ->
     fromCase x
+  Reg.Block Reg.InstrBlock {..} ->
+    fromRegCode bNoStack info _instrBlockCode
   where
     fromBinaryOp :: Reg.BinaryOp -> Statement
     fromBinaryOp Reg.BinaryOp {..} =

@@ -40,59 +40,64 @@ function f(tree) : integer {
       ret;
     }
     node: {
-      pusht;
-      push tmp[0].node[0];
-      call g;
-      pusht;
-      push tmp[0].node[1];
-      call g;
-      pusht;
-      push tmp[1];
-      case tree {
-        leaf: {
-          pop;
-          push 3;
-          push 0;
-          sub;
-        }
-        node: {
-          pusht;
-          push 32768;
-          push tmp[3].node[1];
-          call f;
-          push tmp[3].node[0];
-          call f;
-          add;
-          mod;
-          popt;
-        }
+      tsave {
+        push tmp[0].node[0];
+        call g;
+        tsave {
+          push tmp[0].node[1];
+          call g;
+          tsave {
+            push tmp[1];
+            case tree {
+              leaf: {
+                pop;
+                push 3;
+                push 0;
+                sub;
+              }
+              node: {
+                save {
+                  push 32768;
+                  push tmp[3].node[1];
+                  call f;
+                  push tmp[3].node[0];
+                  call f;
+                  add;
+                  mod;
+                };
+              }
+            };
+            tsave {
+              push tmp[2];
+              case tree {
+                node: {
+                  save {
+                    push 32768;
+                    push tmp[4].node[1];
+                    call f;
+                    push tmp[4].node[0];
+                    call f;
+                    add;
+                    mod;
+                  };
+                }
+                default: {
+                  pop;
+                  push 2;
+                }
+              };
+              tsave {
+                push 32768;
+                push tmp[3];
+                push tmp[4];
+                mul;
+                mod;
+                ret;
+              };
+            };
+          };
+        };
       };
-      pusht;
-      push tmp[2];
-      case tree {
-        node: {
-          pusht;
-          push 32768;
-          push tmp[4].node[1];
-          call f;
-          push tmp[4].node[0];
-          call f;
-          add;
-          mod;
-          popt;
-        }
-        default: {
-          pop;
-          push 2;
-        }
-      };
-      pusht;
-      push 32768;
-      push tmp[3];
-      push tmp[4];
-      mul;
-      mod;
-      ret;
     }
   };
 }
@@ -125,20 +130,21 @@ function g(tree) : tree {
       push arg[0];
       case tree {
         node: {
-          pusht;
-          push tmp[0].node[0];
-          call isNode;
-          br {
-            true: {
-              push tmp[0].node[1];
-              ret;
-            }
-            false: {
-              push tmp[0].node[1];
-              push tmp[0].node[0];
-              alloc node;
-              ret;
-            }
+          tsave {
+            push tmp[0].node[0];
+            call isNode;
+            br {
+              true: {
+                push tmp[0].node[1];
+                ret;
+              }
+              false: {
+                push tmp[0].node[1];
+                push tmp[0].node[0];
+                alloc node;
+                ret;
+              }
+            };
           };
         }
       };

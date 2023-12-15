@@ -27,6 +27,11 @@ computeFunctionStackUsage tab fi = do
             return
               ( max (si ^. stackInfoValueStackHeight) (max (maximum (map (maximum . map fst) cs)) (maybe 0 (maximum . map fst) md)),
                 max (si ^. stackInfoTempStackHeight) (max (maximum (map (maximum . map snd) cs)) (maybe 0 (maximum . map snd) md))
+              ),
+          _recurseSave = \si _ b ->
+            return
+              ( max (si ^. stackInfoValueStackHeight) (maximum (map fst b)),
+                max (si ^. stackInfoTempStackHeight) (maximum (map snd b))
               )
         }
 

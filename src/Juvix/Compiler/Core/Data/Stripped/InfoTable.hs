@@ -45,6 +45,7 @@ data ConstructorInfo = ConstructorInfo
     _constructorInductive :: Symbol,
     _constructorTag :: Tag,
     _constructorType :: Type,
+    _constructorArgNames :: [Maybe Text],
     _constructorFixity :: Maybe Fixity
   }
 

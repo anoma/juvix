@@ -179,6 +179,7 @@ goConstructor sym ctor = do
             _constructorTag = tag,
             _constructorType = ty,
             _constructorArgsNum = argsNum',
+            _constructorArgNames = replicate argsNum' Nothing,
             _constructorInductive = sym,
             _constructorBuiltin = mblt,
             _constructorFixity = ctorName ^. nameFixity,

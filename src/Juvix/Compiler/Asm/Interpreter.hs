@@ -61,6 +61,15 @@ runCodeR infoTable funInfo = goCode (funInfo ^. functionCode) >> popLastValueSta
             _ -> case def of
               Just x -> goCode x
               Nothing -> runtimeError "no matching branch"
+      Save CmdSave {..} -> do
+        registerLocation (_cmdSaveInfo ^. commandInfoLocation)
+        v <- popValueStack
+        pushTempStack v
+        if
+            | _cmdSaveIsTail ->
+                goCode _cmdSaveCode
+            | otherwise ->
+                goCode _cmdSaveCode >> popTempStack >> goCode cont
 
     goInstr :: (Member Runtime r) => Maybe Location -> Instruction -> Code -> Sem r ()
     goInstr loc instr cont = case instr of
@@ -109,12 +118,6 @@ runCodeR infoTable funInfo = goCode (funInfo ^. functionCode) >> popLastValueSta
         goCode cont
       Pop ->
         popValueStack >> goCode cont
-      PushTemp -> do
-        v <- popValueStack
-        pushTempStack v
-        goCode cont
-      PopTemp ->
-        popTempStack >> goCode cont
       Trace -> do
         v <- topValueStack
         logMessage (printVal v)
@@ -225,8 +228,8 @@ runCodeR infoTable funInfo = goCode (funInfo ^. functionCode) >> popLastValueSta
     getDirectRef :: (Member Runtime r) => DirectRef -> Sem r Val
     getDirectRef = \case
       StackRef -> topValueStack
-      ArgRef off -> readArg off
-      TempRef off -> readTemp off
+      ArgRef OffsetRef {..} -> readArg _offsetRefOffset
+      TempRef OffsetRef {..} -> readTemp _offsetRefOffset
 
     popLastValueStack :: (Member Runtime r) => Sem r Val
     popLastValueStack = do
