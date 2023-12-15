@@ -61,6 +61,11 @@ upToParsing = ask >>= Parser.fromSource
 -- Workflows from parsed source
 --------------------------------------------------------------------------------
 
+upToParsedSource ::
+  (Members '[Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Error JuvixError, NameIdGen] r) =>
+  Sem r Parser.ParserResult
+upToParsedSource = ask
+
 upToScoping ::
   (Members '[Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Error JuvixError, NameIdGen] r) =>
   Sem r Scoper.ScoperResult

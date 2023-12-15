@@ -13,10 +13,9 @@ where
 import Control.Monad.Extra as Monad
 import Data.Algorithm.Diff
 import Data.Algorithm.DiffOutput
-import Juvix.Compiler.Concrete (HighlightInput)
-import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination
 import Juvix.Compiler.Pipeline.EntryPoint.IO
+import Juvix.Compiler.Pipeline.Loader.PathResolver
 import Juvix.Compiler.Pipeline.Run
 import Juvix.Data.Effect.TaggedLock
 import Juvix.Extra.Paths hiding (rootBuildDir)
@@ -90,7 +89,7 @@ testRunIO ::
   forall a.
   EntryPoint ->
   Sem (PipelineEff PipelineAppEffects) a ->
-  IO (ResolverState, a)
+  IO (ResolverState, PipelineResult a)
 testRunIO e = testTaggedLockedToIO . runIO defaultGenericOptions e
 
 testDefaultEntryPointIO :: Path Abs Dir -> Path Abs File -> IO EntryPoint
@@ -102,14 +101,13 @@ testDefaultEntryPointNoFileIO cwd = testTaggedLockedToIO (defaultEntryPointNoFil
 testRunIOEither ::
   EntryPoint ->
   Sem (PipelineEff PipelineAppEffects) a ->
-  IO (HighlightInput, (Either JuvixError (ResolverState, a)))
+  IO (Either JuvixError (ResolverState, PipelineResult a))
 testRunIOEither entry = testTaggedLockedToIO . runIOEither entry
 
 testRunIOEitherTermination ::
   EntryPoint ->
   Sem (Termination ': PipelineEff PipelineAppEffects) a ->
-  IO (Either JuvixError (ResolverState, a))
+  IO (Either JuvixError (ResolverState, PipelineResult a))
 testRunIOEitherTermination entry =
-  fmap snd
-    . testRunIOEither entry
+  testRunIOEither entry
     . evalTermination iniTerminationState

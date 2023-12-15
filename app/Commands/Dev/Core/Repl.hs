@@ -106,7 +106,7 @@ runRepl opts tab = do
         Right node'
           | Info.member Info.kNoDisplayInfo (Core.getInfo node') -> runRepl opts tab'
           | otherwise -> do
-              renderStdOut (Core.ppOut opts (Core.disambiguateNodeNames (Core.Module defaultModuleId tab' mempty) node'))
+              renderStdOut (Core.ppOut opts (Core.disambiguateNodeNames (Core.moduleFromInfoTable tab') node'))
               embed (putStrLn "")
               runRepl opts tab'
       where
@@ -114,7 +114,7 @@ runRepl opts tab = do
 
     replNormalize :: Core.InfoTable -> Core.Node -> Sem r ()
     replNormalize tab' node =
-      let md' = Core.Module defaultModuleId tab' mempty
+      let md' = Core.moduleFromInfoTable tab'
           node' = normalize md' node
        in if
               | Info.member Info.kNoDisplayInfo (Core.getInfo node') ->
@@ -126,7 +126,7 @@ runRepl opts tab = do
 
     replType :: Core.InfoTable -> Core.Node -> Sem r ()
     replType tab' node = do
-      let md' = Core.Module defaultModuleId tab' mempty
+      let md' = Core.moduleFromInfoTable tab'
           ty = Core.disambiguateNodeNames md' (Core.computeNodeType md' node)
       renderStdOut (Core.ppOut opts ty)
       embed (putStrLn "")

@@ -13,7 +13,7 @@ runCommand opts = do
   inputFile :: Path Abs File <- fromAppPathFile sinputFile
   s' <- readFile $ toFilePath inputFile
   tab <- getRight (mapLeft JuvixError (Core.runParserMain inputFile defaultModuleId mempty s'))
-  r <- runReader (project @GlobalOptions @Core.CoreOptions gopts) $ runError @JuvixError $ Core.toStripped' (Core.Module defaultModuleId tab mempty)
+  r <- runReader (project @GlobalOptions @Core.CoreOptions gopts) $ runError @JuvixError $ Core.toStripped' (Core.moduleFromInfoTable tab)
   tab' <- Asm.fromCore . Stripped.fromCore . Core.computeCombinedInfoTable <$> getRight r
   if
       | project opts ^. coreAsmPrint ->

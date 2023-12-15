@@ -8,6 +8,7 @@ import Data.Text.IO qualified as TIO
 import GHC.Base (seq)
 import Juvix.Compiler.Asm.Pretty qualified as Asm
 import Juvix.Compiler.Asm.Translation.FromCore qualified as Asm
+import Juvix.Compiler.Core.Data.Module
 import Juvix.Compiler.Core.Extra.Utils
 import Juvix.Compiler.Core.Options
 import Juvix.Compiler.Core.Pipeline
@@ -47,11 +48,12 @@ coreCompileAssertion' ::
   Assertion
 coreCompileAssertion' optLevel tab mainFile expectedFile stdinText step = do
   step "Translate to JuvixAsm"
-  case run $ runReader opts $ runError $ toStripped' tab of
+  case run $ runReader opts $ runError $ toStored' (moduleFromInfoTable tab) >>= toStripped' of
     Left err -> assertFailure (show (pretty (fromJuvixError @GenericError err)))
-    Right tab0 -> do
+    Right m -> do
+      let tab0 = computeCombinedInfoTable m
       assertBool "Check info table" (checkInfoTable tab0)
-      let tab' = Asm.fromCore $ Stripped.fromCore $ tab0
+      let tab' = Asm.fromCore $ Stripped.fromCore tab0
       length (fromText (Asm.ppPrint tab' tab') :: String) `seq`
         Asm.asmCompileAssertion' optLevel tab' mainFile expectedFile stdinText step
   where
@@ -73,4 +75,4 @@ coreCompileAssertion mainFile expectedFile stdinText step = do
       expected <- TIO.readFile (toFilePath expectedFile)
       assertEqDiffText ("Check: EVAL output = " <> toFilePath expectedFile) "" expected
     Right (tabIni, Just node) ->
-      coreCompileAssertion' 3 (setupMainFunction tabIni node) mainFile expectedFile stdinText step
+      coreCompileAssertion' 3 (setupMainFunction defaultModuleId tabIni node) mainFile expectedFile stdinText step

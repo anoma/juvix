@@ -1,24 +1,11 @@
 module Scope.Positive where
 
 import Base
-import Data.HashMap.Strict qualified as HashMap
-import Juvix.Compiler.Builtins (evalTopBuiltins)
-import Juvix.Compiler.Concrete qualified as Concrete
-import Juvix.Compiler.Concrete.Data.Highlight (ignoreHighlightBuilder)
 import Juvix.Compiler.Concrete.Extra
 import Juvix.Compiler.Concrete.Print qualified as P
-import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
-import Juvix.Compiler.Pipeline.Package.Loader
-import Juvix.Compiler.Pipeline.Package.Loader.Error
-import Juvix.Compiler.Pipeline.Package.Loader.EvalEff.IO
-import Juvix.Compiler.Pipeline.Package.Loader.PathResolver
-import Juvix.Compiler.Pipeline.Setup
 import Juvix.Compiler.Store.Scoped.Language
-import Juvix.Data.Effect.Git
-import Juvix.Data.Effect.Process
-import Juvix.Data.Effect.TaggedLock
 import Juvix.Prelude.Pretty
 
 data PathResolverMode
@@ -61,85 +48,37 @@ testDescr PosTest {..} = helper renderCodeNew
               _testRoot = tRoot,
               _testAssertion = Steps $ \step -> do
                 entryPoint <- testDefaultEntryPointIO tRoot file'
-                let runHelper :: HashMap (Path Abs File) Text -> Sem (PipelineEff PipelineAppEffects) a -> IO (ResolverState, a)
-                    runHelper files = do
-                      let runPathResolver' = case _pathResolverMode of
-                            FullPathResolver -> runPathResolverPipe
-                            PackagePathResolver -> runPackagePathResolver' (entryPoint ^. entryPointResolverRoot)
-                      runFinal
-                        . resourceToIOFinal
-                        . embedToFinal @IO
-                        . runTaggedLock LockModeExclusive
-                        . evalInternetOffline
-                        . ignoreHighlightBuilder
-                        . runErrorIO' @JuvixError
-                        . evalTopBuiltins
-                        . evalTopNameIdGen defaultModuleId
-                        . runFilesPure files tRoot
-                        . runReader entryPoint
-                        . ignoreLog
-                        . runProcessIO
-                        . mapError (JuvixError @GitProcessError)
-                        . runGitProcess
-                        . mapError (JuvixError @DependencyError)
-                        . mapError (JuvixError @PackageLoaderError)
-                        . runEvalFileEffIO
-                        . runPathResolver'
-                    evalHelper :: HashMap (Path Abs File) Text -> Sem (PipelineEff PipelineAppEffects) a -> IO a
-                    evalHelper files = fmap snd . runHelper files
 
-                step "Parsing"
-                p :: Parser.ParserResult <- snd <$> testRunIO entryPoint upToParsing
+                let evalHelper :: Text -> Sem (PipelineEff PipelineAppEffects) a -> IO (PipelineResult a)
+                    evalHelper input m = snd <$> testRunIO entryPoint {_entryPointStdin = Just input} m
 
-                step "Scoping"
-                (resolverState :: ResolverState, s :: Scoper.ScoperResult) <-
-                  testRunIO
-                    entryPoint
-                    ( do
-                        void (entrySetup defaultDependenciesConfig)
-                        Concrete.fromParsed p
-                    )
+                step "Parsing & Scoping"
+                PipelineResult s _ <- snd <$> testRunIO entryPoint upToScoping
 
-                let packageFiles' :: [(Path Abs File, Text)]
-                    packageFiles' =
-                      [ (pkgi ^. packagePackage . packageFile, renderPackageVersion PackageVersion1 (pkgi ^. packagePackage))
-                        | pkgi <- (^. resolverCacheItemPackage) <$> toList (resolverState ^. resolverCache)
-                      ]
-                    fsScoped :: HashMap (Path Abs File) Text
-                    fsScoped =
-                      HashMap.fromList $
-                        [ (getModuleFilePath m, renderer m)
-                          | m <- toList (s ^. Scoper.resultScoperTable . Scoper.infoModules)
-                        ]
-                          <> packageFiles'
-                    fsParsed :: HashMap (Path Abs File) Text
-                    fsParsed =
-                      HashMap.fromList $
-                        [ (getModuleFilePath' m, either renderCodeNew renderCodeNew m)
-                          | m <- toList (p ^. Parser.resultTable . Parser.infoParsedModules)
-                        ]
-                          <> packageFiles'
+                let p = s ^. Scoper.resultParserResult
+                    fScoped :: Text
+                    fScoped = renderer $ s ^. Scoper.resultModule
+                    fParsed :: Text
+                    fParsed = renderCodeNew $ p ^. Parser.resultModule
 
-                step "Parsing pretty scoped"
-                p' :: Parser.ParserResult <- evalHelper fsScoped upToParsing
+                step "Parsing & scoping pretty scoped"
+                PipelineResult s' _ <- evalHelper fScoped upToScoping
+                let p' = s' ^. Scoper.resultParserResult
 
                 step "Parsing pretty parsed"
-                parsedPretty' :: Parser.ParserResult <- evalHelper fsParsed upToParsing
-
-                step "Scoping the scoped"
-                s' :: Scoper.ScoperResult <- evalHelper fsScoped upToScoping
+                PipelineResult parsedPretty' _ <- evalHelper fParsed upToParsing
 
                 step "Checks"
-                let smodules = s ^. Scoper.resultModules
-                    smodules' = s' ^. Scoper.resultModules
+                let smodule = s ^. Scoper.resultModule
+                    smodule' = s' ^. Scoper.resultModule
 
-                let pmodules = p ^. Parser.resultModules
-                    pmodules' = p' ^. Parser.resultModules
-                    parsedPrettyModules = parsedPretty' ^. Parser.resultModules
+                let pmodule = p ^. Parser.resultModule
+                    pmodule' = p' ^. Parser.resultModule
+                    parsedPrettyModule = parsedPretty' ^. Parser.resultModule
 
-                assertEqDiffShow "check: scope . parse . pretty . scope . parse = scope . parse" smodules smodules'
-                assertEqDiffShow "check: parse . pretty . scope . parse = parse" pmodules pmodules'
-                assertEqDiffShow "check: parse . pretty . parse = parse" pmodules parsedPrettyModules
+                assertEqDiffShow "check: scope . parse . pretty . scope . parse = scope . parse" smodule smodule'
+                assertEqDiffShow "check: parse . pretty . scope . parse = parse" pmodule pmodule'
+                assertEqDiffShow "check: parse . pretty . parse = parse" pmodule parsedPrettyModule
             }
 
 allTests :: TestTree

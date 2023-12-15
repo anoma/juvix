@@ -22,7 +22,7 @@ testDescr NegTest {..} =
           _testRoot = tRoot,
           _testAssertion = Single $ do
             entryPoint <- testDefaultEntryPointIO tRoot file'
-            result <- testTaggedLockedToIO (snd <$> runIOEither entryPoint upToParsing)
+            result <- testTaggedLockedToIO (runIOEither entryPoint upToParsing)
             case mapLeft fromJuvixError result of
               Left (Just err) -> whenJust (_checkErr err) assertFailure
               Right _ -> assertFailure "Unexpected success."

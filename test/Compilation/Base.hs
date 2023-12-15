@@ -4,7 +4,6 @@ import Base
 import Core.Compile.Base
 import Core.Eval.Base
 import Juvix.Compiler.Core qualified as Core
-import Juvix.Data.PPOutput
 
 data CompileAssertionMode
   = EvalOnly
@@ -34,16 +33,14 @@ compileAssertionEntry ::
 compileAssertionEntry adjustEntry root' optLevel mode mainFile expectedFile step = do
   step "Translate to JuvixCore"
   entryPoint <- adjustEntry <$> testDefaultEntryPointIO root' mainFile
-  tab <- (^. Core.coreResultTable) . snd <$> testRunIO entryPoint upToCore
-  case run $ runReader Core.defaultCoreOptions $ runError $ Core.toEval' tab of
-    Left err -> assertFailure (show (pretty (fromJuvixError @GenericError err)))
-    Right tab' -> do
-      let evalAssertion = coreEvalAssertion' EvalModePlain tab' mainFile expectedFile step
-          compileAssertion' stdinText = coreCompileAssertion' optLevel tab' mainFile expectedFile stdinText step
-      case mode of
-        EvalOnly -> evalAssertion
-        CompileOnly stdinText -> compileAssertion' stdinText
-        EvalAndCompile -> evalAssertion >> compileAssertion' ""
+  PipelineResult res _ <- snd <$> testRunIO entryPoint upToStoredCore
+  let tab' = Core.computeCombinedInfoTable (res ^. Core.coreResultModule)
+      evalAssertion = coreEvalAssertion' EvalModePlain tab' mainFile expectedFile step
+      compileAssertion' stdinText = coreCompileAssertion' optLevel tab' mainFile expectedFile stdinText step
+  case mode of
+    EvalOnly -> evalAssertion
+    CompileOnly stdinText -> compileAssertion' stdinText
+    EvalAndCompile -> evalAssertion >> compileAssertion' ""
 
 compileErrorAssertion ::
   Path Abs Dir ->
@@ -53,7 +50,7 @@ compileErrorAssertion ::
 compileErrorAssertion root' mainFile step = do
   step "Translate to JuvixCore"
   entryPoint <- testDefaultEntryPointIO root' mainFile
-  tab <- (^. Core.coreResultTable) . snd <$> testRunIO entryPoint upToCore
-  case run $ runReader Core.defaultCoreOptions $ runError @JuvixError $ Core.toStripped' tab of
+  PipelineResult res _ <- snd <$> testRunIO entryPoint upToStoredCore
+  case run $ runReader Core.defaultCoreOptions $ runError @JuvixError $ Core.toStripped' (res ^. Core.coreResultModule) of
     Left _ -> assertBool "" True
     Right _ -> assertFailure "no error"

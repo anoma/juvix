@@ -22,12 +22,13 @@ coreNormalizeAssertion mainFile expectedFile step = do
     Right (_, Nothing) -> assertFailure "Empty program"
     Right (tabIni, Just node) -> do
       step "Transform"
-      let tab = setupMainFunction tabIni node
-          transforms = toNormalizeTransformations
-      case run $ runReader defaultCoreOptions $ runError @JuvixError $ applyTransformations transforms tab of
+      let tab = setupMainFunction defaultModuleId tabIni node
+          transforms = toStoredTransformations ++ toNormalizeTransformations
+      case run $ runReader defaultCoreOptions $ runError @JuvixError $ applyTransformations transforms (moduleFromInfoTable tab) of
         Left err -> assertFailure (show (pretty (fromJuvixError @GenericError err)))
-        Right tab' -> do
+        Right m -> do
           step "Normalize"
-          let node' = normalize tab' (lookupIdentifierNode tab' (fromJust $ tab' ^. infoMain))
-              tab'' = setupMainFunction tab' node'
+          let tab' = computeCombinedInfoTable m
+              node' = normalize m (lookupIdentifierNode m (fromJust $ tab' ^. infoMain))
+              tab'' = setupMainFunction defaultModuleId tab' node'
           coreEvalAssertion' EvalModeJSON tab'' mainFile expectedFile step

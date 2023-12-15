@@ -1,7 +1,7 @@
 module Parsing.Negative where
 
 import Base
-import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Error
+import Juvix.Compiler.Pipeline.Loader.PathResolver.Error
 import Juvix.Parser.Error
 
 root :: Path Abs Dir
@@ -24,7 +24,7 @@ testDescr NegTest {..} =
           _testRoot = tRoot,
           _testAssertion = Single $ do
             entryPoint <- testDefaultEntryPointIO tRoot _file
-            res <- snd <$> testRunIOEither entryPoint upToParsing
+            res <- testRunIOEither entryPoint upToParsedSource
             case mapLeft fromJuvixError res of
               Left (Just parErr) -> whenJust (_checkErr parErr) assertFailure
               Left Nothing -> assertFailure "An error ocurred but it was not in the parser."

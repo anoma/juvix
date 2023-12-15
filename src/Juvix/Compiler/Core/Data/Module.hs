@@ -20,10 +20,13 @@ makeLenses ''Module
 
 withInfoTable :: (Module -> Module) -> InfoTable -> InfoTable
 withInfoTable f tab =
-  f (Module defaultModuleId tab mempty) ^. moduleInfoTable
+  f (moduleFromInfoTable tab) ^. moduleInfoTable
 
 emptyModule :: Module
 emptyModule = Module defaultModuleId mempty mempty
+
+moduleFromInfoTable :: InfoTable -> Module
+moduleFromInfoTable tab = Module defaultModuleId tab mempty
 
 computeCombinedIdentContext :: Module -> IdentContext
 computeCombinedIdentContext Module {..} =

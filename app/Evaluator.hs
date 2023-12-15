@@ -50,7 +50,7 @@ evalAndPrint opts tab node = do
           renderStdOut (Core.ppOut opts node'')
           newline
       where
-        node'' = if project opts ^. evalNoDisambiguate then node' else Core.disambiguateNodeNames (Core.Module defaultModuleId tab mempty) node'
+        node'' = if project opts ^. evalNoDisambiguate then node' else Core.disambiguateNodeNames (Core.moduleFromInfoTable tab) node'
   where
     defaultLoc :: Sem r Interval
     defaultLoc = singletonInterval . mkInitialLoc <$> fromAppPathFile f
@@ -65,11 +65,11 @@ normalizeAndPrint ::
   Core.Node ->
   Sem r ()
 normalizeAndPrint opts tab node =
-  let node' = normalize (Core.Module defaultModuleId tab mempty) node
+  let node' = normalize (Core.moduleFromInfoTable tab) node
    in if
           | Info.member Info.kNoDisplayInfo (Core.getInfo node') ->
               return ()
           | otherwise -> do
-              let node'' = if project opts ^. evalNoDisambiguate then node' else Core.disambiguateNodeNames (Core.Module defaultModuleId tab mempty) node'
+              let node'' = if project opts ^. evalNoDisambiguate then node' else Core.disambiguateNodeNames (Core.moduleFromInfoTable tab) node'
               renderStdOut (Core.ppOut opts node'')
               embed (putStrLn "")
