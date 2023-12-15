@@ -1,6 +1,7 @@
 module Juvix.Compiler.Asm.Translation.FromSource
   ( module Juvix.Compiler.Asm.Translation.FromSource,
     module Juvix.Parser.Error,
+    BuilderState,
   )
 where
 
@@ -29,16 +30,22 @@ localS update a = do
 parseText :: Text -> Either MegaparsecError InfoTable
 parseText = runParser ""
 
+parseText' :: BuilderState -> Text -> Either MegaparsecError BuilderState
+parseText' bs = runParser' bs ""
+
 runParser :: FilePath -> Text -> Either MegaparsecError InfoTable
-runParser fileName input =
+runParser fileName input = (^. stateInfoTable) <$> runParser' emptyBuilderState fileName input
+
+runParser' :: BuilderState -> FilePath -> Text -> Either MegaparsecError BuilderState
+runParser' bs fileName input =
   case run $
     evalState @Index 0 $
       evalState @LocalNameMap mempty $
-        runInfoTableBuilder $
+        runInfoTableBuilder' bs $
           evalTopNameIdGen $
             P.runParserT parseToplevel fileName input of
     (_, Left err) -> Left (MegaparsecError err)
-    (tbl, Right ()) -> Right tbl
+    (bs', Right ()) -> Right bs'
 
 createBuiltinConstr ::
   Symbol ->
@@ -330,6 +337,8 @@ command = do
       return $ mkInstr' loc Dump
     "fail" ->
       return $ mkInstr' loc Failure
+    "argsnum" ->
+      return $ mkInstr' loc ArgsNum
     "alloc" ->
       mkInstr' loc . AllocConstr <$> constrTag
     "calloc" ->

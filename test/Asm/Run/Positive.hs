@@ -24,6 +24,9 @@ testDescr PosTest {..} =
           _testAssertion = Steps $ asmRunAssertion file' expected' return (const (return ()))
         }
 
+filterTests :: [String] -> [PosTest] -> [PosTest]
+filterTests incl = filter (\PosTest {..} -> _name `elem` incl)
+
 allTests :: TestTree
 allTests =
   testGroup
@@ -216,5 +219,10 @@ tests =
       "Test037: String instructions"
       $(mkRelDir ".")
       $(mkRelFile "test037.jva")
-      $(mkRelFile "out/test037.out")
+      $(mkRelFile "out/test037.out"),
+    PosTest
+      "Test038: Apply & argsnum"
+      $(mkRelDir ".")
+      $(mkRelFile "test038.jva")
+      $(mkRelFile "out/test038.out")
   ]
