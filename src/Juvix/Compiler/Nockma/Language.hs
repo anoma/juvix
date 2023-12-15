@@ -165,6 +165,7 @@ class (Eq a) => NockNatural a where
 data NockNaturalNaturalError
   = NaturalInvalidPosition (Atom Natural)
   | NaturalInvalidOp (Atom Natural)
+  deriving stock (Show)
 
 instance NockNatural Natural where
   type ErrNockNatural Natural = NockNaturalNaturalError
