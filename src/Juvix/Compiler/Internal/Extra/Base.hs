@@ -397,6 +397,11 @@ foldApplication' f (arg :| args) =
       [] -> acc
       ApplicationArg i a : as -> go (Application (ExpressionApplication acc) a i) as
 
+isNormalHole :: Expression -> Bool
+isNormalHole = \case
+  ExpressionHole {} -> True
+  _ -> False
+
 foldApplication :: Expression -> [ApplicationArg] -> Expression
 foldApplication f args = case nonEmpty args of
   Nothing -> f

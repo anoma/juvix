@@ -689,9 +689,17 @@ holeRefineToFunction impl h = do
       ExpressionHole h'' -> holeRefineToFunction impl h''
       _ -> error "cannot refine hole to function"
     Nothing -> do
-      l <- freshHoleImpl (getLoc h) impl
-      r <- freshHoleImpl (getLoc h) Implicit
-      let fun = Function (unnamedParameter' impl l) r
+      let loc = getLoc h
+      l <- freshHoleImpl loc impl
+      r <- freshHoleImpl loc Implicit
+      pname <- freshVar loc "auxFun"
+      let fparam =
+            FunctionParameter
+              { _paramImplicit = impl,
+                _paramType = l,
+                _paramName = Just pname
+              }
+      let fun = Function fparam r
       whenJustM (matchTypes (ExpressionHole h) (ExpressionFunction fun)) impossible
       return fun
 
@@ -1086,15 +1094,14 @@ inferLeftAppExpression mhint e = case e of
         kind <- lookupInductiveType v
         return (TypedExpression kind (ExpressionIden i))
 
--- | The hint is used for trailing holes only
 holesHelper :: forall r. (Members '[HighlightBuilder, Reader InfoTable, State FunctionsTable, State TypesTable, Reader LocalVars, Error TypeCheckerError, NameIdGen, Inference, Output Example, Output TypedHole, Builtins, Termination, Output CastHole, Reader InsertedArgsStack] r) => Maybe Expression -> Expression -> Sem r TypedExpression
 holesHelper mhint expr = do
   let (f, args) = unfoldExpressionApp expr
-      hint
+      hintForLeft
         | null args = mhint
         | otherwise = Nothing
   arityCheckBuiltins f args
-  fTy <- inferLeftAppExpression hint f
+  fTy <- inferLeftAppExpression hintForLeft f
   iniBuilderType <- mkInitBuilderType fTy
   let iniArg :: ApplicationArg -> AppBuilderArg
       iniArg a =
@@ -1399,6 +1406,7 @@ holesHelper mhint expr = do
                   _functionDefaultDefault = Nothing,
                   _functionDefaultRight = BuilderTypeNoDefaults (f ^. functionRight)
                 }
+
             peekFunctionNoDefaults :: Expression -> Sem r' Function
             peekFunctionNoDefaults ty0 = do
               ty <- weakNormalize ty0
